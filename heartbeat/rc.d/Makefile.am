@@ -22,6 +22,6 @@ MAINTAINERCLEANFILES    = Makefile.in
 harcddir		= $(sysconfdir)/ha.d/rc.d
 
 harcd_SCRIPTS		= ip-request ip-request-resp status \
-			ask_resources ha_takeover
+			ask_resources hb_takeover
 
 EXTRA_DIST              = $(harcd_SCRIPTS)

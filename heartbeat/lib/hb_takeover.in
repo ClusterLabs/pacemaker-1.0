@@ -25,7 +25,7 @@ fi
 
 
 ha_clustermsg <<-!MSG
-	t=ha_takeover
+	t=hb_takeover
 	rsc_hold=$resources
 !MSG
 
