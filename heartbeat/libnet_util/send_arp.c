@@ -1,4 +1,4 @@
-/* $Id: send_arp.c,v 1.9 2004/03/19 15:07:43 alan Exp $ */
+/* $Id: send_arp.c,v 1.10 2004/04/27 09:49:32 horms Exp $ */
 /* 
  * send_arp
  * 
@@ -384,23 +384,24 @@ create_pid_directory(const char *pidfilename)
 {
 	int	status;
 	struct stat stat_buf;
+	char    *pidfilename_cpy;
 	char    *dir;
 
-	dir = strdup(pidfilename);
-	if (!dir) {
+	pidfilename_cpy = strdup(pidfilename);
+	if (!pidfilename_cpy) {
 		syslog(LOG_INFO, "Memory allocation failure: %s\n",
 				strerror(errno));
 		return -1;
 	}
-
-	dirname(dir);
+	
+	dir = dirname(pidfilename_cpy);
 
 	status = stat(dir, &stat_buf); 
 
 	if (status < 0 && errno != ENOENT && errno != ENOTDIR) {
 		syslog(LOG_INFO, "Could not stat pid-file directory "
 				"[%s]: %s", dir, strerror(errno));
-		free(dir);
+		free(pidfilename_cpy);
 		return -1;
 	}
 	
@@ -410,17 +411,18 @@ create_pid_directory(const char *pidfilename)
 		}
 		syslog(LOG_INFO, "Pid-File directory exists but is "
 				"not a directory [%s]", dir);
-		free(dir);
+		free(pidfilename_cpy);
 		return -1;
         }
 
 	if (mkdir(dir, S_IRUSR|S_IWUSR|S_IXUSR | S_IRGRP|S_IXGRP) < 0) {
 		syslog(LOG_INFO, "Could not create pid-file directory "
 				"[%s]: %s", dir, strerror(errno));
-		free(dir);
+		free(pidfilename_cpy);
 		return -1;
 	}
 
+	free(pidfilename_cpy);
 	return 0;
 }
 
@@ -545,6 +547,9 @@ write_pid_file(const char *pidfilename)
 
 /*
  * $Log: send_arp.c,v $
+ * Revision 1.10  2004/04/27 09:49:32  horms
+ * Fix for pid code for FreeBSD (and others)
+ *
  * Revision 1.9  2004/03/19 15:07:43  alan
  * Put in a fix provided by Michael Dipper <md@LF.net>
  * A '/' is missing from the pidfile pathname for send_arp.
