@@ -19,20 +19,20 @@
  *
  */
 
+#include <portability.h>
+#include <heartbeat.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <errno.h>
 #include <string.h>
 #include <time.h>
 #include <unistd.h>
-#include <heartbeat.h>
 #include <ha_msg.h>
 #include <hb_proc.h>
 #include <unistd.h>
 #include <clplumbing/ipc.h>
 #include <clplumbing/netstring.h>
 #include <clplumbing/base64.h>
-#include <portability.h>
 
 /*
  * Avoid sprintf.  Use snprintf instead, even if you count your bytes.
