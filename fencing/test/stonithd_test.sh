@@ -35,18 +35,18 @@ RSH=ssh
 RCP=scp
 ERR_COUNT=0
 
-$LRMADMIN -A myid1 stonith null NULL config_string=$NODE2
+$LRMADMIN -A myid1 stonith null NULL hostlist=$NODE2
 [ $? == 0 ] || let ERR_COUNT++ 
-$LRMADMIN -A myid2 stonith null NULL config_string=$NODE3
+$LRMADMIN -A myid2 stonith null NULL hostlist=$NODE3
 [ $? == 0 ] || let ERR_COUNT++ 
 $LRMADMIN -E myid1 start 0 0 0
 [ $? == 0 ] || let ERR_COUNT++ 
 $LRMADMIN -E myid2 start 0 0 0
 [ $? == 0 ] || let ERR_COUNT++ 
 
-$RSH root@$NODE2 $LRMADMIN -A myid3 stonith null NULL config_string=$NODE1
+$RSH root@$NODE2 $LRMADMIN -A myid3 stonith null NULL hostlist=$NODE1
 [ $? == 0 ] || let ERR_COUNT++ 
-$RSH root@$NODE2 $LRMADMIN -A myid4 stonith null NULL config_string=$NODE3
+$RSH root@$NODE2 $LRMADMIN -A myid4 stonith null NULL hostlist=$NODE3
 [ $? == 0 ] || let ERR_COUNT++ 
 $RSH root@$NODE2 $LRMADMIN -E myid3 start 0 0 0
 [ $? == 0 ] || let ERR_COUNT++ 
