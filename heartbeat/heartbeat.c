@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.366 2005/02/21 05:30:25 alan Exp $ */
+/* $Id: heartbeat.c,v 1.367 2005/02/21 07:14:15 alan Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -2806,6 +2806,7 @@ shutdown_last_client_child(int nsig)
 		cl_log(LOG_DEBUG, "shutdown_last_client_child: Try next one.");
 	}
 	/* OOPS! Couldn't kill a process this time... Try the next one... */
+	config->last_client = config->last_client->prev;
 	return shutdown_last_client_child(nsig);
 }
 
@@ -5066,6 +5067,9 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.367  2005/02/21 07:14:15  alan
+ * Fixed a bug where a process which wasn't running would cause an infinite loop.
+ *
  * Revision 1.366  2005/02/21 05:30:25  alan
  * Made heartbeat pass BasicSanityCheck again...
  * Now on to better tests :-)
