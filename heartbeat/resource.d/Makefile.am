@@ -39,6 +39,7 @@ hard_SCRIPTS	=			\
 			OCF		\
 			portblock	\
 			ServeRAID	\
+			SendArp		\
 			Raid1		\
 			WAS		\
 			WinPopup	\
