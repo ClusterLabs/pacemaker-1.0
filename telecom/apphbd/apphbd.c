@@ -1,4 +1,4 @@
-/* $Id: apphbd.c,v 1.54 2004/11/08 09:07:51 sunjd Exp $ */
+/* $Id: apphbd.c,v 1.55 2004/11/18 00:34:37 gshi Exp $ */
 /*
  * apphbd:	application heartbeat daemon
  *
@@ -278,6 +278,7 @@ apphb_client_new(struct IPC_CHANNEL* ch)
 	 * NOTE: this disallows multiple outstanding calls from a client
 	 * (IMHO this is not a problem)
 	 */
+	ret->rcmsg.msg_buf = NULL;
 	ret->rcmsg.msg_body = &ret->rc;
 	ret->rcmsg.msg_len = sizeof(ret->rc);
 	ret->rcmsg.msg_done = NULL;

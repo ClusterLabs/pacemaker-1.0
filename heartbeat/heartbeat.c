@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.336 2004/11/16 05:58:00 zhenh Exp $ */
+/* $Id: heartbeat.c,v 1.337 2004/11/18 00:34:37 gshi Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -1348,7 +1348,7 @@ hb_del_ipcmsg(IPC_Message* m)
 			,	(unsigned long)m);
 		}
 		memset(m->msg_body, 0, m->msg_len);
-		ha_free(m->msg_body);
+		ha_free(m->msg_buf);
 		memset(m, 0, sizeof(*m));
 		ha_free(m);
 	}else{
@@ -1363,20 +1363,35 @@ hb_new_ipcmsg(const void* data, int len, IPC_Channel* ch, int refcnt)
 	IPC_Message*	hdr;
 	char*	copy;
 	
+	if (ch == NULL){
+		cl_log(LOG_ERR, "hb_new_ipcmsg:"
+		       " invalid parameter");
+		return NULL;
+	}
+	
+	if (ch->msgpad > MAX_MSGPAD){
+		cl_log(LOG_ERR, "hb_new_ipcmsg: too many pads "
+		       "something is wrong");
+		return NULL;
+	}
+
+
 	if ((hdr = (IPC_Message*)ha_malloc(sizeof(*hdr)))  == NULL) {
 		return NULL;
 	}
-	if ((copy = (char*)ha_malloc(len)) == NULL) {
+	if ((copy = (char*)ha_malloc(ch->msgpad + len))
+	    == NULL) {
 		ha_free(hdr);
 		return NULL;
 	}
-	memcpy(copy, data, len);
+	memcpy(copy + ch->msgpad, data, len);
 	hdr->msg_len = len;
-	hdr->msg_body = copy;
+	hdr->msg_buf = copy;
+	hdr->msg_body = copy + ch->msgpad;
 	hdr->msg_ch = ch;
 	hdr->msg_done = hb_del_ipcmsg;
 	hdr->msg_private = GINT_TO_POINTER(refcnt);
-
+	
 	if (DEBUGPKTCONT) {
 		cl_log(LOG_DEBUG, "Message allocated: 0x%lx: refcnt %d"
 		,	(unsigned long)hdr, refcnt);
@@ -1391,8 +1406,8 @@ static void
 send_to_all_media(const char * smsg, int len)
 {
 	int	j;
-	IPC_Message*	outmsg;
-
+	IPC_Message*	outmsg = NULL;
+	
 	/* Throw away some packets if testing is enabled */
 	if (TESTSEND) {
 		if (TestRand(send_loss_prob)) {
@@ -1400,21 +1415,32 @@ send_to_all_media(const char * smsg, int len)
 		}
 	}
 
-	outmsg = hb_new_ipcmsg(smsg, len, NULL, nummedia);
-	if (outmsg == NULL) {
-		cl_log(LOG_ERR, "Out of memory. Shutting down.");
-		hb_initiate_shutdown(FALSE);
-	}
 
 	/* Send the message to all our heartbeat interfaces */
 	for (j=0; j < nummedia; ++j) {
 		IPC_Channel*	wch = sysmedia[j]->wchan[P_WRITEFD];
 		int	wrc;
+		
+		/*take the first media write channel as this msg's chan
+		  assumption all channel's msgpad is the same
+		*/
+		
+		if (outmsg == NULL){
+			outmsg = hb_new_ipcmsg(smsg, len, wch,
+					       nummedia);
+		}
 
+		if (outmsg == NULL) {
+			cl_log(LOG_ERR, "Out of memory. Shutting down.");
+			hb_initiate_shutdown(FALSE);
+			return ;
+		}
+		
+		outmsg->msg_ch = wch;
 		wrc=wch->ops->send(wch, outmsg);
 		if (wrc != IPC_OK) {
 			cl_perror("Cannot write to media pipe %d"
-			,	j);
+				  ,	j);
 			cl_log(LOG_ERR, "Shutting down.");
 			hb_initiate_shutdown(FALSE);
 		}
@@ -4722,6 +4748,11 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.337  2004/11/18 00:34:37  gshi
+ * 1. use one system call send() instead of two for each message in IPC.
+ * 2. fixed a bug: heartbeat could crash if IPC pipe beween heartbeat and a client
+ * is full.
+ *
  * Revision 1.336  2004/11/16 05:58:00  zhenh
  * 1.Make the ordering shutdown work. 2.Move HBDoMsg_T_SHUTDONE() to hb_resource.c
  *
