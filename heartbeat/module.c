@@ -1,4 +1,4 @@
-/* $Id: module.c,v 1.55 2004/03/25 07:55:40 alan Exp $ */
+/* $Id: module.c,v 1.56 2005/03/09 16:07:45 andrew Exp $ */
 /*
  * module: Dynamic module support code
  *
@@ -161,7 +161,9 @@ SetParameterValue(const char * name, const char * value)
 	char *	valdup;
 	void *	gname;
 	void *	gval;
-
+	int	name_len = strlen(name?name:"");
+	char *  env_name = cl_malloc(name_len + 4);
+	
 	if (Parameters == NULL) {
 		Parameters = g_hash_table_new(g_str_hash, g_str_equal);
 		if (Parameters == NULL) {
@@ -179,6 +181,17 @@ SetParameterValue(const char * name, const char * value)
 	namedup = g_strdup(name);
 	valdup = g_strdup(value);
 	g_hash_table_insert(Parameters, namedup, valdup);
+
+	if(name_len > 0) {
+		snprintf(env_name, name_len+4, "HA_%s", name);
+		env_name[name_len+3] = 0;
+		setenv(env_name, value, 1);
+	}
+	
+	/* It may not always be safe to free env_name (man putenv, setenv)
+	 * Free it for now pending compaints from the field
+	 */
+ 	cl_free(env_name);
 }
 /* 
  * GetParameterValue() provides information from the configuration file
