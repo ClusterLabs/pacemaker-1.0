@@ -660,6 +660,13 @@ trap 'RemoveConfigFiles' 0
 SetUpConfigFiles
 > $LOGFILE
 
+COREPID=/proc/sys/kernel/core_uses_pid
+if
+  [ -f $COREPID
+then
+  echo 1 > $COREPID
+fi
+
 TestHeartbeat
 StonithCheck
 AppHBCheck
