@@ -65,6 +65,12 @@ ConfigureLinux() {
     distro="Debian GNU/Linux"
     PACKAGECMD="$MAKE_CMD deb"
     DFLAGS="--mandir=/usr/share/man"
+  elif
+    [ -f /etc/gentoo-release -a -s /etc/gentoo-release ]
+  then
+    distro="Gentoo Linux"
+    PACKAGECMD="$MAKE_CMD dist"
+    DFLAGS="--with-group-name=cluster --with-ccmuser-name=cluster --with-group-id=65 --with-ccmuser-id=65"
   else
     distro="Generic Linux"
   fi
