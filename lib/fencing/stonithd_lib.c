@@ -42,10 +42,6 @@
 #include <fencing/stonithd_api.h>
 #include <fencing/stonithd_msg.h>
 
-/* For compiling on MAC OS */
-#ifdef ON_DARWIN
-#define sighandler_t sig_t
-#endif
 
 static const char * CLIENT_NAME = NULL;
 static pid_t CLIENT_PID = 0;
@@ -154,14 +150,14 @@ stonithd_signon(const char * client_name)
 		return ST_FAIL;
 	}
 
-	// waiting for the output to finish
+	/* waiting for the output to finish */
 	chan_waitout_timeout(chan, DEFAULT_TIMEOUT);
 	ZAPMSG(request);
 
 	/* Read the reply... */
 	stdlib_log(LOG_DEBUG, "waiting for the signon reply msg.");
         if ( IPC_OK != chan_waitin_timeout(chan, DEFAULT_TIMEOUT) ) {
-		stdlib_log(LOG_ERR, "waitin failed."); // how to deal. important
+		stdlib_log(LOG_ERR, "waitin failed."); /*  how to deal. important */
 		return ST_FAIL;
 	}
 
@@ -213,7 +209,7 @@ stonithd_signoff(void)
 		return ST_FAIL;
 	}
 
-	// waiting for the output to finish
+	/*  waiting for the output to finish */
 	chan_waitout_timeout(chan, DEFAULT_TIMEOUT);
 	ZAPMSG(request);
 
@@ -299,7 +295,7 @@ stonithd_node_fence(stonith_ops_t * op)
 		return ST_FAIL;
 	}
 
-	// waiting for the output to finish
+	/*  waiting for the output to finish */
 	chan_waitout_timeout(chan, DEFAULT_TIMEOUT);
 	ZAPMSG(request);
 	
@@ -605,7 +601,7 @@ stonithd_virtual_stonithRA_ops( stonithRA_ops_t * op, int * call_id)
 		return ST_FAIL;
 	}
 
-	// waiting for the output to finish
+	/*  waiting for the output to finish */
 	chan_waitout_timeout(chan, DEFAULT_TIMEOUT);
 	ZAPMSG(request);
 	
@@ -699,7 +695,7 @@ int stonithd_list_stonith_types(GList ** types)
 		return ST_FAIL;
 	}
 
-	// waiting for the output to finish
+	/*  waiting for the output to finish */
 	chan_waitout_timeout(chan, DEFAULT_TIMEOUT);
 	ZAPMSG(request);
 	
