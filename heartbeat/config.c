@@ -1,4 +1,4 @@
-/* $Id: config.c,v 1.137 2005/01/20 19:17:49 gshi Exp $ */
+/* $Id: config.c,v 1.138 2005/01/31 17:56:19 alan Exp $ */
 /*
  * Parse various heartbeat configuration files...
  *
@@ -384,7 +384,7 @@ init_config(const char * cfgfile)
 		SetParameterValue(KEY_UDPPORT, tmp);
 	}
 
-	if (!nice_failback) {
+	if (!nice_failback && DoManageResources) {
 		ha_log(LOG_WARNING
 		,	"Deprecated 'legacy' auto_failback option selected.");
 		ha_log(LOG_WARNING
@@ -2075,6 +2075,10 @@ set_corerootdir(const char* value)
 
 /*
  * $Log: config.c,v $
+ * Revision 1.138  2005/01/31 17:56:19  alan
+ * Made the comment on Deprecated legacy option not come out if DoManageResources
+ * is turned off.
+ *
  * Revision 1.137  2005/01/20 19:17:49  gshi
  * added flow control, if congestion happens, clients will be paused while heartbeat messages can still go through
  * congestion is denfined as (last_send_out_seq_number - last_ack_seq_number) is greater than half of message queue.
