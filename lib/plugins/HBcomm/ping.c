@@ -1,4 +1,4 @@
-static const char _ping_Id [] = "$Id: ping.c,v 1.21 2003/08/14 03:25:27 horms Exp $";
+static const char _ping_Id [] = "$Id: ping.c,v 1.22 2003/08/14 03:26:16 horms Exp $";
 /*
  * ping.c: ICMP-echo-based heartbeat code for heartbeat.
  *
@@ -171,7 +171,7 @@ PIL_PLUGIN_INIT(PILPlugin*us, const PILPluginImports* imports)
 {
 	(void)_heartbeat_h_Id;
 	(void)_ha_msg_h_Id;
-	(void)_udp_Id;
+	(void)_ping_Id;
 
 	/* Force the compiler to do a little type checking */
 	(void)(PILPluginInitFun)PIL_PLUGIN_INIT;
