@@ -1,4 +1,4 @@
-/* $Id: hb_api.c,v 1.109 2004/08/31 21:45:01 alan Exp $ */
+/* $Id: hb_api.c,v 1.110 2004/09/01 09:43:51 sunjd Exp $ */
 /*
  * hb_api: Server-side heartbeat API code
  *
@@ -1071,7 +1071,10 @@ api_process_registration_msg(client_proc_t* client, struct ha_msg * msg)
 	}
 	api_send_client_msg(client, resp);
 	/* What to do with 'resp'.  Do we need it any more?? FIXME!! */
+	/* I think we don't need it anymore when go here, or memory leak
+	   will be very severe. You don't test it;-)	
 	goto del_msg;
+	*/
 
 del_rsp_and_msg:
 	if (resp != NULL) {
