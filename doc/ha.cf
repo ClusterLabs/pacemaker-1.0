@@ -258,3 +258,19 @@ auto_failback on
 #	debug - set debug level
 #		defaults to zero
 #debug 1
+#
+#	API Authentication - replaces the fifo-permissions-based system of the past
+#
+#
+#	You can put a uid list and/or a gid list.
+#	If you put both, then a process is authorized if it qualifies under either
+#	the uid list, or under the gid list.
+#
+#	The groupname "default" has special meaning.  If it is specified, then
+#	this will be used for authorizing groupless clients, and any client groups
+#	not otherwise specified.
+#
+apiauth	ipfail uid=hacluster
+apiauth ccm uid=hacluster
+#apiauth ping gid=haclient uid=alanr,root
+#apiauth default gid=haclient
