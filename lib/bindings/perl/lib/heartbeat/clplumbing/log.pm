@@ -77,7 +77,7 @@ sub cl_log_set_facility {
 	
 	# Fix the logging facility.
 	if (defined($LOG_FACILITY_MAP{$facility})) {
-		$facility = $LOG_PRIO_MAP{$facility};
+		$facility = $LOG_FACILITY_MAP{$facility};
 	} elsif (($facility !~ /^\d+$/) 
 		&& ($facility >= 0) 
 		&& ($facility <= 23)) {
