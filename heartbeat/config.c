@@ -1,4 +1,4 @@
-/* $Id: config.c,v 1.127 2004/09/10 07:23:50 alan Exp $ */
+/* $Id: config.c,v 1.128 2004/09/10 22:47:40 alan Exp $ */
 /*
  * Parse various heartbeat configuration files...
  *
@@ -1710,7 +1710,7 @@ add_client_child(const char * directive)
 	command[cmdlen] = EOS;
 
 	path = ha_malloc(pathlen+1);
-	if (command == NULL) {
+	if (path == NULL) {
 		ha_log(LOG_ERR, "Out of memory in add_client_child "
 				"(path)");
 		ha_free(command); command=NULL;
@@ -2027,6 +2027,9 @@ baddirective:
 
 /*
  * $Log: config.c,v $
+ * Revision 1.128  2004/09/10 22:47:40  alan
+ * BEAM FIXES:  various minor fixes related to running out of memory.
+ *
  * Revision 1.127  2004/09/10 07:23:50  alan
  * BEAM fixes:  Fixed a couple of resource leaks, and a couple of use-after-free errors.
  *

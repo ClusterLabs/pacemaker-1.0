@@ -1,4 +1,4 @@
-/* $Id: hb_api.c,v 1.111 2004/09/10 01:12:23 alan Exp $ */
+/* $Id: hb_api.c,v 1.112 2004/09/10 22:47:40 alan Exp $ */
 /*
  * hb_api: Server-side heartbeat API code
  *
@@ -920,7 +920,9 @@ freeandexitresp:
 	ha_msg_del(resp);
 	resp=NULL;
 freeandexit:
-	ha_msg_del(msg); msg=NULL;
+	if (msg != NULL) {
+		ha_msg_del(msg); msg=NULL;
+	}
 }
 
 /* Process a registration request from a potential client */

@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.318 2004/09/10 01:12:23 alan Exp $ */
+/* $Id: heartbeat.c,v 1.319 2004/09/10 22:47:40 alan Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -2644,7 +2644,9 @@ send_cluster_msg(struct ha_msg* msg)
 
 	if (msg == NULL || (type = ha_msg_value(msg, F_TYPE)) == NULL) {
 		cl_perror("Invalid message in send_cluster_msg");
-		ha_msg_del(msg);
+		if (msg != NULL) {
+			ha_msg_del(msg);
+		}
 		return HA_FAIL;
 	}
 
@@ -3898,14 +3900,14 @@ request_msg_rexmit(struct node_info *node, seqno_t lowseq
 	char		high[16];
 	if ((hmsg = ha_msg_new(6)) == NULL) {
 		cl_log(LOG_ERR, "no memory for " T_REXMIT);
+		return;
 	}
 
 	sprintf(low, "%lu", lowseq);
 	sprintf(high, "%lu", hiseq);
 
 
-	if (	hmsg != NULL
-	&& 	ha_msg_add(hmsg, F_TYPE, T_REXMIT) == HA_OK
+	if (	ha_msg_add(hmsg, F_TYPE, T_REXMIT) == HA_OK
 	&&	ha_msg_add(hmsg, F_TO, node->nodename)==HA_OK
 	&&	ha_msg_add(hmsg, F_FIRSTSEQ, low) == HA_OK
 	&&	ha_msg_add(hmsg, F_LASTSEQ, high) == HA_OK) {
@@ -3917,7 +3919,7 @@ request_msg_rexmit(struct node_info *node, seqno_t lowseq
 		node->track.last_rexmit_req = time_longclock();
 	}else{
 		ha_msg_del(hmsg);
-		cl_log(LOG_ERR, "no memory for " T_REXMIT);
+		cl_log(LOG_ERR, "Cannot create " T_REXMIT " message.");
 	}
 }
 
@@ -4459,6 +4461,9 @@ hb_unregister_to_apphbd(void)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.319  2004/09/10 22:47:40  alan
+ * BEAM FIXES:  various minor fixes related to running out of memory.
+ *
  * Revision 1.318  2004/09/10 01:12:23  alan
  * BEAM CHANGES: Fixed a couple of very minor bugs, and cleaned up some BEAM warnings.
  *

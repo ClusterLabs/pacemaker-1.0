@@ -1,4 +1,4 @@
-/* $Id: hb_resource.c,v 1.63 2004/09/10 07:23:50 alan Exp $ */
+/* $Id: hb_resource.c,v 1.64 2004/09/10 22:47:40 alan Exp $ */
 /*
  * hb_resource: Linux-HA heartbeat resource management code
  *
@@ -1431,8 +1431,10 @@ send_stonith_msg(const char *nodename, const char *result)
 		cl_log(LOG_ERR
 		,	"Cannot send reset reply message [%s] for %s", result
 		,	nodename);
-		ha_msg_del(hmsg);
-		hmsg = NULL;
+		if (hmsg != NULL) {
+			ha_msg_del(hmsg);
+			hmsg = NULL;
+		}
 	}
 	return;
 }
@@ -2330,6 +2332,9 @@ StonithStatProcessName(ProcTrack* p)
 
 /*
  * $Log: hb_resource.c,v $
+ * Revision 1.64  2004/09/10 22:47:40  alan
+ * BEAM FIXES:  various minor fixes related to running out of memory.
+ *
  * Revision 1.63  2004/09/10 07:23:50  alan
  * BEAM fixes:  Fixed a couple of resource leaks, and a couple of use-after-free errors.
  *
