@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.338 2004/11/22 20:06:41 gshi Exp $ */
+/* $Id: heartbeat.c,v 1.339 2004/12/04 00:47:45 gshi Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -1600,6 +1600,12 @@ comm_now_up()
 static gboolean
 APIregistration_dispatch(IPC_Channel* chan,  gpointer user_data)
 {
+	/* 
+	 * This channel must be non-blocking as
+	 * we don't want to block for a client
+	 */
+	chan->is_send_blocking = FALSE;
+
 	if (ANYDEBUG) {
 		cl_log(LOG_DEBUG, "APIregistration_dispatch() {");
 	}
@@ -4751,6 +4757,10 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.339  2004/12/04 00:47:45  gshi
+ * fixed an infinite loop in heartbeat when IPC pipe is full: a channel
+ * to communicate with a client in heartbeat should not be blocking
+ *
  * Revision 1.338  2004/11/22 20:06:41  gshi
  * new IPC message should be memset-ed to 0
  * to avoid errors caused by adding a new field (void*) msg_buf
