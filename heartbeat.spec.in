@@ -1,4 +1,4 @@
-#	$Id: heartbeat.spec.in,v 1.79 2004/02/16 07:10:55 horms Exp $
+#	$Id: heartbeat.spec.in,v 1.80 2004/02/17 05:50:30 alan Exp $
 
 # Workaround for a change in RPM 4.1.x; needs proper fixing soon!
 %define _unpackaged_files_terminate_build 0
@@ -73,6 +73,36 @@ PILS is designed to support any number of plugins
 implementing any number of interfaces.
 
 %changelog
+* Tue Feb 16 2004  Alan Robertson <alanr@unix.sh> (see doc/AUTHORS file)
++ Version 1.2.0
+  + Replaced the nice_failback option with the auto_failback option.
+	THIS OBSOLETES THE NICE_FAILBACK OPTION. READ THE DOCS FOR HOW
+	TO UPGRADE SMOOTHLY.
+  + Added a new feature to hb_standby which allows you to give up
+	  any specific category of resources:  local, foreign, or all.
+	The old behavior is "all" which is the default.
+	This allows you to put a auto_failback no cluster into
+	  an active/active configuration on demand.
+  + ipfail now works properly with auto_failback on (active/active)
+  + ipfail now has "hysteresis" so that it doesn't respond immediately
+	to a network failure, but waits a little while so that the
+	damage can be properly assessed and extraneous takeovers avoided
+  + Added new ping node timeout directive "deadping"
+  + Made sure heartbeat preallocated stack and heap, and printed a
+	message if we allocate heap once we're started up...
+  + IPMILan STONITH plugin added to CVS
+  + Added IPaddr2 resource script
+  + Made the APC smart UPS ups code compatible with more UPSes
+  + Added a (preliminary?) ordered messaging facility from Yi Zhu
+  + Changed IPaddr's method of doing ARPs in background so that
+	certain timing windows were closed.
+  + Added OCF (wrapper) resource script
+  + Allow respawn programs to take arguments
+  + Added pinggroups (where any node being up is OK)
+  + SIGNIFICANT amount of internal rearchitecture.
+  + Many bug fixes.
+  + Several documentation updates.
+
 * Tue Feb 10 2004  Alan Robertson <alanr@unix.sh> (see doc/AUTHORS file)
 + Version 1.1.5
   + ipfail now has "hysteresis" so that it doesn't respond immediately
