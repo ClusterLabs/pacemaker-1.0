@@ -1,4 +1,4 @@
-/* $Id: stonithd.c,v 1.27 2005/03/16 08:33:57 sunjd Exp $ */
+/* $Id: stonithd.c,v 1.28 2005/03/18 10:38:43 andrew Exp $ */
 
 /* File: stonithd.c
  * Description: STONITH daemon for node fencing
@@ -1459,6 +1459,7 @@ on_stonithd_node_fence(const struct ha_msg * request, gpointer data)
 
 	st_op = g_new(stonith_ops_t, 1);
 	st_op->node_list = NULL;
+	st_op->node_uuid = NULL;
 
 	if ( HA_OK == ha_msg_value_int(request, F_STONITHD_OPTYPE, &tmpint)) {
 		st_op->optype = tmpint;
@@ -1490,6 +1491,13 @@ on_stonithd_node_fence(const struct ha_msg * request, gpointer data)
 		goto sendback_reply;
 	}
 
+	if ((tmpstr = cl_get_string(request, F_STONITHD_NODE)) != NULL ) {
+		st_op->node_uuid = g_strdup(tmpstr);	
+	} else {
+		stonithd_log(LOG_WARNING, "The stonith requirement message"
+			     " contains no target node UUID field.");
+	}
+	
 	/* If the node is me, should stonith myself. ;-) No, never come here
 	 * from this API while the node name is myself.
 	 * So just broadcast the requirement to the whole of cluster to do it.
@@ -1790,6 +1798,8 @@ stonithop_result_to_local_client( stonith_ops_t * st_op, gpointer data)
   	    ||(ha_msg_add(reply, F_STONITHD_APIRPL, ST_STRET) != HA_OK ) 
 	    ||(ha_msg_add_int(reply, F_STONITHD_OPTYPE, st_op->optype) != HA_OK)
 	    ||(ha_msg_add(reply, F_STONITHD_NODE, st_op->node_name) != HA_OK)
+	    ||(st_op->node_uuid == NULL
+	       || ha_msg_add(reply, F_STONITHD_NODE_UUID, st_op->node_uuid) != HA_OK)
 	    ||(ha_msg_add_int(reply, F_STONITHD_TIMEOUT, st_op->timeout)!=HA_OK)
 	    ||(ha_msg_add_int(reply, F_STONITHD_CALLID, st_op->call_id) !=HA_OK)
 	    ||(ha_msg_add_int(reply, F_STONITHD_FRC, st_op->op_result) 
@@ -1925,6 +1935,8 @@ require_others_to_stonith(stonith_ops_t * st_op)
 					T_WHOCANST : T_STIT) != HA_OK)
 	    ||(ha_msg_add(msg, F_ORIG, local_nodename) != HA_OK)
 	    ||(ha_msg_add(msg, F_STONITHD_NODE, st_op->node_name) != HA_OK)
+	    ||(st_op->node_uuid == NULL
+	       || ha_msg_add(msg, F_STONITHD_NODE_UUID, st_op->node_uuid) != HA_OK)
 	    ||(ha_msg_add_int(msg, F_STONITHD_OPTYPE, st_op->optype) != HA_OK)
 	    ||(ha_msg_add_int(msg, F_STONITHD_TIMEOUT, st_op->timeout) != HA_OK)
 	    ||(ha_msg_add_int(msg, F_STONITHD_CALLID, st_op->call_id) 
@@ -2966,6 +2978,11 @@ free_common_op_t(gpointer data)
 
 /* 
  * $Log: stonithd.c,v $
+ * Revision 1.28  2005/03/18 10:38:43  andrew
+ * Make sure node_uuid doesnt contain random data
+ * I reccomend a common function for packing and unpacking stonith_ops be
+ *  created and to have it initialize all the fields to NULL.
+ *
  * Revision 1.27  2005/03/16 08:33:57  sunjd
  * Fix a bug which may lead to a infinite loop.
  * Add logs; adjust several logs' loglevel.

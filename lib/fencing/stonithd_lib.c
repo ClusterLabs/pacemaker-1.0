@@ -282,6 +282,8 @@ stonithd_node_fence(stonith_ops_t * op)
 
 	if (  (ha_msg_add_int(request, F_STONITHD_OPTYPE, op->optype) != HA_OK )
 	    ||(ha_msg_add(request, F_STONITHD_NODE, op->node_name ) != HA_OK)
+	    ||(op->node_uuid == NULL
+	       || ha_msg_add(request, F_STONITHD_NODE_UUID, op->node_uuid) != HA_OK)
 	    ||(ha_msg_add_int(request, F_STONITHD_TIMEOUT, op->timeout) 
 		!= HA_OK) ) {
 		stdlib_log(LOG_ERR, "stonithd_node_fence: "
@@ -390,6 +392,8 @@ stonithd_receive_ops_result(gboolean blocking)
 		stdlib_log(LOG_DEBUG, "received stonith final ret.");
 		/* handle the stonith op result message */
 		st_op = g_new(stonith_ops_t, 1);	
+		st_op->node_uuid = NULL;
+		
 		if ( ha_msg_value_int(reply, F_STONITHD_OPTYPE, &tmpint)
 			== HA_OK) {
 			st_op->optype = tmpint;	
@@ -405,6 +409,14 @@ stonithd_receive_ops_result(gboolean blocking)
 			stdlib_log(LOG_ERR, "stonithd_receive_ops_result: the "
 				   "reply contains no node_name field.");
 			rc = ST_FAIL;
+		}
+
+		if ((tmpstr = cl_get_string(reply, F_STONITHD_NODE_UUID)) != NULL) {
+			st_op->node_uuid = g_strdup(tmpstr);
+
+		} else {
+			stdlib_log(LOG_WARNING, "stonithd_receive_ops_result: the "
+				   "reply contains no node_uuid field.");
 		}
 
 		if ( ha_msg_value_int(reply, F_STONITHD_TIMEOUT, &tmpint)
