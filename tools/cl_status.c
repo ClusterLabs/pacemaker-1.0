@@ -249,7 +249,7 @@ static gboolean HB_SIGNON = FALSE;
  * The following is to avoid cl_status sleeping forever. This is due to the 
  * hearbeat's abnormal status or even its crash.  
  */
-unsigned int DEFAULT_TIMEOUT = 2;
+unsigned int DEFAULT_TIMEOUT = 5;
 /* the handler of signal SIGALRM */
 static void quit(int signum);
 
@@ -275,9 +275,6 @@ main(int argc, char ** argv)
 	/* cl_log_enable_stderr(TRUE); */
 	cl_log_set_facility(LOG_USER);
 
-	cl_log(LOG_INFO, "start:optind: %d  argv[optind+1]: %s", optind, 
-		argv[optind+1]);
-
 	/*
 	 * To avoid cl_status sleep forever, trigger a timer and dealing with 
 	 * signal SIGALRM. This sleep is due to hearbeat's abnormal status or
@@ -299,7 +296,7 @@ main(int argc, char ** argv)
 				return UNKNOWN_ERROR;
 			}
 
-			/* cl_log(LOG_INFO, "Signing in with heartbeat."); */
+			/* cl_log(LOG_DEBUG, "Signing in with heartbeat."); */
 			if (hb->llc_ops->signon(hb, cl_status_name)!= HA_OK) {
 				cl_log(LOG_ERR, "Cannot signon with heartbeat");
 				cl_log(LOG_ERR, "REASON: %s", 
@@ -317,9 +314,6 @@ main(int argc, char ** argv)
 		cl_log(LOG_ERR, "%s is not a correct sub-command.", argv[1]);
 		ret_value = PARAMETER_ERROR;
 	}
-
-	cl_log(LOG_INFO, "End: optind: %d  argv[optind+1]: %s", optind, 
-		argv[optind+1]);
 
 	if (HB_SIGNON == TRUE) {
 		if (hb->llc_ops->signoff(hb) != HA_OK) {
@@ -449,7 +443,7 @@ nodestatus(ll_cluster_t *hb, int argc, char ** argv, const char * optstr)
 		return PARAMETER_ERROR;
 	}
 
-	cl_log(LOG_INFO, "optind: %d   argv[optindex+1]: %s", optind, 
+	cl_log(LOG_DEBUG, "optind: %d   argv[optindex+1]: %s", optind, 
 		argv[optind+1]);
 	status = hb->llc_ops->node_status(hb, argv[optind+1]);
 	if ( status == NULL ) {
@@ -493,7 +487,7 @@ nodetype(ll_cluster_t *hb, int argc, char ** argv, const char * optstr)
 		return PARAMETER_ERROR;
 	}
 
-	cl_log(LOG_INFO, "optind: %d   argv[optindex+1]: %s", optind, 
+	cl_log(LOG_DEBUG, "optind: %d   argv[optindex+1]: %s", optind, 
 		argv[optind+1]);
 	type = hb->llc_ops->node_type(hb, argv[optind+1]);
 	if ( type == NULL ) {
@@ -524,7 +518,7 @@ listhblinks(ll_cluster_t *hb, int argc, char ** argv, const char * optstr)
 		return PARAMETER_ERROR;
 	}
 
-	cl_log(LOG_INFO, "optind: %d   argv[optindex+1]: %s", optind, 
+	cl_log(LOG_DEBUG, "optind: %d   argv[optindex+1]: %s", optind, 
 		argv[optind+1]);
 
 	if (hb->llc_ops->init_ifwalk(hb, argv[optind+1]) != HA_OK) {
@@ -593,7 +587,7 @@ static int
 clientstatus(ll_cluster_t *hb, int argc, char ** argv, const char * optstr)
 {
 	/* Default value, its unit is milliseconds */
-	int timeout = 100;  
+	int timeout = 500;
 	const char * cstatus;
 	int ret = UNKNOWN_ERROR;
 
@@ -695,7 +689,7 @@ hbparameter(ll_cluster_t *hb, int argc, char ** argv, const char * optstr)
 		}
 	} while (1);
 
-	cl_log(LOG_INFO,"paramname: %s", paramname);
+	cl_log(LOG_DEBUG,"paramname: %s", paramname);
 	if ( paramname != NULL ) {
 		char * pvalue;
 		pvalue = hb->llc_ops->get_parameter(hb, paramname);
