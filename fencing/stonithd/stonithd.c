@@ -1,4 +1,4 @@
-/* $Id: stonithd.c,v 1.13 2005/02/07 00:23:01 alan Exp $ */
+/* $Id: stonithd.c,v 1.14 2005/02/12 17:13:34 alan Exp $ */
 
 /* File: stonithd.c
  * Description: STONITH deamon for node fencing
@@ -2714,7 +2714,7 @@ running_deamon_pid(const char * pidfile)
 	pid_t pid;
 
 	if (NULL == (fd = fopen(pidfile, "r")) ) {
-		stonithd_log(LOG_INFO, "cannot open PID file: %s", pidfile);
+		stonithd_log(LOG_DEBUG, "cannot open PID file: %s", pidfile);
 		return -1;	
 	}
 
@@ -2823,6 +2823,9 @@ free_common_op_t(gpointer data)
 
 /* 
  * $Log: stonithd.c,v $
+ * Revision 1.14  2005/02/12 17:13:34  alan
+ * Changed a "cannot open pid file" message into a DEBUG message.
+ *
  * Revision 1.13  2005/02/07 00:23:01  alan
  * BEAM fix: changed printf to print a non-NULL value ;-)
  *
