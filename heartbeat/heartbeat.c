@@ -1,4 +1,4 @@
-const static char * _heartbeat_c_Id = "$Id: heartbeat.c,v 1.285 2004/01/22 01:52:31 alan Exp $";
+const static char * _heartbeat_c_Id = "$Id: heartbeat.c,v 1.286 2004/01/30 15:08:43 lars Exp $";
 
 /*
  * heartbeat: Linux-HA heartbeat code
@@ -3499,7 +3499,7 @@ should_drop_message(struct node_info * thisnode, const struct ha_msg *msg,
  * NOTE: It's our job to dispose of the packet we're given...
  */
 static int
-process_outbound_packet(struct msg_xmit_hist*	msghist
+process_outbound_packet(struct msg_xmit_hist*	hist
 ,		struct ha_msg *	msg)
 {
 
@@ -3542,7 +3542,7 @@ process_outbound_packet(struct msg_xmit_hist*	msghist
 	}
 	/* Remember Messages with sequence numbers */
 	if (cseq != NULL) {
-		add2_xmit_hist (msghist, msg, seqno);
+		add2_xmit_hist (hist, msg, seqno);
 	}
 
 
@@ -4115,6 +4115,9 @@ get_localnodeinfo(void)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.286  2004/01/30 15:08:43  lars
+ * Remove a shadow variable.
+ *
  * Revision 1.285  2004/01/22 01:52:31  alan
  * Made a test error message a little more explicit.
  *
