@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.325 2004/10/08 18:37:06 alan Exp $ */
+/* $Id: heartbeat.c,v 1.326 2004/10/08 21:31:48 alan Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -2435,10 +2435,10 @@ shutdown_last_client_child(int nsig)
 		}
 		cl_log(LOG_INFO, "client [%s] not running."
 		,	lastclient->command);
+		cl_free(lastclient);
 	}else{
 		cl_log(LOG_ERR, "shutdown_last_clent_child(NULL client)");
 	}
-	cl_free(lastclient);
 	/* OOPS! Couldn't kill a process... Try the next one... */
 	return shutdown_last_client_child(nsig);
 }
@@ -4553,6 +4553,9 @@ get_localnodeinfo(void)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.326  2004/10/08 21:31:48  alan
+ * BEAM fix:  potentially tried to free a NULL pointer.
+ *
  * Revision 1.325  2004/10/08 18:37:06  alan
  * Put in two things:
  * 	Got rid of old SUSEisms in the install process
