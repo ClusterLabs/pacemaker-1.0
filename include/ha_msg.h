@@ -1,4 +1,4 @@
-/* $Id: ha_msg.h,v 1.43 2004/12/05 19:20:56 andrew Exp $ */
+/* $Id: ha_msg.h,v 1.44 2005/01/18 07:48:39 zhenh Exp $ */
 /*
  * Intracluster message object (struct ha_msg)
  *
@@ -169,6 +169,7 @@ extern struct fieldtypefuncs_s fieldtypefuncs[4];
 #define F_RTYPE		"rtype"		/* Resource type */
 #define F_ORDERSEQ	"oseq"		/* Order Sequence number */
 #define F_DT		"dt"		/* Dead time field for heartbeat*/
+#define F_CRM_DATA	"crm_xml" 
 
 	/* Message types */
 #define	T_STATUS	"status"	/* Status (heartbeat) */
