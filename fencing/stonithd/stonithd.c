@@ -1,4 +1,4 @@
-/* $Id: stonithd.c,v 1.19 2005/02/24 06:51:49 sunjd Exp $ */
+/* $Id: stonithd.c,v 1.20 2005/03/08 00:12:04 sunjd Exp $ */
 
 /* File: stonithd.c
  * Description: STONITH daemon for node fencing
@@ -252,6 +252,7 @@ static struct RA_operation_to_handler raop_handler[] = {
 	{ "start",	stonithRA_start, 	stonithRA_start_post },
 	{ "stop",	stonithRA_stop,		stonithRA_stop_post },
 	{ "monitor",	stonithRA_monitor,	stonithRA_monitor_post },
+	{ "status",	stonithRA_monitor,	stonithRA_monitor_post },
 };
 
 #define PID_FILE        HA_VARRUNDIR"/stonithd.pid"
@@ -2907,6 +2908,9 @@ free_common_op_t(gpointer data)
 
 /* 
  * $Log: stonithd.c,v $
+ * Revision 1.20  2005/03/08 00:12:04  sunjd
+ * Add the support to the 'status' operation
+ *
  * Revision 1.19  2005/02/24 06:51:49  sunjd
  * fix a initializing bug; add some logs and comments
  *
