@@ -1,0 +1,9 @@
+Makefile.in
+Makefile
+.deps
+.libs
+cl_respawn
+cl_status
+*.la
+*.lo
+.*.swp
