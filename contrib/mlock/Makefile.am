@@ -31,7 +31,7 @@ havarlibdir             = $(localstatedir)/lib/@HB_PKG@
 halib_PROGRAMS          = mlock
 
 ## SOURCES
-mlock_SOURCES          = mlock.c mlock.h
+mlock_SOURCES          = mlock.c
 mlock_LDADD            =$(GLIBLIB)
 
 
