@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.324 2004/10/06 16:38:15 alan Exp $ */
+/* $Id: heartbeat.c,v 1.325 2004/10/08 18:37:06 alan Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -357,6 +357,7 @@ const char*	CoreProcessName(ProcTrack* p);
 void		hb_kill_managed_children(int nsig);
 void		hb_kill_rsc_mgmt_children(int nsig);
 void		hb_kill_core_children(int nsig);
+static gboolean	hb_mcp_final_shutdown(gpointer p);
 
 
 static void	ManagedChildRegistered(ProcTrack* p);
@@ -399,7 +400,8 @@ static int	IncrGeneration(seqno_t * generation);
 static int	GetTimeBasedGeneration(seqno_t * generation);
 static int	process_outbound_packet(struct msg_xmit_hist* hist
 ,			struct ha_msg * msg);
-static void	start_a_child_client(gpointer childentry, gpointer pidtable);
+static void	start_a_child_client(gpointer childentry, gpointer dummy);
+static gboolean	shutdown_last_client_child(int nsig);
 static void	LookForClockJumps(void);
 static void	get_localnodeinfo(void);
 static gboolean EmergencyShutdown(gpointer p);
@@ -1224,7 +1226,7 @@ master_control_process(IPC_Channel* fifoproc)
 
 	if (G_main_add_input(G_PRIORITY_HIGH, FALSE, 
 			     &polled_input_SourceFuncs) ==NULL){
-		cl_log(LOG_ERR, "cl_respawn: G_main_add_input failed");
+		cl_log(LOG_ERR, "master_control_process: G_main_add_input failed");
 	}
 
 
@@ -1548,7 +1550,7 @@ comm_now_up()
 	/* Start each of our known child clients */
 	if (!shutdown_in_progress) {
 		g_list_foreach(config->client_list
-		,	start_a_child_client, config->client_children);
+		,	start_a_child_client, NULL);
 	}
 	if (!startup_complete) {
 		startup_complete = TRUE;
@@ -1644,11 +1646,12 @@ hb_initiate_shutdown(int quickshutdown)
 		Gmain_timeout_add(1000*60*60, EmergencyShutdown, NULL);
 		return;
 	}
-	/* Trigger final shutdown. */
-	hb_mcp_final_shutdown(NULL);
+	/* Trigger initial shutdown process for quick shutdown */
+	hb_mcp_final_shutdown(NULL); /* phase 0 (quick) */
 }
 
-gboolean
+
+static gboolean
 hb_mcp_final_shutdown(gpointer p)
 {
 	static int shutdown_phase = 0;
@@ -1661,19 +1664,30 @@ hb_mcp_final_shutdown(gpointer p)
 
 	CL_IGNORE_SIG(SIGTERM);
 	switch (shutdown_phase) {
-	case 0:	
+
+	case 0:		/* From hb_initiate_shutdown -- quickshutdown*/
+			/* OR HBDoMsg_T_SHUTDONE -- long shutdown*/
+		shutdown_phase = 1;
 		send_local_status();
-		hb_kill_managed_children(SIGTERM);
+		if (!shutdown_last_client_child(SIGTERM)) {
+			return hb_mcp_final_shutdown(p); /* phase 1 (no children) */
+		}
+		return FALSE;
+
+	case 1:		/* From ManagedChildDied() (or above) */
+		shutdown_phase = 2;
+		send_local_status();
 		/* THIS IS RESOURCE WORK!  FIXME */
 		if (procinfo->giveup_resources) {
 			/* Shouldn't *really* need this */
 			hb_kill_rsc_mgmt_children(SIGTERM);
 		}
-		shutdown_phase = 1;
-		Gmain_timeout_add(1000, hb_mcp_final_shutdown, NULL);
+		Gmain_timeout_add(1000, hb_mcp_final_shutdown /* phase 2 */
+		,	NULL);
 		return FALSE;
 
-	case 1:
+	case 2: /* From 1-second delay above */
+		shutdown_phase = 3;
 		if (procinfo->giveup_resources) {
 			/* THIS IS RESOURCE WORK!  FIXME */
 			/* Shouldn't *really* need this either ;-) */
@@ -1683,15 +1697,11 @@ hb_mcp_final_shutdown(gpointer p)
 		CL_KILL(-getpid(), SIGTERM);
 		hb_kill_core_children(SIGTERM); /* Is this redundant? */
 		hb_tickle_watchdog();
-		shutdown_phase = 2;
+		/* Ought to go down fast now... */
+		Gmain_timeout_add(30*1000, EmergencyShutdown, NULL);
 		return FALSE;
-	case 2:
-		hb_tickle_watchdog();
-		shutdown_phase = 3;
-		break;
 
-
-	default:
+	default:	/* This should also never be reached */
 		hb_emergency_shutdown();
 		break;
 	}
@@ -1853,8 +1863,8 @@ HBDoMsg_T_SHUTDONE(const char * type, struct node_info * fromnode
 			,	"Calling hb_mcp_final_shutdown"
 			" in a second.");
 		}
-		/* Trigger final shutdown in a second */
-		Gmain_timeout_add(1, hb_mcp_final_shutdown, NULL);
+		/* Trigger next phase of final shutdown process in a second */
+		Gmain_timeout_add(1000, hb_mcp_final_shutdown, NULL); /* phase 0 - normal */
 	}else{
 		/* THIS IS RESOURCE WORK!  FIXME */
 		fromnode->has_resources = FALSE;
@@ -2206,6 +2216,7 @@ ManagedChildRegistered(ProcTrack* p)
 
 	managed_child_count++;
 	managedchild->pid = p->pid;
+	managedchild->proctrack = p;
 }
 
 /* Handle the death of one of our managed child processes */
@@ -2216,6 +2227,7 @@ ManagedChildDied(ProcTrack* p, int status, int signo, int exitcode
 	struct client_child*	managedchild = p->privatedata;
 
 	managedchild->pid = 0;
+	managedchild->proctrack = NULL;
 	managed_child_count --;
 
 	/* If they exit 100 we won't restart them */
@@ -2244,11 +2256,22 @@ ManagedChildDied(ProcTrack* p, int status, int signo, int exitcode
 			cl_log(LOG_INFO
 			,	"Respawning client \"%s\":"
 			,	managedchild->command);
-			start_a_child_client(managedchild
-			,	config->client_children);
+			start_a_child_client(managedchild, NULL);
 		}
 	}
 	p->privatedata = NULL;
+	if (shutdown_in_progress) {
+		if (!shutdown_last_client_child(SIGTERM)) {
+			if (managed_child_count != 0)  {
+				cl_log(LOG_ERR
+				,	"managed_child_count is %d should be zero"
+				,	managed_child_count);
+				managed_child_count = 0;
+			}
+			/* Trigger next shutdown phase */
+			hb_mcp_final_shutdown(NULL); /* phase 1 (last child died) */
+		}
+	}
 
 }
 
@@ -2294,7 +2317,7 @@ hb_kill_tracked_process(ProcTrack* p, void * data)
 
 
 static void
-start_a_child_client(gpointer childentry, gpointer pidtable)
+start_a_child_client(gpointer childentry, gpointer dummy)
 {
 	struct client_child*	centry = childentry;
 	pid_t			pid;
@@ -2382,6 +2405,42 @@ start_a_child_client(gpointer childentry, gpointer pidtable)
 	}
 	/* Suppress respawning */
 	exit(100);
+}
+
+static gboolean		/* return TRUE if any child was signalled */
+shutdown_last_client_child(int nsig)
+{
+	GList*			list = config->client_list;
+	GList*			last;
+	struct client_child*	lastclient;
+
+	if (!list) {
+		return FALSE;
+	}
+
+	last = g_list_last(list);
+	g_assert(last != NULL);
+	lastclient = last->data;
+	config->client_list = g_list_remove(list, lastclient);
+	if (lastclient) {
+		if (ANYDEBUG) {
+			cl_log(LOG_DEBUG, "Shutting down client %s"
+			,	lastclient->command);
+		}
+		lastclient->respawn = FALSE;
+		if (lastclient->proctrack) {
+			hb_kill_tracked_process(lastclient->proctrack
+			,	GINT_TO_POINTER(nsig));
+			return TRUE;
+		}
+		cl_log(LOG_INFO, "client [%s] not running."
+		,	lastclient->command);
+	}else{
+		cl_log(LOG_ERR, "shutdown_last_clent_child(NULL client)");
+	}
+	cl_free(lastclient);
+	/* OOPS! Couldn't kill a process... Try the next one... */
+	return shutdown_last_client_child(nsig);
 }
 
 static const char *
@@ -4494,6 +4553,12 @@ get_localnodeinfo(void)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.325  2004/10/08 18:37:06  alan
+ * Put in two things:
+ * 	Got rid of old SUSEisms in the install process
+ *
+ * 	Added code to shut down respawn clients in reverse order.
+ *
  * Revision 1.324  2004/10/06 16:38:15  alan
  * Put in a fix to exit if we're out of memory.
  *

@@ -1,4 +1,4 @@
-#	$Id: heartbeat.spec.in,v 1.102 2004/10/07 19:41:03 alan Exp $
+#	$Id: heartbeat.spec.in,v 1.103 2004/10/08 18:37:06 alan Exp $
 
 # Workaround for a change in RPM 4.1.x; needs proper fixing soon!
 ##%define _unpackaged_files_terminate_build 0
@@ -865,13 +865,6 @@ make DESTDIR=$RPM_BUILD_ROOT install
   ln -s @sbindir@/ldirectord ldirectord
 )
 
-TEMPL=$RPM_BUILD_ROOT@localstatedir@/adm/fillup-templates
-if
-  [ ! -d $TEMPL ]
-then
-  mkdir -p $TEMPL
-fi
-install -m 644 rc.config.heartbeat $TEMPL
 
 ###########################################################
 %files
@@ -900,7 +893,6 @@ install -m 644 rc.config.heartbeat $TEMPL
 @INITDIR@/heartbeat
 @libdir@/ocf
 @sysconfdir@/logrotate.d/heartbeat
-@localstatedir@/adm/fillup-templates/rc.config.heartbeat
 %dir @localstatedir@/lib/@HB_PKG@
 %dir @localstatedir@/run
 %dir @localstatedir@/run/@HB_PKG@
@@ -1026,63 +1018,18 @@ fi
 %post
 ###########################################################
 
-# Run heartbeat on startup
-if
-  [ -f etc/SuSE-release ]
-then
-  start=@HB_INITSTARTPRI@
-  stop=@HB_INITSTOPPRI@
-  for d in etc/init.d/rc[235].d
-  do
-    rm -f $d/[SK]*[0-9]heartbeat
-    ln -s ../heartbeat $d/S${start}heartbeat 
-    ln -s ../heartbeat $d/K${stop}heartbeat
-  done
-  FILLUP=/bin/fillup
-  if 
-    $FILLUP -q -d = etc/rc.config var/adm/fillup-templates/rc.config.heartbeat
-  then
-    : $FILLUP returned OK
-  else
-    echo "ERROR: $FILLUP failed. This should not happen. Please compare"
-    echo "@sysconfdir@/rc.config and @localstatedir@/adm/fillup-templates/rc.config.heartbeat"
-    echo "and update by hand."
-  fi
-elif
-  [ -x sbin/chkconfig ]
-then
-  sbin/chkconfig --add heartbeat
-fi
+# Enable heartbeat on startup
+/sbin/chkconfig --add heartbeat
 true
 
 ###########################################################
 %preun
 ###########################################################
 
-Uninstall_PPP_hack() {
-  file2hack=etc/ppp/ip-up.local
-  echo "NOTE: Restoring /$file2hack"
-  MARKER="Heartbeat"
-  ed -s $file2hack <<-!EOF  2>/dev/null
-H
-g/ $MARKER\$/d
-w
-!EOF
-}
 
 if
   [ $1 = 0 ]
 then
-  [ -x sbin/chkconfig ] && sbin/chkconfig --del heartbeat
-  if
-    [ ! -x etc/ppp/ip-up.heart ]
-  then
-    Uninstall_PPP_hack
-  fi
-fi
-if
-   [ -r etc/SuSE-release ]
-then
-  rm -f etc/init.d/rc[235].d/[SK]*[0-9]heartbeat
+  [ -x /sbin/chkconfig ] && /sbin/chkconfig --del heartbeat
 fi
 true

@@ -1,4 +1,4 @@
-/* $Id: heartbeat_private.h,v 1.13 2004/09/18 23:09:14 alan Exp $ */
+/* $Id: heartbeat_private.h,v 1.14 2004/10/08 18:37:07 alan Exp $ */
 /*
  * heartbeat_private.h: definitions for the Linux-HA heartbeat program
  * that are defined in heartbeat.c and are used by other .c files
@@ -61,7 +61,6 @@ int  hb_send_resources_held(int stable, const char * comment);
 void hb_setup_child(void);
 void init_resource_module(void);
 
-gboolean hb_mcp_final_shutdown(gpointer p);
 gboolean hb_send_local_status(gpointer p);
 gboolean hb_dump_all_proc_stats(gpointer p);
 void	heartbeat_monitor(struct ha_msg * msg, int status, const char * iface);

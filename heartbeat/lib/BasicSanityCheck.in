@@ -111,7 +111,8 @@ GenerateHaCf() {
 	mcast $INTERFACE $MCASTIP 694 0 0
 	#bcast $INTERFACE
 	node $LOCALNODE $DUMMYNODE
-	apiauth lha-snmpagent uid=root
+	respawn @HA_CCMUSER@ $HBLIB/ipfail
+	respawn @HA_CCMUSER@ $HBLIB/ccm
 	!
   chmod 644 $1
 }

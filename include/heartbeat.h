@@ -1,4 +1,4 @@
-/* $Id: heartbeat.h,v 1.51 2004/09/03 21:47:19 alan Exp $ */
+/* $Id: heartbeat.h,v 1.52 2004/10/08 18:37:07 alan Exp $ */
 /*
  * heartbeat.h: core definitions for the Linux-HA heartbeat program
  *
@@ -56,6 +56,7 @@
 #include <clplumbing/cl_log.h>
 #include <clplumbing/longclock.h>
 #include <clplumbing/ipc.h>
+#include <clplumbing/proctrack.h>
 #include <clplumbing/cl_malloc.h>
 #define index FooIndex
 #define time FooTime
@@ -292,11 +293,6 @@ struct sys_config {
 	struct HBauth_info  auth_config[MAXAUTH];
 	GList*		client_list;
 			/* List data: struct client_child */
-			/* These all show up in client_children */
-			/* when they're spawned (and have a pid) */
-	GHashTable*	client_children;/* Indexed by pid */
-			/* associated data: struct client_child */
-			/* They appear here after being spawned */
 };
 
 
@@ -331,14 +327,15 @@ struct msg_xmit_hist {
  *	Normally, if they they die, we restart them.
  */
 struct client_child {
-	pid_t	pid;		/* Process id of child process */
-	int	respawn;	/* Respawn it if it dies? */
-	uid_t	u_runas;	/* Which user to run as? */
-	gid_t	g_runas;	/* Which group id to run as? */
-	int	respawncount;	/* Last time we respawned this command */
-	int	shortrcount;	/* How many times has it respawned too fast? */
-	char*	command;	/* What command to run? */
-	char*	path;		/* Path (argv[0])? */
+	pid_t		pid;		/* Process id of child process */
+	ProcTrack*	proctrack;	/* Process tracking structure */
+	int		respawn;	/* Respawn it if it dies? */
+	uid_t		u_runas;	/* Which user to run as? */
+	gid_t		g_runas;	/* Which group id to run as? */
+	int		respawncount;	/* Last time we respawned */
+	int		shortrcount;	/* Count of fast respawns */
+	char*		command;	/* What command to run? */
+	char*		path;		/* Path (argv[0])? */
 };
 
 int api_remove_client_pid(pid_t c_pid, const char * reason);

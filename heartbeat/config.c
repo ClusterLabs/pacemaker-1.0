@@ -1,4 +1,4 @@
-/* $Id: config.c,v 1.129 2004/09/18 22:43:08 alan Exp $ */
+/* $Id: config.c,v 1.130 2004/10/08 18:37:06 alan Exp $ */
 /*
  * Parse various heartbeat configuration files...
  *
@@ -232,8 +232,6 @@ init_config(const char * cfgfile)
 	config->deadping_ms = -1;
 	config->hopfudge = 1;
 	config->log_facility = -1;
-	config->client_children = g_hash_table_new(g_direct_hash
-	,	g_direct_equal);
 	config->client_list = NULL;
 
 	curnode = NULL;
@@ -462,6 +460,7 @@ parse_config(const char * cfgfile, char *nodename)
 	,	{"ccm",		"uid=" HA_CCMUSER}
 	,	{"ping",	"gid=" HA_APIGROUP}
 	,	{"cl_status",	"gid=" HA_APIGROUP}
+	,	{"lha-snmpagent","uid=root"}
 	};
 
 	if ((f = fopen(cfgfile, "r")) == NULL) {
@@ -2021,6 +2020,12 @@ baddirective:
 
 /*
  * $Log: config.c,v $
+ * Revision 1.130  2004/10/08 18:37:06  alan
+ * Put in two things:
+ * 	Got rid of old SUSEisms in the install process
+ *
+ * 	Added code to shut down respawn clients in reverse order.
+ *
  * Revision 1.129  2004/09/18 22:43:08  alan
  * Merged in changes from 1.2.3
  *
