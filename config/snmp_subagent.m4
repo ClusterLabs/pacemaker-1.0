@@ -293,7 +293,6 @@ AC_DEFUN([LIB_SNMP],
 		openssl, openssl-devel,
 		rpm, rpm-devel,
 		popt, and tcpd-devel
-
 	])
     else
 	AC_MSG_WARN([SNMP: snmp library dependency resolved. List of libraries needed to compile the subagent:])
