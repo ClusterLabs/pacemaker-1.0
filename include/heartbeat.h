@@ -1,4 +1,4 @@
-/* $Id: heartbeat.h,v 1.47 2004/07/15 17:23:32 msoffen Exp $ */
+/* $Id: heartbeat.h,v 1.48 2004/07/19 21:38:18 yixiong Exp $ */
 /*
  * heartbeat.h: core definitions for the Linux-HA heartbeat program
  *
@@ -35,6 +35,8 @@
 #	define	SETATTR(fd, s)	tcsetattr(fd, TCSAFLUSH, s)
 #	define	FLUSH(fd)	tcflush(fd, TCIOFLUSH)
 #endif
+
+#include <config.h>
 
 #include <limits.h>
 #include <syslog.h>

@@ -84,7 +84,7 @@ AC_DEFUN([LIB_SNMP],
     UCD_SNMP_HEADER=no
     dnl then check ucd-snmp headers 
     AC_CHECK_HEADERS([ucd-snmp/version.h], [UCD_SNMP_HEADER=yes],
-        [AC_MSG_WARN([ucd-snmp header not found])], [])
+        [AC_MSG_WARN([ucd-snmp header not found])], [#define UCD_COMPATIBLE])
         dnl make sure net-snmp is compiled with "--enable-ucd-snmp-compatibility"
 
     if
@@ -183,25 +183,16 @@ AC_DEFUN([LIB_SNMP],
  
  	dnl try adding rpm libraries
  	if test x"$SNMP_LIBS_FOUND" = x"no"; then
+ 	    dnl getting rpm libraries
  	    LIB_RPM
- 	    dnl the case without libwrap
-	    if test x"LIB_WRAP" = x""; then
- 		LIBS="$UCD_SNMP_LIBS $LIB_CRYPTO $RPM_LIBS"
- 		AC_TRY_LINK([], [],
- 		    [SNMP_LIBS="$LIBS"
- 		    SNMP_LIBS_FOUND=yes], 
- 		    [AC_MSG_WARN([UCD-SNMP: "$LIBS" dependency failed!!!])])
- 	    dnl the case with libwrap
- 	    else
- 		LIBS="$UCD_SNMP_LIBS $LIB_CRYPTO $LIB_WRAP $RPM_LIBS"
- 		AC_TRY_LINK([#include <tcpd.h>
- 		    int allow_severity = 1;
- 		    int deny_severity = 2;], [],
- 		    [SNMP_LIBS="$LIBS"
- 		    SNMP_LIBS_FOUND=yes
-		    AC_DEFINE([SNMP_NEED_TCPWRAPPER], 1, [Need to include tcpd.h headers]) ], 
- 		    [AC_MSG_WARN([UCD-SNMP: "$LIBS" dependency failed!!!])])
- 	    fi
+	    LIBS="$UCD_SNMP_LIBS $LIB_CRYPTO $LIB_WRAP $RPM_LIBS"
+	    AC_TRY_LINK([#include <tcpd.h>
+		int allow_severity = 1;
+		int deny_severity = 2;], [],
+		[SNMP_LIBS="$LIBS"
+		SNMP_LIBS_FOUND=yes
+		AC_DEFINE([SNMP_NEED_TCPWRAPPER], 1, [Need to include tcpd.h headers]) ], 
+		[AC_MSG_WARN([UCD-SNMP: "$LIBS" dependency failed!!!])])
  	fi
 
     dnl check for net-snmp libraries
@@ -244,6 +235,18 @@ AC_DEFUN([LIB_SNMP],
  	    	    AC_MSG_WARN([NET-SNMP: no libwrap available. "$LIBS" dependency failed!!!])
  	        fi
  	    fi
+
+	    dnl try adding rpm libraries
+	    RPM_LIBS=""
+	    if test x"$SNMP_LIBS_FOUND" = x"no"; then
+	    	dnl get the rpm libraries
+		LIB_RPM
+		LIBS="$NET_SNMP_LIBS $LIB_CRYPTO $LIB_WRAP $RPM_LIBS"
+		AC_TRY_LINK([], [],
+		    [SNMP_LIBS="$LIBS"
+		    SNMP_LIBS_FOUND=yes], 
+		    [AC_MSG_WARN([NET-SNMP: "$LIBS" dependency failed!!!])])
+	    fi
 	fi
     fi
 
