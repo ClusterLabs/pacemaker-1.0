@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.327 2004/10/16 04:12:56 alan Exp $ */
+/* $Id: heartbeat.c,v 1.328 2004/10/19 09:47:47 zhenh Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -333,7 +333,7 @@ int				UseOurOwnPoll = FALSE;
 static longclock_t		NextPoll = 0UL;
 static int			ClockJustJumped = FALSE;
 longclock_t			local_takeover_time = 0L;
-
+static int 			deadtime_tmpadd_count = 0;
 
 #undef DO_AUDITXMITHIST
 #ifdef DO_AUDITXMITHIST
@@ -407,6 +407,9 @@ static void	LookForClockJumps(void);
 static void	get_localnodeinfo(void);
 static gboolean EmergencyShutdown(gpointer p);
 static gboolean hb_reregister_with_apphbd(gpointer dummy);
+
+static void	hb_add_deadtime(int increment);
+static gboolean	hb_pop_deadtime(gpointer p);
 
 static GHashTable*	message_callbacks = NULL;
 static gboolean	HBDoMsgCallback(const char * type, struct node_info* fromnode
@@ -1221,11 +1224,16 @@ master_control_process(IPC_Channel* fifoproc)
 			}
 		}
 	}while (!allstarted);
+	
+	hb_add_deadtime(2000);
+	Gmain_timeout_add(5000, hb_pop_deadtime, NULL);
+
 	set_local_status(UPSTATUS);	/* We're pretty sure we're up ;-) */
 	if (ANYDEBUG) {
 		cl_log(LOG_DEBUG
 		,	"All your child process are belong to us");
 	}
+
 	send_local_status();
 
 	if (G_main_add_input(G_PRIORITY_HIGH, FALSE, 
@@ -1783,7 +1791,8 @@ HBDoMsg_T_STATUS(const char * type, struct node_info * fromnode
 
 	const char *	status;
 	longclock_t		messagetime = time_longclock();
-
+	const char	*tmpstr;
+	long		deadtime;
 
 	status = ha_msg_value(msg, F_STATUS);
 	if (status == NULL)  {
@@ -1836,7 +1845,11 @@ HBDoMsg_T_STATUS(const char * type, struct node_info * fromnode
 	}else{
 		heartbeat_monitor(msg, NOCHANGE, iface);
 	}
-
+	if ((tmpstr = ha_msg_value(msg, F_DT)) != NULL
+	&&	sscanf(tmpstr, "%lx", &deadtime) == 1) {
+		fromnode->dead_ticks = msto_longclock(deadtime);	
+	}
+	
 	/* Did we get a status update on ourselves? */
 	if (fromnode == curnode) {
 		hb_tickle_watchdog();
@@ -2346,6 +2359,7 @@ start_a_child_client(gpointer childentry, gpointer dummy)
 		cl_perror("Cannot exec %s", centry->command);
 		return;
 	}
+	hb_add_deadtime(2000);
 
 	/* We need to fork so we can make child procs not real time */
 	switch(pid=fork()) {
@@ -2357,6 +2371,7 @@ start_a_child_client(gpointer childentry, gpointer dummy)
 		default:	/* Parent */
 				NewTrackedProc(pid, 1, PT_LOGVERBOSE
 				,	centry, &ManagedChildTrackOps);
+				hb_pop_deadtime(NULL);
 				return;
 
 		case 0:		/* Child */
@@ -2526,6 +2541,8 @@ restart_heartbeat(void)
 	for (j=3; j < oflimits.rlim_cur; ++j) {
 		close(j);
 	}
+
+	hb_add_deadtime(30000);
 
 	hb_close_watchdog();
 	
@@ -2782,8 +2799,8 @@ send_local_status()
 {
 	struct ha_msg *	m;
 	int		rc;
-
-
+	char		deadtime[64];
+	long		cur_deadtime;
 
 	if (DEBUGDETAILS){
 		cl_log(LOG_DEBUG, "PID %d: Sending local status"
@@ -2795,8 +2812,12 @@ send_local_status()
 		cl_log(LOG_ERR, "Cannot send local status.");
 		return HA_FAIL;
 	}
+	cur_deadtime = longclockto_ms(curnode->dead_ticks);
+	snprintf(deadtime, sizeof(deadtime), "%lx", cur_deadtime);
+	
 	if (ha_msg_add(m, F_TYPE, T_STATUS) != HA_OK
-	||	ha_msg_add(m, F_STATUS, curnode->status) != HA_OK) {
+	||	ha_msg_add(m, F_STATUS, curnode->status) != HA_OK
+	||	ha_msg_add(m, F_DT, deadtime) != HA_OK) {
 		cl_log(LOG_ERR, "send_local_status: "
 		"Cannot create local status msg");
 		rc = HA_FAIL;
@@ -2834,9 +2855,15 @@ hb_dump_all_proc_stats(gpointer p)
 	int	j;
 
 	cl_log(LOG_INFO, "Daily informational memory statistics");
+
+	hb_add_deadtime(2000);
+
 	for (j=0; j < procinfo->nprocs; ++j) {
 		hb_dump_proc_stats(procinfo->info+j);
 	}
+	
+	hb_pop_deadtime(NULL);
+	
 	cl_log(LOG_INFO, "These are nothing to worry about.");
 	return TRUE;
 }
@@ -4554,9 +4581,34 @@ get_localnodeinfo(void)
 	}
 	g_strdown(localnodename);
 }
+static void
+hb_add_deadtime(int increment)
+{
+	longclock_t new_ticks;
+	new_ticks = msto_longclock(config->deadtime_ms + increment);
+	if (curnode->dead_ticks < new_ticks) {
+		curnode->dead_ticks = new_ticks;
+		send_local_status();
+	}
+	deadtime_tmpadd_count++;
+}
+static gboolean
+hb_pop_deadtime(gpointer p)
+{
+	deadtime_tmpadd_count--;
+	if (deadtime_tmpadd_count <= 0) {
+		curnode->dead_ticks = msto_longclock(config->deadtime_ms);
+		send_local_status();
+		deadtime_tmpadd_count = 0;
+	}
+	return FALSE;
+}
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.328  2004/10/19 09:47:47  zhenh
+ * make the deadtime tunable
+ *
  * Revision 1.327  2004/10/16 04:12:56  alan
  * Added core dump directories, and a bunch of code to cd into the
  * right core dump directory, and activated that code in several
