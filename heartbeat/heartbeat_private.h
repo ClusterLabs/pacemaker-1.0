@@ -1,4 +1,4 @@
-/* $Id: heartbeat_private.h,v 1.14 2004/10/08 18:37:07 alan Exp $ */
+/* $Id: heartbeat_private.h,v 1.15 2004/11/16 06:07:05 zhenh Exp $ */
 /*
  * heartbeat_private.h: definitions for the Linux-HA heartbeat program
  * that are defined in heartbeat.c and are used by other .c files
@@ -39,11 +39,17 @@
 #include <clplumbing/proctrack.h>
 #include <hb_proc.h>
 
+enum comm_state {
+	COMM_STARTING,
+	COMM_LINKSUP
+};
+
 extern const char *	cmdname;
 extern int		nice_failback;
 extern int		WeAreRestarting;
 extern int		shutdown_in_progress;
 extern longclock_t	local_takeover_time;
+extern enum comm_state	heartbeat_comm_state;
 
 /* Used by signal handlers */
 void hb_init_watchdog(void);
@@ -74,6 +80,7 @@ void hb_trigger_restart(int quickrestart);
 
 void hb_giveup_resources(void);
 void hb_kill_tracked_process(ProcTrack* p, void * data);
+gboolean hb_mcp_final_shutdown(gpointer p);
 
 struct ha_msg * add_control_msg_fields(struct ha_msg* ret);
 #endif /* _HEARTBEAT_PRIVATE_H */
