@@ -205,8 +205,7 @@ LookForString() {
   count=1
   while
     if
-      sync
-      grep "$1" $LOGFILE
+      grep -i "$1" $LOGFILE
     then
       return 0
     fi
@@ -222,8 +221,7 @@ LookForString() {
 #	Complain unless the right number are there.
 CheckPat()
 {
-  sync
-  count=`egrep -c "$1" $LOGFILE`
+  count=`egrep -ic "$1" $LOGFILE`
   min=$2
   if
     [ $# -gt 2 ]
