@@ -235,7 +235,7 @@ clusterinfo_get_int_value(lha_attribute_t attr, size_t index, uint32_t * value)
 
 	    for (i = 0; i < gNodeTable->len; i++) {
 		status = ((struct hb_nodeinfo *) g_ptr_array_index(gNodeTable, i))->status;
-		if (status != LHANODESTATUS_DEAD || 
+		if (status != LHANODESTATUS_DEAD &&
 			status != LHANODESTATUS_UNKNOWN ) {
 		    count++;
 		}
