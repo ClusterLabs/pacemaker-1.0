@@ -1,7 +1,7 @@
-/* $Id: mlock.c,v 1.6 2004/09/03 21:03:00 gshi Exp $ */
+/* $Id: mlock.c,v 1.7 2004/09/10 01:58:58 alan Exp $ */
 /*
  *
- * multi-clients lock test code
+ * multi-clients NFS lock test code
  *
  * Copyright (C) 2004 Guochun Shi<gshi@ncsa.uiuc.edu>
  *
@@ -856,6 +856,7 @@ generate_task_list(void)
 				
 			case FORK:
 				j++;
+				/* fall through */
 			case RUN:
 				task->run_param.num = task_table[i][j++];
 				task->run_param.sec = task_table[i][j++];
