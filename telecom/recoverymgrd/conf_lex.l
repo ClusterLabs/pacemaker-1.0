@@ -26,6 +26,7 @@
 #define  YYSTYPE char *
 #include "conf_yacc.h"
 extern int yylex(void);
+extern YYSTYPE yylval;
 
 extern void *yy_flex_realloc( void *ptr, yy_size_t size );
 extern int yy_flex_strlen( yyconst char *s );
