@@ -47,6 +47,7 @@ ConfigureLinux() {
   then
     distro="SuSE Linux"
     PACKAGECMD="$MAKE_CMD rpm"
+    export CFLAGS="$CFLAGS -fno-unit-at-a-time"
     DFLAGS="--with-ucd-snmp-devel=ucdsnmp --with-group-id=90 --with-ccmuser-id=90"
   elif
     [ -f /etc/redhat-release -a -s /etc/redhat-release ] 
@@ -122,7 +123,7 @@ ConfigureSolaris() {
 ConfigureDarwin() {
   FLAGS="--prefix=/sw --sysconfdir=/sw/etc --localstatedir=/sw/var --with-initdir=/private/etc/mach_init.d --enable-fatal-warnings=yes --with-group-id=65 --with-ccmuser-id=65"
   CFENV="Darwin"
-  export LDFLAGS="${LDFLAGS} -bind_at_load"
+  export LDFLAGS="${LDFLAGS} -bind_at_load -fno-common"
 }
 
 ConfigureGenericUNIX() {
