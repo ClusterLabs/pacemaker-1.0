@@ -60,6 +60,8 @@ initialize_table_LHAMembershipTable(void)
             
     if (!my_handler || !table_info || !iinfo) {
         snmp_log(LOG_ERR, "malloc failed in initialize_table_LHAMembershipTable");
+	SNMP_FREE(iinfo);
+	SNMP_FREE(table_info);
         return; /* Serious error. */
     }
 
@@ -165,7 +167,7 @@ LHAMembershipTable_get_next_data_point(void **my_loop_context, void **my_data_co
 	i = 0;
     }
 
-    if (gMembershipInfo && i >= gMembershipInfo->len) 
+    if (!gMembershipInfo || i >= gMembershipInfo->len) 
 	return NULL;
 
     vptr = put_index_data;

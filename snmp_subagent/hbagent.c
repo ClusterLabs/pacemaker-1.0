@@ -740,6 +740,10 @@ init_membership(void)
 
         nbuf = (SaClmClusterNotificationT *) ha_malloc(gNodeTable->len *
                                 sizeof (SaClmClusterNotificationT));
+	if (!nbuf) {
+		cl_log(LOG_ERR, "%s: ha_malloc failed for SaClmClusterNotificationT.", __FUNCTION__);
+		return HA_FAIL;
+	}
 
         if (saClmClusterTrackStart(&handle, SA_TRACK_CURRENT, nbuf,
                 gNodeTable->len) != SA_OK) {

@@ -60,6 +60,8 @@ initialize_table_LHAIFStatusTable(void)
             
     if (!my_handler || !table_info || !iinfo) {
         snmp_log(LOG_ERR, "malloc failed in initialize_table_LHAIFStatusTable");
+	SNMP_FREE(iinfo);
+	SNMP_FREE(table_info);
         return; /* Serious error. */
     }
 
@@ -177,7 +179,7 @@ LHAIFStatusTable_get_next_data_point(void **my_loop_context, void **my_data_cont
 	i = 0;
     }
 
-    if (gIFInfo && i >= gIFInfo->len) 
+    if (!gIFInfo || i >= gIFInfo->len) 
 	return NULL;
 
     vptr = put_index_data;

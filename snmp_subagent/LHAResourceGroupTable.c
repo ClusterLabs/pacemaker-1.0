@@ -60,6 +60,8 @@ initialize_table_LHAResourceGroupTable(void)
             
     if (!my_handler || !table_info || !iinfo) {
         snmp_log(LOG_ERR, "malloc failed in initialize_table_LHAResourceGroupTable");
+	SNMP_FREE(iinfo);
+	SNMP_FREE(table_info);
         return; /* Serious error. */
     }
 
@@ -176,7 +178,7 @@ LHAResourceGroupTable_get_next_data_point(void **my_loop_context, void **my_data
 	i = 0;
     }
 
-    if (gResourceGroupInfo && i >= gResourceGroupInfo->len)
+    if (!gResourceGroupInfo || i >= gResourceGroupInfo->len)
 	return NULL;
 
     vptr = put_index_data;

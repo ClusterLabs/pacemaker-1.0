@@ -61,6 +61,8 @@ initialize_table_LHANodeTable(void)
             
     if (!my_handler || !table_info || !iinfo) {
         snmp_log(LOG_ERR, "malloc failed in initialize_table_LHANodeTable");
+	SNMP_FREE(iinfo);
+	SNMP_FREE(table_info);
         return; /* Serious error. */
     }
 
@@ -166,8 +168,8 @@ LHANodeTable_get_next_data_point(void **my_loop_context, void **my_data_context,
 	i = 0;
     }
 
-    if (gNodeInfo && i >= gNodeInfo->len) 
-	return NULL;
+    if (!gNodeInfo || i >= gNodeInfo->len)
+    	return NULL;
 
     vptr = put_index_data;
     info = (struct hb_nodeinfo *) g_ptr_array_index(gNodeInfo, i);
