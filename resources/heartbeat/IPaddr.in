@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-#	$Id: IPaddr.in,v 1.4 2004/11/09 07:33:00 zhenh Exp $
+#	$Id: IPaddr.in,v 1.5 2004/11/10 00:22:13 gshi Exp $
 #
 #	This script manages IP alias IP addresses
 #
@@ -658,7 +658,7 @@ ip_monitor() {
 
 usage() {
   echo $USAGE >&2
-  echo "$Id: IPaddr.in,v 1.4 2004/11/09 07:33:00 zhenh Exp $"
+  echo "$Id: IPaddr.in,v 1.5 2004/11/10 00:22:13 gshi Exp $"
 }
 
 #
@@ -703,10 +703,13 @@ case $2 in
 		;;
 esac
 
-exit 0
+exit $?
 #
 #
 # $Log: IPaddr.in,v $
+# Revision 1.5  2004/11/10 00:22:13  gshi
+# return value should be $? instead of 0
+#
 # Revision 1.4  2004/11/09 07:33:00  zhenh
 # fix some bugs of exit code
 #
