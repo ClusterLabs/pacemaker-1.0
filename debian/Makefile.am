@@ -20,6 +20,14 @@
 #
 MAINTAINERCLEANFILES    = Makefile.in
 
+#PATCH_FILES		= $(shell find patches/ patches/series/ -maxdepth 1 -type f)
+PATCH_FILES		= patches/01-running_resource.patch \
+			  patches/00-ssh_scp_path.patch \
+			  patches/03-configure_status.patch \
+			  patches/02-lex_yacc_cflags.patch \
+			  patches/04-boostrap_copy.patch \
+			  patches/series/1.2.3-1
+
 EXTRA_DIST	        = changelog control copyright compat dpkg-checkbuild \
                           ldirectord.files \
                           ldirectord.postinst \
@@ -33,7 +41,7 @@ EXTRA_DIST	        = changelog control copyright compat dpkg-checkbuild \
                           heartbeat.dirs heartbeat.files \
 			  heartbeat-dev.dirs heartbeat-dev.files \
                           heartbeat.postinst heartbeat.postrm \
-			  rules
+			  rules apply $(PATCH_FILES)
 
 clean-local:
 	rm -f *.substvars *.debhelper files

@@ -1,8 +1,75 @@
-heartbeat (1.3.0.cvs.20040616-1) unstable; urgency=low
+heartbeat (1.2.3-1) unstable; urgency=low
 
-  * Test
+  * New Upstream
+    - Incoporate init script patch from 1.2.2-12 (Bug#268670)
+    - Incoporate ssh dependancy patch from 1.2.2-11
+    - All other changes were merged upstream for 1.2.3
+  * Added patch manager from kernel-source-2.4.27 to keep debian
+    specific and otherwise unmerged patches in order
 
- -- Simon Horman <horms@debian.org>  Wed, 16 Jun 2004 15:17:28 +0900
+ -- Simon Horman <horms@debian.org>  Tue, 21 Sep 2004 16:05:46 +0900
+
+heartbeat (1.2.2-12) unstable; urgency=low
+
+  * Backport send ARP from head branch
+    - broadcast works with -C
+    - -C is documented
+    - (closes: Bug#262288)
+  * Some init scipts tell us that they are not running,
+    heartbeat mistakenly just sees "running" and assumes they are.
+    - Fix by adding the following to ResourceManager(.in)
+   	  case `$spath $arg status` in
+      ->    *not [Rr]unning*)   return 3;;
+     	    *[Rr]unning*|*OK*)	return 0;;
+     	    *)			return 3;;
+   	  esac
+    - (closes: Bug#268670)
+  * Remove config.log in clean target of rules file
+
+ -- Simon Horman <horms@debian.org>  Mon, 30 Aug 2004 12:21:20 +0900
+
+heartbeat (1.2.2-11) unstable; urgency=medium
+
+  * Remove build dependancy on ssh as the package has ongoing
+    install problems on arm and this is preventing this package
+    from moving into sarge. Instead, provide configure options
+    to specify the path to ssh and scp.
+
+ -- Simon Horman <horms@debian.org>  Mon, 26 Jul 2004 12:00:37 +0900
+
+heartbeat (1.2.2-10) unstable; urgency=low
+
+  * Revert to tar ball that was used for previous (> 1.2.2-9) builds.
+    You can't modify the tar ball on debian.org !!! (silly me)
+
+ -- Simon Horman <horms@debian.org>  Wed,  7 Jul 2004 12:17:28 +0900
+
+heartbeat (1.2.2-9) unstable; urgency=low
+
+  * Fix sequence number wrap in ping_group
+    (Patched ping_group.c from 1.10 to 1.11)
+  * Build against tar ball from linux-ha.org
+    A locally produced tar ball had been used in the past (my mistake)
+
+ -- Simon Horman <horms@debian.org>  Wed,  7 Jul 2004 11:20:41 +0900
+
+heartbeat (1.2.2-8) unstable; urgency=low
+
+  *  The previous version never made it into testing because
+     the build failed on arm because the ssh package was broken
+     at the time. I have not had any luck contacting someone to
+     rebuild the package.
+  *  Updated ldirectord to 1.77.2.4 (from 1.77.2.2).
+     Fixes a problem where real servers present in multiple
+     virtuals would only be added to one virtual service.
+
+ -- Simon Horman <horms@debian.org>  Wed, 23 Jun 2004 17:01:26 +0900
+
+heartbeat (1.2.2-7) unstable; urgency=low
+
+  * Link the apcmastersnmp stonith module against libsnmp
+
+ -- Simon Horman <horms@debian.org>  Fri,  4 Jun 2004 16:07:49 +0900
 
 heartbeat (1.2.2-5) unstable; urgency=low
 

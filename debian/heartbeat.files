@@ -74,8 +74,7 @@ usr/lib/libclm.so.0
 usr/lib/libclm.so.0.0.0
 usr/lib/libckpt.so.0
 usr/lib/libckpt.so.0.0.0
-usr/lib/heartbeat/cl_status
-usr/lib/heartbeat/cl_respawn
+usr/bin/cl_status
 usr/share/man/man8/heartbeat.8.gz
 usr/share/man/man8/apphbd.8.gz
 usr/share/man/man1/cl_status.1.gz

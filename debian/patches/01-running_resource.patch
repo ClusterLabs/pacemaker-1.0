@@ -1,0 +1,11 @@
+diff -x install-sh -x ltmain.sh -x missing -x mkinstalldirs -x config.guess -x config.sub -x configure.in -x aclocal.m4 -x autom4te.cache -x Makefile.in -x libltdl -ruN heartbeat-1.2.3/heartbeat/lib/ResourceManager.in heartbeat-1.2.3.debian/heartbeat/lib/ResourceManager.in
+--- heartbeat-1.2.3/heartbeat/lib/ResourceManager.in	2004-04-20 14:05:29.000000000 +0900
++++ heartbeat-1.2.3.debian/heartbeat/lib/ResourceManager.in	2004-08-30 12:23:33.000000000 +0900
+@@ -181,6 +181,7 @@
+   spath=`scriptpath $1`;
+ 
+   case `$spath $arg status` in
++    *not\ [Rr]unning*)  return 3;;
+     *[Rr]unning*|*OK*)	return 0;;
+     *)			return 3;;
+   esac
