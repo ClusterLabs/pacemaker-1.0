@@ -1,4 +1,4 @@
-/* $Id: ccmlib.h,v 1.16 2004/09/20 18:59:16 msoffen Exp $ */
+/* $Id: ccmlib.h,v 1.17 2004/11/08 08:26:01 andrew Exp $ */
 /*
  * ccmlib.h: internal definations for ccm library files.
  *
@@ -40,7 +40,7 @@ void oc_ev_special(const oc_ev_t *, oc_ev_class_t , int );
 
 #define NODEIDSIZE 255 /* if this value is changed change it 
 			  	also in ccm.h */
-#define CCMFIFO "/var/lib/heartbeat/ccm/ccm" /* if this value
+#define CCMFIFO HA_VARLIBDIR "/heartbeat/ccm/ccm" /* if this value
 			is changed change it also in ccm.h */
 
 size_t strnlen(const char *, size_t); /*TOBEDONE*/

@@ -1,4 +1,4 @@
-/* $Id: ccm.h,v 1.24 2004/10/01 00:52:55 yixiong Exp $ */
+/* $Id: ccm.h,v 1.25 2004/11/08 08:26:01 andrew Exp $ */
 /*
  * ccm.h: definitions Consensus Cluster Manager internal header
  *				file
@@ -81,7 +81,7 @@ unsigned int version_get_nresp(ccm_version_t *);
 #define NODEIDSIZE 255 /* if this value is changed, change it
 			  	also in ccmlib.h */
 #define STATUSSIZE 15
-#define CCMFIFO    "/var/lib/heartbeat/ccm/ccm" /* if this value is
+#define CCMFIFO    HA_VARLIBDIR "/heartbeat/ccm/ccm" /* if this value is
 			changed change it also in ccmlib.h */
 
 typedef struct NodeList_s {
