@@ -1,4 +1,4 @@
-/* $Id: hb_api.c,v 1.114 2004/10/08 19:53:13 gshi Exp $ */
+/* $Id: hb_api.c,v 1.115 2004/10/13 22:38:07 gshi Exp $ */
 /*
  * hb_api: Server-side heartbeat API code
  *
@@ -1605,7 +1605,6 @@ api_add_client(client_proc_t* client, struct ha_msg* msg)
 		cl_log(LOG_WARNING
 		,	"Client [%s] pid %d failed authorization [%s]"
 		,	client->client_id, pid, client->removereason);
-		api_send_client_status(client, LEAVESTATUS, "auth failure");
 		return FALSE;
 	}
 	return TRUE;
