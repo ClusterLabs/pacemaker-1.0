@@ -4,6 +4,9 @@
 #include "ais_base.h"
 
 /* Chapter 9 */
+#ifdef __CPLUSPLUS
+extern "C"{
+#endif
 
 typedef OPAQUE_TYPE SaMsgHandleT;
 typedef OPAQUE_TYPE SaMsgMessageHandleT;
@@ -236,5 +239,9 @@ saMsgMessageReplyAsync(const SaMsgHandleT *msgHandle,
                        const SaMsgMessageT *replyMessage,
                        const SaMsgMessageInfoT *receiveMessageInfo,
                        SaMsgAckFlagsT ackFlags);
+
+#ifdef __CPLUSPLUS
+}
+#endif
 
 #endif /* _AIS_MESSAGE_H_ */

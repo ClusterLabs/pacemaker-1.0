@@ -4,6 +4,9 @@
 #include "ais_base.h"
 
 /* Chapter 6 */
+#ifdef __CPLUSPLUS
+extern "C"{
+#endif
 
 typedef SaUint32T SaClmHandleT;
 typedef SaUint32T SaClmNodeIdT;
@@ -82,5 +85,8 @@ saClmClusterNodeGetAsync(const SaClmHandleT *clmHandle,
                          SaInvocationT invocation,
                          SaClmNodeIdT nodeId,
                          SaClmClusterNodeT *clusterNode);
+#ifdef __CPLUSPLUS
+}
+#endif
 
 #endif /* _AIS_MEMBERSHIP_H_ */

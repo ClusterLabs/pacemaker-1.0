@@ -5,6 +5,9 @@
 
 
 /* Chapter 8 */
+#ifdef __CPLUSPLUS
+extern "C"{
+#endif
 
 typedef SaUint32T SaEvtHandleT;
 typedef SaUint32T SaEvtEventHandleT;
@@ -147,5 +150,8 @@ SaErrorT saEvtChannelUnlink(SaEvtHandleT evtHandle,
     SaErrorT 
 saEvtEventRetentionTimeClear(SaEvtChannelHandleT channelHandle,
                              const SaEvtEventIdT eventHandle);
+#ifdef __CPLUSPLUS
+}
+#endif
 
 #endif /* _AIS_EVENT_H_ */

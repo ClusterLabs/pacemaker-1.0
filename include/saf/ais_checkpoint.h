@@ -4,6 +4,9 @@
 #include "ais_base.h"
 
 /* Chapter 7 */
+#ifdef __CPLUSPLUS
+extern "C"{
+#endif
 
 typedef OPAQUE_TYPE SaCkptHandleT;
 typedef OPAQUE_TYPE SaCkptCheckpointHandleT;
@@ -203,5 +206,8 @@ saCkptCheckpointSynchronizeAsync(const SaCkptHandleT *ckptHandle,
                                  SaInvocationT invocation,
                                  const SaCkptCheckpointHandleT 
                                      *checkpointHandle);
+#ifdef __CPLUSPLUS
+}
+#endif
 
 #endif /* _AIS_CHECKPOINT_H_ */
