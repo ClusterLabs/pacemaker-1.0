@@ -37,6 +37,7 @@ CLSTATUS=@bindir@/cl_status
 APPHBTEST=$HBLIB/apphbtest
 IPCTEST=$HBLIB/ipctest
 LRMTEST=$HBLIB/lrmtest/LRMBasicSanityCheck
+STONITHDTEST=$HBLIB/stonithdtest/STONITHDBasicSanityCheck
 CRMTEST=$HBLIB/crmtest/1node.sh
 SNMPAGENTTEST=$HBLIB/SNMPAgentSanityCheck
 MALLOC_CHECK_=2; export MALLOC_CHECK_
@@ -120,6 +121,7 @@ GenerateHaCf() {
 	node $LOCALNODE $DUMMYNODE
 	respawn @HA_CCMUSER@ $HBLIB/ccm
 	respawn @HA_CCMUSER@ $HBLIB/ipfail
+	apiauth stonithd uid=root
 	# Eventually I'd like to be able to enable this and
 	# have things work right...
 	#respawn root $HBLIB/hbagent
@@ -646,6 +648,54 @@ LRMTest() {
 	fi
 }
 
+StonithDaemonTest() {
+	if 
+		[ ! -f $STONITHDTEST ]
+	then 
+		return 1
+	fi
+	if 
+		! HBStart
+	then
+		echo "cannot start heartbeat, so donnot start stonith daemon test." | tee -a $LOGFILE
+		return 1
+	fi
+
+  	i=0
+	while
+		[ "$i" -lt 10 ]
+	do
+		if
+			$CLSTATUS hbstatus >/dev/null 2>&1
+		then
+			break
+		else
+			sleep 1
+		fi
+		i=`expr "$i" + 1`
+	done
+
+	if
+		! $CLSTATUS hbstatus >/dev/null 2>&1
+	then
+		echo "There are internal errors in heartbeat, so donnot start stonith daemon test." | tee -a $LOGFILE
+		return 1
+	fi
+
+	echo "starting STONITH Daemon tests" | tee -a $LOGFILE
+	$STONITHDTEST >> $LOGFILE 2>&1
+	ret=$?
+	errcount=`expr $errcount + $ret`
+	if 
+	        [ $ret != 0 ]
+	then 
+		echo "STONITH Daemon tests failed."
+	else 
+	  	echo "STONITH Daemon tests passed."
+	fi
+	HBStop
+}
+
 TestCRM() {
   	if [ ! -f $CRMTEST ]; then
 	    return 0
@@ -726,6 +776,7 @@ StonithCheck
 AppHBCheck
 IPCtest
 LRMTest
+StonithDaemonTest
 TestCRM
 SNMPAgentTest
 
