@@ -712,7 +712,7 @@ StonithCheck
 AppHBCheck
 IPCtest
 LRMTest
-#TestCRM
+TestCRM
 SNMPAgentTest
 
 ls -l $HADIR/core* 2>/dev/null
