@@ -1,4 +1,4 @@
-/* $Id: ha_msg.h,v 1.56 2005/03/18 23:22:16 gshi Exp $ */
+/* $Id: ha_msg.h,v 1.57 2005/03/21 17:51:57 gshi Exp $ */
 /*
  * Intracluster message object (struct ha_msg)
  *
@@ -139,6 +139,7 @@ extern struct fieldtypefuncs_s fieldtypefuncs[4];
 #define	F_TO		"dest"		/* Destination (optional) */
 #define F_TOUUID	"destuuid"	/* Destination uuid(optional) */
 #define	F_STATUS	"st"		/* New status (type = status) */
+#define F_PROTOCOL	"protocol"	/* Protocol number for communication*/
 #define	F_CLIENTNAME	"cn"		/* Client name */
 #define	F_CLIENTSTATUS	"cs"		/* Client status */
 #define	F_TIME		"ts"		/* Timestamp */

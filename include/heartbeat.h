@@ -1,4 +1,4 @@
-/* $Id: heartbeat.h,v 1.60 2005/03/04 15:59:09 alan Exp $ */
+/* $Id: heartbeat.h,v 1.61 2005/03/21 17:51:57 gshi Exp $ */
 /*
  * heartbeat.h: core definitions for the Linux-HA heartbeat program
  *
@@ -218,6 +218,8 @@
 #define	FD_STDIN	0
 #define	FD_STDOUT	1
 #define	FD_STDERR	2
+
+#define PROTOCOL_VERSION	1
 
 typedef unsigned long seqno_t;
 

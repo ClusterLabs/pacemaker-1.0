@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.380 2005/03/18 23:22:16 gshi Exp $ */
+/* $Id: heartbeat.c,v 1.381 2005/03/21 17:51:57 gshi Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -333,6 +333,8 @@ static longclock_t		NextPoll = 0UL;
 static int			ClockJustJumped = FALSE;
 longclock_t			local_takeover_time = 0L;
 static int 			deadtime_tmpadd_count = 0;
+gboolean			enable_flow_control = TRUE;
+
 static void print_a_child_client(gpointer childentry, gpointer unused);
 
 #undef DO_AUDITXMITHIST
@@ -1846,7 +1848,14 @@ hb_mcp_final_shutdown(gpointer p)
 }
 
 
-
+static void
+hb_remove_msg_callback(const char * mtype)
+{
+	if (message_callbacks == NULL) {
+		return;
+	}
+	g_hash_table_remove(message_callbacks, mtype);
+}
 void
 hb_register_msg_callback(const char * mtype, HBmsgcallback callback)
 {
@@ -2023,6 +2032,7 @@ HBDoMsg_T_STATUS(const char * type, struct node_info * fromnode
 	longclock_t		messagetime = time_longclock();
 	const char	*tmpstr;
 	long		deadtime;
+	int		protover;
 
 	status = ha_msg_value(msg, F_STATUS);
 	if (status == NULL)  {
@@ -2031,6 +2041,10 @@ HBDoMsg_T_STATUS(const char * type, struct node_info * fromnode
 		F_STATUS " field");
 		return;
 	}
+	
+	/* Dooes it contain F_PROTOCOL field?*/
+	
+	
 
 	/* Do we already have a newer status? */
 	if (msgtime < fromnode->rmt_lastupdate
@@ -2039,6 +2053,13 @@ HBDoMsg_T_STATUS(const char * type, struct node_info * fromnode
 	}
 
 	/* Have we seen an update from here before? */
+	if (fromnode->nodetype != PINGNODE_I
+	    && enable_flow_control 
+	    && ha_msg_value_int(msg, F_PROTOCOL, &protover) != HA_OK){		
+		cl_log(LOG_INFO, "flow control disabled due to different version heartbeat");
+		enable_flow_control = FALSE;
+		hb_remove_msg_callback(T_ACKMSG);
+	}
 
 	if (fromnode->local_lastupdate) {
 		long		heartbeat_ms;
@@ -2059,7 +2080,7 @@ HBDoMsg_T_STATUS(const char * type, struct node_info * fromnode
 	if (strcasecmp(fromnode->status, status) != 0
 	&&	fromnode != curnode) {
 		cl_log(LOG_INFO
-		,	"Status update for node %s: status %s"
+		       ,	"Status update for node %s: status %s"
 		,	fromnode->nodename
 		,	status);
 		if (ANYDEBUG) {
@@ -2205,6 +2226,10 @@ send_ack_if_needed(struct node_info* thisnode, seqno_t seq)
 	struct seqtrack* t = &thisnode->track;
         seqno_t		fm_seq = t->first_missing_seq;
 	
+	if (!enable_flow_control){
+		return;
+	}
+	
 	if ( (fm_seq != 0 && seq > fm_seq) ||
 	     seq % ACK_MSG_DIV != thisnode->track.ack_trigger){
 		/*no need to send ACK */
@@ -2243,6 +2268,10 @@ send_ack_if_necessary(const struct ha_msg* m)
 	const char*	seq_str = ha_msg_value(m, F_SEQ);
 	seqno_t		seq;
 	struct	node_info*	thisnode = NULL;
+
+	if (!enable_flow_control){
+		return;
+	}
 	
 	if ( cl_get_uuid(m, F_ORIGUUID, fromuuid) != HA_OK){
 		uuid_clear(fromuuid);
@@ -3217,10 +3246,15 @@ send_local_status()
 	||	ha_msg_add(m, F_STATUS, curnode->status) != HA_OK
 	||	ha_msg_add(m, F_DT, deadtime) != HA_OK) {
 		cl_log(LOG_ERR, "send_local_status: "
-		"Cannot create local status msg");
+		       "Cannot create local status msg");
 		rc = HA_FAIL;
 		ha_msg_del(m);
 	}else{
+		if (enable_flow_control 
+		    && ha_msg_add_int(m, F_PROTOCOL, PROTOCOL_VERSION) != HA_OK){
+			cl_log(LOG_ERR, "send_local_status: "
+			       "Adding protocol number failed");
+		}
 		rc = send_cluster_msg(m);
 	}
 
@@ -4529,6 +4563,10 @@ is_lost_packet(struct node_info * thisnode, seqno_t seq)
 	}	
 	
  out:
+	if (!enable_flow_control){
+		return ret;
+	}
+	
 	if (ret && seq == t->first_missing_seq){
 		/*determine the new first missing seq*/
 		seqno_t old_missing_seq = t->first_missing_seq;
@@ -5154,6 +5192,9 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.381  2005/03/21 17:51:57  gshi
+ * disable flow control in heartbeat when running with old versions in other nodes
+ *
  * Revision 1.380  2005/03/18 23:22:16  gshi
  * add a parameter (int flag) to msgfromIPC()
  * flag can have the following bit set
