@@ -217,8 +217,8 @@ auto_failback on
 #ping 10.10.10.254
 #
 #	Treats 10.10.10.254 and 10.10.10.253 as a psuedo-cluster-member
-#       called group1. Both 10.10.10.254 and 10.10.10.253 must be up
-#       for group1 to be up
+#       called group1. If either 10.10.10.254 or 10.10.10.253 are up
+#       then group1 is up
 #	Used together with ipfail below...
 #
 #ping_group group1 10.10.10.254 10.10.10.253

@@ -201,8 +201,8 @@ connectivity for modules like ipfail.</dd>
   <dt> <b><tt><font size="+1">ping_group&nbsp;&nbsp;&nbsp;
 name&nbsp; ping1.linux-ha.org&nbsp; ping2.linux-ha.org ....</font></tt></b></dt>
   <dd> <i>Optional</i>: Specify a group ping nodes.&nbsp; These are the
-  similar to ping nodes, but all nodes in a group must be available
-  for the group to be considered available. The group name can
+  similar to ping nodes, but if any node in a group is available
+  then the group is considered available. The group name can
   be any string and is used to uniquely identify the group.
   Each group must appear on a separate line.
   Like ping nodes the group is not considered to be a cluster node.

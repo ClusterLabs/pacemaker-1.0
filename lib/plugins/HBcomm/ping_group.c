@@ -1,9 +1,9 @@
-static const char _ping_group_Id [] = "$Id: ping_group.c,v 1.1 2003/08/15 05:01:20 horms Exp $";
+static const char _ping_group_Id [] = "$Id: ping_group.c,v 1.2 2003/08/28 01:37:11 horms Exp $";
 /*
  * ping_group.c: ICMP-echo-based heartbeat code for heartbeat.
  *
- * This allows a group of nodes to be pinged. The group is only
- * considered to be available if all of the nodes are available.
+ * This allows a group of nodes to be pinged. The group is
+ * considered to be available if any of the nodes are available.
  *
  * Copyright (C) 2003 Horms <horms@verge.net.au>
  *
@@ -102,7 +102,6 @@ typedef struct ping_group_node ping_group_node_t;
 struct ping_group_node {
         struct sockaddr_in      addr;   	/* ping addr */
 	ping_group_node_t	*next;
-	int			slot[NSLOT];
 };
 
 typedef struct {
@@ -422,7 +421,6 @@ ping_group_read(struct hb_media* mp)
 	int 			seq;
 	size_t			slotn;
 	ping_group_node_t	*node;
-	ping_group_node_t	*node_i;
 	struct ha_msg		*msg = NULL;
 	const char 		*comment;
 
@@ -478,7 +476,6 @@ ping_group_read(struct hb_media* mp)
 		}
 	}
 	if(!node) {
-		/* Hee, sono noodo ha dare desu ka? */
 		return(NULL);
 	}
 
@@ -496,10 +493,7 @@ ping_group_read(struct hb_media* mp)
 	if(seq > ei->iseq) {
 		/* New Sequins ! */
 		ei->iseq = seq;
-		for(node_i = ei->node; node_i; node_i = node_i->next) {
-			node_i->slot[slotn] = 0;
-		}
-		ei->slot[slotn] = ei->nnode;
+		ei->slot[slotn] = 0;
 	}
 	else if(seq < ei->iseq - NSLOT) {
 		/* Sequence is too old */
@@ -507,13 +501,8 @@ ping_group_read(struct hb_media* mp)
 		return(NULL);
 	}
 
-	if(!node->slot[slotn]) {
-		node->slot[slotn]++;
-		ei->slot[slotn]--;
-	}
-
-	if(!ei->slot[slotn]) {
-		/* All nodes have responded */
+	if(!ei->slot[slotn]++) {
+		/* First response responded */
 		return(msg);
 	}
 	
