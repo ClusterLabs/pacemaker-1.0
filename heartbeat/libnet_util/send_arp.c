@@ -1,4 +1,4 @@
-const static char * _send_arp_c = "$Id: send_arp.c,v 1.24 2003/09/26 06:02:13 alan Exp $";
+const static char * _send_arp_c = "$Id: send_arp.c,v 1.1 2003/10/15 09:52:12 horms Exp $";
 /* 
  * send_arp
  * 
@@ -259,6 +259,11 @@ send_arp(libnet_t* lntag, u_long ip, u_char *device, u_char *macaddr, u_char *br
 
 /*
  * $Log: send_arp.c,v $
+ * Revision 1.1  2003/10/15 09:52:12  horms
+ * Move utilities that link against libnet (sendarp and get_hw_addr)
+ * to their own directory so we no longer have to come up with
+ * creative ways to selectively mangle CFLAGS.
+ *
  * Revision 1.24  2003/09/26 06:02:13  alan
  * Fixed an undefined variable warning.
  *

@@ -44,7 +44,7 @@ AM_CFLAGS			= @CFLAGS@ \
 -DHALIB='"$(halibdir)"'
 
 ## script subdirs
-SUBDIRS			= init.d lib logrotate.d rc.d resource.d
+SUBDIRS			= init.d lib logrotate.d rc.d resource.d libnet_util
 
 noinst_HEADERS		=	hb_api_core.h		\
 				hb_config.h		\
@@ -65,7 +65,7 @@ libhbclient_la_SOURCES	= client_lib.c lock.c ha_msg.c
 libhbclient_la_LDFLAGS	= -version-info 0:0:0
 
 ## binary progs
-halib_PROGRAMS		= heartbeat send_arp findif api_test get_hw_addr
+halib_PROGRAMS		= heartbeat findif api_test
 
 ## SOURCES
 heartbeat_SOURCES	= heartbeat.c auth.c				\
@@ -82,25 +82,6 @@ heartbeat_LDADD		= $(top_builddir)/lib/stonith/libstonith.la	\
 heartbeat_LDFLAGS	= @LIBADD_DL@ @LIBLTDL@ -export-dynamic	\
 			-dlpreopen force \
 			-dlopen self
-
-heartbeat_CFLAGS	= $(AM_CFLAGS)
-
-send_arp_SOURCES	= send_arp.c
-send_arp_CFLAGS		= @LIBNETDEFINES@ $(CFLAGS) $(INCLUDES)
-send_arp_LDADD	 	= $(top_builddir)/lib/clplumbing/libplumb.la	\
-			$(gliblib) -L$(libdir) @LIBNETLIBS@
-
-send_arp.o: $(send_arp_SOURCES)
-	( old_pwd=`pwd` ; cd $(srcdir) && $(COMPILE) -c $(send_arp_SOURCES) \
-		-o $$old_pwd/$@  $(send_arp_CFLAGS) )
-
-get_hw_addr_SOURCES	= get_hw_addr.c
-get_hw_addr_CFLAGS	 	= @LIBNETDEFINES@ $(CFLAGS) $(INCLUDES)
-get_hw_addr_LDADD	 	= -L$(libdir) @LIBNETLIBS@
-
-get_hw_addr.o: $(get_hw_addr_SOURCES)
-	( old_pwd=`pwd` ; cd $(srcdir) && $(COMPILE) -c $(get_hw_addr_SOURCES) \
-		-o $$old_pwd/$@ $(get_hw_addr_CFLAGS) )
 
 findif_SOURCES		= findif.c
 findif_LDADD		=$(top_builddir)/replace/libreplace.la

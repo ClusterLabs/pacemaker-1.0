@@ -1,11 +1,9 @@
 Makefile.in
 Makefile
+send_arp
+get_hw_addr
 .deps
 .libs
-heartbeat
-findif
-api_test
 *.la
 *.lo
 .*.swp
-shellfuncs
