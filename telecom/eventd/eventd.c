@@ -1,4 +1,4 @@
-/* $Id: eventd.c,v 1.3 2004/03/25 09:59:18 forrest Exp $ */
+/* $Id: eventd.c,v 1.4 2004/03/29 06:28:24 forrest Exp $ */
 /* 
  * eventd.c: source file for event daemon
  *
@@ -1288,7 +1288,8 @@ static SaErrorT clear_retention_time(char *channel_name,
 	}
 	g_hash_table_remove(evt_ch->event_cache, 
 				(gpointer)(long)(tmp_32));
-	free_event(event);
+	//the event will be released in timeout
+	//free_event(event);
 	return SA_OK;
 }
 
