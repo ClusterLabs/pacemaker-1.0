@@ -1,4 +1,4 @@
-const static char * _heartbeat_c_Id = "$Id: heartbeat.c,v 1.290 2004/02/14 15:48:34 alan Exp $";
+const static char * _heartbeat_c_Id = "$Id: heartbeat.c,v 1.291 2004/02/17 21:10:30 alan Exp $";
 
 /*
  * heartbeat: Linux-HA heartbeat code
@@ -1889,7 +1889,7 @@ process_clustermsg(struct ha_msg* msg, struct link* lnk)
 		    	cl_log(LOG_INFO
 			,	"Received shutdown notice from '%s'."
 			,	thisnode->nodename);
-			mark_node_dead(thisnode);
+			takeover_from_node(thisnode->nodename);
 		}
 
 	}else if (strcasecmp(type, T_STARTING) == 0
@@ -4117,6 +4117,15 @@ get_localnodeinfo(void)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.291  2004/02/17 21:10:30  alan
+ * I'm removing this patch:
+ *   When a node shuts down gracefully, we now mark it dead instead of
+ *   silently taking over its resources.  That way a very quick restart won't
+ *   confuse us.
+ * Because it causes heartbeat to declare one side as having a split brain
+ * when subsequent packets come in from the shutting-down machine.
+ * This causes a restart.
+ *
  * Revision 1.290  2004/02/14 15:48:34  alan
  * When a node shuts down gracefully, we now mark it dead instead of
  * silently taking over its resources.  That way a very quick restart won't
