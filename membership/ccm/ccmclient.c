@@ -1,4 +1,4 @@
-/* $Id: ccmclient.c,v 1.24 2005/03/29 18:48:54 gshi Exp $ */
+/* $Id: ccmclient.c,v 1.25 2005/04/01 00:44:03 gshi Exp $ */
 /* 
  * client.c: Consensus Cluster Client tracker
  *
@@ -381,6 +381,9 @@ client_new_mbrship(ccm_info_t* info, void* borndata)
 	int		n = info->ccm_nodeCount;
 	int		trans = info->ccm_transition_major;
 	int*		member = info->ccm_member;
+	char*		member_str_p;
+	char		member_str[MAXLINE];
+	int		i;
 	
 	assert( n<= MAXNODE);
 
@@ -420,6 +423,16 @@ client_new_mbrship(ccm_info_t* info, void* borndata)
 #else
 	(void)display_func;
 #endif 
+	
+	member_str_p = member_str;
+	for (i = 0; i < info->ccm_nodeCount; i++){
+		int idx = info->ccm_member[i];
+		member_str_p +=sprintf(member_str_p, "%s",info->llm.nodes[idx].nodename);
+		member_str_p += sprintf(member_str_p, "\t");
+	}
+	
+	cl_log(LOG_INFO, "members are: %s", member_str);
+	
 
 	send_all();
 	if(global_verbose) {
