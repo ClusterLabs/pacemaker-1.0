@@ -1,0 +1,8 @@
+sudo rsh kathy /etc/rc.d/init.d/heartbeat stop &
+sudo /etc/rc.d/init.d/heartbeat stop
+sudo rdate -s drtime
+sudo rsh kathy rdate -s drtime
+sudo sh -c ">/var/log/ha-log"
+sudo rsh kathy sh -c '">/var/log/ha-log"'
+sudo rsh kathy /etc/rc.d/init.d/heartbeat start &
+sudo /etc/rc.d/init.d/heartbeat start

@@ -1,0 +1,148 @@
+<!doctype html public "-//w3c//dtd html 4.0 transitional//en">
+<html>
+<head>
+   <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+   <meta name="GENERATOR" content="Mozilla/4.61 [en] (X11; I; Linux 2.2.5-22 i686) [Netscape]">
+</head>
+<body>
+
+<h1>
+Linux-HA Phase I Requirements</h1>
+This document describes a set of general Linux-HA requirements which have
+been presented to the list, and no objections were made.&nbsp; Of course,
+it would have been nice to have had a good discussion, but I take silence
+to mean assent :-)
+<h2>Linux-HA Phase I General Goals</h2>
+
+<ul>
+<li>Simple</li>
+
+<li>Reliable</li>
+
+<li>Easy to configure</li>
+
+<li>Easy to test</li>
+
+<li>Easy to monitor</li>
+
+<li>Redundant hardware and software are verified for
+working condition</li>
+</ul>
+
+<h2>Linux-HA Phase I Requirements</h2>
+
+The short-term goal of Phase I is to provide a more realistic demonstration
+of Linux-HA, in a form that will actually be usable to a certain set of
+customers (users) in a production sense.
+<p>This demonstration is focused on providing High-Availability web service.&nbsp;
+The rationale for providing web service is simple:&nbsp; It is well-understood,
+and Linux has a significant presence in the web server market.&nbsp; This
+will provide more initial users and testers than most other applications.
+<p>The following minimal requirements on the web service are considered
+sufficient for this demonstration:
+<ul>
+<li>
+An active/standby methodology is acceptable.&nbsp; Load sharing need
+not be explicitly supported</li>
+
+<li>
+Data on standby nodes must be continually replicated from their paired
+active nodes over dedicated LANs.&nbsp; I am referring specifically to
+application data, not cluster config data.</li>
+
+<ul>
+<li>
+Comment: It is expected that we will use "poor man's replication"
+between the active and standby nodes</li>
+</ul>
+
+<li>
+<b><i>IP address takeover between active and standby hosts. Ability to
+start and stop applications as IP addresses move around the cluster.</i></b></li>
+
+<li>
+<b><i>Basic cluster monitoring capabilities via /proc-like interface</i></b></li>
+
+<li>
+Simple configuration and installation documentation</li>
+
+<li>
+<b><i>Basic support for either resource groups</i></b> or dependencies</li>
+</ul>
+
+<h2>Restrictions Allowed for Demonstration</h2>
+
+The following restrictions are considered acceptable for the demonstration.
+
+<ul>
+
+<li>It is not necessary to provide load sharing between members of the cluster
+(An active/standby methodology is acceptable)</li>
+
+<li>A single active/standby pair is sufficient at the beginning</li>
+
+<li>No application level notification of cluster transitions need be provided
+(though see the stop/start requirement above)</li>
+
+<li>No hardware diagnostics need be provided</li>
+</ul>
+
+<h2>Post-Demonstration Requirement Candidates</h2>
+After these demonstration requirements have been met, it is expected that
+the following capabilities will be added (not listed in priority order):
+
+<ul>
+<li>Integration of hardware and software diagnostics into the architecture</li>
+
+<li>Support for in-node IP interface failover (failing between NICs within
+a single host)</li>
+
+<li>Application notification of cluster transitions (support for arbitrary
+application failover)</li>
+
+<li>Plug-in modules interface available for cluster management</li>
+
+<ul>
+<li>{allowing support for: active/standby, n+1, load sharing, etc.}</li>
+</ul>
+
+<li>Cluster management uses diagnostic information in failover strategy</li>
+
+<li>Arbitrary number of nodes in cluster.</li>
+
+<li>Multiple pairs of active/standby servers in the cluster</li>
+
+<li>Easily configured support for common servers like these: ftp, smtp,
+pop3, imap, DNS, others (?)</li>
+
+<br>This is intended to be something more sophisticated than changing run
+levels.&nbsp; Changing run levels only supports the active/standby model.&nbsp;
+Note that these kinds of services may be started and stopped with /etc/rc.d/init.d
+scripts, but will not likely be tied to run levels.
+<li>Load sharing between the active/replicator servers via NFS (?)</li>
+
+<li>Support for other replication configurations.&nbsp; For example:</li>
+
+<ul>
+<li>Shared SCSI</li>
+
+<li>GFS</li>
+
+<li>User-defined replication methods</li>
+</ul>
+
+<li>Sophisticated, cool GUI monitoring capabilities</li>
+
+<li>Cool GUI configuration tools</li>
+
+<li>Other cool and feasible things such as people are moved to do them
+:-)</li>
+
+<li>I have a bias against making the customer to write shell
+scripts to move
+resources around for "normal" cases.&nbsp; This is in harmony with "easy
+to configure" and Cool GUI configuration tools.</li>
+</ul>
+
+</body>
+</html>

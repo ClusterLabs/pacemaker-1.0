@@ -1,0 +1,171 @@
+#
+# Sample ldirectord configuration file to configure various virtual services.
+#
+# Ldirectord will connect to each real server once per second and request
+# /index.html. If the data returned by the server does not contain the
+# string "Test Message" then the test fails and the real server will be
+# taken out of the available pool. The real server will be added back into
+# the pool once the test succeeds. If all real servers are removed from the
+# pool then localhost:80 is added to the pool as a fallback measure.
+
+# Global Directives
+checktimeout=3
+checkinterval=1
+fallback=127.0.0.1:80
+autoreload=yes
+#logfile="/var/log/ldirectord.log"
+#logfile="local0"
+quiescent=yes
+
+# A sample virual with a fallback that will override the gobal setting
+virtual=192.168.6.240:80
+	real=192.168.6.2:80 gate
+	real=192.168.6.3:80 gate
+	real=192.168.6.6:80 gate
+ 	fallback=127.0.0.1:80 gate
+	service=http
+	request="index.html"
+	receive="Test Page"
+	scheduler=rr
+	#persistent=600
+	#netmask=255.255.255.255
+	protocol=tcp
+
+# Sample configuration for a fwmark based service For an explination of
+# fwmark see the ipvsadm(8) man page
+#virtual=1
+#	real=192.168.6.2 gate
+#	real=192.168.6.3 gate
+#	real=192.168.6.6 gate
+#	service=http
+#	checkport=80
+#	request="index.html"
+#	receive="Test Page"
+#	scheduler=rr
+#	#persistent=600
+#	#netmask=255.255.255.255
+#	protocol=fwm
+#	checktype=connect
+
+# Sample configuration for a service using a range of real servers
+# and a single real server for a virtual service
+#virtual=192.168.6.240:80
+#	real=192.168.6.2->192.168.6.7:80 gate
+#	real=192.168.6.32:80 gate
+#	service=http
+#	request="index.html"
+#	receive="Test Page"
+#	scheduler=rr
+#	protocol=tcp
+
+#Sample configuration for an https virtual service.
+#Fallback setting overides global
+#virtual=192.168.6.240:443
+#	real=192.168.16.3:443 masq
+#	real=192.168.16.5:443 masq
+#	fallback=127.0.0.1:443
+#	service=https
+#	scheduler=wlc
+#	request="index.html"
+#	receive="Test Page"
+#	scheduler=rr
+#	#persistent=600
+#	#netmask=255.255.255.255
+#	protocol=tcp
+
+#Sample configuration for an ftp virtual service.
+#Fallback setting overides global
+#virtual=192.168.6.240:21
+#	real=192.168.16.3:21 masq
+#	real=192.168.16.5:21 masq
+#	fallback=127.0.0.1:21
+#	service=ftp
+#	scheduler=wlc
+#	login="anonymous"
+#	passwd="ldirectord@localhost"
+#	request="welcome.msg"
+#	receive="test"
+#	persistent=600
+#	#netmask=255.255.255.255
+#	protocol=tcp
+
+#Sample configuration for an smtp virtual service.
+#Fallback setting overides global
+#virtual=192.168.6.240:25
+#	real=192.168.16.3:25 masq
+#	real=192.168.16.5:25 masq
+#	fallback=127.0.0.1:25
+#	service=smtp
+#	scheduler=wlc
+#	persistent=600
+#	protocol=tcp
+
+#Sample configuration for an pop virtual service.
+#Fallback setting overides global
+#virtual=192.168.6.240:110
+#	real=192.168.16.3:110 masq
+#	real=192.168.16.5:110 masq
+#	fallback=127.0.0.1:110
+#	service=pop
+#	scheduler=wlc
+#	#login="test"
+#	#passwd="test"
+#	persistent=600
+#	protocol=tcp
+
+##Sample configuration for an imap virtual service.
+#Fallback setting overides global
+#virtual=192.168.6.240:143
+#	real=127.0.0.1:143 masq
+#	real=192.168.16.3:143 masq
+#	real=192.168.16.5:143 masq
+#	fallback=127.0.0.1:143
+#	service=imap
+#	scheduler=wlc
+#	#login="test"
+#	#passwd="test"
+#	persistent=600
+#	persistent=600
+#	protocol=tcp
+
+#Sample configuration for an ldap virtual service.
+#Fallback setting overides global
+#virtual=192.168.84.5:389
+#	real=10.0.1.4:389 masq
+#	real=10.0.1.6:389 masq
+#	fallback=127.0.0.1:389
+#	service=ldap
+#	scheduler=wlc
+#	request="dc=upmc, dc=fr"
+#	receive="dc=upmc, dc=fr"
+#	persistent=600
+#	#netmask=255.255.255.255
+#	protocol=tcp
+	
+#Sample configuration for an nntp virtual service.
+#Fallback setting overides global
+#virtual=192.168.84.5:119
+#	real=10.0.1.4:119 masq
+#	real=10.0.1.6:119 masq
+#	fallback=127.0.0.1:119
+#	service=nntp
+#	scheduler=wlc
+#	#persistent=600
+#	#netmask=255.255.255.255
+#	protocol=tcp
+	
+#Sample configuration for an unsuported protocol
+#The real servers will just be brought up without checking for availability
+#Fallback setting overides global
+#virtual=192.168.6.240:23
+#	real=192.168.16.3:23 masq 
+#	real=192.168.16.5:23 masq
+#	fallback=127.0.0.1:21
+#	service=none
+#	scheduler=wlc
+#	request="welcome.msg"
+#	receive="test"         
+#	persistent=600
+#	#netmask=255.255.255.255
+#	protocol=tcp
+

@@ -1,0 +1,149 @@
+#
+#	This is a list of resources that move from machine to machine as
+#	nodes go down and come up in the cluster.  Do not include
+#	"administrative" or fixed IP addresses in this file.
+#
+# <VERY IMPORTANT NOTE>
+#	The haresources files MUST BE IDENTICAL on all nodes of the cluster.
+#
+#	The node names listed in front of the resource group information
+#	is the name of the preferred node to run the service.  It is
+#	not necessarily the name of the current machine.  If you are running
+#	auto_failback ON (or legacy), then these services will be started
+#	up on the preferred nodes - any time they're up.
+#
+#	If you are running with auto_failback OFF, then the node information
+#	will be used in the case of a simultaneous start-up, or when using
+#	the hb_standby {foreign,local} command.
+#
+#	BUT FOR ALL OF THESE CASES, the haresources files MUST BE IDENTICAL.
+#	If your files are different then almost certainly something
+#	won't work right.
+# </VERY IMPORTANT NOTE>
+#
+#	
+#	We refer to this file when we're coming up, and when a machine is being
+#	taken over after going down.
+#
+#	You need to make this right for your installation, then install it in
+#	/etc/ha.d
+#
+#	Each logical line in the file constitutes a "resource group".
+#	A resource group is a list of resources which move together from
+#	one node to another - in the order listed.  It is assumed that there
+#	is no relationship between different resource groups.  These
+#	resource in a resource group are started left-to-right, and stopped
+#	right-to-left.  Long lists of resources can be continued from line
+#	to line by ending the lines with backslashes ("\").
+#
+#	These resources in this file are either IP addresses, or the name
+#	of scripts to run to "start" or "stop" the given resource.
+#
+#	The format is like this:
+#
+#node-name resource1 resource2 ... resourceN
+#
+#
+#	If the resource name contains an :: in the middle of it, the
+#	part after the :: is passed to the resource script as an argument.
+#       Multiple arguments are separated by the :: delimeter
+#
+#	In the case of IP addresses, the resource script name IPaddr is
+#	implied.
+#
+#	For example, the IP address 135.9.8.7 could also be represented
+#	as IPaddr::135.9.8.7
+#
+#	THIS IS IMPORTANT!!     vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+#
+#	The given IP address is directed to an interface which has a route
+#	to the given address.  This means you have to have a net route
+#	set up outside of the High-Availability structure.  We don't set it
+#	up here -- we key off of it.
+#
+#	The broadcast address for the IP alias that is created to support
+#	an IP address defaults to the highest address on the subnet.
+#
+#	The netmask for the IP alias that is created defaults to the same
+#	netmask as the route that it selected in in the step above.
+#
+#	The base interface for the IPalias that is created defaults to the
+#	same netmask as the route that it selected in in the step above.
+#
+#	If you want to specify that this IP address is to be brought up
+#	on a subnet with a netmask of 255.255.255.0, you would specify
+#	this as IPaddr::135.9.8.7/24 .  
+#
+#	If you wished to tell it that the broadcast address for this subnet
+#	was 135.9.8.210, then you would specify that this way:
+#		IPaddr::135.9.8.7/24/135.9.8.210
+#
+#	If you wished to tell it that the interface to add the address to
+#	is eth0, then you would need to specify it this way:
+#		IPaddr::135.9.8.7/24/eth0
+#
+#       And this way to specify both the broadcast address and the
+#       interface:
+#		IPaddr::135.9.8.7/24/eth0/135.9.8.210
+#
+#	The IP addresses you list in this file are called "service" addresses,
+#	since they're they're the publicly advertised addresses that clients
+#	use to get at highly available services.
+#
+#	For a hot/standby (non load-sharing) 2-node system with only
+#	a single service address, 
+#	you will probably only put one system name and one IP address in here.
+#	The name you give the address to is the name of the default "hot"
+#	system.
+#
+#	Where the nodename is the name of the node which "normally" owns the
+#	resource.  If this machine is up, it will always have the resource
+#	it is shown as owning.
+#
+#	The string you put in for nodename must match the uname -n name
+#	of your machine.  Depending on how you have it administered, it could
+#	be a short name or a FQDN.
+#
+#-------------------------------------------------------------------
+#
+#	Simple case: One service address, default subnet and netmask
+#		No servers that go up and down with the IP address
+#
+#just.linux-ha.org	135.9.216.110
+#
+#-------------------------------------------------------------------
+#
+#	Assuming the adminstrative addresses are on the same subnet...
+#	A little more complex case: One service address, default subnet
+#	and netmask, and you want to start and stop http when you get
+#	the IP address...
+#
+#just.linux-ha.org	135.9.216.110 http
+#-------------------------------------------------------------------
+#
+#	A little more complex case: Three service addresses, default subnet
+#	and netmask, and you want to start and stop http when you get
+#	the IP address...
+#
+#just.linux-ha.org	135.9.216.110 135.9.215.111 135.9.216.112 httpd
+#-------------------------------------------------------------------
+#
+#	One service address, with the subnet, interface and bcast addr
+#       explicitly defined.
+#
+#just.linux-ha.org	135.9.216.3/28/eth0/135.9.216.12 httpd
+#
+#-------------------------------------------------------------------
+#
+#       An example where a shared filesystem is to be used.
+#       Note that multiple aguments are passed to this script using
+#       the delimiter '::' to separate each argument.
+#
+#node1  10.0.0.170 Filesystem::/dev/sda1::/data1::ext2
+#
+#	Regarding the node-names in this file:
+#
+#	They must match the names of the nodes listed in ha.cf, which in turn
+#	must match the `uname -n` of some node in the cluster.  So they aren't
+#	virtual in any sense of the word.
+#

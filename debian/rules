@@ -1,0 +1,112 @@
+#!/usr/bin/make -f
+# Sample debian/rules that uses debhelper.
+# GNU copyright 1997 to 1999 by Joey Hess.
+
+#Thanks to Paolo Molaro <lupus@debian.org> and heartbeat_0.4.6-2.diff
+
+# Uncomment this to turn on verbose mode.
+#export DH_VERBOSE=1
+
+# This is the debhelper compatability version to use.
+export DH_COMPAT=2
+
+pwd:=$(shell pwd)
+cfg:=--prefix=/usr --sysconfdir=/etc --localstatedir=/var \
+  --mandir=/usr/share/man
+
+build: checkbuild build-stamp
+build-stamp:
+	dh_testdir
+	./configure $(cfg)
+	# Lame libtool workaround that lintian seems keen on
+	sed < libtool > libtool-2 \
+                -e 's/^hardcode_libdir_flag_spec.*$$/hardcode_libdir_flag_spec=" -D__LIBTOOL_IS_A_FOOL__ "/' \
+                -e '/^archive_cmds="/s/"$$/ \\$$deplibs"/'
+	mv libtool-2 libtool
+	chmod 755 libtool
+	$(MAKE)
+	touch build-stamp
+
+clean:
+	dh_testdir
+	dh_testroot
+	# Add here commands to clean up after the build process.
+	-$(MAKE) clean MAKE=make
+	-$(MAKE) distclean MAKE=make
+	dh_clean
+	rm -f build-stamp
+	rm -f debian/init debian/*.debhelper debian/*.substvars
+	rm -r -f debian/heartbeat debian/heartbeat-dev debian/ldirectord \
+		debian/libpils0 debian/libpils-dev \
+		debian/libstonith0 debian/libstonith-dev debian/stonith \
+		debian/tmp
+
+
+install: build
+	dh_testdir
+	dh_testroot
+	dh_clean -k
+	dh_installdirs
+	$(MAKE) install \
+	  DESTDIR=`pwd`/debian/tmp \
+	  docdir=/usr/share/doc/heartbeat \
+	  MAKE=make
+	find `pwd`/debian/tmp/usr/share/man -type f | xargs gzip -v --best
+	install -c -m 755 heartbeat/init.d/heartbeat \
+                `pwd`/debian/tmp/etc/init.d/heartbeat
+	-mkdir -p `pwd`/debian/tmp/usr/share/doc/ldirectord/
+	install -c -m 644 ldirectord/ldirectord.cf \
+	  `pwd`/debian/tmp/usr/share/doc/ldirectord/
+	-mkdir -p `pwd`/debian/tmp/etc/init.d
+	install -c -m 755 ldirectord/init.d/ldirectord \
+		`pwd`/debian/tmp/etc/init.d/ldirectord
+	cd `pwd`/debian/tmp/etc/ha.d/resource.d \
+	  && ln -s /usr/sbin/ldirectord ldirectord
+
+	# We don't install fifos. Rather they are created
+	# by postinst scripts.
+	(cd `pwd`/debian/tmp/var/lib/heartbeat/ && \
+		rm -f api/*.req api/*.rsp fifo register )
+
+	dh_movefiles --source=debian/tmp
+
+# Build architecture-independent files here.
+binary-indep: build install
+# We have nothing to do by default.
+
+# Build architecture-dependent files here.
+binary-arch: build install
+	dh_testdir
+	dh_testroot
+#	dh_installdebconf	
+	dh_installdocs
+	dh_installexamples
+#	dh_installmenu
+#	dh_installemacsen
+#	dh_installpam
+	dh_installinit -n -u 'defaults 20 32'
+#	dh_installcron
+#	dh_installmanpages
+	dh_installinfo
+#	dh_undocumented
+	dh_installchangelogs doc/ChangeLog
+	dh_link
+	dh_strip
+	dh_compress
+	dh_fixperms
+#	dh_suidregister
+	dh_makeshlibs
+	dh_installdeb
+	dh_perl
+	dh_shlibdeps
+	dh_gencontrol
+	dh_md5sums
+	dh_builddeb
+
+binary: binary-indep binary-arch
+
+checkbuild:
+	chmod u+x ./debian/dpkg-checkbuild
+	./debian/dpkg-checkbuild debian/control
+
+.PHONY: build clean binary-indep binary-arch binary install checkbuild

@@ -1,0 +1,59 @@
+#  apphbd.cf 
+#  Default Configure file for apphbd
+#  
+#  Currently this file includes configure items: debug_level, debugfile
+#  logfile, watchdog_device, watchdog_interval_ms, notify_plugin, realtime.
+#  If one of these items is not configured, apphbd will use default configuration:
+#	debug_level = 3
+#	debugfile = NULL
+#	logfile = NULL
+#	watchdog_device = NULL
+#	watchdog_interval_ms = 1000
+#	notify_plugin : no plugin
+#	realtime = yes	  	
+
+
+#  Debug level: Currently effective setting includes 0, 1, 2.
+#  The higher the debug level, the more detailed debug information you will get.
+
+#debug_level 0
+
+#  File to write debug messages to. 
+#  Only effective when debug level is larger than 0
+#  Since apphbd will run as nobody, be sure to specify a file apphbd can write to.  
+
+#debugfile	/var/log/apphbd.debug
+
+#  File to log other messages to. 
+#  Only effective when debug level is larger than 0
+#  Since apphbd will run as nobody, be sure to specify a file apphbd can write to.  
+
+#logfile		/var/log/apphbd.log
+
+#  Watchdog device file. 
+#watchdog_device  /dev/watchdog 
+#  If devfs is enabled, the watchdog device might be:
+#watchdog_device  /dev/misc/watchdog
+
+#  Apphbd tickles watchdog timer at this interval (microseconds).
+#  If watchdog_device is not set, setting watchdog_interval_ms will take no effect. 
+
+#watchdog_interval_ms 2000   
+
+#  Notification plug-ins.
+#  By default apphbd searches plug-in in /usr/lib/heartbeat/plugins/AppHBNotification
+#  You can load more than one plug-ins 
+
+#recmgr plug-in will send notification to recovery manager when an apphb event
+#happens. See apphb_notify.h for definition of these events.
+#notify_plugin  recmgr
+
+#  Other plug-ins if available
+#notify_plugin  other_plugins
+
+
+#  If set 'realtime' as 'yes', apphbd will be scheduled at "realtime" priority.
+#  Otherwise, set as 'no' will disable it.
+
+#realtime yes 
+

@@ -1,0 +1,8 @@
+gXML
+Makefile.in
+Makefile
+.*.swp
+.deps
+.libs
+*.lo
+*.la

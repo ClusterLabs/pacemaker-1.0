@@ -1,0 +1,836 @@
+#	$Id: heartbeat.spec.in,v 1.66 2003/07/14 05:12:55 alan Exp $
+
+# Workaround for a change in RPM 4.1.x; needs proper fixing soon!
+%define _unpackaged_files_terminate_build 0
+
+Summary: @HB_PKG@ - heartbeat subsystem for High-Availability Linux
+Name:	@HB_PKG@
+Version:	@VERSION@
+Release:	1
+Copyright: GPL
+URL: http://linux-ha.org/
+Group: Utilities
+Packager: Alan Robertson <alanr@unix.sh>
+Source: http://linux-ha.org/download/@HB_PKG@-@VERSION@.tar.gz
+Buildroot: /var/tmp/@HB_PKG@-root
+BuildPrereq: glib-devel, lynx, @UCDSNMPDEVEL@, perl, iputils, /usr/bin/ssh, openssl-devel, libnet
+# libnet available from www.ultramonkey.org and others
+Requires: sysklogd, heartbeat-stonith = %{version}-%{release}, heartbeat-pils = %{version}-%{release}
+
+%package ldirectord
+Summary: Monitor daemon for maintaining high availability resources
+Group: Utilities
+Requires: perl, perl-libwww-perl perl-Net-SSLeay, ipvsadm, perl-HTML-Parser, perl-ldap, perl-Mail-IMAPClient, perl-libnet
+# perl-libwww-perl, perl-Net-SSLeay, perl-HTML-Parser, perl-ldap, 
+# perl-Mail-IMAPClient, perl-libnet and ipvsadm available 
+# from www.ultramonkey.org and others
+
+%package stonith
+Requires: telnet, heartbeat-pils = %{version}-%{release}
+Summary: Provides an interface to Shoot The Other Node In The Head 
+Group: Utilities
+
+%package pils
+Summary: Provides a general plugin and interface loading library
+Group: Utilities
+
+%description
+@HB_PKG@ is a basic high-availability subsystem for Linux-HA.
+It will run scripts at initialization, and when machines go up or down.
+This version will also perform IP address takeover using gratuitous ARPs.
+It works correctly for a 2-node configuration, and is extensible to larger
+configurations.
+
+It implements the following kinds of heartbeats:
+	- Bidirectional Serial Rings ("raw" serial ports)
+	- UDP/IP broadcast (ethernet, etc)
+	- Unicast heartbeats
+	- "ping" heartbeats (for routers, switches, etc.)
+	   (to be used for breaking ties in 2-node systems)
+
+%description ldirectord
+ldirectord is a stand-alone daemon to monitor services of real 
+for virtual services provided by The Linux Virtual Server
+(http://www.linuxvirtualserver.org/). It is simple to install 
+and works with the heartbeat code (http://www.linux-ha.org/).
+
+%description stonith
+The STONITH module (a.k.a. STOMITH) provides an extensible interface
+for remotely powering down a node in the cluster.  The idea is quite simple:
+When the software running on one machine wants to make sure another
+machine in the cluster is not using a resource, pull the plug on the other 
+machine. It's simple and reliable, albeit admittedly brutal.
+
+%description pils
+PILS is an generalized and portable open source
+Plugin and Interface Loading System.
+PILS was developed as part of the Open Cluster Framework
+reference implementation, and is designed
+to be directly usable by a wide variety of other applications.
+PILS manages both plugins (loadable objects),
+and the interfaces these plugins implement.
+PILS is designed to support any number of plugins
+implementing any number of interfaces.
+
+%changelog
+* Mon Jul 13 2003  Alan Robertson <alanr@unix.sh> (see doc/AUTHORS file)
++ Version 1.1.2
+  + Replaced the nice_failback option with the auto_failback option.
+	THIS OBSOLETES THE NICE_FAILBACK OPTION. READ THE DOCS FOR HOW
+	TO UPGRADE SMOOTHLY.
+  + Changed IPaddr to not do ARPs in background, and shortened time 
+	between ARPs.  Also made these things tunable...
+  + changed our comm ttys to not become our controlling TTYs
+  + Enhanced the ServeRAID script to fix a critical bug by using a new feature
+  + Added a new DirectoryMap to CVS - tells where everything is...
+  + significantly enhanced the BasicSanityCheck script, and the tests
+	it calls.
+  + added a new option to use a replacement poll function for improved
+	real-time performance.
+  + added the ability to have a cluster node's name be different
+	from it's uname -n
+  + Moved where CTS gets installed to /usr/lib/heartbeat/cts
+  + Big improvements to the CTS README from IBM test labs in Austin.
+  + bug fixes to the WTI NPS power switch
+  + new client API calls:
+	return arbitrary configuration parameters
+	return current resource status
+  + Added a new clplumbing function: mssleep()
+  + added new capabilities for supporting pseudo-resources
+  + added new messages which come out after initial takeover is done
+	 (improves CTS results)
+  + LOTS of documentation updates.
+  + fixed a security vulnerability
+  + fixed a bug where heartbeat would shut down while in the middle
+	of processing resource movement requests.
+  + changed compilation flags to eliminate similar future security
+	issues
+  + went to even-more-strict gcc flags
+  + fixed several "reload" bugs.  Now reload works ;-)
+  + fixed STONITH bug when other node never heard from.
+  + Minor bug fixes (cleaned up corrupted message)
+  + Two different client API bugs fixed.
+  + changed the configure script to test which warning flags are
+	supported by the current gcc.
+  + enhanced the API test program to test new capabilities...
+
+
+* Wed May 21 2003  Alan Robertson <alanr@unix.sh> (see doc/AUTHORS file)
++ Version 1.1.1
+  + Significant restructuring of the processes in heartbeat
+  + Added a new feature to hb_standby which allows you to give up
+	  any specific category of resources:  local, foreign, or all.
+	The old behavior is "all" which is the default.
+	This allows you to put a nice_failback cluster into
+	  an active/active configuration
+  + Enhancements to the ServeRAID code to make it work with the new
+    (supported) version of IPSSEND from the ServeRAID folks...
+  + Added STONITH code for the Dell remote access controller
+  + Fixed a major bug which kept it from taking over correctly after 246
+	days or so
+  + Fixed a major bug where heartbeat didn't lock itself into memory
+	properly
+  + Added new ping node timeout directive "deadping"
+  + Made sure heartbeat preallocated stack and heap, and printed a
+	message if we allocate heap once we're started up...
+  + Minor heartbeat API bug fixes
+  + Minor documentation fixes
+  + Minor fix to allow IP addresses with /32 masks...
+  + Fixed a timing window for !nice_failback resource acquisition
+  + Added several CCM bug fixes
+  + Made the APC smart UPS ups code compatible with more UPSes
+  + Fixed a bug in respawn
+  + Enhanced internal checking for malloc errors...
+  + Added IP alias search optimization from Sean Reifscheneider
+
+* Wed Mar 19 2003  Alan Robertson <alanr@unix.sh> (see doc/AUTHORS file)
++ Version 1.0.2:
+  + Fixed comment errors in heartbeat init script to allow it to run on RH 8.0
+  + Changed apphbd to use poll(2) instead of sigtimedwait(2)
+  + Put missing files into tarball
+  + Documentation improvements for IPaddr and other things
+  + Fixed an error in hb_standby which kept it from working if releasing 
+    resources takes more than 10 seconds
+  + Added a fix to allow heartbeat to run on systems without writable disk
+    (like routers booting from CD-ROM)
+  + Added configuration file for apphbd
+  + Added fix from Adam Li to keep recoverymgr stop looping at high priority
+  + Added fix to ServeRAID resource to make it work with (new) supported 
+    hardware
+  + Added Delay resource script
+  + Added fix to Filesystem to allow it to support NFS mounts and allow
+    user to specify mount options
+  + Added fix to IPaddr to make tmp directory for restoring loopback device
+  + Added fix to ipcsocket code to deal correctly with EAGAIN when sending
+    message body
+
+* Mon Feb 17 2003  Alan Robertson <alanr@unix.sh> (see doc/AUTHORS file)
++ Version 1.0.1:
+  + Fixed some compile errors on different platforms, and library versions
+  + Disable ccm from running on 'ping' nodes
+  + Put in Steve Snodgrass' fix to send_arp to make it work on non-primary
+	interfaces.
+
+* Thu Feb 13 2003  Alan Robertson <alanr@unix.sh> (see doc/AUTHORS file)
++ Version 1.0.1 beta series
+
+  0.4.9g:
+  + Changed default deadtime, warntime, and heartbeat interval
+  + Auto* tool updates
+  + VIP loopback fixes for IP address takeover
+  + Various Solaris and FreeBSD fixes
+  + added SNMP agent
+  + Several CCM bug fixes
+  + two new heartbeat API calls
+  + various documentation fixes, including documentation for ipfail
+  + Numerous minor cleanups.
+  + Fixed a few bugs in the IPC code.
+  + Fixed the (IPC) bug which caused apphbd to hang the whole machine.
+  + Added a new IPC call (waitout)
+  + Wrote a simple IPC test program.
+  + Clarified several log messages.
+  + Cleaned up the ucast communications plugin
+  + Cleaned up for new C compilers
+  + Fixed permissions bug in IPC which caused apphbd to not be usable by all
+  + Added a new rtprio option to the heartbeat config file
+  + updated apphbtest program
+  + Changed ipfail to log things at same level heartbeat does
+
+
+* Sat Nov 30 2002  Alan Robertson <alanr@unix.sh> (see doc/AUTHORS file)
++ Version 0.5 beta series (now renamed to 1.0.1 beta series).
+  0.4.9f:
+  + Added pre-start, pre-stop, post-stop and pre-stop constructs in init script
+  + various IPC fixes
+  + Fix to STONITH behavior: STONITH unresponsive node right after we reboot
+  + Fixed extreme latency in IPC code
+  + various configure.in cleanups
+  + Fixed memory leak in IPC socket code
+  + Added streamlined mainloop/IPC integration code
+  + Moved more heartbeat internal communication to IPC library
+  + Added further support for ipfail
+  + Added supplementary groups to the respawn-ed clients
+  + Added standby to init script actions
+  + Lots of minor CCM fixes
+  + Split (most) resource management code into a separate file.
+  + Fixes to accommodate different versions of libraries
+  + Heartbeat API client headers fixup
+  + Added new API calls
+  + Simplified (and fixed) handling of local status.  This would sometimes cause
+	obscure failures on startup.
+  + Added new IPsrcaddr resource script
+
+  KNOWN BUGS:
+  + apphbd goes into an infinite loop on some platforms
+
+* Wed Oct 9 2002  Alan Robertson <alanr@unix.sh> (see doc/AUTHORS file)
+  0.4.9e:
+  + Changed client code to keep write file descriptor open at all times
+        (realtime improvement)
+  + Added a "poll replacement"  function based on sigtimedwait(2), which
+        should be faster for those cases that can use it.
+  + Added a hb_warntime() call to the application heartbeat API.
+  + Changed all times in the configuration file to be in milliseconds
+        if specified with "ms" at the end.  (seconds is still the default).
+  + Fixes to serious security issue due to Nathan Wallwork <nwallwo@pnm.com>
+  + Changed read/write child processes to run as nobody.
+  + Fixed a bug where ping packets are printed incorrectly when debugging.
+  + Changed heartbeat code to preallocate a some heap space.
+  + CCM daemon API restructuring
+  + Added ipc_channel_pair() function to the IPC library.
+  + Changed everything to use longclock_t instead of clock_t
+  + Fixed a bug concerning the ifwalk() call on ping nodes in the API
+  + Made apphbd run at high priority and locked into memory
+  + Made a library for setting priority up.
+  + Made ucast comm module at least be configurable and loadable.
+  + Fixed a startup/shutdown timing problem.
+
+  0.4.9d:
+  + removed an "open" call for /proc/loadavg (improve realtime behavior)
+  + changed API code to not 1-char reads from clients
+  + Ignored certain error conditions from API clients
+  + fixed an obscure error message about trying to retransmit a packet
+	which we haven't sent yet.  This happens after restarts.
+  + made the PILS libraries available in a separate package
+  + moved the stonith headers to stonith/... when installed
+  + improved debugging for NV failure cases...
+  + updated AUTHORS file and simplified the changelog authorship
+	(look in AUTHORS for the real story)
+  + Added Ram Pai's CCM membership code
+  + Added the application heartbeat code
+  + Added the Kevin Dwyer's ipfail client code to the distribution
+  + Many fixes for various tool versions and OS combinations.
+  + Fixed a few bugs related to clients disconnecting.
+  + Fixed some bugs in the CTS test code.
+  + Added BasicSanityCheck script to tell if built objects look good.
+  + Added PATH-like capabilities to PILS
+  + Changed STONITH to use the new plugin system.
+  + *Significantly* improved STONITH usage message (from Lorn Kay)
+  + Fixed some bugs related to restarting.
+  + Made exit codes more LSB-compliant.
+  + Fixed various things so that ping nodes don't break takeovers.
+
+  0.4.9c and before:
+  + Cluster partitioning  now handled correctly (really!)
+  + Complete rearchitecture of plugin system
+  + Complete restructure of build system to use automake and port things
+	to AIX, FreeBSD and solaris.
+  + Added Lclaudio's "standby" capability to put a node into standby
+	mode on demand.
+  + Added code to send out gratuitous ARP requests as well as gratuitous
+	arp replies during IP address takeover.
+  + Suppress stonith operations for nodes which went down gracefully.
+  + Significantly improved real-time performance
+  + Added new unicast heartbeat type.
+  + Added code to make serial ports flush stale data on new connections.
+  + The Famous CLK_TCK compile time fixes (really!)
+  + Added a document which describes the heartbeat API
+  + Changed the code which makes FIFOs to not try and make the FIFOs for
+        named clients, and several other minor API client changes.
+  + Fixed a fairly rare client API bug where it would shut down the
+        client for no apparent reason.
+  + Added stonith plugins for: apcmaster, apcmastersnmp switches, and ssh
+        module (for test environments only)
+  + Integrated support for the Baytech RPC-3 switch into baytech module
+  + Fixes to APC UPS plugin
+  + Got rid of "control_process: NULL message" message
+  + Got rid of the "controlfifo2msg: cannot create message" message
+  + Added -h option to give usage message for stonith command...
+  + Wait for successful STONITH completion, and retry if its configured.
+  + Sped up takeover code.
+  + Several potential timing problems eliminated.
+  + Cleaned up the shutdown (exit) code considerably.
+  + Detect the death of our core child processes.
+  + Changed where usage messages go depending on exit status from usage().
+  + Made some more functions static.
+  + Real-time performance improvement changes
+  + Updated the faqntips document
+  + Added a feature to heartbeat.h so that log messages get checked as
+        printf-style messages on GNU C compilers
+  + Changed several log messages to have the right parameters (discovered
+        as a result of the change above)
+  + Numerous FreeBSD, Solaris and OpenBSD fixes.
+  + Added backwards compatibility kludge for udp (versus bcast)
+  + Queued messages to API clients instead of throwing them away.
+  + Added code to send out messages when clients join, leave.
+  + Added support for spawning and monitoring child clients.
+  + Cleaned up error messages.
+  + Added support for DB2, ServeRAID and WAS, LVM, and Apache (IBMhttp too),
+    also ICP Vortex controller.
+  + Added locking when creating new IP aliases.
+  + Added a "unicast" media option.
+  + Added a new SimulStart and standby test case.
+  + Diddled init levels around...
+  + Added an application-level heartbeat API.
+  + Added several new "plumbing" subsystems (IPC, longclock_t, proctrack, etc.)
+  + Added a new "contrib" directory.
+  + Fixed serious (but trivial) bug in the process tracking code which caused
+	it to exit heartbeat - this occured repeatably for STONITH operations.
+  + Write a 'v' to the watchdog device to tell it not to reboot us when
+	we close the device.
+  + Various ldirectord fixes due to Horms
+  + Minor patch from Lorn Kay to deal with loopback interfaces which might
+	have been put in by LVS direct routing
+  + Updated AUTHORS file and moved list of authors over
+
+* Fri Mar 16 2001  Alan Robertson <alanr@unix.sh>
++ Version 0.4.9
+
+  + Split into 3 rpms - heartbeat, heartbeat-stonith heartbeat-ldirectord
+
+  + Made media modules and authentication modules and stonith modules
+	dynamically loadable.
+
+  + Added Multicast media support
+  + Added ping node/membership/link type for tiebreaking.  This will
+	be useful when implementing quorum on 2-node systems.
+	(not yet compatible with nice_failback(?))
+  + Removed ppp support
+
+  + Heartbeat client API support
+
+  + Added STONITH API library
+    +   support for the Baytech RPC-3A power switch
+    +   support for the APCsmart UPS
+    +   support for the VACM cluster management tool
+    +	support for WTI RPS10
+    +	support for Night/Ware RPC100S
+    +	support for "Meatware" (human intervention) module
+    +	support for "null" (testing only) module
+
+  + Fixed startup timing bugs
+  + Fixed shutdown sequence bugs: takeover occured before
+	resources were released by other system
+  + Fixed various logging bugs
+  + Closed holes in protection against replay attacks
+
+  + Added checks that complain if all resources aren't idle on startup.
+  + IP address takeover fixes
+      + Endian fixes
+      + Removed the 8-alias limitation
+      + Takeovers now occur faster (ARPs occur asynchronously)
+
+  + Port number changes
+    + Use our IANA port number (694) by default
+    + Recognize our IANA port number ("ha-cluster") if it's in /etc/services
+
+  + Moved several files, etc. from /var/run to /var/lib/heartbeat
+  + Incorporated new ldirectord version
+  + Added late heartbeat warning for late-arriving heartbeats
+  + Added detection of and partial recovery from cluster partitions
+  + Accept multiple arguments for resource scripts
+  + Added Raid1 and Filesystem resource scripts
+  + Added man pages
+  + Added debian package support
+
+* Fri Jun 30 2000 Alan Robertson <alanr@unix.sh>
++ Version 0.4.8
+  + Incorporated ldirectord version 1.9 (fixes memory leak)
+  + Made the order of resource takeover more rational:  Takeover is now
+    left-to-right, and giveup is right-to-left
+  + Changed the default port number to our official IANA port number (694)
+  + Regularized more messages, eliminated some redundant ones.
+  + Print the version of heartbeat when starting.
+  + Print exhaustive version info when starting with debug on.
+  + Hosts now have 3 statuses {down, up, active} active means that it knows
+	that all its links are operational, and it's safe to send cluster
+	messages
+  + Significant revisions to nice_failback (mainly due to lclaudio)
+  + More SuSE-compatibility. Thanks to Friedrich Lobenstock <fl@fl.priv.at>
+  + Tidied up logging so it can be to files, to syslog or both (Horms)
+  + Tidied up build process (Horms)
+  + Updated ldirectord to produce and install a man page and be
+    compatible with the fwmark options to The Linux Virtual Server (Horms)
+  + Added log rotation for ldirectord and heartbeat using logrotate
+    if it is installed
+  + Added Audible Alarm resource by Kirk Lawson <lklawson@heapy.com> 
+    and myself (Horms)
+  + Added init script for ldirectord so it can be run independently
+    of heartbeat (Horms)
+  + Added sample config file for ldirectord (Horms)
+  + An empty /etc/ha.d/conf/ is now part of the rpm distribution
+    as this is where ldirectord's configuration belongs (Horms)
+  + Minor startup script tweaks.  Hopefully, we should be able to make core
+    files should we crash in the future.  Thanks to Holger Kiehl for diagnosing
+    the problem!
+  + Fixed a bug which kept the "logfile" option from ever working.
+  + Added a TestCluster test utility.  Pretty primitive so far...
+  + Fixed the serial locking code so that it unlocks when it shuts down.
+  + Lock heartbeat into memory, and raise our priority
+  + Minor, but important fix from lclaudio to init uninited variable.
+
+* Sat Dec 25 1999 Alan Robertson <alanr@unix.sh>
++ Version 0.4.7
+  + Added the nice_failback feature. If the cluster is running when
+	the primary starts it acts as a secondary. (Luis Claudio Goncalves)
+  + Put in lots of code to make lost packet retransmission happen
+  + Stopped trying to use the /proc/ha interface
+  + Finished the error recovery in the heartbeat protocol (and got it to work)
+  + Added test code for the heartbeat protocol
+  + Raised the maximum length of a node name
+  + Added Jacob Rief's ldirectord resource type
+  + Added Stefan Salzer's <salt@cin.de> fix for a 'grep' in IPaddr which
+	wasn't specific enough and would sometimes get IPaddr confused on
+	IP addresses that prefix-matched.
+  + Added Lars Marowsky-Bree's suggestion to make the code almost completely
+	robust with respect to jumping the clock backwards and forwards
+  + Added code from Michael Moerz <mike@cubit.at> to keep findif from
+	core dumping if /proc/route can't be read.
+
+* Mon Nov 22 1999 Alan Robertson <alanr@unix.sh>
++ Version 0.4.6
+  + Fixed timing problem in "heartbeat restart" so it's reliable now
+  + Made start/stop status compatible with SuSE expectations
+  + Made resource status detection compatible with SuSE start/stop expectations
+  + Fixed a bug relating to serial and ppp-udp authentication (it never worked)
+  + added a little more substance to the error recovery for the HB protocol.
+  + Fixed a bug for logging from shell scripts
+  + Added a little logging for initial resource acquisition
+  + Added #!/bin/sh to the front of shell scripts
+  + Fixed Makefile, so that the build root wasn't compiled into pathnames
+  + Turned on CTSRTS, enabling for flow control for serial ports.
+  + Fixed a bug which kept it from working in non-English environments
+
+* Wed Oct 13 1999 Alan Robertson <alanr@unix.sh>
++ Version 0.4.5
+  + Mijta Sarp added a new feature to authenticate heartbeat packets
+	using a variety of strong authentication techniques
+  + Changed resource acquisition and relinquishment to occur in heartbeat,
+       instead of in the start/stop script.  This means you don't *really*
+       have to use the start/stop script if you don't want to.
+  + Added -k option to gracefully shut down current heartbeat instance
+  + Added -r option to cause currently running heartbeat to reread config files
+  + Added -s option to report on operational status of "heartbeat"
+  + Sped up resource acquisition on master restart.
+  + Added validation of ipresources file at startup time.
+  + Added code to allow the IPaddr takeover script to be given the
+        interface to take over, instead of inferring it.  This was requested
+        by Lars Marowsky-Bree
+  + Incorporated patch from Guenther Thomsen to implement locking for
+        serial ports used for heartbeats
+  + Incorporated patch from Guenther Thomsen to clean up logging.
+        (you can now use syslog and/or file logs)
+  + Improved FreeBSD compatibility.
+  + Fixed a bug where the FIFO doesn't get created correctly.
+  + Fixed a couple of uninitialized variables in heartbeat and /proc/ha code
+  + Fixed longstanding crash bug related to getting a SIGALRM while in malloc
+	or free.
+  + Implemented new memory management scheme, including memory stats
+
+* Thu Sep 16 1999 Alan Robertson <alanr@unix.sh>
++ Version 0.4.4
+  + Fixed a stupid error in handling CIDR addresses in IPaddr.
+  + Updated the documentation with the latest from Rudy.
+
+* Wed Sep 15 1999 Alan Robertson <alanr@unix.sh>
++ Version 0.4.3
+  + Changed startup scripts to create /dev/watchdog if needed
+  + Turned off loading of /proc/ha module by default.
+  + Incorporated bug fix from Thomas Hepper <th@ant.han.de> to IPaddr for
+	PPP configurations
+  + Put in a fix from Gregor Howey <ghowey@bremer-nachrichten.de>
+	where Gregor found that I had stripped off the ::resourceid part
+	of the string in ResourceManager resulting in some bad calls later on.
+  +  Made it compliant with the FHS (filesystem hierarchy standard)
+  +  Fixed IP address takeover so we can take over on non-eth0 interface
+  +  Fixed IP takeover code so we can specify netmasks and broadcast addrs,
+	or default them at the user's option.
+  +  Added code to report on message buffer usage on SIGUSR[12]
+  +  Made SIGUSR1 increment debug level, and SIGUSR2 decrement it.
+  +  Incorporated Rudy's latest "Getting Started" document
+  +  Made it largely Debian-compliant.  Thanks to Guenther Thomsen, Thomas
+	Hepper, Iñaki Fernández Villanueva and others.
+  +  Made changes to work better with Red Hat 6.1, and SMP code.
+  +  Sometimes it seems that the Master Control Process dies :-(
+
+* Sat Aug 14 1999 Alan Robertson <alanr@unix.sh>
++ Version 0.4.2
+  + Implemented simple resource groups
+  + Implemented application notification for groups starting/stopping
+  + Eliminated restriction on floating IPs only being associated with eth0
+  + Added a uniform resource model, with IP resources being only one kind.
+	(Thanks to Lars Marowsky-Bree for a good suggestion)
+  + Largely rewrote the IP address takeover code, making it clearer, fit
+	into the uniform resource model, and removing some restrictions.
+  + Preliminary "Getting Started" document by Rudy Pawul
+  + Improved the /proc/ha code
+  + Fixed memory leak associated with serial ports, and problem with return
+	of control to the "master" node.
+	(Thanks to Holger Kiehl for reporting them, and testing fixes!)
+
+* Tue Jul 6 1999 Alan Robertson <alanr@unix.sh>
++ Version 0.4.1
+  + Fixed major memory leak in 0.4.0 (oops!)
+  + Added code to eliminate duplicate packets and log lost ones
+  + Tightened up PPP/UDP startup/shutdown code
+  + Made PPP/UDP peacefully coexist with "normal" udp
+  + Made logs more uniform and neater
+  + Fixed several other minor bugs
+  + Added very preliminary kernel code for monitoring and controlling
+	heartbeat via /proc/ha.  Very cool, but not really done yet.
+
+* Wed Jun 30 1999 Alan Robertson <alanr@unix.sh>
++ Version 0.4.0
+  + Changed packet format from single line positional parameter style
+	to a collection of {name,value} pairs.  A vital change for the future.
+  + Fixed some bugs with regard to forwarding data around rings
+  + We now modify /etc/ppp/ip-up.local, so PPP-udp works out of the box
+	(at least for Red Hat)
+  + Includes the first version of Volker Wiegand's Hardware Installation Guide
+	(it's pretty good for a first version!)
+
+* Wed Jun 09 1999 Alan Robertson <alanr@unix.sh>
++ Version 0.3.2
+  + Added UDP/PPP bidirectional serial ring heartbeat
+	(PPP ensures data integrity on the serial links)
+  + fixed a stupid bug which caused shutdown to give unpredictable
+	results
+  + added timestamps to /var/log/ha-log messages
+  + fixed a couple of other minor oversights.
+
+* Sun May 10 1999  Alan Robertson <alanr@unix.sh>
++ Version 0.3.1
+  + Make ChangeLog file from RPM specfile
+  + Made ipresources only install in the DOC directory as a sample
+
+* Sun May 09 1999 Alan Robertson <alanr@unix.sh>
++ Version 0.3.0
+  + Added UDP broadcast heartbeat (courtesy of Tom Vogt)
+  + Significantly restructured code making it easier to add heartbeat media
+  + added new directives to config file:
+    + udp interface-name
+    + udpport port-number
+    + baud    serial-baud-rate
+  + made manual daemon shutdown easier (only need to kill one)
+  + moved the sample ha.cf file to the Doc directory
+
+* Sat Mar 27 1999 Alan Robertson <alanr@unix.sh>
++ Version 0.2.0
+  + Make an RPM out of it
+  + Integrated IP address takeover gotten from Horms
+  + Added support to tickle a watchdog timer whenever our heart beats
+  + Integrated enough basic code to allow a 2-node demo to occur
+  + Integrated patches from Andrew Hildebrand <andrew@pdi.com> to allow it
+    to run under IRIX.
+  - Known Bugs
+    - Only supports 2-node clusters
+    - Only supports a single IP interface per node in the cluster
+    - Doesn't yet include Tom Vogt's ethernet heartbeat code
+    - No documentation
+    - Not very useful yet :-)
+
+###########################################################
+%prep
+###########################################################
+%setup
+
+###########################################################
+%build
+###########################################################
+#
+#	I think we should make the RPM configured the same way as things
+#	were configured in the first place.  So, I think it should propagate
+#	whatever flags were on the command line down to here...
+#
+#	(on the other hand, I could be wrong ;-))
+#
+#CFLAGS="${RPM_OPT_FLAGS}" \
+#  ./configure --prefix=@prefix@ --sysconfdir=@sysconfdir@ --localstatedir=@localstatedir@
+./configure @ac_configure_args@
+make
+
+###########################################################
+%install
+###########################################################
+if
+  [ ! -z "${RPM_BUILD_ROOT}"  -a "${RPM_BUILD_ROOT}" != "/" ]
+then
+  rm -rf $RPM_BUILD_ROOT
+fi
+#make DESTDIR=$RPM_BUILD_ROOT install-strip
+make DESTDIR=$RPM_BUILD_ROOT install
+(
+  cd $RPM_BUILD_ROOT@sysconfdir@/ha.d/resource.d
+  ln -s @sbindir@/ldirectord ldirectord
+)
+
+TEMPL=$RPM_BUILD_ROOT@localstatedir@/adm/fillup-templates
+if
+  [ ! -d $TEMPL ]
+then
+  mkdir -p $TEMPL
+fi
+install -m 644 rc.config.heartbeat $TEMPL
+
+###########################################################
+%files
+###########################################################
+%defattr(-,root,root)
+%dir @sysconfdir@/ha.d
+@sysconfdir@/ha.d/harc
+@sysconfdir@/ha.d/shellfuncs
+@sysconfdir@/ha.d/rc.d
+@sysconfdir@/ha.d/README.config
+@libdir@/heartbeat
+@libdir@/libhbclient.*
+@libdir@/libccmclient.*
+@libdir@/libplumb.*
+@libdir@/libapphb.*
+@libdir@/librecoverymgr.*
+@base_includedir@/heartbeat
+@base_includedir@/clplumbing
+@base_includedir@/ocf
+@sysconfdir@/ha.d/resource.d/
+@INITDIR@/heartbeat
+@sysconfdir@/logrotate.d/heartbeat
+@localstatedir@/adm/fillup-templates/rc.config.heartbeat
+%dir @localstatedir@/lib/@HB_PKG@
+%attr (600, root, root)       @localstatedir@/lib/@HB_PKG@/fifo
+%dir %attr (750, root, @HA_APIGROUP@) @localstatedir@/lib/@HB_PKG@/api
+%attr (620, root, @HA_APIGROUP@) @localstatedir@/lib/@HB_PKG@/register
+%attr (755, @HA_CCMUSER@, @HA_APIGROUP@) @localstatedir@/lib/@HB_PKG@/ccm
+%attr (1770, root, @HA_APIGROUP@) @localstatedir@/lib/@HB_PKG@/casual
+%attr (200, @HA_CCMUSER@, @HA_APIGROUP@) @localstatedir@/lib/@HB_PKG@/api/ccm.req
+%attr (600, @HA_CCMUSER@, @HA_APIGROUP@) @localstatedir@/lib/@HB_PKG@/api/ccm.rsp
+%attr (200, @HA_CCMUSER@, @HA_APIGROUP@) @localstatedir@/lib/@HB_PKG@/api/ipfail.req
+%attr (600, @HA_CCMUSER@, @HA_APIGROUP@) @localstatedir@/lib/@HB_PKG@/api/ipfail.rsp
+%doc @mandir@/man8/heartbeat.8*
+%doc @mandir@/man8/apphbd.8*
+%doc doc/AUTHORS
+%doc doc/COPYING
+%doc doc/ChangeLog
+%doc doc/GettingStarted.html
+%doc doc/GettingStarted.txt
+%doc doc/HardwareGuide.html
+%doc doc/HardwareGuide.txt
+%doc doc/README
+%doc doc/Requirements.html
+%doc doc/Requirements.txt
+%doc doc/apphbd.cf
+%doc doc/authkeys
+%doc doc/faqntips.html
+%doc doc/faqntips.txt
+%doc doc/ha.cf
+%doc doc/haresources
+%doc doc/rsync.html
+%doc doc/rsync.txt
+%doc doc/startstop
+#
+# if ENABLE_SNMP_SUBAGENT=1; then
+#	install mib files and other subagent related stuff;
+# fi
+#
+%define ENABLE_SNMP_SUBAGENT @SNMP_SUBAGENT_ENABLED@
+%if %{ENABLE_SNMP_SUBAGENT}
+	@MIBS_DIR@/LINUX-HA-MIB.mib
+%endif
+
+###########################################################
+# Files for ldirectord
+%files ldirectord
+###########################################################
+%defattr(-,root,root)
+@sysconfdir@/ha.d/conf
+@sbindir@/ldirectord
+@sbindir@/supervise-ldirectord-config
+@sysconfdir@/logrotate.d/ldirectord
+@INITDIR@/ldirectord
+@sysconfdir@/ha.d/resource.d/ldirectord
+@mandir@/man8/ldirectord.8*
+@mandir@/man8/supervise-ldirectord-config.8*
+%doc ldirectord/ldirectord.cf
+
+###########################################################
+# Files for the stonith library
+%files stonith
+###########################################################
+%defattr(-,root,root)
+@stonith_includedir@
+@libdir@/libstonith.*
+@libdir@/stonith
+@sbindir@/stonith
+@sbindir@/meatclient
+%doc @mandir@/man8/stonith.8*
+%doc @mandir@/man8/meatclient.8*
+
+###########################################################
+# Files for the PILS library
+%files pils
+###########################################################
+%defattr(-,root,root)
+@pils_includedir@
+@libdir@/libpils.*
+@pils_plugindir@
+
+###########################################################
+%clean
+###########################################################
+if
+  [ -z "${RPM_BUILD_ROOT}"  -a "${RPM_BUILD_ROOT}" != "/" ]
+then
+  rm -rf $RPM_BUILD_ROOT
+fi
+rm -rf $RPM_BUILD_DIR/@HB_PKG@-@VERSION@
+
+###########################################################
+%pre
+###########################################################
+#
+#	This isn't perfect.  But getting every distribution
+#	to agree on group id's seems hard to me :-(
+#
+if
+  getent group @HA_APIGROUP@ >/dev/null
+then
+  : OK group @HA_APIGROUP@ already present
+else
+  GROUPOPT="-g @HA_APIGID@"
+  if
+    usr/sbin/groupadd $GROUPOPT @HA_APIGROUP@ 2>/dev/null
+  then
+    : OK we were able to add group @HA_APIGROUP@
+  else
+    usr/sbin/groupadd @HA_APIGROUP@
+  fi
+fi
+
+if
+  getent passwd @HA_CCMUSER@ >/dev/null
+then
+  : OK user @HA_CCMUSER@ already present
+else
+  USEROPT="-g @HA_APIGROUP@"
+  if
+    usr/sbin/useradd $USEROPT @HA_CCMUSER@ 2>/dev/null
+  then
+    : OK we were able to add user @HA_CCMUSER@
+  else
+    usr/sbin/useradd @HA_CCMUSER@
+  fi
+fi
+#
+
+###########################################################
+%post
+###########################################################
+
+# Run heartbeat on startup
+if
+  [ -f etc/SuSE-release ]
+then
+  start=@HB_INITSTARTPRI@
+  stop=@HB_INITSTOPPRI@
+  for d in etc/init.d/rc[235].d
+  do
+    rm -f $d/[SK]*[0-9]heartbeat
+    ln -s ../heartbeat $d/S${start}heartbeat 
+    ln -s ../heartbeat $d/K${stop}heartbeat
+  done
+  FILLUP=/bin/fillup
+  if 
+    $FILLUP -q -d = etc/rc.config var/adm/fillup-templates/rc.config.heartbeat
+  then
+    : $FILLUP returned OK
+  else
+    echo "ERROR: $FILLUP failed. This should not happen. Please compare"
+    echo "@sysconfdir@/rc.config and @localstatedir@/adm/fillup-templates/rc.config.heartbeat"
+    echo "and update by hand."
+  fi
+elif
+  [ -x sbin/chkconfig ]
+then
+  sbin/chkconfig --add heartbeat
+fi
+true
+
+###########################################################
+%preun
+###########################################################
+
+Uninstall_PPP_hack() {
+  file2hack=etc/ppp/ip-up.local
+  echo "NOTE: Restoring /$file2hack"
+  MARKER="Heartbeat"
+  ed -s $file2hack <<-!EOF  2>/dev/null
+H
+g/ $MARKER\$/d
+w
+!EOF
+}
+
+if
+  [ $1 = 0 ]
+then
+  [ -x sbin/chkconfig ] && sbin/chkconfig --del heartbeat
+  if
+    [ ! -x etc/ppp/ip-up.heart ]
+  then
+    Uninstall_PPP_hack
+  fi
+fi
+if
+   [ -r etc/SuSE-release ]
+then
+  rm -f etc/init.d/rc[235].d/[SK]*[0-9]heartbeat
+fi
+true

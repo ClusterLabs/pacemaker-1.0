@@ -1,0 +1,2 @@
+/etc/logrotate.d/ldirectord
+/etc/init.d/ldirectord

@@ -1,0 +1,292 @@
+LINUX-HA-MIB DEFINITIONS ::= BEGIN
+
+-- Design notes:
+--
+-- 
+
+IMPORTS
+    MODULE-IDENTITY, OBJECT-TYPE, enterprises,
+    Counter32, INTEGER, Integer32		    
+	FROM SNMPv2-SMI
+
+    TEXTUAL-CONVENTION, DisplayString, 
+    TruthValue, DateAndTime			    
+	FROM SNMPv2-TC
+
+    MODULE-COMPLIANCE, OBJECT-GROUP		    
+	FROM SNMPv2-CONF;
+
+LinuxHA	MODULE-IDENTITY
+    LAST-UPDATED "200211040000Z"	-- Nov. 4, 2002
+    ORGANIZATION "High-Availability Linux Project"
+    CONTACT-INFO
+	"Alan Robertson
+	Postal:	Linux-HA Project
+		13750 Bayberry Drive
+		Broomfield, CO 80020-6163
+	Phone:	303-466-7405
+	FAX:	n/a
+	Email:	alanr@unix.sh
+
+	Yixiong Zou
+	Postal: Intel Corp.  
+		CO5-162
+		15400 NW Greenbrier Parkway
+		Beaverton, OR 97006
+		USA
+	Phone:	503-677-4988
+	Fax:	503-677-6670
+	Email:	yixiong.zou@intel.com
+
+	In addition, the Linux-HA mailing list is where all the 
+	discussion about this MIB happens. To join the mailing list, 
+	send a request message to linux-ha-subscribe@muc.de.  
+	The mailing list address is
+	linux-ha-dev@lists.community.tummy.com."
+    DESCRIPTION
+	"This MIB can be used to manage a Linux-HA cluster. The initial plan is
+	to make the heartbeat, resource managment, and memberships accessible
+	through SNMP. Hopefully more things can be added as Linux-HA matures."
+
+    REVISION "200211040000Z"	    -- Nov. 4, 2002
+    DESCRIPTION
+	"The original version of this MIB."
+    ::= { enterprises 4682 }
+
+-- Current LinuxHA core MIB entries
+--  ClusterInfo		    OBJECT IDENTIFIER ::= { LinuxHA 1 }
+--  NodeTable		    OBJECT IDENTIFIER ::= { LinuxHA 2 }
+--  HAIFTable		    OBJECT IDENTIFIER ::= { LinuxHA 3 }
+--  ResourceGroupTable	    OBJECT IDENTIFIER ::= { LinuxHA 4 }
+--  ResourceTable	    OBJECT IDENTIFIER ::= { LinuxHA 5 }
+--  TrapTable		    OBJECT IDENTIFIER ::= { LinuxHA 900 }
+
+ClusterInfo		OBJECT IDENTIFIER ::= { LinuxHA 1 }
+
+NodeCount OBJECT-TYPE
+    SYNTAX	Counter32
+    MAX-ACCESS	not-accessible
+    STATUS	current
+    DESCRIPTION
+	"The number of nodes that are currently present in this
+	cluster."
+    ::= { ClusterInfo 1 }
+
+NodeTable OBJECT-TYPE
+    SYNTAX	SEQUENCE OF NodeEntry
+    MAX-ACCESS	not-accessible
+    STATUS	current
+    DESCRIPTION
+	"A table contains information about all the nodes in the cluster."
+    ::= { LinuxHA 2 }
+
+nodeEntry OBJECT-TYPE
+    SYNTAX	NodeEntry
+    MAX-ACCESS	not-accessible
+    STATUS	current
+    DESCRIPTION	
+	"An entry containing a node and its statistics."
+    INDEX	{ nodeIndex }
+    ::= { NodeTable 1 }
+
+NodeEntry ::= SEQUENCE {
+    nodeIndex	    Integer32,
+    nodeName	    DisplayString,
+    nodeType	    DisplayString,
+    nodeStatus	    DisplayString,
+    nodeHAIFCount   Integer32
+}
+
+nodeIndex OBJECT-TYPE    
+    SYNTAX	Integer32 (0..65535)
+    MAX-ACCESS	not-accessible
+    STATUS	current
+    DESCRIPTION
+	"An integer that uniquelly identifies a node in a cluster."
+    ::= { nodeEntry 1 }
+
+nodeName OBJECT-TYPE
+    SYNTAX	DisplayString
+    MAX-ACCESS	read-only
+    STATUS	current
+    DESCRIPTION
+	"A readable name that represents that node."
+    ::= { nodeEntry 2 }
+
+nodeType OBJECT-TYPE
+    SYNTAX	DisplayString
+    MAX-ACCESS	read-only
+    STATUS	current
+    DESCRIPTION
+	"There could be many types of nodes in the cluster.  For
+	example, a node could be a normal node, or a ping node depending
+	on the configuration."
+    ::= { nodeEntry 3 }
+
+nodeStatus OBJECT-TYPE
+    SYNTAX	DisplayString 
+    MAX-ACCESS	read-only
+    STATUS	current
+    DESCRIPTION
+	"The status of the node. For heartbeat, this would normally be
+	init, up, active, or dead.  Since the status can be customrized, 
+	it is defined as a DisplayString instead of an INTEGER."
+    ::= { nodeEntry 4 }
+
+nodeHAIFCount OBJECT-TYPE
+    SYNTAX	Integer32 (0..65535)
+    MAX-ACCESS	read-only
+    STATUS	current
+    DESCRIPTION
+	"The number of heartbeat interfaces presents on that node."
+    ::= { nodeEntry 5 }
+
+HAIFTable OBJECT-TYPE
+    SYNTAX	SEQUENCE OF HAIFEntry
+    MAX-ACCESS	not-accessible
+    STATUS	current
+    DESCRIPTION
+	"A table containing all the interfaces of a node."
+    ::= { LinuxHA 3 }
+
+haIFEntry OBJECT-TYPE
+    SYNTAX	HAIFEntry
+    MAX-ACCESS	not-accessible
+    STATUS	current
+    DESCRIPTION
+	"An entry containing information about that interface."
+    INDEX	{ haIFIndex, nodeIndex }
+    ::= { HAIFTable 1 }
+
+HAIFEntry ::= SEQUENCE {
+    haIFIndex	    Integer32,
+    haIFName	    DisplayString,
+    haIFStatus	    DisplayString
+}
+
+haIFIndex OBJECT-TYPE
+    SYNTAX	Integer32 (0..65535)
+    MAX-ACCESS	not-accessible
+    STATUS	current
+    DESCRIPTION
+	"An unique integer identifies this interface."
+    ::= { haIFEntry 1 }
+
+haIFName OBJECT-TYPE
+    SYNTAX	DisplayString
+    MAX-ACCESS	read-only
+    STATUS	current
+    DESCRIPTION
+	"A name for this interface."
+    ::= { haIFEntry 2 }
+
+haIFStatus OBJECT-TYPE
+    SYNTAX	DisplayString
+    MAX-ACCESS	read-only
+    STATUS	current
+    DESCRIPTION
+	"The status for this interface. 
+
+				NOT WELL
+	
+	This is somewhat confusing as Linux-HA only reports if the heartbeat
+	can be heard on that interfce or not. So for ethernet interfaces, the
+	interfaces for the node itself is always dead as no heartbeat can be
+	heard on that interface."
+    ::= { haIFEntry 3 }
+
+ResourceGroupTable OBJECT-TYPE
+    SYNTAX	SEQUENCE OF ResourceGroupEntry
+    MAX-ACCESS	not-accessible
+    STATUS	current
+    DESCRIPTION
+	"A table containing information for resource groups."
+    ::= { LinuxHA 4 }
+
+resourceGroupEntry OBJECT-TYPE
+    SYNTAX	ResourceGroupEntry
+    MAX-ACCESS	not-accessible
+    STATUS	current
+    DESCRIPTION
+	"An entry containing a resource group and its information."
+    INDEX	{ resourceGroupIndex }
+    ::= { ResourceGroupTable 1 }
+
+ResourceGroupEntry ::= SEQUENCE	{
+    resourceGroupIndex	Integer32,
+    resourceGroupName	DisplayString,
+    resourceGroupStatus	DisplayString
+}
+
+resourceGroupIndex OBJECT-TYPE
+    SYNTAX	Integer32 (0..65535)
+    MAX-ACCESS	not-accessible
+    STATUS	current
+    DESCRIPTION
+	"A unique integer that identifies this resource group."
+    ::= { resourceGroupEntry 1 }
+
+resourceGroupName OBJECT-TYPE
+    SYNTAX	DisplayString
+    MAX-ACCESS	read-only
+    STATUS	current
+    DESCRIPTION
+	"A name of this resource group."
+    ::= { resourceGroupEntry 2 }
+
+resourceGroupStatus OBJECT-TYPE
+    SYNTAX	DisplayString
+    MAX-ACCESS	read-only
+    STATUS	current
+    DESCRIPTION
+	"The status of this resource group."
+    ::= { resourceGroupEntry 3 }
+
+ResourceTable OBJECT-TYPE
+    SYNTAX	SEQUENCE OF ResourceEntry
+    MAX-ACCESS	not-accessible
+    STATUS	current
+    DESCRIPTION
+	"A table containing information for all the cluster resoureces."
+    ::= { LinuxHA 5 }
+
+resourceEntry OBJECT-TYPE
+    SYNTAX	ResourceEntry
+    MAX-ACCESS	not-accessible
+    STATUS	current
+    DESCRIPTION
+	"An entry containing a resource and its statistics."
+    INDEX	{ resourceGroupIndex resourceIndex }
+    ::= { ResourceTable 1 }
+
+ResourceEntry ::= SEQUENCE {
+    resourceIndex   Integer32,
+    resourceName    DisplayString,
+    resourceStatus  DisplayString,
+}
+
+resourceIndex OBJECT-TYPE
+    SYNTAX	Integer32 (0..65535)
+    MAX-ACCESS	not-accessible
+    STATUS	current
+    DESCRIPTION
+	"A unique integer that identifies this resource."
+    ::= { resourceEntry 1 }
+
+resourceName OBJECT-TYPE
+    SYNTAX	DisplayString
+    MAX-ACCESS	read-only
+    STATUS	current
+    DESCRIPTION
+	"The name of the resource."
+    ::= { resourceEntry 2 }
+
+resourceStatus OBJECT-TYPE
+    SYNTAX	DisplayString
+    MAX-ACCESS	read-only
+    STATUS	current
+    DESCRIPTION
+	"A unique integer that identifies this resource."
+    ::= { resourceEntry 3 }
+
+END

@@ -1,0 +1,13 @@
+Makefile.in
+Makefile
+.deps
+.libs
+heartbeat
+send_arp
+findif
+get_hw_addr
+api_test
+*.la
+*.lo
+.*.swp
+shellfuncs

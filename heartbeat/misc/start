@@ -1,0 +1,1 @@
+sudo /etc/rc.d/init.d/heartbeat start

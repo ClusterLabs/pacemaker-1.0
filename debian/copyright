@@ -1,0 +1,32 @@
+Upstream Sources:
+
+http://www.linux-ha.org/download/
+
+
+Authors:
+
+Alan Robertson <alanr@unix.sh>
+Volker Wiegand <wiegand@suse.de> 
+Rudy Pawul <rpawul@iso-ne.com>
+Mitja Sarp <mitja@lysator.liu.se>
+Jacob Rief <jacob.rief@tis.at>
+Guenther Thomsen <thomsen@cs.tu-berlin.de>
+Luis Claudio R. Gonçalves <lclaudio@conectiva.com.br>
+Marcelo Tosatti <marcelo@conectiva.com.br>
+Horms <horms@vergenet.net>
+Eric Ayers <eric.ayers@compgen.com>
+Mike Tilstra <conrad@sistina.com>
+Juan Pedro Paredes Caballero <juampe@retemail.es>
+Andreas Piesk's <a.piesk@gmx.net>
+Chris Wright <chris@wirex.com>
+
+
+Thanks to Juan Pedro Paredes Caballero <juampe@retemail.es> and Paolo
+Molaro <lupus@debian.org> for helping to make this debian package possile.
+
+Copyright:
+
+You are free to distribute this software under the terms of
+the GNU General Public License.  The full text of this license
+can be found in the file /usr/share/common-licenses/GPL
+

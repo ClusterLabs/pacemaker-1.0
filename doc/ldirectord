@@ -1,0 +1,164 @@
+The ldirectord (Linux Director Daemon) is a stand-alone daemon to monitor
+services of real servers, currently http, https and ftp service. It is simple
+to install and can be started on its own or be started from the heartbeat
+daemon. It is very useful to manage real servers through ipvsadm. ipvsadm
+is part of the Linux Virtual Server (http://www.linuxvirtualserver.org/)
+Project and is used to redirect TCP- and UDP/IP traffic from a virtual
+server to many real servers. Thus LVS, heartbeat and ldirectord can be used
+to build up a redundant, fault-tolerant server farm of http-, https- and 
+ftp-servers. Other types of services may be added in future or upon request.
+
+Installation  and configuration guide:
+ldirectord is written in Perl, thus no compilation is neccessary. Two Perl-
+modules and one library must be installed so that ldirectord can monitor http-
+and https-servers.
+
+These are:
+libwww-perl from www.CPAN.org
+to check http service
+
+libnet-perl from www.CPAN.org
+to check ftp service
+
+Crypt-SSLeay from www.CPAN.org
+openssl from www.openssl.org
+to check https service
+
+If for any reason You don't need to check certain services,
+simply comment out the full function check_http, check_https
+or check_ftp in ldirectord.
+
+ldirectord is located in /etc/ha.d/resource.d/ldirectord
+If ldirectord often must be started manually it is useful to create a softlink.
+As root type 'ln -s /etc/ha.d/resource.d/ldirectord /usr/sbin/ldirectord'
+
+Create a file with any name and place it into /etc/ha.d/conf. This is a
+sample configuration to monitor two virtual servers with two real servers
+each:
+
+/etc/ha.d/conf/www
+-------------------------------------------------
+
+# config file for www.abc.com
+
+# the number of second until a real server is declared dead
+timeout = 30
+
+# the number of second between server checks
+checkinterval = 10
+
+# reload the configuration automatically after a file modification
+autoreload = yes
+
+# virtual = x.y.z.w:p
+#     protocol = tcp|udp
+#     scheduler = rr|wrr|lc|wlc
+#     real = x.y.z.w:p gate|masq|ipip [weight]
+#     ...
+#     
+virtual = 204.202.136.32:80
+        real = 192.168.0.1:80 gate 5
+        real = 192.168.0.2:80 gate 10
+        service = http
+        scheduler = wrr
+        request = "/.testpage"
+        receive = "test page"
+
+virtual = 204.202.136.33:443
+        real = 192.168.0.3:443 masq 1
+        real = 192.168.0.4:443 masq 1
+        service = https
+        scheduler = wlc
+        request = "/.testpage"
+        receive = "test page"
+        persistent = 1800
+
+-------------------------------------------------
+
+You need to create the .testpage file at the DocumentRoot directory of
+each web server. 
+
+     echo "test page" > .testpage
+
+No You may test the configuration. Start the ldirectord as root with:
+ldirectord www start
+You may check if everything works fine. Type 'ipvsadm -l' and see
+if the network address translation shows the above configuration.
+Look at the logfile /var/log/ldirectord.log for details.
+
+If that works fine You may add the following entry to Your /etc/ha.d/haresources
+file:
+
+-------------------------------------------------
+node1 IPaddr::204.202.136.32 IPaddr::204.202.136.33 ldirectord::www
+-------------------------------------------------
+
+Restart heartbeat with 
+/etc/rc.d/init.d/heartbeat restart
+and look if Your host takes the IP-addresses 204.202.136.32 and
+204.202.136.33 and if ipvsadm -l maps the virtual servers onto the real ones.
+
+Now install the files /etc/ha.d/conf/www and /etc/ha.d/haresources on Your second 
+heartbeated host. Shutdown the first host and look if everything still works.
+
+----- Automatic reload and automatic transfer -----
+This feature has been added since I often have to adopt my configuration files and
+I did not want to restart ldirectord and transfer the configuration files manually
+onto the second host.
+In order to automatically reload the configuration put the line
+-------------------------------------------------
+autoreload = yes 
+-------------------------------------------------
+into the configuration file. After each checkinterval a checksum is built
+over the file, and if this changed ldirectord automatically reloads the
+configuration.
+
+To automatically transfer the configuration onto the second machine You
+must create a new user on both heartbeated hosts with their home directories
+located at /etc/ha.d/conf. Do this with
+
+useradd -u 123 -g daemon -c 'High Availability Daemon' -d /etc/ha.d/conf had
+chown -R had /etc/ha.d/conf
+
+The users 'had' must be able to remote copy files from one host to the other
+one without the need of a password. I prefer to use scp (secure copy) but You
+may also use rcp (remote copy) if You feel safe with that or if Your laws
+forbid to use ssh.
+If You use ssh put the name of the other host into the file /etc/shosts.equiv
+(/etc/hosts.equiv for rsh users), create keys with ssh-keygen on each host and
+exchange the public part of the keys by doing once a ssh connection from one host
+to the other and vice versa (rsh users can skip this step). Refer to the
+ssh or rsh manual pages for details.
+These lines must be set in the /etc/sshd_config files on both hosts:
+-------------------------------------------------
+RhostsRSAAuthentication yes
+RSAAuthentication yes
+-------------------------------------------------
+Now the user 'had' should be able to 'scp' any file into the directory
+/etc/ha.d/conf of the other host. Remember: For safty reasons the user root
+may not copy files without a password. If copying files onto the remote host
+works You may put the line:
+-------------------------------------------------
+callback = "/etc/ha.d/resource.d/putcfg"    
+-------------------------------------------------
+into Your configuration file and create a shellscript named putcfg located
+in /etc/ha.d/resource.d. Remember to make the shellscript executable.
+/etc/ha.d/resource.d/putcfg:
+-------------------------------------------------
+#!/bin/sh
+chown had.daemon /etc/ha.d/conf/$1
+su - had -c "scp -p -q /etc/ha.d/conf/$1 name-of-other-host:/etc/ha.d/conf"
+exit $?
+-------------------------------------------------
+
+Now You may safly modify You configuration files without having to manually update
+Your configurations by ftp or worry that they will not be up-to-date after a servercrash
+of the main loadbalancing host.
+
+There is more documentation about ldirectord. Just type ldirectord -h to read
+the online manual.
+
+For questions and suggestions refer to Jacob Rief <jacob.rief@tiscover.com>
+PGP-fingerprint: 2F 8E 63 FC 6C 35 64 4F  20 CA 68 F7 28 0A 18 2F
+
+

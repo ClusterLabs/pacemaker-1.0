@@ -1,0 +1,141 @@
+I'm in the process of putting together a Phase I architecture as I
+mentioned in an earlier posting, and is mentioned on the web site.
+
+The first question that comes to mind are Phase I goals:
+	Service/Resource failover
+	Service Groups or dependencies
+	Resource Diagnostics
+	/proc (or /ha) interface for status and control
+	2-n node cluster size
+	redundant NIC failover
+	shared/mirrored filesystem takeovers
+		{ala Poor Man's data replication}
+
+
+
+Towards this end I've drawn a few pictures, and written a few words
+of text.  The picture is related to Tom Vogt's picture, but has several
+differences. It is very similar to the proposed project framework on the
+HA web site. Each component in this picture is replicated on each
+node in the cluster.
+
+              manual requests
+                    |
+                    v
+          +---------+----------------+
+          |                          |
+          |                          |
+          v                          v
+   diagnostics               +----------------+
+   (scheduled                |                |
+   and manual) ------------->|  Configuration +------> Application
+                             |    Management  |        Notification
+monitoring/heartbeat-------->|                |        API
+                             +--------+-------+
+                                      | ((Re)configuration
+                                      |  Modules)
+        +-------------+---------------+----------+
+        |             |               |          |
+        v             v               v          v
+  IP Takeover     Filesystem    Application     etc.
+                  Takeover      Start/Restart   
+                             
+The discussion below talks about the system in terms of objects,
+although the current code is written in C (not C++), and I expect
+the new framework to be implemented in the same way.
+
+There is a presumption in this design that each node has a copy
+of the whole cluster configuration.  Otherwise, when the
+cluster is reforming itself, it doesn't know what resources
+provided by missing nodes should be instantiated in a failover
+mode on a "replacement" node.
+
+The most common/important kind of object in this model is the resource
+    - Resources are things like IP addresses, NICs, filesystems,
+	disks, applications, etc.
+
+The following methods exist for every resource:
+name()		The name of this resource (ASCII string)
+provided_by()	Returns the node providing this resource
+type()		Returns the "type" of a given resource
+		See "resource_type" object below.
+service_state()	returns IN_SERVICE, OOS or PENDING_OOS
+			(REMOVED or PENDING_REMOVE?)
+in_service()	Brings the resource into service
+oo_service()	Takes the resource out of service, gracefully
+force_oos()	Takes the resource out of service, immediately.
+mark_oos()	Mark a failed resource as out of service
+			takes no action to take the resource out
+			of service
+
+There is a (static member) function which locates a resource:
+find_resource()	Returns the resource that corresponds to the given
+		name
+There is also an object called resource-list-item
+	It has the following methods:
+next()		The next resource-list-item in the list
+resource()	The resource associated with this list item
+
+Resources also have the following member functions (which returns
+	a resource-list)
+dependson_list()	Returns the list of resources which this
+			resource depends directly on
+
+dependents_list()	Returns the list of resources which depend
+			directly on this resource
+
+These dependency lists can be manipulated by these two functions:
+dependson(r1, r2)	Mark resource r1 as dependent on resource r2
+
+There is also a fundamental object called a resource_type
+It has member functions like these:
+	instantiate()	Creates a resource of the given type
+	typename()	returns an ASCII string naming the type
+
+................................. .................................
+Things which are not yet defined but I know I need.
+
+Diagnostics objects
+
+Application notification objects
+	(so an application can register that it wants to
+	 be notified about cluster transitions, etc.)
+
+Message:
+A set of {name,value} pairs sent from a node to all nodes, or
+to a single node.  This is what I now implement in "heartbeat" (this
+version is awaiting testing by SuSE users before release)
+
+Some of the things I haven't defined, I don't know I need, and some
+of them are just lower-level details that I haven't gotten to.
+-----------------------------------------------------------------------
+Continuing on...
+-----------------------------------------------------------------------
+Inside the Configuration Management Subsystem, there exists what I call
+a configuration strategy module.  At this point I assume that this
+is a plug-in module, which can be replaced with any one of a number
+of strategy modules, according to the needs of the system or whims
+of the administrator.
+
+My initial thoughts on a first-cut node transition strategy module
+go like this:
+
+Timeouts and new transitions cause restart from step 1
+
+	Step 1:
+	Declare a cluster transition
+
+	Step 2:	(one everyone has ACKed the cluster transition)
+	Declare a "transition master" node (somehow -lowest node name?)
+
+	Step 2:	(once everyone has ACKed the transition master)
+	Master Requests a config report (what resources each node has)
+
+	Step 3: (once every node has reported)
+	For each resource group, the transition master requests
+		a cost of providing it from each node
+		(infinite if it cannot be provided)
+	Step 4:
+	Transition Manager requests
+
+	And then I finish this document later...

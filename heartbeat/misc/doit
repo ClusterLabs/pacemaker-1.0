@@ -1,0 +1,19 @@
+VERS=0.4.3-1
+SUDO=""
+SUDO="sudo"
+$SUDO /etc/rc.d/init.d/heartbeat stop 
+$SUDO rsh kathy /etc/rc.d/init.d/heartbeat stop &
+if
+  $SUDO make rpm 
+then
+  $SUDO rpm --force --upgrade /usr/src/redhat/RPMS/i386/heartbeat-$VERS.i386.rpm &
+  $SUDO rsh kathy rpm --force --upgrade /usr/src/redhat/RPMS/i386/heartbeat-$VERS.i386.rpm 
+  # $SUDO rdate -s drtime
+  # $SUDO rsh kathy rdate -s drtime
+  $SUDO sh -c ">/var/log/ha-log"
+  $SUDO rsh kathy sh -c '">/var/log/ha-log"'
+  $SUDO rsh kathy /etc/rc.d/init.d/heartbeat start &
+  $SUDO /etc/rc.d/init.d/heartbeat start
+
+fi
+  

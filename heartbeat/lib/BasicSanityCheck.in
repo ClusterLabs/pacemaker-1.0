@@ -1,0 +1,522 @@
+#!/bin/sh
+#
+#	Basic tests of sanity for a newly-built version of
+#	linux-HA software (heartbeat)
+#
+#	Conditions for running:
+#
+#	Heartbeat must be installed.
+#
+#	Must be root.
+#
+#	CANNOT have a real heartbeat configuration.
+#
+#	Must have networking configured with one working
+#		network interface.
+#
+#	should not have $TESTIP below used for anything ;-)
+#
+#	should have multicast address $MCASTIP port 694
+#		available
+#		(you don't need a multicast capable router).
+#
+#
+# Note: you might have to change TESTIP and MCASTIP
+#
+TESTIP=10.253.252.251
+MCASTIP=225.0.0.2
+#
+IFCONFIG="@IFCONFIG@ @IFCONFIG_A_OPT@"
+HADIR=@sysconfdir@/ha.d
+INITDIR=@INITDIR@
+STONITH=@sbindir@/stonith
+LIBDIR=@libdir@/
+HBLIB=$LIBDIR/heartbeat
+APPHBD=$HBLIB/apphbd
+APPHBTEST=$HBLIB/apphbtest
+IPCTEST=$HBLIB/ipctest
+#
+DEFAULTINTERFACE=eth0	# But we really guess it...
+#
+IDENTSTRING="Linux-HA TEST configuration file - REMOVEME!!"
+DUMMYNODE=ImAlwaysDead.com
+LOCALNODE=`uname -n`
+LOGFILE=/tmp/linux-ha.testlog
+RSCDIR=$HADIR/resource.d
+errcount=0
+
+cd @sysconfdir@/ha.d
+ulimit -c unlimited
+
+GetAllIFNames() {
+  $IFCONFIG | grep '^[a-zA-Z]' | cut -d' ' -f1
+}
+
+GuessIFname() {
+  GetAllIFNames | grep -v '^lo' | head -1
+}
+
+INTERFACE=`GuessIFname`
+
+case $INTERFACE in
+  "")	INTERFACE=$DEFAULTINTERFACE;;
+esac
+
+#
+#	Is it safe to overwrite this config file?
+#
+CheckConfigFile() {
+  if
+    [ ! -f $1 ]
+  then
+    return 0
+  fi
+  if
+    grep "$IDENTSTRING" $1 >/dev/null 2>&1
+  then
+    return 0
+  else
+    return 1
+  fi
+}
+
+GenerateAuthKeys() {
+  cat <<-! >$1
+	#	$IDENTSTRING
+	#
+	auth 1
+	1 sha1 SuperSecretKey--SHHH!!!
+	!
+  chmod 600 $1
+}
+
+GenerateHaCf() {
+  cat <<-! >$1
+	#	$IDENTSTRING
+	logfile   $LOGFILE
+	debugfile $LOGFILE
+	keepalive 1
+	debug 1
+	deadtime 3
+	initdead 10
+	auto_failback on
+	stonith_host * null $LOCALNODE $DUMMYNODE
+	mcast $INTERFACE $MCASTIP 694 0 0
+	#bcast $INTERFACE
+	node $LOCALNODE $DUMMYNODE
+	!
+  chmod 644 $1
+}
+
+GenerateHaResources() {
+  cat <<-! >$1
+	#	$IDENTSTRING
+	$DUMMYNODE IPaddr::$TESTIP/30
+	!
+  chmod 644 $1
+}
+CONFIGFILES="ha.cf authkeys haresources"
+
+SetUpConfigFiles() {
+  if
+    HBStatus
+  then
+    echo "Cannot run tests with heartbeat already running."
+  fi
+  SaveConfigFiles
+  for j in $CONFIGFILES
+  do
+    if
+      CheckConfigFile $HADIR/$j
+    then
+      : OK
+    else
+      echo "OOPS! $HADIR/$j already exists!"
+      echo "Real configuration already set up."
+      echo "Sorry..."
+      exit 1
+    fi
+  done
+
+  GenerateAuthKeys $HADIR/authkeys
+  GenerateHaCf $HADIR/ha.cf
+  GenerateHaResources $HADIR/haresources
+  rm -f $HADIR/core
+}
+
+RemoveConfigFiles() {
+  for j in $CONFIGFILES
+  do
+    if
+      CheckConfigFile $HADIR/$j
+    then
+      rm -f $HADIR/$j
+    else
+      echo "OOPS! Cannot remove real config file $HADIR/$j!"
+    fi
+  done
+  RestoreConfigFiles
+}
+
+SaveConfigFiles() {
+  cd $HADIR
+  if
+    [ ! -d .cfsave ]
+  then
+    mkdir .cfsave
+  fi
+  mv $CONFIGFILES .cfsave
+}
+
+RestoreConfigFiles() {
+  mv $HADIR/.cfsave/* $HADIR
+}
+
+HBStart() {
+  echo "Starting heartbeat"
+  $INITDIR/heartbeat start
+}
+
+HBStop() {
+  echo "Stopping heartbeat"
+  $INITDIR/heartbeat stop
+}
+
+HBReload() {
+  echo "Reloading heartbeat"
+  $INITDIR/heartbeat reload >/dev/null 2>&1
+  rc=$?
+  sleep 5
+  return $rc
+}
+
+HBStatus() {
+  case `$INITDIR/heartbeat status 2>&1` in
+    *running*)	true;;
+    *)		false;;
+  esac
+}
+
+#
+#	Search the log file for the given grep pattern
+#
+LookForString() {
+  count=1
+  while
+    if
+      grep "$1" $LOGFILE
+    then
+      return 0
+    fi
+   [ $count -lt 60 ]
+  do
+    count=`expr $count + 1`
+    sleep 1
+  done
+  return 1
+}
+
+#	Check for the given count of the given string
+#	Complain unless the right number are there.
+CheckPat()
+{
+  count=`egrep -c "$1" $LOGFILE`
+  if
+    [ $count -ne $2 ]
+  then
+    echo "ERROR: Did not find $2 occurances of $1 in $LOGFILE"
+    errcount=`expr $errcount + 1`
+  fi
+}
+
+TestHeartbeat() {
+  if
+    HBStatus
+  then
+    echo "That's weird.  Heartbeat seems to be running..."
+    errcount=`expr $errcount + 1`
+    HBStatus
+    HBStop
+  fi
+  if
+    HBStart
+  then
+    if
+      HBStatus
+    then
+     : COOL!
+    else
+     echo "Heartbeat did not start."
+     exit 1
+    fi
+  fi
+
+  #
+  # Heartbeat seems to be running...
+  #
+
+  if
+    LookForString "node $DUMMYNODE.*is dead" >/dev/null
+  then
+    : OK
+  else
+    echo "Does not look like we noticed $DUMMYNODE was dead"
+    errcount=`expr $errcount + 1`
+  fi
+
+  if
+    LookForString "Resetting node $DUMMYNODE with" >/dev/null &&
+    LookForString "node $DUMMYNODE now reset" >/dev/null
+  then
+    : OK
+  else
+    echo "Does not look like we STONITHed $DUMMYNODE"
+    errcount=`expr $errcount + 1`
+  fi
+  
+  if
+    LookForString "IPaddr.*$TESTIP" >/dev/null
+  then
+    :  Looks good
+  else
+    echo "Does not look like we took over the IP address"
+    errcount=`expr $errcount + 1`
+  fi
+
+  if
+    LookForString "[Aa][Rr][Pp]" >/dev/null
+  then
+    :  Looks good
+  else
+    echo "Does not look like we ARPed the address"
+    errcount=`expr $errcount + 1`
+  fi
+
+  sleep 5
+
+  if
+    $RSCDIR/IPaddr $TESTIP monitor >/dev/null 2>&1
+  then
+    : COOL!
+  else
+    echo "Looks like monitor operation failed"
+    errcount=`expr $errcount + 1`
+  fi
+
+  #
+  #	Reload test -- ha.cf changed
+  #
+  echo "Performing ha.cf reload test" >> $LOGFILE
+  touch $HADIR/ha.cf
+  if
+    HBReload
+  then
+    : OK! reload after touching ha.cf worked!
+  else
+    echo "Heartbeat reload operation returned $?"
+    errcount=`expr $errcount + 1`
+  fi
+  if
+    LookForString "restart exec" >/dev/null
+  then
+    :  Looks good
+  else
+    echo "Does not look like we did a restart exec."
+    errcount=`expr $errcount + 1`
+  fi
+  if
+    HBStatus
+  then
+    : "OK - reload didn't kill anything ;-)"
+  fi
+  #
+  #	Reload test -- authkeys changed
+  #
+  echo "Performing authkeys reload test" >> $LOGFILE
+  touch $HADIR/authkeys
+  if
+    HBReload
+  then
+    : OK! reload after touching authkeys worked!
+  else
+    echo "Heartbeat reload operation returned $?"
+    errcount=`expr $errcount + 1`
+  fi
+  if
+    CheckPat "Signalling.* to reread config files" 2 >/dev/null
+  then
+    : OK
+  else
+    echo "Heartbeat did not reread config files exactly twice"
+    errcount=`expr $errcount + 1`
+  fi
+  sleep 2
+  if
+    CheckPat "restart exec" 1 >/dev/null
+  then
+    :  Looks good -- did not do another exec
+  else
+    echo "Looks like we did an extra exec"
+    errcount=`expr $errcount + 1`
+  fi
+  if
+    HBStatus
+  then
+    : "OK - reload didn't kill anything ;-)"
+  fi
+  
+  echo "Stopping heartbeat." >> $LOGFILE
+  if
+    HBStop
+  then
+    : OK!
+  else
+    echo "Heartbeat stop operation returned $?"
+    errcount=`expr $errcount + 1`
+  fi
+  if
+    HBStatus
+  then
+    echo "Looks like heartbeat did not really stop."
+    echo "You\'ll probably need to kill some processes yourself."
+    errcount=`expr $errcount + 1`
+  fi
+
+  if
+    $RSCDIR/IPaddr $TESTIP monitor >/dev/null 2>&1
+  then
+    echo "Looks like the test IP address is still live..."
+    errcount=`expr $errcount + 1`
+  fi
+
+}
+
+StonithCheck() {
+
+  serrcount=0
+
+  echo "Checking STONITH basic sanity."
+  if
+    $STONITH -h >/dev/null
+  then
+    : OK
+  else
+    echo "$STONITH -h failed"
+    serrcount=`expr $serrcount + 1`
+  fi
+  wc=`$STONITH -h | wc -l`
+  if
+    [ $wc -lt 100 ]
+  then
+    echo "$STONITH -h help message is too short"
+    serrcount=`expr $serrcount + 1`
+  fi
+  if
+    FOOBARLIST=`$STONITH -t null -p "foo bar" -l`
+  then
+    : FOOBARLIST OK
+  else
+    echo "$STONITH -t null list option failed"
+    serrcount=`expr $serrcount + 1`
+  fi
+  if
+    echo $FOOBARLIST | grep foo >/dev/null &&
+    echo $FOOBARLIST | grep bar >/dev/null
+  then
+    : OK null list
+  else
+    echo "$STONITH -t null list option incorrect"
+    serrcount=`expr $serrcount + 1`
+  fi
+
+  if
+    RESETOUT=`$STONITH -t null -p "foo bar" foo 2>&1`
+  then
+    case $RESETOUT in
+     *"Host foo null-reset"*)	: NULL Stonith output OK;;
+     *)				echo "NULL reset failed."
+  				  serrcount=`expr $serrcount + 1`;;
+    esac
+  else
+    echo "$STONITH -t null reset failed."
+  fi
+  errcount=`expr $errcount + $serrcount`
+}
+
+
+AppHBCheck() {
+	CFFILE=/tmp/$$.apphbd.cf
+	clientcount=5
+	cat <<-! >$CFFILE
+		realtime yes
+		debug_level	1
+		debugfile	$LOGFILE
+		logfile		$LOGFILE
+	!
+	echo "Performing apphbd success case tests"
+	$APPHBD -k >/dev/null 2>&1
+	$APPHBD -c $CFFILE
+	$APPHBTEST -i 1000 -p $clientcount -n 5 >>$CFFILE 2>&1
+	for pat in "apphb_client_register:" "type=setint" "info:.*apphb_client_remove:"
+	do
+	  CheckPat "$pat" $clientcount
+	done
+	CheckPat "failed to heartbeat|resumed heartbeats" 0
+	
+	echo "Performing apphbd failure case tests"
+	$APPHBTEST -F -i 1000 -p 1 -n 5 >>$CFFILE 2>&1
+	for pat in "'failtest'.* failed to heartbeat" "'failtest'.* resumed heartbeats" "WARN:.*hangup"
+	do
+          CheckPat "$pat" 1
+	done
+	$APPHBD -k $CFFILE
+	CheckPat "info:.*apphbd.*stopped" 1
+}
+
+IPCtest() {
+	echo "Starting IPC tests"
+	$IPCTEST >>$LOGFILE 2>&1
+	errcount=`expr $errcount + $?`
+}
+
+#
+#	Check our identity.
+#	Set Up Config Files.
+#	Run Tests.
+#	Remove Config Files.
+#
+
+ID=`@WHOAMI@`
+case $ID in
+  root)	: OK;;
+  *)	echo "Must be root to run this.  Sorry."
+	exit 1;;
+esac
+
+SetUpConfigFiles
+> $LOGFILE
+
+TestHeartbeat
+RemoveConfigFiles
+StonithCheck
+AppHBCheck
+IPCtest
+
+if
+  [ -f $HADIR/core ]
+then
+  errcount=`expr $errcount + 1`
+  echo "OOPS! We generated a core file!"
+  ls -l $HADIR/core
+  file $HADIR/core
+fi
+
+if
+  egrep  'CRIT|ERROR' $LOGFILE
+then
+  echo "OOPS! Looks like we had some errors come up."
+  errcount=`expr $errcount + 1`
+fi
+
+echo "$errcount errors. Log file is stored in $LOGFILE"
+exit $errcount

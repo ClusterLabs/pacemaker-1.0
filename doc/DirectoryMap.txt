@@ -1,0 +1,239 @@
+Author:  Yi Zhu.
+
+linux-ha -.
+          |-- cts : Cluster Testing System (Python)
+          |-- include : linux-ha header files directory
+          |-- ldirectord : Linux Director Daemon (Perl) which monitors real services like http, https and ftp
+          |-- replace : replacement implementations for some common library (inet_pton, setenv, strerror, etc)
+          \-- lib -.
+                   |-- apphb : client side application heartbeat library 
+                   |-- pils : Plugin system library
+                   |-- recoverymgr : recovery manager client library
+                   |-- clplumbing : cluster plumbing library (IPC, CPU, realtime, etc)
+                   |-- plugins -.
+                   |            |-- AppHBNotification : Recovery manager client plug-in implementation
+                   |            |-- HBauth : heartbeat authentication (CRC, MD5 and SHA1)
+                   |            |-- HBcomm : heartbeat communication method (mcast, ucast, serial, etc)
+                   |            |-- InterfaceMgr : Generic interface (implementation) manager
+                   |            \-- stonith : stonith plugins
+                   |-- stonith : stonith library and utility
+          |-- snmp_subagent : SNMP remote management for Linux-HA cluster
+          |-- doc : linux-ha documentation
+          |-- libltdl : GNU libltdl, a system independent dlopen wrapper for GNU libtool
+          |-- membership -.	Directory for membership implementations
+                          \-- ccm : Consensus Cluster Manager
+          |-- heartbeat : heartbeat framework
+          |-- contrib -.
+                       |            \-- ipfail : IP Failover plugin for Linux-HA
+          \-- telecom -.
+                       |-- apphbd : application heartbeat daemon
+                       \-- recoverymgrd : Recovery manager (apphbd error recovery only)
+==============================================================================================================
+OBSOLETE OR UNUSED DIRECTORIES:
+          |-- proc-ha : (at top level) Linux-HA /proc interface
+              |-- lib/tinyxml : XML parse library
+          |-- stonith (at top level) : OLD stonith library and utility
+
+
+
+=============================================================================
+A little more complete explanation of each of these directories, in non-pictorial
+form:
+-----------------------------------------------------------------------------
+/contrib: A place to hold contributed code not yet part of the main system
+..........................................................................
+
+-----------------------------------------------------------------------------
+/contrib/ipfail : IP Failover plugin for Linux-HA
+.................................................
+This code is a heartbeat client which forces failovers when IP connectivity
+becomes compromised.   It uses voting techniques to ensure that services
+are being moved to a better node.  It could be voting on anything which
+we don't control and which is intrinsic to the local node.  This is
+my vision of its possible future.  This code is reasonably mature at this
+point, and really deserves to be moved out of the contrib directory.
+
+-----------------------------------------------------------------------------
+/cts : Cluster Testing System (Python)
+......................................
+CTS is how the majority of the testing for Linux-HA is done.  This combined
+with the BasicSanityCheck tool does all our automated testing.  CTS generates
+random cluster events and sees if the system recovers from them.
+If you think we ought to test it, it needs to go in here or in the
+BasicSanityCheck tool -- or it won't likely get done.
+
+-----------------------------------------------------------------------------
+/doc : linux-ha documentation
+.............................
+This is where various interesting READMEs and documents like the
+GettingStarted and FAQ document live.
+
+-----------------------------------------------------------------------------
+/heartbeat : heartbeat framework
+................................
+This is the heartbeat program.  It is one of the main things which people
+currently use out of the Linux-HA project.  It provides basic failover
+services, a reasonable API, and some nice communication facilities.
+The API is documented in the doc directory.
+There is a paper on heartbeat dated Summer 2000 which can be found here:
+	http://linux-ha.org/comm/
+
+-----------------------------------------------------------------------------
+/include : linux-ha header files directory and subdirectories
+.............................................................
+
+-----------------------------------------------------------------------------
+/ldirectord : Linux Director Daemon (Perl) which monitors real services
+like http, https and ftp
+.......................................................................
+This code allows us to manage LVS instances for high-availability.
+
+-----------------------------------------------------------------------------
+/lib/apphb : Application heartbeat client library
+.......................................................................
+This code is what clients of the Application Heartbeat daemon in
+telecom/apphbd link against to get application heartbeat services.
+
+-----------------------------------------------------------------------------
+/lib/clplumbing : cluster plumbing library (IPC, CPU, realtime, etc)
+.......................................................................
+There is a TON of really useful things in here.  Although they're in one
+directory, developers should really know about most of them.  Headers
+for these services can be found in the /include/clplumbing/ directory.
+	cl_log:	  
+	IPC code:  abstraction for fast nonblocking sockets-like communication
+                   manages queuing and other details quite nicely includes
+                   an authentication API as part of it.
+	proctrack: child process tracking code
+	longclock: 64-bit timing services which don't move when clock is reset
+	GSource:   functions to make high-level Glib mainloop sources
+	cl_poll:   low-latency poll(2) call replacement code
+	realtime:  manage realtime processes -- locking, priorities, etc.
+	uids:      privilege management (become nobody, return to root, etc.)
+	cl_signal: signal wrapper code
+	Gmain_timeout
+                   integrates longclock timers into Glib mainloop paradigm
+	base64:	   conversion to/from base64 for making strings from binary
+	cpulimits: provide limits on CPU consumption to keep realtime systems
+		   from destroying the system if they run amok
+	mkstemp_mode:	
+                   safe(r) version of mkstemp(3)
+	timers:	  provides some simple millisecond resolution timer services
+                  to use instead of alarm(2) and friends.
+
+
+-----------------------------------------------------------------------------
+/lib/pils: PILS plugin loading and interface management system
+..............................................................
+Reasonably nice plugin management software.  It is documented by slides and
+a paper.  They can be found here:
+	http://linux-ha.org/heartbeat/PILS.pdf -- slides from PILS talk
+	http://linux-ha.org/heartbeat/pils.pdf -- paper on PILS
+
+-----------------------------------------------------------------------------
+/lib/plugins/ : Various kinds of PILS plugins
+.............................................
+
+-----------------------------------------------------------------------------
+
+/lib/plugins/AppHBNotification : Recovery manager client plug-in implementation
+...............................................................................
+The apphb API provides for notification when HA-aware clients stop heartbeating
+or exit abnormally.  This notification is accomplished by providing and
+configuring plugins which notify anyone you want any way you want.  We
+currently only have one such plugin -- one which notifies the recovery manager
+daemon.
+
+-----------------------------------------------------------------------------
+/lib/plugins/HBauth : heartbeat authentication (CRC, MD5 and SHA1)
+..................................................................
+These plugins are used to generate and validate digital signatures for
+heartbeat packets.
+
+-------------------------------------------------------------------------------
+/lib/plugins/HBcomm : heartbeat communication method (mcast, ucast, serial, etc)
+................................................................................
+These plugins are used to send and recieve packets for heartbeat.
+
+-----------------------------------------------------------------------------
+/lib/plugins/InterfaceMgr : PILS generic interface (implementation) manager
+...........................................................................
+These plugins are by PILS applications to load and manage other plugins.
+
+
+-----------------------------------------------------------------------------
+/lib/plugins/stonith : stonith implementation plugins
+.....................................................
+STONITH stands for Shoot The Other Node In The Head.  Stonith is a method
+of ensuring that misbehaving machines have really stopped using resources
+by killing (shooting) them.  It takes the speculation "I think node X is
+dead", and makes it into a certainty.  This directory contains the plugins
+for implementing the STONITH API for various kinds of hardware which
+actually carry out the dirty deed.
+
+
+-----------------------------------------------------------------------------
+/lib/recoverymgr : recovery manager client library
+..................................................
+This library provides services which send event notifications to the recovery
+manager.  It is used by the recovery manager plugin in AppHBNotification.
+
+
+-----------------------------------------------------------------------------
+/lib/stonith : stonith library and utility
+..........................................
+This is the library which people link against who want STONITH services.
+There is also a "stonith" program  used for testing the implementations.
+
+-----------------------------------------------------------------------------
+/libltdl : GNU libltdl, a system independent dlopen wrapper for GNU libtool
+...........................................................................
+Magic libtool stuff.  We need it -- even if I don't understand it ;-)
+
+-----------------------------------------------------------------------------
+/membership: Membership implementations
+.......................................
+Implementations of membership APIs.  Perhaps we should have a common API
+library or plugin set that folks could use to avoid duplicating and fixing
+that for each implementation.
+
+-----------------------------------------------------------------------------
+/membership/ccm : Consensus Cluster Membership (CCM) implementation
+...................................................................
+Ram Pai's consensus cluster membership implementation.  Includes a quorum
+capability.  Built on top of the heartbeat API.
+
+-----------------------------------------------------------------------------
+/replace : replacement implementations for some common library functions
+       (inet_pton, setenv, strerror, etc)
+.......................................................................
+autoconf portability stuff.
+
+-----------------------------------------------------------------------------
+/snmp_subagent : SNMP remote management for Linux-HA cluster
+............................................................
+We have an SNMP MIB reserved for Linux-HA.  This code is supposed to implement
+various kinds of SNMP queries and traps.  It was written by Yixiong Zou.
+
+
+------------------------------------------------------------------------------
+/telecom : telecommunication type functions required for HA-aware applications
+..............................................................................
+Things here aren't *strictly* for telecom type applications, but I had to
+name it something... ;-)
+
+-----------------------------------------------------------------------------
+/telecom/apphbd: application heartbeat daemon
+.............................................
+The application heartbeat daemon.  Processes register with apphbd, and then
+when they fail to heartbeat "often enough", or they die without unregistering,
+various interested parties are notified according to the configured set
+of plugins.  Currently, we only have a plugin for the recovery manager
+daemon.
+
+-----------------------------------------------------------------------------
+/telecom/recoverymgrd : Recovery manager (apphbd error recovery only)
+.....................................................................
+This program takes configured actions to recover from problems that apphbd
+notifies it of.  This typically involves killing and restarting the errant
+processes.

@@ -1,0 +1,37 @@
+Hi,
+
+Welcome to the linux-ha project source tree.
+
+There is a little documentation on setting things up for a HA failover
+system in the doc directory.  The following things are among the more
+interesting docs:
+	GettingStarted.html		HardwareGuide.html
+	Requirements.html		faqntips.html
+	nice_failback.txt		rsync.html
+
+For building the system:
+
+If you have no idea what to do, then you should probably use the ConfigureMe
+to configure (and make, install, package, etc.) the software.  ConfigureMe
+makes some educated guesses on how linux-ha ought to be installed by
+default on the current system type.
+
+If you have played with autoconf/automake packages before, then you can use
+the bootstrap script, or configure, etc. like normal.
+
+Due to the way that init directories are handled by heartbeat,
+make distcheck can be problematic. The following should allow
+this to run successfully, noting that gmake is often available
+as make:
+
+gmake DESTDIR="$PWD/heartbeat-@VERSION@/=inst" distcheck
+
+For more information on the project, see the web site at linux-ha.org.
+Information on joining mailing lists can be found at
+	http://linux-ha.org/contact/
+
+
+	Enjoy!
+
+
+	-- The Linux-Ha development team

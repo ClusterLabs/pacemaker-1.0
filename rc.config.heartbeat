@@ -1,0 +1,4 @@
+#
+# Set this to 'yes', if you want to start heartbeat:
+#
+START_HEARTBEAT=no

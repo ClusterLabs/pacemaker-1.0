@@ -1,0 +1,6 @@
+Makefile
+Makefile.in
+.*.swp
+ha_config.h
+stamp-h2
+stamp-h2.in

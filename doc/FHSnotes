@@ -1,0 +1,130 @@
+/etc/ha.d/haresources and /etc/ha.d/ha.cf are config files which are
+	specifically permitted by the FHS.
+	"/etc contains configuration files and directories that are
+		specific to the current system."
+
+/etc/ha.d/harc can be where it is by extension of the examples of /etc/rc.d/rc
+	since it is analagous by design.
+	Ditto for shellfuncs
+
+The scripts in /etc/ha.d/init.d, rc.d, and resource.d are analagous by
+	design to the scripts in /etc/rc.d/init.d.
+
+I think /etc/ha.d/bin should be moved over to /usr/lib/heartbeat
+
+
+It isn't completely clear where heartbeat-fifo should go.   I would suggest
+/var/run because it is somewhat analagous to the transient
+UNIX-domain socket example mentioned in the FHS.
+	"Programs that maintain transient UNIX-domain sockets should
+	place them in this directory". [/var/run]
+
+
+
+
+
+------------------------------------------------------------------------------
+/etc contains configuration files and directories that are specific to the current system. 
+
+No binaries should be located under /etc. 
+------------------------------------------------------------------------------
+/opt is reserved for the installation of add-on application software packages. 
+I don't consider this an applicaiton software package.
+------------------------------------------------------------------------------
+/usr/lib includes object files, libraries, and internal binaries that are not intended to be executed directly by users or shell scripts. 
+
+Applications may use a single subdirectory under /usr/lib. If an application uses a subdirectory, all architecture-dependent data
+exclusively used by the application should be placed within that subdirectory. For example, the perl5 subdirectory for Perl 5 modules
+and libraries. 
+
+Miscellaneous architecture-independent application-specific static files and subdirectories should be placed in /usr/share. 
+
+------------------------------------------------------------------------------
+
+
+5.9 /var/run : Run-time variable files
+
+This directory contains system information files describing the system since it was booted. Files in this directory should be cleared
+(removed or truncated as appropriate) at the beginning of the boot process. 
+
+Process identifier (PID) files, which were originally placed in /etc, should be placed in /var/run. The naming convention for PID
+files is <program-name>.pid. For example, the crond PID file is named /var/run/crond.pid. 
+
+The internal format of PID files remains unchanged. The file should consist of the process identifier in ASCII-encoded decimal,
+followed by a newline character. For example, if crond was process number 25, /var/run/crond.pid would contain three
+characters: two, five, and newline. 
+
+Programs that read PID files should be somewhat flexible in what they accept; i.e., they should ignore extra whitespace, leading
+zeroes, absence of the trailing newline, or additional lines in the PID file. Programs that create PID files should use the simple
+specification located in the above paragraph. 
+------------------------------------------------------------------------------
+set no
+5.11 /var/state : Variable state information
+
+  /var/state
+  <editor>
+  misc
+  xdm
+  <pkgtool>
+  <package>
+            Variable state information
+            Editor backup files and state
+            Miscellaneous state data
+            X display manager variable data
+            Packaging support files
+            State data for packages and subsystems
+
+
+                                            Tree 5.11.1 
+
+This hierarchy holds state information pertaining to an application or the system. State information is data that programs modify while
+they run, and that pertains to one specific host. Users should never need to modify files in /var/state to configure a package's
+operation. 
+
+State information is generally used to preserve the condition of an application (or a group of inter-related applications) between
+invocations and between different instances of the same application. State information should generally remain valid after a reboot,
+should not be logging output, and should not be spooled data. 
+
+An application (or a group of inter-related applications) should use a subdirectory of /var/state for its data. There is one required
+subdirectory, /var/state/misc, which is intended for state files that don't need a subdirectory; the other subdirectories should
+only be present if the application in question is included in the distribution. 
+
+/var/state/<name> is the location that should be used for all distribution packaging support. Different distributions may use
+different names, of course. 
+
+Previous releases of this standard used the name /var/lib for this hierarchy. /var/lib is deprecated, but it may be used in
+parallel with the required /var/state hierarchy, as a transitional measure for application-specific data. Note, however, that this
+allowance will be removed in a future release of the standard. Alternately, /var/lib may be made a symbolic link to /var/state. 
+
+BEGIN RATIONALE
+
+/usr/lib is increasingly used solely for object files or archives of them; this is true of the current BSD UNIX variants as well as
+current GNU packages. Accordingly, the name /var/lib seemed inappropriate. 
+
+BSD uses the name /var/db for a similar directory. This name seemed overly constricting, as it implied a directory structure
+intended primarily for database (.db) files. 
+
+END RATIONALE
+
+------------------------------------------------------------------------------
+4.5 /usr/lib : Libraries for programming and packages
+
+/usr/lib includes object files, libraries, and internal binaries that are not intended to be executed directly by users or shell scripts. 
+
+
+Applications may use a single subdirectory under /usr/lib. If an application uses a subdirectory, all architecture-dependent data
+exclusively used by the application should be placed within that subdirectory. For example, the perl5 subdirectory for Perl 5 modules
+and libraries. 
+
+Miscellaneous architecture-independent application-specific static files and subdirectories should be placed in /usr/share. 
+
+Some executable commands such as makewhatis and sendmail have also been traditionally placed in /usr/lib. makewhatis is
+an internal binary and should be placed in a binary directory; users access only catman. Newer sendmail binaries are now placed by
+default in /usr/sbin; a symbolic link should remain from /usr/lib. Additionally, systems using Smail should place Smail in
+/usr/sbin/smail, and /usr/sbin/sendmail should be a symbolic link to it. 
+
+A symbolic link /usr/lib/X11 pointing to the lib/X11 directory of the default X distribution is required if X is installed. 
+
+Note: No host-specific data for the X Window System should be stored in /usr/lib/X11. Host-specific configuration files such as
+Xconfig or XF86Config should be stored in /etc/X11. This should include configuration data such as system.twmrc even if it is
+only made a symbolic link to a more global configuration file (probably in /usr/X11R6/lib/X11).

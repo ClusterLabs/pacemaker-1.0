@@ -1,0 +1,5 @@
+usr/include/stonith/stonith.h
+usr/include/stonith/expect.h
+usr/lib/libstonith.a
+usr/lib/libstonith.la
+usr/lib/libstonith.so
