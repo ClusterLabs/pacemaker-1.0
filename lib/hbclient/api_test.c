@@ -1,4 +1,4 @@
-/* $Id: api_test.c,v 1.2 2004/03/26 07:50:07 chuyee Exp $ */
+/* $Id: api_test.c,v 1.3 2004/04/29 15:23:38 kevin Exp $ */
 /* 
  * api_test: Test program for testing the heartbeat API
  *
@@ -28,6 +28,7 @@
 #include <errno.h>
 #include <clplumbing/cl_log.h>
 #include <clplumbing/cl_signal.h>
+#include <clplumbing/cl_malloc.h>
 #include <sys/types.h>
 #include <sys/utsname.h>
 #include <sys/time.h>
@@ -167,7 +168,7 @@ main(int argc, char ** argv)
 			cl_log(LOG_INFO, "Parameter %s is [%s]"
 			,	mandparms[j]
 			,	ctmp);
-			free(ctmp); ctmp = NULL;
+			cl_free(ctmp); ctmp = NULL;
 		}else{
 			cl_log(LOG_ERR, "Mandantory Parameter %s is not available!"
 			,	mandparms[j]);
@@ -178,7 +179,7 @@ main(int argc, char ** argv)
 			cl_log(LOG_INFO, "Optional Parameter %s is [%s]"
 			,	optparms[j]
 			,	ctmp);
-			free(ctmp); ctmp = NULL;
+			cl_free(ctmp); ctmp = NULL;
 		}
 	}
 	if ((cval = hb->llc_ops->get_resources(hb)) == NULL) {
