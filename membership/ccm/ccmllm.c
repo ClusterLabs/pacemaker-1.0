@@ -1,4 +1,4 @@
-/* $Id: ccmllm.c,v 1.6 2004/08/29 03:01:14 msoffen Exp $ */
+/* $Id: ccmllm.c,v 1.7 2005/02/02 19:38:37 gshi Exp $ */
 /* 
  * ccmllm.c: Low Level membership routines.
  *
@@ -135,6 +135,26 @@ llm_status_update(llm_info_t *llm, const char *node, const char *status)
 	return FALSE;
 }
 
+
+int
+llm_get_inactive_node_count(llm_info_t *llm)
+{
+	int	count = 0 ;
+	int	i;
+	
+	for (i = 0; i< llm->llm_nodeCount; i++){
+		cl_log(LOG_INFO, "node=%s  status=%s",
+		       llm->llm_nodes[i].NodeID, 
+		       llm->llm_nodes[i].Status);
+		if (strncmp(llm->llm_nodes[i].Status, 
+			    CLUST_INACTIVE, 
+			    STATUSSIZE) == 0 ){
+			count ++;
+		}
+	}
+	
+	return count;
+}
 
 /* */
 /* Get uuid of the node with given nodename. */

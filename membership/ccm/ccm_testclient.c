@@ -1,4 +1,4 @@
-/* $Id: ccm_testclient.c,v 1.15 2004/03/19 05:01:10 chuyee Exp $ */
+/* $Id: ccm_testclient.c,v 1.16 2005/02/02 19:38:37 gshi Exp $ */
 /* 
  * ccm.c: A consensus cluster membership sample client
  *
@@ -45,28 +45,31 @@ my_ms_events(oc_ed_t event, void *cookie,
 	uint i;
 	int i_am_in;
 
- 	cl_log(LOG_INFO,"event=%s", 
-			event==OC_EV_MS_NEW_MEMBERSHIP?"NEW MEMBERSHIP":
-		        event==OC_EV_MS_NOT_PRIMARY?"NOT PRIMARY":
-			event==OC_EV_MS_PRIMARY_RESTORED?"PRIMARY RESTORED":
-			event==OC_EV_MS_EVICTED?"EVICTED":
-			      "NO QUORUM MEMBERSHIP");
+ 	cl_log(LOG_INFO,"event=%s:", 
+	       event==OC_EV_MS_NEW_MEMBERSHIP?"NEW MEMBERSHIP":
+	       event==OC_EV_MS_NOT_PRIMARY?"NOT PRIMARY":
+	       event==OC_EV_MS_PRIMARY_RESTORED?"PRIMARY RESTORED":
+	       event==OC_EV_MS_EVICTED?"EVICTED":
+	       "NO QUORUM MEMBERSHIP"
+	       );
 
 	if(OC_EV_MS_EVICTED == event) {
 		oc_ev_callback_done(cookie);
 		return;
 	}
-
-	cl_log(LOG_INFO,"trans=%d, nodes=%d, new=%d, lost=%d n_idx=%d, "
-				"new_idx=%d, old_idx=%d",
-			oc->m_instance,
-			oc->m_n_member,
-			oc->m_n_in,
-			oc->m_n_out,
-			oc->m_memb_idx,
-			oc->m_in_idx,
-			oc->m_out_idx);
-
+	
+	cl_log(LOG_INFO,"instance=%d\n"
+	       "# ttl members=%d, ttl_idx=%d\n"
+	       "# new members=%d, new_idx=%d\n"
+	       "# out members=%d, out_idx=%d",
+	       oc->m_instance,
+	       oc->m_n_member,
+	       oc->m_memb_idx,
+	       oc->m_n_in,
+	       oc->m_in_idx,
+	       oc->m_n_out,	       
+	       oc->m_out_idx);
+	
 	i_am_in=0;
 	cl_log(LOG_INFO, "NODES IN THE PRIMARY MEMBERSHIP");
 	for(i=0; i<oc->m_n_member; i++) {

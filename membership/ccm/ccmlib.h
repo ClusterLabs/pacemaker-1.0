@@ -1,4 +1,4 @@
-/* $Id: ccmlib.h,v 1.17 2004/11/08 08:26:01 andrew Exp $ */
+/* $Id: ccmlib.h,v 1.18 2005/02/02 19:38:37 gshi Exp $ */
 /*
  * ccmlib.h: internal definations for ccm library files.
  *
@@ -50,8 +50,7 @@ typedef struct ccm_meminfo_s {
 	int 		ev;
 	int		n;
 	int		trans;
-	int		q_overide; /* if set just assume we have quorum */
-				   /* if unset compute quorum if desired */
+	int		quorum;
 	int 		member[0];
 } ccm_meminfo_t;
 

@@ -1,4 +1,4 @@
-/* $Id: ccm.c,v 1.55 2004/12/22 23:43:49 gshi Exp $ */
+/* $Id: ccm.c,v 1.56 2005/02/02 19:38:37 gshi Exp $ */
 /* 
  * ccm.c: Consensus Cluster Service Program 
  *
@@ -32,126 +32,6 @@
 
 extern int global_verbose;
 extern int global_debug;
-
-/* */
-/* the various states of the CCM state machine. */
-/* */
-enum ccm_state  {
-	CCM_STATE_NONE=0,		/* is in NULL state  */
-	CCM_STATE_VERSION_REQUEST=10,	/* sent a request for protocol version */
-	CCM_STATE_JOINING=20,  		/* has initiated a join protocol  */
-	CCM_STATE_RCVD_UPDATE=30,	/* has recevied the updates from other nodes */
-	CCM_STATE_SENT_MEMLISTREQ=40,	/* CL has sent a request for member list  */
-					/* this state is applicable only on CL */
-	CCM_STATE_REQ_MEMLIST=50,	/* CL has requested member list */
-				  	/* this state is applicable only on non-CL */
-	CCM_STATE_MEMLIST_RES=60,	/* Responded member list to the Cluster  */
-				 	/* Leader */
-	CCM_STATE_JOINED=70,    /* PART of the CCM cluster membership! */
-	CCM_STATE_WAIT_FOR_MEM_LIST=80,
-	CCM_STATE_WAIT_FOR_CHANGE=90,
-	CCM_STATE_NEW_NODE_WAIT_FOR_MEM_LIST=100,
-
-	CCM_STATE_END
-};
-
-/* the times for repeating sending message */
-#define REPEAT_TIMES 10
-
-/* add new enums to this structure as and when new protocols are added */
-enum ccm_protocol {
-	CCM_VER_NONE = 0,
-	CCM_VER_1,
-	CCM_VER_LAST
-};
-
-typedef struct ccm_proto_s {
-	enum ccm_protocol  com_hiproto;/* highest protocol version that  */
-				/* this node can handle */
-	int	com_active_proto;/* protocol version */
-} ccm_proto_t;
-
-
-typedef struct memcomp_s {
-	graph_t		*mem_graph;  /* memlist calculation graph */
-
-	GSList 		*mem_maxt; 	    /* the maxtrans of each node */
-				    /* participating in the computation . */
-				    /* NOTE: the transition number of the */
-				    /* next transition is always 1 higher */
-				    /* than that of all transitions seen  */
-				    /* by each node participating in the  */
-				    /* membership */
-	longclock_t  	mem_inittime; /* the time got intialized */
-} memcomp_t;
-#define 	MEMCOMP_GET_GRAPH(memc)  	memc->mem_graph
-#define 	MEMCOMP_GET_MAXT(memc)  	memc->mem_maxt
-#define 	MEMCOMP_GET_INITTIME(memc)  	memc->mem_inittime
-#define 	MEMCOMP_SET_GRAPH(memc, gr)  	memc->mem_graph=gr
-#define 	MEMCOMP_SET_MAXT(memc, list)  	memc->mem_maxt=list
-#define 	MEMCOMP_SET_INITTIME(memc,time)	memc->mem_inittime=time
-
-
-typedef struct ccm_tmout_s {
-	long	iff;  /* membership_Info_From_Followers_timeout */
-	long	itf;  /* membership_Info_To_Followers_timeout */
-	long	fl;  /* membership_Final_List_timeout */
-	long	u;  /* update timeout */
-	long	lu;  /* long update timeout */
-	long	vrs;  /* version timeout */
-} ccm_tmout_t;
-
-enum change_event_type{
-    TYPE_NONE,	
-    NODE_LEAVE,
-    NEW_NODE
-};
-
-#define COOKIESIZE 15
-typedef struct ccm_info_s {
-	llm_info_t 	ccm_llm;	/*  low level membership info */
-
-	int		ccm_nodeCount;	/*  number of nodes in the ccm cluster */
-	int		ccm_member[MAXNODE];/* members of the ccm cluster */
-	memcomp_t	ccm_memcomp;	/* the datastructure to compute the  */
-					/* final membership for each membership */
-	 				/* computation instance of the ccm protocol. */
-	 				/* used by the leader only. */
-
-	ccm_proto_t  	ccm_proto;	/* protocol version information */
-#define ccm_active_proto ccm_proto.com_active_proto
-#define ccm_hiproto	  ccm_proto.com_hiproto
-
-	char		ccm_cookie[COOKIESIZE];/* context identification string. */
-	uint32_t	ccm_transition_major;/* transition number of the cluster */
-	int		ccm_cluster_leader; /* cluster leader of the last major */
-				/* transition. index of cl in ccm_member table */
-	int		ccm_joined_transition;
-					/* this indicates the major transition  */
-					/* number during which this node became */
-					/* a member of the cluster. */
-					/* A sideeffect of this is it also */
-					/* is used to figure out if this node */
-					/* was ever a part of the cluster. */
-					/* Should be intially set to 0 */
-	uint32_t	ccm_max_transition;	/* the maximum transition number seen */
-					/* by this node ever since it was born. */
-	enum ccm_state 	ccm_node_state;	/* cluster state of this node  */
-	uint32_t	ccm_transition_minor;/* minor transition number of the  */
-					/* cluster */
-
-	ccm_update_t   ccm_update; 	/* structure that keeps track */
-					/* of uptime of each member */
-	GSList		*ccm_joiner_head;/* keeps track of new-bees version */
-					/* request.  */
-	ccm_version_t  ccm_version;     /* keeps track of version request  */
-					/* related info */
-	ccm_tmout_t	tmout;
-	uint32_t change_event_remaining_count; 		
-	enum change_event_type change_type;
-	char change_node_id[NODEIDSIZE];
-
-} ccm_info_t;
 
 
 
@@ -770,12 +650,8 @@ report_mbrs(ccm_info_t *info)
 	/* 
 	 * report to clients, the new membership 
 	 */
-	client_new_mbrship(CCM_GET_MEMCOUNT(info), 
-		CCM_GET_MAJORTRANS(info),
-		CCM_GET_MEMTABLE(info), 
-		(CCM_GET_MEMCOUNT(info)==1 
-		&& llm_only_active_node(CCM_GET_LLM(info))),
-		bornon);
+	client_new_mbrship(info,
+			   bornon);
 	return;
 }
 /*
@@ -3984,8 +3860,11 @@ repeat:
 			/* connectivity or death' of some node		   */
 			const char *result = ha_msg_value(reply, F_APIRESULT);
 			const char *node = ha_msg_value(reply, F_NODE);
+			
+			
 			if(strcmp(result,T_STONITH_OK)==0){
 				nodelist_update(node, CLUST_INACTIVE, -1, info);
+				report_mbrs(info);
 			} else {
 				nodelist_update(node, DEADSTATUS, -1, info);
 			}

@@ -1,4 +1,4 @@
-/* $Id: ccmlib_memapi.c,v 1.23 2004/08/29 03:01:14 msoffen Exp $ */
+/* $Id: ccmlib_memapi.c,v 1.24 2005/02/02 19:38:37 gshi Exp $ */
 /* 
  * ccmlib_memapi.c: Consensus Cluster Membership API
  *
@@ -22,11 +22,13 @@
 
 #define __CCM_LIBRARY__
 #include <ccmlib.h>
+#include <ccm.h>
 /*#include <syslog.h> */
-/*#include <clplumbing/cl_log.h> */
+#include <clplumbing/cl_log.h> 
 
 /* structure to track the membership delivered to client */
 typedef struct mbr_track_s {
+	int			quorum;
 	int			m_size;
 	oc_ev_membership_t 	m_mem;
 } mbr_track_t;
@@ -407,19 +409,7 @@ mem_callback_done(void *cookie)
 	return;
 }
 
-/* a sophisticated quorum algorithm has to be introduced here
- *  currently we are just using the simplest algorithm
- */
-static gboolean
-mem_quorum(mbr_private_t *private, mbr_track_t *mbr)
-{
-	/*cl_log(LOG_DEBUG, "n_member=%d, cllm_get_nodecount=%d\n", */
-	/*	OC_EV_GET_N_MEMBER(mbr), CLLM_GET_NODECOUNT(private->llm)); */
-	if(OC_EV_GET_N_MEMBER(mbr) <
-		(CLLM_GET_NODECOUNT(private->llm)/2+1))
-		return FALSE;
-	return TRUE;
-}
+
 
 static void
 update_bornons(mbr_private_t *private, mbr_track_t *mbr)
@@ -513,23 +503,18 @@ mem_handle_event(class_t *class)
 		oc_type = OC_EV_MS_INVALID;
 
 		switch(type) {
-		case CCM_NEW_MEMBERSHIP :
-
+		case CCM_NEW_MEMBERSHIP :{
+			
+			ccm_meminfo_t* cmi = (ccm_meminfo_t*)msg->msg_body;
+			
 			size = get_new_membership(private, 
-				(ccm_meminfo_t *)msg->msg_body, 
-				msg->msg_len, 
-				&mbr_track);
+						  cmi,
+						  msg->msg_len, 
+						  &mbr_track);
 
-
-			/* if ccm daemon informs us that we have quorum
-			 * by default, we do not have to compute quorum 
-			 */
-			if(((ccm_meminfo_t *)(msg->msg_body))->q_overide) {
-				quorum = TRUE;
-			} else {
-				quorum = mem_quorum(private, mbr_track);
-			}
-
+			
+			mbr_track->quorum = quorum = cmi->quorum;
+			
 			/* if no quorum, delete the bornon dates for lost 
 			 * nodes, add  bornon dates for the new nodes and 
 			 * return
@@ -552,15 +537,19 @@ mem_handle_event(class_t *class)
 			* Do not construct a new membership  
 			*/
 			if (membership_unchanged(private, mbr_track)){
-				/* we do not need the new mbr_track, 
-				*  the old one is the same as the new
-				*/
-				mem_free_func(mbr_track);
+				mbr_track_t* old_mbr_track;
 
-				oc_type = OC_EV_MS_PRIMARY_RESTORED;
-				cookie = private->cookie;
-				mbr_track = (mbr_track_t *)
-					cookie_get_data(cookie);
+				old_mbr_track = (mbr_track_t *)
+					cookie_get_data(private->cookie);
+				
+				if (mbr_track->quorum == old_mbr_track->quorum){
+					/* nothing has changed*/
+					return TRUE;
+				}else if (mbr_track->quorum){
+					oc_type = OC_EV_MS_PRIMARY_RESTORED;
+				}else{
+					oc_type = OC_EV_MS_INVALID;
+				}
 			} else {
 				oc_type = quorum?
 					OC_EV_MS_NEW_MEMBERSHIP:
@@ -576,16 +565,16 @@ mem_handle_event(class_t *class)
 				if(!private->special) {
 				  assert(oc_type == OC_EV_MS_NEW_MEMBERSHIP);
 				}
-
-				update_bornons(private, mbr_track);
-				cookie_unref(private->cookie);
-				cookie = cookie_construct(mem_callback_done, 
-						mem_free_func, mbr_track);
-				private->cookie = cookie;
 			}
+
+			update_bornons(private, mbr_track);
+			cookie_unref(private->cookie);
+			cookie = cookie_construct(mem_callback_done, 
+						  mem_free_func, mbr_track);
+			private->cookie = cookie;
 			size = OC_EV_GET_SIZE(mbr_track);
 			break;
-
+		}
 		case CCM_EVICTED:
 			oc_type = OC_EV_MS_EVICTED;
 			private->client_report = TRUE;
@@ -616,7 +605,6 @@ mem_handle_event(class_t *class)
 			}
 			break;
 		}
-
 		if(private->callback && private->client_report && cookie){
 			cookie_ref(cookie);
 			private->callback(oc_type,

@@ -1,4 +1,4 @@
-/* $Id: ccmclient.c,v 1.15 2004/11/22 20:06:42 gshi Exp $ */
+/* $Id: ccmclient.c,v 1.16 2005/02/02 19:38:37 gshi Exp $ */
 /* 
  * client.c: Consensus Cluster Client tracker
  *
@@ -319,18 +319,36 @@ client_delete_all(void)
 }
 
 
+/* a sophisticated quorum algorithm has to be introduced here
+ *  currently we are just using the simplest algorithm
+ */
+static gboolean
+mem_quorum(llm_info_t* llm, int member_count)
+{
+	int	inactive_count = llm_get_inactive_node_count(llm);
+	int	total_count = llm->llm_nodeCount;
+	
+	cl_log(LOG_INFO, "n_member=%d, nodecount=%d, inactive_count=%d\n",
+	       member_count, total_count, inactive_count); 
+	if(member_count <((total_count - inactive_count)/2 + 1)){
+		return FALSE;
+	}
+	return TRUE;
+}
+
 void
-client_new_mbrship(int n,  int trans, int *member, 
-		gboolean q_flag, void *borndata)
+client_new_mbrship(ccm_info_t* info, void* borndata)
 {
 	/* creating enough heap memory in order to avoid allocation */
 	static struct born_s	bornbuffer[MAXNODE+10];
 	ccm_meminfo_t *ccm=(ccm_meminfo_t *)bornbuffer;
 	ccm_born_t    *born=(ccm_born_t *)bornbuffer;
-
 	struct born_s *born_arry = (struct born_s *)borndata;
-
-	assert(n<=MAXNODE);
+	int		n = info->ccm_nodeCount;
+	int		trans = info->ccm_transition_major;
+	int*		member = info->ccm_member;
+	
+	assert( n<= MAXNODE);
 
 	prim_flag=TRUE;
 	restored_flag=FALSE;
@@ -339,7 +357,7 @@ client_new_mbrship(int n,  int trans, int *member,
 	ccm->ev = CCM_NEW_MEMBERSHIP;
 	ccm->n = n;
 	ccm->trans = trans;
-	ccm->q_overide = q_flag;
+	ccm->quorum = mem_quorum(&info->ccm_llm, n);
 	memcpy(ccm->member, member, n*sizeof(int));
 
 	if(ipc_mem_message && --(ipc_mem_message->count)==0){
