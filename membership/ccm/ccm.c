@@ -1,4 +1,4 @@
-/* $Id: ccm.c,v 1.57 2005/02/17 19:08:20 gshi Exp $ */
+/* $Id: ccm.c,v 1.58 2005/02/18 23:21:21 gshi Exp $ */
 /* 
  * ccm.c: Consensus Cluster Service Program 
  *
@@ -1204,8 +1204,10 @@ ccm_compute_and_send_final_memlist(ll_cluster_t *hb, ccm_info_t *info)
 	update_reset(CCM_GET_UPDATETABLE(info));
 	ccm_memcomp_reset(info);
 	CCM_SET_STATE(info, CCM_STATE_JOINED);
-	if(!ccm_already_joined(info)) 
+	if(!ccm_already_joined(info)) {
 		CCM_SET_JOINED_TRANSITION(info, CCM_GET_MAJORTRANS(info));
+	}
+
 	return;
 }
 
@@ -2525,8 +2527,9 @@ static void ccm_state_wait_for_change(enum ccm_type ccm_msg_type,
 			/*fall through*/	    	
 		case CCM_TYPE_NEW_NODE:
 			/* only leader can stay in this state */
-			if(!ccm_am_i_leader(info))
+			if(!ccm_am_i_leader(info)){
 				assert(0);
+			}
 
 			if (!uptime_set){
 				if ((uptime = ha_msg_value(reply, CCM_UPTIME)) == NULL){
@@ -2822,7 +2825,10 @@ switchstatement:
 			/* mark that this node has sent us a memlist reply.
 			 * Calculate the membership list with this new message 
 			 */
-			if(trans_minorval != CCM_GET_MINORTRANS(info)) break;
+			if(trans_minorval != CCM_GET_MINORTRANS(info)){
+				break;
+			}
+
 			if(trans_majorval != CCM_GET_MAJORTRANS(info)) {
 				cl_log(LOG_INFO, 
 				   "dropping CCM_TYPE_RES_MEMLIST "
@@ -3816,7 +3822,10 @@ ccm_handle_shutdone(ccm_info_t *info,
 		state == CCM_STATE_VERSION_REQUEST) {
 		return timeout_msg_mod(info);
 	}
-	if(!orig) return timeout_msg_mod(info);
+	if(!orig){
+		return timeout_msg_mod(info);
+	}
+
 	if(strncmp(ccm_get_my_hostname(info),orig, 
 		LLM_GET_NODEIDSIZE(CCM_GET_LLM(info))) == 0) {
 		ccm_reset(info);
