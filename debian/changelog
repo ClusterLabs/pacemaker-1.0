@@ -14,6 +14,7 @@ heartbeat (1.3.0-1) unstable; urgency=low
   * Patch is superseeded by much newer codebase 
     (closes: #239685) (closes: Bug#239686)
   * Init script no longer uses -e argument to echo. (closes: Bug#136541)
+  * Plugins no longer need to be executable. (closes: Bug#247348)
 
  -- Simon Horman <horms@debian.org>  Mon, 12 Apr 2004 15:02:28 +0900
 
