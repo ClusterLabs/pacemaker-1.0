@@ -1,4 +1,4 @@
-const static char * _send_arp_c = "$Id: send_arp.c,v 1.6 2003/12/11 22:58:04 alan Exp $";
+const static char * _send_arp_c = "$Id: send_arp.c,v 1.7 2004/01/22 01:53:35 alan Exp $";
 /* 
  * send_arp
  * 
@@ -39,6 +39,7 @@ const static char * _send_arp_c = "$Id: send_arp.c,v 1.6 2003/12/11 22:58:04 ala
 #include <syslog.h>
 #include <libgen.h>
 #include <clplumbing/timers.h>
+#include <clplumbing/cl_signal.h>
 
 #ifdef HAVE_LIBNET_1_0_API
 #	define	LTYPE	struct libnet_link_int
@@ -50,19 +51,20 @@ const static char * _send_arp_c = "$Id: send_arp.c,v 1.6 2003/12/11 22:58:04 ala
 #define PIDDIR       HA_VARLIBDIR "/" PACKAGE "rsctmp/send_arp"
 #define PIDFILE_BASE PIDDIR "/send_arp-"
 
-static int send_arp(LTYPE* l, u_long ip, u_char *device, u_char mac[6], u_char *broadcast, u_char *netmask, u_short arptype);
+static int send_arp(LTYPE* l, u_long ip, u_char *device, u_char mac[6]
+,	u_char *broadcast, u_char *netmask, u_short arptype);
 
 static char print_usage[]={
-"send_arp: sends out custom ARP packet. packetfactory.net\n"
-"\tusage: send_arp [-i repeatinterval-ms] [-r repeatcount]"
-" [-p pidfile] device src_ip_addr src_hw_addr broadcast_ip_addr netmask\n"
-"\tIf src_hw_addr is \"auto\" then the address of device will be used"};
+	"send_arp: sends out custom ARP packet. packetfactory.net\n"
+	"\tusage: send_arp [-i repeatinterval-ms] [-r repeatcount]"
+	" [-p pidfile] device src_ip_addr src_hw_addr broadcast_ip_addr netmask\n"
+	"\tIf src_hw_addr is \"auto\" then the address of device will be used"
+};
 
 static void convert_macaddr (u_char *macaddr, u_char enet_src[6]);
 static int get_hw_addr(char *device, u_char mac[6]);
 int write_pid_file(const char *pidfilename);
 int create_pid_directory(const char *piddirectory);
-
 
 #define AUTO_MAC_ADDR "auto"
 
@@ -70,6 +72,16 @@ int create_pid_directory(const char *piddirectory);
 #ifndef LIBNET_ERRBUF_SIZE
 #	define LIBNET_ERRBUF_SIZE 256
 #endif
+
+static void
+byebye(int nsig)
+{
+	(void)nsig;
+	/* Avoid an "error exit" log message if we're killed */
+	exit(0);
+}
+
+
 int
 main(int argc, char *argv[])
 {
@@ -91,6 +103,8 @@ main(int argc, char *argv[])
 	char    *pidfilename = NULL;
 
 	(void)_send_arp_c;
+	CL_SIGINTERRUPT(SIGTERM, 1);
+	CL_SIGNAL(SIGTERM, byebye);
 
 	openlog("send_arp", LOG_CONS | LOG_PID, LOG_USER);
 
@@ -532,6 +546,9 @@ write_pid_file(const char *pidfilename)
 
 /*
  * $Log: send_arp.c,v $
+ * Revision 1.7  2004/01/22 01:53:35  alan
+ * Changed send_arp to exit(0) when killed by SIGTERM.
+ *
  * Revision 1.6  2003/12/11 22:58:04  alan
  * Put in a patch from Werner Schultheiﬂ for allowing old-style MAC addrs
  * in send_arp.
