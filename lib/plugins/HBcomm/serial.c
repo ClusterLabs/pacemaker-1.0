@@ -1,4 +1,4 @@
-const static char _serial_c_Id [] = "$Id: serial.c,v 1.27 2003/05/21 21:56:50 alan Exp $";
+const static char _serial_c_Id [] = "$Id: serial.c,v 1.28 2004/01/20 16:23:11 alan Exp $";
 
 /*
  * Linux-HA serial heartbeat code
@@ -504,7 +504,7 @@ serial_read (struct hb_media*mp)
 	int			newmsglen = 0;
 	int			startlen;
 	const char *		start = MSG_START;
-	const char *		end = MSG_START;
+	const char *		end = MSG_END;
 	int			endlen;
 	struct serial_private*	spp;
 
@@ -673,6 +673,9 @@ ttygets(char * inbuf, int length, struct serial_private *tty)
 }
 /*
  * $Log: serial.c,v $
+ * Revision 1.28  2004/01/20 16:23:11  alan
+ * Fixed an oversight which turns out to have been luckily-benign in practice.
+ *
  * Revision 1.27  2003/05/21 21:56:50  alan
  * Minor tweak to the last tty fix from Carson Gaspar.
  *
