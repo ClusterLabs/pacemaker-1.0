@@ -1,4 +1,4 @@
-/* $Id: hb_resource.c,v 1.56 2004/05/17 15:12:08 lars Exp $ */
+/* $Id: hb_resource.c,v 1.57 2004/07/02 03:34:21 sunjd Exp $ */
 /*
  * hb_resource: Linux-HA heartbeat resource management code
  *
@@ -853,7 +853,19 @@ process_resources(const char * type, struct ha_msg* msg
 	}
 	if (strcasecmp(type, T_SHUTDONE) == 0) {
 		if (thisnode != curnode) {
-			other_is_stable = 0;
+			/* 
+			 * Fix the issue of can not stopping simulataneous.
+			 * It seems other_is_stable should always be setted as 1 
+			 * when go here. 
+			 * But for avoiding unknown side-effect, now temporily
+			 * set other_is_stable = 1 conditionally.
+			 */
+			if (shutdown_in_progress) {
+				other_is_stable = 1;
+			} else {
+				other_is_stable = 0;
+			}
+			
 			other_holds_resources = HB_NO_RSC;
 			if (ANYDEBUG) {
 				cl_log(LOG_DEBUG
@@ -2201,6 +2213,9 @@ StonithStatProcessName(ProcTrack* p)
 
 /*
  * $Log: hb_resource.c,v $
+ * Revision 1.57  2004/07/02 03:34:21  sunjd
+ * Fix cannot stop two nodes simultaneously, pls help to test more
+ *
  * Revision 1.56  2004/05/17 15:12:08  lars
  * Reverting over-eager approach to disabling old resource manager code.
  *
