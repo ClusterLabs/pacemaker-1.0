@@ -1,4 +1,4 @@
-/* $Id: stonithd.c,v 1.5 2004/12/08 03:24:16 sunjd Exp $ */
+/* $Id: stonithd.c,v 1.6 2004/12/08 09:31:44 sunjd Exp $ */
 
 /* File: stonithd.c
  * Description: STONITH deamon for node fencing
@@ -395,7 +395,7 @@ int main(int argc, char ** argv)
 	 * Initialize the handler of the child quit event. Since the stonith 
 	 * plugin will be runned in a child process.
 	 */
-	if ( NULL == G_main_add_input(G_PRIORITY_HIGH, FALSE,
+	if ( NULL == G_main_add_input(G_PRIORITY_DEFAULT, FALSE,
                                         &polled_input_SourceFuncs)) {
 		stonithd_log(LOG_ERR, "G_main_add_input failed.");
 		stonithd_log(LOG_ERR, "Startup aborted.");
@@ -714,11 +714,11 @@ stonithd_hb_msg_dispatch(IPC_Channel * ipcchan, gpointer user_data)
 	ll_cluster_t *hb = (ll_cluster_t*)user_data;
     
 	while (hb->llc_ops->msgready(hb)) {
-		/* invoke the callbacks with none-block mode*/
+		/* invoke the callbacks with none-block mode */
 		stonithd_log(LOG_DEBUG, "there are hb msg received.");
 		hb->llc_ops->rcvmsg(hb, 0);
 	}
-	/* deal with some abnormal errors/bugs?*/
+	/* deal with some abnormal errors/bugs? */
 	return TRUE;
 }
 
@@ -932,7 +932,8 @@ require_local_stonithop(stonith_ops_t * st_op, stonith_rsc_t * srsc,
 		*tmp_callid = *child_id;
 		g_timeout_add_full(G_PRIORITY_HIGH_IDLE, st_op->timeout,
 		   		   stonithop_timeout, tmp_callid, NULL);
-		stonithd_log(LOG_DEBUG, "inserted call_id=%d", st_op->call_id);
+		stonithd_log(LOG_DEBUG, "require_local_stonithop: inserted "
+			    "optype=%d, child_id=%d", st_op->optype, *child_id);
 		return ST_OK;
 	}
 }
@@ -1038,7 +1039,7 @@ accept_client_dispatch(IPC_Channel * ch, gpointer user)
 	}
 
 	stonithd_log(LOG_DEBUG, "IPC accepted a connection.");
-	G_main_add_IPC_Channel(G_PRIORITY_DEFAULT, ch, FALSE, 
+	G_main_add_IPC_Channel(G_PRIORITY_HIGH, ch, FALSE, 
 			stonithd_client_dispatch, (gpointer)ch,
 			stonithd_IPC_destroy_notify);
 
@@ -1480,7 +1481,8 @@ initiate_local_stonithop(stonith_ops_t * st_op, stonith_rsc_t * srsc,
 		*tmp_callid = call_id;
 		g_timeout_add_full(G_PRIORITY_HIGH_IDLE, st_op->timeout,
 		   		   stonithop_timeout, tmp_callid, NULL);
-		stonithd_log(LOG_DEBUG, "inserted call_id=%d", call_id);
+		stonithd_log(LOG_DEBUG, "initiate_local_stonithop: inserted "
+			    "optype=%d, child_id=%d", st_op->optype, call_id);
 		return call_id;
 	}
 }
@@ -1513,11 +1515,17 @@ continue_local_stonithop(int old_key)
 		rsc_id)) != NULL ) { 
 		if ((*child_pid=stonith_operate_locally(op->st_op, srsc)) > 0) {
 			g_hash_table_steal(executing_queue, orignal_key);
+			stonithd_log(LOG_DEBUG, "continue_local_stonithop: "
+				     "removed optype=%d, key_id=%d", 
+				     op->st_op->optype, *orignal_key);
 			g_free(orignal_key);
 			orignal_key = NULL;
 			/* donnot need to free the old one */
 			op->data = srsc->rsc_id;
 			g_hash_table_insert(executing_queue, child_pid, op);
+			stonithd_log(LOG_DEBUG, "continue_local_stonithop: "
+				     "inserted optype=%d, child_id=%d", 
+				     op->st_op->optype, *child_pid);
 			return ST_OK;
 		} else {
 			rsc_id = srsc->rsc_id;
@@ -1565,8 +1573,10 @@ initiate_remote_stonithop(stonith_ops_t * st_op, stonith_rsc_t * srsc,
 		g_timeout_add_full(G_PRIORITY_HIGH_IDLE, st_op->timeout,
 				   stonithop_timeout, tmp_callid, NULL);
 
-		stonithd_log(LOG_DEBUG, "inserted call_id=%d", st_op->call_id);
-		stonithd_log(LOG_DEBUG, "require_others_to_stonith succeed.");
+		stonithd_log(LOG_DEBUG, "initiate_remote_stonithop: inserted "
+			  "optype=%d, key=%d", op->st_op->optype, *tmp_callid);
+		stonithd_log(LOG_DEBUG, "initiate_remote_stonithop: "
+			     "require_others_to_stonith succeed.");
 		return negative_callid_counter--;
 	}
 }
@@ -1597,8 +1607,12 @@ changeto_remote_stonithop(int old_key)
 		/* donnt need to free op->data */
 		op->data = NULL;
 		g_hash_table_steal(executing_queue, orignal_key);
+		stonithd_log(LOG_DEBUG, "changeto_remote_stonithop: removed "
+			  "optype=%d, key=%d", op->st_op->optype, *orignal_key);
 		*orignal_key = op->st_op->call_id;
 		g_hash_table_insert(executing_queue, orignal_key, op);
+		stonithd_log(LOG_DEBUG, "changeto_remote_stonithop: inserted "
+			  "optype=%d, key=%d", op->st_op->optype, *orignal_key);
 	}
 
 	return ST_OK;
@@ -2578,9 +2592,7 @@ get_exist_client_by_chan(GList * client_list, IPC_Channel * ch)
 		return NULL;
 	} 
 
-	stonithd_log(LOG_DEBUG, "get_exist_client_by_chan: middle.");
 	tmplist = g_list_first(client_list);
-	stonithd_log(LOG_DEBUG, "get_exist_client_by_chan: middle2.");
 	for (tmplist = g_list_first(client_list); tmplist != NULL; 
 	     tmplist = g_list_next(tmplist)) {
 		stonithd_log(LOG_DEBUG, "tmplist=%p", tmplist);
@@ -2809,7 +2821,6 @@ free_common_op_t(gpointer data)
 		op->st_op = NULL;
 	}
 
-	stonithd_log(LOG_DEBUG, "free_common_op_t: middle.");
 	if ( op->scenario == STONITH_REQ ) {
 		ZAPGDOBJ(op->result_receiver);
 	}	
@@ -2820,6 +2831,9 @@ free_common_op_t(gpointer data)
 
 /* 
  * $Log: stonithd.c,v $
+ * Revision 1.6  2004/12/08 09:31:44  sunjd
+ * add code to output more debugging information
+ *
  * Revision 1.5  2004/12/08 03:24:16  sunjd
  * 1) Use the new ha_msg_add_in/ha_msg_value_int to replace ha_msg_addbin/cl_get_binary, so to
  * avoid the possible endian issue.
