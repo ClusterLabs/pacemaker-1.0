@@ -20,10 +20,10 @@
 MAINTAINERCLEANFILES    = Makefile.in
 
 if HBAAPI_BUILD
-HBAAPI_DIR = hbaping
+HBAPING = hbaping.la
 endif
 
-SUBDIRS                 = $(HBAAPI_DIR)
+SUBDIRS                 = 
 
 INCLUDES                = -I$(top_builddir)/include -I$(top_srcdir)/include \
 			-I$(top_builddir)/linux-ha -I$(top_srcdir)/linux-ha  \
@@ -37,7 +37,7 @@ AM_CFLAGS		= @CFLAGS@
 halibdir		= $(libdir)/@HB_PKG@
 plugindir		= $(halibdir)/plugins/HBcomm
 plugin_LTLIBRARIES	= bcast.la mcast.la ping.la serial.la ucast.la \
-			  ping_group.la 
+			  ping_group.la  $(HBAPING)
 
 bcast_la_SOURCES	= bcast.c
 bcast_la_LDFLAGS	= -export-dynamic -module -avoid-version
@@ -60,4 +60,7 @@ ping_group_la_SOURCES	= ping_group.c
 ping_group_la_LDFLAGS	= -export-dynamic -module -avoid-version
 ping_group_la_LIBADD	= $(top_builddir)/replace/libreplace.la
 
+hbaping_la_SOURCES   	= hbaping.c
+hbaping_la_LDFLAGS  	 = -export-dynamic -module -avoid-version
+hbaping_la_LIBADD   	 = $(top_builddir)/replace/libreplace.la
 
