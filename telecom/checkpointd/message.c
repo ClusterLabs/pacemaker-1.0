@@ -1,4 +1,4 @@
-/* $Id: message.c,v 1.12 2004/05/24 06:12:27 deng.pan Exp $ */
+/* $Id: message.c,v 1.13 2004/08/29 03:01:14 msoffen Exp $ */
 /* 
  * message.c
  *
@@ -140,7 +140,7 @@ SaCkptClusterMsgProcess()
 	}
 
 	if (!strcmp(ckptMsg->msgType, T_CKPT)) {
-		// FIXME: different version should be work together 
+		/* FIXME: different version should be work together  */
 		if ( SaCkptVersionCompare(ckptMsg->msgVersion, 
 			saCkptService->version) != 0) {
 			cl_log(LOG_ERR, 
@@ -482,9 +482,9 @@ SaCkptClusterMsgProcess()
 		 * active node to send it the data
 		 */
 		case M_RPLC_CRT:
-			// FIXME:
-			// if the message size is exceed 1400, break
-			// this message into several messages
+			/* FIXME: */
+			/* if the message size is exceed 1400, break */
+			/* this message into several messages */
 			
 			if (replica == NULL) {
 				cl_log(LOG_ERR,
@@ -875,10 +875,10 @@ SaCkptClusterMsgProcess()
 
 			if (!strcmp(replica->activeNodeName, 
 				ckptMsg->fromNodeName)) {
-				// FIXME: 
-				// got the active replica by election
-				// the most updated replica will be the active 
-				// replica
+				/* FIXME:  */
+				/* got the active replica by election */
+				/* the most updated replica will be the active  */
+				/* replica */
 				strcpy(replica->activeNodeName, 
 					saCkptService->nodeName);
 				replica->flagIsActive = TRUE;
@@ -890,9 +890,9 @@ SaCkptClusterMsgProcess()
 				}
 
 #if 0
-				// FIXME: 
-				// if there are started requests on this replica
-				// return SA_ERR_TRY_AGAIN
+				/* FIXME:  */
+				/* if there are started requests on this replica */
+				/* return SA_ERR_TRY_AGAIN */
 				g_hash_table_foreach(saCkptService->clientHash, 
 					xxxx,
 					(gpointer)replica);

@@ -1,4 +1,4 @@
-/* $Id: ccmlib_memapi.c,v 1.22 2004/04/15 03:01:08 chuyee Exp $ */
+/* $Id: ccmlib_memapi.c,v 1.23 2004/08/29 03:01:14 msoffen Exp $ */
 /* 
  * ccmlib_memapi.c: Consensus Cluster Membership API
  *
@@ -22,8 +22,8 @@
 
 #define __CCM_LIBRARY__
 #include <ccmlib.h>
-//#include <syslog.h>
-//#include <clplumbing/cl_log.h>
+/*#include <syslog.h> */
+/*#include <clplumbing/cl_log.h> */
 
 /* structure to track the membership delivered to client */
 typedef struct mbr_track_s {
@@ -413,8 +413,8 @@ mem_callback_done(void *cookie)
 static gboolean
 mem_quorum(mbr_private_t *private, mbr_track_t *mbr)
 {
-	//cl_log(LOG_DEBUG, "n_member=%d, cllm_get_nodecount=%d\n",
-	//	OC_EV_GET_N_MEMBER(mbr), CLLM_GET_NODECOUNT(private->llm));
+	/*cl_log(LOG_DEBUG, "n_member=%d, cllm_get_nodecount=%d\n", */
+	/*	OC_EV_GET_N_MEMBER(mbr), CLLM_GET_NODECOUNT(private->llm)); */
 	if(OC_EV_GET_N_MEMBER(mbr) <
 		(CLLM_GET_NODECOUNT(private->llm)/2+1))
 		return FALSE;

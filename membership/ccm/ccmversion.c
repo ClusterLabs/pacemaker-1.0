@@ -1,4 +1,4 @@
-/* $Id: ccmversion.c,v 1.5 2004/02/17 22:12:00 lars Exp $ */
+/* $Id: ccmversion.c,v 1.6 2004/08/29 03:01:14 msoffen Exp $ */
 /* 
  * ccmversion.c: routines that handle information while in the version 
  * request state
@@ -36,10 +36,10 @@
 
 
 extern int global_debug;
-//
-// return true if we have waited long enough for a response
-// for our version request.
-//
+/* */
+/* return true if we have waited long enough for a response */
+/* for our version request. */
+/* */
 static int
 version_timeout_expired(ccm_version_t *ver, longclock_t timeout)
 {
@@ -47,10 +47,10 @@ version_timeout_expired(ccm_version_t *ver, longclock_t timeout)
 				timeout));
 }
 
-//
-// reset all the data structures used to track the version request
-// state.
-//
+/* */
+/* reset all the data structures used to track the version request */
+/* state. */
+/* */
 void
 version_reset(ccm_version_t *ver)
 {
@@ -59,10 +59,10 @@ version_reset(ccm_version_t *ver)
 	VERSION_SET_NRESP(ver,0);
 }
 
-//
-// return true if version request has message has to be resent.
-// else return false.
-//
+/* */
+/* return true if version request has message has to be resent. */
+/* else return false. */
+/* */
 int
 version_retry(ccm_version_t *ver, longclock_t timeout)
 {
@@ -82,11 +82,11 @@ version_retry(ccm_version_t *ver, longclock_t timeout)
 	return VER_NO_CHANGE;
 }
 
-//
-// The caller informs us:
-// "please note that there is some activity going on in the cluster.
-// Probably you may want to try for some more time"
-//
+/* */
+/* The caller informs us: */
+/* "please note that there is some activity going on in the cluster. */
+/* Probably you may want to try for some more time" */
+/* */
 void
 version_some_activity(ccm_version_t *ver)
 {

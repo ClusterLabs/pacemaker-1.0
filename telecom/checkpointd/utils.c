@@ -1,4 +1,4 @@
-/* $Id: utils.c,v 1.6 2004/03/18 09:43:58 lars Exp $ */
+/* $Id: utils.c,v 1.7 2004/08/29 03:01:16 msoffen Exp $ */
 /* 
  * utils.c
  *
@@ -59,7 +59,7 @@ SaCkptVersionCompare(SaVersionT ver1, SaVersionT ver2)
 	} else if (ver1.major > ver2.major) {
 		return 1;
 	} else if ((ver1.minor == 0xff) || (ver2.minor == 0xff)) {
-		// do not care about the minor number
+		/* do not care about the minor number */
 		return 0;
 	} else if (ver1.minor < ver2.minor) {
 		return -1;

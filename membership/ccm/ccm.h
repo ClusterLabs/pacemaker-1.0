@@ -1,4 +1,4 @@
-/* $Id: ccm.h,v 1.21 2004/03/25 08:20:31 alan Exp $ */
+/* $Id: ccm.h,v 1.22 2004/08/29 03:01:14 msoffen Exp $ */
 /*
  * ccm.h: definitions Consensus Cluster Manager internal header
  *				file
@@ -52,13 +52,13 @@
 #include <hb_api.h>
 
 
-// BEGINNING OF version request tracking interfaces
+/* BEGINNING OF version request tracking interfaces */
 typedef struct ccm_version_s {
 	longclock_t time;
 	int	numtries;
-	int	n_resp; // keeps track of the number of version
-				// responses recevied from other nodes
-				// after we received the first response.
+	int	n_resp; /* keeps track of the number of version */
+				/* responses recevied from other nodes */
+				/* after we received the first response. */
 } ccm_version_t;
 void version_reset(ccm_version_t *);
 void version_some_activity(ccm_version_t *);
@@ -70,11 +70,11 @@ unsigned int version_get_nresp(ccm_version_t *);
 #define VER_NO_CHANGE 2
 #define VER_TRY_END   3
 
-// END OF version request tracking interfaces
+/* END OF version request tracking interfaces */
 
 
 
-// BEGINING OF Low Level Membership interfaces
+/* BEGINING OF Low Level Membership interfaces */
 #define NODEIDSIZE 255 /* if this value is changed, change it
 			  	also in ccmlib.h */
 #define STATUSSIZE 15
@@ -88,9 +88,9 @@ typedef struct NodeList_s {
 		uint received_change_msg;
 } NodeList_t;
 typedef struct llm_info_s { /* information about low level membership info */
-	uint	   llm_nodeCount; //number of nodes in the cluster 
-	int	   llm_mynode;	 //index of mynode
-	NodeList_t llm_nodes[MAXNODE];  //information of each node
+	uint	   llm_nodeCount; /*number of nodes in the cluster  */
+	int	   llm_mynode;	 /*index of mynode */
+	NodeList_t llm_nodes[MAXNODE];  /*information of each node */
 } llm_info_t;
 #define CLUST_INACTIVE  "inctv"
 #define LLM_GET_MYNODE(llm) llm->llm_mynode
@@ -124,7 +124,7 @@ void llm_end(llm_info_t *);
 int llm_is_valid_node(llm_info_t *, const char *);
 void llm_add(llm_info_t *, const char *, const char *, const char *);
 int llm_get_index(llm_info_t *, const char *);
-// END OF Low Level Membership interfaces
+/* END OF Low Level Membership interfaces */
 
 
 /* ccm prototypes */
@@ -139,7 +139,7 @@ int ccm_get_fd(void *);
 void ccm_send_init_state(void *);
 void ccm_check_memoryleak(void);
 
-// BEGINING OF update interfaces
+/* BEGINING OF update interfaces */
 /* structure that keeps track of new joining requests. */
 typedef struct update_s {
 	int 	index; /* index of the node in the ccm_llm table */
@@ -151,8 +151,8 @@ typedef struct ccm_update_s {
 	uint	nodeCount;
 	longclock_t  inittime;
 	update_t update[MAXNODE];
-	GSList *cl_head; // a linked list of cached cluster leader 
-				  //  requests 
+	GSList *cl_head; /* a linked list of cached cluster leader  */
+				  /*  requests  */
 } ccm_update_t;
 #define UPDATE_GET_LEADER(updt) updt->leader
 #define UPDATE_GET_NODECOUNT(updt) updt->nodeCount
@@ -189,11 +189,11 @@ int update_strcreate(ccm_update_t *, char **, llm_info_t *);
 void update_strdelete(char *memlist);
 int update_is_member(ccm_update_t *, llm_info_t *, const char *);
 int update_get_uptime(ccm_update_t *, llm_info_t *, int );
-// END OF update interfaces
+/* END OF update interfaces */
 
 
 
-// BEGINNING OF graph interfaces
+/* BEGINNING OF graph interfaces */
 
 typedef struct vertex_s {
                 unsigned char  *bitmap; /* bitmap sent by each node */
@@ -203,9 +203,9 @@ typedef struct vertex_s {
 
 typedef struct graph_s {
         vertex_t  *graph_node[MAXNODE];
-        int        graph_nodes;// no of nodes that had sent the join message
-                                //  whose bitmaps we are now expecting
-        int        graph_rcvd; // no of nodes that have sent a memlistbitmap
+        int        graph_nodes;/* no of nodes that had sent the join message */
+                                /*  whose bitmaps we are now expecting */
+        int        graph_rcvd; /* no of nodes that have sent a memlistbitmap */
 } graph_t;  
 graph_t * graph_init(void);
 void graph_free(graph_t *);
@@ -214,10 +214,10 @@ void graph_update_membership(graph_t *, int , unsigned char *);
 int  graph_filled_all(graph_t *);
 int graph_get_maxclique(graph_t *, unsigned char **);
 void graph_add_to_membership(graph_t *, int, int);
-// END OF graph interfaces
+/* END OF graph interfaces */
 
 
-// BEGINNING OF bitmap interfaces
+/* BEGINNING OF bitmap interfaces */
 int bitmap_create(unsigned char **, int);
 void bitmap_delete(unsigned char *);
 void bitmap_mark(int, unsigned char *, int);
@@ -228,13 +228,13 @@ void bitmap_print(unsigned char *, int, char *);
 void bitmap_reset(unsigned char *, int);
 int  bitmap_size(int);
 int  bitmap_copy(unsigned char *, unsigned char *);
-// END OF bitmap interfaces
+/* END OF bitmap interfaces */
 
 
 size_t strnlen(const char *, size_t); /*TOBEDONE*/
 /* end ccm */
 
-// BEGINNING OF client management interfaces
+/* BEGINNING OF client management interfaces */
 void client_init(void);
 int  client_add(struct IPC_CHANNEL *);
 void client_delete(struct IPC_CHANNEL *);
@@ -243,6 +243,6 @@ void client_new_mbrship(int n, int , int *, gboolean, void *);
 void client_llm_init(llm_info_t *);
 void client_influx(void);
 void client_evicted(void);
-// END OF client management interfaces
+/* END OF client management interfaces */
 
 #endif /*  _CLUSTER_MANAGER_H_ */

@@ -1,4 +1,4 @@
-/* $Id: ccmupdate.c,v 1.8 2004/02/17 22:12:00 lars Exp $ */
+/* $Id: ccmupdate.c,v 1.9 2004/08/29 03:01:14 msoffen Exp $ */
 /* 
  * update.c: functions that track the votes during the voting protocol
  *
@@ -23,21 +23,21 @@
  */
 #include <ccm.h>
 
-// generic leader info
+/* generic leader info */
 typedef struct leader_info_s {
 	int		index;
 	int		trans;
 } leader_info_t;
 
-//
-// BEGIN of Functions that keeps track of the memlist request messages from
-// cluster leaders.
-//
+/* */
+/* BEGIN of Functions that keeps track of the memlist request messages from */
+/* cluster leaders. */
+/* */
 
-//
-// add the node 'node' to the list of cluster leaders requesting
-// for membership information.
-//
+/* */
+/* add the node 'node' to the list of cluster leaders requesting */
+/* for membership information. */
+/* */
 void
 update_add_memlist_request(ccm_update_t *tab, 
 			llm_info_t *llm, 
@@ -67,9 +67,9 @@ update_add_memlist_request(ccm_update_t *tab,
 	return;
 }
 
-//
-// free all the members in the list.
-//
+/* */
+/* free all the members in the list. */
+/* */
 void
 update_free_memlist_request(ccm_update_t *tab) 
 {
@@ -85,10 +85,10 @@ update_free_memlist_request(ccm_update_t *tab)
 	UPDATE_SET_CLHEAD(tab, NULL);
 }
 
-//
-// set up the context to traverse the list of 
-// cluster leaders.
-//
+/* */
+/* set up the context to traverse the list of  */
+/* cluster leaders. */
+/* */
 void *
 update_initlink(ccm_update_t *tab)
 {
@@ -98,9 +98,9 @@ update_initlink(ccm_update_t *tab)
 }
 
 
-//
-// return name of the cluster leader in the next element in the list.
-//
+/* */
+/* return name of the cluster leader in the next element in the list. */
+/* */
 char *
 update_next_link(ccm_update_t *tab, llm_info_t *llm, void *tr, uint *trans)
 {
@@ -114,24 +114,24 @@ update_next_link(ccm_update_t *tab, llm_info_t *llm, void *tr, uint *trans)
 	return (LLM_GET_NODEID(llm, node->index));
 }
 
-//
-// free the context used for cluster leader link traversal.
-//
+/* */
+/* free the context used for cluster leader link traversal. */
+/* */
 void
 update_freelink(ccm_update_t *tab, void *track)
 {
 	g_free(track);
 	return;
 }
-//
-// END of Functions that keeps track of the memlist request messages from
-// cluster leaders.
-//
+/* */
+/* END of Functions that keeps track of the memlist request messages from */
+/* cluster leaders. */
+/* */
 
 
-//
-// clear all the information that we are tracking.
-//
+/* */
+/* clear all the information that we are tracking. */
+/* */
 void
 update_reset(ccm_update_t *tab)
 {
@@ -150,9 +150,9 @@ update_reset(ccm_update_t *tab)
 	update_free_memlist_request(tab);
 }
 
-//
-// initialize our datastructures.
-//
+/* */
+/* initialize our datastructures. */
+/* */
 void
 update_init(ccm_update_t *tab)
 {
@@ -160,10 +160,10 @@ update_init(ccm_update_t *tab)
 	update_reset(tab);
 }
 
-//
-// return TRUE if sufficient time has expired since update messages
-// were exchanged.
-//
+/* */
+/* return TRUE if sufficient time has expired since update messages */
+/* were exchanged. */
+/* */
 int
 update_timeout_expired(ccm_update_t *tab, unsigned long timeout)
 {
@@ -171,9 +171,9 @@ update_timeout_expired(ccm_update_t *tab, unsigned long timeout)
 }
 
 
-//
-// return TRUE if we have received any update messages at all.
-//
+/* */
+/* return TRUE if we have received any update messages at all. */
+/* */
 int
 update_any(ccm_update_t *tab)
 {
@@ -181,10 +181,10 @@ update_any(ccm_update_t *tab)
 	return TRUE;
 }
 
-//
-// given two members return the leader.
-//
-//
+/* */
+/* given two members return the leader. */
+/* */
+/* */
 static uint
 update_compute_leader(ccm_update_t *tab, uint j, llm_info_t *llm)
 {
@@ -223,9 +223,9 @@ leader_str :
 }
 
 
-//
-// given the current members, choose the leader.
-//
+/* */
+/* given the current members, choose the leader. */
+/* */
 static int
 update_find_leader(ccm_update_t *tab, llm_info_t *llm) 
 {
@@ -248,7 +248,7 @@ update_find_leader(ccm_update_t *tab, llm_info_t *llm)
 }
 
 
-// return the index of the 'orig' node in the update table.
+/* return the index of the 'orig' node in the update table. */
 static int
 update_get_index(ccm_update_t *tab,
 		llm_info_t *llm,
@@ -291,9 +291,9 @@ update_get_uptime(ccm_update_t *tab,
 	return -1;
 }
 
-//
-// return TRUE if 'orig' had participated in the update voting round.
-//
+/* */
+/* return TRUE if 'orig' had participated in the update voting round. */
+/* */
 int
 update_is_member(ccm_update_t *tab,
 		llm_info_t *llm,
@@ -304,9 +304,9 @@ update_is_member(ccm_update_t *tab,
 }
 	
 
-//
-// Update the vote of 'orig' node in the update table.
-//
+/* */
+/* Update the vote of 'orig' node in the update table. */
+/* */
 void
 update_add(ccm_update_t *tab, 
 		llm_info_t *llm, 
@@ -359,7 +359,7 @@ update_add(ccm_update_t *tab,
 
 	UPDATE_SET_INDEX(tab,j,i);
 	UPDATE_SET_UPTIME(tab,j,uptime);
-	// increment the nodecount
+	/* increment the nodecount */
 	UPDATE_INCR_NODECOUNT(tab);
 
 	if(leader_flag) 
@@ -370,9 +370,9 @@ update_add(ccm_update_t *tab,
 
 
 
-//
-// remove the vote of 'orig' from the update table.
-//
+/* */
+/* remove the vote of 'orig' from the update table. */
+/* */
 void
 update_remove(ccm_update_t *tab, 
 		llm_info_t *llm, 
@@ -412,10 +412,10 @@ update_remove(ccm_update_t *tab,
 
 
 
-//
-// return TRUE if I am the leader among the members that have
-// voted in this round of update exchanges.
-//
+/* */
+/* return TRUE if I am the leader among the members that have */
+/* voted in this round of update exchanges. */
+/* */
 int
 update_am_i_leader(ccm_update_t *tab, 
 		llm_info_t *llm)
@@ -428,9 +428,9 @@ update_am_i_leader(ccm_update_t *tab,
 }
 
 
-//
-// return the name of the cluster leader.
-//
+/* */
+/* return the name of the cluster leader. */
+/* */
 char *
 update_get_cl_name(ccm_update_t *tab,
 		llm_info_t *llm)
@@ -442,10 +442,10 @@ update_get_cl_name(ccm_update_t *tab,
 
 
 
-//
-// return the uuid of the next member who has voted in the update
-// message transfer round.
-//
+/* */
+/* return the uuid of the next member who has voted in the update */
+/* message transfer round. */
+/* */
 int
 update_get_next_uuid(ccm_update_t *tab, llm_info_t *llm, int *lastindex)
 {
@@ -466,11 +466,11 @@ update_get_next_uuid(ccm_update_t *tab, llm_info_t *llm, int *lastindex)
 	return(LLM_GET_UUID(llm,UPDATE_GET_INDEX(tab,indx)));
 }
 
-//
-// create a string that represents the members of the update
-// round, and return it through the memlist parameter.
-// also return the size of the string.
-//
+/* */
+/* create a string that represents the members of the update */
+/* round, and return it through the memlist parameter. */
+/* also return the size of the string. */
+/* */
 int 
 update_strcreate(ccm_update_t *tab,
 		char **memlist,
@@ -505,9 +505,9 @@ update_strcreate(ccm_update_t *tab,
 	return str_len;
 }
 
-//
-// delete the memory used to store the string.
-//
+/* */
+/* delete the memory used to store the string. */
+/* */
 void
 update_strdelete(char *memlist)
 {

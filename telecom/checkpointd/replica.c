@@ -1,4 +1,4 @@
-/* $Id: replica.c,v 1.15 2004/05/24 06:12:27 deng.pan Exp $ */
+/* $Id: replica.c,v 1.16 2004/08/29 03:01:14 msoffen Exp $ */
 /* 
  * replica.c: 
  *
@@ -989,7 +989,7 @@ SaCkptReplicaUpdCommit(SaCkptReplicaT* replica, SaCkptReqT req,
 	
 	SaCkptReqSecCrtParamT* secCrtParam = NULL;
 	SaCkptReqSecDelParamT* secDelParam = NULL;
-//	SaCkptReqSecReadParamT* secReadParam = NULL;
+/*	SaCkptReqSecReadParamT* secReadParam = NULL; */
 	SaCkptReqSecWrtParamT* secWrtParam = NULL;
 	SaCkptReqSecOwrtParamT* secOwrtParam = NULL;
 
@@ -1176,7 +1176,7 @@ SaCkptReplicaUpdRollback(SaCkptReplicaT* replica, SaCkptReqT req,
 	
 	SaCkptReqSecCrtParamT* secCrtParam = NULL;
 	SaCkptReqSecDelParamT* secDelParam = NULL;
-//	SaCkptReqSecReadParamT* secReadParam = NULL;
+/*	SaCkptReqSecReadParamT* secReadParam = NULL; */
 	SaCkptReqSecWrtParamT* secWrtParam = NULL;
 	SaCkptReqSecOwrtParamT* secOwrtParam = NULL;
 

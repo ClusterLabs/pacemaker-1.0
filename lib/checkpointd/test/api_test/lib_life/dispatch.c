@@ -1,4 +1,4 @@
-/* $Id: dispatch.c,v 1.2 2004/07/15 14:33:49 msoffen Exp $ */
+/* $Id: dispatch.c,v 1.3 2004/08/29 03:01:13 msoffen Exp $ */
 /* 
  * dispatch.c: data checkpoint API test:saCkptDispatch
  *
@@ -205,7 +205,7 @@ int  dispatch_normal_call(void)
 			return -1 ;
 		}
 
-	if ( !callback_match )  //invocatation mismatch 
+	if ( !callback_match )  /*invocatation mismatch  */
 		{	
 		
 			saCkptFinalize (& ckpt_handle) ;

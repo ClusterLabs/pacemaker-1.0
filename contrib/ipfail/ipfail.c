@@ -1,4 +1,4 @@
-/* $Id: ipfail.c,v 1.36 2004/05/17 15:12:07 lars Exp $ */
+/* $Id: ipfail.c,v 1.37 2004/08/29 03:01:12 msoffen Exp $ */
 /* ipfail: IP Failover plugin for Linux-HA
  *
  * Copyright (C) 2002-2004 Kevin Dwyer <kevin@pheared.net>
@@ -580,7 +580,7 @@ msg_resources(const struct ha_msg *msg, void *private)
 			 * ping nodes.
 			 */
 			ask_ping_nodes(private, ping_node_status(private));
-			//giveup(private);
+			/* giveup(private); */
 
                         /* The ask_ping_nodes message will sort out whether
                          * a standby is necessary. */

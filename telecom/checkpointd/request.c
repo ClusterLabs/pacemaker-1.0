@@ -1,4 +1,4 @@
-/* $Id: request.c,v 1.9 2004/04/02 05:16:48 deng.pan Exp $ */
+/* $Id: request.c,v 1.10 2004/08/29 03:01:14 msoffen Exp $ */
 /* 
  * request.c: 
  *
@@ -96,7 +96,7 @@ SaCkptRequestStart(SaCkptRequestT* ckptReq)
 	SaCkptReqCloseParamT	*closeParam = NULL;
 	SaCkptReqSecExpSetParamT	*secExpSetParam = NULL;
 	SaCkptReqRtnParamT	*rtnParam = NULL;
-//	SaCkptReqUlnkParamT	*unlinkParam = NULL;
+/*	SaCkptReqUlnkParamT	*unlinkParam = NULL; */
 	SaCkptReqSecQueryParamT	*secQueryParam = NULL;
 	
 	SaCkptSectionT		*section = NULL;
@@ -427,8 +427,8 @@ SaCkptRequestStart(SaCkptRequestT* ckptReq)
 				ckptReq);
 			break;
 		}
-		// FIXME
-		// How about replica is NULL ?
+		/* FIXME */
+		/* How about replica is NULL ? */
 
 		/* add request to hash table */
 		g_hash_table_insert(client->requestHash,
@@ -483,7 +483,7 @@ SaCkptRequestStart(SaCkptRequestT* ckptReq)
 		}
 
 		section->expirationTime = secExpSetParam->expireTime;
-		// FIXME: start expiration timer
+		/* FIXME: start expiration timer */
 		
 		ckptResp->resp->retVal = SA_OK;
 		SaCkptResponseSend(&ckptResp);
@@ -817,7 +817,7 @@ SaCkptRequestReceive(IPC_Channel* clientChannel)
 	/* receive ipc message */
 	rc = clientChannel->ops->recv(clientChannel, &ipcMsg);
 	if (rc != IPC_OK) {
-//		cl_log(LOG_ERR, "Receive error request");
+/*		cl_log(LOG_ERR, "Receive error request"); */
 		return NULL;
 	}
 
@@ -968,8 +968,8 @@ SaCkptRequestRemove(SaCkptRequestT** pCkptReq)
 				SaCkptRequestStart(ckptReq);
 			}
 
-			// FIXME
-			// How about the replica is NULL?
+			/* FIXME */
+			/* How about the replica is NULL? */
 		}
 	}
 

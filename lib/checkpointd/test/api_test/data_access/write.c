@@ -1,4 +1,4 @@
-/* $Id: write.c,v 1.2 2004/07/15 14:33:49 msoffen Exp $ */
+/* $Id: write.c,v 1.3 2004/08/29 03:01:13 msoffen Exp $ */
 /* 
  * write.c: Test data checkpoint API : saCkptCheckpointWrite
  *
@@ -19,9 +19,9 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#include <saf/ais.h>
 #include <stdio.h>
 #include <unistd.h>
+#include <saf/ais.h>
 #include "ckpt_test.h"
 #include <time.h>
 
@@ -44,7 +44,6 @@ int write_invalid_databuff(void);
 int write_negative_datasize(void);
 int write_big_datasize(void);
 int write_big_offset(void);
-
 
 void ckpt_open_callback (SaInvocationT invocation,
                          const SaCkptCheckpointHandleT *checkpointHandle,
@@ -664,7 +663,7 @@ returns :
 int write_invalid_sectid(void)
 {
         SaUint8T sect_tmp_array[] = "12345679";
-        //int tmp ;
+        /*int tmp ; */
         
         ckpt_error = saCkptInitialize (&ckpt_handle, & ckpt_callback,  &ckpt_version) ;
         if (ckpt_error != SA_OK)

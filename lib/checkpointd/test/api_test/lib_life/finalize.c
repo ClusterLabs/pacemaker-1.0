@@ -1,4 +1,4 @@
-/* $Id: finalize.c,v 1.2 2004/07/15 14:33:49 msoffen Exp $ */
+/* $Id: finalize.c,v 1.3 2004/08/29 03:01:13 msoffen Exp $ */
 /* 
  * finalize.c: data checkpoint API test: saCkptFinalize
  *
@@ -175,7 +175,7 @@ int main(void)
 	ckpt_name.length = sizeof (name_fin) ;
 	memcpy (ckpt_name.value, name_fin, ckpt_name.length);
 
-	//ckpt_create_attri.creationFlags = SA_CKPT_WR_ACTIVE_REPLICA ;
+	/*ckpt_create_attri.creationFlags = SA_CKPT_WR_ACTIVE_REPLICA ;*/
 	ckpt_create_attri.creationFlags = SA_CKPT_WR_ALL_REPLICAS ;
 	ckpt_create_attri.retentionDuration = SA_TIME_END;
 	ckpt_create_attri.checkpointSize = 1000 ;

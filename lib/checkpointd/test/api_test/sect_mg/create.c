@@ -1,4 +1,4 @@
-/* $Id: create.c,v 1.2 2004/07/15 14:33:49 msoffen Exp $ */
+/* $Id: create.c,v 1.3 2004/08/29 03:01:13 msoffen Exp $ */
 /* 
  * creat.c: data checkpoint API test: saCkptSectionCreate
  *
@@ -338,7 +338,7 @@ returns :
 int create_null_section_id(void)
 {
 	SaCkptSectionCreationAttributesT tmp_sect_attri ;
-	//SaCkptSectionIdT tmp_sect_id ;
+	/*SaCkptSectionIdT tmp_sect_id ;*/
 	
 	
 	ckpt_error = saCkptInitialize ( &ckpt_handle, & ckpt_callback,  &ckpt_version) ;
@@ -559,7 +559,7 @@ int create_expire_time(void)
 			return -1 ;				
 		}
 
-	// Check SA_TIME_END support 
+	/* Check SA_TIME_END support */
 	tmp_sect_attri.expirationTime = SA_TIME_END ;
 
 	ckpt_error = saCkptSectionCreate(& checkpoint_handle, & tmp_sect_attri,  
@@ -688,7 +688,7 @@ int create_normal_call_generate_id(void)
 					(void *) init_data, sizeof (init_data)) ;
 	if (ckpt_error != SA_OK)
 		{
-		//	saCkptSectionDelete( & checkpoint_handle,  sect_create_attri.sectionId);
+		/*	saCkptSectionDelete( & checkpoint_handle,  sect_create_attri.sectionId);*/
 			sect_id.id = sect_id_array ;
 			sect_id.idLen = sizeof (sect_id_array) ;
 			saCkptCheckpointClose ( & checkpoint_handle) ;
@@ -763,7 +763,7 @@ int create_duplicate_call(void)
 				(void *) init_data, sizeof (init_data)) ;
 	if (ckpt_error != SA_OK)
 	{
-		//saCkptSectionDelete( & checkpoint_handle,  sect_create_attri.sectionId);
+		/*saCkptSectionDelete( & checkpoint_handle,  sect_create_attri.sectionId);*/
 		saCkptCheckpointClose ( & checkpoint_handle) ;
 		saCkptFinalize (& ckpt_handle) ;
 		return -1 ;

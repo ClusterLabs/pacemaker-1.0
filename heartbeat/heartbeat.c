@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.310 2004/08/26 00:52:42 gshi Exp $ */
+/* $Id: heartbeat.c,v 1.311 2004/08/29 03:01:12 msoffen Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -1999,7 +1999,9 @@ process_clustermsg(struct ha_msg* msg, struct link* lnk)
 	}
 	
 	
-	//thisnode = lookup_node(from);
+	/*
+	thisnode = lookup_node(from);
+	*/
 	thisnode = (struct node_info*) lookup_tables(from, fromuuid);
 	
 	if (thisnode == NULL) {
@@ -2604,7 +2606,7 @@ set_local_status(const char * newstatus)
 		/*
 		 * We can't do this because of conflicts between the two
 		 * paths the updates otherwise arrive through...
-		 * (Is this still true???)
+		 * (Is this still true? ? ?)
 		 */
 
 		strncpy(curnode->status, newstatus, sizeof(curnode->status));
@@ -4446,6 +4448,9 @@ hb_unregister_to_apphbd(void)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.311  2004/08/29 03:01:12  msoffen
+ * Replaced all // COMMENTs with /* COMMENT */
+ *
  * Revision 1.310  2004/08/26 00:52:42  gshi
  * fixed a bug which will make ping node unrecognizable
  * in re-reading config when heartbeat receiving a SIGHUP signal

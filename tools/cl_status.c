@@ -299,7 +299,7 @@ main(int argc, char ** argv)
 				return UNKNOWN_ERROR;
 			}
 
-			//cl_log(LOG_INFO, "Signing in with heartbeat.");
+			/* cl_log(LOG_INFO, "Signing in with heartbeat."); */
 			if (hb->llc_ops->signon(hb, cl_status_name)!= HA_OK) {
 				cl_log(LOG_ERR, "Cannot signon with heartbeat");
 				cl_log(LOG_ERR, "REASON: %s", 
@@ -347,7 +347,7 @@ main(int argc, char ** argv)
 static int 
 hbstatus(ll_cluster_t *hb, int argc, char ** argv, const char * optstr)
 {
-	// Is it ok to judge if heartbeat is running via signon status?
+	/* Is it ok to judge if heartbeat is running via signon status? */
 	if ( HB_SIGNON == TRUE ) {
 		printf("Heartbeat is running on this machine.\n");
 		return 0;

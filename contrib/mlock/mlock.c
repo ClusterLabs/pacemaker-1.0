@@ -1,4 +1,4 @@
-
+/* $Id: mlock.c,v 1.5 2004/08/29 03:01:12 msoffen Exp $ */
 /*
  *
  * multi-clients lock test code
@@ -232,7 +232,7 @@ close_testfile(void)
 		perror("close");
 		exit(1);
 	}
-	//unlink(gi.filename);
+	/* unlink(gi.filename); */
 	return;
 }
 
@@ -342,7 +342,7 @@ do_test( struct test_task* tt)
 	}
 	
 	if (result == 0) {
-		//if (result = lockf(gi.fd, tt->func, tt->length) != 0){
+		/* if (result = lockf(gi.fd, tt->func, tt->length) != 0){ */
 		if ((result = fcntl(gi.fd, cmd, &flock)) != 0 ){
 			result = errno;
 		}else if ( cmd == F_GETLK && flock.l_type != F_UNLCK){
@@ -724,7 +724,7 @@ generate_task_list(void)
 			{0, RUN, 10, 7, F_ULOCK, 2, 1, PASS},
 			{0, SEND},
 			{0, WAIT},
-			//{0, RUN, 10, 9, F_ULOCK, 0, 1, PASS},
+			/* {0, RUN, 10, 9, F_ULOCK, 0, 1, PASS}, */
 			{0, RUN, 10, 10, F_TLOCK, 1, 3, PASS},
 			{0, RUN, 10, 11, F_ULOCK, 2, 1, PASS},
 			{0, SEND},

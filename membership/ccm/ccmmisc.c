@@ -1,4 +1,4 @@
-/* $Id: ccmmisc.c,v 1.16 2004/02/17 22:12:00 lars Exp $ */
+/* $Id: ccmmisc.c,v 1.17 2004/08/29 03:01:14 msoffen Exp $ */
 /* 
  * ccmmisc.c: Miscellaneous Consensus Cluster Service functions
  *
@@ -27,9 +27,9 @@
 #include <malloc.h>
 #endif
 
-//
-// Convert a given string to a bitmap.
-//
+/* */
+/* Convert a given string to a bitmap. */
+/* */
 int
 ccm_str2bitmap(const char *memlist, unsigned char **bitlist)
 {
@@ -51,9 +51,9 @@ ccm_str2bitmap(const char *memlist, unsigned char **bitlist)
 }
 
 
-//
-// Convert a given bitmap to a string.
-//
+/* */
+/* Convert a given bitmap to a string. */
+/* */
 int
 ccm_bitmap2str(const unsigned char *bitmap, int numBytes, char **memlist)
 {
@@ -68,28 +68,28 @@ ccm_bitmap2str(const unsigned char *bitmap, int numBytes, char **memlist)
 	return binary_to_base64(bitmap, numBytes, *memlist, maxstrsize);
 }
 
-// 
-//
-// END OF GENERIC FUNCTION FOR BITMAP AND STRING CONVERSION.
-//
+/*  */
+/* */
+/* END OF GENERIC FUNCTION FOR BITMAP AND STRING CONVERSION. */
+/* */
 
 
 							
-//
-// BEGIN OF FUNCTIONS THAT FACILITATE A MONOTONICALLY INCREASING
-// LOCAL CLOCK. Useful for timeout manipulations.
-//
-// NOTE: gettimeofday() is generally helpful, but has the disadvantage
-// of resetting to a earlier value(in case system administrator resets
-// the clock)
-// Similarly times() is a monotonically increasing clock, but has the
-// disadvantage a of wrapping back on overflow.
-//
-//
+/* */
+/* BEGIN OF FUNCTIONS THAT FACILITATE A MONOTONICALLY INCREASING */
+/* LOCAL CLOCK. Useful for timeout manipulations. */
+/* */
+/* NOTE: gettimeofday() is generally helpful, but has the disadvantage */
+/* of resetting to a earlier value(in case system administrator resets */
+/* the clock) */
+/* Similarly times() is a monotonically increasing clock, but has the */
+/* disadvantage a of wrapping back on overflow. */
+/* */
+/* */
 
-//
-// return the current time 
-// 
+/* */
+/* return the current time  */
+/*  */
 longclock_t 
 ccm_get_time(void)
 {
@@ -97,11 +97,11 @@ ccm_get_time(void)
 }
 
 
-//
-// given two times, and a timeout interval(in milliseconds), 
-// return true if the timeout has occured, else return
-// false.
-// NOTE: 'timeout' is in milliseconds.
+/* */
+/* given two times, and a timeout interval(in milliseconds),  */
+/* return true if the timeout has occured, else return */
+/* false. */
+/* NOTE: 'timeout' is in milliseconds. */
 int
 ccm_timeout(longclock_t t1, longclock_t t2, unsigned long timeout)
 {

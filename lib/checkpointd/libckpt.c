@@ -1,4 +1,4 @@
-/* $Id: libckpt.c,v 1.13 2004/04/07 17:24:20 alan Exp $ */
+/* $Id: libckpt.c,v 1.14 2004/08/29 03:01:13 msoffen Exp $ */
 /* 
  * ckptlib.c: data checkpoint API library
  *
@@ -636,7 +636,7 @@ saCkptInitialize(SaCkptHandleT *ckptHandle/*[out]*/,
 
 		if (i == 1)  { /* async channel */
 			ch->ops->set_recv_qlen(ch, 0);
-			// ch->ops->set_send_qlen(ch, 0);
+			/* ch->ops->set_send_qlen(ch, 0); */
 		}
 
 		libClient->channel[i] = ch;
@@ -959,7 +959,7 @@ saCkptFinalize(const SaCkptHandleT *ckptHandle)
 		libCheckpoint = (SaCkptLibCheckpointT*)(list->data);
 		checkpointHandle = &(libCheckpoint->checkpointHandle);
 		saCkptCheckpointClose(checkpointHandle);
-//		ha_free(libCheckpoint);
+/*		ha_free(libCheckpoint); */
 
 		list = libClient->checkpointList;
 	}

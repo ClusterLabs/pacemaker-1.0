@@ -1,4 +1,4 @@
-/* $Id: ckpttest.c,v 1.9 2004/04/06 07:24:59 deng.pan Exp $ */
+/* $Id: ckpttest.c,v 1.10 2004/08/29 03:01:14 msoffen Exp $ */
 /* 
  * ckpttest.c: data checkpoint service test program
  *
@@ -39,7 +39,7 @@
 int requestNumber = 0;
 
 #undef TESTLOOP
-// #define TESTLOOP 1
+/* #define TESTLOOP 1 */
 
 int main(void)
 {
@@ -74,7 +74,7 @@ int main(void)
 
 	/* checkpoint open */
 	ckpt_create_attri.creationFlags = SA_CKPT_WR_ALL_REPLICAS ;
-//	ckpt_create_attri.creationFlags = SA_CKPT_WR_ACTIVE_REPLICA ;
+/*	ckpt_create_attri.creationFlags = SA_CKPT_WR_ACTIVE_REPLICA ; */
 	ckpt_create_attri.retentionDuration = SA_TIME_END;
 	ckpt_create_attri.checkpointSize = 1000 ;
 	ckpt_create_attri.maxSectionSize = 100;

@@ -1,4 +1,4 @@
-/* $Id: overwrite.c,v 1.2 2004/07/15 14:33:49 msoffen Exp $ */
+/* $Id: overwrite.c,v 1.3 2004/08/29 03:01:13 msoffen Exp $ */
 /* 
  * overwrite.c: Test data checkpoint API : saCkptSectionOverwrite
  *
@@ -336,7 +336,7 @@ int overwrite_normal_call(void)
 			return -1 ;	
 		}
 		
-	//check if the overwrite data has been write into the section	
+	/*check if the overwrite data has been write into the section	 */
 	sectread.sectionId.id = sect_id_array ;
 	sectread.sectionId.idLen = sizeof(sect_id_array) ;
 	sectread.dataBuffer = buffer ;
@@ -422,7 +422,7 @@ int overwrite_default_section(void)
 			return -1 ;	
 		}
 	
-	//check if the overwrite data has been write into the default section	
+	/*check if the overwrite data has been write into the default section	 */
 	sectread.sectionId.id =NULL ;
 	sectread.sectionId.idLen = 0 ;
 	sectread.dataBuffer = buffer ;

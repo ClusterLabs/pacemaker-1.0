@@ -1,4 +1,4 @@
-/* $Id: ccmbitmap.c,v 1.3 2004/02/17 22:12:00 lars Exp $ */
+/* $Id: ccmbitmap.c,v 1.4 2004/08/29 03:01:14 msoffen Exp $ */
 /* 
  * ccmbitmap.c: functions that manipulate bitmaps
  *
@@ -19,9 +19,9 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
-// bitmap.c 
-//	Routines to manage a bitmap -- an array of bits each of which
-//	can be either on or off.  Represented as an array of integers.
+/* bitmap.c  */
+/*	Routines to manage a bitmap -- an array of bits each of which */
+/*	can be either on or off.  Represented as an array of integers. */
 #include <ccm.h>
 
 #ifndef TRUE
@@ -32,8 +32,8 @@
 #define BitsInByte CHAR_BIT
 
 
-// 	Initialize a bitmap with "nitems" bits, so that every bit is clear.
-//	it can be added somewhere on a list.
+/* 	Initialize a bitmap with "nitems" bits, so that every bit is clear. */
+/*	it can be added somewhere on a list. */
 int
 bitmap_create(unsigned char **map, int numBits)
 { 
@@ -51,7 +51,7 @@ bitmap_create(unsigned char **map, int numBits)
   return(numBytes);
 }
 
-// return the number of bytes required to represent numBits
+/* return the number of bytes required to represent numBits */
 int
 bitmap_size(int numBits)
 { 
@@ -65,13 +65,13 @@ bitmap_size(int numBits)
 }
 
 
-//	delete bitmap
+/*	delete bitmap */
 void
 bitmap_delete(unsigned char *map) {
   g_free(map);
 }
 
-//	mark the which bit as set
+/*	mark the which bit as set */
 void 
 bitmap_mark(int which, unsigned char *map, int numBits) {
   assert(which >= 0 && which < numBits);
@@ -79,7 +79,7 @@ bitmap_mark(int which, unsigned char *map, int numBits) {
 }
 
 
-// 	Clear the "which" bit in a bitmap.
+/* 	Clear the "which" bit in a bitmap. */
 void 
 bitmap_clear(int which, unsigned char *map, int numBits) {
   assert(which >= 0 && which < numBits);
@@ -87,7 +87,7 @@ bitmap_clear(int which, unsigned char *map, int numBits) {
 }
 
 
-// 	Return TRUE if the "which" bit is set.
+/* 	Return TRUE if the "which" bit is set. */
 int 
 bitmap_test(int which, const unsigned char *map, int numBits)
 {
@@ -98,7 +98,7 @@ bitmap_test(int which, const unsigned char *map, int numBits)
     return(FALSE);
 }
 
-// 	Return total number of bits already set 
+/* 	Return total number of bits already set  */
 int 
 bitmap_count(const unsigned char *map, int numBits) 
 {
@@ -112,7 +112,7 @@ bitmap_count(const unsigned char *map, int numBits)
 }
 
 
-// 	Print the contents of the bitmap, for debugging.
+/* 	Print the contents of the bitmap, for debugging. */
 void
 bitmap_print(unsigned char *map, int numBits, char * comments)
 {
@@ -125,7 +125,7 @@ bitmap_print(unsigned char *map, int numBits, char * comments)
   fprintf(stderr, "\n"); 
 }
 
-//	Reset the bitmap.
+/*	Reset the bitmap. */
 void
 bitmap_reset(unsigned char *map, int numBits)
 {

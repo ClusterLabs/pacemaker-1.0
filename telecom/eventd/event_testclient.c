@@ -1,4 +1,4 @@
-/* $Id: event_testclient.c,v 1.2 2004/03/19 07:32:01 forrest Exp $ */
+/* $Id: event_testclient.c,v 1.3 2004/08/29 03:01:16 msoffen Exp $ */
 /* 
  * event_testclient.c: demo for event service
  *
@@ -22,7 +22,7 @@
 #include <clplumbing/cl_signal.h>
 #include "event.h"
 
-//event data get
+/*event data get */
 static void callback_event_deliver(SaEvtSubscriptionIdT sub_id,
 				SaEvtEventHandleT event_handle,
 				const SaSizeT eventDataSize)
@@ -57,7 +57,7 @@ int main(int argc, char **argv)
 	SaSelectionObjectT fd;
 	fd_set rset;
 	
-	//initialize
+	/*initialize */
 	version.releaseCode = 'A';
 	version.major = 1;
 	version.minor = 0;
@@ -67,11 +67,11 @@ int main(int argc, char **argv)
 		return 1;
 	}
 
-	//get selection object
+	/*get selection object */
 	saEvtSelectionObjectGet(evt_handle, &fd);
 	printf("the fd for selection is: %d\n", fd);
 
-	//channel open
+	/*channel open */
 	ch_name.length = 3;
 	memcpy(ch_name.value, "aaa", 3);
 	if(saEvtChannelOpen(evt_handle, &ch_name, 7, 1000000, &channel_handle)
@@ -87,7 +87,7 @@ int main(int argc, char **argv)
 	printf("the channel handle == %d\n", (unsigned int)channel_handle);
 	printf("the channel handle1 == %d\n", (unsigned int)channel_handle1);
 
-	//subscribe/unsubscribe
+	/*subscribe/unsubscribe */
 	filter_array.filtersNumber = 1;
 	filter_array.filters = g_malloc0(sizeof(SaEvtEventFilterT));
 	filter_array.filters[0].filterType = SA_EVT_EXACT_FILTER;
@@ -95,15 +95,15 @@ int main(int argc, char **argv)
 	filter_array.filters[0].filter.pattern = (SaUint8T *)g_malloc(6);
 	memcpy(filter_array.filters[0].filter.pattern, "abcxyz", 6);
 	saEvtEventSubscribe(channel_handle, &filter_array, 1);
-//	saEvtEventUnsubscribe(channel_handle, 1);
+/*	saEvtEventUnsubscribe(channel_handle, 1); */
 
-	//event allocate
+	/*event allocate */
 	saEvtEventAllocate(channel_handle, &event_handle);
 	saEvtEventAllocate(channel_handle1, &event_handle1);
 	printf("the event handle == %d\n", (unsigned int)event_handle);
 	printf("the event handle1 == %d\n", (unsigned int)event_handle1);
 
-	// attributes set/get
+	/* attributes set/get */
 	saEvtEventAttributesSet(event_handle, NULL, 1, 1000, NULL);
 	pattern_array.patternsNumber = 1;
 	pattern_array.patterns = (SaEvtEventPatternT *)g_malloc(sizeof(SaEvtEventPatternT));
@@ -124,14 +124,14 @@ int main(int argc, char **argv)
 	printf("publish_time == %Ld\n", publish_time);
 	printf("event_id == %Ld\n", event_id);
 
-	//publish
+	/*publish */
 	data_size = 20;
 	event_data = g_malloc0(data_size);
 	memcpy(event_data, "first event", data_size);
 	saEvtEventPublish(event_handle, event_data, data_size, &event_id);
 	printf("the event id of published event is: %Ld\n", event_id);
 	
-	//dispatch, event_data_get(in callback function)
+	/*dispatch, event_data_get(in callback function) */
 	FD_ZERO(&rset);
 	FD_SET(fd, &rset);
 	select_ret = select(fd + 1, &rset, NULL,NULL, NULL);
@@ -144,7 +144,7 @@ int main(int argc, char **argv)
 		printf("*** end dispatch ***\n");
 	}
 
-	//retention time
+	/*retention time */
 	saEvtEventSubscribe(channel_handle, &filter_array, 2);
 	for(;;){
 		FD_ZERO(&rset);
@@ -159,15 +159,15 @@ int main(int argc, char **argv)
 		}
 	}
 
-	//event free
+	/*event free */
 	saEvtEventFree(event_handle);
 	saEvtEventFree(event_handle1);
 
-	//channel close
+	/*channel close */
 	saEvtChannelClose(channel_handle);
 	saEvtChannelClose(channel_handle1);
 
-	//finalize
+	/*finalize */
 	saEvtFinalize(evt_handle);
 	return 0;
 }

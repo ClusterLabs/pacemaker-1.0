@@ -1,4 +1,4 @@
-/* $Id: ccmllm.c,v 1.5 2004/02/17 22:12:00 lars Exp $ */
+/* $Id: ccmllm.c,v 1.6 2004/08/29 03:01:14 msoffen Exp $ */
 /* 
  * ccmllm.c: Low Level membership routines.
  *
@@ -23,9 +23,9 @@
 #include <ccm.h>
 
 
-//
-// return the number of nodes in the cluster that are in a active state.
-//
+/* */
+/* return the number of nodes in the cluster that are in a active state. */
+/* */
 int
 llm_get_active_nodecount(llm_info_t *llm)
 {
@@ -55,23 +55,23 @@ llm_only_active_node(llm_info_t *llm)
 	return TRUE;
 }
 
-//
-// return the nodename of the node with the specified uuid.
-//
+/* */
+/* return the nodename of the node with the specified uuid. */
+/* */
 char *
 llm_get_nodeid_from_uuid(llm_info_t *llm, const int uuid)
 {
 	return LLM_GET_NODEID(llm, uuid);
 }
 
-//
-// return >0 if name of the node with indx1 is lexically
-// higher than the name of the node with indx2.
-// return 0 if the node names of both the nodes are the
-// same
-// return <0 if name of the node with indx1 is lexically
-// lower than the name of the node with indx2.
-//
+/* */
+/* return >0 if name of the node with indx1 is lexically */
+/* higher than the name of the node with indx2. */
+/* return 0 if the node names of both the nodes are the */
+/* same */
+/* return <0 if name of the node with indx1 is lexically */
+/* lower than the name of the node with indx2. */
+/* */
 int
 llm_nodeid_cmp(llm_info_t *llm, int indx1, int indx2)
 {
@@ -80,9 +80,9 @@ llm_nodeid_cmp(llm_info_t *llm, int indx1, int indx2)
 }
 
 
-//
-// Get the index of the node with the given nodename 
-//
+/* */
+/* Get the index of the node with the given nodename  */
+/* */
 int
 llm_get_index(llm_info_t *llm, const char *node)
 {
@@ -103,15 +103,15 @@ llm_get_index(llm_info_t *llm, const char *node)
 	return -1;
 }
 
-//
-// Update the status of node 'nodename'.
-// return TRUE if the node transitioned to DEADSTATUS or CLUST_INACTIVE
-//
-// NOTE: CLUST_INACTIVE carries more information then DEADSTATUS
-// DEADSTATUS just means the node is assumed to be dead, probably because
-// of loss of connectivity or because of real death.
-// BUT CLUST_INACTIVE confirms that the node is really cluster inactive.
-//
+/* */
+/* Update the status of node 'nodename'. */
+/* return TRUE if the node transitioned to DEADSTATUS or CLUST_INACTIVE */
+/* */
+/* NOTE: CLUST_INACTIVE carries more information then DEADSTATUS */
+/* DEADSTATUS just means the node is assumed to be dead, probably because */
+/* of loss of connectivity or because of real death. */
+/* BUT CLUST_INACTIVE confirms that the node is really cluster inactive. */
+/* */
 int
 llm_status_update(llm_info_t *llm, const char *node, const char *status)
 {
@@ -136,9 +136,9 @@ llm_status_update(llm_info_t *llm, const char *node, const char *status)
 }
 
 
-//
-// Get uuid of the node with given nodename.
-//
+/* */
+/* Get uuid of the node with given nodename. */
+/* */
 int 
 llm_get_uuid(llm_info_t *llm, const char *orig)
 {
@@ -148,10 +148,10 @@ llm_get_uuid(llm_info_t *llm, const char *orig)
 	return LLM_GET_UUID(llm,i);
 }
 
-//
-// return true if the node 'node' is a member of the
-// low level membership.
-//
+/* */
+/* return true if the node 'node' is a member of the */
+/* low level membership. */
+/* */
 int
 llm_is_valid_node(llm_info_t *llm, 
 	const char *node)
@@ -160,9 +160,9 @@ llm_is_valid_node(llm_info_t *llm,
 	return TRUE;
 }
 
-//
-// set the context to fill in the low membership information.
-//
+/* */
+/* set the context to fill in the low membership information. */
+/* */
 void 
 llm_init(llm_info_t *llm)
 {
@@ -171,9 +171,9 @@ llm_init(llm_info_t *llm)
 	return;
 }
 
-//
-// done filling in the low level membership. 
-//
+/* */
+/* done filling in the low level membership.  */
+/* */
 void 
 llm_end(llm_info_t *llm)
 {
@@ -182,10 +182,10 @@ llm_end(llm_info_t *llm)
 	return;
 }
 
-//
-// add a node to the low level membership with its
-// coresspoding attributes.
-//
+/* */
+/* add a node to the low level membership with its */
+/* coresspoding attributes. */
+/* */
 void
 llm_add(llm_info_t *llm, 
 	const char *node, 

@@ -1,4 +1,4 @@
-/* $Id: ccmgraph.c,v 1.9 2004/02/17 22:12:00 lars Exp $ */
+/* $Id: ccmgraph.c,v 1.10 2004/08/29 03:01:14 msoffen Exp $ */
 /* 
  * ccmgraph.c: Keeps track of the connectivity within the cluster members
  *		to derive the largest totally connected subgraph.
@@ -35,10 +35,10 @@ static char 	vyesorno='n';
 #define GRAPH_TIMEOUT  15
 #define GRAPH_TIMEOUT_TOO_LONG  25
 
-//
-// clean up the unneccessary bits in the graph and check for
-// inconsistency.
-//
+/* */
+/* clean up the unneccessary bits in the graph and check for */
+/* inconsistency. */
+/* */
 static void
 graph_sanitize(graph_t *gr)
 {
@@ -100,9 +100,9 @@ graph_sanitize(graph_t *gr)
 }
 		
 
-//
-// print the vertices that belong the largest totally connected subgraph.
-//
+/* */
+/* print the vertices that belong the largest totally connected subgraph. */
+/* */
 static void
 print_vertex(vertex_t **vertex, int maxnode)
 {
@@ -124,13 +124,13 @@ print_vertex(vertex_t **vertex, int maxnode)
 }
 
 
-//
-// BEGIN OF FUNCTIONS THAT FORM THE CORE OF THE ALGORITHM
-//
+/* */
+/* BEGIN OF FUNCTIONS THAT FORM THE CORE OF THE ALGORITHM */
+/* */
 
-//
-// the function that orders the vertices in the graph while sorting.
-//
+/* */
+/* the function that orders the vertices in the graph while sorting. */
+/* */
 static int
 compare(const void *value1, const void *value2)
 {
@@ -351,13 +351,13 @@ get_max_clique(vertex_t **vertex,  int maxnode, int *loc)
 
 	return size;
 }
-//
-// END OF FUNCTIONS THAT FORM THE CORE OF THE ALGORITHM
-//
+/* */
+/* END OF FUNCTIONS THAT FORM THE CORE OF THE ALGORITHM */
+/* */
 
-//
-// initialize the graph.
-//
+/* */
+/* initialize the graph. */
+/* */
 graph_t *
 graph_init()
 {
@@ -377,9 +377,9 @@ graph_init()
 }
 
 
-//
-// free all the datastructures 
-//
+/* */
+/* free all the datastructures  */
+/* */
 void
 graph_free(graph_t *gr)
 {
@@ -395,19 +395,19 @@ graph_free(graph_t *gr)
 }
 
 
-//
-// add a new member to the graph, whose id is 'uuid'
-//
+/* */
+/* add a new member to the graph, whose id is 'uuid' */
+/* */
 void
 graph_add_uuid(graph_t *gr, int uuid)
 {
 	gr->graph_node[gr->graph_nodes++]->uuid = uuid;
 }
 
-//
-// add the member whose id is 'dst_uuid' to the connectivity list
-// of the member with id 'src_uuid'
-//
+/* */
+/* add the member whose id is 'dst_uuid' to the connectivity list */
+/* of the member with id 'src_uuid' */
+/* */
 void
 graph_add_to_membership(graph_t *gr, int src_uuid, int dst_uuid)
 {
@@ -425,9 +425,9 @@ graph_add_to_membership(graph_t *gr, int src_uuid, int dst_uuid)
 
 
 
-//
-// update the connectivity information of the member whose id is 'uuid'.
-//
+/* */
+/* update the connectivity information of the member whose id is 'uuid'. */
+/* */
 void
 graph_update_membership(graph_t *gr, 
 			int uuid, 
@@ -457,10 +457,10 @@ graph_update_membership(graph_t *gr,
 	return;
 }
 
-//
-// return TRUE, if all the members of the graph have their
-// connectivity information updated.
-//
+/* */
+/* return TRUE, if all the members of the graph have their */
+/* connectivity information updated. */
+/* */
 int
 graph_filled_all(graph_t *gr)
 {
@@ -468,9 +468,9 @@ graph_filled_all(graph_t *gr)
 }
 
 
-//
-// return the largest fully connected subgraph.
-//
+/* */
+/* return the largest fully connected subgraph. */
+/* */
 int
 graph_get_maxclique(graph_t *gr, unsigned char **bitmap)
 {

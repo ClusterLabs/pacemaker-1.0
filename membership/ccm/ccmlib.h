@@ -1,4 +1,4 @@
-/* $Id: ccmlib.h,v 1.14 2004/02/17 22:12:00 lars Exp $ */
+/* $Id: ccmlib.h,v 1.15 2004/08/29 03:01:14 msoffen Exp $ */
 /*
  * ccmlib.h: internal definations for ccm library files.
  *
@@ -64,8 +64,8 @@ typedef struct ccm_born_s {
 } ccm_born_t;
 
 typedef struct ccm_llm_s { /* information about low level membership info */
-	uint	   n; 		//number of nodes in the cluster 
-	int	   mynode;	 //index of mynode
+	uint	   n; 		/* number of nodes in the cluster  */
+	int	   mynode;	 /* index of mynode */
 	struct  node_s {
 		uint  Uuid;  /* a cluster unique id for the node */
 		char Id[NODEIDSIZE];

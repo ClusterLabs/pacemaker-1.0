@@ -70,7 +70,7 @@ typedef struct {
     void *dataBuffer;
     SaSizeT dataSize;
     SaOffsetT dataOffset;
-    SaSizeT readSize; //[out]
+    SaSizeT readSize; /*[out] */
 } SaCkptIOVectorElementT;
 
 

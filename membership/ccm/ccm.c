@@ -1,4 +1,4 @@
-/* $Id: ccm.c,v 1.46 2004/04/20 21:21:20 andrew Exp $ */
+/* $Id: ccm.c,v 1.47 2004/08/29 03:01:14 msoffen Exp $ */
 /* 
  * ccm.c: Consensus Cluster Service Program 
  *
@@ -32,21 +32,21 @@
 extern int global_verbose;
 extern int global_debug;
 
-//
-// the various states of the CCM state machine.
-//
+/* */
+/* the various states of the CCM state machine. */
+/* */
 enum ccm_state  {
-	CCM_STATE_NONE=0,	// is in NULL state 
-	CCM_STATE_VERSION_REQUEST=10,	// sent a request for protocol version
-	CCM_STATE_JOINING=20,  // has initiated a join protocol 
-	CCM_STATE_RCVD_UPDATE=30,// has recevied the updates from other nodes
-	CCM_STATE_SENT_MEMLISTREQ=40,// CL has sent a request for member list 
-				// this state is applicable only on CL
-	CCM_STATE_REQ_MEMLIST=50,// CL has requested member list
-				  // this state is applicable only on non-CL
-	CCM_STATE_MEMLIST_RES=60,// Responded member list to the Cluster 
-				  //	Leader
-	CCM_STATE_JOINED=70,    // PART of the CCM cluster membership!
+	CCM_STATE_NONE=0,		/* is in NULL state  */
+	CCM_STATE_VERSION_REQUEST=10,	/* sent a request for protocol version */
+	CCM_STATE_JOINING=20,  		/* has initiated a join protocol  */
+	CCM_STATE_RCVD_UPDATE=30,	/* has recevied the updates from other nodes */
+	CCM_STATE_SENT_MEMLISTREQ=40,	/* CL has sent a request for member list  */
+					/* this state is applicable only on CL */
+	CCM_STATE_REQ_MEMLIST=50,	/* CL has requested member list */
+				  	/* this state is applicable only on non-CL */
+	CCM_STATE_MEMLIST_RES=60,	/* Responded member list to the Cluster  */
+				 	/* Leader */
+	CCM_STATE_JOINED=70,    /* PART of the CCM cluster membership! */
 	CCM_STATE_WAIT_FOR_MEM_LIST=80,
 	CCM_STATE_WAIT_FOR_CHANGE=90,
 	CCM_STATE_NEW_NODE_WAIT_FOR_MEM_LIST=100,
@@ -54,7 +54,7 @@ enum ccm_state  {
 	CCM_STATE_END
 };
 
-//the times for repeating sending message
+/* the times for repeating sending message */
 #define REPEAT_TIMES 10
 
 /* add new enums to this structure as and when new protocols are added */
@@ -65,23 +65,23 @@ enum ccm_protocol {
 };
 
 typedef struct ccm_proto_s {
-	enum ccm_protocol  com_hiproto;// highest protocol version that 
-				// this node can handle
-	int	com_active_proto;// protocol version
+	enum ccm_protocol  com_hiproto;/* highest protocol version that  */
+				/* this node can handle */
+	int	com_active_proto;/* protocol version */
 } ccm_proto_t;
 
 
 typedef struct memcomp_s {
-	graph_t		*mem_graph;  // memlist calculation graph
+	graph_t		*mem_graph;  /* memlist calculation graph */
 
-	GSList 		*mem_maxt; 	    // the maxtrans of each node
-				    // participating in the computation .
-				    // NOTE: the transition number of the
-				    // next transition is always 1 higher
-				    // than that of all transitions seen 
-				    // by each node participating in the 
-				    // membership
-	longclock_t  	mem_inittime; // the time got intialized
+	GSList 		*mem_maxt; 	    /* the maxtrans of each node */
+				    /* participating in the computation . */
+				    /* NOTE: the transition number of the */
+				    /* next transition is always 1 higher */
+				    /* than that of all transitions seen  */
+				    /* by each node participating in the  */
+				    /* membership */
+	longclock_t  	mem_inittime; /* the time got intialized */
 } memcomp_t;
 #define 	MEMCOMP_GET_GRAPH(memc)  	memc->mem_graph
 #define 	MEMCOMP_GET_MAXT(memc)  	memc->mem_maxt
@@ -108,43 +108,43 @@ enum change_event_type{
 
 #define COOKIESIZE 15
 typedef struct ccm_info_s {
-	llm_info_t 	ccm_llm;	//  low level membership info
+	llm_info_t 	ccm_llm;	/*  low level membership info */
 
-	int		ccm_nodeCount;	//  number of nodes in the ccm cluster
-	int		ccm_member[MAXNODE];// members of the ccm cluster
-	memcomp_t	ccm_memcomp;	// the datastructure to compute the 
-					// final membership for each membership
-	 				// computation instance of the ccm protocol.
-	 				// used by the leader only.
+	int		ccm_nodeCount;	/*  number of nodes in the ccm cluster */
+	int		ccm_member[MAXNODE];/* members of the ccm cluster */
+	memcomp_t	ccm_memcomp;	/* the datastructure to compute the  */
+					/* final membership for each membership */
+	 				/* computation instance of the ccm protocol. */
+	 				/* used by the leader only. */
 
-	ccm_proto_t  	ccm_proto;	// protocol version information
+	ccm_proto_t  	ccm_proto;	/* protocol version information */
 #define ccm_active_proto ccm_proto.com_active_proto
 #define ccm_hiproto	  ccm_proto.com_hiproto
 
-	char		ccm_cookie[COOKIESIZE];// context identification string.
-	uint32_t	ccm_transition_major;// transition number of the cluster
-	int		ccm_cluster_leader; // cluster leader of the last major
-				// transition. index of cl in ccm_member table
+	char		ccm_cookie[COOKIESIZE];/* context identification string. */
+	uint32_t	ccm_transition_major;/* transition number of the cluster */
+	int		ccm_cluster_leader; /* cluster leader of the last major */
+				/* transition. index of cl in ccm_member table */
 	int		ccm_joined_transition;
-					// this indicates the major transition 
-					// number during which this node became
-					// a member of the cluster.
-					// A sideeffect of this is it also
-					// is used to figure out if this node
-					// was ever a part of the cluster.
-					// Should be intially set to 0
-	uint32_t	ccm_max_transition;//the maximum transition number seen
-					// by this node ever since it was born.
-	enum ccm_state 	ccm_node_state;	// cluster state of this node 
-	uint32_t	ccm_transition_minor;// minor transition number of the 
-					//cluster
+					/* this indicates the major transition  */
+					/* number during which this node became */
+					/* a member of the cluster. */
+					/* A sideeffect of this is it also */
+					/* is used to figure out if this node */
+					/* was ever a part of the cluster. */
+					/* Should be intially set to 0 */
+	uint32_t	ccm_max_transition;	/* the maximum transition number seen */
+					/* by this node ever since it was born. */
+	enum ccm_state 	ccm_node_state;	/* cluster state of this node  */
+	uint32_t	ccm_transition_minor;/* minor transition number of the  */
+					/* cluster */
 
-	ccm_update_t   ccm_update; 	// structure that keeps track
-					// of uptime of each member
-	GSList		*ccm_joiner_head;// keeps track of new-bees version
-					// request. 
-	ccm_version_t  ccm_version;     // keeps track of version request 
-					// related info
+	ccm_update_t   ccm_update; 	/* structure that keeps track */
+					/* of uptime of each member */
+	GSList		*ccm_joiner_head;/* keeps track of new-bees version */
+					/* request.  */
+	ccm_version_t  ccm_version;     /* keeps track of version request  */
+					/* related info */
 	ccm_tmout_t	tmout;
 	uint32_t change_event_remaining_count; 		
 	enum change_event_type change_type;
@@ -169,8 +169,8 @@ typedef struct ccm_info_s {
 #define		CCM_INIT_MAXTRANS(info) 	\
 					info->ccm_max_transition = 0
 
-// 	NOTE the reason the increment for majortrans is done
-// 	as below is to force recomputation of  ccm_max_transition 
+/* 	NOTE the reason the increment for majortrans is done */
+/* 	as below is to force recomputation of  ccm_max_transition  */
 #define		CCM_INCREMENT_MAJORTRANS(info) 	\
 				CCM_SET_MAJORTRANS(info, \
 					CCM_GET_MAJORTRANS(info)+1)
@@ -246,7 +246,7 @@ static void report_reset(void);
 static int ccm_already_joined(ccm_info_t *);
 static void ccm_memcomp_reset(ccm_info_t *);
 
-//For enhanced membership service
+/* For enhanced membership service */
 static void append_change_msg(ccm_info_t *info,const char *node);
 static int received_all_change_msg(ccm_info_t *info);
 static int is_expected_change_msg(ccm_info_t *info, const char *node,
@@ -311,16 +311,17 @@ static int new_node_mem_list_timeout(unsigned long timeout)
 #define CCM_SET_RECEIVED_CHANGE_MSG(info, node, value) \
 	CCM_GET_LLM(info)->llm_nodes[info->ccm_member[ccm_get_membership_index(info, node)]].received_change_msg = value
 
+/*
 ////////////////////////////////////////////////////////////////
 // BEGIN OF Functions associated with CCM token types that are
 // communicated accross nodes and their values.
 ////////////////////////////////////////////////////////////////
+*/
 
-
-// the ccm types tokens used locally, these are the integer equivalents
-// for the F_TYPE tokens. The strings defined in ccm_type_str are
-// communicated accross the wire. But locally they are mapped to
-// ccm_types for easier processing.
+/* the ccm types tokens used locally, these are the integer equivalents */
+/* for the F_TYPE tokens. The strings defined in ccm_type_str are */
+/* communicated accross the wire. But locally they are mapped to */
+/* ccm_types for easier processing. */
 enum ccm_type {
 	CCM_TYPE_PROTOVERSION=1,
 	CCM_TYPE_PROTOVERSION_RESP,
@@ -349,8 +350,8 @@ static void ccm_state_new_node_wait_for_mem_list(enum ccm_type ccm_msg_type,
 			ccm_info_t *info);
 
 
-// the ccm strings tokens communicated aross the wire.
-// these are the values for the F_TYPE names.
+/* the ccm strings tokens communicated aross the wire. */
+/* these are the values for the F_TYPE names. */
 #define TYPESTRSIZE 20
 char  ccm_type_str[CCM_TYPE_LAST][TYPESTRSIZE] = {
 			"",
@@ -371,9 +372,9 @@ char  ccm_type_str[CCM_TYPE_LAST][TYPESTRSIZE] = {
 			""
 	};
 
-//
-// ccm defined new type tokens used by the CCM protocol.
-//
+/* */
+/* ccm defined new type tokens used by the CCM protocol. */
+/* */
 #define CCM_VERSIONVAL  "ccmpverval" 	  /* version value token */
 #define CCM_UPTIME      "ccmuptime"       /* Uptime for Consensus  */
 #define CCM_MEMLIST     "ccmmemlist"      /* bitmap for membership */
@@ -386,18 +387,18 @@ char  ccm_type_str[CCM_TYPE_LAST][TYPESTRSIZE] = {
 #define CCM_CLSIZE   	"ccmclsize"       /* new cluster size */
 #define CCM_UPTIMELIST "ccmuptimelist" /*uptime list*/
 
-// given a ccm_type return the string representation associated with it.
-// NOTE: string representation is used to communicate accross node.
-//       and ccm_type is used for easier local processing.
+/* given a ccm_type return the string representation associated with it. */
+/* NOTE: string representation is used to communicate accross node. */
+/*       and ccm_type is used for easier local processing. */
 static char *
 ccm_type2string(enum ccm_type type)
 {
 	return ccm_type_str[type];
 }
 
-//
-// given a string representation return the string type.
-//
+/* */
+/* given a string representation return the string type. */
+/* */
 static enum ccm_type 
 ccm_string2type(const char *type)
 {
@@ -410,12 +411,12 @@ ccm_string2type(const char *type)
 	return CCM_TYPE_ERROR;
 }
 
-// END OF TYPE_STR datastructure and associated functions
+/* END OF TYPE_STR datastructure and associated functions */
 
 
-//
-// timeout configuration function
-//
+/* */
+/* timeout configuration function */
+/* */
 static void
 ccm_configure_timeout(ll_cluster_t *hb, ccm_info_t *info)
 {
@@ -435,9 +436,9 @@ ccm_configure_timeout(ll_cluster_t *hb, ccm_info_t *info)
 }
 
 
-//
-// ccm_get_my_hostname: return my nodename.
-//
+/* */
+/* ccm_get_my_hostname: return my nodename. */
+/* */
 static char *
 ccm_get_my_hostname(ccm_info_t *info)
 {
@@ -446,12 +447,12 @@ ccm_get_my_hostname(ccm_info_t *info)
 }
 
 
-//
-// timeout_msg_create: 
-//	fake up a timeout message, which is in the
-// 	same format as the other messages that are
-//	communicated across the nodes.
-//
+/* */
+/* timeout_msg_create:  */
+/*	fake up a timeout message, which is in the */
+/* 	same format as the other messages that are */
+/*	communicated across the nodes. */
+/* */
 
 static struct ha_msg * timeout_msg = NULL;
 
@@ -517,22 +518,22 @@ timeout_msg_mod(ccm_info_t *info)
 
 
 #ifdef TIMEOUT_MSG_FUNCTIONS_NEEDED
-//
-// timeout_msg_done: 
-//   done with the processing of this message.
+/* */
+/* timeout_msg_done:  */
+/*   done with the processing of this message. */
 static void
 timeout_msg_done(void)
 {
-	// nothing to do.
+	/* nothing to do. */
 	return;
 }
 
 
-//
-// timeout_msg_del: 
-//   delete the given timeout message.
-//   nobody calls this function. 
-//   someday somebody will call it :)
+/* */
+/* timeout_msg_del:  */
+/*   delete the given timeout message. */
+/*   nobody calls this function.  */
+/*   someday somebody will call it :) */
 static void
 timeout_msg_del(void)
 {
@@ -542,12 +543,12 @@ timeout_msg_del(void)
 #endif
 
 
-//
-// These are the function that keep track of number of time a version
-// response message has been dropped. These function are consulted by
-// the CCM algorithm to determine if a version response message has
-// to be dropped or not.
-//
+/* */
+/* These are the function that keep track of number of time a version */
+/* response message has been dropped. These function are consulted by */
+/* the CCM algorithm to determine if a version response message has */
+/* to be dropped or not. */
+/* */
 static int respdrop=0;
 #define MAXDROP 3
 
@@ -570,15 +571,15 @@ resp_reset(void)
 {
 	respdrop=0;
 }
-//
-// End of response processing messages.
-//
+/* */
+/* End of response processing messages. */
+/* */
 
 
-//
-// BEGIN OF functions that track the time since a connectivity reply has
-// been sent to the leader.
-//
+/* */
+/* BEGIN OF functions that track the time since a connectivity reply has */
+/* been sent to the leader. */
+/* */
 static longclock_t finallist_time;
 
 static void
@@ -598,28 +599,28 @@ finallist_timeout(unsigned long timeout)
 {
 	return(ccm_timeout(finallist_time, ccm_get_time(), timeout));
 }
-//
-// END OF functions that track the time since a connectivity reply has
-// been sent to the leader.
-//
+/* */
+/* END OF functions that track the time since a connectivity reply has */
+/* been sent to the leader. */
+/* */
 
 
-// BEGINE of the functions that track asynchronous leave
-//
-// When ccm running on a  node leaves the cluster voluntarily it 
-// sends  a  leave  message  to  the  other nodes in the cluster. 
-// Similarly  whenever  ccm  running on some node of the cluster,
-// dies  the  local  heartbeat   delivers a leave message to ccm.
-// And  whenever  some node in the cluster dies, local heartbeat 
-// informs  the  death  through  a  callback. 
-// In all these cases, ccm is informed about the loss of the node,
-// asynchronously, in  some context where immidiate processing of 
-// the message is not possible. 
-// The  following  set of routines act as a cache that keep track 
-// of  message  leaves  and  facilitates  the  delivery  of these 
-// messages at a convinient time.
-// 
-//
+/* BEGINE of the functions that track asynchronous leave */
+/* */
+/* When ccm running on a  node leaves the cluster voluntarily it  */
+/* sends  a  leave  message  to  the  other nodes in the cluster.  */
+/* Similarly  whenever  ccm  running on some node of the cluster, */
+/* dies  the  local  heartbeat   delivers a leave message to ccm. */
+/* And  whenever  some node in the cluster dies, local heartbeat  */
+/* informs  the  death  through  a  callback.  */
+/* In all these cases, ccm is informed about the loss of the node, */
+/* asynchronously, in  some context where immidiate processing of  */
+/* the message is not possible.  */
+/* The  following  set of routines act as a cache that keep track  */
+/* of  message  leaves  and  facilitates  the  delivery  of these  */
+/* messages at a convinient time. */
+/*  */
+/* */
 static unsigned char *leave_bitmap=NULL;
 
 static void
@@ -674,8 +675,8 @@ leave_any(void)
 
 
 
-// Reset all the datastructures. Go to a state which is equivalent
-// to a state when the node is just about to join a cluster.
+/* Reset all the datastructures. Go to a state which is equivalent */
+/* to a state when the node is just about to join a cluster. */
 static void 
 ccm_reset(ccm_info_t *info)
 {
@@ -722,9 +723,9 @@ report_reset(void)
 	return;
 }
 
-//
-// print and report the cluster membership to clients.
-//
+/* */
+/* print and report the cluster membership to clients. */
+/* */
 static void
 report_mbrs(ccm_info_t *info)
 {
@@ -783,20 +784,20 @@ report_mbrs(ccm_info_t *info)
 
 
 
-//
-// generate a random cookie.
-// NOTE: cookie  is  a  mechanism  of  seperating out the contexts
-// of  messages  of  partially  partitioned  clusters.
-// For example, consider  a  case  where   node  A  is  physically
-// in  the  partition  X  and  partition  Y,  and  but  has joined 
-// membership  in partition X. It will end up getting ccm protocol
-// messages  sent  by  members in both the partitions. In order to 
-// seperate  out  messages  belonging  to  individual partition, a 
-// random  string  is  used  as  a identifier by each partition to 
-// identify  its  messages.  In  the above case A will get message 
-// from  both  the  partitions  but  only listens to messages from 
-// partition X and drops messages from partition Y.
-//
+/* */
+/* generate a random cookie. */
+/* NOTE: cookie  is  a  mechanism  of  seperating out the contexts */
+/* of  messages  of  partially  partitioned  clusters. */
+/* For example, consider  a  case  where   node  A  is  physically */
+/* in  the  partition  X  and  partition  Y,  and  but  has joined  */
+/* membership  in partition X. It will end up getting ccm protocol */
+/* messages  sent  by  members in both the partitions. In order to  */
+/* seperate  out  messages  belonging  to  individual partition, a  */
+/* random  string  is  used  as  a identifier by each partition to  */
+/* identify  its  messages.  In  the above case A will get message  */
+/* from  both  the  partitions  but  only listens to messages from  */
+/* partition X and drops messages from partition Y. */
+/* */
 static char *
 ccm_generate_random_cookie(void)
 {
@@ -828,11 +829,11 @@ ccm_free_random_cookie(char *cookie)
 
 
 
-// BEGIN OF FUNCTIONS that keep track of connectivity  information 
-// conveyed by individual members of the cluster. These  functions 
-// are used by only the cluster leader. Ultimately these connectivity
-// information is used by the cluster to extract out the members
-// of the cluster that have total connectivity.
+/* BEGIN OF FUNCTIONS that keep track of connectivity  information  */
+/* conveyed by individual members of the cluster. These  functions  */
+/* are used by only the cluster leader. Ultimately these connectivity */
+/* information is used by the cluster to extract out the members */
+/* of the cluster that have total connectivity. */
 static int
 ccm_memcomp_cmpr(gconstpointer a, gconstpointer b)
 {
@@ -874,7 +875,7 @@ ccm_memcomp_note(ccm_info_t *info, const char *orig,
 	return;
 }
 
-// called by the cluster leader only 
+/* called by the cluster leader only  */
 static void
 ccm_memcomp_note_my_membership(ccm_info_t *info)
 {
@@ -903,7 +904,7 @@ ccm_memcomp_add(ccm_info_t *info, const char *orig)
 	graph_add_uuid(MEMCOMP_GET_GRAPH(mem_comp), uuid);
 	graph_add_to_membership(MEMCOMP_GET_GRAPH(mem_comp), 
 			myuuid, uuid);
-	//ccm_memcomp_note(info, orig, maxtrans, memlist);
+	/* ccm_memcomp_note(info, orig, maxtrans, memlist); */
 	return;
 }
 
@@ -988,9 +989,9 @@ ccm_memcomp_get_maxmembership(ccm_info_t *info, unsigned char **bitmap)
 }
 
 
-//
-// END OF the membership tracking functions.
-//
+/* */
+/* END OF the membership tracking functions. */
+/* */
 
 
 static int 
@@ -1015,13 +1016,13 @@ ccm_am_i_member(ccm_info_t *info, const char *memlist)
 }
 
 
-//
-// BEGIN  OF  FUNCTIONS  that  keep track of stablized membership list
-// 
-// These  function  keep track of consensus membership once a instance
-// of the  ccm algorithm terminates and decided on the final consensus 
-// members of the cluster.
-//
+/* */
+/* BEGIN  OF  FUNCTIONS  that  keep track of stablized membership list */
+/*  */
+/* These  function  keep track of consensus membership once a instance */
+/* of the  ccm algorithm terminates and decided on the final consensus  */
+/* members of the cluster. */
+/* */
 static int 
 ccm_memlist_changed(ccm_info_t *info, 
 		  char *bitmap /* the bitmap string containing bits */)
@@ -1138,25 +1139,25 @@ ccm_already_joined(ccm_info_t *info)
 	return FALSE;
 }
 
-//
-// END  OF  FUNCTIONS  that  keep track of stablized membership list
-//
+/* */
+/* END  OF  FUNCTIONS  that  keep track of stablized membership list */
+/* */
 
 
-// 
-// BEGIN OF FUNCTIONS THAT KEEP TRACK of cluster nodes that have shown
-// interest in joining the cluster.
-//
-//
-// NOTE: when a new node wants to join the cluster, it multicasts a 
-// message asking for the necessary information to send out a  join
-// message. (it needs the current major transistion number, the context
-// string i.e cookie, the protocol number that everybody is operating
-// in).
-//
-// The functions below track these messages sent out by new potential
-// members showing interest in acquiring the initial context.
-//
+/*  */
+/* BEGIN OF FUNCTIONS THAT KEEP TRACK of cluster nodes that have shown */
+/* interest in joining the cluster. */
+/* */
+/* */
+/* NOTE: when a new node wants to join the cluster, it multicasts a  */
+/* message asking for the necessary information to send out a  join */
+/* message. (it needs the current major transistion number, the context */
+/* string i.e cookie, the protocol number that everybody is operating */
+/* in). */
+/* */
+/* The functions below track these messages sent out by new potential */
+/* members showing interest in acquiring the initial context. */
+/* */
 static void 
 ccm_add_new_joiner(ccm_info_t *info, const char *orig)
 {
@@ -1207,17 +1208,19 @@ ccm_remove_new_joiner(ccm_info_t *info, const char *orig)
 				GINT_TO_POINTER(idx)));
 	return;
 }
-//
-// END OF FUNCTIONS THAT KEEP TRACK of cluster nodes that have shown
-// interest in joining the cluster.
-//
+/* */
+/* END OF FUNCTIONS THAT KEEP TRACK of cluster nodes that have shown */
+/* interest in joining the cluster. */
+/* */
 
 
+/*
 /////////////////////////////////////////////////////////////////////
 //
 // BEGIN OF FUNCTIONS THAT SEND OUT messages to nodes of the cluster
 //
 /////////////////////////////////////////////////////////////////////
+*/
 static void
 ccm_delay_random_interval(void)
 {
@@ -1228,14 +1231,14 @@ ccm_delay_random_interval(void)
 	usleep(random()%MAXNODE); /*sleep some random microsecond interval*/
 }
 
-//
-// compute the final membership list from the acquired connectivity
-// information from other nodes. And send out the consolidated
-// members of the cluster information to the all the members of 
-// that have participated in the CCM protocol.
-//
-// NOTE: Called by the cluster leader only.
-//
+/* */
+/* compute the final membership list from the acquired connectivity */
+/* information from other nodes. And send out the consolidated */
+/* members of the cluster information to the all the members of  */
+/* that have participated in the CCM protocol. */
+/* */
+/* NOTE: Called by the cluster leader only. */
+/* */
 static void
 ccm_compute_and_send_final_memlist(ll_cluster_t *hb, ccm_info_t *info)
 {
@@ -1316,12 +1319,12 @@ ccm_compute_and_send_final_memlist(ll_cluster_t *hb, ccm_info_t *info)
 }
 
 
-//
-// send a reply to the potential joiner, containing the neccessary
-// context needed by the joiner, to initiate a new round of a ccm 
-// protocol.
-// NOTE: This function is called by the cluster leader only.
-//
+/* */
+/* send a reply to the potential joiner, containing the neccessary */
+/* context needed by the joiner, to initiate a new round of a ccm  */
+/* protocol. */
+/* NOTE: This function is called by the cluster leader only. */
+/* */
 static int 
 ccm_send_joiner_reply(ll_cluster_t *hb, ccm_info_t *info, const char *joiner)
 {
@@ -1365,10 +1368,10 @@ ccm_send_joiner_reply(ll_cluster_t *hb, ccm_info_t *info, const char *joiner)
 	return(rc);
 }
 
-// 
-// browse through the list of interested joiners and reply to each of
-// them.
-// 
+/*  */
+/* browse through the list of interested joiners and reply to each of */
+/* them. */
+/*  */
 static void 
 ccm_send_join_reply(ll_cluster_t *hb, ccm_info_t *info)
 {
@@ -1399,11 +1402,11 @@ ccm_send_join_reply(ll_cluster_t *hb, ccm_info_t *info)
 }
 
 
-//
-// send a final membership list to all the members who have participated
-// in the ccm protocol.
-// NOTE: Called by the cluster leader on.
-//
+/* */
+/* send a final membership list to all the members who have participated */
+/* in the ccm protocol. */
+/* NOTE: Called by the cluster leader on. */
+/* */
 static int
 ccm_send_final_memlist(ll_cluster_t *hb, 
 			ccm_info_t *info, 
@@ -1463,11 +1466,11 @@ ccm_send_final_memlist(ll_cluster_t *hb,
 
 
 
-//
-// send out a message to the cluster asking for the context
-// NOTE: this context is used to intiate a new instance of 
-// 	a CCM protocol.
-//
+/* */
+/* send out a message to the cluster asking for the context */
+/* NOTE: this context is used to intiate a new instance of  */
+/* 	a CCM protocol. */
+/* */
 static int
 ccm_send_protoversion(ll_cluster_t *hb, ccm_info_t *info)
 {
@@ -1495,10 +1498,10 @@ ccm_send_protoversion(ll_cluster_t *hb, ccm_info_t *info)
 	return(rc);
 }
 
-//
-// send out a abort message to whoever has initiated a new instance
-// of ccm protocol.
-//
+/* */
+/* send out a abort message to whoever has initiated a new instance */
+/* of ccm protocol. */
+/* */
 static int
 ccm_send_abort(ll_cluster_t *hb, ccm_info_t *info, 
 		const char *dest, 
@@ -1536,10 +1539,10 @@ ccm_send_abort(ll_cluster_t *hb, ccm_info_t *info,
 
 
 
-//
-// send out a leave message to indicate to everybody that it is leaving
-// the cluster.
-//
+/* */
+/* send out a leave message to indicate to everybody that it is leaving */
+/* the cluster. */
+/* */
 static int
 ccm_send_leave(ll_cluster_t *hb, ccm_info_t *info)
 {
@@ -1576,10 +1579,10 @@ ccm_send_leave(ll_cluster_t *hb, ccm_info_t *info)
 	return(rc);
 }
 
-//
-// send out a join message. THis message will initiate a new instance of
-// the ccm protocol.
-//
+/* */
+/* send out a join message. THis message will initiate a new instance of */
+/* the ccm protocol. */
+/* */
 static int
 ccm_send_join(ll_cluster_t *hb, ccm_info_t *info)
 {
@@ -1629,9 +1632,9 @@ ccm_send_join(ll_cluster_t *hb, ccm_info_t *info)
 }
 
 
-//
-// send out the connectivity information to the cluster leader.
-//
+/* */
+/* send out the connectivity information to the cluster leader. */
+/* */
 static int
 ccm_send_memlist_res(ll_cluster_t *hb, 
 			ccm_info_t *info,
@@ -1695,12 +1698,12 @@ ccm_send_memlist_res(ll_cluster_t *hb,
 	return(rc);
 }
 
-//
-// send out a message to all the members of the cluster, asking for
-// their connectivity information.
-//
-// NOTE: called by the cluster leader only.
-//
+/* */
+/* send out a message to all the members of the cluster, asking for */
+/* their connectivity information. */
+/* */
+/* NOTE: called by the cluster leader only. */
+/* */
 static int
 ccm_send_memlist_request(ll_cluster_t *hb, ccm_info_t *info)
 {
@@ -1742,12 +1745,12 @@ ccm_send_memlist_request(ll_cluster_t *hb, ccm_info_t *info)
 
 
 
-//
-// Browse through the list of all the connectivity request messages
-// from cluster leaders. Send out the connectivity information only
-// to the node which we believe is the cluster leader. To everybody 
-// else send out a null message.
-//
+/* */
+/* Browse through the list of all the connectivity request messages */
+/* from cluster leaders. Send out the connectivity information only */
+/* to the node which we believe is the cluster leader. To everybody  */
+/* else send out a null message. */
+/* */
 static int
 ccm_send_cl_reply(ll_cluster_t *hb, ccm_info_t *info)
 {
@@ -1826,18 +1829,20 @@ ccm_send_cl_reply(ll_cluster_t *hb, ccm_info_t *info)
 	update_free_memlist_request(CCM_GET_UPDATETABLE(info)); 
 	return ret;
 }
+/*
 /////////////////////////////////////////////////////////////////////
 //
 // END OF FUNCTIONS THAT SEND OUT messages to nodes of the cluster
 //
 /////////////////////////////////////////////////////////////////////
+*/
 
 
-//
-// Fake up a leave message.
-// This is generally done when heartbeat informs ccm of the crash of
-// a cluster member.
-//
+/* */
+/* Fake up a leave message. */
+/* This is generally done when heartbeat informs ccm of the crash of */
+/* a cluster member. */
+/* */
 static struct ha_msg *
 ccm_create_leave_msg(ccm_info_t *info, int uuid)
 {
@@ -1881,10 +1886,10 @@ ccm_create_leave_msg(ccm_info_t *info, int uuid)
 }
 
 
-//
-// Watch out for new messages. As and when they arrive, return the
-// message.
-//
+/* */
+/* Watch out for new messages. As and when they arrive, return the */
+/* message. */
+/* */
 static struct ha_msg *
 ccm_readmsg(ccm_info_t *info, ll_cluster_t *hb)
 {
@@ -1903,14 +1908,14 @@ ccm_readmsg(ccm_info_t *info, ll_cluster_t *hb)
 
 
 
-//
-// Move the state of this ccm node, from joining state directly to
-// the joined state.
-//
-// NOTE: this is generally called when a joining nodes determines
-// that it is the only node in the cluster, and everybody else are
-// dead.
-//
+/* */
+/* Move the state of this ccm node, from joining state directly to */
+/* the joined state. */
+/* */
+/* NOTE: this is generally called when a joining nodes determines */
+/* that it is the only node in the cluster, and everybody else are */
+/* dead. */
+/* */
 static void
 ccm_joining_to_joined(ll_cluster_t *hb, ccm_info_t *info)
 {
@@ -1964,13 +1969,13 @@ ccm_joining_to_joined(ll_cluster_t *hb, ccm_info_t *info)
 	return;
 }
 
-//
-// Move the state of this ccm node, from init state directly to
-// the joined state.
-//
-// NOTE: this is generally called when a node when it  determines
-// that it is all alone in the cluster.
-//
+/* */
+/* Move the state of this ccm node, from init state directly to */
+/* the joined state. */
+/* */
+/* NOTE: this is generally called when a node when it  determines */
+/* that it is all alone in the cluster. */
+/* */
 static void
 ccm_init_to_joined(ccm_info_t *info)
 {
@@ -1996,10 +2001,10 @@ ccm_init_to_joined(ccm_info_t *info)
 
 
 
-//
-// The state machine that processes message when it is
-//	the CCM_STATE_VERSION_REQUEST state
-//
+/* */
+/* The state machine that processes message when it is */
+/*	the CCM_STATE_VERSION_REQUEST state */
+/* */
 static void
 ccm_state_version_request(enum ccm_type ccm_msg_type,
 			struct ha_msg *reply,
@@ -2181,10 +2186,10 @@ ccm_state_version_request(enum ccm_type ccm_msg_type,
 	return;
 }
 
-//
-// The state machine that processes message when it is
-//	CCM_STATE_JOINED state.
-//
+/* */
+/* The state machine that processes message when it is */
+/*	CCM_STATE_JOINED state. */
+/* */
 static void
 ccm_state_joined(enum ccm_type ccm_msg_type, 
 			struct ha_msg *reply, 
@@ -2476,10 +2481,10 @@ ccm_state_joined(enum ccm_type ccm_msg_type,
 	}
 }
 
-//
-// The state machine that processes message when it is in
-// CCM_STATE_WAIT_FOR_CHANGE state.
-//
+/* */
+/* The state machine that processes message when it is in */
+/* CCM_STATE_WAIT_FOR_CHANGE state. */
+/* */
 static void ccm_state_wait_for_change(enum ccm_type ccm_msg_type,
 			struct ha_msg *reply,
 			ll_cluster_t *hb,
@@ -2745,10 +2750,10 @@ static void ccm_state_wait_for_change(enum ccm_type ccm_msg_type,
 }
 
 
-//
-// The state machine that processes message when it is
-//	in the CCM_STATE_SENT_MEMLISTREQ state
-//
+/* */
+/* The state machine that processes message when it is */
+/*	in the CCM_STATE_SENT_MEMLISTREQ state */
+/* */
 static void
 ccm_state_sent_memlistreq(enum ccm_type ccm_msg_type, 
 			struct ha_msg *reply, 
@@ -3039,10 +3044,10 @@ switchstatement:
 	}
 }
 
-//
-// the state machine that processes messages when it is in the
-// CCM_STATE_MEMLIST_RES state.
-//
+/* */
+/* the state machine that processes messages when it is in the */
+/* CCM_STATE_MEMLIST_RES state. */
+/* */
 static void
 ccm_state_memlist_res(enum ccm_type ccm_msg_type, 
 		struct ha_msg *reply, 
@@ -3413,10 +3418,10 @@ switchstatement:
 
 
 
-//
-// the state machine that processes messages when it is in the
-// CCM_STATE_JOINING state.
-//
+/* */
+/* the state machine that processes messages when it is in the */
+/* CCM_STATE_JOINING state. */
+/* */
 static void
 ccm_state_joining(enum ccm_type ccm_msg_type, 
 		struct ha_msg *reply, 
@@ -3797,9 +3802,9 @@ switchstatement:
 }
 
 
-// 
-// The most important function which tracks the state machine.
-// 
+/*  */
+/* The most important function which tracks the state machine. */
+/*  */
 static void
 ccm_control_init(ccm_info_t *info)
 {
@@ -3818,10 +3823,10 @@ ccm_control_init(ccm_info_t *info)
 
 
 
-//
-// The callback function which is called when the status of a link
-// changes.
-//
+/* */
+/* The callback function which is called when the status of a link */
+/* changes. */
+/* */
 static void
 LinkStatus(const char * node, const char * lnk, const char * status ,
 		void * private)
@@ -3833,10 +3838,10 @@ LinkStatus(const char * node, const char * lnk, const char * status ,
 }
 
 
-//
-// The callback function which is called when the status of a node
-// changes.
-//
+/* */
+/* The callback function which is called when the status of a node */
+/* changes. */
+/* */
 static void
 nodelist_update(const char *id, const char *status, int hbgen, void *private)
 {
@@ -3914,9 +3919,9 @@ ccm_handle_shutdone(ccm_info_t *info,
 	return(ccm_create_leave_msg(info, uuid));
 }
 
-// 
-// The most important function which tracks the state machine.
-// 
+/*  */
+/* The most important function which tracks the state machine. */
+/*  */
 static int
 ccm_control_process(ccm_info_t *info, ll_cluster_t * hb)
 {
@@ -4099,10 +4104,10 @@ typedef struct  ccm_s {
 	void    	*info;
 } ccm_t;
 
-//  look at the current state machine and decide if 
-//  the state machine needs immidiate control for further
-//  state machine processing. Called by the check function
-//  of heartbeat-source of the main event loop.
+/*  look at the current state machine and decide if  */
+/*  the state machine needs immidiate control for further */
+/*  state machine processing. Called by the check function */
+/*  of heartbeat-source of the main event loop. */
 int
 ccm_need_control(void *data)
 {
@@ -4114,10 +4119,10 @@ ccm_need_control(void *data)
 	return FALSE;
 }
 
-//  look at the current state machine and decide if 
-//  the state machine needs immidiate control for further
-//  state machine processing. Called by the check function
-//  of heartbeat-source of the main event loop.
+/*  look at the current state machine and decide if  */
+/*  the state machine needs immidiate control for further */
+/*  state machine processing. Called by the check function */
+/*  of heartbeat-source of the main event loop. */
 int
 ccm_take_control(void *data)
 {
@@ -4597,10 +4602,10 @@ reset_change_info(ccm_info_t *info)
 	return;
 }
 
-//
-// Broadcast ALIVE msg to cluster to notify cluster
-//	that "I want to join this partition!"
-//
+/* */
+/* Broadcast ALIVE msg to cluster to notify cluster */
+/*	that "I want to join this partition!" */
+/* */
 static int ccm_send_alive_msg(ll_cluster_t *hb, ccm_info_t *info)
 {
 	struct ha_msg *m;
@@ -4638,11 +4643,11 @@ static int ccm_send_alive_msg(ll_cluster_t *hb, ccm_info_t *info)
 	return(rc);
 }
 
-//
-// After certain node in partition received alive msg, 
-//	it send newnode msg to leader to inform the leader that
-//	"I detect one node want to join our partition!"
-//
+/* */
+/* After certain node in partition received alive msg,  */
+/*	it send newnode msg to leader to inform the leader that */
+/*	"I detect one node want to join our partition!" */
+/* */
 static int ccm_send_newnode_to_leader(ll_cluster_t *hb, 
 		ccm_info_t *info, const char *node)
 {
@@ -4687,9 +4692,9 @@ static int ccm_send_newnode_to_leader(ll_cluster_t *hb,
 	return(rc);
 }
 
-//
-//  Construct and send mem_list, uptime_list to all members in the partition
-//
+/* */
+/*  Construct and send mem_list, uptime_list to all members in the partition */
+/* */
 static void send_mem_list_to_all(ll_cluster_t *hb, 
 		ccm_info_t *info, char *cookie)
 {

@@ -1,4 +1,4 @@
-/* $Id: ccmclient.c,v 1.12 2004/02/17 22:12:00 lars Exp $ */
+/* $Id: ccmclient.c,v 1.13 2004/08/29 03:01:14 msoffen Exp $ */
 /* 
  * client.c: Consensus Cluster Client tracker
  *
@@ -225,8 +225,8 @@ cleanup(void)
 	ipc_born_message = NULL;
 	ipc_misc_message = NULL;
 
-	// NOTE: ipc_llm_message is never destroyed.
-	// Also, do not free the client structure.
+	/* NOTE: ipc_llm_message is never destroyed. */
+	/* Also, do not free the client structure. */
 
 	return;
 }

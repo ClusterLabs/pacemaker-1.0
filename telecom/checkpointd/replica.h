@@ -1,10 +1,10 @@
-/* $Id: replica.h,v 1.9 2004/04/07 17:22:16 alan Exp $ */
+/* $Id: replica.h,v 1.10 2004/08/29 03:01:14 msoffen Exp $ */
 #ifndef _CKPT_REPLICA_H
 #define _CKPT_REPLICA_H
 
 #include <glib.h>
 
-// #include <clplumbing/longclock.h>
+/* #include <clplumbing/longclock.h> */
 
 #include <saf/ais.h>
 #include "client.h"

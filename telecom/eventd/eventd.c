@@ -1,4 +1,4 @@
-/* $Id: eventd.c,v 1.5 2004/04/06 19:09:20 msoffen Exp $ */
+/* $Id: eventd.c,v 1.6 2004/08/29 03:01:16 msoffen Exp $ */
 /* 
  * eventd.c: source file for event daemon
  *
@@ -36,7 +36,7 @@ typedef struct {
 }evt_filter_array;
 
 struct evt_event {
-	SaEvtEventIdT event_id; //globally unique 
+	SaEvtEventIdT event_id; /*globally unique  */
 	SaTimeT retention_time;
 	SaNameT publisherName;
 	SaTimeT publish_time;
@@ -54,21 +54,22 @@ struct evt_subscription {
 	IPC_Channel *client;
 	SaEvtChannelHandleT clt_ch_handle;
 	SaEvtSubscriptionIdT subscription_id;	
-	void *ch_id; //at daemon side
+	void *ch_id; /*at daemon side */
 };
 
 struct evt_new_subscription {
 	char *channel_name;
 	SaEvtEventFilterArrayT *filters;
 	char *orig;
-	//void *ch_id; //at daemon side
-	SaUint64T ch_id; //in fact it's a pointer, in order to portable between 32 bit and 64 bit platform, we define it as 64 bit length
+	/*at daemon side */
+	/*void *ch_id; */
+	SaUint64T ch_id; /*in fact it's a pointer, in order to portable between 32 bit and 64 bit platform, we define it as 64 bit length */
 	SaEvtSubscriptionIdT subscription_id;
 };
 
 struct evt_new_subscription_reply {
 	char *channel_name;
-	SaUint64T ch_id; //at daemon side
+	SaUint64T ch_id; /*at daemon side*/
 	SaEvtSubscriptionIdT subscription_id;
 	struct evt_event *event;
 };
@@ -134,7 +135,7 @@ struct client_msg{
 	enum evt_type msg_type;
 	char *channel_name;
 	union {
-		struct evt_event *event;  //publish
+		struct evt_event *event;  /*publish*/
 		struct evt_subscription *subscription;
 		struct evt_ch_open *ch_open;
 		struct evt_ch_close *ch_close;
@@ -327,7 +328,7 @@ static void read_publish(void *msg, struct client_msg *ret)
 	tmp_char += sizeof(SaSizeT);
 	event->publisherName.length = str_len;
 	memcpy(event->publisherName.value, tmp_char, str_len);
-	//event->publisherName[str_len] = '\0';
+	/*event->publisherName[str_len] = '\0';*/
 	tmp_char += str_len;
 	memcpy(&(event->publish_time), tmp_char, sizeof(SaTimeT));
 	tmp_char += sizeof(SaTimeT);
@@ -530,7 +531,7 @@ static struct client_msg *evt_read_client_msg(IPC_Channel *ch)
 	}
 	tmp_char = (char *)ipc_msg->msg_body;
 	ret->msg_type = *(tmp_char);
-//	printf("msg_type == %d\n", (char)ret->msg_type);
+/*	printf("msg_type == %d\n", (char)ret->msg_type);*/
 	switch(*(tmp_char)){
 		case EVT_INITIALIZE:
 			break;
@@ -622,14 +623,14 @@ static struct evt_ch_open_request *add_pending_ch_open_request(IPC_Channel *clie
 
 	ch_open_req = (struct evt_ch_open_request *)g_malloc(
 			sizeof(struct evt_ch_open_request));
-	//TODO: copy channel name
+	/*TODO: copy channel name*/
 	ch_open_req->clt_ch_handle = msg->private.ch_open->clt_ch_handle;
 	ch_open_req->client = client;
 	ch_open_req->time_out = msg->private.ch_open->time_out;
-	//TODO: we need compare client+clt_ch_handle+ch_name to determine a key
+	/*TODO: we need compare client+clt_ch_handle+ch_name to determine a key*/
 	g_hash_table_insert(info->evt_pending_ch_open_requests, 
 			(gpointer)ch_open_req, (gpointer)ch_open_req);
-	//TODO: start a timer
+	/*TODO: start a timer*/
 	return ch_open_req;	
 }
 
@@ -685,8 +686,8 @@ static int send_open_channel_reply(IPC_Channel *client,
 	return 0;
 }
 
-//determine the byte order of platform
-//0 indicate big-endian; 1 indicate little-endian
+/*determine the byte order of platform*/
+/*0 indicate big-endian; 1 indicate little-endian*/
 static int byte_order(void)
 {
 	union{
@@ -711,21 +712,21 @@ static void deliver_event_to_local_subscriber(struct evt_subscription *subscript
 	SaUint8T *tmp_char;
 	void *msg;
 	
-	//calculate the size of pattern_array
+	/*calculate the size of pattern_array*/
 	number = event->pattern_array->patternsNumber;
 	pattern = event->pattern_array->patterns;
 	for(i=0; i<number; i++){
 		size = size + (pattern+i)->patternSize;
 	}
 	size = size + (number+1)*sizeof(SaSizeT);
-	//calculate the size of publisher_name
+	/*calculate the size of publisher_name*/
 	publisher_len = event->publisherName.length;
 	msg_size = 1+sizeof(SaEvtChannelHandleT)+sizeof(SaEvtSubscriptionIdT)+
 		sizeof(SaSizeT)+size+sizeof(SaUint8T)+sizeof(SaTimeT)+
 		sizeof(SaSizeT)+publisher_len+sizeof(SaTimeT)+
 		sizeof(SaEvtEventIdT)+sizeof(SaSizeT)+event->data_size;
 	msg = g_malloc(msg_size);
-	//msg type == EVT_NORMAL_EVENT
+	/*msg type == EVT_NORMAL_EVENT*/
 	tmp_char = (SaUint8T *)msg;
 	*(tmp_char) = EVT_NORMAL_EVENT;
 	tmp_char++;
@@ -821,7 +822,7 @@ static int fliter_match(SaEvtEventPatternT *pattern, SaEvtEventFilterT *filter)
 
 		default:
 			break;
-			//error message
+			/*error message*/
 	}
 	return 1;
 }
@@ -873,7 +874,7 @@ static void search_ch_instance(gpointer key,
 {
 	struct channel_instance *ch_ins;
 	ch_ins = (struct channel_instance *)value;
-	//user_data is event to be published
+	/*user_data is event to be published*/
 	g_hash_table_foreach(ch_ins->subscriptions,
 			search_subscription,
 			user_data);
@@ -1043,7 +1044,7 @@ static void send_cached_events_to_client(char *channel_name,
 		struct evt_subscription *subscription,
 		GHashTable *event_cache)
 {
-	//compare the pattern against the filter, deliver event to client if match
+	/*compare the pattern against the filter, deliver event to client if match*/
 	g_hash_table_foreach(event_cache,
 			search_cached_event,
 			subscription);
@@ -1241,7 +1242,7 @@ static void free_remote_event(struct evt_event *event)
 	pattern_array = event->pattern_array;
 	patterns = pattern_array->patterns;
 	number = pattern_array->patternsNumber;
-	//g_free(event->publisherName);
+	/*g_free(event->publisherName);*/
 	g_free(event->event_data);
 	for(i=0; i<number; i++){
 		g_free(patterns[i].pattern);
@@ -1288,8 +1289,8 @@ static SaErrorT clear_retention_time(char *channel_name,
 	}
 	g_hash_table_remove(evt_ch->event_cache, 
 				(gpointer)(long)(tmp_32));
-	//the event will be released in timeout
-	//free_event(event);
+	/*the event will be released in timeout*/
+	/*free_event(event);*/
 	return SA_OK;
 }
 
@@ -1470,7 +1471,7 @@ static int handle_msg_from_client(IPC_Channel *client, gpointer user_data)
 				g_hash_table_insert(evt_ipc->channel_instances,
 						(gpointer)ch_ins,
 						(gpointer)ch_ins);				
-				//sleep(1);
+				/*sleep(1);*/
 				send_open_channel_reply(client, 
 					msg->private.ch_open, 
 					ch_ins,
@@ -1479,7 +1480,7 @@ static int handle_msg_from_client(IPC_Channel *client, gpointer user_data)
 				if((msg->private.ch_open->ch_open_flags & SA_EVT_CHANNEL_CREATE)
 					== SA_EVT_CHANNEL_CREATE){
 					evt_ch->unlink = FALSE;
-					//be the same as the above brach
+					/*be the same as the above brach*/
 					ch_ins = (struct channel_instance *)
 						g_malloc0(sizeof(struct channel_instance));
 					ch_ins->clt_ch_handle = msg->private.ch_open->clt_ch_handle;
@@ -1537,7 +1538,7 @@ static int handle_msg_from_client(IPC_Channel *client, gpointer user_data)
 				g_hash_table_insert(evt_ipc->channel_instances,
 						(gpointer)ch_ins,
 						(gpointer)ch_ins);				
-				//sleep(1);
+				/*sleep(1);*/
 				send_open_channel_reply(client, 
 					msg->private.ch_open, 
 					ch_ins,
@@ -1558,13 +1559,13 @@ static int handle_msg_from_client(IPC_Channel *client, gpointer user_data)
 		case EVT_CLOSE_EVENT_CHANNEL:
 			evt_ch = find_channel_by_name(channel_name);
 			if(evt_ch == NULL){
-				//error msg
+				/*error msg*/
 				return 1;
 			}
 			ch_ins = g_hash_table_lookup(evt_ch->channel_instances,
 				msg->private.ch_close->ch_ins);
 			if(ch_ins == NULL){
-				//error msg
+				/*error msg*/
 				return 1;
 			}
 			if(ch_ins->subscriptions != NULL){
@@ -1585,8 +1586,8 @@ static int handle_msg_from_client(IPC_Channel *client, gpointer user_data)
 			break;
 
 		case EVT_PUBLISH:
-			//1 forward the event to local subscriber
-			//2 broadcast the event to cluster
+			/*1 forward the event to local subscriber*/
+			/*2 broadcast the event to cluster*/
 			event = msg->private.event;
 			evt_ch = find_channel_by_name(channel_name);
 			if(evt_ch == NULL){
@@ -1600,7 +1601,7 @@ static int handle_msg_from_client(IPC_Channel *client, gpointer user_data)
 			printf("the event_id == %Ld\n", event_id);
 			send_publish_reply_to_client(client, event,
 					SA_OK, event_id);
-			//sleep(1);
+			/*sleep(1);*/
 			event->event_id = event_id;
 			pattern_array = msg->private.event->pattern_array;
 			publish_to_local_subscriber(evt_ch,
@@ -1616,7 +1617,7 @@ static int handle_msg_from_client(IPC_Channel *client, gpointer user_data)
 						(gpointer)local_event_id,
 						(gpointer)event);
 				
-				//TODO: should start timer in order to remove event when timeout
+				/*TODO: should start timer in order to remove event when timeout*/
 				event_timeout = (struct event_timeout_s *)g_malloc(
 									sizeof(struct event_timeout_s));
 				event_timeout->event_cache = evt_ch->event_cache;
@@ -1627,20 +1628,20 @@ static int handle_msg_from_client(IPC_Channel *client, gpointer user_data)
 										event_timeout, NULL);				
 				
 			}else{
-				// free event
+				/* free event*/
 				free_event(event);
 			}
 			break;
 
 		case EVT_SUBSCRIBE:			
-			//1 record the subscription
-			//2 send the events within the retention time to client			
+			/*1 record the subscription*/
+			/*2 send the events within the retention time to client			*/
 			
 			append_subscription(channel_name, 
 					msg->private.subscription);
 			evt_ch = find_channel_by_name(channel_name);
 			if(evt_ch->event_cache != NULL){
-				//sleep(1);
+				/*sleep(1);*/
 				send_cached_events_to_client(channel_name,
 						msg->private.subscription,
 						evt_ch->event_cache);
@@ -1681,7 +1682,7 @@ static int handle_msg_from_client(IPC_Channel *client, gpointer user_data)
 				send_clear_to_node(channel_name,
 						event_id, node_id);
 				clear_req = append_clear_req(client, event_id);
-				//TODO: timeout function associated with clear
+				/*TODO: timeout function associated with clear*/
 			}
 			g_free(msg->private.retention_clear);
 			break;
@@ -2004,8 +2005,8 @@ static void read_new_sub_reply(const void *bin_msg, struct client_msg *ret)
 	tmp_char_pattern = tmp_char + number*sizeof(SaSizeT);
 
 	for(i=0; i<number; i++){
-//		patterns[i].patternSize = ntohl(*(tmp_size));
-//		tmp_size++;
+/*		patterns[i].patternSize = ntohl(*(tmp_size));*/
+/*		tmp_size++;*/
 		memcpy(&tmp_size, tmp_char, sizeof(SaSizeT));
 		patterns[i].patternSize = ntohl(tmp_size);
 		tmp_char += sizeof(SaSizeT);
@@ -2394,7 +2395,7 @@ static int handle_msg_from_hb(ll_cluster_t *hb)
 		return 0;
 	}
 	printf("event daemon received msg from hb\n");
-	//retrieve message type
+	/*retrieve message type*/
 	msg = evt_read_hb_msg(m);
 	if(msg == NULL){
 		return 0;
@@ -2402,13 +2403,13 @@ static int handle_msg_from_hb(ll_cluster_t *hb)
 	
 	evt_msg_type = msg->msg_type;
 	
-	//retrieve channel name
+	/*retrieve channel name*/
 	channel_name = msg->channel_name;
 	printf("the type of msg from hb:%d\n", evt_msg_type);
 	switch(evt_msg_type) {
 	 
 		case EVT_EVENT_MSG:
-			//if found matched filters, forward the event to client	
+			/*if found matched filters, forward the event to client	*/
 			event = msg->private.event;
 			pattern_array = event->pattern_array;			
 			evt_ch = find_channel_by_name(channel_name);
@@ -2473,7 +2474,7 @@ static int handle_msg_from_hb(ll_cluster_t *hb)
 							(gpointer)ch_ins,
 							(gpointer)ch_ins);
 				
-					//sleep(1);
+					/*sleep(1);*/
 					send_open_channel_reply(client, 
 						msg->private.ch_open, 
 						ch_ins,
@@ -2498,16 +2499,16 @@ static int handle_msg_from_hb(ll_cluster_t *hb)
 						(gpointer)ch_ins,
 						(gpointer)ch_ins);
 				
-					//sleep(1);
+					/*sleep(1);*/
 					send_open_channel_reply(client, 
 						msg->private.ch_open, 
 						ch_ins,
 						SA_OK);
 				}
-				//TODO: free ch_open_request, remove it from hash table
-				//remove_pending_ch_open_request(key);
+				/*TODO: free ch_open_request, remove it from hash table*/
+				/*remove_pending_ch_open_request(key);*/
 			}else{
-				//log or print error message
+				/*log or print error message*/
 			}
 			if(msg->private.ch_open_reply_remote->channel_name != NULL){
 				g_free(msg->private.ch_open_reply_remote->channel_name);
@@ -2577,7 +2578,7 @@ static int handle_msg_from_hb(ll_cluster_t *hb)
 				send_retention_clear_reply(orig, event_id,
 						ret_code, channel_name);
 			}else{
-				//error
+				/*error*/
 			}
 			g_free(clear_req);
 			break;
@@ -2768,8 +2769,8 @@ int main(int argc, char **argv)
 	free(tmp_cmdname);
 
 	return(1);
-	//(void)_heartbeat_h_Id;
-	//(void)_ha_msg_h_Id;
+	/*(void)_heartbeat_h_Id;*/
+	/*(void)_ha_msg_h_Id;*/
 		
 }
 

@@ -1,4 +1,4 @@
-/* $Id: ccmmain.c,v 1.16 2004/02/17 22:12:00 lars Exp $ */
+/* $Id: ccmmain.c,v 1.17 2004/08/29 03:01:14 msoffen Exp $ */
 /* 
  * ccm.c: Consensus Cluster Service Program 
  *
@@ -55,7 +55,7 @@ hb_input_dispatch(int fd, gpointer user_data)
 static void
 hb_input_destroy(gpointer user_data)
 {
-	// close connections to all the clients
+	/* close connections to all the clients */
 	client_delete_all();
 	return;
 }
@@ -160,9 +160,9 @@ usage(const char *cmd)
 }
 
 
-//
-// debug facilitator.
-//
+/* */
+/* debug facilitator. */
+/* */
 static void
 ccm_debug(int signum) 
 {
@@ -184,9 +184,9 @@ ccm_debug(int signum)
 }
 
 
-//
-// The main function!
-//
+/* */
+/* The main function! */
+/* */
 int
 main(int argc, char **argv)
 {

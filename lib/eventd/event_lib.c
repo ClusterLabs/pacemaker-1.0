@@ -1,4 +1,4 @@
-/* $Id: event_lib.c,v 1.8 2004/04/07 01:17:45 forrest Exp $ */
+/* $Id: event_lib.c,v 1.9 2004/08/29 03:01:13 msoffen Exp $ */
 /* 
  * event_lib.c: source file for event library
  *
@@ -486,7 +486,7 @@ saEvtChannelOpen(const SaEvtHandleT evtHandle, const SaNameT *channelName,
 		return SA_ERR_LIBRARY;
 	}
 	
-	//send channel_open request
+	/*send channel_open request */
 	str_len = channelName->length;
 	msg_len = 1+sizeof(SaSizeT)+str_len+sizeof(SaEvtChannelHandleT)
 		+sizeof(SaEvtChannelOpenFlagsT);
@@ -507,21 +507,21 @@ saEvtChannelOpen(const SaEvtHandleT evtHandle, const SaNameT *channelName,
 	memcpy(tmp_char, &(channelOpenFlags), sizeof(SaEvtChannelOpenFlagsT));
 	send_to_evt_daemon(evt_hd->ch, msg, msg_len);
 
-//	sleep(1);
+/*	sleep(1); */
 	g_free(msg);
 
-	//wait for reply
+	/*wait for reply */
 	fd = evt_hd->selectionObject;
 	time_out.tv_sec = 0;
 	time_out.tv_usec = timeout;
-	//if msg_type is normal event, buffer it and continue
-	//if msg_type is open_channel_reply, break
+	/*if msg_type is normal event, buffer it and continue */
+	/*if msg_type is open_channel_reply, break */
 	for(;;){
 		FD_ZERO(&rset);
 		FD_SET(fd, &rset);
 		select_ret = select(fd + 1, &rset, NULL,NULL, NULL);
 		if(select_ret == -1){
-			//perror("select");
+			/*perror("select"); */
 			return SA_ERR_LIBRARY;		
 		}else if(select_ret == 0){
 			return SA_ERR_TIMEOUT;
@@ -541,13 +541,13 @@ saEvtChannelOpen(const SaEvtHandleT evtHandle, const SaNameT *channelName,
 					return msg_reply->private.open_ch_reply->ret_code;
 				}
 			}else{
-				//update timeout, continue
+				/*update timeout, continue */
 			}
 		}else if(msg_reply->msg_type == EVT_NORMAL_EVENT) {
 			
 			event_hd = msg_reply->private.event;			
 			append_to_event_queue(evt_hd->event_queue, event_hd);
-			//TODO: update timeout, continue
+			/*TODO: update timeout, continue */
 		}else if(msg_reply->msg_type == EVT_ASYN_CH_OPEN_REPLY_FROM_DAEMON)
 		{
 			open_ch_reply = msg_reply->private.open_ch_reply;
@@ -555,12 +555,12 @@ saEvtChannelOpen(const SaEvtHandleT evtHandle, const SaNameT *channelName,
 					open_ch_reply);
 		}else 
 		{
-			//update timeout, continue
-			//error msg
+			/*update timeout, continue */
+			/*error msg */
 		}
 		
 	}
-	//if open evt_channel succeed	
+	/*if open evt_channel succeed	 */
 	evt_channel_hd->channelName.length = str_len;
 	strncpy(evt_channel_hd->channelName.value, channelName->value, str_len);
 	evt_channel_hd->evt_handle = evtHandle;
@@ -619,7 +619,7 @@ static void free_event_queue(struct event_queue_s *event_queue)
 
 static void free_event(evt_event_handle *event_hd)
 {
-	//free patternArray, publisherName, then free event_hd
+	/*free patternArray, publisherName, then free event_hd */
 	g_free(event_hd->patternArray);	
 	g_free(event_hd->eventData);
 	g_free(event_hd);
@@ -705,11 +705,11 @@ saEvtFinalize(SaEvtHandleT evtHandle)
 	if( evt_hd == NULL){
 		return SA_ERR_BAD_HANDLE;
 	}
-	//close the connection
+	/*close the connection */
 	ch = evt_hd->ch;
 	send_evt_finalize(ch, evt_hd);	
 	ch->ops->destroy(ch);
-	//free up the resources, free the channel, the events
+	/*free up the resources, free the channel, the events */
 	g_hash_table_remove(evt_handle_hash, (gpointer)evtHandle);
 	g_hash_table_foreach(evt_hd->evt_channel_hash,
 			free_ch_resource,
@@ -750,7 +750,7 @@ saEvtChannelClose(SaEvtChannelHandleT channelHandle)
 	evt_channel_handle *evt_channel_hd;
 	evt_handle *evt_hd;
 	GHashTable *event_handle_hash, *subscription_hash;
-	//free events, free subscriptions, free item in hash table, free evt_channel_hd
+	/*free events, free subscriptions, free item in hash table, free evt_channel_hd */
 	evt_channel_hd = g_hash_table_lookup(evt_channel_hash,
 			(gpointer)channelHandle);
 	if(evt_channel_hd == NULL){
@@ -844,7 +844,7 @@ static SaErrorT copy_patternarray(evt_event_handle *event_hd,
 	SaUint8T *tmp_char;
 	number = patternArray->patternsNumber;
 	pattern = patternArray->patterns;
-	//size = field1(number of patterns)+ field2(length of each pattern)+ field3(patterns)
+	/*size = field1(number of patterns)+ field2(length of each pattern)+ field3(patterns) */
 	for(i=0; i<number; i++){
 		size = size + (pattern+i)->patternSize;
 	}
@@ -924,7 +924,7 @@ saEvtEventAttributesGet(const SaEvtEventHandleT eventHandle,
 		return SA_ERR_BAD_HANDLE;
 	}
 	
-	//TODO: what should be done if patterSize conflicts
+	/*TODO: what should be done if patterSize conflicts */
 	if(patternArray != NULL){
 		tmp_size = (SaSizeT *)event_hd->patternArray;
 		number = *(tmp_size);
@@ -1059,7 +1059,7 @@ saEvtEventPublish(const SaEvtEventHandleT eventHandle,
 		FD_ZERO(&rset);
 		FD_SET(fd, &rset);
 		if(select(fd + 1, &rset, NULL,NULL,NULL) == -1){
-			//perror("select");
+			/*perror("select"); */
 			return(1);
 		}
 		msg_reply = read_from_ipc(ch);
@@ -1073,11 +1073,11 @@ saEvtEventPublish(const SaEvtEventHandleT eventHandle,
 					return msg_reply->private.pub_reply->ret_code;
 				}
 			}else{
-				//update timeout, continue
+				/*update timeout, continue */
 			}
 		}else if(msg_reply->msg_type == EVT_NORMAL_EVENT)
 		{
-			//TODO: update timeout, continue
+			/*TODO: update timeout, continue */
 			event_hd = msg_reply->private.event;
 			append_to_event_queue(evt_hd->event_queue, event_hd);
 		}else if(msg_reply->msg_type == EVT_ASYN_CH_OPEN_REPLY_FROM_DAEMON)
@@ -1087,11 +1087,11 @@ saEvtEventPublish(const SaEvtEventHandleT eventHandle,
 					open_ch_reply);
 		}else
 		{
-			//update timeout, continue
-			//error msg
+			/*update timeout, continue */
+			/*error msg */
 		}
-		//if msg_type is normal event, buffer it and continue
-		//if msg_type is publish_reply, break
+		/*if msg_type is normal event, buffer it and continue */
+		/*if msg_type is publish_reply, break */
 	}
 
 	*(eventId) = (SaEvtEventIdT)msg_reply->private.pub_reply->event_id;
@@ -1139,9 +1139,9 @@ saEvtEventSubscribe(const SaEvtChannelHandleT channelHandle,
 			(gpointer)subscriptionId, 
 			(gpointer)subscriptionId);
 	
-	//msg_size= msg_type+ch_name_len+ch_name+channel_id+sub_id+filter_len+filters_number+pattern
+	/*msg_size= msg_type+ch_name_len+ch_name+channel_id+sub_id+filter_len+filters_number+pattern */
 	str_len = evt_channel_hd->channelName.length;
-	// calculate filter length, then copy it to msg
+	/* calculate filter length, then copy it to msg */
 	number = filters->filtersNumber;
 	filter = filters->filters;
 	for(i=0; i<number; i++){
@@ -1213,7 +1213,7 @@ SaErrorT saEvtEventUnsubscribe(
 		return SA_ERR_NAME_NOT_FOUND;
 	}
 	g_hash_table_remove(subscription_hash, (gpointer)subscriptionId);
-	// construct the msg and send to daemon
+	/* construct the msg and send to daemon */
 	str_len = evt_channel_hd->channelName.length;
 	msg_size = 1+sizeof(SaSizeT)+str_len+sizeof(void *)+
 		sizeof(SaEvtSubscriptionIdT);
@@ -1320,9 +1320,9 @@ saEvtDispatch(const SaEvtHandleT evtHandle,
 	if((dispatchFlags < 1) || (dispatchFlags > 3)){
 		return SA_ERR_BAD_FLAGS;
 	}	
-	//can read two types of message from IPC:
-	//1 EVT_NORMAL_EVENT
-	//2 EVT_CH_OPEN_REPLY_FROM_DAEMON: for channel_open_async
+	/*can read two types of message from IPC: */
+	/*1 EVT_NORMAL_EVENT */
+	/*2 EVT_CH_OPEN_REPLY_FROM_DAEMON: for channel_open_async */
 		
 	switch(dispatchFlags){
 		case SA_DISPATCH_ONE:
@@ -1369,7 +1369,7 @@ saEvtDispatch(const SaEvtHandleT evtHandle,
 						evt_channel_hash, 
 						(gpointer)open_ch_reply->clt_ch_handle);
 				if(evt_channel_hd == NULL){
-					//TODO: free open_ch_reply
+					/*TODO: free open_ch_reply */
 					return SA_ERR_LIBRARY;
 				}
 				evt_channel_hd->ch_instance = 
@@ -1393,7 +1393,7 @@ saEvtDispatch(const SaEvtHandleT evtHandle,
 					ret = select(fd + 1, &rset,NULL,NULL,
 							&time_out);
 					if( ret == -1){
-						//error
+						/*error */
 						return SA_ERR_LIBRARY;
 					}else if(ret == 0){
 						return SA_OK;
@@ -1441,7 +1441,7 @@ saEvtDispatch(const SaEvtHandleT evtHandle,
 						evt_channel_hash, 
 						(gpointer)open_ch_reply->clt_ch_handle);
 					if(evt_channel_hd == NULL){
-						//TODO: free open_ch_reply
+						/*TODO: free open_ch_reply */
 						return SA_ERR_LIBRARY;
 					}
 					evt_channel_hd->ch_instance = 
@@ -1538,7 +1538,7 @@ SaErrorT saEvtEventRetentionTimeClear(
 	if(evt_hd == NULL){
 		return SA_ERR_LIBRARY;
 	}
-	//msg_size=1+sizeof(SaSizeT)+str_len+sizeof(SaEvtEventIdT)
+	/*msg_size=1+sizeof(SaSizeT)+str_len+sizeof(SaEvtEventIdT) */
 	str_len = evt_channel_hd->channelName.length;
 	msg_size = 1+sizeof(SaSizeT)+str_len+sizeof(SaEvtEventIdT);
 	msg = g_malloc(msg_size);
@@ -1552,14 +1552,14 @@ SaErrorT saEvtEventRetentionTimeClear(
 	tmp_char += str_len;
 	memcpy(tmp_char, &eventId, sizeof(SaEvtEventIdT));
 	send_to_evt_daemon(evt_channel_hd->ch, msg, msg_size);	
-	//select wait until receiving the reply	
+	/*select wait until receiving the reply	 */
 	ch = evt_channel_hd->ch;
 	fd = evt_channel_hd->selectionObject;
 	for(;;){
 		FD_ZERO(&rset);
 		FD_SET(fd, &rset);
 		if(select(fd + 1, &rset, NULL,NULL,NULL) == -1){
-			//perror("select");
+			/*perror("select"); */
 			return SA_ERR_LIBRARY;
 		}
 		msg_reply = read_from_ipc(ch);
@@ -1568,8 +1568,8 @@ SaErrorT saEvtEventRetentionTimeClear(
 			if(clear_reply->event_id == eventId){
 				return clear_reply->ret_code;
 			}else{
-				//error
-				//continue to wait reply from daemon
+				/*error */
+				/*continue to wait reply from daemon */
 				continue;
 			}
 		}else if(msg_reply->msg_type == EVT_NORMAL_EVENT){

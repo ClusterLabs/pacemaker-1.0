@@ -1,4 +1,4 @@
-/* $Id: checkpointd.c,v 1.13 2004/04/02 05:16:48 deng.pan Exp $ */
+/* $Id: checkpointd.c,v 1.14 2004/08/29 03:01:14 msoffen Exp $ */
 /* 
  * checkpointd.c: data checkpoint service
  *
@@ -94,20 +94,20 @@ SaCkptCheckpointdInit(void)
 	ll_cluster_t*	hb = NULL;
 	const char* strNode = NULL;
 
-	// set log options
+	/* set log options */
 	cl_log_set_entity("CKPT");
 	if (saCkptService->flagDaemon) {
 		cl_log_enable_stderr(FALSE);
 	} else {
 		cl_log_enable_stderr(TRUE);
 	}
-//	cl_log_set_facility(LOG_LOCAL1);
+/*	cl_log_set_facility(LOG_LOCAL1); */
 
 	cl_log(LOG_INFO, "=== Start checkpointd ===");
 	
 	hb = ll_cluster_new("heartbeat");
 
-	// sign on with heartbeat
+	/* sign on with heartbeat */
 	if (hb->llc_ops->signon(hb, "checkpointd") != HA_OK) {
 		cl_log(LOG_ERR, "Cannot sign on with heartbeat\n");
 		cl_log(LOG_ERR, "REASON: %s\n", 
@@ -180,7 +180,7 @@ SaCkptClientChannelDestroy(gpointer user_data)
 {
 	cl_log(LOG_INFO, "Client disconnected");
 
-	// FIXME: delete client and remove all its requests and timers
+	/* FIXME: delete client and remove all its requests and timers */
 	return;
 }
 
@@ -252,7 +252,7 @@ static void SaCkptWaitDebugDestroy(gpointer);
 static gboolean
 SaCkptWaitDebugDispatch(IPC_Channel *newclient, gpointer user_data)
 {
-//	client_add(newclient);
+/*	client_add(newclient); */
 
 	G_main_add_IPC_Channel(G_PRIORITY_LOW, newclient, FALSE, 
 				SaCkptClientDebugDispatch, newclient, 
@@ -298,7 +298,7 @@ main(int argc, char ** argv)
 		printf("Cannot allocat memory\n");
 	}
 
-	// get options
+	/* get options */
 	while (1) {
 #ifdef HAVE_GETOPT_H
 		c = getopt_long(argc, argv, OPTARGS, long_options, NULL);

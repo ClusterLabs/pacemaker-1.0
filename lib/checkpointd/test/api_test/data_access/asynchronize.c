@@ -1,4 +1,4 @@
-/* $Id: asynchronize.c,v 1.2 2004/07/15 14:33:49 msoffen Exp $ */
+/* $Id: asynchronize.c,v 1.3 2004/08/29 03:01:13 msoffen Exp $ */
 /* 
  * asynchronize.c: Test data checkpoint API : saCkptCheckpointSynchronizeAsync
  *
@@ -230,7 +230,7 @@ int async_err_access(void)
 			return -1 ;
 		}	
 
-	if ( ckpt_error != SA_OK )  // error 
+	if ( ckpt_error != SA_OK )  /* error  */
 		{			
 			saCkptCheckpointClose (&checkpoint_handle) ;
 			saCkptFinalize (& ckpt_handle) ;
@@ -324,7 +324,7 @@ int async_normal_call(void)
 			return -1 ;
 		}	
 
-	if ( ckpt_error != SA_OK )  // error 
+	if ( ckpt_error != SA_OK )  /* error  */
 		{			
 			saCkptCheckpointClose (&checkpoint_handle) ;
 			saCkptFinalize (& ckpt_handle) ;
