@@ -14,7 +14,7 @@ beam::attribute_by_signature {
 	explanation = "Binary data is to be avoided except for very rare circumstances.  It is not portable, and so should be avoided when at all possible.",
 	category = nonportable
        )
-} "ha_msg_addbin" cl_get_binary "cl_msg_addbin" "cl_msg_add_binary"
+} "cl_get_binary" "cl_msg_addbin" "cl_msg_modbin" "ha_get_binary" "ha_msg_addbin" "ha_msg_modbin"
 
 #
 #beam::attribute_by_signature {
