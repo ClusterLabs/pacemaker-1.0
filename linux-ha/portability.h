@@ -63,7 +63,7 @@ int setenv(const char *name, const char * value, int why);
 
 #ifndef HA_HAVE_STRERROR
   /* We supply a replacement function, but need a prototype */
-const char * strerror(int errnum);
+char * strerror(int errnum);
 #endif /* HA_HAVE_STRERROR */
 
 int setenv(const char *name, const char * value, int why);
