@@ -8,6 +8,15 @@ set beam::allocation_may_return_null "yes"
 
 set beam::MISTAKE21::enabling_policy "unsafe"
 set beam::MISTAKE21::enabling_policy "nonportable"
+set beam::WARNING5::enabling_policy "always"
+set beam::WARNING6::enabling_policy "always"
+set beam::WARNING10::enabling_policy "always"
+set beam::WARNING14::enabling_policy "always"
+set beam::WARNING15::enabling_policy "always"
+set beam::PORTABILITY1::enabling_policy "always"
+set beam::PORTABILITY2::enabling_policy "always"
+set beam::PORTABILITY3::enabling_policy "always"
+set beam::PORTABILITY5::enabling_policy "always"
 
 beam::attribute_by_signature {
 	advisory (
