@@ -1,4 +1,4 @@
-/* $Id: ipfail.c,v 1.30 2004/04/21 15:41:49 kevin Exp $ */
+/* $Id: ipfail.c,v 1.31 2004/04/27 14:27:54 kevin Exp $ */
 /* ipfail: IP Failover plugin for Linux-HA
  *
  * Copyright (C) 2002-2003 Kevin Dwyer <kevin@pheared.net>
@@ -359,7 +359,7 @@ LinkStatus(const char *node, const char *lnk, const char *status,
 			       " of ping nodes.");
 		} else {
 			cl_log(LOG_INFO, "We are dead. :<");
-			delay_giveup(private, HB_ALL_RESOURCES, -1);
+                        ask_ping_nodes(private, num_ping);
 		}
 	}
 }
@@ -441,6 +441,11 @@ delay_giveup(ll_cluster_t *hb, const char *res_type, int mseconds)
 
 	gd = malloc(sizeof(struct giveup_data));
        
+        if (gd == NULL) {
+                cl_log(LOG_ERR, "Out of memory, can't giveup.");
+                return;
+        }
+
 	gd->hb = hb;
 	gd->res_type = res_type;
 
@@ -575,6 +580,10 @@ msg_resources(const struct ha_msg *msg, void *private)
 			 */
 			ask_ping_nodes(private, ping_node_status(private));
 			//giveup(private);
+
+                        /* The ask_ping_nodes message will sort out whether
+                         * a standby is necessary. */
+                        need_standby = 0;
 		}
 	}
 
@@ -638,12 +647,15 @@ msg_ping_nodes(const struct ha_msg *msg, void *private)
 		send_abort_giveup(hb);
 		if (delay_giveup_tag) {
 			/* We've got a delayed giveup, and we're now balanced*/
+			/* BUG? We don't want to do this if we have an 
+			   auto_failback pending, I think. */
+
 			abort_giveup();
 		} else if (auto_failback && is_stable(hb)) {
 			/* We're balanced, so make sure we don't have foreign 
 			 * stuff
 			 */
-			cl_log(LOG_DEBUG, "Giving up for auto_failback");
+			cl_log(LOG_INFO, "Giving up for auto_failback");
 			delay_giveup(hb, HB_FOREIGN_RESOURCES, -1);
 		}
 	}
