@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-#	$Id: ResourceManager.in,v 1.28 2005/01/11 14:54:11 alan Exp $
+#	$Id: ResourceManager.in,v 1.29 2005/02/14 07:37:12 horms Exp $
 #
 #	New haresources format:
 #
@@ -99,13 +99,15 @@ ipres() {
 	#		branch to "a:")
 	#	3) Append a blank to the end of the line
 	#	4) Compress multiple blanks/tabs into a single blank
-	#	5) Strip off a leading space (if any)
+	#	5) Remove lines that only contain whitespace or are empty
+	#	6) Strip off a leading space (if any)
 	#
 	sed						\
 		-e  's%#.*%%'				\
 		-e :a -e '/\\$/N; s/\\\n//; ta'		\
 		-e  's%$% %'				\
 		-e  's%[	 ][	 ]*% %g' 	\
+		-e  '/^[	 ]*$/ d' 		\
 		-e  's%^ %%' 				|
 	awk '/.*/ {$1 = tolower($1); print $0, ""}'	|
   	egrep $grepflags "$pat"
@@ -439,9 +441,12 @@ esac
 
 #
 #	$Log: ResourceManager.in,v $
+#	Revision 1.29  2005/02/14 07:37:12  horms
+#	Omit blank lines from output of allkeys
+#
 #	Revision 1.28  2005/01/11 14:54:11  alan
 #	Ported forwards a fix which releases partially-acquired resource groups
-#
+#	
 #	Revision 1.27  2005/01/11 14:41:28  alan
 #	Activated a patch provided by lge a long time ago - with a little
 #	change brought to our attention by Umbrae <umbrae@gmail.com>
