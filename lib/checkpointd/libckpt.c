@@ -1,4 +1,4 @@
-/* $Id: libckpt.c,v 1.11 2004/04/06 07:23:01 deng.pan Exp $ */
+/* $Id: libckpt.c,v 1.12 2004/04/07 16:53:08 alan Exp $ */
 /* 
  * ckptlib.c: data checkpoint API library
  *
@@ -3026,7 +3026,7 @@ saCkptCheckpointWrite(
 	SaCkptReqSecWrtParamT* wrtParam = NULL;
 	
 	SaErrorT libError = SA_OK;
-	int i = 0;
+	SaUint32T i = 0;
 
 	if (checkpointHandle == NULL) {
 		cl_log(LOG_ERR, 
@@ -3250,7 +3250,7 @@ saCkptCheckpointRead(
 	SaCkptReqSecReadParamT* readParam = NULL;
 	
 	SaErrorT libError = SA_OK;
-	int i = 0;
+	SaUint32T i = 0;
 
 	if (checkpointHandle == NULL) {
 		cl_log(LOG_ERR, 
