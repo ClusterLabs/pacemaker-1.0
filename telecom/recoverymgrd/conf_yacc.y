@@ -91,8 +91,7 @@ command: userinfo FILENAME OPEN_CURLY events
 		printf("scriptname = %s\n", current->scriptname);
 		printf("appname = %s\n", current->appname);
 		
-		for (i=1;i<MAXEVENTS;i++)
-		{
+		for (i=1;i<MAXEVENTS;i++) {
 		   printf("event (%i) = %s\n", i, current->event[i].args);
 		}
 #endif
@@ -108,15 +107,11 @@ userinfo: WORD COLON WORD
 		struct passwd* mypasswd = NULL;
 		struct group* mygroup = NULL;
 		current = (RecoveryInfo *) malloc(sizeof(RecoveryInfo));
-		if (!current)
-		{
+		if (!current) {
 		   printf("out of memory. Failed to parse config file\n");
 		   return(5);
-		}
-		else 
-		{
-		   for (i=1;i<MAXEVENTS;i++)
-	           {
+		}else{
+		   for (i=1;i<MAXEVENTS;i++) {
 		      current->event[i].inuse = FALSE;
 		      current->event[i].args[0] = '\0';
 	 	   }
@@ -160,16 +155,15 @@ eventdef: event EQUALS STRING
 		printf("string(yylval) = %s\n", yylval);
 		printf("strlen = %d\n", strlen($3));
 #endif
-		if (!current || eventindex >= MAXEVENTS) return(4);
+		if (!current || eventindex >= MAXEVENTS){ return(4);}
 
 		current->event[eventindex].inuse = TRUE;
 
 		/* remove quotes */
 		length = strlen($3)-2;
-		if (length <= 2) 
+		if (length <= 2) {
 			current->event[eventindex].args[0] = '\0';
-		else
-		{	
+		}else{	
 			if (length > CONFIGSTRINGLENGTH)
 				length = CONFIGSTRINGLENGTH;
 			strncpy(current->event[eventindex].args,
