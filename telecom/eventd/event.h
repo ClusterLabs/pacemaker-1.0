@@ -1,4 +1,4 @@
-/* $Id: event.h,v 1.2 2004/03/25 08:11:34 alan Exp $ */
+/* $Id: event.h,v 1.3 2004/04/06 19:15:57 msoffen Exp $ */
 /* 
  * event.h: header file for event service
  *
@@ -39,11 +39,10 @@
 #include <stdarg.h>
 #include <assert.h>
 #include <glib.h>
-#include <ipc.h>
+#include <sys/ipc.h>
 #include <clplumbing/Gmain_timeout.h>
 #include <clplumbing/GSource.h>
 #include <clplumbing/realtime.h>
-#include <base64.h>
 
 #include <ha_config.h>
 #include <heartbeat.h>
