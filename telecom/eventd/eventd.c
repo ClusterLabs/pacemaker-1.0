@@ -1,4 +1,4 @@
-/* $Id: eventd.c,v 1.2 2004/03/25 08:11:34 alan Exp $ */
+/* $Id: eventd.c,v 1.3 2004/03/25 09:59:18 forrest Exp $ */
 /* 
  * eventd.c: source file for event daemon
  *
@@ -298,10 +298,8 @@ typedef struct hb_usrdata_s {
 static void read_publish(void *msg, struct client_msg *ret)
 {
 	struct evt_event *event;
-	SaUint8T *tmp_char;
-	SaSizeT str_len, *tmp_size, number, i;
-	SaEvtEventHandleT *tmp_event_handle;
-	SaTimeT *tmp_time;
+	SaUint8T *tmp_char, *tmp_char_pattern;
+	SaSizeT str_len, number, i;
 	SaEvtEventPatternArrayT *pattern_array;
 	SaEvtEventPatternT *patterns;
 
@@ -313,56 +311,48 @@ static void read_publish(void *msg, struct client_msg *ret)
 	event->pattern_array = pattern_array;
 	tmp_char = (SaUint8T *)msg;
 	tmp_char++;
-	tmp_size = (SaSizeT *)tmp_char;
-	str_len = *(tmp_size);
+	memcpy(&str_len, tmp_char, sizeof(SaSizeT));
 	ret->channel_name = g_malloc(str_len+1);
-	tmp_size++;
-	tmp_char = (SaUint8T *)tmp_size;
+	tmp_char += sizeof(SaSizeT);
 	memcpy(ret->channel_name, tmp_char, str_len);
 	ret->channel_name[str_len] = '\0';
 	tmp_char += str_len;
-	tmp_event_handle = (SaEvtEventHandleT *)tmp_char;
-	event->clt_event_hd = *(tmp_event_handle);
-	tmp_event_handle++;
-	tmp_char = (SaUint8T *)tmp_event_handle;
+	memcpy(&(event->clt_event_hd), tmp_char, sizeof(SaEvtEventHandleT));
+	tmp_char += sizeof(SaEvtEventHandleT);
 	event->priority = *(tmp_char);
 	tmp_char++;
-	tmp_time = (SaTimeT *)tmp_char;
-	event->retention_time = *(tmp_time);
-	tmp_time++;
-	tmp_size = (SaSizeT *)tmp_time;
-	str_len = *(tmp_size);
+	memcpy(&(event->retention_time), tmp_char, sizeof(SaTimeT));
+	tmp_char += sizeof(SaTimeT);
+	memcpy(&str_len, tmp_char, sizeof(SaSizeT));
+	tmp_char += sizeof(SaSizeT);
 	event->publisherName.length = str_len;
-	tmp_size++;
-	tmp_char = (SaUint8T *)tmp_size;
 	memcpy(event->publisherName.value, tmp_char, str_len);
 	//event->publisherName[str_len] = '\0';
 	tmp_char += str_len;
-	tmp_time = (SaTimeT *)tmp_char;
-	event->publish_time = *(tmp_time);
-	tmp_time++;
-	tmp_size = (SaSizeT *)tmp_time;
-	event->pattern_size = *(tmp_size);
-	tmp_size++;
-	number = *(tmp_size);
+	memcpy(&(event->publish_time), tmp_char, sizeof(SaTimeT));
+	tmp_char += sizeof(SaTimeT);
+	memcpy(&(event->pattern_size), tmp_char, sizeof(SaSizeT));
+	tmp_char += sizeof(SaSizeT);
+	memcpy(&number, tmp_char, sizeof(SaSizeT));
+	tmp_char += sizeof(SaSizeT);
+
 	pattern_array->patternsNumber = number;
 	patterns = (SaEvtEventPatternT *)g_malloc(
 			sizeof(SaEvtEventPatternT)*number);
 	pattern_array->patterns = patterns;
-	tmp_size++;
-	tmp_char = (SaUint8T *)(tmp_size+number);
+	tmp_char_pattern = tmp_char + number*sizeof(SaSizeT);
 	for(i=0; i<number; i++){
-		patterns[i].patternSize = *(tmp_size);
-		tmp_size++;
+		memcpy(&(patterns[i].patternSize), tmp_char, sizeof(SaSizeT));
+		tmp_char += sizeof(SaSizeT);
+
 		patterns[i].pattern = g_malloc(patterns[i].patternSize);
-		memcpy(patterns[i].pattern, tmp_char, patterns[i].patternSize);
-		tmp_char += patterns[i].patternSize;
+		memcpy(patterns[i].pattern, tmp_char_pattern, patterns[i].patternSize);
+		tmp_char_pattern += patterns[i].patternSize;
 	}
-	tmp_size = (SaSizeT *)tmp_char;
-	event->data_size = *(tmp_size);
-	tmp_size++;
+	tmp_char = tmp_char_pattern;
+	memcpy(&(event->data_size), tmp_char, sizeof(SaSizeT));
+	tmp_char += sizeof(SaSizeT);
 	event->event_data = g_malloc(event->data_size);
-	tmp_char = (SaUint8T *)tmp_size;
 	memcpy(event->event_data, tmp_char, event->data_size);
 	return;
 }
@@ -371,84 +361,70 @@ static void read_unsubscribe(void *msg, struct client_msg *ret)
 {
 	struct evt_subscription *subscription;
 	SaUint8T *tmp_char;
-	SaSizeT str_len, *tmp_size;
-	void **tmp_void;
-	SaEvtSubscriptionIdT *tmp_sub_id;
+	SaSizeT str_len;
+	
 	
 	subscription = (struct evt_subscription *)g_malloc(
 			sizeof(struct evt_subscription));
 	ret->private.subscription = subscription;
 	tmp_char = (SaUint8T *)msg;
 	tmp_char++;
-	tmp_size = (SaSizeT *)tmp_char;
-	str_len = *(tmp_size);
+	memcpy(&str_len, tmp_char, sizeof(SaSizeT));
+	tmp_char += sizeof(SaSizeT);
 	ret->channel_name = g_malloc(str_len+1);
-	tmp_size++;
-	tmp_char = (SaUint8T *)tmp_size;
 	memcpy(ret->channel_name, tmp_char, str_len);
 	ret->channel_name[str_len] = '\0';
 	tmp_char += str_len;
-	tmp_void = (void **)tmp_char;
-	subscription->ch_id = *(tmp_void);
-	tmp_void++;
-	tmp_sub_id = (SaEvtSubscriptionIdT *)tmp_void;
-	subscription->subscription_id = *(tmp_sub_id);
+	memcpy(&(subscription->ch_id), tmp_char, sizeof(void *));
+	tmp_char += sizeof(void *);
+	memcpy(&(subscription->subscription_id), tmp_char, sizeof(SaEvtSubscriptionIdT));
 	return;
 }
 
 static void read_open_channel(void *msg, struct client_msg *ret)
 {
 	SaUint8T *tmp_char;
-	SaSizeT str_len, *tmp_size;	
+	SaSizeT str_len;	
 	struct evt_ch_open *ch_open;
-	SaEvtChannelHandleT *tmp_handle;
-	SaEvtChannelOpenFlagsT *tmp_flag;
-
+	
 	ch_open = (struct evt_ch_open *)g_malloc(sizeof(struct evt_ch_open));
 	ret->private.ch_open = ch_open;
 	tmp_char = (SaUint8T *)msg;
 	tmp_char++;
-	tmp_size = (SaSizeT *)tmp_char;
-	str_len = *(tmp_size);
+	memcpy(&str_len, tmp_char, sizeof(SaSizeT));
+	tmp_char += sizeof(SaSizeT);
+
 	ret->channel_name = g_malloc(str_len+1);
 	ch_open->channel_name = g_malloc(str_len+1);
-	tmp_size++;
-	tmp_char = (SaUint8T *)tmp_size;
 	memcpy(ret->channel_name, tmp_char, str_len);
 	memcpy(ch_open->channel_name, tmp_char, str_len);
 	ret->channel_name[str_len] = '\0';
 	ch_open->channel_name[str_len] = '\0';
 	tmp_char += str_len;
-	tmp_handle = (SaEvtChannelHandleT *)tmp_char;
-	ch_open->clt_ch_handle = *(tmp_handle);
-	tmp_handle++;
-	tmp_flag = (SaEvtChannelOpenFlagsT *)tmp_handle;
-	ch_open->ch_open_flags = *(tmp_flag);
+	memcpy(&(ch_open->clt_ch_handle), tmp_char, sizeof(SaEvtChannelHandleT));
+	tmp_char += sizeof(SaEvtChannelHandleT);
+	memcpy(&(ch_open->ch_open_flags), tmp_char, sizeof(SaEvtChannelOpenFlagsT));
 	return;
 }
 
 static void read_close_channel(void *msg, struct client_msg *ret)
 {
 	SaUint8T *tmp_char;
-	SaSizeT str_len, *tmp_size;
+	SaSizeT str_len;
 	struct evt_ch_close *ch_close;
-	void **tmp_void;
-
+	
 	ch_close = (struct evt_ch_close *)g_malloc(
 			sizeof(struct evt_ch_close));
 	ret->private.ch_close = ch_close;
 	tmp_char = (SaUint8T *)msg;
 	tmp_char++;
-	tmp_size = (SaSizeT *)tmp_char;
-	str_len = *(tmp_size);
+	memcpy(&str_len, tmp_char, sizeof(SaSizeT));
+	tmp_char += sizeof(SaSizeT);
 	ret->channel_name = g_malloc(str_len+1);
-	tmp_size++;
-	tmp_char = (SaUint8T *)tmp_size;
 	memcpy(ret->channel_name, tmp_char, str_len);
 	ret->channel_name[str_len] = '\0';
 	tmp_char += str_len;
-	tmp_void = (void **)tmp_char;
-	ch_close->ch_ins = *(tmp_void);
+	memcpy(&(ch_close->ch_ins), tmp_char, sizeof(void *));
 	return;
 }
 
@@ -456,24 +432,20 @@ static void read_clear_retention_time(void *msg, struct client_msg *ret)
 {
 	struct evt_retention_clear *retention_clear;
 	SaUint8T *tmp_char;
-	SaSizeT str_len, *tmp_size;
-	SaEvtEventIdT *tmp_evtid;
-
+	SaSizeT str_len;
+	
 	retention_clear = (struct evt_retention_clear *)g_malloc(
 			sizeof(struct evt_retention_clear));
 	ret->private.retention_clear = retention_clear;
 	tmp_char = (SaUint8T *)msg;
 	tmp_char++;
-	tmp_size = (SaSizeT *)tmp_char;
-	str_len = *(tmp_size);
+	memcpy(&str_len, tmp_char, sizeof(SaSizeT));
+	tmp_char += sizeof(SaSizeT);
 	ret->channel_name = g_malloc(str_len+1);
-	tmp_size++;
-	tmp_char = (SaUint8T *)tmp_size;
 	memcpy(ret->channel_name, tmp_char, str_len);
 	ret->channel_name[str_len] = '\0';
 	tmp_char += str_len;
-	tmp_evtid = (SaEvtEventIdT *)tmp_char;
-	retention_clear->event_id = *(tmp_evtid);
+	memcpy(&(retention_clear->event_id), tmp_char, sizeof(SaEvtEventIdT));
 	return;
 }
 
@@ -481,13 +453,9 @@ static void read_subscribe(IPC_Channel *ch, void *msg, struct client_msg *ret)
 {
 	struct evt_subscription *subscription;
 	SaUint8T *tmp_char;
-	SaSizeT str_len, *tmp_size, number, i;
-	void **tmp_void;
-	SaEvtSubscriptionIdT *tmp_sub_id;
+	SaSizeT str_len, number, i;		
 	SaEvtEventFilterT *filter;
-	SaEvtEventFilterTypeT *tmp_filter_type;
-	SaEvtChannelHandleT *tmp_ch_handle;
-
+	
 	subscription = (struct evt_subscription *)g_malloc(
 			sizeof(struct evt_subscription));
 	subscription->filters = (SaEvtEventFilterArrayT *)g_malloc(
@@ -496,61 +464,54 @@ static void read_subscribe(IPC_Channel *ch, void *msg, struct client_msg *ret)
 	ret->private.subscription = subscription;
 	tmp_char = (SaUint8T *)msg;
 	tmp_char++;
-	tmp_size = (SaSizeT *)tmp_char;
-	str_len = *(tmp_size);
+	memcpy(&str_len, tmp_char, sizeof(SaSizeT));
+	tmp_char += sizeof(SaSizeT);
+
 	ret->channel_name = g_malloc(str_len+1);
-	tmp_size++;
-	tmp_char = (SaUint8T *)tmp_size;
 	memcpy(ret->channel_name, tmp_char, str_len);
 	ret->channel_name[str_len] = '\0';
 	tmp_char += str_len;
-	tmp_void = (void **)tmp_char;
-	subscription->ch_id = *(tmp_void);
-	tmp_void++;
-	tmp_sub_id = (SaEvtSubscriptionIdT *)tmp_void;
-	subscription->subscription_id = *(tmp_sub_id);
-	tmp_sub_id++;
-	tmp_size = (SaSizeT *)tmp_sub_id;
-	subscription->filters_size = *(tmp_size);
-	tmp_size++;
-	number = *(tmp_size);
+	memcpy(&(subscription->ch_id), tmp_char, sizeof(void *));
+	tmp_char += sizeof(void *);
+	memcpy(&(subscription->subscription_id), tmp_char, sizeof(SaEvtSubscriptionIdT));
+	tmp_char += sizeof(SaEvtSubscriptionIdT);
+	memcpy(&(subscription->filters_size), tmp_char, sizeof(SaSizeT));
+	tmp_char += sizeof(SaSizeT);
+	memcpy(&number, tmp_char, sizeof(SaSizeT));
+	tmp_char += sizeof(SaSizeT);
 	subscription->filters->filtersNumber = number;
 	
 	filter = (SaEvtEventFilterT *)g_malloc(
 			sizeof(SaEvtEventFilterT)*number);
 	subscription->filters->filters = filter;
-	tmp_size++;
-	tmp_char = (SaUint8T *)tmp_size;
+
 	for(i=0; i<number; i++){
-		tmp_filter_type = (SaEvtEventFilterTypeT *)tmp_char;
-		filter[i].filterType = *(tmp_filter_type);
-		tmp_filter_type++;
-		tmp_size = (SaSizeT *)tmp_filter_type;
-		str_len = *(tmp_size);
+
+		memcpy(&(filter[i].filterType), tmp_char, sizeof(SaEvtEventFilterTypeT));
+		tmp_char += sizeof(SaEvtEventFilterTypeT);
+
+		memcpy(&str_len, tmp_char, sizeof(SaSizeT));
+		tmp_char += sizeof(SaSizeT);
 		filter[i].filter.patternSize = str_len;
 		filter[i].filter.pattern = (SaUint8T *)g_malloc(str_len);
-		tmp_size++;		
-		tmp_char = (SaUint8T *)tmp_size;
 		memcpy(filter[i].filter.pattern, tmp_char, str_len);
 		tmp_char += str_len;
 	}
-	tmp_ch_handle = (SaEvtChannelHandleT *)tmp_char;
-	subscription->clt_ch_handle = *(tmp_ch_handle);
+	memcpy(&(subscription->clt_ch_handle), tmp_char, sizeof(SaEvtChannelHandleT));
 	return;	
 }
 
 static void read_unlink_client(void *msg, struct client_msg *ret)
 {
 	SaUint8T *tmp_char;
-	SaSizeT str_len, *tmp_size;
+	SaSizeT str_len;
 
 	tmp_char = (SaUint8T *)msg;
 	tmp_char++;
-	tmp_size = (SaSizeT *)tmp_char;
-	str_len = *(tmp_size);
+
+	memcpy(&str_len, tmp_char, sizeof(SaSizeT));
+	tmp_char += sizeof(SaSizeT);
 	ret->channel_name = g_malloc(str_len+1);
-	tmp_size++;
-	tmp_char = (SaUint8T *)tmp_size;
 	memcpy(ret->channel_name, tmp_char, str_len);
 	ret->channel_name[str_len] = '\0';
 	return;
@@ -699,13 +660,10 @@ static int send_open_channel_reply(IPC_Channel *client,
 		struct channel_instance *ch_ins,
 		SaErrorT ret_code)
 {
-	SaSizeT str_len, msg_size, *tmp_size;
+	SaSizeT str_len, msg_size;
 	void *msg;
 	char *tmp_char;
-	SaEvtChannelHandleT *tmp_handle;
-	void **tmp_void;
-	SaErrorT *tmp_err;
-	
+		
 	str_len = strlen(ch_open->channel_name);
 	msg_size = 1+sizeof(SaSizeT)+str_len+sizeof(SaEvtChannelHandleT)
 		+sizeof(void *)+sizeof(SaErrorT);
@@ -713,20 +671,16 @@ static int send_open_channel_reply(IPC_Channel *client,
 	tmp_char = (char *)msg;
 	*(tmp_char) = EVT_CH_OPEN_REPLY_FROM_DAEMON;
 	tmp_char++;
-	tmp_size = (SaSizeT *)tmp_char;
-	*(tmp_size) = str_len;
-	tmp_size++;
-	tmp_char = (char *)tmp_size;
+	memcpy(tmp_char, &str_len, sizeof(SaSizeT));
+	tmp_char += sizeof(SaSizeT);
 	memcpy(tmp_char, ch_open->channel_name, str_len);
 	tmp_char += str_len;
-	tmp_handle = (SaEvtChannelHandleT *)tmp_char;
-	*(tmp_handle) = ch_open->clt_ch_handle;
-	tmp_handle++;
-	tmp_void = (void **)tmp_handle;
-	*(tmp_void) = (void *)ch_ins;
-	tmp_void++;
-	tmp_err = (SaErrorT *)tmp_void;
-	*(tmp_err) = ret_code;
+	memcpy(tmp_char, &(ch_open->clt_ch_handle), sizeof(SaEvtChannelHandleT));
+	tmp_char += sizeof(SaEvtChannelHandleT);
+	memcpy(tmp_char, &(ch_ins), sizeof(void *));
+	tmp_char += sizeof(void *);
+	memcpy(tmp_char, &ret_code, sizeof(SaErrorT));
+	tmp_char += sizeof(SaErrorT);
 	send_to_client(client, msg, msg_size);	
 	return 0;
 }
@@ -755,12 +709,6 @@ static void deliver_event_to_local_subscriber(struct evt_subscription *subscript
 	SaSizeT number, msg_size, i, size=0, publisher_len;
 	SaEvtEventPatternT *pattern;
 	SaUint8T *tmp_char;
-	SaEvtChannelHandleT *tmp_ch_hd;
-	SaEvtSubscriptionIdT *tmp_sub;
-	SaSizeT *tmp_size;
-	SaTimeT *tmp_time;
-	SaUint8T *tmp_name;
-	SaEvtEventIdT *tmp_evt_id;
 	void *msg;
 	
 	//calculate the size of pattern_array
@@ -781,48 +729,40 @@ static void deliver_event_to_local_subscriber(struct evt_subscription *subscript
 	tmp_char = (SaUint8T *)msg;
 	*(tmp_char) = EVT_NORMAL_EVENT;
 	tmp_char++;
-	tmp_ch_hd = (SaEvtChannelHandleT *)tmp_char;
-	*(tmp_ch_hd) = subscription->clt_ch_handle;
-	tmp_ch_hd++;
-	tmp_sub = (SaEvtSubscriptionIdT *)tmp_ch_hd;
-	*(tmp_sub) = subscription->subscription_id;
-	tmp_sub++;
-	tmp_size = (SaSizeT *)tmp_sub;
-	*(tmp_size) = size;
-	tmp_size++;
-	*(tmp_size) = number;
-	tmp_size++;
+
+	memcpy(tmp_char, &(subscription->clt_ch_handle), sizeof(SaEvtChannelHandleT));
+	tmp_char += sizeof(SaEvtChannelHandleT);
+	memcpy(tmp_char, &(subscription->subscription_id), sizeof(SaEvtSubscriptionIdT));
+	tmp_char += sizeof(SaEvtSubscriptionIdT);
+	memcpy(tmp_char, &size, sizeof(SaSizeT));
+	tmp_char += sizeof(SaSizeT);
+	memcpy(tmp_char, &number, sizeof(SaSizeT));
+	tmp_char += sizeof(SaSizeT);
+
 	for(i=0; i<number; i++){
-		*(tmp_size) = (pattern+i)->patternSize;
-		tmp_size++;
+		memcpy(tmp_char, &((pattern+i)->patternSize), sizeof(SaSizeT));
+		tmp_char += sizeof(SaSizeT);
 	}
-	tmp_char = (SaUint8T *)tmp_size;
+
 	for(i=0; i<number; i++){
 		strncpy(tmp_char, (pattern+i)->pattern, 
 				(pattern+i)->patternSize);
 		tmp_char += (pattern+i)->patternSize;
 	}	
-	*(tmp_char) = event->priority;
+	memcpy(tmp_char, &(event->priority), 1);
 	tmp_char++;
-	tmp_time = (SaTimeT *)tmp_char;
-	*(tmp_time) = event->retention_time;
-	tmp_time++;
-	tmp_size = (SaSizeT *)tmp_time;
-	*(tmp_size) = publisher_len;
-	tmp_size++;
-	tmp_name = (SaUint8T *)tmp_size;
-	memcpy(tmp_name, event->publisherName.value, publisher_len);
-	tmp_name += publisher_len;
-	tmp_time = (SaTimeT *)tmp_name;
-	*(tmp_time) = event->publish_time;
-	tmp_time++;
-	tmp_evt_id = (SaEvtEventIdT *)tmp_time;
-	*(tmp_evt_id) = event->event_id;
-	tmp_evt_id++;
-	tmp_size = (SaSizeT *)tmp_evt_id;
-	*(tmp_size) = event->data_size;
-	tmp_size++;
-	tmp_char = (SaUint8T *)tmp_size;
+	memcpy(tmp_char, &(event->retention_time), sizeof(SaTimeT));
+	tmp_char += sizeof(SaTimeT);
+	memcpy(tmp_char, &publisher_len, sizeof(SaSizeT));
+	tmp_char += sizeof(SaSizeT);
+	memcpy(tmp_char, event->publisherName.value, publisher_len);
+	tmp_char += publisher_len;
+	memcpy(tmp_char, &(event->publish_time), sizeof(SaTimeT));
+	tmp_char += sizeof(SaTimeT);
+	memcpy(tmp_char, &(event->event_id), sizeof(SaEvtEventIdT));
+	tmp_char += sizeof(SaEvtEventIdT);
+	memcpy(tmp_char, &(event->data_size), sizeof(SaSizeT));
+	tmp_char += sizeof(SaSizeT);
 	memcpy(tmp_char, event->event_data, event->data_size);
 	send_to_client(subscription->client, msg, msg_size);
 	return;
@@ -975,13 +915,13 @@ static SaEvtEventIdT get_event_id(SaUint32T local_event_id)
 static void broadcast_event_msg_to_cluster(struct client_msg *msg)
 {
 	struct ha_msg *m;
-	SaSizeT msg_len, str_len, publisher_len, number, *tmp_size, i;
+	SaSizeT msg_len, str_len, publisher_len, number, tmp_size, i;
 	SaEvtEventPatternT *pattern;
 	void *bin_msg;
 	SaUint8T *tmp_char;
 	struct evt_event *event = msg->private.event;
-	SaTimeT *tmp_time;
-	SaEvtEventIdT *tmp_event_id;
+	SaTimeT tmp_time;
+	SaEvtEventIdT tmp_event_id;
 
 	if ((m=ha_msg_new(0)) == NULL) {
 		cl_log(LOG_ERR, "Cannot broadcast event to cluster");
@@ -1002,49 +942,51 @@ static void broadcast_event_msg_to_cluster(struct client_msg *msg)
 	tmp_char = (SaUint8T *)bin_msg;
 	*(tmp_char) = EVT_EVENT_MSG;
 	tmp_char++;
-	tmp_size = (SaSizeT *)tmp_char;
-	*(tmp_size) = htonl(str_len);
-	tmp_size++;
-	tmp_char = (SaUint8T *)tmp_size;
+
+	tmp_size = htonl(str_len);
+	memcpy(tmp_char, &tmp_size, sizeof(SaSizeT));
+	tmp_char += sizeof(SaSizeT);
 	memcpy(tmp_char, msg->channel_name, str_len);
 	tmp_char += str_len;
 	*(tmp_char) = event->priority;
 	tmp_char++;
-	tmp_time = (SaTimeT *)tmp_char;
-	hton_64(&(event->retention_time), tmp_time);
-	tmp_time++;
-	tmp_size = (SaSizeT *)tmp_time;
-	*(tmp_size) = htonl(publisher_len);
-	tmp_size++;
-	tmp_char = (char *)tmp_size;
+	hton_64(&(event->retention_time), &tmp_time);
+	memcpy(tmp_char, &tmp_time, sizeof(SaTimeT));
+	tmp_char += sizeof(SaTimeT);
+	tmp_size = htonl(publisher_len);
+	memcpy(tmp_char, &tmp_size, sizeof(SaSizeT));
+	tmp_char += sizeof(SaSizeT);
 	memcpy(tmp_char, event->publisherName.value, publisher_len);
 	tmp_char += publisher_len;
-	tmp_time = (SaTimeT *)tmp_char;
-	hton_64(&(event->publish_time), tmp_time);
-	tmp_time++;
-	tmp_size = (SaSizeT *)tmp_time;
-	*(tmp_size) = htonl(event->pattern_size);
-	tmp_size++;
-	*(tmp_size) = htonl(number);
-	tmp_size++;
+	hton_64(&(event->publish_time), &tmp_time);
+	memcpy(tmp_char, &tmp_time, sizeof(SaTimeT));
+	tmp_char += sizeof(SaTimeT);
+	tmp_size = htonl(event->pattern_size);
+	memcpy(tmp_char, &tmp_size, sizeof(SaSizeT));
+	tmp_char += sizeof(SaSizeT);
+	tmp_size = htonl(number);
+	memcpy(tmp_char, &tmp_size, sizeof(SaSizeT));
+	tmp_char += sizeof(SaSizeT);
+
 	for(i=0; i<number; i++){
-		*(tmp_size) = htonl((pattern+i)->patternSize);
-		tmp_size++;
+		tmp_size = htonl((pattern+i)->patternSize);
+		memcpy(tmp_char, &tmp_size, sizeof(SaSizeT));
+		tmp_char += sizeof(SaSizeT);
 	}
-	tmp_char = (SaUint8T *)tmp_size;
+
 	for(i=0; i<number; i++){
 		memcpy(tmp_char, (pattern+i)->pattern,
 				(pattern+i)->patternSize);
 		tmp_char += (pattern+i)->patternSize;
 	}
-	tmp_size = (SaSizeT *)tmp_char;
-	*(tmp_size) = htonl(event->data_size);
-	tmp_size++;
-	tmp_char = (char *)tmp_size;
+	tmp_size = htonl(event->data_size);
+	memcpy(tmp_char, &tmp_size, sizeof(SaSizeT));
+	tmp_char += sizeof(SaSizeT);
+
 	memcpy(tmp_char, event->event_data, event->data_size);
 	tmp_char += event->data_size;
-	tmp_event_id = (SaEvtEventIdT *)tmp_char;
-	hton_64(&(event->event_id), tmp_event_id);
+	hton_64(&(event->event_id), &tmp_event_id);
+	memcpy(tmp_char, &tmp_event_id, sizeof(SaEvtEventIdT));
 
 	if((ha_msg_addbin(m, BIN_CONTENT, bin_msg, msg_len) == HA_FAIL)||
 		(ha_msg_add(m, F_TYPE, EVT_SERVICE) == HA_FAIL)){
@@ -1067,24 +1009,18 @@ static void send_publish_reply_to_client(IPC_Channel *client,
 	void *msg;
 	SaSizeT msg_size;
 	char *tmp_char;
-	SaEvtEventHandleT *tmp_handle;
-	SaEvtEventIdT *tmp_event_id;
-	SaErrorT *tmp_err;
-	
+		
 	msg_size = 1+sizeof(SaEvtEventHandleT)+
 				sizeof(SaEvtEventIdT)+sizeof(SaErrorT);
 	msg = g_malloc(msg_size);
 	tmp_char = msg;
 	*(tmp_char) = EVT_PUBLISH_REPLY;
 	tmp_char++;
-	tmp_handle = (SaEvtEventHandleT *)tmp_char;
-	*(tmp_handle) = event->clt_event_hd;
-	tmp_handle++;
-	tmp_event_id = (SaEvtEventIdT *)tmp_handle;
-	*(tmp_event_id) = event_id;
-	tmp_event_id++;
-	tmp_err = (SaErrorT *)tmp_event_id;
-	*(tmp_err) = ret_code;
+	memcpy(tmp_char, &(event->clt_event_hd), sizeof(SaEvtEventHandleT));
+	tmp_char += sizeof(SaEvtEventHandleT);
+	memcpy(tmp_char, &event_id, sizeof(SaEvtEventIdT));
+	tmp_char += sizeof(SaEvtEventIdT);
+	memcpy(tmp_char, &ret_code, sizeof(SaErrorT));	
 	send_to_client(client, msg, msg_size);
 	return;
 }
@@ -1139,10 +1075,7 @@ static void send_retention_clear_reply_to_client(IPC_Channel *client,
 	SaSizeT str_len, msg_size;
 	void *msg;
 	char *tmp_char;
-	SaSizeT *tmp_size;
-	SaEvtEventIdT *tmp_evtid;
-	SaErrorT *tmp_err;
-		
+			
 	str_len = strlen(channel_name);
 	msg_size = 1+sizeof(SaSizeT)+str_len+sizeof(SaEvtEventIdT)+
 				sizeof(SaErrorT);
@@ -1150,17 +1083,13 @@ static void send_retention_clear_reply_to_client(IPC_Channel *client,
 	tmp_char = (char *)msg;
 	*(tmp_char) = EVT_CLEAR_RETENTION_TIME_REPLY;
 	tmp_char++;
-	tmp_size = (SaSizeT *)tmp_char;
-	*(tmp_size) = str_len;
-	tmp_size++;
-	tmp_char = (char *)tmp_size;
+	memcpy(tmp_char, &str_len, sizeof(SaSizeT));
+	tmp_char += sizeof(SaSizeT);
 	strncpy(tmp_char, channel_name, str_len);
 	tmp_char += str_len;
-	tmp_evtid = (SaEvtEventIdT *)tmp_char;
-	*(tmp_evtid) = event_id;
-	tmp_evtid++;
-	tmp_err = (SaErrorT *)tmp_evtid;
-	*(tmp_err) = reply;
+	memcpy(tmp_char, &event_id, sizeof(SaEvtEventIdT));
+	tmp_char += sizeof(SaEvtEventIdT);
+	memcpy(tmp_char, &reply, sizeof(SaErrorT));
 	send_to_client(client, msg, msg_size);
 	return;
 }
@@ -1168,8 +1097,8 @@ static void send_retention_clear_reply_to_client(IPC_Channel *client,
 static void broadcast_ch_open_req(SaUint8T *channel_name,
 		struct evt_ch_open_request *ch_open_req)
 {
-	SaSizeT str_len, msg_len, *tmp_size;
-	SaUint64T *tmp_key, key;
+	SaSizeT str_len, msg_len, tmp_size;
+	SaUint64T tmp_key, key;
 	SaUint8T *tmp_char;
 	void *msg;
 	struct ha_msg *m;
@@ -1184,15 +1113,14 @@ static void broadcast_ch_open_req(SaUint8T *channel_name,
 	tmp_char = (SaUint8T *)msg;
 	*(tmp_char) = EVT_CH_OPEN_REQUEST;
 	tmp_char++;
-	tmp_size = (SaSizeT *)tmp_char;
-	*(tmp_size) = htonl(str_len);
-	tmp_size++;
-	tmp_char = (SaUint8T *)tmp_size;
+	tmp_size = htonl(str_len);
+	memcpy(tmp_char, &tmp_size, sizeof(SaSizeT));
+	tmp_char += sizeof(SaSizeT);
 	memcpy(tmp_char, channel_name, str_len);
 	tmp_char += str_len;
-	tmp_key = (SaUint64T *)tmp_char;
-	key = (SaUint64T)(SaUint32T)ch_open_req;
-	hton_64(&key, tmp_key);
+	key = (SaUint64T)(long)ch_open_req;
+	hton_64(&key, &tmp_key);
+	memcpy(tmp_char, &tmp_key, sizeof(SaUint64T));
 	
 	if((ha_msg_addbin(m, BIN_CONTENT, msg, msg_len) == HA_FAIL) ||
 			(ha_msg_add(m, F_TYPE, EVT_SERVICE) == HA_FAIL)){
@@ -1211,13 +1139,13 @@ static void broadcast_new_subscription(SaUint8T *channel_name,
 		struct evt_subscription *subscription)
 {
 	struct ha_msg *m;
-	SaSizeT str_len, msg_len, *tmp_size, number, i;
+	SaSizeT str_len, msg_len, tmp_size, number, i;
 	void *msg;
 	SaUint8T *tmp_char;
-	SaUint64T *tmp_64, key;
-	SaUint32T *tmp_32;
+	SaUint64T tmp_64, key;
+	SaUint32T tmp_32;
 	SaEvtEventFilterT *filter;
-	SaEvtEventFilterTypeT *tmp_filter_type;
+	SaEvtEventFilterTypeT tmp_filter_type;
 
 	if ((m=ha_msg_new(0)) == NULL) {
 		cl_log(LOG_ERR, "Cannot broadcast new subscription to cluster");
@@ -1231,35 +1159,36 @@ static void broadcast_new_subscription(SaUint8T *channel_name,
 	tmp_char = (SaUint8T *)msg;
 	*(tmp_char) = EVT_NEW_SUBSCRIBE;
 	tmp_char++;
-	tmp_size = (SaSizeT *)tmp_char;
-	*(tmp_size) = htonl(str_len);
-	tmp_size++;
-	tmp_char = (SaUint8T *)tmp_size;
+	tmp_size = htonl(str_len);
+	memcpy(tmp_char, &tmp_size, sizeof(SaSizeT));
+	tmp_char += sizeof(SaSizeT);
 	memcpy(tmp_char, channel_name, str_len);
 	tmp_char += str_len;
-	tmp_64 = (SaUint64T *)tmp_char;
 	key = (SaUint64T)(long)(subscription->ch_id);
-	hton_64(&key, tmp_64);
-	tmp_64++;
-	tmp_32 = (SaUint32T *)tmp_64;
-	*(tmp_32) = htonl(subscription->subscription_id);
-	tmp_32++;
-	tmp_size = (SaSizeT *)tmp_32;
-	*(tmp_size) = htonl(subscription->filters_size);
-	tmp_size++;
+	hton_64(&key, &tmp_64);
+	memcpy(tmp_char, &tmp_64, sizeof(SaUint64T));
+	tmp_char += sizeof(SaUint64T);
+	tmp_32 = htonl(subscription->subscription_id);
+	memcpy(tmp_char, &tmp_32, sizeof(SaUint32T));
+	tmp_char += sizeof(SaUint32T);
+	tmp_size = htonl(subscription->filters_size);
+	memcpy(tmp_char, &tmp_size, sizeof(SaSizeT));
+	tmp_char += sizeof(SaSizeT);
+
 	number = subscription->filters->filtersNumber;
-	*(tmp_size) = htonl(number);
-	tmp_size++;
-	tmp_char = (SaUint8T *)tmp_size;
+	tmp_size = htonl(number);
+	memcpy(tmp_char, &tmp_size, sizeof(SaSizeT));
+	tmp_char += sizeof(SaSizeT);
+
 	filter = subscription->filters->filters;
 	for(i=0; i<number; i++){
-		tmp_filter_type = (SaEvtEventFilterTypeT *)tmp_char;
-		*(tmp_filter_type) = htonl(filter[i].filterType);
-		tmp_filter_type++;
-		tmp_size = (SaSizeT *)tmp_filter_type;
-		*(tmp_size) = htonl(filter[i].filter.patternSize);
-		tmp_size++;
-		tmp_char = (SaUint8T *)tmp_size;
+
+		tmp_filter_type = htonl(filter[i].filterType);
+		memcpy(tmp_char, &tmp_filter_type, sizeof(SaEvtEventFilterTypeT));
+		tmp_char += sizeof(SaEvtEventFilterTypeT);
+		tmp_size = htonl(filter[i].filter.patternSize);
+		memcpy(tmp_char, &tmp_size, sizeof(SaSizeT));
+		tmp_char += sizeof(SaSizeT);
 		memcpy(tmp_char, filter[i].filter.pattern,
 				filter[i].filter.patternSize);
 		tmp_char += filter[i].filter.patternSize;
@@ -1390,9 +1319,9 @@ static void send_clear_to_node(SaUint8T *channel_name,
 	struct ha_msg *m;
 	void *msg;
 	char *to_id;
-	SaSizeT msg_len, str_len, *tmp_size;
+	SaSizeT msg_len, str_len, tmp_size;
 	SaUint8T *tmp_char;
-	SaEvtEventIdT *tmp_event_id;
+	SaEvtEventIdT tmp_event_id;
 	
 	if ((m=ha_msg_new(0)) == NULL) {
 		cl_log(LOG_ERR, "Cannot send clear reply to remote");
@@ -1405,15 +1334,15 @@ static void send_clear_to_node(SaUint8T *channel_name,
 	tmp_char = (SaUint8T *)msg;
 	*(tmp_char) = EVT_RETENTION_CLEAR_REQUEST;
 	tmp_char++;
-	tmp_size = (SaSizeT *)tmp_char;
-	*(tmp_size) = htonl(str_len);
-	tmp_size++;
-	tmp_char = (SaUint8T *)tmp_size;
+
+	tmp_size = htonl(str_len);
+	memcpy(tmp_char, &tmp_size, sizeof(SaSizeT));
+	tmp_char += sizeof(SaSizeT);
 	memcpy(tmp_char, channel_name, str_len);
 	tmp_char += str_len;
-	tmp_event_id = (SaEvtEventIdT *)tmp_char;
-	hton_64(&(event_id), tmp_event_id);
-
+	hton_64(&(event_id), &tmp_event_id);
+	memcpy(tmp_char, &tmp_event_id, sizeof(SaEvtEventIdT));
+	
 	if((ha_msg_addbin(m, BIN_CONTENT, msg, msg_len) == HA_FAIL) || 
 			(ha_msg_add(m, F_TYPE, EVT_SERVICE) == HA_FAIL)){
 		cl_log(LOG_ERR, "Cannot create clear reply message");
@@ -1431,7 +1360,7 @@ static void broadcast_unlink(SaUint8T *channel_name)
 {
 	struct ha_msg *m;
 	void *msg;
-	SaSizeT str_len, msg_len, *tmp_size;
+	SaSizeT str_len, msg_len, tmp_size;
 	SaUint8T *tmp_char;
 	
 	if ((m=ha_msg_new(0)) == NULL) {
@@ -1444,10 +1373,9 @@ static void broadcast_unlink(SaUint8T *channel_name)
 	tmp_char = (SaUint8T *)msg;
 	*(tmp_char) = EVT_CHANNEL_UNLINK_NOTIFY;
 	tmp_char++;
-	tmp_size = (SaSizeT *)tmp_char;
-	*(tmp_size) = htonl(str_len);
-	tmp_size++;
-	tmp_char = (SaUint8T *)tmp_size;
+	tmp_size = htonl(str_len);
+	memcpy(tmp_char, &tmp_size, sizeof(SaSizeT));
+	tmp_char += sizeof(SaSizeT);
 	memcpy(tmp_char, channel_name, str_len);
 	if((ha_msg_addbin(m, BIN_CONTENT, msg, msg_len) == HA_FAIL) ||
 			(ha_msg_add(m, F_TYPE, EVT_SERVICE) == HA_FAIL)){
@@ -1819,27 +1747,27 @@ static void read_ch_open_reply(const void *bin_msg, struct client_msg *ret)
 	struct evt_ch_open_reply_remote *ch_open_reply;
 	const SaUint8T *tmp_char;
 	SaSizeT str_len;
-	const SaSizeT *tmp_size;
-	const SaUint64T *tmp_key;
+	SaSizeT tmp_size;
+	SaUint64T tmp_key;
 
 	ch_open_reply = (struct evt_ch_open_reply_remote *)g_malloc0(
 			sizeof(struct evt_ch_open_reply_remote));
 	ret->private.ch_open_reply_remote = ch_open_reply;
 	tmp_char = (const SaUint8T *)bin_msg;
 	tmp_char++;
-	tmp_size = (const SaSizeT *)tmp_char;
-	str_len = ntohl(*(tmp_size));
-	tmp_size++;	
+	memcpy(&tmp_size, tmp_char, sizeof(SaSizeT));
+	str_len = ntohl(tmp_size);
+	tmp_char += sizeof(SaSizeT);
+
 	ret->channel_name = g_malloc(str_len+1);
 	ch_open_reply->channel_name = g_malloc(str_len+1);
-	tmp_char = (const SaUint8T *)tmp_size;
 	memcpy(ret->channel_name, tmp_char, str_len);
 	memcpy(ch_open_reply->channel_name, tmp_char, str_len);
 	ret->channel_name[str_len] = '\0';
 	ch_open_reply->channel_name[str_len] = '\0';
 	tmp_char += str_len;
-	tmp_key = (const SaUint64T *)tmp_char;
-	ntoh_64(tmp_key, &(ch_open_reply->key));
+	memcpy(&tmp_key, tmp_char, sizeof(SaUint64T));
+	ntoh_64(&tmp_key, &(ch_open_reply->key));
 	return;
 }
 
@@ -1849,27 +1777,27 @@ static void read_ch_open_request_remote(const void *bin_msg,
 	struct evt_ch_open_request_remote *ch_open_request;
 	const SaUint8T *tmp_char;
 	SaSizeT str_len;
-	const SaSizeT *tmp_size;
-	const SaUint64T *tmp_key;
+	SaSizeT tmp_size;
+	SaUint64T tmp_key;
 	
 	ch_open_request = (struct evt_ch_open_request_remote *)g_malloc0(
 			sizeof(struct evt_ch_open_request_remote));
 	ret->private.ch_open_request_remote = ch_open_request;
 	tmp_char = (const SaUint8T *)bin_msg;
 	tmp_char++;
-	tmp_size = (const SaSizeT *)tmp_char;
-	str_len = ntohl(*(tmp_size));
-	tmp_size++;	
+	memcpy(&tmp_size, tmp_char, sizeof(SaSizeT));
+	str_len = ntohl(tmp_size);
+	tmp_char += sizeof(SaSizeT);
+
 	ret->channel_name = g_malloc(str_len+1);
 	ch_open_request->channel_name = g_malloc(str_len+1);
-	tmp_char = (const SaUint8T *)tmp_size;
 	memcpy(ret->channel_name, tmp_char, str_len);
 	memcpy(ch_open_request->channel_name, tmp_char, str_len);
 	ret->channel_name[str_len] = '\0';
 	ch_open_request->channel_name[str_len] = '\0';
 	tmp_char += str_len;
-	tmp_key = (const SaUint64T *)tmp_char;
-	ntoh_64(tmp_key, &(ch_open_request->key));
+	memcpy(&tmp_key, tmp_char, sizeof(SaUint64T));
+	ntoh_64(&tmp_key, &(ch_open_request->key));
 	return;	
 }
 
@@ -1877,12 +1805,12 @@ static void read_event_msg(const void *bin_msg, struct client_msg *ret)
 {
 	struct evt_event *event;
 	SaEvtEventPatternArrayT *pattern_array;
-	const SaUint8T *tmp_char;
+	const SaUint8T *tmp_char, *tmp_char_pattern;
 	SaSizeT str_len, number, i;
-	const SaSizeT* tmp_size;
+	SaSizeT tmp_size;
 	SaEvtEventPatternT *patterns;
-	const SaEvtEventIdT *tmp_event_id;
-	const SaTimeT *tmp_time;
+	SaEvtEventIdT tmp_event_id;
+	SaTimeT tmp_time;
 
 	event = (struct evt_event *)g_malloc(sizeof(struct evt_event));
 	ret->private.event = event;
@@ -1891,55 +1819,59 @@ static void read_event_msg(const void *bin_msg, struct client_msg *ret)
 	event->pattern_array = pattern_array;
 	tmp_char = (const SaUint8T *)bin_msg;
 	tmp_char++;
-	tmp_size = (const SaSizeT *)tmp_char;
-	str_len = ntohl(*(tmp_size));
-	tmp_size++;
+	memcpy(&tmp_size, tmp_char, sizeof(SaSizeT));
+	str_len = ntohl(tmp_size);
+	tmp_char += sizeof(SaSizeT);
 	ret->channel_name = g_malloc(str_len+1);
-	tmp_char = (const SaUint8T *)tmp_size;
 	memcpy(ret->channel_name, tmp_char, str_len);
 	ret->channel_name[str_len] = '\0';
 	tmp_char += str_len;
 	event->priority = *(tmp_char);
 	tmp_char++;
-	tmp_time = (const SaTimeT *)tmp_char;
-	ntoh_64(tmp_time, &(event->retention_time));
-	tmp_time++;
-	tmp_size = (const SaSizeT *)tmp_time;
-	str_len = ntohl(*(tmp_size));
+	memcpy(&tmp_time, tmp_char, sizeof(SaTimeT));
+	ntoh_64(&tmp_time, &(event->retention_time));
+	tmp_char += sizeof(SaTimeT);
+	memcpy(&tmp_size, tmp_char, sizeof(SaSizeT));
+	str_len = ntohl(tmp_size);
+	tmp_char += sizeof(SaSizeT);
+
 	event->publisherName.length = str_len;
-	tmp_size++;
-	tmp_char = (const SaUint8T *)tmp_size;
 	memcpy(event->publisherName.value, tmp_char, str_len);
 	tmp_char += str_len;
-	tmp_time = (const SaTimeT *)tmp_char;
-	ntoh_64(tmp_time, &(event->publish_time));
-	tmp_time++;
-	tmp_size = (const SaSizeT *)tmp_time;
-	event->pattern_size = ntohl(*(tmp_size));
-	tmp_size++;
-	number = ntohl(*(tmp_size));
+	memcpy(&tmp_time, tmp_char, sizeof(SaTimeT));
+	ntoh_64(&tmp_time, &(event->publish_time));
+	tmp_char += sizeof(SaTimeT);
+	memcpy(&tmp_size, tmp_char, sizeof(SaSizeT));
+	event->pattern_size = ntohl(tmp_size);
+	tmp_char += sizeof(SaSizeT);
+	memcpy(&tmp_size, tmp_char, sizeof(SaSizeT));
+	number = ntohl(tmp_size);
+	tmp_char += sizeof(SaSizeT);
 	pattern_array->patternsNumber = number;
 	patterns = (SaEvtEventPatternT *)g_malloc(
 			sizeof(SaEvtEventPatternT)*number);
 	pattern_array->patterns = patterns;
-	tmp_size++;
-	tmp_char = (const SaUint8T *)(tmp_size+number);
+	tmp_char_pattern = tmp_char + number*sizeof(SaSizeT);
 	for(i=0; i<number; i++){
-		patterns[i].patternSize = ntohl(*(tmp_size));
-		tmp_size++;
+
+		memcpy(&tmp_size, tmp_char, sizeof(SaSizeT));
+		patterns[i].patternSize = ntohl(tmp_size);
+		tmp_char += sizeof(SaSizeT);
+
 		patterns[i].pattern = g_malloc(patterns[i].patternSize);
-		memcpy(patterns[i].pattern, tmp_char, patterns[i].patternSize);
-		tmp_char += patterns[i].patternSize;
+		memcpy(patterns[i].pattern, tmp_char_pattern, patterns[i].patternSize);
+		tmp_char_pattern += patterns[i].patternSize;
 	}
-	tmp_size = (const SaSizeT *)tmp_char;
-	event->data_size = ntohl(*(tmp_size));
-	tmp_size++;
+
+	tmp_char = tmp_char_pattern;
+	memcpy(&tmp_size, tmp_char, sizeof(SaSizeT));
+	event->data_size = ntohl(tmp_size);
+	tmp_char += sizeof(SaSizeT);
 	event->event_data = g_malloc(event->data_size);
-	tmp_char = (const SaUint8T *)tmp_size;
 	memcpy(event->event_data, tmp_char, event->data_size);
 	tmp_char += event->data_size;
-	tmp_event_id = (const SaEvtEventIdT *)tmp_char;
-	ntoh_64(tmp_event_id, &(event->event_id));
+	memcpy(&tmp_event_id, tmp_char, sizeof(SaEvtEventIdT));
+	ntoh_64(&tmp_event_id, &(event->event_id));
 	return;
 }
 
@@ -1947,15 +1879,14 @@ static void read_unlink(const void *bin_msg, struct client_msg *ret)
 {
 	const SaUint8T *tmp_char;
 	SaSizeT str_len;
-	const SaSizeT *tmp_size;
+	SaSizeT tmp_size;
 	
 	tmp_char = (const SaUint8T *)bin_msg;
 	tmp_char++;
-	tmp_size = (const SaSizeT *)tmp_char;
-	str_len = ntohl(*(tmp_size));
-	tmp_size++;
+	memcpy(&tmp_size, tmp_char, sizeof(SaSizeT));
+	str_len = ntohl(tmp_size);
+	tmp_char += sizeof(SaSizeT);
 	ret->channel_name = g_malloc(str_len+1);
-	tmp_char = (const SaUint8T *)tmp_size;
 	memcpy(ret->channel_name, tmp_char, str_len);
 	ret->channel_name[str_len] = '\0';
 	return;
@@ -1965,12 +1896,12 @@ static void read_new_subscribe(const void *bin_msg, struct client_msg *ret)
 {
 	const SaUint8T *tmp_char;
 	SaSizeT str_len, number, i;
-	const SaSizeT *tmp_size;
-	const SaUint64T *tmp_64;
+	SaSizeT tmp_size;
+	SaUint64T tmp_64;
 	struct evt_new_subscription *new_sub;
-	const SaUint32T *tmp_32;
+	SaUint32T tmp_32;
 	SaEvtEventFilterT *filter;
-	const SaEvtEventFilterTypeT *tmp_filter_type;
+	SaEvtEventFilterTypeT tmp_filter_type;
 	
 	new_sub = (struct evt_new_subscription *)g_malloc(
 					sizeof(struct evt_new_subscription));
@@ -1979,42 +1910,42 @@ static void read_new_subscribe(const void *bin_msg, struct client_msg *ret)
 			sizeof(SaEvtEventFilterArrayT));
 	tmp_char = (const SaUint8T *)bin_msg;
 	tmp_char++;
-	tmp_size = (const SaSizeT *)tmp_char;
-	str_len = ntohl(*(tmp_size));
-	tmp_size++;
+	memcpy(&tmp_size, tmp_char, sizeof(SaSizeT));
+	str_len = ntohl(tmp_size);
+	tmp_char += sizeof(SaSizeT);
 	ret->channel_name = g_malloc(str_len+1);
 	new_sub->channel_name = g_malloc(str_len+1);
-	tmp_char = (const SaUint8T *)tmp_size;
 	memcpy(ret->channel_name, tmp_char, str_len);
 	memcpy(new_sub->channel_name, tmp_char, str_len);
 	ret->channel_name[str_len] = '\0';
 	new_sub->channel_name[str_len] = '\0';
 	tmp_char += str_len;
-	tmp_64 = (const SaUint64T *)tmp_char;
-	ntoh_64(tmp_64, &(new_sub->ch_id));
-	tmp_64++;
-	tmp_32 = (const SaUint32T *)tmp_64;
-	new_sub->subscription_id = ntohl(*(tmp_32));
-	tmp_32++;
-	tmp_size = (const SaSizeT *)tmp_32;
-	tmp_size++;
-	number = ntohl(*(tmp_size));
+	memcpy(&tmp_64, tmp_char, sizeof(SaUint64T));
+	ntoh_64(&tmp_64, &(new_sub->ch_id));
+	tmp_char += sizeof(SaUint64T);
+	memcpy(&tmp_32, tmp_char, sizeof(SaUint32T));
+	new_sub->subscription_id = ntohl(tmp_32);
+	tmp_char += sizeof(SaUint32T);
+	memcpy(&tmp_size, tmp_char, sizeof(SaSizeT));
+	number = ntohl(tmp_size);
+	tmp_char += sizeof(SaSizeT);
+
 	new_sub->filters->filtersNumber = number;
 	filter = (SaEvtEventFilterT *)g_malloc(
 			sizeof(SaEvtEventFilterT)*number);
 	new_sub->filters->filters = filter;
-	tmp_size++;
-	tmp_char = (const SaUint8T *)tmp_size;
+
 	for(i=0; i<number; i++){
-		tmp_filter_type = (const SaEvtEventFilterTypeT *)tmp_char;
-		filter[i].filterType = ntohl(*(tmp_filter_type));
-		tmp_filter_type++;
-		tmp_size = (const SaSizeT *)tmp_filter_type;
-		str_len = ntohl(*(tmp_size));
+
+		memcpy(&tmp_filter_type, tmp_char, sizeof(SaEvtEventFilterTypeT));
+		filter[i].filterType = ntohl(tmp_filter_type);
+		tmp_char += sizeof(SaEvtEventFilterTypeT);
+		memcpy(&tmp_size, tmp_char, sizeof(SaSizeT));
+		str_len = ntohl(tmp_size);
+		tmp_char += sizeof(SaSizeT);
+
 		filter[i].filter.patternSize = str_len;
 		filter[i].filter.pattern = (SaUint8T *)g_malloc(str_len);
-		tmp_size++;		
-		tmp_char = (const SaUint8T *)tmp_size;
 		memcpy(filter[i].filter.pattern, tmp_char, str_len);
 		tmp_char += str_len;
 	}
@@ -2023,25 +1954,24 @@ static void read_new_subscribe(const void *bin_msg, struct client_msg *ret)
 
 static void read_new_sub_reply(const void *bin_msg, struct client_msg *ret)
 {
-	const SaUint8T *tmp_char;
+	const SaUint8T *tmp_char, *tmp_char_pattern;
 	SaSizeT str_len, number, i, publisher_len;
-	const SaSizeT *tmp_size;
+	SaSizeT tmp_size;
 	struct evt_new_subscription_reply *new_sub_reply;
-	const SaUint64T *tmp_64;
-	const SaUint32T *tmp_32;
+	SaUint64T tmp_64;
+	SaUint32T tmp_32;
 	struct evt_event *event;
 	SaEvtEventPatternArrayT *pattern_array;
 	SaEvtEventPatternT *patterns;
-	const SaTimeT *tmp_time;
-	const SaEvtEventIdT *tmp_evt_id;
+	SaTimeT tmp_time;
+	SaEvtEventIdT tmp_evt_id;
 
 	tmp_char = (const SaUint8T *)bin_msg;
 	tmp_char++;
-	tmp_size = (const SaSizeT *)tmp_char;
-	str_len = ntohl(*(tmp_size));
-	tmp_size++;
+	memcpy(&tmp_size, tmp_char, sizeof(SaSizeT));
+	str_len = ntohl(tmp_size);
+	tmp_char += sizeof(SaSizeT);
 	ret->channel_name = g_malloc(str_len+1);
-	tmp_char = (const SaUint8T *)tmp_size;
 	memcpy(ret->channel_name, tmp_char, str_len);
 	ret->channel_name[str_len] = '\0';
 	tmp_char += str_len;	
@@ -2056,50 +1986,54 @@ static void read_new_sub_reply(const void *bin_msg, struct client_msg *ret)
 	pattern_array = (SaEvtEventPatternArrayT *)g_malloc(
 			sizeof(SaEvtEventPatternArrayT));
 	event->pattern_array = pattern_array;
-	tmp_64 = (const SaUint64T *)tmp_char;
-	ntoh_64(tmp_64, &(new_sub_reply->ch_id));
-	tmp_64++;
-	tmp_32 = (const SaUint32T *)tmp_64;
-	new_sub_reply->subscription_id = ntohl(*(tmp_32));
-	tmp_32++;
-	tmp_size = (const SaSizeT *)tmp_32;
-	tmp_size++;
-	number = htonl(*(tmp_size));
+	memcpy(&tmp_64, tmp_char, sizeof(SaUint64T));
+	ntoh_64(&tmp_64, &(new_sub_reply->ch_id));
+	tmp_char += sizeof(SaUint64T);
+	memcpy(&tmp_32, tmp_char, sizeof(SaUint32T));
+	new_sub_reply->subscription_id = ntohl(tmp_32);
+	tmp_char += sizeof(SaUint32T);
+	tmp_char += sizeof(SaSizeT);
+	memcpy(&tmp_size, tmp_char, sizeof(SaSizeT));
+	number = htonl(tmp_size);
+	tmp_char += sizeof(SaSizeT);
 	pattern_array->patternsNumber = number;
 	patterns = (SaEvtEventPatternT *)g_malloc(
 			sizeof(SaEvtEventPatternT)*number);
 	pattern_array->patterns = patterns;
-	tmp_size++;
-	tmp_char = (const SaUint8T *)(tmp_size+number);
+	tmp_char_pattern = tmp_char + number*sizeof(SaSizeT);
+
 	for(i=0; i<number; i++){
-		patterns[i].patternSize = ntohl(*(tmp_size));
-		tmp_size++;
+//		patterns[i].patternSize = ntohl(*(tmp_size));
+//		tmp_size++;
+		memcpy(&tmp_size, tmp_char, sizeof(SaSizeT));
+		patterns[i].patternSize = ntohl(tmp_size);
+		tmp_char += sizeof(SaSizeT);
+
 		patterns[i].pattern = g_malloc(patterns[i].patternSize);
-		memcpy(patterns[i].pattern, tmp_char, patterns[i].patternSize);
-		tmp_char += patterns[i].patternSize;
+		memcpy(patterns[i].pattern, tmp_char_pattern, patterns[i].patternSize);
+		tmp_char_pattern += patterns[i].patternSize;
 	}
+	tmp_char = tmp_char_pattern;
 	event->priority = *(tmp_char);
 	tmp_char++;
-	tmp_time = (const SaTimeT *)(tmp_char);
-	ntoh_64(tmp_time, &(event->retention_time));
-	tmp_time++;
-	tmp_size = (const SaSizeT *)tmp_time;
-	publisher_len = ntohl(*(tmp_size));
+	memcpy(&tmp_time, tmp_char, sizeof(SaTimeT));
+	ntoh_64(&tmp_time, &(event->retention_time));
+	tmp_char += sizeof(SaTimeT);
+	memcpy(&tmp_size, tmp_char, sizeof(SaSizeT));
+	publisher_len = ntohl(tmp_size);
+	tmp_char += sizeof(SaSizeT);
 	event->publisherName.length = publisher_len;
-	tmp_size++;
-	tmp_char = (const SaUint8T *)tmp_size;
 	memcpy(event->publisherName.value, tmp_char, publisher_len);
 	tmp_char += publisher_len;
-	tmp_time = (const SaTimeT *)tmp_char;
-	ntoh_64(tmp_time, &(event->publish_time));
-	tmp_time++;
-	tmp_evt_id = (const SaEvtEventIdT *)tmp_time;
-	ntoh_64(tmp_evt_id, &(event->event_id));
-	tmp_evt_id++;
-	tmp_size = (const SaSizeT *)tmp_evt_id;
-	event->data_size = ntohl(*(tmp_size));
-	tmp_size++;
-	tmp_char = (const SaUint8T *)tmp_size;
+	memcpy(&tmp_time, tmp_char, sizeof(SaTimeT));
+	ntoh_64(&tmp_time, &(event->publish_time));
+	tmp_char += sizeof(SaTimeT);
+	memcpy(&tmp_evt_id, tmp_char, sizeof(SaEvtEventIdT));
+	ntoh_64(&tmp_evt_id, &(event->event_id));
+	tmp_char += sizeof(SaEvtEventIdT);
+	memcpy(&tmp_size, tmp_char, sizeof(SaSizeT));
+	event->data_size = ntohl(tmp_size);
+	tmp_char += sizeof(SaSizeT);
 	memcpy(event->event_data, tmp_char, event->data_size);
 	return;
 }
@@ -2107,26 +2041,25 @@ static void read_new_sub_reply(const void *bin_msg, struct client_msg *ret)
 static void read_clear_req(const void *bin_msg, struct client_msg *ret)
 {
 	const SaUint8T *tmp_char;
-	const SaSizeT *tmp_size;
+	SaSizeT tmp_size;
 	SaSizeT str_len;
 	struct evt_retention_clear *clear_req;
-	const SaEvtEventIdT *tmp_event_id;
+	SaEvtEventIdT tmp_event_id;
 
 	tmp_char = (const SaUint8T *)bin_msg;
 	tmp_char++;
-	tmp_size = (const SaSizeT *)tmp_char;
-	str_len = ntohl(*(tmp_size));
-	tmp_size++;
+	memcpy(&tmp_size, tmp_char, sizeof(SaSizeT));
+	str_len = ntohl(tmp_size);
+	tmp_char += sizeof(SaSizeT);
 	ret->channel_name = g_malloc(str_len+1);
-	tmp_char = (const SaUint8T *)tmp_size;
 	memcpy(ret->channel_name, tmp_char, str_len);
 	ret->channel_name[str_len] = '\0';
 	tmp_char += str_len;
 	clear_req = (struct evt_retention_clear *)g_malloc(
 			sizeof(struct evt_retention_clear));
 	ret->private.retention_clear = clear_req;
-	tmp_event_id = (const SaEvtEventIdT *)tmp_char;
-	ntoh_64(tmp_event_id, &(clear_req->event_id));
+	memcpy(&tmp_event_id, tmp_char, sizeof(SaEvtEventIdT));
+	ntoh_64(&tmp_event_id, &(clear_req->event_id));
 	return;
 }
 
@@ -2134,30 +2067,29 @@ static void read_clear_reply_remote(const void *bin_msg,
 								struct client_msg *ret)
 {
 	const SaUint8T *tmp_char;
-	const SaSizeT *tmp_size;
+	SaSizeT tmp_size;
 	SaSizeT str_len;
 	struct evt_retention_clear_reply *clear_reply_remote;
-	const SaEvtEventIdT *tmp_event_id;
-	const SaErrorT *tmp_err;
+	SaEvtEventIdT tmp_event_id;
+	SaErrorT tmp_err;
 
 	tmp_char = (const SaUint8T *)bin_msg;
 	tmp_char++;
-	tmp_size = (const SaSizeT *)tmp_char;
-	str_len = ntohl(*(tmp_size));
-	tmp_size++;
+	memcpy(&tmp_size, tmp_char, sizeof(SaSizeT));
+	str_len = ntohl(tmp_size);
+	tmp_char += sizeof(SaSizeT);
 	ret->channel_name = g_malloc(str_len+1);
-	tmp_char = (const SaUint8T *)tmp_size;
 	memcpy(ret->channel_name, tmp_char, str_len);
 	ret->channel_name[str_len] = '\0';
 	tmp_char += str_len;
 	clear_reply_remote = (struct evt_retention_clear_reply *)g_malloc(
 						sizeof(struct evt_retention_clear_reply));
 	ret->private.retention_clear_reply = clear_reply_remote;
-	tmp_event_id = (const SaEvtEventIdT *)tmp_char;
-	ntoh_64(tmp_event_id, &(clear_reply_remote->event_id));
-	tmp_event_id++;
-	tmp_err = (const SaErrorT *)tmp_event_id;
-	clear_reply_remote->ret_code = ntohl(*(tmp_err));
+	memcpy(&tmp_event_id, tmp_char, sizeof(SaEvtEventIdT));
+	ntoh_64(&tmp_event_id, &(clear_reply_remote->event_id));
+	tmp_char += sizeof(SaEvtEventIdT);
+	memcpy(&tmp_err, tmp_char, sizeof(SaErrorT));
+	clear_reply_remote->ret_code = ntohl(tmp_err);
 	return;
 }
 
@@ -2208,8 +2140,8 @@ static struct client_msg *evt_read_hb_msg(struct ha_msg *m)
 static void evt_send_open_reply(const char *orig,
 					char *channel_name, SaUint64T key)
 {
-	SaSizeT str_len, msg_len, *tmp_size;
-	SaUint64T *tmp_key;
+	SaSizeT str_len, msg_len, tmp_size;
+	SaUint64T tmp_key;
 	SaUint8T *tmp_char;
 	void *msg;
 	struct ha_msg *m;
@@ -2224,14 +2156,14 @@ static void evt_send_open_reply(const char *orig,
 	tmp_char = (SaUint8T *)msg;
 	*(tmp_char) = EVT_CH_OPEN_REPLY;
 	tmp_char++;
-	tmp_size = (SaSizeT *)tmp_char;
-	*(tmp_size) = htonl(str_len);
-	tmp_size++;
-	tmp_char = (SaUint8T *)tmp_size;
+	tmp_size = htonl(str_len);
+	memcpy(tmp_char, &tmp_size, sizeof(SaSizeT));
+	tmp_char += sizeof(SaSizeT);
 	memcpy(tmp_char, channel_name, str_len);
 	tmp_char += str_len;
-	tmp_key = (SaUint64T *)tmp_char;
-	hton_64(&key, tmp_key);
+	hton_64(&key, &tmp_key);
+	memcpy(tmp_char, &tmp_key, sizeof(SaUint64T));
+
 	if((ha_msg_addbin(m, BIN_CONTENT, msg, msg_len) == HA_FAIL) ||
 			(ha_msg_add(m, F_TYPE, EVT_SERVICE) == HA_FAIL)){
 		cl_log(LOG_ERR, "Cannot create open_ch reply to remote message");
@@ -2249,14 +2181,14 @@ static void deliver_event_to_remote_subscriber(
 		struct evt_new_subscription *new_sub, struct evt_event *event)
 {
 	struct ha_msg *m;
-	SaSizeT str_len, publisher_len, msg_len, *tmp_size, number, i;
+	SaSizeT str_len, publisher_len, msg_len, tmp_size, number, i;
 	void *msg;
 	SaUint8T *tmp_char;
-	SaUint64T *tmp_64;
-	SaUint32T *tmp_32;
+	SaUint64T tmp_64;
+	SaUint32T tmp_32;
 	SaEvtEventPatternT *pattern;
-	SaTimeT *tmp_time;
-	SaEvtEventIdT *tmp_evt_id;
+	SaTimeT tmp_time;
+	SaEvtEventIdT tmp_evt_id;
 
 	if ((m=ha_msg_new(0)) == NULL) {
 		cl_log(LOG_ERR, "Cannot deliver event to remote");
@@ -2272,30 +2204,34 @@ static void deliver_event_to_remote_subscriber(
 	tmp_char = (SaUint8T *)msg;
 	*(tmp_char) = EVT_NEW_SUBSCRIBE_REPLY;
 	tmp_char++;
-	tmp_size = (SaSizeT *)tmp_char;
-	*(tmp_size) = htonl(str_len);
-	tmp_size++;
-	tmp_char = (SaUint8T *)tmp_size;
+	tmp_size = htonl(str_len);
+	memcpy(tmp_char, &tmp_size, sizeof(SaSizeT));
+	tmp_char += sizeof(SaSizeT);
 	memcpy(tmp_char, new_sub->channel_name, str_len);
 	tmp_char += str_len;
-	tmp_64 = (SaUint64T *)tmp_char;
-	hton_64(&(new_sub->ch_id), tmp_64);
-	tmp_64++;
-	tmp_32 = (SaUint32T *)tmp_64;
-	*(tmp_32) = htonl(new_sub->subscription_id);
-	tmp_32++;
+	hton_64(&(new_sub->ch_id), &tmp_64);
+	memcpy(tmp_char, &tmp_64, sizeof(SaUint64T));
+	tmp_char += sizeof(SaUint64T);
+	tmp_32 = htonl(new_sub->subscription_id);
+	memcpy(tmp_char, &tmp_32, sizeof(SaUint32T));
+	tmp_char += sizeof(SaUint32T);
+
 	number = event->pattern_array->patternsNumber;
 	pattern = event->pattern_array->patterns;
-	tmp_size = (SaSizeT *)tmp_32;
-	*(tmp_size) = htonl(event->pattern_size);
-	tmp_size++;
-	*(tmp_size) = htonl(number);
-	tmp_size++;
+	tmp_size = htonl(event->pattern_size);
+	memcpy(tmp_char, &tmp_size, sizeof(SaSizeT));
+	tmp_char += sizeof(SaSizeT);
+	tmp_size = htonl(number);
+	memcpy(tmp_char, &tmp_size, sizeof(SaSizeT));
+	tmp_char += sizeof(SaSizeT);
+	
 	for(i=0; i<number; i++){
-		*(tmp_size) = htonl((pattern+i)->patternSize);
-		tmp_size++;
+
+		tmp_size = htonl((pattern+i)->patternSize);
+		memcpy(tmp_char, &tmp_size, sizeof(SaSizeT));
+		tmp_char += sizeof(SaSizeT);
 	}
-	tmp_char = (SaUint8T *)tmp_size;
+
 	for(i=0; i<number; i++){
 		memcpy(tmp_char, (pattern+i)->pattern, 
 				(pattern+i)->patternSize);
@@ -2303,25 +2239,24 @@ static void deliver_event_to_remote_subscriber(
 	}
 	*(tmp_char) = event->priority;
 	tmp_char++;
-	tmp_time = (SaTimeT *)tmp_char;
-	hton_64(&(event->retention_time), tmp_time);
-	tmp_time++;
-	tmp_size = (SaSizeT *)tmp_time;
-	*(tmp_size) = htonl(publisher_len);
-	tmp_size++;
-	tmp_char = (SaUint8T *)tmp_size;
+	hton_64(&(event->retention_time), &tmp_time);
+	memcpy(tmp_char, &tmp_time, sizeof(SaTimeT));
+	tmp_char += sizeof(SaTimeT);
+	tmp_size = htonl(publisher_len);
+	memcpy(tmp_char, &tmp_size, sizeof(SaSizeT));
+	tmp_char += sizeof(SaSizeT);
 	memcpy(tmp_char, event->publisherName.value, publisher_len);
 	tmp_char += publisher_len;
-	tmp_time = (SaTimeT *)tmp_char;
-	hton_64(&(event->publish_time), tmp_time);
-	tmp_time++;
-	tmp_evt_id = (SaEvtEventIdT *)tmp_time;
-	hton_64(&(event->event_id), tmp_time);
-	tmp_evt_id++;
-	tmp_size = (SaSizeT *)tmp_evt_id;
-	*(tmp_size) = htonl(event->data_size);
-	tmp_size++;
-	tmp_char = (SaUint8T *)tmp_size;
+	hton_64(&(event->publish_time), &tmp_time);
+	memcpy(tmp_char, &tmp_time, sizeof(SaTimeT));
+	tmp_char += sizeof(SaTimeT);
+	hton_64(&(event->event_id), &tmp_evt_id);
+	memcpy(tmp_char, &tmp_evt_id, sizeof(SaEvtEventIdT));
+	tmp_char += sizeof(SaEvtEventIdT);
+	tmp_size = htonl(event->data_size);
+	memcpy(tmp_char, &tmp_size, sizeof(SaSizeT));
+	tmp_char += sizeof(SaSizeT);
+
 	memcpy(tmp_char, event->event_data, event->data_size);
 	if((ha_msg_addbin(m, BIN_CONTENT, msg, msg_len) == HA_FAIL) ||
 		(ha_msg_add(m, F_TYPE, EVT_SERVICE) == HA_FAIL)){
@@ -2373,11 +2308,11 @@ static void send_retention_clear_reply(const char *orig,
 				SaUint8T *channel_name)
 {
 	struct ha_msg *m;
-	SaSizeT str_len, msg_len, *tmp_size;
+	SaSizeT str_len, msg_len, tmp_size;
 	void *msg;
 	SaUint8T *tmp_char;
-	SaUint64T *tmp_64;
-	SaErrorT *tmp_err;
+	SaUint64T tmp_64;
+	SaErrorT tmp_err;
 
 	if ((m=ha_msg_new(0)) == NULL) {
 		cl_log(LOG_ERR, "Cannot send retention clear reply to remote");
@@ -2389,17 +2324,16 @@ static void send_retention_clear_reply(const char *orig,
 	tmp_char = (SaUint8T *)msg;
 	*(tmp_char) = EVT_RETENTION_CLEAR_REPLY;
 	tmp_char++;
-	tmp_size = (SaSizeT *)tmp_char;
-	*(tmp_size) = htonl(str_len);
-	tmp_size++;
-	tmp_char = (SaUint8T *)tmp_size;
+	tmp_size = htonl(str_len);
+	memcpy(tmp_char, &tmp_size, sizeof(SaSizeT));
+	tmp_char += sizeof(SaSizeT);
 	memcpy(tmp_char, channel_name, str_len);
 	tmp_char += str_len;
-	tmp_64 = (SaUint64T *)tmp_char;
-	hton_64(&event_id, tmp_64);
-	tmp_64++;
-	tmp_err = (SaErrorT *)tmp_64;
-	*(tmp_err) = htonl(ret_code);
+	hton_64(&event_id, &tmp_64);
+	memcpy(tmp_char, &tmp_64, sizeof(SaUint64T));
+	tmp_char += sizeof(SaUint64T);
+	tmp_err = htonl(ret_code);
+	memcpy(tmp_char, &tmp_err, sizeof(SaErrorT));
 
 	if((ha_msg_addbin(m, BIN_CONTENT, msg, msg_len) == HA_FAIL) ||
 		(ha_msg_add(m, F_TYPE, EVT_SERVICE) == HA_FAIL)){
@@ -2838,3 +2772,4 @@ int main(int argc, char **argv)
 	//(void)_ha_msg_h_Id;
 		
 }
+
