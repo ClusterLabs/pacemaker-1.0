@@ -1,4 +1,4 @@
-/* $Id: hb_api.c,v 1.127 2005/01/20 19:17:49 gshi Exp $ */
+/* $Id: hb_api.c,v 1.128 2005/01/31 22:57:27 gshi Exp $ */
 /*
  * hb_api: Server-side heartbeat API code
  *
@@ -1340,7 +1340,8 @@ api_process_registration_msg(client_proc_t* client, struct ha_msg * msg)
 	 */
 	if (!api_add_client(client, msg)) {
 		cl_log(LOG_ERR
-		,	"api_process_registration_msg: cannot add client(1)");
+		       ,	"api_process_registration_msg: cannot add client(%s)"
+		       ,	client->client_id);
 	}
 
 	/* Make sure we can find them in the table... */
