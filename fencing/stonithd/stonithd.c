@@ -1,3 +1,5 @@
+/* $Id: stonithd.c,v 1.4 2004/12/06 21:24:07 msoffen Exp $ */
+
 /* File: stonithd.c
  * Description: STONITH deamon for node fencing
  *
@@ -526,7 +528,7 @@ stonithd_quit(int signo)
 	if (mainloop != NULL && g_main_is_running(mainloop)) {
 		g_main_quit(mainloop);
 	} else {
-		//apphb_unregister();
+		/*apphb_unregister();*/
 		exit(LSB_EXIT_OK);
 	}
 }
@@ -1258,7 +1260,7 @@ send_back_reply:
 		return ST_FAIL;
 	}
 	
-	if (msg2ipcchan(reply, ch) != HA_OK) { // How to deal the error
+	if (msg2ipcchan(reply, ch) != HA_OK) { /* How to deal the error*/
 		ZAPCHAN(ch);
 		ZAPMSG(reply);
 		stonithd_log(LOG_ERR, "can't send signon reply message to IPC");
@@ -1329,7 +1331,7 @@ send_back_reply:
 		return ST_FAIL;
 	}
 	
-	if (msg2ipcchan(reply, ch) != HA_OK) { // How to deal the error
+	if (msg2ipcchan(reply, ch) != HA_OK) { /* How to deal the error*/
 		ZAPCHAN(ch); /* ? */
 		ZAPMSG(reply);
 		stonithd_log(LOG_ERR, "can't send signoff reply message to IPC");
@@ -2053,7 +2055,7 @@ on_stonithd_virtual_stonithRA_ops(const struct ha_msg * request, gpointer data)
 	}
 
 	/* execute stonith plugin : begin */
-	// When in parent process then be back here 
+	/* When in parent process then be back here */
 	child_pid = g_new(int,1);
 	if ((*child_pid = stonithRA_operate(ra_op, NULL)) <= 0) {
 		api_reply = ST_APIFAIL;
@@ -2089,7 +2091,7 @@ send_back_reply:
 	}
 	g_free(child_pid);
 
-	if (msg2ipcchan(reply, ch) != HA_OK) { // How to deal the error
+	if (msg2ipcchan(reply, ch) != HA_OK) { /* How to deal the error*/
 		ZAPCHAN(ch); /* ? */
 		ZAPMSG(reply);
 		stonithd_log(LOG_ERR, "on_stonithd_virtual_stonithRA_ops: "
@@ -2128,7 +2130,7 @@ send_stonithRAop_final_result( stonithRA_ops_t * ra_op, gpointer data)
 	reply = ha_msg_new(0);
 
 	stonithd_log(LOG_DEBUG, "ra_op->op_type=%s, ra_op->ra_name=%s",
-		     ra_op->op_type, ra_op->ra_name); // can be deleted
+		     ra_op->op_type, ra_op->ra_name); /* can be deleted*/
 	if ( (ha_msg_add(reply, F_STONITHD_TYPE, ST_APIRPL) != HA_OK ) 
   	    ||(ha_msg_add(reply, F_STONITHD_APIRPL, ST_RAOPRET) != HA_OK ) 
 	    ||(ha_msg_add(reply, F_STONITHD_RAOPTYPE, ra_op->op_type) != HA_OK)
@@ -2222,7 +2224,7 @@ on_stonithd_list_stonith_types(const struct ha_msg * request, gpointer data)
 		return ST_FAIL;
 	}
 	
-	if (msg2ipcchan(reply, ch) != HA_OK) { // How to deal the error
+	if (msg2ipcchan(reply, ch) != HA_OK) { /* How to deal the error*/
 		ZAPCHAN(ch); /* ? */
 		ZAPMSG(reply);
 		stonithd_log(LOG_ERR, "on_stonithd_list_stonith_types: cannot "
@@ -2336,7 +2338,7 @@ stonithRA_start( stonithRA_ops_t * op, gpointer data)
 
 			stonith_delete(stonith_obj); 
 			stonith_obj = NULL;
-			return ST_FAIL; //exit(rc);
+			return ST_FAIL; /*exit(rc);*/
 		}
 	}
 	
@@ -2816,3 +2818,10 @@ free_common_op_t(gpointer data)
 
 	/* Donnot need to free 'data' field */
 }
+
+/* 
+ * $Log: stonithd.c,v $
+ * Revision 1.4  2004/12/06 21:24:07  msoffen
+ * Fixed C++ style comments
+ *
+ */
