@@ -1,4 +1,4 @@
-/* $Id: heartbeat.h,v 1.53 2004/10/08 19:53:13 gshi Exp $ */
+/* $Id: heartbeat.h,v 1.54 2004/10/13 20:52:41 davidlee Exp $ */
 /*
  * heartbeat.h: core definitions for the Linux-HA heartbeat program
  *
@@ -264,6 +264,10 @@ struct node_info {
 
 
 #define MAXAUTH	16
+
+#ifndef PATH_MAX
+# define PATH_MAX MAXPATHLEN
+#endif
 
 struct sys_config {
 	TIME_T		cfg_time;		/* Timestamp of config file */
