@@ -1,3 +1,10 @@
+heartbeat (1.2.2-5) unstable; urgency=low
+
+  * Fixed alignment error in IPv6addr.c that manifests on ia64
+    (closes: Bug#249847)
+
+ -- Simon Horman <horms@debian.org>  Thu, 20 May 2004 11:20:47 +0900
+
 heartbeat (1.2.2-4) unstable; urgency=low
 
   * Put back inary-arch and binary-indep targets
