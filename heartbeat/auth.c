@@ -152,9 +152,13 @@ parse_authfile(void)
 	for (j=0; j < MAXAUTH; ++j) {
 		if (ParsedYet) {
 			if (config->auth_config[j].auth) {
+#if 0
 				/* Unload this auth module */
 				PILIncrIFRefCount(PluginLoadingSystem
 				,	HB_AUTH_TYPE_S, method, -1);
+#else
+				/* Unloading code is broken :-( */ ;
+#endif
 			}
 			if (config->auth_config[j].key) {
 				ha_free(config->auth_config[j].key);
@@ -293,6 +297,9 @@ parse_authfile(void)
 }
 /*
  * $Log: auth.c,v $
+ * Revision 1.14  2004/02/10 05:32:43  alan
+ * Suppress unloading authentication modules for now.
+ *
  * Revision 1.13  2004/01/21 11:34:14  horms
  * - Replaced numerous malloc + strcpy/strncpy invocations with strdup
  *   * This usually makes the code a bit cleaner
