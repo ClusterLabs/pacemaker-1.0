@@ -1,4 +1,4 @@
-/* $Id: event.h,v 1.1 2004/03/19 07:21:55 forrest Exp $ */
+/* $Id: event.h,v 1.2 2004/03/25 08:11:34 alan Exp $ */
 /* 
  * event.h: header file for event service
  *
@@ -89,7 +89,7 @@ struct sa_handle {
 };
 
 struct sa_handle_database {
-		int handle_count;
+		SaUint32T handle_count;
 		struct sa_handle *handles;
 };
 

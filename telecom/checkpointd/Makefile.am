@@ -25,8 +25,6 @@ INCLUDES                = -I$(top_builddir)/include \
 			-I$(top_srcdir)/libltdl \
 			-I$(top_builddir)/linux-ha \
 			-I$(top_srcdir)/linux-ha \
-			-I$(top_builddir)/heartbeat \
-			-I$(top_srcdir)/heartbeat \
 			-I$(top_builddir)/include/clplumbing
 			-I$(top_srcdir)/include/clplumbing
 
@@ -52,8 +50,8 @@ checkpointd_SOURCES	= checkpointd.c message.c request.c replica.c \
 			utils.c client.c response.c operation.c
 checkpointd_CFLAGS	= $(AM_CFLAGS)
 checkpointd_LDADD	= $(top_builddir)/replace/libreplace.la \
+			$(top_builddir)/lib/hbclient/libhbclient.la \
 			$(top_builddir)/lib/clplumbing/libplumb.la \
-			$(top_builddir)/heartbeat/libhbclient.la \
 			$(GLIBLIB)
 checkpointd_LDFLAGS	= 
 
@@ -62,8 +60,8 @@ ckpttest_SOURCES	= ckpttest.c
 ckpttest_LDADD		= $(GLIBLIB) \
 	 		$(top_builddir)/lib/checkpointd/libckpt.la \
 			$(top_builddir)/replace/libreplace.la \
+			$(top_builddir)/lib/hbclient/libhbclient.la \
 			$(top_builddir)/lib/clplumbing/libplumb.la \
-			$(top_builddir)/heartbeat/libhbclient.la \
 			$(GLIBLIB)
 ckpttest_LDFLAGS	= 
 

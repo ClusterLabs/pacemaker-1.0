@@ -1,4 +1,4 @@
-/* $Id: eventd.c,v 1.1 2004/03/19 07:21:55 forrest Exp $ */
+/* $Id: eventd.c,v 1.2 2004/03/25 08:11:34 alan Exp $ */
 /* 
  * eventd.c: source file for event daemon
  *
@@ -170,7 +170,7 @@ void ntoh_64(const SaUint64T *src_64, SaUint64T *dst_64);
 static void add_node_l(const char *node,
 					const char *status, const char *mynode)
 {
-	uint nodecount, mynode_idx, i, j;
+	int nodecount, mynode_idx, i, j;
 	char value;
 
 	nodecount = node_list.node_count;
