@@ -460,7 +460,9 @@ deal_cmd_str(char * cmd_str, char * execv_argv[])
 		}
 
 		pre = next;
-		if (++index >= MAX_NUM_OF_PARAMETER - 1) break; 
+		if (++index >= MAX_NUM_OF_PARAMETER - 1) {
+			break; 
+		}
 	} while (1==1);
 	
 	if (index >= MAX_NUM_OF_PARAMETER - 1) {
