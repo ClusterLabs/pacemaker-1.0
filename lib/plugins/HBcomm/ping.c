@@ -1,4 +1,4 @@
-/* $Id: ping.c,v 1.27 2004/02/17 22:11:59 lars Exp $ */
+/* $Id: ping.c,v 1.28 2004/02/23 20:38:38 msoffen Exp $ */
 /*
  * ping.c: ICMP-echo-based heartbeat code for heartbeat.
  *
@@ -53,10 +53,6 @@
 #	include <netinet/ip_var.h>
 #endif /* HAVE_NETINET_IP_VAR_H */
 
-#ifdef HAVE_NETINET_IP_COMPAT_H
-#	include <netinet/ip_compat.h>
-#endif /* HAVE_NETINET_IP_COMPAT_H */
-
 #ifdef HAVE_NETINET_IP_FW_H
 #	include <netinet/ip_fw.h>
 #endif /* HAVE_NETINET_IP_FW_H */
@@ -66,6 +62,11 @@
 #endif /* HAVE_NETINET_IP_H */
 
 #include <netinet/ip_icmp.h>
+
+#ifdef HAVE_NETINET_IP_COMPAT_H
+#	include <netinet/ip_compat.h>
+#endif /* HAVE_NETINET_IP_COMPAT_H */
+
 #include <net/if.h>
 #include <arpa/inet.h>
 
