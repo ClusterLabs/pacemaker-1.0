@@ -3,4 +3,6 @@ Makefile
 .*.swp
 *.pyc
 *.py
-nohup.out
+*.out
+local6
+local7
