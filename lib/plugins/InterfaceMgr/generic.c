@@ -1,4 +1,4 @@
-/* $Id: generic.c,v 1.20 2004/09/03 18:13:35 gshi Exp $ */
+/* $Id: generic.c,v 1.21 2004/09/07 16:19:33 alan Exp $ */
 /*
  * 
  * Generic interface (implementation) manager
@@ -134,12 +134,12 @@ PIL_PLUGIN_INIT(PILPlugin*us, PILPluginImports* imports, void *user_ptr)
 	GenPIImports = imports;
 
 	if (GenDebugFlag) {
-		GenPIImports->log(PIL_DEBUG
+		PILCallLog(GenPIImports->log, PIL_DEBUG
 		,	"IF manager %s: initializing.", PIL_PLUGIN_S);
 	}
 
 	if (user_ptr == NULL) {
-		imports->log(PIL_CRIT
+		PILCallLog(GenPIImports->log, PIL_CRIT
 		,	"%s Interface Manager requires non-NULL "
 		" PILGenericIfMgmtRqst user pointer at initialization."
 		,	PIL_PLUGIN_S);
@@ -149,7 +149,7 @@ PIL_PLUGIN_INIT(PILPlugin*us, PILPluginImports* imports, void *user_ptr)
 	GenPlugin = us;
 
 	if (GenDebugFlag) {
-		GenPIImports->log(PIL_DEBUG
+		PILCallLog(GenPIImports->log, PIL_DEBUG
 		,	"IF manager %s: registering as a plugin."
 		, PIL_PLUGIN_S);
 	}
@@ -161,7 +161,7 @@ PIL_PLUGIN_INIT(PILPlugin*us, PILPluginImports* imports, void *user_ptr)
 	/* Register ourselves as a plugin */
 
 	if ((ret = imports->register_plugin(us, &OurPIExports)) != PIL_OK) {
-		imports->log(PIL_CRIT
+		PILCallLog(imports->log, PIL_CRIT
 		,	"IF manager %s unable to register as plugin (%s)"
 		,	PIL_PLUGIN_S, PIL_strerror(ret));
 
@@ -201,14 +201,14 @@ AddAnInterfaceType(PILPlugin*us, GHashTable* MasterTable, PILGenericIfMgmtRqst* 
 	g_hash_table_insert(MasterTable, g_strdup(req->iftype), req);
 
 	if (req->ifmap == NULL) {
-		GenPIImports->log(PIL_CRIT
+		PILCallLog(GenPIImports->log, PIL_CRIT
 		,	"IF manager %s: iftype %s has NULL"
 		" ifmap pointer address."
 		,	PIL_PLUGIN_S, req->iftype);
 		return PIL_INVAL;
 	}
 	if ((*req->ifmap) != NULL) {
-		GenPIImports->log(PIL_CRIT
+		PILCallLog(GenPIImports->log, PIL_CRIT
 		,	"IF manager %s: iftype %s GHashTable pointer"
 		" was not initialized to NULL"
 		,	PIL_PLUGIN_S, req->iftype);
@@ -216,11 +216,11 @@ AddAnInterfaceType(PILPlugin*us, GHashTable* MasterTable, PILGenericIfMgmtRqst* 
 	}
 
 	if (GenDebugFlag) {
-		GenPIImports->log(PIL_DEBUG
+		PILCallLog(GenPIImports->log, PIL_DEBUG
 		,	"IF manager %s: registering ourselves"
 		" to manage interface type %s"
 		,	PIL_PLUGIN_S, req->iftype);
-		GenPIImports->log(PIL_DEBUG
+		PILCallLog(GenPIImports->log, PIL_DEBUG
 		,	"%s IF manager: ifmap: 0x%lx callback: 0x%lx"
 		" imports: 0x%lx"
 		,	PIL_PLUGIN_S
@@ -245,7 +245,7 @@ AddAnInterfaceType(PILPlugin*us, GHashTable* MasterTable, PILGenericIfMgmtRqst* 
 	GenIfImports->ModRefCount(GenIf, +100);
 
 	if (rc != PIL_OK) {
-		GenPIImports->log(PIL_CRIT
+		PILCallLog(GenPIImports->log, PIL_CRIT
 		,	"Generic interface manager %s: unable to register"
 		" to manage interface type %s: %s"
 		,	PIL_PLUGIN_S, req->iftype
@@ -306,7 +306,7 @@ RegisterGenIF(PILInterface* intf,  void** imports)
 
 	/* Reference count should now be one */
 	if (GenDebugFlag) {
-		GenPIImports->log(PIL_DEBUG
+		PILCallLog(GenPIImports->log, PIL_DEBUG
 		,	"%s IF manager: interface %s/%s registering."
 		,	PIL_PLUGIN_S, intf->interfacetype->typename
 		,	intf->interfacename);
@@ -322,12 +322,12 @@ RegisterGenIF(PILInterface* intf,  void** imports)
 
 		g_hash_table_insert(ifmap, intf->interfacename,intf->exports);
 		if (GenDebugFlag) {
-			GenPIImports->log(PIL_DEBUG
+			PILCallLog(GenPIImports->log, PIL_DEBUG
 			, "%s IF manager: Inserted interface [%s] in hash"
-			" table @ 0x%08x"
+			" table @ 0x%08lx"
 			, PIL_PLUGIN_S, intf->interfacename
-			, ifmap);
-			GenPIImports->log(PIL_DEBUG
+			, (unsigned long)ifmap);
+			PILCallLog(GenPIImports->log, PIL_DEBUG
 			, "%s IF manager: Exports are here: 0x%08x"
 			, PIL_PLUGIN_S
 			, GPOINTER_TO_UINT(intf->exports));
@@ -337,10 +337,10 @@ RegisterGenIF(PILInterface* intf,  void** imports)
 			PILInterfaceType*	t = intf->interfacetype;
 
 			if (GenDebugFlag) {
-				GenPIImports->log(PIL_DEBUG
+				PILCallLog(GenPIImports->log, PIL_DEBUG
 				,	"%s IF manager: callback 0x%lx"
 				,	PIL_PLUGIN_S
-				,	ifinfo->callback);
+				,	(unsigned long)ifinfo->callback);
 			}
 			ifinfo->callback(PIL_REGISTER
 			,	t->universe->piuniv, intf->interfacename
@@ -352,7 +352,7 @@ RegisterGenIF(PILInterface* intf,  void** imports)
 		return PIL_OK;
 
 	}else{
-		GenPIImports->log(PIL_WARN
+		PILCallLog(GenPIImports->log, PIL_WARN
 		,	"RegisterGenIF: interface type %s not found"
 		,	intf->interfacename);
 	}
@@ -378,7 +378,7 @@ UnregisterGenIF(PILInterface*intf)
 	 * then remove this entry from it.
 	 */
 	if (GenDebugFlag) {
-		GenPIImports->log(PIL_DEBUG
+		PILCallLog(GenPIImports->log, PIL_DEBUG
 		,	"%s IF manager: unregistering interface %s/%s."
 		,	PIL_PLUGIN_S, intf->interfacetype->typename
 		,	intf->interfacename);
@@ -391,10 +391,10 @@ UnregisterGenIF(PILInterface*intf)
 		if (ifinfo->callback != NULL) {
 			PILInterfaceType*	t = intf->interfacetype;
 			if (GenDebugFlag) {
-				GenPIImports->log(PIL_DEBUG
+				PILCallLog(GenPIImports->log, PIL_DEBUG
 				,	"%s IF manager: callback 0x%lx"
 				,	PIL_PLUGIN_S
-				,	ifinfo->callback);
+				,	(unsigned long)ifinfo->callback);
 			}
 			ifinfo->callback(PIL_UNREGISTER
 			,	t->universe->piuniv, intf->interfacename
@@ -405,7 +405,7 @@ UnregisterGenIF(PILInterface*intf)
 		g_hash_table_remove(ifmap, intf->interfacename);
 
 	}else{
-		GenPIImports->log(PIL_WARN
+		PILCallLog(GenPIImports->log, PIL_WARN
 		,	"UnregisterGenIF: interface type %s not found"
 		,	intf->interfacename);
 		return PIL_INVAL;
@@ -424,10 +424,10 @@ CloseGenInterfaceManager(PILInterface*intf, void* info)
 	GHashTable*	MasterTable = intf->ud_interface;
 
 	if (GenDebugFlag) {
-		GenPIImports->log(PIL_INFO
+		PILCallLog(GenPIImports->log, PIL_INFO
 		,	"In CloseGenInterFaceManager on %s/%s (MasterTable: 0x%08lx)"
 		,	intf->interfacetype->typename, intf->interfacename
-		,	MasterTable);
+		,	(unsigned long)MasterTable);
 	}
 
 
