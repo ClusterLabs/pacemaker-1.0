@@ -269,11 +269,16 @@ AC_DEFUN([LIB_SNMP],
 	    libelf.so -> libelf.so.x exists. Or install the libelf-devel and 
 	    libbz2-devl rpms.
 	    
-	For Suse users: 
+	For SUSE LINUX users: 
 
 	    If you installed the NET-SNMP RPM from a Suse release, please
 	    double check and make sure that you have the 'tcpd-devel' 
 	    rpm installed on your system as well. 
+	    Many problems come from the lack of one of these packages
+		openssl, openssl-devel
+		rpm, rpm-devel
+		and tcpd-devel
+
 	])
     else
 	AC_MSG_WARN([SNMP: snmp library dependency resolved. List of libraries needed to compile the subagent:])
