@@ -124,7 +124,7 @@ SetUpConfigFiles() {
   if
     HBStatus
   then
-    echo "Cannot run tests with heartbeat already running."
+    echo "Should not run tests with heartbeat already running."
   fi
   SaveConfigFiles
   for j in $CONFIGFILES
@@ -246,7 +246,6 @@ TestHeartbeat() {
     HBStatus
   then
     echo "That's weird.  Heartbeat seems to be running..."
-    errcount=`expr $errcount + 1`
     HBStatus
     HBStop
   fi
@@ -269,8 +268,17 @@ TestHeartbeat() {
      exit 1
     fi
   fi
-  echo Waiting for heartbeat to start up ...
-  sleep 12
+  for j in 1 2 3 4 5 6 7 8 9 10 11 13 14 15 16 17 18 19 20
+  do
+    if
+      $CLSTATUS hbstatus >/dev/null 2>&1
+    then
+       break
+    else
+      sleep 1
+    fi
+  done
+
   if
     $CLSTATUS hbstatus >/dev/null 2>&1
   then
@@ -327,6 +335,28 @@ TestHeartbeat() {
     errcount=`expr $errcount + 1`
   fi
 
+  #	Wait until heartbeat thinks things are stable
+  #	that is, not in "transistion"
+  for j in 1 2 3 4 5 6 7 8 9 10 11 13 14 15 16 17 18 19 20
+  do
+    if
+      STAT=`$CLSTATUS rscstatus 2>/dev/null`
+    then
+      case "$STAT" in
+        transition)
+		sleep 1
+		;;
+        all)	break
+		;;
+        *)	echo "$CLSTATUS shows resource status as $STAT" | tee -a $LOGFILE
+		break
+		;;
+      esac
+    else
+      echo "$CLSTATUS rscstatus failed [$?]" | tee -a $LOGFILE
+      break
+    fi
+  done
   if
     LookForString "[Aa][Rr][Pp]" >/dev/null
   then
@@ -335,9 +365,6 @@ TestHeartbeat() {
     echo "Does not look like we ARPed the address" | tee -a $LOGFILE
     errcount=`expr $errcount + 1`
   fi
-
-  sleep 10
-
   if
     $RSCDIR/IPaddr $TESTIP status >/dev/null 2>&1 &&
     $RSCDIR/IPaddr $TESTIP monitor >/dev/null 2>&1
@@ -345,18 +372,6 @@ TestHeartbeat() {
     : COOL!
   else
     echo "Looks like monitor operation failed" | tee -a $LOGFILE
-    errcount=`expr $errcount + 1`
-  fi
-  if
-   STAT=`$CLSTATUS rscstatus 2>/dev/null`
-  then
-    case $STAT in
-      all)	;;
-      *)	echo "$CLSTATUS shows resource status as $STAT" | tee -a $LOGFILE
-    		errcount=`expr $errcount + 1`;;
-    esac
-  else
-    echo "$CLSTATUS rscstatus failed [$?]" | tee -a $LOGFILE
     errcount=`expr $errcount + 1`
   fi
 
