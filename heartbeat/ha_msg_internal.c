@@ -1,4 +1,4 @@
-/* $Id: ha_msg_internal.c,v 1.48 2005/01/18 20:33:03 andrew Exp $ */
+/* $Id: ha_msg_internal.c,v 1.49 2005/02/08 08:10:27 gshi Exp $ */
 /*
  * ha_msg_internal: heartbeat internal messaging functions
  *
@@ -249,7 +249,7 @@ isauthentic(const struct ha_msg * m)
 	struct HBauth_info*	which;
 	
 	
-	if (m->stringlen >= sizeof(msgbody)) {
+	if (get_stringlen(m) >= sizeof(msgbody)) {
 		return(0);
 	}
 	
@@ -416,6 +416,12 @@ main(int argc, char ** argv)
 #endif
 /*
  * $Log: ha_msg_internal.c,v $
+ * Revision 1.49  2005/02/08 08:10:27  gshi
+ * change the way stringlen and netstringlen is computed.
+ *
+ * Now it is computed resursively in child messages in get_stringlen() and get_netstringlen()
+ * so it allows changing child messages dynamically.
+ *
  * Revision 1.48  2005/01/18 20:33:03  andrew
  * Appologies for the top-level commit, one change necessitated another which
  *   exposed some bugs... etc etc

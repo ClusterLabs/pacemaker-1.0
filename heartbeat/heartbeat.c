@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.349 2005/02/07 21:32:38 gshi Exp $ */
+/* $Id: heartbeat.c,v 1.350 2005/02/08 08:10:27 gshi Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -4563,11 +4563,6 @@ audit_xmit_hist(void)
 		}
 		if (msg->stringlen <= 0) {
 			cl_log(LOG_CRIT
-			,	"Non-positive nalloc in audit_xmit_hist");
-			doabort=TRUE;
-		}
-		if (msg->stringlen <= 0) {
-			cl_log(LOG_CRIT
 			,	"Non-positive stringlen in audit_xmit_hist");
 			doabort=TRUE;
 		}
@@ -4581,7 +4576,7 @@ audit_xmit_hist(void)
 			,	"TOO Large nfields in audit_xmit_hist");
 			doabort=TRUE;
 		}
-		if (msg->stringlen <= msg->nfields*4) {
+		if (get_stringlen(msg) <= msg->nfields*4) {
 			cl_log(LOG_CRIT
 			,	"Too small stringlen in audit_xmit_hist");
 			doabort=TRUE;
@@ -4996,6 +4991,12 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.350  2005/02/08 08:10:27  gshi
+ * change the way stringlen and netstringlen is computed.
+ *
+ * Now it is computed resursively in child messages in get_stringlen() and get_netstringlen()
+ * so it allows changing child messages dynamically.
+ *
  * Revision 1.349  2005/02/07 21:32:38  gshi
  * move the free from the calling function in wirefmt2ipcmsg() to the caller
  *
