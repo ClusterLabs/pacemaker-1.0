@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.375 2005/03/15 18:06:09 gshi Exp $ */
+/* $Id: heartbeat.c,v 1.376 2005/03/15 18:40:06 gshi Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -1636,7 +1636,7 @@ APIregistration_dispatch(IPC_Channel* chan,  gpointer user_data)
 	 * This channel must be non-blocking as
 	 * we don't want to block for a client
 	 */
-	chan->should_send_blocking = FALSE;
+	chan->should_send_block = FALSE;
 
 	if (ANYDEBUG) {
 		cl_log(LOG_DEBUG, "APIregistration_dispatch() {");
@@ -5144,6 +5144,9 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.376  2005/03/15 18:40:06  gshi
+ * change should_send_blocking to should_send_block 'cause it's a better name
+ *
  * Revision 1.375  2005/03/15 18:06:09  gshi
  * change the logfile/debugfile ownership to HA_CCMUSER(hacluster) in the initialize_heartbeat()
  *
