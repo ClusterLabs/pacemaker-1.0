@@ -1,4 +1,4 @@
-/* $Id: clientrequest.h,v 1.8 2004/10/08 19:07:05 alan Exp $ */
+/* $Id: clientrequest.h,v 1.9 2004/11/18 01:56:59 yixiong Exp $ */
 /* checkpoint request.h */
 #ifndef _CKPT_CLIENT_REQUEST_H
 #define _CKPT_CLIENT_REQUEST_H
@@ -31,9 +31,14 @@ typedef enum {
 	REQ_CKPT_SYNC_ASYNC 	= 18	/* synchronize the checkpoint */
 } SaCkptReqT;
 
+/*
+	Currently it is only a quick work around,it is not a good way for it may cause pointer error
+	In future, it should be changed
+	On attention is, whenever contain this in another structure, it should be the last one
+*/
 typedef struct {
-	SaUint8T	id[SA_MAX_ID_LENGTH];
 	SaSizeT		idLen;
+	SaUint8T	id[0];
 } SaCkptFixLenSectionIdT;
 
 /* saCkptInitialize() */
@@ -48,20 +53,47 @@ typedef struct {
 	SaCkptHandleT	clientHandle;
 } SaCkptReqFinalParamT;
 
+
+typedef enum{
+	RES_INVLID		=		0,
+	RES_NO_REPLICA 		= 		1,	
+	RES_STANDBY 		=		2,	
+	RES_RACE_HIGH_PRIO	=		3,
+	RES_RACE_LOW_PRIO	=		4,
+	RES_HAVE_REPLICA	=		5,
+	RES_NO_RESPONSE		=		6,
+	RES_SELF		= 		7,
+	RES_NOT_RUN		=		8,
+	RES_EARLIER		= 		9,
+	RES_LATER		=		10
+}saOpenResponseTypeT;
+
+typedef struct{
+	char 				nodeName[SA_MAX_NAME_LENGTH];
+	saOpenResponseTypeT 		status ;
+	/*If this node is a low priority one, keep the original message to notify it */
+	void			*originalMessage;
+}saOpenNodeStatusT;
+
 /* saCkptCheckpointOpen() */
 typedef struct {
 	SaNameT 				ckptName;
 	SaCkptCheckpointOpenFlagsT 		openFlag;
 	SaCkptCheckpointCreationAttributesT 	attr;
-	SaTimeT					timetout; 
+	/*  the node list */ 
+	GList *					nodeReponse;					
+	SaTimeT					timetout;
 } SaCkptReqOpenParamT;
 
 typedef struct {
 	SaNameT 				ckptName;
 	SaCkptCheckpointOpenFlagsT 		openFlag;
 	SaCkptCheckpointCreationAttributesT 	attr;
+	/* the node list */ 
+	GList *					nodeReponse;					
 	SaInvocationT				invocation; 
 } SaCkptReqOpenAsyncParamT;
+
 
 /* saCkptCheckpointClose() */
 typedef struct {
@@ -98,8 +130,8 @@ typedef struct {
 /* saCkptSectionCreate()*/
 typedef struct {
 	SaCkptCheckpointHandleT checkpointHandle;
-	SaCkptFixLenSectionIdT	sectionID;
 	SaTimeT 		expireTime;
+	SaCkptFixLenSectionIdT	sectionID;
 } SaCkptReqSecCrtParamT;
 
 
@@ -113,8 +145,8 @@ typedef struct {
 /* saCkptCheckpointWrite() */
 typedef struct {
 	SaCkptCheckpointHandleT checkpointHandle;
-	SaCkptFixLenSectionIdT	sectionID;
 	SaSizeT	 		offset; 
+	SaCkptFixLenSectionIdT	sectionID;
 } SaCkptReqSecWrtParamT;
 
 
@@ -128,16 +160,16 @@ typedef struct {
 /* saCkptCheckpointRead() */
 typedef struct {
 	SaCkptCheckpointHandleT checkpointHandle;
-	SaCkptFixLenSectionIdT	sectionID;
 	SaSizeT			offset; 
 	SaSizeT			dataSize; 
+	SaCkptFixLenSectionIdT	sectionID;
 } SaCkptReqSecReadParamT;
 
 /* saCkptSectionExpirationTimeSet */
 typedef struct {
 	SaCkptCheckpointHandleT checkpointHandle;
-	SaCkptFixLenSectionIdT	sectionID;
 	SaTimeT expireTime;
+	SaCkptFixLenSectionIdT	sectionID;
 } SaCkptReqSecExpSetParamT;
 
 /* saCkptSectionIteratorInitialize */

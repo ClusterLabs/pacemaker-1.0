@@ -1,4 +1,4 @@
-/* $Id: libckpt.c,v 1.15 2004/10/21 06:48:07 deng.pan Exp $ */
+/* $Id: libckpt.c,v 1.16 2004/11/18 01:56:59 yixiong Exp $ */
 /* 
  * ckptlib.c: data checkpoint API library
  *
@@ -165,6 +165,7 @@ SaCkptLibGetReqNO(void)
 	return ckptLibRequestNO++;
 }
 
+/*	FIXME it should not be a global static variable */
 static SaCkptSectionIteratorT 
 SaCkptLibGetIterator(void)
 {
@@ -2065,7 +2066,19 @@ saCkptSectionCreate(
 			"Null section ID in saCkptSectionCreate");
 		return SA_ERR_INVALID_PARAM;
 	}
-
+	if ((sectionCreationAttributes->sectionId->idLen < 0)) {
+		cl_log(LOG_ERR, 
+			"Negative sectionId idLen in saCkptSectionCreate");
+		return SA_ERR_INVALID_PARAM;
+	
+	}
+	if ((sectionCreationAttributes->sectionId->id == NULL) ^ 
+		(sectionCreationAttributes->sectionId->idLen == 0)) {
+		cl_log(LOG_ERR, 
+			"Miss match sectionId id and idLen in saCkptSectionCreate");
+		return SA_ERR_INVALID_PARAM;
+			
+	}
 	/*
 	 * if the section ID is SA_CKPT_GENERATED_SECTION_ID,
 	 * generate a random ID for the section
@@ -2115,7 +2128,7 @@ saCkptSectionCreate(
 	if (!(libCheckpoint->openFlag & SA_CKPT_CHECKPOINT_WRITE)) {
 		cl_log(LOG_ERR, 
 			"Checkpoint is not opened for write");
-		return SA_ERR_LIBRARY;
+		return SA_ERR_ACCESS;
 	}
 	libClient = libCheckpoint->client;
 	
@@ -2123,8 +2136,11 @@ saCkptSectionCreate(
 					sizeof(SaCkptLibRequestT));
 	clientRequest = (SaCkptClientRequestT*)ha_malloc(
 					sizeof(SaCkptClientRequestT));
+					
 	secCrtParam = (SaCkptReqSecCrtParamT*)ha_malloc(
-					sizeof(SaCkptReqSecCrtParamT));
+					sizeof(SaCkptReqSecCrtParamT)	\
+					+sectionCreationAttributes->sectionId->idLen);
+
 	if (initialDataSize > 0) {
 		data = (void*)ha_malloc(initialDataSize);
 	}
@@ -2141,7 +2157,8 @@ saCkptSectionCreate(
 	
 	memset(libRequest, 0, sizeof(SaCkptLibRequestT));
 	memset(clientRequest, 0, sizeof(SaCkptClientRequestT));
-	memset(secCrtParam, 0, sizeof(SaCkptReqSecCrtParamT));
+	memset(secCrtParam, 0, sizeof(SaCkptReqSecCrtParamT)\
+		+sectionCreationAttributes->sectionId->idLen);
 	memcpy(data, initialData, initialDataSize);
 	
 	libRequest->client = libClient;
@@ -2151,7 +2168,7 @@ saCkptSectionCreate(
 	clientRequest->clientHandle = libClient->clientHandle;
 	clientRequest->requestNO = SaCkptLibGetReqNO();
 	clientRequest->req = REQ_SEC_CRT;
-	clientRequest->reqParamLength = sizeof(SaCkptReqSecCrtParamT);
+	clientRequest->reqParamLength = sizeof(SaCkptReqSecCrtParamT) + sectionCreationAttributes->sectionId->idLen;
 	clientRequest->dataLength = initialDataSize;
 	clientRequest->reqParam = secCrtParam;
 	clientRequest->data = data;
@@ -2269,6 +2286,19 @@ saCkptSectionDelete(
 		"Cannot delete default section in saCkptSectionDelete");
 		return SA_ERR_INVALID_PARAM;
 	}
+	
+	if ((sectionId->id == NULL) ^ (sectionId->idLen == 0)) {
+		cl_log(LOG_ERR, 
+		"Mismatch id and idLen on sectionId in saCkptSectionDelete");
+		return SA_ERR_INVALID_PARAM;
+	}
+	
+	if ((sectionId->idLen < 0)) {
+		cl_log(LOG_ERR, 
+		"Negative idLen in saCkptSectionDelete");
+		return SA_ERR_INVALID_PARAM;
+	}
+	
 
 	libCheckpoint = SaCkptGetLibCheckpointByHandle(
 		*checkpointHandle);
@@ -2280,7 +2310,7 @@ saCkptSectionDelete(
 	if (!(libCheckpoint->openFlag & SA_CKPT_CHECKPOINT_WRITE)) {
 		cl_log(LOG_ERR, 
 			"Checkpoint is not opened for write");
-		return SA_ERR_LIBRARY;
+		return SA_ERR_ACCESS;
 	}
 	libClient = libCheckpoint->client;
 	
@@ -2289,7 +2319,8 @@ saCkptSectionDelete(
 	clientRequest = (SaCkptClientRequestT*)ha_malloc(
 					sizeof(SaCkptClientRequestT));
 	secDelParam = (SaCkptReqSecDelParamT*)ha_malloc(
-					sizeof(SaCkptReqSecDelParamT));
+					sizeof(SaCkptReqSecDelParamT)	\
+					+ sectionId->idLen);
 	
  	if ((libRequest == NULL) ||
 		(clientRequest == NULL) ||
@@ -2302,7 +2333,8 @@ saCkptSectionDelete(
 	
 	memset(libRequest, 0, sizeof(SaCkptLibRequestT));
 	memset(clientRequest, 0, sizeof(SaCkptClientRequestT));
-	memset(secDelParam, 0, sizeof(SaCkptReqSecDelParamT));
+	memset(secDelParam, 0, sizeof(SaCkptReqSecDelParamT)\
+		+ sectionId->idLen );
 	
 	libRequest->client = libClient;
 	libRequest->timeoutTag = 0;
@@ -2311,7 +2343,7 @@ saCkptSectionDelete(
 	clientRequest->clientHandle = libClient->clientHandle;
 	clientRequest->requestNO = SaCkptLibGetReqNO();
 	clientRequest->req = REQ_SEC_DEL;
-	clientRequest->reqParamLength = sizeof(SaCkptReqSecDelParamT);
+	clientRequest->reqParamLength = sizeof(SaCkptReqSecDelParamT) + sectionId->idLen;
 	clientRequest->dataLength = 0;
 	clientRequest->reqParam = secDelParam;
 	clientRequest->data = NULL;
@@ -2413,6 +2445,18 @@ saCkptSectionExpirationTimeSet(
 			"Default section can not expire");
 		return SA_ERR_INVALID_PARAM;
 	}
+	
+	if ((sectionId->id == NULL) ^ (sectionId->idLen == 0)) {
+		cl_log(LOG_ERR, 
+		"Mismatch id and idLen on sectionId in saCkptSectionExpirationTimeSet");
+		return SA_ERR_INVALID_PARAM;
+	}
+	
+	if ((sectionId->idLen < 0)) {
+		cl_log(LOG_ERR, 
+		"Negative idLen in saCkptSectionExpirationTimeSet");
+		return SA_ERR_INVALID_PARAM;
+	}
 
 	time(&currentTime);
 	if (expirationTime < currentTime * 1000000000LL) {
@@ -2435,7 +2479,8 @@ saCkptSectionExpirationTimeSet(
 	clientRequest = (SaCkptClientRequestT*)ha_malloc(
 					sizeof(SaCkptClientRequestT));
 	secExpSetParam = (SaCkptReqSecExpSetParamT*)ha_malloc(
-					sizeof(SaCkptReqSecExpSetParamT));
+					sizeof(SaCkptReqSecExpSetParamT)	\
+					+ sectionId->idLen);
 	
  	if ((libRequest == NULL) ||
 		(clientRequest == NULL) ||
@@ -2448,7 +2493,8 @@ saCkptSectionExpirationTimeSet(
 	
 	memset(libRequest, 0, sizeof(SaCkptLibRequestT));
 	memset(clientRequest, 0, sizeof(SaCkptClientRequestT));
-	memset(secExpSetParam, 0, sizeof(SaCkptReqSecExpSetParamT));
+	memset(secExpSetParam, 0, sizeof(SaCkptReqSecExpSetParamT)	\
+		+ sectionId->idLen);
 	
 	libRequest->client = libClient;
 	libRequest->timeoutTag = 0;
@@ -2457,7 +2503,7 @@ saCkptSectionExpirationTimeSet(
 	clientRequest->clientHandle = libClient->clientHandle;
 	clientRequest->requestNO = SaCkptLibGetReqNO();
 	clientRequest->req = REQ_SEC_EXP_SET;
-	clientRequest->reqParamLength = sizeof(SaCkptReqSecExpSetParamT);
+	clientRequest->reqParamLength = sizeof(SaCkptReqSecExpSetParamT) + sectionId->idLen;
 	clientRequest->dataLength = 0;
 	clientRequest->reqParam = secExpSetParam;
 	clientRequest->data = NULL;
@@ -2539,22 +2585,19 @@ saCkptSectionIteratorInitialize(
 	SaCkptReqSecQueryParamT* secQueryParam = NULL;
  	SaCkptClientResponseT* clientResponse = NULL;
 	SaCkptLibCheckpointT* libCheckpoint = NULL;
-	
-	SaErrorT libError = SA_OK;
 	IPC_Channel* ch = NULL;
-
 	GList* sectionList = NULL;
 	SaCkptSectionDescriptorT* sectionDescriptor = NULL;
 	int sectionNumber = 0;
 	int i = 0;
-	char* p = NULL;
-
+	char * p = NULL;
+	SaErrorT libError = SA_OK;
 	time_t currentTime;
 
 	if (libIteratorHash == NULL) {
 		cl_log(LOG_ERR, 
 			"Library is not initialized");
-		return SA_ERR_LIBRARY;
+		return SA_ERR_INIT;
 	}
 	
 	if (checkpointHandle == NULL) {
@@ -2654,11 +2697,19 @@ saCkptSectionIteratorInitialize(
 	}
 
 	*sectionIterator = SaCkptLibGetIterator();
+	if(clientResponse->dataLength < sizeof(int)){
+		cl_log(LOG_ERR,"response have err datalength");
+		libError = SA_ERR_LIBRARY;
+		goto secQueryError;
+	}
+	 p = clientResponse->data;
+	 
+	sectionNumber = *(int *)p;
+	p += sizeof(int);
+		
+//	responseSectionDescriptor = (SaCkptSectionDescriptorT *)p;
 	
-	sectionNumber = clientResponse->dataLength / 
-		(sizeof(SaCkptSectionDescriptorT) + SA_MAX_ID_LENGTH);
-	p = clientResponse->data;
-	
+	/*	FIXME: Not thread safe 	*/
 	for(i=0; i<sectionNumber; i++) {
 		sectionDescriptor = ha_malloc(
 			sizeof(SaCkptSectionDescriptorT));
@@ -2671,17 +2722,21 @@ saCkptSectionIteratorInitialize(
 
 		memcpy(sectionDescriptor, p, sizeof(SaCkptSectionDescriptorT));
 		p += sizeof(SaCkptSectionDescriptorT);
-
 		if (sectionDescriptor->sectionId.idLen > 0) {
 			sectionDescriptor->sectionId.id = 
 				ha_malloc(sectionDescriptor->sectionId.idLen);
+			if(sectionDescriptor->sectionId.id == NULL){
+				cl_log(LOG_ERR, 
+				"No memory in saCkptSectionIteratorInitialize");
+				libError = SA_ERR_NO_MEMORY;
+				goto secQueryError;
+			}
 			memcpy(sectionDescriptor->sectionId.id, 
 				p, sectionDescriptor->sectionId.idLen);
+			p += sectionDescriptor->sectionId.idLen;
 		} else {
 			sectionDescriptor->sectionId.id = NULL;
-		}
-		p += SA_MAX_ID_LENGTH;
-		
+		}		
 		sectionList = g_list_append(sectionList, sectionDescriptor);
 	}
 	g_hash_table_insert(libIteratorHash, sectionIterator, sectionList);
@@ -2725,7 +2780,7 @@ saCkptSectionIteratorNext(
 	if (libIteratorHash == NULL) {
 		cl_log(LOG_ERR, 
 			"Library is not initialized");
-		return SA_ERR_LIBRARY;
+		return SA_ERR_INIT;
 	}
 	
 	if (sectionIterator == NULL) {
@@ -2764,6 +2819,7 @@ saCkptSectionIteratorNext(
 	
 	sectionList = g_list_remove(sectionList, secDescriptor);
 	
+	/*	FIXME: what about when the list is null 	*/
 	g_hash_table_insert(libIteratorHash, sectionIterator,
 		sectionList);
 
@@ -2783,7 +2839,7 @@ saCkptSectionIteratorFinalize(
 	if (libIteratorHash == NULL) {
 		cl_log(LOG_ERR, 
 			"Library is not initialized");
-		return SA_ERR_LIBRARY;
+		return SA_ERR_INIT;
 	}
 
 	if (sectionIterator == NULL) {
@@ -2858,7 +2914,7 @@ saCkptCheckpointSectionWrite(
 	clientRequest->clientHandle = libClient->clientHandle;
 	clientRequest->requestNO = SaCkptLibGetReqNO();
 	clientRequest->req = REQ_SEC_WRT;
-	clientRequest->reqParamLength = sizeof(SaCkptReqSecWrtParamT);
+	clientRequest->reqParamLength = sizeof(SaCkptReqSecWrtParamT) + wrtParam->sectionID.idLen;;
 	clientRequest->dataLength = dataLength;
 	clientRequest->reqParam = wrtParam;
 	clientRequest->data = data;
@@ -2956,7 +3012,7 @@ saCkptCheckpointSectionRead(
 	clientRequest->clientHandle = libClient->clientHandle;
 	clientRequest->requestNO = SaCkptLibGetReqNO();
 	clientRequest->req = REQ_SEC_RD;
-	clientRequest->reqParamLength = sizeof(SaCkptReqSecReadParamT);
+	clientRequest->reqParamLength = sizeof(SaCkptReqSecReadParamT) + readParam->sectionID.idLen;
 	clientRequest->dataLength = 0;
 	clientRequest->reqParam = readParam;
 	clientRequest->data = NULL;
@@ -3025,6 +3081,7 @@ saCkptCheckpointWrite(
 {
 	SaCkptLibCheckpointT* libCheckpoint = NULL;
 	SaCkptReqSecWrtParamT* wrtParam = NULL;
+	SaUint32T maxSectionIdLen = 0;
 	
 	SaErrorT libError = SA_OK;
 	SaUint32T i = 0;
@@ -3057,19 +3114,29 @@ saCkptCheckpointWrite(
 	if (!(libCheckpoint->openFlag & SA_CKPT_CHECKPOINT_WRITE)) {
 		cl_log(LOG_ERR, 
 			"Checkpoint is not opened for write");
-		return SA_ERR_LIBRARY;
+		return SA_ERR_ACCESS;
 	}
 	
-	wrtParam = (SaCkptReqSecWrtParamT*)ha_malloc(
-		sizeof(SaCkptReqSecWrtParamT));
-	if (wrtParam == NULL) {
-		cl_log(LOG_ERR, 
-			"No memory in saCkptCheckpointWrite");
-		return SA_ERR_NO_MEMORY;
-	}
-
+	
 	for(i=0; i<numberOfElements; i++) {
-		memset(wrtParam, 0, sizeof(SaCkptReqSecWrtParamT));
+		if(wrtParam == NULL || maxSectionIdLen < ioVector[i].sectionId.idLen){
+			if(wrtParam != NULL) {
+				ha_free(wrtParam);
+				wrtParam = NULL;
+			}
+				
+			wrtParam = (SaCkptReqSecWrtParamT*)ha_malloc(
+				sizeof(SaCkptReqSecWrtParamT) 
+				+ ioVector[i].sectionId.idLen);
+			if (wrtParam == NULL) {
+				cl_log(LOG_ERR, 
+					"No memory in saCkptCheckpointWrite");
+				return SA_ERR_NO_MEMORY;
+			}
+		}
+		
+		memset(wrtParam, 0, sizeof(SaCkptReqSecWrtParamT)
+			+ ioVector[i].sectionId.idLen);
 		wrtParam->checkpointHandle = *checkpointHandle;
 		wrtParam->sectionID.idLen= ioVector[i].sectionId.idLen;
 		memcpy(wrtParam->sectionID.id,
@@ -3086,9 +3153,14 @@ saCkptCheckpointWrite(
 			}
 			break;
 		}
+		
+		if(wrtParam != NULL) {
+			ha_free(wrtParam);
+			wrtParam = NULL;
+		}
 	}
 
-	ha_free(wrtParam);
+	if(wrtParam != NULL) ha_free(wrtParam);
 
 	return libError;
 }
@@ -3130,9 +3202,16 @@ saCkptSectionOverwrite(
 			"Null dataBuffer in saCkptSectionOverwrite");
 		return SA_ERR_INVALID_PARAM;
 	}
+		
+	if (dataSize <0){
+		cl_log(LOG_ERR, 
+			"Negative dataSize in saCkptSectionOverwrite");
+		return SA_ERR_INVALID_PARAM;
+	}
 
 	libCheckpoint = SaCkptGetLibCheckpointByHandle(
 		*checkpointHandle);
+		
 	if (libCheckpoint == NULL) {
 		cl_log(LOG_ERR, 
 			"Checkpoint is not open");
@@ -3141,7 +3220,7 @@ saCkptSectionOverwrite(
 	if (!(libCheckpoint->openFlag & SA_CKPT_CHECKPOINT_WRITE)) {
 		cl_log(LOG_ERR, 
 			"Checkpoint is not opened for write");
-		return SA_ERR_LIBRARY;
+		return SA_ERR_ACCESS;
 	}
 	libClient = libCheckpoint->client;
 	
@@ -3150,7 +3229,8 @@ saCkptSectionOverwrite(
 	clientRequest = (SaCkptClientRequestT*)ha_malloc(
 					sizeof(SaCkptClientRequestT));
 	secOwrtParam = (SaCkptReqSecOwrtParamT*)ha_malloc(
-					sizeof(SaCkptReqSecOwrtParamT));
+					sizeof(SaCkptReqSecOwrtParamT)
+					+ sectionId->idLen);
 	
  	if ((libRequest == NULL) ||
 		(clientRequest == NULL) ||
@@ -3163,7 +3243,7 @@ saCkptSectionOverwrite(
 	
 	memset(libRequest, 0, sizeof(SaCkptLibRequestT));
 	memset(clientRequest, 0, sizeof(SaCkptClientRequestT));
-	memset(secOwrtParam, 0, sizeof(SaCkptReqSecOwrtParamT));
+	memset(secOwrtParam, 0, sizeof(SaCkptReqSecOwrtParamT) + sectionId->idLen);
 	
 	libRequest->client = libClient;
 	libRequest->timeoutTag = 0;
@@ -3172,7 +3252,7 @@ saCkptSectionOverwrite(
 	clientRequest->clientHandle = libClient->clientHandle;
 	clientRequest->requestNO = SaCkptLibGetReqNO();
 	clientRequest->req = REQ_SEC_OWRT;
-	clientRequest->reqParamLength = sizeof(SaCkptReqSecOwrtParamT);
+	clientRequest->reqParamLength = sizeof(SaCkptReqSecOwrtParamT)+ sectionId->idLen;;
 	clientRequest->dataLength = dataSize;
 	clientRequest->reqParam = secOwrtParam;
 	clientRequest->data = dataBuffer;
@@ -3249,9 +3329,10 @@ saCkptCheckpointRead(
 {
 	SaCkptLibCheckpointT* libCheckpoint = NULL;
 	SaCkptReqSecReadParamT* readParam = NULL;
+	SaUint32T maxSectionIdLen = 0;
 	
 	SaErrorT libError = SA_OK;
-	SaUint32T i = 0;
+	int i = 0;
 
 	if (checkpointHandle == NULL) {
 		cl_log(LOG_ERR, 
@@ -3281,18 +3362,29 @@ saCkptCheckpointRead(
 	if (!(libCheckpoint->openFlag & SA_CKPT_CHECKPOINT_READ)) {
 		cl_log(LOG_ERR, 
 			"Checkpoint is not opened for read");
-		return SA_ERR_LIBRARY;
+		return SA_ERR_ACCESS;
 	}
 	
-	readParam = (SaCkptReqSecReadParamT*)ha_malloc(
-		sizeof(SaCkptReqSecReadParamT));
-	if (readParam == NULL) {
-		cl_log(LOG_ERR, 
-			"No memory in saCkptCheckpointRead");
-		return SA_ERR_NO_MEMORY;
-	}
 
 	for(i=0; i<numberOfElements; i++) {
+		
+		if(ioVector[i].dataSize < 0 || ioVector[i].dataOffset < 0 ){
+			cl_log(LOG_ERR, " dataSize or dataOffset at ioverctor %d less than 0 \n", i);
+			if( readParam!= NULL) ha_free(readParam);
+			return SA_ERR_INVALID_PARAM;
+		}
+		if( readParam == NULL  || maxSectionIdLen < ioVector[i].sectionId.idLen) {
+			if( readParam!= NULL) ha_free(readParam);
+			readParam = (SaCkptReqSecReadParamT*)ha_malloc(
+				sizeof(SaCkptReqSecReadParamT)	\
+				+ ioVector[i].sectionId.idLen);
+			if (readParam == NULL) {
+				cl_log(LOG_ERR, 
+					"No memory in saCkptCheckpointRead");
+				return SA_ERR_NO_MEMORY;
+			}
+		}
+
 		memset(readParam, 0, sizeof(SaCkptReqSecReadParamT));
 		readParam->checkpointHandle = *checkpointHandle;
 		readParam->sectionID.idLen= ioVector[i].sectionId.idLen;
@@ -3313,7 +3405,7 @@ saCkptCheckpointRead(
 		}
 	}
 
-	ha_free(readParam);
+	if( readParam != NULL) ha_free(readParam);
 
 	return libError;
 }

@@ -1,4 +1,4 @@
-/* $Id: message.c,v 1.13 2004/08/29 03:01:14 msoffen Exp $ */
+/* $Id: message.c,v 1.14 2004/11/18 01:56:59 yixiong Exp $ */
 /* 
  * message.c
  *
@@ -24,12 +24,13 @@
 #endif
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 #include <errno.h>
 #include <string.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-
+#include <string.h>
 #include <glib.h>
 
 #include <clplumbing/cl_log.h>
@@ -125,13 +126,13 @@ SaCkptClusterMsgProcess()
 	SaNameT*	unlinkName = NULL;
 
 	SaCkptStateT*	state = NULL;
-
+	saOpenResponseTypeT openRespType ;
 	int	checkpointHandle;
 
 	GList*	list = NULL;
 	GList* 	nodeList = NULL;
 	int	finished = TRUE;
-
+	saOpenResponseTypeT	updateOpenProcessRes = -1;
 	SaErrorT	retVal;
 
 	ckptMsg = SaCkptMessageReceive();
@@ -155,7 +156,18 @@ SaCkptClusterMsgProcess()
 		}
 
 		switch (ckptMsg->msgSubtype) {
-
+		/*
+		 * Sent out when checkpoint service started
+		 */
+		case M_CKPT_CREATED:
+			receiveCkptCreateMsg(ckptMsg);
+			break;
+		/*
+		 * Response for M_CKPT_CREATED
+		 */
+		case M_CKPT_CREATED_REPLY:
+			receiveCkptCreateReplyMsg(ckptMsg);
+			break;
 		/*
 		 * unlink the checkpoint
 		 * add its name to the unlinkCheckpointHash
@@ -197,25 +209,66 @@ SaCkptClusterMsgProcess()
 		 * it will copy the data from active checkpoint
 		 */
 		case M_CKPT_OPEN_BCAST:
+		
+			if(isLoopMessage(ckptMsg)){
+				ckptMsg->msgSubtype = M_CKPT_OPEN_BCAST_REPLY_SELF;
+				if(saCkptService->flagVerbose){
+					cl_log(LOG_INFO,
+					"self M_CKPT_OPEN_BCAST, ignore it\n");
+				}
+				SaCkptMessageSend(ckptMsg, 
+					ckptMsg->clientHostName);
+				break;
+			}
+			openParam = (SaCkptReqOpenParamT*)ckptMsg->param;
+			
 			if (replica == NULL) {
 				if (saCkptService->flagVerbose) {
 					cl_log(LOG_INFO,
-					"No replica, ignore message");
+					"No replica\n");
 				}
-				
+				if(isOnOpenProcess(openParam) == NULL){
+					if (saCkptService->flagVerbose) {
+						cl_log(LOG_INFO,
+						"No replica and no local open request\n");
+					}
+					ckptMsg->msgSubtype = M_CKPT_OPEN_BCAST_REPLY_NO_REPLICA;
+				}
+				/*
+			 	 * This node have already a open request with 
+				 * the same name, so if it is a conflict open, 
+				 * the high priority node will do it, 
+				 * otherwise , the earlier one do it. 
+				 * Just compare the node name for priority now
+			 	 */
+				else {
+					updateOpenProcessQueue(ckptMsg, &updateOpenProcessRes);
+					
+					if(updateOpenProcessRes == RES_RACE_HIGH_PRIO){
+						ckptMsg->msgSubtype = M_CKPT_OPEN_BCAST_REPLY_RACE_HIGH;
+					}else if(updateOpenProcessRes == RES_RACE_LOW_PRIO){
+						ckptMsg->msgSubtype = M_CKPT_OPEN_BCAST_REPLY_RACE_LOW;
+					
+					}else{
+						ckptMsg->msgSubtype = M_CKPT_OPEN_BCAST_REPLY_EARLIER;
+					}
+				}
+				SaCkptMessageSend(ckptMsg, 
+					ckptMsg->clientHostName);
 				break;
 			}
 
 			if (!replica->flagIsActive) {
 				if (saCkptService->flagVerbose) {
 					cl_log(LOG_INFO,
-					"Standby replica, ignore message");
+					"Standby replica for open request\n");
 				}
-				
+				ckptMsg->msgSubtype = M_CKPT_OPEN_BCAST_REPLY_STANDBY;
+				SaCkptMessageSend(ckptMsg, 
+					ckptMsg->clientHostName);
 				break;	
 			}
 
-			openParam = (SaCkptReqOpenParamT*)ckptMsg->param;
 
 			/* 
 			 * if the createattribute is not null and is 
@@ -238,7 +291,7 @@ SaCkptClusterMsgProcess()
 				ckptMsg->msgSubtype = 
 					M_CKPT_OPEN_BCAST_REPLY;
 				ckptMsg->retVal = 
-					SA_ERR_FAILED_OPERATION;
+					SA_ERR_EXIST;
 				SaCkptMessageSend(ckptMsg, 
 					ckptMsg->clientHostName);
 				break;
@@ -249,7 +302,7 @@ SaCkptClusterMsgProcess()
 				cl_log(LOG_ERR, 
 					"checkpoint %s has been unlinked",
 					replica->checkpointName);
-				ckptMsg->retVal = SA_ERR_FAILED_OPERATION;
+				ckptMsg->retVal = SA_ERR_INVALID_PARAM;
 			} else {
 				strcpy(ckptMsg->activeNodeName,
 					saCkptService->nodeName);
@@ -261,7 +314,8 @@ SaCkptClusterMsgProcess()
 			break;
 
 		/* 
-		 * the reply message to M_CKPT_OPEN_BCAST
+		 * the reply message to M_CKPT_OPEN_BCAST when active replica
+		 * on sent node
 		 */
 		case M_CKPT_OPEN_BCAST_REPLY:
 			if (replica != NULL) {
@@ -272,6 +326,12 @@ SaCkptClusterMsgProcess()
 
 			SACKPTMESSAGEVALIDATEREQ(ckptMsg);
 
+			openParam = ckptReq->clientRequest->reqParam;
+
+			updateOpenParamNodeStatus(openParam, 
+				ckptMsg->fromNodeName, RES_HAVE_REPLICA);
+
+			removeOpenPendingQueue(ckptReq->clientRequest->reqParam);
 			if (ckptMsg->retVal != SA_OK) {
 				ckptResp = SaCkptResponseCreate(ckptReq);
 				ckptResp->resp->retVal = ckptMsg->retVal;
@@ -283,7 +343,6 @@ SaCkptClusterMsgProcess()
 				break;
 			}
 			
-			openParam = ckptReq->clientRequest->reqParam;
 			
 			if (openParam->openFlag & 
 				SA_CKPT_CHECKPOINT_COLOCATED) {
@@ -296,6 +355,77 @@ SaCkptClusterMsgProcess()
 			SaCkptMessageSend(ckptMsg, ckptMsg->activeNodeName);
 
 			break;
+	
+		/*
+		 * No replica for M_CKPT_OPEN_BCAST on sent node
+		 * ugly goto , may remove it ...
+		 */
+		case M_CKPT_OPEN_BCAST_REPLY_NO_REPLICA:
+			openRespType = RES_NO_REPLICA;
+			goto here;
+		/*
+		 * Standby replica for M_CKPT_OPEN_BCAST on sent node
+		 */
+
+		case M_CKPT_OPEN_BCAST_REPLY_STANDBY:
+			openRespType = RES_STANDBY;
+			goto here;
+			
+		/*
+		 * A race condition for M_CKPT_OPEN_BCAST 
+		 * sent node have high priority
+		 */
+		case M_CKPT_OPEN_BCAST_REPLY_RACE_HIGH:
+			openRespType = RES_RACE_HIGH_PRIO;
+			goto here;
+			
+		/*
+		 * A race condition for M_CKPT_OPEN_BCAST 
+		 * sent node have low priority
+		 */
+		case M_CKPT_OPEN_BCAST_REPLY_RACE_LOW:
+			openRespType = RES_RACE_LOW_PRIO;
+			goto here;
+		/*
+		 * The sent node have open on progress
+		 * this node send M_CKPT_OPEN_BCAST_REPLY_NO_REPLICA for 
+		 * sent node's M_CKPT_OPEN_BCAST
+		 */
+		case M_CKPT_OPEN_BCAST_REPLY_EARLIER:
+			openRespType = RES_EARLIER;
+			goto here;
+			
+		case M_CKPT_OPEN_BCAST_REPLY_SELF:
+			openRespType = RES_SELF;
+			/* Ugly goto */
+			
+here:			SACKPTMESSAGEVALIDATEREQ(ckptMsg);
+			openParam = ckptReq->clientRequest->reqParam;
+			if( NULL == isOnOpenProcess(openParam)){
+			/* The reason not found may because it have receive reply from other side*/
+				if(saCkptService->flagVerbose){
+					cl_log(LOG_INFO,
+					"open reponse miss\n");
+				}	
+				break;
+			}else{
+				if(saCkptService->flagVerbose){
+					cl_log(LOG_INFO,
+					"open reponse found\n");
+				}
+				updateOpenParamNodeStatus(
+					openParam, ckptMsg->fromNodeName, 
+					openRespType);
+
+				if( openReqFinishedForLocalCreate(openParam)){
+					SaCkptRequestStopTimer(ckptReq);
+					ckptResp = createLocalReplical(ckptReq);
+					notifyLowPrioNode(openParam);
+					removeOpenPendingQueue(ckptReq->clientRequest->reqParam);
+					SaCkptResponseSend(&ckptResp);
+				}
+				break;
+			}	
 
 		/* 
 		 * if the client do not want to create a local copy of 
@@ -337,7 +467,7 @@ SaCkptClusterMsgProcess()
 				ckptMsg->msgSubtype = 
 					M_CKPT_OPEN_REMOTE_REPLY;
 				ckptMsg->retVal = 
-					SA_ERR_FAILED_OPERATION;
+					SA_ERR_EXIST;
 				SaCkptMessageSend(ckptMsg, 
 					ckptMsg->clientHostName);
 				break;
@@ -376,6 +506,7 @@ SaCkptClusterMsgProcess()
 
 			SACKPTMESSAGEVALIDATEREQ(ckptMsg);
 			SaCkptRequestStopTimer(ckptReq);
+			
 
 			if (ckptMsg->retVal != SA_OK) {
 				ckptResp = SaCkptResponseCreate(ckptReq);
@@ -609,6 +740,8 @@ SaCkptClusterMsgProcess()
 				replica->nodeList = 
 					g_list_append(replica->nodeList,
 					(gpointer)state);
+				/*should update the request on pending list*/
+				updateReplicaPendingOption(replica, ckptMsg->clientHostName);
 				ckptMsg->retVal = SA_OK;
 			} else {
 				ckptMsg->retVal = SA_ERR_NO_MEMORY;
@@ -1508,7 +1641,9 @@ SaCkptClusterMsgProcess()
 			g_hash_table_foreach(saCkptService->replicaHash,
 				SaCkptReplicaNodeFailure,
 				(gpointer)ckptMsg->fromNodeName);
-
+			/*
+			 *FIXME update saCkptService->nodeStatus
+			 */
 			/* 
 			 * for each sent client request, redo it since all the 
 			 * operations are reentriable
@@ -2096,12 +2231,44 @@ SaCkptMsgSubtype2String(SaCkptMsgSubtypeT msgSubtype)
 	SACKPTASSERT(strTemp != NULL);
 	
 	switch (msgSubtype) {
+		
+	case M_CKPT_CREATED:
+		strcpy(strTemp, "M_CKPT_CREATED");
+		break;
+	case M_CKPT_CREATED_REPLY:	
+		strcpy(strTemp, "M_CKPT_CREATED_REPLY");
+		break;
 	case M_CKPT_OPEN_BCAST:
 		strcpy(strTemp, "M_CKPT_OPEN_BCAST");
 		break;
 	case M_CKPT_OPEN_BCAST_REPLY:
 		strcpy(strTemp, "M_CKPT_OPEN_BCAST_REPLY");
 		break;
+	
+	case M_CKPT_OPEN_BCAST_REPLY_NO_REPLICA:
+		strcpy(strTemp, "M_CKPT_OPEN_BCAST_REPLY_NO_REPLICA");
+		break;
+	
+	case M_CKPT_OPEN_BCAST_REPLY_STANDBY:
+		strcpy(strTemp, "M_CKPT_OPEN_BCAST_REPLY_STANDBY");
+		break;
+	
+	case M_CKPT_OPEN_BCAST_REPLY_RACE_HIGH:
+		strcpy(strTemp, "M_CKPT_OPEN_BCAST_REPLY_RACE_HIGH");
+		break;
+	
+	case M_CKPT_OPEN_BCAST_REPLY_RACE_LOW:
+		strcpy(strTemp, "M_CKPT_OPEN_BCAST_REPLY_RACE_LOW");
+		break;
+		
+	case M_CKPT_OPEN_BCAST_REPLY_SELF:
+		strcpy(strTemp, "M_CKPT_OPEN_BCAST_REPLY_SELF");
+		break;
+	case M_CKPT_OPEN_BCAST_REPLY_EARLIER:
+		strcpy(strTemp, "M_CKPT_OPEN_BCAST_REPLY_EARLIER");
+		break;
+	
+
 	case M_RPLC_CRT:
 		strcpy(strTemp, "M_RPLC_CRT");
 		break;
@@ -2398,5 +2565,453 @@ SaCkptMessageDelete(SaCkptMessageT** pCkptMsg)
 	*pCkptMsg = NULL;
 
 	return;
+}
+
+/*
+* keep this open request 
+*/
+void 
+initOpenReqNodeStatus(SaCkptClientRequestT *clientReq){
+	
+	SaCkptReqOpenParamT	*openParam	= NULL;
+	
+	if(clientReq == NULL){
+		cl_log(LOG_ERR, "NULL clientReq in initOpenReqNodeStatus\n");
+		return;
+	}
+	if((clientReq->req != REQ_CKPT_OPEN) 
+				&& (clientReq->req != REQ_CKPT_OPEN_ASYNC)){
+		cl_log(LOG_ERR, "Not Open Request in initOpenReqNodeStatus\n");
+		return;
+	}
+	
+	openParam = (SaCkptReqOpenParamT *)clientReq->reqParam;
+	
+	g_hash_table_foreach(saCkptService->nodeStatusHash, getNodeCkptStatus,openParam);
+	
+	g_hash_table_insert(saCkptService->openRequestHash, (gpointer)openParam->ckptName.value,(gpointer)clientReq);
+}
+
+/* set the open request's status according to node status*/
+void
+getNodeCkptStatus(gpointer key,gpointer value,
+			gpointer user_data){
+	saCkptNodeInfo *ckptNodeInfo = value;
+	const char *	nodeName = key;
+	SaCkptReqOpenParamT * openParam = user_data;
+	saOpenNodeStatusT  	*status 	= NULL;
+	status = (saOpenNodeStatusT *)ha_malloc(
+		sizeof(saOpenNodeStatusT));
+	if(status == NULL){
+		/*FIXME how to report error on hash fucntions*/
+		cl_log(LOG_INFO,"malloc error in getNodeCkptStatus\n");
+		return;
+	}
+	strncpy(status->nodeName, nodeName, SA_MAX_NAME_LENGTH);
+	
+	if(ckptNodeInfo->ckptStatus == CKPT_RUNNING){
+		status->status = RES_NO_RESPONSE ;
+	}else{
+		status->status = RES_NOT_RUN;
+	}
+
+	openParam->nodeReponse = g_list_append(openParam->nodeReponse,status);
+}
+
+gboolean 
+isLoopMessage(SaCkptMessageT * ckptMsg){
+	if( ckptMsg == NULL) return FALSE;
+	
+	if( strncmp(ckptMsg->fromNodeName, 
+		saCkptService->nodeName, SA_MAX_NAME_LENGTH)){
+		return FALSE;	
+	}
+	
+	return TRUE;
+}
+
+/* Check if a open request exist already*/
+SaCkptClientRequestT *
+isOnOpenProcess(SaCkptReqOpenParamT *openParam ){
+	SaCkptClientRequestT *	clientReq = NULL;
+
+	if(openParam == NULL){
+		if(saCkptService->flagVerbose){
+			cl_log(LOG_INFO,"NULL openParam on isOnOpenProcess\n");
+			return 0;
+		}
+	}
+	
+	clientReq = (SaCkptClientRequestT *)g_hash_table_lookup(	\
+			saCkptService->openRequestHash,	\
+			(gconstpointer)openParam->ckptName.value);
+	
+	return clientReq ;
+}
+
+gboolean
+isHighPriority(const SaCkptMessageT *ckptMsg ){
+	if(ckptMsg == NULL){
+		cl_log(LOG_INFO,"NULL ckptMsg on isHighPriority\n");
+		return FALSE;
+	}
+	if( strncmp(ckptMsg->fromNodeName, 
+		saCkptService->nodeName, SA_MAX_NAME_LENGTH) < 0){
+		return FALSE;	
+	}
+	
+	return TRUE;
+}
+
+gint
+updateOpenProcessQueue(const SaCkptMessageT *ckptMsg ,saOpenResponseTypeT *type){
+	
+	SaCkptClientRequestT 		*clientReq	=	NULL;
+	SaCkptReqOpenParamT 		*openParam	=	NULL;
+	saOpenResponseTypeT		nodeStatus	=	RES_NO_REPLICA;
+	gint 				result		=	1;
+	if(ckptMsg == NULL){
+		cl_log(LOG_INFO,"NULL ckptMsg on isHighPriority\n");
+		return 0;
+	}
+	openParam = (SaCkptReqOpenParamT*)ckptMsg->param;
+	
+	if(( clientReq = isOnOpenProcess(openParam)) != NULL){
+		cl_log(LOG_INFO,
+		"\tupdate open process queue for checkpoint %s \n",
+		openParam->ckptName.value);
+
+		if( getOpenParamNodeStatus(
+				(SaCkptReqOpenParamT *)clientReq->reqParam, 
+				ckptMsg->fromNodeName,&nodeStatus)){
+			if(nodeStatus == RES_NO_REPLICA){
+				cl_log(LOG_INFO,"\t get res_no_replica already\n");
+				updateOpenParamNodeStatus(
+					(SaCkptReqOpenParamT *)clientReq->reqParam,
+					ckptMsg->fromNodeName, RES_LATER);
+
+ 				setOpenParamNodeStatusCkptMessage(
+					(SaCkptReqOpenParamT *)clientReq->reqParam,
+					ckptMsg->fromNodeName,ckptMsg);
+				*type = RES_EARLIER;
+			}
+			return 1;
+			
+		}
+		if(isHighPriority(ckptMsg)){
+			cl_log(LOG_INFO,"\t\tresult is high\n");
+			updateOpenParamNodeStatus(
+				(SaCkptReqOpenParamT *)clientReq->reqParam,
+				ckptMsg->fromNodeName, 
+				RES_RACE_LOW_PRIO);
+
+			setOpenParamNodeStatusCkptMessage(
+				(SaCkptReqOpenParamT *)clientReq->reqParam,
+				ckptMsg->fromNodeName,
+				ckptMsg);
+
+			*type = RES_RACE_HIGH_PRIO;
+		}else{
+			cl_log(LOG_INFO,"\t\tresult is low\n");
+			updateOpenParamNodeStatus(
+				(SaCkptReqOpenParamT*)clientReq->reqParam,
+				ckptMsg->fromNodeName, 
+				RES_RACE_HIGH_PRIO);
+			*type = RES_RACE_LOW_PRIO;
+		}
+	}else{
+		
+		result = 0;
+	}
+	return result;
+
+}
+/* Check if we should create a local replica*/
+gboolean
+openReqFinishedForLocalCreate(SaCkptReqOpenParamT  *openParam){
+	
+	gboolean allFinished = TRUE;
+	gboolean noRemoteReplical = TRUE;
+	saOpenNodeStatusT 	*status = NULL;
+	GList  			*list	= NULL;
+	if(openParam == NULL ){
+		if(saCkptService->flagVerbose){
+			cl_log(LOG_INFO, 
+			"NULL parameter on openReqFinishedForLocalCreate\n");
+		}
+		return FALSE;
+	}
+	openParamNodeStatusDump(openParam);
+
+	list = openParam->nodeReponse;
+	while(list != NULL){
+		status = (saOpenNodeStatusT *)(list->data);
+		if(status->status  == RES_NO_RESPONSE){
+			 allFinished = FALSE;
+		}else if(status->status  == RES_RACE_HIGH_PRIO 
+			||status->status  == RES_EARLIER ){
+			noRemoteReplical = FALSE;
+		}
+		
+		list = list->next;
+	}
+	
+	return (allFinished && noRemoteReplical) ;
+}
+
+void
+openParamNodeStatusDump(SaCkptReqOpenParamT  *openParam){
+	saOpenNodeStatusT 	*status = NULL;
+	GList  			*list	= NULL;
+	if(saCkptService->flagVerbose){
+		cl_log(LOG_INFO,
+		"\tOpen Req %s status is: \n",
+		openParam->ckptName.value);
+	}
+	list = openParam->nodeReponse;
+	while(list != NULL){
+		status = (saOpenNodeStatusT *)(list->data);
+		if(saCkptService->flagVerbose){
+			cl_log(LOG_INFO,
+			"\tNode %s is %d\n",
+			status->nodeName,
+			status->status);
+		}
+		list = list->next;
+	}
+}
+
+gint 
+getOpenParamNodeStatus(SaCkptReqOpenParamT  *openParam, const char *nodeName, saOpenResponseTypeT *type){
+	saOpenNodeStatusT 	*status = NULL;
+	GList  			*list	= NULL;
+	
+	if(openParam == NULL ||nodeName == NULL || type == NULL){
+		cl_log(LOG_ERR, "NULL parameter on getOpenParamNodeStatus\n");
+		return 0;
+	}
+	list = openParam->nodeReponse;
+
+	while(list != NULL){
+		status = (saOpenNodeStatusT *)(list->data);
+		if(!strncmp(status->nodeName,nodeName,SA_MAX_NAME_LENGTH)){
+			*type = status->status ;
+			break;
+		}
+		list = list->next;
+	}
+	return 1;
+	
+}	
+
+
+void 
+updateOpenParamNodeStatus(SaCkptReqOpenParamT  *openParam, const char *nodeName, saOpenResponseTypeT type){
+	
+	saOpenNodeStatusT 	*status = NULL;
+	GList  			*list	= NULL;
+	
+	if(openParam == NULL ||nodeName == NULL){
+		cl_log(LOG_ERR, 
+		"NULL parameter on updateOpenParamNodeStatus\n");
+		return;
+	}
+	list = openParam->nodeReponse;
+	
+	while(list != NULL){
+		status = (saOpenNodeStatusT *)(list->data);
+		if(!strncmp(status->nodeName,nodeName,SA_MAX_NAME_LENGTH)){
+			status->status = type;
+			break;
+		}
+		list = list->next;
+	}
+	
+	
+}
+
+gint
+setOpenParamNodeStatusCkptMessage(SaCkptReqOpenParamT  *openParam, const char *nodeName, const SaCkptMessageT *ckptMsg)
+{
+	saOpenNodeStatusT 	*status = NULL;
+	GList  			*list	= NULL;
+	SaCkptMessageT 	*localCkptMsg = NULL;
+	
+	if(openParam == NULL ||nodeName == NULL){
+		cl_log(LOG_ERR, 
+		"NULL parameter on updateOpenParamNodeStatus\n");
+		return HA_FAIL;
+	}
+	localCkptMsg = dupCkptMessage(ckptMsg);
+	
+	if(localCkptMsg == NULL){
+		cl_log(LOG_ERR,
+		 "Malloc error on updateOpenParamNodeStatus\n");
+		return HA_FAIL;
+	}
+	list = openParam->nodeReponse;
+	
+	while(list != NULL){
+		status = (saOpenNodeStatusT *)(list->data);
+		if(!strncmp(status->nodeName,nodeName,SA_MAX_NAME_LENGTH)){
+			if(status->status != RES_RACE_LOW_PRIO){
+				cl_log(LOG_INFO,
+				"not RES_RACE_LOW_PRIO in setOpenParamNodeStatusCkptMessage\n");
+				return HA_FAIL;
+			}
+			status->originalMessage = localCkptMsg;
+			break;
+		}
+		list = list->next;
+	}
+	return HA_OK;
+}
+
+void
+notifyLowPrioNode(SaCkptReqOpenParamT  *openParam){
+	GList  			*list	= NULL;
+	SaCkptMessageT* ckptMsg = NULL;
+	saOpenNodeStatusT *status = NULL;
+	ckptMsg = (SaCkptMessageT*)SaCkptMalloc(sizeof(SaCkptMessageT));
+	
+	list = openParam->nodeReponse;
+	cl_log(LOG_INFO,"Enter notifyLowPrioNode\n");
+	while(list != NULL){
+		status = (saOpenNodeStatusT *)(list->data);
+		if(status->status == RES_RACE_LOW_PRIO 
+				||status->status == RES_LATER ){
+			ckptMsg= (SaCkptMessageT *)status->originalMessage;
+			cl_log(LOG_INFO,"notify lower prio node %s\n",ckptMsg->clientHostName);
+			ckptMsg->msgSubtype = M_CKPT_OPEN_BCAST_REPLY;
+			ckptMsg->retVal = SA_OK;
+			strcpy(ckptMsg->activeNodeName, saCkptService->nodeName);			SaCkptMessageSend(ckptMsg, ckptMsg->clientHostName);
+			break;
+		}
+		list = list->next;
+	}
+}
+
+void
+removeOpenPendingQueue(SaCkptReqOpenParamT  *openParam ){
+	if(openParam == NULL){
+		cl_log(LOG_INFO, "NULL openParam on updateOpenParamNodeStatus\n");
+		return;
+	}		
+	openParamNodeStatusDump(openParam);
+	g_hash_table_remove(
+		saCkptService->openRequestHash, 
+		(gpointer)openParam->ckptName.value);
+	
+}
+
+void
+receiveCkptCreateMsg(SaCkptMessageT* ckptMsg ){
+	saCkptNodeInfo *  nodeStatus = NULL;
+	char targetNodeName[SA_MAX_NAME_LENGTH];
+	if(ckptMsg->msgSubtype != M_CKPT_CREATED){
+		cl_log(LOG_ERR,
+		"ckptMsg is not M_CKPT_CREATED on receiveCkptCreateMsg\n");
+		return;
+	}
+	nodeStatus = g_hash_table_lookup(saCkptService->nodeStatusHash,
+		(gpointer)ckptMsg->fromNodeName);
+	if(nodeStatus == NULL){
+		cl_log(LOG_INFO,
+		"the node %s not found on hashtable\n",ckptMsg->fromNodeName);
+		return ;
+	}
+	nodeStatus->ckptStatus = CKPT_RUNNING;
+	
+	if(!isLoopMessage(ckptMsg))
+	{	
+		strncpy(targetNodeName,
+			ckptMsg->fromNodeName,
+			SA_MAX_NAME_LENGTH);
+		targetNodeName[SA_MAX_NAME_LENGTH - 1] = '\0';
+		ckptMsg->msgSubtype = M_CKPT_CREATED_REPLY;
+		SaCkptMessageSend(ckptMsg,targetNodeName);
+	}
+	return;
+}
+
+void
+receiveCkptCreateReplyMsg(SaCkptMessageT* ckptMsg ){
+	saCkptNodeInfo *  nodeStatus = NULL;
+	if(ckptMsg->msgSubtype != M_CKPT_CREATED_REPLY){
+		cl_log(LOG_ERR,
+		"ckptMsg is not M_CKPT_CREATED on receiveCkptCreateMsg\n");
+		return;
+	}
+	nodeStatus = g_hash_table_lookup(
+			saCkptService->nodeStatusHash,
+			(gpointer)ckptMsg->fromNodeName);
+	if(nodeStatus == NULL){
+		cl_log(LOG_INFO,
+		"the node %s not found on hashtable\n",ckptMsg->fromNodeName);
+		return ;
+	}
+	nodeStatus->ckptStatus = CKPT_RUNNING;
+	return;
+}
+
+SaCkptMessageT *
+dupCkptMessage(const SaCkptMessageT *ckptMsg){
+
+	SaCkptMessageT * ret = NULL;
+	void * param = NULL;
+	void * data = NULL;
+	if(ckptMsg == NULL){
+		cl_log(LOG_INFO,"NULL ckptMsg in dupCkptMessage\n");
+		return NULL;
+	}
+	ret = (SaCkptMessageT *)ha_malloc(sizeof(SaCkptMessageT));
+	param = ha_malloc(ckptMsg->paramLength);
+	data = ha_malloc(ckptMsg->dataLength);
+	
+	if(ret == NULL ||param== NULL ||  data== NULL){
+		cl_log(LOG_INFO,"malloc error in dupCkptMessage\n");
+		if(ret!= NULL) ha_free(ret);
+		if(param!= NULL) ha_free(param);
+		if(data!= NULL) ha_free(data);
+		return NULL;
+	} 
+	memset(ret,0,sizeof(SaCkptMessageT));
+	memset(param,0,ckptMsg->paramLength);
+	memset(data,0,ckptMsg->dataLength);
+	
+	memcpy(ret,ckptMsg,sizeof(SaCkptMessageT));
+	memcpy(param,ckptMsg->param,ckptMsg->paramLength);
+	memcpy(data,ckptMsg->data,ckptMsg->dataLength);
+	
+	ret->param = param;
+	ret->data = data;
+	return ret;
+
+}
+
+
+void 
+displayOpenQueStatus(gpointer key, 
+	gpointer value, 
+	gpointer userdata){
+	SaCkptClientRequestT *clientReq = key;
+	SaCkptReqOpenParamT * openParam = clientReq->reqParam;
+	GList * list = openParam->nodeReponse;
+	saOpenNodeStatusT * status = NULL;
+	if(saCkptService->flagVerbose){
+		cl_log(LOG_INFO,
+		"show open request response for chkpt %s \n",
+		openParam->ckptName.value);
+	}
+	while(list!= NULL){
+		status = (saOpenNodeStatusT *)list->data;
+		if(saCkptService->flagVerbose){
+			cl_log(LOG_INFO,
+			"\tnode %s have status of %d\n",
+			status->nodeName,
+			status->status);
+		}
+		list = list->next;
+	}
 }
 

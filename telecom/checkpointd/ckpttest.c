@@ -1,4 +1,4 @@
-/* $Id: ckpttest.c,v 1.10 2004/08/29 03:01:14 msoffen Exp $ */
+/* $Id: ckpttest.c,v 1.11 2004/11/18 01:56:59 yixiong Exp $ */
 /* 
  * ckpttest.c: data checkpoint service test program
  *
@@ -47,7 +47,7 @@ int main(void)
 	SaErrorT  		ckpt_error;
 	SaCkptHandleT 		ckpt_handle ;
 	SaCkptCheckpointHandleT	checkpoint_handle;
-	SaVersionT 		ckpt_version = {'A', '0', '1'};
+	SaVersionT 		ckpt_version = {'A', 1, 1};
 	SaNameT 		ckpt_name = {9, "testckpt"};
 	SaTimeT  		open_timeout = SA_TIME_END;
 
@@ -55,11 +55,13 @@ int main(void)
 	SaCkptSectionCreationAttributesT sect_create_attri ;
 	SaCkptSectionIdT sect_id ;
 	SaUint8T sectionid = 0;
+	unsigned char sectionName[6]="ABCDE\0";
 	SaCkptIOVectorElementT	io_write;
 	SaCkptIOVectorElementT	io_read;
 
 	int i = 0; /* section test loop count */
 	int data_buffer = 0;
+	unsigned char dataBuf[4]="abc\0";
 	time_t cur_time;
 
 	/* library initialize */
@@ -78,7 +80,7 @@ int main(void)
 	ckpt_create_attri.retentionDuration = SA_TIME_END;
 	ckpt_create_attri.checkpointSize = 1000 ;
 	ckpt_create_attri.maxSectionSize = 100;
-	ckpt_create_attri.maxSections = 10 ;
+	ckpt_create_attri.maxSections = 11 ;
 	ckpt_create_attri.maxSectionIdSize = SA_MAX_ID_LENGTH ;
 	
 	ckpt_error = saCkptCheckpointOpen(&ckpt_handle, 
@@ -143,8 +145,9 @@ int main(void)
 	for (i=0; i<9; i++) {
 		/* section create */
 		sectionid = 'A' + i;
-		sect_id.id = &sectionid ;
-		sect_id.idLen = sizeof(sectionid);
+		sectionName[0] += 1;
+		sect_id.id = sectionName;
+		sect_id.idLen = sizeof(sectionName)/sizeof(unsigned char);
 		sect_create_attri.sectionId = &sect_id ;
 
 		time(&cur_time) ;
@@ -156,24 +159,27 @@ int main(void)
 		
 		ckpt_error = saCkptSectionCreate(&checkpoint_handle, 
 						&sect_create_attri,  
-						&data_buffer, 
-						sizeof(data_buffer)) ;
-		if( ckpt_error != SA_OK) {
+						dataBuf, 
+						sizeof(dataBuf)/sizeof(unsigned char)) ;
+		if( ckpt_error != SA_OK && ckpt_error != SA_ERR_EXIST) {
 			printf("\tsaCkptSectionCreate error\n");
 			saCkptCheckpointClose(&checkpoint_handle) ;
 			saCkptFinalize (& ckpt_handle) ;
 			return -1 ;
 		} else {
-			printf("\tsection %c created\n", *(SaUint8T*)sect_id.id);
+			if(ckpt_error == SA_ERR_EXIST){
+				printf("\tsection %c existed already\n", *(SaUint8T*)sect_id.id);
+			}
+			else printf("\tsection %c created\n", *(SaUint8T*)sect_id.id);
 		}
 
 		/* read init data from the section */
 		data_buffer = 0;
 		
-		io_read.sectionId.id = &sectionid;
-		io_read.sectionId.idLen = sizeof(sectionid);
-		io_read.dataBuffer = &data_buffer;
-		io_read.dataSize = sizeof(data_buffer);
+		io_read.sectionId.id = sectionName;
+		io_read.sectionId.idLen = sizeof(sectionName)/sizeof(unsigned char);
+		io_read.dataBuffer = dataBuf;
+		io_read.dataSize = sizeof(dataBuf)/sizeof(unsigned char);
 		io_read.dataOffset = 0;
 		ckpt_error = saCkptCheckpointRead (&checkpoint_handle, 
 				&io_read, 
@@ -186,14 +192,14 @@ int main(void)
 			return -1 ;
 		} else {
 			printf("\tRead number %d from section %c\n", 
-				data_buffer,
+				dataBuf[0],
 				*(SaUint8T*)(io_read.sectionId.id));
 		}
 		
 		/* write to the section */
 		data_buffer = '*';
-		io_write.sectionId.id = &sectionid;
-		io_write.sectionId.idLen = sizeof(sectionid);
+		io_write.sectionId.id = sectionName;
+		io_write.sectionId.idLen = sizeof(sectionName);
 		io_write.dataBuffer = &data_buffer;
 		io_write.dataOffset = 0;
 		io_write.dataSize = sizeof(data_buffer);
@@ -212,19 +218,19 @@ int main(void)
 				*(SaUint8T*)(io_write.sectionId.id));
 		}
 	}
-
+	sectionName[0]='A';
 	/* section delete */
 	for (i=0; i<9; i++) {
 		/* section create */
 		sectionid = 'A' + i;
-		
-		sect_id.id = &sectionid ;
-		sect_id.idLen = sizeof(sectionid);
+		sectionName[0] += 1;
+		sect_id.id = sectionName ;
+		sect_id.idLen = sizeof(sectionName)/sizeof(unsigned char);
 
 		ckpt_error = saCkptSectionDelete(&checkpoint_handle,
 						&sect_id);
 		if( ckpt_error != SA_OK) {
-			printf("\tsaCkptSectionCreate error\n");
+			printf("\tsaCkptSectionDelete error\n");
 			saCkptCheckpointClose(&checkpoint_handle) ;
 			saCkptFinalize (& ckpt_handle) ;
 			return -1 ;

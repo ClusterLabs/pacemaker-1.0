@@ -1,4 +1,4 @@
-/* $Id: message.h,v 1.7 2004/04/17 14:02:22 alan Exp $ */
+/* $Id: message.h,v 1.8 2004/11/18 01:56:59 yixiong Exp $ */
 #ifndef _CKPT_MESSAGE_H
 #define _CKPT_MESSAGE_H
 
@@ -39,10 +39,18 @@
 /* checkpoint message subtypes */
 typedef enum {
 	M_NULL,
-
+	M_CKPT_CREATED,
+	M_CKPT_CREATED_REPLY,
 	/* checkpoint open message */
 	M_CKPT_OPEN_BCAST,
 	M_CKPT_OPEN_BCAST_REPLY,
+	M_CKPT_OPEN_BCAST_REPLY_NO_REPLICA,
+	M_CKPT_OPEN_BCAST_REPLY_STANDBY,
+	M_CKPT_OPEN_BCAST_REPLY_EARLIER,
+	M_CKPT_OPEN_BCAST_REPLY_RACE_HIGH,
+	M_CKPT_OPEN_BCAST_REPLY_RACE_LOW,
+	M_CKPT_OPEN_BCAST_REPLY_SELF,
+	M_CKPT_OPEN_BCAST_REPLY_CONT,
 	M_RPLC_CRT,
 	M_RPLC_CRT_REPLY,
 	M_RPLC_ADD,
@@ -158,6 +166,37 @@ SaCkptOperationT* SaCkptOperationCreate(SaCkptMessageT*, SaCkptReplicaT*);
 
 char* SaCkptMsgSubtype2String(SaCkptMsgSubtypeT);
 
+void initOpenReqNodeStatus(SaCkptClientRequestT *clientReq);
 
+void  initNodeToOpenReq(const char * nodeName ,SaCkptClientRequestT *clientReq);
+
+gboolean isLoopMessage(SaCkptMessageT * ckptMsg);
+void openParamNodeStatusDump(SaCkptReqOpenParamT  *openParam);
+
+SaCkptClientRequestT * isOnOpenProcess(SaCkptReqOpenParamT *openParam );
+
+gboolean isHighPriority(const 	SaCkptMessageT *ckptMsg );
+
+gint updateOpenProcessQueue(const SaCkptMessageT *ckptMsg ,saOpenResponseTypeT *type);
+
+void updateOpenParamNodeStatus(SaCkptReqOpenParamT  *openParam, const char *nodeName, saOpenResponseTypeT type);
+
+gboolean openReqFinishedForLocalCreate(SaCkptReqOpenParamT  *openParam);
+
+void removeOpenPendingQueue(SaCkptReqOpenParamT  *openParam );
+
+void receiveCkptCreateMsg(SaCkptMessageT* ckptMsg );
+
+gint setOpenParamNodeStatusCkptMessage(SaCkptReqOpenParamT  *openParam, const char *nodeName, const SaCkptMessageT *ckptMsg);
+
+void notifyLowPrioNode(SaCkptReqOpenParamT  *openParam);
+
+SaCkptMessageT * dupCkptMessage(const SaCkptMessageT *ckptMsg);
+
+void receiveCkptCreateReplyMsg(SaCkptMessageT* ckptMsg );
+void  displayOpenQueStatus(gpointer key, 
+	gpointer value, 
+	gpointer userdata);
+gint  getOpenParamNodeStatus(SaCkptReqOpenParamT  *openParam, const char *nodeName, saOpenResponseTypeT *type);
 #endif  /* _SA_CKPT_MESSAGE_H */
 

@@ -1,4 +1,4 @@
-/* $Id: operation.c,v 1.10 2004/05/24 06:12:27 deng.pan Exp $ */
+/* $Id: operation.c,v 1.11 2004/11/18 01:56:59 yixiong Exp $ */
 /* 
  * operation.c: 
  *
@@ -196,9 +196,14 @@ SaCkptOperationStart(SaCkptOperationT* ckptOp)
 				
 				list = list->next;
 			}
+			cl_log(LOG_INFO,"-------Before we send out multicase \n");
+			
 			SaCkptMessageMulticast(ckptMsg, nodeList);
+			cl_log(LOG_INFO,"-------we send out multicase \n");
+			
 			g_list_free(nodeList);
-
+			cl_log(LOG_INFO,"-------we free nodelist \n");
+		
 			replica->flagReplicaLock = FALSE;
 			if (saCkptService->flagVerbose) {
 				cl_log(LOG_INFO,
@@ -209,7 +214,7 @@ SaCkptOperationStart(SaCkptOperationT* ckptOp)
 			SaCkptOperationRemove(&ckptOp);
 		
 		}else {
-			ckptMsg->msgSubtype = M_CKPT_UPD_BCAST;
+			ckptMsg->msgSubtype = M_CKPT_UPD_PREPARE_BCAST;
 			SaCkptMessageMulticast(ckptMsg, 
 				ckptOp->stateList);
 		}
@@ -353,7 +358,7 @@ SaCkptOperationStartTimer(SaCkptOperationT* ckptOp)
 	
 	if (ckptOp->timeoutTag <= 0) {
 		ckptOp->timeoutTag = Gmain_timeout_add(
-			OPERATION_TIMEOUT * 1000, 
+			OPERATION_TIMEOUT * 1000000, 
 			SaCkptOperationTimeout, 
 			(gpointer)ckptOp);
 
@@ -611,3 +616,104 @@ SaCkptOperationNodeFailure(gpointer key,
 	return;
 }
 
+SaCkptResponseT* 
+createLocalReplical(SaCkptRequestT* ckptReq){
+	
+	SaCkptResponseT* ckptResp = NULL;
+	SaCkptOpenCheckpointT* openCkpt = ckptReq->openCkpt;
+	SaCkptClientT* client = ckptReq->client;
+	SaCkptReplicaT* replica = NULL;
+
+
+	SaCkptReqOpenParamT* openParam = NULL;
+
+	char* strReq = NULL;
+	
+	if(ckptReq == NULL) {
+		cl_log(LOG_ERR,"NULL ckptReq in createLocalReplica");
+		return NULL;
+	}
+	
+	if(ckptReq->clientRequest->req != REQ_CKPT_OPEN &&
+			ckptReq->clientRequest->req != REQ_CKPT_OPEN_ASYNC){
+		cl_log(LOG_ERR,"Not open req in createLocalReplica");
+		return NULL;
+	}
+
+	strReq = SaCkptReq2String(ckptReq->clientRequest->req);
+	cl_log(LOG_INFO, 
+		"client %d, request %lu (%s), create a local replica", 
+		ckptReq->clientRequest->clientHandle,
+		ckptReq->clientRequest->requestNO, strReq);
+	SaCkptFree((void*)&strReq);
+
+	ckptResp = SaCkptResponseCreate(ckptReq);
+	
+	openParam = ckptReq->clientRequest->reqParam;
+
+	if (openParam->openFlag & 
+		SA_CKPT_CHECKPOINT_COLOCATED) {
+
+		/* create local replica */
+		replica = SaCkptReplicaCreate(openParam);
+		SACKPTASSERT(replica != NULL);
+		replica->replicaState= STATE_CREATE_COMMITTED;
+
+		/* open the local replica */
+		openCkpt = SaCkptCheckpointOpen(client, 
+			replica, openParam);
+		SACKPTASSERT(openCkpt != NULL);
+		ckptReq->openCkpt = openCkpt;
+
+		/* create and send client response */
+		ckptResp->resp->dataLength = 
+			sizeof(SaCkptCheckpointHandleT);
+		ckptResp->resp->data = SaCkptMalloc(
+			sizeof(SaCkptCheckpointHandleT));
+		memcpy(ckptResp->resp->data, 
+			&(openCkpt->checkpointHandle),
+			sizeof(openCkpt->checkpointHandle));
+
+		ckptResp->resp->retVal = SA_OK;
+	} else {
+		ckptResp->resp->retVal = SA_ERR_TIMEOUT;
+	}
+	return ckptResp;
+}
+
+void
+updateReplicaPendingOption(SaCkptReplicaT *replica, const char *hostName){
+	GList * list = NULL;
+	GList * opStateList = NULL;
+	SaCkptOperationT* ckptOp = NULL;
+	SaCkptStateT* state = NULL;
+	gboolean nodeExisted = FALSE;
+	list = replica->pendingOperationList;
+	
+	while(list != NULL){
+		ckptOp = (SaCkptOperationT*)list->data;
+		opStateList = ckptOp->stateList;
+		nodeExisted = FALSE;
+		/* we should check if this node name exist already, maybe just for debug*/
+		while(opStateList != NULL){
+			state = (SaCkptStateT* )opStateList->data;
+			if(!strncmp(state->nodeName, hostName,SA_MAX_NAME_LENGTH )){
+				nodeExisted = TRUE;
+				cl_log(LOG_ERR, "hostName %s exist already in updateReplicaPendingOption\n",hostName);
+				break;
+			}
+			opStateList = opStateList->next;
+		}
+		
+		if(!nodeExisted){
+			opStateList = ckptOp->stateList;
+			state = (SaCkptStateT*)ha_malloc(sizeof(SaCkptStateT));
+			strncpy(state->nodeName,hostName,SA_MAX_NAME_LENGTH);
+			state->nodeName[SA_MAX_NAME_LENGTH-1]='\0';
+			state->state = OP_STATE_STARTED;
+			ckptOp->stateList = g_list_append(ckptOp->stateList,
+				(gpointer)state);
+		}
+		list = list->next;
+	}
+}

@@ -1,4 +1,4 @@
-/* $Id: utils.c,v 1.7 2004/08/29 03:01:16 msoffen Exp $ */
+/* $Id: utils.c,v 1.8 2004/11/18 01:56:59 yixiong Exp $ */
 /* 
  * utils.c
  *
@@ -231,7 +231,5 @@ SaCkptFree(void** p)
 
 	return;
 }
-
-
 
 

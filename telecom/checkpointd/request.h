@@ -1,4 +1,4 @@
-/* $Id: request.h,v 1.3 2004/03/12 02:59:38 deng.pan Exp $ */
+/* $Id: request.h,v 1.4 2004/11/18 01:56:59 yixiong Exp $ */
 #ifndef _CKPT_REQUEST_H
 #define _CKPT_REQUEST_H
 
@@ -10,7 +10,6 @@
 #include "replica.h"
 #include "client.h"
 #include "operation.h"
-
 
 
 typedef struct _SaCkptRequestT{
@@ -60,5 +59,6 @@ gboolean SaCkptRequestTimeout(gpointer);
  * the request will be resent to the new active replica 
  */
 void SaCkptRequestNodeFailure(gpointer, gpointer, gpointer );
+
 
 #endif

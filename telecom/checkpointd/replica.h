@@ -1,4 +1,4 @@
-/* $Id: replica.h,v 1.10 2004/08/29 03:01:14 msoffen Exp $ */
+/* $Id: replica.h,v 1.11 2004/11/18 01:56:59 yixiong Exp $ */
 #ifndef _CKPT_REPLICA_H
 #define _CKPT_REPLICA_H
 
@@ -153,8 +153,6 @@ typedef struct _SaCkptReplicaT {
 typedef struct _SaCkptSectionT{
 	SaCkptReplicaT* 	replica;
 	
-	SaCkptFixLenSectionIdT	sectionID;
-	
 	SaTimeT	expirationTime;
 	SaTimeT	lastUpdateTime;
 
@@ -197,6 +195,8 @@ typedef struct _SaCkptSectionT{
 	 * the rollback operation is rollback the backup operation
 	 */
 	int	dataUpdateState;
+	
+	SaCkptFixLenSectionIdT sectionID;
 	 
 } SaCkptSectionT;
 
@@ -294,5 +294,7 @@ void SaCkptReplicaNodeFailure(gpointer, gpointer, gpointer);
 
 char* SaCkptSectionId2String(SaCkptFixLenSectionIdT);
 
+void 
+SaCkptDumpReplica(SaCkptReplicaT* replica);
 
 #endif

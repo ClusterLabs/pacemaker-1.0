@@ -1,4 +1,4 @@
-/* $Id: replica.c,v 1.16 2004/08/29 03:01:14 msoffen Exp $ */
+/* $Id: replica.c,v 1.17 2004/11/18 01:56:59 yixiong Exp $ */
 /* 
  * replica.c: 
  *
@@ -167,7 +167,7 @@ SaCkptReplicaCreate(SaCkptReqOpenParamT* openParam)
 	replica->retentionTimeoutTag = 0;
 
 	/* create default section */
-	sec = (SaCkptSectionT*)SaCkptMalloc(sizeof(SaCkptSectionT));
+	sec = (SaCkptSectionT*)SaCkptMalloc(sizeof(SaCkptSectionT) + sizeof(SaUint8T));
 	SACKPTASSERT(sec != NULL);
 	sec->replica = replica;
 	sec->sectionID.id[0] = 0;
@@ -368,6 +368,7 @@ SaCkptReplicaPack(void** data, SaSizeT* dataLength,
 {
 	SaCkptSectionT* sec = NULL;
 	SaCkptStateT* state = NULL;
+	int sectionLength = 0;
 
 	GList*	list = NULL;
 
@@ -455,8 +456,12 @@ SaCkptReplicaPack(void** data, SaSizeT* dataLength,
 	list = replica->sectionList;
 	while (list != NULL) {
 		sec = (SaCkptSectionT* )list->data;
+		sectionLength = sizeof(SaCkptSectionT) + sec->sectionID.idLen;
 		index = sec->dataIndex;
 
+		memcpy(p,&sectionLength,sizeof(sectionLength));
+		p += sizeof(sizeof(sectionLength));
+		
 		memcpy(p, &sec->sectionID.idLen, 
 			sizeof(sec->sectionID.idLen));
 		p += sizeof(sec->sectionID.idLen);
@@ -517,6 +522,7 @@ SaCkptReplicaUnpack(void* data, int dataLength)
 	SaUint32T i = 0;
 	SaUint32T n = 0;
 	int m = 0;
+	int sectionLength = 0;
 
 	GList* list = NULL;
 	SaCkptSectionT* sec = NULL;
@@ -608,7 +614,10 @@ SaCkptReplicaUnpack(void* data, int dataLength)
 
 	list = replica->sectionList;
 	for(i=0; i<replica->sectionNumber; i++) {
-		sec = (SaCkptSectionT*)SaCkptMalloc(sizeof(SaCkptSectionT));
+		memcpy(&sectionLength ,p,sizeof(sectionLength));
+		p += sizeof(sectionLength);
+		
+		sec = (SaCkptSectionT*)SaCkptMalloc(sectionLength);
 		SACKPTASSERT (sec != NULL);
 		
 		replica->sectionList = g_list_append(replica->sectionList, 
@@ -684,7 +693,9 @@ SaCkptReplicaUnpack(void* data, int dataLength)
 	replica->openCheckpointList= NULL;
 
 	SaCkptFree((void*)&q);
-
+	if(saCkptService->flagVerbose){
+		SaCkptDumpReplica(replica);
+	}
 	cl_log(LOG_INFO, "Replica %s was copied from node %s",
 		replica->checkpointName,
 		replica->activeNodeName);
@@ -773,7 +784,7 @@ SaCkptReplicaUpdate(SaCkptReplicaT* replica, SaCkptReqT req,
 			strSectionID = SaCkptSectionId2String(sec->sectionID);
 			cl_log(LOG_INFO, 
 				"Update: section %s deleted from replica %s",
-				strSectionID,
+				sec->sectionID.id,
 				replica->checkpointName);
 			SaCkptFree((void*)&strSectionID);
 		}
@@ -913,8 +924,12 @@ SaCkptReplicaUpdPrepare(SaCkptReplicaT* replica, SaCkptReqT req,
 		sec = SaCkptSectionFind(replica, 
 			&(secDelParam->sectionID));
 		if (sec == NULL) {
-			cl_log(LOG_INFO, "Can not find section");
+			if(saCkptService->flagVerbose){
+				cl_log(LOG_INFO, 
+				"Can not find section %s \n", secDelParam->sectionID.id);
+			}
 			retVal = SA_ERR_NOT_EXIST;
+			
 			break;
 		}
 
@@ -928,8 +943,11 @@ SaCkptReplicaUpdPrepare(SaCkptReplicaT* replica, SaCkptReqT req,
 		sec = SaCkptSectionFind(replica, 
 			&(secWrtParam->sectionID));
 		if (sec == NULL) {
-			cl_log(LOG_INFO, "Can not find section");
+			if(saCkptService->flagVerbose){
+				cl_log(LOG_INFO, "Can not find section %s \n", secWrtParam->sectionID.id);
+			}
 			retVal = SA_ERR_INVALID_PARAM;
+			
 			break;
 		}
 
@@ -948,7 +966,10 @@ SaCkptReplicaUpdPrepare(SaCkptReplicaT* replica, SaCkptReqT req,
 		sec = SaCkptSectionFind(replica, 
 			&(secOwrtParam->sectionID));
 		if (sec == NULL) {
-			cl_log(LOG_INFO, "Can not find section");
+			if(saCkptService->flagVerbose){
+				cl_log(LOG_INFO,
+				 "Can not find section %s \n", secOwrtParam->sectionID.id);
+			}
 			retVal = SA_ERR_INVALID_PARAM;
 			break;
 		}
@@ -1056,7 +1077,7 @@ SaCkptReplicaUpdCommit(SaCkptReplicaT* replica, SaCkptReqT req,
 			strSectionID = SaCkptSectionId2String(sec->sectionID);
 			cl_log(LOG_INFO, 
 				"Commit: section %s deleted from replica %s",
-				strSectionID,
+				sec->sectionID.id,
 				replica->checkpointName);
 			SaCkptFree((void*)&strSectionID);
 		}
@@ -1213,7 +1234,7 @@ SaCkptReplicaUpdRollback(SaCkptReplicaT* replica, SaCkptReqT req,
 			strSectionID = SaCkptSectionId2String(sec->sectionID);
 			cl_log(LOG_INFO, 
 				"Rollback: section %s deleted from replica %s",
-				strSectionID,
+				sec->sectionID.id,
 				replica->checkpointName);
 			SaCkptFree((void*)&strSectionID);
 		}
@@ -1327,7 +1348,7 @@ SaCkptSectionFind(SaCkptReplicaT* replica, SaCkptFixLenSectionIdT* sectionID)
 
 	while (list != NULL) {
 		sec = (SaCkptSectionT*)list->data;
-		if (!memcmp(sec->sectionID.id, sectionID->id,
+		if ((sectionID->idLen == sec->sectionID.idLen) && !memcmp(sec->sectionID.id, sectionID->id,
 			sectionID->idLen)) {
 			return sec;
 		}
@@ -1421,14 +1442,17 @@ SaCkptSectionCreate(SaCkptReplicaT* replica,
 	}
 
 	/* create section */
-	sec = (SaCkptSectionT*)SaCkptMalloc(sizeof(SaCkptSectionT));
+	sec = (SaCkptSectionT*)SaCkptMalloc(sizeof(SaCkptSectionT) + secCrtParam->sectionID.idLen);
 	if (sec == NULL) {
 		cl_log(LOG_ERR,
 			"Section create failed, no memory");
 		return SA_ERR_NO_MEMORY;
 	}
 	sec->replica = replica;
-	sec->sectionID= secCrtParam->sectionID;
+	
+	sec->sectionID.idLen = secCrtParam->sectionID.idLen;
+	memcpy(sec->sectionID.id,secCrtParam->sectionID.id,secCrtParam->sectionID.idLen);
+	
 	sec->expirationTime = secCrtParam->expireTime;
 	sec->lastUpdateTime = time_longclock();
 	sec->dataIndex = 0;
@@ -1462,7 +1486,7 @@ SaCkptSectionCreate(SaCkptReplicaT* replica,
 		strSectionID = SaCkptSectionId2String(sec->sectionID);
 		cl_log(LOG_INFO, 
 			"Section %s created in replica %s",
-			strSectionID,
+			sec->sectionID.id,
 			replica->checkpointName);
 		SaCkptFree((void*)&strSectionID);
 	}
@@ -1689,22 +1713,36 @@ SaCkptReplicaNodeFailure(gpointer key,
 char* 
 SaCkptSectionId2String(SaCkptFixLenSectionIdT sectionId)
 {
-	char* strSectionId = NULL;
-	char	buf[3] = {0};	
-	SaSizeT	i = 0;
-
-	strSectionId = (char*)SaCkptMalloc(2*SA_MAX_ID_LENGTH + 3);
+	char* strSectionId = NULL, *pSec = NULL;
+	int i = 0;
+	strSectionId = (char*)SaCkptMalloc(sectionId.idLen * 4 + strlen("\0"));
+	pSec = strSectionId;
 	SACKPTASSERT(strSectionId != NULL);
 
-	strSectionId[0] = '0';
-	strSectionId[1] = 'x';
-	strSectionId[2] = 0;
-	for (i=0; i < sectionId.idLen; i++) {
-		sprintf(buf, "%0x", sectionId.id[i]);
-		strncat(strSectionId, buf, 2);
+	for(i =0; i< sectionId.idLen; i++)
+	{
+		sprintf(pSec, "%d",sectionId.id[i]);
+		pSec ++;
 	}
+	strncat(pSec, "\0", strlen("\0"));
 
 	return strSectionId;
 }
 
-
+void 
+SaCkptDumpReplica(SaCkptReplicaT* replica){
+	GList * list = NULL;
+	SaCkptSectionT * section = NULL;
+	int i = 0;
+	cl_log(LOG_INFO, "\treplica info");
+	cl_log(LOG_INFO, "\tname is %s \n",replica->checkpointName);
+	cl_log(LOG_INFO, "\tsection number is %d \n",(int)replica->sectionNumber);
+	list = replica->sectionList;
+	
+	while(list != NULL){
+		section = (SaCkptSectionT *)list->data;
+		cl_log(LOG_INFO, "\t %d section length is %d, name is %s \n",i++,section->sectionID.idLen,section->sectionID.id);
+		list=list->next;
+		
+	}
+}

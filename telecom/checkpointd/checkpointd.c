@@ -1,4 +1,4 @@
-/* $Id: checkpointd.c,v 1.14 2004/08/29 03:01:14 msoffen Exp $ */
+/* $Id: checkpointd.c,v 1.15 2004/11/18 01:56:59 yixiong Exp $ */
 /* 
  * checkpointd.c: data checkpoint service
  *
@@ -37,7 +37,6 @@
 #include <sys/stat.h>
 
 #include <glib.h>
-
 #include <clplumbing/cl_log.h>
 #include <clplumbing/cl_signal.h>
 #include <clplumbing/ipc.h>
@@ -80,7 +79,22 @@ static gboolean SaCkptWaitChannelDispatch(IPC_Channel *, gpointer);
 static void SaCkptWaitChannelDestroy(gpointer);
 static IPC_WaitConnection* SaCkptWaitChannelInit(char*);
 
+static int NodeHBStatusArray[] = {
+	HB_INIT,
+	HB_UP,
+	HB_ACTIVE,
+	HB_DEAD,
+	HB_UNKNOWN 
 
+};
+
+const char * HeartbeatStatusArray[]={
+	INITSTATUS,
+	UPSTATUS,
+	ACTIVESTATUS,
+	DEADSTATUS,
+	""
+};
 static void
 SaCkptDmalloc(int signum) {
 	cl_log(LOG_INFO, "Receive signal SIGINT");
@@ -132,12 +146,18 @@ SaCkptCheckpointdInit(void)
 		g_hash_table_new(g_int_hash, g_int_equal);
 	saCkptService->unlinkedCheckpointHash = 
 		g_hash_table_new(g_str_hash, g_str_equal);
+	saCkptService->openRequestHash =
+		g_hash_table_new(g_str_hash, g_str_equal);
+	saCkptService->nodeStatusHash = 
+		g_hash_table_new(g_str_hash, g_str_equal);
+	
+	checkpointNodeStatusInit();
 	
 	saCkptService->nextClientHandle = 0;
 	saCkptService->nextCheckpointHandle = 0;
 	
-	saCkptService->version.major = '0';
-	saCkptService->version.minor = '1';
+	saCkptService->version.major = saCkptMajorVersion;
+	saCkptService->version.minor = saCkptMinorVersion;
 	saCkptService->version.releaseCode = 'A';
 
 	return;
@@ -339,7 +359,8 @@ main(int argc, char ** argv)
 		SaCkptHbInputDispatch, 
 		NULL, 
 		SaCkptHbInputDestroy);
-
+	
+	serviceBeginNotify();
 	/* 
 	 * the clients wait channel is the other source of events.
 	 * This source delivers the clients connection events.
@@ -367,6 +388,8 @@ main(int argc, char ** argv)
 	g_hash_table_destroy(saCkptService->clientHash);
 	g_hash_table_destroy(saCkptService->openCheckpointHash);
 	g_hash_table_destroy(saCkptService->unlinkedCheckpointHash);
+	g_hash_table_destroy(saCkptService->openRequestHash);
+	g_hash_table_destroy(saCkptService->nodeStatusHash);
 	SaCkptFree((void*)&saCkptService);
 
 #ifdef USE_DMALLOC
@@ -378,3 +401,92 @@ main(int argc, char ** argv)
 	return 0;
 }
 
+gint
+checkpointNodeStatusInit(void){
+	saCkptNodeInfo				*nodeInfo = NULL;
+	saCkptNodeHBStatus hbStatus =		HB_UNKNOWN;
+	saCkptNodeCkptStatus ckptStatus =	CKPT_NOT_INIT;
+	ll_cluster_t*	hb = NULL;
+	const char * nodeName = NULL,*status = NULL;
+	
+	hb = saCkptService->heartbeat;
+	if(saCkptService->flagVerbose){
+		cl_log(LOG_INFO,"init checkpoint node status\n");
+	}
+	if( hb->llc_ops->init_nodewalk(hb) == HA_OK){
+		nodeName = (hb->llc_ops->nextnode(hb));
+		while(nodeName != NULL){
+			nodeInfo = (saCkptNodeInfo *)ha_malloc(
+					sizeof(saCkptNodeInfo));
+			
+			status = hb->llc_ops->node_status(hb,nodeName);
+			
+			hbStatus = transHbNodeStatus(status);
+			
+			if(saCkptService->flagVerbose){
+				cl_log(LOG_INFO,"node : %s, status : %s\n",
+					nodeName,status);
+			}
+			
+			strncpy(nodeInfo->nodeName ,nodeName,SA_MAX_NAME_LENGTH);
+			nodeInfo->nodeName[SA_MAX_NAME_LENGTH -1] = '\0';
+			nodeInfo->nodeHbStatus = hbStatus;
+			nodeInfo->ckptStatus = ckptStatus;
+			g_hash_table_insert(saCkptService->nodeStatusHash,
+					(gpointer)nodeInfo->nodeName,
+					(gpointer)nodeInfo);
+			nodeName = (hb->llc_ops->nextnode(hb));
+		}
+		if(hb->llc_ops->end_nodewalk(hb) != HA_OK){
+			cl_log(LOG_ERR,"heartbeat end_nodewalk error on checkpointNodeStatusInit\n");
+			return HA_FAIL;	
+		}else
+			return HA_OK;
+	}else{
+		cl_log(LOG_ERR,
+			"heartbeat nodewalk error on checkpointNodeStatusInit\n");
+		return HA_FAIL;
+	}
+	
+}
+
+saCkptNodeHBStatus
+transHbNodeStatus(const char *hbStatus){
+	int i = 0;
+	int found = 0;
+	if(hbStatus == NULL) {
+		cl_log(LOG_ERR,"NULL hbStatus in transHbNodeStatus\n");
+		return HB_UNKNOWN;
+	}
+	while(strlen( HeartbeatStatusArray[i])){
+		if(strncmp( hbStatus,HeartbeatStatusArray[i],
+					strlen( HeartbeatStatusArray[i]))==0){
+			found =1 ;
+			break;
+		}
+		i++;
+	}
+	
+	if(found)
+		return NodeHBStatusArray[i];
+	else 
+		return HB_UNKNOWN;
+}
+
+gint
+serviceBeginNotify(void){
+	SaCkptMessageT* ckptMsg = NULL;
+	ckptMsg = (SaCkptMessageT*)SaCkptMalloc(sizeof(SaCkptMessageT));
+	if(ckptMsg == NULL){
+		cl_log(LOG_ERR,"Memory alloc fail on serviceBeginNotify\n");
+		return HA_FAIL;
+	}
+	strcpy(ckptMsg->msgType, T_CKPT);
+	ckptMsg->msgSubtype = M_CKPT_CREATED;
+	ckptMsg->msgVersion = saCkptService->version;
+	ckptMsg->retVal = SA_OK;
+	strncpy(ckptMsg->fromNodeName, saCkptService->nodeName,SA_MAX_NAME_LENGTH);
+	SaCkptMessageBroadcast(ckptMsg);
+	SaCkptFree((void*)&ckptMsg);
+	return HA_OK;
+}
