@@ -21,27 +21,14 @@
 /*
  *	Here's our approach:
  *
- *	Have each application have it's own FIFO for
- *		sending requests to heartbeat, and one for getting responses.
+ *	Have each application connect to heartbeat via our IPC layer.
+ *		This IPC layer currently uses sockets and provides
+ *		a suitable authorization API.
  *
- *	Set the permissions on this fifo directory to require
- *		root permissions to create/delete.  The apps don't create
- *		these FIFOs, and heartbeat doesn't remove them.
+ *	We can validate permissions for "sniffing" using the builtin
+ *		IPC authorization API.
  *
- *	Create a casual subdirectory which is sticky and writable
- *		by whoever you want.  The apps create/delete these FIFOs,
- *		and heartbeat can clean them up too (like it does now).
- *
- *	Whenever it reads a message it checks the permissions of the
- *		FIFO it came from, and validates the request accordingly.
- *
- *	You can validate the pid from comparing the owner of the FIFO
- *		with the uid of the owner of /proc/pid.  They should
- *		match.
- *
- *	You can validate "root" permissions for "sniffing" in a similar way
- *		On the other hand, sniffing these is no worse than sniffing
- *		the ethernet, which you already assume might happen...
+ *	This code thankfully no longer uses FIFOs.
  *
  */
 
@@ -115,25 +102,24 @@ typedef struct order_queue {
 typedef struct llc_private {
 	const char *		PrivateId;	/* A "magic cookie */
 	llc_nstatus_callback_t	node_callback;	/* Node status callback fcn */
-	void*			node_private;	/* node status callback data */
+	void*			node_private;	/* node status callback data*/
 	llc_ifstatus_callback_t	if_callback;	/* IF status callback fcn */
 	void*			if_private;	/* IF status callback data */
-	struct gen_callback*	genlist;	/* List of general callbacks */
-	char			ReqFIFOName[MXFIFOPATH];/* Request FIFO name */
-	FILE*			RequestFIFO;	/* Request FIFO (write-only) */
-	char			ReplyFIFOName[MXFIFOPATH];/* Reply FIFO name */
-	FILE*			ReplyFIFO;	/* Reply FIFO (read-only) */
+	struct gen_callback*	genlist;	/* List of general callbacks*/
+	IPC_Channel*		chan;		/* IPC communication channel*/
 	struct stringlist *	nodelist;	/* List of nodes from query */
 	struct stringlist *	iflist;		/* List of IFs from query */
-	struct MsgQueue *	firstQdmsg;	/* Message Queue */
-	struct MsgQueue *	lastQdmsg;	/* End of msg Queue */
 	int			SignedOn;	/* 1 if we're signed on */
 	int			iscasual;	/* 1 if casual client */
 	long			deadtime_ms;	/* heartbeat's deadtime */
-	long			keepalive_ms;	/* heartbeat's keepalive time*/
-	int			logfacility;	/* heartbeat's logging facility */
+	long			keepalive_ms;	/* HB's keepalive time*/
+	int			logfacility;	/* HB's logging facility */
 	struct stringlist*	nextnode;	/* Next node for walknode */
-	struct stringlist*	nextif;		/* Next interface for walkif */
+	struct stringlist*	nextif;		/* Next interface for walkif*/
+	/* Messages to be read after current call completes */
+	struct MsgQueue *	firstQdmsg;
+	struct MsgQueue *	lastQdmsg;
+	/* The next two items are for ordered message delivery */
 	order_seq_t		order_seq_head;	/* head of order_seq list */
 	order_queue_t*		order_queue_head;/* head of order queue */
 }llc_private_t;
@@ -276,35 +262,15 @@ hb_api_signon(struct ll_cluster* cinfo, const char * clientid)
 {
 	struct ha_msg*	request;
 	struct ha_msg*	reply;
-	int		fd, Regfd;
 	struct utsname	un;
 	int		rc;
 	const char *	result;
-	const char *	directory;
 	int		iscasual;
-	FILE*		RegFIFO;
-	struct stat	sbuf;
 	llc_private_t* pi;
 	const char	*tmpstr;
-
-	/*
-	 * A little explanation about our FIFOs...
-	 *
-	 * There is a Registration FIFO, a Request FIFO and a Reply FIFO
-	 * We write the Registration FIFO only once, to register ourselves
-	 * as a client.  As a result, it's a local variable (RegFIFO), in this
-	 * routine.
-	 * 
-	 * Whenever we make a request of heartbeat, we write it to the request
-	 * FIFO (ReqFIFO), and then heartbeat replies to us on our Reply FIFO,
-	 * (ReplyFIFO) which we then read to get the reply from heartbeat.
-	 *
-	 * So, the usage of FIFOs by the client library is as follows:
-	 *
-	 * RegFIFO	write-only (only used once)
-	 * ReqFIFO	write-only (used once per request)
-	 * ReplyFIFO	read-only (used per request or other msg received)
-	 */
+        char		regpath[] = API_REGFIFO;
+	char		path[] = IPC_PATH_ATTR;
+	GHashTable*	wchanattrs;
 
 	if (!ISOURS(cinfo)) {
 		ha_api_log(LOG_ERR, "hb_api_signon: bad cinfo");
@@ -328,23 +294,8 @@ hb_api_signon(struct ll_cluster* cinfo, const char * clientid)
 		iscasual = 1;
 	}
 
-	if (!iscasual && DoLock(HBPREFIX, OurClientID) != 0) {
-		ha_api_perror("Cannot lock FIFO for %s", OurClientID);
-	}
 	pi->iscasual = iscasual;
-	directory = (iscasual ? CASUALCLIENTDIR : NAMEDCLIENTDIR);
 
-	snprintf(pi->ReplyFIFOName, sizeof(pi->ReplyFIFOName)
-	,	"%s/%s%s", directory, OurClientID, RSP_SUFFIX);
-
-	snprintf(pi->ReqFIFOName, sizeof(pi->ReqFIFOName)
-	,	"%s/%s%s", directory, OurClientID, REQ_SUFFIX);
-
-	/*
-	 * We need to provide locking for named clients to ensure that only
-	 * one client is accessing the request/response FIFOs simultaneously.
-	 *	(for now, it's a wee bug ;-))
-	 */
 
 	if (uname(&un) < 0) {
 		ha_api_perror("uname failure");
@@ -365,94 +316,39 @@ hb_api_signon(struct ll_cluster* cinfo, const char * clientid)
 	if ((request = hb_api_boilerplate(API_SIGNON)) == NULL) {
 		return HA_FAIL;
 	}
+	wchanattrs = g_hash_table_new(g_str_hash, g_str_equal);
+        g_hash_table_insert(wchanattrs, path, regpath);
 
-	/* Make sure the registration FIFO exists */
-	if (stat(API_REGFIFO, &sbuf) < 0 || !S_ISFIFO(sbuf.st_mode)) {
-		ha_api_log(LOG_ERR, "FIFO %s does not exist", API_REGFIFO);
-		ZAPMSG(request);
-		return HA_FAIL;
-	}
-	
-	if (iscasual) {
-		/* Make our reply FIFO */
-		if (mkfifo(pi->ReplyFIFOName, 0600) < 0) {
-			ha_api_perror("hb_api_signon: Can't create fifo %s"
-			,	pi->ReplyFIFOName);
-			ZAPMSG(request);
-			return HA_FAIL;
-		}
+	/* Connect to the heartbeat API server */
 
-		/* Make our request FIFO */
-		if (mkfifo(pi->ReqFIFOName, 0600) < 0) {
-			ha_api_perror("hb_api_signon: Can't create fifo %s"
-			,	pi->ReqFIFOName);
-			ZAPMSG(request);
-			return HA_FAIL;
-		}
-	}
-	/* We open it this way to keep the open from hanging...
-	 * We really only need to read it (see the fdopen below), but if
-	 * we open it only for reading then we'll get an EPIPE until it
-	 * is opened by heartbeat (or something like that).  In any case,
-	 * we only need to read it, but we have to open it this way for
-	 * things to work right.
-	 */
-	if ((fd = open(pi->ReplyFIFOName, O_RDWR)) < 0) {
-		ha_api_log(LOG_ERR, "hb_api_signon: Can't open reply fifo %s"
-		,	pi->ReplyFIFOName);
-		ZAPMSG(request);
-		return HA_FAIL;
-	}
-	/*
-	 * Although we opened it for r/w as explained above, there's no need
-	 * to tell stdio that, because we're only going to read it.
-	 * So, we do an open(2), then an fdopen of the fd gotten from open().
-	 */
-	if ((pi->ReplyFIFO = fdopen(fd, "r")) == NULL) {
-		ha_api_log(LOG_ERR, "hb_api_signon: Can't fdopen reply fifo %s"
-		,	pi->ReplyFIFOName);
+	if ((pi->chan = ipc_channel_constructor(IPC_ANYTYPE, wchanattrs))
+	==	NULL) {
+		ha_api_log(LOG_ERR, "hb_api_signon: Can't connect"
+		" to heartbeat");
 		ZAPMSG(request);
 		return HA_FAIL;
 	}
 
-	/*
-	 * We cannot allow the ReplyFIFO to be buffered or we can get
-	 * get very confused if it has more than one message in it.
-	 * In particular, we have no way to tell if stdio has read in
-	 * a message that we'd like to report to the client via
-	 * msgready().  So, we do this to make msgready() accurate
-	 * (which is hardly an optional property).
-	 */
-	setvbuf(pi->ReplyFIFO, NULL, _IONBF, 0);
-
-	/*  Open up the registration FIFO. We will open it in nonblocking
-	 *  mode, to verify if heartbeat has already opened the other end.
-	 *  If we do not use nonblocking open, we will end up getting 
-	 *  blocked for ever till heartbeat opens the other end of the fifo.
-	 */
-	if((Regfd = open(API_REGFIFO, O_WRONLY|O_NONBLOCK)) == -1) {
-		ha_api_log(LOG_ERR, "hb_api_signon: Can't open register fifo "
-			API_REGFIFO);
+        if (pi->chan->ops->initiate_connection(pi->chan) != IPC_OK) {
+		ha_api_log(LOG_ERR, "hb_api_signon: Can't initiate"
+		" connection  to heartbeat");
 		ZAPMSG(request);
-		return HA_FAIL;
-	}
+                return HA_FAIL;
+        }
 
-	if ((RegFIFO = fdopen(Regfd, "w")) == NULL) {
-		ha_api_perror("Can't fopen " API_REGFIFO);
-		ZAPMSG(request);
-		return HA_FAIL;
-	}
 
 	/* Send the registration request message */
-	if (msg2stream(request, RegFIFO) != HA_OK) {
-		fclose(RegFIFO); RegFIFO=NULL;
+	if (msg2ipcchan(request, pi->chan) != HA_OK) {
+		pi->chan->ops->destroy(pi->chan);
+		pi->chan = NULL;
 		ha_api_perror("can't send message to %s", API_REGFIFO);
 		ZAPMSG(request);
 		return HA_FAIL;
 	}
-	fclose(RegFIFO); RegFIFO=NULL;
-		
+	
+
 	ZAPMSG(request);
+	pi->chan->ops->waitout(pi->chan);
 
 	/* Read the reply... */
 	if ((reply=read_api_msg(pi)) == NULL) {
@@ -465,16 +361,6 @@ hb_api_signon(struct ll_cluster* cinfo, const char * clientid)
 		rc = HA_OK;
 		pi->SignedOn = 1;
 
-		/*
-		 * Heartbeat has now opened our request FIFO (for reading)
-		 * So it's now safe for us to open our end of it for writing.
-		 */
-		if ((pi->RequestFIFO = fopen(pi->ReqFIFOName, "w")) == NULL) {
-			ha_api_log(LOG_ERR, "hb_api_signon: Can't open req fifo %s"
-			,	pi->ReqFIFOName);
-			ZAPMSG(reply);
-			return HA_FAIL;
-		}
 		if ((tmpstr = ha_msg_value(reply, F_DEADTIME)) == NULL
 		||	sscanf(tmpstr, "%lx", &(pi->deadtime_ms)) != 1) {
 			ha_api_log(LOG_ERR
@@ -539,24 +425,15 @@ hb_api_signoff(struct ll_cluster* cinfo)
 	}
 	
 	/* Send the message */
-	if (msg2stream(request, pi->RequestFIFO) != HA_OK) {
+	if (msg2ipcchan(request, pi->chan) != HA_OK) {
 		ZAPMSG(request);
-		ha_api_perror("can't send message to RequestFIFO");
+		ha_api_perror("can't send message to IPC");
 		return HA_FAIL;
 	}
-	if (!pi->iscasual && DoUnlock(HBPREFIX, OurClientID) != 0) {
-		ha_api_log(LOG_ERR, "Cannot unlock FIFO for %s", OurClientID);
-	}
+	pi->chan->ops->waitout(pi->chan);
 	ZAPMSG(request);
 	OurClientID = NULL;
-	(void)fclose(pi->RequestFIFO);	pi->RequestFIFO = NULL;
-	(void)fclose(pi->ReplyFIFO);	pi->ReplyFIFO = NULL;
-	if (pi->iscasual) {
-		(void)unlink(pi->ReplyFIFOName);
-		(void)unlink(pi->ReqFIFOName);
-	}
-	pi->ReplyFIFOName[0] = EOS;
-	pi->ReqFIFOName[0] = EOS;
+	pi->chan->ops->destroy(pi->chan);
 	pi->SignedOn = 0;
 	zap_order_seq(pi);
 	zap_order_queue(pi);
@@ -633,9 +510,9 @@ hb_api_setfilter(struct ll_cluster* ci, unsigned fmask)
 	}
 	
 	/* Send the message */
-	if (msg2stream(request, pi->RequestFIFO) != HA_OK) {
+	if (msg2ipcchan(request, pi->chan) != HA_OK) {
 		ZAPMSG(request);
-		ha_api_perror("can't send message to RequestFIFO");
+		ha_api_perror("can't send message to IPC");
 		return HA_FAIL;
 	}
 	ZAPMSG(request);
@@ -696,8 +573,8 @@ hb_api_setsignal(ll_cluster_t* lcl, int nsig)
 	}
 	
 	/* Send message */
-	if (msg2stream(request, pi->RequestFIFO) != HA_OK) {
-		ha_api_perror("can't send message to RequestFIFO");
+	if (msg2ipcchan(request, pi->chan) != HA_OK) {
+		ha_api_perror("can't send message to IPC Channel");
 		ZAPMSG(request);
 		return HA_FAIL;
 	}
@@ -741,9 +618,9 @@ get_nodelist(llc_private_t* pi)
 	}
 
 	/* Send message */
-	if (msg2stream(request, pi->RequestFIFO) != HA_OK) {
+	if (msg2ipcchan(request, pi->chan) != HA_OK) {
 		ZAPMSG(request);
-		ha_api_perror("can't send message to RequestFIFO");
+		ha_api_perror("can't send message to IPC Channel");
 		return HA_FAIL;
 	}
 	ZAPMSG(request);
@@ -812,9 +689,9 @@ get_iflist(llc_private_t* pi, const char *host)
 	}
 
 	/* Send message */
-	if (msg2stream(request, pi->RequestFIFO) != HA_OK) {
+	if (msg2ipcchan(request, pi->chan) != HA_OK) {
 		ZAPMSG(request);
-		ha_api_perror("Can't send message to RequestFIFO");
+		ha_api_perror("Can't send message to IPC Channel");
 		return HA_FAIL;
 	}
 	ZAPMSG(request);
@@ -881,9 +758,9 @@ get_nodestatus(ll_cluster_t* lcl, const char *host)
 	}
 
 	/* Send message */
-	if (msg2stream(request, pi->RequestFIFO) != HA_OK) {
+	if (msg2ipcchan(request, pi->chan) != HA_OK) {
 		ZAPMSG(request);
-		ha_api_perror("Can't send message to RequestFIFO");
+		ha_api_perror("Can't send message to IPC Channel");
 		return NULL;
 	}
 	ZAPMSG(request);
@@ -944,9 +821,9 @@ get_nodetype(ll_cluster_t* lcl, const char *host)
 	}
 
 	/* Send message */
-	if (msg2stream(request, pi->RequestFIFO) != HA_OK) {
+	if (msg2ipcchan(request, pi->chan) != HA_OK) {
 		ZAPMSG(request);
-		ha_api_perror("Can't send message to RequestFIFO");
+		ha_api_perror("Can't send message to IPC Channel");
 		return NULL;
 	}
 	ZAPMSG(request);
@@ -1001,9 +878,9 @@ get_parameter(ll_cluster_t* lcl, const char* pname)
 	}
 
 	/* Send message */
-	if (msg2stream(request, pi->RequestFIFO) != HA_OK) {
+	if (msg2ipcchan(request, pi->chan) != HA_OK) {
 		ZAPMSG(request);
-		ha_api_perror("Can't send message to RequestFIFO");
+		ha_api_perror("Can't send message to IPC Channel");
 		return NULL;
 	}
 	ZAPMSG(request);
@@ -1052,9 +929,9 @@ get_resources(ll_cluster_t* lcl)
 	}
 
 	/* Send message */
-	if (msg2stream(request, pi->RequestFIFO) != HA_OK) {
+	if (msg2ipcchan(request, pi->chan) != HA_OK) {
 		ZAPMSG(request);
-		ha_api_perror("Can't send message to RequestFIFO");
+		ha_api_perror("Can't send message to IPC Channel");
 		return NULL;
 	}
 	ZAPMSG(request);
@@ -1184,9 +1061,9 @@ get_ifstatus(ll_cluster_t* lcl, const char *host, const char * ifname)
 	}
 
 	/* Send message */
-	if (msg2stream(request, pi->RequestFIFO) != HA_OK) {
+	if (msg2ipcchan(request, pi->chan) != HA_OK) {
 		ZAPMSG(request);
-		ha_api_perror("Can't send message to RequestFIFO");
+		ha_api_perror("Can't send message to IPC Channel");
 		return NULL;
 	}
 	ZAPMSG(request);
@@ -1456,9 +1333,11 @@ read_api_msg(llc_private_t* pi)
 	for (;;) {
 		struct ha_msg*	msg;
 		const char *	type;
-		if ((msg=msgfromstream(pi->ReplyFIFO)) == NULL) {
+
+		pi->chan->ops->waitin(pi->chan);
+		if ((msg=msgfromIPC(pi->chan)) == NULL) {
 			ha_api_perror("read_api_msg: "
-			"Cannot read reply from ReplyFIFO");
+			"Cannot read reply from IPC channel");
 			continue;
 		}
 		if ((type=ha_msg_value(msg, F_TYPE)) != NULL
@@ -1648,7 +1527,7 @@ read_hb_msg(ll_cluster_t* llc, int blocking)
 	}
 	/* Process msg from FIFO */
 	while (msgready(llc)){
-		msg = msgfromstream(pi->ReplyFIFO);
+		msg = msgfromIPC(pi->chan);
 		if ((retmsg = process_hb_msg(pi, msg)))
 			return retmsg;
 	}
@@ -1667,7 +1546,7 @@ read_hb_msg(ll_cluster_t* llc, int blocking)
          * that we can finally return a non-NULL msg to user.
          */
 	while (1){
-		msg = msgfromstream(pi->ReplyFIFO);
+		msg = msgfromIPC(pi->chan);
 		if (!msg)
 			return NULL;
 		if ((retmsg = process_hb_msg(pi, msg)))
@@ -1990,7 +1869,7 @@ get_inputfd(ll_cluster_t* ci)
 		ha_api_log(LOG_ERR, "not signed on");
 		return -1;
 	}
-	return(fileno(pi->ReplyFIFO));
+	return pi->chan->ops->get_recv_select_fd(pi->chan);
 }
 
 /*
@@ -1999,10 +1878,6 @@ get_inputfd(ll_cluster_t* ci)
 static int
 msgready(ll_cluster_t*ci )
 {
-	fd_set		fds;
-	int             fd = get_inputfd(ci);
-	struct timeval	tv;
-	int		rc;
 	llc_private_t* pi;
 
 	ClearLog();
@@ -2019,14 +1894,8 @@ msgready(ll_cluster_t*ci )
 	if (pi->firstQdmsg) {
 		return 1;
 	}
-	FD_ZERO(&fds);
-	FD_SET(fd, &fds);
-	tv.tv_sec = 0;
-	tv.tv_usec = 0;
 
-	rc = select(fd+1, &fds, NULL, NULL, &tv);
-	
-	return (rc > 0);
+	return pi->chan->ops->is_message_pending(pi->chan);
 }
 
 /*
@@ -2095,7 +1964,7 @@ sendclustermsg(ll_cluster_t* lcl, struct ha_msg* msg)
 		return HA_FAIL;
 	}
 
-	return(msg2stream(msg, pi->RequestFIFO));
+	return(msg2ipcchan(msg, pi->chan));
 }
 
 /*
@@ -2128,7 +1997,7 @@ sendnodemsg(ll_cluster_t* lcl, struct ha_msg* msg
 		ha_api_log(LOG_ERR, "sendnodemsg: cannot set F_TO field");
 		return(HA_FAIL);
 	}
-	return(msg2stream(msg, pi->RequestFIFO));
+	return(msg2ipcchan(msg, pi->chan));
 }
 
 /* Add order sequence number field */
@@ -2192,7 +2061,7 @@ send_ordered_clustermsg(ll_cluster_t* lcl, struct ha_msg* msg)
 
 	add_order_seq(pi, msg);
 
-	return(msg2stream(msg, pi->RequestFIFO));
+	return(msg2ipcchan(msg, pi->chan));
 }
 
 static int
@@ -2223,7 +2092,7 @@ send_ordered_nodemsg(ll_cluster_t* lcl, struct ha_msg* msg
 		return(HA_FAIL);
 	}
 	add_order_seq(pi, msg);
-	return(msg2stream(msg, pi->RequestFIFO));
+	return(msg2ipcchan(msg, pi->chan));
 }
 
 static char	APILogBuf[MAXLINE] = "";
@@ -2301,7 +2170,7 @@ ha_api_perror(const char * fmt, ...)
  */
 static struct llc_ops heartbeat_ops = {
 	hb_api_signon,		/* signon */
-	hb_api_signoff,		/* signon */
+	hb_api_signoff,		/* signoff */
 	hb_api_delete,		/* delete */
 	set_msg_callback,	/* set_msg_callback */
 	set_nstatus_callback,	/* set_nstatus_callback */

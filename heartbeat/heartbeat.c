@@ -1,4 +1,4 @@
-const static char * _heartbeat_c_Id = "$Id: heartbeat.c,v 1.278 2003/10/27 10:42:52 horms Exp $";
+const static char * _heartbeat_c_Id = "$Id: heartbeat.c,v 1.279 2003/10/29 04:05:01 alan Exp $";
 
 /*
  * heartbeat: Linux-HA heartbeat code
@@ -259,13 +259,6 @@ const static char * _heartbeat_c_Id = "$Id: heartbeat.c,v 1.278 2003/10/27 10:42
 #define OPTARGS			"dkMrRsvlC:"
 #define	ONEDAY			(24*60*60)	/* Seconds in a day */
 
-#define	PRI_SENDSTATUS		G_PRIORITY_HIGH
-#define	PRI_DUMPSTATS		G_PRIORITY_LOW
-#define	PRI_AUDITCLIENT		G_PRIORITY_LOW
-#define	PRI_APIREGISTER		(G_PRIORITY_LOW-1)
-#define	PRI_CLUSTERMSG		G_PRIORITY_DEFAULT
-#define	PRI_FIFOMSG		PRI_CLUSTERMSG-1
-
 #define REAPER_SIG		0x0001UL
 #define TERM_SIG		0x0002UL
 #define DEBUG_USR1_SIG		0x0004UL
@@ -381,7 +374,7 @@ static void	init_xmit_hist (struct msg_xmit_hist * hist);
 static void	process_rexmit(struct msg_xmit_hist * hist
 ,			struct ha_msg* msg);
 static void	process_clustermsg(struct ha_msg* msg, struct link* lnk);
-static void	process_registermsg(FILE * f);
+extern void	process_registerevent(IPC_Channel* chan,  gpointer user_data);
 static void	nak_rexmit(seqno_t seqno, const char * reason);
 static int	IncrGeneration(seqno_t * generation);
 static int	GetTimeBasedGeneration(seqno_t * generation);
@@ -405,7 +398,7 @@ static gboolean	polled_input_dispatch(gpointer source_data
 ,			GTimeVal* current_time
 ,			gpointer user_data);
 
-static gboolean	APIregistration_input_dispatch(int fd, gpointer user_data);
+static gboolean	APIregistration_dispatch(IPC_Channel* chan, gpointer user_data);
 static gboolean	FIFO_child_msg_dispatch(IPC_Channel* chan, gpointer udata);
 static gboolean	read_child_dispatch(IPC_Channel* chan, gpointer user_data);
 static gboolean hb_update_cpu_limit(gpointer p);
@@ -635,22 +628,6 @@ initialize_heartbeat()
 		return HA_FAIL;
 	}
 
-	if (stat(API_REGFIFO, &buf) < 0 || !S_ISFIFO(buf.st_mode)) {
-		cl_log(LOG_INFO, "Creating FIFO %s.", API_REGFIFO);
-		unlink(API_REGFIFO);
-		if (mkfifo(API_REGFIFO, 0420) < 0) {
-			cl_perror("Cannot make fifo %s.", API_REGFIFO);
-			return HA_FAIL;
-		}
-	}
-
-	if (stat(API_REGFIFO, &buf) < 0) {
-		cl_log(LOG_ERR, "FIFO %s does not exist", API_REGFIFO);
-		return HA_FAIL;
-	}else if (!S_ISFIFO(buf.st_mode)) {
-		cl_log(LOG_ERR, "%s is not a FIFO", API_REGFIFO);
-		return HA_FAIL;
-	}
 
 
 	/* Clean up tmp files from our resource scripts */
@@ -1094,15 +1071,17 @@ master_control_process(IPC_Channel* fifoproc)
  *			(should this propagate to client children?)
  *
  */
-	FILE*			regfifo;
-	int			regfd;
 	volatile struct process_info *	pinfo;
 	int			allstarted;
 	int			j;
-	GFDSource*		APIRegistrationGFD;
+	GWCSource*		regsource;
 	GCHSource*		FifoChildSource;
+	GHashTable*		wchanattrs;
+	IPC_WaitConnection*	regwchan = NULL;
 	GMainLoop*		mainloop;
 	long			memstatsinterval;
+        char			regfifo[] = API_REGFIFO;
+	char			path[] = IPC_PATH_ATTR;
 
 	init_xmit_hist (&msghist);
 
@@ -1126,19 +1105,6 @@ master_control_process(IPC_Channel* fifoproc)
 
 	set_proc_title("%s: master control process", cmdname);
 
-
-	if ((regfd = open(API_REGFIFO, O_RDONLY|O_NDELAY)) < 0) {
-		cl_perror("master_control_process: Can't open " API_REGFIFO);
-		cleanexit(1);
-	}
-	(void)open(API_REGFIFO, O_WRONLY);
-
-	if ((regfifo = fdopen(regfd, "r")) == NULL) {
-		cl_perror("master_control_process"
-		": Can't fdopen "API_REGFIFO);
-		cleanexit(1);
-	}
-	regfd = fileno(regfifo);	clearerr(regfifo);
 
 
 	if (ANYDEBUG) {
@@ -1170,13 +1136,33 @@ master_control_process(IPC_Channel* fifoproc)
 	g_source_add(G_PRIORITY_HIGH, FALSE, &polled_input_SourceFuncs
 	,	NULL, NULL, NULL);
 
-	APIRegistrationGFD = G_main_add_fd(PRI_APIREGISTER, regfd, FALSE
-	, 	APIregistration_input_dispatch, regfifo, NULL);
 
 	/* We only read from this source, we never write to it */
 	FifoChildSource = G_main_add_IPC_Channel(PRI_FIFOMSG, fifoproc
 	,	FALSE, FIFO_child_msg_dispatch, NULL, NULL);
 
+	wchanattrs = g_hash_table_new(g_str_hash, g_str_equal);
+
+        g_hash_table_insert(wchanattrs, path, regfifo);
+
+	regwchan = ipc_wait_conn_constructor(IPC_DOMAIN_SOCKET, wchanattrs);
+
+	if (regwchan == NULL) {
+		cl_log(LOG_DEBUG
+		,	"Cannot open registration socket at %s"
+		,	regfifo);
+		cleanexit(LSB_EXIT_EPERM);
+	}
+
+	regsource = G_main_add_IPC_WaitConnection(PRI_APIREGISTER, regwchan
+	,	NULL, FALSE, APIregistration_dispatch, NULL, NULL);
+	
+
+	if (regsource == NULL) {
+		cl_log(LOG_DEBUG
+		,	"Cannot create registration source from IPC");
+		cleanexit(LSB_EXIT_GENERIC);
+	}
 	if (ANYDEBUG) {
 		cl_log(LOG_DEBUG
 		,	"Starting local status message @ %ld ms intervals"
@@ -1464,20 +1450,13 @@ comm_now_up()
 
 
 static gboolean
-APIregistration_input_dispatch(int fd,	gpointer user_data)
+APIregistration_dispatch(IPC_Channel* chan,  gpointer user_data)
 {
-	FILE *		regfifo = user_data;
 	if (ANYDEBUG) {
 		cl_log(LOG_DEBUG
-		,	"Processing register message from regfd %d."
-		,	fd);
+		,	"Processing register event.");
 	}
-	if (fileno(regfifo) != fd) {
-		/* Bad boojum! */
-		cl_log(LOG_ERR
-		,	"FD mismatch in APIregistration_input_dispatch");
-	}
-	process_registermsg(regfifo);
+	process_registerevent(chan, user_data);
 	return TRUE;
 }
 
@@ -1946,22 +1925,6 @@ process_clustermsg(struct ha_msg* msg, struct link* lnk)
 	if (heartbeat_comm_state != COMM_LINKSUP) {
 		check_comm_isup();
 	}	
-}
-
-/* Process a registration request from a potential client */
-static void
-process_registermsg(FILE *regfifo)
-{
-	struct ha_msg *		msg = NULL;
-
-	/* Ill-behaved clients can cause this... */
-
-	if ((msg = msgfromstream(regfifo)) == NULL) {
-		return;
-	}
-	api_heartbeat_monitor(msg, APICALL, "<api>");
-	api_process_registration(msg);
-	ha_msg_del(msg);  msg = NULL;
 }
 
 void
@@ -4125,7 +4088,13 @@ get_localnodeinfo(void)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.279  2003/10/29 04:05:01  alan
+ * Changed things so that the API uses IPC instead of FIFOs.
+ * This isn't 100% done - python API code needs updating, and need to check authorization
+ * for the ability to "sniff" other people's packets.
+ *
  * Revision 1.278  2003/10/27 10:42:52  horms
+ *
  * Ensure that init_config() and parse_ha_resources() are
  * only called once on restart. Else all sorts of strange
  * things can happen. Kurosawa Takahiro.

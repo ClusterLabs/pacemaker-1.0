@@ -1,4 +1,4 @@
-static const char * _ha_msg_c_Id = "$Id: ha_msg.c,v 1.45 2003/07/14 04:30:49 alan Exp $";
+static const char * _ha_msg_c_Id = "$Id: ha_msg.c,v 1.46 2003/10/29 04:05:00 alan Exp $";
 /*
  * Heartbeat messaging object.
  *
@@ -580,6 +580,33 @@ ipcmsg2hamsg(IPC_Message*m)
 	return ret;
 }
 
+int
+msg2ipcchan(struct ha_msg*m, IPC_Channel*ch)
+{
+	IPC_Message*	imsg;
+
+	if (m == NULL || ch == NULL) {
+		ha_log(LOG_ERR, "Invalid msg2ipcchan argument");
+		errno = EINVAL;
+		return HA_FAIL;
+	}
+	
+	if ((imsg = hamsg2ipcmsg(m, ch)) == NULL) {
+		ha_log(LOG_ERR, "hamsg2ipcmsg() failure");
+		return HA_FAIL;
+	}
+
+	if (ch->ops->send(ch, imsg) != IPC_OK) {
+		if (ch->ch_status == IPC_CONNECT) {
+			ha_log(LOG_ERR
+			,	"msg2ipcchan: ch->ops->send() failure");
+		}
+		imsg->msg_done(imsg);
+		return HA_FAIL;
+	}
+	return HA_OK;
+}
+
 /* Converts a string (perhaps received via UDP) into a message */
 struct ha_msg *
 string2msg(const char * s, size_t length)
@@ -678,7 +705,9 @@ ha_log_message (const struct ha_msg *m)
 	ha_log(LOG_INFO, "MSG: Dumping message with %d fields", m->nfields);
 
 	for (j=0; j < m->nfields; ++j) {
-		ha_log(LOG_INFO, "MSG[%d]: [%s=%s]",j, m->names[j] ? m->names[j] : "NULL", m->values[j] ? m->values[j] : "NULL");
+		ha_log(LOG_INFO, "MSG[%d]: [%s=%s]",j
+		,	m->names[j] ? m->names[j] : "NULL"
+		,	m->values[j] ? m->values[j] : "NULL");
 	}
 }
 
@@ -705,6 +734,11 @@ main(int argc, char ** argv)
 #endif
 /*
  * $Log: ha_msg.c,v $
+ * Revision 1.46  2003/10/29 04:05:00  alan
+ * Changed things so that the API uses IPC instead of FIFOs.
+ * This isn't 100% done - python API code needs updating, and need to check authorization
+ * for the ability to "sniff" other people's packets.
+ *
  * Revision 1.45  2003/07/14 04:30:49  alan
  * This patch from Kurosawa-san (by way of Horms):
  *    Heartbeat uses poll() in order to check messages in API FIFO and

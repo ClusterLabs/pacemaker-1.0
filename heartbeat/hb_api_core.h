@@ -30,34 +30,39 @@
 #	define _HB_API_CORE_H 1
 #include <sys/types.h>
 #include <glib.h>
-#include <clplumbing/longclock.h>
 #include <clplumbing/GSource.h>
 #include <ha_msg.h>
+
+/* Dispatch priorities for various kinds of events */
+#define	PRI_SENDSTATUS		G_PRIORITY_HIGH
+#define	PRI_DUMPSTATS		G_PRIORITY_LOW
+#define	PRI_AUDITCLIENT		G_PRIORITY_LOW
+#define	PRI_APIREGISTER		(G_PRIORITY_LOW-1)
+#define	PRI_CLUSTERMSG		G_PRIORITY_DEFAULT
+#define	PRI_FIFOMSG		PRI_CLUSTERMSG-1
+#define	PRI_CLIENTMSG		PRI_FIFOMSG
+
+void process_registerevent(IPC_Channel* chan,  gpointer user_data);
 
 /*
  *   Per-client API data structure.
  */
 
 typedef struct client_process {
-	char	client_id[32];  /* Client identification */
-	pid_t	pid;		/* PID of client process */
-	uid_t	uid;		/* UID of client  process */
-	int	iscasual;	/* 1 if this is a "casual" client */
-	int	isindispatch;	/* TRUE if we're in dispatch now */
-	const char*removereason;/* non-NULL if client is being removed */
-	FILE*	input_fifo;	/* Input FIFO file pointer */
-	int	output_fifofd;	/* Output FIFO file descriptor */
-	GList*	msgQ;		/* Queue of msgs for client */
-	int	msgcount;	/* length of client message queue */
-	int    	signal;		/* What signal to indicate new msgs */
-	int   	desired_types;	/* A bit mask of desired message types*/
-	struct client_process*  next;
-	GFDSource*		g_source_id;	/* return from G_main_add_fd() */
-	int			fd;	/* FD that goes with g_source_id */
+    char	client_id[32];  /* Client identification */
+    pid_t	pid;		/* PID of client process */
+    uid_t	uid;		/* UID of client  process */
+    int		iscasual;	/* 1 if this is a "casual" client */
+    int		isindispatch;	/* TRUE if we're in dispatch now */
+    const char*	removereason;/* non-NULL if client is being removed */
+    IPC_Channel*chan;	/* client IPC channel */
+    GCHSource*	gsource;	/* return from G_main_add_fd() */
+    int    	signal;		/* What signal to indicate new msgs */
+    int   	desired_types;	/* A bit mask of desired message types*/
 	
-	longclock_t	next_app_hb;	/* Next application heartbeat time */
-	longclock_t	app_hb_ticks;	/* ticks between app heartbeats */
+	struct client_process*  next;
 }client_proc_t;
+
 
 /*
  * Types of messages. 

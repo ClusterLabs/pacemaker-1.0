@@ -1,4 +1,4 @@
-const static char * _hb_config_c_Id = "$Id: config.c,v 1.101 2003/10/27 19:20:37 alan Exp $";
+const static char * _hb_config_c_Id = "$Id: config.c,v 1.102 2003/10/29 04:05:00 alan Exp $";
 /*
  * Parse various heartbeat configuration files...
  *
@@ -57,6 +57,7 @@ const static char * _hb_config_c_Id = "$Id: config.c,v 1.101 2003/10/27 19:20:37
 #include <hb_module.h>
 #include <hb_api.h>
 #include <hb_config.h>
+#include <hb_api_core.h>
 
 #define	DIRTYALIASKLUDGE
 
@@ -440,10 +441,12 @@ parse_config(const char * cfgfile, char *nodename)
 	if ((f = fopen(cfgfile, "r")) == NULL) {
 		ha_log(LOG_ERR, "Cannot open config file [%s]", cfgfile);
 		ha_log(LOG_INFO
-		,       "An annotated sample %s file is provided in the documentation."
+		,       "An annotated sample %s file is provided in"
+		" the documentation."
 		,       cfgfile);
 		ha_log(LOG_INFO
-		,       "Please copy it to %s, read it, customize it, and try again."
+		,       "Please copy it to %s, read it, customize it"
+		", and try again."
 		,       cfgfile);
 
 		return(HA_FAIL);
@@ -1711,15 +1714,16 @@ make_id_table(const char * list, int listlen, int (*map)(const char *, int))
 static int
 set_api_authorization(const char * directive)
 {
-	const char *	bp;
-	const char *	client;
-	int		clientlen;
-	const char *	gidlist = NULL;
-	int		gidlen = 0;
-	const char *	uidlist = NULL;
-	int		uidlen = 0;
-	struct IPC_AUTH*auth = NULL;
-	char		clname[MAXLINE];
+	const char *		bp;
+	const char *		client;
+	int			clientlen;
+	const char *		gidlist = NULL;
+	int			gidlen = 0;
+	const char *		uidlist = NULL;
+	int			uidlen = 0;
+	struct IPC_AUTH*	auth = NULL;
+	char* 			clname = NULL;
+	client_proc_t	dummy;
 	
 
 	/* String processing in 'C' is *so* ugly...   */
@@ -1732,9 +1736,18 @@ set_api_authorization(const char * directive)
 	}
 	client = bp;
 	clientlen = strcspn(bp, WHITESPACE);
-	if (clientlen >= MAXLINE-1 || clientlen < 1) {
-		cl_log(LOG_ERR
-		,	"Client name too long in %s directive",	KEY_APIPERM);
+
+	if (clientlen <= 0) {
+		goto baddirective;
+	}
+	if (clientlen >= sizeof(dummy.client_id)) {
+		cl_log(LOG_ERR, "client name [%*s] too long"
+		,	clientlen, client);
+		goto baddirective;
+	}
+	clname = ha_malloc(clientlen+1);
+	if (clname == NULL) {
+		cl_log(LOG_ERR, "out of memory for client name");
 		goto baddirective;
 	}
 	strncpy(clname, client, clientlen);
@@ -1812,12 +1825,14 @@ set_api_authorization(const char * directive)
 		,	KEY_APIPERM, clname, directive);
 		return HA_FAIL;
 	}
+	g_hash_table_insert(APIAuthorization, clname, auth);
 
 	return HA_OK;
 
 baddirective:
 	cl_log(LOG_ERR, "Invalid %s directive [%s]", KEY_APIPERM, directive);
-	cl_log(LOG_INFO, "Syntax: %s [uid=uidlist] [gid=gidlist]", KEY_APIPERM);
+	cl_log(LOG_INFO, "Syntax: %s [uid=uidlist] [gid=gidlist]"
+	,	KEY_APIPERM);
 	cl_log(LOG_INFO, "Where uidlist is a comma-separated list of uids,");
 	cl_log(LOG_INFO, "and gidlist is a comma-separated list of gids");
 	cl_log(LOG_INFO, "One or the other must be specified.");
@@ -1836,6 +1851,10 @@ baddirective:
 		ha_free(auth);
 		auth = NULL;
 	}
+	if (clname) {
+		ha_free(clname);
+		clname = NULL;
+	}
 	return HA_FAIL;
 
 }
@@ -1845,6 +1864,11 @@ baddirective:
 
 /*
  * $Log: config.c,v $
+ * Revision 1.102  2003/10/29 04:05:00  alan
+ * Changed things so that the API uses IPC instead of FIFOs.
+ * This isn't 100% done - python API code needs updating, and need to check authorization
+ * for the ability to "sniff" other people's packets.
+ *
  * Revision 1.101  2003/10/27 19:20:37  alan
  * Fixed a couple of minor but important bugs in the client authentication code.
  *

@@ -142,7 +142,6 @@ extern int	UseOurOwnPoll;
 int		debug_client_count = 0;
 int		total_client_count = 0;
 client_proc_t*	client_list = NULL;	/* List of all our API clients */
-static gboolean	client_output_pending = FALSE;
 			/* TRUE when any client output still pending */
 struct node_info *curnode;
 
@@ -150,17 +149,15 @@ static void	api_process_request(client_proc_t* client, struct ha_msg *msg);
 static void	api_send_client_msg(client_proc_t* client, struct ha_msg *msg);
 static void	api_send_client_status(client_proc_t* client
 ,	const char * status, const char *	reason);
-static void	api_flush_msgQ(client_proc_t* client);
-static void	api_clean_clientQ(client_proc_t* client);
-static void		api_flush_pending_msgQ(void);
 static void	api_remove_client_int(client_proc_t* client, const char * rsn);
-static int	api_add_client(struct ha_msg* msg);
+static int	api_add_client(client_proc_t* chan, struct ha_msg* msg);
 static client_proc_t*	find_client(const char * fromid, const char * pid);
-static FILE*		open_reqfifo(client_proc_t* client);
-static const char *	client_fifo_name(client_proc_t* client, int isreq);
-static	uid_t		pid2uid(pid_t pid);
-static int		ClientSecurityIsOK(client_proc_t* client);
-static int		HostSecurityIsOK(void);
+static void	G_remove_client(gpointer Client);
+static gboolean	APIclients_input_dispatch(IPC_Channel* chan, gpointer udata);
+static void	api_process_registration_msg(client_proc_t*, struct ha_msg *);
+static gboolean	api_check_client_authorization(client_proc_t* client);
+
+extern GHashTable*	APIAuthorization;
 
 
 /*
@@ -192,7 +189,6 @@ api_heartbeat_monitor(struct ha_msg *msg, int msgtype, const char *iface)
 	(void)_hb_config_h_Id;
 	(void)_heartbeat_private_h_Id;
 
-	api_flush_pending_msgQ();
 
 	/* This kicks out most messages, since debug clients are rare */
 
@@ -222,6 +218,9 @@ api_heartbeat_monitor(struct ha_msg *msg, int msgtype, const char *iface)
 		/* Is this message addressed to us? */
 		if (clientid != NULL
 		&&	strcmp(clientid, client->client_id) != 0) {
+			continue;
+		}
+		if (client->chan->ch_status != IPC_CONNECT) {
 			continue;
 		}
 
@@ -708,13 +707,6 @@ api_process_request(client_proc_t* fromclient, struct ha_msg * msg)
 		goto freeandexitresp;
 	}
 
-	/* See if this client FIFOs are (still) properly secured */
-
-	if (!ClientSecurityIsOK(client)) {
-		client->removereason = "security";
-		goto freeandexitresp;
-	}
-	
 	for(x = 0 ; x < DIMOF(query_handler_list); x++) { 
 
 		int ret;
@@ -772,18 +764,47 @@ freeandexit:
 	ha_msg_del(msg); msg=NULL;
 }
 
+/* Process a registration request from a potential client */
+void
+process_registerevent(IPC_Channel* chan,  gpointer user_data)
+{
+	client_proc_t*	client;
+
+	if ((client = MALLOCT(client_proc_t)) == NULL) {
+		ha_log(LOG_ERR
+		,	"unable to add client [no memory]");
+		chan->ops->destroy(chan);
+		return;
+	}
+	/* Zap! */
+	memset(client, 0, sizeof(*client));
+	client->pid = 0;
+	client->desired_types = DEFAULTREATMENT;
+	client->signal = 0;
+	client->chan = chan;
+	client->gsource = G_main_add_IPC_Channel(PRI_CLIENTMSG
+	,	chan, FALSE
+	,	APIclients_input_dispatch
+	,	client, G_remove_client);
+
+	client->next = client_list;
+	client_list = client;
+	total_client_count++;
+}
+
 /*
  *	Register a new client.
  */
-void
-api_process_registration(struct ha_msg * msg)
+static void
+api_process_registration_msg(client_proc_t* client, struct ha_msg * msg)
 {
 	const char *	msgtype;
 	const char *	reqtype;
 	const char *	fromid;
 	const char *	pid;
 	struct ha_msg *	resp;
-	client_proc_t*	client;
+	client_proc_t*	fcli;
+	
 	char		deadtime[64];
 	char		keepalive[64];
 	char		logfacility[64];
@@ -793,14 +814,16 @@ api_process_registration(struct ha_msg * msg)
 	||	(reqtype = ha_msg_value(msg, F_APIREQ)) == NULL
 	||	strcmp(msgtype, T_APIREQ) != 0
 	||	strcmp(reqtype, API_SIGNON) != 0)  {
-		ha_log(LOG_ERR, "api_process_registration: bad message");
+		ha_log(LOG_ERR, "api_process_registration_msg: bad message");
+		ha_log_message(msg);
 		return;
 	}
 	fromid = ha_msg_value(msg, F_FROMID);
 	pid = ha_msg_value(msg, F_PID);
 
 	if (fromid == NULL && pid == NULL) {
-		ha_log(LOG_ERR, "api_process_registration: no fromid in msg");
+		ha_log(LOG_ERR
+		,	"api_process_registration_msg: no fromid in msg");
 		return;
 	}
 
@@ -808,41 +831,49 @@ api_process_registration(struct ha_msg * msg)
 	 *	Create the response message
 	 */
 	if ((resp = ha_msg_new(4)) == NULL) {
-		ha_log(LOG_ERR, "api_process_registration: out of memory/1");
+		ha_log(LOG_ERR
+		,	"api_process_registration_msg: out of memory/1");
 		return;
 	}
 	if (ha_msg_add(resp, F_TYPE, T_APIRESP) != HA_OK) {
 		ha_log(LOG_ERR
-		,	"api_process_registration: cannot add field/2");
+		,	"api_process_registration_msg: cannot add field/2");
 		ha_msg_del(resp); resp=NULL;
 		return;
 	}
 	if (ha_msg_add(resp, F_APIREQ, reqtype) != HA_OK) {
 		ha_log(LOG_ERR
-		,	"api_process_registration: cannot add field/3");
+		,	"api_process_registration_msg: cannot add field/3");
 		ha_msg_del(resp); resp=NULL;
 		return;
 	}
 
+	client->pid = atoi(pid);
 	/*
 	 *	Sign 'em up.
 	 */
-	if (!api_add_client(msg)) {
+	if (!api_add_client(client, msg)) {
 		ha_log(LOG_ERR
-		,	"api_process_registration: cannot add client");
+		,	"api_process_registration_msg: cannot add client(1)");
 	}
 
 	/* Make sure we can find them in the table... */
-	if ((client = find_client(fromid, pid)) == NULL) {
+	if ((fcli = find_client(fromid, pid)) == NULL) {
 		ha_log(LOG_ERR
-		,	"api_process_registration: cannot add client");
+		,	"api_process_registration_msg: cannot find client");
 		ha_msg_del(resp); resp=NULL;
-		/* We can't properly reply to them.  Sorry they'll hang... */
+		/* We can't properly reply to them. They'll hang. Sorry... */
+		return;
+	}
+	if (fcli != client) {
+		ha_log(LOG_ERR
+		,	"api_process_registration_msg: found wrong client");
+		ha_msg_del(resp); resp=NULL;
 		return;
 	}
 	if (ha_msg_mod(resp, F_APIRESULT, API_OK) != HA_OK) {
 		ha_log(LOG_ERR
-		,	"api_process_registration: cannot add field/4");
+		,	"api_process_registration_msg: cannot add field/4");
 		ha_msg_del(resp); resp=NULL;
 		return;
 	}
@@ -856,7 +887,7 @@ api_process_registration(struct ha_msg * msg)
 	|| 	(ha_msg_add(resp, F_KEEPALIVE, keepalive) != HA_OK)
 	||	(ha_msg_mod(resp, F_NODENAME, localnodename) != HA_OK)
 	|| 	(ha_msg_add(resp, F_LOGFACILITY, logfacility) != HA_OK)) {
-		ha_log(LOG_ERR, "api_process_registration: cannot add field/4");
+		ha_log(LOG_ERR, "api_process_registration_msg: cannot add field/4");
 		ha_msg_del(resp); resp=NULL;
 		return;
 	}
@@ -915,150 +946,21 @@ api_send_client_status(client_proc_t* client, const char * status
 static void
 api_send_client_msg(client_proc_t* client, struct ha_msg *msg)
 {
-	char *		msgstring;
-
-
-	if ((msgstring = msg2string(msg)) == NULL) {
-		ha_log(LOG_ERR
-		,	"api_send_client_message: msg2string failed client %ld"
-		,	(long) client->pid);
-		return;
+	if (msg2ipcchan(msg, client->chan) != HA_OK) {
+		if (!client->removereason) {
+			client->removereason = "sendfail";
+		}
 	}
 
-	/*
-	 * We should enforce some kind of a limit on messages we queue
-	 * up for clients.  Sick clients shouldn't use infinite resources.
-	 */
-
-	client->msgQ = g_list_append(client->msgQ, msgstring);
-	++client->msgcount;
-	api_flush_msgQ(client);
-}
-
-
-static void
-api_flush_msgQ(client_proc_t* client)
-{
-	const char*	fifoname;
-	int		rc;
-	int		nsig;
-	int		writeok=0;
-	pid_t		clientpid = client->pid;
-
-	fifoname = client_fifo_name(client, 0);
-
-	if (client->output_fifofd < 0) {
-		client->output_fifofd = open(fifoname, O_WRONLY|O_NDELAY);
-	}
-	if(client->output_fifofd < 0) {
-		if (client->removereason) {
-			return;
-		}
-
-		/* Sometimes they've gone before we know it */
-		/* Then we get ENXIO.  So we ignore those. */
-		if (errno != ENXIO && errno != EINTR) {
-			/*
-			 * FIXME:  ???
-			 * It seems like with the O_NDELAY on the
-			 * open we ought not get EINTR.  But we
-			 * do anyway...
-			 */
-			ha_perror("api_flush_msgQ: can't open %s", fifoname);
-		}
-		client->removereason = "FIFOerr";
-
-		return;
-	}
-
-	/* Write out each message in the queue */
-	while (client->msgQ != NULL) {
-		char *		msgstring;
-		int		msglen;
-
-		msgstring = (char*)(client->msgQ->data);
-		msglen = strlen(msgstring);
-		rc=write(client->output_fifofd, msgstring, msglen);
-		if (rc != msglen) {
-			if (rc < 0 && errno == EPIPE) {
-				client->removereason = "EPIPE";
-				break;
-			}
-			if (rc < 0 && errno == EINTR) {
-				continue;
-			}
-			if (rc >= 0 || errno != EAGAIN) {
-				ha_perror("Cannot write message to client"
-				" %ld (write failure %d)"
-				,	(long) clientpid, rc);
-			}
-			client_output_pending = TRUE;
-			break;
-		}
-		if (DEBUGPKTCONT) {
-			cl_log(LOG_DEBUG, "Sending message to client pid %d: "
-					"msg [%s]", client->pid, msgstring);
-		}
-
-		/* If the write succeeded, remove msg from queue */
-		++writeok;
-		--client->msgcount;
-		client->msgQ = g_list_remove(client->msgQ, msgstring);
-		ha_free(msgstring); msgstring = NULL;
-	}
-	nsig = (writeok ? client->signal : 0);
-
-	if (CL_KILL(clientpid, nsig) < 0 && errno == ESRCH) {
+	if (CL_KILL(client->pid, client->signal) < 0 && errno == ESRCH) {
 		ha_log(LOG_INFO, "api_send_client: client %ld died"
 		,	(long) client->pid);
-		client->removereason = "died";
-	}else if (!ClientSecurityIsOK(client)) {
-		client->removereason = "security";
-	}
-
-}
-
-/*
- * Try to  deliver messages that were not deliverable to clients earlier
- */
-static void
-api_flush_pending_msgQ(void)
-{
-      client_proc_t* client;
-
-	if (!client_output_pending) {
-		return;
-	}
-	client_output_pending = FALSE;
-	for (client=client_list; client != NULL; client=client->next) {
-		/*
-		 * NOTE: api_flush_msgQ() sets client_output_pending
-		 * if any messages cannot be delivered.
-		 */
-       		if(client->msgcount) {
-			api_flush_msgQ(client);
+		if (!client->removereason) {
+			client->removereason = "died";
 		}
 	}
 }
 
-static void
-api_clean_clientQ(client_proc_t* client)
-{
-	while (client->msgQ != NULL) {
-		char *	msg;
-		--client->msgcount;
-		msg = client->msgQ->data;
-		client->msgQ = g_list_remove(client->msgQ, msg);
-		ha_free(msg); msg = NULL;
-	}
-}
-
-/*
- *	The range of file descriptors we have open for the request FIFOs
- */
-
-static int	maxfd = -1;
-static int	minfd = -1;
 
 int
 api_remove_client_pid(pid_t c_pid, const char * reason)
@@ -1072,7 +974,7 @@ api_remove_client_pid(pid_t c_pid, const char * reason)
 	}
 
 	client->removereason = reason;
-	G_main_del_fd(client->g_source_id);
+	G_main_del_IPC_Channel(client->gsource);
 	return 1;
 }
 static void
@@ -1118,34 +1020,16 @@ api_remove_client_int(client_proc_t* req, const char * reason)
 				" pid [%ld] reason: %s"
 				,	(long)req->pid, reason);
 			}
-			/* Close the input FIFO */
-			if (client->input_fifo != NULL) {
-				int	fd = client->fd;
-				if (fd == maxfd) {
-					--maxfd;
-				}
-				fclose(client->input_fifo);
-				client->input_fifo = NULL;
-
-				if (UseOurOwnPoll) {
-					cl_poll_ignore(client->fd);
-				}
-			}
-			close(client->output_fifofd);
-			client->output_fifofd = -1;
-			/* Clean up after casual clients */
-			if (client->iscasual) {
-				unlink(client_fifo_name(client, 0));
-				unlink(client_fifo_name(client, 1));
-			}
 			if (prev == NULL) {
 				client_list = client->next;
 			}else{
 				prev->next = client->next;
 			}
 
-			/* Throw away any Queued messages */
-			api_clean_clientQ(client);
+			/* Channel is automatically destroyed 
+			 * by the G_CH* code...
+			 */
+			client->chan = NULL;
 
 			/* Zap! */
 			memset(client, 0, sizeof(*client));
@@ -1169,59 +1053,33 @@ api_remove_client_int(client_proc_t* req, const char * reason)
  *			decimal integer.
  */
 static int
-api_add_client(struct ha_msg* msg)
+api_add_client(client_proc_t* client, struct ha_msg* msg)
 {
 	pid_t		pid = 0;
-	int		fifoifd;
-	FILE*		fifofp;
-	client_proc_t*	client;
 	const char*	cpid;
 	const char *	fromid;
 
 	
-	/* Not a wonderful place to call it, but not too bad either... */
-
-	if (!HostSecurityIsOK()) {
-		return 0;
-	}
-
 	if ((cpid = ha_msg_value(msg, F_PID)) != NULL) {
 		pid = atoi(cpid);
 	}
 	if (pid <= 0  || (CL_KILL(pid, 0) < 0 && errno == ESRCH)) {
 		ha_log(LOG_WARNING
 		,	"api_add_client: bad pid [%ld]", (long) pid);
-		return 0;
+		return FALSE;
 	}
+
 	fromid = ha_msg_value(msg, F_FROMID);
 
-	client = find_client(cpid, fromid);
-
-	if (client != NULL) {
-		if (CL_KILL(client->pid, 0) == 0 || errno != ESRCH) {
-			ha_log(LOG_WARNING
-			,	"duplicate client add request");
-			return 0;
-		}else{
-			ha_log(LOG_ERR
-			,	"client pid %ld [%s] died (api_add_client)"
-			,	(long) client->pid, fromid);
-		}
-		client->removereason = "bad add request";
+	
+	if (find_client(fromid, NULL) != NULL) {
+		ha_log(LOG_WARNING
+		,	"duplicate client add request [%s] [%s]"
+		,	(fromid ? fromid : "(nullfromid)")
+		,	(cpid ? cpid : "(nullcpid)"));
+		client->removereason = "duplicate add request";
+		return FALSE;
 	}
-	if ((client = MALLOCT(client_proc_t)) == NULL) {
-		ha_log(LOG_ERR
-		,	"unable to add client pid %ld [no memory]", (long) pid);
-		return 0;
-	}
-	/* Zap! */
-	memset(client, 0, sizeof(*client));
-	client->input_fifo = NULL;
-	client->output_fifofd = -1;
-	client->msgQ = NULL;
-	client->pid = pid;
-	client->desired_types = DEFAULTREATMENT;
-	client->signal = 0;
 
 	if (fromid != NULL) {
 		strncpy(client->client_id, fromid, sizeof(client->client_id));
@@ -1235,35 +1093,51 @@ api_add_client(struct ha_msg* msg)
 		,	"%d", pid);
 		client->iscasual = 1;
 	}
-
-	client->next = client_list;
-	client_list = client;
-	total_client_count++;
-
-	/* Make sure their FIFOs are properly secured */
-	if (!ClientSecurityIsOK(client)) {
-		/* No insecure clients allowed! */
-		client->removereason = "security";
-		return 0;
+	if (api_check_client_authorization(client)) {
+		api_send_client_status(client, JOINSTATUS, API_SIGNON);
+	}else{
+		ha_log(LOG_WARNING
+		,	"Client [%s] pid %d failed authorization [%s]"
+		,	client->client_id, pid, client->removereason);
+		api_send_client_status(client, JOINSTATUS, API_SIGNOFF);
+		return FALSE;
 	}
-	if ((fifofp=open_reqfifo(client)) <= 0) {
-		ha_log(LOG_ERR
-		,	"Unable to open API FIFO for client %s"
-		,	client->client_id);
-		client->removereason = "fifo open";
-		return 0;
-	}
-	fifoifd=fileno(fifofp);
-	client->input_fifo = fifofp;
-	if (fifoifd > maxfd) {
-		maxfd = fifoifd;
-	}
-	if (minfd < 0 || fifoifd < minfd) {
-		minfd = fifoifd;
-	}
-	api_send_client_status(client, JOINSTATUS, API_SIGNON);
-	return 1;
+	return TRUE;
 }
+static gboolean
+api_check_client_authorization(client_proc_t* client)
+{
+	gpointer	gauth;
+	IPC_Auth*	auth;
+	if (client->iscasual
+	||	(gauth = g_hash_table_lookup(APIAuthorization
+	,	client->client_id))	==  NULL) {
+		if ((gauth = g_hash_table_lookup(APIAuthorization, "default"))
+		== NULL) {
+			client->removereason = "no default client auth";
+			return FALSE;
+		}
+		
+	}
+	auth = gauth;
+	if (client->chan->ops->verify_auth(client->chan, gauth)) {
+		if (client->chan->farside_pid != 0) {
+			if (client->chan->farside_pid != client->pid) {
+				client->removereason = "pid mismatch";
+				cl_log(LOG_INFO
+				,	"PID mismatch: %d vs farside_pid: %d"
+				,	client->pid
+				,	client->chan->farside_pid);
+				return FALSE;
+			}
+		}
+		return TRUE;
+	}
+	client->removereason = "client failed authorization";
+	return FALSE;
+}
+
+
 
 /*
  *	Find the client that goes with this client id/pid
@@ -1289,423 +1163,17 @@ find_client(const char * fromid, const char * cpid)
 	return(NULL);
 }
 
-/*
- *	Return the name of the client FIFO of the given type
- *		(request or response)
- */
-static const char *
-client_fifo_name(client_proc_t* client, int isrequest)
-{
-	static char	fifoname[PATH_MAX];
-	const char *	dirprefix;
-	const char *	fifosuffix;
 
-	dirprefix = (client->iscasual ? CASUALCLIENTDIR : NAMEDCLIENTDIR);
-	fifosuffix = (isrequest ? REQ_SUFFIX : RSP_SUFFIX);
-	
-	snprintf(fifoname, sizeof(fifoname), "%s/%s%s"
-	,	dirprefix, client->client_id, fifosuffix);
-	return(fifoname);
-}
-
-
-/*
- * Our Goal: To be as big a pain in the posterior as we can be :-)
- */
-
-static int
-HostSecurityIsOK(void)
-{
-	uid_t		our_uid = geteuid();
-	struct stat	s;
-
-	/*
-	 * Check out the Heartbeat internal-use FIFO...
-	 */
-
-	if (stat(FIFONAME, &s) < 0) {
-		ha_log(LOG_ERR
-		,	"FIFO %s does not exist", FIFONAME);
-		return(0);
-	}
-
-	/* Is the heartbeat FIFO internal-use pathname a FIFO? */
-
-	if (!S_ISFIFO(s.st_mode)) {
-		ha_log(LOG_ERR
-		,	"%s is not a FIFO", FIFONAME);
-		unlink(FIFONAME);
-		return 0;
-	}
-	/*
-	 * Check to make sure it isn't readable or writable by group or other.
-	 */
-
-	if ((s.st_mode&(S_IRGRP|S_IWGRP|S_IROTH|S_IWOTH)) != 0) {
-		ha_log(LOG_ERR
-		,	"FIFO %s is not secure.", FIFONAME);
-		return 0;
-	}
-
-	/* Let's make sure it's owned by us... */
-
-	if (s.st_uid != our_uid) {
-		ha_log(LOG_ERR
-		,	"FIFO %s not owned by uid %ld.", FIFONAME
-		,	(long) our_uid);
-		return 0;
-	}
-
-	/*
-	 *	Now, let's check out the API registration FIFO
-	 */
-
-	if (stat(API_REGFIFO, &s) < 0) {
-		ha_log(LOG_ERR
-		,	"FIFO %s does not exist", API_REGFIFO);
-		return(0);
-	}
-
-	/* Is the registration FIFO pathname a FIFO? */
-
-	if (!S_ISFIFO(s.st_mode)) {
-		ha_log(LOG_ERR
-		,	"%s is not a FIFO", API_REGFIFO);
-		unlink(FIFONAME);
-		return 0;
-	}
-	/*
-	 * Check to make sure it isn't readable or writable by other
-	 * or readable by group.
-	 */
-
-	if ((s.st_mode&(S_IRGRP|S_IROTH|S_IWOTH)) != 0) {
-		ha_log(LOG_ERR
-		,	"FIFO %s is not secure.", API_REGFIFO);
-		return 0;
-	}
-
-	/* Let's make sure it's owned by us... */
-	if (s.st_uid != our_uid) {
-		ha_log(LOG_ERR
-		,	"FIFO %s not owned by uid %ld.", API_REGFIFO
-		,	(long) our_uid);
-		return 0;
-	}
-
-
-	/* 
-	 * Check out the casual client FIFO directory
-	 */
-
-	if (stat(CASUALCLIENTDIR, &s) < 0) {
-		ha_log(LOG_ERR
-		,	"Directory %s does not exist", CASUALCLIENTDIR);
-		return(0);
-	}
-
-	/* Is the Casual Client FIFO directory pathname really a directory? */
-
-	if (!S_ISDIR(s.st_mode)) {
-		ha_log(LOG_ERR
-		,	"%s is not a Directory", CASUALCLIENTDIR);
-		return(0);
-	}
-
-	/* Let's make sure it's owned by us... */
-
-	if (s.st_uid != our_uid) {
-		ha_log(LOG_ERR
-		,	"Directory %s not owned by uid %ld.", CASUALCLIENTDIR
-		,	(long) our_uid);
-		return 0;
-	}
-
-	/* Make sure it isn't R,W or X by other. */
-
-	if ((s.st_mode&(S_IROTH|S_IWOTH|S_IXOTH)) != 0) {
-		ha_log(LOG_ERR
-		,	"Directory %s is not secure.", CASUALCLIENTDIR);
-		return 0;
-	}
-
-	/* Make sure it *is* executable and writable by group */
-
-	if ((s.st_mode&(S_IXGRP|S_IWGRP)) != (S_IXGRP|S_IWGRP)){
-		ha_log(LOG_ERR
-		,	"Directory %s is not usable.", CASUALCLIENTDIR);
-		return 0;
-	}
-
-	/* Make sure the casual client FIFO directory is sticky */
-
-	if ((s.st_mode&(S_IXGRP|S_IWGRP|S_ISVTX)) != (S_IXGRP|S_IWGRP|S_ISVTX)){
-		ha_log(LOG_ERR
-		,	"Directory %s is not sticky.", CASUALCLIENTDIR);
-		return 0;
-	}
-
-	/* 
-	 * Check out the Named Client FIFO directory
-	 */
-
-	if (stat(NAMEDCLIENTDIR, &s) < 0) {
-		ha_log(LOG_ERR
-		,	"Directory %s does not exist", NAMEDCLIENTDIR);
-		return(0);
-	}
-
-	/* Is the Named Client FIFO directory pathname actually a directory? */
-
-	if (!S_ISDIR(s.st_mode)) {
-		ha_log(LOG_ERR
-		,	"%s is not a Directory", NAMEDCLIENTDIR);
-		return(0);
-	}
-
-	/* Let's make sure it's owned by us... */
-
-	if (s.st_uid != our_uid) {
-		ha_log(LOG_ERR
-		,	"Directory %s not owned by uid %ld.", NAMEDCLIENTDIR
-		,	(long) our_uid);
-		return 0;
-	}
-
-	/* Make sure it isn't R,W or X by other, or writable by group */
-
-	if ((s.st_mode&(S_IXOTH|S_IROTH|S_IWOTH|S_IWGRP)) != 0) {
-		ha_log(LOG_ERR
-		,	"Directory %s is not secure.", NAMEDCLIENTDIR);
-		return 0;
-	}
-
-	/* Make sure it *is* executable by group */
-
-	if ((s.st_mode&(S_IXGRP)) != (S_IXGRP)) {
-		ha_log(LOG_ERR
-		,	"Directory %s is not usable.", NAMEDCLIENTDIR);
-		return 0;
-	}
-	return 1;
-}
-
-/*
- *	We are the security tough-guys.  Or so we hope ;-)
- */
-static int
-ClientSecurityIsOK(client_proc_t* client)
-{
-	const char *	fifoname;
-	struct stat	s;
-	uid_t		client_uid;
-	uid_t		our_uid;
-
-	/* Does this client even exist? */
-
-	if (CL_KILL(client->pid, 0) < 0 && errno == ESRCH) {
-		ha_log(LOG_ERR
-		,	"Client pid %ld does not exist", (long) client->pid);
-		return(0);
-	}
-	client_uid = pid2uid(client->pid);
-	our_uid = geteuid();
-
-
-	/*
-	 * Check the security of the Client's Request FIFO
-	 */
-
-	fifoname = client_fifo_name(client, 1);
-
-	if (stat(fifoname, &s) < 0) {
-		ha_log(LOG_ERR
-		,	"FIFO %s does not exist", fifoname);
-		return(0);
-	}
-
-	/* Is the request FIFO pathname a FIFO? */
-
-	if (!S_ISFIFO(s.st_mode)) {
-		ha_log(LOG_ERR
-		,	"%s is not a FIFO", fifoname);
-		unlink(fifoname);
-		return 0;
-	}
-
-	/*
-	 * Check to make sure it isn't writable by group or other,
-	 * or readable by others.
-	 */
-	if ((s.st_mode&(S_IWGRP|S_IWOTH|S_IROTH)) != 0) {
-		ha_log(LOG_ERR
-		,	"FIFO %s is not secure.", fifoname);
-		return 0;
-	}
-
-	/*
-	 * The request FIFO shouldn't be group readable unless it's
- 	 * grouped to our effective group id, and we aren't root. 
-	 * If we're root, we can read it anyway, so there's no reason
-	 * we should allow it to be group readable.
-	 */
-
-	if ((s.st_mode&S_IRGRP) != 0 && s.st_gid != getegid()
-	&&	geteuid() != 0) {
-		ha_log(LOG_ERR
-		,	"FIFO %s is not secure (g+r).", fifoname);
-		return 0;
-	}
-
-	/* Does it look like the given client pid can write this FIFO? */
-
-	if (client_uid != s.st_uid) {
-		ha_log(LOG_ERR
-		,	"Client pid %ld is not uid %ld like they"
-		" must be to write FIFO %s"
-		,	(long)client->pid, (long)s.st_uid, fifoname);
-		return 0;
-	}
-
-	/*
-	 * Check the security of the Client's Response FIFO
-	 */
-
-	fifoname = client_fifo_name(client, 0);
-	if (stat(fifoname, &s) < 0) {
-		ha_log(LOG_ERR
-		,	"FIFO %s does not exist", fifoname);
-		return 0;
-	}
-
-	/* Is the response FIFO pathname a FIFO? */
-
-	if (!S_ISFIFO(s.st_mode)) {
-		ha_log(LOG_ERR
-		,	"%s is not a FIFO", fifoname);
-		unlink(fifoname);
-		return 0;
-	}
-
-	/*
-	 * Is the response FIFO secure?
-	 */
-
-	/*
-	 * Check to make sure it isn't readable by group or other,
-	 * or writable by others.
-	 */
-	if ((s.st_mode&(S_IRGRP|S_IROTH|S_IWOTH)) != 0) {
-		ha_log(LOG_ERR
-		,	"FIFO %s is not secure.", fifoname);
-		return 0;
-	}
-
-	/*
-	 * The response FIFO shouldn't be group writable unless it's
- 	 * grouped to our effective group id, and we aren't root. 
-	 * If we're root, we can write it anyway, so there's no reason
-	 * we should allow it to be group writable.
-	 */
-	if ((s.st_mode&S_IWGRP) != 0 && s.st_gid != getegid()
-	&&	geteuid() != 0) {
-		ha_log(LOG_ERR
-		,	"FIFO %s is not secure (g+w).", fifoname);
-		return 0;
-	}
-
-	/* Does it look like the given client pid can read this FIFO? */
-
-	if (client_uid != s.st_uid) {
-		ha_log(LOG_ERR
-		,	"Client pid %ld is not uid %ld like they"
-		" must be to read FIFO %s"
-		,	(long)client->pid, (long)s.st_uid, fifoname);
-		return 0;
-	}
-	return 1;
-}
 
 static gboolean
-APIclients_input_dispatch(int fd, gpointer user_data);
-
-/*
- * Open the request FIFO for the given client.
- */
-static FILE*
-open_reqfifo(client_proc_t* client)
-{
-	struct stat	s;
-	const char *	fifoname = client_fifo_name(client, 1);
-	int		fd;
-	FILE *		ret;
-
-
-	if (client->input_fifo != NULL) {
-		return(client->input_fifo);
-	}
-
-	/* How about that! */
-	client->uid = s.st_uid;
-	/*
-	 *	FIXME realtime:
-	 *	This code costs us realtime.
-	 *	To fix it we need to switch to sockets which we only open
-	 *	once when we first start up.  Our socket-based IPC library
-	 *	is lots nicer, but it will take some work to get there...
-	 */
-	fd = open(fifoname, O_RDONLY|O_NDELAY);
-	if (fd < 0) {
-		return(NULL);
-	}
-	if ((ret = fdopen(fd, "r")) != NULL) {
-#if 0
-		/*FIXME!!  WHY DID WE DO THIS? */
-	 	/* FIXME realtime!! */
-		setbuf(ret, NULL);
-#endif
-	}
-	client->fd = fd;
-	client->g_source_id = G_main_add_fd(G_PRIORITY_DEFAULT, fd, FALSE
-	,	APIclients_input_dispatch, client, G_remove_client);
-	return ret;
-}
-
-#define	PROC	"/proc/"
-
-/* Return the uid of the given pid */
-
-static	uid_t
-pid2uid(pid_t pid)
-{
-	struct stat	s;
-	char	procpath[sizeof(PROC)+20];
-
-	snprintf(procpath, sizeof(procpath), "%s%ld", PROC, (long)pid);
-
-	if (stat(procpath, &s) < 0) {
-		return(-1);
-	}
-	/*
-	 * This isn't a perfect test.  On Linux we could look at the
-	 * /proc/$pid/status file for the line that says:
-	 *	Uid:    500     500     500     500 
-	 * and parse it for find out whatever we want to know.
-	 */
-	return s.st_uid;
-}
-
-static gboolean
-APIclients_input_dispatch(int fd, gpointer user_data)
+APIclients_input_dispatch(IPC_Channel* chan, gpointer user_data)
 {
 	client_proc_t*	client = user_data;
 
-	if (fd != client->fd) {
+	if (chan != client->chan) {
 		/* Bad boojum! */
 		ha_log(LOG_ERR
-		,	"APIclients_input_dispatch fd mismatch"
-		": %d vs %d for pid %ld"
-		,	fd, client->fd, (long)client->pid);
+		,	"APIclients_input_dispatch chan mismatch");
 		return FALSE;
 	}
 	if (client->removereason) {
@@ -1744,10 +1212,10 @@ ProcessAnAPIRequest(client_proc_t*	client)
 	}
 
 	/* See if we can read the message */
-	if ((msg = msgfromstream(client->input_fifo)) == NULL) {
+	if ((msg = msgfromIPC(client->chan)) == NULL) {
 
 		/* EOF? */
-		if (feof(client->input_fifo)) {
+		if (client->chan->ch_status == IPC_DISCONNECT) {
 			ha_log(LOG_INFO
 			,	"EOF from client pid %ld"
 			,	(long)client->pid);
@@ -1755,22 +1223,9 @@ ProcessAnAPIRequest(client_proc_t*	client)
 			return FALSE;
 		}
 
-		/* Interrupted read or no data? */
-		if (ferror(client->input_fifo)
-		&&	(errno == EINTR || errno == EAGAIN)) {
-			clearerr(client->input_fifo);
-			return FALSE;
-		}
-
 		/* None of the above... */
 		ha_log(LOG_INFO, "No message from pid %ld"
 		,	(long)client->pid);
-
-		if (ferror(client->input_fifo)) {
-			ha_perror("API FIFO read error: pid %ld"
-			,	(long)client->pid);
-			clearerr(client->input_fifo);
-		}
 		++consecutive_failures;
 		/*
 		 * This used to happen because of EOF,
@@ -1790,7 +1245,14 @@ ProcessAnAPIRequest(client_proc_t*	client)
 
 	/* Process the API request message... */
 	api_heartbeat_monitor(msg, APICALL, "<api>");
-	api_process_request(client, msg);
+
+
+	/* First message must be a registration msg */
+	if (client->pid == 0) {
+		api_process_registration_msg(client, msg);
+	}else{
+		api_process_request(client, msg);
+	}
 	msg = NULL;
 
 	return TRUE;
