@@ -1,4 +1,4 @@
-static const char _ping_group_Id [] = "$Id: ping_group.c,v 1.2 2003/08/28 01:37:11 horms Exp $";
+static const char _ping_group_Id [] = "$Id: ping_group.c,v 1.3 2003/09/26 05:33:24 alan Exp $";
 /*
  * ping_group.c: ICMP-echo-based heartbeat code for heartbeat.
  *
@@ -726,7 +726,7 @@ ping_group_parse(const char *line)
 {
 	char		tmp[MAXLINE];
 	size_t		len;
-	size_t		nhost;
+	size_t		nhost = 0;
 	struct hb_media *media;
 
 	/* Skip over white space, then grab the name */
@@ -764,7 +764,7 @@ ping_group_parse(const char *line)
 		nhost++;
 	}
 
-	if(!nhost) {
+	if(nhost == 0) {
 		ping_group_destroy(media);
 		return(HA_FAIL);
 	}
