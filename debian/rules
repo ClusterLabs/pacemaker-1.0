@@ -8,7 +8,7 @@
 #export DH_VERBOSE=1
 
 cfg:=--prefix=/usr --sysconfdir=/etc --localstatedir=/var \
-  --mandir=/usr/share/man
+  --mandir=/usr/share/man --enable-checkpointd
 
 # These are used for cross-compiling and for saving the configure script
 # from having to guess our platform (since we know it already)
