@@ -1,4 +1,4 @@
-const static char * _hb_config_c_Id = "$Id: config.c,v 1.106 2004/01/18 21:15:14 alan Exp $";
+const static char * _hb_config_c_Id = "$Id: config.c,v 1.107 2004/01/20 08:58:29 horms Exp $";
 /*
  * Parse various heartbeat configuration files...
  *
@@ -1853,7 +1853,6 @@ set_api_authorization(const char * directive)
 	memset(auth, 0, sizeof(auth));
 
 	if (uidlist) {
-		char uid [] = "uid = ";
 		auth->uid = make_id_table(uidlist, uidlen, unametonum);
 		if (auth->uid == NULL) {
 			cl_log(LOG_ERR 
@@ -1863,7 +1862,6 @@ set_api_authorization(const char * directive)
 		}
 	}
 	if (gidlist) {
-		char gid [] = "gid = ";
 		auth->gid = make_id_table(gidlist, gidlen, gnametonum);
 		if (auth->gid == NULL) {
 			cl_log(LOG_ERR 
@@ -1923,6 +1921,9 @@ baddirective:
 
 /*
  * $Log: config.c,v $
+ * Revision 1.107  2004/01/20 08:58:29  horms
+ * Removed unused variables
+ *
  * Revision 1.106  2004/01/18 21:15:14  alan
  * Put in various fixes associated with authentication bugs and also
  * with an infinite loop bug.
