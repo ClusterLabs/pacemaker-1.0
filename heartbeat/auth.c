@@ -1,4 +1,4 @@
-/* $Id: auth.c,v 1.15 2004/02/17 22:11:57 lars Exp $ */
+/* $Id: auth.c,v 1.16 2004/08/28 00:23:44 alan Exp $ */
 /*
  * auth.c: Authentication code for heartbeat
  *
@@ -174,16 +174,17 @@ parse_authfile(void)
 		
 		bp += strspn(bp, WHITESPACE);
 
-		if (*buf == COMMENTCHAR || *buf == EOS) {
+		if (*bp == COMMENTCHAR || *bp == EOS) {
 			continue;
 		}
-		if (*buf == 'a') {
+		if (*bp == 'a') {
 			if ((src=sscanf(bp, "auth %d", &authnum)) != 1) {
 				ha_log(LOG_ERR
 				,	"Invalid auth line [%s] in " KEYFILE
 				,	 buf);
 				rc = HA_FAIL;
 			}
+			/* Parsing of this line now complete */
 			continue;
 		}
 
@@ -191,7 +192,7 @@ parse_authfile(void)
 		key[0] = EOS;
 		if ((src=sscanf(bp, "%d%s%s", &i, method, key)) >= 2) {
 
-			char *		cpkey;
+			char *	cpkey;
 			char *	permname;
 
 			if (ANYDEBUG) {
@@ -295,6 +296,9 @@ parse_authfile(void)
 }
 /*
  * $Log: auth.c,v $
+ * Revision 1.16  2004/08/28 00:23:44  alan
+ * Fixed a bug pointed out by Lars Ellenberg.
+ *
  * Revision 1.15  2004/02/17 22:11:57  lars
  * Pet peeve removal: _Id et al now gone, replaced with consistent Id header.
  *
