@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.373 2005/03/08 23:54:01 alan Exp $ */
+/* $Id: heartbeat.c,v 1.374 2005/03/14 22:57:17 gshi Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -2160,7 +2160,7 @@ update_client_status_msg_list(struct node_info* thisnode)
 			t->client_status_msg_queue = NULL;
 			
 			cl_log(LOG_DEBUG,"client_status_msg_queue"
-			       "for node %s destroied",
+			       "for node %s destroyed",
 			       thisnode->nodename);
 		}
 	}
@@ -5120,6 +5120,9 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.374  2005/03/14 22:57:17  gshi
+ * typo
+ *
  * Revision 1.373  2005/03/08 23:54:01  alan
  * Modified the maximum CPU percentage to 75% for the main
  * process...
