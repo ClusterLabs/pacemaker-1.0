@@ -1,4 +1,4 @@
-/* $Id: write7node2.c,v 1.2 2004/07/15 14:33:49 msoffen Exp $ */
+/* $Id: write7node2.c,v 1.3 2004/08/26 03:47:13 deng.pan Exp $ */
 /* 
  * write7node2.c: Test data checkpoint function : saCkptCheckpointWrite 
  *
@@ -25,7 +25,7 @@
 #include <syslog.h>
 #include <unistd.h>
 #include <time.h>
-#include <glib.h>
+// #include <glib-1.2/glib.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <sys/time.h>
@@ -153,7 +153,7 @@ void initparam(void)
 	sectattri.sectionId = &sectid ;
 	
 
-	sectread=g_malloc0(section_No*sizeof(SaCkptIOVectorElementT));
+	sectread=malloc(section_No*sizeof(SaCkptIOVectorElementT));
 	for(i=0;i<section_No;i++){
 		sectread[i].sectionId.id = sect_id_array ;
 		sectread[i].sectionId.idLen = sizeof (sect_id_array) ;
@@ -164,7 +164,7 @@ void initparam(void)
 	}
 
 
-	sectwrite=g_malloc0(section_No*sizeof(SaCkptIOVectorElementT));
+	sectwrite=malloc(section_No*sizeof(SaCkptIOVectorElementT));
 	for(i=0;i<section_No;i++){
 		sectwrite[i].sectionId.id = sect_id_array ;
 		sectwrite[i].sectionId.idLen = sizeof (sect_id_array) ;

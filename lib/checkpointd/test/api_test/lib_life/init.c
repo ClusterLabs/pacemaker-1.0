@@ -1,4 +1,4 @@
-/* $Id: init.c,v 1.2 2004/07/15 14:33:49 msoffen Exp $ */
+/* $Id: init.c,v 1.3 2004/08/26 03:47:13 deng.pan Exp $ */
 /* 
  * init.c: data checkpoint API test: saCkptInitialize
  *
@@ -18,8 +18,6 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
-
-#include <config.h>
 
 #include <stdio.h>
 #include <saf/ais.h>
