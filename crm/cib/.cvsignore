@@ -1,4 +1,6 @@
 Makefile
 Makefile.in
 .libs
-crmadmin
+*.la
+*.lo
+cib

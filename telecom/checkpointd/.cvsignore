@@ -1,4 +1,7 @@
-.deps
 Makefile
 Makefile.in
+.deps
+.libs
+ckpttest
+checkpointd
 
