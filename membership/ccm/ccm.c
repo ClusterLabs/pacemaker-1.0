@@ -1,4 +1,4 @@
-/* $Id: ccm.c,v 1.75 2005/04/04 16:07:00 gshi Exp $ */
+/* $Id: ccm.c,v 1.76 2005/04/06 21:59:52 gshi Exp $ */
 /* 
  * ccm.c: Consensus Cluster Service Program 
  *
@@ -685,19 +685,16 @@ report_mbrs(ccm_info_t *info)
 		assert(bornon[i].bornon!=-1);
 	}
 
-	if(global_verbose) {
-		cl_log(LOG_DEBUG,"\t\t the following are the members " 
-			"of the group of transition=%d",
-			CCM_GET_MAJORTRANS(info));
-
-		for (i=0 ;  i < CCM_GET_MEMCOUNT(info); i++) {
-			nodename = LLM_GET_NODEID(CCM_GET_LLM(info), 
-					CCM_GET_MEMINDEX(info,i));
-			cl_log(LOG_DEBUG,"\t\tnodename=%s bornon=%d", nodename, 
-					bornon[i].bornon);
-		}
+	cl_log(LOG_DEBUG,"\t\t the following are the members " 
+	       "of the group of transition=%d",
+	       CCM_GET_MAJORTRANS(info));
+	
+	for (i=0 ;  i < CCM_GET_MEMCOUNT(info); i++) {
+		nodename = LLM_GET_NODEID(CCM_GET_LLM(info), 
+					  CCM_GET_MEMINDEX(info,i));
+		cl_log(LOG_DEBUG,"\t\tnodename=%s bornon=%d", nodename, 
+		       bornon[i].bornon);
 	}
-
 
 	/* 
 	 * report to clients, the new membership 
