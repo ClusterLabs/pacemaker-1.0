@@ -662,7 +662,7 @@ SetUpConfigFiles
 
 COREPID=/proc/sys/kernel/core_uses_pid
 if
-  [ -f $COREPID
+  [ -f "$COREPID" ]
 then
   echo 1 > $COREPID
 fi
