@@ -1,4 +1,4 @@
-/* $Id: portability.h,v 1.32 2004/02/17 22:12:00 lars Exp $ */
+/* $Id: portability.h,v 1.33 2004/04/20 20:08:37 msoffen Exp $ */
 #ifndef PORTABILITY_H
 #  define PORTABILITY_H
 
@@ -102,10 +102,23 @@ inet_pton(int af, const char *src, void *dst);
 
 #ifndef HA_HAVE_STRNLEN
 	size_t strnlen(const char *s, size_t maxlen);
-
 #else
 #	define USE_GNU
 #endif
+
+#ifndef HA_HAVE_STRNDUP
+	char *strndup(const char *str, size_t len);
+#else
+#	define USE_GNU
+#endif
+
+#ifdef HAVE_UUID_H 
+#  include <uuid.h>
+#endif 
+
+#ifdef HAVE_UUID_UUID_H 
+#  include <uuid/uuid.h>
+#endif /* HAVE_UUID_UUID_H */
 
 #ifndef HA_HAVE_NFDS_T 
 	typedef unsigned int nfds_t;
