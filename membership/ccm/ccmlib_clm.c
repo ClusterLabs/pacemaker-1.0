@@ -253,7 +253,7 @@ retrieve_current_buffer(__clm_handle_t *hd)
 		if (p) {
 			strncpy(MEMNODE(i).nodeName.value, p, 
 					SA_MAX_NAME_LENGTH - 1);
-			MEMNODE(i).nodeName.value[SA_MAX_NAME_LENGTH] = '\0';
+			MEMNODE(i).nodeName.value[SA_MAX_NAME_LENGTH-1] = '\0';
 		} else {
 			MEMNODE(i).nodeName.value[0] = '\0';
 		}
@@ -280,7 +280,7 @@ retrieve_changes_buffer(__clm_handle_t *hd)
 					strncpy(MEMNODE(j).nodeName.value, p, 
 							SA_MAX_NAME_LENGTH-1);
 					MEMNODE(j).nodeName.value \
-						[SA_MAX_NAME_LENGTH] = '\0';
+						[SA_MAX_NAME_LENGTH-1] = '\0';
 				} else {
 					MEMNODE(j).nodeName.value[0] = '\0';
 				}
@@ -297,7 +297,7 @@ retrieve_changes_buffer(__clm_handle_t *hd)
 		if (p) {
 			strncpy(MEMNODE(n).nodeName.value, p,
 					SA_MAX_NAME_LENGTH - 1);
-			MEMNODE(n).nodeName.value[SA_MAX_NAME_LENGTH] = '\0';
+			MEMNODE(n).nodeName.value[SA_MAX_NAME_LENGTH-1] = '\0';
 		} else {
 			MEMNODE(n).nodeName.value[0] = '\0';
 		}
@@ -320,7 +320,7 @@ retrieve_changes_only_buffer(__clm_handle_t *hd)
 		if (p) {
 			strncpy(MEMNODE(n).nodeName.value, p,
 					SA_MAX_NAME_LENGTH - 1);
-			MEMNODE(n).nodeName.value[SA_MAX_NAME_LENGTH] = '\0';
+			MEMNODE(n).nodeName.value[SA_MAX_NAME_LENGTH-1] = '\0';
 		} else {
 			MEMNODE(n).nodeName.value[0] = '\0';
 		}
@@ -334,7 +334,7 @@ retrieve_changes_only_buffer(__clm_handle_t *hd)
 		if (p) {
 			strncpy(MEMNODE(n).nodeName.value, p,
 					SA_MAX_NAME_LENGTH - 1);
-			MEMNODE(n).nodeName.value[SA_MAX_NAME_LENGTH] = '\0';
+			MEMNODE(n).nodeName.value[SA_MAX_NAME_LENGTH-1] = '\0';
 		} else {
 			MEMNODE(n).nodeName.value[0] = '\0';
 		}
@@ -519,7 +519,7 @@ retrieve_node_buffer(SaClmNodeIdT nodeId, SaClmClusterNodeT *clusterNode)
 				strncpy(clusterNode->nodeName.value, p,
 						SA_MAX_NAME_LENGTH - 1);
 				clusterNode->nodeName.value \
-					[SA_MAX_NAME_LENGTH] = '\0';
+					[SA_MAX_NAME_LENGTH-1] = '\0';
 			} else {
 				clusterNode->nodeName.value[0] = '\0';
 			}
@@ -535,7 +535,7 @@ retrieve_node_buffer(SaClmNodeIdT nodeId, SaClmClusterNodeT *clusterNode)
 				strncpy(clusterNode->nodeName.value, p,
 						SA_MAX_NAME_LENGTH - 1);
 				clusterNode->nodeName.value \
-					[SA_MAX_NAME_LENGTH] = '\0';
+					[SA_MAX_NAME_LENGTH-1] = '\0';
 			} else {
 				clusterNode->nodeName.value[0] = '\0';
 			}
