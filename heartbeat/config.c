@@ -1,4 +1,4 @@
-/* $Id: config.c,v 1.147 2005/02/21 09:48:38 alan Exp $ */
+/* $Id: config.c,v 1.148 2005/02/21 10:27:10 alan Exp $ */
 /*
  * Parse various heartbeat configuration files...
  *
@@ -446,7 +446,7 @@ init_config(const char * cfgfile)
 		}
 	}
 
-	if (errcount == 0) {
+	if (errcount == 0 && DoManageResources) {
 		init_resource_module();
 	}
 	
@@ -2153,6 +2153,9 @@ set_release2mode(const char* value)
 
 /*
  * $Log: config.c,v $
+ * Revision 1.148  2005/02/21 10:27:10  alan
+ * Put in the fix in config.c I meant to put in last time...
+ *
  * Revision 1.147  2005/02/21 09:48:38  alan
  * Moved the code to enable processing of T_SHUTDONE messages until after reading
  * the config file.
