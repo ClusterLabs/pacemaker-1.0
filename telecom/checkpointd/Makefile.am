@@ -52,6 +52,7 @@ checkpointd_CFLAGS	= $(AM_CFLAGS)
 checkpointd_LDADD	= $(top_builddir)/replace/libreplace.la \
 			$(top_builddir)/lib/hbclient/libhbclient.la \
 			$(top_builddir)/lib/clplumbing/libplumb.la \
+			$(top_builddir)/replace/libreplace.la \
 			$(GLIBLIB)
 checkpointd_LDFLAGS	= 
 
@@ -62,6 +63,7 @@ ckpttest_LDADD		= $(GLIBLIB) \
 			$(top_builddir)/replace/libreplace.la \
 			$(top_builddir)/lib/hbclient/libhbclient.la \
 			$(top_builddir)/lib/clplumbing/libplumb.la \
+			$(top_builddir)/replace/libreplace.la \
 			$(GLIBLIB)
 ckpttest_LDFLAGS	= 
 
