@@ -75,7 +75,7 @@ Description: Plugin and Interface Loading System
 
 Package: heartbeat
 Architecture: any
-Depends: ${shlibs:Depends}, python
+Depends: ${shlibs:Depends}, python, iproute
 Recommends: sysklogd|syslog-ng, system-log-daemon, logrotate
 Description: Subsystem for High-Availability Linux
  heartbeat is a basic heartbeat subsystem for Linux-HA.
