@@ -561,23 +561,26 @@ hb_rsc_resource_state(void)
 
 #define	HB_UPD_RSC(full, cur, up)	((full) ? up : (up == HB_NO_RSC) ? HB_NO_RSC : ((up)|(cur)))
 
-
 void
 comm_up_resource_action(void)
 {
 	static int	resources_requested_yet = 0;
+	int		deadcount = countbystatus(DEADSTATUS, TRUE);
 
+	if (deadcount == 0) {
+		/*
+		 * If all nodes are up, we won't have to acquire
+                 * anyone else's resources.  We're done with that.
+		 */
+		foreign_takeover_work_done = TRUE;
+	}
 	if (nice_failback) {
 		send_local_starting();
 	}else{
 		/* Original ("normal") starting behavior */
-		int	deadcount = countbystatus(DEADSTATUS, TRUE);
 		if (!WeAreRestarting && !resources_requested_yet) {
 			resources_requested_yet=1;
 			req_our_resources(FALSE);
-		}
-		if (deadcount == 0) {
-			foreign_takeover_work_done = TRUE;
 		}
 	}
 
@@ -2124,6 +2127,13 @@ StonithProcessName(ProcTrack* p)
 
 /*
  * $Log: hb_resource.c,v $
+ * Revision 1.48  2004/02/13 17:57:31  alan
+ * Changed the code so in comm_up_resource_action, so that when
+ * no other nodes are down when we first start up, that we
+ * note that foreign resource acquisition is complete.
+ * This will make the CTS tests happier, since otherwise
+ * a message they rely on won't come out sometimes.
+ *
  * Revision 1.47  2004/02/13 07:20:48  alan
  * Change hb_resource so that we get exactly one message when local+remote
  * takeovers complete.  This is hard, and under some circumstances, we may
