@@ -1,4 +1,4 @@
-/* $Id: hb_resource.c,v 1.58 2004/08/10 04:55:24 alan Exp $ */
+/* $Id: hb_resource.c,v 1.59 2004/08/14 14:42:22 alan Exp $ */
 /*
  * hb_resource: Linux-HA heartbeat resource management code
  *
@@ -1213,6 +1213,10 @@ req_our_resources(int getthemanyway)
 	int	pid;
 	int	upcount;
 
+	if (!DoManageResources) {
+		return;
+	}
+
 	if (nice_failback) {
 
 		if (((other_holds_resources & HB_FOREIGN_RSC) != 0
@@ -2280,6 +2284,11 @@ StonithStatProcessName(ProcTrack* p)
 
 /*
  * $Log: hb_resource.c,v $
+ * Revision 1.59  2004/08/14 14:42:22  alan
+ * Put in lots of comments about resource-work tieins in heartbeat.c, plus put in
+ * a short term workaround for dealing with one particular case:
+ * req_our_resources().
+ *
  * Revision 1.58  2004/08/10 04:55:24  alan
  * Completed first pass of -M flag reorganization.
  * It passes BasicSanityCheck.

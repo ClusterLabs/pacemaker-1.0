@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.308 2004/08/10 04:55:24 alan Exp $ */
+/* $Id: heartbeat.c,v 1.309 2004/08/14 14:42:23 alan Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -508,6 +508,7 @@ init_procinfo()
 	if (shmctl(ipcid, IPC_RMID, NULL) < 0) {
 		cl_perror("Cannot IPC_RMID proc status shared memory id");
 	}
+	/* THIS IS RESOURCE WORK!  FIXME */
 	procinfo->giveup_resources = 1;
 	procinfo->i_hold_resources = HB_NO_RSC;
 }
@@ -672,6 +673,7 @@ initialize_heartbeat()
 
 
 
+	/* THIS IS RESOURCE WORK!  FIXME */
 	/* Clean up tmp files from our resource scripts */
 	system("rm -fr " RSC_TMPDIR);
 
@@ -1497,6 +1499,7 @@ polled_input_dispatch(gpointer source_data, GTimeVal* current_time
 		check_comm_isup();
 	}
 
+	/* THIS IS RESOURCE WORK!  FIXME */
 	/* Check for "time to take over local resources */
 	if (nice_failback && resourcestate == HB_R_RSCRCVD
 	&&	cmp_longclock(now, local_takeover_time) > 0) {
@@ -1611,6 +1614,7 @@ hb_initiate_shutdown(int quickshutdown)
 	send_local_status();
 	if (!quickshutdown) {
 		shutdown_in_progress = TRUE;
+		/* THIS IS RESOURCE WORK!  FIXME */
 		procinfo->giveup_resources = TRUE;
 		hb_giveup_resources();
 		/* Do something more drastic in 60 minutes */
@@ -1638,6 +1642,7 @@ hb_mcp_final_shutdown(gpointer p)
 	case 0:	
 		send_local_status();
 		hb_kill_managed_children(SIGTERM);
+		/* THIS IS RESOURCE WORK!  FIXME */
 		if (procinfo->giveup_resources) {
 			/* Shouldn't *really* need this */
 			hb_kill_rsc_mgmt_children(SIGTERM);
@@ -1648,6 +1653,7 @@ hb_mcp_final_shutdown(gpointer p)
 
 	case 1:
 		if (procinfo->giveup_resources) {
+			/* THIS IS RESOURCE WORK!  FIXME */
 			/* Shouldn't *really* need this either ;-) */
 			hb_kill_rsc_mgmt_children(SIGKILL);
 		}
@@ -1828,6 +1834,7 @@ HBDoMsg_T_SHUTDONE(const char * type, struct node_info * fromnode
 ,	TIME_T msgtime, seqno_t seqno, const char * iface, struct ha_msg * msg)
 {
 	if (heartbeat_comm_state == COMM_LINKSUP) {
+		/* THIS IS RESOURCE WORK!  FIXME */
 		process_resources(type, msg, fromnode);
 	}
 	heartbeat_monitor(msg, KEEPIT, iface);
@@ -1844,7 +1851,7 @@ HBDoMsg_T_SHUTDONE(const char * type, struct node_info * fromnode
 		/* Trigger final shutdown in a second */
 		Gmain_timeout_add(1, hb_mcp_final_shutdown, NULL);
 	}else{
-		/* This is resource work!!! FIXME!!!  */
+		/* THIS IS RESOURCE WORK!  FIXME */
 		fromnode->has_resources = FALSE;
 		other_is_stable = 0;
 		other_holds_resources= HB_NO_RSC;
@@ -2446,6 +2453,7 @@ restart_heartbeat(void)
 	cl_make_normaltime();
 	return_to_orig_privs();	/* Remain privileged 'til the end */
 	cl_log(LOG_INFO, "Restarting heartbeat.");
+	/* THIS IS RESOURCE WORK!  FIXME */
 	quickrestart = (procinfo->giveup_resources ? FALSE : TRUE);
 
 	cl_log(LOG_INFO, "Performing heartbeat restart exec.");
@@ -2461,6 +2469,7 @@ restart_heartbeat(void)
 		hb_close_watchdog();
 	}
 	if (quickrestart) {
+		/* THIS IS RESOURCE WORK!  FIXME */
 		if (nice_failback) {
 			cl_log(LOG_INFO, "Current resources: -R -C %s"
 			,	decode_resources(procinfo->i_hold_resources));
@@ -2814,6 +2823,7 @@ mark_node_dead(struct node_info *hip)
 	}
 
 	strncpy(hip->status, DEADSTATUS, sizeof(hip->status));
+	/* THIS IS RESOURCE WORK!  FIXME */
 	hb_rsc_recover_dead_resources(hip);
 }
 
@@ -2833,6 +2843,7 @@ cause_shutdown_restart()
 	/* And, it really should work every time... :-) */
 
 	procinfo->restart_after_shutdown = 1;
+	/* THIS IS RESOURCE WORK!  FIXME */
 	procinfo->giveup_resources = 1;
 	hb_giveup_resources();
 	/* Do something more drastic in 60 minutes */
@@ -2873,6 +2884,7 @@ usage(void)
 		if (thislet[1] == ':') {
 			const char *	desc = "unknown-flag-argument";
 
+			/* THIS IS RESOURCE WORK!  FIXME */
 			/* Put a switch statement here eventually... */
 			switch(thislet[0]) {
 			case 'C':	desc = "Current-resource-state";
@@ -2935,6 +2947,7 @@ main(int argc, char * argv[], char **envp)
 		switch(flag) {
 
 			case 'C':
+				/* THIS IS RESOURCE WORK!  FIXME */
 				CurrentStatus = optarg;
 				procinfo->i_hold_resources
 				=	encode_resources(CurrentStatus);
@@ -3079,6 +3092,7 @@ main(int argc, char * argv[], char **envp)
 	if (WeAreRestarting) {
 
 		if (init_config(CONFIG_NAME) != HA_OK
+			/* THIS IS RESOURCE WORK!  FIXME */
 		||	parse_ha_resources(RESOURCE_CFG) != HA_OK){
 			int err = errno;
 			cl_log(LOG_INFO
@@ -3101,6 +3115,7 @@ main(int argc, char * argv[], char **envp)
 			cleanexit(LSB_EXIT_GENERIC);
 		}
 
+	/* LOTS OF RESOURCE WORK HERE!  FIXME */
 		/*
 		 * Nice_failback complicates things a bit here...
 		 * We need to allow for the possibility that the user might
@@ -3162,6 +3177,7 @@ main(int argc, char * argv[], char **envp)
 
 		errno = 0;
 		if (init_config(CONFIG_NAME)
+			/* THIS IS RESOURCE WORK!  FIXME */
 		&&	parse_ha_resources(RESOURCE_CFG)){
 			cl_log(LOG_INFO
 			,	"Signalling heartbeat pid %ld to reread"
@@ -3194,6 +3210,7 @@ StartHeartbeat:
         /* We have already initialized configs in case WeAreRestarting. */
         if (WeAreRestarting
         ||      (init_config(CONFIG_NAME)
+			/* THIS IS RESOURCE WORK!  FIXME */
                 &&      parse_ha_resources(RESOURCE_CFG))) {
 		if (ANYDEBUG) {
 			cl_log(LOG_DEBUG
@@ -3619,6 +3636,8 @@ should_drop_message(struct node_info * thisnode, const struct ha_msg *msg,
 				,	"See documentation for information"
 				" on tuning deadtime.");
 
+				/* THIS IS RESOURCE WORK!  FIXME */
+				/* IS THIS RIGHT??? FIXME ?? */
 				if (DoManageResources) {
 					send_local_status();
 					Gmain_timeout_add(2000
@@ -3635,6 +3654,7 @@ should_drop_message(struct node_info * thisnode, const struct ha_msg *msg,
 			thisnode->rmt_lastupdate = 0L;
 			thisnode->local_lastupdate = 0L;
 			thisnode->status_seqno = 0L;
+			/* THIS IS RESOURCE WORK!  FIXME */
 			thisnode->has_resources = TRUE;
 		}
 		t->generation = gen;
@@ -4422,6 +4442,11 @@ hb_unregister_to_apphbd(void)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.309  2004/08/14 14:42:23  alan
+ * Put in lots of comments about resource-work tieins in heartbeat.c, plus put in
+ * a short term workaround for dealing with one particular case:
+ * req_our_resources().
+ *
  * Revision 1.308  2004/08/10 04:55:24  alan
  * Completed first pass of -M flag reorganization.
  * It passes BasicSanityCheck.
