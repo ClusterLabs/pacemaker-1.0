@@ -31,3 +31,5 @@ endif
 
 SUBDIRS			=  apphbd recoverymgrd $(EVENTD_DIR) \
 			   $(CHECKPOINTD_DIR) $(CMS_DIR)
+DIST_SUBDIRS		=  apphbd recoverymgrd eventd \
+			   checkpointd
