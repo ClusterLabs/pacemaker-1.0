@@ -56,6 +56,8 @@
 #include <hb_api.h>
 #include <clplumbing/cl_log.h>
 #include <clplumbing/cl_signal.h>
+#include <clplumbing/GSource.h>
+#include <clplumbing/Gmain_timeout.h>
 #include "ipfail.h"
 
 /* ICK! global vars. */
@@ -65,11 +67,12 @@ int node_stable;           /* Other node stable?                      */
 int need_standby;          /* Are we waiting for stability?           */
 int quitnow = 0;           /* Allows a signal to break us out of loop */
 int auto_failback;         /* How is our auto_failback configured?    */
+GMainLoop *mainloop;       /* Reference to the mainloop for events    */
+guint delay_giveup_tag = 0;/* Our delay timer                         */
 
 int
 main(int argc, char **argv)
 {
-	struct ha_msg *reply;
 	unsigned fmask;
 	ll_cluster_t *hb;
 	char pid[10];
@@ -88,11 +91,7 @@ main(int argc, char **argv)
 
 	hb = ll_cluster_new("heartbeat");
 
-	/* Get the file descriptor from the API */
-	apifd = hb->llc_ops->inputfd(hb);
-
 	memset(other_node, 0, sizeof(other_node));
-	node_stable = 0;
 	need_standby = 0;
 
 	memset(pid, 0, sizeof(pid));
@@ -100,6 +99,8 @@ main(int argc, char **argv)
 	cl_log(LOG_DEBUG, "PID=%s", pid);
 
 	open_api(hb);
+
+	node_stable = is_stable(hb);
 
 	/* Obtain our local node name */
 	node_name = hb->llc_ops->get_mynodeid(hb);
@@ -152,11 +153,31 @@ main(int argc, char **argv)
 	cl_log_enable_stderr(FALSE);
 
 
+	/* We will sit in a glib loop waiting for inputs, or making decisions
+	 * for failover
+	 */
+	mainloop = g_main_new(TRUE);
+	
+	apifd = hb->llc_ops->inputfd(hb);
+	
+	/* Watch the API's fd for input */
+	G_main_add_fd(G_PRIORITY_HIGH, apifd, FALSE, ipfail_dispatch, 
+		      (gpointer)hb, ipfail_dispatch_destroy);
+
+	Gmain_timeout_add_full(G_PRIORITY_DEFAULT, 1000, 
+	                     ipfail_timeout_dispatch, (gpointer)hb, 
+	                     ipfail_dispatch_destroy);
+	
+	g_main_run(mainloop);
+	g_main_destroy(mainloop);
+	
+	/*
 	for(; !quitnow && (reply=hb->llc_ops->readmsg(hb, 1)) != NULL;) {
 		ha_log_message(reply);
 		ha_msg_del(reply); reply=NULL;
 		errno = 0;
 	}
+	*/
 
 	if (!quitnow && errno != EAGAIN && errno != EINTR) {
 		cl_perror("read_hb_msg returned NULL");
@@ -166,6 +187,15 @@ main(int argc, char **argv)
 	close_api(hb);
 
 	return 0;
+}
+
+int
+is_stable(ll_cluster_t *hb)
+{
+	if (!strcmp(hb->llc_ops->get_resources(hb), "transition"))
+		return 0;
+
+	return 1;
 }
 
 void
@@ -246,6 +276,13 @@ set_callbacks(ll_cluster_t *hb)
 		exit(3);
 	}
 
+	if (hb->llc_ops->set_msg_callback(hb, "abort_giveup", 
+					  msg_abort_giveup, hb) != HA_OK) {
+		cl_log(LOG_ERR, "Cannot set msg_abort_giveup callback");
+		cl_log(LOG_ERR, "REASON: %s", hb->llc_ops->errmsg(hb));
+		exit(4);
+	}
+
 	if (hb->llc_ops->set_msg_callback(hb, "you_are_dead", 
 					  i_am_dead, hb) != HA_OK) {
 		cl_log(LOG_ERR, "Cannot set i_am_dead callback");
@@ -294,7 +331,7 @@ NodeStatus(const char *node, const char *status, void *private)
 	if (strcmp(status, DEADSTATUS) == 0) {
 		if (ping_node_status(private)) {
 			cl_log(LOG_INFO, "NS: We are still alive!");
-		}else{
+		} else {
 			cl_log(LOG_INFO, "NS: We are dead. :<");
 		}
 	} else if (strcmp(status, PINGSTATUS) == 0) {
@@ -331,7 +368,7 @@ LinkStatus(const char *node, const char *lnk, const char *status,
 			       " of ping nodes.");
 		} else {
 			cl_log(LOG_INFO, "We are dead. :<");
-			giveup(private, HB_ALL_RESOURCES);
+			delay_giveup(private, HB_ALL_RESOURCES, -1);
 		}
 	}
 }
@@ -369,18 +406,23 @@ ping_node_status(ll_cluster_t *hb)
 	return found;
 }
 
-void
-giveup(ll_cluster_t *hb, const char *res_type)
+gboolean
+giveup(gpointer user_data)
 {
 	/* Giveup: Takes the heartbeat cluster as input and the type of
-	 * resources to give up.  Returns nothing.
+	 * resources to give up.  Returning FALSE causes the timer to die.
 	 * Forces the local node to release a particular class of resources.
 	 */
 
+	struct giveup_data *gd = user_data;
+	ll_cluster_t *hb = gd->hb;
+	const char *res_type = gd->res_type;
 	struct ha_msg *msg;
 	char pid[10];
 
-	if (node_stable) {
+	cl_log(LOG_DEBUG, "giveup() called (timeout worked)");
+
+	if (is_stable(hb)) {
 		memset(pid, 0, sizeof(pid));
 		snprintf(pid, sizeof(pid), "%ld", (long)getpid());
 
@@ -397,7 +439,84 @@ giveup(ll_cluster_t *hb, const char *res_type)
 	} else {
 		need_standby = 1;
 	}
+
+	return FALSE;
 }
+
+void
+delay_giveup(ll_cluster_t *hb, const char *res_type, int mseconds)
+{
+	struct giveup_data *gd;
+
+	gd = malloc(sizeof(struct giveup_data));
+       
+	gd->hb = hb;
+	gd->res_type = res_type;
+
+	/* Set mseconds to -1 to use default. (twice the keepalive) */
+	if (mseconds < 0) {
+		mseconds = hb->llc_ops->get_keepalive(hb) * 2;
+	}
+
+	cl_log(LOG_DEBUG, "Delayed giveup in %i seconds.", mseconds / 1000);
+
+	if (delay_giveup_tag) {
+		/* A timer exists already? */
+		cl_log(LOG_DEBUG, "Detected existing delay timer, overriding");
+		Gmain_timeout_remove(delay_giveup_tag);
+		delay_giveup_tag = 0;
+	}
+
+	/* We are going to call giveup in mseconds/1000 Seconds. */
+	delay_giveup_tag = Gmain_timeout_add_full(G_PRIORITY_DEFAULT, 
+						  mseconds, 
+						  giveup, (gpointer)gd, 
+						  giveup_destroy);
+}
+
+void
+giveup_destroy(gpointer user_data)
+{
+	/* Clean up the struct giveup_data that we were using */
+	free(user_data);
+
+	delay_giveup_tag = 0;
+	cl_log(LOG_DEBUG, "giveup timeout has been destroyed.");
+}
+
+void
+abort_giveup()
+{
+	if (delay_giveup_tag) {
+		cl_log(LOG_INFO, "Aborted delayed giveup (%u)", 
+		       delay_giveup_tag);
+		Gmain_timeout_remove(delay_giveup_tag);
+		delay_giveup_tag = 0;
+	} else {
+		cl_log(LOG_DEBUG, "No giveup timer to abort.");
+	}
+}
+
+void
+send_abort_giveup(ll_cluster_t *hb)
+{
+        struct ha_msg *msg;
+
+        msg = ha_msg_new(2);
+        ha_msg_add(msg, F_TYPE, "abort_giveup");
+        ha_msg_add(msg, F_ORIG, node_name);
+
+        hb->llc_ops->sendnodemsg(hb, msg, other_node);
+        cl_log(LOG_DEBUG, "Abort message sent.");
+        ha_msg_del(msg);
+}
+
+void
+msg_abort_giveup(const struct ha_msg *msg, void *private)
+{
+        abort_giveup();
+}
+
 
 void
 msg_ipfail_join(const struct ha_msg *msg, void *private)
@@ -506,19 +625,30 @@ msg_ping_nodes(const struct ha_msg *msg, void *private)
 	 */
 
 	int num_nodes=0;
+	ll_cluster_t *hb = private;
 
 	cl_log(LOG_DEBUG, "Got asked for num_ping.");
-	num_nodes = ping_node_status(private);
+	num_nodes = ping_node_status(hb);
 	if (num_nodes > atoi(ha_msg_value(msg, F_NUMPING))) {
-		you_are_dead(private);
+		you_are_dead(hb);
 	}
 	else if (num_nodes < atoi(ha_msg_value(msg, F_NUMPING))) {
-		giveup(private, HB_ALL_RESOURCES);
+		cl_log(LOG_DEBUG, "Giving up because we have less num_nodes.");
+		delay_giveup(hb, HB_ALL_RESOURCES, -1);
 	}
 	else {
-		/* We're balanced, so make sure we don't have foreign stuff */
-		if (auto_failback && node_stable)
-			giveup(private, HB_FOREIGN_RESOURCES);
+		cl_log(LOG_DEBUG, "num_nodes is the same for both sides.");
+		send_abort_giveup(hb);
+		if (delay_giveup_tag) {
+			/* We've got a delayed giveup, and we're now balanced*/
+			abort_giveup();
+		} else if (auto_failback && is_stable(hb)) {
+			/* We're balanced, so make sure we don't have foreign 
+			 * stuff
+			 */
+			cl_log(LOG_DEBUG, "Giving up for auto_failback");
+			delay_giveup(hb, HB_FOREIGN_RESOURCES, -1);
+		}
 	}
 }
 
@@ -554,7 +684,7 @@ i_am_dead(const struct ha_msg *msg, void *private)
 	 */
 
 	cl_log(LOG_DEBUG, "Got you_are_dead.");
-	giveup(private, HB_ALL_RESOURCES);
+	delay_giveup(private, HB_ALL_RESOURCES, -1);
 }
 
 void
@@ -562,6 +692,57 @@ gotsig(int nsig)
 {
 	(void)nsig;
 	quitnow = 1;
+}
+
+/* Used to handle the API in the gmainloop */
+gboolean 
+ipfail_dispatch(int fd, gpointer user_data)
+{
+	struct ha_msg *reply;
+	ll_cluster_t *hb = user_data;
+	
+	/*
+	if (hb->llc_ops->msgready(hb))
+		cl_log(LOG_DEBUG, "Msg ready!");
+	cl_log(LOG_DEBUG, "Reading a message!");
+	*/
+	reply = hb->llc_ops->readmsg(hb, 0);
+
+	if (reply != NULL) {
+		/* ha_log_message(reply); */
+		ha_msg_del(reply); reply=NULL;
+		return TRUE;
+	}
+	/*
+	else
+	  return FALSE;
+	*/
+	
+	return TRUE;
+}
+
+void
+ipfail_dispatch_destroy(gpointer user_data)
+{
+	return;
+}
+
+gboolean
+ipfail_timeout_dispatch(gpointer user_data)
+{
+	ll_cluster_t *hb = user_data;
+
+	if (quitnow) {
+		g_main_destroy(mainloop);
+		mainloop = NULL;
+		return FALSE;
+	}
+
+	if (hb->llc_ops->msgready(hb)) {
+		/* cl_log(LOG_DEBUG, "Msg ready! [2]"); */
+		return ipfail_dispatch(-1, user_data);
+	}
+	return TRUE;
 }
 
 void

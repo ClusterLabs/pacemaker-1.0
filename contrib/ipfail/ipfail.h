@@ -17,6 +17,8 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+
+/* Various defualts */
 #define	DEFAULT_FACILITY	LOG_DAEMON
 #define F_NUMPING               "num_ping"
 
@@ -25,6 +27,13 @@
 #define HB_ALL_RESOURCES        "all"
 
 
+/* Data structures */
+struct giveup_data {
+	ll_cluster_t *hb;
+	const char *res_type;
+};
+
+/* Prototypes */
 void node_walk(ll_cluster_t *);
 void set_signals(ll_cluster_t *);
 void NodeStatus(const char *, const char *, void *);
@@ -34,10 +43,19 @@ void msg_ping_nodes(const struct ha_msg *, void *);
 void i_am_dead(const struct ha_msg *, void *);
 void msg_resources(const struct ha_msg *, void *);
 void gotsig(int);
-void giveup(ll_cluster_t *, const char *);
+gboolean giveup(gpointer);
 void you_are_dead(ll_cluster_t *);
 int ping_node_status(ll_cluster_t *);
 void ask_ping_nodes(ll_cluster_t *, int);
 void set_callbacks(ll_cluster_t *);
 void open_api(ll_cluster_t *);
 void close_api(ll_cluster_t *);
+gboolean ipfail_dispatch(int, gpointer);
+void ipfail_dispatch_destroy(gpointer);
+gboolean ipfail_timeout_dispatch(gpointer);
+void delay_giveup(ll_cluster_t *, const char *, int);
+void giveup_destroy(gpointer);
+void abort_giveup(void);
+void send_abort_giveup(ll_cluster_t *);
+void msg_abort_giveup(const struct ha_msg *, void *);
+int is_stable(ll_cluster_t *);
