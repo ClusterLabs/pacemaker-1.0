@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-my($VERSION)=(qw$Id: ldirectord,v 1.96 2005/02/09 08:15:04 horms Exp $)[2];
+my($VERSION)=(qw$Id: ldirectord,v 1.97 2005/02/09 08:17:02 horms Exp $)[2];
 
 ######################################################################
 # ldirectord                 http://www.vergenet.net/linux/ldirectord/
@@ -707,6 +707,7 @@ sub read_config
 			$vsrv{receive} = "";
 			$vsrv{login} = "";
 			$vsrv{passwd} = "ldirectord\@$ENV{HOSTNAME}";
+			$vsrv{database} = "mysql";
 			$vsrv{checktimeout} = 0;
 			$vsrv{connecttimeout} = 0;
 			$vsrv{negotiatetimeout} = 0;
@@ -764,6 +765,9 @@ sub read_config
 				} elsif ($rcmd =~ /^passwd\s*=\s*\"(.*)\"/) {
 					$1 =~ /(.+)/ or &config_error($line, "invalid password");
 					$vsrv{passwd} = $1;
+				} elsif ($rcmd =~ /^database\s*=\s*\"(.*)\"/) {
+					$1 =~ /(.+)/ or &config_error($line, "invalid database");
+					$vsrv{database} = $1;
 				} elsif ($rcmd =~ /^load\s*=\s*\"(.*)\"/) {
 					$1 =~ /(\w+)/ or &config_error($line, "invalid string for load testing");
 					$vsrv{load} = $1;
@@ -986,6 +990,9 @@ sub _ld_read_config_virtual_resolve
 			}
 			elsif ($vsrv->{port} eq "53") {
 				$vsrv->{service} = "dns";
+			} 
+			elsif ($vsrv->{port} eq "3306") {
+				$vsrv->{service} = "mysql";
 			} 
 			else {
 				$vsrv->{service} = "none";
@@ -1587,6 +1594,8 @@ sub ld_main
 						$$r{num_connects} = 0 if (check_nntp($v, $r));
 					} elsif ($$v{service} eq "dns") {
 						$$r{num_connects} = 0 if (check_dns($v, $r));
+					} elsif ($$v{service} eq "mysql") {
+						$$r{num_connects} = 0 if (check_mysql($v, $r));
 					} else {
 						$$r{num_connects} = 0 if (check_none($v, $r));
 					}
@@ -1861,10 +1870,9 @@ sub check_https_child
 		my $recstr = $$r{receive};
 		if($result =~ /error/i ||
 				($recstr =~ /.+/ && !($body =~ /$recstr/))) {
-			&ld_debug(2, "Expected String Not Present");
+			alarm(0);
 			die("$result");
 		}
-		&ld_debug(2, "Expected String Present");
 	};
 
 	if ($@) {
@@ -1888,14 +1896,13 @@ sub check_https
 	$pid = fork();
 	if ($pid) {
 		#parent
-		while (wait < 0) {
-			if (kill 0, $pid > 0) {
-				#no child for some reason 
-				return 1;
-			}
-			# wait was interupted by a signal, try again
+		if (wait) {
+			$status = $? >> 8;
 		}
-		$status = $? >> 8;
+		else {
+			#no child for some reason
+			return 1;
+		}
 	}
 	elsif (defined $pid) {
 		exit check_https_child($v, $r);
@@ -1905,7 +1912,7 @@ sub check_https
 		return 1;
 	}
 
-	&ld_debug(2, "Status: $status (" . (($status==0)?"ok":"fail") . ")");
+	&ld_debug(2, "Status: $status");
 	if ($status ne 0) {
 		service_set($v, $r, "down");
 		return 0;
@@ -1950,6 +1957,57 @@ sub check_nntp
         $sock->close;
 
         return 0;
+}
+
+
+sub check_mysql
+{
+	require DBI;
+	my ($v, $r) = @_;
+	my $port=(defined $$v{checkport}?$$v{checkport}:$$r{port});
+	my ($dbh, $sth, $query, $rows, $result);   # Local variables
+	$query = $$r{request};
+	$query =~ s#^/##;
+	unless ($$v{login} && $$v{passwd} && $query) {
+		service_set($v, $r, "down");
+		&ld_log("Error: Must specify a login, passwd, and request string for mysql.  Not adding $$r{server}.\n");
+		return 1;
+	}
+	$result=2;   # Set result flag.  Only ok if ends up at zero.
+	&ld_debug(2, "Checking mysql server=$$r{server} port=$port\n");
+	$dbh = DBI->connect("dbi:mysql:database=$$v{database};host=$$r{server};port=$port", $$v{login}, $$v{passwd});
+	unless ($dbh) {
+		&ld_debug(4, "Failed to bind to $$r{server} with $dbh->err");
+		service_set($v, $r, "down");
+		return 1;
+	}
+	$result--;
+	$sth = $dbh->prepare($query);
+	$rows = $sth->execute;
+	ld_debug(4, "Database search returned $rows rows");
+	if ($rows gt 0) {
+		# If it returns with a number, it is ok.
+		# Disallows query of an empty table.
+		$result--;
+	}
+	# If user defined a receive string (number of rows returned), only do
+	# the check if the previous fetchall_arrayref succeeded.
+	#if (defined $$r{receive} && $result eq 0) {
+	#	# Receive string specifies an exact number of rows
+	#	if ($rows ne $$r{receive}) {
+	#	ld_debug(2,"Service down, receive=$$r{receive}");
+	#		$result=1;
+	#	}
+	#}
+	if ($result == 1) {
+		# Should never get here
+		service_set($v, $r, "down");
+		return 1;
+	}
+	service_set($v, $r, "up");
+	$sth->finish;
+	$dbh->disconnect;
+	return 0;
 }
 
 
