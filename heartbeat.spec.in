@@ -1,4 +1,4 @@
-#	$Id: heartbeat.spec.in,v 1.84 2004/05/11 13:02:21 lars Exp $
+#	$Id: heartbeat.spec.in,v 1.85 2004/05/14 21:06:57 andrew Exp $
 
 # Workaround for a change in RPM 4.1.x; needs proper fixing soon!
 %define _unpackaged_files_terminate_build 0
@@ -839,6 +839,18 @@ install -m 644 rc.config.heartbeat $TEMPL
 %define ENABLE_SNMP_SUBAGENT @SNMP_SUBAGENT_ENABLED@
 %if %{ENABLE_SNMP_SUBAGENT}
 	@MIBS_DIR@/LINUX-HA-MIB.mib
+%endif
+
+%define ENABLE_CRM @CRM_ENABLED@
+%if %{ENABLE_CRM}
+	%dir %attr (750, root, @HA_APIGROUP@) @localstatedir@/lib/@HB_PKG@/crm
+	@libdir@/libcib.*
+	@libdir@/libcrmcommon.*
+%endif
+
+%define ENABLE_LRM @LRM_ENABLED@
+%if %{ENABLE_LRM}
+	@libdir@/liblrm.*
 %endif
 
 ###########################################################
