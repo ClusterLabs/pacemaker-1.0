@@ -1,4 +1,4 @@
-/* $Id: hb_resource.c,v 1.67 2004/11/11 20:27:03 gshi Exp $ */
+/* $Id: hb_resource.c,v 1.68 2004/11/16 05:47:23 zhenh Exp $ */
 /*
  * hb_resource: Linux-HA heartbeat resource management code
  *
@@ -171,11 +171,6 @@ static ProcTrack_ops StonithStatProcessTrackOps = {
 };
 
 
-void
-init_resource_module(void)
-{
-	hb_register_comm_up_callback(comm_up_resource_action);
-}
 
 static void
 HBDoMsg_T_STARTING_or_RESOURCES(const char * type, struct node_info * fromnode
@@ -229,6 +224,46 @@ HBDoMsg_default(const char * type, struct node_info * fromnode
 {
 	heartbeat_monitor(msg, KEEPIT, iface);
 	QueueRemoteRscReq(PerformQueuedNotifyWorld, msg);
+}
+
+/* Received a "SHUTDONE" message from someone... */
+static void 
+HBDoMsg_T_SHUTDONE(const char * type, struct node_info * fromnode
+,	TIME_T msgtime, seqno_t seqno, const char * iface, struct ha_msg * msg)
+{
+	if (heartbeat_comm_state == COMM_LINKSUP) {
+		process_resources(type, msg, fromnode);
+	}
+	heartbeat_monitor(msg, KEEPIT, iface);
+	if (fromnode == curnode) {
+		if (ANYDEBUG) {
+			cl_log(LOG_DEBUG
+			,	"Received T_SHUTDONE from us.");
+		}
+		if (ANYDEBUG) {
+			cl_log(LOG_DEBUG
+			,	"Calling hb_mcp_final_shutdown"
+			" in a second.");
+		}
+		/* Trigger next phase of final shutdown process in a second */
+		Gmain_timeout_add(1000, hb_mcp_final_shutdown, NULL); /* phase 0 - normal */
+	}else{
+		fromnode->has_resources = FALSE;
+		other_is_stable = 0;
+		other_holds_resources= HB_NO_RSC;
+
+		cl_log(LOG_INFO
+		,	"Received shutdown notice from '%s'."
+		,	fromnode->nodename);
+		takeover_from_node(fromnode->nodename);
+	}
+}
+
+void
+init_resource_module(void)
+{
+	hb_register_msg_callback(T_SHUTDONE, HBDoMsg_T_SHUTDONE);
+	hb_register_comm_up_callback(comm_up_resource_action);
 }
 
 static const char *	rsc_msg[] =	{HB_NO_RESOURCES, HB_LOCAL_RESOURCES
@@ -2007,12 +2042,6 @@ hb_giveup_resources(void)
 	}
 	pclose(rkeys);
 
-	/* Kill all our managed children... */
-	ForEachProc(&ManagedChildTrackOps, hb_kill_tracked_process
-	,	GINT_TO_POINTER(SIGTERM));
-	ForEachProc(&hb_rsc_RscMgmtProcessTrackOps, hb_kill_tracked_process
-	,	GINT_TO_POINTER(SIGKILL));
-
 	cl_log(LOG_INFO, "All HA resources relinquished.");
 
 	if ((m=ha_msg_new(0)) == NULL) {
@@ -2387,6 +2416,9 @@ StonithStatProcessName(ProcTrack* p)
 
 /*
  * $Log: hb_resource.c,v $
+ * Revision 1.68  2004/11/16 05:47:23  zhenh
+ * 1.Make the ordering shutdown work. 2.Move HBDoMsg_T_SHUTDONE() to hb_resource.c
+ *
  * Revision 1.67  2004/11/11 20:27:03  gshi
  * node dead notice should be called after the node is really decared dead
  * instead of after receving a shutdown message from it
