@@ -1,4 +1,4 @@
-# $Id: Makefile.am,v 1.8 2004/10/14 08:40:20 davidlee Exp $
+# $Id: Makefile.am,v 1.9 2004/10/14 09:17:40 davidlee Exp $
 #
 # Open-HA "pkg" Makefile for Solaris etc.
 #
@@ -86,6 +86,8 @@ $(INFOFILES)/prototype:	stamp-tmpinst
 	    $$3 ~ /\/lib\/@HB_PKG@\/api\// \
 	      { $$5 = "@HA_CCMUSER@" ; $$6 = "@HA_APIGROUP@" } \
 	    $$3 ~ /.*var.*\/lib\/@HB_PKG@\/ccm$$/ \
+	      { $$5 = "@HA_CCMUSER@" ; $$6 = "@HA_APIGROUP@" } \
+	    $$3 ~ /\/bin\/cl_status$$/ \
 	      { $$5 = "@HA_CCMUSER@" ; $$6 = "@HA_APIGROUP@" } \
 	    { print ; } \
 	  ' > $@
