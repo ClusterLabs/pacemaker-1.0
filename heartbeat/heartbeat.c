@@ -1,4 +1,4 @@
-const static char * _heartbeat_c_Id = "$Id: heartbeat.c,v 1.288 2004/02/06 07:18:15 horms Exp $";
+const static char * _heartbeat_c_Id = "$Id: heartbeat.c,v 1.289 2004/02/08 09:23:02 alan Exp $";
 
 /*
  * heartbeat: Linux-HA heartbeat code
@@ -3336,7 +3336,8 @@ should_drop_message(struct node_info * thisnode, const struct ha_msg *msg,
 	if (gen < t->generation) {
 		cl_log(LOG_ERR
 		,	"should_drop_message: attempted replay attack"
-		" [%s]? [curgen = %ld]", thisnode->nodename, t->generation);
+		" [%s]? [gen = %ld, curgen = %ld]"
+		,	thisnode->nodename, gen, t->generation);
 		return DROPIT;
 
 	}else if (is_status) {
@@ -4116,6 +4117,9 @@ get_localnodeinfo(void)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.289  2004/02/08 09:23:02  alan
+ * Put in a little more data from the "attempted replay attack" message.
+ *
  * Revision 1.288  2004/02/06 07:18:15  horms
  * Fixed duplicated global definitions
  *
