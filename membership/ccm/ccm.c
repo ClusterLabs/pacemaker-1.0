@@ -1,4 +1,4 @@
-/* $Id: ccm.c,v 1.60 2005/02/22 07:03:14 gshi Exp $ */
+/* $Id: ccm.c,v 1.61 2005/02/22 18:41:17 gshi Exp $ */
 /* 
  * ccm.c: Consensus Cluster Service Program 
  *
@@ -3875,7 +3875,7 @@ repeat:
 			cl_log(LOG_DEBUG, "received shutdown orig=%s", orig);
 			nodelist_update(orig, CLUST_INACTIVE, -1, info);
 		       	newreply = ccm_handle_shutdone(info, orig, status);
-			
+			CCM_SET_STATE(info, CCM_STATE_END);
 			ha_msg_del(reply);
 			reply = newreply;
 			return TRUE;
@@ -4000,12 +4000,17 @@ repeat:
 		ccm_state_new_node_wait_for_mem_list(ccm_msg_type, reply, hb
 						     ,	info);
 		break;
+	case CCM_STATE_END:
+		/* State after receiving T_SHUTDONE message
+		 * Waiting to be killed, ingore any message
+		 */
+		break;
 		
 	default:
 		cl_log(LOG_ERR, "INTERNAL LOGIC ERROR");
 		return(FALSE);
 	}
-
+	
 	if(ccm_msg_type != CCM_TYPE_TIMEOUT) {
 		ha_msg_del(reply);
 	}
