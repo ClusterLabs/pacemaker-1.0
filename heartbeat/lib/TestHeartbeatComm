@@ -1,0 +1,55 @@
+#!/bin/sh
+# The purpose of this script is to break or fix the communication in the cluster.
+#
+HADIR=/etc/ha.d
+INITDIR=/etc/init.d
+LIBDIR=/usr/lib/
+HBLIB=$LIBDIR/heartbeat
+TESTFILE=OnlyForTesting
+
+USAGE="Usage: 'TestHeartbeatComm break-communication|fix-communication'"
+
+if 
+  [ $# -lt 1 ]
+then
+  echo "$USAGE";
+  exit 1;
+fi
+
+cd /etc/ha.d
+
+# Create OnlyForTesting File. It is invoked by ParseTestOpts() in heartbeat.c
+
+GenerateTestingFile(){
+  cat <<EOF >$TESTFILE
+xmitloss=1
+rcvloss=1
+EOF
+}
+
+DeleteTestingFile(){
+  rm -f $TESTFILE
+  echo "DeleteTestFileOK"
+}
+
+HBReload(){
+  $INITDIR/heartbeat reload
+}
+
+
+OPT=$1
+case "$OPT" in
+  break-communication)
+	GenerateTestingFile
+	HBReload
+	;;
+  fix-communication)
+	DeleteTestingFile
+	HBReload
+	;;
+  *)
+	echo "$USAGE"
+	;;
+esac
+
+exit 1
