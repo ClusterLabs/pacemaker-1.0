@@ -53,7 +53,7 @@ cd @sysconfdir@/ha.d
 ulimit -c unlimited
 
 GetAllIFNames() {
-  $IFCONFIG | grep '^[a-zA-Z]' | cut -d' ' -f1
+  $IFCONFIG | grep '^[a-zA-Z]' | sed 's%:* .*%%'
 }
 
 GuessIFname() {
