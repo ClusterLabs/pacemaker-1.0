@@ -1,4 +1,4 @@
-/* $Id: ha_msg.h,v 1.41 2004/11/08 20:48:36 gshi Exp $ */
+/* $Id: ha_msg.h,v 1.42 2004/12/05 04:32:50 gshi Exp $ */
 /*
  * Intracluster message object (struct ha_msg)
  *
@@ -365,6 +365,25 @@ int cl_msg_list_length(struct ha_msg* msg, const char* name);
 
 /* Return nth element of a list*/
 void* cl_msg_list_nth_data(struct ha_msg* msg, const char* name, int n);
+
+/* Functions to add/mod/get an integer */
+int	ha_msg_add_int(struct ha_msg * msg, const char * name, int value);
+int	ha_msg_mod_int(struct ha_msg * msg, const char * name, int value);
+int	ha_msg_value_int(struct ha_msg * msg, const char * name, int* value);
+
+/* Functions to add/get a uuid*/
+int	ha_msg_add_uuid(struct ha_msg * msg, const char * name, const uuid_t id);
+int	ha_msg_value_uuid(struct ha_msg * msg, const char * name, uuid_t id);
+
+/* Functions to add/get a string list*/
+int	ha_msg_add_str_list(struct ha_msg * msg, const char * name, GList* list);
+GList*	ha_msg_value_str_list(struct ha_msg * msg, const char * name);
+
+
+/* Function to add/get a string hash table*/
+GHashTable*	ha_msg_value_str_table(struct ha_msg * msg, const char * name);
+int		ha_msg_add_str_table(struct ha_msg * msg, const char * name,
+				     GHashTable* hash_table);
 
 
 /*internal use for list type*/
