@@ -1,4 +1,4 @@
-/* $Id: hb_resource.c,v 1.50 2004/03/25 07:55:39 alan Exp $ */
+/* $Id: hb_resource.c,v 1.51 2004/03/30 19:38:48 alan Exp $ */
 /*
  * hb_resource: Linux-HA heartbeat resource management code
  *
@@ -820,7 +820,8 @@ process_resources(const char * type, struct ha_msg* msg
 					/* FYI: This also got noted earlier */
 					procinfo->i_hold_resources
 					|=	HB_FOREIGN_RSC;
-					other_is_stable = 1;
+					rsc_needs_failback = TRUE;
+					other_is_stable = TRUE;
 					if (ANYDEBUG) {
 						cl_log(LOG_DEBUG
 						, "process_resources(3): %s"
@@ -2126,6 +2127,10 @@ StonithProcessName(ProcTrack* p)
 
 /*
  * $Log: hb_resource.c,v $
+ * Revision 1.51  2004/03/30 19:38:48  alan
+ * Applied a fix for a bug.  Fix supplied by
+ * Kurosawa Takahiro <kurosawa@valinux.co.jp>.
+ *
  * Revision 1.50  2004/03/25 07:55:39  alan
  * Moved heartbeat libraries to the lib directory.
  *
