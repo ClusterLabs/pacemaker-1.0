@@ -24,10 +24,10 @@ gives?</a></li>
     <li> <a href="#what_is_it">What is a cluster?</a></li>
     <li> <a href="#res_scr">What is a resource script?</a></li>
     <li> <a href="#mon">How to monitor various resources?</a>. 	If one of
-my resouces stops working heartbeat doesn't do anything 	unless the server
+my resources stops working heartbeat doesn't do anything 	unless the server
 crashes.  How do I monitor resources with heartbeat? 	</li>
     <li><a href="#ipfail">If my one of my ethernet connections goes away
-(cable severence, NIC failure, locusts), but my current primary node (the
+(cable severance, NIC failure, locusts), but my current primary node (the
 one with the services) is otherwise fine, no one can get to my services and
 I want to fail them over to my other cluster node. &nbsp;Is there a way to
 do this?</a><br>
@@ -71,7 +71,7 @@ automatically. &nbsp;How can I require human confirmation before failing over?</
 	to use STONITH. &nbsp;Any recommendations?</a><br>
     </li>
     <li><a href="#active_active">Can heartbeat be configured in an 	active/active
-configuration?</a> 	If so, how do I do this, since the haresource script
+configuration?</a> 	If so, how do I do this, since the haresources file
 is supposed 	to be the same on each box so I do not know how this could be
 done.&nbsp;</li>
   <li><a href="#iftrunc">Why are my interface names getting truncated when
@@ -101,9 +101,9 @@ for Linux-HA.</a> &nbsp;You can find out about them by visiting <a
  href="http://linux-ha.org/contact/">http://linux-ha.org/contact/</a>.<br>
    </li>
   <br>
-    <li> <a name="what_is_it">HA (High availability Cluster)</a> - This is
- a cluster that allows a host (or hosts) to become Highly Available, that
-means if one node goes down (or a service on that node goes down) another
+    <li> <a name="what_is_it">HA (High availability Cluster)</a> - 
+ A cluster that allows a host (or hosts) to become Highly Available.  This
+means that if one node goes down (or a service on that node goes down) another
 node can pick up the service or node and take over from the failed machine.
     <a href="http://www.linux-ha.org">http://linux-ha.org</a> <br>
   Computing Cluster - This is what a Beowulf cluster is. It allows distributed 
@@ -119,7 +119,7 @@ a certain server (apache for example) over a farm of servers. <a
 clustering under Linux, look at the Clustering HOWTO.</li>
   <br>
     <li> <a name="res_scr">Resource scripts</a> are basically (extended)
-System V init scripts. They have to support stop, start, and status operations.&nbsp; 
+System V init scripts. They must support stop, start, and status operations.&nbsp; 
 In the future we will also add support for a "monitor" operation for monitoring 
 services as you requested. The IPaddr script implements this new "monitor" 
 operation now (but heartbeat doesn't use that function of it). For more info 
@@ -135,16 +135,16 @@ a reasonable solution.     <br>
  	</li>
       <li>Get all required modules listed. You can find them at 	nearest
 mirror or at the CPAN archive (www.cpan.org). 	I am not very familiar with
-Perl, so i downloaded them from CPAN 	archive as .tar.gz packages and installed
-them usual way 	(perl Makefile.pl &amp;&amp; make &amp;&amp; make test &amp;&amp; 
+Perl, so I downloaded them from CPAN 	archive as .tar.gz packages and installed
+them in the usual way 	(perl Makefile.pl &amp;&amp; make &amp;&amp; make test &amp;&amp; 
 	make install).           </li>
       <li>Mon is software for monitoring different network resources. 	It
 can ping computers, connect to various ports, monitor WWW, 	MySQL etc. In
 case of dysfunction of some resources it triggers 	some scripts.        
   </li>
       <li>Unpack mon in some directory. Best starting point is README file. 
-	Complete documentation is in &lt;dir&gt;/doc, where &lt;dir&gt; 	is place
-where you unpacked mon package.           </li>
+	Complete documentation is in the &lt;dir&gt;/doc, where &lt;dir&gt; 	is the place
+you unpacked mon package.           </li>
       <li>For a fast start do following steps:         
         <ol type="a">
   	<li>copy all subdirs found in &lt;dir&gt; to /usr/lib/mon </li>
@@ -222,7 +222,7 @@ like     <br>
  	<li>Kernel bug.</li>
  	
     </ul>
-    </a> 	For how to deal with the first occurrance (heavy load), please
+    </a> 	For how to deal with the first occurrence (heavy load), please
 read the 	answer to the <a href="#heavy_load">next FAQ item.</a>
     <p> 	If your system was not under moderate to heavy load when it 	got
 this message, you probably have the kernel bug. 	The 2.4.18 Linux kernel
@@ -253,8 +253,8 @@ machine generally helps. 	Newer versions of heartbeat are a better about
 this than 	pre 1.0 versions.</li>
   <br>
      <li><a name="serialerr">It's common to get a single mangled packet 	on
-your serial interface when heartbeat starts up.</a> 	&nbsp;This is an indicator
-that happened. &nbsp;It's harmless in 	this scenario.  If it happens continually,
+your serial interface when heartbeat starts up.</a> 	&nbsp;This message is an indication
+that we received a mangled packet. &nbsp;It's harmless in 	this scenario.  If it happens continually,
 there is probably 	something else going on. 	<br>
     </li>
   <br>
@@ -270,7 +270,7 @@ and when it discovers the problem, the message will wind up in different places.
      
     </ol>
   Newer releases are better about also putting out startup messages to stderr 
-in addition to whereever you have configured them to go. </li>
+in addition to wherever you have configured them to go. </li>
   <br>
      <li> <a name="multiple_clusters">Use multicast</a> and give each its
 own multicast group. If you need to/want to use broadcast, then run each
@@ -309,8 +309,8 @@ may even tell you if you are missing 	some other required packages!</li>
 	the ha.cf file.</a> &nbsp;The meatware STONITH device asks the 	operator
 to go power reset the machine which has gone down.&nbsp; 	When the operator
 has reset the machine he or she then issues a 	command to tell the meatware
-STONITH plugin that the reset has  	taken place. &nbsp;Heartbeat will wait
-indefinitely until 	the operator acknowledges the reset has occured. &nbsp;During 
+STONITH plug-in that the reset has  	taken place. &nbsp;Heartbeat will wait
+indefinitely until 	the operator acknowledges the reset has occurred. &nbsp;During 
 	this time, the resources will not be taken over, and 	nothing will happen.</li>
   <br>
     <li><a name="STONITH">STONITH is a form of fencing</a>, and is an acronym 
@@ -421,7 +421,7 @@ can post questions to the mailing list. Please 	include following:
 installation)</li>
       <li>Include your configuration files from BOTH machines. 	You can omit
 authkeys.</li>
-      <li>Include the of your logs which describes errors.&nbsp; Send them 
+      <li>Include the parts of your logs which describe the errors.&nbsp; Send them 
 	as text/plain attachments. <br>
   	Please don't send "cleaned up" logs.&nbsp; The real logs have 	more information
 in them than cleaned up versions.&nbsp; Always 	include at least a little
