@@ -1,4 +1,4 @@
-/* $Id: hb_resource.c,v 1.60 2004/09/08 18:57:30 gshi Exp $ */
+/* $Id: hb_resource.c,v 1.61 2004/09/08 22:19:42 alan Exp $ */
 /*
  * hb_resource: Linux-HA heartbeat resource management code
  *
@@ -379,7 +379,7 @@ notify_world(struct ha_msg * msg, const char * ostatus)
 
 		case 0:	{	/* Child */
 				int	j;
-				cl_make_normaltime();
+				hb_setup_child();
 				set_proc_title("%s: notify_world()", cmdname);
 				setpgid(0,0);
 				CL_SIGACTION(SIGCHLD, NULL, &sa);
@@ -461,7 +461,7 @@ hb_rsc_recover_dead_resources(struct node_info* hip)
 
 
 		case HB_R_SHUTDOWN:
-		case HB_R_STABLE:	break;
+		case HB_R_STABLE:	return;
 					
 		default:	
 				cl_log(LOG_ERR
@@ -503,14 +503,28 @@ hb_rsc_recover_dead_resources(struct node_info* hip)
 			send_stonith_msg(hip->nodename, T_STONITH_NOTCONFGD);
 			cl_log(LOG_WARNING, "No STONITH device configured.");
 			cl_log(LOG_WARNING, "Shared disks are not protected.");
+			/* nice_failback needs us to do this anyway... */
+			takeover_from_node(hip->nodename);
 		}
 	}else{
-		cl_log(LOG_INFO, "Dead node %s held no resources."
+		cl_log(LOG_INFO, "Dead node %s gave up resources."
 		,	hip->nodename);
 		send_stonith_msg(hip->nodename, T_STONITH_UNNEEDED);
+		if (nice_failback) {
+			/* These might happen due to timing weirdnesses */
+			if (! (procinfo->i_hold_resources & HB_LOCAL_RSC)){
+				req_our_resources(TRUE);
+			}
+			if (! (procinfo->i_hold_resources & HB_FOREIGN_RSC)){
+				takeover_from_node(hip->nodename);
+			}
+		}else{
+			/* With nice_failback disabled, we always
+			 * own our own (local) resources
+			 */
+			takeover_from_node(hip->nodename);
+		}
 	}
-	/* nice_failback needs us to do this anyway... */
-	takeover_from_node(hip->nodename);
 }
 
 static gboolean
@@ -520,7 +534,8 @@ hb_rsc_isstable(void)
 	if (!nice_failback) {
 		if (ANYDEBUG) {
 			cl_log(LOG_DEBUG
-			,	"hb_rsc_isstable: ResourceMgmt_child_count: %d"
+			,	"hb_rsc_isstable"
+			": ResourceMgmt_child_count: %d"
 			,	ResourceMgmt_child_count);
 		}
 		return ResourceMgmt_child_count == 0;
@@ -736,7 +751,7 @@ process_resources(const char * type, struct ha_msg* msg
 			return;
 
 		}
-		other_is_stable = 0;
+		other_is_stable = FALSE;
 		if (ANYDEBUG) {
 			cl_log(LOG_DEBUG
 			, "process_resources: other now unstable");
@@ -820,12 +835,12 @@ process_resources(const char * type, struct ha_msg* msg
 						cl_log(LOG_INFO
 						,	"remote resource"
 						" transition completed.");
-						other_is_stable = 1;
+						other_is_stable = TRUE;
 					 	hb_send_resources_held(resourcestate == HB_R_STABLE, NULL);	
 						PerformAutoFailback();
 					}
 				}else{
-					other_is_stable = 0;
+					other_is_stable = FALSE;
 					if (ANYDEBUG) {
 						cl_log(LOG_DEBUG
 						, "process_resources(2): %s"
@@ -918,25 +933,38 @@ process_resources(const char * type, struct ha_msg* msg
 	}
 	if (strcasecmp(type, T_SHUTDONE) == 0) {
 		if (thisnode != curnode) {
-			/* 
-			 * Fix the issue of can not stopping simulataneous.
-			 * It seems other_is_stable should always be setted as 1 
-			 * when go here. 
-			 * But for avoiding unknown side-effect, now temporily
-			 * set other_is_stable = 1 conditionally.
+			/*
+			 * It seems other_is_stable should be set to TRUE
+			 * when we come here because the other side
+			 * declared they are shutting down and no longer
+			 * own any resources.
 			 */
-			if (shutdown_in_progress) {
-				other_is_stable = 1;
-			} else {
-				other_is_stable = 0;
-			}
-			
+			other_is_stable = TRUE;
 			other_holds_resources = HB_NO_RSC;
 			if (ANYDEBUG) {
 				cl_log(LOG_DEBUG
 				, "process_resources(4): %s"
 				, " other now stable - T_SHUTDONE");
 			}
+			if ((procinfo->i_hold_resources != HB_ALL_RSC)
+			&&	!shutdown_in_progress) {
+				int	rtype;
+			
+				switch (procinfo->i_hold_resources) {
+					case HB_FOREIGN_RSC:
+						rtype = HB_LOCAL_RSC;	break;
+					case HB_LOCAL_RSC:
+						rtype = HB_FOREIGN_RSC;	break;
+					default:
+					case HB_NO_RSC:
+						rtype = HB_ALL_RSC;	break;
+				}
+				
+				/* Take over resources immediately */
+				going_standby = DONE;
+				go_standby(OTHER, rtype);
+			}
+
 		}else{
 			resourcestate = newrstate = HB_R_SHUTDOWN;
 			procinfo->i_hold_resources = 0;
@@ -1173,7 +1201,7 @@ takeover_from_node(const char * nodename)
 			procinfo->i_hold_resources |= HB_FOREIGN_RSC;
 
 			other_holds_resources = HB_NO_RSC;
-			other_is_stable = 1;	/* Not going anywhere */
+			other_is_stable = TRUE;	/* Not going anywhere */
 			takeover_in_progress = TRUE;
 			if (ANYDEBUG) {
 				cl_log(LOG_DEBUG
@@ -1214,7 +1242,7 @@ req_our_resources(int getthemanyway)
 	int	pid;
 	int	upcount;
 
-	if (!DoManageResources) {
+	if (!DoManageResources || shutdown_in_progress) {
 		return;
 	}
 
@@ -1266,8 +1294,7 @@ req_our_resources(int getthemanyway)
 				break;
 	}
 
-	hb_close_watchdog();
-	cl_make_normaltime();
+	hb_setup_child();
 	set_proc_title("%s: req_our_resources()", cmdname);
 	setpgid(0,0);
 	CL_SIGNAL(SIGCHLD, SIG_DFL);
@@ -1284,6 +1311,10 @@ req_our_resources(int getthemanyway)
 		setenv(HANICEFAILBACK, "yes", 1);
 	}
 	sprintf(cmd, HALIB "/ResourceManager listkeys %s", curnode->nodename);
+	if (ANYDEBUG) {
+		cl_log(LOG_DEBUG, "req_our_resources(%s)"
+		,	cmd);
+	}
 
 	if ((rkeys = popen(cmd, "r")) == NULL) {
 		cl_log(LOG_ERR, "Cannot run command %s", cmd);
@@ -1292,8 +1323,15 @@ req_our_resources(int getthemanyway)
 
 
 	for (;;) {
+		if (DEBUGDETAILS) {
+			cl_log(LOG_DEBUG, "req_our_resources() before fgets()");
+		}
 		errno = 0;
 		if (fgets(buf, MAXLINE, rkeys) == NULL) {
+			if (DEBUGDETAILS) {
+				cl_log(LOG_DEBUG
+				,	"req_our_resources() fgets => NULL");
+			}
 			if (ferror(rkeys)) {
 				cl_perror("req_our_resources: fgets failure");
 			}
@@ -1304,17 +1342,18 @@ req_our_resources(int getthemanyway)
 		if (buf[strlen(buf)-1] == '\n') {
 			buf[strlen(buf)-1] = EOS;
 		}
-		if (ANYDEBUG) {
-			cl_log(LOG_INFO, "req_our_resources()"
-			": " HALIB "/req_resource %s", buf);
-		}
 		sprintf(getcmd, HALIB "/req_resource %s", buf);
+		if (ANYDEBUG) {
+			cl_log(LOG_DEBUG, "req_our_resources()"
+			": running [%s]",	getcmd);
+		}
 		if ((rc=system(getcmd)) != 0) {
 			cl_perror("%s returned %d", getcmd, rc);
 			finalrc=HA_FAIL;
 		}
 	}
 	rc=pclose(rkeys);
+	rkeys = NULL;
 	if (rc < 0 && errno != ECHILD) {
 		cl_perror("pclose(%s) returned %d", cmd, rc);
 	}else if (rc > 0) {
@@ -1422,6 +1461,13 @@ ask_for_resources(struct ha_msg *msg)
 		,	"Standby mode only implemented when nice_failback on");
 		return;
 	}
+	if (resourcestate == HB_R_SHUTDOWN) {
+		if (ANYDEBUG){
+			cl_log(LOG_DEBUG
+			,	"standby message ignored during shutdown");
+		}
+		return;
+	}
 	info = ha_msg_value(msg, F_COMMENT);
 	from = ha_msg_value(msg, F_ORIG);
 	rsctype=ha_msg_value(msg, F_RESOURCES);
@@ -1482,7 +1528,7 @@ ask_for_resources(struct ha_msg *msg)
 				cl_log(LOG_DEBUG
 				, "ask_for_resources: other now unstable");
 			}
-			other_is_stable = 0;
+			other_is_stable = FALSE;
 			cl_log(LOG_INFO, "%s wants to go standby [%s]"
 			,	from, decode_resources(rtype));
 			if (msgfromme) {
@@ -1661,7 +1707,7 @@ go_standby(enum standby who, int resourceset) /* Which resources to give up */
 	 * our resources.
 	 */
 	if (who == ME) {
-		other_is_stable = 0;
+		other_is_stable = FALSE;
 		if (ANYDEBUG) {
 			cl_log(LOG_DEBUG, "go_standby: other is unstable");
 		}
@@ -1687,7 +1733,7 @@ go_standby(enum standby who, int resourceset) /* Which resources to give up */
 				return;
 
 				/*
-				 * We cant't block here, because then we
+				 * We can't block here, because then we
 				 * aren't sending heartbeats out...
 				 */
 		default:	
@@ -1698,8 +1744,7 @@ go_standby(enum standby who, int resourceset) /* Which resources to give up */
 				break;
 	}
 
-	hb_close_watchdog();
-	cl_make_normaltime();
+	hb_setup_child();
 	setpgid(0,0);
 	CL_SIGNAL(SIGCHLD, SIG_DFL);
 
@@ -1867,8 +1912,7 @@ hb_giveup_resources(void)
 				break;
 	}
 
-	hb_close_watchdog();
-	cl_make_normaltime();
+	hb_setup_child();
 	setpgid(0,0);
 	set_proc_title("%s: hb_signal_giveup_resources()", cmdname);
 
@@ -1965,9 +2009,8 @@ Initiate_Reset(Stonith* s, const char * nodename, gboolean doreset)
 				break;
 
 	}
-	hb_close_watchdog();
-	/* Guard against possibly hanging Stonith code... */
-	cl_make_normaltime();
+	/* Guard against possibly hanging Stonith code, etc... */
+	hb_setup_child();
 	setpgid(0,0);
 	set_proc_title("%s: Initiate_Reset()", cmdname);
 	CL_SIGNAL(SIGCHLD,SIG_DFL);
@@ -2285,6 +2328,9 @@ StonithStatProcessName(ProcTrack* p)
 
 /*
  * $Log: hb_resource.c,v $
+ * Revision 1.61  2004/09/08 22:19:42  alan
+ * Bringing forward changes from the 1.2.x branch.
+ *
  * Revision 1.60  2004/09/08 18:57:30  gshi
  * fixed a bug: api_test cannot receive messages
  * the default handler gets all messages
