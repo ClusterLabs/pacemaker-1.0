@@ -49,7 +49,7 @@
 #include "operation.h"
 #include "utils.h"
 
-#ifdef DMALLOC
+#ifdef USE_DMALLOC
 #include <dmalloc.h>
 #endif
 
@@ -1604,7 +1604,7 @@ SaCkptSectionId2String(SaCkptFixLenSectionIdT sectionId)
 {
 	char* strSectionId = NULL;
 	char	buf[3] = {0};	
-	int 	i = 0;
+	 SaUint32T	i = 0;
 
 	strSectionId = (char*)SaCkptMalloc(2*SA_MAX_ID_LENGTH + 3);
 	SACKPTASSERT(strSectionId != NULL);
@@ -1612,7 +1612,7 @@ SaCkptSectionId2String(SaCkptFixLenSectionIdT sectionId)
 	strSectionId[0] = '0';
 	strSectionId[1] = 'x';
 	strSectionId[2] = 0;
-	for (i=0; i<sectionId.idLen; i++) {
+	for (i=0; i < sectionId.idLen; i++) {
 		sprintf(buf, "%0x", sectionId.id[i]);
 		strncat(strSectionId, buf, 2);
 	}

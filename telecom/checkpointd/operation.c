@@ -49,7 +49,7 @@
 #include "operation.h"
 #include "utils.h"
 
-#ifdef DMALLOC
+#ifdef USE_DMALLOC
 #include <dmalloc.h>
 #endif
 
@@ -385,7 +385,11 @@ SaCkptOperationFinished(char* fromNodeName, SaCkptOpStateT opState, GList* list)
 		if (!strcmp(state->nodeName, fromNodeName)) {
 			state->state = opState;
 		} else {
-			if (state->state != opState) {
+			/*
+			 * Shouldn't state->state be the same type
+			 * as opState?  FIXME or comment me
+			 */
+			if ((SaCkptOpStateT)state->state != opState) {
 				finished = FALSE;
 			}
 		}
