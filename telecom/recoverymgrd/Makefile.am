@@ -35,6 +35,7 @@ COMMONLIBS		= $(top_builddir)/lib/clplumbing/libplumb.la	\
 
 LIBRT 			= @LIBRT@
 
+CFLAGS			= $(NON_FATAL_CFLAGS)
 AM_CFLAGS		=  -DPIDFILE='"$(PIDFILE)"'
 
 AM_YFLAGS		= -d
@@ -57,23 +58,3 @@ recoverymgrd_LDADD	= $(COMMONLIBS) 				\
 recoverymgrd_LDFLAGS	= @LIBADD_DL@ @LIBLTDL@ -export-dynamic		\
 			-dlpreopen-force 				\
 			-dlopen-self
-
-
-#
-#	Since all this code compiles cleanly without warnings, we
-#	disallow all warnings here just like everywhere else.
-#	If your version of lex or yacc is broken, then work around
-#	it.  This has been done for the current Linux lex/yacc
-#
-lex.yy.$(OBJEXT): lex.yy.c
-	( old_pwd=`pwd` ; cd $(srcdir) &&			\
-	$(CC) $(DEFS) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS)	\
-	-c lex.yy.c				\
-	-o $$old_pwd/$@  $(LEX_SOURCE_CFLAGS) -Wall )
-
-conf_lex.$(OBJEXT): conf_lex.c
-	( old_pwd=`pwd` ; cd $(srcdir) &&			\
-	$(CC) $(DEFS) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS)	\
-	-c conf_lex.c			\
-	-o $$old_pwd/$@  $(LEX_SOURCE_CFLAGS) -Wall )
-
