@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.345 2005/01/27 17:23:43 alan Exp $ */
+/* $Id: heartbeat.c,v 1.346 2005/01/27 19:36:02 alan Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -611,7 +611,6 @@ lookup_node(const char * h)
 void
 hb_setup_child(void)
 {
-	int	j;
 
 	close(watchdogfd);
 	cl_make_normaltime();
@@ -1869,7 +1868,7 @@ HBDoMsg_T_ACKMSG(const char * type, struct node_info * fromnode,
 			cl_log(LOG_DEBUG, "HBDoMsg_T_ACK:"
 				"late ackseq message"
 				" current fromnode ackseq = %ld"
-				" ackseq = %ld in this message.",
+				" ackseq = %ld in this message."
 				,	fromnode->track.ackseq
 				, ackseq);
 		}
@@ -2167,7 +2166,7 @@ static void
 send_ack_if_necessary(const struct ha_msg* m)
 {
 	const char*	fromnode = ha_msg_value(m, F_ORIG);
-	int		uuidlen;	
+	size_t		uuidlen;	
 	const char*	fromuuid = cl_get_binary(m, F_ORIGUUID, &uuidlen);
 	const char*	seq_str = ha_msg_value(m, F_SEQ);
 	seqno_t		seq;
@@ -4987,6 +4986,9 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.346  2005/01/27 19:36:02  alan
+ * Fixed various minor compile problems.
+ *
  * Revision 1.345  2005/01/27 17:23:43  alan
  * Fixed some debug message formats
  * Changed the code to not close everything when starting a STONITH child process
