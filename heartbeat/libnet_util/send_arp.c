@@ -1,4 +1,4 @@
-/* $Id: send_arp.c,v 1.13 2004/09/10 02:03:00 alan Exp $ */
+/* $Id: send_arp.c,v 1.14 2005/03/04 15:27:04 alan Exp $ */
 /* 
  * send_arp
  * 
@@ -632,7 +632,7 @@ write_pid_file(const char *pidfilename)
 
 	while (1) {
 		bytes = write(pidfilefd, pidbuf, strlen(pidbuf));
-		if (bytes != strlen(pidbuf)) {
+		if (bytes != (ssize_t)strlen(pidbuf)) {
 			if (bytes < 0 && errno == EINTR) {
 				continue;
 			}
@@ -652,6 +652,9 @@ write_pid_file(const char *pidfilename)
 
 /*
  * $Log: send_arp.c,v $
+ * Revision 1.14  2005/03/04 15:27:04  alan
+ * Fixed a signed/unsigned bug in send_arp.c
+ *
  * Revision 1.13  2004/09/10 02:03:00  alan
  * BEAM FIX:  A variable was declared unsigned that should have been declared signed.
  * 	This is the result of a previous size_t fix that should have used ssize_t instead.
