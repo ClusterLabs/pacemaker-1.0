@@ -24,7 +24,7 @@
 # Note: you might have to change TESTIP and MCASTIP
 #
 TESTIP=10.253.252.251
-MCASTIP=225.0.0.2
+MCASTIP=225.224.223.222
 #
 IFCONFIG="@IFCONFIG@ @IFCONFIG_A_OPT@"
 HADIR=@sysconfdir@/ha.d
