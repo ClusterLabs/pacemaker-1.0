@@ -19,8 +19,6 @@
 #
 MAINTAINERCLEANFILES    = Makefile.in
 
-SUBDIRS                 = @hbaping@
-
 INCLUDES                = -I$(top_builddir)/include -I$(top_srcdir)/include \
 			-I$(top_builddir)/linux-ha -I$(top_srcdir)/linux-ha  \
 			-I$(top_builddir)/libltdl -I$(top_srcdir)/libltdl  \
@@ -32,28 +30,9 @@ AM_CFLAGS		= @CFLAGS@
 
 halibdir		= $(libdir)/@HB_PKG@
 plugindir		= $(halibdir)/plugins/HBcomm
-plugin_LTLIBRARIES	= bcast.la mcast.la ping.la serial.la ucast.la \
-			  ping_group.la 
+plugin_LTLIBRARIES	= hbaping.la
 
-bcast_la_SOURCES	= bcast.c
-bcast_la_LDFLAGS	= -export-dynamic -module -avoid-version
-
-ucast_la_SOURCES	= ucast.c
-ucast_la_LDFLAGS	= -export-dynamic -module -avoid-version
-
-mcast_la_SOURCES	= mcast.c
-mcast_la_LDFLAGS	= -export-dynamic -module -avoid-version 
-mcast_la_LIBADD		= $(top_builddir)/replace/libreplace.la
-
-serial_la_SOURCES	= serial.c
-serial_la_LDFLAGS	= -export-dynamic -module -avoid-version
-
-ping_la_SOURCES		= ping.c
-ping_la_LDFLAGS		= -export-dynamic -module -avoid-version
-ping_la_LIBADD		= $(top_builddir)/replace/libreplace.la
-
-ping_group_la_SOURCES	= ping_group.c
-ping_group_la_LDFLAGS	= -export-dynamic -module -avoid-version
-ping_group_la_LIBADD	= $(top_builddir)/replace/libreplace.la
-
+hbaping_la_SOURCES   = hbaping.c
+hbaping_la_LDFLAGS   = -export-dynamic -module -avoid-version -lHBAAPI
+hbaping_la_LIBADD    = $(top_builddir)/replace/libreplace.la 
 
