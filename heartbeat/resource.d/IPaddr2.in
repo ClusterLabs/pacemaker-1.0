@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-#	$Id: IPaddr2.in,v 1.7 2003/10/29 11:40:50 horms Exp $
+#	$Id: IPaddr2.in,v 1.8 2003/12/12 09:40:18 horms Exp $
 #
 #	Copyright (C) 2003 Tuomo Soini <tis@foobar.fi>
 #
@@ -217,7 +217,7 @@ start() {
 	    exit 0
 	    ;;
 	loopback)
-            remove_conflicting_loopback $BASEIP $NETMASK 255.255.255.255 lo
+            remove_conflicting_loopback $BASEIP 32 255.255.255.255 lo
             ;;
     esac
 
