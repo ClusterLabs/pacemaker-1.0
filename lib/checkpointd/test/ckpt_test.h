@@ -1,4 +1,4 @@
-/* $Id: ckpt_test.h,v 1.2 2004/07/15 14:33:48 msoffen Exp $ */
+/* $Id: ckpt_test.h,v 1.3 2004/11/08 08:09:09 andrew Exp $ */
 /* 
  * ckpt_test.h: Data checkpoint Test Head File 
  *
@@ -39,7 +39,7 @@
 
 #define INVOCATION_BASE  100
 
-#define CKPTFIFO "/var/lib/heartbeat/ckpt/ckpt.sock"
+#define CKPTFIFO HA_VARLIBDIR "heartbeat/ckpt/ckpt.sock"
 #define RECVSIZE 102400
 #define SEL_TIMEOUT 10
 
