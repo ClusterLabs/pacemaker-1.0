@@ -22,7 +22,7 @@ MAINTAINERCLEANFILES    = Makefile.in
 mibsdir			= @MIBS_DIR@
 mibs_DATA		= LINUX-HA-MIB.mib
 
-EXTRA_DIST		= $(mibs_DATA)
+EXTRA_DIST		= SNMPAgentSanityCheck.in $(mibs_DATA)
 
 INCLUDES                = -I$(top_builddir)/include -I$(top_srcdir)/include \
 			-I$(top_builddir)/linux-ha -I$(top_srcdir)/linux-ha  \
@@ -54,8 +54,8 @@ hbagent_LDADD	 	= \
 
 hbagent_LDFLAGS		= @SNMP_LIBS@ 
 
-## test cases
-#noinst_PROGRAMS		= testclient
-#testclient_SOURCES	= testclient.c
-#testclient_LDADD        = $(HASUBAGENT_LDADD_EXTRA)
+# test cases
+testdir			= $(libdir)/heartbeat
+test_SCRIPTS		= SNMPAgentSanityCheck
+
 

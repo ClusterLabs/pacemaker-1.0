@@ -37,6 +37,7 @@ CLSTATUS=@bindir@/cl_status
 APPHBTEST=$HBLIB/apphbtest
 IPCTEST=$HBLIB/ipctest
 LRMTEST=$HBLIB/lrmtest/LRMBasicSanityCheck
+SNMPAGENTTEST=$HBLIB/SNMPAgentSanityCheck
 MALLOC_CHECK_=2; export MALLOC_CHECK_
 #
 DEFAULTINTERFACE=eth0	# But we really guess it...
@@ -110,6 +111,7 @@ GenerateHaCf() {
 	mcast $INTERFACE $MCASTIP 694 0 0
 	#bcast $INTERFACE
 	node $LOCALNODE $DUMMYNODE
+	apiauth lha-snmpagent uid=root
 	!
   chmod 644 $1
 }
@@ -600,6 +602,29 @@ LRMTest() {
 	fi
 }
 
+SNMPAgentTest() {
+	if 
+	    [ ! -f $SNMPAGENTTEST ]
+	then 
+	    return 0
+	fi
+	if 
+	    HBStart
+	then
+	    sleep 1
+	    echo "starting SNMP Agent tests" | tee -a $LOGFILE
+	    $SNMPAGENTTEST >> $LOGFILE 2>&1
+	    ret=$?
+	    errcount=`expr $errcount + $ret`
+	    if 
+	        [ $ret != 0 ]
+	    then 
+	        echo "SNMP Agent tests failed."
+	    fi
+	    HBStop
+	fi
+}
+
 #
 #	Check our identity.
 #	Set Up Config Files.
@@ -623,6 +648,7 @@ StonithCheck
 AppHBCheck
 IPCtest
 LRMTest
+SNMPAgentTest
 
 if
   [ -f $HADIR/core ]

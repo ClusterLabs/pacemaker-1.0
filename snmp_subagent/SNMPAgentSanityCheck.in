@@ -1,0 +1,68 @@
+#!/bin/bash
+set +x
+
+NODE0=`uname -n`
+NODE1=imalwaysdead.com
+
+# make sure the subagent is dead
+sudo killall -9 hbagent
+
+# make sure the snmpd is running
+sudo service snmpd status 
+ret=$?
+if test $ret != 0 
+	then echo "snmpd not running, starting snmpd now..."
+	sudo service snmpd restart
+	ret=$?
+	if test $ret != 0
+		then echo "Starting snmpd failed"
+		exit $ret
+	fi
+else 
+	echo "snmpd is already running, good"
+fi
+
+# start the linux-ha snmp subagent
+sudo @libdir@/heartbeat/hbagent -d &
+sleep 1
+
+# get the nodename for node0 and node1
+# node0 should be the value of the localhost
+# node1 should be "ImAlwaysDead.com"
+
+export MIBS=ALL
+#snmpwalk -v2c localhost -c public LinuxHA
+node0=`snmpget -v2c localhost -c public LHANodeName.0 | sed -ne 's/LINUX-HA-MIB::LHANodeName.0 = STRING: //p'`
+echo node0 = $node0
+node1=`snmpget -v2c localhost -c public LHANodeName.1 | sed -ne 's/LINUX-HA-MIB::LHANodeName.1 = STRING: //p'`
+echo node1 = $node1
+
+ret=1
+ret2=1
+for name in $NODE0 $NODE1; do
+	echo name = $name, node0 = $node0
+	if test "$node0" = "$name"; then
+		ret=0
+		echo "found $node0"
+		break
+	fi
+done
+
+if test $ret = 0; then
+	for name in $NODE0 $NODE1; do
+		echo name = $name, node1 = $node1
+		if test "$node1" = "$name"; then
+			ret2=0
+			echo "found $node1"
+			break
+		fi
+	done
+fi
+
+if test $ret2 = 0; then
+	echo "BasicSanityCheck for SNMP Subagent passed."
+	exit 0
+else 
+	echo "BasicSanityCheck for SNMP Subagent failed."
+	exit 1
+fi
