@@ -29,6 +29,7 @@ hard_SCRIPTS	=			\
 			Filesystem	\
 			ICP		\
 			IPaddr		\
+			IPaddr2		\
 			IPsrcaddr	\
 			LinuxSCSI	\
 			LVM		\

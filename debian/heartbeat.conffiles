@@ -9,6 +9,7 @@
 /etc/ha.d/resource.d/Filesystem
 /etc/ha.d/resource.d/ICP
 /etc/ha.d/resource.d/IPaddr
+/etc/ha.d/resource.d/IPaddr2
 /etc/ha.d/resource.d/IPsrcaddr
 /etc/ha.d/resource.d/LVM
 /etc/ha.d/resource.d/LinuxSCSI

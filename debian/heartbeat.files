@@ -7,6 +7,7 @@ etc/ha.d/resource.d/AudibleAlarm
 etc/ha.d/resource.d/Filesystem
 etc/ha.d/resource.d/ICP
 etc/ha.d/resource.d/IPaddr
+etc/ha.d/resource.d/IPaddr2
 etc/ha.d/resource.d/IPsrcaddr
 etc/ha.d/resource.d/LVM
 etc/ha.d/resource.d/LinuxSCSI
@@ -47,7 +48,6 @@ usr/lib/heartbeat/apphbtest
 usr/lib/heartbeat/ccm
 usr/lib/heartbeat/ccm_testclient
 usr/lib/heartbeat/findif
-usr/lib/heartbeat/get_hw_addr
 usr/lib/heartbeat/ha_config
 usr/lib/heartbeat/hb_standby
 usr/lib/heartbeat/heartbeat
