@@ -1,4 +1,4 @@
-/* $Id: event_lib.c,v 1.2 2004/03/23 07:22:36 forrest Exp $ */
+/* $Id: event_lib.c,v 1.3 2004/03/23 09:04:14 forrest Exp $ */
 /* 
  * event_lib.c: source file for event library
  *
@@ -501,6 +501,12 @@ saEvtChannelOpen(const SaEvtHandleT evtHandle, const SaNameT *channelName,
 	SaUint8T *tmp_char;
 	SaEvtChannelOpenFlagsT *tmp_flag;
 	
+	if((channelHandle == NULL) || (channelName == NULL)){
+		return SA_ERR_INVALID_PARAM;
+	}
+	if(channelOpenFlags > 7){
+		return SA_ERR_BAD_FLAGS;
+	}
 	evt_hd = (evt_handle *)g_hash_table_lookup(evt_handle_hash,
 			(gpointer)evtHandle);
 	if( evt_hd == NULL){
