@@ -1,4 +1,4 @@
-/* $Id: ccm.c,v 1.52 2004/10/07 23:14:16 alan Exp $ */
+/* $Id: ccm.c,v 1.53 2004/10/08 22:02:08 alan Exp $ */
 /* 
  * ccm.c: Consensus Cluster Service Program 
  *
@@ -4192,12 +4192,14 @@ ccm_initialize()
 
 	if((ccmret = (ccm_t *)g_malloc(sizeof(ccm_t))) == NULL){
 		cl_log(LOG_ERR, "Cannot allocate memory");
+		g_free(global_info);
 		return NULL;
 	}
 
 	if((hname = hb_fd->llc_ops->get_mynodeid(hb_fd)) == NULL) {
 		cl_log(LOG_ERR, "get_mynodeid() failed");
 		g_free(ccmret);
+		g_free(global_info);
 		return NULL;
 	}
 	cl_log(LOG_INFO, "Hostname: %s", hname);
@@ -4208,6 +4210,7 @@ ccm_initialize()
 		cl_log(LOG_ERR, "Cannot set if status callback");
 		cl_log(LOG_ERR, "REASON: %s", hb_fd->llc_ops->errmsg(hb_fd));
 		g_free(ccmret);
+		g_free(global_info);
 		return NULL;
 	}
 	
@@ -4216,6 +4219,7 @@ ccm_initialize()
 		cl_log(LOG_ERR, "Cannot set filter mode");
 		cl_log(LOG_ERR, "REASON: %s", hb_fd->llc_ops->errmsg(hb_fd));
 		g_free(ccmret);
+		g_free(global_info);
 		return NULL;
 	}
 
@@ -4228,6 +4232,7 @@ ccm_initialize()
 		cl_log(LOG_ERR, "Cannot start node walk");
 		cl_log(LOG_ERR, "REASON: %s", hb_fd->llc_ops->errmsg(hb_fd));
 		g_free(ccmret);
+		g_free(global_info);
 		return NULL;
 	}
 
@@ -4242,6 +4247,7 @@ ccm_initialize()
 			if(strcmp(node,hname) == 0) {
 				cl_log(LOG_ERR, "This cluster node: %s: "
 						"is a ping node", node);
+				g_free(global_info);
 				g_free(ccmret);
 				return NULL;
 			}
@@ -4264,6 +4270,7 @@ ccm_initialize()
 		cl_log(LOG_ERR, "Cannot end node walk");
 		cl_log(LOG_ERR, "REASON: %s", hb_fd->llc_ops->errmsg(hb_fd));
 		g_free(ccmret);
+		g_free(global_info);
 		return NULL;
 	}
 
@@ -4278,6 +4285,7 @@ ccm_initialize()
 		cl_log(LOG_ERR, "Cannot set message signal");
 		cl_log(LOG_ERR, "REASON: %s", hb_fd->llc_ops->errmsg(hb_fd));
 		g_free(ccmret);
+		g_free(global_info);
 		return NULL;
 	}
 
