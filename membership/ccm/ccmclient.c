@@ -1,4 +1,4 @@
-/* $Id: ccmclient.c,v 1.19 2005/02/17 19:08:20 gshi Exp $ */
+/* $Id: ccmclient.c,v 1.20 2005/03/08 20:56:19 gshi Exp $ */
 /* 
  * client.c: Consensus Cluster Client tracker
  *
@@ -102,7 +102,15 @@ send_func(gpointer key, gpointer value, gpointer user_data)
 	if(evicted_flag) {
 		/*send evicted message*/
 		if(ccm_client->ccm_flags == CL_MEM) {
-			send_message(ccm_client, ipc_misc_message);
+			struct IPC_CHANNEL* chan = ccm_client->ccm_ipc_client;
+			
+			if (chan->ops->get_chan_status(chan) == IPC_CONNECT){
+				send_message(ccm_client, ipc_misc_message);
+			}else {
+				/* IPC is broken, the client is already gone
+				 * Do nothing
+				 */
+			}
 			ccm_client->ccm_flags = CL_INIT;
 		}
 		return;
