@@ -1,4 +1,4 @@
-/* $Id: ipfail.c,v 1.26 2004/04/01 15:55:40 alan Exp $ */
+/* $Id: ipfail.c,v 1.27 2004/04/01 17:16:26 alan Exp $ */
 /* ipfail: IP Failover plugin for Linux-HA
  *
  * Copyright (C) 2002-2003 Kevin Dwyer <kevin@pheared.net>
@@ -537,6 +537,10 @@ msg_resources(const struct ha_msg *msg, void *private)
 	/* msg_resources: Catch T_RESOURCES messages, so that we can
 	 * find out when stability is achieved among the cluster
 	 */
+	if (!orig || !isstable) {
+		cl_log(LOG_ERR, "Missing orig or isstable value in msg!");
+		cl_log_message(msg);
+	}
 
 	/* Right now there are two stable messages sent out, we are
 	 * only concerned with the one that has no info= line on it.
@@ -703,7 +707,7 @@ ipfail_dispatch(int fd, gpointer user_data)
 	reply = hb->llc_ops->readmsg(hb, 0);
 
 	if (reply != NULL) {
-		/* ha_log_message(reply); */
+		/* cl_log_message(reply); */
 		ha_msg_del(reply); reply=NULL;
 		return TRUE;
 	}
