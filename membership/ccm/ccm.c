@@ -1,4 +1,4 @@
-/* $Id: ccm.c,v 1.44 2004/03/25 08:20:30 alan Exp $ */
+/* $Id: ccm.c,v 1.45 2004/04/02 14:55:36 msoffen Exp $ */
 /* 
  * ccm.c: Consensus Cluster Service Program 
  *
@@ -21,7 +21,9 @@
  *
  */
 #include <ha_config.h>
+#ifdef HAVE_STDINT_H
 #include <stdint.h>
+#endif
 #include <ccm.h>
 #include <clplumbing/cl_signal.h>
 
