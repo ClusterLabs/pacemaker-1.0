@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.350 2005/02/08 08:10:27 gshi Exp $ */
+/* $Id: heartbeat.c,v 1.351 2005/02/12 17:15:16 alan Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -3289,6 +3289,7 @@ main(int argc, char * argv[], char **envp)
 	long		running_hb_pid = get_running_hb_pid();
 	int		generic_error = LSB_EXIT_GENERIC;
 
+	cl_malloc_forced_for_glib();
 	num_hb_media_types = 0;
 	/* A precautionary measure */
 	getrlimit(RLIMIT_NOFILE, &oflimits);
@@ -4991,6 +4992,9 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.351  2005/02/12 17:15:16  alan
+ * Forced code to use cl_malloc() for glib use.
+ *
  * Revision 1.350  2005/02/08 08:10:27  gshi
  * change the way stringlen and netstringlen is computed.
  *
