@@ -97,8 +97,7 @@ libclm_la_CFLAGS	= -DHA_VARLIBDIR='"@HA_VARLIBDIR@"' -g #-DPOSIX_THREADS
 libclm_la_LDFLAGS	= -version-info 0:0:0
 
 clmtest_SOURCES		= clmtest.c
-clmtest_LDADD		= libclm.la \
-			  $(top_builddir)/membership/ccm/libccmclient.la \
+clmtest_LDADD		= libclm.la libccmclient.la \
 			  $(top_builddir)/lib/clplumbing/libplumb.la \
 			  $(gliblib)
 
