@@ -1,4 +1,4 @@
-/* $Id: stonithd.c,v 1.7 2004/12/09 06:51:07 sunjd Exp $ */
+/* $Id: stonithd.c,v 1.8 2004/12/09 07:29:09 sunjd Exp $ */
 
 /* File: stonithd.c
  * Description: STONITH deamon for node fencing
@@ -1760,7 +1760,7 @@ stonith_operate_locally( stonith_ops_t * st_op, stonith_rsc_t * srsc)
 		return -1;
 	}
 
-	if (st_op->optype == 0) {  /* QUERY opertation */
+	if (st_op->optype == QUERY) {
 		stonithd_log(LOG_DEBUG, "query operation.");
 		return -1;
 	}
@@ -2829,6 +2829,9 @@ free_common_op_t(gpointer data)
 
 /* 
  * $Log: stonithd.c,v $
+ * Revision 1.8  2004/12/09 07:29:09  sunjd
+ * minor polish
+ *
  * Revision 1.7  2004/12/09 06:51:07  sunjd
  * 1) fix a bug related to QUERY operation
  * 2) add more debugging output and remove the redundant code to kill child processes.
