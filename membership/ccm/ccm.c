@@ -1,4 +1,4 @@
-/* $Id: ccm.c,v 1.64 2005/03/01 00:30:30 gshi Exp $ */
+/* $Id: ccm.c,v 1.65 2005/03/04 20:41:03 gshi Exp $ */
 /* 
  * ccm.c: Consensus Cluster Service Program 
  *
@@ -2521,6 +2521,7 @@ static void ccm_state_wait_for_change(enum ccm_type ccm_msg_type,
 					ccm_send_join_reply(hb, info);
 					g_slist_free(CCM_GET_JOINERHEAD(info));
 					CCM_SET_JOINERHEAD(info, NULL);
+					CCM_SET_CL(info, ccm_get_my_membership_index(info));
 					CCM_SET_STATE(info, CCM_STATE_JOINED);
 					return;
 				}
