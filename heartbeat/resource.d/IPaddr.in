@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-#	$Id: IPaddr.in,v 1.44 2003/07/16 13:43:30 alan Exp $
+#	$Id: IPaddr.in,v 1.45 2003/10/15 17:04:40 horms Exp $
 #
 #	This script manages IP alias IP addresses
 #
@@ -33,7 +33,6 @@ VARLIB=@localstatedir@/lib/@HB_PKG@
 VLDIR=$VARLIB/rsctmp/IPaddr
 ROUTE=@ROUTE@
 SENDARP=$HA_BIN/send_arp
-GET_HW_ADDR=$HA_BIN/get_hw_addr
 FINDIF=$HA_BIN/findif
 USAGE="usage: $0 ip-address {start|stop|status|monitor}";
 SYSTYPE="`uname -s`"
@@ -142,34 +141,6 @@ find_interface() {
   echo $IF
   return 0;
 }
-
-#
-#	Return the MAC address of the given interface in the form
-#	sendarp wants to see it...
-#
-
-GetMACaddr() {
-  case $SYSTYPE in
-
-    *BSD|SunOS)
-	# Does this catch all types of interfaces on *BSD and SunOS?
-	MACtmp=`$IFCONFIG "$1"  |
-	fgrep "ether" |  sed  "s/^.*ether  *//"`
-	case $MACtmp in
-	  ?:*)	MACtmp=0$MACtmp;;
-	esac
-	ifconfig2sendarp "$MACtmp";;
-
-    *)	MACtmp=`$IFCONFIG "$1"  | 
-	fgrep "$1" |  sed "s/^.*HWaddr  *//"`
-	ifconfig2sendarp "$MACtmp";;
-  esac
-}
-
-
-  # Transform a MACaddr from ifconfig style to sendarp style
-
-#HWsed='s%\(..\):\(..\):\(..\):\(..\):\(..\):\(..\).*$%\1\2\3\4\5\6%'
 
 #
 # This routine should handle any type of interface, but has only been
@@ -573,14 +544,6 @@ ip_start() {
 
   TARGET_INTERFACE=`echo $IF | sed 's%:.*%%'`
 
-  MACADDR=`$GET_HW_ADDR "$TARGET_INTERFACE"`
-
-  if [ "X$MACADDR" = "X" ]; then
-	ha_log "ERROR: Could not locate obtain hardware address" \
-		"for $TARGET_INTERFACE"
-	exit 1
-  fi
-
   ha_log "info: Sending Gratuitous Arp for $BASEIP on $IF [$TARGET_INTERFACE]"
 
   # Had to get rid of the backgrounding -- it can cause a quick transfer
@@ -604,7 +567,7 @@ ip_start() {
   : ${ARP_NETMASK=ffffffffffff}	# netmask for ARP
   
 
-  ARGS="-i $ARP_INTERVAL_MS -r $ARP_REPEAT $TARGET_INTERFACE ${BASEIP} ${MACADDR} ${BASEIP} ${ARP_NETMASK}"
+  ARGS="-i $ARP_INTERVAL_MS -r $ARP_REPEAT $TARGET_INTERFACE ${BASEIP} auto ${BASEIP} ${ARP_NETMASK}"
   ha_log "$SENDARP $ARGS"
   case $ARP_BACKGROUND in
     yes) ($SENDARP $ARGS || ha_log "ERROR: Could not send gratuitous arps")&;;
@@ -674,7 +637,7 @@ ip_monitor() {
 
 usage() {
   echo $USAGE >&2
-  echo "$Id: IPaddr.in,v 1.44 2003/07/16 13:43:30 alan Exp $"
+  echo "$Id: IPaddr.in,v 1.45 2003/10/15 17:04:40 horms Exp $"
 }
 
 #
@@ -721,6 +684,9 @@ esac
 #
 #
 # $Log: IPaddr.in,v $
+# Revision 1.45  2003/10/15 17:04:40  horms
+# Merged  get_hw_addr into and send_arp
+#
 # Revision 1.44  2003/07/16 13:43:30  alan
 # Redirected some irrelevant error messages from ls to /dev/null
 #

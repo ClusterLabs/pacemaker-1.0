@@ -199,18 +199,15 @@ LIBRT = @LIBRT@
 AM_CFLAGS = @CFLAGS@ -DVAR_RUN_D='"$(havarrundir)"'	-DVAR_LIB_D='"$(havarlibdir)"'		-DHA_D='"$(hadir)"'			-DHALIB='"$(halibdir)"' @LIBNETDEFINES@
 
 
-halib_PROGRAMS = send_arp get_hw_addr
+halib_PROGRAMS = send_arp
 
 send_arp_SOURCES = send_arp.c
 send_arp_LDADD = $(top_builddir)/lib/clplumbing/libplumb.la				$(gliblib) -L$(libdir) @LIBNETLIBS@
 
-get_hw_addr_SOURCES = send_arp.c
-get_hw_addr_LDADD = $(top_builddir)/lib/clplumbing/libplumb.la				$(gliblib) -L$(libdir) @LIBNETLIBS@
-
 mkinstalldirs = $(SHELL) $(top_srcdir)/mkinstalldirs
 CONFIG_HEADER = ../../linux-ha/config.h ../../include/ha_config.h
 CONFIG_CLEAN_FILES = 
-halib_PROGRAMS =  send_arp$(EXEEXT) get_hw_addr$(EXEEXT)
+halib_PROGRAMS =  send_arp$(EXEEXT)
 PROGRAMS =  $(halib_PROGRAMS)
 
 
@@ -221,9 +218,6 @@ LIBS = @LIBS@
 send_arp_OBJECTS =  send_arp.$(OBJEXT)
 send_arp_DEPENDENCIES =  $(top_builddir)/lib/clplumbing/libplumb.la
 send_arp_LDFLAGS = 
-get_hw_addr_OBJECTS =  send_arp.$(OBJEXT)
-get_hw_addr_DEPENDENCIES =  $(top_builddir)/lib/clplumbing/libplumb.la
-get_hw_addr_LDFLAGS = 
 CFLAGS = @CFLAGS@
 COMPILE = $(CC) $(DEFS) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
 LTCOMPILE = $(LIBTOOL) --mode=compile $(CC) $(DEFS) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
@@ -236,8 +230,8 @@ DISTFILES = $(DIST_COMMON) $(SOURCES) $(HEADERS) $(TEXINFOS) $(EXTRA_DIST)
 
 TAR = tar
 GZIP_ENV = --best
-SOURCES = $(send_arp_SOURCES) $(get_hw_addr_SOURCES)
-OBJECTS = $(send_arp_OBJECTS) $(get_hw_addr_OBJECTS)
+SOURCES = $(send_arp_SOURCES)
+OBJECTS = $(send_arp_OBJECTS)
 
 all: all-redirect
 .SUFFIXES:
@@ -322,10 +316,6 @@ maintainer-clean-libtool:
 send_arp$(EXEEXT): $(send_arp_OBJECTS) $(send_arp_DEPENDENCIES)
 	@rm -f send_arp$(EXEEXT)
 	$(LINK) $(send_arp_LDFLAGS) $(send_arp_OBJECTS) $(send_arp_LDADD) $(LIBS)
-
-get_hw_addr$(EXEEXT): $(get_hw_addr_OBJECTS) $(get_hw_addr_DEPENDENCIES)
-	@rm -f get_hw_addr$(EXEEXT)
-	$(LINK) $(get_hw_addr_LDFLAGS) $(get_hw_addr_OBJECTS) $(get_hw_addr_LDADD) $(LIBS)
 
 tags: TAGS
 

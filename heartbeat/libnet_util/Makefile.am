@@ -34,12 +34,8 @@ AM_CFLAGS			= @CFLAGS@ \
 -DHALIB='"$(halibdir)"' \
 @LIBNETDEFINES@
 
-halib_PROGRAMS		= send_arp get_hw_addr
+halib_PROGRAMS		= send_arp
 
 send_arp_SOURCES	= send_arp.c
 send_arp_LDADD	 	= $(top_builddir)/lib/clplumbing/libplumb.la	\
-			$(gliblib) -L$(libdir) @LIBNETLIBS@
-
-get_hw_addr_SOURCES	= get_hw_addr.c
-get_hw_addr_LDADD	= $(top_builddir)/lib/clplumbing/libplumb.la	\
 			$(gliblib) -L$(libdir) @LIBNETLIBS@

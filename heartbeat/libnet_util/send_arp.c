@@ -1,4 +1,4 @@
-const static char * _send_arp_c = "$Id: send_arp.c,v 1.1 2003/10/15 09:52:12 horms Exp $";
+const static char * _send_arp_c = "$Id: send_arp.c,v 1.2 2003/10/15 17:03:23 horms Exp $";
 /* 
  * send_arp
  * 
@@ -45,13 +45,17 @@ const static char * _send_arp_c = "$Id: send_arp.c,v 1.1 2003/10/15 09:52:12 hor
 #	define	LTYPE	libnet_t
 #endif
 
-int send_arp(LTYPE* l, u_long ip, u_char *device, u_char *macaddr, u_char *broadcast, u_char *netmask, u_short arptype);
+int send_arp(LTYPE* l, u_long ip, u_char *device, u_char mac[6], u_char *broadcast, u_char *netmask, u_short arptype);
 
 char print_usage[]={"send_arp: sends out custom ARP packet. packetfactory.net\n"
 "\tusage: send_arp [-i repeatinterval-ms] [-r repeatcount]"
-" device src_ip_addr src_hw_addr broadcast_ip_addr netmask"};
+" device src_ip_addr src_hw_addr broadcast_ip_addr netmask\n"
+"\tIf src_hw_addr is \"auto\" then the address of device will be used"};
 
 void convert_macaddr (u_char *macaddr, u_char enet_src[6]);
+int get_hw_addr(char *device, u_char mac[6]);
+
+#define AUTO_MAC_ADDR "auto"
 
 
 #ifndef LIBNET_ERRBUF_SIZE
@@ -68,6 +72,7 @@ main(int argc, char *argv[])
 	char*	broadcast;
 	char*	netmask;
 	u_long	ip;
+	u_char  src_mac[6];
 	LTYPE*	l;
 	int	repeatcount = 1;
 	int	j;
@@ -136,14 +141,25 @@ main(int argc, char *argv[])
 #	error "Must have LIBNET API version defined."
 #endif
 
+	if (!strcasecmp(macaddr, AUTO_MAC_ADDR)) {
+		if (get_hw_addr(device, src_mac) < 0) {
+			 syslog(LOG_ERR, "Cannot find mac address for %s", 
+					 device);
+			 exit(EXIT_FAILURE);
+		}
+	}
+	else {
+		convert_macaddr(macaddr, src_mac);
+	}
+
 /*
  * We need to send both a broadcast ARP request as well as the ARP response we
  * were already sending.  All the interesting research work for this fix was
  * done by Masaki Hasegawa <masaki-h@pp.iij4u.or.jp> and his colleagues.
  */
 	for (j=0; j < repeatcount; ++j) {
-		c = send_arp(l, ip, device, macaddr, broadcast, netmask, ARPOP_REQUEST);
-		c = send_arp(l, ip, device, macaddr, broadcast, netmask, ARPOP_REPLY);
+		c = send_arp(l, ip, device, src_mac, broadcast, netmask, ARPOP_REQUEST);
+		c = send_arp(l, ip, device, src_mac, broadcast, netmask, ARPOP_REPLY);
 		if (j != repeatcount-1) {
 			mssleep(msinterval);
 		}
@@ -171,11 +187,67 @@ convert_macaddr (u_char *macaddr, u_char enet_src[6])
 
 #ifdef HAVE_LIBNET_1_0_API
 int
+get_hw_addr(char *device, u_char mac[6])
+{
+	struct ether_addr	*mac_address;
+	struct libnet_link_int  *network;
+	char                    err_buf[LIBNET_ERRBUF_SIZE];
+
+	/* Get around bad prototype for libnet_error() */
+	char errmess1 [] = "libnet_open_link_interface: %s\n";
+	char errmess2 [] = "libnet_get_hwaddr: %s\n";
+
+
+	network = libnet_open_link_interface(device, err_buf);
+	if (!network) {
+		libnet_error(LIBNET_ERR_FATAL, errmess1, err_buf);
+		return -1;
+	}
+
+	mac_address = libnet_get_hwaddr(network, device, err_buf);
+	if (!mac_address) {
+		libnet_error(LIBNET_ERR_FATAL, errmess2, err_buf);
+		return -1;
+	}
+
+	memcpy(mac, mac_address->ether_addr_octet, 6);
+
+	return 0;
+}
+#endif
+
+#ifdef HAVE_LIBNET_1_1_API
+int
+get_hw_addr(char *device, u_char mac[6])
+{
+	struct libnet_ether_addr	*mac_address;
+	libnet_t		*ln;
+	char			err_buf[LIBNET_ERRBUF_SIZE];
+
+	ln = libnet_init(LIBNET_LINK, device, err_buf);
+	if (!ln) {
+		fprintf(stderr, "libnet_open_link_interface: %s\n", err_buf);
+		return -1;
+	}
+
+	mac_address = libnet_get_hwaddr(ln);
+	if (!mac_address) {
+		fprintf(stderr,  "libnet_get_hwaddr: %s\n", err_buf);
+		return -1;
+	}
+
+	memcpy(mac, mac_address->ether_addr_octet, 6);
+
+	return 0;
+}
+#endif
+
+#ifdef HAVE_LIBNET_1_0_API
+int
 send_arp(struct libnet_link_int *l, u_long ip, u_char *device, u_char *macaddr, u_char *broadcast, u_char *netmask, u_short arptype)
 {
 	int n;
 	u_char *buf;
-	u_char enet_src[6] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
 	u_char enet_dst[6] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
 
 
@@ -185,10 +257,9 @@ send_arp(struct libnet_link_int *l, u_long ip, u_char *device, u_char *macaddr, 
 	}
 
 	/* Convert ASCII Mac Address to 6 Hex Digits. */
-	convert_macaddr (macaddr, enet_src);
 
 	/* Ethernet header */
-	libnet_build_ethernet(enet_dst, enet_src, ETHERTYPE_ARP, NULL, 0, buf);
+	libnet_build_ethernet(enet_dst, macaddr, ETHERTYPE_ARP, NULL, 0, buf);
 
 	/*
 	 *  ARP header
@@ -198,7 +269,7 @@ send_arp(struct libnet_link_int *l, u_long ip, u_char *device, u_char *macaddr, 
 		6,				/* Hardware address length */
 		4,				/* Protocol address length */
 		arptype,			/* ARP operation */
-		enet_src,			/* Source hardware addr */
+		macaddr,			/* Source hardware addr */
 		(u_char *)&ip,			/* Target hardware addr */
 		enet_dst,			/* Destination hw addr */
 		(u_char *)&ip,			/* Target protocol address */
@@ -218,15 +289,10 @@ send_arp(struct libnet_link_int *l, u_long ip, u_char *device, u_char *macaddr, 
 
 #ifdef HAVE_LIBNET_1_1_API
 int
-send_arp(libnet_t* lntag, u_long ip, u_char *device, u_char *macaddr, u_char *broadcast, u_char *netmask, u_short arptype)
+send_arp(libnet_t* lntag, u_long ip, u_char *device, u_char macaddr[6], u_char *broadcast, u_char *netmask, u_short arptype)
 {
 	int n;
-	u_char enet_src[6] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
 	u_char enet_dst[6] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
-
-
-	/* Convert ASCII Mac Address to 6 Hex Digits. */
-	convert_macaddr (macaddr, enet_src);
 
 	/*
 	 *  ARP header
@@ -236,18 +302,18 @@ send_arp(libnet_t* lntag, u_long ip, u_char *device, u_char *macaddr, u_char *br
 		6,		/* Hardware address length */
 		4,		/* protocol address length */
 		arptype,	/* ARP operation type */
-		enet_src,	/* sender Hardware address */
+		macaddr,	/* sender Hardware address */
 		(u_char *)&ip,	/* sender protocol address */
 		enet_dst,	/* target hardware address */
 		(u_char *)&ip,	/* target protocol address */
 		NULL,		/* Payload */
 		0,		/* Length of payload */
-	lntag,		/* libnet context pointer */
-	0		/* packet id */
+		lntag,		/* libnet context pointer */
+		0		/* packet id */
 	);
 
 	/* Ethernet header */
-	libnet_build_ethernet(enet_dst, enet_src, ETHERTYPE_ARP, NULL, 0
+	libnet_build_ethernet(enet_dst, macaddr, ETHERTYPE_ARP, NULL, 0
 	,	lntag, 0);
 
 	n = libnet_write(lntag);
@@ -259,6 +325,9 @@ send_arp(libnet_t* lntag, u_long ip, u_char *device, u_char *macaddr, u_char *br
 
 /*
  * $Log: send_arp.c,v $
+ * Revision 1.2  2003/10/15 17:03:23  horms
+ * Merged  get_hw_addr into and send_arp
+ *
  * Revision 1.1  2003/10/15 09:52:12  horms
  * Move utilities that link against libnet (sendarp and get_hw_addr)
  * to their own directory so we no longer have to come up with
