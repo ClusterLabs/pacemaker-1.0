@@ -1,4 +1,4 @@
-/* $Id: serial.c,v 1.35 2004/05/12 01:42:44 alan Exp $ */
+/* $Id: serial.c,v 1.36 2004/06/18 03:06:42 alan Exp $ */
 /*
  * Linux-HA serial heartbeat code
  *
@@ -368,11 +368,16 @@ ttysetup(int fd, const char * ourtty)
 	}
 	if (ANYDEBUG) {
 		PILCallLog(LOG, PIL_DEBUG, "tty setup on %s complete.", ourtty);
-		PILCallLog(LOG, PIL_DEBUG, "Baud rate set to: 0x%x", serial_baud);
-		PILCallLog(LOG, PIL_DEBUG, "ti.c_iflag = 0x%x", ti.c_iflag);
-		PILCallLog(LOG, PIL_DEBUG, "ti.c_oflag = 0x%x", ti.c_oflag);
-		PILCallLog(LOG, PIL_DEBUG, "ti.c_cflag = 0x%x", ti.c_cflag);
-		PILCallLog(LOG, PIL_DEBUG, "ti.c_lflag = 0x%x", ti.c_lflag);
+		PILCallLog(LOG, PIL_DEBUG, "Baud rate set to: 0x%x"
+		,	(unsigned)serial_baud);
+		PILCallLog(LOG, PIL_DEBUG, "ti.c_iflag = 0x%x"
+		,	(unsigned)ti.c_iflag);
+		PILCallLog(LOG, PIL_DEBUG, "ti.c_oflag = 0x%x"
+		,	(unsigned)ti.c_oflag);
+		PILCallLog(LOG, PIL_DEBUG,"ti.c_cflag = 0x%x"
+		,	(unsigned)ti.c_cflag);
+		PILCallLog(LOG, PIL_DEBUG, "ti.c_lflag = 0x%x"
+		,	(unsigned)ti.c_lflag);
 	}
 	/* For good measure */
 	FLUSH(fd);
@@ -698,6 +703,9 @@ ttygets(char * inbuf, int length, struct serial_private *tty)
 }
 /*
  * $Log: serial.c,v $
+ * Revision 1.36  2004/06/18 03:06:42  alan
+ * Fixed some format items to match their format strings.
+ *
  * Revision 1.35  2004/05/12 01:42:44  alan
  * Changed the tty write timeout back to a warning...
  *
