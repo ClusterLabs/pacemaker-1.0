@@ -1,4 +1,4 @@
-/* $Id: portability.h,v 1.36 2004/09/14 15:07:30 gshi Exp $ */
+/* $Id: portability.h,v 1.37 2004/09/18 23:13:37 alan Exp $ */
 #ifndef PORTABILITY_H
 #  define PORTABILITY_H
 
@@ -24,7 +24,9 @@
 
 #define	EOS			'\0'
 #define	DIMOF(a)		((int) (sizeof(a)/sizeof(a[0])) )
-#define	STRLEN(conststr)	((int)(sizeof(conststr)/sizeof(char))-1)
+#define	STRLEN_CONST(conststr)	((size_t)((sizeof((const char *)conststr)/sizeof(char))-1))
+#define	STRNCMP_CONST(varstr, conststr) strncmp((varstr), conststr, STRLEN_CONST(conststr)+1)
+#define	STRLEN(c)		STRLEN_CONST(c)
 
 /* Needs to be defined before any other includes, otherwise some system
  * headers do not behave as expected! Major black magic... */

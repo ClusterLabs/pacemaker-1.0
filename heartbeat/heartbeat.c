@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.320 2004/09/14 15:07:28 gshi Exp $ */
+/* $Id: heartbeat.c,v 1.321 2004/09/18 23:13:37 alan Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -306,17 +306,17 @@ volatile struct process_info *	curproc = NULL;
 struct TestParms *		TestOpts;
 
 int				debug = 0;
-static int			verbose = FALSE;
+static gboolean			verbose = FALSE;
 int				timebasedgenno = FALSE;
 int				parse_only = FALSE;
-static int			killrunninghb = FALSE;
-static int			rpt_hb_status = FALSE;
+static gboolean			killrunninghb = FALSE;
+static gboolean			rpt_hb_status = FALSE;
 int				RestartRequested = FALSE;
 static long			hb_pid_in_file = 0L;
 int				hb_realtime_prio = -1;
 
 int	 			UseApphbd = FALSE;
-static int			RegisteredToApphbd = FALSE;
+static gboolean			RegisteredWithApphbd = FALSE;
 
 char *				watchdogdev = NULL;
 static int			watchdogfd = -1;
@@ -331,6 +331,7 @@ int				UseOurOwnPoll = FALSE;
 static longclock_t		NextPoll = 0UL;
 static int			ClockJustJumped = FALSE;
 longclock_t			local_takeover_time = 0L;
+
 
 #undef DO_AUDITXMITHIST
 #ifdef DO_AUDITXMITHIST
@@ -401,6 +402,7 @@ static void	start_a_child_client(gpointer childentry, gpointer pidtable);
 static void	LookForClockJumps(void);
 static void	get_localnodeinfo(void);
 static gboolean EmergencyShutdown(gpointer p);
+static gboolean hb_reregister_with_apphbd(gpointer dummy);
 
 static GHashTable*	message_callbacks = NULL;
 static gboolean	HBDoMsgCallback(const char * type, struct node_info* fromnode
@@ -671,6 +673,8 @@ initialize_heartbeat()
 			cl_perror("Cannot make fifo %s.", FIFONAME);
 			return HA_FAIL;
 		}
+	}else{
+		chmod(FIFONAME, FIFOMODE);
 	}
 
 	if (stat(FIFONAME, &buf) < 0) {
@@ -761,11 +765,7 @@ initialize_heartbeat()
 				break;
 
 		case 0:		/* Child */
-				/* Actually don't need this judgement.
-				   Just to show the logic */
-				if ( UseApphbd == FALSE ) {
-					close(watchdogfd);
-				}
+				close(watchdogfd);
 				curproc = &procinfo->info[ourproc];
 				cl_malloc_setstats(&curproc->memstats);
 				cl_msg_setstats(&curproc->msgstats);
@@ -797,11 +797,7 @@ initialize_heartbeat()
 					break;
 
 			case 0:		/* Child */
-					/* Actually don't need this judgement.
-				   	   Just to show the logic */
-					if ( UseApphbd == FALSE ) {
-						close(watchdogfd);
-					}
+					close(watchdogfd);
 					curproc = &procinfo->info[ourproc];
 					cl_malloc_setstats(&curproc->memstats);
 					cl_msg_setstats(&curproc->msgstats);
@@ -829,11 +825,7 @@ initialize_heartbeat()
 					break;
 
 			case 0:		/* Child */
-					/* Actually don't need this judgement.
-				   	   Just to show the logic */
-					if ( UseApphbd == FALSE ) {
-						close(watchdogfd);
-					}
+					close(watchdogfd);
 					curproc = &procinfo->info[ourproc];
 					cl_malloc_setstats(&curproc->memstats);
 					cl_msg_setstats(&curproc->msgstats);
@@ -951,6 +943,7 @@ write_child(struct hb_media* mp)
 		}
 
 		cl_cpu_limit_update();
+		
 		if (mp->vf->write(mp, ipcmsg->msg_body, ipcmsg->msg_len) != HA_OK) {
 			cl_perror("write failure on %s %s."
 			,	mp->type, mp->name);
@@ -1179,11 +1172,7 @@ master_control_process(IPC_Channel* fifoproc)
 
 	init_xmit_hist (&msghist);
 
-	if ( UseApphbd == TRUE ) {
-		hb_init_register_to_apphbd();
-	} else {
-		hb_init_watchdog();
-	}
+	hb_init_watchdog();
 
 
 	if (hb_signal_set_master_control_process(NULL) < 0) {
@@ -1193,8 +1182,8 @@ master_control_process(IPC_Channel* fifoproc)
 	}
 
 	if (ANYDEBUG) {
-		/* Limit ourselves to 30% of the CPU */
-		cl_cpu_limit_setpercent(30);
+		/* Limit ourselves to 50% of the CPU */
+		cl_cpu_limit_setpercent(50);
 		/* Update our CPU limit periodically */
 		Gmain_timeout_add_full(G_PRIORITY_HIGH-1
 		,	cl_cpu_limit_ms_interval()
@@ -1293,10 +1282,6 @@ master_control_process(IPC_Channel* fifoproc)
 	 * Things to do on a periodic basis...
 	 */
 	
-	/* 
-	 * Although put apphb_hb in the hb_send_local_status like watchdog,
-	 * if need to have a separate timer for more explicit? 
-	 */  
 	/* Send local status at the "right time" */
 	Gmain_timeout_add_full(PRI_SENDSTATUS, config->heartbeat_ms
 	,	hb_send_local_status, NULL, NULL);
@@ -1307,7 +1292,7 @@ master_control_process(IPC_Channel* fifoproc)
 	,	hb_dump_all_proc_stats, NULL, NULL);
 
 	/* Audit clients for liveness periodically */
-	Gmain_timeout_add_full(PRI_AUDITCLIENT, 10*1000
+	Gmain_timeout_add_full(PRI_AUDITCLIENT, 9*1000
 	,	api_audit_clients, NULL, NULL);
 
 	/* Reset timeout times to "now" */
@@ -1321,6 +1306,12 @@ master_control_process(IPC_Channel* fifoproc)
 	Gmain_timeout_add_full(PRI_SENDSTATUS, config->heartbeat_ms
 	,       Gmain_hb_signal_process_pending, NULL, NULL);
 
+	if (UseApphbd) {
+		Gmain_timeout_add_full(PRI_DUMPSTATS
+		,	60*(1000-10) /* Not quite on a minute boundary */
+		,	hb_reregister_with_apphbd
+		,	NULL, NULL);
+	}
 
 	if (UseOurOwnPoll) {
 		g_main_set_poll_func(cl_glibpoll);
@@ -1451,7 +1442,7 @@ polled_input_prepare(GSource* source,
 
 	if (DEBUGDETAILS){
 		cl_log(LOG_DEBUG,"polled_input_prepare(): timeout=%d"
-		       ,	*timeout);
+		,	*timeout);
 	}
 	LookForClockJumps();
 	
@@ -1673,19 +1664,11 @@ hb_mcp_final_shutdown(gpointer p)
 		/* Kill any lingering processes in our process group */
 		CL_KILL(-getpid(), SIGTERM);
 		hb_kill_core_children(SIGTERM); /* Is this redundant? */
-		if (UseApphbd == TRUE) {
-			hb_apphb_hb();
-		} else {
-			hb_tickle_watchdog();
-		}
+		hb_tickle_watchdog();
 		shutdown_phase = 2;
 		return FALSE;
 	case 2:
-		if (UseApphbd == TRUE) {
-			hb_apphb_hb();
-		} else {
-			hb_tickle_watchdog();
-		}
+		hb_tickle_watchdog();
 		shutdown_phase = 3;
 		break;
 
@@ -1694,12 +1677,7 @@ hb_mcp_final_shutdown(gpointer p)
 		hb_emergency_shutdown();
 		break;
 	}
-
-	if (UseApphbd == TRUE) {
-		hb_unregister_to_apphbd();
-	} else {
-		hb_close_watchdog();
-	}
+	hb_close_watchdog();
 
 	/* Whack 'em */
 	hb_kill_core_children(SIGKILL);
@@ -1829,11 +1807,7 @@ HBDoMsg_T_STATUS(const char * type, struct node_info * fromnode
 
 	/* Did we get a status update on ourselves? */
 	if (fromnode == curnode) {
-		if (UseApphbd == TRUE) {
-			hb_apphb_hb();
-		} else { 
-			hb_tickle_watchdog();
-		}
+		hb_tickle_watchdog();
 	}
 
 	fromnode->rmt_lastupdate = msgtime;
@@ -1915,15 +1889,16 @@ HBDoMsg_T_QCSTATUS(const char * type, struct node_info * fromnode
 }
 
 /*
-* Process an incoming message from our read child processes
-* That is, packets coming from other nodes.
-*/
+ * Process an incoming message from our read child processes
+ * That is, packets coming from other nodes.
+ */
 static void
 process_clustermsg(struct ha_msg* msg, struct link* lnk)
 {
 	struct node_info *	thisnode = NULL;
 	const char*		iface;
 
+	TIME_T			msgtime = 0;
 	longclock_t		now = time_longclock();
 	const char *		from;
 	const char *		fromuuid;
@@ -1933,8 +1908,7 @@ process_clustermsg(struct ha_msg* msg, struct link* lnk)
 	int			action;
 	const char *		cseq;
 	seqno_t			seqno = 0;
-	longclock_t		messagetime = time_longclock();
-	TIME_T			msgtime;
+	longclock_t		messagetime = now;
 
 
 
@@ -1993,7 +1967,7 @@ process_clustermsg(struct ha_msg* msg, struct link* lnk)
 		sscanf(cseq, "%lx", &seqno);
 	}else{
 		seqno = 0L;
-		if (strncmp(type, NOSEQ_PREFIX, STRLEN(NOSEQ_PREFIX)) != 0) {
+		if (strncmp(type, NOSEQ_PREFIX, STRLEN_CONST(NOSEQ_PREFIX)) != 0) {
 			cl_log(LOG_ERR
 			,	"process_clustermsg: %s: iface %s, from %s"
 			,	"missing seqno"
@@ -2005,9 +1979,9 @@ process_clustermsg(struct ha_msg* msg, struct link* lnk)
 	}
 
 
-	sscanf(ts, TIME_X, &msgtime);
+	
 
-	if (ts == 0 || msgtime == 0) {
+	if (sscanf(ts, TIME_X, &msgtime) != 1 || ts == 0 || msgtime == 0) {
 		return;
 	}
 	
@@ -2344,9 +2318,6 @@ start_a_child_client(gpointer childentry, gpointer pidtable)
 				break;
 	}
 
-	if ( UseApphbd == FALSE ) {
-		close(watchdogfd);
-	}
 	/* Child process:  start the managed child */
 	hb_setup_child();
 	setpgid(0,0);
@@ -2475,11 +2446,8 @@ restart_heartbeat(void)
 		close(j);
 	}
 
-	if ( UseApphbd == TRUE ) {
-		hb_unregister_to_apphbd();
-	} else {
-		hb_close_watchdog();
-	}
+	hb_close_watchdog();
+	
 	if (quickrestart) {
 		/* THIS IS RESOURCE WORK!  FIXME */
 		if (nice_failback) {
@@ -2561,7 +2529,7 @@ check_for_timeouts(void)
 
 		if (hip == curnode) continue;
 
-		for (i=0; (lnk = &hip->links[i]), lnk->name; i++) {
+		for (i=0; (lnk = &hip->links[i], lnk->name); i++) {
 			if (lnk->lastupdate > now) {
 					lnk->lastupdate = 0L;
 			}
@@ -2670,6 +2638,7 @@ send_cluster_msg(struct ha_msg* msg)
 		char *	smsg = NULL;
 		int	needprivs = !cl_have_full_privs();
 		size_t	len;
+		ssize_t	writerc;
 
 		if (needprivs) {
 			return_to_orig_privs();
@@ -2684,13 +2653,18 @@ send_cluster_msg(struct ha_msg* msg)
 		 * It will then get written to the cluster properly.
 		 */
 
-
-		if (	(smsg = msg2wirefmt(msg, &len)) == NULL
-		||	(ffd = open(FIFONAME, O_WRONLY|O_NDELAY|O_APPEND)) < 0
-		||	write(ffd, smsg, len -1 )
-		!=	(ssize_t)(len -1)){
-			cl_perror("Cannot write message to " FIFONAME
-			" [%d vs %d]", getpid(), processes[0]);
+		if ((smsg = msg2wirefmt(msg, &len)) == NULL) {
+			cl_log(LOG_ERR
+			,	"send_cluster_msg: cannot convert"
+			" message to wire format (pid %d)", (int)getpid());
+			rc = HA_FAIL;
+		}else if ((ffd = open(FIFONAME, O_WRONLY|O_NDELAY|O_APPEND)) < 0) {
+			cl_perror("send_cluster_msg: cannot open " FIFONAME);
+			rc = HA_FAIL;
+		}else if ((writerc=write(ffd, smsg, len-1))
+		!=		(ssize_t)(len -1)){
+			cl_perror("send_cluster_msg: cannot write to "
+			FIFONAME " [rc = %d]", (int)writerc);
 			cl_log_message(msg);
 			rc = HA_FAIL;
 			
@@ -2703,7 +2677,11 @@ send_cluster_msg(struct ha_msg* msg)
 			}
 			ha_free(smsg);
 		}
-		close(ffd);
+		if (ffd > 0) {
+			if (close(ffd) < 0) {
+				cl_perror("%s close failure", FIFONAME);
+			}
+		}
 		/* Dispose of the original message */
 		ha_msg_del(msg);
 		if (needprivs) {
@@ -3269,11 +3247,7 @@ void
 cleanexit(rc)
 	int	rc;
 {
-	if (UseApphbd == TRUE ) {
-		apphb_unregister();
-	} else {
-		hb_close_watchdog();
-	}
+	hb_close_watchdog();
 
 	if (localdie) {
 		if (ANYDEBUG) {
@@ -3338,7 +3312,9 @@ make_daemon(void)
 {
 	long			pid;
 	FILE *			lockfd;
-	const char *	devnull = "/dev/null";
+	const char *		devnull = "/dev/null";
+	struct rlimit		oflimits;
+	int			j;
 
 	/* See if heartbeat is already running... */
 
@@ -3388,6 +3364,11 @@ make_daemon(void)
 	(void)open(devnull, O_WRONLY);		/* Stdout: fd 1 */
 	close(FD_STDERR);
 	(void)open(devnull, O_WRONLY);		/* Stderr: fd 2 */
+	/* A precautionary measure */
+	getrlimit(RLIMIT_NOFILE, &oflimits);
+	for (j=FD_STDERR+1; j < oflimits.rlim_cur; ++j) {
+		close(j);
+	}
 	chdir(HA_D);
 	/* We need to at least ignore SIGINTs early on */
 	hb_signal_set_common(NULL);
@@ -3397,6 +3378,79 @@ make_daemon(void)
 		}
 	}
 }
+
+#define	APPHBINSTANCE	"master_control_process"
+
+static void
+hb_init_register_with_apphbd(void)
+{
+	static int	failcount = 0;
+	if (!UseApphbd || RegisteredWithApphbd) {
+		return;
+	}
+		
+	if (apphb_register(hbname, APPHBINSTANCE) != 0) {
+		/* Log attempts once an hour or so... */
+		if ((failcount % 60) ==  0) {
+			cl_perror("Unable to register with apphbd.");
+			cl_log(LOG_INFO, "Continuing to try and register.");
+		}
+		++failcount;
+		return;
+	}
+
+	RegisteredWithApphbd = TRUE;
+	cl_log(LOG_INFO, "Registered with apphbd as %s/%s."
+	,	hbname, APPHBINSTANCE); 
+
+	if (apphb_setinterval(config->deadtime_ms) < 0
+	||	apphb_setwarn(config->warntime_ms) < 0) {
+		cl_perror("Unable to setup with apphbd.");
+		apphb_unregister();
+		RegisteredWithApphbd = FALSE;
+		++failcount;
+	}else{
+		failcount = 0;
+	}
+}
+
+static gboolean
+hb_reregister_with_apphbd(gpointer dummy)
+{
+	if (UseApphbd) {
+		hb_init_register_with_apphbd();
+	}
+	return UseApphbd;
+}
+
+static void
+hb_unregister_from_apphb(void)
+{
+	if (RegisteredWithApphbd == TRUE ) {
+		UseApphbd = FALSE;
+		apphb_unregister();
+	}
+}
+
+static void
+hb_apphb_hb(void)
+{
+	if (UseApphbd) {
+		if (RegisteredWithApphbd) {
+			if (apphb_hb() < 0) {
+				/* apphb_hb() will fail if apphbd exits */
+				cl_perror("apphb_hb() failed.");
+				apphb_unregister();
+				RegisteredWithApphbd = FALSE;
+			}
+		}	
+		/*
+		 * Our timeout job (hb_reregister_with_apphbd) will
+		 * reregister us if we become unregistered somehow...
+		 */
+	}
+}
+
 
 static void
 hb_init_watchdog_interval(void)
@@ -3446,6 +3500,9 @@ hb_init_watchdog(void)
 			,	watchdogdev);
 		}
 	}
+	if ( UseApphbd == TRUE ) {
+		hb_init_register_with_apphbd();
+	}
 }
 
 void
@@ -3459,6 +3516,7 @@ hb_tickle_watchdog(void)
 			watchdogfd=-1;
 		}
 	}
+	hb_apphb_hb();
 }
 
 void
@@ -3482,6 +3540,9 @@ hb_close_watchdog(void)
 			}
 		}
 		watchdogfd=-1;
+	}
+	if (RegisteredWithApphbd) {
+		hb_unregister_from_apphb();
 	}
 }
 
@@ -3612,8 +3673,7 @@ should_drop_message(struct node_info * thisnode, const struct ha_msg *msg,
 	
 	if(touuid && touuid_len == sizeof(uuid_t)){
 		IsToUs = (uuid_compare(touuid, config->uuid) == 0);
-	}
-	else{
+	}else{
 		IsToUs = (to == NULL) || (strcmp(to, curnode->nodename) == 0);
 	}
 	
@@ -3903,8 +3963,8 @@ request_msg_rexmit(struct node_info *node, seqno_t lowseq
 		return;
 	}
 
-	sprintf(low, "%lu", lowseq);
-	sprintf(high, "%lu", hiseq);
+	snprintf(low, sizeof(low), "%lu", lowseq);
+	snprintf(high, sizeof(high), "%lu", hiseq);
 
 
 	if (	ha_msg_add(hmsg, F_TYPE, T_REXMIT) == HA_OK
@@ -4236,7 +4296,7 @@ nak_rexmit(seqno_t seqno, const char * reason)
 	struct ha_msg*	msg;
 	char	sseqno[32];
 
-	sprintf(sseqno, "%lx", seqno);
+	snprintf(sseqno, sizeof(sseqno), "%lx", seqno);
 	cl_log(LOG_ERR, "Cannot rexmit pkt %lu: %s", seqno, reason);
 
 	if ((msg = ha_msg_new(6)) == NULL) {
@@ -4411,56 +4471,41 @@ get_localnodeinfo(void)
 	g_strdown(localnodename);
 }
 
-void 
-hb_init_register_to_apphbd(void)
-{
-	char app_instance[20];
-	cl_log(LOG_CRIT, "Trying to register to apphbd"); 
-
-	snprintf(app_instance, 20, "%s_%ld", hbname, (long)getpid());
-
-	if (apphb_register(hbname, app_instance) != 0) {
-		cl_log(LOG_ERR, "Failed when trying to register to apphbd.");
-		cl_log(LOG_ERR, "Maybe apphd isnot running. Quit.");
-		cl_log(LOG_ERR, "Will try again later periodly.");
-		return;
-	}
-
-	cl_log(LOG_INFO, "Has registerred to apphbd.");
-	RegisteredToApphbd = TRUE;
-	apphb_setinterval(config->heartbeat_ms + 20);
-	/* or set it as config->deadtime_ms ? */
-	apphb_setwarn(config->warntime_ms + 10);
-}
-
-void
-hb_apphb_hb(void)
-{
-	if (UseApphbd == TRUE) {
-		if ( RegisteredToApphbd == TRUE ) {
-			apphb_hb();
-			/* Not sure its cause, must be due to apphbd's quit? */
-			/*
-			if ( apphb_hb() != 0 ) {
-				RegisteredToApphbd = FALSE;
-			 */
-		} else {
-			cl_log(LOG_CRIT, "One of repeating registers.");
-			hb_init_register_to_apphbd();
-		}	
-	}
-}
-
-void
-hb_unregister_to_apphbd(void)
-{
-	if (UseApphbd == TRUE && RegisteredToApphbd == TRUE ) {
-		apphb_unregister();
-	}
-}
-
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.321  2004/09/18 23:13:37  alan
+ * Brought forward changes from 1.2 CVS - and added portability macros
+ * for STRLEN_CONST and STRNCMP_CONST
+ *
+ * Revision 1.291.2.15  2004/09/17 05:39:55  alan
+ * Fixed a bug where we printed out the "trying to register" message once per
+ * minute, when we ought to be printing it once per hour instead.
+ * Also, changed a few error messages slightly.
+ *
+ * we can't set our interval correctly, and we'll reregister and try again.
+ *
+ * Revision 1.291.2.12  2004/09/15 14:52:05  alan
+ * Minor tweaks in the apphbd (re-)registration code in heartbeat.
+ * Not tested yet.  I'll do that in a few minutes ;-)
+ *
+ * Revision 1.291.2.11  2004/09/11 20:52:33  alan
+ * Brought back changes from HEAD
+ * 1) Added apphbd option
+ * 2) Restructuring of packet handling
+ * 3) Various BEAM fixes
+ *
+ * Revision 1.291.2.10  2004/09/11 06:36:32  msoffen
+ * Moved variable  definitions to top of functions/blocks, changed comments to c style comments.
+ *
+ * Revision 1.291.2.9  2004/09/07 14:55:35  alan
+ * Increased the size of a set of retransmissions that are sent all at once
+ * to 50.  At high heartbeat rates a short glitch can lose more packets at once
+ * than originally anticipated when the code was written.
+ * Changed code to retransmit missing packets in the correct original order, not
+ * in reverse order as it had done before.  One of those ideas that seemed
+ * good at the time.. (?!).
+ *
+ * 11 September 2004: Merged some log info from stable and HEAD (AlanR)
  * Revision 1.320  2004/09/14 15:07:28  gshi
  * change glib API to glib2 API
  *
