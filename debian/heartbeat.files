@@ -66,6 +66,7 @@ usr/lib/heartbeat/plugins/HBauth/sha1.so
 usr/lib/heartbeat/plugins/HBcomm/bcast.so
 usr/lib/heartbeat/plugins/HBcomm/mcast.so
 usr/lib/heartbeat/plugins/HBcomm/ping.so
+usr/lib/heartbeat/plugins/HBcomm/ping_group.so
 usr/lib/heartbeat/plugins/HBcomm/serial.so
 usr/lib/heartbeat/plugins/HBcomm/ucast.so
 usr/lib/heartbeat/plugins/test/test.so

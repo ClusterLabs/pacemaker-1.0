@@ -1,7 +1,13 @@
-static const char _ping_Id [] = "$Id: ping.c,v 1.23 2003/08/15 05:01:20 horms Exp $";
+static const char _ping_group_Id [] = "$Id: ping_group.c,v 1.1 2003/08/15 05:01:20 horms Exp $";
 /*
- * ping.c: ICMP-echo-based heartbeat code for heartbeat.
+ * ping_group.c: ICMP-echo-based heartbeat code for heartbeat.
  *
+ * This allows a group of nodes to be pinged. The group is only
+ * considered to be available if all of the nodes are available.
+ *
+ * Copyright (C) 2003 Horms <horms@verge.net.au>
+ *
+ * Based heavily on ping.c
  * Copyright (C) 2000 Alan Robertson <alanr@unix.sh>
  *
  * The checksum code in this file code was borrowed from the ping program.
@@ -81,38 +87,52 @@ static const char _ping_Id [] = "$Id: ping.c,v 1.23 2003/08/15 05:01:20 horms Ex
 
 #define PIL_PLUGINTYPE          HB_COMM_TYPE
 #define PIL_PLUGINTYPE_S        HB_COMM_TYPE_S
-#define PIL_PLUGIN              ping
-#define PIL_PLUGIN_S            "ping"
+#define PIL_PLUGIN              ping_group
+#define PIL_PLUGIN_S            "ping_group"
 #define PIL_PLUGINLICENSE	LICENSE_LGPL
 #define PIL_PLUGINLICENSEURL	URL_LGPL
 #include <pils/plugin.h>
 
 
-struct ping_private {
+#define NSLOT			16              /* How old ping sequence
+						   numbers can be to still
+						   count */
+typedef struct ping_group_node ping_group_node_t;
+
+struct ping_group_node {
         struct sockaddr_in      addr;   	/* ping addr */
-        int    			sock;		/* ping socket */
-	int			ident;		/* heartbeat pid */
-	int			iseq;		/* sequence number */
+	ping_group_node_t	*next;
+	int			slot[NSLOT];
 };
 
+typedef struct {
+	int			ident;		/* heartbeat pid */
+        int    			sock;		/* ping socket */
+	ping_group_node_t	*node;
+	size_t			nnode;
+	int			slot[NSLOT];
+	int			iseq;		/* sequence number */
+} ping_group_private_t;
 
-static struct hb_media*	ping_new (const char* interface);
-static int		ping_open (struct hb_media* mp);
-static int		ping_close (struct hb_media* mp);
-static struct ha_msg*	ping_read (struct hb_media* mp);
-static int		ping_write (struct hb_media* mp, struct ha_msg* msg);
 
-static struct ping_private *
-			new_ping_interface(const char * host);
+static int   		ping_group_parse(const char *line);
+static int		ping_group_open (struct hb_media* mp);
+static int		ping_group_close (struct hb_media* mp);
+static struct ha_msg*	ping_group_read (struct hb_media* mp);
+static int		ping_group_write (struct hb_media* mp
+,				struct ha_msg* msg);
+
+static struct hb_media * ping_group_new(const char *name);
 static int		in_cksum (u_short * buf, int nbytes);
 
-static int		ping_mtype(char **buffer);
-static int		ping_descr(char **buffer);
-static int		ping_isping(void);
+static int		ping_group_mtype(char **buffer);
+static int		ping_group_descr(char **buffer);
+static int		ping_group_isping(void);
 
 
-#define		ISPINGOBJECT(mp)	((mp) && ((mp)->vf == (void*)&pingOps))
-#define		PINGASSERT(mp)	g_assert(ISPINGOBJECT(mp))
+#define		ISPINGGROUPOBJECT(mp)	                                     \
+			((mp) && ((mp)->vf == (void*)&ping_group_ops))
+#define		PINGGROUPASSERT(mp)	g_assert(ISPINGGROUPOBJECT(mp))
 
 /*
  * pingclose is called as part of unloading the ping HBcomm plugin.
@@ -122,36 +142,36 @@ static int		ping_isping(void);
  */
 
 static void
-pingclosepi(PILPlugin*pi)
+ping_group_close_pi(PILPlugin*pi)
 {
 }
 
 
 /*
- * pingcloseintf called as part of shutting down the ping HBcomm interface.
+ * ping_group_close_intf called as part of shutting down the ping HBcomm interface.
  * If there was any global data allocated, or file descriptors opened, etc.
  * which is associated with the ping implementation, here's our chance
  * to clean it up.
  */
 static PIL_rc
-pingcloseintf(PILInterface* pi, void* pd)
+ping_group_close_intf(PILInterface* pi, void* pd)
 {
 	return PIL_OK;
 }
 
-static struct hb_media_fns pingOps ={
-	ping_new,	/* Create single object function */
-	NULL,		/* whole-line parse function */
-	ping_open,
-	ping_close,
-	ping_read,
-	ping_write,
-	ping_mtype,
-	ping_descr,
-	ping_isping,
+static struct hb_media_fns ping_group_ops ={
+	NULL,		  /* Create single object function */
+	ping_group_parse, /* whole-line parse function */
+	ping_group_open,
+	ping_group_close,
+	ping_group_read,
+	ping_group_write,
+	ping_group_mtype,
+	ping_group_descr,
+	ping_group_isping,
 };
 
-PIL_PLUGIN_BOILERPLATE("1.0", Debug, pingclosepi);
+PIL_PLUGIN_BOILERPLATE("1.0", Debug, ping_group_close_pi);
 
 static const PILPluginImports*  PluginImports;
 static PILPlugin*               OurPlugin;
@@ -171,7 +191,7 @@ PIL_PLUGIN_INIT(PILPlugin*us, const PILPluginImports* imports)
 {
 	(void)_heartbeat_h_Id;
 	(void)_ha_msg_h_Id;
-	(void)_ping_Id;
+	(void)_ping_group_Id;
 
 	/* Force the compiler to do a little type checking */
 	(void)(PILPluginInitFun)PIL_PLUGIN_INIT;
@@ -185,14 +205,14 @@ PIL_PLUGIN_INIT(PILPlugin*us, const PILPluginImports* imports)
 	/*  Register our interface implementation */
  	return imports->register_interface(us, PIL_PLUGINTYPE_S
 	,	PIL_PLUGIN_S
-	,	&pingOps
-	,	pingcloseintf		/*close */
+	,	&ping_group_ops
+	,	ping_group_close_intf		/*close */
 	,	&OurInterface
 	,	(void*)&OurImports
 	,	interfprivate); 
 }
 static int
-ping_mtype(char **buffer) { 
+ping_group_mtype(char **buffer) { 
 	
 	*buffer = MALLOC((strlen(PIL_PLUGIN_S) * sizeof(char)) + 1);
 
@@ -202,9 +222,9 @@ ping_mtype(char **buffer) {
 }
 
 static int
-ping_descr(char **buffer) { 
+ping_group_descr(char **buffer) { 
 
-	const char *str = "ping membership";	
+	const char *str = "ping group membership";	
 
 	*buffer = MALLOC((strlen(str) * sizeof(char)) + 1);
 
@@ -216,43 +236,62 @@ ping_descr(char **buffer) {
 /* Yes, a ping device */
 
 static int
-ping_isping(void) {
+ping_group_isping(void) {
 	return 1;
 }
 
 
-static struct ping_private *
-new_ping_interface(const char * host)
+static ping_group_node_t *
+new_ping_group_node(const char *host)
 {
-	struct ping_private*	ppi;
-	struct sockaddr_in *to;
+	ping_group_node_t* node;
 
-	if ((ppi = (struct ping_private*)MALLOC(sizeof(struct ping_private)))
-	== NULL) {
-		return NULL;
+	node = (ping_group_node_t*)MALLOC(sizeof(ping_group_node_t));
+	if(!node) {
+		return(NULL);
 	}
-	memset(ppi, 0, sizeof (*ppi));
-  	to = &ppi->addr;
+	memset(node, 0, sizeof(ping_group_node_t));
 
 #ifdef HAVE_SOCKADDR_IN_SIN_LEN
-	ppi->addr.sin_len = sizeof(struct sockaddr_in);
+	node->addr.sin_len = sizeof(struct sockaddr_in);
 #endif
-	ppi->addr.sin_family = AF_INET;
+	node->addr.sin_family = AF_INET;
 
-	if (inet_pton(AF_INET, host, (void *)&ppi->addr.sin_addr) <= 0) {
-		struct hostent *hep;
-		hep = gethostbyname(host);
-		if (hep == NULL) {
+	if (inet_pton(AF_INET, host, (void *)&node->addr.sin_addr) <= 0) {
+		struct hostent *hp;
+		hp = gethostbyname(host);
+		if (hp == NULL) {
 			LOG(PIL_CRIT, "unknown host: %s: %s"
 			,	host, strerror(errno));
-			FREE(ppi); ppi = NULL;
+			FREE(node);
 			return NULL;
 		}
-		ppi->addr.sin_family = hep->h_addrtype;
-		memcpy(&ppi->addr.sin_addr, hep->h_addr, hep->h_length);
+		node->addr.sin_family = hp->h_addrtype;
+		memcpy(&node->addr.sin_addr, hp->h_addr, hp->h_length);
 	}
-	ppi->ident = getpid() & 0xFFFF;
-	return(ppi);
+
+	return(node);
+}
+
+static int
+ping_group_add_node(struct hb_media* media, const char *host)
+{
+	ping_group_private_t *priv;
+	ping_group_node_t *node;
+
+	PINGGROUPASSERT(media);
+	priv = (ping_group_private_t *)media->pd;
+
+	node = new_ping_group_node(host);
+	if(!node) {
+		return(HA_FAIL);
+	}
+
+	node->next = priv->node;
+	priv->node = node;
+	priv->nnode++;
+
+	return(HA_OK);
 }
 
 /*
@@ -260,35 +299,81 @@ new_ping_interface(const char * host)
  *	Name of host is passed as a parameter
  */
 static struct hb_media *
-ping_new(const char * host)
+ping_group_new(const char *name)
 {
-	struct ping_private*	ipi;
-	struct hb_media *	ret;
-	char * 			name;
+	ping_group_private_t*	priv;
+	struct hb_media *	media;
+	char *			tmp;
 
-	ipi = new_ping_interface(host);
-	if (ipi == NULL) {
+	priv = (ping_group_private_t*)MALLOC(sizeof(ping_group_private_t));
+	if(!priv) {
+		return(NULL);
+	}
+	memset(priv, 0, sizeof(ping_group_private_t));
+
+	priv->ident = getpid() & 0xFFFF;
+
+	media = (struct hb_media *) MALLOC(sizeof(struct hb_media));
+	if(!media) {
+		FREE(priv);
 		return(NULL);
 	}
 
-	ret = (struct hb_media *) MALLOC(sizeof(struct hb_media));
-	if (ret == NULL) {
-		FREE(ipi); ipi = NULL;
+	media->pd = (void*)priv;
+	tmp = MALLOC(strlen(name)+1);
+	if(!tmp) {
+		FREE(priv);
+		FREE(media);
 		return(NULL);
 	}
 
-	ret->pd = (void*)ipi;
-	name = MALLOC(strlen(host)+1);
-	if(name == NULL) {
-		FREE(ipi); ipi = NULL;
-		FREE(ret); ret = NULL;
-		return(NULL);
-	}
-	strcpy(name, host);
-	ret->name = name;
-	add_node(host, PINGNODE_I);
+	strcpy(tmp, name);
+	media->name = tmp;
+	add_node(tmp, PINGNODE_I);
 
-	return(ret);
+	/* Fake it so that PINGGROUPASSERT() will work
+	 * before the media is registered */
+	media->vf = (void*)&ping_group_ops;
+
+	return(media);
+}
+
+static void
+ping_group_destroy_data(struct hb_media* media)
+{
+	ping_group_private_t*	priv;
+	ping_group_node_t *	node;
+
+	PINGGROUPASSERT(media);
+        priv = (ping_group_private_t *)media->pd;
+
+	while(priv->node) {
+		node = priv->node;
+		priv->node = node->next;
+		FREE(node);
+	}
+}
+
+static void
+ping_group_destroy(struct hb_media* media)
+{
+	ping_group_private_t*	priv;
+
+	PINGGROUPASSERT(media);
+        priv = (ping_group_private_t *)media->pd;
+
+	ping_group_destroy_data(media);
+
+	FREE(priv);
+	media->pd = NULL;
+
+	/* XXX: How can we free this? Should media->name really be const?
+	 * And on the same topic, how are media unregistered / freed ? */
+	/*
+	tmp = (char *)media->name;
+	FREE(tmp);
+	media->name = NULL;
+	*/
 }
 
 /*
@@ -296,19 +381,21 @@ ping_new(const char * host)
  */
 
 static int
-ping_close(struct hb_media* mp)
+ping_group_close(struct hb_media* mp)
 {
-	struct ping_private * ei;
+	ping_group_private_t * ei;
 	int	rc = HA_OK;
 
-	PINGASSERT(mp);
-	ei = (struct ping_private *) mp->pd;
+	PINGGROUPASSERT(mp);
+	ei = (ping_group_private_t *) mp->pd;
 
 	if (ei->sock >= 0) {
 		if (close(ei->sock) < 0) {
 			rc = HA_FAIL;
 		}
 	}
+
+	ping_group_destroy_data(mp);
 	return(rc);
 }
 
@@ -317,9 +404,9 @@ ping_close(struct hb_media* mp)
  */
 
 static struct ha_msg *
-ping_read(struct hb_media* mp)
+ping_group_read(struct hb_media* mp)
 {
-	struct ping_private *	ei;
+	ping_group_private_t *	ei;
 	union {
 		char		cbuf[MAXLINE+ICMP_HDR_SZ];
 		struct ip	ip;
@@ -332,11 +419,15 @@ ping_read(struct hb_media* mp)
 	struct icmp		icp;
 	int			numbytes;
 	int			hlen;
-	struct ha_msg *		msg;
+	int 			seq;
+	size_t			slotn;
+	ping_group_node_t	*node;
+	ping_group_node_t	*node_i;
+	struct ha_msg		*msg = NULL;
 	const char 		*comment;
 
-	PINGASSERT(mp);
-	ei = (struct ping_private *) mp->pd;
+	PINGGROUPASSERT(mp);
+	ei = (ping_group_private_t *) mp->pd;
 
 	if ((numbytes=recvfrom(ei->sock, (void *) &buf.cbuf
 	,	sizeof(buf.cbuf)-1, 0,	(struct sockaddr *)&their_addr
@@ -345,7 +436,7 @@ ping_read(struct hb_media* mp)
 			LOG(PIL_CRIT, "Error receiving from socket: %s"
 			,	strerror(errno));
 		}
-		return NULL;
+		return(NULL);
 	}
 	/* Avoid potential buffer overruns */
 	buf.cbuf[numbytes] = EOS;
@@ -359,15 +450,16 @@ ping_read(struct hb_media* mp)
 		,	numbytes
 		,	inet_ntoa(*(struct in_addr *)
 		&		their_addr.sin_addr.s_addr));
-		return NULL;
+		return(NULL);
 	}
 
 	/* Now the ICMP part */	/* (there may be a better way...) */
 	memcpy(&icp, (buf.cbuf + hlen), sizeof(icp));
 
 	if (icp.icmp_type != ICMP_ECHOREPLY || icp.icmp_id != ei->ident) {
-		return NULL;
+		return(NULL);
 	}
+	seq = ntohs(icp.icmp_seq);
 
 	if (DEBUGPKT) {
 		LOG(PIL_DEBUG, "got %d byte packet from %s"
@@ -377,6 +469,17 @@ ping_read(struct hb_media* mp)
 
 	if (DEBUGPKTCONT && numbytes > 0) {
 		LOG(PIL_DEBUG, "%s", msgstart);
+	}
+
+	for(node = ei->node; node; node = node->next) {
+		if(!memcmp(&(their_addr.sin_addr), &(node->addr.sin_addr),
+					sizeof(struct in_addr))) {
+			break;
+		}
+	}
+	if(!node) {
+		/* Hee, sono noodo ha dare desu ka? */
+		return(NULL);
 	}
 
 	msg = string2msg(msgstart, bufmax - msgstart);
@@ -389,7 +492,33 @@ ping_read(struct hb_media* mp)
 		return(NULL);
 	}
 
-	return(msg);
+	slotn = seq % NSLOT;
+	if(seq > ei->iseq) {
+		/* New Sequins ! */
+		ei->iseq = seq;
+		for(node_i = ei->node; node_i; node_i = node_i->next) {
+			node_i->slot[slotn] = 0;
+		}
+		ei->slot[slotn] = ei->nnode;
+	}
+	else if(seq < ei->iseq - NSLOT) {
+		/* Sequence is too old */
+		ha_msg_del(msg);
+		return(NULL);
+	}
+
+	if(!node->slot[slotn]) {
+		node->slot[slotn]++;
+		ei->slot[slotn]--;
+	}
+
+	if(!ei->slot[slotn]) {
+		/* All nodes have responded */
+		return(msg);
+	}
+	
+	ha_msg_del(msg);
+	return(NULL);
 }
 
 /*
@@ -406,9 +535,9 @@ ping_read(struct hb_media* mp)
  */
 
 static int
-ping_write(struct hb_media* mp, struct ha_msg * msg)
+ping_group_write(struct hb_media* mp, struct ha_msg * msg)
 {
-	struct ping_private *	ei;
+	ping_group_private_t *	ei;
 	int			rc;
 	char*			pkt;
 	union{
@@ -421,9 +550,11 @@ ping_write(struct hb_media* mp, struct ha_msg * msg)
 	const char *		type;
 	const char *		ts;
 	struct ha_msg *		nmsg;
+	ping_group_node_t *	node;
+	struct timespec		pause = {0, 1};
 
-	PINGASSERT(mp);
-	ei = (struct ping_private *) mp->pd;
+	PINGGROUPASSERT(mp);
+	ei = (ping_group_private_t *) mp->pd;
 	type = ha_msg_value(msg, F_TYPE);
 
 	if (type == NULL || strcmp(type, T_STATUS) != 0 
@@ -436,7 +567,7 @@ ping_write(struct hb_media* mp, struct ha_msg * msg)
 	 *
 	 * F_TYPE:	T_NS_STATUS
 	 * F_STATUS:	ping
-	 * F_COMMENT:	ping
+	 * F_COMMENT:	ping_group
 	 * F_ORIG:	destination name
 	 * F_TIME:	local timestamp (from "msg")
 	 * F_AUTH:	added by add_msg_auth()
@@ -492,21 +623,28 @@ ping_write(struct hb_media* mp, struct ha_msg * msg)
 	/* Compute the ICMP checksum */
 	icp->icmp_cksum = in_cksum((u_short *)icp, pktsize);
 
-	if ((rc=sendto(ei->sock, (void *) icmp_pkt, pktsize, 0
-	,	(struct sockaddr *)&ei->addr
-	,	sizeof(struct sockaddr))) != pktsize) {
-		LOG(PIL_CRIT, "Error sending packet: %s", strerror(errno));
-		FREE(icmp_pkt);
-		return(HA_FAIL);
+	for(node = ei->node; node; node = node->next) {
+		if ((rc=sendto(ei->sock, (void *) icmp_pkt, pktsize, 0
+		,	(struct sockaddr *)&node->addr
+		,	sizeof(struct sockaddr))) != pktsize) {
+			LOG(PIL_CRIT, "Error sending packet: %s"
+			,	strerror(errno));
+			FREE(icmp_pkt);
+			return(HA_FAIL);
+		}
+
+		if (DEBUGPKT) {
+			LOG(PIL_DEBUG, "sent %d bytes to %s"
+			,	rc, inet_ntoa(node->addr.sin_addr));
+   		}
+
+		nanosleep(&pause, NULL);
 	}
 
-	if (DEBUGPKT) {
-		LOG(PIL_DEBUG, "sent %d bytes to %s"
-		,	rc, inet_ntoa(ei->addr.sin_addr));
-   	}
 	if (DEBUGPKTCONT) {
 		LOG(PIL_DEBUG, pkt);
    	}
+
 	FREE(icmp_pkt);
 	return HA_OK;
 }
@@ -514,15 +652,16 @@ ping_write(struct hb_media* mp, struct ha_msg * msg)
 /*
  *	Open ping socket.
  */
+
 static int
-ping_open(struct hb_media* mp)
+ping_group_open(struct hb_media* mp)
 {
-	struct ping_private * ei;
+	ping_group_private_t * ei;
 	int sockfd;
 	struct protoent *proto;
 
-	PINGASSERT(mp);
-	ei = (struct ping_private *) mp->pd;
+	PINGGROUPASSERT(mp);
+	ei = (ping_group_private_t *) mp->pd;
 
 
 	if ((proto = getprotobyname("icmp")) == NULL) {
@@ -540,7 +679,7 @@ ping_open(struct hb_media* mp)
 	}
 	ei->sock = sockfd;
 
-	LOG(LOG_NOTICE, "ping heartbeat started.");
+	LOG(LOG_NOTICE, "ping group heartbeat started.");
 	return HA_OK;
 }
 
@@ -580,3 +719,69 @@ in_cksum (u_short *addr, int len)
 
 	return answer;
 }
+
+
+/* mcast_parse will parse the line in the config file that is 
+ * associated with the media's type (hb_dev_mtype).  It should 
+ * receive the rest of the line after the mtype.  And it needs
+ * to call hb_dev_new, add the media to the list of available media.
+ *
+ * So in this case, the config file line should look like
+ * mcast [device] [mcast group] [port] [mcast ttl] [mcast loop]
+ * for example:
+ * mcast eth0 225.0.0.1 694 1 0
+ */
+
+static int
+ping_group_parse(const char *line)
+{
+	char		tmp[MAXLINE];
+	size_t		len;
+	size_t		nhost;
+	struct hb_media *media;
+
+	/* Skip over white space, then grab the name */
+	line += strspn(line, WHITESPACE);
+	len = strcspn(line, WHITESPACE);
+	strncpy(tmp, line, len);
+	line += len;
+	*(tmp+len) = EOS;
+
+	if(*tmp == EOS) {
+		return(HA_FAIL);
+	}
+
+	media = ping_group_new(tmp);
+	if (!media) {
+		return(HA_FAIL);
+	}
+
+	while(1) {
+		/* Skip over white space, then grab the host */
+		line += strspn(line, WHITESPACE);
+		len = strcspn(line, WHITESPACE);
+		strncpy(tmp, line, len);
+		line += len;
+		*(tmp+len) = EOS;
+
+		if(*tmp == EOS) {
+			break;
+		}
+
+		if(ping_group_add_node(media, tmp) < 0) {
+			ping_group_destroy(media);
+			return(HA_FAIL);
+		}
+		nhost++;
+	}
+
+	if(!nhost) {
+		ping_group_destroy(media);
+		return(HA_FAIL);
+	}
+		
+	OurImports->RegisterNewMedium(media);
+
+	return(HA_OK);
+}
+

@@ -198,6 +198,19 @@ connectivity for modules like ipfail.</dd>
   <br>
   <dd><br>
   </dd>
+  <dt> <b><tt><font size="+1">ping_group&nbsp;&nbsp;&nbsp;
+name&nbsp; ping1.linux-ha.org&nbsp; ping2.linux-ha.org ....</font></tt></b></dt>
+  <dd> <i>Optional</i>: Specify a group ping nodes.&nbsp; These are the
+  similar to ping nodes, but all nodes in a group must be available
+  for the group to be considered available. The group name can
+  be any string and is used to uniquely identify the group.
+  Each group must appear on a separate line.
+  Like ping nodes the group is not considered to be a cluster node.
+  They appear to be the same as ping nodes and are used to check&nbsp; network
+  connectivity for modules like ipfail.</dd>
+  <br>
+  <dd><br>
+  </dd>
 </dl>
 <b><font size="+1">Configuring haresources</font></b> <br>
 Once you've got your ha.cf set up, you need to configure <i>haresources</i>.&nbsp;
@@ -264,12 +277,12 @@ haresources to /etc/ha.d and you're ready to start! <br>
 &nbsp; </p>
 
 <b><font size="+1">Configuring ipfail</font></b><br>
-The ipfail plugin attempts to provide detection of network failures, and then
-intelligently react, directing the cluster to failover resources as necessary.
-In order to accomplish this goal, it uses ping nodes which work as "dumb" third
-parties in the cluster.  Provided both HA nodes can communicate with each 
-other, ipfail can reliably detect when one of their network links has become 
-unusable, and compensate.<br>
+The ipfail plugin attempts to provide detection of network failures, and
+then intelligently react, directing the cluster to failover resources as
+necessary.  In order to accomplish this goal, it uses ping nodes or ping
+groups which work as "dumb" third parties in the cluster.  Provided both HA
+nodes can communicate with each other, ipfail can reliably detect when one
+of their network links has become unusable, and compensate.<br>
 <br>
 To configure ipfail, the following steps must be performed.
 <ol>

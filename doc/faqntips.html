@@ -167,14 +167,15 @@ homepage 	(www.linuxvirtualserver.org) you can find scripts for adding and
     </li>
   <br>
      <li>          
-    <p><a name="ipfail">Yes! &nbsp;Use the ipfail plug-in.</a> &nbsp;For each
-interface you wish to monitor, specify one or more "ping" nodes in your configuration.
-&nbsp;Each node in your cluster will monitor these ping nodes. &nbsp;Should
-one node detect a failure in one of these ping nodes, it will contact the
-other node in order to determine whether it or the ping node has the problem.
-&nbsp;If the cluster node has the problem, it will try to failover its resources
-(if it has any).</p>
-           
+    <p><a name="ipfail">Yes! &nbsp;Use the ipfail plug-in.</a> &nbsp;For
+    each interface you wish to monitor, specify one or more "ping" nodes or
+    "ping groups" in your configuration.  &nbsp;Each node in your cluster
+    will monitor these ping nodes or groups. &nbsp;Should one node detect a
+    failure in one of these ping nodes, it will contact the other node in
+    order to determine whether it or the ping node has the problem.
+    &nbsp;If the cluster node has the problem, it will try to failover its
+    resources (if it has any).</p>
+
     <p>To use ipfail, you will need to add the following to your /etc/ha.d/ha.cf 
 files:<br>
   &nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; respawn hacluster /usr/lib/heartbeat/ipfail<br>

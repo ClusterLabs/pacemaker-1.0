@@ -216,6 +216,13 @@ auto_failback on
 #
 #ping 10.10.10.254
 #
+#	Treats 10.10.10.254 and 10.10.10.253 as a psuedo-cluster-member
+#       called group1. Both 10.10.10.254 and 10.10.10.253 must be up
+#       for group1 to be up
+#	Used together with ipfail below...
+#
+#ping_group group1 10.10.10.254 10.10.10.253
+#
 #	Processes started and stopped with heartbeat.  Restarted unless
 #		they exit with rc=100
 #

@@ -1,3 +1,9 @@
+heartbeat (1.1.2.cvs.20030813-1) unstable; urgency=low
+
+  * Testin'
+
+ -- Simon Horman <horms@vergenet.net>  Wed, 13 Aug 2003 18:44:52 +0900
+
 heartbeat (1.1.2-1) unstable; urgency=low
 
   * New upstream
