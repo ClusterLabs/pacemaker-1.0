@@ -1,4 +1,4 @@
-/* $Id: stonithd.c,v 1.9 2004/12/20 03:26:41 sunjd Exp $ */
+/* $Id: stonithd.c,v 1.10 2005/01/03 18:12:10 alan Exp $ */
 
 /* File: stonithd.c
  * Description: STONITH deamon for node fencing
@@ -1782,7 +1782,7 @@ stonith_operate_locally( stonith_ops_t * st_op, stonith_rsc_t * srsc)
 
 	/* now in child process */
 	/* this operation may be on block status */
-	exit(st_obj->s_ops->reset_req(st_obj, st_op->optype, 
+	exit(stonith_req_reset(st_obj, st_op->optype, 
 				      g_strdup(st_op->node_name)));
 }
 
@@ -2263,9 +2263,8 @@ stonithRA_start( stonithRA_ops_t * op, gpointer data)
 	int		rc; /* To return compatible return code */
 	stonith_rsc_t * srsc;
 	Stonith *	stonith_obj = NULL;
-	const char *	config_file = NULL;
-	const char *	config_string = NULL;
 	pid_t 		pid;
+	StonithNVpair*	snv;
 
 	/* Check the parameter */
 	if ( op == NULL || op->rsc_id <= 0 || op->op_type == NULL
@@ -2287,15 +2286,6 @@ stonithRA_start( stonithRA_ops_t * op, gpointer data)
 		print_str_hashtable(op->params);
 	}
 
-	config_file = g_hash_table_lookup(op->params, "config_file");
-	config_string = g_hash_table_lookup(op->params, "config_string");
-	if ( (config_file == NULL && config_string == NULL )
-	     || ( config_file != NULL && config_string != NULL )) {
-		stonithd_log(LOG_ERR, "stonithRA_start: invalid parameters.");
-		stonithd_log(LOG_ERR, "config_file=%p, config_string=%p",
-			     config_file, config_string);
-		return ST_FAIL;
-	}
 
 	stonith_obj = stonith_new(op->ra_name);
 
@@ -2305,36 +2295,23 @@ stonithRA_start( stonithRA_ops_t * op, gpointer data)
 		return ST_FAIL;
 	}
 
-	if (config_file) {
-		/* Configure the Stonith object from a file */
-		if ( stonith_obj->s_ops->set_config_file(stonith_obj, 
-				config_file) != S_OK) {
-			stonithd_log(LOG_ERR,
-				"Invalid config file %s for %s device.",
-				config_file, op->ra_name);
-			stonithd_log(LOG_DEBUG, "Config file syntax: %s",
-				stonith_obj->s_ops->
-				   getinfo(stonith_obj, ST_CONF_FILE_SYNTAX));
+	snv = stonith_ghash_to_NVpair(op->params);
+	if ( snv == NULL
+	||	stonith_set_config(stonith_obj, snv) != S_OK ) {
+		stonithd_log(LOG_ERR,
+			"Invalid config info for %s device.", op->ra_name);
 
-			stonith_delete(stonith_obj); 
-			stonith_obj = NULL;
-			return ST_FAIL;
+		stonith_delete(stonith_obj); 
+		stonith_obj = NULL;
+		if (snv != NULL) {
+			free_NVpair(snv);
+			snv = NULL;
 		}
-	} else {
-		/* Configure the Stonith object from the argument */
-		if ( stonith_obj->s_ops->set_config_info(stonith_obj, 
-				config_string) != S_OK) {
-			stonithd_log(LOG_ERR,
-				"Invalid config string %s for %s device.",
-				config_string, op->ra_name);
-			stonithd_log(LOG_DEBUG, "Config string syntax: %s",
-				stonith_obj->s_ops->
-				   getinfo(stonith_obj, ST_CONF_INFO_SYNTAX));
-
-			stonith_delete(stonith_obj); 
-			stonith_obj = NULL;
-			return ST_FAIL; /*exit(rc);*/
-		}
+		return ST_FAIL; /*exit(rc);*/
+	}
+	if (snv != NULL) {
+		free_NVpair(snv);
+		snv = NULL;
 	}
 	
 	op->private_data = stonith_obj;
@@ -2349,7 +2326,7 @@ probe_status:
 
 	/* Now in the child process */
 	/* Need to distiguish the exit code more carefully */
-	if ( (rc = stonith_obj->s_ops->status(stonith_obj)) == S_OK ) {
+	if ( (rc = stonith_get_status(stonith_obj)) == S_OK ) {
 		exit(EXECRA_OK);
 	} else {
 		exit(EXECRA_UNKNOWN_ERROR);
@@ -2375,7 +2352,7 @@ stonithRA_start_post( stonithRA_ops_t * ra_op, gpointer data )
 	srsc->stonith_obj = ra_op->private_data;
 	ra_op->private_data = NULL;
 	srsc->node_list = NULL;
-	srsc->node_list = srsc->stonith_obj->s_ops->hostlist(srsc->stonith_obj);
+	srsc->node_list = stonith_get_hostlist(srsc->stonith_obj);
 	if (srsc->node_list == NULL) {
 		stonithd_log(LOG_ERR, "Could not list nodes for stonith RA %s.",
 			     ra_op->ra_name);
@@ -2457,7 +2434,7 @@ stonithRA_monitor( stonithRA_ops_t * ra_op, gpointer data )
 
 	/* Go here the child */
 	/* Need to distiguish the exit code more carefully */
-	if ( srsc->stonith_obj->s_ops->status(srsc->stonith_obj) == S_OK ) {
+	if ( stonith_get_status(srsc->stonith_obj) == S_OK ) {
 		exit(EXECRA_OK);
 	} else {
 		exit(EXECRA_STATUS_UNKNOWN);
@@ -2829,6 +2806,13 @@ free_common_op_t(gpointer data)
 
 /* 
  * $Log: stonithd.c,v $
+ * Revision 1.10  2005/01/03 18:12:10  alan
+ * Stonith version 2.
+ * Some compatibility with old versions is still missing.
+ * Basically, you can't (yet) use files for config information.
+ * But, we'll fix that :-).
+ * Right now ssh, null and baytech all work.
+ *
  * Revision 1.9  2004/12/20 03:26:41  sunjd
  * Patch from Andrew. donnot define a union with no name, that may cause a compiling issue
  *
