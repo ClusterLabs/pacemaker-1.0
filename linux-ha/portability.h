@@ -100,7 +100,8 @@ inet_pton(int af, const char *src, void *dst);
 #endif /* HA_HAVE_INET_PTON */
 
 #ifndef HA_HAVE_STRNLEN
-#	define	strnlen(a,b) strlen(a)
+	size_t strnlen(const char *s, size_t maxlen);
+
 #else
 #	define USE_GNU
 #endif
