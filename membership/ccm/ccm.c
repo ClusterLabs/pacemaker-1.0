@@ -1,4 +1,4 @@
-/* $Id: ccm.c,v 1.40 2004/02/17 22:49:48 lars Exp $ */
+/* $Id: ccm.c,v 1.41 2004/02/18 01:51:43 alan Exp $ */
 /* 
  * ccm.c: Consensus Cluster Service Program 
  *
@@ -4737,11 +4737,12 @@ static void ccm_fill_update_table(ccm_info_t *info,
 {
 	int * uptime, i;
 	unsigned char *tmp_uptime;
+	void *tmp;
 
 	(void)ccm_str2bitmap(uptime_list, &tmp_uptime);
+	tmp = tmp_uptime;
 	/* Ugly workaround - FIXME, ccm_*bitmap* ought to take void **
 	 * parameters */
-	void *tmp = tmp_uptime;
 	uptime = tmp;
 
 	UPDATE_SET_NODECOUNT(update_table, info->ccm_nodeCount);
