@@ -1,0 +1,9 @@
+Makefile.in
+Makefile
+.deps
+.libs
+*.la
+*.lo
+.*.swp
+event_testclient
+eventd
