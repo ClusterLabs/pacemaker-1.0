@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.381 2005/03/21 17:51:57 gshi Exp $ */
+/* $Id: heartbeat.c,v 1.382 2005/03/21 18:05:06 gshi Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -1960,17 +1960,15 @@ HBDoMsg_T_ACKMSG(const char * type, struct node_info * fromnode,
 		int	minidx;
 		int	i;
 		
+		hist->lowest_acknode = NULL;
 		minidx = -1;
 		minseq = 0;
 		for (i = 0; i < config->nodecount; i++){
 			struct node_info* hip = &config->nodes[i];
 			
 			if (STRNCMP_CONST(hip->status,DEADSTATUS) == 0
-			||	STRNCMP_CONST(hip->status, INITSTATUS) == 0){
-				
-				if (hist->lowest_acknode == hip){
-					hist->lowest_acknode = NULL;
-				}
+			    || STRNCMP_CONST(hip->status, INITSTATUS) == 0
+			    || hip->nodetype == PINGNODE_I){
 				continue;
 			}
 
@@ -5192,6 +5190,10 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.382  2005/03/21 18:05:06  gshi
+ * fixed a bug reported by Jason Whiteaker:
+ * heartbeat shall not expect ACK from ping nodes
+ *
  * Revision 1.381  2005/03/21 17:51:57  gshi
  * disable flow control in heartbeat when running with old versions in other nodes
  *
