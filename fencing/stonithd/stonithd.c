@@ -1,4 +1,4 @@
-/* $Id: stonithd.c,v 1.24 2005/03/11 06:46:17 sunjd Exp $ */
+/* $Id: stonithd.c,v 1.25 2005/03/11 08:46:09 sunjd Exp $ */
 
 /* File: stonithd.c
  * Description: STONITH daemon for node fencing
@@ -1196,8 +1196,9 @@ stonithd_IPC_destroy_notify(gpointer data)
 		stonithd_log(LOG_DEBUG, "Delete a client from client_list "
 			"in stonithd_IPC_destroy_notify.");
 	} else {
-		stonithd_log(LOG_ERR, "stonithd_IPC_destroy_notify: Failed "
-			"to delete a client from client_list.");
+		stonithd_log(LOG_DEBUG, "stonithd_IPC_destroy_notify: Failed "
+			"to delete a client from client_list, maybe it has "
+			"been deleted in signoff function.");
 	}
 }
 
@@ -2951,6 +2952,9 @@ free_common_op_t(gpointer data)
 
 /* 
  * $Log: stonithd.c,v $
+ * Revision 1.25  2005/03/11 08:46:09  sunjd
+ * log message changes
+ *
  * Revision 1.24  2005/03/11 06:46:17  sunjd
  * degrade some log messages' loglevel
  *
