@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.374 2005/03/14 22:57:17 gshi Exp $ */
+/* $Id: heartbeat.c,v 1.375 2005/03/15 18:06:09 gshi Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -619,6 +619,28 @@ hb_setup_child(void)
 	cl_cpu_limit_disable();
 }
 
+static void
+change_logfile_ownership(void)
+{
+	struct passwd * entry;
+	const char* apiuser = HA_CCMUSER;
+
+	entry = getpwnam(apiuser);
+	if (entry == NULL){
+		cl_log(LOG_ERR, "change_logfile_ownship:"
+		       " entry for user %s not found", apiuser);
+		return;
+	}
+	
+	if (config->use_logfile){
+		chown(config->logfile, entry->pw_uid, entry->pw_gid);
+	}
+	if (config->use_dbgfile){
+		chown(config->dbgfile, entry->pw_uid, entry->pw_gid);
+	}
+	
+}
+
 /*
  *	This routine starts everything up and kicks off the heartbeat
  *	process.
@@ -647,6 +669,8 @@ initialize_heartbeat()
 	localdie = NULL;
 
 
+	change_logfile_ownership();
+	
 	if (timebasedgenno) {
 		getgen = GetTimeBasedGeneration;
 	}
@@ -5120,6 +5144,9 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.375  2005/03/15 18:06:09  gshi
+ * change the logfile/debugfile ownership to HA_CCMUSER(hacluster) in the initialize_heartbeat()
+ *
  * Revision 1.374  2005/03/14 22:57:17  gshi
  * typo
  *
