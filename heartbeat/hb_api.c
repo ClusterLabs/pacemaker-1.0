@@ -854,7 +854,7 @@ api_process_registration_msg(client_proc_t* client, struct ha_msg * msg)
 		return;
 	}
 	if (DEBUGDETAILS) {
-		ha_log(LOG_ERR
+		ha_log(LOG_DEBUG
 		,	"api_process_registration_msg(%s, %s, %s)"
 		,	msgtype, pid, (fromid==NULL ?"nullfrom" : fromid));
 	}
