@@ -1,4 +1,4 @@
-/* $Id: ha_msg.h,v 1.47 2005/01/26 13:57:06 andrew Exp $ */
+/* $Id: ha_msg.h,v 1.48 2005/01/28 09:10:15 gshi Exp $ */
 /*
  * Intracluster message object (struct ha_msg)
  *
@@ -230,6 +230,8 @@ int		ha_msg_adduuid(struct ha_msg * msg, const char * name,
 /* Add null-terminated name and a value to the message */
 int		ha_msg_add(struct ha_msg * msg
 		,	const char* name, const char* value);
+
+int		cl_msg_remove(struct ha_msg* msg, const char* name);
 
 /* Modify null-terminated name and a value to the message */
 int		cl_msg_modstring(struct ha_msg * msg,
