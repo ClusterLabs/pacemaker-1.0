@@ -1,4 +1,4 @@
-/* $Id: send_arp.c,v 1.8 2004/02/17 22:11:57 lars Exp $ */
+/* $Id: send_arp.c,v 1.9 2004/03/19 15:07:43 alan Exp $ */
 /* 
  * send_arp
  * 
@@ -48,7 +48,7 @@
 #	define	LTYPE	libnet_t
 #endif
 
-#define PIDDIR       HA_VARLIBDIR "/" PACKAGE "rsctmp/send_arp"
+#define PIDDIR       HA_VARLIBDIR "/" PACKAGE "/rsctmp/send_arp"
 #define PIDFILE_BASE PIDDIR "/send_arp-"
 
 static int send_arp(LTYPE* l, u_long ip, u_char *device, u_char mac[6]
@@ -545,6 +545,10 @@ write_pid_file(const char *pidfilename)
 
 /*
  * $Log: send_arp.c,v $
+ * Revision 1.9  2004/03/19 15:07:43  alan
+ * Put in a fix provided by Michael Dipper <md@LF.net>
+ * A '/' is missing from the pidfile pathname for send_arp.
+ *
  * Revision 1.8  2004/02/17 22:11:57  lars
  * Pet peeve removal: _Id et al now gone, replaced with consistent Id header.
  *
