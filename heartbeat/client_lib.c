@@ -685,7 +685,7 @@ get_nodelist(llc_private_t* pi)
 {
 	struct ha_msg*		request;
 	struct ha_msg*		reply;
-	const char *		result;
+	const char *		result = NULL;
 	struct stringlist*	sl;
 
 	if (!pi->SignedOn) {
