@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-my($VERSION)=(qw$Id: ldirectord,v 1.93 2004/11/09 03:58:42 horms Exp $)[2];
+my($VERSION)=(qw$Id: ldirectord,v 1.94 2005/01/14 08:46:57 horms Exp $)[2];
 
 ######################################################################
 # ldirectord                 http://www.vergenet.net/linux/ldirectord/
@@ -225,12 +225,13 @@ answers and in much longer intervalls a negotiating check is done.  Off
 means no checking will take place and no real or fallback servers will be
 activated. Default is I<negotiate>.
 
-B<service = ftp>|B<smtp>|B<http>|B<pop>|B<nntp>|B<imap>|B<ldap>|B<https>|B<dns>|B<none>
+B<service = ftp>|B<smtp>|B<http>|B<pop>|B<nntp>|B<imap>|B<ldap>|B<https>|B<dns>|B<mysql>|B<none>
 
 The type of service to monitor when using checktype=negotiate. None denotes
 a service that will not be monitored. If the port specfied for the virtual
-server is 21, 25, 80, 110, 119, 143, 389 or 443, the default B<ftp>,
-B<smtp>, B<http>, B<pop>, B<nntp>, B<imap>, B<ldap>or B<https> respectivly.
+server is 21, 25, 80, 110, 119, 143, 389, 443 or 3306, the default B<ftp>,
+B<smtp>, B<http>, B<pop>, B<nntp>, B<imap>, B<ldap>, B<https> or B<mysql> 
+respectivly.
 Otherwise the default service is B<none>.
 
 B<checkport = >I<n>
@@ -247,6 +248,10 @@ overridden by an optional per real-server based request-string.
 For a DNS check this should the name of an A record, or the address
 of a PTR record to look up.
 
+For a MySQL check, this should be a SQL query performed from the mysql 
+client prompt.  The data returned is not checked, only that the answer
+is one or more rows.  This is a required setting.
+
 B<receive = ">I<regexp to compare>B<">
 
 If the requested result contains this I<regexp to compare>, the real server
@@ -258,6 +263,8 @@ overridden by an optional per real-server based receive regexp.
 For a DNS check this should be any one the A record's addresses or
 any one of the PTR record's names.
 
+For a MySQL check, the receive setting is not used.
+
 B<virtualhost = ">I<hostname>B<">
 
 Used when using a negotiate check with HTTP or HTTPS. Sets the host header
@@ -268,16 +275,24 @@ As a last resort the IP address of the real server will be used.
 
 B<login = ">I<username>B<">
 
-Username to use to login to FTP, POP and IMAP servers. Default is anonymous
-for FTP. For POP and IMAP the default is the empty string, in which
-case authentication will not be attempted.
+Username to use to login to FTP, POP, IMAP and MySQL servers. Default is 
+anonymous for FTP. For POP, IMAP, and MySQL the default is the empty string,
+in which case authentication will not be attempted.
 
+For a MySQL check, the login username is a required setting.
 
 B<passwd = ">I<password>B<">
 
-Password to use to login to FTP, POP and IMAP servers. Default is 
+Password to use to login to FTP, POP, IMAP and MySQL servers. Default is 
 ldirectord\@<hostname>, where hostname is the environment variable 
 HOSTNAME evaluated at run time.
+
+For a MySQL check, the password is a required setting.
+
+B<database = ">I<databasename>B<">
+
+Only for MySQL servers, this is the database that the query (set by
+B<receive> above) will be performed against.  This is a required setting.
 
 
 B<scheduler => I<scheduler_name>
