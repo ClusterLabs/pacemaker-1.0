@@ -72,33 +72,63 @@ install-stamp:
 	cd $(DTMP)/etc/ && ln -s ha.d heartbeat
 	dh_movefiles --source=debian/tmp
 
-binary: build install
-	dh_testdir
-	dh_testroot
-	dh_installdebconf	
-	dh_installdocs
-	dh_installexamples
-#	dh_installmenu
-#	dh_installemacsen
-#	dh_installpam
-	dh_installinit -n -u 'defaults 20 32'
-#	dh_installcron
-	dh_installman
-#	dh_installinfo
-#	dh_undocumented
-	dh_installchangelogs `pwd`/debian/heartbeat/usr/share/doc/heartbeat/ChangeLog
-	dh_link
-	dh_strip
-	dh_compress
-	dh_fixperms
-#	dh_suidregister
-	dh_makeshlibs -V
-	dh_installdeb
-	dh_perl
-	dh_shlibdeps
-	dh_gencontrol
-	dh_md5sums
-	dh_builddeb
+binary-indep: build install
+	dh_testdir -i
+	dh_testroot -i
+	dh_installdebconf -i
+	dh_installdocs -i
+	dh_installexamples -i
+#	dh_installmenu -i
+#	dh_installemacsen -i
+#	dh_installpam -i
+	dh_installinit -i -n -u 'defaults 20 32'
+#	dh_installcron -i
+	dh_installman -i
+#	dh_installinfo -i
+#	dh_undocumented -i
+	dh_installchangelogs -i
+	dh_link -i
+	dh_strip -i
+	dh_compress -i
+	dh_fixperms -i
+#	dh_suidregister -i
+	dh_makeshlibs -i -V
+	dh_installdeb -i
+	dh_perl -i
+	dh_shlibdeps -i
+	dh_gencontrol -i
+	dh_md5sums -i
+	dh_builddeb -i
+
+binary-arch: build install
+	dh_testdir -a
+	dh_testroot -a
+	dh_installdebconf -a
+	dh_installdocs -a
+	dh_installexamples -a
+#	dh_installmenu -a
+#	dh_installemacsen -a
+#	dh_installpam -a
+	dh_installinit -a -n -u 'defaults 20 32'
+#	dh_installcron -a
+	dh_installman -a
+#	dh_installinfo -a
+#	dh_undocumented -a
+	dh_installchangelogs -a `pwd`/debian/heartbeat/usr/share/doc/heartbeat/ChangeLog
+	dh_link -a
+	dh_strip -a
+	dh_compress -a
+	dh_fixperms -a
+#	dh_suidregister -a
+	dh_makeshlibs -a -V
+	dh_installdeb -a
+	dh_perl -a
+	dh_shlibdeps -a
+	dh_gencontrol -a
+	dh_md5sums -a
+	dh_builddeb -a
+
+binary: binary-indep binary-arch
 	@echo "Any unpackaged files follow (.a and .la files omitted):"
 	@cd $(DTMP) && find ./ \! -type d | egrep -v \\\.l?a
 
@@ -106,4 +136,4 @@ checkbuild:
 	chmod u+x ./debian/dpkg-checkbuild
 	./debian/dpkg-checkbuild debian/control
 
-.PHONY: build clean binary install checkbuild
+.PHONY: build clean binary binary-indep binary-arch install checkbuild 

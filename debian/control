@@ -1,12 +1,13 @@
 Source: heartbeat
 Section: admin
-Priority: extra
+Priority: optional
 Maintainer: Simon Horman <horms@debian.org>
 Build-Depends: debhelper (>= 4.0.0), libsnmp5-dev | libsnmp4.2-dev, libglib1.2-dev, perl, net-tools, netkit-ping | iputils-ping, ssh, python, psmisc, modutils, libnet1-dev, raidtools2, iproute, libssl-dev, libtool, automake
 Standards-Version: 3.6.1
 
 Package: ldirectord
 Section: admin
+Priority: optional
 Architecture: all
 Depends: ${perl:Depends}, libdigest-md5-perl, libwww-perl, libnet-ssleay-perl, libmail-imapclient-perl, libnet-ldap-perl, ipvsadm
 Recommends: sysklogd|syslog-ng, logrotate
@@ -18,6 +19,7 @@ Description: Monitors virtual services provided by LVS
 
 Package: stonith
 Section: admin
+Priority: optional
 Architecture: any
 Depends: ${shlibs:Depends}
 Description: Interface for remotely powering down a node in the cluster
@@ -29,6 +31,7 @@ Description: Interface for remotely powering down a node in the cluster
 
 Package: libstonith0
 Section: libs
+Priority: optional
 Architecture: any
 Depends: ${shlibs:Depends}
 Description: Interface for remotely powering down a node in the cluster
@@ -36,6 +39,7 @@ Description: Interface for remotely powering down a node in the cluster
 
 Package: libstonith-dev
 Section: libdevel
+Priority: optional
 Architecture: any
 Depends: libstonith0 (= ${Source-Version})
 Description: Interface for remotely powering down a node in the cluster
@@ -43,6 +47,7 @@ Description: Interface for remotely powering down a node in the cluster
 
 Package: libpils0
 Section: libs
+Priority: optional
 Architecture: any
 Depends: ${shlibs:Depends}
 Description: Plugin and Interface Loading System
@@ -55,12 +60,15 @@ Description: Plugin and Interface Loading System
 
 Package: libpils-dev
 Section: devel
+Priority: optional
 Architecture: any
 Depends: libpils0 (= ${Source-Version})
 Description: Plugin and Interface Loading System - development files
  Headers and Libraries for developing modules to work with PILS
 
 Package: heartbeat
+Section: admin
+Priority: optional
 Architecture: any
 Depends: ${shlibs:Depends}, python, iproute, adduser, netkit-ping | iputils-ping
 Recommends: sysklogd | syslog-ng | system-log-daemon, logrotate
@@ -75,6 +83,8 @@ Description: Subsystem for High-Availability Linux
    * UDP/IP broadcast (ethernet, etc)
 
 Package: heartbeat-dev
+Section: devel
+Priority: optional
 Architecture: any
 Depends: heartbeat (= ${Source-Version}), libstonith-dev (= ${Source-Version})
 Description: Subsystem for High-Availability Linux - development files
