@@ -19,7 +19,10 @@
  USA
  */
 
+#define _GNU_SOURCE /* Needed for strn* functions */
+
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #define  YY_NO_UNPUT

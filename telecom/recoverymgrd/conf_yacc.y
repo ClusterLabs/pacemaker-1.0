@@ -20,6 +20,8 @@
  USA
 */
 
+#define _GNU_SOURCE /* Needed for strn* functions */
+
 #ifdef HAVE_CONFIG_H
 #include <config.h>
 #endif
