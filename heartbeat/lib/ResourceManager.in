@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-#	$Id: ResourceManager.in,v 1.25 2004/11/09 22:05:34 gshi Exp $
+#	$Id: ResourceManager.in,v 1.26 2004/11/10 18:37:07 alan Exp $
 #
 #	New haresources format:
 #
@@ -265,6 +265,8 @@ acquireresourcegroup() {
       : $j start succeeded
     else
       rc=$?
+      ha_log "ERROR: Subsequent resources not started due to previous error"
+      break
     fi
   done
   return $rc
@@ -429,10 +431,13 @@ esac
 exit $?
 #
 #	$Log: ResourceManager.in,v $
+#	Revision 1.26  2004/11/10 18:37:07  alan
+#	Put in code to stop starting resources when we get a failure.
+#
 #	Revision 1.25  2004/11/09 22:05:34  gshi
 #	the return value should be the return value of the exec funcion
 #	instead of 0
-#
+#	
 #	Revision 1.24  2004/11/08 20:48:36  gshi
 #	implemented logging daemon
 #	
