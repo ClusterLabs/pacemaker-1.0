@@ -1,4 +1,4 @@
-/* $Id: hb_resource.c,v 1.51 2004/03/30 19:38:48 alan Exp $ */
+/* $Id: hb_resource.c,v 1.52 2004/04/08 20:53:44 alan Exp $ */
 /*
  * hb_resource: Linux-HA heartbeat resource management code
  *
@@ -36,6 +36,7 @@
 #include <hb_api_core.h>
 #include <setproctitle.h>
 #include <clplumbing/cl_signal.h>
+#include <clplumbing/Gmain_timeout.h>
 #include <clplumbing/realtime.h>
 
 /**************************************************************************
@@ -2096,7 +2097,13 @@ PerformQueuedNotifyWorld(GHook* hook)
 	/* "m" is automatically destroyed when "hook" is */
 }
 
-	
+static gboolean
+StonithProc(gpointer gph)
+{
+	struct StonithProcHelper* h	= gph;
+	Initiate_Reset(config->stonith, h->nodename);
+	return FALSE;
+}
 
 /* Handle the death of a STONITH process */
 static void
@@ -2107,7 +2114,8 @@ StonithProcessDied(ProcTrack* p, int status, int signo, int exitcode, int waslog
 	if (signo != 0 || exitcode != 0) {
 		cl_log(LOG_ERR, "STONITH of %s failed.  Retrying..."
 		,	h->nodename);
-		Initiate_Reset(config->stonith, h->nodename);
+
+		Gmain_timeout_add(1000, StonithProc, h);
 	}else{
 		/* We need to finish taking over the other side's resources */
 		takeover_from_node(h->nodename);
@@ -2127,6 +2135,9 @@ StonithProcessName(ProcTrack* p)
 
 /*
  * $Log: hb_resource.c,v $
+ * Revision 1.52  2004/04/08 20:53:44  alan
+ * Put in code to make STONITH repeat after 1 second's delay - instead of continually...
+ *
  * Revision 1.51  2004/03/30 19:38:48  alan
  * Applied a fix for a bug.  Fix supplied by
  * Kurosawa Takahiro <kurosawa@valinux.co.jp>.
