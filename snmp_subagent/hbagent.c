@@ -148,7 +148,7 @@ static uint32_t IF_STATUS_VALUE[] =
 
 static RETSIGTYPE
 stop_server(int a) {
-    keep_running = 0;
+    	keep_running = 0;
 }
 
 uint32_t 
@@ -640,14 +640,16 @@ walk_iftable(void)
 int
 handle_heartbeat_msg(void)
 {
-	struct ha_msg *msg;
-	const char *type, *node;
+	struct ha_msg * msg;
+	const char * type, * node;
 
 	while (hb->llc_ops->msgready(hb)) {
 
 		msg = hb->llc_ops->readmsg(hb, 0);
-		if (!msg)
-		    	break;
+		if (!msg) {
+			cl_log(LOG_ERR, "read_hb_msg returned NULL");
+			return HA_FAIL;
+		}
 
 		type = ha_msg_value(msg, F_TYPE);
 		node = ha_msg_value(msg, F_ORIG);
@@ -1339,8 +1341,20 @@ main(int argc, char ** argv)
 	
 	hbagent_trap(0, myid);
 	snmp_shutdown("LHA-agent");
+
 	ha_free(myid);
 	free_storage();
+
+        if (hb->llc_ops->signoff(hb) != HA_OK) {
+                cl_log(LOG_ERR, "Cannot sign off from heartbeat.\n");
+                cl_log(LOG_ERR, "REASON: %s\n", hb->llc_ops->errmsg(hb));
+                exit(10);
+        }
+        if (hb->llc_ops->delete(hb) != HA_OK) {
+                cl_log(LOG_ERR, "Cannot delete API object.\n");
+                cl_log(LOG_ERR, "REASON: %s\n", hb->llc_ops->errmsg(hb));
+                exit(11);
+        }
 
 	return 0;
 }
