@@ -1,8 +1,5 @@
-#
-# linux-ha: Linux-HA heartbeat code
-#
-# Copyright (C) 2001 Michael Moerz
-#                    This instance created by Horms
+# Author: Sun Jiang Dong <sunjd@cn.ibm.com>
+# Copyright (c) 2004 International Business Machines
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -18,15 +15,6 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #
-MAINTAINERCLEANFILES    = Makefile.in ha_config.h
+MAINTAINERCLEANFILES = Makefile.in
 
-EXTRA_DIST = ha_config.h.in
-
-includedir=$(base_includedir)/heartbeat
-
-noinst_HEADERS	        = hb_api_core.h
-include_HEADERS	        = apphb.h apphb_notify.h HBauth.h HBcomm.h \
-			  ha_msg.h heartbeat.h hb_api.h ha_config.h \
-			  recoverymgr.h
-
-SUBDIRS                 = checkpointd clplumbing ocf pils saf stonith @LRM_DIR@
+SUBDIRS = lrmd admin test

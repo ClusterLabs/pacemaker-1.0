@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-#	$Id: ResourceManager.in,v 1.13 2004/03/25 10:17:28 lars Exp $
+#	$Id: ResourceManager.in,v 1.14 2004/03/26 05:00:47 alan Exp $
 #
 #	New haresources format:
 #
@@ -283,7 +283,9 @@ TakeGroup() {
 StatGroup() {
   result="FirstTime"
 
-  for resource in `ipresline $1`
+  set `ipresline $1`
+  shift
+  for resource
   do
     if
       we_own_resource $resource
@@ -379,10 +381,13 @@ esac
 
 #
 #	$Log: ResourceManager.in,v $
+#	Revision 1.14  2004/03/26 05:00:47  alan
+#	Added the Local Resource Manager from Zhen Huang and Jiang Dong Sun to CVS.
+#
 #	Revision 1.13  2004/03/25 10:17:28  lars
 #	Part I: Lower-case hostnames whereever they are coming in. STONITH
 #	module audit to follow.
-#
+#	
 #	Revision 1.12  2003/09/19 19:12:35  alan
 #	Changed resourcemanager to not give an ERROR instead of a WARNING if
 #	one of the resource scripts it starts gives a bad return code.
