@@ -1,4 +1,4 @@
-/* $Id: stonithd.c,v 1.20 2005/03/08 00:12:04 sunjd Exp $ */
+/* $Id: stonithd.c,v 1.21 2005/03/08 08:17:16 sunjd Exp $ */
 
 /* File: stonithd.c
  * Description: STONITH daemon for node fencing
@@ -273,7 +273,9 @@ static struct RA_operation_to_handler raop_handler[] = {
 static const char * M_STARTUP = "start up successfully.",
 		  * M_RUNNING = "is already running.",
 		  * M_QUIT    = "normally quit.",
-		  * M_ABORT   = "abnormally abort.";
+		  * M_ABORT   = "abnormally abort.",
+		  * M_STONITH_SUCCEED = "Succeeded to STONITH the node",
+		  * M_STONITH_FAIL    = "Failed to STONITH the node";
 
 static const char * simple_help_screen =
 "Usage: stonithd [-nskdh]\n"
@@ -1731,6 +1733,14 @@ stonithop_result_to_local_client( stonith_ops_t * st_op, gpointer data)
 		return ST_FAIL;
 	}
 
+	if (st_op->op_result == STONITH_SUCCEEDED ) {
+		stonithd_log(LOG_INFO, "%s %s: optype=%d.", M_STONITH_SUCCEED
+			     , st_op->node_name, st_op->optype);
+	} else {
+		stonithd_log(LOG_INFO, "%s %s: optype=%d.", M_STONITH_FAIL
+			     , st_op->node_name, st_op->optype);
+	}
+
 	stonithd_log(LOG_DEBUG, "stonith finished: optype=%d, node_name=%s", 
 		     st_op->optype, st_op->node_name);
 
@@ -2908,6 +2918,9 @@ free_common_op_t(gpointer data)
 
 /* 
  * $Log: stonithd.c,v $
+ * Revision 1.21  2005/03/08 08:17:16  sunjd
+ * add the STONITH result patterns for CTS
+ *
  * Revision 1.20  2005/03/08 00:12:04  sunjd
  * Add the support to the 'status' operation
  *
