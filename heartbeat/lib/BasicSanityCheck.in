@@ -555,7 +555,7 @@ IPCtest() {
 LRMTest() {
 	echo "Starting LRM tests" | tee -a $LOGFILE
 	$LRMTEST $1 >>$LOGFILE 2>&1
-	ret = $?
+	ret=$?
 	errcount=`expr $errcount + $ret`
 	if [ $ret == "0" ] 
 	then
