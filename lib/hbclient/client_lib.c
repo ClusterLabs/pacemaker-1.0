@@ -1,4 +1,4 @@
-/* $Id: client_lib.c,v 1.12 2004/10/05 20:20:49 gshi Exp $ */
+/* $Id: client_lib.c,v 1.13 2004/10/08 19:53:13 gshi Exp $ */
 /* 
  * client_lib: heartbeat API client side code
  *
@@ -92,6 +92,9 @@ struct orderQ {
 	struct ha_msg *		orderQ[MAXMSGHIST];
 	int			curr_index;
 	seqno_t			curr_seqno;
+	seqno_t			curr_gen;
+	seqno_t			first_msg_seq;
+	seqno_t			first_msg_gen;
 };
 
 typedef struct order_queue {
@@ -1525,35 +1528,82 @@ pop_orderQ(struct orderQ * q)
 	return NULL;
 }
 
+
+static int
+msg_oseq_compare(seqno_t oseq1, seqno_t gen1,  
+		 seqno_t oseq2,  seqno_t gen2)
+{
+	int ret;
+
+	if ( gen1 > gen2){
+		ret = 1;
+	} else if (gen1 < gen2){
+		ret = -1;
+	} else {
+		
+		if (oseq1 > oseq2){
+			ret = 1;
+		} else if (oseq1 < oseq2){
+			ret = -1;
+		} else{
+			ret =  0;
+		}		
+	}
+	
+	return ret;	
+
+}
+
 /*
  *	Process ordered message
  */
 static struct ha_msg *
-process_ordered_msg(struct orderQ* q, struct ha_msg* msg, seqno_t oseq)
+process_ordered_msg(struct orderQ* q, struct ha_msg* msg,
+		    seqno_t seq, seqno_t oseq, seqno_t gen)
 {
-	int	i;
+	int		i;
+	
+	/*any message with lower oseq than q->first_oseq
+	  will be dropped*/
+	if (q->first_msg_seq != 0 && msg_oseq_compare(q->first_msg_seq,
+						      q->first_msg_gen,
+						      seq, gen) > 0 ) {
+		return NULL;
+	}
+	
+	/*if this is the first packet, pop it*/
+	if ( q->first_msg_seq ==  0){
+		q->first_msg_seq = seq;
+		q->first_msg_gen = gen;
+		q->curr_gen = gen;
+		q->curr_seqno = oseq;
+		return msg;
+	}
+		
+	
+	if (gen > q->curr_gen || 
+	    (gen == q->curr_gen && oseq < q->curr_seqno )){
+		/* Sender restarted */
+		if (DEBUGORDER)
+			cl_log(LOG_DEBUG, "Sender restarted!");
 
-	if (oseq < q->curr_seqno || oseq - q->curr_seqno >= MAXMSGHIST){
-		if (oseq < q->curr_seqno){
-			/* Sender restarted */
-			if (DEBUGORDER)
-				cl_log(LOG_DEBUG, "Sender restarted!");
-
-			q->curr_seqno = 1;
-		}else {
-			/*
-			 * receives a very big sequence number, the
-			 * message is not reliable at this point
-			 */
-			if (DEBUGORDER) {
-				cl_log(LOG_DEBUG
-				,	"lost at least one unretrievable "
-					"packet! [%lx:%lx], force reset"
-				,	q->curr_seqno
-				,	oseq);
-			}
-			q->curr_seqno = oseq;
+		q->curr_seqno = 0;
+		q->curr_gen = gen;
+	}else if (gen == q->curr_gen &&
+		  oseq - q->curr_seqno >= MAXMSGHIST){
+		/*
+		 * receives a very big sequence number, the
+		 * message is not reliable at this point
+		 */
+		if (DEBUGORDER) {
+			cl_log(LOG_DEBUG
+			       ,	"lost at least one unretrievable "
+			       "packet! [%lx:%lx], force reset"
+			       ,	q->curr_seqno
+			       ,	oseq);
 		}
+		q->curr_seqno = oseq;
+
 		for (i = 0; i < MAXMSGHIST; i++) {
 			/* Clear order queue, msg obsoleted */
 			if (q->orderQ[i]){
@@ -1562,36 +1612,16 @@ process_ordered_msg(struct orderQ* q, struct ha_msg* msg, seqno_t oseq)
 			}
 		}
 		q->curr_index = 0;
+		
 	}
-	/* Put the new received packet in queue */
-	q->orderQ[(q->curr_index + oseq - q->curr_seqno) % MAXMSGHIST] = msg;
 
-	/* Should we send the first ordered packets? */
-	if (oseq == q->curr_seqno || (q->curr_seqno == 1 
-	&&	oseq - q->curr_seqno >= SEQGAP)){
-		if (oseq != q->curr_seqno){
-			/*
-			 * We probably missed first several packets
-			 * since the client on from_node restarted.
-			 */
-			if (DEBUGORDER) {
-				cl_log(LOG_DEBUG
-				,	"Finally lost SEQGAP pkts, discard, "
-					"oseq 0x%lx, currseq 0x%lx"
-				,	oseq, q->curr_seqno);
-			}
-			for (i = q->curr_index
-			;	q->orderQ[i] == NULL
-			;	i = (i+1) % MAXMSGHIST)
-				q->curr_seqno++;
-			q->curr_index = i;
-			if (DEBUGORDER) {
-				cl_log(LOG_DEBUG
-				,	"After discard, seqno 0x%lx, index %d"
-				,	q->curr_seqno
-				,	q->curr_index);
-			}
-		}
+
+
+	/* Put the new received packet in queue */
+	q->orderQ[(q->curr_index + oseq - q->curr_seqno -1 ) % MAXMSGHIST] = msg;
+	
+	/* if this is the packet we are expecting, pop it*/
+	if (msg_oseq_compare(q->curr_seqno + 1, q->curr_gen,oseq, gen) == 0 ){
 		return pop_orderQ(q);
 	}
 	return NULL;
@@ -1607,9 +1637,24 @@ process_hb_msg(llc_private_t* pi, struct ha_msg* msg)
 	const char *	from_node;
 	const char *	to_node;
 	seqno_t		oseq;
+	const char *	cgen;
+	seqno_t		gen;
 	order_queue_t * oq;
 	int		i;
-
+	seqno_t		seq;
+	const char*	cseq;
+	
+	if ((cseq = ha_msg_value(msg, F_SEQ)) == NULL
+	    ||	sscanf(cseq, "%lx", &seq) != 1){
+		return msg;
+	}
+	
+	
+	if ((cgen = ha_msg_value(msg, F_HBGENERATION)) == NULL
+	    ||	sscanf(cgen, "%lx", &gen) != 1){
+		return msg;
+	}
+	
 	if ((coseq = ha_msg_value(msg, F_ORDERSEQ)) != NULL
 	&&	sscanf(coseq, "%lx", &oseq) == 1){
 		/* find the order queue by from_node */
@@ -1634,9 +1679,17 @@ process_hb_msg(llc_private_t* pi, struct ha_msg* msg)
 			}
 			strncpy(oq->from_node, from_node, HOSTLENG);
 			oq->node.curr_index = 0;
-			oq->node.curr_seqno = 1;                    
+			oq->node.curr_seqno = 0;                    
+			oq->node.curr_gen = gen;
+			oq->node.first_msg_seq = 0;
+			oq->node.first_msg_gen = 0;
+			
 			oq->cluster.curr_index = 0;
-			oq->cluster.curr_seqno = 1;                    
+			oq->cluster.curr_seqno = 0;                    
+			oq->cluster.curr_gen = gen;
+			oq->cluster.first_msg_seq = 0;
+			oq->cluster.first_msg_gen = 0;
+		
 			for (i=0; i < MAXMSGHIST; i++){
 				oq->node.orderQ[i] = NULL;
 				oq->cluster.orderQ[i] = NULL;
@@ -1646,9 +1699,9 @@ process_hb_msg(llc_private_t* pi, struct ha_msg* msg)
 			pi->order_queue_head = oq;
 		}
 		if ((to_node = ha_msg_value(msg, F_TO)) == NULL)
-			return process_ordered_msg(&oq->cluster, msg, oseq);
+			return process_ordered_msg(&oq->cluster, msg, seq, oseq, gen);
 		else
-			return process_ordered_msg(&oq->node, msg, oseq);
+			return process_ordered_msg(&oq->node, msg, seq, oseq, gen);
 	}else
 		/* Simply return no order required msg */
 		return msg;

@@ -36,7 +36,7 @@
 GHashTable*			name_table = NULL;
 GHashTable*			uuid_table = NULL;
 
-static guint 
+guint 
 uuid_hash(gconstpointer key)
 {
 	const char *p = key;
@@ -52,7 +52,7 @@ uuid_hash(gconstpointer key)
 	return h;
 }
 
-static gint
+gint
 uuid_equal(gconstpointer v, gconstpointer v2)
 {
 	return (uuid_compare(v, v2) == 0 );

@@ -1,4 +1,4 @@
-/* $Id: hb_api_core.h,v 1.7 2004/07/07 19:07:15 gshi Exp $ */
+/* $Id: hb_api_core.h,v 1.8 2004/10/08 19:53:13 gshi Exp $ */
 /*
  * hb_api_core_h: Internal definitions and functions for the heartbeat API
  *
@@ -61,8 +61,8 @@ typedef struct client_process {
     GCHSource*	gsource;	/* return from G_main_add_fd() */
     int    	signal;		/* What signal to indicate new msgs */
     int   	desired_types;	/* A bit mask of desired message types*/
-	
 	struct client_process*  next;
+	GHashTable*	seq_snapshot_table;
 }client_proc_t;
 
 

@@ -1,4 +1,4 @@
-/* $Id: heartbeat.h,v 1.52 2004/10/08 18:37:07 alan Exp $ */
+/* $Id: heartbeat.h,v 1.53 2004/10/08 19:53:13 gshi Exp $ */
 /*
  * heartbeat.h: core definitions for the Linux-HA heartbeat program
  *
@@ -376,6 +376,8 @@ struct link *  iface_lookup_node(const char *);
 int	add_node(const char * value, int nodetype);
 void	SetParameterValue(const char * name, const char * value);
 
+gint		uuid_equal(gconstpointer v, gconstpointer v2);
+guint		uuid_hash(gconstpointer key);
 void		add_nametable(const char* nodename, char* value);
 void		add_uuidtable(const char* uuid, char* value);
 const char *	uuid2nodename(const uuid_t uuid);

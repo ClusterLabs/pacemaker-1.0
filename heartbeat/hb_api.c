@@ -1,4 +1,4 @@
-/* $Id: hb_api.c,v 1.113 2004/10/06 19:08:46 andrew Exp $ */
+/* $Id: hb_api.c,v 1.114 2004/10/08 19:53:13 gshi Exp $ */
 /*
  * hb_api: Server-side heartbeat API code
  *
@@ -171,8 +171,116 @@ static void	G_remove_client(gpointer Client);
 static gboolean	APIclients_input_dispatch(IPC_Channel* chan, gpointer udata);
 static void	api_process_registration_msg(client_proc_t*, struct ha_msg *);
 static gboolean	api_check_client_authorization(client_proc_t* client);
-
+static int	create_seq_snapshot_table(GHashTable** ptable) ;
+static void	destroy_seq_snapshot_table(GHashTable* table);
 extern GHashTable*	APIAuthorization;
+
+struct seq_snapshot{
+	seqno_t		generation;
+	seqno_t		last_seq;
+};
+
+
+
+static int
+should_msg_sendto_client(client_proc_t* client, struct ha_msg* msg)
+{
+	GHashTable* table;
+	struct node_info *	thisnode = NULL;	
+	const char *		from;
+	const char *		fromuuid;
+	size_t			uuidlen;
+	struct seq_snapshot*	snapshot;
+	const char *		cseq;
+	const char *		cgen;
+	seqno_t			seq;
+	seqno_t			gen;
+	int			ret = 0;
+
+	if (!client || !msg){
+		cl_log(LOG_ERR, "should_msg_sendto_client:"
+		       " invalid arguemts");
+		return 0;
+	}
+	
+
+
+	table = client->seq_snapshot_table;
+	if (!table){
+		return 1;
+	}
+
+
+	fromuuid = cl_get_binary(msg, F_ORIGUUID, &uuidlen);
+	if (!fromuuid){
+		return 1;
+	}
+	
+	snapshot= (struct seq_snapshot*) g_hash_table_lookup(table, fromuuid);
+	if (!snapshot){
+		return 1;
+	}
+
+	from = ha_msg_value(msg, F_ORIG);
+	cseq = ha_msg_value(msg, F_SEQ);
+	cgen = ha_msg_value(msg, F_HBGENERATION);
+	
+	if (!from || !cseq || !cgen){
+		cl_log(LOG_ERR, "should_msg_sendto_client: no from/seq/gen found");
+		return 0;
+	}
+	
+	sscanf(cseq, "%lx", &seq);
+	sscanf(cgen, "%lx", &gen);
+	
+	if (seq < 0 || gen < 0){
+		cl_log(LOG_ERR, "should_msg_sendto_client:"
+		       "wrong seq/gen number");
+		return 0;
+	}
+	
+	if ( gen > snapshot->generation ||
+	     (gen == snapshot->generation && seq >= snapshot->last_seq)){		
+		ret= 1;
+	}
+	
+	/*check if there is any retransmission going on
+	  if not, we can delete this item
+	*/
+	thisnode = lookup_tables(from, fromuuid);
+	if ( thisnode == NULL){
+		cl_log(LOG_ERR, "should_msg_sendto_client: node not found in table");
+	}else{
+		struct seqtrack *	t = &thisnode->track;
+		if (t->nmissing ==0){
+			
+			if (ANYDEBUG){
+				cl_log(LOG_DEBUG,
+				       "Removing one entry in seq snapshot hash table"
+				       "for node %s", thisnode->nodename);
+			}
+
+			if(!g_hash_table_remove(table, fromuuid)){
+				cl_log(LOG_ERR,"should_msg_sendto_client:"
+				       "g_hash_table_remove failed");
+				return HA_FAIL;
+			}
+			cl_free(snapshot);
+			
+			if (ANYDEBUG){
+				cl_log(LOG_DEBUG,
+				       "destroying the seq snapshot hash table");
+			}		
+			if ( g_hash_table_size(table) ==0){
+				g_hash_table_destroy(table);
+				client->seq_snapshot_table = NULL;
+			}
+		}		
+	}
+
+	return ret;
+}
+
 
 
 /*
@@ -188,7 +296,6 @@ extern GHashTable*	APIAuthorization;
  * oblivion by Alan Robertson <alanr@unix.sh>
  *
  */
-
 /*
  *	Monitor messages.  Pass them along to interested clients (if any)
  */
@@ -236,10 +343,18 @@ api_heartbeat_monitor(struct ha_msg *msg, int msgtype, const char *iface)
 		/* Is this one of the types of messages we're interested in? */
 
 		if ((msgtype & client->desired_types) != 0) {
-			api_send_client_msg(client, msg);
+
+			
+			if (should_msg_sendto_client(client, msg)){
+				api_send_client_msg(client, msg);
+			}else {
+				cl_log(LOG_WARNING, "out of order message dropped ");
+				cl_log_message(msg);
+			}
+			
 			if (client->removereason && !client->isindispatch) {
 				api_remove_client_pid(client->pid
-				,	client->removereason);
+						      ,	client->removereason);
 			}
 		}
 
@@ -324,6 +439,11 @@ api_signoff(const struct ha_msg* msg, struct ha_msg* resp
 			cl_log(LOG_DEBUG, "Signing client %ld off"
 			,	(long) client->pid);
 		}
+		if (client->seq_snapshot_table){
+			destroy_seq_snapshot_table(client->seq_snapshot_table);
+			client->seq_snapshot_table = NULL;
+		}
+		
 		client->removereason = API_SIGNOFF;
 		return I_API_IGN;
 }
@@ -966,6 +1086,103 @@ process_registerevent(IPC_Channel* chan,  gpointer user_data)
 	}
 }
 
+static void     
+destroy_pair(gpointer key, gpointer value, gpointer user_data)
+{
+	if(value){
+		cl_free(value);
+	}
+}
+static void
+destroy_seq_snapshot_table(GHashTable* table) 
+{
+	if (ANYDEBUG){
+		cl_log(LOG_DEBUG,
+		       "Destroying seq snapshot hash table");
+	}
+
+	if(table){
+		g_hash_table_foreach(table, destroy_pair, NULL);
+		g_hash_table_destroy(table);
+	}
+	return ;
+}
+static int
+create_seq_snapshot_table(GHashTable** ptable) 
+{
+	GHashTable*		table = NULL;
+	int			i;
+	
+	if ( !ptable){
+		cl_log(LOG_ERR, "create_seq_snapshot_table: "
+		       "nvalid arguments");
+		return HA_FAIL;		
+	}
+	
+	*ptable = NULL;
+	for (i = 0 ; i < config->nodecount; i++){
+	
+		struct node_info*	node = &config->nodes[i];
+		struct seqtrack*	t = &node->track;
+
+
+		if (uuid_is_null(node->uuid)){
+			continue;
+		}
+
+		if (t->nmissing > 0){
+			struct seq_snapshot* snapshot;
+			
+			snapshot = (struct seq_snapshot*) 
+				cl_malloc(sizeof(struct seq_snapshot));
+			
+			if (snapshot == NULL){
+				cl_log(LOG_ERR, "allocating memory for"
+				       " seq_snapshot failed");
+				return HA_FAIL;
+			}
+		
+			snapshot->last_seq = t->last_seq;
+			snapshot->generation = t->generation;
+
+			if (table == NULL){
+				if (ANYDEBUG){
+					cl_log(LOG_DEBUG,
+					       "Creating seq snapshot hash table");
+				}
+				table = g_hash_table_new(uuid_hash, uuid_equal);
+				if (table == NULL){
+					cl_log(LOG_ERR, "creating hashtable for"
+					       " seq_snapshot failed");
+					return HA_FAIL;
+				}
+			}
+			if (ANYDEBUG){
+				cl_log(LOG_DEBUG,
+				       "Creating one entry in seq snapshot hash table"
+				       "for node %s", node->nodename);
+			}
+			
+			g_hash_table_insert(table, node->uuid, snapshot);
+			
+		}else{
+			if (ANYDEBUG){
+				cl_log(LOG_DEBUG,
+				       "create_seq_snapshot_table:"
+				       "no missing packets found for "
+				       "node %s", node->nodename);
+			}	
+		}
+	}
+	
+	*ptable = table;
+	
+	return HA_OK;
+}	
+
+
+
+
 /*
  *	Register a new client.
  */
@@ -982,6 +1199,7 @@ api_process_registration_msg(client_proc_t* client, struct ha_msg * msg)
 	char		deadtime[64];
 	char		keepalive[64];
 	char		logfacility[64];
+
 
 	if (msg == NULL
 	||	(msgtype = ha_msg_value(msg, F_TYPE)) == NULL
@@ -1047,6 +1265,18 @@ api_process_registration_msg(client_proc_t* client, struct ha_msg * msg)
 		goto del_rsp_and_msg;
 		return;
 	}
+
+	/*everything goes well, 
+	  now create a table to record sequence/generation number
+	  for each node if necessary*/
+	
+	client->seq_snapshot_table = NULL;
+	if (create_seq_snapshot_table(&client->seq_snapshot_table) != HA_OK){
+		cl_log(LOG_ERR, "api_process_registration_msg: "
+		       " creating seq snapshot table failed");
+		return;
+	}
+
 	if (ha_msg_mod(resp, F_APIRESULT, API_OK) != HA_OK) {
 		cl_log(LOG_ERR
 		,	"api_process_registration_msg: cannot add field/4");
