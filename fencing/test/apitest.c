@@ -62,6 +62,7 @@ int main(int argc, char * argv[])
 	st_op = g_new(stonith_ops_t, 1);
 	st_op->optype = atoi(argv[1]);
 	st_op->node_name = g_strdup(argv[2]);
+	st_op->node_uuid = g_strdup(argv[2]);
 	st_op->timeout = atoi(argv[3]);
 	
 	if (ST_OK!=stonithd_set_stonith_ops_callback(stonith_ops_cb, argv[4])) {

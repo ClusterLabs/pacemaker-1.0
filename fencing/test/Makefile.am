@@ -31,7 +31,12 @@ COMMONLIBS	 =  $(top_builddir)/lib/clplumbing/libplumb.la   \
                     $(top_builddir)/lib/fencing/libstonithd.la	 \
 		    $(GLIBLIB)
 
-noinst_PROGRAMS =  apitest
 
+testdir			= 	$(libdir)/heartbeat/stonithdtest
+test_SCRIPTS		=	STONITHDBasicSanityCheck
+EXTRA_DIST		=	STONITHDBasicSanityCheck
+
+
+test_PROGRAMS =  apitest
 apitest_SOURCES =  apitest.c
 apitest_LDFLAGS = $(COMMONLIBS) -luuid
