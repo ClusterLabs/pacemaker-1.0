@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-my($VERSION)=(qw$Id: ldirectord,v 1.85 2004/04/13 11:47:50 horms Exp $)[2];
+my($VERSION)=(qw$Id: ldirectord,v 1.86 2004/05/07 08:30:23 horms Exp $)[2];
 
 ######################################################################
 # ldirectord                 http://www.vergenet.net/linux/ldirectord/
@@ -2046,7 +2046,7 @@ sub service_set()
 # _remove_service
 # Remove a real server by either making it quiescent or deleteing it
 # Should be called by _service_down or fallback_off
-# I.e. If you want to change the state of a real server call set_service.
+# I.e. If you want to change the state of a real server call service_set.
 #      If you call this function directly then ldirectord will lose track
 #      of the state of real servers.
 # If the real server exists (which it should) make it quiescent or
@@ -2129,7 +2129,7 @@ sub _remove_service {
 # _restore_service
 # Make a retore a real server. The opposite of _quiescent_server.
 # Should be called by _service_up or fallback_on
-# I.e. If you want to change the state of a real server call set_service.
+# I.e. If you want to change the state of a real server call service_set.
 #      If you call this function directly then ldirectord will lose track
 #      of the state of real servers.
 # If the real server exists (which it should) make it quiescent. If it
@@ -2184,8 +2184,8 @@ sub _restore_service {
 
 # _service_up
 # Bring a real service up if it is down
-# Should be called by set_service only
-# I.e. If you want to change the state of a real server call set_service.
+# Should be called by service_set only
+# I.e. If you want to change the state of a real server call service_set.
 #      If you call this function directly then ldirectord will lose track
 #      of the state of real servers.
 # pre: v: reference to virtual service to with the real server belongs
@@ -2210,8 +2210,8 @@ sub _service_up
 
 # _service_down
 # Bring a real service down if it is up
-# Should be called by set_service only
-# I.e. if you want to change the state of a real server call set_service.
+# Should be called by service_set only
+# I.e. if you want to change the state of a real server call service_set.
 #      If you call this function directly then ldirectord will lose track
 #      of the state of real servers.
 # pre: v: reference to virtual service to with the real server belongs
