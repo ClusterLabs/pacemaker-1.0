@@ -22,7 +22,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <signal.h>
+#include <strings.h>
 #include <errno.h>
+#include <sys/types.h>
+#include <sys/time.h>
+#include <unistd.h>
 #include <saf/ais.h>
 
 #define MAX_ITEMS	5 /* for a max 5-nodes cluster */
