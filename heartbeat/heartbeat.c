@@ -1,4 +1,4 @@
-const static char * _heartbeat_c_Id = "$Id: heartbeat.c,v 1.274 2003/08/06 13:48:46 horms Exp $";
+const static char * _heartbeat_c_Id = "$Id: heartbeat.c,v 1.275 2003/09/19 19:21:14 alan Exp $";
 
 /*
  * heartbeat: Linux-HA heartbeat code
@@ -1839,7 +1839,7 @@ process_clustermsg(struct ha_msg* msg, struct link* lnk)
 				,	seqno, msgtime);
 			}
 			
-			notify_world(msg, thisnode->status);
+			QueueRemoteRscReq(PerformQueuedNotifyWorld, msg);
 			strncpy(thisnode->status, status
 			, 	sizeof(thisnode->status));
 			heartbeat_monitor(msg, action, iface);
@@ -1929,11 +1929,11 @@ process_clustermsg(struct ha_msg* msg, struct link* lnk)
 			return;
 		}
 		heartbeat_monitor(msg, action, iface);
-		notify_world(msg, thisnode->status);
+		QueueRemoteRscReq(PerformQueuedNotifyWorld, msg);
 	}else{
 		/* None of the above... */
 		heartbeat_monitor(msg, action, iface);
-		notify_world(msg, thisnode->status);
+		QueueRemoteRscReq(PerformQueuedNotifyWorld, msg);
 		if (heartbeat_comm_state != COMM_LINKSUP) {
 			check_comm_isup();
 		}
@@ -2630,7 +2630,7 @@ change_link_status(struct node_info *hip, struct link *lnk
 		return;
 	}
 	heartbeat_monitor(lmsg, KEEPIT, "<internal>");
-	notify_world(lmsg, NULL);
+	QueueRemoteRscReq(PerformQueuedNotifyWorld, lmsg);
 	ha_msg_del(lmsg); lmsg = NULL;
 }
 
@@ -4121,6 +4121,10 @@ get_localnodeinfo(void)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.275  2003/09/19 19:21:14  alan
+ * Fixed the bug where we ran resource scripts twice.
+ * The fix consisted of causing the resource requests to be queued, so that they aren't run simultaneously.
+ *
  * Revision 1.274  2003/08/06 13:48:46  horms
  * Allow respawn programmes to have arguments. Diarmuid O'Neill + Horms
  *

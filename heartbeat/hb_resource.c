@@ -104,7 +104,8 @@ struct hb_const_string {
 #define	HB_RSCMGMTPROC(p, s)					\
 	{							\
 	 	static struct hb_const_string cstr = {(s)};	\
-		NewTrackedProc((p), 1, PT_LOGNORMAL		\
+		NewTrackedProc((p), 1				\
+		,	(debug ? PT_LOGVERBOSE : PT_LOGNORMAL)	\
 		,	&cstr, &hb_rsc_RscMgmtProcessTrackOps);	\
 	}
 
@@ -979,6 +980,11 @@ takeover_from_node(const char * nodename)
 			/* case 1 - part 1 */
 			/* part 2 is done by the mach_down script... */
 		}
+		/* This is here because we might not have gotten our
+		 * resources yet - waiting for the other side to give them
+		 * up.  Fortunately, req_our_resources() won't cause a
+		 * race condition because it queues its work.
+		 */
 		req_our_resources(TRUE);
 		/* req_our_resources turns on the HB_LOCAL_RSC bit */
 
@@ -1777,6 +1783,12 @@ static void
 RscMgmtProcessRegistered(ProcTrack* p)
 {
 	ResourceMgmt_child_count ++;
+	if (ANYDEBUG) {
+		ha_log(LOG_DEBUG, "Process [%s] started pid %d"
+		,	p->ops->proctype(p)
+		,	p->pid
+		);
+	}
 }
 /* Handle the death of a resource management process */
 static void
@@ -1849,17 +1861,30 @@ InitRemoteRscReqQueue(void)
 void
 QueueRemoteRscReq(RemoteRscReqFunc func, struct ha_msg* msg)
 {
-	GHook*	hook;
+	GHook*		hook;
+	const char *	fp;
 
 	InitRemoteRscReqQueue();
 	hook = g_hook_alloc(&RemoteRscReqQueue);
 
+	fp  = ha_msg_value(msg, F_TYPE);
+
 	if (ANYDEBUG) {
 		ha_log(LOG_DEBUG
-		,	"Queueing remote resource request (hook = 0x%p)"
-		,	(void *)hook);
+		,	"Queueing remote resource request (hook = 0x%p) %s"
+		,	(void *)hook, fp);
 		ha_log_message(msg);
 	}
+
+	if (fp == NULL || !FilterNotifications(fp)) {
+		if (ANYDEBUG) {
+			ha_log(LOG_DEBUG
+			,	"%s: child process unneeded.", fp);
+			ha_log_message(msg);
+		}
+		return;
+	}
+
 	hook->func = func;
 	hook->data = ha_msg_copy(msg);
 	hook->destroy = (GDestroyNotify)(ha_msg_del);
@@ -1876,6 +1901,8 @@ StartNextRemoteRscReq(void)
 
 	/* We can only run one of these at a time... */
 	if (ResourceMgmt_child_count != 0) {
+		ha_log(LOG_DEBUG, "StartNextRemoteRscReq(): child count %d"
+		,	ResourceMgmt_child_count);
 		return;
 	}
 
@@ -1957,6 +1984,10 @@ StonithProcessName(ProcTrack* p)
 
 /*
  * $Log: hb_resource.c,v $
+ * Revision 1.33  2003/09/19 19:21:14  alan
+ * Fixed the bug where we ran resource scripts twice.
+ * The fix consisted of causing the resource requests to be queued, so that they aren't run simultaneously.
+ *
  * Revision 1.32  2003/07/14 04:12:12  alan
  * Changed heartbeat so that the resource acquisition messages come out at
  * the right time.

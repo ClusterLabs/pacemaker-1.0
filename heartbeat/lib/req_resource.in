@@ -60,15 +60,25 @@ case $HA_NICEFAILBACK in
   yes)	HA_DONTASK=yes;;
 esac
 
+CMD=ip-request
 case $HA_DONTASK in
   yes)
-	$HA_BIN/ResourceManager status "$RESOURCE" ||
-	$HA_BIN/ResourceManager takegroup "$RESOURCE";;
+	#
+	#	Pretend the current owner gave it up peacefully
+	#
+	ha_clustermsg <<-!MSG
+		t=$CMD-resp
+		dest=$HA_CURHOST
+		ipaddr=$RESOURCE
+		weown=yes
+		ok=OK
+!MSG
+	;;
 
   *)
 	: "Ask Nicely ;-)"
 	ha_clustermsg <<-!MSG
-	t=ip-request
+	t=$CMD
 	ipaddr=$RESOURCE
 !MSG
 
