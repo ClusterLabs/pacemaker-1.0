@@ -34,5 +34,5 @@ librecoverymgr_la_SOURCES	= 		\
 				recoverymgr.c	
 
 librecoverymgr_la_CFLAGS	= -DHA_VARLIBDIR='"@HA_VARLIBDIR@"'
-librecoverymgr_la_LDFLAGS	= -version-info 0:0:0 
+librecoverymgr_la_LDFLAGS	= -version-info 1:0:0 
 
