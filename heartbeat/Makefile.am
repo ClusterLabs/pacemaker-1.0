@@ -90,6 +90,7 @@ EXTRA_DIST              = $(ha_DATA) $(ha_SCRIPTS)
 # additional installations not covered normally
 install-exec-local:
 	$(mkinstalldirs) $(DESTDIR)$(havarrundir) 
+	$(mkinstalldirs) $(DESTDIR)$(havarlibdir)
 	-chmod 750 $(DESTDIR)$(havarrundir)
 	test -p $(DESTDIR)$(hafifo) || mkfifo -m 600 $(DESTDIR)$(hafifo)
 
