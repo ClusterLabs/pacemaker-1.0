@@ -1919,7 +1919,7 @@ QueueRemoteRscReq(RemoteRscReqFunc func, struct ha_msg* msg)
 
 	fp  = ha_msg_value(msg, F_TYPE);
 
-	if (ANYDEBUG) {
+	if (DEBUGDETAILS) {
 		ha_log(LOG_DEBUG
 		,	"Queueing remote resource request (hook = 0x%p) %s"
 		,	(void *)hook, fp);
@@ -1927,7 +1927,7 @@ QueueRemoteRscReq(RemoteRscReqFunc func, struct ha_msg* msg)
 	}
 
 	if (fp == NULL || !FilterNotifications(fp)) {
-		if (ANYDEBUG) {
+		if (DEBUGDETAILS) {
 			ha_log(LOG_DEBUG
 			,	"%s: child process unneeded.", fp);
 			ha_log_message(msg);
@@ -1995,7 +1995,7 @@ PerformQueuedNotifyWorld(GHook* hook)
 	 * We have been asked to run a notify_world() which
 	 * we would like to have done earlier...
 	 */
-	if (ANYDEBUG) {
+	if (DEBUGDETAILS) {
 		ha_log(LOG_DEBUG, "PerformQueuedNotifyWorld() msg follows");
 		ha_log_message(m);
 	}
@@ -2034,6 +2034,10 @@ StonithProcessName(ProcTrack* p)
 
 /*
  * $Log: hb_resource.c,v $
+ * Revision 1.43  2004/02/10 19:16:24  alan
+ * Print fewer messages with minimum level of debug turned on.
+ * This will help realtime performance when running tests.
+ *
  * Revision 1.42  2004/02/03 07:10:51  alan
  * Put in yet another early shutdown special case.
  * I can't seem to hang it any more this way in hundreds of attempts :-)
