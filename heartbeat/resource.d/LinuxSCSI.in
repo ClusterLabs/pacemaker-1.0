@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $Id: LinuxSCSI.in,v 1.5 2002/03/14 15:30:06 alan Exp $
+# $Id: LinuxSCSI.in,v 1.6 2004/04/16 17:15:06 alan Exp $
 # 
 # LinuxSCSI
 #
@@ -92,7 +92,7 @@ usage() {
 	keep in the volumes.  If you don't use a reasonable volume manager,
 	then you'll have to mount by UUID.
 
-	$Id: LinuxSCSI.in,v 1.5 2002/03/14 15:30:06 alan Exp $
+	$Id: LinuxSCSI.in,v 1.6 2004/04/16 17:15:06 alan Exp $
 	!
   exit 1
 }
@@ -161,6 +161,14 @@ scsi_stop() {
   parseinst "$1"
   [ $target = error ] && exit 1
   echo "scsi-remove-single-device $host $channel $target $lun" >>$PROCSCSI
+  if
+    scsi_status "$1"
+  then
+    echo "ERROR: SCSI device $1 still active!"
+    return 1
+  else
+    return 0
+  fi
 }
 
 
