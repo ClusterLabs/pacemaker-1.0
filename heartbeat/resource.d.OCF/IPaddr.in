@@ -625,7 +625,7 @@ ip_monitor() {
   return 1
 }
 
-meta-data() {
+meta_data() {
   echo "
 <?xml version=\"1.0\"?>
 <!DOCTYPE resource-agent SYSTEM \"ra-api-1.dtd\">
@@ -653,6 +653,7 @@ meta-data() {
   </special>
 </resource-agent>
 "
+}
 
 usage() {
   echo $USAGE >&2
@@ -692,7 +693,8 @@ then
 fi
 
 if 
-  [ $OCF_RA_VERSION_MAJOR -ne 1 ]  || [ $OCF_RA_VERSION_MINOR -ne 0 ]
+  ( [ X$OCF_RA_VERSION_MAJOR != "X" ] && [ $OCF_RA_VERSION_MAJOR -ne 1 ] )  ||
+  ( [ X$OCF_RA_VERSION_MINOR != "X" ] && [ $OCF_RA_VERSION_MINOR -ne 0 ] )
 then
   echo incompatible API version
   exit
@@ -703,7 +705,7 @@ case $1 in
   stop)		ip_stop $OCF_RESKEY_ipaddr;;
   status)	ip_status $OCF_RESKEY_ipaddr;;
   monitor)	ip_monitor $OCF_RESKEY_ipaddr;;
-  meta-data)	meta-data
+  meta-data)	meta_data;;
   *)		usage
  		exit 1
 		;;
