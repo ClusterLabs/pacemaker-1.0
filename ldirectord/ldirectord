@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-my($VERSION)=(qw$Id: ldirectord,v 1.72 2003/09/08 04:08:18 horms Exp $)[2];
+my($VERSION)=(qw$Id: ldirectord,v 1.73 2003/09/24 05:50:00 horms Exp $)[2];
 
 ######################################################################
 # ldirectord                 http://www.vergenet.net/linux/ldirectord/
@@ -102,9 +102,9 @@ service must follow this line immediately and be indented.
 
 B<checktimeout = >I<n>
 
-Defines the number of second until a real server is declared dead. Default
-is 5 seconds. If defined in virtual server section then the global value
-is overridden.
+Timeout in seconds for connect checks. If the timeout is exceeded then the
+real server is declared dead.  Default is 5 seconds. If defined in virtual
+server section then the global value is overridden.
 
 B<connecttimeout = >I<n>
 
@@ -112,9 +112,9 @@ Not used.
 
 B<negotiatetimeout = >I<n>
 
-Defines the number of seconds to wait for TCP/IP timeouts. Default is
-defined by the operating system. If defined in virtual server section
-then the global value is overridden.
+Timeout in seconds for negotiate checks. Default is defined by the
+operating system. If defined in virtual server section then the global
+value is overridden.
 
 B<checkinterval = >I<n>
 
