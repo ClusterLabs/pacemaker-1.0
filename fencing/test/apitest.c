@@ -21,50 +21,64 @@
 #include <portability.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdarg.h>
 #include <unistd.h>
-#include <signal.h>
-#include <sys/types.h>
-#include <sys/wait.h>
 #ifdef HAVE_GETOPT_H
 #include <getopt.h>
 #endif /* HAVE_GETOPT_H */
-#include <errno.h>
 #include <glib.h>
 #include <clplumbing/cl_log.h>
 #include <clplumbing/uids.h>
 #include <fencing/stonithd_api.h>
 
+static int g_rc = 0;
+
 static void
 stonith_ops_cb(stonith_ops_t * op, void * private_data)
 {
-	printf("optype=%d, node_name=%s, result=%d\n",op->optype, op->node_name,
-		op->op_result);
+	printf("optype=%d, node_name=%s, result=%d, node_list=%s\n",op->optype,
+		op->node_name, op->op_result, (char *)op->node_list);
+	if (atoi(private_data) != op->op_result) {
+		g_rc = -1;
+	}
 }
 
-int main(void)
+int main(int argc, char * argv[])
 {	
-	cl_log_set_entity("STONITHD_API_TEST");
-	cl_log_set_facility(LOG_USER);
-	cl_log_enable_stderr(TRUE);
-	stonithd_signon("test");
-	//sleep(1);
-
 	stonith_ops_t * st_op;
 
+	cl_log_set_entity("STDAPI_TEST");
+	cl_log_set_facility(LOG_USER);
+	cl_log_enable_stderr(TRUE);
+	if (argc != 5) {
+		cl_log(LOG_ERR, "parameter error.");
+		printf("%s optype target_node timeout expect_value.\n", argv[0]);
+		return -1;
+	}
+
+	if (ST_OK != stonithd_signon("apitest")) {
+		return -1;
+	}
+
 	st_op = g_new(stonith_ops_t, 1);
-	st_op->optype = 1;
-	st_op->node_name = g_strdup("hadev1");
-	st_op->timeout = 10000;
+	st_op->optype = atoi(argv[1]);
+	st_op->node_name = g_strdup(argv[2]);
+	st_op->timeout = atoi(argv[3]);
 	
-	stonithd_set_stonith_ops_callback(stonith_ops_cb, NULL);
+	if (ST_OK!=stonithd_set_stonith_ops_callback(stonith_ops_cb, argv[4])) {
+		stonithd_signoff();
+		return -1;
+	}
 	if (ST_OK == stonithd_node_fence( st_op )) {
 		while (stonithd_op_result_ready() != TRUE) {
 			;
 		}
 
 		cl_log(LOG_DEBUG, "Will call stonithd_receive_ops_result.");
-		stonithd_receive_ops_result(TRUE);
+		if (ST_OK!=stonithd_receive_ops_result(TRUE)) {
+			return -1;
+		}
+	} else {
+		g_rc = -1;
 	}
 
 	/*
@@ -77,7 +91,9 @@ int main(void)
 
 	stonithd_virtual_stonithRA_ops( stra_op, &call_id );
 	*/
-	stonithd_signoff();
+	if (ST_OK!=stonithd_signoff()) {
+		g_rc = -1;
+	}
 
-	return 0;
+	return g_rc;
 }
