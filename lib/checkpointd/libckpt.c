@@ -1,4 +1,4 @@
-/* $Id: libckpt.c,v 1.14 2004/08/29 03:01:13 msoffen Exp $ */
+/* $Id: libckpt.c,v 1.15 2004/10/21 06:48:07 deng.pan Exp $ */
 /* 
  * ckptlib.c: data checkpoint API library
  *
@@ -2744,7 +2744,8 @@ saCkptSectionIteratorNext(
 		sectionIterator);
 	if (sectionList == NULL) {
 		/* FIXME: should be SA_ERR_NO_SECTIONS */
-		return SA_ERR_LIBRARY;
+		/* return SA_ERR_LIBRARY; */
+		return SA_ERR_NOT_EXIST; 
 	}
 
 	secDescriptor = (SaCkptSectionDescriptorT*)sectionList->data;
