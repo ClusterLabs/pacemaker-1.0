@@ -1,4 +1,4 @@
-/* $Id: client_lib.c,v 1.22 2005/02/22 06:59:15 gshi Exp $ */
+/* $Id: client_lib.c,v 1.23 2005/02/22 18:56:10 gshi Exp $ */
 /* 
  * client_lib: heartbeat API client side code
  *
@@ -2819,7 +2819,7 @@ chan_is_connected(ll_cluster_t* lcl)
 		return FALSE;		
 	}
 	
-	if(lcl->ll_cluster_private){
+	if(lcl->ll_cluster_private == NULL){
 		cl_log(LOG_ERR, "Invalid argument, "
 		       "lcl->llc_cluster_private is NULL");
 		return FALSE;
