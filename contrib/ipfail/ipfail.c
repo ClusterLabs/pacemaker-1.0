@@ -1,4 +1,4 @@
-/* $Id: ipfail.c,v 1.34 2004/05/11 04:11:28 kevin Exp $ */
+/* $Id: ipfail.c,v 1.35 2004/05/15 09:28:07 andrew Exp $ */
 /* ipfail: IP Failover plugin for Linux-HA
  *
  * Copyright (C) 2002-2004 Kevin Dwyer <kevin@pheared.net>
@@ -184,9 +184,10 @@ main(int argc, char **argv)
 int
 is_stable(ll_cluster_t *hb)
 {
+#ifndef WITH_CRM
 	if (!strcmp(hb->llc_ops->get_resources(hb), "transition"))
 		return 0;
-
+#endif	
 	return 1;
 }
 

@@ -1,4 +1,4 @@
-/* $Id: hb_resource.c,v 1.54 2004/04/27 18:29:03 gshi Exp $ */
+/* $Id: hb_resource.c,v 1.55 2004/05/15 09:28:08 andrew Exp $ */
 /*
  * hb_resource: Linux-HA heartbeat resource management code
  *
@@ -76,6 +76,7 @@
  **************************************************************************/
 
 extern struct node_info *	curnode;
+#ifndef WITH_CRM
 int				DoManageResources = TRUE;
 int 				nice_failback = FALSE;
 int 				auto_failback = FALSE;
@@ -115,6 +116,7 @@ struct hb_const_string {
 		,	(debug ? PT_LOGVERBOSE : PT_LOGNORMAL)	\
 		,	&cstr, &hb_rsc_RscMgmtProcessTrackOps);	\
 	}
+#endif
 
 
 /*
@@ -125,12 +127,15 @@ struct StonithProcHelper {
 };
 extern ProcTrack_ops ManagedChildTrackOps;
 
+#ifndef WITH_CRM
 static int	ResourceMgmt_child_count = 0;
 
 static void	StartNextRemoteRscReq(void);
 static void	InitRemoteRscReqQueue(void);
 static int	send_standby_msg(enum standby state);
+#endif
 static void 	send_stonith_msg(const char *, const char *);
+#ifndef WITH_CRM
 static void	go_standby(enum standby who, int resourceset);
 static int	send_local_starting(void);
 
@@ -138,6 +143,7 @@ static	void	RscMgmtProcessRegistered(ProcTrack* p);
 static	void	RscMgmtProcessDied(ProcTrack* p, int status, int signo
 ,				int exitcode, int waslogged);
 static	const char * RscMgmtProcessName(ProcTrack* p);
+#endif
 
 static	void StonithProcessDied(ProcTrack* p, int status, int signo
 ,		int exitcode, int waslogged);
@@ -146,6 +152,7 @@ static	void StonithStatProcessDied(ProcTrack* p, int status, int signo
 ,		int exitcode, int waslogged);
 static	const char * StonithStatProcessName(ProcTrack* p);
 void	Initiate_Reset(Stonith* s, const char * nodename, gboolean doreset);
+#ifndef WITH_CRM
 static int FilterNotifications(const char * msgtype);
 static int countbystatus(const char * status, int matchornot);
 static gboolean hb_rsc_isstable(void);
@@ -156,6 +163,7 @@ ProcTrack_ops hb_rsc_RscMgmtProcessTrackOps = {
 	RscMgmtProcessRegistered,
 	RscMgmtProcessName
 };
+#endif
 
 static ProcTrack_ops StonithProcessTrackOps = {
 	StonithProcessDied,
@@ -169,6 +177,7 @@ static ProcTrack_ops StonithStatProcessTrackOps = {
 	StonithStatProcessName
 };
 
+#ifndef WITH_CRM
 static const char *	rsc_msg[] =	{HB_NO_RESOURCES, HB_LOCAL_RESOURCES
 ,	HB_FOREIGN_RESOURCES, HB_ALL_RESOURCES};
 
@@ -203,6 +212,7 @@ CreateInitialFilter(void)
 	}
 	closedir(dp);
 }
+
 static int
 FilterNotifications(const char * msgtype)
 {
@@ -617,6 +627,7 @@ AnnounceTakeover(const char * reason)
 	cl_log(LOG_INFO, INITMSG " (%s)", reason);
 	init_takeover_announced = TRUE;
 }
+
 void
 process_resources(const char * type, struct ha_msg* msg
 ,	struct node_info * thisnode)
@@ -1002,7 +1013,6 @@ hb_send_resources_held(int stable, const char * comment)
 	return(rc);
 }
 
-
 /* Send the starting msg out to the cluster */
 static int
 send_local_starting(void)
@@ -1034,6 +1044,7 @@ send_local_starting(void)
 	resourcestate = HB_R_STARTING;
 	return(rc);
 }
+
 /* We take all resources over from a given node */
 void
 takeover_from_node(const char * nodename)
@@ -1287,6 +1298,7 @@ send_standby_msg(enum standby state)
 
 	return(rc);
 }
+#endif
 
 void
 send_stonith_msg(const char *nodename, const char *result)
@@ -1319,7 +1331,7 @@ send_stonith_msg(const char *nodename, const char *result)
 #define	STANDBY_INIT_TO_MS	10000L		/* ms timeout for initial reply */
 #define	HB_STANDBY_RSC_TO_MS	60L*(60L*1000L)	/* resource handling timeout */
 						/* (An hour in ms)*/
-
+#ifndef WITH_CRM
 void
 ask_for_resources(struct ha_msg *msg)
 {
@@ -1555,7 +1567,6 @@ countbystatus(const char * status, int matchornot)
 	}
 	return count;
 }
-
 
 static void
 go_standby(enum standby who, int resourceset) /* Which resources to give up */
@@ -1853,7 +1864,7 @@ hb_giveup_resources(void)
 
 	exit(0);
 }
-
+#endif
 
 void
 Initiate_Reset(Stonith* s, const char * nodename, gboolean doreset)
@@ -1944,7 +1955,7 @@ Initiate_Reset(Stonith* s, const char * nodename, gboolean doreset)
 	exit (exitcode);
 }
 
-
+#ifndef WITH_CRM
 static void
 RscMgmtProcessRegistered(ProcTrack* p)
 {
@@ -2110,7 +2121,6 @@ StartNextRemoteRscReq(void)
 	g_hook_destroy_link(&RemoteRscReqQueue, hook);
 }
 
-
 /*
  * Perform a queued notify_world() call
  *
@@ -2133,6 +2143,7 @@ PerformQueuedNotifyWorld(GHook* hook)
 	notify_world(m, curnode->status);
 	/* "m" is automatically destroyed when "hook" is */
 }
+#endif
 
 static gboolean
 StonithProc(gpointer gph)
@@ -2153,9 +2164,11 @@ StonithProcessDied(ProcTrack* p, int status, int signo, int exitcode, int waslog
 		,	h->nodename);
 
 		Gmain_timeout_add(5*1000, StonithProc, h);
+#ifndef WITH_CRM
 	}else{
 		/* We need to finish taking over the other side's resources */
 		takeover_from_node(h->nodename);
+#endif
 	}
 	g_free(h->nodename);	h->nodename=NULL;
 	g_free(p->privatedata);	p->privatedata = NULL;
@@ -2201,6 +2214,11 @@ StonithStatProcessName(ProcTrack* p)
 
 /*
  * $Log: hb_resource.c,v $
+ * Revision 1.55  2004/05/15 09:28:08  andrew
+ * Disable ALL legacy resource management iff configured with --enable-crm
+ * Possibly I have been a little over-zealous but likely the feature(s)
+ *  would need to be re-written to use the new design anyway.
+ *
  * Revision 1.54  2004/04/27 18:29:03  gshi
  * send a stability message back to the sender
  * unon recving that kind of message

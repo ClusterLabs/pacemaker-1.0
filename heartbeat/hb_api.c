@@ -1,4 +1,4 @@
-/* $Id: hb_api.c,v 1.99 2004/04/18 07:13:27 alan Exp $ */
+/* $Id: hb_api.c,v 1.100 2004/05/15 09:28:08 andrew Exp $ */
 /*
  * hb_api: Server-side heartbeat API code
  *
@@ -124,8 +124,10 @@ static int api_clientstatus (const struct ha_msg* msg, struct ha_msg* resp
 static int api_get_parameter (const struct ha_msg* msg, struct ha_msg* resp
 ,	client_proc_t* client, const char** failreason);
 
+#ifndef WITH_CRM
 static int api_get_resources (const struct ha_msg* msg, struct ha_msg* resp
 ,	client_proc_t* client, const char** failreason);
+#endif
 
 gboolean ProcessAnAPIRequest(client_proc_t* client);
 
@@ -140,7 +142,9 @@ struct api_query_handler query_handler_list [] = {
 	{ API_IFLIST, api_iflist },
 	{ API_CLIENTSTATUS, api_clientstatus },
 	{ API_GETPARM, api_get_parameter},
+#ifndef WITH_CRM
 	{ API_GETRESOURCES, api_get_resources},
+#endif
 };
 
 extern int	UseOurOwnPoll;
@@ -646,6 +650,7 @@ api_get_parameter (const struct ha_msg* msg, struct ha_msg* resp
 	}
 	return I_API_RET;
 }
+#ifndef WITH_CRM
 static int
 api_get_resources (const struct ha_msg* msg, struct ha_msg* resp
 ,	client_proc_t* client, const char** failreason)
@@ -665,6 +670,7 @@ api_get_resources (const struct ha_msg* msg, struct ha_msg* resp
 	}
 	return I_API_RET;
 }
+#endif
 
 /*
  * Process an API request message from one of our clients

@@ -1,4 +1,4 @@
-/* $Id: hb_api.h,v 1.16 2004/03/26 07:50:05 chuyee Exp $ */
+/* $Id: hb_api.h,v 1.17 2004/05/15 09:28:09 andrew Exp $ */
 /*
  * Client-side Low-level clustering API for heartbeat.
  *
@@ -339,8 +339,10 @@ struct llc_ops {
 #define	KEY_FACILITY	"logfacility"
 #define	KEY_LOGFILE	"logfile"
 #define	KEY_DBGFILE	"debugfile"
+#ifndef WITH_CRM
 #define KEY_FAILBACK	"nice_failback"
 #define KEY_AUTOFAIL	"auto_failback"
+#endif
 #define KEY_STONITH	"stonith"
 #define KEY_STONITHHOST "stonith_host"
 #define KEY_CLIENT_CHILD "respawn"

@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-#	$Id: heartbeat.in,v 1.34 2004/03/19 16:32:18 alan Exp $
+#	$Id: heartbeat.in,v 1.35 2004/05/15 09:28:09 andrew Exp $
 #
 # heartbeat     Start high-availability services
 #
@@ -48,6 +48,7 @@ CONFIG=$HA_DIR/ha.cf
 
 LOCKDIR=@localstatedir@/lock/subsys
 RUNDIR=@localstatedir@/run
+WITH_CRM=@CRM_ENABLED@
 
 if
   [ -r /etc/SuSE-release ]
@@ -213,7 +214,9 @@ start_heartbeat() {
 
 StartHA() {
   EchoNoNl "Starting High-Availability services: "
-  $HA_BIN/ResourceManager verifyallidle
+  if [ "$WITH_CRM" != "1" ]; then
+      $HA_BIN/ResourceManager verifyallidle
+  fi
   if
     [ $USE_MODULES = 1 ]
   then
@@ -221,10 +224,12 @@ StartHA() {
     init_watchdog
   fi
   rm -f $RUNDIR/ppp.d/*
-  if
-    [  -f $HA_DIR/ipresources -a ! -f $HA_DIR/haresources ]
-  then
-    mv $HA_DIR/ipresources $HA_DIR/haresources
+  if [ "$WITH_CRM" != "1" ]; then
+      if
+	  [  -f $HA_DIR/ipresources -a ! -f $HA_DIR/haresources ]
+	  then
+	  mv $HA_DIR/ipresources $HA_DIR/haresources
+      fi
   fi
   #	Start heartbeat daemon
   if
@@ -321,10 +326,12 @@ ReloadHA() {
 
 RunStartStop() {
   # Run pre-startup script if it exists
-  if
-    [  -f $HA_DIR/resource.d/startstop ]
-  then
-    $HA_DIR/resource.d/startstop  "$@"
+  if [ "$WITH_CRM" != "1" ]; then
+      if
+	  [  -f $HA_DIR/resource.d/startstop ]
+	  then
+	  $HA_DIR/resource.d/startstop  "$@"
+      fi
   fi
 }
 
@@ -395,6 +402,11 @@ exit $RC
 #
 #
 #  $Log: heartbeat.in,v $
+#  Revision 1.35  2004/05/15 09:28:09  andrew
+#  Disable ALL legacy resource management iff configured with --enable-crm
+#  Possibly I have been a little over-zealous but likely the feature(s)
+#   would need to be re-written to use the new design anyway.
+#
 #  Revision 1.34  2004/03/19 16:32:18  alan
 #  Put in a fix which causes us to always load the watchdog timer module with nowayout=0
 #

@@ -1,4 +1,4 @@
-/* $Id: api_test.c,v 1.3 2004/04/29 15:23:38 kevin Exp $ */
+/* $Id: api_test.c,v 1.4 2004/05/15 09:28:09 andrew Exp $ */
 /* 
  * api_test: Test program for testing the heartbeat API
  *
@@ -87,7 +87,9 @@ const char * mandparms[] =
 ,	KEY_INITDEAD
 ,	KEY_BAUDRATE
 ,	KEY_UDPPORT
+#ifndef WITH_CRM
 ,	KEY_AUTOFAIL
+#endif	
 ,	KEY_GEN_METH
 ,	KEY_REALTIME
 ,	KEY_DEBUGLEVEL
@@ -112,7 +114,9 @@ main(int argc, char ** argv)
 	const char *	intf;
 	int		msgcount=0;
 	char *		ctmp;
+#ifndef WITH_CRM
 	const char *	cval;
+#endif
 	int		j;
 	const char *	cstatus;
 	int		timeout = 100; /* milliseconds */
@@ -182,6 +186,7 @@ main(int argc, char ** argv)
 			cl_free(ctmp); ctmp = NULL;
 		}
 	}
+#ifndef WITH_CRM
 	if ((cval = hb->llc_ops->get_resources(hb)) == NULL) {
 		cl_perror("Cannot get resource status");
 		cl_log(LOG_ERR, "REASON: %s\n"
@@ -189,7 +194,8 @@ main(int argc, char ** argv)
 	}else{
 		cl_log(LOG_INFO, "Current resource status: %s", cval);
 	}
-
+#endif
+		
 
 	cl_log(LOG_INFO, "Starting node walk\n");
 	if (hb->llc_ops->init_nodewalk(hb) != HA_OK) {

@@ -1,4 +1,4 @@
-/* $Id: heartbeat.c,v 1.301 2004/04/15 16:25:01 alan Exp $ */
+/* $Id: heartbeat.c,v 1.302 2004/05/15 09:28:08 andrew Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -344,9 +344,10 @@ static
 const char*	CoreProcessName(ProcTrack* p);
 
 void		hb_kill_managed_children(int nsig);
+#ifndef WITH_CRM
 void		hb_kill_rsc_mgmt_children(int nsig);
+#endif
 void		hb_kill_core_children(int nsig);
-
 
 static void	ManagedChildRegistered(ProcTrack* p);
 static void	ManagedChildDied(ProcTrack* p, int status
@@ -375,7 +376,9 @@ static int	should_drop_message(struct node_info* node
 ,		const struct ha_msg* msg, const char *iface);
 static int	is_lost_packet(struct node_info * thisnode, seqno_t seq);
 static void	cause_shutdown_restart(void);
+#ifndef WITH_CRM
 static gboolean	CauseShutdownRestart(gpointer p);
+#endif
 static void	add2_xmit_hist (struct msg_xmit_hist * hist
 ,			struct ha_msg* msg, seqno_t seq);
 static void	init_xmit_hist (struct msg_xmit_hist * hist);
@@ -1442,7 +1445,8 @@ polled_input_dispatch(gpointer source_data, GTimeVal* current_time
 		check_comm_isup();
 	}
 
-	/* Check for "time to take over local resources */
+#ifndef WITH_CRM
+		/* Check for "time to take over local resources */
 	if (nice_failback && resourcestate == HB_R_RSCRCVD
 	&&	cmp_longclock(now, local_takeover_time) > 0) {
 		resourcestate = HB_R_STABLE;
@@ -1451,6 +1455,7 @@ polled_input_dispatch(gpointer source_data, GTimeVal* current_time
 		hb_send_resources_held(TRUE, NULL);
 		AuditResources();
 	}
+#endif
 	if (DEBUGDETAILS){
 		cl_log(LOG_DEBUG,"}/*polled_input_dispatch*/;");
 	}
@@ -1478,8 +1483,14 @@ comm_now_up()
 	/* Update our local status... */
 	set_local_status(ACTIVESTATUS);
 
+#ifndef WITH_CRM
 	comm_up_resource_action();
-
+#else
+	if (config->stonith) {
+		/* This will get called every hour from now on... */
+		Initiate_Reset(config->stonith, NULL, FALSE);
+	}
+#endif
 
 	/* Start each of our known child clients */
 	g_list_foreach(config->client_list
@@ -1510,6 +1521,7 @@ hb_kill_managed_children(int nsig)
 	,	GINT_TO_POINTER(nsig));
 }
 
+#ifndef WITH_CRM
 void
 hb_kill_rsc_mgmt_children(int nsig)
 {
@@ -1519,6 +1531,7 @@ hb_kill_rsc_mgmt_children(int nsig)
 	,	hb_kill_tracked_process
 	,	GINT_TO_POINTER(nsig));
 }
+#endif
 
 void
 hb_kill_core_children(int nsig)
@@ -1554,9 +1567,78 @@ hb_initiate_shutdown(int quickshutdown)
 	}
 	send_local_status();
 	if (!quickshutdown) {
+#ifndef WITH_CRM
 		shutdown_in_progress = TRUE;
 		procinfo->giveup_resources = TRUE;
 		hb_giveup_resources();
+#else
+		/* this no longer involves resources and therefore
+		 * should not be in hb_resources.c
+		 */
+		int		rc;
+		pid_t		pid;
+		struct ha_msg *	m;
+		
+		shutdown_in_progress = TRUE;
+
+		hb_close_watchdog();
+		DisableProcLogging();	/* We're shutting down */
+
+		cl_log(LOG_INFO, "Heartbeat shutdown in progress. (%d)"
+		       ,	(int) getpid());
+
+		/* We need to fork so we can make child procs not real time */
+
+		switch((pid=fork())) {
+			case -1:
+				cl_log(LOG_ERR, "Cannot fork.");
+				return;
+			default:
+				return;
+			case 0:		/* Child */
+				break;
+		}
+		
+		hb_close_watchdog();
+		cl_make_normaltime();
+		setpgid(0,0);
+		set_proc_title("%s: hb_initiate_shutdown()", cmdname);
+
+		/* We don't want to be interrupted while shutting down */
+		CL_SIGNAL(SIGCHLD, SIG_DFL);
+		CL_SIGINTERRUPT(SIGCHLD, 0);
+		
+		alarm(0);
+		CL_IGNORE_SIG(SIGALRM);
+		CL_SIGINTERRUPT(SIGALRM, 0);
+		
+		CL_IGNORE_SIG(SIGTERM);
+		/* CL_SIGINTERRUPT(SIGTERM, 0); */
+
+		/* Kill all our managed children... */
+		ForEachProc(&ManagedChildTrackOps, hb_kill_tracked_process,
+			    GINT_TO_POINTER(SIGTERM));
+
+		cl_log(LOG_INFO, "All HA children relinquished.");
+		
+		if ((m=ha_msg_new(0)) == NULL) {
+			cl_log(LOG_ERR, "Cannot send final shutdown msg");
+			exit(1);
+		}
+		if ((ha_msg_add(m, F_TYPE, T_SHUTDONE) != HA_OK
+		     ||	ha_msg_add(m, F_STATUS, DEADSTATUS) != HA_OK)) {
+			cl_log(LOG_ERR, "hb_initiate_shutdown: "
+			       "Cannot create local msg");
+			ha_msg_del(m);
+		}else{
+			if (ANYDEBUG) {
+				cl_log(LOG_DEBUG, "Sending T_SHUTDONE.");
+			}
+			rc = send_cluster_msg(m); m = NULL;
+		}
+		
+		exit(0);
+#endif
 		/* Do something more drastic in 60 minutes */
 		Gmain_timeout_add(1000*60*60, EmergencyShutdown, NULL);
 		return;
@@ -1582,19 +1664,23 @@ hb_mcp_final_shutdown(gpointer p)
 	case 0:	
 		send_local_status();
 		hb_kill_managed_children(SIGTERM);
+#ifndef WITH_CRM
 		if (procinfo->giveup_resources) {
 			/* Shouldn't *really* need this */
 			hb_kill_rsc_mgmt_children(SIGTERM);
 		}
+#endif
 		shutdown_phase = 1;
 		Gmain_timeout_add(1000, hb_mcp_final_shutdown, NULL);
 		return FALSE;
 
 	case 1:
+#ifndef WITH_CRM
 		if (procinfo->giveup_resources) {
 			/* Shouldn't *really* need this either ;-) */
 			hb_kill_rsc_mgmt_children(SIGKILL);
 		}
+#endif		
 		/* Kill any lingering processes in our process group */
 		CL_KILL(-getpid(), SIGTERM);
 		hb_kill_core_children(SIGTERM); /* Is this redundant? */
@@ -1640,7 +1726,9 @@ process_clustermsg(struct ha_msg* msg, struct link* lnk)
 	const char*		iface;
 
 	TIME_T			msgtime = 0;
+#ifndef WITH_CRM
 	longclock_t		now = time_longclock();
+#endif
 	const char *		from;
 	const char *		ts;
 	const char *		type;
@@ -1658,6 +1746,7 @@ process_clustermsg(struct ha_msg* msg, struct link* lnk)
 	}
 	messagetime = time_longclock();
 
+#ifndef WITH_CRM
 	/* FIXME: We really ought to use gmainloop timers for this */
 	if (cmp_longclock(standby_running, zero_longclock) != 0) {
 		if (DEBUGDETAILS) {
@@ -1680,7 +1769,8 @@ process_clustermsg(struct ha_msg* msg, struct link* lnk)
 			".  Standby request cancelled.");
 		}
 	}
-
+#endif
+	
 	/* Extract message type, originator, timestamp, auth */
 	type = ha_msg_value(msg, F_TYPE);
 	from = ha_msg_value(msg, F_ORIG);
@@ -1852,7 +1942,9 @@ if (DEBUGDETAILS) {
 				,	seqno, msgtime);
 			}
 			
+#ifndef WITH_CRM
 			QueueRemoteRscReq(PerformQueuedNotifyWorld, msg);
+#endif
 			strncpy(thisnode->status, status
 			, 	sizeof(thisnode->status));
 			heartbeat_monitor(msg, action, iface);
@@ -1881,9 +1973,11 @@ if (DEBUGDETAILS) {
 	/* Did we get a "shutdown complete" message? */
 
 	}else if (strcasecmp(type, T_SHUTDONE) == 0) {
+#ifndef WITH_CRM
 		if (heartbeat_comm_state == COMM_LINKSUP) {
 			process_resources(type, msg, thisnode);
 		}
+#endif
 	    	heartbeat_monitor(msg, action, iface);
 		if (thisnode == curnode) {
 			if (ANYDEBUG) {
@@ -1898,18 +1992,25 @@ if (DEBUGDETAILS) {
 			/* Trigger final shutdown in a second */
 			Gmain_timeout_add(1, hb_mcp_final_shutdown, NULL);
 		}else{
+#ifndef WITH_CRM
 			thisnode->has_resources = FALSE;
 			other_is_stable = 0;
 			other_holds_resources= HB_NO_RSC;
-
+#endif
+			
 		    	cl_log(LOG_INFO
 			,	"Received shutdown notice from '%s'."
 			,	thisnode->nodename);
+#ifndef WITH_CRM
 			takeover_from_node(thisnode->nodename);
+#endif
 		}
 
+#ifdef WITH_CRM
+	}else if (strcasecmp(type, T_STARTING) == 0) {		
+#else
 	}else if (strcasecmp(type, T_STARTING) == 0
-	||	strcasecmp(type, T_RESOURCES) == 0) {
+		  ||	strcasecmp(type, T_RESOURCES) == 0) {
 		/*
 		 * process_resources() will deal with T_STARTING
 		 * and T_RESOURCES messages appropriately.
@@ -1917,8 +2018,10 @@ if (DEBUGDETAILS) {
 		if (heartbeat_comm_state == COMM_LINKSUP) {
 			process_resources(type, msg, thisnode);
 		}
+#endif
 		heartbeat_monitor(msg, action, iface);
 
+#ifndef WITH_CRM
 	}else if (strcasecmp(type, T_ASKRESOURCES) == 0) {
 
 		/* Someone wants to go standby!!! */
@@ -1944,6 +2047,7 @@ if (DEBUGDETAILS) {
 		heartbeat_monitor(msg, action, iface);
 		QueueRemoteRscReq(PerformQueuedNotifyWorld, msg);
 
+#endif
 	}else if (strcasecmp(type, T_QCSTATUS) == 0) {
 		/* This is a client status query from remote client */
 		const char * clientid;
@@ -1979,13 +2083,17 @@ if (DEBUGDETAILS) {
 	}else{
 		/* None of the above... */
 		heartbeat_monitor(msg, action, iface);
+#ifndef WITH_CRM
 		QueueRemoteRscReq(PerformQueuedNotifyWorld, msg);
+#endif
 		if (heartbeat_comm_state != COMM_LINKSUP) {
 			check_comm_isup();
 		}
+#ifndef WITH_CRM
 		if (heartbeat_comm_state == COMM_LINKSUP) {
 			process_resources(type, msg, thisnode);
 		}
+#endif
 	}
 	/* See if our comm channels are working yet... */
 	if (heartbeat_comm_state != COMM_LINKSUP) {
@@ -2367,6 +2475,7 @@ restart_heartbeat(void)
 
 	hb_close_watchdog();
 	if (quickrestart) {
+#ifndef WITH_CRM
 		if (nice_failback) {
 			cl_log(LOG_INFO, "Current resources: -R -C %s"
 			,	decode_resources(procinfo->i_hold_resources));
@@ -2375,9 +2484,12 @@ restart_heartbeat(void)
 			,	decode_resources(procinfo->i_hold_resources)
 			,	(const char *)NULL);
 		}else{
+#endif
 			execl(HALIB "/heartbeat", "heartbeat", "-R"
 			,	(const char *)NULL);
+#ifndef WITH_CRM
 		}
+#endif
 	}else{
 		/* Make sure they notice we're dead */
 		sleep((config->deadtime_ms+999)/1000+1);
@@ -2699,7 +2811,9 @@ change_link_status(struct node_info *hip, struct link *lnk
 		return;
 	}
 	heartbeat_monitor(lmsg, KEEPIT, "<internal>");
+#ifndef WITH_CRM
 	QueueRemoteRscReq(PerformQueuedNotifyWorld, lmsg);
+#endif
 	ha_msg_del(lmsg); lmsg = NULL;
 }
 
@@ -2720,16 +2834,20 @@ mark_node_dead(struct node_info *hip)
 	}
 
 	strncpy(hip->status, DEADSTATUS, sizeof(hip->status));
+#ifndef WITH_CRM
 	hb_rsc_recover_dead_resources(hip);
+#endif
 }
 
 
+#ifndef WITH_CRM
 static gboolean
 CauseShutdownRestart(gpointer p)
 {
 	cause_shutdown_restart();
 	return FALSE;
 }
+#endif
 
 static void
 cause_shutdown_restart()
@@ -2739,8 +2857,10 @@ cause_shutdown_restart()
 	/* And, it really should work every time... :-) */
 
 	procinfo->restart_after_shutdown = 1;
+#ifndef WITH_CRM
 	procinfo->giveup_resources = 1;
 	hb_giveup_resources();
+#endif	
 	/* Do something more drastic in 60 minutes */
 	Gmain_timeout_add(1000*60*60, EmergencyShutdown, NULL);
 }
@@ -2840,6 +2960,7 @@ main(int argc, char * argv[], char **envp)
 
 		switch(flag) {
 
+#ifndef WITH_CRM
 			case 'C':
 				CurrentStatus = optarg;
 				procinfo->i_hold_resources
@@ -2850,15 +2971,18 @@ main(int argc, char * argv[], char **envp)
 					,	decode_resources(procinfo->i_hold_resources));
 				}
 				break;
+#endif
 			case 'd':
 				++debug;
 				break;
 			case 'k':
 				++killrunninghb;
 				break;
+#ifndef WITH_CRM
 			case 'M':
 				DoManageResources=0;
 				break;
+#endif
 			case 'r':
 				++RestartRequested;
 				break;
@@ -2974,8 +3098,12 @@ main(int argc, char * argv[], char **envp)
 	 */
 	if (WeAreRestarting) {
 
+#ifdef WITH_CRM
+		if (init_config(CONFIG_NAME) != HA_OK){
+#else
 		if (init_config(CONFIG_NAME) != HA_OK
 		||	parse_ha_resources(RESOURCE_CFG) != HA_OK){
+#endif
 			int err = errno;
 			cl_log(LOG_INFO
 			,	"Config errors: Heartbeat"
@@ -2997,6 +3125,7 @@ main(int argc, char * argv[], char **envp)
 			cleanexit(LSB_EXIT_GENERIC);
 		}
 
+#ifndef WITH_CRM
 		/*
 		 * Nice_failback complicates things a bit here...
 		 * We need to allow for the possibility that the user might
@@ -3043,6 +3172,7 @@ main(int argc, char * argv[], char **envp)
 				}
 			}
 		}
+#endif
 	}
 
 	/*
@@ -3057,8 +3187,12 @@ main(int argc, char * argv[], char **envp)
 		}
 
 		errno = 0;
+#ifdef WITH_CRM
+		if (init_config(CONFIG_NAME)){
+#else
 		if (init_config(CONFIG_NAME)
 		&&	parse_ha_resources(RESOURCE_CFG)){
+#endif
 			cl_log(LOG_INFO
 			,	"Signalling heartbeat pid %ld to reread"
 			" config files", running_hb_pid);
@@ -3085,10 +3219,14 @@ StartHeartbeat:
 
 
         /* We have already initialized configs in case WeAreRestarting. */
-        if (WeAreRestarting
+ #ifdef WITH_CRM
+       if (WeAreRestarting || init_config(CONFIG_NAME)) {
+#else		
+       if (WeAreRestarting
         ||      (init_config(CONFIG_NAME)
                 &&      parse_ha_resources(RESOURCE_CFG))) {
-		if (ANYDEBUG) {
+#endif
+	        if (ANYDEBUG) {
 			cl_log(LOG_DEBUG
 			,	"HA configuration OK.  Heartbeat starting.");
 		}
@@ -3156,7 +3294,9 @@ hb_emergency_shutdown(void)
 	cl_log(LOG_ERR, "Emergency Shutdown: "
 			"Attempting to kill everything ourselves");
 	CL_KILL(-getpgrp(), SIGTERM);
+#ifndef WITH_CRM
 	hb_kill_rsc_mgmt_children(SIGKILL);
+#endif	
 	hb_kill_managed_children(SIGKILL);
 	hb_kill_core_children(SIGKILL);
 	sleep(2);
@@ -3486,11 +3626,13 @@ should_drop_message(struct node_info * thisnode, const struct ha_msg *msg,
 				,	"See documentation for information"
 				" on tuning deadtime.");
 
+#ifndef WITH_CRM
 				if (DoManageResources) {
 					send_local_status();
 					Gmain_timeout_add(2000
 					,	CauseShutdownRestart, NULL);
 				}
+#endif
 				ishealedpartition=1;
 			}
 		}else if (gen > t->generation) {
@@ -3502,7 +3644,9 @@ should_drop_message(struct node_info * thisnode, const struct ha_msg *msg,
 			thisnode->rmt_lastupdate = 0L;
 			thisnode->local_lastupdate = 0L;
 			thisnode->status_seqno = 0L;
+#ifndef WITH_CRM
 			thisnode->has_resources = TRUE;
+#endif
 		}
 		t->generation = gen;
 	}
@@ -4241,6 +4385,11 @@ get_localnodeinfo(void)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.302  2004/05/15 09:28:08  andrew
+ * Disable ALL legacy resource management iff configured with --enable-crm
+ * Possibly I have been a little over-zealous but likely the feature(s)
+ *  would need to be re-written to use the new design anyway.
+ *
  * Revision 1.301  2004/04/15 16:25:01  alan
  * Increased the allowable CPU percentage for write child processes to 20% - because pings can be expensive.
  *

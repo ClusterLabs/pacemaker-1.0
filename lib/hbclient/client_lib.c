@@ -1,4 +1,4 @@
-/* $Id: client_lib.c,v 1.4 2004/04/17 07:57:07 alan Exp $ */
+/* $Id: client_lib.c,v 1.5 2004/05/15 09:28:09 andrew Exp $ */
 /* 
  * client_lib: heartbeat API client side code
  *
@@ -188,7 +188,9 @@ static const char *	get_nodetype(ll_cluster_t*, const char *host);
 static const char *	get_ifstatus(ll_cluster_t*, const char *host
 ,	const char * intf);
 static char *		get_parameter(ll_cluster_t*, const char* pname);
+#ifndef WITH_CRM
 static const char *	get_resources(ll_cluster_t*);
+#endif
 static int		get_inputfd(ll_cluster_t*);
 static IPC_Channel*	get_ipcchan(ll_cluster_t*);
 static int		msgready(ll_cluster_t*);
@@ -1018,6 +1020,7 @@ get_parameter(ll_cluster_t* lcl, const char* pname)
 	return ret;
 }
 
+#ifndef WITH_CRM
 static const char *	
 get_resources(ll_cluster_t* lcl)
 {
@@ -1070,6 +1073,7 @@ get_resources(ll_cluster_t* lcl)
 
 	return ret;
 }
+#endif
 
 /*
  * Return heartbeat's keepalive time
@@ -2416,7 +2420,9 @@ static struct llc_ops heartbeat_ops = {
 	get_keepalive,		/* get_keepalive */
 	get_mynodeid,		/* get_mynodeid */
 	get_logfacility,	/* suggested logging facility */
+#ifndef WITH_CRM
 	get_resources,		/* Get current resource allocation */
+#endif
 	APIError,		/* errormsg */
 };
 
