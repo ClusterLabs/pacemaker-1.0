@@ -228,6 +228,12 @@ auto_failback on
 #
 #respawn userid /path/name/to/run
 #respawn hacluster /usr/lib/heartbeat/ipfail
+#
+#	Access control for client api
+#       	default is no access
+#
+#apiauth client-name gid=gidlist uid=uidlist
+#apiauth ipfail gid=haclient uid=hacluster
 
 ###########################
 #
