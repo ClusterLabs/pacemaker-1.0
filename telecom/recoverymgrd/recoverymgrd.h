@@ -62,11 +62,11 @@ static recoverymgr_client_t* recoverymgr_client_new(struct IPC_CHANNEL* ch);
 static gboolean recoverymgr_dispatch(IPC_Channel* src, gpointer Client);
 void recoverymgr_client_remove(gpointer Client);
 static gboolean recoverymgr_read_msg(recoverymgr_client_t *client);
-void recoverymgr_process_msg(recoverymgr_client_t* client, void* Msg,  int length);
-static int recoverymgr_client_connect(recoverymgr_client_t *client, void *Msg, int length);
+void recoverymgr_process_msg(recoverymgr_client_t* client, void* Msg,  size_t length);
+static int recoverymgr_client_connect(recoverymgr_client_t *client, void *Msg, size_t length);
 static int recoverymgr_client_disconnect(recoverymgr_client_t* client , 
-		void * msg, int msgsize);
-static int recoverymgr_client_event(recoverymgr_client_t *client, void *Msg, int msgsize);
+		void * msg, size_t msgsize);
+static int recoverymgr_client_event(recoverymgr_client_t *client, void *Msg, size_t msgsize);
 static void recoverymgr_putrc(recoverymgr_client_t *client, int rc);
 int recover_app(RecoveryInfo *info, int eventindex);
 void child_setup_function(RecoveryInfo *info);

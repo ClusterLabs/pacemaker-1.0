@@ -459,7 +459,7 @@ recoverymgr_read_msg(recoverymgr_client_t *client)
 struct cmd {
         const char *    msg;
         gboolean        senderrno;
-        int             (*fun)(recoverymgr_client_t* client, void* msg, int len);
+        int             (*fun)(recoverymgr_client_t* client, void* msg, size_t len);
 };
 
 /**
@@ -475,7 +475,7 @@ struct cmd    cmds[] =
  * Process a message from client process 
  */
 void
-recoverymgr_process_msg(recoverymgr_client_t* client, void* Msg,  int length)
+recoverymgr_process_msg(recoverymgr_client_t* client, void* Msg,  size_t length)
 {
         struct recoverymgr_msg *      	msg = Msg;
         const int               	sz1     = sizeof(msg->msgtype)-1;
@@ -544,7 +544,7 @@ recoverymgr_putrc(recoverymgr_client_t* client, int rc)
  * @return EINVAL if message is not a recoverymgr_connectmsg
  */
 static int
-recoverymgr_client_connect(recoverymgr_client_t *client, void *Msg, int length)
+recoverymgr_client_connect(recoverymgr_client_t *client, void *Msg, size_t length)
 {
         struct recoverymgr_connectmsg* 	msg = Msg;
         int                     	namelen = -1;
@@ -562,7 +562,7 @@ recoverymgr_client_connect(recoverymgr_client_t *client, void *Msg, int length)
 
         if (length < sizeof(*msg)
         ||      (namelen = strnlen(msg->appname, sizeof(msg->appname))) < 1
-        ||      namelen >= sizeof(msg->appname)
+        ||      namelen >= (int)sizeof(msg->appname)
         ||      strnlen(msg->appinstance, sizeof(msg->appinstance))
         >=      sizeof(msg->appinstance)) {
                 return EINVAL;
@@ -608,7 +608,7 @@ recoverymgr_client_connect(recoverymgr_client_t *client, void *Msg, int length)
  *  Client requested disconnect 
  */
 static int
-recoverymgr_client_disconnect(recoverymgr_client_t* client , void * msg, int msgsize)
+recoverymgr_client_disconnect(recoverymgr_client_t* client , void * msg, size_t msgsize)
 {
         if (debug >= DBGDETAIL) {
 		cl_log(LOG_DEBUG, "recoverymgr_client_disconnect\n");
@@ -636,7 +636,7 @@ recoverymgr_client_disconnect(recoverymgr_client_t* client , void * msg, int msg
  *
  */
 static int
-recoverymgr_client_event(recoverymgr_client_t *client, void *Msg, int msgsize)
+recoverymgr_client_event(recoverymgr_client_t *client, void *Msg, size_t msgsize)
 {
 	struct recoverymgr_event_msg  	*msg = Msg;
  	RecoveryInfo 			*info = NULL;
