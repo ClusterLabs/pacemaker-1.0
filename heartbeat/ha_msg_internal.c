@@ -1,4 +1,4 @@
-/* $Id: ha_msg_internal.c,v 1.46 2004/08/29 04:33:41 msoffen Exp $ */
+/* $Id: ha_msg_internal.c,v 1.47 2004/08/31 17:35:13 alan Exp $ */
 /*
  * ha_msg_internal: heartbeat internal messaging functions
  *
@@ -32,6 +32,7 @@
 #include <heartbeat.h>
 #include <ha_msg.h>
 #include <heartbeat_private.h>
+#include <clplumbing/netstring.h>
 
 #define		MINFIELDS	30
 #define		CRNL		"\r\n"
@@ -271,7 +272,11 @@ isauthentic(const struct ha_msg * m)
 	
 	if (authtoken == NULL
 	||	sscanf(authtoken, "%d %s", &authwhich, authstring) != 2) {
-		ha_log(LOG_WARNING, "Bad/invalid auth token, authtoken=%p", authtoken);
+		if (!cl_msg_quiet_fmterr) {
+			ha_log(LOG_WARNING
+			,	"Bad/invalid auth token, authtoken=%p"
+			,	authtoken);
+		}
 		return(0);
 	}
 	which = config->auth_config + authwhich;
@@ -411,6 +416,9 @@ main(int argc, char ** argv)
 #endif
 /*
  * $Log: ha_msg_internal.c,v $
+ * Revision 1.47  2004/08/31 17:35:13  alan
+ * Put in a "be quiet on format errors" change I had missed before...
+ *
  * Revision 1.46  2004/08/29 04:33:41  msoffen
  * Fixed comments to properly compile
  *
