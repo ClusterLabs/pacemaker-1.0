@@ -1,4 +1,4 @@
-/* $Id: hb_resource.c,v 1.62 2004/09/10 01:12:23 alan Exp $ */
+/* $Id: hb_resource.c,v 1.63 2004/09/10 07:23:50 alan Exp $ */
 /*
  * hb_resource: Linux-HA heartbeat resource management code
  *
@@ -2191,6 +2191,7 @@ QueueRemoteRscReq(RemoteRscReqFunc func, struct ha_msg* msg)
 			,	"%s: child process unneeded.", fp);
 			cl_log_message(msg);
 		}
+		g_hook_free(&RemoteRscReqQueue, hook);
 		return;
 	}
 
@@ -2234,8 +2235,8 @@ StartNextRemoteRscReq(void)
 	}
 	/* Call the hook... */
 	func(hook);
-	g_hook_unref(&RemoteRscReqQueue, hook);
 	g_hook_destroy_link(&RemoteRscReqQueue, hook);
+	g_hook_unref(&RemoteRscReqQueue, hook);
 }
 
 
@@ -2299,7 +2300,7 @@ StonithProcessName(ProcTrack* p)
 }
 
 static gboolean
-StonithStatProc(gpointer gph)
+StonithStatProc(gpointer dummy)
 {
 	Initiate_Reset(config->stonith, "?", FALSE);
 	return FALSE;
@@ -2315,7 +2316,7 @@ StonithStatProcessDied(ProcTrack* p, int status, int signo, int exitcode, int wa
 	}
 	g_free(h->nodename);	h->nodename=NULL;
 	g_free(p->privatedata);	p->privatedata = NULL;
-	Gmain_timeout_add(3600*1000, StonithStatProc, h);
+	Gmain_timeout_add(3600*1000, StonithStatProc, NULL);
 }
 
 static const char *
@@ -2329,6 +2330,9 @@ StonithStatProcessName(ProcTrack* p)
 
 /*
  * $Log: hb_resource.c,v $
+ * Revision 1.63  2004/09/10 07:23:50  alan
+ * BEAM fixes:  Fixed a couple of resource leaks, and a couple of use-after-free errors.
+ *
  * Revision 1.62  2004/09/10 01:12:23  alan
  * BEAM CHANGES: Fixed a couple of very minor bugs, and cleaned up some BEAM warnings.
  *

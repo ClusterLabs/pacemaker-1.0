@@ -1,4 +1,4 @@
-/* $Id: config.c,v 1.126 2004/09/10 01:12:23 alan Exp $ */
+/* $Id: config.c,v 1.127 2004/09/10 07:23:50 alan Exp $ */
 /*
  * Parse various heartbeat configuration files...
  *
@@ -1846,6 +1846,7 @@ make_id_table(const char * list, int listlen, int (*map)(const char *, int))
 		}
 		idval = map(id, idlen);
 		if (idval < 0) {
+			g_hash_table_destroy(ret);
 			return NULL;
 		}
 		if (ANYDEBUG) {
@@ -2026,6 +2027,9 @@ baddirective:
 
 /*
  * $Log: config.c,v $
+ * Revision 1.127  2004/09/10 07:23:50  alan
+ * BEAM fixes:  Fixed a couple of resource leaks, and a couple of use-after-free errors.
+ *
  * Revision 1.126  2004/09/10 01:12:23  alan
  * BEAM CHANGES: Fixed a couple of very minor bugs, and cleaned up some BEAM warnings.
  *
