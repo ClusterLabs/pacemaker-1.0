@@ -1,4 +1,4 @@
-/* $Id: portability.h,v 1.34 2004/04/20 21:21:20 andrew Exp $ */
+/* $Id: portability.h,v 1.35 2004/04/21 16:39:47 msoffen Exp $ */
 #ifndef PORTABILITY_H
 #  define PORTABILITY_H
 
@@ -112,11 +112,11 @@ inet_pton(int af, const char *src, void *dst);
 #	define USE_GNU
 #endif
 
-#ifdef HAVE_UUID_H 
+#ifdef HAVE_UUID_H
 #  include <uuid.h>
-#endif 
+#endif /* HAVE_UUID_H */
 
-#ifdef HAVE_UUID_UUID_H 
+#ifdef HAVE_UUID_UUID_H
 #  include <uuid/uuid.h>
 #endif /* HAVE_UUID_UUID_H */
 
@@ -127,7 +127,9 @@ inet_pton(int af, const char *src, void *dst);
 
 #ifdef HAVE_STRUCT_UCRED_DARWIN
 #	include <sys/utsname.h>
-#	define SYS_NMLN _SYS_NAMELEN
+#	ifndef SYS_NMLN
+#		define SYS_NMLN _SYS_NAMELEN
+#	endif /* SYS_NMLN */
 #endif
 
 #endif /* PORTABILITY_H */
