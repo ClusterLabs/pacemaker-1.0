@@ -32,35 +32,30 @@ halibdir		= $(libdir)/@HB_PKG@
 
 NET_SNMP_CONFIG		= @NET_SNMP_CONFIG@
 
-# LTLIBRARIES is for shared+static libs
-noinst_LTLIBRARIES = libhaclient.la
+# binary programs
+halib_PROGRAMS		= hbagent
 
-libhaclient_la_SOURCES	= haclient.h haclient.c
+hbagent_SOURCES		= hbagent.h hbagent.c \
+			  LHAClusterInfo.h LHAClusterInfo.c \
+			  LHANodeTable.h LHANodeTable_enums.h LHANodeTable_columns.h LHANodeTable.c \
+			  LHAIFTable.h LHAIFTable_enums.h LHAIFTable_columns.h LHAIFTable.c \
+			  LHAMembershipTable_columns.h LHAMembershipTable_enums.h LHAMembershipTable.h LHAMembershipTable.c \
+			  LHAHeartbeatConfigInfo.c LHAHeartbeatConfigInfo.h \
+			  LHAResourceGroupTable.c LHAResourceGroupTable_columns.h LHAResourceGroupTable_enums.h LHAResourceGroupTable.h
 
-libhaclient_la_LIBADD	= \
+
+
+hbagent_LDADD	 	= \
                         $(top_builddir)/lib/clplumbing/libplumb.la \
 			$(top_builddir)/lib/hbclient/libhbclient.la \
+			$(top_builddir)/membership/ccm/libccmclient.la \
+			$(top_builddir)/membership/ccm/libclm.la \
 			$(GLIBLIB)
 
-# binary programs
-halib_PROGRAMS		= hasubagent
+hbagent_LDFLAGS		= @SNMP_LIBS@ 
 
-hasubagent_SOURCES	= hasubagent.c \
-			  ucd_util_funcs.h \
-			  ClusterInfo.h ClusterInfo.c \
-			  NodeTable.h NodeTable.c \
-			  HAIFTable.h HAIFTable.c
-
-
-HASUBAGENT_LDADD_EXTRA 	= \
-                        $(top_builddir)/lib/clplumbing/libplumb.la \
-			$(top_builddir)/lib/hbclient/libhbclient.la
-
-hasubagent_LDADD	= $(HASUBAGENT_LDADD_EXTRA)
-hasubagent_LDFLAGS	= @SNMP_LIBS@ 
-
-# test cases
-noinst_PROGRAMS		= testclient
-testclient_SOURCES	= testclient.c
-testclient_LDADD        = $(HASUBAGENT_LDADD_EXTRA)
+## test cases
+#noinst_PROGRAMS		= testclient
+#testclient_SOURCES	= testclient.c
+#testclient_LDADD        = $(HASUBAGENT_LDADD_EXTRA)
 
