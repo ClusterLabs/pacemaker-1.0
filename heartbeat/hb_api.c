@@ -1,4 +1,4 @@
-/* $Id: hb_api.c,v 1.103 2004/07/26 12:39:46 andrew Exp $ */
+/* $Id: hb_api.c,v 1.104 2004/08/30 09:56:37 sunjd Exp $ */
 /*
  * hb_api: Server-side heartbeat API code
  *
@@ -987,6 +987,7 @@ api_process_registration_msg(client_proc_t* client, struct ha_msg * msg)
 	||	strcmp(reqtype, API_SIGNON) != 0)  {
 		cl_log(LOG_ERR, "api_process_registration_msg: bad message");
 		cl_log_message(msg);
+		ha_msg_del(msg); msg = NULL;
 		return;
 	}
 	fromid = ha_msg_value(msg, F_FROMID);
@@ -995,6 +996,7 @@ api_process_registration_msg(client_proc_t* client, struct ha_msg * msg)
 	if (fromid == NULL && pid == NULL) {
 		cl_log(LOG_ERR
 		,	"api_process_registration_msg: no fromid in msg");
+		ha_msg_del(msg); msg = NULL;
 		return;
 	}
 	if (DEBUGDETAILS) {
@@ -1009,24 +1011,28 @@ api_process_registration_msg(client_proc_t* client, struct ha_msg * msg)
 	if ((resp = ha_msg_new(4)) == NULL) {
 		cl_log(LOG_ERR
 		,	"api_process_registration_msg: out of memory/1");
+		ha_msg_del(msg); msg = NULL;
 		return;
 	}
 	if (ha_msg_add(resp, F_TYPE, T_APIRESP) != HA_OK) {
 		cl_log(LOG_ERR
 		,	"api_process_registration_msg: cannot add field/2");
 		ha_msg_del(resp); resp=NULL;
+		ha_msg_del(msg); msg = NULL;
 		return;
 	}
 	if (ha_msg_add(resp, F_APIREQ, reqtype) != HA_OK) {
 		cl_log(LOG_ERR
 		,	"api_process_registration_msg: cannot add field/3");
 		ha_msg_del(resp); resp=NULL;
+		ha_msg_del(msg); msg = NULL;
 		return;
 	}
 
 	client->pid = atoi(pid);
 	/*
 	 *	Sign 'em up.
+	 *	Note: anyway, api_add_client will not delete msg.
 	 */
 	if (!api_add_client(client, msg)) {
 		cl_log(LOG_ERR
@@ -1038,6 +1044,7 @@ api_process_registration_msg(client_proc_t* client, struct ha_msg * msg)
 		cl_log(LOG_ERR
 		,	"api_process_registration_msg: cannot find client");
 		ha_msg_del(resp); resp=NULL;
+		ha_msg_del(msg); msg = NULL;
 		/* We can't properly reply to them. They'll hang. Sorry... */
 		return;
 	}
@@ -1045,12 +1052,14 @@ api_process_registration_msg(client_proc_t* client, struct ha_msg * msg)
 		cl_log(LOG_ERR
 		,	"api_process_registration_msg: found wrong client");
 		ha_msg_del(resp); resp=NULL;
+		ha_msg_del(msg); msg = NULL;
 		return;
 	}
 	if (ha_msg_mod(resp, F_APIRESULT, API_OK) != HA_OK) {
 		cl_log(LOG_ERR
 		,	"api_process_registration_msg: cannot add field/4");
 		ha_msg_del(resp); resp=NULL;
+		ha_msg_del(msg); msg = NULL;
 		return;
 	}
 
@@ -1065,6 +1074,7 @@ api_process_registration_msg(client_proc_t* client, struct ha_msg * msg)
 	|| 	(ha_msg_add(resp, F_LOGFACILITY, logfacility) != HA_OK)) {
 		cl_log(LOG_ERR, "api_process_registration_msg: cannot add field/4");
 		ha_msg_del(resp); resp=NULL;
+		ha_msg_del(msg); msg = NULL;
 		return;
 	}
 	if (ANYDEBUG) {
@@ -1074,6 +1084,7 @@ api_process_registration_msg(client_proc_t* client, struct ha_msg * msg)
 	}
 	api_send_client_msg(client, resp);
 	ha_msg_del(resp); resp=NULL;
+	ha_msg_del(msg); msg = NULL;
 }
 
 static void
