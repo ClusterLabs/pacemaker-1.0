@@ -63,7 +63,7 @@ beam::attribute_by_signature {
 #######################################################################
 #	useful project definitions...
 #######################################################################
-beam::attribute_by_signature { noreturn } "cleanexit"
+beam::attribute_by_signature { noreturn } "exit" "cleanexit"
 beam::attribute_by_signature { noreturn } "yy_fatal_error"
 
 
