@@ -1,4 +1,4 @@
-/* $Id: client_lib.c,v 1.17 2004/12/06 21:02:44 gshi Exp $ */
+/* $Id: client_lib.c,v 1.18 2004/12/09 23:12:39 gshi Exp $ */
 /* 
  * client_lib: heartbeat API client side code
  *
@@ -366,7 +366,7 @@ hb_api_signon(struct ll_cluster* cinfo, const char * clientid)
 		return HA_FAIL;
 	}
 
-	pi->chan->is_send_blocking = TRUE;
+	pi->chan->should_send_blocking = TRUE;
 
         if (pi->chan->ops->initiate_connection(pi->chan) != IPC_OK) {
 		ha_api_log(LOG_ERR, "hb_api_signon: Can't initiate"

@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.341 2004/12/06 21:02:44 gshi Exp $ */
+/* $Id: heartbeat.c,v 1.342 2004/12/09 23:12:39 gshi Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -1610,7 +1610,7 @@ APIregistration_dispatch(IPC_Channel* chan,  gpointer user_data)
 	 * This channel must be non-blocking as
 	 * we don't want to block for a client
 	 */
-	chan->is_send_blocking = FALSE;
+	chan->should_send_blocking = FALSE;
 
 	if (ANYDEBUG) {
 		cl_log(LOG_DEBUG, "APIregistration_dispatch() {");
@@ -4765,6 +4765,11 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.342  2004/12/09 23:12:39  gshi
+ * change variable name in channel struct from is_send_blocking
+ * to should_send_blocking since this variable determine
+ * if the send function *should* block or not in case of full queue
+ *
  * Revision 1.341  2004/12/06 21:02:44  gshi
  * in client_status() call
  *
