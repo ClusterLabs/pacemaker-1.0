@@ -4,3 +4,4 @@ Makefile.in
 pengine
 ptest
 .deps
+.gres.*

@@ -5,3 +5,5 @@ crmd
 .deps
 fsa_actions.*
 fsa_inputs.*
+.gres.*
+

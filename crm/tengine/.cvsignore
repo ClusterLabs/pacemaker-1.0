@@ -4,3 +4,4 @@ Makefile.in
 tengine
 .deps
 ttest
+.gres.*
