@@ -104,7 +104,7 @@ static const unsigned long
 	DEFAULT_APPHB_INTERVAL 	= 2000, /* MS */
 	DEFAULT_APPHB_WARNTIME  = 6000; /* MS */
 
-static unsigned long MAGIC_EXIT_CODE = 100;
+static int MAGIC_EXIT_CODE = 100;
 
 static const char * app_name = "cl_respawn";
 static gboolean monitored_prog_quit = FALSE;
@@ -484,19 +484,17 @@ on_polled_input_dispatch(gpointer source_data, GTimeVal* current_time,
 	if (monitored_prog_quit == TRUE) { 
 		if ( ( old_pid = wait(&exit_status) ) <= 0) {
 			/* 
-			   Or donnot quit cl_respawn, and restart its
-			   monitored program ?
+			 * Or do not quit cl_respawn, and restart its
+			 * monitored program ?
 			*/
-			cl_log(LOG_ERR, "error: %s", strerror(errno));
-			cl_log(LOG_ERR, "will quit due to wait error.");
+			cl_perror("Quitting due to wait error.");
 			cl_respawn_quit(3);		
 			return TRUE;
 		}
 
 		if (WEXITSTATUS(exit_status) == MAGIC_EXIT_CODE) {
-			cl_log(LOG_CRIT, "donnot restart the monitored program "
-			       "%s[%d], whose exit code equal MAGIC_EXIT_CODE "
-			       "%lu", execv_argv[0], old_pid, MAGIC_EXIT_CODE);
+			cl_log(LOG_INFO, "Not restartng monitored program"
+			" %s [%d]", execv_argv[0], old_pid);
 			cl_respawn_quit(3);		
 			return TRUE;
 		}
