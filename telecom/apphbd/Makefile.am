@@ -30,6 +30,7 @@ havarlibdir		= $(localstatedir)/lib/@HB_PKG@
 PIDFILE			= $(localstatedir)/run/apphbd.pid
 
 COMMONLIBS		= $(top_builddir)/lib/clplumbing/libplumb.la	\
+			$(top_builddir)/replace/libreplace.la \
 			$(GLIBLIB)
 
 LIBRT 			= @LIBRT@
