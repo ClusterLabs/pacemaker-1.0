@@ -20,6 +20,6 @@
 #
 MAINTAINERCLEANFILES    = Makefile.in
 
-includedir=$(saf_includedir)
+includedir=@saf_includedir@
 
 include_HEADERS	        = ais.h

@@ -20,4 +20,4 @@
 MAINTAINERCLEANFILES    = Makefile.in
 
 ## Subdirectories...
-SUBDIRS			=  apphbd recoverymgrd
+SUBDIRS			=  apphbd checkpointd recoverymgrd

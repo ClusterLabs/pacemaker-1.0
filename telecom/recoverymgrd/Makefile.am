@@ -32,7 +32,6 @@ COMMONLIBS		= $(top_builddir)/lib/clplumbing/libplumb.la	\
 
 LIBRT 			= @LIBRT@
 
-## lex and yacc don't generate proper prototypes, so -Werror breaks build
 AM_CFLAGS		=  -DPIDFILE='"$(PIDFILE)"'
 
 
@@ -41,7 +40,8 @@ halib_PROGRAMS		= recoverymgrd
 
 ## SOURCES
 
-recoverymgrd_SOURCES	= y.tab.c lex.yy.c  recoverymgrd.c 
+recoverymgrd_SOURCES	= conf_yacc.yacc conf_lex.lex recoverymgrd.c lex.yy.c y.tab.c y.tab.h
+noinst_HEADERS = recoverymgrd.h configfile.h
 
 recoverymgrd_CFLAGS		= -DHA_VARLIBDIR='"@HA_VARLIBDIR@"'
 recoverymgrd_LDADD		= $(COMMONLIBS) 			\
@@ -59,3 +59,7 @@ lex.yy.c: conf_lex.lex
 
 y.tab.c: conf_yacc.yacc lex.yy.c recoverymgrd.c
 	yacc -d conf_yacc.yacc
+
+y.tab.h: y.tab.c # Automatically built at the same time
+
+recoverymgrd-recoverymgrd.$(OBJEXT): y.tab.h y.tab.c

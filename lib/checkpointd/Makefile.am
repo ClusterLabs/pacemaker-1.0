@@ -45,9 +45,3 @@ libckpt_la_SOURCES	= libckpt.c
 
 libckpt_la_CFLAGS	= $(AM_CFLAGS)
 libckpt_la_LDFLAGS	= -version-info 0:0:0 
-
-install-exec-local:
-	test -p $(ckptvarlibdir) || mkdir $(ckptvarlibdir)
-
-uninstall-local:
-	-test -p $(ckptvarlibdir) || mkdir $(ckptvarlibdir)
