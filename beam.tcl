@@ -82,6 +82,7 @@ beam::attribute_by_signature { noreturn } "yy_fatal_error"
 #######################################################################
 lappend beam::MISTAKE15::disabled_macros	YYSTYPE XSRETURN LT_STMT_START __DBGTRACE
 set beam::ERROR33::disabled_files "/*/*glib*/glib.h"
+set beam::MISTAKE5::disabled_files "/*/*glib*/gstring.h"
 set beam::ERROR7::disabled_files "*/lib/bindings/perl/cl_raw/cl_raw_wrap.c"
 set beam::disabled_files "*/libltdl/*"
 # I think this yydestruct problem is a BEAM bug...
