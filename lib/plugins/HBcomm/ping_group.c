@@ -1,4 +1,4 @@
-/* $Id: ping_group.c,v 1.13 2004/10/24 13:00:13 lge Exp $ */
+/* $Id: ping_group.c,v 1.14 2005/03/15 11:39:54 alan Exp $ */
 /*
  * ping_group.c: ICMP-echo-based heartbeat code for heartbeat.
  *
@@ -404,6 +404,7 @@ ping_group_read(struct hb_media* mp, int *lenp)
 	PINGGROUPASSERT(mp);
 	ei = (ping_group_private_t *) mp->pd;
 
+	*lenp = 0;
 	if ((numbytes=recvfrom(ei->sock, (void *) &buf.cbuf
 	,	sizeof(buf.cbuf)-1, 0,	(struct sockaddr *)&their_addr
 	,	&addr_len)) < 0) {
@@ -477,7 +478,10 @@ ping_group_read(struct hb_media* mp, int *lenp)
 	ei->slot[slotn] = seq;
 	
 	pktlen = numbytes - hlen - ICMP_HDR_SZ;
-	pkt = ha_malloc(pktlen + 1);
+	if (NULL == (pkt = ha_malloc(pktlen + 1))) {
+		ha_msg_del(msg);
+		return NULL;
+	}
 	pkt[pktlen] = 0;
 	
 	memcpy(pkt, buf.cbuf + hlen + ICMP_HDR_SZ, pktlen);	
@@ -550,6 +554,7 @@ ping_group_write(struct hb_media* mp, void *p, int len)
 	 */
 	if ((nmsg = ha_msg_new(5)) == NULL) {
 		PILCallLog(LOG, PIL_CRIT, "cannot create new message");
+		ha_msg_del(msg);
 		return(HA_FAIL);
 	}
 
@@ -622,7 +627,8 @@ ping_group_write(struct hb_media* mp, void *p, int len)
 	}
 
 	if (DEBUGPKTCONT) {
-		PILCallLog(LOG, PIL_DEBUG, "%s", (const char*)pkt);
+		PILCallLog(LOG, PIL_DEBUG, "%s"
+		,	(const char*)icp->icmp_data);
    	}
 
 	FREE(icmp_pkt);
