@@ -112,7 +112,6 @@ GenerateHaCf() {
 	#bcast $INTERFACE
 	node $LOCALNODE $DUMMYNODE
 	apiauth lha-snmpagent uid=root
-	apiauth cl_status gid=haclient uid=hacluster
 	!
   chmod 644 $1
 }
