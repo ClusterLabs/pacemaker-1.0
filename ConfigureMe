@@ -205,9 +205,9 @@ do_configure () {
 	# "configure" etc. set up.
 	if [ ! -x ${pathtotop}/configure ]
 	then
-		Run ${pathtotop}/bootstrap $@
+		Run ${pathtotop}/bootstrap "$@"
 	else
-		Run ${pathtotop}/configure $@
+		Run ${pathtotop}/configure "$@"
 	fi
 }
 
