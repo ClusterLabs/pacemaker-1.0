@@ -21,7 +21,7 @@ LINUX-HA-MIB DEFINITIONS ::= BEGIN
 
 IMPORTS
     MODULE-IDENTITY, OBJECT-TYPE, enterprises,
-    Counter32, INTEGER, Integer32		    
+    Counter32, INTEGER, Integer32, Unsigned32, IpAddress
 	FROM SNMPv2-SMI
 
     TEXTUAL-CONVENTION, DisplayString, 
@@ -59,9 +59,10 @@ LinuxHA	MODULE-IDENTITY
 	The mailing list address is
 	linux-ha-dev@lists.community.tummy.com."
     DESCRIPTION
-	"This MIB can be used to manage a Linux-HA cluster. The initial plan is
-	to make the heartbeat, resource managment, and memberships accessible
-	through SNMP. Hopefully more things can be added as Linux-HA matures."
+	"This MIB can be used to manage a Linux-HA cluster. The
+	initial plan is to make the heartbeat, resource managment,
+	and memberships accessible through SNMP. Hopefully more
+	things can be added as Linux-HA matures."
 
     REVISION "200211040000Z"	    -- Nov. 4, 2002
     DESCRIPTION
@@ -69,13 +70,20 @@ LinuxHA	MODULE-IDENTITY
     ::= { enterprises 4682 }
 
 -- Current LinuxHA core MIB entries
---  LHAClusterInfo		    OBJECT IDENTIFIER ::= { LinuxHA 1 }
---  LHANodeTable		    OBJECT IDENTIFIER ::= { LinuxHA 2 }
---  LHAIFStatusTable		    OBJECT IDENTIFIER ::= { LinuxHA 3 }
---  LHAResourceGroupTable	    OBJECT IDENTIFIER ::= { LinuxHA 4 }
---  LHAMembershipTable		    OBJECT IDENTIFIER ::= { LinuxHA 6 }
---  LHAHeartbeatConfigInfo	    OBJECT IDENTIFIER ::= { LinuxHA 7 }
---  LHATrapTable		    OBJECT IDENTIFIER ::= { LinuxHA 900 }
+--  LHAClusterInfo 	      OBJECT IDENTIFIER ::= { LinuxHA 1 }
+--  LHANodeTable	      OBJECT IDENTIFIER ::= { LinuxHA 2 }
+--  LHAIFStatusTable	      OBJECT IDENTIFIER ::= { LinuxHA 3 }
+--  LHAResourceGroupTable     OBJECT IDENTIFIER ::= { LinuxHA 4 }
+--  LHAMembershipTable	      OBJECT IDENTIFIER ::= { LinuxHA 6 }
+--  LHAHeartbeatConfigInfo    OBJECT IDENTIFIER ::= { LinuxHA 7 }
+--  LHATrapTable	      OBJECT IDENTIFIER ::= { LinuxHA 900 }
+
+LHAUUIDString ::= TEXTUAL-CONVENTION
+    DISPLAY-HINT "f28ad1d9-e3fb-4fe8-bedb-43cc23fb13d5"
+    STATUS       current
+    DESCRIPTION
+    	"A string that represents a UUID"
+    SYNTAX       OCTET STRING (SIZE (36))
 
 LHAClusterInfo		OBJECT IDENTIFIER ::= { LinuxHA 1 }
 
@@ -84,7 +92,8 @@ LHATotalNodeCount OBJECT-TYPE
     MAX-ACCESS	read-only
     STATUS	current
     DESCRIPTION
-	"The number of nodes that are currently configured for this cluster."
+	"The number of nodes that are currently configured for this
+	cluster."
     ::= { LHAClusterInfo 1 }
 
 LHALiveNodeCount OBJECT-TYPE
@@ -92,7 +101,8 @@ LHALiveNodeCount OBJECT-TYPE
     MAX-ACCESS	read-only
     STATUS	current
     DESCRIPTION
-	"The number of nodes that are currently active in this cluster."
+	"The number of nodes that are currently active in this
+	cluster."
     ::= { LHAClusterInfo 2 }
 
 LHACurrentNodeID OBJECT-TYPE
@@ -100,8 +110,9 @@ LHACurrentNodeID OBJECT-TYPE
     MAX-ACCESS	read-only
     STATUS	current
     DESCRIPTION
-	"The nodes id of the host that this agent currently represents.
-	This value is the same as the LHANodeIndex value of this node."
+	"The nodes id of the host that this agent currently
+	represents.  This value is the same as the LHANodeIndex value
+	of this node."
     ::= { LHAClusterInfo 3 }
 
 LHAResourceGroupCount OBJECT-TYPE
@@ -109,8 +120,8 @@ LHAResourceGroupCount OBJECT-TYPE
     MAX-ACCESS	read-only
     STATUS	current
     DESCRIPTION
-	"The total number of Resource Groups that has been configured
-	for this cluster."
+	"The total number of Resource Groups that have been
+	configured for this cluster."
     ::= { LHAClusterInfo 4 }
 
 LHANodeTable OBJECT-TYPE
@@ -118,7 +129,8 @@ LHANodeTable OBJECT-TYPE
     MAX-ACCESS	not-accessible
     STATUS	current
     DESCRIPTION
-	"A table contains information about all the nodes in the cluster."
+	"A table contains information about all the nodes in the
+	cluster."
     ::= { LinuxHA 2 }
 
 LHANodeEntry OBJECT-TYPE
@@ -133,8 +145,10 @@ LHANodeEntry OBJECT-TYPE
 lhaNodeEntry ::= SEQUENCE {
     LHANodeIndex	    Integer32,
     LHANodeName	    	    DisplayString,
-    LHANodeType	            DisplayString,
-    LHANodeStatus	    DisplayString,
+    LHANodeTypeString       DisplayString,
+    LHANodeTypeValue        INTEGER,
+    LHANodeStatusString	    DisplayString,
+    LHANodeStatusValue	    INTEGER,
     LHANodeUUID		    DisplayString,
     LHANodeIFCount	    Counter32,
 }
@@ -144,7 +158,8 @@ LHANodeIndex OBJECT-TYPE
     MAX-ACCESS	not-accessible
     STATUS	current
     DESCRIPTION
-	"An integer that uniquelly identifies a node in a cluster."
+	"An integer that identifies a node in a cluster for a given
+	snmp session."
     ::= { LHANodeEntry 1 }
 
 LHANodeName OBJECT-TYPE
@@ -152,36 +167,74 @@ LHANodeName OBJECT-TYPE
     MAX-ACCESS	read-only
     STATUS	current
     DESCRIPTION
-	"A readable name that represents that node."
+	"A human readable name that represents that node."
     ::= { LHANodeEntry 2 }
 
-LHANodeType OBJECT-TYPE
+LHANodeTypeString OBJECT-TYPE
     SYNTAX	DisplayString
     MAX-ACCESS	read-only
     STATUS	current
     DESCRIPTION
 	"There could be many types of nodes in the cluster.  For
-	example, a node could be a normal node, or a ping node depending
-	on the configuration."
+	example, a node could be a normal node, or a ping node
+	depending on the configuration.  This object shows the
+	type of this node in a human readble string format."
     ::= { LHANodeEntry 3 }
 
-LHANodeStatus OBJECT-TYPE
-    SYNTAX	DisplayString 
+LHANodeTypeValue OBJECT-TYPE
+    SYNTAX	INTEGER {
+	    	    unknown (0),
+		    normal (1),
+		    ping (2)
+	    	}
     MAX-ACCESS	read-only
     STATUS	current
     DESCRIPTION
-	"The status of the node. For heartbeat, this would normally be
-	init, up, active, or dead.  Since the status can be customrized, 
-	it is defined as a DisplayString instead of an INTEGER."
+	"There could be many types of nodes in the cluster.  For
+	example, a node could be a normal node, or a ping node
+	depending on the configuration.  This object shows the
+	type of this node as an integer.  
+	
+	So far only the normal node and ping node are defined.  All
+	the rest will fall into the 'unknown' catagory. "
     ::= { LHANodeEntry 4 }
 
-LHANodeUUID OBJECT-TYPE
+LHANodeStatusString OBJECT-TYPE
     SYNTAX	DisplayString 
     MAX-ACCESS	read-only
     STATUS	current
     DESCRIPTION
-	"The UUID of the current node."
+	"The status of the node in human readable format. For
+	heartbeat, this would normally be init, up, active, or dead."
     ::= { LHANodeEntry 5 }
+
+LHANodeStatusString OBJECT-TYPE
+    SYNTAX	INTEGER {
+	    	    unknown (0),
+		    init (1),
+		    up (2),
+		    active (3), 
+		    dead (4)
+	    	}
+    MAX-ACCESS	read-only
+    STATUS	current
+    DESCRIPTION
+	"The status of the node as an integer. For heartbeat, this
+	would normally be init, up, active, or dead.
+
+	So far, only these four states are defined.  All the rest
+	falls in 'unknown' catagory."
+    ::= { LHANodeEntry 5 }
+
+LHANodeUUID OBJECT-TYPE
+    SYNTAX	LHAUUIDString
+    MAX-ACCESS	read-only
+    STATUS	current
+    DESCRIPTION
+	"The UUID of the current node in string representatio.  This
+	UUID will be persisted over the heartbeat session.  So it can
+	be used as a unique identifier for a node."
+    ::= { LHANodeEntry 6 }
 
 LHANodeIFCount OBJECT-TYPE
     SYNTAX	Counter32
@@ -197,7 +250,8 @@ LHAIFStatusTable OBJECT-TYPE
     MAX-ACCESS	not-accessible
     STATUS	current
     DESCRIPTION
-	"A table containing all the interfaces of a node."
+	"A table describes all the interfaces that are used by the
+	heartbeat cluster."
     ::= { LinuxHA 3 }
 
 LHAIFStatusEntry OBJECT-TYPE
@@ -211,9 +265,10 @@ LHAIFStatusEntry OBJECT-TYPE
     ::= { LHAIFStatusTable 1 }
 
 lhaIFStatusEntry ::= SEQUENCE {
-    LHAIFIndex	    Integer32,
-    LHAIFName	    DisplayString,
-    LHAIFStatus	    DisplayString
+    LHAIFIndex	    	Integer32,
+    LHAIFName	    	DisplayString,
+    LHAIFStatusString	DisplayString,
+    LHAIFStatusValue	INTEGER
 }
 
 LHAIFIndex OBJECT-TYPE
@@ -232,27 +287,43 @@ LHAIFName OBJECT-TYPE
 	"A name for this interface."
     ::= { LHAIFStatusEntry 2 }
 
-LHAIFStatus OBJECT-TYPE
+LHAIFStatusString OBJECT-TYPE
     SYNTAX	DisplayString
     MAX-ACCESS	read-only
     STATUS	current
     DESCRIPTION
-	"The status for this interface. 
+	"The status for this interface in human readable format. 
 
 				NOTE WELL
 	
-	This is somewhat confusing as Linux-HA only reports if the heartbeat
-	can be heard on that interfce or not. So for ethernet interfaces, the
-	interfaces for the node itself is always dead as no heartbeat can be
-	heard on that interface."
+	This is somewhat confusing as Linux-HA only reports if the
+	heartbeat can be heard on that interfce or not. So for
+	ethernet interfaces, the interfaces for the node itself is
+	always dead as no heartbeat can be heard on that interface."
     ::= { LHAIFStatusEntry 3 }
+
+LHAIFStatusValue OBJECT-TYPE
+    SYNTAX	INTEGER {
+	    	    unknown (0),
+		    up (1),
+		    down (2)
+    		}
+    MAX-ACCESS	read-only
+    STATUS	current
+    DESCRIPTION
+	"The status for this interface as an integer. 
+	
+	Currently only up and down are defined as the interface
+	status.  All the others will fall into the unknown catagory."
+    ::= { LHAIFStatusEntry 4 }
+
 
 LHAResourceGroupTable OBJECT-TYPE
     SYNTAX	SEQUENCE OF lhaResourceGroupEntry
     MAX-ACCESS	not-accessible
     STATUS	current
     DESCRIPTION
-	"A table containing information for resource groups."
+	"A table containing information of all the resource groups."
     ::= { LinuxHA 4 }
 
 LHAResourceGroupEntry OBJECT-TYPE
@@ -260,7 +331,8 @@ LHAResourceGroupEntry OBJECT-TYPE
     MAX-ACCESS	not-accessible
     STATUS	current
     DESCRIPTION
-	"An entry containing a resource group and its information."
+	"An entry that describes the resource group and its
+	information."
     INDEX	{ LHAResourceGroupIndex }
     ::= { LHAResourceGroupTable 1 }
 
@@ -276,8 +348,7 @@ LHAResourceGroupIndex OBJECT-TYPE
     MAX-ACCESS	not-accessible
     STATUS	current
     DESCRIPTION
-	"A unique integer that identifies this resource group that 'belongs'
-	to a particular resource mater node."
+	"A unique integer that identifies this resource group."
     ::= { LHAResourceGroupEntry 1 }
 
 LHAResourceGroupMaster OBJECT-TYPE
@@ -285,15 +356,16 @@ LHAResourceGroupMaster OBJECT-TYPE
     MAX-ACCESS	not-accessible
     STATUS	current
     DESCRIPTION
-	"The master node of this resource group.  This is normally the 
-	node that controls this resource group.  
+	"The master node of this resource group.  This is normally
+	the node that controls the fail over activity of this
+	resource group.  
 	
-	For example, if the line in haresources is shown as the following:
+	For example, if the line in haresources is shown as the
+	following:
 	
-	just.linux-ha.org  192.168.1.1 httpd
+		just.linux-ha.org  192.168.1.1 httpd
 
-	then the host name: just.linux-ha.org will be the value for 
-	LHAResourceGroupMaster"
+	then the host name just.linux-ha.org will be the value here."
     ::= { LHAResourceGroupEntry 2 }
 
 LHAResourceGroupResources OBJECT-TYPE
@@ -305,7 +377,7 @@ LHAResourceGroupResources OBJECT-TYPE
     ::= { LHAResourceGroupEntry 3 }
 
 LHAResourceGroupStatus OBJECT-TYPE
-    SYNTAX	Integer32
+    SYNTAX	Unsigned32 (0..255)
     MAX-ACCESS	read-only
     STATUS	current
     DESCRIPTION
@@ -319,7 +391,6 @@ LHAResourceGroupStatus OBJECT-TYPE
 	 100-149 reserved for distribution use
 	 150-199 reserved for application use
 	 200-254 reserved
-
 	 "
     ::= { LHAResourceGroupEntry 4 }
 
@@ -373,7 +444,7 @@ LHAMemberName OBJECT-TYPE
     ::= { LHAMembershipEntry 2 }
 
 LHAMemberAddress OBJECT-TYPE
-    SYNTAX	DisplayString
+    SYNTAX	IpAddress
     MAX-ACCESS	read-only
     STATUS	current
     DESCRIPTION
@@ -398,6 +469,7 @@ LHAMemberIsMember OBJECT-TYPE
 
 LHAMemberLastChange OBJECT-TYPE
     SYNTAX	INTEGER {
+	    	    undefined (0),
 		    nochange (1),
 		    joined (2),
 		    left (3)
@@ -425,14 +497,6 @@ LHAHBVersion OBJECT-TYPE
     DESCRIPTION
 	"The heartbeat version."
     ::= { LHAHeartbeatConfigInfo 1 }
-
-LHAHOPFudge OBJECT-TYPE
-    SYNTAX	DisplayString
-    MAX-ACCESS	read-only
-    STATUS	current
-    DESCRIPTION
-	"The number of hops count minus the numer of nodes in cluster."
-    ::= { LHAHeartbeatConfigInfo 2 }
 
 LHAKeepAlive OBJECT-TYPE
     SYNTAX	DisplayString
@@ -474,14 +538,6 @@ LHAInitDead OBJECT-TYPE
 	"Very first dead time.  Should be twice the normal dead time."
     ::= { LHAHeartbeatConfigInfo 7 }
 
-LHAWatchdogTimer OBJECT-TYPE
-    SYNTAX	DisplayString
-    MAX-ACCESS	read-only
-    STATUS	current
-    DESCRIPTION
-	"Watchdog timer that is configured for this node."
-    ::= { LHAHeartbeatConfigInfo 8 }
-
 LHABaudRate OBJECT-TYPE
     SYNTAX	DisplayString
     MAX-ACCESS	read-only
@@ -490,24 +546,13 @@ LHABaudRate OBJECT-TYPE
 	"Baud rate for serial ports."
     ::= { LHAHeartbeatConfigInfo 9 }
 
-LHAUDPPort OBJECT-TYPE
-    SYNTAX	DisplayString
-    MAX-ACCESS	read-only
-    STATUS	current
-    DESCRIPTION
-	"UDP port used for heartbeat communication."
-    ::= { LHAHeartbeatConfigInfo 10 }
-
-LHNiceFailBack OBJECT-TYPE
-    SYNTAX	DisplayString
-    MAX-ACCESS	read-only
-    STATUS	current
-    DESCRIPTION
-	"This is an obsolete option for the failback setting."
-    ::= { LHAHeartbeatConfigInfo 11 }
-
 LHAutoFailBack OBJECT-TYPE
-    SYNTAX	DisplayString
+    SYNTAX	INTEGER {
+	    	    undefined (0),
+		    on (1),
+		    off (2),
+		    legacy (3),
+    		}
     MAX-ACCESS	read-only
     STATUS	current
     DESCRIPTION
@@ -540,87 +585,6 @@ LHARespawn OBJECT-TYPE
     DESCRIPTION
 	"The other services that got respawned by heartbeat daemon."
     ::= { LHAHeartbeatConfigInfo 15 }
-
-LHAGenMethod OBJECT-TYPE
-    SYNTAX	DisplayString
-    MAX-ACCESS	read-only
-    STATUS	current
-    DESCRIPTION
-	"Heartbeat Generation Method creation method.  Normally this is 
-	stored on disk and incremented as needed."
-    ::= { LHAHeartbeatConfigInfo 16 }
-
-LHARealTime OBJECT-TYPE
-    SYNTAX	DisplayString
-    MAX-ACCESS	read-only
-    STATUS	current
-    DESCRIPTION
-	"Realtime excution of heartbeat.  High Priority, etc."
-    ::= { LHAHeartbeatConfigInfo 17 }
-
-LHARTPriority OBJECT-TYPE
-    SYNTAX	DisplayString
-    MAX-ACCESS	read-only
-    STATUS	current
-    DESCRIPTION
-	"Realtime  Priority."
-    ::= { LHAHeartbeatConfigInfo 18 }
-
-LHADebugLevel OBJECT-TYPE
-    SYNTAX	DisplayString
-    MAX-ACCESS	read-only
-    STATUS	current
-    DESCRIPTION
-	"The debug level.  Default is 0."
-    ::= { LHAHeartbeatConfigInfo 19 }
-
-LHANormalPoll OBJECT-TYPE
-    SYNTAX	DisplayString
-    MAX-ACCESS	read-only
-    STATUS	current
-    DESCRIPTION
-	"To use normal Poll instead of heartbeat's own poll() call."
-    ::= { LHAHeartbeatConfigInfo 20 }
-
-LHAAPIAuth OBJECT-TYPE
-    SYNTAX	DisplayString
-    MAX-ACCESS	read-only
-    STATUS	current
-    DESCRIPTION
-	"The authentication information needed for the heartbeat clients."
-    ::= { LHAHeartbeatConfigInfo 21 }
-
-LHAMsgFmt OBJECT-TYPE
-    SYNTAX	DisplayString
-    MAX-ACCESS	read-only
-    STATUS	current
-    DESCRIPTION
-	"Heartbeat message format."
-    ::= { LHAHeartbeatConfigInfo 22 }
-
-LHALogFile OBJECT-TYPE
-    SYNTAX	DisplayString
-    MAX-ACCESS	read-only
-    STATUS	current
-    DESCRIPTION
-	"Log file location."
-    ::= { LHAHeartbeatConfigInfo 23 }
-
-LHADebugFile OBJECT-TYPE
-    SYNTAX	DisplayString
-    MAX-ACCESS	read-only
-    STATUS	current
-    DESCRIPTION
-	"Debug file location."
-    ::= { LHAHeartbeatConfigInfo 24 }
-
-LHALogFacility OBJECT-TYPE
-    SYNTAX	DisplayString
-    MAX-ACCESS	read-only
-    STATUS	current
-    DESCRIPTION
-	"Log facility to use."
-    ::= { LHAHeartbeatConfigInfo 25 }
 
 LHATrapTable                    OBJECT IDENTIFIER ::= { LinuxHA 900 }
 
