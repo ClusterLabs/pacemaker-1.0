@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-my($VERSION)=(qw$Id: ldirectord,v 1.83 2004/03/10 07:40:05 horms Exp $)[2];
+my($VERSION)=(qw$Id: ldirectord,v 1.84 2004/04/12 06:41:36 horms Exp $)[2];
 
 ######################################################################
 # ldirectord                 http://www.vergenet.net/linux/ldirectord/
@@ -1877,14 +1877,12 @@ sub check_ftp
 	require Net::FTP;
 	my ($v, $r) = @_;
 	my $ftp;
-        local *READ_FH;
-	local *WRITE_FH;
+	my $memory;
 	my $port=(defined $$v{checkport}?$$v{checkport}:$$r{port});
 
 	&ld_debug(2, "Checking ftp server=$$r{server} port=$port");
 	
-	pipe(\*READ_FH, \*WRITE_FH);
-	select(\*WRITE_FH); $| = 1; select(STDERR);
+	open(MEMORY,'>', \$memory);
 
 	unless ($ftp = Net::FTP->new("$$r{server}:$port", 
 			Timeout=>$$v{negotiatetimeout})) {
@@ -1894,17 +1892,16 @@ sub check_ftp
 	$ftp->login($$v{login}, $$v{passwd});
 	$ftp->cwd("/");
 	$ftp->binary();
-	$ftp->get("$$r{request}", \*WRITE_FH);
+	$ftp->pasv();
+	$ftp->get("$$r{request}", *MEMORY);
 	$ftp->quit();
-	close(\*WRITE_FH);
-	while(<READ_FH>) {
-		if (/$$r{receive}/) {
-	 		service_set($v, $r, "up");
-			close(\*READ_FH);
-			return 1
-		}
+
+	close(MEMORY);
+
+	if ($memory =~ /$$r{receive}/) {
+		service_set($v, $r, "up");
+		return 1;
 	}
-	close(\*READ_FH);
 
 	service_set($v, $r, "down");
 	return 0;
