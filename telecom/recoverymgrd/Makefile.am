@@ -19,8 +19,11 @@
 #
 MAINTAINERCLEANFILES    = Makefile.in
 
+CLEANFILES		= conf_lex.c  conf_yacc.c  conf_yacc.h
+
 INCLUDES                = -I$(top_builddir)/include -I$(top_srcdir)/include \
-			-I$(top_builddir)/libltdl -I$(top_srcdir)/libltdl
+			-I$(top_builddir)/libltdl -I$(top_srcdir)/libltdl \
+			-I$(top_builddir)/linux-ha -I$(top_srcdir)/linux-ha
 
 hadir			= $(sysconfdir)/ha.d
 halibdir		= $(libdir)/@HB_PKG@
@@ -64,13 +67,11 @@ recoverymgrd_LDFLAGS	= @LIBADD_DL@ @LIBLTDL@ -export-dynamic		\
 #	it.  This has been done for the current Linux lex/yacc
 #
 lex.yy.$(OBJEXT): lex.yy.c
-	( old_pwd=`pwd` ; cd $(srcdir) && 				\
-		$(CC) $(DEFS) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS)	\
-		-c lex.yy.c				\
-		-o $$old_pwd/$@  $(LEX_SOURCE_CFLAGS) -Wall )
+	$(CC) $(DEFS) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS)	\
+	-c lex.yy.c				\
+	-o $@  $(LEX_SOURCE_CFLAGS) -Wall
 
 conf_lex.$(OBJEXT): conf_lex.c
-	( old_pwd=`pwd` ; cd $(srcdir) && 				\
-		$(CC) $(DEFS) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS)	\
-		-c conf_lex.c			\
-		-o $$old_pwd/$@  $(LEX_SOURCE_CFLAGS) -Wall )
+	$(CC) $(DEFS) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS)	\
+	-c conf_lex.c			\
+	-o $@  $(LEX_SOURCE_CFLAGS) -Wall
