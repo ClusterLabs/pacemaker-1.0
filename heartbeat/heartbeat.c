@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.356 2005/02/18 16:45:59 alan Exp $ */
+/* $Id: heartbeat.c,v 1.357 2005/02/18 18:26:25 alan Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -1731,6 +1731,11 @@ hb_mcp_final_shutdown(gpointer p)
 		shutdown_phase = 1;
 		send_local_status();
 		if (!shutdown_last_client_child(SIGTERM)) {
+			if (ANYDEBUG) {
+				cl_log(LOG_DEBUG
+				, "hb_mcp_final_shutdown()"
+				"- immediate completion.");
+			}
 			return hb_mcp_final_shutdown(p); /* phase 1 (no children) */
 		}
 		return FALSE;
@@ -2570,14 +2575,27 @@ ManagedChildDied(ProcTrack* p, int status, int signo, int exitcode
 	p->privatedata = NULL;
 	if (shutdown_in_progress) {
                 if (g_list_find(config->client_list, managedchild) != NULL){
+			int len = g_list_length(config->client_list);
+			int newlen;
 			/* Child died unexpectedly, remove it and return */
-			if (ANYDEBUG) {
-				cl_log(LOG_DEBUG
-				,	"client \"%s\" died early during shutdown."
-				,	managedchild->command);
-			}
 			config->client_list = g_list_remove(config->client_list
 			,	managedchild);
+			newlen = g_list_length(config->client_list);
+			if (ANYDEBUG) {
+				cl_log(LOG_DEBUG
+				,	"client \"%s\" died early during"
+				" shutdown."
+				,	managedchild->command);
+				cl_log(LOG_DEBUG, "new list length: %d"
+				,	newlen);
+			}
+			if (newlen != len - 1) {
+				cl_log(LOG_ERR
+				,	"removing \"%s\" didn't work right"
+				": oldlen = %d newlen = %d"
+				,	managedchild->command
+				,	len, newlen);
+			}
 			return; 
 		}
 
@@ -2741,6 +2759,8 @@ shutdown_last_client_child(int nsig)
 	GList*			list = config->client_list;
 	GList*			last;
 	struct client_child*	lastclient;
+	int			oldlen;
+	int			newlen;
 
 	if (!list) {
 		return FALSE;
@@ -2749,11 +2769,24 @@ shutdown_last_client_child(int nsig)
 	last = g_list_last(list);
 	g_assert(last != NULL);
 	lastclient = last->data;
+	oldlen = g_list_length(list);
+	
 	config->client_list = g_list_remove(list, lastclient);
+	newlen = g_list_length(list);
+
+	if (newlen != oldlen -1) {
+		cl_log(LOG_ERR
+		,	"removing \"%s\" didn't work right"
+		": oldlen = %d newlen = %d"
+		,	lastclient->command
+		,	oldlen, newlen);
+	}
+
 	if (lastclient) {
 		if (ANYDEBUG) {
-			cl_log(LOG_DEBUG, "Shutting down client %s"
-			,	lastclient->command);
+			cl_log(LOG_DEBUG, "Shutting down client %s (%d left)"
+			,	lastclient->command
+			,	newlen);
 		}
 		lastclient->respawn = FALSE;
 		if (lastclient->proctrack) {
@@ -5030,6 +5063,10 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.357  2005/02/18 18:26:25  alan
+ * More debugging for client child killing.
+ * Weird...
+ *
  * Revision 1.356  2005/02/18 16:45:59  alan
  * Cleaned up and made more detailed some of the death-of-process logging.
  * No real code changes intended...
