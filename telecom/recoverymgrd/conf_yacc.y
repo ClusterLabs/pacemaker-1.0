@@ -188,6 +188,4 @@ event: APPHB_HUP_L 		{ eventindex = (int) APPHB_HUP; }
 	| APPHB_HBAGAIN_L	{ eventindex =(int) APPHB_HBAGAIN; }
 	| APPHB_HBWARN_L	{ eventindex = (int) APPHB_HBWARN; }
 	| APPHB_HBUNREG_L	{ eventindex = (int) APPHB_HBUNREG; };
-
-
 %%

@@ -46,12 +46,12 @@ extern int yy_flex_strlen( yyconst char *s );
 
 %%
 
-PID			return PID;
-APPHB_HUP		return APPHB_HUP_L;
-APPHB_NOHB		return APPHB_NOHB_L;
-APPHB_HBAGAIN		return APPHB_HBAGAIN_L;
-APPHB_HBWARN		return APPHB_HBWARN_L;
-APPHB_HBUNREG		return APPHB_HBUNREG_L;
+PID			{return PID;};
+APPHB_HUP		{return APPHB_HUP_L;};
+APPHB_NOHB		{return APPHB_NOHB_L;};
+APPHB_HBAGAIN		{return APPHB_HBAGAIN_L;};
+APPHB_HBWARN		{return APPHB_HBWARN_L;};
+APPHB_HBUNREG		{return APPHB_HBUNREG_L;};
 \".+\"			{yylval=(char *)strdup(yytext); return STRING;}
 [a-zA-Z][a-zA-Z0-9]*	{yylval=(char *)strdup(yytext); return WORD;}
 [_a-zA-Z0-9\/.-]+	{yylval=(char *)strdup(yytext); return FILENAME;}
