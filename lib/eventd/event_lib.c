@@ -1,4 +1,4 @@
-/* $Id: event_lib.c,v 1.1 2004/03/19 07:21:55 forrest Exp $ */
+/* $Id: event_lib.c,v 1.2 2004/03/23 07:22:36 forrest Exp $ */
 /* 
  * event_lib.c: source file for event library
  *
@@ -1304,6 +1304,9 @@ saEvtSelectionObjectGet(const SaEvtHandleT evtHandle,
 {
 	evt_handle *evt_hd;
 	
+	if(selectionObject == NULL){
+		return SA_ERR_INVALID_PARAM;
+	}
 	evt_hd = g_hash_table_lookup(evt_handle_hash, (gpointer)evtHandle);
 	if( evt_hd == NULL){
 		return SA_ERR_BAD_HANDLE;
