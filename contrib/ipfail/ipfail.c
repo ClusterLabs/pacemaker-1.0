@@ -171,14 +171,6 @@ main(int argc, char **argv)
 	g_main_run(mainloop);
 	g_main_destroy(mainloop);
 	
-	/*
-	for(; !quitnow && (reply=hb->llc_ops->readmsg(hb, 1)) != NULL;) {
-		ha_log_message(reply);
-		ha_msg_del(reply); reply=NULL;
-		errno = 0;
-	}
-	*/
-
 	if (!quitnow && errno != EAGAIN && errno != EINTR) {
 		cl_perror("read_hb_msg returned NULL");
 		cl_log(LOG_ERR, "REASON: %s", hb->llc_ops->errmsg(hb));
