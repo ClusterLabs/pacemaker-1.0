@@ -1,4 +1,4 @@
-/* $Id: stonithd.c,v 1.25 2005/03/11 08:46:09 sunjd Exp $ */
+/* $Id: stonithd.c,v 1.26 2005/03/15 19:52:24 gshi Exp $ */
 
 /* File: stonithd.c
  * Description: STONITH daemon for node fencing
@@ -328,7 +328,7 @@ int main(int argc, char ** argv)
 	cl_log_enable_stderr(TRUE);
 	cl_log_set_facility(LOG_DAEMON);
 	/* will enable it until log daemon becomes stable */
-	cl_log_send_to_logging_daemon(FALSE);
+	cl_log_set_uselogd(FALSE);
 
 	do {
 		option_char = getopt(argc, argv, optstr);
@@ -2952,6 +2952,10 @@ free_common_op_t(gpointer data)
 
 /* 
  * $Log: stonithd.c,v $
+ * Revision 1.26  2005/03/15 19:52:24  gshi
+ * changed cl_log_send_to_logging_daemon() to cl_log_set_uselogd()
+ * added cl_log_get_uselogd()
+ *
  * Revision 1.25  2005/03/11 08:46:09  sunjd
  * log message changes
  *
