@@ -164,7 +164,7 @@ echo libtoolize --ltdl --force --copy
 libtoolize --ltdl --force --copy
 
 echo automake --add-missing --include-deps
-automake --add-missing --include-deps
+automake --add-missing --include-deps --copy
 
 echo autoconf
 autoconf
