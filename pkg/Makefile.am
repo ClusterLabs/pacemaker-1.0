@@ -1,3 +1,4 @@
+# $Id: Makefile.am,v 1.5 2004/04/26 20:22:16 msoffen Exp $
 #
 # Open-HA "pkg" Makefile for Solaris etc.
 #

@@ -5,3 +5,4 @@ NAME=Open-HA hearbeat for multi-machine resilience
 CATEGORY=system
 CLASSES=none build
 BASEDIR=/
+EMAIL=linux-ha@lists.linux-ha.org
