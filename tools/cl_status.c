@@ -34,7 +34,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <errno.h>
-#ifdef HAVE_GET_OPT_H
+#ifdef HAVE_GETOPT_H
 #include <getopt.h>
 #endif
 #include <stdarg.h>
