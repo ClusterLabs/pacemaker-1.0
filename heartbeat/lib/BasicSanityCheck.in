@@ -36,6 +36,8 @@ APPHBD=$HBLIB/apphbd
 CLSTATUS=$HBLIB/cl_status
 APPHBTEST=$HBLIB/apphbtest
 IPCTEST=$HBLIB/ipctest
+LRM_ENABLED=@LRM_ENABLED@
+LRMTEST=$HBLIB/lrmtest/LRMBasicSanityCheck
 #
 DEFAULTINTERFACE=eth0	# But we really guess it...
 #
@@ -551,6 +553,19 @@ IPCtest() {
 	errcount=`expr $errcount + $?`
 }
 
+LRMTest() {
+	echo "Starting LRM tests" | tee -a $LOGFILE
+	$LRMTEST $1 >>$LOGFILE 2>&1
+	ret = $?
+	errcount=`expr $errcount + $ret`
+	if [ $ret == "0" ] 
+	then
+	  echo LRM tests succeeded.
+	else
+	  echo LRM tests failed.
+	fi
+}
+
 #
 #	Check our identity.
 #	Set Up Config Files.
@@ -573,6 +588,10 @@ RemoveConfigFiles
 StonithCheck
 AppHBCheck
 IPCtest
+if [ $LRM_ENABLED == "1" ] && [ -f $LRMTEST ] 
+then
+  LRMTest $HBLIB
+fi
 
 if
   [ -f $HADIR/core ]
