@@ -1,4 +1,4 @@
-static const char _ucast_Id [] = "$Id: ucast.c,v 1.15 2003/02/07 08:37:18 horms Exp $";
+static const char _ucast_Id [] = "$Id: ucast.c,v 1.16 2003/09/05 05:09:22 alan Exp $";
 /*
  * Adapted from alanr's UDP broadcast heartbeat bcast.c by Stéphane Billiart
  *	<stephane@reefedge.com>
@@ -307,7 +307,8 @@ static int ucast_init(void)
  *	Create new UDP/IP unicast heartbeat object 
  *	Name of interface and address are passed as parameters
  */
-static struct hb_media* ucast_new(const char *intf, const char *addr)
+static struct hb_media*
+ucast_new(const char *intf, const char *addr)
 {
 	struct ip_private *ipi;
 	struct hb_media *ret;
