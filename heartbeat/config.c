@@ -1,4 +1,4 @@
-const static char * _hb_config_c_Id = "$Id: config.c,v 1.104 2003/12/11 23:00:47 alan Exp $";
+const static char * _hb_config_c_Id = "$Id: config.c,v 1.105 2004/01/08 08:23:50 horms Exp $";
 /*
  * Parse various heartbeat configuration files...
  *
@@ -1719,7 +1719,7 @@ make_id_table(const char * list, int listlen, int (*map)(const char *, int))
 }
 
 /*
- * apiperm client-name gid=gidlist uid=uidlist
+ * apiauth client-name gid=gidlist uid=uidlist
  *
  * Record API permissions for use in API client authorization
  */
@@ -1877,6 +1877,9 @@ baddirective:
 
 /*
  * $Log: config.c,v $
+ * Revision 1.105  2004/01/08 08:23:50  horms
+ * typo
+ *
  * Revision 1.104  2003/12/11 23:00:47  alan
  * Fixed a couple of signed/unsigned problems (warnings) in the code.
  *
