@@ -38,9 +38,9 @@ sleep 1
 
 export MIBS=ALL
 #snmpwalk -v2c localhost -c public LinuxHA
-node0=`snmpget -v2c localhost -c public LHANodeName.0 | sed -ne 's/LINUX-HA-MIB::LHANodeName.0 = STRING: //p'`
+node0=`snmpget -v2c localhost -c public LHANodeName.1 | sed -ne 's/LINUX-HA-MIB::LHANodeName.1 = STRING: //p'`
 echo node0 = $node0
-node1=`snmpget -v2c localhost -c public LHANodeName.1 | sed -ne 's/LINUX-HA-MIB::LHANodeName.1 = STRING: //p'`
+node1=`snmpget -v2c localhost -c public LHANodeName.2 | sed -ne 's/LINUX-HA-MIB::LHANodeName.2 = STRING: //p'`
 echo node1 = $node1
 
 ret=1
