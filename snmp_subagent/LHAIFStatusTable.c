@@ -24,6 +24,7 @@
  *        : mib2c.iterate.conf,v 5.9 2003/06/04 00:14:41 hardaker Exp $
  */
 
+#include <portability.h>
 #include <net-snmp/net-snmp-config.h>
 #include <net-snmp/net-snmp-includes.h>
 #include <net-snmp/agent/net-snmp-agent-includes.h>
