@@ -52,7 +52,7 @@
 #define	CMS_MSG_REQUEST			(1 << 18)
 
 
-#define CMS_DOMAIN_SOCKET	HA_VARLIBDIR "heartbeat/cms/cms"
+#define CMS_DOMAIN_SOCKET	HA_VARLIBDIR "/heartbeat/cms/cms"
 
 typedef struct {
 
