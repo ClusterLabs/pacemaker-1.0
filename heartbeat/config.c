@@ -1,4 +1,4 @@
-/* $Id: config.c,v 1.138 2005/01/31 17:56:19 alan Exp $ */
+/* $Id: config.c,v 1.139 2005/02/04 20:52:12 alan Exp $ */
 /*
  * Parse various heartbeat configuration files...
  *
@@ -96,6 +96,7 @@ static int set_register_to_apphbd(const char *);
 static int set_badpack_warn(const char*);
 static int set_coredump(const char*);
 static int set_corerootdir(const char*);
+static int set_release2mode(const char*);
 
 /*
  * Each of these parameters is is automatically recorded by
@@ -137,6 +138,8 @@ struct directive {
 , {KEY_BADPACK,   set_badpack_warn, TRUE, "true", "warn about bad packets"}
 , {KEY_COREDUMP,  set_coredump, TRUE, "true", "enable Linux-HA core dumps"}
 , {KEY_COREROOTDIR,set_corerootdir, TRUE, NULL, "set root directory of core dump area"}
+, {KEY_REL2,      set_release2mode, TRUE, "false"
+,				"enable release 2 style resource management"}
 };
 
 static const struct WholeLineDirective {
@@ -2071,10 +2074,74 @@ set_corerootdir(const char* value)
 	return HA_OK;
 }
 
+/*
+ *  Enable all these flags when  KEY_RELEASE2 is enabled...
+ *	apiauth lrmd    uid=root
+ *	apiauth crmd    uid=hacluster
+ *	apiauth cib     uid=hacluster
+ *	apiauth cibmon  uid=hacluster
+ *	respawn root    /usr/lib/heartbeat/lrmd
+ *	respawn hacluster       /usr/lib/heartbeat/ccm
+ *	respawn hacluster       /usr/lib/heartbeat/cib
+ *	respawn hacluster       /usr/lib/heartbeat/cibmon
+ *	respawn hacluster       /usr/lib/heartbeat/crmd
+ */
+
+
+static int
+set_release2mode(const char* value)
+{
+	const struct do_directive {
+		const char * dname;
+		const char * dval;
+	} r2dirs[] =
+	{	{"apiauth", "lrmd   uid=root"}
+	,	{"apiauth", "crmd   uid=" HA_CCMUSER}
+	,	{"apiauth", "cib    uid=" HA_CCMUSER}
+	,	{"apiauth", "cibmon uid=" HA_CCMUSER}
+	,	{"respawn", "root "           HALIB "/lrmd"}
+	,	{"respawn", " "HA_CCMUSER " " HALIB "/ccm"}
+	,	{"respawn", " "HA_CCMUSER " " HALIB "/cib"}
+	,	{"respawn", " "HA_CCMUSER " " HALIB "/cibmon"}
+	,	{"respawn", " "HA_CCMUSER " " HALIB "/crmd"}
+	};
+	gboolean	dorel2;
+	int		rc;
+	int		j;
+	int		rc2 = HA_OK;
+
+	if ((rc = str_to_boolean(value, &dorel2)) == HA_OK) {
+		if (!dorel2) {
+			return HA_OK;
+		}
+	}else{
+		return rc;
+	}
+
+	/* Enable release 2 style cluster management */
+	for (j=0; j < DIMOF(r2dirs); ++j) {
+		int	k;
+		for (k=0; k < DIMOF(WLdirectives); ++k) {
+			if (0 != strcmp(r2dirs[j].dname, WLdirectives[k].type)) {
+				continue;
+			}
+			if (HA_OK
+			!= (rc2 = WLdirectives[k].parse(r2dirs[j].dval))) {
+				cl_log(LOG_ERR, "Directive %s %s failed"
+				,	r2dirs[j].dname, r2dirs[j].dval);
+			}
+		}
+	}
+	return rc2;
+}
 
 
 /*
  * $Log: config.c,v $
+ * Revision 1.139  2005/02/04 20:52:12  alan
+ * Put in a new directive to enable the CRM and all its paraphanelia
+ * required for release 2.
+ *
  * Revision 1.138  2005/01/31 17:56:19  alan
  * Made the comment on Deprecated legacy option not come out if DoManageResources
  * is turned off.
