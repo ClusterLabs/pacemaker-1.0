@@ -251,7 +251,7 @@ TestHeartbeat() {
     HBStop
   fi
   if
-   ! $CLSTATUS hbstatus >/dev/null 2>&1
+    $CLSTATUS hbstatus >/dev/null 2>&1
   then
     echo "$CLSTATUS shows heartbeat running" | tee -a $LOGFILE
     errcount=`expr $errcount + 1`
@@ -269,8 +269,10 @@ TestHeartbeat() {
      exit 1
     fi
   fi
+  echo Waiting for heartbeat to start up ...
+  sleep 12
   if
-   ! $CLSTATUS hbstatus >/dev/null 2>&1
+    $CLSTATUS hbstatus >/dev/null 2>&1
   then
    : OK
   else
@@ -278,7 +280,7 @@ TestHeartbeat() {
     errcount=`expr $errcount + 1`
   fi
   if
-   ! $CLSTATUS nodestatus $LOCALNODE >/dev/null 2>&1
+    $CLSTATUS nodestatus $LOCALNODE >/dev/null 2>&1
   then
    : OK
   else
@@ -299,7 +301,7 @@ TestHeartbeat() {
     errcount=`expr $errcount + 1`
   fi
   if
-   ! $CLSTATUS nodestatus $DUMMYNODE >/dev/null 2>&1
+    $CLSTATUS nodestatus $DUMMYNODE >/dev/null 2>&1
   then
     echo "$CLSTATUS shows $DUMMYNODE status as alive(!)" | tee -a $LOGFILE
     errcount=`expr $errcount + 1`
@@ -334,7 +336,7 @@ TestHeartbeat() {
     errcount=`expr $errcount + 1`
   fi
 
-  sleep 5
+  sleep 10
 
   if
     $RSCDIR/IPaddr $TESTIP status >/dev/null 2>&1 &&
