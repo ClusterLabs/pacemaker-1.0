@@ -371,6 +371,29 @@ hb_rsc_recover_dead_resources(struct node_info* hip)
 		takeover_from_node(hip->nodename);
 		return;
 	}
+	/*
+	 * We can get confused by a dead node when we're 
+	 * not fully started, unless we're careful.
+	 */
+	if (shutdown_in_progress) {
+		switch(resourcestate) {
+		case HB_R_SHUTDOWN:
+		case HB_R_STABLE:	break;
+					
+		default:	
+				cl_log(LOG_ERR
+				,	"recover_dead_resources()"
+				" during shutdown"
+				": state %d", resourcestate);
+				/* FALL THROUGH! */
+		case HB_R_BOTHSTARTING:
+		case HB_R_RSCRCVD:
+		case HB_R_STARTING:	hb_giveup_resources();
+					return;
+			hb_giveup_resources();
+			return;
+		}
+	}
 	rsc_needs_failback = TRUE;
 
 	/*
@@ -2005,6 +2028,10 @@ StonithProcessName(ProcTrack* p)
 
 /*
  * $Log: hb_resource.c,v $
+ * Revision 1.40  2004/01/30 22:45:17  alan
+ * Fixed a hole where very early shutdown requests with the other node
+ * dead could cause problems.
+ *
  * Revision 1.39  2004/01/20 15:23:22  alan
  * Fixed a dumb bug where we correctly (and somewhat laboriously) computed the
  * resource state of the "other side", and then immediately (on the next line)
