@@ -83,6 +83,7 @@
 #include <clplumbing/cl_poll.h>
 #include <clplumbing/realtime.h>
 #include <clplumbing/uids.h>
+#include <clplumbing/cpulimits.h>
 #include <pils/generic.h>
 #include <pils/plugin.h>
 
@@ -178,12 +179,12 @@ static int set_notify_plugin(const char* option);
 static int set_debugfile(const char* option);
 static int set_logfile(const char* option);
 struct {
-	int	debug_level;
-	char	wdt_dev[MAXLINE];
-	int	wdt_interval_ms;
-	int	realtime;
-	char	debugfile[MAXLINE];
-	char	logfile[MAXLINE];
+	int		debug_level;
+	char		wdt_dev[MAXLINE];
+	int		wdt_interval_ms;
+	int		realtime;
+	char		debugfile[MAXLINE];
+	char		logfile[MAXLINE];
 } apphbd_config;
 
 struct directive{
@@ -235,17 +236,12 @@ apphb_dispatch(IPC_Channel* src, gpointer Client)
 		cl_log(LOG_DEBUG, "apphb_dispatch: client: %ld"
 		,	(long)client->pid);
 	}
-	/* FIXME!!!! ??? */
-	if (client->ch->ch_status == IPC_DISCONNECT) {
-		apphb_notify(client, APPHB_HUP);
-		client->deleteme = TRUE;
-		return FALSE;
-	}
 
 	while (!client->deleteme
 	&&	client->ch->ops->is_message_pending(client->ch)) {
 
 		if (client->ch->ch_status == IPC_DISCONNECT) {
+			apphb_notify(client, APPHB_HUP);
 			client->deleteme = TRUE;
 		}else{
 			if (!apphb_read_msg(client)) {
@@ -911,7 +907,7 @@ main(int argc, char ** argv)
 	}
 
 	if (argerr) {
-		usage(cmdname,LSB_EXIT_GENERIC);
+		usage(cmdname, LSB_EXIT_GENERIC);
 	}
 
 	if (req_status){
@@ -947,6 +943,14 @@ shutdown(int nsig)
 	}else{
 		exit(LSB_EXIT_OK);
 	}
+}
+
+static gboolean
+cpu_limit_timer(gpointer unused)
+{
+	(void)unused;
+	cl_cpu_limit_update();
+	return TRUE;
 }
 
 
@@ -1004,6 +1008,12 @@ init_start()
 	/* Create a source to handle new connection requests */
 	G_main_add_IPC_WaitConnection(G_PRIORITY_HIGH, wconn
 	,	NULL, FALSE, apphb_new_dispatch, wconn, NULL);
+	if (apphbd_config.debug_level >= DBGMIN) {
+		int	ms_interval;
+		cl_cpu_limit_setpercent(20);
+		ms_interval = cl_cpu_limit_ms_interval();
+		Gmain_timeout_add(ms_interval, cpu_limit_timer, NULL);
+	}
 
 	/* Create the mainloop and run it... */
 	mainloop = g_main_new(FALSE);
