@@ -1,4 +1,4 @@
-/* $Id: config.c,v 1.116 2004/03/25 07:55:38 alan Exp $ */
+/* $Id: config.c,v 1.117 2004/03/25 10:17:28 lars Exp $ */
 /*
  * Parse various heartbeat configuration files...
  *
@@ -924,6 +924,7 @@ add_node(const char * value, int nodetype)
 	++config->nodecount;
 	strncpy(hip->status, INITSTATUS, sizeof(hip->status));
 	strncpy(hip->nodename, value, sizeof(hip->nodename));
+	g_strdown(hip->nodename);
 	hip->rmt_lastupdate = 0L;
 	hip->has_resources = TRUE;
 	hip->anypacketsyet  = 0;
@@ -1451,6 +1452,7 @@ set_stonith_host_info(const char * value)
 	}
 	strncpy(StonithHost, vp, tlen);
 	StonithHost[tlen] = EOS;
+	g_strdown(StonithHost);
 
 	/* Verify that this host is valid to create this stonith
 	 *  object.  Expect the hostname listed to match this host or '*'
@@ -1980,6 +1982,10 @@ baddirective:
 
 /*
  * $Log: config.c,v $
+ * Revision 1.117  2004/03/25 10:17:28  lars
+ * Part I: Lower-case hostnames whereever they are coming in. STONITH
+ * module audit to follow.
+ *
  * Revision 1.116  2004/03/25 07:55:38  alan
  * Moved heartbeat libraries to the lib directory.
  *

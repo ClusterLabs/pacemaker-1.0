@@ -1,4 +1,4 @@
-/* $Id: client_lib.c,v 1.1 2004/03/25 08:05:23 alan Exp $ */
+/* $Id: client_lib.c,v 1.2 2004/03/25 10:17:29 lars Exp $ */
 /* 
  * client_lib: heartbeat API client side code
  *
@@ -307,7 +307,8 @@ hb_api_signon(struct ll_cluster* cinfo, const char * clientid)
 		return HA_FAIL;
 	}
         memset(OurNode, 0, sizeof(OurNode));
-	strncpy(OurNode, un.nodename, sizeof(OurNode) -1 );
+	strncpy(OurNode, un.nodename, sizeof(OurNode)-1);
+	g_strdown(OurNode);
 
 	/* Initialize order_seq_head */
 	pi->order_seq_head.seqno = 1;

@@ -1,4 +1,4 @@
-/* $Id: heartbeat.c,v 1.296 2004/03/25 07:55:40 alan Exp $ */
+/* $Id: heartbeat.c,v 1.297 2004/03/25 10:17:28 lars Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -2919,6 +2919,7 @@ main(int argc, char * argv[], char **envp)
 		}else{
 			struct utsname u;
 			uname(&u);
+			g_strdown(u.nodename);
 			printf("%s OK [pid %ld et al] is running on %s [%s]...\n"
 			,	cmdname, running_hb_pid, u.nodename, localnodename);
 			cleanexit(LSB_STATUS_OK);
@@ -4188,11 +4189,16 @@ get_localnodeinfo(void)
 	if (fp) {
 		fclose(fp);
 	}
+	g_strdown(localnodename);
 }
 
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.297  2004/03/25 10:17:28  lars
+ * Part I: Lower-case hostnames whereever they are coming in. STONITH
+ * module audit to follow.
+ *
  * Revision 1.296  2004/03/25 07:55:40  alan
  * Moved heartbeat libraries to the lib directory.
  *

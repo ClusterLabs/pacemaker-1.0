@@ -415,7 +415,7 @@ class hb_api:
 
         self.ReqFIFOName = self.FIFOdir + os.sep + self.OurClientID + ".req"
         self.ReplyFIFOName = self.FIFOdir + os.sep + self.OurClientID + ".rsp"
-        self.OurNode = os.uname()[1]
+        self.OurNode = lower(os.uname()[1])
            
         #
         # For named clients, lock the request/response fifos

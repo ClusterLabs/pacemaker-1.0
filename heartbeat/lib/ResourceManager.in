@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-#	$Id: ResourceManager.in,v 1.12 2003/09/19 19:12:35 alan Exp $
+#	$Id: ResourceManager.in,v 1.13 2004/03/25 10:17:28 lars Exp $
 #
 #	New haresources format:
 #
@@ -89,13 +89,15 @@ ipres() {
 	#	3) Append a blank to the end of the line
 	#	4) Compress multiple blanks/tabs into a single blank
 	#	5) Strip off a leading space (if any)
+	#       6) Lower-case the first word (hostname)
 	#
 	sed						\
 		-e  's%#.*%%'				\
 		-e :a -e '/\\$/N; s/\\\n//; ta'		\
 		-e  's%$% %'				\
 		-e  's%[	 ][	 ]*% %g' 	\
-		-e  's%^ %%' 				|
+		-e  's%^ %%' 				\
+		-e  's%^\([^ ]*\)%\L\1%'		|
   	egrep $grepflags "$pat"
 }
 
@@ -377,10 +379,14 @@ esac
 
 #
 #	$Log: ResourceManager.in,v $
+#	Revision 1.13  2004/03/25 10:17:28  lars
+#	Part I: Lower-case hostnames whereever they are coming in. STONITH
+#	module audit to follow.
+#
 #	Revision 1.12  2003/09/19 19:12:35  alan
 #	Changed resourcemanager to not give an ERROR instead of a WARNING if
 #	one of the resource scripts it starts gives a bad return code.
-#
+#	
 #	Revision 1.11  2003/07/22 09:50:23  alan
 #	Added code to pay attention more to return codes in ResourceManager,
 #	and also to avoid starting any resource twice (barring race conditions).
