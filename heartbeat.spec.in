@@ -1,4 +1,4 @@
-#	$Id: heartbeat.spec.in,v 1.105 2004/10/16 20:34:15 alan Exp $
+#	$Id: heartbeat.spec.in,v 1.106 2004/10/23 16:21:29 alan Exp $
 
 # Workaround for a change in RPM 4.1.x; needs proper fixing soon!
 ##%define _unpackaged_files_terminate_build 0
@@ -73,6 +73,11 @@ PILS is designed to support any number of plugins
 implementing any number of interfaces.
 
 %changelog
+
+* Mon Oct 11 2004  Alan Robertson <alanr@unix.sh> (see doc/AUTHORS file)
++ Version 1.99.1 - *early* beta series - preparing for 2.0.0
+  + Andrew provided a number of fixes to the CRM and 2.0 features
+  + Fixed a problem with retrying failed STONITH operations
 
 * Mon Oct 11 2004  Alan Robertson <alanr@unix.sh> (see doc/AUTHORS file)
 + Version 1.99.0 - *early* beta series - preparing for 2.0.0
