@@ -1,4 +1,4 @@
-const static char * _hb_config_c_Id = "$Id: config.c,v 1.100 2003/10/27 15:47:10 alan Exp $";
+const static char * _hb_config_c_Id = "$Id: config.c,v 1.101 2003/10/27 19:20:37 alan Exp $";
 /*
  * Parse various heartbeat configuration files...
  *
@@ -119,7 +119,6 @@ struct directive {
 , {KEY_REALTIME,  set_realtime, TRUE, "true", "enable realtime behavior?"}
 , {KEY_DEBUGLEVEL,set_debuglevel, TRUE, NULL, "debug level"}
 , {KEY_NORMALPOLL,set_normalpoll, TRUE, "true", "Use system poll(2) function?"}
-, {KEY_APIPERM,	  set_api_authorization, FALSE, NULL, NULL}
 };
 
 static const struct WholeLineDirective {
@@ -127,8 +126,9 @@ static const struct WholeLineDirective {
 	int (*parse) (const char *line);
 }WLdirectives[] =
 {
-	{KEY_STONITH,  	   set_stonith_info},
-	{KEY_STONITHHOST,  set_stonith_host_info}
+	{KEY_STONITH,  	   set_stonith_info}
+,	{KEY_STONITHHOST,  set_stonith_host_info}
+,	{KEY_APIPERM,	   set_api_authorization}
 ,	{KEY_CLIENT_CHILD,  add_client_child}
 };
 
@@ -249,7 +249,6 @@ init_config(const char * cfgfile)
 		openlog(cmdname, LOG_CONS | LOG_PID, config->log_facility);
 	}
 
-	APIAuthorization = g_hash_table_new(g_str_hash, g_str_equal);
 
 	/* Set any "fixed" defaults */
 	for (j=0; j < DIMOF(Directives); ++j) {
@@ -449,6 +448,7 @@ parse_config(const char * cfgfile, char *nodename)
 
 		return(HA_FAIL);
 	}
+	APIAuthorization = g_hash_table_new(g_str_hash, g_str_equal);
 
 	fstat(fileno(f), &sbuf);
 	config->cfg_time = sbuf.st_mtime;
@@ -1687,7 +1687,7 @@ make_id_table(const char * list, int listlen, int (*map)(const char *, int))
 	while (id < lastid && *id != EOS) {
 		idlen = strcspn(id, ",");
 		if (id+idlen >= lastid) {
-			idlen = (lastid - id)-1;
+			idlen = (lastid - id);
 		}
 		idval = map(id, idlen);
 		if (idval < 0) {
@@ -1748,7 +1748,7 @@ set_api_authorization(const char * directive)
 
 		bp += strspn(bp, WHITESPACE);
 
-		if (strncmp(bp, "uid=", 4)) {
+		if (strncmp(bp, "uid=", 4) == 0) {
 			if (uidlist != NULL) {
 				cl_log(LOG_ERR 
 				,	"Duplicate uid list in " KEY_APIPERM);
@@ -1758,7 +1758,7 @@ set_api_authorization(const char * directive)
 			uidlist=bp;
 			uidlen = strcspn(bp, WHITESPACE);
 			bp += uidlen;
-		}else if (strncmp(bp, "gid=", 4)) {
+		}else if (strncmp(bp, "gid=", 4) == 0) {
 			if (gidlist != NULL) {
 				cl_log(LOG_ERR 
 				,	"Duplicate gid list in " KEY_APIPERM);
@@ -1791,7 +1791,8 @@ set_api_authorization(const char * directive)
 		auth->uid = make_id_table(uidlist, uidlen, unametonum);
 		if (auth->uid == NULL) {
 			cl_log(LOG_ERR 
-			,	"Bad uid list in " KEY_APIPERM);
+			,	"Bad uid list [%*s] in " KEY_APIPERM
+			,	uidlen, uidlist);
 			goto baddirective;
 		}
 	}
@@ -1799,7 +1800,8 @@ set_api_authorization(const char * directive)
 		auth->gid = make_id_table(gidlist, gidlen, gnametonum);
 		if (auth->gid == NULL) {
 			cl_log(LOG_ERR 
-			,	"Bad gid list in " KEY_APIPERM);
+			,	"Bad gid list [%*s] in " KEY_APIPERM
+			,	gidlen, gidlist);
 			goto baddirective;
 		}
 	}
@@ -1823,10 +1825,12 @@ baddirective:
 		if (auth->uid) {
 			/* Ought to destroy the strings too */
 			g_hash_table_destroy(auth->uid);
+			auth->uid = NULL;
 		}
 		if (auth->gid) {
 			/* Ought destroy the strings too */
 			g_hash_table_destroy(auth->gid);
+			auth->gid = NULL;
 		}
 		memset(auth, 0, sizeof(auth));
 		ha_free(auth);
@@ -1841,6 +1845,9 @@ baddirective:
 
 /*
  * $Log: config.c,v $
+ * Revision 1.101  2003/10/27 19:20:37  alan
+ * Fixed a couple of minor but important bugs in the client authentication code.
+ *
  * Revision 1.100  2003/10/27 15:47:10  alan
  * Added a new configuration directive for managing API authoriztion.
  *
