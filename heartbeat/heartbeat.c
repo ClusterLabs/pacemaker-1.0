@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.348 2005/02/07 18:14:49 gshi Exp $ */
+/* $Id: heartbeat.c,v 1.349 2005/02/07 21:32:38 gshi Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -890,6 +890,7 @@ read_child(struct hb_media* mp)
 		hb_signal_process_pending();
 		
 		imsg = wirefmt2ipcmsg(pkt, pktlen, ourchan);
+		ha_free(pkt);
 		if (imsg != NULL) {
 			/* Send frees "imsg" "at the right time" */
 			rc = ourchan->ops->send(ourchan, imsg);
@@ -4995,6 +4996,9 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.349  2005/02/07 21:32:38  gshi
+ * move the free from the calling function in wirefmt2ipcmsg() to the caller
+ *
  * Revision 1.348  2005/02/07 18:14:49  gshi
  * fix for shutdown
  *
