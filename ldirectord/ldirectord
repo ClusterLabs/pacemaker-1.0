@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-my($VERSION)=(qw$Id: ldirectord,v 1.92 2004/09/10 04:17:44 horms Exp $)[2];
+my($VERSION)=(qw$Id: ldirectord,v 1.93 2004/11/09 03:58:42 horms Exp $)[2];
 
 ######################################################################
 # ldirectord                 http://www.vergenet.net/linux/ldirectord/
@@ -1817,9 +1817,10 @@ sub check_https_child
 		my $recstr = $$r{receive};
 		if($result =~ /error/i ||
 				($recstr =~ /.+/ && !($body =~ /$recstr/))) {
-			alarm(0);
+			&ld_debug(2, "Expected String Not Present");
 			die("$result");
 		}
+		&ld_debug(2, "Expected String Present");
 	};
 
 	if ($@) {
@@ -1838,7 +1839,7 @@ sub check_https
 	# to prevent the parent from contiuously growing in size.
 	my $pid;
 	my $status;
-	local $SIG{'CHLD'} = "IGNORE";
+	local $SIG{'CHLD'} = undef;
 	
 	$pid = fork();
 	if ($pid) {
@@ -1859,7 +1860,7 @@ sub check_https
 		return 1;
 	}
 
-	&ld_debug(2, "Status: $status");
+	&ld_debug(2, "Status: $status (" . (($status==0)?"ok":"fail") . ")");
 	if ($status ne 0) {
 		service_set($v, $r, "down");
 		return 0;
