@@ -22,9 +22,18 @@
 #include <stdio.h>
 #include <string.h>
 
+#define  YY_NO_UNPUT
 #include "y.tab.h"
 extern char * yylval;
 extern int yylex(void);
+
+#ifdef FLEX_SCANNER
+#	define	MAKE_WARNINGS_GO_AWAY	(void)yy_flex_realloc; 	\
+					(void)yy_flex_strlen;
+#else
+#	define	MAKE_WARNINGS_GO_AWAY	;
+#endif
+
 %}
 
 %%
@@ -39,12 +48,17 @@ APPHB_HBUNREG		return APPHB_HBUNREG_L;
 [a-zA-Z][a-zA-Z0-9]*	yylval=(char *)strdup(yytext); return WORD; 
 [_a-zA-Z0-9\/.-]+	yylval=(char *)strdup(yytext); return FILENAME;
 [ \t]+			/* ignore whitespace */;
-\n			/* ignore */;
+\n			/* ignore */ MAKE_WARNINGS_GO_AWAY
 \{			return OPEN_CURLY;
 \}			return CLOSE_CURLY;
 :			return COLON;
 =			return EQUALS;
 #+.*\n			/* ignore lines starting with # */
+
+#			REJECT	/* This makes unused label warning go away */
+			/* This rule is actually never matched because
+			 * of the rule above.
+			 */
 
 %%
 

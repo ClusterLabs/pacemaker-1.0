@@ -91,7 +91,7 @@ yywrap(void)
         return 1;
 }
 
-void 
+static void 
 print_hash(gpointer key, gpointer value, gpointer userdata)
 {
 	char* key_str = key;

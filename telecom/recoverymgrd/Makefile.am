@@ -33,8 +33,7 @@ COMMONLIBS		= $(top_builddir)/lib/clplumbing/libplumb.la	\
 LIBRT 			= @LIBRT@
 
 ## lex and yacc don't generate proper prototypes, so -Werror breaks build
-CFLAGS			= -O2 -Wall \
-			-DPIDFILE='"$(PIDFILE)"'
+AM_CFLAGS		=  -DPIDFILE='"$(PIDFILE)"'
 
 
 ## binary progs
@@ -60,5 +59,3 @@ lex.yy.c: conf_lex.lex
 
 y.tab.c: conf_yacc.yacc lex.yy.c recoverymgrd.c
 	yacc -d conf_yacc.yacc
-	
-

@@ -1,4 +1,3 @@
-
 %{
 
 /*
@@ -22,6 +21,7 @@
 */
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <grp.h>
 #include <pwd.h>
@@ -34,6 +34,17 @@
 
 extern int yylex(void);
 /* #define DEBUG */
+
+/* This conditional may not be a truly adequate test */
+
+#ifdef YYBYACC
+#	define	MAKE_WARNINGS_GO_AWAY	{			\
+						(void)yyrcsid;	\
+					}
+#else
+#	define	MAKE_WARNINGS_GO_AWAY	/* Nothing */
+#endif
+
 %}
 
 %token PID APPHB_HUP_L APPHB_NOHB_L APPHB_HBAGAIN_L APPHB_HBWARN_L 
@@ -46,6 +57,7 @@ extern int yylex(void);
 commands: command commands 
 	| command
 	{
+		MAKE_WARNINGS_GO_AWAY
 	}
 
 command: userinfo FILENAME OPEN_CURLY events 
@@ -74,6 +86,9 @@ command: userinfo FILENAME OPEN_CURLY events
 		   printf("event (%i) = %s\n", i, current->event[i].args);
 		}
 #endif
+		if (0) {
+			YYERROR;
+		}
 	}
 
 
