@@ -29,23 +29,12 @@ us=`uname -n`
 
 usage() {
   echo "Usage: $0 <email> [subject] {start|stop|status}"
-  echo "$Id: MailTo.in,v 1.6 2004/04/19 18:09:39 alan Exp $"
+  echo "$Id: MailTo.in,v 1.7 2004/04/20 19:52:53 msoffen Exp $"
   exit 1
 }
 
-OS=`uname -s`
-case "$OS" in
-    SunOS)
-	MailCmd=mailx
-        ;;
-    *)
-        # OS=Linux, etc.
-	MailCmd=mail
-	;;
-esac
-
 MailProgram() {
-	$MailCmd -s "$1" "$email"  <<EOF
+	@MAILCMD@ -s "$1" "$email"  <<EOF
         $Subject
  
         Command line was:
