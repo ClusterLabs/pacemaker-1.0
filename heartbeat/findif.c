@@ -1,4 +1,4 @@
-/* $Id: findif.c,v 1.34 2004/03/25 07:55:39 alan Exp $ */
+/* $Id: findif.c,v 1.35 2004/04/27 11:25:59 horms Exp $ */
 /*
  * findif.c:	Finds an interface which can route a given address
  *
@@ -606,6 +606,10 @@ usage()
 		"    interface: interface to add the virtual interface to\n"
 		"    broadcast: broadcast address of the network that "
 			"address belongs to\n"
+		"\n"
+		"Options:\n"
+		"    -C: Output netmask as the number of bits rather "
+			"than as 4 octets.\n"
 	,	cmdname, cmdname);
 	exit(1);
 }
@@ -678,6 +682,9 @@ ff02::%lo0/32                     fe80::1%lo0                   UC          lo0
 
 /* 
  * $Log: findif.c,v $
+ * Revision 1.35  2004/04/27 11:25:59  horms
+ * Document -C option to findif
+ *
  * Revision 1.34  2004/03/25 07:55:39  alan
  * Moved heartbeat libraries to the lib directory.
  *
