@@ -178,7 +178,7 @@ SaveConfigFiles() {
 }
 
 RestoreConfigFiles() {
-  mv $HADIR/.cfsave/* $HADIR
+  mv $HADIR/.cfsave/* $HADIR >/dev/null 2>&1
 }
 
 HBStart() {
