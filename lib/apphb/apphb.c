@@ -1,4 +1,4 @@
-/* $Id: apphb.c,v 1.18 2004/09/10 01:27:17 alan Exp $ */
+/* $Id: apphb.c,v 1.19 2004/11/08 09:07:51 sunjd Exp $ */
 /*
  * apphb.c: application heartbeat library code.
  *
@@ -109,6 +109,13 @@ apphb_register(const char * appname, const char * appinstance)
 	strncpy(msg.msgtype, REGISTER, sizeof(msg.msgtype));
 	strncpy(msg.appname, appname, sizeof(msg.appname));
 	strncpy(msg.appinstance, appinstance, sizeof(msg.appinstance));
+	/* Maybe we need current starting directory instead of 
+	 * current work directory. 
+	 */
+	if ( getcwd(msg.curdir, APPHB_OLEN) == NULL)  {
+		apphb_unregister();
+		return -1;
+	}
 	msg.pid = getpid();
 	msg.uid = getuid();
 	msg.gid = getgid();

@@ -1,4 +1,4 @@
-/* $Id: apphb_notify.h,v 1.4 2004/10/24 13:00:12 lge Exp $ */
+/* $Id: apphb_notify.h,v 1.5 2004/11/08 09:07:51 sunjd Exp $ */
 #ifndef _APPHB_NOTIFY_H
 #	define _APPHB_NOTIFY_H
 /*
@@ -25,9 +25,10 @@ typedef enum apphb_event apphb_event_t;
  */
 struct AppHBNotifyOps_s {
 	int (*cregister)(pid_t pid, const char * appname, const char * appinst
-	,	uid_t uid, gid_t gid, void * handle);
-	int (*status)(const char * appname, const char * appinst, pid_t pid
-	,	uid_t uid, gid_t gid, apphb_event_t event);
+	,	const char * curdir, uid_t uid, gid_t gid, void * handle);
+	int (*status)(const char * appname, const char * appinst
+	,	const char * curdir, pid_t pid, uid_t uid, gid_t gid 
+	,	apphb_event_t event);
 };
 
 /*

@@ -1,4 +1,4 @@
-/* $Id: apphbd.c,v 1.53 2004/10/16 04:12:56 alan Exp $ */
+/* $Id: apphbd.c,v 1.54 2004/11/08 09:07:51 sunjd Exp $ */
 /*
  * apphbd:	application heartbeat daemon
  *
@@ -121,6 +121,8 @@ typedef struct apphb_client apphb_client_t;
 struct apphb_client {
 	char *			appname;	/* application name */
 	char *			appinst;	/* application name */
+	char *			curdir;		/* application starting 
+						   directory */
 	pid_t			pid;		/* application pid */
 	uid_t			uid;		/* application UID */
 	gid_t			gid;		/* application GID */
@@ -348,6 +350,7 @@ apphb_client_register(apphb_client_t* client, void* Msg,  size_t length)
 	ipc_destroy_auth(clientauth);
 	client->appname = g_strdup(msg->appname);
 	client->appinst = g_strdup(msg->appinstance);
+	client->curdir = g_strdup(msg->curdir);
 	client->uid = msg->uid;
 	client->gid = msg->gid;
 
@@ -365,7 +368,7 @@ apphb_client_register(apphb_client_t* client, void* Msg,  size_t length)
 	/* Tell the plugins something happened */
 	for (j=0; j < n_Notification_Plugins; ++j) {
 		NotificationPlugins[j]->cregister(client->pid
-		,	client->appname, client->appinst
+		,	client->appname, client->appinst, client->curdir
 		,	client->uid, client->gid, client);
 	}
 	return 0;
@@ -637,7 +640,7 @@ apphb_notify(apphb_client_t* client, apphb_event_t event)
 	/* Tell the plugins something happened */
 	for (j=0; j < n_Notification_Plugins; ++j) {
 		NotificationPlugins[j]->status(client->appname
-		,	client->appinst, client->pid
+		,	client->appinst, client->curdir, client->pid
 		,	client->uid, client->gid, event);
 	}
 }

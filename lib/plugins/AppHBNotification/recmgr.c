@@ -1,4 +1,4 @@
-/* $Id: recmgr.c,v 1.5 2004/10/24 13:00:12 lge Exp $ */
+/* $Id: recmgr.c,v 1.6 2004/11/08 09:07:51 sunjd Exp $ */
 /*
  * recmgr.c: Recovery manager client plug-in implementation
  * 
@@ -96,10 +96,10 @@ static void*                   	interfprivate;
  * notification plugin operations
  */
 static int our_cregister(pid_t pid, const char *appname, const char *appinst,
-		uid_t uid, gid_t gid, void *handle);
+		const char * curdir, uid_t uid, gid_t gid, void *handle);
 
 static int our_status(const char *appname, const char *appinst,
-		pid_t pid, uid_t uid, gid_t gid, 
+		const char * curdir, pid_t pid, uid_t uid, gid_t gid, 
 		apphb_event_t event);
 
 static struct AppHBNotifyOps_s  recmgrops = {
@@ -171,7 +171,7 @@ PIL_PLUGIN_INIT(PILPlugin*us, const PILPluginImports* imports, void *user_ptr)
  *  used in the plugin.
  */
 static int our_cregister(pid_t pid, const char *appname, const char *appinst,
-		uid_t uid, gid_t gid, void *handle)
+		const char * curdir, uid_t uid, gid_t gid, void *handle)
 {
 
 	return 0;
@@ -185,7 +185,7 @@ static int our_cregister(pid_t pid, const char *appname, const char *appinst,
  * @return zero on success, non-zero on error
  */
 static int our_status(const char *appname, const char *appinst,
-		pid_t pid, uid_t uid, gid_t gid, 
+		const char * curdir, pid_t pid, uid_t uid, gid_t gid,
 		apphb_event_t event)
 {
 	int rc;
