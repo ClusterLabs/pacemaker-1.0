@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.382 2005/03/21 18:05:06 gshi Exp $ */
+/* $Id: heartbeat.c,v 1.383 2005/03/21 18:40:57 gshi Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -4837,7 +4837,8 @@ add2_xmit_hist (struct msg_xmit_hist * hist, struct ha_msg* msg
 	hist->lastmsg = slot;
 	AUDITXMITHIST;
 	
-	if (hist->hiseq - hist->ackseq > MAXMSGHIST/2){
+	if (enable_flow_control
+	    && hist->hiseq - hist->ackseq > MAXMSGHIST/2){
 		all_clients_pause();
 	}
 
@@ -5190,6 +5191,9 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.383  2005/03/21 18:40:57  gshi
+ * we don't pause clients if flow control is not enabled
+ *
  * Revision 1.382  2005/03/21 18:05:06  gshi
  * fixed a bug reported by Jason Whiteaker:
  * heartbeat shall not expect ACK from ping nodes
