@@ -1,4 +1,4 @@
-/* $Id: config.c,v 1.141 2005/02/09 11:47:24 andrew Exp $ */
+/* $Id: config.c,v 1.142 2005/02/12 10:16:21 alan Exp $ */
 /*
  * Parse various heartbeat configuration files...
  *
@@ -471,7 +471,6 @@ parse_config(const char * cfgfile, char *nodename)
 		const char *	authspec;
 	} defserv[] = 
 	{	{"ipfail",	"uid=" HA_CCMUSER}
-	,	{"ccm",		"uid=" HA_CCMUSER}
 	,	{"ping",	"gid=" HA_APIGROUP}
 	,	{"cl_status",	"gid=" HA_APIGROUP}
 	,	{"lha-snmpagent","uid=root"}
@@ -2093,11 +2092,15 @@ set_release2mode(const char* value)
 		const char * dname;
 		const char * dval;
 	} r2dirs[] =
-	{	{"apiauth", "lrmd   uid=root"}
-	,	{"apiauth", "crmd   uid=" HA_CCMUSER}
-	,	{"apiauth", "cib    uid=" HA_CCMUSER}
+	{	{"apiauth", "ccm 	uid=" HA_CCMUSER}
+	,	{"apiauth", "cib 	uid=" HA_CCMUSER}
+	,	{"apiauth", "stonithd   uid=root"}
+		/* LRM is not a heartbeat API client */
+	,	{"apiauth", "crmd   	uid=" HA_CCMUSER}
+
 	,	{"respawn", " "HA_CCMUSER " " HALIB "/ccm"}
 	,	{"respawn", " "HA_CCMUSER " " HALIB "/cib"}
+	,	{"respawn", "root "	      HALIB "/stonithd"}
 	,	{"respawn", "root "           HALIB "/lrmd"}
 	,	{"respawn", " "HA_CCMUSER " " HALIB "/crmd"}
 	};
@@ -2134,6 +2137,9 @@ set_release2mode(const char* value)
 
 /*
  * $Log: config.c,v $
+ * Revision 1.142  2005/02/12 10:16:21  alan
+ * Modified startup commands for 'crm' directive.
+ *
  * Revision 1.141  2005/02/09 11:47:24  andrew
  * Adjust the order a little.  Give the CIB longer to start up.
  *
