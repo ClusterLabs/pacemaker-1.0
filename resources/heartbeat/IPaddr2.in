@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-#	$Id: IPaddr2.in,v 1.3 2004/08/30 09:09:25 horms Exp $
+#	$Id: IPaddr2.in,v 1.4 2005/04/04 08:30:28 horms Exp $
 #
 #	Copyright (C) 2003 Tuomo Soini <tis@foobar.fi>
 #
@@ -356,12 +356,16 @@ stop() {
 	esac
     fi
 
-    if
-	[ -z "$IF" ]
-    then
-	: Requested interface not in use
-	exit 0
-    fi
+    #
+    #	Do we already service this IP address?
+    #
+    case `status $1` in
+	stopped|loopback)
+	    : Requested interface not in use
+	    exit 0
+	    ;;
+    esac
+
 
     #
     #	If there is local_giveip script, run it.
