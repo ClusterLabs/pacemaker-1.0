@@ -733,8 +733,7 @@ ipfail_timeout_dispatch(gpointer user_data)
 	ll_cluster_t *hb = user_data;
 
 	if (quitnow) {
-		g_main_destroy(mainloop);
-		mainloop = NULL;
+		g_main_quit(mainloop);
 		return FALSE;
 	}
 
