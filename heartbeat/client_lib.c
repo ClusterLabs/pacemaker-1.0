@@ -88,6 +88,27 @@ typedef struct gen_callback {
 #define	MXFIFOPATH	128
 #define	HBPREFIX	"LCK..hbapi:"
 
+/* Order sequence */
+typedef struct order_seq {
+	char			to_node[HOSTLENG];
+	seqno_t			seqno;
+	struct order_seq *	next;
+}order_seq_t;
+
+/* Order Queue */
+struct orderQ {
+	struct ha_msg *		orderQ[MAXMSGHIST];
+	int			curr_index;
+	seqno_t			curr_seqno;
+};
+
+typedef struct order_queue {
+	char			from_node[HOSTLENG];
+	struct orderQ		node;
+	struct orderQ		cluster;
+	struct order_queue*	next;
+}order_queue_t;
+
 /*
  *	Our heartbeat private data
  */
@@ -113,12 +134,16 @@ typedef struct llc_private {
 	int			logfacility;	/* heartbeat's logging facility */
 	struct stringlist*	nextnode;	/* Next node for walknode */
 	struct stringlist*	nextif;		/* Next interface for walkif */
+	order_seq_t		order_seq_head;	/* head of order_seq list */
+	order_queue_t*		order_queue_head;/* head of order queue */
 }llc_private_t;
 
 static const char * OurID = "Heartbeat private data";	/* "Magic cookie" */
 
 #define ISOURS(l) (l && l->ll_cluster_private &&			\
 		(((llc_private_t*)(l->ll_cluster_private))->PrivateId) == OurID)
+#define SEQGAP		16
+#define DEBUGORDER	0
 
 static void		ClearLog(void);
 			/* Common code for request messages */
@@ -133,6 +158,8 @@ static int		get_nodelist(llc_private_t*);
 static void		zap_nodelist(llc_private_t*);
 static int		get_iflist(llc_private_t*, const char *host);
 static void		zap_iflist(llc_private_t*);
+static void		zap_order_seq(llc_private_t* pi);
+static void		zap_order_queue(llc_private_t* pi);
 static int		enqueue_msg(llc_private_t*,struct ha_msg*);
 static struct ha_msg*	dequeue_msg(llc_private_t*);
 static gen_callback_t*	search_gen_callback(const char * type, llc_private_t*);
@@ -167,6 +194,11 @@ static int		msgready(ll_cluster_t*);
 static int		setfmode(ll_cluster_t*, int mode);
 static int		sendclustermsg(ll_cluster_t*, struct ha_msg* msg);
 static int		sendnodemsg(ll_cluster_t*, struct ha_msg* msg
+,			const char * nodename);
+
+STATIC void		add_order_seq(llc_private_t*, struct ha_msg* msg);
+static int		send_ordered_clustermsg(ll_cluster_t* lcl, struct ha_msg* msg);
+static int		send_ordered_nodemsg(ll_cluster_t* lcl, struct ha_msg* msg
 ,			const char * nodename);
 static const char *	APIError(ll_cluster_t*);
 static int		CallbackCall(llc_private_t* p, struct ha_msg * msg);
@@ -320,6 +352,14 @@ hb_api_signon(struct ll_cluster* cinfo, const char * clientid)
 	}
         memset(OurNode, 0, sizeof(OurNode));
 	strncpy(OurNode, un.nodename, sizeof(OurNode) -1 );
+
+	/* Initialize order_seq_head */
+	pi->order_seq_head.seqno = 1;
+	pi->order_seq_head.to_node[0] = '\0';
+	pi->order_seq_head.next = NULL;
+
+	/* Initialize order_queue_head */
+	pi->order_queue_head = NULL;
 
 	/* Crank out the boilerplate */
 	if ((request = hb_api_boilerplate(API_SIGNON)) == NULL) {
@@ -518,6 +558,8 @@ hb_api_signoff(struct ll_cluster* cinfo)
 	pi->ReplyFIFOName[0] = EOS;
 	pi->ReqFIFOName[0] = EOS;
 	pi->SignedOn = 0;
+	zap_order_seq(pi);
+	zap_order_queue(pi);
 
 	return HA_OK;
 }
@@ -1188,6 +1230,45 @@ zap_iflist(llc_private_t* pi)
 	pi->nextif = NULL;
 }
 
+static void
+zap_order_seq(llc_private_t* pi)
+{
+	order_seq_t * order_seq = pi->order_seq_head.next;
+	order_seq_t * next;
+
+	while (order_seq != NULL){
+		next = order_seq->next;
+		ha_free(order_seq);
+		order_seq = next;	 
+	}
+	pi->order_seq_head.next = NULL;
+}
+
+static void
+zap_order_queue(llc_private_t* pi)
+{
+	order_queue_t *	oq = pi->order_queue_head;
+	order_queue_t *	next;
+	int		i;
+
+	while (oq != NULL) {
+		next = oq->next;
+		for (i = 0; i < MAXMSGHIST; i++){
+			if (oq->node.orderQ[i]){
+				ZAPMSG(oq->node.orderQ[i]);
+				oq->node.orderQ[i] = NULL;
+			}
+			if (oq->cluster.orderQ[i]){
+				ZAPMSG(oq->cluster.orderQ[i]);
+				oq->cluster.orderQ[i] = NULL;
+			}
+		}
+		ha_free(oq);
+		oq = next;     
+	}
+	pi->order_queue_head = NULL;
+}
+
 /*
  * Create a new stringlist.
  */
@@ -1393,13 +1474,162 @@ read_api_msg(llc_private_t* pi)
 }
 
 /*
+ * Pop up orderQ.
+ */
+static struct ha_msg *
+pop_orderQ(struct orderQ * q)
+{
+	struct ha_msg *	msg;
+
+	if (q->orderQ[q->curr_index]){
+		msg = q->orderQ[q->curr_index];
+		q->orderQ[q->curr_index] = NULL;
+		q->curr_index = (q->curr_index + 1) % MAXMSGHIST;
+		q->curr_seqno++;
+		return msg;
+	}
+	return NULL;
+}
+
+/*
+ *	Process ordered message
+ */
+static struct ha_msg *
+process_ordered_msg(struct orderQ* q, struct ha_msg* msg, seqno_t oseq)
+{
+	int	i;
+
+	if (oseq < q->curr_seqno || oseq - q->curr_seqno >= MAXMSGHIST){
+		if (oseq < q->curr_seqno){
+			/* Sender restarted */
+			if (DEBUGORDER)
+				cl_log(LOG_DEBUG, "Sender restarted!");
+
+			q->curr_seqno = 1;
+		}else {
+			/*
+			 * receives a very big sequence number, the
+			 * message is not reliable at this point
+			 */
+			if (DEBUGORDER) {
+				cl_log(LOG_DEBUG
+				,	"lost at least one unretrievable "
+					"packet! [%lx:%lx], force reset"
+				,	q->curr_seqno
+				,	oseq);
+			}
+			q->curr_seqno = oseq;
+		}
+		for (i = 0; i < MAXMSGHIST; i++) {
+			/* Clear order queue, msg obsoleted */
+			if (q->orderQ[i]){
+				ha_free(q->orderQ[i]);
+				q->orderQ[i] = NULL;
+			}
+		}
+		q->curr_index = 0;
+	}
+	/* Put the new received packet in queue */
+	q->orderQ[(q->curr_index + oseq - q->curr_seqno) % MAXMSGHIST] = msg;
+
+	/* Should we send the first ordered packets? */
+	if (oseq == q->curr_seqno || (q->curr_seqno == 1 
+	&&	oseq - q->curr_seqno >= SEQGAP)){
+		if (oseq != q->curr_seqno){
+			/*
+			 * We probably missed first several packets
+			 * since the client on from_node restarted.
+			 */
+			if (DEBUGORDER) {
+				cl_log(LOG_DEBUG
+				,	"Finally lost SEQGAP pkts, discard, "
+					"oseq 0x%lx, currseq 0x%lx"
+				,	oseq, q->curr_seqno);
+			}
+			for (i = q->curr_index
+			;	q->orderQ[i] == NULL
+			;	i = (i+1) % MAXMSGHIST)
+				q->curr_seqno++;
+			q->curr_index = i;
+			if (DEBUGORDER) {
+				cl_log(LOG_DEBUG
+				,	"After discard, seqno 0x%lx, index %d"
+				,	q->curr_seqno
+				,	q->curr_index);
+			}
+		}
+		return pop_orderQ(q);
+	}
+	return NULL;
+}
+
+/*
+ *	Process msg gotten from FIFO or msgQ.
+ */
+static struct ha_msg *
+process_hb_msg(llc_private_t* pi, struct ha_msg* msg)
+{
+	const char *	coseq;
+	const char *	from_node;
+	const char *	to_node;
+	seqno_t		oseq;
+	order_queue_t * oq;
+	int		i;
+
+	if ((coseq = ha_msg_value(msg, F_ORDERSEQ)) != NULL
+	&&	sscanf(coseq, "%lx", &oseq) == 1){
+		/* find the order queue by from_node */
+		if ((from_node = ha_msg_value(msg, F_ORIG)) == NULL){
+			ha_api_log(LOG_ERR
+			,	"%s: extract F_ORIG failed", __FUNCTION__);
+			ZAPMSG(msg);
+			return NULL;
+		}
+		for (oq = pi->order_queue_head; oq != NULL; oq = oq->next){
+			if (strcmp(oq->from_node, from_node) == 0)
+				break;
+		}
+		if (oq == NULL){
+			oq = (order_queue_t *) ha_malloc(sizeof(order_queue_t));
+			if (oq == NULL){
+				ha_api_log(LOG_ERR
+				,	"%s: order_queue_t malloc failed"
+				,	__FUNCTION__);
+				ZAPMSG(msg);
+				return NULL;
+			}
+			strncpy(oq->from_node, from_node, HOSTLENG);
+			oq->node.curr_index = 0;
+			oq->node.curr_seqno = 1;                    
+			oq->cluster.curr_index = 0;
+			oq->cluster.curr_seqno = 1;                    
+			for (i=0; i < MAXMSGHIST; i++){
+				oq->node.orderQ[i] = NULL;
+				oq->cluster.orderQ[i] = NULL;
+			}
+
+			oq->next = pi->order_queue_head;
+			pi->order_queue_head = oq;
+		}
+		if ((to_node = ha_msg_value(msg, F_TO)) == NULL)
+			return process_ordered_msg(&oq->cluster, msg, oseq);
+		else
+			return process_ordered_msg(&oq->node, msg, oseq);
+	}else
+		/* Simply return no order required msg */
+		return msg;
+}
+
+/*
  * Read a heartbeat message.  Read from the queue first.
  */
 static struct ha_msg *
 read_hb_msg(ll_cluster_t* llc, int blocking)
 {
+	llc_private_t*	pi;
 	struct ha_msg*	msg;
-	llc_private_t* pi;
+	struct ha_msg*	retmsg;
+	order_queue_t*	oq;
 
 	if (!ISOURS(llc)) {
 		ha_api_log(LOG_ERR, "read_hb_msg: bad cinfo");
@@ -1411,16 +1641,38 @@ read_hb_msg(ll_cluster_t* llc, int blocking)
 		return NULL;
 	}
 
-	msg = dequeue_msg(pi);
+	/* Process msg from msgQ */
+	while ((msg = dequeue_msg(pi))){
+		if ((retmsg = process_hb_msg(pi, msg)))
+			return retmsg;
+	}
+	/* Process msg from FIFO */
+	while (msgready(llc)){
+		msg = msgfromstream(pi->ReplyFIFO);
+		if ((retmsg = process_hb_msg(pi, msg)))
+			return retmsg;
+	}
+	/* Process msg from orderQ */
+	for (oq = pi->order_queue_head; oq != NULL; oq = oq->next){
+		if ((retmsg = pop_orderQ(&oq->node)))
+			return retmsg;
+		if ((retmsg = pop_orderQ(&oq->cluster)))
+			return retmsg;
+	}
 
-	if (msg != NULL) {
-		return(msg);
+	if (!blocking)
+		return NULL;
+
+	/* If this is a blocking call, we keep on reading from FIFO, so
+         * that we can finally return a non-NULL msg to user.
+         */
+	while (1){
+		msg = msgfromstream(pi->ReplyFIFO);
+		if (!msg)
+			return NULL;
+		if ((retmsg = process_hb_msg(pi, msg)))
+			return retmsg;
 	}
-	if (!blocking && !msgready(llc)) {
-		return(NULL);
-	}
-	msg = msgfromstream(pi->ReplyFIFO);
-	return msg;
 }
 
 /*
@@ -1481,13 +1733,40 @@ CallbackCall(llc_private_t* p, struct ha_msg * msg)
 	
 	/* Special case: node status (change) */
 
-	if (p->node_callback
-	&&	(strcasecmp(mtype, T_STATUS) == 0
-	||		strcasecmp(mtype, T_NS_STATUS) == 0)) {
+	if ((strcasecmp(mtype, T_STATUS) == 0
+	||	strcasecmp(mtype, T_NS_STATUS) == 0)) {
+		/* If DEADSTATUS, cleanup order queue for the node */
+		if (strcmp(ha_msg_value(msg, F_STATUS), DEADSTATUS) == 0) {
+			order_queue_t *	oq = p->order_queue_head;
+			order_queue_t *	prev;
+			order_queue_t *	next;
+			int		i;
 
-		p->node_callback(ha_msg_value(msg, F_ORIG)
-		,	ha_msg_value(msg, F_STATUS), p->node_private);
-		return(1);
+			for (prev = NULL; oq != NULL; prev = oq, oq = oq->next){
+				if (strcmp(oq->from_node
+				,	ha_msg_value(msg, F_ORIG)) == 0)
+					break;
+			}
+			if (oq){
+				next = oq->next;
+				for (i = 0; i < MAXMSGHIST; i++){
+					if (oq->node.orderQ[i])
+						ZAPMSG(oq->node.orderQ[i]);
+					if (oq->cluster.orderQ[i])
+						ZAPMSG(oq->cluster.orderQ[i]);
+				}
+				ha_free(oq);
+				if (prev)
+					prev->next = next;
+				else
+					p->order_queue_head = next;
+			}
+		}
+		if (p->node_callback) {
+			p->node_callback(ha_msg_value(msg, F_ORIG)
+			,	ha_msg_value(msg, F_STATUS), p->node_private);
+			return(1);
+		}
 	}
 
 	/* Special case: interface status (change) */
@@ -1852,6 +2131,101 @@ sendnodemsg(ll_cluster_t* lcl, struct ha_msg* msg
 	return(msg2stream(msg, pi->RequestFIFO));
 }
 
+/* Add order sequence number field */
+STATIC  void
+add_order_seq(llc_private_t* pi, struct ha_msg* msg)
+{
+        order_seq_t *	order_seq = &pi->order_seq_head;
+        const char *	to_node;
+        char		seq[32];
+
+	to_node = ha_msg_value(msg, F_TO);
+	if (to_node != NULL){
+		for (order_seq = pi->order_seq_head.next; order_seq != NULL
+		;	order_seq = order_seq->next){
+			if (strcmp(order_seq->to_node, to_node) == 0)
+				break;
+		}
+	}
+	if (order_seq == NULL && to_node != NULL){
+		order_seq = (order_seq_t *) ha_malloc(sizeof(order_seq_t));
+		if (order_seq == NULL){
+			ha_api_log(LOG_ERR
+			,	"add_order_seq: order_seq_t malloc failed!");
+			return;
+            	}
+		strncpy(order_seq->to_node, to_node, HOSTLENG);
+		order_seq->seqno = 1;
+		order_seq->next = pi->order_seq_head.next;
+		pi->order_seq_head.next = order_seq;
+        }
+        sprintf(seq, "%lx", order_seq->seqno);
+        order_seq->seqno++;
+        ha_msg_mod(msg, F_ORDERSEQ, seq);
+}
+
+/*
+ * Send an ordered message to the cluster.
+ */
+
+static int
+send_ordered_clustermsg(ll_cluster_t* lcl, struct ha_msg* msg)
+{
+	llc_private_t* pi;
+	ClearLog();
+	if (!ISOURS(lcl)) {
+		ha_api_log(LOG_ERR, "%s: bad cinfo", __FUNCTION__);
+		return HA_FAIL;
+	}
+
+	pi = (llc_private_t*)lcl->ll_cluster_private;
+
+	if (!pi->SignedOn) {
+		ha_api_log(LOG_ERR, "not signed on");
+		return HA_FAIL;
+	}
+
+	if (pi->iscasual) {
+		ha_api_log(LOG_ERR, "%s: casual client", __FUNCTION__);
+		return HA_FAIL;
+	}
+
+	add_order_seq(pi, msg);
+
+	return(msg2stream(msg, pi->RequestFIFO));
+}
+
+static int
+send_ordered_nodemsg(ll_cluster_t* lcl, struct ha_msg* msg
+,			const char * nodename)
+{
+	llc_private_t* pi;
+	ClearLog();
+	if (!ISOURS(lcl)) {
+		ha_api_log(LOG_ERR, "sendnodemsg: bad cinfo");
+		return HA_FAIL;
+	}
+	pi = (llc_private_t*)lcl->ll_cluster_private;
+	if (!pi->SignedOn) {
+		ha_api_log(LOG_ERR, "not signed on");
+		return HA_FAIL;
+	}
+	if (pi->iscasual) {
+		ha_api_log(LOG_ERR, "sendnodemsg: casual client");
+		return HA_FAIL;
+	}
+	if (*nodename == EOS) {
+		ha_api_log(LOG_ERR, "sendnodemsg: bad nodename");
+		return HA_FAIL;
+	}
+	if (ha_msg_mod(msg, F_TO, nodename) != HA_OK) {
+		ha_api_log(LOG_ERR, "sendnodemsg: cannot set F_TO field");
+		return(HA_FAIL);
+	}
+	add_order_seq(pi, msg);
+	return(msg2stream(msg, pi->RequestFIFO));
+}
+
 static char	APILogBuf[MAXLINE] = "";
 size_t		BufLen = 0;
 
@@ -1943,6 +2317,8 @@ static struct llc_ops heartbeat_ops = {
 	get_ifstatus,		/* if_status */
 	sendclustermsg,		/* sendclustermsg */
 	sendnodemsg,		/* sendnodemsg */
+	send_ordered_clustermsg,/* send_ordered_clustermsg */
+	send_ordered_nodemsg,	/* send_ordered_nodemsg */
 	get_inputfd,		/* inputfd */
 	msgready,		/* msgready */
 	hb_api_setsignal,	/* setmsgsignal */

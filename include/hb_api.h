@@ -171,6 +171,19 @@ struct llc_ops {
 ,			const char * nodename);
 
 /*
+ *	send_ordered_clustermsg: Send ordered message to all cluster members.
+ */
+	int		(*send_ordered_clustermsg)(ll_cluster_t*
+,			struct ha_msg* msg);
+/*
+ *	send_ordered_nodemsg:	Send ordered message to node.
+ */
+	int		(*send_ordered_nodemsg)(ll_cluster_t*
+,			struct ha_msg* msg
+,			const char* nodename);
+ 
+ 
+/*
  *	inputfd:	Return fd which can be given to select(2) or poll(2)
  *			for determining when messages are ready to be read.
  *			Only to be used in select() or poll(), please...

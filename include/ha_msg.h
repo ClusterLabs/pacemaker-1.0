@@ -22,7 +22,7 @@
 
 #ifndef _HA_MSG_H
 #	define _HA_MSG_H 1
-static const char * _ha_msg_h_Id = "$Id: ha_msg.h,v 1.20 2003/07/01 02:36:22 alan Exp $";
+static const char * _ha_msg_h_Id = "$Id: ha_msg.h,v 1.21 2003/09/11 16:01:28 alan Exp $";
 #include <stdio.h>
 #include <clplumbing/ipc.h>
 
@@ -76,6 +76,7 @@ struct ha_msg {
 #define F_LOGFACILITY	"logfacility"	/* Suggested cluster syslog facility */
 #define F_NODETYPE	"nodetype"	/* Type of node */
 #define F_RTYPE		"rtype"		/* Resource type */
+#define F_ORDERSEQ	"oseq"		/* Order Sequence number */
 
 	/* Message types */
 #define	T_STATUS	"status"	/* Status (heartbeat) */
