@@ -1,4 +1,4 @@
-/* $Id: ccmllm.c,v 1.9 2005/02/17 19:08:20 gshi Exp $ */
+/* $Id: ccmllm.c,v 1.10 2005/03/04 15:59:09 alan Exp $ */
 /* 
  * ccmllm.c: Low Level membership routines.
  *
@@ -154,8 +154,8 @@ llm_status_update(llm_info_t *llm, const char *node, const char *status)
 int
 llm_get_inactive_node_count(llm_info_t *llm)
 {
-	int	count = 0 ;
-	int	i;
+	int		count = 0 ;
+	unsigned	i;
 	
 	for (i = 0; i< llm->llm_nodeCount; i++){
 		cl_log(LOG_INFO, "node=%s  status=%s",

@@ -1,4 +1,4 @@
-/* $Id: heartbeat.h,v 1.59 2005/02/21 01:16:16 alan Exp $ */
+/* $Id: heartbeat.h,v 1.60 2005/03/04 15:59:09 alan Exp $ */
 /*
  * heartbeat.h: core definitions for the Linux-HA heartbeat program
  *
@@ -234,7 +234,7 @@ struct seqtrack {
 	GList*		client_status_msg_queue; /*client status message queue*/
 	seqno_t		seqmissing[MAXMISSING];
 	const char *	last_iface;
-	int		ack_trigger; /*whenever a message received 
+	seqno_t		ack_trigger; /*whenever a message received 
 				      *with seq % ACK_MSG_DIV == ack_trigger
 				      *we send back an ACK
 				    */
