@@ -1,4 +1,4 @@
-/* $Id: event_testclient.c,v 1.1 2004/03/19 07:21:55 forrest Exp $ */
+/* $Id: event_testclient.c,v 1.2 2004/03/19 07:32:01 forrest Exp $ */
 /* 
  * event_testclient.c: demo for event service
  *
@@ -40,8 +40,6 @@ static void callback_event_deliver(SaEvtSubscriptionIdT sub_id,
 int main(int argc, char **argv)
 {
 
-	//struct IPC_CHANNEL *ch;
-	SaUint32T handle;
 	SaVersionT version;
 	SaEvtHandleT evt_handle;
 	SaEvtCallbacksT callbacks;
