@@ -1,4 +1,4 @@
-/* $Id: apphbtest.c,v 1.22 2004/02/17 22:12:01 lars Exp $ */
+/* $Id: apphbtest.c,v 1.23 2004/09/28 06:32:19 alan Exp $ */
 /*
  * apphbtest:	application heartbeat test program
  *
@@ -128,7 +128,8 @@ doafailtest(void)
 	char	app_name[] = "failtest";
 	char	app_instance[APPNAME_LEN];
 	
-	sprintf(app_instance, "%s_%ld", app_name, (long)getpid());
+	snprintf(app_instance, sizeof(app_instance)
+	,	"%s_%ld", app_name, (long)getpid());
 	
 	cl_log(LOG_INFO, "Client %s registering", app_instance);
 	
@@ -198,7 +199,8 @@ hb_normal(int hb_intvl_ms, int delaysecs, int hb_num)
 	char	app_instance[APPNAME_LEN];
 	struct	timeval tmp;
 
-	sprintf(app_instance, "%s_%ld", app_name, (long)getpid());
+	snprintf(app_instance, sizeof(app_instance)
+	,	"%s_%ld", app_name, (long)getpid());
 	
 	if (delaysecs) {
 		/* sleep randomly for a while */
@@ -320,7 +322,8 @@ apphb_setwarn_test(int warnhb_ms, int hb_ms)
 	char	app_name[] = "apphb_setwarn_test";
 	char	app_instance[APPNAME_LEN];
 
-	sprintf(app_instance, "%s_%ld", app_name, (long)getpid());
+	snprintf(app_instance, sizeof(app_instance)
+	,	"%s_%ld", app_name, (long)getpid());
 	cl_log(LOG_INFO, "----Start test apphb_setwarn----");
 	cl_log(LOG_INFO, "Client %s registering", app_instance);
 	rc = apphb_register(app_name, app_instance);
@@ -376,7 +379,8 @@ void dup_reg_test()
 	char	app_instance[APPNAME_LEN];
 	char	app_name[] = "dup_reg_test";
 
-	sprintf(app_instance, "%s_%ld", app_name, (long)getpid());
+	snprintf(app_instance, sizeof(app_instance)
+	,	"%s_%ld", app_name, (long)getpid());
 	
 	cl_log(LOG_INFO, "----Client %s trying to register twice----"
 			, app_instance);
