@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-my($VERSION)=(qw$Id: ldirectord,v 1.88 2004/05/27 05:29:05 horms Exp $)[2];
+my($VERSION)=(qw$Id: ldirectord,v 1.89 2004/05/31 02:27:24 horms Exp $)[2];
 
 ######################################################################
 # ldirectord                 http://www.vergenet.net/linux/ldirectord/
@@ -443,7 +443,10 @@ sub ld_init
 	$SIG{'__WARN__'} = "DEFAULT";
 
 	# handle PIPE separately as it probably should be ignored
-	$SIG{'PIPE'} = \&ld_handler_ignore;
+	# This used to call a signal handler, that logged a message
+	# However, this typically goes to syslog and if syslog
+	# is playing up a loop will occur. 
+	$SIG{'PIPE'} = "IGNORE";
 
 	# HUP is actually used
 	$SIG{'HUP'} = \&ld_handler_hup;
@@ -567,12 +570,6 @@ sub ld_handler_term
 }
 
 
-sub ld_handler_ignore
-{
-	my ($signal) = (@_);
-	&ld_log("Ignoring signal: $signal");
-	
-}
 sub ld_handler_hup
 {
         my ($signal) = (@_);
