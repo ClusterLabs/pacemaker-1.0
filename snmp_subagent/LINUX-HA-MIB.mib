@@ -95,6 +95,24 @@ LHALiveNodeCount OBJECT-TYPE
 	"The number of nodes that are currently active in this cluster."
     ::= { LHAClusterInfo 2 }
 
+LHACurrentNodeID OBJECT-TYPE
+    SYNTAX	Integer32
+    MAX-ACCESS	read-only
+    STATUS	current
+    DESCRIPTION
+	"The nodes id of the host that this agent currently represents.
+	This value is the same as the LHANodeIndex value of this node."
+    ::= { LHAClusterInfo 3 }
+
+LHAResourceGroupCount OBJECT-TYPE
+    SYNTAX	Counter32
+    MAX-ACCESS	read-only
+    STATUS	current
+    DESCRIPTION
+	"The total number of Resource Groups that has been configured
+	for this cluster."
+    ::= { LHAClusterInfo 4 }
+
 LHANodeTable OBJECT-TYPE
     SYNTAX	SEQUENCE OF lhaNodeEntry
     MAX-ACCESS	not-accessible
@@ -117,6 +135,8 @@ lhaNodeEntry ::= SEQUENCE {
     LHANodeName	    	    DisplayString,
     LHANodeType	            DisplayString,
     LHANodeStatus	    DisplayString,
+    LHANodeUUID		    DisplayString,
+    LHANodeIFCount	    Counter32,
 }
 
 LHANodeIndex OBJECT-TYPE    
@@ -155,6 +175,23 @@ LHANodeStatus OBJECT-TYPE
 	it is defined as a DisplayString instead of an INTEGER."
     ::= { LHANodeEntry 4 }
 
+LHANodeUUID OBJECT-TYPE
+    SYNTAX	DisplayString 
+    MAX-ACCESS	read-only
+    STATUS	current
+    DESCRIPTION
+	"The UUID of the current node."
+    ::= { LHANodeEntry 5 }
+
+LHANodeIFCount OBJECT-TYPE
+    SYNTAX	Counter32
+    MAX-ACCESS	read-only
+    STATUS	current
+    DESCRIPTION
+	"The number of interfaces that is used by heartbeat
+	for this node."
+    ::= { LHANodeEntry 6 }
+
 LHAIFStatusTable OBJECT-TYPE
     SYNTAX	SEQUENCE OF lhaIFEntry
     MAX-ACCESS	not-accessible
@@ -168,8 +205,9 @@ LHAIFStatusEntry OBJECT-TYPE
     MAX-ACCESS	not-accessible
     STATUS	current
     DESCRIPTION
-	"An entry containing information about that interface."
-    INDEX	{ LHANodeName, LHAIFIndex, LHAIFName }
+	"An entry containing information about that interface.
+	The LHANodeIndex is listed in the LHANodeTable."
+    INDEX	{ LHANodeIndex, LHAIFIndex }
     ::= { LHAIFStatusTable 1 }
 
 lhaIFStatusEntry ::= SEQUENCE {
@@ -223,15 +261,24 @@ LHAResourceGroupEntry OBJECT-TYPE
     STATUS	current
     DESCRIPTION
 	"An entry containing a resource group and its information."
-    INDEX	{ LHAResourceGroupMaster LHAResourceGroupIndex }
+    INDEX	{ LHAResourceGroupIndex }
     ::= { LHAResourceGroupTable 1 }
 
 lhaResourceGroupEntry ::= SEQUENCE	{
-    LHAResourceGroupMaster	DisplayString,
     LHAResourceGroupIndex	Integer32,
+    LHAResourceGroupMaster	DisplayString,
     LHAResourceGroupResources   DisplayString,
     LHAResourceGroupStatus	Integer32
 }
+
+LHAResourceGroupIndex OBJECT-TYPE
+    SYNTAX	Integer32 (0..65535)
+    MAX-ACCESS	not-accessible
+    STATUS	current
+    DESCRIPTION
+	"A unique integer that identifies this resource group that 'belongs'
+	to a particular resource mater node."
+    ::= { LHAResourceGroupEntry 1 }
 
 LHAResourceGroupMaster OBJECT-TYPE
     SYNTAX	DisplayString
@@ -247,15 +294,6 @@ LHAResourceGroupMaster OBJECT-TYPE
 
 	then the host name: just.linux-ha.org will be the value for 
 	LHAResourceGroupMaster"
-    ::= { LHAResourceGroupEntry 1 }
-
-LHAResourceGroupIndex OBJECT-TYPE
-    SYNTAX	Integer32 (0..65535)
-    MAX-ACCESS	not-accessible
-    STATUS	current
-    DESCRIPTION
-	"A unique integer that identifies this resource group that 'belongs'
-	to a particular resource mater node."
     ::= { LHAResourceGroupEntry 2 }
 
 LHAResourceGroupResources OBJECT-TYPE
