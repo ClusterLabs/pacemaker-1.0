@@ -50,7 +50,7 @@ audiablealarm_stop () {
 		PID=`head -1 $PIDFILE`
 		ha_log "info: $0: Appears to already be running, killing [$PID]"
 		kill $PID > /dev/null
-		rm $PIDFILE
+		rm -f $PIDFILE
 	fi
 }
 
@@ -93,7 +93,7 @@ case "$lastarg" in
 	echo "Usage: [node1 node2 ... ] {start|stop|restart|status}"
 	echo "  The node list is an optional space delimited"
 	echo "  list of hosts that should never sound the alarm."
-	echo "$Id: AudibleAlarm.in,v 1.6 2002/08/01 06:41:55 horms Exp $";
+	echo "$Id: AudibleAlarm.in,v 1.7 2003/08/13 18:17:22 msoffen Exp $";
 	exit 1
 esac
 
