@@ -1,4 +1,4 @@
-/* $Id: ccm.c,v 1.59 2005/02/21 21:11:09 gshi Exp $ */
+/* $Id: ccm.c,v 1.60 2005/02/22 07:03:14 gshi Exp $ */
 /* 
  * ccm.c: Consensus Cluster Service Program 
  *
@@ -3941,14 +3941,14 @@ repeat:
 		 */
 		tmp_repeat = 0;
 		while(ccm_send_protoversion(hb, info) != HA_OK) {
-			if(tmp_repeat < REPEAT_TIMES){
+			if(hb->llc_ops->chan_is_connected(hb) && tmp_repeat < REPEAT_TIMES){
 				cl_log(LOG_ERR,
-					"ccm_control_process:failure to send "
-					"protoversion request");
+				       "ccm_control_process:failure to send "
+				       "protoversion request");
 				cl_shortsleep();
 				tmp_repeat++;
 			}else{
-				break;
+				return FALSE;
 			}
 		}
 		CCM_SET_STATE(info, CCM_STATE_VERSION_REQUEST);
