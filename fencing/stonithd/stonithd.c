@@ -1,4 +1,4 @@
-/* $Id: stonithd.c,v 1.17 2005/02/17 08:21:42 sunjd Exp $ */
+/* $Id: stonithd.c,v 1.18 2005/02/22 01:26:58 sunjd Exp $ */
 
 /* File: stonithd.c
  * Description: STONITH daemon for node fencing
@@ -42,6 +42,7 @@
 #include <getopt.h>
 #endif /* HAVE_GETOPT_H */
 #include <errno.h>
+#include <pwd.h>
 #include <glib.h>
 #include <pils/plugin.h>
 #include <stonith/stonith.h>
@@ -53,7 +54,8 @@
 #include <clplumbing/proctrack.h>
 #include <clplumbing/GSource.h>
 #include <clplumbing/cl_log.h>
-
+#include <clplumbing/cl_malloc.h>
+#include <clplumbing/coredumps.h>
 #include <apphb.h>
 #include <ha_msg.h>
 #include <hb_api.h>
@@ -310,15 +312,19 @@ static ll_cluster_t *	hb			= NULL;
 static gboolean 	childs_quit		= FALSE;
 static gboolean 	DEBUG_MODE		= FALSE;
 static gboolean 	TEST 			= FALSE;
+static IPC_Auth* 	ipc_auth 		= NULL;
 
 int main(int argc, char ** argv)
 {
 	int main_rc = LSB_EXIT_OK;
 	int option_char;
 
+	cl_malloc_forced_for_glib(); /* Force more memory checks */
         cl_log_set_entity(stonithd_name);
 	cl_log_enable_stderr(TRUE);
 	cl_log_set_facility(LOG_DAEMON);
+	/* will enable it until log daemon becomes stable */
+	cl_log_send_to_logging_daemon(FALSE);
 
 	do {
 		option_char = getopt(argc, argv, optstr);
@@ -369,6 +375,12 @@ int main(int argc, char ** argv)
 					LSB_EXIT_EINVAL : MAGIC_EC;
 		}
 	} while (1);
+	
+	if ( STARTUP_ALONE == TRUE ) {
+		/* enable coredump by itself, or depend on its parent */
+		cl_cdtocoredir();
+		cl_enable_coredumps(TRUE);
+	}
 
 	if ( running_daemon_pid(PIDFILE) > 0 ) {
 		stonithd_log(LOG_NOTICE, "%s %s", argv[0], M_RUNNING);
@@ -453,7 +465,9 @@ int main(int argc, char ** argv)
 	stonithd_log(LOG_DEBUG, "Enter g_mainloop\n");
 	stonithd_log(LOG_NOTICE, "%s %s", argv[0], M_STARTUP );
 	 
+	drop_privs(0, 0); /* become "nobody" */
 	g_main_run(mainloop);
+	return_to_orig_privs();
 
 	MY_APPHB_HB
 	if (SIGNONED_TO_APPHBD == TRUE) {
@@ -479,6 +493,10 @@ delhb_quit:
 
 	g_list_free(client_list); /* important. Others! free each item! pls check */
 	g_hash_table_destroy(executing_queue); /* ? */
+	if ( NULL != ipc_auth ) {
+		g_hash_table_destroy(ipc_auth->uid); /* ? */
+		cl_free(ipc_auth); /* ? */
+	}
 
 	if (unlink(PID_FILE) != 0) {
                 stonithd_log(LOG_ERR, "it failed to remove pidfile %s.", PIDFILE);
@@ -533,9 +551,13 @@ become_daemon(gboolean startup_alone)
 	CL_SIGNAL(SIGQUIT, stonithd_quit);
 	CL_SIGNAL(SIGCHLD, child_quit);
 	
+	/* Temporarily donnot abort even failed to create the pidfile according
+	 * to Andrew's suggestion. In the future will disable pidfile functions
+	 * when started up by heartbeat.
+	 */
 	if (0 != create_pidfile(PIDFILE)) {
-		stonithd_log(LOG_ERR, "%s %s", stonithd_name, M_ABORT);
-		exit((STARTUP_ALONE == TRUE) ? LSB_EXIT_GENERIC : MAGIC_EC);
+		stonithd_log(LOG_ERR, "%s not %s, although failed to create the"
+			     "pid file.", stonithd_name, M_ABORT);
 	}
 }
 
@@ -1022,7 +1044,10 @@ init_client_API_handler(void)
 	IPC_WaitConnection*	apichan = NULL;
 	char			path[] = IPC_PATH_ATTR;
 	char			sock[] = STONITHD_SOCK;
+	struct passwd*  	pw_entry;
 	GWCSource*		api_source;
+	GHashTable*     	uid_hashtable;
+	int             	tmp = 1;
 
 	stonithd_log(LOG_DEBUG, "init_client_API_handler: begin");
 
@@ -1036,9 +1061,32 @@ init_client_API_handler(void)
 	}
 	/* Need to destroy the chanattrs? */
 
+	/* Make up ipc auth struct. Now only allow the clients with uid=root or
+	 * uid=hacluster to connect.
+	 */
+        uid_hashtable = g_hash_table_new(g_direct_hash, g_direct_equal);
+        /* Add root;s uid */
+        g_hash_table_insert(uid_hashtable, GUINT_TO_POINTER(0), &tmp);
+
+        pw_entry = getpwnam(HA_CCMUSER);
+        if (pw_entry == NULL) {
+                stonithd_log(LOG_ERR, "Cannot get the uid of HACCMUSER");
+        } else {
+                g_hash_table_insert(uid_hashtable, GUINT_TO_POINTER
+				    (pw_entry->pw_uid), &tmp);
+        }
+
+        if ( NULL == (ipc_auth = MALLOCT(struct IPC_AUTH)) ) {
+                stonithd_log(LOG_ERR, "init_client_API_handler: MALLOCT failed.");
+		g_hash_table_destroy(uid_hashtable);
+        } else {
+                ipc_auth->uid = uid_hashtable;
+                ipc_auth->gid = NULL;
+        }
+
 	/* When to destroy the api_source */
 	api_source = G_main_add_IPC_WaitConnection(G_PRIORITY_HIGH, apichan,
-				NULL, FALSE, accept_client_dispatch, NULL, NULL);
+				ipc_auth, FALSE, accept_client_dispatch, NULL, NULL);
 
 	if (api_source == NULL) {
 		cl_log(LOG_DEBUG, "Cannot create API listening source of "
@@ -1795,10 +1843,13 @@ stonith_operate_locally( stonith_ops_t * st_op, stonith_rsc_t * srsc)
 	}
 
 	/* stonith it by myself in child */
+	return_to_orig_privs();
        	if ((pid = fork()) < 0) {
                	stonithd_log(LOG_ERR, "stonith_operate_locally: fork failed.");
+		return_to_dropped_privs();
                	return -1;
        	} else if (pid > 0) { /* in the parent process */
+		return_to_dropped_privs();
                	return pid;
        	}
 
@@ -1945,7 +1996,9 @@ stonithop_timeout(gpointer data)
 
 	/* Kill the possible child process forked for this operation */
 	if (orig_key!=NULL && *orig_key > 0 && CL_PID_EXISTS(*orig_key)) {
+		return_to_orig_privs();
 		CL_KILL(*orig_key, 9);	
+		return_to_dropped_privs();
 	}
 
 	return FALSE;
@@ -2339,10 +2392,13 @@ stonithRA_start( stonithRA_ops_t * op, gpointer data)
 	op->private_data = stonith_obj;
 
 probe_status:
+	return_to_orig_privs();
         if ((pid = fork()) < 0) {
                 stonithd_log(LOG_ERR, "stonithRA_start: fork failed.");
+		return_to_dropped_privs();
                 return -1;
         } else if (pid > 0) { /* in the parent process */
+		return_to_dropped_privs();
                 return pid;
         }
 
@@ -2447,10 +2503,13 @@ stonithRA_monitor( stonithRA_ops_t * ra_op, gpointer data )
 		return -1;
 	}
 
+	return_to_orig_privs();
         if ((pid = fork()) < 0) {
                 stonithd_log(LOG_ERR, "stonithRA_monitor: fork failed.");
+		return_to_dropped_privs();
                 return -1;
         } else if (pid > 0) { /* in the parent process */
+		return_to_dropped_privs();
                 return pid;
         }
 
@@ -2828,6 +2887,12 @@ free_common_op_t(gpointer data)
 
 /* 
  * $Log: stonithd.c,v $
+ * Revision 1.18  2005/02/22 01:26:58  sunjd
+ * add cl_malloc_forced_for_glib;
+ * add authority verification to IPC channel
+ * downgrade previlege to nobody as possible.
+ * other minor polish
+ *
  * Revision 1.17  2005/02/17 08:21:42  sunjd
  * fix the log level; correct the word misspelling
  *
