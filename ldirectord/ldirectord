@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-my($VERSION)=(qw$Id: ldirectord,v 1.79 2004/02/24 02:09:26 horms Exp $)[2];
+my($VERSION)=(qw$Id: ldirectord,v 1.80 2004/02/24 10:01:59 horms Exp $)[2];
 
 ######################################################################
 # ldirectord                 http://www.vergenet.net/linux/ldirectord/
@@ -225,7 +225,7 @@ answers and in much longer intervalls a negotiating check is done.  Off
 means no checking will take place and no real or fallback servers will be
 activated. Default is I<negotiate>.
 
-B<service = ftp>|B<smtp>|B<http>|B<pop>|B<nntp>|B<imap>|B<ldap>|B<https>|B<none>
+B<service = ftp>|B<smtp>|B<http>|B<pop>|B<nntp>|B<imap>|B<ldap>|B<https>|B<dns>|B<none>
 
 The type of service to monitor when using checktype=negotiate. None denotes
 a service that will not be monitored. If the port specfied for the virtual
@@ -244,6 +244,9 @@ This object will be requested each checkinterval seconds on each real
 server.  The string must be inside quotes. Note that this string may be
 overridden by an optional per real-server based request-string.
 
+For a DNS check this should the name of an A record, or the address
+of a PTR record to look up.
+
 B<receive = ">I<regexp to compare>B<">
 
 If the requested result contains this I<regexp to compare>, the real server
@@ -251,6 +254,9 @@ is declared alive. The regexp must be inside quotes. Keep in mind that
 regexps are not plain strings and that you need to escape the special
 characters if they should as litterals. Note that this regexp may be
 overridden by an optional per real-server based receive regexp.
+
+For a DNS check this should be any one the A record's addresses or
+any one of the PTR record's names.
 
 B<virtualhost = ">I<hostname>B<">
 
@@ -643,6 +649,9 @@ sub read_config
 			if ($ip_port) {
 				$vsrv{checktype} = "negotiate";
 			        $vsrv{protocol} = "tcp";
+				if ($ip_port =~ /:53/) {
+					$vsrv{protocol} = "udp";
+				}
 			} else {
 			        $vsrv{fwm} = $fwm;
 				$vsrv{checktype} = "negotiate";
@@ -765,8 +774,8 @@ sub read_config
 				} elsif ($rcmd =~ /^service\s*=\s*(.*)/) {
 					lc($1);
 					$1 =~ /(\w+)/ && ($1 eq "http" || $1 eq "https" || $1 eq "ldap"
-					    || $1 eq "ftp" || $1 eq "none" || $1 eq "smtp" || $1 eq "pop" || $1 eq "imap" || $1 eq "nntp")
-					    or &config_error($line, "service must be http, https, ftp, smtp, pop, imap, ldap, nntp or none");
+					    || $1 eq "ftp" || $1 eq "none" || $1 eq "smtp" || $1 eq "pop" || $1 eq "imap" || $1 eq "nntp" || $1 eq "dns")
+					    or &config_error($line, "service must be http, https, ftp, smtp, pop, imap, ldap, nntp, dns or none");
 					$vsrv{service} = $1;
 					if($vsrv{service} eq "ftp" and 
 							$vsrv{login} eq "") {
@@ -933,6 +942,9 @@ sub _ld_read_config_virtual_resolve
 			} 
 			elsif ($vsrv->{port} eq "389") {
 				$vsrv->{service} = "ldap";
+			}
+			elsif ($vsrv->{port} eq "53") {
+				$vsrv->{service} = "dns";
 			} 
 			else {
 				$vsrv->{service} = "none";
@@ -1504,6 +1516,8 @@ sub ld_main
 						$$r{num_connects} = 0 if (check_ldap($v, $r));
 					} elsif ($$v{service} eq "nntp") {
 						$$r{num_connects} = 0 if (check_nntp($v, $r));
+					} elsif ($$v{service} eq "dns") {
+						$$r{num_connects} = 0 if (check_dns($v, $r));
 					} else {
 						$$r{num_connects} = 0 if (check_none($v, $r));
 					}
@@ -1893,6 +1907,58 @@ sub check_ftp
 	close(\*READ_FH);
 
 	service_set($v, $r, "down");
+	return 0;
+}
+
+
+sub check_dns
+{
+	my $res;
+	my $query;
+	my $rr;
+	my $request;
+	my ($v,$r) = @_;
+	{
+		# Net::DNS makes ungaurded calls to eval
+		# which throw a fatal exception if they fail
+		# Needless to say, this is completely stupid.
+		local $SIG{'__DIE__'} = "DEFAULT";
+		require Net::DNS;
+	}
+	$res = new Net::DNS::Resolver;
+	if($DEBUG > 2) {
+		$res->debug(1);
+	}
+
+	$$r{"request"} =~ m/^\/?(.*)/;
+	$request=$1;
+
+	&ld_debug(2, "Checking dns: request=\"$request\" receive=\""
+		. $$r{"receive"} . "\"\n");
+
+	eval {
+		 local $SIG{'__DIE__'} = "DEFAULT";
+		 local $SIG{'ALRM'} = sub { die "timeout\n"; };
+		 alarm($$v{checktimeout});
+		 $res->nameservers($$r{server});
+		 $query = $res->search($request);
+		 alarm(0);
+	};
+ 
+	if (@$ eq "timeout\n" or ! $query) {
+		 service_set($v,$r,"down");
+		 return 0;
+	}
+ 
+	foreach $rr ($query->answer) {
+	        if (($rr->type eq "A" and $rr->address eq $$r{"receive"}) or
+	            ($rr->type eq "PTR" and $rr->ptrdname eq $$r{"receive"})) {
+	         	service_set($v,$r,"up");
+	         	return 1;
+		}
+        }
+ 
+	service_set($v,$r,"down");
 	return 0;
 }
 

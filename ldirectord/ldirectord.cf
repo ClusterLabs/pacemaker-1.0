@@ -155,6 +155,20 @@ virtual=192.168.6.240:80
 #	#netmask=255.255.255.255
 #	protocol=tcp
 
+#Sample configuration for a UDP DNS virtual service.
+#Fallback setting overides global
+#virtual=192.168.84.5:53
+#	real=10.0.1.4:53 masq
+#	real=10.0.1.6:53 masq
+#	fallback=127.0.0.1:53
+#	request="some.domain.com.au"
+#	recieve="127.0.0.1"
+#	service=dns
+#	scheduler=wlc
+#	#persistent=600
+#	#netmask=255.255.255.255
+#	protocol=udp
+
 #Sample configuration for an unsuported protocol
 #The real servers will just be brought up without checking for availability
 #Fallback setting overides global
