@@ -1,4 +1,4 @@
-/* $Id: libckpt.c,v 1.12 2004/04/07 16:53:08 alan Exp $ */
+/* $Id: libckpt.c,v 1.13 2004/04/07 17:24:20 alan Exp $ */
 /* 
  * ckptlib.c: data checkpoint API library
  *
@@ -1988,7 +1988,7 @@ saCkptCheckpointStatusGet(
 	}
 
 	if (clientResponse->dataLength < 
-		sizeof(SaCkptCheckpointStatusT)) {
+		(SaSizeT)sizeof(SaCkptCheckpointStatusT)) {
 		cl_log(LOG_ERR, 
 			"Checkpoint daemon returned error data");
 		libError = clientResponse->retVal;
