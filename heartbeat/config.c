@@ -1,4 +1,4 @@
-/* $Id: config.c,v 1.142 2005/02/12 10:16:21 alan Exp $ */
+/* $Id: config.c,v 1.143 2005/02/12 10:38:51 alan Exp $ */
 /*
  * Parse various heartbeat configuration files...
  *
@@ -2124,6 +2124,11 @@ set_release2mode(const char* value)
 			if (0 != strcmp(r2dirs[j].dname, WLdirectives[k].type)) {
 				continue;
 			}
+			if (ANYDEBUG) {
+				cl_log(LOG_DEBUG, "Implicit directive: %s %s"
+				,	 r2dirs[j].dname
+				,	 r2dirs[j].dval);
+			}
 			if (HA_OK
 			!= (rc2 = WLdirectives[k].parse(r2dirs[j].dval))) {
 				cl_log(LOG_ERR, "Directive %s %s failed"
@@ -2137,6 +2142,9 @@ set_release2mode(const char* value)
 
 /*
  * $Log: config.c,v $
+ * Revision 1.143  2005/02/12 10:38:51  alan
+ * Added debugging to newly modified implicit CRM directives.
+ *
  * Revision 1.142  2005/02/12 10:16:21  alan
  * Modified startup commands for 'crm' directive.
  *
