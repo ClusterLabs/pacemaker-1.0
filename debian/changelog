@@ -1,8 +1,8 @@
 heartbeat (1.99.1-1) unstable; urgency=low
 
   * Updated for 1.99.1
-  * Do not call dh_fixperms in debian/rules as the heartbeat build
-    process does install files with unusual permissions sometimes.
+  * Don't run exclude cl_status from dh_fixperms as it overrides permissions
+    that the build system sets which are needed for correct opperation.
 
  -- Simon Horman <horms@debian.org>  Thu, 11 Nov 2004 12:02:38 +0900
 
