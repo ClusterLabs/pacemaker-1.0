@@ -7,11 +7,13 @@ Filesystem
 ICP
 IPaddr
 IPaddr2
+IPv6addr
 Delay
 LVM
 LinuxSCSI
 MailTo
 Raid1
+SendArp
 ServeRAID
 WAS
 WinPopup
@@ -19,4 +21,6 @@ IPsrcaddr
 portblock
 Xinetd
 OCF
-SendArp
+.libs
+.deps
+*.o

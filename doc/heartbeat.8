@@ -1,14 +1,9 @@
-.TH HEARTBEAT 8 "29 May 2003"
+.TH HEARTBEAT 8 "12th May 2004"
 .SH NAME
 heartbeat \- Heartbeat subsystem for High-Availability Linux
 .SH SYNOPSIS
 .B heartbeat
 .nh
-.RI "[ -dkrRsv ] [-C Current-resource-state ]"
-.br
-.RI "-C only valid with -R"
-.br
-.RI "-r is mutually exclusive with -R"
 .SH DESCRIPTION
 \fBheartbeat\fP is a basic heartbeat subsystem for Linux-HA.
 It will run scripts at initialisation, and when machines go up or down.
@@ -30,31 +25,44 @@ on http://www.linux-ha.org/
 .SH OPTIONS
 .TP
 \fB-d\fP
-increment debugging level
+Increment debugging level. Higher levels are more verbose.
 .TP
 \fB-r\fP
-restart heartbeat
+Restart heartbeat. May not be used with -R.
 .TP
 \fB-k\fP
-kill (stop) heartbeat
+Kill (stop) heartbeat.
 .TP
 \fB-s\fP
-report heartbeat status
+Report heartbeat status.
 .TP
 \fB-R\fP
-Heartbeat restart exec flag (internal use only)
+Heartbeat restart exec flag (internal use only).
+May not be used with -r.
 .TP
 \fB-C\fP
-Heartbeat current resource state for restart (internal use only)
+Heartbeat current resource state for restart (internal use only).
+Only valid with -R. 
 .PP
 Note that most of these options are used for supporting the heartbeat
 \fIinit script\fP, which provides the conventional start,
-stop, status and restart options (among others).
+stop, status and restart options (among others). It is recommended
+to use this rather than invoking the heartbeat command directly.
+
+.SH SEE ALSO
+cl_status(1), apphbd(8)
+
+.SH DOCUMENTATION
+More information may be found at http://www.linux-ha.org.
+
+.SH FILES
+.TP
+/etc/ha.cf, /etc/haresources, /etc/authkeys
 
 .SH AUTHORS
 .nf
 heartbeat - Alan Robertson <alanr@unix.sh> et al.
 man page - Juan Pedro Paredes Caballero <juampe@retemail.es>
-           Horms <horms@vergenet.net>
+           Horms <horms@verge.net.au>
 .fi
 

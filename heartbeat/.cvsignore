@@ -11,3 +11,4 @@ api_test
 *.lo
 .*.swp
 shellfuncs
+cl_status

@@ -24,6 +24,7 @@ INCLUDES                = -I$(top_builddir)/include -I$(top_srcdir)/include \
 			-I$(top_builddir)/libltdl -I$(top_srcdir)/libltdl
 
 hadir			= $(sysconfdir)/ha.d
+habindir		= @bindir@
 halibdir		= $(libdir)/@HB_PKG@
 commmoddir		= $(halibdir)/modules/comm
 havarlibdir		= $(localstatedir)/lib/@HB_PKG@
@@ -56,6 +57,7 @@ noinst_HEADERS		=	hb_config.h		\
 
 
 ## binary progs
+habin_PROGRAMS		= cl_status
 halib_PROGRAMS		= heartbeat findif
 
 ## SOURCES
@@ -77,6 +79,12 @@ heartbeat_CFLAGS       = $(AM_CFLAGS)
 
 findif_SOURCES		= findif.c
 findif_LDADD		=$(top_builddir)/replace/libreplace.la
+
+cl_status_SOURCES	= cl_status.c
+cl_status_LDADD		= $(top_builddir)/lib/hbclient/libhbclient.la	\
+			  $(top_builddir)/lib/clplumbing/libplumb.la	\
+			  $(gliblib)					\
+			  $(top_builddir)/replace/libreplace.la
 
 
 ## SCRIPTS/DATA
