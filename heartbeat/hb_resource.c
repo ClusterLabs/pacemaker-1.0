@@ -410,6 +410,12 @@ hb_rsc_recover_dead_resources(struct node_info* hip)
 static gboolean
 hb_rsc_isstable(void)
 {
+	/* Is this the "legacy" case? */
+	if (!nice_failback) {
+		return ResourceMgmt_child_count == 0
+		&&	!takeover_in_progress;
+	}
+
 	return	other_is_stable
 	&&	!takeover_in_progress
 	&&	going_standby == NOT
@@ -1984,6 +1990,10 @@ StonithProcessName(ProcTrack* p)
 
 /*
  * $Log: hb_resource.c,v $
+ * Revision 1.34  2003/09/19 19:57:31  alan
+ * When auto_failback = legacy, 1.1.2 wouldn't shut down properly.
+ * The code was testing some nice_failback only variables.  Now it doesn't ;-)
+ *
  * Revision 1.33  2003/09/19 19:21:14  alan
  * Fixed the bug where we ran resource scripts twice.
  * The fix consisted of causing the resource requests to be queued, so that they aren't run simultaneously.
