@@ -42,6 +42,8 @@ hadate() {
 }
 
 ha_log() {
+# TODO: Revisit as soon as the logging daemon is implemented.
+#
 	if
 	  [ -n "$HA_LOGFACILITY" ]
         then
