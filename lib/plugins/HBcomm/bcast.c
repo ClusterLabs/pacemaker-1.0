@@ -1,4 +1,4 @@
-/* $Id: bcast.c,v 1.37 2004/04/29 16:22:36 msoffen Exp $ */
+/* $Id: bcast.c,v 1.38 2004/09/28 06:30:39 alan Exp $ */
 /*
  * bcast.c: UDP/IP broadcast-based communication code for heartbeat.
  *
@@ -164,17 +164,18 @@ bcast_mtype(char** buffer) {
 		return 0;
 	}
 
-	return STRLEN(PIL_PLUGIN_S);
+	return STRLEN_CONST(PIL_PLUGIN_S);
 }
 
 static int
 bcast_descr(char **buffer) { 
-	*buffer = STRDUP("UDP/IP broadcast");
+	const char constret[] = "UDP/IP broadcast";
+	*buffer = STRDUP(constret);
 	if (!*buffer) {
 		return 0;
 	}
 
-	return strlen(*buffer);
+	return STRLEN_CONST(constret);
 }
 
 static int
@@ -783,6 +784,9 @@ if_get_broadaddr(const char *ifn, struct in_addr *broadaddr)
 
 /*
  * $Log: bcast.c,v $
+ * Revision 1.38  2004/09/28 06:30:39  alan
+ * Some constant string fixes, and a BEAM fix in plugins.
+ *
  * Revision 1.37  2004/04/29 16:22:36  msoffen
  * Changed ??? to ? ( picked up as trigraph )
  *

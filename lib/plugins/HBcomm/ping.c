@@ -1,4 +1,4 @@
-/* $Id: ping.c,v 1.34 2004/05/12 00:02:18 alan Exp $ */
+/* $Id: ping.c,v 1.35 2004/09/28 06:30:39 alan Exp $ */
 /*
  * ping.c: ICMP-echo-based heartbeat code for heartbeat.
  *
@@ -379,7 +379,11 @@ ping_read(struct hb_media* mp, int *lenp)
 	}
 	
 	pktlen = numbytes - hlen - ICMP_HDR_SZ;
-	pkt = ha_malloc(pktlen + 1);
+
+	if ((pkt = ha_malloc(pktlen + 1)) == NULL) {
+		return NULL;
+	}
+	
 	pkt[pktlen] = 0;
 	
 	memcpy(pkt, buf.cbuf + hlen + ICMP_HDR_SZ, pktlen);	
