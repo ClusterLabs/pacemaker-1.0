@@ -99,6 +99,5 @@ install-exec-local:
 
 uninstall-local:
 	-test -p $(DESTDIR)$(hafifo) && rm $(DESTDIR)$(hafifo)
-	rm -rf $(DESTDIR)$(havarrundir)
 	rm -rf $(DESTDIR)$(havarrunhbdir)
 
