@@ -16,3 +16,6 @@ var/lib/heartbeat
 var/lib/heartbeat/api
 var/lib/heartbeat/casual
 var/lib/heartbeat/ccm
+var/lib/heartbeat/rsctmp
+var/lib/heartbeat/rsctmp/IPaddr
+var/lib/heartbeat/rsctmp/IPaddr2

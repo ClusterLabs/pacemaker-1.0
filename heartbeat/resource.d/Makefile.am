@@ -19,6 +19,11 @@
 #
 MAINTAINERCLEANFILES    = Makefile.in
 
+havarlibdir             = $(localstatedir)/lib/@HB_PKG@
+rsctmp                  = $(havarlibdir)/rsctmp
+ipaddrtmp               = $(havarlibdir)/rsctmp/IPaddr
+ipaddr2tmp              = $(havarlibdir)/rsctmp/IPaddr2
+
 harddir			= $(sysconfdir)/ha.d/resource.d
 
 hard_SCRIPTS	=			\
@@ -41,3 +46,20 @@ hard_SCRIPTS	=			\
 			WAS		\
 			WinPopup	\
 			Xinetd
+
+## additional Makefile targets
+# additional installations not covered normally
+install-exec-local:
+	$(mkinstalldirs) $(DESTDIR)$(rsctmp) $(DESTDIR)$(ipaddrtmp) \
+		$(DESTDIR)$(ipaddr2tmp)
+	-chgrp $(apigid) $(DESTDIR)$(rsctmp) $(DESTDIR)$(ipaddrtmp) \
+                $(DESTDIR)$(ipaddr2tmp)
+	-chown $(ccmuid) $(DESTDIR)$(rsctmp) $(DESTDIR)$(ipaddrtmp) \
+                $(DESTDIR)$(ipaddr2tmp)
+	chmod 750 $(DESTDIR)$(rsctmp) $(DESTDIR)$(ipaddrtmp) \
+                $(DESTDIR)$(ipaddr2tmp)
+
+uninstall-local:
+	rm -fr $(DESTDIR)$(rsctmp) $(DESTDIR)$(ipaddrtmp) \
+                $(DESTDIR)$(ipaddr2tmp)
+

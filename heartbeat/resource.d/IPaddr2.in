@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-#	$Id: IPaddr2.in,v 1.1 2003/10/15 17:05:23 horms Exp $
+#	$Id: IPaddr2.in,v 1.2 2003/10/23 05:34:03 horms Exp $
 #
 #	Copyright (C) 2003 Tuomo Soini <tis@foobar.fi>
 #
@@ -160,14 +160,6 @@ remove_conflicting_loopback() {
     ifname="$4"
 
     ha_log "info: Removing conflicting loopback $ifname."
-    if
-	[ -d "$VLDIR/" ] || mkdir -p "$VLDIR/"
-    then
-	: Directory $VLDIR now exists
-    else
-	ha_log "ERROR: Could not create \"$VLDIR/\" conflicting" \
-	    " loopback $ifname cannot be restored."
-    fi
     if
 	echo "$ipaddr $netmask $broadcast $ifname" > "$VLDIR/$ipaddr"
     then
