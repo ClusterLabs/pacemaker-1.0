@@ -7,3 +7,4 @@ Makefile
 .*.swp
 ccm
 ccm_testclient
+clmtest
