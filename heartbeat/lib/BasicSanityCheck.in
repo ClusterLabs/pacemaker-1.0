@@ -110,8 +110,8 @@ GenerateHaCf() {
 	debugfile $LOGFILE
 	keepalive 10ms
 	debug 1
-	deadtime 10
-	initdead 10
+	deadtime 5
+	initdead 5
 	auto_failback on
 	stonith_host * null $LOCALNODE $DUMMYNODE
 	mcast $INTERFACE $MCASTIP 694 0 0
@@ -620,7 +620,7 @@ SNMPAgentTest() {
 	if 
 	    HBStart
 	then
-	    sleep 1
+	    sleep 6
 	    echo "starting SNMP Agent tests" | tee -a $LOGFILE
 	    $SNMPAGENTTEST >> $LOGFILE 2>&1
 	    ret=$?
