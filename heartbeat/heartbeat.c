@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.369 2005/02/23 21:03:53 gshi Exp $ */
+/* $Id: heartbeat.c,v 1.370 2005/03/03 19:32:48 gshi Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -392,7 +392,8 @@ static void	process_rexmit(struct msg_xmit_hist * hist
 ,			struct ha_msg* msg);
 static void	process_clustermsg(struct ha_msg* msg, struct link* lnk);
 extern void	process_registerevent(IPC_Channel* chan,  gpointer user_data);
-static void	nak_rexmit(seqno_t seqno, const char * reason);
+static void	nak_rexmit(struct msg_xmit_hist * hist, 
+			   seqno_t seqno, const char*, const char * reason);
 static int	IncrGeneration(seqno_t * generation);
 static int	GetTimeBasedGeneration(seqno_t * generation);
 static int	process_outbound_packet(struct msg_xmit_hist* hist
@@ -4135,20 +4136,33 @@ should_drop_message(struct node_info * thisnode, const struct ha_msg *msg,
 		if (strcasecmp(type, T_NAKREXMIT) == 0) {
 			const char *	cnseq = ha_msg_value(msg, F_FIRSTSEQ);
 			seqno_t		nseq;
+
 			if (cnseq  == NULL || sscanf(cnseq, "%lx", &nseq) != 1
-			||	nseq <= 0) {
+			    ||	nseq <= 0) {
 				cl_log(LOG_ERR
 				, "should_drop_message: bad nak seq number");
 				return DROPIT;
 			}
 
-			cl_log(LOG_ERR , "%s: node %s seq %ld"
-			,	"Irretrievably lost packet"
-			,	thisnode->nodename, nseq);
+			if (to == NULL){
+				cl_log(LOG_WARNING,"should_drop_message: tonodename not found "
+				       "heartbeat version not matching?");				       
+			}
+			if (to == NULL || strncmp(to, curnode->nodename, HOSTLENG ) == 0){				
+				cl_log(LOG_ERR , "%s: node %s seq %ld",
+				       "Irretrievably lost packet",
+				       thisnode->nodename, nseq);
+			}
+
 			is_lost_packet(thisnode, nseq);
 			return DROPIT;
+			
+		}else if (to == NULL || strncmp(to, curnode->nodename, HOSTLENG ) == 0){			
+			return KEEPIT;
+		}else{
+			return DROPIT;
 		}
-		return KEEPIT;
+		
 	}
 	if (strcasecmp(type, T_STATUS) == 0) {
 		is_status = 1;
@@ -4765,9 +4779,16 @@ process_rexmit(struct msg_xmit_hist * hist, struct ha_msg* msg)
 	seqno_t		thisseq;
 	int		firstslot = hist->lastmsg-1;
 	int		rexmit_pkt_count = 0;
-
+	const char*	fromnodename = ha_msg_value(msg, F_ORIG);
+	
+	if (fromnodename == NULL){
+		cl_log(LOG_ERR, "process_rexmit: "
+		       "from node not found in the message");
+		return;		
+	}
+	
 	if ((cfseq = ha_msg_value(msg, F_FIRSTSEQ)) == NULL
-	||	(clseq = ha_msg_value(msg, F_LASTSEQ)) == NULL
+	    ||	(clseq = ha_msg_value(msg, F_LASTSEQ)) == NULL
 	||	(fseq=atoi(cfseq)) <= 0 || (lseq=atoi(clseq)) <= 0
 	||	fseq > lseq) {
 		cl_log(LOG_ERR, "Invalid rexmit seqnos");
@@ -4782,7 +4803,7 @@ process_rexmit(struct msg_xmit_hist * hist, struct ha_msg* msg)
 		int	foundit = 0;
 		if (thisseq <= hist->lowseq) {
 			/* Lowseq is less than the lowest recorded seqno */
-			nak_rexmit(thisseq, "seqno too low");
+			nak_rexmit(hist, thisseq, fromnodename, "seqno too low");
 			continue;
 		}
 		if (thisseq > hist->hiseq) {
@@ -4791,7 +4812,7 @@ process_rexmit(struct msg_xmit_hist * hist, struct ha_msg* msg)
 			 * momentarily a little out of sync...
 			 * Since the rexmit request doesn't send out our
 			 * generation number, we're just guessing
-			 * ... nak_rexmit(thisseq, "seqno too high"); ...
+			 * ... nak_rexmit(thisseq, fromnode, "seqno too high"); ...
 			 *
 			 * Otherwise it's a bug ;-)
 			 */
@@ -4863,7 +4884,7 @@ process_rexmit(struct msg_xmit_hist * hist, struct ha_msg* msg)
 
 		}
 		if (!foundit) {
-			nak_rexmit(thisseq, "seqno not found");
+			nak_rexmit(hist, thisseq, fromnodename, "seqno not found");
 		}
 NextReXmit:/* Loop again */;
 	}
@@ -4871,22 +4892,37 @@ NextReXmit:/* Loop again */;
 
 
 static void
-nak_rexmit(seqno_t seqno, const char * reason)
+printout_histstruct(struct msg_xmit_hist* hist)
+{
+	cl_log(LOG_INFO,"hist information:");
+	cl_log(LOG_INFO, "hiseq =%lu, lowseq=%lu,ackseq=%lu,lastmsg=%d",
+	       hist->hiseq, hist->lowseq, hist->ackseq, hist->lastmsg);
+	
+}
+static void
+nak_rexmit(struct msg_xmit_hist * hist, 
+	   seqno_t seqno, 
+	   const char* fromnodename,
+	   const char * reason)
 {
 	struct ha_msg*	msg;
 	char	sseqno[32];
-
+	
 	snprintf(sseqno, sizeof(sseqno), "%lx", seqno);
-	cl_log(LOG_ERR, "Cannot rexmit pkt %lu: %s", seqno, reason);
+	cl_log(LOG_ERR, "Cannot rexmit pkt %lu for %s: %s", 
+	       seqno, fromnodename, reason);
 
+	printout_histstruct(hist);
+	
 	if ((msg = ha_msg_new(6)) == NULL) {
 		cl_log(LOG_ERR, "no memory for " T_NAKREXMIT);
 		return;
 	}
-
+	
 	if (ha_msg_add(msg, F_TYPE, T_NAKREXMIT) != HA_OK
-	||	ha_msg_add(msg, F_FIRSTSEQ, sseqno) != HA_OK
-	||	ha_msg_add(msg, F_COMMENT, reason) != HA_OK) {
+	    ||	ha_msg_add(msg, F_FIRSTSEQ, sseqno) != HA_OK
+	    ||  ha_msg_add(msg, F_TO, fromnodename) !=HA_OK
+	    ||	ha_msg_add(msg, F_COMMENT, reason) != HA_OK) {
 		cl_log(LOG_ERR, "cannot create " T_NAKREXMIT " msg.");
 		ha_msg_del(msg); msg=NULL;
 		return;
@@ -5075,6 +5111,13 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.370  2005/03/03 19:32:48  gshi
+ * A T_REXMIT is a message with NOSEQ_PREFIX.
+ * It should be not be processed unless it is broadcast or
+ * addressed to this node.
+ *
+ * Added some debug infomation
+ *
  * Revision 1.369  2005/02/23 21:03:53  gshi
  * fixed a bug that when all nodes are in INITSTATUS,
  * hist->lowest_acknode is set to wrong pointer
