@@ -1,4 +1,4 @@
-/* $Id: ccm.c,v 1.65 2005/03/04 20:41:03 gshi Exp $ */
+/* $Id: ccm.c,v 1.66 2005/03/04 20:50:02 gshi Exp $ */
 /* 
  * ccm.c: Consensus Cluster Service Program 
  *
@@ -62,15 +62,6 @@ extern int global_debug;
 					info->ccm_transition_major = 0
 #define		CCM_RESET_MINORTRANS(info) 	\
 					info->ccm_transition_minor = 0
-#define		CCM_SET_STATE(info, istate)				\
-		{							\
-			cl_log(LOG_INFO,"change state from %s to %s",   \
-			       state_string(info->ccm_node_state),state_string(istate)); \
-			info->ccm_node_state = (istate);		\
-			if((istate)==CCM_STATE_JOINING)			\
-				client_influx();			\
-		}
-
 
 #define 	CCM_SET_JOINED_TRANSITION(info, trans) \
 					info->ccm_joined_transition = trans
@@ -175,6 +166,33 @@ state_string(int state){
 	
 	return state_strings[state];
 }
+
+static void
+ccm_set_state(ccm_info_t* info, int istate,const struct ha_msg*  msg)	
+{									
+			int leader = info->ccm_cluster_leader;		
+			int indx;					
+			if (leader < 0) {
+				indx = -1;			
+			}else{
+				indx = info->ccm_member[leader];
+			}
+			cl_log(LOG_INFO,"change state from %s to %s, current leader is %s",   
+			       state_string(info->ccm_node_state),state_string(istate), 
+			       indx < 0 ?"none": info->ccm_llm.llm_nodes[indx].NodeID); 
+#if 0
+			if (msg) {
+				cl_log_message(LOG_INFO, msg);		
+			}
+#endif 
+			info->ccm_node_state = (istate);		
+			if((istate)==CCM_STATE_JOINING){
+				client_influx();	
+			}		
+}
+
+
+
 
 static void
 change_time_init(void)
@@ -606,7 +624,7 @@ ccm_reset(ccm_info_t *info)
 	CCM_SET_MINORTRANS(info,0);
 	CCM_SET_CL(info,-1);
 	CCM_SET_JOINED_TRANSITION(info, 0);
-	CCM_SET_STATE(info, CCM_STATE_NONE);
+	ccm_set_state(info, CCM_STATE_NONE, NULL);
 	update_reset(CCM_GET_UPDATETABLE(info));
 	g_slist_free(CCM_GET_JOINERHEAD(info));
 	CCM_SET_JOINERHEAD(info, NULL);
@@ -1229,7 +1247,7 @@ ccm_compute_and_send_final_memlist(ll_cluster_t *hb, ccm_info_t *info)
 	report_mbrs(info);/* call this before update_reset() */
 	update_reset(CCM_GET_UPDATETABLE(info));
 	ccm_memcomp_reset(info);
-	CCM_SET_STATE(info, CCM_STATE_JOINED);
+	ccm_set_state(info, CCM_STATE_JOINED, NULL);
 	if(!ccm_already_joined(info)) {
 		CCM_SET_JOINED_TRANSITION(info, CCM_GET_MAJORTRANS(info));
 	}
@@ -1881,7 +1899,7 @@ ccm_joining_to_joined(ll_cluster_t *hb, ccm_info_t *info)
 	
 	CCM_SET_CL(info, ccm_get_my_membership_index(info));
 	update_reset(CCM_GET_UPDATETABLE(info));
-	CCM_SET_STATE(info, CCM_STATE_JOINED);
+	ccm_set_state(info, CCM_STATE_JOINED, NULL);
 	report_mbrs(info);
 	if(!ccm_already_joined(info)) {
 		CCM_SET_JOINED_TRANSITION(info, 1);
@@ -1913,7 +1931,7 @@ ccm_init_to_joined(ccm_info_t *info)
 	CCM_SET_COOKIE(info, cookie);
 	ccm_free_random_cookie(cookie);
 	CCM_SET_CL(info, ccm_get_my_membership_index(info));
-	CCM_SET_STATE(info, CCM_STATE_JOINED);
+	ccm_set_state(info, CCM_STATE_JOINED, NULL);
 	CCM_SET_JOINED_TRANSITION(info, 1);
 	report_mbrs(info);
 	return;
@@ -1991,7 +2009,7 @@ ccm_state_version_request(enum ccm_type ccm_msg_type,
 				cl_shortsleep(); /* sleep for a while */
 				/* send a fresh version request message */
 				version_reset(CCM_GET_VERSION(info));
-				CCM_SET_STATE(info, CCM_STATE_NONE);
+				ccm_set_state(info, CCM_STATE_NONE, reply);
 				/* free all the joiners that we accumulated */
 				g_slist_free(CCM_GET_JOINERHEAD(info));
 				CCM_SET_JOINERHEAD(info, NULL);
@@ -2040,7 +2058,7 @@ ccm_state_version_request(enum ccm_type ccm_msg_type,
 			and set our state to NEW_NODE_WAIT_FOR_MEM_LIST */
 		update_reset(CCM_GET_UPDATETABLE(info));
 		new_node_mem_list_time_init();
-		CCM_SET_STATE(info, CCM_STATE_NEW_NODE_WAIT_FOR_MEM_LIST);
+		ccm_set_state(info, CCM_STATE_NEW_NODE_WAIT_FOR_MEM_LIST, reply);
 
 		/* free all the joiners that we accumulated */
 		g_slist_free(CCM_GET_JOINERHEAD(info));
@@ -2055,7 +2073,7 @@ ccm_state_version_request(enum ccm_type ccm_msg_type,
 			case VER_NO_CHANGE: 
 				break;
 			case VER_TRY_AGAIN:
-				CCM_SET_STATE(info, CCM_STATE_NONE);
+				ccm_set_state(info, CCM_STATE_NONE, reply);
 				break;
 			case VER_TRY_END:
 				if(ccm_am_i_highest_joiner(info)) {
@@ -2067,7 +2085,7 @@ ccm_state_version_request(enum ccm_type ccm_msg_type,
 						cl_log(LOG_DEBUG,
 							"joined but not really");
 					version_reset(CCM_GET_VERSION(info));
-					CCM_SET_STATE(info, CCM_STATE_NONE);
+					ccm_set_state(info, CCM_STATE_NONE, reply);
 				}
 				/* free all the joiners that we accumulated */
 				g_slist_free(CCM_GET_JOINERHEAD(info));
@@ -2236,7 +2254,7 @@ ccm_state_joined(enum ccm_type ccm_msg_type,
 				}
 			}
 
-			CCM_SET_STATE(info, CCM_STATE_JOINING);
+			ccm_set_state(info, CCM_STATE_JOINING, reply);
 			break;	
 
 		case CCM_TYPE_LEAVE: 
@@ -2262,7 +2280,7 @@ ccm_state_joined(enum ccm_type ccm_msg_type,
 						break;
 					}
 				}
-				CCM_SET_STATE(info, CCM_STATE_JOINING);
+				ccm_set_state(info, CCM_STATE_JOINING,reply);
 				return;
 			}
 
@@ -2289,13 +2307,13 @@ ccm_state_joined(enum ccm_type ccm_msg_type,
 					return;
 				}
 				change_time_init();
-				CCM_SET_STATE(info, CCM_STATE_WAIT_FOR_CHANGE);	
+				ccm_set_state(info, CCM_STATE_WAIT_FOR_CHANGE, reply);	
                          
 			}else {
 				/* I'm not leader, send CCM_TYPE_NODE_LEAVE to leader */
 				send_node_leave_to_leader(hb, info, orig);
 				mem_list_time_init();
-				CCM_SET_STATE(info,CCM_STATE_WAIT_FOR_MEM_LIST);
+				ccm_set_state(info,CCM_STATE_WAIT_FOR_MEM_LIST, reply);
 			}
 			break;
 
@@ -2319,7 +2337,7 @@ ccm_state_joined(enum ccm_type ccm_msg_type,
 				update_add(CCM_GET_UPDATETABLE(info), 
 						CCM_GET_LLM(info), orig, uptime_val, FALSE);
 				change_time_init();
-				CCM_SET_STATE(info, CCM_STATE_WAIT_FOR_CHANGE);
+				ccm_set_state(info, CCM_STATE_WAIT_FOR_CHANGE, reply);
 			}
 			break;
 
@@ -2352,14 +2370,14 @@ ccm_state_joined(enum ccm_type ccm_msg_type,
 					return;
 				}
 				change_time_init();
-				CCM_SET_STATE(info, CCM_STATE_WAIT_FOR_CHANGE);
+				ccm_set_state(info, CCM_STATE_WAIT_FOR_CHANGE, reply);
 			}else{
 				/* I'm not leader, send CCM_TYPE_NEW_NODE
 				 * to leader and transit to WAIT_FOR_MEM_LIST
 				 */
 				ccm_send_newnode_to_leader(hb, info, orig);
 				mem_list_time_init();
-				CCM_SET_STATE(info,CCM_STATE_WAIT_FOR_MEM_LIST);
+				ccm_set_state(info,CCM_STATE_WAIT_FOR_MEM_LIST, reply);
 			}
 			break;
 
@@ -2384,7 +2402,7 @@ ccm_state_joined(enum ccm_type ccm_msg_type,
 						CCM_GET_LLM(info),
 						orig, uptime_val, FALSE);
 				change_time_init();
-				CCM_SET_STATE(info, CCM_STATE_WAIT_FOR_CHANGE);
+				ccm_set_state(info, CCM_STATE_WAIT_FOR_CHANGE, reply);
 			}
 			break;
 
@@ -2522,7 +2540,7 @@ static void ccm_state_wait_for_change(enum ccm_type ccm_msg_type,
 					g_slist_free(CCM_GET_JOINERHEAD(info));
 					CCM_SET_JOINERHEAD(info, NULL);
 					CCM_SET_CL(info, ccm_get_my_membership_index(info));
-					CCM_SET_STATE(info, CCM_STATE_JOINED);
+					ccm_set_state(info, CCM_STATE_JOINED,reply);
 					return;
 				}
 			}else{
@@ -2541,7 +2559,7 @@ static void ccm_state_wait_for_change(enum ccm_type ccm_msg_type,
 						break;
 					}
 				}
-				CCM_SET_STATE(info, CCM_STATE_JOINING);
+				ccm_set_state(info, CCM_STATE_JOINING, reply);
 				return;
 			}                  
 			break;
@@ -2591,7 +2609,7 @@ static void ccm_state_wait_for_change(enum ccm_type ccm_msg_type,
 					ccm_send_join_reply(hb, info);
 					g_slist_free(CCM_GET_JOINERHEAD(info));
 					CCM_SET_JOINERHEAD(info, NULL);
-					CCM_SET_STATE(info, CCM_STATE_JOINED);
+					ccm_set_state(info, CCM_STATE_JOINED, reply);
 					return;
 				}                       
 			}else{
@@ -2603,7 +2621,7 @@ static void ccm_state_wait_for_change(enum ccm_type ccm_msg_type,
 						" failure to send join");
 					cl_shortsleep();
 				}
-				CCM_SET_STATE(info, CCM_STATE_JOINING);
+				ccm_set_state(info, CCM_STATE_JOINING, reply);
 				return;
 			}
 			break;
@@ -2625,7 +2643,7 @@ static void ccm_state_wait_for_change(enum ccm_type ccm_msg_type,
 						break;
 					}
 				}
-				CCM_SET_STATE(info, CCM_STATE_JOINING);
+				ccm_set_state(info, CCM_STATE_JOINING, reply);
 			}
 			break;
 
@@ -2661,7 +2679,7 @@ static void ccm_state_wait_for_change(enum ccm_type ccm_msg_type,
 				}
 			}
 
-			CCM_SET_STATE(info, CCM_STATE_JOINING);
+			ccm_set_state(info, CCM_STATE_JOINING, reply);
 			break;		
 	        
 		default:  
@@ -3130,7 +3148,7 @@ switchstatement:
 						break;
 					}
 				}
-				CCM_SET_STATE(info, CCM_STATE_JOINING);
+				ccm_set_state(info, CCM_STATE_JOINING, reply);
 			}
 
 			break;
@@ -3209,7 +3227,7 @@ switchstatement:
 				}
 			}
 			finallist_reset();
-			CCM_SET_STATE(info, CCM_STATE_JOINING);
+			ccm_set_state(info, CCM_STATE_JOINING, reply);
 			break;
 
 		case CCM_TYPE_LEAVE: 
@@ -3241,7 +3259,7 @@ switchstatement:
 					}
 				}
 				finallist_reset();
-				CCM_SET_STATE(info, CCM_STATE_JOINING);
+				ccm_set_state(info, CCM_STATE_JOINING, reply);
 			}
 
 			break;
@@ -3327,7 +3345,7 @@ switchstatement:
 			report_mbrs(info); /* call before update_reset */
 			update_reset(CCM_GET_UPDATETABLE(info));
 			finallist_reset();
-			CCM_SET_STATE(info, CCM_STATE_JOINED);
+			ccm_set_state(info, CCM_STATE_JOINED, reply);
 			g_slist_free(CCM_GET_JOINERHEAD(info));
 			CCM_SET_JOINERHEAD(info, NULL);
 			if(!ccm_already_joined(info)) 
@@ -3538,8 +3556,8 @@ switchstatement:
 						ccm_memcomp_init(info);
 						ccm_memcomp_note_my_membership(
 								info);
-						CCM_SET_STATE(info, 
-						  CCM_STATE_SENT_MEMLISTREQ);
+						ccm_set_state(info, 
+							      CCM_STATE_SENT_MEMLISTREQ, reply);
 					} else {
 						/* check if we have already 
 						 * received memlist request
@@ -3557,8 +3575,8 @@ switchstatement:
 						if (ccm_send_cl_reply(hb,info) 
 								== TRUE) {
 							finallist_init();
-							CCM_SET_STATE(info, 
-							 CCM_STATE_MEMLIST_RES);
+							ccm_set_state(info, 
+								      CCM_STATE_MEMLIST_RES, reply);
 						}
 					}
 					break; /* done all processing */
@@ -3629,7 +3647,7 @@ switchstatement:
 				}
 				ccm_memcomp_init(info);
 				ccm_memcomp_note_my_membership(info);
-				CCM_SET_STATE(info, CCM_STATE_SENT_MEMLISTREQ);
+				ccm_set_state(info, CCM_STATE_SENT_MEMLISTREQ, reply);
 			} else {
 				/* check if we have already received memlist 
 				 * request from any node(which believes itself 
@@ -3643,8 +3661,8 @@ switchstatement:
 				if (ccm_send_cl_reply(hb, info) == TRUE) {
 					/* free the update data*/
 					finallist_init();
-					CCM_SET_STATE(info, 
-							CCM_STATE_MEMLIST_RES);
+					ccm_set_state(info, 
+						      CCM_STATE_MEMLIST_RES, reply);
 				} else if(update_timeout_expired(
 						CCM_GET_UPDATETABLE(info),
 						CCM_TMOUT_GET_LU(info))) {
@@ -3662,7 +3680,7 @@ switchstatement:
 						}
 					}
 					ccm_reset(info);
-					CCM_SET_STATE(info, CCM_STATE_NONE);
+					ccm_set_state(info, CCM_STATE_NONE, reply);
 				}
 			}
 			break;
@@ -3750,7 +3768,7 @@ ccm_control_init(ccm_info_t *info)
 	if (llm_get_active_nodecount(CCM_GET_LLM(info)) == 1) {
 		ccm_init_to_joined(info);
 	} else {
-		CCM_SET_STATE(info, CCM_STATE_NONE);
+		ccm_set_state(info, CCM_STATE_NONE, NULL);
 	}
 
 	return;
@@ -3941,7 +3959,7 @@ repeat:
 				return FALSE;
 			}
 		}
-		CCM_SET_STATE(info, CCM_STATE_VERSION_REQUEST);
+		ccm_set_state(info, CCM_STATE_VERSION_REQUEST, NULL);
 		/* 
 		 * FALL THROUGH 
 		 */
@@ -4405,7 +4423,7 @@ static void ccm_state_wait_for_mem_list(enum ccm_type ccm_msg_type,
 			ccm_fill_update_table(info, CCM_GET_UPDATETABLE(info),
 						uptime_list);
 			report_mbrs(info);
-			CCM_SET_STATE(info, CCM_STATE_JOINED);
+			ccm_set_state(info, CCM_STATE_JOINED, reply);
 			break;
         	
 		case CCM_TYPE_TIMEOUT:
@@ -4425,7 +4443,7 @@ static void ccm_state_wait_for_mem_list(enum ccm_type ccm_msg_type,
 						break;
 					}
 				}
-				CCM_SET_STATE(info, CCM_STATE_JOINING);
+				ccm_set_state(info, CCM_STATE_JOINING, reply);
 			}
 			break;
 
@@ -4460,7 +4478,7 @@ static void ccm_state_wait_for_mem_list(enum ccm_type ccm_msg_type,
 				}
 			}
 
-			CCM_SET_STATE(info, CCM_STATE_JOINING);
+			ccm_set_state(info, CCM_STATE_JOINING, reply);
 			break;
 
 		case CCM_TYPE_LEAVE:
@@ -4484,13 +4502,19 @@ static void ccm_state_wait_for_mem_list(enum ccm_type ccm_msg_type,
 						break;
 					}
 				}
-				CCM_SET_STATE(info, CCM_STATE_JOINING);
+				ccm_set_state(info, CCM_STATE_JOINING, reply);
 				return;
 			}
 
 		case CCM_TYPE_ALIVE:
 			/* We do nothing here because we believe leader
 			 * will deal with this LEAVE message. SPOF?
+			 */
+			break;
+
+		case CCM_TYPE_PROTOVERSION:
+			/* leader will handle this message
+			 * we can safely ignore it
 			 */
 			break;
 
@@ -4815,7 +4839,7 @@ static void ccm_state_new_node_wait_for_mem_list(enum ccm_type ccm_msg_type,
 			if(ccm_get_membership_index(info, 
 					CCM_GET_MYNODE_ID(info)) == -1){
 				version_reset(CCM_GET_VERSION(info));
-				CCM_SET_STATE(info, CCM_STATE_NONE);
+				ccm_set_state(info, CCM_STATE_NONE, reply);
 				g_slist_free(CCM_GET_JOINERHEAD(info));
 				CCM_SET_JOINERHEAD(info, NULL);
 				break;
@@ -4832,8 +4856,8 @@ static void ccm_state_new_node_wait_for_mem_list(enum ccm_type ccm_msg_type,
 			CCM_SET_JOINED_TRANSITION(info, CCM_GET_MAJORTRANS(info));
 			ccm_fill_update_table(info, 
 				CCM_GET_UPDATETABLE(info), uptime_list);
+			ccm_set_state(info, CCM_STATE_JOINED, reply);	        
 			report_mbrs(info);
-			CCM_SET_STATE(info, CCM_STATE_JOINED);	        
 			break;
 
 		case CCM_TYPE_TIMEOUT:
@@ -4852,7 +4876,7 @@ static void ccm_state_new_node_wait_for_mem_list(enum ccm_type ccm_msg_type,
 						break;
 					}
 				}
-				CCM_SET_STATE(info, CCM_STATE_JOINING);
+				ccm_set_state(info, CCM_STATE_JOINING, reply);
 			}	
 			break;
 
@@ -4886,7 +4910,7 @@ static void ccm_state_new_node_wait_for_mem_list(enum ccm_type ccm_msg_type,
 					break;
 				}
 			}
-			CCM_SET_STATE(info, CCM_STATE_JOINING);
+			ccm_set_state(info, CCM_STATE_JOINING, reply);
 			break;		
 
 		case CCM_TYPE_LEAVE:
@@ -4910,7 +4934,7 @@ static void ccm_state_new_node_wait_for_mem_list(enum ccm_type ccm_msg_type,
 						break;
 					}
 				}
-				CCM_SET_STATE(info, CCM_STATE_JOINING);
+				ccm_set_state(info, CCM_STATE_JOINING, reply);
 			}
 
 		case CCM_TYPE_ALIVE:
@@ -4918,6 +4942,14 @@ static void ccm_state_new_node_wait_for_mem_list(enum ccm_type ccm_msg_type,
 			 * will deal with this LEAVE message. SPOF?
 			 */
 			break;		
+
+		case CCM_TYPE_PROTOVERSION:
+			/* we are waiting for the leader for membership list
+			 * it's ok if someone want to join -- just ignore
+			 * the message and let the leader handl it
+			 */
+			
+			break;
 
 		default:
 			cl_log(LOG_ERR,"ccm_state_new_node_waitfor_memlst:dropping message"
