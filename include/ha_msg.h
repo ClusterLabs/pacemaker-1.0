@@ -1,4 +1,4 @@
-/* $Id: ha_msg.h,v 1.49 2005/02/07 11:28:34 andrew Exp $ */
+/* $Id: ha_msg.h,v 1.50 2005/02/10 01:34:09 gshi Exp $ */
 /*
  * Intracluster message object (struct ha_msg)
  *
@@ -125,7 +125,6 @@ extern struct fieldtypefuncs_s fieldtypefuncs[4];
 #define	MSG_END_NETSTRING	"%%%\n"
 #define	EQUAL		"="
 
-#define	MAXMSG	40000	/* Maximum string length for a message */
 #define MAXDEPTH 10     /* Maximum recursive message depth */
 #define MAXLENGTH	1024
 
