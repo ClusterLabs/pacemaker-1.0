@@ -1,4 +1,4 @@
-#	$Id: heartbeat.spec.in,v 1.66 2003/07/14 05:12:55 alan Exp $
+#	$Id: heartbeat.spec.in,v 1.67 2003/09/25 20:40:26 alan Exp $
 
 # Workaround for a change in RPM 4.1.x; needs proper fixing soon!
 %define _unpackaged_files_terminate_build 0
@@ -73,6 +73,38 @@ PILS is designed to support any number of plugins
 implementing any number of interfaces.
 
 %changelog
+* Fri Sep 26 2003  Alan Robertson <alanr@unix.sh> (see doc/AUTHORS file)
++ Version 1.1.3
+  + Bugfix for heartbeat starting resources twice concurrently if
+    auto_failback was set to "legacy".
+  + Bugfix for messages getting lost if messages were sent in quick
+    succession. (Kurosawa Takahiro)
+  + Bugfix for Filesystem resource checking for presence of filesystem
+    support before loading the module.
+  + BasicSanityCheck extended to cover more basic tests.
+  + Bugfix for findif not working correctly for CIDR netmasks.
+  + Minor bugfix for ldirectord recognizing new schedulers correctly and
+    timeout settings are now being honoured.
+  + Enhanced the message giving a better explanation of how to set up node
+    names properly when current node not found in the ha.cf file
+  + Send a message to the cluster whenever we have a node which doesn't
+    need STONITHing - even though it's gone down.  This fix needed
+    by CCM, which is in turn needed by EVMS.
+  + Enhanced the messages for missing ha.cf and missing haresources files
+    explaining that sample config files are found in the documentation. 
+  + Fix for memory leak from Forrest Zhao<forrest.zhao@intel.com>
+  + Added a (preliminary?) ordered messaging facility from Yi Zhu
+  + FAQ updates
+  + Added Xinetd resource script
+  + Added OCF (wrapper) resource script
+  + Allow respawn programs to take arguments
+  + Added pinggroups (where any node being up is OK)
+  + fixed ldirectord negotiatetimeout for HTTP
+  + fixed a bug which caused -d flag to be ignored
+  + failing resource scripts are now ERRORs not WARNings
+  + now shuts down correctly when auto_failback == legacy
+
+
 * Mon Jul 13 2003  Alan Robertson <alanr@unix.sh> (see doc/AUTHORS file)
 + Version 1.1.2
   + Replaced the nice_failback option with the auto_failback option.
