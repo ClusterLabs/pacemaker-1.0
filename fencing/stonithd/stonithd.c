@@ -1,4 +1,4 @@
-/* $Id: stonithd.c,v 1.31 2005/03/21 09:13:42 sunjd Exp $ */
+/* $Id: stonithd.c,v 1.32 2005/03/21 15:00:58 sunjd Exp $ */
 
 /* File: stonithd.c
  * Description: STONITH daemon for node fencing
@@ -2903,7 +2903,7 @@ kill_running_daemon(const char * pidfile)
 	pid_t pid;
 
 	if ( (pid = running_daemon_pid(PIDFILE)) < 0 ) {
-		stonithd_log(LOG_ERR, "cannot get daemon PID to kill it.");
+		stonithd_log(LOG_NOTICE, "cannot get daemon PID to kill it.");
 		return LSB_EXIT_GENERIC;	
 	}
 
@@ -2978,6 +2978,9 @@ free_common_op_t(gpointer data)
 
 /* 
  * $Log: stonithd.c,v $
+ * Revision 1.32  2005/03/21 15:00:58  sunjd
+ * Change loglevel
+ *
  * Revision 1.31  2005/03/21 09:13:42  sunjd
  * Change the return code to reflect the daemon status
  *
