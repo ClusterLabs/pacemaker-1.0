@@ -2,8 +2,8 @@ Source: heartbeat
 Build-Depends: debhelper (>= 2.0.0), libsnmp5-dev | libsnmp4.2-dev, libglib1.2-dev, perl, net-tools, netkit-ping, ssh, python, util-linux, psmisc, mount, e2fsprogs, modutils, libnet0-dev, raidtools2, iproute, libssl-dev | libssl09-dev, libtool, automake
 Section: admin
 Priority: optional
-Maintainer: Simon Horman <horms@vergenet.net>
-Standards-Version: 3.5.10
+Maintainer: Simon Horman <horms@debian.org>
+Standards-Version: 3.6.1
 
 Package: ldirectord
 Section: admin
