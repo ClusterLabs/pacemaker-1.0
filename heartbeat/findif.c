@@ -1,4 +1,4 @@
-/* $Id: findif.c,v 1.40 2004/09/10 21:22:50 alan Exp $ */
+/* $Id: findif.c,v 1.41 2004/09/18 23:11:54 alan Exp $ */
 /*
  * findif.c:	Finds an interface which can route a given address
  *
@@ -430,8 +430,10 @@ ValidateNetmaskBits (char *netmaskbits, unsigned long *netmask)
 				,	"Invalid netmask specification [%s]"
 				,	netmaskbits);
 				usage();
-				return;
+				/*not reached */
+				exit(1);
 			}
+
 			bits = 32 - bits;
 			*netmask = (1L<<(bits))-1L;
 			*netmask = ((~(*netmask))&0xffffffffUL);
@@ -700,6 +702,9 @@ ff02::%lo0/32                     fe80::1%lo0                   UC          lo0
 
 /* 
  * $Log: findif.c,v $
+ * Revision 1.41  2004/09/18 23:11:54  alan
+ * Bringing forward trivial changes from 1.2 version.
+ *
  * Revision 1.40  2004/09/10 21:22:50  alan
  * Put something back which I shouldn't have changed.
  * The code used to allow a /32 netmask, and I mistakenly made it an error.
