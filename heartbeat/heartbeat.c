@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.379 2005/03/17 05:37:23 gshi Exp $ */
+/* $Id: heartbeat.c,v 1.380 2005/03/18 23:22:16 gshi Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -1084,7 +1084,7 @@ Gmain_hb_signal_process_pending(void *data)
 static gboolean
 FIFO_child_msg_dispatch(IPC_Channel* source, gpointer user_data)
 {
-	struct ha_msg*	msg = msgfromIPC_noauth(source);
+	struct ha_msg*	msg = msgfromIPC(source, 0);
 
 	if (DEBUGDETAILS) {
 		cl_log(LOG_DEBUG, "FIFO_child_msg_dispatch() {");
@@ -1105,7 +1105,7 @@ FIFO_child_msg_dispatch(IPC_Channel* source, gpointer user_data)
 static gboolean
 read_child_dispatch(IPC_Channel* source, gpointer user_data)
 {
-	struct ha_msg*	msg = msgfromIPC(source);
+	struct ha_msg*	msg = msgfromIPC(source, MSG_NEEDAUTH);
 	struct hb_media** mp = user_data;
 	int	media_idx = mp - &sysmedia[0];
 
@@ -5154,6 +5154,15 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.380  2005/03/18 23:22:16  gshi
+ * add a parameter (int flag) to msgfromIPC()
+ * flag can have the following bit set
+ * if (flag & MSG_NEEDAUTH): authentication is required for the message
+ * if (flag & MSG_ALLOWINTR): if there is interruption which causes recv() to return
+ * 			   return NULL.
+ *
+ * most of time, it is called with flag = 0
+ *
  * Revision 1.379  2005/03/17 05:37:23  gshi
  * fixed a bug:
  *

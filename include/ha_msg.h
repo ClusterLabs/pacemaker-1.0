@@ -1,4 +1,4 @@
-/* $Id: ha_msg.h,v 1.55 2005/03/15 01:09:42 gshi Exp $ */
+/* $Id: ha_msg.h,v 1.56 2005/03/18 23:22:16 gshi Exp $ */
 /*
  * Intracluster message object (struct ha_msg)
  *
@@ -117,6 +117,8 @@ struct fieldtypefuncs_s{
 
 extern struct fieldtypefuncs_s fieldtypefuncs[4];
 
+#define MSG_NEEDAUTH	0x01
+#define MSG_ALLOWINTR	0X02
 
 #define	IFACE		"!^!\n"  
 #define	MSG_START	">>>\n"
@@ -270,7 +272,7 @@ int		ha_msg_add_nv(struct ha_msg* msg, const char * nvline, const char * bufmax)
 #define ha_msg_value(m,name) cl_get_string(m, name)
 
 /* Reads an IPC stream -- converts it into a message */
-struct ha_msg *	msgfromIPC(IPC_Channel * f);
+struct ha_msg *	msgfromIPC(IPC_Channel * f, int flag);
 
 IPC_Message * ipcmsgfromIPC(IPC_Channel * ch);
 

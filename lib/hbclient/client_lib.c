@@ -1,4 +1,4 @@
-/* $Id: client_lib.c,v 1.24 2005/03/15 18:40:06 gshi Exp $ */
+/* $Id: client_lib.c,v 1.25 2005/03/18 23:22:16 gshi Exp $ */
 /* 
  * client_lib: heartbeat API client side code
  *
@@ -1458,9 +1458,9 @@ read_api_msg(llc_private_t* pi)
 	for (;;) {
 		struct ha_msg*	msg;
 		const char *	type;
-
+		
 		pi->chan->ops->waitin(pi->chan);
-		if ((msg=msgfromIPC(pi->chan)) == NULL) {
+		if ((msg=msgfromIPC(pi->chan, 0)) == NULL) {
 			ha_api_perror("read_api_msg: "
 			"Cannot read reply from IPC channel");
 			continue;
@@ -1495,7 +1495,7 @@ read_cstatus_respond_msg(llc_private_t* pi, int timeout)
 	||	(poll(&pfd, 1, timeout) > 0 && pfd.revents == POLLIN)) {
 
 		while (pi->chan->ops->is_message_pending(pi->chan)) {
-			if ((msg=msgfromIPC(pi->chan)) == NULL) {
+			if ((msg=msgfromIPC(pi->chan, 0)) == NULL) {
 				ha_api_perror("read_api_msg: "
 				"Cannot read reply from IPC channel");
 				continue;
@@ -1980,7 +1980,7 @@ read_hb_msg(ll_cluster_t* llc, int blocking)
 	}
 	/* Process msg from FIFO */
 	while (msgready(llc)){
-		msg = msgfromIPC(pi->chan);
+		msg = msgfromIPC(pi->chan, 0);
 		if (msg == NULL) {
 			if (pi->chan->ch_status != IPC_CONNECT) {
 				pi->SignedOn = FALSE;
@@ -2000,7 +2000,7 @@ read_hb_msg(ll_cluster_t* llc, int blocking)
          */
 	for(;;) {
 		pi->chan->ops->waitin(pi->chan);
-		msg = msgfromIPC(pi->chan);
+		msg = msgfromIPC(pi->chan, 0);
 		if (msg == NULL) {
 			if (pi->chan->ch_status != IPC_CONNECT) {
 				pi->SignedOn = FALSE;
