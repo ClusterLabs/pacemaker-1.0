@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-#	$Id: heartbeat.in,v 1.33 2004/02/08 09:32:30 alan Exp $
+#	$Id: heartbeat.in,v 1.34 2004/03/19 16:32:18 alan Exp $
 #
 # heartbeat     Start high-availability services
 #
@@ -180,7 +180,7 @@ init_watchdog_linux() {
       then
         : softdog already loaded
       else
-        $INSMOD softdog >/dev/null 2>&1
+        $INSMOD softdog nowayout=0 >/dev/null 2>&1
       fi;;
   esac
   if
@@ -395,6 +395,9 @@ exit $RC
 #
 #
 #  $Log: heartbeat.in,v $
+#  Revision 1.34  2004/03/19 16:32:18  alan
+#  Put in a fix which causes us to always load the watchdog timer module with nowayout=0
+#
 #  Revision 1.33  2004/02/08 09:32:30  alan
 #  Fixed the standby option in the init script to handle the switch to
 #  auto_failback correctly.
