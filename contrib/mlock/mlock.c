@@ -525,7 +525,7 @@ static GSList *
 generate_task_list(void)
 {
 	GSList* task_list = NULL;
-	int i;
+	size_t i;
 	
   	int  task_table[][9] =
 		{
@@ -876,7 +876,7 @@ generate_task_list(void)
 static void
 remove_task_list(GSList* task_list)
 {
-	int i;
+	size_t i;
 	
 	for (i = 0; i < g_slist_length(task_list); i++){
 		g_free(g_slist_nth_data(task_list, i));
@@ -889,7 +889,7 @@ remove_task_list(GSList* task_list)
 static void
 runtests(GSList* task_list)
 {
-	int i;
+	size_t i;
 	
 	for (i = 0; i < g_slist_length(task_list); i++){
 		struct task* task; 
