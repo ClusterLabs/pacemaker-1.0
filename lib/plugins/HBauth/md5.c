@@ -19,7 +19,9 @@
  */
 
 #include <portability.h>
+#ifdef HAVE_STDINT_H
 #include <stdint.h>
+#endif
 #include <stdio.h>		/* for sprintf() */
 #include <string.h>		/* for memcpy() */
 #include <sys/types.h>		/* for stupid systems */
