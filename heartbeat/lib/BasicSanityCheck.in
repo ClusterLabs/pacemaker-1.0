@@ -221,10 +221,19 @@ LookForString() {
 CheckPat()
 {
   count=`egrep -c "$1" $LOGFILE`
+  min=$2
   if
-    [ $count -ne $2 ]
+    [ $# -gt 2 ]
   then
-    echo "ERROR: Did not find $2 occurances of $1 in $LOGFILE"
+    max=$3
+  else
+    max=$2
+  fi
+  if
+    [ $count -lt $min -o $count -gt $max ]
+  then
+    echo "ERROR: Did not find [$2:$3] occurances of $1 in $LOGFILE `date`" 2>&1 | tee -a $LOGFILE
+    echo "ERROR: Found $count instead." | tee -a $LOGFILE
     errcount=`expr $errcount + 1`
   fi
 }
@@ -246,7 +255,7 @@ TestHeartbeat() {
     then
      : COOL!
     else
-     echo "Heartbeat did not start."
+     echo "Heartbeat did not start." | tee -a $LOGFILE
      exit 1
     fi
   fi
@@ -260,7 +269,7 @@ TestHeartbeat() {
   then
     : OK
   else
-    echo "Does not look like we noticed $DUMMYNODE was dead"
+    echo "Does not look like we noticed $DUMMYNODE was dead" | tee -a $LOGFILE
     errcount=`expr $errcount + 1`
   fi
 
@@ -270,7 +279,7 @@ TestHeartbeat() {
   then
     : OK
   else
-    echo "Does not look like we STONITHed $DUMMYNODE"
+    echo "Does not look like we STONITHed $DUMMYNODE" | tee -a $LOGFILE
     errcount=`expr $errcount + 1`
   fi
   
@@ -279,7 +288,7 @@ TestHeartbeat() {
   then
     :  Looks good
   else
-    echo "Does not look like we took over the IP address"
+    echo "Does not look like we took over the IP address" | tee -a $LOGFILE
     errcount=`expr $errcount + 1`
   fi
 
@@ -288,7 +297,7 @@ TestHeartbeat() {
   then
     :  Looks good
   else
-    echo "Does not look like we ARPed the address"
+    echo "Does not look like we ARPed the address" | tee -a $LOGFILE
     errcount=`expr $errcount + 1`
   fi
 
@@ -300,7 +309,7 @@ TestHeartbeat() {
   then
     : COOL!
   else
-    echo "Looks like monitor operation failed"
+    echo "Looks like monitor operation failed" | tee -a $LOGFILE
     errcount=`expr $errcount + 1`
   fi
 
@@ -314,7 +323,7 @@ TestHeartbeat() {
   then
     : OK! reload after touching ha.cf worked!
   else
-    echo "Heartbeat reload operation returned $?"
+    echo "Heartbeat reload operation returned $?" | tee -a $LOGFILE
     errcount=`expr $errcount + 1`
   fi
   if
@@ -322,7 +331,7 @@ TestHeartbeat() {
   then
     :  Looks good
   else
-    echo "Does not look like we did a restart exec."
+    echo "Does not look like we did a restart exec." | tee -a $LOGFILE
     errcount=`expr $errcount + 1`
   fi
   if
@@ -340,7 +349,7 @@ TestHeartbeat() {
   then
     : OK! reload after touching authkeys worked!
   else
-    echo "Heartbeat reload operation returned $?"
+    echo "Heartbeat reload operation returned $?" | tee -a $LOGFILE
     errcount=`expr $errcount + 1`
   fi
   if
@@ -348,7 +357,7 @@ TestHeartbeat() {
   then
     : OK
   else
-    echo "Heartbeat did not reread config files exactly twice"
+    echo "Heartbeat did not reread config files exactly twice" | tee -a $LOGFILE
     errcount=`expr $errcount + 1`
   fi
   sleep 2
@@ -357,7 +366,7 @@ TestHeartbeat() {
   then
     :  Looks good -- did not do another exec
   else
-    echo "Looks like we did an extra exec"
+    echo "Looks like we did an extra exec" | tee -a $LOGFILE
     errcount=`expr $errcount + 1`
   fi
   if
@@ -372,13 +381,13 @@ TestHeartbeat() {
   then
     : OK!
   else
-    echo "Heartbeat stop operation returned $?"
+    echo "Heartbeat stop operation returned $?" | tee -a $LOGFILE
     errcount=`expr $errcount + 1`
   fi
   if
     HBStatus
   then
-    echo "Looks like heartbeat did not really stop."
+    echo "Looks like heartbeat did not really stop." | tee -a $LOGFILE
     echo "You\'ll probably need to kill some processes yourself."
     errcount=`expr $errcount + 1`
   fi
@@ -397,20 +406,20 @@ StonithCheck() {
 
   serrcount=0
 
-  echo "Checking STONITH basic sanity."
+  echo "Checking STONITH basic sanity." | tee -a $LOGFILE
   if
     $STONITH -h >/dev/null
   then
     : OK
   else
-    echo "$STONITH -h failed"
+    echo "$STONITH -h failed" | tee -a $LOGFILE
     serrcount=`expr $serrcount + 1`
   fi
   wc=`$STONITH -h | wc -l`
   if
     [ $wc -lt 100 ]
   then
-    echo "$STONITH -h help message is too short"
+    echo "$STONITH -h help message is too short" | tee -a $LOGFILE
     serrcount=`expr $serrcount + 1`
   fi
   if
@@ -418,7 +427,7 @@ StonithCheck() {
   then
     : FOOBARLIST OK
   else
-    echo "$STONITH -t null list option failed"
+    echo "$STONITH -t null list option failed" | tee -a $LOGFILE
     serrcount=`expr $serrcount + 1`
   fi
   if
@@ -427,7 +436,7 @@ StonithCheck() {
   then
     : OK null list
   else
-    echo "$STONITH -t null list option incorrect"
+    echo "$STONITH -t null list option incorrect" | tee -a $LOGFILE
     serrcount=`expr $serrcount + 1`
   fi
 
@@ -440,7 +449,7 @@ StonithCheck() {
   				  serrcount=`expr $serrcount + 1`;;
     esac
   else
-    echo "$STONITH -t null reset failed."
+    echo "$STONITH -t null reset failed." | tee -a $LOGFILE
   fi
   errcount=`expr $errcount + $serrcount`
 }
@@ -455,28 +464,43 @@ AppHBCheck() {
 		debugfile	$LOGFILE
 		logfile		$LOGFILE
 	!
-	echo "Performing apphbd success case tests"
-	$APPHBD -k >/dev/null 2>&1
+	echo "Performing apphbd success case tests" | tee -a $LOGFILE
+	if
+          $APPHBD -s >/dev/null 2>&2
+        then
+          echo "That's odd, $APPHBD is already running."
+	  killcount=2
+	  $APPHBD -k >/dev/null 2>&1
+        else
+          killcount=1
+        fi
 	$APPHBD -c $CFFILE
-	$APPHBTEST -i 1000 -p $clientcount -n 5 >>$CFFILE 2>&1
+	sleep 5
+	$APPHBTEST -i 1000 -p $clientcount -n 5 >> $LOGFILE 2>&1 
 	for pat in "apphb_client_register:" "type=setint" "info:.*apphb_client_remove:"
 	do
 	  CheckPat "$pat" $clientcount
 	done
 	CheckPat "failed to heartbeat|resumed heartbeats" 0
 	
-	echo "Performing apphbd failure case tests"
+	echo "Performing apphbd failure case tests" | tee -a $LOGFILE
 	$APPHBTEST -F -i 1000 -p 1 -n 5 >>$CFFILE 2>&1
-	for pat in "'failtest'.* failed to heartbeat" "'failtest'.* resumed heartbeats" "WARN:.*hangup"
+	for pat in "'failtest'.* failed to heartbeat" "'failtest'.* resumed heartbeats"
 	do
-          CheckPat "$pat" 1
+          CheckPat "$pat" 1 2
 	done
+	CheckPat "WARN:.*hangup" 1
 	$APPHBD -k $CFFILE
-	CheckPat "info:.*apphbd.*stopped" 1
+	CheckPat "info:.*apphbd.*stopped" $killcount
+	if
+          $APPHBD -s >/dev/null 2>&1
+        then
+          echo "ERROR: $APPHBD is still running!" | tee -a $LOGFILE
+        fi
 }
 
 IPCtest() {
-	echo "Starting IPC tests"
+	echo "Starting IPC tests" | tee -a $LOGFILE
 	$IPCTEST >>$LOGFILE 2>&1
 	errcount=`expr $errcount + $?`
 }
