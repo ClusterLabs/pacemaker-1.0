@@ -1753,13 +1753,11 @@ ccm_create_leave_msg(ccm_info_t *info, int uuid)
 // message.
 //
 static struct ha_msg *
-ccm_readmsg(ccm_info_t *info, ll_cluster_t *hb, int ttimeout)
+ccm_readmsg(ccm_info_t *info, ll_cluster_t *hb)
 {
 	int 	uuid;
-	int	fd;
 
 	assert(hb);
-	fd = hb->llc_ops->inputfd(hb);
 
 	/* check if there are any leave events to be delivered */
 	while((uuid=leave_get_next()) != -1) {
@@ -3281,7 +3279,7 @@ ccm_control_process(ccm_info_t *info, ll_cluster_t * hb)
 
 repeat:
 	/* read the next available message */
-	reply = ccm_readmsg(info, hb, 0); /* wait no sec for timeout */
+	reply = ccm_readmsg(info, hb); /* this is non-blocking */
 
 	if (reply) {
 		type = ha_msg_value(reply, F_TYPE);
