@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-#	$Id: IPaddr.in,v 1.49 2003/10/29 05:38:59 horms Exp $
+#	$Id: IPaddr.in,v 1.50 2003/10/29 11:40:50 horms Exp $
 #
 #	This script manages IP alias IP addresses
 #
@@ -31,7 +31,7 @@ IFCONFIG=@IFCONFIG@
 IFCONFIG_A_OPT=@IFCONFIG_A_OPT@
 VARLIB=@localstatedir@/lib/@HB_PKG@
 VLDIR=$VARLIB/rsctmp/IPaddr
-PIDDIR=$VARLIB/run
+SENDARPPIDDIR=$VARLIB/rsctmp/send_arp
 ROUTE=@ROUTE@
 SENDARP=$HA_BIN/send_arp
 FINDIF=$HA_BIN/findif
@@ -335,7 +335,7 @@ restore_loopback() {
 #
 ip_stop() {
   BASEIP=`echo $1 | sed s'%/.*%%'`
-  SENDARPPIDFILE="$PIDDIR/send_arp-$BASEIP"
+  SENDARPPIDFILE="$SENDARPPIDDIR/send_arp-$BASEIP"
   IF=`find_interface $BASEIP`
 
   if test -f "$SENDARPPIDFILE"
@@ -411,6 +411,12 @@ ip_stop() {
 #	is an aliased interface name (e.g., "eth0:0", "dc0", "le0:0").
 #
 find_free_interface() {
+  if
+    [ ! -d $VLDIR ]
+  then
+    mkdir -p $VLDIR
+  fi
+
   BASEIP=`echo $1 | sed s'%/.*%%'`
   if
     NICINFO=`$FINDIF $1`
@@ -507,7 +513,7 @@ ip_start() {
   esac
 
   BASEIP=`echo $1 | sed s'%/.*%%'`
-  SENDARPPIDFILE="$PIDDIR/send_arp-$BASEIP"
+  SENDARPPIDFILE="$SENDARPPIDDIR/send_arp-$BASEIP"
 
   case $SYSTYPE in
     Linux)
@@ -631,7 +637,7 @@ ip_monitor() {
 
 usage() {
   echo $USAGE >&2
-  echo "$Id: IPaddr.in,v 1.49 2003/10/29 05:38:59 horms Exp $"
+  echo "$Id: IPaddr.in,v 1.50 2003/10/29 11:40:50 horms Exp $"
 }
 
 #
@@ -678,6 +684,9 @@ esac
 #
 #
 # $Log: IPaddr.in,v $
+# Revision 1.50  2003/10/29 11:40:50  horms
+# Send arp  creates a driectory to store its pid file in on-the-fly. IPaddr does likewise for state files.
+#
 # Revision 1.49  2003/10/29 05:38:59  horms
 # Need to create these directories on-the-fly after all.
 #

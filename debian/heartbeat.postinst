@@ -90,22 +90,6 @@ if [ "$1" = "configure" ]; then
 	chmod 0750 /var/lib/heartbeat/ccm
 	chown "$HA_CCMUSER" /var/lib/heartbeat/ccm
 	chgrp "$HA_APIGROUP" /var/lib/heartbeat/ccm
- 
-	chmod 0750 /var/lib/heartbeat/rsctmp
-	chown "$HA_CCMUSER" /var/lib/heartbeat/rsctmp
-	chgrp "$HA_APIGROUP" /var/lib/heartbeat/rsctmp
- 
-	chmod 0750 /var/lib/heartbeat/rsctmp/IPaddr
-	chown "$HA_CCMUSER" /var/lib/heartbeat/rsctmp/IPaddr
-	chgrp "$HA_APIGROUP" /var/lib/heartbeat/rsctmp/IPaddr
- 
-	chmod 0750 /var/lib/heartbeat/rsctmp/IPaddr2
-	chown "$HA_CCMUSER" /var/lib/heartbeat/rsctmp/IPaddr2
-	chgrp "$HA_APIGROUP" /var/lib/heartbeat/rsctmp/IPaddr2
- 
-	chmod 0750 /var/lib/heartbeat/run
-	chown "$HA_CCMUSER" /var/lib/heartbeat/run
-	chgrp "$HA_APIGROUP" /var/lib/heartbeat/run
 
 	update-rc.d heartbeat defaults >/dev/null
 fi

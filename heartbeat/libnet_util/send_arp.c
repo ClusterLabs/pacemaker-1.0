@@ -1,4 +1,4 @@
-const static char * _send_arp_c = "$Id: send_arp.c,v 1.3 2003/10/23 07:36:29 horms Exp $";
+const static char * _send_arp_c = "$Id: send_arp.c,v 1.4 2003/10/29 11:40:50 horms Exp $";
 /* 
  * send_arp
  * 
@@ -36,6 +36,7 @@ const static char * _send_arp_c = "$Id: send_arp.c,v 1.3 2003/10/23 07:36:29 hor
 
 #include <libnet.h>
 #include <syslog.h>
+#include <libgen.h>
 #include <clplumbing/timers.h>
 
 #ifdef HAVE_LIBNET_1_0_API
@@ -45,7 +46,8 @@ const static char * _send_arp_c = "$Id: send_arp.c,v 1.3 2003/10/23 07:36:29 hor
 #	define	LTYPE	libnet_t
 #endif
 
-#define PIDFILE_BASE HA_VARLIBDIR "/" PACKAGE "/send_arp-"
+#define PIDDIR       HA_VARLIBDIR "/" PACKAGE "rsctmp/send_arp"
+#define PIDFILE_BASE PIDDIR "/send_arp-"
 
 static int send_arp(LTYPE* l, u_long ip, u_char *device, u_char mac[6], u_char *broadcast, u_char *netmask, u_short arptype);
 
@@ -58,6 +60,7 @@ static char print_usage[]={
 static void convert_macaddr (u_char *macaddr, u_char enet_src[6]);
 static int get_hw_addr(char *device, u_char mac[6]);
 int write_pid_file(const char *pidfilename);
+int create_pid_directory(const char *piddirectory);
 
 
 #define AUTO_MAC_ADDR "auto"
@@ -103,13 +106,13 @@ main(int argc, char *argv[])
 				break;
 
 		default:	fprintf(stderr, "usage: %s\n\n", print_usage);
-				exit(1);
+				return 1;
 				break;
 		}
 	}
 	if (argc-optind != 5) {
 		fprintf(stderr, "usage: %s\n\n", print_usage);
-		exit(1);;
+		return 1;
 	}
 
 	/*
@@ -131,35 +134,39 @@ main(int argc, char *argv[])
 					PIDFILE_BASE, ipaddr) >= 
 				sizeof(pidfilenamebuf)) {
 			syslog(LOG_INFO, "Pid file truncated");
-			exit(EXIT_FAILURE);
+			return EXIT_FAILURE;
 		}
 		pidfilename = pidfilenamebuf;
 	}
 
 	if(write_pid_file(pidfilename) < 0) {
-		exit(EXIT_FAILURE);
+		return EXIT_FAILURE;
 	}
 
 #if defined(HAVE_LIBNET_1_0_API)
 	if ((ip = libnet_name_resolve(ipaddr, 1)) == -1UL) {
 		syslog(LOG_ERR, "Cannot resolve IP address [%s]", ipaddr);
-		exit(EXIT_FAILURE);
+		unlink(pidfilename);
+		return EXIT_FAILURE;
 	}
 
 	l = libnet_open_link_interface(device, errbuf);
 	if (!l) {
 		syslog(LOG_ERR, "libnet_open_link_interface on %s: %s"
 		,	device, errbuf);
-		exit(EXIT_FAILURE);
+		unlink(pidfilename);
+		return EXIT_FAILURE;
 	}
 #elif defined(HAVE_LIBNET_1_1_API)
 	if ((l=libnet_init(LIBNET_LINK, device, errbuf)) == NULL) {
 		syslog(LOG_ERR, "libnet_init failure on %s", device);
-		exit(EXIT_FAILURE);
+		unlink(pidfilename);
+		return EXIT_FAILURE;
 	}
 	if ((signed)(ip = libnet_name2addr4(l, ipaddr, 1)) == -1) {
 		syslog(LOG_ERR, "Cannot resolve IP address [%s]", ipaddr);
-		exit(EXIT_FAILURE);
+		unlink(pidfilename);
+		return EXIT_FAILURE;
 	}
 #else
 #	error "Must have LIBNET API version defined."
@@ -169,7 +176,8 @@ main(int argc, char *argv[])
 		if (get_hw_addr(device, src_mac) < 0) {
 			 syslog(LOG_ERR, "Cannot find mac address for %s", 
 					 device);
-			 exit(EXIT_FAILURE);
+			 unlink(pidfilename);
+			 return EXIT_FAILURE;
 		}
 	}
 	else {
@@ -182,15 +190,18 @@ main(int argc, char *argv[])
  * done by Masaki Hasegawa <masaki-h@pp.iij4u.or.jp> and his colleagues.
  */
 	for (j=0; j < repeatcount; ++j) {
-		c = send_arp(l, ip, device, src_mac, broadcast, netmask, ARPOP_REQUEST);
-		c = send_arp(l, ip, device, src_mac, broadcast, netmask, ARPOP_REPLY);
+		c = send_arp(l, ip, device, src_mac, broadcast, 
+				netmask, ARPOP_REQUEST);
+		mssleep(msinterval / 2);
+		c = send_arp(l, ip, device, src_mac, broadcast, 
+				netmask, ARPOP_REPLY);
 		if (j != repeatcount-1) {
-			mssleep(msinterval);
+			mssleep(msinterval / 2);
 		}
 	}
 
 	unlink(pidfilename);
-	return (c < 0  ? EXIT_FAILURE : EXIT_SUCCESS);
+	return c < 0  ? EXIT_FAILURE : EXIT_SUCCESS;
 }
 
 
@@ -279,7 +290,7 @@ send_arp(struct libnet_link_int *l, u_long ip, u_char *device, u_char *macaddr, 
 
 	if (libnet_init_packet(LIBNET_ARP_H + LIBNET_ETH_H, &buf) == -1) {
 	syslog(LOG_ERR, "libnet_init_packet memory:");
-		exit(EXIT_FAILURE);
+		return -1;
 	}
 
 	/* Convert ASCII Mac Address to 6 Hex Digits. */
@@ -351,6 +362,52 @@ send_arp(libnet_t* lntag, u_long ip, u_char *device, u_char macaddr[6], u_char *
 
 
 int
+create_pid_directory(const char *pidfilename)  
+{
+	int	status;
+	struct stat stat_buf;
+	char    *dir;
+
+	dir = strdup(pidfilename);
+	if (!dir) {
+		syslog(LOG_INFO, "Memory allocation failure: %s\n",
+				strerror(errno));
+		return -1;
+	}
+
+	dirname(dir);
+
+	status = stat(dir, &stat_buf); 
+
+	if (status < 0 && errno != ENOENT && errno != ENOTDIR) {
+		syslog(LOG_INFO, "Could not stat pid-file directory "
+				"[%s]: %s", dir, strerror(errno));
+		free(dir);
+		return -1;
+	}
+	
+	if (!status) {
+		if (S_ISDIR(stat_buf.st_mode)) {
+			return 0;
+		}
+		syslog(LOG_INFO, "Pid-File directory exists but is "
+				"not a directory [%s]", dir);
+		free(dir);
+		return -1;
+        }
+
+	if (mkdir(dir, S_IRUSR|S_IWUSR|S_IXUSR | S_IRGRP|S_IXGRP) < 0) {
+		syslog(LOG_INFO, "Could not create pid-file directory "
+				"[%s]: %s", dir, strerror(errno));
+		free(dir);
+		return -1;
+	}
+
+	return 0;
+}
+
+
+int
 write_pid_file(const char *pidfilename)  
 {
 
@@ -359,12 +416,22 @@ write_pid_file(const char *pidfilename)
 	pid_t   pid;
 	size_t  bytes;
 
+	if (*pidfilename != '/') {
+		syslog(LOG_INFO, "Invalid pid-file name, must begin with a "
+				"'/' [%s]\n", pidfilename);
+		return -1;
+	}
+
+	if (create_pid_directory(pidfilename) < 0) {
+		return -1;
+	}
+
 	while (1) {
 		pidfilefd = open(pidfilename, O_CREAT|O_EXCL|O_RDWR, 
 				S_IRUSR|S_IWUSR);
 		if (pidfilefd < 0) {
 			if (errno != EEXIST) { /* Old PID file */
-				syslog(LOG_INFO, "Could not open pid file "
+				syslog(LOG_INFO, "Could not open pid-file "
 						"[%s]: %s", pidfilename, 
 						strerror(errno));
 				return -1;
@@ -376,7 +443,7 @@ write_pid_file(const char *pidfilename)
 
 		pidfilefd = open(pidfilename, O_RDONLY, S_IRUSR|S_IWUSR);
 		if (pidfilefd < 0) {
-			syslog(LOG_INFO, "Could not open pid file " 
+			syslog(LOG_INFO, "Could not open pid-file " 
 					"[%s]: %s", pidfilename, 
 					strerror(errno));
 			return -1;
@@ -388,7 +455,7 @@ write_pid_file(const char *pidfilename)
 				if (errno == EINTR) {
 					continue;
 				}
-				syslog(LOG_INFO, "Could not read pid file " 
+				syslog(LOG_INFO, "Could not read pid-file " 
 						"[%s]: %s", pidfilename, 
 						strerror(errno));
 				return -1;
@@ -398,14 +465,14 @@ write_pid_file(const char *pidfilename)
 		}
 
 		if(unlink(pidfilename) < 0) {
-			syslog(LOG_INFO, "Could not delete pid file "
+			syslog(LOG_INFO, "Could not delete pid-file "
 	 				"[%s]: %s", pidfilename, 
 					strerror(errno));
 			return -1;
 		}
 
 		if (!bytes) {
-			syslog(LOG_INFO, "Invalid pid in pid file "
+			syslog(LOG_INFO, "Invalid pid in pid-file "
 	 				"[%s]: %s", pidfilename, 
 					strerror(errno));
 			return -1;
@@ -415,7 +482,7 @@ write_pid_file(const char *pidfilename)
 
 		pid = strtoul(pidbuf, NULL, 10);
 		if (pid == ULONG_MAX && errno == ERANGE) {
-			syslog(LOG_INFO, "Invalid pid in pid file "
+			syslog(LOG_INFO, "Invalid pid in pid-file "
 	 				"[%s]: %s", pidfilename, 
 					strerror(errno));
 			return -1;
@@ -423,7 +490,7 @@ write_pid_file(const char *pidfilename)
 
 		if (kill(pid, SIGKILL) < 0 && errno != ESRCH) {
 			syslog(LOG_INFO, "Error killing old proccess [%u] "
-	 				"from pid file [%s]: %s", pid,
+	 				"from pid-file [%s]: %s", pid,
 					pidfilename, strerror(errno));
 			return -1;
 		}
@@ -444,7 +511,7 @@ write_pid_file(const char *pidfilename)
 			if (bytes < 0 && errno == EINTR) {
 				continue;
 			}
-			syslog(LOG_INFO, "Could not write pid file "
+			syslog(LOG_INFO, "Could not write pid-file "
 					"[%s]: %s", pidfilename,
 					strerror(errno));
 			return -1;
@@ -460,6 +527,9 @@ write_pid_file(const char *pidfilename)
 
 /*
  * $Log: send_arp.c,v $
+ * Revision 1.4  2003/10/29 11:40:50  horms
+ * Send arp  creates a driectory to store its pid file in on-the-fly. IPaddr does likewise for state files.
+ *
  * Revision 1.3  2003/10/23 07:36:29  horms
  * added pid file to sendarp
  *

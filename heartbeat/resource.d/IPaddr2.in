@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-#	$Id: IPaddr2.in,v 1.6 2003/10/29 05:38:59 horms Exp $
+#	$Id: IPaddr2.in,v 1.7 2003/10/29 11:40:50 horms Exp $
 #
 #	Copyright (C) 2003 Tuomo Soini <tis@foobar.fi>
 #
@@ -29,7 +29,7 @@ SENDARP=$HA_BIN/send_arp
 FINDIF=$HA_BIN/findif
 VARLIB=@localstatedir@/lib/@HB_PKG@
 VLDIR=$VARLIB/rsctmp/IPaddr
-PIDDIR=$VARLIB/run
+SENDARPPIDDIR=$VARLIB/rsctmp/send_arp
 USAGE="usage: $0 ip-address[/netmaskbits[/interface[:label][/broadcast]]]
 {start|stop|status|monitor}\n\nNote: $0 only works on Linux";
 
@@ -207,7 +207,7 @@ restore_loopback() {
 #	do nothing.
 #
 start() {
-    SENDARPPIDFILE="$PIDDIR/send_arp-$BASEIP"
+    SENDARPPIDFILE="$SENDARPPIDDIR/send_arp-$BASEIP"
 
     #
     #	Do we already service this IP address?
@@ -274,7 +274,7 @@ start() {
 #
 stop() {
     IF=`find_interface $BASEIP`
-    SENDARPPIDFILE="$PIDDIR/send_arp-$BASEIP"
+    SENDARPPIDFILE="$SENDARPPIDDIR/send_arp-$BASEIP"
 
     if
 	[ -f "$SENDARPPIDFILE" ]
