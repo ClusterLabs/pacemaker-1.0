@@ -1,4 +1,4 @@
-static const char * _ha_msg_c_Id = "$Id: ha_msg_internal.c,v 1.37 2003/07/03 21:50:40 alan Exp $";
+static const char * _ha_msg_c_Id = "$Id: ha_msg_internal.c,v 1.38 2003/11/10 08:55:20 lars Exp $";
 /*
  * ha_msg_internal: heartbeat internal messaging functions
  *
@@ -33,7 +33,7 @@ static const char * _ha_msg_c_Id = "$Id: ha_msg_internal.c,v 1.37 2003/07/03 21:
 #include <ha_msg.h>
 #include <heartbeat_private.h>
 
-#define		MINFIELDS	20
+#define		MINFIELDS	30
 #define		CRNL		"\r\n"
 
 
@@ -360,6 +360,19 @@ main(int argc, char ** argv)
 #endif
 /*
  * $Log: ha_msg_internal.c,v $
+ * Revision 1.38  2003/11/10 08:55:20  lars
+ * Bugfixes by Deng, Pan:
+ *
+ * - While receiving a ha_msg, the default number of fields is MINFIELDS,
+ *   which is 20. After the reception, if more than 20 fields needed to be
+ *   added, it will fail.  I changed the MINFIELDS to 30. It is not a
+ *   graceful fix, but it can work for checkpoint service. I think the max
+ *   fields should not be fixed.
+ *
+ * - The message create routine ha_msg_new() in ha_msg.c. It takes a
+ *   parameter nfields, but the function does not use it at all. If nfields
+ *   > MINFIELDS, the allocated fields should be nfields.
+ *
  * Revision 1.37  2003/07/03 21:50:40  alan
  * Changed the function which adds the "from" address to not use uname, but
  * the already-computed localnodename variable.

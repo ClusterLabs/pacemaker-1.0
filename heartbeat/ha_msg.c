@@ -1,4 +1,4 @@
-static const char * _ha_msg_c_Id = "$Id: ha_msg.c,v 1.46 2003/10/29 04:05:00 alan Exp $";
+static const char * _ha_msg_c_Id = "$Id: ha_msg.c,v 1.47 2003/11/10 08:55:20 lars Exp $";
 /*
  * Heartbeat messaging object.
  *
@@ -35,7 +35,7 @@ static const char * _ha_msg_c_Id = "$Id: ha_msg.c,v 1.46 2003/10/29 04:05:00 ala
 #include <unistd.h>
 #include <clplumbing/ipc.h>
 
-#define		MINFIELDS	20
+#define		MINFIELDS	30
 #define		CRNL		"\r\n"
 
 #undef DOAUDITS
@@ -54,6 +54,7 @@ struct ha_msg *
 ha_msg_new(nfields)
 {
 	struct ha_msg *	ret;
+	int	nalloc;
 
 	(void)_heartbeat_h_Id;
 	(void)_ha_msg_c_Id;
@@ -61,11 +62,18 @@ ha_msg_new(nfields)
 	ret = MALLOCT(struct ha_msg);
 	if (ret) {
 		ret->nfields = 0;
-		ret->nalloc    = MINFIELDS;
-		ret->names     = (char **)ha_calloc(sizeof(char *), MINFIELDS);
-		ret->nlens     = (int *)ha_calloc(sizeof(int), MINFIELDS);
-		ret->values    = (char **)ha_calloc(sizeof(char *), MINFIELDS);
-		ret->vlens     = (int *)ha_calloc(sizeof(int), MINFIELDS);
+
+		if (nfields > MINFIELDS) {
+			nalloc = nfields;
+		} else {
+			nalloc = MINFIELDS;
+		}
+
+		ret->nalloc    = nalloc;
+		ret->names     = (char **)ha_calloc(sizeof(char *), nalloc);
+		ret->nlens     = (int *)ha_calloc(sizeof(int), nalloc);
+		ret->values    = (char **)ha_calloc(sizeof(char *), nalloc);
+		ret->vlens     = (int *)ha_calloc(sizeof(int), nalloc);
 		ret->stringlen = sizeof(MSG_START)+sizeof(MSG_END)-1;
 
 		if (ret->names == NULL || ret->values == NULL
@@ -734,6 +742,19 @@ main(int argc, char ** argv)
 #endif
 /*
  * $Log: ha_msg.c,v $
+ * Revision 1.47  2003/11/10 08:55:20  lars
+ * Bugfixes by Deng, Pan:
+ *
+ * - While receiving a ha_msg, the default number of fields is MINFIELDS,
+ *   which is 20. After the reception, if more than 20 fields needed to be
+ *   added, it will fail.  I changed the MINFIELDS to 30. It is not a
+ *   graceful fix, but it can work for checkpoint service. I think the max
+ *   fields should not be fixed.
+ *
+ * - The message create routine ha_msg_new() in ha_msg.c. It takes a
+ *   parameter nfields, but the function does not use it at all. If nfields
+ *   > MINFIELDS, the allocated fields should be nfields.
+ *
  * Revision 1.46  2003/10/29 04:05:00  alan
  * Changed things so that the API uses IPC instead of FIFOs.
  * This isn't 100% done - python API code needs updating, and need to check authorization
