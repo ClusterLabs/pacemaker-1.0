@@ -439,7 +439,7 @@ nodestatus(ll_cluster_t *hb, int argc, char ** argv, const char * optstr)
 	};
 
 	if (argc <= optind+1) {
-		fprintf(stderr, "No enough parameter.\n");
+		fprintf(stderr, "Not enough parameters.\n");
 		return PARAMETER_ERROR;
 	}
 
