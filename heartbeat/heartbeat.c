@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.355 2005/02/17 19:21:34 gshi Exp $ */
+/* $Id: heartbeat.c,v 1.356 2005/02/18 16:45:59 alan Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -2522,8 +2522,24 @@ ManagedChildDied(ProcTrack* p, int status, int signo, int exitcode
 	managedchild->proctrack = NULL;
 	managed_child_count --;
 
-	/* If they exit 100 we won't restart them */
 
+	/* Log anything out of the ordinary... */
+	if (!shutdown_in_progress && !waslogged) {
+		if (0 != exitcode) {
+			cl_log(LOG_ERR
+			,	"Client %s exited with return code %d."
+			,	managedchild->command
+			,	exitcode);
+		}
+		if (0 != signo) {
+			cl_log(LOG_ERR
+			,	"Client %s killed by signal %d."
+			,	managedchild->command
+			,	signo);
+		}
+	}
+
+	/* If they exit 100 we won't restart them */
 	if (managedchild->respawn && !shutdown_in_progress
 	&&	exitcode != 100) {
 		longclock_t	now = time_longclock();
@@ -2545,7 +2561,7 @@ ManagedChildDied(ProcTrack* p, int status, int signo, int exitcode
 			,	"respawning too fast");
 			managedchild->shortrcount = 0;
 		}else{
-			cl_log(LOG_INFO
+			cl_log(LOG_ERR
 			,	"Respawning client \"%s\":"
 			,	managedchild->command);
 			start_a_child_client(managedchild, NULL);
@@ -2554,20 +2570,29 @@ ManagedChildDied(ProcTrack* p, int status, int signo, int exitcode
 	p->privatedata = NULL;
 	if (shutdown_in_progress) {
                 if (g_list_find(config->client_list, managedchild) != NULL){
-			/* this child died unexpectedly,
-			 * remove it from list and return
-			 */
-			config->client_list = g_list_remove(config->client_list, 
-							managedchild);
+			/* Child died unexpectedly, remove it and return */
+			if (ANYDEBUG) {
+				cl_log(LOG_DEBUG
+				,	"client \"%s\" died early during shutdown."
+				,	managedchild->command);
+			}
+			config->client_list = g_list_remove(config->client_list
+			,	managedchild);
 			return; 
 		}
 
 		if (!shutdown_last_client_child(SIGTERM)) {
 			if (managed_child_count != 0)  {
 				cl_log(LOG_ERR
-				,	"managed_child_count is %d should be zero"
+				,	"managed_child_count is %d"
+				" should be zero"
 				,	managed_child_count);
 				managed_child_count = 0;
+			}
+			if (ANYDEBUG) {
+				cl_log(LOG_DEBUG
+				,	"Final client \"%s\" died."
+				,	managedchild->command);
 			}
                        /* Trigger next shutdown phase */
 			hb_mcp_final_shutdown(NULL); /* phase 1 (last child died) */
@@ -2736,11 +2761,14 @@ shutdown_last_client_child(int nsig)
 			,	GINT_TO_POINTER(nsig));
 			return TRUE;
 		}
-		cl_log(LOG_INFO, "client [%s] not running."
+		cl_log(LOG_INFO, "client [%s] is not running."
 		,	lastclient->command);
 		cl_free(lastclient);
 	}else{
 		cl_log(LOG_ERR, "shutdown_last_clent_child(NULL client)");
+	}
+	if (ANYDEBUG) {
+		cl_log(LOG_DEBUG, "shutdown_last_client_child: Try next one.");
 	}
 	/* OOPS! Couldn't kill a process... Try the next one... */
 	return shutdown_last_client_child(nsig);
@@ -5002,6 +5030,10 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.356  2005/02/18 16:45:59  alan
+ * Cleaned up and made more detailed some of the death-of-process logging.
+ * No real code changes intended...
+ *
  * Revision 1.355  2005/02/17 19:21:34  gshi
  * BEAM FIX: add surrounding braces
  *
