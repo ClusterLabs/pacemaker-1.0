@@ -1,4 +1,4 @@
-const static char * _hb_config_c_Id = "$Id: config.c,v 1.109 2004/01/21 11:34:14 horms Exp $";
+const static char * _hb_config_c_Id = "$Id: config.c,v 1.110 2004/01/30 15:11:27 lars Exp $";
 /*
  * Parse various heartbeat configuration files...
  *
@@ -359,15 +359,15 @@ init_config(const char * cfgfile)
 	}
 	if (GetParameterValue(KEY_UDPPORT) == NULL) {
 		struct servent*	service;
-		int		udpport;
+		int		tmpudpport;
 		char		tmp[32];
  		/* If our service name is in /etc/services, then use it */
 		if ((service=getservbyname(HA_SERVICENAME, "udp")) != NULL){
-			udpport = ntohs(service->s_port);
+			tmpudpport = ntohs(service->s_port);
 		}else{
-			udpport = UDPPORT;
+			tmpudpport = UDPPORT;
 		}
-		snprintf(tmp, (sizeof(tmp)-1), "%d", udpport);
+		snprintf(tmp, (sizeof(tmp)-1), "%d", tmpudpport);
 		SetParameterValue(KEY_UDPPORT, tmp);
 	}
 
@@ -1920,6 +1920,9 @@ baddirective:
 
 /*
  * $Log: config.c,v $
+ * Revision 1.110  2004/01/30 15:11:27  lars
+ * Fix shadow variable.
+ *
  * Revision 1.109  2004/01/21 11:34:14  horms
  * - Replaced numerous malloc + strcpy/strncpy invocations with strdup
  *   * This usually makes the code a bit cleaner
