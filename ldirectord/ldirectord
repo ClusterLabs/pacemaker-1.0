@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-my($VERSION)=(qw$Id: ldirectord,v 1.74 2003/10/02 08:09:02 horms Exp $)[2];
+my($VERSION)=(qw$Id: ldirectord,v 1.75 2003/12/16 03:47:16 horms Exp $)[2];
 
 ######################################################################
 # ldirectord                 http://www.vergenet.net/linux/ldirectord/
@@ -2546,7 +2546,7 @@ sub get_real_id_str
 
         $real    = $check . ":" . $v->{"protocol"} . ":" 
 	         . $r->{"server"} . ":" . $r->{"port"} . ":" 
-		 . $checkport . ":" 
+		 . $checkport . ":" . $r->{"weight"} . ":"
 		 . quotemeta($request) . ":" . quotemeta($receive);
 }
 
