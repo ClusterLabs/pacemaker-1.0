@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.317 2004/09/07 16:07:53 alan Exp $ */
+/* $Id: heartbeat.c,v 1.318 2004/09/10 01:12:23 alan Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -572,13 +572,13 @@ hb_versioninfo(void)
 struct link *
 lookup_iface(struct node_info * hip, const char *iface)
 {
-	struct link *lnk;
-	int j = 0;
-	while((lnk = &hip->links[j]) && lnk->name) {
+	struct link *	lnk;
+	int		j;
+
+	for (j=0; (lnk = &hip->links[j], lnk->name); ++j) {
 		if (strcmp(lnk->name, iface) == 0) {
 			return lnk;
 		}
-		j++;
 	}
 	return NULL;
 }
@@ -2056,6 +2056,7 @@ process_clustermsg(struct ha_msg* msg, struct link* lnk)
 		
 		case DUPLICATE:
 		heartbeat_monitor(msg, action, iface);
+		/* fall through */
 		case KEEPIT:
 
 		/* Even though it's a DUP, it could update link status*/
@@ -2554,23 +2555,21 @@ check_for_timeouts(void)
 	/* Check all links status of all nodes */
 
 	for (j=0; j < config->nodecount; ++j) {
-		struct link *lnk;
-		int i = 0;
+		struct link *	lnk;
+		int		i;
 		hip = &config->nodes[j];
 
 		if (hip == curnode) continue;
 
-		while((lnk = &hip->links[i]) && lnk->name) {
+		for (i=0; (lnk = &hip->links[i]), lnk->name; i++) {
 			if (lnk->lastupdate > now) {
 					lnk->lastupdate = 0L;
 			}
 			if (cmp_longclock(lnk->lastupdate, TooOld) >= 0
 			||  strcmp(lnk->status, DEADSTATUS) == 0 ) {
-				i++;
 				continue;
 			}
 			change_link_status(hip, lnk, DEADSTATUS);
-			i++;
 		}
 	}
 }
@@ -4460,6 +4459,9 @@ hb_unregister_to_apphbd(void)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.318  2004/09/10 01:12:23  alan
+ * BEAM CHANGES: Fixed a couple of very minor bugs, and cleaned up some BEAM warnings.
+ *
  * Revision 1.317  2004/09/07 16:07:53  alan
  * Added hb_setup_child() to centralize child setup overhead.  Pulled from STABLE branch.
  *

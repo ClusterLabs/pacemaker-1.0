@@ -1,4 +1,4 @@
-/* $Id: findif.c,v 1.38 2004/04/29 14:18:20 kevin Exp $ */
+/* $Id: findif.c,v 1.39 2004/09/10 01:12:23 alan Exp $ */
 /*
  * findif.c:	Finds an interface which can route a given address
  *
@@ -425,13 +425,13 @@ ValidateNetmaskBits (char *netmaskbits, unsigned long *netmask)
 		}else{
 			unsigned long	bits = atoi(netmaskbits);
 
-			if (bits < 1 || bits > 32) {
+			if (bits < 1 || bits > 31) {
 				fprintf(stderr
 				,	"Invalid netmask specification [%s]"
 				,	netmaskbits);
 				usage();
+				return;
 			}
-
 			bits = 32 - bits;
 			*netmask = (1L<<(bits))-1L;
 			*netmask = ((~(*netmask))&0xffffffffUL);
@@ -700,6 +700,9 @@ ff02::%lo0/32                     fe80::1%lo0                   UC          lo0
 
 /* 
  * $Log: findif.c,v $
+ * Revision 1.39  2004/09/10 01:12:23  alan
+ * BEAM CHANGES: Fixed a couple of very minor bugs, and cleaned up some BEAM warnings.
+ *
  * Revision 1.38  2004/04/29 14:18:20  kevin
  * Be nice to the non C99 compliant comilers. (Declarations come first)
  *

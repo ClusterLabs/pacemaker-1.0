@@ -1,4 +1,4 @@
-/* $Id: config.c,v 1.125 2004/08/31 20:58:21 alan Exp $ */
+/* $Id: config.c,v 1.126 2004/09/10 01:12:23 alan Exp $ */
 /*
  * Parse various heartbeat configuration files...
  *
@@ -1774,14 +1774,17 @@ unametonum(const char * lname, int llen)
 	char	loginname[64];
 	struct passwd*	pwd;
 
-	if (isdigit(loginname[0])) {
-		return atoi(loginname);
-	}
 	if (llen >= (int)sizeof(loginname)) {
+		cl_log(LOG_ERR 
+		,	"user id name [%s] is too long", loginname);
 		return -1;
 	}
 	strncpy(loginname, lname, llen);
 	loginname[llen] = EOS;
+
+	if (isdigit(loginname[0])) {
+		return atoi(loginname);
+	}
 	if ((pwd = getpwnam(loginname)) == NULL) {
 		cl_log(LOG_ERR 
 		,	"Invalid user id name [%s]", loginname);
@@ -2023,6 +2026,9 @@ baddirective:
 
 /*
  * $Log: config.c,v $
+ * Revision 1.126  2004/09/10 01:12:23  alan
+ * BEAM CHANGES: Fixed a couple of very minor bugs, and cleaned up some BEAM warnings.
+ *
  * Revision 1.125  2004/08/31 20:58:21  alan
  * Fixed the size of a memset call...
  *

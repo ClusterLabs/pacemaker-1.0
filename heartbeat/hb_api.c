@@ -1,4 +1,4 @@
-/* $Id: hb_api.c,v 1.110 2004/09/01 09:43:51 sunjd Exp $ */
+/* $Id: hb_api.c,v 1.111 2004/09/10 01:12:23 alan Exp $ */
 /*
  * hb_api: Server-side heartbeat API code
  *
@@ -470,7 +470,7 @@ api_iflist(const struct ha_msg* msg, struct ha_msg* resp
 		}
 
 		/* Find last link... */
- 		for(j=0; (lnk = &node->links[j]) && lnk->name; ++j) {
+ 		for(j=0; (lnk = &node->links[j], lnk->name); ++j) {
 			last = j;
                 }
 		/* Don't report on ping links */
@@ -510,7 +510,7 @@ api_ping_iflist(const struct ha_msg* msg, struct node_info * node
 	int	j;
 	struct link * lnk;
 
- 	for(j=0; (lnk = &node->links[j]) && lnk->name; ++j) {
+ 	for(j=0; (lnk = &node->links[j], lnk->name); ++j) {
 		if (strcmp(lnk->name, node->nodename) == 0) {
 			if (ha_msg_mod(resp, F_IFNAME
 			,	lnk->name) != HA_OK) {
@@ -1295,9 +1295,9 @@ api_add_client(client_proc_t* client, struct ha_msg* msg)
 	const char*	cpid;
 	const char *	fromid;
 	const char *	cgid = NULL;
-	const char *	cuid;
-	long		luid;
-	long		lgid;
+	const char *	cuid = NULL;
+	long		luid = -1;
+	long		lgid = -1;
 	uid_t		uid = (uid_t)-1;
 	gid_t		gid = (gid_t)-1;
 
@@ -1345,7 +1345,8 @@ api_add_client(client_proc_t* client, struct ha_msg* msg)
 		client->removereason = "invalid id info";
 		cl_log(LOG_ERR, "Client user/group id is incorrect"
 		" [%s] => %ld [%s] => %ld"
-		,	cuid, luid, cgid, lgid);
+		,	cuid == NULL ? "<null>" : cuid, luid
+		,	cgid == NULL ? "<null>" : cgid, lgid);
 		return FALSE;
 	}
 

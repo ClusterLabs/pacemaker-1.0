@@ -1,4 +1,4 @@
-/* $Id: hb_resource.c,v 1.61 2004/09/08 22:19:42 alan Exp $ */
+/* $Id: hb_resource.c,v 1.62 2004/09/10 01:12:23 alan Exp $ */
 /*
  * hb_resource: Linux-HA heartbeat resource management code
  *
@@ -337,7 +337,10 @@ notify_world(struct ha_msg * msg, const char * ostatus)
 	char *	const	argv[MAXFIELDS+3] = {rc_arg0, command, NULL};
 	const char *	fp;
 	char *		tp;
-	int		pid, status;
+	int		pid;
+#if WAITFORCOMMANDS
+	int		status;
+#endif
 
 	if (!DoManageResources) {
 		return;
@@ -429,8 +432,6 @@ notify_world(struct ha_msg * msg, const char * ostatus)
 
 #if WAITFORCOMMANDS
 	waitpid(pid, &status, 0);
-#else
-	(void)status;
 #endif
 }
 
@@ -2328,6 +2329,9 @@ StonithStatProcessName(ProcTrack* p)
 
 /*
  * $Log: hb_resource.c,v $
+ * Revision 1.62  2004/09/10 01:12:23  alan
+ * BEAM CHANGES: Fixed a couple of very minor bugs, and cleaned up some BEAM warnings.
+ *
  * Revision 1.61  2004/09/08 22:19:42  alan
  * Bringing forward changes from the 1.2.x branch.
  *
