@@ -1,4 +1,4 @@
-#	$Id: heartbeat.spec.in,v 1.67 2003/09/25 20:40:26 alan Exp $
+#	$Id: heartbeat.spec.in,v 1.68 2003/10/14 18:32:48 alan Exp $
 
 # Workaround for a change in RPM 4.1.x; needs proper fixing soon!
 %define _unpackaged_files_terminate_build 0
@@ -12,7 +12,7 @@ URL: http://linux-ha.org/
 Group: Utilities
 Packager: Alan Robertson <alanr@unix.sh>
 Source: http://linux-ha.org/download/@HB_PKG@-@VERSION@.tar.gz
-Buildroot: /var/tmp/@HB_PKG@-root
+Buildroot: %{_tmppath}/@HB_PKG@-root
 BuildPrereq: glib-devel, lynx, @UCDSNMPDEVEL@, perl, iputils, /usr/bin/ssh, openssl-devel, libnet
 # libnet available from www.ultramonkey.org and others
 Requires: sysklogd, heartbeat-stonith = %{version}-%{release}, heartbeat-pils = %{version}-%{release}
