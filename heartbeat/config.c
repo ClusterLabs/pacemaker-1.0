@@ -1,4 +1,4 @@
-/* $Id: config.c,v 1.124 2004/08/31 20:56:11 alan Exp $ */
+/* $Id: config.c,v 1.125 2004/08/31 20:58:21 alan Exp $ */
 /*
  * Parse various heartbeat configuration files...
  *
@@ -2006,7 +2006,7 @@ baddirective:
 			g_hash_table_destroy(auth->gid);
 			auth->gid = NULL;
 		}
-		memset(auth, 0, sizeof(auth));
+		memset(auth, 0, sizeof(*auth));
 		ha_free(auth);
 		auth = NULL;
 	}
@@ -2023,6 +2023,9 @@ baddirective:
 
 /*
  * $Log: config.c,v $
+ * Revision 1.125  2004/08/31 20:58:21  alan
+ * Fixed the size of a memset call...
+ *
  * Revision 1.124  2004/08/31 20:56:11  alan
  * Fixed the new bug that kept heartbeat from passing BasicSanityCheck
  *
