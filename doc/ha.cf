@@ -294,6 +294,16 @@ auto_failback on
 #	The groupname "default" has special meaning.  If it is specified, then
 #	this will be used for authorizing groupless clients, and any client groups
 #	not otherwise specified.
+#	
+#	There is a subtle exception to this.  "default" will never be used in the 
+#	following cases (actual default auth directives noted in brackets)
+#		  ipfail 	(uid=HA_CCMUSER)
+#		  ccm 	 	(uid=HA_CCMUSER)
+#		  ping		(gid=HA_APIGROUP)
+#		  cl_status	(gid=HA_APIGROUP)
+#
+#	This is done to avoid creating a gaping security hole and matches the most
+#	likely desired configuration.
 #
 #apiauth ipfail uid=hacluster
 #apiauth ccm uid=hacluster
