@@ -1,18 +1,24 @@
 #!/bin/bash
 set +x
 
+#
+#	BasicSanityCheck has to run as root.
+#	
+#	Perhaps a better way to do this is to use the cl_status command...
+#		-- AlanR
+#	
 NODE0=`uname -n`
 NODE1=imalwaysdead.com
 
 # make sure the subagent is dead
-sudo killall -9 hbagent
+killall -9 hbagent
 
 # make sure the snmpd is running
-sudo service snmpd status 
+@INITDIR@/snmpd status 
 ret=$?
 if test $ret != 0 
 	then echo "snmpd not running, starting snmpd now..."
-	sudo service snmpd restart
+	@INITDIR@/snmpd restart
 	ret=$?
 	if test $ret != 0
 		then echo "Starting snmpd failed"
@@ -23,7 +29,7 @@ else
 fi
 
 # start the linux-ha snmp subagent
-sudo @libdir@/heartbeat/hbagent -d &
+@libdir@/heartbeat/hbagent -d &
 sleep 1
 
 # get the nodename for node0 and node1
