@@ -1,4 +1,4 @@
-/* $Id: findif.c,v 1.36 2004/04/27 11:33:19 horms Exp $ */
+/* $Id: findif.c,v 1.37 2004/04/29 07:12:19 lars Exp $ */
 /*
  * findif.c:	Finds an interface which can route a given address
  *
@@ -517,6 +517,7 @@ main(int argc, char ** argv) {
 		strncpy(best_if, if_specified, sizeof(best_if));
 		*(best_if + sizeof(best_if) - 1) = '\0';
 	}else{
+		strcpy(best_if,"UNKNOWN"); /* just in case */
 		SearchRoute **sr = search_mechs;
 		char errmsg[MAXSTR] = "No valid mecahnisms";
 		int rc = -1;
@@ -534,6 +535,7 @@ main(int argc, char ** argv) {
 		if (rc != 0) {	/* No route, or all mechanisms failed */
 			if (*errmsg) {
 				fprintf(stderr, "%s", errmsg);
+				return(1);
 			}
 		}
 	}
@@ -697,6 +699,9 @@ ff02::%lo0/32                     fe80::1%lo0                   UC          lo0
 
 /* 
  * $Log: findif.c,v $
+ * Revision 1.37  2004/04/29 07:12:19  lars
+ * add missing return
+ *
  * Revision 1.36  2004/04/27 11:33:19  horms
  * Honour -C flag when broadcast is supplied
  *
