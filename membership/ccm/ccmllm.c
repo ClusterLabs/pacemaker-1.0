@@ -1,4 +1,4 @@
-/* $Id: ccmllm.c,v 1.10 2005/03/04 15:59:09 alan Exp $ */
+/* $Id: ccmllm.c,v 1.11 2005/03/16 14:56:33 gshi Exp $ */
 /* 
  * ccmllm.c: Low Level membership routines.
  *
@@ -261,6 +261,7 @@ llm_add(llm_info_t *llm,
 		LLM_SET_UUID(llm, j, j);
 	}
 		
+	llm->llm_nodes[i].join_request = FALSE;
 	LLM_SET_NODEID(llm, i, node);
 	LLM_SET_STATUS(llm, i, status);
 	LLM_SET_UUID(llm, i, i);

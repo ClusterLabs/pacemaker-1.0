@@ -1,4 +1,4 @@
-/* $Id: ccm.h,v 1.30 2005/03/04 22:04:02 gshi Exp $ */
+/* $Id: ccm.h,v 1.31 2005/03/16 14:56:33 gshi Exp $ */
 /*
  * ccm.h: definitions Consensus Cluster Manager internal header
  *				file
@@ -88,10 +88,11 @@ unsigned int version_get_nresp(ccm_version_t *);
 			changed change it also in ccmlib.h */
 
 typedef struct NodeList_s {
-		uint  NodeUuid;  /* a cluster unique id for the node */
-		char NodeID[NODEIDSIZE];
-		char Status[STATUSSIZE];
-		uint received_change_msg;
+	uint  NodeUuid;  /* a cluster unique id for the node */
+	gboolean join_request;
+	char NodeID[NODEIDSIZE];
+	char Status[STATUSSIZE];
+	uint received_change_msg;
 } NodeList_t;
 typedef struct llm_info_s { /* information about low level membership info */
 	uint	   llm_nodeCount; /*number of nodes in the cluster  */
@@ -369,8 +370,6 @@ typedef struct ccm_info_s {
 
 	ccm_update_t   ccm_update; 	/* structure that keeps track */
 					/* of uptime of each member */
-	GSList		*ccm_joiner_head;/* keeps track of new-bees version */
-					/* request.  */
 	ccm_version_t  ccm_version;     /* keeps track of version request  */
 					/* related info */
 	ccm_tmout_t	tmout;

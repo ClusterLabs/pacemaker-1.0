@@ -1,4 +1,4 @@
-/* $Id: ccm.c,v 1.70 2005/03/14 20:10:39 gshi Exp $ */
+/* $Id: ccm.c,v 1.71 2005/03/16 14:56:33 gshi Exp $ */
 /* 
  * ccm.c: Consensus Cluster Service Program 
  *
@@ -35,7 +35,6 @@ extern int global_debug;
 
 
 
-
 #define		CCM_SET_ACTIVEPROTO(info, val) \
 					info->ccm_active_proto = val
 #define		CCM_SET_MAJORTRANS(info, val) 	\
@@ -68,7 +67,6 @@ extern int global_debug;
 #define 	CCM_SET_COOKIE(info, val) \
 				strncpy(info->ccm_cookie, val, COOKIESIZE)
 #define 	CCM_SET_CL(info, index)	info->ccm_cluster_leader = index
-#define 	CCM_SET_JOINERHEAD(info, ptr)	info->ccm_joiner_head = ptr
 
 
 #define		CCM_GET_ACTIVEPROTO(info) info->ccm_active_proto
@@ -92,7 +90,6 @@ extern int global_debug;
 #define 	CCM_GET_MEMINDEX(info, i)	info->ccm_member[i]
 #define 	CCM_GET_MEMTABLE(info)		info->ccm_member
 #define 	CCM_GET_CL(info)  		info->ccm_cluster_leader
-#define 	CCM_GET_JOINERHEAD(info)	info->ccm_joiner_head
 #define		CCM_TRANS_EARLIER(trans1, trans2) (trans1 < trans2) /*TOBEDONE*/
 #define 	CCM_GET_VERSION(info)	&(info->ccm_version)
 
@@ -111,6 +108,8 @@ extern int global_debug;
 #define 	CCM_TMOUT_GET_FL(info) info->tmout.fl
 
 /* PROTOTYPE */
+static void
+ccm_reset_all_join_request(ccm_info_t* info);
 static void ccm_send_join_reply(ll_cluster_t *, ccm_info_t *);
 static int ccm_send_final_memlist(ll_cluster_t *, ccm_info_t *, 
 		char *, char *, uint32_t );
@@ -182,7 +181,7 @@ ccm_set_state(ccm_info_t* info, int istate,const struct ha_msg*  msg)
 			       indx < 0 ?"none": info->ccm_llm.llm_nodes[indx].NodeID); 
 #if 1
 			if (msg) {
-				cl_log_message(LOG_INFO, msg);		
+				cl_log_message(LOG_DEBUG, msg);		
 			}
 #endif 
 			info->ccm_node_state = (istate);		
@@ -628,8 +627,7 @@ ccm_reset(ccm_info_t *info)
 	CCM_SET_JOINED_TRANSITION(info, 0);
 	ccm_set_state(info, CCM_STATE_NONE, NULL);
 	update_reset(CCM_GET_UPDATETABLE(info));
-	g_slist_free(CCM_GET_JOINERHEAD(info));
-	CCM_SET_JOINERHEAD(info, NULL);
+	ccm_reset_all_join_request(info);
 	version_reset(CCM_GET_VERSION(info));
 	finallist_reset();
 	leave_reset();
@@ -640,7 +638,7 @@ static void
 ccm_init(ccm_info_t *info)
 {
 	update_init(CCM_GET_UPDATETABLE(info));
-	CCM_SET_JOINERHEAD(info, NULL);
+	ccm_reset_all_join_request(info);
 	CCM_INIT_MAXTRANS(info);
         leave_init();
         (void)timeout_msg_init(info);
@@ -1076,75 +1074,169 @@ ccm_already_joined(ccm_info_t *info)
 	return FALSE;
 }
 
-/* */
-/* END  OF  FUNCTIONS  that  keep track of stablized membership list */
-/* */
+/* 
+ * END  OF  FUNCTIONS  that  keep track of stablized membership list 
+ */
 
 
-/*  */
-/* BEGIN OF FUNCTIONS THAT KEEP TRACK of cluster nodes that have shown */
-/* interest in joining the cluster. */
-/* */
-/* */
-/* NOTE: when a new node wants to join the cluster, it multicasts a  */
-/* message asking for the necessary information to send out a  join */
-/* message. (it needs the current major transistion number, the context */
-/* string i.e cookie, the protocol number that everybody is operating */
-/* in). */
-/* */
-/* The functions below track these messages sent out by new potential */
-/* members showing interest in acquiring the initial context. */
-/* */
+/* 
+ * BEGIN OF FUNCTIONS THAT KEEP TRACK of cluster nodes that have shown 
+ * interest in joining the cluster. 
+ *
+ * NOTE: when a new node wants to join the cluster, it multicasts a  
+ * message asking for the necessary information to send out a  join 
+ * message. (it needs the current major transistion number, the context 
+ * string i.e cookie, the protocol number that everybody is operating 
+ * in). 
+ * 
+ * The functions below track these messages sent out by new potential 
+ * members showing interest in acquiring the initial context. 
+ */
 static void 
 ccm_add_new_joiner(ccm_info_t *info, const char *orig)
 {
-	/* check if there is already a cached request for the
-	 * joiner 
-	 */
-	int idx = llm_get_index(CCM_GET_LLM(info), orig)+1;
-	if(!g_slist_find(CCM_GET_JOINERHEAD(info),GINT_TO_POINTER(idx))) {
-		CCM_SET_JOINERHEAD(info, g_slist_append(CCM_GET_JOINERHEAD(info), 
-					GINT_TO_POINTER(idx)));
-	} 
-	else {
-		if(global_debug)
-			cl_log(LOG_DEBUG,"add_joiner %s already done", orig);
-	}
+	llm_info_t* llm = &info->ccm_llm;
+	
+	int idx = llm_get_index(&info->ccm_llm, orig);
+	
+	llm->llm_nodes[idx].join_request = TRUE;
+	
 	return;
+}
+
+
+static gboolean
+ccm_get_all_active_join_request(ccm_info_t* info)
+{	
+	
+	llm_info_t* llm = &info->ccm_llm;
+	int i;
+	
+	for (i = 0 ; i < llm->llm_nodeCount; i++){
+		if (strncmp(llm->llm_nodes[i].Status,"active",STATUSSIZE)
+		    || llm->llm_nodes[i].join_request == FALSE ){
+			return FALSE;
+		}
+	}
+	
+	return TRUE;
+	
+}
+
+
+static void
+ccm_reset_all_join_request(ccm_info_t* info)
+{
+	llm_info_t* llm = &info->ccm_llm;
+	int i;
+	
+	for (i = 0 ; i < llm->llm_nodeCount; i++){
+		llm->llm_nodes[i].join_request = FALSE;		
+	}	
 }
 
 
 static int
 ccm_am_i_highest_joiner(ccm_info_t *info)
 {
-	int   		joiner;
-	char *		joiner_name;
-	gpointer	jptr;
-	char *		hname = ccm_get_my_hostname(info);
-	GSList *	head = CCM_GET_JOINERHEAD(info);
 
-	while ( head ) {
-		jptr = g_slist_nth_data(head, 0);
-		joiner = GPOINTER_TO_INT(jptr)-1;
-		joiner_name = LLM_GET_NODEID(CCM_GET_LLM(info), joiner);
-		if (strncmp(hname, joiner_name, 
-			LLM_GET_NODEIDSIZE(CCM_GET_LLM(info))) < 0) {
+	llm_info_t*	llm = &info->ccm_llm;
+	int		total_nodes =llm->llm_nodeCount;
+	int		my_indx = llm->llm_mynode;
+	int		i;
+
+	for (i = my_indx + 1 ; i < total_nodes; i++){
+		if (llm->llm_nodes[i].join_request){
 			return FALSE;
 		}
-		head = g_slist_next(head);
 	}
+	
 	return TRUE;
 }
 
 static void 
 ccm_remove_new_joiner(ccm_info_t *info, const char *orig)
 {
-	int idx = llm_get_index(CCM_GET_LLM(info), orig)+1;
-	CCM_SET_JOINERHEAD(info, 
-			g_slist_remove(CCM_GET_JOINERHEAD(info), 
-				GINT_TO_POINTER(idx)));
+	llm_info_t* llm = &info->ccm_llm;
+	int index = llm_get_index(llm, orig);
+	
+	llm->llm_nodes[index].join_request = FALSE;
+	
 	return;
 }
+
+
+
+/* 
+ * send a reply to the potential joiner, containing the neccessary 
+ * context needed by the joiner, to initiate a new round of a ccm  
+ * protocol. 
+ * NOTE: This function is called by the cluster leader only. 
+ */
+
+static int 
+ccm_send_one_join_reply(ll_cluster_t *hb, ccm_info_t *info, const char *joiner)
+{
+	struct ha_msg *m;
+	char activeproto[3];
+	char clsize[5];
+	char majortrans[15]; /* 10 is the maximum number of digits in 
+				UINT_MAX , adding a buffer of 5 */
+	char *cookie;
+	int rc;
+
+
+	/*send the membership information to all the nodes of the cluster*/
+	if ((m=ha_msg_new(0)) == NULL) {
+		cl_log(LOG_ERR, "Cannot send CCM version msg");
+			return(HA_FAIL);
+	}
+	
+	snprintf(activeproto, sizeof(activeproto), "%d", 
+			CCM_GET_ACTIVEPROTO(info));
+	snprintf(majortrans, sizeof(majortrans), "%d", 
+				CCM_GET_MAJORTRANS(info));
+	snprintf(clsize, sizeof(clsize), "%d", 
+				CCM_GET_MEMCOUNT(info));
+	cookie = CCM_GET_COOKIE(info);
+	assert(cookie && *cookie);
+	
+	if ((ha_msg_add(m, F_TYPE, ccm_type2string(CCM_TYPE_PROTOVERSION_RESP)) 
+	     == HA_FAIL)
+	    ||(ha_msg_add(m, CCM_PROTOCOL, activeproto) == HA_FAIL) 
+	    ||(ha_msg_add(m, CCM_MAJORTRANS, majortrans) == HA_FAIL)
+	    ||(ha_msg_add(m, CCM_CLSIZE, clsize) == HA_FAIL)
+	    ||(ha_msg_add(m, CCM_COOKIE, cookie) == HA_FAIL)) {
+		cl_log(LOG_ERR, "ccm_send_one_join_reply: Cannot create JOIN "
+		       "reply message");
+		rc = HA_FAIL;
+	} else {
+		rc = hb->llc_ops->sendnodemsg(hb, m, joiner);
+		}
+	ha_msg_del(m);
+	return(rc);
+}
+
+/* send reply to a join quest and clear the request*/
+
+static void 
+ccm_send_join_reply(ll_cluster_t *hb, ccm_info_t *info)
+{
+	llm_info_t* llm = &info->ccm_llm;
+	int i;
+	
+	for (i = 0 ; i < llm->llm_nodeCount; i++){
+		if ( i == llm->llm_mynode){
+			continue;
+		}
+		if (llm->llm_nodes[i].join_request){
+			ccm_send_one_join_reply(hb,info, llm->llm_nodes[i].NodeID);
+			llm->llm_nodes[i].join_request = FALSE;
+		}
+	}
+}
+
+
 /* */
 /* END OF FUNCTIONS THAT KEEP TRACK of cluster nodes that have shown */
 /* interest in joining the cluster. */
@@ -1242,9 +1334,7 @@ ccm_compute_and_send_final_memlist(ll_cluster_t *hb, ccm_info_t *info)
 	 * If so respond and free all the joiners.
 	 */
 	ccm_send_join_reply(hb, info);
-	g_slist_free(CCM_GET_JOINERHEAD(info));
-	CCM_SET_JOINERHEAD(info, NULL);
-	
+
 	CCM_SET_CL(info, ccm_get_my_membership_index(info));
 	report_mbrs(info);/* call this before update_reset() */
 	update_reset(CCM_GET_UPDATETABLE(info));
@@ -1257,88 +1347,6 @@ ccm_compute_and_send_final_memlist(ll_cluster_t *hb, ccm_info_t *info)
 	return;
 }
 
-
-/* */
-/* send a reply to the potential joiner, containing the neccessary */
-/* context needed by the joiner, to initiate a new round of a ccm  */
-/* protocol. */
-/* NOTE: This function is called by the cluster leader only. */
-/* */
-static int 
-ccm_send_joiner_reply(ll_cluster_t *hb, ccm_info_t *info, const char *joiner)
-{
-	struct ha_msg *m;
-	char activeproto[3];
-	char clsize[5];
-	char majortrans[15]; /* 10 is the maximum number of digits in 
-				UINT_MAX , adding a buffer of 5 */
-	char *cookie;
-	int rc;
-
-
-	/*send the membership information to all the nodes of the cluster*/
-	if ((m=ha_msg_new(0)) == NULL) {
-		cl_log(LOG_ERR, "Cannot send CCM version msg");
-			return(HA_FAIL);
-	}
-	
-	snprintf(activeproto, sizeof(activeproto), "%d", 
-			CCM_GET_ACTIVEPROTO(info));
-	snprintf(majortrans, sizeof(majortrans), "%d", 
-				CCM_GET_MAJORTRANS(info));
-	snprintf(clsize, sizeof(clsize), "%d", 
-				CCM_GET_MEMCOUNT(info));
-	cookie = CCM_GET_COOKIE(info);
-	assert(cookie && *cookie);
-
-	if ((ha_msg_add(m, F_TYPE, ccm_type2string(CCM_TYPE_PROTOVERSION_RESP)) 
-					== HA_FAIL)
-		||(ha_msg_add(m, CCM_PROTOCOL, activeproto) == HA_FAIL) 
-		||(ha_msg_add(m, CCM_MAJORTRANS, majortrans) == HA_FAIL)
-		||(ha_msg_add(m, CCM_CLSIZE, clsize) == HA_FAIL)
-		||(ha_msg_add(m, CCM_COOKIE, cookie) == HA_FAIL)) {
-		cl_log(LOG_ERR, "ccm_send_joiner_reply: Cannot create JOIN "
-				"reply message");
-			rc = HA_FAIL;
-		} else {
-			rc = hb->llc_ops->sendnodemsg(hb, m, joiner);
-		}
-	ha_msg_del(m);
-	return(rc);
-}
-
-/*  */
-/* browse through the list of interested joiners and reply to each of */
-/* them. */
-/*  */
-static void 
-ccm_send_join_reply(ll_cluster_t *hb, ccm_info_t *info)
-{
-	int 	joiner;
-	gpointer	jptr;
-	const char *joiner_name;
-	GSList 	*head = CCM_GET_JOINERHEAD(info);
-	int repeat;
-	
-	while(head) {
-		jptr = g_slist_nth_data(head, 0);
-		joiner = GPOINTER_TO_INT(jptr)-1;
-		joiner_name = LLM_GET_NODEID(CCM_GET_LLM(info), joiner);
-		/* send joiner the neccessary information */
-		repeat = 0;
-		while (ccm_send_joiner_reply(hb, info, joiner_name)!=HA_OK) {
-			if(repeat < REPEAT_TIMES){
-				cl_log(LOG_ERR, "ccm_send_join_reply: failure "
-					"to send join reply");
-				cl_shortsleep();
-				repeat++;
-			}else{
-				break;
-			}
-		}
-		head = g_slist_next(head);
-	}
-}
 
 
 /* */
@@ -1896,8 +1904,6 @@ ccm_joining_to_joined(ll_cluster_t *hb, ccm_info_t *info)
 	 * If so respond 
 	 */
 	ccm_send_join_reply(hb, info);
-	g_slist_free(CCM_GET_JOINERHEAD(info));
-	CCM_SET_JOINERHEAD(info, NULL);
 	
 	CCM_SET_CL(info, ccm_get_my_membership_index(info));
 	update_reset(CCM_GET_UPDATETABLE(info));
@@ -2013,8 +2019,7 @@ ccm_state_version_request(enum ccm_type ccm_msg_type,
 				version_reset(CCM_GET_VERSION(info));
 				ccm_set_state(info, CCM_STATE_NONE, reply);
 				/* free all the joiners that we accumulated */
-				g_slist_free(CCM_GET_JOINERHEAD(info));
-				CCM_SET_JOINERHEAD(info, NULL);
+				ccm_reset_all_join_request(info);
 				break;
 			} 
 		}
@@ -2063,8 +2068,7 @@ ccm_state_version_request(enum ccm_type ccm_msg_type,
 		ccm_set_state(info, CCM_STATE_NEW_NODE_WAIT_FOR_MEM_LIST, reply);
 
 		/* free all the joiners that we accumulated */
-		g_slist_free(CCM_GET_JOINERHEAD(info));
-		CCM_SET_JOINERHEAD(info, NULL);
+		ccm_reset_all_join_request(info);
 
 		break;
 
@@ -2072,27 +2076,25 @@ ccm_state_version_request(enum ccm_type ccm_msg_type,
 		try = version_retry(CCM_GET_VERSION(info), 
 					CCM_TMOUT_GET_VRS(info));
 		switch (try) {
-			case VER_NO_CHANGE: 
-				break;
-			case VER_TRY_AGAIN:
+		case VER_NO_CHANGE: 
+			break;
+		case VER_TRY_AGAIN:
+			ccm_set_state(info, CCM_STATE_NONE, reply);
+			break;
+		case VER_TRY_END:
+			if(ccm_am_i_highest_joiner(info)) {
+				ccm_init_to_joined(info);
+				ccm_send_join_reply(hb, info);
+				
+			} else {
+				if(global_debug)
+					cl_log(LOG_DEBUG,
+					       "joined but not really");
+				version_reset(CCM_GET_VERSION(info));
 				ccm_set_state(info, CCM_STATE_NONE, reply);
-				break;
-			case VER_TRY_END:
-				if(ccm_am_i_highest_joiner(info)) {
-					if(global_debug)
-						cl_log(LOG_DEBUG,"joined");
-					ccm_init_to_joined(info);
-				} else {
-					if(global_debug)
-						cl_log(LOG_DEBUG,
-							"joined but not really");
-					version_reset(CCM_GET_VERSION(info));
-					ccm_set_state(info, CCM_STATE_NONE, reply);
-				}
-				/* free all the joiners that we accumulated */
-				g_slist_free(CCM_GET_JOINERHEAD(info));
-				CCM_SET_JOINERHEAD(info, NULL);
-				break;
+				ccm_reset_all_join_request(info);
+			}
+			break;
 		}
 		break;
 				
@@ -2104,6 +2106,12 @@ ccm_state_version_request(enum ccm_type ccm_msg_type,
 		 * we will restart the join.
 		 */
 		ccm_add_new_joiner(info, orig);
+		if (ccm_get_all_active_join_request(info)
+		    && ccm_am_i_highest_joiner(info)){
+			ccm_init_to_joined(info);
+			ccm_send_join_reply(hb, info);
+		}
+		
 		break;
 
 	case CCM_TYPE_ABORT:
@@ -2203,7 +2211,7 @@ ccm_state_joined(enum ccm_type ccm_msg_type,
 			 */
 			if (ccm_am_i_leader(info)){
 				repeat = 0;
-				while (ccm_send_joiner_reply(hb, info, orig)
+				while (ccm_send_one_join_reply(hb, info, orig)
 						!= HA_OK) {
 					if(repeat < REPEAT_TIMES){
 						cl_log(LOG_WARNING,
@@ -2531,8 +2539,6 @@ static void ccm_state_wait_for_change(enum ccm_type ccm_msg_type,
 					update_reset(CCM_GET_UPDATETABLE(info));
 					ccm_free_random_cookie(newcookie);
 					ccm_send_join_reply(hb, info);
-					g_slist_free(CCM_GET_JOINERHEAD(info));
-					CCM_SET_JOINERHEAD(info, NULL);
 					CCM_SET_CL(info, ccm_get_my_membership_index(info));
 					ccm_set_state(info, CCM_STATE_JOINED,reply);
 					return;
@@ -2601,8 +2607,6 @@ static void ccm_state_wait_for_change(enum ccm_type ccm_msg_type,
 					update_reset(CCM_GET_UPDATETABLE(info));
 					ccm_free_random_cookie(newcookie);
 					ccm_send_join_reply(hb, info);
-					g_slist_free(CCM_GET_JOINERHEAD(info));
-					CCM_SET_JOINERHEAD(info, NULL);
 					ccm_set_state(info, CCM_STATE_JOINED, reply);
 					return;
 				}                       
@@ -3339,8 +3343,7 @@ switchstatement:
 			update_reset(CCM_GET_UPDATETABLE(info));
 			finallist_reset();
 			ccm_set_state(info, CCM_STATE_JOINED, reply);
-			g_slist_free(CCM_GET_JOINERHEAD(info));
-			CCM_SET_JOINERHEAD(info, NULL);
+			ccm_reset_all_join_request(info);
 			if(!ccm_already_joined(info)) 
 				CCM_SET_JOINED_TRANSITION(info, 
 					CCM_GET_MAJORTRANS(info));
@@ -3927,8 +3930,10 @@ repeat:
 	type = ha_msg_value(reply, F_TYPE);
 	ccm_msg_type = ccm_string2type(type);
 	if(global_debug){
-		cl_log(LOG_DEBUG, "received message %s orig=%s", 
-		       type, ha_msg_value(reply, F_ORIG));
+		if(ccm_msg_type != CCM_TYPE_TIMEOUT){
+			cl_log(LOG_DEBUG, "received message %s orig=%s", 
+			       type, ha_msg_value(reply, F_ORIG));
+		}
 	}
 	
 	if (ccm_msg_type < 0){
@@ -4836,8 +4841,7 @@ static void ccm_state_new_node_wait_for_mem_list(enum ccm_type ccm_msg_type,
 					CCM_GET_MYNODE_ID(info)) == -1){
 				version_reset(CCM_GET_VERSION(info));
 				ccm_set_state(info, CCM_STATE_NONE, reply);
-				g_slist_free(CCM_GET_JOINERHEAD(info));
-				CCM_SET_JOINERHEAD(info, NULL);
+				ccm_reset_all_join_request(info);
 				break;
 			}
 			CCM_SET_MAJORTRANS(info, curr_major+1); 
