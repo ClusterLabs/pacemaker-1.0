@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.330 2004/10/20 19:33:13 gshi Exp $ */
+/* $Id: heartbeat.c,v 1.331 2004/10/22 14:23:09 alan Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -1662,6 +1662,24 @@ hb_initiate_shutdown(int quickshutdown)
 	hb_mcp_final_shutdown(NULL); /* phase 0 (quick) */
 }
 
+/*
+ *	The general idea of this code is that we go through several shutdown phases:
+ *
+ *	0: We've given up release 1 style local resources
+ *    		Action:  we shut down our client children
+ *		each one in reverse start order
+ *
+ *	1: We've shut down all our client children
+ *		Action: delay one second to let
+ *		messages be received
+ *
+ *	2: We have delayed one second after phase 1
+ *		Action: we kill all our "core" children
+ *			(read, write, fifo)
+ *
+ *	We exit/restart after the last of our core children
+ *	dies.
+ */
 
 static gboolean
 hb_mcp_final_shutdown(gpointer p)
@@ -4606,6 +4624,9 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.331  2004/10/22 14:23:09  alan
+ * Added comments explaining the shutdown phases.
+ *
  * Revision 1.330  2004/10/20 19:33:13  gshi
  * reverse the previous wrong commit
  * sorry
