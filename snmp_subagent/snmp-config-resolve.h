@@ -28,4 +28,4 @@
 #undef PACKAGE_VERSION
 #endif
 
-#endif // __SNMP_CONFIG_RESOLVE_H
+#endif /* __SNMP_CONFIG_RESOLVE_H */
