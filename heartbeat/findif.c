@@ -1,4 +1,4 @@
-static const char _findif_c [] = "$Id: findif.c,v 1.29 2003/07/02 22:27:00 alan Exp $";
+static const char _findif_c [] = "$Id: findif.c,v 1.30 2003/09/26 05:55:54 alan Exp $";
 /*
  * findif.c:	Finds an interface which can route a given address
  *
@@ -429,7 +429,7 @@ ValidateNetmaskBits (char *netmaskbits, unsigned long *netmask)
 int
 main(int argc, char ** argv) {
 
-	char *	iparg;
+	char *	iparg = NULL;
 	char *	address = NULL;
 	char *	bcast_arg = NULL;
 	char *	netmaskbits = NULL;
@@ -665,6 +665,9 @@ ff02::%lo0/32                     fe80::1%lo0                   UC          lo0
 
 /* 
  * $Log: findif.c,v $
+ * Revision 1.30  2003/09/26 05:55:54  alan
+ * Fixed an undefined variable warning...
+ *
  * Revision 1.29  2003/07/02 22:27:00  alan
  * Fixed a bug in the broadcast output format for CIDR -C option for findif.
  *
