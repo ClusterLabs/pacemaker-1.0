@@ -216,16 +216,8 @@ hbaping_isping(void) {
 static struct hbaping_private *
 new_hbaping_interface(const char * host)
 {
-	int retval;
 	struct hbaping_private*	ppi;
 	HBA_UINT32 hba_cnt;
-	union {
-		HBA_FCPTARGETMAPPING	fcp_tmap;
-		struct {
-			HBA_UINT32	cnt;
-			HBA_FCPSCSIENTRY	entry[32];
-		} fcp_tmapi;
-	} map;
 
 	if ((ppi = (struct hbaping_private*)MALLOC(sizeof(struct hbaping_private))) == NULL) {
 		return NULL;
@@ -249,32 +241,7 @@ new_hbaping_interface(const char * host)
 
 	strncpy(ppi->namebuf, host, sizeof(ppi->namebuf));
 	
-	if ((ppi->handle = HBA_OpenAdapter(ppi->namebuf)) == 0) {
-		LOG(PIL_CRIT, "can't open adapter %s", ppi->namebuf);
-		return(NULL);
-	}
 
-	/* discover target mapping, use the first port only
-	 * will be used to contact shared device controller
-	 * in hbaping_write
-	 */
-
-	map.fcp_tmapi.cnt = 32;
-	retval = HBA_GetFcpTargetMapping(ppi->handle, &map.fcp_tmap);
-	if (retval != HBA_STATUS_OK) {
-		LOG(PIL_CRIT, "failure of HBA_GetFcpTargetMapping: %d", retval);
-		return(NULL);
-	}
-	if (map.fcp_tmap.NumberOfEntries == 0) {
-		LOG(PIL_CRIT, "no target found for adapter %s", host);
-		return(NULL);
-	}
-	/*memcpy(&(ppi->addr), &(map.fcp_tmap.entry[0].FcpId.PortWWN), 
-			sizeof(HBA_WWN));*/
-	ppi->addr = map.fcp_tmap.entry[0].FcpId.PortWWN;
-
-
-	ppi->ident = getpid() & 0xFFFF;
 	return(ppi);
 }
 
@@ -436,10 +403,47 @@ hbaping_write(struct hb_media* mp, void *p, int len)
 static int
 hbaping_open(struct hb_media* mp)
 {
-	struct hbaping_private * ei;
+	struct hbaping_private * ppi;
+	int retval;
+	union {
+		HBA_FCPTARGETMAPPING	fcp_tmap;
+		struct {
+			HBA_UINT32	cnt;
+			HBA_FCPSCSIENTRY	entry[32];
+		} fcp_tmapi;
+	} map;
+
+
 
 	PINGASSERT(mp);
-	ei = (struct hbaping_private *) mp->pd;
+	ppi = (struct hbaping_private *) mp->pd;
+	
+	if ((ppi->handle = HBA_OpenAdapter(ppi->namebuf)) == 0) {
+		LOG(PIL_CRIT, "can't open adapter %s", ppi->namebuf);
+		return(HA_FAIL);
+	}
+	
+	/* discover target mapping, use the first port only
+	 * will be used to contact shared device controller
+	 * in hbaping_write
+	 */
+	
+	map.fcp_tmapi.cnt = 32;
+	retval = HBA_GetFcpTargetMapping(ppi->handle, &map.fcp_tmap);
+	if (retval != HBA_STATUS_OK) {
+		LOG(PIL_CRIT, "failure of HBA_GetFcpTargetMapping: %d", retval);
+		return(HA_FAIL);
+	}
+	if (map.fcp_tmap.NumberOfEntries == 0) {
+		LOG(PIL_CRIT, "no target found for adapter %s", ppi->namebuf);
+		return(HA_FAIL);
+	}
+	/*memcpy(&(ppi->addr), &(map.fcp_tmap.entry[0].FcpId.PortWWN), 
+	  sizeof(HBA_WWN));*/
+	ppi->addr = map.fcp_tmap.entry[0].FcpId.PortWWN;
+	
+	ppi->ident = getpid() & 0xFFFF;
+
 
 	LOG(LOG_NOTICE, "hbaping heartbeat started.");
 	return HA_OK;
