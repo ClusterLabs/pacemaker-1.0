@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.339 2004/12/04 00:47:45 gshi Exp $ */
+/* $Id: heartbeat.c,v 1.340 2004/12/04 01:21:11 gshi Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -1165,14 +1165,10 @@ master_control_process(IPC_Channel* fifoproc)
 	volatile struct process_info *	pinfo;
 	int			allstarted;
 	int			j;
-	GWCSource*		regsource;
 	GCHSource*		FifoChildSource;
-	GHashTable*		wchanattrs;
-	IPC_WaitConnection*	regwchan = NULL;
 	GMainLoop*		mainloop;
 	long			memstatsinterval;
-        char			regsock[] = API_REGSOCK;
-	char			path[] = IPC_PATH_ATTR;
+
 
 	init_xmit_hist (&msghist);
 
@@ -1241,28 +1237,7 @@ master_control_process(IPC_Channel* fifoproc)
 	FifoChildSource = G_main_add_IPC_Channel(PRI_FIFOMSG, fifoproc
 	,	FALSE, FIFO_child_msg_dispatch, NULL, NULL);
 
-	wchanattrs = g_hash_table_new(g_str_hash, g_str_equal);
 
-        g_hash_table_insert(wchanattrs, path, regsock);
-
-	regwchan = ipc_wait_conn_constructor(IPC_DOMAIN_SOCKET, wchanattrs);
-
-	if (regwchan == NULL) {
-		cl_log(LOG_DEBUG
-		,	"Cannot open registration socket at %s"
-		,	regsock);
-		cleanexit(LSB_EXIT_EPERM);
-	}
-
-	regsource = G_main_add_IPC_WaitConnection(PRI_APIREGISTER, regwchan
-	,	NULL, FALSE, APIregistration_dispatch, NULL, NULL);
-	
-
-	if (regsource == NULL) {
-		cl_log(LOG_DEBUG
-		,	"Cannot create registration source from IPC");
-		cleanexit(LSB_EXIT_GENERIC);
-	}
 	if (ANYDEBUG) {
 		cl_log(LOG_DEBUG
 		,	"Starting local status message @ %ld ms intervals"
@@ -1566,6 +1541,13 @@ static void
 comm_now_up()
 {
 	static int	linksupbefore = 0;
+	char			regsock[] = API_REGSOCK;
+	char			path[] = IPC_PATH_ATTR;
+	GHashTable*		wchanattrs;
+	GWCSource*		regsource;
+	IPC_WaitConnection*	regwchan = NULL;
+
+
 	if (linksupbefore) {
 		return;
 	}
@@ -1580,6 +1562,30 @@ comm_now_up()
 
 	if (comm_up_callback) {
 		comm_up_callback();
+	}
+	
+	/* Start to listen to the socket for clients*/
+	wchanattrs = g_hash_table_new(g_str_hash, g_str_equal);
+	
+        g_hash_table_insert(wchanattrs, path, regsock);
+	
+	regwchan = ipc_wait_conn_constructor(IPC_DOMAIN_SOCKET, wchanattrs);
+
+	if (regwchan == NULL) {
+		cl_log(LOG_DEBUG
+		,	"Cannot open registration socket at %s"
+		,	regsock);
+		cleanexit(LSB_EXIT_EPERM);
+	}
+
+	regsource = G_main_add_IPC_WaitConnection(PRI_APIREGISTER, regwchan
+	,	NULL, FALSE, APIregistration_dispatch, NULL, NULL);
+	
+
+	if (regsource == NULL) {
+		cl_log(LOG_DEBUG
+		,	"Cannot create registration source from IPC");
+		cleanexit(LSB_EXIT_GENERIC);
 	}
 
 	/* Start each of our known child clients */
@@ -4757,6 +4763,11 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.340  2004/12/04 01:21:11  gshi
+ * Fixed a bug that a client may not get client status callback if it connects to heartbeat
+ * immediately after heartbeat starts.
+ * The fix is that heartbeat disallows a client to connect to it if heartbeat is not ready yet
+ *
  * Revision 1.339  2004/12/04 00:47:45  gshi
  * fixed an infinite loop in heartbeat when IPC pipe is full: a channel
  * to communicate with a client in heartbeat should not be blocking
