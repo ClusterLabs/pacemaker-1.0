@@ -36,7 +36,8 @@ Makefile.perl: Makefile.PL
 	touch $@
 
 cl_raw/cl_raw.pm: cl_raw/cl_raw.i
-	$(SWIG) $(SWIG_OPTIONS) $(INCLUDES) -perl -outdir cl_raw $^
+	cd cl_raw && \
+	$(SWIG) $(SWIG_OPTIONS) $(SUB_INCLUDES) -perl cl_raw.i
 
 install-data-local:
 	$(MAKE) -fMakefile.perl PREFIX=$(prefix) $(PERL_INSTALL_TARGET)
