@@ -112,6 +112,7 @@ GenerateHaCf() {
 	#bcast $INTERFACE
 	node $LOCALNODE $DUMMYNODE
 	apiauth lha-snmpagent uid=root
+	apiauth cl_status gid=haclient uid=hacluster
 	!
   chmod 644 $1
 }
@@ -523,7 +524,7 @@ StonithCheck() {
     RESETOUT=`$STONITH -t null -p "foo bar" foo 2>&1`
   then
     case $RESETOUT in
-     *"Host foo null-reset"*)	: NULL Stonith output OK;;
+     *"Host null-reset: foo"*)	: NULL Stonith output OK;;
      *)				echo "NULL reset failed."
   				  serrcount=`expr $serrcount + 1`;;
     esac
