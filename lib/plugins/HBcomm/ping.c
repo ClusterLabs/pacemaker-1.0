@@ -1,4 +1,4 @@
-/* $Id: ping.c,v 1.37 2004/10/24 13:00:13 lge Exp $ */
+/* $Id: ping.c,v 1.38 2005/03/15 11:30:45 alan Exp $ */
 /*
  * ping.c: ICMP-echo-based heartbeat code for heartbeat.
  *
@@ -512,7 +512,8 @@ ping_write(struct hb_media* mp, void *p, int len)
 		,	rc, inet_ntoa(ei->addr.sin_addr));
    	}
 	if (DEBUGPKTCONT) {
-		PILCallLog(LOG, PIL_DEBUG, "ping pkt: %s", pkt);
+		PILCallLog(LOG, PIL_DEBUG, "ping pkt: %s"
+		,	icp->icmp_data);
    	}
 	FREE(icmp_pkt);
 	ha_msg_del(msg);
