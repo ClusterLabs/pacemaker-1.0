@@ -195,7 +195,7 @@
     </task>
     <task id="25" name="Date 2" note="" work="0" duration="5011200" start="20050115T000000Z" end="20050915T170000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-duration"/>
     <task id="26" name="229.19: Community (RH) Cluster Integration" note="" work="864000" start="20050115T000000Z" end="20050225T170000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-work"/>
-    <task id="27" name="229.20: project leadership, etc." note="Ongoing..." work="1198080" duration="5990400" start="20050115T000000Z" end="20050917T170000Z" percent-complete="100" priority="1" type="normal" scheduling="fixed-duration"/>
+    <task id="27" name="229.20: project leadership, etc." note="Ongoing..." work="1180800" duration="5904000" start="20050115T000000Z" end="20050914T170000Z" percent-complete="100" priority="1" type="normal" scheduling="fixed-duration"/>
     <task id="28" name="229.23: revised STONITH API" note="" work="432000" start="20050115T000000Z" end="20050201T170000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-work"/>
     <task id="29" name="1039.14: CIM support" note="" work="432000" start="20050115T000000Z" end="20050204T170000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-work"/>
     <task id="30" name="1040.04: Internal IBM support" note="" work="576000" start="20050115T000000Z" end="20050211T170000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-work"/>
@@ -256,36 +256,41 @@
     <task id="53" name="Total Ordered messaging" note="" work="1152000" start="20050115T000000Z" end="20050302T170000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-work"/>
     <task id="54" name="Resource Dependency Analysis" note="" work="0" start="20050115T000000Z" end="20050117T080000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-work"/>
     <task id="55" name="Delay (C.L. start)" note="" work="0" duration="316800" start="20050115T000000Z" end="20050131T170000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-duration"/>
-    <task id="56" name="config daemon architecture" note="" work="144000" start="20050131T170000Z" end="20050207T170000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-work">
-      <predecessors>
-        <predecessor id="1" predecessor-id="55" type="FS"/>
-      </predecessors>
+    <task id="56" name="Management GUI" note="" work="806400" start="20050131T170000Z" end="20050310T170000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-work">
+      <task id="57" name="config daemon architecture" note="" work="144000" start="20050131T170000Z" end="20050203T120000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-work">
+        <predecessors>
+          <predecessor id="1" predecessor-id="55" type="FS"/>
+        </predecessors>
+      </task>
+      <task id="58" name="config/status API design" note="" work="316800" start="20050203T120000Z" end="20050210T170000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-work">
+        <predecessors>
+          <predecessor id="1" predecessor-id="57" type="FS"/>
+        </predecessors>
+      </task>
+      <task id="59" name="config/status Daemon (for GUI)" note="" work="576000" start="20050210T170000Z" end="20050310T170000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-work">
+        <predecessors>
+          <predecessor id="1" predecessor-id="58" type="FS"/>
+        </predecessors>
+      </task>
+      <task id="60" name="GTK GUI" note="" work="576000" start="20050210T170000Z" end="20050310T170000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-work">
+        <predecessors>
+          <predecessor id="1" predecessor-id="58" type="FS"/>
+        </predecessors>
+      </task>
+      <task id="61" name="Other GUI?" note="" work="28800" start="20050210T170000Z" end="20050211T170000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-work">
+        <predecessors>
+          <predecessor id="1" predecessor-id="58" type="FS"/>
+        </predecessors>
+      </task>
     </task>
-    <task id="57" name="config/status API design" note="" work="316800" start="20050207T170000Z" end="20050222T170000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-work">
-      <predecessors>
-        <predecessor id="1" predecessor-id="56" type="FS"/>
-        <predecessor id="1" predecessor-id="55" type="FS"/>
-      </predecessors>
-    </task>
-    <task id="58" name="config/status Daemon (for GUI)" note="" work="576000" start="20050222T170000Z" end="20050322T170000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-work">
-      <predecessors>
-        <predecessor id="1" predecessor-id="57" type="FS"/>
-      </predecessors>
-    </task>
-    <task id="59" name="GTK GUI" note="" work="576000" start="20050222T170000Z" end="20050322T170000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-work">
-      <predecessors>
-        <predecessor id="1" predecessor-id="57" type="FS"/>
-      </predecessors>
-    </task>
-    <task id="60" name="Other GUI?" note="" work="28800" start="20050115T000000Z" end="20050117T170000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-work"/>
-    <task id="61" name="1042.06: (DONE) DRBD/DB2 performance testing" note="" work="0" start="20050115T000000Z" end="20050117T080000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-work"/>
-    <task id="62" name="1041.23: ?Make SAF libraries thread-safe" note="This is likely to translate into integration with OpenAIS, and contributing to it." work="576000" start="20050115T000000Z" end="20050211T170000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-work"/>
-    <task id="63" name="1040.06: !Move web site to new format" note="Tue 18 Jan 2005, 21:54 - Some community resources have been identified who will do this.&#10;" work="288000" start="20050115T000000Z" end="20050128T170000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-work"/>
-    <task id="64" name="1044.08: ?Merge two test tools" note="" work="288000" start="20050115T000000Z" end="20050128T170000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-work"/>
-    <task id="65" name="229.21: ?Internationalization" note="Tue 18 Jan 2005, 21:39:&#10;Probably won't get done.&#10;The customer we were doing this for/with has backed out." work="576000" start="20050115T000000Z" end="20050211T170000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-work"/>
-    <task id="66" name="1041.25: ?TIPC Integration" note="Tue 18 Jan 2005, 21:42 This may no longer make much sense, since we probably won't be doing major heartbeat-communication-based work.&#10;&#10;" work="432000" start="20050115T000000Z" end="20050204T170000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-work"/>
-    <task id="67" name="1044.09: ?Creation of new test cases" note="" work="576000" start="20050115T000000Z" end="20050211T170000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-work"/>
-    <task id="68" name="1044.10: ?Fully automated nightly tests" note="" work="432000" start="20050115T000000Z" end="20050204T170000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-work"/>
+    <task id="62" name="1042.06: (DONE) DRBD/DB2 performance testing" note="" work="0" start="20050115T000000Z" end="20050117T080000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-work"/>
+    <task id="63" name="1041.23: ?Make SAF libraries thread-safe" note="This is likely to translate into integration with OpenAIS, and contributing to it." work="576000" start="20050115T000000Z" end="20050211T170000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-work"/>
+    <task id="64" name="1040.06: !Move web site to new format" note="Tue 18 Jan 2005, 21:54 - Some community resources have been identified who will do this.&#10;" work="288000" start="20050115T000000Z" end="20050128T170000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-work"/>
+    <task id="65" name="1044.08: ?Merge two test tools" note="" work="288000" start="20050115T000000Z" end="20050128T170000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-work"/>
+    <task id="66" name="229.21: ?Internationalization" note="Tue 18 Jan 2005, 21:39:&#10;Probably won't get done.&#10;The customer we were doing this for/with has backed out." work="576000" start="20050115T000000Z" end="20050211T170000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-work"/>
+    <task id="67" name="1041.25: ?TIPC Integration" note="Tue 18 Jan 2005, 21:42 This may no longer make much sense, since we probably won't be doing major heartbeat-communication-based work.&#10;&#10;" work="432000" start="20050115T000000Z" end="20050204T170000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-work"/>
+    <task id="68" name="1044.09: ?Creation of new test cases" note="" work="576000" start="20050115T000000Z" end="20050211T170000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-work"/>
+    <task id="69" name="1044.10: ?Fully automated nightly tests" note="" work="432000" start="20050115T000000Z" end="20050204T170000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-work"/>
   </tasks>
   <resource-groups>
     <group id="1" name="Corporacion Linux" admin-name="Enriquez Rodrigo" admin-phone="+56 (0)2 244 4250" admin-email="rodrigo@corporacionlinux.cl"/>
@@ -357,8 +362,12 @@
     </resource>
   </resources>
   <allocations>
-    <allocation task-id="59" resource-id="2" units="100"/>
+    <allocation task-id="58" resource-id="2" units="100"/>
+    <allocation task-id="57" resource-id="2" units="100"/>
+    <allocation task-id="60" resource-id="2" units="100"/>
     <allocation task-id="58" resource-id="3" units="100"/>
+    <allocation task-id="57" resource-id="3" units="100"/>
+    <allocation task-id="59" resource-id="3" units="100"/>
     <allocation task-id="44" resource-id="4" units="100"/>
     <allocation task-id="49" resource-id="4" units="100"/>
     <allocation task-id="48" resource-id="4" units="100"/>
