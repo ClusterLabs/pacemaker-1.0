@@ -1004,7 +1004,7 @@ api_flush_msgQ(client_proc_t* client)
 		++writeok;
 		--client->msgcount;
 		client->msgQ = g_list_remove(client->msgQ, msgstring);
-		ha_free(msgstring);
+		ha_free(msgstring); msgstring = NULL;
 	}
 	nsig = (writeok ? client->signal : 0);
 
