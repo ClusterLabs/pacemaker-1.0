@@ -1,4 +1,4 @@
-/* $Id: ccmclient.c,v 1.13 2004/08/29 03:01:14 msoffen Exp $ */
+/* $Id: ccmclient.c,v 1.14 2004/11/22 15:21:13 andrew Exp $ */
 /* 
  * client.c: Consensus Cluster Client tracker
  *
@@ -44,20 +44,21 @@ typedef struct ccm_ipc_s {
 	struct IPC_MESSAGE ipcmsg;/*this should be the last field*/
 } ccm_ipc_t;
 
-static ccm_ipc_t *ipc_llm_message;/*active low level membership*/
-static ccm_ipc_t *ipc_mem_message;/*active membership*/
-static ccm_ipc_t *ipc_born_message;/*active bornon information*/
-static ccm_ipc_t *ipc_misc_message;/*active misc information*/
+static ccm_ipc_t *ipc_llm_message  = NULL; /* active low level membership */
+static ccm_ipc_t *ipc_mem_message  = NULL; /* active membership           */
+static ccm_ipc_t *ipc_born_message = NULL; /* active bornon information   */
+static ccm_ipc_t *ipc_misc_message = NULL; /* active misc information     */
 
 #define MAXIPC 100
-static GMemChunk *ipc_mem_chk = NULL;
+
+static GMemChunk *ipc_mem_chk  = NULL;
 static GMemChunk *ipc_born_chk = NULL;
 static GMemChunk *ipc_misc_chk = NULL;
 
-static gboolean llm_flag=FALSE;
-static gboolean evicted_flag=FALSE;
-static gboolean prim_flag=FALSE;
-static gboolean restored_flag=FALSE;
+static gboolean llm_flag      = FALSE;
+static gboolean evicted_flag  = FALSE;
+static gboolean prim_flag     = FALSE;
+static gboolean restored_flag = FALSE;
 
 
 /* 
@@ -70,15 +71,26 @@ static GHashTable  *ccm_hashclient = NULL;
 static void 
 send_message(ccm_client_t *ccm_client, ccm_ipc_t *msg)
 {
+	int send_rc = IPC_OK;
 	struct IPC_CHANNEL *ipc_client = ccm_client->ccm_ipc_client;
 
 	++(msg->count);
 
-	while(ipc_client->ops->send(ipc_client, &(msg->ipcmsg)) 
-			== IPC_FAIL){
+	do {
+		send_rc = ipc_client->ops->send(ipc_client, &(msg->ipcmsg));
+
+		if(send_rc != IPC_OK
+		   && (ipc_client->ch_status == IPC_DISCONNECT
+		       || ipc_client->ch_status == IPC_DISC_PENDING)) {
+			cl_log(LOG_ERR, "Channel is dead.  Cannot send message.");
+			break;
+		}
+		
 		cl_log(LOG_WARNING, "ipc channel blocked");
 		cl_shortsleep();
-	}
+
+	} while(send_rc == IPC_FAIL);
+
 	return;
 }
 
@@ -143,6 +155,7 @@ delete_message(ccm_ipc_t *ccmipc)
 	GMemChunk  *chkptr = ccmipc->chkptr;
 	if(chkptr){
 		g_mem_chunk_free(chkptr, ccmipc);
+		ccmipc->chkptr = NULL;
 	}
 }
 
@@ -175,9 +188,12 @@ create_message(GMemChunk *chk, void *data, int size)
 
 	ipcmsg->ipcmsg.msg_body = ipcmsg+1;
 	memcpy(ipcmsg->ipcmsg.msg_body, data, size);
-	ipcmsg->ipcmsg.msg_len = size;
-	ipcmsg->ipcmsg.msg_done = send_func_done;
+
+	ipcmsg->ipcmsg.msg_len     = size;
+	ipcmsg->ipcmsg.msg_done    = send_func_done;
 	ipcmsg->ipcmsg.msg_private = ipcmsg;
+	ipcmsg->ipcmsg.msg_buf     = NULL;
+
 	return ipcmsg;
 }
 
