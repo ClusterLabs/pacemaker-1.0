@@ -1,4 +1,4 @@
-/* $Id: request.c,v 1.7 2004/03/12 02:59:38 deng.pan Exp $ */
+/* $Id: request.c,v 1.8 2004/03/17 02:10:10 deng.pan Exp $ */
 /* 
  * request.c: 
  *
@@ -755,8 +755,14 @@ SaCkptRequestRemove(SaCkptRequestT** pCkptReq)
 		SaCkptFree((void**)&(ckptReq->clientRequest->reqParam));
 	}
 	SaCkptFree((void**)&(ckptReq->clientRequest));
-	SaCkptFree((void*)&ckptReq);
+	SaCkptFree((void**)&ckptReq);
 
+	if (client == NULL) {
+		*pCkptReq = NULL;
+
+		return HA_OK;
+	}
+	
 	/* start pending request */
 	list = client->pendingRequestList;
 	if (list != NULL) {

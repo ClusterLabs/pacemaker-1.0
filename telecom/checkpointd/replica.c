@@ -1,4 +1,4 @@
-/* $Id: replica.c,v 1.10 2004/03/12 02:59:38 deng.pan Exp $ */
+/* $Id: replica.c,v 1.11 2004/03/17 02:10:10 deng.pan Exp $ */
 /* 
  * replica.c: 
  *
@@ -745,6 +745,7 @@ SaCkptReplicaUpdate(SaCkptReplicaT* replica, SaCkptReqT req,
 		sec = SaCkptSectionFind(replica, 
 			&(secDelParam->sectionID));
 		if (sec == NULL) {
+			cl_log(LOG_INFO, "Can not find section");
 			retVal = SA_ERR_NOT_EXIST;
 			break;
 		}
@@ -783,6 +784,7 @@ SaCkptReplicaUpdate(SaCkptReplicaT* replica, SaCkptReqT req,
 		sec = SaCkptSectionFind(replica, 
 			&(secWrtParam->sectionID));
 		if (sec == NULL) {
+			cl_log(LOG_INFO, "Can not find section");
 			retVal = SA_ERR_INVALID_PARAM;
 			break;
 		}
@@ -817,6 +819,7 @@ SaCkptReplicaUpdate(SaCkptReplicaT* replica, SaCkptReqT req,
 		sec = SaCkptSectionFind(replica, 
 			&(secOwrtParam->sectionID));
 		if (sec == NULL) {
+			cl_log(LOG_INFO, "Can not find section");
 			retVal = SA_ERR_INVALID_PARAM;
 			break;
 		}
@@ -890,6 +893,7 @@ SaCkptReplicaUpdPrepare(SaCkptReplicaT* replica, SaCkptReqT req,
 		sec = SaCkptSectionFind(replica, 
 			&(secDelParam->sectionID));
 		if (sec == NULL) {
+			cl_log(LOG_INFO, "Can not find section");
 			retVal = SA_ERR_NOT_EXIST;
 			break;
 		}
@@ -904,6 +908,7 @@ SaCkptReplicaUpdPrepare(SaCkptReplicaT* replica, SaCkptReqT req,
 		sec = SaCkptSectionFind(replica, 
 			&(secWrtParam->sectionID));
 		if (sec == NULL) {
+			cl_log(LOG_INFO, "Can not find section");
 			retVal = SA_ERR_INVALID_PARAM;
 			break;
 		}
@@ -923,6 +928,7 @@ SaCkptReplicaUpdPrepare(SaCkptReplicaT* replica, SaCkptReqT req,
 		sec = SaCkptSectionFind(replica, 
 			&(secOwrtParam->sectionID));
 		if (sec == NULL) {
+			cl_log(LOG_INFO, "Can not find section");
 			retVal = SA_ERR_INVALID_PARAM;
 			break;
 		}
@@ -980,6 +986,7 @@ SaCkptReplicaUpdCommit(SaCkptReplicaT* replica, SaCkptReqT req,
 		sec = SaCkptSectionFind(replica, 
 			&(secCrtParam->sectionID));
 		if (sec == NULL) {
+			cl_log(LOG_INFO, "Can not find section");
 			retVal = SA_ERR_NOT_EXIST;
 			break;
 		}
@@ -1005,6 +1012,7 @@ SaCkptReplicaUpdCommit(SaCkptReplicaT* replica, SaCkptReqT req,
 		sec = SaCkptSectionFind(replica, 
 			&(secDelParam->sectionID));
 		if (sec == NULL) {
+			cl_log(LOG_INFO, "Can not find section");
 			retVal = SA_ERR_NOT_EXIST;
 			break;
 		}
@@ -1049,6 +1057,7 @@ SaCkptReplicaUpdCommit(SaCkptReplicaT* replica, SaCkptReqT req,
 		sec = SaCkptSectionFind(replica, 
 			&(secWrtParam->sectionID));
 		if (sec == NULL) {
+			cl_log(LOG_INFO, "Can not find section");
 			retVal = SA_ERR_NOT_EXIST;
 			break;
 		}
@@ -1084,6 +1093,7 @@ SaCkptReplicaUpdCommit(SaCkptReplicaT* replica, SaCkptReqT req,
 		sec = SaCkptSectionFind(replica, 
 			&(secOwrtParam->sectionID));
 		if (sec == NULL) {
+			cl_log(LOG_INFO, "Can not find section");
 			retVal = SA_ERR_NOT_EXIST;
 			break;
 		}
@@ -1194,6 +1204,7 @@ SaCkptReplicaUpdRollback(SaCkptReplicaT* replica, SaCkptReqT req,
 		sec = SaCkptSectionFind(replica, 
 			&(secDelParam->sectionID));
 		if (sec == NULL) {
+			cl_log(LOG_INFO, "Can not find section");
 			retVal = SA_ERR_NOT_EXIST;
 			break;
 		}
@@ -1213,6 +1224,7 @@ SaCkptReplicaUpdRollback(SaCkptReplicaT* replica, SaCkptReqT req,
 		sec = SaCkptSectionFind(replica, 
 			&(secWrtParam->sectionID));
 		if (sec == NULL) {
+			cl_log(LOG_INFO, "Can not find section");
 			retVal = SA_ERR_NOT_EXIST;
 			break;
 		}
@@ -1238,6 +1250,7 @@ SaCkptReplicaUpdRollback(SaCkptReplicaT* replica, SaCkptReqT req,
 		sec = SaCkptSectionFind(replica, 
 			&(secOwrtParam->sectionID));
 		if (sec == NULL) {
+			cl_log(LOG_INFO, "Can not find section");
 			retVal = SA_ERR_NOT_EXIST;
 			break;
 		}
