@@ -643,11 +643,11 @@ case $ID in
 	exit 1;;
 esac
 
+trap 'RemoveConfigFiles' 0
 SetUpConfigFiles
 > $LOGFILE
 
 TestHeartbeat
-RemoveConfigFiles
 StonithCheck
 AppHBCheck
 IPCtest
