@@ -1,4 +1,4 @@
-/* $Id: request.c,v 1.11 2004/11/18 01:56:59 yixiong Exp $ */
+/* $Id: request.c,v 1.12 2004/12/06 21:19:20 msoffen Exp $ */
 /* 
  * request.c: 
  *
@@ -702,12 +702,12 @@ begin:		strReq = SaCkptReq2String(ckptReq->clientRequest->req);
 							memcpy(p,section->sectionID.id,section->sectionID.idLen);
 							p+=  section->sectionID.idLen;
 						}
-					}//if(secListPass == 0)
+					}/*if(secListPass == 0) */
 				}
 				
 				list = list->next;
-			}//while (list != NULL)
-		}//for(secListPass 
+			}/* while (list != NULL) */
+		}/* for(secListPass  */
 		ckptResp->resp->dataLength = secListTotalSize + sizeof(int);
 		ckptResp->resp->retVal = SA_OK;
 		SaCkptResponseSend(&ckptResp);
