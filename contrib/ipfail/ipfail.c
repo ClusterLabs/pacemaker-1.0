@@ -1,4 +1,4 @@
-/* $Id: ipfail.c,v 1.33 2004/04/29 15:22:48 kevin Exp $ */
+/* $Id: ipfail.c,v 1.34 2004/05/11 04:11:28 kevin Exp $ */
 /* ipfail: IP Failover plugin for Linux-HA
  *
  * Copyright (C) 2002-2004 Kevin Dwyer <kevin@pheared.net>
@@ -475,7 +475,7 @@ void
 giveup_destroy(gpointer user_data)
 {
 	/* Clean up the struct giveup_data that we were using */
-	cl_free(user_data);
+	free(user_data);
 
 	delay_giveup_tag = 0;
 	cl_log(LOG_DEBUG, "giveup timeout has been destroyed.");
