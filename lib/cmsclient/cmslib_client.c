@@ -75,7 +75,7 @@ saname_cmp(const SaNameT s1, const SaNameT s2)
 {
 	SaUint16T len1, len2;
 
-	// dprintf("Length of s1: %d, s2: %d\n", s1.length, s2.length);
+	/* dprintf("Length of s1: %d, s2: %d\n", s1.length, s2.length); */
 	len1 = s1.value[s1.length - 1] ? s1.length : s1.length - 1;
 	len2 = s2.value[s2.length - 1] ? s2.length : s2.length - 1;
 
