@@ -30,8 +30,8 @@ struct HBauth_info {
 /* Authentication interfaces */
 struct HBAuthOps {
 	int (*auth)
-	(	const struct HBauth_info * authinfo, const char *data
-	,	char * result, int resultlen);
+	(	const struct HBauth_info * authinfo, const void *data
+	,	size_t data_len, char * result, int resultlen);
 	int		(*needskey) (void); 
 };
 

@@ -37,7 +37,7 @@
 
 /* The Ops we export to the world... */
 static int md5_auth_calc(const struct HBauth_info *t
-,	const char * text, char * result, int resultlen);
+,	const void * text, size_t textlen ,char * result, int resultlen);
 
 static int md5_auth_needskey(void);
 
@@ -338,8 +338,8 @@ MD5Transform(uint32_t buf[4], uint32_t const in[16])
 }
 
 static int
-md5_auth_calc(const struct HBauth_info *t, const char * text
-,	char * result, int resultlen)
+md5_auth_calc(const struct HBauth_info *t, const void * text
+,	size_t textlen, char * result, int resultlen)
 {
 
 	MD5Context context;
@@ -350,13 +350,12 @@ md5_auth_calc(const struct HBauth_info *t, const char * text
 	/* outer padding - * key XORd with opad */
 	unsigned char k_opad[65];    
 	unsigned char tk[MD5_DIGESTSIZE];
-	int i, text_len, key_len;
+	int i, key_len;
 
 
 	if (resultlen <= (MD5_DIGESTSIZE+1) *2) {
 		return 0;
 	}
-	text_len = strlen(text);
 	key_len = strlen(key);
 	
 	/* if key is longer than MD5_BLOCKSIZE bytes reset it to key=MD5(key) */
@@ -383,7 +382,7 @@ md5_auth_calc(const struct HBauth_info *t, const char * text
 	/* perform inner MD5 */
 	MD5Init(&context);                   /* init context for 1st pass */
 	MD5Update(&context, k_ipad, MD5_BLOCKSIZE);     /* start with inner pad */
-	MD5Update(&context, text, text_len); /* then text of datagram */
+	MD5Update(&context, text, textlen); /* then text of datagram */
 	MD5Final(digest, &context);          /* finish up 1st pass */
 	/* perform outer MD5 */
 	MD5Init(&context);                   /* init context for 2nd pass */

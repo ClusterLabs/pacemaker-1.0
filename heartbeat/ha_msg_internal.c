@@ -1,4 +1,4 @@
-static const char * _ha_msg_c_Id = "$Id: ha_msg_internal.c,v 1.38 2003/11/10 08:55:20 lars Exp $";
+static const char * _ha_msg_c_Id = "$Id: ha_msg_internal.c,v 1.39 2003/12/19 17:28:01 alan Exp $";
 /*
  * ha_msg_internal: heartbeat internal messaging functions
  *
@@ -177,6 +177,7 @@ add_msg_auth(struct ha_msg * m)
 
 
 	if (!config->authmethod->auth->auth(config->authmethod, msgbody
+	,	strnlen(msgbody, sizeof(msgbody))
 	,	authtoken, DIMOF(authtoken))) {
 		ha_log(LOG_ERR 
 		,	"Cannot compute message authentication [%s/%s/%s]"
@@ -243,7 +244,9 @@ isauthentic(const struct ha_msg * m)
 	}
 		
 	
-	if (!which->auth->auth(which, msgbody, authbuf, DIMOF(authbuf))) {
+	if (!which->auth->auth(which
+	,	msgbody, strnlen(msgbody, sizeof(msgbody))
+	,	authbuf, DIMOF(authbuf))) {
 		ha_log(LOG_ERR, "Failed to compute message authentication");
 		return(0);
 	}
@@ -360,6 +363,10 @@ main(int argc, char ** argv)
 #endif
 /*
  * $Log: ha_msg_internal.c,v $
+ * Revision 1.39  2003/12/19 17:28:01  alan
+ * Incorporated a patch from Guochun Shi <gshi@ncsa.uiuc.edu> to allow
+ * the authentication facility to be able to authenticate binary messages.
+ *
  * Revision 1.38  2003/11/10 08:55:20  lars
  * Bugfixes by Deng, Pan:
  *

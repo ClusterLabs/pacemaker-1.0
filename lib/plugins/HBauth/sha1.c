@@ -49,7 +49,7 @@ void SHA1Update(SHA1_CTX* context, const unsigned char* data, unsigned int len);
 void SHA1Final(unsigned char digest[20], SHA1_CTX* context);
 
 static int sha1_auth_calc (const struct HBauth_info *info
-,			    const char * text, char * result, int resultlen);
+,			    const void * text, size_t textlen, char * result, int resultlen);
 
 static int sha1_auth_needskey(void);
 
@@ -271,14 +271,14 @@ void SHA1Final(unsigned char digest[20], SHA1_CTX* context)
 
 static int
 sha1_auth_calc (const struct HBauth_info *info
-,	    const char * text, char * result, int resultlen)
+,	    const void * text, size_t textlen, char * result, int resultlen)
 {
 	SHA1_CTX ictx, octx ;
 	unsigned char   isha[SHA_DIGESTSIZE]; 
 	unsigned char 	osha[SHA_DIGESTSIZE];
 	unsigned char   tk[SHA_DIGESTSIZE];
 	unsigned char   buf[SHA_BLOCKSIZE];
-	int	i, text_len, key_len;
+	int	i, key_len;
 	unsigned char * key;
 
 	if (resultlen <= SHA_DIGESTSIZE) {
@@ -287,7 +287,6 @@ sha1_auth_calc (const struct HBauth_info *info
 
 	key = g_strdup(info->key);
 
-	text_len = strlen(text);
 	key_len = strlen(key);
 
 	if (key_len > SHA_BLOCKSIZE) {
@@ -308,7 +307,7 @@ sha1_auth_calc (const struct HBauth_info *info
 	for (i = key_len ; i < SHA_BLOCKSIZE ; ++i) buf[i] = 0x36 ;
 
 	SHA1Update(&ictx, buf, SHA_BLOCKSIZE) ;
-	SHA1Update(&ictx, (const unsigned char *)text, text_len) ;
+	SHA1Update(&ictx, (const unsigned char *)text, textlen) ;
 
 	SHA1Final(isha, &ictx) ;
 

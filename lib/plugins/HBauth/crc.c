@@ -12,7 +12,7 @@
 #include <pils/plugin.h>
 
 static int crc_auth_calc(const struct HBauth_info *
-,	const char * text, char * result, int resultlen);
+,	const void* text, size_t text_len, char * result, int resultlen);
 static int crc_auth_needskey (void);
 
 static struct HBAuthOps crcOps =
@@ -142,13 +142,13 @@ crc_auth_needskey (void)
 }
                         
 static int crc_auth_calc (const struct HBauth_info * info
-,	const char * value, char * result, int resultlen)
+,	const void * value, size_t valuelen, char * result, int resultlen)
 {
+	const char* valuechar=value;
 	unsigned long crc = 0;
-	int length=strlen(value);
 	(void)info;
-	while(length--)
-		crc = (crc << 8) ^ crctab[((crc >> 24) ^ *(value++)) & 0xFF];
+	while(valuelen--)
+		crc = (crc << 8) ^ crctab[((crc >> 24) ^ *(valuechar++)) & 0xFF];
 
 	crc = ~crc & 0xFFFFFFFFul;
 	snprintf(result, resultlen, "%lx", crc);
