@@ -1,4 +1,4 @@
-/* $Id: hb_resource.c,v 1.66 2004/11/08 20:48:36 gshi Exp $ */
+/* $Id: hb_resource.c,v 1.67 2004/11/11 20:27:03 gshi Exp $ */
 /*
  * hb_resource: Linux-HA heartbeat resource management code
  *
@@ -452,7 +452,39 @@ hb_rsc_recover_dead_resources(struct node_info* hip)
 	gboolean	need_stonith = TRUE;
 	standby_running = zero_longclock;
 	going_standby	= NOT;
+	struct ha_msg *	hmsg;
+	char		timestamp[16];
+
 	
+	if ((hmsg = ha_msg_new(6)) == NULL) {
+		cl_log(LOG_ERR, "no memory to takeover_from_node");
+		return;
+	}
+	
+	sprintf(timestamp, TIME_X, (TIME_T) time(NULL));
+
+	if (	ha_msg_add(hmsg, F_TYPE, T_STATUS) != HA_OK
+	||	ha_msg_add(hmsg, F_SEQ, "1") != HA_OK
+	||	ha_msg_add(hmsg, F_TIME, timestamp) != HA_OK
+	||	ha_msg_add(hmsg, F_ORIG, hip->nodename) != HA_OK
+	||	ha_msg_add(hmsg, F_STATUS, DEADSTATUS) != HA_OK) {
+		cl_log(LOG_ERR, "no memory to takeover_from_node");
+		ha_msg_del(hmsg);
+		return;
+	}
+	
+	if (hip->nodetype == PINGNODE_I) {
+		if (ha_msg_add(hmsg, F_COMMENT, "ping") != HA_OK) {
+			cl_log(LOG_ERR, "no memory to mark ping node dead");
+			ha_msg_del(hmsg);
+			return;
+		}
+	}
+	
+	/*deliver this message to clients*/
+	heartbeat_monitor(hmsg, KEEPIT, "<internal>");
+	ha_msg_del(hmsg);
+	hmsg = NULL;
 
 	if (hip->nodetype == PINGNODE_I) {
 		takeover_from_node(hip->nodename);
@@ -1153,6 +1185,7 @@ takeover_from_node(const char * nodename)
 	struct ha_msg *	hmsg;
 	char		timestamp[16];
 
+
 	if (hip == 0) {
 		return;
 	}
@@ -1192,8 +1225,8 @@ takeover_from_node(const char * nodename)
 	}
 
 	/* Sending this message triggers the "mach_down" script */
-
-	heartbeat_monitor(hmsg, KEEPIT, "<internal>");
+	
+	/*heartbeat_monitor(hmsg, KEEPIT, "<internal>");*/
 	QueueRemoteRscReq(PerformQueuedNotifyWorld, hmsg);
 
 	/*
@@ -2354,6 +2387,10 @@ StonithStatProcessName(ProcTrack* p)
 
 /*
  * $Log: hb_resource.c,v $
+ * Revision 1.67  2004/11/11 20:27:03  gshi
+ * node dead notice should be called after the node is really decared dead
+ * instead of after receving a shutdown message from it
+ *
  * Revision 1.66  2004/11/08 20:48:36  gshi
  * implemented logging daemon
  *
