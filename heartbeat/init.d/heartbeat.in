@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-#	$Id: heartbeat.in,v 1.30 2003/06/16 03:50:48 alan Exp $
+#	$Id: heartbeat.in,v 1.31 2003/08/13 04:36:56 alan Exp $
 #
 # heartbeat     Start high-availability services
 #
@@ -358,7 +358,7 @@ case "$1" in
         if
           [ $RC -eq 0 ]
         then
-          rm $LOCKDIR/$SUBSYS
+          rm -f $LOCKDIR/$SUBSYS
         fi
         RunStartStop post-stop $RC
 	;;
@@ -391,6 +391,9 @@ exit $RC
 #
 #
 #  $Log: heartbeat.in,v $
+#  Revision 1.31  2003/08/13 04:36:56  alan
+#  Put in a minor change from Tuomo Soini.
+#
 #  Revision 1.30  2003/06/16 03:50:48  alan
 #  Fixed up the default start/stop levels for heartbeat
 #
