@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.362 2005/02/20 07:25:16 alan Exp $ */
+/* $Id: heartbeat.c,v 1.363 2005/02/20 08:00:06 alan Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -1748,7 +1748,11 @@ hb_mcp_final_shutdown(gpointer p)
 		return FALSE;
 
 	case 1:		/* From ManagedChildDied() (or above) */
-		g_assert(LLEN(config->client_list) == 0);
+		if (NULL != g_list_first(config->client_list)) {
+			g_list_foreach(config->client_list
+			,	print_a_child_client, NULL);
+			abort();
+		}
 		shutdown_phase = 2;
 		if (procinfo->restart_after_shutdown) {
                 	hb_add_deadtime(30000);
@@ -5098,6 +5102,10 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.363  2005/02/20 08:00:06  alan
+ * Changed a g_assert into a different test, a different printout
+ * and a raw abort instead of the assert...
+ *
  * Revision 1.362  2005/02/20 07:25:16  alan
  * Fixed a condition in a debug printout so it's right :-)
  *
