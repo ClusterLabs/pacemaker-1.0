@@ -1,4 +1,4 @@
-/* $Id: stonithd.c,v 1.11 2005/02/02 09:42:03 sunjd Exp $ */
+/* $Id: stonithd.c,v 1.12 2005/02/06 08:54:34 sunjd Exp $ */
 
 /* File: stonithd.c
  * Description: STONITH deamon for node fencing
@@ -1094,7 +1094,7 @@ stonithd_client_dispatch(IPC_Channel * ch, gpointer user_data)
 			stonithd_log(LOG_ERR, "Failed when receiving IPC messages.");
 			return FALSE;
 		} else {
-			return stonithd_process_client_msg(msg, (gpointer)ch);
+			stonithd_process_client_msg(msg, (gpointer)ch);
 		}
 	}
 			
@@ -2823,6 +2823,9 @@ free_common_op_t(gpointer data)
 
 /* 
  * $Log: stonithd.c,v $
+ * Revision 1.12  2005/02/06 08:54:34  sunjd
+ * remove return, or the loop is useless
+ *
  * Revision 1.11  2005/02/02 09:42:03  sunjd
  * Take it into account that it may be started up by heartbeat.
  *
