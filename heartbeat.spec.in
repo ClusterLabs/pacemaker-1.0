@@ -1,4 +1,4 @@
-#	$Id: heartbeat.spec.in,v 1.107 2004/10/27 21:32:53 yixiong Exp $
+#	$Id: heartbeat.spec.in,v 1.108 2004/11/09 18:27:40 davidlee Exp $
 
 # Workaround for a change in RPM 4.1.x; needs proper fixing soon!
 ##%define _unpackaged_files_terminate_build 0
@@ -1016,7 +1016,7 @@ if
 then
   : OK user @HA_CCMUSER@ already present
 else
-  USEROPT="-g @HA_APIGROUP@ -u @HA_CCMUID@"
+  USEROPT="-g @HA_APIGROUP@ -u @HA_CCMUID@ -d @HA_COREDIR@/@HA_CCMUSER@"
   if
     /usr/sbin/useradd $USEROPT @HA_CCMUSER@ 2>/dev/null
   then
