@@ -1,4 +1,4 @@
-/* $Id: mcast.c,v 1.17 2004/03/03 05:31:50 alan Exp $ */
+/* $Id: mcast.c,v 1.18 2004/04/28 22:30:29 alan Exp $ */
 /*
  * mcast.c: implements hearbeat API for UDP multicast communication
  *
@@ -471,8 +471,8 @@ mcast_write(struct hb_media* hbm, void *pkt, int len)
 	if ((rc=sendto(mcp->wsocket, pkt, len, 0
 	,	(struct sockaddr *)&mcp->addr
 	,	sizeof(struct sockaddr))) != len) {
-		LOG(PIL_WARN, "Error sending packet: %s", strerror(errno));
-		ha_free(pkt);
+		LOG(PIL_CRIT, "Unable to send mcast packet [%d]: %s"
+		,	rc, strerror(errno));
 		return(HA_FAIL);
 	}
 	
@@ -831,6 +831,9 @@ get_loop(const char *loop, u_char *l)
 
 /*
  * $Log: mcast.c,v $
+ * Revision 1.18  2004/04/28 22:30:29  alan
+ * Put in some fixes for extra freeing of memory in the communications plugins.
+ *
  * Revision 1.17  2004/03/03 05:31:50  alan
  * Put in Gochun Shi's new netstrings on-the-wire data format code.
  * this allows sending binary data, among many other things!

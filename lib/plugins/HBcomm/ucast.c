@@ -1,4 +1,4 @@
-/* $Id: ucast.c,v 1.19 2004/03/03 05:31:51 alan Exp $ */
+/* $Id: ucast.c,v 1.20 2004/04/28 22:30:29 alan Exp $ */
 /*
  * Adapted from alanr's UDP broadcast heartbeat bcast.c by Stéphane Billiart
  *	<stephane@reefedge.com>
@@ -450,12 +450,11 @@ ucast_write(struct hb_media* mp, void *pkt, int len)
 	UCASTASSERT(mp);
 	ei = (struct ip_private*)mp->pd;
 	
-	if ((rc = sendto(ei->wsocket, pkt, len, 0,
-			(struct sockaddr *)&ei->addr,
-			 sizeof(struct sockaddr))) != len) {
-		LOG(PIL_CRIT, "ucast: error sending packet: %s",
-		    strerror(errno));
-		ha_free(pkt);
+	if ((rc = sendto(ei->wsocket, pkt, len, 0
+	,		(struct sockaddr *)&ei->addr
+	,		 sizeof(struct sockaddr))) != len) {
+		LOG(PIL_CRIT, "Unable to send [%d] ucast packet: %s"
+		,	rc, strerror(errno));
 		return HA_FAIL;
 	}
 	

@@ -1,4 +1,4 @@
-/* $Id: bcast.c,v 1.35 2004/03/03 05:31:50 alan Exp $ */
+/* $Id: bcast.c,v 1.36 2004/04/28 22:30:29 alan Exp $ */
 /*
  * bcast.c: UDP/IP broadcast-based communication code for heartbeat.
  *
@@ -404,8 +404,8 @@ bcast_write(struct hb_media* mp, void *pkt, int len)
 	if ((rc=sendto(ei->wsocket, pkt, len, 0
 	,	(struct sockaddr *)&ei->addr
 	,	sizeof(struct sockaddr))) != len) {
-		PILCallLog(LOG, PIL_CRIT, "Error sending packet: %s"
-		,	strerror(errno));
+		PILCallLog(LOG, PIL_CRIT, "Unable to send bcast [%d] packet: %s"
+		,	rc, strerror(errno));
 		return(HA_FAIL);
 	}
 
@@ -783,6 +783,9 @@ if_get_broadaddr(const char *ifn, struct in_addr *broadaddr)
 
 /*
  * $Log: bcast.c,v $
+ * Revision 1.36  2004/04/28 22:30:29  alan
+ * Put in some fixes for extra freeing of memory in the communications plugins.
+ *
  * Revision 1.35  2004/03/03 05:31:50  alan
  * Put in Gochun Shi's new netstrings on-the-wire data format code.
  * this allows sending binary data, among many other things!
