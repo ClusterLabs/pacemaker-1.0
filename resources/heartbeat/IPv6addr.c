@@ -671,7 +671,7 @@ write_pid_file(const char *pid_file)
 	int     	pidfilefd;
 	char    	pidbuf[11];
 	unsigned long   pid;
-	size_t 		bytes;
+	ssize_t 	bytes;
 
 	if (*pid_file != '/') {
 		cl_log(LOG_INFO, "Invalid pid-file name, must begin with a "
