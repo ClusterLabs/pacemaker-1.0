@@ -26,6 +26,7 @@
 #include <string.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <limits.h>
 
 #include <glib.h>
 
@@ -36,6 +37,10 @@ int requestNumber = 0;
 #undef TESTLOOP
 // #define TESTLOOP 1
 
+#ifndef LLONG_MAX
+#define	LLONG_MAX	9223372036854775807LL
+#endif
+
 int main(void)
 {
 
@@ -44,7 +49,7 @@ int main(void)
 	SaCkptCheckpointHandleT	checkpoint_handle;
 	SaVersionT 		ckpt_version = {'A', '0', '1'};
 	SaNameT 		ckpt_name = {9, "testckpt"};
-	SaTimeT  		open_timeout = ((SaTimeT)LONG_MAX);
+	SaTimeT  		open_timeout = ((SaTimeT)LLONG_MAX);
 
 	SaCkptCheckpointCreationAttributesT ckpt_create_attri ;
 	SaCkptIOVectorElementT	io_write;
@@ -56,7 +61,7 @@ int main(void)
 	ckpt_create_attri.checkpointSize = 1000 ;
 	ckpt_create_attri.maxSectionSize = 100;
 	ckpt_create_attri.maxSections = 10 ;
-	ckpt_create_attri.maxSectionIdSize = 10 ;
+	ckpt_create_attri.maxSectionIdSize = SA_MAX_ID_LENGTH ;
 	
 	io_write.sectionId.id[0] = 0;
 	io_write.sectionId.idLen = 0;
@@ -106,7 +111,7 @@ while (1) {
 		requestNumber = 0;
 	}
 
-	printf("Accepted requests: %d\n", requestNumber);
+	printf("Accepted %d requests before\n", requestNumber);
 
 	/* update the request number */
 

@@ -40,16 +40,16 @@
 
 #include <saf/ais.h>
 #include <checkpointd/clientrequest.h>
-#include "request.h"
 #include "checkpointd.h"
 #include "client.h"
 #include "replica.h"
 #include "message.h"
+#include "request.h"
 #include "response.h"
 #include "operation.h"
 #include "utils.h"
 
-#ifdef HAVE_DMALLOC
+#ifdef USE_DMALLOC
 #include <dmalloc.h>
 #endif
 

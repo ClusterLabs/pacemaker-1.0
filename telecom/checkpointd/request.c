@@ -40,16 +40,16 @@
 
 #include <saf/ais.h>
 #include <checkpointd/clientrequest.h>
-#include "request.h"
 #include "checkpointd.h"
 #include "client.h"
 #include "replica.h"
 #include "message.h"
+#include "request.h"
 #include "response.h"
 #include "operation.h"
 #include "utils.h"
 
-#ifdef HAVE_DMALLOC
+#ifdef USE_DMALLOC
 #include <dmalloc.h>
 #endif
 
@@ -422,6 +422,13 @@ SaCkptRequestReceive(IPC_Channel* clientChannel)
 //		cl_log(LOG_ERR, "Receive error request");
 		return NULL;
 	}
+
+	if (ipcMsg->msg_len <
+		sizeof(SaCkptClientRequestT) - 2*sizeof(void*)) {
+		cl_log(LOG_ERR, "Error request");
+		return NULL;
+	}
+
 	p = ipcMsg->msg_body;
 
 	clientRequest = SaCkptMalloc(sizeof(SaCkptClientRequestT));

@@ -44,11 +44,12 @@
 #include "client.h"
 #include "replica.h"
 #include "message.h"
+#include "request.h"
 #include "response.h"
 #include "operation.h"
 #include "utils.h"
 
-#ifdef HAVE_DMALLOC
+#ifdef USE_DMALLOC
 #include <dmalloc.h>
 #endif
 
@@ -344,7 +345,7 @@ main(int argc, char ** argv)
 	g_hash_table_destroy(saCkptService->openCheckpointHash);
 	SaCkptFree((void**)&saCkptService);
 
-#ifdef HAVE_DMALLOC
+#ifdef USE_DMALLOC
 	dmalloc_shutdown();
 #endif
 

@@ -40,16 +40,16 @@
 
 #include <saf/ais.h>
 #include <checkpointd/clientrequest.h>
-#include "request.h"
 #include "checkpointd.h"
 #include "client.h"
 #include "replica.h"
 #include "message.h"
+#include "request.h"
 #include "response.h"
 #include "operation.h"
 #include "utils.h"
 
-#ifdef HAVE_DMALLOC
+#ifdef DMALLOC
 #include <dmalloc.h>
 #endif
 
@@ -145,6 +145,11 @@ SaCkptOperationStart(SaCkptOperationT* ckptOp)
 	ckptOp->state = OP_STATE_STARTED;
 	
 	replica->flagLockReplica = TRUE;
+	if (saCkptService->flagVerbose) {
+		cl_log(LOG_INFO,
+			"Replica %s locked",
+			replica->checkpointName);
+	}
 	
 	switch (ckptOp->operation) {
 	case OP_RPLC_CRT:
@@ -200,6 +205,11 @@ SaCkptOperationStart(SaCkptOperationT* ckptOp)
 			g_list_free(nodeList);
 
 			replica->flagLockReplica = FALSE;
+			if (saCkptService->flagVerbose) {
+				cl_log(LOG_INFO,
+					"Replica %s unlocked",
+					replica->checkpointName);
+			}
 		
 		}else {
 			g_hash_table_insert(replica->operationHash,
@@ -224,6 +234,11 @@ SaCkptOperationStart(SaCkptOperationT* ckptOp)
 		SaCkptMessageSend(ckptMsg, ckptMsg->clientHostName);
 
 		replica->flagLockReplica = FALSE;
+		if (saCkptService->flagVerbose) {
+			cl_log(LOG_INFO,
+				"Replica %s unlocked",
+				replica->checkpointName);
+		}
 
 		break;
 
@@ -440,8 +455,7 @@ SaCkptOperationNodeFailure(gpointer key,
 	GList* list = NULL;
 	int finished = TRUE;
 
-	unsigned opState = 0;
-	gboolean statesetyet = FALSE;
+	int opState = 0;
 
 	ckptOp = (SaCkptOperationT*)value;
 	replica = ckptOp->replica;
@@ -470,9 +484,8 @@ SaCkptOperationNodeFailure(gpointer key,
 					ckptOp->stateList,
 					(gpointer)state);
 			} else {
-				if (!statesetyet) {
+				if (opState == -1) {
 					opState = state->state;
-					statesetyet=TRUE;
 				} else {
 					if (opState != state->state) {
 						finished = FALSE;
@@ -518,6 +531,11 @@ SaCkptOperationNodeFailure(gpointer key,
 				SaCkptFree((void**)&ckptMsg);
 
 				replica->flagLockReplica = FALSE;
+				if (saCkptService->flagVerbose) {
+					cl_log(LOG_INFO,
+						"Replica %s unlocked",
+						replica->checkpointName);
+				}
 
 				SaCkptOperationRemove(&ckptOp);
 				break;
@@ -539,6 +557,11 @@ SaCkptOperationNodeFailure(gpointer key,
 				SaCkptFree((void**)&ckptMsg);
 
 				replica->flagLockReplica = FALSE;
+				if (saCkptService->flagVerbose) {
+					cl_log(LOG_INFO,
+						"Replica %s unlocked",
+						replica->checkpointName);
+				}
 
 				SaCkptOperationRemove(&ckptOp);
 

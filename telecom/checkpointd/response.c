@@ -41,19 +41,18 @@
 
 #include <saf/ais.h>
 #include <checkpointd/clientrequest.h>
-#include "request.h"
 #include "checkpointd.h"
 #include "client.h"
 #include "replica.h"
 #include "message.h"
+#include "request.h"
 #include "response.h"
 #include "operation.h"
 #include "utils.h"
 
-#ifdef HAVE_DMALLOC
+#ifdef USE_DMALLOC
 #include <dmalloc.h>
 #endif
-
 
 extern SaCkptServiceT* saCkptService;
 
@@ -78,9 +77,12 @@ SaCkptResponseSend(SaCkptResponseT** pCkptResp)
 		strReq = SaCkptReq2String(ckptReq->clientRequest->req);
 		strErr = SaCkptErr2String(ckptResp->resp->retVal);
 		cl_log(LOG_INFO,
-		"Send response for request %lu (%s), client %d, status %s",
-		ckptResp->resp->requestNO, strReq,
-		ckptResp->resp->clientHandle, strErr);
+			"Send response for request %lu (%s)",
+			ckptResp->resp->requestNO, strReq);
+		cl_log(LOG_INFO,
+			"\tclient %d, data length %lu, status %s",
+			ckptResp->resp->clientHandle, 
+			ckptResp->resp->dataLength, strErr);
 		SaCkptFree((void**)&strErr);
 		SaCkptFree((void**)&strReq);
 	}

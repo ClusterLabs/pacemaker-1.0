@@ -32,7 +32,7 @@
 #include <saf/ais.h>
 #include "utils.h"
 
-#ifdef HAVE_DMALLOC
+#ifdef USE_DMALLOC
 #include <dmalloc.h>
 #endif
 

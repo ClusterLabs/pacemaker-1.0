@@ -41,16 +41,16 @@
 
 #include <saf/ais.h>
 #include <checkpointd/clientrequest.h>
-#include "request.h"
 #include "checkpointd.h"
 #include "client.h"
 #include "replica.h"
 #include "message.h"
+#include "request.h"
 #include "response.h"
 #include "operation.h"
 #include "utils.h"
 
-#ifdef HAVE_DMALLOC
+#ifdef USE_DMALLOC
 #include <dmalloc.h>
 #endif
 
@@ -399,6 +399,11 @@ SaCkptClusterMsgProcess()
 			if (replica->flagLockReplica != TRUE){
 				/* lock the replica first */
 				replica->flagLockReplica = TRUE;
+				if (saCkptService->flagVerbose) {
+					cl_log(LOG_INFO,
+						"Replica %s locked",
+						replica->checkpointName);
+				}
 
 				ckptOp->state = OP_STATE_STARTED;
 				
@@ -608,6 +613,11 @@ SaCkptClusterMsgProcess()
 
 				/* unlock the replica */
 				replica->flagLockReplica = FALSE;
+				if (saCkptService->flagVerbose) {
+					cl_log(LOG_INFO,
+						"Replica %s unlocked",
+						replica->checkpointName);
+				}
 
 				SaCkptOperationRemove(&ckptOp);
 			}
@@ -636,6 +646,11 @@ SaCkptClusterMsgProcess()
 			} else {
 				replica->replicaState = STATE_CREATE_COMMITTED;
 				replica->flagLockReplica = FALSE;
+				if (saCkptService->flagVerbose) {
+					cl_log(LOG_INFO,
+						"Replica %s unlocked",
+						replica->checkpointName);
+				}
 				replica->flagPendOperation = FALSE;
 				
 				openParam = ckptReq->clientRequest->reqParam;
@@ -717,6 +732,11 @@ SaCkptClusterMsgProcess()
 					ckptOp->clientHostName);
 
 				replica->flagLockReplica = FALSE;
+				if (saCkptService->flagVerbose) {
+					cl_log(LOG_INFO,
+						"Replica %s unlocked",
+						replica->checkpointName);
+				}
 
 				SaCkptOperationRemove(&ckptOp);
 			}
@@ -759,6 +779,11 @@ SaCkptClusterMsgProcess()
 					saCkptService->nodeName);
 				replica->flagIsActive = TRUE;
 				replica->flagLockReplica = FALSE;
+				if (saCkptService->flagVerbose) {
+					cl_log(LOG_INFO,
+						"Replica %s unlocked",
+						replica->checkpointName);
+				}
 
 #if 0
 				// FIXME: 
@@ -818,6 +843,11 @@ SaCkptClusterMsgProcess()
 			}
 
 			replica->flagLockReplica = TRUE;
+			if (saCkptService->flagVerbose) {
+				cl_log(LOG_INFO,
+					"Replica %s locked",
+					replica->checkpointName);
+			}
 			
 			/*
 			 * if replica is opened with SA_CKPT_WR_ACTIVE_REPLICA
@@ -839,6 +869,13 @@ SaCkptClusterMsgProcess()
 					ckptMsg->clientHostName);
 
 				if (retVal != SA_OK) {
+					replica->flagLockReplica = FALSE;
+					if (saCkptService->flagVerbose) {
+						cl_log(LOG_INFO,
+							"Replica %s unlocked",
+							replica->checkpointName);
+					}
+
 					break;
 				}
 
@@ -859,12 +896,15 @@ SaCkptClusterMsgProcess()
 					
 					list = list->next;
 				}
-				
 				SaCkptMessageMulticast(ckptMsg, nodeList);
-
 				g_list_free(nodeList);
 
 				replica->flagLockReplica = FALSE;
+				if (saCkptService->flagVerbose) {
+					cl_log(LOG_INFO,
+						"Replica %s unlocked",
+						replica->checkpointName);
+				}
 				
 			}else {
 				g_hash_table_insert(replica->operationHash,
@@ -1040,6 +1080,11 @@ SaCkptClusterMsgProcess()
 				
 				/* unlock replica */
 				replica->flagLockReplica = FALSE;
+				if (saCkptService->flagVerbose) {
+					cl_log(LOG_INFO,
+						"Replica %s unlocked",
+						replica->checkpointName);
+				}
 				
 				SaCkptOperationRemove(&ckptOp);
 			}
@@ -1099,6 +1144,11 @@ SaCkptClusterMsgProcess()
 
 				/* unlock replica */
 				replica->flagLockReplica = FALSE;
+				if (saCkptService->flagVerbose) {
+					cl_log(LOG_INFO,
+						"Replica %s unlocked",
+						replica->checkpointName);
+				}
 
 				SaCkptOperationRemove(&ckptOp);
 			}

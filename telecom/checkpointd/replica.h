@@ -18,8 +18,8 @@ typedef enum {
 } SaCkptReplicaStateT;
 
 typedef struct _SaCkptStateT {
-	char		nodeName[SA_MAX_NAME_LENGTH];
-	unsigned	state;
+	char	nodeName[SA_MAX_NAME_LENGTH];
+	int	state;
 } SaCkptStateT;
 
 typedef struct _SaCkptReplicaT {
@@ -139,7 +139,7 @@ typedef struct _SaCkptReplicaT {
 typedef struct _SaCkptSectionT{
 	SaCkptReplicaT* 	replica;
 	
-	SaCkptSectionIdT	sectionID;
+	SaCkptFixLenSectionIdT	sectionID;
 	
 	longclock_t	expirationTime;
 	longclock_t	lastUpdateTime;
@@ -257,13 +257,13 @@ int SaCkptSectionRead(SaCkptReplicaT*,	SaCkptSectionT*,
 
 int SaCkptSectionCreate(SaCkptReplicaT*, 
 	SaCkptReqSecCrtParamT*, size_t, void*, SaCkptSectionT**);
-int SaCkptSectionDelete(SaCkptReplicaT*, SaCkptSectionIdT*);
+int SaCkptSectionDelete(SaCkptReplicaT*, SaCkptFixLenSectionIdT*);
 int SaCkptSectionWrite(SaCkptReplicaT*,	SaCkptSectionT*, 
 	size_t, size_t, void*);
 int SaCkptSectionOverwrite(SaCkptReplicaT*, SaCkptSectionT*, 
 	size_t, void*);
 
-SaCkptSectionT* SaCkptSectionFind(SaCkptReplicaT*, SaCkptSectionIdT*);
+SaCkptSectionT* SaCkptSectionFind(SaCkptReplicaT*, SaCkptFixLenSectionIdT*);
 
 SaCkptOpenCheckpointT* SaCkptCheckpointOpen(SaCkptClientT*, 
 	SaCkptReplicaT*, SaCkptReqOpenParamT*);
@@ -277,5 +277,8 @@ gboolean SaCkptRetentionTimeout(gpointer );
 
 /* after node failuer, remove it from replica node list */
 void SaCkptReplicaNodeFailure(gpointer, gpointer, gpointer);
+
+char* SaCkptSectionId2String(SaCkptFixLenSectionIdT);
+
 
 #endif
