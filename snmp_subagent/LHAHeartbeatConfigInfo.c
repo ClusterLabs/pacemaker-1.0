@@ -8,8 +8,8 @@
 #include <net-snmp/agent/net-snmp-agent-includes.h>
 #include "LHAHeartbeatConfigInfo.h"
 
-#include <hb_api.h>
 #include "hbagent.h"
+#include <hb_api.h>
 
 /** Initializes the LHAHeartbeatConfigInfo module */
 void

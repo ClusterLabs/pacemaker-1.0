@@ -3,6 +3,7 @@
 
 #include <glib.h>
 #include "saf/ais.h"
+#include "snmp-config-resolve.h"
 
 /* funcs and structs used by the SNMP agent */
 

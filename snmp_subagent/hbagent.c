@@ -4,11 +4,11 @@
 #include <config.h>
 #endif
 
+#include "hbagent.h"
+
 #include "hb_api.h"
 #include "heartbeat.h"
 #include "clplumbing/cl_log.h"
-
-#include "hbagent.h"
 
 #include <net-snmp/net-snmp-config.h>
 #include <net-snmp/net-snmp-includes.h>

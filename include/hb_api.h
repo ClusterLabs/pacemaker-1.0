@@ -1,4 +1,4 @@
-/* $Id: hb_api.h,v 1.22 2004/07/19 21:38:18 yixiong Exp $ */
+/* $Id: hb_api.h,v 1.23 2004/07/19 23:35:37 yixiong Exp $ */
 /*
  * Client-side Low-level clustering API for heartbeat.
  *
@@ -45,7 +45,10 @@
 #ifndef __HB_API_H
 #	define __HB_API_H 1
 
+#ifdef HAVE_CONFIG_H
 #include <config.h>
+#endif 
+
 #include <ha_msg.h>
 #include <clplumbing/ipc.h>
 
