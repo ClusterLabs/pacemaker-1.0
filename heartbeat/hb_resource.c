@@ -673,7 +673,6 @@ process_resources(const char * type, struct ha_msg* msg
 
 			other_holds_resources
 			=	HB_UPD_RSC(fullupdate, other_holds_resources, n);
-			other_holds_resources =	n;
 			if (ANYDEBUG) {
 				ha_log(LOG_INFO
 				,	"other_holds_resources: %d"
@@ -2006,6 +2005,13 @@ StonithProcessName(ProcTrack* p)
 
 /*
  * $Log: hb_resource.c,v $
+ * Revision 1.39  2004/01/20 15:23:22  alan
+ * Fixed a dumb bug where we correctly (and somewhat laboriously) computed the
+ * resource state of the "other side", and then immediately (on the next line)
+ * set it to the wrong value.
+ * This is probably the result of not doing the update correctly when we
+ * put the more laborious (and correct) code in a while back (oops!).
+ *
  * Revision 1.38  2003/09/26 05:48:19  alan
  * Fixed a few undefined variable complaints.
  *
