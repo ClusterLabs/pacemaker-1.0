@@ -1,4 +1,4 @@
-/* $Id: client_lib.c,v 1.8 2004/07/26 11:43:25 andrew Exp $ */
+/* $Id: client_lib.c,v 1.9 2004/08/31 21:18:35 alan Exp $ */
 /* 
  * client_lib: heartbeat API client side code
  *
@@ -331,14 +331,14 @@ hb_api_signon(struct ll_cluster* cinfo, const char * clientid)
 	if ((request = hb_api_boilerplate(API_SIGNON)) == NULL) {
 		return HA_FAIL;
 	}
-	snprintf(cuid, sizeof(cuid)-1, "%ld",  (long)getuid());
+	snprintf(cuid, sizeof(cuid)-1, "%ld",  (long)geteuid());
 	/* Add our UID to the message */
 	if (ha_msg_add(request, F_UID, cuid) != HA_OK) {
 		ha_api_log(LOG_ERR, "hb_api_signon: cannot add F_UID field");
 		ZAPMSG(request);
 		return HA_FAIL;
 	}
-	snprintf(cgid, sizeof(cgid)-1, "%ld",  (long)getgid());
+	snprintf(cgid, sizeof(cgid)-1, "%ld",  (long)getegid());
 	/* Add our GID to the message */
 	if (ha_msg_add(request, F_GID, cgid) != HA_OK) {
 		ha_api_log(LOG_ERR, "hb_api_signon: cannot add F_GID field");
