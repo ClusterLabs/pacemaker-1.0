@@ -1,4 +1,4 @@
-/* $Id: client_lib.c,v 1.20 2005/02/14 21:06:11 gshi Exp $ */
+/* $Id: client_lib.c,v 1.21 2005/02/17 18:20:03 gshi Exp $ */
 /* 
  * client_lib: heartbeat API client side code
  *
@@ -559,7 +559,6 @@ hb_api_setfilter(struct ll_cluster* ci, unsigned fmask)
 
 	/* Read reply... */
 	if ((reply=read_api_msg(pi)) == NULL) {
-		ZAPMSG(request);
 		return HA_FAIL;
 	}
 	if ((result = ha_msg_value(reply, F_APIRESULT)) != NULL
@@ -621,7 +620,6 @@ hb_api_setsignal(ll_cluster_t* lcl, int nsig)
 
 	/* Read reply... */
 	if ((reply=read_api_msg(pi)) == NULL) {
-		ZAPMSG(request);
 		return HA_FAIL;
 	}
 	if ((result = ha_msg_value(reply, F_APIRESULT)) != NULL
