@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.346 2005/01/27 19:36:02 alan Exp $ */
+/* $Id: heartbeat.c,v 1.347 2005/01/28 00:19:52 gshi Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -1830,8 +1830,17 @@ HBDoMsg_T_ACKMSG(const char * type, struct node_info * fromnode,
 {
 	const char*	ackseq_str = ha_msg_value(msg, F_ACKSEQ);
 	seqno_t		ackseq;
-	struct msg_xmit_hist* hist = &msghist;
+	struct msg_xmit_hist* hist = &msghist;	
+	const char*	to =  
+		(const char*)ha_msg_value(msg, F_TO);
+	struct node_info* tonode;
 	
+	
+	if (!to || (tonode = lookup_tables(to, NULL)) == NULL
+	    || tonode != curnode){
+		return;
+	}
+
 	if (ackseq_str == NULL||
 	    sscanf(ackseq_str, "%lx", &ackseq) != 1){
 		goto out;
@@ -1844,34 +1853,24 @@ HBDoMsg_T_ACKMSG(const char * type, struct node_info * fromnode,
 	}
 
 	if (ackseq < hist->ackseq){
-		if (ANYDEBUG){
-			cl_log(LOG_DEBUG, "HBDoMsg_T_ACK:"
-			       "late ackseq message"
-			       "current hist ackseq = %ld"
-			       "ackseq =%ld in this message",
-			       hist->ackseq, ackseq);
-		}
+		/* late or dup ack
+		 * ignored
+		 */
+		
 		goto out;
 	}else if (ackseq > hist->hiseq){
-		if (ANYDEBUG){
-			cl_log(LOG_DEBUG, "HBDoMsg_T_ACK"
-			       ": corrupted ackseq"
-			       " current hiseq = %ld"
-			       " ackseq =%ld in this message",
-			       hist->hiseq, ackseq);			
-		}
+		cl_log(LOG_ERR, "HBDoMsg_T_ACK"
+		       ": corrupted ackseq"
+		       " current hiseq = %ld"
+		       " ackseq =%ld in this message",
+		       hist->hiseq, ackseq);			
 		goto out;
 	}
 	
 	if ( ackseq < fromnode->track.ackseq){
-		if (ANYDEBUG){
-			cl_log(LOG_DEBUG, "HBDoMsg_T_ACK:"
-				"late ackseq message"
-				" current fromnode ackseq = %ld"
-				" ackseq = %ld in this message."
-				,	fromnode->track.ackseq
-				, ackseq);
-		}
+		/* late or dup ack
+		 * ignored
+		 */
 		goto out;
 	}
 	
@@ -1899,8 +1898,9 @@ HBDoMsg_T_ACKMSG(const char * type, struct node_info * fromnode,
 		for (i = 0; i < config->nodecount; i++){
 			struct node_info* hip = &config->nodes[i];
 			
-			if (strncmp(hip->status,DEADSTATUS,STATUSLENG) ==0){
-		
+			if (strncmp(hip->status,DEADSTATUS,STATUSLENG) ==0
+			    || strncmp(hip->status,INITSTATUS,STATUSLENG) ==0 ){
+				
 				if (hist->lowest_acknode == hip){
 					hist->lowest_acknode = NULL;
 				}
@@ -4986,6 +4986,10 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.347  2005/01/28 00:19:52  gshi
+ * fixed a bug: a node should only process ACK message with dest to it
+ * not all of them.
+ *
  * Revision 1.346  2005/01/27 19:36:02  alan
  * Fixed various minor compile problems.
  *
