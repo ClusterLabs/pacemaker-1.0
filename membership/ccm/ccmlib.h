@@ -1,4 +1,4 @@
-/* $Id: ccmlib.h,v 1.15 2004/08/29 03:01:14 msoffen Exp $ */
+/* $Id: ccmlib.h,v 1.16 2004/09/20 18:59:16 msoffen Exp $ */
 /*
  * ccmlib.h: internal definations for ccm library files.
  *
@@ -21,6 +21,7 @@
  */
 #ifndef __CCMLIB_H_
 #define __CCMLIB_H_
+#include <portability.h>
 #include <errno.h>
 #include <unistd.h>
 #include <stdio.h>

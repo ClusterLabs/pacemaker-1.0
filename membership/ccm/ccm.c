@@ -1,4 +1,4 @@
-/* $Id: ccm.c,v 1.47 2004/08/29 03:01:14 msoffen Exp $ */
+/* $Id: ccm.c,v 1.48 2004/09/20 18:59:51 msoffen Exp $ */
 /* 
  * ccm.c: Consensus Cluster Service Program 
  *
@@ -20,12 +20,12 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
  */
-#include <ha_config.h>
+#include <ccm.h>
 #include <config.h>
+#include <ha_config.h>
 #ifdef HAVE_STDINT_H
 #include <stdint.h>
 #endif
-#include <ccm.h>
 #include <clplumbing/cl_signal.h>
 
 

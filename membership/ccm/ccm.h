@@ -1,4 +1,4 @@
-/* $Id: ccm.h,v 1.22 2004/08/29 03:01:14 msoffen Exp $ */
+/* $Id: ccm.h,v 1.23 2004/09/20 18:59:16 msoffen Exp $ */
 /*
  * ccm.h: definitions Consensus Cluster Manager internal header
  *				file
@@ -24,6 +24,9 @@
 #ifndef _CLUSTER_MANAGER_H_
 #define _CLUSTER_MANAGER_H_
  
+/* MUST BE INCLUDED for configure time ifdef vars */
+#include <portability.h>
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
