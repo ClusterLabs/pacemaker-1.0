@@ -65,7 +65,7 @@ typedef SaInt64T 		SaTimeT;
 #define SA_TIME_BEGIN ((SaTimeT)0x8000000000000001LL)
 
 #define SA_MAX_NAME_LENGTH	32
-#define SA_MAX_ID_LENGTH	4
+#define SA_MAX_ID_LENGTH	128
 
 typedef struct {
     SaUint16T length;
