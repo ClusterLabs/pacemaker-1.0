@@ -1,4 +1,4 @@
-const static char * _send_arp_c = "$Id: send_arp.c,v 1.23 2003/07/12 17:02:59 alan Exp $";
+const static char * _send_arp_c = "$Id: send_arp.c,v 1.24 2003/09/26 06:02:13 alan Exp $";
 /* 
  * send_arp
  * 
@@ -60,7 +60,7 @@ void convert_macaddr (u_char *macaddr, u_char enet_src[6]);
 int
 main(int argc, char *argv[])
 {
-	int	c;
+	int	c = -1;
 	char	errbuf[LIBNET_ERRBUF_SIZE];
 	char*	device;
 	char*	ipaddr;
@@ -148,7 +148,7 @@ main(int argc, char *argv[])
 			mssleep(msinterval);
 		}
 	}
-	return (c == -1 ? EXIT_FAILURE : EXIT_SUCCESS);
+	return (c < 0  ? EXIT_FAILURE : EXIT_SUCCESS);
 }
 
 
@@ -259,6 +259,9 @@ send_arp(libnet_t* lntag, u_long ip, u_char *device, u_char *macaddr, u_char *br
 
 /*
  * $Log: send_arp.c,v $
+ * Revision 1.24  2003/09/26 06:02:13  alan
+ * Fixed an undefined variable warning.
+ *
  * Revision 1.23  2003/07/12 17:02:59  alan
  * Hopefully last fix for the changes made to allow user to specify arp intervals, etc.
  *
