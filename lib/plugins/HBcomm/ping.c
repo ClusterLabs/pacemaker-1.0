@@ -1,4 +1,4 @@
-static const char _udp_Id [] = "$Id: ping.c,v 1.19 2003/08/13 06:50:25 horms Exp $";
+static const char _udp_Id [] = "$Id: ping.c,v 1.20 2003/08/13 09:36:31 horms Exp $";
 /*
  * ping.c: ICMP-echo-based heartbeat code for heartbeat.
  *
@@ -264,6 +264,7 @@ ping_new(const char * host)
 {
 	struct ping_private*	ipi;
 	struct hb_media *	ret;
+	char * 			name;
 
 	ipi = new_ping_interface(host);
 	if (ipi == NULL) {
@@ -271,17 +272,22 @@ ping_new(const char * host)
 	}
 
 	ret = (struct hb_media *) MALLOC(sizeof(struct hb_media));
-	if (ret != NULL) {
-		char * name;
-		ret->pd = (void*)ipi;
-		name = MALLOC(strlen(host)+1);
-		strcpy(name, host);
-		ret->name = name;
-		add_node(host, PINGNODE_I);
-
-	}else{
+	if (ret == NULL) {
 		FREE(ipi); ipi = NULL;
+		return(NULL);
 	}
+
+	ret->pd = (void*)ipi;
+	name = MALLOC(strlen(host)+1);
+	if(name == NULL) {
+		FREE(ipi); ipi = NULL;
+		FREE(ret); ret = NULL;
+		return(NULL);
+	}
+	strcpy(name, host);
+	ret->name = name;
+	add_node(host, PINGNODE_I);
+
 	return(ret);
 }
 
