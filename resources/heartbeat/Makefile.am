@@ -53,6 +53,7 @@ hard_SCRIPTS	=			\
 			IPsrcaddr	\
 			LinuxSCSI	\
 			LVM		\
+			LVSSyncDaemonSwap \
 			MailTo		\
 			OCF		\
 			portblock	\

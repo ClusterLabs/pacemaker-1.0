@@ -1,0 +1,165 @@
+#!/bin/sh
+#
+#        $Id: LVSSyncDaemonSwap,v 1.1 2005/02/14 08:32:28 horms Exp $
+#
+#        Copyright (C) 2005 Horms <horms@verge.net.au>
+#
+#        This script manages the LVS synchronisation daemon
+#
+#       Please note that as of 2.4.29, this is no longer needed
+#       as both the master and backup daemon can run simultaneously
+#
+#        usage: $0 {master|slave} {start|stop|status|monitor|cleanup}
+#
+#        The first argument, master or backup, is the YING.
+#        The YANG is internally calculated to be which ever or master and
+#        backup YING is not.
+#
+#       e.g $0 LVSSyncDaemonSwap master start   # YING=master YANG=backup
+#           $0 LVSSyncDaemonSwap backup start   # YING=backup YANG=master
+#               
+#
+#       "start" will stop the YANG if it is running and starts the YING
+#       "stop"  will stop the YING if it is running and starts the YANG
+#       "cleanup" is a non-standard target stop the YING if it is running
+#                 an stop the YANG if it is running 
+#
+#
+#
+unset LANG
+LC_ALL=C
+export LC_ALL
+
+prefix=/usr
+exec_prefix=/usr
+. /etc/ha.d/shellfuncs
+
+USAGE="usage: $0 {master|slave} {start|stop|status|monitor|cleanup}\n\nNote: $0 only works on Linux";
+
+# This is consistent with ldirectord's behaviour
+# Except that this script does not have a debug mode
+if [ -x "/sbin/ipvsadm" ]; then
+	IPVSADM="/sbin/ipvsadm";
+elif [ -x "/usr/sbin/ipvsadm" ]; then
+	IPVSADM="/usr/sbin/ipvsadm";
+else
+	ha_log "ERROR: Can not find ipvsadm";
+	exit 1
+fi
+
+
+status() {
+    if ps ax | grep " \[ipvs[ _]sync$1\]$" > /dev/null; then
+        echo "running"
+        return 3
+    fi
+
+    echo "stopped"
+    return 0
+}
+
+run_ipvsadm () {
+    $IPVSADM $@
+    rc=$?
+    if [ $rc -ne 0 ]; then
+        echo "ERROR: ipvsadm $@ failed."
+        return $rc
+    fi
+
+    return 0
+}
+
+ying_yan() {
+    if [ "$1" = "master" ]; then
+        echo "backup"
+    else 
+        echo "master"
+    fi
+}
+
+start_stop() {
+    YING=$1
+    YANG=$2
+
+    if [ $(status $YING) = "running" ]; then
+        return 0
+    fi
+
+    if [ $(status $YANG) = "running" ]; then
+            run_ipvsadm --stop-daemon || return $?
+        ha_log "info: ipvs_sync$YANG down"
+    fi
+
+    run_ipvsadm --start-daemon $YING || return $?
+
+    ha_log "info: ipvs_sync$YING up"
+    return 0
+}
+
+start() {
+    start_stop $1 $(ying_yan $1) || return $?
+    ha_log "info: ipvs_sync$YING obtained"
+    return 0
+}
+
+stop() {
+    start_stop $(ying_yan $1) $1 || return $?
+    ha_log "info: ipvs_sync$YANG released"
+    return 0
+}
+
+cleanup() {
+    if [ $(status master) = "running" ]; then
+            YING=master
+    elif [ $(status backup) = "running" ]; then
+            YING=backup
+    else
+        return 0
+    fi
+
+    
+    run_ipvsadm --stop-daemon || return $?
+    ha_log "info: ipvs_sync$YING down"
+    return 0
+}
+
+monitor() {
+    status $1
+    return $?
+}
+
+usage() {
+  echo -e $USAGE >&2
+}
+
+if
+    [ $# -ne 2 ]
+then
+    usage
+    exit 1
+fi
+
+case $2 in
+    start)
+        start $1
+        ;;
+    stop)
+        stop $1
+        ;;
+    status)
+        status $1
+        ;;
+    monitor)
+        monitor $1
+        ;;
+    cleanup)
+        cleanup $1
+        ;;
+    *)
+        usage
+        exit 1
+        ;;
+esac
+
+exit $?
+
