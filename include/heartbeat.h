@@ -1,4 +1,4 @@
-/* $Id: heartbeat.h,v 1.50 2004/09/03 21:03:03 gshi Exp $ */
+/* $Id: heartbeat.h,v 1.51 2004/09/03 21:47:19 alan Exp $ */
 /*
  * heartbeat.h: core definitions for the Linux-HA heartbeat program
  *
@@ -314,7 +314,7 @@ struct hb_media {
 
 int parse_authfile(void);
 
-#define	MAXMSGHIST	100
+#define	MAXMSGHIST	1000
 struct msg_xmit_hist {
 	struct ha_msg*	msgq[MAXMSGHIST];
 	seqno_t		seqnos[MAXMSGHIST];
