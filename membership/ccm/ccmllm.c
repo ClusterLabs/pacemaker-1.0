@@ -1,4 +1,4 @@
-/* $Id: ccmllm.c,v 1.8 2005/02/17 17:28:50 alan Exp $ */
+/* $Id: ccmllm.c,v 1.9 2005/02/17 19:08:20 gshi Exp $ */
 /* 
  * ccmllm.c: Low Level membership routines.
  *
@@ -46,10 +46,12 @@ llm_only_active_node(llm_info_t *llm)
 {
 	uint  i;
 	for ( i = 0 ; i < LLM_GET_NODECOUNT(llm) ; i++ ) {
+
 		if (i == (uint)LLM_GET_MYNODE(llm)) {
 			continue;
 		}
 		if (0!=STRNCMP_CONST(LLM_GET_STATUS(llm, i), CLUST_INACTIVE)){
+
 			return FALSE;
 		}
 	}
@@ -96,10 +98,20 @@ llm_get_index(llm_info_t *llm, const char *node)
 	do {
 		mid = (low+high+1)/2;
 		value = strncmp(LLM_GET_NODEID(llm, mid), node, NODEIDSIZE);
-		if(value==0) return mid;
-		if(high == low) break;
-		if(value > 0) high=mid-1;
-		else low=mid+1;
+		if(value==0) {
+			return mid;
+		}
+
+		if(high == low) {
+			break;
+		}
+		
+		if(value > 0) {
+			high=mid-1;
+		}
+		else {
+			low=mid+1;
+		}
 	} while(high>=low);
 	return -1;
 }
@@ -119,7 +131,9 @@ llm_status_update(llm_info_t *llm, const char *node, const char *status)
 	int i;
 
 	i = llm_get_index(llm, node);
-	if(i == -1) return FALSE;
+	if(i == -1){
+		return FALSE;
+	}
 
 	/* if there is no status change for this node just return */
 	/*  FALSE 						  */
@@ -164,7 +178,10 @@ llm_get_uuid(llm_info_t *llm, const char *orig)
 {
 	int i;
 	i = llm_get_index(llm, orig);
-	if( i == -1 ) return i;
+	if( i == -1 ) {
+		return i;
+	}
+
 	return LLM_GET_UUID(llm,i);
 }
 
@@ -176,7 +193,9 @@ int
 llm_is_valid_node(llm_info_t *llm, 
 	const char *node)
 {
-	if(llm_get_index(llm, node) == -1 ) return FALSE;
+	if(llm_get_index(llm, node) == -1 ) {
+		return FALSE;
+	}
 	return TRUE;
 }
 

@@ -1,4 +1,4 @@
-/* $Id: ccmlib_memapi.c,v 1.24 2005/02/02 19:38:37 gshi Exp $ */
+/* $Id: ccmlib_memapi.c,v 1.25 2005/02/17 19:08:20 gshi Exp $ */
 /* 
  * ccmlib_memapi.c: Consensus Cluster Membership API
  *
@@ -177,7 +177,9 @@ init_llmborn(mbr_private_t *private)
 	struct IPC_MESSAGE *msg;
 	struct timeval tv;
 
-	if(private->llm) return 0;
+	if(private->llm) {
+		return 0;
+	}
 
 	ch 	   = private->channel;
 	sockfd = ch->ops->get_recv_select_fd(ch);
@@ -263,11 +265,23 @@ compare(const void *value1, const void *value2)
 {
 	const oc_node_t *t1 = (const oc_node_t *)value1;
 	const oc_node_t *t2 = (const oc_node_t *)value2;
+	
+	if (t1->node_born_on < t2->node_born_on){
+		return -1;
+	}
 
-	if (t1->node_born_on < t2->node_born_on) return -1;
-	if (t1->node_born_on > t2->node_born_on) return 1;
-	if (t1->node_id < t2->node_id) return -1;
-	if (t1->node_id > t2->node_id) return 1;
+	if (t1->node_born_on > t2->node_born_on){
+		return 1;
+	}
+
+	if (t1->node_id < t2->node_id) {
+		return -1;
+	}
+
+	if (t1->node_id > t2->node_id) {
+		return 1;
+	}
+	
 	return 0;
 }
 
@@ -276,8 +290,9 @@ llm_get_Id_from_Uuid(ccm_llm_t *stuff, uint uuid)
 {
 	uint lpc = 0;
 	for (; lpc < stuff->n; lpc++) {
-		if(stuff->node[lpc].Uuid == uuid)
+		if(stuff->node[lpc].Uuid == uuid){		       
 			return stuff->node[lpc].Id;
+		}
 	}
 	return NULL;
 }
@@ -297,7 +312,7 @@ get_new_membership(mbr_private_t *private,
 	int n_nodes = CLLM_GET_NODECOUNT(private->llm);
 
 	int size    = sizeof(oc_ev_membership_t) + 
-			2*n_nodes*sizeof(oc_node_t);
+		2*n_nodes*sizeof(oc_node_t);
 
  	newmbr = *mbr = (mbr_track_t *) g_malloc(size+sizeof(int));
 
@@ -383,8 +398,9 @@ mem_free_func(void *data)
 	if(mbr_track) {
 		/* free m_n_member uname, m_n_in is actually the same ptr */
 		for (lpc = 0 ; lpc < OC_EV_GET_N_MEMBER(mbr_track); lpc++ ) {
-			if ((uname = OC_EV_GET_NODE(mbr_track, lpc).node_uname))
+			if ((uname = OC_EV_GET_NODE(mbr_track, lpc).node_uname)){
 				g_free(uname);
+			}
 		}
 		/* free m_n_out uname */
 		for (lpc = OC_EV_GET_OUT_IDX(mbr_track)
@@ -392,8 +408,9 @@ mem_free_func(void *data)
 			+	OC_EV_GET_N_OUT(mbr_track)
 		;	lpc++) {
 
-			if ((uname = OC_EV_GET_NODE(mbr_track, lpc).node_uname))
+			if ((uname = OC_EV_GET_NODE(mbr_track, lpc).node_uname)){
 				g_free(uname);
+			}
 		}
 		g_free(mbr_track);
 	}
@@ -435,7 +452,9 @@ membership_unchanged(mbr_private_t *private, mbr_track_t *mbr)
 	mbr_track_t *oldmbr = (mbr_track_t *) 
 				cookie_get_data(private->cookie);
 
-	if(!oldmbr) return FALSE;
+	if(!oldmbr) {
+		return FALSE;
+	}
 
 	if(OC_EV_GET_N_MEMBER(mbr) != OC_EV_GET_N_MEMBER(oldmbr)){
 			return FALSE;
@@ -466,7 +485,9 @@ mem_handle_event(class_t *class)
 	int ret;
 	gboolean quorum;
 
-	if(!class_valid(class)) return FALSE;
+	if(!class_valid(class)){
+		return FALSE;
+	}
 
 	private = (mbr_private_t *)class->private;
 	ch 	   = private->channel;
@@ -582,9 +603,9 @@ mem_handle_event(class_t *class)
 
 		case CCM_INFLUX:
 
-			if(type==CCM_INFLUX)
+			if(type==CCM_INFLUX){
 				oc_type = OC_EV_MS_NOT_PRIMARY;
-
+			}
 
 
 			cookie = private->cookie;
@@ -640,12 +661,16 @@ mem_activate(class_t *class)
 	struct IPC_CHANNEL *ch;
 	int sockfd;
 
-	if(!class_valid(class)) return -1;
+	if(!class_valid(class)) {
+		return -1;
+	}
 
 	/* if already activated */
 
 	private = (mbr_private_t *)class->private;
-	if(private->llm)return -1;
+	if(private->llm){
+		return -1;
+	}
 
 	ch 	   = private->channel;
 
@@ -686,7 +711,9 @@ mem_set_callback(class_t *class, oc_ev_callback_t f)
 	mbr_private_t 	*private;
 	oc_ev_callback_t *ret_f;
 
-	if(!class_valid(class)) return NULL;
+	if(!class_valid(class)){
+		return NULL;
+	}
 
 	private = (mbr_private_t *)class->private;
 	
@@ -705,7 +732,9 @@ mem_set_special(class_t *class, int type)
 {
 	mbr_private_t 	*private;
 
-	if(!class_valid(class)) return;
+	if(!class_valid(class)) {
+		return;
+	}
 
 	private = (mbr_private_t *)class->private;
 	
@@ -721,13 +750,15 @@ mem_is_my_nodeid(class_t *class, const oc_node_t *node)
 {
 	mbr_private_t 	*private;
 
-	if(!class_valid(class)) return FALSE;
-
+	if(!class_valid(class)){
+		return FALSE;
+	}
 	private = (mbr_private_t *)class->private;
 
-	if (node->node_id == CLLM_GET_MYUUID(private->llm))
+	if (node->node_id == CLLM_GET_MYUUID(private->llm)){
 		return TRUE;
-
+	}
+	
 	return FALSE;
 }
 
@@ -744,7 +775,9 @@ oc_ev_memb_class(oc_ev_callback_t  *fn)
 
 	memclass = g_malloc(sizeof(class_t));
 
-	if (!memclass) return NULL;
+	if (!memclass){
+		return NULL;
+	}
 
 	private = (mbr_private_t *)g_malloc0(sizeof(mbr_private_t));
 	if (!private) {

@@ -1,4 +1,4 @@
-/* $Id: ccmlib_eventapi.c,v 1.8 2004/02/17 22:12:00 lars Exp $ */
+/* $Id: ccmlib_eventapi.c,v 1.9 2005/02/17 19:08:20 gshi Exp $ */
 /* 
  * ccmlib_eventapi.c: OCF event API.
  *
@@ -72,14 +72,20 @@ void *
 cookie_get_data(void *ck)
 {
 	oc_ev_cookie_t *cookie = (oc_ev_cookie_t *)ck;
-	if (!cookie) return NULL;
+	if (!cookie) {
+		return NULL;
+	}
+
 	return cookie->data;
 }
 void *
 cookie_get_func(void *ck)
 {
 	oc_ev_cookie_t *cookie = (oc_ev_cookie_t *)ck;
-	if(!cookie) return NULL;
+	if(!cookie) {
+		return NULL;
+	}
+
 	return cookie->func;
 }
 
@@ -87,7 +93,9 @@ void
 cookie_unref(void *ck)
 {
 	oc_ev_cookie_t *cookie = (oc_ev_cookie_t *)ck;
-	if(!cookie) return;
+	if(!cookie) {
+		return;
+	}
 	if(--cookie->refcount == 0) {
 		 if(cookie->freefunc){
 			 cookie->freefunc(cookie->data);
@@ -101,7 +109,9 @@ void
 cookie_ref(void *ck)
 {
 	oc_ev_cookie_t *cookie = (oc_ev_cookie_t *)ck;
-	if(!cookie) return;
+	if(!cookie) {
+		return;
+	}
 	++cookie->refcount;
 	return;
 }
@@ -161,9 +171,13 @@ eventclass_remove_func(gpointer key,
 static gboolean
 token_invalid(const __oc_ev_t *token)
 {
-	if(!token) return TRUE;
+	if(!token){
+		return TRUE;
+	}
 
-	if(token->oc_flag!= EVENT_INIT) return TRUE;
+	if(token->oc_flag!= EVENT_INIT) {
+		return TRUE;
+	}
 
 	return FALSE;
 }
@@ -217,7 +231,9 @@ oc_ev_register(oc_ev_t **token)
 	rettoken = (__oc_ev_t *)g_malloc(sizeof(__oc_ev_t));
 	*token = (oc_ev_t *)GUINT_TO_POINTER(token_counter++);
 
-	if(!rettoken) return ENOMEM;
+	if(!rettoken) {
+		return ENOMEM;
+	}
 
 	rettoken->oc_flag = EVENT_INIT;
 	rettoken->oc_eventclass = g_hash_table_new(g_direct_hash, 
@@ -235,10 +251,11 @@ oc_ev_unregister(oc_ev_t *tok)
 {
 	__oc_ev_t *token = (__oc_ev_t *)g_hash_table_lookup(tokenhash, 
 			tok);
-
-	if(token == NULL) return EINVAL;
-	if(token_invalid(token)) return EINVAL;
-
+	
+	if(token == NULL || token_invalid(token)){
+		return EINVAL;
+	}
+	
 	
 	/*
 	 * delete all the event classes associated within
@@ -266,10 +283,11 @@ oc_ev_special(const oc_ev_t *tok,
 	class_t *class;
 	const __oc_ev_t *token =  (__oc_ev_t *)
 		g_hash_table_lookup(tokenhash, tok);
-
-	if(token == NULL) return;
-	if(token_invalid(token)) return;
-
+	
+	if(token == NULL || token_invalid(token)){
+		return;
+	}
+	
 	/* if structure for the class already exists 
  	 *  just update the callback. Else allocate
 	 *  a structure and update the callback
@@ -294,9 +312,10 @@ oc_ev_set_callback(const oc_ev_t *tok,
 	const __oc_ev_t *token =  (__oc_ev_t *)
 		g_hash_table_lookup(tokenhash, tok);
 
-	if(token == NULL) return EINVAL;
-	if(token_invalid(token)) return EINVAL;
-
+	if(token == NULL || token_invalid(token)){
+		return EINVAL;
+	}
+	
 
 	/* if structure for the class already exists 
  	 *  just update the callback. Else allocate
@@ -327,16 +346,21 @@ oc_ev_activate(const oc_ev_t *tok, int *fd)
 		g_hash_table_lookup(tokenhash, tok);
 
 	*fd = -1;
-	if(token == NULL) return EINVAL;
-	if(token_invalid(token)) return EINVAL;
 
-	if(!g_hash_table_size(token->oc_eventclass))
+	if(token == NULL || token_invalid(token)){
+		return EINVAL;
+	}
+	
+	if(!g_hash_table_size(token->oc_eventclass)){
 		return EMFILE;
-				
+	}
+
 	g_hash_table_foreach(token->oc_eventclass, 
 				activate_func, fd);
-	if(*fd == -1)
+	if(*fd == -1){
 		return 1;
+	}
+
 	return 0;
 }
 
@@ -347,16 +371,19 @@ oc_ev_handle_event(const oc_ev_t *tok)
 	const __oc_ev_t *token =  (__oc_ev_t *)
 		g_hash_table_lookup(tokenhash, tok);
 
-	if(token == NULL) return EINVAL;
-	if(token_invalid(token)) return EINVAL;
+	if(token == NULL || token_invalid(token)){
+		return EINVAL;
+	}
+	
 
-	if(!g_hash_table_size(token->oc_eventclass))
+	if(!g_hash_table_size(token->oc_eventclass)){
 		return -1;
-
+	}
+	
 	if(g_hash_table_size(token->oc_eventclass)) {
 		g_hash_table_foreach_remove(token->oc_eventclass, 
-				handle_func, 
-				NULL);
+					    handle_func, 
+					    NULL);
 	}
 	return 0;
 }
@@ -381,9 +408,9 @@ oc_ev_is_my_nodeid(const oc_ev_t *tok, const oc_node_t *node)
 	const __oc_ev_t *token =  (__oc_ev_t *)
 		g_hash_table_lookup(tokenhash, tok);
 
-	if(token == NULL) return EINVAL;
-	if(token_invalid(token)) return EINVAL;
-	if(!node) return EINVAL;
+	if(token == NULL || token_invalid(token) || !node){
+		return EINVAL;
+	}
 
 	class = g_hash_table_lookup(token->oc_eventclass, 
 			(void *)OC_EV_MEMB_CLASS);

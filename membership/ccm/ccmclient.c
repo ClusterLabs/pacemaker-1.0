@@ -1,4 +1,4 @@
-/* $Id: ccmclient.c,v 1.18 2005/02/15 22:17:17 alan Exp $ */
+/* $Id: ccmclient.c,v 1.19 2005/02/17 19:08:20 gshi Exp $ */
 /* 
  * client.c: Consensus Cluster Client tracker
  *
@@ -216,7 +216,9 @@ flush_func(gpointer key, gpointer value, gpointer user_data)
 	while(ipc_client->ops->is_sending_blocked(ipc_client)) {
 		cl_log(LOG_WARNING, "ipc channel blocked");
 		cl_shortsleep();
-		if(ipc_client->ops->resume_io(ipc_client) == IPC_BROKEN) break;
+		if(ipc_client->ops->resume_io(ipc_client) == IPC_BROKEN) {
+			break;
+		}
 	}
 }
 

@@ -1,4 +1,4 @@
-/* $Id: ccmgraph.c,v 1.10 2004/08/29 03:01:14 msoffen Exp $ */
+/* $Id: ccmgraph.c,v 1.11 2005/02/17 19:08:20 gshi Exp $ */
 /* 
  * ccmgraph.c: Keeps track of the connectivity within the cluster members
  *		to derive the largest totally connected subgraph.
@@ -64,17 +64,21 @@ graph_sanitize(graph_t *gr)
 		 */
 		for(uuid_j=0; uuid_j < MAXNODE; uuid_j++) {
 			for (j=0; j<gr->graph_nodes; j++) {
-				if(uuid_j == graph_node[j]->uuid) break;
+				if(uuid_j == graph_node[j]->uuid) {
+					break;
+				}
 			}
 			if(j == gr->graph_nodes) {
 				/* node uuid_j is not in the graph, so clear its
 				 * bits.
 				 */
 				bitmap_clear(uuid_j, graph_node[i]->bitmap, 
-						MAXNODE);
+					     MAXNODE);
 			} else {
-				if(uuid_i == uuid_j) continue;
-
+				if(uuid_i == uuid_j) {
+					continue;
+				}
+				
 				if(graph_node[j]->bitmap == NULL) {
 					bitmap_create(&bitmap, MAXNODE);
 					graph_node[j]->bitmap = bitmap;
@@ -153,7 +157,9 @@ relocate(vertex_t **vertex,
 
 	tmp_vertex = vertex[indx];
 	for  ( i = indx+1; i < size; i++ ) {
-		if(tmp_vertex->count >= vertex[i]->count) break;
+		if(tmp_vertex->count >= vertex[i]->count) {
+			break;
+		}
 		vertex[i-1] = vertex[i];
 		indxtab[vertex[i-1]->uuid] = i-1;
 	}
@@ -188,13 +194,16 @@ find_best_candidate(vertex_t **vertex, int startindx,
 
 	min_indx = startindx;
 	min_count = INT_MAX;
-
+	
 	for ( i = size-1; i >= startindx; i-- ) {
 		count = 0;
 		for (uuid = 0; uuid < maxnode; uuid++) {
 			if(bitmap_test(uuid, vertex[i]->bitmap, maxnode)){
 				indx = indxtab[uuid];
-				if(indx == -1 || indx >= size) continue;
+				if(indx == -1 || indx >= size) {
+					continue;
+				}
+
 				count += vertex[indx]->count;
 			}
 		}
@@ -221,7 +230,9 @@ find_size(vertex_t **vertex, int maxnode)
 	for ( i= 1 ; i < maxnode; i++ ) {
 		if(vertex[i]->count == size) {
 			size++;
-		} else break;
+		} else {
+			break;
+		}
 	}
 	return size;
 }
@@ -247,7 +258,9 @@ delete_entry(vertex_t **vertex, int indx, int size,
 	for ( uuid = 0 ; uuid < maxnode ; uuid ++ ){
 		if(bitmap_test(uuid, tmp_vertex->bitmap, maxnode)) {
 			loc = indxtab[uuid];
-			if(loc == -1 || loc >= size-1) continue;
+			if(loc == -1 || loc >= size-1) {
+				continue;
+			}
 			decrement_count(vertex, loc, size-1, indxtab, maxnode);
 		}
 	}
@@ -305,24 +318,30 @@ get_max_clique(vertex_t **vertex,  int maxnode, int *loc)
 			indxtab[vertex[i]->uuid] = i;
 		}
 	}
-
+	
 	maxconnect = 1;
 	for ( j=i-1 ; j>=0;  j-- ) {
 		if (vyesorno == 'y') {
 			print_vertex(vertex, maxnode);
 		}
 
-		if((j+1)<maxconnect) break; /* done */
-
-		if(vertex[j]->count >= j+1) break; /* done */
+		if((j+1)<maxconnect){
+			break; /* done */
+		}
+		
+		if(vertex[j]->count >= j+1){
+			break; /* done */
+		}
 
 		/* find number of entries with the same connectivity value */
 		num=1;
 		for(k=j-1; k>=0; k--) {
-			if(vertex[j]->count == vertex[k]->count)
-				 num++;
-			else 
+			if(vertex[j]->count == vertex[k]->count){
+				num++;
+			}
+			else {
 				break;
+			}
 		}
 		
 		/* find the best candidate to be considered for removal */
@@ -341,10 +360,12 @@ get_max_clique(vertex_t **vertex,  int maxnode, int *loc)
 				maxconnect=tmp_maxconnect;
 		}
 	}
-
+	
 	if ((j+1) < maxconnect) {
 		size = maxconnect;
-	} else { *loc = 0; size = j+1; }
+	} else {
+		*loc = 0; size = j+1; 
+	}
 	
 	g_free(indxtab);
 
@@ -364,8 +385,9 @@ graph_init()
 	int i;
 	graph_t *gr;
 
-	if((gr = (graph_t *)g_malloc(sizeof(graph_t))) == NULL)
+	if((gr = (graph_t *)g_malloc(sizeof(graph_t))) == NULL){
 		return NULL;
+	}
 	
 	memset(gr, 0, sizeof(graph_t));
 	memset(graph, 0, sizeof(graph));
@@ -384,7 +406,10 @@ void
 graph_free(graph_t *gr)
 {
 	int i;
-	if(!gr) return;
+	if(!gr) {
+		return;
+	}
+
 	for ( i = 0 ; i < gr->graph_nodes; i++ ) {
 		if(gr->graph_node[i]->bitmap != NULL) {
 			bitmap_delete(gr->graph_node[i]->bitmap);

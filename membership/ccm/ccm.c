@@ -1,4 +1,4 @@
-/* $Id: ccm.c,v 1.56 2005/02/02 19:38:37 gshi Exp $ */
+/* $Id: ccm.c,v 1.57 2005/02/17 19:08:20 gshi Exp $ */
 /* 
  * ccm.c: Consensus Cluster Service Program 
  *
@@ -286,8 +286,9 @@ ccm_string2type(const char *type)
 	enum ccm_type i;
 
 	for ( i = CCM_TYPE_PROTOVERSION; i <= CCM_TYPE_LAST; i++ ) {
-		if (strncmp(ccm_type_str[i], type, TYPESTRSIZE) == 0)
+		if (strncmp(ccm_type_str[i], type, TYPESTRSIZE) == 0){
 			return i;
+		}
 	}
 	return CCM_TYPE_ERROR;
 }
@@ -436,8 +437,9 @@ static int respdrop=0;
 static int
 resp_can_i_drop(void)
 {
-	if (respdrop >= MAXDROP)
+	if (respdrop >= MAXDROP){
 		return FALSE;
+	}
 	return TRUE;
 }
 
@@ -518,7 +520,9 @@ static void
 leave_reset(void)
 {
 	int numBytes = bitmap_size(MAXNODE);
-	if(!leave_bitmap) return;
+	if(!leave_bitmap) {
+		return;
+	}
 	memset(leave_bitmap, 0, numBytes);
 	return;
 }
@@ -548,7 +552,9 @@ leave_get_next(void)
 static int
 leave_any(void)
 {
-	if(bitmap_count(leave_bitmap,MAXNODE)) return TRUE;
+	if(bitmap_count(leave_bitmap,MAXNODE)){
+		return TRUE;
+	}
 	return FALSE;
 }
 /* leave bitmap relate routines end */
@@ -562,7 +568,9 @@ static void
 ccm_reset(ccm_info_t *info)
 {
 
-	if(ccm_already_joined(info)) client_evicted();
+	if(ccm_already_joined(info)){
+		client_evicted();
+	}
 
 	CCM_RESET_MEMBERSHIP(info);
 	ccm_memcomp_reset(info);
@@ -719,7 +727,9 @@ ccm_memcomp_cmpr(gconstpointer a, gconstpointer b)
 static void
 ccm_memcomp_free(gpointer data, gpointer userdata)
 {
-	if(data) g_free(data);
+	if(data) {
+		g_free(data);
+	}
 	return;
 }
 
@@ -828,8 +838,7 @@ ccm_memcomp_reset(ccm_info_t *info)
 static int
 ccm_memcomp_rcvd_all(ccm_info_t *info)
 {
-	return 
-	graph_filled_all(MEMCOMP_GET_GRAPH(CCM_GET_MEMCOMP(info)));
+	return graph_filled_all(MEMCOMP_GET_GRAPH(CCM_GET_MEMCOMP(info)));
 }
 
 static int
@@ -858,8 +867,9 @@ ccm_memcomp_get_maxmembership(ccm_info_t *info, unsigned char **bitmap)
 	while (head) {
 		ptr = (uint32_t *)g_slist_nth_data(head, 0);
 		uuid = ptr[1];
-		if(bitmap_test(uuid, *bitmap, MAXNODE)) 
+		if(bitmap_test(uuid, *bitmap, MAXNODE)) {
 			return ptr[0];
+		}
 		head = g_slist_next(head);
 	}
 	return 0;
@@ -917,8 +927,9 @@ ccm_memlist_changed(ccm_info_t *info,
 		assert(indx >=0 && indx < LLM_GET_NODECOUNT(llm));
 		uuid = LLM_GET_UUID(llm,indx);
 		assert(uuid>=0 && uuid < MAXNODE);
-		if (!bitmap_test(uuid, bitmap, MAXNODE))
+		if (!bitmap_test(uuid, bitmap, MAXNODE)){
 			return TRUE;
+		}
 	}
 	return FALSE;
 } 
@@ -977,8 +988,9 @@ ccm_get_membership_index(ccm_info_t *info, const char *node)
 	for ( i = 0 ; i < CCM_GET_MEMCOUNT(info) ; i++ ) {
 		indx =  CCM_GET_MEMINDEX(info, i);
 		if(strncmp(LLM_GET_NODEID(llm, indx), node, 
-				LLM_GET_NODEIDSIZE(llm)) == 0)
+			   LLM_GET_NODEIDSIZE(llm)) == 0){
 			return i;
+		}
 	}
 	return -1;
 }
@@ -991,8 +1003,9 @@ ccm_get_my_membership_index(ccm_info_t *info)
 	llm_info_t *llm = CCM_GET_LLM(info);
 
 	for ( i = 0 ; i < CCM_GET_MEMCOUNT(info) ; i++ ) {
-		if (CCM_GET_MEMINDEX(info, i) == LLM_GET_MYNODE(llm))
+		if (CCM_GET_MEMINDEX(info, i) == LLM_GET_MYNODE(llm)){
 			return i;
+		}
 	}
 		
 	assert(0); /* should never reach here */
@@ -1002,8 +1015,9 @@ ccm_get_my_membership_index(ccm_info_t *info)
 static int
 ccm_am_i_leader(ccm_info_t *info)
 {
-	if (ccm_get_my_membership_index(info) == CCM_GET_CL(info))
+	if (ccm_get_my_membership_index(info) == CCM_GET_CL(info)){
 		return TRUE;
+	}
 	return FALSE;
 }
 
@@ -1841,8 +1855,9 @@ ccm_joining_to_joined(ll_cluster_t *hb, ccm_info_t *info)
 	update_reset(CCM_GET_UPDATETABLE(info));
 	CCM_SET_STATE(info, CCM_STATE_JOINED);
 	report_mbrs(info);
-	if(!ccm_already_joined(info)) 
+	if(!ccm_already_joined(info)) {
 		CCM_SET_JOINED_TRANSITION(info, 1);
+	}
 	return;
 }
 
@@ -2198,8 +2213,10 @@ ccm_state_joined(enum ccm_type ccm_msg_type,
 
 		case CCM_TYPE_LEAVE: 
 			index = ccm_get_membership_index(info, orig);
-			if (index == -1) break;
-			
+			if (index == -1) {
+				break;
+			}
+
 			/* If the dead node is the partition leader, go to
 			 * JOINING state
 			 */
@@ -2654,7 +2671,9 @@ ccm_state_sent_memlistreq(enum ccm_type ccm_msg_type,
 		return;
 	}
 
-	if(ccm_msg_type ==  CCM_TYPE_PROTOVERSION) goto switchstatement;
+	if(ccm_msg_type ==  CCM_TYPE_PROTOVERSION) {
+		goto switchstatement;
+	}
 
 	if(strncmp(CCM_GET_COOKIE(info), ha_msg_value(reply, CCM_COOKIE), 
 				COOKIESIZE) != 0){
@@ -2873,7 +2892,9 @@ switchstatement:
 			 * exchange than just neglect it 
 			 */
 			if(!update_is_member(CCM_GET_UPDATETABLE(info), 
-					CCM_GET_LLM(info), orig)) break;
+					     CCM_GET_LLM(info), orig)) {
+				break;
+			}
 			
 			/* if this node had sent a memlist before dying,
 			 * reset its memlist information */
@@ -2951,7 +2972,9 @@ ccm_state_memlist_res(enum ccm_type ccm_msg_type,
 		return;
 	}
 
-	if(ccm_msg_type ==  CCM_TYPE_PROTOVERSION) goto switchstatement;
+	if(ccm_msg_type ==  CCM_TYPE_PROTOVERSION) {
+		goto switchstatement;
+	}
 
 	if(strncmp(CCM_GET_COOKIE(info), ha_msg_value(reply, CCM_COOKIE), 
 				COOKIESIZE) != 0){
@@ -3322,7 +3345,9 @@ ccm_state_joining(enum ccm_type ccm_msg_type,
 		return;
 	}
 
-	if(ccm_msg_type ==  CCM_TYPE_PROTOVERSION) goto switchstatement;
+	if(ccm_msg_type ==  CCM_TYPE_PROTOVERSION) {
+		goto switchstatement;
+	}
 
 	if(strncmp(CCM_GET_COOKIE(info), ha_msg_value(reply, CCM_COOKIE), 
 			COOKIESIZE) != 0){
@@ -3766,9 +3791,15 @@ ccm_handle_hbapiclstat(ccm_info_t *info,
 		return NULL;
 	}
 
-	if(!orig) return NULL;
+	if(!orig){
+		return NULL;
+	}
+
 	uuid = llm_get_uuid(CCM_GET_LLM(info), orig);
-	if(uuid == -1) return NULL;
+	if(uuid == -1) {
+		return NULL;
+	}
+
 	return(ccm_create_leave_msg(info, uuid));
 }
 
@@ -3792,7 +3823,10 @@ ccm_handle_shutdone(ccm_info_t *info,
 		return NULL;
 	}
 	uuid = llm_get_uuid(CCM_GET_LLM(info), orig);
-	if(uuid == -1) return timeout_msg_mod(info);
+	if(uuid == -1) {
+		return timeout_msg_mod(info);
+	}
+
 	return(ccm_create_leave_msg(info, uuid));
 }
 
@@ -3963,7 +3997,9 @@ repeat:
 		return(1);
 	}
 
-	if(ccm_msg_type != CCM_TYPE_TIMEOUT) ha_msg_del(reply);
+	if(ccm_msg_type != CCM_TYPE_TIMEOUT) {
+		ha_msg_del(reply);
+	}
 
 	/* If there is another message in the channel, process it now. */
 	if (hb->llc_ops->msgready(hb))
@@ -3994,8 +4030,9 @@ ccm_need_control(void *data)
 	ccm_info_t *info =  (ccm_info_t *)((ccm_t *)data)->info;
 
 	if(leave_any() || 
-		CCM_GET_STATE(info) != CCM_STATE_JOINED)
+	   CCM_GET_STATE(info) != CCM_STATE_JOINED){
 			return TRUE;
+	}
 	return FALSE;
 }
 
@@ -4211,10 +4248,11 @@ static void append_change_msg(ccm_info_t *info, const char *node)
 
 static int received_all_change_msg(ccm_info_t *info)
 {
-	if(info->change_event_remaining_count == 0)
+	if(info->change_event_remaining_count == 0){
 		return 1;
-	else
+	}else{
 		return 0;
+	}
 }
 
 static int is_expected_change_msg(ccm_info_t *info, const char *node,enum change_event_type type)
@@ -4434,7 +4472,9 @@ static void ccm_state_wait_for_mem_list(enum ccm_type ccm_msg_type,
 			break;
 
 		case CCM_TYPE_LEAVE:
-			if(ccm_get_membership_index(info, orig) == -1) break;
+			if(ccm_get_membership_index(info, orig) == -1) {
+				break;
+			}
 
 			/* if the dead node is leader, jump to CCM state machine */
 			if(ccm_get_membership_index(info, orig) == CCM_GET_CL(info)){
@@ -4852,7 +4892,9 @@ static void ccm_state_new_node_wait_for_mem_list(enum ccm_type ccm_msg_type,
 			break;		
 
 		case CCM_TYPE_LEAVE:
-			if(ccm_get_membership_index(info, orig) == -1) break;
+			if(ccm_get_membership_index(info, orig) == -1) {
+				break;
+			}
 			
 			/* if the dead node is leader, jump to CCM state machine */
 			if(ccm_get_membership_index(info, orig) == CCM_GET_CL(info)){

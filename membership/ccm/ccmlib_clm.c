@@ -149,10 +149,12 @@ saClmInitialize(SaClmHandleT *clmHandle, const SaClmCallbacksT *clmCallbacks,
 	oc_ev_register(&ev_token);
 	if ((ret = oc_ev_set_callback(ev_token, OC_EV_MEMB_CLASS
 	,	ccm_events, NULL)) != 0) {
-		if (ret == ENOMEM)
+		if (ret == ENOMEM){
 			return SA_ERR_NO_MEMORY;
-		else
+		}
+		else{
 			assert(0);	/* Never runs here */
+		}
 	}
 	/* We must call it to get non-quorum partition info */
 	oc_ev_special(ev_token, OC_EV_MEMB_CLASS, 0);
@@ -160,17 +162,20 @@ saClmInitialize(SaClmHandleT *clmHandle, const SaClmCallbacksT *clmCallbacks,
 	clm_init();
 
 	phd = (__clm_handle_t **)g_malloc(sizeof(__clm_handle_t *));
-	if (!phd)
+	if (!phd){
 		return SA_ERR_NO_MEMORY;
+	}
 
 	hash_key = (SaClmHandleT *)g_malloc(sizeof(SaClmHandleT));
-	if (!hash_key)
+	if (!hash_key){
 		return SA_ERR_NO_MEMORY;
+	}
 
 	*phd = (__clm_handle_t *)g_malloc(sizeof(__clm_handle_t));
 	hd = *phd;
-	if (!hd)
+	if (!hd){
 		return SA_ERR_NO_MEMORY;
+	}
 
 	*clmHandle = __handle_counter++;
 	*hash_key = *clmHandle;
@@ -220,8 +225,9 @@ saClmSelectionObjectGet(const SaClmHandleT *clmHandle,
 {
 	__clm_handle_t *hd = GET_CLM_HANDLE(clmHandle);
 
-	if (!hd)
+	if (!hd){
 		return SA_ERR_BAD_HANDLE;
+	}
 
 	*selectionObject = hd->fd;
 
@@ -358,12 +364,14 @@ saClmDispatch(const SaClmHandleT *clmHandle,
 	uint itemnum;
 	__clm_handle_t *hd = GET_CLM_HANDLE(clmHandle);
 
-	if (!hd)
+	if (!hd){
 		return SA_ERR_BAD_HANDLE;
+	}
 
 	if ((ret = oc_ev_handle_event(hd->ev_token)) != 0) {
-		if (ret == EINVAL)
+		if (ret == EINVAL){
 			return SA_ERR_BAD_HANDLE;
+		}
 
 		/* else we must be evicted */
 	}
@@ -383,13 +391,15 @@ saClmDispatch(const SaClmHandleT *clmHandle,
 		,	__ccm_event);
 		return SA_OK;
 	}
-	if (!__ccm_data)
+	if (!__ccm_data){
 		return SA_ERR_INIT;
+	}
 
 	oc = __ccm_data;
 
-	if(CLM_TRACK_STOP == hd->trackflags)
+	if(CLM_TRACK_STOP == hd->trackflags){
 		return SA_OK;
+	}
 
 	/* SA_TRACK_CURRENT is cleared in saClmClusterTrackStart, hence we 
 	 * needn't to deal with it now*/
@@ -455,8 +465,9 @@ saClmClusterTrackStart(const SaClmHandleT *clmHandle,
 {
 	__clm_handle_t *hd = GET_CLM_HANDLE(clmHandle);
 
-	if (!hd)
+	if (!hd){
 		return SA_ERR_BAD_HANDLE;
+	}
 
 	hd->trackflags = trackFlags;
 	hd->itemnum = numberOfItems;
@@ -469,8 +480,9 @@ saClmClusterTrackStart(const SaClmHandleT *clmHandle,
 		/* Clear SA_TRACK_CURRENT, it's no use since now. */
 		hd->trackflags &= ~SA_TRACK_CURRENT;
 
-		if (__ccm_data == NULL) 
+		if (__ccm_data == NULL) {
 			return SA_ERR_LIBRARY;
+		}
 		
 		oc = __ccm_data;
 		itemnum = oc->m_n_member;
@@ -496,8 +508,9 @@ saClmClusterTrackStop(const SaClmHandleT *clmHandle)
 {
 	__clm_handle_t *hd = GET_CLM_HANDLE(clmHandle);
 
-	if (!hd)
+	if (!hd){
 		return SA_ERR_BAD_HANDLE;
+	}
 
 	/* This is ugly. But we currently depends on OCF interface, we have
 	 * no choice. This should be fixed in the next version after we remove
@@ -572,12 +585,14 @@ saClmClusterNodeGet(SaClmNodeIdT nodeId, SaTimeT timeout,
 		return SA_ERR_INVALID_PARAM;
 	}
 	for (i = 0; i < timeout; i++) {
-		if (__ccm_data)
+		if (__ccm_data){
 			break;
+		}
 		sleep(1);
 	}
-	if (i == timeout)
+	if (i == timeout){
 		return SA_ERR_TIMEOUT;
+	}
 
 	pthread_lock();
 	ret = retrieve_node_buffer(nodeId, clusterNode);
@@ -598,8 +613,9 @@ saClmClusterNodeGetAsync(const SaClmHandleT *clmHandle,
 	int ret;
 	__clm_handle_t *hd = GET_CLM_HANDLE(clmHandle);
 
-	if (!hd)
+	if (!hd){
 		return SA_ERR_BAD_HANDLE;
+	}
 
 	if (!clusterNode) {
 		cl_log(LOG_ERR, "Invalid parameter clusterNode <%p>"

@@ -1,4 +1,4 @@
-/* $Id: ccmupdate.c,v 1.9 2004/08/29 03:01:14 msoffen Exp $ */
+/* $Id: ccmupdate.c,v 1.10 2005/02/17 19:08:20 gshi Exp $ */
 /* 
  * update.c: functions that track the votes during the voting protocol
  *
@@ -49,11 +49,11 @@ update_add_memlist_request(ccm_update_t *tab,
 	int i=0;
 
 	while((obj = (leader_info_t *)
-			g_slist_nth_data(UPDATE_GET_CLHEAD(tab),i++)) != NULL){
+	       g_slist_nth_data(UPDATE_GET_CLHEAD(tab),i++)) != NULL){
 		if(idx == obj->index) {
 			if(trans > obj->trans) {
 				cl_log(LOG_WARNING
-				,	"WARNING:update_add_memlist_request"
+				       ,	"WARNING:update_add_memlist_request"
 				" %s already added(updating)", node);
 				obj->trans = trans;
 			}
@@ -79,7 +79,10 @@ update_free_memlist_request(ccm_update_t *tab)
 	for (i = 0; i < g_slist_length(UPDATE_GET_CLHEAD(tab)); i++) {
 		obj = (leader_info_t *)g_slist_nth_data(
 				UPDATE_GET_CLHEAD(tab),i);
-		if(obj) g_free(obj);
+		if(obj) {
+			g_free(obj);
+		}
+
 	}
 	g_slist_free(UPDATE_GET_CLHEAD(tab));
 	UPDATE_SET_CLHEAD(tab, NULL);
@@ -108,7 +111,10 @@ update_next_link(ccm_update_t *tab, llm_info_t *llm, void *tr, uint *trans)
 	GSList **track = (GSList **)tr;
 
 	node = (leader_info_t *)g_slist_nth_data((*track),0);
-	if(node==NULL) return NULL;
+	if(node==NULL) {
+		return NULL;
+	}
+
 	*trans = node->trans;
 	*track = g_slist_next(*track);
 	return (LLM_GET_NODEID(llm, node->index));
@@ -177,7 +183,10 @@ update_timeout_expired(ccm_update_t *tab, unsigned long timeout)
 int
 update_any(ccm_update_t *tab)
 {
-	if (UPDATE_GET_LEADER(tab) == -1) return FALSE;
+	if (UPDATE_GET_LEADER(tab) == -1) {
+		return FALSE;
+	}
+
 	return TRUE;
 }
 
@@ -193,32 +202,52 @@ update_compute_leader(ccm_update_t *tab, uint j, llm_info_t *llm)
 
 	int leader = tab->leader;
 
-	if(leader == -1) return j;
+	if(leader == -1) {
+		return j;
+	}
 
 	entry1 = &(tab->update[j]);
 
 	entry2 = &(tab->update[leader]);
 
-	if (entry2 == NULL) return j;	
-	if (entry1 == NULL) return leader;
+	if (entry2 == NULL) {
+		return j;	
+	}
+
+	if (entry1 == NULL) {
+		return leader;
+	}
 
 	if ((entry2->uptime == 0)  
-		&&  (entry1->uptime == 0)) goto leader_str;
+	    &&  (entry1->uptime == 0)) {
+		goto leader_str;
+	}
 
-	if (entry1->uptime == 0) return leader;
+	if (entry1->uptime == 0) {
+		return leader;
+	}
 
-	if (entry2->uptime == 0) return j;
+	if (entry2->uptime == 0) {
+		return j;
+	}
 
-	if (entry2->uptime < entry1->uptime) return leader;
+	if (entry2->uptime < entry1->uptime) {
+		return leader;
+	}
 
-	if (entry2->uptime > entry1->uptime) return j;
+	if (entry2->uptime > entry1->uptime) {
+		return j;
+	}
 
 leader_str :
 	value =  llm_nodeid_cmp(llm, entry2->index, entry1->index);
 
 	assert(value != 0);
 
-	if (value < 0) return leader;
+	if (value < 0) {
+		return leader;
+	}
+
 	return j;
 }
 
@@ -232,17 +261,22 @@ update_find_leader(ccm_update_t *tab, llm_info_t *llm)
 	uint i, leader, j;
 
 	for ( i = 0 ; i < LLM_GET_NODECOUNT(llm); i++ ){
-		if (UPDATE_GET_INDEX(tab, i) != -1) break;
+		if (UPDATE_GET_INDEX(tab, i) != -1) {
+			break;
+		}
 	}
 
 	leader = i;
 
 	for ( j = i+1 ; j < LLM_GET_NODECOUNT(llm); j++ ){
 
-		if (UPDATE_GET_INDEX(tab, j) == -1) continue;
+		if (UPDATE_GET_INDEX(tab, j) == -1){
+			continue;
+		}
 
-		if(update_compute_leader(tab, j, llm) == j)
+		if(update_compute_leader(tab, j, llm) == j){
 			leader = j;
+		}
 	}
 	return leader;
 }
@@ -258,14 +292,21 @@ update_get_index(ccm_update_t *tab,
 	uint j;
 
 	i = llm_get_index(llm, orig);
-	if ( i == -1 ) return -1;
+	if ( i == -1 ){
+		return -1;
+	}
 
 	/* search for the index in the update table */
 	for ( j = 0 ; j < LLM_GET_NODECOUNT(llm); j++ ){
-		if (UPDATE_GET_INDEX(tab,j) == i ) break;
+		if (UPDATE_GET_INDEX(tab,j) == i ){
+			break;
+		}
 	}
 
-	if ( j == LLM_GET_NODECOUNT(llm)) return -1;
+	if ( j == LLM_GET_NODECOUNT(llm)){
+		return -1;
+	}
+
 	return j;
 }
 
@@ -279,10 +320,12 @@ update_get_uptime(ccm_update_t *tab,
 
 	for ( j = 0 ; j < LLM_GET_NODECOUNT(llm); j++ ){
 		i = UPDATE_GET_INDEX(tab,j);
-		if (i == -1)
+		if (i == -1){
 			continue;
-		if (i == idx) 
+		}
+		if (i == idx) {
 			return UPDATE_GET_UPTIME(tab,j);
+		}
 		count++;
 		if(count >= UPDATE_GET_NODECOUNT(tab)){
 			return -1;
@@ -299,7 +342,9 @@ update_is_member(ccm_update_t *tab,
 		llm_info_t *llm,
 		const char *orig)
 {
-	if(update_get_index(tab, llm, orig) == -1 ) return FALSE;
+	if(update_get_index(tab, llm, orig) == -1 ){
+		return FALSE;
+	}
 	return TRUE;
 }
 	
@@ -336,7 +381,9 @@ update_add(ccm_update_t *tab,
 	 * entries.
 	 */
 	for ( j = 0 ; j < LLM_GET_NODECOUNT(llm); j++ ){
-		if (UPDATE_GET_INDEX(tab,j) == -1 ) break;
+		if (UPDATE_GET_INDEX(tab,j) == -1 ){
+			break;
+		}
 
 		/* check if this update is a duplicate update from the same node
 		 * This should not happen. But never know! 
@@ -362,9 +409,9 @@ update_add(ccm_update_t *tab,
 	/* increment the nodecount */
 	UPDATE_INCR_NODECOUNT(tab);
 
-	if(leader_flag) 
+	if(leader_flag) {
 		UPDATE_SET_LEADER(tab, update_compute_leader(tab, j, llm));
-
+	}
 	return;
 }
 
@@ -398,7 +445,9 @@ update_remove(ccm_update_t *tab,
 			!= NULL) {
 		if(obj->index == idx){
 			tab->cl_head = g_slist_remove(tab->cl_head, obj);
-		} else i++;
+		} else {
+			i++;
+		}
 	}
 
 	/* recalculate the new leader if leader's entry is being removed*/
@@ -458,9 +507,13 @@ update_get_next_uuid(ccm_update_t *tab, llm_info_t *llm, int *lastindex)
 	indx = (*lastindex == -1 ? 0 : *lastindex);
 
 	while (UPDATE_GET_INDEX(tab,indx) == -1 && 
-			indx < LLM_GET_NODECOUNT(llm)) indx++;
-	if (indx == LLM_GET_NODECOUNT(llm)) return -1;
-				
+	       indx < LLM_GET_NODECOUNT(llm)){ 
+		indx++;
+	}
+	if (indx == LLM_GET_NODECOUNT(llm)) {
+		return -1;
+	}
+	
 	*lastindex = indx+1;
 	
 	return(LLM_GET_UUID(llm,UPDATE_GET_INDEX(tab,indx)));
@@ -491,7 +544,9 @@ update_strcreate(ccm_update_t *tab,
 	for ( i = 0 ; i < LLM_GET_NODECOUNT(llm); i ++ ) {
 		/* get the index of the node in the llm table */
 		indx = UPDATE_GET_INDEX(tab,i);
-		if (indx == -1) continue;
+		if (indx == -1){
+			continue;
+		}
 
 		/* get the uuid of the node from the llm table */
 		uuid = LLM_GET_UUID(llm,indx);
