@@ -1,4 +1,4 @@
-/* $Id: ccmlib_memapi.c,v 1.25 2005/02/17 19:08:20 gshi Exp $ */
+/* $Id: ccmlib_memapi.c,v 1.26 2005/02/21 18:09:26 gshi Exp $ */
 /* 
  * ccmlib_memapi.c: Consensus Cluster Membership API
  *
@@ -599,8 +599,21 @@ mem_handle_event(class_t *class)
 		case CCM_EVICTED:
 			oc_type = OC_EV_MS_EVICTED;
 			private->client_report = TRUE;
-			/* FALL THROUGH */
+			
+			size = 0;
+			mbr_track = NULL;
 
+			if (private->cookie){
+				cookie_unref(private->cookie);
+			}
+			cookie= cookie_construct(mem_callback_done, NULL,NULL);
+			if ( cookie == NULL){
+				cl_log(LOG_ERR, "mem_handle_event: coookie construction failed");
+				abort();
+			}
+			private->cookie=cookie;
+			break;
+			
 		case CCM_INFLUX:
 
 			if(type==CCM_INFLUX){
