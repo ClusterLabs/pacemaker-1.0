@@ -995,7 +995,6 @@ main (int argc, char**  argv)
 	int i;
 
 	extern char *optarg;
-	extern int optind, opterr, optopt;
 
 	/*default number of phase is 1*/
 	num_ites = 1; 
