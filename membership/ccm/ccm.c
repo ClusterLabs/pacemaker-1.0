@@ -1,4 +1,4 @@
-/* $Id: ccm.c,v 1.38 2004/02/17 22:12:00 lars Exp $ */
+/* $Id: ccm.c,v 1.39 2004/02/17 22:27:38 lars Exp $ */
 /* 
  * ccm.c: Consensus Cluster Service Program 
  *
@@ -4735,16 +4735,20 @@ static void ccm_state_new_node_wait_for_mem_list(enum ccm_type ccm_msg_type,
 static void ccm_fill_update_table(ccm_info_t *info,
 		ccm_update_t *update_table, const char *uptime_list)
 {
-	int * uptime, i;
+	int * uptime, i, size;
 	unsigned char *tmp_uptime;
 
-	(void)ccm_str2bitmap(uptime_list, &tmp_uptime);
-	uptime = (int *)tmp_uptime;
+	size = ccm_str2bitmap(uptime_list, &tmp_uptime);
+
+	uptime = (int *)g_malloc(size);
+	memcpy(uptime,tmp_uptime,size);
+
 	UPDATE_SET_NODECOUNT(update_table, info->ccm_nodeCount);
 	for (i = 0; i< info->ccm_nodeCount; i++){
 		update_table->update[i].index = info->ccm_member[i];
 		update_table->update[i].uptime = uptime[i];
 	}
+	g_free(uptime);
 	g_free(tmp_uptime);
 }
 
