@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.353 2005/02/14 21:06:11 gshi Exp $ */
+/* $Id: heartbeat.c,v 1.354 2005/02/17 17:24:26 alan Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -1878,8 +1878,8 @@ HBDoMsg_T_ACKMSG(const char * type, struct node_info * fromnode,
 	fromnode->track.ackseq = ackseq;
 	
 	if (hist->lowest_acknode != NULL &&
-	    strncmp(hist->lowest_acknode->status, 
-		    DEADSTATUS, STATUSLENG) == 0){
+	    STRNCMP_CONST(hist->lowest_acknode->status, 
+		    DEADSTATUS) == 0){
 		/* the lowest acked node is dead
 		 * we cannnot count on that node 
 		 * to update our ackseq
@@ -1899,8 +1899,8 @@ HBDoMsg_T_ACKMSG(const char * type, struct node_info * fromnode,
 		for (i = 0; i < config->nodecount; i++){
 			struct node_info* hip = &config->nodes[i];
 			
-			if (strncmp(hip->status,DEADSTATUS,STATUSLENG) ==0
-			    || strncmp(hip->status,INITSTATUS,STATUSLENG) ==0 ){
+			if (STRNCMP_CONST(hip->status,DEADSTATUS) == 0
+			||	STRNCMP_CONST(hip->status, INITSTATUS) == 0){
 				
 				if (hist->lowest_acknode == hip){
 					hist->lowest_acknode = NULL;
@@ -5000,6 +5000,9 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.354  2005/02/17 17:24:26  alan
+ * Changed some code to use STRNCMP_CONST to get rid of some BEAM complaints...
+ *
  * Revision 1.353  2005/02/14 21:06:11  gshi
  * BEAM fix:
  *
