@@ -640,12 +640,6 @@ api_process_request(client_proc_t* fromclient, struct ha_msg * msg)
 		/* Is this too restrictive? */
 		/* We also put their client ID info in the packet as F_TOID */
 
-		/* XXX
-		 * It appears this *is* too restrictive for use with
-		 * CRM. We'll clean this up soon and then also fix the
-		 * comment at the top of this file. (lmb 2004-01-14)
-		 */
-
 		/*
 		 * N.B.:  This restriction exists because of security concerns
 		 * It would be imprudent to remove it without a lot
