@@ -1,4 +1,4 @@
-/* $Id: replica.c,v 1.13 2004/04/07 17:22:16 alan Exp $ */
+/* $Id: replica.c,v 1.14 2004/04/17 16:46:16 alan Exp $ */
 /* 
  * replica.c: 
  *
@@ -1397,7 +1397,7 @@ SaCkptSectionCreate(SaCkptReplicaT* replica,
 	if (sec != NULL) {
 		cl_log(LOG_ERR,
 			"Section create failed, section %d already existed",
-			*(int*)sec->sectionID.id);
+			(int)(*sec->sectionID.id));
 		return SA_ERR_EXIST;
 	}
 
