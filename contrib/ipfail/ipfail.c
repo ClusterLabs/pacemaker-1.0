@@ -1,4 +1,4 @@
-/* $Id: ipfail.c,v 1.29 2004/04/20 20:16:29 msoffen Exp $ */
+/* $Id: ipfail.c,v 1.30 2004/04/21 15:41:49 kevin Exp $ */
 /* ipfail: IP Failover plugin for Linux-HA
  *
  * Copyright (C) 2002-2003 Kevin Dwyer <kevin@pheared.net>
@@ -71,11 +71,11 @@ int auto_failback;         /* How is our auto_failback configured?    */
 GMainLoop *mainloop;       /* Reference to the mainloop for events    */
 guint delay_giveup_tag = 0;/* Our delay timer                         */
 
-ll_cluster_t *hb;
 int
 main(int argc, char **argv)
 {
 	unsigned fmask;
+	ll_cluster_t *hb;
 	char pid[10];
 	char *bname, *parameter;
 	int apifd;
