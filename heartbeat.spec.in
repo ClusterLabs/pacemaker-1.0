@@ -1,4 +1,4 @@
-#	$Id: heartbeat.spec.in,v 1.93 2004/08/30 19:27:43 alan Exp $
+#	$Id: heartbeat.spec.in,v 1.94 2004/08/31 21:46:32 alan Exp $
 
 # Workaround for a change in RPM 4.1.x; needs proper fixing soon!
 ##%define _unpackaged_files_terminate_build 0
@@ -811,6 +811,8 @@ install -m 644 rc.config.heartbeat $TEMPL
 %attr (600, root, root)       @localstatedir@/lib/@HB_PKG@/fifo
 %dir %attr (750, root, @HA_APIGROUP@) @localstatedir@/lib/@HB_PKG@/api
 %attr (755, @HA_CCMUSER@, @HA_APIGROUP@) @localstatedir@/lib/@HB_PKG@/ccm
+%attr (4755, @HA_CCMUSER@, @HA_APIGROUP@) @bindir@/cl_status
+@bindir@/cl_respawn
 
 @RPM_FILES_CKPT@
 @RPM_FILES_CMS@
