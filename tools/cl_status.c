@@ -655,7 +655,7 @@ rscstatus(ll_cluster_t *hb, int argc, char ** argv, const char * optstr)
 	} else {
 		printf("%s", rstatus);
 	}
-	return 1;
+	return 0;
 }
 
 static int
