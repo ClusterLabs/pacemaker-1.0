@@ -44,8 +44,7 @@ hadate() {
 ha_log() {
 	if [ "x${HA_LOGD}" = "xyes" ] ; then 
 		${HA_BIN}/ha_logger ha-log "${*}"
-		rc=$?
-		if [ "$rc" -eq "0" ] ; then
+		if [ "$?" -eq "0" ] ; then
 			return 0
 		fi
 	fi
@@ -85,8 +84,7 @@ ha_debug() {
 
         if [ "x${HA_LOGD}" = "xyes" ] ; then  
                 ${HA_BIN}/ha_logger ha-debug "${*}"
-                rc=$?
-                if [ "$rc" -eq "0" ] ; then
+                if [ "$?" -eq "0" ] ; then
                         return 0
                 fi
         fi
