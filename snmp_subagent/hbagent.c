@@ -968,7 +968,7 @@ main(int argc, char ** argv)
 
 	fd_set fdset;
 	struct timeval tv, *tvp;
-	int flag, block, numfds, hb_fd = 0, mem_fd = 0;
+	int flag, block = 0, numfds, hb_fd = 0, mem_fd = 0;
 
 	/* change this if you want to be a SNMP master agent */
 	int agentx_subagent=1; 
@@ -1075,13 +1075,16 @@ main(int argc, char ** argv)
 		}
 
 		tvp = &tv;
+		tv.tv_sec = DEFAULT_TIME_OUT;
+		tv.tv_usec = 0;
 
 		snmp_select_info(&numfds, &fdset, &tv, &block);
 
 		if (block) {
 			tvp = NULL;
-		} if (tvp->tv_sec == 0) {
+		} else if (!timerisset(tvp)) {
 		    tvp->tv_sec = DEFAULT_TIME_OUT;
+		    tvp->tv_usec = 0;
 		}
 
 		ret = select(numfds, &fdset, 0, 0, tvp);
