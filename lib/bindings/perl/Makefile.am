@@ -35,7 +35,7 @@ cl_raw/cl_raw.pm: cl_raw/cl_raw.i
 	$(SWIG) $(SWIG_OPTIONS) $(INCLUDES) -perl -outdir cl_raw $^
 
 install-data-local:
-	$(MAKE) -fMakefile.perl PREFIX=$(prefix) install
+	$(MAKE) -fMakefile.perl PREFIX=$(prefix) $(PERL_INSTALL_TARGET)
 
 CLEANFILES = .made_mod cl_raw/cl_raw.pm cl_raw/cl_raw_wrap.c
 
