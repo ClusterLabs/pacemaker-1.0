@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.347 2005/01/28 00:19:52 gshi Exp $ */
+/* $Id: heartbeat.c,v 1.348 2005/02/07 18:14:49 gshi Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -2548,6 +2548,15 @@ ManagedChildDied(ProcTrack* p, int status, int signo, int exitcode
 	}
 	p->privatedata = NULL;
 	if (shutdown_in_progress) {
+                if (g_list_find(config->client_list, managedchild) != NULL){
+			/* this child died unexpectedly,
+			 * remove it from list and return
+			 */
+			config->client_list = g_list_remove(config->client_list, 
+							managedchild);
+			return; 
+		}
+
 		if (!shutdown_last_client_child(SIGTERM)) {
 			if (managed_child_count != 0)  {
 				cl_log(LOG_ERR
@@ -2555,7 +2564,7 @@ ManagedChildDied(ProcTrack* p, int status, int signo, int exitcode
 				,	managed_child_count);
 				managed_child_count = 0;
 			}
-			/* Trigger next shutdown phase */
+                       /* Trigger next shutdown phase */
 			hb_mcp_final_shutdown(NULL); /* phase 1 (last child died) */
 		}
 	}
@@ -4986,6 +4995,14 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.348  2005/02/07 18:14:49  gshi
+ * fix for shutdown
+ *
+ * sometimes an "Emertency Shutdown" error message may appear in normal shutdown
+ * This is due to a child (ccm) died in the shutdown process but the master process
+ * has not enter shutdown state machine yet. This will result in calling hb_mcp_final_shutdown()
+ * too many times.
+ *
  * Revision 1.347  2005/01/28 00:19:52  gshi
  * fixed a bug: a node should only process ACK message with dest to it
  * not all of them.
