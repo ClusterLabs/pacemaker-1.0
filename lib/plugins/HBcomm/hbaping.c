@@ -110,31 +110,6 @@ static int		hbaping_isping(void);
 #define		ISPINGOBJECT(mp)	((mp) && ((mp)->vf == (void*)&hbapingOps))
 #define		PINGASSERT(mp)	g_assert(ISPINGOBJECT(mp))
 
-/*
- * pingclose is called as part of unloading the ping HBcomm plugin.
- * If there was any global data allocated, or file descriptors opened, etc.
- * which is associated with the plugin, and not a single interface
- * in particular, here's our chance to clean it up.
- */
-
-static void
-hbapingclosepi(PILPlugin*pi)
-{
-}
-
-
-/*
- * pingcloseintf called as part of shutting down the ping HBcomm interface.
- * If there was any global data allocated, or file descriptors opened, etc.
- * which is associated with the ping implementation, here's our chance
- * to clean it up.
- */
-static PIL_rc
-hbapingcloseintf(PILInterface* pi, void* pd)
-{
-	return PIL_OK;
-}
-
 static struct hb_media_fns hbapingOps ={
 	hbaping_new,	/* Create single object function */
 	NULL,		/* whole-line parse function */
@@ -147,7 +122,7 @@ static struct hb_media_fns hbapingOps ={
 	hbaping_isping,
 };
 
-PIL_PLUGIN_BOILERPLATE("1.0", Debug, hbapingclosepi);
+PIL_PLUGIN_BOILERPLATE2("1.0", Debug);
 
 static const PILPluginImports*  PluginImports;
 static PILPlugin*               OurPlugin;
@@ -179,7 +154,7 @@ PIL_PLUGIN_INIT(PILPlugin*us, const PILPluginImports* imports)
  	return imports->register_interface(us, PIL_PLUGINTYPE_S
 	,	PIL_PLUGIN_S
 	,	&hbapingOps
-	,	hbapingcloseintf		/*close */
+	,	NULL		/*close */
 	,	&OurInterface
 	,	(void*)&OurImports
 	,	interfprivate); 

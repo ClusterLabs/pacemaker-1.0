@@ -1,4 +1,4 @@
-/* $Id: sha1.c,v 1.12 2004/06/18 03:05:36 alan Exp $ */
+/* $Id: sha1.c,v 1.13 2004/10/06 10:55:17 lars Exp $ */
 /*
 SHA-1 in C
 By Steve Reid <steve@edmweb.com>
@@ -61,29 +61,7 @@ static struct HBAuthOps sha1Ops =
 ,	sha1_auth_needskey
 };
 
-/*
- * sha1close is called as part of shutting down the sha1 HBauth plugin.
- * If there was any global data allocated, or file descriptors opened, etc.
- * which is associated with the plugin, and not a single interface
- * in particular, here's our chance to clean it up.
- */
-
-static void sha1closepi(PILPlugin*pi)
-{
-}
-
-
-/*
- * sha1closeintf called as part of shutting down the sha1 HBauth interface.
- * If there was any global data allocated, or file descriptors opened, etc.
- * which is associated with the sha1 implementation, here's our chance
- * to clean it up.
- */
-static PIL_rc sha1closeintf(PILInterface* pi, void* pd)
-{
-	return PIL_OK;
-}
-PIL_PLUGIN_BOILERPLATE("1.0", Debug, sha1closepi);
+PIL_PLUGIN_BOILERPLATE2("1.0", Debug);
 static const PILPluginImports*  PluginImports;
 static PILPlugin*               OurPlugin;
 static PILInterface*		OurInterface;
@@ -113,7 +91,7 @@ PIL_PLUGIN_INIT(PILPlugin*us, const PILPluginImports* imports)
 	/*  Register our interfaces */
  	return imports->register_interface(us, PIL_PLUGINTYPE_S,  PIL_PLUGIN_S
 	,	&sha1Ops
-	,	sha1closeintf		/*close */
+	,	NULL		/*close */
 	,	&OurInterface
 	,	&OurImports
 	,	interfprivate); 

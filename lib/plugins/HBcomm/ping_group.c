@@ -1,4 +1,4 @@
-/* $Id: ping_group.c,v 1.11 2004/06/16 07:38:54 horms Exp $ */
+/* $Id: ping_group.c,v 1.12 2004/10/06 10:55:17 lars Exp $ */
 /*
  * ping_group.c: ICMP-echo-based heartbeat code for heartbeat.
  *
@@ -135,31 +135,6 @@ static int		ping_group_isping(void);
 			((mp) && ((mp)->vf == (void*)&ping_group_ops))
 #define		PINGGROUPASSERT(mp)	g_assert(ISPINGGROUPOBJECT(mp))
 
-/*
- * pingclose is called as part of unloading the ping HBcomm plugin.
- * If there was any global data allocated, or file descriptors opened, etc.
- * which is associated with the plugin, and not a single interface
- * in particular, here's our chance to clean it up.
- */
-
-static void
-ping_group_close_pi(PILPlugin*pi)
-{
-}
-
-
-/*
- * ping_group_close_intf called as part of shutting down the ping HBcomm interface.
- * If there was any global data allocated, or file descriptors opened, etc.
- * which is associated with the ping implementation, here's our chance
- * to clean it up.
- */
-static PIL_rc
-ping_group_close_intf(PILInterface* pi, void* pd)
-{
-	return PIL_OK;
-}
-
 static struct hb_media_fns ping_group_ops ={
 	NULL,		  /* Create single object function */
 	ping_group_parse, /* whole-line parse function */
@@ -172,7 +147,7 @@ static struct hb_media_fns ping_group_ops ={
 	ping_group_isping,
 };
 
-PIL_PLUGIN_BOILERPLATE("1.0", Debug, ping_group_close_pi);
+PIL_PLUGIN_BOILERPLATE2("1.0", Debug);
 
 static const PILPluginImports*  PluginImports;
 static PILPlugin*               OurPlugin;
@@ -204,7 +179,7 @@ PIL_PLUGIN_INIT(PILPlugin*us, const PILPluginImports* imports)
  	return imports->register_interface(us, PIL_PLUGINTYPE_S
 	,	PIL_PLUGIN_S
 	,	&ping_group_ops
-	,	ping_group_close_intf		/*close */
+	,	NULL		/*close */
 	,	&OurInterface
 	,	(void*)&OurImports
 	,	interfprivate); 

@@ -1,4 +1,4 @@
-/* $Id: md5.c,v 1.11 2004/09/10 01:55:42 alan Exp $ */
+/* $Id: md5.c,v 1.12 2004/10/06 10:55:17 lars Exp $ */
 /*
  * This code implements the MD5 message-digest algorithm.
  * The algorithm is due to Ron Rivest.  This code was
@@ -50,32 +50,7 @@ static struct HBAuthOps md5ops =
 ,	md5_auth_needskey
 };
 
-/*
- * The following two functions are only exported to the plugin infrastructure.
- */
-
-/*
- * md5close is called as part of shutting down the md5 HBauth plugin.
- * If there was any global data allocated, or file descriptors opened, etc.
- * which is associated with the plugin, and not a single interface
- * in particular, here's our chance to clean it up.
- */
-static void md5closepi(PILPlugin* pi)
-{
-}
-
-/*
- * md5closeintf called as part of shutting down the md5 HBauth interface.
- * If there was any global data allocated, or file descriptors opened, etc.
- * which is associated with the md5 implementation, here's our chance
- * to clean it up.
- */
-static PIL_rc md5closeintf(PILInterface* pi, void* pd)
-{
-	return PIL_OK;
-}
-
-PIL_PLUGIN_BOILERPLATE("1.0", Debug, md5closepi);
+PIL_PLUGIN_BOILERPLATE2("1.0", Debug);
 
 static const PILPluginImports*  PluginImports;
 static PILPlugin*               OurPlugin;
@@ -106,7 +81,7 @@ PIL_PLUGIN_INIT(PILPlugin*us, const PILPluginImports* imports)
 	/*  Register our interfaces */
  	return imports->register_interface(us, PIL_PLUGINTYPE_S,  PIL_PLUGIN_S
 	,	&md5ops
-	,	md5closeintf		/*close */
+	,	NULL		/*close */
 	,	&OurInterface
 	,	&OurImports
 	,	interfprivate); 

@@ -1,4 +1,4 @@
-/* $Id: generic.c,v 1.22 2004/10/05 14:26:16 lars Exp $ */
+/* $Id: generic.c,v 1.23 2004/10/06 10:55:17 lars Exp $ */
 /*
  * 
  * Generic interface (implementation) manager
@@ -61,8 +61,6 @@
 #include <pils/generic.h>
 
 #include <stdio.h>
-
-static void CloseGeneralPluginManager(PILPlugin* us);
 
 PIL_PLUGIN_BOILERPLATE("1.0", GenDebugFlag, CloseGeneralPluginManager)
 

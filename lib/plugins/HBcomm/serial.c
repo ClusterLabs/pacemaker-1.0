@@ -1,4 +1,4 @@
-/* $Id: serial.c,v 1.36 2004/06/18 03:06:42 alan Exp $ */
+/* $Id: serial.c,v 1.37 2004/10/06 10:55:17 lars Exp $ */
 /*
  * Linux-HA serial heartbeat code
  *
@@ -86,32 +86,6 @@ static int		serial_descr(char **buffer);
 static int		serial_isping(void);
 
 
-/*
- * serialclosepi is called as part of unloading the serial HBcomm plugin.
- * If there was any global data allocated, or file descriptors opened, etc.
- * which is associated with the plugin, and not a single interface
- * in particular, here's our chance to clean it up.
- */
-
-static void
-serialclosepi(PILPlugin*pi)
-{
-	serial_localdie();
-}
-
-
-/*
- * serialcloseintf called as part of shutting down the serial HBcomm interface.
- * If there was any global data allocated, or file descriptors opened, etc.
- * which is associated with the serial implementation, here's our chance
- * to clean it up.
- */
-static PIL_rc
-serialcloseintf(PILInterface* pi, void* pd)
-{
-	return PIL_OK;
-}
-
 static struct hb_media_fns serialOps ={
 	serial_new,	/* Create single object function */
 	NULL,		/* whole-line parse function */
@@ -124,7 +98,7 @@ static struct hb_media_fns serialOps ={
 	serial_isping,
 };
 
-PIL_PLUGIN_BOILERPLATE("1.0", Debug, serialclosepi);
+PIL_PLUGIN_BOILERPLATE2("1.0", Debug);
 static const PILPluginImports*  PluginImports;
 static PILPlugin*               OurPlugin;
 static PILInterface*		OurInterface;
@@ -156,7 +130,7 @@ PIL_PLUGIN_INIT(PILPlugin*us, const PILPluginImports* imports)
  	rc = imports->register_interface(us, PIL_PLUGINTYPE_S
 	,	PIL_PLUGIN_S
 	,	&serialOps
-	,	serialcloseintf		/*close */
+	,	NULL		/*close */
 	,	&OurInterface
 	,	(void*)&OurImports
 	,	interfprivate); 
@@ -703,6 +677,13 @@ ttygets(char * inbuf, int length, struct serial_private *tty)
 }
 /*
  * $Log: serial.c,v $
+ * Revision 1.37  2004/10/06 10:55:17  lars
+ * - Define PIL_PLUGIN_BOILERPLATE() as it used to be, which implies a
+ *   prototype for the closepi function.
+ * - Define PIL_PLUGIN_BOILERPLATE2() which just takes two arguments and
+ *   fills in NULL for all those plugins which don't use the closepi()
+ *   functionality.
+ *
  * Revision 1.36  2004/06/18 03:06:42  alan
  * Fixed some format items to match their format strings.
  *

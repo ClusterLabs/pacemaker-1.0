@@ -1,4 +1,4 @@
-/* $Id: mcast.c,v 1.20 2004/09/27 04:23:30 alan Exp $ */
+/* $Id: mcast.c,v 1.21 2004/10/06 10:55:17 lars Exp $ */
 /*
  * mcast.c: implements hearbeat API for UDP multicast communication
  *
@@ -77,31 +77,6 @@ static int		mcast_mtype(char** buffer);
 static int		mcast_isping(void);
 
 
-/*
- * mcastclose is called as part of unloading the mcast HBcomm plugin.
- * If there was any global data allocated, or file descriptors opened, etc.
- * which is associated with the plugin, and not a single interface
- * in particular, here's our chance to clean it up.
- */
-
-static void
-mcastclosepi(PILPlugin*pi)
-{
-}
-
-
-/*
- * mcastcloseintf called as part of shutting down the mcast HBcomm interface.
- * If there was any global data allocated, or file descriptors opened, etc.
- * which is associated with the mcast implementation, here's our chance
- * to clean it up.
- */
-static PIL_rc
-mcastcloseintf(PILInterface* pi, void* pd)
-{
-	return PIL_OK;
-}
-
 static struct hb_media_fns mcastOps ={
 	NULL,		/* Create single object function */
 	mcast_parse,	/* whole-line parse function */
@@ -114,7 +89,7 @@ static struct hb_media_fns mcastOps ={
 	mcast_isping,
 };
 
-PIL_PLUGIN_BOILERPLATE("1.0", Debug, mcastclosepi);
+PIL_PLUGIN_BOILERPLATE2("1.0", Debug);
 static const PILPluginImports*  PluginImports;
 static PILPlugin*               OurPlugin;
 static PILInterface*		OurInterface;
@@ -145,7 +120,7 @@ PIL_PLUGIN_INIT(PILPlugin*us, const PILPluginImports* imports)
  	return imports->register_interface(us, PIL_PLUGINTYPE_S
 	,	PIL_PLUGIN_S
 	,	&mcastOps
-	,	mcastcloseintf		/*close */
+	,	NULL		/*close */
 	,	&OurInterface
 	,	(void*)&OurImports
 	,	interfprivate); 
@@ -834,6 +809,13 @@ get_loop(const char *loop, u_char *l)
 
 /*
  * $Log: mcast.c,v $
+ * Revision 1.21  2004/10/06 10:55:17  lars
+ * - Define PIL_PLUGIN_BOILERPLATE() as it used to be, which implies a
+ *   prototype for the closepi function.
+ * - Define PIL_PLUGIN_BOILERPLATE2() which just takes two arguments and
+ *   fills in NULL for all those plugins which don't use the closepi()
+ *   functionality.
+ *
  * Revision 1.20  2004/09/27 04:23:30  alan
  * Put in some code to print out failure cases better, and also to
  * better diagnose bad configurations.

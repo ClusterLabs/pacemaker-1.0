@@ -1,4 +1,4 @@
-/* $Id: crc.c,v 1.7 2004/02/17 22:11:59 lars Exp $ */
+/* $Id: crc.c,v 1.8 2004/10/06 10:55:17 lars Exp $ */
 #include <portability.h> 
 #include <stdio.h> 
 #include <string.h> 
@@ -78,29 +78,7 @@ static unsigned long const crctab[256] =
 };
 
 
-/*
- * crcclose is called as part of shutting down the crc HBauth plugin.
- * If there was any global data allocated, or file descriptors opened, etc.
- * which is associated with the plugin, and not a single interface
- * in particular, here's our chance to clean it up.
- */
-
-static void crcclosepi(PILPlugin*pi)
-{
-}
-
-
-/*
- * crccloseintf called as part of shutting down the crc HBauth interface.
- * If there was any global data allocated, or file descriptors opened, etc.
- * which is associated with the crc implementation, here's our chance
- * to clean it up.
- */
-static PIL_rc crccloseintf(PILInterface* pi, void* pd)
-{
-	return PIL_OK;
-}
-PIL_PLUGIN_BOILERPLATE("1.0", Debug, crcclosepi);
+PIL_PLUGIN_BOILERPLATE2("1.0", Debug);
 static const PILPluginImports*  PluginImports;
 static PILPlugin*               OurPlugin;
 static PILInterface*		OurInterface;
@@ -130,7 +108,7 @@ PIL_PLUGIN_INIT(PILPlugin*us, const PILPluginImports* imports)
 	/*  Register our interfaces */
  	return imports->register_interface(us, PIL_PLUGINTYPE_S,  PIL_PLUGIN_S
 	,	&crcOps
-	,	crccloseintf		/*close */
+	,	NULL		/*close */
 	,	&OurInterface
 	,	&OurImports
 	,	interfprivate); 

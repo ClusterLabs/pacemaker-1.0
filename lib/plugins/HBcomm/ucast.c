@@ -1,4 +1,4 @@
-/* $Id: ucast.c,v 1.21 2004/05/11 22:04:35 alan Exp $ */
+/* $Id: ucast.c,v 1.22 2004/10/06 10:55:17 lars Exp $ */
 /*
  * Adapted from alanr's UDP broadcast heartbeat bcast.c by Stéphane Billiart
  *	<stephane@reefedge.com>
@@ -104,8 +104,6 @@ struct ip_private {
  */
 
 PIL_rc PIL_PLUGIN_INIT(PILPlugin *us, const PILPluginImports *imports);
-static void ucastclosepi(PILPlugin *pi);
-static PIL_rc ucastcloseintf(PILInterface *pi, void *pd);
 
 static int ucast_parse(const char *line);
 static struct hb_media* ucast_new(const char *intf, const char *addr);
@@ -150,7 +148,7 @@ static struct hb_media_fns ucastOps = {
 	ucast_isping
 };
 
-PIL_PLUGIN_BOILERPLATE("1.0", Debug, ucastclosepi);
+PIL_PLUGIN_BOILERPLATE2("1.0", Debug);
 static const PILPluginImports*  PluginImports;
 static PILPlugin*               OurPlugin;
 static PILInterface*		OurInterface;
@@ -176,18 +174,8 @@ PIL_rc PIL_PLUGIN_INIT(PILPlugin *us, const PILPluginImports *imports)
 
 	/*  Register our interface implementation */
  	return imports->register_interface(us, PIL_PLUGINTYPE_S,
-		PIL_PLUGIN_S, &ucastOps, ucastcloseintf,
+		PIL_PLUGIN_S, &ucastOps, NULL,
 		&OurInterface, (void*)&OurImports, interfprivate); 
-}
-
-static void ucastclosepi(PILPlugin *pi)
-{
-	return;
-}
-
-static PIL_rc ucastcloseintf(PILInterface *pi, void *pd)
-{
-	return PIL_OK;
 }
 
 static int ucast_parse(const char *line)

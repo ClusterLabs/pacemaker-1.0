@@ -1,4 +1,4 @@
-/* $Id: HBauth.c,v 1.10 2004/02/17 22:11:59 lars Exp $ */
+/* $Id: HBauth.c,v 1.11 2004/10/06 10:55:17 lars Exp $ */
 /*
  *	Heartbeat authentication interface manager
  *
@@ -36,7 +36,7 @@
 #include <pils/interface.h>
 #include <stdio.h>
 
-PIL_PLUGIN_BOILERPLATE("1.0", AuthDebugFlag, ClosePlugin)
+PIL_PLUGIN_BOILERPLATE2("1.0", AuthDebugFlag)
 
 
 /*
@@ -51,8 +51,6 @@ static PILInterface*		AuthIf;		/* Our Auth Interface info */
 static PIL_rc RegisterAuthIF(PILInterface* ifenv, void**	imports);
 
 static PIL_rc UnregisterAuthIF(PILInterface*iifinfo);
-
-static PIL_rc CloseAuthInterfaceManager(PILInterface*, void* info);
 
 /*
  *	Our Interface Manager interfaces - exported to the universe!
@@ -121,18 +119,11 @@ PIL_PLUGIN_INIT(PILPlugin*us, PILPluginImports* imports, void *user_ptr)
 	,	PIT
 	,	PIN3
 	,	&AuthIfOps
-	,	CloseAuthInterfaceManager
+	,	NULL
 	,	&AuthIf			/* Our interface object pointer */
 	,	(void**)&AuthIfImports	/* Interface-imported functions */
 	,	user_ptr);
 	return ret;
-}
-
-static void
-ClosePlugin(PILPlugin* us)
-{
-	/* Closing down all our interfaces did everything for us... */
-	return;
 }
 
 /*
@@ -179,12 +170,3 @@ UnregisterAuthIF(PILInterface*intf)
 	return PIL_OK;
 }
 
-/*
- *	Close down the authentication interface manager.
- */
-static PIL_rc
-CloseAuthInterfaceManager(PILInterface*intf, void* info)
-{
-	/* All our clients get shut down automatically */
-	return PIL_OK;
-}
