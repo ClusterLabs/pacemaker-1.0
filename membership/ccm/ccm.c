@@ -1,4 +1,4 @@
-/* $Id: ccm.c,v 1.41 2004/02/18 01:51:43 alan Exp $ */
+/* $Id: ccm.c,v 1.42 2004/02/19 07:38:43 forrest Exp $ */
 /* 
  * ccm.c: Consensus Cluster Service Program 
  *
@@ -49,6 +49,9 @@ enum ccm_state  {
 
 	CCM_STATE_END
 };
+
+//the times for repeating sending message
+#define REPEAT_TIMES 10
 
 /* add new enums to this structure as and when new protocols are added */
 enum ccm_protocol {
@@ -1238,6 +1241,7 @@ ccm_compute_and_send_final_memlist(ll_cluster_t *hb, ccm_info_t *info)
 	char *cookie = NULL;
 	int numBytes;
 	int strsize;
+	int repeat;
 
 	/* get the maxmimum membership list */
 	maxtrans = ccm_memcomp_get_maxmembership(info, &bitmap);
@@ -1254,12 +1258,20 @@ ccm_compute_and_send_final_memlist(ll_cluster_t *hb, ccm_info_t *info)
 	if(ccm_memlist_changed(info, bitmap)) {
 		cookie = ccm_generate_random_cookie();
 	}
-
+	repeat = 0;
 	while (ccm_send_final_memlist(hb, info, cookie, string, maxtrans+1) 
 					!= HA_OK) {
-		cl_log(LOG_ERR, "ccm_compute_and_send_final_memlist: failure "
-						"to send finalmemlist");
-		cl_shortsleep();
+		if(repeat < REPEAT_TIMES){
+			cl_log(LOG_ERR,
+				"ccm_compute_and_send_final_memlist: failure "
+				"to send finalmemlist");
+			cl_shortsleep();
+			repeat++;
+		}else{
+			bitmap_delete(bitmap);
+			g_free(string);
+			return;
+		}
 	}
 
 	/* fill my new memlist and update the new cookie if any */
@@ -1360,16 +1372,23 @@ ccm_send_join_reply(ll_cluster_t *hb, ccm_info_t *info)
 	gpointer	jptr;
 	const char *joiner_name;
 	GSList 	*head = CCM_GET_JOINERHEAD(info);
-
+	int repeat;
+	
 	while(head) {
 		jptr = g_slist_nth_data(head, 0);
 		joiner = GPOINTER_TO_INT(jptr)-1;
 		joiner_name = LLM_GET_NODEID(CCM_GET_LLM(info), joiner);
 		/* send joiner the neccessary information */
+		repeat = 0;
 		while (ccm_send_joiner_reply(hb, info, joiner_name)!=HA_OK) {
-			cl_log(LOG_ERR, "ccm_send_join_reply: failure "
-				"to send join reply");
-			cl_shortsleep();
+			if(repeat < REPEAT_TIMES){
+				cl_log(LOG_ERR, "ccm_send_join_reply: failure "
+					"to send join reply");
+				cl_shortsleep();
+				repeat++;
+			}else{
+				break;
+			}
 		}
 		head = g_slist_next(head);
 	}
@@ -1732,6 +1751,7 @@ ccm_send_cl_reply(ll_cluster_t *hb, ccm_info_t *info)
 	char *memlist, *cl, *cl_tmp;
 	void *cltrack;
 	uint  trans;
+	int repeat;
 	/*
         * Get the name of the cluster leader
 	*/
@@ -1766,22 +1786,35 @@ ccm_send_cl_reply(ll_cluster_t *hb, ccm_info_t *info)
 			 * the leader, provided we have been a cluster member 
 			 * in the past 
 			 */
+			repeat = 0;
 			while (ccm_send_memlist_res(hb, info, cl, memlist)
 						!=HA_OK) {
-				cl_log(LOG_ERR, "ccm_state_version_request: "
-					"failure to send join");
+				if(repeat < REPEAT_TIMES){
+					cl_log(LOG_ERR,
+						"ccm_state_version_request: "
+						"failure to send join");
 					cl_shortsleep();
+					repeat++;
+				}else{
+					break;
+				}
 			}
 			update_strdelete(memlist);
 		} else {
 			/* I dont trust this Cluster Leader.
 			Send NULL memlist message */
+			repeat = 0;
 			while (ccm_send_memlist_res(hb, info, cl_tmp, NULL)
 					!= HA_OK) {
-				cl_log(LOG_ERR, 
-				"ccm_state_version_request: failure "
+				if(repeat < REPEAT_TIMES){
+					cl_log(LOG_ERR, 
+					"ccm_state_version_request: failure "
 						"to send join");
-				cl_shortsleep();
+					cl_shortsleep();
+					repeat++;
+				}else{
+					break;
+				}
 			}
 		}
 	}
@@ -1973,7 +2006,8 @@ ccm_state_version_request(enum ccm_type ccm_msg_type,
 	uint trans_val;
 	int  proto_val, clsize_val;
 	int try;
-
+	int repeat;
+	
 	/* who sent this message */
 	if ((orig = ha_msg_value(reply, F_ORIG)) == NULL) {
 		cl_log(LOG_WARNING, "ccm_state_version_request: "
@@ -2061,10 +2095,16 @@ ccm_state_version_request(enum ccm_type ccm_msg_type,
 		CCM_SET_MINORTRANS(info, 0);
 		CCM_SET_COOKIE(info, cookie);
 		version_set_nresp(CCM_GET_VERSION(info),0);
+		repeat = 0;
 		while(ccm_send_alive_msg(hb, info) != HA_OK){
-			cl_log(LOG_WARNING, 
+			if(repeat < REPEAT_TIMES){
+				cl_log(LOG_WARNING, 
 				"ccm_state_version_request: failure to send alive");
-			cl_shortsleep();
+				cl_shortsleep();
+				repeat++;
+			}else{
+				break;
+			}
 		}
 
 		/* initialize the update table  
@@ -2149,7 +2189,8 @@ ccm_state_joined(enum ccm_type ccm_msg_type,
 {
 	const char *orig,  *trans, *uptime;
 	uint  trans_majorval=0, trans_minorval=0, uptime_val;
-
+	int repeat;
+	
 	if ((orig = ha_msg_value(reply, F_ORIG)) == NULL) {
 		cl_log(LOG_WARNING, "ccm_state_joined: received message "
 							"from unknown");
@@ -2219,11 +2260,18 @@ ccm_state_joined(enum ccm_type ccm_msg_type,
  			 * then we shall respond with the neccessary information
 			 */
 			if (ccm_am_i_leader(info)){
+				repeat = 0;
 				while (ccm_send_joiner_reply(hb, info, orig)
 						!= HA_OK) {
-					cl_log(LOG_WARNING, "ccm_state_joined: "
+					if(repeat < REPEAT_TIMES){
+						cl_log(LOG_WARNING,
+						"ccm_state_joined: "
 						"failure to send join reply");
 						cl_shortsleep();
+						repeat++;
+					}else{
+						break;
+					}
 				}
 			}
 			break;
@@ -2246,10 +2294,17 @@ ccm_state_joined(enum ccm_type ccm_msg_type,
 						orig, uptime_val, TRUE);
 
 			CCM_SET_MINORTRANS(info, trans_minorval);
+			repeat = 0;
 			while (ccm_send_join(hb, info) != HA_OK) {
-				cl_log(LOG_WARNING, "ccm_state_joined: failure "
-							"to send join");
-				cl_shortsleep();
+				if(repeat < REPEAT_TIMES){
+					cl_log(LOG_WARNING,
+						"ccm_state_joined: failure "
+						"to send join");
+					cl_shortsleep();
+					repeat++;
+				}else{
+					break;
+				}
 			}
 
 			CCM_SET_STATE(info, CCM_STATE_JOINING);
@@ -2264,10 +2319,17 @@ ccm_state_joined(enum ccm_type ccm_msg_type,
 			 */
 			if (index == CCM_GET_CL(info)){
 				update_reset(CCM_GET_UPDATETABLE(info));
+				repeat = 0;
 				while (ccm_send_join(hb, info) != HA_OK) {
-					cl_log(LOG_WARNING, "ccm_state_joined:"
-					" failure to send join");
-					cl_shortsleep();
+					if(repeat < REPEAT_TIMES){
+						cl_log(LOG_WARNING,
+						"ccm_state_joined:"
+						" failure to send join");
+						cl_shortsleep();
+						repeat++;
+					}else{
+						break;
+					}
 				}
 				CCM_SET_STATE(info, CCM_STATE_JOINING);
 				return;
@@ -2422,7 +2484,8 @@ static void ccm_state_wait_for_change(enum ccm_type ccm_msg_type,
 	const char *orig, *trans, *uptime, *node;
 	uint trans_majorval=0, trans_minorval=0, uptime_val=0;
 	gboolean uptime_set = FALSE;
-
+	int repeat;
+	
 	if ((orig = ha_msg_value(reply, F_ORIG)) == NULL) {
 		cl_log(LOG_WARNING, "ccm_state_joined: received message "
 							"from unknown");
@@ -2534,10 +2597,17 @@ static void ccm_state_wait_for_change(enum ccm_type ccm_msg_type,
 				reset_change_info(info);
 				update_reset(CCM_GET_UPDATETABLE(info));
 				CCM_INCREMENT_MINORTRANS(info);
+				repeat = 0;
 				while (ccm_send_join(hb, info) != HA_OK) {
-					cl_log(LOG_WARNING, "ccm_state_joined:"
-					 " failure to send join");
-					cl_shortsleep();
+					if(repeat < REPEAT_TIMES){
+						cl_log(LOG_WARNING,
+						"ccm_state_joined:"
+						" failure to send join");
+						cl_shortsleep();
+						repeat++;
+					}else{
+						break;
+					}
 				}
 				CCM_SET_STATE(info, CCM_STATE_JOINING);
 				return;
@@ -2610,10 +2680,17 @@ static void ccm_state_wait_for_change(enum ccm_type ccm_msg_type,
 				reset_change_info(info);
 				update_reset(CCM_GET_UPDATETABLE(info));
 				CCM_INCREMENT_MINORTRANS(info);
+				repeat = 0;
 				while (ccm_send_join(hb, info) != HA_OK) {
-					cl_log(LOG_WARNING, "ccm_state_wait_for_change:"
-						 " failure to send join");
-					cl_shortsleep();
+					if(repeat < REPEAT_TIMES){
+						cl_log(LOG_WARNING,
+						"ccm_state_wait_for_change:"
+						" failure to send join");
+						cl_shortsleep();
+						repeat++;
+					}else{
+						break;
+					}
 				}
 				CCM_SET_STATE(info, CCM_STATE_JOINING);
 			}
@@ -2638,10 +2715,17 @@ static void ccm_state_wait_for_change(enum ccm_type ccm_msg_type,
 						orig, uptime_val, TRUE);
 
 			CCM_SET_MINORTRANS(info, trans_minorval);
+			repeat = 0;
 			while (ccm_send_join(hb, info) != HA_OK) {
-				cl_log(LOG_WARNING, "ccm_state_joined: failure "
-							"to send join");
-				cl_shortsleep();
+				if(repeat < REPEAT_TIMES){
+					cl_log(LOG_WARNING,
+						"ccm_state_joined: failure "
+						"to send join");
+					cl_shortsleep();
+					repeat++;
+				}else{
+					break;
+				}
 			}
 
 			CCM_SET_STATE(info, CCM_STATE_JOINING);
@@ -2670,6 +2754,7 @@ ccm_state_sent_memlistreq(enum ccm_type ccm_msg_type,
 	const char *orig,  *trans, *memlist, *uptime;
 	uint   trans_minorval=0, trans_majorval=0, trans_maxval=0;
         uint    uptime_val;
+	int repeat;
 
 	if ((orig = ha_msg_value(reply, F_ORIG)) == NULL) {
 		cl_log(LOG_WARNING, "ccm_state_sent_memlistreq: received message "
@@ -2780,10 +2865,17 @@ switchstatement:
 					 * be waiting on us. So just send
 					 * leave message and reset.
 				 	 */
+					repeat = 0;
 					while (ccm_send_leave(hb, info) != HA_OK) {
-						cl_log(LOG_ERR, "ccm_state_memlistreq: "
+						if(repeat < REPEAT_TIMES){
+							cl_log(LOG_ERR,
+							"ccm_state_memlistreq:"
 							"failure to send leave");
-						cl_shortsleep();
+							cl_shortsleep();
+							repeat++;
+						}else{
+							break;
+						}
 					}
 					ccm_reset(info);
 				} else {
@@ -2806,12 +2898,18 @@ switchstatement:
 			 * leaders. Right?
 			 */
 
-
+			repeat = 0;
 			while (ccm_send_memlist_res(hb, info, orig, NULL) != 
 						HA_OK) {
-				cl_log(LOG_ERR, "ccm_state_sent_memlistreq: "
-					"failure to send join");
-				cl_shortsleep();
+				if(repeat < REPEAT_TIMES){
+					cl_log(LOG_ERR,
+						"ccm_state_sent_memlistreq: "
+						"failure to send join");
+					cl_shortsleep();
+					repeat++;
+				}else{
+					break;
+				}
 			}
 			break;
 
@@ -2857,12 +2955,18 @@ switchstatement:
 					 * be waiting on us. So just send
 					 * leave message and reset.
 				 	 */
+					repeat = 0;
 					while (ccm_send_leave(hb, info) 
 							!= HA_OK) {
-						cl_log(LOG_ERR, 
-						 "ccm_state_memlistreq: "
-						 "failure to send leave");
-						cl_shortsleep();
+						if(repeat < REPEAT_TIMES){
+							cl_log(LOG_ERR, 
+							"ccm_state_memlistreq:"
+						 	"failure to send leave");
+							cl_shortsleep();
+							repeat++;
+						}else{
+							break;
+						}
 					}
 					ccm_reset(info);
 				} else {
@@ -2897,12 +3001,18 @@ switchstatement:
 					 * be waiting on us. So just send
 					 * leave message and reset.
 				 	 */
+					repeat = 0;
 					while (ccm_send_leave(hb, info) 
 							!= HA_OK) {
-						cl_log(LOG_ERR, 
-						 "ccm_state_memlistreq: "
-						 "failure to send leave");
-						cl_shortsleep();
+						if(repeat < REPEAT_TIMES){
+							cl_log(LOG_ERR, 
+						 	"ccm_state_memlistreq: "
+						 	"failure to send leave");
+							cl_shortsleep();
+							repeat++;
+						}else{
+							break;
+						}
 					}
 					ccm_reset(info);
 				} else {
@@ -2940,7 +3050,7 @@ ccm_state_memlist_res(enum ccm_type ccm_msg_type,
 	uint    uptime_val;
 	uint  curr_major, curr_minor;
 	int   indx;
-
+	int repeat;
 
 
 	if ((orig = ha_msg_value(reply, F_ORIG)) == NULL) {
@@ -3030,12 +3140,19 @@ switchstatement:
 			 * to the sender. The sender must resend the message.
 			 */
 			if (trans_majorval > CCM_GET_MAJORTRANS(info)) {
+				repeat = 0;
 				while (ccm_send_abort(hb, info, orig, 
 					trans_majorval, trans_minorval) 
 							!= HA_OK) {
-					cl_log(LOG_ERR, "ccm_state_memlist_res:"
-						" failure to send join");
-					cl_shortsleep();
+					if(repeat < REPEAT_TIMES){
+						cl_log(LOG_ERR,
+						"ccm_state_memlist_res:"
+						" failure to send abort");
+						cl_shortsleep();
+						repeat++;
+					}else{
+						break;
+					}
 				}
 				break;
 			}
@@ -3059,10 +3176,17 @@ switchstatement:
 					CCM_GET_LLM(info), orig, uptime_val, TRUE);
 
 				CCM_SET_MINORTRANS(info, trans_minorval);
+				repeat = 0;
 				while (ccm_send_join(hb, info) != HA_OK) {
-					cl_log(LOG_ERR, "ccm_state_memlist_res:"
+					if(repeat < REPEAT_TIMES){
+						cl_log(LOG_ERR,
+						"ccm_state_memlist_res:"
 						" failure to send join");
-					cl_shortsleep();
+						cl_shortsleep();
+						repeat++;
+					}else{
+						break;
+					}
 				}
 				CCM_SET_STATE(info, CCM_STATE_JOINING);
 			}
@@ -3085,11 +3209,18 @@ switchstatement:
 			 * will start all fresh!
 			 */
 			if (trans_minorval == CCM_GET_MINORTRANS(info)) {
+				repeat = 0;
 				while (ccm_send_memlist_res(hb, info, orig, 
 							NULL) != HA_OK) {
-					cl_log(LOG_ERR, "ccm_state_memlist_res:"
-					 " failure to send join");
-					cl_shortsleep();
+					if(repeat < REPEAT_TIMES){
+						cl_log(LOG_ERR,
+						"ccm_state_memlist_res:"
+						 " failure to send join");
+						cl_shortsleep();
+						repeat++;
+					}else{
+						break;
+					}
 				}
 				break;
 			}
@@ -3097,10 +3228,17 @@ switchstatement:
 			/* all other cases are cases of byzantine failure 
 			 * We leave the cluster
 			 */
+			repeat = 0;
 			while (ccm_send_leave(hb, info) != HA_OK) {
-				cl_log(LOG_ERR, "ccm_state_memlist_res: "
-					"failure to send join");
-				cl_shortsleep();
+				if(repeat < REPEAT_TIMES){
+					cl_log(LOG_ERR,
+						"ccm_state_memlist_res: "
+						"failure to send join");
+					cl_shortsleep();
+					repeat++;
+				}else{
+					break;
+				}
 			}
 
 			ccm_reset(info); 
@@ -3116,10 +3254,17 @@ switchstatement:
 			}
 			update_reset(CCM_GET_UPDATETABLE(info));
 			CCM_INCREMENT_MINORTRANS(info);
+			repeat = 0;
 			while (ccm_send_join(hb, info) != HA_OK) {
-				cl_log(LOG_ERR, "ccm_state_memlist_res:"
-				" failure to send join");
-				cl_shortsleep();
+				if(repeat < REPEAT_TIMES){
+					cl_log(LOG_ERR,
+						"ccm_state_memlist_res:"
+						" failure to send join");
+					cl_shortsleep();
+					repeat++;
+				}else{
+					break;
+				}
 			}
 			finallist_reset();
 			CCM_SET_STATE(info, CCM_STATE_JOINING);
@@ -3141,10 +3286,17 @@ switchstatement:
 				 */
 				update_reset(CCM_GET_UPDATETABLE(info));
 				CCM_INCREMENT_MINORTRANS(info);
+				repeat = 0;
 				while (ccm_send_join(hb, info) != HA_OK) {
-					cl_log(LOG_ERR, "ccm_state_memlist_res:"
-					" failure to send join");
-					cl_shortsleep();
+					if(repeat < REPEAT_TIMES){
+						cl_log(LOG_ERR,
+						"ccm_state_memlist_res:"
+						" failure to send join");
+						cl_shortsleep();
+						repeat++;
+					}else{
+						break;
+					}
 				}
 				finallist_reset();
 				CCM_SET_STATE(info, CCM_STATE_JOINING);
@@ -3270,7 +3422,8 @@ ccm_state_joining(enum ccm_type ccm_msg_type,
 	const char *orig,  *trans, *uptime;
 	uint   trans_majorval=0, trans_minorval=0;
         uint	uptime_val;
-
+	int repeat;
+	
 	if ((orig = ha_msg_value(reply, F_ORIG)) == NULL) {
 		cl_log(LOG_WARNING, "ccm_state_joining: received message "
 							"from unknown");
@@ -3393,11 +3546,17 @@ switchstatement:
 					CCM_GET_LLM(info), orig, uptime_val, TRUE);
 
 				CCM_SET_MINORTRANS(info, trans_minorval);
+				repeat = 0;
 				while (ccm_send_join(hb, info) != HA_OK) {
-					cl_log(LOG_ERR, 
-					 "ccm_state_joining: failure "
+					if(repeat < REPEAT_TIMES){
+						cl_log(LOG_ERR, 
+						"ccm_state_joining: failure "
 						"to send join");
-					cl_shortsleep();
+						cl_shortsleep();
+						repeat++;
+					}else{
+						break;
+					}
 				}
 			} else {
 				/* update the update table  */
@@ -3418,13 +3577,19 @@ switchstatement:
 						CCM_GET_LLM(info))) {
 						/* send out the 
 						 * membershiplist request */
+						repeat = 0;
 						while(ccm_send_memlist_request(
 							hb, info)!=HA_OK) {
+							if(repeat < REPEAT_TIMES){
 							cl_log(LOG_ERR, 
 							"ccm_state_joining: "
 							"failure to send "
 							"memlist request");
 							cl_shortsleep();
+							repeat++;
+							}else{
+								break;
+							}
 						}
 						ccm_memcomp_init(info);
 						ccm_memcomp_note_my_membership(
@@ -3504,12 +3669,19 @@ switchstatement:
 				}
 
 				/* send out the membershiplist request */
+				repeat = 0;
 				while (ccm_send_memlist_request(hb, info) 
 							!= HA_OK) {
-					cl_log(LOG_ERR, "ccm_state_joining: "
+					if(repeat < REPEAT_TIMES){
+						cl_log(LOG_ERR,
+						"ccm_state_joining: "
 						"failure to send memlist "
 						"request");
-					cl_shortsleep();
+						cl_shortsleep();
+						repeat++;
+					}else{
+						break;
+					}
 				}
 				ccm_memcomp_init(info);
 				ccm_memcomp_note_my_membership(info);
@@ -3532,12 +3704,18 @@ switchstatement:
 				} else if(update_timeout_expired(
 						CCM_GET_UPDATETABLE(info),
 						CCM_TMOUT_GET_LU(info))) {
+					repeat = 0;
 					while (ccm_send_leave(hb, info) 
 							!= HA_OK) {
-					   	cl_log(LOG_ERR, 
+						if(repeat < REPEAT_TIMES){
+					   		cl_log(LOG_ERR, 
 							"ccm_state_joining: "
 					 		"failure to send leave");
-						cl_shortsleep();
+							cl_shortsleep();
+							repeat++;
+						}else{
+							break;
+						}
 					}
 					ccm_reset(info);
 					CCM_SET_STATE(info, CCM_STATE_NONE);
@@ -3569,14 +3747,20 @@ switchstatement:
 				join message */
 			CCM_INCREMENT_MINORTRANS(info);
 			update_reset(CCM_GET_UPDATETABLE(info));
+			repeat = 0;
 			while (ccm_send_join(hb, info) != HA_OK) {
-				cl_log(LOG_ERR, "ccm_state_joining: failure "
-					"to send join");
-				cl_shortsleep();
+				if(repeat < REPEAT_TIMES){
+					cl_log(LOG_ERR,
+						"ccm_state_joining: failure "
+						"to send join");
+					cl_shortsleep();
+					repeat++;
+				}else{
+					break;
+				}
 			}
 
 			break;
-
 
 		case CCM_TYPE_LEAVE: 
 
@@ -3737,6 +3921,7 @@ ccm_control_process(ccm_info_t *info, ll_cluster_t * hb)
 	enum ccm_type ccm_msg_type;
 	const char *orig=NULL;
 	const char *status=NULL;
+	int tmp_repeat;
 
 repeat:
 	/* read the next available message */
@@ -3822,10 +4007,17 @@ repeat:
 		/* request for protocol version and transition 
 		 * number for compatibility 
 		 */
+		tmp_repeat = 0;
 		while(ccm_send_protoversion(hb, info) != HA_OK) {
-			cl_log(LOG_ERR, "ccm_control_process:failure to send "
+			if(tmp_repeat < REPEAT_TIMES){
+				cl_log(LOG_ERR,
+					"ccm_control_process:failure to send "
 					"protoversion request");
-			cl_shortsleep();
+				cl_shortsleep();
+				tmp_repeat++;
+			}else{
+				break;
+			}
 		}
 		CCM_SET_STATE(info, CCM_STATE_VERSION_REQUEST);
 		/* 
@@ -4172,7 +4364,8 @@ static void ccm_state_wait_for_mem_list(enum ccm_type ccm_msg_type,
 	const char *orig, *trans, *uptime, *cookie, *memlist, *uptime_list;
 	uint trans_majorval=0,trans_minorval=0, uptime_val;
 	uint curr_major, curr_minor;
-
+	int repeat;
+	
 	if ((orig = ha_msg_value(reply, F_ORIG)) == NULL) {
 		cl_log(LOG_WARNING, "ccm_state_wait_for_mem_list: received message "
 							"from unknown");
@@ -4272,10 +4465,17 @@ static void ccm_state_wait_for_mem_list(enum ccm_type ccm_msg_type,
 				reset_change_info(info);
 				update_reset(CCM_GET_UPDATETABLE(info));
 				CCM_INCREMENT_MINORTRANS(info);
+				repeat = 0;
 				while (ccm_send_join(hb, info) != HA_OK) {
-					cl_log(LOG_WARNING, "ccm_state_joined:"
-						 " failure to send join");
-					cl_shortsleep();
+					if(repeat < REPEAT_TIMES){
+						cl_log(LOG_WARNING,
+						"ccm_state_joined:"
+						" failure to send join");
+						cl_shortsleep();
+						repeat++;
+					}else{
+						break;
+					}
 				}
 				CCM_SET_STATE(info, CCM_STATE_JOINING);
 			}
@@ -4299,10 +4499,17 @@ static void ccm_state_wait_for_mem_list(enum ccm_type ccm_msg_type,
 						orig, uptime_val, TRUE);
 
 			CCM_SET_MINORTRANS(info, trans_minorval);
+			repeat = 0;
 			while (ccm_send_join(hb, info) != HA_OK) {
-				cl_log(LOG_WARNING, "ccm_state_joined: failure "
-							"to send join");
-				cl_shortsleep();
+				if(repeat < REPEAT_TIMES){
+					cl_log(LOG_WARNING,
+						"ccm_state_joined: failure "
+						"to send join");
+					cl_shortsleep();
+					repeat++;
+				}else{
+					break;
+				}
 			}
 
 			CCM_SET_STATE(info, CCM_STATE_JOINING);
@@ -4315,10 +4522,17 @@ static void ccm_state_wait_for_mem_list(enum ccm_type ccm_msg_type,
 			if(ccm_get_membership_index(info, orig) == CCM_GET_CL(info)){
 				update_reset(CCM_GET_UPDATETABLE(info));
 				CCM_INCREMENT_MINORTRANS(info);
+				repeat = 0;
 				while (ccm_send_join(hb, info) != HA_OK) {
-					cl_log(LOG_WARNING, "ccm_state_joined:"
-						 " failure to send join");
-					cl_shortsleep();
+					if(repeat < REPEAT_TIMES){
+						cl_log(LOG_WARNING,
+						"ccm_state_joined:"
+						" failure to send join");
+						cl_shortsleep();
+						repeat++;
+					}else{
+						break;
+					}
 				}
 				CCM_SET_STATE(info, CCM_STATE_JOINING);
 				return;
@@ -4564,6 +4778,7 @@ static void ccm_state_new_node_wait_for_mem_list(enum ccm_type ccm_msg_type,
     	const char *orig,  *trans, *uptime, *memlist, *cookie, *uptime_list;
 	uint  trans_majorval=0,trans_minorval=0, uptime_val;
 	uint  curr_major, curr_minor;
+	int repeat;
 
 	if ((orig = ha_msg_value(reply, F_ORIG)) == NULL) {
 		cl_log(LOG_WARNING, "ccm_state_new_node_wait_for_mem_list: " 
@@ -4666,10 +4881,17 @@ static void ccm_state_new_node_wait_for_mem_list(enum ccm_type ccm_msg_type,
 			if (new_node_mem_list_timeout(CCM_TMOUT_GET_U(info))){
 				update_reset(CCM_GET_UPDATETABLE(info));
 				CCM_INCREMENT_MINORTRANS(info);
+				repeat = 0;
 				while (ccm_send_join(hb, info) != HA_OK) {
-					cl_log(LOG_WARNING, "ccm_state_new_node_wait_for_mem_list:"
-						 " failure to send join");
-					cl_shortsleep();
+					if(repeat < REPEAT_TIMES){
+						cl_log(LOG_WARNING,
+						"ccm_state_new_node_wait_for_mem_list:"
+						" failure to send join");
+						cl_shortsleep();
+						repeat++;
+					}else{
+						break;
+					}
 				}
 				CCM_SET_STATE(info, CCM_STATE_JOINING);
 			}	
@@ -4693,10 +4915,17 @@ static void ccm_state_new_node_wait_for_mem_list(enum ccm_type ccm_msg_type,
 						orig, uptime_val, TRUE);
 
 			CCM_SET_MINORTRANS(info, trans_minorval);
+			repeat = 0;
 			while (ccm_send_join(hb, info) != HA_OK) {
-				cl_log(LOG_WARNING, "ccm_state_new_node_wait_for_mem_list: "
-						"failure to send join");
-				cl_shortsleep();
+				if(repeat < REPEAT_TIMES){
+					cl_log(LOG_WARNING,
+					"ccm_state_new_node_wait_for_mem_list: "
+					"failure to send join");
+					cl_shortsleep();
+					repeat++;
+				}else{
+					break;
+				}
 			}
 			CCM_SET_STATE(info, CCM_STATE_JOINING);
 			break;		
@@ -4708,10 +4937,17 @@ static void ccm_state_new_node_wait_for_mem_list(enum ccm_type ccm_msg_type,
 			if(ccm_get_membership_index(info, orig) == CCM_GET_CL(info)){
 				update_reset(CCM_GET_UPDATETABLE(info));
 				CCM_INCREMENT_MINORTRANS(info);
+				repeat = 0;
 				while (ccm_send_join(hb, info) != HA_OK) {
-					cl_log(LOG_WARNING, "ccm_state_new_node_wait_for_mem_list:"
+					if(repeat < REPEAT_TIMES){
+						cl_log(LOG_WARNING,
+						"ccm_state_new_node_wait_for_mem_list:"
 						" failure to send join");
-					cl_shortsleep();
+						cl_shortsleep();
+						repeat++;
+					}else{
+						break;
+					}
 				}
 				CCM_SET_STATE(info, CCM_STATE_JOINING);
 			}
