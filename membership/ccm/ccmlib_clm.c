@@ -33,6 +33,7 @@
 #  include <pthread.h>
 #endif
 #include <sys/time.h>
+#include <string.h>
 
 #define CLM_TRACK_STOP 0
 #define CLM_DEBUG 0
@@ -231,8 +232,7 @@ set_misc_node_info(SaClmClusterNodeT *cn)
 {
 	cn->nodeAddress.length = 0;
 	cn->nodeAddress.value[0] = '\0';
-	cn->nodeName.length = 0;
-	cn->nodeName.value[0] = '\0';
+	cn->nodeName.length = strlen(cn->nodeName.value);
 	cn->clusterName.length = 0;
 	cn->clusterName.value[0] = '\0';
 	cn->bootTimestamp = 0;
@@ -242,12 +242,21 @@ static void
 retrieve_current_buffer(__clm_handle_t *hd)
 {
 	int i;
+	char *p;
 	const oc_ev_membership_t *oc = __ccm_data;
 
 	for (i = 0; i < oc->m_n_member; i++) {
 		MEMCHANGE(i) = SA_CLM_NODE_NO_CHANGE;
 		MEMNODE(i).nodeId = oc->m_array[oc->m_memb_idx+i].node_id;
 		MEMNODE(i).member = 1;
+		p = oc->m_array[oc->m_memb_idx+i].node_uname;
+		if (p) {
+			strncpy(MEMNODE(i).nodeName.value, p, 
+					SA_MAX_NAME_LENGTH - 1);
+			MEMNODE(i).nodeName.value[SA_MAX_NAME_LENGTH] = '\0';
+		} else {
+			MEMNODE(i).nodeName.value[0] = '\0';
+		}
 		set_misc_node_info(&MEMNODE(i));
 	}
 }
@@ -256,6 +265,7 @@ static void
 retrieve_changes_buffer(__clm_handle_t *hd)
 {
 	int i, j, n;
+	char *p;
 	const oc_ev_membership_t *oc = __ccm_data;
 
 	retrieve_current_buffer(hd);
@@ -265,6 +275,15 @@ retrieve_changes_buffer(__clm_handle_t *hd)
 			if (MEMNODE(j).nodeId
 			==	oc->m_array[oc->m_in_idx+i].node_id) {
 				MEMCHANGE(j) = SA_CLM_NODE_JOINED;
+				p = oc->m_array[oc->m_in_idx+i].node_uname;
+				if (p) {
+					strncpy(MEMNODE(j).nodeName.value, p, 
+							SA_MAX_NAME_LENGTH-1);
+					MEMNODE(j).nodeName.value \
+						[SA_MAX_NAME_LENGTH] = '\0';
+				} else {
+					MEMNODE(j).nodeName.value[0] = '\0';
+				}
 				break;
 			}
 		}
@@ -274,6 +293,14 @@ retrieve_changes_buffer(__clm_handle_t *hd)
 		MEMCHANGE(n) = SA_CLM_NODE_LEFT;
 		MEMNODE(n).nodeId = oc->m_array[oc->m_out_idx+j].node_id;
 		MEMNODE(n).member = 0;
+		p = oc->m_array[oc->m_out_idx+j].node_uname;
+		if (p) {
+			strncpy(MEMNODE(n).nodeName.value, p,
+					SA_MAX_NAME_LENGTH - 1);
+			MEMNODE(n).nodeName.value[SA_MAX_NAME_LENGTH] = '\0';
+		} else {
+			MEMNODE(n).nodeName.value[0] = '\0';
+		}
 		set_misc_node_info(&MEMNODE(n));
 	}
 }
@@ -282,18 +309,35 @@ static void
 retrieve_changes_only_buffer(__clm_handle_t *hd)
 {
 	int i, n;
+	char *p;
 	const oc_ev_membership_t *oc = __ccm_data;
 
 	for (i = 0, n = 0; i < oc->m_n_in; i++, n++) {
 		MEMCHANGE(n) = SA_CLM_NODE_JOINED;
 		MEMNODE(n).nodeId = oc->m_array[oc->m_in_idx+i].node_id;
 		MEMNODE(n).member = 1;
+		p = oc->m_array[oc->m_in_idx+i].node_uname;
+		if (p) {
+			strncpy(MEMNODE(n).nodeName.value, p,
+					SA_MAX_NAME_LENGTH - 1);
+			MEMNODE(n).nodeName.value[SA_MAX_NAME_LENGTH] = '\0';
+		} else {
+			MEMNODE(n).nodeName.value[0] = '\0';
+		}
 		set_misc_node_info(&MEMNODE(n));
 	}
 	for (i = 0; i < oc->m_n_out; i++, n++) {
 		MEMCHANGE(n) = SA_CLM_NODE_LEFT;
 		MEMNODE(n).nodeId = oc->m_array[oc->m_out_idx+i].node_id;
 		MEMNODE(n).member = 0;
+		p = oc->m_array[oc->m_out_idx+i].node_uname;
+		if (p) {
+			strncpy(MEMNODE(n).nodeName.value, p,
+					SA_MAX_NAME_LENGTH - 1);
+			MEMNODE(n).nodeName.value[SA_MAX_NAME_LENGTH] = '\0';
+		} else {
+			MEMNODE(n).nodeName.value[0] = '\0';
+		}
 		set_misc_node_info(&MEMNODE(n));
 	}
 }
@@ -462,6 +506,7 @@ retrieve_node_buffer(SaClmNodeIdT nodeId, SaClmClusterNodeT *clusterNode)
 {
 	const oc_ev_membership_t *oc;
 	int i;
+	char *p;
 
 	oc = (const oc_ev_membership_t *)__ccm_data;
 
@@ -469,6 +514,15 @@ retrieve_node_buffer(SaClmNodeIdT nodeId, SaClmClusterNodeT *clusterNode)
 		if (oc->m_array[oc->m_memb_idx+i].node_id == nodeId) {
 			clusterNode->nodeId = nodeId;
 			clusterNode->member = 1;
+			p = oc->m_array[oc->m_memb_idx+i].node_uname;
+			if (p) {
+				strncpy(clusterNode->nodeName.value, p,
+						SA_MAX_NAME_LENGTH - 1);
+				clusterNode->nodeName.value \
+					[SA_MAX_NAME_LENGTH] = '\0';
+			} else {
+				clusterNode->nodeName.value[0] = '\0';
+			}
 			goto found;
 		}
 	}
@@ -476,6 +530,15 @@ retrieve_node_buffer(SaClmNodeIdT nodeId, SaClmClusterNodeT *clusterNode)
 		if (oc->m_array[oc->m_out_idx+i].node_id == nodeId) {
 			clusterNode->nodeId = nodeId;
 			clusterNode->member = 0;
+			p = oc->m_array[oc->m_out_idx+i].node_uname;
+			if (p) {
+				strncpy(clusterNode->nodeName.value, p,
+						SA_MAX_NAME_LENGTH - 1);
+				clusterNode->nodeName.value \
+					[SA_MAX_NAME_LENGTH] = '\0';
+			} else {
+				clusterNode->nodeName.value[0] = '\0';
+			}
 			goto found;
 		}
 	}
