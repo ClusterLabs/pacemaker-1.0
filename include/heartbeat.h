@@ -1,4 +1,4 @@
-/* $Id: heartbeat.h,v 1.58 2005/02/14 21:06:11 gshi Exp $ */
+/* $Id: heartbeat.h,v 1.59 2005/02/21 01:16:16 alan Exp $ */
 /*
  * heartbeat.h: core definitions for the Linux-HA heartbeat program
  *
@@ -306,6 +306,7 @@ struct sys_config {
 	struct HBauth_info  auth_config[MAXAUTH];
 	GList*		client_list;
 			/* List data: struct client_child */
+	GList*		last_client;/* Last in client_list */
 };
 
 

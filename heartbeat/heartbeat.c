@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.363 2005/02/20 08:00:06 alan Exp $ */
+/* $Id: heartbeat.c,v 1.364 2005/02/21 01:16:16 alan Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -1717,7 +1717,6 @@ hb_initiate_shutdown(int quickshutdown)
  *	dies.
  */
 
-#define	LLEN(l)	((l) == NULL ? 0 : g_list_length(l))
 
 gboolean
 hb_mcp_final_shutdown(gpointer p)
@@ -1748,7 +1747,7 @@ hb_mcp_final_shutdown(gpointer p)
 		return FALSE;
 
 	case 1:		/* From ManagedChildDied() (or above) */
-		if (NULL != g_list_first(config->client_list)) {
+		if (NULL != config->last_client) {
 			g_list_foreach(config->client_list
 			,	print_a_child_client, NULL);
 			abort();
@@ -2587,41 +2586,20 @@ ManagedChildDied(ProcTrack* p, int status, int signo, int exitcode
 	p->privatedata = NULL;
 	if (shutdown_in_progress) {
                 if (g_list_find(config->client_list, managedchild) != NULL){
-			int len = LLEN(config->client_list);
-			int newlen;
-			/* Child died unexpectedly, remove it and return */
-			config->client_list = g_list_remove(config->client_list
-			,	managedchild);
-			newlen = LLEN(config->client_list);
+			/* Child died unexpectedly, ignore it and return */
 			if (ANYDEBUG) {
 				cl_log(LOG_DEBUG
 				,	"client \"%s\" died early during"
 				" shutdown."
 				,	managedchild->command);
-				cl_log(LOG_DEBUG, "new list length: %d"
-				,	newlen);
 			}
-			if (newlen != len - 1) {
-				cl_log(LOG_ERR
-				,	"removing \"%s\" didn't work right"
-				": oldlen = %d newlen = %d"
-				,	managedchild->command
-				,	len, newlen);
-			}
-			cl_log(LOG_DEBUG, "ManagedChildDied():...");
-			g_list_foreach(config->client_list
-			,	print_a_child_client, NULL);
-			cl_log(LOG_DEBUG, "ManagedChildDied():done");
 			return; 
 		}
-
 		if (!shutdown_last_client_child(SIGTERM)) {
-			if (managed_child_count != 0)  {
+			if (config->last_client) {
 				cl_log(LOG_ERR
-				,	"managed_child_count is %d"
-				" should be zero"
-				,	managed_child_count);
-				managed_child_count = 0;
+				,	"ManagedChildDied()"
+				": config->last_client != NULL");
 			}
 			if (ANYDEBUG) {
 				cl_log(LOG_DEBUG
@@ -2632,7 +2610,6 @@ ManagedChildDied(ProcTrack* p, int status, int signo, int exitcode
 			hb_mcp_final_shutdown(NULL); /* phase 1 (last child died) */
 		}
 	}
-
 }
 
 /* Handle the death of one of our managed child processes */
@@ -2790,41 +2767,19 @@ start_a_child_client(gpointer childentry, gpointer dummy)
 static gboolean		/* return TRUE if any child was signalled */
 shutdown_last_client_child(int nsig)
 {
-	GList*			list = config->client_list;
 	GList*			last;
 	struct client_child*	lastclient;
-	int			oldlen;
-	int			newlen;
 
-	if (!list) {
+	if (NULL == (last = config->last_client)) {
 		return FALSE;
+	}else{
+		config->last_client = config->last_client->prev;
 	}
-
-	last = g_list_last(list);
-	g_assert(last != NULL);
 	lastclient = last->data;
-	oldlen = LLEN(list);
-	
-	config->client_list = g_list_remove(list, lastclient);
-	newlen = LLEN(list);
-
-	if (newlen != oldlen -1) {
-		cl_log(LOG_ERR
-		,	"removing \"%s\" didn't work right"
-		": oldlen = %d newlen = %d"
-		,	lastclient->command
-		,	oldlen, newlen);
-	}
-	cl_log(LOG_DEBUG, "shutdown_last_client_child():...");
-	g_list_foreach(config->client_list
-	,	print_a_child_client, NULL);
-	cl_log(LOG_DEBUG, "shutdown_last_client_child():done.");
-
 	if (lastclient) {
 		if (ANYDEBUG) {
-			cl_log(LOG_DEBUG, "Shutting down client %s (%d left)"
-			,	lastclient->command
-			,	newlen);
+			cl_log(LOG_DEBUG, "Shutting down client %s"
+			,	lastclient->command);
 		}
 		lastclient->respawn = FALSE;
 		if (lastclient->proctrack) {
@@ -2834,14 +2789,13 @@ shutdown_last_client_child(int nsig)
 		}
 		cl_log(LOG_INFO, "client [%s] is not running."
 		,	lastclient->command);
-		cl_free(lastclient);
 	}else{
 		cl_log(LOG_ERR, "shutdown_last_clent_child(NULL client)");
 	}
 	if (ANYDEBUG) {
 		cl_log(LOG_DEBUG, "shutdown_last_client_child: Try next one.");
 	}
-	/* OOPS! Couldn't kill a process... Try the next one... */
+	/* OOPS! Couldn't kill a process this time... Try the next one... */
 	return shutdown_last_client_child(nsig);
 }
 
@@ -5102,6 +5056,12 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.364  2005/02/21 01:16:16  alan
+ * Changed the heartbeat code for shutting down clients.
+ * We no longer remove them from the list, instead we maintain a pointer
+ * to the last client not yet shut down, and update that pointer
+ * without changing anything.
+ *
  * Revision 1.363  2005/02/20 08:00:06  alan
  * Changed a g_assert into a different test, a different printout
  * and a raw abort instead of the assert...

@@ -1,4 +1,4 @@
-/* $Id: config.c,v 1.145 2005/02/14 15:26:51 alan Exp $ */
+/* $Id: config.c,v 1.146 2005/02/21 01:16:16 alan Exp $ */
 /*
  * Parse various heartbeat configuration files...
  *
@@ -247,6 +247,7 @@ init_config(const char * cfgfile)
 	config->hopfudge = 1;
 	config->log_facility = -1;
 	config->client_list = NULL;
+	config->last_client = NULL;
 
 	curnode = NULL;
 
@@ -1771,6 +1772,7 @@ add_client_child(const char * directive)
 	child->command = command;
 	child->path = path;
 	config->client_list = g_list_append(config->client_list, child);
+	config->last_client = g_list_last(config->client_list);
 
 	return HA_OK;
 }
@@ -2146,6 +2148,12 @@ set_release2mode(const char* value)
 
 /*
  * $Log: config.c,v $
+ * Revision 1.146  2005/02/21 01:16:16  alan
+ * Changed the heartbeat code for shutting down clients.
+ * We no longer remove them from the list, instead we maintain a pointer
+ * to the last client not yet shut down, and update that pointer
+ * without changing anything.
+ *
  * Revision 1.145  2005/02/14 15:26:51  alan
  * Forgot to turn off DoManageResources(!).  I had thought that this was present
  * before.  Either I deleted it by mistake, or something...
