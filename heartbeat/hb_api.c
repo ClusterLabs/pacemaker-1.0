@@ -1,4 +1,4 @@
-/* $Id: hb_api.c,v 1.105 2004/08/31 13:47:31 alan Exp $ */
+/* $Id: hb_api.c,v 1.106 2004/08/31 17:39:02 alan Exp $ */
 /*
  * hb_api: Server-side heartbeat API code
  *
@@ -1162,6 +1162,7 @@ api_remove_client_pid(pid_t c_pid, const char * reason)
 
 	client->removereason = reason;
 	G_main_del_IPC_Channel(client->gsource);
+	client->gsource = NULL;
 	return 1;
 }
 static void
@@ -1222,8 +1223,11 @@ api_remove_client_int(client_proc_t* req, const char * reason)
 				prev->next = client->next;
 			}
 
-			client->chan->ops->destroy(client->chan);
-			client->chan = NULL;
+
+			/* Drop the source - that will destroy the 'chan' */
+			if (client->gsource) {
+				G_main_del_IPC_Channel(client->gsource);
+			}
 
 			/* Zap! */
 			memset(client, 0, sizeof(*client));
