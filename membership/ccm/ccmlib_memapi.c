@@ -1,4 +1,4 @@
-/* $Id: ccmlib_memapi.c,v 1.26 2005/02/21 18:09:26 gshi Exp $ */
+/* $Id: ccmlib_memapi.c,v 1.27 2005/03/22 00:13:22 gshi Exp $ */
 /* 
  * ccmlib_memapi.c: Consensus Cluster Membership API
  *
@@ -495,7 +495,9 @@ mem_handle_event(class_t *class)
 	if(init_llmborn(private)){
 		return FALSE;
 	}
-
+	
+	
+	
 	while(ch->ops->is_message_pending(ch)){
 		/* receive the message and call the callback*/
 		ret=ch->ops->recv(ch,&msg);
@@ -503,20 +505,13 @@ mem_handle_event(class_t *class)
 		if(ret == IPC_FAIL) {
 			return TRUE;
 		}
-
-		if(ret!=IPC_OK){
-			/* FIXIT. setting it to CCM_EVICTED is not
-			 * correct. However the draft api says nothing
-			 * about this case.
-			 * Proposal:
-			 * Set something like  CCM_LOST_SERVICE here
-			 * and return OC_EV_MS_LOST_SERVICE to the
-			 * client
-			 */
-			type = CCM_EVICTED;
-		} else {
-			type = ((ccm_meminfo_t *)msg->msg_body)->ev;
+		
+		if(ret != IPC_OK){
+			/* this should never happen*/			
+			abort();			
 		}
+		
+		type = ((ccm_meminfo_t *)msg->msg_body)->ev;
 
 
 		cookie= mbr_track = NULL;

@@ -1,4 +1,4 @@
-/* $Id: ccmmain.c,v 1.23 2005/02/24 00:27:24 gshi Exp $ */
+/* $Id: ccmmain.c,v 1.24 2005/03/22 00:13:22 gshi Exp $ */
 /* 
  * ccm.c: Consensus Cluster Service Program 
  *
@@ -86,7 +86,9 @@ clntCh_input_dispatch(IPC_Channel *client,
 	      gpointer        user_data)
 {
 	if(client->ch_status == IPC_DISCONNECT){
-		cl_log(LOG_INFO, "dispatch:received HUP");
+		cl_log(LOG_INFO, "client (pid=%d) removed from ccm", 
+		       client->farside_pid);
+		
 		client_delete(client);
 		return FALSE;
 	}
@@ -97,7 +99,6 @@ clntCh_input_dispatch(IPC_Channel *client,
 static void
 clntCh_input_destroy(gpointer user_data)
 {
-	cl_log(LOG_INFO, "clntCh_input_destroy:received HUP");
 	return;
 }
 
