@@ -1,4 +1,4 @@
-/* $Id: ha_msg.h,v 1.35 2004/09/30 06:02:23 gshi Exp $ */
+/* $Id: ha_msg.h,v 1.36 2004/10/06 12:14:53 andrew Exp $ */
 /*
  * Intracluster message object (struct ha_msg)
  *
@@ -179,6 +179,7 @@ extern struct fieldtypefuncs_s fieldtypefuncs[4];
 #define	T_RCSTATUS	"respond-cstatus"/* Respond client status */
 #define	T_STONITH	"stonith"	/* Stonith return code */
 #define T_SHUTDONE	"shutdone"	/* External Shutdown complete */
+#define T_CRM		"crmd"		/* Cluster resource manager message */
 
 #define T_APIREQ	"hbapi-req"	/* Heartbeat API request */
 #define T_APIRESP	"hbapi-resp"	/* Heartbeat API response */
