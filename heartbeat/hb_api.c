@@ -1,4 +1,4 @@
-/* $Id: hb_api.c,v 1.116 2004/10/14 20:22:43 gshi Exp $ */
+/* $Id: hb_api.c,v 1.117 2004/10/20 19:26:55 gshi Exp $ */
 /*
  * hb_api: Server-side heartbeat API code
  *
@@ -161,6 +161,9 @@ client_proc_t*	client_list = NULL;	/* List of all our API clients */
 			/* TRUE when any client output still pending */
 extern struct node_info *curnode;
 
+static unsigned long	client_generation = 0; 
+#define MAX_CLIENT_GEN 64
+
 static void	api_process_request(client_proc_t* client, struct ha_msg *msg);
 static void	api_send_client_msg(client_proc_t* client, struct ha_msg *msg);
 static void	api_send_client_status(client_proc_t* client
@@ -196,6 +199,8 @@ should_msg_sendto_client(client_proc_t* client, struct ha_msg* msg)
 	seqno_t			seq;
 	seqno_t			gen;
 	int			ret = 0;
+	const char*		type;
+	struct seqtrack *	t;
 
 	if (!client || !msg){
 		cl_log(LOG_ERR, "should_msg_sendto_client:"
@@ -203,23 +208,7 @@ should_msg_sendto_client(client_proc_t* client, struct ha_msg* msg)
 		return 0;
 	}
 	
-
-
-	table = client->seq_snapshot_table;
-	if (!table){
-		return 1;
-	}
-
-
-	fromuuid = cl_get_binary(msg, F_ORIGUUID, &uuidlen);
-	if (!fromuuid){
-		return 1;
-	}
 	
-	snapshot= (struct seq_snapshot*) g_hash_table_lookup(table, fromuuid);
-	if (!snapshot){
-		return 1;
-	}
 
 	from = ha_msg_value(msg, F_ORIG);
 	cseq = ha_msg_value(msg, F_SEQ);
@@ -227,6 +216,7 @@ should_msg_sendto_client(client_proc_t* client, struct ha_msg* msg)
 	
 	if (!from || !cseq || !cgen){
 		cl_log(LOG_ERR, "should_msg_sendto_client: no from/seq/gen found");
+		cl_log_message(msg);
 		return 0;
 	}
 	
@@ -239,6 +229,34 @@ should_msg_sendto_client(client_proc_t* client, struct ha_msg* msg)
 		return 0;
 	}
 	
+	fromuuid = cl_get_binary(msg, F_ORIGUUID, &uuidlen);
+	thisnode = lookup_tables(from, fromuuid);
+	if ( thisnode == NULL){
+		cl_log(LOG_ERR, "should_msg_sendto_client: node not found in table");
+		return 0;
+	}
+
+	t = &thisnode->track;
+
+	/*if uuid is not found, then it always passes the first restriction*/
+	if (!fromuuid){
+		goto nextstep;
+	}
+
+
+	
+	table = client->seq_snapshot_table;
+	if (!table){
+		goto nextstep;
+	}
+
+	
+	snapshot= (struct seq_snapshot*) g_hash_table_lookup(table, fromuuid);
+	if (!snapshot){
+		goto nextstep;
+	}
+
+	
 	if ( gen > snapshot->generation ||
 	     (gen == snapshot->generation && seq >= snapshot->last_seq)){		
 		ret= 1;
@@ -247,38 +265,76 @@ should_msg_sendto_client(client_proc_t* client, struct ha_msg* msg)
 	/*check if there is any retransmission going on
 	  if not, we can delete this item
 	*/
-	thisnode = lookup_tables(from, fromuuid);
-	if ( thisnode == NULL){
-		cl_log(LOG_ERR, "should_msg_sendto_client: node not found in table");
-	}else{
-		struct seqtrack *	t = &thisnode->track;
-		if (t->nmissing ==0){
-			
-			if (ANYDEBUG){
-				cl_log(LOG_DEBUG,
-				       "Removing one entry in seq snapshot hash table"
-				       "for node %s", thisnode->nodename);
-			}
 
-			if(!g_hash_table_remove(table, fromuuid)){
-				cl_log(LOG_ERR,"should_msg_sendto_client:"
-				       "g_hash_table_remove failed");
-				return HA_FAIL;
-			}
-			cl_free(snapshot);
-			
-			if (ANYDEBUG){
-				cl_log(LOG_DEBUG,
-				       "destroying the seq snapshot hash table");
-			}		
-			if ( g_hash_table_size(table) ==0){
-				g_hash_table_destroy(table);
-				client->seq_snapshot_table = NULL;
-			}
+	if (t->nmissing ==0){
+		
+		if (ANYDEBUG){
+			cl_log(LOG_DEBUG,
+			       "Removing one entry in seq snapshot hash table"
+			       "for node %s", thisnode->nodename);
+		}
+		
+		if(!g_hash_table_remove(table, fromuuid)){
+			cl_log(LOG_ERR,"should_msg_sendto_client:"
+			       "g_hash_table_remove failed");
+			return 0;
+		}
+		cl_free(snapshot);
+		
+		if (ANYDEBUG){
+			cl_log(LOG_DEBUG,
+			       "destroying the seq snapshot hash table");
 		}		
-	}
+		if ( g_hash_table_size(table) ==0){
+			g_hash_table_destroy(table);
+			client->seq_snapshot_table = NULL;
+		}
+	}		
+	
+	if ( ret ==0  ){
 
-	return ret;
+		return 0;
+	}
+	
+ nextstep:
+	/* if it's a client status message, then it will not be delivered
+	   until all messages before it has been received
+	*/
+       	
+	if( (type = ha_msg_value(msg, F_TYPE)) == NULL){
+		cl_log(LOG_ERR, "no type field found");
+		return 0;
+	}
+	
+	if ( strcmp(type, T_APICLISTAT) != 0 || t->nmissing == 0){		
+		return 1;
+	}
+	
+
+	if ( seq > t->first_missing_seq ){
+		/*hmmm.... we cannot deliever the message now,
+		  queue it*/		
+		
+		struct ha_msg* copymsg = ha_msg_copy(msg);
+		
+		if (!copymsg){
+			cl_log(LOG_ERR, "msg copy failed");
+			return 0;
+		}
+		
+		t->client_status_msg_queue = 
+			g_list_append(t->client_status_msg_queue,
+				      copymsg);
+		if (ANYDEBUG){
+			cl_log(LOG_DEBUG,"one entry added to client_status_msg_queue"
+			       "for node %s", thisnode->nodename);
+		}
+		return 0;
+	}
+	
+
+	
+	return 1;
 }
 
 
@@ -305,6 +361,7 @@ api_heartbeat_monitor(struct ha_msg *msg, int msgtype, const char *iface)
 	const char*	clientid;
 	client_proc_t*	client;
 	client_proc_t*	nextclient;
+	
 
 	/* This kicks out most messages, since debug clients are rare */
 
@@ -342,14 +399,11 @@ api_heartbeat_monitor(struct ha_msg *msg, int msgtype, const char *iface)
 
 		/* Is this one of the types of messages we're interested in? */
 
-		if ((msgtype & client->desired_types) != 0) {
-
+		if ((msgtype & client->desired_types) != 0) {		       	
 			
-			if (should_msg_sendto_client(client, msg)){
-				api_send_client_msg(client, msg);
-			}else {
-				cl_log(LOG_WARNING, "out of order message dropped ");
-				cl_log_message(msg);
+			
+			if (should_msg_sendto_client(client, msg)){				
+				api_send_client_msg(client, msg);				
 			}
 			
 			if (client->removereason && !client->isindispatch) {
@@ -863,6 +917,26 @@ api_get_nodename(const struct ha_msg* msg, struct ha_msg* resp,
 	
 }
 
+
+static int
+add_client_gen(struct ha_msg* msg)
+{
+	char buf[MAX_CLIENT_GEN];
+	
+	memset(buf, 0, MAX_CLIENT_GEN);
+	snprintf(buf, MAX_CLIENT_GEN, "%ld",client_generation);	
+	if (ha_msg_add(msg, F_CLIENT_GENERATION, buf) != HA_OK){
+		cl_log(LOG_ERR, "api_send_client_status: cannot add fields");
+		ha_msg_del(msg); msg=NULL;
+		return HA_FAIL;
+	}
+	
+	return HA_OK;
+	
+}
+
+
+
 /*
  * Process an API request message from one of our clients
  */
@@ -930,6 +1004,11 @@ api_process_request(client_proc_t* fromclient, struct ha_msg * msg)
 		}
 
 		/* Mikey likes it! */
+		if (add_client_gen(msg) != HA_OK){
+			cl_log(LOG_ERR, "api_process_request: "
+			       " add client generation to ha_msg failed ");			
+		}
+
 		if (send_cluster_msg(msg) != HA_OK) {
 			cl_log(LOG_ERR, "api_process_request: "
 			"cannot forward message to cluster");
@@ -1302,12 +1381,6 @@ api_process_registration_msg(client_proc_t* client, struct ha_msg * msg)
 		,	(client->iscasual? "'casual'" : client->client_id));
 	}
 	api_send_client_msg(client, resp);
-	/* What to do with 'resp'.  Do we need it any more?? FIXME!! */
-	/* I think we don't need it anymore when go here, or memory leak
-	   will be very severe. You don't test it;-)	
-	goto del_msg;
-	*/
-
 del_rsp_and_msg:
 	if (resp != NULL) {
 		ha_msg_del(resp); resp=NULL;
@@ -1318,12 +1391,13 @@ del_msg:
 	}
 }
 
+
+
 static void
 api_send_client_status(client_proc_t* client, const char * status
 ,	const char *	reason)
 {
-	struct ha_msg*	msg;
-
+	struct ha_msg*		msg;
 	if (client->iscasual) {
 		return;
 	}
@@ -1335,22 +1409,34 @@ api_send_client_status(client_proc_t* client, const char * status
 		cl_log(LOG_ERR, "api_send_client_status: out of memory/1");
 		return;
 	}
-
+	
 	if (ha_msg_add(msg, F_TYPE, T_APICLISTAT) != HA_OK
-	||	ha_msg_add(msg, F_STATUS, status) != HA_OK
-	||	ha_msg_add(msg, F_FROMID, client->client_id) != HA_OK
-	||	ha_msg_add(msg, F_TOID, client->client_id) != HA_OK
-	||	ha_msg_add(msg, F_ORIG, curnode->nodename) != HA_OK
-	||	(reason != NULL && ha_msg_add(msg, F_COMMENT, reason)
-	!= HA_OK)) {
+	    ||	ha_msg_add(msg, F_STATUS, status) != HA_OK
+	    ||	ha_msg_add(msg, F_FROMID, client->client_id) != HA_OK
+	    ||	ha_msg_add(msg, F_TOID, client->client_id) != HA_OK
+	    ||	ha_msg_add(msg, F_ORIG, curnode->nodename) != HA_OK
+	    ||	(reason != NULL && ha_msg_add(msg, F_COMMENT, reason)
+		 != HA_OK)) {
 		cl_log(LOG_ERR, "api_send_client_status: cannot add fields");
 		ha_msg_del(msg); msg=NULL;
 		return;
 	}
+	
+	if (strcmp(status, JOINSTATUS) == 0){
+		client_generation++;
+	}
+	
+	if (add_client_gen(msg) != HA_OK){
+		cl_log(LOG_ERR, "api_send_client_status: cannot add fields");
+		ha_msg_del(msg); msg=NULL;
+		return;
+	}
+	
 	if (strcmp(status, LEAVESTATUS) == 0) {
 		/* Make sure they know they're signed off... */
 		api_send_client_msg(client, msg);
 	}
+	
 	if (send_cluster_msg(msg) != HA_OK) {
 		cl_log(LOG_ERR, "api_send_client_status: "
 			"cannot send message to cluster");

@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.328 2004/10/19 09:47:47 zhenh Exp $ */
+/* $Id: heartbeat.c,v 1.329 2004/10/20 19:26:55 gshi Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -3699,6 +3699,29 @@ should_ring_copy_msg(struct ha_msg *m)
  *	This protocol is called from master_control_process().
  */
 
+static void
+client_status_msg_queue_cleanup(GList* list)
+{
+	int i;
+	
+	if (list == NULL){
+		return;
+	}
+
+	for (i = 0; i < g_list_length(list); i++){
+		
+		struct ha_msg* msg = 
+			(struct ha_msg*) g_list_nth_data(list, i);		
+		if(msg){
+			ha_msg_del(msg);
+		}
+	}	
+	
+	g_list_free(list);
+	
+	return;
+}
+
 
 /*
  *	Right now, this function is a little too simple.  There is no
@@ -3878,6 +3901,13 @@ should_drop_message(struct node_info * thisnode, const struct ha_msg *msg,
 			t->nmissing = 0;
 			t->last_seq = seq;
 			t->last_iface = iface;
+			t->first_missing_seq = 0;
+			if ( t->client_status_msg_queue){
+
+				client_status_msg_queue_cleanup(t->client_status_msg_queue);
+				t->client_status_msg_queue = NULL;
+			}
+			
 			cl_log(LOG_ERR, "lost a lot of packets!");
 			return (IsToUs ? KEEPIT : DROPIT);
 		}else{
@@ -3885,6 +3915,12 @@ should_drop_message(struct node_info * thisnode, const struct ha_msg *msg,
 		}
 
 		/* Try and Record each of the missing sequence numbers */
+		if (t->first_missing_seq == 0
+		    || 	t->first_missing_seq > t -> last_seq + 1 ){
+			
+			t->first_missing_seq = t -> last_seq +1;				
+		} 
+
 		for(k = t->last_seq+1; k < seq; ++k) {
 			if (t->nmissing < MAXMISSING-1) {
 				t->seqmissing[t->nmissing] = k;
@@ -3940,6 +3976,11 @@ should_drop_message(struct node_info * thisnode, const struct ha_msg *msg,
 		t->last_seq = seq;
 		t->last_rexmit_req = zero_longclock;
 		t->last_iface = iface;
+		t->first_missing_seq = 0;
+		if (t->client_status_msg_queue){			
+			client_status_msg_queue_cleanup(t->client_status_msg_queue);
+			t->client_status_msg_queue = NULL;
+		}
 		return (IsToUs ? KEEPIT : DROPIT);
 	}
 	/* This is a DUP packet (or a really old one we lost track of) */
@@ -4036,7 +4077,8 @@ is_lost_packet(struct node_info * thisnode, seqno_t seq)
 {
 	struct seqtrack *	t = &thisnode->track;
 	int			j;
-
+	int			ret = 0;
+	
 	for (j=0; j < t->nmissing; ++j) {
 		/* Is this one of our missing packets? */
 		if (seq == t->seqmissing[j]) {
@@ -4056,11 +4098,88 @@ is_lost_packet(struct node_info * thisnode, seqno_t seq)
 				cl_log(LOG_INFO, "No pkts missing from %s!"
 				,	thisnode->nodename);
 			}
-			return 1;
+			ret = 1;
+			goto  update_client_status_queue;
 		}
 	}
-	return 0;
+
+	ret =0;
+
+ update_client_status_queue:
+	/*determine the new first missing seq*/
+	if (ret){		
+		t->first_missing_seq = 0;
+		for (j=0; j < t->nmissing; ++j) {
+			if (t->seqmissing[j] != NOSEQUENCE){
+				if (t->first_missing_seq == 0 ||
+				    t->seqmissing[j] < t->first_missing_seq){
+					
+					t->first_missing_seq = t->seqmissing[j];
+				}				
+			}
+		}
+		
+		
+		if(t->client_status_msg_queue){			
+
+			int			n;
+			struct ha_msg*		msg ;
+			seqno_t			seq;
+			const char *		cseq;
+			int			i;
+
+			n = g_list_length(t->client_status_msg_queue);
+			
+			i = 0;
+			while( i < n){
+
+				msg = (struct ha_msg*)
+					g_list_nth_data(t->client_status_msg_queue,i);
+				if (msg == NULL){
+					cl_log(LOG_ERR, "msg is NULL in client"
+					       " status msg queue");
+					return ret;
+				}
+				
+				cseq = ha_msg_value(msg, F_SEQ);
+				if (cseq  == NULL || sscanf(cseq, "%lx", &seq) != 1 ||	seq <= 0) {
+					cl_log(LOG_ERR, "bad sequence number");
+					cl_log_message(msg);
+					return ret;
+				}
+				
+				if ( t->first_missing_seq == 0 || seq < t->first_missing_seq){
+					/* deliver the message to client*/
+					heartbeat_monitor(msg, KEEPIT, NULL);
+
+					t->client_status_msg_queue = 
+						g_list_remove(t->client_status_msg_queue,msg);
+					
+					ha_msg_del(msg);
+					
+					n = g_list_length(t->client_status_msg_queue);
+					i--;
+				}	
+				
+				i++;
+				
+			}
+			
+			if (g_list_length(t->client_status_msg_queue) == 0){
+				g_list_free(t->client_status_msg_queue);
+				t->client_status_msg_queue = NULL;
+				
+				if (ANYDEBUG){
+					cl_log(LOG_DEBUG,"client_status_msg_queue"
+					       "for node %s destried", thisnode->nodename);
+				}
+			}
+		}
+	}
+	
+	return ret;
 }
+
 
 static void
 request_msg_rexmit(struct node_info *node, seqno_t lowseq
@@ -4606,6 +4725,9 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.329  2004/10/20 19:26:55  gshi
+ * temporary fix for memory free problem in media failure
+ *
  * Revision 1.328  2004/10/19 09:47:47  zhenh
  * make the deadtime tunable
  *

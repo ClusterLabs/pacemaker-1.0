@@ -1,4 +1,4 @@
-/* $Id: config.c,v 1.131 2004/10/16 04:12:56 alan Exp $ */
+/* $Id: config.c,v 1.132 2004/10/20 19:26:55 gshi Exp $ */
 /*
  * Parse various heartbeat configuration files...
  *
@@ -896,8 +896,8 @@ add_option(const char *	option, const char * value)
 			PILIncrIFRefCount(PluginLoadingSystem
 			,	HB_COMM_TYPE_S, option, -1);
 			/* Does this come from ha_malloc? FIXME!! */
-			ha_free(descr); descr = NULL;
-			ha_free(type);  type = NULL;
+			g_free(descr); descr = NULL;
+			g_free(type);  type = NULL;
 			return(HA_FAIL);
 		}else{
 			mp->type = type;
@@ -2047,6 +2047,9 @@ set_corerootdir(const char* value)
 
 /*
  * $Log: config.c,v $
+ * Revision 1.132  2004/10/20 19:26:55  gshi
+ * temporary fix for memory free problem in media failure
+ *
  * Revision 1.131  2004/10/16 04:12:56  alan
  * Added core dump directories, and a bunch of code to cd into the
  * right core dump directory, and activated that code in several
