@@ -1,4 +1,4 @@
-/* $Id: oc_membership.h,v 1.5 2004/02/24 22:30:09 andrew Exp $ */
+/* $Id: oc_membership.h,v 1.6 2004/04/20 20:14:30 msoffen Exp $ */
 #ifndef OCF_OC_MEMBERSHIP_H
 #	define OCF_OC_MEMBERSHIP_H
 /*
@@ -51,9 +51,11 @@
 #ifdef HAVE_UUID_UUID_H
 #	include <uuid/uuid.h>
 #else
-
-typedef unsigned char uuid_t[16];
-
+#ifdef HAVE_UUID_H
+#	include <uuid.h>
+#else
+	typedef unsigned char uuid_t[16];
+#endif
 #endif
 						/* controversial? */
 typedef void *					oc_cluster_handle_t;
