@@ -137,7 +137,7 @@ typedef SaUint32T SaCkptCheckpointOpenFlagsT;
 #define SA_CKPT_GENERATED_SECTION_ID {NULL, 0}
 
 typedef struct {
-    SaUint8T id[SA_MAX_ID_LENGTH];		// Pan Deng
+    SaUint8T *id;
     SaUint32T idLen;
 } SaCkptSectionIdT;
 

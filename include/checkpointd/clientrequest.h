@@ -7,6 +7,8 @@
 #define CKPTIPC CKPTVARLIBDIR "/ckpt.sock"
 #define DEBUGIPC CKPTVARLIBDIR "/debug.sock"
 
+#define SA_MAX_ID_LENGTH	4
+
 typedef enum {
 	REQ_SERVICE_INIT 	= 1,	/* service initialization*/
 	REQ_SERVICE_FINL 	= 2,	/* service finalization */
@@ -25,6 +27,12 @@ typedef enum {
 	REQ_SEC_RD 		= 15,	/* read secton */
 	REQ_CKPT_SYNC 		= 16,	/* synchronize the checkpoint */
 } SaCkptReqT;
+
+typedef struct {
+	SaUint8T	id[SA_MAX_ID_LENGTH];
+	SaUint32T	idLen;
+} SaCkptFixLenSectionIdT;
+
 /*
 #if 0
 typedef struct _SaCkptClientRequestT{
@@ -123,7 +131,7 @@ typedef struct {
 /* saCkptSectionCreate()*/
 typedef struct {
 	SaCkptCheckpointHandleT checkpointHandle;
-	SaCkptSectionIdT	sectionID;
+	SaCkptFixLenSectionIdT	sectionID;
 	SaTimeT 		expireTime;
 } SaCkptReqSecCrtParamT;
 
@@ -131,14 +139,14 @@ typedef struct {
 /* saCkptSectionDelete()*/
 typedef struct {
 	SaCkptCheckpointHandleT checkpointHandle;
-	SaCkptSectionIdT	sectionID;
+	SaCkptFixLenSectionIdT	sectionID;
 } SaCkptReqSecDelParamT;
 
 
 /* saCkptCheckpointWrite() */
 typedef struct {
 	SaCkptCheckpointHandleT checkpointHandle;
-	SaCkptSectionIdT	sectionID;
+	SaCkptFixLenSectionIdT	sectionID;
 	SaUint32T 		offset; 
 } SaCkptReqSecWrtParamT;
 
@@ -146,14 +154,14 @@ typedef struct {
 /* saCkptCheckpointOverwrite() */
 typedef struct {
 	SaCkptCheckpointHandleT checkpointHandle;
-	SaCkptSectionIdT	sectionID;
+	SaCkptFixLenSectionIdT	sectionID;
 } SaCkptReqSecOwrtParamT;
 
 
 /* saCkptCheckpointRead() */
 typedef struct {
 	SaCkptCheckpointHandleT checkpointHandle;
-	SaCkptSectionIdT	sectionID;
+	SaCkptFixLenSectionIdT	sectionID;
 	SaUint32T		offset; 
 	SaUint32T		dataSize; 
 } SaCkptReqSecReadParamT;
@@ -161,7 +169,7 @@ typedef struct {
 /* saCkptSectionExpirationTimeSet */
 typedef struct {
 	SaCkptCheckpointHandleT checkpointHandle;
-	SaCkptSectionIdT	sectionID;
+	SaCkptFixLenSectionIdT	sectionID;
 	SaTimeT expireTime;
 } SaCkptReqSecExpSetParamT;
 
