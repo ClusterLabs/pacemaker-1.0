@@ -1,4 +1,4 @@
-/* $Id: event_lib.c,v 1.6 2004/03/26 02:54:35 forrest Exp $ */
+/* $Id: event_lib.c,v 1.7 2004/03/26 05:33:55 forrest Exp $ */
 /* 
  * event_lib.c: source file for event library
  *
@@ -50,6 +50,7 @@ typedef struct evt_event_handle_s {
 	SaEvtEventIdT evtId;
 	SaEvtChannelHandleT channelId;
 	struct evt_event_handle_s *next;
+	int set_flag;
 } evt_event_handle;
 
 struct queue_head {
@@ -896,7 +897,8 @@ saEvtEventAttributesSet(SaEvtEventHandleT eventHandle,
 	memcpy(event_hd->publisherName.value, publisherName->value,
 			publisherName->length);		
 	event_hd->publishTime = (SaTimeT)time(NULL);	
-	
+	event_hd->set_flag = 1;
+
 	return SA_OK;
 }
 
@@ -921,6 +923,7 @@ saEvtEventAttributesGet(const SaEvtEventHandleT eventHandle,
 	if(event_hd == NULL){
 		return SA_ERR_BAD_HANDLE;
 	}
+	
 	//TODO: what should be done if patterSize conflicts
 	if(patternArray != NULL){
 		tmp_size = (SaSizeT *)event_hd->patternArray;
@@ -1032,7 +1035,9 @@ saEvtEventPublish(const SaEvtEventHandleT eventHandle,
 	if(event_hd == NULL){
 		return SA_ERR_BAD_HANDLE;
 	}
-
+	if(event_hd->set_flag == 0){
+		return SA_ERR_INVALID_PARAM;
+	}
 	evt_channel_hd = g_hash_table_lookup(evt_channel_hash,
 			(gpointer)event_hd->channelId);
 	if(evt_channel_hd == NULL){
