@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-#	$Id: IPaddr.in,v 1.47 2003/10/23 08:03:17 horms Exp $
+#	$Id: IPaddr.in,v 1.48 2003/10/24 07:07:44 horms Exp $
 #
 #	This script manages IP alias IP addresses
 #
@@ -333,6 +333,7 @@ ip_stop() {
   if test -f "$SENDARPPIDFILE"
   then
   	cat "$SENDARPPIDFILE" | xargs kill
+	rm -f "$SENDARPPIDFILE"
   fi
 
   case $SYSTYPE in
@@ -622,7 +623,7 @@ ip_monitor() {
 
 usage() {
   echo $USAGE >&2
-  echo "$Id: IPaddr.in,v 1.47 2003/10/23 08:03:17 horms Exp $"
+  echo "$Id: IPaddr.in,v 1.48 2003/10/24 07:07:44 horms Exp $"
 }
 
 #
@@ -669,6 +670,9 @@ esac
 #
 #
 # $Log: IPaddr.in,v $
+# Revision 1.48  2003/10/24 07:07:44  horms
+# remove send arps pid file on stop if it exists
+#
 # Revision 1.47  2003/10/23 08:03:17  horms
 # IPaddr and IPaddr2 both kill send_arp on stop
 # IPaddr defaults to running send_arp in the background
