@@ -1371,6 +1371,7 @@ group_mem_dispatch(gpointer data, gpointer user_data)
 	client_mqgroup_track_t * track = (client_mqgroup_track_t *)data;
 	notify_buffer_t * notify = (notify_buffer_t *)user_data;
 
+	memset(&msg, 0, sizeof(msg));
 
 	cmg = (client_mqgroup_notify_t *)
 			ha_malloc(sizeof(client_mqgroup_notify_t));

@@ -1,4 +1,4 @@
-/* $Id: event_lib.c,v 1.9 2004/08/29 03:01:13 msoffen Exp $ */
+/* $Id: event_lib.c,v 1.10 2004/11/22 20:06:42 gshi Exp $ */
 /* 
  * event_lib.c: source file for event library
  *
@@ -149,7 +149,8 @@ static SaErrorT send_to_evt_daemon(struct IPC_CHANNEL *ch,
 				void *msg, SaSizeT msg_size)
 {
 	struct IPC_MESSAGE	Msg;
-
+	
+	memset(&Msg, 0, sizeof(Msg));
 	Msg.msg_body = msg;
 	Msg.msg_len = msg_size;
 	Msg.msg_done = NULL;

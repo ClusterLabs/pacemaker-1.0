@@ -1,4 +1,4 @@
-/* $Id: eventd.c,v 1.7 2004/08/30 22:24:15 alan Exp $ */
+/* $Id: eventd.c,v 1.8 2004/11/22 20:06:42 gshi Exp $ */
 /* 
  * eventd.c: source file for event daemon
  *
@@ -646,6 +646,8 @@ static void send_to_client(struct IPC_CHANNEL *client,
 		void *msg, SaSizeT msg_size)
 {
 	struct IPC_MESSAGE	Msg;
+
+	memset(&Msg, 0, sizeof(Msg));
 
 	Msg.msg_body = msg;
 	Msg.msg_len = msg_size;

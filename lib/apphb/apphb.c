@@ -1,4 +1,4 @@
-/* $Id: apphb.c,v 1.20 2004/11/18 00:34:37 gshi Exp $ */
+/* $Id: apphb.c,v 1.21 2004/11/22 20:06:42 gshi Exp $ */
 /*
  * apphb.c: application heartbeat library code.
  *
@@ -120,6 +120,8 @@ apphb_register(const char * appname, const char * appinstance)
 	msg.uid = getuid();
 	msg.gid = getgid();
 	
+	memset(&Msg, 0, sizeof(Msg));
+
 	Msg.msg_buf = NULL;
 	Msg.msg_body = &msg;
 	Msg.msg_len = sizeof(msg);
@@ -158,6 +160,9 @@ apphb_unregister(void)
 	/* Send an unregister message to the server... */
 	if (hbcomm != NULL && hbstatus == IPC_OK) {
 		strncpy(msg.msgtype, UNREGISTER, sizeof(msg.msgtype));
+
+		memset(&Msg, 0, sizeof(Msg));
+	
 		Msg.msg_buf = NULL;
 		Msg.msg_body = &msg;
 		Msg.msg_len = sizeof(msg);
@@ -205,6 +210,9 @@ apphb_setinterval(unsigned long hbms)
 	}
 	strncpy(msg.msgtype, SETINTERVAL, sizeof(msg.msgtype));
 	msg.ms = hbms;
+
+	memset(&Msg, 0, sizeof(Msg));
+	
 	Msg.msg_buf = NULL;
 	Msg.msg_body = &msg;
 	Msg.msg_len = sizeof(msg);
@@ -240,6 +248,9 @@ apphb_setwarn(unsigned long hbms)
 	}
 	strncpy(msg.msgtype, SETWARNTIME, sizeof(msg.msgtype));
 	msg.ms = hbms;
+
+	memset(&Msg, 0, sizeof(Msg));
+	
 	Msg.msg_buf = NULL;
 	Msg.msg_body = &msg;
 	Msg.msg_len = sizeof(msg);
@@ -269,6 +280,9 @@ apphb_hb(void)
 		return -1;
 	}
 	strncpy(msg.msgtype, HEARTBEAT, sizeof(msg.msgtype));
+	
+	memset(&Msg, 0, sizeof(Msg));
+	
 	Msg.msg_buf = NULL;
 	Msg.msg_body = &msg;
 	Msg.msg_len = sizeof(msg);

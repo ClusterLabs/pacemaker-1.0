@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.337 2004/11/18 00:34:37 gshi Exp $ */
+/* $Id: heartbeat.c,v 1.338 2004/11/22 20:06:41 gshi Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -1379,6 +1379,9 @@ hb_new_ipcmsg(const void* data, int len, IPC_Channel* ch, int refcnt)
 	if ((hdr = (IPC_Message*)ha_malloc(sizeof(*hdr)))  == NULL) {
 		return NULL;
 	}
+	
+	memset(hdr, 0, sizeof(*hdr));
+
 	if ((copy = (char*)ha_malloc(ch->msgpad + len))
 	    == NULL) {
 		ha_free(hdr);
@@ -4748,6 +4751,10 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.338  2004/11/22 20:06:41  gshi
+ * new IPC message should be memset-ed to 0
+ * to avoid errors caused by adding a new field (void*) msg_buf
+ *
  * Revision 1.337  2004/11/18 00:34:37  gshi
  * 1. use one system call send() instead of two for each message in IPC.
  * 2. fixed a bug: heartbeat could crash if IPC pipe beween heartbeat and a client

@@ -1,4 +1,4 @@
-/* $Id: recoverymgr.c,v 1.3 2004/02/17 22:12:00 lars Exp $ */
+/* $Id: recoverymgr.c,v 1.4 2004/11/22 20:06:42 gshi Exp $ */
 /*
  * recoverymgr.c: recovery manager client library code.
  *
@@ -122,7 +122,9 @@ recoverymgr_send_event(const char *appname, const char *appinst,
 	msg.uid = uid;
 	msg.gid = gid;
 	msg.event = event;	
-		
+	
+	memset(&Msg, 0, sizeof(Msg));
+	
         Msg.msg_body = &msg;
         Msg.msg_len = sizeof(msg);
         Msg.msg_done = NULL;
@@ -202,7 +204,9 @@ recoverymgr_connect(const char * appname,
 	msg.pid = getpid();
 	msg.uid = getuid();
 	msg.gid = getgid();
-
+	
+	memset(&Msg, 0, sizeof(Msg));
+	
 	Msg.msg_body = &msg;
 	Msg.msg_len = sizeof(msg);
 	Msg.msg_done = NULL;
@@ -242,6 +246,9 @@ recoverymgr_disconnect(void)
 	/* Send an unregister message to the server... */
 	if (comm != NULL && status == IPC_OK) {
 		strncpy(msg.msgtype, RECOVERYMGR_DISCONNECT, sizeof(msg.msgtype));
+
+		memset(&Msg, 0, sizeof(Msg));
+		
 		Msg.msg_body = &msg;
 		Msg.msg_len = sizeof(msg);
 		Msg.msg_done = NULL;

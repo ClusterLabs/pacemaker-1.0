@@ -1,4 +1,4 @@
-/* $Id: recoverymgrd.c,v 1.10 2004/10/16 04:12:57 alan Exp $ */
+/* $Id: recoverymgrd.c,v 1.11 2004/11/22 20:06:42 gshi Exp $ */
 /*
  * Generic Recovery manager implementation
  * 
@@ -340,6 +340,8 @@ recoverymgr_client_new(struct IPC_CHANNEL* ch)
 
         ret = g_new(recoverymgr_client_t, 1);
 
+	memset(ret, 0, sizeof(*ret));
+	
         ret->appname = NULL;
         ret->appinst = NULL;
         ret->ch = ch;

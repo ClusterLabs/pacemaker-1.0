@@ -1,4 +1,4 @@
-/* $Id: ccmclient.c,v 1.14 2004/11/22 15:21:13 andrew Exp $ */
+/* $Id: ccmclient.c,v 1.15 2004/11/22 20:06:42 gshi Exp $ */
 /* 
  * client.c: Consensus Cluster Client tracker
  *
@@ -185,7 +185,9 @@ create_message(GMemChunk *chk, void *data, int size)
 
 	ipcmsg->chkptr = chk;
 	ipcmsg->count = 0;
-
+	
+	memset(&ipcmsg->ipcmsg, 0, sizeof(IPC_Message));
+	
 	ipcmsg->ipcmsg.msg_body = ipcmsg+1;
 	memcpy(ipcmsg->ipcmsg.msg_body, data, size);
 
