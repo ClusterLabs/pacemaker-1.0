@@ -1,4 +1,4 @@
-const static char * _hb_config_c_Id = "$Id: config.c,v 1.112 2004/02/10 05:29:26 alan Exp $";
+const static char * _hb_config_c_Id = "$Id: config.c,v 1.113 2004/02/10 19:58:48 alan Exp $";
 /*
  * Parse various heartbeat configuration files...
  *
@@ -823,7 +823,7 @@ islegaldirective(const char *directive)
 		}
 	}
 	for (j=0; j < DIMOF(WLdirectives); ++j) {
-		if (ANYDEBUG) {
+		if (DEBUGDETAILS) {
 			ha_log(LOG_DEBUG
 			, "Comparing directive [%s] against WLdirective[%s]"
 			,	 directive, WLdirectives[j].type);
@@ -1966,6 +1966,9 @@ baddirective:
 
 /*
  * $Log: config.c,v $
+ * Revision 1.113  2004/02/10 19:58:48  alan
+ * Decreased startup debugging at lowest level.
+ *
  * Revision 1.112  2004/02/10 05:29:26  alan
  * Provided more backwards compatibility for pre 1.0.x code than we had before.
  * We now permit nice_failback, even though we complain loudly about it.
