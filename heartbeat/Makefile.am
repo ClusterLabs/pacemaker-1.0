@@ -29,8 +29,6 @@ halibdir		= $(libdir)/@HB_PKG@
 commmoddir		= $(halibdir)/modules/comm
 havarlibdir		= $(localstatedir)/lib/@HB_PKG@
 havarrundir		= $(localstatedir)/run
-apidir		       	= $(havarlibdir)/api
-apicasualdir		= $(havarlibdir)/casual
 # fifos with path
 hafifo			= $(havarlibdir)/fifo
 apigid			= @HA_APIGID@
@@ -91,15 +89,11 @@ EXTRA_DIST              = $(ha_DATA) $(ha_SCRIPTS)
 ## additional Makefile targets
 # additional installations not covered normally
 install-exec-local:
-	$(mkinstalldirs) $(DESTDIR)$(havarrundir) $(DESTDIR)$(apidir) \
-		$(DESTDIR)$(apicasualdir)
-	-chmod 750 $(DESTDIR)$(havarrundir) $(DESTDIR)$(apidir)
-	-chmod 1770 $(DESTDIR)/$(apicasualdir)
-	-chgrp $(apigid) $(DESTDIR)/$(apidir) $(DESTDIR)/$(apicasualdir)
+	$(mkinstalldirs) $(DESTDIR)$(havarrundir) 
+	-chmod 750 $(DESTDIR)$(havarrundir)
 	test -p $(DESTDIR)$(hafifo) || mkfifo -m 600 $(DESTDIR)$(hafifo)
 
 uninstall-local:
 	-test -p $(DESTDIR)$(hafifo) && rm $(DESTDIR)$(hafifo)
-	rm -rf $(DESTDIR)$(havarrundir) $(DESTDIR)$(apidir) \
-                $(DESTDIR)$(apicasualdir)
+	rm -rf $(DESTDIR)$(havarrundir) 
 
