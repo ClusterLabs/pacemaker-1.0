@@ -1,4 +1,4 @@
-/* $Id: event_lib.c,v 1.3 2004/03/23 09:04:14 forrest Exp $ */
+/* $Id: event_lib.c,v 1.4 2004/03/23 18:50:37 msoffen Exp $ */
 /* 
  * event_lib.c: source file for event library
  *
