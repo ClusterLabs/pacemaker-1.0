@@ -1,4 +1,4 @@
-/* $Id: ccmllm.c,v 1.11 2005/03/16 14:56:33 gshi Exp $ */
+/* $Id: ccmllm.c,v 1.12 2005/03/16 17:50:00 gshi Exp $ */
 /* 
  * ccmllm.c: Low Level membership routines.
  *
@@ -157,11 +157,11 @@ llm_get_inactive_node_count(llm_info_t *llm)
 	int		count = 0 ;
 	unsigned	i;
 	
-	for (i = 0; i< llm->llm_nodeCount; i++){
+	for (i = 0; i< llm->nodecount; i++){
 		cl_log(LOG_INFO, "node=%s  status=%s",
-		       llm->llm_nodes[i].NodeID, 
-		       llm->llm_nodes[i].Status);
-		if (STRNCMP_CONST(llm->llm_nodes[i].Status, 
+		       llm->nodes[i].nodename, 
+		       llm->nodes[i].status);
+		if (STRNCMP_CONST(llm->nodes[i].status, 
 			    CLUST_INACTIVE) == 0){
 			count ++;
 		}
@@ -261,7 +261,7 @@ llm_add(llm_info_t *llm,
 		LLM_SET_UUID(llm, j, j);
 	}
 		
-	llm->llm_nodes[i].join_request = FALSE;
+	llm->nodes[i].join_request = FALSE;
 	LLM_SET_NODEID(llm, i, node);
 	LLM_SET_STATUS(llm, i, status);
 	LLM_SET_UUID(llm, i, i);

@@ -1,4 +1,4 @@
-/* $Id: ccm.c,v 1.71 2005/03/16 14:56:33 gshi Exp $ */
+/* $Id: ccm.c,v 1.72 2005/03/16 17:49:59 gshi Exp $ */
 /* 
  * ccm.c: Consensus Cluster Service Program 
  *
@@ -75,7 +75,7 @@ extern int global_debug;
 #define 	CCM_GET_MAXTRANS(info)   info->ccm_max_transition
 #define		CCM_GET_STATE(info) 	info->ccm_node_state 
 #define		CCM_GET_HIPROTO(info) 	info->ccm_hiproto 
-#define 	CCM_GET_LLM(info) 	(&(info->ccm_llm))
+#define 	CCM_GET_LLM(info) 	(&(info->llm))
 #define 	CCM_GET_UPDATETABLE(info) (&(info->ccm_update))
 #define 	CCM_GET_MEMCOMP(info) (&(info->ccm_memcomp))
 #define 	CCM_GET_JOINED_TRANSITION(info) info->ccm_joined_transition
@@ -178,7 +178,7 @@ ccm_set_state(ccm_info_t* info, int istate,const struct ha_msg*  msg)
 			}
 			cl_log(LOG_INFO,"change state from %s to %s, current leader is %s",   
 			       state_string(info->ccm_node_state),state_string(istate), 
-			       indx < 0 ?"none": info->ccm_llm.llm_nodes[indx].NodeID); 
+			       indx < 0 ?"none": info->llm.nodes[indx].nodename); 
 #if 1
 			if (msg) {
 				cl_log_message(LOG_DEBUG, msg);		
@@ -227,13 +227,13 @@ static int new_node_mem_list_timeout(unsigned long timeout)
 }
 
 #define CCM_GET_MYNODE_ID(info) \
-	info->ccm_llm.llm_nodes[info->ccm_llm.llm_mynode].NodeID
+	info->llm.nodes[info->llm.myindex].nodename
 #define CCM_GET_CL_NODEID(info) \
-	info->ccm_llm.llm_nodes[info->ccm_member[CCM_GET_CL(info)]].NodeID 
+	info->llm.nodes[info->ccm_member[CCM_GET_CL(info)]].nodename 
 #define CCM_GET_RECEIVED_CHANGE_MSG(info, node) \
-	CCM_GET_LLM(info)->llm_nodes[info->ccm_member[ccm_get_membership_index(info, node)]].received_change_msg
+	CCM_GET_LLM(info)->nodes[info->ccm_member[ccm_get_membership_index(info, node)]].received_change_msg
 #define CCM_SET_RECEIVED_CHANGE_MSG(info, node, value) \
-	CCM_GET_LLM(info)->llm_nodes[info->ccm_member[ccm_get_membership_index(info, node)]].received_change_msg = value
+	CCM_GET_LLM(info)->nodes[info->ccm_member[ccm_get_membership_index(info, node)]].received_change_msg = value
 
 /*
 ////////////////////////////////////////////////////////////////
@@ -1095,11 +1095,11 @@ ccm_already_joined(ccm_info_t *info)
 static void 
 ccm_add_new_joiner(ccm_info_t *info, const char *orig)
 {
-	llm_info_t* llm = &info->ccm_llm;
+	llm_info_t* llm = &info->llm;
 	
-	int idx = llm_get_index(&info->ccm_llm, orig);
+	int idx = llm_get_index(&info->llm, orig);
 	
-	llm->llm_nodes[idx].join_request = TRUE;
+	llm->nodes[idx].join_request = TRUE;
 	
 	return;
 }
@@ -1109,12 +1109,12 @@ static gboolean
 ccm_get_all_active_join_request(ccm_info_t* info)
 {	
 	
-	llm_info_t* llm = &info->ccm_llm;
+	llm_info_t* llm = &info->llm;
 	int i;
 	
-	for (i = 0 ; i < llm->llm_nodeCount; i++){
-		if (strncmp(llm->llm_nodes[i].Status,"active",STATUSSIZE)
-		    || llm->llm_nodes[i].join_request == FALSE ){
+	for (i = 0 ; i < llm->nodecount; i++){
+		if (strncmp(llm->nodes[i].status,"active",STATUSSIZE)
+		    || llm->nodes[i].join_request == FALSE ){
 			return FALSE;
 		}
 	}
@@ -1127,11 +1127,11 @@ ccm_get_all_active_join_request(ccm_info_t* info)
 static void
 ccm_reset_all_join_request(ccm_info_t* info)
 {
-	llm_info_t* llm = &info->ccm_llm;
+	llm_info_t* llm = &info->llm;
 	int i;
 	
-	for (i = 0 ; i < llm->llm_nodeCount; i++){
-		llm->llm_nodes[i].join_request = FALSE;		
+	for (i = 0 ; i < llm->nodecount; i++){
+		llm->nodes[i].join_request = FALSE;		
 	}	
 }
 
@@ -1140,13 +1140,13 @@ static int
 ccm_am_i_highest_joiner(ccm_info_t *info)
 {
 
-	llm_info_t*	llm = &info->ccm_llm;
-	int		total_nodes =llm->llm_nodeCount;
-	int		my_indx = llm->llm_mynode;
+	llm_info_t*	llm = &info->llm;
+	int		total_nodes =llm->nodecount;
+	int		my_indx = llm->myindex;
 	int		i;
 
 	for (i = my_indx + 1 ; i < total_nodes; i++){
-		if (llm->llm_nodes[i].join_request){
+		if (llm->nodes[i].join_request){
 			return FALSE;
 		}
 	}
@@ -1157,10 +1157,10 @@ ccm_am_i_highest_joiner(ccm_info_t *info)
 static void 
 ccm_remove_new_joiner(ccm_info_t *info, const char *orig)
 {
-	llm_info_t* llm = &info->ccm_llm;
+	llm_info_t* llm = &info->llm;
 	int index = llm_get_index(llm, orig);
 	
-	llm->llm_nodes[index].join_request = FALSE;
+	llm->nodes[index].join_request = FALSE;
 	
 	return;
 }
@@ -1222,16 +1222,16 @@ ccm_send_one_join_reply(ll_cluster_t *hb, ccm_info_t *info, const char *joiner)
 static void 
 ccm_send_join_reply(ll_cluster_t *hb, ccm_info_t *info)
 {
-	llm_info_t* llm = &info->ccm_llm;
+	llm_info_t* llm = &info->llm;
 	int i;
 	
-	for (i = 0 ; i < llm->llm_nodeCount; i++){
-		if ( i == llm->llm_mynode){
+	for (i = 0 ; i < llm->nodecount; i++){
+		if ( i == llm->myindex){
 			continue;
 		}
-		if (llm->llm_nodes[i].join_request){
-			ccm_send_one_join_reply(hb,info, llm->llm_nodes[i].NodeID);
-			llm->llm_nodes[i].join_request = FALSE;
+		if (llm->nodes[i].join_request){
+			ccm_send_one_join_reply(hb,info, llm->nodes[i].nodename);
+			llm->nodes[i].join_request = FALSE;
 		}
 	}
 }
@@ -4542,7 +4542,7 @@ update_membership(ccm_info_t *info, const char *node,
 		info->ccm_nodeCount--;
 	}else{
 		for ( i = 0 ; i < LLM_GET_NODECOUNT(llm); i++ ) {
-			if(strcmp(node, llm->llm_nodes[i].NodeID) == 0){
+			if(strcmp(node, llm->nodes[i].nodename) == 0){
 				/* update the membership list with this member */
 				CCM_ADD_MEMBERSHIP(info, i);
 				break;
@@ -4559,7 +4559,7 @@ reset_change_info(ccm_info_t *info)
 	unsigned i;
 
 	for(i=0; i<LLM_GET_NODECOUNT(llm); i++) {
-		llm->llm_nodes[i].received_change_msg = 0;
+		llm->nodes[i].received_change_msg = 0;
 	}
 	return;
 }
@@ -4684,7 +4684,7 @@ static void send_mem_list_to_all(ll_cluster_t *hb,
         }
 
 	for ( i = 0 ; i < size ; i++ ) {
-		bitmap_mark(llm->llm_nodes[info->ccm_member[i]].NodeUuid, 
+		bitmap_mark(llm->nodes[info->ccm_member[i]].uuid, 
 				bitmap, MAXNODE);
 		uptime[i] = htonl(update_get_uptime(CCM_GET_UPDATETABLE(info), 
 				CCM_GET_LLM(info),

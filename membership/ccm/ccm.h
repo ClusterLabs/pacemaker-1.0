@@ -1,4 +1,4 @@
-/* $Id: ccm.h,v 1.31 2005/03/16 14:56:33 gshi Exp $ */
+/* $Id: ccm.h,v 1.32 2005/03/16 17:50:00 gshi Exp $ */
 /*
  * ccm.h: definitions Consensus Cluster Manager internal header
  *				file
@@ -87,38 +87,40 @@ unsigned int version_get_nresp(ccm_version_t *);
 #define CCMFIFO    HA_VARLIBDIR "/heartbeat/ccm/ccm" /* if this value is
 			changed change it also in ccmlib.h */
 
-typedef struct NodeList_s {
-	uint  NodeUuid;  /* a cluster unique id for the node */
+typedef struct llm_node_s {
+	uint  uuid;  /* a cluster unique id for the node */
 	gboolean join_request;
-	char NodeID[NODEIDSIZE];
-	char Status[STATUSSIZE];
+	char nodename[NODEIDSIZE];
+	char status[STATUSSIZE];
 	uint received_change_msg;
-} NodeList_t;
+}llm_node_t;
+
 typedef struct llm_info_s { /* information about low level membership info */
-	uint	   llm_nodeCount; /*number of nodes in the cluster  */
-	int	   llm_mynode;	 /*index of mynode */
-	NodeList_t llm_nodes[MAXNODE];  /*information of each node */
+	uint	   nodecount; /*total number of nodes in the cluster  */
+	int	   myindex;	 /*index of mynode */
+	llm_node_t nodes[MAXNODE];  /*information of each node */
 } llm_info_t;
+
 #define CLUST_INACTIVE  "inctv"
-#define LLM_GET_MYNODE(llm) llm->llm_mynode
-#define LLM_GET_NODECOUNT(llm) llm->llm_nodeCount
-#define LLM_GET_UUID(llm,i) llm->llm_nodes[i].NodeUuid
+#define LLM_GET_MYNODE(llm) llm->myindex
+#define LLM_GET_NODECOUNT(llm) llm->nodecount
+#define LLM_GET_UUID(llm,i) llm->nodes[i].uuid
 #define LLM_GET_MYUUID(llm) LLM_GET_UUID(llm, LLM_GET_MYNODE(llm))
-#define LLM_GET_NODEID(llm,i) llm->llm_nodes[i].NodeID
+#define LLM_GET_NODEID(llm,i) llm->nodes[i].nodename
 #define LLM_GET_MYNODEID(llm) LLM_GET_NODEID(llm, LLM_GET_MYNODE(llm))
-#define LLM_GET_STATUS(llm,i) llm->llm_nodes[i].Status
-#define LLM_SET_MYNODE(llm,indx) llm->llm_mynode = indx
-#define LLM_SET_NODECOUNT(llm, count) llm->llm_nodeCount = count
-#define LLM_INC_NODECOUNT(llm) (llm->llm_nodeCount)++
-#define LLM_SET_UUID(llm,i, uuid) llm->llm_nodes[i].NodeUuid = uuid
-#define LLM_SET_MYUUID(llm, uuid) LLM_SET_UUID(llm, LLM_GET_MYNODE(llm), uuid)
+#define LLM_GET_STATUS(llm,i) llm->nodes[i].status
+#define LLM_SET_MYNODE(llm,indx) llm->myindex = indx
+#define LLM_SET_NODECOUNT(llm, count) llm->nodecount = count
+#define LLM_INC_NODECOUNT(llm) (llm->nodecount)++
+#define LLM_SET_UUID(llm,i, _uuid) llm->nodes[i].uuid = _uuid
+#define LLM_SET_MYUUID(llm, _uuid) LLM_SET_UUID(llm, LLM_GET_MYNODE(llm), _uuid)
 #define LLM_SET_NODEID(llm, i, name)  \
-			(strncpy(llm->llm_nodes[i].NodeID,name,NODEIDSIZE))
+			(strncpy(llm->nodes[i].nodename,name,NODEIDSIZE))
 #define LLM_SET_MYNODEID(llm, name) \
 			LLM_SET_NODEID(llm, LLM_GET_MYNODE(llm), name)
 #define LLM_SET_STATUS(llm,i,status) \
-			(strncpy(llm->llm_nodes[i].Status,status,STATUSSIZE))
-#define LLM_COPY(llm,dst,src) (llm->llm_nodes[dst] = llm->llm_nodes[src])
+			(strncpy(llm->nodes[i].status,status,STATUSSIZE))
+#define LLM_COPY(llm,dst,src) (llm->nodes[dst] = llm->nodes[src])
 #define LLM_GET_NODEIDSIZE(llm) NODEIDSIZE
 int llm_get_active_nodecount(llm_info_t *);
 gboolean llm_only_active_node(llm_info_t *);
@@ -337,8 +339,8 @@ enum change_event_type{
 
 #define COOKIESIZE 15
 typedef struct ccm_info_s {
-	llm_info_t 	ccm_llm;	/*  low level membership info */
-
+	llm_info_t 	llm;	/*  low level membership info */
+	
 	int		ccm_nodeCount;	/*  number of nodes in the ccm cluster */
 	int		ccm_member[MAXNODE];/* members of the ccm cluster */
 	memcomp_t	ccm_memcomp;	/* the datastructure to compute the  */

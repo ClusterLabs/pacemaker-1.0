@@ -1,4 +1,4 @@
-/* $Id: ccmclient.c,v 1.22 2005/03/16 16:26:59 lars Exp $ */
+/* $Id: ccmclient.c,v 1.23 2005/03/16 17:50:00 gshi Exp $ */
 /* 
  * client.c: Consensus Cluster Client tracker
  *
@@ -343,7 +343,7 @@ static gboolean
 mem_quorum(llm_info_t* llm, int member_count)
 {
 	int	inactive_count = llm_get_inactive_node_count(llm);
-	int	total_count = llm->llm_nodeCount;
+	int	total_count = llm->nodecount;
 	
 	cl_log(LOG_INFO, "n_member=%d, nodecount=%d, inactive_count=%d",
 	       member_count, total_count, inactive_count); 
@@ -383,7 +383,7 @@ client_new_mbrship(ccm_info_t* info, void* borndata)
 	ccm->ev = CCM_NEW_MEMBERSHIP;
 	ccm->n = n;
 	ccm->trans = trans;
-	ccm->quorum = mem_quorum(&info->ccm_llm, n);
+	ccm->quorum = mem_quorum(&info->llm, n);
 	memcpy(ccm->member, member, n*sizeof(int));
 
 	if(ipc_mem_message && --(ipc_mem_message->count)==0){
