@@ -1,4 +1,4 @@
-/* $Id: md5.c,v 1.10 2004/02/17 22:11:59 lars Exp $ */
+/* $Id: md5.c,v 1.11 2004/09/10 01:55:42 alan Exp $ */
 /*
  * This code implements the MD5 message-digest algorithm.
  * The algorithm is due to Ron Rivest.  This code was
@@ -242,14 +242,14 @@ MD5Final(md5byte digest[16], MD5Context *ctx)
 /* The four core functions - F1 is optimized somewhat */
 
 /* #define F1(x, y, z) (x & y | ~x & z) */
-#define F1(x, y, z) (z ^ (x & (y ^ z)))
+#define F1(x, y, z) ((z) ^ ((x) & ((y) ^ (z))))
 #define F2(x, y, z) F1(z, x, y)
-#define F3(x, y, z) (x ^ y ^ z)
-#define F4(x, y, z) (y ^ (x | ~z))
+#define F3(x, y, z) ((x) ^ (y) ^ (z))
+#define F4(x, y, z) ((y) ^ ((x) | ~(z)))
 
 /* This is the central step in the MD5 algorithm. */
 #define MD5STEP(f,w,x,y,z,in,s) \
-	 (w += f(x,y,z) + in, w = (w<<s | w>>(32-s)) + x)
+	 (w += f(x,y,z) + (in), (w) = ((w)<<(s) | (w)>>(32-(s))) + (x))
 
 /*
  * The core of the MD5 algorithm, this alters an existing MD5 hash to
