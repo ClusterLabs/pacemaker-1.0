@@ -19,17 +19,5 @@
 #
 MAINTAINERCLEANFILES    = Makefile.in
 
-if EVENTD_BUILD
-EVENTD_DIR = eventd
-endif
-if CHECKPOINTD_BUILD
-CHECKPOINTD_DIR = checkpointd
-endif
-if CMS_BUILD
-CMS_DIR = cms
-endif
-
-SUBDIRS			=  apphbd recoverymgrd $(EVENTD_DIR) \
-			   $(CHECKPOINTD_DIR) $(CMS_DIR)
-DIST_SUBDIRS		=  apphbd recoverymgrd eventd cms \
-			   checkpointd
+SUBDIRS			=  apphbd recoverymgrd
+DIST_SUBDIRS		=  apphbd recoverymgrd
