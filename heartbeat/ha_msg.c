@@ -1,4 +1,4 @@
-/* $Id: ha_msg.c,v 1.51 2004/03/05 17:25:18 alan Exp $ */
+/* $Id: ha_msg.c,v 1.52 2004/03/10 22:52:46 andrew Exp $ */
 /*
  * Heartbeat messaging object.
  *
@@ -561,7 +561,7 @@ ha_msg_addraw_ll(struct ha_msg * msg, char * name, size_t namelen,
 
 	if (newstringlen >= MAXMSG) {
 		ha_log(LOG_ERR, "ha_msg_addraw_ll(): "
-		       "cannot add name/value to ha_msg");
+		       "cannot add name/value to ha_msg (value too big)");
 		return(HA_FAIL);
 	}
 
@@ -1754,6 +1754,9 @@ main(int argc, char ** argv)
 #endif
 /*
  * $Log: ha_msg.c,v $
+ * Revision 1.52  2004/03/10 22:52:46  andrew
+ * Allow people to distinguish between this error and one further up.
+ *
  * Revision 1.51  2004/03/05 17:25:18  alan
  * cleanup of netstring patch.
  * Hopefully it also cleaned up the size_t vs int problems in the code.
