@@ -1,4 +1,4 @@
-/* $Id: ckpttest.c,v 1.8 2004/03/12 02:59:38 deng.pan Exp $ */
+/* $Id: ckpttest.c,v 1.9 2004/04/06 07:24:59 deng.pan Exp $ */
 /* 
  * ckpttest.c: data checkpoint service test program
  *
@@ -41,10 +41,6 @@ int requestNumber = 0;
 #undef TESTLOOP
 // #define TESTLOOP 1
 
-#ifndef LLONG_MAX
-#define	LLONG_MAX	9223372036854775807LL
-#endif
-
 int main(void)
 {
 
@@ -53,7 +49,7 @@ int main(void)
 	SaCkptCheckpointHandleT	checkpoint_handle;
 	SaVersionT 		ckpt_version = {'A', '0', '1'};
 	SaNameT 		ckpt_name = {9, "testckpt"};
-	SaTimeT  		open_timeout = ((SaTimeT)LLONG_MAX);
+	SaTimeT  		open_timeout = SA_TIME_END;
 
 	SaCkptCheckpointCreationAttributesT ckpt_create_attri ;
 	SaCkptSectionCreationAttributesT sect_create_attri ;

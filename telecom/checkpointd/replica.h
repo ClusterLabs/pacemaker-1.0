@@ -1,10 +1,10 @@
-/* $Id: replica.h,v 1.7 2004/04/02 05:16:48 deng.pan Exp $ */
+/* $Id: replica.h,v 1.8 2004/04/06 07:24:59 deng.pan Exp $ */
 #ifndef _CKPT_REPLICA_H
 #define _CKPT_REPLICA_H
 
 #include <glib.h>
 
-#include <clplumbing/longclock.h>
+// #include <clplumbing/longclock.h>
 
 #include <saf/ais.h>
 #include "client.h"
@@ -46,7 +46,7 @@ typedef struct _SaCkptReplicaT {
 	int	sectionNumber;
 	
 	/* retention duration in seconds */
-	longclock_t 	retentionDuration; 
+	SaTimeT	retentionDuration; 
 
 	/* retention timeout tag */
 	unsigned int	retentionTimeoutTag;
@@ -151,8 +151,8 @@ typedef struct _SaCkptSectionT{
 	
 	SaCkptFixLenSectionIdT	sectionID;
 	
-	longclock_t	expirationTime;
-	longclock_t	lastUpdateTime;
+	SaTimeT	expirationTime;
+	SaTimeT	lastUpdateTime;
 
 	/*
 	 * section state.
