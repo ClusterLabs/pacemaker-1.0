@@ -243,7 +243,7 @@ stonithd_signoff(void)
 		stdlib_log(LOG_DEBUG, "stonithd_signoff: "
 			   "Got an unexpected message.");
 	}
-
+	ha_msg_del(reply);
 	return rc;
 }
 
