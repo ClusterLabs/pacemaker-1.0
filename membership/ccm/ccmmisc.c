@@ -22,7 +22,6 @@
 #include <portability.h>
 #include <ccm.h>
 #include <stdlib.h>
-#include <ccm.h>
 #ifdef HAVE_MALLINFO
 #include <malloc.h>
 #endif
@@ -33,7 +32,7 @@
 int
 ccm_str2bitmap(const char *memlist, unsigned char **bitlist)
 {
-	size_t str_len =  strnlen(memlist, maxstrsz);
+	size_t str_len =  strlen(memlist);
 	int    outbytes = B64_maxbytelen(str_len);
 
 	(void)_heartbeat_h_Id; /* Make compiler happy */
