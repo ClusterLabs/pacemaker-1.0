@@ -1,34 +1,23 @@
---- heartbeat-1.2.3/telecom/recoverymgrd/Makefile.am	2004-04-20 14:05:39.000000000 +0900
-+++ heartbeat-1.2.3.debian/telecom/recoverymgrd/Makefile.am	2004-09-21 16:23:46.000000000 +0900
-@@ -35,6 +35,7 @@
- 
- LIBRT 			= @LIBRT@
- 
-+CFLAGS			= $(NON_FATAL_CFLAGS)
- AM_CFLAGS		=  -DPIDFILE='"$(PIDFILE)"'
- 
- AM_YFLAGS		= -d
-@@ -57,23 +58,3 @@
+--- a/telecom/recoverymgrd/Makefile.am	2004-11-10 16:19:51.000000000 +0900
++++ b/telecom/recoverymgrd/Makefile.am	2004-11-10 16:21:22.000000000 +0900
+@@ -72,3 +72,20 @@
  recoverymgrd_LDFLAGS	= @LIBADD_DL@ @LIBLTDL@ -export-dynamic		\
  			-dlpreopen-force 				\
  			-dlopen-self
--
--
--#
--#	Since all this code compiles cleanly without warnings, we
--#	disallow all warnings here just like everywhere else.
--#	If your version of lex or yacc is broken, then work around
--#	it.  This has been done for the current Linux lex/yacc
--#
--lex.yy.$(OBJEXT): lex.yy.c
--	( old_pwd=`pwd` ; cd $(srcdir) &&			\
--	$(CC) $(DEFS) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS)	\
--	-c lex.yy.c				\
--	-o $$old_pwd/$@  $(LEX_SOURCE_CFLAGS) -Wall )
--
--conf_lex.$(OBJEXT): conf_lex.c
--	( old_pwd=`pwd` ; cd $(srcdir) &&			\
--	$(CC) $(DEFS) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS)	\
--	-c conf_lex.c			\
--	-o $$old_pwd/$@  $(LEX_SOURCE_CFLAGS) -Wall )
--
++
++#
++#       This seems to be needed to compile on Debian Sarge (10 Nov 2004)
++#       Bison 1.875a (1:1.875a-1.1)
++#       Flex 2.5.31  (2.5.31-27)
++#
++lex.yy.$(OBJEXT): lex.yy.c
++	old_pwd=`pwd` ; cd $(srcdir) &&				\
++	$(CC) $(DEFS) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS)	\
++	-c lex.yy.c						\
++	-o $$old_pwd/$@  $(NON_FATAL_CFLAGS) -Wall
++
++conf_lex.$(OBJEXT): conf_lex.c
++	old_pwd=`pwd` ; cd $(srcdir) &&				\
++	$(CC) $(DEFS) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS)	\
++	-c conf_lex.c						\
++	-o $$old_pwd/$@  $(NON_FATAL_CFLAGS) -Wall

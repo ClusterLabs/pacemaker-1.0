@@ -1,11 +1,11 @@
-diff -x install-sh -x ltmain.sh -x missing -x mkinstalldirs -x config.guess -x config.sub -x configure.in -x aclocal.m4 -x autom4te.cache -x Makefile.in -x libltdl -ruN heartbeat-1.2.3/heartbeat/lib/ResourceManager.in heartbeat-1.2.3.debian/heartbeat/lib/ResourceManager.in
---- heartbeat-1.2.3/heartbeat/lib/ResourceManager.in	2004-04-20 14:05:29.000000000 +0900
-+++ heartbeat-1.2.3.debian/heartbeat/lib/ResourceManager.in	2004-08-30 12:23:33.000000000 +0900
-@@ -181,6 +181,7 @@
-   spath=`scriptpath $1`;
- 
+--- a/heartbeat/lib/ResourceManager.in	2004-11-10 12:15:50.000000000 +0900
++++ b/heartbeat/lib/ResourceManager.in	2004-11-10 12:16:04.000000000 +0900
+@@ -183,7 +183,7 @@
    case `$spath $arg status` in
-+    *not\ [Rr]unning*)  return 3;;
+     # uncomment next line if you have misbehaving scripts,
+     # and you don't want to fix each single one of them...
+-    #  *not\ [Rr]unning*)	return 3;;
++    *not\ [Rr]unning*)	return 3;;
      *[Rr]unning*|*OK*)	return 0;;
      *)			return 3;;
    esac

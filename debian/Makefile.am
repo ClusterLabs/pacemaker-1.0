@@ -23,10 +23,9 @@ MAINTAINERCLEANFILES    = Makefile.in
 #PATCH_FILES		= $(shell find patches/ patches/series/ -maxdepth 1 -type f)
 PATCH_FILES		= patches/01-running_resource.patch \
 			  patches/00-ssh_scp_path.patch \
-			  patches/03-configure_status.patch \
 			  patches/02-lex_yacc_cflags.patch \
-			  patches/04-boostrap_copy.patch \
-			  patches/series/1.2.3-1
+			  patches/03-nonroot_chroot.patch \
+			  patches/series/1.99.1-1
 
 EXTRA_DIST	        = changelog control copyright compat dpkg-checkbuild \
                           ldirectord.files \

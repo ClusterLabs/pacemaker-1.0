@@ -50,14 +50,15 @@ unpatch:
 	override_version=$(RELEASE) sh debian/apply $(UPSTREAM)
 
 
-build: checkbuild build-stamp
+build: checkbuild patch build-stamp
 build-stamp:
 	dh_testdir
 	./configure $(cfg)
 	$(MAKE)
 	touch build-stamp
 
-clean:
+clean: clean-stamp unpatch
+clean-stamp:
 	dh_testdir
 	dh_testroot
 	# Add here commands to clean up after the build process.
@@ -69,7 +70,7 @@ clean:
 		debian/libpils0 debian/libpils-dev \
 		debian/libstonith0 debian/libstonith-dev debian/stonith \
 		debian/tmp
-
+	#There is no stamp!
 
 install: build install-stamp
 install-stamp:
