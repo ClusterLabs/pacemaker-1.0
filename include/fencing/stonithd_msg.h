@@ -37,6 +37,8 @@
 #define F_STONITHD_OPTYPE "optype"     	/* stonith op type */
 #define F_STONITHD_NODE   "node"     	/* the name of node which is rquired
 					   to stonith */
+#define F_STONITHD_NODE_UUID "node_uuid"/* the uuid of the node which is rquired
+					   to be stonith'd */
 #define F_STONITHD_TIMEOUT  "timeout"  	/* the timeout of a stonith operation */
 #define F_STONITHD_RSCID    "rscid" 	/* stonith resource id */
 #define F_STONITHD_RANAME   "raname" 	/* stonith RA name */
