@@ -35,7 +35,7 @@ NET_SNMP_CONFIG		= @NET_SNMP_CONFIG@
 # binary programs
 halib_PROGRAMS		= hbagent
 
-hbagent_SOURCES		= hbagent.h hbagent.c \
+hbagent_SOURCES		= snmp-config-resolve.h hbagent.h hbagent.c \
 			  LHAClusterInfo.h LHAClusterInfo.c \
 			  LHANodeTable.h LHANodeTable_enums.h LHANodeTable_columns.h LHANodeTable.c \
 			  LHAIFTable.h LHAIFTable_enums.h LHAIFTable_columns.h LHAIFTable.c \
