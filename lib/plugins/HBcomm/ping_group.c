@@ -1,4 +1,4 @@
-/* $Id: ping_group.c,v 1.5 2004/02/17 22:11:59 lars Exp $ */
+/* $Id: ping_group.c,v 1.6 2004/02/26 01:53:13 horms Exp $ */
 /*
  * ping_group.c: ICMP-echo-based heartbeat code for heartbeat.
  *
@@ -78,6 +78,7 @@
 #include <netdb.h>
 #include <heartbeat.h>
 #include <HBcomm.h>
+#include <clplumbing/realtime.h>
 
 #ifdef linux
 #	define	ICMP_HDR_SZ	sizeof(struct icmphdr)	/* 8 */
@@ -535,7 +536,6 @@ ping_group_write(struct hb_media* mp, struct ha_msg * msg)
 	const char *		ts;
 	struct ha_msg *		nmsg;
 	ping_group_node_t *	node;
-	struct timespec		pause = {0, 1};
 
 	PINGGROUPASSERT(mp);
 	ei = (ping_group_private_t *) mp->pd;
@@ -622,7 +622,7 @@ ping_group_write(struct hb_media* mp, struct ha_msg * msg)
 			,	rc, inet_ntoa(node->addr.sin_addr));
    		}
 
-		nanosleep(&pause, NULL);
+		cl_shortsleep();
 	}
 
 	if (DEBUGPKTCONT) {
