@@ -1,4 +1,4 @@
-/* $Id: serial.c,v 1.34 2004/05/11 22:04:35 alan Exp $ */
+/* $Id: serial.c,v 1.35 2004/05/12 01:42:44 alan Exp $ */
 /*
  * Linux-HA serial heartbeat code
  *
@@ -628,7 +628,7 @@ serial_write(struct hb_media* mp, void *p, int len)
 
 				lastwarn = now;
 				warnyet = TRUE;
-				PILCallLog(LOG, PIL_CRIT
+				PILCallLog(LOG, PIL_WARN
 				,	"TTY write timeout on [%s]"
 				" (no connection or bad cable"
 				"? [see documentation])"
@@ -698,6 +698,9 @@ ttygets(char * inbuf, int length, struct serial_private *tty)
 }
 /*
  * $Log: serial.c,v $
+ * Revision 1.35  2004/05/12 01:42:44  alan
+ * Changed the tty write timeout back to a warning...
+ *
  * Revision 1.34  2004/05/11 22:04:35  alan
  * Changed all the HBcomm plugins to use PILCallLog() for logging instead of calling
  * the function pointer directly.
