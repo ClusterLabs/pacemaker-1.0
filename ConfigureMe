@@ -59,6 +59,12 @@ ConfigureLinux() {
     distro=Conectiva
     PACKAGECMD="$MAKE_CMD rpm"
     DFLAGS="--with-group-id=17 --mandir=/usr/share/man --infodir=/usr/share/info --with-ccmuser-id=17"
+  elif
+    [ -f /etc/debian_version -a -s /etc/debian_version ]
+  then
+    distro="Debian/GNU"
+    PACKAGECMD="$MAKE_CMD deb"
+    DFLAGS="--mandir=/usr/share/man"
   else
     distro="Generic"
   fi
