@@ -7,7 +7,16 @@ set beam::allocation_may_return_null "yes"
  
 
 set beam::MISTAKE21::enabling_policy "unsafe"
+set beam::MISTAKE21::enabling_policy "nonportable"
 
+beam::attribute_by_signature {
+	advisory (
+	explanation = "Binary data is to be avoided except for very rare circumstances.  It is not portable, and so should be avoided when at all possible."
+	category = nonportable
+       )
+} "ha_msg_addbin" cl_get_binary "cl_msg_addbin" "cl_msg_add_binary"
+
+#
 #beam::attribute_by_signature {
 #      advisory (
 #         explanation = "This function is not safe. Use strnlen(3) instead.",
