@@ -69,7 +69,6 @@ ccm_SOURCES	= ccm.c \
 
 ccm_LDADD	= $(top_builddir)/lib/clplumbing/libplumb.la	\
 		$(top_builddir)/lib/hbclient/libhbclient.la  	\
-		$(top_builddir)/replace/libreplace.la		\
 		$(gliblib) 
 
 ccm_LDFLAGS		= 
@@ -77,7 +76,6 @@ ccm_LDFLAGS		=
 ccm_testclient_SOURCES	= ccm_testclient.c
 ccm_testclient_LDADD	= libccmclient.la \
 			  $(top_builddir)/lib/clplumbing/libplumb.la \
-			  $(top_builddir)/replace/libreplace.la      \
 			  $(gliblib) 
 
 libccmclient_la_SOURCES	= ccmlib_memapi.c ccmlib_eventapi.c ccmlib.h
@@ -99,7 +97,6 @@ libclm_la_LDFLAGS	= -version-info 0:0:0
 clmtest_SOURCES		= clmtest.c
 clmtest_LDADD		= libclm.la libccmclient.la \
 			  $(top_builddir)/lib/clplumbing/libplumb.la \
-			  $(top_builddir)/replace/libreplace.la      \
 			  $(gliblib)
 
 ## additional Makefile targets

@@ -51,10 +51,10 @@ halib_PROGRAMS		= eventd event_testclient
 eventd_SOURCES	= eventd.c event.h 
 
 eventd_CFLAGS	= $(AM_CFLAGS)
-eventd_LDADD	= $(top_builddir)/replace/libreplace.la \
-			$(top_builddir)/lib/clplumbing/libplumb.la \
-			$(top_builddir)/heartbeat/libhbclient.la \
-			$(GLIBLIB)
+eventd_LDADD	= \
+		$(top_builddir)/lib/clplumbing/libplumb.la \
+		$(top_builddir)/heartbeat/libhbclient.la \
+		$(GLIBLIB)
 eventd_LDFLAGS	= 
 
 

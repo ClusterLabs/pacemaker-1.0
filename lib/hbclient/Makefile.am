@@ -55,5 +55,4 @@ halib_PROGRAMS		= api_test
 
 api_test_SOURCES	= api_test.c
 api_test_LDADD		= $(top_builddir)/lib/clplumbing/libplumb.la	\
-			$(top_builddir)/replace/libreplace.la		\
 			libhbclient.la $(gliblib)

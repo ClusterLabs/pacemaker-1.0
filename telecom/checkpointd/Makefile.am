@@ -51,10 +51,9 @@ halib_PROGRAMS		= checkpointd ckpttest
 checkpointd_SOURCES	= checkpointd.c message.c request.c replica.c \
 			utils.c client.c response.c operation.c
 checkpointd_CFLAGS	= $(AM_CFLAGS)
-checkpointd_LDADD	= $(top_builddir)/replace/libreplace.la \
+checkpointd_LDADD	= \
 			$(top_builddir)/lib/hbclient/libhbclient.la \
 			$(top_builddir)/lib/clplumbing/libplumb.la \
-			$(top_builddir)/replace/libreplace.la \
 			$(GLIBLIB)
 checkpointd_LDFLAGS	= 
 
@@ -62,10 +61,8 @@ checkpointd_LDFLAGS	=
 ckpttest_SOURCES	= ckpttest.c
 ckpttest_LDADD		= $(GLIBLIB) \
 	 		$(top_builddir)/lib/checkpointd/libckpt.la \
-			$(top_builddir)/replace/libreplace.la \
 			$(top_builddir)/lib/hbclient/libhbclient.la \
 			$(top_builddir)/lib/clplumbing/libplumb.la \
-			$(top_builddir)/replace/libreplace.la \
 			$(GLIBLIB)
 ckpttest_LDFLAGS	= 
 

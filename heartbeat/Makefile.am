@@ -65,7 +65,6 @@ heartbeat_SOURCES	= heartbeat.c auth.c				\
 			hb_signal.c module.c setproctitle.c
 
 heartbeat_LDADD		= $(top_builddir)/lib/stonith/libstonith.la	\
-			$(top_builddir)/replace/libreplace.la		\
 			$(top_builddir)/lib/pils/libpils.la		\
 			$(top_builddir)/lib/clplumbing/libplumb.la	\
 			$(top_builddir)/libltdl/libltdlc.la $(gliblib) $(LIBRT)

@@ -30,7 +30,6 @@ havarlibdir		= $(localstatedir)/lib/@HB_PKG@
 PIDFILE			= $(localstatedir)/run/apphbd.pid
 
 COMMONLIBS		= $(top_builddir)/lib/clplumbing/libplumb.la	\
-			$(top_builddir)/replace/libreplace.la \
 			$(GLIBLIB)
 
 LIBRT 			= @LIBRT@
@@ -51,7 +50,6 @@ apphbd_CFLAGS		= -DHA_VARLIBDIR='"@HA_VARLIBDIR@"'
 apphbd_LDADD		= $(COMMONLIBS) 				\
 			$(top_builddir)/lib/pils/libpils.la		\
 			$(top_builddir)/libltdl/libltdlc.la 		\
-			$(top_builddir)/replace/libreplace.la		\
 			$(LIBRT)
 
 apphbd_LDFLAGS	= @LIBADD_DL@ @LIBLTDL@ -export-dynamic	\
@@ -63,6 +61,5 @@ apphbtest_SOURCES	= apphbtest.c
 apphbtest_CFLAGS	= -DHA_VARLIBDIR='"@HA_VARLIBDIR@"'
 apphbtest_LDADD		= $(COMMONLIBS) 				\
 			$(top_builddir)/lib/apphb/libapphb.la
-			$(top_builddir)/replace/libreplace.la
 
 apphbtest_LDFLAGS	=

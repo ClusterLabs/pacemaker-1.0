@@ -52,7 +52,6 @@ recoverymgrd_CFLAGS	= -DHA_VARLIBDIR='"@HA_VARLIBDIR@"'
 recoverymgrd_LDADD	= $(COMMONLIBS) 				\
 			$(top_builddir)/lib/pils/libpils.la		\
 			$(top_builddir)/lib/apphb/libapphb.la		\
-			$(top_builddir)/replace/libreplace.la		\
 			$(LIBRT)
 
 recoverymgrd_LDFLAGS	= @LIBADD_DL@ @LIBLTDL@ -export-dynamic		\
