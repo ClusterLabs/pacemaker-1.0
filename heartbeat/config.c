@@ -1,4 +1,4 @@
-/* $Id: config.c,v 1.146 2005/02/21 01:16:16 alan Exp $ */
+/* $Id: config.c,v 1.147 2005/02/21 09:48:38 alan Exp $ */
 /*
  * Parse various heartbeat configuration files...
  *
@@ -50,6 +50,7 @@
 #include <sys/resource.h>
 
 #include <heartbeat.h>
+#include <heartbeat_private.h>
 #include <ha_msg.h>
 #include <pils/plugin.h>
 #include <clplumbing/realtime.h>
@@ -443,6 +444,10 @@ init_config(const char * cfgfile)
 			config->nodes[j].dead_ticks
 			=	msto_longclock(config->deadtime_ms);
 		}
+	}
+
+	if (errcount == 0) {
+		init_resource_module();
 	}
 	
 	return(errcount ? HA_FAIL : HA_OK);
@@ -2148,6 +2153,10 @@ set_release2mode(const char* value)
 
 /*
  * $Log: config.c,v $
+ * Revision 1.147  2005/02/21 09:48:38  alan
+ * Moved the code to enable processing of T_SHUTDONE messages until after reading
+ * the config file.
+ *
  * Revision 1.146  2005/02/21 01:16:16  alan
  * Changed the heartbeat code for shutting down clients.
  * We no longer remove them from the list, instead we maintain a pointer

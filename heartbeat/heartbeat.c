@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.367 2005/02/21 07:14:15 alan Exp $ */
+/* $Id: heartbeat.c,v 1.368 2005/02/21 09:48:38 alan Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -3486,11 +3486,6 @@ main(int argc, char * argv[], char **envp)
 		snprintf(cdebug, sizeof(debug), "%d", debug);
 		setenv(HADEBUGVAL, cdebug, TRUE);
 	}
-	if (DoManageResources && !killrunninghb) {
-		init_resource_module();
-	}
-
-
 
 	/*
 	 *	We've been asked to shut down the currently running heartbeat
@@ -5067,6 +5062,10 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.368  2005/02/21 09:48:38  alan
+ * Moved the code to enable processing of T_SHUTDONE messages until after reading
+ * the config file.
+ *
  * Revision 1.367  2005/02/21 07:14:15  alan
  * Fixed a bug where a process which wasn't running would cause an infinite loop.
  *
