@@ -1,4 +1,4 @@
-/* $Id: heartbeat_private.h,v 1.9 2004/05/17 15:12:08 lars Exp $ */
+/* $Id: heartbeat_private.h,v 1.10 2004/05/24 09:21:29 sunjd Exp $ */
 /*
  * heartbeat_private.h: definitions for the Linux-HA heartbeat program
  * that are defined in heartbeat.c and are used by other .c files
@@ -42,6 +42,11 @@ extern int		nice_failback;
 extern int		WeAreRestarting;
 extern int		shutdown_in_progress;
 extern longclock_t	local_takeover_time;
+
+/* Used when taking advantage of apphbd */
+void hb_init_register_to_apphbd(void);
+void hb_apphb_hb(void);
+void hb_unregister_to_apphbd(void);
 
 /* Used by signal handlers */
 void hb_init_watchdog(void);

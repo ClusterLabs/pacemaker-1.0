@@ -1,4 +1,8 @@
-/* $Id: heartbeat.c,v 1.303 2004/05/17 15:12:08 lars Exp $ */
+/*
+ * TODO:
+ * 1) Man page update
+ */
+/* $Id: heartbeat.c,v 1.304 2004/05/24 09:18:49 sunjd Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -259,6 +263,7 @@
 #include <hb_signal.h>
 #include <hb_config.h>
 #include <hb_resource.h>
+#include <apphb.h>
 
 #include "setproctitle.h"
 
@@ -308,6 +313,10 @@ static int			rpt_hb_status = FALSE;
 int				RestartRequested = FALSE;
 static long			hb_pid_in_file = 0L;
 int				hb_realtime_prio = -1;
+
+int	 			UseApphbd = FALSE;
+static int			RegisteredToApphbd = FALSE;
+
 char *				watchdogdev = NULL;
 static int			watchdogfd = -1;
 static int			watchdog_timeout_ms = 0L;
@@ -715,7 +724,11 @@ initialize_heartbeat()
 				break;
 
 		case 0:		/* Child */
-				close(watchdogfd);
+				/* Actually don't need this judgement.
+				   Just to show the logic */
+				if ( UseApphbd == FALSE ) {
+					close(watchdogfd);
+				}
 				curproc = &procinfo->info[ourproc];
 				cl_malloc_setstats(&curproc->memstats);
 				cl_msg_setstats(&curproc->msgstats);
@@ -747,7 +760,11 @@ initialize_heartbeat()
 					break;
 
 			case 0:		/* Child */
-					close(watchdogfd);
+					/* Actually don't need this judgement.
+				   	   Just to show the logic */
+					if ( UseApphbd == FALSE ) {
+						close(watchdogfd);
+					}
 					curproc = &procinfo->info[ourproc];
 					cl_malloc_setstats(&curproc->memstats);
 					cl_msg_setstats(&curproc->msgstats);
@@ -775,7 +792,11 @@ initialize_heartbeat()
 					break;
 
 			case 0:		/* Child */
-					close(watchdogfd);
+					/* Actually don't need this judgement.
+				   	   Just to show the logic */
+					if ( UseApphbd == FALSE ) {
+						close(watchdogfd);
+					}
 					curproc = &procinfo->info[ourproc];
 					cl_malloc_setstats(&curproc->memstats);
 					cl_msg_setstats(&curproc->msgstats);
@@ -1121,7 +1142,12 @@ master_control_process(IPC_Channel* fifoproc)
 
 	init_xmit_hist (&msghist);
 
-	hb_init_watchdog();
+	if ( UseApphbd == TRUE ) {
+		hb_init_register_to_apphbd();
+	} else {
+		hb_init_watchdog();
+	}
+
 
 	if (hb_signal_set_master_control_process(NULL) < 0) {
 		cl_log(LOG_ERR, "master_control_process(): "
@@ -1227,6 +1253,10 @@ master_control_process(IPC_Channel* fifoproc)
 	 * Things to do on a periodic basis...
 	 */
 	
+	/* 
+	 * Although put apphb_hb in the hb_send_local_status like watchdog,
+	 * if need to have a separate timer for more explicit? 
+	 */  
 	/* Send local status at the "right time" */
 	Gmain_timeout_add_full(PRI_SENDSTATUS, config->heartbeat_ms
 	,	hb_send_local_status, NULL, NULL);
@@ -1598,11 +1628,19 @@ hb_mcp_final_shutdown(gpointer p)
 		/* Kill any lingering processes in our process group */
 		CL_KILL(-getpid(), SIGTERM);
 		hb_kill_core_children(SIGTERM); /* Is this redundant? */
-		hb_tickle_watchdog();
+		if (UseApphbd == TRUE) {
+			hb_apphb_hb();
+		} else {
+			hb_tickle_watchdog();
+		}
 		shutdown_phase = 2;
 		return FALSE;
 	case 2:
-		hb_tickle_watchdog();
+		if (UseApphbd == TRUE) {
+			hb_apphb_hb();
+		} else {
+			hb_tickle_watchdog();
+		}
 		shutdown_phase = 3;
 		break;
 
@@ -1612,7 +1650,11 @@ hb_mcp_final_shutdown(gpointer p)
 		break;
 	}
 
-	hb_close_watchdog();
+	if (UseApphbd == TRUE) {
+		hb_unregister_to_apphbd();
+	} else {
+		hb_close_watchdog();
+	}
 
 	/* Whack 'em */
 	hb_kill_core_children(SIGKILL);
@@ -1862,7 +1904,11 @@ if (DEBUGDETAILS) {
 
 		/* Did we get a status update on ourselves? */
 		if (thisnode == curnode) {
-			hb_tickle_watchdog();
+			if (UseApphbd == TRUE) {
+				hb_apphb_hb();
+			} else { 
+				hb_tickle_watchdog();
+			}
 		}
 
 		thisnode->rmt_lastupdate = msgtime;
@@ -2237,7 +2283,9 @@ start_a_child_client(gpointer childentry, gpointer pidtable)
 				break;
 	}
 
-	close(watchdogfd);
+	if ( UseApphbd == FALSE ) {
+		close(watchdogfd);
+	}
 	/* Child process:  start the managed child */
 	cl_make_normaltime();
 	setpgid(0,0);
@@ -2365,7 +2413,11 @@ restart_heartbeat(void)
 		close(j);
 	}
 
-	hb_close_watchdog();
+	if ( UseApphbd == TRUE ) {
+		hb_unregister_to_apphbd();
+	} else {
+		hb_close_watchdog();
+	}
 	if (quickrestart) {
 		if (nice_failback) {
 			cl_log(LOG_INFO, "Current resources: -R -C %s"
@@ -3129,7 +3181,12 @@ void
 cleanexit(rc)
 	int	rc;
 {
-	hb_close_watchdog();
+	if (UseApphbd == TRUE ) {
+		apphb_unregister();
+	} else {
+		hb_close_watchdog();
+	}
+
 	if (localdie) {
 		if (ANYDEBUG) {
 			cl_log(LOG_DEBUG, "Calling localdie() function");
@@ -3259,6 +3316,7 @@ hb_init_watchdog_interval(void)
 	if (watchdogfd < 0) {
 		return;
 	}
+
 	if (watchdog_timeout_ms == 0L) {
 		watchdog_timeout_ms = config->deadtime_ms + 10;
 	}
@@ -4238,9 +4296,59 @@ get_localnodeinfo(void)
 	g_strdown(localnodename);
 }
 
+void 
+hb_init_register_to_apphbd(void)
+{
+	char app_instance[20];
+	cl_log(LOG_CRIT, "Trying to register to apphbd"); 
+
+	snprintf(app_instance, 20, "%s_%ld", hbname, (long)getpid());
+
+	if (apphb_register(hbname, app_instance) != 0) {
+		cl_log(LOG_ERR, "Failed when trying to register to apphbd.");
+		cl_log(LOG_ERR, "Maybe apphd isnot running. Quit.");
+		cl_log(LOG_ERR, "Will try again later periodly.");
+		return;
+	}
+
+	cl_log(LOG_INFO, "Has registerred to apphbd.");
+	RegisteredToApphbd = TRUE;
+	apphb_setinterval(config->heartbeat_ms + 20);
+	/* or set it as config->deadtime_ms ? */
+	apphb_setwarn(config->warntime_ms + 10);
+}
+
+void
+hb_apphb_hb(void)
+{
+	if (UseApphbd == TRUE) {
+		if ( RegisteredToApphbd == TRUE ) {
+			apphb_hb();
+			/* Not sure its cause, must be due to apphbd's quit? */
+			/*
+			if ( apphb_hb() != 0 ) {
+				RegisteredToApphbd = FALSE;
+			 */
+		} else {
+			cl_log(LOG_CRIT, "One of repeating registers.");
+			hb_init_register_to_apphbd();
+		}	
+	}
+}
+
+void
+hb_unregister_to_apphbd(void)
+{
+	if (UseApphbd == TRUE && RegisteredToApphbd == TRUE ) {
+		apphb_unregister();
+	}
+}
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.304  2004/05/24 09:18:49  sunjd
+ * make heartbeat an apphbd client
+ *
  * Revision 1.303  2004/05/17 15:12:08  lars
  * Reverting over-eager approach to disabling old resource manager code.
  *

@@ -1,4 +1,4 @@
-/* $Id: config.c,v 1.119 2004/05/17 15:12:07 lars Exp $ */
+/* $Id: config.c,v 1.120 2004/05/24 09:20:08 sunjd Exp $ */
 /*
  * Parse various heartbeat configuration files...
  *
@@ -87,6 +87,7 @@ static int set_debuglevel(const char *);
 static int set_normalpoll(const char *);
 static int set_api_authorization(const char *);
 static int set_msgfmt(const char*);
+static int set_register_to_apphbd(const char *);
 
 /*
  * Each of these parameters is is automatically recorded by
@@ -122,6 +123,7 @@ struct directive {
 , {KEY_DEBUGLEVEL,set_debuglevel, TRUE, NULL, "debug level"}
 , {KEY_NORMALPOLL,set_normalpoll, TRUE, "true", "Use system poll(2) function?"}
 , {KEY_MSGFMT,    set_msgfmt, TRUE, "classic", "message format in the wire"}
+, {KEY_REGAPPHBD, set_register_to_apphbd, FALSE, NULL, "register to apphbd"}
 };
 
 static const struct WholeLineDirective {
@@ -157,6 +159,7 @@ extern int    				timebasedgenno;
 int    					enable_realtime = TRUE;
 extern int    				debug;
 int					netstring_format = FALSE;
+extern int				UseApphbd;
 
 static int	islegaldirective(const char *directive);
 static int	parse_config(const char * cfgfile, char *nodename);
@@ -1271,6 +1274,18 @@ set_auto_failback(const char * value)
 	return rc;
 }
 
+static int 
+set_register_to_apphbd(const char * value)
+{
+	int	ret;
+	ret = str_to_boolean(value, &UseApphbd);
+	if (ret == HA_FAIL) {
+		UseApphbd = FALSE;
+		ret = HA_OK;
+	}
+	return ret;
+}
+
 /*
  *	Convert a string into a positive, rounded number of milliseconds.
  *
@@ -1982,6 +1997,9 @@ baddirective:
 
 /*
  * $Log: config.c,v $
+ * Revision 1.120  2004/05/24 09:20:08  sunjd
+ * make heartbeat an apphbd client
+ *
  * Revision 1.119  2004/05/17 15:12:07  lars
  * Reverting over-eager approach to disabling old resource manager code.
  *
