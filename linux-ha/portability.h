@@ -1,4 +1,4 @@
-/* $Id: portability.h,v 1.33 2004/04/20 20:08:37 msoffen Exp $ */
+/* $Id: portability.h,v 1.34 2004/04/20 21:21:20 andrew Exp $ */
 #ifndef PORTABILITY_H
 #  define PORTABILITY_H
 
@@ -122,6 +122,12 @@ inet_pton(int af, const char *src, void *dst);
 
 #ifndef HA_HAVE_NFDS_T 
 	typedef unsigned int nfds_t;
+#endif
+
+
+#ifdef HAVE_STRUCT_UCRED_DARWIN
+#	include <sys/utsname.h>
+#	define SYS_NMLN _SYS_NAMELEN
 #endif
 
 #endif /* PORTABILITY_H */

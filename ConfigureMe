@@ -102,6 +102,11 @@ ConfigureSolaris() {
   CFENV="Solaris"
 }
 
+ConfigureDarwin() {
+  FLAGS="--prefix=/sw --sysconfdir=/sw/etc --localstatedir=/sw/var --with-initdir=/sw/etc/init.d"
+  CFENV="Darwin"
+}
+
 ConfigureGenericUNIX() {
   echo "Configuring for generic UNIX system"
   FLAGS="--prefix=/usr --sysconfdir=/etc --localstatedir=/var"
@@ -146,6 +151,7 @@ GetNativeConfigureFlags() {
     netbsd)	ConfigureOpenBSD;;
     *bsd)	ConfigureGenericBSD;;
     sunos)	ConfigureSolaris;;
+    darwin)	ConfigureDarwin;;
     *)		ConfigureGenericUNIX;;
   esac
 }
