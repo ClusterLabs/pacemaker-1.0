@@ -28,6 +28,9 @@ Usage() {
 #	then submit a patch.  Some of these conventions were wild guesses...
 #
 
+cmd=$0
+pathtotop=`dirname ${cmd}`
+
 
 PACKAGECMD=""
 
@@ -187,17 +190,30 @@ shift
 
 
 case $cmd in
-  cf|conf|configure)		Run ./bootstrap $FLAGS $@;;
-  make|build)			Run ./bootstrap $FLAGS $@ && Run $MAKE_CMD;;
-  install)			Run ./bootstrap $FLAGS $@ && \
-  				Run $MAKE_CMD install;;
-  dist)				Run echo ./bootstrap $FLAGS $@ && \
-  				Run $MAKE_CMD dist;;
-  distcheck)			Run ./bootstrap $FLAGS $@ && \
-  				source ./heartbeat/lib/ha_config &&
-  				Run $MAKE_CMD \
-				    DESTDIR="$PWD/heartbeat-$VERSION/=inst" \
-				    distcheck;;
-  pkg|package|rpm|deb|dpkg)	Run ./bootstrap $FLAGS $@ && PackageItUp;;
-  *)				Usage;;
+  cf|conf|configure)		
+  	Run "${pathtotop}/bootstrap" $FLAGS $@
+	;;
+  make|build)			
+  	Run "${pathtotop}/bootstrap" $FLAGS $@ && \
+  	Run $MAKE_CMD;;
+  install)			
+  	Run "${pathtotop}/bootstrap" $FLAGS $@ && \
+	Run $MAKE_CMD install
+	;;
+  dist)				
+  	Run echo ./bootstrap $FLAGS $@ && \
+  	Run $MAKE_CMD dist
+	;;
+  distcheck)			
+  	Run "${pathtotop}/bootstrap" $FLAGS $@ && \
+	source ./heartbeat/lib/ha_config && \
+	Run $MAKE_CMD DESTDIR="$PWD/heartbeat-$VERSION/=inst" distcheck
+	;;
+  pkg|package|rpm|deb|dpkg)	
+  	Run "${pathtotop}/bootstrap" $FLAGS $@ && \
+	PackageItUp
+	;;
+  *)	
+  	Usage
+	;;
 esac
