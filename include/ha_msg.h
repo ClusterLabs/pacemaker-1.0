@@ -1,4 +1,4 @@
-/* $Id: ha_msg.h,v 1.44 2005/01/18 07:48:39 zhenh Exp $ */
+/* $Id: ha_msg.h,v 1.45 2005/01/18 20:33:04 andrew Exp $ */
 /*
  * Intracluster message object (struct ha_msg)
  *
@@ -48,7 +48,7 @@ enum cl_msgfmt{
 #define HA_MSG_ASSERT(X)  do{  if(!(X)){				\
 	cl_log(LOG_ERR, "Assertion failed on line %d in file \"%s\""    \
 	, __LINE__, __FILE__);					         \
-	exit(1);		   				         \
+	abort();		   				         \
 	}								\
     }while(0)
 	
@@ -83,7 +83,7 @@ struct fieldtypefuncs_s{
 	void* (*dup)(const void*, size_t);
 
 	/* display printout the field*/
-	void (*display)(int, char* , void*);
+	void (*display)(int, int, char* , void*);
 
 	/* add the field into a message*/
 	int (*addfield) (struct ha_msg* msg, char* name, size_t namelen,
@@ -169,7 +169,7 @@ extern struct fieldtypefuncs_s fieldtypefuncs[4];
 #define F_RTYPE		"rtype"		/* Resource type */
 #define F_ORDERSEQ	"oseq"		/* Order Sequence number */
 #define F_DT		"dt"		/* Dead time field for heartbeat*/
-#define F_CRM_DATA	"crm_xml" 
+#define F_CRM_DATA	"crm_xml"
 
 	/* Message types */
 #define	T_STATUS	"status"	/* Status (heartbeat) */
@@ -350,7 +350,7 @@ int cl_get_type(const struct ha_msg *msg, const char *name);
 struct ha_msg *cl_get_struct(const struct ha_msg *msg, const char* name);
 
 /* Log the contents of a  message */
-void cl_log_message (const struct ha_msg *m);
+void cl_log_message (int log_level, const struct ha_msg *m);
 
 /* Supply messaging system with old style authentication/authorization method */
 void cl_set_oldmsgauthfunc(gboolean (*authfunc)(const struct ha_msg*));

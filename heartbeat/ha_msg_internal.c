@@ -1,4 +1,4 @@
-/* $Id: ha_msg_internal.c,v 1.47 2004/08/31 17:35:13 alan Exp $ */
+/* $Id: ha_msg_internal.c,v 1.48 2005/01/18 20:33:03 andrew Exp $ */
 /*
  * ha_msg_internal: heartbeat internal messaging functions
  *
@@ -57,11 +57,11 @@ struct default_vals {
 };
 
 static	const char * ha_msg_seq(void);
-static	const char * ha_msg_timestamp(void);
+static	const char * HA_Messageimestamp(void);
 static	const char * ha_msg_loadavg(void);
 static	const char * ha_msg_from(void);
 static  const char * ha_msg_fromuuid(void);
-static	const char * ha_msg_ttl(void);
+static	const char * HA_Messagetl(void);
 static	const char * ha_msg_hbgen(void);
 
 /* Each of these functions returns static data requiring copying */
@@ -70,9 +70,9 @@ struct default_vals defaults [] = {
 	{F_ORIGUUID,	ha_msg_fromuuid, 2},
 	{F_SEQ,		ha_msg_seq,	1},
 	{F_HBGENERATION,ha_msg_hbgen,	0},
-	{F_TIME,	ha_msg_timestamp,0},
+	{F_TIME,	HA_Messageimestamp,0},
 	{F_LOAD,	ha_msg_loadavg, 1},
-	{F_TTL,		ha_msg_ttl, 0},
+	{F_TTL,		HA_Messagetl, 0},
 };
 
 struct ha_msg *
@@ -118,14 +118,14 @@ add_control_msg_fields(struct ha_msg* ret)
 
 	if ((type = ha_msg_value(ret, F_TYPE)) == NULL) {
 		ha_log(LOG_ERR, "No type (add_control_msg_fields): ");
-		cl_log_message(ret);
+		cl_log_message(LOG_ERR, ret);
 		ha_msg_del(ret);
 		return(NULL);
 	}
 	
 	if (DEBUGPKTCONT) {
 		ha_log(LOG_DEBUG, "add_control_msg_fields: input packet");
-		cl_log_message(ret);
+		cl_log_message(LOG_DEBUG, ret);
 	}
 
 	noseqno = (strncmp(type, NOSEQ_PREFIX, sizeof(NOSEQ_PREFIX)-1) == 0);
@@ -174,7 +174,7 @@ add_control_msg_fields(struct ha_msg* ret)
 	}
 	if (DEBUGPKTCONT) {
 		ha_log(LOG_DEBUG, "add_control_msg_fields: packet returned");
-		cl_log_message(ret);
+		cl_log_message(LOG_DEBUG, ret);
 	}
 
 	return ret;
@@ -204,7 +204,7 @@ add_msg_auth(struct ha_msg * m)
 			,	"add_msg_auth: %s:  from %s"
 			,	"missing from/ts/type"
 			,	(from? from : "<?>"));
-			cl_log_message(m);
+			cl_log_message(LOG_ERR, m);
 		}
 	}
 
@@ -336,7 +336,7 @@ ha_msg_seq(void)
 
 /* Add local timestamp field */
 STATIC	const char *
-ha_msg_timestamp(void)
+HA_Messageimestamp(void)
 {
 	static char ts[32];
 	sprintf(ts, TIME_X, (TIME_T)time(NULL));
@@ -378,7 +378,7 @@ ha_msg_loadavg(void)
 }
 
 STATIC	const char *
-ha_msg_ttl(void)
+HA_Messagetl(void)
 {
 	static char	ttl[8];
 	snprintf(ttl, sizeof(ttl), "%d", config->hopfudge + config->nodecount);
@@ -416,6 +416,24 @@ main(int argc, char ** argv)
 #endif
 /*
  * $Log: ha_msg_internal.c,v $
+ * Revision 1.48  2005/01/18 20:33:03  andrew
+ * Appologies for the top-level commit, one change necessitated another which
+ *   exposed some bugs... etc etc
+ *
+ * Remove redundant usage of XML in the CRM
+ * - switch to "struct ha_msg" aka. HA_Message for everything except data
+ * Make sure the expected type of all FSA input data is verified before processing
+ * Fix a number of bugs including
+ * - looking in the wrong place for the API result data in the CIB API
+ *   (hideous that this actually worked).
+ * - not overwriting error codes when sending the result to the client in the CIB API
+ *   (this lead to some error cases being treated as successes later in the code)
+ * Add PID to log messages sent to files (not to syslog)
+ * Add a log level to calls for cl_log_message()
+ * - convert existing calls, sorry if I got the level wrong
+ * Add some checks in cl_msg.c code to prevent NULL pointer exceptions
+ * - usually when NULL is passed to strlen() or similar
+ *
  * Revision 1.47  2004/08/31 17:35:13  alan
  * Put in a "be quiet on format errors" change I had missed before...
  *

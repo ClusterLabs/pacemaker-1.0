@@ -1,4 +1,4 @@
-/* $Id: hb_resource.c,v 1.70 2005/01/03 18:12:10 alan Exp $ */
+/* $Id: hb_resource.c,v 1.71 2005/01/18 20:33:03 andrew Exp $ */
 /*
  * hb_resource: Linux-HA heartbeat resource management code
  *
@@ -2265,14 +2265,14 @@ QueueRemoteRscReq(RemoteRscReqFunc func, struct ha_msg* msg)
 		cl_log(LOG_DEBUG
 		,	"Queueing remote resource request (hook = 0x%p) %s"
 		,	(void *)hook, fp);
-		cl_log_message(msg);
+		cl_log_message(LOG_DEBUG, msg);
 	}
 
 	if (fp == NULL || !FilterNotifications(fp)) {
 		if (DEBUGDETAILS) {
 			cl_log(LOG_DEBUG
 			,	"%s: child process unneeded.", fp);
-			cl_log_message(msg);
+			cl_log_message(LOG_DEBUG, msg);
 		}
 		g_hook_free(&RemoteRscReqQueue, hook);
 		return;
@@ -2340,7 +2340,7 @@ PerformQueuedNotifyWorld(GHook* hook)
 	 */
 	if (DEBUGDETAILS) {
 		cl_log(LOG_DEBUG, "PerformQueuedNotifyWorld() msg follows");
-		cl_log_message(m);
+		cl_log_message(LOG_DEBUG, m);
 	}
 	notify_world(m, curnode->status);
 	/* "m" is automatically destroyed when "hook" is */
@@ -2416,6 +2416,24 @@ StonithStatProcessName(ProcTrack* p)
 
 /*
  * $Log: hb_resource.c,v $
+ * Revision 1.71  2005/01/18 20:33:03  andrew
+ * Appologies for the top-level commit, one change necessitated another which
+ *   exposed some bugs... etc etc
+ *
+ * Remove redundant usage of XML in the CRM
+ * - switch to "struct ha_msg" aka. HA_Message for everything except data
+ * Make sure the expected type of all FSA input data is verified before processing
+ * Fix a number of bugs including
+ * - looking in the wrong place for the API result data in the CIB API
+ *   (hideous that this actually worked).
+ * - not overwriting error codes when sending the result to the client in the CIB API
+ *   (this lead to some error cases being treated as successes later in the code)
+ * Add PID to log messages sent to files (not to syslog)
+ * Add a log level to calls for cl_log_message()
+ * - convert existing calls, sorry if I got the level wrong
+ * Add some checks in cl_msg.c code to prevent NULL pointer exceptions
+ * - usually when NULL is passed to strlen() or similar
+ *
  * Revision 1.70  2005/01/03 18:12:10  alan
  * Stonith version 2.
  * Some compatibility with old versions is still missing.

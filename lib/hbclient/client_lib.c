@@ -1,4 +1,4 @@
-/* $Id: client_lib.c,v 1.18 2004/12/09 23:12:39 gshi Exp $ */
+/* $Id: client_lib.c,v 1.19 2005/01/18 20:33:04 andrew Exp $ */
 /* 
  * client_lib: heartbeat API client side code
  *
@@ -1553,7 +1553,7 @@ moveup_backupQ(struct orderQ* q)
 				cl_log(LOG_ERR, "moveup_backupQ:"
 				       "queue is not empty"
 				       " possible memory leak");
-				cl_log_message(q->orderQ[i]);
+				cl_log_message(LOG_ERR, q->orderQ[i]);
 
 			}
 		}
@@ -1743,7 +1743,7 @@ process_ordered_msg(struct orderQ* q, struct ha_msg* msg,
 		
 		cl_log(LOG_ERR, "process_ordered_msg: Received message"
 		       " from previous client. This should never happen");
-		cl_log_message(msg);
+		cl_log_message(LOG_ERR, msg);
 		return NULL;
 	}else if (oseq - q->curr_oseqno >= MAXMSGHIST){
 		/*
@@ -1813,8 +1813,8 @@ process_client_status_msg(llc_private_t* pi, struct ha_msg* msg,
 				cl_log(LOG_ERR, "process_client_status_msg: "
 				       " the previous leave msg "
 				       "is not delivered yet");
-				cl_log_message(oq->leave_msg);
-				cl_log_message(msg);
+				cl_log_message(LOG_ERR, oq->leave_msg);
+				cl_log_message(LOG_ERR, msg);
 				return NULL;
 			}
 			
@@ -1838,7 +1838,7 @@ process_client_status_msg(llc_private_t* pi, struct ha_msg* msg,
 	}else{
 		cl_log(LOG_ERR, "process_client_status_msg: "
 		       "no status found in client status msg");
-		cl_log_message(msg);
+		cl_log_message(LOG_ERR, msg);
 		return NULL;
 	}		
 	

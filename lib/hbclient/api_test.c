@@ -1,4 +1,4 @@
-/* $Id: api_test.c,v 1.5 2004/05/17 15:12:08 lars Exp $ */
+/* $Id: api_test.c,v 1.6 2005/01/18 20:33:04 andrew Exp $ */
 /* 
  * api_test: Test program for testing the heartbeat API
  *
@@ -267,12 +267,12 @@ main(int argc, char ** argv)
 		cl_log(LOG_NOTICE, "Got message %d of type [%s] from [%s]\n"
 		,	msgcount, type, orig);
 		if (strcasecmp(type, T_APICLISTAT) == 0) {
-			cl_log_message(reply);
+			cl_log_message(LOG_NOTICE, reply);
 			cl_log(LOG_NOTICE, "%s", hb->llc_ops->errmsg(hb));
 		}
 #if 0
 		else {
-			cl_log_message(reply);
+			cl_log_message(LOG_NOTICE, reply);
 			cl_log(LOG_NOTICE, "%s", hb->llc_ops->errmsg(hb));
 		}
 #endif

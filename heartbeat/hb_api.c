@@ -1,4 +1,4 @@
-/* $Id: hb_api.c,v 1.125 2005/01/03 18:03:48 gshi Exp $ */
+/* $Id: hb_api.c,v 1.126 2005/01/18 20:33:03 andrew Exp $ */
 /*
  * hb_api: Server-side heartbeat API code
  *
@@ -287,7 +287,7 @@ should_msg_sendto_client(client_proc_t* client, struct ha_msg* msg)
 	if ( ret == 0  ){
 		/* hmmmm.... this message is dropped */
 		cl_log(LOG_WARNING, "message is dropped ");
-		cl_log_message(msg);
+		cl_log_message(LOG_WARNING, msg);
 		return FALSE;
 	}
 	
@@ -1012,7 +1012,7 @@ api_process_request(client_proc_t* fromclient, struct ha_msg * msg)
  		}
 		if (DEBUGDETAILS) {
 			cl_log(LOG_DEBUG, "Sending API message to cluster...");
-			cl_log_message(msg);
+			cl_log_message(LOG_DEBUG, msg);
 		}
 
 		/* Mikey likes it! */
@@ -1114,7 +1114,7 @@ api_process_request(client_proc_t* fromclient, struct ha_msg * msg)
 bad_req:
 	cl_log(LOG_ERR, "api_process_request: bad request [%s]"
 	,	reqtype);
-	cl_log_message(msg);
+	cl_log_message(LOG_ERR, msg);
 	if (ha_msg_add(resp, F_APIRESULT, API_BADREQ) != HA_OK) {
 		cl_log(LOG_ERR
 		,	"api_process_request: cannot add field/11");
@@ -1298,7 +1298,7 @@ api_process_registration_msg(client_proc_t* client, struct ha_msg * msg)
 	||	strcmp(msgtype, T_APIREQ) != 0
 	||	strcmp(reqtype, API_SIGNON) != 0)  {
 		cl_log(LOG_ERR, "api_process_registration_msg: bad message");
-		cl_log_message(msg);
+		cl_log_message(LOG_ERR, msg);
 		goto del_msg;
 	}
 	fromid = ha_msg_value(msg, F_FROMID);
@@ -1688,7 +1688,7 @@ api_add_client(client_proc_t* client, struct ha_msg* msg)
 	||	(cgid = ha_msg_value(msg, F_GID)) == NULL
 	||	sscanf(cuid, "%ld", &luid) != 1
 	||	sscanf(cgid, "%ld", &lgid) != 1) {
-		cl_log_message(msg);
+		cl_log_message(LOG_ERR, msg);
 		client->removereason = "invalid id info";
 		cl_log(LOG_ERR, "Client user/group id is incorrect"
 		" [%s] => %ld [%s] => %ld"

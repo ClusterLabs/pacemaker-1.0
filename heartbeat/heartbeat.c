@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.342 2004/12/09 23:12:39 gshi Exp $ */
+/* $Id: heartbeat.c,v 1.343 2005/01/18 20:33:03 andrew Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -1018,7 +1018,7 @@ fifo_child(IPC_Channel* chan)
 			IPC_Message*	m;
 			if (DEBUGDETAILS) {
 				cl_log(LOG_DEBUG, "fifo_child message:");
-				cl_log_message(msg);
+				cl_log_message(LOG_DEBUG, msg);
 			}
 			m = hamsg2ipcmsg(msg, chan);
 			if (m) {
@@ -2106,7 +2106,7 @@ process_clustermsg(struct ha_msg* msg, struct link* lnk)
 		,	"missing from/ts/type"
 		,	iface
 		,	(from? from : "<?>"));
-		cl_log_message(msg);
+		cl_log_message(LOG_ERR, msg);
 		return;
 	}
 	if (cseq != NULL) {
@@ -2119,7 +2119,7 @@ process_clustermsg(struct ha_msg* msg, struct link* lnk)
 			,	"missing seqno"
 			,	iface
 			,	(from? from : "<?>"));
-			cl_log_message(msg);
+			cl_log_message(LOG_ERR, msg);
 			return;
 		}
 	}
@@ -2149,7 +2149,7 @@ process_clustermsg(struct ha_msg* msg, struct link* lnk)
 		cl_log(LOG_ERR
 		,   "process_status_message: bad node [%s] in message"
 		,	from);
-		cl_log_message(msg);
+		cl_log_message(LOG_ERR, msg);
 		return;
 #endif
 	}
@@ -2874,7 +2874,7 @@ send_cluster_msg(struct ha_msg* msg)
 		!=		(ssize_t)(len -1)){
 			cl_perror("send_cluster_msg: cannot write to "
 			FIFONAME " [rc = %d]", (int)writerc);
-			cl_log_message(msg);
+			cl_log_message(LOG_ERR, msg);
 			rc = HA_FAIL;
 			
 		}
@@ -3907,7 +3907,7 @@ should_drop_message(struct node_info * thisnode, const struct ha_msg *msg,
 	
 	if (cseq  == NULL || sscanf(cseq, "%lx", &seq) != 1 ||	seq <= 0) {
 		cl_log(LOG_ERR, "should_drop_message: bad sequence number");
-		cl_log_message(msg);
+		cl_log_message(LOG_ERR, msg);
 		return DROPIT;
 	}
 
@@ -4102,7 +4102,7 @@ should_drop_message(struct node_info * thisnode, const struct ha_msg *msg,
 	/* This is a DUP packet (or a really old one we lost track of) */
 	if (DEBUGPKT) {
 		cl_log(LOG_DEBUG, "should_drop_message: Duplicate packet");
-		cl_log_message(msg);
+		cl_log_message(LOG_DEBUG, msg);
 	}
 	return DROPIT;
 
@@ -4461,7 +4461,7 @@ process_rexmit(struct msg_xmit_hist * hist, struct ha_msg* msg)
 	||	(fseq=atoi(cfseq)) <= 0 || (lseq=atoi(clseq)) <= 0
 	||	fseq > lseq) {
 		cl_log(LOG_ERR, "Invalid rexmit seqnos");
-		cl_log_message(msg);
+		cl_log_message(LOG_ERR, msg);
 	}
 
 	/*
@@ -4538,7 +4538,7 @@ process_rexmit(struct msg_xmit_hist * hist, struct ha_msg* msg)
 			smsg = msg2wirefmt(hist->msgq[msgslot], &len);
 
 			if (DEBUGPKT) {
-				cl_log_message(hist->msgq[msgslot]);
+				cl_log_message(LOG_INFO, hist->msgq[msgslot]);
 				cl_log(LOG_INFO
 				,	"Rexmit STRING conversion: [%s]"
 				,	smsg);
@@ -4765,6 +4765,24 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.343  2005/01/18 20:33:03  andrew
+ * Appologies for the top-level commit, one change necessitated another which
+ *   exposed some bugs... etc etc
+ *
+ * Remove redundant usage of XML in the CRM
+ * - switch to "struct ha_msg" aka. HA_Message for everything except data
+ * Make sure the expected type of all FSA input data is verified before processing
+ * Fix a number of bugs including
+ * - looking in the wrong place for the API result data in the CIB API
+ *   (hideous that this actually worked).
+ * - not overwriting error codes when sending the result to the client in the CIB API
+ *   (this lead to some error cases being treated as successes later in the code)
+ * Add PID to log messages sent to files (not to syslog)
+ * Add a log level to calls for cl_log_message()
+ * - convert existing calls, sorry if I got the level wrong
+ * Add some checks in cl_msg.c code to prevent NULL pointer exceptions
+ * - usually when NULL is passed to strlen() or similar
+ *
  * Revision 1.342  2004/12/09 23:12:39  gshi
  * change variable name in channel struct from is_send_blocking
  * to should_send_blocking since this variable determine
