@@ -1,4 +1,4 @@
-/* $Id: stonithd.c,v 1.33 2005/04/06 03:33:20 sunjd Exp $ */
+/* $Id: stonithd.c,v 1.34 2005/04/06 03:40:27 sunjd Exp $ */
 
 /* File: stonithd.c
  * Description: STONITH daemon for node fencing
@@ -2705,9 +2705,7 @@ free_stonith_rsc(stonith_rsc_t * srsc)
 		srsc->stonith_obj = NULL;
 	}
 
-	stonithd_log(LOG_DEBUG, "free_stonith_rsc: free hostlist.");
 	stonith_free_hostlist(srsc->node_list);
-	stonithd_log(LOG_DEBUG, "free_stonith_rsc: end to free hostlist.");
 	srsc->node_list = NULL;
 
 	stonithd_log(LOG_DEBUG, "free_stonith_rsc: finished.");
@@ -2972,6 +2970,9 @@ free_common_op_t(gpointer data)
 
 /* 
  * $Log: stonithd.c,v $
+ * Revision 1.34  2005/04/06 03:40:27  sunjd
+ * some polish(actually mainly inluded in last checking)
+ *
  * Revision 1.33  2005/04/06 03:33:20  sunjd
  * use the new function cl_inherit_use_logd
  *
