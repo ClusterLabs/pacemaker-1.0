@@ -8,7 +8,7 @@ LIBDIR=@libdir@/
 HBLIB=$LIBDIR/heartbeat
 TESTFILE=OnlyForTesting
 
-USAGE="Usage: 'TestHeartbeatComm break-communication|fix-communication|delete-testingfile'"
+USAGE="Usage: 'TestHeartbeatComm break-communication allow-nodes-list|fix-communication|delete-testingfile'"
 
 if 
   [ $# -lt 1 ]
@@ -22,10 +22,14 @@ cd @sysconfdir@/ha.d
 # Create OnlyForTesting File. It is invoked by ParseTestOpts() in heartbeat.c
 
 GenerateTestingFile(){
+save_IFS=$IFS
+IFS=';'
   cat <<EOF >$TESTFILE
 xmitloss=1
 rcvloss=1
+allownodes=$*;
 EOF
+IFS=$save_IFS
 }
 
 DeleteTestingFile(){
@@ -41,7 +45,8 @@ HBReload(){
 OPT=$1
 case "$OPT" in
   break-communication)
-	GenerateTestingFile
+	shift
+	GenerateTestingFile $@
 	HBReload
 	;;
   fix-communication)

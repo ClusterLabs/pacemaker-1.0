@@ -1,4 +1,4 @@
-/* $Id: test.h,v 1.8 2004/02/17 22:11:57 lars Exp $ */
+/* $Id: test.h,v 1.9 2005/03/04 04:44:11 zhenh Exp $ */
 /*
  * test.h: header for special test code inside of heartbeat
  *
@@ -30,6 +30,7 @@ struct TestParms {
 	int	enable_rcv_pkt_loss;
 	float	send_loss_prob;
 	float	rcv_loss_prob;
+	char	allow_nodes[512];
 };
 
 extern struct TestParms *	TestOpts;

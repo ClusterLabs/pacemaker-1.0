@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.370 2005/03/03 19:32:48 gshi Exp $ */
+/* $Id: heartbeat.c,v 1.371 2005/03/04 04:44:11 zhenh Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -1387,7 +1387,10 @@ send_to_all_media(const char * smsg, int len)
 	/* Throw away some packets if testing is enabled */
 	if (TESTSEND) {
 		if (TestRand(send_loss_prob)) {
-			return;
+			if( '\0' == TestOpts->allow_nodes[0] 
+			|| ';' == TestOpts->allow_nodes[0] ) {
+				return;
+			}
 		}
 	}
 
@@ -2357,8 +2360,11 @@ process_clustermsg(struct ha_msg* msg, struct link* lnk)
 
 	/* Throw away some incoming packets if testing is enabled */
 	if (TESTRCV) {
-		if (thisnode != curnode && TestRand(rcv_loss_prob)) {
-			return;
+		if (thisnode != curnode &&  TestRand(rcv_loss_prob)) {
+			char* match = strstr(TestOpts->allow_nodes,from);
+			if ( NULL == match || ';' != *(match+strlen(from)) ) {
+				return;
+			}
 		}
 	}
 	thisnode->anypacketsyet = 1;
@@ -4938,7 +4944,7 @@ ParseTestOpts()
 	FILE *	fp;
 	static struct TestParms p;
 	char	name[64];
-	char	value[64];
+	char	value[512];
 	int	something_changed = 0;
 
 	if ((fp = fopen(openpath, "r")) == NULL) {
@@ -4969,6 +4975,9 @@ ParseTestOpts()
 			p.enable_send_pkt_loss = 1;
 			cl_log(LOG_INFO, "Xmit loss probability = %.3f"
 			,	p.send_loss_prob);
+		}else if (strcmp(name, "allownodes") == 0) {
+			strncpy(p.allow_nodes, value, sizeof(p.allow_nodes)-1);
+			cl_log(LOG_INFO, "Allow nodes = %s", p.allow_nodes);
 		}else{
 			cl_log(LOG_ERR
 			,	"Cannot recognize test param [%s] in [%s]"
@@ -5111,6 +5120,9 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.371  2005/03/04 04:44:11  zhenh
+ * make heartbeat can simulate the broken of more than one nodes, for the split-brain cts test
+ *
  * Revision 1.370  2005/03/03 19:32:48  gshi
  * A T_REXMIT is a message with NOSEQ_PREFIX.
  * It should be not be processed unless it is broadcast or
