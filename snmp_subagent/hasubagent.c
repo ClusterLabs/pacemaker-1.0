@@ -1,13 +1,13 @@
-/* $Id: hasubagent.c,v 1.11 2004/02/17 22:12:01 lars Exp $ */
+/* $Id: hasubagent.c,v 1.12 2004/06/07 21:26:51 msoffen Exp $ */
 #include <portability.h>
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <limits.h>
 
 #ifdef HAVE_CONFIG_H
 #include <config.h>
 #endif
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <limits.h>
 
 #ifdef HAVE_NET_SNMP
 #	define	USE_NET_SNMP
@@ -181,3 +181,9 @@ main(int argc, char **argv)
 }
 
 
+/*
+ * $Log: hasubagent.c,v $
+ * Revision 1.12  2004/06/07 21:26:51  msoffen
+ * Added log entry and moved header includes
+ *
+ */
