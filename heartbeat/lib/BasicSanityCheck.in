@@ -174,7 +174,7 @@ SaveConfigFiles() {
   then
     mkdir .cfsave
   fi
-  mv $CONFIGFILES .cfsave
+  mv $CONFIGFILES .cfsave >/dev/null 2>&1
 }
 
 RestoreConfigFiles() {
