@@ -95,9 +95,9 @@ GenerateHaCf() {
 	#	$IDENTSTRING
 	logfile   $LOGFILE
 	debugfile $LOGFILE
-	keepalive 1
+	keepalive 500ms
 	debug 1
-	deadtime 3
+	deadtime 10
 	initdead 10
 	auto_failback on
 	stonith_host * null $LOCALNODE $DUMMYNODE
