@@ -1,4 +1,4 @@
-const static char * _heartbeat_c_Id = "$Id: heartbeat.c,v 1.280 2003/11/20 03:13:55 alan Exp $";
+const static char * _heartbeat_c_Id = "$Id: heartbeat.c,v 1.281 2003/12/08 20:55:00 alan Exp $";
 
 /*
  * heartbeat: Linux-HA heartbeat code
@@ -2285,6 +2285,7 @@ restart_heartbeat(void)
 		close(j);
 	}
 
+	hb_close_watchdog();
 	if (quickrestart) {
 		if (nice_failback) {
 			cl_log(LOG_INFO, "Current resources: -R -C %s"
@@ -4110,6 +4111,10 @@ get_localnodeinfo(void)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.281  2003/12/08 20:55:00  alan
+ * Fixed a bug reported by John Leach <john@johnleach.co.uk> where heartbeat
+ * sometimes fails to close the watchdog device before execing itself.
+ *
  * Revision 1.280  2003/11/20 03:13:55  alan
  * Fixed a bug where we always waited forever for client messages once
  * we got the first one.
