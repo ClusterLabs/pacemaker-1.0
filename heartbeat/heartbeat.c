@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.361 2005/02/20 03:11:40 alan Exp $ */
+/* $Id: heartbeat.c,v 1.362 2005/02/20 07:25:16 alan Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -2677,7 +2677,7 @@ print_a_child_client(gpointer childentry, gpointer unused)
 {
 	struct client_child*	centry = childentry;
 
-	if (!centry->proctrack) {
+	if (centry->proctrack) {
 		cl_log(LOG_DEBUG
 		,	"RUNNING Child client \"%s\" (%d,%d) pid %d"
 		,	centry->command, (int) centry->u_runas
@@ -5098,6 +5098,9 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.362  2005/02/20 07:25:16  alan
+ * Fixed a condition in a debug printout so it's right :-)
+ *
  * Revision 1.361  2005/02/20 03:11:40  alan
  * Suppressed BEAM warning for weird bitfield/enum.
  *
