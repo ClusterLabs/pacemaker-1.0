@@ -86,8 +86,10 @@ start_stonithd()
 {
 	#kill the previous stonithd instance
 	$STONITHD -k
+	sleep 1
 	#start the new stonithd instance 
 	$STONITHD -at
+	sleep 1
 	$STONITHD -s
 	if [ $? != 0 ]; then
 		echo Can not start stonithd
