@@ -1,4 +1,4 @@
-/* $Id: heartbeat.h,v 1.40 2004/02/17 22:11:58 lars Exp $ */
+/* $Id: heartbeat.h,v 1.41 2004/03/18 11:00:13 andrew Exp $ */
 /*
  * heartbeat.h: core definitions for the Linux-HA heartbeat program
  *
@@ -72,7 +72,7 @@
 #  endif 
 #endif
 
-#define	MAXLINE		2048
+#define	MAXLINE		MAXMSG
 #define	MAXFIELDS	30		/* Max # of fields in a msg */
 #define HOSTLENG	100		/* Maximum size of "uname -a" return */
 #define STATUSLENG	32		/* Maximum size of status field */
