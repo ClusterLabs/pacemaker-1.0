@@ -234,16 +234,17 @@ stonithd_signoff(void)
 			SIGNONED_TO_STONITHD = FALSE;
 			CLIENT_NAME = NULL;
 			rc = ST_OK;
-			stdlib_log(LOG_INFO, "succeeded to sign off the "
+			stdlib_log(LOG_DEBUG, "succeeded to sign off the "
 				   "stonithd.");
 		} else {
-			stdlib_log(LOG_INFO, "fail to sign off the stonithd.");
+			stdlib_log(LOG_NOTICE, "fail to sign off the stonithd.");
 		}
 	} else {
 		stdlib_log(LOG_DEBUG, "stonithd_signoff: "
 			   "Got an unexpected message.");
 	}
-	ha_msg_del(reply);
+	ZAPMSG(reply);
+	
 	return rc;
 }
 
