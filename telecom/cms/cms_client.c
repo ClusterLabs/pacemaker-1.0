@@ -901,7 +901,9 @@ client_send_msg(IPC_Channel * client, size_t len, gpointer data)
 		cl_log(LOG_ERR, "%s: ha_malloc failed", __FUNCTION__);
 		return FALSE;
 	}
-
+	
+	memset(msg, 0, sizeof(IPC_Message) + len);
+	
 #if DEBUG_MEMORY
 	dprintf("%s (%p) ha_malloc %p, size 0x%x\n", __FUNCTION__
 	,	&client_send_msg, msg, sizeof(IPC_Message) + len);

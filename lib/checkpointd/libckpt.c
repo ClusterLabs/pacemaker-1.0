@@ -1,4 +1,4 @@
-/* $Id: libckpt.c,v 1.16 2004/11/18 01:56:59 yixiong Exp $ */
+/* $Id: libckpt.c,v 1.17 2004/11/22 19:03:00 gshi Exp $ */
 /* 
  * ckptlib.c: data checkpoint API library
  *
@@ -279,6 +279,7 @@ SaCkptLibRequestSend(IPC_Channel* ch,
 		return SA_ERR_NO_MEMORY;
 	}
 	
+	memset(ipcMsg, 0, sizeof(IPC_Message));
 	ipcMsg->msg_private = NULL;
 	ipcMsg->msg_done = NULL;
 	ipcMsg->msg_ch = ch;

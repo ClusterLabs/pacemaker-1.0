@@ -231,7 +231,9 @@ cmsclient_message_send(__cms_handle_t * hd, size_t len, gpointer data)
 		cl_log(LOG_ERR, "%s: ha_malloc failed", __FUNCTION__);
 		return FALSE;
 	}
-
+	
+	memset(msg, 0, sizeof(IPC_Message) + len);
+	
 	if (hd->backup_fd >= 0)
 		restore_poll(hd);
 

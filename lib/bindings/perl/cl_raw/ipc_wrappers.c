@@ -1,4 +1,4 @@
-/* $Id: ipc_wrappers.c,v 1.2 2004/03/04 13:22:06 lars Exp $ */
+/* $Id: ipc_wrappers.c,v 1.3 2004/11/22 19:03:00 gshi Exp $ */
 /*
  * Some helpers for wrapping the ocf_ipc functionality for Perl.
  *
@@ -162,7 +162,9 @@ void ipc_msg_free(IPC_Message *msg) {
 
 IPC_Message *ipc_msg_constructor(IPC_Channel *ch, size_t s, char *data) {
 	IPC_Message *msg = (IPC_Message *)g_malloc(sizeof(IPC_Message));
-
+	
+	memset(msg, 0, sizeof(IPC_Message));
+	
 	msg->msg_private = NULL;
 	msg->msg_done = ipc_msg_free;
 	msg->msg_ch = ch;
