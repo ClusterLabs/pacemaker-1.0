@@ -1,4 +1,4 @@
-/* $Id: stonithd.c,v 1.22 2005/03/11 03:23:43 sunjd Exp $ */
+/* $Id: stonithd.c,v 1.23 2005/03/11 05:46:50 sunjd Exp $ */
 
 /* File: stonithd.c
  * Description: STONITH daemon for node fencing
@@ -1152,7 +1152,7 @@ stonithd_client_dispatch(IPC_Channel * ch, gpointer user_data)
 
 	while ( ch->ops->is_message_pending(ch))  {
 		if (ch->ch_status == IPC_DISCONNECT) {
-			stonithd_log(LOG_INFO, "IPC disconneted with a client.");
+			stonithd_log(LOG_DEBUG, "IPC disconneted with a client.");
 #if 0
 			/* For verify the API use */
 			if  ((msg = msgfromIPC_noauth(ch)) == NULL ) {
@@ -2758,7 +2758,7 @@ delete_client_by_chan(GList ** client_list, IPC_Channel * ch)
 	stonithd_client_t * client;
 
 	if ( (client = get_exist_client_by_chan(*client_list, ch)) != NULL ) {
-		stonithd_log(LOG_INFO, "delete_client_by_chan: delete client "
+		stonithd_log(LOG_DEBUG, "delete_client_by_chan: delete client "
 			"%s (pid=%d)", client->name, client->pid);
 		*client_list = g_list_remove(*client_list, client);
 		free_client(client);
@@ -2768,7 +2768,7 @@ delete_client_by_chan(GList ** client_list, IPC_Channel * ch)
 			     "client_list = %p", *client_list);
 		return ST_OK;
 	} else {
-		stonithd_log(LOG_INFO, "delete_client_by_chan: no client "
+		stonithd_log(LOG_DEBUG, "delete_client_by_chan: no client "
 			"using this channel, so no client deleted.");
 		return ST_FAIL;
 	}
@@ -2948,6 +2948,9 @@ free_common_op_t(gpointer data)
 
 /* 
  * $Log: stonithd.c,v $
+ * Revision 1.23  2005/03/11 05:46:50  sunjd
+ * Degrade some logs' priority
+ *
  * Revision 1.22  2005/03/11 03:23:43  sunjd
  * make TEST mode work well; add more logs
  *
