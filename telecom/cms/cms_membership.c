@@ -121,7 +121,7 @@ set_cms_status(const char * node, const char * status, void * private)
 		return HA_OK;
 	}
 
-	// is_cms_online(node);
+	/* is_cms_online(node); */
 
 	element = g_list_find_custom(mqmember_list, host, comp_mqmember);
 	if (element) {
@@ -256,7 +256,7 @@ getnode_callback(SaInvocationT invocation, SaClmClusterNodeT *clusterNode
 {
 	if (error != SA_OK) {
 		cl_log(LOG_ERR, "Get Node Callback failed [%d]\n", error);
-		// exit(1);
+		/* exit(1); */
 	}
 	dprintf("Invocation [%d]\n", invocation);
 	dump_nodeinfo(clusterNode);

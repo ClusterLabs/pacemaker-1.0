@@ -577,7 +577,7 @@ reply_mqname_open(ll_cluster_t *hb, struct ha_msg *msg)
 		 * because on reopen case, the original master name
 		 * server need to check this bit before msgfeed.
 		 */
-		//mq->mqstat = MQ_STATUS_OPEN;
+		/* mq->mqstat = MQ_STATUS_OPEN; */
 
 		mq->list = NULL;
 		mq->current = NULL;

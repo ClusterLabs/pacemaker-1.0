@@ -868,8 +868,8 @@ cms_client_msg_done(IPC_Message * msg)
 	client_header_t * message;
 	size_t msg_type;
 	char * mqname;
-	//mqueue_t * mq;
-	//client_message_t * m = (client_message_t *) message;
+	/* mqueue_t * mq; */
+	/* client_message_t * m = (client_message_t *) message; */
 
 	message = msg->msg_body;
 	msg_type = message->type;

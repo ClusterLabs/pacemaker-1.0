@@ -85,7 +85,7 @@ cmsrequest_type2string(size_t type)
 			tail = index - 1;
 
 		index = (head + tail) / 2;
-		// dprintf("index is %d, type is 0x%x\n", index, type);
+		/* dprintf("index is %d, type is 0x%x\n", index, type); */
 	}
 
 	cl_log(LOG_CRIT, "Invalid request type [%d]", (int)type);
