@@ -1359,7 +1359,7 @@ main(int argc, char ** argv)
 	ha_free(myid);
 	free_storage();
 
-        if (hb->llc_ops->signoff(hb) != HA_OK) {
+        if (hb->llc_ops->signoff(hb, TRUE) != HA_OK) {
                 cl_log(LOG_ERR, "Cannot sign off from heartbeat.");
                 cl_log(LOG_ERR, "REASON: %s", hb->llc_ops->errmsg(hb));
                 exit(10);

@@ -1,4 +1,4 @@
-/* $Id: api_test.c,v 1.7 2005/03/16 17:11:15 lars Exp $ */
+/* $Id: api_test.c,v 1.8 2005/04/06 18:07:53 gshi Exp $ */
 /* 
  * api_test: Test program for testing the heartbeat API
  *
@@ -302,7 +302,7 @@ main(int argc, char ** argv)
 		cl_log(LOG_ERR, "read_hb_msg returned NULL");
 		cl_log(LOG_ERR, "REASON: %s", hb->llc_ops->errmsg(hb));
 	}
-	if (hb->llc_ops->signoff(hb) != HA_OK) {
+	if (hb->llc_ops->signoff(hb, TRUE) != HA_OK) {
 		cl_log(LOG_ERR, "Cannot sign off from heartbeat.");
 		cl_log(LOG_ERR, "REASON: %s", hb->llc_ops->errmsg(hb));
 		exit(10);

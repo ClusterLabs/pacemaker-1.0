@@ -1,4 +1,4 @@
-/* $Id: ipfail.c,v 1.39 2004/10/16 04:12:56 alan Exp $ */
+/* $Id: ipfail.c,v 1.40 2005/04/06 18:07:51 gshi Exp $ */
 /* ipfail: IP Failover plugin for Linux-HA
  *
  * Copyright (C) 2002-2004 Kevin Dwyer <kevin@pheared.net>
@@ -800,7 +800,7 @@ void
 close_api(ll_cluster_t *hb)
 {
 	/* Log off of the API and clean up */
-	if (hb->llc_ops->signoff(hb) != HA_OK) {
+	if (hb->llc_ops->signoff(hb, FALSE) != HA_OK) {
 		cl_log(LOG_ERR, "Cannot sign off from heartbeat.");
 		cl_log(LOG_ERR, "REASON: %s", hb->llc_ops->errmsg(hb));
 		exit(14);

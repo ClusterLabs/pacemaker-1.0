@@ -288,7 +288,7 @@ main(int argc, char ** argv)
 	}
 
 	if (HB_SIGNON == TRUE) {
-		if (hb->llc_ops->signoff(hb) != HA_OK) {
+		if (hb->llc_ops->signoff(hb, TRUE) != HA_OK) {
 			cl_log(LOG_ERR, "Cannot sign off from heartbeat.");
 			cl_log(LOG_ERR, "REASON: %s", hb->llc_ops->errmsg(hb));
 			/* Comment it to avoid to mask the subcommand's return

@@ -1,4 +1,4 @@
-/* $Id: client_lib.c,v 1.27 2005/04/04 19:19:31 gshi Exp $ */
+/* $Id: client_lib.c,v 1.28 2005/04/06 18:07:53 gshi Exp $ */
 /* 
  * client_lib: heartbeat API client side code
  *
@@ -150,7 +150,7 @@ static void		ClearLog(void);
 			/* Common code for request messages */
 static struct ha_msg*	hb_api_boilerplate(const char * apitype);
 static int		hb_api_signon(struct ll_cluster*, const char * clientid);
-static int		hb_api_signoff(struct ll_cluster*);
+static int		hb_api_signoff(struct ll_cluster*, gboolean);
 static int		hb_api_setfilter(struct ll_cluster*, unsigned);
 static void		destroy_stringlist(struct stringlist *);
 static struct stringlist*
@@ -302,7 +302,7 @@ hb_api_signon(struct ll_cluster* cinfo, const char * clientid)
 
 	/* Re-sign ourselves back on */
 	if (pi->SignedOn) {
-		hb_api_signoff(cinfo);
+		hb_api_signoff(cinfo, FALSE);
 	}
 
 	snprintf(OurPid, sizeof(OurPid), "%d", getpid());
@@ -442,7 +442,7 @@ hb_api_signon(struct ll_cluster* cinfo, const char * clientid)
  * Sign off (disconnect) as a heartbeat client process.
  */
 static int
-hb_api_signoff(struct ll_cluster* cinfo)
+hb_api_signoff(struct ll_cluster* cinfo,gboolean need_destroy_chan)
 {
 	struct ha_msg*	request;
 	llc_private_t* pi;
@@ -472,7 +472,9 @@ hb_api_signoff(struct ll_cluster* cinfo)
 	pi->chan->ops->waitout(pi->chan);
 	ZAPMSG(request);
 	OurClientID = NULL;
-	pi->chan->ops->destroy(pi->chan);
+	if(need_destroy_chan){
+		pi->chan->ops->destroy(pi->chan);
+	}
 	pi->SignedOn = 0;
 	zap_order_seq(pi);
 	zap_order_queue(pi);
@@ -493,7 +495,7 @@ hb_api_delete(struct ll_cluster* ci)
 	pi = (llc_private_t*)ci->ll_cluster_private;
 
 	/* Sign off */
-	hb_api_signoff(ci);
+	hb_api_signoff(ci, TRUE);
 
 	/* Free up interface and node lists */
 	zap_iflist(pi);

@@ -1,4 +1,4 @@
-/* $Id: stonithd.c,v 1.34 2005/04/06 03:40:27 sunjd Exp $ */
+/* $Id: stonithd.c,v 1.35 2005/04/06 18:07:52 gshi Exp $ */
 
 /* File: stonithd.c
  * Description: STONITH daemon for node fencing
@@ -480,7 +480,7 @@ int main(int argc, char ** argv)
 	}
 
 signoff_quit:
-	if (hb != NULL && hb->llc_ops->signoff(hb) != HA_OK) {
+	if (hb != NULL && hb->llc_ops->signoff(hb, FALSE) != HA_OK) {
 		stonithd_log(LOG_ERR, "Cannot sign off from heartbeat.");
 		stonithd_log(LOG_ERR, "REASON: %s", hb->llc_ops->errmsg(hb));
 		main_rc = LSB_EXIT_GENERIC;
@@ -2970,6 +2970,11 @@ free_common_op_t(gpointer data)
 
 /* 
  * $Log: stonithd.c,v $
+ * Revision 1.35  2005/04/06 18:07:52  gshi
+ * bug 433
+ *
+ * provide an option to destroy channel in signoff call
+ *
  * Revision 1.34  2005/04/06 03:40:27  sunjd
  * some polish(actually mainly inluded in last checking)
  *

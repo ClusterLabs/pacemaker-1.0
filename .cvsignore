@@ -27,8 +27,6 @@ libtool.m4
 ltdl.m4
 *.beam
 parser-messages
-MasterPlan.pdf
-MasterPlan.html
 MISC_ERRORS
 cscope.files
 cscope.out

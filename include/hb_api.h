@@ -1,4 +1,4 @@
-/* $Id: hb_api.h,v 1.30 2005/04/04 19:19:31 gshi Exp $ */
+/* $Id: hb_api.h,v 1.31 2005/04/06 18:07:53 gshi Exp $ */
 /*
  * Client-side Low-level clustering API for heartbeat.
  *
@@ -79,7 +79,7 @@ typedef struct ll_cluster {
 
 struct llc_ops {
 	int		(*signon) (ll_cluster_t*, const char * service);
-	int		(*signoff) (ll_cluster_t*);
+	int		(*signoff) (ll_cluster_t*, gboolean);
 	int		(*delete) (ll_cluster_t*);
 	
 /*
