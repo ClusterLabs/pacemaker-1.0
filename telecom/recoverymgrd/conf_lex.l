@@ -19,6 +19,7 @@
  USA
  */
 
+#undef _GNU_SOURCE  /* in case it was defined on the command line */
 #define _GNU_SOURCE /* Needed for strn* functions */
 
 #include <stdio.h>

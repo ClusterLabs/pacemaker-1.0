@@ -1,4 +1,4 @@
-/* $Id: portability.h,v 1.38 2004/09/27 21:38:17 alan Exp $ */
+/* $Id: portability.h,v 1.39 2004/10/01 12:04:13 lge Exp $ */
 #ifndef PORTABILITY_H
 #  define PORTABILITY_H
 
@@ -30,6 +30,7 @@
 
 /* Needs to be defined before any other includes, otherwise some system
  * headers do not behave as expected! Major black magic... */
+#undef _GNU_SOURCE  /* in case it was defined on the command line */
 #define _GNU_SOURCE
 
 #ifdef __STDC__
