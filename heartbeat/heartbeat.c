@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.323 2004/10/04 16:28:58 lge Exp $ */
+/* $Id: heartbeat.c,v 1.324 2004/10/06 16:38:15 alan Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -2933,7 +2933,10 @@ main(int argc, char * argv[], char **envp)
 	cl_log_enable_stderr(TRUE);
 	g_log_set_always_fatal((GLogLevelFlags)0);
 
-	tmp_cmdname = ha_strdup(argv[0]);
+	if ((tmp_cmdname = ha_strdup(argv[0])) == NULL) {
+		cl_perror("Out of memory in main.");
+		exit(1);
+	}
 	if ((cmdname = strrchr(tmp_cmdname, '/')) != NULL) {
 		++cmdname;
 	}else{
@@ -4491,6 +4494,9 @@ get_localnodeinfo(void)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.324  2004/10/06 16:38:15  alan
+ * Put in a fix to exit if we're out of memory.
+ *
  * Revision 1.323  2004/10/04 16:28:58  lge
  * fix for heartbeat & sleep 1; heartbeat -k
  *  Shutdown delayed until Communication is up.
