@@ -1,4 +1,4 @@
-/* $Id: ipfail.c,v 1.32 2004/04/28 16:28:01 kevin Exp $ */
+/* $Id: ipfail.c,v 1.33 2004/04/29 15:22:48 kevin Exp $ */
 /* ipfail: IP Failover plugin for Linux-HA
  *
  * Copyright (C) 2002-2004 Kevin Dwyer <kevin@pheared.net>
@@ -57,6 +57,7 @@
 #include <hb_api.h>
 #include <clplumbing/cl_log.h>
 #include <clplumbing/cl_signal.h>
+#include <clplumbing/cl_malloc.h>
 #include <clplumbing/GSource.h>
 #include <clplumbing/Gmain_timeout.h>
 #include "ipfail.h"
@@ -127,7 +128,7 @@ main(int argc, char **argv)
 
 		cl_log(LOG_DEBUG, "auto_failback -> %i (%s)", auto_failback,
 		       parameter);
-		free(parameter);
+		cl_free(parameter);
 	} else
 		cl_log(LOG_ERR, "Couldn't get auto_failback setting.");
 
@@ -474,7 +475,7 @@ void
 giveup_destroy(gpointer user_data)
 {
 	/* Clean up the struct giveup_data that we were using */
-	free(user_data);
+	cl_free(user_data);
 
 	delay_giveup_tag = 0;
 	cl_log(LOG_DEBUG, "giveup timeout has been destroyed.");
