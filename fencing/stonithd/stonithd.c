@@ -1,4 +1,4 @@
-/* $Id: stonithd.c,v 1.14 2005/02/12 17:13:34 alan Exp $ */
+/* $Id: stonithd.c,v 1.15 2005/02/15 17:40:44 alan Exp $ */
 
 /* File: stonithd.c
  * Description: STONITH deamon for node fencing
@@ -731,6 +731,10 @@ stonithd_hb_msg_dispatch(IPC_Channel * ipcchan, gpointer user_data)
 	ll_cluster_t *hb = (ll_cluster_t*)user_data;
     
 	while (hb->llc_ops->msgready(hb)) {
+		/* FIXME:  This should be a higher-level API function (broken API) */
+		if (hb->llc_ops->ipcchan(hb)->ch_status != IPC_DISCONNECT) {
+			stonithd_quit(0);
+		}
 		/* invoke the callbacks with none-block mode */
 		stonithd_log(LOG_DEBUG, "there are hb msg received.");
 		hb->llc_ops->rcvmsg(hb, 0);
@@ -2823,6 +2827,9 @@ free_common_op_t(gpointer data)
 
 /* 
  * $Log: stonithd.c,v $
+ * Revision 1.15  2005/02/15 17:40:44  alan
+ * Hopefully got rid of an infinite loop in STONITHd.
+ *
  * Revision 1.14  2005/02/12 17:13:34  alan
  * Changed a "cannot open pid file" message into a DEBUG message.
  *
