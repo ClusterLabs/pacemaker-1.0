@@ -21,7 +21,7 @@
 #ifndef _HEARTBEAT_H
 #	define _HEARTBEAT_H 1
 
-static const char * _heartbeat_h_Id = "$Id: heartbeat.h,v 1.38 2003/08/06 13:48:46 horms Exp $";
+static const char * _heartbeat_h_Id = "$Id: heartbeat.h,v 1.39 2004/01/21 05:54:20 horms Exp $";
 
 #ifdef SYSV
 #	include <sys/termio.h>
@@ -371,6 +371,7 @@ void	SetParameterValue(const char * name, const char * value);
 
 void*		ha_malloc(size_t size);
 void*		ha_calloc(size_t nmemb, size_t size);
+char*		ha_strdup(const char *s);
 void		ha_free(void *ptr);
 int		ha_is_allocated(const void *ptr);
 void		ha_malloc_report(void);
