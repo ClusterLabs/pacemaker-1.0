@@ -1,4 +1,4 @@
-/* $Id: ccm.c,v 1.49 2004/10/01 00:52:55 yixiong Exp $ */
+/* $Id: ccm.c,v 1.50 2004/10/01 12:44:16 lge Exp $ */
 /* 
  * ccm.c: Consensus Cluster Service Program 
  *
@@ -4168,12 +4168,6 @@ ccm_initialize()
 
 	hb_fd = ll_cluster_new("heartbeat");
 
-	/* change the logging facility to the one used by heartbeat daemon */
-	if ((facility = hb_fd->llc_ops->get_logfacility(hb_fd))>0) {
-		cl_log_set_facility(facility);
-	}
-
-	
 	cl_log(LOG_INFO, "PID=%ld", (long)getpid());
 
 	cl_log(LOG_INFO, "Signing in with Heartbeat");
@@ -4181,6 +4175,14 @@ ccm_initialize()
 		cl_log(LOG_ERR, "Cannot sign on with heartbeat");
 		cl_log(LOG_ERR, "REASON: %s", hb_fd->llc_ops->errmsg(hb_fd));
 		return NULL;
+	}
+
+	/* change the logging facility to the one used by heartbeat daemon
+	 * the signon MUST BE FIRST! */
+	if ((facility = hb_fd->llc_ops->get_logfacility(hb_fd))>0) {
+		/* If someone cares, map it to its name ... */
+		cl_log(LOG_INFO, "Switched to heartbeat syslog facility: %d", facility);
+		cl_log_set_facility(facility);
 	}
 
 	if((global_info = (ccm_info_t *)g_malloc(sizeof(ccm_info_t))) == NULL){
