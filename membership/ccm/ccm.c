@@ -1,4 +1,4 @@
-/* $Id: ccm.c,v 1.72 2005/03/16 17:49:59 gshi Exp $ */
+/* $Id: ccm.c,v 1.73 2005/03/24 23:55:10 alan Exp $ */
 /* 
  * ccm.c: Consensus Cluster Service Program 
  *
@@ -1110,7 +1110,7 @@ ccm_get_all_active_join_request(ccm_info_t* info)
 {	
 	
 	llm_info_t* llm = &info->llm;
-	int i;
+	size_t i;
 	
 	for (i = 0 ; i < llm->nodecount; i++){
 		if (strncmp(llm->nodes[i].status,"active",STATUSSIZE)
@@ -1128,7 +1128,7 @@ static void
 ccm_reset_all_join_request(ccm_info_t* info)
 {
 	llm_info_t* llm = &info->llm;
-	int i;
+	size_t i;
 	
 	for (i = 0 ; i < llm->nodecount; i++){
 		llm->nodes[i].join_request = FALSE;		
@@ -1223,10 +1223,10 @@ static void
 ccm_send_join_reply(ll_cluster_t *hb, ccm_info_t *info)
 {
 	llm_info_t* llm = &info->llm;
-	int i;
+	size_t i;
 	
 	for (i = 0 ; i < llm->nodecount; i++){
-		if ( i == llm->myindex){
+		if ( i == (size_t)llm->myindex){
 			continue;
 		}
 		if (llm->nodes[i].join_request){
