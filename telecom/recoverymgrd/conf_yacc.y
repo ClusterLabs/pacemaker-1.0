@@ -61,7 +61,7 @@ commands: command commands
 	| command
 	{
 		MAKE_WARNINGS_GO_AWAY
-	}
+	};
 
 command: userinfo FILENAME OPEN_CURLY events 
 	{
@@ -92,7 +92,7 @@ command: userinfo FILENAME OPEN_CURLY events
 		if (0) {
 			YYERROR;
 		}
-	}
+	};
 
 
 userinfo: WORD COLON WORD
@@ -138,12 +138,12 @@ userinfo: WORD COLON WORD
 			return(3);
 		   } 	
 		 }
-	}
+	};
 
 events: eventdef events
 	| eventdef CLOSE_CURLY
 	{
-	}	
+	};
 
 eventdef: event EQUALS STRING
 	{
@@ -180,16 +180,13 @@ eventdef: event EQUALS STRING
 	{
 		current->event[eventindex].inuse = TRUE;
 		current->event[eventindex].args[0] = '\0';
-	}
+	};
 
 event: APPHB_HUP_L 		{ eventindex = (int) APPHB_HUP; }
 	| APPHB_NOHB_L  	{ eventindex = (int) APPHB_NOHB; }
 	| APPHB_HBAGAIN_L	{ eventindex =(int) APPHB_HBAGAIN; }
 	| APPHB_HBWARN_L	{ eventindex = (int) APPHB_HBWARN; }
-	| APPHB_HBUNREG_L	{ eventindex = (int) APPHB_HBUNREG; }
+	| APPHB_HBUNREG_L	{ eventindex = (int) APPHB_HBUNREG; };
 
 
 %%
-
-
-
