@@ -100,6 +100,7 @@ ConfigureGenericBSD() {
 ConfigureSolaris() {
   FLAGS="--prefix=/opt --sysconfdir=/opt/etc --localstatedir=/opt/var"
   CFENV="Solaris"
+  PACKAGECMD="$MAKE_CMD pkg"
 }
 
 ConfigureDarwin() {
