@@ -48,7 +48,7 @@ Contributors, ordered by last name:
 	Stefan Salzer <salt@cin.de>
 	Mitja Sarp <mitja@lysator.liu.se>
 		Initial authentication support (first big contribution)
-	Matthew Soffen <msoffen@iso-ne.com>
+	Matthew Soffen <sirgeek@mrsucko.org>
 		FreeBSD port, Solaris fixes, and release manager
 	Guenther Thomsen <thomsen@cs.tu-berlin.de>
 		Debian compliance
