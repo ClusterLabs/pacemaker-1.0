@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-#	$Id: IPaddr2.in,v 1.8 2003/12/12 09:40:18 horms Exp $
+#	$Id: IPaddr2.in,v 1.9 2004/04/27 11:35:22 horms Exp $
 #
 #	Copyright (C) 2003 Tuomo Soini <tis@foobar.fi>
 #
@@ -43,6 +43,7 @@ NICINFO=`$FINDIF -C $1 | sed -e 's/netmask\ //;s/broadcast\ //'`
 IFACE=`echo "$NICINFO" | cut -f1`
 NETMASK=`echo "$NICINFO" | cut -f2`
 BROADCAST=`echo "$NICINFO" | cut -f3`
+exit
 
 case $IFACE in
     *:*)
@@ -103,8 +104,31 @@ delete_interface () {
 
     ha_log "info: $CMD"
     $CMD
+
+    if 
+        [ $? -ne 0 ]
+    then
+        return $?
+    fi
+    
+    CMD="$IP2UTIL -o -f inet addr list $iface"
+
+    ha_log "info: $CMD"
+    ADDR=`$CMD`
+
+    if 
+        [ $? -ne 0 -o ! -z "$ADDR" ]
+    then
+        return $?
+    fi
+    
+    CMD="$IP2UTIL -o -f inet link set down $iface"
+
+    ha_log "info: $CMD"
+    $CMD
     
     return $?
+
 }
 
 
@@ -128,7 +152,18 @@ add_interface () {
 
     ha_log "info: $CMD"
     $CMD
-    
+
+    if 
+        [ $? -ne 0 ]
+    then
+        return $?
+    fi
+
+    CMD="$IP2UTIL -f inet link set up $iface"
+
+    ha_log "info: $CMD"
+    $CMD
+
     return $?
 }
 
