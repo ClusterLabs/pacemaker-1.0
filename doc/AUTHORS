@@ -12,6 +12,9 @@ Contributors, ordered by last name:
 
 	Eric Ayers <eric@compgen.com>
 		Nightware RPC100S, and WTI RPS10 support
+	Andrew Beekhof <andrew@beekhof.net>
+	        Cluster Resource Manager
+		Darwin Cleanups
 	Stéphane Billiart <stephane@reefedge.com> - unicast support
 	Gregor Binder <gbinder@sysfive.com> - "meatware" STONITH support
         Juan Pedro Paredes Caballero <juampe@retemail.es> - Debian support
