@@ -1,4 +1,4 @@
-/* $Id: sha1.c,v 1.11 2004/02/17 22:11:59 lars Exp $ */
+/* $Id: sha1.c,v 1.12 2004/06/18 03:05:36 alan Exp $ */
 /*
 SHA-1 in C
 By Steve Reid <steve@edmweb.com>
@@ -296,7 +296,8 @@ sha1_auth_calc (const struct HBauth_info *info
 		SHA1_CTX         tctx ;
 		SHA1Init(&tctx);
 		SHA1Update(&tctx, key, key_len);
-		SHA1Final(key, &tctx);
+		SHA1Final(tk, &tctx);
+		g_free(key);
 		key = tk;
 		key_len = SHA_DIGESTSIZE;
 	}
@@ -314,11 +315,11 @@ sha1_auth_calc (const struct HBauth_info *info
 
 	SHA1Final(isha, &ictx) ;
 
-	/**** Outter Digest ****/
+	/**** Outer Digest ****/
 
 	SHA1Init(&octx) ;
 
-	/* Pad the key for outter digest */
+	/* Pad the key for outer digest */
 
 	for (i = 0 ; i < key_len ; ++i) buf[i] = key[i] ^ 0x5C ;
 	for (i = key_len ; i < SHA_BLOCKSIZE ; ++i) buf[i] = 0x5C ;
@@ -332,7 +333,9 @@ sha1_auth_calc (const struct HBauth_info *info
 		sprintf(tk, "%02x", osha[i]);
 		strcat(result, tk);
 	}
-	g_free(key);
+	if (key != tk) {
+		g_free(key);
+	}
 
 	return TRUE;
 }
