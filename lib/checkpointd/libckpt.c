@@ -1,4 +1,4 @@
-/* $Id: libckpt.c,v 1.6 2004/03/12 02:58:56 deng.pan Exp $ */
+/* $Id: libckpt.c,v 1.7 2004/03/12 18:01:47 msoffen Exp $ */
 /* 
  * ckptlib.c: data checkpoint API library
  *
@@ -188,8 +188,8 @@ SaCkptLibGetIterator(void)
 static SaCkptLibRequestT*
 SaCkptGetLibRequestByReqno(SaUint32T reqno)
 {
-	GList* list = NULL;;
 	SaCkptLibRequestT* libRequest;
+	GList* list = NULL;
 	
 	list = libAsyncRequestList;
 	while( list != NULL ) {
@@ -205,8 +205,8 @@ SaCkptGetLibRequestByReqno(SaUint32T reqno)
 static SaCkptClientResponseT*
 SaCkptGetLibResponseByReqno(SaUint32T reqno)
 {
-	GList* list = NULL;;
 	SaCkptClientResponseT* libResponse;
+	GList* list = NULL;
 	
 	list = libResponseList;
 	while( list != NULL ) {
@@ -226,8 +226,8 @@ SaCkptGetLibResponseByReqno(SaUint32T reqno)
 static SaCkptLibClientT*
 SaCkptGetLibClientByHandle(SaCkptHandleT clientHandle)
 {
-	GList* list = NULL;;
 	SaCkptLibClientT* libClient;
+	GList* list = NULL;
 	
 	list = libClientList;
 	while( list != NULL ) {
