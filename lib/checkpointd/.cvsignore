@@ -1,0 +1,6 @@
+.deps
+.libs
+Makefile
+Makefile.in
+libckpt.la
+libckpt_la-libckpt.lo

@@ -4,3 +4,5 @@ Makefile
 y.tab.c
 y.tab.h
 lex.yy.c
+.libs
+recoverymgrd
