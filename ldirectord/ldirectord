@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-my($VERSION)=(qw$Id: ldirectord,v 1.73 2003/09/24 05:50:00 horms Exp $)[2];
+my($VERSION)=(qw$Id: ldirectord,v 1.74 2003/10/02 08:09:02 horms Exp $)[2];
 
 ######################################################################
 # ldirectord                 http://www.vergenet.net/linux/ldirectord/
@@ -486,7 +486,7 @@ sub ld_init
 			kill 1, $oldpid;
 			ld_exit(0, "Exiting from ldirectord reload");
 		} elsif ($CMD eq "status") {
-			print "ldirectord for $CONFIG is running with pid: $oldpid\n";
+			print STDERR "ldirectord for $CONFIG is running with pid: $oldpid\n";
 			ld_cmd_children("status", %LD_INSTANCE);
 			ld_exit(0, "Exiting from ldirectord status");
 		} else {
@@ -1367,7 +1367,7 @@ sub ld_start
 
 	# read status of current ipvsadm -L -n
         $oldsrv=&ld_read_ipvsadm();
-        
+
 	# modify service, if changed
 	foreach $nv (@VIRTUAL) {
 		my $nreal = $$nv{real};
@@ -1381,13 +1381,13 @@ sub ld_start
 			my $or = $$ov{real};
 			for $nr (@$nreal) {
 				if (exists($$or{"$$nr{server}:$$nr{port}"})) {
-					&system_wrapper("$IPVSADM -e $$nv{proto} " . &get_virtual($nv) . " -r $$nr{server}:$$nr{port} $$nr{forw} -w $$nr{wght}");
-					$$nr{status} = 1;
+					&system_wrapper("$IPVSADM -e $$nv{proto} " .  &get_virtual($nv) .  " -r $$nr{server}:$$nr{port} $$nr{forw} -w $$nr{wght}");
+					$$nr{status} = -1;
 					$$nv{status}++;
 					&ld_log("Changed real server: $$nr{server}:$$nr{port} ($$nv{status} x " . &get_virtual($nv) . ")\n");
 					delete($$or{"$$nr{server}:$$nr{port}"});
 				} else {
-					$$nr{status} = 0;
+					$$nr{status} = -1;
 				}
 			}
 			# remove remaining entries for real servers
@@ -1400,7 +1400,7 @@ sub ld_start
 			# no such service, create a new one
 			&system_wrapper("$IPVSADM -A $$nv{flags}");
 			for $nr (@$nreal) {
-				$$nr{status} = 0;
+				$$nr{status} = -1;
 			}
 			&ld_log("Added virtual server: " . &get_virtual($nv));
 		}
@@ -1516,8 +1516,9 @@ sub ld_main
 			}
 			# $ua->wait($$v{checktimeout});
 		}
-		check_cfgfile();
-		sleep $CHECKINTERVAL;
+		if (!check_cfgfile()) {
+			sleep $CHECKINTERVAL;
+		}
 	}
 }
 
@@ -1558,6 +1559,8 @@ sub check_http
 		LWP::Debug::level('+');
 	}
 	my ($v, $r) = @_;
+
+	&ld_debug(2, "Checking http: url=\"$$r{url}\"");
 	
 	my $ua = new LWP::UserAgent();
 	$ua->timeout($$v{negotiatetimeout});
@@ -1589,8 +1592,12 @@ sub check_smtp
 {
 	require Net::SMTP;
 	my ($v, $r) = @_;
+	my $port=(defined $$v{checkport}?$$v{checkport}:$$r{port});
 	
-	my $smtp = new Net::SMTP($$r{server}, Timeout => $$v{negotiatetimeout});
+	&ld_debug(2, "Checking http: server=$$r{server} port=$port");
+	
+	my $smtp = new Net::SMTP($$r{server}, Port => $port,
+			Timeout => $$v{negotiatetimeout});
 	if ($smtp) {
 		$smtp->quit;
 		service_set($v, $r, "up");
@@ -1606,8 +1613,12 @@ sub check_pop
 {
 	require Net::POP3;
 	my ($v, $r) = @_;
+	my $port=(defined $$v{checkport}?$$v{checkport}:$$r{port});
 	
-	my $pop = new Net::POP3($$r{server}, Timeout => $$v{negotiatetimeout});
+	&ld_debug(2, "Checking pop server=$$r{server} port=$port");
+	
+	my $pop = new Net::POP3($$r{server}, Port => $port, 
+			Timeout => $$v{negotiatetimeout});
 	if (!$pop) {
 		service_set($v, $r, "down");
 		return 1;
@@ -1633,8 +1644,11 @@ sub check_imap
 {
 	require Mail::IMAPClient;
 	my ($v, $r) = @_;
+	my $port=(defined $$v{checkport}?$$v{checkport}:$$r{port});
 	
-	my $imap = new Mail::IMAPClient(Server => $$r{server}, Port=>$$r{port},
+	&ld_debug(2, "Checking imap server=$$r{server} port=$port");
+	
+	my $imap = new Mail::IMAPClient(Server => $$r{server}, Port=>$port,
 					Timeout => $$v{negotiatetimeout},
 					User => $$v{login}, 
 					Password => $$v{passwd});
@@ -1661,9 +1675,12 @@ sub check_ldap
 {
 	my ($v, $r) = @_;
 	require Net::LDAP;
+	my $port=(defined $$v{checkport}?$$v{checkport}:$$r{port});
 
+	&ld_debug(2, "Checking ldap server=$$r{server} port=$port");
+	
 	my $recstr = $$r{receive};
-	my $ldap = Net::LDAP->new("$$r{server}", port => $$r{checkport},
+	my $ldap = Net::LDAP->new("$$r{server}", port => $port,
 					timeout => $$v{negotiatetimeout});
 	if(!$ldap) {
 		service_set($v, $r, "down");
@@ -1712,14 +1729,18 @@ sub check_https
 	$Net::SSLeay::trace = 0;
 	my $uri = $$v{request};
 	my ($page, $result, %headers);
+	my $port=(defined $$v{checkport}?$$v{checkport}:$$r{port});
+
+	&ld_debug(2, "Checking https server=$$r{server} port=$port");
+	
 	eval {
 		local $SIG{__WARN__};
 		local $SIG{'__DIE__'} = "DEFAULT";
 		local $SIG{'ALRM'} = sub { die "Timeout Alarm" };
 		alarm $$v{negotiatetimeout};
-		&ld_debug(2, "Testing: $$r{server}, $$r{port}, $uri");
+		&ld_debug(2, "Testing: $$r{server}, $port, $uri");
 		($page, $result, %headers)  = &Net::SSLeay::get_https(
-				$$r{server}, $$r{port}, $uri);
+				$$r{server}, $port, $uri);
 		&ld_debug(2, "Result: $result");
 		my $recstr = $$r{receive};
 		if($result =~ /error/i ||
@@ -1746,9 +1767,12 @@ sub check_nntp
         my $sock;
         my $s;
         my $buf;
+	my $port=(defined $$v{checkport}?$$v{checkport}:$$r{port});
 
+	&ld_debug(2, "Checking nntp server=$$r{server} port=$port");
+	
         unless ($sock = IO::Socket::INET->new(PeerAddr => $$r{server},
-                PeerPort => $$r{port}, Proto => 'tcp',
+                PeerPort => $port, Proto => 'tcp',
                 TimeOut => $$v{negotiatetimeout})) {
                 service_set($v, $r, "down");
                 return 0;
@@ -1775,8 +1799,8 @@ sub check_nntp
 sub check_connect
 {
 	my ($v, $r) = @_;
-
 	my $port=(defined $$v{checkport}?$$v{checkport}:$$r{port});
+
 	eval {
 		local $SIG{'__DIE__'} = "DEFAULT";
 		local $SIG{'ALRM'} = sub { die "Timeout Alarm" };
@@ -1810,12 +1834,15 @@ sub check_ftp
 	my $ftp;
         local *READ_FH;
 	local *WRITE_FH;
+	my $port=(defined $$v{checkport}?$$v{checkport}:$$r{port});
 
+	&ld_debug(2, "Checking ftp server=$$r{server} port=$port");
+	
 	pipe(\*READ_FH, \*WRITE_FH);
 	select(\*WRITE_FH); $| = 1; select(STDERR);
 
-	unless ($ftp = Net::FTP->new("$$r{server}:$$r{port}", 
-				Timeout=>$$v{negotiatetimeout})) {
+	unless ($ftp = Net::FTP->new("$$r{server}:$port", 
+			Timeout=>$$v{negotiatetimeout})) {
 		service_set($v, $r, "down");
 		return 0;
 	}
@@ -1846,6 +1873,9 @@ sub check_ftp
 sub check_none
 {
 	my ($v, $r) = @_;
+
+	&ld_debug(2, "Checking none");
+	
 	service_set($v, $r, "up");
 	return 1;
 }
@@ -1875,8 +1905,8 @@ sub service_set()
 	my ($real, $virtual, $virt);
 
         # Return if the real server is already in the desired state
-	return if ($$r{status}!=0 and $state=~/up/i);
-	return if ($$r{status}!=1 and $state=~/down/i);
+	return if ($$r{status}==1 and $state=~/up/i);
+	return if ($$r{status}==0 and $state=~/down/i);
 
         # Find the real server in @REAL
 	foreach $real (@REAL) {
@@ -1945,23 +1975,51 @@ sub _remove_service {
         my $or;
         my $ipvsadm_args;
         my $log_args;
+	my $virtual_str;
+	my $old_rservice;
 
-	$ipvsadm_args = "$$v{proto} " . &get_virtual($v) . " -r $rservice";
-        $log_args = "$tag server: $rservice "
-                    . "($$v{status} x " .  &get_virtual($v) . ")";
+	$virtual_str = &get_virtual($v);
 
         $oldsrv=&ld_read_ipvsadm();
-        $ov=$oldsrv->{&get_virtual($v) . " " . $v->{"protocol"}};
-        if(defined($ov)){
-                $or=$ov->{"real"}->{$rservice};
-        }
+        $ov=$oldsrv->{$virtual_str . " " . $v->{"protocol"}};
+	if(!defined($ov)){
+		return;
+	}
+
+        $or=$ov->{"real"}->{$rservice};
+
+	# If a virtual service is a IP/port service (not fwmark)
+	# and a real-servers uses a forwarding mechanism other than masq
+	# then the port will always be that of the virtual service.
+	# This includes real-servers that LVS has set to use
+	# the local forwarding mechanism because their IP address
+	# is local. Thus, if $rservice does not exist test
+	# for the same ip address with the virtual servers port.
+	# N.B: This could cause strange things to happen if
+	# there is a clash between two real servers on different ports
+	# that LVS has mapped to being the same thing.
+	if(!defined($or)) {
+		$old_rservice = $rservice;
+		$rservice =~ /(.*):(.*)/;
+		$rservice = $1;
+		$virtual_str =~ /(.*):(.*)/;
+		$rservice .= ":" . $2;
+        	$or=$ov->{"real"}->{$rservice};
+	}
 
         if(!defined($or) or ($or->{"weight"} eq 0 and 
 			$or->{"forward"} eq $rforw)){
 		return;
 	}
 
-	if(($$v{quiescent} and $$v{quiescent} eq "no")
+	$ipvsadm_args = "$$v{proto} " . $virtual_str . " -r $rservice";
+        $log_args = "$tag server: $rservice ";
+	if(defined($old_rservice)) {
+		$log_args .= "mapped from $old_rservice "
+	}
+	$log_args .= "($$v{status} x $virtual_str)";
+
+	if($tag eq "fallback" or ($$v{quiescent} and $$v{quiescent} eq "no")
 			or (!defined($$v{quiescent}) and $QUIESCENT eq "no")){
                 &system_wrapper("$IPVSADM -d $ipvsadm_args");
 	        &ld_log("Deleted $log_args");
@@ -2142,7 +2200,9 @@ sub fallback_find
 
 sub check_cfgfile
 {
-	my ($dev, $ino, $mode, $nlink, $uid, $gid, $rdev, $size, $atime, $mtime) = stat($CONFIG);
+	my ($dev, $ino, $mode, $nlink, $uid, $gid, $rdev, 
+		$size, $atime, $mtime) = stat($CONFIG);
+	my ($status);
 	return if ($stattime==$mtime);
 	$stattime = $mtime;
 	use Digest::MD5 qw(md5 md5_hex);
@@ -2162,8 +2222,11 @@ sub check_cfgfile
 		if (-x $CALLBACK) {
 			&system_wrapper("$CALLBACK $CONFIG");
 		}
+		$status = 1;
 	}
 	$checksum = $digest;
+
+	return $status;
 }
 
 
@@ -2450,6 +2513,7 @@ sub get_real_id_str
 
 	my $request = "";
 	my $receive = "";
+	my $checkport = "";
 	my $check;
 	my $real;
 
@@ -2459,6 +2523,7 @@ sub get_real_id_str
 	else {
 		$request = $v->{"request"};
 	}
+
 	if(defined($r->{"receive"})) {
 		$receive = $r->{"receive"};
 	}
@@ -2474,10 +2539,15 @@ sub get_real_id_str
 		$check = $v->{"checktype"};
 	}
 
+	if(defined($v->{"checkport"})) {
+		$checkport = $v->{"checkport"};
+	}
+
 
         $real    = $check . ":" . $v->{"protocol"} . ":" 
-	         . $r->{"server"} . ":" . $r->{"port"}
-	         . ":" . quotemeta($request) . ":" . quotemeta($receive);
+	         . $r->{"server"} . ":" . $r->{"port"} . ":" 
+		 . $checkport . ":" 
+		 . quotemeta($request) . ":" . quotemeta($receive);
 }
 
 
