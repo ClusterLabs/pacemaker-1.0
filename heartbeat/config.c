@@ -1,4 +1,4 @@
-/* $Id: config.c,v 1.140 2005/02/08 07:24:26 alan Exp $ */
+/* $Id: config.c,v 1.141 2005/02/09 11:47:24 andrew Exp $ */
 /*
  * Parse various heartbeat configuration files...
  *
@@ -2096,9 +2096,9 @@ set_release2mode(const char* value)
 	{	{"apiauth", "lrmd   uid=root"}
 	,	{"apiauth", "crmd   uid=" HA_CCMUSER}
 	,	{"apiauth", "cib    uid=" HA_CCMUSER}
-	,	{"respawn", "root "           HALIB "/lrmd"}
 	,	{"respawn", " "HA_CCMUSER " " HALIB "/ccm"}
 	,	{"respawn", " "HA_CCMUSER " " HALIB "/cib"}
+	,	{"respawn", "root "           HALIB "/lrmd"}
 	,	{"respawn", " "HA_CCMUSER " " HALIB "/crmd"}
 	};
 	gboolean	dorel2;
@@ -2134,6 +2134,9 @@ set_release2mode(const char* value)
 
 /*
  * $Log: config.c,v $
+ * Revision 1.141  2005/02/09 11:47:24  andrew
+ * Adjust the order a little.  Give the CIB longer to start up.
+ *
  * Revision 1.140  2005/02/08 07:24:26  alan
  * Added code to not start cibmon with the 'crm on' option.
  *
