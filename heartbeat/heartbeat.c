@@ -1,4 +1,4 @@
-/* $Id: heartbeat.c,v 1.294 2004/03/05 17:25:19 alan Exp $ */
+/* $Id: heartbeat.c,v 1.295 2004/03/17 18:04:05 msoffen Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -901,7 +901,7 @@ fifo_child(IPC_Channel* chan)
 		": Soldiering on...");
 	}
 	set_proc_title("%s: FIFO reader", cmdname);
-	fiforfd = open(FIFONAME, O_RDONLY|O_NDELAY);
+	fiforfd = open(FIFONAME, O_RDONLY|O_NDELAY|O_NONBLOCK);
 	if (fiforfd < 0) {
 		cl_perror("FIFO open (O_RDONLY) failed.");
 		exit(1);
@@ -2480,7 +2480,7 @@ send_cluster_msg(struct ha_msg* msg)
 
 
 		if (	(smsg = msg2wirefmt(msg, &len)) == NULL
-		||	(ffd = open(FIFONAME, O_WRONLY|O_NDELAY)) < 0
+		||	(ffd = open(FIFONAME, O_WRONLY|O_NDELAY|O_APPEND)) < 0
 		||	write(ffd, smsg, len -1 )
 		!=	len -1){
 			cl_perror("Cannot write message to " FIFONAME
@@ -4107,6 +4107,9 @@ get_localnodeinfo(void)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.295  2004/03/17 18:04:05  msoffen
+ * Changes to make the FIFO work on Solaris
+ *
  * Revision 1.294  2004/03/05 17:25:19  alan
  * cleanup of netstring patch.
  * Hopefully it also cleaned up the size_t vs int problems in the code.
