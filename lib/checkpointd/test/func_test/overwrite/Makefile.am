@@ -45,7 +45,6 @@ test_linkfiles		= $(GLIBLIB) \
 			$(top_builddir)/lib/hbclient/libhbclient.la 
 ## binary progs 
 noinst_PROGRAMS	= overwrite1node1 overwrite1node2 overwrite2node1 overwrite2node2 overwrite3node1 overwrite3node2  overwrite4node1 overwrite4node2 overwrite5node1 overwrite5node2 overwrite6node1 overwrite6node2
-halib_PROGRAMS	= overwrite1node1 overwrite1node2 overwrite2node1 overwrite2node2  overwrite3node1 overwrite3node2  overwrite4node1 overwrite4node2 overwrite5node1 overwrite5node2 overwrite6node1 overwrite6node2 
 
 overwrite1node1_SOURCES	= overwrite1node1.c
 overwrite1node1_LDADD	= $(test_linkfiles) 

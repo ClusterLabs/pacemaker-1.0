@@ -48,10 +48,6 @@ noinst_PROGRAMS	= 	sect_create1node1 sect_create1node2 sect_create2node1 sect_cr
 					sect_create3node1 sect_create3node2 sect_create4node1 sect_create4node2\
 					sect_create5node1 sect_create5node2 sect_create6node1 sect_create6node2
 					
-halib_PROGRAMS	=	sect_create1node1 sect_create1node2 sect_create2node1 sect_create2node2\
-					sect_create3node1 sect_create3node2 sect_create4node1 sect_create4node2\
-					sect_create5node1 sect_create5node2 sect_create6node1 sect_create6node2
-
 sect_create1node1_SOURCES	= sect_create1node1.c
 sect_create1node1_LDADD	= $(test_linkfiles) 
 sect_create1node1_LDFLAGS	= 

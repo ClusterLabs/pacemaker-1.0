@@ -44,7 +44,6 @@ test_linkfiles		= $(GLIBLIB) \
 
 ## binary progs
 noinst_PROGRAMS		= open close unlink set_duration get_status set_active
-halib_PROGRAMS		= open close unlink set_duration get_status set_active
 
 open_SOURCES		= open.c
 open_LDADD		= $(test_linkfiles)

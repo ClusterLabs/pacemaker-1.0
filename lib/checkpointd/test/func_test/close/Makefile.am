@@ -46,7 +46,6 @@ test_linkfiles		= $(GLIBLIB) \
 			$(top_builddir)/lib/hbclient/libhbclient.la 
 ## binary progs 
 noinst_PROGRAMS	= close1node1 close1node2 close2node1 close2node2 close3node1 close3node2
-halib_PROGRAMS		= close1node1 close1node2 close2node1 close2node2 close3node1 close3node2
 
 close1node1_SOURCES	= close1node1.c
 close1node1_LDADD	= $(test_linkfiles)

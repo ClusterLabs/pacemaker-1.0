@@ -43,7 +43,6 @@ test_linkfiles		= $(GLIBLIB) \
 			$(top_builddir)/lib/hbclient/libhbclient.la 
 ## binary progs 
 noinst_PROGRAMS	= write1node1 write1node2  write2node1 write2node2 write3node1 write3node2 write4node1 write4node2 write5node1 write5node2 write6node1 write6node2 write7node1 write7node2
-halib_PROGRAMS		= write1node1 write1node2 write2node1 write2node2 write3node1 write3node2 write4node1 write4node2 write5node1 write5node2 write6node1 write6node2 write7node1 write7node2
 
 write1node1_SOURCES	= write1node1.c
 write1node1_LDADD	= $(test_linkfiles) 

@@ -43,7 +43,6 @@ test_linkfiles		= $(GLIBLIB) \
 			$(top_builddir)/lib/hbclient/libhbclient.la 
 ## binary progs
 noinst_PROGRAMS	= sync1node1 sync1node2 sync2node1 sync2node2 sync3node1 sync3node2  sync4node1 sync4node2 sync5node1 sync5node2
-halib_PROGRAMS		= sync1node1 sync1node2  sync2node1 sync2node2 sync3node1 sync3node2   sync4node1 sync4node2 sync5node1 sync5node2
 
 sync1node1_SOURCES	= sync1node1.c
 sync1node1_LDADD	= $(test_linkfiles) 

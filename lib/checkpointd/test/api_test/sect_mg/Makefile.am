@@ -43,7 +43,6 @@ test_linkfiles		= $(GLIBLIB) \
 			$(top_builddir)/lib/hbclient/libhbclient.la 
 ## binary progs
 noinst_PROGRAMS		= create delete iterator_finalize iterator_init iterator_next expire_time_set
-halib_PROGRAMS		= create delete iterator_finalize iterator_init iterator_next expire_time_set
 
 #ckpttest
 create_SOURCES		= create.c

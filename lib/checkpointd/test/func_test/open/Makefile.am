@@ -45,7 +45,6 @@ test_linkfiles	= $(GLIBLIB) \
 			
 ## binary progs
 noinst_PROGRAMS	= open1node1 open1node2 open2node1  open2node2
-halib_PROGRAMS		= open1node1 open1node2 open2node1  open2node2
 
 open1node1_SOURCES	= open1node1.c
 open1node1_LDADD	= $(test_linkfiles) 

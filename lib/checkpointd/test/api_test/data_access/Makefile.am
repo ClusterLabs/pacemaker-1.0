@@ -43,7 +43,6 @@ test_linkfiles		= $(GLIBLIB) \
 			$(top_builddir)/lib/hbclient/libhbclient.la 
 ## binary progs
 noinst_PROGRAMS		= read write overwrite asynchronize synchronize 
-halib_PROGRAMS		= read write overwrite asynchronize synchronize 
 
 read_SOURCES		= read.c
 read_LDADD		= $(test_linkfiles)

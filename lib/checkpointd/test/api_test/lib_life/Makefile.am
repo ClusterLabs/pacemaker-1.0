@@ -44,7 +44,6 @@ test_linkfiles		= $(GLIBLIB) \
 
 ## binary progs
 noinst_PROGRAMS		= init finalize fdget dispatch
-halib_PROGRAMS		= init finalize fdget dispatch
 
 #ckpttest
 
