@@ -1,4 +1,4 @@
-/* $Id: ccmclient.c,v 1.16 2005/02/02 19:38:37 gshi Exp $ */
+/* $Id: ccmclient.c,v 1.17 2005/02/15 22:11:42 alan Exp $ */
 /* 
  * client.c: Consensus Cluster Client tracker
  *
@@ -286,26 +286,32 @@ client_add(struct IPC_CHANNEL *ipc_client)
 	return 0;
 }
 
+static void
+client_destroy(struct IPC_CHANNEL *ipc_client)
+{
+	ccm_client_t  *ccm_client;
+	if((ccm_client = g_hash_table_lookup(ccm_hashclient, ipc_client))
+	!=	NULL){
+		g_free(ccm_client);
+	}
+	ipc_client->ops->destroy(ipc_client);
+}
 
 void
 client_delete(struct IPC_CHANNEL *ipc_client)
 {
-	ccm_client_t  *ccm_client;
 
-	if((ccm_client = g_hash_table_lookup(ccm_hashclient, ipc_client))
-				!=NULL){
-		g_hash_table_remove(ccm_hashclient, ipc_client);
-		g_free(ccm_client);
-	}
+	g_hash_table_remove(ccm_hashclient, ipc_client);
+	client_destroy(ipc_client);
 	return;
 }
 
 static gboolean 
-delete_func(gpointer key, gpointer value, gpointer user_data)
+destroy_func(gpointer key, gpointer value, gpointer user_data)
 {
 	struct IPC_CHANNEL *ipc_client = (struct IPC_CHANNEL *)key;
 
-	client_delete(ipc_client);
+	client_destroy(ipc_client);
 	return TRUE;
 }
 
@@ -313,7 +319,7 @@ void
 client_delete_all(void)
 {
 	if(g_hash_table_size(ccm_hashclient)) {
-		g_hash_table_foreach_remove(ccm_hashclient, delete_func, NULL);
+		g_hash_table_foreach_remove(ccm_hashclient, destroy_func, NULL);
 	}
 	return;
 }
