@@ -1,4 +1,4 @@
-/* $Id: stonithd.c,v 1.29 2005/03/18 11:00:04 sunjd Exp $ */
+/* $Id: stonithd.c,v 1.30 2005/03/21 08:56:39 sunjd Exp $ */
 
 /* File: stonithd.c
  * Description: STONITH daemon for node fencing
@@ -617,13 +617,13 @@ on_polled_input_dispatch(GSource * source, GSourceFunc callback,
 		rc = g_hash_table_lookup_extended(executing_queue, &pid, 
 				(gpointer *)&orignal_key, (gpointer *)&op);
 
-		if (rc == FALSE ) { /* || op == NULL)  */
-			stonithd_log(LOG_ERR, "received child quit signal, "
+		if (rc == FALSE) {
+			stonithd_log(LOG_NOTICE, "received child quit signal, "
 				"but no this child pid in excuting list.");
 			continue;
 		}
 
-		if ( op == NULL) {
+		if (op == NULL) {
 			stonithd_log(LOG_ERR, "received child quit signal: "
 				"but op==NULL");
 			continue;
@@ -2978,6 +2978,9 @@ free_common_op_t(gpointer data)
 
 /* 
  * $Log: stonithd.c,v $
+ * Revision 1.30  2005/03/21 08:56:39  sunjd
+ * Change a log message's loglevel
+ *
  * Revision 1.29  2005/03/18 11:00:04  sunjd
  * fix a 'mispell' error ;-)
  *
