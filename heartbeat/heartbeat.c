@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.357 2005/02/18 18:26:25 alan Exp $ */
+/* $Id: heartbeat.c,v 1.358 2005/02/18 20:30:27 alan Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -1689,6 +1689,10 @@ hb_initiate_shutdown(int quickshutdown)
 		Gmain_timeout_add(1000*60*60, EmergencyShutdown, NULL);
 		return;
 	}
+	if (ANYDEBUG) {
+		cl_log(LOG_DEBUG
+		, "hb_initiate_shutdown(): calling hb_mcp_final_shutdown()");
+	}
 	/* Trigger initial shutdown process for quick shutdown */
 	hb_mcp_final_shutdown(NULL); /* phase 0 (quick) */
 }
@@ -1741,6 +1745,7 @@ hb_mcp_final_shutdown(gpointer p)
 		return FALSE;
 
 	case 1:		/* From ManagedChildDied() (or above) */
+		g_assert(g_list_length(config->client_list) == 0);
 		shutdown_phase = 2;
 		if (procinfo->restart_after_shutdown) {
                 	hb_add_deadtime(30000);
@@ -5063,6 +5068,9 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.358  2005/02/18 20:30:27  alan
+ * Put in an assert and some more debugging for this annoying shutdown problem...
+ *
  * Revision 1.357  2005/02/18 18:26:25  alan
  * More debugging for client child killing.
  * Weird...
