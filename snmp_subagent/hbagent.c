@@ -34,7 +34,9 @@
 #define LHAAGENTID "lha-snmpagent"
 
 static unsigned long hbInitialized = 0;
-static ll_cluster_t * hb = NULL;
+static unsigned long clmInitialized = 0;
+static ll_cluster_t * hb = NULL; // heartbeat handle
+static const char * myid = NULL; // my node id
 static SaClmHandleT clm = 0;
 
 static GArray * gNodeTable = NULL;
@@ -43,6 +45,23 @@ static GArray * gMembershipTable = NULL;
 static GArray * gResourceTable = NULL;
 
 static int keep_running;
+
+int init_heartbeat(void);
+int get_heartbeat_fd(void);
+int handle_heartbeat_msg(void);
+
+int init_membership(void);
+int get_membership_fd(void);
+int handle_membership_msg(void);
+
+int init_resource_table(void);
+
+int init_storage(void);
+
+void free_storage(void);
+
+int walk_node_table(void);
+int walk_if_table(void);
 
 static RETSIGTYPE
 stop_server(int a) {
@@ -210,19 +229,23 @@ main(int argc, char ** argv)
 
 	/* initialize mib code here */
 
+	if ((ret = init_storage()) != HA_OK) {
+	    	return -2;
+	}
+
 	if ((ret = init_heartbeat()) != HA_OK ||
 	    	(hb_fd = get_heartbeat_fd()) <=0) {
                 return -1;
         }
 
 	if ((ret = init_resource_table()) != HA_OK) {
-
+	    	cl_log(LOG_ERR, "resource table initialization failure.");
 	}
 
 	if ((ret = init_membership() != HA_OK) ||
 		(mem_fd = get_membership_fd()) <= 0) {
-	    	return -2;
-	}
+	    	cl_log(LOG_ERR, "membership initialization failure.  You will not be able to view any membership information in this cluster.");
+	} 
 
 	init_LHAClusterInfo();
 	init_LHANodeTable();
@@ -253,7 +276,10 @@ main(int argc, char ** argv)
 
 		FD_ZERO(&fdset);
                 FD_SET(hb_fd, &fdset);
-		FD_SET(mem_fd, &fdset);
+
+		if (clmInitialized) {
+			FD_SET(mem_fd, &fdset);
+		}
 
 		tv.tv_sec = DEFAULT_TIME_OUT;
 		tv.tv_usec = 0;
@@ -285,7 +311,7 @@ main(int argc, char ** argv)
 				cl_log(LOG_ERR, "heartbeat stopped.");
 				break;
 			}
-		} else if (FD_ISSET(mem_fd, &fdset)) {
+		} else if (clmInitialized && FD_ISSET(mem_fd, &fdset)) {
 		    	/* membership events */
 
 		    	if ((ret = handle_membership_msg()) == HA_FAIL) {
@@ -300,6 +326,7 @@ main(int argc, char ** argv)
 
 	/* at shutdown time */
 	snmp_shutdown("example-demon");
+	free_storage();
 
 	return 0;
 }
@@ -311,6 +338,7 @@ NodeStatus(const char * node, const char * status, void * private)
 {
         cl_log(LOG_NOTICE, "Status update: Node %s now has status %s\n"
         ,       node, status);
+	walk_node_table();
 }
 
 static void
@@ -319,6 +347,131 @@ LinkStatus(const char * node, const char * lnk, const char * status
 {
         cl_log(LOG_NOTICE, "Link Status update: Link %s/%s now has status %s\n"
         ,       node, lnk, status);
+	walk_if_table();
+}
+
+int
+init_storage(void)
+{
+	gNodeTable = g_array_new(TRUE, TRUE, sizeof (struct hb_nodeinfo));
+	gIFTable = g_array_new(TRUE, TRUE, sizeof (struct hb_ifinfo));
+	gResourceTable = g_array_new(TRUE, TRUE, sizeof (struct hb_rsinfo));
+	gMembershipTable = g_array_new(TRUE, TRUE, 
+			sizeof (SaClmClusterNotificationT));
+
+	if (!gNodeTable || !gIFTable || !gResourceTable || !gMembershipTable){
+	    	cl_log(LOG_ERR, "Storage allocation failure.  Out of Memory.");
+		return HA_FAIL;
+	} 
+
+	return HA_OK;
+}
+
+static void
+free_nodetable(void)
+{
+	struct hb_nodeinfo * node;
+
+	if (!gNodeTable) 
+		return;
+
+	while (gNodeTable->len) {
+
+	    	node = &g_array_index(gNodeTable, struct hb_nodeinfo, 0);
+
+		free(node->name);
+		free(node->type);
+		free(node->status);
+
+		gNodeTable = g_array_remove_index_fast(gNodeTable, 0);
+	}
+
+	return;
+}
+
+static void
+free_iftable(void)
+{
+	struct hb_ifinfo * interface;
+
+	if (!gIFTable) 
+		return;
+
+	while (gIFTable->len) {
+		interface = &g_array_index(gIFTable, struct hb_ifinfo, 0);
+
+		free(interface->name);
+		free(interface->node);
+		free(interface->status);
+
+		gIFTable = g_array_remove_index_fast(gIFTable, 0);
+	}
+
+	return;
+}
+
+static void
+free_resourcetable(void)
+{
+	struct hb_rsinfo * resource;
+
+	if (!gResourceTable) 
+		return;
+
+	while (gResourceTable->len) {
+
+		resource = & g_array_index(gResourceTable, 
+			struct hb_rsinfo, 0);
+
+		free(resource->master);
+		free(resource->resource);
+
+		gResourceTable = g_array_remove_index_fast(gResourceTable, 0);
+	}
+
+	return;
+}
+
+static void
+free_membershiptable(void)
+{
+	SaClmClusterNotificationT * buf;
+
+    	if (!gMembershipTable)
+	    return;
+
+	while (gMembershipTable->len) {
+
+	    	buf = &g_array_index(gMembershipTable, 
+			SaClmClusterNotificationT, 0);
+	    	free(buf);
+
+		gMembershipTable = 
+		    g_array_remove_index_fast(gMembershipTable, 0);
+	}
+	
+	return;
+}
+
+void
+free_storage(void)
+{
+    	free_nodetable();
+	g_array_free(gNodeTable, 1);
+	gNodeTable = NULL;
+
+	free_iftable();
+	g_array_free(gIFTable, 1);
+	gIFTable = NULL;
+
+	free_resourcetable();
+	g_array_free(gResourceTable, 1);
+	gResourceTable = NULL;
+
+	free_membershiptable();
+	g_array_free(gMembershipTable, 1);
+	gResourceTable = NULL;
+
 }
 
 int
@@ -337,6 +490,12 @@ init_heartbeat(void)
 
 	if (hb->llc_ops->signon(hb, LHAAGENTID)!= HA_OK) {
 		cl_log(LOG_ERR, "Cannot sign on with heartbeat\n");
+		cl_log(LOG_ERR, "REASON: %s\n", hb->llc_ops->errmsg(hb));
+		return HA_FAIL;
+	}
+
+	if (NULL == (myid = hb->llc_ops->get_mynodeid(hb))) {
+		cl_log(LOG_ERR, "Cannot get mynodeid\n");
 		cl_log(LOG_ERR, "REASON: %s\n", hb->llc_ops->errmsg(hb));
 		return HA_FAIL;
 	}
@@ -382,81 +541,6 @@ get_heartbeat_fd(void)
 	return fd;
 }
 
-static void
-free_nodetable(void)
-{
-	size_t len, i;
-	struct hb_nodeinfo * node;
-
-	if (!gNodeTable) 
-		return;
-
-	len = gNodeTable->len;
-
-	for (i = 0; i < len; i++) {
-		node = &g_array_index(gNodeTable, struct hb_nodeinfo, i);
-
-		free(node->name);
-		free(node->type);
-		free(node->status);
-	}
-
-	g_array_free(gNodeTable, 1);
-	gNodeTable = NULL;
-
-	return;
-}
-
-static void
-free_iftable(void)
-{
-	size_t len, i;
-	struct hb_ifinfo * interface;
-
-	if (!gIFTable) 
-		return;
-
-	len = gIFTable->len;
-
-	for (i = 0; i < len; i++) {
-		interface = &g_array_index(gIFTable, struct hb_ifinfo, i);
-
-		free(interface->name);
-		free(interface->node);
-		free(interface->status);
-	}
-
-	g_array_free(gIFTable, 1);
-	gIFTable = NULL;
-
-	return;
-}
-
-static void
-free_resourcetable(void)
-{
-	size_t len, i;
-	struct hb_rsinfo * resource;
-
-	if (!gResourceTable) 
-		return;
-
-	len = gResourceTable->len;
-
-	for (i = 0; i < len; i++) {
-		resource = & g_array_index(gResourceTable, 
-			struct hb_rsinfo, i);
-
-		free(resource->master);
-		free(resource->resource);
-	}
-
-	g_array_free(gResourceTable, 1);
-	gResourceTable = NULL;
-
-	return;
-}
-
 int
 walk_node_table(void)
 {
@@ -466,8 +550,6 @@ walk_node_table(void)
 	if (gNodeTable) {
 		free_nodetable();
 	}
-
-	gNodeTable = g_array_new(TRUE, TRUE, sizeof (struct hb_nodeinfo));
 
 	if (hb->llc_ops->init_nodewalk(hb) != HA_OK) {
 		cl_log(LOG_ERR, "Cannot start node walk\n");
@@ -510,8 +592,6 @@ walk_if_table(void)
 		free_iftable();
 	}
 
-	gIFTable = g_array_new(TRUE, TRUE, sizeof (struct hb_ifinfo));
-
 	for (i = 0; i < gNodeTable->len; i++) {
 		node = &g_array_index(gNodeTable, struct hb_nodeinfo, i);
 		ifcount = 0;
@@ -552,33 +632,33 @@ int
 handle_heartbeat_msg(void)
 {
 	struct ha_msg *msg;
-	const char * type;
+	const char *type, *node;
 
-	if (hb->llc_ops->msgready(hb)) {
+	fprintf(stderr, "handling heartbeat msgs... \n");
+
+	while (hb->llc_ops->msgready(hb)) {
+
 		msg = hb->llc_ops->readmsg(hb, 0);
-		if (msg) {
-			type = ha_msg_value(msg, F_TYPE);
-			if (!type) {
-				// can't read type. log and ignore the msg.
-				cl_log(LOG_DEBUG, "Can't read msg type.\n");
-				return HA_OK;
-			}
+		if (!msg)
+		    	break;
 
-			// we only handle the shutdown msg for now.
-			if (strncmp(type, T_SHUTDONE, 20) == 0) {
-				return HA_FAIL;
-			}
+		type = ha_msg_value(msg, F_TYPE);
+		node = ha_msg_value(msg, F_ORIG);
+		fprintf(stderr, "node = %s, type = %s, \n", node, type);
+		if (!type || !node) {
+			// can't read type. log and ignore the msg.
+			cl_log(LOG_DEBUG, "Can't read msg type.\n");
+			return HA_OK;
 		}
+
+		// we only handle the shutdown msg for now.
+		if (strcmp(myid, node) == 0 && strncmp(type, T_SHUTDONE, 20) == 0) {
+			return HA_FAIL;
+		}
+		ha_msg_del(msg);
+		msg = NULL;
 	}
 	return HA_OK;
-}
-
-static void
-free_membership_table(void)
-{
-	g_array_free(gMembershipTable, 0);
-	
-	return;
 }
 
 static void
@@ -587,7 +667,7 @@ clm_track_cb(SaClmClusterNotificationT *nbuf, SaUint32T nitem,
 {
         int i;
 
-        free_membership_table();
+        free_membershiptable();
 
         for (i = 0; i < nitem; i++) {
 	    	cl_log(LOG_INFO, "adding %s in membership table", nbuf[i].clusterNode.nodeName.value);
@@ -608,9 +688,6 @@ init_membership(void)
 	SaErrorT ret;
 	static SaClmClusterNotificationT * nbuf;
 	SaClmHandleT handle;
-
-	gMembershipTable = g_array_new(TRUE, TRUE, 
-			sizeof (SaClmClusterNotificationT));
 
 	SaClmCallbacksT my_callbacks = {
 	    .saClmClusterTrackCallback 
@@ -643,6 +720,8 @@ init_membership(void)
         }
 
 	clm = handle;
+
+	clmInitialized = 1;
 
 	return HA_OK;
 }
@@ -691,8 +770,6 @@ init_resource_table(void)
 	if (gResourceTable) {
 	    	free_resourcetable();
 	}
-
-	gResourceTable = g_array_new(TRUE, TRUE, sizeof (struct hb_rsinfo));
 
 	if ((rcsf = fopen(RESOURCE_CFG, "r")) == NULL) {
 	    	cl_log(LOG_ERR, "Cannot open file %s", RESOURCE_CFG);
