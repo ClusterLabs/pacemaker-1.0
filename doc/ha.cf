@@ -295,8 +295,9 @@ auto_failback on
 #	this will be used for authorizing groupless clients, and any client groups
 #	not otherwise specified.
 #
-#apiauth	ipfail uid=hacluster
+#apiauth ipfail uid=hacluster
 #apiauth ccm uid=hacluster
+#apiauth cms uid=hacluster
 #apiauth ping gid=haclient uid=alanr,root
 #apiauth default gid=haclient
 

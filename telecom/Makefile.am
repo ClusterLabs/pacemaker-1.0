@@ -25,5 +25,9 @@ endif
 if CHECKPOINTD_BUILD
 CHECKPOINTD_DIR = checkpointd
 endif
+if CMS_BUILD
+CMS_DIR = cms
+endif
 
-SUBDIRS			=  apphbd recoverymgrd $(EVENTD_DIR) $(CHECKPOINTD_DIR)
+SUBDIRS			=  apphbd recoverymgrd $(EVENTD_DIR) \
+			   $(CHECKPOINTD_DIR) $(CMS_DIR)
