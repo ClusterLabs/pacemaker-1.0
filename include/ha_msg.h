@@ -1,4 +1,4 @@
-/* $Id: ha_msg.h,v 1.33 2004/07/07 19:07:15 gshi Exp $ */
+/* $Id: ha_msg.h,v 1.34 2004/09/22 22:41:09 gshi Exp $ */
 /*
  * Intracluster message object (struct ha_msg)
  *
@@ -34,7 +34,9 @@
 enum cl_netstring_type{
 	FT_STRING,
 	FT_BINARY,
-	FT_STRUCT
+	FT_STRUCT,
+	FT_LIST_ELEMENT,
+	FT_LIST,
 };
 
 enum cl_msgfmt{
@@ -74,6 +76,7 @@ struct ha_msg {
 
 #define	MAXMSG	40000	/* Maximum string length for a message */
 #define MAXDEPTH 10     /* Maximum recursive message depth */
+#define MAXLENGTH	1024
 
 	/* Common field names for our messages */
 #define	F_TYPE		"t"		/* Message type */
@@ -289,5 +292,21 @@ void cl_set_oldmsgauthfunc(gboolean (*authfunc)(const struct ha_msg*));
 
 /* Set default messaging format */
 void cl_set_msg_format(enum cl_msgfmt mfmt);
+
+/* Add a string to a list*/
+int cl_msg_list_add_string(struct ha_msg* msg, const char* name, const char* value);
+
+/* Return length of a list*/
+int cl_msg_list_length(struct ha_msg* msg, const char* name);
+
+/* Return nth element of a list*/
+void* cl_msg_list_nth_data(struct ha_msg* msg, const char* name, int n);
+
+
+/*internal use for list type*/
+size_t string_list_pack_length(GList* list);
+int string_list_pack(GList* list, char* buf, char* maxp);
+GList* string_list_unpack(const char* packed_str_list, size_t length);
+void list_cleanup(GList* list);
 
 #endif /* __HA_MSG_H */
