@@ -1,4 +1,4 @@
-/* $Id: serial.c,v 1.32 2004/04/29 16:23:16 msoffen Exp $ */
+/* $Id: serial.c,v 1.33 2004/04/29 16:24:34 msoffen Exp $ */
 /*
  * Linux-HA serial heartbeat code
  *
@@ -698,8 +698,11 @@ ttygets(char * inbuf, int length, struct serial_private *tty)
 }
 /*
  * $Log: serial.c,v $
+ * Revision 1.33  2004/04/29 16:24:34  msoffen
+ * fixed comment in Log
+ *
  * Revision 1.32  2004/04/29 16:23:16  msoffen
- * Changed // comments to /* */ comments.
+ * Changed // comments to / * * / comments.
  *
  * Revision 1.31  2004/03/03 05:31:51  alan
  * Put in Gochun Shi's new netstrings on-the-wire data format code.
