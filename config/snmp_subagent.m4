@@ -259,8 +259,8 @@ AC_DEFUN([LIB_SNMP],
 	Despite my best effort I still cannot figure out the library dependencies of snmp.  
 	Your best bet will be compile the ucd-snmp package from the source and try again. 
 
-	Special Note for RedHat users:
-	    If you installed the NET-SNMP RPM from a RedHat CD, make sure both the symbolic links 
+	Special Note for RedHat/Fedora users:
+	    If you installed the NET-SNMP RPM from a RedHat/Fedora CD, make sure both the symbolic links 
 	for libbz2.so -> libbz2.so.x and libelf.so -> libelf.so.x exists. Or install the libelf-devel
 	and libbz2-devl rpms.])
     else
