@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-my($VERSION)=(qw$Id: ldirectord,v 1.98 2005/02/09 08:19:51 horms Exp $)[2];
+my($VERSION)=(qw$Id: ldirectord,v 1.99 2005/02/24 09:07:00 horms Exp $)[2];
 
 ######################################################################
 # ldirectord                 http://www.vergenet.net/linux/ldirectord/
@@ -264,6 +264,12 @@ For a DNS check this should be any one the A record's addresses or
 any one of the PTR record's names.
 
 For a MySQL check, the receive setting is not used.
+
+B<httpmethod = GET>|B<HEAD>
+
+Sets the HTTP method which should be used to fetch the URI specified in
+the request-string. GET is the method used by default if the parameter is
+not set. If HEAD is used, the receive-string should be unset.
 
 B<virtualhost = ">I<hostname>B<">
 
@@ -712,6 +718,7 @@ sub read_config
 			$vsrv{connecttimeout} = 0;
 			$vsrv{negotiatetimeout} = 0;
 			$vsrv{num_connects} = 0;
+			$vsrv{httpmethod} = "GET";
 			push(@VIRTUAL, \%vsrv);
 			while(<CFGFILE>) {
 				$line++;
@@ -826,6 +833,10 @@ sub read_config
 							$vsrv{login} eq "") {
 						$vsrv{login} = "anonymous";
 					}
+				} elsif ($rcmd =~ /^httpmethod\s*=\s*(.*)/) {
+					$1 =~ /(\w+)/ && (uc($1) eq "GET" || uc($1) eq "HEAD")
+					    or &config_error($line, "httpmethod must be GET or HEAD");
+					$vsrv{httpmethod} = uc($1);
 				} elsif ($rcmd =~ /^virtualhost\s*=\s*(.*)/) {
 					$1 =~ /\"?([^"]*)\"?/ or
 					&config_error($line, "invalid virtualhost");
@@ -1675,7 +1686,7 @@ sub check_http
 	my $ua = new LWP::UserAgent();
 	$ua->timeout($$v{negotiatetimeout});
 	my $h = new  HTTP::Headers("Host" => $virtualhost);
-	my $req = new HTTP::Request("GET", "$$r{url}", $h);
+	my $req = new HTTP::Request("$$v{httpmethod}", "$$r{url}", $h);
 	my $res;
 	{
 		# LWP makes ungaurded calls to eval
@@ -1848,7 +1859,7 @@ sub check_https_child
 	}
 	my $virtualhost = (defined $$v{virtualhost} ? $$v{virtualhost} : $host);
 	my ($page, $errors, $cert, $head, $body, $response, $result);
-	my $msg = "GET $uri HTTP/1.0" . $CRLF
+	my $msg = "$$v{httpmethod}" . " $uri HTTP/1.0" . $CRLF
 	        . "Host: " . $virtualhost . $CRLF
 		. "Accept: */*" . $CRLF . $CRLF;
 
