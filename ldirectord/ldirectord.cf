@@ -142,7 +142,7 @@ virtual=192.168.6.240:80
 #	persistent=600
 #	#netmask=255.255.255.255
 #	protocol=tcp
-	
+
 #Sample configuration for an nntp virtual service.
 #Fallback setting overides global
 #virtual=192.168.84.5:119
@@ -154,7 +154,7 @@ virtual=192.168.6.240:80
 #	#persistent=600
 #	#netmask=255.255.255.255
 #	protocol=tcp
-	
+
 #Sample configuration for an unsuported protocol
 #The real servers will just be brought up without checking for availability
 #Fallback setting overides global
