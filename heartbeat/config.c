@@ -1,4 +1,4 @@
-/* $Id: config.c,v 1.144 2005/02/12 10:53:39 alan Exp $ */
+/* $Id: config.c,v 1.145 2005/02/14 15:26:51 alan Exp $ */
 /*
  * Parse various heartbeat configuration files...
  *
@@ -2076,10 +2076,12 @@ set_corerootdir(const char* value)
 
 /*
  *  Enable all these flags when  KEY_RELEASE2 is enabled...
- *	apiauth lrmd    uid=root
- *	apiauth crmd    uid=hacluster
- *	apiauth cib     uid=hacluster
- *	respawn root    /usr/lib/heartbeat/lrmd
+ *	apiauth lrmd   		uid=root
+ *	apiauth stonithd	uid=root
+ *	apiauth crmd		uid=hacluster
+ *	apiauth cib		uid=hacluster
+ *	respawn root		/usr/lib/heartbeat/lrmd
+ *	respawn root		/usr/lib/heartbeat/stonithd
  *	respawn hacluster       /usr/lib/heartbeat/ccm
  *	respawn hacluster       /usr/lib/heartbeat/cib
  *	respawn hacluster       /usr/lib/heartbeat/crmd
@@ -2118,6 +2120,7 @@ set_release2mode(const char* value)
 		return rc;
 	}
 
+	DoManageResources = FALSE;
 	/* Enable release 2 style cluster management */
 	for (j=0; j < DIMOF(r2dirs); ++j) {
 		int	k;
@@ -2143,6 +2146,10 @@ set_release2mode(const char* value)
 
 /*
  * $Log: config.c,v $
+ * Revision 1.145  2005/02/14 15:26:51  alan
+ * Forgot to turn off DoManageResources(!).  I had thought that this was present
+ * before.  Either I deleted it by mistake, or something...
+ *
  * Revision 1.144  2005/02/12 10:53:39  alan
  * Put CCM back as an implicit apiauth because the tests require it,
  * and changing it is probably a bad idea :-).
