@@ -1,4 +1,4 @@
-/* $Id: auth.c,v 1.16 2004/08/28 00:23:44 alan Exp $ */
+/* $Id: auth.c,v 1.17 2004/09/03 18:12:48 gshi Exp $ */
 /*
  * auth.c: Authentication code for heartbeat
  *
@@ -98,8 +98,9 @@ parse_authfile(void)
 
 	if (ANYDEBUG) {
 		ha_log(LOG_DEBUG
-		,	"Beginning authentication parsing");
+		,       "Beginning authentication parsing");
 	}
+
 	if (ANYDEBUG) {
 		ha_log(LOG_DEBUG
 		,	"%d max authentication methods", MAXAUTH);
@@ -150,13 +151,10 @@ parse_authfile(void)
 	for (j=0; j < MAXAUTH; ++j) {
 		if (ParsedYet) {
 			if (config->auth_config[j].auth) {
-#if 0
 				/* Unload this auth module */
 				PILIncrIFRefCount(PluginLoadingSystem
-				,	HB_AUTH_TYPE_S, method, -1);
-#else
-				/* Unloading code is broken :-( */ ;
-#endif
+				,	HB_AUTH_TYPE_S, config->auth_config[j].authname, -1);
+
 			}
 			if (config->auth_config[j].key) {
 				ha_free(config->auth_config[j].key);
@@ -296,6 +294,10 @@ parse_authfile(void)
 }
 /*
  * $Log: auth.c,v $
+ * Revision 1.17  2004/09/03 18:12:48  gshi
+ * fixed a bug in PILS for unloading a plugin
+ * enabled unloading in HBauth and stonith
+ *
  * Revision 1.16  2004/08/28 00:23:44  alan
  * Fixed a bug pointed out by Lars Ellenberg.
  *

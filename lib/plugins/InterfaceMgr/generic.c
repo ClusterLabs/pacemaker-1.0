@@ -1,4 +1,4 @@
-/* $Id: generic.c,v 1.19 2004/02/17 22:11:59 lars Exp $ */
+/* $Id: generic.c,v 1.20 2004/09/03 18:13:35 gshi Exp $ */
 /*
  * 
  * Generic interface (implementation) manager
@@ -131,6 +131,8 @@ PIL_PLUGIN_INIT(PILPlugin*us, PILPluginImports* imports, void *user_ptr)
 	PILPluginInitFun	fun = &PIL_PLUGIN_INIT; (void)fun;
 
 
+	GenPIImports = imports;
+
 	if (GenDebugFlag) {
 		GenPIImports->log(PIL_DEBUG
 		,	"IF manager %s: initializing.", PIL_PLUGIN_S);
@@ -144,7 +146,6 @@ PIL_PLUGIN_INIT(PILPlugin*us, PILPluginImports* imports, void *user_ptr)
 		return PIL_INVAL;
 	}
 
-	GenPIImports = imports;
 	GenPlugin = us;
 
 	if (GenDebugFlag) {
