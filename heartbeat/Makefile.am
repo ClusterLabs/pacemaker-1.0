@@ -83,6 +83,8 @@ heartbeat_LDFLAGS	= @LIBADD_DL@ @LIBLTDL@ -export-dynamic	\
 			-dlpreopen force \
 			-dlopen self
 
+heartbeat_CFLAGS       = $(AM_CFLAGS)
+
 findif_SOURCES		= findif.c
 findif_LDADD		=$(top_builddir)/replace/libreplace.la
 
