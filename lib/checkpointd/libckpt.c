@@ -1185,6 +1185,28 @@ saCkptSectionCreate(
 	memcpy(&(secCrtParam.sectionID), sectionCreationAttributes->sectionId, \
 		sizeof(SaCkptSectionIdT));
 
+	if ( NULL == sectionCreationAttributes->sectionId
+		|| sectionCreationAttributes->sectionId->idLen > SA_MAX_ID_LENGTH
+		|| sectionCreationAttributes->sectionId->idLen < 0) {
+		return SA_ERR_INVALID_PARAM;
+	} else {
+		/* 
+		 * if section id is SA_CKPT_DEFAULT_SECTION_ID
+		 * ckpt sevice daemon generates the section id and return it back
+ 		 */
+		if ( 0 == sectionCreationAttributes->sectionId->idLen) {
+			secCrtParam.sectionID.idLen = 0;
+			secCrtParam.sectionID.id[0] = 0;
+		} else {
+			secCrtParam.sectionID.idLen = 
+				sectionCreationAttributes->sectionId->idLen;
+			memset(secCrtParam.sectionID.id, 0, SA_MAX_ID_LENGTH);
+			memcpy(secCrtParam.sectionID.id, 
+				sectionCreationAttributes->sectionId->id,
+				secCrtParam.sectionID.idLen);
+		}
+	}
+
 	/* send the request head */
 	sockfd = pCkptData->pInit->syncfd;
 	retcode = reliableWrite(sockfd, (char*)&reqhead, sizeof(reqhead), &tv);
@@ -1219,12 +1241,22 @@ saCkptSectionCreate(
 	}	
 	if( SA_OK != resphead.retval ) {
 		perror("saCkptSectionCreate failure!");
+	} else {
+		if (0 == secCrtParam.sectionID.idLen) {
+			// TODO: read the generated section id
+		} else {
+			/* discard the unexpected data */
+			if (resphead.dataLen > 0) {
+				removeData(sockfd, &resphead, &tv);
+			}
+		}
 	}
 	
 	return resphead.retval;
 }
 
-/* delete the section within the checkpoint.
+/* 
+ * delete the section within the checkpoint.
  */
 SaErrorT
 saCkptSectionDelete(
@@ -1261,7 +1293,14 @@ saCkptSectionDelete(
 
 	/* prepare the request param */
 	secDelParam.checkpointHandle = *checkpointHandle;
-	memcpy(&(secDelParam.sectionID), sectionId, sizeof(SaCkptSectionIdT));
+	if ( sectionId->idLen < 0 || sectionId->idLen > SA_MAX_ID_LENGTH ) {
+		return SA_ERR_INVALID_PARAM;
+	} else {
+		secDelParam.sectionID.idLen = sectionId->idLen;
+		memset(secDelParam.sectionID.id, 0, SA_MAX_ID_LENGTH);
+		memcpy(secDelParam.sectionID.id, sectionId->id,
+			secDelParam.sectionID.idLen);
+	}
 
 	/* hello to ckpt service */
 	sockfd = pCkptData->pInit->syncfd;
@@ -1312,7 +1351,15 @@ saCkptSectionExpirationTimeSet(
 	/* prepare the request param */
 	secExpParam.checkpointHandle = *checkpointHandle;
 	secExpParam.expireTime = expirationTime;
-	memcpy(&(secExpParam.sectionID), sectionId, sizeof(SaCkptSectionIdT));
+	if ( sectionId->idLen < 0 || sectionId->idLen > SA_MAX_ID_LENGTH ) {
+		return SA_ERR_INVALID_PARAM;
+	} else {
+		secExpParam.sectionID.idLen = sectionId->idLen;
+		memset(secExpParam.sectionID.id, 0, SA_MAX_ID_LENGTH);
+		memcpy(secExpParam.sectionID.id, sectionId->id,
+			secExpParam.sectionID.idLen);
+	}
+
 	
 	/* hello to ckpt service */
 	sockfd = pCkptData->pInit->syncfd;
@@ -1336,7 +1383,6 @@ saCkptSectionIteratorInitialize(
 	SaInt32T sockfd;
 	SaInt32T i, num;
 	SaErrorT retcode;
-	//SaUint8T *pBuf, *pId;
 	GList *pIterator = NULL;
 	size_t len;
 	CkptListDataT *pCkptData;
@@ -1508,12 +1554,6 @@ saCkptCheckpointWrite(
 	struct timeval tv = TIMEOUT_VAL;
 
 	/* check the parameters */
-/* Pan Deng
-	if (NULL == checkpointHandle || NULL == ioVector \
-			|| NULL == erroneousVectorIndex) {
-		return SA_ERR_INVALID_PARAM;
-	}
-*/
 	if (NULL == checkpointHandle || NULL == ioVector) {
 		return SA_ERR_INVALID_PARAM;
 	}
@@ -1547,8 +1587,15 @@ saCkptCheckpointWrite(
 		
 		/* prepare the request param */
 		secWrtParam.offset = ioVector[i].dataOffset;
-		memcpy(&(secWrtParam.sectionID), &(ioVector[i].sectionId),\
-			sizeof(SaCkptSectionIdT));
+		if ( ioVector[i].sectionId.idLen < 0
+			||ioVector[i].sectionId.idLen > SA_MAX_ID_LENGTH ) {
+			return SA_ERR_INVALID_PARAM;
+		} else {
+			secWrtParam.sectionID.idLen = ioVector[i].sectionId.idLen;
+			memset(secWrtParam.sectionID.id, 0, SA_MAX_ID_LENGTH);
+			memcpy(secWrtParam.sectionID.id, ioVector[i].sectionId.id,
+				secWrtParam.sectionID.idLen);
+		}
 		
 		/* send the request head */
 		retcode = reliableWrite(sockfd, (char*)&reqhead, \
@@ -1581,6 +1628,11 @@ saCkptCheckpointWrite(
 		if ( SA_OK != retcode ) {
 			perror("saCkptCheckpointWrite: readRespheadByReqno");
 			break;
+		}
+		
+		/* discard the unexpedted data */
+		if (resphead.dataLen > 0) {
+			retcode = removeData(sockfd, &resphead, &tv);
 		}
 		
 		if( SA_OK != resphead.retval ) {
@@ -1638,7 +1690,15 @@ saCkptSectionOverwrite(
 
   	/* prepare the request param */
 	secOwrtParam.checkpointHandle = *checkpointHandle;
-	memcpy(&(secOwrtParam.sectionID), sectionId, sizeof(SaCkptSectionIdT));
+	if ( sectionId->idLen < 0 || sectionId->idLen > SA_MAX_ID_LENGTH ) {
+		return SA_ERR_INVALID_PARAM;
+	} else {
+		secOwrtParam.sectionID.idLen = sectionId->idLen;
+		memset(secOwrtParam.sectionID.id, 0, SA_MAX_ID_LENGTH);
+		memcpy(secOwrtParam.sectionID.id, sectionId->id,
+			secOwrtParam.sectionID.idLen);
+	}
+
 
 	/* send the request head */
 	retcode = reliableWrite(sockfd, (char*)&reqhead, sizeof(reqhead), &tv);
@@ -1663,12 +1723,16 @@ saCkptSectionOverwrite(
 	}	
 	
 	/* get the response */
-	retcode = readRespheadByReqno(sockfd, &resphead, \
+	retcode = readRespheadByReqno(sockfd, &resphead, 
 			reqhead.reqno, &tv);
 	if (SA_OK != retcode) {
 		perror("saCkptSectionOverwrite: readRespheadByReqno");
 		return retcode;
 	}	
+
+	if (resphead.dataLen > 0) { 
+		retcode = removeData(sockfd, &resphead, &tv);
+	}
 
 	return resphead.retval;
 }
@@ -1725,8 +1789,16 @@ saCkptCheckpointRead(
 		reqhead.reqno = genReqNo();
 		
 		/* prepare the request param */
-		memcpy(&(secRdParam.sectionID), &(ioVector[i].sectionId),\
-			sizeof(SaCkptSectionIdT));
+		if ( ioVector[i].sectionId.idLen < 0
+			||ioVector[i].sectionId.idLen > SA_MAX_ID_LENGTH ) {
+			return SA_ERR_INVALID_PARAM;
+		} else {
+			secRdParam.sectionID.idLen = ioVector[i].sectionId.idLen;
+			memset(secRdParam.sectionID.id, 0, SA_MAX_ID_LENGTH);
+			memcpy(secRdParam.sectionID.id, ioVector[i].sectionId.id,
+				secRdParam.sectionID.idLen);
+		}
+
 		secRdParam.dataSize = ioVector[i].dataSize;
 		secRdParam.offset = ioVector[i].dataOffset;
 
