@@ -1,4 +1,4 @@
-/* $Id: eventd.c,v 1.4 2004/03/29 06:28:24 forrest Exp $ */
+/* $Id: eventd.c,v 1.5 2004/04/06 19:09:20 msoffen Exp $ */
 /* 
  * eventd.c: source file for event daemon
  *
@@ -2728,7 +2728,7 @@ int main(int argc, char **argv)
 	hb_usrdata_t    usrdata;
 	IPC_Channel *ipc_chan;
 	IPC_WaitConnection *wait_ch;
-	
+	int temp;
 
 	if ((cmdname = strrchr(tmp_cmdname, '/')) != NULL) {
 		++cmdname;
@@ -2760,7 +2760,6 @@ int main(int argc, char **argv)
 				                FALSE, waitCh_input_dispatch, wait_ch,
 				                waitCh_input_destroy);
 
-	int temp;
 	temp = Gmain_timeout_add_full(G_PRIORITY_HIGH, 1000, test_timeout, &temp, NULL);
 
 	g_main_run(usrdata.mainloop);
