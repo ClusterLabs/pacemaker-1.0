@@ -23,6 +23,7 @@
 
 MAINTAINERCLEANFILES    = Makefile.in
 CLEANFILES	= $(INFOFILES)/pkginfo $(INFOFILES)/prototype stamp-tmpinst
+EXTRA_DIST	= $(INFOFILES)/pkginfo.in
 
 PKGNAME		= OPENHA
 
