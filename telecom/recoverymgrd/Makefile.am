@@ -72,3 +72,9 @@ recoverymgrd_LDADD	= $(COMMONLIBS) 				\
 recoverymgrd_LDFLAGS	= @LIBADD_DL@ @LIBLTDL@ -export-dynamic		\
 			-dlpreopen-force 				\
 			-dlopen-self
+
+conf_lex.o: conf_lex.c
+	$(CC) $(DEFS) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) 		\
+		$(AM_CFLAGS) $(NON_FATAL_CFLAGS) -c $<
+
+
