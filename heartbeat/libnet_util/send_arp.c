@@ -1,4 +1,4 @@
-const static char * _send_arp_c = "$Id: send_arp.c,v 1.4 2003/10/29 11:40:50 horms Exp $";
+const static char * _send_arp_c = "$Id: send_arp.c,v 1.5 2003/10/31 16:15:20 msoffen Exp $";
 /* 
  * send_arp
  * 
@@ -34,6 +34,7 @@ const static char * _send_arp_c = "$Id: send_arp.c,v 1.4 2003/10/29 11:40:50 hor
 #include <config.h>
 #endif
 
+#include <limits.h>
 #include <libnet.h>
 #include <syslog.h>
 #include <libgen.h>
@@ -527,6 +528,9 @@ write_pid_file(const char *pidfilename)
 
 /*
  * $Log: send_arp.c,v $
+ * Revision 1.5  2003/10/31 16:15:20  msoffen
+ * Added limit.h to define MAXINT value.
+ *
  * Revision 1.4  2003/10/29 11:40:50  horms
  * Send arp  creates a driectory to store its pid file in on-the-fly. IPaddr does likewise for state files.
  *
