@@ -19,6 +19,7 @@
  */
 
 #include <portability.h>
+#include <stdint.h>
 #include <stdio.h>		/* for sprintf() */
 #include <string.h>		/* for memcpy() */
 #include <sys/types.h>		/* for stupid systems */
@@ -112,31 +113,27 @@ PIL_PLUGIN_INIT(PILPlugin*us, const PILPluginImports* imports)
  *	Real work starts here ;-)
  */
 
-#define UWORD32 unsigned long
-
 #define MD5_DIGESTSIZE  16
 #define MD5_BLOCKSIZE   64
 
 typedef struct MD5Context_st {
-	UWORD32 buf[4];
-	UWORD32 bytes[2];
-	UWORD32 in[16];
+	uint32_t buf[4];
+	uint32_t bytes[2];
+	uint32_t in[16];
 }MD5Context;
 
 #define md5byte unsigned char
-#define UWORD32 unsigned long
-
 
 struct MD5Context {
-	UWORD32 buf[4];
-	UWORD32 bytes[2];
-	UWORD32 in[16];
+	uint32_t buf[4];
+	uint32_t bytes[2];
+	uint32_t in[16];
 };
 
 static void MD5Init(MD5Context *context);
 static void MD5Update(MD5Context *context, md5byte const *buf, unsigned len);
 static void MD5Final(unsigned char digest[16], MD5Context *context);
-static void MD5Transform(UWORD32 buf[4], UWORD32 const in[16]);
+static void MD5Transform(uint32_t buf[4], uint32_t const in[16]);
 
 static int
 md5_auth_needskey(void) 
@@ -170,7 +167,7 @@ MD5Init(MD5Context *ctx)
 static void
 MD5Update(MD5Context *ctx, md5byte const *buf, unsigned len)
 {
-	UWORD32 t;
+	uint32_t t;
 
 	/* Update byte count */
 
@@ -257,9 +254,9 @@ MD5Final(md5byte digest[16], MD5Context *ctx)
  * the data and converts bytes into longwords for this routine.
  */
 static void
-MD5Transform(UWORD32 buf[4], UWORD32 const in[16])
+MD5Transform(uint32_t buf[4], uint32_t const in[16])
 {
-	register UWORD32 a, b, c, d;
+	register uint32_t a, b, c, d;
 
 	a = buf[0];
 	b = buf[1];

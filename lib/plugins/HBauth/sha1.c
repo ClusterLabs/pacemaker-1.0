@@ -20,7 +20,9 @@ A million repetitions of "a"
 
 #include <portability.h>
 #include <stdio.h>
+#include <stdint.h>
 #include <string.h>
+#include <sys/types.h>
 #include <HBauth.h>
 
 #define PIL_PLUGINTYPE		HB_AUTH_TYPE
@@ -32,18 +34,16 @@ A million repetitions of "a"
 #include <pils/plugin.h>
 
 
-#define UWORD32 unsigned long
-
 #define SHA_DIGESTSIZE  20
 #define SHA_BLOCKSIZE   64
 
 typedef struct SHA1Context_st{
-	    UWORD32 state[5];
-	    UWORD32 count[2];
+	    uint32_t state[5];
+	    uint32_t count[2];
 	    unsigned char buffer[64];
 } SHA1_CTX;
 
-void SHA1Transform(unsigned long state[5], const unsigned char buffer[64]);
+void SHA1Transform(uint32_t state[5], const unsigned char buffer[64]);
 void SHA1Init(SHA1_CTX* context);
 void SHA1Update(SHA1_CTX* context, const unsigned char* data, unsigned int len);
 void SHA1Final(unsigned char digest[20], SHA1_CTX* context);
@@ -146,12 +146,12 @@ sha1_auth_needskey(void)
 
 /* Hash a single 512-bit block. This is the core of the algorithm. */
 
-void SHA1Transform(unsigned long state[5], const unsigned char buffer[64])
+void SHA1Transform(uint32_t state[5], const unsigned char buffer[64])
 {
-unsigned long a, b, c, d, e;
+uint32_t a, b, c, d, e;
 typedef union {
     unsigned char c[64];
-    unsigned long l[16];
+    uint32_t l[16];
 } CHAR64LONG16;
 CHAR64LONG16* block;
 #ifdef SHA1HANDSOFF
@@ -239,7 +239,7 @@ unsigned int i, j;
 
 void SHA1Final(unsigned char digest[20], SHA1_CTX* context)
 {
-    unsigned long i, j;
+    uint32_t i, j;
     unsigned char finalcount[8];
     unsigned char twohundred [] = "\200";
     unsigned char twozeroes [] = "\00";
