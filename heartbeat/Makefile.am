@@ -44,7 +44,7 @@ AM_CFLAGS			= @CFLAGS@ \
 -DHALIB='"$(halibdir)"'
 
 ## script subdirs
-SUBDIRS			= init.d lib logrotate.d rc.d resource.d libnet_util
+SUBDIRS			= init.d lib logrotate.d rc.d libnet_util
 
 noinst_HEADERS		=	hb_config.h		\
 				hb_module.h		\
