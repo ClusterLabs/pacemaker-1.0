@@ -11,6 +11,9 @@
 # /var/lib directory
 HA_VARLIBDIR="@HA_VARLIBDIR@" 
 
+# directory to drop core files into
+HA_COREDIR="@HA_COREDIR@" 
+
 # Group to own API fifos
 HA_APIGROUP="@HA_APIGROUP@" 
 

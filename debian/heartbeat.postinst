@@ -23,11 +23,12 @@ case "$1" in
                 addgroup --system --group "$HA_APIGROUP" > /dev/null
         fi
         if ! getent passwd "$HA_CCMUSER" > /dev/null ; then
-                adduser --no-create-home --uid "$HA_CCMUID" \
+                adduser --uid "$HA_CCMUID" \
                         --ingroup "$HA_APIGROUP" \
                         --gecos "Heartbeat System Account" \
                         --no-create-home --disabled-login \
-                        --home /usr/lib/heartbeat --shell /bin/false  \
+                        --home "$HA_COREDIR/$HA_CCMUSER" \
+                        --shell /bin/false  \
                         --disabled-password "$HA_CCMUSER" > /dev/null
         fi
 
