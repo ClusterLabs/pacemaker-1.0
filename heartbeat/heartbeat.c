@@ -1,4 +1,4 @@
-const static char * _heartbeat_c_Id = "$Id: heartbeat.c,v 1.286 2004/01/30 15:08:43 lars Exp $";
+const static char * _heartbeat_c_Id = "$Id: heartbeat.c,v 1.287 2004/01/30 15:09:35 lars Exp $";
 
 /*
  * heartbeat: Linux-HA heartbeat code
@@ -378,7 +378,7 @@ extern void	process_registerevent(IPC_Channel* chan,  gpointer user_data);
 static void	nak_rexmit(seqno_t seqno, const char * reason);
 static int	IncrGeneration(seqno_t * generation);
 static int	GetTimeBasedGeneration(seqno_t * generation);
-static int	process_outbound_packet(struct msg_xmit_hist* msghist
+static int	process_outbound_packet(struct msg_xmit_hist* hist
 ,			struct ha_msg * msg);
 static void	start_a_child_client(gpointer childentry, gpointer pidtable);
 static void	LookForClockJumps(void);
@@ -4115,6 +4115,9 @@ get_localnodeinfo(void)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.287  2004/01/30 15:09:35  lars
+ * Fix prototype too.
+ *
  * Revision 1.286  2004/01/30 15:08:43  lars
  * Remove a shadow variable.
  *
