@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.344 2005/01/20 19:17:49 gshi Exp $ */
+/* $Id: heartbeat.c,v 1.345 2005/01/27 17:23:43 alan Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -613,9 +613,6 @@ hb_setup_child(void)
 {
 	int	j;
 
-	for (j=3; j < 50; j++) {
-/*  		(void)close(j); */
-	}
 	close(watchdogfd);
 	cl_make_normaltime();
 	cl_cpu_limit_disable();
@@ -1848,7 +1845,6 @@ HBDoMsg_T_ACKMSG(const char * type, struct node_info * fromnode,
 	}
 
 	if (ackseq < hist->ackseq){
-		
 		if (ANYDEBUG){
 			cl_log(LOG_DEBUG, "HBDoMsg_T_ACK:"
 			       "late ackseq message"
@@ -1858,25 +1854,24 @@ HBDoMsg_T_ACKMSG(const char * type, struct node_info * fromnode,
 		}
 		goto out;
 	}else if (ackseq > hist->hiseq){
-		
 		if (ANYDEBUG){
-			cl_log(LOG_DEBUG, "HBDoMsg_T_ACK:"
-			       "corrupted ackseq"
-			       "current hiseq =%ld"
-			       "ackseq =%ld in this message",
+			cl_log(LOG_DEBUG, "HBDoMsg_T_ACK"
+			       ": corrupted ackseq"
+			       " current hiseq = %ld"
+			       " ackseq =%ld in this message",
 			       hist->hiseq, ackseq);			
 		}
 		goto out;
 	}
 	
-	
 	if ( ackseq < fromnode->track.ackseq){
 		if (ANYDEBUG){
 			cl_log(LOG_DEBUG, "HBDoMsg_T_ACK:"
-			       "late ackseq message"
-			       "current fromnode ackseq = %ld"
-			       "ackseq =%ld in this message",
-			       fromnode->track.ackseq, ackseq);
+				"late ackseq message"
+				" current fromnode ackseq = %ld"
+				" ackseq = %ld in this message.",
+				,	fromnode->track.ackseq
+				, ackseq);
 		}
 		goto out;
 	}
@@ -3277,6 +3272,8 @@ int
 main(int argc, char * argv[], char **envp)
 {
 	int		flag;
+	int		j;
+	struct rlimit	oflimits;
 	int		argerrs = 0;
 	char *		CurrentStatus=NULL;
 	char *		tmp_cmdname;
@@ -3284,6 +3281,11 @@ main(int argc, char * argv[], char **envp)
 	int		generic_error = LSB_EXIT_GENERIC;
 
 	num_hb_media_types = 0;
+	/* A precautionary measure */
+	getrlimit(RLIMIT_NOFILE, &oflimits);
+	for (j=FD_STDERR+1; j < oflimits.rlim_cur; ++j) {
+		close(j);
+	}
 
 	
 	/* Redirect messages from glib functions to our handler */
@@ -3698,8 +3700,6 @@ make_daemon(void)
 	long			pid;
 	FILE *			lockfd;
 	const char *		devnull = "/dev/null";
-	struct rlimit		oflimits;
-	int			j;
 
 	/* See if heartbeat is already running... */
 
@@ -3749,11 +3749,6 @@ make_daemon(void)
 	(void)open(devnull, O_WRONLY);		/* Stdout: fd 1 */
 	close(FD_STDERR);
 	(void)open(devnull, O_WRONLY);		/* Stderr: fd 2 */
-	/* A precautionary measure */
-	getrlimit(RLIMIT_NOFILE, &oflimits);
-	for (j=FD_STDERR+1; j < oflimits.rlim_cur; ++j) {
-/*  		close(j); */
-	}
 	cl_cdtocoredir();
 	/* We need to at least ignore SIGINTs early on */
 	hb_signal_set_common(NULL);
@@ -4992,6 +4987,11 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.345  2005/01/27 17:23:43  alan
+ * Fixed some debug message formats
+ * Changed the code to not close everything when starting a STONITH child process
+ * Moved our initial close calls to the very first part of main().
+ *
  * Revision 1.344  2005/01/20 19:17:49  gshi
  * added flow control, if congestion happens, clients will be paused while heartbeat messages can still go through
  * congestion is denfined as (last_send_out_seq_number - last_ack_seq_number) is greater than half of message queue.
