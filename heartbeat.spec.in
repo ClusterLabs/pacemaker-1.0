@@ -1,4 +1,4 @@
-#	$Id: heartbeat.spec.in,v 1.113 2005/03/29 00:00:18 alan Exp $
+#	$Id: heartbeat.spec.in,v 1.114 2005/03/30 06:35:48 alan Exp $
 
 # Workaround for a change in RPM 4.1.x; needs proper fixing soon!
 ##%define _unpackaged_files_terminate_build 0
@@ -915,12 +915,9 @@ make DESTDIR=$RPM_BUILD_ROOT install
 @sysconfdir@/logrotate.d/heartbeat
 %dir @localstatedir@/lib/@HB_PKG@
 %dir @localstatedir@/lib/@HB_PKG@/cores
-%dir @localstatedir@/lib/@HB_PKG@/cores/root
-%attr (0700, root -) @localstatedir@/lib/@HB_PKG@/cores/root
-%dir @localstatedir@/lib/@HB_PKG@/cores/nobody
-%attr (0700, nobody -) @localstatedir@/lib/@HB_PKG@/cores/nobody
-%dir @localstatedir@/lib/@HB_PKG@/cores/@HA_CCMUSER@
-%attr (0700, @HA_CCMUSER@ -) @localstatedir@/lib/@HB_PKG@/cores/@HA_CCMUSER@
+%dir %attr (0700, root -) @localstatedir@/lib/@HB_PKG@/cores/root
+%dir %attr (0700, nobody -) @localstatedir@/lib/@HB_PKG@/cores/nobody
+%dir %attr (0700, @HA_CCMUSER@ -) @localstatedir@/lib/@HB_PKG@/cores/@HA_CCMUSER@
 %dir @localstatedir@/run
 %dir @localstatedir@/run/@HB_PKG@
 %attr (2555, @HA_CCMUSER@, @HA_APIGROUP@) @bindir@/cl_status
@@ -942,19 +939,10 @@ make DESTDIR=$RPM_BUILD_ROOT install
 	@MIBS_DIR@/LINUX-HA-MIB.mib
 %endif
 
-%define ENABLE_CRM @CRM_ENABLED@
-%if %{ENABLE_CRM}
-	%dir %attr (750, @HA_CCMUSER@, @HA_APIGROUP@) @localstatedir@/lib/@HB_PKG@/crm
-	%dir %attr (755, @HA_CCMUSER@, @HA_APIGROUP@) @libdir@/@HB_PKG@/crmtest
-	@libdir@/libcib.*
-	@libdir@/libcrmcommon.*
-%endif
-
-%define ENABLE_LRM @LRM_ENABLED@
-%if %{ENABLE_LRM}
-	@libdir@/liblrm.*
-%endif
-
+%attr (750, @HA_CCMUSER@, @HA_APIGROUP@) @localstatedir@/lib/@HB_PKG@/crm
+@libdir@/libcib.*
+@libdir@/libcrmcommon.*
+@libdir@/liblrm.*
 ###########################################################
 # Files for ldirectord
 %files ldirectord
