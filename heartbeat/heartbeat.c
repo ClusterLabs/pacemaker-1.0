@@ -1,4 +1,4 @@
-const static char * _heartbeat_c_Id = "$Id: heartbeat.c,v 1.289 2004/02/08 09:23:02 alan Exp $";
+const static char * _heartbeat_c_Id = "$Id: heartbeat.c,v 1.290 2004/02/14 15:48:34 alan Exp $";
 
 /*
  * heartbeat: Linux-HA heartbeat code
@@ -1889,7 +1889,7 @@ process_clustermsg(struct ha_msg* msg, struct link* lnk)
 		    	cl_log(LOG_INFO
 			,	"Received shutdown notice from '%s'."
 			,	thisnode->nodename);
-			takeover_from_node(thisnode->nodename);
+			mark_node_dead(thisnode);
 		}
 
 	}else if (strcasecmp(type, T_STARTING) == 0
@@ -4117,6 +4117,11 @@ get_localnodeinfo(void)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.290  2004/02/14 15:48:34  alan
+ * When a node shuts down gracefully, we now mark it dead instead of
+ * silently taking over its resources.  That way a very quick restart won't
+ * confuse us.
+ *
  * Revision 1.289  2004/02/08 09:23:02  alan
  * Put in a little more data from the "attempted replay attack" message.
  *
