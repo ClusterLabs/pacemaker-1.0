@@ -295,7 +295,7 @@ main(int argc, char ** argv)
 	if (cms_data.my_nodeid)
 		ha_free(cms_data.my_nodeid);
 
-	if (cms_data.clm_nbuf);
+	if (cms_data.clm_nbuf)
 		ha_free(cms_data.clm_nbuf);
 
 	return 1;

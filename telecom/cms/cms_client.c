@@ -109,13 +109,17 @@ cms_client_add(GHashTable ** cms_client_table, struct IPC_CHANNEL * newclient)
 	}
 
 	cms_client = (cms_client_t *) ha_malloc(sizeof(cms_client_t));
+	key = (pid_t *)ha_malloc(sizeof(pid_t));
+	if (!key || !cms_client) {
+		cl_log(LOG_CRIT, "malloc key failiure for client add.");
+		return HA_FAIL;
+	}
 
 	dprintf("Add farside_pid [%d] to daemon <%p>\n"
 	,	newclient->farside_pid, *cms_client_table);
 	cms_client->channel_count = 1;
 	cms_client->opened_mqueue_list = NULL;
 
-	key = (pid_t *)ha_malloc(sizeof(pid_t));
 	*key = newclient->farside_pid;
 	g_hash_table_insert(*cms_client_table, key, cms_client);
 
@@ -574,6 +578,10 @@ client_process_message_request(IPC_Channel * client, client_header_t * msg)
 
 	m = (client_message_t *)
 			ha_malloc(sizeof(client_message_t) + message->size);
+	if (!m) {
+		cl_log(LOG_CRIT, "malloc failed for client message request.");
+		return FALSE;
+	}
 
 	m->header.type = CMS_MSG_GET;
         m->header.len = sizeof(client_message_t) + message->size;
@@ -721,7 +729,11 @@ client_process_mqgroup_track(IPC_Channel * client, client_header_t * msg)
 	client_mqgroup_notify_t * rmsg;
 
 	rmsg = (client_mqgroup_notify_t *)
-			ha_malloc(sizeof(client_mqgroup_notify_t));
+			malloc(sizeof(client_mqgroup_notify_t));
+	if (!rmsg) {
+		cl_log(LOG_CRIT, "malloc rmsg failed for mqgroup_track.");
+		return FALSE;
+	}
 
 	rmsg->header.type = msg->type;
 	rmsg->header.len = sizeof(client_mqgroup_notify_t);

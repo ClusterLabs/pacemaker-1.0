@@ -51,6 +51,11 @@ mqueue_handle_insert(mqueue_t *mq)
 	guint * handle;
 
 	handle = (guint *) ha_malloc(sizeof(guint));
+	if (!handle) {
+		cl_log(LOG_CRIT, "malloc handle failed for mqueue_handle_insert.");
+		return 0;
+	}
+
 	*handle = __msghandle_counter++;
 	g_hash_table_insert(mqtable_handle_hash, handle, mq);
 	mq->handle = *handle;
@@ -268,6 +273,12 @@ pack_mqinfo(gpointer key, gpointer value, gpointer mqinfo)
 
 	mqueue_t * mqg = NULL;
 	struct mq_groupinfo * group;
+
+	group = (struct mq_groupinfo *) ha_malloc(sizeof(struct mq_groupinfo));
+	if (!group) {
+		cl_log(LOG_CRIT, "malloc failed for group in pack mqinfo.");
+		return;
+	}
 
 	info->qname.length = strlen(mq->name) + 1;
 	strncpy(info->qname.value, mq->name, SA_MAX_NAME_LENGTH); 
@@ -506,7 +517,7 @@ mqueue_update_usage(mqueue_t * mq, int priority, SaSizeT size)
 			mq->status.saMsgQueueUsage[priority].queueSize)
 		mq->status.saMsgQueueUsage[priority].queueUsed =
 			mq->status.saMsgQueueUsage[priority].queueSize;
-	if (mq->status.saMsgQueueUsage[priority].numberOfMessages < 0)
+	if ((SaInt32T) (mq->status.saMsgQueueUsage[priority].numberOfMessages) < 0)
 		mq->status.saMsgQueueUsage[priority].numberOfMessages = 0;
 
 	dprintf("%s: queueUsed [%d], numberOfMessages [%lu]\n"
@@ -586,6 +597,10 @@ mqueue_copy_notify_data(gpointer data, gpointer user_data)
 
 	buf->change_buff = realloc(buf->change_buff
 	,	(++(buf->number)) * sizeof(SaMsgQueueGroupNotificationT));
+	if (!buf->change_buff) {
+		cl_log(LOG_CRIT, "realloc failed for mqueue_copy_notify_data.");
+		return;
+	}
 
 	dprintf("%s: mqname is [%s]\n", __FUNCTION__, ((mqueue_t *)data)->name);
 	current = buf->change_buff + buf->number - 1;

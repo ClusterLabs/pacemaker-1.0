@@ -282,6 +282,10 @@ mqclm_track(SaClmClusterNotificationT *nbuf, SaUint32T nitem
 
 		buffer = (SaClmClusterNotificationT *)
 				ha_malloc(sizeof(SaClmClusterNotificationT));
+		if (!buffer) {
+			cl_log(LOG_CRIT, "malloc failed for mqclm_track buffer.");
+			return;
+		}
 
 		*buffer = nbuf[i];
 		clm_member_list = g_list_append(clm_member_list, buffer);
@@ -327,6 +331,10 @@ cms_membership_init(cms_data_t * cmsdata)
 
 	nbuf = (SaClmClusterNotificationT *) ha_malloc(cmsdata->node_count * 
 				sizeof (SaClmClusterNotificationT));
+	if (!nbuf) {
+		cl_log(LOG_CRIT, "malloc failed for notification buffer.");
+		return HA_FAIL;
+	}
 
 	if (saClmClusterTrackStart(&handle, SA_TRACK_CURRENT, nbuf, 
 		cmsdata->node_count) != SA_OK) {

@@ -750,6 +750,9 @@ process_mqname_send(struct ha_msg *msg, cms_data_t * cmsdata)
 			 */
 			message = (SaMsgMessageT*)
 				ha_malloc(sizeof(SaMsgMessageT) + data_len);
+			if (!message)
+				return SA_ERR_NO_MEMORY;
+
 			message->type = *msg_type;
 			message->version = *msg_ver;
 			message->size = *msg_size;
@@ -1138,7 +1141,7 @@ process_mqname_reopen(struct ha_msg *msg, enum mqname_type type,
 			return FALSE;
 		}
 		if ((mq = mqname_lookup(name, NULL)) == NULL
-		&&	mq->mqstat != MQ_STATUS_CLOSE) {
+		||	mq->mqstat != MQ_STATUS_CLOSE) {
 			cl_log(LOG_ALERT, "State machine BUG");
 			return FALSE;
 		}
@@ -1163,7 +1166,7 @@ process_mqname_reopen(struct ha_msg *msg, enum mqname_type type,
 
 	case MQNAME_TYPE_MSGFEED_END:
 		if ((mq = mqname_lookup(name, NULL)) == NULL
-		&&	mq->mqstat != MQ_STATUS_CLOSE) {
+		||	mq->mqstat != MQ_STATUS_CLOSE) {
 			cl_log(LOG_ALERT, "State machine BUG");
 			return FALSE;
 		}
@@ -1405,6 +1408,7 @@ group_mem_dispatch(gpointer data, gpointer user_data)
 
 	default:
 		cl_log(LOG_ERR, "Unknown track flag [%d]", track->flag);
+		ha_free(cmg);
 		return;
 	}
 
@@ -1748,6 +1752,7 @@ process_mqueue_status(struct ha_msg *msg)
 	||	(expire = ha_msg_value(msg, F_MQEXPIRE)) == NULL
 	||	(usedstring = ha_msg_value(msg, F_MQUSED)) == NULL
 	||	(numstring = ha_msg_value(msg, F_MQMSGNUM)) == NULL) {
+
 		cl_log(LOG_ERR, "%s: ha_msg_value failed", __FUNCTION__);
 		ret = SA_ERR_LIBRARY;
 	}
