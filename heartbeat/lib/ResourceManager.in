@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-#	$Id: ResourceManager.in,v 1.18 2004/04/15 13:18:38 alan Exp $
+#	$Id: ResourceManager.in,v 1.19 2004/04/15 18:15:50 alan Exp $
 #
 #	New haresources format:
 #
@@ -232,7 +232,7 @@ giveupresourcegroup() {
       ha_log "info: Retrying failed stop operation [$j]"
     done
     if
-      we_own_resource $j 
+      [ $rc1 -ne 0 ] && we_own_resource $j 
     then
       : We still own $j
     else
@@ -433,10 +433,13 @@ esac
 
 #
 #	$Log: ResourceManager.in,v $
+#	Revision 1.19  2004/04/15 18:15:50  alan
+#	Fixed a bug in the last fix to ResourceManager - I didn't check return codes correctly.
+#
 #	Revision 1.18  2004/04/15 13:18:38  alan
 #	Put in a kludge to permit the new code to avoid an unnecessary reboot for
 #	Red Hat and other non-LSB-compliant init scripts.
-#
+#	
 #	Revision 1.17  2004/04/12 21:43:43  alan
 #	Changed the function that runs scripts to return the proper return code.
 #	
