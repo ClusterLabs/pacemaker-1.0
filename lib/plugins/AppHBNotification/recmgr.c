@@ -1,4 +1,4 @@
-/* $Id: recmgr.c,v 1.2 2004/02/17 22:11:59 lars Exp $ */
+/* $Id: recmgr.c,v 1.3 2004/10/05 14:26:16 lars Exp $ */
 /*
  * recmgr.c: Recovery manager client plug-in implementation
  * 
@@ -78,15 +78,15 @@ int	debug = 0;
 #include <clplumbing/GSource.h>
 #include <clplumbing/ipc.h>
 
-/* 
- * use the built-in definitions for PILPluginOps 
- */
-PIL_PLUGIN_BOILERPLATE("1.0", Debug, recmgrclose);
-
 static void recmgrclose(PILPlugin* us)
 {
   /* intentionally left blank */
 }
+
+/* 
+ * use the built-in definitions for PILPluginOps 
+ */
+PIL_PLUGIN_BOILERPLATE("1.0", Debug, recmgrclose);
 
 /* 
  * Locations to store info aquired during registration 
