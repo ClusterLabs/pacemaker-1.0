@@ -1,4 +1,4 @@
-/* $Id: stonithd.c,v 1.23 2005/03/11 05:46:50 sunjd Exp $ */
+/* $Id: stonithd.c,v 1.24 2005/03/11 06:46:17 sunjd Exp $ */
 
 /* File: stonithd.c
  * Description: STONITH daemon for node fencing
@@ -1193,8 +1193,11 @@ stonithd_IPC_destroy_notify(gpointer data)
 	}
 
 	if ( ST_OK == delete_client_by_chan(&client_list, ch) ) {
-		stonithd_log(LOG_INFO, "Delete a client from client_list "
+		stonithd_log(LOG_DEBUG, "Delete a client from client_list "
 			"in stonithd_IPC_destroy_notify.");
+	} else {
+		stonithd_log(LOG_ERR, "stonithd_IPC_destroy_notify: Failed "
+			"to delete a client from client_list.");
 	}
 }
 
@@ -1278,7 +1281,7 @@ on_stonithd_signon(const struct ha_msg * request, gpointer data)
 			stonithd_log(LOG_NOTICE, "The client pid=%d re-signon "
 				    "unnecessarily.", client->pid);
 		} else {
-			stonithd_log(LOG_INFO, "The client's channel isnot "
+			stonithd_log(LOG_NOTICE, "The client's channel isnot "
 				     "correspond to the former pid(%d). It "
 				     "seems a child is using its parent's "
 				     "IPC channel.", client->pid);
@@ -1383,12 +1386,12 @@ on_stonithd_signoff(const struct ha_msg * request, gpointer data)
 
 	if ( (client = get_exist_client_by_chan(client_list, ch)) != NULL ) {
 		if (client->pid == tmpint) {
-			stonithd_log(LOG_INFO, "have the client %s (pid=%d) "
+			stonithd_log(LOG_DEBUG, "have the client %s (pid=%d) "
 				     "sign off.", client->name, client->pid);
 			delete_client_by_chan(&client_list, ch);
 			client = NULL;
 		} else {
-			stonithd_log(LOG_INFO, "The client's channel isnot "
+			stonithd_log(LOG_NOTICE, "The client's channel isnot "
 				     "correspond to the former pid(%d). It "
 				     "seems a child is using its parent's "
 				     "IPC channel.", client->pid);
@@ -1399,7 +1402,7 @@ on_stonithd_signoff(const struct ha_msg * request, gpointer data)
 	}
 
  	if ( strncmp(api_reply, ST_APIOK, strlen(ST_APIOK)) == 0 ) {
-		stonithd_log(LOG_INFO,"client pid=%d has sign off stonithd "
+		stonithd_log(LOG_DEBUG,"client pid=%d has sign off stonithd "
 				"succeedly.", tmpint);
 	} else {
 		stonithd_log(LOG_INFO,"client pid=%d failed to sign off "
@@ -2699,13 +2702,13 @@ get_exist_client_by_chan(GList * client_list, IPC_Channel * ch)
 	
 	stonithd_log(LOG_DEBUG, "get_exist_client_by_chan: begin.");
 	if (client_list == NULL) {
-		stonithd_log(LOG_INFO, "get_exist_client_by_chan: "
+		stonithd_log(LOG_DEBUG, "get_exist_client_by_chan: "
 			     "client_list == NULL");
 		return NULL;
 	} 
 
 	if (ch == NULL) {
-		stonithd_log(LOG_INFO, "get_exist_client_by_chan:ch=NULL");
+		stonithd_log(LOG_DEBUG, "get_exist_client_by_chan:ch=NULL");
 		return NULL;
 	} 
 
@@ -2948,6 +2951,9 @@ free_common_op_t(gpointer data)
 
 /* 
  * $Log: stonithd.c,v $
+ * Revision 1.24  2005/03/11 06:46:17  sunjd
+ * degrade some log messages' loglevel
+ *
  * Revision 1.23  2005/03/11 05:46:50  sunjd
  * Degrade some logs' priority
  *

@@ -94,7 +94,7 @@ stonithd_signon(const char * client_name)
 
 	if ( SIGNONED_TO_STONITHD ) {
 		/* if server is broken, then signoff and signon? important */
-		stdlib_log(LOG_INFO, "stonithd_signon: has sigoned to "
+		stdlib_log(LOG_DEBUG, "stonithd_signon: has sigoned to "
 			   "stonithd.");
 		return ST_OK;
 	}
@@ -370,7 +370,7 @@ stonithd_receive_ops_result(gboolean blocking)
 
 	/* If there is no msg ready and none blocking mode, then return */
 	if ((stonithd_op_result_ready() == FALSE) && (blocking == FALSE)) {
-		stdlib_log(LOG_INFO, "stonithd_receive_ops_result: "
+		stdlib_log(LOG_DEBUG, "stonithd_receive_ops_result: "
 			   "no result available.");
 		return ST_OK;
 	}
