@@ -1,4 +1,4 @@
-/* $Id: mlock.c,v 1.9 2005/01/18 16:59:20 gshi Exp $ */
+/* $Id: mlock.c,v 1.10 2005/02/17 15:06:35 alan Exp $ */
 /*
  *
  * multi-clients NFS lock test code
@@ -945,7 +945,9 @@ runtests(GSList* task_list)
 				      task->run_param.length,
 				      task->run_param.pass, 
 				      FATAL);
-				while(1) sleep(1);
+				while(1) {
+					sleep(1);
+				}
 			}else{
 				gi.forkpid = subpid;
 			}
