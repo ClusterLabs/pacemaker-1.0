@@ -1,4 +1,4 @@
-/* $Id: ccmclient.c,v 1.17 2005/02/15 22:11:42 alan Exp $ */
+/* $Id: ccmclient.c,v 1.18 2005/02/15 22:17:17 alan Exp $ */
 /* 
  * client.c: Consensus Cluster Client tracker
  *
@@ -294,7 +294,7 @@ client_destroy(struct IPC_CHANNEL *ipc_client)
 	!=	NULL){
 		g_free(ccm_client);
 	}
-	ipc_client->ops->destroy(ipc_client);
+	/* IPC_Channel is automatically destroyed when channel is disconnected */
 }
 
 void
