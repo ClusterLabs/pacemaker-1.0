@@ -53,7 +53,13 @@ cd @sysconfdir@/ha.d
 ulimit -c unlimited
 
 GetAllIFNames() {
-  $IFCONFIG | grep '^[a-zA-Z]' | sed 's%:* .*%%'
+
+    if [ "apple" = "@build_vendor@" ]; then
+	# "flags=8863" signifies and active interface that supports tcp
+	$IFCONFIG | grep '^[a-zA-Z]' | grep "flags=8863" | sed 's%:* .*%%'
+    else
+	$IFCONFIG | grep '^[a-zA-Z]' | sed 's%:* .*%%'
+    fi
 }
 
 GuessIFname() {
