@@ -1,7 +1,4 @@
-#
-# apphb: OCF application heartbeat library
-#
-# Copyright (C) 2002 Alan Robertson, International Business Machines
+# Copyright (C) 2002 Alan Robertson
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -18,15 +15,19 @@
 # Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #
 MAINTAINERCLEANFILES    = Makefile.in
-
+       
 INCLUDES                = -I$(top_builddir)/include \
 			-I$(top_srcdir)/include \
-			-I$(top_builddir)/lib/checkpointd \
-			-I$(top_srcdir)/lib/checkpointd  \
-			-I$(top_builddir)/linux-ha \
-			-I$(top_srcdir)/linux-ha  \
 			-I$(top_builddir)/libltdl \
-			-I$(top_srcdir)/libltdl
+			-I$(top_srcdir)/libltdl \
+			-I$(top_builddir)/linux-ha \
+			-I$(top_srcdir)/linux-ha \
+			-I$(top_builddir)/heartbeat \
+			-I$(top_srcdir)/heartbeat \
+			-I$(top_builddir)/include/clplumbing \
+			-I$(top_srcdir)/include/clplumbing \
+			-I$(top_builddir)/lib/checkpointd/test \
+			-I$(top_srcdir)/lib/checkpointd/test 
 
 hadir			= $(sysconfdir)/ha.d
 halibdir		= $(libdir)/@HB_PKG@
@@ -35,16 +36,34 @@ havarlibdir		= $(localstatedir)/lib/@HB_PKG@
 ckptvarlibdir		= $(havarlibdir)/ckpt
 havarrundir		= $(localstatedir)/run/
 
-AM_CFLAGS		= @CFLAGS@ \
-			-DCKPTVARLIBDIR='"$(ckptvarlibdir)"'
+test_LDADD		= $(GLIBLIB) \
+	 		$(top_builddir)/lib/checkpointd/libckpt.la \
+			$(top_builddir)/replace/libreplace.la \
+			$(top_builddir)/lib/clplumbing/libplumb.la \
+			$(top_builddir)/lib/hbclient/libhbclient.la 
 
-## libraries
-lib_LTLIBRARIES		= libckpt.la
+## binary progs
+noinst_PROGRAMS		= init finalize fdget dispatch
+halib_PROGRAMS		= init finalize fdget dispatch
 
-libckpt_la_SOURCES	= libckpt.c	
-libckpt_la_CFLAGS	= $(AM_CFLAGS)
-libckpt_la_LDFLAGS	= -version-info 0:0:0 
+#ckpttest
+
+init_SOURCES		= init.c
+init_LDADD		= $(test_LDADD)
+init_LDFLAGS	= 
+
+finalize_SOURCES		= finalize.c
+finalize_LDADD		= $(test_LDADD)
+finalize_LDFLAGS	= 
+
+fdget_SOURCES		= fdget.c
+fdget_LDADD		= $(test_LDADD)
+fdget_LDFLAGS	= 
 
 
-## test cases
-SUBDIRS			= . test
+dispatch_SOURCES		= dispatch.c
+dispatch_LDADD		= $(test_LDADD)
+dispatch_LDFLAGS	= 
+
+
+
