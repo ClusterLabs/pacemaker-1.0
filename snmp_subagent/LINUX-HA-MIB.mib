@@ -501,7 +501,7 @@ LHABaudRate OBJECT-TYPE
 	"Baud rate for serial ports."
     ::= { LHAHeartbeatConfigInfo 9 }
 
-LHAutoFailBack OBJECT-TYPE
+LHAAutoFailBack OBJECT-TYPE
     SYNTAX	INTEGER {
 	    	    undefined (0),
 		    on (1),
