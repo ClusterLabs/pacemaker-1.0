@@ -1,4 +1,4 @@
-/* $Id: config.c,v 1.139 2005/02/04 20:52:12 alan Exp $ */
+/* $Id: config.c,v 1.140 2005/02/08 07:24:26 alan Exp $ */
 /*
  * Parse various heartbeat configuration files...
  *
@@ -2079,11 +2079,9 @@ set_corerootdir(const char* value)
  *	apiauth lrmd    uid=root
  *	apiauth crmd    uid=hacluster
  *	apiauth cib     uid=hacluster
- *	apiauth cibmon  uid=hacluster
  *	respawn root    /usr/lib/heartbeat/lrmd
  *	respawn hacluster       /usr/lib/heartbeat/ccm
  *	respawn hacluster       /usr/lib/heartbeat/cib
- *	respawn hacluster       /usr/lib/heartbeat/cibmon
  *	respawn hacluster       /usr/lib/heartbeat/crmd
  */
 
@@ -2098,11 +2096,9 @@ set_release2mode(const char* value)
 	{	{"apiauth", "lrmd   uid=root"}
 	,	{"apiauth", "crmd   uid=" HA_CCMUSER}
 	,	{"apiauth", "cib    uid=" HA_CCMUSER}
-	,	{"apiauth", "cibmon uid=" HA_CCMUSER}
 	,	{"respawn", "root "           HALIB "/lrmd"}
 	,	{"respawn", " "HA_CCMUSER " " HALIB "/ccm"}
 	,	{"respawn", " "HA_CCMUSER " " HALIB "/cib"}
-	,	{"respawn", " "HA_CCMUSER " " HALIB "/cibmon"}
 	,	{"respawn", " "HA_CCMUSER " " HALIB "/crmd"}
 	};
 	gboolean	dorel2;
@@ -2138,6 +2134,9 @@ set_release2mode(const char* value)
 
 /*
  * $Log: config.c,v $
+ * Revision 1.140  2005/02/08 07:24:26  alan
+ * Added code to not start cibmon with the 'crm on' option.
+ *
  * Revision 1.139  2005/02/04 20:52:12  alan
  * Put in a new directive to enable the CRM and all its paraphanelia
  * required for release 2.
