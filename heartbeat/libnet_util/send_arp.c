@@ -1,4 +1,4 @@
-/* $Id: send_arp.c,v 1.10 2004/04/27 09:49:32 horms Exp $ */
+/* $Id: send_arp.c,v 1.11 2004/04/27 11:55:54 horms Exp $ */
 /* 
  * send_arp
  * 
@@ -206,9 +206,15 @@ main(int argc, char *argv[])
 	for (j=0; j < repeatcount; ++j) {
 		c = send_arp(l, ip, device, src_mac, broadcast, 
 				netmask, ARPOP_REQUEST);
+		if (c < 0) {
+			break;
+		}
 		mssleep(msinterval / 2);
 		c = send_arp(l, ip, device, src_mac, broadcast, 
 				netmask, ARPOP_REPLY);
+		if (c < 0) {
+			break;
+		}
 		if (j != repeatcount-1) {
 			mssleep(msinterval / 2);
 		}
@@ -314,12 +320,17 @@ send_arp(struct libnet_link_int *l, u_long ip, u_char *device, u_char *macaddr, 
 	/* Convert ASCII Mac Address to 6 Hex Digits. */
 
 	/* Ethernet header */
-	libnet_build_ethernet(enet_dst, macaddr, ETHERTYPE_ARP, NULL, 0, buf);
+	if (libnet_build_ethernet(enet_dst, macaddr, ETHERTYPE_ARP, NULL, 0
+	,	buf) == -1) {
+		syslog(LOG_ERR, "libnet_build_ethernet failed:");
+		libnet_destroy_packet(&buf);
+		return -1;
+	}
 
 	/*
 	 *  ARP header
 	 */
-	libnet_build_arp(ARPHRD_ETHER,	/* Hardware address type */
+	if (libnet_build_arp(ARPHRD_ETHER,	/* Hardware address type */
 		ETHERTYPE_IP,			/* Protocol address type */
 		6,				/* Hardware address length */
 		4,				/* Protocol address length */
@@ -330,9 +341,16 @@ send_arp(struct libnet_link_int *l, u_long ip, u_char *device, u_char *macaddr, 
 		(u_char *)&ip,			/* Target protocol address */
 		NULL,				/* Payload */
 		0,				/* Payload length */
-		buf + LIBNET_ETH_H);
+		buf + LIBNET_ETH_H) == -1) {
+	        syslog(LOG_ERR, "libnet_build_arp failed:");
+		libnet_destroy_packet(&buf);
+		return -1;
+	}
 
 	n = libnet_write_link_layer(l, device, buf, LIBNET_ARP_H + LIBNET_ETH_H);
+	if (n == -1) {
+		syslog(LOG_ERR, "libnet_build_ethernet failed:");
+	}
 
 	libnet_destroy_packet(&buf);
 	return (n);
@@ -352,7 +370,7 @@ send_arp(libnet_t* lntag, u_long ip, u_char *device, u_char macaddr[6], u_char *
 	/*
 	 *  ARP header
 	 */
-	libnet_build_arp(ARPHRD_ETHER,	/* hardware address type */
+	if (libnet_build_arp(ARPHRD_ETHER,	/* hardware address type */
 		ETHERTYPE_IP,	/* protocol address type */
 		6,		/* Hardware address length */
 		4,		/* protocol address length */
@@ -365,13 +383,22 @@ send_arp(libnet_t* lntag, u_long ip, u_char *device, u_char macaddr[6], u_char *
 		0,		/* Length of payload */
 		lntag,		/* libnet context pointer */
 		0		/* packet id */
-	);
+	) == -1 ) {
+		syslog(LOG_ERR, "libnet_build_arp failed:");
+		return -1;
+	}
 
 	/* Ethernet header */
-	libnet_build_ethernet(enet_dst, macaddr, ETHERTYPE_ARP, NULL, 0
-	,	lntag, 0);
+	if (libnet_build_ethernet(enet_dst, macaddr, ETHERTYPE_ARP, NULL, 0
+	,	lntag, 0) == -1 ) {
+		syslog(LOG_ERR, "libnet_build_ethernet failed:");
+		return -1;
+	}
 
 	n = libnet_write(lntag);
+	if (n == -1) {
+		syslog(LOG_ERR, "libnet_build_ethernet failed:");
+	}
 	libnet_clear_packet(lntag);
 
 	return (n);
@@ -547,6 +574,9 @@ write_pid_file(const char *pidfilename)
 
 /*
  * $Log: send_arp.c,v $
+ * Revision 1.11  2004/04/27 11:55:54  horms
+ * Slightly better error checking
+ *
  * Revision 1.10  2004/04/27 09:49:32  horms
  * Fix for pid code for FreeBSD (and others)
  *
