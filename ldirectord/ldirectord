@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-my($VERSION)=(qw$Id: ldirectord,v 1.84 2004/04/12 06:41:36 horms Exp $)[2];
+my($VERSION)=(qw$Id: ldirectord,v 1.85 2004/04/13 11:47:50 horms Exp $)[2];
 
 ######################################################################
 # ldirectord                 http://www.vergenet.net/linux/ldirectord/
@@ -1790,6 +1790,7 @@ sub check_https
 		my $recstr = $$r{receive};
 		if($result =~ /error/i ||
 				($recstr =~ /.+/ && !($body =~ /$recstr/))) {
+			alarm(0);
 			die("$result");
 		}
 		alarm 0; # Cancel the alarm
@@ -1854,6 +1855,7 @@ sub check_connect
 		my $result = &ld_open_socket($$r{server}, $port, $$v{protocol});
 		if ($result == 0) {
 			# Failure to open the socket
+			alarm(0);
 			die("Couldn't open socket to $$r{server}:$port");
 		} else {
 			&ld_debug(3, "Connected to $1 (port $port)");
