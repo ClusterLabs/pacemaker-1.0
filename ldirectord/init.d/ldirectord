@@ -14,6 +14,8 @@
 # Licence: GNU General Public Licence
 #
 
+DAEMON=/usr/sbin/ldirectord
+
 # Source function library.
 if
   [ -f /etc/rc.d/init.d/functions ]
@@ -21,13 +23,20 @@ then
   . /etc/rc.d/init.d/functions
 else
   function action {
-    echo "$1"
+    echo -n "$1... "
     shift
     $@
+    stat=$?
+    if [ $stat = 0 ]; then
+      echo success
+    else
+      echo failure
+    fi
+    return  $stat
   }
 fi
 
-[ -x /usr/sbin/ldirectord ] || exit 0
+[ -x $DAEMON ] || exit 0
 
 
 ######################################################################
@@ -36,26 +45,30 @@ fi
 
 case "$1" in
   start)
-        action "Starting ldirectord" /usr/sbin/ldirectord start
+        action "Starting ldirectord" $DAEMON start
 	;;
   stop)
-        action "Stopping ldirectord" /usr/sbin/ldirectord stop
+        action "Stopping ldirectord" $DAEMON stop
 	;;
   restart)
-	$0 stop
-	sleep 1; # It may take a moment for the original ldirectord to exit
-	$0 start
+        action "Restarting ldirectord" $DAEMON restart
+	;;
+  try-restart)
+        action "Try-Restarting ldirectord" $DAEMON try-restart
 	;;
   status)
-	/usr/sbin/ldirectord status
+	$DAEMON status
 	;;
-  reload|force-reload)
-  	/usr/sbin/ldirectord reload
+  reload)
+        action "Reloading ldirectord" $DAEMON reload
+	;;
+  force-reload)
+        action "Force-Reloading ldirectord" $DAEMON force-reload
 	;;
   *)
 	echo "Usage: ldirectord
-	{start|stop|restart|status|reload|force-reload}"
+	{start|stop|restart|try-restart|status|reload|force-reload}"
 	exit 1
 esac
 
-exit 0
+exit $?

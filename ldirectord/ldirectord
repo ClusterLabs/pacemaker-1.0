@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-my($VERSION)=(qw$Id: ldirectord,v 1.94 2005/01/14 08:46:57 horms Exp $)[2];
+my($VERSION)=(qw$Id: ldirectord,v 1.95 2005/02/09 08:07:10 horms Exp $)[2];
 
 ######################################################################
 # ldirectord                 http://www.vergenet.net/linux/ldirectord/
@@ -468,7 +468,7 @@ sub ld_init
 
 	# search for the correct configuration file
 	if ( !defined $ARGV[0] ) {
-	 	init_error("Usage ldirectord [-d] [configfile] \{start|stop|restart|reload|status\}\nRun ldirectord -h for more information");
+		usage();
 	}
 	if ( defined $ARGV[0] && defined $ARGV[1] ) {
 		$CONFIG = $ARGV[0];
@@ -481,8 +481,10 @@ sub ld_init
 		$CFGNAME = "ldirectord";
 		$CMD = $ARGV[0];
 	}
-	if ( $CMD ne "start" && $CMD ne "stop" && $CMD ne "status" && $CMD ne "restart" && $CMD ne "reload") {
-	 	init_error("Usage ldirectord [-d] [configfile] \{start|stop|restart|reload|status\}\nType ldirectord -h for more information");
+	if ( $CMD ne "start" and $CMD ne "stop" and $CMD ne "status" 
+			and $CMD ne "restart" and $CMD ne "try-restart"
+			and $CMD ne "reload" and $CMD ne "force-reload") {
+		usage();
 	}
 	if ( -f "/etc/ha.d/$CONFIG" ) {
 		$CONFIG = "/etc/ha.d/$CONFIG";
@@ -491,52 +493,72 @@ sub ld_init
 	} elsif ( ! -f "$CONFIG" ) {
 		init_error("Config file $CONFIG not found");
 	}
+	read_config();
+	undef @OLDVIRTUAL;
+
 	my $oldpid;
+	my $filepid;
 	if (open(FILE, "<$RUNPID.$CFGNAME.pid")) {
 		$_ = <FILE>;
 		chomp;
-		my $tmppid = $_;
+		$filepid = $_;
 		close(FILE);
 		# Check to make sure this isn't a stale pid file
-		if (open(FILE, "</proc/$tmppid/cmdline")) {
+		if (open(FILE, "</proc/$filepid/cmdline")) {
 			$_ = <FILE>;
 			if (/ldirectord/) {
-				$oldpid = $tmppid;
+				$oldpid = $filepid;
 			}
 			close(FILE);
 		}
 	}
 	if (defined $oldpid) {
-		# Kill old daemon
-		if ($CMD eq "stop") {
+		if ($CMD eq "start") {
+			ld_exit(0, "Exiting from ldirectord $CMD");
+		} elsif ($CMD eq "stop") {
 			kill 15, $oldpid;
-			ld_exit(0, "Exiting from ldirectord stop");
-		} elsif ($CMD eq "restart") {
+			ld_exit(0, "Exiting from ldirectord $CMD");
+		} elsif ($CMD eq "restart" or $CMD eq "try-restart") {
 			kill 15, $oldpid;
 			while (-f "$RUNPID.$CFGNAME.pid") {
 				# wait until old pid file is removed
+				sleep 1;
 			}
-		} elsif ($CMD eq "reload") {
+			# N.B Fall through 
+		} elsif ($CMD eq "reload" or $CMD eq "force-reload") {
 			kill 1, $oldpid;
-			ld_exit(0, "Exiting from ldirectord reload");
-		} elsif ($CMD eq "status") {
+			ld_exit(0, "Exiting from ldirectord $CMD");
+		} else { # status
 			print STDERR "ldirectord for $CONFIG is running with pid: $oldpid\n";
 			ld_cmd_children("status", %LD_INSTANCE);
-			ld_exit(0, "Exiting from ldirectord status");
-		} else {
-			init_error("ldirectord for $CONFIG is already running with pid: $oldpid");
+			ld_log("ldirectord for $CONFIG is running with pid: $oldpid");
+			ld_log("Exiting from ldirectord $CMD");
+			ld_exit(0, "Exiting from ldirectord $CMD");
 		}
 	} else {
-		if ($CMD eq "status") {
-			init_error("ldirectord is stopped for $CONFIG");
-			# Clean up
-			ld_exit(0, "Exiting from ldirectord status");
-		} elsif ($CMD ne "start") {
-			init_error("ldirectord is stopped for $CONFIG");
+		if ($CMD eq "start" or $CMD eq "restart") {
+			;
+		} elsif ($CMD eq "stop" or $CMD eq "try-restart") {
+			ld_exit(0, "Exiting from ldirectord $CMD");
+		} elsif ($CMD eq "status") {
+			my $status;
+			if (defined $filepid) {
+				print STDERR "ldirectord stale pid file " .
+					"$RUNPID.$CFGNAME.pid for $CONFIG\n";
+				ld_log("ldirectord stale pid file " .
+					"$RUNPID.$CFGNAME.pid for $CONFIG");
+				$status = 1;
+			} else {
+				$status = 3;
+			}
+			print STDERR "ldirectord is stopped for $CONFIG\n";
+			ld_log("ldirectord is stopped for $CONFIG");
+			ld_exit($status, "Exiting from ldirectord $CMD");
+		} else {
+			ld_log("ldirectord is stopped for $CONFIG");
+			ld_exit(1, "Exiting from ldirectord $CMD");
 		}
 	}
-	read_config();
-	undef @OLDVIRTUAL;
 
 	# Run as daemon
 	if ($SUPERVISED || defined $opt_d) {
@@ -551,6 +573,13 @@ sub ld_init
 	}
 }
 
+sub usage
+{
+	init_error("Usage ldirectord [-d] [configfile] " .
+		"\{start|stop|restart|try-restart|reload|force-reload|" .
+		"status\}\n" .
+		"Type ldirectord -h for more information");
+}
 
 sub init_error
 {
@@ -1356,7 +1385,7 @@ sub ld_read_ipvsadm
 
 	# read status of current ipvsadm -L -n
 	unless(open(IPVS, "$IPVSADM -L -n |")){
-          &ld_exit(-1, "Could not run $IPVSADM -L -n");
+          &ld_exit(1, "Could not run $IPVSADM -L -n");
         }
 	$_ = <IPVS>; $_ = <IPVS>; $_ = <IPVS>;
 
@@ -2893,7 +2922,7 @@ sub ld_exit
 {
 	my ($exit_status, $message)=(@_);
 	unless(defined($exit_status)) { $exit_status=0; }
-	unless(defined($exit_status)) { $message=""; }
+	unless(defined($message)) { $message=""; }
 
 	if ($exit_status!=0 or $DEBUG>2) {
 		&ld_log("Exiting with exit_status $exit_status: $message");
@@ -2956,7 +2985,7 @@ sub ld_daemon
 	# session has not yet acquired a controlling terminal our process now
 	# has no controlling terminal, which is a Good Thing for daemons.
 	if(POSIX::setsid()<0){
-		&ld_exit(-1, "ld_daemon: Could not setsid");
+		&ld_exit(1, "ld_daemon: Could not setsid");
 	}
 
 	# fork()' again so the parent, (the session group leader), can exit.
@@ -2968,7 +2997,7 @@ sub ld_daemon
 	# use. Failure to do this could make it so that an administrator
 	# couldn't unmount a filesystem, because it was our current directory.
 	if(chdir("/")<0){
-		&ld_exit(-1, "ld_daemon: Could not chdir");
+		&ld_exit(1, "ld_daemon: Could not chdir");
 	}
 
 	# `close()' fds 0, 1, and 2. This releases the standard in, out, and
@@ -2992,7 +3021,7 @@ sub ld_daemon
 	# `/dev/console' as stderr and/or stdout, and `/dev/null' as stdin, or
 	# any other combination that makes sense for your particular daemon.
 	if(open(STDIN, "</dev/null")<0){
-		&ld_exit(-1, "ld_daemon: Could not open /dev/null");
+		&ld_exit(1, "ld_daemon: Could not open /dev/null");
 	}
 	if(open(STDOUT, ">>/dev/console")<0){
 		&ld_exit(-1, "ld_daemon: Could not open /dev/console");
