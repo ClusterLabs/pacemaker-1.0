@@ -1,4 +1,4 @@
-/* $Id: ha_msg.h,v 1.54 2005/03/07 20:01:28 gshi Exp $ */
+/* $Id: ha_msg.h,v 1.55 2005/03/15 01:09:42 gshi Exp $ */
 /*
  * Intracluster message object (struct ha_msg)
  *
@@ -66,7 +66,7 @@ struct ha_msg {
 				 * including the '\0' character at the end. */
 	size_t  netstringlen;
 	char **	names;
-	int  *	nlens;
+	size_t* nlens;
 	void **	values;
 	size_t*	vlens;
 	int *	types;
