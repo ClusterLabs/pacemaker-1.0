@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-my($VERSION)=(qw$Id: ldirectord,v 1.76 2004/01/06 08:31:25 horms Exp $)[2];
+my($VERSION)=(qw$Id: ldirectord,v 1.77 2004/02/17 02:57:46 horms Exp $)[2];
 
 ######################################################################
 # ldirectord                 http://www.vergenet.net/linux/ldirectord/
@@ -653,9 +653,10 @@ sub read_config
 			push(@VIRTUAL, \%vsrv);
 			while(<CFGFILE>) {
 				$line++;
-				if(m/\s*#/) {
+				if(m/^\s*#/) {
 					next;
 				}
+				s/#.*//;
 				s/\t/    /g;
 				unless (/^ {4,}(.+)/) {
 					last;
