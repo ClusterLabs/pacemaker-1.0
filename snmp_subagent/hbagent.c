@@ -65,7 +65,7 @@ int walk_if_table(void);
 
 int nodestatus_trap(const char * node, const char * status);
 int ifstatus_trap(const char * node, const char * lnk, const char * status);
-int membership_change(void);
+int membership_trap(const char * node, SaClmClusterChangesT status);
 
 static RETSIGTYPE
 stop_server(int a) {
@@ -280,23 +280,27 @@ main(int argc, char ** argv)
 
 		FD_ZERO(&fdset);
                 FD_SET(hb_fd, &fdset);
+		numfds = hb_fd+1;
 
 		if (clmInitialized) {
 			FD_SET(mem_fd, &fdset);
+
+			if (mem_fd > hb_fd)
+				numfds = mem_fd + 1;
 		}
 
-		tv.tv_sec = DEFAULT_TIME_OUT;
-		tv.tv_usec = 0;
 		tvp = &tv;
 
-		numfds = hb_fd+1;
+		snmp_select_info(&numfds, &fdset, &tv, &block);
 
-		snmp_select_info(&numfds, &fdset, tvp, &block);
 		if (block) {
 			tvp = NULL;
+		} if (tvp->tv_sec == 0) {
+		    tvp->tv_sec = DEFAULT_TIME_OUT;
 		}
 
 		ret = select(numfds, &fdset, 0, 0, tvp);
+		fprintf(stderr, "select ret = %d\n", ret);
 
 		if (ret < 0) {
 			/* error */
@@ -315,7 +319,7 @@ main(int argc, char ** argv)
 				cl_log(LOG_ERR, "heartbeat stopped.");
 				break;
 			}
-		} else if (clmInitialized && FD_ISSET(mem_fd, &fdset)) {
+		} else  if (clmInitialized && FD_ISSET(mem_fd, &fdset)) {
 		    	/* membership events */
 
 		    	if ((ret = handle_membership_msg()) == HA_FAIL) {
@@ -323,6 +327,7 @@ main(int argc, char ** argv)
 				break;
 			}
 		} else {
+
 			/* snmp request */
 			snmp_read(&fdset);
 		}
@@ -448,16 +453,15 @@ free_membershiptable(void)
     	if (!gMembershipTable)
 	    return;
 
+	/* this is a continuous buffer allocated by the libclm */
+	buf = &g_array_index(gMembershipTable, SaClmClusterNotificationT, 0);
+	free(buf);
+
 	while (gMembershipTable->len) {
-
-	    	buf = &g_array_index(gMembershipTable, 
-			SaClmClusterNotificationT, 0);
-	    	free(buf);
-
 		gMembershipTable = 
-		    g_array_remove_index_fast(gMembershipTable, 0);
+	    		g_array_remove_index_fast(gMembershipTable, 0);
 	}
-	
+
 	return;
 }
 
@@ -640,8 +644,6 @@ handle_heartbeat_msg(void)
 	struct ha_msg *msg;
 	const char *type, *node;
 
-	fprintf(stderr, "handling heartbeat msgs... \n");
-
 	while (hb->llc_ops->msgready(hb)) {
 
 		msg = hb->llc_ops->readmsg(hb, 0);
@@ -650,7 +652,6 @@ handle_heartbeat_msg(void)
 
 		type = ha_msg_value(msg, F_TYPE);
 		node = ha_msg_value(msg, F_ORIG);
-		fprintf(stderr, "node = %s, type = %s, \n", node, type);
 		if (!type || !node) {
 			// can't read type. log and ignore the msg.
 			cl_log(LOG_DEBUG, "Can't read msg type.\n");
@@ -672,13 +673,34 @@ clm_track_cb(SaClmClusterNotificationT *nbuf, SaUint32T nitem,
 	SaUint32T nmem, SaUint64T nview, SaErrorT error)
 {
         int i;
+	const char * node;
+	SaClmClusterChangesT status;
 
         free_membershiptable();
 
         for (i = 0; i < nitem; i++) {
-	    	cl_log(LOG_INFO, "adding %s in membership table", nbuf[i].clusterNode.nodeName.value);
+		fprintf(stderr, "%s\n",  nbuf[i].clusterNode.nodeName.value);
+
+	    	// cl_log(LOG_INFO, "adding %s in membership table", nbuf[i].clusterNode.nodeName.value);
                 g_array_append_val(gMembershipTable, nbuf[i]);
         }
+
+	if (clmInitialized) {
+	    	fprintf(stderr, "member count: %ld  \n", nmem);
+
+		for (i = 0; i < nitem; i++) {
+		    	status = nbuf[i].clusterChanges;
+			node = nbuf[i].clusterNode.nodeName.value;
+
+		    	fprintf(stderr, "node = %s, status = %d\n", node, status);
+
+			if (status == SA_CLM_NODE_NO_CHANGE) {
+			    	continue;
+			}
+
+	    		membership_trap(node, status);
+		}
+	}
 }
 
 static void
@@ -754,6 +776,7 @@ handle_membership_msg(void)
 	if ((ret = saClmDispatch(&clm, SA_DISPATCH_ALL)) != SA_OK) {
 		if (ret == SA_ERR_LIBRARY) {
 		    	cl_log(LOG_ERR, "I am evicted.");
+			clmInitialized = 0;
 			return HA_FAIL;
 		} else {
 		    cl_log(LOG_WARNING, "saClmDispatch error, ret = [%d]", ret);
@@ -916,7 +939,8 @@ nodestatus_trap(const char * node, const char * status)
                               (const u_char *) status,
                               strlen(status)); /* do NOT use strlen() +1 */
 
-    fprintf(stderr, "node %s: status %s, sending trap now", node, status);
+    cl_log(LOG_INFO, "sending node status trap. node: %s: status %s", 
+	    node, status);
     send_v2trap(notification_vars);
     snmp_free_varbind(notification_vars);
 
@@ -982,7 +1006,65 @@ ifstatus_trap(const char * node, const char * lnk, const char * status)
                               (const u_char *) status,
                               strlen(status)); /* do NOT use strlen() +1 */
 
-    fprintf(stderr, "node:%s, lnk: %s, status:%s, sending trap", node, lnk, status);
+    cl_log(LOG_INFO, "sending ifstatus trap. node:%s, lnk: %s, status:%s", 
+	    node, lnk, status);
+    send_v2trap(notification_vars);
+    snmp_free_varbind(notification_vars);
+
+    return HA_OK;
+}
+
+int 
+membership_trap(const char * node, SaClmClusterChangesT status)
+{
+    oid objid_snmptrap[] = { 1, 3, 6, 1, 6, 3, 1, 1, 4, 1, 0 };
+    size_t objid_snmptrap_len = OID_LENGTH(objid_snmptrap);
+
+    oid  trap_oid[] = { 1, 3, 6, 1, 4, 1, 4682, 900, 5 };
+    size_t trap_oid_len = OID_LENGTH(trap_oid);
+
+    oid  nodename_oid[] = { 1, 3, 6, 1, 4, 1, 4682, 2, 1, 2 };
+    size_t nodename_oid_len = OID_LENGTH(nodename_oid);
+
+    oid  membershipchange_oid[] = { 1, 3, 6, 1, 4, 1, 4682, 6, 1, 6 };
+    size_t membershipchange_oid_len = OID_LENGTH(membershipchange_oid);
+
+    netsnmp_variable_list *notification_vars = NULL;
+
+    snmp_varlist_add_variable(&notification_vars,
+                              /*
+                               * the snmpTrapOID.0 variable
+                               */
+                              objid_snmptrap, objid_snmptrap_len,
+                              /*
+                               * value type is an OID
+                               */
+                              ASN_OBJECT_ID,
+                              /*
+                               * value contents is our notification OID
+                               */
+                              (u_char *) trap_oid,
+                              /*
+                               * size in bytes = oid length * sizeof(oid)
+                               */
+                              trap_oid_len * sizeof(oid));
+
+    snmp_varlist_add_variable(&notification_vars,
+                              nodename_oid, 
+			      nodename_oid_len,
+                              ASN_OCTET_STR,
+                              (const u_char *) node,
+                              strlen(node)); /* do NOT use strlen() +1 */
+
+    snmp_varlist_add_variable(&notification_vars,
+                              membershipchange_oid, 
+			      membershipchange_oid_len,
+                              ASN_INTEGER,
+                              (u_char *) &status,
+                              sizeof(status)); 
+
+    cl_log(LOG_INFO, "sending membership trap. node:%s, status:%d", 
+	    node, status);
     send_v2trap(notification_vars);
     snmp_free_varbind(notification_vars);
 

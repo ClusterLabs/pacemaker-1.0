@@ -585,18 +585,11 @@ LHAIFStatusUpdate NOTIFICATION-TYPE
     	"A link status just changed."
     ::= { LHATrapTable 3 }
 
-LHAMembershipJoined NOTIFICATION-TYPE
-    OBJECTS { LHANodeName }
+LHAMembershipChange NOTIFICATION-TYPE
+    OBJECTS { LHANodeName LHAMemberLastChange }
     STATUS  current
     DESCRIPTION
-    	"A node just got up.  Recovery might be needed."
+    	"A node just changed it membership. "
     ::= { LHATrapTable 5 }
-
-LHAMembershipLeft NOTIFICATION-TYPE
-    OBJECTS { LHANodeName }
-    STATUS  current
-    DESCRIPTION
-    	"A node just got up.  Recovery might be needed."
-    ::= { LHATrapTable 6 }
 
 END
