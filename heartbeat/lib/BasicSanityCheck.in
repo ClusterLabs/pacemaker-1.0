@@ -132,7 +132,6 @@ GenerateCrmdHaCf() {
 	#	$IDENTSTRING
 	logfile   /dev/null
 	debugfile $LOGFILE
-	logfacility    local7
 	keepalive 10ms
 	debug 1
 	deadtime 5
@@ -642,9 +641,11 @@ TestCRM() {
 	fi
 	GenerateCrmdHaCf $HADIR/ha.cf
 #	echo "crm yes" >> $HADIR/ha.cf
-#	echo "logfacility local7" >> $HADIR/ha.cf
 	echo "Starting CRM tests" | tee -a $LOGFILE
-	$CRMTEST -L --ip1 127.0.0.10 --ip2 127.0.0.11 >> $LOGFILE 2>&1
+	CRMLOGFILE="${LOGFILE}.crm"
+	$CRMTEST -L -l $LOGFILE --ip1 127.0.0.10 --ip2 127.0.0.11 > $CRMLOGFILE 2>&1
+	cat $CRMLOGFILE >> $LOGFILE
+	rm $CRMLOGFILE
 	ret=$?
 	if [ $ret != 0 ]; then
 	    errcount=`expr $errcount + 1`
