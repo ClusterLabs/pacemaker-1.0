@@ -1,4 +1,4 @@
-const static char * _heartbeat_c_Id = "$Id: heartbeat.c,v 1.277 2003/09/26 05:48:19 alan Exp $";
+const static char * _heartbeat_c_Id = "$Id: heartbeat.c,v 1.278 2003/10/27 10:42:52 horms Exp $";
 
 /*
  * heartbeat: Linux-HA heartbeat code
@@ -3010,7 +3010,10 @@ main(int argc, char * argv[], char **envp)
 StartHeartbeat:
 
 
-	if (init_config(CONFIG_NAME) && parse_ha_resources(RESOURCE_CFG)) {
+        /* We have already initialized configs in case WeAreRestarting. */
+        if (WeAreRestarting
+        ||      (init_config(CONFIG_NAME)
+                &&      parse_ha_resources(RESOURCE_CFG))) {
 		if (ANYDEBUG) {
 			cl_log(LOG_DEBUG
 			,	"HA configuration OK.  Heartbeat starting.");
@@ -4122,6 +4125,11 @@ get_localnodeinfo(void)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.278  2003/10/27 10:42:52  horms
+ * Ensure that init_config() and parse_ha_resources() are
+ * only called once on restart. Else all sorts of strange
+ * things can happen. Kurosawa Takahiro.
+ *
  * Revision 1.277  2003/09/26 05:48:19  alan
  * Fixed a few undefined variable complaints.
  *
