@@ -1,4 +1,4 @@
-/* $Id: stonithd.c,v 1.6 2004/12/08 09:31:44 sunjd Exp $ */
+/* $Id: stonithd.c,v 1.7 2004/12/09 06:51:07 sunjd Exp $ */
 
 /* File: stonithd.c
  * Description: STONITH deamon for node fencing
@@ -827,6 +827,9 @@ handle_msg_ticanst(const struct ha_msg* msg, void* private_data)
 			   (gpointer *)&op, &call_id);
 	if ( op != NULL &&  /* QUERY only */
 	    (op->scenario == STONITH_INIT || op->scenario == STONITH_REQ)) {
+		/* add the separator blank space */
+		op->st_op->node_list = 
+			g_string_append(op->st_op->node_list, " ");
 		op->st_op->node_list = 
 			g_string_append(op->st_op->node_list, from);
 		stonithd_log(LOG_DEBUG, "handle_msg_ticanst: QUERY operation "
@@ -856,7 +859,8 @@ handle_msg_tstit(const struct ha_msg* msg, void* private_data)
 	/* Don't handle the message sent by myself */
 	if ( strncmp(from, local_nodename, strlen(local_nodename)) 
 		== 0 && TEST == FALSE ) {
-		stonithd_log(LOG_DEBUG, "received a T_ICANST msg from myself.");
+		stonithd_log(LOG_DEBUG, "received a T_STIT msg from myself, "
+			     "will abandon it.");
 		return;
 	}
 
@@ -985,13 +989,6 @@ handle_msg_trstit(const struct ha_msg* msg, void* private_data)
 		stonithd_log(LOG_DEBUG, "handle_msg_trstit: the stonith "
 			"operation (call_id==%d) has finished before "
 			"receiving this message", call_id);
-	}
-
-	/* The following may be redundant, but should cause no 
-	   side-effect. */
-	if (call_id > 0 && CL_PID_EXISTS(call_id)) {
-		stonithd_log(LOG_INFO, "To kill a child %d", call_id);
-		CL_KILL(call_id, 9);	
 	}
 
 	stonithd_log(LOG_DEBUG, "handle_msg_trstit: end");	
@@ -1553,7 +1550,7 @@ initiate_remote_stonithop(stonith_ops_t * st_op, stonith_rsc_t * srsc,
 	}
 
 	st_op->call_id = negative_callid_counter;
-	if (st_op->optype!=QUERY && ST_OK!=require_others_to_stonith(st_op)) {
+	if (ST_OK!=require_others_to_stonith(st_op) && st_op->optype!=QUERY) {
 		stonithd_log(LOG_ERR, "require_others_to_stonith failed.");
 		st_op->call_id = 0;
 		return 1;
@@ -1799,6 +1796,7 @@ require_others_to_stonith(stonith_ops_t * st_op)
 		return ST_FAIL;
 	}
 
+	stonithd_log(LOG_DEBUG, "require_others_to_stonith: begin.");
 	if ( (ha_msg_add(msg, F_TYPE, (st_op->optype == QUERY) ? 
 					T_WHOCANST : T_STIT) != HA_OK)
 	    ||(ha_msg_add(msg, F_ORIG, local_nodename) != HA_OK)
@@ -2831,6 +2829,10 @@ free_common_op_t(gpointer data)
 
 /* 
  * $Log: stonithd.c,v $
+ * Revision 1.7  2004/12/09 06:51:07  sunjd
+ * 1) fix a bug related to QUERY operation
+ * 2) add more debugging output and remove the redundant code to kill child processes.
+ *
  * Revision 1.6  2004/12/08 09:31:44  sunjd
  * add code to output more debugging information
  *
