@@ -1,4 +1,4 @@
-/* $Id: ccm_testclient.c,v 1.14 2004/02/17 22:12:00 lars Exp $ */
+/* $Id: ccm_testclient.c,v 1.15 2004/03/19 05:01:10 chuyee Exp $ */
 /* 
  * ccm.c: A consensus cluster membership sample client
  *
@@ -70,8 +70,9 @@ my_ms_events(oc_ed_t event, void *cookie,
 	i_am_in=0;
 	cl_log(LOG_INFO, "NODES IN THE PRIMARY MEMBERSHIP");
 	for(i=0; i<oc->m_n_member; i++) {
-		cl_log(LOG_INFO,"\tnodeid=%d, born=%d",
+		cl_log(LOG_INFO,"\tnodeid=%d, uname=%s, born=%d",
 			oc->m_array[oc->m_memb_idx+i].node_id,
+			oc->m_array[oc->m_memb_idx+i].node_uname,
 			oc->m_array[oc->m_memb_idx+i].node_born_on);
 		if(oc_ev_is_my_nodeid(ev_token, &(oc->m_array[i]))){
 			i_am_in=1;
@@ -85,16 +86,18 @@ my_ms_events(oc_ed_t event, void *cookie,
 	if(oc->m_n_in==0) 
 		cl_log(LOG_INFO, "\tNONE");
 	for(i=0; i<oc->m_n_in; i++) {
-		cl_log(LOG_INFO,"\tnodeid=%d, born=%d",
+		cl_log(LOG_INFO,"\tnodeid=%d, uname=%s, born=%d",
 			oc->m_array[oc->m_in_idx+i].node_id,
+			oc->m_array[oc->m_in_idx+i].node_uname,
 			oc->m_array[oc->m_in_idx+i].node_born_on);
 	}
 	cl_log(LOG_INFO, "MEMBERS LOST");
 	if(oc->m_n_out==0) 
 		cl_log(LOG_INFO, "\tNONE");
 	for(i=0; i<oc->m_n_out; i++) {
-		cl_log(LOG_INFO,"\tnodeid=%d, born=%d",
+		cl_log(LOG_INFO,"\tnodeid=%d, uname=%s, born=%d",
 			oc->m_array[oc->m_out_idx+i].node_id,
+			oc->m_array[oc->m_out_idx+i].node_uname,
 			oc->m_array[oc->m_out_idx+i].node_born_on);
 	}
 	cl_log(LOG_INFO, "-----------------------");
