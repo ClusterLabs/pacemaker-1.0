@@ -1,4 +1,4 @@
-#	$Id: heartbeat.spec.in,v 1.81 2004/03/25 21:41:47 alan Exp $
+#	$Id: heartbeat.spec.in,v 1.82 2004/04/16 06:52:21 alan Exp $
 
 # Workaround for a change in RPM 4.1.x; needs proper fixing soon!
 %define _unpackaged_files_terminate_build 0
@@ -73,6 +73,30 @@ PILS is designed to support any number of plugins
 implementing any number of interfaces.
 
 %changelog
+* Thu Apr 15 2004  Alan Robertson <alanr@unix.sh> (see doc/AUTHORS file)
++ Version 1.3.0 - beta series
+  + Netstrings can now be used for our on-the-wire data format
+  + Perl/SWIG bindings added for some heartbeat libraries
+  + Significant improvements to SAF data checkpointing API
+  + Implemented unbuffered ipcsocket code for SAF APIs
+  + Many Solaris fixes -- except for ipfail, Solaris works
+  + Significant library restructuring
+  + Watchdog device NOWAYOUT is now overridded if defaulted
+  + Watchdog device now kills machine instantly after deadtime
+ 	instead of after one minute
+  + Hostnames should now be treated case-independently...
+  + Added new client status APIs - client_status() and cstatus_callback()
+  + Fixed bug with auto_failback and quick full restarts
+  + We now automatically reboot when resources fail to stop correctly...
+  + We now check the status of the configured STONITH device hourly...
+  + STONITH operations repeat after a 5 second delay, not immediately...
+  + Added hb_takeover command - complement to hb_standby
+  + Added documentation on how to use evlog/TCP to enable testing to
+	take place without losing messages due to UDP message forwarding
+  + Several new tests from Mi, Jun - split brain, bandwidth, failure
+	detection time.
+  + Fix to LVM resource from Harald Milz <hm@muc.de>
+
 * Tue Feb 16 2004  Alan Robertson <alanr@unix.sh> (see doc/AUTHORS file)
 + Version 1.2.0
   + Replaced the nice_failback option with the auto_failback option.
