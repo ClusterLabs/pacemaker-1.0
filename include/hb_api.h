@@ -312,6 +312,7 @@ struct llc_ops {
 #define KEY_REALTIME	"realtime"
 #define KEY_DEBUGLEVEL	"debug"
 #define KEY_NORMALPOLL	"normalpoll"
+#define KEY_APIPERM	"apiauth"
 
 ll_cluster_t*	ll_cluster_new(const char * llctype);
 #endif /* __HB_API_H */

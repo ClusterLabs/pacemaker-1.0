@@ -1,4 +1,4 @@
-const static char * _hb_config_c_Id = "$Id: config.c,v 1.99 2003/09/25 15:17:55 alan Exp $";
+const static char * _hb_config_c_Id = "$Id: config.c,v 1.100 2003/10/27 15:47:10 alan Exp $";
 /*
  * Parse various heartbeat configuration files...
  *
@@ -41,6 +41,7 @@ const static char * _hb_config_c_Id = "$Id: config.c,v 1.99 2003/09/25 15:17:55 
 #include <dlfcn.h>
 #include <fcntl.h>
 #include <pwd.h>
+#include <grp.h>
 #include <netdb.h>
 #include <sched.h>
 #include <sys/wait.h>
@@ -83,6 +84,7 @@ static int set_generation_method(const char *);
 static int set_realtime(const char *);
 static int set_debuglevel(const char *);
 static int set_normalpoll(const char *);
+static int set_api_authorization(const char *);
 
 /*
  * Each of these parameters is is automatically recorded by
@@ -117,6 +119,7 @@ struct directive {
 , {KEY_REALTIME,  set_realtime, TRUE, "true", "enable realtime behavior?"}
 , {KEY_DEBUGLEVEL,set_debuglevel, TRUE, NULL, "debug level"}
 , {KEY_NORMALPOLL,set_normalpoll, TRUE, "true", "Use system poll(2) function?"}
+, {KEY_APIPERM,	  set_api_authorization, FALSE, NULL, NULL}
 };
 
 static const struct WholeLineDirective {
@@ -145,6 +148,7 @@ extern int				DoManageResources;
 extern int				hb_realtime_prio;
 extern PILPluginUniv*			PluginLoadingSystem;
 extern GHashTable*			CommFunctions;
+GHashTable*				APIAuthorization = NULL;
 struct node_info *   			curnode;
 extern int    				timebasedgenno;
 int    					enable_realtime = TRUE;
@@ -244,6 +248,8 @@ init_config(const char * cfgfile)
 	if (config->log_facility >= 0) {
 		openlog(cmdname, LOG_CONS | LOG_PID, config->log_facility);
 	}
+
+	APIAuthorization = g_hash_table_new(g_str_hash, g_str_equal);
 
 	/* Set any "fixed" defaults */
 	for (j=0; j < DIMOF(Directives); ++j) {
@@ -1621,8 +1627,223 @@ add_client_child(const char * directive)
 
 	return HA_OK;
 }
+
+static int
+gnametonum(const char * gname, int gnlen)
+{
+	char	grpname[64];
+	struct group*	grp;
+
+	if (isdigit(gname[0])) {
+		return atoi(gname);
+	}
+	if (gnlen >= sizeof(grpname)) {
+		return -1;
+	}
+	strncpy(grpname, gname, gnlen);
+	grpname[gnlen] = EOS;
+	if ((grp = getgrnam(grpname)) == NULL) {
+		cl_log(LOG_ERR 
+		,	"Invalid group name [%s]", grpname);
+		return -1;
+	}
+	return (int)grp->gr_gid;
+}
+
+static int
+unametonum(const char * lname, int llen)
+{
+	char	loginname[64];
+	struct passwd*	pwd;
+
+	if (isdigit(loginname[0])) {
+		return atoi(loginname);
+	}
+	if (llen >= sizeof(loginname)) {
+		return -1;
+	}
+	strncpy(loginname, lname, llen);
+	loginname[llen] = EOS;
+	if ((pwd = getpwnam(loginname)) == NULL) {
+		cl_log(LOG_ERR 
+		,	"Invalid user id name [%s]", loginname);
+		return -1;
+	}
+	return (int)pwd->pw_uid;
+}
+
+static GHashTable*
+make_id_table(const char * list, int listlen, int (*map)(const char *, int))
+{
+	GHashTable*	ret;
+	const char *	id;
+	const char *	lastid = list + listlen;
+	int		idlen;
+	int		idval;
+
+	ret = g_hash_table_new(g_int_hash, g_int_equal);
+
+	id = list;
+	while (id < lastid && *id != EOS) {
+		idlen = strcspn(id, ",");
+		if (id+idlen >= lastid) {
+			idlen = (lastid - id)-1;
+		}
+		idval = map(id, idlen);
+		if (idval < 0) {
+			return NULL;
+		}
+		g_hash_table_insert(ret, &idval, &idval);
+		id += idlen;
+		if (id < lastid) {
+			id += strspn(id, ",");
+		}
+	}
+	return ret;
+}
+
+/*
+ * apiperm client-name gid=gidlist uid=uidlist
+ *
+ * Record API permissions for use in API client authorization
+ */
+
+static int
+set_api_authorization(const char * directive)
+{
+	const char *	bp;
+	const char *	client;
+	int		clientlen;
+	const char *	gidlist = NULL;
+	int		gidlen = 0;
+	const char *	uidlist = NULL;
+	int		uidlen = 0;
+	struct IPC_AUTH*auth = NULL;
+	char		clname[MAXLINE];
+	
+
+	/* String processing in 'C' is *so* ugly...   */
+	
+	/* Skip over any initial white space -- to the client name */
+	bp = directive;
+	bp += strspn(bp, WHITESPACE);
+	if (*bp == EOS) {
+		goto baddirective;
+	}
+	client = bp;
+	clientlen = strcspn(bp, WHITESPACE);
+	if (clientlen >= MAXLINE-1 || clientlen < 1) {
+		cl_log(LOG_ERR
+		,	"Client name too long in %s directive",	KEY_APIPERM);
+		goto baddirective;
+	}
+	strncpy(clname, client, clientlen);
+	clname[clientlen] = EOS;
+
+	bp += clientlen;
+
+	bp += strspn(bp, WHITESPACE);
+
+	while (*bp != EOS) {
+
+		bp += strspn(bp, WHITESPACE);
+
+		if (strncmp(bp, "uid=", 4)) {
+			if (uidlist != NULL) {
+				cl_log(LOG_ERR 
+				,	"Duplicate uid list in " KEY_APIPERM);
+				goto baddirective;
+			}
+			bp += 4;
+			uidlist=bp;
+			uidlen = strcspn(bp, WHITESPACE);
+			bp += uidlen;
+		}else if (strncmp(bp, "gid=", 4)) {
+			if (gidlist != NULL) {
+				cl_log(LOG_ERR 
+				,	"Duplicate gid list in " KEY_APIPERM);
+				goto baddirective;
+			}
+			bp += 4;
+			gidlist=bp;
+			gidlen = strcspn(bp, WHITESPACE);
+			bp += gidlen;
+		}else if (*bp != EOS) {
+			cl_log(LOG_ERR 
+			,	"Missing uid or gid in " KEY_APIPERM);
+			goto baddirective;
+		}
+	}
+
+	if (uidlist == NULL && gidlist == NULL) {
+		goto baddirective;
+	}
+
+	auth = MALLOCT(struct IPC_AUTH);
+	if (auth == NULL) {
+		cl_log(LOG_ERR, "Out of memory for IPC_AUTH");
+		goto baddirective;
+	}
+
+	memset(auth, 0, sizeof(auth));
+
+	if (uidlist) {
+		auth->uid = make_id_table(uidlist, uidlen, unametonum);
+		if (auth->uid == NULL) {
+			cl_log(LOG_ERR 
+			,	"Bad uid list in " KEY_APIPERM);
+			goto baddirective;
+		}
+	}
+	if (gidlist) {
+		auth->gid = make_id_table(gidlist, gidlen, gnametonum);
+		if (auth->gid == NULL) {
+			cl_log(LOG_ERR 
+			,	"Bad gid list in " KEY_APIPERM);
+			goto baddirective;
+		}
+	}
+
+	if (g_hash_table_lookup(APIAuthorization, clname) != NULL) {
+		cl_log(LOG_ERR
+		,	"Duplicate %s directive for API client %s: [%s]"
+		,	KEY_APIPERM, clname, directive);
+		return HA_FAIL;
+	}
+
+	return HA_OK;
+
+baddirective:
+	cl_log(LOG_ERR, "Invalid %s directive [%s]", KEY_APIPERM, directive);
+	cl_log(LOG_INFO, "Syntax: %s [uid=uidlist] [gid=gidlist]", KEY_APIPERM);
+	cl_log(LOG_INFO, "Where uidlist is a comma-separated list of uids,");
+	cl_log(LOG_INFO, "and gidlist is a comma-separated list of gids");
+	cl_log(LOG_INFO, "One or the other must be specified.");
+	if (auth != NULL) {
+		if (auth->uid) {
+			/* Ought to destroy the strings too */
+			g_hash_table_destroy(auth->uid);
+		}
+		if (auth->gid) {
+			/* Ought destroy the strings too */
+			g_hash_table_destroy(auth->gid);
+		}
+		memset(auth, 0, sizeof(auth));
+		ha_free(auth);
+		auth = NULL;
+	}
+	return HA_FAIL;
+
+}
+
+
+
+
 /*
  * $Log: config.c,v $
+ * Revision 1.100  2003/10/27 15:47:10  alan
+ * Added a new configuration directive for managing API authoriztion.
+ *
  * Revision 1.99  2003/09/25 15:17:55  alan
  * Improved "no configuration file" messages for newbies.
  *
