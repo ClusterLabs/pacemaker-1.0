@@ -1,4 +1,4 @@
-/* $Id: apphb.c,v 1.17 2004/02/17 22:11:58 lars Exp $ */
+/* $Id: apphb.c,v 1.18 2004/09/10 01:27:17 alan Exp $ */
 /*
  * apphb.c: application heartbeat library code.
  *
@@ -224,7 +224,7 @@ apphb_setwarn(unsigned long hbms)
 		errno = ESRCH;
 		return -1;
 	}
-	if (hbms < 0) {
+	if (hbms <= 0) {
 		errno = EINVAL;
 		return -1;
 	}
