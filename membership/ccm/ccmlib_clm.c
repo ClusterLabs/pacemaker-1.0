@@ -19,17 +19,20 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
  */
+#include <portability.h>
+#include <strings.h>
+
 #include <unistd.h>
 #include <glib.h>
 #include <errno.h>
 #include <assert.h>
-#include <portability.h>
 #include <ocf/oc_event.h>
 #include <clplumbing/cl_log.h>
 #include <saf/ais.h>
 #ifdef POSIX_THREADS
 #  include <pthread.h>
 #endif
+#include <sys/time.h>
 
 #define CLM_TRACK_STOP 0
 #define CLM_DEBUG 0
