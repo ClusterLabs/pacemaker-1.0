@@ -24,11 +24,15 @@ INCLUDES = -I$(top_builddir)/include -I$(top_srcdir)/include \
 	-I$(top_builddir)/linux-ha -I$(top_srcdir)/linux-ha  \
 	-I$(top_builddir)/libltdl -I$(top_srcdir)/libltdl
 
+SUB_INCLUDES = -I$(top_builddir)/../include -I$(top_srcdir)/../include \
+	-I$(top_builddir)/../linux-ha -I$(top_srcdir)/../linux-ha  \
+	-I$(top_builddir)/../libltdl -I$(top_srcdir)/../libltdl
+
 Makefile.perl: Makefile.PL
 	$(PERL) $<
 
 .made_mod: cl_raw/cl_raw.pm Makefile.perl
-	$(MAKE) -fMakefile.perl
+	$(MAKE) -fMakefile.perl INCLUDES="$(SUB_INCLUDES)"
 	touch $@
 
 cl_raw/cl_raw.pm: cl_raw/cl_raw.i

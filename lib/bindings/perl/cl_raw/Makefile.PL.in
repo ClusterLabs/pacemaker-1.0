@@ -19,10 +19,10 @@
 use ExtUtils::MakeMaker;
 WriteMakefile(
 	'NAME'    => 'heartbeat::cl_raw',
-	'LIBS'    => ['-lm -lplumb @GLIBLIB@'], 
+	'LIBS'    => ['-lm -L../../../lib/clplumbing/.libs/ -lplumb @GLIBLIB@'], 
 	'OBJECT'  => 'cl_raw_wrap.o ipc_wrappers.o cl_log_wrappers.o',
 	'PERL_MALLOC_OK' => 1,
-	'INC'	  => '-I. -I/usr/include @GLIBHEAD@',
+	'INC'	  => '-I. -I/usr/include @GLIBHEAD@ $(INCLUDES)',
 	AUTHOR => 'Lars Marowsky-Brée <lmb\@suse.de>',
 	MAKEFILE => 'Makefile.perl'
 );
