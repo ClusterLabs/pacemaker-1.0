@@ -1,4 +1,4 @@
-/* $Id: findif.c,v 1.37 2004/04/29 07:12:19 lars Exp $ */
+/* $Id: findif.c,v 1.38 2004/04/29 14:18:20 kevin Exp $ */
 /*
  * findif.c:	Finds an interface which can route a given address
  *
@@ -517,10 +517,11 @@ main(int argc, char ** argv) {
 		strncpy(best_if, if_specified, sizeof(best_if));
 		*(best_if + sizeof(best_if) - 1) = '\0';
 	}else{
-		strcpy(best_if,"UNKNOWN"); /* just in case */
 		SearchRoute **sr = search_mechs;
 		char errmsg[MAXSTR] = "No valid mecahnisms";
 		int rc = -1;
+
+		strcpy(best_if, "UNKNOWN"); /* just in case */
 
 		while (*sr) {
 			errmsg[0] = '\0';
@@ -699,6 +700,9 @@ ff02::%lo0/32                     fe80::1%lo0                   UC          lo0
 
 /* 
  * $Log: findif.c,v $
+ * Revision 1.38  2004/04/29 14:18:20  kevin
+ * Be nice to the non C99 compliant comilers. (Declarations come first)
+ *
  * Revision 1.37  2004/04/29 07:12:19  lars
  * add missing return
  *
