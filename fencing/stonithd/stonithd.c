@@ -1,4 +1,4 @@
-/* $Id: stonithd.c,v 1.12 2005/02/06 08:54:34 sunjd Exp $ */
+/* $Id: stonithd.c,v 1.13 2005/02/07 00:23:01 alan Exp $ */
 
 /* File: stonithd.c
  * Description: STONITH deamon for node fencing
@@ -2371,8 +2371,8 @@ stonithRA_start_post( stonithRA_ops_t * ra_op, gpointer data )
 	srsc->node_list = NULL;
 	srsc->node_list = stonith_get_hostlist(srsc->stonith_obj);
 	if (srsc->node_list == NULL) {
-		stonithd_log(LOG_ERR, "Could not list nodes for stonith RA %s.",
-			     ra_op->ra_name);
+		stonithd_log(LOG_ERR, "Could not list nodes for stonith RA %s."
+		,	srsc->ra_name);
 	}
 
 	local_started_stonith_rsc = 
@@ -2823,6 +2823,9 @@ free_common_op_t(gpointer data)
 
 /* 
  * $Log: stonithd.c,v $
+ * Revision 1.13  2005/02/07 00:23:01  alan
+ * BEAM fix: changed printf to print a non-NULL value ;-)
+ *
  * Revision 1.12  2005/02/06 08:54:34  sunjd
  * remove return, or the loop is useless
  *
