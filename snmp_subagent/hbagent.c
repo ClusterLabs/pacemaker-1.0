@@ -60,7 +60,7 @@
 
 static unsigned long hbInitialized = 0;
 static ll_cluster_t * hb = NULL; /* heartbeat handle */
-static const char * myid = NULL; /* my node id */
+static char * myid = NULL; /* my node id */
 static SaClmHandleT clm = 0;
 static unsigned long clmInitialized = 0;
 
@@ -91,6 +91,7 @@ int walk_iftable(void);
 int nodestatus_trap(const char * node, const char * status);
 int ifstatus_trap(const char * node, const char * lnk, const char * status);
 int membership_trap(const char * node, SaClmClusterChangesT status);
+int hbagent_trap(int online, const char * node);
 
 int ping_membership(int * mem_fd);
 
@@ -473,7 +474,7 @@ init_heartbeat(void)
 	}
 	cl_cdtocoredir();
 
-	if (NULL == (myid = hb->llc_ops->get_mynodeid(hb))) {
+	if (NULL == (myid = ha_strdup(hb->llc_ops->get_mynodeid(hb)))) {
 		cl_log(LOG_ERR, "Cannot get mynodeid\n");
 		cl_log(LOG_ERR, "REASON: %s\n", hb->llc_ops->errmsg(hb));
 		return HA_FAIL;
@@ -1044,6 +1045,59 @@ ifstatus_trap(const char * node, const char * lnk, const char * status)
 }
 
 int 
+hbagent_trap(int online, const char * node)
+{
+    oid objid_snmptrap[] = { 1, 3, 6, 1, 6, 3, 1, 1, 4, 1, 0 };
+    size_t objid_snmptrap_len = OID_LENGTH(objid_snmptrap);
+
+    oid  nodename_oid[] = { 1, 3, 6, 1, 4, 1, 4682, 2, 1, 2 };
+    size_t nodename_oid_len = OID_LENGTH(nodename_oid);
+
+  /* this is the oid for the hbagent online trap */
+    oid  trap_oid[] = { 1, 3, 6, 1, 4, 1, 4682, 900, 7 };
+    size_t trap_oid_len = OID_LENGTH(trap_oid);
+
+    /* this is the oid for the offline trap */
+    if (!online) {
+	    trap_oid[trap_oid_len - 1] = 9;
+    }
+
+    netsnmp_variable_list *notification_vars = NULL;
+
+    snmp_varlist_add_variable(&notification_vars,
+                              /*
+                               * the snmpTrapOID.0 variable
+                               */
+                              objid_snmptrap, objid_snmptrap_len,
+                              /*
+                               * value type is an OID
+                               */
+                              ASN_OBJECT_ID,
+                              /*
+                               * value contents is our notification OID
+                               */
+                              (u_char *) trap_oid,
+                              /*
+                               * size in bytes = oid length * sizeof(oid)
+                               */
+                              trap_oid_len * sizeof(oid));
+
+    snmp_varlist_add_variable(&notification_vars,
+                              nodename_oid, 
+			      nodename_oid_len,
+                              ASN_OCTET_STR,
+                              (const u_char *) node,
+                              strlen(node)); /* do NOT use strlen() +1 */
+
+    cl_log(LOG_INFO, "sending hbagent trap. status:%d", online);
+    send_v2trap(notification_vars);
+    snmp_free_varbind(notification_vars);
+
+    return HA_OK;
+}
+
+
+int 
 membership_trap(const char * node, SaClmClusterChangesT status)
 {
     oid objid_snmptrap[] = { 1, 3, 6, 1, 6, 3, 1, 1, 4, 1, 0 };
@@ -1159,7 +1213,7 @@ main(int argc, char ** argv)
 
 	/* initialize the agent library */
 	if (init_agent("LHA-agent")) {
-		cl_log(LOG_ERR, "AgentX initialization failure.  This is unrecoverable.  Make sure that the master snmpd is started and is accepting AgentX connetions.  The subagent will not be respawned.");
+		cl_log(LOG_ERR, "AgentX initialization failure.  You can only run this as root.  Also make sure that the master snmpd is started and is accepting AgentX connetions.  The subagent will not be respawned.");
 
 		return 100;
 	}
@@ -1213,6 +1267,8 @@ main(int argc, char ** argv)
 	signal(SIGINT, stop_server);
 
 	snmp_log(LOG_INFO,"LHA-agent is up and running.\n");
+
+	hbagent_trap(1, myid);
 
 	/* you're main loop here... */
 	while(keep_running) {
@@ -1280,7 +1336,10 @@ main(int argc, char ** argv)
 	}
 
 	/* at shutdown time */
+	
+	hbagent_trap(0, myid);
 	snmp_shutdown("LHA-agent");
+	ha_free(myid);
 	free_storage();
 
 	return 0;

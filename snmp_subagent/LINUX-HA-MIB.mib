@@ -564,4 +564,18 @@ LHAMembershipChange NOTIFICATION-TYPE
     	"A node just changed it membership. "
     ::= { LHATrapTable 5 }
 
+LHAHBAgentOnline NOTIFICATION-TYPE
+    OBJECTS { LHANodeName }
+    STATUS  current
+    DESCRIPTION
+    	"The heartbeat agent for this node is online and ready to accept queries. "
+    ::= { LHATrapTable 7 }
+
+LHAHBAgentOffline NOTIFICATION-TYPE
+    OBJECTS { LHANodeName }
+    STATUS  current
+    DESCRIPTION
+    	"The heartbeat agent for this node is offline. "
+    ::= { LHATrapTable 9 }
+
 END
