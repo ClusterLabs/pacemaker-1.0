@@ -47,7 +47,7 @@ done
 #
 case $HA_NICEFAILBACK in
   [Yy]es)
-    ha_log "info: $0: nice_failback: acquiring foreign resources"
+    ha_log "info: $0: nice_failback: foreign resources acquired"
   	ha_clustermsg <<-!MSG
 	t=resource
 	rsc_hold=foreign
