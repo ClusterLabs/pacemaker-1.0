@@ -1,4 +1,4 @@
-/* $Id: stonithd.c,v 1.21 2005/03/08 08:17:16 sunjd Exp $ */
+/* $Id: stonithd.c,v 1.22 2005/03/11 03:23:43 sunjd Exp $ */
 
 /* File: stonithd.c
  * Description: STONITH daemon for node fencing
@@ -359,7 +359,7 @@ int main(int argc, char ** argv)
 			case 'd': /* Run with debug mode */
 				DEBUG_MODE = TRUE;
 				/* adjust the PILs' debug level */ 
-				PILpisysSetDebugLevel(1);
+				PILpisysSetDebugLevel(7);
 				break;
 
 			case 'h':
@@ -708,7 +708,7 @@ init_hb_msg_handler(void)
 	/* Set message callback */
 	if (hb->llc_ops->set_msg_callback(hb, T_WHOCANST, 
 				  handle_msg_twhocan, hb) != HA_OK) {
-		stonithd_log(LOG_ERR, "Cannot set msg T_WHOCAN callback");
+		stonithd_log(LOG_ERR, "Cannot set msg T_WHOCANST callback");
 		stonithd_log(LOG_ERR, "REASON: %s", hb->llc_ops->errmsg(hb));
 		return LSB_EXIT_GENERIC;
 	}
@@ -729,7 +729,7 @@ init_hb_msg_handler(void)
 
 	if (hb->llc_ops->set_msg_callback(hb, T_RSTIT, 
 				  handle_msg_trstit, hb) != HA_OK) {
-		stonithd_log(LOG_ERR, "Cannot set msg t_WHOCAN callback");
+		stonithd_log(LOG_ERR, "Cannot set msg T_WHOCANST callback");
 		stonithd_log(LOG_ERR, "REASON: %s", hb->llc_ops->errmsg(hb));
 		return LSB_EXIT_GENERIC;
 	}
@@ -792,11 +792,15 @@ handle_msg_twhocan(const struct ha_msg* msg, void* private_data)
 		return;
 	}
 
-	/* Don't handle the message sent by myself */
+	/* Don't handle the message sent by myself when not in TEST mode */
 	if ( strncmp(from, local_nodename, strlen(local_nodename)) 
 		== 0) {
-		stonithd_log(LOG_DEBUG, "received a T_WHOCAN msg from myself.");
-		return;
+		stonithd_log(LOG_DEBUG, "received a T_WHOCANST msg from myself.");
+		if (TEST == FALSE) {
+			return;
+		} else {
+			stonithd_log(LOG_DEBUG, "In TEST mode, so continue.");
+		}
 	}
 
 	if ( (target = cl_get_string(msg, F_STONITHD_NODE)) == NULL) {
@@ -841,9 +845,14 @@ handle_msg_twhocan(const struct ha_msg* msg, void* private_data)
 					"sendnodermsg failed.");
 			return;
 		}
-		ZAPMSG(reply);
+		stonithd_log(LOG_DEBUG, "handle_msg_twhocan: I can stonith "
+			     "node %s.", target);
 		stonithd_log(LOG_DEBUG,"handle_msg_twhocan: "
 				"send reply successfully.");
+		ZAPMSG(reply);
+	} else {
+		stonithd_log(LOG_DEBUG, "handle_msg_twhocan: I cannot stonith "
+			     "node %s.", target);
 	}
 }
 
@@ -861,9 +870,9 @@ handle_msg_ticanst(const struct ha_msg* msg, void* private_data)
 		return;
 	}
 
-	/* Don't handle the message sent by myself */
-	if ( strncmp(from, local_nodename, strlen(local_nodename)) 
-		== 0) {
+	/* Don't handle the message sent by myself when not TEST mode */
+	if ( (strncmp(from, local_nodename, strlen(local_nodename)) 
+		== 0) && ( TEST == FALSE ) ){
 		stonithd_log(LOG_DEBUG, "received a T_ICANST msg from myself.");
 		return;
 	}
@@ -926,7 +935,12 @@ handle_msg_tstit(const struct ha_msg* msg, void* private_data)
 		== 0) {
 		stonithd_log(LOG_DEBUG, "received a T_STIT message to require "
 				"to stonith myself.");
-		return;
+		if (TEST == FALSE) {
+			return;
+		} else {
+			stonithd_log(LOG_DEBUG, "In TEST mode, continue even "
+				     "to stonith myself.");
+		}
 	}
 
 	if ( HA_OK != ha_msg_value_int(msg, F_STONITHD_OPTYPE, &optype)) {
@@ -1008,7 +1022,7 @@ handle_msg_trstit(const struct ha_msg* msg, void* private_data)
 		return;
 	}
 
-	/* Don't handle the message sent by myself */
+	/* Don't handle the message sent by myself when not in TEST mode */
 	if ( TEST == FALSE &&
 	     strncmp(from, local_nodename, strlen(local_nodename)) == 0) {
 		stonithd_log(LOG_DEBUG, "received a T_RSTIT msg from myself.");
@@ -1929,6 +1943,7 @@ get_local_stonithobj_can_stonith( const char * node_name,
 	GList * begin_search_list = NULL;
 	stonith_rsc_t * tmp_srsc = NULL;
 
+	stonithd_log(LOG_DEBUG, "get_local_stonithobj_can_stonith: begin.");
 	if (local_started_stonith_rsc == NULL) {
 		stonithd_log(LOG_ERR, "get_local_stonithobj_can_stonith: "
 				"local_started_stonith_rsc == NULL");
@@ -1943,6 +1958,11 @@ get_local_stonithobj_can_stonith( const char * node_name,
 
 	if (begin_rsc_id == NULL) {
 		begin_search_list = g_list_first(local_started_stonith_rsc);
+		if (begin_search_list == NULL) {
+			stonithd_log(LOG_DEBUG, "get_local_stonithobj_can_"
+				"stonith: local_started_stonith_rsc is empty.");
+			return NULL;
+		}
 	} else {
 		for ( tmplist = g_list_first(local_started_stonith_rsc); 
 		      tmplist != NULL; 
@@ -1952,15 +1972,14 @@ get_local_stonithobj_can_stonith( const char * node_name,
 			     strncmp(tmp_srsc->rsc_id, begin_rsc_id, 
 				strlen(begin_rsc_id)) == 0) {
 				begin_search_list = g_list_next(tmplist);
+				break;
 			}
 		}
-	}
-
-	if (begin_search_list == NULL) {
-		stonithd_log(LOG_ERR, "get_local_stonithobj_can_stonith: "
-				"begin_rsc_id donnot exist");
-	} else {
-		begin_search_list = g_list_first(local_started_stonith_rsc);
+		if (begin_search_list == NULL) {
+			stonithd_log(LOG_DEBUG, "get_local_stonithobj_can_"
+				"stonith: begin_rsc_id donnot exist.");
+			return NULL;
+		}
 	}
 
 	for ( tmplist = begin_search_list;
@@ -1970,10 +1989,21 @@ get_local_stonithobj_can_stonith( const char * node_name,
 		if ( tmp_srsc != NULL && tmp_srsc->node_list != NULL ) {
 			char **	this;
 			for(this=tmp_srsc->node_list; *this; ++this) {
+				stonithd_log(LOG_DEBUG, "get_local_stonithobj_"
+					"can_stonith: host=%s.", *this);
 				if ( strncmp(node_name, *this, 
 					strlen(node_name)) == 0 ) {
 					return tmp_srsc;
 				}
+			}
+		} else {
+			if (tmp_srsc == NULL) {
+				stonithd_log(LOG_DEBUG, "get_local_stonithobj_"
+					"can_stonith: tmp_srsc=NULL.");
+				
+			} else {
+				stonithd_log(LOG_DEBUG, "get_local_stonithobj_"
+				    "can_stonith: tmp_srsc->node_list = NULL.");
 			}
 		}
 	}
@@ -2918,6 +2948,9 @@ free_common_op_t(gpointer data)
 
 /* 
  * $Log: stonithd.c,v $
+ * Revision 1.22  2005/03/11 03:23:43  sunjd
+ * make TEST mode work well; add more logs
+ *
  * Revision 1.21  2005/03/08 08:17:16  sunjd
  * add the STONITH result patterns for CTS
  *
