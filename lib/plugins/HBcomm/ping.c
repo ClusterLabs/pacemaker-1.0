@@ -1,4 +1,4 @@
-/* $Id: ping.c,v 1.33 2004/04/29 16:14:50 msoffen Exp $ */
+/* $Id: ping.c,v 1.34 2004/05/12 00:02:18 alan Exp $ */
 /*
  * ping.c: ICMP-echo-based heartbeat code for heartbeat.
  *
@@ -239,7 +239,7 @@ new_ping_interface(const char * host)
 		struct hostent *hep;
 		hep = gethostbyname(host);
 		if (hep == NULL) {
-			LOG(PIL_CRIT, "unknown host: %s: %s"
+			PILCallLog(LOG, PIL_CRIT, "unknown host: %s: %s"
 			,	host, strerror(errno));
 			FREE(ppi); ppi = NULL;
 			return NULL;
@@ -341,7 +341,7 @@ ping_read(struct hb_media* mp, int *lenp)
 	,	sizeof(buf.cbuf)-1, 0,	(struct sockaddr *)&their_addr
 	,	&addr_len)) < 0) {
 		if (errno != EINTR) {
-			LOG(PIL_CRIT, "Error receiving from socket: %s"
+			PILCallLog(LOG, PIL_CRIT, "Error receiving from socket: %s"
 			,	strerror(errno));
 		}
 		return NULL;
@@ -354,7 +354,7 @@ ping_read(struct hb_media* mp, int *lenp)
 	hlen = ip->ip_hl * 4;
 
 	if (numbytes < hlen + ICMP_MINLEN) {
-		LOG(PIL_WARN, "ping packet too short (%d bytes) from %s"
+		PILCallLog(LOG, PIL_WARN, "ping packet too short (%d bytes) from %s"
 		,	numbytes
 		,	inet_ntoa(*(struct in_addr *)
 		&		their_addr.sin_addr.s_addr));
@@ -369,13 +369,13 @@ ping_read(struct hb_media* mp, int *lenp)
 	}
 
 	if (DEBUGPKT) {
-		LOG(PIL_DEBUG, "got %d byte packet from %s"
+		PILCallLog(LOG, PIL_DEBUG, "got %d byte packet from %s"
 		,	numbytes, inet_ntoa(their_addr.sin_addr));
 	}
 	msgstart = (buf.cbuf + hlen + ICMP_HDR_SZ);
 
 	if (DEBUGPKTCONT && numbytes > 0) {
-		LOG(PIL_DEBUG, "%s", msgstart);
+		PILCallLog(LOG, PIL_DEBUG, "%s", msgstart);
 	}
 	
 	pktlen = numbytes - hlen - ICMP_HDR_SZ;
@@ -440,7 +440,7 @@ ping_write(struct hb_media* mp, void *p, int len)
 	
 	msg = wirefmt2msg(p, len);
 	if( !msg){
-		LOG(PIL_CRIT, "ping_write(): cannot convert wirefmt to msg");
+		PILCallLog(LOG, PIL_CRIT, "ping_write(): cannot convert wirefmt to msg");
 		return(HA_FAIL);
 	}
 	
@@ -465,7 +465,7 @@ ping_write(struct hb_media* mp, void *p, int len)
 	 * F_AUTH:	added by add_msg_auth()
 	 */
 	if ((nmsg = ha_msg_new(5)) == NULL) {
-		LOG(PIL_CRIT, "cannot create new message");
+		PILCallLog(LOG, PIL_CRIT, "cannot create new message");
 		ha_msg_del(msg);
 		return(HA_FAIL);
 	}
@@ -476,20 +476,20 @@ ping_write(struct hb_media* mp, void *p, int len)
 	||	ha_msg_add(nmsg, F_ORIG, mp->name) != HA_OK
 	||	ha_msg_add(nmsg, F_TIME, ts) != HA_OK) {
 		ha_msg_del(nmsg); nmsg = NULL;
-		LOG(PIL_CRIT, "cannot add fields to message");
+		PILCallLog(LOG, PIL_CRIT, "cannot add fields to message");
 		ha_msg_del(msg);
 		return HA_FAIL;
 	}
 
 	if (add_msg_auth(nmsg) != HA_OK) {
-		LOG(PIL_CRIT, "cannot add auth field to message");
+		PILCallLog(LOG, PIL_CRIT, "cannot add auth field to message");
 		ha_msg_del(nmsg); nmsg = NULL;
 		ha_msg_del(msg);
 		return HA_FAIL;
 	}
 	
 	if ((pkt = msg2wirefmt(nmsg, &size)) == NULL)  {
-		LOG(PIL_CRIT, "cannot convert message to string");
+		PILCallLog(LOG, PIL_CRIT, "cannot convert message to string");
 		ha_msg_del(msg);
 		return HA_FAIL;
 	}
@@ -499,7 +499,7 @@ ping_write(struct hb_media* mp, void *p, int len)
 	pktsize = size + ICMP_HDR_SZ;
 
 	if ((icmp_pkt = MALLOC(pktsize)) == NULL) {
-		LOG(PIL_CRIT, "out of memory");
+		PILCallLog(LOG, PIL_CRIT, "out of memory");
 		ha_free(pkt);
 		ha_msg_del(msg);
 		return HA_FAIL;
@@ -522,18 +522,18 @@ ping_write(struct hb_media* mp, void *p, int len)
 	if ((rc=sendto(ei->sock, (void *) icmp_pkt, pktsize, 0
 	,	(struct sockaddr *)&ei->addr
 	,	sizeof(struct sockaddr))) != (ssize_t)pktsize) {
-		LOG(PIL_CRIT, "Error sending packet: %s", strerror(errno));
+		PILCallLog(LOG, PIL_CRIT, "Error sending packet: %s", strerror(errno));
 		FREE(icmp_pkt);
 		ha_msg_del(msg);
 		return(HA_FAIL);
 	}
 
 	if (DEBUGPKT) {
-		LOG(PIL_DEBUG, "sent %d bytes to %s"
+		PILCallLog(LOG, PIL_DEBUG, "sent %d bytes to %s"
 		,	rc, inet_ntoa(ei->addr.sin_addr));
    	}
 	if (DEBUGPKTCONT) {
-		LOG(PIL_DEBUG, pkt);
+		PILCallLog(LOG, PIL_DEBUG, "ping pkt: %s", pkt);
    	}
 	FREE(icmp_pkt);
 	ha_msg_del(msg);
@@ -558,21 +558,21 @@ ping_open(struct hb_media* mp)
 
 
 	if ((proto = getprotobyname("icmp")) == NULL) {
-		LOG(PIL_CRIT, "protocol ICMP is unknown: %s", strerror(errno));
+		PILCallLog(LOG, PIL_CRIT, "protocol ICMP is unknown: %s", strerror(errno));
 		return HA_FAIL;
 	}
 	if ((sockfd = socket(AF_INET, SOCK_RAW, proto->p_proto)) < 0) {
-		LOG(PIL_CRIT, "Can't open RAW socket.: %s", strerror(errno));
+		PILCallLog(LOG, PIL_CRIT, "Can't open RAW socket.: %s", strerror(errno));
 		return HA_FAIL;
     	}
 
 	if (fcntl(sockfd, F_SETFD, FD_CLOEXEC)) {
-		LOG(PIL_CRIT, "Error setting the close-on-exec flag: %s"
+		PILCallLog(LOG, PIL_CRIT, "Error setting the close-on-exec flag: %s"
 		,	strerror(errno));
 	}
 	ei->sock = sockfd;
 
-	LOG(LOG_NOTICE, "ping heartbeat started.");
+	PILCallLog(LOG, PIL_INFO, "ping heartbeat started.");
 	return HA_OK;
 }
 
