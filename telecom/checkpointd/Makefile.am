@@ -37,6 +37,7 @@ havarlibdir		= $(localstatedir)/lib/@HB_PKG@
 ckptvarlibdir		= $(havarlibdir)/ckpt
 havarrundir		= $(localstatedir)/run/
 
+## AM_CFLAGS		= @CFLAGS@ -fprofile-arcs -ftest-coverage 
 AM_CFLAGS		= @CFLAGS@ \
 			-DCKPTVARLIBDIR='"$(ckptvarlibdir)"'
 
@@ -59,7 +60,11 @@ checkpointd_LDFLAGS	=
 #ckpttest
 ckpttest_SOURCES	= ckpttest.c
 ckpttest_LDADD		= $(GLIBLIB) \
-			$(top_builddir)/lib/checkpointd/libckpt.la
+	 		$(top_builddir)/lib/checkpointd/libckpt.la \
+			$(top_builddir)/replace/libreplace.la \
+			$(top_builddir)/lib/clplumbing/libplumb.la \
+			$(top_builddir)/heartbeat/libhbclient.la \
+			$(GLIBLIB)
 ckpttest_LDFLAGS	= 
 
 install-exec-local:

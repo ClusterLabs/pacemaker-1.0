@@ -1,4 +1,4 @@
-/* $Id: operation.h,v 1.3 2004/02/17 22:12:02 lars Exp $ */
+/* $Id: operation.h,v 1.4 2004/03/12 02:59:38 deng.pan Exp $ */
 #ifndef _CKPT_OPERATION_H
 #define _CKPT_OPERATION_H
 
@@ -15,7 +15,9 @@ typedef enum {
 	OP_RPLC_ADD	= 3,
 	OP_CKPT_UPD	= 4,
 	OP_CKPT_READ	= 5,
-	OP_CKPT_ULNK	= 6
+	OP_CKPT_ULNK	= 6,
+	OP_CKPT_SYNC	= 7,
+	OP_CKPT_ACT_SET	= 8
 } SaCkptOpT;
 
 /* the replica operation state */

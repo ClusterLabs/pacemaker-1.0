@@ -42,6 +42,5 @@ AM_CFLAGS		= @CFLAGS@ \
 lib_LTLIBRARIES		= libckpt.la
 
 libckpt_la_SOURCES	= libckpt.c	
-
 libckpt_la_CFLAGS	= $(AM_CFLAGS)
 libckpt_la_LDFLAGS	= -version-info 0:0:0 

@@ -1,4 +1,4 @@
-/* $Id: response.c,v 1.6 2004/02/17 22:12:02 lars Exp $ */
+/* $Id: response.c,v 1.7 2004/03/12 02:59:38 deng.pan Exp $ */
 /* 
  * response.c
  *
@@ -37,6 +37,7 @@
 #include <clplumbing/ipc.h>
 #include <clplumbing/Gmain_timeout.h>
 #include <clplumbing/base64.h>
+#include <clplumbing/realtime.h>
 #include <hb_api_core.h>
 #include <hb_api.h>
 #include <ha_msg.h>
@@ -67,7 +68,6 @@ SaCkptResponseSend(SaCkptResponseT** pCkptResp)
 	IPC_Channel* chan = ckptReq->clientChannel;
 
 	IPC_Message* ipcMsg = NULL;
-	int rc = SA_OK;
 	char* p = NULL;
 
 	char* strErr = NULL;
@@ -122,10 +122,12 @@ SaCkptResponseSend(SaCkptResponseT** pCkptResp)
 #endif 
 
 	/* send response message */
-	rc = chan->ops->send(chan, ipcMsg);
-	if (rc != IPC_OK) {
+	while (chan->ops->send(chan, ipcMsg) == IPC_FAIL) {
 		cl_log(LOG_ERR, "Send response failed");
+		cl_log(LOG_ERR, "Sleep for a while and try again");
+		cl_shortsleep();
 	}
+	chan->ops->waitout(chan);
 	
 	/* free ipc message */
 	if (ipcMsg != NULL) {
@@ -146,13 +148,13 @@ SaCkptResponseSend(SaCkptResponseT** pCkptResp)
 
 	*pCkptResp = NULL;
 
-	/* remove request */
-	SaCkptRequestRemove(&ckptReq);
-
 	/* the end of the request */
 	if (saCkptService->flagVerbose) {
 		cl_log(LOG_INFO, "--->>>\n");
 	}
+	
+	/* remove request */
+	SaCkptRequestRemove(&ckptReq);
 
 	return HA_OK;
 }

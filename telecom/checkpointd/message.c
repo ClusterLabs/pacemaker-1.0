@@ -1,4 +1,4 @@
-/* $Id: message.c,v 1.9 2004/02/17 22:12:02 lars Exp $ */
+/* $Id: message.c,v 1.10 2004/03/12 02:59:38 deng.pan Exp $ */
 /* 
  * message.c
  *
@@ -171,7 +171,7 @@ SaCkptClusterMsgProcess()
 			if (!replica->flagIsActive) {
 				if (saCkptService->flagVerbose) {
 					cl_log(LOG_INFO,
-					"Not active replica, ignore message");
+					"Standby replica, ignore message");
 				}
 				
 				break;	
@@ -240,7 +240,7 @@ SaCkptClusterMsgProcess()
 			
 			if (!replica->flagIsActive) {
 				cl_log(LOG_ERR,
-					"Not active replica, ignore message");
+					"Standby replica, ignore message");
 				break;	
 			}
 
@@ -319,7 +319,7 @@ SaCkptClusterMsgProcess()
 			
 			if (!replica->flagIsActive) {
 				cl_log(LOG_ERR,
-					"Not active replica, ignore message");
+					"Standby replica, ignore message");
 				break;	
 			}
 
@@ -390,15 +390,15 @@ SaCkptClusterMsgProcess()
 			
 			if (!replica->flagIsActive) {
 				cl_log(LOG_ERR,
-					"Not active replica, ignore message");
+					"Standby replica, ignore message");
 				break;	
 			}
 
 			ckptOp = SaCkptOperationCreate(ckptMsg, replica);
 			ckptOp->operation= OP_RPLC_CRT;
-			if (replica->flagLockReplica != TRUE){
+			if (replica->flagReplicaLock != TRUE){
 				/* lock the replica first */
-				replica->flagLockReplica = TRUE;
+				replica->flagReplicaLock = TRUE;
 				if (saCkptService->flagVerbose) {
 					cl_log(LOG_INFO,
 						"Replica %s locked",
@@ -612,7 +612,7 @@ SaCkptClusterMsgProcess()
 					ckptOp->clientHostName);
 
 				/* unlock the replica */
-				replica->flagLockReplica = FALSE;
+				replica->flagReplicaLock = FALSE;
 				if (saCkptService->flagVerbose) {
 					cl_log(LOG_INFO,
 						"Replica %s unlocked",
@@ -645,7 +645,7 @@ SaCkptClusterMsgProcess()
 				SaCkptReplicaRemove(&replica);
 			} else {
 				replica->replicaState = STATE_CREATE_COMMITTED;
-				replica->flagLockReplica = FALSE;
+				replica->flagReplicaLock = FALSE;
 				if (saCkptService->flagVerbose) {
 					cl_log(LOG_INFO,
 						"Replica %s unlocked",
@@ -731,7 +731,7 @@ SaCkptClusterMsgProcess()
 				SaCkptMessageSend(ckptMsg, 
 					ckptOp->clientHostName);
 
-				replica->flagLockReplica = FALSE;
+				replica->flagReplicaLock = FALSE;
 				if (saCkptService->flagVerbose) {
 					cl_log(LOG_INFO,
 						"Replica %s unlocked",
@@ -778,7 +778,7 @@ SaCkptClusterMsgProcess()
 				strcpy(replica->activeNodeName, 
 					saCkptService->nodeName);
 				replica->flagIsActive = TRUE;
-				replica->flagLockReplica = FALSE;
+				replica->flagReplicaLock = FALSE;
 				if (saCkptService->flagVerbose) {
 					cl_log(LOG_INFO,
 						"Replica %s unlocked",
@@ -819,14 +819,14 @@ SaCkptClusterMsgProcess()
 			
 			if (!replica->flagIsActive) {
 				cl_log(LOG_ERR,
-					"Not active replica, ignore message");
+					"Standby replica, ignore message");
 				break;	
 			}
 
 			ckptOp = SaCkptOperationCreate(ckptMsg, replica);
 			SACKPTASSERT (ckptOp!= NULL);
 			
-			if (replica->flagLockReplica == TRUE) {
+			if (replica->flagReplicaLock == TRUE) {
 				replica->pendingOperationList = 
 					g_list_append(
 					replica->pendingOperationList,
@@ -842,7 +842,7 @@ SaCkptClusterMsgProcess()
 				break;
 			}
 
-			replica->flagLockReplica = TRUE;
+			replica->flagReplicaLock = TRUE;
 			if (saCkptService->flagVerbose) {
 				cl_log(LOG_INFO,
 					"Replica %s locked",
@@ -869,7 +869,7 @@ SaCkptClusterMsgProcess()
 					ckptMsg->clientHostName);
 
 				if (retVal != SA_OK) {
-					replica->flagLockReplica = FALSE;
+					replica->flagReplicaLock = FALSE;
 					if (saCkptService->flagVerbose) {
 						cl_log(LOG_INFO,
 							"Replica %s unlocked",
@@ -899,7 +899,7 @@ SaCkptClusterMsgProcess()
 				SaCkptMessageMulticast(ckptMsg, nodeList);
 				g_list_free(nodeList);
 
-				replica->flagLockReplica = FALSE;
+				replica->flagReplicaLock = FALSE;
 				if (saCkptService->flagVerbose) {
 					cl_log(LOG_INFO,
 						"Replica %s unlocked",
@@ -1079,7 +1079,7 @@ SaCkptClusterMsgProcess()
 					ckptMsg->clientHostName);
 				
 				/* unlock replica */
-				replica->flagLockReplica = FALSE;
+				replica->flagReplicaLock = FALSE;
 				if (saCkptService->flagVerbose) {
 					cl_log(LOG_INFO,
 						"Replica %s unlocked",
@@ -1143,7 +1143,7 @@ SaCkptClusterMsgProcess()
 				SaCkptMessageSend(ckptMsg, ckptMsg->clientHostName);
 
 				/* unlock replica */
-				replica->flagLockReplica = FALSE;
+				replica->flagReplicaLock = FALSE;
 				if (saCkptService->flagVerbose) {
 					cl_log(LOG_INFO,
 						"Replica %s unlocked",
@@ -1168,11 +1168,11 @@ SaCkptClusterMsgProcess()
 			
 			if (!replica->flagIsActive) {
 				cl_log(LOG_INFO,
-					"Not active replica, ignore message");
+					"Standby replica, ignore message");
 				break;	
 			}
 
-			if (replica->flagLockReplica != TRUE) {
+			if (replica->flagReplicaLock != TRUE) {
 				retVal = SaCkptReplicaRead(replica, 
 					&(ckptMsg->dataLength),
 					&(ckptMsg->data),
@@ -1191,15 +1191,166 @@ SaCkptClusterMsgProcess()
 					replica->pendingOperationList,
 					(gpointer)ckptOp);
 				cl_log(LOG_INFO, 
-					"Send operation to pending list");
+					"Send read operation to pending list");
 				
 				SaCkptOperationStartTimer(ckptOp);
 			}
 
 			break;
 
+		/*
+		 * sync message 
+		 * on receive this message, if the replica is not lock and no 
+		 * other pending operations, the active replica reply it with
+		 * OK. Else, the active replica add it to the the pending list
+		 */
+		case M_CKPT_SYNC:
+			if (replica == NULL) {
+				cl_log(LOG_INFO,
+					"No replica, ignore message");
+				break;
+			}
+			
+			if (!replica->flagIsActive) {
+				cl_log(LOG_INFO,
+					"Standby replica, ignore message");
+				break;	
+			}
+
+			if ((replica->flagReplicaLock != TRUE)  && 
+				(g_list_length(
+				replica->pendingOperationList) == 0)) {
+				
+				ckptMsg->retVal = SA_OK;
+				ckptMsg->msgSubtype = M_CKPT_SYNC_REPLY;
+				SaCkptMessageSend(ckptMsg, 
+					ckptMsg->clientHostName);
+			} else {
+				ckptOp = SaCkptOperationCreate(
+					ckptMsg, replica);
+				replica->pendingOperationList = 
+					g_list_append(
+					replica->pendingOperationList,
+					(gpointer)ckptOp);
+				cl_log(LOG_INFO, 
+					"Send sync operation to pending list");
+				
+				SaCkptOperationStartTimer(ckptOp);
+			}
+
+			break;
+
+		/* 
+		 * set active broadcast message
+		 * on receive this message, all the replica stop sending 
+		 * requests to the active replica.
+		 */
+		case M_CKPT_ACT_SET_BCAST:
+			if (replica == NULL) {
+				cl_log(LOG_INFO,
+					"No replica, ignore message");
+				break;
+			}
+			
+			replica->flagReplicaPending = TRUE;
+			cl_log(LOG_INFO,
+				"Replica %s stop sending requests",
+				replica->checkpointName);
+			
+			if (!replica->flagIsActive) {
+				cl_log(LOG_INFO,
+					"Standby replica, ignore message");
+				break;	
+			}
+
+			if ((replica->flagReplicaLock != TRUE)  && 
+				(g_list_length(
+				replica->pendingOperationList) == 0)) {
+
+				ckptMsg->retVal = SA_OK;
+				ckptMsg->msgSubtype = M_CKPT_ACT_SET_BCAST_REPLY;
+				SaCkptMessageSend(ckptMsg, 
+					ckptMsg->clientHostName);
+			} else {
+				ckptOp = SaCkptOperationCreate(
+					ckptMsg, replica);
+				replica->pendingOperationList = 
+					g_list_append(
+					replica->pendingOperationList,
+					(gpointer)ckptOp);
+				cl_log(LOG_INFO, 
+				"Send act_set operation to pending list");
+				
+				SaCkptOperationStartTimer(ckptOp);
+			}
+
+			break;
+
+		case M_CKPT_ACT_SET_BCAST_REPLY:
+			if (replica == NULL) {
+				cl_log(LOG_INFO,
+					"No replica, ignore message");
+				break;
+			}
+			SACKPTMESSAGEVALIDATEREQ(ckptMsg);
+
+			replica->flagIsActive = TRUE;
+			strcpy(replica->activeNodeName,
+				saCkptService->nodeName);
+			cl_log(LOG_INFO, 
+				"checkpoint %s is set as active replica",
+				replica->checkpointName);
+			
+			replica->flagReplicaPending = FALSE;
+			cl_log(LOG_INFO,
+				"Replica %s resume sending requests",
+				replica->checkpointName);
+			
+			ckptMsg->retVal = SA_OK;
+			ckptMsg->msgSubtype = M_CKPT_ACT_SET_FINISH_BCAST;
+			SaCkptMessageBroadcast(ckptMsg);
+
+			/* stop timer and send back response */
+			SaCkptRequestStopTimer(ckptReq);
+			
+			ckptResp = SaCkptResponseCreate(ckptReq);
+			ckptResp->resp->retVal = ckptMsg->retVal;
+
+			SaCkptResponseSend(&ckptResp);
+
+			break;
+			
+		case M_CKPT_ACT_SET_FINISH_BCAST:
+			if (replica == NULL) {
+				cl_log(LOG_INFO,
+					"No replica, ignore message");
+				break;
+			}
+
+			if (strcmp(saCkptService->nodeName, 
+				ckptMsg->clientHostName) == 0) {
+				cl_log(LOG_INFO,
+					"Send from itself, ignore message");
+				break;
+			}
+
+			replica->flagIsActive = FALSE;
+			strcpy(replica->activeNodeName,
+				ckptMsg->clientHostName);
+			cl_log(LOG_INFO, 
+			"Active node of replica %s has been switched to %s",
+			replica->checkpointName, replica->activeNodeName);
+
+			replica->flagReplicaPending = FALSE;
+			cl_log(LOG_INFO,
+				"Replica %s resume sending requests",
+				replica->checkpointName);
+			
+			break;	
+			
 		case M_CKPT_UPD_REPLY:
 		case M_CKPT_READ_REPLY:
+		case M_CKPT_SYNC_REPLY:
 			if (replica == NULL) {
 				cl_log(LOG_INFO, 
 					"No replica, ignore message");
@@ -1212,7 +1363,8 @@ SaCkptClusterMsgProcess()
 			ckptResp = SaCkptResponseCreate(ckptReq);
 			ckptResp->resp->retVal = ckptMsg->retVal;
 
-			if (ckptMsg->dataLength > 0) {
+			if ((ckptMsg->msgSubtype == M_CKPT_READ_REPLY) &&
+				(ckptMsg->dataLength > 0)) {
 				ckptResp->resp->dataLength = 
 					ckptMsg->dataLength;
 				ckptResp->resp->data = 
@@ -1226,7 +1378,7 @@ SaCkptClusterMsgProcess()
 			SaCkptResponseSend(&ckptResp);
 
 			break;
-
+			
 		default:
 			
 			break;
@@ -1289,12 +1441,12 @@ SaCkptMessageReceive()
 	ll_cluster_t	*hb		= saCkptService->heartbeat;
 	struct ha_msg	*haMsg		= NULL;
 	SaCkptMessageT	*ckptMsg 	= NULL;
-	
+
 	if (!hb->llc_ops->msgready(hb)) {
 		return NULL;
 	}
 	
-	haMsg = hb->llc_ops->readmsg(hb, FALSE);
+	haMsg = hb->llc_ops->readmsg(hb, TRUE);
 	if (haMsg == NULL) {
 		return NULL;
 	}
@@ -1934,23 +2086,14 @@ SaCkptMsgSubtype2String(SaCkptMsgSubtypeT msgSubtype)
 	case M_CKPT_SYNC_REPLY:
 		strcpy(strTemp, "M_CKPT_SYNC_REPLY");
 		break;
-	case M_CKPT_SYNC_FINISH:
-		strcpy(strTemp, "M_CKPT_SYNC_FINISH");
+	case M_CKPT_ACT_SET_BCAST:
+		strcpy(strTemp, "M_CKPT_ACT_SET_BCAST");
 		break;
-	case M_CKPT_SETACTIVE:
-		strcpy(strTemp, "M_CKPT_SETACTIVE");
+	case M_CKPT_ACT_SET_BCAST_REPLY:
+		strcpy(strTemp, "M_CKPT_ACT_SET_BCAST_REPLY");
 		break;
-	case M_CKPT_PENDING_BCAST:
-		strcpy(strTemp, "M_CKPT_PENDING_BCAST");
-		break;
-	case M_CKPT_PENDING_BCAST_REPLY:
-		strcpy(strTemp, "M_CKPT_PENDING_BCAST_REPLY");
-		break;
-	case M_CKPT_SETACTIVE_REPLY:
-		strcpy(strTemp, "M_CKPT_SETACTIVE_REPLY");
-		break;
-	case M_CKPT_SETACTIVE_BCAST:
-		strcpy(strTemp, "M_CKPT_SETACTIVE_BCAST");
+	case M_CKPT_ACT_SET_FINISH_BCAST:
+		strcpy(strTemp, "M_CKPT_ACT_SET_FINISH_BCAST");
 		break;
 	case M_CKPT_READ:
 		strcpy(strTemp, "M_CKPT_READ");

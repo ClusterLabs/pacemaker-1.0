@@ -1,4 +1,4 @@
-/* $Id: replica.c,v 1.9 2004/02/17 22:12:02 lars Exp $ */
+/* $Id: replica.c,v 1.10 2004/03/12 02:59:38 deng.pan Exp $ */
 /* 
  * replica.c: 
  *
@@ -150,7 +150,7 @@ SaCkptReplicaCreate(SaCkptReqOpenParamT* openParam)
 	replica->referenceCount = 0;
 	replica->flagUnlink = FALSE;
 	replica->flagPendOperation = FALSE;
-	replica->flagLockReplica = FALSE;
+	replica->flagReplicaLock = FALSE;
 	if (saCkptService->flagVerbose) {
 		cl_log(LOG_INFO,
 			"Replica %s unlocked",
@@ -660,7 +660,7 @@ SaCkptReplicaUnpack(void* data, int dataLength)
 	replica->pendingOperationList = NULL;
 	replica->flagIsActive = FALSE;
 	replica->flagPendOperation = TRUE;
-	replica->flagLockReplica = TRUE;
+	replica->flagReplicaLock = TRUE;
 	if (saCkptService->flagVerbose) {
 		cl_log(LOG_INFO,
 			"Replica %s locked",
@@ -979,6 +979,10 @@ SaCkptReplicaUpdCommit(SaCkptReplicaT* replica, SaCkptReqT req,
 
 		sec = SaCkptSectionFind(replica, 
 			&(secCrtParam->sectionID));
+		if (sec == NULL) {
+			retVal = SA_ERR_NOT_EXIST;
+			break;
+		}
 		if (sec->sectionState != STATE_CREATE_PREPARED) {
 			cl_log(LOG_ERR, 
 				"Section create commit: not prepared");
@@ -1000,6 +1004,10 @@ SaCkptReplicaUpdCommit(SaCkptReplicaT* replica, SaCkptReqT req,
 
 		sec = SaCkptSectionFind(replica, 
 			&(secDelParam->sectionID));
+		if (sec == NULL) {
+			retVal = SA_ERR_NOT_EXIST;
+			break;
+		}
 		if (sec->sectionState != STATE_DELETE_PREPARED) {
 			cl_log(LOG_ERR, 
 				"Section delete commit: not prepared");
@@ -1040,6 +1048,10 @@ SaCkptReplicaUpdCommit(SaCkptReplicaT* replica, SaCkptReqT req,
 
 		sec = SaCkptSectionFind(replica, 
 			&(secWrtParam->sectionID));
+		if (sec == NULL) {
+			retVal = SA_ERR_NOT_EXIST;
+			break;
+		}
 		if (sec->dataUpdateState != OP_STATE_PREPARED) {
 			cl_log(LOG_ERR, 
 				"Section write commit: not prepared");
@@ -1071,6 +1083,10 @@ SaCkptReplicaUpdCommit(SaCkptReplicaT* replica, SaCkptReqT req,
 
 		sec = SaCkptSectionFind(replica, 
 			&(secOwrtParam->sectionID));
+		if (sec == NULL) {
+			retVal = SA_ERR_NOT_EXIST;
+			break;
+		}
 		if (sec->dataUpdateState != OP_STATE_PREPARED) {
 			cl_log(LOG_ERR, 
 				"Section overwrite commit: not prepared");
@@ -1136,6 +1152,10 @@ SaCkptReplicaUpdRollback(SaCkptReplicaT* replica, SaCkptReqT req,
 		
 		sec = SaCkptSectionFind(replica, 
 			&(secCrtParam->sectionID));
+		if (sec == NULL) {
+			retVal = SA_ERR_NOT_EXIST;
+			break;
+		}
 		if (sec->sectionState != STATE_CREATE_PREPARED) {
 			cl_log(LOG_ERR, 
 				"Section create rollback: not prepared");
@@ -1173,6 +1193,10 @@ SaCkptReplicaUpdRollback(SaCkptReplicaT* replica, SaCkptReqT req,
 
 		sec = SaCkptSectionFind(replica, 
 			&(secDelParam->sectionID));
+		if (sec == NULL) {
+			retVal = SA_ERR_NOT_EXIST;
+			break;
+		}
 		if (sec->sectionState != STATE_DELETE_PREPARED) {
 			cl_log(LOG_ERR, 
 				"Section delete rollback: not prepared");
@@ -1188,6 +1212,10 @@ SaCkptReplicaUpdRollback(SaCkptReplicaT* replica, SaCkptReqT req,
 
 		sec = SaCkptSectionFind(replica, 
 			&(secWrtParam->sectionID));
+		if (sec == NULL) {
+			retVal = SA_ERR_NOT_EXIST;
+			break;
+		}
 		if (sec->dataUpdateState != OP_STATE_PREPARED) {
 			cl_log(LOG_ERR, 
 				"Section write rollback: not prepared");
@@ -1209,6 +1237,10 @@ SaCkptReplicaUpdRollback(SaCkptReplicaT* replica, SaCkptReqT req,
 
 		sec = SaCkptSectionFind(replica, 
 			&(secOwrtParam->sectionID));
+		if (sec == NULL) {
+			retVal = SA_ERR_NOT_EXIST;
+			break;
+		}
 		if (sec->dataUpdateState != OP_STATE_PREPARED) {
 			cl_log(LOG_ERR, 
 				"Section overwrite rollback: not prepared");
@@ -1367,6 +1399,8 @@ SaCkptSectionCreate(SaCkptReplicaT* replica,
 			cl_log(LOG_ERR,
 				"Section create failed, no memory");
 			return SA_ERR_NO_MEMORY;
+		} else {
+			memcpy(sec->data[0], data, dataLength);
 		}
 	} else {
 		sec->data[0] = NULL;
@@ -1596,7 +1630,7 @@ SaCkptReplicaNodeFailure(gpointer key,
 			list = list->next;
 		}
 
-		replica->flagLockReplica = FALSE;
+		replica->flagReplicaLock = FALSE;
 		if (saCkptService->flagVerbose) {
 			cl_log(LOG_INFO,
 				"Replica %s unlocked",

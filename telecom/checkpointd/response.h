@@ -1,4 +1,4 @@
-/* $Id: response.h,v 1.2 2004/02/17 22:12:02 lars Exp $ */
+/* $Id: response.h,v 1.3 2004/03/12 02:59:38 deng.pan Exp $ */
 #ifndef _CKPT_RESPONSE_H
 #define _CKPT_RESPONSE_H
 
@@ -6,15 +6,6 @@
 #include <checkpointd/clientrequest.h>
 #include "request.h"
 
-typedef struct _SaCkptClientResponseT {
-	SaCkptHandleT	clientHandle;
-	SaUint32T	requestNO;
-
-	SaErrorT	retVal;
-
-	SaUint32T	dataLength;
-	void*		data;
-} SaCkptClientResponseT;
 
 typedef struct _SaCkptResponseT {
 	SaCkptRequestT*	ckptReq;

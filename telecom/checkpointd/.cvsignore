@@ -4,4 +4,8 @@ Makefile.in
 .libs
 ckpttest
 checkpointd
+*.o
+*.la
+*.lo
+.*.swp
 

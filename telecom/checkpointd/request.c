@@ -1,4 +1,4 @@
-/* $Id: request.c,v 1.6 2004/02/17 22:12:02 lars Exp $ */
+/* $Id: request.c,v 1.7 2004/03/12 02:59:38 deng.pan Exp $ */
 /* 
  * request.c: 
  *
@@ -36,6 +36,7 @@
 #include <clplumbing/cl_signal.h>
 #include <clplumbing/ipc.h>
 #include <clplumbing/Gmain_timeout.h>
+#include <clplumbing/realtime.h>
 #include <hb_api_core.h>
 #include <hb_api.h>
 #include <ha_msg.h>
@@ -64,14 +65,20 @@ SaCkptRequestProcess(IPC_Channel* clientChannel)
 {
 	SaCkptRequestT 		*ckptReq = NULL;
 
-	ckptReq = SaCkptRequestReceive(clientChannel);
-	if (ckptReq != NULL) {
-		SaCkptRequestStart(ckptReq);
+	while (clientChannel->ops->is_message_pending(clientChannel) 
+		== TRUE) {
+		ckptReq = SaCkptRequestReceive(clientChannel);
+		if (ckptReq != NULL) {
+			SaCkptRequestStart(ckptReq);
 
-		 return TRUE;
-	} else {
-		return FALSE;
+			return TRUE;
+		} else {
+			return FALSE;
+		}
 	}
+
+	return TRUE;
+
 }
 
 int 
@@ -87,10 +94,21 @@ SaCkptRequestStart(SaCkptRequestT* ckptReq)
 	SaCkptReqInitParamT*	initParam = NULL;
 	SaCkptReqOpenParamT*	openParam = NULL;
 	SaCkptReqCloseParamT*	closeParam = NULL;
+	SaCkptReqSecExpSetParamT* secExpSetParam = NULL;
+	SaCkptReqRtnParamT* rtnParam = NULL;
+	SaCkptReqUlnkParamT* unlinkParam = NULL;
+	
+	SaCkptSectionT*	section = NULL;
+	SaCkptCheckpointStatusT *checkpointStatus = NULL;
+	SaCkptCheckpointCreationAttributesT* attr = NULL;
+	
+	SaCkptHandleT		clientHandle;
+	SaCkptCheckpointHandleT	checkpointHandle;
+	void*			reqParam = NULL;
 
-	int	clientHandle;
-	int	checkpointHandle;
-	void*	reqParam;
+	SaTimeT			timeout;
+
+	timeout = REQUEST_TIMEOUT * 1000LL * 1000LL * 1000LL;
 
 	client = ckptReq->client;
 	clientHandle = ckptReq->clientRequest->clientHandle;
@@ -159,6 +177,7 @@ SaCkptRequestStart(SaCkptRequestT* ckptReq)
 		break;
 		
 	case REQ_CKPT_OPEN:
+	case REQ_CKPT_OPEN_ASYNC:
 		ckptReq->operation = OP_CKPT_OPEN;
 		
 		openParam = reqParam;
@@ -213,8 +232,11 @@ SaCkptRequestStart(SaCkptRequestT* ckptReq)
 			strcpy(ckptMsg->checkpointName, openParam->ckptName.value);
 			SaCkptMessageBroadcast(ckptMsg);
 			SaCkptFree((void*)&ckptMsg);
-			
-			SaCkptRequestStartTimer(ckptReq);
+
+			 if (openParam->timetout < timeout) {
+			 	timeout = openParam->timetout;
+			 }
+			SaCkptRequestStartTimer(ckptReq, timeout);
 		}
 
 		break;
@@ -246,33 +268,22 @@ SaCkptRequestStart(SaCkptRequestT* ckptReq)
 			SaCkptMessageSend(ckptMsg, openCkpt->activeNodeName);
 			SaCkptFree((void*)&ckptMsg);
 			
-			SaCkptRequestStartTimer(ckptReq);
+			SaCkptRequestStartTimer(ckptReq, timeout);
 			 
 			break;
 		}
-
-		// FIEXME: before the close, check whether there are still
-		// pending operaitons
 
 		/* local replica exist, close it */
 		ckptResp->resp->retVal = SaCkptCheckpointClose(&openCkpt);
 		SaCkptResponseSend(&ckptResp);
 		
 		break;
-	
-	case REQ_SEC_CRT:
-	case REQ_SEC_DEL:
-	case REQ_SEC_RD:
-	case REQ_SEC_WRT:
-	case REQ_SEC_OWRT:
-		if (ckptReq->clientRequest->req == REQ_SEC_RD) {
-			ckptReq->operation = OP_CKPT_READ;
-		} else {
-			ckptReq->operation = OP_CKPT_UPD;
-		}
+
+	case REQ_CKPT_ACT_SET:
+		ckptReq->operation = OP_CKPT_ACT_SET;
 
 		/* the first field of reqParam is the handle */
-		checkpointHandle= *(int*)reqParam;
+		checkpointHandle= *(SaCkptCheckpointHandleT*)reqParam;
 
 		openCkpt = g_hash_table_lookup(
 			saCkptService->openCheckpointHash,
@@ -284,27 +295,224 @@ SaCkptRequestStart(SaCkptRequestT* ckptReq)
 		}
 		ckptReq->openCkpt = openCkpt;
 
+		replica = openCkpt->replica;
+		if (replica == NULL) {
+			/* no local replica */
+			ckptResp->resp->retVal = SA_ERR_FAILED_OPERATION;
+			SaCkptResponseSend(&ckptResp);
+			break;
+		}
+		
+		if (replica->flagIsActive == TRUE) {
+			/* is already active replica */
+			SaCkptResponseSend(&ckptResp);
+			break;
+		}
+
 		strcpy(ckptReq->toNodeName, openCkpt->activeNodeName);
+		if (replica->flagReplicaPending == TRUE) {
+			client->pendingRequestList = g_list_append(
+				client->pendingRequestList,
+				ckptReq);
+			break;
+		}
+
 		g_hash_table_insert(client->requestHash,
 			(gpointer)&(ckptReq->clientRequest->requestNO),
 			(gpointer)ckptReq);
 
+		ckptMsg = SaCkptMessageCreateReq(ckptReq, M_CKPT_ACT_SET_BCAST);
+		SaCkptMessageBroadcast(ckptMsg);
+		SaCkptFree((void*)&ckptMsg);
+		ckptMsg = NULL;
+		
+		SaCkptRequestStartTimer(ckptReq, timeout);
+		
+		break;	
+		
+	case REQ_SEC_CRT:
+	case REQ_SEC_DEL:
+	case REQ_SEC_RD:
+	case REQ_SEC_WRT:
+	case REQ_SEC_OWRT:
+	case REQ_CKPT_SYNC:
+	case REQ_CKPT_SYNC_ASYNC:
+		if (ckptReq->clientRequest->req == REQ_SEC_RD) {
+			ckptReq->operation = OP_CKPT_READ;
+		} else if ((ckptReq->clientRequest->req == REQ_CKPT_SYNC) ||
+			(ckptReq->clientRequest->req == REQ_CKPT_SYNC_ASYNC)){
+			ckptReq->operation = OP_CKPT_SYNC;
+		} else {
+			ckptReq->operation = OP_CKPT_UPD;
+		}
+
+		/* the first field of reqParam is the handle */
+		checkpointHandle= *(SaCkptCheckpointHandleT*)reqParam;
+
+		openCkpt = g_hash_table_lookup(
+			saCkptService->openCheckpointHash,
+			(gpointer)&(checkpointHandle));
+		if (openCkpt == NULL) {
+			ckptResp->resp->retVal = SA_ERR_BAD_HANDLE;
+			SaCkptResponseSend(&ckptResp);
+			break;
+		}
+		replica = openCkpt->replica;
+		ckptReq->openCkpt = openCkpt;
+
+		strcpy(ckptReq->toNodeName, openCkpt->activeNodeName);
+		
+		if ((replica != NULL) && 
+			(replica->flagReplicaPending == TRUE)) {
+			client->pendingRequestList = g_list_append(
+				client->pendingRequestList,
+				ckptReq);
+			break;
+		}
+		// FIXME
+		// How about replica is NULL ?
+
+		/* add request to hash table */
+		g_hash_table_insert(client->requestHash,
+			&(ckptReq->clientRequest->requestNO),
+			ckptReq);
+
 		if (ckptReq->clientRequest->req == REQ_SEC_RD) {
 			ckptMsg = SaCkptMessageCreateReq(ckptReq, M_CKPT_READ);
+		} else if ((ckptReq->clientRequest->req == REQ_CKPT_SYNC) ||
+			(ckptReq->clientRequest->req == REQ_CKPT_SYNC_ASYNC)){
+			SaCkptReqSyncParamT* syncParam = NULL;
+
+			syncParam = (SaCkptReqSyncParamT*)reqParam;
+			if (syncParam->timeout < timeout) {
+				timeout = syncParam->timeout;
+			}
+			ckptMsg = SaCkptMessageCreateReq(ckptReq, M_CKPT_SYNC);
 		} else {
 			ckptMsg = SaCkptMessageCreateReq(ckptReq, M_CKPT_UPD);
 		}
 		SaCkptMessageSend(ckptMsg, openCkpt->activeNodeName);
-//		SaCkptMessageBroadcast(ckptMsg);
 		SaCkptFree((void*)&ckptMsg);
 		ckptMsg = NULL;
 		
-		SaCkptRequestStartTimer(ckptReq);
+		SaCkptRequestStartTimer(ckptReq, timeout);
+		
+		break;
+
+	case REQ_SEC_EXP_SET:
+		secExpSetParam = reqParam;
+		checkpointHandle= secExpSetParam->checkpointHandle;
+
+		openCkpt = g_hash_table_lookup(
+			saCkptService->openCheckpointHash,
+			(gpointer)&(checkpointHandle));
+		if ((openCkpt == NULL) || 
+			(openCkpt->replica == NULL)) {
+			ckptResp->resp->retVal = SA_ERR_LIBRARY;
+			SaCkptResponseSend(&ckptResp);
+			break;
+		}
+		ckptReq->openCkpt = openCkpt;
+		strcpy(ckptReq->toNodeName, openCkpt->activeNodeName);
+		
+		replica = openCkpt->replica;
+		section = SaCkptSectionFind(replica, 
+					&secExpSetParam->sectionID);
+		if (section == NULL) {
+			ckptResp->resp->retVal = SA_ERR_LIBRARY;
+			SaCkptResponseSend(&ckptResp);
+			break;
+		}
+
+		section->expirationTime = secExpSetParam->expireTime;
+		// FIXME: start expiration timer
+		
+		ckptResp->resp->retVal = SA_OK;
+		SaCkptResponseSend(&ckptResp);
 		
 		break;
 		
+	case REQ_CKPT_STAT_GET:
+		/* the first field of reqParam is the handle */
+		checkpointHandle= *(SaCkptCheckpointHandleT*)reqParam;
+
+		openCkpt = g_hash_table_lookup(
+			saCkptService->openCheckpointHash,
+			(gpointer)&(checkpointHandle));
+		if ((openCkpt == NULL) || 
+			(openCkpt->replica == NULL)) {
+			ckptResp->resp->retVal = SA_ERR_LIBRARY;
+			SaCkptResponseSend(&ckptResp);
+			break;
+		}
+		ckptReq->openCkpt = openCkpt;
+		strcpy(ckptReq->toNodeName, openCkpt->activeNodeName);
+		
+		replica = openCkpt->replica;
+
+		checkpointStatus = SaCkptMalloc(
+			sizeof(SaCkptCheckpointStatusT));
+		if (checkpointStatus == NULL) {
+			ckptResp->resp->retVal = SA_ERR_NO_MEMORY;
+			SaCkptResponseSend(&ckptResp);
+			break;
+		}
+
+		attr = &(checkpointStatus->checkpointCreationAttributes);
+		
+		attr->checkpointSize = replica->checkpointSize;
+		attr->creationFlags = replica->createFlag;
+		attr->maxSectionIdSize = replica->maxSectionIDSize;
+		attr->maxSections = replica->maxSectionNumber;
+		attr->maxSectionSize = replica->maxSectionSize;
+		attr->retentionDuration = replica->retentionDuration;
+		checkpointStatus->numberOfSections = replica->sectionNumber;
+		checkpointStatus->memoryUsed = 0; // FIXME
+					
+		ckptResp->resp->retVal = SA_OK;
+		ckptResp->resp->data = checkpointStatus;
+		ckptResp->resp->dataLength = sizeof(SaCkptCheckpointStatusT);
+		SaCkptResponseSend(&ckptResp);
+		
+		break;
+				
+	case REQ_CKPT_RTN_SET:
+		rtnParam = reqParam;
+		checkpointHandle= rtnParam->checkpointHandle;
+
+		openCkpt = g_hash_table_lookup(
+			saCkptService->openCheckpointHash,
+			(gpointer)&(checkpointHandle));
+		if ((openCkpt == NULL) || 
+			(openCkpt->replica == NULL)) {
+			ckptResp->resp->retVal = SA_ERR_LIBRARY;
+			SaCkptResponseSend(&ckptResp);
+			break;
+		}
+		ckptReq->openCkpt = openCkpt;
+		strcpy(ckptReq->toNodeName, openCkpt->activeNodeName);
+		
+		replica = openCkpt->replica;
+		replica->retentionDuration = rtnParam->retention;
+
+		ckptResp->resp->retVal = SA_OK;
+		SaCkptResponseSend(&ckptResp);
+		
+		break;	
+
+	case REQ_CKPT_ULNK:
+		unlinkParam = reqParam;
+		
+		ckptResp->resp->retVal = SA_OK;
+		SaCkptResponseSend(&ckptResp);
+
+		break;
+
 	default:
 		cl_log(LOG_INFO, "Not implemented request");
+		
+		ckptResp->resp->retVal = SA_ERR_FAILED_OPERATION;
+		SaCkptResponseSend(&ckptResp);
 		break;
 	}
 
@@ -320,7 +528,6 @@ SaCkptRequestStart(SaCkptRequestT* ckptReq)
 	
 	return HA_OK;
 }
-
 
 /* request timeout process, send back timeout response to client */
 gboolean
@@ -415,6 +622,11 @@ SaCkptRequestReceive(IPC_Channel* clientChannel)
 	int	rc = IPC_OK;
 	
 	char	*strReq = NULL;
+
+	while (clientChannel->ops->is_message_pending(clientChannel) 
+		!= TRUE) {
+		cl_shortsleep();
+	}
 
 	/* receive ipc message */
 	rc = clientChannel->ops->recv(clientChannel, &ipcMsg);
@@ -524,6 +736,8 @@ SaCkptRequestRemove(SaCkptRequestT** pCkptReq)
 	SaCkptClientT* client = ckptReq->client;
 	unsigned int requestNO = ckptReq->clientRequest->requestNO;
 
+	GList* list = NULL;
+
 	if (client != NULL) {
 		/* remove ckptReq from request queue */
 		g_hash_table_remove(client->requestHash, 
@@ -543,26 +757,29 @@ SaCkptRequestRemove(SaCkptRequestT** pCkptReq)
 	SaCkptFree((void**)&(ckptReq->clientRequest));
 	SaCkptFree((void*)&ckptReq);
 
-#if 0
 	/* start pending request */
-	if (g_hash_table_size(client->requestHash) == 0) {
-		GList* list = NULL;
-		
-		list = client->pendingRequestList;
-		if (list != NULL) {
-			ckptReq = (SaCkptRequestT*)list->data;
+	list = client->pendingRequestList;
+	if (list != NULL) {
+		ckptReq = (SaCkptRequestT*)list->data;
 
-			if (ckptReq != NULL) {
+		if (ckptReq != NULL) {
+			SaCkptReplicaT* replica = NULL;
+			replica = ckptReq->openCkpt->replica;
+
+			if ((replica != NULL) &&
+				(replica->flagReplicaPending == FALSE)) {
 				client->pendingRequestList = 
 					g_list_remove(
-					client->pendingRequestList, 
-					(gpointer)ckptReq);
+						client->pendingRequestList, 
+						(gpointer)ckptReq);
 
 				SaCkptRequestStart(ckptReq);
 			}
+
+			// FIXME
+			// How about the replica is NULL?
 		}
 	}
-#endif
 
 	*pCkptReq = NULL;
 
@@ -570,14 +787,14 @@ SaCkptRequestRemove(SaCkptRequestT** pCkptReq)
 }
 
 void 
-SaCkptRequestStartTimer(SaCkptRequestT* ckptReq)
+SaCkptRequestStartTimer(SaCkptRequestT* ckptReq, SaTimeT timeout)
 {
 	char* strReq = NULL;
 
 	/* to avoid start more than one timer */
 	if (ckptReq->timeoutTag <= 0) {
 		ckptReq->timeoutTag = Gmain_timeout_add(
-			REQUEST_TIMEOUT * 1000, 
+			timeout / 1000000, 
 			SaCkptRequestTimeout, 
 			(gpointer)ckptReq);
 
@@ -639,6 +856,9 @@ SaCkptReq2String(SaCkptReqT req)
 	case REQ_CKPT_OPEN:
 		strcpy(strTemp, "REQ_CKPT_OPEN");
 		break;
+	case REQ_CKPT_OPEN_ASYNC:
+		strcpy(strTemp, "REQ_CKPT_OPEN_ASYNC");
+		break;
 	case REQ_CKPT_CLOSE:
 		strcpy(strTemp, "REQ_CKPT_CLOSE");
 		break;
@@ -677,6 +897,9 @@ SaCkptReq2String(SaCkptReqT req)
 		break;
 	case REQ_CKPT_SYNC:
 		strcpy(strTemp, "REQ_CKPT_SYNC");
+		break;
+	case REQ_CKPT_SYNC_ASYNC:
+		strcpy(strTemp, "REQ_CKPT_SYNC_ASYNC");
 		break;
 	}
 

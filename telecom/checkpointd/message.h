@@ -1,4 +1,4 @@
-/* $Id: message.h,v 1.4 2004/02/17 22:12:02 lars Exp $ */
+/* $Id: message.h,v 1.5 2004/03/12 02:59:38 deng.pan Exp $ */
 #ifndef _CKPT_MESSAGE_H
 #define _CKPT_MESSAGE_H
 
@@ -87,14 +87,11 @@ typedef enum {
 	/* checkpoint sync message */
 	M_CKPT_SYNC,
 	M_CKPT_SYNC_REPLY,
-	M_CKPT_SYNC_FINISH,
 
 	/* checkpoint set active message */
-	M_CKPT_SETACTIVE,
-	M_CKPT_PENDING_BCAST,
-	M_CKPT_PENDING_BCAST_REPLY,
-	M_CKPT_SETACTIVE_REPLY,
-	M_CKPT_SETACTIVE_BCAST,
+	M_CKPT_ACT_SET_BCAST,
+	M_CKPT_ACT_SET_BCAST_REPLY,
+	M_CKPT_ACT_SET_FINISH_BCAST,
 
 	/* checkpoint read message */
 	M_CKPT_READ,

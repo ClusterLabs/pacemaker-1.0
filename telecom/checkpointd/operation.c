@@ -1,4 +1,4 @@
-/* $Id: operation.c,v 1.8 2004/02/17 22:12:02 lars Exp $ */
+/* $Id: operation.c,v 1.9 2004/03/12 02:59:38 deng.pan Exp $ */
 /* 
  * operation.c: 
  *
@@ -57,7 +57,6 @@
 #endif
 
 extern SaCkptServiceT* saCkptService;
-
 
 /* 
  * operation timeout process 
@@ -133,8 +132,8 @@ SaCkptOperationStart(SaCkptOperationT* ckptOp)
 
 	ckptMsg = SaCkptMessageCreateOp(ckptOp, M_CKPT_UPD);
 	
-	replica->pendingOperationList = g_list_remove(
-		replica->pendingOperationList, 
+	g_hash_table_insert(replica->operationHash,
+		(gpointer)&(ckptOp->operationNO),
 		(gpointer)ckptOp);
 
 	if (saCkptService->flagVerbose) {
@@ -144,7 +143,7 @@ SaCkptOperationStart(SaCkptOperationT* ckptOp)
 	
 	ckptOp->state = OP_STATE_STARTED;
 	
-	replica->flagLockReplica = TRUE;
+	replica->flagReplicaLock = TRUE;
 	if (saCkptService->flagVerbose) {
 		cl_log(LOG_INFO,
 			"Replica %s locked",
@@ -158,12 +157,8 @@ SaCkptOperationStart(SaCkptOperationT* ckptOp)
 		ckptMsg->msgSubtype = M_RPLC_CRT_REPLY;
 		SaCkptMessageSend(ckptMsg, ckptMsg->clientHostName);
 
-		g_hash_table_insert(replica->operationHash,
-			(gpointer)&(ckptOp->operationNO),
-			(gpointer)ckptOp);
-		
 		break;
-		
+
 	case OP_CKPT_UPD:
 		if (replica->createFlag & 
 			SA_CKPT_WR_ACTIVE_REPLICA) {
@@ -204,18 +199,16 @@ SaCkptOperationStart(SaCkptOperationT* ckptOp)
 			SaCkptMessageMulticast(ckptMsg, nodeList);
 			g_list_free(nodeList);
 
-			replica->flagLockReplica = FALSE;
+			replica->flagReplicaLock = FALSE;
 			if (saCkptService->flagVerbose) {
 				cl_log(LOG_INFO,
 					"Replica %s unlocked",
 					replica->checkpointName);
 			}
+
+			SaCkptOperationRemove(&ckptOp);
 		
 		}else {
-			g_hash_table_insert(replica->operationHash,
-				(gpointer)&(ckptOp->operationNO),
-				(gpointer)ckptOp);
-		
 			ckptMsg->msgSubtype = M_CKPT_UPD_BCAST;
 			SaCkptMessageMulticast(ckptMsg, 
 				ckptOp->stateList);
@@ -233,17 +226,43 @@ SaCkptOperationStart(SaCkptOperationT* ckptOp)
 		ckptMsg->msgSubtype = M_CKPT_READ_REPLY;
 		SaCkptMessageSend(ckptMsg, ckptMsg->clientHostName);
 
-		replica->flagLockReplica = FALSE;
+		replica->flagReplicaLock = FALSE;
 		if (saCkptService->flagVerbose) {
 			cl_log(LOG_INFO,
 				"Replica %s unlocked",
 				replica->checkpointName);
 		}
 
+		SaCkptOperationRemove(&ckptOp);
+			
 		break;
 
+	case OP_CKPT_SYNC:
+		ckptMsg->retVal = SA_OK;
+		ckptMsg->msgSubtype = M_CKPT_SYNC_REPLY;
+		SaCkptMessageSend(ckptMsg, ckptMsg->clientHostName);
+		
+		SaCkptOperationRemove(&ckptOp);
+		
+		break;
+
+	case OP_CKPT_ACT_SET:
+		replica->flagReplicaPending = TRUE;
+		cl_log(LOG_INFO,
+			"Replica %s stop sending requests",
+			replica->checkpointName);
+
+		ckptMsg->retVal = SA_OK;
+		ckptMsg->msgSubtype = M_CKPT_ACT_SET_BCAST_REPLY;
+		SaCkptMessageSend(ckptMsg, 
+			ckptMsg->clientHostName);
+
+		SaCkptOperationRemove(&ckptOp);
+
+		break;
 	default:
 		break;
+		
 	}
 
 	return;
@@ -271,7 +290,7 @@ SaCkptOperationRemove(SaCkptOperationT** pCkptOp)
 	g_hash_table_remove(replica->operationHash, 
 		(gpointer)&(ckptOp->operationNO));
 
-	if (replica->flagLockReplica == FALSE) {
+	if (replica->flagReplicaLock == FALSE) {
 		/* start pending operation */
 		list = replica->pendingOperationList;
 		if (list != NULL) {
@@ -432,6 +451,12 @@ SaCkptOp2String(SaCkptOpT op)
 	case OP_CKPT_ULNK:
 		strcpy(strTemp, "OP_CKPT_ULNK");
 		break;
+	case OP_CKPT_SYNC:
+		strcpy(strTemp, "OP_CKPT_SYNC");
+		break;
+	case OP_CKPT_ACT_SET:
+		strcpy(strTemp, "OP_CKPT_ACT_SET");
+		break;
 	}
 
 	strOp = (char*)SaCkptMalloc(strlen(strTemp)+1);
@@ -534,7 +559,7 @@ SaCkptOperationNodeFailure(gpointer key,
 					ckptOp->clientHostName);
 				SaCkptFree((void*)&ckptMsg);
 
-				replica->flagLockReplica = FALSE;
+				replica->flagReplicaLock = FALSE;
 				if (saCkptService->flagVerbose) {
 					cl_log(LOG_INFO,
 						"Replica %s unlocked",
@@ -560,7 +585,7 @@ SaCkptOperationNodeFailure(gpointer key,
 					ckptOp->clientHostName);
 				SaCkptFree((void*)&ckptMsg);
 
-				replica->flagLockReplica = FALSE;
+				replica->flagReplicaLock = FALSE;
 				if (saCkptService->flagVerbose) {
 					cl_log(LOG_INFO,
 						"Replica %s unlocked",

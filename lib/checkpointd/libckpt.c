@@ -1,4 +1,4 @@
-/* $Id: libckpt.c,v 1.5 2004/02/17 22:11:58 lars Exp $ */
+/* $Id: libckpt.c,v 1.6 2004/03/12 02:58:56 deng.pan Exp $ */
 /* 
  * ckptlib.c: data checkpoint API library
  *
@@ -18,7 +18,9 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
-/* This library is an implementation of the Application Interface 
+ 
+/* 
+ * This library is an implementation of the Application Interface 
  * Specification on Service Availability Forum. Refer to: www.saforum.org/
  * specification
  */
@@ -26,6 +28,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <sys/types.h>
+#include <sys/stat.h>
 #include <sys/socket.h>
 #include <sys/time.h>
 #include <sys/un.h>
@@ -34,707 +37,1013 @@
 
 #include <glib.h>
 
+#include <clplumbing/cl_log.h>
+#include <clplumbing/cl_signal.h>
+#include <clplumbing/ipc.h>
+#include <clplumbing/Gmain_timeout.h>
+#include <clplumbing/realtime.h>
+
 #include <saf/ais.h>
-#include "checkpointd/clientrequest.h"
+#include <checkpointd/clientrequest.h>
 
 #ifndef AF_LOCAL
 #	define AF_LOCAL	AF_UNIX
 #endif
 
-/* TODO list: 
+/* 
+ * TODO list: 
  * 1. make all APIs thread safe
  */
 
-/* -------------- data structure ----------------------------------- */
-typedef struct {
-	SaCkptHandleT initHandle; /* return by ckpt service */
-	SaSelectionObjectT syncfd; /* used by synchronous api */
-	SaSelectionObjectT asyncfd; /* used by asynchronous api */
+/* 
+ * the request timeout value in seconds 
+ */
+
+#define	LIB_REQUEST_TIMEOUT	10
+
+/* 
+ * the client structure  
+ */
+typedef struct _SaCkptLibClientT{
+	char		hostName[SA_MAX_NAME_LENGTH];
+	pid_t		pid;
+	int		threadID;
+
+	/* The handle returned by the checkpoint service daemon */
+	SaCkptHandleT	clientHandle;
+
+	/* 
+	 * The client channel 
+	 * channel[0] is for the sync calls
+	 * channel[1] is for the async calls
+	 */
+	IPC_Channel*	channel[2];
+	
+	/* 
+	 * the opened checkpoints
+	 */
+	GList*		checkpointList;
+
 	SaCkptCallbacksT callbacks;
-} InitListDataT;
+} SaCkptLibClientT; 
 
-typedef struct {
-	InitListDataT* pInit;
-	SaCkptCheckpointHandleT checkpointHandle; /* return by ckpt service */
-	SaNameT ckptName; /* checkpoint name */
-} CkptListDataT;
+/* 
+ * the request structure  
+ */
+typedef struct _SaCkptLibRequestT{
+	SaCkptLibClientT*	client;
 
-typedef struct {
-	InitListDataT* pInit;
-	SaUint32T reqno;
-	SaUint32T req;
-	SaInvocationT invocation;
-} ReqListDataT;
+	SaCkptClientRequestT*	clientRequest;
 
-typedef struct {
-	char *pData;
-	SaUint32T bufsize;
-	SaUint32T readlen;
-} SaCkptMsgDataT;
+	/* request timeout handler tag */
+	guint			timeoutTag;
 
-#define TMPBUF_SIZE  256
-const struct timeval TIMEOUT_VAL= {10,0}; /* i/o time out value: 10s */ 
-SaUint32T g_reqNo = 0;
-GList* g_initList = NULL;
-GList* g_ckptList = NULL;
-GList* g_reqList = NULL;
-GList* g_secIteratorList = NULL;
-char g_tmpbuf[TMPBUF_SIZE]; /* used to remove the data left by timeout p */
+} SaCkptLibRequestT;
 
+typedef struct _SaCkptLibCheckpointT{
+	SaCkptLibClientT*	client;
 
-/* generate a request Num */
-static SaUint32T
-genReqNo(void)
+	/* 
+	 * opened checkpoint handle. 
+	 * Returned by checkpoint service daemon
+	 */
+	SaCkptCheckpointHandleT checkpointHandle; 
+	
+	SaNameT ckptName; 
+
+	/*
+	 * checkpoint attributes
+	 */
+	SaCkptCheckpointOpenFlagsT		openFlag;
+	SaCkptCheckpointCreationAttributesT	createAttributes;
+
+	GList* sectionList;
+} SaCkptLibCheckpointT;
+
+GList*	libClientList = NULL;
+GList*	libCheckpointList = NULL;
+
+GList* 	libResponseList = NULL;
+
+GList*	libAsyncRequestList = NULL;
+GList*	libAsyncResponseList = NULL;
+
+GHashTable*	libIteratorHash = NULL;
+
+SaCkptCallbacksT *libCallback = NULL;
+
+extern void *ha_malloc(size_t size);
+extern void  ha_free(void *mem);
+
+static IPC_Channel*
+SaCkptClientChannelInit(char* pathname)
 {
-	return g_reqNo++;
+	IPC_Channel *clientChannel = NULL;
+	mode_t mask;
+	char path[] = IPC_PATH_ATTR;
+	char domainsocket[] = IPC_DOMAIN_SOCKET;
+
+	GHashTable *attrs = g_hash_table_new(g_str_hash,g_str_equal);
+
+	g_hash_table_insert(attrs, path, pathname);
+
+	mask = umask(0);
+	clientChannel = ipc_channel_constructor(domainsocket, attrs);
+	if (clientChannel == NULL){
+		cl_log(LOG_ERR, 
+			"Checkpoint library Can't create client channel");
+		return NULL;
+	}
+	mask = umask(mask);
+
+	g_hash_table_destroy(attrs);
+
+	return clientChannel;
 }
 
-/* get init list data by init handle */
-static InitListDataT*
-getInitDataByHandle(const SaCkptHandleT *pHandle)
+static SaUint32T 
+SaCkptLibGetReqNO(void)
 {
-	GList* pList;
-	InitListDataT* pInitData;
+	static SaUint32T ckptLibRequestNO = 1;
+	return ckptLibRequestNO++;
+}
+
+static SaCkptSectionIteratorT 
+SaCkptLibGetIterator(void)
+{
+	static SaCkptSectionIteratorT ckptLibSecIterator = 1;
 	
-	pList = g_initList;
-	while( NULL != pList ) {
-		pInitData = (InitListDataT*)(pList->data);
-		if( *pHandle == pInitData->initHandle ) {
-			return pInitData;
+	SaCkptSectionIteratorT iterator;
+	GList* sectionList = NULL;
+
+	do {
+		iterator = ckptLibSecIterator++;
+		sectionList = g_hash_table_lookup(
+			libIteratorHash, &iterator);
+	} while (sectionList != NULL);
+
+	return iterator;
+}
+
+static SaCkptLibRequestT*
+SaCkptGetLibRequestByReqno(SaUint32T reqno)
+{
+	GList* list = NULL;;
+	SaCkptLibRequestT* libRequest;
+	
+	list = libAsyncRequestList;
+	while( list != NULL ) {
+		libRequest= (SaCkptLibRequestT*)(list->data);
+		if(libRequest->clientRequest->requestNO == reqno) {
+			return libRequest;
 		}
-		pList = g_list_next(pList);
+		list = g_list_next(list);
 	}
 	return NULL;
 }
 
-/* get checkpoint list data by checkpoint handle */
-static CkptListDataT*
-getCkptDataByHandle(const SaCkptCheckpointHandleT *pHandle)
+static SaCkptClientResponseT*
+SaCkptGetLibResponseByReqno(SaUint32T reqno)
 {
-	GList* pList;
-	CkptListDataT* pCkptData;
+	GList* list = NULL;;
+	SaCkptClientResponseT* libResponse;
 	
-	pList = g_ckptList;
-	while( NULL != pList ) {
-		pCkptData = (CkptListDataT*)(pList->data);
-		if( *pHandle == pCkptData->checkpointHandle ) {
-			return pCkptData;
+	list = libResponseList;
+	while( list != NULL ) {
+		libResponse= (SaCkptClientResponseT*)(list->data);
+		if(libResponse->requestNO == reqno) {
+			libResponseList = g_list_remove(
+				libResponseList,
+				libResponse);
+			return libResponse;
 		}
-		pList = g_list_next(pList);
+		list = g_list_next(list);
+	}
+	return NULL;
+
+}
+
+static SaCkptLibClientT*
+SaCkptGetLibClientByHandle(SaCkptHandleT clientHandle)
+{
+	GList* list = NULL;;
+	SaCkptLibClientT* libClient;
+	
+	list = libClientList;
+	while( list != NULL ) {
+		libClient = (SaCkptLibClientT*)(list->data);
+		if(libClient->clientHandle == clientHandle) {
+			return libClient;
+		}
+		list = g_list_next(list);
 	}
 	return NULL;
 }
 
-/* get asynchronous request list data by request no.*/
-static ReqListDataT*
-getReqDataByReqno(SaUint32T reqno)
+static SaCkptLibCheckpointT*
+SaCkptGetLibCheckpointByHandle(
+	SaCkptCheckpointHandleT checkpointHandle)
 {
-	GList* pList;
-	ReqListDataT* pReqData;
+	GList* list;
+	SaCkptLibCheckpointT* libCheckpoint;
 
-	pList = g_list_next(g_reqList);
-	while( NULL != pList ) {
-		pReqData = (ReqListDataT*)(pList->data);
-		if(reqno == pReqData->reqno) {
-			return pReqData;
+	list = libCheckpointList;
+	while(list != NULL ) {
+		libCheckpoint = (SaCkptLibCheckpointT*)(list->data);
+		if(libCheckpoint->checkpointHandle == checkpointHandle) {
+			return libCheckpoint;
 		}
-		pList = g_list_next(pList);
+		list = g_list_next(list);
 	}
 	return NULL;
 }
 
-/* guarantee read the required data size */
 static SaErrorT
-reliableRead(SaInt32T fd, char* buffer, size_t size, \
-		struct timeval *tv/*[in/out]*/)
+SaCkptLibRequestSend(IPC_Channel* ch, 
+	SaCkptClientRequestT* ckptReq) 
 {
-	SaInt32T iret;
-	fd_set rfds;
-	size_t len = 0;
-	SaErrorT retcode = SA_OK;
-
-	/* set fd */
-	FD_ZERO(&rfds);
-	FD_SET(fd, &rfds);
-
-	/* read data */
-	while (len < size && retcode == SA_OK) {
-		/* wait input data ready. it's not necessary to reset 
-		 * the rfds since it still contains the fd when return
-		 * on success
-		 */
-		iret = select(fd+1, &rfds, NULL, NULL, tv);
-		if (0 == iret) {
-			retcode = SA_ERR_TIMEOUT;
-			/*
-			perror("reliabeRead: select timeout");
-			*/
-			break;
-		}
-		if (iret < 0) {
-			perror("reliabeRead: select");
-			retcode = SA_ERR_LIBRARY;
-			break;
-		}
-
-		/* receive data */
-		iret = recv(fd, (buffer+len), (size-len), 0);
-		if (iret == 0) {
-			/* We don't think this should happen */
-			retcode = SA_ERR_LIBRARY;
-			break;
-		}
-		
-		if (iret < 0) {
-			/* this should not happen */
-			perror("reliabeRead: recv");
-			retcode = SA_ERR_LIBRARY;
-			break;
-    		}
-		
-		len = len + iret;
-		if (len > size) {
-			/* should not happen */
-			retcode = SA_ERR_LIBRARY;
-		}
-	} /* end while (len < size ...*/
-
-	return retcode;
-}
-
-/* send the required data size */
-static SaErrorT
-reliableWrite(SaInt32T fd, const char* buffer, size_t size, \
-		struct timeval *tv /*[in/out]*/)
-{
-	SaInt32T iret;
-	size_t len = 0;
-	SaErrorT retcode = SA_OK;
-	fd_set wfds;
-
-	/* set fd */
-	FD_ZERO(&wfds);
-	FD_SET(fd, &wfds);
-
-	while (len < size && retcode == SA_OK) {
-		/* wait write buffer ready */
-		iret = select(fd+1, NULL, &wfds, NULL, tv);
-		if (0 == iret) {
-			retcode = SA_ERR_TIMEOUT;
-			break;
-		}
-		if (iret < 0) {
-			perror("reliabeWrite: select");
-			retcode = SA_ERR_LIBRARY;
-			break;
-		}
-		iret = send(fd, (buffer+len), (size-len), 0);
-		if (iret == 0) {
-			/* We don't think this should happen */
-			retcode = SA_ERR_LIBRARY;
-		}
-		if (iret < 0) {
-			perror("reliabeWrite: send");
-			retcode = SA_ERR_LIBRARY;
-			break;
-		}	
-		len = len + iret;
-	} /* end while */
-
-	return retcode;
-}
-
-/* remove the data with this response head from the input buffer 
- */
-static SaErrorT
-removeData(SaInt32T fd, SaCkptResponseHeadT *pResphead,\
-		struct timeval *tv /*[in/out]*/)
-{
-	int len;
-	SaErrorT retcode = SA_OK;
-
-	len = pResphead->dataLen;
-
-	while (len > 0) {
-		if (len <= TMPBUF_SIZE) {
-			retcode = reliableRead(fd, g_tmpbuf, len, tv);
-			if (SA_OK != retcode) {
-				perror("removeData: reliabeRead-1");
-			}
-			break;
-		}
-		retcode = reliableRead(fd, g_tmpbuf, TMPBUF_SIZE, tv);
-		if (SA_OK != retcode) {
-			perror("removeData: reliabeRead-2");
-			break;
-		}
-		len = len - TMPBUF_SIZE;
-	}/* end while */
-
-	return retcode;
-}
-
-/* read the response head with this request number
- */
-static SaErrorT
-readRespheadByReqno(SaInt32T fd, SaCkptResponseHeadT *pResphead /*[out]*/,\
-		SaUint32T reqno, struct timeval *tv /*[in/out]*/)
-{
-	SaErrorT retcode;
-
-	while (1) {
-		retcode = reliableRead(fd, (char*)pResphead, \
-			sizeof(SaCkptResponseHeadT), tv);
-		if (SA_OK != retcode) {
-			perror("readMsgByReqno: reliableRead-1");
-			break;
-		}
-		
-#if 0		
-		printf("Read response : ");
-		printf("msglen %lu, initHandle %d, reqno %lu, retval %d, \
-			dataLen %lu\n", 
-			pResphead->msglen, 
-			pResphead->initHandle,
-			pResphead->reqno,
-			pResphead->retval,
-			pResphead->dataLen);
-#endif
-
-		if (reqno == pResphead->reqno) {
-			break;
-		}
-		
-		printf("readMsgByReqno: request number error\n");
-		
-		/* remove the data that is not what we expected */
-		retcode = removeData(fd, pResphead, tv);
-		if (SA_OK != retcode) {
-			break;
-		}
-	}
-	return retcode;
-}
-
-/* invoke callback according to the pending request data
- */
-static SaErrorT
-doDispatch(SaInt32T fd, struct timeval *tv/*[in/out]*/)
-{
-	SaErrorT retcode = SA_OK;
-	ReqListDataT* pReqData = NULL;
-	SaCkptResponseHeadT resphead;
-	SaCkptCheckpointHandleT checkpointHandle;
-	SaCkptCallbacksT *callbacks = &(pReqData->pInit->callbacks);
-
-	/* read response head */
-	retcode = reliableRead(fd, (char*)&resphead, \
-			sizeof(resphead), tv);
-	if (SA_OK != retcode) {
-		perror("saCkptDispatch: reliableRead-1");
-		return retcode;
-	}
+	IPC_Message* ipcMsg = NULL;
 	
-	/* get the request data by reqno */
-	pReqData = getReqDataByReqno(resphead.reqno);
-	if (NULL == pReqData) {
-		/* this response is not related to the pending requests. 
-		 * should not happen. 
-		 */
-		retcode = removeData(fd, &resphead, tv);
-		if (SA_OK != retcode) {
-			/* */
-		}
-		/* !!: Here, we won't try to read next response
-		 */
+	int rc = IPC_OK;
+	char* p = NULL;
+
+	if(ch->ch_status != IPC_CONNECT) {
+		cl_log(LOG_WARNING, 
+			"IPC is in state %d before send message",
+			ch->ch_status);
 		return SA_ERR_LIBRARY;
 	}
 	
-	/* invoke the callbacks */		
-	switch (pReqData->req) {
-	case REQ_CKPT_OPEN:
-		if (SA_OK == resphead.retval) {
-			retcode = reliableRead(fd, (char*)&checkpointHandle, \
-				sizeof(checkpointHandle), tv);
-			if (SA_OK != retcode) {
-				perror("doDispatch: reliableRead failure");
-				break;
-			}
-
-			/* if the callbask is not NULL, invoke the callback
-			 */
-			if (NULL == callbacks->saCkptCheckpointOpenCallback) {
-				break;
-			}
-			callbacks->saCkptCheckpointOpenCallback(\
-			pReqData->invocation, &checkpointHandle, SA_OK);
-		}
-		else {
-			/* if the callbask is not NULL, invoke the callback
-			 */
-			if (NULL == callbacks->saCkptCheckpointOpenCallback) {
-				break;
-			}
-			callbacks->saCkptCheckpointOpenCallback(\
-				pReqData->invocation, NULL, resphead.retval);
-		}
-		break;
-	case REQ_CKPT_SYNC:
-		/* if the callbask is not NULL, invoke the callback
-		 */
-		if (NULL != callbacks->saCkptCheckpointSynchronizeCallback) {
-			callbacks->saCkptCheckpointSynchronizeCallback(\
-				pReqData->invocation, resphead.retval);
-		}
-		break;
+	/* build response message */
+	ipcMsg = (IPC_Message*)ha_malloc(sizeof(IPC_Message));
+	if (ipcMsg == NULL) {
+		cl_log(LOG_ERR, "No memory in checkpoint library");
+		return SA_ERR_NO_MEMORY;
 	}
 	
-	/* remove the request from reqList and free the memory 
-	 */
-	g_reqList = g_list_remove(g_reqList, pReqData);
-	free(pReqData);
+	ipcMsg->msg_private = NULL;
+	ipcMsg->msg_done = NULL;
+	ipcMsg->msg_ch = ch;
+	ipcMsg->msg_len = sizeof(SaCkptClientRequestT) - 
+		2* sizeof(void*) + 
+		ckptReq->dataLength +
+		ckptReq->reqParamLength ;
+	ipcMsg->msg_body = ha_malloc(ipcMsg->msg_len);
+	if (ipcMsg->msg_body == NULL) {
+		cl_log(LOG_ERR, "No memory in checkpoint library");
+		ha_free(ipcMsg);
+		return SA_ERR_NO_MEMORY;
+	}
 
-	return retcode;
+	p = ipcMsg->msg_body;
+	
+	memcpy(p, ckptReq, 
+		sizeof(SaCkptClientRequestT) - 2*sizeof(void*));
+	p += sizeof(SaCkptClientRequestT) - 2*sizeof(void*);
+
+	if (ckptReq->reqParamLength > 0) {
+		memcpy(p, ckptReq->reqParam,
+			ckptReq->reqParamLength);
+		p += ckptReq->reqParamLength;
+	}
+	
+	if (ckptReq->dataLength> 0) {
+		memcpy(p, ckptReq->data, 
+			ckptReq->dataLength);
+		p += ckptReq->dataLength;
+	}
+		
+	/* send request message */
+	while (ch->ops->send(ch, ipcMsg) == IPC_FAIL) {
+		cl_log(LOG_ERR, "Checkpoint library send request failed");
+		cl_log(LOG_ERR, "Sleep for a while and try again");
+		cl_shortsleep();
+	}
+	if(ch->ch_status != IPC_CONNECT) {
+		cl_log(LOG_WARNING, 
+			"IPC is in state %d after send message",
+			ch->ch_status);
+	}
+
+	ch->ops->waitout(ch);
+	
+	/* free ipc message */
+	if (ipcMsg != NULL) {
+		if (ipcMsg->msg_body != NULL) {
+			ha_free(ipcMsg->msg_body);
+		}
+		ha_free(ipcMsg);
+	}
+
+	if (rc == IPC_OK) {
+		return SA_OK;
+	} else {
+		return SA_ERR_LIBRARY;
+	}
+	
 }
 
-/* send request head and param, then wait until get the response.
- * Most requests are not required to send application data, "hello" fits all
- * these requests.
- */
-static SaErrorT
-hello(SaInt32T fd, SaCkptRequestHeadT *pReqHead, const void *pParam,\
-	SaCkptResponseHeadT *pResphead /*[out]*/, \
-	struct timeval *tv /*[in/out]*/)
+static SaErrorT 
+SaCkptLibResponseReceive(IPC_Channel* ch, 
+	SaUint32T requestNO,
+	SaCkptClientResponseT** pCkptResp) 
 {
-	SaErrorT retcode;
-	size_t len;
-	
-	/* send the request head */
-	len = sizeof(SaCkptRequestHeadT);
-	retcode = reliableWrite(fd, (char*)pReqHead, len, tv);
-	if (SA_OK != retcode) {
-		perror("hello: reliableWrite-1 failure");
-		return retcode;
+
+	SaCkptClientResponseT* ckptResp = NULL;
+
+	IPC_Message	*ipcMsg = NULL;
+	int		rc = IPC_OK;
+	SaErrorT	retval = SA_OK;
+	char		*p = NULL;
+
+	ckptResp = SaCkptGetLibResponseByReqno(requestNO);
+	if (ckptResp != NULL) {
+		*pCkptResp = ckptResp;
+		return SA_OK;
 	}
 	
-	/* send the request param */
-	if (0 != pReqHead->paramLen && NULL != pParam) {
-		retcode = reliableWrite(fd, /*(char*)*/pParam, \
-				pReqHead->paramLen, tv);
-		if (SA_OK != retcode) {
-			perror("hello: reliableWrite-2 failure");
-			return retcode;
+	if(ch->ch_status != IPC_CONNECT) {
+		cl_log(LOG_WARNING, 
+			"IPC is in state %d before receive message",
+			ch->ch_status);
+		return SA_ERR_LIBRARY;
+	}
+	
+	while (ch->ops->is_message_pending(ch) != TRUE) {
+		cl_shortsleep();
+	}
+
+	while (ch->ops->is_message_pending(ch) == TRUE) {
+		/* receive ipc message */
+		rc = ch->ops->recv(ch, &ipcMsg);
+		if (rc != IPC_OK) {
+			cl_log(LOG_ERR, "Receive response failed");
+			ha_free(ipcMsg);
+			retval =  SA_ERR_LIBRARY;
+			break;
 		}
+
+		if (ipcMsg->msg_len <
+			sizeof(SaCkptClientResponseT) - sizeof(void*)) {
+			cl_log(LOG_ERR, "Received error response");
+			ha_free(ipcMsg);
+			retval = SA_ERR_LIBRARY;
+			break;
+		}
+		p = ipcMsg->msg_body;
+
+		ckptResp = ha_malloc(sizeof(SaCkptClientResponseT));
+		if (ckptResp == NULL) {
+			cl_log(LOG_ERR, 
+				"No memory in checkpoint library");
+			if (ipcMsg != NULL) {
+				if (ipcMsg->msg_body != NULL) {
+					ha_free(ipcMsg->msg_body);
+				}
+				ha_free(ipcMsg);
+			}
+			retval = SA_ERR_NO_MEMORY;
+			break;
+		}
+
+		memset(ckptResp, 0, sizeof(SaCkptClientResponseT));
+		memcpy(ckptResp, p, 
+			sizeof(SaCkptClientResponseT) - sizeof(void*));
+		p += (sizeof(SaCkptClientResponseT) - sizeof(void*));
+
+		if (ckptResp->dataLength > 0) {
+			ckptResp->data = ha_malloc(ckptResp->dataLength);
+			if (ckptResp->data == NULL) {
+				cl_log(LOG_ERR, 
+					"No memory in checkpoint library");
+				if (ipcMsg != NULL) {
+					if (ipcMsg->msg_body != NULL) {
+						ha_free(ipcMsg->msg_body);
+					}
+					ha_free(ipcMsg);
+				}
+				ha_free(ckptResp);
+				retval = SA_ERR_NO_MEMORY;
+				break;
+			} else {
+				memcpy(ckptResp->data, p, 
+					ckptResp->dataLength);
+				p += ckptResp->dataLength;
+			}
+		} else {
+			ckptResp->data = NULL;
+		}
+
+		/* free ipc message */
+		if (ipcMsg->msg_body != NULL) {
+			ha_free(ipcMsg->msg_body);
+		}
+		ha_free(ipcMsg);
+		
+		libResponseList = g_list_append(libResponseList,
+			ckptResp);
 	}
 	
-	/* get the response head */
-	retcode = readRespheadByReqno(fd, pResphead, pReqHead->reqno, tv);
-	return retcode;
+	ckptResp = SaCkptGetLibResponseByReqno(requestNO);
+	if (ckptResp != NULL) {
+		*pCkptResp = ckptResp;
+		return SA_OK;
+	}
+
+	return retval;
+}
+
+static SaErrorT 
+SaCkptLibResponseReceiveAsync(IPC_Channel* ch) 
+{
+	SaCkptClientResponseT* ckptResp = NULL;
+
+	IPC_Message	*ipcMsg = NULL;
+	int		rc = IPC_OK;
+	SaErrorT	retval = SA_OK;
+	char		*p = NULL;
+
+	if(ch->ch_status != IPC_CONNECT) {
+		cl_log(LOG_WARNING, 
+			"IPC is in state %d before receive message",
+			ch->ch_status);
+		return SA_ERR_LIBRARY;
+	}
+	
+	if (ch->ops->is_message_pending(ch) != TRUE) {
+		return SA_OK;
+	}
+
+	while (ch->ops->is_message_pending(ch) == TRUE) {
+		/* receive ipc message */
+		rc = ch->ops->recv(ch, &ipcMsg);
+		if (rc != IPC_OK) {
+			cl_log(LOG_ERR, "Receive response failed");
+			ha_free(ipcMsg);
+			retval =  SA_ERR_LIBRARY;
+			break;
+		}
+
+		if (ipcMsg->msg_len <
+			sizeof(SaCkptClientResponseT) - sizeof(void*)) {
+			cl_log(LOG_ERR, "Received error response");
+			ha_free(ipcMsg);
+			retval = SA_ERR_LIBRARY;
+			break;
+		}
+		p = ipcMsg->msg_body;
+
+		ckptResp = ha_malloc(sizeof(SaCkptClientResponseT));
+		if (ckptResp == NULL) {
+			cl_log(LOG_ERR, 
+				"No memory in checkpoint library");
+			if (ipcMsg != NULL) {
+				if (ipcMsg->msg_body != NULL) {
+					ha_free(ipcMsg->msg_body);
+				}
+				ha_free(ipcMsg);
+			}
+			retval = SA_ERR_NO_MEMORY;
+			break;
+		}
+
+		memset(ckptResp, 0, sizeof(SaCkptClientResponseT));
+		memcpy(ckptResp, p, 
+			sizeof(SaCkptClientResponseT) - sizeof(void*));
+		p += (sizeof(SaCkptClientResponseT) - sizeof(void*));
+
+		if (ckptResp->dataLength > 0) {
+			ckptResp->data = ha_malloc(ckptResp->dataLength);
+			if (ckptResp->data == NULL) {
+				cl_log(LOG_ERR, 
+					"No memory in checkpoint library");
+				if (ipcMsg != NULL) {
+					if (ipcMsg->msg_body != NULL) {
+						ha_free(ipcMsg->msg_body);
+					}
+					ha_free(ipcMsg);
+				}
+				ha_free(ckptResp);
+				retval = SA_ERR_NO_MEMORY;
+				break;
+			} else {
+				memcpy(ckptResp->data, p, 
+					ckptResp->dataLength);
+				p += ckptResp->dataLength;
+			}
+		} else {
+			ckptResp->data = NULL;
+		}
+
+		/* free ipc message */
+		if (ipcMsg->msg_body != NULL) {
+			ha_free(ipcMsg->msg_body);
+		}
+		ha_free(ipcMsg);
+		
+		libAsyncResponseList = g_list_append(
+			libAsyncResponseList,
+			ckptResp);
+	}
+	
+	return retval;
 }
 
 /* ------------------------- exported API ------------------------------- */
 
-/* Initialize the checkpoint service for the invoking process and register
+/* 
+ * Initialize the checkpoint service for the invoking process and register
  * the related callback functions. 
  */
 SaErrorT
-saCkptInitialize(
-	SaCkptHandleT *ckptHandle/*[out]*/,
+saCkptInitialize(SaCkptHandleT *ckptHandle/*[out]*/,
 	const SaCkptCallbacksT *callbacks,
 	const SaVersionT *version)
 {	
-	SaInt32T iret;
-	SaErrorT retcode;
-	size_t len;
-	SaInt32T syncfd;
-	SaInt32T asyncfd;
-	SaCkptRequestHeadT reqhead;
-	SaCkptResponseHeadT resphead;
-	SaCkptReqInitParamT initParam;
-	InitListDataT* pInitData;
-	struct sockaddr_un srv_addr;
-	struct timeval tv = TIMEOUT_VAL;
+	SaErrorT libError = SA_OK;
 	
-	/* check the parameters */
-	if (NULL == ckptHandle || NULL == version) {
+	SaCkptLibClientT* libClient = NULL;
+	SaCkptLibRequestT* libRequest = NULL;
+	SaCkptClientRequestT* clientRequest = NULL;
+	SaCkptReqInitParamT* initParam = NULL;
+	SaCkptClientResponseT* clientResponse = NULL;
+
+	int i = 0;
+
+	cl_log_set_entity("AIS");
+	cl_log_enable_stderr(TRUE);
+	
+	if (version == NULL) {
+		cl_log(LOG_ERR, 
+			"Null version number in checkpoint library");
 		return SA_ERR_INVALID_PARAM;
 	}
-	
-	/* allocate memory for init data*/
-	pInitData = (InitListDataT*)malloc(sizeof(InitListDataT));
-	if ( NULL == pInitData ) {
-		perror("saCkptInitialize: malloc() failure");
-		return SA_ERR_NO_MEMORY;
-	}
-	
-	/* prepare ckpt service address */
-	memset(&srv_addr, 0, sizeof(srv_addr));
-	srv_addr.sun_family = AF_LOCAL;
-	strncpy(srv_addr.sun_path, CKPTIPC, sizeof(srv_addr.sun_path));
-	
-	/* prepare the sockets */
-	syncfd = socket(AF_LOCAL, SOCK_STREAM, 0);
-	if (syncfd<0) {
-		perror("saCkptInitialize: socket-1 failure");
-		free(pInitData);
-		return SA_ERR_LIBRARY;
-	}		
-	asyncfd = socket(AF_LOCAL, SOCK_STREAM, 0);
-	if (asyncfd<0) {
-		perror("saCkptInitialize: socket-2 failure");
-		free(pInitData);
-		close(syncfd);
-		return SA_ERR_LIBRARY;
-	}
-	
-	/* first connect */
-	iret = connect(syncfd, (struct sockaddr *)&srv_addr,
-			sizeof(struct sockaddr_un));
-	if (iret == -1) {
-	    perror("saCkptInitialize: connect-1 failure");
-		free(pInitData);
-		close(syncfd);
-		close(asyncfd);
-    	return SA_ERR_LIBRARY;
-  	}
-  	
-  	/* second connect */
-	iret = connect(asyncfd, (struct sockaddr *)&srv_addr,
-			sizeof(struct sockaddr_un));
-	if (iret == -1) {
-	    perror("saCkptInitialize: connect-2 failure");
-		free(pInitData);
-		close(syncfd);
-		close(asyncfd);
-    	return SA_ERR_LIBRARY;
-  	}
 
-	/* prepare the request head */
-	len = sizeof(SaCkptRequestHeadT) + sizeof(SaCkptReqInitParamT);
-	reqhead.msglen = len - sizeof(reqhead.msglen);
-	reqhead.initHandle = 0;
-	reqhead.reqno = genReqNo();
-	reqhead.req = REQ_SERVICE_INIT;
-	reqhead.paramLen = sizeof(SaCkptReqInitParamT);
-	reqhead.dataLen = 0;
+	libClient = (SaCkptLibClientT*)ha_malloc(
+					sizeof(SaCkptLibClientT));
+  	libRequest = (SaCkptLibRequestT*)ha_malloc(
+					sizeof(SaCkptLibRequestT));
+	clientRequest = (SaCkptClientRequestT*)ha_malloc(
+					sizeof(SaCkptClientRequestT));
+	initParam = (SaCkptReqInitParamT*)ha_malloc(
+					sizeof(SaCkptReqInitParamT));
+	if ((libClient == NULL) || 
+		(libRequest == NULL) ||
+		(clientRequest == NULL) ||
+		(initParam == NULL)) {
+		cl_log(LOG_ERR, 
+			"No memory in checkpoint library");
+		libError = SA_ERR_NO_MEMORY;
+		goto initError;
+	}
+	
+	memset(libClient, 0, sizeof(SaCkptLibClientT));
+	memset(libRequest, 0, sizeof(SaCkptLibRequestT));
+	memset(clientRequest, 0, sizeof(SaCkptClientRequestT));
+	memset(initParam, 0, sizeof(SaCkptReqInitParamT));
+	
+	libClient->hostName[0] = 0;
+	libClient->pid = getpid();
+	libClient->threadID = 0;
+	libClient->clientHandle = 0;
+	libClient->checkpointList = NULL;
+	for (i=0; i<2; i++) {
+		IPC_Channel* ch = NULL;
+		char pathname[128];
+		
+		memset (pathname, 0, sizeof(pathname));
+		strcpy (pathname, CKPTIPC) ;
+		ch = SaCkptClientChannelInit(pathname);
+		if (ch == NULL) {
+			cl_log(LOG_ERR, 
+			"Checkpoint library can not initiate connection");
+			libError = SA_ERR_LIBRARY;
+			goto initError;
+		}
+		if (ch->ops->initiate_connection(ch)
+			!= IPC_OK) {
+			cl_log(LOG_ERR, 
+			"Checkpoint library can not connect to daemon");
+			libError = SA_ERR_LIBRARY;
+			goto initError;
+		}
 
-	/* prepare the request head */
-	initParam.pid = getpid();
-	initParam.tid = 0;
-	memcpy( &(initParam.ver), version, sizeof(SaVersionT));
-	
-	/* hello to ckpt service */
-	retcode = hello(syncfd, &reqhead, &initParam, &resphead, &tv);
-	if ( SA_OK != retcode || SA_OK != resphead.retval){
-		close(syncfd);
-		close(asyncfd);
-		free(pInitData);
-		if (SA_OK != retcode) {
-			return retcode;
-		}
-		return resphead.retval;
+		libClient->channel[i] = ch;
 	}
-	
-	/* The created service handle is returned in the response head 
-	 * since it is the member of the response head.
-	 * this should conform to the service daemon
-	 */
-	*ckptHandle = resphead.initHandle;
-#if 1	
-	/* send the second request through the second fd, to notify the service 
-	 * that this two connects are combined
-	 */
-	reqhead.initHandle = *ckptHandle;
-	reqhead.reqno = genReqNo();
-	retcode = hello(asyncfd, &reqhead, &initParam, &resphead, &tv);
-	if ( SA_OK != retcode || SA_OK != resphead.retval){
-		close(syncfd);
-		close(asyncfd);
-		free(pInitData);
-		if (SA_OK != retcode) {
-			return retcode;
-		}
-		return resphead.retval;
+
+	libRequest->client = libClient;
+	libRequest->timeoutTag = 0;
+	libRequest->clientRequest = clientRequest;
+
+	clientRequest->clientHandle = 0;
+	clientRequest->requestNO = SaCkptLibGetReqNO();
+	clientRequest->req = REQ_SERVICE_INIT;
+	clientRequest->reqParamLength = sizeof(SaCkptReqInitParamT);
+	clientRequest->dataLength = 0;
+	clientRequest->reqParam = initParam;
+	clientRequest->data = NULL;
+
+	initParam->pid = libClient->pid;
+	initParam->tid = libClient->threadID;
+	memcpy(&(initParam->ver), version, sizeof(SaVersionT));
+
+	libError = SaCkptLibRequestSend(libClient->channel[0], 
+		libRequest->clientRequest);
+	if (libError != SA_OK) {
+		cl_log(LOG_ERR, 
+			"Send initialize request failed");
+		goto initError;
 	}
-#endif
-	/* add new item to service handle list */
-	pInitData->initHandle = *ckptHandle;
-	pInitData->syncfd = syncfd;
-	pInitData->asyncfd = asyncfd;
+
+	libError = SaCkptLibResponseReceive(libClient->channel[0], 
+		libRequest->clientRequest->requestNO,
+		&clientResponse);
+	if (libError != SA_OK) {
+		cl_log(LOG_ERR, 
+			"Receive response failed");
+		goto initError;
+	}
+	if (clientResponse == NULL) {
+		cl_log(LOG_ERR, 
+			"Received null response");
+		libError = SA_ERR_LIBRARY;
+		goto initError;
+	}
+	if (clientResponse->retVal != SA_OK) {
+		cl_log(LOG_ERR, 
+			"Checkpoint daemon returned error");
+		libError = clientResponse->retVal;
+		goto initError;
+	}
+
+	*ckptHandle = clientResponse->clientHandle;
+	
+	libClient->clientHandle = *ckptHandle;
 	if (callbacks != NULL) {
-		pInitData->callbacks = *callbacks;
+		libClient->callbacks = *callbacks;
 	}
-	else {
-		memset(&(pInitData->callbacks), 0, sizeof(SaCkptCallbacksT));
+	libClientList = g_list_append(libClientList, libClient);
+
+	if (libIteratorHash == NULL) {
+		libIteratorHash = 
+			g_hash_table_new(g_int_hash, g_int_equal);
 	}
-	g_initList = g_list_append(g_initList, pInitData);
+
+	/*
+	 * FIXME
+	 * initialize the asyn channel and register callbacks
+	 */
+
+	libError = SA_OK;
+
+initError:
+	if (libError != SA_OK) {
+		if (libClient != NULL) {
+			for (i=0; i<2; i++) {
+				if (libClient->channel[i] != NULL) {
+					IPC_Channel* ch = 
+						libClient->channel[i];
+					ch->ops->destroy(ch);
+				}
+			}
+			ha_free(libClient);
+		}
+	}
 	
-	return SA_OK;
+	if (libRequest != NULL) {
+		ha_free(libRequest);
+	}
+	
+	if (clientRequest != NULL) {
+		ha_free(clientRequest);
+	}
+	
+	if (initParam != NULL) {
+		ha_free(initParam);
+	}
+
+	if (clientResponse != NULL) {
+		if (clientResponse->dataLength > 0) {
+			ha_free(clientResponse->data);
+		}
+		ha_free(clientResponse);
+	}
+
+	return libError;
 }
 
-/* Returns the fd for asynchronously operation
+/* 
+ * Returns the fd for asynchronously operation
  */
 SaErrorT
 saCkptSelectionObjectGet(
 	const SaCkptHandleT *ckptHandle,
 	SaSelectionObjectT *selectionObject/*[out]*/)
 {
-	InitListDataT* pInitData; 
+	SaCkptLibClientT* libClient = NULL;
+	IPC_Channel* ch = NULL;
 
-	/* check the parameters */
-	if (NULL == ckptHandle || NULL == selectionObject) {
+	if (ckptHandle == NULL) {
+		cl_log(LOG_ERR, 
+			"Null handle in checkpoint library");
 		return SA_ERR_INVALID_PARAM;
 	}
-	/* check the handle is valid */
-	pInitData = getInitDataByHandle(ckptHandle);
-	if (NULL == pInitData) {
-		return SA_ERR_BAD_HANDLE;
+
+	libClient = SaCkptGetLibClientByHandle(*ckptHandle);
+	if (libClient == NULL) {
+		cl_log(LOG_ERR, 
+			"Invalid handle in checkpoint library");
+		return SA_ERR_INVALID_PARAM;
 	}
-	*selectionObject = pInitData->asyncfd;
+	
+	ch = libClient->channel[1];
+	*selectionObject = ch->ops->get_recv_select_fd(ch);
+	
 	return SA_OK;
 }
 
-/* This function invokes, in the context of the calling thread,one or all 
+/* 
+ * This function invokes, in the context of the calling thread,one or all 
  * of the pending callbacks for the handle ckptHandle.
  */
 SaErrorT
-saCkptDispatch(
-	const SaCkptHandleT *ckptHandle,
+saCkptDispatch(const SaCkptHandleT *ckptHandle,
 	SaDispatchFlagsT dispatchFlags)
 {
-	SaErrorT retcode;
-	InitListDataT* pInitData;
-	SaInt32T sockfd;
-	fd_set rfds;
-	struct timeval tv = TIMEOUT_VAL;
-	struct timeval zero_tv = {0, 0};
-
-	/* check the init handle is valid */
-	pInitData = getInitDataByHandle(ckptHandle);
-	if (NULL == pInitData) {
-		return SA_ERR_BAD_HANDLE;
+	SaCkptLibClientT* libClient = NULL;
+	SaCkptLibRequestT* libRequest = NULL;
+	
+	SaCkptClientRequestT* clientRequest = NULL;
+ 	SaCkptClientResponseT* clientResponse = NULL;
+	
+	SaInvocationT invocation;
+	SaCkptLibCheckpointT* libCheckpoint = NULL;
+	SaCkptCheckpointHandleT* checkpointHandle = NULL;
+	SaUint32T reqno;
+	SaCkptReqOpenAsyncParamT* openAsyncParam = NULL;
+	SaCkptReqAsyncParamT* asyncParam = NULL;
+	
+	SaErrorT libError = SA_OK;
+	IPC_Channel* ch = NULL;
+	
+	if (ckptHandle == NULL) {
+		cl_log(LOG_ERR, 
+			"Null handle in checkpoint library");
+		return SA_ERR_INVALID_PARAM;
 	}
 
-	/* check the dispatch flag */
-	if ( !(SA_DISPATCH_ONE == dispatchFlags || \
-		SA_DISPATCH_ALL == dispatchFlags || \
-		SA_DISPATCH_BLOCKING == dispatchFlags)) {
-		return SA_ERR_BAD_FLAGS;
+	libClient = SaCkptGetLibClientByHandle(*ckptHandle);
+	if (libClient == NULL) {
+		cl_log(LOG_ERR, 
+			"Invalid handle in checkpoint library");
+		return SA_ERR_INVALID_PARAM;
 	}
-	sockfd = pInitData->asyncfd;
-
-	/* dispatch one pending request */
-	if (SA_DISPATCH_ONE == dispatchFlags) {
-		retcode = doDispatch(sockfd, &tv);
-		return retcode;
+	
+	ch = libClient->channel[1]; /* async channel */
+	libError = SaCkptLibResponseReceiveAsync(ch);
+	if (libError != SA_OK) {
+		cl_log(LOG_ERR, 
+			"Receive response failed");
+		return SA_ERR_LIBRARY;
 	}
-
-	/* dispatch all pending request */
-	if (SA_DISPATCH_ALL == dispatchFlags) {
-		while (1) {
-			int iret;
-			FD_ZERO(&rfds);
-			FD_SET(sockfd, &rfds);
-			
-			/* polling the fd first */
-			iret = select(sockfd+1, &rfds, NULL, NULL, &zero_tv);
-			if (0 == iret) {
-				return SA_OK;
-			}
-			if (iret < 0) {
-				/* ?*/
-				return SA_OK;
-			}
-			retcode = doDispatch(sockfd, &tv);
-			if( SA_OK != retcode) {
-				return retcode;
-			}
-		}/* end while(1) */
+	
+	if (g_list_length(libAsyncResponseList) == 0) {
+		return SA_OK;
 	}
 
-	/* dispatch as request pending until service finalizing */
-	while (1) {
-		int iret;
-		FD_ZERO(&rfds);
-		FD_SET(sockfd, &rfds);
+	while (libAsyncResponseList != NULL) {
+		clientResponse = libAsyncResponseList->data;
 		
-		/* blocking until request pending */
-		iret = select(sockfd+1, &rfds, NULL, NULL, NULL);
-		if (iret <= 0) {
-			/* check the init handle is still valid */
-			pInitData = getInitDataByHandle(ckptHandle);
-			if (NULL == pInitData) {
-				return SA_OK;
-			}
+		libError = clientResponse->retVal;
+		reqno = clientResponse->requestNO;
+		libRequest = SaCkptGetLibRequestByReqno(reqno);
+		clientRequest = libRequest->clientRequest;
+		switch (clientRequest->req) {
+		case REQ_CKPT_OPEN_ASYNC:
+			openAsyncParam = clientRequest->reqParam;
+			invocation = openAsyncParam->invocation;
+			memcpy(checkpointHandle, clientResponse->data,
+				sizeof(SaCkptCheckpointHandleT));
+
+			/*
+			 * create libCheckpoint and add it to the 
+			 * opened checkpoint list
+			 */
+			libCheckpoint->client = libClient;
+			libCheckpoint->checkpointHandle = *checkpointHandle;
+			libCheckpoint->ckptName.length = 
+				openAsyncParam->ckptName.length;
+			memcpy(libCheckpoint->ckptName.value, 
+				openAsyncParam->ckptName.value,
+				openAsyncParam->ckptName.length);
+			memcpy(&(libCheckpoint->createAttributes),
+				&openAsyncParam->attr,
+				sizeof(SaCkptCheckpointCreationAttributesT));
+			libCheckpoint->openFlag = openAsyncParam->openFlag;
+				
+			libClient->checkpointList = g_list_append(
+				libClient->checkpointList,
+				libCheckpoint);
+			libCheckpointList = g_list_append(libCheckpointList,
+				libCheckpoint);
+			
+			
+			libCallback->saCkptCheckpointOpenCallback(
+				invocation, checkpointHandle, libError);
+			break;
+		case REQ_CKPT_SYNC_ASYNC:
+			asyncParam = clientRequest->reqParam;
+			invocation = asyncParam->invocation;
+			libCallback->saCkptCheckpointSynchronizeCallback(
+				invocation, libError);
+			break;
+		default:
+			break;
+		};
+
+		libAsyncResponseList = g_list_remove(libAsyncResponseList,
+			clientResponse);
+		libAsyncRequestList = g_list_remove(libAsyncRequestList,
+			libRequest);
+		ha_free(clientResponse->data);
+		ha_free(clientResponse);
+		ha_free(libRequest->clientRequest->reqParam);
+		ha_free(libRequest->clientRequest->data);
+		ha_free(libRequest->clientRequest);
+		ha_free(libRequest);
+		
+		if (dispatchFlags == SA_DISPATCH_ONE) {
+			break;
 		}
-		tv = TIMEOUT_VAL;
-		retcode = doDispatch(sockfd, &tv);
-		if( SA_OK != retcode) {
-			perror("saCkptDispatch: doDispatch fail");
-		}
-	}/* end while(1) */
+	}
+	
+	return SA_OK; 
 }
 
-/* closes the association, represented by ckptHandle, between the process and
- * the Checkpoint Service. It frees up resources. If any checkpoint is still
- * open with this particular handle, the invocation of this function fails.
+/* 
+ * closes the association, represented by ckptHandle, between the process and
+ * the Checkpoint Service. It frees up resources and close all the opened 
+ * checkpoints.
  */
 SaErrorT
 saCkptFinalize(const SaCkptHandleT *ckptHandle)
 {
-	SaErrorT retcode;
-	size_t len;
-	GList* pList;
-	InitListDataT* pInitData;
-	SaCkptRequestHeadT reqhead;
-	SaCkptResponseHeadT resphead;
-	struct timeval tv = TIMEOUT_VAL;
+	SaCkptLibClientT* libClient = NULL;
+	SaCkptLibRequestT* libRequest = NULL;
+	SaCkptClientRequestT* clientRequest = NULL;
+	SaCkptReqFinalParamT* finalParam = NULL;
+ 	SaCkptClientResponseT* clientResponse = NULL;
+	
+	SaErrorT libError = SA_OK;
+	IPC_Channel* ch = NULL;
+	int i = 0;
+	
+	GList* list = NULL;
 
-	/* check the handle is valid */
-	pInitData = getInitDataByHandle(ckptHandle);
-	if (NULL == pInitData) {
-		return SA_ERR_BAD_HANDLE;
+	if (ckptHandle == NULL) {
+		cl_log(LOG_ERR, 
+			"Null handle in checkpoint library");
+		return SA_ERR_INVALID_PARAM;
 	}
 
-	/* check whether any open ckeckpoints exists with this handle */
-	pList = g_ckptList;
-	while (NULL != pList) {
-		if (pInitData == ((CkptListDataT*)(pList->data))->pInit) {
-			return SA_ERR_BUSY;
+	libClient = SaCkptGetLibClientByHandle(*ckptHandle);
+	if (libClient == NULL) {
+		cl_log(LOG_ERR, 
+			"Invalid handle in checkpoint library");
+		return SA_ERR_INVALID_PARAM;
+	}
+	
+	/*
+	 * close all opened checkpoints first
+	 */
+	list = libClient->checkpointList;
+	while(list != NULL ) {
+		SaCkptLibCheckpointT* libCheckpoint = NULL;
+		SaCkptCheckpointHandleT* checkpointHandle = NULL;
+
+		libCheckpoint = (SaCkptLibCheckpointT*)(list->data);
+		checkpointHandle = &(libCheckpoint->checkpointHandle);
+		saCkptCheckpointClose(checkpointHandle);
+		ha_free(libCheckpoint);
+
+		list = libClient->checkpointList;
+	}
+	
+  	libRequest = (SaCkptLibRequestT*)ha_malloc(
+					sizeof(SaCkptLibRequestT));
+	clientRequest = (SaCkptClientRequestT*)ha_malloc(
+					sizeof(SaCkptClientRequestT));
+	finalParam = (SaCkptReqFinalParamT*)ha_malloc(
+					sizeof(SaCkptReqFinalParamT));
+ 	if ((libRequest == NULL) ||
+		(clientRequest == NULL) ||
+		(finalParam == NULL)) {
+		cl_log(LOG_ERR, 
+			"No memory in checkpoint library");
+		libError = SA_ERR_NO_MEMORY;
+		goto finalError;
+	}
+	
+	memset(libRequest, 0, sizeof(SaCkptLibRequestT));
+	memset(clientRequest, 0, sizeof(SaCkptClientRequestT));
+	memset(finalParam, 0, sizeof(SaCkptReqFinalParamT));
+	
+	libRequest->client = libClient;
+	libRequest->timeoutTag = 0;
+	libRequest->clientRequest = clientRequest;
+
+	clientRequest->clientHandle = libClient->clientHandle;
+	clientRequest->requestNO = SaCkptLibGetReqNO();
+	clientRequest->req = REQ_SERVICE_FINL;
+	clientRequest->reqParamLength = sizeof(SaCkptReqFinalParamT);
+	clientRequest->dataLength = 0;
+	clientRequest->reqParam = finalParam;
+	clientRequest->data = NULL;
+
+	finalParam->clientHandle = *ckptHandle;
+
+	ch = libClient->channel[0];
+	libError = SaCkptLibRequestSend(ch, libRequest->clientRequest);
+	if (libError != SA_OK) {
+		cl_log(LOG_ERR, 
+			"Send finalize request failed");
+		goto finalError;
+	}
+
+	libError = SaCkptLibResponseReceive(ch, 
+		libRequest->clientRequest->requestNO,
+		&clientResponse);
+	if (libError != SA_OK) {
+		cl_log(LOG_ERR, 
+			"Receive response failed");
+		goto finalError;
+	}
+	if (clientResponse == NULL) {
+		cl_log(LOG_ERR, 
+			"Received null response");
+		libError = SA_ERR_LIBRARY;
+		goto finalError;
+	}
+	if (clientResponse->retVal != SA_OK) {
+		cl_log(LOG_ERR, 
+			"Checkpoint daemon returned error");
+		libError = clientResponse->retVal;
+		goto finalError;
+	}
+
+	
+	/*
+	 * FIXME
+	 * cancel all pending callbacks related to this client
+	 */
+	
+	/* remove client */
+	libClientList = g_list_remove(libClientList, libClient);
+
+	/* only destroy the hash table after all the clients finalized */
+	if (g_list_length(libClientList) == 0) {
+		g_hash_table_destroy(libIteratorHash);
+	}
+	
+	libError = SA_OK;
+
+finalError:
+	if (libError == SA_OK) {
+		if (libClient != NULL) {
+			for (i=0; i<2; i++) {
+				if (libClient->channel[i] != NULL) {
+					ch = libClient->channel[i];
+					ch->ops->destroy(ch);
+				}
+			}
+			ha_free(libClient);
 		}
-		pList = g_list_next(pList);
+	}
+	
+	if (libRequest != NULL) {
+		ha_free(libRequest);
+	}
+	
+	if (clientRequest != NULL) {
+		ha_free(clientRequest);
+	}
+	
+	if (finalParam != NULL) {
+		ha_free(finalParam);
 	}
 
-  	/* prepare the request head */
-	len = sizeof(SaCkptRequestHeadT);
-	reqhead.msglen = len - sizeof(reqhead.msglen);
-	reqhead.initHandle = *ckptHandle;
-	reqhead.reqno = genReqNo();
-	reqhead.req = REQ_SERVICE_FINL;
-	reqhead.paramLen = 0;
-	reqhead.dataLen = 0;
-
-	/* hello to ckpt service */
-	/* !!even some error occured, still need to release the resource */
-	retcode = hello(pInitData->syncfd, &reqhead, NULL, &resphead, &tv);
-	if (SA_OK != retcode) {
-		return retcode;
-	}
-	if (SA_OK != resphead.retval) {
-		return resphead.retval;
+	if (clientResponse != NULL) {
+		if (clientResponse->dataLength > 0) {
+			ha_free(clientResponse->data);
+		}
+		ha_free(clientResponse);
 	}
 
-	/* close the fd */
-	close(pInitData->syncfd);
-	close(pInitData->asyncfd);
-
-	/* remove the item from initList and free memory */
-	g_initList = g_list_remove(g_initList, pInitData);
-	free(pInitData);
-	return SA_OK;
+	return libError; 
 }
 
-/* the invocation of this function is blocking. A new checkpoint handle is
+/* 
+ * the invocation of this function is blocking. A new checkpoint handle is
  * returned upon completion.
  */
 SaErrorT
@@ -746,87 +1055,156 @@ saCkptCheckpointOpen(
 	SaTimeT timeout,
 	SaCkptCheckpointHandleT *checkpointHandle/*[out]*/)
 {
-	SaErrorT retcode;
-	size_t len;
-	InitListDataT* pInitData;
-	CkptListDataT* pCkptData;
-	SaCkptRequestHeadT reqhead;
-	SaCkptResponseHeadT resphead;
-	SaCkptReqOpenParamT openParam;
-	long secs = timeout/1000000000L;
-	long usecs = (timeout%1000000000L)*1000000L;
-	struct timeval tv = {secs, usecs};
-
-	/* check the parameters */
-	if (NULL == ckptHandle || NULL == checkpointName \
-			|| NULL == checkpointHandle) {
+	SaCkptLibClientT* libClient = NULL;
+	SaCkptLibRequestT* libRequest = NULL;
+	SaCkptClientRequestT* clientRequest = NULL;
+	SaCkptReqOpenParamT* openParam = NULL;
+ 	SaCkptClientResponseT* clientResponse = NULL;
+	SaCkptLibCheckpointT* libCheckpoint = NULL;
+	
+	SaErrorT libError = SA_OK;
+	IPC_Channel* ch = NULL;
+	
+	if (ckptHandle == NULL) {
+		cl_log(LOG_ERR, 
+			"Null handle in checkpoint library");
 		return SA_ERR_INVALID_PARAM;
 	}
 
-	/* check the handle is valid */
-	pInitData = getInitDataByHandle(ckptHandle);
-	if (NULL == pInitData) {
-		return SA_ERR_BAD_HANDLE;
+	libClient = SaCkptGetLibClientByHandle(*ckptHandle);
+	if (libClient == NULL) {
+		cl_log(LOG_ERR, 
+			"Invalid handle in checkpoint library");
+		return SA_ERR_INVALID_PARAM;
+	}
+	
+  	libRequest = (SaCkptLibRequestT*)ha_malloc(
+					sizeof(SaCkptLibRequestT));
+	clientRequest = (SaCkptClientRequestT*)ha_malloc(
+					sizeof(SaCkptClientRequestT));
+	openParam = (SaCkptReqOpenParamT*)ha_malloc(
+					sizeof(SaCkptReqOpenParamT));
+	libCheckpoint = (SaCkptLibCheckpointT*)ha_malloc(
+					sizeof(SaCkptLibCheckpointT));
+ 	if ((libRequest == NULL) ||
+		(clientRequest == NULL) ||
+		(openParam == NULL) ||
+		(libCheckpoint == NULL)) {
+		cl_log(LOG_ERR, 
+			"No memory in checkpoint library");
+		libError = SA_ERR_NO_MEMORY;
+		goto openError;
+	}
+	
+	memset(libRequest, 0, sizeof(SaCkptLibRequestT));
+	memset(clientRequest, 0, sizeof(SaCkptClientRequestT));
+	memset(openParam, 0, sizeof(SaCkptReqOpenParamT));
+	memset(libCheckpoint, 0, sizeof(SaCkptLibCheckpointT));
+	
+	libRequest->client = libClient;
+	libRequest->timeoutTag = 0;
+	libRequest->clientRequest = clientRequest;
+
+	clientRequest->clientHandle = libClient->clientHandle;
+	clientRequest->requestNO = SaCkptLibGetReqNO();
+	clientRequest->req = REQ_CKPT_OPEN;
+	clientRequest->reqParamLength = sizeof(SaCkptReqOpenParamT);
+	clientRequest->dataLength = 0;
+	clientRequest->reqParam = openParam;
+	clientRequest->data = NULL;
+
+	memcpy(&(openParam->attr), checkpointCreationAttributes,
+		sizeof(SaCkptCheckpointCreationAttributesT));
+	openParam->openFlag = checkpointOpenFlags;
+	openParam->timetout = timeout;
+	openParam->ckptName.length = checkpointName->length;
+	memcpy(openParam->ckptName.value, checkpointName->value,
+		checkpointName->length);
+
+	ch = libClient->channel[0];
+	libError = SaCkptLibRequestSend(ch, libRequest->clientRequest);
+	if (libError != SA_OK) {
+		cl_log(LOG_ERR, 
+			"Send open request failed");
+		goto openError;
 	}
 
-	/* new ckptList item */
-	pCkptData = (CkptListDataT*)malloc(sizeof(CkptListDataT));
-	if (NULL == pCkptData ) {
-		perror("saCkptCheckpointOpen: malloc() failure");
-		return SA_ERR_NO_MEMORY;
+	libError = SaCkptLibResponseReceive(ch, 
+		libRequest->clientRequest->requestNO,
+		&clientResponse);
+	if (libError != SA_OK) {
+		cl_log(LOG_ERR, 
+			"Receive response failed");
+		goto openError;
+	}
+	if (clientResponse == NULL) {
+		cl_log(LOG_ERR, 
+			"Received null response");
+		libError = SA_ERR_LIBRARY;
+		goto openError;
+	}
+	if (clientResponse->retVal != SA_OK) {
+		cl_log(LOG_ERR, 
+			"Checkpoint daemon returned error");
+		libError = clientResponse->retVal;
+		goto openError;
 	}
 
-  	/* prepare the request head */
-	len = sizeof(SaCkptRequestHeadT) + sizeof(SaCkptReqOpenParamT);
-	reqhead.msglen = len - sizeof(reqhead.msglen);
-	reqhead.initHandle = *ckptHandle;
-	reqhead.reqno = genReqNo();
-	reqhead.req = REQ_CKPT_OPEN;
-	reqhead.paramLen = sizeof(SaCkptReqOpenParamT);
-	reqhead.dataLen = 0;
+	memcpy(checkpointHandle, clientResponse->data,
+		sizeof(SaCkptCheckpointHandleT));
+
+	/*
+	 * create libCheckpoint and add it to the opened checkpoint list
+	 */
+	libCheckpoint->client = libClient;
+	libCheckpoint->checkpointHandle = *checkpointHandle;
+	libCheckpoint->ckptName.length = checkpointName->length;
+	memcpy(libCheckpoint->ckptName.value, checkpointName->value,
+		checkpointName->length);
+	memcpy(&(libCheckpoint->createAttributes),
+		checkpointCreationAttributes,
+		sizeof(SaCkptCheckpointCreationAttributesT));
+	libCheckpoint->openFlag = checkpointOpenFlags;
+		
+	libClient->checkpointList = g_list_append(
+		libClient->checkpointList,
+		libCheckpoint);
+	libCheckpointList = g_list_append(libCheckpointList,
+		libCheckpoint);
 	
-	/* prepare the request param */
-	memcpy(&(openParam.ckptName), checkpointName, sizeof(SaNameT));
-	openParam.openFlag = checkpointOpenFlags;
-	if (NULL != checkpointCreationAttributes) {
-		memcpy(&(openParam.attr), checkpointCreationAttributes, \
-					sizeof(openParam.attr));
-	}
-	else {
-		memset(&(openParam.attr), 0, sizeof(openParam.attr));
-	}
-	
-	/* hello to ckpt service */
-	retcode = hello(pInitData->syncfd, &reqhead, &openParam, &resphead, &tv);
-	if (SA_OK != retcode) {
-		free(pCkptData); 
-		return retcode;
-	}
-	if (SA_OK != resphead.retval) {
-		free(pCkptData); 
-		return resphead.retval;
-	}
-	
-	/* receive created checkpont handle */
-	retcode = reliableRead(pInitData->syncfd, (char*)checkpointHandle, \
-					sizeof(checkpointHandle), &tv);
-	if (SA_OK != retcode) {
-		/* ?service has processed your request */
-		perror("saCkptCheckpointOpen: reliableRead failure");
-		free(pCkptData); 
-		return retcode;
+	libError = SA_OK;
+
+openError:
+	if (libError != SA_OK) {
+		if (libCheckpoint != NULL) {
+			ha_free(libCheckpoint);
+		}
 	}
 	
-	/* add item to ckptList */
-	pCkptData->pInit = pInitData;
-	memcpy(&(pCkptData->ckptName), checkpointName, sizeof(SaNameT));
-	pCkptData->checkpointHandle = *checkpointHandle;
-	g_ckptList = g_list_append(g_ckptList, pCkptData);
+	if (libRequest != NULL) {
+		ha_free(libRequest);
+	}
 	
-	return SA_OK;
+	if (clientRequest != NULL) {
+		ha_free(clientRequest);
+	}
+	
+	if (openParam != NULL) {
+		ha_free(openParam);
+	}
+
+	if (clientResponse != NULL) {
+		if (clientResponse->dataLength > 0) {
+			ha_free(clientResponse->data);
+		}
+		ha_free(clientResponse);
+	}
+
+	return libError; 
 }
 
-/* open a checkpoint asynchronously
+/* 
+ * open a checkpoint asynchronously
  */
 SaErrorT
 saCkptCheckpointOpenAsync(
@@ -836,258 +1214,594 @@ saCkptCheckpointOpenAsync(
 	const SaCkptCheckpointCreationAttributesT *checkpointCreationAttributes,
 	SaCkptCheckpointOpenFlagsT checkpointOpenFlags)
 {
-	SaErrorT retcode;
-	size_t len;
-	InitListDataT* pInitData;
-	ReqListDataT* pReqData;
-	SaCkptRequestHeadT reqhead;
-	SaCkptReqOpenParamT openParam;
-	struct timeval tv = TIMEOUT_VAL;
-
-	/* check the parameters */
-	if (NULL == ckptHandle || NULL == checkpointName) {
+	SaCkptLibClientT* libClient = NULL;
+	SaCkptLibRequestT* libRequest = NULL;
+	SaCkptClientRequestT* clientRequest = NULL;
+	SaCkptReqOpenAsyncParamT* openAsyncParam = NULL;
+	SaCkptLibCheckpointT* libCheckpoint = NULL;
+	
+	SaErrorT libError = SA_OK;
+	IPC_Channel* ch = NULL;
+	
+	if (ckptHandle == NULL) {
+		cl_log(LOG_ERR, 
+			"Null handle in checkpoint library");
 		return SA_ERR_INVALID_PARAM;
 	}
 
-	/* check the handle is valid */
-	pInitData = getInitDataByHandle(ckptHandle);
-	if (NULL == pInitData) {
-		return SA_ERR_BAD_HANDLE;
-	}
-
-	/* new reqList item */
-	pReqData = (ReqListDataT*)malloc(sizeof(ReqListDataT));
-	if (NULL == pReqData ) {
-		perror("saCkptCheckpointOpenAsync: malloc() failure");
-		return SA_ERR_NO_MEMORY;
+	libClient = SaCkptGetLibClientByHandle(*ckptHandle);
+	if (libClient == NULL) {
+		cl_log(LOG_ERR, 
+			"Invalid handle in checkpoint library");
+		return SA_ERR_INVALID_PARAM;
 	}
 	
-  	/* prepare the request head */
-	len = sizeof(SaCkptRequestHeadT) + sizeof(SaCkptReqOpenParamT);
-	reqhead.msglen = len - sizeof(reqhead.msglen);
-	reqhead.initHandle = *ckptHandle;
-	reqhead.reqno = genReqNo();
-	reqhead.req = REQ_CKPT_OPEN;
-	reqhead.paramLen = sizeof(SaCkptReqOpenParamT);
-	reqhead.dataLen = 0;
-
-	/* prepare the request param */
-	memcpy(&(openParam.ckptName), checkpointName, sizeof(SaNameT));
-	openParam.openFlag = checkpointOpenFlags;
-	if (NULL != checkpointCreationAttributes) {
-		memcpy(&(openParam.attr), checkpointCreationAttributes, \
-					sizeof(openParam.attr));
-	}
-	else {
-		memset(&(openParam.attr), 0, sizeof(openParam.attr));
+  	libRequest = (SaCkptLibRequestT*)ha_malloc(
+					sizeof(SaCkptLibRequestT));
+	clientRequest = (SaCkptClientRequestT*)ha_malloc(
+					sizeof(SaCkptClientRequestT));
+	openAsyncParam = (SaCkptReqOpenAsyncParamT*)ha_malloc(
+					sizeof(SaCkptReqOpenAsyncParamT));
+	libCheckpoint = (SaCkptLibCheckpointT*)ha_malloc(
+					sizeof(SaCkptLibCheckpointT));
+ 	if ((libRequest == NULL) ||
+		(clientRequest == NULL) ||
+		(openAsyncParam == NULL) ||
+		(libCheckpoint == NULL)) {
+		cl_log(LOG_ERR, 
+			"No memory in checkpoint library");
+		libError = SA_ERR_NO_MEMORY;
+		goto openError;
 	}
 	
-	/* send request head */
-	retcode = reliableWrite(pInitData->asyncfd, (char*)&reqhead, \
-		sizeof(reqhead), &tv);
-	if (SA_OK != retcode ) {
-		perror("saCkptCheckpointOpenAsync: reliableWrite-1 failure");
-		free(pReqData);
-		return retcode;
+	memset(libRequest, 0, sizeof(SaCkptLibRequestT));
+	memset(clientRequest, 0, sizeof(SaCkptClientRequestT));
+	memset(openAsyncParam, 0, sizeof(SaCkptReqOpenAsyncParamT));
+	memset(libCheckpoint, 0, sizeof(SaCkptLibCheckpointT));
+	
+	libRequest->client = libClient;
+	libRequest->timeoutTag = 0;
+	libRequest->clientRequest = clientRequest;
+
+	clientRequest->clientHandle = libClient->clientHandle;
+	clientRequest->requestNO = SaCkptLibGetReqNO();
+	clientRequest->req = REQ_CKPT_OPEN_ASYNC;
+	clientRequest->reqParamLength = sizeof(SaCkptReqOpenAsyncParamT);
+	clientRequest->dataLength = 0;
+	clientRequest->reqParam = openAsyncParam;
+	clientRequest->data = NULL;
+
+	memcpy(&(openAsyncParam->attr), checkpointCreationAttributes,
+		sizeof(SaCkptCheckpointCreationAttributesT));
+	openAsyncParam->openFlag = checkpointOpenFlags;
+	openAsyncParam->invocation= invocation;
+	openAsyncParam->ckptName.length = checkpointName->length;
+	memcpy(openAsyncParam->ckptName.value, checkpointName->value,
+		checkpointName->length);
+
+	ch = libClient->channel[1]; /*async channel*/
+	libError = SaCkptLibRequestSend(ch, libRequest->clientRequest);
+	if (libError != SA_OK) {
+		cl_log(LOG_ERR, 
+			"Send open request failed");
+		goto openError;
 	}
 
-	/* send request param */
-	retcode = reliableWrite(pInitData->asyncfd, (char*)&openParam, \
-		sizeof(openParam), &tv);
-	if (SA_OK != retcode ) {
-		perror("saCkptCheckpointOpenAsync: reliableWrite-1 failure");
-		free(pReqData);
-		return retcode;
-	}
-
-	/* add item to reqList */
-	pReqData->pInit = pInitData;
-	pReqData->reqno = reqhead.reqno;
-	pReqData->req = reqhead.req;
-	pReqData->invocation = invocation;
-	g_reqList = g_list_append(g_reqList, pReqData);
-
+	libAsyncRequestList = g_list_append(libAsyncRequestList, 
+		libRequest);
+	
 	return SA_OK;
+
+openError:
+	if (libError != SA_OK) {
+		if (libCheckpoint != NULL) {
+			ha_free(libCheckpoint);
+		}
+	}
+	
+	if (libRequest != NULL) {
+		ha_free(libRequest);
+	}
+	
+	if (clientRequest != NULL) {
+		ha_free(clientRequest);
+	}
+	
+	if (openAsyncParam != NULL) {
+		ha_free(openAsyncParam);
+	}
+
+	return libError; 
 }
 
-/* free the resources allocated for checkpoint handle
+/* 
+ * free the resources allocated for checkpoint handle
  */
 SaErrorT
-saCkptCheckpointClose(const SaCkptCheckpointHandleT *checkpointHandle)
+saCkptCheckpointClose(
+	const SaCkptCheckpointHandleT *checkpointHandle)
 {
-	SaErrorT retcode;
-	size_t len;
-	CkptListDataT* pCkptData;
-	SaCkptRequestHeadT reqhead;
-	SaCkptResponseHeadT resphead;
-	struct timeval tv = TIMEOUT_VAL;
+	SaCkptLibClientT* libClient = NULL;
+	SaCkptLibRequestT* libRequest = NULL;
+	SaCkptClientRequestT* clientRequest = NULL;
+	SaCkptReqCloseParamT* closeParam = NULL;
+ 	SaCkptClientResponseT* clientResponse = NULL;
+	SaCkptLibCheckpointT* libCheckpoint = NULL;
+	
+	SaErrorT libError = SA_OK;
+	IPC_Channel* ch = NULL;
 
-	/* check the checkpoint handle is valid */
-	pCkptData = getCkptDataByHandle(checkpointHandle);
-	if (NULL == pCkptData) {
-		return SA_ERR_BAD_HANDLE;
+	if (checkpointHandle == NULL) {
+		cl_log(LOG_ERR, 
+			"Null handle in checkpoint library");
+		return SA_ERR_INVALID_PARAM;
 	}
 
-  	/* prepare the request head */
-	len = sizeof(SaCkptRequestHeadT) + sizeof(SaCkptCheckpointHandleT);
-	reqhead.msglen = len - sizeof(reqhead.msglen);
-	reqhead.initHandle = pCkptData->pInit->initHandle;
-	reqhead.reqno = genReqNo();
-	reqhead.req = REQ_CKPT_CLOSE;
-	reqhead.paramLen = sizeof(SaCkptCheckpointHandleT);
-	reqhead.dataLen = 0;
-
-	/* hello to ckpt service */
-	retcode = hello(pCkptData->pInit->syncfd, &reqhead, \
-		checkpointHandle, &resphead, &tv);
-	if (SA_OK != retcode) {
-		return retcode;
+	libCheckpoint = SaCkptGetLibCheckpointByHandle(
+		*checkpointHandle);
+	if (libCheckpoint == NULL) {
+		cl_log(LOG_ERR, 
+			"Checkpoint is not open");
+		return SA_ERR_INVALID_PARAM;
 	}
-	if (SA_OK != resphead.retval) {
-		return resphead.retval;
+	libClient = libCheckpoint->client;
+
+	
+  	libRequest = (SaCkptLibRequestT*)ha_malloc(
+					sizeof(SaCkptLibRequestT));
+	clientRequest = (SaCkptClientRequestT*)ha_malloc(
+					sizeof(SaCkptClientRequestT));
+	closeParam = (SaCkptReqCloseParamT*)ha_malloc(
+					sizeof(SaCkptReqCloseParamT));
+ 	if ((libRequest == NULL) ||
+		(clientRequest == NULL) ||
+		(closeParam == NULL)) {
+		cl_log(LOG_ERR, 
+			"No memory in checkpoint library");
+		libError = SA_ERR_NO_MEMORY;
+		goto closeError;
+	}
+	
+	memset(libRequest, 0, sizeof(SaCkptLibRequestT));
+	memset(clientRequest, 0, sizeof(SaCkptClientRequestT));
+	memset(closeParam, 0, sizeof(SaCkptReqCloseParamT));
+	
+	libRequest->client = libClient;
+	libRequest->timeoutTag = 0;
+	libRequest->clientRequest = clientRequest;
+
+	clientRequest->clientHandle = libClient->clientHandle;
+	clientRequest->requestNO = SaCkptLibGetReqNO();
+	clientRequest->req = REQ_CKPT_CLOSE;
+	clientRequest->reqParamLength = sizeof(SaCkptReqCloseParamT);
+	clientRequest->dataLength = 0;
+	clientRequest->reqParam = closeParam;
+	clientRequest->data = NULL;
+
+	closeParam->checkpointHandle = *checkpointHandle;
+	
+	ch = libClient->channel[0];
+	libError = SaCkptLibRequestSend(ch, libRequest->clientRequest);
+	if (libError != SA_OK) {
+		cl_log(LOG_ERR, 
+			"Send close request failed");
+		goto closeError;
 	}
 
-	/* remove item from ckptList and free the memory */
-	g_ckptList = g_list_remove(g_ckptList, pCkptData);
-	free(pCkptData);
+	libError = SaCkptLibResponseReceive(ch, 
+		libRequest->clientRequest->requestNO,
+		&clientResponse);
+	if (libError != SA_OK) {
+		cl_log(LOG_ERR, 
+			"Receive response failed");
+		goto closeError;
+	}
+	if (clientResponse == NULL) {
+		cl_log(LOG_ERR, 
+			"Received null response");
+		libError = SA_ERR_LIBRARY;
+		goto closeError;
+	}
+	if (clientResponse->retVal != SA_OK) {
+		cl_log(LOG_ERR, 
+			"Checkpoint daemon returned error");
+		libError = clientResponse->retVal;
+		goto closeError;
+	}
 
-	/* ?check reqList and remove the async request with this handle */
-	return SA_OK;
+	libClient->checkpointList = g_list_remove(
+		libClient->checkpointList, libCheckpoint);
+	libCheckpointList = g_list_remove(
+		libCheckpointList, libCheckpoint);
+
+	libError = SA_OK;
+
+closeError:
+	if (libError == SA_OK) {
+		if (libCheckpoint != NULL) {
+			ha_free(libCheckpoint);
+		}
+	}
+	
+	if (libRequest != NULL) {
+		ha_free(libRequest);
+	}
+	
+	if (clientRequest != NULL) {
+		ha_free(clientRequest);
+	}
+	
+	if (closeParam != NULL) {
+		ha_free(closeParam);
+	}
+
+	if (clientResponse != NULL) {
+		if (clientResponse->dataLength > 0) {
+			ha_free(clientResponse->data);
+		}
+		ha_free(clientResponse);
+	}
+
+	return libError; 
+
 }
 
-/* remove this checkpoint.
+/* 
+ * remove this checkpoint.
  */
 SaErrorT
 saCkptCheckpointUnlink(
 	const SaCkptHandleT *ckptHandle,
 	const SaNameT *checkpointName)
 {
-	SaErrorT retcode;
-	size_t len;
-	InitListDataT* pInitData;
-	SaCkptRequestHeadT reqhead;
-	SaCkptResponseHeadT resphead;
-	struct timeval tv = TIMEOUT_VAL;
+	SaCkptLibClientT* libClient = NULL;
+	SaCkptLibRequestT* libRequest = NULL;
+	SaCkptClientRequestT* clientRequest = NULL;
+	SaCkptReqUlnkParamT* unlinkParam = NULL;
+ 	SaCkptClientResponseT* clientResponse = NULL;
+	
+	SaErrorT libError = SA_OK;
+	IPC_Channel* ch = NULL;
 
-	/* check the parameters */
-	if (NULL == ckptHandle || NULL == checkpointName) {
+	if (ckptHandle == NULL) {
+		cl_log(LOG_ERR, 
+			"Null handle in checkpoint library");
 		return SA_ERR_INVALID_PARAM;
 	}
 
-	/* check the handle is valid */
-	pInitData = getInitDataByHandle(ckptHandle);
-	if (NULL == pInitData) {
-		return SA_ERR_BAD_HANDLE;
+	libClient = SaCkptGetLibClientByHandle(*ckptHandle);
+	if (libClient == NULL) {
+		cl_log(LOG_ERR, 
+			"Invalid handle in checkpoint library");
+		return SA_ERR_INVALID_PARAM;
 	}
 
-  	/* prepare the request head */
-	len = sizeof(SaCkptRequestHeadT) + sizeof(SaNameT);
-	reqhead.msglen = len - sizeof(reqhead.msglen);
-	reqhead.initHandle = *ckptHandle;
-	reqhead.reqno = genReqNo();
-	reqhead.req = REQ_CKPT_ULNK;
-	reqhead.paramLen = sizeof(SaNameT);
-	reqhead.dataLen = 0;
-
-	/* hello to ckpt service */
-	retcode = hello(pInitData->syncfd, &reqhead, checkpointName,\
-		&resphead, &tv);
-	if (SA_OK != retcode) {
-		return retcode;
+  	libRequest = (SaCkptLibRequestT*)ha_malloc(
+					sizeof(SaCkptLibRequestT));
+	clientRequest = (SaCkptClientRequestT*)ha_malloc(
+					sizeof(SaCkptClientRequestT));
+	unlinkParam = (SaCkptReqUlnkParamT*)ha_malloc(
+					sizeof(SaCkptReqUlnkParamT));
+ 	if ((libRequest == NULL) ||
+		(clientRequest == NULL) ||
+		(unlinkParam == NULL)) {
+		cl_log(LOG_ERR, 
+			"No memory in checkpoint library");
+		libError = SA_ERR_NO_MEMORY;
+		goto unlinkError;
 	}
-	if (SA_OK != resphead.retval) {
-		return resphead.retval;
+	
+	memset(libRequest, 0, sizeof(SaCkptLibRequestT));
+	memset(clientRequest, 0, sizeof(SaCkptClientRequestT));
+	memset(unlinkParam, 0, sizeof(SaCkptReqUlnkParamT));
+	
+	libRequest->client = libClient;
+	libRequest->timeoutTag = 0;
+	libRequest->clientRequest = clientRequest;
+
+	clientRequest->clientHandle = libClient->clientHandle;
+	clientRequest->requestNO = SaCkptLibGetReqNO();
+	clientRequest->req = REQ_CKPT_ULNK;
+	clientRequest->reqParamLength = sizeof(SaCkptReqUlnkParamT);
+	clientRequest->dataLength = 0;
+	clientRequest->reqParam = unlinkParam;
+	clientRequest->data = NULL;
+
+	unlinkParam->clientHandle = *ckptHandle;
+	unlinkParam->ckptName.length = checkpointName->length;
+	memcpy(unlinkParam->ckptName.value,
+		checkpointName->value,
+		checkpointName->length);
+	
+	ch = libClient->channel[0];
+	libError = SaCkptLibRequestSend(ch, libRequest->clientRequest);
+	if (libError != SA_OK) {
+		cl_log(LOG_ERR, 
+			"Send checkpoint_unlink request failed");
+		goto unlinkError;
 	}
 
-	/* ?no local data struct update */
-	return SA_OK;
-}
+	libError = SaCkptLibResponseReceive(ch, 
+		libRequest->clientRequest->requestNO,
+		&clientResponse);
+	if (libError != SA_OK) {
+		cl_log(LOG_ERR, "Receive response failed");
+		goto unlinkError;
+	}
+	if (clientResponse == NULL) {
+		cl_log(LOG_ERR, "Received null response");
+		libError = SA_ERR_LIBRARY;
+		goto unlinkError;
+	}
+	if (clientResponse->retVal != SA_OK) {
+		cl_log(LOG_ERR, "Checkpoint daemon returned error");
+		libError = clientResponse->retVal;
+		goto unlinkError;
+	}
 
-/* set the checkpoint duration.
+	libError = SA_OK;
+
+unlinkError:
+	
+	if (libRequest != NULL) {
+		ha_free(libRequest);
+	}
+	
+	if (clientRequest != NULL) {
+		ha_free(clientRequest);
+	}
+	
+	if (unlinkParam != NULL) {
+		ha_free(unlinkParam);
+	}
+
+	if (clientResponse != NULL) {
+		if (clientResponse->dataLength > 0) {
+			ha_free(clientResponse->data);
+		}
+		ha_free(clientResponse);
+	}
+
+	return libError; }
+
+/* 
+ * set the checkpoint duration.
  */
 SaErrorT
 saCkptCheckpointRetentionDurationSet(
 	const SaCkptCheckpointHandleT *checkpointHandle,
 	SaTimeT retentionDuration)
 {
-	SaErrorT retcode;
-	size_t len;
-	CkptListDataT* pCkptData;
-	SaCkptReqRtnParamT rtnParam;
-	SaCkptRequestHeadT reqhead;
-	SaCkptResponseHeadT resphead;
-	struct timeval tv = TIMEOUT_VAL;
-
-	/* check the checkpoint handle is valid */
-	pCkptData = getCkptDataByHandle(checkpointHandle);
-	if (NULL == pCkptData) {
-		return SA_ERR_BAD_HANDLE;
-	}
-
-  	/* prepare the request head */
-	len = sizeof(SaCkptRequestHeadT) + sizeof(SaCkptReqRtnParamT);
-	reqhead.msglen = len - sizeof(reqhead.msglen);
-	reqhead.initHandle = pCkptData->pInit->initHandle;
-	reqhead.reqno = genReqNo();
-	reqhead.req = REQ_CKPT_RTN_SET;
-	reqhead.paramLen = sizeof(SaCkptReqRtnParamT);
-	reqhead.dataLen = 0;
-
-	/* prepare the request param */
-	rtnParam.checkpointHandle = *checkpointHandle;
-	rtnParam.retention = retentionDuration;
+	SaCkptLibClientT* libClient = NULL;
+	SaCkptLibRequestT* libRequest = NULL;
+	SaCkptClientRequestT* clientRequest = NULL;
+	SaCkptReqRtnParamT* rtnParam = NULL;
+ 	SaCkptClientResponseT* clientResponse = NULL;
+	SaCkptLibCheckpointT* libCheckpoint = NULL;
 	
-	/* hello to ckpt service */
-	retcode = hello(pCkptData->pInit->syncfd, &reqhead, &rtnParam,\
-		&resphead, &tv);
-	if (SA_OK != retcode) {
-		return retcode;
-	}
-	if (SA_OK != resphead.retval) {
-		return resphead.retval;
+	SaErrorT libError = SA_OK;
+	IPC_Channel* ch = NULL;
+
+	if (checkpointHandle == NULL) {
+		cl_log(LOG_ERR, 
+			"Null handle in checkpoint library");
+		return SA_ERR_INVALID_PARAM;
 	}
 
-	return SA_OK;
+	libCheckpoint = SaCkptGetLibCheckpointByHandle(
+		*checkpointHandle);
+	if (libCheckpoint == NULL) {
+		cl_log(LOG_ERR, 
+			"Checkpoint is not open");
+		return SA_ERR_INVALID_PARAM;
+	}
+	libClient = libCheckpoint->client;
+	
+  	libRequest = (SaCkptLibRequestT*)ha_malloc(
+					sizeof(SaCkptLibRequestT));
+	clientRequest = (SaCkptClientRequestT*)ha_malloc(
+					sizeof(SaCkptClientRequestT));
+	rtnParam = (SaCkptReqRtnParamT*)ha_malloc(
+					sizeof(SaCkptReqRtnParamT));
+ 	if ((libRequest == NULL) ||
+		(clientRequest == NULL) ||
+		(rtnParam == NULL)) {
+		cl_log(LOG_ERR, 
+			"No memory in checkpoint library");
+		libError = SA_ERR_NO_MEMORY;
+		goto rtnError;
+	}
+	
+	memset(libRequest, 0, sizeof(SaCkptLibRequestT));
+	memset(clientRequest, 0, sizeof(SaCkptClientRequestT));
+	memset(rtnParam, 0, sizeof(SaCkptReqRtnParamT));
+	
+	libRequest->client = libClient;
+	libRequest->timeoutTag = 0;
+	libRequest->clientRequest = clientRequest;
+
+	clientRequest->clientHandle = libClient->clientHandle;
+	clientRequest->requestNO = SaCkptLibGetReqNO();
+	clientRequest->req = REQ_CKPT_RTN_SET;
+	clientRequest->reqParamLength = sizeof(SaCkptReqRtnParamT);
+	clientRequest->dataLength = 0;
+	clientRequest->reqParam = rtnParam;
+	clientRequest->data = NULL;
+
+	rtnParam->checkpointHandle = *checkpointHandle;
+	rtnParam->retention = retentionDuration;
+	
+	ch = libClient->channel[0];
+	libError = SaCkptLibRequestSend(ch, libRequest->clientRequest);
+	if (libError != SA_OK) {
+		cl_log(LOG_ERR, 
+			"Send retention duration failed");
+		goto rtnError;
+	}
+
+	libError = SaCkptLibResponseReceive(ch, 
+		libRequest->clientRequest->requestNO,
+		&clientResponse);
+	if (libError != SA_OK) {
+		cl_log(LOG_ERR, 
+			"Receive response failed");
+		goto rtnError;
+	}
+	if (clientResponse == NULL) {
+		cl_log(LOG_ERR, 
+			"Received null response");
+		libError = SA_ERR_LIBRARY;
+		goto rtnError;
+	}
+	if (clientResponse->retVal != SA_OK) {
+		cl_log(LOG_ERR, 
+			"Checkpoint daemon returned error");
+		libError = clientResponse->retVal;
+		goto rtnError;
+	}
+
+	libCheckpoint->createAttributes.retentionDuration = retentionDuration;
+
+	libError = SA_OK;
+
+rtnError:
+	
+	if (libRequest != NULL) {
+		ha_free(libRequest);
+	}
+	
+	if (clientRequest != NULL) {
+		ha_free(clientRequest);
+	}
+	
+	if (rtnParam != NULL) {
+		ha_free(rtnParam);
+	}
+
+	if (clientResponse != NULL) {
+		if (clientResponse->dataLength > 0) {
+			ha_free(clientResponse->data);
+		}
+		ha_free(clientResponse);
+	}
+
+	return libError; 
 }
 
-/* set the local replica as the active replica.
+/* 
+ * set the local replica as the active replica.
  */
 SaErrorT
 saCkptActiveCheckpointSet(const SaCkptCheckpointHandleT *checkpointHandle)
 {
-	SaErrorT retcode;
-	size_t len;
-	CkptListDataT* pCkptData;
-	SaCkptRequestHeadT reqhead;
-	SaCkptResponseHeadT resphead;
-	struct timeval tv = TIMEOUT_VAL;
+	SaCkptLibClientT* libClient = NULL;
+	SaCkptLibRequestT* libRequest = NULL;
+	SaCkptClientRequestT* clientRequest = NULL;
+	SaCkptReqActSetParamT* activeParam = NULL;
+ 	SaCkptClientResponseT* clientResponse = NULL;
+	SaCkptLibCheckpointT* libCheckpoint = NULL;
+	
+	SaErrorT libError = SA_OK;
+	IPC_Channel* ch = NULL;
 
-	/* check the checkpoint handle is valid */
-	pCkptData = getCkptDataByHandle(checkpointHandle);
-	if (NULL == pCkptData) {
-		return SA_ERR_BAD_HANDLE;
+	if (checkpointHandle == NULL) {
+		cl_log(LOG_ERR, 
+			"Null handle in checkpoint library");
+		return SA_ERR_INVALID_PARAM;
+	}
+
+	libCheckpoint = SaCkptGetLibCheckpointByHandle(
+		*checkpointHandle);
+	if (libCheckpoint == NULL) {
+		cl_log(LOG_ERR, 
+			"Checkpoint is not open");
+		return SA_ERR_INVALID_PARAM;
+	}
+	libClient = libCheckpoint->client;
+	
+  	libRequest = (SaCkptLibRequestT*)ha_malloc(
+					sizeof(SaCkptLibRequestT));
+	clientRequest = (SaCkptClientRequestT*)ha_malloc(
+					sizeof(SaCkptClientRequestT));
+	activeParam = (SaCkptReqActSetParamT*)ha_malloc(
+					sizeof(SaCkptReqActSetParamT));
+ 	if ((libRequest == NULL) ||
+		(clientRequest == NULL) ||
+		(activeParam == NULL)) {
+		cl_log(LOG_ERR, 
+			"No memory in checkpoint library");
+		libError = SA_ERR_NO_MEMORY;
+		goto activeError;
 	}
 	
-  	/* prepare the request head */
-	len = sizeof(SaCkptRequestHeadT) + sizeof(SaCkptCheckpointHandleT);
-	reqhead.msglen = len - sizeof(reqhead.msglen);
-	reqhead.initHandle = pCkptData->pInit->initHandle;
-	reqhead.reqno = genReqNo();
-	reqhead.req = REQ_CKPT_ACT_SET;
-	reqhead.paramLen = sizeof(SaCkptCheckpointHandleT);
-	reqhead.dataLen = 0;
+	memset(libRequest, 0, sizeof(SaCkptLibRequestT));
+	memset(clientRequest, 0, sizeof(SaCkptClientRequestT));
+	memset(activeParam, 0, sizeof(SaCkptReqActSetParamT));
 	
-	/* hello to ckpt service */
-	retcode = hello(pCkptData->pInit->syncfd, &reqhead, \
-		checkpointHandle, &resphead, &tv);
-	if (SA_OK != retcode) {
-		return retcode;
+	libRequest->client = libClient;
+	libRequest->timeoutTag = 0;
+	libRequest->clientRequest = clientRequest;
+
+	clientRequest->clientHandle = libClient->clientHandle;
+	clientRequest->requestNO = SaCkptLibGetReqNO();
+	clientRequest->req = REQ_CKPT_ACT_SET;
+	clientRequest->reqParamLength = sizeof(SaCkptReqActSetParamT);
+	clientRequest->dataLength = 0;
+	clientRequest->reqParam = activeParam;
+	clientRequest->data = NULL;
+
+	activeParam->checkpointHandle = *checkpointHandle;
+	
+	ch = libClient->channel[0];
+	libError = SaCkptLibRequestSend(ch, libRequest->clientRequest);
+	if (libError != SA_OK) {
+		cl_log(LOG_ERR, 
+			"Send activate_checkpoint_set request failed");
+		goto activeError;
 	}
-	if (SA_OK != resphead.retval) {
-		return resphead.retval;
+
+	libError = SaCkptLibResponseReceive(ch, 
+		libRequest->clientRequest->requestNO,
+		&clientResponse);
+	if (libError != SA_OK) {
+		cl_log(LOG_ERR, "Receive response failed");
+		goto activeError;
+	}
+	if (clientResponse == NULL) {
+		cl_log(LOG_ERR, "Received null response");
+		libError = SA_ERR_LIBRARY;
+		goto activeError;
+	}
+	if (clientResponse->retVal != SA_OK) {
+		cl_log(LOG_ERR, "Checkpoint daemon returned error");
+		libError = clientResponse->retVal;
+		goto activeError;
+	}
+
+	libError = SA_OK;
+
+activeError:
+	
+	if (libRequest != NULL) {
+		ha_free(libRequest);
 	}
 	
-	return SA_OK;
+	if (clientRequest != NULL) {
+		ha_free(clientRequest);
+	}
+	
+	if (activeParam != NULL) {
+		ha_free(activeParam);
+	}
+
+	if (clientResponse != NULL) {
+		if (clientResponse->dataLength > 0) {
+			ha_free(clientResponse->data);
+		}
+		ha_free(clientResponse);
+	}
+
+	return libError; 
 }
 
 /* get the checkpoint status
@@ -1097,52 +1811,128 @@ saCkptCheckpointStatusGet(
 	const SaCkptCheckpointHandleT *checkpointHandle,
 	SaCkptCheckpointStatusT *checkpointStatus/*[out]*/)
 {
-	SaErrorT retcode;
-	size_t len;
-	CkptListDataT* pCkptData;
-	SaCkptRequestHeadT reqhead;
-	SaCkptResponseHeadT resphead;
-	struct timeval tv = TIMEOUT_VAL;
+	SaCkptLibClientT* libClient = NULL;
+	SaCkptLibRequestT* libRequest = NULL;
+	SaCkptClientRequestT* clientRequest = NULL;
+	SaCkptReqStatGetParamT* statParam = NULL;
+ 	SaCkptClientResponseT* clientResponse = NULL;
+	SaCkptLibCheckpointT* libCheckpoint = NULL;
+	
+	SaErrorT libError = SA_OK;
+	IPC_Channel* ch = NULL;
 
-	/* check the parameters */
-	if (NULL == checkpointHandle || NULL == checkpointStatus) {
+	if (checkpointHandle == NULL) {
+		cl_log(LOG_ERR, 
+			"Null handle in checkpoint library");
 		return SA_ERR_INVALID_PARAM;
 	}
-	/* check the checkpoint handle is valid */
-	pCkptData = getCkptDataByHandle(checkpointHandle);
-	if (NULL == pCkptData) {
-		return SA_ERR_BAD_HANDLE;
+
+	libCheckpoint = SaCkptGetLibCheckpointByHandle(
+		*checkpointHandle);
+	if (libCheckpoint == NULL) {
+		cl_log(LOG_ERR, 
+			"Checkpoint is not open");
+		return SA_ERR_INVALID_PARAM;
+	}
+	libClient = libCheckpoint->client;
+	
+  	libRequest = (SaCkptLibRequestT*)ha_malloc(
+					sizeof(SaCkptLibRequestT));
+	clientRequest = (SaCkptClientRequestT*)ha_malloc(
+					sizeof(SaCkptClientRequestT));
+	statParam = (SaCkptReqStatGetParamT*)ha_malloc(
+					sizeof(SaCkptReqStatGetParamT));
+ 	if ((libRequest == NULL) ||
+		(clientRequest == NULL) ||
+		(statParam == NULL)) {
+		cl_log(LOG_ERR, 
+			"No memory in checkpoint library");
+		libError = SA_ERR_NO_MEMORY;
+		goto statError;
 	}
 	
-  	/* prepare the request head */
-	len = sizeof(SaCkptRequestHeadT) + sizeof(SaCkptCheckpointHandleT);
-	reqhead.msglen = len - sizeof(reqhead.msglen);
-	reqhead.initHandle = pCkptData->pInit->initHandle;
-	reqhead.reqno = genReqNo();
-	reqhead.req = REQ_CKPT_STAT_GET;
-	reqhead.paramLen = sizeof(SaCkptCheckpointHandleT);
-	reqhead.dataLen = 0;
+	memset(libRequest, 0, sizeof(SaCkptLibRequestT));
+	memset(clientRequest, 0, sizeof(SaCkptClientRequestT));
+	memset(statParam, 0, sizeof(SaCkptReqStatGetParamT));
 	
-	/* hello to ckpt service */
-	retcode = hello(pCkptData->pInit->syncfd, &reqhead, \
-		checkpointHandle, &resphead, &tv);
-	if ( SA_OK != retcode ) {
-		return retcode; /* should conform to AIS */
+	libRequest->client = libClient;
+	libRequest->timeoutTag = 0;
+	libRequest->clientRequest = clientRequest;
+
+	clientRequest->clientHandle = libClient->clientHandle;
+	clientRequest->requestNO = SaCkptLibGetReqNO();
+	clientRequest->req = REQ_CKPT_STAT_GET;
+	clientRequest->reqParamLength = sizeof(SaCkptReqStatGetParamT);
+	clientRequest->dataLength = 0;
+	clientRequest->reqParam = statParam;
+	clientRequest->data = NULL;
+
+	statParam->checkpointHandle = *checkpointHandle;
+	
+	ch = libClient->channel[0];
+	libError = SaCkptLibRequestSend(ch, libRequest->clientRequest);
+	if (libError != SA_OK) {
+		cl_log(LOG_ERR, 
+			"Send status_get request failed");
+		goto statError;
 	}
-	if (SA_OK != resphead.retval) {
-		return resphead.retval;
+
+	libError = SaCkptLibResponseReceive(ch, 
+		libRequest->clientRequest->requestNO,
+		&clientResponse);
+	if (libError != SA_OK) {
+		cl_log(LOG_ERR, 
+			"Receive response failed");
+		goto statError;
+	}
+	if (clientResponse == NULL) {
+		cl_log(LOG_ERR, 
+			"Received null response");
+		libError = SA_ERR_LIBRARY;
+		goto statError;
+	}
+	if (clientResponse->retVal != SA_OK) {
+		cl_log(LOG_ERR, 
+			"Checkpoint daemon returned error");
+		libError = clientResponse->retVal;
+		goto statError;
+	}
+
+	if (clientResponse->dataLength < 
+		sizeof(SaCkptCheckpointStatusT)) {
+		cl_log(LOG_ERR, 
+			"Checkpoint daemon returned error data");
+		libError = clientResponse->retVal;
+		goto statError;
+	}
+
+	memcpy(checkpointStatus, clientResponse->data,
+		clientResponse->dataLength);
+
+	libError = SA_OK;
+
+statError:
+	
+	if (libRequest != NULL) {
+		ha_free(libRequest);
 	}
 	
-	/* get the response data */
-	retcode = reliableRead(pCkptData->pInit->syncfd, \
-		(char*)checkpointStatus, \
-		sizeof(SaCkptCheckpointStatusT), &tv);
-	if ( SA_OK != retcode ) {
-		perror("saCkptCheckpointStatusGet: reliableRead failure");
-		return retcode;
+	if (clientRequest != NULL) {
+		ha_free(clientRequest);
 	}
 	
-	return SA_OK;
+	if (statParam != NULL) {
+		ha_free(statParam);
+	}
+
+	if (clientResponse != NULL) {
+		if (clientResponse->dataLength > 0) {
+			ha_free(clientResponse->data);
+		}
+		ha_free(clientResponse);
+	}
+
+	return libError; 
 }
 
 /* create a new section within the checkpoint and fill with the initial data.
@@ -1154,110 +1944,152 @@ saCkptSectionCreate(
 	const void *initialData,
 	SaUint32T initialDataSize)
 {
-	SaErrorT retcode;
-	SaInt32T sockfd;
-	size_t len;
-	CkptListDataT* pCkptData;
-	SaCkptRequestHeadT reqhead;
-	SaCkptResponseHeadT resphead;
-	SaCkptReqSecCrtParamT secCrtParam;
-	struct timeval tv = TIMEOUT_VAL;
+	SaCkptLibClientT* libClient = NULL;
+	SaCkptLibRequestT* libRequest = NULL;
+	SaCkptClientRequestT* clientRequest = NULL;
+	SaCkptReqSecCrtParamT* secCrtParam = NULL;
+ 	SaCkptClientResponseT* clientResponse = NULL;
+	SaCkptLibCheckpointT* libCheckpoint = NULL;
+	
+	SaErrorT libError = SA_OK;
+	IPC_Channel* ch = NULL;
 
-	/* check the parameters */
-	if (NULL == checkpointHandle || NULL == sectionCreationAttributes \
-			|| (NULL == initialData && initialDataSize>0)) {
+	SaCkptSectionIdT* sectionId = NULL;
+	void* data = NULL;
+
+	if (checkpointHandle == NULL) {
+		cl_log(LOG_ERR, 
+			"Null handle in checkpoint library");
 		return SA_ERR_INVALID_PARAM;
 	}
-	/* check the handle is valid */
-	pCkptData = getCkptDataByHandle(checkpointHandle);
-	if (NULL == pCkptData) {
-		return SA_ERR_BAD_HANDLE;
-	}
-	
-  	/* prepare the request head */
-	len = sizeof(SaCkptRequestHeadT) + sizeof(SaCkptReqSecCrtParamT)\
-		+ initialDataSize;
-	reqhead.msglen = len - sizeof(reqhead.msglen);
-	reqhead.initHandle = pCkptData->pInit->initHandle;
-	reqhead.reqno = genReqNo();
-	reqhead.req = REQ_SEC_CRT;
-	reqhead.paramLen = sizeof(SaCkptReqSecCrtParamT);
-	reqhead.dataLen = initialDataSize;
-	
-	/* prepare the request param */
-	secCrtParam.checkpointHandle = *checkpointHandle;
-	secCrtParam.expireTime = sectionCreationAttributes->expirationTime;
-	memcpy(&(secCrtParam.sectionID), sectionCreationAttributes->sectionId, \
-		sizeof(SaCkptSectionIdT));
 
-	if ( NULL == sectionCreationAttributes->sectionId
-		|| sectionCreationAttributes->sectionId->idLen > SA_MAX_ID_LENGTH
-		|| sectionCreationAttributes->sectionId->idLen < 0) {
+	libCheckpoint = SaCkptGetLibCheckpointByHandle(
+		*checkpointHandle);
+	if (libCheckpoint == NULL) {
+		cl_log(LOG_ERR, 
+			"Checkpoint is not open");
 		return SA_ERR_INVALID_PARAM;
-	} else {
-		/* 
-		 * if section id is SA_CKPT_DEFAULT_SECTION_ID
-		 * ckpt sevice daemon generates the section id and return it back
- 		 */
-		if ( 0 == sectionCreationAttributes->sectionId->idLen) {
-			secCrtParam.sectionID.idLen = 0;
-			secCrtParam.sectionID.id[0] = 0;
-		} else {
-			secCrtParam.sectionID.idLen = 
-				sectionCreationAttributes->sectionId->idLen;
-			memset(secCrtParam.sectionID.id, 0, SA_MAX_ID_LENGTH);
-			memcpy(secCrtParam.sectionID.id, 
-				sectionCreationAttributes->sectionId->id,
-				secCrtParam.sectionID.idLen);
-		}
+	}
+	if (!(libCheckpoint->openFlag & SA_CKPT_CHECKPOINT_WRITE)) {
+		cl_log(LOG_ERR, 
+			"Checkpoint is not opened for write");
+		return SA_ERR_LIBRARY;
+	}
+	libClient = libCheckpoint->client;
+	
+  	libRequest = (SaCkptLibRequestT*)ha_malloc(
+					sizeof(SaCkptLibRequestT));
+	clientRequest = (SaCkptClientRequestT*)ha_malloc(
+					sizeof(SaCkptClientRequestT));
+	secCrtParam = (SaCkptReqSecCrtParamT*)ha_malloc(
+					sizeof(SaCkptReqSecCrtParamT));
+	if (initialDataSize > 0) {
+		data = (void*)ha_malloc(initialDataSize);
+	}
+	
+ 	if ((libRequest == NULL) ||
+		(clientRequest == NULL) ||
+		(secCrtParam == NULL) ||
+		((initialDataSize > 0) && (data == NULL))) {
+		cl_log(LOG_ERR, 
+			"No memory in checkpoint library");
+		libError = SA_ERR_NO_MEMORY;
+		goto secCrtError;
+	}
+	
+	memset(libRequest, 0, sizeof(SaCkptLibRequestT));
+	memset(clientRequest, 0, sizeof(SaCkptClientRequestT));
+	memset(secCrtParam, 0, sizeof(SaCkptReqSecCrtParamT));
+	memcpy(data, initialData, initialDataSize);
+	
+	libRequest->client = libClient;
+	libRequest->timeoutTag = 0;
+	libRequest->clientRequest = clientRequest;
+
+	clientRequest->clientHandle = libClient->clientHandle;
+	clientRequest->requestNO = SaCkptLibGetReqNO();
+	clientRequest->req = REQ_SEC_CRT;
+	clientRequest->reqParamLength = sizeof(SaCkptReqSecCrtParamT);
+	clientRequest->dataLength = initialDataSize;
+	clientRequest->reqParam = secCrtParam;
+	clientRequest->data = data;
+
+	secCrtParam->checkpointHandle = *checkpointHandle;
+	secCrtParam->expireTime = 
+		sectionCreationAttributes->expirationTime;
+	secCrtParam->sectionID.idLen = 
+		sectionCreationAttributes->sectionId->idLen;
+	memcpy(secCrtParam->sectionID.id,
+		sectionCreationAttributes->sectionId->id,
+		sectionCreationAttributes->sectionId->idLen);
+	
+	ch = libClient->channel[0];
+	libError = SaCkptLibRequestSend(ch, libRequest->clientRequest);
+	if (libError != SA_OK) {
+		cl_log(LOG_ERR, 
+			"Send section_create request failed");
+		goto secCrtError;
 	}
 
-	/* send the request head */
-	sockfd = pCkptData->pInit->syncfd;
-	retcode = reliableWrite(sockfd, (char*)&reqhead, sizeof(reqhead), &tv);
-	if ( SA_OK != retcode ) {
-		perror("saCkptSectionCreate: reliableWrite-1 failure");
-		return retcode;
-	}	
-	
-	/* send the request param */
-	retcode = reliableWrite(sockfd, (char*)&secCrtParam, \
-		reqhead.paramLen, &tv);
-	if ( SA_OK != retcode ) {
-		perror("saCkptSectionCreate: reliableWrite-2 failure");
-		return retcode;
-	}	
-	
-	/* send the initial data */
-	if ( NULL != initialData ) {
-		retcode = reliableWrite(sockfd, initialData, \
-				initialDataSize, &tv);
-		if ( SA_OK != retcode ) {
-			perror("saCkptSectionCreate: reliableWrite-3 failure");
-			return retcode;
-		}
+	libError = SaCkptLibResponseReceive(ch, 
+		libRequest->clientRequest->requestNO,
+		&clientResponse);
+	if (libError != SA_OK) {
+		cl_log(LOG_ERR, 
+			"Receive response failed");
+		goto secCrtError;
+	}
+	if (clientResponse == NULL) {
+		cl_log(LOG_ERR, 
+			"Received null response");
+		libError = SA_ERR_LIBRARY;
+		goto secCrtError;
+	}
+	if (clientResponse->retVal != SA_OK) {
+		cl_log(LOG_ERR, 
+			"Checkpoint daemon returned error");
+		libError = clientResponse->retVal;
+		goto secCrtError;
 	}
 
-	/* get the response */
-	retcode = readRespheadByReqno(sockfd, &resphead, reqhead.reqno, &tv);
-	if ( SA_OK != retcode ) {
-		perror("saCkptSectionCreate: readRespheadByReqno failure");
-		return retcode;
-	}	
-	if( SA_OK != resphead.retval ) {
-		perror("saCkptSectionCreate failure!");
-	} else {
-		if (0 == secCrtParam.sectionID.idLen) {
-			// TODO: read the generated section id
-		} else {
-			/* discard the unexpected data */
-			if (resphead.dataLen > 0) {
-				removeData(sockfd, &resphead, &tv);
-			}
-		}
+	/* return the section ID */
+	if (clientResponse->dataLength > 0) {
+		sectionId = (SaCkptSectionIdT*)clientResponse->data;
+		sectionCreationAttributes->sectionId->idLen = 
+			sectionId->idLen;
+		memcpy(sectionCreationAttributes->sectionId->id,
+			sectionId->id, sectionId->idLen);
+	}
+
+	libError = SA_OK;
+
+secCrtError:
+
+	if (data != NULL) {
+		ha_free(data);
 	}
 	
-	return resphead.retval;
+	if (libRequest != NULL) {
+		ha_free(libRequest);
+	}
+	
+	if (clientRequest != NULL) {
+		ha_free(clientRequest);
+	}
+	
+	if (secCrtParam != NULL) {
+		ha_free(secCrtParam);
+	}
+
+	if (clientResponse != NULL) {
+		if (clientResponse->dataLength > 0) {
+			ha_free(clientResponse->data);
+		}
+		ha_free(clientResponse);
+	}
+
+	return libError; 
+	
 }
 
 /* 
@@ -1268,53 +2100,126 @@ saCkptSectionDelete(
 	const SaCkptCheckpointHandleT *checkpointHandle,
 	const SaCkptSectionIdT *sectionId)
 {
-	SaInt32T sockfd;
-	SaErrorT retcode;
-	size_t len;
-	CkptListDataT* pCkptData;
-	SaCkptRequestHeadT reqhead;
-	SaCkptResponseHeadT resphead;
-	SaCkptReqSecDelParamT secDelParam;
-	struct timeval tv = TIMEOUT_VAL;
+	SaCkptLibClientT* libClient = NULL;
+	SaCkptLibRequestT* libRequest = NULL;
+	SaCkptClientRequestT* clientRequest = NULL;
+	SaCkptReqSecDelParamT* secDelParam = NULL;
+ 	SaCkptClientResponseT* clientResponse = NULL;
+	SaCkptLibCheckpointT* libCheckpoint = NULL;
+	
+	SaErrorT libError = SA_OK;
+	IPC_Channel* ch = NULL;
 
-	/* check the parameters */
-	if (NULL == checkpointHandle || NULL == sectionId) {
+	if (checkpointHandle == NULL) {
+		cl_log(LOG_ERR, 
+			"Null handle in checkpoint library");
 		return SA_ERR_INVALID_PARAM;
 	}
-	/* check the handle is valid */
-	pCkptData = getCkptDataByHandle(checkpointHandle);
-	if (NULL == pCkptData) {
-		return SA_ERR_BAD_HANDLE;
-	}
 
-  	/* prepare the request head */
-	len = sizeof(SaCkptRequestHeadT) + sizeof(SaCkptReqSecDelParamT);
-	reqhead.msglen = len - sizeof(reqhead.msglen);
-	reqhead.initHandle = pCkptData->pInit->initHandle;
-	reqhead.reqno = genReqNo();
-	reqhead.req = REQ_SEC_DEL;
-	reqhead.paramLen = sizeof(SaCkptReqSecDelParamT);
-	reqhead.dataLen = 0;
-
-	/* prepare the request param */
-	secDelParam.checkpointHandle = *checkpointHandle;
-	if ( sectionId->idLen < 0 || sectionId->idLen > SA_MAX_ID_LENGTH ) {
+	libCheckpoint = SaCkptGetLibCheckpointByHandle(
+		*checkpointHandle);
+	if (libCheckpoint == NULL) {
+		cl_log(LOG_ERR, 
+			"Checkpoint is not open");
 		return SA_ERR_INVALID_PARAM;
-	} else {
-		secDelParam.sectionID.idLen = sectionId->idLen;
-		memset(secDelParam.sectionID.id, 0, SA_MAX_ID_LENGTH);
-		memcpy(secDelParam.sectionID.id, sectionId->id,
-			secDelParam.sectionID.idLen);
 	}
-
-	/* hello to ckpt service */
-	sockfd = pCkptData->pInit->syncfd;
-	retcode = hello(sockfd, &reqhead, &secDelParam, &resphead, &tv);
-	if ( SA_OK != retcode ) {
-		return retcode; /* should conform to AIS */
+	if (!(libCheckpoint->openFlag & SA_CKPT_CHECKPOINT_WRITE)) {
+		cl_log(LOG_ERR, 
+			"Checkpoint is not opened for write");
+		return SA_ERR_LIBRARY;
+	}
+	libClient = libCheckpoint->client;
+	
+  	libRequest = (SaCkptLibRequestT*)ha_malloc(
+					sizeof(SaCkptLibRequestT));
+	clientRequest = (SaCkptClientRequestT*)ha_malloc(
+					sizeof(SaCkptClientRequestT));
+	secDelParam = (SaCkptReqSecDelParamT*)ha_malloc(
+					sizeof(SaCkptReqSecDelParamT));
+	
+ 	if ((libRequest == NULL) ||
+		(clientRequest == NULL) ||
+		(secDelParam == NULL) ) {
+		cl_log(LOG_ERR, 
+			"No memory in checkpoint library");
+		libError = SA_ERR_NO_MEMORY;
+		goto secDelError;
 	}
 	
-	return resphead.retval;
+	memset(libRequest, 0, sizeof(SaCkptLibRequestT));
+	memset(clientRequest, 0, sizeof(SaCkptClientRequestT));
+	memset(secDelParam, 0, sizeof(SaCkptReqSecDelParamT));
+	
+	libRequest->client = libClient;
+	libRequest->timeoutTag = 0;
+	libRequest->clientRequest = clientRequest;
+
+	clientRequest->clientHandle = libClient->clientHandle;
+	clientRequest->requestNO = SaCkptLibGetReqNO();
+	clientRequest->req = REQ_SEC_DEL;
+	clientRequest->reqParamLength = sizeof(SaCkptReqSecDelParamT);
+	clientRequest->dataLength = 0;
+	clientRequest->reqParam = secDelParam;
+	clientRequest->data = NULL;
+
+	secDelParam->checkpointHandle = *checkpointHandle;
+	secDelParam->sectionID.idLen = sectionId->idLen;
+	memcpy(secDelParam->sectionID.id, sectionId->id,
+		sectionId->idLen);
+	
+	ch = libClient->channel[0];
+	libError = SaCkptLibRequestSend(ch, libRequest->clientRequest);
+	if (libError != SA_OK) {
+		cl_log(LOG_ERR, 
+			"Send section_delete request failed");
+		goto secDelError;
+	}
+
+	libError = SaCkptLibResponseReceive(ch, 
+		libRequest->clientRequest->requestNO,
+		&clientResponse);
+	if (libError != SA_OK) {
+		cl_log(LOG_ERR, 
+			"Receive response failed");
+		goto secDelError;
+	}
+	if (clientResponse == NULL) {
+		cl_log(LOG_ERR, 
+			"Received null response");
+		libError = SA_ERR_LIBRARY;
+		goto secDelError;
+	}
+	if (clientResponse->retVal != SA_OK) {
+		cl_log(LOG_ERR, 
+			"Checkpoint daemon returned error");
+		libError = clientResponse->retVal;
+		goto secDelError;
+	}
+
+	libError = SA_OK;
+
+secDelError:
+
+	if (libRequest != NULL) {
+		ha_free(libRequest);
+	}
+	
+	if (clientRequest != NULL) {
+		ha_free(clientRequest);
+	}
+	
+	if (secDelParam != NULL) {
+		ha_free(secDelParam);
+	}
+
+	if (clientResponse != NULL) {
+		if (clientResponse->dataLength > 0) {
+			ha_free(clientResponse->data);
+		}
+		ha_free(clientResponse);
+	}
+
+	return libError; 
 }
 
 /* set the section expiration time
@@ -1325,58 +2230,126 @@ saCkptSectionExpirationTimeSet(
 	const SaCkptSectionIdT* sectionId,
 	SaTimeT expirationTime)
 {
-	SaInt32T sockfd;
-	SaErrorT retcode;
-	size_t len;
-	CkptListDataT* pCkptData;
-	SaCkptRequestHeadT reqhead;
-	SaCkptResponseHeadT resphead;
-	SaCkptReqSecExpSetParamT secExpParam;
-	struct timeval tv = TIMEOUT_VAL;
+	SaCkptLibClientT* libClient = NULL;
+	SaCkptLibRequestT* libRequest = NULL;
+	SaCkptClientRequestT* clientRequest = NULL;
+	SaCkptReqSecExpSetParamT* secExpSetParam = NULL;
+ 	SaCkptClientResponseT* clientResponse = NULL;
+	SaCkptLibCheckpointT* libCheckpoint = NULL;
+	
+	SaErrorT libError = SA_OK;
+	IPC_Channel* ch = NULL;
 
-	/* check the parameters */
-	if (NULL == checkpointHandle || NULL == sectionId) {
+	if (checkpointHandle == NULL) {
+		cl_log(LOG_ERR, 
+			"Null handle in checkpoint library");
 		return SA_ERR_INVALID_PARAM;
 	}
-	/* check the handle is valid */
-	pCkptData = getCkptDataByHandle(checkpointHandle);
-	if (NULL == pCkptData) {
-		return SA_ERR_BAD_HANDLE;
-	}
-	
-  	/* prepare the request head */
-	len = sizeof(SaCkptRequestHeadT) + sizeof(SaCkptReqSecExpSetParamT);
-	reqhead.msglen = len - sizeof(reqhead.msglen);
-	reqhead.initHandle = pCkptData->pInit->initHandle;
-	reqhead.reqno = genReqNo();
-	reqhead.req = REQ_SEC_EXP_SET;
-	reqhead.paramLen = sizeof(SaCkptReqSecExpSetParamT);
-	reqhead.dataLen = 0;
 
-	/* prepare the request param */
-	secExpParam.checkpointHandle = *checkpointHandle;
-	secExpParam.expireTime = expirationTime;
-	if ( sectionId->idLen < 0 || sectionId->idLen > SA_MAX_ID_LENGTH ) {
+	libCheckpoint = SaCkptGetLibCheckpointByHandle(
+		*checkpointHandle);
+	if (libCheckpoint == NULL) {
+		cl_log(LOG_ERR, 
+			"Checkpoint is not open");
 		return SA_ERR_INVALID_PARAM;
-	} else {
-		secExpParam.sectionID.idLen = sectionId->idLen;
-		memset(secExpParam.sectionID.id, 0, SA_MAX_ID_LENGTH);
-		memcpy(secExpParam.sectionID.id, sectionId->id,
-			secExpParam.sectionID.idLen);
+	}
+	libClient = libCheckpoint->client;
+	
+  	libRequest = (SaCkptLibRequestT*)ha_malloc(
+					sizeof(SaCkptLibRequestT));
+	clientRequest = (SaCkptClientRequestT*)ha_malloc(
+					sizeof(SaCkptClientRequestT));
+	secExpSetParam = (SaCkptReqSecExpSetParamT*)ha_malloc(
+					sizeof(SaCkptReqSecExpSetParamT));
+	
+ 	if ((libRequest == NULL) ||
+		(clientRequest == NULL) ||
+		(secExpSetParam == NULL) ) {
+		cl_log(LOG_ERR, 
+			"No memory in checkpoint library");
+		libError = SA_ERR_NO_MEMORY;
+		goto secExpSetError;
+	}
+	
+	memset(libRequest, 0, sizeof(SaCkptLibRequestT));
+	memset(clientRequest, 0, sizeof(SaCkptClientRequestT));
+	memset(secExpSetParam, 0, sizeof(SaCkptReqSecExpSetParamT));
+	
+	libRequest->client = libClient;
+	libRequest->timeoutTag = 0;
+	libRequest->clientRequest = clientRequest;
+
+	clientRequest->clientHandle = libClient->clientHandle;
+	clientRequest->requestNO = SaCkptLibGetReqNO();
+	clientRequest->req = REQ_SEC_EXP_SET;
+	clientRequest->reqParamLength = sizeof(SaCkptReqSecExpSetParamT);
+	clientRequest->dataLength = 0;
+	clientRequest->reqParam = secExpSetParam;
+	clientRequest->data = NULL;
+
+	secExpSetParam->checkpointHandle = *checkpointHandle;
+	secExpSetParam->sectionID.idLen = sectionId->idLen;
+	memcpy(secExpSetParam->sectionID.id, sectionId->id,
+		sectionId->idLen);
+	secExpSetParam->expireTime = expirationTime;
+	
+	ch = libClient->channel[0];
+	libError = SaCkptLibRequestSend(ch, libRequest->clientRequest);
+	if (libError != SA_OK) {
+		cl_log(LOG_ERR, 
+			"Send section_expiration_set request failed");
+		goto secExpSetError;
 	}
 
-	
-	/* hello to ckpt service */
-	sockfd = pCkptData->pInit->syncfd;
-	retcode = hello(sockfd, &reqhead, &secExpParam, &resphead, &tv);
-	if ( SA_OK != retcode ) {
-		return retcode; /* should conform to AIS */
+	libError = SaCkptLibResponseReceive(ch, 
+		libRequest->clientRequest->requestNO,
+		&clientResponse);
+	if (libError != SA_OK) {
+		cl_log(LOG_ERR, 
+			"Receive response failed");
+		goto secExpSetError;
+	}
+	if (clientResponse == NULL) {
+		cl_log(LOG_ERR, 
+			"Received null response");
+		libError = SA_ERR_LIBRARY;
+		goto secExpSetError;
+	}
+	if (clientResponse->retVal != SA_OK) {
+		cl_log(LOG_ERR, 
+			"Checkpoint daemon returned error");
+		libError = clientResponse->retVal;
+		goto secExpSetError;
+	}
+
+	libError = SA_OK;
+
+secExpSetError:
+
+	if (libRequest != NULL) {
+		ha_free(libRequest);
 	}
 	
-	return resphead.retval;
+	if (clientRequest != NULL) {
+		ha_free(clientRequest);
+	}
+	
+	if (secExpSetParam != NULL) {
+		ha_free(secExpSetParam);
+	}
+
+	if (clientResponse != NULL) {
+		if (clientResponse->dataLength > 0) {
+			ha_free(clientResponse->data);
+		}
+		ha_free(clientResponse);
+	}
+
+	return libError; 
 }
 
-/* initialize the section interator
+/* 
+ * initialize the section interator
  */
 SaErrorT
 saCkptSectionIteratorInitialize(
@@ -1385,95 +2358,136 @@ saCkptSectionIteratorInitialize(
 	SaTimeT expirationTime,
 	SaCkptSectionIteratorT *sectionIterator/*[out]*/)
 {
-	SaInt32T sockfd;
-	SaInt32T i, num;
-	SaErrorT retcode;
-	GList *pIterator = NULL;
-	size_t len;
-	CkptListDataT *pCkptData;
-	SaCkptRequestHeadT reqhead;
-	SaCkptResponseHeadT resphead;
-	SaCkptReqSecQueryParamT secQueryParam;
-	SaCkptSectionDescriptorT *pSecDes;
-	struct timeval tv = TIMEOUT_VAL;
+	SaCkptLibClientT* libClient = NULL;
+	SaCkptLibRequestT* libRequest = NULL;
+	SaCkptClientRequestT* clientRequest = NULL;
+	SaCkptReqSecQueryParamT* secQueryParam = NULL;
+ 	SaCkptClientResponseT* clientResponse = NULL;
+	SaCkptLibCheckpointT* libCheckpoint = NULL;
+	
+	SaErrorT libError = SA_OK;
+	IPC_Channel* ch = NULL;
 
-	/* check the parameters */
-	if (NULL == checkpointHandle || NULL == sectionIterator) {
+	GList* sectionList = NULL;
+	SaCkptSectionDescriptorT* sectionDescriptor = NULL;
+	int sectionNumber = 0;
+	int i = 0;
+	char* p = NULL;
+
+	if (checkpointHandle == NULL) {
+		cl_log(LOG_ERR, 
+			"Null handle in checkpoint library");
 		return SA_ERR_INVALID_PARAM;
 	}
-	/* check the handle is valid */
-	pCkptData = getCkptDataByHandle(checkpointHandle);
-	if (NULL == pCkptData) {
-		return SA_ERR_BAD_HANDLE;
-	}
-	
-  	/* prepare the request head */
-	len = sizeof(SaCkptRequestHeadT) + sizeof(SaCkptReqSecQueryParamT);
-	reqhead.msglen = len - sizeof(reqhead.msglen);
-	reqhead.initHandle = pCkptData->pInit->initHandle;
-	reqhead.reqno = genReqNo();
-	reqhead.req = REQ_SEC_QUERY;
-	reqhead.paramLen = sizeof(SaCkptReqSecQueryParamT);
-	reqhead.dataLen = 0;
 
-	/* prepare the request param */
-	secQueryParam.checkpointHandle = *checkpointHandle;
-	secQueryParam.chosenFlag = sectionsChosen;
-	secQueryParam.expireTime = expirationTime;
+	libCheckpoint = SaCkptGetLibCheckpointByHandle(
+		*checkpointHandle);
+	if (libCheckpoint == NULL) {
+		cl_log(LOG_ERR, 
+			"Checkpoint is not open");
+		return SA_ERR_INVALID_PARAM;
+	}
+	libClient = libCheckpoint->client;
 	
-	/* hello to ckpt service */
-	sockfd = pCkptData->pInit->syncfd;
-	retcode = hello(sockfd, &reqhead, &secQueryParam, &resphead, &tv);
-	if ( SA_OK != retcode ) {
-		return retcode; /* should conform to AIS */
+  	libRequest = (SaCkptLibRequestT*)ha_malloc(
+					sizeof(SaCkptLibRequestT));
+	clientRequest = (SaCkptClientRequestT*)ha_malloc(
+					sizeof(SaCkptClientRequestT));
+	secQueryParam = (SaCkptReqSecQueryParamT*)ha_malloc(
+					sizeof(SaCkptReqSecQueryParamT));
+	
+ 	if ((libRequest == NULL) ||
+		(clientRequest == NULL) ||
+		(secQueryParam == NULL) ) {
+		cl_log(LOG_ERR, 
+			"No memory in checkpoint library");
+		libError = SA_ERR_NO_MEMORY;
+		goto secQueryError;
+	}
+	
+	memset(libRequest, 0, sizeof(SaCkptLibRequestT));
+	memset(clientRequest, 0, sizeof(SaCkptClientRequestT));
+	memset(secQueryParam, 0, sizeof(SaCkptReqSecQueryParamT));
+	
+	libRequest->client = libClient;
+	libRequest->timeoutTag = 0;
+	libRequest->clientRequest = clientRequest;
+
+	clientRequest->clientHandle = libClient->clientHandle;
+	clientRequest->requestNO = SaCkptLibGetReqNO();
+	clientRequest->req = REQ_SEC_QUERY;
+	clientRequest->reqParamLength = sizeof(SaCkptReqSecQueryParamT);
+	clientRequest->dataLength = 0;
+	clientRequest->reqParam = secQueryParam;
+	clientRequest->data = NULL;
+
+	secQueryParam->checkpointHandle = *checkpointHandle;
+	secQueryParam->chosenFlag = sectionsChosen;
+	secQueryParam->expireTime = expirationTime;
+	
+	ch = libClient->channel[0];
+	libError = SaCkptLibRequestSend(ch, libRequest->clientRequest);
+	if (libError != SA_OK) {
+		cl_log(LOG_ERR, 
+			"Send iterator_init request failed");
+		goto secQueryError;
 	}
 
-	/* check data length */
-	if (0 == resphead.dataLen) {
-		/* no section match the chosen conditions */
-		*sectionIterator = GPOINTER_TO_INT(NULL);
-		return SA_OK;
+	libError = SaCkptLibResponseReceive(ch, 
+		libRequest->clientRequest->requestNO,
+		&clientResponse);
+	if (libError != SA_OK) {
+		cl_log(LOG_ERR, 
+			"Receive response failed");
+		goto secQueryError;
+	}
+	if (clientResponse == NULL) {
+		cl_log(LOG_ERR, 
+			"Received null response");
+		libError = SA_ERR_LIBRARY;
+		goto secQueryError;
+	}
+	if (clientResponse->retVal != SA_OK) {
+		cl_log(LOG_ERR, 
+			"Checkpoint daemon returned error");
+		libError = clientResponse->retVal;
+		goto secQueryError;
+	}
+
+	*sectionIterator = SaCkptLibGetIterator();
+	
+	sectionNumber = clientResponse->dataLength / 
+		sizeof(SaCkptSectionDescriptorT);
+	p = clientResponse->data;
+	
+	for(i=0; i<sectionNumber; i++) {
+		sectionDescriptor = (SaCkptSectionDescriptorT*)p;
+		sectionList = g_list_append(sectionList, sectionDescriptor);
+		p += sizeof(SaCkptSectionDescriptorT);
+	}
+	g_hash_table_insert(libIteratorHash, sectionIterator, sectionList);
+
+	libError = SA_OK;
+
+secQueryError:
+
+	if (libRequest != NULL) {
+		ha_free(libRequest);
 	}
 	
-	/* dataLen should be the multiple times the size of sec descriptor */	
-	if (0 != (resphead.dataLen%sizeof(SaCkptSectionDescriptorT)) ) {
-		/* should not happen */
-		perror("saCkptSectionIteratorInitialize: invalid data length");
-		return SA_ERR_LIBRARY;
+	if (clientRequest != NULL) {
+		ha_free(clientRequest);
 	}
 	
-	/* alloc memory */
-	num = resphead.dataLen/sizeof(SaCkptSectionDescriptorT);
-	pSecDes = (SaCkptSectionDescriptorT*)malloc(resphead.dataLen);
-	if (NULL == pSecDes) {
-		perror("saCkptSectionIteratorInitialize: malloc-1");
-		/* remove the data left in input buffer, or it will 
-		 * cause the data incomplete (because without header)
-		 */
-		removeData(sockfd, &resphead, &tv);
-		return SA_ERR_NO_MEMORY; 
+	if (secQueryParam != NULL) {
+		ha_free(secQueryParam);
 	}
-	
-	/* get the descriptor data */
-	retcode = reliableRead(sockfd, (char*)pSecDes, resphead.dataLen, &tv);
-	if (SA_OK != retcode ) {
-		perror("saCkptSectionIteratorInitialize: reliableRead failure");
-		free(pSecDes);
-		return SA_ERR_LIBRARY;
+
+	if (clientResponse != NULL) {
+		ha_free(clientResponse);
 	}
-	
-	/* add descriptor to the iterator one by one */
-	for (i=0; i<num; i++) {
-		pIterator = g_list_append(pIterator, &(pSecDes[i]));
-	}
-	
-	/* add to global list */
-	g_secIteratorList = g_list_append(g_secIteratorList, pIterator);
-	
-	/* set iterator  */
-	*sectionIterator = GPOINTER_TO_INT(pIterator);
-	
-	return SA_OK;
+
+	return libError; 
 }
 
 /* get the next section in the iterator
@@ -1483,22 +2497,25 @@ saCkptSectionIteratorNext(
 	SaCkptSectionIteratorT *sectionIterator/*[in/out]*/,
 	SaCkptSectionDescriptorT *sectionDescriptor/*[out]*/)
 {
-	GList* pIterator = GINT_TO_POINTER(*sectionIterator);
+	SaCkptSectionDescriptorT* secDescriptor = NULL;
+	GList* sectionList = NULL;
 
-	/* check the parameters */
-	if (NULL == sectionDescriptor) {
-		return SA_ERR_INVALID_PARAM;
+	sectionList = g_hash_table_lookup(libIteratorHash, 
+		sectionIterator);
+	if (sectionList == NULL) {
+		/* FIXME: should be SA_ERR_NO_SECTIONS */
+		return SA_OK;
 	}
+
+	secDescriptor = (SaCkptSectionDescriptorT*)sectionList->data;
+	memcpy(sectionDescriptor, secDescriptor, 
+		sizeof(SaCkptSectionDescriptorT));
+	ha_free(secDescriptor);
+	sectionList = g_list_remove(sectionList, secDescriptor);
 	
-	/* check iterator */
-	if (NULL == pIterator) {
-		return SA_ERR_NOT_EXIST;
-	}
-	
-	memcpy(sectionDescriptor, pIterator->data, sizeof(sectionDescriptor));
-	pIterator = g_list_next(pIterator);
-	*sectionIterator = GPOINTER_TO_INT(pIterator);
-	
+	g_hash_table_insert(libIteratorHash, sectionIterator,
+		sectionList);
+
 	return SA_OK;
 }
 
@@ -1509,148 +2526,289 @@ SaErrorT
 saCkptSectionIteratorFinalize(
 	SaCkptSectionIteratorT *sectionIterator)
 {
-	GList *pIterator, *pList;
-	SaCkptSectionDescriptorT *pSecDes;
+	SaCkptSectionDescriptorT* secDescriptor = NULL;
+	GList* sectionList = NULL;
 
-	pIterator = GINT_TO_POINTER(*sectionIterator);
-	/* check this iterator does exist */
-	pList = g_secIteratorList;
-	while (NULL != pList) {
-		if ( pIterator == pList->data ) {
-			break;
-		}
-		pList = g_list_next(pList);
-	}
-	if (NULL == pList) {
-		return SA_ERR_INVALID_PARAM;
+	sectionList = g_hash_table_lookup(libIteratorHash, 
+		sectionIterator);
+
+	while (sectionList != NULL) {
+		secDescriptor = 
+			(SaCkptSectionDescriptorT*)sectionList->data;
+		ha_free(secDescriptor);
+		sectionList = g_list_remove(sectionList, secDescriptor);
 	}
 	
-	/* remove this iterator from iterator list */
-	g_secIteratorList = g_list_remove(g_secIteratorList, pIterator);
-	
-	/* free the allocated memory in this iterator */
-	pSecDes = (SaCkptSectionDescriptorT*)(pIterator->data);
-	free(pSecDes);
+	g_hash_table_remove(libIteratorHash, sectionIterator);
 
-	/* free the iterator */
-	g_list_free(pIterator);
-	
 	return SA_OK;
 }
 
-/* write multiple section data to checkpoint.If the invocation does not 
- * complete or returns with an error, nothing has been written at all.
- */
+static SaErrorT
+saCkptCheckpointSectionWrite(
+	SaCkptReqSecWrtParamT *wrtParam,
+	SaUint32T dataLength, void* data)
+{
+	SaCkptCheckpointHandleT* checkpointHandle = NULL;
+	SaCkptLibClientT* libClient = NULL;
+	SaCkptLibRequestT* libRequest = NULL;
+	SaCkptClientRequestT* clientRequest = NULL;
+ 	SaCkptClientResponseT* clientResponse = NULL;
+	SaCkptLibCheckpointT* libCheckpoint = NULL;
+	
+	SaErrorT libError = SA_OK;
+	IPC_Channel* ch = NULL;
+
+	checkpointHandle = &wrtParam->checkpointHandle;
+	libCheckpoint = SaCkptGetLibCheckpointByHandle(
+		*checkpointHandle);
+	libClient = libCheckpoint->client;
+	
+  	libRequest = (SaCkptLibRequestT*)ha_malloc(
+					sizeof(SaCkptLibRequestT));
+	clientRequest = (SaCkptClientRequestT*)ha_malloc(
+					sizeof(SaCkptClientRequestT));
+ 	if ((libRequest == NULL) ||
+		(clientRequest == NULL) ) {
+		cl_log(LOG_ERR, 
+			"No memory in checkpoint library");
+		libError = SA_ERR_NO_MEMORY;
+		goto secWrtError;
+	}
+	
+	memset(libRequest, 0, sizeof(SaCkptLibRequestT));
+	memset(clientRequest, 0, sizeof(SaCkptClientRequestT));
+	
+	libRequest->client = libClient;
+	libRequest->timeoutTag = 0;
+	libRequest->clientRequest = clientRequest;
+
+	clientRequest->clientHandle = libClient->clientHandle;
+	clientRequest->requestNO = SaCkptLibGetReqNO();
+	clientRequest->req = REQ_SEC_WRT;
+	clientRequest->reqParamLength = sizeof(SaCkptReqSecWrtParamT);
+	clientRequest->dataLength = dataLength;
+	clientRequest->reqParam = wrtParam;
+	clientRequest->data = data;
+
+	ch = libClient->channel[0];
+	libError = SaCkptLibRequestSend(ch, libRequest->clientRequest);
+	if (libError != SA_OK) {
+		cl_log(LOG_ERR, 
+			"Send section_write request failed");
+		goto secWrtError;
+	}
+
+	libError = SaCkptLibResponseReceive(ch, 
+		libRequest->clientRequest->requestNO,
+		&clientResponse);
+	if (libError != SA_OK) {
+		cl_log(LOG_ERR, 
+			"Receive response failed");
+		goto secWrtError;
+	}
+	if (clientResponse == NULL) {
+		cl_log(LOG_ERR, 
+			"Received null response");
+		libError = SA_ERR_LIBRARY;
+		goto secWrtError;
+	}
+	if (clientResponse->retVal != SA_OK) {
+		cl_log(LOG_ERR, 
+			"Checkpoint daemon returned error");
+		libError = clientResponse->retVal;
+		goto secWrtError;
+	}
+
+	libError = SA_OK;
+
+secWrtError:
+	
+	if (libRequest != NULL) {
+		ha_free(libRequest);
+	}
+	
+	if (clientRequest != NULL) {
+		ha_free(clientRequest);
+	}
+	
+	if (clientResponse != NULL) {
+		if (clientResponse->dataLength > 0) {
+			ha_free(clientResponse->data);
+		}
+		ha_free(clientResponse);
+	}
+
+	return libError;
+}
+
+static SaErrorT
+saCkptCheckpointSectionRead(
+	SaCkptReqSecReadParamT *readParam,
+	SaSizeT* dataLength, void* data)
+{
+	SaCkptCheckpointHandleT* checkpointHandle = NULL;
+	SaCkptLibClientT* libClient = NULL;
+	SaCkptLibRequestT* libRequest = NULL;
+	SaCkptClientRequestT* clientRequest = NULL;
+ 	SaCkptClientResponseT* clientResponse = NULL;
+	SaCkptLibCheckpointT* libCheckpoint = NULL;
+	
+	SaErrorT libError = SA_OK;
+	IPC_Channel* ch = NULL;
+
+	checkpointHandle = &readParam->checkpointHandle;
+	libCheckpoint = SaCkptGetLibCheckpointByHandle(
+		*checkpointHandle);
+	libClient = libCheckpoint->client;
+	
+  	libRequest = (SaCkptLibRequestT*)ha_malloc(
+					sizeof(SaCkptLibRequestT));
+	clientRequest = (SaCkptClientRequestT*)ha_malloc(
+					sizeof(SaCkptClientRequestT));
+ 	if ((libRequest == NULL) ||
+		(clientRequest == NULL) ) {
+		cl_log(LOG_ERR, 
+			"No memory in checkpoint library");
+		libError = SA_ERR_NO_MEMORY;
+		goto secReadError;
+	}
+	
+	memset(libRequest, 0, sizeof(SaCkptLibRequestT));
+	memset(clientRequest, 0, sizeof(SaCkptClientRequestT));
+	
+	libRequest->client = libClient;
+	libRequest->timeoutTag = 0;
+	libRequest->clientRequest = clientRequest;
+
+	clientRequest->clientHandle = libClient->clientHandle;
+	clientRequest->requestNO = SaCkptLibGetReqNO();
+	clientRequest->req = REQ_SEC_RD;
+	clientRequest->reqParamLength = sizeof(SaCkptReqSecReadParamT);
+	clientRequest->dataLength = 0;
+	clientRequest->reqParam = readParam;
+	clientRequest->data = NULL;
+
+	ch = libClient->channel[0];
+	libError = SaCkptLibRequestSend(ch, libRequest->clientRequest);
+	if (libError != SA_OK) {
+		cl_log(LOG_ERR, 
+			"Send section read request failed");
+		goto secReadError;
+	}
+
+	libError = SaCkptLibResponseReceive(ch, 
+		libRequest->clientRequest->requestNO,
+		&clientResponse);
+	if (libError != SA_OK) {
+		cl_log(LOG_ERR, 
+			"Receive response failed");
+		goto secReadError;
+	}
+	if (clientResponse == NULL) {
+		cl_log(LOG_ERR, 
+			"Received null response");
+		libError = SA_ERR_LIBRARY;
+		goto secReadError;
+	}
+	if (clientResponse->retVal != SA_OK) {
+		cl_log(LOG_ERR, 
+			"Checkpoint daemon returned error");
+		libError = clientResponse->retVal;
+		goto secReadError;
+	}
+
+	*dataLength = clientResponse->dataLength;
+	memcpy(data, clientResponse->data,
+		clientResponse->dataLength);
+
+	libError = SA_OK;
+
+secReadError:
+	
+	if (libRequest != NULL) {
+		ha_free(libRequest);
+	}
+	
+	if (clientRequest != NULL) {
+		ha_free(clientRequest);
+	}
+	
+	if (clientResponse != NULL) {
+		if (clientResponse->dataLength > 0) {
+			ha_free(clientResponse->data);
+		}
+		ha_free(clientResponse);
+	}
+
+	return libError;
+}
+
 SaErrorT
 saCkptCheckpointWrite(
 	const SaCkptCheckpointHandleT *checkpointHandle,
 	const SaCkptIOVectorElementT *ioVector,
 	SaUint32T numberOfElements,
-	SaUint32T *erroneousVectorIndex/*[out]*/)
+	SaUint32T *erroneousVectorIndex)
 {
-	SaInt32T sockfd;
-	SaErrorT retcode = SA_OK;
-	SaUint32T i;
-	size_t len;
-	CkptListDataT* pCkptData;
-	SaCkptRequestHeadT reqhead;
-	SaCkptResponseHeadT resphead;
-	SaCkptReqSecWrtParamT secWrtParam;
-	struct timeval tv = TIMEOUT_VAL;
+	SaCkptLibCheckpointT* libCheckpoint = NULL;
+	SaCkptReqSecWrtParamT* wrtParam = NULL;
+	
+	SaErrorT libError = SA_OK;
+	int i = 0;
 
-	/* check the parameters */
-	if (NULL == checkpointHandle || NULL == ioVector) {
+	if (checkpointHandle == NULL) {
+		cl_log(LOG_ERR, 
+			"Null handle in checkpoint library");
 		return SA_ERR_INVALID_PARAM;
 	}
 
-	/* check the handle is valid */
-	pCkptData = getCkptDataByHandle(checkpointHandle);
-	if (NULL == pCkptData) {
-		return SA_ERR_BAD_HANDLE;
+	libCheckpoint = SaCkptGetLibCheckpointByHandle(
+		*checkpointHandle);
+	if (libCheckpoint == NULL) {
+		cl_log(LOG_ERR, 
+			"Checkpoint is not open");
+		return SA_ERR_INVALID_PARAM;
 	}
-	sockfd = pCkptData->pInit->syncfd;
-
-  	/* prepare the request head */
-	reqhead.initHandle = pCkptData->pInit->initHandle;
-	/* reqhead.reqno = genReqNo(); */
-	reqhead.req = REQ_SEC_WRT;
-	reqhead.paramLen = sizeof(SaCkptReqSecWrtParamT);
-
-	secWrtParam.checkpointHandle = *checkpointHandle;
-	len = sizeof(SaCkptRequestHeadT) + sizeof(SaCkptReqSecWrtParamT);
+	if (!(libCheckpoint->openFlag & SA_CKPT_CHECKPOINT_WRITE)) {
+		cl_log(LOG_ERR, 
+			"Checkpoint is not opened for write");
+		return SA_ERR_LIBRARY;
+	}
 	
-	/* write iovector one by one */
-	for (i=0; i<numberOfElements; i++) {
-		/* reset the time out value */
-		tv = TIMEOUT_VAL;
-		
-		/* prepare the request head */
-		reqhead.reqno = genReqNo(); 
-		reqhead.msglen = len + ioVector[i].dataSize - \
-			sizeof(reqhead.msglen);
-		reqhead.dataLen = ioVector[i].dataSize;
-		
-		/* prepare the request param */
-		secWrtParam.offset = ioVector[i].dataOffset;
-		if ( ioVector[i].sectionId.idLen < 0
-			||ioVector[i].sectionId.idLen > SA_MAX_ID_LENGTH ) {
-			return SA_ERR_INVALID_PARAM;
-		} else {
-			secWrtParam.sectionID.idLen = ioVector[i].sectionId.idLen;
-			memset(secWrtParam.sectionID.id, 0, SA_MAX_ID_LENGTH);
-			memcpy(secWrtParam.sectionID.id, ioVector[i].sectionId.id,
-				secWrtParam.sectionID.idLen);
-		}
-		
-		/* send the request head */
-		retcode = reliableWrite(sockfd, (char*)&reqhead, \
-				sizeof(reqhead), &tv);
-		if (SA_OK != retcode) {
-			perror("saCkptCheckpointWrite: reliableWrite-1");
-			break;
-		}	
-		
-		/* send the request param */
-		retcode = reliableWrite(sockfd, (char*)&secWrtParam, \
-			reqhead.paramLen, &tv);
-		if (SA_OK != retcode) {
-			perror("saCkptCheckpointWrite: reliableWrite-2");
-			break;
-		}	
-		
-		/* send the section data */
-		retcode = reliableWrite(sockfd,\
-				(char*)(ioVector[i].dataBuffer),\
-				ioVector[i].dataSize, &tv);
-		if (SA_OK != retcode) {
-			perror("saCkptCheckpointWrite: reliableWrite-3");
-			break;
-		}
-		
-		/* get the response */
-		retcode = readRespheadByReqno(sockfd, &resphead, \
-				reqhead.reqno, &tv);
-		if ( SA_OK != retcode ) {
-			perror("saCkptCheckpointWrite: readRespheadByReqno");
-			break;
-		}
-		
-		/* discard the unexpedted data */
-		if (resphead.dataLen > 0) {
-			retcode = removeData(sockfd, &resphead, &tv);
-		}
-		
-		if( SA_OK != resphead.retval ) {
-			retcode = resphead.retval;
-			break;
-		}
-	}/* end for */	
-
-	if (erroneousVectorIndex != NULL) {
-		*erroneousVectorIndex = i;
+	wrtParam = (SaCkptReqSecWrtParamT*)ha_malloc(
+		sizeof(SaCkptReqSecWrtParamT));
+	if (wrtParam == NULL) {
+		cl_log(LOG_ERR, 
+			"No memory in checkpoint library");
+		return SA_ERR_NO_MEMORY;
 	}
-	return retcode;
+
+	for(i=0; i<numberOfElements; i++) {
+		memset(wrtParam, 0, sizeof(SaCkptReqSecWrtParamT));
+		wrtParam->checkpointHandle = *checkpointHandle;
+		wrtParam->sectionID.idLen= ioVector[i].sectionId.idLen;
+		memcpy(wrtParam->sectionID.id,
+			ioVector[i].sectionId.id,
+			ioVector[i].sectionId.idLen);
+		wrtParam->offset = ioVector[i].dataOffset;
+
+		libError = saCkptCheckpointSectionWrite(wrtParam,
+			ioVector[i].dataSize, 
+			ioVector[i].dataBuffer);
+		if (libError != SA_OK) {
+			if (erroneousVectorIndex != NULL) {
+				*erroneousVectorIndex = i;
+			}
+			break;
+		}
+	}
+
+	ha_free(wrtParam);
+
+	return libError;
 }
+
 
 /* overwrite the section
  */
@@ -1661,88 +2819,130 @@ saCkptSectionOverwrite(
 	SaUint8T *dataBuffer,
 	SaSizeT dataSize)
 {
-	SaInt32T sockfd;
-	SaErrorT retcode;
-	size_t len;
-	CkptListDataT* pCkptData;
-	SaCkptRequestHeadT reqhead;
-	SaCkptResponseHeadT resphead;
-	SaCkptReqSecOwrtParamT secOwrtParam;
-	struct timeval tv = TIMEOUT_VAL;
+	SaCkptLibClientT* libClient = NULL;
+	SaCkptLibRequestT* libRequest = NULL;
+	SaCkptClientRequestT* clientRequest = NULL;
+	SaCkptReqSecOwrtParamT* secOwrtParam = NULL;
+ 	SaCkptClientResponseT* clientResponse = NULL;
+	SaCkptLibCheckpointT* libCheckpoint = NULL;
+	
+	SaErrorT libError = SA_OK;
+	IPC_Channel* ch = NULL;
 
-	/* check the parameters */
-	if (NULL == checkpointHandle || NULL == sectionId \
-			|| NULL == dataBuffer) {
+	if (checkpointHandle == NULL) {
+		cl_log(LOG_ERR, 
+			"Null handle in checkpoint library");
 		return SA_ERR_INVALID_PARAM;
 	}
-	/* check the handle is valid */
-	pCkptData = getCkptDataByHandle(checkpointHandle);
-	if (NULL == pCkptData) {
-		return SA_ERR_BAD_HANDLE;
-	}
 
-	sockfd = pCkptData->pInit->syncfd;
-
-  	/* prepare the request head */
-	len = sizeof(SaCkptRequestHeadT) + sizeof(SaCkptReqSecOwrtParamT) \
-		+ dataSize;
-	reqhead.msglen = len - sizeof(reqhead.msglen);
-	reqhead.initHandle = pCkptData->pInit->initHandle;
-	reqhead.reqno = genReqNo();
-	reqhead.req = REQ_SEC_OWRT;
-	reqhead.paramLen = sizeof(SaCkptReqSecOwrtParamT);
-	reqhead.dataLen = dataSize;
-
-  	/* prepare the request param */
-	secOwrtParam.checkpointHandle = *checkpointHandle;
-	if ( sectionId->idLen < 0 || sectionId->idLen > SA_MAX_ID_LENGTH ) {
+	libCheckpoint = SaCkptGetLibCheckpointByHandle(
+		*checkpointHandle);
+	if (libCheckpoint == NULL) {
+		cl_log(LOG_ERR, 
+			"Checkpoint is not open");
 		return SA_ERR_INVALID_PARAM;
-	} else {
-		secOwrtParam.sectionID.idLen = sectionId->idLen;
-		memset(secOwrtParam.sectionID.id, 0, SA_MAX_ID_LENGTH);
-		memcpy(secOwrtParam.sectionID.id, sectionId->id,
-			secOwrtParam.sectionID.idLen);
 	}
-
-
-	/* send the request head */
-	retcode = reliableWrite(sockfd, (char*)&reqhead, sizeof(reqhead), &tv);
-	if (SA_OK != retcode) {
-		perror("saCkptSectionOverwrite: reliableWrite-1");
-		return retcode;
+	if (!(libCheckpoint->openFlag & SA_CKPT_CHECKPOINT_WRITE)) {
+		cl_log(LOG_ERR, 
+			"Checkpoint is not opened for write");
+		return SA_ERR_LIBRARY;
+	}
+	libClient = libCheckpoint->client;
+	
+  	libRequest = (SaCkptLibRequestT*)ha_malloc(
+					sizeof(SaCkptLibRequestT));
+	clientRequest = (SaCkptClientRequestT*)ha_malloc(
+					sizeof(SaCkptClientRequestT));
+	secOwrtParam = (SaCkptReqSecOwrtParamT*)ha_malloc(
+					sizeof(SaCkptReqSecOwrtParamT));
+	
+ 	if ((libRequest == NULL) ||
+		(clientRequest == NULL) ||
+		(secOwrtParam == NULL) ) {
+		cl_log(LOG_ERR, 
+			"No memory in checkpoint library");
+		libError = SA_ERR_NO_MEMORY;
+		goto secOwrtError;
 	}
 	
-	/* send the request param */
-	retcode = reliableWrite(sockfd, (char*)&secOwrtParam, \
-		reqhead.paramLen, &tv);
-	if (SA_OK != retcode) {
-		perror("saCkptSectionOverwrite: reliableWrite-2");
-		return retcode;
-	}	
+	memset(libRequest, 0, sizeof(SaCkptLibRequestT));
+	memset(clientRequest, 0, sizeof(SaCkptClientRequestT));
+	memset(secOwrtParam, 0, sizeof(SaCkptReqSecOwrtParamT));
 	
-	/* send the section data */
-	retcode = reliableWrite(sockfd, (char*)(dataBuffer), dataSize, &tv);
-	if (SA_OK != retcode) {
-		perror("saCkptSectionOverwrite: reliableWrite-3");
-		return retcode;
-	}	
-	
-	/* get the response */
-	retcode = readRespheadByReqno(sockfd, &resphead, 
-			reqhead.reqno, &tv);
-	if (SA_OK != retcode) {
-		perror("saCkptSectionOverwrite: readRespheadByReqno");
-		return retcode;
-	}	
+	libRequest->client = libClient;
+	libRequest->timeoutTag = 0;
+	libRequest->clientRequest = clientRequest;
 
-	if (resphead.dataLen > 0) { 
-		retcode = removeData(sockfd, &resphead, &tv);
+	clientRequest->clientHandle = libClient->clientHandle;
+	clientRequest->requestNO = SaCkptLibGetReqNO();
+	clientRequest->req = REQ_SEC_OWRT;
+	clientRequest->reqParamLength = sizeof(SaCkptReqSecOwrtParamT);
+	clientRequest->dataLength = dataSize;
+	clientRequest->reqParam = secOwrtParam;
+	clientRequest->data = dataBuffer;
+
+	secOwrtParam->checkpointHandle = *checkpointHandle;
+	secOwrtParam->sectionID.idLen = sectionId->idLen;
+	memcpy(secOwrtParam->sectionID.id, sectionId->id,
+		sectionId->idLen);
+	
+	ch = libClient->channel[0];
+	libError = SaCkptLibRequestSend(ch, libRequest->clientRequest);
+	if (libError != SA_OK) {
+		cl_log(LOG_ERR, 
+			"Send section_overwrite request failed");
+		goto secOwrtError;
 	}
 
-	return resphead.retval;
+	libError = SaCkptLibResponseReceive(ch, 
+		libRequest->clientRequest->requestNO,
+		&clientResponse);
+	if (libError != SA_OK) {
+		cl_log(LOG_ERR, 
+			"Receive response failed");
+		goto secOwrtError;
+	}
+	if (clientResponse == NULL) {
+		cl_log(LOG_ERR, 
+			"Received null response");
+		libError = SA_ERR_LIBRARY;
+		goto secOwrtError;
+	}
+	if (clientResponse->retVal != SA_OK) {
+		cl_log(LOG_ERR, 
+			"Checkpoint daemon returned error");
+		libError = clientResponse->retVal;
+		goto secOwrtError;
+	}
+
+	libError = SA_OK;
+
+secOwrtError:
+
+	if (libRequest != NULL) {
+		ha_free(libRequest);
+	}
+	
+	if (clientRequest != NULL) {
+		ha_free(clientRequest);
+	}
+	
+	if (secOwrtParam != NULL) {
+		ha_free(secOwrtParam);
+	}
+
+	if (clientResponse != NULL) {
+		if (clientResponse->dataLength > 0) {
+			ha_free(clientResponse->data);
+		}
+		ha_free(clientResponse);
+	}
+
+	return libError; 
 }
 
-/* read multiple section data from checkpoint.
+/* 
+ * read multiple section data from checkpoint.
  */
 SaErrorT
 saCkptCheckpointRead(
@@ -1751,134 +2951,186 @@ saCkptCheckpointRead(
 	SaUint32T numberOfElements,
 	SaUint32T *erroneousVectorIndex/*[out]*/)
 {
-	SaInt32T sockfd;
-	SaErrorT retcode = SA_OK;
-	SaUint32T i;
-	size_t len;
-	CkptListDataT* pCkptData;
-	SaCkptRequestHeadT reqhead;
-	SaCkptResponseHeadT resphead;
-	SaCkptReqSecReadParamT secRdParam;
-	struct timeval tv = TIMEOUT_VAL;
+	SaCkptLibCheckpointT* libCheckpoint = NULL;
+	SaCkptReqSecReadParamT* readParam = NULL;
+	
+	SaErrorT libError = SA_OK;
+	int i = 0;
 
-	/* check the parameters */
-	if (NULL == checkpointHandle || NULL == ioVector) {
+	if (checkpointHandle == NULL) {
+		cl_log(LOG_ERR, 
+			"Null handle in checkpoint library");
 		return SA_ERR_INVALID_PARAM;
 	}
-	/* check the handle is valid */
-	pCkptData = getCkptDataByHandle(checkpointHandle);
-	if (NULL == pCkptData) {
-		return SA_ERR_BAD_HANDLE;
+
+	libCheckpoint = SaCkptGetLibCheckpointByHandle(
+		*checkpointHandle);
+	if (libCheckpoint == NULL) {
+		cl_log(LOG_ERR, 
+			"Checkpoint is not open");
+		return SA_ERR_INVALID_PARAM;
 	}
-	sockfd = pCkptData->pInit->syncfd;
-
-  	/* prepare the request head */
-	len = sizeof(SaCkptRequestHeadT) + sizeof(SaCkptReqSecReadParamT);
-	reqhead.msglen = len - sizeof(reqhead.msglen);
-	reqhead.initHandle = pCkptData->pInit->initHandle;
-	reqhead.req = REQ_SEC_RD;
-	reqhead.paramLen = sizeof(SaCkptReqSecReadParamT);
-	reqhead.dataLen = 0;
-
-  	/* prepare the request param */
-	secRdParam.checkpointHandle = *checkpointHandle;
-
-	/* read section one by one */
-	for (i=0; i<numberOfElements; i++) {
-		size_t readsize;
-		
-		/* reset the timout */
-		tv = TIMEOUT_VAL;
-		
-		/* set different request num for each section */
-		reqhead.reqno = genReqNo();
-		
-		/* prepare the request param */
-		if ( ioVector[i].sectionId.idLen < 0
-			||ioVector[i].sectionId.idLen > SA_MAX_ID_LENGTH ) {
-			return SA_ERR_INVALID_PARAM;
-		} else {
-			secRdParam.sectionID.idLen = ioVector[i].sectionId.idLen;
-			memset(secRdParam.sectionID.id, 0, SA_MAX_ID_LENGTH);
-			memcpy(secRdParam.sectionID.id, ioVector[i].sectionId.id,
-				secRdParam.sectionID.idLen);
-		}
-
-		secRdParam.dataSize = ioVector[i].dataSize;
-		secRdParam.offset = ioVector[i].dataOffset;
-
-		/* hello to ckpt service */
-		retcode = hello(sockfd, &reqhead, &secRdParam, &resphead, &tv);
-		if ( SA_OK != retcode ){
-			perror("saCkptCheckpointRead: hello-1");
-			break;
-		}
-		if (SA_OK != resphead.retval) {
-			retcode = resphead.retval;
-			break;
-		}
-		
-		/* read the section data */
-		readsize = resphead.dataLen;
-		retcode = reliableRead(sockfd, \
-				(char*)(ioVector[i].dataBuffer), \
-				readsize, &tv);
-		if (SA_OK != retcode) {
-			perror("saCkptCheckpointRead: reliableRead-1");
-			break;
-		}
-		ioVector[i].readSize = readsize; /* the actural read size */
-	}
-
-	if (erroneousVectorIndex != NULL) {
-		*erroneousVectorIndex = i;
+	if (!(libCheckpoint->openFlag & SA_CKPT_CHECKPOINT_READ)) {
+		cl_log(LOG_ERR, 
+			"Checkpoint is not opened for read");
+		return SA_ERR_LIBRARY;
 	}
 	
-	return retcode;
+	readParam = (SaCkptReqSecReadParamT*)ha_malloc(
+		sizeof(SaCkptReqSecReadParamT));
+	if (readParam == NULL) {
+		cl_log(LOG_ERR, 
+			"No memory in checkpoint library");
+		return SA_ERR_NO_MEMORY;
+	}
+
+	for(i=0; i<numberOfElements; i++) {
+		memset(readParam, 0, sizeof(SaCkptReqSecReadParamT));
+		readParam->checkpointHandle = *checkpointHandle;
+		readParam->sectionID.idLen= ioVector[i].sectionId.idLen;
+		memcpy(readParam->sectionID.id,
+			ioVector[i].sectionId.id,
+			ioVector[i].sectionId.idLen);
+		readParam->offset = ioVector[i].dataOffset;
+		readParam->dataSize = ioVector[i].dataSize;
+
+		libError = saCkptCheckpointSectionRead(readParam,
+			&(ioVector[i].readSize), 
+			ioVector[i].dataBuffer);
+		if (libError != SA_OK) {
+			if (erroneousVectorIndex != NULL) {
+				*erroneousVectorIndex = i;
+			}
+			break;
+		}
+	}
+
+	ha_free(readParam);
+
+	return libError;
 }
 
-/* synchronize the checkpoint to all replicas
+/* 
+ * synchronize the checkpoint to all replicas
  */
 SaErrorT
 saCkptCheckpointSynchronize(
 	const SaCkptCheckpointHandleT *checkpointHandle,
 	SaTimeT timeout)
 {
-	SaErrorT retcode;
-	size_t len;
-	CkptListDataT* pCkptData;
-	SaCkptRequestHeadT reqhead;
-	SaCkptResponseHeadT resphead;
-	long secs = timeout/((SaTimeT)1000000000L);
-	long usecs = (timeout%((SaTimeT)1000000000L))*1000000L;
-	struct timeval tv = {secs, usecs};
-
-	/* check the checkpoint handle is valid */
-	pCkptData = getCkptDataByHandle(checkpointHandle);
-	if (NULL == pCkptData) {
-		return SA_ERR_BAD_HANDLE;
-	}
-
-  	/* prepare the request head */
-	len = sizeof(SaCkptRequestHeadT) + sizeof(SaCkptCheckpointHandleT);
-	reqhead.msglen = len - sizeof(reqhead.msglen);
-	reqhead.initHandle = pCkptData->pInit->initHandle;
-	reqhead.reqno = genReqNo();
-	reqhead.req = REQ_CKPT_SYNC;
-	reqhead.paramLen = sizeof(SaCkptCheckpointHandleT);
-	reqhead.dataLen = 0;
+	SaCkptLibClientT* libClient = NULL;
+	SaCkptLibRequestT* libRequest = NULL;
+	SaCkptClientRequestT* clientRequest = NULL;
+	SaCkptReqSyncParamT* syncParam = NULL;
+ 	SaCkptClientResponseT* clientResponse = NULL;
+	SaCkptLibCheckpointT* libCheckpoint = NULL;
 	
-	/* hello to ckpt service */
-	retcode = hello(pCkptData->pInit->syncfd, &reqhead, \
-		checkpointHandle, &resphead, &tv);
-	if ( SA_OK != retcode ){
-		return retcode;
+	SaErrorT libError = SA_OK;
+	IPC_Channel* ch = NULL;
+
+	if (checkpointHandle == NULL) {
+		cl_log(LOG_ERR, 
+			"Null handle in checkpoint library");
+		return SA_ERR_INVALID_PARAM;
 	}
 
-	return resphead.retval;
+	libCheckpoint = SaCkptGetLibCheckpointByHandle(
+		*checkpointHandle);
+	if (libCheckpoint == NULL) {
+		cl_log(LOG_ERR, 
+			"Checkpoint is not open");
+		return SA_ERR_INVALID_PARAM;
+	}
+	libClient = libCheckpoint->client;
+	
+  	libRequest = (SaCkptLibRequestT*)ha_malloc(
+					sizeof(SaCkptLibRequestT));
+	clientRequest = (SaCkptClientRequestT*)ha_malloc(
+					sizeof(SaCkptClientRequestT));
+	syncParam = (SaCkptReqSyncParamT*)ha_malloc(
+					sizeof(SaCkptReqSyncParamT));
+ 	if ((libRequest == NULL) ||
+		(clientRequest == NULL) ||
+		(syncParam == NULL)) {
+		cl_log(LOG_ERR, 
+			"No memory in checkpoint library");
+		libError = SA_ERR_NO_MEMORY;
+		goto syncError;
+	}
+	
+	memset(libRequest, 0, sizeof(SaCkptLibRequestT));
+	memset(clientRequest, 0, sizeof(SaCkptClientRequestT));
+	memset(syncParam, 0, sizeof(SaCkptReqSyncParamT));
+	
+	libRequest->client = libClient;
+	libRequest->timeoutTag = 0;
+	libRequest->clientRequest = clientRequest;
+
+	clientRequest->clientHandle = libClient->clientHandle;
+	clientRequest->requestNO = SaCkptLibGetReqNO();
+	clientRequest->req = REQ_CKPT_SYNC;
+	clientRequest->reqParamLength = sizeof(SaCkptReqSyncParamT);
+	clientRequest->dataLength = 0;
+	clientRequest->reqParam = syncParam;
+	clientRequest->data = NULL;
+
+	syncParam->checkpointHandle = *checkpointHandle;
+	syncParam->timeout = timeout;
+	
+	ch = libClient->channel[0];
+	libError = SaCkptLibRequestSend(ch, libRequest->clientRequest);
+	if (libError != SA_OK) {
+		cl_log(LOG_ERR, 
+			"Send activate_checkpoint_set request failed");
+		goto syncError;
+	}
+
+	libError = SaCkptLibResponseReceive(ch, 
+		libRequest->clientRequest->requestNO,
+		&clientResponse);
+	if (libError != SA_OK) {
+		cl_log(LOG_ERR, "Receive response failed");
+		goto syncError;
+	}
+	if (clientResponse == NULL) {
+		cl_log(LOG_ERR, "Received null response");
+		libError = SA_ERR_LIBRARY;
+		goto syncError;
+	}
+	if (clientResponse->retVal != SA_OK) {
+		cl_log(LOG_ERR, "Checkpoint daemon returned error");
+		libError = clientResponse->retVal;
+		goto syncError;
+	}
+
+	libError = SA_OK;
+
+syncError:
+	
+	if (libRequest != NULL) {
+		ha_free(libRequest);
+	}
+	
+	if (clientRequest != NULL) {
+		ha_free(clientRequest);
+	}
+	
+	if (syncParam != NULL) {
+		ha_free(syncParam);
+	}
+
+	if (clientResponse != NULL) {
+		if (clientResponse->dataLength > 0) {
+			ha_free(clientResponse->data);
+		}
+		ha_free(clientResponse);
+	}
+
+	return libError; 
 }
 
-/* sychronize the checkpoint replica on all nodes
+/* 
+ * sychronize the checkpoint replica on all nodes
  */
 SaErrorT
 saCkptCheckpointSynchronizeAsync(
@@ -1886,59 +3138,97 @@ saCkptCheckpointSynchronizeAsync(
 	SaInvocationT invocation,
 	const SaCkptCheckpointHandleT *checkpointHandle)
 {
-	SaErrorT retcode;
-	size_t len;
-	CkptListDataT* pCkptData;
-	SaCkptRequestHeadT reqhead;
-	ReqListDataT* pReqData;
-	struct timeval tv = TIMEOUT_VAL;
+	SaCkptLibClientT* libClient = NULL;
+	SaCkptLibRequestT* libRequest = NULL;
+	SaCkptClientRequestT* clientRequest = NULL;
+	SaCkptReqAsyncParamT* asyncParam = NULL;
+	SaCkptLibCheckpointT* libCheckpoint = NULL;
+	
+	SaErrorT libError = SA_OK;
+	IPC_Channel* ch = NULL;
 
-	/* check the checkpoint handle is valid */
-	pCkptData = getCkptDataByHandle(checkpointHandle);
-	if (NULL == pCkptData) {
-		return SA_ERR_BAD_HANDLE;
-	}
-	/* new reqList item */
-	pReqData = (ReqListDataT*)malloc(sizeof(ReqListDataT));
-	if (NULL == pReqData ) {
-		perror("saCkptCheckpointSynchronizeAsync: malloc-1 failure");
-		return SA_ERR_NO_MEMORY;
+	if (ckptHandle == NULL) {
+		cl_log(LOG_ERR, 
+			"Null handle in checkpoint library");
+		return SA_ERR_INVALID_PARAM;
 	}
 	
-  	/* prepare the request head */
-	len = sizeof(SaCkptRequestHeadT) + sizeof(SaCkptCheckpointHandleT);
-	reqhead.msglen = len - sizeof(reqhead.msglen);
-	reqhead.initHandle = pCkptData->pInit->initHandle;
-	reqhead.reqno = genReqNo();
-	reqhead.req = REQ_CKPT_SYNC;
-	reqhead.paramLen = sizeof(SaCkptCheckpointHandleT);
-	reqhead.dataLen = 0;
-
-	/* send request head */
-	retcode = reliableWrite(pCkptData->pInit->asyncfd, (char*)&reqhead,\
-			sizeof(reqhead), &tv);
-	if (SA_OK != retcode) {
-		perror("saCkptCheckpointOpenAsync: reliableWrite-1 failure");
-		free(pReqData);
-		return retcode;
+	if (checkpointHandle == NULL) {
+		cl_log(LOG_ERR, 
+			"Null handle in checkpoint library");
+		return SA_ERR_INVALID_PARAM;
 	}
 
-	/* send request param */
-	retcode = reliableWrite(pCkptData->pInit->asyncfd, \
-		(const char*)checkpointHandle, \
-		sizeof(SaCkptCheckpointHandleT), &tv);
-	if (SA_OK != retcode) {
-		perror("saCkptCheckpointOpenAsync: reliableWrite-2 failure");
-		free(pReqData);
-		return retcode;
+	libCheckpoint = SaCkptGetLibCheckpointByHandle(
+		*checkpointHandle);
+	if (libCheckpoint == NULL) {
+		cl_log(LOG_ERR, 
+			"Checkpoint is not open");
+		return SA_ERR_INVALID_PARAM;
+	}
+	libClient = libCheckpoint->client;
+	
+  	libRequest = (SaCkptLibRequestT*)ha_malloc(
+					sizeof(SaCkptLibRequestT));
+	clientRequest = (SaCkptClientRequestT*)ha_malloc(
+					sizeof(SaCkptClientRequestT));
+	asyncParam = (SaCkptReqAsyncParamT*)ha_malloc(
+					sizeof(SaCkptReqAsyncParamT));
+ 	if ((libRequest == NULL) ||
+		(clientRequest == NULL) ||
+		(asyncParam == NULL)) {
+		cl_log(LOG_ERR, 
+			"No memory in checkpoint library");
+		libError = SA_ERR_NO_MEMORY;
+		goto syncError;
 	}
 	
-	/* add item to reqList */
-	pReqData->pInit = pCkptData->pInit;
-	pReqData->reqno = reqhead.reqno;
-	pReqData->req = REQ_CKPT_SYNC;
-	pReqData->invocation = invocation;
-	g_reqList = g_list_append(g_reqList, pReqData);
+	memset(libRequest, 0, sizeof(SaCkptLibRequestT));
+	memset(clientRequest, 0, sizeof(SaCkptClientRequestT));
+	memset(asyncParam, 0, sizeof(SaCkptReqAsyncParamT));
+	
+	libRequest->client = libClient;
+	libRequest->timeoutTag = 0;
+	libRequest->clientRequest = clientRequest;
 
+	clientRequest->clientHandle = libClient->clientHandle;
+	clientRequest->requestNO = SaCkptLibGetReqNO();
+	clientRequest->req = REQ_CKPT_SYNC_ASYNC;
+	clientRequest->reqParamLength = sizeof(SaCkptReqAsyncParamT);
+	clientRequest->dataLength = 0;
+	clientRequest->reqParam = asyncParam;
+	clientRequest->data = NULL;
+
+	asyncParam->checkpointHandle = *checkpointHandle;
+	asyncParam->invocation = invocation;
+	
+	ch = libClient->channel[1]; /* async channel */
+	libError = SaCkptLibRequestSend(ch, libRequest->clientRequest);
+	if (libError != SA_OK) {
+		cl_log(LOG_ERR, 
+			"Send activate_checkpoint_set request failed");
+		goto syncError;
+	}
+
+	libAsyncRequestList = g_list_append(libAsyncRequestList, 
+		libRequest);
+	
 	return SA_OK;
+
+syncError:
+	
+	if (libRequest != NULL) {
+		ha_free(libRequest);
+	}
+	
+	if (clientRequest != NULL) {
+		ha_free(clientRequest);
+	}
+	
+	if (asyncParam != NULL) {
+		ha_free(asyncParam);
+	}
+
+	return libError; 
 }
+

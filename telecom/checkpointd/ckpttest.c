@@ -1,4 +1,4 @@
-/* $Id: ckpttest.c,v 1.7 2004/02/17 22:12:02 lars Exp $ */
+/* $Id: ckpttest.c,v 1.8 2004/03/12 02:59:38 deng.pan Exp $ */
 /* 
  * ckpttest.c: data checkpoint service test program
  *
@@ -30,6 +30,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <limits.h>
+#include <time.h>
 
 #include <glib.h>
 
@@ -55,33 +56,17 @@ int main(void)
 	SaTimeT  		open_timeout = ((SaTimeT)LLONG_MAX);
 
 	SaCkptCheckpointCreationAttributesT ckpt_create_attri ;
+	SaCkptSectionCreationAttributesT sect_create_attri ;
+	SaCkptSectionIdT sect_id ;
+	SaUint8T sectionid = 0;
 	SaCkptIOVectorElementT	io_write;
 	SaCkptIOVectorElementT	io_read;
 
-	ckpt_create_attri.creationFlags = SA_CKPT_WR_ALL_REPLICAS ;
-//	ckpt_create_attri.creationFlags = SA_CKPT_WR_ACTIVE_REPLICA ;
-	ckpt_create_attri.retentionDuration = SA_TIME_END;
-	ckpt_create_attri.checkpointSize = 1000 ;
-	ckpt_create_attri.maxSectionSize = 100;
-	ckpt_create_attri.maxSections = 10 ;
-	ckpt_create_attri.maxSectionIdSize = SA_MAX_ID_LENGTH ;
-	
-	io_write.sectionId.id = NULL;
-	io_write.sectionId.idLen = 0;
-	io_write.dataBuffer = &requestNumber;
-	io_write.dataSize = sizeof(int);
-	io_write.dataOffset = 0 ;
+	int i = 0; /* section test loop count */
+	int data_buffer = 0;
+	time_t cur_time;
 
-	io_read.sectionId.id[0] = 0;
-	io_read.sectionId.idLen = 0;
-	io_read.dataBuffer = &requestNumber;
-	io_read.dataOffset = 0 ;
-	io_read.dataSize = sizeof(int);
-	io_read.readSize = 0 ;
-
-#ifdef TESTLOOP
-while (1) {
-#endif
+	/* library initialize */
 	ckpt_error = saCkptInitialize(&ckpt_handle, 
 			NULL, 
 			&ckpt_version) ;
@@ -90,11 +75,22 @@ while (1) {
 		return -1 ;
 	}
 	printf("Client %d initialized\n", ckpt_handle);
-      	
+
+	/* checkpoint open */
+	ckpt_create_attri.creationFlags = SA_CKPT_WR_ALL_REPLICAS ;
+//	ckpt_create_attri.creationFlags = SA_CKPT_WR_ACTIVE_REPLICA ;
+	ckpt_create_attri.retentionDuration = SA_TIME_END;
+	ckpt_create_attri.checkpointSize = 1000 ;
+	ckpt_create_attri.maxSectionSize = 100;
+	ckpt_create_attri.maxSections = 10 ;
+	ckpt_create_attri.maxSectionIdSize = SA_MAX_ID_LENGTH ;
+	
 	ckpt_error = saCkptCheckpointOpen(&ckpt_handle, 
 			&ckpt_name, 
 			&ckpt_create_attri, 
-			SA_CKPT_CHECKPOINT_COLOCATED, 
+			SA_CKPT_CHECKPOINT_COLOCATED |
+			SA_CKPT_CHECKPOINT_READ |
+			SA_CKPT_CHECKPOINT_WRITE, 
 			open_timeout, 
 			&checkpoint_handle) ;
 	if (ckpt_error != SA_OK) {
@@ -104,48 +100,158 @@ while (1) {
 	}
 	printf("checkpoint %d opened\n", checkpoint_handle);
 
-	ckpt_error = saCkptCheckpointRead (&checkpoint_handle, 
+	/* read from the default section */
+	io_read.sectionId.id = NULL;
+	io_read.sectionId.idLen = 0;
+	io_read.dataBuffer = &requestNumber;
+	io_read.dataOffset = 0 ;
+	io_read.dataSize = sizeof(int);
+	io_read.readSize = 0 ;
+
+	ckpt_error = saCkptCheckpointRead(&checkpoint_handle, 
 			&io_read, 
 			1,  
 			NULL) ;
-	if( (ckpt_error != SA_OK) || 
+	if((ckpt_error != SA_OK) || 
 		(io_read.readSize != sizeof(requestNumber))){
 		printf("saCkptCheckpointRead error\n");
 		requestNumber = 0;
+	} else {
+		printf("Read number %d from default section\n", 
+			requestNumber);
 	}
 
-	printf("Accepted %d requests before\n", requestNumber);
-
-	/* update the request number */
-
+	/* write to the default section */
 	requestNumber++;
-	ckpt_error = saCkptCheckpointWrite (&checkpoint_handle, 
+	
+	io_write.sectionId.id = NULL;
+	io_write.sectionId.idLen = 0;
+	io_write.dataBuffer = &requestNumber;
+	io_write.dataSize = sizeof(int);
+	io_write.dataOffset = 0 ;
+
+	ckpt_error = saCkptCheckpointWrite(&checkpoint_handle, 
 			&io_write, 
 			1,  
 			NULL) ;
 	if( ckpt_error != SA_OK) {
 		printf("saCkptCheckpointWrite error\n");
-		saCkptCheckpointClose ( & checkpoint_handle) ;
-		saCkptFinalize (& ckpt_handle) ;
+		saCkptCheckpointClose(&checkpoint_handle) ;
+		saCkptFinalize(&ckpt_handle) ;
 		return -1 ;
+	} else {
+		printf("Write number %d into default section\n", 
+			requestNumber);
 	}
 
-	if (saCkptCheckpointClose(&checkpoint_handle) != SA_OK ) {
+	for (i=0; i<9; i++) {
+		/* section create */
+		sectionid = 'A' + i;
+		sect_id.id = &sectionid ;
+		sect_id.idLen = sizeof(sectionid);
+		sect_create_attri.sectionId = &sect_id ;
+
+		time(&cur_time) ;
+		sect_create_attri.expirationTime = 
+			(SaTimeT)(cur_time + 3600*24) * 1000000000LL;
+
+		/* initial data is the section id */
+		data_buffer = sectionid;
+		
+		ckpt_error = saCkptSectionCreate(&checkpoint_handle, 
+						&sect_create_attri,  
+						&data_buffer, 
+						sizeof(data_buffer)) ;
+		if( ckpt_error != SA_OK) {
+			printf("\tsaCkptSectionCreate error\n");
+			saCkptCheckpointClose(&checkpoint_handle) ;
+			saCkptFinalize (& ckpt_handle) ;
+			return -1 ;
+		} else {
+			printf("\tsection %c created\n", *(SaUint8T*)sect_id.id);
+		}
+
+		/* read init data from the section */
+		data_buffer = 0;
+		
+		io_read.sectionId.id = &sectionid;
+		io_read.sectionId.idLen = sizeof(sectionid);
+		io_read.dataBuffer = &data_buffer;
+		io_read.dataSize = sizeof(data_buffer);
+		io_read.dataOffset = 0;
+		ckpt_error = saCkptCheckpointRead (&checkpoint_handle, 
+				&io_read, 
+				1,  
+				NULL) ;
+		if(ckpt_error != SA_OK) {
+			printf("\tsaCkptCheckpointRead error\n");
+			saCkptCheckpointClose(&checkpoint_handle) ;
+			saCkptFinalize (& ckpt_handle) ;
+			return -1 ;
+		} else {
+			printf("\tRead number %d from section %c\n", 
+				data_buffer,
+				*(SaUint8T*)(io_read.sectionId.id));
+		}
+		
+		/* write to the section */
+		data_buffer = '*';
+		io_write.sectionId.id = &sectionid;
+		io_write.sectionId.idLen = sizeof(sectionid);
+		io_write.dataBuffer = &data_buffer;
+		io_write.dataOffset = 0;
+		io_write.dataSize = sizeof(data_buffer);
+		ckpt_error = saCkptCheckpointWrite (&checkpoint_handle, 
+				&io_write, 
+				1,  
+				NULL) ;
+		if( ckpt_error != SA_OK) {
+			printf("saCkptCheckpointWrite error\n");
+			saCkptCheckpointClose(&checkpoint_handle) ;
+			saCkptFinalize (& ckpt_handle) ;
+			return -1 ;
+		} else {
+			printf("\tWrite number %d into section %c\n", 
+				data_buffer, 
+				*(SaUint8T*)(io_write.sectionId.id));
+		}
+	}
+
+	/* section delete */
+	for (i=0; i<9; i++) {
+		/* section create */
+		sectionid = 'A' + i;
+		
+		sect_id.id = &sectionid ;
+		sect_id.idLen = sizeof(sectionid);
+
+		ckpt_error = saCkptSectionDelete(&checkpoint_handle,
+						&sect_id);
+		if( ckpt_error != SA_OK) {
+			printf("\tsaCkptSectionCreate error\n");
+			saCkptCheckpointClose(&checkpoint_handle) ;
+			saCkptFinalize (& ckpt_handle) ;
+			return -1 ;
+		} else {
+			printf("\tsection %c deleted\n", 
+				*(SaUint8T*)sect_id.id);
+		}
+	}
+	
+	/* checkpoint close */
+	if (saCkptCheckpointClose(&checkpoint_handle) != SA_OK) {
 		printf("saCkptCheckpointClose error\n");
 		saCkptFinalize (&ckpt_handle) ;
 		return -1 ;
 	}
 	printf("checkpoint %d closed\n", checkpoint_handle);
-	
+
+	/* library finalize */
 	if ((ckpt_error = saCkptFinalize(&ckpt_handle)) != SA_OK) {
 		printf("saCkptFinalize error\n");
 		return -1 ;
 	}
 	printf("Client %d finalized\n", ckpt_handle);
-
-#ifdef TESTLOOP
-}
-#endif
 	
 	return 0 ;
 }

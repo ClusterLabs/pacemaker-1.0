@@ -1,4 +1,4 @@
-/* $Id: request.h,v 1.2 2004/02/17 22:12:02 lars Exp $ */
+/* $Id: request.h,v 1.3 2004/03/12 02:59:38 deng.pan Exp $ */
 #ifndef _CKPT_REQUEST_H
 #define _CKPT_REQUEST_H
 
@@ -11,18 +11,7 @@
 #include "client.h"
 #include "operation.h"
 
-/* the request stream in the socket */
-typedef struct _SaCkptClientRequestT{
-	SaCkptHandleT		clientHandle;
-	SaUint32T		requestNO;
 
-	SaCkptReqT		req;
-
-	SaUint32T		reqParamLength;
-	SaUint32T		dataLength;
-	void*			reqParam;
-	void*			data;
-} SaCkptClientRequestT;
 
 typedef struct _SaCkptRequestT{
 	SaCkptClientT*		client;
@@ -57,7 +46,7 @@ int SaCkptRequestRemove(SaCkptRequestT**);
 char* SaCkptReq2String(SaCkptReqT);
 
 
-void SaCkptRequestStartTimer(SaCkptRequestT* ckptReq);
+void SaCkptRequestStartTimer(SaCkptRequestT* ckptReq, SaTimeT);
 void SaCkptRequestStopTimer(SaCkptRequestT* ckptReq);
 
 /* the request process routine */

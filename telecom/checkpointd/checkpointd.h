@@ -1,4 +1,4 @@
-/* $Id: checkpointd.h,v 1.2 2004/02/17 22:12:02 lars Exp $ */
+/* $Id: checkpointd.h,v 1.3 2004/03/12 02:59:38 deng.pan Exp $ */
 #ifndef _CHECKPOINTD_H
 #define _CHECKPOINTD_H
 
@@ -6,15 +6,11 @@
 
 #include <saf/ais.h>
 
-/* timeout value in seconds */
-#define CLIENT_REQUEST_TIMEOUT 	60
-
 /* 
- * the operation timeout value should be smaller 
- * than the request timeout value 
+ * The default timeout value in seconds 
  */
 #define REQUEST_TIMEOUT		10
-#define OPERATION_TIMEOUT	8
+#define OPERATION_TIMEOUT	 8
 
 /*
  * the checkpoint service itself

@@ -1,4 +1,4 @@
-/* $Id: replica.h,v 1.5 2004/02/17 22:12:02 lars Exp $ */
+/* $Id: replica.h,v 1.6 2004/03/12 02:59:38 deng.pan Exp $ */
 #ifndef _CKPT_REPLICA_H
 #define _CKPT_REPLICA_H
 
@@ -130,7 +130,13 @@ typedef struct _SaCkptReplicaT {
 	 * will not start any new operations. all the operations will be 
 	 * added to pending operation queue.
 	 */
-	gboolean	flagLockReplica;
+	gboolean	flagReplicaLock;
+
+	/*
+	 * if this flag is set, all the requests will not be sent to active 
+	 * replica. Instead, the requests will be added pending request queue
+	 */
+	gboolean	flagReplicaPending;
 
 	/* whether this replica is unlinked or not */
 	gboolean	flagUnlink;
