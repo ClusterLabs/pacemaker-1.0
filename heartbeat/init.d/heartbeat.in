@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-#	$Id: heartbeat.in,v 1.31 2003/08/13 04:36:56 alan Exp $
+#	$Id: heartbeat.in,v 1.32 2004/01/20 15:35:09 alan Exp $
 #
 # heartbeat     Start high-availability services
 #
@@ -60,9 +60,6 @@ then
   base=${0##*/}
   link=${base#*[SK][0-9][0-9]}
 
-  # Force execution if not called by a runlevel directory.
-  test "$link" = "$base" && START_HEARTBEAT=yes
-  test "$START_HEARTBEAT" = yes || exit 0
 fi
 if
   [ -z "$rc_done" ]
@@ -391,6 +388,9 @@ exit $RC
 #
 #
 #  $Log: heartbeat.in,v $
+#  Revision 1.32  2004/01/20 15:35:09  alan
+#  Removed some old SuSE-isms from the init script.
+#
 #  Revision 1.31  2003/08/13 04:36:56  alan
 #  Put in a minor change from Tuomo Soini.
 #
