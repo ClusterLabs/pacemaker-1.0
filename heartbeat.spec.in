@@ -1,4 +1,4 @@
-#	$Id: heartbeat.spec.in,v 1.80 2004/02/17 05:50:30 alan Exp $
+#	$Id: heartbeat.spec.in,v 1.81 2004/03/25 21:41:47 alan Exp $
 
 # Workaround for a change in RPM 4.1.x; needs proper fixing soon!
 %define _unpackaged_files_terminate_build 0
@@ -766,6 +766,7 @@ install -m 644 rc.config.heartbeat $TEMPL
 @libdir@/heartbeat
 @libdir@/libhbclient.*
 @libdir@/libccmclient.*
+@libdir@/libclm.*
 @libdir@/libplumb.*
 @libdir@/libapphb.*
 @libdir@/librecoverymgr.*
