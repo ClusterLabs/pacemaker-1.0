@@ -1,4 +1,4 @@
-static const char _udp_Id [] = "$Id: ping.c,v 1.18 2003/07/01 10:12:26 horms Exp $";
+static const char _udp_Id [] = "$Id: ping.c,v 1.19 2003/08/13 06:50:25 horms Exp $";
 /*
  * ping.c: ICMP-echo-based heartbeat code for heartbeat.
  *
@@ -243,7 +243,8 @@ new_ping_interface(const char * host)
 		struct hostent *hep;
 		hep = gethostbyname(host);
 		if (hep == NULL) {
-			LOG(PIL_CRIT, "unknown host: %s: %s", host, strerror(errno));
+			LOG(PIL_CRIT, "unknown host: %s: %s"
+			,	host, strerror(errno));
 			FREE(ppi); ppi = NULL;
 			return NULL;
 		}
@@ -329,10 +330,12 @@ ping_read(struct hb_media* mp)
 	PINGASSERT(mp);
 	ei = (struct ping_private *) mp->pd;
 
-	if ((numbytes=recvfrom(ei->sock, (void *) &buf.cbuf, sizeof(buf.cbuf)-1, 0
-	,	(struct sockaddr *)&their_addr, &addr_len)) < 0) {
+	if ((numbytes=recvfrom(ei->sock, (void *) &buf.cbuf
+	,	sizeof(buf.cbuf)-1, 0,	(struct sockaddr *)&their_addr
+	,	&addr_len)) < 0) {
 		if (errno != EINTR) {
-			LOG(PIL_CRIT, "Error receiving from socket: %s", strerror(errno));
+			LOG(PIL_CRIT, "Error receiving from socket: %s"
+			,	strerror(errno));
 		}
 		return NULL;
 	}
@@ -512,7 +515,8 @@ ping_open(struct hb_media* mp)
     	}
 
 	if (fcntl(sockfd, F_SETFD, FD_CLOEXEC)) {
-		LOG(PIL_CRIT, "Error setting the close-on-exec flag: %s", strerror(errno));
+		LOG(PIL_CRIT, "Error setting the close-on-exec flag: %s"
+		,	strerror(errno));
 	}
 	ei->sock = sockfd;
 
