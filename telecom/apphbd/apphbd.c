@@ -1,4 +1,4 @@
-/* $Id: apphbd.c,v 1.56 2004/11/22 20:06:42 gshi Exp $ */
+/* $Id: apphbd.c,v 1.57 2005/02/12 17:11:48 alan Exp $ */
 /*
  * apphbd:	application heartbeat daemon
  *
@@ -91,6 +91,7 @@
 #include <clplumbing/cl_signal.h>
 #include <clplumbing/lsb_exitcodes.h>
 #include <clplumbing/coredumps.h>
+#include <clplumbing/cl_malloc.h>
 
 
 #ifndef PIDFILE
@@ -397,6 +398,7 @@ apphb_client_remove(gpointer Client)
 	G_main_del_IPC_Channel(client->source);
 	g_free(client->appname);
 	g_free(client->appinst);
+	g_free(client->curdir);
 	memset(client, 0, sizeof(*client));
 }
 
@@ -881,7 +883,9 @@ main(int argc, char ** argv)
 	int		argerr = 0;
 	const char*	cfgfile = CONFIG_FILE;
 
+	cl_malloc_forced_for_glib(); /* Must be first */
 	cl_cdtocoredir();
+	cl_enable_coredumps(TRUE);
 	cl_log_set_entity(cmdname);
 	cl_log_enable_stderr(TRUE);
 	cl_log_set_facility(LOG_USER);
@@ -1055,6 +1059,7 @@ make_daemon(void)
 	long	pid;
 	FILE *	lockfd;
 
+#ifndef NOFORK
 	pid = fork();
 
 	if (pid < 0) {
@@ -1063,6 +1068,7 @@ make_daemon(void)
 	}else if (pid > 0) {
 		exit(LSB_EXIT_OK);
 	}
+#endif
 
 	lockfd = fopen(PIDFILE, "w");
 	if (lockfd == NULL) {
