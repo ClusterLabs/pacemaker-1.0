@@ -36,6 +36,10 @@
 #include <saf/ais.h>
 #include "checkpointd/clientrequest.h"
 
+#ifndef AF_LOCAL
+#	define AF_LOCAL	AF_UNIX
+#endif
+
 /* TODO list: 
  * 1. make all APIs thread safe
  */
