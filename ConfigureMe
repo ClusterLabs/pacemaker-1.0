@@ -177,6 +177,12 @@ GetConfigureFLAGS
 echo ""
 echo "Configure flags for $CFENV: $FLAGS"
 
+if
+  [ $# -le 0 ]
+then
+  Usage
+fi
+
 shift
 
 
