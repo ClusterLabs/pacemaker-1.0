@@ -24,11 +24,9 @@ mibs_DATA		= LINUX-HA-MIB.mib
 
 EXTRA_DIST		= $(mibs_DATA)
 
-INCLUDES		= -I$(top_builddir)/include -I$(top_srcdir)/include
-
-COMMONLIBS              = $(top_builddir)/lib/clplumbing/libplumb.la    \
-			$(top_srcdir)/lib/clplumbing/libplumb.la    \
-			$(GLIBLIB)
+INCLUDES                = -I$(top_builddir)/include -I$(top_srcdir)/include \
+			-I$(top_builddir)/linux-ha -I$(top_srcdir)/linux-ha  \
+			-I$(top_builddir)/libltdl -I$(top_srcdir)/libltdl
 
 halibdir		= $(libdir)/@HB_PKG@
 
@@ -39,10 +37,10 @@ noinst_LTLIBRARIES = libhaclient.la
 
 libhaclient_la_SOURCES	= haclient.h haclient.c
 
-libhaclient_LIBADD_EXTRA = $(top_builddir)/heartbeat/libhbclient.la \
-			$(top_srcdir)/heartbeat/libhbclient.la
-
-libhaclient_la_LIBADD	= $(COMMONLIBS) $(libhaclient_LIBADD_EXTRA)
+libhaclient_la_LIBADD	= \
+                        $(top_builddir)/lib/clplumbing/libplumb.la \
+			$(top_builddir)/lib/hbclient/libhbclient.la \
+			$(GLIBLIB)
 
 # binary programs
 halib_PROGRAMS		= hasubagent
@@ -54,8 +52,9 @@ hasubagent_SOURCES	= hasubagent.c \
 			  HAIFTable.h HAIFTable.c
 
 
-HASUBAGENT_LDADD_EXTRA 	= $(top_builddir)/snmp_subagent/libhaclient.la \
-			$(top_srcdir)/snmp_subagent/libhaclient.la
+HASUBAGENT_LDADD_EXTRA 	= \
+                        $(top_builddir)/lib/clplumbing/libplumb.la \
+			$(top_builddir)/lib/hbclient/libhbclient.la
 
 hasubagent_LDADD	= $(HASUBAGENT_LDADD_EXTRA)
 hasubagent_LDFLAGS	= @SNMP_LIBS@ 
