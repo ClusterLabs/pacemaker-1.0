@@ -1,4 +1,4 @@
-/* $Id: iterator_init.c,v 1.1 2004/06/30 03:37:27 deng.pan Exp $ */
+/* $Id: iterator_init.c,v 1.2 2004/07/15 14:33:49 msoffen Exp $ */
 /* 
  * iterator_init.c: data checkpoint API test: saCkptSectionIteratorInitialize
  *
@@ -1041,6 +1041,7 @@ int init_choosen_flag_geq(void)
 int main(int argc, char* argv[])
 {
 	char case_name[] = "saCkptSectionIteratorInitialize";
+	char name_ite_in[]="checkpoint_ite_in";
 	int case_index ;
 	
 	ckpt_version.major = VERSION_MAJOR;
@@ -1050,7 +1051,6 @@ int main(int argc, char* argv[])
 	ckpt_callback.saCkptCheckpointOpenCallback = ckpt_open_callback ;
 	ckpt_callback.saCkptCheckpointSynchronizeCallback = ckpt_sync_callback;
 
-	char name_ite_in[]="checkpoint_ite_in";
 	ckpt_name.length = sizeof (name_ite_in) ;
 
 	memcpy (ckpt_name.value, name_ite_in, ckpt_name.length);

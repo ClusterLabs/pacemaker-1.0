@@ -1,4 +1,4 @@
-/* $Id: iterator_next.c,v 1.1 2004/06/30 03:37:27 deng.pan Exp $ */
+/* $Id: iterator_next.c,v 1.2 2004/07/15 14:33:49 msoffen Exp $ */
 /* 
  * iterator_next.c: data checkpoint API test: saCkptSectionIteratorNext
  *
@@ -203,8 +203,8 @@ int next_null_descriptor(void)
 
 int main(void)
 {
-
 	char case_name[] = "saCkptSectionIteratorNext";
+	char name_ite_next[]="checkpoint_ite_next";
 	int case_index ;
 	
 	ckpt_version.major = VERSION_MAJOR;
@@ -214,7 +214,6 @@ int main(void)
 	ckpt_callback.saCkptCheckpointOpenCallback = ckpt_open_callback ;
 	ckpt_callback.saCkptCheckpointSynchronizeCallback = ckpt_sync_callback;
 
-	char name_ite_next[]="checkpoint_ite_next";
 	ckpt_name.length = sizeof (name_ite_next) ;
 
 	memcpy (ckpt_name.value, name_ite_next, ckpt_name.length);

@@ -1,4 +1,4 @@
-/* $Id: finalize.c,v 1.1 2004/06/30 03:37:27 deng.pan Exp $ */
+/* $Id: finalize.c,v 1.2 2004/07/15 14:33:49 msoffen Exp $ */
 /* 
  * finalize.c: data checkpoint API test: saCkptFinalize
  *
@@ -160,6 +160,7 @@ int  finalize_ckpt_exist(void)
 int main(void)
 {	
 	char case_name[] = "saCkptFinalize";
+	char name_fin[]="checkpoint_finalize";
 	int case_index ;	 
 	 
 	ckpt_version.major = VERSION_MAJOR ;
@@ -171,8 +172,6 @@ int main(void)
 
 	ckpt_invocation = INVOCATION_BASE ;
 
-	char name_fin[]="checkpoint_finalize";
-	 
 	ckpt_name.length = sizeof (name_fin) ;
 	memcpy (ckpt_name.value, name_fin, ckpt_name.length);
 

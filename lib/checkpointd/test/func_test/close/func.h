@@ -1,4 +1,4 @@
-/* $Id: func.h,v 1.1 2004/06/30 03:44:19 deng.pan Exp $ */
+/* $Id: func.h,v 1.2 2004/07/15 14:33:49 msoffen Exp $ */
 /* 
  * func.h: Test Head file for data checkpoint : saCkptCheckpointClose 
  *
@@ -175,10 +175,9 @@ void initparam(void)
  
 int inittest(void)
 {
-	
+	int i;
 	
 	cphandle = libhandle = -1 ;
-	int i;
 	
 	pidparent = getpid () ;
 	for (i=0; i < PIDNUMS ; i++)

@@ -1,4 +1,4 @@
-/* $Id: sect_create6node2.c,v 1.1 2004/06/30 03:44:20 deng.pan Exp $ */
+/* $Id: sect_create6node2.c,v 1.2 2004/07/15 14:33:49 msoffen Exp $ */
 /* 
  * sec_create6node2.c: Test data checkpoint function : saCkptSectionCreate 
  *
@@ -31,6 +31,7 @@
 int main(int argc, char **argv)
 {
 	int count =0 ;	
+	SaUint8T tmp_sect_id[] = "13";
 
 	if (inittest () != 0)
 		{
@@ -54,7 +55,6 @@ int main(int argc, char **argv)
 	syslog (LOG_INFO|LOG_LOCAL7, "ckpt_signal %d %d\n", count++, SIGUSR1) ;
 	pause () ;
 
-	SaUint8T tmp_sect_id[] = "13";
 	sectid.id = tmp_sect_id ;
 	sectid.idLen = sizeof (tmp_sect_id) ;
 

@@ -1,4 +1,4 @@
-/* $Id: close.c,v 1.1 2004/06/30 03:37:27 deng.pan Exp $ */
+/* $Id: close.c,v 1.2 2004/07/15 14:33:48 msoffen Exp $ */
 /* 
  * close.c: data checkpoint API test:saCkptCheckpointClose
  *
@@ -270,8 +270,8 @@ int close_after_unlink(void)
 
 int  main(void)
 {
-
 	char case_name[] = "saCkptCheckpointClose";
+	char name_close[]="checkpoint_close";
 	int case_index ;
 	 
 	ckpt_version.major = VERSION_MAJOR;
@@ -281,7 +281,6 @@ int  main(void)
 	ckpt_callback.saCkptCheckpointOpenCallback = ckpt_open_callback ;
 	ckpt_callback.saCkptCheckpointSynchronizeCallback = ckpt_sync_callback;
 
-	char name_close[]="checkpoint_close";
 	ckpt_name.length = sizeof (name_close) ;
 
 	memcpy (ckpt_name.value, name_close, ckpt_name.length);

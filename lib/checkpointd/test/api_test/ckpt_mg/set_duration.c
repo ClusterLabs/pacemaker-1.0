@@ -1,4 +1,4 @@
-/* $Id: set_duration.c,v 1.1 2004/06/30 03:37:27 deng.pan Exp $ */
+/* $Id: set_duration.c,v 1.2 2004/07/15 14:33:49 msoffen Exp $ */
 /* 
  * set_duration.c: data checkpoint API test:saCkptCheckpointRetentionDurationSet
  *
@@ -324,6 +324,7 @@ int set_duration_timeout()
 int main(int argc, char* argv[])
 {
 	char case_name[] = "saCkptCheckpointRetentionDurationSet";
+	char name_set_duration[]="checkpoint_set_duration";
 	int case_index ;
 	 
 	ckpt_version.major = VERSION_MAJOR;
@@ -333,7 +334,6 @@ int main(int argc, char* argv[])
 	ckpt_callback.saCkptCheckpointOpenCallback = ckpt_open_callback ;
 	ckpt_callback.saCkptCheckpointSynchronizeCallback = ckpt_sync_callback;
 
-	char name_set_duration[]="checkpoint_set_duration";
 	ckpt_name.length = sizeof (name_set_duration) ;
 	memcpy (ckpt_name.value, name_set_duration, ckpt_name.length);
 

@@ -1,4 +1,4 @@
-/* $Id: sync2node1.c,v 1.1 2004/06/30 03:44:21 deng.pan Exp $ */
+/* $Id: sync2node1.c,v 1.2 2004/07/15 14:33:49 msoffen Exp $ */
 /* 
  * sync2node1.c: Test data checkpoint function : saCkptCheckpointSynchronize 
  *
@@ -278,11 +278,11 @@ int verify (void)
 int writesect (void)
 {
 	int i ;
+	char tmp[50];
 	
 	for (i =0 ; i< 5 ; i++)
 		{
 			sectwrite.dataSize = strlen(data[i]) ;
-			char tmp[50];
 			strcpy(tmp,data[i]);
 			sectwrite.dataBuffer = tmp ;
 			
@@ -360,6 +360,3 @@ int main(int argc, char **argv)
 	finalize () ;
 	return 0 ; 
 }
-
-
-

@@ -1,4 +1,4 @@
-/* $Id: asynchronize.c,v 1.1 2004/06/30 03:37:27 deng.pan Exp $ */
+/* $Id: asynchronize.c,v 1.2 2004/07/15 14:33:49 msoffen Exp $ */
 /* 
  * asynchronize.c: Test data checkpoint API : saCkptCheckpointSynchronizeAsync
  *
@@ -19,12 +19,13 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#include <saf/ais.h>
 #include <stdio.h>
+#include <sys/types.h>
 #include <sys/select.h>
 #include <unistd.h>
-#include "ckpt_test.h"
+#include <saf/ais.h>
 #include <time.h>
+#include "ckpt_test.h"
 
 #define INVOCATION 1024
 void ckpt_open_callback (SaInvocationT invocation,
@@ -346,7 +347,7 @@ int async_normal_call(void)
 
 int main(int argc, char* argv[])
 {
-
+	char name_async[]="checkpoint_async";
 	char case_name[] = "saCkptCheckpointSynchronizeAsync";
 	int case_index ;
 		
@@ -357,7 +358,6 @@ int main(int argc, char* argv[])
 	ckpt_callback.saCkptCheckpointOpenCallback = ckpt_open_callback ;
 	ckpt_callback.saCkptCheckpointSynchronizeCallback = ckpt_async_callback;
 
-	char name_async[]="checkpoint_async";
 	ckpt_name.length = sizeof (name_async) ;
 
 	memcpy (ckpt_name.value, name_async, ckpt_name.length);

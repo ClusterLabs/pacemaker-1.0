@@ -1,4 +1,4 @@
-/* $Id: sync3node1.c,v 1.1 2004/06/30 03:44:21 deng.pan Exp $ */
+/* $Id: sync3node1.c,v 1.2 2004/07/15 14:33:49 msoffen Exp $ */
 /* 
  * sync3node1.c: Test data checkpoint function : saCkptCheckpointSynchronize 
  *
@@ -268,6 +268,7 @@ int verify (void)
 	
 	int i ,len;
 	char tmp[256] ;	
+	char* temp;
 
 	len =0 ;
 	bzero (tmp, sizeof (tmp)) ;
@@ -282,7 +283,6 @@ int verify (void)
 	if (saCkptCheckpointRead (&cphandle, &sectread, 1 , NULL )!= SA_OK)
 		return -1;
 
-	char* temp;
 	temp=(char*)sectread.dataBuffer;
 	
 	if (sectread.readSize != len)
@@ -299,12 +299,12 @@ int writesect (void)
 	int i ;
 	int maxfd ;
 	fd_set  fs ;
+	char tmp[50];
 	SaSelectionObjectT selectobj ; 
 
 	for (i =0 ; i< 5 ; i++)
 		{
 			sectwrite.dataSize = strlen(data[i]) ;
-			char tmp[50];
 			strcpy(tmp,data[i]);
 			sectwrite.dataBuffer = tmp ;
 

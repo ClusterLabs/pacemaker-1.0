@@ -1,4 +1,4 @@
-/* $Id: write7node2.c,v 1.1 2004/06/30 03:44:21 deng.pan Exp $ */
+/* $Id: write7node2.c,v 1.2 2004/07/15 14:33:49 msoffen Exp $ */
 /* 
  * write7node2.c: Test data checkpoint function : saCkptCheckpointWrite 
  *
@@ -19,21 +19,19 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
  
-#include <saf/ais.h>
+#include <stdio.h>
 #include <stdlib.h>
-#include <sys/wait.h>
-#include "ckpt_test.h"
-#include <stdio.h>
-#include <sys/time.h>
 #include <string.h>
-#include <stdio.h>
-#include <string.h>
-#include <glib.h>
-#include <saf/ais.h>
 #include <syslog.h>
 #include <unistd.h>
 #include <time.h>
+#include <glib.h>
+#include <sys/types.h>
+#include <sys/wait.h>
 #include <sys/time.h>
+#include <sys/time.h>
+#include <saf/ais.h>
+#include "ckpt_test.h"
 
 #define PIDNUMS 1 
 #define NAMEPREFIX "checkpoint name:"
@@ -128,6 +126,8 @@ void usrhandler (int signumber)
 void initparam(void)
 {
 	time_t cur_time;	
+	int i;	
+
 	ckpt_version.major = VERSION_MAJOR;
 	ckpt_version.minor = VERSION_MINOR;
 	ckpt_version.releaseCode = VERSION_RELEASCODE;
@@ -153,7 +153,6 @@ void initparam(void)
 	sectattri.sectionId = &sectid ;
 	
 
-	int i;	
 	sectread=g_malloc0(section_No*sizeof(SaCkptIOVectorElementT));
 	for(i=0;i<section_No;i++){
 		sectread[i].sectionId.id = sect_id_array ;
@@ -257,7 +256,7 @@ int createsect (void)
  */
 int verify (void)
 {
-	
+	char tmpp[256] ;
 
 	if (saCkptCheckpointRead (&cphandle, sectread, section_No , NULL )!= SA_OK)
 		{
@@ -267,7 +266,6 @@ int verify (void)
 	if (sectread[0].readSize != 2*sizeof (init_data)-1)
 		return -1 ;
 	
-	char tmpp[256] ;
 	strcpy(tmpp,init_data);
 	strcat(tmpp,init_data);
 	
@@ -349,5 +347,3 @@ int main(int argc, char **argv)
 	
 	return 0 ; 
 }
-
-

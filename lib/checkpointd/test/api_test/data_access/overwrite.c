@@ -1,4 +1,4 @@
-/* $Id: overwrite.c,v 1.1 2004/06/30 03:37:27 deng.pan Exp $ */
+/* $Id: overwrite.c,v 1.2 2004/07/15 14:33:49 msoffen Exp $ */
 /* 
  * overwrite.c: Test data checkpoint API : saCkptSectionOverwrite
  *
@@ -772,8 +772,7 @@ int main(int argc, char* argv[])
 {
 
 	char case_name[] = "saCkptSectionOverwrite";
-
-	
+	char name_overwr[]="checkpoint_overwr";
 	int case_index ;
 		
 	ckpt_version.major = VERSION_MAJOR;
@@ -783,7 +782,6 @@ int main(int argc, char* argv[])
 	ckpt_callback.saCkptCheckpointOpenCallback = ckpt_open_callback ;
 	ckpt_callback.saCkptCheckpointSynchronizeCallback = ckpt_sync_callback;
 
-	char name_overwr[]="checkpoint_overwr";
 	ckpt_name.length = sizeof (name_overwr) ;
 	memcpy (ckpt_name.value, name_overwr, ckpt_name.length);
 

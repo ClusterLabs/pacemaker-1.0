@@ -334,8 +334,8 @@ int sync_normal_call(void)
 
 int main(int argc, char * argv[])
 {
-
 	char case_name[] = "saCkptCheckpointSynchronize";
+	char name_sync[]="checkpoint_sync";
 	int case_index ;
 		
 	ckpt_version.major = VERSION_MAJOR;
@@ -345,7 +345,6 @@ int main(int argc, char * argv[])
 	ckpt_callback.saCkptCheckpointOpenCallback = ckpt_open_callback ;
 	ckpt_callback.saCkptCheckpointSynchronizeCallback = ckpt_sync_callback;
 
-	char name_sync[]="checkpoint_sync";
 	ckpt_name.length = sizeof (name_sync) ;
 
 	memcpy (ckpt_name.value, name_sync, ckpt_name.length);

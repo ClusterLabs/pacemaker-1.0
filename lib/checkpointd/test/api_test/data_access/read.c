@@ -1,4 +1,4 @@
-/* $Id: read.c,v 1.1 2004/06/30 03:37:27 deng.pan Exp $ */
+/* $Id: read.c,v 1.2 2004/07/15 14:33:49 msoffen Exp $ */
 /* 
  * read.c: Test data checkpoint API : saCkptCheckpointRead
  *
@@ -1266,12 +1266,11 @@ int read_big_offset(void)
 	return 0;
 }
 
-int main(int argc, char* argv[])
+int main(int argc, char* argv[]) 
 {
-
 	char case_name[] = "saCkptCheckpointRead";
+	char name_rd[]="checkpoint_rd";
 	char buffer[20] ;
-	
 	int case_index ;
 		
 	ckpt_version.major = VERSION_MAJOR;
@@ -1281,7 +1280,6 @@ int main(int argc, char* argv[])
 	ckpt_callback.saCkptCheckpointOpenCallback = ckpt_open_callback ;
 	ckpt_callback.saCkptCheckpointSynchronizeCallback = ckpt_sync_callback;
 
-	char name_rd[]="checkpoint_rd";
 	ckpt_name.length = sizeof (name_rd) ;
 
 	memcpy (ckpt_name.value,name_rd, ckpt_name.length);

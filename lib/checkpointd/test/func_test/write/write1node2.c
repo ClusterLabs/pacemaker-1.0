@@ -1,4 +1,4 @@
-/* $Id: write1node2.c,v 1.1 2004/06/30 03:44:21 deng.pan Exp $ */
+/* $Id: write1node2.c,v 1.2 2004/07/15 14:33:49 msoffen Exp $ */
 /* 
  * write1node2.c: Test data checkpoint function : saCkptCheckpointWrite 
  *
@@ -19,12 +19,13 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
  
+#include <stdio.h>
 #include <saf/ais.h>
 #include <stdlib.h>
 #include <sys/wait.h>
-#include "ckpt_test.h"
-#include <stdio.h>
 #include <sys/time.h>
+#include <sys/types.h>
+#include "ckpt_test.h"
 
 #define PIDNUMS 1 
 #define NAMEPREFIX "checkpoint name:"

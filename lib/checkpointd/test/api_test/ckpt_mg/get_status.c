@@ -1,4 +1,4 @@
-/* $Id: get_status.c,v 1.1 2004/06/30 03:37:27 deng.pan Exp $ */
+/* $Id: get_status.c,v 1.2 2004/07/15 14:33:48 msoffen Exp $ */
 /* 
  * get_status.c: data checkpoint API test:saCkptCheckpointStatusGet
  *
@@ -59,9 +59,9 @@ returns :
 int  get_status_pre_open(void)
 {
 
-	checkpoint_handle = -1 ;
-
 	SaCkptCheckpointStatusT  checkpoint_stauts ;
+
+	checkpoint_handle = -1 ;
 
 	ckpt_error = saCkptCheckpointStatusGet(&checkpoint_handle, & checkpoint_stauts) ;
 	if ( ckpt_error == SA_OK)
@@ -332,9 +332,8 @@ int get_status_normal_call(void)
 
 int main(int argc, char* argv[])
 {
-
 	char case_name[] = "saCkptCheckpointStatusGet";
-
+	char name_get_status[]="checkpoint_get_status";
 	int case_index ;
 	 
 	ckpt_version.major = VERSION_MAJOR;
@@ -344,7 +343,6 @@ int main(int argc, char* argv[])
 	ckpt_callback.saCkptCheckpointOpenCallback = ckpt_open_callback ;
 	ckpt_callback.saCkptCheckpointSynchronizeCallback = ckpt_sync_callback;
 
-	char name_get_status[]="checkpoint_get_status";
 	ckpt_name.length = sizeof (name_get_status) ;
 
 	memcpy (ckpt_name.value, name_get_status, ckpt_name.length);

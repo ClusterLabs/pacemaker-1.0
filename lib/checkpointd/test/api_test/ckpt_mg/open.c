@@ -1,4 +1,4 @@
-/* $Id: open.c,v 1.1 2004/06/30 03:37:27 deng.pan Exp $ */
+/* $Id: open.c,v 1.2 2004/07/15 14:33:48 msoffen Exp $ */
 /* 
  * open.c: data checkpoint API test:saCkptCheckpointOpen
  *
@@ -583,9 +583,8 @@ int open_repeat_call()
 
 int  main(int argc, char* argv[])
 {
-
 	char case_name[] = "saCkptCheckpointOpen";
-
+	char name_open[]=("checkpoint_open");
 	int case_index ;
 	 
 	ckpt_version.major = VERSION_MAJOR;
@@ -597,7 +596,6 @@ int  main(int argc, char* argv[])
 
 	ckpt_invocation = INVOCATION_BASE ;
 
-	char name_open[]=("checkpoint_open");
 	ckpt_name.length = sizeof(name_open) ;
 	memcpy (ckpt_name.value, name_open, ckpt_name.length);
 	

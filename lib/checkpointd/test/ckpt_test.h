@@ -1,4 +1,4 @@
-/* $Id: ckpt_test.h,v 1.1 2004/06/30 03:37:26 deng.pan Exp $ */
+/* $Id: ckpt_test.h,v 1.2 2004/07/15 14:33:48 msoffen Exp $ */
 /* 
  * ckpt_test.h: Data checkpoint Test Head File 
  *
@@ -19,6 +19,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
  
+#include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <string.h>

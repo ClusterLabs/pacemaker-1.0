@@ -1,4 +1,4 @@
-/* $Id: set_active.c,v 1.1 2004/06/30 03:37:27 deng.pan Exp $ */
+/* $Id: set_active.c,v 1.2 2004/07/15 14:33:49 msoffen Exp $ */
 /* 
  * set_active.c: data checkpoint API test:saCkptActiveCheckpointSet
  *
@@ -286,7 +286,7 @@ int set_active_normal_call(void)
 int main(int argc, char* argv[])
 {
 	char case_name[] = "saCkptActiveCheckpointSet";
-
+	char name_set_active[]=("checkpoint_set_active");
 	int case_index ;
 	 
 	ckpt_version.major = VERSION_MAJOR;
@@ -296,7 +296,6 @@ int main(int argc, char* argv[])
 	ckpt_callback.saCkptCheckpointOpenCallback = ckpt_open_callback ;
 	ckpt_callback.saCkptCheckpointSynchronizeCallback = ckpt_sync_callback;
 
-	char name_set_active[]=("checkpoint_set_active");
 	ckpt_name.length = sizeof(name_set_active) ;
 
 	memcpy (ckpt_name.value, name_set_active, ckpt_name.length);

@@ -1,4 +1,4 @@
-/* $Id: expire_time_set.c,v 1.1 2004/06/30 03:37:27 deng.pan Exp $ */
+/* $Id: expire_time_set.c,v 1.2 2004/07/15 14:33:49 msoffen Exp $ */
 /* 
  * expire_time_set.c: data checkpoint API test: saCkptSectionExpirationTimeSet
  *
@@ -600,8 +600,8 @@ int set_normal_call(void)
 
 int main(int argc, char* argv[])
 {
-
 	char case_name[] = "saCkptSectionExpirationTimeSet";
+	char name_expire[]="checkpoint_expire";
 	int case_index ;
         time_t now;
 		
@@ -612,7 +612,6 @@ int main(int argc, char* argv[])
 	ckpt_callback.saCkptCheckpointOpenCallback = ckpt_open_callback ;
 	ckpt_callback.saCkptCheckpointSynchronizeCallback = ckpt_sync_callback;
 
-	char name_expire[]="checkpoint_expire";
 	ckpt_name.length = sizeof (name_expire) ;
 
 	memcpy (ckpt_name.value, name_expire, ckpt_name.length);

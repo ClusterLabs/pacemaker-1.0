@@ -1,4 +1,4 @@
-/* $Id: unlink.c,v 1.1 2004/06/30 03:37:27 deng.pan Exp $ */
+/* $Id: unlink.c,v 1.2 2004/07/15 14:33:49 msoffen Exp $ */
 /* 
  * unlink.c: data checkpoint API test:saCkptCheckpointUnlink
  *
@@ -441,7 +441,7 @@ int unlink_open_after_unlink(void)
 int  main(void)
 {			
 	char case_name[] = "saCkptCheckpointUnlink";
-
+	char name_unlink[]="checkpoint_unlink";
 	int case_index ;
 	 
 	ckpt_version.major = VERSION_MAJOR;
@@ -451,7 +451,6 @@ int  main(void)
 	ckpt_callback.saCkptCheckpointOpenCallback = ckpt_open_callback ;
 	ckpt_callback.saCkptCheckpointSynchronizeCallback = ckpt_sync_callback;
 
-	char name_unlink[]="checkpoint_unlink";
 	ckpt_name.length = sizeof (name_unlink) ;
 
 	memcpy (ckpt_name.value, name_unlink, ckpt_name.length);

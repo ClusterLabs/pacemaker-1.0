@@ -1,4 +1,4 @@
-/* $Id: write.c,v 1.1 2004/06/30 03:37:27 deng.pan Exp $ */
+/* $Id: write.c,v 1.2 2004/07/15 14:33:49 msoffen Exp $ */
 /* 
  * write.c: Test data checkpoint API : saCkptCheckpointWrite
  *
@@ -1001,7 +1001,7 @@ int main(int argc, char* argv[])
 {
 
         char case_name[] = "saCkptCheckpointWrite";
-        
+        char name_wr[]="checkpoint_wr";
         int case_index ;
                 
         ckpt_version.major = VERSION_MAJOR;
@@ -1011,7 +1011,6 @@ int main(int argc, char* argv[])
         ckpt_callback.saCkptCheckpointOpenCallback = ckpt_open_callback ;
         ckpt_callback.saCkptCheckpointSynchronizeCallback = ckpt_sync_callback;
 
-        char name_wr[]="checkpoint_wr";
         ckpt_name.length = sizeof (name_wr) ;
 
         memcpy (ckpt_name.value, name_wr, ckpt_name.length);

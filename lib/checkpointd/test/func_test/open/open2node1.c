@@ -1,4 +1,4 @@
-/* $Id: open2node1.c,v 1.1 2004/06/30 03:44:19 deng.pan Exp $ */
+/* $Id: open2node1.c,v 1.2 2004/07/15 14:33:49 msoffen Exp $ */
 /* 
  * open2node1.c: Test data checkpoint function : saCkptCheckpointOpen 
  *
@@ -136,8 +136,8 @@ void initparam(void)
  
 int inittest(void)
 {
-	cphandle = libhandle = -1 ;
 	int i;
+	cphandle = libhandle = -1 ;
 	
 	pidparent = getpid () ;
 	for (i=0; i < PIDNUMS ; i++)

@@ -1,4 +1,4 @@
-/* $Id: dispatch.c,v 1.1 2004/06/30 03:37:27 deng.pan Exp $ */
+/* $Id: dispatch.c,v 1.2 2004/07/15 14:33:49 msoffen Exp $ */
 /* 
  * dispatch.c: data checkpoint API test:saCkptDispatch
  *
@@ -231,11 +231,10 @@ int  dispatch_normal_call(void)
 
 
 
-int  main(void)
-{
-
+int  main(void) {
 	char case_name[] = "saCkptDispatch";
 	int case_index ;
+	char name_dispatch[]="checkpoint_dispatch";
 	
 	ckpt_version.major = VERSION_MAJOR;
 	ckpt_version.minor = VERSION_MINOR;
@@ -247,8 +246,6 @@ int  main(void)
 	ckpt_invocation = INVOCATION_BASE ;
 
 	
-	char name_dispatch[]="checkpoint_dispatch";
-	 	 
 	ckpt_name.length = sizeof (name_dispatch) ;
 	memcpy (ckpt_name.value, name_dispatch, ckpt_name.length);
 
