@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.359 2005/02/18 22:02:41 alan Exp $ */
+/* $Id: heartbeat.c,v 1.360 2005/02/19 16:13:27 alan Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -2604,9 +2604,10 @@ ManagedChildDied(ProcTrack* p, int status, int signo, int exitcode
 				,	managedchild->command
 				,	len, newlen);
 			}
-			cl_log(LOG_DEBUG, "ManagedChildDied():");
+			cl_log(LOG_DEBUG, "ManagedChildDied():...");
 			g_list_foreach(config->client_list
 			,	print_a_child_client, NULL);
+			cl_log(LOG_DEBUG, "ManagedChildDied():done");
 			return; 
 		}
 
@@ -2810,9 +2811,10 @@ shutdown_last_client_child(int nsig)
 		,	lastclient->command
 		,	oldlen, newlen);
 	}
-	cl_log(LOG_DEBUG, "shutdown_last_client_child():");
+	cl_log(LOG_DEBUG, "shutdown_last_client_child():...");
 	g_list_foreach(config->client_list
 	,	print_a_child_client, NULL);
+	cl_log(LOG_DEBUG, "shutdown_last_client_child():done.");
 
 	if (lastclient) {
 		if (ANYDEBUG) {
@@ -5095,6 +5097,9 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.360  2005/02/19 16:13:27  alan
+ * Added a tiny bit more debug.
+ *
  * Revision 1.359  2005/02/18 22:02:41  alan
  * Added more debug output for this weird client not being killed bug...
  *
