@@ -56,13 +56,13 @@ typedef SaInt64T 		SaTimeT;
  * the largest timestamp value: 
  * Fri Apr 11 23:47:16.854775807 UTC 2262 
  */
-#define SA_TIME_END ((SaTimeT)0x7FFFFFFFFFFFFFFF)
+#define SA_TIME_END ((SaTimeT)0x7FFFFFFFFFFFFFFFLL)
 
 /*
  * the smallest timestamp value: 
  * Tue Sep 21 00:12:43.145224193 UTC 1667
  */
-#define SA_TIME_BEGIN ((SaTimeT)0x8000000000000001)
+#define SA_TIME_BEGIN ((SaTimeT)0x8000000000000001LL)
 
 #define SA_MAX_NAME_LENGTH	32
 #define SA_MAX_ID_LENGTH	4
