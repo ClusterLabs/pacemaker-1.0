@@ -17,11 +17,29 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #
+AM_CFLAGS                       = @CFLAGS@  @LIBNETDEFINES@
+
+
 MAINTAINERCLEANFILES    = Makefile.in
+
+gliblib			= @GLIBLIB@
 
 havarlibdir             = $(localstatedir)/lib/@HB_PKG@
 
 harddir			= $(sysconfdir)/ha.d/resource.d
+
+
+if USE_IPV6ADDR
+hard_PROGRAMS		= IPv6addr
+else
+hard_PROGRAMS		= 
+endif
+
+IPv6addr_SOURCES	= IPv6addr.c
+
+IPv6addr_LDADD		= $(top_builddir)/lib/clplumbing/libplumb.la	\
+			$(gliblib) @LIBNETLIBS@
+
 
 hard_SCRIPTS	=			\
 			apache		\
