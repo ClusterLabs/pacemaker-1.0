@@ -77,10 +77,6 @@ if [ "$1" = "configure" ]; then
 			/var/lib/heartbeat/api/ipfail.req \
 			/var/lib/heartbeat/api/ipfail.rsp
 
-	rm -f /var/lib/heartbeat/register
-	mknod -m 0620 /var/lib/heartbeat/register p
-	chgrp "$HA_APIGROUP" /var/lib/heartbeat/register
-
 	chmod 1770 /var/lib/heartbeat/casual
 	chgrp "$HA_APIGROUP" /var/lib/heartbeat/casual
 

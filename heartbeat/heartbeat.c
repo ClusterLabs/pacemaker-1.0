@@ -1,4 +1,4 @@
-const static char * _heartbeat_c_Id = "$Id: heartbeat.c,v 1.281 2003/12/08 20:55:00 alan Exp $";
+const static char * _heartbeat_c_Id = "$Id: heartbeat.c,v 1.282 2004/01/08 08:38:01 horms Exp $";
 
 /*
  * heartbeat: Linux-HA heartbeat code
@@ -1091,7 +1091,7 @@ master_control_process(IPC_Channel* fifoproc)
 	IPC_WaitConnection*	regwchan = NULL;
 	GMainLoop*		mainloop;
 	long			memstatsinterval;
-        char			regfifo[] = API_REGFIFO;
+        char			regsock[] = API_REGSOCK;
 	char			path[] = IPC_PATH_ATTR;
 
 	init_xmit_hist (&msghist);
@@ -1154,14 +1154,14 @@ master_control_process(IPC_Channel* fifoproc)
 
 	wchanattrs = g_hash_table_new(g_str_hash, g_str_equal);
 
-        g_hash_table_insert(wchanattrs, path, regfifo);
+        g_hash_table_insert(wchanattrs, path, regsock);
 
 	regwchan = ipc_wait_conn_constructor(IPC_DOMAIN_SOCKET, wchanattrs);
 
 	if (regwchan == NULL) {
 		cl_log(LOG_DEBUG
 		,	"Cannot open registration socket at %s"
-		,	regfifo);
+		,	regsock);
 		cleanexit(LSB_EXIT_EPERM);
 	}
 
@@ -4111,6 +4111,9 @@ get_localnodeinfo(void)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.282  2004/01/08 08:38:01  horms
+ * Post API clean up of API Register fifo which it is a unix socket now - Alan, hb_api.py still needs to be updated
+ *
  * Revision 1.281  2003/12/08 20:55:00  alan
  * Fixed a bug reported by John Leach <john@johnleach.co.uk> where heartbeat
  * sometimes fails to close the watchdog device before execing itself.

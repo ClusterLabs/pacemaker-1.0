@@ -66,7 +66,7 @@ install: build
 	# We don't install fifos. Rather they are created
 	# by postinst scripts.
 	(cd `pwd`/debian/tmp/var/lib/heartbeat/ && \
-		rm -f api/*.req api/*.rsp fifo register )
+		rm -f api/*.req api/*.rsp fifo )
 
 	dh_movefiles --source=debian/tmp
 

@@ -19,7 +19,7 @@ set -e
 if [ "$1" = "remove" ]; then
         ldconfig
 	update-rc.d -f heartbeat remove >/dev/null
-	rm -f /var/lib/heartbeat/fifo /var/lib/heartbeat/register \
+	rm -f /var/lib/heartbeat/fifo \
         	/var/lib/heartbeat/api/ccm.req \
         	/var/lib/heartbeat/api/ccm.rsp \
         	/var/lib/heartbeat/api/ipfail.req \

@@ -126,8 +126,8 @@ typedef struct client_process {
 #define	REQ_SUFFIX	".req"
 #define	RSP_SUFFIX	".rsp"
 
-#ifndef API_REGFIFO
-#	define	API_REGFIFO	VAR_LIB_D "/register"
+#ifndef API_REGSOCK
+#	define	API_REGSOCK	VAR_LIB_D "/register"
 #endif
 
 void api_heartbeat_monitor(struct ha_msg *msg, int msgtype, const char *iface);

@@ -32,7 +32,6 @@ apidir		       	= $(havarlibdir)/api
 apicasualdir		= $(havarlibdir)/casual
 # fifos with path
 hafifo			= $(havarlibdir)/fifo
-apireg			= $(havarlibdir)/register
 apigid			= @HA_APIGID@
 gliblib			= @GLIBLIB@
 
@@ -109,12 +108,9 @@ install-exec-local:
 	-chmod 1770 $(DESTDIR)/$(apicasualdir)
 	-chgrp $(apigid) $(DESTDIR)/$(apidir) $(DESTDIR)/$(apicasualdir)
 	test -p $(DESTDIR)$(hafifo) || mkfifo -m 600 $(DESTDIR)$(hafifo)
-	test -p $(DESTDIR)$(apireg) || mkfifo -m 620 $(DESTDIR)$(apireg)
-	-chgrp $(apigid) $(DESTDIR)/$(apireg)
 
 uninstall-local:
 	-test -p $(DESTDIR)$(hafifo) && rm $(DESTDIR)$(hafifo)
-	-test -p $(DESTDIR)$(apireg) && rm $(DESTDIR)$(apireg)
 	rm -rf $(DESTDIR)$(havarrundir) $(DESTDIR)$(apidir) \
                 $(DESTDIR)$(apicasualdir)
 

@@ -268,7 +268,7 @@ hb_api_signon(struct ll_cluster* cinfo, const char * clientid)
 	int		iscasual;
 	llc_private_t* pi;
 	const char	*tmpstr;
-        char		regpath[] = API_REGFIFO;
+        char		regpath[] = API_REGSOCK;
 	char		path[] = IPC_PATH_ATTR;
 	GHashTable*	wchanattrs;
 	char		cuid[20];
@@ -357,7 +357,7 @@ hb_api_signon(struct ll_cluster* cinfo, const char * clientid)
 	if (msg2ipcchan(request, pi->chan) != HA_OK) {
 		pi->chan->ops->destroy(pi->chan);
 		pi->chan = NULL;
-		ha_api_perror("can't send message to %s", API_REGFIFO);
+		ha_api_perror("can't send message to IPC");
 		ZAPMSG(request);
 		return HA_FAIL;
 	}
