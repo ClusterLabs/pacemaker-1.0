@@ -1,4 +1,4 @@
-/* $Id: hb_api.c,v 1.104 2004/08/30 09:56:37 sunjd Exp $ */
+/* $Id: hb_api.c,v 1.105 2004/08/31 13:47:31 alan Exp $ */
 /*
  * hb_api: Server-side heartbeat API code
  *
@@ -1222,9 +1222,7 @@ api_remove_client_int(client_proc_t* req, const char * reason)
 				prev->next = client->next;
 			}
 
-			/* Channel is automatically destroyed 
-			 * by the G_CH* code...
-			 */
+			client->chan->ops->destroy(client->chan);
 			client->chan = NULL;
 
 			/* Zap! */

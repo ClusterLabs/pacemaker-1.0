@@ -1,4 +1,4 @@
-/* $Id: config.c,v 1.121 2004/07/07 19:07:14 gshi Exp $ */
+/* $Id: config.c,v 1.122 2004/08/31 13:47:31 alan Exp $ */
 /*
  * Parse various heartbeat configuration files...
  *
@@ -873,6 +873,14 @@ add_option(const char *	option, const char * value)
 		funs->descr(&descr);
 		funs->mtype(&type);
 
+		if (nummedia >= MAXMEDIA) {
+			cl_log(LOG_ERR, "Too many media specified (> %d)"
+			,	MAXMEDIA);
+			cl_log(LOG_INFO, "Offending command: %s %s"
+			,	option, value);
+			return HA_FAIL;
+		}
+
 		sysmedia[nummedia] = mp;
 		if (mp == NULL) {
 			ha_log(LOG_ERR, "Illegal %s [%s] in config file [%s]"
@@ -896,10 +904,10 @@ add_option(const char *	option, const char * value)
 			++nummedia;
 			PILIncrIFRefCount(PluginLoadingSystem
 			,	HB_COMM_TYPE_S, option, +1);
-			return(HA_OK);
 		}
 		g_assert(sysmedia[nummedia-1]->type);
 		g_assert(sysmedia[nummedia-1]->description);
+		return(HA_OK);
 	}
 	ha_log(LOG_ERR, "Illegal configuration directive [%s]", option);
 	return(HA_FAIL);
@@ -1999,6 +2007,9 @@ baddirective:
 
 /*
  * $Log: config.c,v $
+ * Revision 1.122  2004/08/31 13:47:31  alan
+ * Put in a bug fix to check for MAXMEDIA in the configuration file.
+ *
  * Revision 1.121  2004/07/07 19:07:14  gshi
  * implemented uuid as nodeid
  *
