@@ -130,10 +130,8 @@ stonithd_signon(const char * client_name)
 	/* important error check client name length */
 	my_euid = geteuid();
 	my_egid = getegid();
-	if (  (	ha_msg_addbin(request, F_STONITHD_CEUID, &my_euid, 
-			      sizeof(uid_t)) != HA_OK)
-	    ||(	ha_msg_addbin(request, F_STONITHD_CEGID, &my_egid,
-			      sizeof(gid_t)) != HA_OK)
+	if (  (	ha_msg_add_int(request, F_STONITHD_CEUID, my_euid) != HA_OK )
+	    ||(	ha_msg_add_int(request, F_STONITHD_CEGID, my_egid) != HA_OK )
 	   ) {
 		stdlib_log(LOG_ERR, "stonithd_signon: "
 			   "cannot add field to ha_msg.");
@@ -277,11 +275,10 @@ stonithd_node_fence(stonith_ops_t * op)
 		return ST_FAIL;
 	}
 
-	if (  (ha_msg_addbin(request, F_STONITHD_OPTYPE, 
-			  &(op->optype), sizeof(op->optype)) != HA_OK)
+	if (  (ha_msg_add_int(request, F_STONITHD_OPTYPE, op->optype) != HA_OK )
 	    ||(ha_msg_add(request, F_STONITHD_NODE, op->node_name ) != HA_OK)
-	    ||(ha_msg_addbin(request, F_STONITHD_TIMEOUT, &(op->timeout), 
-				sizeof(op->timeout) ) != HA_OK) ) {
+	    ||(ha_msg_add_int(request, F_STONITHD_TIMEOUT, op->timeout) 
+		!= HA_OK) ) {
 		stdlib_log(LOG_ERR, "stonithd_node_fence: "
 			   "cannot add field to ha_msg.");
 		ZAPMSG(request);
@@ -354,7 +351,7 @@ stonithd_receive_ops_result(gboolean blocking)
 {
 	struct ha_msg* reply = NULL;
 	const char * tmpstr = NULL;
-	const void * tmpvoid = NULL;
+	int tmpint = 0;
 	int rc = ST_OK;
 
 	stdlib_log(LOG_DEBUG, "stonithd_receive_ops_result: begin");
@@ -377,14 +374,13 @@ stonithd_receive_ops_result(gboolean blocking)
 	if ( TRUE == is_expected_msg(reply, F_STONITHD_TYPE, ST_APIRPL, 
 			     F_STONITHD_APIRPL, ST_STRET)  ) {
 		stonith_ops_t * st_op = NULL;
-		size_t size_tmp;
 
 		stdlib_log(LOG_DEBUG, "received stonith final ret.");
 		/* handle the stonith op result message */
 		st_op = g_new(stonith_ops_t, 1);	
-		if ( (tmpvoid = cl_get_binary(reply, F_STONITHD_OPTYPE,
-					&size_tmp)) != NULL ) {
-			st_op->optype = *(const int *) tmpvoid;	
+		if ( ha_msg_value_int(reply, F_STONITHD_OPTYPE, &tmpint)
+			== HA_OK) {
+			st_op->optype = tmpint;	
 		} else {
 			stdlib_log(LOG_ERR, "stonithd_receive_ops_result: the "
 				   "reply message contains no optype field.");
@@ -399,27 +395,26 @@ stonithd_receive_ops_result(gboolean blocking)
 			rc = ST_FAIL;
 		}
 
-		if ( (tmpvoid = cl_get_binary(reply, F_STONITHD_TIMEOUT,
-					&size_tmp)) != NULL ) {
-			st_op->timeout = *(const int *) tmpvoid;	
+		if ( ha_msg_value_int(reply, F_STONITHD_TIMEOUT, &tmpint)
+			== HA_OK ) {
+			st_op->timeout =  tmpint;	
 		} else {
 			stdlib_log(LOG_ERR, "stonithd_receive_ops_result: the "
 				   "reply message contains no timeout field.");
 			rc = ST_FAIL;
 		}
 
-		if ( (tmpvoid = cl_get_binary(reply, F_STONITHD_CALLID,
-					&size_tmp)) != NULL ) {
-			st_op->call_id = *(const int *) tmpvoid;	
+		if ( ha_msg_value_int(reply, F_STONITHD_CALLID, &tmpint)
+			== HA_OK ) {
+			st_op->call_id = tmpint;	
 		} else {
 			stdlib_log(LOG_ERR, "stonithd_receive_ops_result: the "
 				   "reply message contains no call_id field.");
 			rc = ST_FAIL;
 		}
 
-		if ( (tmpvoid = cl_get_binary(reply, F_STONITHD_FRC,
-					&size_tmp)) != NULL ) {
-			st_op->op_result = *(const int *)tmpvoid;
+		if (ha_msg_value_int(reply, F_STONITHD_FRC, &tmpint) == HA_OK) {
+			st_op->op_result = tmpint;
 		} else {
 			stdlib_log(LOG_ERR, "stonithd_receive_ops_result: the "
 				   "reply contains no op_result field.");
@@ -449,7 +444,6 @@ stonithd_receive_ops_result(gboolean blocking)
 	if (  TRUE == is_expected_msg(reply, F_STONITHD_TYPE, ST_APIRPL,
 			     F_STONITHD_APIRPL, ST_RAOPRET ) ) {
 		stonithRA_ops_t * ra_op = NULL;
-		size_t size_tmp;
 
 		stdlib_log(LOG_DEBUG, "received stonithRA op final ret.");
 		/* handle the stonithRA op result message */
@@ -498,10 +492,10 @@ stonithd_receive_ops_result(gboolean blocking)
 			rc = ST_FAIL;
 		}	
 		
-		if ( (tmpvoid = cl_get_binary(reply, F_STONITHD_CALLID,
-					&size_tmp)) != NULL ) {
-			ra_op->call_id = *(const int *)tmpvoid;
-			stdlib_log(LOG_DEBUG, "receive_ops_result: " \
+		if ( ha_msg_value_int(reply, F_STONITHD_CALLID, &tmpint)
+			== HA_OK ) {
+			ra_op->call_id = tmpint;
+			stdlib_log(LOG_DEBUG, "receive_ops_result: "
 				   "ra_op->call_id=%d.", ra_op->call_id);
 		} else {
 			stdlib_log(LOG_ERR, "stonithd_receive_ops_result: "
@@ -509,9 +503,9 @@ stonithd_receive_ops_result(gboolean blocking)
 			rc = ST_FAIL;
 		}
 
-		if ( (tmpvoid = cl_get_binary(reply, F_STONITHD_FRC,
-					&size_tmp)) != NULL ) {
-			ra_op->op_result = *(const int *)tmpvoid;
+		if ( ha_msg_value_int(reply, F_STONITHD_FRC, &tmpint)
+			== HA_OK ) {
+			ra_op->op_result = tmpint;
 			stdlib_log(LOG_DEBUG, "stonithd_receive_ops_result: "
 				   "ra_op->op_result=%d.", ra_op->op_result);
 		} else {
@@ -628,12 +622,11 @@ stonithd_virtual_stonithRA_ops( stonithRA_ops_t * op, int * call_id)
 
 	if ( ((tmpstr = cl_get_string(reply, F_STONITHD_APIRET)) != NULL) 
 	   	    && (strncmp(tmpstr, ST_APIOK, strlen(ST_APIOK)) == 0) ) {
-		const void * tmpvoid = NULL;
-		size_t size_tmp;
+		int tmpint;
 
-		if ( NULL != (tmpvoid = cl_get_binary(reply, F_STONITHD_CALLID,
-			&size_tmp)) && size_tmp == sizeof(int)) {
-			*call_id = *(const int *)tmpvoid;
+		if ( ha_msg_value_int(reply, F_STONITHD_CALLID, &tmpint)
+			== HA_OK ) {
+			*call_id = tmpint;
 			rc = ST_OK;
 			stdlib_log(LOG_DEBUG, "a stonith RA operation queue " \
 				   "to run, call_id=%d.", *call_id);
@@ -759,7 +752,7 @@ create_basic_reqmsg_fields(const char * apitype)
 	if (  (ha_msg_add(msg, F_STONITHD_TYPE, ST_APIREQ ) != HA_OK )
 	    ||(	ha_msg_add(msg, F_STONITHD_APIREQ, apitype) != HA_OK) 
 	    ||(	ha_msg_add(msg, F_STONITHD_CNAME, CLIENT_NAME) != HA_OK) 
-	    ||(	ha_msg_addbin(msg, F_STONITHD_CPID, &CLIENT_PID, sizeof(pid_t)) != HA_OK) 
+	    ||(	ha_msg_add_int(msg, F_STONITHD_CPID, CLIENT_PID) != HA_OK) 
 	   ) {
 		stdlib_log(LOG_ERR, "create basic msg fields: "
 				"cannot add field to ha_msg.");
