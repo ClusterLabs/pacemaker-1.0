@@ -1,5 +1,5 @@
 <?xml version="1.0"?>
-<project name="Linux-HA project" company="Linux-HA" manager="Alan Robertson" phase="" project-start="20050115T000000Z" mrproject-version="2" calendar="1">
+<project name="Linux-HA project" company="Linux-HA" manager="Alan Robertson" phase="" project-start="20050115T000000Z" mrproject-version="2" calendar="6">
   <properties>
     <property name="cost" type="cost" owner="resource" label="Cost" description="standard cost for a resource"/>
   </properties>
@@ -10,8 +10,8 @@
       <day-type id="1" name="Nonworking" description="A default non working day"/>
       <day-type id="2" name="Use base" description="Use day from base calendar"/>
     </day-types>
-    <calendar id="1" name="Default">
-      <default-week mon="0" tue="0" wed="0" thu="0" fri="0" sat="1" sun="1"/>
+    <calendar id="1" name="NCSA">
+      <default-week mon="0" tue="0" wed="0" thu="0" fri="0" sat="0" sun="1"/>
       <overridden-day-types>
         <overridden-day-type id="0">
           <interval start="0800" end="1200"/>
@@ -20,7 +20,7 @@
       </overridden-day-types>
       <days/>
     </calendar>
-    <calendar id="2" name="US-IBM">
+    <calendar id="2" name="DE-SUSE">
       <default-week mon="0" tue="0" wed="0" thu="0" fri="0" sat="0" sun="1"/>
       <overridden-day-types>
         <overridden-day-type id="0">
@@ -38,9 +38,24 @@
           <interval start="1300" end="1700"/>
         </overridden-day-type>
       </overridden-day-types>
-      <days/>
+      <days>
+        <day date="20050210" type="day-type" id="1"/>
+        <day date="20050215" type="day-type" id="1"/>
+        <day date="20050211" type="day-type" id="1"/>
+        <day date="20050209" type="day-type" id="1"/>
+        <day date="20050214" type="day-type" id="1"/>
+        <day date="20050212" type="day-type" id="1"/>
+      </days>
+      <calendar id="4" name="SJD-IBM">
+        <default-week mon="2" tue="2" wed="2" thu="2" fri="2" sat="2" sun="2"/>
+        <overridden-day-types/>
+        <days>
+          <day date="20050208" type="day-type" id="1"/>
+          <day date="20050207" type="day-type" id="1"/>
+        </days>
+      </calendar>
     </calendar>
-    <calendar id="4" name="DE-SUSE">
+    <calendar id="5" name="US-IBM">
       <default-week mon="0" tue="0" wed="0" thu="0" fri="0" sat="0" sun="1"/>
       <overridden-day-types>
         <overridden-day-type id="0">
@@ -48,10 +63,18 @@
           <interval start="1300" end="1700"/>
         </overridden-day-type>
       </overridden-day-types>
-      <days/>
+      <days>
+        <day date="20051226" type="day-type" id="1"/>
+        <day date="20050905" type="day-type" id="1"/>
+        <day date="20051124" type="day-type" id="1"/>
+        <day date="20050704" type="day-type" id="1"/>
+        <day date="20050530" type="day-type" id="1"/>
+        <day date="20050103" type="day-type" id="1"/>
+        <day date="20051125" type="day-type" id="1"/>
+      </days>
     </calendar>
-    <calendar id="5" name="NCSA">
-      <default-week mon="0" tue="0" wed="0" thu="0" fri="0" sat="0" sun="1"/>
+    <calendar id="6" name="Default">
+      <default-week mon="0" tue="0" wed="0" thu="0" fri="0" sat="1" sun="1"/>
       <overridden-day-types>
         <overridden-day-type id="0">
           <interval start="0800" end="1200"/>
@@ -63,7 +86,7 @@
   </calendars>
   <tasks>
     <task id="1" name="2.0.0 release" note="" work="518400" start="20050115T000000Z" end="20050209T170000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-work">
-      <task id="2" name="2.0.0 test preparation" note="" work="86400" duration="144000" start="20050115T000000Z" end="20050120T170000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-duration"/>
+      <task id="2" name="2.0.0 test preparation" note="" work="115200" duration="144000" start="20050115T000000Z" end="20050120T170000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-duration"/>
       <task id="3" name="2.0.0 testing" note="" work="144000" duration="432000" start="20050120T170000Z" end="20050207T170000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-duration">
         <predecessors>
           <predecessor id="1" predecessor-id="2" type="FS"/>
@@ -135,41 +158,37 @@
         </predecessors>
       </task>
     </task>
-    <task id="18" name="2.0.3 release" note="" work="2275200" start="20050512T170000Z" end="20050831T170000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-work">
-      <task id="19" name="2.0.3 receive feedback, fix bugs from 2.0.2" note="" work="0" duration="1728000" start="20050512T170000Z" end="20050804T170000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-duration">
+    <task id="18" name="Date 1" note="" work="0" duration="3398400" start="20050115T000000Z" end="20050629T170000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-duration"/>
+    <task id="19" name="2.0.3 release" note="" work="2275200" start="20050512T170000Z" end="20050831T170000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-work">
+      <task id="20" name="2.0.3 receive feedback, fix bugs from 2.0.2" note="" work="0" duration="1728000" start="20050512T170000Z" end="20050804T170000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-duration">
         <predecessors>
           <predecessor id="1" predecessor-id="12" type="FS"/>
         </predecessors>
       </task>
-      <task id="20" name="2.0.3 test preparation" note="" work="57600" start="20050804T170000Z" end="20050808T170000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-work">
-        <predecessors>
-          <predecessor id="1" predecessor-id="19" type="FS"/>
-        </predecessors>
-      </task>
-      <task id="21" name="2.0.3 testing" note="" work="432000" start="20050808T170000Z" end="20050829T170000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-work">
+      <task id="21" name="2.0.3 test preparation" note="" work="57600" start="20050804T170000Z" end="20050808T170000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-work">
         <predecessors>
           <predecessor id="1" predecessor-id="20" type="FS"/>
         </predecessors>
       </task>
-      <task id="22" name="2.0.3 release process" note="" work="57600" start="20050829T170000Z" end="20050831T170000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-work">
+      <task id="22" name="2.0.3 testing" note="" work="432000" start="20050808T170000Z" end="20050829T170000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-work">
         <predecessors>
           <predecessor id="1" predecessor-id="21" type="FS"/>
         </predecessors>
       </task>
-      <task id="23" name="2.0.3 release" note="" work="0" start="20050831T170000Z" end="20050831T170000Z" percent-complete="0" priority="0" type="milestone" scheduling="fixed-work">
+      <task id="23" name="2.0.3 release process" note="" work="57600" start="20050829T170000Z" end="20050831T170000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-work">
         <predecessors>
           <predecessor id="1" predecessor-id="22" type="FS"/>
         </predecessors>
       </task>
-    </task>
-    <task id="24" name="Date 1" note="" work="0" duration="2620800" start="20050122T120000Z" end="20050530T170000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-duration">
-      <predecessors>
-        <predecessor id="1" predecessor-id="1" type="SS" lag="648000"/>
-      </predecessors>
+      <task id="24" name="2.0.3 release" note="" work="0" start="20050831T170000Z" end="20050831T170000Z" percent-complete="0" priority="0" type="milestone" scheduling="fixed-work">
+        <predecessors>
+          <predecessor id="1" predecessor-id="23" type="FS"/>
+        </predecessors>
+      </task>
     </task>
     <task id="25" name="Date 2" note="" work="0" duration="5011200" start="20050115T000000Z" end="20050915T170000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-duration"/>
     <task id="26" name="229.19: Community (RH) Cluster Integration" note="" work="864000" start="20050115T000000Z" end="20050225T170000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-work"/>
-    <task id="27" name="229.20: project leadership, etc." note="Ongoing..." work="633600" duration="3196800" start="20050115T000000Z" end="20050524T170000Z" percent-complete="100" priority="1" type="normal" scheduling="fixed-duration"/>
+    <task id="27" name="229.20: project leadership, etc." note="Ongoing..." work="1198080" duration="5990400" start="20050115T000000Z" end="20050917T170000Z" percent-complete="100" priority="1" type="normal" scheduling="fixed-duration"/>
     <task id="28" name="229.23: revised STONITH API" note="" work="432000" start="20050115T000000Z" end="20050201T170000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-work"/>
     <task id="29" name="1039.14: CIM support" note="" work="432000" start="20050115T000000Z" end="20050204T170000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-work"/>
     <task id="30" name="1040.04: Internal IBM support" note="" work="576000" start="20050115T000000Z" end="20050211T170000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-work"/>
@@ -183,75 +202,84 @@
     <task id="38" name="1042.10: Certification with IBM storage" note="" work="576000" start="20050115T000000Z" end="20050211T170000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-work"/>
     <task id="39" name="1044.09: Create new test cases" note="" work="576000" start="20050115T000000Z" end="20050211T170000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-work"/>
     <task id="40" name="1044.11: Create certification process" note="" work="432000" start="20050115T000000Z" end="20050204T170000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-work"/>
-    <task id="41" name="1042.06: (DONE) DRBD/DB2 performance testing" note="" work="0" start="20050115T000000Z" end="20050117T080000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-work"/>
-    <task id="42" name="1041.23: ?Make SAF libraries thread-safe" note="This is likely to translate into integration with OpenAIS, and contributing to it." work="576000" start="20050115T000000Z" end="20050211T170000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-work"/>
-    <task id="43" name="1040.06: !Move web site to new format" note="Tue 18 Jan 2005, 21:54 - Some community resources have been identified who will do this.&#10;" work="288000" start="20050115T000000Z" end="20050128T170000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-work"/>
-    <task id="44" name="1044.08: ?Merge two test tools" note="" work="288000" start="20050115T000000Z" end="20050128T170000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-work"/>
-    <task id="45" name="229.21: ?Internationalization" note="Tue 18 Jan 2005, 21:39:&#10;Probably won't get done.&#10;The customer we were doing this for/with has backed out." work="576000" start="20050115T000000Z" end="20050211T170000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-work"/>
-    <task id="46" name="1041.25: ?TIPC Integration" note="Tue 18 Jan 2005, 21:42 This may no longer make much sense, since we probably won't be doing major heartbeat-communication-based work.&#10;&#10;" work="432000" start="20050115T000000Z" end="20050204T170000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-work"/>
-    <task id="47" name="1044.09: ?Creation of new test cases" note="" work="576000" start="20050115T000000Z" end="20050211T170000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-work"/>
-    <task id="48" name="1044.10: ?Fully automated nightly tests" note="" work="432000" start="20050115T000000Z" end="20050204T170000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-work"/>
+    <task id="41" name="NUT STONITH plugin" note="" work="1152000" start="20050115T000000Z" end="20050302T170000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-work"/>
+    <task id="42" name="CCM Maturation" note="Wed 19 Jan 2005, 15:39 heal split brain, separate info gathering from reporting" work="1728000" start="20050115T000000Z" end="20050325T170000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-work"/>
+    <task id="43" name="Serial Link disconnect check" note="" work="576000" start="20050115T000000Z" end="20050207T170000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-work"/>
+    <task id="44" name="Total Ordered messaging" note="" work="1152000" start="20050115T000000Z" end="20050302T170000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-work"/>
+    <task id="45" name="Resource Dependency Analysis" note="" work="0" start="20050115T000000Z" end="20050117T080000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-work"/>
+    <task id="46" name="1042.06: (DONE) DRBD/DB2 performance testing" note="" work="0" start="20050115T000000Z" end="20050117T080000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-work"/>
+    <task id="47" name="1041.23: ?Make SAF libraries thread-safe" note="This is likely to translate into integration with OpenAIS, and contributing to it." work="576000" start="20050115T000000Z" end="20050211T170000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-work"/>
+    <task id="48" name="1040.06: !Move web site to new format" note="Tue 18 Jan 2005, 21:54 - Some community resources have been identified who will do this.&#10;" work="288000" start="20050115T000000Z" end="20050128T170000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-work"/>
+    <task id="49" name="1044.08: ?Merge two test tools" note="" work="288000" start="20050115T000000Z" end="20050128T170000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-work"/>
+    <task id="50" name="229.21: ?Internationalization" note="Tue 18 Jan 2005, 21:39:&#10;Probably won't get done.&#10;The customer we were doing this for/with has backed out." work="576000" start="20050115T000000Z" end="20050211T170000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-work"/>
+    <task id="51" name="1041.25: ?TIPC Integration" note="Tue 18 Jan 2005, 21:42 This may no longer make much sense, since we probably won't be doing major heartbeat-communication-based work.&#10;&#10;" work="432000" start="20050115T000000Z" end="20050204T170000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-work"/>
+    <task id="52" name="1044.09: ?Creation of new test cases" note="" work="576000" start="20050115T000000Z" end="20050211T170000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-work"/>
+    <task id="53" name="1044.10: ?Fully automated nightly tests" note="" work="432000" start="20050115T000000Z" end="20050204T170000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-work"/>
   </tasks>
   <resource-groups>
-    <group id="1" name="SUSE" admin-name="Lars Marowsky-Bree" admin-phone="+49 221-880-8541" admin-email="lmb@suse.de"/>
-    <group id="2" name="NCSA" admin-name="Harvey Knapp" admin-phone="+1 217-244-6950" admin-email="hknapp@us.ibm.com"/>
-    <group id="3" name="IBM.CN" admin-name="Wang, Yu" admin-phone="+86-10-82782244 x 2796" admin-email="wangyu@cn.ibm.com"/>
-    <group id="4" name="IBM.US" admin-name="Jeff Heroux" admin-phone="+1 845-433-8992" admin-email="heroux@us.ibm.com"/>
+    <group id="1" name="IBM.US" admin-name="Jeff Heroux" admin-phone="+1 845-433-8992" admin-email="heroux@us.ibm.com"/>
+    <group id="2" name="IBM.CN" admin-name="Wang, Yu" admin-phone="+86-10-82782244 x 2796" admin-email="wangyu@cn.ibm.com"/>
+    <group id="3" name="NCSA" admin-name="Harvey Knapp" admin-phone="+1 217-244-6950" admin-email="hknapp@us.ibm.com"/>
+    <group id="4" name="SUSE" admin-name="Lars Marowsky-Bree" admin-phone="+49 221-880-8541" admin-email="lmb@suse.de"/>
   </resource-groups>
   <resources>
-    <resource group="1" id="1" name="Andrew Beekhof" short-name="alsoran" type="1" units="0" email="beekhof@gmail.com" note="" std-rate="0" calendar="4">
+    <resource group="4" id="1" name="Lars Ellenberg" short-name="lge" type="1" units="0" email="l.g.e@web.de" note="" std-rate="0" calendar="2">
       <properties>
         <property name="cost" value=""/>
       </properties>
     </resource>
-    <resource group="1" id="2" name="Lars Marowsky-Bree" short-name="lmb" type="1" units="0" email="lmb@suse.de" note="" std-rate="0" calendar="4">
+    <resource group="1" id="2" name="Alan Robertson" short-name="alanr" type="1" units="0" email="alanr@unix.sh" note="" std-rate="0" calendar="5">
       <properties>
         <property name="cost" value=""/>
       </properties>
     </resource>
-    <resource group="4" id="3" name="Dave Blaschke" short-name="dave" type="1" units="0" email="blaschke@us.ibm.com" note="" std-rate="0" calendar="2">
+    <resource group="3" id="3" name="Guochun Shi" short-name="gshi" type="1" units="0" email="gshi@ncsa.uiuc.edu" note="" std-rate="0" calendar="1">
       <properties>
         <property name="cost" value=""/>
       </properties>
     </resource>
-    <resource group="3" id="4" name="Zhao, Kai" short-name="kai" type="1" units="0" email="zhaokai@cn.ibm.com" note="" std-rate="0" calendar="3">
+    <resource group="2" id="4" name="Sun, Jiang Dong" short-name="jiang" type="1" units="0" email="hasjd@cn.ibm.com" note="" std-rate="0" calendar="4">
       <properties>
         <property name="cost" value=""/>
       </properties>
     </resource>
-    <resource group="3" id="5" name="Huang, Zhen" short-name="zhen" type="1" units="0" email="zhenhltc@cn.ibm.com" note="" std-rate="0" calendar="3">
+    <resource group="2" id="5" name="Huang, Zhen" short-name="zhen" type="1" units="0" email="zhenhltc@cn.ibm.com" note="" std-rate="0" calendar="3">
       <properties>
         <property name="cost" value=""/>
       </properties>
     </resource>
-    <resource group="3" id="6" name="Sun, Jiang Dong" short-name="jiang" type="1" units="0" email="hasjd@cn.ibm.com" note="" std-rate="0" calendar="3">
+    <resource group="2" id="6" name="Zhao, Kai" short-name="kai" type="1" units="0" email="zhaokai@cn.ibm.com" note="" std-rate="0" calendar="3">
       <properties>
         <property name="cost" value=""/>
       </properties>
     </resource>
-    <resource group="2" id="7" name="Guochun Shi" short-name="gshi" type="1" units="0" email="gshi@ncsa.uiuc.edu" note="" std-rate="0" calendar="5">
+    <resource group="1" id="7" name="Dave Blaschke" short-name="dave" type="1" units="0" email="blaschke@us.ibm.com" note="" std-rate="0" calendar="5">
       <properties>
         <property name="cost" value=""/>
       </properties>
     </resource>
-    <resource group="4" id="8" name="Alan Robertson" short-name="alanr" type="1" units="0" email="alanr@unix.sh" note="" std-rate="0" calendar="2">
+    <resource group="4" id="8" name="Lars Marowsky-Bree" short-name="lmb" type="1" units="0" email="lmb@suse.de" note="" std-rate="0" calendar="2">
       <properties>
         <property name="cost" value=""/>
       </properties>
     </resource>
-    <resource group="1" id="9" name="Lars Ellenberg" short-name="lge" type="1" units="0" email="l.g.e@web.de" note="" std-rate="0" calendar="4">
+    <resource group="4" id="9" name="Andrew Beekhof" short-name="alsoran" type="1" units="0" email="beekhof@gmail.com" note="" std-rate="0" calendar="2">
       <properties>
         <property name="cost" value=""/>
       </properties>
     </resource>
   </resources>
   <allocations>
-    <allocation task-id="28" resource-id="6" units="100"/>
-    <allocation task-id="3" resource-id="8" units="33"/>
-    <allocation task-id="16" resource-id="8" units="100"/>
-    <allocation task-id="10" resource-id="8" units="100"/>
-    <allocation task-id="4" resource-id="8" units="100"/>
-    <allocation task-id="2" resource-id="8" units="60"/>
-    <allocation task-id="27" resource-id="8" units="20"/>
+    <allocation task-id="3" resource-id="2" units="33"/>
+    <allocation task-id="16" resource-id="2" units="100"/>
+    <allocation task-id="10" resource-id="2" units="100"/>
+    <allocation task-id="4" resource-id="2" units="100"/>
+    <allocation task-id="2" resource-id="2" units="80"/>
+    <allocation task-id="27" resource-id="2" units="20"/>
+    <allocation task-id="44" resource-id="3" units="100"/>
+    <allocation task-id="43" resource-id="3" units="100"/>
+    <allocation task-id="42" resource-id="3" units="100"/>
+    <allocation task-id="41" resource-id="3" units="100"/>
+    <allocation task-id="28" resource-id="4" units="100"/>
   </allocations>
 </project>
