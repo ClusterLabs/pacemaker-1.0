@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.316 2004/09/07 14:51:12 alan Exp $ */
+/* $Id: heartbeat.c,v 1.317 2004/09/07 16:07:53 alan Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -607,6 +607,19 @@ lookup_node(const char * h)
 	} else {
 		return (config->nodes+j);
 	}
+}
+
+void
+hb_setup_child(void)
+{
+	int	j;
+
+	for (j=3; j < 50; j++) {
+		(void)close(j);
+	}
+	close(watchdogfd);
+	cl_make_normaltime();
+	cl_cpu_limit_disable();
 }
 
 /*
@@ -2334,7 +2347,7 @@ start_a_child_client(gpointer childentry, gpointer pidtable)
 		close(watchdogfd);
 	}
 	/* Child process:  start the managed child */
-	cl_make_normaltime();
+	hb_setup_child();
 	setpgid(0,0);
 
 	/* Limit peak resource usage, maximize success chances */
@@ -4447,6 +4460,9 @@ hb_unregister_to_apphbd(void)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.317  2004/09/07 16:07:53  alan
+ * Added hb_setup_child() to centralize child setup overhead.  Pulled from STABLE branch.
+ *
  * Revision 1.316  2004/09/07 14:51:12  alan
  * Increased the size of a set of retransmissions that are sent all at once
  * to 50.  At high heartbeat rates a short glitch can lose more packets at once
