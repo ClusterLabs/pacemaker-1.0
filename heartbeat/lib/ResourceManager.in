@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-#	$Id: ResourceManager.in,v 1.21 2004/04/16 17:06:10 alan Exp $
+#	$Id: ResourceManager.in,v 1.22 2004/04/16 19:01:00 gshi Exp $
 #
 #	New haresources format:
 #
@@ -245,6 +245,7 @@ giveupresourcegroup() {
         ha_log "WARN: Machine reboot narrowly avoided!"
       fi
     fi
+  done
   return $rc
 }
 
@@ -424,10 +425,13 @@ esac
 
 #
 #	$Log: ResourceManager.in,v $
+#	Revision 1.22  2004/04/16 19:01:00  gshi
+#	added a missing 'done' statement
+#
 #	Revision 1.21  2004/04/16 17:06:10  alan
 #	Fixed a bug in ResourceManager where it warns about bad resource scripts
 #	when they're OK.  Problem noted by Jens Schmalzing <j.s@lmu.de>.  Thanks Jens!
-#
+#	
 #	Revision 1.20  2004/04/16 04:48:05  alan
 #	Put in a fix which gets rid of LMB's non-portable sed expression.
 #	
