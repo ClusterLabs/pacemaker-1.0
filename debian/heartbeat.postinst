@@ -102,6 +102,10 @@ if [ "$1" = "configure" ]; then
 	chmod 0750 /var/lib/heartbeat/rsctmp/IPaddr2
 	chown "$HA_CCMUSER" /var/lib/heartbeat/rsctmp/IPaddr2
 	chgrp "$HA_APIGROUP" /var/lib/heartbeat/rsctmp/IPaddr2
+ 
+	chmod 0750 /var/lib/heartbeat/run
+	chown "$HA_CCMUSER" /var/lib/heartbeat/run
+	chgrp "$HA_APIGROUP" /var/lib/heartbeat/run
 
 	update-rc.d heartbeat defaults >/dev/null
 fi
