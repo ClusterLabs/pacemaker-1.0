@@ -80,8 +80,13 @@ int 				nice_failback = FALSE;
 int 				auto_failback = FALSE;
 int 				failback_in_progress = FALSE;
 static gboolean			rsc_needs_failback = FALSE;
-static gboolean			local_takeover_completed = FALSE;
-static gboolean			foreign_takeover_completed = FALSE;
+/*
+ * These are true when all our initial work for taking over local
+ * or foreign resources is completed, or found to be unnecessary. 
+ */
+static gboolean			local_takeover_work_done = FALSE;
+static gboolean			foreign_takeover_work_done = FALSE;
+
 static gboolean			rsc_needs_shutdown = FALSE;
 int				other_holds_resources = HB_NO_RSC;
 int				other_is_stable = FALSE; /* F_ISSTABLE */
@@ -345,10 +350,15 @@ notify_world(struct ha_msg * msg, const char * ostatus)
 			}
 
 
-		default:	/* Parent */
-				/* We only run one of these commands at a time */
+		default:	/* We're the Parent. */
+				/* We run these commands at a time */
 				/* So this use of "command" is OK */
 				HB_RSCMGMTPROC(pid, command);
+				if (ANYDEBUG) {
+					ha_log(LOG_DEBUG
+					,	"Starting notify process [%s]"
+					,	command);
+				}
 	}
 
 #if WAITFORCOMMANDS
@@ -567,7 +577,7 @@ comm_up_resource_action(void)
 			req_our_resources(FALSE);
 		}
 		if (deadcount == 0) {
-			foreign_takeover_completed = TRUE;
+			foreign_takeover_work_done = TRUE;
 		}
 	}
 
@@ -577,12 +587,23 @@ AnnounceTakeover(const char * reason)
 {
 	static gboolean		init_takeover_announced = FALSE;
 
+	if (ANYDEBUG) {
+		cl_log(LOG_INFO
+		,	"AnnounceTakeover(local %d, foreign %d"
+		", reason '%s' (%d))"
+		,	local_takeover_work_done
+		,	foreign_takeover_work_done
+		,	reason
+		,	init_takeover_announced);
+	}
+		
+
 	if (init_takeover_announced
-	||	!local_takeover_completed || !foreign_takeover_completed) {
+	||	!local_takeover_work_done || !foreign_takeover_work_done) {
 		return;
 	}
-	init_takeover_announced = TRUE;
 	ha_log(LOG_INFO, INITMSG " (%s)", reason);
+	init_takeover_announced = TRUE;
 }
 void
 process_resources(const char * type, struct ha_msg* msg
@@ -627,6 +648,8 @@ process_resources(const char * type, struct ha_msg* msg
 			break;
 		case HB_R_STARTING:
 			newrstate = HB_R_BOTHSTARTING;
+			foreign_takeover_work_done = TRUE;
+			AnnounceTakeover("HB_R_BOTHSTARTING");
 			/* ??? req_our_resources(); ??? */
 			break;
 
@@ -680,15 +703,16 @@ process_resources(const char * type, struct ha_msg* msg
 
 		switch (resourcestate) {
 
-		case HB_R_BOTHSTARTING: newrstate = HB_R_RSCRCVD;
-					foreign_takeover_completed = TRUE;
-					break;
+		case HB_R_BOTHSTARTING: 
 		case HB_R_STARTING:	newrstate = HB_R_RSCRCVD;
-					foreign_takeover_completed = TRUE;
-					if (!auto_failback) {
-						local_takeover_completed = TRUE;
+					if (nice_failback
+					&&	!auto_failback) {
+			
+						foreign_takeover_work_done
+						=	TRUE;
+						AnnounceTakeover
+						("T_RESOURCES");
 					}
-					AnnounceTakeover("T_RESOURCES");
 
 		case HB_R_RSCRCVD:
 		case HB_R_STABLE:
@@ -747,6 +771,15 @@ process_resources(const char * type, struct ha_msg* msg
 				newrstate = HB_R_STABLE;
 				hb_send_resources_held(TRUE, NULL);
 				PerformAutoFailback();
+				foreign_takeover_work_done = TRUE;
+				if (!auto_failback) {
+					if (other_holds_resources
+					& HB_FOREIGN_RSC) {
+						local_takeover_work_done
+						=	TRUE;
+					}
+				}
+				AnnounceTakeover("T_RESOURCES(them)");
 			}
 		}else{	/* This message is from us... */
 			const char * comment = ha_msg_value(msg, F_COMMENT);
@@ -767,7 +800,19 @@ process_resources(const char * type, struct ha_msg* msg
 			 */
 				/* Probably unnecessary */
 			procinfo->i_hold_resources
-			=	HB_UPD_RSC(fullupdate, procinfo->i_hold_resources, n);
+			=	HB_UPD_RSC(fullupdate
+			,	procinfo->i_hold_resources, n);
+			if (procinfo->i_hold_resources & HB_LOCAL_RSC) {
+				/* This may sometimes be slightly premature.
+				 * The problem is that if the machine has
+				 * no local resources we will receive no
+				 * ip-addr-resp messages for resource
+				 * releases from the far side, so we
+				 * have to do something to cover that case.
+				 */
+				local_takeover_work_done = TRUE;
+				AnnounceTakeover("T_RESOURCES(us)");
+			}
 
 			if (comment) {
 				if (strcmp(comment, "mach_down") == 0) {
@@ -783,7 +828,7 @@ process_resources(const char * type, struct ha_msg* msg
 						, "process_resources(3): %s"
 						, " other now stable");
 					}
-					foreign_takeover_completed = TRUE;
+					foreign_takeover_work_done = TRUE;
 					AnnounceTakeover("mach_down");
 				}else if (strcmp(comment, "shutdown") == 0) {
 					resourcestate = newrstate = HB_R_SHUTDOWN;
@@ -1099,6 +1144,12 @@ req_our_resources(int getthemanyway)
 		 */
 		procinfo->i_hold_resources |= HB_LOCAL_RSC;
 	}
+	upcount = countbystatus(ACTIVESTATUS, TRUE);
+
+	/* Our status update is often not done yet */
+	if (strcmp(curnode->status, ACTIVESTATUS) != 0) {
+		upcount++;
+	}
 
 	/* We need to fork so we can make child procs not real time */
 	switch(pid=fork()) {
@@ -1106,7 +1157,13 @@ req_our_resources(int getthemanyway)
 		case -1:	ha_log(LOG_ERR, "Cannot fork.");
 				return;
 		default:
-				HB_RSCMGMTPROC(pid, "req_our_resources");
+				if (upcount < 2) {
+					HB_RSCMGMTPROC(pid
+					,	"req_our_resources");
+				}else{
+					HB_RSCMGMTPROC(pid
+					,	"req_our_resources(ask)");
+				}
 				return;
 
 		case 0:		/* Child */
@@ -1120,19 +1177,14 @@ req_our_resources(int getthemanyway)
 	alarm(0);
 	CL_IGNORE_SIG(SIGALRM);
 	CL_SIGINTERRUPT(SIGALRM, 0);
-	if (nice_failback) {
-		setenv(HANICEFAILBACK, "yes", 1);
-	}
-	upcount = countbystatus(ACTIVESTATUS, TRUE);
-
-	/* Our status update is often not done yet */
-	if (strcmp(curnode->status, ACTIVESTATUS) != 0) {
-		upcount++;
-	}
  
 	/* Are we all alone in the world? */
 	if (upcount < 2) {
 		setenv(HADONTASK, "yes", 1);
+	}
+
+	if (nice_failback) {
+		setenv(HANICEFAILBACK, "yes", 1);
 	}
 	sprintf(cmd, HALIB "/ResourceManager listkeys %s", curnode->nodename);
 
@@ -1173,15 +1225,15 @@ req_our_resources(int getthemanyway)
 	}
 
 	if (rsc_count == 0) {
-		ha_log(LOG_INFO, "No local resources [%s]", cmd);
+		ha_log(LOG_INFO, "No local resources [%s] to acquire.", cmd);
 	}else{
 		if (ANYDEBUG) {
 			ha_log(LOG_INFO, "%d local resources from [%s]"
 			,	rsc_count, cmd);
 		}
+		ha_log(LOG_INFO, "Local Resource acquisition completed.");
 	}
 	hb_send_resources_held(TRUE, "req_our_resources()");
-	ha_log(LOG_INFO, "Resource acquisition completed.");
 	exit(0);
 }
 
@@ -1430,7 +1482,7 @@ ask_for_resources(struct ha_msg *msg)
 				" acquisition done [%s]."
 				,	decode_resources(rtype));
 				if (auto_failback) {
-					local_takeover_completed = TRUE;
+					local_takeover_work_done = TRUE;
 					AnnounceTakeover("auto_failback");
 				}
 				switch(rtype) {
@@ -1868,22 +1920,26 @@ static void
 RscMgmtProcessDied(ProcTrack* p, int status, int signo, int exitcode
 ,	int waslogged)
 {
+	const char *	pname = RscMgmtProcessName(p);
 	ResourceMgmt_child_count --;
 
-	if (strcmp(RscMgmtProcessName(p), "req_our_resources") == 0
-	||	 strcmp(RscMgmtProcessName(p), "ip-request-resp") == 0) {
-		local_takeover_completed = TRUE;
-		AnnounceTakeover(RscMgmtProcessName(p));
-	}else if (!nice_failback
-	&&	strcmp(RscMgmtProcessName(p), "status") == 0) {
+	if (ANYDEBUG) {
+		cl_log(LOG_DEBUG, "RscMgmtProc '%s' exited code %d"
+		,	pname, exitcode);
+	}
+	if (strcmp(pname, "req_our_resources") == 0
+	||	 strcmp(pname, "ip-request-resp") == 0) {
+		local_takeover_work_done = TRUE;
+		AnnounceTakeover(pname);
+	}else if (!nice_failback && strcmp(pname, "status") == 0) {
 		int	deadcount = countbystatus(DEADSTATUS, TRUE);
 		if (deadcount > 0) {
 			/* Must be our partner is dead...
 			 * Status would have invoked mach_down
 			 * and now all their resource are belong to us
 			 */
-			foreign_takeover_completed = TRUE;
-			AnnounceTakeover(RscMgmtProcessName(p));
+			foreign_takeover_work_done = TRUE;
+			AnnounceTakeover(pname);
 		}
 	}
 
@@ -2068,6 +2124,11 @@ StonithProcessName(ProcTrack* p)
 
 /*
  * $Log: hb_resource.c,v $
+ * Revision 1.47  2004/02/13 07:20:48  alan
+ * Change hb_resource so that we get exactly one message when local+remote
+ * takeovers complete.  This is hard, and under some circumstances, we may
+ * send out a message before the takeovers are 100% done.
+ *
  * Revision 1.46  2004/02/12 09:30:05  alan
  * Put in a very small change to allow CTS to work with
  * auto_failback 'legacy' configurations.
