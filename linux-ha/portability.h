@@ -1,4 +1,4 @@
-/* $Id: portability.h,v 1.39 2004/10/01 12:04:13 lge Exp $ */
+/* $Id: portability.h,v 1.40 2004/10/08 20:11:16 alan Exp $ */
 #ifndef PORTABILITY_H
 #  define PORTABILITY_H
 
@@ -58,6 +58,10 @@
 
 #ifdef HAVE_CONFIG_H
 #include <config.h>
+#endif
+
+#if defined(ANSI_ONLY) && !defined(inline)
+#	define inline	/* nothing */
 #endif
 
 #ifndef HA_HAVE_SETENV
