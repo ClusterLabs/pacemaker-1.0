@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.378 2005/03/17 05:32:45 alan Exp $ */
+/* $Id: heartbeat.c,v 1.379 2005/03/17 05:37:23 gshi Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -2179,6 +2179,8 @@ update_client_status_msg_list(struct node_info* thisnode)
 					g_list_delete_link(t->client_status_msg_queue,
 							   listrunner);				
 				
+			}else{
+				break;
 			}	
 			
 		}
@@ -5152,6 +5154,12 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.379  2005/03/17 05:37:23  gshi
+ * fixed a bug:
+ *
+ * if there are multiple messages missing before a client status message,
+ * heartbeat will enter an infinite loop
+ *
  * Revision 1.378  2005/03/17 05:32:45  alan
  * Put in a change to make heartbeat restart whenever a split brain heals
  * not just if we manage resources.
