@@ -1,4 +1,4 @@
-/* $Id: client_lib.c,v 1.25 2005/03/18 23:22:16 gshi Exp $ */
+/* $Id: client_lib.c,v 1.26 2005/03/30 19:46:50 gshi Exp $ */
 /* 
  * client_lib: heartbeat API client side code
  *
@@ -1460,9 +1460,12 @@ read_api_msg(llc_private_t* pi)
 		const char *	type;
 		
 		pi->chan->ops->waitin(pi->chan);
+		if (pi->chan->ch_status  == IPC_DISCONNECT){
+			break;
+		}
 		if ((msg=msgfromIPC(pi->chan, 0)) == NULL) {
 			ha_api_perror("read_api_msg: "
-			"Cannot read reply from IPC channel");
+				      "Cannot read reply from IPC channel");
 			continue;
 		}
 		if ((type=ha_msg_value(msg, F_TYPE)) != NULL
