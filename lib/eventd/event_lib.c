@@ -1,4 +1,4 @@
-/* $Id: event_lib.c,v 1.5 2004/03/24 10:17:47 forrest Exp $ */
+/* $Id: event_lib.c,v 1.6 2004/03/26 02:54:35 forrest Exp $ */
 /* 
  * event_lib.c: source file for event library
  *
@@ -786,7 +786,10 @@ saEvtEventAllocate(const SaEvtChannelHandleT channelHandle,
 	evt_event_handle *event_hd;	
 	evt_channel_handle *evt_channel_hd;
 	GHashTable *event_handle_hash;
-
+	
+	if(eventHandle == NULL){
+		return SA_ERR_INVALID_PARAM;
+	}
 	evt_channel_hd = g_hash_table_lookup(evt_channel_hash,
 			(gpointer)channelHandle);
 	if(evt_channel_hd == NULL){
@@ -878,7 +881,9 @@ saEvtEventAttributesSet(SaEvtEventHandleT eventHandle,
 	if((patternArray == NULL) || (publisherName == NULL)){
 		return SA_ERR_INVALID_PARAM;
 	}
-	
+	if(priority > SA_EVT_LOWEST_PRIORITY){
+		return SA_ERR_INVALID_PARAM;
+	}	
 	event_hd = (evt_event_handle *)g_hash_table_lookup(evt_event_hash,
 			(gpointer)(eventHandle));
 	if(event_hd == NULL){
