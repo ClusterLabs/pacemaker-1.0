@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.364 2005/02/21 01:16:16 alan Exp $ */
+/* $Id: heartbeat.c,v 1.365 2005/02/21 02:24:09 alan Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -1670,6 +1670,14 @@ hb_initiate_shutdown(int quickshutdown)
 	if (ANYDEBUG) {
 		cl_log(LOG_DEBUG, "hb_initiate_shutdown() called.");
 	}
+	if (shutdown_in_progress) {
+		if (ANYDEBUG) {
+			cl_log(LOG_DEBUG, "hb_initiate_shutdown"
+			"(): shutdown already in progress");
+			return;
+		}
+	}
+		
 	/* THINK maybe even add "need_shutdown", because it is not yet in
 	 * progress; or do a Gmain_timeout_add, or something like that.
 	 * A cleanexit(LSB_EXIT_OK) won't do, out children will continue
@@ -2585,8 +2593,9 @@ ManagedChildDied(ProcTrack* p, int status, int signo, int exitcode
 	}
 	p->privatedata = NULL;
 	if (shutdown_in_progress) {
-                if (g_list_find(config->client_list, managedchild) != NULL){
-			/* Child died unexpectedly, ignore it and return */
+                if (g_list_find(config->client_list, managedchild)
+		!=	config->last_client){
+			/* Child died prematurely, ignore it and return */
 			if (ANYDEBUG) {
 				cl_log(LOG_DEBUG
 				,	"client \"%s\" died early during"
@@ -5056,6 +5065,9 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.365  2005/02/21 02:24:09  alan
+ * More diddles in new client shutdown code...
+ *
  * Revision 1.364  2005/02/21 01:16:16  alan
  * Changed the heartbeat code for shutting down clients.
  * We no longer remove them from the list, instead we maintain a pointer
