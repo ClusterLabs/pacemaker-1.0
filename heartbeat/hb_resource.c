@@ -1002,7 +1002,7 @@ takeover_from_node(const char * nodename)
 	/* Sending this message triggers the "mach_down" script */
 
 	heartbeat_monitor(hmsg, KEEPIT, "<internal>");
-	notify_world(hmsg, hip->status);
+	QueueRemoteRscReq(PerformQueuedNotifyWorld, hmsg);
 
 	/*
 	 * STONITH has already successfully completed, or wasn't needed...
@@ -2034,6 +2034,10 @@ StonithProcessName(ProcTrack* p)
 
 /*
  * $Log: hb_resource.c,v $
+ * Revision 1.44  2004/02/10 22:44:02  alan
+ * Found and got rid of a direct call to notify world, and replaced it by
+ * a queued call to notify world.
+ *
  * Revision 1.43  2004/02/10 19:16:24  alan
  * Print fewer messages with minimum level of debug turned on.
  * This will help realtime performance when running tests.
