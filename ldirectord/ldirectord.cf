@@ -61,13 +61,13 @@ virtual=192.168.6.240:80
 #Sample configuration for an https virtual service.
 #Fallback setting overides global
 #virtual=192.168.6.240:443
-#	real=192.168.16.3:443 masq
-#	real=192.168.16.5:443 masq
+#	real=192.168.16.3:443 masq "https://some.domain.com.au:443/" "Test page"
+#	real=192.168.16.5:443 masq "https://some.domain.com.au:443/" "Test page"
 #	fallback=127.0.0.1:443
 #	service=https
 #	scheduler=wlc
-#	request="index.html"
-#	receive="Test Page"
+#	#request="index.html"
+#	#receive="Test Page"
 #	scheduler=rr
 #	#persistent=600
 #	#netmask=255.255.255.255

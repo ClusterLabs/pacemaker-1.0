@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-my($VERSION)=(qw$Id: ldirectord,v 1.77 2004/02/17 02:57:46 horms Exp $)[2];
+my($VERSION)=(qw$Id: ldirectord,v 1.78 2004/02/23 07:51:15 horms Exp $)[2];
 
 ######################################################################
 # ldirectord                 http://www.vergenet.net/linux/ldirectord/
@@ -343,6 +343,8 @@ use vars qw(
 	    @OLDVIRTUAL
 	    @REAL
 	    @VIRTUAL
+
+	    $CRLF
 );
 
 # default values
@@ -357,6 +359,7 @@ $NEGOTIATETIMEOUT = 0;
 $RUNPID           = "/var/run/ldirectord";
 $QUIESCENT        = "yes";
 
+$CRLF = "\x0d\x0a";
 
 use Getopt::Std;
 #use English;
@@ -1725,25 +1728,35 @@ sub check_https
 {
 	my ($v, $r) = @_;
 	require Net::SSLeay;
-	$Net::SSLeay::trace = 0;
-	my $uri = $$v{request};
-	my ($page, $result, %headers);
-	my $port=(defined $$v{checkport}?$$v{checkport}:$$r{port});
+	$Net::SSLeay::trace = $DEBUG;
+	$$r{url} =~ /https:\/\/([^:\/]+)(:([^\/]+))?(\/.*)/;
+	my $host = $1;
+	my $port = $3;
+	my $uri = $4;
+	unless (defined $port) {
+		$port=(defined $$v{checkport}?$$v{checkport}:$$r{port})
+	}
+	my ($page, $errors, $cert, $head, $body, $response, $result);
+	my $msg = "GET $uri HTTP/1.0" . $CRLF
+	        . "Host: " . $host . $CRLF
+		. "Accept: */*" . $CRLF . $CRLF;
 
-	&ld_debug(2, "Checking https server=$$r{server} port=$port");
+	&ld_debug(2, "Checking https url=\"$$r{url}\"");
 	
 	eval {
 		local $SIG{__WARN__};
 		local $SIG{'__DIE__'} = "DEFAULT";
 		local $SIG{'ALRM'} = sub { die "Timeout Alarm" };
 		alarm $$v{negotiatetimeout};
-		&ld_debug(2, "Testing: $$r{server}, $port, $uri");
-		($page, $result, %headers)  = &Net::SSLeay::get_https(
-				$$r{server}, $port, $uri);
-		&ld_debug(2, "Result: $result");
+		&ld_debug(2, "Testing: $host, $port, $uri");
+		($page, $errors, $cert)  = &Net::SSLeay::sslcat($host,
+		               $port, $msg);
+		($head, $body) = split /\s?\n\s?\n/, $page, 2;
+		($response, $head) = split /\s?\n/, $head, 2;
+		&ld_debug(2, "Result: $response");
 		my $recstr = $$r{receive};
 		if($result =~ /error/i ||
-				($recstr =~ /.+/ && !($page =~ /$recstr/))) {
+				($recstr =~ /.+/ && !($body =~ /$recstr/))) {
 			die("$result");
 		}
 	};
