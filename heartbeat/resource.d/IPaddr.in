@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-#	$Id: IPaddr.in,v 1.51 2004/01/30 22:49:54 alan Exp $
+#	$Id: IPaddr.in,v 1.52 2004/02/05 05:12:30 alan Exp $
 #
 #	This script manages IP alias IP addresses
 #
@@ -561,9 +561,9 @@ ip_start() {
 
   # Set default values (can be overridden as described above)
 
-  : ${ARP_INTERVAL_MS=200}	# milliseconds between ARPs
-  : ${ARP_REPEAT=5}		# repeat count
-  : ${ARP_BACKGROUND=yes}	# no to run in foreground
+  : ${ARP_INTERVAL_MS=500}	# milliseconds between ARPs
+  : ${ARP_REPEAT=10}		# repeat count
+  : ${ARP_BACKGROUND=yes}	# no to run in foreground (no longer any reason to do this)
   : ${ARP_NETMASK=ffffffffffff}	# netmask for ARP
   
 
@@ -637,7 +637,7 @@ ip_monitor() {
 
 usage() {
   echo $USAGE >&2
-  echo "$Id: IPaddr.in,v 1.51 2004/01/30 22:49:54 alan Exp $"
+  echo "$Id: IPaddr.in,v 1.52 2004/02/05 05:12:30 alan Exp $"
 }
 
 #
@@ -684,6 +684,9 @@ esac
 #
 #
 # $Log: IPaddr.in,v $
+# Revision 1.52  2004/02/05 05:12:30  alan
+# Doubled the number of ARPs (10), over a period of 5 seconds
+#
 # Revision 1.51  2004/01/30 22:49:54  alan
 # Changed IPaddr so it exits with proper LSB exit codes
 # for status.
