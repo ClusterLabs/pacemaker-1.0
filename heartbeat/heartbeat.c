@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.313 2004/09/03 21:03:01 gshi Exp $ */
+/* $Id: heartbeat.c,v 1.314 2004/09/05 02:34:56 alan Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -1183,8 +1183,8 @@ master_control_process(IPC_Channel* fifoproc)
 	}
 
 	if (ANYDEBUG) {
-		/* Limit ourselves to 10% of the CPU */
-		cl_cpu_limit_setpercent(20);
+		/* Limit ourselves to 30% of the CPU */
+		cl_cpu_limit_setpercent(30);
 		/* Update our CPU limit periodically */
 		Gmain_timeout_add_full(G_PRIORITY_HIGH-1
 		,	cl_cpu_limit_ms_interval()
@@ -4444,6 +4444,10 @@ hb_unregister_to_apphbd(void)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.314  2004/09/05 02:34:56  alan
+ * HEAD change to up % of CPU heartbeat main process is allowed to use to 30%
+ * I've been testing with 10ms heartbeat intervals...
+ *
  * Revision 1.313  2004/09/03 21:03:01  gshi
  *  fixed some warnings in ia64 machines
  *
