@@ -1,4 +1,4 @@
-/* $Id: mlock.c,v 1.5 2004/08/29 03:01:12 msoffen Exp $ */
+/* $Id: mlock.c,v 1.6 2004/09/03 21:03:00 gshi Exp $ */
 /*
  *
  * multi-clients lock test code
@@ -508,7 +508,7 @@ init_comm(const char* servername)
 
 		their_addr.sin_family = AF_INET;
 		their_addr.sin_port = htons(MYPORT);
-		their_addr.sin_addr = *((struct in_addr *) he->h_addr);
+		memcpy(&their_addr.sin_addr, he->h_addr, sizeof(struct in_addr));
 		memset(&(their_addr.sin_zero), '\0', 8);
 		
 		if(connect(gi.sockfd, (struct sockaddr *) &their_addr,

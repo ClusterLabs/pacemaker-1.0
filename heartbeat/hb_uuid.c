@@ -81,23 +81,23 @@ printout(void){
 
 #endif
 
-static char* 
+static struct node_info*
 lookup_nametable(const char* nodename)
 {
-	return g_hash_table_lookup(name_table, nodename);
+	return (struct node_info*)g_hash_table_lookup(name_table, nodename);
 }
 
-static char*
+static struct node_info*
 lookup_uuidtable(const char* uuid)
 {
-	return g_hash_table_lookup(uuid_table, uuid);
+	return (struct node_info*)g_hash_table_lookup(uuid_table, uuid);
 }
 
-char*
+struct node_info*
 lookup_tables(const char* nodename, const char* uuid)
 {
 	
-	char* hip = NULL;
+	struct node_info* hip = NULL;
 	
 	if(!nodename){
 		cl_log(LOG_ERR,"lookup_tables: bad parameters");

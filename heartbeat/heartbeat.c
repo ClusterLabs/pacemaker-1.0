@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.312 2004/08/29 04:33:41 msoffen Exp $ */
+/* $Id: heartbeat.c,v 1.313 2004/09/03 21:03:01 gshi Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -1998,11 +1998,7 @@ process_clustermsg(struct ha_msg* msg, struct link* lnk)
 		return;
 	}
 	
-	
-	/*
-	thisnode = lookup_node(from);
-	*/
-	thisnode = (struct node_info*) lookup_tables(from, fromuuid);
+	thisnode = lookup_tables(from, fromuuid);
 	
 	if (thisnode == NULL) {
 #if defined(MITJA)
@@ -4448,6 +4444,9 @@ hb_unregister_to_apphbd(void)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.313  2004/09/03 21:03:01  gshi
+ *  fixed some warnings in ia64 machines
+ *
  * Revision 1.312  2004/08/29 04:33:41  msoffen
  * Fixed comments to properly compile
  *
