@@ -1,4 +1,4 @@
-/* $Id: config.c,v 1.133 2004/11/08 20:48:36 gshi Exp $ */
+/* $Id: config.c,v 1.134 2004/11/23 16:26:38 gshi Exp $ */
 /*
  * Parse various heartbeat configuration files...
  *
@@ -90,7 +90,7 @@ static int set_normalpoll(const char *);
 static int set_api_authorization(const char *);
 static int set_msgfmt(const char*);
 static int set_logdaemon(const char*);
-static int set_connintval(const char *);
+static int set_logdconntime(const char *);
 static int set_register_to_apphbd(const char *);
 static int set_badpack_warn(const char*);
 static int set_coredump(const char*);
@@ -131,7 +131,7 @@ struct directive {
 , {KEY_NORMALPOLL,set_normalpoll, TRUE, "true", "Use system poll(2) function?"}
 , {KEY_MSGFMT,    set_msgfmt, TRUE, "classic", "message format in the wire"}
 , {KEY_LOGDAEMON, set_logdaemon, TRUE, "no", "use logging daemon"}  
-, {KEY_CONNINTVAL,set_connintval, TRUE, "60", "the interval to reconnect to logd"}  
+, {KEY_CONNINTVAL,set_logdconntime, TRUE, "60", "the interval to reconnect to logd"}  
 , {KEY_REGAPPHBD, set_register_to_apphbd, FALSE, NULL, "register with apphbd"}
 , {KEY_BADPACK,   set_badpack_warn, TRUE, "true", "warn about bad packets"}
 , {KEY_COREDUMP,  set_coredump, TRUE, "true", "enable Linux-HA core dumps"}
@@ -1652,7 +1652,7 @@ set_logdaemon(const char * value)
 }
 
 static int
-set_connintval(const char * value)
+set_logdconntime(const char * value)
 {
 	conn_logd_intval = get_msec(value);
 
@@ -2076,6 +2076,9 @@ set_corerootdir(const char* value)
 
 /*
  * $Log: config.c,v $
+ * Revision 1.134  2004/11/23 16:26:38  gshi
+ * rename directive conn_logd_intval to conn_logd_time
+ *
  * Revision 1.133  2004/11/08 20:48:36  gshi
  * implemented logging daemon
  *

@@ -320,7 +320,7 @@ auto_failback on
 # use_logd yes/no
 
 #	the interval we  reconnect to logging daemon if the previous connection failed
-#	default: 60 (seconds)
-#conn_logd_intval 60
+#	default: 60 seconds
+#conn_logd_time 60
 
 
