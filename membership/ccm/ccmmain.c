@@ -1,4 +1,4 @@
-/* $Id: ccmmain.c,v 1.19 2005/02/15 20:11:31 alan Exp $ */
+/* $Id: ccmmain.c,v 1.20 2005/02/15 21:02:25 alan Exp $ */
 /* 
  * ccm.c: Consensus Cluster Service Program 
  *
@@ -198,13 +198,14 @@ main(int argc, char **argv)
 	IPC_WaitConnection *wait_ch;
 
 	char *cmdname;
-	char *tmp_cmdname = g_strdup(argv[0]);
+	char *tmp_cmdname;
 	int  flag;
 	hb_usrdata_t	usrdata;
 
 #if 1
 	cl_malloc_forced_for_glib();
 #endif
+	tmp_cmdname = g_strdup(argv[0]);
 	if ((cmdname = strrchr(tmp_cmdname, '/')) != NULL) {
 		++cmdname;
 	} else {
