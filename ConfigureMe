@@ -48,7 +48,11 @@ ConfigureLinux() {
     distro="SuSE Linux"
     PACKAGECMD="$MAKE_CMD rpm"
     export CFLAGS="$CFLAGS -fno-unit-at-a-time"
-    DFLAGS="--with-ucd-snmp-devel=ucdsnmp --with-group-id=90 --with-ccmuser-id=90"
+    DFLAGS="--with-group-id=90 --with-ccmuser-id=90"
+    R=`cat /etc/SuSE-release | grep 'VERSION *= *' | sed -e 's%.*= *%%'`
+    case $R in
+      [78].*) DFLAGS="$DFLAGS --disable-snmp-subagent --disable-swig --with-ucd-snmp-devel=ucdsnmp";;
+    esac
   elif
     [ -f /etc/redhat-release -a -s /etc/redhat-release ] 
   then
