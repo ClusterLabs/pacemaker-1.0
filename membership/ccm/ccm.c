@@ -2126,14 +2126,15 @@ ccm_state_joined(enum ccm_type ccm_msg_type,
 			break;
 
 		case CCM_TYPE_PROTOVERSION:
-			/* If we were leader in the last successful itteration,
+			/* If we were leader in the last successful iteration,
  			 * then we shall respond with the neccessary information
 			 */
 			if (ccm_am_i_leader(info)){
 				while (ccm_send_joiner_reply(hb, info, orig)
 						!= HA_OK) {
 					cl_log(LOG_WARNING, "ccm_state_joined: "
-						"failure to send join reply");
+					"failure to send join reply [%s]"
+					,	hb->llc_ops->errmsg(hb));
 						cl_shortsleep();
 				}
 			}
@@ -2159,7 +2160,8 @@ ccm_state_joined(enum ccm_type ccm_msg_type,
 			CCM_SET_MINORTRANS(info, trans_minorval);
 			while (ccm_send_join(hb, info) != HA_OK) {
 				cl_log(LOG_WARNING, "ccm_state_joined: failure "
-							"to send join");
+					"to send join [%s]"
+				,	hb->llc_ops->errmsg(hb));
 				cl_shortsleep();
 			}
 
@@ -2174,7 +2176,8 @@ ccm_state_joined(enum ccm_type ccm_msg_type,
 			update_reset(CCM_GET_UPDATETABLE(info));
 			while (ccm_send_join(hb, info) != HA_OK) {
 				cl_log(LOG_WARNING, "ccm_state_joined:"
-				" failure to send join");
+					" failure to send join [%s]"
+				,	hb->llc_ops->errmsg(hb));
 				cl_shortsleep();
 			}
 			CCM_SET_STATE(info, CCM_STATE_JOINING);
