@@ -1,4 +1,4 @@
-/* $Id: ccmllm.c,v 1.12 2005/03/16 17:50:00 gshi Exp $ */
+/* $Id: ccmllm.c,v 1.13 2005/03/29 18:47:52 gshi Exp $ */
 /* 
  * ccmllm.c: Low Level membership routines.
  *
@@ -157,10 +157,13 @@ llm_get_inactive_node_count(llm_info_t *llm)
 	int		count = 0 ;
 	unsigned	i;
 	
+	cl_log(LOG_INFO, "Counting nodes(dead nodes are not shown):");
 	for (i = 0; i< llm->nodecount; i++){
-		cl_log(LOG_INFO, "node=%s  status=%s",
-		       llm->nodes[i].nodename, 
-		       llm->nodes[i].status);
+		if (STRNCMP_CONST(llm->nodes[i].status, DEADSTATUS) != 0){
+			cl_log(LOG_INFO, "node=%s  status=%s",
+			       llm->nodes[i].nodename, 
+			       llm->nodes[i].status);
+		}
 		if (STRNCMP_CONST(llm->nodes[i].status, 
 			    CLUST_INACTIVE) == 0){
 			count ++;
