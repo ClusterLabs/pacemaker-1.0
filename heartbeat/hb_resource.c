@@ -413,10 +413,24 @@ hb_rsc_isstable(void)
 {
 	/* Is this the "legacy" case? */
 	if (!nice_failback) {
-		return ResourceMgmt_child_count == 0
-		&&	!takeover_in_progress;
+		if (ANYDEBUG) {
+			cl_log(LOG_DEBUG
+			,	"rsc_isstable: ResourceMgmt_child_count: %d"
+			,	ResourceMgmt_child_count);
+		}
+		return ResourceMgmt_child_count == 0;
 	}
 
+	if (ANYDEBUG) {
+		cl_log(LOG_DEBUG
+		,	"rsc_isstable: ResourceMgmt_child_count: %d"
+		", takeover_in_progress: %d, going_standby: %d"
+		", standby running(ms): %ld, resourcestate: %d" 
+		,	ResourceMgmt_child_count
+		,	takeover_in_progress, going_standby
+		,	longclockto_ms(standby_running)
+		,	resourcestate);
+	}
 	return	other_is_stable
 	&&	!takeover_in_progress
 	&&	going_standby == NOT
@@ -701,7 +715,7 @@ process_resources(const char * type, struct ha_msg* msg
 				if (strcmp(comment, "mach_down") == 0) {
 					ha_log(LOG_INFO
 					,	"mach_down takeover complete.");
-					takeover_in_progress = 0;
+					takeover_in_progress = FALSE;
 					/* FYI: This also got noted earlier */
 					procinfo->i_hold_resources
 					|=	HB_FOREIGN_RSC;
@@ -788,8 +802,7 @@ AuditResources(void)
 	 *	If things are stable, look for orphaned resources...
 	 */
 
-	if (resourcestate == HB_R_STABLE && other_is_stable
-	&&	!shutdown_in_progress) {
+	if (hb_rsc_isstable()) {
 		/*
 		 *	Does someone own local resources?
 		 */
@@ -973,7 +986,7 @@ takeover_from_node(const char * nodename)
 
 			other_holds_resources = HB_NO_RSC;
 			other_is_stable = 1;	/* Not going anywhere */
-			takeover_in_progress = 1;
+			takeover_in_progress = TRUE;
 			if (ANYDEBUG) {
 				ha_log(LOG_DEBUG
 				,	"takeover_from_node: other now stable");
@@ -1991,6 +2004,10 @@ StonithProcessName(ProcTrack* p)
 
 /*
  * $Log: hb_resource.c,v $
+ * Revision 1.36  2003/09/24 23:04:41  alan
+ * Put in some small amount of debugging, and eliminated a little of the
+ * checking for auto_failback legacy case during shutdown.
+ *
  * Revision 1.35  2003/09/24 05:53:13  alan
  * Put in a STONITH message for one case where it was missing...
  *
