@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-#	$Id: IPaddr.in,v 1.52 2004/02/05 05:12:30 alan Exp $
+#	$Id: IPaddr.in,v 1.53 2004/04/19 18:09:39 alan Exp $
 #
 #	This script manages IP alias IP addresses
 #
@@ -37,6 +37,14 @@ SENDARP=$HA_BIN/send_arp
 FINDIF=$HA_BIN/findif
 USAGE="usage: $0 ip-address {start|stop|status|monitor}";
 SYSTYPE="`uname -s`"
+case "$SYSTYPE" in
+    SunOS)
+        # `uname -r` = 5.9 -> SYSVERSION = 9
+        SYSVERSION="`uname -r | cut -d. -f 2`"
+	;;
+    *)
+        ;;
+esac
 
 #
 #      Find out which alias serves the given IP address
@@ -201,14 +209,11 @@ delete_interface () {
 
   case $SYSTYPE in
 	SunOS)
-		case `uname -r` in
-			5.8)
-				CMD="$IFCONFIG $ifname unplumb"
-				;;
-			*)
-				CMD="$IFCONFIG $ifname 0 down"
-				;;
-		esac
+		if [ "$SYSVERSION" -ge 8 ] ; then
+		    CMD="$IFCONFIG $ifname unplumb"
+		else
+		    CMD="$IFCONFIG $ifname 0 down"
+		fi
 		;;
 	*BSD)
 		CMD="$IFCONFIG $ifname inet $ipaddr -alias"
@@ -247,15 +252,15 @@ add_interface () {
 
   case $SYSTYPE in
     SunOS)
-		case `uname -r` in
-		  5.8)
-				$IFCONFIG $iface plumb
-				CMD="$IFCONFIG $iface inet $ipaddr $IFEXTRA up"
-				;;
-		  *)
-				CMD="$IFCONFIG $iface inet $ipaddr $IFEXTRA up"
-				;;
-		esac
+		if [ "$SYSVERSION" -ge 8 ] ; then
+		    $IFCONFIG $iface plumb
+		    rc=$?
+		    if [ $rc -ne 0 ] ; then
+			echo "ERROR: '$IFCONFIG $iface plumb' failed."
+			return $rc
+		    fi
+		fi
+		CMD="$IFCONFIG $iface inet $ipaddr $IFEXTRA up"
 		;;
 
     *BSD)
@@ -353,7 +358,7 @@ ip_stop() {
 			exit 0
 		fi;;
 
-	Linux)
+	Linux|SunOS)
 		if [ -z "$IF" ]; then
     			: Requested interface not in use
     			exit 0
@@ -383,8 +388,8 @@ ip_stop() {
   rc=$?
 
   case $SYSTYPE in
-	*BSD|SunOS)	;;
-	Linux)
+	*BSD)	;;
+	Linux|SunOS)
 		restore_loopback "$BASEIP"
 		# remove lock file...
 		rm -f "$VLDIR/$IF";;
@@ -516,7 +521,7 @@ ip_start() {
   SENDARPPIDFILE="$SENDARPPIDDIR/send_arp-$BASEIP"
 
   case $SYSTYPE in
-    Linux)
+    Linux|SunOS)
 		CURRENTIF=`find_interface "$BASEIP"`
        		case $CURRENTIF in
          	  lo*)
@@ -589,7 +594,7 @@ ip_status() {
 		echo "stopped"; return 3
 	fi;;
 
-    Linux)		
+    Linux|SunOS)		
 	if
 		[ -z "$IF" ]
 	then
@@ -621,11 +626,23 @@ ip_status() {
 #
 ip_monitor() {
   BASEIP=`echo $1 | sed s'%/.*%%'`
-  OPTS=" -c 1 @PING_TIMEOUT_OPT@ -q"
+  TIMEOUT=1 # seconds
+  case $SYSTYPE in
+        Linux)
+            # -c count -t timetolive -q(uiet) -n(umeric) -W timeout
+            PINGARGS="-c 1 -q -n -W $TIMEOUT $BASEIP"
+            ;;
+        SunOS)
+            PINGARGS="$BASEIP $TIMEOUT"
+            ;;
+        *)
+            PINGARGS="-c 1 @PING_TIMEOUT_OPT@ -q $BASEIP"
+            ;;
+  esac
   for j in 1 2 3
   do
     if
-      @PING@ $OPTS $BASEIP >/dev/null 2>&1
+      @PING@ $PINGARGS >/dev/null 2>&1
     then
       echo "OK"
       return 0
@@ -637,7 +654,7 @@ ip_monitor() {
 
 usage() {
   echo $USAGE >&2
-  echo "$Id: IPaddr.in,v 1.52 2004/02/05 05:12:30 alan Exp $"
+  echo "$Id: IPaddr.in,v 1.53 2004/04/19 18:09:39 alan Exp $"
 }
 
 #
@@ -684,6 +701,9 @@ esac
 #
 #
 # $Log: IPaddr.in,v $
+# Revision 1.53  2004/04/19 18:09:39  alan
+# Some Solaris patches from Dominique Petitpierre <Dominique.Petitpierre@adm.unige.ch> to MailTo and IPaddr.
+#
 # Revision 1.52  2004/02/05 05:12:30  alan
 # Doubled the number of ARPs (10), over a period of 5 seconds
 #
