@@ -1,4 +1,4 @@
-/* $Id: heartbeat.h,v 1.56 2004/11/08 20:48:36 gshi Exp $ */
+/* $Id: heartbeat.h,v 1.57 2005/01/20 19:17:50 gshi Exp $ */
 /*
  * heartbeat.h: core definitions for the Linux-HA heartbeat program
  *
@@ -93,7 +93,7 @@
 
 #define	FIFOMODE	0600
 #define	RQSTDELAY	10
-
+#define	ACK_MSG_DIV	10
 #ifndef HA_D
 #	define	HA_D		"/etc/ha.d"
 #endif
@@ -221,7 +221,9 @@
 
 typedef unsigned long seqno_t;
 
-#define	MAXMISSING	16
+#define	MAXMSGHIST	1000
+#define	MAXMISSING	MAXMSGHIST
+
 #define	NOSEQUENCE	0xffffffffUL
 struct seqtrack {
 	longclock_t	last_rexmit_req;
@@ -232,6 +234,11 @@ struct seqtrack {
 	GList*		client_status_msg_queue; /*client status message queue*/
 	seqno_t		seqmissing[MAXMISSING];
 	const char *	last_iface;
+	int		ack_trigger; /*whenever a message received 
+				      *with seq % ACK_MSG_DIV == ack_trigger
+				      *we send back an ACK
+				    */
+	seqno_t		ackseq; /* ACKed seq*/
 };
 
 struct link {
@@ -316,7 +323,6 @@ struct hb_media {
 
 int parse_authfile(void);
 
-#define	MAXMSGHIST	1000
 struct msg_xmit_hist {
 	struct ha_msg*	msgq[MAXMSGHIST];
 	seqno_t		seqnos[MAXMSGHIST];
@@ -324,6 +330,8 @@ struct msg_xmit_hist {
 	int		lastmsg;
 	seqno_t		hiseq;
 	seqno_t		lowseq; /* one less than min actually present */
+	seqno_t		ackseq;
+	struct node_info* lowest_acknode;
 };
 
 /*
@@ -366,7 +374,7 @@ extern char *			localnodename;
 
 /* Generally useful exportable HA heartbeat routines... */
 extern void		ha_assert(const char *s, int line, const char * file);
-
+gboolean		heartbeat_on_congestion(void);
 extern int		send_cluster_msg(struct ha_msg*msg);
 extern void		cleanexit(int exitcode);
 extern void		check_auth_change(struct sys_config *);

@@ -1,4 +1,4 @@
-/* $Id: config.c,v 1.136 2005/01/11 04:57:59 alan Exp $ */
+/* $Id: config.c,v 1.137 2005/01/20 19:17:49 gshi Exp $ */
 /*
  * Parse various heartbeat configuration files...
  *
@@ -957,6 +957,9 @@ add_node(const char * value, int nodetype)
 	hip->local_lastupdate = time_longclock();
 	hip->track.nmissing = 0;
 	hip->track.last_seq = NOSEQUENCE;
+	hip->track.ackseq = 0;
+	srand(time(NULL));
+	hip->track.ack_trigger = rand()%ACK_MSG_DIV;
 	hip->nodetype = nodetype;
 	add_nametable(hip->nodename, (char*)hip);
 	return(HA_OK);
@@ -2072,6 +2075,10 @@ set_corerootdir(const char* value)
 
 /*
  * $Log: config.c,v $
+ * Revision 1.137  2005/01/20 19:17:49  gshi
+ * added flow control, if congestion happens, clients will be paused while heartbeat messages can still go through
+ * congestion is denfined as (last_send_out_seq_number - last_ack_seq_number) is greater than half of message queue.
+ *
  * Revision 1.136  2005/01/11 04:57:59  alan
  * Put back in the ability to configure from a string as an explicit operation,
  * and also the ability to configure from a file.  These are both

@@ -1,4 +1,4 @@
-/* $Id: hb_api_core.h,v 1.8 2004/10/08 19:53:13 gshi Exp $ */
+/* $Id: hb_api_core.h,v 1.9 2005/01/20 19:17:50 gshi Exp $ */
 /*
  * hb_api_core_h: Internal definitions and functions for the heartbeat API
  *
@@ -142,6 +142,8 @@ void process_api_msgs(fd_set* inputs, fd_set* exceptions);
 int  compute_msp_fdset(fd_set* set, int fd1, int fd2);
 gboolean api_audit_clients(gpointer p);
 client_proc_t*	find_client(const char * fromid, const char * pid);
+gboolean	all_clients_resume(void);
+gboolean	all_clients_pause(void);
 
 /* Return code for API query handlers */
 

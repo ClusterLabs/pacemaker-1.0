@@ -1,4 +1,4 @@
-/* $Id: ha_msg.h,v 1.45 2005/01/18 20:33:04 andrew Exp $ */
+/* $Id: ha_msg.h,v 1.46 2005/01/20 19:17:50 gshi Exp $ */
 /*
  * Intracluster message object (struct ha_msg)
  *
@@ -169,7 +169,8 @@ extern struct fieldtypefuncs_s fieldtypefuncs[4];
 #define F_RTYPE		"rtype"		/* Resource type */
 #define F_ORDERSEQ	"oseq"		/* Order Sequence number */
 #define F_DT		"dt"		/* Dead time field for heartbeat*/
-#define F_CRM_DATA	"crm_xml"
+#define F_ACKSEQ	"ackseq"	/* The seq number this msg is acking*/
+#define F_CRM_DATA	"crm_xml" 
 
 	/* Message types */
 #define	T_STATUS	"status"	/* Status (heartbeat) */
@@ -193,6 +194,7 @@ extern struct fieldtypefuncs_s fieldtypefuncs[4];
 #define	T_REXMIT	NOSEQ_PREFIX "rexmit"    	 /* Rexmit request    */
 #define	T_NAKREXMIT	NOSEQ_PREFIX "nak_rexmit"	/* NAK Rexmit request */
 #define	T_NS_STATUS	NOSEQ_PREFIX "st"		/* ping status        */
+#define T_ACKMSG	NOSEQ_PREFIX "ackmsg"		/* ACK message*/
 
 /* Messages associated with nice_failback */
 #define T_STARTING      "starting"      /* Starting Heartbeat		*/

@@ -1,4 +1,4 @@
-/* $Id: hb_api.c,v 1.126 2005/01/18 20:33:03 andrew Exp $ */
+/* $Id: hb_api.c,v 1.127 2005/01/20 19:17:49 gshi Exp $ */
 /*
  * hb_api: Server-side heartbeat API code
  *
@@ -1556,6 +1556,7 @@ api_remove_client_int(client_proc_t* req, const char * reason)
 
 			/* Drop the source - that will destroy the 'chan' */
 			if (client->gsource) {
+
 				G_main_del_IPC_Channel(client->gsource);
 			}
 			
@@ -1808,6 +1809,7 @@ APIclients_input_dispatch(IPC_Channel* chan, gpointer user_data)
 	client_proc_t*	client = user_data;
 	gboolean	ret = TRUE;
 
+
 	if (DEBUGDETAILS) {
 		cl_log(LOG_DEBUG
 		,	"APIclients_input_dispatch() {");
@@ -1847,6 +1849,46 @@ getout:
 }
 
 
+gboolean all_clients_running = TRUE;
+gboolean
+all_clients_pause(void)
+{
+	client_proc_t* client;
+
+	if (!all_clients_running ){
+		return TRUE;
+	}
+	
+	cl_log(LOG_INFO, "all clients are now paused");
+		
+	for (client=client_list; client != NULL; client=client->next) {
+		G_main_IPC_Channel_pause(client->gsource);
+		
+	}	
+	all_clients_running = FALSE;
+	return TRUE;
+}
+
+gboolean
+all_clients_resume(void)
+{
+	client_proc_t* client;
+	
+	if (all_clients_running ){
+		return TRUE;
+	}
+	
+	cl_log(LOG_INFO, "all clients are now resumed");
+	
+	for (client=client_list; client != NULL; client=client->next) {
+		G_main_IPC_Channel_resume(client->gsource);		
+	}	
+	
+	all_clients_running = TRUE;
+	
+	return TRUE;
+}
+
 gboolean
 ProcessAnAPIRequest(client_proc_t*	client)
 {
@@ -1863,8 +1905,7 @@ ProcessAnAPIRequest(client_proc_t*	client)
 	if (!client->chan->ops->is_message_pending(client->chan)) {
 		goto getout;
 	}
-
-
+	
 	/* See if we can read the message */
 	if ((msg = msgfromIPC_noauth(client->chan)) == NULL) {
 

@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.343 2005/01/18 20:33:03 andrew Exp $ */
+/* $Id: heartbeat.c,v 1.344 2005/01/20 19:17:49 gshi Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -271,7 +271,6 @@
 
 #define OPTARGS			"dkMrRsvlC:"
 #define	ONEDAY			(24*60*60)	/* Seconds in a day */
-
 #define REAPER_SIG		0x0001UL
 #define TERM_SIG		0x0002UL
 #define DEBUG_USR1_SIG		0x0004UL
@@ -1830,6 +1829,116 @@ HBDoMsgCallback(const char * type, struct node_info * fromnode
 }
 
 static void
+HBDoMsg_T_ACKMSG(const char * type, struct node_info * fromnode,
+	      TIME_T msgtime, seqno_t seqno, const char * iface, struct ha_msg * msg)
+{
+	const char*	ackseq_str = ha_msg_value(msg, F_ACKSEQ);
+	seqno_t		ackseq;
+	struct msg_xmit_hist* hist = &msghist;
+	
+	if (ackseq_str == NULL||
+	    sscanf(ackseq_str, "%lx", &ackseq) != 1){
+		goto out;
+	}
+
+
+	if (ackseq == fromnode->track.ackseq){
+		/*dup message*/
+		goto out;
+	}
+
+	if (ackseq < hist->ackseq){
+		
+		if (ANYDEBUG){
+			cl_log(LOG_DEBUG, "HBDoMsg_T_ACK:"
+			       "late ackseq message"
+			       "current hist ackseq = %ld"
+			       "ackseq =%ld in this message",
+			       hist->ackseq, ackseq);
+		}
+		goto out;
+	}else if (ackseq > hist->hiseq){
+		
+		if (ANYDEBUG){
+			cl_log(LOG_DEBUG, "HBDoMsg_T_ACK:"
+			       "corrupted ackseq"
+			       "current hiseq =%ld"
+			       "ackseq =%ld in this message",
+			       hist->hiseq, ackseq);			
+		}
+		goto out;
+	}
+	
+	
+	if ( ackseq < fromnode->track.ackseq){
+		if (ANYDEBUG){
+			cl_log(LOG_DEBUG, "HBDoMsg_T_ACK:"
+			       "late ackseq message"
+			       "current fromnode ackseq = %ld"
+			       "ackseq =%ld in this message",
+			       fromnode->track.ackseq, ackseq);
+		}
+		goto out;
+	}
+	
+	fromnode->track.ackseq = ackseq;
+	
+	if (hist->lowest_acknode != NULL &&
+	    strncmp(hist->lowest_acknode->status, 
+		    DEADSTATUS, STATUSLENG) == 0){
+		/* the lowest acked node is dead
+		 * we cannnot count on that node 
+		 * to update our ackseq
+		 */
+		hist->lowest_acknode = NULL;
+	}
+
+	if (hist->lowest_acknode == NULL ||
+	    hist->lowest_acknode == fromnode){
+		/*find the new lowest and update hist->ackseq*/
+		seqno_t	minseq;
+		int	minidx;
+		int	i;
+		
+		minidx = -1;
+		minseq = 0;
+		for (i = 0; i < config->nodecount; i++){
+			struct node_info* hip = &config->nodes[i];
+			
+			if (strncmp(hip->status,DEADSTATUS,STATUSLENG) ==0){
+		
+				if (hist->lowest_acknode == hip){
+					hist->lowest_acknode = NULL;
+				}
+				continue;
+			}
+
+			if (minidx == -1 ||
+			    hip->track.ackseq < minseq){
+				minseq = hip->track.ackseq;
+				minidx = i;
+			}
+		}
+		
+		if (minidx == config->nodecount){
+			cl_log(LOG_ERR, "minidx out of bound"
+			       "minidx=%d",minidx );
+			goto out;
+		}
+		hist->ackseq = minseq;
+		hist->lowest_acknode = &config->nodes[minidx];
+		
+		if (hist->hiseq - hist->ackseq < MAXMSGHIST/2){
+			all_clients_resume();
+		}
+	}
+ out:
+
+	return;
+}
+
+
+static void
 HBDoMsg_T_REXMIT(const char * type, struct node_info * fromnode
 ,	TIME_T msgtime, seqno_t seqno, const char * iface, struct ha_msg * msg)
 {
@@ -1965,19 +2074,6 @@ static void
 update_client_status_msg_list(struct node_info* thisnode)
 {
 	struct seqtrack *	t = &thisnode->track;
-	int			j;
-	
-	/*determine the new first missing seq*/
-	t->first_missing_seq = 0;
-	for (j=0; j < t->nmissing; ++j) {
-		if (t->seqmissing[j] != NOSEQUENCE){
-			if (t->first_missing_seq == 0 ||
-			    t->seqmissing[j] < t->first_missing_seq){
-				
-				t->first_missing_seq = t->seqmissing[j];
-			}				
-		}
-	}
 		
 	if(t->client_status_msg_queue){			
 		
@@ -2033,6 +2129,73 @@ update_client_status_msg_list(struct node_info* thisnode)
 	}
 
 	return;
+}
+static void
+send_ack_if_needed(struct node_info* thisnode, seqno_t seq)
+{
+	struct ha_msg*	hmsg;
+	char		seq_str[32];
+	struct seqtrack* t = &thisnode->track;
+        seqno_t		fm_seq = t->first_missing_seq;
+	
+	if ( (fm_seq != 0 && seq > fm_seq) ||
+	     seq % ACK_MSG_DIV != thisnode->track.ack_trigger){
+		/*no need to send ACK */
+		return;
+	}	
+
+	if ((hmsg = ha_msg_new(0)) == NULL) {
+		cl_log(LOG_ERR, "no memory for " T_ACKMSG);
+		return;
+	}
+	
+	sprintf(seq_str, "%lx",seq);
+	
+	if (ha_msg_add(hmsg, F_TYPE, T_ACKMSG) == HA_OK &&
+	    ha_msg_add(hmsg, F_TO, thisnode->nodename) == HA_OK &&
+	    ha_msg_add(hmsg, F_ACKSEQ,seq_str) == HA_OK) {
+		
+		if (send_cluster_msg(hmsg) != HA_OK) {
+			cl_log(LOG_ERR, "cannot send " T_ACKMSG
+			       " request to %s", thisnode->nodename);
+		}
+	}else{
+		ha_msg_del(hmsg);
+		cl_log(LOG_ERR, "Cannot create " T_REXMIT " message.");
+	}
+	
+	return;
+}
+
+
+static void
+send_ack_if_necessary(const struct ha_msg* m)
+{
+	const char*	fromnode = ha_msg_value(m, F_ORIG);
+	int		uuidlen;	
+	const char*	fromuuid = cl_get_binary(m, F_ORIGUUID, &uuidlen);
+	const char*	seq_str = ha_msg_value(m, F_SEQ);
+	seqno_t		seq;
+	struct	node_info*	thisnode = NULL;
+	
+	
+	if (fromnode == NULL ||
+	    seq_str == NULL ||
+	    sscanf( seq_str, "%lx", &seq) != 1){		
+		return;
+	}
+	
+	thisnode = lookup_tables(fromnode, fromuuid);
+	if (thisnode == NULL){
+		
+		cl_log(LOG_ERR, "node %s not found "
+		       "bad message",
+		       fromnode);
+		return;		
+	}
+
+	send_ack_if_needed(thisnode, seq);
+	
 }
 
 /*
@@ -2193,8 +2356,8 @@ process_clustermsg(struct ha_msg* msg, struct link* lnk)
 		}
 		break;
 	}
-
-
+	
+	
 	thisnode->track.last_iface = iface;
 
 	if (HBDoMsgCallback(type, thisnode, msgtime, seqno, iface, msg)) {
@@ -3218,6 +3381,7 @@ main(int argc, char * argv[], char **envp)
 	hb_register_msg_callback(T_STATUS,	HBDoMsg_T_STATUS);
 	hb_register_msg_callback(T_NS_STATUS,	HBDoMsg_T_STATUS);
 	hb_register_msg_callback(T_QCSTATUS,	HBDoMsg_T_QCSTATUS);
+	hb_register_msg_callback(T_ACKMSG,	HBDoMsg_T_ACKMSG);
 
 	if (init_set_proc_title(argc, argv, envp) < 0) {
 		cl_log(LOG_ERR, "Allocation of proc title failed.");
@@ -3915,8 +4079,6 @@ should_drop_message(struct node_info * thisnode, const struct ha_msg *msg,
 	if (cgen != NULL) {
 		sscanf(cgen, "%lx", &gen);
 	}
-
-
 	
 	touuid= cl_get_binary(msg, F_TOUUID, &touuid_len);
 	
@@ -3989,6 +4151,7 @@ should_drop_message(struct node_info * thisnode, const struct ha_msg *msg,
 	if (t->last_seq == NOSEQUENCE || seq == (t->last_seq+1)) {
 		t->last_seq = seq;
 		t->last_iface = iface;
+		send_ack_if_necessary(msg);
 		return (IsToUs ? KEEPIT : DROPIT);
 	}else if (seq == t->last_seq) {
 		/* Same as last-seen packet -- very common case */
@@ -4079,6 +4242,9 @@ should_drop_message(struct node_info * thisnode, const struct ha_msg *msg,
 	if (ishealedpartition || isrestart) {
 		const char *	sts;
 		TIME_T	newts = 0L;
+
+		send_ack_if_necessary(msg);
+		
 		if ((sts = ha_msg_value(msg, F_TIME)) == NULL
 		||	sscanf(sts, TIME_X, &newts) != 1 || newts == 0L) {
 			/* Toss it.  No valid timestamp */
@@ -4193,7 +4359,7 @@ is_lost_packet(struct node_info * thisnode, seqno_t seq)
 {
 	struct seqtrack *	t = &thisnode->track;
 	int			j;
-
+	int			ret = 0;
 	
 	for (j=0; j < t->nmissing; ++j) {
 		/* Is this one of our missing packets? */
@@ -4204,7 +4370,7 @@ is_lost_packet(struct node_info * thisnode, seqno_t seq)
 			if (j == (t->nmissing-1)) {
 				t->nmissing --;
 			}
-
+			
 			/* Swallow up found packets */
 			while (t->nmissing > 0
 			&&	t->seqmissing[t->nmissing-1] == NOSEQUENCE) {
@@ -4213,11 +4379,54 @@ is_lost_packet(struct node_info * thisnode, seqno_t seq)
 			if (t->nmissing == 0) {
 				cl_log(LOG_INFO, "No pkts missing from %s!"
 				,	thisnode->nodename);
+				t->first_missing_seq = 0;
 			}
-			return 1;
+			ret = 1;
+			goto out;
 		}
 	}	
-	return 0;
+	
+ out:
+	if (ret && seq == t->first_missing_seq){
+		/*determine the new first missing seq*/
+		seqno_t old_missing_seq = t->first_missing_seq;
+		seqno_t lastseq_to_ack;
+		seqno_t x;
+		seqno_t trigger = thisnode->track.ack_trigger;
+		seqno_t ack_seq;
+		t->first_missing_seq = 0;
+		for (j=0; j < t->nmissing; ++j) {
+			if (t->seqmissing[j] != NOSEQUENCE){
+				if (t->first_missing_seq == 0 ||
+				    t->seqmissing[j] < t->first_missing_seq){					
+					t->first_missing_seq = t->seqmissing[j];
+				}				
+			}
+		}		
+		
+		if (t->first_missing_seq == 0){
+			lastseq_to_ack = t->last_seq;			
+		}else {
+			lastseq_to_ack = t->first_missing_seq - 1 ;
+		}
+		
+
+		x = lastseq_to_ack % ACK_MSG_DIV;
+		if (x >= trigger ){
+			ack_seq = lastseq_to_ack/ACK_MSG_DIV*ACK_MSG_DIV + trigger;
+		}else{
+			ack_seq = (lastseq_to_ack/ACK_MSG_DIV -1)*ACK_MSG_DIV + trigger;
+		}
+		
+		if (ack_seq >= old_missing_seq){
+			send_ack_if_needed(thisnode, ack_seq);
+		}
+		
+	}else if (t->first_missing_seq != 0){
+		request_msg_rexmit(thisnode, t->first_missing_seq, t->first_missing_seq);
+	}
+	return ret;
+	
 }
 
 
@@ -4308,9 +4517,11 @@ static void
 init_xmit_hist (struct msg_xmit_hist * hist)
 {
 	int	j;
-
+	
 	hist->lastmsg = MAXMSGHIST-1;
 	hist->hiseq = hist->lowseq = 0;
+	hist->ackseq = 0;
+	hist->lowest_acknode = NULL;
 	for (j=0; j < MAXMSGHIST; ++j) {
 		hist->msgq[j] = NULL;
 		hist->seqnos[j] = 0;
@@ -4401,6 +4612,17 @@ audit_xmit_hist(void)
 #endif
 
 
+gboolean
+heartbeat_on_congestion(void)
+{
+	
+	struct msg_xmit_hist* hist = &msghist;
+	
+	return hist->hiseq - hist->ackseq > MAXMSGHIST/2;
+	
+}
+
+
 /* Add a packet to a channel's transmit history */
 static void
 add2_xmit_hist (struct msg_xmit_hist * hist, struct ha_msg* msg
@@ -4441,6 +4663,11 @@ add2_xmit_hist (struct msg_xmit_hist * hist, struct ha_msg* msg
 	hist->lastrexmit[slot] = 0L;
 	hist->lastmsg = slot;
 	AUDITXMITHIST;
+	
+	if (hist->hiseq - hist->ackseq > MAXMSGHIST/2){
+		all_clients_pause();
+	}
+
 }
 
 
@@ -4765,6 +4992,10 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.344  2005/01/20 19:17:49  gshi
+ * added flow control, if congestion happens, clients will be paused while heartbeat messages can still go through
+ * congestion is denfined as (last_send_out_seq_number - last_ack_seq_number) is greater than half of message queue.
+ *
  * Revision 1.343  2005/01/18 20:33:03  andrew
  * Appologies for the top-level commit, one change necessitated another which
  *   exposed some bugs... etc etc
