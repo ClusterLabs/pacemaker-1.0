@@ -431,8 +431,8 @@ hb_api_signoff(struct ll_cluster* cinfo)
 	pi = (llc_private_t*)cinfo->ll_cluster_private;
 
 	if (!pi->SignedOn) {
-		ha_api_log(LOG_ERR, "not signed on");
-		return HA_FAIL;
+		/* Already signed off... No value in returning an error... */
+		return HA_OK;
 	}
 
 	if ((request = hb_api_boilerplate(API_SIGNOFF)) == NULL) {
