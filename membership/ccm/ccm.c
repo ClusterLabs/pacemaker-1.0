@@ -1,4 +1,4 @@
-/* $Id: ccm.c,v 1.62 2005/02/24 00:27:24 gshi Exp $ */
+/* $Id: ccm.c,v 1.63 2005/02/24 20:46:29 gshi Exp $ */
 /* 
  * ccm.c: Consensus Cluster Service Program 
  *
@@ -145,7 +145,7 @@ static int ccm_send_newnode_to_leader(ll_cluster_t *hb, ccm_info_t *info,
 static void send_mem_list_to_all(ll_cluster_t *hb, ccm_info_t *info, 
 		char *cookie);
 static int ccm_send_to_all(ll_cluster_t *hb, ccm_info_t *info, char *memlist, 
-		char *newcookie, void *uptime_list, size_t uptime_size);
+		char *newcookie, int *uptime_list, size_t uptime_size);
 static void ccm_fill_update_table(ccm_info_t *info, 
 		ccm_update_t *update_table, const void *uptime_list);
 
@@ -4277,8 +4277,8 @@ static void ccm_state_wait_for_mem_list(enum ccm_type ccm_msg_type,
 			ccm_info_t *info)
 {
 	const char *orig, *trans, *uptime, *cookie, *memlist;
-	const void *uptime_list;
-	size_t uptime_size;
+	int uptime_list[MAXNODE];
+	size_t uptime_size = MAXNODE;
 	uint trans_majorval=0,trans_minorval=0, uptime_val;
 	uint curr_major, curr_minor;
 	int repeat;
@@ -4356,13 +4356,15 @@ static void ccm_state_wait_for_mem_list(enum ccm_type ccm_msg_type,
 						"no membership list ");
 				return;
 			}
-			if ((uptime_list = cl_get_binary(reply, CCM_UPTIMELIST,
-						&uptime_size)) ==NULL){
-				
-				cl_log(LOG_WARNING, "ccm_state_wait_for_mem_list: "
-						"no uptime list ");
+
+			
+			if (cl_msg_get_list_int(reply,CCM_UPTIMELIST, 
+						uptime_list, &uptime_size) != HA_OK){
+				cl_log(LOG_ERR," ccm_state_new_node_wait_for_mem_list:"
+				       "geting uptie_list failed");
 				return;
 			}
+
 			ccm_fill_memlist_from_str(info, memlist);
 			CCM_SET_MAJORTRANS(info, curr_major+1);
 			CCM_RESET_MINORTRANS(info);
@@ -4646,7 +4648,7 @@ static void send_mem_list_to_all(ll_cluster_t *hb,
 
 static int ccm_send_to_all(ll_cluster_t *hb, ccm_info_t *info, 
 		char *memlist, char *newcookie,
-		void *uptime_list, size_t uptime_size)
+		int *uptime_list, size_t uptime_size)
 {  
 	struct ha_msg *m;
 	char activeproto[3];
@@ -4670,14 +4672,14 @@ static int ccm_send_to_all(ll_cluster_t *hb, ccm_info_t *info,
 					CCM_GET_MINORTRANS(info));
 
 	cookie = CCM_GET_COOKIE(info);
-
+	
 	if ((ha_msg_add(m, F_TYPE, ccm_type2string(CCM_TYPE_MEM_LIST)) 
 							== HA_FAIL)
 		||(ha_msg_add(m, CCM_MAJORTRANS, majortrans) == HA_FAIL)
 		||(ha_msg_add(m, CCM_MINORTRANS, minortrans) == HA_FAIL)		
 		||(ha_msg_add(m, CCM_COOKIE, cookie) == HA_FAIL)
 		||(ha_msg_add(m, CCM_MEMLIST, memlist) == HA_FAIL)
-		||(ha_msg_addbin(m, CCM_UPTIMELIST, uptime_list, uptime_size)
+	    ||(cl_msg_add_list_int(m, CCM_UPTIMELIST, uptime_list, uptime_size)
 			 == HA_FAIL)
 		||(!newcookie? FALSE: (ha_msg_add(m, CCM_NEWCOOKIE, newcookie)
 							==HA_FAIL))) {
@@ -4697,8 +4699,8 @@ static void ccm_state_new_node_wait_for_mem_list(enum ccm_type ccm_msg_type,
 			ccm_info_t *info)
 {
     	const char *orig,  *trans, *uptime, *memlist, *cookie;
-	const void *uptime_list;
-	size_t uptime_size;
+	int uptime_list[MAXNODE];
+	size_t uptime_size = MAXNODE;
 	uint  trans_majorval=0,trans_minorval=0, uptime_val;
 	uint  curr_major, curr_minor;
 	int repeat;
@@ -4755,7 +4757,7 @@ static void ccm_state_new_node_wait_for_mem_list(enum ccm_type ccm_msg_type,
 	}
     	
 	switch(ccm_msg_type){
-
+		
 		case CCM_TYPE_MEM_LIST:
 			curr_major = CCM_GET_MAJORTRANS(info);
 			curr_minor = CCM_GET_MINORTRANS(info);
@@ -4774,8 +4776,14 @@ static void ccm_state_new_node_wait_for_mem_list(enum ccm_type ccm_msg_type,
 						"no membership list ");
 				return;
 			}
-			uptime_list = cl_get_binary(reply,
-					CCM_UPTIMELIST, &uptime_size);
+			
+			if (cl_msg_get_list_int(reply,CCM_UPTIMELIST, 
+						uptime_list, &uptime_size) != HA_OK){
+				cl_log(LOG_ERR," ccm_state_new_node_wait_for_mem_list:"
+				       "geting uptie_list failed");
+				return;
+			}
+			
 			ccm_fill_memlist_from_str(info, memlist);
 			if(ccm_get_membership_index(info, 
 					CCM_GET_MYNODE_ID(info)) == -1){
