@@ -10,6 +10,7 @@
            #define LHAMEMBERISMEMBER_FALSE		2
 
 /* enums for column LHAMemberLastChange */
+           #define LHAMEMBERLASTCHANGE_UNDEFINED		0
            #define LHAMEMBERLASTCHANGE_NOCHANGE		1
            #define LHAMEMBERLASTCHANGE_JOINED		2
            #define LHAMEMBERLASTCHANGE_LEFT		3

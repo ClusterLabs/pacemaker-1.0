@@ -56,7 +56,7 @@ initialize_table_LHAIFStatusTable(void)
                                              LHAIFStatusTable_handler,
                                              LHAIFStatusTable_oid,
                                              OID_LENGTH(LHAIFStatusTable_oid),
-                                             HANDLER_CAN_RWRITE);
+                                             HANDLER_CAN_RONLY);
             
     if (!my_handler || !table_info || !iinfo) {
         snmp_log(LOG_ERR, "malloc failed in initialize_table_LHAIFStatusTable");
@@ -67,14 +67,13 @@ initialize_table_LHAIFStatusTable(void)
      * Setting up the table's definition
      */
     netsnmp_table_helper_add_indexes(table_info,
-                                  ASN_OCTET_STR, /* index: LHANodeName */
+                                  ASN_INTEGER, /* index: LHANodeIndex */
                                   ASN_INTEGER, /* index: LHAIFIndex */
-                                  ASN_OCTET_STR, /* index: LHAIFName */
                              0);
 
     /** Define the minimum and maximum accessible columns.  This
         optimizes retrival. */
-    table_info->min_column = 3;
+    table_info->min_column = 2;
     table_info->max_column = 3;
 
     /* iterator access routines */
@@ -184,11 +183,9 @@ LHAIFStatusTable_get_next_data_point(void **my_loop_context, void **my_data_cont
     vptr = put_index_data;
     info = (struct hb_ifinfo *) g_ptr_array_index(gIFInfo, i);
 
-    snmp_set_var_value(vptr, (u_char *) info->node, strlen(info->node) + 1);
+    snmp_set_var_value(vptr, (u_char *) &(info->nodeid), sizeof(size_t));
     vptr = vptr->next_variable;
     snmp_set_var_value(vptr, (u_char *) &(info->id), sizeof(size_t));
-    vptr = vptr->next_variable;
-    snmp_set_var_value(vptr, (u_char *) info->name, strlen(info->name) + 1);
     vptr = vptr->next_variable;
 
     i++;
@@ -251,11 +248,18 @@ LHAIFStatusTable_handler(
                to be dealt with here */
             case MODE_GET:
                 switch(table_info->colnum) {
-                    case COLUMN_LHAIFSTATUS:
+                    case COLUMN_LHAIFNAME:
                         snmp_set_var_typed_value(var, 
 				ASN_OCTET_STR, 
-				(u_char *) entry->status, 
-				strlen(entry->status) + 1);
+				(u_char *) entry->name, 
+				strlen(entry->name) + 1);
+                        break;
+
+                    case COLUMN_LHAIFSTATUS:
+                        snmp_set_var_typed_value(var, 
+				ASN_INTEGER, 
+				(u_char *) & entry->status, 
+				sizeof(entry->status));
                         break;
 
                     default:

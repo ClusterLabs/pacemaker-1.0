@@ -56,7 +56,7 @@ initialize_table_LHAResourceGroupTable(void)
                                              LHAResourceGroupTable_handler,
                                              LHAResourceGroupTable_oid,
                                              OID_LENGTH(LHAResourceGroupTable_oid),
-                                             HANDLER_CAN_RWRITE);
+                                             HANDLER_CAN_RONLY);
             
     if (!my_handler || !table_info || !iinfo) {
         snmp_log(LOG_ERR, "malloc failed in initialize_table_LHAResourceGroupTable");
@@ -67,13 +67,12 @@ initialize_table_LHAResourceGroupTable(void)
      * Setting up the table's definition
      */
     netsnmp_table_helper_add_indexes(table_info,
-                                  ASN_OCTET_STR, /* index: LHAResourceGroupMaster */
                                   ASN_INTEGER, /* index: LHAResourceGroupIndex */
                              0);
 
     /** Define the minimum and maximum accessible columns.  This
         optimizes retrival. */
-    table_info->min_column = 3;
+    table_info->min_column = 2;
     table_info->max_column = 4;
 
     /* iterator access routines */
@@ -186,11 +185,7 @@ LHAResourceGroupTable_get_next_data_point(void **my_loop_context, void **my_data
     rsinfo_get_int_value(RESOURCE_STATUS, i, &status);
     info->status = status;
 
-    snmp_set_var_value(vptr, (u_char *) info->master, 
-	    strlen(info->master) + 1);
-    vptr = vptr->next_variable;
-
-    snmp_set_var_value(vptr, (u_char *) &info->index, sizeof(size_t));
+    snmp_set_var_value(vptr, (u_char *) &info->id, sizeof(size_t));
     vptr = vptr->next_variable;
 
     i++;
@@ -212,7 +207,6 @@ LHAResourceGroupTable_handler(
     netsnmp_table_request_info *table_info;
     netsnmp_variable_list *var;
 
-    int status = 0;
     struct hb_rsinfo * entry;
     
     for(request = requests; request; request = request->next) {
@@ -255,6 +249,13 @@ LHAResourceGroupTable_handler(
                to be dealt with here */
             case MODE_GET:
                 switch(table_info->colnum) {
+                    case COLUMN_LHARESOURCEGROUPMASTER:
+                        snmp_set_var_typed_value(var, 
+				ASN_INTEGER, 
+				(u_char *) & entry->masternodeid,
+				sizeof(entry->masternodeid));
+                        break;
+
                     case COLUMN_LHARESOURCEGROUPRESOURCES:
                         snmp_set_var_typed_value(var, 
 				ASN_OCTET_STR, 
@@ -264,9 +265,9 @@ LHAResourceGroupTable_handler(
 
 		    case COLUMN_LHARESOURCEGROUPSTATUS:
 			snmp_set_var_typed_value(var,
-				ASN_INTEGER,
+				ASN_UNSIGNED,
 				(u_char *) & entry->status,
-				sizeof(status));
+				sizeof(entry->status));
 			break;
 
                     default:

@@ -24,9 +24,11 @@
 #ifndef __hasubagent_h__
 #define __hasubagent_h__
 
+#include <stdint.h>
 #include <glib.h>
 #include "saf/ais.h"
 #include "snmp-config-resolve.h"
+#include <uuid/uuid.h>
 
 #define CACHE_TIME_OUT 5
 
@@ -43,43 +45,48 @@ typedef enum lha_attribute {
 	/* LHA_CLUSTERINFO stats */
 	TOTAL_NODE_COUNT,
 	LIVE_NODE_COUNT,
+	RESOURCE_GROUP_COUNT,
+	CURRENT_NODE_ID,
 
 	/* LHA_RESOURCEINFO stats */
 	RESOURCE_STATUS,
 } lha_attribute_t;
 
 
-int get_int_value(lha_group_t group, lha_attribute_t attr, size_t index, int32_t * value);
+int get_int_value(lha_group_t group, lha_attribute_t attr, size_t index, uint32_t * value);
 
 int get_str_value(lha_group_t group, lha_attribute_t attr, size_t index, char * * value);
 
-int clusterinfo_get_int_value(lha_attribute_t attr, size_t index, int32_t * value);
+int clusterinfo_get_int_value(lha_attribute_t attr, size_t index, uint32_t * value);
 
-int rsinfo_get_int_value(lha_attribute_t attr, size_t index, int32_t * value);
+int rsinfo_get_int_value(lha_attribute_t attr, size_t index, uint32_t * value);
 
 int hbconfig_get_str_value(const char * attr, char * * value);
 
 GPtrArray * get_hb_info(lha_group_t group);
 
 struct hb_nodeinfo {
+	size_t id;
 	char * name;
-	char * type;
-	char * status;
+	uint32_t type;
+	uint32_t status;
+	size_t ifcount;
+	uuid_t uuid;
 };
 
 struct hb_ifinfo {
-	size_t nodeid;
 	size_t id;
+	size_t nodeid;
 	char * name;
 	char * node;
-	char * status;
+	uint32_t status;
 };
 
 struct hb_rsinfo {
-    	char * master;
-	int    index;
+	size_t id;
+	size_t masternodeid;
 	char * resource;
-	int    status;
+	uint32_t status;
 };
 
 #endif /* __hasubagent_h__ */

@@ -56,7 +56,7 @@ initialize_table_LHAMembershipTable(void)
                                              LHAMembershipTable_handler,
                                              LHAMembershipTable_oid,
                                              OID_LENGTH(LHAMembershipTable_oid),
-                                             HANDLER_CAN_RWRITE);
+                                             HANDLER_CAN_RONLY);
             
     if (!my_handler || !table_info || !iinfo) {
         snmp_log(LOG_ERR, "malloc failed in initialize_table_LHAMembershipTable");

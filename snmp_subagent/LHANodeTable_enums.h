@@ -5,4 +5,16 @@
 #ifndef LHANODETABLE_ENUMS_H
 #define LHANODETABLE_ENUMS_H
 
+/* enums for column LHANodeType */
+           #define LHANODETYPE_UNKNOWN		0
+           #define LHANODETYPE_NORMAL		1
+           #define LHANODETYPE_PING		2
+
+/* enums for column LHANodeStatus */
+           #define LHANODESTATUS_UNKNOWN	0
+           #define LHANODESTATUS_INIT		1
+           #define LHANODESTATUS_UP		2
+           #define LHANODESTATUS_ACTIVE		3
+           #define LHANODESTATUS_DEAD		4
+
 #endif /* LHANODETABLE_ENUMS_H */

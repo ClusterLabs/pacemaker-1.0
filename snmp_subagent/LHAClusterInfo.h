@@ -7,6 +7,8 @@
 
 /* function declarations */
 void init_LHAClusterInfo(void);
+Netsnmp_Node_Handler handle_LHAResourceGroupCount;
+Netsnmp_Node_Handler handle_LHACurrentNodeID;
 Netsnmp_Node_Handler handle_LHALiveNodeCount;
 Netsnmp_Node_Handler handle_LHATotalNodeCount;
 

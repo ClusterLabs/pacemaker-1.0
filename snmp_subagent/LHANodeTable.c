@@ -73,8 +73,8 @@ initialize_table_LHANodeTable(void)
 
     /** Define the minimum and maximum accessible columns.  This
         optimizes retrival. */
-    table_info->min_column = COLUMN_LHANODENAME;
-    table_info->max_column = COLUMN_LHANODESTATUS;
+    table_info->min_column = 2;
+    table_info->max_column = 6;
 
     /* iterator access routines */
     iinfo->get_first_data_point = LHANodeTable_get_first_data_point;
@@ -136,7 +136,7 @@ LHANodeTable_get_first_data_point(void **my_loop_context, void **my_data_context
     if (gNodeInfo && gNodeInfo->len == 0) 
 	return NULL;
 
-    *my_loop_context = 0;
+    *my_loop_context = NULL;
     return LHANodeTable_get_next_data_point(my_loop_context,
 	    			my_data_context,
 	    			put_index_data,
@@ -156,22 +156,28 @@ LHANodeTable_get_next_data_point(void **my_loop_context, void **my_data_context,
                          netsnmp_variable_list *put_index_data,
                          netsnmp_iterator_info *mydata)
 {
-
-    size_t i;
+    static size_t i;
     netsnmp_variable_list *vptr;
+    struct hb_nodeinfo * info;
 
-    i = (size_t) *my_loop_context;
+    if (*my_loop_context != NULL) {
+	i = *((size_t *) *my_loop_context);
+    } else {
+	i = 0;
+    }
 
     if (gNodeInfo && i >= gNodeInfo->len) 
 	return NULL;
 
     vptr = put_index_data;
+    info = (struct hb_nodeinfo *) g_ptr_array_index(gNodeInfo, i);
     
-    snmp_set_var_value(vptr, (u_char *) &i, sizeof(size_t));
+    snmp_set_var_value(vptr, (u_char *) & info->id, sizeof(size_t));
     vptr = vptr->next_variable;
 
-    *my_data_context = (void *) g_ptr_array_index(gNodeInfo, i);
-    *my_loop_context = (void *) ++i;
+    i++;
+    *my_data_context = (void *) info;
+    *my_loop_context = (void *) &i;
 
     return put_index_data;
 }
@@ -237,17 +243,32 @@ LHANodeTable_handler(
 
                     case COLUMN_LHANODETYPE:
                         snmp_set_var_typed_value(var, 
-				ASN_OCTET_STR, 
-				(u_char *) (entry->type), 
-				strlen(entry->type) + 1);
+				ASN_INTEGER, 
+				(u_char *) & entry->type, 
+				sizeof(entry->type));
                         break;
 
                     case COLUMN_LHANODESTATUS:
                         snmp_set_var_typed_value(var, 
-				ASN_OCTET_STR, 
-				(u_char *) (entry->status), 
-				strlen(entry->status) + 1);
+				ASN_INTEGER, 
+				(u_char *) & entry->status, 
+				sizeof(entry->status));
                         break;
+
+                    case COLUMN_LHANODEUUID:
+                        snmp_set_var_typed_value(var, 
+				ASN_OCTET_STR, 
+				(u_char *) entry->uuid, 
+				16);
+                        break;
+
+                    case COLUMN_LHANODEIFCOUNT:
+                        snmp_set_var_typed_value(var, 
+				ASN_COUNTER, 
+				(u_char *) & entry->ifcount, 
+				sizeof(entry->ifcount));
+                        break;
+
 
                     default:
                         /** We shouldn't get here */

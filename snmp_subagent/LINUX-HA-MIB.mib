@@ -79,11 +79,11 @@ LinuxHA	MODULE-IDENTITY
 --  LHATrapTable	      OBJECT IDENTIFIER ::= { LinuxHA 900 }
 
 LHAUUIDString ::= TEXTUAL-CONVENTION
-    DISPLAY-HINT "f28ad1d9-e3fb-4fe8-bedb-43cc23fb13d5"
+    DISPLAY-HINT "4x-2x-2x-2x-4x2x"
     STATUS       current
     DESCRIPTION
     	"A string that represents a UUID"
-    SYNTAX       OCTET STRING (SIZE (36))
+    SYNTAX       OCTET STRING (SIZE (16))
 
 LHAClusterInfo		OBJECT IDENTIFIER ::= { LinuxHA 1 }
 
@@ -314,20 +314,13 @@ LHAResourceGroupIndex OBJECT-TYPE
     ::= { LHAResourceGroupEntry 1 }
 
 LHAResourceGroupMaster OBJECT-TYPE
-    SYNTAX	DisplayString
-    MAX-ACCESS	not-accessible
+    SYNTAX	Integer32 (0..65535)
+    MAX-ACCESS	read-only
     STATUS	current
     DESCRIPTION
-	"The master node of this resource group.  This is normally
-	the node that controls the fail over activity of this
-	resource group.  
-	
-	For example, if the line in haresources is shown as the
-	following:
-	
-		just.linux-ha.org  192.168.1.1 httpd
-
-	then the host name just.linux-ha.org will be the value here."
+	"The master node id of this resource group.  This is 
+	the LHANodeIndex for the master node of this resource
+	group. "
     ::= { LHAResourceGroupEntry 2 }
 
 LHAResourceGroupResources OBJECT-TYPE
@@ -406,7 +399,7 @@ LHAMemberName OBJECT-TYPE
     ::= { LHAMembershipEntry 2 }
 
 LHAMemberAddress OBJECT-TYPE
-    SYNTAX	IpAddress
+    SYNTAX	OCTET STRING (SIZE (64))
     MAX-ACCESS	read-only
     STATUS	current
     DESCRIPTION

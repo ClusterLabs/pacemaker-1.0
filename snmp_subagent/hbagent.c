@@ -92,13 +92,87 @@ int nodestatus_trap(const char * node, const char * status);
 int ifstatus_trap(const char * node, const char * lnk, const char * status);
 int membership_trap(const char * node, SaClmClusterChangesT status);
 
+int ping_membership(int * mem_fd);
+
+uint32_t get_status_value(const char * status, const char * * status_array, uint32_t * value_array);
+
+const char * NODE_STATUS [] = 
+{
+	"",
+	INITSTATUS,
+	UPSTATUS,
+	ACTIVESTATUS,
+	DEADSTATUS,
+	""
+};
+
+static uint32_t NODE_STATUS_VALUE[] = 
+{	
+	LHANODESTATUS_UNKNOWN, 
+	LHANODESTATUS_INIT,
+	LHANODESTATUS_UP,
+	LHANODESTATUS_ACTIVE,
+	LHANODESTATUS_DEAD,
+};
+
+const char * NODE_TYPE [] =
+{
+	UNKNOWNNODE,
+	NORMALNODE,
+	PINGNODE,
+	""
+};
+
+static uint32_t NODE_TYPE_VALUE[] =
+{
+	LHANODETYPE_UNKNOWN,
+	LHANODETYPE_NORMAL,
+	LHANODETYPE_PING
+};
+
+const char * IF_STATUS[] = 
+{
+	"",
+	LINKUP,
+	DEADSTATUS,
+	""
+};
+
+static uint32_t IF_STATUS_VALUE[] = 
+{
+	LHAIFSTATUS_UNKNOWN,
+	LHAIFSTATUS_UP,
+	LHAIFSTATUS_DOWN
+};
+
 static RETSIGTYPE
 stop_server(int a) {
     keep_running = 0;
 }
 
+uint32_t 
+get_status_value(const char * status, const char * * status_array, uint32_t * value_array)
+{
+	int i = 1;
+	int found = 0;
+
+	while (strlen(status_array[i])) {
+		if (strncmp(status, status_array[i], 
+					strlen(status_array[i])) == 0) {
+			found = 1;
+			break;
+		}
+		i++;
+	}
+
+	if (found)
+		return value_array[i];
+	else 
+		return value_array[0];
+}
+
 int 
-get_int_value(lha_group_t group, lha_attribute_t attr, size_t index, int * value)
+get_int_value(lha_group_t group, lha_attribute_t attr, size_t index, uint32_t * value)
 {
 	switch (group) {
 		case LHA_CLUSTERINFO: 
@@ -136,11 +210,12 @@ get_str_value(lha_group_t group, lha_attribute_t attr, size_t index, char * * va
 }
 
 int
-clusterinfo_get_int_value(lha_attribute_t attr, size_t index, int32_t * value)
+clusterinfo_get_int_value(lha_attribute_t attr, size_t index, uint32_t * value)
 {
     int i;
-    const char * status;
+    uint32_t status;
     size_t count;
+    const struct hb_nodeinfo * node;
 
     *value = 0;
 
@@ -160,12 +235,29 @@ clusterinfo_get_int_value(lha_attribute_t attr, size_t index, int32_t * value)
 
 	    for (i = 0; i < gNodeTable->len; i++) {
 		status = ((struct hb_nodeinfo *) g_ptr_array_index(gNodeTable, i))->status;
-		if (strcmp(status, DEADSTATUS) != 0) {
+		if (status != LHANODESTATUS_DEAD || 
+			status != LHANODESTATUS_UNKNOWN ) {
 		    count++;
 		}
 	    }
 
 	    *value = count;
+	    break;
+
+	case RESOURCE_GROUP_COUNT:
+	    *value = gResourceTable->len;
+
+	    break;
+
+	case CURRENT_NODE_ID:
+	    for (i = 0; i < gNodeTable->len; i++) {
+		node = (struct hb_nodeinfo *) g_ptr_array_index(gNodeTable, i);
+		if (strcmp(node->name, myid) == 0) {
+		    *value = node->id;
+		    break;
+		}
+	    }
+
 	    break;
 
 	default:
@@ -184,8 +276,10 @@ hbconfig_get_str_value(const char * attr, char * * value)
     *value  = err;
 
     if ((ret = hb->llc_ops->get_parameter(hb, attr)) == NULL) {
-	cl_log(LOG_ERR, "getting parameter [%s] error.", attr);
+	/*
+	cl_log(LOG_INFO, "getting parameter [%s] error.", attr);
 	cl_log(LOG_INFO, "reason: %s.", hb->llc_ops->errmsg(hb));
+	*/
 
 	/* we have to return HA_OK here otherwise the 
 	   agent code would not progress */
@@ -270,8 +364,6 @@ free_nodetable(void)
 		node = (struct hb_nodeinfo *) g_ptr_array_remove_index_fast(gNodeTable, 0);
 
 		free(node->name);
-		free(node->type);
-		free(node->status);
 		ha_free(node);
 	}
 
@@ -291,7 +383,6 @@ free_iftable(void)
 
 		free(interface->name);
 		free(interface->node);
-		free(interface->status);
 		ha_free(interface);
 	}
 
@@ -310,7 +401,6 @@ free_resourcetable(void)
 
 		resource = (struct hb_rsinfo *) g_ptr_array_remove_index_fast(gResourceTable, 0);
 
-		free(resource->master);
 		free(resource->resource);
 		ha_free(resource);
 
@@ -368,8 +458,8 @@ init_heartbeat(void)
 
 	hb = ll_cluster_new("heartbeat");
 
-	cl_log(LOG_DEBUG, "PID=%ld\n", (long)getpid());
-	cl_log(LOG_DEBUG, "Signing in with heartbeat\n");
+	cl_log(LOG_DEBUG, "PID=%ld", (long)getpid());
+	cl_log(LOG_DEBUG, "Signing in with heartbeat");
 
 	if (hb->llc_ops->signon(hb, LHAAGENTID)!= HA_OK) {
 		cl_log(LOG_ERR, "Cannot sign on with heartbeat\n");
@@ -436,26 +526,26 @@ walk_nodetable(void)
 {
 	const char *name, *type, *status;
 	struct hb_nodeinfo * node;
+	size_t id = 0;
+	uuid_t uuid;
 
 	if (gNodeTable) {
 		free_nodetable();
 	}
 
 	if (hb->llc_ops->init_nodewalk(hb) != HA_OK) {
-		cl_log(LOG_ERR, "Cannot start node walk\n");
-		cl_log(LOG_ERR, "REASON: %s\n", hb->llc_ops->errmsg(hb));
+		cl_log(LOG_ERR, "Cannot start node walk");
+		cl_log(LOG_ERR, "REASON: %s", hb->llc_ops->errmsg(hb));
 		return HA_FAIL;
 	}
 	while((name = hb->llc_ops->nextnode(hb))!= NULL) {
+		id++;
+
 		status = hb->llc_ops->node_status(hb, name);
-
-		cl_log(LOG_DEBUG, "Cluster node: %s: status: %s\n", name 
-		,	status);
-
 		type = hb->llc_ops->node_type(hb, name);
 
-		cl_log(LOG_DEBUG, "Cluster node: %s: type: %s\n", name 
-		,	type);
+		cl_log(LOG_INFO, "node %d: %s, type: %s, status: %s", id, name 
+		,	type, status);
 
 		node = (struct hb_nodeinfo *) ha_malloc(sizeof(struct hb_nodeinfo));
 		if (!node) {
@@ -464,14 +554,24 @@ walk_nodetable(void)
 		}
 
 		node->name =  g_strdup(name);
-		node->type =  g_strdup(type);
-		node->status = g_strdup(status);
+		node->ifcount = 0;
+		node->id = id;
+
+		memset(uuid, 0, sizeof(uuid_t));
+		if (hb->llc_ops->get_uuid_by_name(hb, name, uuid) == HA_FAIL) {
+			cl_log(LOG_DEBUG, "Cannot get the uuid for node: %s", name);
+		}
+		memcpy(node->uuid, uuid, sizeof(uuid_t));
+
+		node->type = get_status_value(type, NODE_TYPE, NODE_TYPE_VALUE);
+		node->status = get_status_value(status, NODE_STATUS,
+				NODE_STATUS_VALUE);
 
 		g_ptr_array_add(gNodeTable, (gpointer *) node); 
 	}
 	if (hb->llc_ops->end_nodewalk(hb) != HA_OK) {
-		cl_log(LOG_ERR, "Cannot end node walk\n");
-		cl_log(LOG_ERR, "REASON: %s\n", hb->llc_ops->errmsg(hb));
+		cl_log(LOG_ERR, "Cannot end node walk");
+		cl_log(LOG_ERR, "REASON: %s", hb->llc_ops->errmsg(hb));
 		return HA_FAIL;
 	}
 	return HA_OK;
@@ -483,7 +583,8 @@ walk_iftable(void)
 	const char *name, * status;
 	struct hb_nodeinfo * node;
 	struct hb_ifinfo * interface;
-	int i, ifcount;
+	int i; 
+	size_t ifcount;
 
 	if (gIFTable) {
 		free_iftable();
@@ -494,16 +595,16 @@ walk_iftable(void)
 		ifcount = 0;
 
 		if (hb->llc_ops->init_ifwalk(hb, node->name) != HA_OK) {
-			cl_log(LOG_ERR, "Cannot start if walk\n");
-			cl_log(LOG_ERR, "REASON: %s\n", hb->llc_ops->errmsg(hb));
+			cl_log(LOG_ERR, "Cannot start if walk");
+			cl_log(LOG_ERR, "REASON: %s", hb->llc_ops->errmsg(hb));
 			return HA_FAIL;
 		}
 
 		while((name = hb->llc_ops->nextif(hb))!=NULL) {
 			status = hb->llc_ops->if_status(hb, node->name, name);
 
-			cl_log(LOG_DEBUG, "node interface: %s: status: %s\n",
-					name,	status);
+			cl_log(LOG_INFO, "node: %s, interface: %s, status: %s",
+					node->name, name, status);
 
 			interface = (struct hb_ifinfo *) ha_malloc(sizeof(struct hb_ifinfo));
 			if (!interface) {
@@ -513,19 +614,21 @@ walk_iftable(void)
 
 			interface->name = g_strdup(name);
 			interface->node = g_strdup(node->name);
-			interface->status = g_strdup(status);
-			interface->nodeid= i;
-			interface->id = ifcount++;
+			interface->nodeid = node->id;
+			interface->id = ++ifcount;
+			interface->status = get_status_value(status,
+					IF_STATUS, IF_STATUS_VALUE);
 
 			g_ptr_array_add(gIFTable, (gpointer *) interface);
 		}
 
+		node->ifcount = ifcount;
+
 		if (hb->llc_ops->end_ifwalk(hb) != HA_OK) {
-			cl_log(LOG_ERR, "Cannot end if walk.\n");
-			cl_log(LOG_ERR, "REASON: %s\n", hb->llc_ops->errmsg(hb));
+			cl_log(LOG_ERR, "Cannot end if walk.");
+			cl_log(LOG_ERR, "REASON: %s", hb->llc_ops->errmsg(hb));
 			return HA_FAIL;
 		}
-
 	}
 	return HA_OK;
 }
@@ -603,7 +706,7 @@ int
 init_membership(void)
 {
 	SaErrorT ret;
-	static SaClmClusterNotificationT * nbuf;
+	static SaClmClusterNotificationT * nbuf = NULL;
 	SaClmHandleT handle;
 
 	SaClmCallbacksT my_callbacks = {
@@ -614,9 +717,12 @@ init_membership(void)
 	};
 
 	if ((ret = saClmInitialize(&handle, &my_callbacks, NULL)) != SA_OK) {
-	    cl_log(LOG_ERR, "saClmInitialize error, errno [%d]\n",ret);
-	    return HA_FAIL;
+	    cl_log(LOG_DEBUG, "Membership service currently not available.  Will try again later. errno [%d]",ret);
+	    return HA_OK;
 	}
+
+	if (nbuf)
+		ha_free(nbuf);
 
         nbuf = (SaClmClusterNotificationT *) ha_malloc(gNodeTable->len *
                                 sizeof (SaClmClusterNotificationT));
@@ -639,6 +745,7 @@ init_membership(void)
 	clm = handle;
 
 	clmInitialized = 1;
+	cl_log(LOG_INFO, "Membership service initialized successfully.");
 
 	return HA_OK;
 }
@@ -648,6 +755,9 @@ get_membership_fd(void)
 {
     	SaErrorT ret;
 	SaSelectionObjectT st;
+
+	if (!clmInitialized)
+		return 0;
 
 	if ((ret = saClmSelectionObjectGet(&clm, &st)) != SA_OK) {
 	    	cl_log(LOG_ERR, "saClmSelectionObjectGet error, errno [%d]\n", ret);
@@ -664,9 +774,15 @@ handle_membership_msg(void)
 
 	if ((ret = saClmDispatch(&clm, SA_DISPATCH_ALL)) != SA_OK) {
 		if (ret == SA_ERR_LIBRARY) {
-		    	cl_log(LOG_ERR, "I am evicted.");
+
+		    	cl_log(LOG_DEBUG, "I am evicted.");
+
+			/* mark the membership as uninitialized and try 
+			   again later. */
 			clmInitialized = 0;
-			return HA_FAIL;
+			free_membershiptable();
+
+			return HA_OK;
 		} else {
 		    cl_log(LOG_WARNING, "saClmDispatch error, ret = [%d]", ret);
 		}
@@ -676,14 +792,31 @@ handle_membership_msg(void)
 }
 
 int
+ping_membership(int * mem_fd)
+{
+	int fd;
+
+	if (clmInitialized) 
+		return 0;
+
+	init_membership();
+	fd = get_membership_fd();
+
+	*mem_fd = fd;
+
+	return HA_OK;
+}
+
+int
 init_resource_table(void)
 {
-    	int rc, i, mcount, found;
+    	int rc, i, count, found;
 	FILE * rcsf;
 	char buf[MAXLINE];
 	char host[MAXLINE], pad[MAXLINE];
 	struct hb_rsinfo * resource;
-	char * node;
+	struct hb_nodeinfo * node;
+	size_t nodeid = 0;
 
 	if (gResourceTable) {
 	    	free_resourcetable();
@@ -694,6 +827,7 @@ init_resource_table(void)
 		return HA_FAIL;
 	}
 
+	count = 0;
 	for (;;) {
 	    	errno = 0;
 		if (fgets(buf, MAXLINE, rcsf) == NULL) {
@@ -714,37 +848,28 @@ init_resource_table(void)
 		    	cl_log(LOG_WARNING, "%s syntax error?", RESOURCE_CFG);
 		};
 
-		resource = (struct hb_rsinfo *) ha_malloc(sizeof(struct hb_rsinfo));
-		if (!resource) {
-			cl_log(LOG_CRIT, "malloc resource info failed.");
-			return HA_FAIL;
-		}
-
-		resource->master = g_strdup(host);
-		resource->resource = g_strdup(pad);
-
-		/* make sure that the master node is in the node list */
+		/* make sure that the host node is in the node list */
 		found = 0;
 		for (i = 0; i < gNodeTable->len; i++) {
-		    	node = ((struct hb_nodeinfo *) g_ptr_array_index(gNodeTable, i))->name;
-			if (strcmp(node, host) == 0) {
+		    	node = (struct hb_nodeinfo *) g_ptr_array_index(gNodeTable, i);
+			if (strcmp(node->name, host) == 0) {
 			    	found = 1;
+				nodeid = node->id;
 			    	break;
 			}
 		}
 		if (!found)
 		    continue;
 
-		mcount = 0;
-		for (i = 0; i < gResourceTable->len; i++) {
-		    	node = ((struct hb_rsinfo *) g_ptr_array_index(gResourceTable, i))->master;
-
-			if (strcmp(node, host) == 0) {
-			    mcount++;
-			}
+		resource = (struct hb_rsinfo *) ha_malloc(sizeof(struct hb_rsinfo));
+		if (!resource) {
+			cl_log(LOG_CRIT, "malloc resource info failed.");
+			return HA_FAIL;
 		}
 
-		resource->index = mcount + 1;
+		resource->id = ++count;
+		resource->masternodeid = nodeid;
+		resource->resource = g_strdup(pad);
 
 		g_ptr_array_add(gResourceTable, (gpointer *) resource);
 	}
@@ -753,9 +878,9 @@ init_resource_table(void)
 }
 
 int 
-rsinfo_get_int_value(lha_attribute_t attr, size_t index, int32_t * value)
+rsinfo_get_int_value(lha_attribute_t attr, size_t index, uint32_t * value)
 {
-    int rc = 0;
+    uint32_t rc = 0;
     char getcmd[MAXLINE];
     char * resource;
 
@@ -769,7 +894,7 @@ rsinfo_get_int_value(lha_attribute_t attr, size_t index, int32_t * value)
 	    resource = ((struct hb_rsinfo *) g_ptr_array_index(gResourceTable, index))->resource;
 	    sprintf(getcmd, HALIB "/ResourceManager status %s", resource);
 	    rc = system(getcmd);
-	    cl_log(LOG_INFO, "resource [%s] status: [%d]", resource, WEXITSTATUS(rc));
+	    /* cl_log(LOG_INFO, "resource [%s] status: [%d]", resource, WEXITSTATUS(rc)); */
 
 	    *value = WEXITSTATUS(rc);
 	    break;
@@ -1039,10 +1164,19 @@ main(int argc, char ** argv)
 	    	cl_log(LOG_ERR, "resource table initialization failure.");
 	}
 
+	ret = init_membership();
+	mem_fd = get_membership_fd();
+
+	if (ret != HA_OK) {
+		cl_log(LOG_ERR, "fatal error during membership initialization. ");
+	}  
+
+	/*
 	if ((ret = init_membership() != HA_OK) ||
 		(mem_fd = get_membership_fd()) <= 0) {
-	    	cl_log(LOG_ERR, "membership initialization failure.  You will not be able to view any membership information in this cluster.");
+	    	cl_log(LOG_DEBUG, "membership initialization failure.  You will not be able to view any membership information in this cluster.");
 	} 
+	*/
 
 	init_LHAClusterInfo();
 	init_LHANodeTable();
@@ -1083,27 +1217,32 @@ main(int argc, char ** argv)
 				numfds = mem_fd + 1;
 		}
 
-		tvp = &tv;
 		tv.tv_sec = DEFAULT_TIME_OUT;
 		tv.tv_usec = 0;
+		tvp = &tv;
 
-		snmp_select_info(&numfds, &fdset, &tv, &block);
+		snmp_select_info(&numfds, &fdset, tvp, &block);
 
 		if (block) {
 			tvp = NULL;
-		} else if (!timerisset(tvp)) {
+		} else if (tvp->tv_sec == 0) {
+			fprintf(stderr, "timer is not set... ");
 		    tvp->tv_sec = DEFAULT_TIME_OUT;
 		    tvp->tv_usec = 0;
 		}
+
+		fprintf(stderr, "tv = %ld, block = %d\n", tvp->tv_sec, block);
 
 		ret = select(numfds, &fdset, 0, 0, tvp);
 
 		if (ret < 0) {
 			/* error */
-			cl_log(LOG_ERR, "select() returned with an error.");
+			cl_log(LOG_ERR, "select() returned with an error. shutting down...");
 			break;
 		} else if (ret == 0) {
 			/* timeout */
+			fprintf(stderr, "select timed out...\n");
+			ping_membership(&mem_fd);
 			snmp_timeout();
 			continue;
 		} 
@@ -1112,14 +1251,14 @@ main(int argc, char ** argv)
 			/* heartbeat */
 
 			if ((ret = handle_heartbeat_msg()) == HA_FAIL) {
-				cl_log(LOG_ERR, "heartbeat stopped. subagent quit.");
+				cl_log(LOG_ERR, "no heartbeat. quit now.");
 				break;
 			}
 		} else  if (clmInitialized && FD_ISSET(mem_fd, &fdset)) {
 		    	/* membership events */
 
 		    	if ((ret = handle_membership_msg()) == HA_FAIL) {
-			    	cl_log(LOG_ERR, "memebership error.");
+			    	cl_log(LOG_ERR, "unrecoverable membership error. quit now.");
 				break;
 			}
 		} else {

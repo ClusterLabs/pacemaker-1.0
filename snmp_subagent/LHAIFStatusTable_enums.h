@@ -5,4 +5,9 @@
 #ifndef LHAIFSTATUSTABLE_ENUMS_H
 #define LHAIFSTATUSTABLE_ENUMS_H
 
+/* enums for column LHAIFStatus */
+           #define LHAIFSTATUS_UNKNOWN		0
+           #define LHAIFSTATUS_UP		1
+           #define LHAIFSTATUS_DOWN		2
+
 #endif /* LHAIFSTATUSTABLE_ENUMS_H */

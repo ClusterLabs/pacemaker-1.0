@@ -36,11 +36,23 @@
 void
 init_LHAClusterInfo(void)
 {
+    static oid LHAResourceGroupCount_oid[] = { 1,3,6,1,4,1,4682,1,4 };
+    static oid LHACurrentNodeID_oid[] = { 1,3,6,1,4,1,4682,1,3 };
     static oid LHALiveNodeCount_oid[] = { 1,3,6,1,4,1,4682,1,2 };
     static oid LHATotalNodeCount_oid[] = { 1,3,6,1,4,1,4682,1,1 };
 
     DEBUGMSGTL(("LHAClusterInfo", "Initializing\n"));
 
+    netsnmp_register_scalar(
+        netsnmp_create_handler_registration("LHAResourceGroupCount", handle_LHAResourceGroupCount,
+                               LHAResourceGroupCount_oid, OID_LENGTH(LHAResourceGroupCount_oid),
+                               HANDLER_CAN_RONLY
+        ));
+    netsnmp_register_scalar(
+        netsnmp_create_handler_registration("LHACurrentNodeID", handle_LHACurrentNodeID,
+                               LHACurrentNodeID_oid, OID_LENGTH(LHACurrentNodeID_oid),
+                               HANDLER_CAN_RONLY
+        ));
     netsnmp_register_scalar(
         netsnmp_create_handler_registration("LHALiveNodeCount", handle_LHALiveNodeCount,
                                LHALiveNodeCount_oid, OID_LENGTH(LHALiveNodeCount_oid),
@@ -54,6 +66,72 @@ init_LHAClusterInfo(void)
 }
 
 int
+handle_LHAResourceGroupCount(netsnmp_mib_handler *handler,
+                          netsnmp_handler_registration *reginfo,
+                          netsnmp_agent_request_info   *reqinfo,
+                          netsnmp_request_info         *requests)
+{
+    /* We are never called for a GETNEXT if it's registered as a
+       "instance", as it's "magically" handled for us.  */
+
+    /* a instance handler also only hands us one request at a time, so
+       we don't need to loop over a list of requests; we'll only get one. */
+    
+    size_t value = 0;
+    switch(reqinfo->mode) {
+
+        case MODE_GET:
+
+	    get_int_value(LHA_CLUSTERINFO, RESOURCE_GROUP_COUNT, 0, (uint32_t *) & value);
+
+            snmp_set_var_typed_value(requests->requestvb, 
+		    	ASN_COUNTER,
+                        (u_char *) & value,
+			sizeof(value));
+            break;
+
+
+        default:
+            /* we should never get here, so this is a really bad error */
+            return SNMP_ERR_GENERR;
+    }
+
+    return SNMP_ERR_NOERROR;
+}
+int
+handle_LHACurrentNodeID(netsnmp_mib_handler *handler,
+                          netsnmp_handler_registration *reginfo,
+                          netsnmp_agent_request_info   *reqinfo,
+                          netsnmp_request_info         *requests)
+{
+    /* We are never called for a GETNEXT if it's registered as a
+       "instance", as it's "magically" handled for us.  */
+
+    /* a instance handler also only hands us one request at a time, so
+       we don't need to loop over a list of requests; we'll only get one. */
+    
+    uint32_t value = 0;
+    switch(reqinfo->mode) {
+
+        case MODE_GET:
+
+	    get_int_value(LHA_CLUSTERINFO, CURRENT_NODE_ID, 0, 
+		    (uint32_t *) & value);
+
+            snmp_set_var_typed_value(requests->requestvb, ASN_INTEGER,
+                                     (u_char *) & value,
+				     sizeof(value));
+            break;
+
+
+        default:
+            /* we should never get here, so this is a really bad error */
+            return SNMP_ERR_GENERR;
+    }
+
+    return SNMP_ERR_NOERROR;
+}
+int
 handle_LHALiveNodeCount(netsnmp_mib_handler *handler,
                           netsnmp_handler_registration *reginfo,
                           netsnmp_agent_request_info   *reqinfo,
@@ -65,17 +143,17 @@ handle_LHALiveNodeCount(netsnmp_mib_handler *handler,
     /* a instance handler also only hands us one request at a time, so
        we don't need to loop over a list of requests; we'll only get one. */
     
-    size_t long_ret = 0;
+    size_t value = 0;
     switch(reqinfo->mode) {
 
         case MODE_GET:
 
 	    get_int_value(LHA_CLUSTERINFO, LIVE_NODE_COUNT, 0, 
-		    (int32_t *) &long_ret);
+		    (uint32_t *) & value);
 
             snmp_set_var_typed_value(requests->requestvb, ASN_COUNTER,
-                                     (u_char *) &long_ret,
-                                     sizeof(long_ret));
+                                     (u_char *) & value,
+                                     sizeof(value));
             break;
 
 
@@ -99,17 +177,17 @@ handle_LHATotalNodeCount(netsnmp_mib_handler *handler,
     /* a instance handler also only hands us one request at a time, so
        we don't need to loop over a list of requests; we'll only get one. */
     
-    size_t long_ret = 0;
+    size_t value = 0;
     switch(reqinfo->mode) {
 
         case MODE_GET:
 
 	    get_int_value(LHA_CLUSTERINFO, TOTAL_NODE_COUNT, 0, 
-		    (int32_t *) &long_ret);
+		    (uint32_t *) & value);
 
             snmp_set_var_typed_value(requests->requestvb, ASN_COUNTER,
-                                     (u_char *) &long_ret,
-                                     sizeof(long_ret));
+                                     (u_char *) & value,
+                                     sizeof(value));
             break;
 
 
