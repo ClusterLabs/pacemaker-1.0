@@ -1,4 +1,4 @@
-/* $Id: stonithd.c,v 1.26 2005/03/15 19:52:24 gshi Exp $ */
+/* $Id: stonithd.c,v 1.27 2005/03/16 08:33:57 sunjd Exp $ */
 
 /* File: stonithd.c
  * Description: STONITH daemon for node fencing
@@ -994,7 +994,7 @@ require_local_stonithop(stonith_ops_t * st_op, stonith_rsc_t * srsc,
 		op = g_new(common_op_t, 1);
 		op->scenario = STONITH_REQ;
 		op->result_receiver = g_strdup(asker); 
-		op->data = NULL;
+		op->data = srsc->rsc_id;
 		op->op_union.st_op = st_op;
 		g_hash_table_insert(executing_queue, child_id, op);
 		tmp_callid = g_new(int, 1);
@@ -1233,8 +1233,8 @@ stonithd_process_client_msg(struct ha_msg * msg, gpointer data)
 			/*call the handler of the message*/
 			rc = api_msg_to_handlers[i].handler(msg, ch);
 			if (rc != ST_OK) {
-				stonithd_log(LOG_ERR, "handling msg %s failed."
-					     , api_type);
+				stonithd_log(LOG_WARNING, "There is something "
+					"wrong when handling msg %s.", api_type);
 			}
 			break;
 		}
@@ -1423,7 +1423,7 @@ send_back_reply:
 	if (msg2ipcchan(reply, ch) != HA_OK) { /* How to deal the error*/
 		ZAPCHAN(ch); /* ? */
 		ZAPMSG(reply);
-		stonithd_log(LOG_ERR, "can't send signoff reply message to IPC");
+		stonithd_log(LOG_WARNING, "can't send signoff reply message to IPC");
 		return ST_FAIL;
         }
 
@@ -1592,6 +1592,7 @@ continue_local_stonithop(int old_key)
 	common_op_t * op = NULL;
 	int * orignal_key = NULL;
 
+	stonithd_log(LOG_DEBUG, "continue_local_stonithop: begin.");
 	if (FALSE == g_hash_table_lookup_extended(executing_queue, &old_key, 
 			(gpointer *)&orignal_key, (gpointer *)&op)) {
 		stonithd_log(LOG_ERR, "continue_local_stonithop: No old_key's "
@@ -1606,6 +1607,12 @@ continue_local_stonithop(int old_key)
 	}
 
 	rsc_id = op->data;
+	if ( rsc_id == NULL ) {
+		stonithd_log(LOG_ERR, "continue_local_stonithop: the old rsc_id"
+				" == NULL, not correct!.");
+		return ST_FAIL;
+	}
+
 	child_pid = g_new(int, 1);
 	while ((srsc = get_local_stonithobj_can_stonith(op->op_union.st_op->node_name,
 		rsc_id)) != NULL ) { 
@@ -1683,16 +1690,23 @@ changeto_remote_stonithop(int old_key)
 	common_op_t * op = NULL;
 	int * orignal_key = NULL;
 
+	stonithd_log(LOG_DEBUG, "changeto_remote_stonithop: begin.");
 	if (FALSE == g_hash_table_lookup_extended(executing_queue, &old_key, 
 			(gpointer *)&orignal_key, (gpointer *)&op)) {
 		stonithd_log(LOG_ERR, "changeto_remote_stonithop: no old_key's "
 			     "item exist in executing_queue. Strange!"); 
 		return ST_FAIL;
 	}
-	if (op->scenario != STONITH_INIT && op->scenario != STONITH_REQ &&
-	    op->op_union.st_op == NULL) {
-		stonithd_log(LOG_ERR, "changeto_remote_stonithop: the old_key's"
-			     " item isnot a stonith item. Strange!");
+
+	if (op->scenario != STONITH_INIT) {
+		stonithd_log(LOG_DEBUG, "changeto_remote_stonithop: I am not "
+			     "stonith initiator, donnot pass it to others.");
+		return ST_FAIL;
+	}
+
+	if ( op->op_union.st_op == NULL) {
+		stonithd_log(LOG_ERR, "changeto_remote_stonithop: "
+				"op->op_union.st_op == NULL");
 		return ST_FAIL;
 	}
 
@@ -2952,6 +2966,10 @@ free_common_op_t(gpointer data)
 
 /* 
  * $Log: stonithd.c,v $
+ * Revision 1.27  2005/03/16 08:33:57  sunjd
+ * Fix a bug which may lead to a infinite loop.
+ * Add logs; adjust several logs' loglevel.
+ *
  * Revision 1.26  2005/03/15 19:52:24  gshi
  * changed cl_log_send_to_logging_daemon() to cl_log_set_uselogd()
  * added cl_log_get_uselogd()
