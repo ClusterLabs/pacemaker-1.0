@@ -1,4 +1,4 @@
-/* $Id: message.h,v 1.6 2004/04/02 05:16:48 deng.pan Exp $ */
+/* $Id: message.h,v 1.7 2004/04/17 14:02:22 alan Exp $ */
 #ifndef _CKPT_MESSAGE_H
 #define _CKPT_MESSAGE_H
 
@@ -121,9 +121,9 @@ typedef struct _SaCkptMessageT {
 	SaCkptOpT	operation;
 	int		operationNO;
 	
-	size_t		paramLength;
+	SaSizeT		paramLength;
 	void*		param;
-	size_t		dataLength;
+	SaSizeT		dataLength;
 	void*		data;
 
 	SaErrorT	retVal;
