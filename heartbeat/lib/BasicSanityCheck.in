@@ -490,6 +490,7 @@ AppHBCheck() {
 	do
           CheckPat "$pat" 1 2
 	done
+	sleep 5
 	CheckPat "WARN:.*hangup" 1
 	$APPHBD -k $CFFILE
 	CheckPat "info:.*apphbd.*stopped" $killcount
