@@ -117,7 +117,7 @@ main(int argc, char **argv)
 		if (!strcmp(parameter, "legacy")) {
 			cl_log(LOG_ERR, "auto_failback set to "
 			       "incompatible legacy option.");
-			exit(20);
+			exit(100);
 		}
 
 		if (!strcmp(parameter, "on"))
