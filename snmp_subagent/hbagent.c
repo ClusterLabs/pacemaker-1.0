@@ -273,8 +273,6 @@ hbconfig_get_str_value(const char * attr, char * * value)
     char * ret;
     static char err[] = "N/A";
 
-    *value  = err;
-
     if ((ret = hb->llc_ops->get_parameter(hb, attr)) == NULL) {
 	/*
 	cl_log(LOG_INFO, "getting parameter [%s] error.", attr);
@@ -283,10 +281,11 @@ hbconfig_get_str_value(const char * attr, char * * value)
 
 	/* we have to return HA_OK here otherwise the 
 	   agent code would not progress */
+	*value  = ha_strdup(err);
 	return HA_OK;
     };
 
-    *value = ret;
+    *value = ha_strdup(ret);
 
     return HA_OK;
 }

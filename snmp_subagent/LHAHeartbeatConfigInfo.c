@@ -32,6 +32,7 @@
 
 #include "hbagent.h"
 #include <hb_api.h>
+#include "clplumbing/cl_malloc.h"
 
 /** Initializes the LHAHeartbeatConfigInfo module */
 void
@@ -136,9 +137,11 @@ handle_LHAHBVersion(netsnmp_mib_handler *handler,
 
         default:
             /* we should never get here, so this is a really bad error */
+            ha_free(value);
             return SNMP_ERR_GENERR;
     }
 
+    ha_free(value);
     return SNMP_ERR_NOERROR;
 }
 int
@@ -162,9 +165,11 @@ handle_LHAKeepAlive(netsnmp_mib_handler *handler,
 
        default:
             /* we should never get here, so this is a really bad error */
+            ha_free(value);
             return SNMP_ERR_GENERR;
     }
 
+    ha_free(value);
     return SNMP_ERR_NOERROR;
 }
 int
@@ -188,9 +193,11 @@ handle_LHADeadTime(netsnmp_mib_handler *handler,
 
         default:
             /* we should never get here, so this is a really bad error */
+            ha_free(value);
             return SNMP_ERR_GENERR;
     }
 
+    ha_free(value);
     return SNMP_ERR_NOERROR;
 }
 int
@@ -214,9 +221,11 @@ handle_LHADeadPing(netsnmp_mib_handler *handler,
 
         default:
             /* we should never get here, so this is a really bad error */
+            ha_free(value);
             return SNMP_ERR_GENERR;
     }
 
+    ha_free(value);
     return SNMP_ERR_NOERROR;
 }
 int
@@ -240,9 +249,11 @@ handle_LHAWarnTime(netsnmp_mib_handler *handler,
 
         default:
             /* we should never get here, so this is a really bad error */
+            ha_free(value);
             return SNMP_ERR_GENERR;
     }
 
+    ha_free(value);
     return SNMP_ERR_NOERROR;
 }
 int
@@ -266,9 +277,11 @@ handle_LHAInitDead(netsnmp_mib_handler *handler,
 
         default:
             /* we should never get here, so this is a really bad error */
+            ha_free(value);
             return SNMP_ERR_GENERR;
     }
 
+    ha_free(value);
     return SNMP_ERR_NOERROR;
 }
 int
@@ -292,9 +305,11 @@ handle_LHABaudRate(netsnmp_mib_handler *handler,
 
         default:
             /* we should never get here, so this is a really bad error */
+            ha_free(value);
             return SNMP_ERR_GENERR;
     }
 
+    ha_free(value);
     return SNMP_ERR_NOERROR;
 }
 int
@@ -324,9 +339,11 @@ handle_LHAutoFailBack(netsnmp_mib_handler *handler,
 
        default:
             /* we should never get here, so this is a really bad error */
+            ha_free(ret);
             return SNMP_ERR_GENERR;
     }
 
+    ha_free(ret);
     return SNMP_ERR_NOERROR;
 }
 int
@@ -350,9 +367,11 @@ handle_LHAStonith(netsnmp_mib_handler *handler,
 
         default:
             /* we should never get here, so this is a really bad error */
+            ha_free(value);
             return SNMP_ERR_GENERR;
     }
 
+    ha_free(value);
     return SNMP_ERR_NOERROR;
 }
 int
@@ -376,9 +395,11 @@ handle_LHAStonithHost(netsnmp_mib_handler *handler,
 
        default:
             /* we should never get here, so this is a really bad error */
+            ha_free(value);
             return SNMP_ERR_GENERR;
     }
 
+    ha_free(value);
     return SNMP_ERR_NOERROR;
 }
 int
@@ -402,9 +423,11 @@ handle_LHARespawn(netsnmp_mib_handler *handler,
 
         default:
             /* we should never get here, so this is a really bad error */
+            ha_free(value);
             return SNMP_ERR_GENERR;
     }
 
+    ha_free(value);
     return SNMP_ERR_NOERROR;
 }
 
