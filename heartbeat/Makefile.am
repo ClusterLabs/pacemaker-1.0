@@ -28,7 +28,6 @@ halibdir		= $(libdir)/@HB_PKG@
 commmoddir		= $(halibdir)/modules/comm
 havarlibdir		= $(localstatedir)/lib/@HB_PKG@
 havarrundir		= $(localstatedir)/run/
-halocalvarrundir	= $(havarlibdir)/run/
 apidir		       	= $(havarlibdir)/api
 apicasualdir		= $(havarlibdir)/casual
 # fifos with path
@@ -103,13 +102,10 @@ EXTRA_DIST              = $(ha_DATA) $(ha_SCRIPTS)
 # additional installations not covered normally
 install-exec-local:
 	$(mkinstalldirs) $(DESTDIR)$(havarrundir) $(DESTDIR)$(apidir) \
-		$(DESTDIR)$(apicasualdir) $(DESTDIR)$(halocalvarrundir)
-	-chmod 750 $(DESTDIR)$(havarrundir) $(DESTDIR)$(apidir) \
-	           $(DESTDIR)$(halocalvarrundir)
+		$(DESTDIR)$(apicasualdir)
+	-chmod 750 $(DESTDIR)$(havarrundir) $(DESTDIR)$(apidir)
 	-chmod 1770 $(DESTDIR)/$(apicasualdir)
-	-chgrp $(apigid) $(DESTDIR)/$(apidir) $(DESTDIR)/$(apicasualdir) \
-		$(DESTDIR)$(halocalvarrundir)
-	-chown $(ccmuid) $(DESTDIR)$(halocalvarrundir)
+	-chgrp $(apigid) $(DESTDIR)/$(apidir) $(DESTDIR)/$(apicasualdir)
 	test -p $(DESTDIR)$(hafifo) || mkfifo -m 600 $(DESTDIR)$(hafifo)
 	test -p $(DESTDIR)$(apireg) || mkfifo -m 620 $(DESTDIR)$(apireg)
 	-chgrp $(apigid) $(DESTDIR)/$(apireg)
@@ -118,4 +114,5 @@ uninstall-local:
 	-test -p $(DESTDIR)$(hafifo) && rm $(DESTDIR)$(hafifo)
 	-test -p $(DESTDIR)$(apireg) && rm $(DESTDIR)$(apireg)
 	rm -rf $(DESTDIR)$(havarrundir) $(DESTDIR)$(apidir) \
-                $(DESTDIR)$(apicasualdir) $(DESTDIR)$(halocalvarrundir)
+                $(DESTDIR)$(apicasualdir)
+
