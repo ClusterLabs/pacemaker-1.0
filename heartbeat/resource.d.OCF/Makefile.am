@@ -19,8 +19,6 @@
 #
 MAINTAINERCLEANFILES = Makefile.in
 
-havarlibdir          = $(localstatedir)/lib/@HB_PKG@
+ocfdir		     = /usr/ocf/resource.d
 
-harddir		     = $(sysconfdir)/ha.d/resource.d.OCF
-
-hard_SCRIPTS	     = IPaddr
+ocf_SCRIPTS	     = IPaddr
