@@ -1,4 +1,4 @@
-#	$Id: heartbeat.spec.in,v 1.74 2004/01/22 03:35:07 horms Exp $
+#	$Id: heartbeat.spec.in,v 1.75 2004/01/23 05:31:21 alan Exp $
 
 # Workaround for a change in RPM 4.1.x; needs proper fixing soon!
 %define _unpackaged_files_terminate_build 0
@@ -73,6 +73,18 @@ PILS is designed to support any number of plugins
 implementing any number of interfaces.
 
 %changelog
+* Fri Jan 22 2004  Alan Robertson <alanr@unix.sh> (see doc/AUTHORS file)
++ Version 1.1.4
+  + Changed the API to use sockets (IPC library) instead of FIFOs.
+  + Added new apiauth directives to provide authorization information
+	formerly provided by the FIFO permissions.
+  + Added Intel's implementation of the SAF data checkpointing API
+  + Added a cleanup suggested by Emily Ratliff.
+  + Various cleanups due to horms.
+  + Various minor bug fixes.
+  + probably a bunch of other things I don't have time to research
+	right now :-)
+
 * Fri Sep 26 2003  Alan Robertson <alanr@unix.sh> (see doc/AUTHORS file)
 + Version 1.1.3
   + Bugfix for heartbeat starting resources twice concurrently if
@@ -669,6 +681,7 @@ install -m 644 rc.config.heartbeat $TEMPL
 @libdir@/libplumb.*
 @libdir@/libapphb.*
 @libdir@/librecoverymgr.*
+@libdir@/libckpt.*
 @base_includedir@/heartbeat
 @base_includedir@/clplumbing
 @base_includedir@/saf
