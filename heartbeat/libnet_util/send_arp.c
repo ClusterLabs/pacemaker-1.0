@@ -1,4 +1,4 @@
-/* $Id: send_arp.c,v 1.12 2004/06/15 01:49:04 horms Exp $ */
+/* $Id: send_arp.c,v 1.13 2004/09/10 02:03:00 alan Exp $ */
 /* 
  * send_arp
  * 
@@ -539,7 +539,7 @@ write_pid_file(const char *pidfilename)
 	int     	pidfilefd;
 	char    	pidbuf[11];
 	unsigned long   pid;
-	size_t 		bytes;
+	ssize_t 	bytes;
 
 	if (*pidfilename != '/') {
 		syslog(LOG_INFO, "Invalid pid-file name, must begin with a "
@@ -652,6 +652,10 @@ write_pid_file(const char *pidfilename)
 
 /*
  * $Log: send_arp.c,v $
+ * Revision 1.13  2004/09/10 02:03:00  alan
+ * BEAM FIX:  A variable was declared unsigned that should have been declared signed.
+ * 	This is the result of a previous size_t fix that should have used ssize_t instead.
+ *
  * Revision 1.12  2004/06/15 01:49:04  horms
  * Changes to make gratuitous ARP Packets RFC2002 (4.6) compliant
  *
