@@ -10,3 +10,6 @@ hbagent
 MISC_ERRORS
 parser-messages
 SNMPAgentSanityCheck
+*.beam
+parser-messages
+MISC_ERRORS

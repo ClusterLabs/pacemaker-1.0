@@ -7,3 +7,6 @@ Makefile
 .*.swp
 event_testclient
 eventd
+*.beam
+parser-messages
+MISC_ERRORS

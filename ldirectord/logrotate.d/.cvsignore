@@ -1,2 +1,5 @@
 Makefile.in
 Makefile
+*.beam
+parser-messages
+MISC_ERRORS

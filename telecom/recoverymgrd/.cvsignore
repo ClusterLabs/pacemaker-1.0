@@ -6,3 +6,6 @@ conf_yacc.c
 conf_yacc.h
 .libs
 recoverymgrd
+*.beam
+parser-messages
+MISC_ERRORS

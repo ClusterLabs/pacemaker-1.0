@@ -25,3 +25,9 @@ patches
 updates
 libtool.m4
 ltdl.m4
+*.beam
+parser-messages
+MISC_ERRORS
+cscope.files
+cscope.out
+logs

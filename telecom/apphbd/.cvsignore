@@ -7,3 +7,6 @@ Makefile
 .*.swp
 apphbd
 apphbtest
+*.beam
+parser-messages
+MISC_ERRORS

@@ -9,3 +9,6 @@ faqntips.txt
 heartbeat_api.txt
 rsync.txt
 startstop
+*.beam
+parser-messages
+MISC_ERRORS

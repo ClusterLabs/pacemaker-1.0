@@ -5,3 +5,6 @@ ha_config.h
 stamp-h1
 stamp-h2
 stamp-h2.in
+*.beam
+parser-messages
+MISC_ERRORS

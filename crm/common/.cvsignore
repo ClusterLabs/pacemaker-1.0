@@ -4,3 +4,6 @@ Makefile.in
 *.la
 *.lo
 .deps
+*.beam
+parser-messages
+MISC_ERRORS

@@ -6,3 +6,6 @@ Makefile
 *.lo
 .*.swp
 ipfail
+*.beam
+parser-messages
+MISC_ERRORS

@@ -8,3 +8,6 @@ Makefile
 ccm
 ccm_testclient
 clmtest
+*.beam
+parser-messages
+MISC_ERRORS

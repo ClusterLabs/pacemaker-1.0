@@ -10,3 +10,6 @@ Makefile
 *.la
 blib
 pm_to_blib
+*.beam
+parser-messages
+MISC_ERRORS

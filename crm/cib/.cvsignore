@@ -5,3 +5,6 @@ Makefile.in
 *.lo
 cib
 .deps
+*.beam
+parser-messages
+MISC_ERRORS

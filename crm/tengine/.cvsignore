@@ -5,3 +5,6 @@ tengine
 .deps
 ttest
 .gres.*
+*.beam
+parser-messages
+MISC_ERRORS

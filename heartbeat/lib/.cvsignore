@@ -10,3 +10,6 @@ hb_standby
 ha_config
 TestHeartbeatComm
 hb_takeover
+*.beam
+parser-messages
+MISC_ERRORS

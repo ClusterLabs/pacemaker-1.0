@@ -5,3 +5,6 @@ pengine
 ptest
 .deps
 .gres.*
+*.beam
+parser-messages
+MISC_ERRORS

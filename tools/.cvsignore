@@ -7,3 +7,6 @@ cl_status
 *.la
 *.lo
 .*.swp
+*.beam
+parser-messages
+MISC_ERRORS

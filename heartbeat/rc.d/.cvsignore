@@ -2,3 +2,6 @@ Makefile.in
 Makefile
 ask_resources
 hb_takeover
+*.beam
+parser-messages
+MISC_ERRORS

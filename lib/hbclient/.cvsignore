@@ -6,3 +6,6 @@ Makefile
 *.lo
 *.la
 api_test
+*.beam
+parser-messages
+MISC_ERRORS

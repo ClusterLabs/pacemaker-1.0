@@ -7,3 +7,6 @@ fsa_actions.*
 fsa_inputs.*
 .gres.*
 
+*.beam
+parser-messages
+MISC_ERRORS

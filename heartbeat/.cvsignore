@@ -12,3 +12,6 @@ api_test
 .*.swp
 shellfuncs
 cl_status
+*.beam
+parser-messages
+MISC_ERRORS

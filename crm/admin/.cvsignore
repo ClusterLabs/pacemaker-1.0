@@ -4,3 +4,6 @@ Makefile.in
 crmadmin
 cibadmin
 .deps
+*.beam
+parser-messages
+MISC_ERRORS
