@@ -1,4 +1,4 @@
-/* $Id: eventd.c,v 1.6 2004/08/29 03:01:16 msoffen Exp $ */
+/* $Id: eventd.c,v 1.7 2004/08/30 22:24:15 alan Exp $ */
 /* 
  * eventd.c: source file for event daemon
  *
@@ -2097,10 +2097,10 @@ static void read_clear_reply_remote(const void *bin_msg,
 
 static struct client_msg *evt_read_hb_msg(struct ha_msg *m)
 {	
-	SaSizeT msg_len;
-	const void *bin_msg;
-	const SaUint8T *tmp_char;
-	struct client_msg *ret;
+	size_t			msg_len;
+	const void*		bin_msg;
+	const SaUint8T*		tmp_char;
+	struct client_msg*	ret;
 	
 	ret = (struct client_msg *)g_malloc0(sizeof(struct client_msg));
 	if(ret == NULL){
