@@ -1,4 +1,4 @@
-static const char _findif_c [] = "$Id: findif.c,v 1.31 2004/01/14 17:51:07 alan Exp $";
+static const char _findif_c [] = "$Id: findif.c,v 1.32 2004/01/20 10:16:08 horms Exp $";
 /*
  * findif.c:	Finds an interface which can route a given address
  *
@@ -497,7 +497,8 @@ main(int argc, char ** argv) {
 	ValidateNetmaskBits (netmaskbits, &netmask);
 
 	if (if_specified != NULL) {
-		strncmp(best_if, if_specified, sizeof(best_if));
+		strncpy(best_if, if_specified, sizeof(best_if));
+		*(best_if + sizeof(best_if) - 1) = '\0';
 	}else{
 		SearchRoute **sr = search_mechs;
 		char errmsg[MAXSTR] = "No valid mecahnisms";
@@ -677,6 +678,9 @@ ff02::%lo0/32                     fe80::1%lo0                   UC          lo0
 
 /* 
  * $Log: findif.c,v $
+ * Revision 1.32  2004/01/20 10:16:08  horms
+ * Should be strncpy not strncmp
+ *
  * Revision 1.31  2004/01/14 17:51:07  alan
  * Put in some minor code cleanups suggested by Emily Ratliff.
  *
