@@ -1,4 +1,4 @@
-/* $Id: ccm.h,v 1.27 2005/02/03 14:33:06 andrew Exp $ */
+/* $Id: ccm.h,v 1.28 2005/02/24 00:27:24 gshi Exp $ */
 /*
  * ccm.h: definitions Consensus Cluster Manager internal header
  *				file
@@ -379,7 +379,17 @@ typedef struct ccm_info_s {
 
 } ccm_info_t;
 
+/*
+ * datastructure passed to the event loop.
+ * This acts a handle, and should not be interpreted
+ * by the event loop.
+ */
+typedef struct  ccm_s {
+	ll_cluster_t    *hbfd;
+	void    	*info;
+} ccm_t;
+
 
 void client_new_mbrship(ccm_info_t*, void*);
-
+void ccm_reset(ccm_info_t *info);
 #endif /*  _CLUSTER_MANAGER_H_ */

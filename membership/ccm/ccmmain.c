@@ -1,4 +1,4 @@
-/* $Id: ccmmain.c,v 1.22 2005/02/22 07:02:45 gshi Exp $ */
+/* $Id: ccmmain.c,v 1.23 2005/02/24 00:27:24 gshi Exp $ */
 /* 
  * ccm.c: Consensus Cluster Service Program 
  *
@@ -186,7 +186,25 @@ ccm_debug(int signum)
 
 }
 
-
+static gboolean
+ccm_shutdone(int sig, gpointer userdata)
+{	
+	hb_usrdata_t*	hb = (hb_usrdata_t*)userdata;
+	ccm_t*		ccm = (ccm_t*)hb->ccmdata;
+	ccm_info_t *	info = (ccm_info_t*)ccm->info;
+	GMainLoop *	mainloop = hb->mainloop;
+	
+	cl_log(LOG_INFO, "received SIGTERM in node");
+	if (info == NULL || mainloop == NULL){
+		cl_log(LOG_ERR, "ccm_shutdone: invalid arguments");
+		return FALSE;
+	}
+	
+	ccm_reset(info);
+	g_main_quit(mainloop);
+	
+	return TRUE;
+}
 /* */
 /* The main function! */
 /* */
@@ -194,7 +212,7 @@ int
 main(int argc, char **argv)
 {
 	IPC_WaitConnection *wait_ch;
-
+	
 	char *cmdname;
 	char *tmp_cmdname;
 	int  flag;
@@ -231,7 +249,7 @@ main(int argc, char **argv)
 	CL_SIGNAL(SIGUSR1, ccm_debug);
 	CL_SIGNAL(SIGUSR2, ccm_debug);
 	CL_IGNORE_SIG(SIGPIPE);
-
+	
 	/* initialize the client tracking system */
 	client_init();
 
@@ -246,7 +264,10 @@ main(int argc, char **argv)
 	if(!usrdata.ccmdata) {
 		exit(1);
 	}
-
+	
+	G_main_add_SignalHandler(G_PRIORITY_HIGH, SIGTERM, 
+				 ccm_shutdone, &usrdata, NULL);
+	
 	/* we want hb_input_dispatch to be called when some input is
 	 * pending on the heartbeat fd, and every 1 second 
 	 */

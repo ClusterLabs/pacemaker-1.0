@@ -1,4 +1,4 @@
-/* $Id: ccm.c,v 1.61 2005/02/22 18:41:17 gshi Exp $ */
+/* $Id: ccm.c,v 1.62 2005/02/24 00:27:24 gshi Exp $ */
 /* 
  * ccm.c: Consensus Cluster Service Program 
  *
@@ -564,7 +564,7 @@ leave_any(void)
 
 /* Reset all the datastructures. Go to a state which is equivalent */
 /* to a state when the node is just about to join a cluster. */
-static void 
+void 
 ccm_reset(ccm_info_t *info)
 {
 
@@ -3809,36 +3809,6 @@ ccm_handle_hbapiclstat(ccm_info_t *info,
 	return(ccm_create_leave_msg(info, uuid));
 }
 
-
-static struct ha_msg*
-ccm_handle_shutdone(ccm_info_t *info,
-		const char *orig, 
-		const char *status)
-{
-	int 		uuid;
-	enum ccm_state 	state = CCM_GET_STATE(info);
-	
-	if(state == CCM_STATE_NONE ||
-		state == CCM_STATE_VERSION_REQUEST) {
-		return timeout_msg_mod(info);
-	}
-	if(!orig){
-		return timeout_msg_mod(info);
-	}
-
-	if(strncmp(ccm_get_my_hostname(info),orig, 
-		LLM_GET_NODEIDSIZE(CCM_GET_LLM(info))) == 0) {
-		ccm_reset(info);
-		return NULL;
-	}
-	uuid = llm_get_uuid(CCM_GET_LLM(info), orig);
-	if(uuid == -1) {
-		return timeout_msg_mod(info);
-	}
-
-	return(ccm_create_leave_msg(info, uuid));
-}
-
 /*  */
 /* The most important function which tracks the state machine. */
 /*  */
@@ -3870,14 +3840,7 @@ repeat:
 			ha_msg_del(reply);
 			reply = newreply;
 		} else if((strncmp(type, T_SHUTDONE, TYPESTRSIZE)) == 0) {
-			/* handle heartbeat shutdown message */
-
-			cl_log(LOG_DEBUG, "received shutdown orig=%s", orig);
-			nodelist_update(orig, CLUST_INACTIVE, -1, info);
-		       	newreply = ccm_handle_shutdone(info, orig, status);
-			CCM_SET_STATE(info, CCM_STATE_END);
-			ha_msg_del(reply);
-			reply = newreply;
+			/* ignore heartbeat shutdone message */
 			return TRUE;
 			
 		} else if((strcasecmp(type, T_STATUS) == 0
@@ -4000,11 +3963,6 @@ repeat:
 		ccm_state_new_node_wait_for_mem_list(ccm_msg_type, reply, hb
 						     ,	info);
 		break;
-	case CCM_STATE_END:
-		/* State after receiving T_SHUTDONE message
-		 * Waiting to be killed, ingore any message
-		 */
-		break;
 		
 	default:
 		cl_log(LOG_ERR, "INTERNAL LOGIC ERROR");
@@ -4024,15 +3982,6 @@ repeat:
 
 
 
-/*
- * datastructure passed to the event loop.
- * This acts a handle, and should not be interpreted
- * by the event loop.
- */
-typedef struct  ccm_s {
-	ll_cluster_t    *hbfd;
-	void    	*info;
-} ccm_t;
 
 /*  look at the current state machine and decide if  */
 /*  the state machine needs immidiate control for further */
