@@ -1,4 +1,4 @@
-/* $Id: ping.c,v 1.32 2004/04/20 21:21:32 kevin Exp $ */
+/* $Id: ping.c,v 1.33 2004/04/29 16:14:50 msoffen Exp $ */
 /*
  * ping.c: ICMP-echo-based heartbeat code for heartbeat.
  *
@@ -399,7 +399,7 @@ ping_read(struct hb_media* mp, int *lenp)
 	}
 	
 	ha_msg_del(msg);
-	//return(msg);
+	/* return(msg); */
 	
 	return(pkt);
 
