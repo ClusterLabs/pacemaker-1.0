@@ -26,7 +26,7 @@ us=`uname -n`
 audiablealarm_start () {
 	ha_log "info: $0: Starting"
     	if [ -f $PIDFILE ]; then
-        	PID=`head -1 $PIDFILE`
+        	PID=`head -n 1 $PIDFILE`
 		ha_log "info: $0: Appears to already be running, killing [$PID]"
 		kill $PID > /dev/null
 	fi
@@ -47,7 +47,7 @@ audiablealarm_start () {
 audiablealarm_stop () {
 	ha_log "info: $0: Shutting down"
   	if [ -f $PIDFILE ]; then
-		PID=`head -1 $PIDFILE`
+		PID=`head -n 1 $PIDFILE`
 		ha_log "info: $0: Appears to already be running, killing [$PID]"
 		kill $PID > /dev/null
 		rm -f $PIDFILE
@@ -93,7 +93,7 @@ case "$lastarg" in
 	echo "Usage: [node1 node2 ... ] {start|stop|restart|status}"
 	echo "  The node list is an optional space delimited"
 	echo "  list of hosts that should never sound the alarm."
-	echo "$Id: AudibleAlarm.in,v 1.7 2003/08/13 18:17:22 msoffen Exp $";
+	echo "$Id: AudibleAlarm.in,v 1.8 2003/10/29 16:27:18 lars Exp $";
 	exit 1
 esac
 

@@ -133,7 +133,7 @@ Resource_Name=$1
 Resource_Instance=$2
 Operation=$3
 Resource_Inst_File="${HA_DIR}/conf/OCF/${Resource_Name}/${Resource_Instance}"
-Resource_Script=`ls ${OCF_AGENTS}/*/${Resource_Name} 2>/dev/null | head -1`
+Resource_Script=`ls ${OCF_AGENTS}/*/${Resource_Name} 2>/dev/null | head -n 1`
 
 
 if

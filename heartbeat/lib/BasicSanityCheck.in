@@ -53,7 +53,7 @@ GetAllIFNames() {
 }
 
 GuessIFname() {
-  GetAllIFNames | grep -v '^lo' | head -1
+  GetAllIFNames | grep -v '^lo' | head -n 1
 }
 
 INTERFACE=`GuessIFname`
