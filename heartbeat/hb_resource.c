@@ -1,4 +1,4 @@
-/* $Id: hb_resource.c,v 1.64 2004/09/10 22:47:40 alan Exp $ */
+/* $Id: hb_resource.c,v 1.65 2004/10/20 15:31:00 alan Exp $ */
 /*
  * hb_resource: Linux-HA heartbeat resource management code
  *
@@ -2284,6 +2284,9 @@ StonithProcessDied(ProcTrack* p, int status, int signo, int exitcode, int waslog
 		,	h->nodename);
 
 		Gmain_timeout_add(5*1000, StonithProc, h);
+		/* Don't free 'h' - we still need it */
+		p->privatedata = NULL;
+		return;
 	}else{
 		/* We need to finish taking over the other side's resources */
 		takeover_from_node(h->nodename);
@@ -2332,6 +2335,10 @@ StonithStatProcessName(ProcTrack* p)
 
 /*
  * $Log: hb_resource.c,v $
+ * Revision 1.65  2004/10/20 15:31:00  alan
+ * Fixed a bug in STONITH retries where it frees something
+ * prematurely.
+ *
  * Revision 1.64  2004/09/10 22:47:40  alan
  * BEAM FIXES:  various minor fixes related to running out of memory.
  *
