@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-#	$Id: IPaddr.in,v 1.54 2004/04/27 10:51:40 horms Exp $
+#	$Id: IPaddr.in,v 1.55 2004/04/27 10:54:13 horms Exp $
 #
 #	This script manages IP alias IP addresses
 #
@@ -358,7 +358,7 @@ ip_stop() {
 			exit 0
 		fi;;
 
-	Linux)
+	Linux|SunOS)
 		if [ -z "$IF" ]; then
     			: Requested interface not in use
     			exit 0
@@ -389,7 +389,7 @@ ip_stop() {
 
   case $SYSTYPE in
 	*BSD)	;;
-	Linux)
+	Linux|SunOS)
 		restore_loopback "$BASEIP"
 		# remove lock file...
 		rm -f "$VLDIR/$IF";;
@@ -521,7 +521,7 @@ ip_start() {
   SENDARPPIDFILE="$SENDARPPIDDIR/send_arp-$BASEIP"
 
   case $SYSTYPE in
-    Linux)
+    Linux|SunOS)
 		CURRENTIF=`find_interface "$BASEIP"`
        		case $CURRENTIF in
          	  lo*)
@@ -594,7 +594,7 @@ ip_status() {
 		echo "stopped"; return 3
 	fi;;
 
-    Linux)		
+    Linux|SunOS)		
 	if
 		[ -z "$IF" ]
 	then
@@ -654,7 +654,7 @@ ip_monitor() {
 
 usage() {
   echo $USAGE >&2
-  echo "$Id: IPaddr.in,v 1.54 2004/04/27 10:51:40 horms Exp $"
+  echo "$Id: IPaddr.in,v 1.55 2004/04/27 10:54:13 horms Exp $"
 }
 
 #
@@ -701,6 +701,9 @@ esac
 #
 #
 # $Log: IPaddr.in,v $
+# Revision 1.55  2004/04/27 10:54:13  horms
+# Ooops, the previous commit was a mistake
+#
 # Revision 1.54  2004/04/27 10:51:40  horms
 # Fix for pid code for FreeBSD (and others)
 #
