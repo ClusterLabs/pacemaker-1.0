@@ -1,4 +1,4 @@
-/* $Id: heartbeat.c,v 1.300 2004/04/10 16:33:54 alan Exp $ */
+/* $Id: heartbeat.c,v 1.301 2004/04/15 16:25:01 alan Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -881,8 +881,9 @@ write_child(struct hb_media* mp)
 	curproc->pstat = RUNNING;
 
 	if (ANYDEBUG) {
-		/* Limit ourselves to 10% of the CPU */
-		cl_cpu_limit_setpercent(10);
+		/* Limit ourselves to 20% of the CPU */
+		/* This seems like a lot, but pings are expensive :-( */
+		cl_cpu_limit_setpercent(20);
 	}
 	for (;;) {
 		IPC_Message*	ipcmsg = ipcmsgfromIPC(ourchan);
@@ -4240,6 +4241,9 @@ get_localnodeinfo(void)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.301  2004/04/15 16:25:01  alan
+ * Increased the allowable CPU percentage for write child processes to 20% - because pings can be expensive.
+ *
  * Revision 1.300  2004/04/10 16:33:54  alan
  * Fixed a bug in setting watchdog timer timeouts.
  * I thought the units for these intervals were ticks, but they were seconds
