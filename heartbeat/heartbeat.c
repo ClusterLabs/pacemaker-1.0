@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.354 2005/02/17 17:24:26 alan Exp $ */
+/* $Id: heartbeat.c,v 1.355 2005/02/17 19:21:34 gshi Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -2907,7 +2907,9 @@ check_for_timeouts(void)
 		int		i;
 		hip = &config->nodes[j];
 
-		if (hip == curnode) continue;
+		if (hip == curnode) {
+			continue;
+		}
 
 		for (i=0; (lnk = &hip->links[i], lnk->name); i++) {
 			if (lnk->lastupdate > now) {
@@ -5000,6 +5002,9 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.355  2005/02/17 19:21:34  gshi
+ * BEAM FIX: add surrounding braces
+ *
  * Revision 1.354  2005/02/17 17:24:26  alan
  * Changed some code to use STRNCMP_CONST to get rid of some BEAM complaints...
  *
