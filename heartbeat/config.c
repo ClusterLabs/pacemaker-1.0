@@ -1,4 +1,4 @@
-const static char * _hb_config_c_Id = "$Id: config.c,v 1.96 2003/08/14 06:24:13 horms Exp $";
+const static char * _hb_config_c_Id = "$Id: config.c,v 1.97 2003/09/19 19:08:05 alan Exp $";
 /*
  * Parse various heartbeat configuration files...
  *
@@ -115,7 +115,7 @@ struct directive {
 , {KEY_RT_PRIO,	  set_realtime_prio, TRUE, NULL, "realtime priority"}
 , {KEY_GEN_METH,  set_generation_method, TRUE, "file", "protocol generation computation method"}
 , {KEY_REALTIME,  set_realtime, TRUE, "true", "enable realtime behavior?"}
-, {KEY_DEBUGLEVEL,set_debuglevel, TRUE, "0", "debug level"}
+, {KEY_DEBUGLEVEL,set_debuglevel, TRUE, NULL, "debug level"}
 , {KEY_NORMALPOLL,set_normalpoll, TRUE, "true", "Use system poll(2) function?"}
 };
 
@@ -255,8 +255,14 @@ init_config(const char * cfgfile)
 		
 	}
 
+	if (GetParameterValue(KEY_DEBUGLEVEL) == NULL) {
+		char	debugstr[10];
+		snprintf(debugstr, sizeof(debugstr), "%d", debug);
+		add_option(KEY_DEBUGLEVEL, debugstr);
+	}
+
 	if (nummedia < 1) {
-		ha_log(LOG_ERR, "No heartbeat ports defined");
+		ha_log(LOG_ERR, "No heartbeat media defined");
 		++errcount;
 	}
 
@@ -1601,6 +1607,9 @@ add_client_child(const char * directive)
 }
 /*
  * $Log: config.c,v $
+ * Revision 1.97  2003/09/19 19:08:05  alan
+ * Fixed a bug where the -d level was always ignored.
+ *
  * Revision 1.96  2003/08/14 06:24:13  horms
  * Don't override names modules give themselves
  *
