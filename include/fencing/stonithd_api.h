@@ -61,8 +61,10 @@ typedef struct
 	int		call_id;
 	stonith_ret_t	op_result;	
 /*
- * Now just used for op==QUERY, then data is a GList *, contain the node name 
- * who can stonith a node whose name equals node_name/node_uuid. */
+ * Now just used for op==QUERY, then node_list is a char *, contain the name 
+ * of the nodes who can stonith a node whose name equals node_name. The 
+ * separator is blanks.
+ */
 	void *		node_list;
 } stonith_ops_t;
 
@@ -170,7 +172,7 @@ int stonithd_set_stonithRA_ops_callback(stonithRA_ops_callback_t callback,
  */
 int stonithd_list_stonith_types(GList ** types);
 
-/* Enable debug information output for  */
-void enable_debug_mode(void);
+/* Enable debug information output for the stonithd client library */
+void stdlib_enable_debug_mode(void);
 
 #endif /* _STONITD_API_H_ */
