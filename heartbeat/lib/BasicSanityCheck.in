@@ -37,6 +37,7 @@ CLSTATUS=@bindir@/cl_status
 APPHBTEST=$HBLIB/apphbtest
 IPCTEST=$HBLIB/ipctest
 LRMTEST=$HBLIB/lrmtest/LRMBasicSanityCheck
+MALLOC_CHECK_=2; export MALLOC_CHECK_
 #
 DEFAULTINTERFACE=eth0	# But we really guess it...
 #
