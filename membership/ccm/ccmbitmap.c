@@ -1,4 +1,4 @@
-/* $Id: ccmbitmap.c,v 1.4 2004/08/29 03:01:14 msoffen Exp $ */
+/* $Id: ccmbitmap.c,v 1.5 2005/03/04 22:04:02 gshi Exp $ */
 /* 
  * ccmbitmap.c: functions that manipulate bitmaps
  *
@@ -29,7 +29,6 @@
 #	define FALSE 0
 #endif
 
-#define BitsInByte CHAR_BIT
 
 
 /* 	Initialize a bitmap with "nitems" bits, so that every bit is clear. */

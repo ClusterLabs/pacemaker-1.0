@@ -1,4 +1,4 @@
-/* $Id: ccm.c,v 1.66 2005/03/04 20:50:02 gshi Exp $ */
+/* $Id: ccm.c,v 1.67 2005/03/04 22:04:02 gshi Exp $ */
 /* 
  * ccm.c: Consensus Cluster Service Program 
  *
@@ -180,7 +180,7 @@ ccm_set_state(ccm_info_t* info, int istate,const struct ha_msg*  msg)
 			cl_log(LOG_INFO,"change state from %s to %s, current leader is %s",   
 			       state_string(info->ccm_node_state),state_string(istate), 
 			       indx < 0 ?"none": info->ccm_llm.llm_nodes[indx].NodeID); 
-#if 0
+#if 1
 			if (msg) {
 				cl_log_message(LOG_INFO, msg);		
 			}
@@ -937,7 +937,7 @@ ccm_am_i_member(ccm_info_t *info, const char *memlist)
 
 	int my_uuid = LLM_GET_MYUUID(llm);
 
-	if (bitmap_test(my_uuid, bitmap, numBytes)){
+	if (bitmap_test(my_uuid, bitmap, numBytes*BitsInByte)){
 		bitmap_delete(bitmap);
 		return TRUE;
 	}

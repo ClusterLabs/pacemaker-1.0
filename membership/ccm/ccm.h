@@ -1,4 +1,4 @@
-/* $Id: ccm.h,v 1.29 2005/03/01 00:30:30 gshi Exp $ */
+/* $Id: ccm.h,v 1.30 2005/03/04 22:04:02 gshi Exp $ */
 /*
  * ccm.h: definitions Consensus Cluster Manager internal header
  *				file
@@ -55,6 +55,8 @@
 #include <hb_api.h>
 
 #include <ocf/oc_event.h>
+
+#define BitsInByte CHAR_BIT
 
 /* BEGINNING OF version request tracking interfaces */
 typedef struct ccm_version_s {
