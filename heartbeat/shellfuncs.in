@@ -64,6 +64,14 @@ ha_log() {
 	else
 	  Echo `hadate`"${*}" >&2
 	fi
+        if
+          [ -n "$HA_DEBUGLOG" ]
+        then
+          : appending to $HA_DEBUGLOG
+          Echo "$HA_LOGTAG: "`hadate`"${*}" >> $HA_DEBUGLOG
+        fi
+
+
 }
 
 ha_debug() {
