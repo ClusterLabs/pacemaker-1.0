@@ -68,10 +68,10 @@ ckpttest_LDADD		= $(GLIBLIB) \
 ckpttest_LDFLAGS	= 
 
 install-exec-local:
-	$(mkinstalldirs) $(DESTDIR)$(ckptvarlibdir)
+	$(mkinstalldirs) $(DESTDIR)/$(ckptvarlibdir)
 	chmod 770 $(DESTDIR)/$(ckptvarlibdir)
-	-test -p $(ckptvarlibdir) || mkdir -p $(ckptvarlibdir)
+	-test -p $(DESTDIR)/$(ckptvarlibdir) || mkdir -p $(DESTDIR)/$(ckptvarlibdir)
 
 uninstall-local:
-	-rm -fr $(DESTDIR)$(ckptvarlibdir)
+	-rm -fr $(DESTDIR)/$(ckptvarlibdir)
 
