@@ -19,10 +19,10 @@ A million repetitions of "a"
 #define SHA1HANDSOFF 1
 
 #include <portability.h>
-#ifdef HAVE_STDINT_H
 #include <stdio.h>
-#endif
+#ifdef HAVE_STDINT_H
 #include <stdint.h>
+#endif
 #include <string.h>
 #include <sys/types.h>
 #include <HBauth.h>
