@@ -1,4 +1,4 @@
-/* $Id: stonithd.c,v 1.30 2005/03/21 08:56:39 sunjd Exp $ */
+/* $Id: stonithd.c,v 1.31 2005/03/21 09:13:42 sunjd Exp $ */
 
 /* File: stonithd.c
  * Description: STONITH daemon for node fencing
@@ -134,7 +134,7 @@ struct RA_operation_to_handler
 
 /* Miscellaneous functions such as daemon routines and others. */
 static void become_daemon(gboolean);
-static void show_daemon_status(const char * pidfile);
+static int show_daemon_status(const char * pidfile);
 static int kill_running_daemon(const char * pidfile);
 static pid_t running_daemon_pid(const char * pidfile);
 static int create_pidfile(const char * pidfile);
@@ -347,9 +347,7 @@ int main(int argc, char ** argv)
 				break;
 			
 			case 's': /* Show daemon status */
-				show_daemon_status(PIDFILE);
-				return (STARTUP_ALONE == TRUE) ? 
-					LSB_EXIT_OK : MAGIC_EC;
+				return show_daemon_status(PIDFILE);
 				break; /* Never reach here, just for uniform */
 
 			case 'k': /* kill the running daemon */
@@ -2887,13 +2885,15 @@ running_daemon_pid(const char * pidfile)
 	return -1;
 }
 
-static void
+static int
 show_daemon_status(const char * pidfile)
 {
 	if (running_daemon_pid(PIDFILE) > 0) {
 		stonithd_log(LOG_INFO, "%s %s", stonithd_name, M_RUNNING);
+		return 0;
 	} else {
 		stonithd_log(LOG_INFO, "%s seem stopped.", stonithd_name);
+		return -1;
 	}
 }
 
@@ -2978,6 +2978,9 @@ free_common_op_t(gpointer data)
 
 /* 
  * $Log: stonithd.c,v $
+ * Revision 1.31  2005/03/21 09:13:42  sunjd
+ * Change the return code to reflect the daemon status
+ *
  * Revision 1.30  2005/03/21 08:56:39  sunjd
  * Change a log message's loglevel
  *
