@@ -44,6 +44,7 @@
 #include <clplumbing/cl_log.h>
 #include <hb_api.h>
 
+
 /* exit code */
 const int OK = 0,
 	  NORMAL_FAIL = 1,		/* such as the local node is down */
@@ -261,8 +262,8 @@ main(int argc, char ** argv)
 	int i = -1;
 	gboolean GOOD_CMD = FALSE;
 
-	if ((argc == 1) || ( argc == 2 && strncmp(argv[1],"-h",3) == 0)){
-		printf("%s",simple_help_screen);
+	if ((argc == 1) || ( argc == 2 && STRNCMP_CONST(argv[1],"-h") == 0)){
+		printf("%s", simple_help_screen);
 		return 0;
 	}
 
@@ -407,10 +408,10 @@ listnodes(ll_cluster_t *hb, int argc, char ** argv, const char * optstr)
 		} else {
 			type = hb->llc_ops->node_type(hb, node);
 			if (( ONLY_LIST_NORAMAL == TRUE )
-			      && (strncmp(type, "normal", 8)==0)) {
+			      && (STRNCMP_CONST(type, "normal")==0)) {
 				printf("%s\n", node);
 			} else if (( ONLY_LIST_PING == TRUE ) 
-				    && (strncmp(type, "ping", 8)==0)) {
+				    && (STRNCMP_CONST(type, "ping")==0)) {
 				printf("%s\n", node);
 			}
 		} 
@@ -430,8 +431,8 @@ listnodes(ll_cluster_t *hb, int argc, char ** argv, const char * optstr)
 static int 
 nodestatus(ll_cluster_t *hb, int argc, char ** argv, const char * optstr)
 {
-	const char * status;
-	int ret = UNKNOWN_ERROR;
+	const char *	status;
+	int		ret = UNKNOWN_ERROR;
 
 	if ( general_simple_opt_deal(argc, argv, optstr) < 0 ) {
 		/* There are option errors */
@@ -451,20 +452,20 @@ nodestatus(ll_cluster_t *hb, int argc, char ** argv, const char * optstr)
 		return PARAMETER_ERROR;
 	}
 	if (FOR_HUMAN_READ == TRUE) {
-		printf("The cluster nodes %s is %s\n", argv[optind+1], status);
+		printf("The cluster node %s is %s\n", argv[optind+1], status);
 	} else {
 		printf("%s\n", status);
 	}
 
-       if ( strncmp(status, "active", 6) == 0 
-       ||      strncmp(status, "up", 3) == 0) {
+       if ( STRNCMP_CONST(status, "active") == 0 
+       ||      STRNCMP_CONST(status, "up") == 0) {
 		ret = OK;   /* the node is active */
 	} else {
 		ret = NORMAL_FAIL;  /* the status = "dead" */
 	}
 	/* Should there be other status? According the comment in heartbeat.c
-	   three status: active, up, down. But it's not like that. 
-	*/
+	 * three status: active, up, down. But it's not like that. 
+	 */
 	
 	return ret;
 }
@@ -574,7 +575,7 @@ hblinkstatus(ll_cluster_t *hb, int argc, char ** argv, const char * optstr)
 		printf("%s\n", if_status);
 	}
 
-	if ( strncmp(if_status, "up", 3) == 0 ) {
+	if ( STRNCMP_CONST(if_status, "up") == 0 ) {
 		ret = OK; /* the link is up */
 	} else {
 		ret = NORMAL_FAIL; /* the link is dead */
@@ -616,13 +617,13 @@ clientstatus(ll_cluster_t *hb, int argc, char ** argv, const char * optstr)
 		printf("%s\n", cstatus);
 	}
 
-	if ( strncmp(cstatus, "online", 6) == 0 ) {
+	if ( STRNCMP_CONST(cstatus, "online") == 0 ) {
 		ret = OK; 
-	} else if ( strncmp(cstatus, "offline", 7) == 0 ) {
+	} else if ( STRNCMP_CONST(cstatus, "offline") == 0 ) {
 		ret = NORMAL_FAIL; /* the client is offline */
-	} else if ( strncmp(cstatus, "join", 4) == 0 ) {
+	} else if ( STRNCMP_CONST(cstatus, "join") == 0 ) {
 		ret = 2;
-	} else if ( strncmp(cstatus, "leave", 5) == 0 ) {
+	} else if ( STRNCMP_CONST(cstatus, "leave") == 0 ) {
 		ret = 3;
 	}
 	
