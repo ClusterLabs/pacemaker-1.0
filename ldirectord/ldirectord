@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-my($VERSION)=(qw$Id: ldirectord,v 1.89 2004/05/31 02:27:24 horms Exp $)[2];
+my($VERSION)=(qw$Id: ldirectord,v 1.90 2004/06/03 07:59:57 horms Exp $)[2];
 
 ######################################################################
 # ldirectord                 http://www.vergenet.net/linux/ldirectord/
@@ -611,6 +611,7 @@ sub reread_config
 sub read_config
 {
 	undef @VIRTUAL;
+	undef @REAL;
 	undef $CALLBACK;
 	undef %LD_INSTANCE;
 	undef $checksum;
@@ -657,7 +658,6 @@ sub read_config
 				$vsrv{port} = "0";
 			}
 			$vsrv{real} = \@rsrv;
-			$vsrv{status} = 0;
 			$vsrv{scheduler} = "wrr";
 			$vsrv{request} = "/";
 			$vsrv{receive} = "";
@@ -1286,7 +1286,6 @@ sub ld_setup
 				$$r{num_connects} = -1;
 			}
 		}
-		$$v{status} = -1;
 		$$v{checktimeout} = $CHECKTIMEOUT if ($$v{checktimeout}<=0);
 		$$v{connecttimeout} = $CONNECTTIMEOUT if ($$v{connecttimeout}<=0);
 		$$v{connecttimeout} = $$v{checktimeout} if ($$v{connecttimeout}<=0);
@@ -1383,51 +1382,85 @@ sub ld_start
 	my $real_service;
 	my $nv;
 	my $nr;
+	my $server_down = {};
 
 	# read status of current ipvsadm -L -n
         $oldsrv=&ld_read_ipvsadm();
 
-	# modify service, if changed
+	# make sure virtual servers are up to date
 	foreach $nv (@VIRTUAL) {
-		my $nreal = $$nv{real};
-		$$nv{status} = 0;
-		my $real_service = &get_virtual($nv) . " "  . $$nv{protocol};
+		my $real_service = &get_virtual($nv) . " "  . $nv->{protocol};
+
 		if (exists($oldsrv->{"$real_service"})) {
 			# service exists, modify it
 			&system_wrapper("$IPVSADM -E $$nv{flags}");
 			&ld_log("Changed virtual server: " . &get_virtual($nv));
-			my $ov = $oldsrv->{&get_virtual($nv) . " " . $$nv{protocol}};
-			my $or = $$ov{real};
-			for $nr (@$nreal) {
-				if (exists($$or{"$$nr{server}:$$nr{port}"})) {
-					&system_wrapper("$IPVSADM -e $$nv{proto} " .  &get_virtual($nv) .  " -r $$nr{server}:$$nr{port} $$nr{forw} -w $$nr{wght}");
-					_status_up($nv, $nr);
-					&ld_log("Changed real server: $$nr{server}:$$nr{port} ($$nv{status} x " . &get_virtual($nv) . ")\n");
-					delete($$or{"$$nr{server}:$$nr{port}"});
-				}
-			}
-			# remove remaining entries for real servers
-			for my $k (keys %$or) {
-				&system_wrapper("$IPVSADM -d $$nv{proto} " . &get_virtual($nv) . " -r $k");
-				&ld_log("Removed real server: $$nr{server}:$$nr{port} ($$nv{status} x " . &get_virtual($nv) . ")\n");
-			}
-			delete $oldsrv->{&get_virtual($nv) . " " . $$nv{protocol}};
-		} else {
+		}
+		else {
 			# no such service, create a new one
 			&system_wrapper("$IPVSADM -A $$nv{flags}");
 			&ld_log("Added virtual server: " . &get_virtual($nv));
 		}
+	}
 
+	# make sure real servers are up to date
+	foreach $nv (@VIRTUAL) {
+		my $nreal = $nv->{real};
+		my $ov = $oldsrv->{&get_virtual($nv) . " " . $nv->{protocol}};
+		my $or = $ov->{real};
+		my $fallback = fallback_find($nv);
+
+		if (defined($fallback)) {
+			delete($or->{$fallback->{server}});
+		}
+
+		for $nr (@$nreal) {
+			my $real_str = "$nr->{server}:$nr->{port}";
+			if (! defined($or->{$real_str}) or
+					$or->{$real_str}->{weight} == 0) {
+				$server_down->{$real_str} = [$nv, $nr];
+				#service_set($nv, $nr, "down", "force");
+			}
+			else {
+				if (defined $server_down->{$real_str}) {
+					delete($server_down->{$real_str});
+				}
+				service_set($nv, $nr, "up", "force");
+			}
+			delete($or->{$real_str});
+		}
+
+		# remove remaining entries for real servers
+		for my $k (keys %$or) {
+			&system_wrapper("$IPVSADM -d " . $nv->{proto} .
+					&get_virtual($nv) . " -r $k");
+			&ld_log("Removed real server: $k (" . 
+					#scalar(%{$nv->{real_status}}) .
+					" x " .  &get_virtual($nv) . ")\n");
+			delete($$or{$k});
+		}
+
+		delete($oldsrv->{&get_virtual($nv) . " " . $nv->{protocol}});
 		&fallback_on($nv);
+	}
+
+	for my $k (keys (%$server_down)) {
+	        my $v = $server_down->{$k};
+		service_set(@$v[0], @$v[1], "down", "force");
+		delete($server_down->{$k});
+		#sleep 5;
 	}
 
 	# remove remaining entries for virtual servers
 	foreach $nv (@OLDVIRTUAL) {
-		if (exists($oldsrv->{&get_virtual($nv) . " " . $$nv{protocol}})) {
-			# service still exists, remove it
-			&system_wrapper("$IPVSADM -D $$nv{proto} " . &get_virtual($nv));
-			&ld_log("Removed virtual server: " . &get_virtual($nv) . "\n");
+		if (! defined($oldsrv->{&get_virtual($nv) . " " . 
+					$nv->{protocol}})) {
+			next;
 		}
+		# service still exists, remove it
+		&system_wrapper("$IPVSADM -D " . $nv->{proto} . " " . 
+				&get_virtual($nv));
+		&ld_log("Removed virtual server: " . &get_virtual($nv) . "\n");
 	}
 }
 
@@ -1451,7 +1484,10 @@ sub ld_stop
 			if (defined $$r{virtual_status}) {
 				&system_wrapper("$IPVSADM -d $$v{proto} " . &get_virtual($v) . " -r $$r{server}:$$r{port}");
 				_status_down($v, $r);
-				&ld_log("Removed real server: $$r{server}:$$r{port} ($$v{status} x " . &get_virtual($v) );
+				&ld_log("Removed real server: " .
+					"$$r{server}:$$r{port} (" .
+					#scalar(%{$v->{real_status}}) . 
+					" x " . &get_virtual($v) );
 			}
 		}
 		&system_wrapper("$IPVSADM -D $$v{proto} " .  &get_virtual($v));
@@ -1985,7 +2021,7 @@ sub check_none
 
 sub service_set()
 {
-	my ($v, $r, $state) = @_;
+	my ($v, $r, $state, $force) = @_;
 
 	my ($real, $virtual, $virt);
 
@@ -2015,10 +2051,10 @@ sub service_set()
 		}
 		if ($found == 1) {
 			if ($state=~/up/i) {
-				_service_up($v, $r);
+				_service_up($v, $r, $force);
 				&ld_debug(2, "Enabled server=$$r{server}");
 			} elsif ($state=~/down/i) {
-				_service_down($v, $r);
+				_service_down($v, $r, $force);
 				&ld_debug(2, "Disabled server=$$r{server}");
 			}
 		}
@@ -2056,6 +2092,7 @@ sub _remove_service {
         my $log_args;
 	my $virtual_str;
 	my $old_rservice;
+	my $is_quiescent;
 
 	$virtual_str = &get_virtual($v);
 
@@ -2063,6 +2100,14 @@ sub _remove_service {
         $ov=$oldsrv->{$virtual_str . " " . $v->{"protocol"}};
 	if(!defined($ov)){
 		return;
+	}
+
+	if ($tag ne "fallback" 
+			and ((defined $$v{quiescent} 
+					and $$v{quiescent} eq "yes")
+				or (!defined($$v{quiescent}) 
+					and $QUIESCENT eq "yes"))){
+		$is_quiescent = "quiescent";
 	}
 
         $or=$ov->{"real"}->{$rservice};
@@ -2086,8 +2131,10 @@ sub _remove_service {
         	$or=$ov->{"real"}->{$rservice};
 	}
 
-        if(!defined($or) or ($or->{"weight"} eq 0 and 
-			$or->{"forward"} eq $rforw)){
+        if((!defined($or) and !defined($is_quiescent)) or 
+			(defined($is_quiescent) and defined($or) and
+				$or->{"weight"} eq 0 and 
+				$or->{"forward"} eq $rforw)){
 		return;
 	}
 
@@ -2096,16 +2143,25 @@ sub _remove_service {
 	if(defined($old_rservice)) {
 		$log_args .= "mapped from $old_rservice "
 	}
-	$log_args .= "($$v{status} x $virtual_str)";
+	$log_args .= "(" #. scalar(%{$v->{real_status}}) 
+		. " x $virtual_str)";
 
-	if($tag eq "fallback" or ($$v{quiescent} and $$v{quiescent} eq "no")
-			or (!defined($$v{quiescent}) and $QUIESCENT eq "no")){
+	if(defined($is_quiescent)) {
+		if (defined($or)) {
+                	&system_wrapper("$IPVSADM -e "
+					. "$ipvsadm_args $rforw -w 0");
+	        	&ld_log("Quiescent $log_args (Weight set to 0)");
+		}
+		else {
+                	&system_wrapper("$IPVSADM -a "
+					. "$ipvsadm_args $rforw -w 0");
+	        	&ld_log("Quiescent $log_args (Weight set to 0)");
+		}
+        }
+	else {
                 &system_wrapper("$IPVSADM -d $ipvsadm_args");
 	        &ld_log("Deleted $log_args");
-	} else {
-                &system_wrapper("$IPVSADM -e $ipvsadm_args $rforw -w 0");
-	        &ld_log("Quiescent $log_args (Weight set to 0)");
-        }
+	}
 }
 
 
@@ -2142,7 +2198,8 @@ sub _restore_service {
 	$ipvsadm_args = "$$v{proto} " . &get_virtual($v) 
                         . " -r $rservice $rforw -w $rwght";
         $log_args = "$tag server: $rservice "
-                    . "($$v{status} x " .  &get_virtual($v) . ")";
+                    . "(" #. scalar(%{$v->{real_status}}) 
+		    . " x " .  &get_virtual($v) . ")";
 
         #if the server exists then restore its weight
         # otherwise add the server
@@ -2166,24 +2223,36 @@ sub _restore_service {
 
 
 # Set the status of a server as up
-# Should onlu be called from _service_up or _ld_start
+# Should only be called from _service_up or _ld_start
 
 sub _status_up
 {
-	my ($v, $r) = (@_);
+	my ($v, $r, $is_fallback) = (@_);
 
 	my $virtual_id = get_virtual_id_str($v);
+	my $real_id = get_real_id_str($r, $v);
 
-	if (defined ($r->{virtual_status}) and
-			$r->{virtual_status}->{"$virtual_id"}) {
-		return undef;
+	if (defined($is_fallback)) {
+		if (defined($v->{real_status}) or
+				(defined($v->{fallback_status}) and
+				$v->{fallback_status}->{"$real_id"})) {
+			return undef;
+		}
 	}
-	
-	if (!defined ($r->{virtual_status})) {
-		$r->{virtual_status} = {};
+	else {
+		if (defined ($v->{real_status}) and
+				$v->{real_status}->{"$real_id"}) {
+			return undef;
+		}
 	}
+
 	$r->{virtual_status}->{"$virtual_id"} = 1;
-	$v->{status}++;
+	if (defined $is_fallback) {
+		$v->{fallback_status}->{"$real_id"} = 1;
+	}
+	else {
+		$v->{real_status}->{"$real_id"} = 1;
+	}
 
 	return 1;
 }
@@ -2193,17 +2262,39 @@ sub _status_up
 
 sub _status_down
 {
-	my ($v, $r) = (@_);
+	my ($v, $r, $is_fallback) = (@_);
 
 	my $virtual_id = get_virtual_id_str($v);
+	my $real_id = get_real_id_str($r, $v);
 
-	if (! defined ($r->{virtual_status}) or
-			! $r->{virtual_status}->{"$virtual_id"}) {
-		return undef;
+	if (defined($is_fallback)) {
+		if (! defined($v->{real_status}) or
+				! defined($v->{fallback_status}) or
+				! $v->{fallback_status}->{"$real_id"}) {
+			return undef;
+		}
 	}
-	
+	else {
+		if (! defined ($v->{real_status}) or
+				! $v->{real_status}->{"$real_id"}) {
+			return undef;
+		}
+	}
+
+	if (defined($is_fallback)) {
+		delete $v->{fallback_status}->{"$real_id"};
+		if (! %{$v->{fallback_status}}) {
+			$v->{fallback_status} = undef;
+		}
+	}
+	else {
+		delete $v->{real_status}->{"$real_id"};
+		if (! %{$v->{real_status}}) {
+			$v->{real_status} = undef;
+		}
+	}
+
 	delete $r->{virtual_status}->{"$virtual_id"};
-	$v->{status}--;
 	if (! %{$r->{virtual_status}}) {
 		$r->{virtual_status} = undef;
 	}
@@ -2228,9 +2319,9 @@ sub _status_down
 
 sub _service_up
 {
-	my ($v, $r) = (@_);
+	my ($v, $r, $force) = (@_);
 
-	if (! _status_up($v, $r)) {
+	if (! _status_up($v, $r) and ! defined($force)) {
 		return;
 	}
 
@@ -2254,14 +2345,15 @@ sub _service_up
 
 sub _service_down
 {
-	my ($v, $r) = @_;
+	my ($v, $r, $force) = @_;
 
-	if (! _status_down($v, $r)) {
+	if (! _status_down($v, $r) and ! defined($force)) {
 		return;
 	}
 
         &_remove_service($v, $r->{server} . ":" . $r->{port}, 
                           $r->{forw}, "real");
+
 	&fallback_on($v);
 }
 
@@ -2274,14 +2366,18 @@ sub _service_down
 
 sub fallback_on
 {
-	my ($v) = (@_);
+	my ($v, $force) = (@_);
 
 	my $fallback=&fallback_find($v);
-	if (defined $fallback and $$v{status}==0) {
-                _restore_service($v, $fallback->{server}, 
-                        get_forward_flag($fallback->{forward}), 
-                        "1", "fallback");
+
+	if (! defined($fallback) or (! _status_up($v, $fallback, "fallback") 
+			and ! defined($force))) {
+		return;
 	}
+
+	&_restore_service($v, $fallback->{server}, 
+			get_forward_flag($fallback->{forward}), 
+				"1", "fallback");
 }
 
 
@@ -2293,14 +2389,18 @@ sub fallback_on
 
 sub fallback_off
 {
-	my ($v) = (@_);
+	my ($v, $force) = (@_);
 
 	my $fallback=&fallback_find($v);
-	if (defined $fallback and $$v{status}==1) {
-                _remove_service($v, $fallback->{server},
-                         get_forward_flag($fallback->{forward}),
-                         "fallback");
+
+	if (! defined($fallback) or (! _status_down($v, $fallback, "fallback") 
+			and ! defined($force))) {
+		return;
 	}
+
+	&_remove_service($v, $fallback->{server},
+			get_forward_flag($fallback->{forward}),
+				"fallback");
 }
 
 
@@ -2322,7 +2422,7 @@ sub fallback_find
 		return($FALLBACK->{$virtual->{"protocol"}});
 	}
 
-	return;
+	return undef;
 }
 
 
