@@ -1,4 +1,4 @@
-/* $Id: hb_resource.c,v 1.68 2004/11/16 05:47:23 zhenh Exp $ */
+/* $Id: hb_resource.c,v 1.69 2004/11/17 21:00:14 msoffen Exp $ */
 /*
  * hb_resource: Linux-HA heartbeat resource management code
  *
@@ -485,10 +485,10 @@ void
 hb_rsc_recover_dead_resources(struct node_info* hip)
 {
 	gboolean	need_stonith = TRUE;
-	standby_running = zero_longclock;
-	going_standby	= NOT;
 	struct ha_msg *	hmsg;
 	char		timestamp[16];
+	standby_running = zero_longclock;
+	going_standby	= NOT;
 
 	
 	if ((hmsg = ha_msg_new(6)) == NULL) {
@@ -2416,6 +2416,9 @@ StonithStatProcessName(ProcTrack* p)
 
 /*
  * $Log: hb_resource.c,v $
+ * Revision 1.69  2004/11/17 21:00:14  msoffen
+ * Moved initialization of standby_running and going_standby to compile on BSD
+ *
  * Revision 1.68  2004/11/16 05:47:23  zhenh
  * 1.Make the ordering shutdown work. 2.Move HBDoMsg_T_SHUTDONE() to hb_resource.c
  *
