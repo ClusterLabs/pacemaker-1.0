@@ -1,4 +1,4 @@
-/* $Id: oc_membership.h,v 1.4 2004/02/17 22:11:58 lars Exp $ */
+/* $Id: oc_membership.h,v 1.5 2004/02/24 22:30:09 andrew Exp $ */
 #ifndef OCF_OC_MEMBERSHIP_H
 #	define OCF_OC_MEMBERSHIP_H
 /*
@@ -99,7 +99,7 @@ typedef struct oc_member_uniqueid_s		oc_member_uniqueid_t;
  * checksum or it may be some other value.  All that is specified is that
  * it and the m_instance are unique when taken as a whole.
  */
-typedef unsigned char oc_mbr_uuid[16];
+typedef unsigned char oc_mbr_uniqueid[16];
 struct oc_member_uniqueid_s {
 	unsigned	m_instance;
 	oc_mbr_uniqueid	uniqueid;
