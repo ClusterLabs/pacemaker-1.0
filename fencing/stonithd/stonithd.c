@@ -1,7 +1,7 @@
-/* $Id: stonithd.c,v 1.16 2005/02/16 21:40:06 gshi Exp $ */
+/* $Id: stonithd.c,v 1.17 2005/02/17 08:21:42 sunjd Exp $ */
 
 /* File: stonithd.c
- * Description: STONITH deamon for node fencing
+ * Description: STONITH daemon for node fencing
  *
  * Author: Sun Jiang Dong <sunjd@cn.ibm.com>
  * Copyright (c) 2004 International Business Machines
@@ -130,11 +130,11 @@ struct RA_operation_to_handler
 	RA_subop_handler		post_handler;
 };
 
-/* Miscellaneous functions such as deamon routines and others. */
-static void become_deamon(gboolean);
-static void show_deamon_status(const char * pidfile);
-static int kill_running_deamon(const char * pidfile);
-static pid_t running_deamon_pid(const char * pidfile);
+/* Miscellaneous functions such as daemon routines and others. */
+static void become_daemon(gboolean);
+static void show_daemon_status(const char * pidfile);
+static int kill_running_daemon(const char * pidfile);
+static pid_t running_daemon_pid(const char * pidfile);
 static int create_pidfile(const char * pidfile);
 static void stonithd_log(int priority, const char * fmt, ...)G_GNUC_PRINTF(2,3);
 static void stonithd_quit(int signo);
@@ -254,7 +254,7 @@ static struct RA_operation_to_handler raop_handler[] = {
 
 #define PID_FILE        HA_VARRUNDIR"/stonithd.pid"
 
-/* define the message type between stonith deamons on different nodes */
+/* define the message type between stonith daemons on different nodes */
 #define T_WHOCANST  	"whocanst"	/* who can stonith a node */
 #define T_ICANST	"icanst" 	/* I can stonith a node */	
 #define T_STIT		"stit" 		/* please stonith it */	
@@ -275,8 +275,8 @@ static const char * M_STARTUP = "start up successfully.",
 static const char * simple_help_screen =
 "Usage: stonithd [-nskdh]\n"
 "	-n	Do not register to apphbd. Now donnot register to apphbd by default.\n"
-"	-s	Show the status of the deamons.\n"
-"	-k	Kill the deamon.\n"
+"	-s	Show the status of the daemons.\n"
+"	-k	Kill the daemon.\n"
 "	-d	Run the stonithd in debug mode. Under debug mode more\n"
 "		debug information is written to log file.\n"
 "	-a	Start up alone outside of heartbeat.\n" 
@@ -336,14 +336,14 @@ int main(int argc, char ** argv)
 				NEED_SIGNON_TO_APPHBD = FALSE;
 				break;
 			
-			case 's': /* Show deamon status */
-				show_deamon_status(PIDFILE);
+			case 's': /* Show daemon status */
+				show_daemon_status(PIDFILE);
 				return (STARTUP_ALONE == TRUE) ? 
 					LSB_EXIT_OK : MAGIC_EC;
 				break; /* Never reach here, just for uniform */
 
-			case 'k': /* kill the running deamon */
-				return(kill_running_deamon(PIDFILE));
+			case 'k': /* kill the running daemon */
+				return(kill_running_daemon(PIDFILE));
 				break; /* Never reach here, just for uniform */
 
 			case 'd': /* Run with debug mode */
@@ -370,13 +370,13 @@ int main(int argc, char ** argv)
 		}
 	} while (1);
 
-	if ( running_deamon_pid(PIDFILE) > 0 ) {
+	if ( running_daemon_pid(PIDFILE) > 0 ) {
 		stonithd_log(LOG_NOTICE, "%s %s", argv[0], M_RUNNING);
 		return (STARTUP_ALONE == TRUE) ? LSB_EXIT_OK : MAGIC_EC;
 	}
 
-	/* Not use deamon() API, since it's not POSIX compliant */
-	become_deamon(STARTUP_ALONE);
+	/* Not use daemon() API, since it's not POSIX compliant */
+	become_daemon(STARTUP_ALONE);
 
 	hb = ll_cluster_new("heartbeat");
 	if ( hb == NULL ) {
@@ -496,10 +496,10 @@ delhb_quit:
 
 /* 
  * Notes: 
- * 1) Not use deamon() API for its portibility, any comment?
+ * 1) Not use daemon() API for its portibility, any comment?
 */
 static void
-become_deamon(gboolean startup_alone)
+become_daemon(gboolean startup_alone)
 {
 	pid_t pid;
 	int j;
@@ -509,7 +509,7 @@ become_deamon(gboolean startup_alone)
 
 		if (pid < 0) { /* in parent process and fork failed. */
 			stonithd_log(LOG_ERR, 
-				     "become_deamon: forking a child failed.");
+				     "become_daemon: forking a child failed.");
 			stonithd_log(LOG_ERR, 
 				     "exit due to not becoming a daemon.");
 			exit(LSB_EXIT_GENERIC);
@@ -1054,6 +1054,7 @@ accept_client_dispatch(IPC_Channel * ch, gpointer user)
 {
 	if (ch == NULL) {
 		stonithd_log(LOG_ERR, "IPC accepting a connection failed.");
+		return FALSE;
 	}
 
 	stonithd_log(LOG_DEBUG, "IPC accepted a connection.");
@@ -1078,7 +1079,7 @@ stonithd_client_dispatch(IPC_Channel * ch, gpointer user_data)
 
 	while ( ch->ops->is_message_pending(ch))  {
 		if (ch->ch_status == IPC_DISCONNECT) {
-			stonithd_log(LOG_ERR, "IPC disconneted with a client.");
+			stonithd_log(LOG_INFO, "IPC disconneted with a client.");
 #if 0
 			/* For verify the API use */
 			if  ((msg = msgfromIPC_noauth(ch)) == NULL ) {
@@ -2271,7 +2272,7 @@ stonithRA_operate( stonithRA_ops_t * op, gpointer data )
 	}
 
         if (i == DIMOF(raop_handler)) {
-                stonithd_log(LOG_ERR, "stonithRA_operate: received an unknown "
+                stonithd_log(LOG_WARNING, "stonithRA_operate: received an unknown "
 			     "RA op, and now just ignore it.");
         }
 
@@ -2712,7 +2713,7 @@ create_pidfile(const char * pidfile)
 }
 
 static pid_t
-running_deamon_pid(const char * pidfile)
+running_daemon_pid(const char * pidfile)
 {
 	FILE * fd;
 	pid_t pid;
@@ -2737,9 +2738,9 @@ running_deamon_pid(const char * pidfile)
 }
 
 static void
-show_deamon_status(const char * pidfile)
+show_daemon_status(const char * pidfile)
 {
-	if (running_deamon_pid(PIDFILE) > 0) {
+	if (running_daemon_pid(PIDFILE) > 0) {
 		stonithd_log(LOG_INFO, "%s %s", stonithd_name, M_RUNNING);
 	} else {
 		stonithd_log(LOG_INFO, "%s seem stopped.", stonithd_name);
@@ -2747,22 +2748,22 @@ show_deamon_status(const char * pidfile)
 }
 
 static int
-kill_running_deamon(const char * pidfile)
+kill_running_daemon(const char * pidfile)
 {
 	pid_t pid;
 
-	if ( (pid = running_deamon_pid(PIDFILE)) < 0 ) {
-		stonithd_log(LOG_ERR, "cannot get deamon PID to kill it.");
+	if ( (pid = running_daemon_pid(PIDFILE)) < 0 ) {
+		stonithd_log(LOG_ERR, "cannot get daemon PID to kill it.");
 		return LSB_EXIT_GENERIC;	
 	}
 
 	if (CL_KILL(pid, SIGTERM) == 0) {
 		stonithd_log(LOG_INFO, "Signal sent to a runnig stonithd "
-			"deamon, its pid is %ld,", (long)pid);
+			"daemon, its pid is %ld,", (long)pid);
 		return LSB_EXIT_OK;
 	} else {
 		stonithd_log(LOG_ERR, "Cannot kill the running stonithd "
-			     "deamon, its pid is %ld.", (long)pid);
+			     "daemon, its pid is %ld.", (long)pid);
 		return (errno == EPERM ? LSB_EXIT_EPERM : LSB_EXIT_GENERIC);
 	} 
 }
@@ -2827,7 +2828,11 @@ free_common_op_t(gpointer data)
 
 /* 
  * $Log: stonithd.c,v $
+ * Revision 1.17  2005/02/17 08:21:42  sunjd
+ * fix the log level; correct the word misspelling
+ *
  * Revision 1.16  2005/02/16 21:40:06  gshi
+ *
  * stonithd should quit when IPC is disconnected instead of when IPC is not disconnected
  *
  * Revision 1.15  2005/02/15 17:40:44  alan
