@@ -1,4 +1,4 @@
-/* $Id: ccmclient.c,v 1.21 2005/03/10 17:45:14 gshi Exp $ */
+/* $Id: ccmclient.c,v 1.22 2005/03/16 16:26:59 lars Exp $ */
 /* 
  * client.c: Consensus Cluster Client tracker
  *
@@ -345,8 +345,17 @@ mem_quorum(llm_info_t* llm, int member_count)
 	int	inactive_count = llm_get_inactive_node_count(llm);
 	int	total_count = llm->llm_nodeCount;
 	
-	cl_log(LOG_INFO, "n_member=%d, nodecount=%d, inactive_count=%d\n",
+	cl_log(LOG_INFO, "n_member=%d, nodecount=%d, inactive_count=%d",
 	       member_count, total_count, inactive_count); 
+	
+	/* XXX REVISIT TODO: This is a temporary WORK-AROUND for the two
+	 * node clusters. With one node missing, always assume quorum.
+	 * This will be farmed out to plugins later! */
+	if (total_count == 2) {
+		cl_log(LOG_INFO, "Asserting quorum for two node cluster!");
+		return TRUE;
+	}
+	
 	if(member_count <((total_count - inactive_count)/2 + 1)){
 		return FALSE;
 	}
