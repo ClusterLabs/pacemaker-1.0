@@ -1,4 +1,4 @@
-/* $Id: hb_api.c,v 1.123 2004/12/06 21:02:44 gshi Exp $ */
+/* $Id: hb_api.c,v 1.124 2004/12/14 22:12:31 alan Exp $ */
 /*
  * hb_api: Server-side heartbeat API code
  *
@@ -1465,8 +1465,10 @@ api_send_client_msg(client_proc_t* client, struct ha_msg *msg)
 	}
 
 	if (CL_KILL(client->pid, client->signal) < 0 && errno == ESRCH) {
-		cl_log(LOG_INFO, "api_send_client: client %ld died"
-		,	(long) client->pid);
+		if (ANYDEBUG) {
+			cl_log(LOG_DEBUG, "api_send_client: client %ld died"
+			,	(long) client->pid);
+		}
 		if (!client->removereason) {
 			client->removereason = "died";
 		}
@@ -1857,9 +1859,11 @@ ProcessAnAPIRequest(client_proc_t*	client)
 
 		/* EOF? */
 		if (client->chan->ch_status == IPC_DISCONNECT) {
-			cl_log(LOG_INFO
-			,	"EOF from client pid %ld"
-			,	(long)client->pid);
+			if (ANYDEBUG) {
+				cl_log(LOG_DEBUG
+				,	"EOF from client pid %ld"
+				,	(long)client->pid);
+			}
 			client->removereason = "EOF";
 			goto getout;
 		}
@@ -1901,9 +1905,11 @@ getout:
 	/* May have gotten a message from 'client' */
 	if (CL_KILL(client->pid, 0) < 0 && errno == ESRCH) {
 		/* Oops... he's dead */
-		cl_log(LOG_INFO
-		,	"Client pid %ld died (input)"
-		,	(long)client->pid);
+		if (ANYDEBUG) {
+			cl_log(LOG_DEBUG
+			,	"Client pid %ld died (input)"
+			,	(long)client->pid);
+		}
 		client->removereason = "died";
 	}
 	if (DEBUGDETAILS) {
