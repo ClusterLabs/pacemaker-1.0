@@ -1,4 +1,4 @@
-/* $Id: ping_group.c,v 1.10 2004/05/11 22:04:35 alan Exp $ */
+/* $Id: ping_group.c,v 1.11 2004/06/16 07:38:54 horms Exp $ */
 /*
  * ping_group.c: ICMP-echo-based heartbeat code for heartbeat.
  *
@@ -95,9 +95,10 @@
 #include <pils/plugin.h>
 
 
-#define NSLOT			16              /* How old ping sequence
+#define NSLOT			128              /* How old ping sequence
 						   numbers can be to still
 						   count */
+
 typedef struct ping_group_node ping_group_node_t;
 
 struct ping_group_node {
@@ -492,34 +493,23 @@ ping_group_read(struct hb_media* mp, int *lenp)
 	}
 
 	slotn = seq % NSLOT;
-	if(seq > ei->iseq) {
-		/* New Sequins ! */
-		ei->iseq = seq;
-		ei->slot[slotn] = 0;
-	}
-	else if(seq < ei->iseq - NSLOT) {
-		/* Sequence is too old */
+	if(ei->slot[slotn] == seq) {
+		/* Duplicate within window */
 		ha_msg_del(msg);
 		return(NULL);
 	}
+
+	ei->slot[slotn] = seq;
 	
-	if(!ei->slot[slotn]++) {
-		/* First response responded */
-		
-		pktlen = numbytes - hlen - ICMP_HDR_SZ;
-		pkt = ha_malloc(pktlen + 1);
-		pkt[pktlen] = 0;
-		
-		memcpy(pkt, buf.cbuf + hlen + ICMP_HDR_SZ, pktlen);	
-		*lenp = pktlen + 1;
-		
-		ha_msg_del(msg);
-		
-		return(pkt);
-	}
+	pktlen = numbytes - hlen - ICMP_HDR_SZ;
+	pkt = ha_malloc(pktlen + 1);
+	pkt[pktlen] = 0;
+	
+	memcpy(pkt, buf.cbuf + hlen + ICMP_HDR_SZ, pktlen);	
+	*lenp = pktlen + 1;
 	
 	ha_msg_del(msg);
-	return(NULL);
+	return(pkt);
 }
 
 /*
