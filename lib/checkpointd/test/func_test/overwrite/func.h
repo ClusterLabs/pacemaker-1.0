@@ -1,4 +1,4 @@
-/* $Id: func.h,v 1.1 2004/06/30 03:44:20 deng.pan Exp $ */
+/* $Id: func.h,v 1.2 2004/10/09 01:49:41 lge Exp $ */
 /* 
  * func.h: Test data checkpoint head file: ssaCkptSectionOverwrite 
  *
@@ -105,7 +105,7 @@ void termhandler (int signumber)
 
 void usrhandler (int signumber)
 {
-//	signal (SIGUSR1, usrhandler) ;
+/*	signal (SIGUSR1, usrhandler) ; */
 	return ;
 }
 /*

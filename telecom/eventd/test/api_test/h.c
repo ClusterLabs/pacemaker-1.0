@@ -1,4 +1,4 @@
-/* $Id: h.c,v 1.1 2004/08/03 06:32:21 deng.pan Exp $ */
+/* $Id: h.c,v 1.2 2004/10/09 01:49:42 lge Exp $ */
 /* 
  * h.c: Event Service API test case for:SaEvtChannelOpenSync, SaEvtDispatch
  *
@@ -33,10 +33,10 @@ SaInvocationT evt_invocation;
 SaEvtChannelHandleT channel_handle;
 static int nOpenTimes;
 
-//event data get
+/*event data get */
 static void callback_event_open(SaInvocationT invocation,const SaEvtChannelHandleT ChannelHandle,SaErrorT error)
 {
-	//for Openasync1: Openasync first time without CREAT falg
+	/*for Openasync1: Openasync first time without CREAT falg */
 	nOpenTimes++;
 	if(nOpenTimes==1)
 		{
@@ -50,13 +50,13 @@ static void callback_event_open(SaInvocationT invocation,const SaEvtChannelHandl
 	if (invocation != evt_invocation)
 		return ;
 	
-	//callback_match = 1 ;
+	/*callback_match = 1 ; */
 	channel_handle =  ChannelHandle ;
 	return ;
 }
 
 
-//event data get
+/*event data get */
 static void callback_event_deliver(SaEvtSubscriptionIdT sub_id,
 				SaEvtEventHandleT event_handle,
 				const SaSizeT eventDataSize)
@@ -85,7 +85,7 @@ int main(int argc, char **argv)
 	evt_invocation = INVOCATION_BASE ;
 	SaErrorT Evt_Error;
 	
-	//initialize
+	/*initialize */
 	version.releaseCode = 'A';
 	version.major = 1;
 	version.minor = 0;
@@ -98,20 +98,20 @@ int main(int argc, char **argv)
 		return 1;
 	}
 
-	//get selection object
+	/*get selection object */
 	saEvtSelectionObjectGet(evt_handle, &fd);
 
-	//channel open
+	/*channel open */
 	ch_name.length = 8;
 	memcpy(ch_name.value, "opensync", 8);
 
 
-	//Openasync1: openasync first time without Creat flag		
+	/*Openasync1: openasync first time without Creat flag */
 	Evt_Error = saEvtChannelOpenAsync(evt_handle,evt_invocation , &ch_name, 3);
 	if(Evt_Error!=SA_OK){
 		printf("Event service opensync(1) fail\n");
 	}else{
-		//dispatch, event_data_get(in callback function)
+		/*dispatch, event_data_get(in callback function) */
 		FD_ZERO(&rset);
 		FD_SET(fd, &rset);
 		select_ret = select(fd + 1, &rset, NULL,NULL, NULL);
@@ -135,7 +135,7 @@ int main(int argc, char **argv)
 
 	
 	
-	//dispatch, event_data_get(in callback function)
+	/*dispatch, event_data_get(in callback function) */
 	FD_ZERO(&rset);
 	FD_SET(fd, &rset);
 	select_ret = select(fd + 1, &rset, NULL,NULL, NULL);
@@ -145,7 +145,7 @@ int main(int argc, char **argv)
 	}else{
 
 		
-		//dispatch 1
+		/*dispatch 1 */
 		if(saEvtDispatch(evt_handle, SA_DISPATCH_ONE)== SA_OK){
 			printf("Event service dispatch(1) success\n");
 			
@@ -155,34 +155,34 @@ int main(int argc, char **argv)
 	}
 
 	
-	//channel close
+	/*channel close */
 	saEvtChannelClose(channel_handle);
 
-	//opensync 2	
+	/*opensync 2 */
 	if(saEvtChannelOpenAsync(evt_handle,evt_invocation , &ch_name, -1)== SA_ERR_BAD_FLAGS){
 		printf("Event service opensync(3) success\n");
 	}else{
 		printf("Event service opensync(3) fail\n");	
 	}
 
-	//finalize
+	/*finalize */
 	saEvtFinalize(evt_handle);
 	 
-	//dispatch 2
+	/*dispatch 2 */
 	if(saEvtDispatch(evt_handle, SA_DISPATCH_ONE)== SA_ERR_BAD_HANDLE){
 		printf("Event service dispatch(2) success\n");			
 	}else{
 		printf("Event service dispatch(2) fail\n");	
 	}
 	
-	//opensync 3	
+	/*opensync 3 */
 	if(saEvtChannelOpenAsync(evt_handle,evt_invocation , &ch_name, 5)== SA_ERR_BAD_HANDLE){
 		printf("Event service opensync(4) success\n");
 	}else{
 		printf("Event service opensync(4) fail\n");	
 	}
 	
-	//dispatch 3
+	/*dispatch 3 */
 	saEvtInitialize(&evt_handle, &callbacks, &version);
 	if(saEvtDispatch(evt_handle, -1)== SA_ERR_BAD_FLAGS){
 		printf("Event service dispatch(3) success\n");

@@ -1,4 +1,4 @@
-/* $Id: write4node1.c,v 1.1 2004/06/30 03:44:21 deng.pan Exp $ */
+/* $Id: write4node1.c,v 1.2 2004/10/09 01:49:41 lge Exp $ */
 /* 
  * write4node1.c: Test data checkpoint function : saCkptCheckpointWrite 
  *
@@ -97,7 +97,7 @@ void termhandler (int signumber)
 
 void usrhandler (int signumber)
 {
-//	signal (SIGUSR1, usrhandler) ;
+/*	signal (SIGUSR1, usrhandler) ; */
 	return ;
 }
 /*

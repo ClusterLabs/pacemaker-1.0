@@ -1,4 +1,4 @@
-/* $Id: fun10node1.c,v 1.1 2004/08/03 06:32:21 deng.pan Exp $ */
+/* $Id: fun10node1.c,v 1.2 2004/10/09 01:49:42 lge Exp $ */
 /* 
  * fun10node1.c: Funtion Test Case 10 for Event Service Test
  * saEvtInitialize, saEvtFinalize, saEvtSelectionObjectGet
@@ -25,13 +25,13 @@
 static int nCmpResult=1, nTimes=0;
 
 
-//event data get
+/*event data get */
 static void callback_event_deliver(SaEvtSubscriptionIdT sub_id,
 				SaEvtEventHandleT event_handle,
 				const SaSizeT eventDataSize)
 {
 	nTimes++;
-	//syslog (LOG_INFO|LOG_LOCAL7,"\n$$$$$$$$$node 1 :sub: %d, Event: %d$$$$$$$$$$$\n",(int)sub_id,eventDataSize);
+	/*syslog (LOG_INFO|LOG_LOCAL7,"\n$$$$$$$$$node 1 :sub: %d, Event: %d$$$$$$$$$$$\n",(int)sub_id,eventDataSize); */
 	switch(sub_id)
 	{
 		case 1: 
@@ -66,20 +66,20 @@ int main(int argc, char **argv)
 		return -1;
 	}	
 	
-	//initialize
+	/*initialize */
 	callbacks.saEvtEventDeliverCallback = callback_event_deliver;
 	if(saEvtInitialize(&evt_handle, &callbacks, &version) != SA_OK){
 		syslog (LOG_INFO|LOG_LOCAL7, "%s \n", Fail_message) ;
 		return -1;
 	}
 	
-	//get selection object
+	/*get selection object */
 	saEvtSelectionObjectGet(evt_handle, &fd);
 
 	/* tell monitor machine "I'm up now"*/ 	
 	syslog (LOG_INFO|LOG_LOCAL7, "%s %d\n", Start_message, getpid ()) ;	
 	
-	//Step 1. 
+	/*Step 1. */
 	for(i=0;i<2;i++){
 		
 		ch_name.length = i+1;
@@ -95,7 +95,7 @@ int main(int argc, char **argv)
 	syslog (LOG_INFO|LOG_LOCAL7, "%s %d %d\n",Signal_message, count++, SIGUSR1) ;
 	pausepause () ;		
 
-	//setmode() will set the 6 event patterns and 4 filter arrays, see in func.h
+	/*setmode() will set the 6 event patterns and 4 filter arrays, see in func.h */
 	if(setmode()<0){
 		for(i=0;i<4;i++) saEvtChannelClose(channel_handle[i]);
 		saEvtFinalize(evt_handle);
@@ -114,12 +114,12 @@ int main(int argc, char **argv)
 		}
 	}
 
-	//wait for node 2 step 4
+	/*wait for node 2 step 4 */
 	
 	syslog (LOG_INFO|LOG_LOCAL7, "%s %d %d\n",Signal_message, count++, SIGUSR1) ;
 	pausepause () ;	
 
-	//step 3: publish event1~6 on channel 1~2 node 1
+	/*step 3: publish event1~6 on channel 1~2 node 1 */
 	for(i=1;i<2;i++)
 	{
 		if(Publish_Event_mode(channel_handle[i])<0){
@@ -157,7 +157,7 @@ int main(int argc, char **argv)
 		
 	freemode();
 	
-	//finalize	
+	/*finalize */
 	if(saEvtFinalize(evt_handle)!=SA_OK){
 		syslog (LOG_INFO|LOG_LOCAL7, "%s \n", Fail_message) ;
 		return -1;

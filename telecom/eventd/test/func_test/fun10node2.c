@@ -1,4 +1,4 @@
-/* $Id: fun10node2.c,v 1.1 2004/08/03 06:32:21 deng.pan Exp $ */
+/* $Id: fun10node2.c,v 1.2 2004/10/09 01:49:42 lge Exp $ */
 /* 
  * fun10node2.c: Funtion Test Case 10 for Event Service Test
  * saEvtInitialize, saEvtFinalize, saEvtSelectionObjectGet
@@ -25,13 +25,13 @@
 static int nCmpResult=1, nTimes=0;
 
 
-//event data get
+/*event data get */
 static void callback_event_deliver(SaEvtSubscriptionIdT sub_id,
 				SaEvtEventHandleT event_handle,
 				const SaSizeT eventDataSize)
 {
 	nTimes++;
-	//syslog (LOG_INFO|LOG_LOCAL7,"\n$$$$$$$$$node 2 :sub: %d, Event: %d$$$$$$$$$$$\n",(int)sub_id,eventDataSize);
+	/*syslog (LOG_INFO|LOG_LOCAL7,"\n$$$$$$$$$node 2 :sub: %d, Event: %d$$$$$$$$$$$\n",(int)sub_id,eventDataSize); */
 
 	switch(sub_id)
 	{
@@ -66,25 +66,25 @@ int main(int argc, char **argv)
 		return -1;
 	}
 	
-	//initialize
+	/*initialize */
 	callbacks.saEvtEventDeliverCallback = callback_event_deliver;
 	if(saEvtInitialize(&evt_handle, &callbacks, &version) != SA_OK){		
 		syslog (LOG_INFO|LOG_LOCAL7, "%s \n", Fail_message) ;
 		return -1;
 	}
 	
-	//get selection object
+	/*get selection object */
 	saEvtSelectionObjectGet(evt_handle, &fd);
 
 	
 	/* tell monitor machine "I'm up now"*/ 	
 	syslog (LOG_INFO|LOG_LOCAL7, "%s %d\n", Start_message, getpid ()) ;
 	
-	//count=0
+	/*count=0 */
 	syslog (LOG_INFO|LOG_LOCAL7, "%s %d %d\n",Signal_message, count++, SIGUSR1) ;
 	pausepause();
 
-	//Step 1
+	/*Step 1 */
 	for(i=0;i<2;i++){
 		ch_name.length = i+1;
 		memcpy(ch_name.value, "0000000", i+1);
@@ -99,9 +99,9 @@ int main(int argc, char **argv)
 	syslog (LOG_INFO|LOG_LOCAL7, "%s %d %d\n",Signal_message, count++, SIGUSR1) ;
 	pausepause();	
 
-	//step 3
-	//subscribe filter4~1 on channel1~4 node 2
-	//setmode() will set the 6 event patterns and 4 filter arrays, see in func.h
+	/*step 3 */
+	/*subscribe filter4~1 on channel1~4 node 2 */
+	/*setmode() will set the 6 event patterns and 4 filter arrays, see in func.h */
 	if(setmode()<0){
 		for(i=0;i<2;i++) saEvtChannelClose(channel_handle[i]);
 		saEvtFinalize(evt_handle);
@@ -123,7 +123,7 @@ int main(int argc, char **argv)
 	syslog (LOG_INFO|LOG_LOCAL7, "%s %d %d\n",Signal_message, count++, SIGUSR1) ;
 		pausepause () ;
 
-	//step 4
+	/*step 4 */
 	FD_ZERO(&rset);
 	FD_SET(fd, &rset);
 	tv.tv_sec=2;
@@ -150,7 +150,7 @@ int main(int argc, char **argv)
 	syslog (LOG_INFO|LOG_LOCAL7, "%s %d %d\n",Signal_message, count++, SIGUSR1) ;
 	pausepause () ;		
 
-	//Step 5.	subscribe filter 3 on node2 channel1 
+	/*Step 5.       subscribe filter 3 on node2 channel1 */
 	if(saEvtEventSubscribe(channel_handle[0], &filter_mode[2], 3)!= SA_OK){
 		for(i=0;i<2;i++) saEvtChannelClose(channel_handle[i]);
 		freemode();
@@ -159,7 +159,7 @@ int main(int argc, char **argv)
 		return -1;
 	}
 	
-	//step 6.	unsubscribe filter 1 on node2 channel1
+	/*step 6.	unsubscribe filter 1 on node2 channel1 */
 	if(saEvtEventUnsubscribe(channel_handle[0], 1)!= SA_OK){
 		for(i=0;i<2;i++) saEvtChannelClose(channel_handle[i]);
 		freemode();
@@ -168,7 +168,7 @@ int main(int argc, char **argv)
 		return -1;
 	}
 	
-	//step 7.	receive events on node2 channel1 (Event 2,3,5) 
+	/*step 7.	receive events on node2 channel1 (Event 2,3,5) */
 	FD_ZERO(&rset);
 	FD_SET(fd, &rset);
 	tv.tv_sec=2;
@@ -196,7 +196,7 @@ int main(int argc, char **argv)
 	syslog (LOG_INFO|LOG_LOCAL7, "%s %d %d\n",Signal_message, count++, SIGUSR1) ;
 	pausepause () ;	
 		
-	//Step 8.	subscribe filter 4 on node2 channel1 
+	/*Step 8.	subscribe filter 4 on node2 channel1 */
 	if(saEvtEventSubscribe(channel_handle[0], &filter_mode[3], 4)!= SA_OK){
 		for(i=0;i<2;i++) saEvtChannelClose(channel_handle[i]);
 		freemode();
@@ -205,7 +205,7 @@ int main(int argc, char **argv)
 		return -1;
 	}
 
-	//step 9.	unsubscribe filter 3 on node2 channel1
+	/*step 9.	unsubscribe filter 3 on node2 channel1 */
 	if(saEvtEventUnsubscribe(channel_handle[0], 3)!= SA_OK){
 		for(i=0;i<2;i++) saEvtChannelClose(channel_handle[i]);
 		freemode();
@@ -214,7 +214,7 @@ int main(int argc, char **argv)
 		return -1;
 	}
 	
-	//step 10.	receive events on node2 channel1 (Event 4,6) 
+	/*step 10.	receive events on node2 channel1 (Event 4,6) */
 	FD_ZERO(&rset);
 	FD_SET(fd, &rset);
 	tv.tv_sec=2;
@@ -242,7 +242,7 @@ int main(int argc, char **argv)
 	syslog (LOG_INFO|LOG_LOCAL7, "%s %d %d\n",Signal_message, count++, SIGUSR1) ;
 	pausepause () ;	
 		
-	//Step 11.	subscribe filter 1 on node2 channel1 
+	/*Step 11.	subscribe filter 1 on node2 channel1 */
 	if(saEvtEventSubscribe(channel_handle[0], &filter_mode[0], 1)!= SA_OK){
 		syslog (LOG_INFO|LOG_LOCAL7, "%s \n", "step 11 subscribe error") ;
 		for(i=0;i<2;i++) saEvtChannelClose(channel_handle[i]);
@@ -252,7 +252,7 @@ int main(int argc, char **argv)
 		return -1;
 	}
 
-	//step 12.	unsubscribe filter 4 on node2 channel1
+	/*step 12.	unsubscribe filter 4 on node2 channel1 */
 	if(saEvtEventUnsubscribe(channel_handle[0], 4)!= SA_OK){
 		for(i=0;i<2;i++) saEvtChannelClose(channel_handle[i]);
 		freemode();
@@ -261,7 +261,7 @@ int main(int argc, char **argv)
 		return -1;
 	}
 	
-	//step 13.	receive events on node2 channel1 (Event 1) 
+	/*step 13.	receive events on node2 channel1 (Event 1) */
 	FD_ZERO(&rset);
 	FD_SET(fd, &rset);
 	tv.tv_sec=2;

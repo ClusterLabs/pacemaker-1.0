@@ -1,4 +1,4 @@
-/* $Id: sect_delete4node1.c,v 1.1 2004/06/30 03:44:20 deng.pan Exp $ */
+/* $Id: sect_delete4node1.c,v 1.2 2004/10/09 01:49:41 lge Exp $ */
 /* 
  * sec_delete4node1.c: Test data checkpoint function : saCkptSectionDelete 
  *
@@ -21,7 +21,7 @@
  
 #define CkptOpenFlag SA_CKPT_CHECKPOINT_COLOCATED|SA_CKPT_CHECKPOINT_WRITE|SA_CKPT_CHECKPOINT_READ
 #define CaseName "sect_delete4"
-//#define CkptCreationFlag SA_CKPT_WR_ACTIVE_REPLICA 
+/*#define CkptCreationFlag SA_CKPT_WR_ACTIVE_REPLICA */
 #define CkptCreationFlag SA_CKPT_WR_ALL_REPLICAS 
 #include "func.h"
 

@@ -1,4 +1,4 @@
-/* $Id: g.c,v 1.1 2004/08/03 06:32:21 deng.pan Exp $ */
+/* $Id: g.c,v 1.2 2004/10/09 01:49:42 lge Exp $ */
 /* 
  * g.c: Event Service API test case for:SaEvtChannelUnlink
  *
@@ -19,8 +19,8 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-//#include <clplumbing/cl_signal.h>
-//#include "event.h"
+/*#include <clplumbing/cl_signal.h> */
+/*#include "event.h" */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -28,7 +28,7 @@
 #include <saf/ais_base.h>
 #include <saf/ais_event.h>
 
-//event data get
+/*event data get */
 static void callback_event_deliver(SaEvtSubscriptionIdT sub_id,
 				SaEvtEventHandleT event_handle,
 				const SaSizeT eventDataSize)
@@ -56,7 +56,7 @@ int main(int argc, char **argv)
 
 	memcpy(&ch_hd, tmp_char, 4);
 	
-	//initialize
+	/*initialize */
 	version.releaseCode = 'A';
 	version.major = 1;
 	version.minor = 0;
@@ -66,7 +66,7 @@ int main(int argc, char **argv)
 		return 1;
 	}
 
-	//channel open
+	/*channel open */
 	ch_name.length = 6;
 	memcpy(ch_name.value, "unlink", 6);
 	
@@ -94,13 +94,15 @@ int main(int argc, char **argv)
 		printf("Event channel unlink(2) success\n");
 	}
 	
-/*	if(saEvtChannelClose(channel_handle)==SA_OK)
+#if 0
+	if(saEvtChannelClose(channel_handle)==SA_OK)
 	{
 		printf("Event channel close after unlink fail\n");
-		//return 1;
-	}*/
+		/*return 1; */
+	}
+#endif
 	
-	//finalize
+	/*finalize */
 	saEvtFinalize(evt_handle);
 	
 	if(saEvtChannelUnlink(evt_handle,&ch_name) != SA_ERR_BAD_HANDLE){

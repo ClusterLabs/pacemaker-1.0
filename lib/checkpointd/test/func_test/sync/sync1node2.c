@@ -1,4 +1,4 @@
-/* $Id: sync1node2.c,v 1.1 2004/06/30 03:44:21 deng.pan Exp $ */
+/* $Id: sync1node2.c,v 1.2 2004/10/09 01:49:41 lge Exp $ */
 /* 
  * sync1node2.c: Test data checkpoint function : saCkptCheckpointSynchronize 
  *
@@ -39,7 +39,7 @@ SaCkptSectionIdT sectid ;
 SaCkptIOVectorElementT sectread ;
 SaCkptIOVectorElementT sectwrite ;
 char buffer[256] ;
-//char *data[5] = {"one", "two", "three", "four", "five"} ;
+/*char *data[5] = {"one", "two", "three", "four", "five"} ; */
 
 void asynccallback (SaInvocationT invocation, SaErrorT error);
 void finalize(void);
@@ -110,7 +110,7 @@ void termhandler (int signumber)
 
 void usrhandler (int signumber)
 {
-//	signal (SIGUSR1, usrhandler) ;
+/*	signal (SIGUSR1, usrhandler) ; */
 	return ;
 }
 /*

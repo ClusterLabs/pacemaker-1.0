@@ -1,4 +1,4 @@
-/* $Id: d.c,v 1.1 2004/08/03 06:32:21 deng.pan Exp $ */
+/* $Id: d.c,v 1.2 2004/10/09 01:49:42 lge Exp $ */
 /* 
  * d.c: Event Service API test case for:saEvtEventAttributesSet
  *
@@ -19,8 +19,8 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-//#include <clplumbing/cl_signal.h>
-//#include "event.h"
+/*#include <clplumbing/cl_signal.h> */
+/*#include "event.h" */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -28,7 +28,7 @@
 #include <saf/ais_base.h>
 #include <saf/ais_event.h>
 
-//event data get
+/*event data get */
 static void callback_event_deliver(SaEvtSubscriptionIdT sub_id,
 				SaEvtEventHandleT event_handle,
 				const SaSizeT eventDataSize)
@@ -55,7 +55,7 @@ int main(int argc, char **argv)
 	SaNameT publisher_name;
 	SaEvtEventPatternArrayT pattern_array, pattern_array_out;
 
-	//initialize
+	/*initialize */
 	version.releaseCode = 'A';
 	version.major = 1;
 	version.minor = 0;
@@ -65,7 +65,7 @@ int main(int argc, char **argv)
 		return 1;
 	}
 
-	//channel open
+	/*channel open */
 	ch_name.length = 3;
 	memcpy(ch_name.value, "aaa", 3);
 	if(saEvtChannelOpen(evt_handle, &ch_name, 7, 1000000, &channel_handle)
@@ -74,13 +74,13 @@ int main(int argc, char **argv)
 		return 1;
 	}
 	
-	//event allocate
+	/*event allocate */
 	if(saEvtEventAllocate(channel_handle, &event_hd) != SA_OK){
 		printf("Event allocate fail\n");
 		return 1;
 	}
 
-	//attributes set
+	/*attributes set */
 	publisher_name.length = 7;
 	memcpy(publisher_name.value, "forrest", 7); 
 	if(saEvtEventAttributesSet(event_hd, NULL, 1, 1000, &publisher_name) ==
@@ -117,7 +117,7 @@ int main(int argc, char **argv)
 		printf("Event attributes set(4) fail\n");
 	}
 
-	//event attributes get
+	/*event attributes get */
 	SaUint8T priority_out;
 	SaTimeT time_out, publish_out;
 	SaNameT name_out;
@@ -134,7 +134,7 @@ int main(int argc, char **argv)
 		printf("Event attributes get(1) fail\n");
 	}
 
-	//event free
+	/*event free */
 	if(saEvtEventFree(event_hd) != SA_OK){
 		printf("Event free fail\n");
 		return 1;
@@ -153,13 +153,13 @@ int main(int argc, char **argv)
 		printf("Event attributes get(2) fail\n");
 	}
 
-	//channel close
+	/*channel close */
 	if(saEvtChannelClose(channel_handle) != SA_OK){
 		printf("Event channel close fail\n");
 		return 1;
 	}
 
-	//finalize
+	/*finalize */
 	saEvtFinalize(evt_handle);
 	return 0;
 }

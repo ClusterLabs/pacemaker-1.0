@@ -1,4 +1,4 @@
-/* $Id: func.h,v 1.1 2004/06/30 03:44:20 deng.pan Exp $ */
+/* $Id: func.h,v 1.2 2004/10/09 01:49:41 lge Exp $ */
 /* 
  * func.h: Head File for data checkpoint Test : saCkptSectionDelete 
  *
@@ -124,7 +124,7 @@ void termhandler (int signumber)
 
 void usrhandler (int signumber)
 {
-//	signal (SIGUSR1, usrhandler) ;
+/*	signal (SIGUSR1, usrhandler) ; */
 	return ;
 }
 /*
@@ -145,12 +145,12 @@ void initparam(void)
 	ckpt_invocation = INVOCATION_BASE ;
 	ckpt_name.length = sizeof(CaseName);
 	
-	//memcpy (ckpt_name.value, name, ckpt_name.length);
+	/*memcpy (ckpt_name.value, name, ckpt_name.length); */
 	
 	memcpy (ckpt_name.value, CaseName, sizeof(CaseName));
 
-//	ckpt_create_attri.creationFlags = SA_CKPT_WR_ALL_REPLICAS ;
-//	ckpt_create_attri.creationFlags = SA_CKPT_WR_ACTIVE_REPLICA ;
+/*	ckpt_create_attri.creationFlags = SA_CKPT_WR_ALL_REPLICAS ; */
+/*	ckpt_create_attri.creationFlags = SA_CKPT_WR_ACTIVE_REPLICA ; */
 	ckpt_create_attri.creationFlags = CkptCreationFlag;
 	ckpt_create_attri.retentionDuration = 0;
 	ckpt_create_attri.checkpointSize = 1000 ;

@@ -1,4 +1,4 @@
-/* $Id: gXMLscan.h,v 1.2 2004/02/17 22:12:00 lars Exp $ */
+/* $Id: gXMLscan.h,v 1.3 2004/10/09 01:49:42 lge Exp $ */
 /*
  * gXMLscan.h - gXMLscan header file
  *
@@ -44,9 +44,9 @@ typedef enum {
 }TokenType;
 
 /* gXML_token def */
-// this structure is inherited by the scanner and is
-// used to keep track of the state machine and cuurent
-// and peek tokens for the parser 
+/* this structure is inherited by the scanner and is */
+/* used to keep track of the state machine and cuurent */
+/* and peek tokens for the parser */
 /* gXML_token def */
 typedef struct _gXML_token{
         gint            state;
@@ -58,10 +58,10 @@ typedef struct _gXML_token{
 
 
 /* gXML_scanner def */
-// this structure inherits a gXML_token, it keeps track
-// of the state the next and current char tokens as well
-// as the NexToken and the peek variables used by the gXML_parse
-// function 
+/* this structure inherits a gXML_token, it keeps track */
+/* of the state the next and current char tokens as well */
+/* as the NexToken and the peek variables used by the gXML_parse */
+/* function */
 typedef struct _gXML_scanner{
         gXML_token n_token;
         GString *input_stream;
@@ -78,21 +78,21 @@ typedef struct _gXML_scanner{
 
 gXML_token
 gXML_scan(gXML_scanner *scanner);
-//  inputs:     passed a gXML_scanner that has already been initialized
-//  outputs:    each token is returned, one at a time, in the form
-//              of a gXML_token variable
+/*  inputs:     passed a gXML_scanner that has already been initialized */
+/*  outputs:    each token is returned, one at a time, in the form */
+/*              of a gXML_token variable */
 
 
 gXML_scanner* gXML_new_scanner(GString *input_stream);
-//  inputs:     passed a GString that is the XML stream to be scanned
-//  outputs:    initializes a new scanner and returns it
+/*  inputs:     passed a GString that is the XML stream to be scanned */
+/*  outputs:    initializes a new scanner and returns it */
 
 gint gXML_scanner_get_next_char(gXML_scanner *scanner);
-//  inputs:     passed a valid gXML_scanner
-//  outputs:    scanner increments scanner token position varibles
-//              and changes the current and next token variables
-//              accordingly.  It returns a gint that is the integer
-//              representation of the next_token
+/*  inputs:     passed a valid gXML_scanner */
+/*  outputs:    scanner increments scanner token position varibles */
+/*              and changes the current and next token variables */
+/*              accordingly.  It returns a gint that is the integer */
+/*              representation of the next_token */
 
 #endif
 

@@ -1,4 +1,4 @@
-/* $Id: write7node2.c,v 1.3 2004/08/26 03:47:13 deng.pan Exp $ */
+/* $Id: write7node2.c,v 1.4 2004/10/09 01:49:42 lge Exp $ */
 /* 
  * write7node2.c: Test data checkpoint function : saCkptCheckpointWrite 
  *
@@ -25,7 +25,7 @@
 #include <syslog.h>
 #include <unistd.h>
 #include <time.h>
-// #include <glib-1.2/glib.h>
+/* #include <glib-1.2/glib.h> */
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <sys/time.h>
@@ -113,7 +113,7 @@ void termhandler (int signumber)
 
 void usrhandler (int signumber)
 {
-//	signal (SIGUSR1, usrhandler) ;
+/*	signal (SIGUSR1, usrhandler) ; */
 	return ;
 }
 /*

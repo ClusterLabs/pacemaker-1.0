@@ -1,4 +1,4 @@
-/* $Id: pf1node1.c,v 1.1 2004/08/03 06:32:22 deng.pan Exp $ */
+/* $Id: pf1node1.c,v 1.2 2004/10/09 01:49:43 lge Exp $ */
 /* 
  * pf1node1.c: Performance Test case 1 for Event Service Test
  * saEvtInitialize, saEvtFinalize, saEvtSelectionObjectGet
@@ -59,13 +59,13 @@ int main(int argc, char **argv)
 	version.major = 1;
 	version.minor = 0;
 	
-	//initialize
+	/*initialize */
 	if(saEvtInitialize(&evt_handle, &callbacks, &version) != SA_OK){
 		return -1;
 	}
 	syslog (LOG_INFO|LOG_LOCAL7, "%s \n", "node1 init" ) ;		
 	
-	//Open Channel	
+	/*Open Channel */
 	ch_name.length = sizeof(Pattern1);
 	memcpy(ch_name.value, Pattern1, sizeof(Pattern1));	
 	if(saEvtChannelOpen(evt_handle, &ch_name, 7, 1000000, &channel_handle1)
@@ -74,7 +74,7 @@ int main(int argc, char **argv)
 		return -1;
 	}
 
-	//event allocate
+	/*event allocate */
 	if(saEvtEventAllocate(channel_handle1, &event_handle)!= SA_OK)
 	{
 		saEvtChannelClose(channel_handle1);
@@ -82,7 +82,7 @@ int main(int argc, char **argv)
 		return -1;
 	}
 
-	// attributes set
+	/* attributes set */
 	pattern_array.patternsNumber = 1;
 	pattern_array.patterns = (SaEvtEventPatternT *)g_malloc(sizeof(SaEvtEventPatternT));
 	pattern_array.patterns[0].patternSize = sizeof(Pattern1);
@@ -97,16 +97,16 @@ int main(int argc, char **argv)
 		return -1;
 	}
 
-	//set data
+	/*set data */
 	data_size = sizeof(EVENT_DATA);
 	event_data = g_malloc0(data_size);
 	memcpy(event_data, EVENT_DATA, data_size);
 	
-	//set the current time
+	/*set the current time */
 	time(&cur_time);
 	wait_time=cur_time;
 	
-	//publish within run_time
+	/*publish within run_time */
 	while(wait_time+run_time>cur_time){
 		if(saEvtEventPublish(event_handle, event_data, data_size, &event_id)!= SA_OK)
 		{
@@ -122,7 +122,7 @@ int main(int argc, char **argv)
 	printf("##Publish Events: %d \n", nTimes);
 	printf("##time: %d \n", (int)(cur_time-wait_time));
 	
-	//event free
+	/*event free */
 	free(pattern_array.patterns[0].pattern);
 	free(pattern_array.patterns);
 	free(event_data);

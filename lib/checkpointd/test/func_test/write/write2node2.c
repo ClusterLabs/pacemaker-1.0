@@ -1,4 +1,4 @@
-/* $Id: write2node2.c,v 1.2 2004/07/15 14:33:49 msoffen Exp $ */
+/* $Id: write2node2.c,v 1.3 2004/10/09 01:49:41 lge Exp $ */
 /* 
  * write2node2.c: Test data checkpoint function : saCkptCheckpointWrite 
  *
@@ -106,7 +106,7 @@ void termhandler (int signumber)
 
 void usrhandler (int signumber)
 {
-//	signal (SIGUSR1, usrhandler) ;
+/*	signal (SIGUSR1, usrhandler) ; */
 	return ;
 }
 /*
@@ -294,8 +294,8 @@ int main(int argc, char **argv)
 		}
 
 	/* wait for node 2 (active node) ready */
-	//syslog (LOG_INFO|LOG_LOCAL7, "ckpt_signal %d %d\n", count++, SIGUSR1) ;
-	//pause () ;
+	/*syslog (LOG_INFO|LOG_LOCAL7, "ckpt_signal %d %d\n", count++, SIGUSR1) ; */
+	/*pause () ; */
 
 	/* Create one section and check */
 	saCkptSectionDelete(&cphandle, &sectid);

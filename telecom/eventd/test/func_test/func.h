@@ -1,4 +1,4 @@
-/* $Id: func.h,v 1.1 2004/08/03 06:32:22 deng.pan Exp $ */
+/* $Id: func.h,v 1.2 2004/10/09 01:49:43 lge Exp $ */
 /* 
  * func.h:  Head File for Event Service Funtion Test
  * saEvtInitialize, saEvtFinalize, saEvtSelectionObjectGet
@@ -95,7 +95,7 @@ void pausepause (void)
 void termhandler (int signumber)
 {
 	
-//	finalize () ;
+/*	finalize () ; */
 	exit (0) ;
 }
 
@@ -153,7 +153,7 @@ void initparam(void)
 	version.minor = 0;
 	evt_invocation = INVOCATION_BASE ;	
 	
-	//timeout use in select
+	/*timeout use in select */
 	tv.tv_sec=2;
 	tv.tv_usec=0;
 }
@@ -242,7 +242,7 @@ int receivecmp (const SaEvtEventHandleT eventHandlein,
 	char *c2=Datain;
 	for (i=0;i<data_size;i++)
 	{
-		//if(((char *)event_data)[i]!=((char *)Datain)[i])
+		/*if(((char *)event_data)[i]!=((char *)Datain)[i]) */
 		if(c1[i]!=c2[i])
 		{		
 			return -1;
@@ -311,9 +311,9 @@ int receivecmp (const SaEvtEventHandleT eventHandlein,
 int setmode(void)
 {
 
-	///////////////////PATTERN MODE SET//////////////////////
+	/*/////////////////PATTERN MODE SET////////////////////// */
 	
-	//pattern 1.	{abd, xyz, 123}
+	/*pattern 1.	{abd, xyz, 123} */
 	pattern_mode[0].patternsNumber = 3;
 	pattern_mode[0].patterns = (SaEvtEventPatternT *)g_malloc(3*sizeof(SaEvtEventPatternT));
 	
@@ -329,7 +329,7 @@ int setmode(void)
 	pattern_mode[0].patterns[2].pattern = (SaUint8T *)g_malloc(sizeof("123")-1);
 	memcpy(pattern_mode[0].patterns[2].pattern, "123", sizeof("123")-1);
 	
-	//pattern 2.	{abc, xyz}
+	/*pattern 2.	{abc, xyz} */
 	pattern_mode[1].patternsNumber = 2;
 	pattern_mode[1].patterns = (SaEvtEventPatternT *)g_malloc(2*sizeof(SaEvtEventPatternT));
 	
@@ -341,7 +341,7 @@ int setmode(void)
 	pattern_mode[1].patterns[1].pattern = (SaUint8T *)g_malloc(sizeof("xyz")-1);
 	memcpy(pattern_mode[1].patterns[1].pattern, "xyz", sizeof("xyz")-1);
 
-	//pattern 3.	{abc, 12, 23}
+	/*pattern 3.	{abc, 12, 23} */
 	pattern_mode[2].patternsNumber = 3;
 	pattern_mode[2].patterns = (SaEvtEventPatternT *)g_malloc(3*sizeof(SaEvtEventPatternT));
 	
@@ -358,7 +358,7 @@ int setmode(void)
 	memcpy(pattern_mode[2].patterns[2].pattern, "23", sizeof("23")-1);	
 
 	
-	//pattern 4.	{abcd, 12}
+	/*pattern 4.	{abcd, 12} */
 	pattern_mode[3].patternsNumber = 2;
 	pattern_mode[3].patterns = (SaEvtEventPatternT *)g_malloc(2*sizeof(SaEvtEventPatternT));
 	
@@ -370,7 +370,7 @@ int setmode(void)
 	pattern_mode[3].patterns[1].pattern = (SaUint8T *)g_malloc(sizeof("12")-1);
 	memcpy(pattern_mode[3].patterns[1].pattern, "12", sizeof("12")-1);
 
-	//pattern 5.	{abc}
+	/*pattern 5.	{abc} */
 	pattern_mode[4].patternsNumber = 1;
 	pattern_mode[4].patterns = (SaEvtEventPatternT *)g_malloc(sizeof(SaEvtEventPatternT));
 	
@@ -379,7 +379,7 @@ int setmode(void)
 	memcpy(pattern_mode[4].patterns[0].pattern, "abc", sizeof("abc")-1);
 	
 	
-	//pattern 6.	{abcde}
+	/*pattern 6.	{abcde} */
 	pattern_mode[5].patternsNumber = 1;
 	pattern_mode[5].patterns = (SaEvtEventPatternT *)g_malloc(sizeof(SaEvtEventPatternT));
 	
@@ -388,9 +388,9 @@ int setmode(void)
 	memcpy(pattern_mode[5].patterns[0].pattern, "abcde", sizeof("abcde")-1);	
 
 	
-	///////////////////FILTER MODE SET//////////////////////
+	/*/////////////////FILTER MODE SET////////////////////// */
 
-	//Filter 1.	{[ab, PRE], [-, ALL], [123, SUB]} 
+	/*Filter 1.	{[ab, PRE], [-, ALL], [123, SUB]} */
 	filter_mode[0].filtersNumber = 3;
 	filter_mode[0].filters = g_malloc0(3*sizeof(SaEvtEventFilterT));
 	
@@ -407,7 +407,7 @@ int setmode(void)
 	memcpy(filter_mode[0].filters[2].filter.pattern, "123", sizeof("123")-1);
 
 	
-	//Filter 2.	{[bc, SUB], [xyz, EXACT], [-, ALL]}  
+	/*Filter 2.	{[bc, SUB], [xyz, EXACT], [-, ALL]} */
 	filter_mode[1].filtersNumber = 3;
 	filter_mode[1].filters = g_malloc0(3*sizeof(SaEvtEventFilterT));
 	
@@ -423,7 +423,7 @@ int setmode(void)
 
 	filter_mode[1].filters[2].filterType = SA_EVT_PASS_ALL_FILTER;
 
-	//Filter 3.	{[abc, EXACT], [(size=0), -]} 
+	/*Filter 3.	{[abc, EXACT], [(size=0), -]} */
 	filter_mode[2].filtersNumber = 2;
 	filter_mode[2].filters = g_malloc0(2*sizeof(SaEvtEventFilterT));
 	
@@ -434,7 +434,7 @@ int setmode(void)
 		
 	filter_mode[2].filters[1].filter.patternSize = 0;
 
-	//Filter 4.	{[abcd, PRE]} 
+	/*Filter 4.	{[abcd, PRE]} */
 	filter_mode[3].filtersNumber = 1;
 	filter_mode[3].filters = g_malloc0(sizeof(SaEvtEventFilterT));
 	
@@ -477,12 +477,12 @@ int freemode(void)
 	return 0;
 }
 
-//Publish 6 events on a given channel, used in subscribe test
+/*Publish 6 events on a given channel, used in subscribe test */
 int Publish_Event_mode(SaEvtChannelHandleT channel_handle_in)
 {
 	int i;
 	
-	//event allocate
+	/*event allocate */
 	if(saEvtEventAllocate(channel_handle_in, &event_handle)!= SA_OK)
 	{
 		return -1;
@@ -491,7 +491,7 @@ int Publish_Event_mode(SaEvtChannelHandleT channel_handle_in)
 	publisher_name.length = sizeof("subscribe test");
 	memcpy(publisher_name.value, "subscribe test", sizeof("subscribe test"));
 
-	//publish	
+	/*publish */
 	for(i=0;i<6;i++)
 	{
 
@@ -514,7 +514,7 @@ int Publish_Event_mode(SaEvtChannelHandleT channel_handle_in)
 			syslog (LOG_INFO|LOG_LOCAL7, "event %d published\n",i) ;
 	}
 	
-	//event free
+	/*event free */
 	free(event_data);
 	if(saEvtEventFree(event_handle)!= SA_OK)
 	{

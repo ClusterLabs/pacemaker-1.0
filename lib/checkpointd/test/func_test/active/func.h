@@ -1,4 +1,4 @@
-/* $Id: func.h,v 1.1 2004/06/30 03:44:19 deng.pan Exp $ */
+/* $Id: func.h,v 1.2 2004/10/09 01:49:41 lge Exp $ */
 /* 
  * func.h: Test data checkpoint head file: saCkptActiveCheckpointSet 
  *
@@ -92,7 +92,7 @@ void termhandler (int signumber)
 
 void usrhandler (int signumber)
 {
-//	signal (SIGUSR1, usrhandler) ;
+/*	signal (SIGUSR1, usrhandler) ; */
 	return ;
 }
 
@@ -163,7 +163,7 @@ int inittest(void)
 int opensync (void)
 {
 
-	//return 1;
+	/*return 1; */
 	/* library initialize */
 	if ( saCkptInitialize (&libhandle, &ckpt_callback, 
 						   &ckpt_version) != SA_OK)

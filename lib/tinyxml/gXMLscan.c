@@ -1,4 +1,4 @@
-/* $Id: gXMLscan.c,v 1.3 2004/02/17 22:12:00 lars Exp $ */
+/* $Id: gXMLscan.c,v 1.4 2004/10/09 01:49:42 lge Exp $ */
 /*
  * gXMLscan.c - gXMLscan implementation file
  *
@@ -25,8 +25,8 @@
 #include "XMLchars.h"
 
 /* States */
-// this state enumeration is used for the state and action
-// tables 
+/* this state enumeration is used for the state and action */
+/* tables */
 enum state {
         INIT,
         TOTAG,	/* < received - no tag chars yet */
@@ -76,9 +76,9 @@ enum CharClass {
 #define A_BK		0x8000L		/* unget (backup) a character */
 
 /* STATE-NEXT STATE TABLE */
-// this is the state vs next state table
-// the current state is along the left and the character
-// received is at the top
+/* this is the state vs next state table */
+/* the current state is along the left and the character */
+/* received is at the top */
 static int FSA[MAXSTATE][MAXINP] = {
 /*STATE:   EOF   QUOTE  LT     GT    EQUAL  SLSH   STRING WHSP    AMP   SEMI */
 /*INIT*/ {FINAL, INSTR, TOTAG, INIT,  INIT,  INSTR, INSTR, INIT,  INAMP, INSTR},
@@ -95,9 +95,9 @@ static int FSA[MAXSTATE][MAXINP] = {
 };
 
 /* STATE-ACTION TABLE */
-// this is the state vs action table
-// the current state is along the left (which row) and the character
-// received is at the top (which column)
+/* this is the state vs action table */
+/* the current state is along the left (which row) and the character */
+/* received is at the top (which column) */
 /*
  * Normally, I try really hard to get the code to be readable in 80 columns.
  * This table really needs ~ 91 columns for readability.  Sorry...
@@ -122,23 +122,23 @@ static unsigned long Actions[MAXSTATE][MAXINP] = {
 
 enum  CharClass gXML_find_chartype(gint token);
 void gXML_scanner_unget_char(gXML_scanner *scanner);
-//  inputs:     passed an integer value for a char
-//  outputs:    it returns the correct enumerated value for each
-//              char
+/*  inputs:     passed an integer value for a char */
+/*  outputs:    it returns the correct enumerated value for each */
+/*              char */
 
-//implementation/////////////
+/*implementation///////////// */
 
 static gchar gXMLLookupEscape(const char * s);
 gboolean XMLDEBUGSCANNER=FALSE;
 gXML_token
 gXML_scan(gXML_scanner *scanner)
 {
-        //variables
+        /*variables */
         gint this_char;
         enum CharClass chartype;
         enum state curstate=INIT, nextstate;
         unsigned long action;
-        ///variables
+        /*/variables */
 
         /* Get the next character */
 
@@ -150,7 +150,7 @@ gXML_scan(gXML_scanner *scanner)
 
                 if(this_char != EOS){
                         scanner->n_token.c_NextChar = this_char;
-                }//end else if(this_char != EOS..
+                }/*end else if(this_char != EOS.. */
 
 		if (XMLDEBUGSCANNER) {
 			printf("l %d char: '%c' %d\n"
@@ -307,11 +307,11 @@ gXML_scan(gXML_scanner *scanner)
 			return scanner->n_token;
 		}
 
-        }//end while(this_char = gXML_scanner_get_next_char...
+        }/*end while(this_char = gXML_scanner_get_next_char... */
         
         scanner->n_token.c_CurChar = scanner->n_token.c_NextChar;
         scanner->n_token.peek = T_EOF;                        
-	//tell init_structure that we've reached EOF
+	/*tell init_structure that we've reached EOF */
         return scanner->n_token;         
 }
 

@@ -1,4 +1,4 @@
-/* $Id: a.c,v 1.1 2004/08/03 06:32:21 deng.pan Exp $ */
+/* $Id: a.c,v 1.2 2004/10/09 01:49:42 lge Exp $ */
 /* 
  * a.c: Event Service API test case for:
  * saEvtInitialize, saEvtFinalize, saEvtSelectionObjectGet
@@ -20,8 +20,8 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-//#include <clplumbing/cl_signal.h>
-//#include "event.h"
+/*#include <clplumbing/cl_signal.h> */
+/*#include "event.h" */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -29,7 +29,7 @@
 #include <saf/ais_base.h>
 #include <saf/ais_event.h>
 
-//event data get
+/*event data get */
 static void callback_event_deliver(SaEvtSubscriptionIdT sub_id,
 				SaEvtEventHandleT event_handle,
 				const SaSizeT eventDataSize)
@@ -52,7 +52,7 @@ int main(int argc, char **argv)
 	SaEvtCallbacksT callbacks;
 	SaSelectionObjectT select_obj;
 	
-	//initialize, version
+	/*initialize, version */
 	version.releaseCode = 'A';
 	version.major = 1;
 	version.minor = 0;
@@ -68,7 +68,7 @@ int main(int argc, char **argv)
 		printf("Event service finalize(1) fail\n");
 	}
 
-	//initialize, version
+	/*initialize, version */
 	version.major = 2;
 	if((saEvtInitialize(&evt_handle, &callbacks, &version) 
 		== SA_ERR_VERSION) && (version.major == 1)){
@@ -77,7 +77,7 @@ int main(int argc, char **argv)
 		printf("Event service initialize(2) fail\n");
 	}
 
-	//finalize
+	/*finalize */
 	if(saEvtFinalize(evt_handle) == SA_ERR_BAD_HANDLE){
 		printf("Event service finalize(2) success\n");
 	}else{
@@ -91,14 +91,14 @@ int main(int argc, char **argv)
 		printf("Event service initialize(3) fail\n");
 	}
 	
-	//selectobjectget
+	/*selectobjectget */
 	if(saEvtSelectionObjectGet(evt_handle, &select_obj) == SA_OK){
 		printf("Event service get selection object(1) fail\n");
 	}else{
 		printf("Event service get selection object(1) success\n");
 	}
 
-	//selectobjectget
+	/*selectobjectget */
 	saEvtInitialize(&evt_handle, &callbacks, &version); 
 	if(saEvtSelectionObjectGet(evt_handle, NULL) == SA_ERR_INVALID_PARAM){
 		printf("Event service get selection object(2) success\n");

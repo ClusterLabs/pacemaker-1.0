@@ -1,4 +1,4 @@
-/* $Id: fun13node1.c,v 1.1 2004/08/03 06:32:21 deng.pan Exp $ */
+/* $Id: fun13node1.c,v 1.2 2004/10/09 01:49:43 lge Exp $ */
 /* 
  * fun13node1.c: Funtion Test Case 13 for Event Service Test
  * saEvtInitialize, saEvtFinalize, saEvtSelectionObjectGet
@@ -35,7 +35,7 @@ SaEvtChannelHandleT channel_handle1,channel_handle2;
 
 int SubscribeReceive(SaEvtChannelHandleT channel_handlein);
 
-//event data get
+/*event data get */
 static void callback_event_deliver(SaEvtSubscriptionIdT sub_id,
 				SaEvtEventHandleT event_handle,
 				const SaSizeT eventDataSize)
@@ -45,10 +45,10 @@ static void callback_event_deliver(SaEvtSubscriptionIdT sub_id,
 	return;
 }
 
-//Subscribe and Receive event 1,2 on some channel
+/*Subscribe and Receive event 1,2 on some channel */
 int SubscribeReceive(SaEvtChannelHandleT channel_handlein)
 {
-	//subscribe 1, 2
+	/*subscribe 1, 2 */
 	filter_array.filtersNumber = 1;
 	filter_array.filters = g_malloc0(sizeof(SaEvtEventFilterT));
 	filter_array.filters[0].filterType = SA_EVT_EXACT_FILTER;
@@ -73,7 +73,7 @@ int SubscribeReceive(SaEvtChannelHandleT channel_handlein)
 	free(filter_array.filters[0].filter.pattern);
 	free(filter_array.filters);
 
-	//receive	
+	/*receive */
 	FD_ZERO(&rset);
 	FD_SET(fd, &rset);
 	tv.tv_sec=2;
@@ -120,14 +120,14 @@ int main(int argc, char **argv)
 		return -1;
 	}	
 	
-	//initialize
+	/*initialize */
 	callbacks.saEvtEventDeliverCallback = callback_event_deliver;
 	if(saEvtInitialize(&evt_handle, &callbacks, &version) != SA_OK){
 		syslog (LOG_INFO|LOG_LOCAL7, "%s \n", Fail_message) ;
 		return -1;
 	}
 	
-	//get selection object
+	/*get selection object */
 	saEvtSelectionObjectGet(evt_handle, &fd);
 
 
@@ -135,7 +135,7 @@ int main(int argc, char **argv)
 	syslog (LOG_INFO|LOG_LOCAL7, "%s %d\n", Start_message, getpid ()) ;
 	
 	
-	//open channel	
+	/*open channel */
 	ch_name.length = sizeof("fun13");
 	memcpy(ch_name.value, "fun13", sizeof("fun13"));
 	
@@ -153,13 +153,13 @@ int main(int argc, char **argv)
 		return -1;
 	}
 
-	//count =0 	
+	/*count =0 */
 	syslog (LOG_INFO|LOG_LOCAL7, "%s %d %d\n",Signal_message, count++, SIGUSR1) ;
 		pausepause () ;	
 
 
-	//step 1: Publish event1 (retention time: 10000) and event2 (retention time: 20000) on node1 channel1~2
-	//event allocate
+	/*step 1: Publish event1 (retention time: 10000) and event2 (retention time: 20000) on node1 channel1~2 */
+	/*event allocate */
 	if(saEvtEventAllocate(channel_handle1, &event_handle)!= SA_OK)
 	{
 		saEvtChannelClose(channel_handle1);
@@ -168,7 +168,7 @@ int main(int argc, char **argv)
 		return -1;
 	}
 
-	// attributes set/get
+	/* attributes set/get */
 	pattern_array.patternsNumber = 1;
 	pattern_array.patterns = (SaEvtEventPatternT *)g_malloc(sizeof(SaEvtEventPatternT));
 	pattern_array.patterns[0].patternSize = sizeof(Pattern1);
@@ -184,7 +184,7 @@ int main(int argc, char **argv)
 		return -1;
 	}
 	
-	//publish event1
+	/*publish event1 */
 	data_size = sizeof(EVENT_DATA);
 	event_data = g_malloc0(data_size);
 	memcpy(event_data, EVENT_DATA, data_size);
@@ -196,11 +196,11 @@ int main(int argc, char **argv)
 		return -1;
 	}
 
-	//set the current time
+	/*set the current time */
 	time(&cur_time);
 	wait_time=cur_time;
 
-	//publish event2
+	/*publish event2 */
 	memcpy(pattern_array.patterns[0].pattern, Pattern2, sizeof(Pattern2));
 	if(saEvtEventAttributesSet(event_handle, &pattern_array, Event_Priority, Event_retentionTime*4, &publisher_name)!= SA_OK)
 	{
@@ -217,7 +217,7 @@ int main(int argc, char **argv)
 		return -1;
 	}
 	
-	//event free
+	/*event free */
 	free(pattern_array.patterns[0].pattern);
 	free(pattern_array.patterns);
 	free(event_data);
@@ -229,14 +229,14 @@ int main(int argc, char **argv)
 		return -1;
 	}	
 
-	//count=1
+	/*count=1 */
 	syslog (LOG_INFO|LOG_LOCAL7, "%s %d %d\n",Signal_message, count++, SIGUSR1) ;
    	pausepause () ;		
 
 		
 
-	//step 2
-	//subscribe and receive event1,2 on both nodes channel1
+	/*step 2 */
+	/*subscribe and receive event1,2 on both nodes channel1 */
 	if(SubscribeReceive(channel_handle1)<0){
 		saEvtChannelClose(channel_handle1);
 		saEvtChannelClose(channel_handle2);
@@ -245,19 +245,19 @@ int main(int argc, char **argv)
 		return -1;
 	}
 
-	//step3:wait 5 second on node1 and node2
+	/*step3:wait 5 second on node1 and node2 */
 	do{
 		time(&cur_time);
 		sleep(1);
 	}while(wait_time+Event_retentionTime/1000>cur_time);
 	wait_time+=Event_retentionTime/1000;
 
-	//count=2
+	/*count=2 */
 	syslog (LOG_INFO|LOG_LOCAL7, "%s %d %d\n",Signal_message, count++, SIGUSR1) ;
 	pausepause () ;		
 		
-	//step 4
-	//subscribe and receive event1,2 on both nodes channel2
+	/*step 4 */
+	/*subscribe and receive event1,2 on both nodes channel2 */
 	if(SubscribeReceive(channel_handle2)<0){
 		saEvtChannelClose(channel_handle1);
 		saEvtChannelClose(channel_handle2);
@@ -266,19 +266,19 @@ int main(int argc, char **argv)
 		return -1;
 	}
 	
-	//step5:wait 5 second on node1 and node2
+	/*step5:wait 5 second on node1 and node2 */
 	do{
 		sleep(1);
 		time(&cur_time);
 	}while(wait_time+Event_retentionTime/1000>cur_time);
 	wait_time+=Event_retentionTime/1000;	
 
-	//count=3
+	/*count=3 */
 	syslog (LOG_INFO|LOG_LOCAL7, "%s %d %d\n",Signal_message, count++, SIGUSR1) ;
 	pausepause () ;	
 
-	//step 6
-	//subscribe and receive event1,2 on both nodes channel1
+	/*step 6 */
+	/*subscribe and receive event1,2 on both nodes channel1 */
 	if(SubscribeReceive(channel_handle1)<0){
 		saEvtChannelClose(channel_handle1);
 		saEvtChannelClose(channel_handle2);
@@ -286,19 +286,19 @@ int main(int argc, char **argv)
 		syslog (LOG_INFO|LOG_LOCAL7, "%s \n", Fail_message) ;
 		return -1;
 	}
-	//step7:wait 5 second on node1 and node2
+	/*step7:wait 5 second on node1 and node2 */
 	do{
 		sleep(1);
 		time(&cur_time);
 	}while(wait_time+Event_retentionTime/1000>cur_time);
 	wait_time+=Event_retentionTime/1000;
 
-	//count=4
+	/*count=4 */
 	syslog (LOG_INFO|LOG_LOCAL7, "%s %d %d\n",Signal_message, count++, SIGUSR1) ;
 	pausepause () ;	
 
-	//step 8
-	//subscribe and receive event1,2 on both nodes channel2
+	/*step 8 */
+	/*subscribe and receive event1,2 on both nodes channel2 */
 	if(SubscribeReceive(channel_handle2)<0){
 		saEvtChannelClose(channel_handle1);
 		saEvtChannelClose(channel_handle2);
@@ -307,7 +307,7 @@ int main(int argc, char **argv)
 		return -1;
 	}
 
-	//count=5
+	/*count=5 */
 	syslog (LOG_INFO|LOG_LOCAL7, "%s %d %d\n",Signal_message, count++, SIGUSR1) ;
 	pausepause () ;	
 	
@@ -325,7 +325,7 @@ int main(int argc, char **argv)
 	}
 		
 
-	//finalize
+	/*finalize */
 	if(saEvtFinalize(evt_handle)!= SA_OK){
 		syslog (LOG_INFO|LOG_LOCAL7, "%s \n", Fail_message) ;
 		return -1;

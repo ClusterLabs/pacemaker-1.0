@@ -1,4 +1,4 @@
-/* $Id: open2node1.c,v 1.2 2004/07/15 14:33:49 msoffen Exp $ */
+/* $Id: open2node1.c,v 1.3 2004/10/09 01:49:41 lge Exp $ */
 /* 
  * open2node1.c: Test data checkpoint function : saCkptCheckpointOpen 
  *
@@ -93,7 +93,7 @@ void termhandler (int signumber)
 
 void usrhandler (int signumber)
 {
-//	signal (SIGUSR1, usrhandler) ;
+/*	signal (SIGUSR1, usrhandler) ; */
 	return ;
 }
 /*
@@ -176,7 +176,7 @@ int inittest(void)
  */
 int opensync (int flag)
 {
-	if (flag < 0) //parent creation 
+	if (flag < 0) /*parent creation */
 	{
 		/* library initialize */
 		if ( saCkptInitialize (&libhandle, &ckpt_callback, 
@@ -191,7 +191,7 @@ int opensync (int flag)
 						SA_CKPT_CHECKPOINT_WRITE, 
 						open_timeout, &cphandle) ;
 	}
-	else{  //child process open  
+	else{  /*child process open */
 		ckpt_error = 
 			saCkptCheckpointOpen (&libhandle, 
 						&ckpt_name, 

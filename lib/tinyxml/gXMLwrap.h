@@ -1,15 +1,15 @@
-/* $Id: gXMLwrap.h,v 1.2 2004/02/17 22:12:00 lars Exp $ */
-// gXMLwrap.h
-// for the gXML library
-// library of functions to wrap and unwrap data using the gXML_wrapper
-//  structure defined in gXML.h
+/* $Id: gXMLwrap.h,v 1.3 2004/10/09 01:49:42 lge Exp $ */
+/* gXMLwrap.h */
+/* for the gXML library */
+/* library of functions to wrap and unwrap data using the gXML_wrapper */
+/*  structure defined in gXML.h */
 
 #include "gXML.h"
 
 #ifndef gXML_WRAP_H
 #define gXML_WRAP_H
 
-// ****************** WRAPPING FUNCTIONS ***********************
+/* ****************** WRAPPING FUNCTIONS *********************** */
 /* Preconditions: The data pointer passed in is of the proper type
  * Postconditions: A wrapper is created, and the data is wrapped.
  *  The gXML_wrapper's data field points to the data.

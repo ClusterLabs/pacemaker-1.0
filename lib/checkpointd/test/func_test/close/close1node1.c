@@ -1,4 +1,4 @@
-/* $Id: close1node1.c,v 1.1 2004/06/30 03:44:19 deng.pan Exp $ */
+/* $Id: close1node1.c,v 1.2 2004/10/09 01:49:41 lge Exp $ */
 /* 
  * close1node1.c: Test data checkpoint function : saCkptCheckpointClose 
  *
@@ -21,7 +21,7 @@
 #define CkptOpenFlag SA_CKPT_CHECKPOINT_COLOCATED|SA_CKPT_CHECKPOINT_WRITE|SA_CKPT_CHECKPOINT_READ
 #define CaseName "close1"
 #define CkptCreationFlag SA_CKPT_WR_ACTIVE_REPLICA 
-//#define CkptCreationFlag SA_CKPT_WR_ALL_REPLICAS 
+/*#define CkptCreationFlag SA_CKPT_WR_ALL_REPLICAS */
 #include "func.h"
 
 
@@ -29,7 +29,7 @@
 int main(int argc, char **argv)
 {
 	int count =0 ;	
-	//char activenode[50] ;
+	/*char activenode[50] ;*/
 	int i ;
 	
 	if (inittest () != 0)
@@ -63,7 +63,7 @@ int main(int argc, char **argv)
 					syslog (LOG_INFO|LOG_LOCAL7, "ckpt_fail\n") ;
 					return -1 ;
 				}
-			else if (pid[i] == 0) //child process
+			else if (pid[i] == 0) /* child process */
 				{
 						if (opensync() < 0)
 							{

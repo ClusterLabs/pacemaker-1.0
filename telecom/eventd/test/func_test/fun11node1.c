@@ -1,4 +1,4 @@
-/* $Id: fun11node1.c,v 1.1 2004/08/03 06:32:21 deng.pan Exp $ */
+/* $Id: fun11node1.c,v 1.2 2004/10/09 01:49:42 lge Exp $ */
 /* 
  * fun11node1.c: Funtion Test Case 11 for Event Service Test
  * saEvtInitialize, saEvtFinalize, saEvtSelectionObjectGet
@@ -32,7 +32,7 @@ static int count =0,nTimes=0;
 #define PublishName "f11node1"
 #define Pattern1 "func11"
 
-//event data get
+/*event data get */
 static void callback_event_deliver(SaEvtSubscriptionIdT sub_id,
 				SaEvtEventHandleT event_handle,
 				const SaSizeT eventDataSize)
@@ -56,14 +56,14 @@ int main(int argc, char **argv)
 	
 	
 	
-	//initialize
+	/*initialize */
 	callbacks.saEvtEventDeliverCallback = callback_event_deliver;
 	if(saEvtInitialize(&evt_handle, &callbacks, &version) != SA_OK){
 		syslog (LOG_INFO|LOG_LOCAL7, "%s \n", Fail_message) ;
 		return -1;
 	}
 	
-	//get selection object
+	/*get selection object */
 	saEvtSelectionObjectGet(evt_handle, &fd);
 
 
@@ -71,7 +71,7 @@ int main(int argc, char **argv)
 	syslog (LOG_INFO|LOG_LOCAL7, "%s %d\n", Start_message, getpid ()) ;
 	
 	
-	//Step 1. 	
+	/*Step 1. */
 	ch_name.length = sizeof("fun11");
 	memcpy(ch_name.value, "fun11", sizeof("fun11"));
 	
@@ -82,13 +82,13 @@ int main(int argc, char **argv)
 		return -1;
 	}
 
-	//count=0
+	/*count=0 */
 	syslog (LOG_INFO|LOG_LOCAL7, "%s %d %d\n",Signal_message, count++, SIGUSR1) ;
 	pausepause () ;	
 
 
-	//step 3: publish event 1on node 1 with retentiontime set to 1000000
-	//event allocate
+	/*step 3: publish event 1on node 1 with retentiontime set to 1000000 */
+	/*event allocate */
 	if(saEvtEventAllocate(channel_handle1, &event_handle)!= SA_OK)
 	{
 		saEvtChannelClose(channel_handle1);
@@ -97,7 +97,7 @@ int main(int argc, char **argv)
 		return -1;
 	}
 
-	// attributes set
+	/* attributes set */
 	pattern_array.patternsNumber = 1;
 	pattern_array.patterns = (SaEvtEventPatternT *)g_malloc(sizeof(SaEvtEventPatternT));
 	pattern_array.patterns[0].patternSize = sizeof(Pattern1);
@@ -113,7 +113,7 @@ int main(int argc, char **argv)
 		return -1;
 	}
 
-	//publish
+	/*publish */
 	data_size = sizeof(EVENT_DATA);
 	event_data = g_malloc0(data_size);
 	memcpy(event_data, EVENT_DATA, data_size);
@@ -126,7 +126,7 @@ int main(int argc, char **argv)
 	}
 	eventid2clear=event_id;
 	
-	//event free
+	/*event free */
 	free(pattern_array.patterns[0].pattern);
 	free(pattern_array.patterns);
 	free(event_data);
@@ -138,12 +138,12 @@ int main(int argc, char **argv)
 		return -1;
 	}	
 
-	//count=1
+	/*count=1 */
 	syslog (LOG_INFO|LOG_LOCAL7, "%s %d %d\n",Signal_message, count++, SIGUSR1) ;
 	pausepause () ;		
 
-	//step 3
-	//RetetionTimeClear
+	/*step 3 */
+	/*RetetionTimeClear */
 	Evt_Error=saEvtEventRetentionTimeClear(channel_handle1, eventid2clear);
 	if(Evt_Error!=SA_OK){
 		saEvtChannelClose(channel_handle1);
@@ -152,8 +152,8 @@ int main(int argc, char **argv)
 		return -1;
 	}		
 
-	//step 4
-	//subscribe
+	/*step 4 */
+	/*subscribe */
 	filter_array.filtersNumber = 1;
 	filter_array.filters = g_malloc0(sizeof(SaEvtEventFilterT));
 	filter_array.filters[0].filterType = SA_EVT_EXACT_FILTER;
@@ -172,7 +172,7 @@ int main(int argc, char **argv)
 	free(filter_array.filters);
 
 	
-	// receive 
+	/* receive */
 	FD_ZERO(&rset);
 	FD_SET(fd, &rset);
 	select_ret = select(fd + 1, &rset, NULL,NULL, &tv);
@@ -184,7 +184,7 @@ int main(int argc, char **argv)
 		return -1;
 	}
 
-	//count=2
+	/*count=2 */
 	syslog (LOG_INFO|LOG_LOCAL7, "%s %d %d\n",Signal_message, count++, SIGUSR1) ;
 	pausepause () ;	
 	
@@ -195,11 +195,11 @@ int main(int argc, char **argv)
 		return -1;
 	}
 
-	//count=3
+	/*count=3 */
 	syslog (LOG_INFO|LOG_LOCAL7, "%s %d %d\n",Signal_message, count++, SIGUSR1) ;
 	pausepause () ;	
 
-	//finalize
+	/*finalize */
 	if(saEvtFinalize(evt_handle)!= SA_OK){
 		syslog (LOG_INFO|LOG_LOCAL7, "%s \n", Fail_message) ;
 		return -1;

@@ -1,4 +1,4 @@
-/* $Id: fun2node1.c,v 1.1 2004/08/03 06:32:22 deng.pan Exp $ */
+/* $Id: fun2node1.c,v 1.2 2004/10/09 01:49:43 lge Exp $ */
 /* 
  * fun2node1.c: Funtion Test Case 2 for Event Service Test
  * saEvtInitialize, saEvtFinalize, saEvtSelectionObjectGet
@@ -49,20 +49,20 @@ int main(int argc, char **argv)
 		return 1;
 	}	
 	
-	//initialize
+	/*initialize */
 	callbacks.saEvtChannelOpenCallback = callback_event_open;
 	if(saEvtInitialize(&evt_handle, &callbacks, &version) != SA_OK){
 		syslog (LOG_INFO|LOG_LOCAL7, "%s \n", Fail_message) ;
 		return 1;
 	}
 
-	//get selection object
+	/*get selection object */
 	saEvtSelectionObjectGet(evt_handle, &fd);
 	
 	/* tell monitor machine "I'm up now"*/ 	
 	syslog (LOG_INFO|LOG_LOCAL7, "%s %d\n", Start_message, getpid ()) ;
 		
-	//Step 1. 	
+	/*Step 1. */
 	ch_name.length = sizeof("fun02");
 	memcpy(ch_name.value, "fun02", sizeof("fun02"));
 	
@@ -84,7 +84,7 @@ int main(int argc, char **argv)
 	syslog (LOG_INFO|LOG_LOCAL7, "%s %d %d\n",Signal_message, count++, SIGUSR1) ;
 	pausepause () ;
 	
-	//Step 3.
+	/*Step 3. */
 	while(nOpenTimes<2)
 	{
 		FD_ZERO(&rset);
@@ -110,7 +110,7 @@ int main(int argc, char **argv)
 	pausepause () ;
 	
 	
-	//step 5
+	/*step 5 */
 	ch_name.length = sizeof("fun021");
 	memcpy(ch_name.value, "fun021", sizeof("fun021"));
 	
@@ -146,7 +146,7 @@ int main(int argc, char **argv)
 	syslog (LOG_INFO|LOG_LOCAL7, "%s %d %d\n",Signal_message, count++, SIGUSR1) ;
 	pausepause () ;
 	
-	//Step 3.
+	/*Step 3. */
 	while(nOpenTimes<5)
 	{
 		FD_ZERO(&rset);
@@ -171,7 +171,7 @@ int main(int argc, char **argv)
 	syslog (LOG_INFO|LOG_LOCAL7, "%s %d %d\n",Signal_message, count++, SIGUSR1) ;
 	pausepause () ;		
 	
-	//9. close channels on node1	
+	/*9. close channels on node1 */
 	for(i=0; i<5; i++){
 		if((Evt_Error=saEvtChannelClose(channel_handle[i]))!= SA_OK ){
 		
@@ -186,7 +186,7 @@ int main(int argc, char **argv)
 	syslog (LOG_INFO|LOG_LOCAL7, "%s %d %d\n",Signal_message, count++, SIGUSR1) ;
 	pausepause () ;	
 	
-	//finalize
+	/*finalize */
 	saEvtFinalize(evt_handle);
 	
 	syslog (LOG_INFO|LOG_LOCAL7, "%s", Success_message) ;	

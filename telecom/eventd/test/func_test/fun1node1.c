@@ -1,4 +1,4 @@
-/* $Id: fun1node1.c,v 1.1 2004/08/03 06:32:22 deng.pan Exp $ */
+/* $Id: fun1node1.c,v 1.2 2004/10/09 01:49:43 lge Exp $ */
 /* 
  * fun1node1.c: Funtion Test Case 1 for Event Service Test
  * saEvtInitialize, saEvtFinalize, saEvtSelectionObjectGet
@@ -33,7 +33,7 @@ int main(int argc, char **argv)
 		return -1;
 	}	
 	
-	//initialize
+	/*initialize */
 	if(saEvtInitialize(&evt_handle, &callbacks, &version) != SA_OK){
 		syslog (LOG_INFO|LOG_LOCAL7, "%s \n", Fail_message) ;
 		return -1;
@@ -42,7 +42,7 @@ int main(int argc, char **argv)
 	/* tell monitor machine "I'm up now"*/ 	
 	syslog (LOG_INFO|LOG_LOCAL7, "%s %d\n", Start_message, getpid ()) ;
 		
-	//Step 1. 	
+	/*Step 1. */
 	ch_name.length = sizeof("fun01");
 	memcpy(ch_name.value, "fun01", sizeof("fun01"));
 	
@@ -63,7 +63,7 @@ int main(int argc, char **argv)
 	syslog (LOG_INFO|LOG_LOCAL7, "%s %d %d\n",Signal_message, count++, SIGUSR1) ;
 	pausepause () ;
 	
-	//step 3
+	/*step 3 */
 	ch_name.length = sizeof("fun011");
 	memcpy(ch_name.value, "fun011", sizeof("fun011"));
 	
@@ -98,7 +98,7 @@ int main(int argc, char **argv)
 	syslog (LOG_INFO|LOG_LOCAL7, "%s %d %d\n",Signal_message, count++, SIGUSR1) ;
 	pausepause () ;
 	
-	//5. close channels on node1	
+	/*5. close channels on node1 */
 	for(i=0; i<5; i++){
 		if(saEvtChannelClose(channel_handle[i]) != SA_OK){
 			saEvtFinalize(evt_handle);
@@ -111,7 +111,7 @@ int main(int argc, char **argv)
 	syslog (LOG_INFO|LOG_LOCAL7, "%s %d %d\n",Signal_message, count++, SIGUSR1) ;
 	pausepause () ;			
 
-	//finalize
+	/*finalize */
 	saEvtFinalize(evt_handle);
 	
 	syslog (LOG_INFO|LOG_LOCAL7, "%s", Success_message) ;

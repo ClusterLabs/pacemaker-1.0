@@ -1,4 +1,4 @@
-/* $Id: fun7node1.c,v 1.1 2004/08/03 06:32:22 deng.pan Exp $ */
+/* $Id: fun7node1.c,v 1.2 2004/10/09 01:49:43 lge Exp $ */
 /* 
  * fun7node1.c: Funtion Test Case 7 for Event Service Test
  * saEvtInitialize, saEvtFinalize, saEvtSelectionObjectGet
@@ -29,7 +29,7 @@ static int nCmpResult=1,nTimes=0;
 #define PublishName "f7node1"
 #define Pattern1 "func07"
 
-//event data get
+/*event data get */
 static void callback_event_deliver(SaEvtSubscriptionIdT sub_id,
 				SaEvtEventHandleT event_handle,
 				const SaSizeT eventDataSize)
@@ -73,21 +73,21 @@ int main(int argc, char **argv)
 		return -1;
 	}	
 	
-	//initialize
+	/*initialize */
 	callbacks.saEvtEventDeliverCallback = callback_event_deliver;
 	if(saEvtInitialize(&evt_handle, &callbacks, &version) != SA_OK){
 		syslog (LOG_INFO|LOG_LOCAL7, "%s \n", Fail_message) ;
 		return -1;
 	}
 	
-	//get selection object
+	/*get selection object */
 	saEvtSelectionObjectGet(evt_handle, &fd);
 
 
 	/* tell monitor machine "I'm up now"*/ 	
 	syslog (LOG_INFO|LOG_LOCAL7, "%s %d\n", Start_message, getpid ()) ;
 		
-	//Step 1. 	
+	/*Step 1. */
 	ch_name.length = sizeof("fun07");
 	memcpy(ch_name.value, "fun07", sizeof("fun07"));
 	
@@ -101,8 +101,8 @@ int main(int argc, char **argv)
 	syslog (LOG_INFO|LOG_LOCAL7, "%s %d %d\n",Signal_message, count++, SIGUSR1) ;
 		pausepause () ;		
 
-	//step 3
-	//subscribe
+	/*step 3 */
+	/*subscribe */
 	filter_array.filtersNumber = 1;
 	filter_array.filters = g_malloc0(sizeof(SaEvtEventFilterT));
 	filter_array.filters[0].filterType = SA_EVT_EXACT_FILTER;
@@ -124,8 +124,8 @@ int main(int argc, char **argv)
 	syslog (LOG_INFO|LOG_LOCAL7, "%s %d %d\n",Signal_message, count++, SIGUSR1) ;
 	pausepause () ;	
 
-	//step 5: publish event 1 on node 1
-	//event allocate
+	/*step 5: publish event 1 on node 1 */
+	/*event allocate */
 	if(saEvtEventAllocate(channel_handle1, &event_handle)!= SA_OK)
 	{
 		saEvtChannelClose(channel_handle1);
@@ -134,7 +134,7 @@ int main(int argc, char **argv)
 		return -1;
 	}
 
-	// attributes set/get
+	/* attributes set/get */
 	pattern_array.patternsNumber = 1;
 	pattern_array.patterns = (SaEvtEventPatternT *)g_malloc(sizeof(SaEvtEventPatternT));
 	pattern_array.patterns[0].patternSize = sizeof(Pattern1);
@@ -150,7 +150,7 @@ int main(int argc, char **argv)
 		return -1;
 	}
 
-	//publish
+	/*publish */
 	data_size = sizeof(EVENT_DATA);
 	event_data = g_malloc0(data_size);
 	memcpy(event_data, EVENT_DATA, data_size);
@@ -162,7 +162,7 @@ int main(int argc, char **argv)
 		return -1;
 	}
 	
-	//event free
+	/*event free */
 	free(pattern_array.patterns[0].pattern);
 	free(pattern_array.patterns);
 	free(event_data);
@@ -210,7 +210,7 @@ int main(int argc, char **argv)
 	syslog (LOG_INFO|LOG_LOCAL7, "%s %d %d\n",Signal_message, count++, SIGUSR1) ;
 	pausepause () ;			
 
-	//finalize
+	/*finalize */
 	saEvtFinalize(evt_handle);
 	
 	syslog (LOG_INFO|LOG_LOCAL7, "%s", Success_message) ;	

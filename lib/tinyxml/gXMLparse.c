@@ -1,4 +1,4 @@
-/* $Id: gXMLparse.c,v 1.5 2004/02/17 22:12:00 lars Exp $ */
+/* $Id: gXMLparse.c,v 1.6 2004/10/09 01:49:42 lge Exp $ */
 /* gXMLparse.c : implementation file for gXML parser for Linux-HA
  * 
  * Copyright (C) 2001 Tom Darrow <tdarrow@epsnorthwest.com>
@@ -95,7 +95,7 @@ gXML_struct(gXML_wrapper** returned, GString* string)
 				,	*returned);
 			}
 			return TRUE;
-		}; // if
+		}; /* if */
 		gXML_syntax_error("no end-of-file found");
 		return FALSE;
 	}
@@ -514,14 +514,14 @@ gXML_Attr_list(GHashTable* attribs, gXML_scanner* scanner, gXML_token* token)
 				/* FIXME - should name be wrapped or not? */
                 
 				if (!gXML_Attr_list(attribs, scanner, token)){
-					// SYNTAX ERROR PRINTED IN FAILED CALL
+					/* SYNTAX ERROR PRINTED IN FAILED CALL */
 					return FALSE;
-				} // !gXML_Attr_list
+				} /* !gXML_Attr_list */
 				if (XMLDEBUG) {
 					fprintf(stderr, "RETURNING: Attr_list ::= WORD = \"string\"\n");
 				}
-			} // else
-		} // if !T_EQ
+			} /* else */
+		} /* if !T_EQ */
 	}else{
 		if (XMLDEBUG) {
  			fprintf(stderr, "Attr_list ::= {empty}\n");

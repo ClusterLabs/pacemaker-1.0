@@ -1,4 +1,4 @@
-/* $Id: fun4node1.c,v 1.1 2004/08/03 06:32:22 deng.pan Exp $ */
+/* $Id: fun4node1.c,v 1.2 2004/10/09 01:49:43 lge Exp $ */
 /* 
  * fun4node1.c: Funtion Test Case 4 for Event Service Test
  * saEvtInitialize, saEvtFinalize, saEvtSelectionObjectGet
@@ -37,7 +37,7 @@ int main(int argc, char **argv)
 		return -1;
 	}	
 	
-	//initialize
+	/*initialize */
 	if(saEvtInitialize(&evt_handle, &callbacks, &version) != SA_OK){
 		syslog (LOG_INFO|LOG_LOCAL7, "%s \n", Fail_message) ;
 		return -1;
@@ -56,7 +56,7 @@ int main(int argc, char **argv)
 		return -1;
 	}	
 
-	//step 1:event allocate
+	/*step 1:event allocate */
 	if(saEvtEventAllocate(channel_handle, &event_handle)!= SA_OK)
 	{
 		saEvtChannelClose(channel_handle);
@@ -68,7 +68,7 @@ int main(int argc, char **argv)
 	syslog (LOG_INFO|LOG_LOCAL7, "%s %d %d\n",Signal_message, count++, SIGUSR1) ;
 	pausepause () ;	
 
-	// Step3: attributes set
+	/* Step3: attributes set */
 	pattern_array.patternsNumber = 1;
 	pattern_array.patterns = (SaEvtEventPatternT *)g_malloc(sizeof(SaEvtEventPatternT));
 	pattern_array.patterns[0].patternSize = 6;
@@ -86,7 +86,7 @@ int main(int argc, char **argv)
 	syslog (LOG_INFO|LOG_LOCAL7, "%s %d %d\n",Signal_message, count++, SIGUSR1) ;
 	pausepause () ;	
 
-	// Step5: attributes get
+	/* Step5: attributes get */
 	pattern_array_out.patternsNumber = 1;
 	pattern_array_out.patterns = (SaEvtEventPatternT *)g_malloc(sizeof(SaEvtEventPatternT));
 	pattern_array_out.patterns[0].patternSize = 6;
@@ -143,7 +143,7 @@ int main(int argc, char **argv)
 	syslog (LOG_INFO|LOG_LOCAL7, "%s %d %d\n",Signal_message, count++, SIGUSR1) ;
 	pausepause () ;	
 
-	//Step 7: event free
+	/*Step 7: event free */
 	free(pattern_array.patterns[0].pattern);
 	free(pattern_array.patterns);
 	free(pattern_array_out.patterns[0].pattern);
@@ -172,7 +172,7 @@ int main(int argc, char **argv)
 	syslog (LOG_INFO|LOG_LOCAL7, "%s %d %d\n",Signal_message, count++, SIGUSR1) ;
 	pausepause();	
 	
-	//finalize
+	/*finalize */
 	saEvtFinalize(evt_handle);
 
 	syslog (LOG_INFO|LOG_LOCAL7, "%s", Success_message) ;	

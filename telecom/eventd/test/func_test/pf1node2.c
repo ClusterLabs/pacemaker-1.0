@@ -1,4 +1,4 @@
-/* $Id: pf1node2.c,v 1.1 2004/08/03 06:32:22 deng.pan Exp $ */
+/* $Id: pf1node2.c,v 1.2 2004/10/09 01:49:43 lge Exp $ */
 /* 
  * pf1node2.c: Performance Test case 1 for Event Service Test
  * saEvtInitialize, saEvtFinalize, saEvtSelectionObjectGet
@@ -48,7 +48,7 @@ SaEvtEventFilterArrayT filter_array;
 time_t cur_time,wait_time;
 int nTimes=0;
 
-//event data get
+/*event data get */
 static void callback_event_deliver(SaEvtSubscriptionIdT sub_id,
 				SaEvtEventHandleT event_handle,
 				const SaSizeT eventDataSize)
@@ -65,16 +65,16 @@ int main(int argc, char **argv)
 	version.major = 1;
 	version.minor = 0;	
 	
-	//initialize
+	/*initialize */
 	callbacks.saEvtEventDeliverCallback = callback_event_deliver;
 	if(saEvtInitialize(&evt_handle, &callbacks, &version) != SA_OK){	
 		return -1;
 	}
 	
-	//get selection object
+	/*get selection object */
 	saEvtSelectionObjectGet(evt_handle, &fd);
 
-	//Open Channel
+	/*Open Channel */
 	ch_name.length = sizeof(Pattern1);
 	memcpy(ch_name.value, Pattern1, sizeof(Pattern1));
 
@@ -84,7 +84,7 @@ int main(int argc, char **argv)
 		return -1;
 	}
 
-	//subscribe
+	/*subscribe */
 	filter_array.filtersNumber = 1;
 	filter_array.filters = g_malloc0(sizeof(SaEvtEventFilterT));
 	filter_array.filters[0].filterType = SA_EVT_EXACT_FILTER;
@@ -99,16 +99,16 @@ int main(int argc, char **argv)
 	free(filter_array.filters[0].filter.pattern);
 	free(filter_array.filters);
 	
-	//set the current time
+	/*set the current time */
 	time(&cur_time);
 	wait_time=cur_time;
 
-	//receive within runtime	
+	/*receive within runtime */
 	while(wait_time+run_time>cur_time){
 		FD_ZERO(&rset);
 		FD_SET(fd, &rset);
 		
-		//timeout used in select
+		/*timeout used in select */
 		tv.tv_sec=2;
 		tv.tv_usec=0;
 		

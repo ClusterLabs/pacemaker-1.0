@@ -1,4 +1,4 @@
-/* $Id: write1node2.c,v 1.2 2004/07/15 14:33:49 msoffen Exp $ */
+/* $Id: write1node2.c,v 1.3 2004/10/09 01:49:41 lge Exp $ */
 /* 
  * write1node2.c: Test data checkpoint function : saCkptCheckpointWrite 
  *
@@ -103,7 +103,7 @@ void termhandler (int signumber)
 
 void usrhandler (int signumber)
 {
-//	signal (SIGUSR1, usrhandler) ;
+/*	signal (SIGUSR1, usrhandler) ; */
 	return ;
 }
 /*

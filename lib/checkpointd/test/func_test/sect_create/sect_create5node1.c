@@ -1,4 +1,4 @@
-/* $Id: sect_create5node1.c,v 1.1 2004/06/30 03:44:20 deng.pan Exp $ */
+/* $Id: sect_create5node1.c,v 1.2 2004/10/09 01:49:41 lge Exp $ */
 /* 
  * sec_create5node1.c: Test data checkpoint function : saCkptSectionCreate 
  *
@@ -22,7 +22,7 @@
 #define CkptOpenFlag SA_CKPT_CHECKPOINT_COLOCATED|SA_CKPT_CHECKPOINT_WRITE|SA_CKPT_CHECKPOINT_READ
 #define CaseName "sect_create5"
 #define CkptCreationFlag SA_CKPT_WR_ACTIVE_REPLICA 
-//#define CkptCreationFlag SA_CKPT_WR_ALL_REPLICAS 
+/*#define CkptCreationFlag SA_CKPT_WR_ALL_REPLICAS */
 #include "func.h"
 
 

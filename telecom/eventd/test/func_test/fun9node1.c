@@ -1,4 +1,4 @@
-/* $Id: fun9node1.c,v 1.1 2004/08/03 06:32:22 deng.pan Exp $ */
+/* $Id: fun9node1.c,v 1.2 2004/10/09 01:49:43 lge Exp $ */
 /* 
  * fun9node1.c: Funtion Test Case 9 for Event Service Test
  * saEvtInitialize, saEvtFinalize, saEvtSelectionObjectGet
@@ -23,13 +23,13 @@
 
 static int nCmpResult=1, nTimes=0;
 
-//event data get
+/*event data get */
 static void callback_event_deliver(SaEvtSubscriptionIdT sub_id,
 				SaEvtEventHandleT event_handle,
 				const SaSizeT eventDataSize)
 {
 	nTimes++;
-	//syslog (LOG_INFO|LOG_LOCAL7, "\n$$$$node 1 :sub: %d, Event: %d$$$$$\n",(int)sub_id,eventDataSize);
+	/*syslog (LOG_INFO|LOG_LOCAL7, "\n$$$$node 1 :sub: %d, Event: %d$$$$$\n",(int)sub_id,eventDataSize); */
 	switch(sub_id)
 	{
 		case 1: 
@@ -64,20 +64,20 @@ int main(int argc, char **argv)
 		return -1;
 	}	
 	
-	//initialize
+	/*initialize */
 	callbacks.saEvtEventDeliverCallback = callback_event_deliver;
 	if(saEvtInitialize(&evt_handle, &callbacks, &version) != SA_OK){
 		syslog (LOG_INFO|LOG_LOCAL7, "%s \n", Fail_message) ;
 		return -1;
 	}
 	
-	//get selection object
+	/*get selection object */
 	saEvtSelectionObjectGet(evt_handle, &fd);
 
 	/* tell monitor machine "I'm up now"*/ 	
 	syslog (LOG_INFO|LOG_LOCAL7, "%s %d\n", Start_message, getpid ()) ;	
 	
-	//Step 1. 	
+	/*Step 1. */
 	for(i=0;i<4;i++){		
 		ch_name.length = i+1;
 		memcpy(ch_name.value, "99999", i+1);
@@ -89,13 +89,13 @@ int main(int argc, char **argv)
 		}
 	}
 	
-	//count =0
+	/*count =0 */
 	syslog (LOG_INFO|LOG_LOCAL7, "%s %d %d\n",Signal_message, count++, SIGUSR1) ;
 	pausepause () ;		
 
-	//step 2
-	//subscribe filter1~4 on channel 1 node 1
-	//setmode() will set the 6 event patterns and 4 filter arrays, see in func.h
+	/*step 2 */
+	/*subscribe filter1~4 on channel 1 node 1 */
+	/*setmode() will set the 6 event patterns and 4 filter arrays, see in func.h */
 	if(setmode()<0){
 		for(i=0;i<4;i++) saEvtChannelClose(channel_handle[i]);
 		saEvtFinalize(evt_handle);
@@ -114,15 +114,15 @@ int main(int argc, char **argv)
 		}
 	}
 
-	//count=1
+	/*count=1 */
 	syslog (LOG_INFO|LOG_LOCAL7, "%s %d %d\n",Signal_message, count++, SIGUSR1) ;
 	pausepause () ;	
 	
-	//count=2
+	/*count=2 */
 	syslog (LOG_INFO|LOG_LOCAL7, "%s %d %d\n",Signal_message, count++, SIGUSR1) ;
 	pausepause () ;	
 
-	//step 5
+	/*step 5 */
 	FD_ZERO(&rset);
 	FD_SET(fd, &rset);
 	tv.tv_sec=2;
@@ -147,11 +147,11 @@ int main(int argc, char **argv)
 			}
 		}
 
-	//count=3
+	/*count=3 */
 	syslog (LOG_INFO|LOG_LOCAL7, "%s %d %d\n",Signal_message, count++, SIGUSR1) ;
 	pausepause () ;	
 
-	//step 6 : unsubscribe filter 1,3 on channel 1
+	/*step 6 : unsubscribe filter 1,3 on channel 1 */
 	if(saEvtEventUnsubscribe(channel_handle[0], 1)!= SA_OK){
 		for(i=0;i<4;i++) saEvtChannelClose(channel_handle[i]);
 		freemode();
@@ -168,11 +168,11 @@ int main(int argc, char **argv)
 		return -1;
 	}
 
-	//count=4
+	/*count=4 */
 	syslog (LOG_INFO|LOG_LOCAL7, "%s %d %d\n",Signal_message, count++, SIGUSR1) ;
 	pausepause () ;	
 
-	//step 8
+	/*step 8 */
 	FD_ZERO(&rset);
 	FD_SET(fd, &rset);
 	tv.tv_sec=2;
@@ -187,7 +187,7 @@ int main(int argc, char **argv)
 			return -1;
 		}else{
 			sleep(1);
-			//if(saEvtDispatch(evt_handle, SA_DISPATCH_ALL)!= SA_OK )
+			/*if(saEvtDispatch(evt_handle, SA_DISPATCH_ALL)!= SA_OK ) */
 			if(saEvtDispatch(evt_handle, SA_DISPATCH_ALL)!= SA_OK || nCmpResult<0 ||nTimes!=10)
 			{
 				for(i=0;i<4;i++) saEvtChannelClose(channel_handle[i]);
@@ -198,7 +198,7 @@ int main(int argc, char **argv)
 			}
 		}
 		
-	//count =5
+	/*count =5 */
 	syslog (LOG_INFO|LOG_LOCAL7, "%s %d %d\n",Signal_message, count++, SIGUSR1) ;
 	pausepause () ;
 	
@@ -214,7 +214,7 @@ int main(int argc, char **argv)
 		
 	freemode();
 	
-	//finalize
+	/*finalize */
 	saEvtFinalize(evt_handle);
 	
 	syslog (LOG_INFO|LOG_LOCAL7, "%s", Success_message) ;	

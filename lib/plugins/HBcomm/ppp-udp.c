@@ -1,4 +1,4 @@
-/* $Id: ppp-udp.c,v 1.15 2004/02/17 22:11:59 lars Exp $ */
+/* $Id: ppp-udp.c,v 1.16 2004/10/09 01:49:42 lge Exp $ */
 /*
  *	ppp-udp.c:	Implements UDP over PPP for bidirectional ring
  *			heartbeats.
@@ -171,7 +171,7 @@ static int hb_dev_isping (void);
 extern int	udpport;	/* Shared with udp.c */
 
 #define		ISUDPOBJECT(mp)	((mp) && ((mp)->vf == (void*)&ppp_udp_media_fns))
-//#define		PPPUDPASSERT(mp)	ASSERT(ISUDPOBJECT(mp))
+/*#define		PPPUDPASSERT(mp)	ASSERT(ISUDPOBJECT(mp)) */
 #define PPPUDPASSERT(mp) 
 static int hb_dev_mtype (char **buffer)
 {
@@ -1222,6 +1222,10 @@ ppp_localdie(void)
 }
 /*
  * $Log: ppp-udp.c,v $
+ * Revision 1.16  2004/10/09 01:49:42  lge
+ * 199Kb patch transforming all // I could find into /* */
+ * have a lot of fun :-/
+ *
  * Revision 1.15  2004/02/17 22:11:59  lars
  * Pet peeve removal: _Id et al now gone, replaced with consistent Id header.
  *
