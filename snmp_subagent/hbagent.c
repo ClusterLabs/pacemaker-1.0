@@ -640,15 +640,23 @@ walk_iftable(void)
 int
 handle_heartbeat_msg(void)
 {
+	IPC_Channel * chan;
 	struct ha_msg * msg;
 	const char * type, * node;
 
 	while (hb->llc_ops->msgready(hb)) {
 
+		chan = hb->llc_ops->ipcchan(hb);
+		/* this happens when the main heartbeat daemon is not there
+		   any more */
+		if (chan->ch_status == IPC_DISCONNECT) {
+			return HA_FAIL;
+		} 
+
 		msg = hb->llc_ops->readmsg(hb, 0);
 		if (!msg) {
-			cl_log(LOG_ERR, "read_hb_msg returned NULL");
-			return HA_FAIL;
+			cl_log(LOG_DEBUG, "read_hb_msg returned NULL.");
+			continue;
 		}
 
 		type = ha_msg_value(msg, F_TYPE);
