@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-#	$Id: IPaddr.in,v 1.48 2003/10/24 07:07:44 horms Exp $
+#	$Id: IPaddr.in,v 1.49 2003/10/29 05:38:59 horms Exp $
 #
 #	This script manages IP alias IP addresses
 #
@@ -292,6 +292,14 @@ remove_conflicting_loopback() {
 	ifname="$2"
 
 	ha_log "info: Removing conflicting loopback $ifname."
+	if
+	  [ -d "$VLDIR/" ] || mkdir -p "$VLDIR/"
+	then
+	  : Directory $VLDIR now exists
+	else
+	  ha_log "ERROR: Could not create \"$VLDIR/\" conflicting" \
+	  " loopback $ifname cannot be restored."
+	fi
 	if 
 	  echo $ifname > "$VLDIR/$ipaddr"
 	then
@@ -623,7 +631,7 @@ ip_monitor() {
 
 usage() {
   echo $USAGE >&2
-  echo "$Id: IPaddr.in,v 1.48 2003/10/24 07:07:44 horms Exp $"
+  echo "$Id: IPaddr.in,v 1.49 2003/10/29 05:38:59 horms Exp $"
 }
 
 #
@@ -670,6 +678,9 @@ esac
 #
 #
 # $Log: IPaddr.in,v $
+# Revision 1.49  2003/10/29 05:38:59  horms
+# Need to create these directories on-the-fly after all.
+#
 # Revision 1.48  2003/10/24 07:07:44  horms
 # remove send arps pid file on stop if it exists
 #
