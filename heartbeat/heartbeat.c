@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.368 2005/02/21 09:48:38 alan Exp $ */
+/* $Id: heartbeat.c,v 1.369 2005/02/23 21:03:53 gshi Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -1940,6 +1940,10 @@ HBDoMsg_T_ACKMSG(const char * type, struct node_info * fromnode,
 			}
 		}
 		
+		if (minidx == -1){
+			/*each node is in either DEASTATUS or INITSTATUS*/
+			goto out;
+		}
 		if (minidx == config->nodecount){
 			cl_log(LOG_ERR, "minidx out of bound"
 			       "minidx=%d",minidx );
@@ -1953,6 +1957,15 @@ HBDoMsg_T_ACKMSG(const char * type, struct node_info * fromnode,
 		}
 	}
  out:
+#if 0
+	cl_log(LOG_INFO, "hist->ackseq =%ld, node %s's ackseq=%ld",
+	       hist->ackseq, fromnode->nodename,
+	       fromnode->track.ackseq);
+	
+	if (hist->lowest_acknode){
+		cl_log(LOG_INFO,"expecting from %s",hist->lowest_acknode->nodename);
+	}
+#endif 
 
 	return;
 }
@@ -5062,6 +5075,10 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.369  2005/02/23 21:03:53  gshi
+ * fixed a bug that when all nodes are in INITSTATUS,
+ * hist->lowest_acknode is set to wrong pointer
+ *
  * Revision 1.368  2005/02/21 09:48:38  alan
  * Moved the code to enable processing of T_SHUTDONE messages until after reading
  * the config file.
