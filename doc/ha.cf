@@ -228,6 +228,26 @@ auto_failback on
 #
 #ping_group group1 10.10.10.254 10.10.10.253
 #
+#	HBA ping derective for Fiber Channel
+#	Treats fc-card-name as psudo-cluster-member
+#	used with ipfail below ...
+#
+#	You can obtain HBAAPI from http://hbaapi.sourceforge.net.  You need 
+#	to get the library specific to your HBA directly from the vender
+#	To install HBAAPI stuff, all You need to do is to compile the common
+#	part you obtained from the sourceforge. This will produce libHBAAPI.so 
+#	which you need to copy to /usr/lib. You need also copy hbaapi.h to 
+#	/usr/include.
+#	
+#	The fc-card-name is the name obtained from the hbaapitest program 
+#	that is part of the hbaapi package. Running hbaapitest will produce
+#	a verbose output. One of the first line is similar to:
+#		Apapter number 0 is named: qlogic-qla2200-0
+#	Here fc-card-name is qlogic-qla2200-0. 	
+#
+#hbaping fc-card-name
+#
+#
 #	Processes started and stopped with heartbeat.  Restarted unless
 #		they exit with rc=100
 #
