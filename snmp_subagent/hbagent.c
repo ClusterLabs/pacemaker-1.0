@@ -216,152 +216,6 @@ get_hb_info(lha_group_t group)
     }
 }
 
-int
-main(int argc, char ** argv) 
-{
-	int ret;
-
-	fd_set fdset;
-	struct timeval tv, *tvp;
-	int block, numfds, hb_fd = 0, mem_fd = 0;
-
-	/* change this if you want to be a SNMP master agent */
-	int agentx_subagent=1; 
-
-	/* change this if you want to run in the background */
-	int background = 0; 
-
-	/* change this if you want to use syslog */
-	int syslog = 0; 
-
-	/* print log errors to syslog or stderr */
-	if (syslog)
-		snmp_enable_calllog();
-	else
-		snmp_enable_stderrlog();
-
-	/* we're an agentx subagent? */
-	if (agentx_subagent) {
-		/* make us a agentx client. */
-		netsnmp_ds_set_boolean(NETSNMP_DS_APPLICATION_ID, 
-				NETSNMP_DS_AGENT_ROLE, 1);
-	}
-
-	/* run in background, if requested */
-	if (background && netsnmp_daemonize(1, !syslog))
-		exit(1);
-
-	/* initialize the agent library */
-	init_agent("LHA-agent");
-
-	/* initialize mib code here */
-
-	if ((ret = init_storage()) != HA_OK) {
-	    	return -2;
-	}
-
-	if ((ret = init_heartbeat()) != HA_OK ||
-	    	(hb_fd = get_heartbeat_fd()) <=0) {
-                return -1;
-        }
-
-	if ((ret = init_resource_table()) != HA_OK) {
-	    	cl_log(LOG_ERR, "resource table initialization failure.");
-	}
-
-	if ((ret = init_membership() != HA_OK) ||
-		(mem_fd = get_membership_fd()) <= 0) {
-	    	cl_log(LOG_ERR, "membership initialization failure.  You will not be able to view any membership information in this cluster.");
-	} 
-
-	init_LHAClusterInfo();
-	init_LHANodeTable();
-	init_LHAIFStatusTable();
-	init_LHAResourceGroupTable();
-	init_LHAMembershipTable();
-	init_LHAHeartbeatConfigInfo();
-
-	/* LHA-agent will be used to read LHA-agent.conf files. */
-	init_snmp("LHA-agent");
-
-	/* If we're going to be a snmp master agent, initial the ports */
-	if (!agentx_subagent)
-		init_master_agent();  /* open the port to listen on (defaults to udp:161) */
-
-	/* In case we recevie a request to stop (kill -TERM or kill -INT) */
-	keep_running = 1;
-	signal(SIGTERM, stop_server);
-	signal(SIGINT, stop_server);
-
-	snmp_log(LOG_INFO,"LHA-agent is up and running.\n");
-
-	/* you're main loop here... */
-	while(keep_running) {
-	/* if you use select(), see snmp_select_info() in snmp_api(3) */
-	/*     --- OR ---  */
-		// agent_check_and_process(1); /* 0 == don't block */
-
-		FD_ZERO(&fdset);
-                FD_SET(hb_fd, &fdset);
-		numfds = hb_fd + 1;
-
-		if (clmInitialized) {
-			FD_SET(mem_fd, &fdset);
-
-			if (mem_fd > hb_fd)
-				numfds = mem_fd + 1;
-		}
-
-		tvp = &tv;
-
-		snmp_select_info(&numfds, &fdset, &tv, &block);
-
-		if (block) {
-			tvp = NULL;
-		} if (tvp->tv_sec == 0) {
-		    tvp->tv_sec = DEFAULT_TIME_OUT;
-		}
-
-		ret = select(numfds, &fdset, 0, 0, tvp);
-
-		if (ret < 0) {
-			/* error */
-			cl_log(LOG_ERR, "select() returned with an error.");
-			break;
-		} else if (ret == 0) {
-			/* timeout */
-			snmp_timeout();
-			continue;
-		} 
-
-		if (FD_ISSET(hb_fd, &fdset)) {
-			/* heartbeat */
-
-			if ((ret = handle_heartbeat_msg()) == HA_FAIL) {
-				cl_log(LOG_ERR, "heartbeat stopped.");
-				break;
-			}
-		} else  if (clmInitialized && FD_ISSET(mem_fd, &fdset)) {
-		    	/* membership events */
-
-		    	if ((ret = handle_membership_msg()) == HA_FAIL) {
-			    	cl_log(LOG_ERR, "memebership error.");
-				break;
-			}
-		} else {
-
-			/* snmp request */
-			snmp_read(&fdset);
-		}
-	}
-
-	/* at shutdown time */
-	snmp_shutdown("example-demon");
-	free_storage();
-
-	return 0;
-}
-
 /* functions which talk to heartbeat */
 
 static void
@@ -512,7 +366,6 @@ init_heartbeat(void)
 	hb = NULL;
 
 	cl_log_set_entity("lha-snmpagent");
-	cl_log_enable_stderr(TRUE);
 	cl_log_set_facility(LOG_USER);
 
 	hb = ll_cluster_new("heartbeat");
@@ -1087,5 +940,172 @@ membership_trap(const char * node, SaClmClusterChangesT status)
     return HA_OK;
 }
 
+static void
+usage(void)
+{
+    	fprintf(stderr, "Usage: hbagent -d\n");
+}
+
+int
+main(int argc, char ** argv) 
+{
+	int ret;
+
+	fd_set fdset;
+	struct timeval tv, *tvp;
+	int flag, block, numfds, hb_fd = 0, mem_fd = 0;
+
+	/* change this if you want to be a SNMP master agent */
+	int agentx_subagent=1; 
+
+	/* change this if you want to run in the background */
+	int background = 1; 
+
+	/* change this if you want to use syslog */
+	int syslog = 1; 
+
+	while ((flag = getopt(argc, argv, "d")) != EOF) {
+	    	switch (flag) {
+		    case 'd':
+			background = 0;
+			break;
+		    default: 
+			usage();
+			exit(1);
+		}
+	}
+
+	if (background) 
+		cl_log_enable_stderr(FALSE);
+	else 
+	    	cl_log_enable_stderr(TRUE);
+
+	/* print log errors to syslog or stderr */
+	if (syslog)
+		snmp_enable_calllog();
+	else
+		snmp_enable_stderrlog();
+
+	/* we're an agentx subagent? */
+	if (agentx_subagent) {
+		/* make us a agentx client. */
+		netsnmp_ds_set_boolean(NETSNMP_DS_APPLICATION_ID, 
+				NETSNMP_DS_AGENT_ROLE, 1);
+	}
+
+	/* run in background, if requested */
+	if (background && netsnmp_daemonize(1, !syslog))
+		exit(1);
+
+	/* initialize the agent library */
+	init_agent("LHA-agent");
+
+	/* initialize mib code here */
+
+	if ((ret = init_storage()) != HA_OK) {
+	    	return -2;
+	}
+
+	if ((ret = init_heartbeat()) != HA_OK ||
+	    	(hb_fd = get_heartbeat_fd()) <=0) {
+                return -1;
+        }
+
+	if ((ret = init_resource_table()) != HA_OK) {
+	    	cl_log(LOG_ERR, "resource table initialization failure.");
+	}
+
+	if ((ret = init_membership() != HA_OK) ||
+		(mem_fd = get_membership_fd()) <= 0) {
+	    	cl_log(LOG_ERR, "membership initialization failure.  You will not be able to view any membership information in this cluster.");
+	} 
+
+	init_LHAClusterInfo();
+	init_LHANodeTable();
+	init_LHAIFStatusTable();
+	init_LHAResourceGroupTable();
+	init_LHAMembershipTable();
+	init_LHAHeartbeatConfigInfo();
+
+	/* LHA-agent will be used to read LHA-agent.conf files. */
+	init_snmp("LHA-agent");
+
+	/* If we're going to be a snmp master agent, initial the ports */
+	if (!agentx_subagent)
+		init_master_agent();  /* open the port to listen on (defaults to udp:161) */
+
+	/* In case we recevie a request to stop (kill -TERM or kill -INT) */
+	keep_running = 1;
+	signal(SIGTERM, stop_server);
+	signal(SIGINT, stop_server);
+
+	snmp_log(LOG_INFO,"LHA-agent is up and running.\n");
+
+	/* you're main loop here... */
+	while(keep_running) {
+	/* if you use select(), see snmp_select_info() in snmp_api(3) */
+	/*     --- OR ---  */
+		// agent_check_and_process(1); /* 0 == don't block */
+
+		FD_ZERO(&fdset);
+                FD_SET(hb_fd, &fdset);
+		numfds = hb_fd + 1;
+
+		if (clmInitialized) {
+			FD_SET(mem_fd, &fdset);
+
+			if (mem_fd > hb_fd)
+				numfds = mem_fd + 1;
+		}
+
+		tvp = &tv;
+
+		snmp_select_info(&numfds, &fdset, &tv, &block);
+
+		if (block) {
+			tvp = NULL;
+		} if (tvp->tv_sec == 0) {
+		    tvp->tv_sec = DEFAULT_TIME_OUT;
+		}
+
+		ret = select(numfds, &fdset, 0, 0, tvp);
+
+		if (ret < 0) {
+			/* error */
+			cl_log(LOG_ERR, "select() returned with an error.");
+			break;
+		} else if (ret == 0) {
+			/* timeout */
+			snmp_timeout();
+			continue;
+		} 
+
+		if (FD_ISSET(hb_fd, &fdset)) {
+			/* heartbeat */
+
+			if ((ret = handle_heartbeat_msg()) == HA_FAIL) {
+				cl_log(LOG_ERR, "heartbeat stopped. subagent quit.");
+				break;
+			}
+		} else  if (clmInitialized && FD_ISSET(mem_fd, &fdset)) {
+		    	/* membership events */
+
+		    	if ((ret = handle_membership_msg()) == HA_FAIL) {
+			    	cl_log(LOG_ERR, "memebership error.");
+				break;
+			}
+		} else {
+
+			/* snmp request */
+			snmp_read(&fdset);
+		}
+	}
+
+	/* at shutdown time */
+	snmp_shutdown("LHA-agent");
+	free_storage();
+
+	return 0;
+}
 
 
