@@ -1,4 +1,4 @@
-/* $Id: hb_api.c,v 1.98 2004/03/26 07:50:02 chuyee Exp $ */
+/* $Id: hb_api.c,v 1.99 2004/04/18 07:13:27 alan Exp $ */
 /*
  * hb_api: Server-side heartbeat API code
  *
@@ -1310,7 +1310,7 @@ api_check_client_authorization(client_proc_t* client)
 	}
 	if (auth == NULL
 	||	client->chan->ops->verify_auth(client->chan, auth) == IPC_OK) {
-		if (client->chan->farside_pid != 0) {
+		if (client->chan->farside_pid > 0) {
 			if (client->chan->farside_pid != client->pid) {
 				client->removereason = "pid mismatch";
 				cl_log(LOG_INFO
