@@ -37,6 +37,7 @@ CLSTATUS=@bindir@/cl_status
 APPHBTEST=$HBLIB/apphbtest
 IPCTEST=$HBLIB/ipctest
 LRMTEST=$HBLIB/lrmtest/LRMBasicSanityCheck
+CRMTEST=$HBLIB/crmtest/1node.sh
 SNMPAGENTTEST=$HBLIB/SNMPAgentSanityCheck
 MALLOC_CHECK_=2; export MALLOC_CHECK_
 #
@@ -122,6 +123,24 @@ GenerateHaCf() {
 	# Eventually I'd like to be able to enable this and
 	# have things work right...
 	#respawn root $HBLIB/hbagent
+	!
+  chmod 644 $1
+}
+
+GenerateCrmdHaCf() {
+  cat <<-! >$1
+	#	$IDENTSTRING
+	logfile   /dev/null
+	debugfile $LOGFILE
+	logfacility    local7
+	keepalive 10ms
+	debug 1
+	deadtime 5
+	initdead 5
+	mcast $INTERFACE $MCASTIP 694 0 0
+	#bcast $INTERFACE
+	node $LOCALNODE $DUMMYNODE
+	crm yes
 	!
   chmod 644 $1
 }
@@ -617,6 +636,27 @@ LRMTest() {
 	fi
 }
 
+TestCRM() {
+  	if [ ! -f $CRMTEST ]; then
+	    return 0
+	fi
+	GenerateCrmdHaCf $HADIR/ha.cf
+#	echo "crm yes" >> $HADIR/ha.cf
+#	echo "logfacility local7" >> $HADIR/ha.cf
+	echo "Starting CRM tests" | tee -a $LOGFILE
+	$CRMTEST -L --ip1 127.0.0.10 --ip2 127.0.0.11 >> $LOGFILE 2>&1
+	ret=$?
+	if [ $ret != 0 ]; then
+	    errcount=`expr $errcount + 1`
+	    echo "CRM tests failed."
+	else 
+	    echo "CRM tests passed."
+	fi
+
+	# stat likes dumping core when MALLOC_CHECK_=2 is specified
+	file $HADIR/core* | grep -e "from 'stat'" | rm -f `awk '{ print $1 }' | tr ':' ' '`
+}
+
 SNMPAgentTest() {
 	if 
 	    [ ! -f $SNMPAGENTTEST ]
@@ -672,15 +712,16 @@ StonithCheck
 AppHBCheck
 IPCtest
 LRMTest
+TestCRM
 SNMPAgentTest
 
+ls -l $HADIR/core* 2>/dev/null
 if
-  [ -f $HADIR/core ]
+  [ $? = 0 ]
 then
   errcount=`expr $errcount + 1`
   echo "OOPS! We generated a core file!"
-  ls -l $HADIR/core
-  file $HADIR/core
+  file $HADIR/core*
 fi
 
 if
