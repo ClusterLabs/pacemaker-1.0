@@ -37,24 +37,24 @@ ConfigureLinux() {
     [ -f /etc/UnitedLinux-release -a -s /etc/UnitedLinux-release ]
   then
     distro=UL
-    PACKAGECMD="make rpm"
+    PACKAGECMD="$MAKE_CMD rpm"
     DFLAGS="--with-ucd-snmp-devel=ucdsnmp --with-group-id=90 --with-ccmuser-id=90"
   elif
     [ -f /etc/SuSE-release -a -s /etc/SuSE-release ]
   then
     distro=SuSE
-    PACKAGECMD="make rpm"
+    PACKAGECMD="$MAKE_CMD rpm"
     DFLAGS="--with-ucd-snmp-devel=ucdsnmp --with-group-id=90 --with-ccmuser-id=90"
   elif
     [ -f /etc/redhat-release -a -s /etc/redhat-release ] 
   then
     distro=RedHat
-    PACKAGECMD="make rpm"
+    PACKAGECMD="$MAKE_CMD rpm"
   elif
     [ -f /etc/conectiva-release -a -s /etc/conectiva-release ]
   then
     distro=Conectiva
-    PACKAGECMD="make rpm"
+    PACKAGECMD="$MAKE_CMD rpm"
     DFLAGS="--with-group-id=17 --mandir=/usr/share/man --infodir=/usr/share/info --with-ccmuser-id=17"
   else
     distro="Generic"
@@ -111,10 +111,6 @@ lcase() {
 }
 
 GetConfigureFLAGS() {
-  case $CROSSCOMPILE in
-    yes)	GetCrossConfigureFlags;;
-    *)		GetNativeConfigureFlags;;
-  esac
   if 
       [ "X$MAKE" != "X" ]
   then
@@ -126,6 +122,10 @@ GetConfigureFLAGS() {
   else
       MAKE_CMD="make"
   fi
+  case $CROSSCOMPILE in
+    yes)	GetCrossConfigureFlags;;
+    *)		GetNativeConfigureFlags;;
+  esac
 }
 
 GetNativeConfigureFlags() {
