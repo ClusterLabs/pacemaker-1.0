@@ -20,8 +20,12 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#if HAVE_UNISTD_H
 #include <unistd.h>
+#endif
+#if HAVE_GETOPT_H
 #include <getopt.h>
+#endif
 #include <errno.h>
 #include <string.h>
 #include <sys/types.h>
@@ -137,9 +141,9 @@ usage()
 	printf("checkpointd - data checkpoint service daemon\n");
 	printf("Usage: checkpointd [options...]\n");
 	printf("Options:\n");
-	printf("\t--help\t\tshow this help\n");
-	printf("\t--daemon\trun in daemon mode\n");
-	printf("\t--verbose\trun in verbose mode\n");
+	printf("\t--help, -h, -?\t\tshow this help\n");
+	printf("\t--daemon, -d\trun in daemon mode\n");
+	printf("\t--verbose, -v\trun in verbose mode\n");
 }
 
 
@@ -260,6 +264,7 @@ SaWaitDebugDestroy(gpointer user_data)
 
 #endif
 
+#define OPTARGS "?dvh:"
 int
 main(int argc, char ** argv)
 {
@@ -269,12 +274,14 @@ main(int argc, char ** argv)
 	int	fd;
 
 	int c;
+#if HAVE_GETOPT_H
 	static struct option long_options[] = {
 		{"daemon", 0, 0, 'd'},
 		{"verbose", 0, 0, 'v'},
 		{"help", 0, 0, 'h'},
 		{0, 0, 0, 0}
 	};
+#endif
 
 	(void)_ha_msg_h_Id;
 	(void)_heartbeat_h_Id;
@@ -286,7 +293,12 @@ main(int argc, char ** argv)
 
 	// get options
 	while (1) {
-		c = getopt_long(argc, argv, "d", long_options, NULL);
+#if HAVE_GETOPT_H
+		c = getopt_long(argc, argv, OPTARGS, long_options, NULL);
+#else
+		c = getopt(argc, argv, OPTARGS);
+#endif
+
 		if (c == -1) break;
 		switch (c) {
 		case 'd': 
