@@ -1122,7 +1122,7 @@ ccm_delay_random_interval(void)
 	/* seed the random with a random value */
 	gettimeofday(&tmp, NULL);
 	srandom((unsigned int)tmp.tv_usec); 
- 	usleep(random()%MAXNODE); /*sleep some random microsecond interval*/
+	usleep(random()%MAXNODE); /*sleep some random microsecond interval*/
 }
 
 //
@@ -1154,7 +1154,7 @@ ccm_compute_and_send_final_memlist(ll_cluster_t *hb, ccm_info_t *info)
 
 	/* check if the membership has changed from that before. If so we
 	 * have to generate a new cookie.
- 	 */
+	 */
 	if(ccm_memlist_changed(info, bitmap)) {
 		cookie = ccm_generate_random_cookie();
 	}
@@ -1755,10 +1755,8 @@ ccm_create_leave_msg(ccm_info_t *info, int uuid)
 static struct ha_msg *
 ccm_readmsg(ccm_info_t *info, ll_cluster_t *hb, int ttimeout)
 {
-	fd_set          fds;
-	int             fd;
-	int 		uuid;
-	struct timeval	tv;
+	int 	uuid;
+	int	fd;
 
 	assert(hb);
 	fd = hb->llc_ops->inputfd(hb);
@@ -1769,12 +1767,7 @@ ccm_readmsg(ccm_info_t *info, ll_cluster_t *hb, int ttimeout)
 		return(ccm_create_leave_msg(info, uuid));
 	}
 
-	FD_ZERO(&fds);
-	FD_SET(fd, &fds);
-	tv.tv_sec = ttimeout;
-	tv.tv_usec = 0;
-
-	if (select(fd+1, &fds, NULL, NULL, &tv)) {
+	if (hb->llc_ops->msgready(hb)) {
 		return(hb->llc_ops->readmsg(hb, 0));
 	}
 
@@ -1806,7 +1799,7 @@ ccm_joining_to_joined(ll_cluster_t *hb, ccm_info_t *info)
 	 * got from others, and create a new cookie.
 	 * This bug was noticed: when testing with partitioned
 	 * clusters.
- 	 */
+	 */
 	cookie = ccm_generate_random_cookie();
 
 	/* fill my new memlist and update the new cookie if any */
@@ -1888,7 +1881,7 @@ ccm_state_version_request(enum ccm_type ccm_msg_type,
 {
 	const char *orig, *proto, *cookie, *trans, *clsize;
 	uint trans_val;
-        int  proto_val, clsize_val;
+	int  proto_val, clsize_val;
 	int try;
 
 	/* who sent this message */
@@ -1992,7 +1985,7 @@ ccm_state_version_request(enum ccm_type ccm_msg_type,
 
 		break;
 
-        case CCM_TYPE_TIMEOUT:
+	case CCM_TYPE_TIMEOUT:
 		try = version_retry(CCM_GET_VERSION(info), 
 					CCM_TMOUT_GET_VRS(info));
 		switch (try) {
@@ -2030,18 +2023,18 @@ ccm_state_version_request(enum ccm_type ccm_msg_type,
 		ccm_add_new_joiner(info, orig);
 		break;
 
-        case CCM_TYPE_JOIN:
-        case CCM_TYPE_REQ_MEMLIST:
-        case CCM_TYPE_RES_MEMLIST:
-        case CCM_TYPE_FINAL_MEMLIST:
-        case CCM_TYPE_ABORT:
+	case CCM_TYPE_JOIN:
+	case CCM_TYPE_REQ_MEMLIST:
+	case CCM_TYPE_RES_MEMLIST:
+	case CCM_TYPE_FINAL_MEMLIST:
+	case CCM_TYPE_ABORT:
 		/* note down there is some activity going 
 		 * on and we are not yet alone in the cluster 
 		 */
 		version_some_activity(CCM_GET_VERSION(info));
 		
-        case CCM_TYPE_LEAVE:
-        case CCM_TYPE_ERROR:
+	case CCM_TYPE_LEAVE:
+	case CCM_TYPE_ERROR:
 	default:
 		/* nothing to do. Just forget the message */
 		break;
@@ -2127,7 +2120,7 @@ ccm_state_joined(enum ccm_type ccm_msg_type,
 
 		case CCM_TYPE_PROTOVERSION:
 			/* If we were leader in the last successful iteration,
- 			 * then we shall respond with the neccessary information
+			 * then we shall respond with the neccessary information
 			 */
 			if (ccm_am_i_leader(info)){
 				while (ccm_send_joiner_reply(hb, info, orig)
@@ -3286,8 +3279,8 @@ ccm_control_process(ccm_info_t *info, ll_cluster_t * hb)
 	const char *orig=NULL;
 	const char *status=NULL;
 
+repeat:
 	/* read the next available message */
-
 	reply = ccm_readmsg(info, hb, 0); /* wait no sec for timeout */
 
 	if (reply) {
@@ -3418,6 +3411,10 @@ ccm_control_process(ccm_info_t *info, ll_cluster_t * hb)
 	}
 
 	if(ccm_msg_type != CCM_TYPE_TIMEOUT) ha_msg_del(reply);
+
+	/* If there is another message in the channel, process it now. */
+	if (hb->llc_ops->msgready(hb))
+		goto repeat;
 
 	return 0;
 }
