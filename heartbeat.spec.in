@@ -1,4 +1,4 @@
-#	$Id: heartbeat.spec.in,v 1.88 2004/08/05 06:39:08 forrest Exp $
+#	$Id: heartbeat.spec.in,v 1.89 2004/08/05 19:52:29 andrew Exp $
 
 # Workaround for a change in RPM 4.1.x; needs proper fixing soon!
 %define _unpackaged_files_terminate_build 0
@@ -810,6 +810,7 @@ install -m 644 rc.config.heartbeat $TEMPL
 %attr (600, root, root)       @localstatedir@/lib/@HB_PKG@/fifo
 %dir %attr (750, root, @HA_APIGROUP@) @localstatedir@/lib/@HB_PKG@/api
 %attr (755, @HA_CCMUSER@, @HA_APIGROUP@) @localstatedir@/lib/@HB_PKG@/ccm
+
 @RPM_FILES_CKPT@
 @RPM_FILES_CMS@
 @RPM_FILES_EVT@
@@ -847,7 +848,8 @@ install -m 644 rc.config.heartbeat $TEMPL
 
 %define ENABLE_CRM @CRM_ENABLED@
 %if %{ENABLE_CRM}
-	%dir %attr (750, root, @HA_APIGROUP@) @localstatedir@/lib/@HB_PKG@/crm
+	%dir %attr (750, @HA_CCMUSER@, @HA_APIGROUP@) @localstatedir@/lib/@HB_PKG@/crm
+	%dir %attr (755, @HA_CCMUSER@, @HA_APIGROUP@) @libdir@/@HB_PKG@/crmtest
 	@libdir@/libcib.*
 	@libdir@/libcrmcommon.*
 %endif
