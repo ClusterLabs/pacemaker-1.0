@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-my($VERSION)=(qw$Id: ldirectord,v 1.87 2004/05/07 08:53:33 horms Exp $)[2];
+my($VERSION)=(qw$Id: ldirectord,v 1.88 2004/05/27 05:29:05 horms Exp $)[2];
 
 ######################################################################
 # ldirectord                 http://www.vergenet.net/linux/ldirectord/
@@ -1265,7 +1265,6 @@ sub ld_setup
 			} else {
 				 $$r{wght} = "1";
 			}
-			$$r{status} = -1;
         		if (defined $$r{request} && defined $$r{receive}) {
 				my $uri = $$r{request};
 				$uri =~ s/^\///g;
@@ -1405,13 +1404,9 @@ sub ld_start
 			for $nr (@$nreal) {
 				if (exists($$or{"$$nr{server}:$$nr{port}"})) {
 					&system_wrapper("$IPVSADM -e $$nv{proto} " .  &get_virtual($nv) .  " -r $$nr{server}:$$nr{port} $$nr{forw} -w $$nr{wght}");
-					$$nv{status}++;
-					$$nr{status} = 1;
+					_status_up($nv, $nr);
 					&ld_log("Changed real server: $$nr{server}:$$nr{port} ($$nv{status} x " . &get_virtual($nv) . ")\n");
 					delete($$or{"$$nr{server}:$$nr{port}"});
-				}
-				else {
-					$$nr{status} = 0;
 				}
 			}
 			# remove remaining entries for real servers
@@ -1423,9 +1418,6 @@ sub ld_start
 		} else {
 			# no such service, create a new one
 			&system_wrapper("$IPVSADM -A $$nv{flags}");
-			for $nr (@$nreal) {
-				$$nr{status} = -1;
-			}
 			&ld_log("Added virtual server: " . &get_virtual($nv));
 		}
 
@@ -1459,10 +1451,9 @@ sub ld_stop
 	foreach my $v (@VIRTUAL) {
 		my $real = $$v{real};
 		foreach my $r (@$real) {
-			if ($$r{status}>0) {
+			if (defined $$r{virtual_status}) {
 				&system_wrapper("$IPVSADM -d $$v{proto} " . &get_virtual($v) . " -r $$r{server}:$$r{port}");
-				$$r{status} = 0;
-				$$v{status}--;
+				_status_down($v, $r);
 				&ld_log("Removed real server: $$r{server}:$$r{port} ($$v{status} x " . &get_virtual($v) );
 			}
 		}
@@ -2001,10 +1992,6 @@ sub service_set()
 
 	my ($real, $virtual, $virt);
 
-        # Return if the real server is already in the desired state
-	return if ($$r{status}==1 and $state=~/up/i);
-	return if ($$r{status}==0 and $state=~/down/i);
-
         # Find the real server in @REAL
 	foreach $real (@REAL) {
 		if($real->{"real"} eq get_real_id_str($r, $v)) {
@@ -2181,6 +2168,55 @@ sub _restore_service {
 }
 
 
+# Set the status of a server as up
+# Should onlu be called from _service_up or _ld_start
+
+sub _status_up
+{
+	my ($v, $r) = (@_);
+
+	my $virtual_id = get_virtual_id_str($v);
+
+	if (defined ($r->{virtual_status}) and
+			$r->{virtual_status}->{"$virtual_id"}) {
+		return undef;
+	}
+	
+	if (!defined ($r->{virtual_status})) {
+		$r->{virtual_status} = {};
+	}
+	$r->{virtual_status}->{"$virtual_id"} = 1;
+	$v->{status}++;
+
+	return 1;
+}
+
+# Set the status of a server as down
+# Should onlu be called from _service_down or _ld_stop
+
+sub _status_down
+{
+	my ($v, $r) = (@_);
+
+	my $virtual_id = get_virtual_id_str($v);
+
+	if (! defined ($r->{virtual_status}) or
+			! $r->{virtual_status}->{"$virtual_id"}) {
+		return undef;
+	}
+	
+	delete $r->{virtual_status}->{"$virtual_id"};
+	$v->{status}--;
+	if (! %{$r->{virtual_status}}) {
+		$r->{virtual_status} = undef;
+	}
+
+	return 1;
+}
+
+
+
+
 # _service_up
 # Bring a real service up if it is down
 # Should be called by service_set only
@@ -2197,13 +2233,13 @@ sub _service_up
 {
 	my ($v, $r) = (@_);
 
-	if ($$r{status}==0 or $$r{status}==-1) {
-                &_restore_service($v, $r->{server} . ":" . $r->{port}, 
-                                  $r->{forw}, $r->{wght}, "real");
-		$$v{status}++;
-		$$r{status} = 1;
-		&fallback_off($v);
+	if (! _status_up($v, $r)) {
+		return;
 	}
+
+        &_restore_service($v, $r->{server} . ":" . $r->{port}, 
+                                  $r->{forw}, $r->{wght}, "real");
+	&fallback_off($v);
 }
 
 
@@ -2223,15 +2259,13 @@ sub _service_down
 {
 	my ($v, $r) = @_;
 
-	if ($$r{status}==1 or $$r{status}==-1) {
-                &_remove_service($v, $r->{server} . ":" . $r->{port}, 
-                                  $r->{forw}, "real");
-		if ($$r{status}==1) {
-			$$v{status}--;
-		}
-		$$r{status} = 0;
-		&fallback_on($v);
+	if (! _status_down($v, $r)) {
+		return;
 	}
+
+        &_remove_service($v, $r->{server} . ":" . $r->{port}, 
+                          $r->{forw}, "real");
+	&fallback_on($v);
 }
 
 
