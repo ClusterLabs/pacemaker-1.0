@@ -115,7 +115,7 @@ binary-indep: build install
 	dh_link -i
 	dh_strip -i
 	dh_compress -i
-#	dh_fixperms -i
+	dh_fixperms -i
 #	dh_suidregister -i
 	dh_makeshlibs -i -V
 	dh_installdeb -i
@@ -143,7 +143,7 @@ binary-arch: build install
 	dh_link -a
 	dh_strip -a
 	dh_compress -a
-#	dh_fixperms -a
+	dh_fixperms -a --exclude usr/bin/cl_status
 #	dh_suidregister -a
 	dh_makeshlibs -a -V
 	dh_installdeb -a
