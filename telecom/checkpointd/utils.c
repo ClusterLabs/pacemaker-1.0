@@ -1,4 +1,4 @@
-/* $Id: utils.c,v 1.5 2004/02/17 22:12:02 lars Exp $ */
+/* $Id: utils.c,v 1.6 2004/03/18 09:43:58 lars Exp $ */
 /* 
  * utils.c
  *
@@ -222,10 +222,12 @@ void* SaCkptMalloc(int size)
 void 
 SaCkptFree(void** p)
 {
-	if (*p != NULL) {
-		free(*p);
+	if (p != NULL) {
+		if (*p != NULL) {
+			free(*p);
+		}
+		*p = NULL;
 	}
-	*p = NULL;
 
 	return;
 }
