@@ -382,16 +382,13 @@ saClmDispatch(const SaClmHandleT *clmHandle,
 		return SA_ERR_INIT;
 
 	oc = __ccm_data;
-	switch (hd->trackflags) {
 
-	case CLM_TRACK_STOP:
+	if(CLM_TRACK_STOP == hd->trackflags)
 		return SA_OK;
 
-	case SA_TRACK_CURRENT:
-		/* This is handled immediately in saClmClusterTrackStart */
-		break;
-
-	case SA_TRACK_CHANGES:
+	/* SA_TRACK_CURRENT is cleared in saClmClusterTrackStart, hence we 
+	 * needn't to deal with it now*/
+	if (hd->trackflags & SA_TRACK_CHANGES) {
 		itemnum = oc->m_n_member + oc->m_n_out;
 		if (itemnum > hd->itemnum) {
 			hd->callbacks.saClmClusterTrackCallback(hd->nbuf
@@ -404,9 +401,7 @@ saClmDispatch(const SaClmHandleT *clmHandle,
 		pthread_unlock();
 		hd->callbacks.saClmClusterTrackCallback(hd->nbuf, itemnum
 		,	oc->m_n_member, oc->m_instance, SA_OK);
-		break;
-
-	case SA_TRACK_CHANGES_ONLY:
+	} else if (hd->trackflags & SA_TRACK_CHANGES_ONLY) {
 		itemnum = oc->m_n_in + oc->m_n_out;
 		if (itemnum > hd->itemnum) {
 			hd->callbacks.saClmClusterTrackCallback(hd->nbuf
@@ -420,8 +415,7 @@ saClmDispatch(const SaClmHandleT *clmHandle,
 		hd->callbacks.saClmClusterTrackCallback(hd->nbuf, itemnum
 		,	oc->m_n_member, oc->m_instance, SA_OK);
 
-		break;
-	default:
+	} else {
 		assert(0);
 	}
 	/* unlock */
@@ -463,9 +457,12 @@ saClmClusterTrackStart(const SaClmHandleT *clmHandle,
 	hd->itemnum = numberOfItems;
 	hd->nbuf = notificationBuffer;
 
-	if (trackFlags == SA_TRACK_CURRENT) {
+	if (trackFlags & SA_TRACK_CURRENT) {
 		const oc_ev_membership_t *oc;
 		SaUint32T itemnum;
+		
+		/* Clear SA_TRACK_CURRENT, it's no use since now. */
+		hd->trackflags &= ~SA_TRACK_CURRENT;
 		
 		oc = __ccm_data;
 		itemnum = oc->m_n_member;
