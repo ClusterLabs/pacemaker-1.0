@@ -36,6 +36,7 @@
 #include <net-snmp/net-snmp-config.h>
 #include <net-snmp/net-snmp-includes.h>
 #include <net-snmp/agent/net-snmp-agent-includes.h>
+#include <sys/wait.h>
 
 #include "LHAClusterInfo.h"
 #include "LHANodeTable.h"
@@ -53,12 +54,12 @@
 
 #include "saf/ais.h"
 
-#define DEFAULT_TIME_OUT 5 // default timeout value for snmp in sec.
+#define DEFAULT_TIME_OUT 5 /* default timeout value for snmp in sec. */
 #define LHAAGENTID "lha-snmpagent"
 
 static unsigned long hbInitialized = 0;
-static ll_cluster_t * hb = NULL; // heartbeat handle
-static const char * myid = NULL; // my node id
+static ll_cluster_t * hb = NULL; /* heartbeat handle */
+static const char * myid = NULL; /* my node id */
 static SaClmHandleT clm = 0;
 static unsigned long clmInitialized = 0;
 
@@ -398,7 +399,7 @@ init_heartbeat(void)
 	}
 
 #if 1
-	// walk the node table
+	/* walk the node table */
 	if ( HA_OK != walk_node_table() || HA_OK != walk_if_table() ) {
 		return HA_FAIL;
 	}
@@ -526,12 +527,12 @@ handle_heartbeat_msg(void)
 		type = ha_msg_value(msg, F_TYPE);
 		node = ha_msg_value(msg, F_ORIG);
 		if (!type || !node) {
-			// can't read type. log and ignore the msg.
+			/* can't read type. log and ignore the msg. */
 			cl_log(LOG_DEBUG, "Can't read msg type.\n");
 			return HA_OK;
 		}
 
-		// we only handle the shutdown msg for now.
+		/* we only handle the shutdown msg for now. */
 		if (strcmp(myid, node) == 0 && strncmp(type, T_SHUTDONE, 20) == 0) {
 			return HA_FAIL;
 		}
@@ -1045,7 +1046,8 @@ main(int argc, char ** argv)
 	while(keep_running) {
 	/* if you use select(), see snmp_select_info() in snmp_api(3) */
 	/*     --- OR ---  */
-		// agent_check_and_process(1); /* 0 == don't block */
+		/* 0 == don't block */
+		/* agent_check_and_process(1); */
 
 		FD_ZERO(&fdset);
                 FD_SET(hb_fd, &fdset);
