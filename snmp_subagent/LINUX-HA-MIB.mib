@@ -167,9 +167,9 @@ LHAIFEntry OBJECT-TYPE
     ::= { LHAIFTable 1 }
 
 lhaIFEntry ::= SEQUENCE {
-    haIFIndex	    Integer32,
-    haIFName	    DisplayString,
-    haIFStatus	    DisplayString
+    LHAIFIndex	    Integer32,
+    LHAIFName	    DisplayString,
+    LHAIFStatus	    DisplayString
 }
 
 LHAIFIndex OBJECT-TYPE
@@ -578,5 +578,48 @@ LHALogFacility OBJECT-TYPE
 	"Log facility to use."
     ::= { LHAHeartbeatConfigInfo 25 }
 
+LHATrapTable                    OBJECT IDENTIFIER ::= { LinuxHA 900 }
+
+LHANodeDown NOTIFICATION-TYPE
+    OBJECTS { LHANodeName }
+    STATUS  current
+    DESCRIPTION
+    	"A node just went down.  Recovery needed."
+    ::= { LHATrapTable 1 }
+
+LHANodeUp NOTIFICATION-TYPE
+    OBJECTS { LHANodeName }
+    STATUS  current
+    DESCRIPTION
+    	"A node just got up.  Recovery might be needed."
+    ::= { LHATrapTable 2 }
+
+LHALinkDown NOTIFICATION-TYPE
+    OBJECTS { LHANodeName LHAIFName }
+    STATUS  current
+    DESCRIPTION
+    	"A link just went down."
+    ::= { LHATrapTable 3 }
+
+LHALinkUp NOTIFICATION-TYPE
+    OBJECTS { LHANodeName LHAIFName }
+    STATUS  current
+    DESCRIPTION
+    	"A node just got up.  Recovery might be needed."
+    ::= { LHATrapTable 4 }
+
+LHAMembershipJoined NOTIFICATION-TYPE
+    OBJECTS { LHANodeName }
+    STATUS  current
+    DESCRIPTION
+    	"A node just got up.  Recovery might be needed."
+    ::= { LHATrapTable 5 }
+
+LHAMembershipLeft NOTIFICATION-TYPE
+    OBJECTS { LHANodeName }
+    STATUS  current
+    DESCRIPTION
+    	"A node just got up.  Recovery might be needed."
+    ::= { LHATrapTable 6 }
 
 END
