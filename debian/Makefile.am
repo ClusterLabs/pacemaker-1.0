@@ -20,8 +20,7 @@
 #
 MAINTAINERCLEANFILES    = Makefile.in
 
-EXTRA_DIST	        = changelog control copyright dpkg-checkbuild \
-                          ldirectord.conffiles \
+EXTRA_DIST	        = changelog control copyright compat dpkg-checkbuild \
                           ldirectord.files \
                           ldirectord.postinst \
                           ldirectord.postrm \
@@ -30,7 +29,7 @@ EXTRA_DIST	        = changelog control copyright dpkg-checkbuild \
 			  stonith.files \
                           libstonith0.dirs libstonith0.files \
 			  libstonith-dev.dirs libstonith-dev.files \
-                          libstonith0.postinst heartbeat.conffiles \
+                          libstonith0.postinst \
                           heartbeat.dirs heartbeat.files \
 			  heartbeat-dev.dirs heartbeat-dev.files \
                           heartbeat.postinst heartbeat.postrm \

@@ -12,6 +12,10 @@ usr/lib/libapphb.la
 usr/lib/libapphb.so
 usr/lib/librecoverymgr.la
 usr/lib/librecoverymgr.so
+usr/lib/libclm.la
+usr/lib/libclm.so
+usr/lib/libckpt.la
+usr/lib/libckpt.so
 usr/include/clplumbing/GSource.h
 usr/include/clplumbing/Gmain_timeout.h
 usr/include/clplumbing/apphb_cs.h
@@ -28,6 +32,11 @@ usr/include/clplumbing/proctrack.h
 usr/include/clplumbing/realtime.h
 usr/include/clplumbing/timers.h
 usr/include/clplumbing/uids.h
+usr/include/clplumbing/cl_malloc.h
+usr/include/clplumbing/cpulimits.h
+usr/include/clplumbing/netstring.h
+usr/include/clplumbing/recoverymgr_cs.h
+usr/include/clplumbing/ttylock.h
 usr/include/heartbeat/HBauth.h
 usr/include/heartbeat/HBcomm.h
 usr/include/heartbeat/apphb.h
@@ -36,5 +45,14 @@ usr/include/heartbeat/ha_msg.h
 usr/include/heartbeat/hb_api.h
 usr/include/heartbeat/heartbeat.h
 usr/include/heartbeat/ha_config.h
+usr/include/heartbeat/recoverymgr.h
 usr/include/ocf/oc_event.h
 usr/include/ocf/oc_membership.h
+usr/include/saf/ais.h
+usr/include/saf/ais_amf.h
+usr/include/saf/ais_base.h
+usr/include/saf/ais_checkpoint.h
+usr/include/saf/ais_event.h
+usr/include/saf/ais_lock.h
+usr/include/saf/ais_membership.h
+usr/include/saf/ais_message.h

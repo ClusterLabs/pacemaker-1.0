@@ -1,18 +1,15 @@
 Source: heartbeat
-Build-Depends: debhelper (>= 2.0.0), libsnmp5-dev | libsnmp4.2-dev, libglib1.2-dev, perl, net-tools, netkit-ping | iputils-ping, ssh, python, util-linux, psmisc, mount, e2fsprogs, modutils, libnet0-dev, raidtools2, iproute, libssl-dev | libssl09-dev, libtool, automake
 Section: admin
-Priority: optional
+Priority: extra
 Maintainer: Simon Horman <horms@debian.org>
+Build-Depends: debhelper (>= 4.0.0), libsnmp5-dev | libsnmp4.2-dev, libglib1.2-dev, perl, net-tools, netkit-ping | iputils-ping, ssh, python, psmisc, modutils, libnet1-dev, raidtools2, iproute, libssl-dev, libtool, automake
 Standards-Version: 3.6.1
 
 Package: ldirectord
 Section: admin
-Architecture: any
+Architecture: all
 Depends: ${perl:Depends}, libdigest-md5-perl, libwww-perl, libnet-ssleay-perl, libmail-imapclient-perl, libnet-ldap-perl, ipvsadm
-Recommends: sysklogd|syslog-ng, system-log-daemon, logrotate
-Replaces: heartbeat-ldirectord
-Provides: heartbeat-ldirectord
-Conflicts: heartbeat-ldirectord
+Recommends: sysklogd|syslog-ng, logrotate
 Description: Monitors virtual services provided by LVS
  ldirectord is a stand-alone daemon to monitor services of real
  for virtual services provided by The Linux Virtual Server
@@ -23,9 +20,6 @@ Package: stonith
 Section: admin
 Architecture: any
 Depends: ${shlibs:Depends}
-Replaces: heartbeat-stonith
-Provides: heartbeat-stonith
-Conflicts: heartbeat-stonith
 Description: Interface for remotely powering down a node in the cluster
  The STONITH module (a.k.a. STOMITH) provides an extensible interface for
  remotely powering down a node in the cluster.  The idea is quite simple:
@@ -41,42 +35,35 @@ Description: Interface for remotely powering down a node in the cluster
  Library to handle stonith modules and to register objects with stonith.
 
 Package: libstonith-dev
-Section: devel
+Section: libdevel
 Architecture: any
 Depends: libstonith0 (= ${Source-Version})
-Replaces: heartbeat-stonith-dev
-Provides: heartbeat-stonith-dev
-Conflicts: heartbeat-stonith-dev
 Description: Interface for remotely powering down a node in the cluster
  Headers and Libraries for developing modules to work with Stonith
 
 Package: libpils0
+Section: libs
 Architecture: any
 Depends: ${shlibs:Depends}
-Replaces: heartbeat-pils
-Provides: heartbeat-pils
-Conflicts: heartbeat-pils
 Description: Plugin and Interface Loading System
  PILS is an generalized and portable open source Plugin and Interface
- Loading System.  PILS was developed as part of the Open Cluster Framework
+ Loading System. PILS was developed as part of the Open Cluster Framework
  reference implementation, and is designed to be directly usable by a wide
  variety of other applications.  PILS manages both plugins (loadable
  objects), and the interfaces these plugins implement.  PILS is designed to
  support any number of plugins implementing any number of interfaces.
 
 Package: libpils-dev
+Section: devel
 Architecture: any
 Depends: libpils0 (= ${Source-Version})
-Replaces: heartbeat-pils-dev
-Provides: heartbeat-pils-dev
-Conflicts: heartbeat-pils-dev
-Description: Plugin and Interface Loading System
- Headers and Libraries for developing modules to work with
+Description: Plugin and Interface Loading System - development files
+ Headers and Libraries for developing modules to work with PILS
 
 Package: heartbeat
 Architecture: any
-Depends: ${shlibs:Depends}, python, iproute
-Recommends: sysklogd|syslog-ng, system-log-daemon, logrotate
+Depends: ${shlibs:Depends}, python, iproute, adduser, netkit-ping | iputils-ping
+Recommends: sysklogd | syslog-ng | system-log-daemon, logrotate
 Description: Subsystem for High-Availability Linux
  heartbeat is a basic heartbeat subsystem for Linux-HA.
  It will run scripts at initialisation, and when machines go up or down.
@@ -90,6 +77,5 @@ Description: Subsystem for High-Availability Linux
 Package: heartbeat-dev
 Architecture: any
 Depends: heartbeat (= ${Source-Version}), libstonith-dev (= ${Source-Version})
-Description: Subsystem for High-Availability Linux
- Headers and Libraries for developing modules to work with 
- High-Availabiluty Linux
+Description: Subsystem for High-Availability Linux - development files
+ Headers and Libraries for developing modules to work with Heartbeat

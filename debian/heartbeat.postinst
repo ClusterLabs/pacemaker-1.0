@@ -1,4 +1,3 @@
-#!/bin/sh
 # postinst script for heartbeat
 #
 # see: dh_installdeb(1)
@@ -19,56 +18,26 @@ set -e
 
 case "$1" in
     configure)
-        if getent group "$HA_APIGROUP" > /dev/null ; then
-                TMP_GID=`getent group "$HA_APIGROUP" | cut -d: -f3`
-                if test "$TMP_GID" != "$HA_APIGID"; then
-                        echo "Group ID missmatch for group " \
-                                "\"$HA_APIGROUP\": " \
-                                "needs to be \"$HA_APIGID\" but " \
-                                "it already exists with group id " \
-                                "\"$TMP_GID\"" >& 2
-                        exit 1
-                fi
-        else
-                adduser --group --no-create-home --gid "$HA_APIGID" \
-                        --gecos "Heartbeat System Account" \
-                        --disabled-password "$HA_APIGROUP" > /dev/null
+        if ! getent group "$HA_APIGROUP" > /dev/null ; then
+                addgroup --system --group "$HA_APIGROUP" > /dev/null
         fi
-        if getent passwd "$HA_CCMUSER" > /dev/null ; then
-                TMP_UID=`getent passwd "$HA_CCMUSER" | cut -d: -f3`
-                if test "$TMP_UID" != "$HA_CCMUID"; then
-                        echo "User ID missmatch for group \"$HA_CCMUSER\": " \
-                                "needs to be \"$HA_CCMUID\" but " \
-                                "it already exists with user id " \
-                                "\"$TMP_UID\"" >& 2
-                        exit 1
-                fi
-        else
+        if ! getent passwd "$HA_CCMUSER" > /dev/null ; then
                 adduser --no-create-home --uid "$HA_CCMUID" \
-                        --gid "$HA_APIGID" --gecos "Heartbeat System Account" \
+                        --ingroup "$HA_APIGROUP" \
+                        --gecos "Heartbeat System Account" \
+                        --no-create-home --disabled-login \
+                        --home /usr/lib/heartbeat --shell /bin/false  \
                         --disabled-password "$HA_CCMUSER" > /dev/null
         fi
 
 	#
-	#casual
+	#fifo (0600, root, root)
 	#
-	chmod 1770 /var/lib/heartbeat/casual || true
-	chgrp "$HA_APIGROUP" /var/lib/heartbeat/casual || true
-	#
-	#ccm
-	#
-	chmod 755 /var/lib/heartbeat/ccm || true
-	chown "$HA_CCMUSER" /var/lib/heartbeat/ccm || true
-	chgrp "$HA_APIGROUP" /var/lib/heartbeat/ccm || true
-	#
-	#api
-	#
-	chmod 750 /var/lib/heartbeat/api || true
-	chgrp "$HA_APIGROUP" /var/lib/heartbeat/api || true
+        rm -f /var/lib/heartbeat/fifo
+        mknod -m 0600 /var/lib/heartbeat/fifo p
 	
 	# Do we want to move the old S20 symlinks to S75 ones?
 	if [ -n "$2" ] ; then
-          
 	  if `dpkg --compare-versions "$2" lt 1.0.4-2`; then
             # use debconf
             . /usr/share/debconf/confmodule

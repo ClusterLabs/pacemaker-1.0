@@ -7,12 +7,26 @@
 # Uncomment this to turn on verbose mode.
 #export DH_VERBOSE=1
 
-# This is the debhelper compatability version to use.
-export DH_COMPAT=2
-
-pwd:=$(shell pwd)
 cfg:=--prefix=/usr --sysconfdir=/etc --localstatedir=/var \
   --mandir=/usr/share/man
+
+# These are used for cross-compiling and for saving the configure script
+# from having to guess our platform (since we know it already)
+DEB_HOST_GNU_TYPE   ?= $(shell dpkg-architecture -qDEB_HOST_GNU_TYPE)
+DEB_BUILD_GNU_TYPE  ?= $(shell dpkg-architecture -qDEB_BUILD_GNU_TYPE)
+
+CFLAGS = -Wall -g
+
+ifneq (,$(findstring noopt,$(DEB_BUILD_OPTIONS)))
+       CFLAGS += -O0
+else
+       CFLAGS += -O2
+endif
+ifeq (,$(findstring nostrip,$(DEB_BUILD_OPTIONS)))
+       INSTALL_PROGRAM += -s
+endif
+
+DTMP:=`pwd`/debian/tmp
 
 build: checkbuild build-stamp
 build-stamp:
@@ -27,8 +41,7 @@ clean:
 	# Add here commands to clean up after the build process.
 	-$(MAKE) clean MAKE=make
 	-$(MAKE) distclean MAKE=make
-	dh_clean
-	rm -f build-stamp
+	dh_clean build-stamp install-stamp
 	rm -f debian/init debian/*.debhelper debian/*.substvars
 	rm -r -f debian/heartbeat debian/heartbeat-dev debian/ldirectord \
 		debian/libpils0 debian/libpils-dev \
@@ -36,38 +49,33 @@ clean:
 		debian/tmp
 
 
-install: build
+install: build install-stamp
+install-stamp:
 	dh_testdir
 	dh_testroot
 	dh_clean -k
 	dh_installdirs
-	$(MAKE) install \
-	  DESTDIR=`pwd`/debian/tmp \
-	  docdir=/usr/share/doc/heartbeat \
-	  MAKE=make
-	find `pwd`/debian/tmp/usr/share/man -type f | xargs gzip -v --best
+	$(MAKE) install DESTDIR=$(DTMP) \
+	  MAKE=make \
+	  docdir=/usr/share/doc/heartbeat 
+	find $(DTMP)/usr/share/man -type f | xargs gzip -v --best
 	install -c -m 755 heartbeat/init.d/heartbeat \
-                `pwd`/debian/tmp/etc/init.d/heartbeat
-	-mkdir -p `pwd`/debian/tmp/usr/share/doc/ldirectord/
+                $(DTMP)/etc/init.d/heartbeat
+	-mkdir -p $(DTMP)/usr/share/doc/ldirectord/
 	install -c -m 644 ldirectord/ldirectord.cf \
-	  `pwd`/debian/tmp/usr/share/doc/ldirectord/
-	-mkdir -p `pwd`/debian/tmp/etc/init.d
+	  $(DTMP)/usr/share/doc/ldirectord/
+	-mkdir -p $(DTMP)/etc/init.d
 	install -c -m 755 ldirectord/init.d/ldirectord \
-		`pwd`/debian/tmp/etc/init.d/ldirectord
-	cd `pwd`/debian/tmp/etc/ha.d/resource.d \
+		$(DTMP)/etc/init.d/ldirectord
+	cd $(DTMP)/etc/ha.d/resource.d \
 	  && ln -s /usr/sbin/ldirectord ldirectord
-
-	# We don't install fifos. Rather they are created
-	# by postinst scripts.
-	(cd `pwd`/debian/tmp/var/lib/heartbeat/ && \
-		rm -f api/*.req api/*.rsp fifo )
-
+	cd $(DTMP)/etc/ && ln -s ha.d heartbeat
 	dh_movefiles --source=debian/tmp
 
 binary: build install
 	dh_testdir
 	dh_testroot
-#	dh_installdebconf	
+	dh_installdebconf	
 	dh_installdocs
 	dh_installexamples
 #	dh_installmenu
@@ -75,22 +83,24 @@ binary: build install
 #	dh_installpam
 	dh_installinit -n -u 'defaults 20 32'
 #	dh_installcron
-#	dh_installmanpages
-	dh_installinfo
+	dh_installman
+#	dh_installinfo
 #	dh_undocumented
-	dh_installchangelogs doc/ChangeLog
+	dh_installchangelogs `pwd`/debian/heartbeat/usr/share/doc/heartbeat/ChangeLog
 	dh_link
 	dh_strip
 	dh_compress
 	dh_fixperms
 #	dh_suidregister
-	dh_makeshlibs
+	dh_makeshlibs -V
 	dh_installdeb
 	dh_perl
 	dh_shlibdeps
 	dh_gencontrol
 	dh_md5sums
 	dh_builddeb
+	@echo "Any unpackaged files follow (.a and .la files omitted):"
+	@cd $(DTMP) && find ./ \! -type d | egrep -v \\\.l?a
 
 checkbuild:
 	chmod u+x ./debian/dpkg-checkbuild

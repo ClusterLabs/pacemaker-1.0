@@ -1,4 +1,28 @@
-heartbeat (1.3.0-1) unstable; urgency=low
+heartbeat (1.2.2-3) unstable; urgency=low
+
+  * Package provides /etc/ha.d and /etc/heartbeat
+    (actually fixed in 1.2.2-2) (closes: Bug#222712)
+  * There is a known limitation with ifconfig's handling of
+    long interface names. Use IPadd2, which used the ip command,
+    instead.  (Fixed in upstream) (closes: Bug#229978)
+  * New upstream (closes: Bug#248611)
+  * Heartbeat package does not use debconf anymore
+    (Fixed a while ago) (closes: Bug#189932)
+  * Evms seems to no longer depend on heartbeat.
+    (closes: Bug#207607)
+  * Made dependancy on libnet1-dev instead of 
+    libnet1-dev | libnet0-dev | libnet-dev.
+    - libnet0-dev is in setction oldlibs in stable
+    - allows IPv6addr to be included.
+  * Include IPv6addr
+  * Made dependancy on libssl-dev instead of libssl-dev | libssl09-dev
+    as libssl09-dev is not in stable.
+  * Changed priority to extra as that is the lowest common 
+    denominator of our dependancies.
+
+ -- Simon Horman <horms@debian.org>  Tue, 18 May 2004 12:54:30 +0900
+
+heartbeat (1.2.2-2) unstable; urgency=low
 
   * New Upstream
   * ldirectord uses host portion of request string as documented in
@@ -8,71 +32,272 @@ heartbeat (1.3.0-1) unstable; urgency=low
     It is rather difficult to implement them correctly given the heartbeat
     build system, and the policy allows them not to exist. (closes: Bug#188835)
   * Added dependancy on libmail-imapclient-perl. (closes: Bug#242077)
-  * The timestamp overflow was fixed long time ago. 
+  * The timestamp overflow was fixed long time ago.
     (closes: Bug#239683) (closes: Bug#239687)
   * inet_aton is no longer used in mcast.c (closes: Bug#239684)
-  * Patch is superseeded by much newer codebase 
+  * Patch is superseeded by much newer codebase
     (closes: #239685) (closes: Bug#239686)
   * Init script no longer uses -e argument to echo. (closes: Bug#136541)
   * Plugins no longer need to be executable. (closes: Bug#247348)
     (closes: Bug#247485)
+  * Merged debian packaging in Debian Unstable pool with the
+    linux-ha tree.
 
- -- Simon Horman <horms@debian.org>  Mon, 12 Apr 2004 15:02:28 +0900
+ -- Simon Horman <horms@debian.org>  Fri, 14 May 2004 12:32:26 +0900
+
+heartbeat (1.2.0-2) unstable; urgency=low
+
+  * Added Depends on libmail-imapclient-perl to ldirectord.
+    (Closes: #242077) Thanks Cyril Bouthors for noticing.
+
+ -- Alberto Gonzalez Iniesta <agi@agi.as>  Mon,  5 Apr 2004 09:11:03 +0200
 
 heartbeat (1.2.0-1) unstable; urgency=low
 
-  * New Upstream
+  * The 'My f*cking Toshiba HD crashed and delayed everything' release
+  * New upstream release
 
- -- Simon Horman <horms@vergenet.net>  Tue, 17 Feb 2004 11:23:59 +0900
+ -- Alberto Gonzalez Iniesta <agi@agi.as>  Tue, 16 Mar 2004 20:24:24 +0100
 
-heartbeat (1.1.5-1) unstable; urgency=low
+heartbeat (1.0.4-3) unstable; urgency=low
 
-  * New Upstream
+  * Corrected default paths to Apache binary and configuration file.
+    (Closes: #230042)
+  * Corrected typo in heartbeat-dev description (Closes: #230639)
+  * Corrected grammatical confusion in template (Closes: #232459)
+  * Actually correct permissions on /var/lib/heartbeat/ccm.
+    (Closes: #233021)
 
- -- Simon Horman <horms@vergenet.net>  Tue, Feb 10 2004 11:23:45 +0900
+ -- Alberto Gonzalez Iniesta <agi@agi.as>  Wed, 28 Jan 2004 07:36:17 +0100
 
-heartbeat (1.1.4-1) unstable; urgency=low
+heartbeat (1.0.4-2) unstable; urgency=low
 
-  * New Upstream
+  * Improved haclient user and group creation/deletion [postinst & postrm]
+    Make use of gentent instead of greping /etc/(passwd|group)
+    Inspired by Horms' packages ;)
+  * Moved to debhelper compatability 4. Created debian/compat.
+  * Avoid failing while moving contents from old configuration dir to
+    new one if expected contents are not found.
+    (Closes: #221546)
+  * Removed README.config from /etc (Closes: #222708)
+  * Make 'daemon' be the default syslog facility for heartbeat
+    (Closes: #226600)
+  * Corrected owner and permissions under /var/lib/heartbeat
+    (Closes: #228505)
+  * Make libstonith0 depend on libsnmp5. Thanks Stefan Beck for noticing.
+    (Closes: #228544)
+  * Make libstonith0 depend on libssl0.9.7. Why the f*ck does dpkg-shlibdeps
+    not find these?
+  * Make heartbeat start later and stop sooner (S75 and K05) so that it
+    won't f*ck drbd. Thanks Stefan Schleifer for noticing.
+    Created a debconf template to ask if the change should be done when
+    upgrading from previous versions.
+  * Fixed debconf template text for directory movement.
 
- -- Simon Horman <horms@vergenet.net>  Fri, 22 Jan 2004 11:02:06 +0900
+ -- Alberto Gonzalez Iniesta <agi@agi.as>  Wed, 12 Nov 2003 15:05:00 +0100
 
-heartbeat (1.1.3-1) unstable; urgency=low
+heartbeat (1.0.4-1) unstable; urgency=low
 
-  * New upstream
+  * New upstream release
+  * Bumped Standards-Version to 3.6.1. No change
+  * Removed debconf supported configuration of heartbeat.
+    It was buggy, and a pain to debug. I'd rather not have it
+    on sarge. (Closes: #204775) I'll work on a new one when time
+    permits.
 
- -- Simon Horman <horms@vergenet.net>  Fri, 26 Sep 2003 14:12:10 +0900
+ -- Alberto Gonzalez Iniesta <agi@agi.as>  Sat,  4 Oct 2003 17:36:40 +0200
 
-heartbeat (1.1.2-1) unstable; urgency=low
+heartbeat (1.0.3-3) unstable; urgency=low
 
-  * New upstream
+  * Removed deletion of fifo files in heartbeat.prerm
+    (That shouldn't be done there. It broke dpkg-reconfigure)
+  * Added Depends on libwww-perl and libnet-ssleay-perl
+    (Closes: #142297)
+  * libstonith-dev's Section is now libdevel (Closes: #188206)
 
- -- Simon Horman <horms@vergenet.net>  Wed,  2 Jul 2003 10:35:45 +0900
+ -- Alberto Gonzalez Iniesta <agi@agi.as>  Sun, 13 Jul 2003 17:13:43 +0200
 
-heartbeat (1.1.1-1) unstable; urgency=low
+heartbeat (1.0.3-2) unstable; urgency=low
 
-  * New upstream
+  * Fixed sections for libstonith-dev, it's libdevel
 
- -- Simon Horman <horms@vergenet.net>  Mon, 24 Mar 2003 10:28:08 +0900
+ -- Alberto Gonzalez Iniesta <agi@agi.as>  Sat, 12 Jul 2003 20:10:59 +0200
 
-heartbeat (0.4.9-1) unstable; urgency=low
+heartbeat (1.0.3-1) unstable; urgency=low
 
-  * Updated for 0.4.9
+  * The 'debcamp' release
+  * New upstream release
+  * Added build-depends on iputils-ping, I hoped it wouldn't be
+    necessary. (Closes: #200938)
+  * Also added Depends on iputils-ping. That's the ping package
+    with the ping syntax we need (Closes: #170799)
+  * The heartbeat.config from 0.4.9.2-1 did 'cut' the right way 
+    (Closes: #166065)
+  * Added missing db_stop in heartbeat.postinst
+    (Closes: #199484)
+  * /usr/lib/heartbeat/ResourceManager now has the right path to
+    init.d scripts (Closes: #169865)
+  * Made Simon Horman <horms@vergenet.net> a co-maintainer
 
- -- Simon Horman <horms@vergenet.net>  Sat, 07 Apr 2001 18:03:12 -0700
- 
-heartbeat (0.4.8-2) unstable; urgency=low
+ -- Alberto Gonzalez Iniesta <agi@agi.as>  Sat, 12 Jul 2003 12:13:03 +0200
 
-  * Split ldirectord and stonith into separate packages
-  * Fixed Man page so it refers to HTML documenation
+heartbeat (1.0.2-1) unstable; urgency=low
 
- -- Simon Horman <horms@vergenet.net>  Fri, 22 Dec 2000 05:05:05 -0500
+  * New upstream release (Closes: #186900)
+  * New maintainer (Closes: #192680)
+  * Bumped Standards-Version to 3.5.10
+  * Patched ha_msg.c to fix format string bug (Closes: #199016)
 
-heartbeat (0.4.8-1) unstable; urgency=low
+ -- Alberto Gonzalez Iniesta <agi@agi.as>  Wed, 02 Jul 2003 00:11:24 +0200
+
+heartbeat (0.4.9.2-3.1) unstable; urgency=low
+
+  * Use -r instead of -R for ipvsadm.  Thanks to Sergio Talens-Oliag.
+  (Closes: #147290)
+  * Fix lintian errors by removing *.conffiles.
+
+ -- James Morrison <phython@debian.org>  Sat, 29 Mar 2003 14:56:12 -0500
+
+heartbeat (0.4.9.2-3) unstable; urgency=low
+
+  * fixed a build bug caused by a buggy ld - I don't know if ld still
+    has that problem (it doesn't seem to me), but anyway it's done.
+    (closes: #129361)
+
+ -- Michael Moerz <mikem@debian.org>  Tue, 15 Oct 2002 12:44:05 +0200
+
+heartbeat (0.4.9.2-2) unstable; urgency=low
+
+  * and again I was caught by that groupadd in the Makefiles
+    this is fixed now (closes: 164773)
+
+ -- Michael Moerz <mikem@debian.org>  Tue, 15 Oct 2002 02:08:52 +0200
+
+heartbeat (0.4.9.2-1) unstable; urgency=low
+
+  * new upstream release
+  * fixed cut problem (caused by missing escape sequences) 
+    (closes: #130895, #131253, #131259)
+  * corrected missing Depends on adduser (closes: #147661)
+  * corrected problem with install and duplicate files (closes: #162446)
+  * fixed false assumption about possition of fuser from /sbin to /bin
+  * changed configuration directory from /etc/ha.d to /etc/heartbeat
+  * added the essential question if the user wants to use debconf
+    for the configuration of heartbeat
+
+ -- Michael Moerz <mikem@debian.org>  Mon, 14 Oct 2002 11:30:52 +0200
+
+heartbeat (0.4.9.0l-7.2) unstable; urgency=low
+
+  * corrected wrong dependency (on lvs) (Closes: #141922)
+
+ -- Michael Moerz <mikem@debian.org>  Sun, 28 Apr 2002 02:31:57 +0200
+
+heartbeat (0.4.9.0l-7.1) unstable; urgency=high
+
+  * Non-maintainer upload, trying to get a release into woody
+  * Use ifconfig <interface> 0 instead of ifconfig <interface> down
+    (Closes: #129779)
+
+ -- Matt Zimmerman <mdz@debian.org>  Sat,  2 Mar 2002 22:49:32 -0500
+
+heartbeat (0.4.9.0l-7) unstable; urgency=low
+
+  * removed call of groupadd in hearbeat/Makefile (Closes: #121244)
+  * heartbeat depends on system-log-daemon instead of sysklogd.
+    (Closes: #120721)
+  * corrected the soname of libhbclient from .0.0.0 to
+    libhbclient.so.0.0.0
+  * removed debian/.shlibs files since they are autogenerated now
+    by dh_makeshlibs -V
+  * removed some log file that remained in debian/ from testing and
+    debugging the debconf interface
+
+ -- Michael Moerz <mikem@debian.org>  Thu, 13 Dec 2001 03:14:42 +0100
+
+heartbeat (0.4.9.0l-6) unstable; urgency=low
+
+  * this time I hope I got it right with the sections of the several packages
+    involved
+  * heartbeat is up to date now (Closes: #79946, #90521, #63259)
+  * /usr/lib/heartbeat/ResourceManager: renamed init.d directory
+    (Closes: #89598)
+  * A newer README.Debian added (Closes: #94469)
+
+ -- Michael Moerz <mikem@debian.org>  Mon, 12 Nov 2001 20:27:59 +0100
+
+heartbeat (0.4.9.0l-5) unstable; urgency=low
+
+  * an other forgotten debug statement that caused trouble (Closes: #118984)
+  * fixed some missing ldconfig in heartbeat.postinst and heartbeat.postrm
+  * fixed so version in heartbeat.shlibs
+
+ -- Michael Moerz <mikem@debian.org>  Sat, 10 Nov 2001 19:21:19 +0100
+
+heartbeat (0.4.9.0l-4) unstable; urgency=low
+
+  * corrected section of ldirectords and stoniths to section admin
+  * corrected wrong dependency of ldirectord to lvs (ipvsadm)
+
+ -- Michael Moerz <mikem@debian.org>  Sat, 10 Nov 2001 11:43:22 +0100
+
+heartbeat (0.4.9.0l-3) unstable; urgency=low
+
+  * corrected my faulty control file - so 0l-2 and 0l-1 never ever made
+    it into the archive
+
+ -- Michael Moerz <mikem@debian.org>  Fri,  9 Nov 2001 00:49:11 +0100
+
+heartbeat (0.4.9.0l-2) unstable; urgency=low
+
+  * removed some debug output causing a file testj to be written in the
+    current directory 
+
+ -- Michael Moerz <mikem@debian.org>  Thu,  8 Nov 2001 01:34:30 +0100
+
+heartbeat (0.4.9.0l-1) unstable; urgency=low
+
+  * taking package after talking to Paolo Molaro - well I was really lazy
+    cause it took me a lot of time to create a working new package, but I
+    hope the debconf interface was worth the waiting ...
+  * Updated for 0.4.9.0l
+  * modified package to fit policy 3.5.3.0
+  * added Build Depends
+  * added debconf support for heartbeat
+  * wrote a very short manpage for stonith and meatclient
+
+ -- Michael Moerz <mikem@debian.org>  Tue, 8 Nov 2001 22:56:01 +0200
+
+heartbeat (0.4.6-2.2) frozen unstable; urgency=low
+
+  * NMU
+  * Fix Build-depends, this time with source.  Closes: #105837
+
+ -- LaMont Jones <lamont@debian.org>  Wed, 15 Aug 2001 23:48:09 -0600
+
+heartbeat (0.4.6-2) frozen unstable; urgency=low
+
+  * Fix ugly bug with prerm (Closes: bug#56671). To the release manager:
+    get this in potato as that bug is really annoying (endless loop
+    with the yes program when uninstalling). You still need to kill or Crtl-C
+    the prerm script, as it seems it's not possible to override
+    a broken prerm script before it's run by dpkg.
+  * Applied little patch from Terry Katz to make IPAddr work correctly
+    with multiple similar IPs on the same pc (Closes: bug#55925).
+
+ -- Paolo Molaro <lupus@debian.org>  Mon,  7 Feb 2000 15:36:38 +0100
+
+heartbeat (0.4.6-1) unstable; urgency=low
+
+  * New upstream release.
+
+ -- Paolo Molaro <lupus@debian.org>  Thu,  2 Dec 1999 16:51:41 +0100
+
+heartbeat (0.4.5a-1) unstable; urgency=low
 
   * Initial Release.
 
- -- Juan Pedro Paredes Caballero <juampe@retemail.es>  Wed, 22 Nov 2000 04:08:58 +0100
+ -- Paolo Molaro <lupus@debian.org>  Wed, 17 Nov 1999 17:30:23 +0100
 
 Local variables:
 mode: debian-changelog

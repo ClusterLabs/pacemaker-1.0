@@ -11,3 +11,4 @@ usr/lib/stonith/plugins/stonith/null.so
 usr/lib/stonith/plugins/stonith/nw_rpc100s.so
 usr/lib/stonith/plugins/stonith/rcd_serial.so
 usr/lib/stonith/plugins/stonith/rps10.so
+usr/lib/stonith/plugins/stonith/ibmhmc.so
