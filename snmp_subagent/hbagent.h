@@ -72,6 +72,7 @@ struct hb_ifinfo {
 
 struct hb_rsinfo {
     	char * master;
+	int    index;
 	char * resource;
 	int    status;
 };

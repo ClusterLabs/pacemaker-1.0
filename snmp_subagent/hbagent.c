@@ -681,11 +681,12 @@ handle_membership_msg(void)
 int
 init_resource_table(void)
 {
-    	int rc;
+    	int rc, i, mcount, found;
 	FILE * rcsf;
 	char buf[MAXLINE];
 	char host[MAXLINE], pad[MAXLINE];
 	struct hb_rsinfo resource;
+	char * node;
 
 	if (gResourceTable) {
 	    	free_resourcetable();
@@ -720,6 +721,31 @@ init_resource_table(void)
 
 		resource.master = g_strdup(host);
 		resource.resource = g_strdup(pad);
+
+		/* make sure that the master node is in the node list */
+		found = 0;
+		for (i = 0; i < gNodeTable->len; i++) {
+		    	node = g_array_index(gNodeTable, 
+				struct hb_nodeinfo, i).name;
+			if (strcmp(node, host) == 0) {
+			    	found = 1;
+			    	break;
+			}
+		}
+		if (!found)
+		    continue;
+
+		mcount = 0;
+		for (i = 0; i < gResourceTable->len; i++) {
+		    	node = g_array_index(gResourceTable, 
+				struct hb_rsinfo, i).master;
+
+			if (strcmp(node, host) == 0) {
+			    mcount++;
+			}
+		}
+
+		resource.index = mcount + 1;
 
 		g_array_append_val(gResourceTable, resource);
 	}

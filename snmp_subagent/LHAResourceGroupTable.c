@@ -45,12 +45,13 @@ initialize_table_LHAResourceGroupTable(void)
      * Setting up the table's definition
      */
     netsnmp_table_helper_add_indexes(table_info,
+                                  ASN_OCTET_STR, /* index: LHAResourceGroupMaster */
                                   ASN_INTEGER, /* index: LHAResourceGroupIndex */
                              0);
 
     /** Define the minimum and maximum accessible columns.  This
         optimizes retrival. */
-    table_info->min_column = 2;
+    table_info->min_column = 3;
     table_info->max_column = 4;
 
     /* iterator access routines */
@@ -162,8 +163,12 @@ LHAResourceGroupTable_get_next_data_point(void **my_loop_context, void **my_data
 
     rsinfo_get_int_value(RESOURCE_STATUS, i, &status);
     info->status = status;
-    
-    snmp_set_var_value(vptr, (u_char *) &i, sizeof(size_t));
+
+    snmp_set_var_value(vptr, (u_char *) info->master, 
+	    strlen(info->master) + 1);
+    vptr = vptr->next_variable;
+
+    snmp_set_var_value(vptr, (u_char *) &info->index, sizeof(size_t));
     vptr = vptr->next_variable;
 
     i++;
@@ -228,13 +233,6 @@ LHAResourceGroupTable_handler(
                to be dealt with here */
             case MODE_GET:
                 switch(table_info->colnum) {
-                    case COLUMN_LHARESOURCEGROUPMASTER:
-                        snmp_set_var_typed_value(var, 
-				ASN_OCTET_STR, 
-				(u_char *) entry->master, 
-				strlen(entry->master) + 1);
-                        break;
-
                     case COLUMN_LHARESOURCEGROUPRESOURCES:
                         snmp_set_var_typed_value(var, 
 				ASN_OCTET_STR, 
