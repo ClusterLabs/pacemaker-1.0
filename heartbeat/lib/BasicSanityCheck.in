@@ -465,7 +465,7 @@ AppHBCheck() {
 	
 	echo "Performing apphbd failure case tests"
 	$APPHBTEST -F -i 1000 -p 1 -n 5 >>$CFFILE 2>&1
-	for pat in "'failtest'.* failed to heartbeat" "'failtest'.* resumed heartbeats" "WARN:.*hangup"
+	for pat in "'failtest'.* failed to heartbeat" "'failtest'.* resumed heartbeats" "info:.*HANGUP"
 	do
           CheckPat "$pat" 1
 	done
