@@ -176,6 +176,7 @@ static const char *	get_ifstatus(ll_cluster_t*, const char *host
 static char *		get_parameter(ll_cluster_t*, const char* pname);
 static const char *	get_resources(ll_cluster_t*);
 static int		get_inputfd(ll_cluster_t*);
+static IPC_Channel*	get_ipcchan(ll_cluster_t*);
 static int		msgready(ll_cluster_t*);
 static int		setfmode(ll_cluster_t*, int mode);
 static int		sendclustermsg(ll_cluster_t*, struct ha_msg* msg);
@@ -1879,7 +1880,7 @@ end_ifwalk(ll_cluster_t* ci)
 }
 
 /*
- * Return the file descriptor associated with this object.
+ * Return the input file descriptor associated with this object.
  */
 static int
 get_inputfd(ll_cluster_t* ci)
@@ -1897,6 +1898,26 @@ get_inputfd(ll_cluster_t* ci)
 	}
 	return pi->chan->ops->get_recv_select_fd(pi->chan);
 }
+/*
+ * Return the IPC channel associated with this object.
+ */
+static IPC_Channel*
+get_ipcchan(ll_cluster_t* ci)
+{
+	llc_private_t* pi;
+	ClearLog();
+	if (!ISOURS(ci)) {
+		ha_api_log(LOG_ERR, "get_ipcchan: bad cinfo");
+		return NULL;
+	}
+	pi = (llc_private_t*)ci->ll_cluster_private;
+	if (!pi->SignedOn) {
+		ha_api_log(LOG_ERR, "not signed on");
+		return NULL;
+	}
+	return pi->chan;
+}
+
 
 /*
  * Return TRUE (1) if there is a message ready to read.
@@ -2215,6 +2236,7 @@ static struct llc_ops heartbeat_ops = {
 	send_ordered_clustermsg,/* send_ordered_clustermsg */
 	send_ordered_nodemsg,	/* send_ordered_nodemsg */
 	get_inputfd,		/* inputfd */
+	get_ipcchan,		/* ipcchan */
 	msgready,		/* msgready */
 	hb_api_setsignal,	/* setmsgsignal */
 	rcvmsg,			/* rcvmsg */

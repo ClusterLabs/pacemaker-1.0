@@ -44,6 +44,7 @@
 #ifndef __HB_API_H
 #	define __HB_API_H 1
 #include <ha_msg.h>
+#include <clplumbing/ipc.h>
 
 #define	LLC_PROTOCOL_VERSION	1
 
@@ -187,8 +188,22 @@ struct llc_ops {
  *	inputfd:	Return fd which can be given to select(2) or poll(2)
  *			for determining when messages are ready to be read.
  *			Only to be used in select() or poll(), please...
+ *			Note that due to IPC input buffering, always check
+ *			msgready() before going into select() or poll()
+ *			or you might hang there forever.
  */
 	int		(*inputfd)(ll_cluster_t*);
+ 
+/*
+ *	ipcchan:	Return IPC channel which can be given to
+ *			G_main_add_IPC_Channel() for mainloop use.
+ *			Please do not use send(), recv() directly.
+ *			Feel free to use waitin(), waitout(),
+ *			is_message_pending(), is_sending_blocked(),
+ *			set_recv_qlen(), set_send_qlen(), resume_io(),
+ *			verify_auth().
+ */
+	IPC_Channel*	(*ipcchan)(ll_cluster_t*);
 /*
  *	msgready:	Returns TRUE (1) when a message is ready to be read.
  */
