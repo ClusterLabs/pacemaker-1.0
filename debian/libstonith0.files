@@ -3,6 +3,8 @@ usr/lib/libstonith.so.0.0.0
 usr/lib/stonith/plugins/stonith/apcmaster.so
 usr/lib/stonith/plugins/stonith/apcmastersnmp.so
 usr/lib/stonith/plugins/stonith/apcsmart.so
+usr/lib/stonith/plugins/stonith/drac3.so
+usr/lib/stonith/plugins/stonith/external.so
 usr/lib/stonith/plugins/stonith/meatware.so
 usr/lib/stonith/plugins/stonith/ssh.so
 usr/lib/stonith/plugins/stonith/wti_nps.so

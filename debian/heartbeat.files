@@ -5,6 +5,7 @@ usr/share/doc/heartbeat/GettingStarted.html
 usr/share/doc/heartbeat/HardwareGuide.txt
 usr/share/doc/heartbeat/HardwareGuide.html
 usr/share/doc/heartbeat/README
+usr/share/doc/heartbeat/README.cts
 usr/share/doc/heartbeat/Requirements.txt
 usr/share/doc/heartbeat/Requirements.html
 usr/share/doc/heartbeat/apphbd.cf
@@ -33,6 +34,8 @@ usr/lib/heartbeat/heartbeat
 usr/lib/heartbeat/ipfail
 usr/lib/heartbeat/ipctest
 usr/lib/heartbeat/mach_down
+usr/lib/heartbeat/mlock
+usr/lib/heartbeat/ocf-shellfuncs
 usr/lib/heartbeat/cts/CM_fs.py
 usr/lib/heartbeat/cts/CM_hb.py
 usr/lib/heartbeat/cts/CTS.py
@@ -56,8 +59,6 @@ usr/lib/heartbeat/ipctransientclient
 usr/lib/heartbeat/ipctransientserver
 usr/lib/heartbeat/TestHeartbeatComm
 usr/lib/heartbeat/hb_takeover
-usr/lib/heartbeat/checkpointd
-usr/lib/heartbeat/ckpttest
 usr/lib/heartbeat/recoverymgrd
 usr/lib/heartbeat/clmtest
 usr/lib/libhbclient.so.0
@@ -72,9 +73,12 @@ usr/lib/librecoverymgr.so.0
 usr/lib/librecoverymgr.so.0.0.0
 usr/lib/libclm.so.0
 usr/lib/libclm.so.0.0.0
-usr/lib/libckpt.so.0
-usr/lib/libckpt.so.0.0.0
+usr/lib/ocf/resource.d/heartbeat/IPaddr
+usr/lib/ocf/resource.d/heartbeat/IPaddr2
+usr/lib/ocf/resource.d/heartbeat/drbd
+usr/lib/ocf/resource.d/heartbeat/Dummy
 usr/bin/cl_status
+usr/bin/cl_respawn
 usr/share/man/man8/heartbeat.8.gz
 usr/share/man/man8/apphbd.8.gz
 usr/share/man/man1/cl_status.1.gz

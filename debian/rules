@@ -92,6 +92,8 @@ install-stamp:
 	cd $(DTMP)/etc/ha.d/resource.d \
 	  && ln -s /usr/sbin/ldirectord ldirectord
 	cd $(DTMP)/etc/ && ln -s ha.d heartbeat
+	mv `pwd`/debian/tmp/usr/lib/heartbeat/cts/README \
+		`pwd`/debian/tmp/usr/share/doc/heartbeat/README.cts
 	dh_movefiles --source=debian/tmp
 
 binary-indep: build install
