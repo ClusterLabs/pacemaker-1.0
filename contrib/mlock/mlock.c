@@ -1,4 +1,4 @@
-/* $Id: mlock.c,v 1.8 2004/10/24 13:00:11 lge Exp $ */
+/* $Id: mlock.c,v 1.9 2005/01/18 16:59:20 gshi Exp $ */
 /*
  *
  * multi-clients NFS lock test code
@@ -151,7 +151,7 @@ close_savefd(void)
 }
 
 static void
-trunc(void )
+hb_trunc(void )
 {
 	if (ftruncate(gi.fd, 0) == -1){
 		perror("ftruncate");
@@ -968,7 +968,7 @@ runtests(GSList* task_list)
 			popfd();
 			break;
 		case TRUNC:
-			trunc();
+			hb_trunc();
 			break;
 		}
 		
