@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.322 2004/10/01 13:10:33 lge Exp $ */
+/* $Id: heartbeat.c,v 1.323 2004/10/04 16:28:58 lge Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -323,6 +323,7 @@ static int			watchdogfd = -1;
 static int			watchdog_timeout_ms = 0L;
 
 int				shutdown_in_progress = FALSE;
+int				startup_complete = FALSE;
 int				WeAreRestarting = FALSE;
 enum comm_state			heartbeat_comm_state = COMM_STARTING;
 static int			CoreProcessCount = 0;
@@ -1545,8 +1546,16 @@ comm_now_up()
 	}
 
 	/* Start each of our known child clients */
-	g_list_foreach(config->client_list
-	,	start_a_child_client, config->client_children);
+	if (!shutdown_in_progress) {
+		g_list_foreach(config->client_list
+		,	start_a_child_client, config->client_children);
+	}
+	if (!startup_complete) {
+		startup_complete = TRUE;
+		if (shutdown_in_progress) {
+			hb_initiate_shutdown(FALSE);
+		}
+	}
 }
 
 
@@ -1615,9 +1624,19 @@ hb_initiate_shutdown(int quickshutdown)
 	if (ANYDEBUG) {
 		cl_log(LOG_DEBUG, "hb_initiate_shutdown() called.");
 	}
+	/* THINK maybe even add "need_shutdown", because it is not yet in
+	 * progress; or do a Gmain_timeout_add, or something like that.
+	 * A cleanexit(LSB_EXIT_OK) won't do, out children will continue
+	 * without us.
+	 */
+	shutdown_in_progress = TRUE;
+	if (!startup_complete) {
+		cl_log(LOG_WARNING
+		,	"Shutdown delayed until Communication is up.");
+		return;
+	}
 	send_local_status();
 	if (!quickshutdown) {
-		shutdown_in_progress = TRUE;
 		/* THIS IS RESOURCE WORK!  FIXME */
 		procinfo->giveup_resources = TRUE;
 		hb_giveup_resources();
@@ -1626,7 +1645,6 @@ hb_initiate_shutdown(int quickshutdown)
 		return;
 	}
 	/* Trigger final shutdown. */
-	shutdown_in_progress = TRUE;
 	hb_mcp_final_shutdown(NULL);
 }
 
@@ -3018,7 +3036,7 @@ main(int argc, char * argv[], char **envp)
 		snprintf(cdebug, sizeof(debug), "%d", debug);
 		setenv(HADEBUGVAL, cdebug, TRUE);
 	}
-	if (DoManageResources) {
+	if (DoManageResources && !killrunninghb) {
 		init_resource_module();
 	}
 
@@ -4473,6 +4491,10 @@ get_localnodeinfo(void)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.323  2004/10/04 16:28:58  lge
+ * fix for heartbeat & sleep 1; heartbeat -k
+ *  Shutdown delayed until Communication is up.
+ *
  * Revision 1.322  2004/10/01 13:10:33  lge
  * micro fixes
  *  initialize logfacility = -1 in hb_cluster_new()
