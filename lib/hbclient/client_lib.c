@@ -1,4 +1,4 @@
-/* $Id: client_lib.c,v 1.16 2004/11/18 00:34:37 gshi Exp $ */
+/* $Id: client_lib.c,v 1.17 2004/12/06 21:02:44 gshi Exp $ */
 /* 
  * client_lib: heartbeat API client side code
  *
@@ -857,7 +857,8 @@ get_clientstatus(ll_cluster_t* lcl, const char *host
 
 		if ((m = ha_msg_new(0)) == NULL
 		||	ha_msg_add(m, F_TYPE, T_QCSTATUS) != HA_OK
-		||	ha_msg_add(m, F_CLIENTNAME, clientname) != HA_OK) {
+		||	ha_msg_add(m, F_CLIENTNAME, clientname) != HA_OK
+		||	ha_msg_add(m, F_FROMID, OurClientID) != HA_OK) {
 			
 			if (m){
 				ha_msg_del(m);

@@ -1,4 +1,4 @@
-/* $Id: hb_api.c,v 1.122 2004/11/04 21:33:41 gshi Exp $ */
+/* $Id: hb_api.c,v 1.123 2004/12/06 21:02:44 gshi Exp $ */
 /*
  * hb_api: Server-side heartbeat API code
  *
@@ -754,12 +754,14 @@ api_clientstatus(const struct ha_msg* msg, struct ha_msg* resp
 {
 	const char *		cnode;
 	const char *		cname;
+	const char *		our_clientid;
 	struct node_info *	node;
 	struct ha_msg *		m;
 	int			ret = HA_FAIL;
 
 	if ((cnode = ha_msg_value(msg, F_NODENAME)) == NULL
 	|| (cname = ha_msg_value(msg, F_CLIENTNAME)) == NULL
+	|| (our_clientid = ha_msg_value(msg, F_FROMID)) == NULL
 	|| (node = lookup_node(cnode)) == NULL) {
 		*failreason = "EINVAL";
 		return I_API_BADREQ;
@@ -796,7 +798,8 @@ api_clientstatus(const struct ha_msg* msg, struct ha_msg* resp
 	if ((m = ha_msg_new(0)) == NULL
 	||	ha_msg_add(m, F_TYPE, T_QCSTATUS) != HA_OK
 	||	ha_msg_add(m, F_TO, cnode) != HA_OK
-	||	ha_msg_add(m, F_CLIENTNAME, cname) != HA_OK) {
+	||	ha_msg_add(m, F_CLIENTNAME, cname) != HA_OK
+	|| 	ha_msg_add(m, F_FROMID, our_clientid) != HA_OK) {
 
 		ha_log(LOG_ERR, "api_clientstatus: cannot add field");
 		*failreason = "ENOMEM";

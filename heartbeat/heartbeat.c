@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.340 2004/12/04 01:21:11 gshi Exp $ */
+/* $Id: heartbeat.c,v 1.341 2004/12/06 21:02:44 gshi Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -1924,10 +1924,12 @@ HBDoMsg_T_QCSTATUS(const char * type, struct node_info * fromnode
 ,	TIME_T msgtime, seqno_t seqno, const char * iface, struct ha_msg * msg)
 {
 	const char * clientid;
+	const char * fromclient;
 	struct ha_msg * m = NULL;
 	int ret = HA_FAIL;
 	
-	if ((clientid = ha_msg_value(msg, F_CLIENTNAME)) == NULL) {
+	if ((clientid = ha_msg_value(msg, F_CLIENTNAME)) == NULL
+	    || (fromclient = ha_msg_value(msg, F_FROMID)) == NULL) {
 		cl_log(LOG_ERR, "%s ha_msg_value failed", __FUNCTION__);
 		return;
 	}
@@ -1938,7 +1940,8 @@ HBDoMsg_T_QCSTATUS(const char * type, struct node_info * fromnode
 	if (ha_msg_add(m, F_TYPE, T_RCSTATUS) != HA_OK
 	||	ha_msg_add(m, F_TO, fromnode->nodename) != HA_OK
 	||	ha_msg_add(m, F_APIRESULT, API_OK) != HA_OK
-	||	ha_msg_add(m, F_CLIENTNAME, clientid) != HA_OK) {
+	||	ha_msg_add(m, F_CLIENTNAME, clientid) != HA_OK
+	||	ha_msg_add(m, F_TOID, fromclient) != HA_OK) {
 		cl_log(LOG_ERR, "Cannot create clent status msg");
 		return;
 	}
@@ -1953,7 +1956,6 @@ HBDoMsg_T_QCSTATUS(const char * type, struct node_info * fromnode
 		return;
 	}
 	send_cluster_msg(m);
-	heartbeat_monitor(msg, KEEPIT, iface);
 }
 
 
@@ -4763,6 +4765,13 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.341  2004/12/06 21:02:44  gshi
+ * in client_status() call
+ *
+ * only the querying client in the querying node should receive
+ * the client status message. Clients in other nodes, or other clients in
+ * local node should not be bothered.
+ *
  * Revision 1.340  2004/12/04 01:21:11  gshi
  * Fixed a bug that a client may not get client status callback if it connects to heartbeat
  * immediately after heartbeat starts.
