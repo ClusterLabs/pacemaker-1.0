@@ -69,13 +69,13 @@ print_key_value(gpointer key, gpointer value, gpointer user_data)
 }
 
 static void
-printout(GHashTable* table){
+printout(void){
 	cl_log(LOG_INFO, " printing out name table:");
 	g_hash_table_foreach(name_table, 
 			     print_key_value, NULL);	
-	//	cl_log(LOG_INFO, " printing out uuidname table:");
-	//	g_hash_table_foreach(uuid_table, 
-	//			     print_key_value, NULL);	
+		cl_log(LOG_INFO, " printing out uuidname table:");
+		g_hash_table_foreach(uuid_table, 
+				     print_key_value, NULL);	
 	
 }
 
@@ -103,6 +103,8 @@ lookup_tables(const char* nodename, const char* uuid)
 		cl_log(LOG_ERR,"lookup_tables: bad parameters");
 	}
 	
+	/*printout();*/
+
 	if(uuid){
 		hip = lookup_uuidtable(uuid);
 	}
@@ -177,7 +179,12 @@ add_uuidtable(const char* uuid, char* value)
 
 int
 inittable(void)
+
 {
+	if( uuid_table || name_table){
+		cleanuptable();
+	}
+
 	uuid_table = g_hash_table_new(uuid_hash, uuid_equal);	
 	if (!uuid_table){
 		cl_log(LOG_ERR, "ghash table allocation error");

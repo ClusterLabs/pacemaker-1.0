@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.309 2004/08/14 14:42:23 alan Exp $ */
+/* $Id: heartbeat.c,v 1.310 2004/08/26 00:52:42 gshi Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -3086,6 +3086,10 @@ main(int argc, char * argv[], char **envp)
 		/*NOTREACHED*/
 	}
 
+	/*init table for nodename/uuid lookup*/
+	inittable();
+
+
 	/*
 	 *	We think we just performed an "exec" of ourselves to restart.
 	 */
@@ -3164,6 +3168,8 @@ main(int argc, char * argv[], char **envp)
 		}
 	}
 
+
+
 	/*
 	 *	We've been asked to restart currently running heartbeat
 	 *	process (or at least get it to reread it's configuration
@@ -3203,8 +3209,6 @@ main(int argc, char * argv[], char **envp)
 
 StartHeartbeat:
 
-	/*init table for nodename/uuid lookup*/
-	inittable();
 	
 	
         /* We have already initialized configs in case WeAreRestarting. */
@@ -4442,6 +4446,12 @@ hb_unregister_to_apphbd(void)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.310  2004/08/26 00:52:42  gshi
+ * fixed a bug which will make ping node unrecognizable
+ * in re-reading config when heartbeat receiving a SIGHUP signal
+ *
+ * the bug is introduced by uuid code
+ *
  * Revision 1.309  2004/08/14 14:42:23  alan
  * Put in lots of comments about resource-work tieins in heartbeat.c, plus put in
  * a short term workaround for dealing with one particular case:
