@@ -1,4 +1,4 @@
-/* $Id: hb_api.c,v 1.124 2004/12/14 22:12:31 alan Exp $ */
+/* $Id: hb_api.c,v 1.125 2005/01/03 18:03:48 gshi Exp $ */
 /*
  * hb_api: Server-side heartbeat API code
  *
@@ -414,6 +414,10 @@ api_heartbeat_monitor(struct ha_msg *msg, int msgtype, const char *iface)
 			}
 			
 			if (client->removereason && !client->isindispatch) {
+				if (ANYDEBUG){
+					cl_log(LOG_DEBUG, "api_remove_client_pid: client is "
+					       "%s", client->client_id);
+				}
 				api_remove_client_pid(client->pid
 						      ,	client->removereason);
 			}
@@ -1525,7 +1529,6 @@ api_remove_client_int(client_proc_t* req, const char * reason)
 	client_proc_t*	client;
 
 		
-	api_send_client_status(req, LEAVESTATUS, reason);
 
 	--total_client_count;
 
@@ -1551,22 +1554,30 @@ api_remove_client_int(client_proc_t* req, const char * reason)
 			}
 
 
-#if MAKEITCRASH
 			/* Drop the source - that will destroy the 'chan' */
 			if (client->gsource) {
 				G_main_del_IPC_Channel(client->gsource);
 			}
-#endif
-
-			/* Zap! */
-			memset(client, 0, sizeof(*client));
-			ha_free(client); client = NULL;
-			return;
+			
+			break;
 		}
 		prev = client;
 	}
-	cl_log(LOG_ERR,	"api_remove_client_int: could not find pid [%ld]"
-	,	(long) req->pid);
+	
+
+	if (req == client){
+		
+		api_send_client_status(req, LEAVESTATUS, reason);
+		
+		/* Zap! */
+		memset(client, 0, sizeof(*client));
+		ha_free(client); client = NULL;
+	}else{
+		cl_log(LOG_ERR,	"api_remove_client_int: could not find pid [%ld]"
+		       ,	(long) req->pid);
+	}
+	
+	return;
 }
 
 
