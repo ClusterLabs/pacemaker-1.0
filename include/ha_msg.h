@@ -1,4 +1,4 @@
-/* $Id: ha_msg.h,v 1.34 2004/09/22 22:41:09 gshi Exp $ */
+/* $Id: ha_msg.h,v 1.35 2004/09/30 06:02:23 gshi Exp $ */
 /*
  * Intracluster message object (struct ha_msg)
  *
@@ -35,7 +35,6 @@ enum cl_netstring_type{
 	FT_STRING,
 	FT_BINARY,
 	FT_STRUCT,
-	FT_LIST_ELEMENT,
 	FT_LIST,
 };
 
@@ -47,7 +46,13 @@ enum cl_msgfmt{
 
 #define NEEDHEAD	1
 #define NOHEAD		0
-
+#define HA_MSG_ASSERT(X)  do{  if(!(X)){				\
+	cl_log(LOG_ERR, "Assertion failed on line %d in file \"%s\""    \
+	, __LINE__, __FILE__);					         \
+	exit(1);		   				         \
+	}								\
+    }while(0)
+	
 typedef struct hb_msg_stats_s {
 	unsigned long		totalmsgs;	/* Total # of messages */
 						/* ever handled */
@@ -67,6 +72,53 @@ struct ha_msg {
 	size_t*	vlens;
 	int *	types;
 };
+
+
+
+struct fieldtypefuncs_s{
+
+	/* memfree frees the memory involved*/
+	void (*memfree)(void*);
+
+	/* dup makes a complete copy of the field*/
+	void* (*dup)(const void*, size_t);
+
+	/* display printout the field*/
+	void (*display)(int, char* , void*);
+
+	/* add the field into a message*/
+	int (*addfield) (struct ha_msg* msg, char* name, size_t namelen,
+			 void* value, size_t vallen, int depth);
+
+	/* return the string length required to add this field*/
+	int (*stringlen) (size_t namlen, size_t vallen, const void* value);
+
+	/* return the netstring length required to add this field*/
+	int (*netstringlen) (size_t namlen, size_t vallen, const void* value);
+	
+	/* print the field into the provided buffer, convert it first */
+	/* if ncecessary*/
+	int (*tostring)(char*, char*, void* ,size_t,int);
+	
+	/* print the field into the provided buffer*/
+	int (*tonetstring)(char*, char*, void*, size_t, size_t*);
+
+	/* convert the given string to a field
+	   note: this functions involves allocate memory for 
+	   for the field
+	*/
+	int (*stringtofield)(void*, size_t, int depth, void**, size_t* );
+
+	/* convert the given netstring to a field
+	   note: this functions involves allocate memory for 
+	   for the field
+	*/
+	int (*netstringtofield)(const void*, size_t, void**, size_t*);
+};
+
+extern struct fieldtypefuncs_s fieldtypefuncs[4];
+
+
 #define	IFACE		"!^!\n"  
 #define	MSG_START	">>>\n"
 #define	MSG_END		"<<<\n"
@@ -264,10 +316,10 @@ struct ha_msg *	controlfifo2msg(FILE * f);
 gboolean	isauthentic(const struct ha_msg * msg);
 
 /* Get the required string length for the given message */ 
-int get_stringlen(const struct ha_msg *m, int depth);
+int get_stringlen(const struct ha_msg *m);
 
 /* Get the requried netstring length for the given message*/
-int get_netstringlen(const struct ha_msg *m, int depth);
+int get_netstringlen(const struct ha_msg *m);
 
 /* Add a child message to a message as a field */
 int ha_msg_addstruct(struct ha_msg * msg, const char * name, void* ptr);
@@ -304,7 +356,7 @@ void* cl_msg_list_nth_data(struct ha_msg* msg, const char* name, int n);
 
 
 /*internal use for list type*/
-size_t string_list_pack_length(GList* list);
+size_t string_list_pack_length(const GList* list);
 int string_list_pack(GList* list, char* buf, char* maxp);
 GList* string_list_unpack(const char* packed_str_list, size_t length);
 void list_cleanup(GList* list);
