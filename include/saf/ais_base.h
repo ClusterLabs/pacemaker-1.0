@@ -28,9 +28,7 @@ typedef OPAQUE_TYPE SaLckLockIdT;
 typedef OPAQUE_TYPE SaLckResourceIdT;
 */
 
-/* added by steve jin */
 
-#define SA_TIME_END 0 
 /* Chapter 3 */
 #define OPAQUE_TYPE  int
 
@@ -53,6 +51,18 @@ typedef unsigned short 		SaUint16T;
 typedef unsigned long 		SaUint32T;
 typedef unsigned long long 	SaUint64T;
 typedef SaInt64T 		SaTimeT;
+
+/* 
+ * the largest timestamp value: 
+ * Fri Apr 11 23:47:16.854775807 UTC 2262 
+ */
+#define SA_TIME_END ((SaTimeT)0x7FFFFFFFFFFFFFFF)
+
+/*
+ * the smallest timestamp value: 
+ * Tue Sep 21 00:12:43.145224193 UTC 1667
+ */
+#define SA_TIME_BEGIN ((SaTimeT)0x8000000000000001)
 
 #define SA_MAX_NAME_LENGTH	32
 #define SA_MAX_ID_LENGTH	4
