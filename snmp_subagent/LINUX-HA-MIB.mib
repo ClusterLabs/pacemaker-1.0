@@ -217,27 +217,19 @@ LHAResourceGroupEntry OBJECT-TYPE
     STATUS	current
     DESCRIPTION
 	"An entry containing a resource group and its information."
-    INDEX	{ LHAResourceGroupIndex }
+    INDEX	{ LHAResourceGroupMaster LHAResourceGroupIndex }
     ::= { LHAResourceGroupTable 1 }
 
 lhaResourceGroupEntry ::= SEQUENCE	{
-    LHAResourceGroupIndex	Integer32,
     LHAResourceGroupMaster	DisplayString,
+    LHAResourceGroupIndex	Integer32,
     LHAResourceGroupResources   DisplayString,
     LHAResourceGroupStatus	Integer32
 }
 
-LHAResourceGroupIndex OBJECT-TYPE
-    SYNTAX	Integer32 (0..65535)
-    MAX-ACCESS	not-accessible
-    STATUS	current
-    DESCRIPTION
-	"A unique integer that identifies this resource group."
-    ::= { LHAResourceGroupEntry 1 }
-
 LHAResourceGroupMaster OBJECT-TYPE
     SYNTAX	DisplayString
-    MAX-ACCESS	read-only
+    MAX-ACCESS	not-accessible
     STATUS	current
     DESCRIPTION
 	"The master node of this resource group.  This is normally the 
@@ -249,6 +241,15 @@ LHAResourceGroupMaster OBJECT-TYPE
 
 	then the host name: just.linux-ha.org will be the value for 
 	LHAResourceGroupMaster"
+    ::= { LHAResourceGroupEntry 1 }
+
+LHAResourceGroupIndex OBJECT-TYPE
+    SYNTAX	Integer32 (0..65535)
+    MAX-ACCESS	not-accessible
+    STATUS	current
+    DESCRIPTION
+	"A unique integer that identifies this resource group that 'belongs'
+	to a particular resource mater node."
     ::= { LHAResourceGroupEntry 2 }
 
 LHAResourceGroupResources OBJECT-TYPE

@@ -681,11 +681,10 @@ handle_membership_msg(void)
 int
 init_resource_table(void)
 {
-    	int rc, i;
-	FILE * rkeys;
-    	char cmd[MAXLINE];
+    	int rc;
+	FILE * rcsf;
 	char buf[MAXLINE];
-	char * node;
+	char host[MAXLINE], pad[MAXLINE];
 	struct hb_rsinfo resource;
 
 	if (gResourceTable) {
@@ -694,44 +693,35 @@ init_resource_table(void)
 
 	gResourceTable = g_array_new(TRUE, TRUE, sizeof (struct hb_rsinfo));
 
-    	for (i = 0; i < gNodeTable->len; i++) {
-	    	node = g_array_index(gNodeTable, struct hb_nodeinfo, i).name;
-
-	    	sprintf(cmd, HALIB "/ResourceManager listkeys %s", node);
-
-		if ((rkeys = popen(cmd, "r")) == NULL) {
-		    	cl_log(LOG_ERR, "Cannot run command %s", cmd);
-			return HA_FAIL;
-		}
-
-		for (;;) {
-		    	errno = 0;
-			if (fgets(buf, MAXLINE, rkeys) == NULL) {
-			    	if (ferror(rkeys)) {
-				    	cl_perror("fgets failure");
-				}
-				break;
-			}
-
-			if (buf[strlen(buf) - 1] == '\n') 
-			    buf[strlen(buf) - 1] = EOS;
-
-			resource.master = g_strdup(node);
-			resource.resource = g_strdup(buf);
-
-			g_array_append_val(gResourceTable, resource);
-		}
-
-		rc = pclose(rkeys);
-		if (rc < 0 && errno != ECHILD) {
-			cl_perror("pclose(%s) returned %d", cmd, rc);
-		}else if (rc > 0) {
-			cl_log(LOG_ERR, "[%s] exited with 0x%x", cmd, rc);
-		}
+	if ((rcsf = fopen(RESOURCE_CFG, "r")) == NULL) {
+	    	cl_log(LOG_ERR, "Cannot open file %s", RESOURCE_CFG);
+		return HA_FAIL;
 	}
 
-	for (i = 0; i < gResourceTable->len; i++) {
-	    	fprintf(stderr, "node: %s - resource: %s\n", g_array_index(gResourceTable, struct hb_rsinfo, i).master, g_array_index(gResourceTable, struct hb_rsinfo, i).resource);
+	for (;;) {
+	    	errno = 0;
+		if (fgets(buf, MAXLINE, rcsf) == NULL) {
+		    	if (ferror(rcsf)) {
+			    	cl_perror("fgets failure");
+			}
+			break;
+		}
+		/* remove the comments */
+		if (buf[0] == '#') {
+		    	continue;
+		} 
+
+		if (buf[strlen(buf) - 1] == '\n') 
+		    buf[strlen(buf) - 1] = EOS;
+
+		if ((rc = sscanf(buf, "%s %[^\n\t\r]", host, pad)) < 1) {
+		    	cl_log(LOG_WARNING, "%s syntax error?", RESOURCE_CFG);
+		};
+
+		resource.master = g_strdup(host);
+		resource.resource = g_strdup(pad);
+
+		g_array_append_val(gResourceTable, resource);
 	}
 
 	return HA_OK;
