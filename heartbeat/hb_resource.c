@@ -1,4 +1,4 @@
-/* $Id: hb_resource.c,v 1.52 2004/04/08 20:53:44 alan Exp $ */
+/* $Id: hb_resource.c,v 1.53 2004/04/14 00:31:00 alan Exp $ */
 /*
  * hb_resource: Linux-HA heartbeat resource management code
  *
@@ -142,7 +142,10 @@ static	const char * RscMgmtProcessName(ProcTrack* p);
 static	void StonithProcessDied(ProcTrack* p, int status, int signo
 ,		int exitcode, int waslogged);
 static	const char * StonithProcessName(ProcTrack* p);
-void	Initiate_Reset(Stonith* s, const char * nodename);
+static	void StonithStatProcessDied(ProcTrack* p, int status, int signo
+,		int exitcode, int waslogged);
+static	const char * StonithStatProcessName(ProcTrack* p);
+void	Initiate_Reset(Stonith* s, const char * nodename, gboolean doreset);
 static int FilterNotifications(const char * msgtype);
 static int countbystatus(const char * status, int matchornot);
 static gboolean hb_rsc_isstable(void);
@@ -158,6 +161,12 @@ static ProcTrack_ops StonithProcessTrackOps = {
 	StonithProcessDied,
 	NULL,
 	StonithProcessName
+};
+
+static ProcTrack_ops StonithStatProcessTrackOps = {
+	StonithStatProcessDied,
+	NULL,
+	StonithStatProcessName
 };
 
 static const char *	rsc_msg[] =	{HB_NO_RESOURCES, HB_LOCAL_RESOURCES
@@ -426,7 +435,7 @@ hb_rsc_recover_dead_resources(struct node_info* hip)
 		/* We have to Zap them before we take the resources */
 		/* This often takes a few seconds. */
 		if (config->stonith) {
-			Initiate_Reset(config->stonith, hip->nodename);
+			Initiate_Reset(config->stonith, hip->nodename, TRUE);
 			/* It will call takeover_from_node() later */
 			return;
 		}else{
@@ -578,6 +587,10 @@ comm_up_resource_action(void)
 			resources_requested_yet=1;
 			req_our_resources(FALSE);
 		}
+	}
+	if (config->stonith) {
+		/* This will get called every hour from now on... */
+		Initiate_Reset(config->stonith, NULL, FALSE);
 	}
 
 }
@@ -1841,16 +1854,19 @@ hb_giveup_resources(void)
 
 
 void
-Initiate_Reset(Stonith* s, const char * nodename)
+Initiate_Reset(Stonith* s, const char * nodename, gboolean doreset)
 {
 	const char*	result = "bad";
 	int		pid;
 	int		exitcode = 0;
 	struct StonithProcHelper *	h;
+	int		rc;
+	ProcTrack_ops * track;
 	/*
 	 * We need to fork because the stonith operations block for a long
 	 * time (10 seconds in common cases)
 	 */
+	track = (doreset ?  &StonithProcessTrackOps : &StonithStatProcessTrackOps);
 	switch((pid=fork())) {
 
 		case -1:	cl_log(LOG_ERR, "Cannot fork.");
@@ -1858,8 +1874,7 @@ Initiate_Reset(Stonith* s, const char * nodename)
 		default:
 				h = g_new(struct StonithProcHelper, 1);
 				h->nodename = g_strdup(nodename);
-				NewTrackedProc(pid, 1, PT_LOGVERBOSE, h
-				,	&StonithProcessTrackOps);
+				NewTrackedProc(pid, 1, PT_LOGVERBOSE, h, track);
 				/* StonithProcessDied is called when done */
 				return;
 
@@ -1874,17 +1889,30 @@ Initiate_Reset(Stonith* s, const char * nodename)
 	set_proc_title("%s: Initiate_Reset()", cmdname);
 	CL_SIGNAL(SIGCHLD,SIG_DFL);
 
-	cl_log(LOG_INFO
-	,	"Resetting node %s with [%s]"
-	,	nodename
-	,	s->s_ops->getinfo(s, ST_DEVICEID));
+	if (doreset) {
+		cl_log(LOG_INFO
+		,	"Resetting node %s with [%s]"
+		,	nodename
+		,	s->s_ops->getinfo(s, ST_DEVICEID));
+	}else{
+		cl_log(LOG_INFO
+		,	"Checking status of STONITH device [%s]"
+		,	s->s_ops->getinfo(s, ST_DEVICEID));
+	}
 
-	switch (s->s_ops->reset_req(s, ST_GENERIC_RESET, nodename)){
+	if (doreset) {
+		rc = s->s_ops->reset_req(s, ST_GENERIC_RESET, nodename);
+	}else{
+		rc = s->s_ops->status(s);
+	}
+	switch (rc) {
 
 	case S_OK:
 		result=T_STONITH_OK;
-		cl_log(LOG_INFO
-		,	"node %s now reset.", nodename);
+		if (doreset) {
+			cl_log(LOG_INFO
+			,	"node %s now reset.", nodename);
+		}
 		exitcode = 0;
 		break;
 
@@ -1898,12 +1926,19 @@ Initiate_Reset(Stonith* s, const char * nodename)
 		break;
 
 	default:
-		cl_log(LOG_ERR, "Host %s not reset!", nodename);
+		if (doreset) {
+			cl_log(LOG_ERR, "Host %s not reset!", nodename);
+		}else{
+			cl_log(LOG_ERR, "STONITH device %s not operational!"
+			,	s->s_ops->getinfo(s, ST_DEVICEID));
+		}
 		exitcode = 1;
 		result = T_STONITH_BAD;
 	}
 
-	send_stonith_msg(nodename, result);
+	if (doreset) {	
+		send_stonith_msg(nodename, result);
+	}
 	exit (exitcode);
 }
 
@@ -2101,7 +2136,7 @@ static gboolean
 StonithProc(gpointer gph)
 {
 	struct StonithProcHelper* h	= gph;
-	Initiate_Reset(config->stonith, h->nodename);
+	Initiate_Reset(config->stonith, h->nodename, TRUE);
 	return FALSE;
 }
 
@@ -2115,7 +2150,7 @@ StonithProcessDied(ProcTrack* p, int status, int signo, int exitcode, int waslog
 		cl_log(LOG_ERR, "STONITH of %s failed.  Retrying..."
 		,	h->nodename);
 
-		Gmain_timeout_add(1000, StonithProc, h);
+		Gmain_timeout_add(5*1000, StonithProc, h);
 	}else{
 		/* We need to finish taking over the other side's resources */
 		takeover_from_node(h->nodename);
@@ -2133,8 +2168,40 @@ StonithProcessName(ProcTrack* p)
 	return buf;
 }
 
+static gboolean
+StonithStatProc(gpointer gph)
+{
+	Initiate_Reset(config->stonith, "?", FALSE);
+	return FALSE;
+}
+static void
+StonithStatProcessDied(ProcTrack* p, int status, int signo, int exitcode, int waslogged)
+{
+	struct StonithProcHelper*	h = p->privatedata;
+
+	if ((signo != 0 && signo != SIGTERM) || exitcode != 0) {
+		cl_log(LOG_ERR, "STONITH status operation failed.");
+		cl_log(LOG_INFO, "This may mean that the STONITH device has failed!");
+	}
+	g_free(h->nodename);	h->nodename=NULL;
+	g_free(p->privatedata);	p->privatedata = NULL;
+	Gmain_timeout_add(3600*1000, StonithStatProc, h);
+}
+
+static const char *
+StonithStatProcessName(ProcTrack* p)
+{
+	static char buf[100];
+	snprintf(buf, sizeof(buf), "STONITH-stat");
+	return buf;
+}
+
+
 /*
  * $Log: hb_resource.c,v $
+ * Revision 1.53  2004/04/14 00:31:00  alan
+ * Added to code to check STONITH device every hour.
+ *
  * Revision 1.52  2004/04/08 20:53:44  alan
  * Put in code to make STONITH repeat after 1 second's delay - instead of continually...
  *
