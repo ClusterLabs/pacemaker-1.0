@@ -1,4 +1,4 @@
-/* $Id: ucast.c,v 1.18 2004/02/17 22:11:59 lars Exp $ */
+/* $Id: ucast.c,v 1.19 2004/03/03 05:31:51 alan Exp $ */
 /*
  * Adapted from alanr's UDP broadcast heartbeat bcast.c by Stéphane Billiart
  *	<stephane@reefedge.com>
@@ -111,8 +111,8 @@ static int ucast_parse(const char *line);
 static struct hb_media* ucast_new(const char *intf, const char *addr);
 static int ucast_open(struct hb_media *mp);
 static int ucast_close(struct hb_media *mp);
-static struct ha_msg* ucast_read(struct hb_media *mp);
-static int ucast_write(struct hb_media *mp, struct ha_msg *msg);
+static void* ucast_read(struct hb_media *mp, int* lenp);
+static int ucast_write(struct hb_media *mp, void *msg, int len);
 
 static int HB_make_receive_sock(struct hb_media *ei);
 static int HB_make_send_sock(struct hb_media *mp);
@@ -379,17 +379,21 @@ static int ucast_close(struct hb_media* mp)
 	return rc;
 }
 
+
 /*
  * Receive a heartbeat unicast packet from UDP interface
  */
-static struct ha_msg* ucast_read(struct hb_media *mp)
+
+static void *
+ucast_read(struct hb_media* mp, int *lenp)
 {
 	struct ip_private *ei;
 	int addr_len;
 	struct sockaddr_in their_addr;
 	int numbytes;
 	char buf[MAXLINE];
-
+	void	*pkt;
+	
 	UCASTASSERT(mp);
 	ei = (struct ip_private*)mp->pd;
 
@@ -416,47 +420,55 @@ static struct ha_msg* ucast_read(struct hb_media *mp)
 	if (DEBUGPKTCONT) {
 		LOG(LOG_DEBUG, buf);
 	}
-	return string2msg(buf, sizeof(buf));
+
+		
+	pkt = ha_malloc(numbytes + 1);
+	if(!pkt){
+		PILCallLog(LOG, PIL_CRIT
+			   ,	"Error in allocating memory");
+		return(NULL);
+	}
+	
+	memcpy(pkt, buf, numbytes + 1);		
+	*lenp = numbytes +1;
+	
+	return(pkt);	
+	
+	
 }
 
 /*
  * Send a heartbeat packet over unicast UDP/IP interface
  */
-static int ucast_write(struct hb_media *mp, struct ha_msg *msgptr)
+
+static int
+ucast_write(struct hb_media* mp, void *pkt, int len)
 {
 	struct ip_private *ei;
 	int rc;
-	char *pkt;
-	int size;
-
+	
 	UCASTASSERT(mp);
 	ei = (struct ip_private*)mp->pd;
-
-	if (!(pkt = msg2string(msgptr)))
-		return HA_FAIL;
-
-	size = strlen(pkt)+1;
-
-	if ((rc = sendto(ei->wsocket, pkt, size, 0,
+	
+	if ((rc = sendto(ei->wsocket, pkt, len, 0,
 			(struct sockaddr *)&ei->addr,
-			sizeof(struct sockaddr))) != size) {
+			 sizeof(struct sockaddr))) != len) {
 		LOG(PIL_CRIT, "ucast: error sending packet: %s",
-			strerror(errno));
+		    strerror(errno));
 		ha_free(pkt);
 		return HA_FAIL;
 	}
-
+	
 	if (DEBUGPKT) {
 		LOG(LOG_DEBUG, "ucast: sent %d bytes to %s", rc,
-			inet_ntoa(ei->addr.sin_addr));
+		    inet_ntoa(ei->addr.sin_addr));
    	}
 	if (DEBUGPKTCONT) {
 		LOG(LOG_DEBUG, pkt);
    	}
-
-	ha_free(pkt);
-
-	return HA_OK;
+	
+	return HA_OK;	
+	
 }
 
 /*

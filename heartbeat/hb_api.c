@@ -1,4 +1,4 @@
-/* $Id: hb_api.c,v 1.95 2004/02/17 22:11:57 lars Exp $ */
+/* $Id: hb_api.c,v 1.96 2004/03/03 05:31:50 alan Exp $ */
 /*
  * hb_api: Server-side heartbeat API code
  *
@@ -1344,7 +1344,7 @@ ProcessAnAPIRequest(client_proc_t*	client)
 
 
 	/* See if we can read the message */
-	if ((msg = msgfromIPC(client->chan)) == NULL) {
+	if ((msg = msgfromIPC_noauth(client->chan)) == NULL) {
 
 		/* EOF? */
 		if (client->chan->ch_status == IPC_DISCONNECT) {

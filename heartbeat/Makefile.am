@@ -60,15 +60,15 @@ noinst_HEADERS		=	hb_api_core.h		\
 
 lib_LTLIBRARIES		= libhbclient.la 
 
-libhbclient_la_SOURCES	= client_lib.c lock.c ha_msg.c
+libhbclient_la_SOURCES	= client_lib.c lock.c ha_msg.c netstring.c
 libhbclient_la_LDFLAGS	= -version-info 0:0:0
 
 ## binary progs
-halib_PROGRAMS		= heartbeat findif api_test
+halib_PROGRAMS		= heartbeat findif api_test netstring_test
 
 ## SOURCES
 heartbeat_SOURCES	= heartbeat.c auth.c				\
-			config.c ha_malloc.c ha_msg.c			\
+			config.c ha_malloc.c ha_msg.c netstring.c	\
 			ha_msg_internal.c hb_api.c hb_resource.c	\
 			hb_signal.c lock.c module.c setproctitle.c
 
@@ -90,6 +90,11 @@ findif_LDADD		=$(top_builddir)/replace/libreplace.la
 api_test_SOURCES	= api_test.c
 api_test_LDADD		= $(top_builddir)/lib/clplumbing/libplumb.la	\
 			libhbclient.la $(gliblib)
+
+netstring_test_SOURCES	= netstring_test.c
+netstring_test_LDADD	= $(top_builddir)/lib/clplumbing/libplumb.la	\
+			libhbclient.la $(gliblib)
+
 
 ## SCRIPTS/DATA
 ha_DATA			= shellfuncs README.config 

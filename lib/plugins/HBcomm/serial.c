@@ -1,4 +1,4 @@
-/* $Id: serial.c,v 1.30 2004/02/17 22:11:59 lars Exp $ */
+/* $Id: serial.c,v 1.31 2004/03/03 05:31:51 alan Exp $ */
 /*
  * Linux-HA serial heartbeat code
  *
@@ -44,6 +44,8 @@
 #include <clplumbing/longclock.h>
 #include <clplumbing/timers.h>
 
+
+
 #define PIL_PLUGINTYPE		HB_COMM_TYPE
 #define PIL_PLUGINTYPE_S	HB_COMM_TYPE_S
 #define PIL_PLUGIN		serial
@@ -67,10 +69,10 @@ static const char *	baudstring;
 static struct hb_media*		lastserialport;
 
 static struct hb_media*	serial_new(const char * value);
-static struct ha_msg*	serial_read(struct hb_media *mp);
+static void*		serial_read(struct hb_media *mp, int* lenp);
 static char *		ttygets(char * inbuf, int length
 ,				struct serial_private *tty);
-static int		serial_write(struct hb_media*mp, struct ha_msg *msg);
+static int		serial_write(struct hb_media*mp, void *msg , int len);
 static int		serial_open(struct hb_media* mp);
 static int		ttysetup(int fd, const char * ourtty);
 static int		opentty(char * serial_device);
@@ -422,20 +424,170 @@ serial_localdie(void)
 	}
 }
 
-/* This function does all the writing to our tty ports */
-static int
-serial_write (struct hb_media*mp, struct ha_msg*m)
-{
-	char *			str;
 
+/* This function does all the reading from our tty ports */
+
+static void *
+serial_read(struct hb_media* mp, int *lenp)
+{
+	char			buf[MAXLINE];
+	struct serial_private*	thissp;
+	int			startlen;
+	const char *		start = MSG_START;
+	const char *		end = MSG_END;
+	int			endlen;
+	char			*msgstring;
+	char			*p;
+	int			len = 0;
+	int			tmplen;
+
+
+	
+	
+	TTYASSERT(mp);
+	thissp = (struct serial_private*)mp->pd;
+
+	startlen = strlen(start);
+	if (start[startlen-1] == '\n') {
+		--startlen;
+	}
+	endlen = strlen(end);
+	if (end[endlen-1] == '\n') {
+		--endlen;
+	}
+	
+	msgstring = ha_calloc(MAXMSG,1 );
+	if(!msgstring){
+		LOG(PIL_CRIT, "serial_read: cannot allocate memory to msgstring ");
+		return(NULL);
+	}
+	msgstring[0] = 0;
+
+	p = msgstring;
+	
+	/* Skip until we find a MSG_START (hopefully we skip nothing) */
+	while (ttygets(buf, MAXLINE, thissp) != NULL
+	       &&	strncmp(buf, start, startlen) != 0) {
+		
+		
+		/*nothing*/
+	}
+	
+	len = strnlen(buf, MAXLINE) + 1;
+	if(len >=  MAXMSG){
+		LOG(PIL_CRIT,  "serial_read:MSG_START exceeds MAXMSG");
+		ha_free(msgstring);
+		return(NULL);
+	}
+
+	tmplen = strnlen(buf, MAXLINE);
+	
+	strcat(p, buf);
+	p += tmplen;
+	strcat(p, "\n");
+	p++;
+
+	while (ttygets(buf, MAXLINE, thissp) != NULL
+	       &&	strncmp(buf, MSG_END, endlen) != 0) {
+		
+		
+		len += strnlen(buf, MAXLINE) + 1;
+		if(len >= MAXMSG){
+			LOG(PIL_CRIT, "serial_read:msgstring exceeds MAXMSG");
+			ha_free(msgstring);
+			return(NULL);
+		}
+		
+		
+		tmplen = strnlen(buf, MAXLINE);
+		memcpy(p, buf, tmplen);		
+		p += tmplen;
+		strcat(p, "\n");
+		p++;
+	}
+
+	
+	if(strncmp(buf, MSG_END, endlen) == 0){
+		
+		len += strnlen(buf, MAXLINE) + 2;
+		if(len >= MAXMSG){
+			LOG(PIL_CRIT, "serial_read:msgstring exceeds MAXMSG after adding MSG_END");
+			ha_free(msgstring);
+			return(NULL);
+		}
+
+		tmplen = strnlen(buf, MAXLINE);
+		
+		memcpy(p, buf, tmplen);
+		p += tmplen;
+		strcat(p, "\n");
+		p++;
+		p[0] = 0;
+	}
+	
+	if (buf[0] == EOS ) {
+		ha_free(msgstring);
+		return NULL;
+	}else{
+		thissp->consecutive_errors=0;
+	}
+	
+	
+	*lenp = len;
+	
+	//LOG(PIL_INFO, "final msgstring=%s", msgstring);
+	
+	return(msgstring);	
+}
+
+/* This function does all the writing to our tty ports */
+
+static int
+serial_write(struct hb_media* mp, void *p, int len)
+{
+
+	int			string_startlen = sizeof(MSG_START)-1;
+	int			netstring_startlen = sizeof(MSG_START_NETSTRING) - 1;
+
+	char			*str;
+	int			str_new = 0;
 	int			wrc;
 	int			size;
 	int			ourtty;
 	static gboolean		warnyet=FALSE;
 	static longclock_t	warninterval;
 	static longclock_t	lastwarn;
+	
+
+	if (strncmp(p, MSG_START, string_startlen) == 0) {
+		str = p;
+		size = strlen(str);
+		if(size > len){
+			return(HA_FAIL);
+		}
+	} else if(strncmp(p, MSG_START_NETSTRING, netstring_startlen) == 0) {
+		
+		struct ha_msg * msg;
+		
+		msg = wirefmt2msg(p, len);
+		if(!msg){
+			ha_log(LOG_WARNING, "serial_write(): wirefmt2msg() failed");
+			return(HA_FAIL);
+		}
+		
+		add_msg_auth(msg);
+		str = msg2string(msg);		
+		str_new = 1;
+		size = strlen(str);
+		ha_msg_del(msg);
+		
+	} else{
+		return(HA_FAIL);
+	}
+
 
 	TTYASSERT(mp);
+	
 
 	if (!warnyet) {
 		warninterval = msto_longclock(RTS_WARNTIME*1000L);
@@ -443,11 +595,7 @@ serial_write (struct hb_media*mp, struct ha_msg*m)
 	ourmedia = mp;	/* Only used for the "localdie" function */
 	OurImports->RegisterCleanup(serial_localdie);
 	ourtty = ((struct serial_private*)(mp->pd))->ttyfd;
-	if ((str=msg2string(m)) == NULL) {
-		LOG(PIL_CRIT, "Cannot convert message to tty string");
-		return(HA_FAIL);
-	}
-	size = strlen(str);
+
 	if (DEBUGPKT) {
 		LOG(PIL_DEBUG, "Sending pkt to %s [%d bytes]"
 		,	mp->name, size);
@@ -461,7 +609,7 @@ serial_write (struct hb_media*mp, struct ha_msg*m)
 	if (DEBUGPKTCONT) {
 		LOG(PIL_DEBUG, "serial write returned %d", wrc);
 	}
-
+	
 	if (wrc < 0 || wrc != size) {
 		if (DEBUGPKTCONT && wrc < 0) {
 			LOG(PIL_DEBUG, "serial write errno was %d", errno);
@@ -484,142 +632,15 @@ serial_write (struct hb_media*mp, struct ha_msg*m)
 			}
 		}else{
 			LOG(PIL_CRIT, "TTY write failure on [%s]: %s"
-			,	mp->name, strerror(errno));
+			    ,	mp->name, strerror(errno));
 		}
 	}
-	ha_free(str);
+	
+	if(str_new){
+		ha_free(str);
+		str = NULL;
+	}
 	return(HA_OK);
-}
-
-/* This function does all the reading from our tty ports */
-static struct ha_msg *
-serial_read (struct hb_media*mp)
-{
-	char buf[MAXLINE];
-	const char *		bufmax = buf + sizeof(buf);
-	struct hb_media*	sp;
-	struct serial_private*	thissp;
-	struct ha_msg*		ret;
-	char *			newmsg = NULL;
-	int			newmsglen = 0;
-	int			startlen;
-	const char *		start = MSG_START;
-	const char *		end = MSG_END;
-	int			endlen;
-	struct serial_private*	spp;
-
-	TTYASSERT(mp);
-	thissp = (struct serial_private*)mp->pd;
-
-	if ((ret = ha_msg_new(0)) == NULL) {
-		LOG(PIL_CRIT, "Cannot get new message");
-		return(NULL);
-	}
-	startlen = strlen(start);
-	if (start[startlen-1] == '\n') {
-		--startlen;
-	}
-	endlen = strlen(end);
-	if (end[endlen-1] == '\n') {
-		--endlen;
-	}
-	/* Skip until we find a MSG_START (hopefully we skip nothing) */
-	while (ttygets(buf, MAXLINE, thissp) != NULL
-	&&	strncmp(buf, start, startlen) != 0) {
-		/* Nothing */
-	}
-
-	while (ttygets(buf, MAXLINE, thissp) != NULL
-	&&	strncmp(buf, MSG_END, endlen) != 0) {
-
-		/* Add the "name=value" string on this line to the message */
-		if (ha_msg_add_nv(ret, buf, bufmax) != HA_OK) {
-			ha_msg_del(ret);
-			return(NULL);
-		}
-	}
-
-	if (buf[0] == EOS || ret->nfields < 1) {
-		ha_msg_del(ret);
-		return NULL;
-	}else{
-		thissp->consecutive_errors=0;
-	}
-
-	/* Should this message should continue around the ring? */
-
-	if (!isauthentic(ret) || !should_ring_copy_msg(ret)) {
-		/* Avoid infinite loops... Ignore this message */
-		return(ret);
-	}
-
-
-	/* Add Name=value pairs until we reach MSG_END or EOF */
-	/* Forward message to other port in ring (if any) */
-	for (sp=lastserialport; sp; sp=spp->next) {
-		TTYASSERT(sp);
-		spp = (struct serial_private*)sp->pd;
-		if (sp == mp) {
-			/* That's us! */
-			continue;
-		}
-
-		/* Modify message, decrementing TTL (and reauthenticate it) */
-		if (newmsglen) {
-			const char *		ttl_s;
-			int			ttl;
-			char			nttl[8];
-
-			/* Decrement TTL in the message before forwarding */
-			if ((ttl_s = ha_msg_value(ret, F_TTL)) == NULL) {
-				return(ret);
-			}
-			ttl = atoi(ttl_s);
-			sprintf(nttl, "%d", ttl-1);
-			ha_msg_mod(ret, F_TTL, nttl);
-
-			/* Re-authenticate message */
-			add_msg_auth(ret);
-
-			if ((newmsg = msg2string(ret)) == NULL) {
-				LOG(PIL_CRIT, "Cannot convert serial msg to string");
-				continue;
-			}
-			newmsglen = strlen(newmsg);
-		}
-		/*
-		 * This will eventually have to be changed
-		 * if/when we change from FIFOs to more general IPC
-		 */
-		if (newmsglen) {
-			/*
-			 * I suppose it just becomes an IPC abstraction
-			 * and we issue a "msgput" or some such on it...
-			 */
-#if 0
-			if (DEBUGPKT) {
-				ha_log(LOG_DEBUG
-				,	"serial_read: writing %s"
-				" (len: %d) to %d"
-				,	newmsg, newmsglen
-				,	sp->wpipe[P_WRITEFD]);
-			}
-			/* FIXME!!!!! */
-			/* I think the code as it stands never calls this
-			 * anyway.  It *should* call this, but I don't
-			 * see any way for newmsglen to become nonzero
-			 */
-			write(sp->wchan[P_WRITEFD], newmsg, newmsglen);
-#else
-			;
-#endif
-		}
-	}
-
-	if (newmsglen) {
-		ha_free(newmsg);
-	}
-	return(ret);
 }
 
 
@@ -673,6 +694,10 @@ ttygets(char * inbuf, int length, struct serial_private *tty)
 }
 /*
  * $Log: serial.c,v $
+ * Revision 1.31  2004/03/03 05:31:51  alan
+ * Put in Gochun Shi's new netstrings on-the-wire data format code.
+ * this allows sending binary data, among many other things!
+ *
  * Revision 1.30  2004/02/17 22:11:59  lars
  * Pet peeve removal: _Id et al now gone, replaced with consistent Id header.
  *

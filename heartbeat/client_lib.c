@@ -1,4 +1,4 @@
-/* $Id: client_lib.c,v 1.48 2004/02/17 22:11:57 lars Exp $ */
+/* $Id: client_lib.c,v 1.49 2004/03/03 05:31:50 alan Exp $ */
 /* 
  * client_lib: heartbeat API client side code
  *
@@ -50,6 +50,10 @@
 #include <hb_api.h>
 #include <lock.h>
 #include <glib.h>
+
+struct sys_config *		config  = NULL;
+
+int			netstring_format = TRUE;
 
 struct stringlist {
 	char *			value;
@@ -2317,4 +2321,14 @@ ll_cluster_new(const char * llctype)
 		return hb_cluster_new();
 	}
 	return NULL;
+}
+
+void
+check_auth_change(struct sys_config *conf){
+
+}
+
+int
+isauthentic(const struct ha_msg * m){
+  return(0);
 }

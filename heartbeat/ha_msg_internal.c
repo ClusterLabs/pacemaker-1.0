@@ -1,4 +1,4 @@
-/* $Id: ha_msg_internal.c,v 1.40 2004/02/17 22:11:57 lars Exp $ */
+/* $Id: ha_msg_internal.c,v 1.41 2004/03/03 05:31:50 alan Exp $ */
 /*
  * ha_msg_internal: heartbeat internal messaging functions
  *
@@ -41,6 +41,8 @@
 
 #define	SEQ	"seq"
 #define	LOAD1	"load1"
+
+extern int		netstring_format;
 
 /* The value functions are expected to return pointers to static data */
 struct default_vals {
@@ -113,8 +115,8 @@ add_control_msg_fields(struct ha_msg* ret)
 			ha_msg_del(ret);
 			return(NULL);
 		}
-	}
-	if (!add_msg_auth(ret)) {
+	} 
+	if (!netstring_format && !add_msg_auth(ret)) {
 		ha_msg_del(ret);
 		ret = NULL;
 	}
@@ -125,15 +127,15 @@ add_control_msg_fields(struct ha_msg* ret)
 	return ret;
 }
 
+
+
 int
 add_msg_auth(struct ha_msg * m)
 {
 	char	msgbody[MAXMSG];
 	char	authstring[MAXLINE];
 	char	authtoken[MAXLINE];
-	char *	bp = msgbody;
-	int	j;
-
+	
 	{
 		const char *	from;
 		const char *	ts;
@@ -155,24 +157,17 @@ add_msg_auth(struct ha_msg * m)
 
 	check_auth_change(config);
 	msgbody[0] = EOS;
-	for (j=0; j < m->nfields; ++j) {
-		/* Skip over any F_AUTH fields we find... */
-		if (strcmp(m->names[j], F_AUTH) == 0) {
-			continue;
-		}
-		strcat(bp, m->names[j]);
-		bp += m->nlens[j];
-		strcat(bp, "=");
-		bp++;
-		strcat(bp, m->values[j]);
-		bp += m->vlens[j];
-		strcat(bp, "\n");
-		bp++;
+	
+	if (msg2string_buf(m, msgbody, MAXMSG, 0, NOHEAD) != HA_OK){
+		ha_log(LOG_ERR
+		       ,	"add_msg_auth: compute string failed");
+		return(HA_FAIL);
 	}
+	
 
-
+	
 	if (!config->authmethod->auth->auth(config->authmethod, msgbody
-	,	strnlen(msgbody, sizeof(msgbody))
+	,	strnlen(msgbody, MAXMSG)
 	,	authtoken, DIMOF(authtoken))) {
 		ha_log(LOG_ERR 
 		,	"Cannot compute message authentication [%s/%s/%s]"
@@ -196,37 +191,35 @@ isauthentic(const struct ha_msg * m)
 	char	authstring[MAXLINE];
 	char	authbuf[MAXLINE];
 	const char *	authtoken = NULL;
-	char *	bp = msgbody;
 	int	j;
 	int	authwhich = 0;
 	struct HBauth_info*	which;
 	
+	
 	if (m->stringlen >= sizeof(msgbody)) {
 		return(0);
 	}
-
+	
 	/* Reread authentication? */
 	check_auth_change(config);
 
-	msgbody[0] = EOS;
+
+	if (msg2string_buf(m, msgbody, MAXMSG,0, NOHEAD) != HA_OK){
+		ha_log(LOG_ERR
+		       ,	"add_msg_auth: compute string failed");
+		return(HA_FAIL);
+	}
+	
 	for (j=0; j < m->nfields; ++j) {
 		if (strcmp(m->names[j], F_AUTH) == 0) {
 			authtoken = m->values[j];
 			continue;
-		}
-		strcat(bp, m->names[j]);
-		bp += m->nlens[j];
-		strcat(bp, "=");
-		bp++;
-		strcat(bp, m->values[j]);
-		bp += m->vlens[j];
-		strcat(bp, "\n");
-		bp++;
-	}
+		}		
+	}	
 	
 	if (authtoken == NULL
 	||	sscanf(authtoken, "%d %s", &authwhich, authstring) != 2) {
-		ha_log(LOG_WARNING, "Bad/invalid auth token");
+		ha_log(LOG_WARNING, "Bad/invalid auth token, authtoken=%p", authtoken);
 		return(0);
 	}
 	which = config->auth_config + authwhich;
@@ -240,7 +233,7 @@ isauthentic(const struct ha_msg * m)
 		
 	
 	if (!which->auth->auth(which
-	,	msgbody, strnlen(msgbody, sizeof(msgbody))
+        ,	msgbody, strnlen(msgbody, MAXMSG)
 	,	authbuf, DIMOF(authbuf))) {
 		ha_log(LOG_ERR, "Failed to compute message authentication");
 		return(0);
@@ -252,7 +245,8 @@ isauthentic(const struct ha_msg * m)
 		return(1);
 	}
 	if (DEBUGAUTH) {
-		ha_log(LOG_INFO, "Packet failed authentication check");
+		ha_log(LOG_INFO, "Packet failed authentication check, "
+		       "authstring =%s,authbuf=%s ", authstring, authbuf);
 	}
 	return(0);
 }
@@ -358,6 +352,10 @@ main(int argc, char ** argv)
 #endif
 /*
  * $Log: ha_msg_internal.c,v $
+ * Revision 1.41  2004/03/03 05:31:50  alan
+ * Put in Gochun Shi's new netstrings on-the-wire data format code.
+ * this allows sending binary data, among many other things!
+ *
  * Revision 1.40  2004/02/17 22:11:57  lars
  * Pet peeve removal: _Id et al now gone, replaced with consistent Id header.
  *

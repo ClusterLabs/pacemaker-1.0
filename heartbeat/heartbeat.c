@@ -1,4 +1,4 @@
-/* $Id: heartbeat.c,v 1.292 2004/02/17 22:11:57 lars Exp $ */
+/* $Id: heartbeat.c,v 1.293 2004/03/03 05:31:50 alan Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -803,20 +803,19 @@ read_child(struct hb_media* mp)
 		cl_cpu_limit_setpercent(10);
 	}
 	for (;;) {
-		struct	ha_msg*	m;
-		IPC_Message*	imsg;
+		void		*pkt;
+		IPC_Message     *imsg;
 		int		rc;
 		int		rc2;
+		int		pktlen;
 
 		hb_signal_process_pending();
-		if ((m=mp->vf->read(mp)) == NULL) {
+		if ((pkt=mp->vf->read(mp, &pktlen)) == NULL) {
 			continue;
 		}
 		hb_signal_process_pending();
-
-		imsg = hamsg2ipcmsg(m, ourchan);
-		ha_msg_del(m); m=NULL;
-
+		
+		imsg = wirefmt2ipcmsg(pkt, pktlen, ourchan);
 		if (imsg != NULL) {
 			/* Send frees "imsg" "at the right time" */
 			rc = ourchan->ops->send(ourchan, imsg);
@@ -859,17 +858,22 @@ write_child(struct hb_media* mp)
 		cl_cpu_limit_setpercent(10);
 	}
 	for (;;) {
-		struct ha_msg * msgp = msgfromIPC(ourchan);
-
+		IPC_Message*	ipcmsg = ipcmsgfromIPC(ourchan);
 		hb_signal_process_pending();
-		if (msgp == NULL) {
+		if (ipcmsg == NULL) {
 			continue;
 		}
-		if (mp->vf->write(mp, msgp) != HA_OK) {
+
+		
+		if (mp->vf->write(mp, ipcmsg->msg_body, ipcmsg->msg_len) != HA_OK) {
 			cl_perror("write failure on %s %s."
 			,	mp->type, mp->name);
 		}
-		ha_msg_del(msgp); msgp = NULL;
+
+		if(ipcmsg->msg_done) { 
+			 ipcmsg->msg_done(ipcmsg); 
+		}
+
 		hb_signal_process_pending();
 		cl_cpu_limit_update();
 		cl_realtime_malloc_check();
@@ -970,7 +974,7 @@ Gmain_hb_signal_process_pending(void *data)
 static gboolean
 FIFO_child_msg_dispatch(IPC_Channel* source, gpointer user_data)
 {
-	struct ha_msg*	msg = msgfromIPC(source);
+	struct ha_msg*	msg = msgfromIPC_noauth(source);
 
 	if (DEBUGDETAILS) {
 		cl_log(LOG_DEBUG, "FIFO_child_msg_dispatch() {");
@@ -1654,17 +1658,9 @@ process_clustermsg(struct ha_msg* msg, struct link* lnk)
 	ts = ha_msg_value(msg, F_TIME);
 	cseq = ha_msg_value(msg, F_SEQ);
 
-	if (!isauthentic(msg)) {
-		cl_log(LOG_WARNING
-		,       "process_clustermsg: node [%s]"
-		" failed authentication", from ? from : "?");
-		if (ANYDEBUG) {
-			ha_log_message(msg);
-		}
-		return;
-	}else if (DEBUGDETAILS) {
+if (DEBUGDETAILS) {
 		cl_log(LOG_DEBUG
-		,       "process_clustermsg: node [%s] auth ok"
+		       ,       "process_clustermsg: node [%s]"
 		,	from ? from :"?");
 	}
 
@@ -2466,6 +2462,7 @@ send_cluster_msg(struct ha_msg* msg)
 		int	ffd = -1;
 		char *	smsg = NULL;
 		int	needprivs = !cl_have_full_privs();
+		int	len;
 
 		if (needprivs) {
 			return_to_orig_privs();
@@ -2480,10 +2477,12 @@ send_cluster_msg(struct ha_msg* msg)
 		 * It will then get written to the cluster properly.
 		 * NOTE: stringlen includes room for the EOS byte.
 		 */
-		if (	(smsg = msg2string(msg)) == NULL
+
+
+		if (	(smsg = msg2wirefmt(msg, &len)) == NULL
 		||	(ffd = open(FIFONAME, O_WRONLY|O_NDELAY)) < 0
-		||	write(ffd, smsg, msg->stringlen-1)
-		!=	((int)msg->stringlen)-1){
+		||	write(ffd, smsg, len -1 )
+		!=	len -1){
 			cl_perror("Cannot write message to " FIFONAME
 			" [%d vs %d]", getpid(), processes[0]);
 			ha_log_message(msg);
@@ -3502,6 +3501,7 @@ process_outbound_packet(struct msg_xmit_hist*	hist
 	seqno_t		seqno = -1;
 	const  char *	to;
 	int		IsToUs;
+	int		len;
 
 	if (DEBUGPKTCONT) {
 		cl_log(LOG_DEBUG, "got msg in process_outbound_packet");
@@ -3526,7 +3526,7 @@ process_outbound_packet(struct msg_xmit_hist*	hist
 	IsToUs = (to != NULL) && (strcmp(to, curnode->nodename) == 0);
 
 	/* Convert the incoming message to a string */
-	smsg = msg2string(msg);
+	smsg = msg2wirefmt(msg, &len);
 
 	/* If it didn't convert, throw original message away */
 	if (smsg == NULL) {
@@ -3542,7 +3542,7 @@ process_outbound_packet(struct msg_xmit_hist*	hist
 	/* Direct message to "loopback" processing */
 	process_clustermsg(msg, NULL);
 
-	send_to_all_media(smsg, msg->stringlen);
+	send_to_all_media(smsg, len);
 	ha_free(smsg);
 
 	/*  Throw away "msg" here if it's not saved above */
@@ -3861,6 +3861,8 @@ process_rexmit(struct msg_xmit_hist * hist, struct ha_msg* msg)
 			char *		smsg;
 			longclock_t	now = time_longclock();
 			longclock_t	last_rexmit;
+			int		len;
+
 			if (msgslot < 0) {
 				msgslot = MAXMSGHIST;
 			}
@@ -3898,7 +3900,7 @@ process_rexmit(struct msg_xmit_hist * hist, struct ha_msg* msg)
 				cl_log(LOG_INFO, "Retransmitting pkt %lu"
 				,	thisseq);
 			}
-			smsg = msg2string(hist->msgq[msgslot]);
+			smsg = msg2wirefmt(hist->msgq[msgslot], &len);
 
 			if (DEBUGPKT) {
 				ha_log_message(hist->msgq[msgslot]);
@@ -3911,7 +3913,7 @@ process_rexmit(struct msg_xmit_hist * hist, struct ha_msg* msg)
 			if (smsg != NULL) {
 				hist->lastrexmit[msgslot] = now;
 				send_to_all_media(smsg
-				,	hist->msgq[msgslot]->stringlen);
+				  ,	len);
 			}
 
 		}
@@ -4105,6 +4107,10 @@ get_localnodeinfo(void)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.293  2004/03/03 05:31:50  alan
+ * Put in Gochun Shi's new netstrings on-the-wire data format code.
+ * this allows sending binary data, among many other things!
+ *
  * Revision 1.292  2004/02/17 22:11:57  lars
  * Pet peeve removal: _Id et al now gone, replaced with consistent Id header.
  *

@@ -1,4 +1,4 @@
-/* $Id: ping_group.c,v 1.6 2004/02/26 01:53:13 horms Exp $ */
+/* $Id: ping_group.c,v 1.7 2004/03/03 05:31:51 alan Exp $ */
 /*
  * ping_group.c: ICMP-echo-based heartbeat code for heartbeat.
  *
@@ -118,9 +118,9 @@ typedef struct {
 static int   		ping_group_parse(const char *line);
 static int		ping_group_open (struct hb_media* mp);
 static int		ping_group_close (struct hb_media* mp);
-static struct ha_msg*	ping_group_read (struct hb_media* mp);
+static void*		ping_group_read (struct hb_media* mp, int* lenp);
 static int		ping_group_write (struct hb_media* mp
-,				struct ha_msg* msg);
+					  ,void* msg, int len);
 
 static struct hb_media * ping_group_new(const char *name);
 static int		in_cksum (u_short * buf, int nbytes);
@@ -394,13 +394,16 @@ ping_group_close(struct hb_media* mp)
 	return(rc);
 }
 
+
+
 /*
  * Receive a heartbeat ping reply packet.
  */
 
-static struct ha_msg *
-ping_group_read(struct hb_media* mp)
+static void *
+ping_group_read(struct hb_media* mp, int *lenp)
 {
+	
 	ping_group_private_t *	ei;
 	union {
 		char		cbuf[MAXLINE+ICMP_HDR_SZ];
@@ -419,7 +422,9 @@ ping_group_read(struct hb_media* mp)
 	ping_group_node_t	*node;
 	struct ha_msg		*msg = NULL;
 	const char 		*comment;
-
+	char			*pkt;
+	int			pktlen;
+	
 	PINGGROUPASSERT(mp);
 	ei = (ping_group_private_t *) mp->pd;
 
@@ -465,6 +470,7 @@ ping_group_read(struct hb_media* mp)
 		LOG(PIL_DEBUG, "%s", msgstart);
 	}
 
+
 	for(node = ei->node; node; node = node->next) {
 		if(!memcmp(&(their_addr.sin_addr), &(node->addr.sin_addr),
 					sizeof(struct in_addr))) {
@@ -475,7 +481,7 @@ ping_group_read(struct hb_media* mp)
 		return(NULL);
 	}
 
-	msg = string2msg(msgstart, bufmax - msgstart);
+	msg = wirefmt2msg(msgstart, bufmax - msgstart);
 	if(msg == NULL) {
 		return(NULL);
 	}
@@ -496,10 +502,20 @@ ping_group_read(struct hb_media* mp)
 		ha_msg_del(msg);
 		return(NULL);
 	}
-
+	
 	if(!ei->slot[slotn]++) {
 		/* First response responded */
-		return(msg);
+		
+		pktlen = numbytes - hlen - ICMP_HDR_SZ;
+		pkt = ha_malloc(pktlen + 1);
+		pkt[pktlen] = 0;
+		
+		memcpy(pkt, buf.cbuf + hlen + ICMP_HDR_SZ, pktlen);	
+		*lenp = pktlen + 1;
+		
+		ha_msg_del(msg);
+		
+		return(pkt);
 	}
 	
 	ha_msg_del(msg);
@@ -518,10 +534,10 @@ ping_group_read(struct hb_media* mp)
  * We ignore packets we're given to write that aren't "status" packets.
  *
  */
-
 static int
-ping_group_write(struct hb_media* mp, struct ha_msg * msg)
+ping_group_write(struct hb_media* mp, void *p, int len)
 {
+	
 	ping_group_private_t *	ei;
 	int			rc;
 	char*			pkt;
@@ -536,13 +552,24 @@ ping_group_write(struct hb_media* mp, struct ha_msg * msg)
 	const char *		ts;
 	struct ha_msg *		nmsg;
 	ping_group_node_t *	node;
+	struct ha_msg*		msg;
 
 	PINGGROUPASSERT(mp);
+
+	
+	if ((msg = wirefmt2msg(p, len)) == NULL) {
+		LOG(PIL_CRIT, "ping_write(): cannot convert wirefmt to msg");
+		return(HA_FAIL);
+	}
+
+
+
 	ei = (ping_group_private_t *) mp->pd;
 	type = ha_msg_value(msg, F_TYPE);
 
 	if (type == NULL || strcmp(type, T_STATUS) != 0 
 	|| ((ts = ha_msg_value(msg, F_TIME)) == NULL)) {
+		ha_msg_del(msg);
 		return HA_OK;
 	}
 
@@ -568,28 +595,31 @@ ping_group_write(struct hb_media* mp, struct ha_msg * msg)
 	||	ha_msg_add(nmsg, F_TIME, ts) != HA_OK) {
 		ha_msg_del(nmsg); nmsg = NULL;
 		LOG(PIL_CRIT, "cannot add fields to message");
+		ha_msg_del(msg);
 		return HA_FAIL;
 	}
 
 	if (add_msg_auth(nmsg) != HA_OK) {
 		LOG(PIL_CRIT, "cannot add auth field to message");
 		ha_msg_del(nmsg); nmsg = NULL;
+		ha_msg_del(msg);
 		return HA_FAIL;
 	}
 
-	if ((pkt = msg2string(nmsg)) == NULL)  {
+	if ((pkt = msg2wirefmt(nmsg, &size)) == NULL)  {
 		LOG(PIL_CRIT, "cannot convert message to string");
+		ha_msg_del(msg);
 		return HA_FAIL;
 	}
 	ha_msg_del(nmsg); nmsg = NULL;
 
-	size = strlen(pkt)+1;
 
 	pktsize = size + ICMP_HDR_SZ;
 
 	if ((icmp_pkt = MALLOC(size + ICMP_HDR_SZ)) == NULL) {
 		LOG(PIL_CRIT, "out of memory");
 		ha_free(pkt);
+		ha_msg_del(msg);
 		return HA_FAIL;
 	}
 
@@ -614,6 +644,7 @@ ping_group_write(struct hb_media* mp, struct ha_msg * msg)
 			LOG(PIL_CRIT, "Error sending packet: %s"
 			,	strerror(errno));
 			FREE(icmp_pkt);
+			ha_msg_del(msg);
 			return(HA_FAIL);
 		}
 
@@ -630,6 +661,7 @@ ping_group_write(struct hb_media* mp, struct ha_msg * msg)
    	}
 
 	FREE(icmp_pkt);
+	ha_msg_del(msg);
 	return HA_OK;
 }
 

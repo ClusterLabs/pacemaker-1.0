@@ -1,4 +1,4 @@
-/* $Id: ha_msg.h,v 1.25 2004/02/17 22:11:58 lars Exp $ */
+/* $Id: ha_msg.h,v 1.26 2004/03/03 05:31:50 alan Exp $ */
 /*
  * Intracluster message object (struct ha_msg)
  *
@@ -29,22 +29,37 @@
 #define	HA_FAIL		0
 #define	HA_OK		1
 
+enum{
+	FT_STRING,
+	FT_BINARY,
+	FT_STRUCT
+};
+
+
+#define NEEDHEAD	1
+#define NOHEAD		0
+
 struct ha_msg {
 	int	nfields;
 	int	nalloc;
 	size_t	stringlen;	/* #bytes needed to convert this to a string
 				 * including the '\0' character at the end. */
+	size_t  netstringlen;
 	char **	names;
 	int  *	nlens;
 	char **	values;
 	int  *	vlens;
+	int  *  types;
 };
 #define	IFACE		"!^!\n"  
 #define	MSG_START	">>>\n"
 #define	MSG_END		"<<<\n"
+#define	MSG_START_NETSTRING	"###\n"
+#define	MSG_END_NETSTRING	"%%%\n"
 #define	EQUAL		"="
 
 #define	MAXMSG	1400	/* Maximum string length for a message */
+#define MAXDEPTH 10     /* Maximum recursive message depth */
 
 	/* Common field names for our messages */
 #define	F_TYPE		"t"		/* Message type */
@@ -122,6 +137,10 @@ void		ha_msg_del(struct ha_msg *msg);
 /* Copy message */
 struct ha_msg*	ha_msg_copy(const struct ha_msg *msg);
 
+/*Add a null-terminated name and binary value to a message*/
+int		ha_msg_addbin(struct ha_msg * msg, const char * name, 
+				  const void * value, size_t vallen);
+
 /* Add null-terminated name and a value to the message */
 int		ha_msg_add(struct ha_msg * msg
 		,	const char* name, const char* value);
@@ -134,17 +153,30 @@ int		ha_msg_mod(struct ha_msg * msg
 int		ha_msg_nadd(struct ha_msg * msg, const char * name, int namelen
 		,	const char * value, int vallen);
 
+/* Add a name/value/type to a message (with sizes for name and value) */
+int		ha_msg_nadd_type(struct ha_msg * msg, const char * name, int namelen
+				 ,	const char * value, int vallen, int type);
+
 /* Add name=value string to a message */
 int		ha_msg_add_nv(struct ha_msg* msg, const char * nvline, const char * bufmax);
 
+	
 /* Return value associated with particular name */
-const char *	ha_msg_value(const struct ha_msg * msg, const char * name);
+#define ha_msg_value(m,name) cl_get_string(m, name)
 
 /* Reads an IPC stream -- converts it into a message */
 struct ha_msg *	msgfromIPC(IPC_Channel * f);
 
+IPC_Message * ipcmsgfromIPC(IPC_Channel * ch);
+
 /* Reads a stream -- converts it into a message */
 struct ha_msg *	msgfromstream(FILE * f);
+
+/* Reads a stream with string format--converts it into a message */
+struct ha_msg *	msgfromstream_string(FILE * f);
+
+/* Reads a stream with netstring format--converts it into a message */
+struct ha_msg * msgfromstream_netstring(FILE * f);
 
 /* Same as above plus copying the iface name to "iface" */
 struct ha_msg * if_msgfromstream(FILE * f, char *iface);
@@ -160,16 +192,63 @@ struct ha_msg *	string2msg(const char * s, size_t length);
 
 /* Converts a message into a string */
 char *		msg2string(const struct ha_msg *m);
+
+/* Converts a message into a string in the provided buffer with certain 
+depth and with or without start/end */
+int		msg2string_buf(const struct ha_msg *m, char* buf,
+			       int len, int depth, int needhead);
+
+/* Converts a message into wire format */
+char*		msg2wirefmt(const struct ha_msg *m, size_t* );
+
+/* Converts wire format data into a message */
+struct ha_msg*	wirefmt2msg(const char* s, size_t length);
+
+/* Convets wire format data into an IPC message */
+IPC_Message*	wirefmt2ipcmsg(void* p, int len, IPC_Channel* ch);
+
 /* Converts an ha_msg into an IPC message */
 IPC_Message* hamsg2ipcmsg(struct ha_msg* m, IPC_Channel* ch);
+
 /* Converts an IPC message into an ha_msg */
 struct ha_msg* ipcmsg2hamsg(IPC_Message*m);
+
 /* Outputs a message to an IPC channel */
 int msg2ipcchan(struct ha_msg*m, IPC_Channel*ch);
+
+/* Outpus a message to an IPC channel without authencating 
+the message */
+struct ha_msg* msgfromIPC_noauth(IPC_Channel * ch);
 
 /* Reads from control fifo, and creates a new message from it */
 /* This adds the default sequence#, load avg, etc. to the message */
 struct ha_msg *	controlfifo2msg(FILE * f);
+
+/* Dump the message into log file */
 void		ha_log_message(const struct ha_msg* msg);
+
+/* Check if the message is authenticated */
 int		isauthentic(const struct ha_msg * msg);
+
+/* Get the required string length for the given message */ 
+int get_stringlen(const struct ha_msg *m, int depth);
+
+/* Get the requried netstring length for the given message*/
+int get_netstringlen(const struct ha_msg *m, int depth);
+
+/* Add a child message to a message as a field */
+int ha_msg_addstruct(struct ha_msg * msg, const char * name, void* ptr);
+
+/* Get binary data from a message */
+const void * cl_get_binary(const struct ha_msg *msg, const char * name, size_t * vallen);
+
+/* Get string data from a message */
+const char * cl_get_string(const struct ha_msg *msg, const char *name);
+
+/* Get the type for a field from a message */
+int cl_get_type(const struct ha_msg *msg, const char *name);
+
+/* Get a child message from a message*/
+struct ha_msg *cl_get_struct(const struct ha_msg *msg, const char* name);
+
 #endif /* __HA_MSG_H */

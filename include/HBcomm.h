@@ -1,4 +1,4 @@
-/* $Id: HBcomm.h,v 1.6 2004/02/17 22:11:58 lars Exp $ */
+/* $Id: HBcomm.h,v 1.7 2004/03/03 05:31:50 alan Exp $ */
 /*
  * HBcomm.h: Communication functions for Linux-HA
  *
@@ -33,9 +33,9 @@ struct hb_media_fns {
 	int		(*parse)	(const char * options);
 	int		(*open)		(struct hb_media *mp);
 	int		(*close)	(struct hb_media *mp);
-	struct ha_msg*	(*read)		(struct hb_media *mp);
+	void*		(*read)		(struct hb_media *mp, int *len );
 	int		(*write)	(struct hb_media *mp
-					,	struct ha_msg* msg);
+					 ,	void *msg, int len);
 	int		(*mtype)	(char **buffer);
 	int		(*descr)	(char **buffer);
 	int		(*isping)	(void);

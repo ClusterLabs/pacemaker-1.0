@@ -274,3 +274,9 @@ auto_failback on
 #apiauth ccm uid=hacluster
 #apiauth ping gid=haclient uid=alanr,root
 #apiauth default gid=haclient
+
+# message format in the wire, it can be classic or netstring, default is classic
+#msgfmt  netstring
+
+
+

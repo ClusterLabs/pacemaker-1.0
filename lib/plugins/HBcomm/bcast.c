@@ -1,4 +1,4 @@
-/* $Id: bcast.c,v 1.34 2004/02/17 22:11:59 lars Exp $ */
+/* $Id: bcast.c,v 1.35 2004/03/03 05:31:50 alan Exp $ */
 /*
  * bcast.c: UDP/IP broadcast-based communication code for heartbeat.
  *
@@ -66,8 +66,8 @@ static int		bcast_init(void);
 struct hb_media*	bcast_new(const char* interface);
 static int		bcast_open(struct hb_media* mp);
 static int		bcast_close(struct hb_media* mp);
-struct ha_msg*		bcast_read(struct hb_media* mp);
-static int		bcast_write(struct hb_media* mp, struct ha_msg* msg);
+static void*		bcast_read(struct hb_media* mp, int *lenp);
+static int		bcast_write(struct hb_media* mp, void* msg, int len);
 static int		bcast_make_receive_sock(struct hb_media* ei);
 static int		bcast_make_send_sock(struct hb_media * mp);
 static struct ip_private *
@@ -326,18 +326,23 @@ bcast_close(struct hb_media* mp)
 
 	return(rc);
 }
+
+
+
+
 /*
  * Receive a heartbeat broadcast packet from BCAST interface
  */
 
-struct ha_msg *
-bcast_read(struct hb_media* mp)
+void *
+bcast_read(struct hb_media* mp, int * lenp)
 {
 	struct ip_private *	ei;
 	char			buf[MAXLINE];
 	int			addr_len = sizeof(struct sockaddr);
    	struct sockaddr_in	their_addr; /* connector's addr information */
 	int	numbytes;
+	void	*pkt;
 
 	BCASTASSERT(mp);
 	ei = (struct ip_private *) mp->pd;
@@ -345,7 +350,7 @@ bcast_read(struct hb_media* mp)
 	if (DEBUGPKT) {
 		PILCallLog(LOG, PIL_DEBUG
 		,	"bcast_read : reading from socket %d (writing to socket %d)"
-		,	ei->rsocket, ei->wsocket);
+			   ,	ei->rsocket, ei->wsocket);
 	}
 
 	if ((numbytes=recvfrom(ei->rsocket, buf, MAXLINE-1, MSG_WAITALL
@@ -365,37 +370,42 @@ bcast_read(struct hb_media* mp)
 		,	numbytes, inet_ntoa(their_addr.sin_addr));
 	}
 	if (DEBUGPKTCONT && numbytes > 0) {
-		PILCallLog(LOG, PIL_DEBUG, "%s", buf);
+	  PILCallLog(LOG, PIL_DEBUG, "%s", buf);
 	}
-	return(string2msg(buf, sizeof(buf)));
+	
+	pkt = ha_malloc(numbytes + 1);
+	if(!pkt){
+		PILCallLog(LOG, PIL_CRIT
+			    ,	"Error in allocating memory");
+		return(NULL);
+	}
+	
+	memcpy(pkt, buf, numbytes + 1);
+	*lenp = numbytes +1;
+	
+	return(pkt);
 }
+
 
 /*
  * Send a heartbeat packet over broadcast UDP/IP interface
  */
 
+
 static int
-bcast_write(struct hb_media* mp, struct ha_msg * msgptr)
+bcast_write(struct hb_media* mp, void *pkt, int len)
 {
 	struct ip_private *	ei;
 	int			rc;
-	char*			pkt;
-	int			size;
 
 	BCASTASSERT(mp);
 	ei = (struct ip_private *) mp->pd;
-
-	if ((pkt = msg2string(msgptr)) == NULL)  {
-		return(HA_FAIL);
-	}
-	size = strlen(pkt)+1;
-
-	if ((rc=sendto(ei->wsocket, pkt, size, 0
+	
+	if ((rc=sendto(ei->wsocket, pkt, len, 0
 	,	(struct sockaddr *)&ei->addr
-	,	sizeof(struct sockaddr))) != size) {
+	,	sizeof(struct sockaddr))) != len) {
 		PILCallLog(LOG, PIL_CRIT, "Error sending packet: %s"
 		,	strerror(errno));
-		ha_free(pkt);
 		return(HA_FAIL);
 	}
 
@@ -406,11 +416,11 @@ bcast_write(struct hb_media* mp, struct ha_msg * msgptr)
    	}
 
 	if (DEBUGPKTCONT) {
-		PILCallLog(LOG, PIL_DEBUG, "bcast pkt out: [%s]", pkt);
+		PILCallLog(LOG, PIL_DEBUG, "bcast pkt out: [%s]", (char*)pkt);
    	}
-	ha_free(pkt);
 	return(HA_OK);
 }
+
 
 /*
  * Set up socket for sending broadcast UDP heartbeats
@@ -773,6 +783,10 @@ if_get_broadaddr(const char *ifn, struct in_addr *broadaddr)
 
 /*
  * $Log: bcast.c,v $
+ * Revision 1.35  2004/03/03 05:31:50  alan
+ * Put in Gochun Shi's new netstrings on-the-wire data format code.
+ * this allows sending binary data, among many other things!
+ *
  * Revision 1.34  2004/02/17 22:11:59  lars
  * Pet peeve removal: _Id et al now gone, replaced with consistent Id header.
  *

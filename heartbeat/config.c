@@ -1,4 +1,4 @@
-/* $Id: config.c,v 1.114 2004/02/17 22:11:57 lars Exp $ */
+/* $Id: config.c,v 1.115 2004/03/03 05:31:50 alan Exp $ */
 /*
  * Parse various heartbeat configuration files...
  *
@@ -86,6 +86,7 @@ static int set_realtime(const char *);
 static int set_debuglevel(const char *);
 static int set_normalpoll(const char *);
 static int set_api_authorization(const char *);
+static int set_msgfmt(const char*);
 
 /*
  * Each of these parameters is is automatically recorded by
@@ -120,6 +121,7 @@ struct directive {
 , {KEY_REALTIME,  set_realtime, TRUE, "true", "enable realtime behavior?"}
 , {KEY_DEBUGLEVEL,set_debuglevel, TRUE, NULL, "debug level"}
 , {KEY_NORMALPOLL,set_normalpoll, TRUE, "true", "Use system poll(2) function?"}
+, {KEY_MSGFMT,    set_msgfmt, TRUE, "classic", "message format in the wire"}
 };
 
 static const struct WholeLineDirective {
@@ -154,6 +156,7 @@ extern struct node_info *   			curnode;
 extern int    				timebasedgenno;
 int    					enable_realtime = TRUE;
 extern int    				debug;
+int					netstring_format = FALSE;
 
 static int	islegaldirective(const char *directive);
 static int	parse_config(const char * cfgfile, char *nodename);
@@ -1586,6 +1589,20 @@ set_normalpoll(const char * value)
 	}
 	return ret;
 }
+static int
+set_msgfmt(const char* value)
+{
+	if( strcmp(value, "classic") ==0 ){
+		netstring_format = FALSE;
+		return HA_OK;
+	}
+	if( strcmp(value,"netstring") == 0){
+		netstring_format = TRUE;
+		return HA_OK;
+	}
+	
+	return HA_FAIL;
+}
 
 static int
 add_client_child(const char * directive)
@@ -1961,6 +1978,10 @@ baddirective:
 
 /*
  * $Log: config.c,v $
+ * Revision 1.115  2004/03/03 05:31:50  alan
+ * Put in Gochun Shi's new netstrings on-the-wire data format code.
+ * this allows sending binary data, among many other things!
+ *
  * Revision 1.114  2004/02/17 22:11:57  lars
  * Pet peeve removal: _Id et al now gone, replaced with consistent Id header.
  *

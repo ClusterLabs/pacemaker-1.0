@@ -21,3 +21,5 @@ build-stamp
 .*.swp
 autom4te*
 README
+patches
+updates

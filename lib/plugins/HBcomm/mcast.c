@@ -1,4 +1,4 @@
-/* $Id: mcast.c,v 1.16 2004/02/17 22:11:59 lars Exp $ */
+/* $Id: mcast.c,v 1.17 2004/03/03 05:31:50 alan Exp $ */
 /*
  * mcast.c: implements hearbeat API for UDP multicast communication
  *
@@ -70,8 +70,8 @@ static struct hb_media * mcast_new(const char * intf, const char *mcast
 			,	u_short port, u_char ttl, u_char loop);
 static int		mcast_open(struct hb_media* mp);
 static int		mcast_close(struct hb_media* mp);
-static struct ha_msg*	mcast_read(struct hb_media* mp);
-static int		mcast_write(struct hb_media* mp, struct ha_msg* msg);
+static void*		mcast_read(struct hb_media* mp, int* lenp);
+static int		mcast_write(struct hb_media* mp, void* p, int len);
 static int		mcast_descr(char** buffer);
 static int		mcast_mtype(char** buffer);
 static int		mcast_isping(void);
@@ -403,41 +403,56 @@ mcast_close(struct hb_media* hbm)
 	}
 	return(rc);
 }
+
 /*
  * Receive a heartbeat multicast packet from UDP interface
  */
 
-static struct ha_msg *
-mcast_read(struct hb_media* hbm)
+static void *
+mcast_read(struct hb_media* hbm, int *lenp)
 {
 	struct mcast_private *	mcp;
 	char			buf[MAXLINE];
 	int			addr_len = sizeof(struct sockaddr);
    	struct sockaddr_in	their_addr; /* connector's addr information */
 	int	numbytes;
+	void	*pkt;
 
 	MCASTASSERT(hbm);
 	mcp = (struct mcast_private *) hbm->pd;
-
+	
 	if ((numbytes=recvfrom(mcp->rsocket, buf, MAXLINE-1, 0
-	,	(struct sockaddr *)&their_addr, &addr_len)) < 0) {
+			       ,(struct sockaddr *)&their_addr, &addr_len)) < 0) {
 		if (errno != EINTR) {
 			LOG(PIL_CRIT, "Error receiving from socket: %s"
-			,	strerror(errno));
+			    ,	strerror(errno));
 		}
 		return NULL;
 	}
 	/* Avoid possible buffer overruns */
 	buf[numbytes] = EOS;
-
+	
 	if (Debug >= PKTTRACE) {
 		LOG(PIL_DEBUG, "got %d byte packet from %s"
-		,	numbytes, inet_ntoa(their_addr.sin_addr));
+		    ,	numbytes, inet_ntoa(their_addr.sin_addr));
 	}
 	if (Debug >= PKTCONTTRACE && numbytes > 0) {
 		LOG(PIL_DEBUG, buf);
 	}
-	return(string2msg(buf, sizeof(buf)));
+	
+	pkt = ha_malloc(numbytes + 1);
+	if(!pkt){
+		LOG(PIL_CRIT
+		    ,	"Error in allocating memory");
+		return(NULL);
+	}
+	
+	memcpy(pkt, buf, numbytes + 1);
+	*lenp = numbytes + 1 ;
+
+	return(pkt);
+	
+	
 }
 
 /*
@@ -445,38 +460,34 @@ mcast_read(struct hb_media* hbm)
  */
 
 static int
-mcast_write(struct hb_media* hbm, struct ha_msg * msgptr)
+mcast_write(struct hb_media* hbm, void *pkt, int len)
 {
 	struct mcast_private *	mcp;
 	int			rc;
-	char*			pkt;
-	int			size;
-
+	
 	MCASTASSERT(hbm);
 	mcp = (struct mcast_private *) hbm->pd;
 
-	if ((pkt = msg2string(msgptr)) == NULL)  {
-		return(HA_FAIL);
-	}
-	size = strlen(pkt)+1;
-
-	if ((rc=sendto(mcp->wsocket, pkt, size, 0
+	if ((rc=sendto(mcp->wsocket, pkt, len, 0
 	,	(struct sockaddr *)&mcp->addr
-	,	sizeof(struct sockaddr))) != size) {
+	,	sizeof(struct sockaddr))) != len) {
 		LOG(PIL_WARN, "Error sending packet: %s", strerror(errno));
 		ha_free(pkt);
 		return(HA_FAIL);
 	}
-
+	
 	if (Debug >= PKTTRACE) {
 		LOG(PIL_DEBUG, "sent %d bytes to %s"
-		,	rc, inet_ntoa(mcp->addr.sin_addr));
+		    ,	rc, inet_ntoa(mcp->addr.sin_addr));
    	}
 	if (Debug >= PKTCONTTRACE) {
 		LOG(PIL_DEBUG, pkt);
    	}
-	ha_free(pkt);
 	return(HA_OK);
+
+
+  return(HA_OK);
+  
 }
 
 /*
@@ -820,6 +831,10 @@ get_loop(const char *loop, u_char *l)
 
 /*
  * $Log: mcast.c,v $
+ * Revision 1.17  2004/03/03 05:31:50  alan
+ * Put in Gochun Shi's new netstrings on-the-wire data format code.
+ * this allows sending binary data, among many other things!
+ *
  * Revision 1.16  2004/02/17 22:11:59  lars
  * Pet peeve removal: _Id et al now gone, replaced with consistent Id header.
  *
