@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.372 2005/03/04 15:34:59 alan Exp $ */
+/* $Id: heartbeat.c,v 1.373 2005/03/08 23:54:01 alan Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -1180,8 +1180,8 @@ master_control_process(IPC_Channel* fifoproc)
 	}
 
 	if (ANYDEBUG) {
-		/* Limit ourselves to 50% of the CPU */
-		cl_cpu_limit_setpercent(50);
+		/* Limit ourselves to 75% of the CPU */
+		cl_cpu_limit_setpercent(75);
 		/* Update our CPU limit periodically */
 		Gmain_timeout_add_full(G_PRIORITY_HIGH-1
 		,	cl_cpu_limit_ms_interval()
@@ -5120,6 +5120,13 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.373  2005/03/08 23:54:01  alan
+ * Modified the maximum CPU percentage to 75% for the main
+ * process...
+ *
+ * This still worries me, but if the problem doesn't recur, then it
+ * must have been an OK change to make ;-)
+ *
  * Revision 1.372  2005/03/04 15:34:59  alan
  * Fixed various signed/unsigned errors...
  *
