@@ -98,7 +98,7 @@ queue_open(SaMsgHandleT * handle, int argc, char **argv, const char * optstr)
 {
 	const char * name = DEFAULT_MQUEUE_NAME;
 	SaNameT saname;
-	char c;
+	int c;
 	SaMsgQueueCreationFlagsT flag;
 	SaErrorT ret;
 
@@ -151,7 +151,7 @@ queue_create(SaMsgHandleT * handle, int argc, char **argv, const char * optstr)
 {
 	const char * name = DEFAULT_MQUEUE_NAME;
 	SaNameT saname;
-	char c;
+	int c;
 	SaMsgQueueCreationFlagsT flag;
 	SaMsgQueueCreationAttributesT attr;
 	SaErrorT ret;
@@ -233,7 +233,7 @@ queue_status(SaMsgHandleT * handle, int argc, char ** argv, const char *optstr)
 {
 	const char * name = DEFAULT_MQUEUE_NAME;
 	SaNameT saname;
-	char c;
+	int c;
 	SaErrorT ret;
 	int i;
 	SaMsgQueueStatusT qst;
@@ -304,7 +304,7 @@ queue_close(SaMsgHandleT * handle, int argc, char **argv, const char * optstr)
 {
 	const char * name = DEFAULT_MQUEUE_NAME;
 	SaNameT saname;
-	char c;
+	int c;
 	SaErrorT ret;
 
 	next_command = NULL;
@@ -353,7 +353,7 @@ queue_unlink(SaMsgHandleT * handle, int argc, char **argv, const char * optstr)
 {
 	const char * name = DEFAULT_MQUEUE_NAME;
 	SaNameT saname;
-	char c;
+	int c;
 	SaErrorT ret;
 
 	next_command = NULL;
@@ -403,7 +403,7 @@ group_create(SaMsgHandleT * handle, int argc, char **argv,
 {
 	const char * name = DEFAULT_MQGROUP_NAME;
 	SaNameT saname;
-	char c;
+	int c;
 	SaMsgQueueCreationFlagsT flag;
 	SaErrorT ret;
 
@@ -458,7 +458,7 @@ group_delete(SaMsgHandleT * handle, int argc, char **argv,
 {
 	const char * name = DEFAULT_MQGROUP_NAME;
 	SaNameT saname;
-	char c;
+	int c;
 	SaMsgQueueCreationFlagsT flag;
 	SaErrorT ret;
 
@@ -513,7 +513,7 @@ group_insert(SaMsgHandleT * handle, int argc, char **argv,
 	const char * qname = DEFAULT_MQUEUE_NAME;
 	const char * gname = DEFAULT_MQGROUP_NAME;
 	SaNameT saqname, sagname;
-	char c;
+	int c;
 	SaMsgQueueCreationFlagsT flag;
 	SaErrorT ret;
 
@@ -575,7 +575,7 @@ group_remove(SaMsgHandleT * handle, int argc, char **argv,
 	const char * qname = DEFAULT_MQUEUE_NAME;
 	const char * gname = DEFAULT_MQGROUP_NAME;
 	SaNameT saqname, sagname;
-	char c;
+	int c;
 	SaMsgQueueCreationFlagsT flag;
 	SaErrorT ret;
 
@@ -636,7 +636,7 @@ group_track(SaMsgHandleT * handle, int argc, char **argv,
 {
 	const char * name = DEFAULT_MQGROUP_NAME;
 	SaNameT saname;
-	char c;
+	int c;
 	SaMsgQueueCreationFlagsT flag;
 	SaErrorT ret;
 
@@ -694,7 +694,7 @@ group_trackstop(SaMsgHandleT * handle, int argc, char **argv,
 {
 	const char * name = DEFAULT_MQGROUP_NAME;
 	SaNameT saname;
-	char c;
+	int c;
 	SaErrorT ret;
 
 	next_command = NULL;
@@ -745,7 +745,7 @@ message_send(SaMsgHandleT * handle, int argc, char **argv, const char * optstr)
 	const char * name = DEFAULT_MQUEUE_NAME;
 	const char * msgstr = DEFAULT_MESSAGE_STRING;
 	SaNameT saname;
-	char c;
+	int c;
 	SaMsgQueueCreationFlagsT flag = SA_MSG_MESSAGE_DELIVERED_ACK;
 	SaMsgMessageT message;
 	SaTimeT timeout = SA_TIME_END;
@@ -821,7 +821,7 @@ message_get(SaMsgQueueHandleT * handle, int argc, char **argv,
 {
 	const char * name = DEFAULT_MQUEUE_NAME;
 	SaNameT saname;
-	char c;
+	int c;
 	SaErrorT ret = SA_OK;
 	SaMsgMessageT message;
 	SaMsgMessageInfoT info;

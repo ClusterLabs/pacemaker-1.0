@@ -606,7 +606,7 @@ reply_mqname_open(ll_cluster_t *hb, struct ha_msg *msg)
 		 * because on reopen case, the original master name
 		 * server need to check this bit before msgfeed.
 		 */
-		//mq->mqstat = MQ_STATUS_OPEN;
+		/*mq->mqstat = MQ_STATUS_OPEN; */
 		mqhost = ha_msg_value(msg, F_ORIG);
 
 		mq->list = NULL;
@@ -1756,7 +1756,7 @@ process_mqname_update(struct ha_msg *msg, cms_data_t * cmsdata)
 
 	if ((info = cl_get_binary(msg, F_MQUPDATE, &info_len)) == NULL) {
 		cl_log(LOG_INFO, "received NULL mq info update");
-		// cmsdata->cms_ready = 1;
+		/* cmsdata->cms_ready = 1; */
 	}
 
 	/*

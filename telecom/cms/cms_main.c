@@ -237,7 +237,7 @@ int
 main(int argc, char ** argv) 
 {
 	GMainLoop *mainloop;
-	char c;
+	int c;
 
 	while (1) {
 		c = getopt(argc, argv, "d");
