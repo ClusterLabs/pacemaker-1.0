@@ -1,4 +1,4 @@
-/* $Id: stonithd.c,v 1.8 2004/12/09 07:29:09 sunjd Exp $ */
+/* $Id: stonithd.c,v 1.9 2004/12/20 03:26:41 sunjd Exp $ */
 
 /* File: stonithd.c
  * Description: STONITH deamon for node fencing
@@ -83,7 +83,7 @@ typedef struct {
 	union {
 		stonith_ops_t	* st_op;
 		stonithRA_ops_t * ra_op;
-	};
+	} op_union;
 	void * data;	/* private data */
 } common_op_t;
 
@@ -584,19 +584,19 @@ on_polled_input_dispatch(GSource * source, GSourceFunc callback,
 		}
 
 		if ( op->scenario == STONITH_RA_OP ) {
-			if (op->ra_op == NULL || op->result_receiver == NULL) {
+			if (op->op_union.ra_op == NULL || op->result_receiver == NULL) {
 				stonithd_log(LOG_ERR, 
 					"on_polled_input_dispatch: "
-					"op->ra_op == NULL or "
+					"op->op_union.ra_op == NULL or "
 					"op->result_receiver == NULL");
 				continue;
 			}
 
-			op->ra_op->call_id = pid;
-			op->ra_op->op_result = exit_status;
-			send_stonithRAop_final_result(op->ra_op, 
+			op->op_union.ra_op->call_id = pid;
+			op->op_union.ra_op->op_result = exit_status;
+			send_stonithRAop_final_result(op->op_union.ra_op, 
 						      op->result_receiver);
-			post_handle_raop(op->ra_op);
+			post_handle_raop(op->op_union.ra_op);
 			g_hash_table_remove(executing_queue, &pid);
 			continue;
 		}
@@ -604,16 +604,16 @@ on_polled_input_dispatch(GSource * source, GSourceFunc callback,
 		/* next is stonith operation related */
 		if ( op->scenario == STONITH_INIT || 
 		     op->scenario == STONITH_REQ ) {
-			if (op->st_op == NULL || op->result_receiver == NULL ) {
+			if (op->op_union.st_op == NULL || op->result_receiver == NULL ) {
 				stonithd_log(LOG_ERR, 
 					"on_polled_input_dispatch: "
-					"op->st_op == NULL or "
+					"op->op_union.st_op == NULL or "
 					"op->result_receiver == NULL");
 				continue;
 			}
 			
 			if (WEXITSTATUS(exit_status) == S_OK) {
-				op->st_op->op_result = STONITH_SUCCEEDED;
+				op->op_union.st_op->op_result = STONITH_SUCCEEDED;
 				send_stonithop_final_result(op); 
 				g_hash_table_remove(executing_queue, &pid);
 				continue;
@@ -623,7 +623,7 @@ on_polled_input_dispatch(GSource * source, GSourceFunc callback,
 				continue;
 			} else {
 				if (changeto_remote_stonithop(pid) != ST_OK) {
-					op->st_op->op_result = STONITH_GENERIC;
+					op->op_union.st_op->op_result = STONITH_GENERIC;
 					send_stonithop_final_result(op);
 					g_hash_table_remove(executing_queue,
 							    &pid);
@@ -828,10 +828,10 @@ handle_msg_ticanst(const struct ha_msg* msg, void* private_data)
 	if ( op != NULL &&  /* QUERY only */
 	    (op->scenario == STONITH_INIT || op->scenario == STONITH_REQ)) {
 		/* add the separator blank space */
-		op->st_op->node_list = 
-			g_string_append(op->st_op->node_list, " ");
-		op->st_op->node_list = 
-			g_string_append(op->st_op->node_list, from);
+		op->op_union.st_op->node_list = 
+			g_string_append(op->op_union.st_op->node_list, " ");
+		op->op_union.st_op->node_list = 
+			g_string_append(op->op_union.st_op->node_list, from);
 		stonithd_log(LOG_DEBUG, "handle_msg_ticanst: QUERY operation "
 			"(call_id=%d): added a node's name who can stonith "
 			"another node.", call_id);
@@ -930,7 +930,7 @@ require_local_stonithop(stonith_ops_t * st_op, stonith_rsc_t * srsc,
 		op->scenario = STONITH_REQ;
 		op->result_receiver = g_strdup(asker); 
 		op->data = NULL;
-		op->st_op = st_op;
+		op->op_union.st_op = st_op;
 		g_hash_table_insert(executing_queue, child_id, op);
 		tmp_callid = g_new(int, 1);
 		*tmp_callid = *child_id;
@@ -980,7 +980,7 @@ handle_msg_trstit(const struct ha_msg* msg, void* private_data)
 			   (gpointer *)&op, &call_id);
 	if ( op != NULL && 
 	    (op->scenario == STONITH_INIT || op->scenario == STONITH_REQ)) {
-		op->st_op->op_result = op_result;
+		op->op_union.st_op->op_result = op_result;
 		send_stonithop_final_result(op);
 		stonithd_log(LOG_DEBUG, "handle_msg_trstit: clean the "
 			     "executing queue.");
@@ -1470,7 +1470,7 @@ initiate_local_stonithop(stonith_ops_t * st_op, stonith_rsc_t * srsc,
 		op->data = srsc->rsc_id;
 		op->result_receiver = ch;
 		st_op->call_id = call_id;
-		op->st_op = st_op;
+		op->op_union.st_op = st_op;
 		tmp_callid = g_new(int, 1);
 		*tmp_callid = call_id;
 		g_hash_table_insert(executing_queue, tmp_callid, op);
@@ -1500,7 +1500,7 @@ continue_local_stonithop(int old_key)
 		return ST_FAIL;
 	}
 	if (op->scenario != STONITH_INIT && op->scenario != STONITH_REQ &&
-	    op->st_op == NULL) {
+	    op->op_union.st_op == NULL) {
 		stonithd_log(LOG_ERR, "continue_local_stonithop: the old_key's "
 			     "item isnot a stonith item. Strange!");
 		return ST_FAIL;
@@ -1508,13 +1508,13 @@ continue_local_stonithop(int old_key)
 
 	rsc_id = op->data;
 	child_pid = g_new(int, 1);
-	while ((srsc = get_local_stonithobj_can_stonith(op->st_op->node_name,
+	while ((srsc = get_local_stonithobj_can_stonith(op->op_union.st_op->node_name,
 		rsc_id)) != NULL ) { 
-		if ((*child_pid=stonith_operate_locally(op->st_op, srsc)) > 0) {
+		if ((*child_pid=stonith_operate_locally(op->op_union.st_op, srsc)) > 0) {
 			g_hash_table_steal(executing_queue, orignal_key);
 			stonithd_log(LOG_DEBUG, "continue_local_stonithop: "
 				     "removed optype=%d, key_id=%d", 
-				     op->st_op->optype, *orignal_key);
+				     op->op_union.st_op->optype, *orignal_key);
 			g_free(orignal_key);
 			orignal_key = NULL;
 			/* donnot need to free the old one */
@@ -1522,7 +1522,7 @@ continue_local_stonithop(int old_key)
 			g_hash_table_insert(executing_queue, child_pid, op);
 			stonithd_log(LOG_DEBUG, "continue_local_stonithop: "
 				     "inserted optype=%d, child_id=%d", 
-				     op->st_op->optype, *child_pid);
+				     op->op_union.st_op->optype, *child_pid);
 			return ST_OK;
 		} else {
 			rsc_id = srsc->rsc_id;
@@ -1561,7 +1561,7 @@ initiate_remote_stonithop(stonith_ops_t * st_op, stonith_rsc_t * srsc,
 		op = g_new(common_op_t, 1);
 		op->scenario = STONITH_INIT;
 		op->result_receiver = ch;
-		op->st_op = st_op;
+		op->op_union.st_op = st_op;
 		tmp_callid = g_new(int, 1);
 		*tmp_callid = st_op->call_id;
 		g_hash_table_insert(executing_queue, tmp_callid, op);
@@ -1571,7 +1571,7 @@ initiate_remote_stonithop(stonith_ops_t * st_op, stonith_rsc_t * srsc,
 				   stonithop_timeout, tmp_callid, NULL);
 
 		stonithd_log(LOG_DEBUG, "initiate_remote_stonithop: inserted "
-			  "optype=%d, key=%d", op->st_op->optype, *tmp_callid);
+			  "optype=%d, key=%d", op->op_union.st_op->optype, *tmp_callid);
 		stonithd_log(LOG_DEBUG, "initiate_remote_stonithop: "
 			     "require_others_to_stonith succeed.");
 		return negative_callid_counter--;
@@ -1591,13 +1591,13 @@ changeto_remote_stonithop(int old_key)
 		return ST_FAIL;
 	}
 	if (op->scenario != STONITH_INIT && op->scenario != STONITH_REQ &&
-	    op->st_op == NULL) {
+	    op->op_union.st_op == NULL) {
 		stonithd_log(LOG_ERR, "changeto_remote_stonithop: the old_key's"
 			     " item isnot a stonith item. Strange!");
 		return ST_FAIL;
 	}
 
-	if ( ST_OK != require_others_to_stonith(op->st_op) ) {
+	if ( ST_OK != require_others_to_stonith(op->op_union.st_op) ) {
 		stonithd_log(LOG_ERR, "require_others_to_stonith failed.");
 		return ST_FAIL;
 	} else {
@@ -1605,11 +1605,11 @@ changeto_remote_stonithop(int old_key)
 		op->data = NULL;
 		g_hash_table_steal(executing_queue, orignal_key);
 		stonithd_log(LOG_DEBUG, "changeto_remote_stonithop: removed "
-			  "optype=%d, key=%d", op->st_op->optype, *orignal_key);
-		*orignal_key = op->st_op->call_id;
+			  "optype=%d, key=%d", op->op_union.st_op->optype, *orignal_key);
+		*orignal_key = op->op_union.st_op->call_id;
 		g_hash_table_insert(executing_queue, orignal_key, op);
 		stonithd_log(LOG_DEBUG, "changeto_remote_stonithop: inserted "
-			  "optype=%d, key=%d", op->st_op->optype, *orignal_key);
+			  "optype=%d, key=%d", op->op_union.st_op->optype, *orignal_key);
 	}
 
 	return ST_OK;
@@ -1627,12 +1627,12 @@ send_stonithop_final_result( common_op_t * op)
 
 	if (op->scenario == STONITH_INIT) {
 		return stonithop_result_to_local_client(
-				op->st_op, op->result_receiver);
+				op->op_union.st_op, op->result_receiver);
 	}
 		
 	if (op->scenario == STONITH_REQ) {
 		return stonithop_result_to_other_node(
-				op->st_op, op->result_receiver);
+				op->op_union.st_op, op->result_receiver);
 	}
 
 	stonithd_log(LOG_DEBUG, "scenario value may be wrong.");
@@ -1907,10 +1907,10 @@ stonithop_timeout(gpointer data)
 			   (gpointer *)&op, call_id);
 	if ( op != NULL && 
 	    (op->scenario == STONITH_INIT || op->scenario == STONITH_REQ)) {
-		if (op->st_op->optype != QUERY) {
-			op->st_op->op_result = STONITH_TIMEOUT;
+		if (op->op_union.st_op->optype != QUERY) {
+			op->op_union.st_op->op_result = STONITH_TIMEOUT;
 		} else {
-			op->st_op->op_result = STONITH_SUCCEEDED;
+			op->op_union.st_op->op_result = STONITH_SUCCEEDED;
 		}
 	
 		send_stonithop_final_result(op);
@@ -1974,7 +1974,7 @@ has_this_callid(gpointer key, gpointer value, gpointer user_data)
 		return;
 	}
 
-	if (op->st_op != NULL && op->st_op->call_id == callid ) {
+	if (op->op_union.st_op != NULL && op->op_union.st_op->call_id == callid ) {
 		*(tmp_data->key) = key;
 		*(tmp_data->value) = value;
 	}
@@ -2062,7 +2062,7 @@ on_stonithd_virtual_stonithRA_ops(const struct ha_msg * request, gpointer data)
 		op = g_new(common_op_t, 1);
 		op->scenario = STONITH_RA_OP;
 		op->result_receiver = client->ch;
-		op->ra_op = ra_op;
+		op->op_union.ra_op = ra_op;
 		key_tmp = g_new(int, 1);
 		*key_tmp = *child_pid;
 		g_hash_table_insert(executing_queue, key_tmp, op);
@@ -2812,11 +2812,11 @@ free_common_op_t(gpointer data)
 	stonithd_log(LOG_DEBUG, "free_common_op_t: begin.");
 	
 	if ( op->scenario == STONITH_RA_OP ) {
-		free_stonithRA_ops_t(op->ra_op);
-		op->ra_op = NULL;
+		free_stonithRA_ops_t(op->op_union.ra_op);
+		op->op_union.ra_op = NULL;
 	} else {
-		free_stonith_ops_t(op->st_op);
-		op->st_op = NULL;
+		free_stonith_ops_t(op->op_union.st_op);
+		op->op_union.st_op = NULL;
 	}
 
 	if ( op->scenario == STONITH_REQ ) {
@@ -2829,6 +2829,9 @@ free_common_op_t(gpointer data)
 
 /* 
  * $Log: stonithd.c,v $
+ * Revision 1.9  2004/12/20 03:26:41  sunjd
+ * Patch from Andrew. donnot define a union with no name, that may cause a compiling issue
+ *
  * Revision 1.8  2004/12/09 07:29:09  sunjd
  * minor polish
  *
