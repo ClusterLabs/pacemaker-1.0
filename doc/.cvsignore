@@ -2,5 +2,10 @@ Makefile.in
 Makefile
 ChangeLog
 .*.swp
-*.txt
+HardwareGuide.txt
+GettingStarted.txt
+Requirements.txt
+faqntips.txt
+heartbeat_api.txt
+rsync.txt
 startstop
