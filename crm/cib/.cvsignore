@@ -4,6 +4,7 @@ Makefile.in
 *.la
 *.lo
 cib
+cibmon
 .deps
 *.beam
 parser-messages
