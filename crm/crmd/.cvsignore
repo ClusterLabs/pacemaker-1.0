@@ -6,7 +6,7 @@ crmd
 fsa_actions.*
 fsa_inputs.*
 .gres.*
-
+atest
 *.beam
 parser-messages
 MISC_ERRORS
