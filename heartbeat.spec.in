@@ -1,4 +1,4 @@
-#	$Id: heartbeat.spec.in,v 1.82 2004/04/16 06:52:21 alan Exp $
+#	$Id: heartbeat.spec.in,v 1.83 2004/04/30 20:59:21 gshi Exp $
 
 # Workaround for a change in RPM 4.1.x; needs proper fixing soon!
 %define _unpackaged_files_terminate_build 0
@@ -73,6 +73,12 @@ PILS is designed to support any number of plugins
 implementing any number of interfaces.
 
 %changelog
+
+*  Alan Robertson <alanr@unix.sh> (see doc/AUTHORS file)
++ Version 1.2.2 
+  + hardcoded directory bug fix in heartbeat/rc.d/hb_takeover.in by Dominique Petitpierre (Dominique.Petitpierre@adm.unige.ch)
+  
+
 * Thu Apr 15 2004  Alan Robertson <alanr@unix.sh> (see doc/AUTHORS file)
 + Version 1.3.0 - beta series
   + Netstrings can now be used for our on-the-wire data format
