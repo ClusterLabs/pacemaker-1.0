@@ -111,8 +111,11 @@ GenerateHaCf() {
 	mcast $INTERFACE $MCASTIP 694 0 0
 	#bcast $INTERFACE
 	node $LOCALNODE $DUMMYNODE
-	respawn @HA_CCMUSER@ $HBLIB/ipfail
 	respawn @HA_CCMUSER@ $HBLIB/ccm
+	respawn @HA_CCMUSER@ $HBLIB/ipfail
+	# Eventually I'd like to be able to enable this and
+	# have things work right...
+	#respawn root $HBLIB/hbagent
 	!
   chmod 644 $1
 }
