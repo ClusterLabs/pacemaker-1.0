@@ -497,7 +497,7 @@ init_comm(const char* servername)
 
 		}
 		if ((he=gethostbyname(servername)) == NULL){
-			perror("gethostbyname");
+			output("gethostbyname: Error, servername =%s \n", servername);
 			exit(1);
 		}
 		
@@ -978,9 +978,9 @@ runtests(GSList* task_list)
 static void
 usage(const char* pgm)
 {
- 	output("Usage: this test need to run in two machines\n");
-	output("node1:\n %s [-N num]\n", pgm);
-	output("node2:\n %s [-N num] <node1_hostname>\n", pgm);
+ 	output("Usage: this test need to run in two machines, the filesname and num have to be the same in both nodes\n");
+	output("node1:\n %s [-N num] <filename>\n", pgm);
+	output("node2:\n %s [-N num] <filename> <node1_hostname>\n", pgm);
 	return;
 }
 
@@ -988,6 +988,7 @@ int
 main (int argc, char**  argv)
 {
 	char* servername = NULL;
+	char* filename = NULL;
 	GSList* task_list = NULL;
 	int option;
 	int num_ites;
@@ -1013,15 +1014,22 @@ main (int argc, char**  argv)
 	gi.clientID = 0;
 	for (i = optind ; i <  argc; i++)
 		{
-			gi.clientID = 1;
-			servername = argv[i];
+			if (filename == NULL){
+                                filename = argv[i];
+			} else {
+	                        servername = argv[i];
+                                gi.clientID = 1;
+			}
 		}
-	
+	if (filename == NULL){
+		usage(argv[0]);
+		exit(1);
+	}
 	gi.testpass = 0;
 	gi.testwarn = 0;
 	gi.testfail = 0;
 	
-	strcpy(gi.filename, "/tmp/sharedir/abc");
+	strcpy(gi.filename, filename);
 	
 	init_comm(servername);
 	
