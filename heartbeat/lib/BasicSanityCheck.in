@@ -294,7 +294,9 @@ TestHeartbeat() {
      exit 1
     fi
   fi
-  for j in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20
+  j=0
+  while
+    [ "$j" -lt 30 ]
   do
     if
       $CLSTATUS hbstatus >/dev/null 2>&1
@@ -303,6 +305,7 @@ TestHeartbeat() {
     else
       sleep 1
     fi
+    j=`expr "$j" + 1`
   done
 
   if
@@ -507,7 +510,7 @@ StonithCheck() {
   if
     [ $wc -lt 100 ]
   then
-    echo "$STONITH -h help message is too short" | tee -a $LOGFILE
+    echo "$STONITH -h help message is too short ($wc lines)" | tee -a $LOGFILE
     serrcount=`expr $serrcount + 1`
   fi
   if
