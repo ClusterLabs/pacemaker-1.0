@@ -1,4 +1,4 @@
-const static char * _hb_config_c_Id = "$Id: config.c,v 1.111 2004/02/06 07:18:15 horms Exp $";
+const static char * _hb_config_c_Id = "$Id: config.c,v 1.112 2004/02/10 05:29:26 alan Exp $";
 /*
  * Parse various heartbeat configuration files...
  *
@@ -450,6 +450,14 @@ parse_config(const char * cfgfile, char *nodename)
 	int		i;
 	longclock_t	cticks;
 	struct stat	sbuf;
+	struct DefServices {
+		const char *	name;
+		const char *	authspec;
+	} defserv[] = 
+	{	{"ipfail",	"uid=" HA_CCMUSER}
+	,	{"ccm",		"uid=" HA_CCMUSER}
+	,	{"ping",	"gid=" HA_APIGROUP}
+	};
 
 	if ((f = fopen(cfgfile, "r")) == NULL) {
 		ha_log(LOG_ERR, "Cannot open config file [%s]", cfgfile);
@@ -595,6 +603,19 @@ parse_config(const char * cfgfile, char *nodename)
 		}
 	}
 
+	/* Provide default authorization information for well-known services */
+	for (i=0; i < DIMOF(defserv); ++i) {
+		char	buf[100];
+		/* Allow users to override our defaults... */
+		if (g_hash_table_lookup(APIAuthorization, defserv[i].name)
+		 == NULL) {
+			snprintf(buf, sizeof(buf), "%s %s"
+			,	defserv[i].name
+			,	defserv[i].authspec);
+			set_api_authorization(buf);
+		}
+	}
+
 	cticks = time_longclock();
 
 	for (i=0; i < config->nodecount; ++i) {
@@ -717,10 +738,11 @@ parse_ha_resources(const char * cfgfile)
 	if ((f = fopen(cfgfile, "r")) == NULL) {
 		ha_log(LOG_ERR, "Cannot open resources file [%s]", cfgfile);
 		ha_log(LOG_INFO
-		,       "An annotated sample %s file is provided in the documentation."
-		,       cfgfile);
+		,       "An annotated sample %s file is provided in the"
+		" documentation.", cfgfile);
 		ha_log(LOG_INFO
-		,       "Please copy it to %s, read it, customize it, and try again."
+		,       "Please copy it to %s, read it, customize it"
+		", and try again."
 		,       cfgfile);
 		return(HA_FAIL);
 	}
@@ -1200,12 +1222,36 @@ set_logfile(const char * value)
 static int
 set_nice_failback(const char * value)
 {
+	int	rc;
+	int	failback = 0;
+
+	rc = str_to_boolean(value, &failback);
 
 	cl_log(LOG_ERR, "nice_failback flag is obsolete."
 	". Use auto_failback {on, off, legacy} instead.");
-	cl_log(LOG_INFO, "See documentation for details.");
-	
-	return HA_FAIL;
+
+	if (rc) {
+		if (nice_failback) {
+			cl_log(LOG_ERR
+			,	"'%s %s' has been changed to '%s off'"
+			,	KEY_FAILBACK, value, KEY_AUTOFAIL);
+			set_auto_failback("off");
+		}else{
+			cl_log(LOG_ERR
+			,	"%s %s has been strictly interpreted as"
+			" '%s legacy'"
+			,	KEY_FAILBACK, value, KEY_AUTOFAIL);
+			cl_log(LOG_ERR
+			,	"Consider converting to '%s on'."
+			,	KEY_AUTOFAIL);
+			cl_log(LOG_ERR
+			,	"When you do, then you can use ipfail"
+			", and hb_standby");
+			set_auto_failback("legacy");
+		}
+	}
+	cl_log(LOG_ERR, "See documentation for details.");
+	return rc;
 }
 
 /* sets auto_failback behavior on/off */
@@ -1920,6 +1966,12 @@ baddirective:
 
 /*
  * $Log: config.c,v $
+ * Revision 1.112  2004/02/10 05:29:26  alan
+ * Provided more backwards compatibility for pre 1.0.x code than we had before.
+ * We now permit nice_failback, even though we complain loudly about it.
+ * We now also provide default authorization information for the ipfail
+ * and ccm services.
+ *
  * Revision 1.111  2004/02/06 07:18:15  horms
  * Fixed duplicated global definitions
  *
