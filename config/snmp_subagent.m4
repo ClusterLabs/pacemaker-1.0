@@ -87,12 +87,12 @@ AC_DEFUN([LIB_SNMP],
         [AC_MSG_WARN([ucd-snmp header not found])], [#define UCD_COMPATIBLE])
         dnl make sure net-snmp is compiled with "--enable-ucd-snmp-compatibility"
 
-    if
-      test x"$NET_SNMP_HEADER" = x"yes" && test x"$UCD_SNMP_HEADER" = x"no" ;
-    then
-      AC_MSG_WARN([Your NET-SNMP is not compiled with --enable-ucd-snmp-compatibility turned on.])
-      AC_MSG_ERROR([Please recompile the NET-SNMP with that option.])
-    fi
+    dnl if
+    dnl   test x"$NET_SNMP_HEADER" = x"yes" && test x"$UCD_SNMP_HEADER" = x"no" ;
+    dnl then
+    dnl   AC_MSG_WARN([Your NET-SNMP is not compiled with --enable-ucd-snmp-compatibility turned on.])
+    dnl   AC_MSG_ERROR([Please recompile the NET-SNMP with that option.])
+    dnl fi
 
     dnl exit if no SNMP headers found.
     if
