@@ -1,4 +1,4 @@
-/* $Id: hb_api.c,v 1.106 2004/08/31 17:39:02 alan Exp $ */
+/* $Id: hb_api.c,v 1.107 2004/08/31 17:47:57 alan Exp $ */
 /*
  * hb_api: Server-side heartbeat API code
  *
@@ -87,6 +87,7 @@
 #include <unistd.h>
 #include <clplumbing/cl_poll.h>
 #include <clplumbing/cl_signal.h>
+#include <clplumbing/netstring.h>
 
 /* Definitions of API query handlers */
 static int api_ping_iflist(const struct ha_msg* msg, struct node_info * node
