@@ -1,4 +1,4 @@
-const static char * _send_arp_c = "$Id: send_arp.c,v 1.5 2003/10/31 16:15:20 msoffen Exp $";
+const static char * _send_arp_c = "$Id: send_arp.c,v 1.6 2003/12/11 22:58:04 alan Exp $";
 /* 
  * send_arp
  * 
@@ -133,7 +133,7 @@ main(int argc, char *argv[])
 	if (!pidfilename) {
 		if (snprintf(pidfilenamebuf, sizeof(pidfilenamebuf), "%s%s", 
 					PIDFILE_BASE, ipaddr) >= 
-				sizeof(pidfilenamebuf)) {
+				(int)sizeof(pidfilenamebuf)) {
 			syslog(LOG_INFO, "Pid file truncated");
 			return EXIT_FAILURE;
 		}
@@ -214,6 +214,10 @@ convert_macaddr (u_char *macaddr, u_char enet_src[6])
 
 	pos = 0;
 	for (i = 0; i < 6; i++) {
+		/* Inserted to allow old-style MAC addresses */
+		if (*macaddr == ':') {
+			pos++;
+		}
 		bits[0] = macaddr[pos++];
 		bits[1] = macaddr[pos++];
 		bits[2] = '\0';
@@ -412,10 +416,10 @@ int
 write_pid_file(const char *pidfilename)  
 {
 
-	int     pidfilefd;
-	char    pidbuf[11];
-	pid_t   pid;
-	size_t  bytes;
+	int     	pidfilefd;
+	char    	pidbuf[11];
+	unsigned long   pid;
+	size_t 		bytes;
 
 	if (*pidfilename != '/') {
 		syslog(LOG_INFO, "Invalid pid-file name, must begin with a "
@@ -490,18 +494,18 @@ write_pid_file(const char *pidfilename)
 		}
 
 		if (kill(pid, SIGKILL) < 0 && errno != ESRCH) {
-			syslog(LOG_INFO, "Error killing old proccess [%u] "
+			syslog(LOG_INFO, "Error killing old proccess [%lu] "
 	 				"from pid-file [%s]: %s", pid,
 					pidfilename, strerror(errno));
 			return -1;
 		}
 
-		syslog(LOG_INFO, "Killed old send_arp process [%u]\n",
+		syslog(LOG_INFO, "Killed old send_arp process [%lu]\n",
 				pid);
 	}
 
-	if (snprintf(pidbuf, sizeof(pidbuf), "%u", 
-				getpid()) >= sizeof(pidbuf)) {
+	if (snprintf(pidbuf, sizeof(pidbuf), "%u"
+	,	getpid()) >= (int)sizeof(pidbuf)) {
 		syslog(LOG_INFO, "Pid too long for buffer [%u]", getpid());
 		return -1;
 	}
@@ -528,6 +532,12 @@ write_pid_file(const char *pidfilename)
 
 /*
  * $Log: send_arp.c,v $
+ * Revision 1.6  2003/12/11 22:58:04  alan
+ * Put in a patch from Werner Schultheiﬂ for allowing old-style MAC addrs
+ * in send_arp.
+ *
+ * Fixed some signed/unsigned warning issues in the code.
+ *
  * Revision 1.5  2003/10/31 16:15:20  msoffen
  * Added limit.h to define MAXINT value.
  *
