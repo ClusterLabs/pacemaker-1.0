@@ -27,15 +27,12 @@
 #include "cms_data.h"
 #include "cms_cluster.h"
 #include "cms_client.h"
+#include "cms_membership.h"
 
 #define dprintf(arg...)	do {if (option_debug) fprintf(stderr, ##arg);} while(0)
 #define CMS_TRACE()	dprintf("TRACE: In function %s\n", __FUNCTION__)
 
-
-extern char mqname_type_str[MQNAME_TYPE_LAST][TYPESTRSIZE];
-extern char cmsrequest_type_str[CMS_TYPE_TOTAL][TYPESTRSIZE];
-extern char sa_errortype_str[SA_ERR_BAD_FLAGS + 2][TYPESTRSIZE];
-
+#define TYPESTRSIZE 40
 
 const char * mqname_type2string(enum mqname_type type);
 enum mqname_type mqname_string2type(const char *str);

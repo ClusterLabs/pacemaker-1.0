@@ -31,8 +31,6 @@
 #include "cms_data.h"
 #include "cms_mqueue.h"
 
-#define TYPESTRSIZE	40
-
 enum mqname_type {
 	MQNAME_TYPE_INIT = 1,
 	MQNAME_TYPE_REQUEST = 2,
@@ -50,7 +48,10 @@ enum mqname_type {
 	MQNAME_TYPE_MSGFEED_END = 14,
 	MQNAME_TYPE_STATUS_REQUEST = 15,
 	MQNAME_TYPE_STATUS_REPLY = 16,
-	MQNAME_TYPE_LAST = 18
+	MQNAME_TYPE_UPDATE_REQUEST = 17,
+	MQNAME_TYPE_RECEIVE = 18,
+	MQNAME_TYPE_REPLY = 19,
+	MQNAME_TYPE_LAST = 21
 };
 
 
@@ -79,6 +80,8 @@ enum mqname_type {
 #define F_MQUSED	"mqused"
 #define F_MQMSGNUM	"mqmsgnum"
 #define F_MQEXPIRE	"mqexpire"
+#define F_SENDRECEIVE   "mqsendreceive"
+#define F_MQMSGREPLYSEQ "mqreplyseq"
 
 #define S_MQCLOSED	"mq_s_closed"
 
@@ -103,8 +106,10 @@ int request_mqgroup_insert(const char *gname, const char *name,
 			   cms_data_t * cmsdata);
 int request_mqgroup_remove(const char *gname, const char *name,
 			   cms_data_t * cmsdata);
-int request_mqname_update(const char * node, cms_data_t * cmsdata);
 int request_mqueue_status(mqueue_t * mqueue, cms_data_t * cmsdata);
+int request_mqinfo_update(cms_data_t * cmsdata);
+
+int send_mq_reply(mqueue_request_t * request, SaMsgSenderIdT senderId, SaMsgMessageT *msg, cms_data_t * cmsdata);
 
 
 /*
@@ -114,7 +119,7 @@ int request_mqueue_status(mqueue_t * mqueue, cms_data_t * cmsdata);
  */
 int reply_mqueue_status(struct ha_msg *msg, cms_data_t * cmsdata);
 int reply_mqname_open(ll_cluster_t *hb, struct ha_msg *msg);
-
+int reply_mqinfo_update(const char * node, cms_data_t * cmsdata);
 
 /*
  * Naming conventions: functions prefixed with process_ are post
@@ -135,5 +140,7 @@ int process_mqgroup_remove(struct ha_msg *msg);
 int process_mqname_ack(struct ha_msg *msg);
 int process_mqname_update(struct ha_msg *msg, cms_data_t * cmsdata);
 int process_mqueue_status(struct ha_msg *msg);
+int process_mqinfo_update_request(struct ha_msg *msg, cms_data_t * cmsdata);
+int process_mqsend_reply(struct ha_msg * msg, cms_data_t * cmsdata);
 
 #endif	/* __CMS_CLUSTER_H__ */

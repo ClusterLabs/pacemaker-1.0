@@ -109,17 +109,13 @@ cms_client_add(GHashTable ** cms_client_table, struct IPC_CHANNEL * newclient)
 	}
 
 	cms_client = (cms_client_t *) ha_malloc(sizeof(cms_client_t));
-	key = (pid_t *)ha_malloc(sizeof(pid_t));
-	if (!key || !cms_client) {
-		cl_log(LOG_CRIT, "malloc key failiure for client add.");
-		return HA_FAIL;
-	}
 
 	dprintf("Add farside_pid [%d] to daemon <%p>\n"
 	,	newclient->farside_pid, *cms_client_table);
 	cms_client->channel_count = 1;
 	cms_client->opened_mqueue_list = NULL;
 
+	key = (pid_t *)ha_malloc(sizeof(pid_t));
 	*key = newclient->farside_pid;
 	g_hash_table_insert(*cms_client_table, key, cms_client);
 
@@ -135,6 +131,7 @@ cms_client_close_all(GHashTable * cms_client_table)
 		g_hash_table_foreach_remove(cms_client_table, 
 				delete_cms_client, NULL);
 	}
+
 	return;
 }
 
@@ -159,6 +156,7 @@ msg, cms_data_t * cmsdata)
 	 * membership available.  
 	 */
 	if ((queue = mqname_lookup(mqname, NULL)) == NULL) {
+		dprintf("%s, queue %s not found.\n", __FUNCTION__, mqname);
 		error = SA_ERR_NOT_EXIST;
 
 		reply.type = msg->type;
@@ -169,6 +167,22 @@ msg, cms_data_t * cmsdata)
 		client_send_msg(client, reply.len, &reply);
 		return TRUE;
 	};
+
+	dprintf("%s, queue %s found.\n", __FUNCTION__, mqname);
+
+	if (!is_cms_online(queue->host)) {
+		cl_log(LOG_WARNING, "%s, cms daemon offline on [%s], return BAD_HANDLE for queue status.", __FUNCTION__, queue->host);
+
+		error = SA_ERR_BAD_HANDLE;
+
+		reply.type = msg->type;
+		reply.len = sizeof(client_header_t);
+		reply.flag = error;
+		reply.name = msg->name;
+
+		client_send_msg(client, reply.len, &reply);
+		return TRUE;
+	}
 
 	/* Get queueUsed and numberOfMessages for saMsgQueueUsage[4]
 	 * from mqueue open node.
@@ -231,10 +245,10 @@ client_process_mqopen(IPC_Channel * client, client_header_t * msg,
 	}
 
 	if (!mq && (m->header.type != CMS_QUEUEGROUP_CREATE)
-	&&	(m->openflag & SA_MSG_QUEUE_OPEN_ONLY)) {
+	&&	!(m->openflag & SA_MSG_QUEUE_CREATE)) {
 
 		error = SA_ERR_NOT_EXIST;
-		cl_log(LOG_INFO, "%s: SA_MSG_QUEUE_OPEN_ONLY provided for %s"
+		cl_log(LOG_INFO, "%s: SA_MSG_QUEUE_CREATE not provided for %s"
 		,	__FUNCTION__, mqname);
 	}
 
@@ -357,15 +371,11 @@ client_process_mqclose(IPC_Channel * client, client_header_t * msg,
 		g_list_remove(cms_client->opened_mqueue_list, mq);
 
 
+	#if 0
 	if (m->silent)
 		return TRUE;
+	#endif
 
-	reply.type = CMS_QUEUE_CLOSE;
-	reply.len = sizeof(client_header_t);
-	reply.flag = SA_OK;
-	str2saname(&reply.name, mq->name);
-
-	client_send_msg(client, reply.len, &reply);	
 	return TRUE;
 }
 
@@ -404,19 +414,12 @@ client_process_mqunlink(IPC_Channel * client, client_header_t * msg,
 		 */
 	}
 
-	reply.type = CMS_QUEUE_UNLINK;
-	reply.len = sizeof(client_header_t);
-	reply.flag = SA_OK;
-	str2saname(&reply.name, mq->name);
-
 	if (request_mqname_unlink(mqname, cmsdata) == FALSE) {
 		cl_log(LOG_ERR, "%s: mqname_unlink failed", __FUNCTION__);
 		ha_free(mqname);
 		return FALSE;
 	}
 	mqueue_handle_remove(&(m->handle));
-
-	client_send_msg(client, reply.len, &reply);	
 
 	/*
 	 * remove this mq from client's opened_mqueue_list
@@ -444,7 +447,7 @@ client_process_mqsend(IPC_Channel * client, client_header_t * msg,
 	IPC_Channel *cli = NULL; 
 	unsigned long * seq = NULL;
 	client_message_t * m = (client_message_t *) msg;
-	client_header_t reply;
+	client_message_ack_t reply;
 	SaErrorT error;
 
 	mqname = saname2str(m->header.name);
@@ -454,8 +457,9 @@ client_process_mqsend(IPC_Channel * client, client_header_t * msg,
 	dprintf("request.request_type is %d\n", request.request_type);
 	request.invocation = m->invocation;
 	request.ack = m->ack;
+	request.sendreceive = m->sendreceive;
 	request.seq = gSendSeqNo++;
-
+	
 	dprintf("%s: mqname = %s\n", __FUNCTION__, mqname);
 	m->data = (void *)((char *)msg + sizeof(client_message_t));
 	m->msg.data = m->data;
@@ -507,7 +511,7 @@ client_process_mqsend(IPC_Channel * client, client_header_t * msg,
 
 	if (request.ack) {
 
-		dprintf("%s: insert ack packet\n", __FUNCTION__);
+		dprintf("%s: insert ack packet ", __FUNCTION__);
 
 		if ((cli = (IPC_Channel *) ha_malloc(sizeof(IPC_Channel))) 
 				== NULL 
@@ -523,7 +527,9 @@ client_process_mqsend(IPC_Channel * client, client_header_t * msg,
 		*cli = *client;
 		*seq = request.seq;
 
+		dprintf("seq = %ld, client = %p\n", *seq, cli);
 		g_hash_table_insert(mq_ack_pending_hash, seq, cli);
+
 	} 
 
 	if (request_mqname_send(&request, mq->host, NULL, &(m->msg)
@@ -539,11 +545,16 @@ client_process_mqsend(IPC_Channel * client, client_header_t * msg,
 
 error:
 	/* This is actually a error respond instead of a ACK. */
-	reply.type = CMS_MSG_SEND;
-	reply.len = sizeof(client_header_t);
-	reply.flag = error;
-	reply.name = msg->name;
-	client_send_msg(client, reply.len, &reply);
+	memset(&reply, 0, sizeof(client_message_ack_t));
+
+	reply.header.type = CMS_MSG_ACK;
+	reply.header.len = sizeof(client_message_ack_t);
+	reply.header.flag = error;
+	reply.header.name = msg->name;
+	reply.send_type = msg->type;
+	reply.invocation = m->invocation;
+
+	client_send_msg(client, reply.header.len, &reply);
 
 	ha_free(mqname);
 	return TRUE;
@@ -554,7 +565,7 @@ client_process_message_request(IPC_Channel * client, client_header_t * msg)
 {
 	char * mqname;
 	mqueue_t * mq;
-	SaMsgMessageT * message;
+	message_t * message;
 	client_message_t * m;
 
 	mqname = saname2str(msg->name);
@@ -574,26 +585,26 @@ client_process_message_request(IPC_Channel * client, client_header_t * msg)
 	}
 
 	dprintf("%s: dequeue_message [%s]\n", __FUNCTION__
-	,	(char *)message->data);
+	,	(char *)message->msg.data);
 
 	m = (client_message_t *)
-			ha_malloc(sizeof(client_message_t) + message->size);
-	if (!m) {
-		cl_log(LOG_CRIT, "malloc failed for client message request.");
-		return FALSE;
-	}
+			ha_malloc(sizeof(client_message_t) + message->msg.size);
 
 	m->header.type = CMS_MSG_GET;
-        m->header.len = sizeof(client_message_t) + message->size;
+        m->header.len = sizeof(client_message_t) + message->msg.size;
         m->header.flag = SA_OK;
 	m->header.name = msg->name;
         m->handle = mq->handle;
-        m->msg = *message;
+	m->senderId = message->msgInfo.senderId;
+        m->msg = message->msg;
         m->msg.data = NULL;
         m->data = m + 1;
-        memcpy(m->data, message->data, message->size);
+        memcpy(m->data, message->msg.data, message->msg.size);
 
 	client_send_msg(client, m->header.len, m);
+
+	/* TODO: needs fix.  
+	   Can only be called after the msg_done */
 
 	ha_free(message);
 	ha_free(mqname);
@@ -729,11 +740,7 @@ client_process_mqgroup_track(IPC_Channel * client, client_header_t * msg)
 	client_mqgroup_notify_t * rmsg;
 
 	rmsg = (client_mqgroup_notify_t *)
-			malloc(sizeof(client_mqgroup_notify_t));
-	if (!rmsg) {
-		cl_log(LOG_CRIT, "malloc rmsg failed for mqgroup_track.");
-		return FALSE;
-	}
+			ha_malloc(sizeof(client_mqgroup_notify_t));
 
 	rmsg->header.type = msg->type;
 	rmsg->header.len = sizeof(client_mqgroup_notify_t);
@@ -794,7 +801,6 @@ client_process_mqgroup_track(IPC_Channel * client, client_header_t * msg)
 		
 	client_send_msg(client, rmsg->header.len, (client_header_t *)rmsg);
 
-	free(rmsg);
 	goto exit;
 
 noexist:
@@ -867,15 +873,13 @@ cms_client_msg_done(IPC_Message * msg)
 {
 	client_header_t * message;
 	size_t msg_type;
-	char * mqname;
-	/* mqueue_t * mq; */
-	/* client_message_t * m = (client_message_t *) message; */
+	//mqueue_t * mq;
+	//client_message_t * m = (client_message_t *) message;
 
 	message = msg->msg_body;
 	msg_type = message->type;
 
 	dprintf("cms_client_msg_done, type = %d\n", (int)msg_type);
-	mqname = saname2str(message->name);
 
 #if 0
 	/* update the buffer size */
@@ -885,7 +889,22 @@ cms_client_msg_done(IPC_Message * msg)
 #endif
 
 	ha_free(msg->msg_private);
-	ha_free(mqname);
+	return;
+}
+
+static void
+cms_client_msg_done_freeclient(IPC_Message * msg)
+{
+	client_header_t * message;
+	size_t msg_type;
+
+	message = msg->msg_body;
+	msg_type = message->type;
+
+	dprintf("cms_client_msg_done, type = %d\n", (int)msg_type);
+
+	ha_free(msg->msg_private);
+	ha_free(msg->msg_ch);
 	return;
 }
 
@@ -901,9 +920,7 @@ client_send_msg(IPC_Channel * client, size_t len, gpointer data)
 		cl_log(LOG_ERR, "%s: ha_malloc failed", __FUNCTION__);
 		return FALSE;
 	}
-	
-	memset(msg, 0, sizeof(IPC_Message) + len);
-	
+
 #if DEBUG_MEMORY
 	dprintf("%s (%p) ha_malloc %p, size 0x%x\n", __FUNCTION__
 	,	&client_send_msg, msg, sizeof(IPC_Message) + len);
@@ -914,6 +931,7 @@ client_send_msg(IPC_Channel * client, size_t len, gpointer data)
 	msg->msg_done = cms_client_msg_done;
 	msg->msg_private = msg;
 	msg->msg_ch = client;
+	msg->msg_buf = NULL;
 
 	ret = client->ops->send(client, msg);
 
@@ -922,6 +940,43 @@ client_send_msg(IPC_Channel * client, size_t len, gpointer data)
 	else 
 		return FALSE;
 }
+
+/* This function send the message thru the client and free the client
+ * memory afterward. This has to be done here since it is async. --YZ
+ */
+int
+client_send_msg_freeclient(IPC_Channel * client, size_t len, gpointer data)
+{
+	int ret;
+	IPC_Message * msg;
+
+	CMS_TRACE();
+
+	if ((msg = ha_malloc(sizeof(IPC_Message) + len)) == NULL) {
+		cl_log(LOG_ERR, "%s: ha_malloc failed", __FUNCTION__);
+		return FALSE;
+	}
+
+#if DEBUG_MEMORY
+	dprintf("%s (%p) ha_malloc %p, size 0x%x\n", __FUNCTION__
+	,	&client_send_msg, msg, sizeof(IPC_Message) + len);
+#endif
+	msg->msg_body = msg + 1;
+	memcpy(msg->msg_body, data, len);
+	msg->msg_len = len;
+	msg->msg_done = cms_client_msg_done_freeclient;
+	msg->msg_private = msg;
+	msg->msg_ch = client;
+	msg->msg_buf = NULL;
+
+	ret = client->ops->send(client, msg);
+
+	if (ret == IPC_OK) 
+		return TRUE;
+	else 
+		return FALSE;
+}
+
 
 int
 client_send_error_msg(IPC_Channel * client, const char * name,
@@ -1016,3 +1071,74 @@ client_send_notready_msg(IPC_Channel * client, client_header_t * msg)
 
 	return client_send_msg(client, reply.len, &reply);
 }
+
+int client_process_mqsend_reply(IPC_Channel * client, client_header_t * msg, cms_data_t * cmsdata)
+{
+	SaErrorT error;
+	mqueue_request_t request;
+	IPC_Channel *cli = NULL; 
+	unsigned long * seq = NULL;
+	client_message_t * m = (client_message_t *) msg;
+	client_message_ack_t reply;
+
+	/* no queue name for this msg */
+	request.qname = NULL;
+	request.gname = NULL;
+	request.request_type = m->header.type;
+	dprintf("request.request_type is %d\n", request.request_type);
+	request.invocation = m->invocation;
+	request.ack = m->ack;
+	request.sendreceive = 0;
+	request.seq = gSendSeqNo++; 
+
+	m->data = (void *)((char *)msg + sizeof(client_message_t));
+	m->msg.data = m->data;
+
+	if (request.ack) {
+
+		dprintf("%s: insert ack packet: ", __FUNCTION__);
+
+		if ((cli = (IPC_Channel *) ha_malloc(sizeof(IPC_Channel))) 
+				== NULL 
+		||  (seq = (unsigned long *) ha_malloc(sizeof(unsigned long))) 
+				== NULL ) {
+			cl_log(LOG_ERR, "%s: ha_malloc failed", __FUNCTION__);
+			if (cli)
+				ha_free(cli);
+
+			error = SA_ERR_NO_MEMORY;
+			goto error;
+		}
+		*cli = *client;
+		*seq = request.seq;
+
+		dprintf("seq = %ld, client = %p\n", *seq, cli);
+		g_hash_table_insert(mq_ack_pending_hash, seq, cli);
+	} 
+
+	if (send_mq_reply(&request, m->senderId, &(m->msg), cmsdata) != TRUE) {
+
+		cl_log(LOG_ERR, "%s: mqname_send failed", __FUNCTION__);
+		error = SA_ERR_LIBRARY;
+		goto error;
+	}
+
+	return TRUE;
+
+error:
+	/* This is actually a error respond instead of a ACK. */
+	memset(&reply, 0, sizeof(client_message_ack_t));
+
+	reply.header.type = CMS_MSG_ACK;
+	reply.header.len = sizeof(client_message_ack_t);
+	reply.header.flag = error;
+	reply.header.name = msg->name;
+	reply.send_type = msg->type;
+	reply.invocation = m->invocation;
+
+	client_send_msg(client, reply.header.len, &reply);
+
+	return TRUE;
+}
+
+

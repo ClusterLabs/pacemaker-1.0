@@ -51,11 +51,6 @@ mqueue_handle_insert(mqueue_t *mq)
 	guint * handle;
 
 	handle = (guint *) ha_malloc(sizeof(guint));
-	if (!handle) {
-		cl_log(LOG_CRIT, "malloc handle failed for mqueue_handle_insert.");
-		return 0;
-	}
-
 	*handle = __msghandle_counter++;
 	g_hash_table_insert(mqtable_handle_hash, handle, mq);
 	mq->handle = *handle;
@@ -81,11 +76,26 @@ dump_mqueue_list(mqueue_t * mq)
 	,	g_list_last(mq->list));
 }
 
-static void
+void
+unref_mqueue(gpointer data, gpointer user_data)
+{
+	mqueue_t *mq = (mqueue_t *) data;
+	mqueue_t *mqg = (mqueue_t *) user_data;
+
+	mq->list = g_list_remove(mq->list, mqg);
+	if (G_LIST_EMPTY(mq->list))
+		mq->list = NULL;
+
+	dump_mqueue_list(mq);
+}
+
+void
 unref_mqgroup(gpointer data, gpointer user_data)
 {
 	mqueue_t *mqg = (mqueue_t *)data;
 	mqueue_t *mq = (mqueue_t *)user_data;
+
+	dprintf("%s, mqg = %s, mq = %s\n", __FUNCTION__, mqg->name, mq->name);
 
 	mqgroup_unref_mqueue(mqg, mq);
 }
@@ -117,6 +127,8 @@ mqueue_table_remove(const char * qname)
 
 	CMS_TRACE();
 
+	dprintf("%s, queue name = %s\n", __FUNCTION__, qname);
+
 	mq = g_hash_table_lookup(mqtable_name_hash, qname);
 	if (!mq) 
 		return HA_FAIL;
@@ -125,21 +137,31 @@ mqueue_table_remove(const char * qname)
 
 	/* TODO: list memory needs to be freed as well */
 
-	ha_free(mq->name);
-	ha_free(mq->host);
-
-	if (mq->client)
-		ha_free(mq->client);
-
-	if (mq->list) {
+	if (mq->list && !IS_MQGROUP(mq)) {
 		/*
 		 * unreference this mqueue from mqgroups include it
+		 *
+		 * the mq->policy check above make sure that this is a 
+		 * regular queue, not a queue group.
 		 */
 		g_list_foreach(mq->list, unref_mqgroup, mq);
+		g_list_free(mq->list);
+	} else {
+		/* handle the queue group case 
+		 * remove the reference from the mq about this mqg.
+		 */
+
+		g_list_foreach(mq->list, unref_mqueue, mq);
 		g_list_free(mq->list);
 	}
 	if (mq->notify_list) 
 		g_list_free(mq->notify_list);
+
+	if (mq->client)
+		ha_free(mq->client);
+
+	ha_free(mq->name);
+	ha_free(mq->host);
 
 	ha_free(mq);
 
@@ -274,12 +296,6 @@ pack_mqinfo(gpointer key, gpointer value, gpointer mqinfo)
 	mqueue_t * mqg = NULL;
 	struct mq_groupinfo * group;
 
-	group = (struct mq_groupinfo *) ha_malloc(sizeof(struct mq_groupinfo));
-	if (!group) {
-		cl_log(LOG_CRIT, "malloc failed for group in pack mqinfo.");
-		return;
-	}
-
 	info->qname.length = strlen(mq->name) + 1;
 	strncpy(info->qname.value, mq->name, SA_MAX_NAME_LENGTH); 
 
@@ -370,6 +386,10 @@ mqueue_table_unpack(const struct mq_info * buf, size_t buflen)
 
 		dprintf("    mqstat = %d\n", pbuf->mqstat);
 		mq->mqstat = pbuf->mqstat;
+		if (mq->mqstat == MQ_STATUS_OPEN) 
+			(mq->status).sendingState = SA_MSG_QUEUE_AVAILABLE;
+		else 
+			(mq->status).sendingState = SA_MSG_QUEUE_UNAVAILABLE;
 
 		dprintf("    policy = %d\n", pbuf->policy);
 		mq->policy = pbuf->policy;
@@ -463,18 +483,18 @@ mqueue_close_node(char * node)
 }
 
 void
-enqueue_message(mqueue_t * mq, SaUint8T prio, SaMsgMessageT * msg)
+enqueue_message(mqueue_t * mq, SaUint8T prio, message_t * msg)
 {
 	dprintf("%s: mq = [%s], priority = %u\n", __FUNCTION__, mq->name, prio);
 
 	mq->message_buffer[prio] = g_list_append(mq->message_buffer[prio], msg);
-	mqueue_update_usage(mq, prio, msg->size);
+	mqueue_update_usage(mq, prio, msg->msg.size);
 }
 
-SaMsgMessageT *
+message_t *
 dequeue_message(mqueue_t * mq)
 {
-	SaMsgMessageT * message = NULL;
+	message_t * message = NULL;
 	GList *head, *queue;
 	SaUint8T i;
 
@@ -486,9 +506,10 @@ dequeue_message(mqueue_t * mq)
 		if (g_list_length(queue)) {
 			head = g_list_first(queue);
 			mq->message_buffer[i] = g_list_remove_link(queue, head);
-			message = head->data;
+			message = (message_t *) head->data;
+
 			g_list_free_1(head);
-			mqueue_update_usage(mq, i, -message->size);
+			mqueue_update_usage(mq, i, -(message->msg.size));
 
 			return message;
 		}
@@ -517,7 +538,7 @@ mqueue_update_usage(mqueue_t * mq, int priority, SaSizeT size)
 			mq->status.saMsgQueueUsage[priority].queueSize)
 		mq->status.saMsgQueueUsage[priority].queueUsed =
 			mq->status.saMsgQueueUsage[priority].queueSize;
-	if ((SaInt32T) (mq->status.saMsgQueueUsage[priority].numberOfMessages) < 0)
+	if (mq->status.saMsgQueueUsage[priority].numberOfMessages < 0)
 		mq->status.saMsgQueueUsage[priority].numberOfMessages = 0;
 
 	dprintf("%s: queueUsed [%d], numberOfMessages [%lu]\n"
@@ -597,10 +618,6 @@ mqueue_copy_notify_data(gpointer data, gpointer user_data)
 
 	buf->change_buff = realloc(buf->change_buff
 	,	(++(buf->number)) * sizeof(SaMsgQueueGroupNotificationT));
-	if (!buf->change_buff) {
-		cl_log(LOG_CRIT, "realloc failed for mqueue_copy_notify_data.");
-		return;
-	}
 
 	dprintf("%s: mqname is [%s]\n", __FUNCTION__, ((mqueue_t *)data)->name);
 	current = buf->change_buff + buf->number - 1;

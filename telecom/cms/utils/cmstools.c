@@ -22,11 +22,12 @@
  *
  */
 #include <stdio.h>
-#include <unistd.h>
+#include <unistd.h> /* sleep() */
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
 
+#include <clplumbing/cl_log.h>
 #include <clplumbing/ipc.h>
 #include <clplumbing/GSource.h>
 #include <saf/ais.h>
@@ -80,6 +81,7 @@ static const char * option_help =
 "Usage: cmstools -c <command> [<options> [<parameters>]] ...\n";
 
 int option_verbose;
+int option_sleep;
 const char * next_command;
 
 SaMsgQueueHandleT mqueue_handle;
@@ -134,8 +136,8 @@ queue_open(SaMsgHandleT * handle, int argc, char **argv, const char * optstr)
 
 	flag = SA_MSG_QUEUE_SELECTION_OBJECT_SET;
 
-	if ((ret = saMsgQueueOpen(handle, &saname, NULL, flag, &mqueue_handle,
-			SA_TIME_END)) != SA_OK)
+	if ((ret = saMsgQueueOpen(handle, &saname, NULL, flag, SA_TIME_END,
+			&mqueue_handle)) != SA_OK)
 		dprintf("saMsgQueueOpen failed, error = [%d]\n", ret);
 	else
 		dprintf("saMsgQueueOpen Succeed!\n");
@@ -156,7 +158,7 @@ queue_create(SaMsgHandleT * handle, int argc, char **argv, const char * optstr)
 	SaTimeT timeout;
 	int i;
 
-	flag = SA_MSG_QUEUE_SELECTION_OBJECT_SET;
+	flag = SA_MSG_QUEUE_SELECTION_OBJECT_SET | SA_MSG_QUEUE_CREATE;
 	attr.creationFlags = DEFAULT_CREATION_FLAGS;
 	timeout = DEFAULT_TIMEOUT;
 
@@ -216,8 +218,8 @@ queue_create(SaMsgHandleT * handle, int argc, char **argv, const char * optstr)
 	strcpy(saname.value, name);
 	saname.length = strlen(saname.value);
 
-	if ((ret = saMsgQueueOpen(handle, &saname, &attr, flag,
-			&mqueue_handle, timeout)) != SA_OK)
+	if ((ret = saMsgQueueOpen(handle, &saname, &attr, flag, timeout,
+			&mqueue_handle)) != SA_OK)
 		dprintf("saMsgQueueOpen failed, error = [%d]\n", ret);
 	else
 		dprintf("saMsgQueueOpen Succeed!\n");
@@ -675,7 +677,7 @@ group_track(SaMsgHandleT * handle, int argc, char **argv,
 	strcpy(saname.value, name);
 	saname.length = strlen(saname.value);
 
-	if ((ret = saMsgQueueGroupTrackStart(handle, &saname, flag, NULL, 0))
+	if ((ret = saMsgQueueGroupTrack(handle, &saname, flag, NULL))
 		!= SA_OK) {
 		
 		dprintf("saMsgQueueGroupTrack failed, error = [%d]\n", ret);
@@ -822,6 +824,7 @@ message_get(SaMsgQueueHandleT * handle, int argc, char **argv,
 	char c;
 	SaErrorT ret = SA_OK;
 	SaMsgMessageT message;
+	SaMsgMessageInfoT info;
 	SaTimeT timeout = SA_TIME_END;
 	int count = 1;
 	char buff[DEFAULT_MESSAGE_SIZE];
@@ -867,7 +870,8 @@ message_get(SaMsgQueueHandleT * handle, int argc, char **argv,
 	saname.length = strlen(saname.value);
 
 	while (count > 0) {
-		if ((ret = saMsgMessageGet(&mqueue_handle, &message, NULL,				timeout)) != SA_OK) {
+		message.size = DEFAULT_MESSAGE_SIZE;
+		if ((ret = saMsgMessageGet(&mqueue_handle, &message, &info,				timeout)) != SA_OK) {
 		
 			dprintf("saMsgMessageGet failed, error = [%d]\n", ret);
 			return ret;
@@ -902,14 +906,23 @@ main(int argc, char * argv[])
 		.saMsgMessageDeliveredCallback = deliver_cb,
 	};
 
-	/* parsing options */
+	cl_log_set_facility(LOG_USER);
+	cl_log_enable_stderr(TRUE);	/* parsing options */
+
 	while (!next_command) {
-		c = getopt(argc, argv, "vc:");
+		c = getopt(argc, argv, "dsvc:");
 
 		switch (c) {
+			case 's':
+				option_sleep = 1;
 
 			case 'v':
 				option_verbose = 1;
+				break;
+			case 'd':
+				option_verbose = 1;
+				cl_log_set_facility(LOG_USER);
+				cl_log_enable_stderr(TRUE);
 				break;
 			case 'c':
 				next_command = optarg;
@@ -947,6 +960,10 @@ main(int argc, char * argv[])
 
 		if (!found)
 			usage();
+	}
+
+	while (option_sleep) {
+		sleep (10); /* sleep for 10 seconds */
 	}
 
 	if (optind < argc)

@@ -38,8 +38,6 @@ GList *mqmember_list = NULL;
 GList *clm_member_list = NULL;
 static cms_data_t * gcms_data = NULL;
 
-static int send_mq_update(const char * host);
-
 #define CS_TIMEOUT 1000 /* 1 second */
 
 
@@ -86,7 +84,7 @@ mqname_dump_membership(void)
 	g_list_foreach(mqmember_list, dump_mq_member, NULL);
 }
 
-static int
+int
 is_cms_online(const char * node)
 {
 	ll_cluster_t * hb = gcms_data->hb_handle;
@@ -121,7 +119,7 @@ set_cms_status(const char * node, const char * status, void * private)
 		return HA_OK;
 	}
 
-	/* is_cms_online(node); */
+	// is_cms_online(node);
 
 	element = g_list_find_custom(mqmember_list, host, comp_mqmember);
 	if (element) {
@@ -158,42 +156,11 @@ set_cms_status(const char * node, const char * status, void * private)
 			mqmember_list = g_list_insert_sorted(mqmember_list
 			,	host, comp_mqmember);
 
-			send_mq_update(node);
 		}
 	}
 
 	mqname_dump_membership();
 	return HA_OK;
-}
-
-static int
-send_mq_update(const char * node)
-{
-	char * host;
-
-	/* we ourselves just joined, no update needed. */
-	if (g_list_length(mqmember_list) <= 1) {
-		return HA_OK;
-	}
-
-	/*
-	 * always the first node in the list should send out the mq 
-	 * update.  in case that the new node is the first node, 
-	 * choose the second node to send out the mq update
-	 */
-	host = g_list_nth_data(mqmember_list, 0);
-	if (strcmp(host, node) == 0) {
-		host = g_list_nth_data(mqmember_list, 1);
-	}
-
-	/* are we the one that should send out the mq update? */
-	if (strcmp(host, gcms_data->my_nodeid) != 0) {
-		return HA_OK;
-	}
-
-	cl_log(LOG_INFO, "%s: host is %s", __FUNCTION__, host);
-
-	return request_mqname_update(node, &cms_data);
 }
 
 static void
@@ -256,7 +223,7 @@ getnode_callback(SaInvocationT invocation, SaClmClusterNodeT *clusterNode
 {
 	if (error != SA_OK) {
 		cl_log(LOG_ERR, "Get Node Callback failed [%d]\n", error);
-		/* exit(1); */
+		// exit(1);
 	}
 	dprintf("Invocation [%d]\n", invocation);
 	dump_nodeinfo(clusterNode);
@@ -282,10 +249,6 @@ mqclm_track(SaClmClusterNotificationT *nbuf, SaUint32T nitem
 
 		buffer = (SaClmClusterNotificationT *)
 				ha_malloc(sizeof(SaClmClusterNotificationT));
-		if (!buffer) {
-			cl_log(LOG_CRIT, "malloc failed for mqclm_track buffer.");
-			return;
-		}
 
 		*buffer = nbuf[i];
 		clm_member_list = g_list_append(clm_member_list, buffer);
@@ -308,6 +271,7 @@ int
 cms_membership_init(cms_data_t * cmsdata)
 {
 	SaErrorT ret;
+	SaVersionT version; 
 	SaClmHandleT handle;
 	SaSelectionObjectT st;
 	SaClmClusterNotificationT * nbuf;
@@ -319,25 +283,38 @@ cms_membership_init(cms_data_t * cmsdata)
 		=	(SaClmClusterNodeGetCallbackT)getnode_callback
 	};
 
+	version.major = 0x01;
+	version.minor = 0x01;
+	version.releaseCode = 'A';
+
 	cl_log(LOG_INFO, "initializing with clm...");
 	gcms_data = cmsdata;
 
 	cmsdata->clm_nbuf = NULL;
 
-	if ((ret = saClmInitialize(&handle, &my_callbacks, NULL)) != SA_OK) {
+	if ((ret = saClmInitialize(&handle, &my_callbacks, &version)) != SA_OK) {
 		cl_log(LOG_ERR, "saClmInitialize error, errno [%d]", ret);
 		return HA_FAIL;
 	}
 
 	nbuf = (SaClmClusterNotificationT *) ha_malloc(cmsdata->node_count * 
 				sizeof (SaClmClusterNotificationT));
-	if (!nbuf) {
-		cl_log(LOG_CRIT, "malloc failed for notification buffer.");
-		return HA_FAIL;
-	}
 
-	if (saClmClusterTrackStart(&handle, SA_TRACK_CURRENT, nbuf, 
-		cmsdata->node_count) != SA_OK) {
+#if 0
+	/* Get current cluster membership map. */
+	if ((ret = saClmClusterTrackStart(&handle, SA_TRACK_CURRENT, nbuf, 
+	    cmsdata->node_count) != SA_OK)) {
+		cl_log(LOG_ERR, "SA_TRACK_CURRENT error, errno [%d]\n", ret);
+		ha_free(nbuf);
+		return HA_FAIL; 
+	}
+#endif
+
+	ret = saClmClusterTrackStart(&handle, SA_TRACK_CURRENT, nbuf, cmsdata->node_count);
+
+	cl_log(LOG_INFO, "SA_TRACK_CURRENT: ret = %d\n", ret);
+
+	if (ret != SA_OK) {
 		cl_log(LOG_ERR, "SA_TRACK_CURRENT error, errno [%d]\n", ret);
 		ha_free(nbuf);
 		return HA_FAIL; 
@@ -350,8 +327,8 @@ cms_membership_init(cms_data_t * cmsdata)
 	}
 
 	/* Start to track cluster membership changes events */
-	if (saClmClusterTrackStart(&handle, SA_TRACK_CHANGES, nbuf, 
-		cmsdata->node_count) != SA_OK) {
+	if ((ret = saClmClusterTrackStart(&handle, SA_TRACK_CHANGES, nbuf, 
+		cmsdata->node_count)) != SA_OK) {
 		cl_log(LOG_ERR, "SA_TRACK_CURRENT error, errno [%d]\n", ret);
 		ha_free(nbuf);
 		return HA_FAIL; 
@@ -365,6 +342,7 @@ cms_membership_init(cms_data_t * cmsdata)
 		cmsdata->cms_ready = 1;
 	} else {
 		cmsdata->cms_ready = 0;
+		/* ask for the mqinfoupdate later */
 	}
 
 	return HA_OK;
@@ -385,16 +363,17 @@ cms_membership_dispatch(SaClmHandleT * handle, SaDispatchFlagsT flags)
 	if ((ret = saClmDispatch(handle, flags)) != SA_OK) {
 		if (ret == SA_ERR_LIBRARY) {
 			cl_log(LOG_ERR, "cms: evicted by membership!");
-			return HA_FAIL;
+			return FALSE;
 		} else if (ret == SA_ERR_BAD_HANDLE) {
 			cl_log(LOG_ERR, "cms: Membership Service not "
 				"available, errno [%d]", ret);
-			return HA_FAIL;
+			return FALSE;
 		}
 		cl_log(LOG_ERR, "cms: saClmDispatch error, errno [%d]", ret);
-		return HA_FAIL;
+		return FALSE;
 	}
 
-	return HA_OK;
+	return TRUE;
 }
+
 

@@ -29,5 +29,6 @@ int cms_membership_init(cms_data_t * cms_data);
 int cms_membership_dispatch(SaClmHandleT * handle, SaDispatchFlagsT flags);
 int cms_membership_get_input_fd(SaClmHandleT * handle);
 void cms_membership_finalize(SaClmHandleT * handle);
+int is_cms_online(const char * node);
 
 #endif /* __CMS_MEMBERSHIP_H__ */

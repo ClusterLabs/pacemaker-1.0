@@ -26,7 +26,7 @@
 
 #include <saf/ais_message.h>
 #include "cms_cluster.h"
-#include "cmsclient_types.h"
+#include "cms_client_types.h"
 
 
 
@@ -59,12 +59,15 @@ int client_process_mqgroup_track_stop(IPC_Channel * client,
 				      client_header_t * msg);
 int client_process_message_request(IPC_Channel * client, client_header_t * msg);
 
+int client_process_mqsend_reply(IPC_Channel * client, client_header_t * msg, cms_data_t * cmsdata);
+
 
 /*
  * Naming conventions: functions prefixed with client_send_ are
  * functions that send reply message to the client by local cms.
  */
 int client_send_msg(IPC_Channel * client, size_t len, gpointer data);
+int client_send_msg_freeclient(IPC_Channel * client, size_t len, gpointer data);
 int client_send_error_msg(IPC_Channel * client, const char * name,
 			  size_t type, SaErrorT error);
 int client_send_qstatus(IPC_Channel * client, mqueue_t * queue, int flag);

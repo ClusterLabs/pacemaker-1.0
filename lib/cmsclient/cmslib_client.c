@@ -33,8 +33,8 @@
 #include <heartbeat.h>
 #include <saf/ais.h>
 
-#include "cmsclient.h"
-#include "cmsclient_types.h"
+#include "cmslib_client.h"
+#include "cms_client_types.h"
 
 #define PIPETRICK_DEBUG	0
 
@@ -75,7 +75,7 @@ saname_cmp(const SaNameT s1, const SaNameT s2)
 {
 	SaUint16T len1, len2;
 
-	/* dprintf("Length of s1: %d, s2: %d\n", s1.length, s2.length); */
+	// dprintf("Length of s1: %d, s2: %d\n", s1.length, s2.length);
 	len1 = s1.value[s1.length - 1] ? s1.length : s1.length - 1;
 	len2 = s2.value[s2.length - 1] ? s2.length : s2.length - 1;
 
@@ -186,7 +186,6 @@ cmsclient_message_recv(__cms_handle_t * hd, client_header_t ** data)
 {
 	int ret;
 	IPC_Message * ipc_msg;
-	void * buf;
 
 	if (hd->backup_fd >= 0)
 		restore_poll(hd);
@@ -196,14 +195,8 @@ cmsclient_message_recv(__cms_handle_t * hd, client_header_t ** data)
 	if (ret != IPC_OK)
 		return ret;
 
-	buf = ha_malloc(ipc_msg->msg_len);
-	if (!buf) {
-		cl_log(LOG_CRIT, "unable to malloc data for cmsclient_message_recv.");
-		return IPC_FAIL;
-	}
-
-	memcpy(buf, ipc_msg->msg_body, ipc_msg->msg_len);
-	*data = (client_header_t *) buf;
+	*data = ha_malloc(ipc_msg->msg_len);
+	memcpy(*data, ipc_msg->msg_body, ipc_msg->msg_len);
 
 	ipc_msg->msg_done(ipc_msg);
 
@@ -231,9 +224,7 @@ cmsclient_message_send(__cms_handle_t * hd, size_t len, gpointer data)
 		cl_log(LOG_ERR, "%s: ha_malloc failed", __FUNCTION__);
 		return FALSE;
 	}
-	
-	memset(msg, 0, sizeof(IPC_Message) + len);
-	
+
 	if (hd->backup_fd >= 0)
 		restore_poll(hd);
 
@@ -242,6 +233,7 @@ cmsclient_message_send(__cms_handle_t * hd, size_t len, gpointer data)
 	msg->msg_len = len;
 	msg->msg_private = msg;
 	msg->msg_done = cmsclient_message_done;
+	msg->msg_buf = 0;
 
 	return hd->ch->ops->send(hd->ch, msg);
 }
@@ -353,24 +345,20 @@ wait_for_msg(__cms_handle_t * handle, size_t msgtype,
 			return SA_ERR_LIBRARY;
 		}
 
-		dprintf("received msg... type = 0x%x, name = %s\n"
-		,	cms_msg->type, cms_msg->name.value);
+		if (cms_msg->type & msgtype) {
 
-		if (cms_msg->type & msgtype && queueName != NULL
-		&&	queueName != NULL
-		&&	(saname_cmp(cms_msg->name, *queueName) == 0)) {
+			if (!queueName || (queueName && (saname_cmp(cms_msg->name, *queueName) == 0))) {
+				*msg = cms_msg;
 
-			dprintf("Func %s return OK\n", __FUNCTION__);
-			*msg = cms_msg;
+				if (g_list_length(handle->dispatch_queue))
+					active_poll(handle);
 
-			if (g_list_length(handle->dispatch_queue))
-				active_poll(handle);
+				return SA_OK;
+			} 
+		} 
 
-			return SA_OK;
-		} else {
-			enqueue_dispatch_msg(handle, cms_msg);
-			t_start = time_longclock();
-		}
+		enqueue_dispatch_msg(handle, cms_msg);
+		t_start = time_longclock();
 	}
 }
 
@@ -500,6 +488,14 @@ read_and_queue_ipc_msg(__cms_handle_t * handle)
 			}
 
 			track->policy = m->policy;
+			track->buf.numberOfItems = m->number;
+			track->buf.notification =
+				(SaMsgQueueGroupNotificationT *)
+				ha_malloc(m->number
+					* sizeof(SaMsgQueueGroupNotificationT));
+
+			memcpy(track->buf.notification, m->data, m->number *
+				sizeof(SaMsgQueueGroupNotificationT));
 
 			/*
 			 * only enqueue head is enough for us
@@ -507,11 +503,6 @@ read_and_queue_ipc_msg(__cms_handle_t * handle)
 			dprintf("enqueue group notify msg head\n");
 			nsg = (client_mqgroup_notify_t *)
 				ha_malloc(sizeof(client_mqgroup_notify_t));
-			if (!nsg) {
-				ha_free(rcmg);
-				cl_log(LOG_CRIT, "malloc failed for the notification.");
-				return FALSE;
-			}
 			memcpy(nsg, m, sizeof(client_mqgroup_notify_t));
 			enqueue_dispatch_msg(handle, (client_header_t *)nsg);
 
@@ -559,7 +550,7 @@ dispatch_msg(__cms_handle_t * handle, client_header_t * msg)
 				omsg->handle = 0;
 			}
 			(handle->callbacks).saMsgQueueOpenCallback(
-			   	&(omsg->handle), omsg->invocation,
+			   	omsg->invocation, &(omsg->handle),
 				omsg->header.flag);
 		}
 
@@ -573,7 +564,7 @@ dispatch_msg(__cms_handle_t * handle, client_header_t * msg)
 
 		if (handle->callbacks.saMsgMessageReceivedCallback)
 			handle->callbacks.saMsgMessageReceivedCallback(
-					&(qhd->queue_handle), NULL, 0);
+					&(qhd->queue_handle));
 			
 		ha_free(gmsg);
  		break;
@@ -616,6 +607,10 @@ dispatch_msg(__cms_handle_t * handle, client_header_t * msg)
  		if ((handle->callbacks).saMsgQueueGroupTrackCallback == NULL)
  			return FALSE;
  
+ 		(handle->callbacks).saMsgQueueGroupTrackCallback(
+ 			track->name, &(track->buf), track->policy,
+ 			track->buf.numberOfItems, SA_OK);
+ 			
 		ha_free(name);
 		ha_free(nmsg);
  		break;
@@ -679,8 +674,6 @@ saMsgInitialize(SaMsgHandleT *msgHandle, const SaMsgCallbacksT *msgCallbacks,
 	dprintf("farside_pid = %d\n", ch->farside_pid);
 
 	hd = (__cms_handle_t *)ha_malloc(sizeof(__cms_handle_t));
-	if (!hd)
-		return SA_ERR_NO_MEMORY;
 
 	memset(hd, 0, sizeof(__cms_handle_t));
 	hd->queue_handle_hash = g_hash_table_new(g_int_hash, g_int_equal);
@@ -735,8 +728,8 @@ saMsgQueueOpen(const SaMsgHandleT *msgHandle,
                const SaNameT *queueName,
                const SaMsgQueueCreationAttributesT *creationAttributes,
                SaMsgQueueOpenFlagsT openFlags,
-               SaMsgQueueHandleT *queueHandle,
-               SaTimeT timeout)
+               SaTimeT timeout,
+               SaMsgQueueHandleT *queueHandle)
 {
 	int ret;
 
@@ -749,8 +742,8 @@ saMsgQueueOpen(const SaMsgHandleT *msgHandle,
 		return SA_ERR_BAD_FLAGS;
 
 	if (bad_saname(queueName) || !queueHandle
-	||	(!creationAttributes && !(openFlags & SA_MSG_QUEUE_OPEN_ONLY))
-	||	(creationAttributes && (openFlags & SA_MSG_QUEUE_OPEN_ONLY)))
+	||	(!creationAttributes && (openFlags & SA_MSG_QUEUE_CREATE))
+	||	(creationAttributes && !(openFlags & SA_MSG_QUEUE_CREATE)))
 		return SA_ERR_INVALID_PARAM;
 
 
@@ -785,7 +778,6 @@ saMsgQueueOpen(const SaMsgHandleT *msgHandle,
 	}
 
 	if (openFlags & SA_MSG_QUEUE_RECEIVE_CALLBACK
-	&&	!(hd->callbacks).saMsgQueueOpenCallback
 	&&	!(hd->callbacks).saMsgMessageReceivedCallback)
 		return SA_ERR_INIT;
 
@@ -1010,8 +1002,6 @@ saMsgMessageSend(const SaMsgHandleT *msgHandle,
 
 	cmg = (client_message_t *)
 		ha_malloc(sizeof(client_message_t) + message->size);
-	if (!cmg)
-		return SA_ERR_NO_MEMORY;
 
 	cmg->header.type = CMS_MSG_SEND;
 	cmg->header.name = *destination;
@@ -1038,18 +1028,13 @@ saMsgMessageSend(const SaMsgHandleT *msgHandle,
 
 	while (1) {
 
-		ret = wait_for_msg(hd, CMS_MSG_ACK | CMS_MSG_SEND,
+		ret = wait_for_msg(hd, CMS_MSG_ACK,
 				destination, &rcmg, timeout);
 		if (ret != SA_OK) 
 			return ret;
 
 		ret = rcmg->flag;
 		ack = (client_message_ack_t *) rcmg;
-
-		if (rcmg->type == CMS_MSG_SEND) {
-			ha_free((client_message_t *)rcmg);
-			return ret;
-		}
 
 		/*
 		 * CMS_MSG_SEND is a blocking call, so we can only
@@ -1083,8 +1068,6 @@ saMsgMessageSendAsync(const SaMsgHandleT *msgHandle,
 
 	cmg = (client_message_t *)
 			ha_malloc(sizeof(client_message_t) + message->size);
-	if (!cmg)
-		return SA_ERR_NO_MEMORY;
 
 	cmg->header.type = CMS_MSG_SEND_ASYNC;
 	cmg->header.name = *destination;
@@ -1119,7 +1102,6 @@ request_for_message(__cms_handle_t * hd, const SaNameT * name)
 	return cmsclient_message_send(hd, sizeof(request_msg), &request_msg);
 }
 
-
 SaErrorT
 saMsgMessageGet(const SaMsgQueueHandleT *queueHandle,
                 SaMsgMessageT *message,
@@ -1130,7 +1112,6 @@ saMsgMessageGet(const SaMsgQueueHandleT *queueHandle,
 	SaErrorT error = SA_OK;
 	client_message_t * cmg;
 	client_header_t *rcmg;
-	client_header_t request_msg;
 	__cms_handle_t *hd = GET_MQ_HANDLE(queueHandle);
 	__cms_queue_handle_t *qhd;
 	SaNameT * qname;
@@ -1143,6 +1124,11 @@ saMsgMessageGet(const SaMsgQueueHandleT *queueHandle,
 		return SA_ERR_BAD_HANDLE;
 	}
 
+	if (!messageInfo || !message) 
+		return SA_ERR_INVALID_PARAM;
+
+	memset(messageInfo, 0, sizeof(SaMsgMessageInfoT));
+
 	qhd = g_hash_table_lookup(hd->queue_handle_hash, queueHandle);
 	assert(qhd != NULL);
 	qname = &(qhd->queue_name);
@@ -1150,29 +1136,31 @@ saMsgMessageGet(const SaMsgQueueHandleT *queueHandle,
 	/*
 	 * request a message from daemon
 	 */
-	request_msg.type = CMS_MSG_REQUEST;
-	request_msg.name = *qname;
-
-	cmsclient_message_send(hd, sizeof(request_msg), &request_msg);
-
-wait_again:
-	ret = wait_for_msg(hd, CMS_MSG_NOTIFY |CMS_MSG_GET, qname, &rcmg,
-			   timeout);
-
-	if (rcmg->type == CMS_MSG_NOTIFY) {
-		dprintf("Received CMS_MSG_NOTIFY\n");
+	while (1) {
 		request_for_message(hd, qname);
-		goto wait_again;
-	}
 
-	if (ret != SA_OK) {
-		cl_log(LOG_ERR, "wait_for_msg error [%d]", ret);
-		return ret;
-	}
+		ret = wait_for_msg(hd, CMS_MSG_GET | CMS_MSG_NOTIFY, qname, &rcmg,
+				   timeout);
+
+		if (ret != SA_OK) {
+			cl_log(LOG_ERR, "wait_for_msg error [%d]", ret);
+			return ret;
+		}
+
+		if (rcmg->type == CMS_MSG_NOTIFY) {
+			dprintf("Received CMS_MSG_NOTIFY\n");
+			continue;
+		} else 
+			break;
+	} 
 
 	cmg = (client_message_t *)rcmg;
 	cmg->data = (void *)((char *)cmg + sizeof(client_message_t));
 	dprintf("message.data is [%s]\n", (char *)cmg->data);
+
+	if (cmg->senderId) {
+		messageInfo->senderId = cmg->senderId;
+	}
 
 	if (message->size < cmg->msg.size) 
 		error = SA_ERR_NO_SPACE;
@@ -1313,8 +1301,8 @@ saMsgQueueOpenAsync(const SaMsgHandleT *msgHandle,
 		return SA_ERR_BAD_FLAGS;
 
 	if (bad_saname(queueName) || !msgHandle
-	||	(!creationAttributes && !(openFlags & SA_MSG_QUEUE_OPEN_ONLY))
-	||	(creationAttributes && (openFlags & SA_MSG_QUEUE_OPEN_ONLY)))
+	||	(!creationAttributes && openFlags & SA_MSG_QUEUE_CREATE)
+	||	(creationAttributes && !(openFlags & SA_MSG_QUEUE_CREATE)))
 		return SA_ERR_INVALID_PARAM;
 
 
@@ -1515,11 +1503,10 @@ saMsgQueueGroupRemove(SaMsgHandleT *msgHandle,
 }
 
 SaErrorT 
-saMsgQueueGroupTrackStart(const SaMsgHandleT *msgHandle,
+saMsgQueueGroupTrack(const SaMsgHandleT *msgHandle,
                      const SaNameT *queueGroupName,
                      SaUint8T trackFlags,
-                     SaMsgQueueGroupNotificationT *notificationBuffer,
-                     SaUint32T numberOfItems)
+                     SaMsgQueueGroupNotificationBufferT *notificationBuffer)
 {
 	int ret;
 	client_mqgroup_mem_t cmg;
@@ -1597,6 +1584,27 @@ saMsgQueueGroupTrackStart(const SaMsgHandleT *msgHandle,
 			goto exit;
 		}
 
+		dprintf("numberOfItems %lu, real number %lu\n"
+		,	notificationBuffer->numberOfItems, rmsg->number);
+
+		if (!notificationBuffer->notification) {
+			notificationBuffer->notification =
+				(SaMsgQueueGroupNotificationT *)
+				ha_malloc(rmsg->number *
+					sizeof(SaMsgQueueGroupNotificationT));
+			if (!notificationBuffer->notification) {
+				ret = SA_ERR_NO_MEMORY;
+				goto exit;
+			}
+		} else if (notificationBuffer->numberOfItems < rmsg->number) {
+			ret = SA_ERR_NO_SPACE;
+			goto exit;
+		}
+
+		notificationBuffer->numberOfItems = rmsg->number;
+		memcpy(notificationBuffer->notification, rmsg->data
+		,	rmsg->number * sizeof(SaMsgQueueGroupNotificationT));
+
 	}
 
 exit:
@@ -1637,4 +1645,191 @@ saMsgQueueGroupTrackStop(const SaMsgHandleT *msgHandle,
 
 	return SA_OK;
 }
+
+SaErrorT 
+saMsgMessageSendReceive(SaMsgHandleT msgHandle,
+			const SaNameT *destination,
+                        const SaMsgMessageT *sendMessage,
+                        SaMsgMessageT *receiveMessage,
+			SaTimeT *replySendTime,
+                        SaTimeT timeout)
+{
+	SaErrorT error = SA_OK;
+	int ret;
+	__cms_handle_t *hd = GET_CMS_HANDLE(&msgHandle);
+	const SaMsgMessageT * message;
+	client_message_t *cmg;
+	client_header_t *rcmg;
+	client_message_t * ack;
+	int freeack = 0;
+
+	message = sendMessage;
+
+	if (message->priority > SA_MSG_MESSAGE_LOWEST_PRIORITY)
+		return SA_ERR_INVALID_PARAM;
+
+	if (hd == NULL) {
+		cl_log(LOG_ERR, "%s: Cannot find hd by handlle [%d]"
+		,	__FUNCTION__, msgHandle);
+		return SA_ERR_BAD_HANDLE;
+	}
+
+	cmg = (client_message_t *)
+		ha_malloc(sizeof(client_message_t) + message->size);
+
+	cmg->header.type = CMS_MSG_SEND_RECEIVE;
+	cmg->header.name = *destination;
+	cmg->msg = *message;
+	cmg->invocation = 0;
+	cmg->data = cmg + 1;
+	cmg->sendreceive = 1;
+	memcpy(cmg->data, message->data, message->size);
+	cmg->ack = SA_MSG_MESSAGE_DELIVERED_ACK; /* according to the spec */
+
+	ret = cmsclient_message_send(hd,
+			sizeof(client_message_t) + message->size, cmg);
+
+	/* TODO: fix needed.  this can only be called after the msg_done */
+	ha_free(cmg);
+
+	while (1) {
+		ret = wait_for_msg(hd, CMS_MSG_RECEIVE, 
+				NULL, &rcmg, timeout);
+		if (ret != SA_OK) 
+			return ret;
+		else 
+			break;
+	}
+
+	ret = rcmg->flag;
+	ack = (client_message_t *) rcmg;
+	ack->data = (void *)((char *)cmg + sizeof(client_message_t));
+	if (ack->msg.size > receiveMessage->size) {
+		error = SA_ERR_NO_SPACE;
+	}
+	receiveMessage->size = ack->msg.size;
+
+	if (receiveMessage->data) {
+		memcpy(receiveMessage->data, ack->data,
+			(ack->msg.size > receiveMessage->size ? 
+			 receiveMessage->size : ack->msg.size));
+		freeack = 1;
+	} else {
+		receiveMessage->data = ack->data;
+	}
+
+	receiveMessage->type = ack->msg.type;
+	receiveMessage->version = ack->msg.version;
+	receiveMessage->priority = 0;
+
+	if (freeack) 
+		ha_free(ack);
+
+	dprintf("type is %d\n", ack->send_type);
+
+	return error;
+}
+
+SaErrorT 
+saMsgMessageReply(SaMsgHandleT msgHandle,
+		  const SaMsgMessageT *replyMessage,
+                  const SaMsgSenderIdT *senderId,
+                  SaTimeT timeout)
+{
+	client_message_t *cmg;
+	client_header_t *rcmg;
+	client_message_ack_t * ack;
+	int ret;
+	__cms_handle_t *hd = GET_CMS_HANDLE(&msgHandle);
+
+	cmg = (client_message_t *)
+		ha_malloc(sizeof(client_message_t) + replyMessage->size);
+
+	cmg->header.type = CMS_MSG_REPLY;
+	cmg->header.name.length = 0;
+	cmg->msg = *replyMessage;
+	cmg->invocation = 0;
+	cmg->data = cmg + 1;
+	memcpy(cmg->data, replyMessage->data, replyMessage->size);
+	cmg->ack = SA_MSG_MESSAGE_DELIVERED_ACK; /* according to the spec */
+
+	if (hd == NULL) {
+		cl_log(LOG_ERR, "%s: Cannot find hd by handlle [%d]"
+		,	__FUNCTION__, msgHandle);
+		return SA_ERR_BAD_HANDLE;
+	}
+
+	ret = cmsclient_message_send(hd,
+		sizeof(client_message_t) + replyMessage->size, cmg);
+
+	ha_free(cmg);
+
+	while (1) {
+
+		ret = wait_for_msg(hd, CMS_MSG_ACK,
+				NULL, &rcmg, timeout);
+		if (ret != SA_OK) 
+			return ret;
+
+		ret = rcmg->flag;
+		ack = (client_message_ack_t *) rcmg;
+
+		/*
+		 * CMS_MSG_SEND is a blocking call, so we can only
+		 * have one client waiting for it. Thus when we get
+		 * an ACK that is for the request type CMS_MSG_SEND,
+		 * we know this is the ACK we are waiting for.
+		 */
+		dprintf("type is %d\n", ack->send_type);
+
+		if (ack->send_type == CMS_MSG_REPLY) {
+			ha_free((client_message_t *) rcmg);
+			return ret;
+
+		} else {
+			enqueue_dispatch_msg(hd, rcmg);
+		}
+	}
+
+	return SA_ERR_NOT_SUPPORTED;
+}
+
+SaErrorT 
+saMsgMessageReplyAsync(SaMsgHandleT msgHandle,
+                       SaInvocationT invocation,
+                       const SaMsgMessageT *replyMessage,
+		       const SaMsgSenderIdT *senderId,
+                       SaMsgAckFlagsT ackFlags)
+{
+	client_message_t *cmg;
+	int ret;
+	__cms_handle_t *hd = GET_CMS_HANDLE(&msgHandle);
+
+
+	cmg = (client_message_t *)
+			ha_malloc(sizeof(client_message_t) + replyMessage->size);
+
+	cmg->header.type = CMS_MSG_REPLY_ASYNC;
+	cmg->header.name.length = 0;
+	cmg->msg = *replyMessage;
+	cmg->invocation = 0;
+	cmg->data = cmg + 1;
+	memcpy(cmg->data, replyMessage->data, replyMessage->size);
+	cmg->ack = SA_MSG_MESSAGE_DELIVERED_ACK; /* according to the spec */
+
+	if (hd == NULL) {
+		cl_log(LOG_ERR, "%s: Cannot find hd by handlle [%d]"
+		,	__FUNCTION__, msgHandle);
+		return SA_ERR_BAD_HANDLE;
+	}
+
+	ret = cmsclient_message_send(hd,
+		sizeof(client_message_t) + replyMessage->size, cmg);
+
+	ha_free(cmg);
+
+	return ret == IPC_OK ? SA_OK : SA_ERR_LIBRARY;
+}
+
+
 

@@ -53,7 +53,7 @@ cms_SOURCES	= cms_main.c cms_data.h cms_membership.c cms_membership.h \
 			cms_cluster.h cms_cluster.c cms_client.h \
 			cms_client.c cms_mqueue.c cms_mqueue.h \
 			cms_entry.c cms_common.h cms_common.c \
-			cmsclient_types.h
+			cms_client_types.h
 
 cms_CFLAGS	= $(AM_CFLAGS)
 cms_LDADD	= $(top_builddir)/replace/libreplace.la \

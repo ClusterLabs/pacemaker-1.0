@@ -42,7 +42,7 @@ havarrundir		= $(localstatedir)/run/
 noinst_HEADERS		= 
 
 ## binary progs
-halib_PROGRAMS		= cmstools
+halib_PROGRAMS		= cmstools 
 
 #cmstools
 cmstools_SOURCES	= cmstools.c cmstools.h
@@ -51,7 +51,6 @@ cmstools_LDADD		= $(top_builddir)/lib/cmsclient/libcms.la \
 			$(top_builddir)/lib/clplumbing/libplumb.la \
 			$(GLIBLIB)
 cmstools_LDFLAGS	= 
-
 
 install-exec-local:
 	$(mkinstalldirs) $(DESTDIR)$(cmsvarlibdir)

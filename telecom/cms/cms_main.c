@@ -166,7 +166,7 @@ hb_input_destroy(gpointer user_data)
 	cms_client_close_all(cmsdata->client_table);
 
 	/* shut ourself down when there's no heartbeat. */
-	g_main_destroy(cmsdata->mainloop);
+	g_main_quit(cmsdata->mainloop);
 	return;
 }
 
@@ -213,7 +213,11 @@ clm_input_destroy(gpointer user_data)
 {
 	cms_data_t * cmsdata = (cms_data_t *) user_data;
 
+	cl_log(LOG_WARNING, "Lost connection to membership service. Need to bail out.");
+
 	cms_membership_finalize(&cmsdata->clm_handle);
+
+	g_main_quit(cmsdata->mainloop);
 
 	return;
 }
@@ -221,6 +225,11 @@ clm_input_destroy(gpointer user_data)
 static gboolean
 hb_input_dispatch(IPC_Channel * channel, gpointer user_data)
 {
+	if (channel->ch_status == IPC_DISCONNECT) {
+		cl_log(LOG_INFO, "Lost connection to heartbeat service. Need to bail out!");
+		return FALSE;
+	}
+
 	return cluster_input_dispatch(channel, user_data);
 }
 
@@ -267,6 +276,7 @@ main(int argc, char ** argv)
 		cl_log(LOG_ERR, "cluster_hash_table_init failed");
 		exit(3);
 	}
+
 	if (cms_client_init(&cms_data) != HA_OK) {
 		cl_log(LOG_ERR, "cms_client_init failed");
 		exit(4);
@@ -286,6 +296,17 @@ main(int argc, char ** argv)
 #if DEBUG_MEMORY
 	mtrace();
 #endif
+	/* NOTE: we send out a request for mqinfo_update 
+	   if we are not the first or only node in the cluster. 
+	   
+	   There is a possible race condition here.  If this node
+	   itself is really really slow compared to the rest of 
+	   the nodes in the cluster, it might get the reply back
+	   before the main loop get setup thus lost this message. */
+	if (!cms_data.cms_ready) {
+		request_mqinfo_update(&cms_data);
+	}
+
 	g_main_run(mainloop);
 #if DEBUG_MEMORY
 	muntrace();
@@ -295,7 +316,7 @@ main(int argc, char ** argv)
 	if (cms_data.my_nodeid)
 		ha_free(cms_data.my_nodeid);
 
-	if (cms_data.clm_nbuf)
+	if (cms_data.clm_nbuf);
 		ha_free(cms_data.clm_nbuf);
 
 	return 1;

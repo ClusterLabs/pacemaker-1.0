@@ -114,6 +114,14 @@ repeat:
 		process_mqueue_status(reply);
 		break;
 
+	case MQNAME_TYPE_UPDATE_REQUEST:
+		process_mqinfo_update_request(reply, &cms_data);
+		break;
+
+	case MQNAME_TYPE_REPLY:
+		process_mqsend_reply(reply, &cms_data);
+		break;
+
 	default:
 		cl_log(LOG_ERR, "%s: Unknow type [%s]", __FUNCTION__, type);
 		break;
@@ -158,6 +166,8 @@ process_client_message(IPC_Channel * client, client_header_t * msg)
 			break;
 
 		case CMS_MSG_SEND:
+		case CMS_MSG_SEND_ASYNC:
+		case CMS_MSG_SEND_RECEIVE:
 			ret = client_process_mqsend(client, msg, &cms_data);
 			break;
 
@@ -183,6 +193,10 @@ process_client_message(IPC_Channel * client, client_header_t * msg)
 			ret = client_process_mqgroup_track_stop(client, msg);
 			break;
 
+		case CMS_MSG_REPLY:
+		case CMS_MSG_REPLY_ASYNC:
+			ret = client_process_mqsend_reply(client, msg, &cms_data);
+			break;
 		default:
 			cl_log(LOG_ERR, "Unknow message type [%d]"
 			,	(int)msg->type);

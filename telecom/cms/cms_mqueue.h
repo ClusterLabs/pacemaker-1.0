@@ -77,6 +77,7 @@ typedef struct {
 	SaTimeT retention;
 	SaSizeT size[SA_MSG_MESSAGE_LOWEST_PRIORITY + 1];
 	SaMsgAckFlagsT ack;
+	int sendreceive;
 	unsigned long seq;
 } mqueue_request_t;
 
@@ -88,6 +89,10 @@ typedef struct {
 	SaNameT name;
 } notify_buffer_t;
 
+typedef struct {
+	SaMsgMessageInfoT msgInfo;
+	SaMsgMessageT msg;
+} message_t;
 
 struct mq_info {
 	SaNameT 	qname;
@@ -112,14 +117,16 @@ mqueue_t * mqueue_handle_lookup(guint *handle, int * group);
 int mqueue_table_pack(struct mq_info * * buf, size_t * buf_len);
 int mqueue_table_unpack(const struct mq_info * info, size_t info_len);
 void mqueue_close_node(char * node);
-void enqueue_message(mqueue_t * mq, SaUint8T prio, SaMsgMessageT * msg);
-SaMsgMessageT * dequeue_message(mqueue_t * mq);
+void enqueue_message(mqueue_t * mq, SaUint8T prio, message_t * msg);
+message_t * dequeue_message(mqueue_t * mq);
 int sa_mqueue_usage_encode(char *size, char *used, char * number,
 SaMsgQueueUsageT * usage);
 int sa_mqueue_usage_decode(const char *size, const char *used, const char *
 number, SaMsgQueueUsageT * usage);
 void mqueue_copy_notify_data(gpointer data, gpointer user_data);
 void mqueue_update_usage(mqueue_t * mq, int priority, SaSizeT size);
+void unref_mqgroup(gpointer data, gpointer user_data);
+void unref_mqueue(gpointer data, gpointer user_data);
 int mqgroup_unref_mqueue(mqueue_t * mqg, mqueue_t * mq);
 void dump_mqueue_list(mqueue_t * mq);
 

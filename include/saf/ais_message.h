@@ -5,7 +5,7 @@
 
 /* Chapter 9 */
 #ifdef __CPLUSPLUS
-extern "C"{
+extern "C" {
 #endif
 
 typedef OPAQUE_TYPE SaMsgHandleT;
@@ -30,7 +30,7 @@ typedef struct {
     SaTimeT retentionTime;
 } SaMsgQueueCreationAttributesT;
 
-#define SA_MSG_QUEUE_OPEN_ONLY 0x1
+#define SA_MSG_QUEUE_CREATE 0x1
 #define SA_MSG_QUEUE_RECEIVE_CALLBACK 0x2
 #define SA_MSG_QUEUE_SELECTION_OBJECT_SET 0x4
 #define SA_MSG_QUEUE_EMPTY 0x8
@@ -79,6 +79,11 @@ typedef struct {
 } SaMsgQueueGroupNotificationT;
 
 typedef struct {
+    SaUint32T numberOfItems;
+    SaMsgQueueGroupNotificationT *notification;
+} SaMsgQueueGroupNotificationBufferT;
+
+typedef struct {
     SaSizeT type;
     SaSizeT version;
     SaSizeT size;
@@ -94,15 +99,14 @@ typedef struct {
 } SaMsgMessageInfoT;
 
 typedef void
-(*SaMsgQueueOpenCallbackT)(const SaMsgQueueHandleT *queueHandle,
-                           SaInvocationT invocation,
+(*SaMsgQueueOpenCallbackT)(SaInvocationT invocation,
+                           const SaMsgQueueHandleT *queueHandle,
                            SaErrorT error);
 typedef void 
 (*SaMsgQueueGroupTrackCallbackT)(const SaNameT *queueGroupName,
-                                 const SaMsgQueueGroupNotificationT 
+                                 const SaMsgQueueGroupNotificationBufferT 
                                      *notificationBuffer,
                                  SaMsgQueueGroupPolicyT queueGroupPolicy,
-                                 SaUint32T numberOfItems,
                                  SaUint32T numberOfMembers,
                                  SaErrorT error);
 
@@ -111,9 +115,7 @@ typedef void
                                   SaErrorT error);
 
 typedef void 
-(*SaMsgMessageReceivedCallbackT)(const SaMsgQueueHandleT *queueHandle,
-                                 const SaMsgMessageHandleT *messageHandle,
-                                 SaSizeT size);
+(*SaMsgMessageReceivedCallbackT)(const SaMsgQueueHandleT *queueHandle);
 
 typedef struct {
     const SaMsgQueueOpenCallbackT saMsgQueueOpenCallback;
@@ -140,8 +142,8 @@ saMsgQueueOpen(const SaMsgHandleT *msgHandle,
                const SaNameT *queueName,
                const SaMsgQueueCreationAttributesT *creationAttributes,
                SaMsgQueueOpenFlagsT openFlags,
-               SaMsgQueueHandleT *queueHandle,
-               SaTimeT timeout);
+               SaTimeT timeout,
+               SaMsgQueueHandleT *queueHandle);
 
     SaErrorT 
 saMsgQueueOpenAsync(const SaMsgHandleT *msgHandle,
@@ -180,11 +182,10 @@ saMsgQueueGroupRemove(SaMsgHandleT *msgHandle,
                       const SaNameT *queueName);
 
     SaErrorT 
-saMsgQueueGroupTrackStart(const SaMsgHandleT *msgHandle,
-                          const SaNameT *queueGroupName,
-                          SaUint8T trackFlags,
-                          SaMsgQueueGroupNotificationT *notificationBuffer,
-                          SaUint32T numberOfItems);
+saMsgQueueGroupTrack(const SaMsgHandleT *msgHandle,
+                     const SaNameT *queueGroupName,
+                     SaUint8T trackFlags,
+                     SaMsgQueueGroupNotificationBufferT *notificationBuffer);
 
     SaErrorT 
 saMsgQueueGroupTrackStop(const SaMsgHandleT *msgHandle,
@@ -220,28 +221,26 @@ saMsgMessageReceivedGet(const SaMsgQueueHandleT *queueHandle,
 saMsgMessageCancel(const SaMsgQueueHandleT *queueHandle);
 
     SaErrorT 
-saMsgMessageSendReceive(const SaNameT *destination,
+saMsgMessageSendReceive(SaMsgHandleT msgHandle,
+			const SaNameT *destination,
                         const SaMsgMessageT *sendMessage,
                         SaMsgMessageT *receiveMessage,
-                        SaMsgMessageInfoT *receiveMessageInfo,
-                        SaTimeT timeout,
-                        SaMsgAckFlagsT ackFlags);
+			SaTimeT *replySendTime,
+                        SaTimeT timeout);
 
     SaErrorT 
-saMsgMessageReply(const SaMsgMessageT *replyMessage,
-                  const SaMsgMessageInfoT *receiveMessageInfo,
-                  SaMsgAckFlagsT ackFlags,
+saMsgMessageReply(SaMsgHandleT msgHandle,
+		  const SaMsgMessageT *replyMessage,
+                  const SaMsgSenderIdT *senderId,
                   SaTimeT timeout);
 
     SaErrorT 
-saMsgMessageReplyAsync(const SaMsgHandleT *msgHandle,
+saMsgMessageReplyAsync(SaMsgHandleT msgHandle,
                        SaInvocationT invocation,
                        const SaMsgMessageT *replyMessage,
-                       const SaMsgMessageInfoT *receiveMessageInfo,
+		       const SaMsgSenderIdT *senderId,
                        SaMsgAckFlagsT ackFlags);
-
 #ifdef __CPLUSPLUS
 }
 #endif
-
 #endif /* _AIS_MESSAGE_H_ */

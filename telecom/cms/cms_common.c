@@ -28,10 +28,99 @@
 
 #include "cms_common.h"
 
+const char * sa_errortype_str[SA_ERR_BAD_FLAGS + 2] = {
+	"",
+	"sa_ok",
+	"sa_err_library",
+	"sa_err_version",
+	"sa_err_init",
+	"sa_err_timeout",
+	"sa_err_try_again",
+	"sa_err_invalid_param",
+	"sa_err_no_memory",
+	"sa_err_bad_handle",
+	"sa_err_busy",
+	"sa_err_access",
+	"sa_err_not_exist",
+	"sa_err_name_too_long",
+	"sa_err_exist",
+	"sa_err_no_space",
+	"sa_err_interrupt",
+	"sa_err_system",
+	"sa_err_name_not_found",
+	"sa_err_no_resources",
+	"sa_err_not_supported",
+	"sa_err_bad_operation",
+	"sa_err_failed_operation",
+	"sa_err_message_error",
+	"sa_err_no_message",
+	"sa_err_queue_full",
+	"sa_err_queue_not_available",
+	"sa_err_bad_checkpoint",
+	"sa_err_bad_flags",
+	""
+};
+
+const char * mqname_type_str[MQNAME_TYPE_LAST] = {
+	"",
+	"mqinit",
+	"mqrequest",
+	"mqgranted",
+	"mqreopen",
+	"mqdenied",
+	"mqclose",
+	"mqunlink",
+	"mqsend",
+	"mqinsert",
+	"mqremove",
+	"mqmsgack",
+	"mqinfoupdate",
+	"mqreopenmsgfeed",
+	"mqmsgfeedend",
+	"mqstatusrequest",
+	"mqstatusreply",
+	"mqinfoupdaterequest",
+	"mqsendreceive",
+	"mqreceivereply",
+	""
+};
+
+const char * cmsrequest_type_str[CMS_TYPE_TOTAL] = {
+	"",
+	"cms_qstatus",
+	"cms_qopen",
+	"cms_qopenasync",
+	"cms_qclose",
+	"cms_qunlink",
+	"cms_msend",
+	"cms_msendasync",
+	"cms_mack",
+	"cms_mreceivedget",
+	"cms_qg_creat",
+	"cms_qg_delete",
+	"cms_qg_insert",
+	"cms_qg_remove",
+	"cms_qg_track_start",
+	"cms_qg_track_stop",
+	"cms_qg_notify",
+	"cms_msg_request",
+	"cms_msg_sendreceive",
+	"cms_msg_receive",
+	"cms_msg_reply",
+	"cms_msg_replyasync",
+	/* below are msg types that can not go across network */
+	"cms_mget",
+	"cms_msg_notify",
+	""
+};
+
 
 const char *
 mqname_type2string(enum mqname_type type)
 {
+	if (type > MQNAME_TYPE_LAST) 
+		return NULL;
+
 	return mqname_type_str[type];
 }
 
@@ -44,12 +133,15 @@ mqname_string2type(const char *str)
 		if (strncmp(str, mqname_type_str[i], TYPESTRSIZE) == 0)
 			return i;
 	}
-	return MQNAME_TYPE_LAST;
+	return 0;
 }
 
 const char *
 saerror_type2string(SaErrorT type)
 {
+	if (type > SA_ERR_BAD_FLAGS)
+		return NULL;
+
 	return sa_errortype_str[type];
 }
 
@@ -68,41 +160,23 @@ saerror_string2type(const char * str)
 const char *
 cmsrequest_type2string(size_t type) 
 {
-	int head = 0;
-	int tail = CMS_TYPE_TOTAL - 1;
-	int index = CMS_TYPE_TOTAL / 2;
+	if (type > CMS_TYPE_TOTAL) 
+		return NULL;
 
-	/* binary search */
-	while ((index >= head) && (index <= tail)) {
-
-		if (type == (1 << index))
-			return cmsrequest_type_str[index];
-
-		else if (type > (1 << index))
-			head = index + 1;
-
-		else
-			tail = index - 1;
-
-		index = (head + tail) / 2;
-		/* dprintf("index is %d, type is 0x%x\n", index, type); */
-	}
-
-	cl_log(LOG_CRIT, "Invalid request type [%d]", (int)type);
-	return NULL;
+	return cmsrequest_type_str[type];
 }
 
-size_t
+enum cms_client_msg_type
 cmsrequest_string2type(const char * str)
 {
 	int i;
 
 	for (i = 0; i < CMS_TYPE_TOTAL; i++) {
 		if (strncmp(str, cmsrequest_type_str[i], TYPESTRSIZE) == 0)
-			return (1 << i);
+			return i;
 	}
 	cl_log(LOG_CRIT, "Invalid request string [%s]", str);
-	return -1;
+	return 0;
 }
 
 long long
