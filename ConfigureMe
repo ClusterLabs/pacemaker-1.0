@@ -103,7 +103,7 @@ ConfigureSolaris() {
 }
 
 ConfigureDarwin() {
-  FLAGS="--prefix=/sw --sysconfdir=/sw/etc --localstatedir=/sw/var --with-initdir=/sw/etc/init.d"
+  FLAGS="--prefix=/sw --sysconfdir=/sw/etc --localstatedir=/sw/var --with-initdir=/private/etc/mach_init.d"
   CFENV="Darwin"
 }
 
