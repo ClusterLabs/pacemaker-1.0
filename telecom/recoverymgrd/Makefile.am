@@ -34,7 +34,7 @@ LIBRT 			= @LIBRT@
 
 AM_CFLAGS		=  -DPIDFILE='"$(PIDFILE)"'
 
-YFLAGS			= -d
+AM_YFLAGS		= -d
 
 
 ## binary progs
