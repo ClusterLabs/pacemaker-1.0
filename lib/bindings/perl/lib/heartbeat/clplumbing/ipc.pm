@@ -540,6 +540,20 @@ sub isrconn {
 	return heartbeat::cl_raw::ipc_ch_isrconn($self->{raw});
 }
 
+=item $ch-E<gt>status();
+
+Returns ch_status.
+
+=cut
+sub status {
+	my ($self) = @_;
+	ref($self) or croak "Instance variable needed";
+	UNIVERSAL::isa($self, "heartbeat::clplumbing::ipc::channel")
+		or croak "Wrong object type, not an IPC channel";
+	return
+	heartbeat::cl_rawc::IPC_CHANNEL_ch_status_get($self->{raw}); 
+}
+
 =item $ch-E<gt>is_message_pending();
 
 Returns TRUE if a message can be read right now.
