@@ -256,13 +256,25 @@ AC_DEFUN([LIB_SNMP],
 
     if test x"$SNMP_LIBS_FOUND" = x"no"; then
 	AC_MSG_ERROR([
-	Despite my best effort I still cannot figure out the library dependencies of snmp.  
-	Your best bet will be compile the ucd-snmp package from the source and try again. 
+	Despite my best effort I still cannot figure out the library 
+	dependencies for your snmp libraries.  
+	
+	Your best bet will be compile the net-snmp package from the source and 
+	try again. 
 
-	Special Note for RedHat/Fedora users:
-	    If you installed the NET-SNMP RPM from a RedHat/Fedora CD, make sure both the symbolic links 
-	for libbz2.so -> libbz2.so.x and libelf.so -> libelf.so.x exists. Or install the libelf-devel
-	and libbz2-devl rpms.])
+	Note for RedHat/Fedora users:
+
+	    If you installed the NET-SNMP RPM from a RedHat/Fedora CD, make sure 
+	    both the symbolic links for libbz2.so -> libbz2.so.x and 
+	    libelf.so -> libelf.so.x exists. Or install the libelf-devel and 
+	    libbz2-devl rpms.
+	    
+	For Suse users: 
+
+	    If you installed the NET-SNMP RPM from a Suse release, please
+	    double check and make sure that you have the 'tcpd-devel' 
+	    rpm installed on your system as well. 
+	])
     else
 	AC_MSG_WARN([SNMP: snmp library dependency resolved. List of libraries needed to compile the subagent:])
 	AC_MSG_WARN([	$SNMP_LIBS.])
