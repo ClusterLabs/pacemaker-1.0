@@ -1,4 +1,4 @@
-/* $Id: ccm.c,v 1.54 2004/10/16 04:12:56 alan Exp $ */
+/* $Id: ccm.c,v 1.55 2004/12/22 23:43:49 gshi Exp $ */
 /* 
  * ccm.c: Consensus Cluster Service Program 
  *
@@ -1899,11 +1899,11 @@ ccm_readmsg(ccm_info_t *info, ll_cluster_t *hb)
 	assert(hb);
 
 	/* check if there are any leave events to be delivered */
-	while((uuid=leave_get_next()) != -1) {
+	if ((uuid=leave_get_next()) != -1) {
 		/* create a leave message and return it */
 		return ccm_create_leave_msg(info, uuid);
 	}
-
+	
 	return hb->llc_ops->readmsg(hb, 0);
 }
 
@@ -2561,7 +2561,7 @@ static void ccm_state_wait_for_change(enum ccm_type ccm_msg_type,
 			orig = CCM_GET_MYNODE_ID(info);
 			uptime_val = CCM_GET_JOINED_TRANSITION(info);
 			uptime_set = TRUE;
-
+			/*fall through*/
 		case CCM_TYPE_NODE_LEAVE:               
 			/* only leader can stay in this state */
 			if(!ccm_am_i_leader(info))
@@ -2629,7 +2629,7 @@ static void ccm_state_wait_for_change(enum ccm_type ccm_msg_type,
 			orig = CCM_GET_MYNODE_ID(info);
 			uptime_val = CCM_GET_JOINED_TRANSITION(info);
 			uptime_set = TRUE;
-	    	
+			/*fall through*/	    	
 		case CCM_TYPE_NEW_NODE:
 			/* only leader can stay in this state */
 			if(!ccm_am_i_leader(info))
