@@ -130,8 +130,6 @@ GenerateHaCf() {
 GenerateCrmdHaCf() {
   cat <<-! >$1
 	#	$IDENTSTRING
-	conn_logd_time 60
-	use_logd  true
 	logfile   /dev/null
 	debugfile $LOGFILE
 	keepalive 10ms
@@ -141,18 +139,20 @@ GenerateCrmdHaCf() {
 	mcast $INTERFACE $MCASTIP 694 0 0
 	#bcast $INTERFACE
 	node $LOCALNODE $DUMMYNODE
-	respawn root $HBLIB/ha_logd -c $2
 	crm yes
 	!
   chmod 644 $1
-  cat <<-! >$2
-	#	$IDENTSTRING
-	logfile   /dev/null
-	debugfile $LOGFILE
-	#logfacility
-	entity ha_logd
-	#useapphbd no
-	!
+#	conn_logd_time 60
+#	use_logd  true
+#	respawn root $HBLIB/ha_logd -c $2
+#  cat <<-! >$2
+#	#	$IDENTSTRING
+#	logfile   /dev/null
+#	debugfile $LOGFILE
+#	#logfacility
+#	entity ha_logd
+#	#useapphbd no
+#	!
 }
 
 GenerateHaResources() {
