@@ -272,9 +272,17 @@ AC_DEFUN([LIB_SNMP],
 	Note for RedHat/Fedora users:
 
 	    If you installed the NET-SNMP RPM from a RedHat/Fedora CD, make sure 
-	    both the symbolic links for libbz2.so -> libbz2.so.x and 
-	    libelf.so -> libelf.so.x exists. Or install the libelf-devel and 
-	    libbz2-devl rpms.
+	    the symbolic links exist:
+                libbz2.so -> libbz2.so.x,
+                libelf.so -> libelf.so.x 
+                librpm.so -> librpm.so.x
+                librpmio.so -> librpmio.so.x
+
+	Or install the libelf-devel rpm-devel  and libbz2-devl rpms.
+
+        NOTE: Instead of libelf you may have elfutils installed.  If you do then
+	install  elfutils-devel instead of libelf-devel.
+
 	    
 	For SUSE LINUX users: 
 
