@@ -1,4 +1,4 @@
-#	$Id: heartbeat.spec.in,v 1.110 2005/01/10 17:27:02 lars Exp $
+#	$Id: heartbeat.spec.in,v 1.111 2005/02/21 06:22:54 alan Exp $
 
 # Workaround for a change in RPM 4.1.x; needs proper fixing soon!
 ##%define _unpackaged_files_terminate_build 0
@@ -38,13 +38,17 @@ Group: Utilities
 @HB_PKG@ is a basic high-availability subsystem for Linux-HA.
 It will run scripts at initialization, and when machines go up or down.
 This version will also perform IP address takeover using gratuitous ARPs.
-It works correctly for a 2-node configuration, and is extensible to larger
-configurations.
+It supports "n-node" clusters with significant capabilities for managing
+resources and dependencies.
+
+In addition it continues to support the older release 1 style of
+2-node clustering.
 
 It implements the following kinds of heartbeats:
-	- Bidirectional Serial Rings ("raw" serial ports)
+	- Serial ports
+	- UDP/IP multicast (ethernet, etc)
 	- UDP/IP broadcast (ethernet, etc)
-	- Unicast heartbeats
+	- UDP/IP heartbeats
 	- "ping" heartbeats (for routers, switches, etc.)
 	   (to be used for breaking ties in 2-node systems)
 
@@ -73,6 +77,13 @@ PILS is designed to support any number of plugins
 implementing any number of interfaces.
 
 %changelog
+
+* Sun Feb 20 2005  Alan Robertson <alanr@unix.sh> (see doc/AUTHORS file)
++ Version 1.99.2 - Near-final beta "technology preview" of 2.0.0 release
+  + Many many many changes.  Far too many to describe here.
+  + See http://wiki.linux-ha.org/ClusterResourceManager/Setup
+    for certain basic ideas about getting started.
+
 
 * Mon Oct 11 2004  Alan Robertson <alanr@unix.sh> (see doc/AUTHORS file)
 + Version 1.99.1 - *early* beta series - preparing for 2.0.0
