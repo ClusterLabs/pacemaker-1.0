@@ -176,7 +176,8 @@ stonithd_signon(const char * client_name)
 				   "stonithd.");
 		}
 	} else {
-		stdlib_log(LOG_DEBUG, "Got an unexpected message.");
+		stdlib_log(LOG_DEBUG, "stonithd_signon: "
+			   "Got an unexpected message.");
 		/* Handle it furtherly ? */
 	}
 
@@ -237,7 +238,8 @@ stonithd_signoff(void)
 			stdlib_log(LOG_INFO, "fail to sign off the stonithd.");
 		}
 	} else {
-		stdlib_log(LOG_DEBUG, "Got an unexpected message.");
+		stdlib_log(LOG_DEBUG, "stonithd_signoff: "
+			   "Got an unexpected message.");
 	}
 
 	return rc;
@@ -320,7 +322,8 @@ stonithd_node_fence(stonith_ops_t * op)
 				   "the stonithd.");
 		}
 	} else {
-		stdlib_log(LOG_DEBUG, "Got an unexpected message.");
+		stdlib_log(LOG_DEBUG, "stonithd_node_fence: "
+			   "Got an unexpected message.");
 		/* Need to handle in other way? */
 	}
 
@@ -528,7 +531,8 @@ stonithd_receive_ops_result(gboolean blocking)
 	}
 
 	ZAPMSG(reply);
-	stdlib_log(LOG_DEBUG, "Got an unexpected message.");
+	stdlib_log(LOG_DEBUG, "stonithd_receive_ops_result: "
+		   "Got an unexpected message.");
 	return ST_FAIL;
 }
 
@@ -616,7 +620,8 @@ stonithd_virtual_stonithRA_ops( stonithRA_ops_t * op, int * call_id)
 	if ( FALSE == is_expected_msg(reply, F_STONITHD_TYPE, ST_APIRPL, 
 			     F_STONITHD_APIRPL, ST_RRAOP) ) {
 		ZAPMSG(reply); /* avoid to zap the msg ? */
-		stdlib_log(LOG_DEBUG, "Got an unexpected message.");
+		stdlib_log(LOG_DEBUG, "stonithd_virtual_stonithRA_ops: "
+			   "Got an unexpected message.");
 		return ST_FAIL;
 	}
 
@@ -731,7 +736,8 @@ int stonithd_list_stonith_types(GList ** types)
 			stdlib_log(LOG_DEBUG, "failed to get stonith types.");
 		}
 	} else {
-		stdlib_log(LOG_DEBUG, "Got an unexpected message.");
+		stdlib_log(LOG_DEBUG, "stonithd_list_stonith_types: "
+			   "Got an unexpected message.");
 	}
 
 	ZAPMSG(reply);
@@ -775,12 +781,18 @@ is_expected_msg(const struct ha_msg * msg,
 	}
 
 	if (   ( (tmpstr = cl_get_string(msg, field_name1)) != NULL )
-	    && (strncmp(tmpstr, field_content1, strlen(field_content1)) == 0) ) {
+	    && (strncmp(tmpstr, field_content1, strlen(field_content1))==0) ) {
+		stdlib_log(LOG_DEBUG, "%s = %s", field_name1, tmpstr);
 		if (  ( (tmpstr = cl_get_string(msg, field_name2)) != NULL )
 		    && strncmp(tmpstr, field_content2, strlen(field_content2)) 
 			== 0)  {
+			stdlib_log(LOG_DEBUG, "%s = %s\n", field_name2, tmpstr);
 			rc= TRUE;
+		} else {
+			stdlib_log(LOG_DEBUG, "%s = %s\n", field_name2, tmpstr);
 		}
+	} else {
+		stdlib_log(LOG_DEBUG, "%s = %s\n", field_name1, tmpstr);
 	}
 
 	return rc;
