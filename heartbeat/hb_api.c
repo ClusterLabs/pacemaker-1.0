@@ -639,12 +639,17 @@ api_process_request(client_proc_t* fromclient, struct ha_msg * msg)
 		}
 		/* Is this too restrictive? */
 		/* We also put their client ID info in the packet as F_TOID */
-
-		if (ha_msg_mod(msg, F_TOID, fromclient->client_id) != HA_OK) {
-			ha_log(LOG_ERR, "api_process_request: "
-			"cannot add F_TOID field");
-			goto freeandexit;
-		}
+#ifndef	WITH_CRM
+		/* XXX
+		 * It appears this *is* too restrictive for use with
+		 * CRM. We'll clean this up soon and then also fix the
+		 * comment at the top of this file. (lmb 2004-01-14) */
+ 		if (ha_msg_mod(msg, F_TOID, fromclient->client_id) != HA_OK) {
+ 			ha_log(LOG_ERR, "api_process_request: "
+ 			"cannot add F_TOID field");
+ 			goto freeandexit;
+ 		}
+#endif
 		if (DEBUGDETAILS) {
 			ha_log(LOG_DEBUG, "Sending API message to cluster...");
 			ha_log_message(msg);
