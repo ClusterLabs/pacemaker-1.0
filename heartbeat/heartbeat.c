@@ -1,4 +1,4 @@
-/* $Id: heartbeat.c,v 1.299 2004/03/26 07:50:02 chuyee Exp $ */
+/* $Id: heartbeat.c,v 1.300 2004/04/10 16:33:54 alan Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -3263,15 +3263,19 @@ hb_init_watchdog_interval(void)
 	}
 #ifdef WDIOC_SETTIMEOUT
 	{
-		longclock_t	timeout;
-		int timeout_ticks;
+		int timeout_secs;
 
-		timeout = msto_longclock(watchdog_timeout_ms);
-		timeout_ticks = (int)longclockto_long(timeout);
+		timeout_secs = (watchdog_timeout_ms+999)/1000;
 
-		if (ioctl(watchdogfd, WDIOC_SETTIMEOUT, &timeout_ticks) < 0) {
-			cl_perror("Failed to set watchdog timer to %d ticks"
-			,	timeout_ticks);
+		if (ANYDEBUG) {
+			cl_log(LOG_DEBUG, "Set watchdog timer to %d seconds."
+			,	timeout_secs);
+		}
+
+		if (ioctl(watchdogfd, WDIOC_SETTIMEOUT, &timeout_secs) < 0) {
+			cl_perror( "WDIOC_SETTIMEOUT"
+			": Failed to set watchdog timer to %d seconds."
+			,	timeout_secs);
 		}
 	}
 #endif
@@ -4236,7 +4240,14 @@ get_localnodeinfo(void)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.300  2004/04/10 16:33:54  alan
+ * Fixed a bug in setting watchdog timer timeouts.
+ * I thought the units for these intervals were ticks, but they were seconds
+ * instead.  OOPS!
+ * But, now it shuts down within a second of when it should.
+ *
  * Revision 1.299  2004/03/26 07:50:02  chuyee
+ *
  * Add checking heartbeat client status APIs:
  *
  * 	client_status()
