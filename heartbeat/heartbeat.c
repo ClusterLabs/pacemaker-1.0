@@ -1,4 +1,4 @@
-const static char * _heartbeat_c_Id = "$Id: heartbeat.c,v 1.284 2004/01/21 11:34:14 horms Exp $";
+const static char * _heartbeat_c_Id = "$Id: heartbeat.c,v 1.285 2004/01/22 01:52:31 alan Exp $";
 
 /*
  * heartbeat: Linux-HA heartbeat code
@@ -3994,8 +3994,9 @@ ParseTestOpts()
 			cl_log(LOG_INFO, "Xmit loss probability = %.3f"
 			,	p.send_loss_prob);
 		}else{
-			cl_log(LOG_INFO, "Cannot recognize test param [%s]"
-			,	name);
+			cl_log(LOG_ERR
+			,	"Cannot recognize test param [%s] in [%s]"
+			,	name, openpath);
 		}
 	}
 	cl_log(LOG_INFO, "WARNING: Above Options Now Enabled.");
@@ -4114,6 +4115,9 @@ get_localnodeinfo(void)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.285  2004/01/22 01:52:31  alan
+ * Made a test error message a little more explicit.
+ *
  * Revision 1.284  2004/01/21 11:34:14  horms
  * - Replaced numerous malloc + strcpy/strncpy invocations with strdup
  *   * This usually makes the code a bit cleaner
