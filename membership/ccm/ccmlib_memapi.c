@@ -1,4 +1,4 @@
-/* $Id: ccmlib_memapi.c,v 1.17 2004/02/17 22:12:00 lars Exp $ */
+/* $Id: ccmlib_memapi.c,v 1.18 2004/03/05 12:55:20 andrew Exp $ */
 /* 
  * ccmlib_memapi.c: Consensus Cluster Membership API
  *
@@ -97,6 +97,7 @@ void * cookie_get_data(void *ck);
 void * cookie_get_func(void *ck);
 void cookie_ref(void *ck);
 void cookie_unref(void *ck);
+static const char *llm_get_Id_from_Uuid(ccm_llm_t *stuff, uint uuid);
 
 
 
@@ -263,6 +264,19 @@ compare(const void *value1, const void *value2)
 	return 0;
 }
 
+static const char *
+llm_get_Id_from_Uuid(ccm_llm_t *stuff, uint uuid)
+{
+	int lpc = 0;
+	for (; lpc < stuff->n; lpc++) {
+		if(stuff->node[lpc].Uuid == uuid)
+			return stuff->node[lpc].Id;
+	}
+	return NULL;
+}
+
+
+
 static int
 get_new_membership(mbr_private_t *private,
 		ccm_meminfo_t *mbrinfo,
@@ -280,8 +294,6 @@ get_new_membership(mbr_private_t *private,
 
  	newmbr = *mbr = (mbr_track_t *) g_malloc(size+sizeof(int));
 
-
-
 	trans = OC_EV_SET_INSTANCE(newmbr,mbrinfo->trans);
 	n_members = OC_EV_SET_N_MEMBER(newmbr,mbrinfo->n);
 	OC_EV_SET_SIZE(newmbr, size);
@@ -289,8 +301,17 @@ get_new_membership(mbr_private_t *private,
 	j = OC_EV_SET_MEMB_IDX(newmbr,0);
 
 	for ( i = 0 ; i < n_members; i++ ) {
+		const char *uname = NULL;
 		gpointer	gborn; /* Help make gcc warning go away */
 		uuid =  CLLM_GET_UUID(private->llm, mbrinfo->member[i]);
+
+		uname = llm_get_Id_from_Uuid(private->llm, uuid);
+
+		/* strdup(uname) needs to be cleaned up somewhere
+		 * but I cant see where
+		 */
+		
+		newmbr->m_mem.m_array[j].node_uname = strdup(uname); 
 
 		OC_EV_SET_NODEID(newmbr,j,uuid);
 

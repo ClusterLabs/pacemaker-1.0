@@ -1,4 +1,4 @@
-/* $Id: oc_event.h,v 1.2 2004/02/17 22:11:58 lars Exp $ */
+/* $Id: oc_event.h,v 1.3 2004/03/05 12:55:21 andrew Exp $ */
 /*
  * oc_event.h
  *
@@ -106,6 +106,7 @@ typedef enum {
  * member node information
  */
 typedef struct oc_node_s {
+	char   *node_uname;     /* unique */
 	uint    node_id;        /* unique */
 	uint    node_born_on;   /* membership instance number */
 } oc_node_t;
