@@ -1,4 +1,4 @@
-const static char * _hb_config_c_Id = "$Id: config.c,v 1.97 2003/09/19 19:08:05 alan Exp $";
+const static char * _hb_config_c_Id = "$Id: config.c,v 1.98 2003/09/23 06:40:55 alan Exp $";
 /*
  * Parse various heartbeat configuration files...
  *
@@ -294,6 +294,9 @@ init_config(const char * cfgfile)
 #else
 		ha_log(LOG_ERR, "Current node [%s] not in configuration!"
 		,	localnodename);
+		ha_log(LOG_INFO, "By default, cluster nodes are named"
+		" by `uname -n` and must be declared with a 'node'"
+		" directive in the ha.cf file.");
 		++errcount;
 #endif
 	}
@@ -1607,6 +1610,9 @@ add_client_child(const char * directive)
 }
 /*
  * $Log: config.c,v $
+ * Revision 1.98  2003/09/23 06:40:55  alan
+ * Put in extra explanatory text for explaining that nodes are named by uname -n.
+ *
  * Revision 1.97  2003/09/19 19:08:05  alan
  * Fixed a bug where the -d level was always ignored.
  *
