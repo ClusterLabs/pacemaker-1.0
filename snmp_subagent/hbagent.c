@@ -913,6 +913,8 @@ rsinfo_get_int_value(lha_attribute_t attr, size_t index, uint32_t * value)
 int 
 nodestatus_trap(const char * node, const char * status)
 {
+    uint32_t svalue = 0;
+
     oid objid_snmptrap[] = { 1, 3, 6, 1, 6, 3, 1, 1, 4, 1, 0 };
     size_t objid_snmptrap_len = OID_LENGTH(objid_snmptrap);
 
@@ -926,6 +928,8 @@ nodestatus_trap(const char * node, const char * status)
     size_t nodestatus_oid_len = OID_LENGTH(nodestatus_oid);
 
     netsnmp_variable_list *notification_vars = NULL;
+
+    svalue = get_status_value(status, NODE_STATUS, NODE_STATUS_VALUE);
 
     snmp_varlist_add_variable(&notification_vars,
                               /*
@@ -956,12 +960,12 @@ nodestatus_trap(const char * node, const char * status)
     snmp_varlist_add_variable(&notification_vars,
                               nodestatus_oid, 
 			      nodestatus_oid_len,
-                              ASN_OCTET_STR,
-                              (const u_char *) status,
-                              strlen(status)); /* do NOT use strlen() +1 */
+                              ASN_INTEGER,
+                              (const u_char *) & svalue,
+                              sizeof(svalue)); 
 
-    cl_log(LOG_INFO, "sending node status trap. node: %s: status %s", 
-	    node, status);
+    cl_log(LOG_INFO, "sending node status trap. node: %s: status %s, value:%d", 
+	    node, status, svalue);
     send_v2trap(notification_vars);
     snmp_free_varbind(notification_vars);
 
@@ -971,6 +975,8 @@ nodestatus_trap(const char * node, const char * status)
 int 
 ifstatus_trap(const char * node, const char * lnk, const char * status)
 {
+    uint32_t svalue = 0;
+
     oid objid_snmptrap[] = { 1, 3, 6, 1, 6, 3, 1, 1, 4, 1, 0 };
     size_t objid_snmptrap_len = OID_LENGTH(objid_snmptrap);
 
@@ -987,6 +993,8 @@ ifstatus_trap(const char * node, const char * lnk, const char * status)
     size_t ifstatus_oid_len = OID_LENGTH(ifstatus_oid);
 
     netsnmp_variable_list *notification_vars = NULL;
+
+    svalue = get_status_value(status, IF_STATUS, IF_STATUS_VALUE);
 
     snmp_varlist_add_variable(&notification_vars,
                               /*
@@ -1023,12 +1031,12 @@ ifstatus_trap(const char * node, const char * lnk, const char * status)
     snmp_varlist_add_variable(&notification_vars,
                               ifstatus_oid, 
 			      ifstatus_oid_len,
-                              ASN_OCTET_STR,
-                              (const u_char *) status,
-                              strlen(status)); /* do NOT use strlen() +1 */
+                              ASN_INTEGER,
+                              (const u_char *) & svalue,
+                              sizeof(svalue)); 
 
-    cl_log(LOG_INFO, "sending ifstatus trap. node:%s, lnk: %s, status:%s", 
-	    node, lnk, status);
+    cl_log(LOG_INFO, "sending ifstatus trap. node:%s, lnk: %s, status:%s, value: %d", 
+	    node, lnk, status, svalue);
     send_v2trap(notification_vars);
     snmp_free_varbind(notification_vars);
 
@@ -1081,7 +1089,7 @@ membership_trap(const char * node, SaClmClusterChangesT status)
                               membershipchange_oid, 
 			      membershipchange_oid_len,
                               ASN_INTEGER,
-                              (u_char *) &status,
+                              (u_char *) & status,
                               sizeof(status)); 
 
     cl_log(LOG_INFO, "sending membership trap. node:%s, status:%d", 
@@ -1254,14 +1262,14 @@ main(int argc, char ** argv)
 			/* heartbeat */
 
 			if ((ret = handle_heartbeat_msg()) == HA_FAIL) {
-				cl_log(LOG_ERR, "no heartbeat. quit now.");
+				cl_log(LOG_DEBUG, "no heartbeat. quit now.");
 				break;
 			}
 		} else  if (clmInitialized && FD_ISSET(mem_fd, &fdset)) {
 		    	/* membership events */
 
 		    	if ((ret = handle_membership_msg()) == HA_FAIL) {
-			    	cl_log(LOG_ERR, "unrecoverable membership error. quit now.");
+			    	cl_log(LOG_DEBUG, "unrecoverable membership error. quit now.");
 				break;
 			}
 		} else {
