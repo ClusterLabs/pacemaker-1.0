@@ -81,11 +81,12 @@ AC_DEFUN([LIB_SNMP],
     AC_CHECK_HEADERS([net-snmp/version.h], [NET_SNMP_HEADER=yes], 
         [AC_MSG_WARN([net-snmp header not found])], [])
 
+    UCD_SNMP_HEADER=no
     dnl then check ucd-snmp headers 
-    AC_CHECK_HEADERS([ucd-snmp/version.h], [],
-	[AC_MSG_ERROR([no snmp library headers found.])], [#define UCD_COMPATIBLE])
-    
-    dnl make sure net-snmp is compiled with "--enable-ucd-snmp-compatibility"
+    AC_CHECK_HEADERS([ucd-snmp/version.h], [UCD_SNMP_HEADER=yes],
+        [AC_MSG_WARN([ucd-snmp header not found])], [])
+        dnl make sure net-snmp is compiled with "--enable-ucd-snmp-compatibility"
+
     if
       test x"$NET_SNMP_HEADER" = x"yes" && test x"$UCD_SNMP_HEADER" = x"no" ;
     then
