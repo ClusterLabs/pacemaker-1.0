@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-my($VERSION)=(qw$Id: ldirectord,v 1.80 2004/02/24 10:01:59 horms Exp $)[2];
+my($VERSION)=(qw$Id: ldirectord,v 1.81 2004/03/08 12:29:00 horms Exp $)[2];
 
 ######################################################################
 # ldirectord                 http://www.vergenet.net/linux/ldirectord/
@@ -1792,8 +1792,8 @@ sub check_https
 				($recstr =~ /.+/ && !($body =~ /$recstr/))) {
 			die("$result");
 		}
+		alarm 0; # Cancel the alarm
 	};
-	alarm 0; # Cancel the alarm
 
 	if ($@) {
 		service_set($v, $r, "down");
@@ -1858,8 +1858,8 @@ sub check_connect
 		} else {
 			&ld_debug(3, "Connected to $1 (port $port)");
 		}
+		alarm 0; # Cancel the alarm
 	};
-	alarm 0; # Cancel the alarm
 	if ($@) {
 		&service_set($v, $r, "down");
 		&ld_debug(3, "Deactivated service $$r{server}:$$r{port}: $@");
