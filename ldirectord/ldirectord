@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-my($VERSION)=(qw$Id: ldirectord,v 1.97 2005/02/09 08:17:02 horms Exp $)[2];
+my($VERSION)=(qw$Id: ldirectord,v 1.98 2005/02/09 08:19:51 horms Exp $)[2];
 
 ######################################################################
 # ldirectord                 http://www.vergenet.net/linux/ldirectord/
@@ -1896,13 +1896,14 @@ sub check_https
 	$pid = fork();
 	if ($pid) {
 		#parent
-		if (wait) {
-			$status = $? >> 8;
+		while (wait < 0) {
+			if (kill 0, $pid > 0) {
+				#no child for some reason 
+				return 1;
+			}
+			# wait was interupted by a signal, try again
 		}
-		else {
-			#no child for some reason
-			return 1;
-		}
+		$status = $? >> 8;
 	}
 	elsif (defined $pid) {
 		exit check_https_child($v, $r);
