@@ -1,4 +1,4 @@
-/* $Id: client_lib.c,v 1.10 2004/10/01 13:10:34 lge Exp $ */
+/* $Id: client_lib.c,v 1.11 2004/10/01 13:23:29 lge Exp $ */
 /* 
  * client_lib: heartbeat API client side code
  *
@@ -2629,7 +2629,6 @@ hb_cluster_new()
 	memset(ret, 0, sizeof(*ret));
 
 	hb->PrivateId = OurID;
-	hb->logfacility = -1;	/* we don't know it yet */
 	ret->ll_cluster_private = hb;
 	ret->llc_ops = &heartbeat_ops;
 
