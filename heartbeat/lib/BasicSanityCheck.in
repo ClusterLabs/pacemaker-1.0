@@ -644,10 +644,7 @@ TestCRM() {
 	GenerateCrmdHaCf $HADIR/ha.cf
 #	echo "crm yes" >> $HADIR/ha.cf
 	echo "Starting CRM tests" | tee -a $LOGFILE
-	CRMLOGFILE="${LOGFILE}.crm"
-	$CRMTEST -L -d /tmp -l /var/log/ha-debug --ip1 127.0.0.10 --ip2 127.0.0.11 > $CRMLOGFILE 2>&1
-	cat $CRMLOGFILE >> $LOGFILE
-	rm $CRMLOGFILE
+	$CRMTEST -L -d /tmp -l /var/log/ha-debug --ip1 127.0.0.10 --ip2 127.0.0.11 > $LOGFILE 2>&1
 	ret=$?
 	if [ $ret != 0 ]; then
 	    errcount=`expr $errcount + 1`
