@@ -1106,13 +1106,13 @@ main(int argc, char ** argv)
 
 	fd_set fdset;
 	struct timeval tv, *tvp;
-	int flag, block = 0, numfds, hb_fd = 0, mem_fd = 0;
+	int flag, block = 0, numfds, hb_fd = 0, mem_fd = 0, debug = 0;
 
 	/* change this if you want to be a SNMP master agent */
 	int agentx_subagent=1; 
 
 	/* change this if you want to run in the background */
-	int background = 1; 
+	int background = 0; 
 
 	/* change this if you want to use syslog */
 	int syslog = 1; 
@@ -1120,7 +1120,7 @@ main(int argc, char ** argv)
 	while ((flag = getopt(argc, argv, "d")) != EOF) {
 	    	switch (flag) {
 		    case 'd':
-			background = 0;
+			debug++ ;
 			break;
 		    default: 
 			usage();
@@ -1128,10 +1128,10 @@ main(int argc, char ** argv)
 		}
 	}
 
-	if (background) 
-		cl_log_enable_stderr(FALSE);
+	if (debug) 
+		cl_log_enable_stderr(TRUE);
 	else 
-	    	cl_log_enable_stderr(TRUE);
+		cl_log_enable_stderr(FALSE);
 
 	/* print log errors to syslog or stderr */
 	if (syslog)
