@@ -1,4 +1,4 @@
-/* $Id: ccmlib_memapi.c,v 1.21 2004/04/07 17:52:52 alan Exp $ */
+/* $Id: ccmlib_memapi.c,v 1.22 2004/04/15 03:01:08 chuyee Exp $ */
 /* 
  * ccmlib_memapi.c: Consensus Cluster Membership API
  *
@@ -83,8 +83,13 @@ typedef struct mbr_private_s {
 #define OC_EV_GET_NODEID(m,idx)  m->m_mem.m_array[idx].node_id
 #define OC_EV_GET_BORN(m,idx)  m->m_mem.m_array[idx].node_born_on
 
-#define OC_EV_COPY_NODE(m1,idx1,m2,idx2)  \
+#define OC_EV_COPY_NODE_WITHOUT_UNAME(m1,idx1,m2,idx2)  \
 		m1->m_mem.m_array[idx1]=m2->m_mem.m_array[idx2]
+
+#define OC_EV_COPY_NODE(m1,idx1,m2,idx2)  \
+		m1->m_mem.m_array[idx1]=m2->m_mem.m_array[idx2]; \
+		m1->m_mem.m_array[idx1].node_uname = \
+				strdup(m2->m_mem.m_array[idx2].node_uname)
 
 #define OC_EV_GET_SIZE(m)  m->m_size
 
@@ -342,7 +347,8 @@ get_new_membership(mbr_private_t *private,
 			if(!already_present(OC_EV_GET_NODEARRY(oldmbr),
 					OC_EV_GET_N_MEMBER(oldmbr),
 					OC_EV_GET_NODE(newmbr,i))){
-				OC_EV_COPY_NODE(newmbr, in_index, newmbr, i);
+				OC_EV_COPY_NODE_WITHOUT_UNAME(newmbr
+				,	in_index, newmbr, i);
 				in_index++;
 				OC_EV_INC_N_IN(newmbr);
 			}
@@ -369,14 +375,23 @@ static void
 mem_free_func(void *data)
 {
 	unsigned lpc = 0;
+	char * uname;
 	mbr_track_t  *mbr_track =  (mbr_track_t *)data;
 
 	if(mbr_track) {
-		for (lpc = 0 ; lpc < mbr_track->m_mem.m_n_member; lpc++ ) {
-			char *uname = mbr_track->m_mem.m_array[lpc].node_uname;
-			if(uname != NULL) {
+		/* free m_n_member uname, m_n_in is actually the same ptr */
+		for (lpc = 0 ; lpc < OC_EV_GET_N_MEMBER(mbr_track); lpc++ ) {
+			if ((uname = OC_EV_GET_NODE(mbr_track, lpc).node_uname))
 				g_free(uname);
-			}
+		}
+		/* free m_n_out uname */
+		for (lpc = OC_EV_GET_OUT_IDX(mbr_track)
+		;	lpc < OC_EV_GET_OUT_IDX(mbr_track)
+			+	OC_EV_GET_N_OUT(mbr_track)
+		;	lpc++) {
+
+			if ((uname = OC_EV_GET_NODE(mbr_track, lpc).node_uname))
+				g_free(uname);
 		}
 		g_free(mbr_track);
 	}
