@@ -208,7 +208,7 @@ LHANodeStatusString OBJECT-TYPE
 	heartbeat, this would normally be init, up, active, or dead."
     ::= { LHANodeEntry 5 }
 
-LHANodeStatusString OBJECT-TYPE
+LHANodeStatusValue OBJECT-TYPE
     SYNTAX	INTEGER {
 	    	    unknown (0),
 		    init (1),
@@ -224,7 +224,7 @@ LHANodeStatusString OBJECT-TYPE
 
 	So far, only these four states are defined.  All the rest
 	falls in 'unknown' catagory."
-    ::= { LHANodeEntry 5 }
+    ::= { LHANodeEntry 6 }
 
 LHANodeUUID OBJECT-TYPE
     SYNTAX	LHAUUIDString
@@ -234,7 +234,7 @@ LHANodeUUID OBJECT-TYPE
 	"The UUID of the current node in string representatio.  This
 	UUID will be persisted over the heartbeat session.  So it can
 	be used as a unique identifier for a node."
-    ::= { LHANodeEntry 6 }
+    ::= { LHANodeEntry 7 }
 
 LHANodeIFCount OBJECT-TYPE
     SYNTAX	Counter32
@@ -243,7 +243,7 @@ LHANodeIFCount OBJECT-TYPE
     DESCRIPTION
 	"The number of interfaces that is used by heartbeat
 	for this node."
-    ::= { LHANodeEntry 6 }
+    ::= { LHANodeEntry 8 }
 
 LHAIFStatusTable OBJECT-TYPE
     SYNTAX	SEQUENCE OF lhaIFEntry
