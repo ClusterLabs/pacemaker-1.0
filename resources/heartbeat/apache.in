@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $Id: apache.in,v 1.1 2004/08/27 09:34:14 lars Exp $
+# $Id: apache.in,v 1.2 2004/09/09 22:23:00 alan Exp $
 #
 #	High-Availability Apache/IBMhttp control script
 # 
@@ -88,7 +88,7 @@ usage() {
 		monitor in the methods call if we don't know think
 		that the monitor call will actually work ;-)
 
-	$Id: apache.in,v 1.1 2004/08/27 09:34:14 lars Exp $
+	$Id: apache.in,v 1.2 2004/09/09 22:23:00 alan Exp $
 	!
   exit 1
 }
@@ -163,7 +163,8 @@ apache_param() {
   varname=$2
 
   if
-    apachecat $1 | grep -i "^$varname " | sed 's%^[^ ]* %%' 
+    apachecat $1 | grep -i "^$varname " | \
+        sed -e 's%^[^ ]* %%' -e 's%^"%%' -e 's%"$%%'
   then
      : OK
   else
