@@ -1,4 +1,4 @@
-/* $Id: operation.c,v 1.9 2004/03/12 02:59:38 deng.pan Exp $ */
+/* $Id: operation.c,v 1.10 2004/05/24 06:12:27 deng.pan Exp $ */
 /* 
  * operation.c: 
  *
@@ -484,7 +484,7 @@ SaCkptOperationNodeFailure(gpointer key,
 	GList* list = NULL;
 	int finished = TRUE;
 
-	int opState = 0;
+	int opState = -1;
 
 	ckptOp = (SaCkptOperationT*)value;
 	replica = ckptOp->replica;
@@ -508,10 +508,16 @@ SaCkptOperationNodeFailure(gpointer key,
 		finished = TRUE;
 		while (list != NULL) {
 			state = (SaCkptStateT*)list->data;
+			if (state == NULL) {
+				list = list->next;
+				continue;
+			}
 			if (!strcmp(state->nodeName, strNodeName)) {
 				ckptOp->stateList = g_list_remove(
 					ckptOp->stateList,
 					(gpointer)state);
+				list = ckptOp->stateList;
+				continue;
 			} else {
 				if (opState == -1) {
 					opState = state->state;

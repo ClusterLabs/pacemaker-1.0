@@ -1,4 +1,4 @@
-/* $Id: replica.c,v 1.14 2004/04/17 16:46:16 alan Exp $ */
+/* $Id: replica.c,v 1.15 2004/05/24 06:12:27 deng.pan Exp $ */
 /* 
  * replica.c: 
  *
@@ -591,7 +591,8 @@ SaCkptReplicaUnpack(void* data, int dataLength)
 		memcpy(&(state->state), p, sizeof(state->state));
 		p += sizeof(state->state);
 
-		list = g_list_append(list, (gpointer)state);
+		replica->nodeList = g_list_append(
+			replica->nodeList, (gpointer)state);
 	}
 
 	memcpy(&n, p, sizeof(n));
@@ -606,7 +607,7 @@ SaCkptReplicaUnpack(void* data, int dataLength)
 	p += sizeof(replica->nextOperationNumber);
 
 	list = replica->sectionList;
-	for(i=0; i < replica->sectionNumber; i++) {
+	for(i=0; i<replica->sectionNumber; i++) {
 		sec = (SaCkptSectionT*)SaCkptMalloc(sizeof(SaCkptSectionT));
 		SACKPTASSERT (sec != NULL);
 		
@@ -811,6 +812,13 @@ SaCkptReplicaUpdate(SaCkptReplicaT* replica, SaCkptReqT req,
 					secWrtParam->offset + 
 					dataLength -
 					sec->dataLength[index];
+
+				sec->dataLength[(index+1)%2] = 
+					secWrtParam->offset +
+					dataLength;
+			} else {
+				sec->dataLength[(index+1)%2] = 
+					sec->dataLength[sec->dataIndex];
 			}
 			
 			/* commit the update */
@@ -818,6 +826,7 @@ SaCkptReplicaUpdate(SaCkptReplicaT* replica, SaCkptReqT req,
 			sec->dataLength[index] = 0;
 			sec->dataIndex = (index + 1) % 2;
 			sec->dataUpdateState = OP_STATE_COMMITTED;
+			sec->lastUpdateTime = time_longclock();
 		}
 
 		break;
@@ -845,7 +854,9 @@ SaCkptReplicaUpdate(SaCkptReplicaT* replica, SaCkptReqT req,
 			SaCkptFree((void**)&(sec->data[index]));
 			sec->dataLength[index]= 0;
 			sec->dataIndex = (index + 1) % 2;
+			sec->dataLength[sec->dataIndex] = dataLength;
 			sec->dataUpdateState = OP_STATE_COMMITTED;
+			sec->lastUpdateTime = time_longclock();
 		}
 
 		break;
@@ -1086,6 +1097,13 @@ SaCkptReplicaUpdCommit(SaCkptReplicaT* replica, SaCkptReqT req,
 				secWrtParam->offset + 
 				dataLength -
 				sec->dataLength[index];
+
+			sec->dataLength[(index+1)%2] = 
+				secWrtParam->offset +
+				dataLength;
+		} else {
+			sec->dataLength[(index+1)%2] = 
+				sec->dataLength[sec->dataIndex];
 		}
 		
 		/* commit the update */
@@ -1124,6 +1142,7 @@ SaCkptReplicaUpdCommit(SaCkptReplicaT* replica, SaCkptReqT req,
 		SaCkptFree((void**)&(sec->data[index]));
 		sec->dataLength[index]= 0;
 		sec->dataIndex = (index + 1) % 2;
+		sec->dataLength[sec->dataIndex] = dataLength;
 		sec->dataUpdateState = OP_STATE_COMMITTED;
 		sec->lastUpdateTime = time_longclock();
 		

@@ -1,4 +1,4 @@
-/* $Id: message.c,v 1.11 2004/04/02 05:16:48 deng.pan Exp $ */
+/* $Id: message.c,v 1.12 2004/05/24 06:12:27 deng.pan Exp $ */
 /* 
  * message.c
  *
@@ -57,6 +57,7 @@
 #include <dmalloc.h>
 #endif
 
+#undef CKPTDEBUG 
 
 extern SaCkptServiceT* saCkptService;
 
@@ -1571,13 +1572,16 @@ SaCkptMessageReceive()
 
 	if (saCkptService->flagVerbose) {
 		char* strSubtype = NULL;
+		char* strErr = NULL;
 
-		strSubtype= SaCkptMsgSubtype2String(ckptMsg->msgSubtype);
+		strSubtype = SaCkptMsgSubtype2String(ckptMsg->msgSubtype);
+		strErr = SaCkptErr2String(ckptMsg->retVal);
 		cl_log(LOG_INFO, 
-			"Message from %s, type %s, subtype %s",
+			"Message from %s, type %s, subtype %s, status %s",
 			ckptMsg->fromNodeName,
-			ckptMsg->msgType, strSubtype);
+			ckptMsg->msgType, strSubtype, strErr);
 		SaCkptFree((void*)&strSubtype);
+		SaCkptFree((void*)&strErr);
 	}
 	
 	ha_msg_del(haMsg);
@@ -1916,6 +1920,7 @@ SaCkptMessageSend(SaCkptMessageT* ckptMsg, char* nodename)
 	struct ha_msg	*haMsg = NULL;
 
 	char		*strSubtype = NULL;
+	char		*strErr = NULL;
 	int		rc;
 
 	strcpy(ckptMsg->fromNodeName, saCkptService->nodeName);
@@ -1931,10 +1936,13 @@ SaCkptMessageSend(SaCkptMessageT* ckptMsg, char* nodename)
 			if (saCkptService->flagVerbose) {
 				strSubtype = SaCkptMsgSubtype2String(
 					ckptMsg->msgSubtype);
+				strErr = SaCkptErr2String(ckptMsg->retVal);
 				cl_log(LOG_INFO, 
-				"Send message to %s, type %s, subtype %s",
-				nodename, ckptMsg->msgType, strSubtype);
+				"Send message to %s, type %s, subtype %s, status %s",
+				nodename, ckptMsg->msgType, 
+				strSubtype, strErr);
 				SaCkptFree((void*)&strSubtype);
+				SaCkptFree((void*)&strErr);
 			}
 
 #ifdef CKPTDEBUG
@@ -2107,7 +2115,7 @@ SaCkptMsgSubtype2String(SaCkptMsgSubtypeT msgSubtype)
 		strcpy(strTemp, "M_RPLC_ADD_REPLY");
 		break;
 	case M_RPLC_ADD_PREPARE_BCAST:
-		strcpy(strTemp, "M_RPLC_ADD_REPLY");
+		strcpy(strTemp, "M_RPLC_ADD_PREPARE_BCAST");
 		break;
 	case M_RPLC_ADD_PREPARE_BCAST_REPLY:
 		strcpy(strTemp, "M_RPLC_ADD_PREPARE_BCAST_REPLY");
