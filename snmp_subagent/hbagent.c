@@ -1226,12 +1226,9 @@ main(int argc, char ** argv)
 		if (block) {
 			tvp = NULL;
 		} else if (tvp->tv_sec == 0) {
-			fprintf(stderr, "timer is not set... ");
 		    tvp->tv_sec = DEFAULT_TIME_OUT;
 		    tvp->tv_usec = 0;
 		}
-
-		fprintf(stderr, "tv = %ld, block = %d\n", tvp->tv_sec, block);
 
 		ret = select(numfds, &fdset, 0, 0, tvp);
 
@@ -1241,7 +1238,6 @@ main(int argc, char ** argv)
 			break;
 		} else if (ret == 0) {
 			/* timeout */
-			fprintf(stderr, "select timed out...\n");
 			ping_membership(&mem_fd);
 			snmp_timeout();
 			continue;
