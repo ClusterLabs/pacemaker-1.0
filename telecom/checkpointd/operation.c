@@ -1,4 +1,4 @@
-/* $Id: operation.c,v 1.11 2004/11/18 01:56:59 yixiong Exp $ */
+/* $Id: operation.c,v 1.12 2005/03/16 17:11:15 lars Exp $ */
 /* 
  * operation.c: 
  *
@@ -196,13 +196,13 @@ SaCkptOperationStart(SaCkptOperationT* ckptOp)
 				
 				list = list->next;
 			}
-			cl_log(LOG_INFO,"-------Before we send out multicase \n");
+			cl_log(LOG_INFO,"-------Before we send out multicast");
 			
 			SaCkptMessageMulticast(ckptMsg, nodeList);
-			cl_log(LOG_INFO,"-------we send out multicase \n");
+			cl_log(LOG_INFO,"-------we send out multicast");
 			
 			g_list_free(nodeList);
-			cl_log(LOG_INFO,"-------we free nodelist \n");
+			cl_log(LOG_INFO,"-------we free nodelist");
 		
 			replica->flagReplicaLock = FALSE;
 			if (saCkptService->flagVerbose) {
@@ -699,7 +699,7 @@ updateReplicaPendingOption(SaCkptReplicaT *replica, const char *hostName){
 			state = (SaCkptStateT* )opStateList->data;
 			if(!strncmp(state->nodeName, hostName,SA_MAX_NAME_LENGTH )){
 				nodeExisted = TRUE;
-				cl_log(LOG_ERR, "hostName %s exist already in updateReplicaPendingOption\n",hostName);
+				cl_log(LOG_ERR, "hostName %s exist already in updateReplicaPendingOption",hostName);
 				break;
 			}
 			opStateList = opStateList->next;

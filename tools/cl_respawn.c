@@ -321,7 +321,7 @@ run_client_as_child(void)
  	/* Now in child process */
 	execvp(execv_argv[0], execv_argv);
 	/* if go here, there must be something wrong */
-	cl_log(LOG_ERR, "%s\n",strerror(errno));
+	cl_log(LOG_ERR, "%s",strerror(errno));
 	cl_log(LOG_ERR, "execving monitored program %s failed.", execv_argv[0]);
 
 	i = 0;
@@ -346,7 +346,7 @@ become_deamon(void)
 	pid = fork();
 
 	if (pid < 0) {
-		cl_log(LOG_CRIT, "cannot start daemon.\n");
+		cl_log(LOG_CRIT, "cannot start daemon.");
 		exit(LSB_EXIT_GENERIC);
 	} else if (pid > 0) {
 		exit(LSB_EXIT_OK);

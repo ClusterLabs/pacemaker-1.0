@@ -619,7 +619,7 @@ reply_mqname_open(ll_cluster_t *hb, struct ha_msg *msg)
 
 		mq = (mqueue_t *) ha_malloc(sizeof(mqueue_t));
 		if (!mq) {
-			cl_log(LOG_ERR, "%s: ha_malloc failed\n", __FUNCTION__);
+			cl_log(LOG_ERR, "%s: ha_malloc failed", __FUNCTION__);
 			return FALSE;
 		}
 
@@ -797,7 +797,7 @@ process_mqname_send(struct ha_msg *msg, cms_data_t * cmsdata)
 	gname = ha_msg_value(msg, F_MQGROUPNAME);
 	priority = (const SaUint8T *) msg_pri;
 	if ((*priority) > SA_MSG_MESSAGE_LOWEST_PRIORITY) {
-		cl_log(LOG_ALERT, "Wrong priorty [%u]\n", *priority);
+		cl_log(LOG_ALERT, "Wrong priorty [%u]", *priority);
 		return FALSE;
 	}
 	
@@ -974,7 +974,7 @@ process_mqname_granted(struct ha_msg *msg, cms_data_t * cmsdata)
 		 */
 		mq = (mqueue_t *) ha_malloc(sizeof(mqueue_t));
 		if (!mq) {
-			cl_log(LOG_ERR, "%s: ha_malloc failed\n", __FUNCTION__);
+			cl_log(LOG_ERR, "%s: ha_malloc failed", __FUNCTION__);
 			return FALSE;
 		}
 		memset(mq, 0, sizeof(mqueue_t));
@@ -1044,7 +1044,7 @@ process_mqname_granted(struct ha_msg *msg, cms_data_t * cmsdata)
 		mq->client = (IPC_Channel *)ha_malloc(sizeof(IPC_Channel));
 
 		if (mq->client == NULL) {
-			cl_log(LOG_ERR, "%s: ha_malloc failed\n", __FUNCTION__);
+			cl_log(LOG_ERR, "%s: ha_malloc failed", __FUNCTION__);
 			return FALSE;
 		}
 

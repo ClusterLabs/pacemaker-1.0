@@ -1,4 +1,4 @@
-/* $Id: ccm_testclient.c,v 1.16 2005/02/02 19:38:37 gshi Exp $ */
+/* $Id: ccm_testclient.c,v 1.17 2005/03/16 17:11:15 lars Exp $ */
 /* 
  * ccm.c: A consensus cluster membership sample client
  *
@@ -57,7 +57,7 @@ my_ms_events(oc_ed_t event, void *cookie,
 		oc_ev_callback_done(cookie);
 		return;
 	}
-	
+
 	cl_log(LOG_INFO,"instance=%d\n"
 	       "# ttl members=%d, ttl_idx=%d\n"
 	       "# new members=%d, new_idx=%d\n"

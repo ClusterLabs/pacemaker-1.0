@@ -1,4 +1,4 @@
-/* $Id: checkpointd.c,v 1.15 2004/11/18 01:56:59 yixiong Exp $ */
+/* $Id: checkpointd.c,v 1.16 2005/03/16 17:11:15 lars Exp $ */
 /* 
  * checkpointd.c: data checkpoint service
  *
@@ -123,8 +123,8 @@ SaCkptCheckpointdInit(void)
 
 	/* sign on with heartbeat */
 	if (hb->llc_ops->signon(hb, "checkpointd") != HA_OK) {
-		cl_log(LOG_ERR, "Cannot sign on with heartbeat\n");
-		cl_log(LOG_ERR, "REASON: %s\n", 
+		cl_log(LOG_ERR, "Cannot sign on with heartbeat");
+		cl_log(LOG_ERR, "REASON: %s", 
 			hb->llc_ops->errmsg(hb));
 		exit(1);
 	}
@@ -411,7 +411,7 @@ checkpointNodeStatusInit(void){
 	
 	hb = saCkptService->heartbeat;
 	if(saCkptService->flagVerbose){
-		cl_log(LOG_INFO,"init checkpoint node status\n");
+		cl_log(LOG_INFO,"init checkpoint node status");
 	}
 	if( hb->llc_ops->init_nodewalk(hb) == HA_OK){
 		nodeName = (hb->llc_ops->nextnode(hb));
@@ -424,7 +424,7 @@ checkpointNodeStatusInit(void){
 			hbStatus = transHbNodeStatus(status);
 			
 			if(saCkptService->flagVerbose){
-				cl_log(LOG_INFO,"node : %s, status : %s\n",
+				cl_log(LOG_INFO,"node : %s, status : %s",
 					nodeName,status);
 			}
 			
@@ -438,7 +438,7 @@ checkpointNodeStatusInit(void){
 			nodeName = (hb->llc_ops->nextnode(hb));
 		}
 		if(hb->llc_ops->end_nodewalk(hb) != HA_OK){
-			cl_log(LOG_ERR,"heartbeat end_nodewalk error on checkpointNodeStatusInit\n");
+			cl_log(LOG_ERR,"heartbeat end_nodewalk error on checkpointNodeStatusInit");
 			return HA_FAIL;	
 		}else
 			return HA_OK;
@@ -455,7 +455,7 @@ transHbNodeStatus(const char *hbStatus){
 	int i = 0;
 	int found = 0;
 	if(hbStatus == NULL) {
-		cl_log(LOG_ERR,"NULL hbStatus in transHbNodeStatus\n");
+		cl_log(LOG_ERR,"NULL hbStatus in transHbNodeStatus");
 		return HB_UNKNOWN;
 	}
 	while(strlen( HeartbeatStatusArray[i])){
@@ -478,7 +478,7 @@ serviceBeginNotify(void){
 	SaCkptMessageT* ckptMsg = NULL;
 	ckptMsg = (SaCkptMessageT*)SaCkptMalloc(sizeof(SaCkptMessageT));
 	if(ckptMsg == NULL){
-		cl_log(LOG_ERR,"Memory alloc fail on serviceBeginNotify\n");
+		cl_log(LOG_ERR,"Memory alloc fail on serviceBeginNotify");
 		return HA_FAIL;
 	}
 	strcpy(ckptMsg->msgType, T_CKPT);

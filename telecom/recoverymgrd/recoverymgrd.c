@@ -1,4 +1,4 @@
-/* $Id: recoverymgrd.c,v 1.12 2005/02/20 03:02:43 alan Exp $ */
+/* $Id: recoverymgrd.c,v 1.13 2005/03/16 17:11:16 lars Exp $ */
 /*
  * Generic Recovery manager implementation
  * 
@@ -97,7 +97,7 @@ print_hash(gpointer key, gpointer value, gpointer userdata)
 {
 	char* key_str = key;
 	char* value_str = value;
-	cl_log(LOG_INFO, "key[%s], value[%s]\n", key_str, value_str);
+	cl_log(LOG_INFO, "key[%s], value[%s]", key_str, value_str);
 }
 
 gboolean
@@ -306,7 +306,7 @@ pending_conn_dispatch(IPC_Channel* src, gpointer user)
 
         if (debug >= DBGMIN) 
 	{
-		cl_log(LOG_DEBUG,"received connection request\n");
+		cl_log(LOG_DEBUG,"received connection request");
                 cl_log(LOG_DEBUG, "recoverymgr dispatch: IPC_channel: 0x%x"
                 " pid=%d"
                 ,       GPOINTER_TO_UINT(src)
@@ -412,10 +412,10 @@ void
 recoverymgr_client_remove(gpointer Client)
 {
         recoverymgr_client_t* client = Client;
-        cl_log(LOG_INFO, "recoverymgr_client_remove: client: %ld\n"
+        cl_log(LOG_INFO, "recoverymgr_client_remove: client: %ld"
         ,       (long)client->pid);
         if (debug >= DBGMIN) {
-                cl_log(LOG_DEBUG, "recoverymgr_client_remove: client pid: %ld\n"
+                cl_log(LOG_DEBUG, "recoverymgr_client_remove: client pid: %ld"
                 ,       (long)client->pid);
         }
         G_main_del_IPC_Channel(client->source);
@@ -558,7 +558,7 @@ recoverymgr_client_connect(recoverymgr_client_t *client, void *Msg, size_t lengt
         IPC_Auth*               	clientauth;*/
 
         if (debug >= DBGDETAIL) {
-		cl_log(LOG_DEBUG, "recoverymgr_client_connect\n");
+		cl_log(LOG_DEBUG, "recoverymgr_client_connect");
 	}
 
         if (client->appname) {
@@ -616,7 +616,7 @@ static int
 recoverymgr_client_disconnect(recoverymgr_client_t* client , void * msg, size_t msgsize)
 {
         if (debug >= DBGDETAIL) {
-		cl_log(LOG_DEBUG, "recoverymgr_client_disconnect\n");
+		cl_log(LOG_DEBUG, "recoverymgr_client_disconnect");
 	}
         client->deleteme=TRUE;
         return 0;
@@ -648,7 +648,7 @@ recoverymgr_client_event(recoverymgr_client_t *client, void *Msg, size_t msgsize
 
         if (debug >= DBGDETAIL) 
 	{
-		cl_log(LOG_CRIT,"recoverymgr_client_event: event=%d\n", msg->event);
+		cl_log(LOG_CRIT,"recoverymgr_client_event: event=%d", msg->event);
 	}
 
 	if (msgsize < sizeof(*msg))
@@ -675,13 +675,13 @@ recoverymgr_client_event(recoverymgr_client_t *client, void *Msg, size_t msgsize
 	info = g_hash_table_lookup(scripts, msg->appname);
 	if (NULL == info)	
  	{
-		cl_log(LOG_INFO, "No script available to recover %s\n", msg->appname);
+		cl_log(LOG_INFO, "No script available to recover %s", msg->appname);
 		return 0;
 	}
 
 	if (info->event[msg->event].inuse == FALSE)
  	{
-		cl_log(LOG_INFO,"Script does not handle this event\n");
+		cl_log(LOG_INFO,"Script does not handle this event");
 
 		return 0;
 	}
@@ -704,7 +704,7 @@ recover_app(RecoveryInfo *info, int eventindex)
 	pid = fork();
 	if (pid < 0)
 	{
-		cl_log(LOG_CRIT,"Failed to fork recovery process\n");
+		cl_log(LOG_CRIT,"Failed to fork recovery process");
 		return -1;
 	}
 	else if (0 == pid)
@@ -714,8 +714,8 @@ recover_app(RecoveryInfo *info, int eventindex)
 		{
    			cl_log(LOG_INFO, "current euid[%ld]", (long)geteuid());
    			cl_log(LOG_INFO, "current egid[%ld]", (long)getegid());
-			cl_log(LOG_DEBUG,"script = %s\n", info->scriptname);
-			cl_log(LOG_DEBUG,"args = %s\n", info->event[eventindex].args);
+			cl_log(LOG_DEBUG,"script = %s", info->scriptname);
+			cl_log(LOG_DEBUG,"args = %s", info->event[eventindex].args);
 		}
 	
 		if (eventindex > MAXEVENTS) {
@@ -724,7 +724,7 @@ recover_app(RecoveryInfo *info, int eventindex)
  	 	if (execl(info->scriptname, info->scriptname,
 			  info->event[eventindex].args, (const char *)NULL) < 0)
 		{
-			cl_perror("Failed to exec recovery script for %s\n", info->appname);
+			cl_perror("Failed to exec recovery script for %s", info->appname);
 			_exit(EXIT_FAILURE);
 		}
 	}
@@ -744,7 +744,7 @@ child_setup_function(RecoveryInfo *info)
    	{
         	if (debug >= DBGDETAIL) 
 		{
-      			cl_log(LOG_INFO,"Unable to get app data for recovery.\n");
+      			cl_log(LOG_INFO,"Unable to get app data for recovery.");
 		}
       		return;
    	}
@@ -754,7 +754,7 @@ child_setup_function(RecoveryInfo *info)
         	if (debug >= DBGDETAIL) 
 		{
 			cl_log(LOG_INFO, "error:[%s]", strerror(errno));
-      			cl_log(LOG_INFO, "Unable to setgid for recovery of %s\n", info->appname);
+      			cl_log(LOG_INFO, "Unable to setgid for recovery of %s", info->appname);
 		}
    	}
 	if ( 0 != setuid(info->uid))
@@ -762,7 +762,7 @@ child_setup_function(RecoveryInfo *info)
         	if (debug >= DBGDETAIL) 
 		{
 			cl_log(LOG_INFO, "error:[%s]", strerror(errno));
-			cl_log(LOG_INFO, "Unable to setuid for recovery of %s\n", info->appname);
+			cl_log(LOG_INFO, "Unable to setuid for recovery of %s", info->appname);
 		}
    	}
 }

@@ -311,7 +311,7 @@ client_input_dispatch(IPC_Channel * client, gpointer user_data)
 		cms_msg = (client_header_t *) msg->msg_body;
 
 		if (!cmsdata->cms_ready) {
-			cl_log(LOG_INFO, "cms_ready = %d\n"
+			cl_log(LOG_INFO, "cms_ready = %d"
 			,	cmsdata->cms_ready);
 
 			client_send_notready_msg(client, cms_msg);

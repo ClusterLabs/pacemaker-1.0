@@ -1,4 +1,4 @@
-/* $Id: libckpt.c,v 1.18 2004/12/06 21:15:45 msoffen Exp $ */
+/* $Id: libckpt.c,v 1.19 2005/03/16 17:11:15 lars Exp $ */
 /* 
  * ckptlib.c: data checkpoint API library
  *
@@ -3370,7 +3370,7 @@ saCkptCheckpointRead(
 	for(i=0; i<numberOfElements; i++) {
 		
 		if(ioVector[i].dataSize < 0 || ioVector[i].dataOffset < 0 ){
-			cl_log(LOG_ERR, " dataSize or dataOffset at ioverctor %d less than 0 \n", i);
+			cl_log(LOG_ERR, " dataSize or dataOffset at ioverctor %d less than 0", i);
 			if( readParam!= NULL) ha_free(readParam);
 			return SA_ERR_INVALID_PARAM;
 		}

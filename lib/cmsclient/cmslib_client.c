@@ -664,7 +664,7 @@ saMsgInitialize(SaMsgHandleT *msgHandle, const SaMsgCallbacksT *msgCallbacks,
 	 * select to this fd will always return immediately.
 	 */
 	if (write(pipefd[1], "ACTIVE", 6) < 0) {
-		cl_log(LOG_ERR, "write pipe failed\n");
+		cl_log(LOG_ERR, "write pipe failed");
 		return SA_ERR_LIBRARY;
 	}
 

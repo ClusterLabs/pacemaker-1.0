@@ -222,7 +222,7 @@ getnode_callback(SaInvocationT invocation, SaClmClusterNodeT *clusterNode
 ,	SaErrorT error)
 {
 	if (error != SA_OK) {
-		cl_log(LOG_ERR, "Get Node Callback failed [%d]\n", error);
+		cl_log(LOG_ERR, "Get Node Callback failed [%d]", error);
 		/* exit(1); */
 	}
 	dprintf("Invocation [%d]\n", invocation);
@@ -304,7 +304,7 @@ cms_membership_init(cms_data_t * cmsdata)
 	/* Get current cluster membership map. */
 	if ((ret = saClmClusterTrackStart(&handle, SA_TRACK_CURRENT, nbuf, 
 	    cmsdata->node_count) != SA_OK)) {
-		cl_log(LOG_ERR, "SA_TRACK_CURRENT error, errno [%d]\n", ret);
+		cl_log(LOG_ERR, "SA_TRACK_CURRENT error, errno [%d]", ret);
 		ha_free(nbuf);
 		return HA_FAIL; 
 	}
@@ -312,16 +312,16 @@ cms_membership_init(cms_data_t * cmsdata)
 
 	ret = saClmClusterTrackStart(&handle, SA_TRACK_CURRENT, nbuf, cmsdata->node_count);
 
-	cl_log(LOG_INFO, "SA_TRACK_CURRENT: ret = %d\n", ret);
+	cl_log(LOG_INFO, "SA_TRACK_CURRENT: ret = %d", ret);
 
 	if (ret != SA_OK) {
-		cl_log(LOG_ERR, "SA_TRACK_CURRENT error, errno [%d]\n", ret);
+		cl_log(LOG_ERR, "SA_TRACK_CURRENT error, errno [%d]", ret);
 		ha_free(nbuf);
 		return HA_FAIL; 
 	}
 
 	if ((ret = saClmSelectionObjectGet(&handle, &st)) != SA_OK) {
-		cl_log(LOG_ERR, "saClmSelectionObjectGet error, errno [%d]\n", ret);
+		cl_log(LOG_ERR, "saClmSelectionObjectGet error, errno [%d]", ret);
 		ha_free(nbuf);
 		return HA_FAIL;
 	}
@@ -329,7 +329,7 @@ cms_membership_init(cms_data_t * cmsdata)
 	/* Start to track cluster membership changes events */
 	if ((ret = saClmClusterTrackStart(&handle, SA_TRACK_CHANGES, nbuf, 
 		cmsdata->node_count)) != SA_OK) {
-		cl_log(LOG_ERR, "SA_TRACK_CURRENT error, errno [%d]\n", ret);
+		cl_log(LOG_ERR, "SA_TRACK_CURRENT error, errno [%d]", ret);
 		ha_free(nbuf);
 		return HA_FAIL; 
 	}

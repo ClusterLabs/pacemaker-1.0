@@ -1,4 +1,4 @@
-/* $Id: message.c,v 1.14 2004/11/18 01:56:59 yixiong Exp $ */
+/* $Id: message.c,v 1.15 2005/03/16 17:11:15 lars Exp $ */
 /* 
  * message.c
  *
@@ -2576,12 +2576,12 @@ initOpenReqNodeStatus(SaCkptClientRequestT *clientReq){
 	SaCkptReqOpenParamT	*openParam	= NULL;
 	
 	if(clientReq == NULL){
-		cl_log(LOG_ERR, "NULL clientReq in initOpenReqNodeStatus\n");
+		cl_log(LOG_ERR, "NULL clientReq in initOpenReqNodeStatus");
 		return;
 	}
 	if((clientReq->req != REQ_CKPT_OPEN) 
 				&& (clientReq->req != REQ_CKPT_OPEN_ASYNC)){
-		cl_log(LOG_ERR, "Not Open Request in initOpenReqNodeStatus\n");
+		cl_log(LOG_ERR, "Not Open Request in initOpenReqNodeStatus");
 		return;
 	}
 	
@@ -2604,7 +2604,7 @@ getNodeCkptStatus(gpointer key,gpointer value,
 		sizeof(saOpenNodeStatusT));
 	if(status == NULL){
 		/*FIXME how to report error on hash fucntions*/
-		cl_log(LOG_INFO,"malloc error in getNodeCkptStatus\n");
+		cl_log(LOG_INFO,"malloc error in getNodeCkptStatus");
 		return;
 	}
 	strncpy(status->nodeName, nodeName, SA_MAX_NAME_LENGTH);
@@ -2637,7 +2637,7 @@ isOnOpenProcess(SaCkptReqOpenParamT *openParam ){
 
 	if(openParam == NULL){
 		if(saCkptService->flagVerbose){
-			cl_log(LOG_INFO,"NULL openParam on isOnOpenProcess\n");
+			cl_log(LOG_INFO,"NULL openParam on isOnOpenProcess");
 			return 0;
 		}
 	}
@@ -2652,7 +2652,7 @@ isOnOpenProcess(SaCkptReqOpenParamT *openParam ){
 gboolean
 isHighPriority(const SaCkptMessageT *ckptMsg ){
 	if(ckptMsg == NULL){
-		cl_log(LOG_INFO,"NULL ckptMsg on isHighPriority\n");
+		cl_log(LOG_INFO,"NULL ckptMsg on isHighPriority");
 		return FALSE;
 	}
 	if( strncmp(ckptMsg->fromNodeName, 
@@ -2671,7 +2671,7 @@ updateOpenProcessQueue(const SaCkptMessageT *ckptMsg ,saOpenResponseTypeT *type)
 	saOpenResponseTypeT		nodeStatus	=	RES_NO_REPLICA;
 	gint 				result		=	1;
 	if(ckptMsg == NULL){
-		cl_log(LOG_INFO,"NULL ckptMsg on isHighPriority\n");
+		cl_log(LOG_INFO,"NULL ckptMsg on isHighPriority");
 		return 0;
 	}
 	openParam = (SaCkptReqOpenParamT*)ckptMsg->param;
@@ -2685,7 +2685,7 @@ updateOpenProcessQueue(const SaCkptMessageT *ckptMsg ,saOpenResponseTypeT *type)
 				(SaCkptReqOpenParamT *)clientReq->reqParam, 
 				ckptMsg->fromNodeName,&nodeStatus)){
 			if(nodeStatus == RES_NO_REPLICA){
-				cl_log(LOG_INFO,"\t get res_no_replica already\n");
+				cl_log(LOG_INFO,"\t get res_no_replica already");
 				updateOpenParamNodeStatus(
 					(SaCkptReqOpenParamT *)clientReq->reqParam,
 					ckptMsg->fromNodeName, RES_LATER);
@@ -2699,7 +2699,7 @@ updateOpenProcessQueue(const SaCkptMessageT *ckptMsg ,saOpenResponseTypeT *type)
 			
 		}
 		if(isHighPriority(ckptMsg)){
-			cl_log(LOG_INFO,"\t\tresult is high\n");
+			cl_log(LOG_INFO,"\t\tresult is high");
 			updateOpenParamNodeStatus(
 				(SaCkptReqOpenParamT *)clientReq->reqParam,
 				ckptMsg->fromNodeName, 
@@ -2712,7 +2712,7 @@ updateOpenProcessQueue(const SaCkptMessageT *ckptMsg ,saOpenResponseTypeT *type)
 
 			*type = RES_RACE_HIGH_PRIO;
 		}else{
-			cl_log(LOG_INFO,"\t\tresult is low\n");
+			cl_log(LOG_INFO,"\t\tresult is low");
 			updateOpenParamNodeStatus(
 				(SaCkptReqOpenParamT*)clientReq->reqParam,
 				ckptMsg->fromNodeName, 
@@ -2787,7 +2787,7 @@ getOpenParamNodeStatus(SaCkptReqOpenParamT  *openParam, const char *nodeName, sa
 	GList  			*list	= NULL;
 	
 	if(openParam == NULL ||nodeName == NULL || type == NULL){
-		cl_log(LOG_ERR, "NULL parameter on getOpenParamNodeStatus\n");
+		cl_log(LOG_ERR, "NULL parameter on getOpenParamNodeStatus");
 		return 0;
 	}
 	list = openParam->nodeReponse;
@@ -2875,13 +2875,13 @@ notifyLowPrioNode(SaCkptReqOpenParamT  *openParam){
 	ckptMsg = (SaCkptMessageT*)SaCkptMalloc(sizeof(SaCkptMessageT));
 	
 	list = openParam->nodeReponse;
-	cl_log(LOG_INFO,"Enter notifyLowPrioNode\n");
+	cl_log(LOG_INFO,"Enter notifyLowPrioNode");
 	while(list != NULL){
 		status = (saOpenNodeStatusT *)(list->data);
 		if(status->status == RES_RACE_LOW_PRIO 
 				||status->status == RES_LATER ){
 			ckptMsg= (SaCkptMessageT *)status->originalMessage;
-			cl_log(LOG_INFO,"notify lower prio node %s\n",ckptMsg->clientHostName);
+			cl_log(LOG_INFO,"notify lower prio node %s",ckptMsg->clientHostName);
 			ckptMsg->msgSubtype = M_CKPT_OPEN_BCAST_REPLY;
 			ckptMsg->retVal = SA_OK;
 			strcpy(ckptMsg->activeNodeName, saCkptService->nodeName);			SaCkptMessageSend(ckptMsg, ckptMsg->clientHostName);
@@ -2894,7 +2894,7 @@ notifyLowPrioNode(SaCkptReqOpenParamT  *openParam){
 void
 removeOpenPendingQueue(SaCkptReqOpenParamT  *openParam ){
 	if(openParam == NULL){
-		cl_log(LOG_INFO, "NULL openParam on updateOpenParamNodeStatus\n");
+		cl_log(LOG_INFO, "NULL openParam on updateOpenParamNodeStatus");
 		return;
 	}		
 	openParamNodeStatusDump(openParam);
@@ -2961,7 +2961,7 @@ dupCkptMessage(const SaCkptMessageT *ckptMsg){
 	void * param = NULL;
 	void * data = NULL;
 	if(ckptMsg == NULL){
-		cl_log(LOG_INFO,"NULL ckptMsg in dupCkptMessage\n");
+		cl_log(LOG_INFO,"NULL ckptMsg in dupCkptMessage");
 		return NULL;
 	}
 	ret = (SaCkptMessageT *)ha_malloc(sizeof(SaCkptMessageT));
@@ -2969,7 +2969,7 @@ dupCkptMessage(const SaCkptMessageT *ckptMsg){
 	data = ha_malloc(ckptMsg->dataLength);
 	
 	if(ret == NULL ||param== NULL ||  data== NULL){
-		cl_log(LOG_INFO,"malloc error in dupCkptMessage\n");
+		cl_log(LOG_INFO,"malloc error in dupCkptMessage");
 		if(ret!= NULL) ha_free(ret);
 		if(param!= NULL) ha_free(param);
 		if(data!= NULL) ha_free(data);

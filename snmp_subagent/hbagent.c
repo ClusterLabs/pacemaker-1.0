@@ -317,7 +317,7 @@ get_hb_info(lha_group_t group)
 static void
 NodeStatus(const char * node, const char * status, void * private)
 {
-        cl_log(LOG_NOTICE, "Status update: Node %s now has status %s\n"
+        cl_log(LOG_NOTICE, "Status update: Node %s now has status %s"
         ,       node, status);
 	walk_nodetable();
 
@@ -328,7 +328,7 @@ static void
 LinkStatus(const char * node, const char * lnk, const char * status
 ,       void * private)
 {
-        cl_log(LOG_NOTICE, "Link Status update: Link %s/%s now has status %s\n"
+        cl_log(LOG_NOTICE, "Link Status update: Link %s/%s now has status %s"
         ,       node, lnk, status);
 	walk_iftable();
 
@@ -462,8 +462,8 @@ init_heartbeat(void)
 	cl_log(LOG_DEBUG, "Signing in with heartbeat");
 
 	if (hb->llc_ops->signon(hb, LHAAGENTID)!= HA_OK) {
-		cl_log(LOG_ERR, "Cannot sign on with heartbeat\n");
-		cl_log(LOG_ERR, "REASON: %s\n", hb->llc_ops->errmsg(hb));
+		cl_log(LOG_ERR, "Cannot sign on with heartbeat");
+		cl_log(LOG_ERR, "REASON: %s", hb->llc_ops->errmsg(hb));
 		return HA_FAIL;
 	}
 
@@ -475,20 +475,20 @@ init_heartbeat(void)
 	cl_cdtocoredir();
 
 	if (NULL == (myid = ha_strdup(hb->llc_ops->get_mynodeid(hb)))) {
-		cl_log(LOG_ERR, "Cannot get mynodeid\n");
-		cl_log(LOG_ERR, "REASON: %s\n", hb->llc_ops->errmsg(hb));
+		cl_log(LOG_ERR, "Cannot get mynodeid");
+		cl_log(LOG_ERR, "REASON: %s", hb->llc_ops->errmsg(hb));
 		return HA_FAIL;
 	}
 
 	if (hb->llc_ops->set_nstatus_callback(hb, NodeStatus, NULL) !=HA_OK){
-	        cl_log(LOG_ERR, "Cannot set node status callback\n");
-	        cl_log(LOG_ERR, "REASON: %s\n", hb->llc_ops->errmsg(hb));
+	        cl_log(LOG_ERR, "Cannot set node status callback");
+	        cl_log(LOG_ERR, "REASON: %s", hb->llc_ops->errmsg(hb));
 		return HA_FAIL;
 	}
 
 	if (hb->llc_ops->set_ifstatus_callback(hb, LinkStatus, NULL)!=HA_OK){
-	        cl_log(LOG_ERR, "Cannot set if status callback\n");
-	        cl_log(LOG_ERR, "REASON: %s\n", hb->llc_ops->errmsg(hb));
+	        cl_log(LOG_ERR, "Cannot set if status callback");
+	        cl_log(LOG_ERR, "REASON: %s", hb->llc_ops->errmsg(hb));
 		return HA_FAIL;
 	}
 
@@ -515,8 +515,8 @@ get_heartbeat_fd(void)
 	}
 
 	if ((fd = hb->llc_ops->inputfd(hb)) < 0) {
-		cl_log(LOG_ERR, "Cannot get inputfd\n");
-		cl_log(LOG_ERR, "REASON, %s\n", hb->llc_ops->errmsg(hb));
+		cl_log(LOG_ERR, "Cannot get inputfd");
+		cl_log(LOG_ERR, "REASON, %s", hb->llc_ops->errmsg(hb));
 	}
 	return fd;
 }
@@ -663,7 +663,7 @@ handle_heartbeat_msg(void)
 		node = ha_msg_value(msg, F_ORIG);
 		if (!type || !node) {
 			/* can't read type. log and ignore the msg. */
-			cl_log(LOG_DEBUG, "Can't read msg type.\n");
+			cl_log(LOG_DEBUG, "Can't read msg type.");
 			return HA_OK;
 		}
 
@@ -749,7 +749,7 @@ init_membership(void)
 
         if (saClmClusterTrackStart(&handle, SA_TRACK_CURRENT, nbuf,
                 gNodeTable->len) != SA_OK) {
-                cl_log(LOG_ERR, "SA_TRACK_CURRENT error, errno [%d]\n", ret);
+                cl_log(LOG_ERR, "SA_TRACK_CURRENT error, errno [%d]", ret);
                 ha_free(nbuf);
                 return HA_FAIL;
         }
@@ -757,7 +757,7 @@ init_membership(void)
         /* Start to track cluster membership changes events */
         if (saClmClusterTrackStart(&handle, SA_TRACK_CHANGES, nbuf,
                 gNodeTable->len) != SA_OK) {
-                cl_log(LOG_ERR, "SA_TRACK_CURRENT error, errno [%d]\n", ret);
+                cl_log(LOG_ERR, "SA_TRACK_CURRENT error, errno [%d]", ret);
                 ha_free(nbuf);
                 return HA_FAIL;
         }
@@ -780,7 +780,7 @@ get_membership_fd(void)
 		return 0;
 
 	if ((ret = saClmSelectionObjectGet(&clm, &st)) != SA_OK) {
-	    	cl_log(LOG_ERR, "saClmSelectionObjectGet error, errno [%d]\n", ret);
+	    	cl_log(LOG_ERR, "saClmSelectionObjectGet error, errno [%d]", ret);
 		return -1;
 	} 
 
@@ -1360,13 +1360,13 @@ main(int argc, char ** argv)
 	free_storage();
 
         if (hb->llc_ops->signoff(hb) != HA_OK) {
-                cl_log(LOG_ERR, "Cannot sign off from heartbeat.\n");
-                cl_log(LOG_ERR, "REASON: %s\n", hb->llc_ops->errmsg(hb));
+                cl_log(LOG_ERR, "Cannot sign off from heartbeat.");
+                cl_log(LOG_ERR, "REASON: %s", hb->llc_ops->errmsg(hb));
                 exit(10);
         }
         if (hb->llc_ops->delete(hb) != HA_OK) {
-                cl_log(LOG_ERR, "Cannot delete API object.\n");
-                cl_log(LOG_ERR, "REASON: %s\n", hb->llc_ops->errmsg(hb));
+                cl_log(LOG_ERR, "Cannot delete API object.");
+                cl_log(LOG_ERR, "REASON: %s", hb->llc_ops->errmsg(hb));
                 exit(11);
         }
 

@@ -1,4 +1,4 @@
-/* $Id: response.c,v 1.10 2004/05/24 06:12:27 deng.pan Exp $ */
+/* $Id: response.c,v 1.11 2005/03/16 17:11:15 lars Exp $ */
 /* 
  * response.c
  *
@@ -152,7 +152,7 @@ SaCkptResponseSend(SaCkptResponseT** pCkptResp)
 
 	/* the end of the request */
 	if (saCkptService->flagVerbose) {
-		cl_log(LOG_INFO, "--->>>\n");
+		cl_log(LOG_INFO, "--->>>");
 	}
 	
 	/* remove request */

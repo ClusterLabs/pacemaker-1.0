@@ -1,4 +1,4 @@
-/* $Id: replica.c,v 1.17 2004/11/18 01:56:59 yixiong Exp $ */
+/* $Id: replica.c,v 1.18 2005/03/16 17:11:15 lars Exp $ */
 /* 
  * replica.c: 
  *
@@ -944,7 +944,7 @@ SaCkptReplicaUpdPrepare(SaCkptReplicaT* replica, SaCkptReqT req,
 			&(secWrtParam->sectionID));
 		if (sec == NULL) {
 			if(saCkptService->flagVerbose){
-				cl_log(LOG_INFO, "Can not find section %s \n", secWrtParam->sectionID.id);
+				cl_log(LOG_INFO, "Can not find section %s", secWrtParam->sectionID.id);
 			}
 			retVal = SA_ERR_INVALID_PARAM;
 			
@@ -1735,13 +1735,13 @@ SaCkptDumpReplica(SaCkptReplicaT* replica){
 	SaCkptSectionT * section = NULL;
 	int i = 0;
 	cl_log(LOG_INFO, "\treplica info");
-	cl_log(LOG_INFO, "\tname is %s \n",replica->checkpointName);
-	cl_log(LOG_INFO, "\tsection number is %d \n",(int)replica->sectionNumber);
+	cl_log(LOG_INFO, "\tname is %s",replica->checkpointName);
+	cl_log(LOG_INFO, "\tsection number is %d",(int)replica->sectionNumber);
 	list = replica->sectionList;
 	
 	while(list != NULL){
 		section = (SaCkptSectionT *)list->data;
-		cl_log(LOG_INFO, "\t %d section length is %d, name is %s \n",i++,section->sectionID.idLen,section->sectionID.id);
+		cl_log(LOG_INFO, "\t %d section length is %d, name is %s",i++,section->sectionID.idLen,section->sectionID.id);
 		list=list->next;
 		
 	}

@@ -146,8 +146,8 @@ cms_heartbeat_init(cms_data_t * cmsdata)
 	if (heartbeat->llc_ops->set_cstatus_callback(heartbeat
 	,	ClientStatus, NULL) != HA_OK) {
 
-		cl_log(LOG_ERR, "Cannot set client status callback\n");
-		cl_log(LOG_ERR, "REASON: %s\n"
+		cl_log(LOG_ERR, "Cannot set client status callback");
+		cl_log(LOG_ERR, "REASON: %s"
 		,	heartbeat->llc_ops->errmsg(heartbeat));
 		return HA_FAIL;
 	}

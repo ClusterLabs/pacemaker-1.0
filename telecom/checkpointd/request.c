@@ -1,4 +1,4 @@
-/* $Id: request.c,v 1.12 2004/12/06 21:19:20 msoffen Exp $ */
+/* $Id: request.c,v 1.13 2005/03/16 17:11:15 lars Exp $ */
 /* 
  * request.c: 
  *
@@ -414,7 +414,7 @@ begin:		strReq = SaCkptReq2String(ckptReq->clientRequest->req);
 		if ((ckptReq->clientRequest->req != REQ_CKPT_SYNC) &&
 			(ckptReq->clientRequest->req != REQ_CKPT_SYNC_ASYNC)){
 			if(saCkptService->flagVerbose){
-				cl_log(LOG_INFO,"Request %lu(%s), section is %s\n",	\
+				cl_log(LOG_INFO,"Request %lu(%s), section is %s",	\
 				ckptReq->clientRequest->requestNO, strReq,sectionName );
 			}
 		}

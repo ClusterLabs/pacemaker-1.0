@@ -276,7 +276,7 @@ proceed:
 
 	mq = (mqueue_t *) ha_malloc(sizeof(mqueue_t));
 	if (!mq) {
-		cl_log(LOG_ERR, "%s: ha_malloc for mqueue_t failed.\n"
+		cl_log(LOG_ERR, "%s: ha_malloc for mqueue_t failed."
 		,	__FUNCTION__);
 		ha_free(cli);
 		ha_free(mqname);
@@ -494,7 +494,7 @@ client_process_mqsend(IPC_Channel * client, client_header_t * msg,
  		||  !(mqueue_name = ((mqueue_t *)(mqg->current->data))->name)
  		||  !(mq = mqueue_table_lookup(mqueue_name, NULL))) {
  
-			cl_log(LOG_ERR, "%s: Cannot find group current [%s]\n"
+			cl_log(LOG_ERR, "%s: Cannot find group current [%s]"
  			,	__FUNCTION__, mqueue_name);
 
 			error = SA_ERR_NOT_EXIST;

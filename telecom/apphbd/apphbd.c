@@ -1,4 +1,4 @@
-/* $Id: apphbd.c,v 1.57 2005/02/12 17:11:48 alan Exp $ */
+/* $Id: apphbd.c,v 1.58 2005/03/16 17:11:15 lars Exp $ */
 /*
  * apphbd:	application heartbeat daemon
  *
@@ -385,10 +385,10 @@ static void
 apphb_client_remove(gpointer Client)
 {
 	apphb_client_t* client = Client;
-	cl_log(LOG_INFO, "apphb_client_remove: client: %ld\n"
+	cl_log(LOG_INFO, "apphb_client_remove: client: %ld"
 	,	(long)client->pid);
 	if (apphbd_config.debug_level >= DBGMIN) {
-		cl_log(LOG_DEBUG, "apphb_client_remove: client pid: %ld\n"
+		cl_log(LOG_DEBUG, "apphb_client_remove: client pid: %ld"
 		,	(long)client->pid);
 	}
 	if (client->timerid) {
@@ -1063,7 +1063,7 @@ make_daemon(void)
 	pid = fork();
 
 	if (pid < 0) {
-		cl_log(LOG_CRIT, "cannot start daemon.\n");
+		cl_log(LOG_CRIT, "cannot start daemon.");
 		exit(LSB_EXIT_GENERIC);
 	}else if (pid > 0) {
 		exit(LSB_EXIT_OK);

@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.376 2005/03/15 18:40:06 gshi Exp $ */
+/* $Id: heartbeat.c,v 1.377 2005/03/16 17:11:15 lars Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -4010,7 +4010,7 @@ hb_tickle_watchdog(void)
 {
 	if (watchdogfd >= 0) {
 		if (write(watchdogfd, "", 1) != 1) {
-			cl_perror("Watchdog write failure: closing %s!\n"
+			cl_perror("Watchdog write failure: closing %s!"
 			,	watchdogdev);
 			hb_close_watchdog();
 			watchdogfd=-1;
@@ -5144,6 +5144,9 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.377  2005/03/16 17:11:15  lars
+ * Janitorial work: Stray \n removal.
+ *
  * Revision 1.376  2005/03/15 18:40:06  gshi
  * change should_send_blocking to should_send_block 'cause it's a better name
  *
