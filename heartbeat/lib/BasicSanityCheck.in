@@ -108,7 +108,6 @@ GenerateHaCf() {
 	mcast $INTERFACE $MCASTIP 694 0 0
 	#bcast $INTERFACE
 	node $LOCALNODE $DUMMYNODE
-	apiauth default uid=root
 	!
   chmod 644 $1
 }

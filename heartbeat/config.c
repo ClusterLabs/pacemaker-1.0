@@ -1,4 +1,4 @@
-/* $Id: config.c,v 1.123 2004/08/31 18:29:15 alan Exp $ */
+/* $Id: config.c,v 1.124 2004/08/31 20:56:11 alan Exp $ */
 /*
  * Parse various heartbeat configuration files...
  *
@@ -1952,7 +1952,7 @@ set_api_authorization(const char * directive)
 		goto baddirective;
 	}
 
-	memset(auth, 0, sizeof(auth));
+	memset(auth, 0, sizeof(*auth));
 
 	if (uidlist) {
 		auth->uid = make_id_table(uidlist, uidlen, unametonum);
@@ -2023,6 +2023,9 @@ baddirective:
 
 /*
  * $Log: config.c,v $
+ * Revision 1.124  2004/08/31 20:56:11  alan
+ * Fixed the new bug that kept heartbeat from passing BasicSanityCheck
+ *
  * Revision 1.123  2004/08/31 18:29:15  alan
  * added the code to config.c to suppress warnings about bad packets
  *
