@@ -1,4 +1,4 @@
-/* $Id: ccmlib_memapi.c,v 1.20 2004/04/02 09:49:33 andrew Exp $ */
+/* $Id: ccmlib_memapi.c,v 1.21 2004/04/07 17:52:52 alan Exp $ */
 /* 
  * ccmlib_memapi.c: Consensus Cluster Membership API
  *
@@ -368,7 +368,7 @@ get_new_membership(mbr_private_t *private,
 static void
 mem_free_func(void *data)
 {
-	int lpc = 0;
+	unsigned lpc = 0;
 	mbr_track_t  *mbr_track =  (mbr_track_t *)data;
 
 	if(mbr_track) {
