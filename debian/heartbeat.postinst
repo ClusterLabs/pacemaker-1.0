@@ -114,6 +114,8 @@ case "$1" in
 	chown root.root ${AKCF}
 	chmod 0600 ${AKCF} # asure that it's only readable by root
 
+	ldconfig
+
 	/etc/init.d/heartbeat start || true
     ;;
 
