@@ -1,4 +1,4 @@
-/* $Id: ccm.c,v 1.50 2004/10/01 12:44:16 lge Exp $ */
+/* $Id: ccm.c,v 1.51 2004/10/07 20:04:05 alan Exp $ */
 /* 
  * ccm.c: Consensus Cluster Service Program 
  *
@@ -806,7 +806,7 @@ ccm_generate_random_cookie(void)
 	struct timeval tmp;
 
 	cookie = g_malloc(COOKIESIZE*sizeof(char));
-	assert(cookie);
+	/* g_malloc never returns NULL: assert(cookie); */
 
 	/* seed the random with a random value */
 	gettimeofday(&tmp, NULL);
@@ -823,7 +823,7 @@ ccm_generate_random_cookie(void)
 static void
 ccm_free_random_cookie(char *cookie)
 {
-	assert(cookie);
+	assert(cookie && *cookie);
 	g_free(cookie);
 }
 
@@ -1350,7 +1350,7 @@ ccm_send_joiner_reply(ll_cluster_t *hb, ccm_info_t *info, const char *joiner)
 	snprintf(clsize, sizeof(clsize), "%d", 
 				CCM_GET_MEMCOUNT(info));
 	cookie = CCM_GET_COOKIE(info);
-	assert(cookie);
+	assert(cookie && *cookie);
 
 	if ((ha_msg_add(m, F_TYPE, ccm_type2string(CCM_TYPE_PROTOVERSION_RESP)) 
 					== HA_FAIL)
@@ -1442,7 +1442,7 @@ ccm_send_final_memlist(ll_cluster_t *hb,
 
 	cookie = CCM_GET_COOKIE(info);
 
-	assert(cookie);
+	assert(cookie && *cookie);
 	assert(finallist);
 
 	if ((ha_msg_add(m, F_TYPE, ccm_type2string(CCM_TYPE_FINAL_MEMLIST)) 
@@ -1563,7 +1563,7 @@ ccm_send_leave(ll_cluster_t *hb, ccm_info_t *info)
 	snprintf(minortrans, sizeof(minortrans), "%d", 
 				CCM_GET_MINORTRANS(info));
 	cookie = CCM_GET_COOKIE(info);
-	assert(cookie);
+	assert(cookie && *cookie);
 
 	if ((ha_msg_add(m, F_TYPE, ccm_type2string(CCM_TYPE_LEAVE)) == HA_FAIL)
 		||(ha_msg_add(m, CCM_COOKIE, cookie) == HA_FAIL)
@@ -1608,7 +1608,7 @@ ccm_send_join(ll_cluster_t *hb, ccm_info_t *info)
 	 * officially joined the cluster 
 	 */
 	cookie = CCM_GET_COOKIE(info);
-	assert(cookie);
+	assert(cookie && *cookie);
 
 	joinedtrans_val = CCM_GET_JOINED_TRANSITION(info);
 	joinedtrans_val = (joinedtrans_val == -1)? 0: joinedtrans_val;
@@ -1665,7 +1665,7 @@ ccm_send_memlist_res(ll_cluster_t *hb,
 					CCM_GET_MAXTRANS(info));
 
 	cookie = CCM_GET_COOKIE(info);
-	assert(cookie);
+	assert(cookie && *cookie);
 
 	if (!memlist) {
 		int numBytes = bitmap_create(&bitmap, MAXNODE);
@@ -1725,7 +1725,7 @@ ccm_send_memlist_request(ll_cluster_t *hb, ccm_info_t *info)
 	snprintf(minortrans, sizeof(minortrans), "%d", 
 					CCM_GET_MINORTRANS(info));
 	cookie = CCM_GET_COOKIE(info);
-	assert(cookie);
+	assert(cookie && *cookie);
 
 	if ((ha_msg_add(m, F_TYPE, ccm_type2string(CCM_TYPE_REQ_MEMLIST)) 
 						== HA_FAIL)
@@ -1870,7 +1870,7 @@ ccm_create_leave_msg(ccm_info_t *info, int uuid)
 	snprintf(minortrans, sizeof(minortrans), "%d", 
 				CCM_GET_MINORTRANS(info));
 	cookie = CCM_GET_COOKIE(info);
-	assert(cookie);
+	assert(cookie && *cookie);
 
 	if ((ha_msg_add(m, F_TYPE, ccm_type2string(CCM_TYPE_LEAVE)) 
 							== HA_FAIL)
@@ -4346,7 +4346,7 @@ static int send_node_leave_to_leader(ll_cluster_t *hb, ccm_info_t *info, const c
 	snprintf(joinedtrans, sizeof(joinedtrans), "%d", 
 		              CCM_GET_JOINED_TRANSITION(info));
 	cookie = CCM_GET_COOKIE(info);
-	assert(cookie);
+	assert(cookie && *cookie);
 
 
 	if((ha_msg_add(m, F_TYPE, ccm_type2string(CCM_TYPE_NODE_LEAVE)) == HA_FAIL)
@@ -4627,7 +4627,7 @@ static int ccm_send_alive_msg(ll_cluster_t *hb, ccm_info_t *info)
 	snprintf(minortrans, sizeof(minortrans), "%d", 
 				CCM_GET_MINORTRANS(info));
 	cookie = CCM_GET_COOKIE(info);
-	assert(cookie);
+	assert(cookie && *cookie);
 
 	if ((ha_msg_add(m, F_TYPE, ccm_type2string(CCM_TYPE_ALIVE)) == HA_FAIL)
 		||(ha_msg_add(m, CCM_COOKIE, cookie) == HA_FAIL)
@@ -4674,7 +4674,7 @@ static int ccm_send_newnode_to_leader(ll_cluster_t *hb,
 		              CCM_GET_JOINED_TRANSITION(info));
 
 	cookie = CCM_GET_COOKIE(info);
-	assert(cookie);
+	assert(cookie && *cookie);
 
 	if ((ha_msg_add(m, F_TYPE, ccm_type2string(CCM_TYPE_NEW_NODE)) == HA_FAIL)
 		||(ha_msg_add(m, CCM_COOKIE, cookie) == HA_FAIL)
