@@ -80,6 +80,8 @@ int 				nice_failback = FALSE;
 int 				auto_failback = FALSE;
 int 				failback_in_progress = FALSE;
 static gboolean			rsc_needs_failback = FALSE;
+static gboolean			local_takeover_completed = FALSE;
+static gboolean			foreign_takeover_completed = FALSE;
 static gboolean			rsc_needs_shutdown = FALSE;
 int				other_holds_resources = HB_NO_RSC;
 int				other_is_stable = FALSE; /* F_ISSTABLE */
@@ -88,7 +90,6 @@ enum hb_rsc_state		resourcestate = HB_R_INIT;
 enum standby			going_standby = NOT;
 longclock_t			standby_running = 0L;
 static int			standby_rsctype = HB_ALL_RSC;
-static gboolean			init_takeover_announced = FALSE;
 
 #define	INITMSG			"Initial resource acquisition complete"
 
@@ -259,7 +260,8 @@ notify_world(struct ha_msg * msg, const char * ostatus)
  *
  */
 	struct sigaction sa;
-	char		command[STATUSLENG];
+	/* We only run one of these commands at a time */
+	static char	command[STATUSLENG];
 	char 		rc_arg0 [] = RC_ARG0;
 	char *	const	argv[MAXFIELDS+3] = {rc_arg0, command, NULL};
 	const char *	fp;
@@ -287,6 +289,7 @@ notify_world(struct ha_msg * msg, const char * ostatus)
 	}
 
 
+	/* FIXME: No check on length of command */
 	while (*fp) {
 		if (isupper((unsigned int)*fp)) {
 			*tp = tolower((unsigned int)*fp);
@@ -343,13 +346,15 @@ notify_world(struct ha_msg * msg, const char * ostatus)
 
 
 		default:	/* Parent */
-				HB_RSCMGMTPROC(pid, "notify world");
+				/* We only run one of these commands at a time */
+				/* So this use of "command" is OK */
+				HB_RSCMGMTPROC(pid, command);
 	}
 
 #if WAITFORCOMMANDS
-				waitpid(pid, &status, 0);
+	waitpid(pid, &status, 0);
 #else
-				(void)status;
+	(void)status;
 #endif
 }
 
@@ -556,12 +561,28 @@ comm_up_resource_action(void)
 		send_local_starting();
 	}else{
 		/* Original ("normal") starting behavior */
+		int	deadcount = countbystatus(DEADSTATUS, TRUE);
 		if (!WeAreRestarting && !resources_requested_yet) {
 			resources_requested_yet=1;
 			req_our_resources(FALSE);
 		}
+		if (deadcount == 0) {
+			foreign_takeover_completed = TRUE;
+		}
 	}
 
+}
+static void
+AnnounceTakeover(const char * reason)
+{
+	static gboolean		init_takeover_announced = FALSE;
+
+	if (init_takeover_announced
+	||	!local_takeover_completed || !foreign_takeover_completed) {
+		return;
+	}
+	init_takeover_announced = TRUE;
+	ha_log(LOG_INFO, INITMSG " (%s)", reason);
 }
 void
 process_resources(const char * type, struct ha_msg* msg
@@ -659,8 +680,16 @@ process_resources(const char * type, struct ha_msg* msg
 
 		switch (resourcestate) {
 
-		case HB_R_BOTHSTARTING:
+		case HB_R_BOTHSTARTING: newrstate = HB_R_RSCRCVD;
+					foreign_takeover_completed = TRUE;
+					break;
 		case HB_R_STARTING:	newrstate = HB_R_RSCRCVD;
+					foreign_takeover_completed = TRUE;
+					if (!auto_failback) {
+						local_takeover_completed = TRUE;
+					}
+					AnnounceTakeover("T_RESOURCES");
+
 		case HB_R_RSCRCVD:
 		case HB_R_STABLE:
 		case HB_R_SHUTDOWN:
@@ -754,11 +783,8 @@ process_resources(const char * type, struct ha_msg* msg
 						, "process_resources(3): %s"
 						, " other now stable");
 					}
-					if (!init_takeover_announced) {
-						ha_log(LOG_INFO
-						,	INITMSG " (mach_down)");
-						init_takeover_announced = TRUE;
-					}
+					foreign_takeover_completed = TRUE;
+					AnnounceTakeover("mach_down");
 				}else if (strcmp(comment, "shutdown") == 0) {
 					resourcestate = newrstate = HB_R_SHUTDOWN;
 				}
@@ -926,11 +952,6 @@ send_local_starting(void)
 
 	if (!nice_failback) {
 		return HA_OK;
-	}
-	if (!auto_failback && !init_takeover_announced) {
-		ha_log(LOG_INFO
-		,	INITMSG " (auto_failback off)");
-		init_takeover_announced = TRUE;
 	}
 	if (ANYDEBUG) {
 		ha_log(LOG_DEBUG
@@ -1408,10 +1429,9 @@ ask_for_resources(struct ha_msg *msg)
 				,	"Standby resource"
 				" acquisition done [%s]."
 				,	decode_resources(rtype));
-				if (!init_takeover_announced) {
-					ha_log(LOG_INFO
-					,	INITMSG " (auto_failback)");
-					init_takeover_announced = TRUE;
+				if (auto_failback) {
+					local_takeover_completed = TRUE;
+					AnnounceTakeover("auto_failback");
 				}
 				switch(rtype) {
 				case HB_LOCAL_RSC:	rup=HB_FOREIGN_RSC;
@@ -1457,6 +1477,9 @@ countbystatus(const char * status, int matchornot)
 	matchornot = (matchornot ? TRUE : FALSE);
 
 	for (j=0; j < config->nodecount; ++j) {
+		if (config->nodes[j].nodetype == PINGNODE_I) {
+			continue;
+		}
 		matches = (strcmp(config->nodes[j].status, status) == 0);
 		if (matches == matchornot) {
 			++count;
@@ -1847,11 +1870,10 @@ RscMgmtProcessDied(ProcTrack* p, int status, int signo, int exitcode
 {
 	ResourceMgmt_child_count --;
 
-	if (!init_takeover_announced
-	&&	strcmp(RscMgmtProcessName(p), "req_our_resources") == 0) {
-		ha_log(LOG_INFO, INITMSG " (req_our_resources)");
-		init_takeover_announced = TRUE;
-			
+	if (strcmp(RscMgmtProcessName(p), "req_our_resources") == 0
+	||	 strcmp(RscMgmtProcessName(p), "ip-request-resp") == 0) {
+		local_takeover_completed = TRUE;
+		AnnounceTakeover(RscMgmtProcessName(p));
 	}
 	p->privatedata = NULL;
 	StartNextRemoteRscReq();
@@ -2034,6 +2056,10 @@ StonithProcessName(ProcTrack* p)
 
 /*
  * $Log: hb_resource.c,v $
+ * Revision 1.45  2004/02/12 08:55:44  alan
+ * Neatend up the code for printing a takeover complete message for the
+ * CTS tests to look for.
+ *
  * Revision 1.44  2004/02/10 22:44:02  alan
  * Found and got rid of a direct call to notify world, and replaced it by
  * a queued call to notify world.
