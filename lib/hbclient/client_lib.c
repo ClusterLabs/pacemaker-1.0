@@ -1,4 +1,4 @@
-/* $Id: client_lib.c,v 1.11 2004/10/01 13:23:29 lge Exp $ */
+/* $Id: client_lib.c,v 1.12 2004/10/05 20:20:49 gshi Exp $ */
 /* 
  * client_lib: heartbeat API client side code
  *
@@ -843,12 +843,16 @@ get_clientstatus(ll_cluster_t* lcl, const char *host
 	/* If host is NULL, user choose the callback method to
 	 * get the result. This also implies timeout is useless */
 	if (host == NULL) {
-		struct ha_msg * m;
+		struct ha_msg * m = NULL;
 
 		if ((m = ha_msg_new(0)) == NULL
 		||	ha_msg_add(m, F_TYPE, T_QCSTATUS) != HA_OK
 		||	ha_msg_add(m, F_CLIENTNAME, clientname) != HA_OK) {
-
+			
+			if (m){
+				ha_msg_del(m);
+			}
+			
 			ha_log(LOG_ERR, "%s: cannot add field", __FUNCTION__);
 			return NULL;
 		}
