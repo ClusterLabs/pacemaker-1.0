@@ -1,4 +1,4 @@
-/* $Id: ha_msg.h,v 1.46 2005/01/20 19:17:50 gshi Exp $ */
+/* $Id: ha_msg.h,v 1.47 2005/01/26 13:57:06 andrew Exp $ */
 /*
  * Intracluster message object (struct ha_msg)
  *
@@ -334,7 +334,7 @@ int get_stringlen(const struct ha_msg *m);
 int get_netstringlen(const struct ha_msg *m);
 
 /* Add a child message to a message as a field */
-int ha_msg_addstruct(struct ha_msg * msg, const char * name, void* ptr);
+int ha_msg_addstruct(struct ha_msg * msg, const char * name, const void* ptr);
 
 /* Get binary data from a message */
 const void * cl_get_binary(const struct ha_msg *msg, const char * name, size_t * vallen);
