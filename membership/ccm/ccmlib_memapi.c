@@ -1,4 +1,4 @@
-/* $Id: ccmlib_memapi.c,v 1.19 2004/03/25 08:20:31 alan Exp $ */
+/* $Id: ccmlib_memapi.c,v 1.20 2004/04/02 09:49:33 andrew Exp $ */
 /* 
  * ccmlib_memapi.c: Consensus Cluster Membership API
  *
@@ -307,10 +307,6 @@ get_new_membership(mbr_private_t *private,
 
 		uname = llm_get_Id_from_Uuid(private->llm, uuid);
 
-		/* strdup(uname) needs to be cleaned up somewhere
-		 * but I cant see where
-		 */
-		
 		newmbr->m_mem.m_array[j].node_uname = strdup(uname); 
 
 		OC_EV_SET_NODEID(newmbr,j,uuid);
@@ -372,9 +368,19 @@ get_new_membership(mbr_private_t *private,
 static void
 mem_free_func(void *data)
 {
+	int lpc = 0;
 	mbr_track_t  *mbr_track =  (mbr_track_t *)data;
 
-	if(mbr_track) g_free(mbr_track);
+	if(mbr_track) {
+		for (lpc = 0 ; lpc < mbr_track->m_mem.m_n_member; lpc++ ) {
+			char *uname = mbr_track->m_mem.m_array[lpc].node_uname;
+			if(uname != NULL) {
+				g_free(uname);
+			}
+		}
+		g_free(mbr_track);
+	}
+	
 
 	return;
 }
@@ -520,7 +526,7 @@ mem_handle_event(class_t *class)
 			if (!private->special && !quorum){
 				update_bornons(private, mbr_track);
 				private->client_report = FALSE;
-				g_free(mbr_track);
+				mem_free_func(mbr_track);
 				break;
 			}
 			private->client_report = TRUE;
@@ -534,7 +540,7 @@ mem_handle_event(class_t *class)
 				/* we do not need the new mbr_track, 
 				*  the old one is the same as the new
 				*/
-				g_free(mbr_track);
+				mem_free_func(mbr_track);
 
 				oc_type = OC_EV_MS_PRIMARY_RESTORED;
 				cookie = private->cookie;
