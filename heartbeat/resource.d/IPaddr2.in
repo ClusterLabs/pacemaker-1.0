@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-#	$Id: IPaddr2.in,v 1.11 2004/06/10 11:26:04 horms Exp $
+#	$Id: IPaddr2.in,v 1.12 2004/06/15 10:39:43 horms Exp $
 #
 #	Copyright (C) 2003 Tuomo Soini <tis@foobar.fi>
 #
@@ -63,7 +63,7 @@ find_interface() {
     #
     # List interfaces but exclude FreeS/WAN ipsecN virtual interfaces
     #
-    iface=`$IP2UTIL -o -f inet addr list | grep "\ $1/" \
+    iface=`$IP2UTIL -o -f inet addr show | grep "\ $1/" \
 	| cut -d ' ' -f2 | grep -v '^ipsec[0-9][0-9]*$'`
     echo $iface
     return 0
@@ -110,7 +110,7 @@ delete_interface () {
         return $?
     fi
     
-    CMD="$IP2UTIL -o -f inet addr list $iface"
+    CMD="$IP2UTIL -o -f inet addr show $iface"
 
     ha_log "info: $CMD"
     ADDR=`$CMD`
@@ -121,7 +121,7 @@ delete_interface () {
         return $?
     fi
     
-    CMD="$IP2UTIL -o -f inet link set down $iface"
+    CMD="$IP2UTIL link set $iface down"
 
     ha_log "info: $CMD"
     $CMD
@@ -158,7 +158,7 @@ add_interface () {
         return $?
     fi
 
-    CMD="$IP2UTIL -f inet link set up $iface"
+    CMD="$IP2UTIL link set $iface up"
 
     ha_log "info: $CMD"
     $CMD
