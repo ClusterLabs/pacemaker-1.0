@@ -46,7 +46,7 @@
 static const char * CLIENT_NAME = NULL;
 static pid_t CLIENT_PID = 0;
 static char CLIENT_PID_STR[16];
-static gboolean DEBUG_MODE	   = TRUE;
+static gboolean DEBUG_MODE	   = FALSE;
 static gboolean SIGNONED_TO_STONITHD = FALSE;
 static IPC_Channel * chan	   = NULL;
 
@@ -863,7 +863,7 @@ chan_waitout_timeout(IPC_Channel * chan, unsigned int timeout)
 	return ret;
 }
 
-void enable_debug_mode(void)
+void stdlib_enable_debug_mode(void)
 {
 	DEBUG_MODE = TRUE;
 }
