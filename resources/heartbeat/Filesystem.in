@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $Id: Filesystem.in,v 1.1 2004/08/27 09:34:14 lars Exp $
+# $Id: Filesystem.in,v 1.2 2005/01/03 06:25:28 alan Exp $
 # 
 # Filesystem
 #      Description: Manages a Filesystem on a shared storage medium.
@@ -95,7 +95,7 @@ cat <<-EOT;
 	<fstype>    : name of the filesystem type. e.g. ext2
 	<options>   : options to be given as -o options to mount.
 
-	$Id: Filesystem.in,v 1.1 2004/08/27 09:34:14 lars Exp $
+	$Id: Filesystem.in,v 1.2 2005/01/03 06:25:28 alan Exp $
 	EOT
 }
 
@@ -122,12 +122,18 @@ DEVICE=$1
 MOUNTPOINT=$2
 FSTYPE=$3
 
+case $# in
+  4)	operation=$4; options="";;
+  5)	operation=$5; options="-o $4";;
+  *)	usage; exit 1;;
+esac
+
 case $DEVICE in
   -*) # Oh... An option to mount instead...  Typically -U or -L
 	;;
   [^/]*:/*)	# An NFS filesystem specification...
 	;;
-  *)	if [ ! -b "$DEVICE" ] ; then
+  *)	if [ ! -b "$DEVICE"  -a "$operation" != stop ]; then
 	  ha_log "ERROR: Couldn't find device $DEVICE. Expected /dev/??? to exist"
 	  usage
 	  exit 1
@@ -147,12 +153,6 @@ check_util $FSCK
 check_util $FUSER
 check_util $MOUNT
 check_util $UMOUNT
-
-case $# in
-  4)	operation=$4; options="";;
-  5)	operation=$5; options="-o $4";;
-  *)	usage; exit 1;;
-esac
   
 
 # Look for the 'start', 'stop' or status argument
