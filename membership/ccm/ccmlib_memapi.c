@@ -1,4 +1,4 @@
-/* $Id: ccmlib_memapi.c,v 1.18 2004/03/05 12:55:20 andrew Exp $ */
+/* $Id: ccmlib_memapi.c,v 1.19 2004/03/25 08:20:31 alan Exp $ */
 /* 
  * ccmlib_memapi.c: Consensus Cluster Membership API
  *
@@ -267,7 +267,7 @@ compare(const void *value1, const void *value2)
 static const char *
 llm_get_Id_from_Uuid(ccm_llm_t *stuff, uint uuid)
 {
-	int lpc = 0;
+	uint lpc = 0;
 	for (; lpc < stuff->n; lpc++) {
 		if(stuff->node[lpc].Uuid == uuid)
 			return stuff->node[lpc].Id;

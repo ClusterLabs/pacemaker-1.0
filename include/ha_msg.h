@@ -1,4 +1,4 @@
-/* $Id: ha_msg.h,v 1.28 2004/03/18 11:00:13 andrew Exp $ */
+/* $Id: ha_msg.h,v 1.29 2004/03/25 08:20:33 alan Exp $ */
 /*
  * Intracluster message object (struct ha_msg)
  *
@@ -24,20 +24,34 @@
 #ifndef _HA_MSG_H
 #	define _HA_MSG_H 1
 #include <stdio.h>
+#include <clplumbing/cl_log.h>
 #include <clplumbing/ipc.h>
+#include <clplumbing/longclock.h>
 
 #define	HA_FAIL		0
 #define	HA_OK		1
 
-enum{
+enum cl_netstring_type{
 	FT_STRING,
 	FT_BINARY,
 	FT_STRUCT
 };
 
+enum cl_msgfmt{
+	MSGFMT_NVPAIR,
+	MSGFMT_NETSTRING,
+};
+
 
 #define NEEDHEAD	1
 #define NOHEAD		0
+
+typedef struct hb_msg_stats_s {
+	unsigned long		totalmsgs;	/* Total # of messages */
+						/* ever handled */
+	unsigned long		allocmsgs;	/* # Msgs currently allocated */
+	longclock_t		lastmsg;
+}hb_msg_stats_t;
 
 struct ha_msg {
 	int	nfields;
@@ -127,6 +141,8 @@ struct ha_msg {
 #define T_STONITH_NOTCONFGD	"n_stnth" /* no stonith device configured */
 #define T_STONITH_UNNEEDED	"unneeded" /* STONITH not required */
 
+/* Set up message statistics area */
+void cl_msg_setstats(volatile hb_msg_stats_t* stats);
 
 /* Allocate new (empty) message */
 struct ha_msg *	ha_msg_new(int nfields);
@@ -224,11 +240,8 @@ struct ha_msg* msgfromIPC_noauth(IPC_Channel * ch);
 /* This adds the default sequence#, load avg, etc. to the message */
 struct ha_msg *	controlfifo2msg(FILE * f);
 
-/* Dump the message into log file */
-void		ha_log_message(const struct ha_msg* msg);
-
 /* Check if the message is authenticated */
-int		isauthentic(const struct ha_msg * msg);
+gboolean	isauthentic(const struct ha_msg * msg);
 
 /* Get the required string length for the given message */ 
 int get_stringlen(const struct ha_msg *m, int depth);
@@ -250,5 +263,14 @@ int cl_get_type(const struct ha_msg *msg, const char *name);
 
 /* Get a child message from a message*/
 struct ha_msg *cl_get_struct(const struct ha_msg *msg, const char* name);
+
+/* Log the contents of a  message */
+void cl_log_message (const struct ha_msg *m);
+
+/* Supply messaging system with old style authentication/authorization method */
+void cl_set_oldmsgauthfunc(gboolean (*authfunc)(const struct ha_msg*));
+
+/* Set default messaging format */
+void cl_set_msg_format(enum cl_msgfmt mfmt);
 
 #endif /* __HA_MSG_H */

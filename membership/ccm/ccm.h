@@ -1,4 +1,4 @@
-/* $Id: ccm.h,v 1.20 2004/02/17 22:12:00 lars Exp $ */
+/* $Id: ccm.h,v 1.21 2004/03/25 08:20:31 alan Exp $ */
 /*
  * ccm.h: definitions Consensus Cluster Manager internal header
  *				file
@@ -49,9 +49,7 @@
 
 #include <ha_config.h>
 #include <heartbeat.h>
-#include <hb_api_core.h>
 #include <hb_api.h>
-#include <hb_proc.h>
 
 
 // BEGINNING OF version request tracking interfaces

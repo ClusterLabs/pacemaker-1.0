@@ -1,4 +1,4 @@
-/* $Id: heartbeat.h,v 1.41 2004/03/18 11:00:13 andrew Exp $ */
+/* $Id: heartbeat.h,v 1.42 2004/03/25 08:20:33 alan Exp $ */
 /*
  * heartbeat.h: core definitions for the Linux-HA heartbeat program
  *
@@ -52,6 +52,7 @@
 #include <clplumbing/cl_log.h>
 #include <clplumbing/longclock.h>
 #include <clplumbing/ipc.h>
+#include <clplumbing/cl_malloc.h>
 #define index FooIndex
 #define time FooTime
 #include <glib.h>
@@ -182,7 +183,6 @@
 #define AUTH_MODULE_DIR HA_MODULE_D "/auth"
 
 #define	STATIC		/* static */
-#define	MALLOCT(t)	((t *)(ha_malloc(sizeof(t))))
 
 /* You may need to change this for your compiler */
 #ifdef HAVE_STRINGIZE
@@ -368,12 +368,6 @@ struct link *  iface_lookup_node(const char *);
 int	add_node(const char * value, int nodetype);
 void	SetParameterValue(const char * name, const char * value);
 
-void*		ha_malloc(size_t size);
-void*		ha_calloc(size_t nmemb, size_t size);
-char*		ha_strdup(const char *s);
-void		ha_free(void *ptr);
-int		ha_is_allocated(const void *ptr);
-void		ha_malloc_report(void);
 
 #ifndef HA_HAVE_SETENV
 int setenv(const char *name, const char * value, int why);

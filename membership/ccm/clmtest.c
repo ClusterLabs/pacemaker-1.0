@@ -71,7 +71,7 @@ static void
 track_callback(SaClmClusterNotificationT *nbuf, SaUint32T nitem
 ,	SaUint32T nmem, SaUint64T nview, SaErrorT error)
 {
-	int i;
+	uint i;
 
 	if (error != SA_OK) {
 		fprintf(stderr, "Track Callback failed [%d]\n", error);

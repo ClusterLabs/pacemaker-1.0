@@ -1,4 +1,4 @@
-/* $Id: hb_api.h,v 1.14 2004/03/03 05:31:50 alan Exp $ */
+/* $Id: hb_api.h,v 1.15 2004/03/25 08:20:33 alan Exp $ */
 /*
  * Client-side Low-level clustering API for heartbeat.
  *
@@ -256,7 +256,7 @@ struct llc_ops {
 #	define	LLC_FILTER_ALLHB	2
 #	define	LLC_FILTER_RAW		3
 
-	int (*setfmode)(ll_cluster_t*, int mode);
+	int (*setfmode)(ll_cluster_t*, unsigned mode);
 /*
  *	Return the value of a heartbeat configuration parameter
  *	as a malloc-ed string().  You need to free() the result when

@@ -241,7 +241,7 @@ set_misc_node_info(SaClmClusterNodeT *cn)
 static void
 retrieve_current_buffer(__clm_handle_t *hd)
 {
-	int i;
+	uint i;
 	char *p;
 	const oc_ev_membership_t *oc = __ccm_data;
 
@@ -264,7 +264,8 @@ retrieve_current_buffer(__clm_handle_t *hd)
 static void
 retrieve_changes_buffer(__clm_handle_t *hd)
 {
-	int i, j, n;
+	uint i, j;
+	int n;
 	char *p;
 	const oc_ev_membership_t *oc = __ccm_data;
 
@@ -308,7 +309,8 @@ retrieve_changes_buffer(__clm_handle_t *hd)
 static void
 retrieve_changes_only_buffer(__clm_handle_t *hd)
 {
-	int i, n;
+	uint i;
+	int n;
 	char *p;
 	const oc_ev_membership_t *oc = __ccm_data;
 
@@ -348,7 +350,7 @@ saClmDispatch(const SaClmHandleT *clmHandle,
 {
 	int ret;
 	const oc_ev_membership_t *oc;
-	int itemnum;
+	uint itemnum;
 	__clm_handle_t *hd = GET_CLM_HANDLE(clmHandle);
 
 	if (!hd)
@@ -463,7 +465,7 @@ saClmClusterTrackStart(const SaClmHandleT *clmHandle,
 
 	if (trackFlags == SA_TRACK_CURRENT) {
 		const oc_ev_membership_t *oc;
-		int itemnum;
+		SaUint32T itemnum;
 		
 		oc = __ccm_data;
 		itemnum = oc->m_n_member;
@@ -505,7 +507,7 @@ static SaErrorT
 retrieve_node_buffer(SaClmNodeIdT nodeId, SaClmClusterNodeT *clusterNode)
 {
 	const oc_ev_membership_t *oc;
-	int i;
+	uint i;
 	char *p;
 
 	oc = (const oc_ev_membership_t *)__ccm_data;
