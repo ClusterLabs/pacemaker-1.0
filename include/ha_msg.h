@@ -22,7 +22,7 @@
 
 #ifndef _HA_MSG_H
 #	define _HA_MSG_H 1
-static const char * _ha_msg_h_Id = "$Id: ha_msg.h,v 1.21 2003/09/11 16:01:28 alan Exp $";
+static const char * _ha_msg_h_Id = "$Id: ha_msg.h,v 1.22 2003/09/24 05:53:13 alan Exp $";
 #include <stdio.h>
 #include <clplumbing/ipc.h>
 
@@ -108,6 +108,7 @@ struct ha_msg {
 #define T_STONITH_BADHOST	"badhost" /* stonith failed */
 #define T_STONITH_BAD		"bad"	  /* stonith failed */
 #define T_STONITH_NOTCONFGD	"n_stnth" /* no stonith device configured */
+#define T_STONITH_UNNEEDED	"unneeded" /* STONITH not required */
 
 
 /* Allocate new (empty) message */

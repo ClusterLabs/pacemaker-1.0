@@ -395,13 +395,14 @@ hb_rsc_recover_dead_resources(struct node_info* hip)
 			/* It will call takeover_from_node() later */
 			return;
 		}else{
-			send_stonith_msg(hip->nodename,T_STONITH_NOTCONFGD);
+			send_stonith_msg(hip->nodename, T_STONITH_NOTCONFGD);
 			ha_log(LOG_WARNING, "No STONITH device configured.");
 			ha_log(LOG_WARNING, "Shared disks are not protected.");
 		}
 	}else{
 		ha_log(LOG_INFO, "Dead node %s held no resources."
 		,	hip->nodename);
+		send_stonith_msg(hip->nodename, T_STONITH_UNNEEDED);
 	}
 	/* nice_failback needs us to do this anyway... */
 	takeover_from_node(hip->nodename);
@@ -1780,7 +1781,7 @@ Initiate_Reset(Stonith* s, const char * nodename)
 		result = T_STONITH_BAD;
 	}
 
-	send_stonith_msg(nodename,result);
+	send_stonith_msg(nodename, result);
 	exit (exitcode);
 }
 
@@ -1990,6 +1991,9 @@ StonithProcessName(ProcTrack* p)
 
 /*
  * $Log: hb_resource.c,v $
+ * Revision 1.35  2003/09/24 05:53:13  alan
+ * Put in a STONITH message for one case where it was missing...
+ *
  * Revision 1.34  2003/09/19 19:57:31  alan
  * When auto_failback = legacy, 1.1.2 wouldn't shut down properly.
  * The code was testing some nice_failback only variables.  Now it doesn't ;-)
