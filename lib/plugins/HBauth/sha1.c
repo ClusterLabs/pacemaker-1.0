@@ -1,4 +1,4 @@
-/* $Id: sha1.c,v 1.14 2004/10/24 13:00:13 lge Exp $ */
+/* $Id: sha1.c,v 1.15 2005/02/18 20:47:59 alan Exp $ */
 /*
 SHA-1 in C
 By Steve Reid <steve@edmweb.com>
@@ -201,7 +201,9 @@ void SHA1Update(SHA1_CTX* context, const unsigned char* data, unsigned int len)
 unsigned int i, j;
 
     j = (context->count[0] >> 3) & 63;
-    if ((context->count[0] += len << 3) < (len << 3)) context->count[1]++;
+    if ((context->count[0] += len << 3) < (len << 3)) {
+	context->count[1]++;
+    }
     context->count[1] += (len >> 29);
     if ((j + len) > 63) {
         memcpy(&context->buffer[j], data, (i = 64-j));
@@ -210,8 +212,9 @@ unsigned int i, j;
             SHA1Transform(context->state, &data[i]);
         }
         j = 0;
+    } else {
+	i = 0;
     }
-    else i = 0;
     memcpy(&context->buffer[j], &data[i], len - i);
 }
 
@@ -285,8 +288,9 @@ sha1_auth_calc (const struct HBauth_info *info
 	SHA1Init(&ictx) ;
 
 	/* Pad the key for inner digest */
-	for (i = 0 ; i < key_len ; ++i) buf[i] = key[i] ^ 0x36 ;
-	for (i = key_len ; i < SHA_BLOCKSIZE ; ++i) buf[i] = 0x36 ;
+	for (i = 0 ; i < key_len ; ++i) { buf[i] = key[i] ^ 0x36;};
+	/* Should this be a call to to memset? */
+	for (i = key_len ; i < SHA_BLOCKSIZE ; ++i) { buf[i] = 0x36;};
 
 	SHA1Update(&ictx, buf, SHA_BLOCKSIZE) ;
 	SHA1Update(&ictx, (const unsigned char *)text, textlen) ;
@@ -300,7 +304,8 @@ sha1_auth_calc (const struct HBauth_info *info
 	/* Pad the key for outer digest */
 
 	for (i = 0 ; i < key_len ; ++i) buf[i] = key[i] ^ 0x5C ;
-	for (i = key_len ; i < SHA_BLOCKSIZE ; ++i) buf[i] = 0x5C ;
+	/* Should this be a call to memset? */
+	for (i = key_len ; i < SHA_BLOCKSIZE ; ++i) { buf[i] = 0x5C; };
 
 	SHA1Update(&octx, buf, SHA_BLOCKSIZE) ;
 	SHA1Update(&octx, isha, SHA_DIGESTSIZE) ;
