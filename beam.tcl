@@ -96,6 +96,8 @@ set beam::disabled_files "*/libltdl/*"
 # I think this yydestruct problem is a BEAM bug...
 set  beam::MISTAKE1::disabled_functions  "yydestruct"
 set  beam::ERROR33::disabled_functions  "g_bit_nth_msf"
+lappend beam::WARNING15::disabled_files "conf_yacc.c"
+lappend beam::WARNING15::disabled_files "conf_lex.c"
 
 
 
