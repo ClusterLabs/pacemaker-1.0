@@ -167,5 +167,5 @@ stdmsg_log(int priority, const char * fmt, ...)
 	va_start(ap, fmt);
 	vsnprintf(buf, sizeof(buf)-1, fmt, ap);
 	va_end(ap);
-	stdmsg_log(priority, "%s", buf);
+	cl_log(priority, "%s", buf);
 }
