@@ -1,5 +1,5 @@
 Source: heartbeat
-Build-Depends: debhelper (>= 2.0.0), libsnmp5-dev | libsnmp4.2-dev, lynx | lynx-ssl, libglib1.2-dev, perl, net-tools, netkit-ping, ssh, python, util-linux, psmisc, mount, e2fsprogs, modutils, libnet0-dev, raidtools2, iproute, libssl-dev | libssl09-dev, libtool, automake
+Build-Depends: debhelper (>= 2.0.0), libsnmp5-dev | libsnmp4.2-dev, libglib1.2-dev, perl, net-tools, netkit-ping, ssh, python, util-linux, psmisc, mount, e2fsprogs, modutils, libnet0-dev, raidtools2, iproute, libssl-dev | libssl09-dev, libtool, automake
 Section: admin
 Priority: optional
 Maintainer: Simon Horman <horms@vergenet.net>
