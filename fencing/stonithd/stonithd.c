@@ -1763,8 +1763,7 @@ stonith_operate_locally( stonith_ops_t * st_op, stonith_rsc_t * srsc)
 
 	if (st_op->optype == 0) {  /* QUERY opertation */
 		stonithd_log(LOG_DEBUG, "query operation.");
-		//query_who_can_stonith_it
-		return -1; /* sunjd */
+		return -1;
 	}
 
 	st_obj = srsc->stonith_obj;
