@@ -1,4 +1,4 @@
-/* $Id: ipfail.c,v 1.25 2004/02/17 22:11:56 lars Exp $ */
+/* $Id: ipfail.c,v 1.26 2004/04/01 15:55:40 alan Exp $ */
 /* ipfail: IP Failover plugin for Linux-HA
  *
  * Copyright (C) 2002-2003 Kevin Dwyer <kevin@pheared.net>
@@ -531,6 +531,9 @@ msg_ipfail_join(const struct ha_msg *msg, void *private)
 void
 msg_resources(const struct ha_msg *msg, void *private)
 {
+	const char * orig = ha_msg_value(msg, F_ORIG);
+	const char * isstable = ha_msg_value(msg, F_ISSTABLE);
+
 	/* msg_resources: Catch T_RESOURCES messages, so that we can
 	 * find out when stability is achieved among the cluster
 	 */
@@ -538,9 +541,9 @@ msg_resources(const struct ha_msg *msg, void *private)
 	/* Right now there are two stable messages sent out, we are
 	 * only concerned with the one that has no info= line on it.
 	 */
-	if (!strcmp(ha_msg_value(msg, F_ORIG), other_node) &&
+	if (orig && !strcmp(orig, other_node) &&
 	    !ha_msg_value(msg, F_COMMENT) &&
-	    !strcmp(ha_msg_value(msg, F_ISSTABLE), "1")) {
+	    isstable && !strcmp(isstable, "1")) {
 
 		cl_log(LOG_DEBUG, "Other side is now stable.");
 		node_stable = 1;
@@ -572,8 +575,8 @@ msg_resources(const struct ha_msg *msg, void *private)
 		}
 	}
 
-	else if (!strcmp(ha_msg_value(msg, F_ORIG), other_node) &&
-		 !strcmp(ha_msg_value(msg, F_ISSTABLE), "0")) {
+	else if (orig && !strcmp(orig, other_node) &&
+		 isstable && !strcmp(isstable, "0")) {
 
 		cl_log(LOG_DEBUG, "Other side is unstable.");
 		node_stable = 0;
