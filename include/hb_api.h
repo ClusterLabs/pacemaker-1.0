@@ -1,4 +1,4 @@
-/* $Id: hb_api.h,v 1.20 2004/07/07 19:07:15 gshi Exp $ */
+/* $Id: hb_api.h,v 1.21 2004/07/15 17:23:32 msoffen Exp $ */
 /*
  * Client-side Low-level clustering API for heartbeat.
  *
@@ -48,6 +48,10 @@
 #include <clplumbing/ipc.h>
 
 #define	LLC_PROTOCOL_VERSION	1
+
+#ifdef HAVE_UUID_UUID_H
+#	include <uuid/uuid.h>
+#endif
 
 typedef void (*llc_msg_callback_t) (const struct ha_msg* msg
 ,	void* private_data);
