@@ -1762,14 +1762,10 @@ ccm_readmsg(ccm_info_t *info, ll_cluster_t *hb)
 	/* check if there are any leave events to be delivered */
 	while((uuid=leave_get_next()) != -1) {
 		/* create a leave message and return it */
-		return(ccm_create_leave_msg(info, uuid));
+		return ccm_create_leave_msg(info, uuid);
 	}
 
-	if (hb->llc_ops->msgready(hb)) {
-		return(hb->llc_ops->readmsg(hb, 0));
-	}
-
-	return NULL;
+	return hb->llc_ops->readmsg(hb, 0);
 }
 
 
