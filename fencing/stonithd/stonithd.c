@@ -1,4 +1,4 @@
-/* $Id: stonithd.c,v 1.32 2005/03/21 15:00:58 sunjd Exp $ */
+/* $Id: stonithd.c,v 1.33 2005/04/06 03:33:20 sunjd Exp $ */
 
 /* File: stonithd.c
  * Description: STONITH daemon for node fencing
@@ -57,6 +57,7 @@
 #include <clplumbing/cl_malloc.h>
 #include <clplumbing/coredumps.h>
 #include <apphb.h>
+#include <heartbeat.h>
 #include <ha_msg.h>
 #include <hb_api.h>
 #include <lrm/raexec.h>
@@ -206,8 +207,6 @@ static int stonithRA_start( stonithRA_ops_t * op, gpointer data );
 static int stonithRA_stop( stonithRA_ops_t * op, gpointer data );
 static int stonithRA_monitor( stonithRA_ops_t * op, gpointer data );
 static int stonithRA_start_post( stonithRA_ops_t * op, gpointer data );
-static int stonithRA_stop_post( stonithRA_ops_t * op, gpointer data );
-static int stonithRA_monitor_post( stonithRA_ops_t * op, gpointer data );
 static int stonithop_result_to_local_client(stonith_ops_t * st_op, 
 					    gpointer data);
 static int send_stonithop_final_result( common_op_t * op );
@@ -250,9 +249,9 @@ static struct api_msg_to_handler api_msg_to_handlers[] = {
 
 static struct RA_operation_to_handler raop_handler[] = {
 	{ "start",	stonithRA_start, 	stonithRA_start_post },
-	{ "stop",	stonithRA_stop,		stonithRA_stop_post },
-	{ "monitor",	stonithRA_monitor,	stonithRA_monitor_post },
-	{ "status",	stonithRA_monitor,	stonithRA_monitor_post },
+	{ "stop",	stonithRA_stop,		NULL },
+	{ "monitor",	stonithRA_monitor,	NULL },
+	{ "status",	stonithRA_monitor,	NULL },
 };
 
 #define PID_FILE        HA_VARRUNDIR"/stonithd.pid"
@@ -291,7 +290,7 @@ static const char * simple_help_screen =
 
 static const char * optstr = "anskdht";
 /* Will replace it with dynamical a config variable */
-#define PIDFILE         "/var/run/stonithd.pid"
+#define STD_PIDFILE         "/var/run/stonithd.pid"
 
 /* Do not need itselv's log file for real wotk, only for debugging
 #define DAEMON_LOG      "/var/log/stonithd.log"
@@ -327,8 +326,8 @@ int main(int argc, char ** argv)
         cl_log_set_entity(stonithd_name);
 	cl_log_enable_stderr(TRUE);
 	cl_log_set_facility(LOG_DAEMON);
-	/* will enable it until log daemon becomes stable */
-	cl_log_set_uselogd(FALSE);
+        /* Use logd if it's enabled by heartbeat */
+        cl_inherit_use_logd(ENV_PREFIX ""KEY_LOGDAEMON, 0);
 
 	do {
 		option_char = getopt(argc, argv, optstr);
@@ -347,11 +346,11 @@ int main(int argc, char ** argv)
 				break;
 			
 			case 's': /* Show daemon status */
-				return show_daemon_status(PIDFILE);
+				return show_daemon_status(STD_PIDFILE);
 				break; /* Never reach here, just for uniform */
 
 			case 'k': /* kill the running daemon */
-				return(kill_running_daemon(PIDFILE));
+				return(kill_running_daemon(STD_PIDFILE));
 				break; /* Never reach here, just for uniform */
 
 			case 'd': /* Run with debug mode */
@@ -387,7 +386,7 @@ int main(int argc, char ** argv)
 		cl_enable_coredumps(TRUE);
 	}
 
-	if ( running_daemon_pid(PIDFILE) > 0 ) {
+	if ( running_daemon_pid(STD_PIDFILE) > 0 ) {
 		stonithd_log(LOG_NOTICE, "%s %s", argv[0], M_RUNNING);
 		return (STARTUP_ALONE == TRUE) ? LSB_EXIT_OK : MAGIC_EC;
 	}
@@ -504,7 +503,7 @@ delhb_quit:
 	}
 
 	if (unlink(PID_FILE) != 0) {
-                stonithd_log(LOG_ERR, "it failed to remove pidfile %s.", PIDFILE);
+                stonithd_log(LOG_ERR, "it failed to remove pidfile %s.", STD_PIDFILE);
 		main_rc = LSB_EXIT_GENERIC;
         }
 
@@ -560,7 +559,7 @@ become_daemon(gboolean startup_alone)
 	 * to Andrew's suggestion. In the future will disable pidfile functions
 	 * when started up by heartbeat.
 	 */
-	if (0 != create_pidfile(PIDFILE)) {
+	if (0 != create_pidfile(STD_PIDFILE)) {
 		stonithd_log(LOG_ERR, "%s not %s, although failed to create the"
 			     "pid file.", stonithd_name, M_ABORT);
 	}
@@ -2322,7 +2321,8 @@ post_handle_raop(stonithRA_ops_t * ra_op)
 			/* call the handler of the operation */
 			if (raop_handler[i].post_handler != NULL) {
 				return raop_handler[i].post_handler(ra_op, NULL);
-			}
+			} else 
+				break;
 		}
 	}
 
@@ -2514,6 +2514,12 @@ stonithRA_start_post( stonithRA_ops_t * ra_op, gpointer data )
 	ra_op->private_data = NULL;
 	srsc->node_list = NULL;
 	srsc->node_list = stonith_get_hostlist(srsc->stonith_obj);
+	char **	this;
+	stonithd_log(LOG_DEBUG, "Got HOSTLIST");
+	for(this=srsc->node_list; *this; ++this) {
+		stonithd_log(LOG_DEBUG, "%s", *this);
+	}
+
 	if (srsc->node_list == NULL) {
 		stonithd_log(LOG_ERR, "Could not list nodes for stonith RA %s."
 		,	srsc->ra_name);
@@ -2558,17 +2564,6 @@ stonithRA_stop( stonithRA_ops_t * ra_op, gpointer data )
 	exit(0);
 }
 
-static int
-stonithRA_stop_post( stonithRA_ops_t * ra_op, gpointer data )
-{
-	/* Currently must be EXECRA_OK */
-	if (ra_op->op_result != EXECRA_OK ) {
-		return ST_FAIL;	
-	}
-
-	return ST_OK;
-}
-
 /* Don't take the weight of the check into account yet */
 static int
 stonithRA_monitor( stonithRA_ops_t * ra_op, gpointer data )
@@ -2604,13 +2599,6 @@ stonithRA_monitor( stonithRA_ops_t * ra_op, gpointer data )
 	} else {
 		exit(EXECRA_STATUS_UNKNOWN);
 	}
-}
-
-static int
-stonithRA_monitor_post( stonithRA_ops_t * op, gpointer data )
-{
-
-	return ST_OK;
 }
 
 static stonith_rsc_t *
@@ -2703,17 +2691,23 @@ free_stonith_rsc(stonith_rsc_t * srsc)
 		return;
 	}
 	
+	stonithd_log(LOG_DEBUG, "free_stonith_rsc: begin.");
+	
 	ZAPGDOBJ(srsc->rsc_id);
 	ZAPGDOBJ(srsc->ra_name);
+	stonithd_log(LOG_DEBUG, "free_stonith_rsc: destroy params.");
 	g_hash_table_destroy(srsc->params);
 	srsc->params = NULL;
 
 	if (srsc->stonith_obj != NULL ) {
+		stonithd_log(LOG_DEBUG, "free_stonith_rsc: destroy stonith_obj.");
 		stonith_delete(srsc->stonith_obj);
 		srsc->stonith_obj = NULL;
 	}
 
+	stonithd_log(LOG_DEBUG, "free_stonith_rsc: free hostlist.");
 	stonith_free_hostlist(srsc->node_list);
+	stonithd_log(LOG_DEBUG, "free_stonith_rsc: end to free hostlist.");
 	srsc->node_list = NULL;
 
 	stonithd_log(LOG_DEBUG, "free_stonith_rsc: finished.");
@@ -2888,7 +2882,7 @@ running_daemon_pid(const char * pidfile)
 static int
 show_daemon_status(const char * pidfile)
 {
-	if (running_daemon_pid(PIDFILE) > 0) {
+	if (running_daemon_pid(STD_PIDFILE) > 0) {
 		stonithd_log(LOG_INFO, "%s %s", stonithd_name, M_RUNNING);
 		return 0;
 	} else {
@@ -2902,7 +2896,7 @@ kill_running_daemon(const char * pidfile)
 {
 	pid_t pid;
 
-	if ( (pid = running_daemon_pid(PIDFILE)) < 0 ) {
+	if ( (pid = running_daemon_pid(STD_PIDFILE)) < 0 ) {
 		stonithd_log(LOG_NOTICE, "cannot get daemon PID to kill it.");
 		return LSB_EXIT_GENERIC;	
 	}
@@ -2978,6 +2972,9 @@ free_common_op_t(gpointer data)
 
 /* 
  * $Log: stonithd.c,v $
+ * Revision 1.33  2005/04/06 03:33:20  sunjd
+ * use the new function cl_inherit_use_logd
+ *
  * Revision 1.32  2005/03/21 15:00:58  sunjd
  * Change loglevel
  *
