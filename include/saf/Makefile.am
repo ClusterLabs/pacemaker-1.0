@@ -22,4 +22,4 @@ MAINTAINERCLEANFILES    = Makefile.in
 
 includedir=@saf_includedir@
 
-include_HEADERS	        = ais.h ais_amf.h ais_base.h ais_checkpoint.h ais_event.h ais_lock.h ais_membership.h ais_message.h
+include_HEADERS	        = ais.h ais_amf.h ais_base.h ais_checkpoint.h ais_event.h ais_lock.h ais_membership.h 

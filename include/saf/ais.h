@@ -1,4 +1,4 @@
-/* $Id: ais.h,v 1.5 2004/07/09 08:18:14 chuyee Exp $ */
+/* $Id: ais.h,v 1.6 2004/07/09 19:23:27 yixiong Exp $ */
 /* --- ais.h
   Header file of SA Forum AIS APIs Version 1.0
   In order to compile, all opaque types which appear as <...> in 
@@ -17,6 +17,5 @@
 #include "ais_checkpoint.h"
 #include "ais_event.h"
 #include "ais_lock.h"
-#include "ais_message.h"
 
 #endif
