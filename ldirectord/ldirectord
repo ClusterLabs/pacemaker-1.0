@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-my($VERSION)=(qw$Id: ldirectord,v 1.78 2004/02/23 07:51:15 horms Exp $)[2];
+my($VERSION)=(qw$Id: ldirectord,v 1.79 2004/02/24 02:09:26 horms Exp $)[2];
 
 ######################################################################
 # ldirectord                 http://www.vergenet.net/linux/ldirectord/
@@ -251,6 +251,14 @@ is declared alive. The regexp must be inside quotes. Keep in mind that
 regexps are not plain strings and that you need to escape the special
 characters if they should as litterals. Note that this regexp may be
 overridden by an optional per real-server based receive regexp.
+
+B<virtualhost = ">I<hostname>B<">
+
+Used when using a negotiate check with HTTP or HTTPS. Sets the host header
+used in the HTTP request.  In the case of HTTPS this generally needs to
+match the common name of the SSL certificate. If not set then the host
+header will be derived from the request url for the real server if present.
+As a last resort the IP address of the real server will be used.
 
 B<login = ">I<username>B<">
 
@@ -764,9 +772,10 @@ sub read_config
 							$vsrv{login} eq "") {
 						$vsrv{login} = "anonymous";
 					}
-				} elsif ($rcmd =~ /^sitename\s*=\s*(.*)/) {
-					$1 =~ /(\w+)/ or &config_error($line, "invalid sitename");
-					$vsrv{sitename} = $1;
+				} elsif ($rcmd =~ /^virtualhost\s*=\s*(.*)/) {
+					$1 =~ /\"?([^"]*)\"?/ or
+					&config_error($line, "invalid virtualhost");
+					$vsrv{virtualhost} = $1;
 				} elsif ($rcmd =~ /^fallback\s*=\s*(.*)/) {    # Allow specification of a virtual-specific fallback host
 					$fallback_line=$line;
 					$vsrv{fallback}=parse_fallback($line, $1);
@@ -1562,11 +1571,19 @@ sub check_http
 	}
 	my ($v, $r) = @_;
 
-	&ld_debug(2, "Checking http: url=\"$$r{url}\"");
+	$$r{url} =~ /http:\/\/([^:\/]+)(:([^\/]+))?(\/.*)/;
+	my $host = $1;
+	#my $port = $3;
+	my $uri = $4;
+	my $virtualhost = (defined $$v{virtualhost} ? $$v{virtualhost} : $host);
+
+	&ld_debug(2, "Checking http: url=\"$$r{url}\" "
+		. "virtualhost=\"$virtualhost\"");
 	
 	my $ua = new LWP::UserAgent();
 	$ua->timeout($$v{negotiatetimeout});
-	my $req = new HTTP::Request(GET=>"$$r{url}");
+	my $h = new  HTTP::Headers("Host" => $virtualhost);
+	my $req = new HTTP::Request("GET", "$$r{url}", $h);
 	my $res;
 	{
 		# LWP makes ungaurded calls to eval
@@ -1736,12 +1753,14 @@ sub check_https
 	unless (defined $port) {
 		$port=(defined $$v{checkport}?$$v{checkport}:$$r{port})
 	}
+	my $virtualhost = (defined $$v{virtualhost} ? $$v{virtualhost} : $host);
 	my ($page, $errors, $cert, $head, $body, $response, $result);
 	my $msg = "GET $uri HTTP/1.0" . $CRLF
-	        . "Host: " . $host . $CRLF
+	        . "Host: " . $virtualhost . $CRLF
 		. "Accept: */*" . $CRLF . $CRLF;
 
-	&ld_debug(2, "Checking https url=\"$$r{url}\"");
+	&ld_debug(2, "Checking https url=\"$$r{url}\" "
+		. "virtualhost=\"$virtualhost\"");
 	
 	eval {
 		local $SIG{__WARN__};
