@@ -2699,7 +2699,7 @@ create_pidfile(const char * pidfile)
 		return LSB_EXIT_GENERIC;
 	} else {
 		pid = getpid();
-		fprintf(fd, "%ld\n", (long)pid);
+		fprintf(fd, "%d\n", pid);
 		fclose(fd);
 	}
 
@@ -2717,7 +2717,7 @@ running_deamon_pid(const char * pidfile)
 		return -1;	
 	}
 
-	if ( (fscanf(fd, "%ld", (long*)&pid) == 1) && ( pid > 0)) {
+	if ( (fscanf(fd, "%d", &pid) == 1) && ( pid > 0)) {
 		if (CL_PID_EXISTS(pid)) {
 			fclose(fd);
 			return pid;
@@ -2811,7 +2811,7 @@ free_common_op_t(gpointer data)
 	}
 
 	if ( op->scenario == STONITH_REQ ) {
-		ZAPGDOBJ((char *)op->result_receiver);
+		ZAPGDOBJ(op->result_receiver);
 	}	
 
 	/* Donnot need to free 'data' field */
