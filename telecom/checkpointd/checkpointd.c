@@ -69,7 +69,7 @@ static void usage(void);
 
 static void SaCkptCheckpointdInit(void);
 
-static gboolean SaCkptHbInputDispatch(int, gpointer);
+static gboolean SaCkptHbInputDispatch(IPC_Channel*, gpointer);
 static void SaCkptHbInputDestroy(gpointer);
 
 static gboolean SaCkptClientChannelDispatch(IPC_Channel*, gpointer);
@@ -152,7 +152,7 @@ usage()
 
 
 static gboolean
-SaCkptHbInputDispatch(int fd, gpointer user_data)
+SaCkptHbInputDispatch(IPC_Channel* chan, gpointer user_data)
 {
 	SaCkptClusterMsgProcess();
 
@@ -174,7 +174,7 @@ SaCkptClientChannelDispatch(IPC_Channel *clientChannel, gpointer user_data)
 static void
 SaCkptClientChannelDestroy(gpointer user_data)
 {
-//	cl_log(LOG_INFO, "SaCkptClientChannelDestroy:received HUP");
+	cl_log(LOG_INFO, "Client disconnected");
 	return;
 }
 
@@ -274,8 +274,8 @@ main(int argc, char ** argv)
 {
 	IPC_WaitConnection 	*waitConnection = NULL;
 	ll_cluster_t		*hb = NULL;
-	char pathname[64] = {0};
-	int	fd;
+	char			pathname[64] = {0};
+	IPC_Channel*		chan;
 
 	int c;
 #ifdef HAVE_GETOPT_H
@@ -329,9 +329,9 @@ main(int argc, char ** argv)
 
 	/* heartbeat message process */
 	hb = saCkptService->heartbeat;
-	fd = hb->llc_ops->inputfd(hb);
-	G_main_add_fd(G_PRIORITY_HIGH, 
-		fd, 
+	chan = hb->llc_ops->ipcchan(hb);
+	G_main_add_IPC_Channel(G_PRIORITY_HIGH, 
+		chan, 
 		FALSE, 
 		SaCkptHbInputDispatch, 
 		NULL, 
