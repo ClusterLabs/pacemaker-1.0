@@ -1,4 +1,4 @@
-const static char * _heartbeat_c_Id = "$Id: heartbeat.c,v 1.276 2003/09/26 04:34:13 alan Exp $";
+const static char * _heartbeat_c_Id = "$Id: heartbeat.c,v 1.277 2003/09/26 05:48:19 alan Exp $";
 
 /*
  * heartbeat: Linux-HA heartbeat code
@@ -2337,7 +2337,7 @@ check_for_timeouts(void)
 	longclock_t		now = time_longclock();
 	struct node_info *	hip;
 	longclock_t		dead_ticks;
-	longclock_t		TooOld;
+	longclock_t		TooOld = msto_longclock(0);
 	int			j;
 
 
@@ -4122,6 +4122,9 @@ get_localnodeinfo(void)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.277  2003/09/26 05:48:19  alan
+ * Fixed a few undefined variable complaints.
+ *
  * Revision 1.276  2003/09/26 04:34:13  alan
  * Fine tuning the auditing code so it doesn't bitch inappropriately.
  *

@@ -1375,7 +1375,7 @@ ask_for_resources(struct ha_msg *msg)
 			standby_running = zero_longclock;
 			going_standby = NOT;
 			if (msgfromme) {
-				int	rup;
+				int	rup = HB_NO_RSC;
 				ha_log(LOG_INFO
 				,	"Standby resource"
 				" acquisition done [%s]."
@@ -1448,7 +1448,7 @@ go_standby(enum standby who, int resourceset) /* Which resources to give up */
 	int			rc = 0;
 	pid_t			pid;
 	int			actresources;	/* Resources to act on */
-	const char *		querycmd;
+	const char *		querycmd = "allkeys";
 
 #define	ACTION_ACQUIRE	0
 #define	ACTION_GIVEUP	1
@@ -2006,6 +2006,9 @@ StonithProcessName(ProcTrack* p)
 
 /*
  * $Log: hb_resource.c,v $
+ * Revision 1.38  2003/09/26 05:48:19  alan
+ * Fixed a few undefined variable complaints.
+ *
  * Revision 1.37  2003/09/26 04:34:13  alan
  * Fine tuning the auditing code so it doesn't bitch inappropriately.
  *
