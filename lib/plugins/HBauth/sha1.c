@@ -1,4 +1,4 @@
-/* $Id: sha1.c,v 1.15 2005/02/18 20:47:59 alan Exp $ */
+/* $Id: sha1.c,v 1.16 2005/02/19 14:48:46 alan Exp $ */
 /*
 SHA-1 in C
 By Steve Reid <steve@edmweb.com>
@@ -303,9 +303,9 @@ sha1_auth_calc (const struct HBauth_info *info
 
 	/* Pad the key for outer digest */
 
-	for (i = 0 ; i < key_len ; ++i) buf[i] = key[i] ^ 0x5C ;
+	for (i = 0 ; i < key_len ; ++i) {buf[i] = key[i] ^ 0x5C;};
 	/* Should this be a call to memset? */
-	for (i = key_len ; i < SHA_BLOCKSIZE ; ++i) { buf[i] = 0x5C; };
+	for (i = key_len ; i < SHA_BLOCKSIZE ; ++i) { buf[i] = 0x5C;};
 
 	SHA1Update(&octx, buf, SHA_BLOCKSIZE) ;
 	SHA1Update(&octx, isha, SHA_DIGESTSIZE) ;
