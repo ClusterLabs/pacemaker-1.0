@@ -22,7 +22,7 @@
 # 2. "pkgmk" from whatever is in $(TMPINSTDIR) into a pkg area $(PKGDIR)
 
 MAINTAINERCLEANFILES    = Makefile.in
-CLEANFILES	= $(INFOFILES)/prototype stamp-tmpinst
+CLEANFILES	= $(INFOFILES)/pkginfo $(INFOFILES)/prototype stamp-tmpinst
 
 PKGNAME		= OPENHA
 
