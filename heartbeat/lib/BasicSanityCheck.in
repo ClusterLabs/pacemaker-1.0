@@ -713,6 +713,9 @@ case $ID in
 esac
 
 trap 'RemoveConfigFiles' 0
+
+touch $LOGFILE
+chmod 666 $LOGFILE
 SetUpConfigFiles
 > $LOGFILE
 
