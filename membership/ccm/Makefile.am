@@ -50,7 +50,7 @@ noinst_HEADERS		= ccm.h ccmlib.h
 
 ## libraries
 
-lib_LTLIBRARIES		= libccmclient.la
+lib_LTLIBRARIES		= libccmclient.la libclm.la
 
 
 ## binary progs
@@ -83,6 +83,24 @@ ccm_testclient_LDADD	= libccmclient.la \
 libccmclient_la_SOURCES	= ccmlib_memapi.c ccmlib_eventapi.c ccmlib.h
 libccmclient_la_LDFLAGS	= -version-info 0:0:0
 
+
+## library libclm.la
+libclmdir		= $(libdir)/@HB_PKG@
+
+## binary program
+libclm_PROGRAMS		= clmtest
+
+libclm_la_SOURCES	= ccmlib_clm.c
+
+## Add -DPOSIX_THREADS to CFLAGS to compile a thread-safe version library
+libclm_la_CFLAGS	= -DHA_VARLIBDIR='"@HA_VARLIBDIR@"' -g #-DPOSIX_THREADS
+libclm_la_LDFLAGS	= -version-info 0:0:0
+
+clmtest_SOURCES		= clmtest.c
+clmtest_LDADD		= libclm.la \
+			  $(top_builddir)/membership/ccm/libccmclient.la \
+			  $(top_builddir)/lib/clplumbing/libplumb.la \
+			  $(gliblib)
 
 ## additional Makefile targets
 # additional installations not covered normally
