@@ -1,4 +1,4 @@
-/* $Id: ccm.c,v 1.67 2005/03/04 22:04:02 gshi Exp $ */
+/* $Id: ccm.c,v 1.68 2005/03/07 22:58:51 gshi Exp $ */
 /* 
  * ccm.c: Consensus Cluster Service Program 
  *
@@ -248,7 +248,7 @@ static int new_node_mem_list_timeout(unsigned long timeout)
 /* communicated accross the wire. But locally they are mapped to */
 /* ccm_types for easier processing. */
 enum ccm_type {
-	CCM_TYPE_PROTOVERSION=1,
+	CCM_TYPE_PROTOVERSION,
 	CCM_TYPE_PROTOVERSION_RESP,
 	CCM_TYPE_JOIN,
 	CCM_TYPE_REQ_MEMLIST,
@@ -257,12 +257,11 @@ enum ccm_type {
 	CCM_TYPE_ABORT,
 	CCM_TYPE_LEAVE,
 	CCM_TYPE_TIMEOUT,
-	CCM_TYPE_ERROR,
 	CCM_TYPE_NODE_LEAVE,
 	CCM_TYPE_MEM_LIST,
 	CCM_TYPE_ALIVE,
 	CCM_TYPE_NEW_NODE,
-	CCM_TYPE_LAST = 16
+	CCM_TYPE_LAST
 };
 
 static void ccm_state_wait_for_mem_list(enum ccm_type ccm_msg_type, 
@@ -277,24 +276,22 @@ static void ccm_state_new_node_wait_for_mem_list(enum ccm_type ccm_msg_type,
 
 /* the ccm strings tokens communicated aross the wire. */
 /* these are the values for the F_TYPE names. */
-#define TYPESTRSIZE 20
-char  ccm_type_str[CCM_TYPE_LAST][TYPESTRSIZE] = {
-			"",
-			"ccmpver",
-			"ccmpverresp",
-			"ccmjoin",
-			"ccmreqmlst",
-			"ccmresmlst",
-			"ccmfnlmlst",
-			"ccmabrt",
-			"ccmlv",
-			"ccmtmout",
-			"ccmerror",
-			"ccmnodeleave",
-			"ccmmemlst",
-			"ccmalive",
-			"ccmnewnode",
-			""
+#define TYPESTRSIZE 32
+char  ccm_type_str[CCM_TYPE_LAST + 1][TYPESTRSIZE] = {
+	"CCM_TYPE_PROTOVERSION",
+	"CCM_TYPE_PROTOVERSION_RESP",
+	"CCM_TYPE_JOIN",
+	"CCM_TYPE_REQ_MEMLIST",
+	"CCM_TYPE_RES_MEMLIST",
+	"CCM_TYPE_FINAL_MEMLIST",
+	"CCM_TYPE_ABORT",
+	"CCM_TYPE_LEAVE",
+	"CCM_TYPE_TIMEOUT",
+	"CCM_TYPE_NODE_LEAVE",
+	"CCM_TYPE_MEM_LIST",
+	"CCM_TYPE_ALIVE",
+	"CCM_TYPE_NEW_NODE",
+	"CCM_TYPE_LAST"
 	};
 
 /* */
@@ -334,7 +331,9 @@ ccm_string2type(const char *type)
 			return i;
 		}
 	}
-	return CCM_TYPE_ERROR;
+	cl_log(LOG_ERR, "Wrong message type: %s", type);	
+	abort();
+	return 0;
 }
 
 /* END OF TYPE_STR datastructure and associated functions */
@@ -2104,18 +2103,11 @@ ccm_state_version_request(enum ccm_type ccm_msg_type,
 		ccm_add_new_joiner(info, orig);
 		break;
 
-	case CCM_TYPE_JOIN:
-	case CCM_TYPE_REQ_MEMLIST:
-	case CCM_TYPE_RES_MEMLIST:
-	case CCM_TYPE_FINAL_MEMLIST:
 	case CCM_TYPE_ABORT:
 		/* note down there is some activity going 
 		 * on and we are not yet alone in the cluster 
 		 */
 		version_some_activity(CCM_GET_VERSION(info));
-		
-	case CCM_TYPE_LEAVE:
-	case CCM_TYPE_ERROR:
 	default:
 		/* nothing to do. Just forget the message */
 		break;
@@ -2197,7 +2189,7 @@ ccm_state_joined(enum ccm_type ccm_msg_type,
 
 		case CCM_TYPE_PROTOVERSION_RESP:
 			cl_log(LOG_WARNING, "ccm_state_joined: dropping message "
-				"of type %s.  Is this a Byzantime failure?", 
+				"of type %s.  Is this a Byzantine failure?", 
 					ccm_type2string(ccm_msg_type));
 
 			break;
@@ -2410,9 +2402,8 @@ ccm_state_joined(enum ccm_type ccm_msg_type,
 		case CCM_TYPE_RES_MEMLIST:
 		case CCM_TYPE_FINAL_MEMLIST:
 		case CCM_TYPE_ABORT:
-		case CCM_TYPE_ERROR:
 			cl_log(LOG_ERR, "ccm_state_joined: dropping message "
-				"of type %s. Is this a Byzantime failure?", 
+				"of type %s. Is this a Byzantine failure?", 
 				ccm_type2string(ccm_msg_type));
 			/* nothing to do. Just forget the message */
 			break;
@@ -2684,7 +2675,7 @@ static void ccm_state_wait_for_change(enum ccm_type ccm_msg_type,
 	        
 		default:  
 			cl_log(LOG_ERR, "ccm_state_joined: dropping message "
-				"of type %s. Is this a Byzantime failure?", 
+				"of type %s. Is this a Byzantine failure?", 
 				ccm_type2string(ccm_msg_type));
 			/* nothing to do. Just forget the message */
 			break;	
@@ -2762,7 +2753,7 @@ switchstatement:
 
 			cl_log(LOG_WARNING, "ccm_state_sent_memlistreq: "
 				"dropping message of type %s. "
-				" Is this a Byzantime failure?",
+				" Is this a Byzantine failure?",
 				ccm_type2string(ccm_msg_type));
 
 			break;
@@ -2982,11 +2973,10 @@ switchstatement:
 				
 		case CCM_TYPE_FINAL_MEMLIST:
 		case CCM_TYPE_ABORT:
-		case CCM_TYPE_ERROR:
 		default:
 			cl_log(LOG_ERR, "ccm_state_sent_memlistreq: "
 					"dropping message of type %s. Is this "
-					"a Byzantime failure?", 
+					"a Byzantine failure?", 
 					ccm_type2string(ccm_msg_type));
 			/* nothing to do. Just forget the message */
 			break;
@@ -3066,7 +3056,7 @@ switchstatement:
 	switch (ccm_msg_type)  {
 		case CCM_TYPE_PROTOVERSION_RESP:
 			cl_log(LOG_WARNING, "ccm_state_memlist_res:dropping message"
-					" of type %s. Is this a Byzantime "
+					" of type %s. Is this a Byzantine "
 					" failure?", 
 					ccm_type2string(ccm_msg_type));
 			break;
@@ -3356,11 +3346,10 @@ switchstatement:
 
 		case CCM_TYPE_ABORT:
 		case CCM_TYPE_RES_MEMLIST:
-		case CCM_TYPE_ERROR:
 		default:
 			cl_log(LOG_ERR, "ccm_state_sendmemlistreq: "
 					"dropping message of type %s. "
-					"Is this a Byzantime failure?", 
+					"Is this a Byzantine failure?", 
 					ccm_type2string(ccm_msg_type));
 			/* nothing to do. Just forget the message */
 			break;
@@ -3465,7 +3454,7 @@ switchstatement:
 			}
 
 			cl_log(LOG_WARNING, "ccm_state_joining: dropping message "
-					" of type %s. Is this a Byzantime "
+					" of type %s. Is this a Byzantine "
 					"failure?", 
 					ccm_type2string(ccm_msg_type));
 			break;
@@ -3743,10 +3732,9 @@ switchstatement:
 
 		case CCM_TYPE_RES_MEMLIST:
 		case CCM_TYPE_FINAL_MEMLIST:
-		case CCM_TYPE_ERROR:
 		default:
 			cl_log(LOG_ERR, "ccm_state_joining: dropping message "
-				"of type %s. Is this a Byzantime failure?", 
+				"of type %s. Is this a Byzantine failure?", 
 					ccm_type2string(ccm_msg_type));
 			/* nothing to do. Just forget the message */
 			break;
@@ -3928,15 +3916,6 @@ repeat:
 
 	type = ha_msg_value(reply, F_TYPE);
 	ccm_msg_type = ccm_string2type(type);
-	if (ccm_msg_type == CCM_TYPE_ERROR) {
-		cl_log(LOG_DEBUG, 
-			"received message %s orig=%s",
-			type, 
-			ha_msg_value(reply, F_ORIG));
-		ha_msg_del(reply);
-		return TRUE;
-	}
-
 	if(global_debug)
 		cl_log(LOG_DEBUG, "received message %s orig=%s", 
 			type, ha_msg_value(reply, F_ORIG));
@@ -4520,7 +4499,7 @@ static void ccm_state_wait_for_mem_list(enum ccm_type ccm_msg_type,
 
 		default:
 			cl_log(LOG_ERR, "ccm_state_wait_for_mem_list: dropping message "
-				"of type %s. Is this a Byzantime failure?",
+				"of type %s. Is this a Byzantine failure?",
 				ccm_type2string(ccm_msg_type));
 			/* nothing to do. Just forget the message */
 			break;
@@ -4953,7 +4932,7 @@ static void ccm_state_new_node_wait_for_mem_list(enum ccm_type ccm_msg_type,
 
 		default:
 			cl_log(LOG_ERR,"ccm_state_new_node_waitfor_memlst:dropping message"
-				" of type %s. Is this a Byzantime failure?", 
+				" of type %s. Is this a Byzantine failure?", 
 				ccm_type2string(ccm_msg_type));
 			/* nothing to do. Just forget the message */
 			break;	
