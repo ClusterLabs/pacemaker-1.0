@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $Id: ServeRAID.in,v 1.18 2003/05/29 16:53:29 alan Exp $
+# $Id: ServeRAID.in,v 1.19 2004/06/18 03:10:08 alan Exp $
 # 
 # ServeRAID
 #
@@ -47,24 +47,12 @@
 #	SCSI initiator ID 6, and the other with SCSI id 7.
 #
 #	At this time, the ServeRAID clustering solution only works with
-#	RAID 1 setups.  It does NOT support RAID 5.
+#	RAID 1 setups.  It does NOT support RAID 5.  This is a firmware
+#	bug in the ServeRAID where it doesn't fail over correctly
+#	if the RAID5 array is in a critical state...
 #
 #	Note that this script requires ServeRAID software version 6.10 or
-#	later.
-#
-#	As of this writing (5/22/2003) this version of the software is not
-#	yet available.  For everything but the ipssend command, you can
-#	grab the ISO image here:
-#
-#		ftp://ftp.pc.ibm.com/pub/pccbbs/bp_server/01r0539.iso
-#
-#	For the time being, you will need to grab a "correct" version of
-#	the ipssend command here:
-#		http://linux-ha.org/download/ipssend.gz
-#
-#	NOTE: This a temporary URL which will go away once the official
-#	version with the corrections is available from IBM.
-#
+#	later.  This software is now available from IBM.
 #
 # An example usage in /etc/ha.d/haresources: 
 #       node1  10.0.0.170 ServeRAID::1::1
@@ -112,7 +100,7 @@ usage() {
 	version becomes available.
 
 
-	$Id: ServeRAID.in,v 1.18 2003/05/29 16:53:29 alan Exp $
+	$Id: ServeRAID.in,v 1.19 2004/06/18 03:10:08 alan Exp $
 	!
   exit 1
 }
