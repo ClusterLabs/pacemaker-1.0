@@ -1,4 +1,4 @@
-/* $Id: config.c,v 1.135 2005/01/03 18:12:10 alan Exp $ */
+/* $Id: config.c,v 1.136 2005/01/11 04:57:59 alan Exp $ */
 /*
  * Parse various heartbeat configuration files...
  *
@@ -80,9 +80,7 @@ static int set_dbgfile(const char *);
 static int set_nice_failback(const char *);
 static int set_auto_failback(const char *);
 static int set_warntime_ms(const char *);
-#if 0
 static int set_stonith_info(const char *);
-#endif
 static int set_stonith_host_info(const char *);
 static int set_realtime_prio(const char *);
 static int add_client_child(const char *);
@@ -145,11 +143,8 @@ static const struct WholeLineDirective {
 	const char * type;
 	int (*parse) (const char *line);
 }WLdirectives[] =
-{
-#if 0
-	{KEY_STONITH,  	   set_stonith_info}
-#endif
-	{KEY_STONITHHOST,  set_stonith_host_info}
+{	{KEY_STONITH,  	   set_stonith_info}
+,	{KEY_STONITHHOST,  set_stonith_host_info}
 ,	{KEY_APIPERM,	   set_api_authorization}
 ,	{KEY_CLIENT_CHILD,  add_client_child}
 };
@@ -1389,7 +1384,6 @@ set_warntime_ms(const char * value)
 	config->warntime_ms = warntime;
 	return(HA_OK);
 }
-#if 0
 /*
  * Set Stonith information
  * 
@@ -1433,11 +1427,11 @@ set_stonith_info(const char * value)
 	vp = evp + strspn(evp, WHITESPACE);
 	sscanf(vp, "%[^\r\n]",  StonithFile);
 
-	switch ((rc=s->s_ops->set_config_file(s, StonithFile))) {
+	switch ((rc=stonith_set_config_file(s, StonithFile))) {
 		case S_OK:
 			/* This will have to change to a list !!! */
 			config->stonith = s;
-			s->s_ops->status(s);
+			stonith_get_status(s);
 			return(HA_OK);
 
 		case S_BADCONFIG:
@@ -1453,7 +1447,6 @@ set_stonith_info(const char * value)
 	}
 	return(HA_FAIL);
 }
-#endif
 
 
 /*
@@ -1473,7 +1466,6 @@ set_stonith_host_info(const char * value)
 	char		StonithHost [HOSTLENG];
 	size_t		tlen;
 	int		rc;
-	StonithNVpair*	sparms;
 	
 	vp += strspn(vp, WHITESPACE);
 	tlen = strcspn(vp, WHITESPACE);
@@ -1533,11 +1525,7 @@ set_stonith_host_info(const char * value)
 	vp = evp;
 	vp += strspn(vp, WHITESPACE);
 	
-        /* NOTE: this might contain a newline character */
-	/* I'd strip it off, but vp is a const char *   */
-	sparms = stonith1_compat_string_to_NVpair(s, vp);
-
-	switch ((rc=stonith_set_config(s, sparms))) {
+	switch ((rc=stonith_set_config_info(s, vp))) {
 		case S_OK:
 			/* This will have to change to a list !!! */
 			config->stonith = s;
@@ -2084,6 +2072,12 @@ set_corerootdir(const char* value)
 
 /*
  * $Log: config.c,v $
+ * Revision 1.136  2005/01/11 04:57:59  alan
+ * Put back in the ability to configure from a string as an explicit operation,
+ * and also the ability to configure from a file.  These are both
+ * assuming old style info strings, and old-style files.
+ * The file operations really ought to support a new format too...
+ *
  * Revision 1.135  2005/01/03 18:12:10  alan
  * Stonith version 2.
  * Some compatibility with old versions is still missing.
