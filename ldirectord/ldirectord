@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-my($VERSION)=(qw$Id: ldirectord,v 1.86 2004/05/07 08:30:23 horms Exp $)[2];
+my($VERSION)=(qw$Id: ldirectord,v 1.87 2004/05/07 08:53:33 horms Exp $)[2];
 
 ######################################################################
 # ldirectord                 http://www.vergenet.net/linux/ldirectord/
@@ -1405,12 +1405,13 @@ sub ld_start
 			for $nr (@$nreal) {
 				if (exists($$or{"$$nr{server}:$$nr{port}"})) {
 					&system_wrapper("$IPVSADM -e $$nv{proto} " .  &get_virtual($nv) .  " -r $$nr{server}:$$nr{port} $$nr{forw} -w $$nr{wght}");
-					$$nr{status} = -1;
 					$$nv{status}++;
+					$$nr{status} = 1;
 					&ld_log("Changed real server: $$nr{server}:$$nr{port} ($$nv{status} x " . &get_virtual($nv) . ")\n");
 					delete($$or{"$$nr{server}:$$nr{port}"});
-				} else {
-					$$nr{status} = -1;
+				}
+				else {
+					$$nr{status} = 0;
 				}
 			}
 			# remove remaining entries for real servers
@@ -2030,11 +2031,9 @@ sub service_set()
 		}
 		if ($found == 1) {
 			if ($state=~/up/i) {
-				$$r{status}=0;
 				_service_up($v, $r);
 				&ld_debug(2, "Enabled server=$$r{server}");
 			} elsif ($state=~/down/i) {
-				$$r{status}=1;
 				_service_down($v, $r);
 				&ld_debug(2, "Disabled server=$$r{server}");
 			}
@@ -2198,11 +2197,11 @@ sub _service_up
 {
 	my ($v, $r) = (@_);
 
-	if ($$r{status}==0) {
+	if ($$r{status}==0 or $$r{status}==-1) {
                 &_restore_service($v, $r->{server} . ":" . $r->{port}, 
                                   $r->{forw}, $r->{wght}, "real");
-		$$r{status} = 1;
 		$$v{status}++;
+		$$r{status} = 1;
 		&fallback_off($v);
 	}
 }
@@ -2224,11 +2223,13 @@ sub _service_down
 {
 	my ($v, $r) = @_;
 
-	if ($$r{status}==1) {
+	if ($$r{status}==1 or $$r{status}==-1) {
                 &_remove_service($v, $r->{server} . ":" . $r->{port}, 
                                   $r->{forw}, "real");
+		if ($$r{status}==1) {
+			$$v{status}--;
+		}
 		$$r{status} = 0;
-		$$v{status}--;
 		&fallback_on($v);
 	}
 }
