@@ -42,6 +42,11 @@
 #include <fencing/stonithd_api.h>
 #include <fencing/stonithd_msg.h>
 
+/* For compiling on MAC OS */
+#ifdef ON_DARWIN
+#define sighandler_t sig_t
+#endif
+
 static const char * CLIENT_NAME = NULL;
 static pid_t CLIENT_PID = 0;
 static char CLIENT_PID_STR[16];
