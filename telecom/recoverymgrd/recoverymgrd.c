@@ -770,7 +770,7 @@ sigchld_handler (int signum)
   	int status;
   	while (1)
     	{
-      		pid = waitpid (WAIT_ANY, &status, WNOHANG);
+      		pid = waitpid ((-1), &status, WNOHANG);
       		if (pid < 0)
        		{
           		break;
