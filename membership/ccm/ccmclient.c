@@ -1,4 +1,4 @@
-/* $Id: ccmclient.c,v 1.20 2005/03/08 20:56:19 gshi Exp $ */
+/* $Id: ccmclient.c,v 1.21 2005/03/10 17:45:14 gshi Exp $ */
 /* 
  * client.c: Consensus Cluster Client tracker
  *
@@ -72,25 +72,26 @@ static void
 send_message(ccm_client_t *ccm_client, ccm_ipc_t *msg)
 {
 	int send_rc = IPC_OK;
-	struct IPC_CHANNEL *ipc_client = ccm_client->ccm_ipc_client;
+	struct IPC_CHANNEL *chan = ccm_client->ccm_ipc_client;
 
 	++(msg->count);
 
 	do {
-		send_rc = ipc_client->ops->send(ipc_client, &(msg->ipcmsg));
-
-		if(send_rc != IPC_OK
-		   && (ipc_client->ch_status == IPC_DISCONNECT
-		       || ipc_client->ch_status == IPC_DISC_PENDING)) {
-			cl_log(LOG_ERR, "Channel is dead.  Cannot send message.");
-			break;
+		if (chan->ops->get_chan_status(chan) == IPC_CONNECT){
+			send_rc = chan->ops->send(chan, &(msg->ipcmsg));
+		}
+		if(send_rc != IPC_OK){
+			if (chan->ops->get_chan_status(chan) != IPC_CONNECT){
+				cl_log(LOG_WARNING, "Channel is dead.  Cannot send message.");
+				break;
+			}else {
+				cl_shortsleep();				
+			}
 		}
 		
-		cl_log(LOG_WARNING, "ipc channel blocked");
-		cl_shortsleep();
-
+		
 	} while(send_rc == IPC_FAIL);
-
+	
 	return;
 }
 
