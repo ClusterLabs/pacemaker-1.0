@@ -1,4 +1,4 @@
-const static char * _heartbeat_c_Id = "$Id: heartbeat.c,v 1.287 2004/01/30 15:09:35 lars Exp $";
+const static char * _heartbeat_c_Id = "$Id: heartbeat.c,v 1.288 2004/02/06 07:18:15 horms Exp $";
 
 /*
  * heartbeat: Linux-HA heartbeat code
@@ -291,6 +291,7 @@ struct node_info *		curnode = NULL;
 pid_t				processes[MAXPROCS];
 volatile struct pstat_shm *	procinfo = NULL;
 volatile struct process_info *	curproc = NULL;
+struct TestParms *		TestOpts;
 
 int				debug = 0;
 static int			verbose = FALSE;
@@ -4115,6 +4116,9 @@ get_localnodeinfo(void)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.288  2004/02/06 07:18:15  horms
+ * Fixed duplicated global definitions
+ *
  * Revision 1.287  2004/01/30 15:09:35  lars
  * Fix prototype too.
  *

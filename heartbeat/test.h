@@ -31,7 +31,7 @@ struct TestParms {
 	float	rcv_loss_prob;
 };
 
-struct TestParms *	TestOpts;
+extern struct TestParms *	TestOpts;
 
 #define	TESTSEND	(TestOpts && TestOpts->enable_send_pkt_loss)
 #define	TESTRCV		(TestOpts && TestOpts->enable_rcv_pkt_loss)

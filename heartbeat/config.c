@@ -1,4 +1,4 @@
-const static char * _hb_config_c_Id = "$Id: config.c,v 1.110 2004/01/30 15:11:27 lars Exp $";
+const static char * _hb_config_c_Id = "$Id: config.c,v 1.111 2004/02/06 07:18:15 horms Exp $";
 /*
  * Parse various heartbeat configuration files...
  *
@@ -150,7 +150,7 @@ extern int				hb_realtime_prio;
 extern PILPluginUniv*			PluginLoadingSystem;
 extern GHashTable*			CommFunctions;
 GHashTable*				APIAuthorization = NULL;
-struct node_info *   			curnode;
+extern struct node_info *   			curnode;
 extern int    				timebasedgenno;
 int    					enable_realtime = TRUE;
 extern int    				debug;
@@ -1920,6 +1920,9 @@ baddirective:
 
 /*
  * $Log: config.c,v $
+ * Revision 1.111  2004/02/06 07:18:15  horms
+ * Fixed duplicated global definitions
+ *
  * Revision 1.110  2004/01/30 15:11:27  lars
  * Fix shadow variable.
  *
