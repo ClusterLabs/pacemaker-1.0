@@ -1,4 +1,4 @@
-/* $Id: hb_api.c,v 1.108 2004/08/31 20:56:11 alan Exp $ */
+/* $Id: hb_api.c,v 1.109 2004/08/31 21:45:01 alan Exp $ */
 /*
  * hb_api: Server-side heartbeat API code
  *
@@ -974,7 +974,7 @@ api_process_registration_msg(client_proc_t* client, struct ha_msg * msg)
 	const char *	reqtype;
 	const char *	fromid;
 	const char *	pid;
-	struct ha_msg *	resp;
+	struct ha_msg *	resp = NULL;
 	client_proc_t*	fcli;
 	
 	char		deadtime[64];
@@ -988,7 +988,7 @@ api_process_registration_msg(client_proc_t* client, struct ha_msg * msg)
 	||	strcmp(reqtype, API_SIGNON) != 0)  {
 		cl_log(LOG_ERR, "api_process_registration_msg: bad message");
 		cl_log_message(msg);
-		return;
+		goto del_msg;
 	}
 	fromid = ha_msg_value(msg, F_FROMID);
 	pid = ha_msg_value(msg, F_PID);
@@ -996,7 +996,7 @@ api_process_registration_msg(client_proc_t* client, struct ha_msg * msg)
 	if (fromid == NULL && pid == NULL) {
 		cl_log(LOG_ERR
 		,	"api_process_registration_msg: no fromid in msg");
-		return;
+		goto del_msg;
 	}
 	if (DEBUGDETAILS) {
 		cl_log(LOG_DEBUG
@@ -1010,19 +1010,17 @@ api_process_registration_msg(client_proc_t* client, struct ha_msg * msg)
 	if ((resp = ha_msg_new(4)) == NULL) {
 		cl_log(LOG_ERR
 		,	"api_process_registration_msg: out of memory/1");
-		return;
+		goto del_msg;
 	}
 	if (ha_msg_add(resp, F_TYPE, T_APIRESP) != HA_OK) {
 		cl_log(LOG_ERR
 		,	"api_process_registration_msg: cannot add field/2");
-		ha_msg_del(resp); resp=NULL;
-		return;
+		goto del_rsp_and_msg;
 	}
 	if (ha_msg_add(resp, F_APIREQ, reqtype) != HA_OK) {
 		cl_log(LOG_ERR
 		,	"api_process_registration_msg: cannot add field/3");
-		ha_msg_del(resp); resp=NULL;
-		return;
+		goto del_rsp_and_msg;
 	}
 
 	client->pid = atoi(pid);
@@ -1038,20 +1036,19 @@ api_process_registration_msg(client_proc_t* client, struct ha_msg * msg)
 	if ((fcli = find_client(fromid, pid)) == NULL) {
 		cl_log(LOG_ERR
 		,	"api_process_registration_msg: cannot find client");
-		ha_msg_del(resp); resp=NULL;
 		/* We can't properly reply to them. They'll hang. Sorry... */
-		return;
+		goto del_rsp_and_msg;
 	}
 	if (fcli != client) {
 		cl_log(LOG_ERR
 		,	"api_process_registration_msg: found wrong client");
-		ha_msg_del(resp); resp=NULL;
+		goto del_rsp_and_msg;
 		return;
 	}
 	if (ha_msg_mod(resp, F_APIRESULT, API_OK) != HA_OK) {
 		cl_log(LOG_ERR
 		,	"api_process_registration_msg: cannot add field/4");
-		ha_msg_del(resp); resp=NULL;
+		goto del_rsp_and_msg;
 		return;
 	}
 
@@ -1065,8 +1062,7 @@ api_process_registration_msg(client_proc_t* client, struct ha_msg * msg)
 	||	(ha_msg_mod(resp, F_NODENAME, localnodename) != HA_OK)
 	|| 	(ha_msg_add(resp, F_LOGFACILITY, logfacility) != HA_OK)) {
 		cl_log(LOG_ERR, "api_process_registration_msg: cannot add field/4");
-		ha_msg_del(resp); resp=NULL;
-		return;
+		goto del_rsp_and_msg;
 	}
 	if (ANYDEBUG) {
 		cl_log(LOG_DEBUG, "Signing on API client %ld (%s)"
@@ -1074,7 +1070,17 @@ api_process_registration_msg(client_proc_t* client, struct ha_msg * msg)
 		,	(client->iscasual? "'casual'" : client->client_id));
 	}
 	api_send_client_msg(client, resp);
-	ha_msg_del(resp); resp=NULL;
+	/* What to do with 'resp'.  Do we need it any more?? FIXME!! */
+	goto del_msg;
+
+del_rsp_and_msg:
+	if (resp != NULL) {
+		ha_msg_del(resp); resp=NULL;
+	}
+del_msg:
+	if (msg != NULL) {
+		ha_msg_del(msg); msg=NULL;
+	}
 }
 
 static void
