@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.358 2005/02/18 20:30:27 alan Exp $ */
+/* $Id: heartbeat.c,v 1.359 2005/02/18 22:02:41 alan Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -329,6 +329,7 @@ static longclock_t		NextPoll = 0UL;
 static int			ClockJustJumped = FALSE;
 longclock_t			local_takeover_time = 0L;
 static int 			deadtime_tmpadd_count = 0;
+static void print_a_child_client(gpointer childentry, gpointer unused);
 
 #undef DO_AUDITXMITHIST
 #ifdef DO_AUDITXMITHIST
@@ -1716,6 +1717,8 @@ hb_initiate_shutdown(int quickshutdown)
  *	dies.
  */
 
+#define	LLEN(l)	((l) == NULL ? 0 : g_list_length(l))
+
 gboolean
 hb_mcp_final_shutdown(gpointer p)
 {
@@ -1745,7 +1748,7 @@ hb_mcp_final_shutdown(gpointer p)
 		return FALSE;
 
 	case 1:		/* From ManagedChildDied() (or above) */
-		g_assert(g_list_length(config->client_list) == 0);
+		g_assert(LLEN(config->client_list) == 0);
 		shutdown_phase = 2;
 		if (procinfo->restart_after_shutdown) {
                 	hb_add_deadtime(30000);
@@ -2580,12 +2583,12 @@ ManagedChildDied(ProcTrack* p, int status, int signo, int exitcode
 	p->privatedata = NULL;
 	if (shutdown_in_progress) {
                 if (g_list_find(config->client_list, managedchild) != NULL){
-			int len = g_list_length(config->client_list);
+			int len = LLEN(config->client_list);
 			int newlen;
 			/* Child died unexpectedly, remove it and return */
 			config->client_list = g_list_remove(config->client_list
 			,	managedchild);
-			newlen = g_list_length(config->client_list);
+			newlen = LLEN(config->client_list);
 			if (ANYDEBUG) {
 				cl_log(LOG_DEBUG
 				,	"client \"%s\" died early during"
@@ -2601,6 +2604,9 @@ ManagedChildDied(ProcTrack* p, int status, int signo, int exitcode
 				,	managedchild->command
 				,	len, newlen);
 			}
+			cl_log(LOG_DEBUG, "ManagedChildDied():");
+			g_list_foreach(config->client_list
+			,	print_a_child_client, NULL);
 			return; 
 		}
 
@@ -2665,6 +2671,24 @@ hb_kill_tracked_process(ProcTrack* p, void * data)
 }
 
 
+static void
+print_a_child_client(gpointer childentry, gpointer unused)
+{
+	struct client_child*	centry = childentry;
+
+	if (!centry->proctrack) {
+		cl_log(LOG_DEBUG
+		,	"RUNNING Child client \"%s\" (%d,%d) pid %d"
+		,	centry->command, (int) centry->u_runas
+		,	(int) centry->g_runas
+		,	centry->pid);
+	}else{
+		cl_log(LOG_DEBUG
+		,	"Idle Child client \"%s\" (%d,%d)"
+		,	centry->command, (int) centry->u_runas
+		,	(int) centry->g_runas);
+	}
+}
 static void
 start_a_child_client(gpointer childentry, gpointer dummy)
 {
@@ -2774,10 +2798,10 @@ shutdown_last_client_child(int nsig)
 	last = g_list_last(list);
 	g_assert(last != NULL);
 	lastclient = last->data;
-	oldlen = g_list_length(list);
+	oldlen = LLEN(list);
 	
 	config->client_list = g_list_remove(list, lastclient);
-	newlen = g_list_length(list);
+	newlen = LLEN(list);
 
 	if (newlen != oldlen -1) {
 		cl_log(LOG_ERR
@@ -2786,6 +2810,9 @@ shutdown_last_client_child(int nsig)
 		,	lastclient->command
 		,	oldlen, newlen);
 	}
+	cl_log(LOG_DEBUG, "shutdown_last_client_child():");
+	g_list_foreach(config->client_list
+	,	print_a_child_client, NULL);
 
 	if (lastclient) {
 		if (ANYDEBUG) {
@@ -5068,6 +5095,9 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.359  2005/02/18 22:02:41  alan
+ * Added more debug output for this weird client not being killed bug...
+ *
  * Revision 1.358  2005/02/18 20:30:27  alan
  * Put in an assert and some more debugging for this annoying shutdown problem...
  *
