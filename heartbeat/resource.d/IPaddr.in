@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-#	$Id: IPaddr.in,v 1.46 2003/10/23 05:34:03 horms Exp $
+#	$Id: IPaddr.in,v 1.47 2003/10/23 08:03:17 horms Exp $
 #
 #	This script manages IP alias IP addresses
 #
@@ -31,6 +31,7 @@ IFCONFIG=@IFCONFIG@
 IFCONFIG_A_OPT=@IFCONFIG_A_OPT@
 VARLIB=@localstatedir@/lib/@HB_PKG@
 VLDIR=$VARLIB/rsctmp/IPaddr
+PIDDIR=$VARLIB/run
 ROUTE=@ROUTE@
 SENDARP=$HA_BIN/send_arp
 FINDIF=$HA_BIN/findif
@@ -326,7 +327,13 @@ restore_loopback() {
 #
 ip_stop() {
   BASEIP=`echo $1 | sed s'%/.*%%'`
+  SENDARPPIDFILE="$PIDDIR/send_arp-$BASEIP"
   IF=`find_interface $BASEIP`
+
+  if test -f "$SENDARPPIDFILE"
+  then
+  	cat "$SENDARPPIDFILE" | xargs kill
+  fi
 
   case $SYSTYPE in
 	*BSD)
@@ -491,6 +498,7 @@ ip_start() {
   esac
 
   BASEIP=`echo $1 | sed s'%/.*%%'`
+  SENDARPPIDFILE="$PIDDIR/send_arp-$BASEIP"
 
   case $SYSTYPE in
     Linux)
@@ -533,16 +541,6 @@ ip_start() {
 
   ha_log "info: Sending Gratuitous Arp for $BASEIP on $IF [$TARGET_INTERFACE]"
 
-  # Had to get rid of the backgrounding -- it can cause a quick transfer
-  # of IP addresses to result in more than one machine serving the IP address.
-  # This behavior has been observed during testing.  It might happen to
-  # you too...
-  #
-  # For this reason, I greatly shortened the time between ARPs
-  #
-  # To make it behave the way you want, set up ${CONF_D}/arp_config
-  # and/or ${CONF_D}/arp_config:${TARGET_INTERFACE}
-  #
   [ -r ${CONF_D}/arp_config ] && . ${CONF_D}/arp_config
   [ -r "${CONF_D}/arp_config:${TARGET_INTERFACE}" ] && . "${CONF_D}/arp_config:${TARGET_INTERFACE}"
 
@@ -550,11 +548,11 @@ ip_start() {
 
   : ${ARP_INTERVAL_MS=200}	# milliseconds between ARPs
   : ${ARP_REPEAT=5}		# repeat count
-  : ${ARP_BACKGROUND=no}	# yes to run in background (not recommended)
+  : ${ARP_BACKGROUND=yes}	# no to run in foreground
   : ${ARP_NETMASK=ffffffffffff}	# netmask for ARP
   
 
-  ARGS="-i $ARP_INTERVAL_MS -r $ARP_REPEAT $TARGET_INTERFACE ${BASEIP} auto ${BASEIP} ${ARP_NETMASK}"
+  ARGS="-i $ARP_INTERVAL_MS -r $ARP_REPEAT -p $SENDARPPIDFILE $TARGET_INTERFACE $BASEIP auto $BASEIP $ARP_NETMASK"
   ha_log "$SENDARP $ARGS"
   case $ARP_BACKGROUND in
     yes) ($SENDARP $ARGS || ha_log "ERROR: Could not send gratuitous arps")&;;
@@ -624,7 +622,7 @@ ip_monitor() {
 
 usage() {
   echo $USAGE >&2
-  echo "$Id: IPaddr.in,v 1.46 2003/10/23 05:34:03 horms Exp $"
+  echo "$Id: IPaddr.in,v 1.47 2003/10/23 08:03:17 horms Exp $"
 }
 
 #
@@ -671,6 +669,11 @@ esac
 #
 #
 # $Log: IPaddr.in,v $
+# Revision 1.47  2003/10/23 08:03:17  horms
+# IPaddr and IPaddr2 both kill send_arp on stop
+# IPaddr defaults to running send_arp in the background
+# IPaddr2 used arp_config in the same way as IPaddr
+#
 # Revision 1.46  2003/10/23 05:34:03  horms
 # create state directories for resources at install time instead of run time.
 #

@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-#	$Id: IPaddr2.in,v 1.2 2003/10/23 05:34:03 horms Exp $
+#	$Id: IPaddr2.in,v 1.3 2003/10/23 08:03:17 horms Exp $
 #
 #	Copyright (C) 2003 Tuomo Soini <tis@foobar.fi>
 #
@@ -29,6 +29,7 @@ SENDARP=$HA_BIN/send_arp
 FINDIF=$HA_BIN/findif
 VARLIB=@localstatedir@/lib/@HB_PKG@
 VLDIR=$VARLIB/rsctmp/IPaddr
+PIDDIR=$VARLIB/run
 USAGE="usage: $0 ip-address[/netmaskbits[/interface[:label][/broadcast]]]
 {start|stop|status|monitor}\n\nNote: $0 only works on Linux";
 
@@ -199,6 +200,8 @@ restore_loopback() {
 #	do nothing.
 #
 start() {
+    SENDARPPIDFILE="$PIDDIR/send_arp-$BASEIP"
+
     #
     #	Do we already service this IP address?
     #
@@ -232,10 +235,31 @@ start() {
 	    ;;
     esac
 
-    CMD="$SENDARP -i 200 -r 5 $INTERFACE $BASEIP auto $BASEIP ffffffff"
-    ha_log "info: Sending Gratuitous Arp for $BASEIP on $INTERFACE"
-    ha_log "$CMD"
-    $CMD || ha_log "ERROR: Could not send gratuitous arp" &
+    [ -r ${CONF_D}/arp_config ] && . ${CONF_D}/arp_config
+    if [ -r "${CONF_D}/arp_config:${TARGET_INTERFACE}" ]
+    then
+    	. "${CONF_D}/arp_config:${TARGET_INTERFACE}"
+    fi
+
+    # Set default values (can be overridden as described above)
+
+    : ${ARP_INTERVAL_MS=200}	# milliseconds between ARPs
+    : ${ARP_REPEAT=5}		# repeat count
+    : ${ARP_BACKGROUND=yes}	# no to run in foreground
+    : ${ARP_NETMASK=ffffffffffff}	# netmask for ARP
+  
+
+    ARGS="-i $ARP_INTERVAL_MS -r $ARP_REPEAT -p $SENDARPPIDFILE $INTERFACE $BASEIP auto $BASEIP $ARP_NETMASK"
+    ha_log "$SENDARP $ARGS"
+    case $ARP_BACKGROUND in
+        yes) 
+	    ($SENDARP $ARGS || 
+	        ha_log "ERROR: Could not send gratuitous arps") &
+	    ;;
+        *)
+	    $SENDARP $ARGS || ha_log "ERROR: Could not send gratuitous arps"
+	    ;;
+    esac
 }
 
 #
@@ -243,6 +267,12 @@ start() {
 #
 stop() {
     IF=`find_interface $BASEIP`
+    SENDARPPIDFILE="$PIDDIR/send_arp-$BASEIP"
+
+    if test -f "$SENDARPPIDFILE"
+    then
+    	cat "$SENDARPPIDFILE" | xargs kill
+    fi
 
     if
 	[ -z "$IF" ]
