@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-#	$Id: IPaddr.in,v 1.3 2004/11/08 20:48:36 gshi Exp $
+#	$Id: IPaddr.in,v 1.4 2004/11/09 07:33:00 zhenh Exp $
 #
 #	This script manages IP alias IP addresses
 #
@@ -555,7 +555,7 @@ ip_start() {
     0)
     		;;
     *)
-		return $rc
+		exit $rc
 		;;
   esac
 
@@ -593,23 +593,23 @@ ip_status() {
 	if
 		$IFCONFIG $IFCONFIG_A_OPT | grep "inet.*[: ]$BASEIP " >/dev/null 2>&1
 	then
-		echo "running"; return 0
+		echo "running"; exit 0
 	else
-		echo "stopped"; return 3
+		echo "stopped"; exit 3
 	fi;;
 
     Linux|SunOS)		
 	if
 		[ -z "$IF" ]
 	then
-		echo "stopped"; return 3
+		echo "stopped"; exit 3
 	else
 		case $IF in
 		  lo*)
-			echo "loopback"; return 0
+			echo "loopback"; exit 0
 			;;
 		  *)
-			echo "running"; return 0
+			echo "running"; exit 0
 			;;
 		esac
 	fi;;
@@ -617,9 +617,9 @@ ip_status() {
 	if
 		[ -z "$IF" ]
 	then
-		echo "stopped"; return 3
+		echo "stopped"; exit 3
 	else
-		echo "running"; return 0
+		echo "running"; exit 0
 	fi;;
   esac
 }
@@ -649,16 +649,16 @@ ip_monitor() {
       @PING@ $PINGARGS >/dev/null 2>&1
     then
       echo "OK"
-      return 0
+      exit 0
     fi
   done
   echo "down"
-  return 1
+  exit 1
 }
 
 usage() {
   echo $USAGE >&2
-  echo "$Id: IPaddr.in,v 1.3 2004/11/08 20:48:36 gshi Exp $"
+  echo "$Id: IPaddr.in,v 1.4 2004/11/09 07:33:00 zhenh Exp $"
 }
 
 #
@@ -707,6 +707,9 @@ exit 0
 #
 #
 # $Log: IPaddr.in,v $
+# Revision 1.4  2004/11/09 07:33:00  zhenh
+# fix some bugs of exit code
+#
 # Revision 1.3  2004/11/08 20:48:36  gshi
 # implemented logging daemon
 #
