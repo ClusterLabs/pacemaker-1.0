@@ -1,0 +1,15 @@
+use 5.008001;
+use ExtUtils::MakeMaker;
+
+# See lib/ExtUtils/MakeMaker.pm for details of how to influence
+# the contents of the Makefile that is written.
+WriteMakefile(
+    NAME => 'heartbeat::clplumbing',
+    VERSION => '0.1', # finds $VERSION
+    DIR => [ 'cl_raw' ],
+    PREREQ_PM => {}, # e.g., Module::Name => 1.1
+    AUTHOR => 'Lars Marowsky-Brée <lmb\@suse.de>',
+    MAKEFILE => 'Makefile.perl',
+);
+
+

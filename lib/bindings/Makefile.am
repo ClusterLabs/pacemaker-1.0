@@ -1,7 +1,7 @@
 #
-# heartbeat library directory: Linux-HA code
+# heartbeat library directory: Script language bindings
 #
-# Copyright (C) 2001 Alan Robertson
+# Copyright (C) 2004 Lars Marowsky-Brée
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -19,19 +19,7 @@
 #
 MAINTAINERCLEANFILES    = Makefile.in
 
-#
-#	PILS is supposed to be an independent library
-#	Stonith should rely only on PILS
-#
-#	The rest can use clplumbing, and the plugins should be able
-#	to use any of the libraries (nothing can be linked against them)
-#
-#
 ## Subdirectories...
 SUBDIRS			=  	\
-	pils stonith 		\
-	clplumbing		\
-	apphb recoverymgr	\
-	plugins  checkpointd    \
-	@SWIG_DIR@
+	perl
 
