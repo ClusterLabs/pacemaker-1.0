@@ -1,4 +1,4 @@
-/* $Id: apphbtest.c,v 1.23 2004/09/28 06:32:19 alan Exp $ */
+/* $Id: apphbtest.c,v 1.24 2005/02/17 09:46:24 sunjd Exp $ */
 /*
  * apphbtest:	application heartbeat test program
  *
@@ -164,7 +164,9 @@ doafailtest(void)
 		}
 
 	}
-	if (debug) fprintf(stderr, "\n");
+	if (debug) {
+		fprintf(stderr, "\n");
+	}
 	sleep(3);
 	if (debug) 
 		fprintf(stderr, "!");
