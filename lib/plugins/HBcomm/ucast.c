@@ -1,4 +1,4 @@
-static const char _ucast_Id [] = "$Id: ucast.c,v 1.16 2003/09/05 05:09:22 alan Exp $";
+static const char _ucast_Id [] = "$Id: ucast.c,v 1.17 2004/01/21 11:34:15 horms Exp $";
 /*
  * Adapted from alanr's UDP broadcast heartbeat bcast.c by Stéphane Billiart
  *	<stephane@reefedge.com>
@@ -79,6 +79,7 @@ static const char _ucast_Id [] = "$Id: ucast.c,v 1.16 2003/09/05 05:09:22 alan E
 
 #define LOG		PluginImports->log
 #define MALLOC		PluginImports->alloc
+#define STRDUP  	PluginImports->mstrdup
 #define FREE		PluginImports->mfree
 
 #define	MAXBINDTRIES	10
@@ -234,34 +235,26 @@ static int ucast_parse(const char *line)
 
 static int ucast_mtype(char **buffer)
 {
-	char *p;
-	int len;
-
-	len = strlen(PIL_PLUGIN_S);
-	if (!(p  = MALLOC(len * sizeof(char) + 1))) {
+	*buffer = STRDUP(PIL_PLUGIN_S);
+	if (!*buffer) {
 		LOG(PIL_CRIT, "ucast: memory allocation error (line %d)",
-			(__LINE__ - 2) );
+				(__LINE__ - 2) );
 		return 0;
 	}
-	strcpy(p, PIL_PLUGIN_S);
-	*buffer = p;
-	return len;
+
+	return strlen(*buffer);
 }
 
 static int ucast_descr(char **buffer)
 { 
-	char *p;
-	int len;
-
-	len = strlen(hb_media_name);
-	if (!(p = MALLOC(len * sizeof(char) + 1))) {
+	*buffer = strdup(hb_media_name);
+	if (!*buffer) {
 		LOG(PIL_CRIT, "ucast: memory allocation error (line %d)",
-			(__LINE__ - 2) );
+				(__LINE__ - 2) );
 		return 0;
 	}
-	strcpy(p, hb_media_name);
-	*buffer = p;
-	return len;
+
+	return strlen(*buffer);
 }
 
 static int ucast_isping(void)
@@ -328,7 +321,7 @@ ucast_new(const char *intf, const char *addr)
 	}
 	else {
 		ret->pd = (void*)ipi;
-		if (!(name = MALLOC(strlen(intf)+1))) {
+		if (!(name = STRDUP(intf))) {
 			LOG(PIL_CRIT,
 				"ucast: memory allocation error (line %d)",
 				(__LINE__ - 3) );
@@ -338,7 +331,6 @@ ucast_new(const char *intf, const char *addr)
 			ret = NULL;
 		}
 		else {
-			strcpy(name, intf);
 			ret->name = name;
 		}
 	}
@@ -665,13 +657,12 @@ static struct ip_private* new_ip_interface(const char *ifn,
 	*/
 	memcpy(&ep->heartaddr, h->h_addr_list[0], sizeof(ep->heartaddr));
 
-	if (!(ep->interface = (char*)MALLOC(strlen(ifn)+1))) {
+	if (!(ep->interface = STRDUP(ifn))) {
 		LOG(PIL_CRIT, "ucast: memory allocation error (line %d)",
 			(__LINE__ - 2) );
 		FREE(ep);
 		return NULL;
 	}
-	strcpy(ep->interface, ifn);
 	
 	bzero(&ep->addr, sizeof(ep->addr));	/* zero the struct */
 	ep->addr.sin_family = AF_INET;		/* host byte order */

@@ -1,4 +1,4 @@
-const static char * _setproctitle_c_Id = "$Id: setproctitle.c,v 1.9 2004/01/21 00:54:30 horms Exp $";
+const static char * _setproctitle_c_Id = "$Id: setproctitle.c,v 1.10 2004/01/21 11:34:15 horms Exp $";
 
 /*
  * setproctitle.c
@@ -85,68 +85,79 @@ static char *LastArgv = NULL;
 extern char **environ;
 
 #ifdef HAVE___PROGNAME
-  extern char *__progname, *__progname_full;
+extern char *__progname;
+extern char *__progname_full;
 #endif /* HAVE___PROGNAME */
 
-void 
+int 
 init_set_proc_title(int argc, char *argv[], char *envp[])
 {
-  int i, envpsize;
-  char **p;
+	int i;
+	int envpsize;
+	char **p;
   
-  /* Move the environment so setproctitle can use the space.
-   */
-  for(i = envpsize = 0; envp[i] != NULL; i++)
-    envpsize += strlen(envp[i]) + 1;
+	/* Move the environment so setproctitle can use the space.
+	 */
+	for(i = envpsize = 0; envp[i] != NULL; i++) {
+		envpsize += strlen(envp[i]) + 1;
+	}
   
-  if((p = (char **) malloc((i + 1) * sizeof(char *))) != NULL ) {
-    environ = p;
+	p = (char **) ha_malloc((i + 1) * sizeof(char *));
+	if (p == NULL) {
+		return -1;
+	}
 
-    for(i = 0; envp[i] != NULL; i++) {
-      if((environ[i] = malloc(strlen(envp[i]) + 1)) != NULL)
-	strcpy(environ[i], envp[i]);
-    }
-    
-    environ[i] = NULL;
-  }
+	environ = p;
+
+	for(i = 0; envp[i] != NULL; i++) {
+		environ[i] = ha_strdup(envp[i]);
+		if(environ[i] == NULL) {
+			goto error_environ;
+		}
+	}
+	environ[i] = NULL;
   
-  Argv = argv;
+	Argv = argv;
   
-  for(i = 0; i < argc; i++) {
-    if(!i || (LastArgv + 1 == argv[i]))
-      LastArgv = argv[i] + strlen(argv[i]);
-  }
+	for(i = 0; i < argc; i++) {
+		if(!i || (LastArgv + 1 == argv[i]))
+			LastArgv = argv[i] + strlen(argv[i]);
+	}
   
-  for(i = 0; envp[i] != NULL; i++) {
-    if((LastArgv + 1) == envp[i])
-      LastArgv = envp[i] + strlen(envp[i]);
-  }
+	for(i = 0; envp[i] != NULL; i++) {
+		if((LastArgv + 1) == envp[i]) {
+			LastArgv = envp[i] + strlen(envp[i]);
+		}
+	}
   
 #ifdef HAVE___PROGNAME
-  /* Set the __progname and __progname_full variables so glibc and company don't
-   * go nuts. - MacGyver
-   */
-  __progname = ha_strdup("heartbeat");
-  __progname_full = ha_strdup(argv[0]);
+  	/* Set the __progname and __progname_full variables so glibc and 
+	 * company don't go nuts. - MacGyver
+	 */
+	__progname = ha_strdup("heartbeat");
+	if (__progname == NULL) {
+		goto error_environ;
+	}
+	__progname_full = ha_strdup(argv[0]);
+	if (__progname_full == NULL) {
+		goto error_environ;
+	}
 #endif /* HAVE___PROGNAME */
   
-#if 0
-  /* Save argument/environment globals for use by set_proc_title */
+	return 0;
 
-  Argv = argv;
-  while(*envp)
-    envp++;
+error_environ:
+	for(i = 0; environ[i] != NULL; i++) {
+      		ha_free(environ[i]);
+	}
+	ha_free(environ);
+	return -1;
 
-  LastArgv = envp[-1] + strlen(envp[-1]);
-#endif
-
-  return;
-
-  /* Have to use these somewhere */
-  (void)_setproctitle_h_Id;
-  (void)_setproctitle_c_Id;
-  (void)_heartbeat_h_Id;
-  (void)_ha_msg_h_Id;
+	/* Have to use these somewhere */
+	(void)_setproctitle_h_Id;
+	(void)_setproctitle_c_Id;
+	(void)_heartbeat_h_Id;
+	(void)_ha_msg_h_Id;
 }    
 
 void set_proc_title(const char *fmt,...)

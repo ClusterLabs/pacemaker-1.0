@@ -235,7 +235,7 @@ parse_authfile(void)
 				continue;
 			}
 
-			cpkey =	ha_malloc(strlen(key)+1);
+			cpkey =	ha_strdup(key);
 			if (cpkey == NULL) {
 				ha_log(LOG_ERR, "Out of memory for authkey");
 				fclose(f);
@@ -243,7 +243,6 @@ parse_authfile(void)
 				,	HB_AUTH_TYPE_S, method, -1);
 				return(HA_FAIL);
 			}
-			strcpy(cpkey, key);
 			config->auth_config[i].key = cpkey;
 			config->auth_config[i].auth = at;
 			config->auth_config[i].authname = permname;
@@ -294,6 +293,15 @@ parse_authfile(void)
 }
 /*
  * $Log: auth.c,v $
+ * Revision 1.13  2004/01/21 11:34:14  horms
+ * - Replaced numerous malloc + strcpy/strncpy invocations with strdup
+ *   * This usually makes the code a bit cleaner
+ *   * Also is easier not to make code with potential buffer over-runs
+ * - Added STRDUP to pils modules
+ * - Removed some spurious MALLOC and FREE redefinitions
+ *   _that could never be used_
+ * - Make sure the return value of strdup is honoured in error conditions
+ *
  * Revision 1.12  2003/12/21 11:18:37  horms
  * Don't used type-pruned pointers. Fixed some uninitialised variables
  *

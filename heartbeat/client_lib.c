@@ -1175,7 +1175,7 @@ new_stringlist(const char *s)
 		return(NULL);
 	}
 
-	if ((cp = (char *)ha_malloc(strlen(s)+1)) == NULL) {
+	if ((cp = ha_strdup(s)) == NULL) {
 		return(NULL);
 	}
 	if ((ret = MALLOCT(struct stringlist)) == NULL) {
@@ -1184,7 +1184,6 @@ new_stringlist(const char *s)
 	}
 	ret->next = NULL;
 	ret->value = cp;
-	strcpy(cp, s);
 	return(ret);
 }
 
@@ -1296,12 +1295,11 @@ add_gen_callback(const char * msgtype, llc_private_t* lcp
 		if (gcb == NULL) {
 			return(HA_FAIL);
 		}
-		type = ha_malloc(strlen(msgtype)+1);
+		type = ha_strdup(msgtype);
 		if (type == NULL) {
 			ha_free(gcb);
 			return(HA_FAIL);
 		}
-		strcpy(type, msgtype);
 		gcb->msgtype = type;
 		gcb->next = lcp->genlist;
 		lcp->genlist = gcb;

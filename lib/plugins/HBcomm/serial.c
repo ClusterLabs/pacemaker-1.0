@@ -1,4 +1,4 @@
-const static char _serial_c_Id [] = "$Id: serial.c,v 1.28 2004/01/20 16:23:11 alan Exp $";
+const static char _serial_c_Id [] = "$Id: serial.c,v 1.29 2004/01/21 11:34:15 horms Exp $";
 
 /*
  * Linux-HA serial heartbeat code
@@ -132,6 +132,7 @@ static void*			interfprivate;
 
 #define LOG	PluginImports->log
 #define MALLOC	PluginImports->alloc
+#define STRDUP  PluginImports->mstrdup
 #define FREE	PluginImports->mfree
 
 PIL_rc
@@ -169,24 +170,22 @@ PIL_PLUGIN_INIT(PILPlugin*us, const PILPluginImports* imports)
 
 static int
 serial_mtype (char **buffer) { 
-	
-	*buffer = MALLOC((strlen("serial") * sizeof(char)) + 1);
+	*buffer = STRDUP("serial");
+	if (!*buffer) {
+		return 0;
+	}
 
-	strcpy(*buffer, "serial");
-
-	return strlen("serial");
+	return strlen(*buffer);
 }
 
 static int
 serial_descr (char **buffer) { 
+	*buffer = STRDUP("serial ring");
+	if (!*buffer) {
+		return 0;
+	}
 
-	const char *str = "serial ring";	
-
-	*buffer = MALLOC((strlen(str) * sizeof(char)) + 1);
-
-	strcpy(*buffer, str);
-
-	return strlen(str);
+	return strlen(*buffer);
 }
 
 static int
@@ -261,12 +260,17 @@ serial_new (const char * port)
 			 */
 			sp->next = lastserialport;
 			lastserialport=ret;
-			sp->ttyname = (char *)MALLOC(strlen(port)+1);
-			sp->consecutive_errors = 0;
-			strcpy(sp->ttyname, port);
-			ret->name = sp->ttyname;
-			ret->pd = sp;
-		}else{
+			sp->ttyname = STRDUP(port);
+			if (sp->ttyname != NULL) {
+				sp->consecutive_errors = 0;
+				ret->name = sp->ttyname;
+				ret->pd = sp;
+			}else{
+				FREE(sp);
+				sp = NULL;
+			}
+		}
+		if (sp == NULL) {
 			FREE(ret);
 			ret = NULL;
 			LOG(PIL_CRIT, "Out of memory (private serial data)");
@@ -673,6 +677,15 @@ ttygets(char * inbuf, int length, struct serial_private *tty)
 }
 /*
  * $Log: serial.c,v $
+ * Revision 1.29  2004/01/21 11:34:15  horms
+ * - Replaced numerous malloc + strcpy/strncpy invocations with strdup
+ *   * This usually makes the code a bit cleaner
+ *   * Also is easier not to make code with potential buffer over-runs
+ * - Added STRDUP to pils modules
+ * - Removed some spurious MALLOC and FREE redefinitions
+ *   _that could never be used_
+ * - Make sure the return value of strdup is honoured in error conditions
+ *
  * Revision 1.28  2004/01/20 16:23:11  alan
  * Fixed an oversight which turns out to have been luckily-benign in practice.
  *

@@ -1,4 +1,4 @@
-static const char _mcast_Id [] = "$Id: mcast.c,v 1.14 2003/02/07 08:37:17 horms Exp $";
+static const char _mcast_Id [] = "$Id: mcast.c,v 1.15 2004/01/21 11:34:15 horms Exp $";
 /*
  * mcast.c: implements hearbeat API for UDP multicast communication
  *
@@ -123,6 +123,7 @@ static void*			interfprivate;
 
 #define LOG	PluginImports->log
 #define MALLOC	PluginImports->alloc
+#define STRDUP  PluginImports->mstrdup
 #define FREE	PluginImports->mfree
 
 PIL_rc
@@ -178,25 +179,23 @@ static int get_loop(const char *loop, u_char *l);
 static int
 mcast_mtype(char** buffer)
 { 
-	
-	*buffer = MALLOC(sizeof(PIL_PLUGIN_S));
+	*buffer = STRDUP(PIL_PLUGIN_S);
+	if (!*buffer) {
+		return 0;
+	}
 
-	strcpy(*buffer, PIL_PLUGIN_S);
-
-	return STRLEN(PIL_PLUGIN_S);
+	return STRLEN(*buffer);
 }
 
 static int
 mcast_descr(char **buffer)
 { 
+	*buffer = STRDUP("UDP/IP multicast");
+	if (!*buffer) {
+		return 0;
+	}
 
-	const char str[] = "UDP/IP multicast";	
-
-	*buffer = MALLOC(sizeof(str));
-
-	strcpy(*buffer, str);
-
-	return STRLEN(str);
+	return STRLEN(*buffer);
 }
 
 static int
@@ -340,11 +339,17 @@ mcast_new(const char * intf, const char *mcast, u_short port,
 	if (ret != NULL) {
 		char * name;
 		ret->pd = (void*)mcp;
-		name = MALLOC(strlen(intf)+1);
-		strcpy(name, intf);
-		ret->name = name;
+		name = STRDUP(intf);
+		if (name != NULL) {
+			ret->name = name;
+		}
+		else {
+			FREE(ret);
+			ret = NULL;
+		}
 
-	}else{
+	}
+	if(ret == NULL) {
 		FREE(mcp->interface);
 		FREE(mcp);
 	}
@@ -610,12 +615,11 @@ new_mcast_private(const char *ifn, const char *mcast, u_short port,
 		return NULL;
 	}
 
-	mcp->interface = (char *)MALLOC(strlen(ifn)+1);
+	mcp->interface = (char *)STRDUP(ifn);
 	if(mcp->interface == NULL) {
 		FREE(mcp);
 		return NULL;
 	}
-	strcpy(mcp->interface, ifn);
 
 	/* Set up multicast address */
 
@@ -819,6 +823,15 @@ get_loop(const char *loop, u_char *l)
 
 /*
  * $Log: mcast.c,v $
+ * Revision 1.15  2004/01/21 11:34:15  horms
+ * - Replaced numerous malloc + strcpy/strncpy invocations with strdup
+ *   * This usually makes the code a bit cleaner
+ *   * Also is easier not to make code with potential buffer over-runs
+ * - Added STRDUP to pils modules
+ * - Removed some spurious MALLOC and FREE redefinitions
+ *   _that could never be used_
+ * - Make sure the return value of strdup is honoured in error conditions
+ *
  * Revision 1.14  2003/02/07 08:37:17  horms
  * Removed inclusion of portability.h from .h files
  * so that it does not need to be installed.

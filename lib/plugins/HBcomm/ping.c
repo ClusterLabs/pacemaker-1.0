@@ -1,4 +1,4 @@
-static const char _ping_Id [] = "$Id: ping.c,v 1.23 2003/08/15 05:01:20 horms Exp $";
+static const char _ping_Id [] = "$Id: ping.c,v 1.24 2004/01/21 11:34:15 horms Exp $";
 /*
  * ping.c: ICMP-echo-based heartbeat code for heartbeat.
  *
@@ -161,6 +161,7 @@ static void*			interfprivate;
 
 #define LOG	PluginImports->log
 #define MALLOC	PluginImports->alloc
+#define STRDUP  PluginImports->mstrdup
 #define FREE	PluginImports->mfree
 
 PIL_rc
@@ -193,24 +194,22 @@ PIL_PLUGIN_INIT(PILPlugin*us, const PILPluginImports* imports)
 }
 static int
 ping_mtype(char **buffer) { 
-	
-	*buffer = MALLOC((strlen(PIL_PLUGIN_S) * sizeof(char)) + 1);
+	*buffer = STRDUP(PIL_PLUGIN_S);
+	if (!*buffer) {
+		return 0;
+	}
 
-	strcpy(*buffer, PIL_PLUGIN_S);
-
-	return strlen(PIL_PLUGIN_S);
+	return strlen(*buffer);
 }
 
 static int
 ping_descr(char **buffer) { 
+	*buffer = STRDUP("ping membership");
+	if (!*buffer) {
+		return 0;
+	}
 
-	const char *str = "ping membership";	
-
-	*buffer = MALLOC((strlen(str) * sizeof(char)) + 1);
-
-	strcpy(*buffer, str);
-
-	return strlen(str);
+	return strlen(*buffer);
 }
 
 /* Yes, a ping device */
@@ -278,13 +277,12 @@ ping_new(const char * host)
 	}
 
 	ret->pd = (void*)ipi;
-	name = MALLOC(strlen(host)+1);
+	name = STRDUP(host);
 	if(name == NULL) {
 		FREE(ipi); ipi = NULL;
 		FREE(ret); ret = NULL;
 		return(NULL);
 	}
-	strcpy(name, host);
 	ret->name = name;
 	add_node(host, PINGNODE_I);
 

@@ -1,4 +1,4 @@
-static const char _ppp_udp_Id [] = "$Id: ppp-udp.c,v 1.13 2003/02/07 08:37:18 horms Exp $";
+static const char _ppp_udp_Id [] = "$Id: ppp-udp.c,v 1.14 2004/01/21 11:34:15 horms Exp $";
 /*
  *	ppp-udp.c:	Implements UDP over PPP for bidirectional ring
  *			heartbeats.
@@ -175,22 +175,22 @@ extern int	udpport;	/* Shared with udp.c */
 #define PPPUDPASSERT(mp) 
 static int hb_dev_mtype (char **buffer)
 {
-	*buffer = ha_malloc((strlen("ppp-udp") * sizeof(char)) + 1);
+	*buffer = ha_strdup("ppp-udp");
+	if (!*buffer) {
+		return 0;
+	}
 
-	strcpy(*buffer, "ppp-udp");
-
-	return strlen("ppp-udp");
+	return strlen(*buffer);
 }
 
 static int hb_dev_descr (char **buffer)
 {
-	const char *str = "Serial ring running PPP/UDP";
+	*buffer = ha_strdup("Serial ring running PPP/UDP");
+	if (!*buffer) {
+		return 0;
+	}
 
-	*buffer = ha_malloc((strlen(str) * sizeof(char)) + 1);
-
-	strcpy(*buffer, str);
-
-	return strlen(str);
+	return strlen(*buffer);
 }
 
 static int hb_dev_isping (void) { 
@@ -227,8 +227,12 @@ hb_dev_new(const char* tty, const char* ipaddr)
 	memset(ipi, 0, sizeof(*ipi));
 
 
-	ipi->ipaddr = ha_malloc(strlen(ipaddr)+1);
-	strcpy(ipi->ipaddr, ipaddr);
+	ipi->ipaddr = ha_strdup(ipaddr);
+	if (!ipi->ipaddr) {
+		ha_log(LOG_ERR, "Out of memory");
+		ha_free(ipi);
+		return NULL;
+	}
 
         ipi->port = udpport;
 
@@ -236,13 +240,14 @@ hb_dev_new(const char* tty, const char* ipaddr)
 	if (ret != NULL) {
 		char *	name;
 		ret->pd = (void*)ipi;
-		name = ha_malloc(strlen(tty)+1);
+		name = ha_strdup(tty);
 		if (name == NULL)  {
+			ha_free(ipi);
+			ha_free(ipi->addr);
 			ha_free(ret);
 			ret=NULL;
 			return(ret);
 		}
-		strcpy(name, tty);
 		ret->name = name;
 		ipi->next = last_udp_ppp_interface;
 		ipi->next = ret;
@@ -250,6 +255,7 @@ hb_dev_new(const char* tty, const char* ipaddr)
 	}else{
 		ha_log(LOG_ERR, "Out of memory");
 		ha_free(ipi);
+		ha_free(ipi->addr);
 	}
 	return(ret);
 }
@@ -373,8 +379,10 @@ ppp_udp_ppp_proc_info(struct hb_media * mp)
 				ei->far_addr = NULL;
 			}
 			line[strlen(line)-1] = EOS;
-			ei->far_addr = ha_malloc(strlen(line)+1);
-			strcpy(ei->far_addr, line);
+			ei->far_addr = ha_strdup(line);
+			if (!ei->far_addr) {
+				return NULL;
+			}
 			if (ANYDEBUG) {
 				ha_log(LOG_DEBUG, "addr=%s", line);
 			}
@@ -385,8 +393,13 @@ ppp_udp_ppp_proc_info(struct hb_media * mp)
 				ei->interface = NULL;
 			}
 			line[strlen(line)-1] = EOS;
-			ei->interface = ha_malloc(strlen(line)+1);
-			strcpy(ei->interface, line);
+			ei->interface = ha_strdup(line);
+			if (!ei->interface) {
+				if (ei->far_addr) {
+					ha_free(ei->far_addr);
+				}
+				return NULL;
+			}
 			if (ANYDEBUG) {
 				ha_log(LOG_DEBUG, "if=%s", ei->interface);
 			}
@@ -1212,6 +1225,15 @@ ppp_localdie(void)
 }
 /*
  * $Log: ppp-udp.c,v $
+ * Revision 1.14  2004/01/21 11:34:15  horms
+ * - Replaced numerous malloc + strcpy/strncpy invocations with strdup
+ *   * This usually makes the code a bit cleaner
+ *   * Also is easier not to make code with potential buffer over-runs
+ * - Added STRDUP to pils modules
+ * - Removed some spurious MALLOC and FREE redefinitions
+ *   _that could never be used_
+ * - Make sure the return value of strdup is honoured in error conditions
+ *
  * Revision 1.13  2003/02/07 08:37:18  horms
  * Removed inclusion of portability.h from .h files
  * so that it does not need to be installed.

@@ -1,4 +1,4 @@
-const static char * _setproctitle_h_Id = "$Id: setproctitle.h,v 1.2 2003/06/24 06:45:09 alan Exp $";
+const static char * _setproctitle_h_Id = "$Id: setproctitle.h,v 1.3 2004/01/21 11:34:15 horms Exp $";
 
 /*
  * setproctitle.h
@@ -59,7 +59,7 @@ const static char * _setproctitle_h_Id = "$Id: setproctitle.h,v 1.2 2003/06/24 0
 #define _HA_SETPROCTITLE_H
 
 #include <glib.h>
-void init_set_proc_title(int argc, char *argv[], char *envp[]);
+int init_set_proc_title(int argc, char *argv[], char *envp[]);
 
 void set_proc_title(const char *fmt,...) G_GNUC_PRINTF(1,2);
 

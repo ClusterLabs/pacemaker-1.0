@@ -1,4 +1,4 @@
-static const char * _ha_msg_c_Id = "$Id: ha_msg.c,v 1.47 2003/11/10 08:55:20 lars Exp $";
+static const char * _ha_msg_c_Id = "$Id: ha_msg.c,v 1.48 2004/01/21 11:34:14 horms Exp $";
 /*
  * Heartbeat messaging object.
  *
@@ -389,7 +389,7 @@ ha_msg_mod(struct ha_msg * msg, const char * name, const char * value)
 	}
 	for (j=0; j < msg->nfields; ++j) {
 		if (strcmp(name, msg->names[j]) == 0) {
-			char *	newv = ha_malloc(strlen(value)+1);
+			char *	newv = ha_strdup(value);
 			int	newlen;
 			int	sizediff = 0;
 			if (newv == NULL) {
@@ -402,7 +402,6 @@ ha_msg_mod(struct ha_msg * msg, const char * name, const char * value)
 			sizediff = newlen - msg->vlens[j];
 			msg->stringlen += sizediff;
 			msg->vlens[j] = newlen;
-			strcpy(newv, value);
 			AUDITMSG(msg);
 			return(HA_OK);
 		}
@@ -742,6 +741,15 @@ main(int argc, char ** argv)
 #endif
 /*
  * $Log: ha_msg.c,v $
+ * Revision 1.48  2004/01/21 11:34:14  horms
+ * - Replaced numerous malloc + strcpy/strncpy invocations with strdup
+ *   * This usually makes the code a bit cleaner
+ *   * Also is easier not to make code with potential buffer over-runs
+ * - Added STRDUP to pils modules
+ * - Removed some spurious MALLOC and FREE redefinitions
+ *   _that could never be used_
+ * - Make sure the return value of strdup is honoured in error conditions
+ *
  * Revision 1.47  2003/11/10 08:55:20  lars
  * Bugfixes by Deng, Pan:
  *

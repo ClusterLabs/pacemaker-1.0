@@ -1,4 +1,4 @@
-static const char _ping_group_Id [] = "$Id: ping_group.c,v 1.3 2003/09/26 05:33:24 alan Exp $";
+static const char _ping_group_Id [] = "$Id: ping_group.c,v 1.4 2004/01/21 11:34:15 horms Exp $";
 /*
  * ping_group.c: ICMP-echo-based heartbeat code for heartbeat.
  *
@@ -180,6 +180,7 @@ static void*			interfprivate;
 
 #define LOG	PluginImports->log
 #define MALLOC	PluginImports->alloc
+#define STRDUP  PluginImports->mstrdup
 #define FREE	PluginImports->mfree
 
 PIL_rc
@@ -213,23 +214,22 @@ PIL_PLUGIN_INIT(PILPlugin*us, const PILPluginImports* imports)
 static int
 ping_group_mtype(char **buffer) { 
 	
-	*buffer = MALLOC((strlen(PIL_PLUGIN_S) * sizeof(char)) + 1);
+	*buffer = STRDUP(PIL_PLUGIN_S);
+	if (!*buffer) {
+		return 0;
+	}
 
-	strcpy(*buffer, PIL_PLUGIN_S);
-
-	return strlen(PIL_PLUGIN_S);
+	return strlen(*buffer);
 }
 
 static int
 ping_group_descr(char **buffer) { 
+	*buffer = STRDUP("ping group membership");
+	if (!*buffer) {
+		return 0;
+	}
 
-	const char *str = "ping group membership";	
-
-	*buffer = MALLOC((strlen(str) * sizeof(char)) + 1);
-
-	strcpy(*buffer, str);
-
-	return strlen(str);
+	return strlen(*buffer);
 }
 
 /* Yes, a ping device */
@@ -319,14 +319,13 @@ ping_group_new(const char *name)
 	}
 
 	media->pd = (void*)priv;
-	tmp = MALLOC(strlen(name)+1);
+	tmp = STRDUP(name);
 	if(!tmp) {
 		FREE(priv);
 		FREE(media);
 		return(NULL);
 	}
 
-	strcpy(tmp, name);
 	media->name = tmp;
 	add_node(tmp, PINGNODE_I);
 

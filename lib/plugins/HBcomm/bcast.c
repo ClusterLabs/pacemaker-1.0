@@ -1,4 +1,4 @@
-static const char _bcast_Id [] = "$Id: bcast.c,v 1.32 2003/06/24 06:50:13 alan Exp $";
+static const char _bcast_Id [] = "$Id: bcast.c,v 1.33 2004/01/21 11:34:15 horms Exp $";
 /*
  * bcast.c: UDP/IP broadcast-based communication code for heartbeat.
  *
@@ -126,6 +126,7 @@ static void*			interfprivate;
 
 #define LOG	PluginImports->log
 #define MALLOC	PluginImports->alloc
+#define STRDUP  PluginImports->mstrdup
 #define FREE	PluginImports->mfree
 
 PIL_rc
@@ -158,24 +159,22 @@ PIL_PLUGIN_INIT(PILPlugin*us, const PILPluginImports* imports)
 
 static int 
 bcast_mtype(char** buffer) { 
-	
-	*buffer = MALLOC(sizeof(PIL_PLUGIN_S));
-
-	strcpy(*buffer, PIL_PLUGIN_S);
+	*buffer = STRDUP(PIL_PLUGIN_S);
+	if (!*buffer) {
+		return 0;
+	}
 
 	return STRLEN(PIL_PLUGIN_S);
 }
 
 static int
 bcast_descr(char **buffer) { 
+	*buffer = STRDUP("UDP/IP broadcast");
+	if (!*buffer) {
+		return 0;
+	}
 
-	const char* str = "UDP/IP broadcast";	
-
-	*buffer = MALLOC((strlen(str) * sizeof(char)) + 1);
-
-	strcpy(*buffer, str);
-
-	return strlen(str);
+	return strlen(*buffer);
 }
 
 static int
@@ -247,11 +246,19 @@ bcast_new(const char * intf)
 		char * name;
 		memset(ret, 0, sizeof(*ret));
 		ret->pd = (void*)ipi;
-		name = MALLOC(strlen(intf)+1);
-		strcpy(name, intf);
-		ret->name = name;
+		name = STRDUP(intf);
+		if (name != NULL) {
+			ret->name = name;
+		} else {
+			FREE(ret);
+			ret = NULL;
+		}
+	}
+	if (ret != NULL) {
 		if (DEBUGPKT) {
-			PILCallLog(LOG, PIL_DEBUG, "bcast_new: returning ret (%s)", ret->name);
+			PILCallLog(LOG, PIL_DEBUG, 
+					"bcast_new: returning ret (%s)", 
+					ret->name);
 		}
 	}else{
 		FREE(ipi->interface);
@@ -648,12 +655,11 @@ new_ip_interface(const char * ifn, int port)
 
 	ep->bcast = broadaddr;
 
-	ep->interface = (char *)MALLOC(strlen(ifn)+1);
+	ep->interface = (char *)STRDUP(ifn);
 	if(ep->interface == NULL) {
 		FREE(ep);
 		return(NULL);
 	}
-	strcpy(ep->interface, ifn);
 	
 	memset(&ep->addr, 0, sizeof(ep->addr));	/* zero the struct */
 	ep->addr.sin_family = AF_INET;		/* host byte order */
@@ -775,6 +781,15 @@ if_get_broadaddr(const char *ifn, struct in_addr *broadaddr)
 
 /*
  * $Log: bcast.c,v $
+ * Revision 1.33  2004/01/21 11:34:15  horms
+ * - Replaced numerous malloc + strcpy/strncpy invocations with strdup
+ *   * This usually makes the code a bit cleaner
+ *   * Also is easier not to make code with potential buffer over-runs
+ * - Added STRDUP to pils modules
+ * - Removed some spurious MALLOC and FREE redefinitions
+ *   _that could never be used_
+ * - Make sure the return value of strdup is honoured in error conditions
+ *
  * Revision 1.32  2003/06/24 06:50:13  alan
  * Added a missing format string.
  * With the right level of debugging enabled, this could have allowed

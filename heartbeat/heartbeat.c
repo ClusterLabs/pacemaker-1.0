@@ -1,4 +1,4 @@
-const static char * _heartbeat_c_Id = "$Id: heartbeat.c,v 1.283 2004/01/21 00:54:30 horms Exp $";
+const static char * _heartbeat_c_Id = "$Id: heartbeat.c,v 1.284 2004/01/21 11:34:14 horms Exp $";
 
 /*
  * heartbeat: Linux-HA heartbeat code
@@ -2810,7 +2810,10 @@ main(int argc, char * argv[], char **envp)
 	get_localnodeinfo();
 	SetParameterValue(KEY_HBVERSION, VERSION);
 
-	init_set_proc_title(argc, argv, envp);
+	if (init_set_proc_title(argc, argv, envp) < 0) {
+		cl_log(LOG_ERR, "Allocation of proc title failed.");
+		cleanexit(generic_error);
+	}
 	set_proc_title("%s", cmdname);
 
 	hbmedia_types = ha_malloc(sizeof(struct hbmedia_types **));
@@ -4111,6 +4114,15 @@ get_localnodeinfo(void)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.284  2004/01/21 11:34:14  horms
+ * - Replaced numerous malloc + strcpy/strncpy invocations with strdup
+ *   * This usually makes the code a bit cleaner
+ *   * Also is easier not to make code with potential buffer over-runs
+ * - Added STRDUP to pils modules
+ * - Removed some spurious MALLOC and FREE redefinitions
+ *   _that could never be used_
+ * - Make sure the return value of strdup is honoured in error conditions
+ *
  * Revision 1.283  2004/01/21 00:54:30  horms
  * Added ha_strdup, so strdup allocations are audited
  *

@@ -1,4 +1,4 @@
-const static char * _hb_config_c_Id = "$Id: config.c,v 1.108 2004/01/21 00:54:29 horms Exp $";
+const static char * _hb_config_c_Id = "$Id: config.c,v 1.109 2004/01/21 11:34:14 horms Exp $";
 /*
  * Parse various heartbeat configuration files...
  *
@@ -991,12 +991,11 @@ set_watchdogdev(const char * value)
 		,	cmdname);
 		return(HA_FAIL);
 	}
-	if ((watchdogdev = (char *)ha_malloc(strlen(value)+1)) == NULL) {
+	if ((watchdogdev = ha_strdup(value)) == NULL) {
 		fprintf(stderr, "%s: Out of memory for watchdog device\n"
 		,	cmdname);
 		return(HA_FAIL);
 	}
-	strcpy(watchdogdev, value);
 	return(HA_OK);
 }
 
@@ -1921,6 +1920,15 @@ baddirective:
 
 /*
  * $Log: config.c,v $
+ * Revision 1.109  2004/01/21 11:34:14  horms
+ * - Replaced numerous malloc + strcpy/strncpy invocations with strdup
+ *   * This usually makes the code a bit cleaner
+ *   * Also is easier not to make code with potential buffer over-runs
+ * - Added STRDUP to pils modules
+ * - Removed some spurious MALLOC and FREE redefinitions
+ *   _that could never be used_
+ * - Make sure the return value of strdup is honoured in error conditions
+ *
  * Revision 1.108  2004/01/21 00:54:29  horms
  * Added ha_strdup, so strdup allocations are audited
  *
