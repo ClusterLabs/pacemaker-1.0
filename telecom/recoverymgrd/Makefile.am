@@ -56,16 +56,6 @@ recoverymgrd_LDFLAGS	= @LIBADD_DL@ @LIBLTDL@ -export-dynamic		\
 			-dlpreopen-force 				\
 			-dlopen-self
 
-#lex.yy.c: conf_lex.lex
-#	lex conf_lex.lex
-
-#y.tab.c: conf_yacc.yacc lex.yy.c recoverymgrd.c
-#	yacc -d conf_yacc.yacc
-
-#y.tab.h: y.tab.c # Automatically built at the same time
-
-#recoverymgrd.$(OBJEXT): y.tab.h y.tab.c lex.yy.c lex.yy.o
-
 # Lex can't be relied on to produce code that won't produce any errors
 # So we make sure that this code is never compiled with -Werror
 lex.yy.$(OBJEXT): lex.yy.c
