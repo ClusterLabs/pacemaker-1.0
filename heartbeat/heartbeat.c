@@ -1,4 +1,4 @@
-const static char * _heartbeat_c_Id = "$Id: heartbeat.c,v 1.275 2003/09/19 19:21:14 alan Exp $";
+const static char * _heartbeat_c_Id = "$Id: heartbeat.c,v 1.276 2003/09/26 04:34:13 alan Exp $";
 
 /*
  * heartbeat: Linux-HA heartbeat code
@@ -1534,6 +1534,7 @@ hb_initiate_shutdown(int quickshutdown)
 	}
 	send_local_status();
 	if (!quickshutdown) {
+		shutdown_in_progress = TRUE;
 		procinfo->giveup_resources = TRUE;
 		hb_giveup_resources();
 		/* Do something more drastic in 60 minutes */
@@ -4121,6 +4122,9 @@ get_localnodeinfo(void)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.276  2003/09/26 04:34:13  alan
+ * Fine tuning the auditing code so it doesn't bitch inappropriately.
+ *
  * Revision 1.275  2003/09/19 19:21:14  alan
  * Fixed the bug where we ran resource scripts twice.
  * The fix consisted of causing the resource requests to be queued, so that they aren't run simultaneously.

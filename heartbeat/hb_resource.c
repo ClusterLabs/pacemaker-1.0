@@ -415,7 +415,7 @@ hb_rsc_isstable(void)
 	if (!nice_failback) {
 		if (ANYDEBUG) {
 			cl_log(LOG_DEBUG
-			,	"rsc_isstable: ResourceMgmt_child_count: %d"
+			,	"hb_rsc_isstable: ResourceMgmt_child_count: %d"
 			,	ResourceMgmt_child_count);
 		}
 		return ResourceMgmt_child_count == 0;
@@ -423,10 +423,11 @@ hb_rsc_isstable(void)
 
 	if (ANYDEBUG) {
 		cl_log(LOG_DEBUG
-		,	"rsc_isstable: ResourceMgmt_child_count: %d"
+		,	"hb_rsc_isstable: ResourceMgmt_child_count: %d"
+		", other_is_stable: %d"
 		", takeover_in_progress: %d, going_standby: %d"
 		", standby running(ms): %ld, resourcestate: %d" 
-		,	ResourceMgmt_child_count
+		,	ResourceMgmt_child_count, other_is_stable
 		,	takeover_in_progress, going_standby
 		,	longclockto_ms(standby_running)
 		,	resourcestate);
@@ -802,7 +803,8 @@ AuditResources(void)
 	 *	If things are stable, look for orphaned resources...
 	 */
 
-	if (hb_rsc_isstable()) {
+	if (hb_rsc_isstable() && !shutdown_in_progress
+	&&	(resourcestate != HB_R_SHUTDOWN))  {
 		/*
 		 *	Does someone own local resources?
 		 */
@@ -1625,6 +1627,7 @@ hb_giveup_resources(void)
 		return;
 	}
 	rsc_needs_shutdown = FALSE;
+	shutdown_in_progress = TRUE;
 
 
 	if (resource_shutdown_in_progress) {
@@ -1636,7 +1639,6 @@ hb_giveup_resources(void)
 		ha_log(LOG_INFO, "hb_giveup_resources(): "
 			"current status: %s", curnode->status);
 	}
-	shutdown_in_progress =TRUE;
 	hb_close_watchdog();
 	DisableProcLogging();	/* We're shutting down */
 	procinfo->i_hold_resources = HB_NO_RSC ;
@@ -2004,6 +2006,9 @@ StonithProcessName(ProcTrack* p)
 
 /*
  * $Log: hb_resource.c,v $
+ * Revision 1.37  2003/09/26 04:34:13  alan
+ * Fine tuning the auditing code so it doesn't bitch inappropriately.
+ *
  * Revision 1.36  2003/09/24 23:04:41  alan
  * Put in some small amount of debugging, and eliminated a little of the
  * checking for auto_failback legacy case during shutdown.
