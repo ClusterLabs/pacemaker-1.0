@@ -668,7 +668,8 @@ handle_heartbeat_msg(void)
 		}
 
 		/* we only handle the shutdown msg for now. */
-		if (strcmp(myid, node) == 0 && strncmp(type, T_SHUTDONE, 20) == 0) {
+		if (strcmp(myid, node) == 0
+		&&		STRNCMP_CONST(type, T_SHUTDONE) == 0) {
 			return HA_FAIL;
 		}
 		ha_msg_del(msg);
@@ -735,8 +736,9 @@ init_membership(void)
 	    return HA_OK;
 	}
 
-	if (nbuf)
+	if (nbuf) {
 		ha_free(nbuf);
+	}
 
         nbuf = (SaClmClusterNotificationT *) ha_malloc(gNodeTable->len *
                                 sizeof (SaClmClusterNotificationT));
