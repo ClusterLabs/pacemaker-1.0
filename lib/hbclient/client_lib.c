@@ -1,4 +1,4 @@
-/* $Id: client_lib.c,v 1.3 2004/03/26 07:50:07 chuyee Exp $ */
+/* $Id: client_lib.c,v 1.4 2004/04/17 07:57:07 alan Exp $ */
 /* 
  * client_lib: heartbeat API client side code
  *
@@ -2362,26 +2362,15 @@ ha_api_log(int priority, const char * fmt, ...)
 	BufLen += len;
 }
 
-extern int	sys_nerr;
 static void
 ha_api_perror(const char * fmt, ...)
 {
 	const char *	err;
-	char	errornumber[16];
 
 	va_list ap;
 	char buf[MAXLINE];
 
-	if (errno < 0 || errno >= sys_nerr) {
-		snprintf(errornumber, sizeof(errornumber), "error %d\n", errno);
-		err = errornumber;
-	}else{
-#ifdef HAVE_STRERROR
-		err = strerror(errno);
-#else
-		err = sys_errlist[errno];
-#endif
-	}
+	err = strerror(errno);
 	va_start(ap, fmt);
 	vsnprintf(buf, MAXLINE, fmt, ap);
 	va_end(ap);
