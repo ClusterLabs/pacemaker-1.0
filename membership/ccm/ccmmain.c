@@ -1,4 +1,4 @@
-/* $Id: ccmmain.c,v 1.18 2004/10/01 00:52:55 yixiong Exp $ */
+/* $Id: ccmmain.c,v 1.19 2005/02/15 20:11:31 alan Exp $ */
 /* 
  * ccm.c: Consensus Cluster Service Program 
  *
@@ -21,6 +21,7 @@
  *
  */
 #include <ccm.h>
+#include <clplumbing/cl_malloc.h>
 #include <clplumbing/cl_signal.h>
 
 #define SECOND   1000
@@ -197,10 +198,13 @@ main(int argc, char **argv)
 	IPC_WaitConnection *wait_ch;
 
 	char *cmdname;
-	char *tmp_cmdname = strdup(argv[0]);
+	char *tmp_cmdname = g_strdup(argv[0]);
 	int  flag;
 	hb_usrdata_t	usrdata;
 
+#if 1
+	cl_malloc_forced_for_glib();
+#endif
 	if ((cmdname = strrchr(tmp_cmdname, '/')) != NULL) {
 		++cmdname;
 	} else {
@@ -265,7 +269,7 @@ main(int argc, char **argv)
 	g_main_run(usrdata.mainloop);
 	g_main_destroy(usrdata.mainloop);
 
-	free(tmp_cmdname);
+	g_free(tmp_cmdname);
 	/*this program should never terminate,unless killed*/
 	return(1);
 }
