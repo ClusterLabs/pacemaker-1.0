@@ -328,7 +328,8 @@ sub DESTROY {
 	ref($self) or croak "Instance variable needed";
 	UNIVERSAL::isa($self, "heartbeat::clplumbing::ipc::server")
 		or croak "Wrong object type, not an IPC WaitConnection";
-	# void ipc_wc_destroy(IPC_WaitConnection *wc);
+
+	heartbeat::clplumbing::ipc::ipc_wc_destroy($self->{raw});
 }
 
 =back
