@@ -52,22 +52,20 @@ APPHB_NOHB		return APPHB_NOHB_L;
 APPHB_HBAGAIN		return APPHB_HBAGAIN_L;
 APPHB_HBWARN		return APPHB_HBWARN_L;
 APPHB_HBUNREG		return APPHB_HBUNREG_L;
-\".+\"			yylval=(char *)strdup(yytext); return STRING; 
-[a-zA-Z][a-zA-Z0-9]*	yylval=(char *)strdup(yytext); return WORD; 
-[_a-zA-Z0-9\/.-]+	yylval=(char *)strdup(yytext); return FILENAME;
+\".+\"			{yylval=(char *)strdup(yytext); return STRING;}
+[a-zA-Z][a-zA-Z0-9]*	{yylval=(char *)strdup(yytext); return WORD;}
+[_a-zA-Z0-9\/.-]+	{yylval=(char *)strdup(yytext); return FILENAME;}
 [ \t]+			/* ignore whitespace */;
 \n			/* ignore */ MAKE_WARNINGS_GO_AWAY
-\{			return OPEN_CURLY;
-\}			return CLOSE_CURLY;
-:			return COLON;
-=			return EQUALS;
+\{			{return OPEN_CURLY;}
+\}			{return CLOSE_CURLY;}
+:			{return COLON;}
+=			{return EQUALS;}
 #+.*\n			/* ignore lines starting with # */
 
-#			REJECT	/* This makes unused label warning go away */
+#			{REJECT;}/* This makes unused label warning go away */
 			/* This rule is actually never matched because
 			 * of the rule above.
 			 */
 
 %%
-
-
