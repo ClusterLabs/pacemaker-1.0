@@ -1,4 +1,4 @@
-/* $Id: mcast.c,v 1.19 2004/05/11 22:04:35 alan Exp $ */
+/* $Id: mcast.c,v 1.20 2004/09/27 04:23:30 alan Exp $ */
 /*
  * mcast.c: implements hearbeat API for UDP multicast communication
  *
@@ -181,18 +181,19 @@ mcast_mtype(char** buffer)
 		return 0;
 	}
 
-	return STRLEN(*buffer);
+	return STRLEN_CONST(PIL_PLUGIN_S);
 }
 
 static int
 mcast_descr(char **buffer)
 { 
-	*buffer = STRDUP("UDP/IP multicast");
+	const char cret[] = "UDP/IP multicast";
+	*buffer = STRDUP(cret);
 	if (!*buffer) {
 		return 0;
 	}
 
-	return STRLEN(*buffer);
+	return STRLEN_CONST(cret);
 }
 
 static int
@@ -216,14 +217,14 @@ mcast_isping(void)
 static int
 mcast_parse(const char *line)
 {
-	const char *	bp = line;
-	char		dev[MAXLINE];
-	char		mcast[MAXLINE];
-	char		token[MAXLINE];
-	u_short		port;
-	u_char		ttl;
-	u_char		loop;
-	int		toklen;
+	const char *		bp = line;
+	char			dev[MAXLINE];
+	char			mcast[MAXLINE];
+	char			token[MAXLINE];
+	u_short			port = 0;	/* Bogus */
+	u_char			ttl = 10;	/* Bogus */
+	u_char			loop = 10;	/* Bogus */
+	int			toklen;
 	struct hb_media *	mp;
 
 	/* Skip over white space, then grab the device */
@@ -263,10 +264,11 @@ mcast_parse(const char *line)
 		token[toklen] = EOS;
 
 		if (*token == EOS)  {
-			PILCallLog(LOG, PIL_CRIT, "mcast [%s] missing port", dev);
+			PILCallLog(LOG, PIL_CRIT, "mcast [%s] missing port"
+			,	dev);
 			return(HA_FAIL);
 		}
-		if (get_port(token, &port) == -1) {
+		if (get_port(token, &port) < 0 || port <= 0) {
 			PILCallLog(LOG, PIL_CRIT, " mcast [%s] bad port [%d]", dev, port);
 			return HA_FAIL;
 		}
@@ -282,7 +284,7 @@ mcast_parse(const char *line)
 			PILCallLog(LOG, PIL_CRIT, "mcast [%s] missing ttl", dev);
 			return(HA_FAIL);
 		}
-		if (get_ttl(token, &ttl) == -1) {
+		if (get_ttl(token, &ttl) < 0 || ttl > 4) {
 			PILCallLog(LOG, PIL_CRIT, " mcast [%s] bad ttl [%d]", dev, ttl);
 			return HA_FAIL;
 		}
@@ -298,7 +300,7 @@ mcast_parse(const char *line)
 			PILCallLog(LOG, PIL_CRIT, "mcast [%s] missing loop", dev);
 			return(HA_FAIL);
 		}
-		if (get_loop(token, &loop) == -1) {
+		if (get_loop(token, &loop) < 0 ||	loop > 1) {
 			PILCallLog(LOG, PIL_CRIT, " mcast [%s] bad loop [%d]", dev, loop);
 			return HA_FAIL;
 		}
@@ -750,11 +752,12 @@ if_getaddr(const char *ifname, struct in_addr *addr)
 		return -1;
 	}
 	if (Debug > 0) {
-		PILCallLog(LOG, PIL_DEBUG,	"looking up address for %s"
+		PILCallLog(LOG, PIL_DEBUG, "looking up address for %s"
 		,	if_info.ifr_name);
 	}
-	if (ioctl(fd, SIOCGIFADDR, &if_info) == -1) {
-		PILCallLog(LOG, PIL_CRIT, "Error ioctl(SIOCGIFADDR)");
+	if (ioctl(fd, SIOCGIFADDR, &if_info) < 0) {
+		PILCallLog(LOG, PIL_CRIT, "Error ioctl(SIOCGIFADDR): %s"
+		,	strerror(errno));
 		close(fd);
 		return -1;
 	}
@@ -831,6 +834,10 @@ get_loop(const char *loop, u_char *l)
 
 /*
  * $Log: mcast.c,v $
+ * Revision 1.20  2004/09/27 04:23:30  alan
+ * Put in some code to print out failure cases better, and also to
+ * better diagnose bad configurations.
+ *
  * Revision 1.19  2004/05/11 22:04:35  alan
  * Changed all the HBcomm plugins to use PILCallLog() for logging instead of calling
  * the function pointer directly.
