@@ -1,4 +1,4 @@
-/* $Id: ha_msg.h,v 1.36 2004/10/06 12:14:53 andrew Exp $ */
+/* $Id: ha_msg.h,v 1.37 2004/10/18 21:13:25 alan Exp $ */
 /*
  * Intracluster message object (struct ha_msg)
  *
@@ -27,6 +27,7 @@
 #include <clplumbing/cl_log.h>
 #include <clplumbing/ipc.h>
 #include <clplumbing/longclock.h>
+#include <uuid/uuid.h>
 
 #define	HA_FAIL		0
 #define	HA_OK		1
@@ -220,6 +221,9 @@ struct ha_msg*	ha_msg_copy(const struct ha_msg *msg);
 int		ha_msg_addbin(struct ha_msg * msg, const char * name, 
 				  const void * value, size_t vallen);
 
+int		ha_msg_adduuid(struct ha_msg * msg, const char * name, 
+				  uuid_t	uuid);
+
 /* Add null-terminated name and a value to the message */
 int		ha_msg_add(struct ha_msg * msg
 		,	const char* name, const char* value);
@@ -232,6 +236,10 @@ int		cl_msg_modbin(struct ha_msg * msg,
 			      const char* name, 
 			      const void* value, 
 			      size_t vlen);
+
+int		cl_msg_moduuid(struct ha_msg * msg, const char * name, 
+				uuid_t	uuid);
+
 int		cl_msg_modstruct(struct ha_msg * msg,
 				 const char* name, 
 				 const struct ha_msg* value);
@@ -327,6 +335,9 @@ int ha_msg_addstruct(struct ha_msg * msg, const char * name, void* ptr);
 
 /* Get binary data from a message */
 const void * cl_get_binary(const struct ha_msg *msg, const char * name, size_t * vallen);
+
+/* Get uuid data from a message */
+int cl_get_uuid(const struct ha_msg *msg, const char * name, uuid_t retval);
 
 /* Get string data from a message */
 const char * cl_get_string(const struct ha_msg *msg, const char *name);
