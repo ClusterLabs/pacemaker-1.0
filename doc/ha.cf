@@ -201,6 +201,11 @@ auto_failback on
 #
 #	Watchdog is the watchdog timer.  If our own heart doesn't beat for
 #	a minute, then our machine will reboot.
+#	NOTE: If you are using the software watchdog, you very likely
+#	wish to load the module with the parameter "nowayout=0" or
+#	compile it without CONFIG_WATCHDOG_NOWAYOUT set. Otherwise even
+#	an orderly shutdown of heartbeat will trigger a reboot, which is
+#	very likely NOT what you want.
 #
 #watchdog /dev/watchdog
 #       
