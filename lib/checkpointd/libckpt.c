@@ -1,4 +1,4 @@
-/* $Id: libckpt.c,v 1.8 2004/03/17 02:08:27 deng.pan Exp $ */
+/* $Id: libckpt.c,v 1.9 2004/03/25 08:05:22 alan Exp $ */
 /* 
  * ckptlib.c: data checkpoint API library
  *
@@ -46,6 +46,7 @@
 
 #include <saf/ais.h>
 #include <checkpointd/clientrequest.h>
+#include <clplumbing/cl_malloc.h>
 
 #ifndef AF_LOCAL
 #	define AF_LOCAL	AF_UNIX
@@ -133,8 +134,6 @@ GHashTable*	libIteratorHash = NULL;
 
 SaCkptCallbacksT *libCallback = NULL;
 
-extern void *ha_malloc(size_t size);
-extern void  ha_free(void *mem);
 
 static IPC_Channel*
 SaCkptClientChannelInit(char* pathname)
@@ -2906,7 +2905,7 @@ saCkptCheckpointWrite(
 	SaCkptReqSecWrtParamT* wrtParam = NULL;
 	
 	SaErrorT libError = SA_OK;
-	int i = 0;
+	SaUint32T i;
 
 	if (checkpointHandle == NULL) {
 		cl_log(LOG_ERR, 
@@ -2947,7 +2946,7 @@ saCkptCheckpointWrite(
 		return SA_ERR_NO_MEMORY;
 	}
 
-	for(i=0; i<numberOfElements; i++) {
+	for(i=0; i< numberOfElements; i++) {
 		memset(wrtParam, 0, sizeof(SaCkptReqSecWrtParamT));
 		wrtParam->checkpointHandle = *checkpointHandle;
 		wrtParam->sectionID.idLen= ioVector[i].sectionId.idLen;
@@ -3130,7 +3129,7 @@ saCkptCheckpointRead(
 	SaCkptReqSecReadParamT* readParam = NULL;
 	
 	SaErrorT libError = SA_OK;
-	int i = 0;
+	SaUint32T i = 0;
 
 	if (checkpointHandle == NULL) {
 		cl_log(LOG_ERR, 
@@ -3171,7 +3170,7 @@ saCkptCheckpointRead(
 		return SA_ERR_NO_MEMORY;
 	}
 
-	for(i=0; i<numberOfElements; i++) {
+	for(i=0; i < numberOfElements; i++) {
 		memset(readParam, 0, sizeof(SaCkptReqSecReadParamT));
 		readParam->checkpointHandle = *checkpointHandle;
 		readParam->sectionID.idLen= ioVector[i].sectionId.idLen;

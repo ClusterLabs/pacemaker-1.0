@@ -1,4 +1,4 @@
-/* $Id: ping_group.c,v 1.8 2004/03/05 17:25:20 alan Exp $ */
+/* $Id: ping_group.c,v 1.9 2004/03/25 08:05:24 alan Exp $ */
 /*
  * ping_group.c: ICMP-echo-based heartbeat code for heartbeat.
  *
@@ -640,7 +640,7 @@ ping_group_write(struct hb_media* mp, void *p, int len)
 	for(node = ei->node; node; node = node->next) {
 		if ((rc=sendto(ei->sock, (void *) icmp_pkt, pktsize, 0
 		,	(struct sockaddr *)&node->addr
-		,	sizeof(struct sockaddr))) != pktsize) {
+		,	sizeof(struct sockaddr))) != (ssize_t)pktsize) {
 			LOG(PIL_CRIT, "Error sending packet: %s"
 			,	strerror(errno));
 			FREE(icmp_pkt);

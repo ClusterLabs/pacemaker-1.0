@@ -1,4 +1,4 @@
-/* $Id: ping.c,v 1.30 2004/03/05 17:25:19 alan Exp $ */
+/* $Id: ping.c,v 1.31 2004/03/25 08:05:24 alan Exp $ */
 /*
  * ping.c: ICMP-echo-based heartbeat code for heartbeat.
  *
@@ -519,7 +519,7 @@ ping_write(struct hb_media* mp, void *p, int len)
 
 	if ((rc=sendto(ei->sock, (void *) icmp_pkt, pktsize, 0
 	,	(struct sockaddr *)&ei->addr
-	,	sizeof(struct sockaddr))) != pktsize) {
+	,	sizeof(struct sockaddr))) != (ssize_t)pktsize) {
 		LOG(PIL_CRIT, "Error sending packet: %s", strerror(errno));
 		FREE(icmp_pkt);
 		ha_msg_del(msg);
