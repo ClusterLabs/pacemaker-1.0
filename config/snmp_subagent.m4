@@ -271,13 +271,13 @@ AC_DEFUN([LIB_SNMP],
 	    
 	For SUSE LINUX users: 
 
-	    If you installed the NET-SNMP RPM from a Suse release, please
+	    If you installed the net-snmp RPM from a Suse release, please
 	    double check and make sure that you have the 'tcpd-devel' 
 	    rpm installed on your system as well. 
 	    Many problems come from the lack of one of these packages
-		openssl, openssl-devel
-		rpm, rpm-devel
-		and tcpd-devel
+		openssl, openssl-devel,
+		rpm, rpm-devel,
+		popt, and tcpd-devel
 
 	])
     else
