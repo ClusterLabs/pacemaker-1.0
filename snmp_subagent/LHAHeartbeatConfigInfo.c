@@ -324,10 +324,10 @@ handle_LHAutoFailBack(netsnmp_mib_handler *handler,
     if (hbconfig_get_str_value(KEY_AUTOFAIL, &ret) != HA_OK) 
 	return SNMP_ERR_GENERR;
 
-    if (strcmp(ret, "on") == 0) value = 1;
-    else if (strcmp(ret, "off") == 0) value = 2;
-    else if (strcmp(ret, "legacy") == 0) value = 3;
-    else value = 0;
+    if (strcmp(ret, "on") == 0) {value = 1;}
+    else if (strcmp(ret, "off") == 0) {value = 2;}
+    else if (strcmp(ret, "legacy") == 0) {value = 3;}
+    else {value = 0;}
 
     switch(reqinfo->mode) {
 
