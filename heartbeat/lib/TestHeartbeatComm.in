@@ -2,7 +2,8 @@
 # The purpose of this script is to break or fix the communication in the cluster.
 #
 HADIR=@sysconfdir@/ha.d
-INITDIR=@INITDIR@
+HBSCRIPT=@INITDIR@/heartbeat@INIT_EXT@
+
 LIBDIR=@libdir@/
 HBLIB=$LIBDIR/heartbeat
 TESTFILE=OnlyForTesting
@@ -33,7 +34,7 @@ DeleteTestingFile(){
 }
 
 HBReload(){
-  $INITDIR/heartbeat reload
+  $HBSCRIPT reload
 }
 
 

@@ -28,7 +28,7 @@ MCASTIP=225.224.223.222
 #
 IFCONFIG="@IFCONFIG@ @IFCONFIG_A_OPT@"
 HADIR=@sysconfdir@/ha.d
-INITDIR=@INITDIR@
+HBSCRIPT=@INITDIR@/heartbeat@INIT_EXT@
 STONITH=@sbindir@/stonith
 LIBDIR=@libdir@/
 HBLIB=$LIBDIR/heartbeat
@@ -182,24 +182,24 @@ RestoreConfigFiles() {
 
 HBStart() {
   echo "Starting heartbeat"
-  $INITDIR/heartbeat start
+  $HBSCRIPT start
 }
 
 HBStop() {
   echo "Stopping heartbeat"
-  $INITDIR/heartbeat stop
+  $HBSCRIPT stop
 }
 
 HBReload() {
   echo "Reloading heartbeat"
-  $INITDIR/heartbeat reload >/dev/null 2>&1
+  $HBSCRIPT reload >/dev/null 2>&1
   rc=$?
   sleep 5
   return $rc
 }
 
 HBStatus() {
-  case `$INITDIR/heartbeat status 2>&1` in
+  case `$HBSCRIPT status 2>&1` in
     *running*)	true;;
     *)		false;;
   esac
