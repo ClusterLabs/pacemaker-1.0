@@ -1,4 +1,4 @@
-/* $Id: findif.c,v 1.42 2004/10/24 14:47:31 lge Exp $ */
+/* $Id: findif.c,v 1.43 2005/02/17 17:21:55 alan Exp $ */
 /*
  * findif.c:	Finds an interface which can route a given address
  *
@@ -301,8 +301,10 @@ SearchUsingRouteCmd (char *address, struct in_addr *in
 		cp = buf;
 
 		sp = buf + buflen;
-		while (sp!=buf && isspace((int)*(sp-1))) --sp;
-		*sp = '\0';
+		while (sp!=buf && isspace((int)*(sp-1))) {
+			--sp;
+		}
+		*sp = EOS;
 
 		buf[buflen] = EOS;
 		if (strstr (buf, "mask:")) {
@@ -702,6 +704,9 @@ ff02::%lo0/32                     fe80::1%lo0                   UC          lo0
 
 /* 
  * $Log: findif.c,v $
+ * Revision 1.43  2005/02/17 17:21:55  alan
+ * Put in missing {}s
+ *
  * Revision 1.42  2004/10/24 14:47:31  lge
  * -pedantic-errors fixes 4:
  *  * Warning: static declaration for `verbose' follows non-static
