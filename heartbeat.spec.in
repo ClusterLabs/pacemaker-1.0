@@ -1,4 +1,4 @@
-#	$Id: heartbeat.spec.in,v 1.112 2005/03/17 05:41:00 alan Exp $
+#	$Id: heartbeat.spec.in,v 1.113 2005/03/29 00:00:18 alan Exp $
 
 # Workaround for a change in RPM 4.1.x; needs proper fixing soon!
 ##%define _unpackaged_files_terminate_build 0
@@ -905,9 +905,6 @@ make DESTDIR=$RPM_BUILD_ROOT install
 @libdir@/libstonithd.*
 @libdir@/libapphb.*
 @libdir@/librecoverymgr.*
-@RPM_FILES_LIBCKPT@
-@RPM_FILES_LIBCMS@
-@RPM_FILES_LIBEVT@
 @base_includedir@/heartbeat
 @base_includedir@/clplumbing
 @base_includedir@/saf
@@ -928,10 +925,6 @@ make DESTDIR=$RPM_BUILD_ROOT install
 %dir @localstatedir@/run/@HB_PKG@
 %attr (2555, @HA_CCMUSER@, @HA_APIGROUP@) @bindir@/cl_status
 @bindir@/cl_respawn
-
-@RPM_FILES_CKPT@
-@RPM_FILES_CMS@
-@RPM_FILES_EVT@
 %dir %attr (755, @HA_CCMUSER@, @HA_APIGROUP@) @localstatedir@/lib/@HB_PKG@/ccm
 %doc @mandir@/man1/cl_status.1*
 %doc @mandir@/man1/ha_logger.1*
