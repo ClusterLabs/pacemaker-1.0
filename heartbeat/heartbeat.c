@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.333 2004/10/25 06:15:43 zhenh Exp $ */
+/* $Id: heartbeat.c,v 1.334 2004/11/02 20:47:49 gshi Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -385,7 +385,7 @@ IPC_Message*	hb_new_ipcmsg(const void* data, int len, IPC_Channel* ch
 ,			int refcnt);
 static void	send_to_all_media(const char * smsg, int len);
 static int	should_drop_message(struct node_info* node
-,		const struct ha_msg* msg, const char *iface);
+,		const struct ha_msg* msg, const char *iface, int *);
 static int	is_lost_packet(struct node_info * thisnode, seqno_t seq);
 static void	cause_shutdown_restart(void);
 static gboolean	CauseShutdownRestart(gpointer p);
@@ -1954,6 +1954,83 @@ HBDoMsg_T_QCSTATUS(const char * type, struct node_info * fromnode
 	heartbeat_monitor(msg, KEEPIT, iface);
 }
 
+
+
+
+static void
+update_client_status_msg_list(struct node_info* thisnode)
+{
+	struct seqtrack *	t = &thisnode->track;
+	int			j;
+	
+	/*determine the new first missing seq*/
+	t->first_missing_seq = 0;
+	for (j=0; j < t->nmissing; ++j) {
+		if (t->seqmissing[j] != NOSEQUENCE){
+			if (t->first_missing_seq == 0 ||
+			    t->seqmissing[j] < t->first_missing_seq){
+				
+				t->first_missing_seq = t->seqmissing[j];
+			}				
+		}
+	}
+		
+	if(t->client_status_msg_queue){			
+		
+		struct ha_msg*		msg ;
+		GList*			listrunner;
+		seqno_t			seq;
+		const char *		cseq;
+		
+		
+		while ((listrunner = g_list_first(t->client_status_msg_queue))
+		       != NULL){
+			
+			msg = (struct ha_msg*) listrunner->data;
+			
+			cseq = ha_msg_value(msg, F_SEQ);
+			if (cseq  == NULL 
+			    || sscanf(cseq, "%lx", &seq) != 1 
+			    ||	seq <= 0) {
+				cl_log(LOG_ERR, "bad sequence number");
+				if (cseq){
+					cl_log(LOG_INFO, "cseq =%s", cseq);
+				}
+				return;
+			}
+			
+			if ( t->first_missing_seq == 0 
+			     || seq < t->first_missing_seq){
+				/* deliver the message to client*/
+				
+				cl_log(LOG_DEBUG, "delivering client status "
+				       "message to a client"				       
+				       " from queue");
+				heartbeat_monitor(msg, KEEPIT, NULL);
+				
+				ha_msg_del(msg);
+				
+				t->client_status_msg_queue = 
+					g_list_delete_link(t->client_status_msg_queue,
+							   listrunner);				
+				
+			}	
+			
+		}
+		
+		if (g_list_length(t->client_status_msg_queue) == 0){
+			g_list_free(t->client_status_msg_queue);
+			t->client_status_msg_queue = NULL;
+			
+			cl_log(LOG_DEBUG,"client_status_msg_queue"
+			       "for node %s destroied",
+			       thisnode->nodename);
+		}
+	}
+
+	return;
+}
+
 /*
  * Process an incoming message from our read child processes
  * That is, packets coming from other nodes.
@@ -1963,7 +2040,6 @@ process_clustermsg(struct ha_msg* msg, struct link* lnk)
 {
 	struct node_info *	thisnode = NULL;
 	const char*		iface;
-
 	TIME_T			msgtime = 0;
 	longclock_t		now = time_longclock();
 	const char *		from;
@@ -1975,7 +2051,7 @@ process_clustermsg(struct ha_msg* msg, struct link* lnk)
 	const char *		cseq;
 	seqno_t			seqno = 0;
 	longclock_t		messagetime = now;
-
+	int			missing_packet =0 ;
 
 
 	if (lnk == NULL) {
@@ -2086,7 +2162,7 @@ process_clustermsg(struct ha_msg* msg, struct link* lnk)
 
 	/* Is this message a duplicate, or destined for someone else? */
 
-	action=should_drop_message(thisnode, msg, iface);
+	action=should_drop_message(thisnode, msg, iface, &missing_packet);
 
 	switch (action) {
 		case DROPIT:
@@ -2138,7 +2214,19 @@ process_clustermsg(struct ha_msg* msg, struct link* lnk)
 			heartbeat_monitor(msg, action, iface);
 		}
 	}
+
+	/* if this packet is a missing packet, 
+	 * need look at 
+	 * client status message list to see
+	 * if we can deliver any
+	 */
+	
+	if (missing_packet){		
+		update_client_status_msg_list(thisnode);
+		
+	}
 }
+
 
 void
 check_auth_change(struct sys_config *conf)
@@ -3718,6 +3806,29 @@ should_ring_copy_msg(struct ha_msg *m)
  *	This protocol is called from master_control_process().
  */
 
+static void
+client_status_msg_queue_cleanup(GList* list)
+{
+	struct ha_msg*	msg;
+	GList*		list_runner;
+	
+	if (list == NULL){
+		return;
+	}
+	
+	while((list_runner =  g_list_first(list))!= NULL) {
+		msg = (struct ha_msg*) list_runner->data;
+		if (msg){
+			ha_msg_del(msg);
+		}
+		list = g_list_delete_link(list, list_runner);
+	}	
+	
+	g_list_free(list);
+	
+	return;
+}
+
 
 /*
  *	Right now, this function is a little too simple.  There is no
@@ -3734,7 +3845,7 @@ should_ring_copy_msg(struct ha_msg *m)
  */
 static int
 should_drop_message(struct node_info * thisnode, const struct ha_msg *msg,
-					const char *iface)
+		    const char *iface, int* is_missing_packet)
 {
 	struct seqtrack *	t = &thisnode->track;
 	const char *		cseq = ha_msg_value(msg, F_SEQ);
@@ -3760,6 +3871,11 @@ should_drop_message(struct node_info * thisnode, const struct ha_msg *msg,
 		update_tables(from, fromuuid);
 	}
 
+	if (is_missing_packet == NULL){
+		cl_log(LOG_ERR, "should_drop_message: "
+		       "NULL input is_missing_packet");
+		return DROPIT;
+	}
 	/* Some packet types shouldn't have sequence numbers */
 	if (type != NULL
 	&&	strncmp(type, NOSEQ_PREFIX, sizeof(NOSEQ_PREFIX)-1) ==	0) {
@@ -3897,6 +4013,13 @@ should_drop_message(struct node_info * thisnode, const struct ha_msg *msg,
 			t->nmissing = 0;
 			t->last_seq = seq;
 			t->last_iface = iface;
+			t->first_missing_seq = 0;
+			if ( t->client_status_msg_queue){
+				GList* mq =  t->client_status_msg_queue;
+				client_status_msg_queue_cleanup(mq);
+				t->client_status_msg_queue = NULL;
+			}
+			
 			cl_log(LOG_ERR, "lost a lot of packets!");
 			return (IsToUs ? KEEPIT : DROPIT);
 		}else{
@@ -3904,6 +4027,12 @@ should_drop_message(struct node_info * thisnode, const struct ha_msg *msg,
 		}
 
 		/* Try and Record each of the missing sequence numbers */
+		if (t->first_missing_seq == 0
+		    || 	t->first_missing_seq > t -> last_seq + 1 ){
+			
+			t->first_missing_seq = t -> last_seq +1;				
+		} 
+
 		for(k = t->last_seq+1; k < seq; ++k) {
 			if (t->nmissing < MAXMISSING-1) {
 				t->seqmissing[t->nmissing] = k;
@@ -3940,7 +4069,7 @@ should_drop_message(struct node_info * thisnode, const struct ha_msg *msg,
 	/*
 	 * Is it a (recorded) missing packet?
 	 */
-	if (is_lost_packet(thisnode, seq)) {
+	if ( (*is_missing_packet = is_lost_packet(thisnode, seq))) {
 		return (IsToUs ? KEEPIT : DROPIT);
 	}
 
@@ -3959,6 +4088,12 @@ should_drop_message(struct node_info * thisnode, const struct ha_msg *msg,
 		t->last_seq = seq;
 		t->last_rexmit_req = zero_longclock;
 		t->last_iface = iface;
+		t->first_missing_seq = 0;
+		if (t->client_status_msg_queue){			
+			GList* mq = t->client_status_msg_queue;
+			client_status_msg_queue_cleanup(mq);
+			t->client_status_msg_queue = NULL;
+		}
 		return (IsToUs ? KEEPIT : DROPIT);
 	}
 	/* This is a DUP packet (or a really old one we lost track of) */
@@ -4056,6 +4191,7 @@ is_lost_packet(struct node_info * thisnode, seqno_t seq)
 	struct seqtrack *	t = &thisnode->track;
 	int			j;
 
+	
 	for (j=0; j < t->nmissing; ++j) {
 		/* Is this one of our missing packets? */
 		if (seq == t->seqmissing[j]) {
@@ -4077,9 +4213,10 @@ is_lost_packet(struct node_info * thisnode, seqno_t seq)
 			}
 			return 1;
 		}
-	}
+	}	
 	return 0;
 }
+
 
 static void
 request_msg_rexmit(struct node_info *node, seqno_t lowseq
@@ -4625,6 +4762,21 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.334  2004/11/02 20:47:49  gshi
+ * the patch ensures the following:
+ * 1. in heartbeat, it will not deliver client join/leave messages
+ * (with sequence number seq_0) until all messages with seq < seq_0
+ * is received and delivered, thus receiving a join/leave message has
+ * the guarantee that all message before that is received in client side.
+ * This applies to all, include ordered message clients and non-ordered
+ * message clients.
+ *
+ * 2. in client, it guarantees no ordered messages loss from peer. It will not
+ * deliver a restarted client's ordered message until it received the previous
+ * client's leave message. Combining the  the guarantee from 1) and the queue
+ * system in client side, messages delivery and order are guaranteed in
+ * client restart case.
+ *
  * Revision 1.333  2004/10/25 06:15:43  zhenh
  * move the code of adjust deadtime to right place to avoid error logs
  *

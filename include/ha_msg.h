@@ -1,4 +1,4 @@
-/* $Id: ha_msg.h,v 1.39 2004/10/24 13:00:12 lge Exp $ */
+/* $Id: ha_msg.h,v 1.40 2004/11/02 20:47:49 gshi Exp $ */
 /*
  * Intracluster message object (struct ha_msg)
  *
@@ -149,6 +149,7 @@ extern struct fieldtypefuncs_s fieldtypefuncs[4];
 #define	F_TTL		"ttl"		/* Time To Live */
 #define F_AUTH		"auth"		/* Authentication string */
 #define F_HBGENERATION	"hg"		/* Heartbeat generation number */
+#define F_CLIENT_GENERATION "client_gen" /* client generation number*/
 #define F_FIRSTSEQ	"firstseq"	/* Lowest seq # to retransmit */
 #define F_LASTSEQ	"lastseq"	/* Highest seq # to retransmit */
 #define F_RESOURCES	"rsc_hold"	/* What resources do we hold? */

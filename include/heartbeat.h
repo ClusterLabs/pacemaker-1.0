@@ -1,4 +1,4 @@
-/* $Id: heartbeat.h,v 1.54 2004/10/13 20:52:41 davidlee Exp $ */
+/* $Id: heartbeat.h,v 1.55 2004/11/02 20:47:49 gshi Exp $ */
 /*
  * heartbeat.h: core definitions for the Linux-HA heartbeat program
  *
@@ -228,6 +228,8 @@ struct seqtrack {
 	int		nmissing;
 	seqno_t		generation;	/* Heartbeat generation # */
 	seqno_t		last_seq;
+	seqno_t		first_missing_seq; /* the smallest missing seq number*/
+	GList*		client_status_msg_queue; /*client status message queue*/
 	seqno_t		seqmissing[MAXMISSING];
 	const char *	last_iface;
 };

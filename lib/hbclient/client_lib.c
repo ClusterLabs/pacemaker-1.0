@@ -1,4 +1,4 @@
-/* $Id: client_lib.c,v 1.14 2004/10/24 14:47:31 lge Exp $ */
+/* $Id: client_lib.c,v 1.15 2004/11/02 20:47:49 gshi Exp $ */
 /* 
  * client_lib: heartbeat API client side code
  *
@@ -91,10 +91,13 @@ typedef struct order_seq {
 struct orderQ {
 	struct ha_msg *		orderQ[MAXMSGHIST];
 	int			curr_index;
-	seqno_t			curr_seqno;
+	seqno_t			curr_oseqno;
 	seqno_t			curr_gen;
+	seqno_t			curr_client_gen;
 	seqno_t			first_msg_seq;
 	seqno_t			first_msg_gen;
+	seqno_t			first_msg_client_gen;
+	struct orderQ		*backupQ;
 };
 
 typedef struct order_queue {
@@ -102,6 +105,8 @@ typedef struct order_queue {
 	struct orderQ		node;
 	struct orderQ		cluster;
 	struct order_queue*	next;
+	struct ha_msg*		leave_msg;
+        int			client_leaving;
 }order_queue_t;
 
 /*
@@ -1510,6 +1515,53 @@ read_cstatus_respond_msg(llc_private_t* pi, int timeout)
 	return NULL;
 }
 
+/* This is the place to handle out of order messages from a restarted 
+ * client. If we receive messages from a restarted client yet no leave
+ * message has been received for the previous client, we need to 
+ * save the restarted client's messages in backup queue. When the leave
+ * message is received, we then call moveup_backupQ()  so that the backup
+ * queue is promoted to our current queue, not backup any more.
+ */
+
+static void
+moveup_backupQ(struct orderQ* q)
+{
+	int	i;
+
+	if (q == NULL){
+		return;
+	}
+	
+	if (q->backupQ){
+		struct orderQ* backup_q = q->backupQ;
+		
+		memcpy(q, backup_q, sizeof(struct orderQ));
+		
+		if (backup_q->backupQ != NULL){
+			cl_log(LOG_ERR, "moveup_backupQ:"
+			       "backupQ in backupQ is not NULL");  
+		}
+		ha_free(backup_q);
+		q->backupQ = NULL;
+	}else {
+		/*the queue must be empty*/
+		for (i = 0; i < MAXMSGHIST; i++) {
+			if (q->orderQ[i]){
+				cl_log(LOG_ERR, "moveup_backupQ:"
+				       "queue is not empty"
+				       " possible memory leak");
+				cl_log_message(q->orderQ[i]);
+
+			}
+		}
+		
+		q->curr_oseqno = 0;
+		
+	}
+
+	return ;
+}
+
 /*
  * Pop up orderQ.
  */
@@ -1522,9 +1574,10 @@ pop_orderQ(struct orderQ * q)
 		msg = q->orderQ[q->curr_index];
 		q->orderQ[q->curr_index] = NULL;
 		q->curr_index = (q->curr_index + 1) % MAXMSGHIST;
-		q->curr_seqno++;
+		q->curr_oseqno++;
 		return msg;
 	}
+	
 	return NULL;
 }
 
@@ -1554,16 +1607,79 @@ msg_oseq_compare(seqno_t oseq1, seqno_t gen1,
 
 }
 
+
+static void
+reset_orderQ(struct orderQ* q)
+{
+	int i;
+
+	for (i =0 ;i < MAXMSGHIST; i++){
+		if (q->orderQ[i]){
+			ha_msg_del(q->orderQ[i]);
+			q->orderQ[i] = 0;
+		}
+	}
+	
+	if (q->backupQ != NULL){
+		reset_orderQ(q->backupQ);
+		ha_free(q->backupQ);
+		q->backupQ = NULL;
+	}
+	
+	memset(q, 0, sizeof(struct orderQ));
+
+	return;
+}
 /*
  *	Process ordered message
  */
+
+static void
+display_orderQ(struct orderQ* q){
+	if(!q){
+		return;
+	}
+
+	cl_log(LOG_INFO, "curr_index=%x,  curr_oseqno=%lx, "
+	       "curr_gen=%lx, curr_client_gen=%lx",
+	       q->curr_index, q->curr_oseqno,
+	       q->curr_gen, q->curr_client_gen);
+	
+	cl_log(LOG_INFO, "first_msg_seq =%lx, first_msg_gen = %lx,"
+	       "first_msg_client_gen =%lx",
+	       q->first_msg_seq, q->first_msg_gen, 
+	       q->first_msg_client_gen);
+	if (q->backupQ == NULL){
+		cl_log(LOG_INFO, "q->backupQ is NULL");
+	}else{
+		display_orderQ(q->backupQ);
+	}
+	
+}
+
 static struct ha_msg *
 process_ordered_msg(struct orderQ* q, struct ha_msg* msg,
-		    seqno_t seq, seqno_t oseq, seqno_t gen)
+		    seqno_t gen, seqno_t cligen,
+		    seqno_t seq, seqno_t oseq,
+		    int popmsg)
 {
-	int		i;
+	int		i;	
 	
-	/*any message with lower oseq than q->first_oseq
+	/*    	display_orderQ(q);  */
+	
+	/*if this is the first packet, pop it*/
+	if ( q->first_msg_seq ==  0){
+		q->first_msg_seq = seq;
+		q->first_msg_client_gen = cligen;
+		q->first_msg_gen = gen;
+		q->curr_gen = gen;
+		q->curr_client_gen = cligen;
+		q->curr_oseqno = oseq -1 ;
+		
+		goto out;
+	}
+		
+	/*any message with lower sequence than q->first_msg_seq
 	  will be dropped*/
 	if (q->first_msg_seq != 0 && msg_oseq_compare(q->first_msg_seq,
 						      q->first_msg_gen,
@@ -1571,26 +1687,62 @@ process_ordered_msg(struct orderQ* q, struct ha_msg* msg,
 		return NULL;
 	}
 	
-	/*if this is the first packet, pop it*/
-	if ( q->first_msg_seq ==  0){
+
+
+	if ( q->curr_oseqno == 0){
+		q->curr_gen = gen;
+		q->curr_client_gen = cligen;
+		goto out;
+	}
+
+	if ( gen > q->curr_gen ){
+		/*heartbeat restart, clean everything up*/		
+		
+		reset_orderQ(q);
+		
 		q->first_msg_seq = seq;
+		q->first_msg_client_gen = cligen;
 		q->first_msg_gen = gen;
 		q->curr_gen = gen;
-		q->curr_seqno = oseq;
-		return msg;
-	}
+		q->curr_client_gen = cligen;
+		q->curr_oseqno = oseq - 1;
 		
-	
-	if (gen > q->curr_gen || 
-	    (gen == q->curr_gen && oseq < q->curr_seqno )){
-		/* Sender restarted */
-		if (DEBUGORDER)
-			cl_log(LOG_DEBUG, "Sender restarted!");
+		goto out;
+		
+	} else if (gen < q->curr_gen){
+		/*
+		 * message from previous heartbeat generation, 
+		 * drop the message
+		 */
+		return NULL;
 
-		q->curr_seqno = 0;
-		q->curr_gen = gen;
-	}else if (gen == q->curr_gen &&
-		  oseq - q->curr_seqno >= MAXMSGHIST){
+	} else if(cligen > q->curr_client_gen ){
+		/*client restarted*/
+		
+		if (q->backupQ == NULL){
+			if ( (q->backupQ = ha_malloc(sizeof(struct orderQ))) 
+			     ==NULL  ){
+				
+				cl_log(LOG_ERR, "process_ordered_msg: "
+				       "allocating memory for backupQ failed");
+				return NULL;			
+			}
+			memset(q->backupQ, 0, sizeof(struct orderQ));
+		}
+		
+		process_ordered_msg(q->backupQ, msg, gen, cligen, seq, oseq, 0);
+		
+		return NULL;
+
+	} else if (cligen < q->curr_client_gen){
+		/*Message from a previous client*/
+		/*this should never happend*/
+		
+		cl_log(LOG_ERR, "process_ordered_msg: Received message"
+		       " from previous client. This should never happen");
+		cl_log_message(msg);
+		return NULL;
+	}else if (oseq - q->curr_oseqno >= MAXMSGHIST){
 		/*
 		 * receives a very big sequence number, the
 		 * message is not reliable at this point
@@ -1599,32 +1751,96 @@ process_ordered_msg(struct orderQ* q, struct ha_msg* msg,
 			cl_log(LOG_DEBUG
 			       ,	"lost at least one unretrievable "
 			       "packet! [%lx:%lx], force reset"
-			       ,	q->curr_seqno
+			       ,	q->curr_oseqno
 			       ,	oseq);
 		}
-		q->curr_seqno = oseq;
-
+		q->curr_oseqno = oseq - 1;
+		
 		for (i = 0; i < MAXMSGHIST; i++) {
 			/* Clear order queue, msg obsoleted */
 			if (q->orderQ[i]){
-				ha_free(q->orderQ[i]);
+				ha_msg_del(q->orderQ[i]);
 				q->orderQ[i] = NULL;
 			}
 		}
 		q->curr_index = 0;
-		
+
+
 	}
+	
 
-
-
+ out:
 	/* Put the new received packet in queue */
-	q->orderQ[(q->curr_index + oseq - q->curr_seqno -1 ) % MAXMSGHIST] = msg;
+	q->orderQ[(q->curr_index + oseq - q->curr_oseqno -1 ) % MAXMSGHIST] = msg;
 	
 	/* if this is the packet we are expecting, pop it*/
-	if (msg_oseq_compare(q->curr_seqno + 1, q->curr_gen,oseq, gen) == 0 ){
+	if (popmsg && msg_oseq_compare(q->curr_oseqno + 1, 
+				       q->curr_gen,oseq, gen) == 0){
 		return pop_orderQ(q);
 	}
 	return NULL;
+	
+}
+
+static struct ha_msg* 
+process_client_status_msg(llc_private_t* pi, struct ha_msg* msg,
+			   const char* from_node)
+{
+	const char*	status = ha_msg_value(msg, F_STATUS);
+	order_queue_t *	oq;
+	struct ha_msg*	retmsg;
+	
+	if (status && (strcmp(status, LEAVESTATUS) == 0 
+		       || strcmp(status, JOINSTATUS) == 0) ){
+		for (oq = pi->order_queue_head; oq != NULL; oq = oq->next){
+			if (strcmp(oq->from_node, from_node) == 0){
+				break;
+			}
+		}
+		if (oq == NULL){
+			/*no ordered queue found, good, 
+			 *simply return the message
+			 */
+			return msg;
+		}
+
+		if (strcmp(status, LEAVESTATUS) == 0 ){
+			
+			if (oq->leave_msg != NULL){
+				cl_log(LOG_ERR, "process_client_status_msg: "
+				       " the previous leave msg "
+				       "is not delivered yet");
+				cl_log_message(oq->leave_msg);
+				cl_log_message(msg);
+				return NULL;
+			}
+			
+			oq->leave_msg = msg;
+			
+			if ((retmsg = pop_orderQ(&oq->node))){				
+				return retmsg;
+			}
+			if ((retmsg = pop_orderQ(&oq->cluster))){
+				return retmsg;
+			}
+			
+			oq->leave_msg = NULL;
+			moveup_backupQ(&oq->node);
+			moveup_backupQ(&oq->cluster);
+			return msg;
+		}else { /*join message*/
+			return msg;
+			
+		}					
+	}else{
+		cl_log(LOG_ERR, "process_client_status_msg: "
+		       "no status found in client status msg");
+		cl_log_message(msg);
+		return NULL;
+	}		
+	
+	return msg;
+
 }
 
 /*
@@ -1633,16 +1849,18 @@ process_ordered_msg(struct orderQ* q, struct ha_msg* msg,
 static struct ha_msg *
 process_hb_msg(llc_private_t* pi, struct ha_msg* msg)
 {
-	const char *	coseq;
 	const char *	from_node;
 	const char *	to_node;
+	order_queue_t * oq;
+	const char *	coseq;
 	seqno_t		oseq;
 	const char *	cgen;
-	seqno_t		gen;
-	order_queue_t * oq;
-	int		i;
-	seqno_t		seq;
+	seqno_t		gen;	
 	const char*	cseq;
+	seqno_t		seq;
+	const char*	ccligen;
+	seqno_t		cligen;
+	
 	
 	if ((cseq = ha_msg_value(msg, F_SEQ)) == NULL
 	    ||	sscanf(cseq, "%lx", &seq) != 1){
@@ -1655,21 +1873,30 @@ process_hb_msg(llc_private_t* pi, struct ha_msg* msg)
 		return msg;
 	}
 	
+	
+	if ((ccligen = ha_msg_value(msg, F_CLIENT_GENERATION)) == NULL
+	    ||	sscanf(ccligen, "%lx", &cligen) != 1){
+		return msg;
+	}
+	
+	if ((from_node = ha_msg_value(msg, F_ORIG)) == NULL){
+		ha_api_log(LOG_ERR
+			   ,	"%s: extract F_ORIG failed", __FUNCTION__);
+		ZAPMSG(msg);
+		return NULL;
+	}	
+	
 	if ((coseq = ha_msg_value(msg, F_ORDERSEQ)) != NULL
 	&&	sscanf(coseq, "%lx", &oseq) == 1){
 		/* find the order queue by from_node */
-		if ((from_node = ha_msg_value(msg, F_ORIG)) == NULL){
-			ha_api_log(LOG_ERR
-			,	"%s: extract F_ORIG failed", __FUNCTION__);
-			ZAPMSG(msg);
-			return NULL;
-		}
+
 		for (oq = pi->order_queue_head; oq != NULL; oq = oq->next){
 			if (strcmp(oq->from_node, from_node) == 0)
 				break;
 		}
 		if (oq == NULL){
-			oq = (order_queue_t *) ha_malloc(sizeof(order_queue_t));
+			oq = (order_queue_t *) 
+				ha_malloc(sizeof(order_queue_t));
 			if (oq == NULL){
 				ha_api_log(LOG_ERR
 				,	"%s: order_queue_t malloc failed"
@@ -1677,36 +1904,30 @@ process_hb_msg(llc_private_t* pi, struct ha_msg* msg)
 				ZAPMSG(msg);
 				return NULL;
 			}
+			memset(oq, 0, sizeof(*oq));
 			strncpy(oq->from_node, from_node, HOSTLENG);
-			oq->node.curr_index = 0;
-			oq->node.curr_seqno = 0;                    
-			oq->node.curr_gen = gen;
-			oq->node.first_msg_seq = 0;
-			oq->node.first_msg_gen = 0;
 			
-			oq->cluster.curr_index = 0;
-			oq->cluster.curr_seqno = 0;                    
-			oq->cluster.curr_gen = gen;
-			oq->cluster.first_msg_seq = 0;
-			oq->cluster.first_msg_gen = 0;
-		
-			for (i=0; i < MAXMSGHIST; i++){
-				oq->node.orderQ[i] = NULL;
-				oq->cluster.orderQ[i] = NULL;
-			}
 
 			oq->next = pi->order_queue_head;
 			pi->order_queue_head = oq;
 		}
 		if ((to_node = ha_msg_value(msg, F_TO)) == NULL)
-			return process_ordered_msg(&oq->cluster, msg, seq, oseq, gen);
+			return process_ordered_msg(&oq->cluster, msg, gen,
+						   cligen, seq, oseq, 1);
 		else
-			return process_ordered_msg(&oq->node, msg, seq, oseq, gen);
-	}else
+			return process_ordered_msg(&oq->node, msg, gen, 
+						   cligen, seq, oseq, 1);
+	}else {
+		const char* type = ha_msg_value(msg, F_TYPE);
+		
+		if ( type && strcmp(type, T_APICLISTAT) == 0){
+			return process_client_status_msg(pi, msg, from_node);
+		}
+		
 		/* Simply return no order required msg */
 		return msg;
+	}
 }
-
 /*
  * Read a heartbeat message.  Read from the queue first.
  */
@@ -1734,10 +1955,27 @@ read_hb_msg(ll_cluster_t* llc, int blocking)
 			return retmsg;
 	}
 	for (oq = pi->order_queue_head; oq != NULL; oq = oq->next){
-		if ((retmsg = pop_orderQ(&oq->node)))
+
+	process_oq:
+		if ((retmsg = pop_orderQ(&oq->node))){
 			return retmsg;
-		if ((retmsg = pop_orderQ(&oq->cluster)))
+		}
+		if ((retmsg = pop_orderQ(&oq->cluster))){
 			return retmsg;
+		}
+		
+		if (oq->leave_msg != NULL){
+			retmsg = oq->leave_msg;
+			oq->leave_msg = NULL;
+			oq->client_leaving = 1;
+			return retmsg;
+		}
+		if (oq->client_leaving){
+			moveup_backupQ(&oq->node);
+			moveup_backupQ(&oq->cluster);			
+			oq->client_leaving = 0;
+			goto process_oq;
+		}		
 	}
 	/* Process msg from FIFO */
 	while (msgready(llc)){
@@ -2688,6 +2926,7 @@ hb_cluster_new()
 	hb->PrivateId = OurID;
 	ret->ll_cluster_private = hb;
 	ret->llc_ops = &heartbeat_ops;
+	
 
 	return ret;
 }
