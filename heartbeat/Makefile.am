@@ -68,6 +68,7 @@ heartbeat_LDADD		= $(top_builddir)/lib/stonith/libstonith.la	\
 			$(top_builddir)/lib/pils/libpils.la		\
 			$(top_builddir)/lib/clplumbing/libplumb.la	\
 			$(top_builddir)/lib/apphb/libapphb.la		\
+			$(top_builddir)/replace/libreplace.la		\
 			$(top_builddir)/libltdl/libltdlc.la $(gliblib) $(LIBRT)
 
 heartbeat_LDFLAGS	= @LIBADD_DL@ @LIBLTDL@ -export-dynamic	\
