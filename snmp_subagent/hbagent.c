@@ -300,7 +300,6 @@ main(int argc, char ** argv)
 		}
 
 		ret = select(numfds, &fdset, 0, 0, tvp);
-		fprintf(stderr, "select ret = %d\n", ret);
 
 		if (ret < 0) {
 			/* error */
@@ -448,14 +447,12 @@ free_resourcetable(void)
 static void
 free_membershiptable(void)
 {
-	SaClmClusterNotificationT * buf;
-
     	if (!gMembershipTable)
 	    return;
 
-	/* this is a continuous buffer allocated by the libclm */
-	buf = &g_array_index(gMembershipTable, SaClmClusterNotificationT, 0);
-	free(buf);
+	/* the membership info buffer is provided by us when we 
+	   initiated the session, so don't really need to free
+	   any memory. */
 
 	while (gMembershipTable->len) {
 		gMembershipTable = 
@@ -679,20 +676,16 @@ clm_track_cb(SaClmClusterNotificationT *nbuf, SaUint32T nitem,
         free_membershiptable();
 
         for (i = 0; i < nitem; i++) {
-		fprintf(stderr, "%s\n",  nbuf[i].clusterNode.nodeName.value);
 
 	    	// cl_log(LOG_INFO, "adding %s in membership table", nbuf[i].clusterNode.nodeName.value);
-                g_array_append_val(gMembershipTable, nbuf[i]);
+                g_array_insert_val(gMembershipTable, i, nbuf[i]);
         }
 
 	if (clmInitialized) {
-	    	fprintf(stderr, "member count: %ld  \n", nmem);
 
 		for (i = 0; i < nitem; i++) {
 		    	status = nbuf[i].clusterChanges;
 			node = nbuf[i].clusterNode.nodeName.value;
-
-		    	fprintf(stderr, "node = %s, status = %d\n", node, status);
 
 			if (status == SA_CLM_NODE_NO_CHANGE) {
 			    	continue;

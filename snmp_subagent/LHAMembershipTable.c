@@ -187,6 +187,7 @@ LHAMembershipTable_handler(
            help return data for the columns of the LHAMembershipTable table in question */
         entry = (SaClmClusterNotificationT *) 
 	    netsnmp_extract_iterator_context(request);
+
         if (entry == NULL) {
             if (reqinfo->mode == MODE_GET) {
                 netsnmp_set_request_error(reqinfo, request, SNMP_NOSUCHINSTANCE);
