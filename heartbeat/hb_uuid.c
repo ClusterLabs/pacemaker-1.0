@@ -19,6 +19,7 @@
  *
  */
 
+#include <portability.h>
 #include <config.h>
 #include <uuid/uuid.h>
 #include <heartbeat.h>
