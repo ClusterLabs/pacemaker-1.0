@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.377 2005/03/16 17:11:15 lars Exp $ */
+/* $Id: heartbeat.c,v 1.378 2005/03/17 05:32:45 alan Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -279,6 +279,10 @@
 #define PARENT_DEBUG_USR2_SIG	0x0020UL
 #define REREAD_CONFIG_SIG	0x0040UL
 #define FALSE_ALARM_SIG		0x0080UL
+
+
+
+#define	ALWAYSRESTART_ON_SPLITBRAIN	1
 
 
 static char 			hbname []= "heartbeat";
@@ -4257,11 +4261,15 @@ should_drop_message(struct node_info * thisnode, const struct ha_msg *msg,
 
 				/* THIS IS RESOURCE WORK!  FIXME */
 				/* IS THIS RIGHT??? FIXME ?? */
+#ifndef ALWAYSRESTART_ON_SPLITBRAIN
 				if (DoManageResources) {
+#endif
 					send_local_status();
 					Gmain_timeout_add(2000
 					,	CauseShutdownRestart, NULL);
+#ifndef ALWAYSRESTART_ON_SPLITBRAIN
 				}
+#endif
 				ishealedpartition=1;
 			}
 		}else if (gen > t->generation) {
@@ -5144,6 +5152,14 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.378  2005/03/17 05:32:45  alan
+ * Put in a change to make heartbeat restart whenever a split brain heals
+ * not just if we manage resources.
+ * This should make the split brain test succeed, and it should work around
+ * a join problem in the CCM.
+ *
+ * And, yes, its a kludge.
+ *
  * Revision 1.377  2005/03/16 17:11:15  lars
  * Janitorial work: Stray \n removal.
  *
