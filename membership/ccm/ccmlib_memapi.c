@@ -1,4 +1,4 @@
-/* $Id: ccmlib_memapi.c,v 1.28 2005/03/29 18:48:54 gshi Exp $ */
+/* $Id: ccmlib_memapi.c,v 1.29 2005/03/30 16:49:20 gshi Exp $ */
 /* 
  * ccmlib_memapi.c: Consensus Cluster Membership API
  *
@@ -510,15 +510,16 @@ mem_handle_event(class_t *class)
 	while(ch->ops->is_message_pending(ch)){
 		/* receive the message and call the callback*/
 		ret=ch->ops->recv(ch,&msg);
-
-		if(ret == IPC_FAIL) {
-			return TRUE;
-		}
 		
 		if(ret != IPC_OK){
-			/* this should never happen*/			
-			cl_log(LOG_ERR, "mem_handle_func:IPC broken, something is wrong!");
-			abort();			
+			/* If IPC is broken
+			 * the we return FALSE, which results in removing of 
+			 * this class in handle function
+			 * This should only happen when ccm is shutdown before the client
+			 *
+			 */
+			cl_log(LOG_INFO, "mem_handle_func:IPC broken, ccm is dead before the client!");
+			return FALSE;
 		}
 		
 		type = ((ccm_meminfo_t *)msg->msg_body)->ev;
