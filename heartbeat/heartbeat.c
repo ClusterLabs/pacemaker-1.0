@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.384 2005/03/22 21:19:11 gshi Exp $ */
+/* $Id: heartbeat.c,v 1.385 2005/03/22 23:35:01 alan Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -1210,8 +1210,8 @@ master_control_process(IPC_Channel* fifoproc)
 	}
 
 	if (ANYDEBUG) {
-		/* Limit ourselves to 75% of the CPU */
-		cl_cpu_limit_setpercent(75);
+		/* Limit ourselves to 50% of the CPU */
+		cl_cpu_limit_setpercent(50);
 		/* Update our CPU limit periodically */
 		Gmain_timeout_add_full(G_PRIORITY_HIGH-1
 		,	cl_cpu_limit_ms_interval()
@@ -5195,6 +5195,10 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.385  2005/03/22 23:35:01  alan
+ * Undid change done for bugzilla 298: infinite loop in heartbeat
+ * since it's an infinite loop, upping the CPU % was not helpful.
+ *
  * Revision 1.384  2005/03/22 21:19:11  gshi
  * if we have not got any ACK message from a node yet,
  * we exclude it in compuation.
