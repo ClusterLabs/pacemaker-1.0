@@ -1,4 +1,4 @@
-/* $Id: client_lib.c,v 1.21 2005/02/17 18:20:03 gshi Exp $ */
+/* $Id: client_lib.c,v 1.22 2005/02/22 06:59:15 gshi Exp $ */
 /* 
  * client_lib: heartbeat API client side code
  *
@@ -2809,6 +2809,33 @@ ClearLog(void)
 	BufLen = 1;
 }
 
+static gboolean
+chan_is_connected(ll_cluster_t* lcl)
+{
+	llc_private_t* pi;
+	if (lcl == NULL){
+		cl_log(LOG_ERR, "Invalid argument, "
+		       "lcl is NULL");
+		return FALSE;		
+	}
+	
+	if(lcl->ll_cluster_private){
+		cl_log(LOG_ERR, "Invalid argument, "
+		       "lcl->llc_cluster_private is NULL");
+		return FALSE;
+	}
+	
+	pi  = (llc_private_t*) lcl->ll_cluster_private;
+	
+	if (pi->chan == NULL){
+		cl_log(LOG_ERR, "Invalid argument: chan is NULL");
+		return FALSE;
+	}
+	
+	return (pi->chan->ch_status == IPC_CONNECT);	
+}
+
+
 static const char *
 APIError(ll_cluster_t* lcl)
 {
@@ -2839,6 +2866,7 @@ ha_api_log(int priority, const char * fmt, ...)
 	strncat(APILogBuf, buf, sizeof(APILogBuf)-BufLen-1);
 	BufLen += len;
 }
+
 
 static void
 ha_api_perror(const char * fmt, ...)
@@ -2898,6 +2926,7 @@ static struct llc_ops heartbeat_ops = {
 	get_mynodeid:		get_mynodeid,		
 	get_logfacility:	get_logfacility,	
 	get_resources:		get_resources,		
+	chan_is_connected:	chan_is_connected,
 	errmsg:			APIError,		
 };
 

@@ -1,4 +1,4 @@
-/* $Id: hb_api.h,v 1.28 2005/02/04 20:52:12 alan Exp $ */
+/* $Id: hb_api.h,v 1.29 2005/02/22 06:59:15 gshi Exp $ */
 /*
  * Client-side Low-level clustering API for heartbeat.
  *
@@ -356,6 +356,14 @@ struct llc_ops {
  *	currently changing.
  */
 	const char * (*get_resources)(ll_cluster_t *);
+
+	/*
+	 * chan_is_connected()
+	 *
+	 * Return true if the channel is connected
+	 */
+	
+	gboolean (*chan_is_connected)(ll_cluster_t *);
 
 
 	const char * (*errmsg)(ll_cluster_t*);
