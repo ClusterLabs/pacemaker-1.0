@@ -1,4 +1,4 @@
-/* $Id: config.c,v 1.122 2004/08/31 13:47:31 alan Exp $ */
+/* $Id: config.c,v 1.123 2004/08/31 18:29:15 alan Exp $ */
 /*
  * Parse various heartbeat configuration files...
  *
@@ -53,6 +53,7 @@
 #include <ha_msg.h>
 #include <pils/plugin.h>
 #include <clplumbing/realtime.h>
+#include <clplumbing/netstring.h>
 #include <HBcomm.h>
 #include <hb_module.h>
 #include <hb_api.h>
@@ -88,6 +89,7 @@ static int set_normalpoll(const char *);
 static int set_api_authorization(const char *);
 static int set_msgfmt(const char*);
 static int set_register_to_apphbd(const char *);
+static int set_badpack_warn(const char*);
 
 /*
  * Each of these parameters is is automatically recorded by
@@ -124,6 +126,7 @@ struct directive {
 , {KEY_NORMALPOLL,set_normalpoll, TRUE, "true", "Use system poll(2) function?"}
 , {KEY_MSGFMT,    set_msgfmt, TRUE, "classic", "message format in the wire"}
 , {KEY_REGAPPHBD, set_register_to_apphbd, FALSE, NULL, "register to apphbd"}
+, {KEY_BADPACK,   set_badpack_warn, TRUE, "true", "warn about bad packets"}
 };
 
 static const struct WholeLineDirective {
@@ -458,6 +461,7 @@ parse_config(const char * cfgfile, char *nodename)
 	{	{"ipfail",	"uid=" HA_CCMUSER}
 	,	{"ccm",		"uid=" HA_CCMUSER}
 	,	{"ping",	"gid=" HA_APIGROUP}
+	,	{"cl_status",	"uid=" HA_CCMUSER}
 	};
 
 	if ((f = fopen(cfgfile, "r")) == NULL) {
@@ -1632,6 +1636,18 @@ set_msgfmt(const char* value)
 	
 	return HA_FAIL;
 }
+static int
+set_badpack_warn(const char* value)
+{
+	int	warnme = TRUE;
+	int	rc;
+	rc = str_to_boolean(value, &warnme);
+
+	if (HA_OK == rc) {
+		cl_msg_quiet_fmterr = !warnme;
+	}
+	return rc;
+}
 
 static int
 add_client_child(const char * directive)
@@ -2007,6 +2023,9 @@ baddirective:
 
 /*
  * $Log: config.c,v $
+ * Revision 1.123  2004/08/31 18:29:15  alan
+ * added the code to config.c to suppress warnings about bad packets
+ *
  * Revision 1.122  2004/08/31 13:47:31  alan
  * Put in a bug fix to check for MAXMEDIA in the configuration file.
  *
