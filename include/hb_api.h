@@ -1,4 +1,4 @@
-/* $Id: hb_api.h,v 1.29 2005/02/22 06:59:15 gshi Exp $ */
+/* $Id: hb_api.h,v 1.30 2005/04/04 19:19:31 gshi Exp $ */
 /*
  * Client-side Low-level clustering API for heartbeat.
  *
@@ -365,7 +365,15 @@ struct llc_ops {
 	
 	gboolean (*chan_is_connected)(ll_cluster_t *);
 
-
+	
+	/* Set the send queue length in heartbeat side
+	   for the channel. This function can be used
+	   to set a large send queue if the client will
+	   receive slowly */
+	
+	int	(*set_sendq_len)(ll_cluster_t* lcl, int length);
+	     
+	     
 	const char * (*errmsg)(ll_cluster_t*);
 };
 

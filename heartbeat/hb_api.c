@@ -1,4 +1,4 @@
-/* $Id: hb_api.c,v 1.130 2005/03/18 23:22:16 gshi Exp $ */
+/* $Id: hb_api.c,v 1.131 2005/04/04 19:19:31 gshi Exp $ */
 /*
  * hb_api: Server-side heartbeat API code
  *
@@ -133,8 +133,9 @@ static int api_get_uuid (const struct ha_msg* msg, struct ha_msg* resp
 
 static int api_get_nodename (const struct ha_msg* msg, struct ha_msg* resp
 ,	client_proc_t* client, const char** failreason);
-
-
+static int
+api_set_sendqlen(const struct ha_msg* msg, struct ha_msg* resp,
+		 client_proc_t* client, const char** failreason);
 
 gboolean ProcessAnAPIRequest(client_proc_t* client);
 
@@ -151,7 +152,8 @@ struct api_query_handler query_handler_list [] = {
 	{ API_GETPARM, api_get_parameter},
 	{ API_GETRESOURCES, api_get_resources},
 	{ API_GETUUID, api_get_uuid},
-	{ API_GETNAME, api_get_nodename}
+	{ API_GETNAME, api_get_nodename},
+	{ API_SET_SENDQLEN, api_set_sendqlen}	
 };
 
 extern int	UseOurOwnPoll;
@@ -921,6 +923,35 @@ api_get_nodename(const struct ha_msg* msg, struct ha_msg* resp,
 	
 }
 
+
+static int
+api_set_sendqlen(const struct ha_msg* msg, struct ha_msg* resp,
+		 client_proc_t* client, const char** failreason)
+{
+	int length;
+	int ret = ha_msg_value_int(msg, F_SENDQLEN, &length);
+	
+
+	if (ret != HA_OK){
+		cl_log(LOG_ERR, "api_set_sendqlen: getting field F_SENDQLEN failed");
+		return I_API_IGN;	
+	}
+
+	if (length <= 0){
+		cl_log(LOG_ERR, "api_set_sendqlen: invalid length value(%d)", 
+		       length);
+		return I_API_IGN;
+	}
+
+	cl_log(LOG_INFO, "the send queue length from heartbeat to client %s "
+	       "is set to %d",  client->client_id, length);
+	
+	client->chan->ops->set_send_qlen(client->chan,length); 
+
+
+	return I_API_IGN;
+	
+}
 
 static int
 add_client_gen(struct ha_msg* msg)

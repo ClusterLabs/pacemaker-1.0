@@ -1,4 +1,4 @@
-/* $Id: client_lib.c,v 1.26 2005/03/30 19:46:50 gshi Exp $ */
+/* $Id: client_lib.c,v 1.27 2005/04/04 19:19:31 gshi Exp $ */
 /* 
  * client_lib: heartbeat API client side code
  *
@@ -2463,6 +2463,54 @@ setfmode(ll_cluster_t* lcl, unsigned mode)
 	
 }
 
+/* This function set the send queue length in heartbeat
+   for the channel connected heartbeat and the client
+   Usually a client should set the length to a longer value
+   if it will receives messages slowly
+*/
+static int
+set_sendq_len(ll_cluster_t* lcl, int length)
+{
+	struct ha_msg*	request;
+	llc_private_t* pi;
+	ClearLog();
+	if (!ISOURS(lcl)) {
+		ha_api_log(LOG_ERR, "set_sendq_len: bad cinfo");
+		return HA_FAIL;
+	}
+
+	if (length <= 0){
+		ha_api_log(LOG_ERR, "invalid argument, length =%d",
+			   length);
+		return HA_FAIL;
+	}
+	
+	pi = (llc_private_t*)lcl->ll_cluster_private;
+	if (!pi->SignedOn) {
+		ha_api_log(LOG_ERR, "set_sendq_len: not signed on");
+		return HA_FAIL;
+	}
+	
+	
+	if ((request = hb_api_boilerplate(API_SET_SENDQLEN)) == NULL) {
+		ha_api_log(LOG_ERR, "set_sendq_len: can't create msg");
+		return HA_FAIL;
+	}
+	
+	if (ha_msg_add_int(request, F_SENDQLEN, length) != HA_OK){
+		ha_api_log(LOG_ERR, "set_sendq_length: adding field failed");
+		return HA_FAIL;
+	}
+	
+	if (msg2ipcchan(request, pi->chan) != HA_OK){
+		ZAPMSG(request);
+		ha_api_perror("set_sendq_len: can't send message to IPC");
+		return HA_FAIL;
+	}
+	
+	return HA_OK;
+}
+
 /*
  * Send a message to the cluster.
  */
@@ -2930,6 +2978,7 @@ static struct llc_ops heartbeat_ops = {
 	get_logfacility:	get_logfacility,	
 	get_resources:		get_resources,		
 	chan_is_connected:	chan_is_connected,
+	set_sendq_len:		set_sendq_len,
 	errmsg:			APIError,		
 };
 
