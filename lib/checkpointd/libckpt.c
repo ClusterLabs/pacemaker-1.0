@@ -1,4 +1,4 @@
-/* $Id: libckpt.c,v 1.17 2004/11/22 19:03:00 gshi Exp $ */
+/* $Id: libckpt.c,v 1.18 2004/12/06 21:15:45 msoffen Exp $ */
 /* 
  * ckptlib.c: data checkpoint API library
  *
@@ -2708,7 +2708,7 @@ saCkptSectionIteratorInitialize(
 	sectionNumber = *(int *)p;
 	p += sizeof(int);
 		
-//	responseSectionDescriptor = (SaCkptSectionDescriptorT *)p;
+/*	responseSectionDescriptor = (SaCkptSectionDescriptorT *)p; */
 	
 	/*	FIXME: Not thread safe 	*/
 	for(i=0; i<sectionNumber; i++) {
