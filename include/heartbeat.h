@@ -1,4 +1,4 @@
-/* $Id: heartbeat.h,v 1.42 2004/03/25 08:20:33 alan Exp $ */
+/* $Id: heartbeat.h,v 1.43 2004/03/26 07:50:05 chuyee Exp $ */
 /*
  * heartbeat.h: core definitions for the Linux-HA heartbeat program
  *
@@ -135,6 +135,8 @@
 #define	PINGSTATUS	"ping"		/* Status of a working ping node */
 #define	JOINSTATUS	"join"		/* Status when an api client joins */
 #define	LEAVESTATUS	"leave"		/* Status when an api client leaves */
+#define	ONLINESTATUS	"online"	/* Status of an online client */
+#define	OFFLINESTATUS	"offline"	/* Status of an offline client */
 #define	LINKUP		"up"		/* The status assigned to a working link */
 #define	LOADAVG		"/proc/loadavg"
 #define	PIDFILE		VAR_RUN_D "/heartbeat.pid"

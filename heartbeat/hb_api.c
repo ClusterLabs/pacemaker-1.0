@@ -1,4 +1,4 @@
-/* $Id: hb_api.c,v 1.97 2004/03/25 07:55:39 alan Exp $ */
+/* $Id: hb_api.c,v 1.98 2004/03/26 07:50:02 chuyee Exp $ */
 /*
  * hb_api: Server-side heartbeat API code
  *
@@ -118,6 +118,9 @@ static int api_ifstatus (const struct ha_msg* msg, struct ha_msg* resp
 static int api_iflist (const struct ha_msg* msg, struct ha_msg* resp
 ,	client_proc_t* client, const char** failreason);
 
+static int api_clientstatus (const struct ha_msg* msg, struct ha_msg* resp
+,	client_proc_t* client, const char** failreason);
+
 static int api_get_parameter (const struct ha_msg* msg, struct ha_msg* resp
 ,	client_proc_t* client, const char** failreason);
 
@@ -135,6 +138,7 @@ struct api_query_handler query_handler_list [] = {
 	{ API_NODETYPE, api_nodetype },
 	{ API_IFSTATUS, api_ifstatus },
 	{ API_IFLIST, api_iflist },
+	{ API_CLIENTSTATUS, api_clientstatus },
 	{ API_GETPARM, api_get_parameter},
 	{ API_GETRESOURCES, api_get_resources},
 };
@@ -152,7 +156,6 @@ static void	api_send_client_status(client_proc_t* client
 ,	const char * status, const char *	reason);
 static void	api_remove_client_int(client_proc_t* client, const char * rsn);
 static int	api_add_client(client_proc_t* chan, struct ha_msg* msg);
-static client_proc_t*	find_client(const char * fromid, const char * pid);
 static void	G_remove_client(gpointer Client);
 static gboolean	APIclients_input_dispatch(IPC_Channel* chan, gpointer udata);
 static void	api_process_registration_msg(client_proc_t*, struct ha_msg *);
@@ -547,6 +550,76 @@ api_ifstatus(const struct ha_msg* msg, struct ha_msg* resp
 		return I_API_IGN;
 	}
 	return I_API_RET;
+}
+
+/**********************************************************************
+ * API_CLIENTSTATUS: Return the status of the given client on a node
+ *********************************************************************/
+
+static int
+api_clientstatus(const struct ha_msg* msg, struct ha_msg* resp
+,	client_proc_t* client, const char** failreason)
+{
+	const char *		cnode;
+	const char *		cname;
+	struct node_info *	node;
+	struct ha_msg *		m;
+	int			ret = HA_FAIL;
+
+	if ((cnode = ha_msg_value(msg, F_NODENAME)) == NULL
+	|| (cname = ha_msg_value(msg, F_CLIENTNAME)) == NULL
+	|| (node = lookup_node(cnode)) == NULL) {
+		*failreason = "EINVAL";
+		return I_API_BADREQ;
+	}
+	if (ha_msg_add(resp, F_SUBTYPE, T_RCSTATUS) != HA_OK) {
+		ha_log(LOG_ERR,	"api_clientstatus: cannot add field");
+		*failreason = "ENOMEM";
+		return I_API_BADREQ;
+	}
+	/* returns client status on local node */
+	if (strcmp(cnode, curnode->nodename) == 0) {
+
+		if (find_client(cname, NULL) != NULL)
+			ret = ha_msg_add(resp, F_CLIENTSTATUS, ONLINESTATUS);
+		else
+			ret = ha_msg_add(resp, F_CLIENTSTATUS, OFFLINESTATUS);
+
+		if (ret != HA_OK) {
+			ha_log(LOG_ERR,	"api_clientstatus: cannot add field");
+			*failreason = "ENOMEM";
+			return I_API_BADREQ;
+		}
+		return I_API_RET;
+	}
+
+	if (strcmp(node->status, ACTIVESTATUS) != 0) {
+		if (ha_msg_add(resp, F_CLIENTSTATUS, OFFLINESTATUS) != HA_OK) {
+			ha_log(LOG_ERR,	"api_clientstatus: cannot add field");
+			*failreason = "ENOMEM";
+			return I_API_BADREQ;
+		}
+		return I_API_RET;
+	}
+	if ((m = ha_msg_new(0)) == NULL
+	||	ha_msg_add(m, F_TYPE, T_QCSTATUS) != HA_OK
+	||	ha_msg_add(m, F_TO, cnode) != HA_OK
+	||	ha_msg_add(m, F_CLIENTNAME, cname) != HA_OK) {
+
+		ha_log(LOG_ERR, "api_clientstatus: cannot add field");
+		*failreason = "ENOMEM";
+		return I_API_BADREQ;
+	}
+	if (send_cluster_msg(m) != HA_OK) {
+		ha_log(LOG_ERR, "api_clientstatus: send_cluster_msg failed");
+		*failreason = "ECOMM";
+		return I_API_BADREQ;
+	}
+	/*
+	 * Here we return I_API_IGN because currently we don't know
+	 * the answer yet.
+	 */
+	return I_API_IGN;
 }
 
 /**********************************************************************
@@ -1257,7 +1330,7 @@ api_check_client_authorization(client_proc_t* client)
 /*
  *	Find the client that goes with this client id/pid
  */
-static client_proc_t*
+client_proc_t*
 find_client(const char * fromid, const char * cpid)
 {
 	pid_t	pid = -1;

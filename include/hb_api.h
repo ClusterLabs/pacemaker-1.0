@@ -1,4 +1,4 @@
-/* $Id: hb_api.h,v 1.15 2004/03/25 08:20:33 alan Exp $ */
+/* $Id: hb_api.h,v 1.16 2004/03/26 07:50:05 chuyee Exp $ */
 /*
  * Client-side Low-level clustering API for heartbeat.
  *
@@ -59,6 +59,10 @@ typedef void (*llc_ifstatus_callback_t) (const char *node
 ,	const char * interface, const char * status
 ,	void* private_data);
 
+typedef void (*llc_cstatus_callback_t) (const char *node
+,	const char * client, const char * status
+,	void* private_date);
+
 typedef struct ll_cluster {
 	void *		ll_cluster_private;
 	struct llc_ops*	llc_ops;
@@ -111,8 +115,20 @@ struct llc_ops {
  *	p:		private data - later passed to callback.
  */
 	int             (*set_ifstatus_callback) (ll_cluster_t*
-,			llc_ifstatus_callback_t cbf, void * p);
- 
+	,		llc_ifstatus_callback_t cbf, void * p);
+/*
+ *	set_cstatus_callback:	Define callback from client status messages
+ *				This is a message of type "hbapi-clstat"
+ *			These messages are received whenever an client on
+ *			other nodes goes dead or becomes active again.
+ *
+ *	cbf		callback function.
+ *
+ *	p:		private data - later passed to callback.
+ */
+	int		(*set_cstatus_callback) (ll_cluster_t*
+	,		llc_cstatus_callback_t cbf, void * p);
+
 
 /*************************************************************************
  * Getting Current Information
@@ -155,6 +171,11 @@ struct llc_ops {
  */
 	const char*	(*if_status)(ll_cluster_t*, const char * nodename
 ,			const char *iface);
+/*
+ *	client_status:	Return current status of the given client
+ */
+	const char*	(*client_status)(ll_cluster_t*, const char *host,
+			const char *clientid, int timeout);
 
 /*************************************************************************
  * Intracluster messaging

@@ -1,4 +1,4 @@
-/* $Id: client_lib.c,v 1.2 2004/03/25 10:17:29 lars Exp $ */
+/* $Id: client_lib.c,v 1.3 2004/03/26 07:50:07 chuyee Exp $ */
 /* 
  * client_lib: heartbeat API client side code
  *
@@ -110,6 +110,8 @@ typedef struct llc_private {
 	void*			node_private;	/* node status callback data*/
 	llc_ifstatus_callback_t	if_callback;	/* IF status callback fcn */
 	void*			if_private;	/* IF status callback data */
+	llc_cstatus_callback_t	cstatus_callback;/*Client status callback fcn */
+	void*			client_private;	/* client status callback data*/
 	struct gen_callback*	genlist;	/* List of general callbacks*/
 	IPC_Channel*		chan;		/* IPC communication channel*/
 	struct stringlist *	nodelist;	/* List of nodes from query */
@@ -159,6 +161,7 @@ static int		add_gen_callback(const char * msgtype
 static int		del_gen_callback(llc_private_t*, const char * msgtype);
 
 static struct ha_msg*	read_api_msg(llc_private_t*);
+static struct ha_msg*	read_cstatus_respond_msg(llc_private_t*pi, int timeout);
 static struct ha_msg*	read_hb_msg(ll_cluster_t*, int blocking);
 
 static int		hb_api_setsignal(ll_cluster_t*, int nsig);
@@ -169,12 +172,18 @@ static int
 set_nstatus_callback (ll_cluster_t*
 ,		llc_nstatus_callback_t cbf, 	void * p);
 static int
-		set_ifstatus_callback (ll_cluster_t* ci
+set_cstatus_callback (ll_cluster_t*
+,		llc_cstatus_callback_t cbf, void * p);
+static int
+set_ifstatus_callback (ll_cluster_t* ci
 ,		llc_ifstatus_callback_t cbf, void * p);
 static int init_nodewalk (ll_cluster_t*);
 static const char * nextnode (ll_cluster_t* ci);
 static int init_ifwalk (ll_cluster_t* ci, const char * host);
 static const char *	get_nodestatus(ll_cluster_t*, const char *host);
+static const char *
+get_clientstatus(ll_cluster_t*, const char *host, const char *clientid
+,	int timeout);
 static const char *	get_nodetype(ll_cluster_t*, const char *host);
 static const char *	get_ifstatus(ll_cluster_t*, const char *host
 ,	const char * intf);
@@ -787,7 +796,6 @@ get_nodestatus(ll_cluster_t* lcl, const char *host)
 
 	/* Read reply... */
 	if ((reply=read_api_msg(pi)) == NULL) {
-		ZAPMSG(request);
 		return NULL;
 	}
 	if ((result = ha_msg_value(reply, F_APIRESULT)) != NULL
@@ -801,6 +809,96 @@ get_nodestatus(ll_cluster_t* lcl, const char *host)
 	}
 	ZAPMSG(reply);
 
+	return ret;
+}
+/*
+* Return the status of the given client.
+*/
+
+static const char *
+get_clientstatus(ll_cluster_t* lcl, const char *host
+,		const char *clientid, int timeout)
+{
+	struct ha_msg*		request;
+	struct ha_msg*		reply;
+	const char *		result;
+	llc_private_t*		pi;
+	static char		statbuf[128];
+	const char *		clientname;
+	const char *		ret;
+	
+	ClearLog();
+	if (!ISOURS(lcl)){
+		ha_api_log(LOG_ERR,"get_clientstatus: bad cinfo");
+		return NULL;
+	}
+	pi = (llc_private_t*)lcl->ll_cluster_private;
+
+	if (!pi->SignedOn){
+		ha_api_log(LOG_ERR,"not signed on");
+		return NULL;
+	}
+	clientname = (clientid == NULL) ? OurClientID : clientid;
+
+	/* If host is NULL, user choose the callback method to
+	 * get the result. This also implies timeout is useless */
+	if (host == NULL) {
+		struct ha_msg * m;
+
+		if ((m = ha_msg_new(0)) == NULL
+		||	ha_msg_add(m, F_TYPE, T_QCSTATUS) != HA_OK
+		||	ha_msg_add(m, F_CLIENTNAME, clientname) != HA_OK) {
+
+			ha_log(LOG_ERR, "%s: cannot add field", __FUNCTION__);
+			return NULL;
+		}
+		if (sendclustermsg(lcl, m) != HA_OK) {
+			ha_log(LOG_ERR, "%s: sendclustermsg fail",__FUNCTION__);
+		}
+		ha_msg_del(m);
+		return NULL;
+	}
+
+	if (*host == EOS) {
+		ha_api_log(LOG_ERR, "client status : bad nodename");
+		return NULL;
+	}
+	if ((request = hb_api_boilerplate(API_CLIENTSTATUS)) == NULL) {
+		ha_api_log(LOG_ERR, "hb_api_boilerplate failed");
+		return NULL;
+	}
+	if (ha_msg_add(request,	F_NODENAME, host)!= HA_OK
+	||	ha_msg_add(request, F_CLIENTNAME, clientname)!= HA_OK) {
+		ha_api_log(LOG_ERR, "get_clientstatus: cannot add message field");
+		ZAPMSG(request);
+		return NULL;
+	}
+	/* Send message */
+	if (msg2ipcchan(request, pi->chan) != HA_OK) {
+		ZAPMSG(request);
+		ha_api_perror("Can't send message to IPC Channel");
+		return NULL;
+	}
+	ZAPMSG(request);
+
+	/* Read reply... */
+	if ((reply = read_cstatus_respond_msg(pi, timeout)) == NULL) {
+		return NULL;
+	}
+
+	if ((result = ha_msg_value(reply, F_APIRESULT)) != NULL
+	&&	strcmp(result, API_OK) == 0
+	&&	(result = ha_msg_value(reply, F_CLIENTSTATUS)) != NULL) {
+
+                memset(statbuf, 0, sizeof(statbuf));
+		strncpy(statbuf, result, sizeof(statbuf) - 1);
+		ret = statbuf;
+	} else {
+		ha_api_perror("received wrong type of msg");
+		ret = NULL;
+	}
+
+	ZAPMSG(reply);
 	return ret;
 }
 
@@ -850,7 +948,6 @@ get_nodetype(ll_cluster_t* lcl, const char *host)
 
 	/* Read reply... */
 	if ((reply=read_api_msg(pi)) == NULL) {
-		ZAPMSG(request);
 		return NULL;
 	}
 	if ((result = ha_msg_value(reply, F_APIRESULT)) != NULL
@@ -907,7 +1004,6 @@ get_parameter(ll_cluster_t* lcl, const char* pname)
 
 	/* Read reply... */
 	if ((reply=read_api_msg(pi)) == NULL) {
-		ZAPMSG(request);
 		return NULL;
 	}
 	if ((result = ha_msg_value(reply, F_APIRESULT)) != NULL
@@ -958,7 +1054,6 @@ get_resources(ll_cluster_t* lcl)
 
 	/* Read reply... */
 	if ((reply=read_api_msg(pi)) == NULL) {
-		ZAPMSG(request);
 		return NULL;
 	}
 	if ((result = ha_msg_value(reply, F_APIRESULT)) != NULL
@@ -1090,7 +1185,6 @@ get_ifstatus(ll_cluster_t* lcl, const char *host, const char * ifname)
 
 	/* Read reply... */
 	if ((reply=read_api_msg(pi)) == NULL) {
-		ZAPMSG(request);
 		return NULL;
 	}
 	if ((result = ha_msg_value(reply, F_APIRESULT)) != NULL
@@ -1371,6 +1465,45 @@ read_api_msg(llc_private_t* pi)
 }
 
 /*
+ * Read a client status respond message either from local node or from
+ * a remote node. All other messages are enqueued to be read later.
+ */
+static struct ha_msg *
+read_cstatus_respond_msg(llc_private_t* pi, int timeout)
+{
+	struct ha_msg*	msg;
+	const char *	type;
+	struct pollfd	pfd;
+
+	pfd.fd = pi->chan->ops->get_recv_select_fd(pi->chan);
+	pfd.events = POLLIN;
+
+	while ((pi->chan->ops->is_message_pending(pi->chan)) 
+	||	(poll(&pfd, 1, timeout) > 0 && pfd.revents == POLLIN)) {
+
+		while (pi->chan->ops->is_message_pending(pi->chan)) {
+			if ((msg=msgfromIPC(pi->chan)) == NULL) {
+				ha_api_perror("read_api_msg: "
+				"Cannot read reply from IPC channel");
+				continue;
+			}
+			if (((type=ha_msg_value(msg, F_TYPE)) != NULL
+			&&	strcmp(type, T_RCSTATUS) == 0)
+			||	((type=ha_msg_value(msg, F_SUBTYPE)) != NULL
+			&&	strcmp(type, T_RCSTATUS) == 0)) {
+				return(msg);
+			}
+			/* Got an unexpected non-api message */
+			/* Queue it up for reading later */
+			enqueue_msg(pi, msg);
+		}
+	}
+
+	/* Timeout or caught a signal */
+	return NULL;
+}
+
+/*
  * Pop up orderQ.
  */
 static struct ha_msg *
@@ -1613,6 +1746,7 @@ set_nstatus_callback (ll_cluster_t* ci
 	pi->node_private = p;
 	return(HA_OK);
 }
+
 /*
  * Set the interface status change callback.
  */
@@ -1624,6 +1758,30 @@ set_ifstatus_callback (ll_cluster_t* ci
 	pi->if_callback = cbf;
 	pi->if_private = p;
 	return(HA_OK);
+}
+
+/*
+ * Set the client status change callback.
+ */
+static int
+set_cstatus_callback (ll_cluster_t* ci
+,		llc_cstatus_callback_t cbf, void * p)
+{
+	llc_private_t*	pi = ci->ll_cluster_private;
+
+	ClearLog();
+	if (!ISOURS(ci)) {
+		ha_api_log(LOG_ERR, "%s: bad cinfo", __FUNCTION__);
+		return HA_FAIL;
+	}
+	if (!pi->SignedOn) {
+		ha_api_log(LOG_ERR, "not signed on");
+		return HA_FAIL;
+	}
+	pi->cstatus_callback = cbf;
+	pi->client_private = p;
+
+	return HA_OK;
 }
 
 /*
@@ -1685,6 +1843,23 @@ CallbackCall(llc_private_t* p, struct ha_msg * msg)
 		,	ha_msg_value(msg, F_IFNAME)
 		,	ha_msg_value(msg, F_STATUS)
 		,	p->if_private);
+		return(1);
+	}
+
+	/* Special case: client status (change) */
+
+	if (p->cstatus_callback && strcasecmp(mtype, T_APICLISTAT) == 0) {
+		p->cstatus_callback(ha_msg_value(msg, F_ORIG)
+		,	ha_msg_value(msg, F_FROMID)
+		,       ha_msg_value(msg, F_STATUS)
+		,       p->client_private);
+		return(1);
+	}
+	if (p->cstatus_callback && strcasecmp(mtype, T_RCSTATUS) == 0) {
+		p->cstatus_callback(ha_msg_value(msg, F_ORIG)
+		,	ha_msg_value(msg, F_CLIENTNAME)
+		,       ha_msg_value(msg, F_CLIENTSTATUS)
+		,       p->client_private);
 		return(1);
 	}
 
@@ -2225,6 +2400,7 @@ static struct llc_ops heartbeat_ops = {
 	set_msg_callback,	/* set_msg_callback */
 	set_nstatus_callback,	/* set_nstatus_callback */
 	set_ifstatus_callback,	/* set_ifstatus_callback */
+	set_cstatus_callback,	/* set_cstatus_callback */
 	init_nodewalk,		/* init_nodewalk */
 	nextnode,		/* nextnode */
 	end_nodewalk,		/* end_nodewalk */
@@ -2234,6 +2410,7 @@ static struct llc_ops heartbeat_ops = {
 	nextif,			/* nextif */
 	end_ifwalk,		/* end_ifwalk */
 	get_ifstatus,		/* if_status */
+	get_clientstatus,	/* client_status */
 	sendclustermsg,		/* sendclustermsg */
 	sendnodemsg,		/* sendnodemsg */
 	send_ordered_clustermsg,/* send_ordered_clustermsg */

@@ -1,4 +1,4 @@
-/* $Id: heartbeat.c,v 1.298 2004/03/25 12:27:03 lars Exp $ */
+/* $Id: heartbeat.c,v 1.299 2004/03/26 07:50:02 chuyee Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -1942,6 +1942,39 @@ if (DEBUGDETAILS) {
 		}
 		heartbeat_monitor(msg, action, iface);
 		QueueRemoteRscReq(PerformQueuedNotifyWorld, msg);
+
+	}else if (strcasecmp(type, T_QCSTATUS) == 0) {
+		/* This is a client status query from remote client */
+		const char * clientid;
+		struct ha_msg * m = NULL;
+		int ret = HA_FAIL;
+		
+		if ((clientid = ha_msg_value(msg, F_CLIENTNAME)) == NULL) {
+			cl_log(LOG_ERR, "%s ha_msg_value failed", __FUNCTION__);
+			return;
+		}
+		if ((m = ha_msg_new(0)) == NULL){
+			cl_log(LOG_ERR, "%s Cannot add field", __FUNCTION__);
+			return;
+		}
+		if (ha_msg_add(m, F_TYPE, T_RCSTATUS) != HA_OK
+		||	ha_msg_add(m, F_TO, from) != HA_OK
+		||	ha_msg_add(m, F_APIRESULT, API_OK) != HA_OK
+		||	ha_msg_add(m, F_CLIENTNAME, clientid) != HA_OK) {
+			cl_log(LOG_ERR, "Cannot create clent status msg");
+			return;
+		}
+		if (find_client(clientid, NULL) != NULL)
+			ret = ha_msg_add(m, F_CLIENTSTATUS, ONLINESTATUS);
+		else
+			ret = ha_msg_add(m, F_CLIENTSTATUS, OFFLINESTATUS);
+
+		if (ret != HA_OK) {
+			cl_log(LOG_ERR, "Cannot create clent status msg");
+			return;
+		}
+		send_cluster_msg(m);
+		return;
 	}else{
 		/* None of the above... */
 		heartbeat_monitor(msg, action, iface);
@@ -4203,6 +4236,12 @@ get_localnodeinfo(void)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.299  2004/03/26 07:50:02  chuyee
+ * Add checking heartbeat client status APIs:
+ *
+ * 	client_status()
+ * 	cstatus_callback()
+ *
  * Revision 1.298  2004/03/25 12:27:03  lars
  * Be case-insensitive when looking up a node in our tables too.
  *

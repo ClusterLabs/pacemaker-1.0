@@ -1,4 +1,4 @@
-/* $Id: ha_msg.h,v 1.29 2004/03/25 08:20:33 alan Exp $ */
+/* $Id: ha_msg.h,v 1.30 2004/03/26 07:50:05 chuyee Exp $ */
 /*
  * Intracluster message object (struct ha_msg)
  *
@@ -77,10 +77,13 @@ struct ha_msg {
 
 	/* Common field names for our messages */
 #define	F_TYPE		"t"		/* Message type */
+#define	F_SUBTYPE	"subt"		/* Message type */
 #define	F_ORIG		"src"		/* Real Originator */
 #define	F_NODE		"node"		/* Node being described */
 #define	F_TO		"dest"		/* Destination (optional) */
 #define	F_STATUS	"st"		/* New status (type = status) */
+#define	F_CLIENTNAME	"cn"		/* Client name */
+#define	F_CLIENTSTATUS	"cs"		/* Client status */
 #define	F_TIME		"ts"		/* Timestamp */
 #define F_SEQ		"seq"		/* Sequence number */
 #define	F_LOAD		"ld"		/* Load average */
@@ -115,6 +118,8 @@ struct ha_msg {
 #define	T_ASKRESOURCES	"ask_resources"	/* Let other node ask my resources */
 #define T_ASKRELEASE	"ip-request"	/* Please give up these resources... */
 #define T_ACKRELEASE	"ip-request-resp"/* Resources given up... */
+#define	T_QCSTATUS	"query-cstatus"	/* Query client status */
+#define	T_RCSTATUS	"respond-cstatus"/* Respond client status */
 #define	T_STONITH	"stonith"	/* Stonith return code */
 #define T_SHUTDONE	"shutdone"	/* External Shutdown complete */
 

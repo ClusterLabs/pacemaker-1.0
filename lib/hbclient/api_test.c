@@ -1,4 +1,4 @@
-/* $Id: api_test.c,v 1.1 2004/03/25 08:05:23 alan Exp $ */
+/* $Id: api_test.c,v 1.2 2004/03/26 07:50:07 chuyee Exp $ */
 /* 
  * api_test: Test program for testing the heartbeat API
  *
@@ -43,6 +43,7 @@
 
 void NodeStatus(const char * node, const char * status, void * private);
 void LinkStatus(const char * node, const char *, const char *, void*);
+void ClientStatus(const char * node, const char *, const char *, void*);
 void gotsig(int nsig);
 
 void
@@ -58,6 +59,14 @@ LinkStatus(const char * node, const char * lnk, const char * status
 {
 	cl_log(LOG_NOTICE, "Link Status update: Link %s/%s now has status %s\n"
 	,	node, lnk, status);
+}
+
+void
+ClientStatus(const char * node, const char * client, const char * status
+,	void * private)
+{
+	cl_log(LOG_NOTICE, "Status update: Client %s/%s now has status [%s]\n"
+	,	node, client, status);
 }
 
 int quitnow = 0;
@@ -104,6 +113,8 @@ main(int argc, char ** argv)
 	char *		ctmp;
 	const char *	cval;
 	int		j;
+	const char *	cstatus;
+	int		timeout = 100; /* milliseconds */
 
 	cl_log_set_entity(argv[0]);
 	cl_log_enable_stderr(TRUE);
@@ -128,6 +139,15 @@ main(int argc, char ** argv)
 		cl_log(LOG_ERR, "REASON: %s\n", hb->llc_ops->errmsg(hb));
 		exit(3);
 	}
+
+	if (hb->llc_ops->set_cstatus_callback(hb, ClientStatus, NULL)!=HA_OK){
+		cl_log(LOG_ERR, "Cannot set client status callback\n");
+		cl_log(LOG_ERR, "REASON: %s\n", hb->llc_ops->errmsg(hb));
+		exit(4);
+	}
+
+	/* Async get client status information in the cluster */
+	hb->llc_ops->client_status(hb, NULL, NULL, -1);
 
 #if 0
 	fmask = LLC_FILTER_RAW;
@@ -196,6 +216,9 @@ main(int argc, char ** argv)
 			,	hb->llc_ops->errmsg(hb));
 			exit(7);
 		}
+		cstatus = hb->llc_ops->client_status(hb, node, "ping", timeout);
+		cl_log(LOG_INFO, "%s/api_test status: [%s]\n", node
+		,	cstatus == NULL ? "timeout" : cstatus);
 	}
 	if (hb->llc_ops->end_nodewalk(hb) != HA_OK) {
 		cl_log(LOG_ERR, "Cannot end node walk\n");
@@ -220,12 +243,14 @@ main(int argc, char ** argv)
 	ha_msg_add(pingreq, F_TYPE, "ping");
 	cl_log(LOG_INFO, "Sleeping...\n");
 	sleep(5);
+
 	if (hb->llc_ops->sendclustermsg(hb, pingreq) == HA_OK) {
 		cl_log(LOG_INFO, "Sent ping request to cluster\n");
 	}else{
 		cl_log(LOG_ERR, "PING request FAIL to cluster\n");
 		cl_log(LOG_ERR, "REASON: %s\n", hb->llc_ops->errmsg(hb));
 	}
+
 	cl_log(LOG_INFO, "Waiting for messages...\n");
 	errno = 0;
 	for(; !quitnow && (reply=hb->llc_ops->readmsg(hb, 1)) != NULL;) {
