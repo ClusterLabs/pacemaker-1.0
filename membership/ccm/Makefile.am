@@ -33,13 +33,11 @@ ccmlibdir		= $(halibdir)
 commmoddir		= $(halibdir)/modules/comm
 havarlibdir		= $(localstatedir)/lib/@HB_PKG@
 havarrundir		= $(localstatedir)/run/
-# fifos with path
+
 ccmdir			= $(havarlibdir)/ccm
 apigid			= @HA_APIGID@
 ccmuid			= @HA_CCMUID@
 gliblib			= @GLIBLIB@
-ccmreqfifo		= $(havarlibdir)/api/ccm.req
-ccmresfifo		= $(havarlibdir)/api/ccm.rsp
 
 
 AM_CFLAGS			= @CFLAGS@	\
@@ -93,15 +91,7 @@ install-exec-local:
 	-chgrp $(apigid) $(DESTDIR)/$(ccmdir)
 	-chown $(ccmuid) $(DESTDIR)/$(ccmdir)
 	chmod 750 $(DESTDIR)/$(ccmdir)
-	test -p $(DESTDIR)$(ccmreqfifo) || mkfifo -m 200 $(DESTDIR)$(ccmreqfifo)
-	test -p $(DESTDIR)$(ccmresfifo) || mkfifo -m 600 $(DESTDIR)$(ccmresfifo)
-	-chgrp $(apigid) $(DESTDIR)/$(ccmreqfifo)
-	-chgrp $(apigid) $(DESTDIR)/$(ccmresfifo)
-	-chown $(ccmuid) $(DESTDIR)/$(ccmreqfifo)
-	-chown $(ccmuid) $(DESTDIR)/$(ccmresfifo)
 
 
 uninstall-local:
-	-test -p $(DESTDIR)$(ccmreqfifo) && rm $(DESTDIR)$(ccmreqfifo)
-	-test -p $(DESTDIR)$(ccmresfifo) && rm $(DESTDIR)$(ccmresfifo)
 	rm -fr $(DESTDIR)$(ccmdir)
