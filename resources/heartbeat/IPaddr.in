@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-#	$Id: IPaddr.in,v 1.1 2004/08/27 09:34:14 lars Exp $
+#	$Id: IPaddr.in,v 1.2 2004/08/27 15:22:00 andrew Exp $
 #
 #	This script manages IP alias IP addresses
 #
@@ -593,7 +593,7 @@ ip_status() {
 	if
 		$IFCONFIG $IFCONFIG_A_OPT | grep "inet.*[: ]$BASEIP " >/dev/null 2>&1
 	then
-		echo "running"
+		echo "running"; return 0
 	else
 		echo "stopped"; return 3
 	fi;;
@@ -606,10 +606,10 @@ ip_status() {
 	else
 		case $IF in
 		  lo*)
-			echo "loopback"
+			echo "loopback"; return 0
 			;;
 		  *)
-			echo "running"
+			echo "running"; return 0
 			;;
 		esac
 	fi;;
@@ -619,7 +619,7 @@ ip_status() {
 	then
 		echo "stopped"; return 3
 	else
-		echo "running"
+		echo "running"; return 0
 	fi;;
   esac
 }
@@ -658,7 +658,7 @@ ip_monitor() {
 
 usage() {
   echo $USAGE >&2
-  echo "$Id: IPaddr.in,v 1.1 2004/08/27 09:34:14 lars Exp $"
+  echo "$Id: IPaddr.in,v 1.2 2004/08/27 15:22:00 andrew Exp $"
 }
 
 #
@@ -705,6 +705,23 @@ esac
 #
 #
 # $Log: IPaddr.in,v $
+# Revision 1.2  2004/08/27 15:22:00  andrew
+# Changes required for 2-node testing to complete:
+# - Fix issues stemming from node UUID support.
+# - Ensure the two-node tests complete
+# - Fixes to the test harness and scripts
+# - Changed IP addresses and node unames in tests (remember the --ip1|2 and --node1|2 options)
+# - Stop status actions when stopping resources
+# - Extra validation, particularly of CIB messages
+# - Cleanups in the common XML code
+# - Finished integration of LRM operation status info
+# - Monitor op now occurs every 9s (will be configurable eventually)
+# - Patched IPaddr to return the correct $? on status ops
+#
+# Other
+# - Updated the .spec.in file to include the OCF RA dir
+# - Updated the lrm/test/Makefile.am to put its basic sanity check into the tarball
+#
 # Revision 1.1  2004/08/27 09:34:14  lars
 # Moving heartbeat resource agents to new directory for consistency.
 #

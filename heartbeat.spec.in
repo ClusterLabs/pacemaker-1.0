@@ -1,4 +1,4 @@
-#	$Id: heartbeat.spec.in,v 1.89 2004/08/05 19:52:29 andrew Exp $
+#	$Id: heartbeat.spec.in,v 1.90 2004/08/27 15:21:57 andrew Exp $
 
 # Workaround for a change in RPM 4.1.x; needs proper fixing soon!
 %define _unpackaged_files_terminate_build 0
@@ -804,6 +804,7 @@ install -m 644 rc.config.heartbeat $TEMPL
 @base_includedir@/ocf
 @sysconfdir@/ha.d/resource.d/
 @INITDIR@/heartbeat
+@libdir@/ocf
 @sysconfdir@/logrotate.d/heartbeat
 @localstatedir@/adm/fillup-templates/rc.config.heartbeat
 %dir @localstatedir@/lib/@HB_PKG@
