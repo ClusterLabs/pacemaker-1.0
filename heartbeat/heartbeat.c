@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.385 2005/03/22 23:35:01 alan Exp $ */
+/* $Id: heartbeat.c,v 1.386 2005/04/01 20:17:29 gshi Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -804,6 +804,9 @@ initialize_heartbeat()
 				fifo_child(fifochildipc[P_WRITEFD]);
 				cl_perror("FIFO child process exiting!");
 				cleanexit(1);
+		default:
+				fifochildipc[P_READFD]->farside_pid = pid;
+
 	}
 	NewTrackedProc(pid, 0, PT_LOGVERBOSE, GINT_TO_POINTER(ourproc)
 	,	&CoreProcessTrackOps);
@@ -836,6 +839,10 @@ initialize_heartbeat()
 					write_child(mp);
 					cl_perror("write process exiting");
 					cleanexit(1);
+			default:
+				mp->wchan[P_WRITEFD]->farside_pid = pid;
+				
+
 		}
 		NewTrackedProc(pid, 0, PT_LOGVERBOSE
 		,	GINT_TO_POINTER(ourproc)
@@ -864,6 +871,8 @@ initialize_heartbeat()
 					read_child(mp);
 					cl_perror("read_child() exiting");
 					cleanexit(1);
+			default:
+					mp->rchan[P_WRITEFD]->farside_pid = pid;
 		}
 		if (ANYDEBUG) {
 			cl_log(LOG_DEBUG, "read child process pid: %d", pid);
@@ -1284,11 +1293,14 @@ master_control_process(IPC_Channel* fifoproc)
 		,	sysmedia[j]->wchan[P_WRITEFD], FALSE
 		,	NULL, sysmedia+j, NULL);
 
+		
 		/* Connect up the read child IPC channel... */
 		G_main_add_IPC_Channel(PRI_CLUSTERMSG
 		,	sysmedia[j]->rchan[P_WRITEFD], FALSE
 		,	read_child_dispatch, sysmedia+j, NULL);
-	}
+
+}	
+	
 
 	/*
 	 * Things to do on a periodic basis...
@@ -5195,6 +5207,9 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.386  2005/04/01 20:17:29  gshi
+ * set channel peer pid correctly bwteeen heartbeat and write/read/fifo child
+ *
  * Revision 1.385  2005/03/22 23:35:01  alan
  * Undid change done for bugzilla 298: infinite loop in heartbeat
  * since it's an infinite loop, upping the CPU % was not helpful.
