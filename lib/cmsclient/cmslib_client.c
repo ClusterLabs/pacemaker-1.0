@@ -186,6 +186,7 @@ cmsclient_message_recv(__cms_handle_t * hd, client_header_t ** data)
 {
 	int ret;
 	IPC_Message * ipc_msg;
+	void * buf;
 
 	if (hd->backup_fd >= 0)
 		restore_poll(hd);
@@ -195,8 +196,14 @@ cmsclient_message_recv(__cms_handle_t * hd, client_header_t ** data)
 	if (ret != IPC_OK)
 		return ret;
 
-	*data = ha_malloc(ipc_msg->msg_len);
-	memcpy(*data, ipc_msg->msg_body, ipc_msg->msg_len);
+	buf = ha_malloc(ipc_msg->msg_len);
+	if (!buf) {
+		cl_log(LOG_CRIT, "unable to malloc data for cmsclient_message_recv.");
+		return IPC_FAIL;
+	}
+
+	memcpy(buf, ipc_msg->msg_body, ipc_msg->msg_len);
+	*data = (client_header_t *) buf;
 
 	ipc_msg->msg_done(ipc_msg);
 
@@ -498,6 +505,11 @@ read_and_queue_ipc_msg(__cms_handle_t * handle)
 			dprintf("enqueue group notify msg head\n");
 			nsg = (client_mqgroup_notify_t *)
 				ha_malloc(sizeof(client_mqgroup_notify_t));
+			if (!nsg) {
+				ha_free(rcmg);
+				cl_log(LOG_CRIT, "malloc failed for the notification.");
+				return FALSE;
+			}
 			memcpy(nsg, m, sizeof(client_mqgroup_notify_t));
 			enqueue_dispatch_msg(handle, (client_header_t *)nsg);
 
@@ -665,6 +677,8 @@ saMsgInitialize(SaMsgHandleT *msgHandle, const SaMsgCallbacksT *msgCallbacks,
 	dprintf("farside_pid = %d\n", ch->farside_pid);
 
 	hd = (__cms_handle_t *)ha_malloc(sizeof(__cms_handle_t));
+	if (!hd)
+		return SA_ERR_NO_MEMORY;
 
 	memset(hd, 0, sizeof(__cms_handle_t));
 	hd->queue_handle_hash = g_hash_table_new(g_int_hash, g_int_equal);
@@ -994,6 +1008,8 @@ saMsgMessageSend(const SaMsgHandleT *msgHandle,
 
 	cmg = (client_message_t *)
 		ha_malloc(sizeof(client_message_t) + message->size);
+	if (!cmg)
+		return SA_ERR_NO_MEMORY;
 
 	cmg->header.type = CMS_MSG_SEND;
 	cmg->header.name = *destination;
@@ -1065,6 +1081,8 @@ saMsgMessageSendAsync(const SaMsgHandleT *msgHandle,
 
 	cmg = (client_message_t *)
 			ha_malloc(sizeof(client_message_t) + message->size);
+	if (!cmg)
+		return SA_ERR_NO_MEMORY;
 
 	cmg->header.type = CMS_MSG_SEND_ASYNC;
 	cmg->header.name = *destination;
