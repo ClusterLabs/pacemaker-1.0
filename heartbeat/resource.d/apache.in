@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $Id: apache.in,v 1.3 2002/10/08 03:35:24 alan Exp $
+# $Id: apache.in,v 1.4 2004/04/30 20:45:10 alan Exp $
 #
 #	High-Availability Apache/IBMhttp control script
 # 
@@ -88,7 +88,7 @@ usage() {
 		monitor in the methods call if we don't know think
 		that the monitor call will actually work ;-)
 
-	$Id: apache.in,v 1.3 2002/10/08 03:35:24 alan Exp $
+	$Id: apache.in,v 1.4 2004/04/30 20:45:10 alan Exp $
 	!
   exit 1
 }
@@ -388,6 +388,13 @@ else
     *)		;;
   esac
   COMMAND=$1
+fi
+
+if
+  [ ! -f "$CONFIGFILE" -a "X$COMMAND" -eq Xstop ]
+then
+  echo "$CONFIGFILE not found - apache considered stopped"
+  exit 0
 fi
 
 if
