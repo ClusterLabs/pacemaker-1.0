@@ -21,6 +21,7 @@
  */
 #include <portability.h>
 #include <strings.h>
+#include <stdio.h>
 
 #include <unistd.h>
 #include <glib.h>
@@ -185,25 +186,29 @@ saClmInitialize(SaClmHandleT *clmHandle, const SaClmCallbacksT *clmCallbacks,
 	}
 
 	/* Prepare information for saClmClusterNodeGet() series calls */
-	FD_ZERO(&rset);
-	FD_SET(hd->fd, &rset);
-	tv.tv_sec = 2;
-	tv.tv_usec = 0;
+	while (!__ccm_data) {
 
-	if ((ret = select(hd->fd + 1, &rset, NULL, NULL, &tv)) == -1) {
-		cl_log(LOG_ERR, "%s: select error [%d]"
-		,	__FUNCTION__, ret);
-		return SA_ERR_LIBRARY;
+		FD_ZERO(&rset);
+		FD_SET(hd->fd, &rset);
+		tv.tv_sec = 2;
+		tv.tv_usec = 0;
 
-	} else if (ret == 0) {
-		cl_log(LOG_WARNING, "%s: select timeout", __FUNCTION__);
-		return SA_ERR_TIMEOUT;
-	}
+		if ((ret = select(hd->fd + 1, &rset, NULL, NULL, &tv)) == -1) {
+			cl_log(LOG_ERR, "%s: select error [%d]"
+			,	__FUNCTION__, ret);
+			return SA_ERR_LIBRARY;
 
-	if ((ret = oc_ev_handle_event(hd->ev_token) != 0)) {
-		cl_log(LOG_ERR, "%s: oc_ev_handle_event error [%d]"
-		,	__FUNCTION__, ret);
-		return SA_ERR_LIBRARY;
+		} else if (ret == 0) {
+			cl_log(LOG_WARNING, "%s: select timeout", __FUNCTION__);
+			return SA_ERR_TIMEOUT;
+		}
+
+		if ((ret = oc_ev_handle_event(hd->ev_token) != 0)) {
+			cl_log(LOG_ERR, "%s: oc_ev_handle_event error [%d]"
+			,	__FUNCTION__, ret);
+			return SA_ERR_LIBRARY;
+		}
+
 	}
 
 	return SA_OK;
@@ -463,6 +468,9 @@ saClmClusterTrackStart(const SaClmHandleT *clmHandle,
 		
 		/* Clear SA_TRACK_CURRENT, it's no use since now. */
 		hd->trackflags &= ~SA_TRACK_CURRENT;
+
+		if (__ccm_data == NULL) 
+			return SA_ERR_LIBRARY;
 		
 		oc = __ccm_data;
 		itemnum = oc->m_n_member;
