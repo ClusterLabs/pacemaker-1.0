@@ -1,4 +1,4 @@
-/* $Id: ccm.c,v 1.42 2004/02/19 07:38:43 forrest Exp $ */
+/* $Id: ccm.c,v 1.43 2004/03/09 06:21:56 forrest Exp $ */
 /* 
  * ccm.c: Consensus Cluster Service Program 
  *
@@ -260,9 +260,9 @@ static int ccm_send_newnode_to_leader(ll_cluster_t *hb, ccm_info_t *info,
 static void send_mem_list_to_all(ll_cluster_t *hb, ccm_info_t *info, 
 		char *cookie);
 static int ccm_send_to_all(ll_cluster_t *hb, ccm_info_t *info, char *memlist, 
-		char *newcookie, char *uptime_list);
+		char *newcookie, void *uptime_list, size_t uptime_size);
 static void ccm_fill_update_table(ccm_info_t *info, 
-		ccm_update_t *update_table, const char *uptime_list);
+		ccm_update_t *update_table, const void *uptime_list);
 
 static longclock_t change_time;
 static void
@@ -4361,7 +4361,9 @@ static void ccm_state_wait_for_mem_list(enum ccm_type ccm_msg_type,
 			ll_cluster_t *hb, 
 			ccm_info_t *info)
 {
-	const char *orig, *trans, *uptime, *cookie, *memlist, *uptime_list;
+	const char *orig, *trans, *uptime, *cookie, *memlist;
+	const void *uptime_list;
+	size_t uptime_size;
 	uint trans_majorval=0,trans_minorval=0, uptime_val;
 	uint curr_major, curr_minor;
 	int repeat;
@@ -4439,8 +4441,9 @@ static void ccm_state_wait_for_mem_list(enum ccm_type ccm_msg_type,
 						"no membership list ");
 				return;
 			}
-			if ((uptime_list = ha_msg_value(reply, CCM_UPTIMELIST))
-					== NULL ){
+			if ((uptime_list = cl_get_binary(reply, CCM_UPTIMELIST,
+						&uptime_size)) ==NULL){
+				
 				cl_log(LOG_WARNING, "ccm_state_wait_for_mem_list: "
 						"no uptime list ");
 				return;
@@ -4455,7 +4458,8 @@ static void ccm_state_wait_for_mem_list(enum ccm_type ccm_msg_type,
 				CCM_SET_COOKIE(info, cookie);
 			}
 			CCM_SET_CL(info, ccm_get_membership_index(info,orig));
-			ccm_fill_update_table(info, CCM_GET_UPDATETABLE(info), uptime_list);
+			ccm_fill_update_table(info, CCM_GET_UPDATETABLE(info),
+						uptime_list);
 			report_mbrs(info);
 			CCM_SET_STATE(info, CCM_STATE_JOINED);
 			break;
@@ -4687,7 +4691,7 @@ static void send_mem_list_to_all(ll_cluster_t *hb,
 {
 	int numBytes, i, size, strsize,  j, tmp, tmp_mem[100];
 	unsigned char *bitmap;
-	char *memlist, *uptime_list;
+	char *memlist;
 	llm_info_t *llm = CCM_GET_LLM(info);
 	int *uptime;
     
@@ -4711,22 +4715,21 @@ static void send_mem_list_to_all(ll_cluster_t *hb,
 	for ( i = 0 ; i < size ; i++ ) {
 		bitmap_mark(llm->llm_nodes[info->ccm_member[i]].NodeUuid, 
 				bitmap, MAXNODE);
-		uptime[i] = update_get_uptime(CCM_GET_UPDATETABLE(info), 
+		uptime[i] = htonl(update_get_uptime(CCM_GET_UPDATETABLE(info), 
 				CCM_GET_LLM(info),
-				tmp_mem[i]);
+				tmp_mem[i]));
 	}    
 	strsize  = ccm_bitmap2str(bitmap, numBytes, &memlist);
 	bitmap_delete(bitmap);
-	ccm_bitmap2str((const unsigned char *)uptime, sizeof(int)*size, &uptime_list);
-	g_free(uptime);
-	ccm_send_to_all(hb, info, memlist, cookie, uptime_list);
+	ccm_send_to_all(hb, info, memlist, cookie, uptime, sizeof(int)*size);
 	g_free(memlist);
-	g_free(uptime_list);
+	g_free(uptime);
 	return;
 }
 
 static int ccm_send_to_all(ll_cluster_t *hb, ccm_info_t *info, 
-		char *memlist, char *newcookie, char *uptime_list)
+		char *memlist, char *newcookie,
+		void *uptime_list, size_t uptime_size)
 {  
 	struct ha_msg *m;
 	char activeproto[3];
@@ -4757,7 +4760,8 @@ static int ccm_send_to_all(ll_cluster_t *hb, ccm_info_t *info,
 		||(ha_msg_add(m, CCM_MINORTRANS, minortrans) == HA_FAIL)		
 		||(ha_msg_add(m, CCM_COOKIE, cookie) == HA_FAIL)
 		||(ha_msg_add(m, CCM_MEMLIST, memlist) == HA_FAIL)
-		||(ha_msg_add(m, CCM_UPTIMELIST, uptime_list) == HA_FAIL)
+		||(ha_msg_addbin(m, CCM_UPTIMELIST, uptime_list, uptime_size)
+			 == HA_FAIL)
 		||(!newcookie? FALSE: (ha_msg_add(m, CCM_NEWCOOKIE, newcookie)
 							==HA_FAIL))) {
 		cl_log(LOG_ERR, "ccm_send_final_memlist: Cannot create "
@@ -4775,7 +4779,9 @@ static void ccm_state_new_node_wait_for_mem_list(enum ccm_type ccm_msg_type,
 	              ll_cluster_t *hb, 
 			ccm_info_t *info)
 {
-    	const char *orig,  *trans, *uptime, *memlist, *cookie, *uptime_list;
+    	const char *orig,  *trans, *uptime, *memlist, *cookie;
+	const void *uptime_list;
+	size_t uptime_size;
 	uint  trans_majorval=0,trans_minorval=0, uptime_val;
 	uint  curr_major, curr_minor;
 	int repeat;
@@ -4851,7 +4857,8 @@ static void ccm_state_new_node_wait_for_mem_list(enum ccm_type ccm_msg_type,
 						"no membership list ");
 				return;
 			}
-			uptime_list = ha_msg_value(reply, CCM_UPTIMELIST);
+			uptime_list = cl_get_binary(reply,
+					CCM_UPTIMELIST, &uptime_size);
 			ccm_fill_memlist_from_str(info, memlist);
 			if(ccm_get_membership_index(info, 
 					CCM_GET_MYNODE_ID(info)) == -1){
@@ -4969,23 +4976,18 @@ static void ccm_state_new_node_wait_for_mem_list(enum ccm_type ccm_msg_type,
 
 
 static void ccm_fill_update_table(ccm_info_t *info,
-		ccm_update_t *update_table, const char *uptime_list)
+		ccm_update_t *update_table, const void *uptime_list)
 {
-	int * uptime, i;
-	unsigned char *tmp_uptime;
-	void *tmp;
+	const int *uptime;
+	int i;
 
-	(void)ccm_str2bitmap(uptime_list, &tmp_uptime);
-	tmp = tmp_uptime;
-	/* Ugly workaround - FIXME, ccm_*bitmap* ought to take void **
-	 * parameters */
-	uptime = tmp;
+	uptime = (const int *)uptime_list;
 
 	UPDATE_SET_NODECOUNT(update_table, info->ccm_nodeCount);
 	for (i = 0; i< info->ccm_nodeCount; i++){
 		update_table->update[i].index = info->ccm_member[i];
-		update_table->update[i].uptime = uptime[i];
+		update_table->update[i].uptime = ntohl(uptime[i]);
 	}
-	g_free(tmp_uptime);
+	return;
 }
 
