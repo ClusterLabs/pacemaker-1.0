@@ -1,4 +1,4 @@
-/* $Id: ccmmain.c,v 1.20 2005/02/15 21:02:25 alan Exp $ */
+/* $Id: ccmmain.c,v 1.21 2005/02/21 21:11:09 gshi Exp $ */
 /* 
  * ccm.c: Consensus Cluster Service Program 
  *
@@ -50,10 +50,8 @@ hb_input_dispatch(IPC_Channel * channel, gpointer user_data)
 		cl_log(LOG_INFO, "Lost connection to heartbeat service. Need to bail out.");
 		return FALSE;
 	}
-	if (ccm_take_control(((hb_usrdata_t *)user_data)->ccmdata)) {
-		return FALSE;
-	}
-	return TRUE;
+	
+	return ccm_take_control(((hb_usrdata_t *)user_data)->ccmdata);
 }
 
 static void

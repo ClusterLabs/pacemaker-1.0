@@ -1,4 +1,4 @@
-/* $Id: ccm.c,v 1.58 2005/02/18 23:21:21 gshi Exp $ */
+/* $Id: ccm.c,v 1.59 2005/02/21 21:11:09 gshi Exp $ */
 /* 
  * ccm.c: Consensus Cluster Service Program 
  *
@@ -3865,21 +3865,21 @@ repeat:
 		       	if((newreply = ccm_handle_hbapiclstat(info, orig, 
 				status)) == NULL) {
 				ha_msg_del(reply);
-				return 0;
+				return TRUE;
 			}
 			ha_msg_del(reply);
 			reply = newreply;
 		} else if((strncmp(type, T_SHUTDONE, TYPESTRSIZE)) == 0) {
 			/* handle heartbeat shutdown message */
+
 			cl_log(LOG_DEBUG, "received shutdown orig=%s", orig);
 			nodelist_update(orig, CLUST_INACTIVE, -1, info);
-		       	if((newreply = ccm_handle_shutdone(info, orig, status)) 
-					== NULL) {
-				ha_msg_del(reply);
-				return 1;
-			}
+		       	newreply = ccm_handle_shutdone(info, orig, status);
+			
 			ha_msg_del(reply);
 			reply = newreply;
+			return TRUE;
+			
 		} else if((strcasecmp(type, T_STATUS) == 0
 			        || strcasecmp(type, T_NS_STATUS) == 0)) {
 			/* process only messages indicating heartbeat on some */
@@ -3893,7 +3893,7 @@ repeat:
 						info);
 			}
 			ha_msg_del(reply);
-			return 0;
+			return TRUE;
 		} else if(strcasecmp(type, T_STONITH) == 0) {
 			/* update any node death status only after stonith */
 			/* is complete irrespective of stonith being 	   */
@@ -3912,7 +3912,7 @@ repeat:
 				nodelist_update(node, DEADSTATUS, -1, info);
 			}
 			ha_msg_del(reply);
-			return 0;
+			return TRUE;
 		}
 	} else {
 		reply = timeout_msg_mod(info);
@@ -3926,7 +3926,7 @@ repeat:
 			type, 
 			ha_msg_value(reply, F_ORIG));
 		ha_msg_del(reply);
-		return 0;
+		return TRUE;
 	}
 
 	if(global_debug)
@@ -3998,12 +3998,12 @@ repeat:
 
 	case CCM_STATE_NEW_NODE_WAIT_FOR_MEM_LIST:
 		ccm_state_new_node_wait_for_mem_list(ccm_msg_type, reply, hb
-		,	info);
+						     ,	info);
 		break;
-
+		
 	default:
 		cl_log(LOG_ERR, "INTERNAL LOGIC ERROR");
-		return(1);
+		return(FALSE);
 	}
 
 	if(ccm_msg_type != CCM_TYPE_TIMEOUT) {
@@ -4014,7 +4014,7 @@ repeat:
 	if (hb->llc_ops->msgready(hb))
 		goto repeat;
 
-	return 0;
+	return TRUE;
 }
 
 
