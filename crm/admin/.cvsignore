@@ -3,6 +3,7 @@ Makefile.in
 .libs
 crmadmin
 cibadmin
+ccm_epoche
 .deps
 *.beam
 parser-messages

@@ -27,3 +27,4 @@ OCF
 *.beam
 parser-messages
 MISC_ERRORS
+LVSSyncDaemonSwap
