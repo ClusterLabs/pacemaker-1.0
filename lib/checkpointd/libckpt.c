@@ -1,4 +1,4 @@
-/* $Id: libckpt.c,v 1.7 2004/03/12 18:01:47 msoffen Exp $ */
+/* $Id: libckpt.c,v 1.8 2004/03/17 02:08:27 deng.pan Exp $ */
 /* 
  * ckptlib.c: data checkpoint API library
  *
@@ -34,6 +34,7 @@
 #include <sys/un.h>
 #include <errno.h>
 #include <string.h>
+#include <time.h>
 
 #include <glib.h>
 
@@ -173,7 +174,7 @@ SaCkptLibGetIterator(void)
 {
 	static SaCkptSectionIteratorT ckptLibSecIterator = 1;
 	
-	SaCkptSectionIteratorT iterator;
+	SaCkptSectionIteratorT iterator = 0;
 	GList* sectionList = NULL;
 
 	do {
@@ -188,7 +189,7 @@ SaCkptLibGetIterator(void)
 static SaCkptLibRequestT*
 SaCkptGetLibRequestByReqno(SaUint32T reqno)
 {
-	SaCkptLibRequestT* libRequest;
+	SaCkptLibRequestT* libRequest = NULL;
 	GList* list = NULL;
 	
 	list = libAsyncRequestList;
@@ -205,7 +206,7 @@ SaCkptGetLibRequestByReqno(SaUint32T reqno)
 static SaCkptClientResponseT*
 SaCkptGetLibResponseByReqno(SaUint32T reqno)
 {
-	SaCkptClientResponseT* libResponse;
+	SaCkptClientResponseT* libResponse = NULL;
 	GList* list = NULL;
 	
 	list = libResponseList;
@@ -226,7 +227,7 @@ SaCkptGetLibResponseByReqno(SaUint32T reqno)
 static SaCkptLibClientT*
 SaCkptGetLibClientByHandle(SaCkptHandleT clientHandle)
 {
-	SaCkptLibClientT* libClient;
+	SaCkptLibClientT* libClient = NULL;
 	GList* list = NULL;
 	
 	list = libClientList;
@@ -244,8 +245,8 @@ static SaCkptLibCheckpointT*
 SaCkptGetLibCheckpointByHandle(
 	SaCkptCheckpointHandleT checkpointHandle)
 {
-	GList* list;
-	SaCkptLibCheckpointT* libCheckpoint;
+	GList* list = NULL;
+	SaCkptLibCheckpointT* libCheckpoint = NULL;
 
 	list = libCheckpointList;
 	while(list != NULL ) {
@@ -573,9 +574,15 @@ saCkptInitialize(SaCkptHandleT *ckptHandle/*[out]*/,
 	cl_log_set_entity("AIS");
 	cl_log_enable_stderr(TRUE);
 	
+	if (ckptHandle == NULL) {
+		cl_log(LOG_ERR, 
+			"Null handle in saCkptInitialize");
+		return SA_ERR_INVALID_PARAM;
+	}
+	
 	if (version == NULL) {
 		cl_log(LOG_ERR, 
-			"Null version number in checkpoint library");
+			"Null version number in saCkptInitialize");
 		return SA_ERR_INVALID_PARAM;
 	}
 
@@ -592,7 +599,7 @@ saCkptInitialize(SaCkptHandleT *ckptHandle/*[out]*/,
 		(clientRequest == NULL) ||
 		(initParam == NULL)) {
 		cl_log(LOG_ERR, 
-			"No memory in checkpoint library");
+			"No memory in saCkptInitialize");
 		libError = SA_ERR_NO_MEMORY;
 		goto initError;
 	}
@@ -616,14 +623,14 @@ saCkptInitialize(SaCkptHandleT *ckptHandle/*[out]*/,
 		ch = SaCkptClientChannelInit(pathname);
 		if (ch == NULL) {
 			cl_log(LOG_ERR, 
-			"Checkpoint library can not initiate connection");
+			"Can not initiate connection in saCkptInitialize");
 			libError = SA_ERR_LIBRARY;
 			goto initError;
 		}
 		if (ch->ops->initiate_connection(ch)
 			!= IPC_OK) {
 			cl_log(LOG_ERR, 
-			"Checkpoint library can not connect to daemon");
+			"Can not connect to daemon in saCkptInitialize");
 			libError = SA_ERR_LIBRARY;
 			goto initError;
 		}
@@ -745,14 +752,20 @@ saCkptSelectionObjectGet(
 
 	if (ckptHandle == NULL) {
 		cl_log(LOG_ERR, 
-			"Null handle in checkpoint library");
+			"Null handle in saCkptSelectionObjectGet");
+		return SA_ERR_INVALID_PARAM;
+	}
+
+	if (selectionObject == NULL) {
+		cl_log(LOG_ERR, 
+			"Null selectobject in saCkptSelectionObjectGet");
 		return SA_ERR_INVALID_PARAM;
 	}
 
 	libClient = SaCkptGetLibClientByHandle(*ckptHandle);
 	if (libClient == NULL) {
 		cl_log(LOG_ERR, 
-			"Invalid handle in checkpoint library");
+			"Invalid handle in saCkptSelectionObjectGet");
 		return SA_ERR_INVALID_PARAM;
 	}
 	
@@ -788,14 +801,14 @@ saCkptDispatch(const SaCkptHandleT *ckptHandle,
 	
 	if (ckptHandle == NULL) {
 		cl_log(LOG_ERR, 
-			"Null handle in checkpoint library");
+			"Null handle in saCkptDispatch");
 		return SA_ERR_INVALID_PARAM;
 	}
 
 	libClient = SaCkptGetLibClientByHandle(*ckptHandle);
 	if (libClient == NULL) {
 		cl_log(LOG_ERR, 
-			"Invalid handle in checkpoint library");
+			"Invalid handle in saCkptDispatch");
 		return SA_ERR_INVALID_PARAM;
 	}
 	
@@ -902,14 +915,14 @@ saCkptFinalize(const SaCkptHandleT *ckptHandle)
 
 	if (ckptHandle == NULL) {
 		cl_log(LOG_ERR, 
-			"Null handle in checkpoint library");
+			"Null handle in saCkptFinalize");
 		return SA_ERR_INVALID_PARAM;
 	}
 
 	libClient = SaCkptGetLibClientByHandle(*ckptHandle);
 	if (libClient == NULL) {
 		cl_log(LOG_ERR, 
-			"Invalid handle in checkpoint library");
+			"Invalid handle in saCkptFinalize");
 		return SA_ERR_INVALID_PARAM;
 	}
 	
@@ -939,7 +952,7 @@ saCkptFinalize(const SaCkptHandleT *ckptHandle)
 		(clientRequest == NULL) ||
 		(finalParam == NULL)) {
 		cl_log(LOG_ERR, 
-			"No memory in checkpoint library");
+			"No memory in saCkptFinalize");
 		libError = SA_ERR_NO_MEMORY;
 		goto finalError;
 	}
@@ -1003,6 +1016,7 @@ saCkptFinalize(const SaCkptHandleT *ckptHandle)
 	/* only destroy the hash table after all the clients finalized */
 	if (g_list_length(libClientList) == 0) {
 		g_hash_table_destroy(libIteratorHash);
+		libIteratorHash = NULL;
 	}
 	
 	libError = SA_OK;
@@ -1064,17 +1078,44 @@ saCkptCheckpointOpen(
 	
 	SaErrorT libError = SA_OK;
 	IPC_Channel* ch = NULL;
+
+	time_t currentTime;
+
+	if (checkpointName == NULL) {
+		cl_log(LOG_ERR, 
+			"Null checkpoint name in saCkptCheckpointOpen");
+		return SA_ERR_INVALID_PARAM;
+	}
+
+	if (checkpointCreationAttributes == NULL) {
+		cl_log(LOG_ERR, 
+			"Null attributes in saCkptCheckpointOpen");
+		return SA_ERR_INVALID_PARAM;
+	}
+
+	if (checkpointHandle == NULL) {
+		cl_log(LOG_ERR, 
+			"Null checkpoint handle in saCkptCheckpointOpen");
+		return SA_ERR_INVALID_PARAM;
+	}
 	
 	if (ckptHandle == NULL) {
 		cl_log(LOG_ERR, 
-			"Null handle in checkpoint library");
+			"Null handle in saCkptCheckpointOpen");
+		return SA_ERR_INVALID_PARAM;
+	}
+
+	time(&currentTime);
+	if (timeout < currentTime * 1000000000LL) {
+		cl_log(LOG_ERR, 
+		"Timeout time is earlier than the current time");
 		return SA_ERR_INVALID_PARAM;
 	}
 
 	libClient = SaCkptGetLibClientByHandle(*ckptHandle);
 	if (libClient == NULL) {
 		cl_log(LOG_ERR, 
-			"Invalid handle in checkpoint library");
+			"Invalid handle in saCkptCheckpointOpen");
 		return SA_ERR_INVALID_PARAM;
 	}
 	
@@ -1091,7 +1132,7 @@ saCkptCheckpointOpen(
 		(openParam == NULL) ||
 		(libCheckpoint == NULL)) {
 		cl_log(LOG_ERR, 
-			"No memory in checkpoint library");
+			"No memory in saCkptCheckpointOpen");
 		libError = SA_ERR_NO_MEMORY;
 		goto openError;
 	}
@@ -1225,14 +1266,26 @@ saCkptCheckpointOpenAsync(
 	
 	if (ckptHandle == NULL) {
 		cl_log(LOG_ERR, 
-			"Null handle in checkpoint library");
+			"Null handle in saCkptCheckpointOpenAsync");
+		return SA_ERR_INVALID_PARAM;
+	}
+
+	if (checkpointName == NULL) {
+		cl_log(LOG_ERR, 
+			"Null checkpoint name in saCkptCheckpointOpenAsync");
+		return SA_ERR_INVALID_PARAM;
+	}
+
+	if (checkpointCreationAttributes == NULL) {
+		cl_log(LOG_ERR, 
+			"Null attributes in saCkptCheckpointOpenAsync");
 		return SA_ERR_INVALID_PARAM;
 	}
 
 	libClient = SaCkptGetLibClientByHandle(*ckptHandle);
 	if (libClient == NULL) {
 		cl_log(LOG_ERR, 
-			"Invalid handle in checkpoint library");
+			"Invalid handle in saCkptCheckpointOpenAsync");
 		return SA_ERR_INVALID_PARAM;
 	}
 	
@@ -1249,7 +1302,7 @@ saCkptCheckpointOpenAsync(
 		(openAsyncParam == NULL) ||
 		(libCheckpoint == NULL)) {
 		cl_log(LOG_ERR, 
-			"No memory in checkpoint library");
+			"No memory in saCkptCheckpointOpenAsync");
 		libError = SA_ERR_NO_MEMORY;
 		goto openError;
 	}
@@ -1333,7 +1386,7 @@ saCkptCheckpointClose(
 
 	if (checkpointHandle == NULL) {
 		cl_log(LOG_ERR, 
-			"Null handle in checkpoint library");
+			"Null handle in saCkptCheckpointClose");
 		return SA_ERR_INVALID_PARAM;
 	}
 
@@ -1357,7 +1410,7 @@ saCkptCheckpointClose(
 		(clientRequest == NULL) ||
 		(closeParam == NULL)) {
 		cl_log(LOG_ERR, 
-			"No memory in checkpoint library");
+			"No memory in saCkptCheckpointClose");
 		libError = SA_ERR_NO_MEMORY;
 		goto closeError;
 	}
@@ -1465,14 +1518,20 @@ saCkptCheckpointUnlink(
 
 	if (ckptHandle == NULL) {
 		cl_log(LOG_ERR, 
-			"Null handle in checkpoint library");
+			"Null handle in saCkptCheckpointUnlink");
+		return SA_ERR_INVALID_PARAM;
+	}
+
+	if (checkpointName == NULL) {
+		cl_log(LOG_ERR, 
+			"Null checkpointname in saCkptCheckpointUnlink");
 		return SA_ERR_INVALID_PARAM;
 	}
 
 	libClient = SaCkptGetLibClientByHandle(*ckptHandle);
 	if (libClient == NULL) {
 		cl_log(LOG_ERR, 
-			"Invalid handle in checkpoint library");
+			"Invalid handle in saCkptCheckpointUnlink");
 		return SA_ERR_INVALID_PARAM;
 	}
 
@@ -1486,7 +1545,7 @@ saCkptCheckpointUnlink(
 		(clientRequest == NULL) ||
 		(unlinkParam == NULL)) {
 		cl_log(LOG_ERR, 
-			"No memory in checkpoint library");
+			"No memory in saCkptCheckpointUnlink");
 		libError = SA_ERR_NO_MEMORY;
 		goto unlinkError;
 	}
@@ -1584,7 +1643,7 @@ saCkptCheckpointRetentionDurationSet(
 
 	if (checkpointHandle == NULL) {
 		cl_log(LOG_ERR, 
-			"Null handle in checkpoint library");
+		"Null handle in saCkptCheckpointRetentionDurationSet");
 		return SA_ERR_INVALID_PARAM;
 	}
 
@@ -1607,7 +1666,7 @@ saCkptCheckpointRetentionDurationSet(
 		(clientRequest == NULL) ||
 		(rtnParam == NULL)) {
 		cl_log(LOG_ERR, 
-			"No memory in checkpoint library");
+			"No memory in saCkptCheckpointRetentionDurationSet");
 		libError = SA_ERR_NO_MEMORY;
 		goto rtnError;
 	}
@@ -1706,7 +1765,7 @@ saCkptActiveCheckpointSet(const SaCkptCheckpointHandleT *checkpointHandle)
 
 	if (checkpointHandle == NULL) {
 		cl_log(LOG_ERR, 
-			"Null handle in checkpoint library");
+			"Null handle in saCkptActiveCheckpointSet");
 		return SA_ERR_INVALID_PARAM;
 	}
 
@@ -1729,7 +1788,7 @@ saCkptActiveCheckpointSet(const SaCkptCheckpointHandleT *checkpointHandle)
 		(clientRequest == NULL) ||
 		(activeParam == NULL)) {
 		cl_log(LOG_ERR, 
-			"No memory in checkpoint library");
+			"No memory in saCkptActiveCheckpointSet");
 		libError = SA_ERR_NO_MEMORY;
 		goto activeError;
 	}
@@ -1823,7 +1882,13 @@ saCkptCheckpointStatusGet(
 
 	if (checkpointHandle == NULL) {
 		cl_log(LOG_ERR, 
-			"Null handle in checkpoint library");
+		"Null checkpoint handle in saCkptCheckpointStatusGet");
+		return SA_ERR_INVALID_PARAM;
+	}
+
+	if (checkpointStatus == NULL) {
+		cl_log(LOG_ERR, 
+			"Null status in saCkptCheckpointStatusGet");
 		return SA_ERR_INVALID_PARAM;
 	}
 
@@ -1846,7 +1911,7 @@ saCkptCheckpointStatusGet(
 		(clientRequest == NULL) ||
 		(statParam == NULL)) {
 		cl_log(LOG_ERR, 
-			"No memory in checkpoint library");
+			"No memory in saCkptCheckpointStatusGet");
 		libError = SA_ERR_NO_MEMORY;
 		goto statError;
 	}
@@ -1959,10 +2024,36 @@ saCkptSectionCreate(
 
 	if (checkpointHandle == NULL) {
 		cl_log(LOG_ERR, 
-			"Null handle in checkpoint library");
+			"Null handle in saCkptSectionCreate");
 		return SA_ERR_INVALID_PARAM;
 	}
 
+	if (sectionCreationAttributes == NULL) {
+		cl_log(LOG_ERR, 
+			"Null section attribute in saCkptSectionCreate");
+		return SA_ERR_INVALID_PARAM;
+	}
+
+	if (sectionCreationAttributes->sectionId == NULL) {
+		cl_log(LOG_ERR, 
+			"Null section ID in saCkptSectionCreate");
+		return SA_ERR_INVALID_PARAM;
+	}
+
+	if ((sectionCreationAttributes->sectionId->id == NULL) && 
+		(sectionCreationAttributes->sectionId->idLen == 0)) {
+		cl_log(LOG_ERR, 
+		"Cannot create default section in saCkptSectionCreate");
+		return SA_ERR_INVALID_PARAM;
+	}
+
+	if ((initialDataSize != 0) && (initialData == NULL)) {
+		cl_log(LOG_ERR, 
+			"No initial data in saCkptSectionCreate");
+		return SA_ERR_INVALID_PARAM;
+	}
+
+	
 	libCheckpoint = SaCkptGetLibCheckpointByHandle(
 		*checkpointHandle);
 	if (libCheckpoint == NULL) {
@@ -2112,7 +2203,19 @@ saCkptSectionDelete(
 
 	if (checkpointHandle == NULL) {
 		cl_log(LOG_ERR, 
-			"Null handle in checkpoint library");
+			"Null handle in saCkptSectionDelete");
+		return SA_ERR_INVALID_PARAM;
+	}
+
+	if (sectionId == NULL) {
+		cl_log(LOG_ERR, 
+			"Null section ID in saCkptSectionDelete");
+		return SA_ERR_INVALID_PARAM;
+	}
+
+	if ((sectionId->id == NULL) && (sectionId->idLen == 0)) {
+		cl_log(LOG_ERR, 
+		"Cannot delete default section in saCkptSectionDelete");
 		return SA_ERR_INVALID_PARAM;
 	}
 
@@ -2240,9 +2343,24 @@ saCkptSectionExpirationTimeSet(
 	SaErrorT libError = SA_OK;
 	IPC_Channel* ch = NULL;
 
+	time_t currentTime;
+
 	if (checkpointHandle == NULL) {
 		cl_log(LOG_ERR, 
-			"Null handle in checkpoint library");
+		"Null handle in saCkptSectionExpirationTimeSet");
+		return SA_ERR_INVALID_PARAM;
+	}
+
+	if (sectionId == NULL) {
+		cl_log(LOG_ERR, 
+		"Null section ID in saCkptSectionExpirationTimeSet");
+		return SA_ERR_INVALID_PARAM;
+	}
+
+	time(&currentTime);
+	if (expirationTime < currentTime * 1000000000LL) {
+		cl_log(LOG_ERR, 
+		"Expiration time is earlier than the current time");
 		return SA_ERR_INVALID_PARAM;
 	}
 
@@ -2374,9 +2492,24 @@ saCkptSectionIteratorInitialize(
 	int i = 0;
 	char* p = NULL;
 
+	time_t currentTime;
+
 	if (checkpointHandle == NULL) {
 		cl_log(LOG_ERR, 
-			"Null handle in checkpoint library");
+			"Null handle in saCkptSectionIteratorInitialize");
+		return SA_ERR_INVALID_PARAM;
+	}
+
+	if (sectionIterator == NULL) {
+		cl_log(LOG_ERR, 
+		"Null sectionIterator in saCkptSectionIteratorInitialize");
+		return SA_ERR_INVALID_PARAM;
+	}
+
+	time(&currentTime);
+	if (expirationTime < currentTime * 1000000000LL) {
+		cl_log(LOG_ERR, 
+		"Expiration time is earlier than the current time");
 		return SA_ERR_INVALID_PARAM;
 	}
 
@@ -2500,6 +2633,18 @@ saCkptSectionIteratorNext(
 	SaCkptSectionDescriptorT* secDescriptor = NULL;
 	GList* sectionList = NULL;
 
+	if (sectionIterator == NULL) {
+		cl_log(LOG_ERR, 
+			"Null sectionIterator in saCkptSectionIteratorNext");
+		return SA_ERR_INVALID_PARAM;
+	}
+
+	if (sectionDescriptor == NULL) {
+		cl_log(LOG_ERR, 
+			"Null sectionDescriptor in saCkptSectionIteratorNext");
+		return SA_ERR_INVALID_PARAM;
+	}
+
 	sectionList = g_hash_table_lookup(libIteratorHash, 
 		sectionIterator);
 	if (sectionList == NULL) {
@@ -2558,6 +2703,12 @@ saCkptCheckpointSectionWrite(
 	
 	SaErrorT libError = SA_OK;
 	IPC_Channel* ch = NULL;
+
+	if ((dataLength != 0) && (data == NULL)) {
+		cl_log(LOG_ERR, 
+			"Null data in saCkptCheckpointSectionWrite");
+		return SA_ERR_INVALID_PARAM;
+	}
 
 	checkpointHandle = &wrtParam->checkpointHandle;
 	libCheckpoint = SaCkptGetLibCheckpointByHandle(
@@ -2759,7 +2910,19 @@ saCkptCheckpointWrite(
 
 	if (checkpointHandle == NULL) {
 		cl_log(LOG_ERR, 
-			"Null handle in checkpoint library");
+			"Null handle in saCkptCheckpointWrite");
+		return SA_ERR_INVALID_PARAM;
+	}
+
+	if (ioVector == NULL) {
+		cl_log(LOG_ERR, 
+			"Null ioVector in saCkptCheckpointWrite");
+		return SA_ERR_INVALID_PARAM;
+	}
+
+	if (numberOfElements <= 0) {
+		cl_log(LOG_ERR, 
+			"No ioVector in saCkptCheckpointWrite");
 		return SA_ERR_INVALID_PARAM;
 	}
 
@@ -2780,7 +2943,7 @@ saCkptCheckpointWrite(
 		sizeof(SaCkptReqSecWrtParamT));
 	if (wrtParam == NULL) {
 		cl_log(LOG_ERR, 
-			"No memory in checkpoint library");
+			"No memory in saCkptCheckpointWrite");
 		return SA_ERR_NO_MEMORY;
 	}
 
@@ -2831,7 +2994,19 @@ saCkptSectionOverwrite(
 
 	if (checkpointHandle == NULL) {
 		cl_log(LOG_ERR, 
-			"Null handle in checkpoint library");
+			"Null handle in saCkptSectionOverwrite");
+		return SA_ERR_INVALID_PARAM;
+	}
+
+	if (sectionId == NULL) {
+		cl_log(LOG_ERR, 
+			"Null sectionId in saCkptSectionOverwrite");
+		return SA_ERR_INVALID_PARAM;
+	}
+
+	if ((dataSize != 0) && (dataBuffer == NULL)) {
+		cl_log(LOG_ERR, 
+			"Null dataBuffer in saCkptSectionOverwrite");
 		return SA_ERR_INVALID_PARAM;
 	}
 
@@ -2860,7 +3035,7 @@ saCkptSectionOverwrite(
 		(clientRequest == NULL) ||
 		(secOwrtParam == NULL) ) {
 		cl_log(LOG_ERR, 
-			"No memory in checkpoint library");
+			"No memory in saCkptSectionOverwrite");
 		libError = SA_ERR_NO_MEMORY;
 		goto secOwrtError;
 	}
@@ -2959,7 +3134,19 @@ saCkptCheckpointRead(
 
 	if (checkpointHandle == NULL) {
 		cl_log(LOG_ERR, 
-			"Null handle in checkpoint library");
+			"Null handle in saCkptCheckpointRead");
+		return SA_ERR_INVALID_PARAM;
+	}
+
+	if (ioVector == NULL) {
+		cl_log(LOG_ERR, 
+			"Null ioVector in saCkptCheckpointRead");
+		return SA_ERR_INVALID_PARAM;
+	}
+
+	if (numberOfElements <= 0) {
+		cl_log(LOG_ERR, 
+			"No ioVector in saCkptCheckpointRead");
 		return SA_ERR_INVALID_PARAM;
 	}
 
@@ -2980,7 +3167,7 @@ saCkptCheckpointRead(
 		sizeof(SaCkptReqSecReadParamT));
 	if (readParam == NULL) {
 		cl_log(LOG_ERR, 
-			"No memory in checkpoint library");
+			"No memory in saCkptCheckpointRead");
 		return SA_ERR_NO_MEMORY;
 	}
 
@@ -3028,9 +3215,18 @@ saCkptCheckpointSynchronize(
 	SaErrorT libError = SA_OK;
 	IPC_Channel* ch = NULL;
 
+	time_t currentTime;
+
 	if (checkpointHandle == NULL) {
 		cl_log(LOG_ERR, 
-			"Null handle in checkpoint library");
+			"Null handle in saCkptCheckpointSynchronize");
+		return SA_ERR_INVALID_PARAM;
+	}
+
+	time(&currentTime);
+	if (timeout < currentTime * 1000000000LL) {
+		cl_log(LOG_ERR, 
+		"Timeout time is earlier than the current time");
 		return SA_ERR_INVALID_PARAM;
 	}
 
@@ -3053,7 +3249,7 @@ saCkptCheckpointSynchronize(
 		(clientRequest == NULL) ||
 		(syncParam == NULL)) {
 		cl_log(LOG_ERR, 
-			"No memory in checkpoint library");
+			"No memory in saCkptCheckpointSynchronize");
 		libError = SA_ERR_NO_MEMORY;
 		goto syncError;
 	}
@@ -3149,13 +3345,13 @@ saCkptCheckpointSynchronizeAsync(
 
 	if (ckptHandle == NULL) {
 		cl_log(LOG_ERR, 
-			"Null handle in checkpoint library");
+			"Null handle in saCkptCheckpointSynchronizeAsync");
 		return SA_ERR_INVALID_PARAM;
 	}
 	
 	if (checkpointHandle == NULL) {
 		cl_log(LOG_ERR, 
-			"Null handle in checkpoint library");
+		"Null checkpoint handle in saCkptCheckpointSynchronizeAsync");
 		return SA_ERR_INVALID_PARAM;
 	}
 
