@@ -690,7 +690,6 @@ hbparameter(ll_cluster_t *hb, int argc, char ** argv, const char * optstr)
 		}
 	} while (1);
 
-	cl_log(LOG_DEBUG,"paramname: %s", paramname);
 	if ( paramname != NULL ) {
 		char * pvalue;
 		pvalue = hb->llc_ops->get_parameter(hb, paramname);
