@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-#	$Id: heartbeat.in,v 1.36 2004/05/17 15:12:08 lars Exp $
+#	$Id: heartbeat.in,v 1.37 2005/03/15 21:37:53 gshi Exp $
 #
 # heartbeat     Start high-availability services
 #
@@ -119,6 +119,45 @@ then
   echo_failure 1
   exit 0
 fi
+
+StartLogd() {
+
+    $HA_BIN/ha_logd -s 2>&1 >/dev/null
+
+    if 
+	[ $? -eq 0 ]
+    then
+	Echo "logd is already running" 
+	return 0
+    fi
+    
+
+    $HA_BIN/ha_logd -d
+    if 
+	[ $? -ne 0 ]
+    then
+	Echo "starting logd failed"
+    fi
+    
+}
+
+StopLogd() {
+    $HA_BIN/ha_logd -s 2>&1 >/dev/null
+    
+    if 
+	[ $? -ne 0 ] 
+    then
+	   Echo "logd is already stopped" 
+	   return 0
+    fi
+
+    $HA_BIN/ha_logd -k
+    if 
+	[ $? -ne 0 ]	
+    then
+	Echo "stopping logd failed"
+    fi    
+}
 
 init_watchdog() {
   if
@@ -333,6 +372,7 @@ RC=0
 
 case "$1" in
   start)
+	StartLogd
 	RunStartStop pre-start
 	StartHA
 	RC=$?
@@ -365,6 +405,7 @@ case "$1" in
           rm -f $LOCKDIR/$SUBSYS
         fi
         RunStartStop post-stop $RC
+	StopLogd
 	;;
 
   restart)
@@ -395,6 +436,10 @@ exit $RC
 #
 #
 #  $Log: heartbeat.in,v $
+#  Revision 1.37  2005/03/15 21:37:53  gshi
+#  start logging daemon before starting heartbeat
+#  stop logging daemon after heartbeat has been stopped
+#
 #  Revision 1.36  2004/05/17 15:12:08  lars
 #  Reverting over-eager approach to disabling old resource manager code.
 #
