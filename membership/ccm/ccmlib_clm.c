@@ -356,11 +356,11 @@ saClmDispatch(const SaClmHandleT *clmHandle,
 	if (!hd)
 		return SA_ERR_BAD_HANDLE;
 
-	if ((ret = oc_ev_handle_event(hd->ev_token) != 0)) {
+	if ((ret = oc_ev_handle_event(hd->ev_token)) != 0) {
 		if (ret == EINVAL)
 			return SA_ERR_BAD_HANDLE;
-		else
-			assert(0);	/* Never runs here */
+
+		/* else we must be evicted */
 	}
 
 	/* We did not lock for read here because other writers will set it
