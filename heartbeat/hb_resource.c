@@ -1,4 +1,4 @@
-/* $Id: hb_resource.c,v 1.59 2004/08/14 14:42:22 alan Exp $ */
+/* $Id: hb_resource.c,v 1.60 2004/09/08 18:57:30 gshi Exp $ */
 /*
  * hb_resource: Linux-HA heartbeat resource management code
  *
@@ -226,6 +226,7 @@ static void
 HBDoMsg_default(const char * type, struct node_info * fromnode
 ,	TIME_T msgtime, seqno_t seqno, const char * iface, struct ha_msg * msg)
 {
+	heartbeat_monitor(msg, KEEPIT, iface);
 	QueueRemoteRscReq(PerformQueuedNotifyWorld, msg);
 }
 
@@ -2284,6 +2285,11 @@ StonithStatProcessName(ProcTrack* p)
 
 /*
  * $Log: hb_resource.c,v $
+ * Revision 1.60  2004/09/08 18:57:30  gshi
+ * fixed a bug: api_test cannot receive messages
+ * the default handler gets all messages
+ * we need to check if any client need that message in the default handler
+ *
  * Revision 1.59  2004/08/14 14:42:22  alan
  * Put in lots of comments about resource-work tieins in heartbeat.c, plus put in
  * a short term workaround for dealing with one particular case:
