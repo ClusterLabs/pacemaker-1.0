@@ -1,4 +1,4 @@
-/* $Id: heartbeat.c,v 1.297 2004/03/25 10:17:28 lars Exp $ */
+/* $Id: heartbeat.c,v 1.298 2004/03/25 12:27:03 lars Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -564,14 +564,22 @@ struct node_info *
 lookup_node(const char * h)
 {
 	int			j;
+	char	*shost;
 
-
-	for (j=0; j < config->nodecount; ++j) {
-		if (strcmp(h, config->nodes[j].nodename) == 0) {
-			return (config->nodes+j);
-		}
+	if ( (shost = ha_strdup(h)) == NULL) {
+		return NULL;
 	}
-	return NULL;
+	g_strdown(shost);
+	for (j=0; j < config->nodecount; ++j) {
+		if (strcmp(shost, config->nodes[j].nodename) == 0)
+			break;
+	}
+	ha_free(shost);
+	if (j == config->nodecount) {
+		return NULL;
+	} else {
+		return (config->nodes+j);
+	}
 }
 
 /*
@@ -4195,6 +4203,9 @@ get_localnodeinfo(void)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.298  2004/03/25 12:27:03  lars
+ * Be case-insensitive when looking up a node in our tables too.
+ *
  * Revision 1.297  2004/03/25 10:17:28  lars
  * Part I: Lower-case hostnames whereever they are coming in. STONITH
  * module audit to follow.
