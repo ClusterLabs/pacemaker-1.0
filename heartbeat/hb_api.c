@@ -1,4 +1,4 @@
-/* $Id: hb_api.c,v 1.121 2004/11/04 18:10:12 gshi Exp $ */
+/* $Id: hb_api.c,v 1.122 2004/11/04 21:33:41 gshi Exp $ */
 /*
  * hb_api: Server-side heartbeat API code
  *
@@ -872,8 +872,6 @@ api_get_uuid (const struct ha_msg* msg, struct ha_msg* resp,
 	}
 	
 	if ((uuid = nodename2uuid(query_nodename)) == NULL){
-		cl_log(LOG_DEBUG, "api_get_uuid: uuid not found"
-		       " in map table for %s", query_nodename);
 		return I_API_RET;
 	}
 	
