@@ -1,4 +1,4 @@
-/* $Id: config.c,v 1.134 2004/11/23 16:26:38 gshi Exp $ */
+/* $Id: config.c,v 1.135 2005/01/03 18:12:10 alan Exp $ */
 /*
  * Parse various heartbeat configuration files...
  *
@@ -55,6 +55,7 @@
 #include <clplumbing/realtime.h>
 #include <clplumbing/netstring.h>
 #include <clplumbing/coredumps.h>
+#include <stonith/stonith.h>
 #include <HBcomm.h>
 #include <hb_module.h>
 #include <hb_api.h>
@@ -79,7 +80,9 @@ static int set_dbgfile(const char *);
 static int set_nice_failback(const char *);
 static int set_auto_failback(const char *);
 static int set_warntime_ms(const char *);
+#if 0
 static int set_stonith_info(const char *);
+#endif
 static int set_stonith_host_info(const char *);
 static int set_realtime_prio(const char *);
 static int add_client_child(const char *);
@@ -143,8 +146,10 @@ static const struct WholeLineDirective {
 	int (*parse) (const char *line);
 }WLdirectives[] =
 {
+#if 0
 	{KEY_STONITH,  	   set_stonith_info}
-,	{KEY_STONITHHOST,  set_stonith_host_info}
+#endif
+	{KEY_STONITHHOST,  set_stonith_host_info}
 ,	{KEY_APIPERM,	   set_api_authorization}
 ,	{KEY_CLIENT_CHILD,  add_client_child}
 };
@@ -1384,7 +1389,7 @@ set_warntime_ms(const char * value)
 	config->warntime_ms = warntime;
 	return(HA_OK);
 }
-
+#if 0
 /*
  * Set Stonith information
  * 
@@ -1448,6 +1453,7 @@ set_stonith_info(const char * value)
 	}
 	return(HA_FAIL);
 }
+#endif
 
 
 /*
@@ -1467,6 +1473,7 @@ set_stonith_host_info(const char * value)
 	char		StonithHost [HOSTLENG];
 	size_t		tlen;
 	int		rc;
+	StonithNVpair*	sparms;
 	
 	vp += strspn(vp, WHITESPACE);
 	tlen = strcspn(vp, WHITESPACE);
@@ -1528,12 +1535,13 @@ set_stonith_host_info(const char * value)
 	
         /* NOTE: this might contain a newline character */
 	/* I'd strip it off, but vp is a const char *   */
+	sparms = stonith1_compat_string_to_NVpair(s, vp);
 
-	switch ((rc=s->s_ops->set_config_info(s, vp))) {
+	switch ((rc=stonith_set_config(s, sparms))) {
 		case S_OK:
 			/* This will have to change to a list !!! */
 			config->stonith = s;
-			s->s_ops->status(s);
+			stonith_get_status(s);
 			return(HA_OK);
 
 		case S_BADCONFIG:
@@ -2076,6 +2084,13 @@ set_corerootdir(const char* value)
 
 /*
  * $Log: config.c,v $
+ * Revision 1.135  2005/01/03 18:12:10  alan
+ * Stonith version 2.
+ * Some compatibility with old versions is still missing.
+ * Basically, you can't (yet) use files for config information.
+ * But, we'll fix that :-).
+ * Right now ssh, null and baytech all work.
+ *
  * Revision 1.134  2004/11/23 16:26:38  gshi
  * rename directive conn_logd_intval to conn_logd_time
  *

@@ -1,4 +1,4 @@
-/* $Id: hb_resource.c,v 1.69 2004/11/17 21:00:14 msoffen Exp $ */
+/* $Id: hb_resource.c,v 1.70 2005/01/03 18:12:10 alan Exp $ */
 /*
  * hb_resource: Linux-HA heartbeat resource management code
  *
@@ -2103,17 +2103,17 @@ Initiate_Reset(Stonith* s, const char * nodename, gboolean doreset)
 		cl_log(LOG_INFO
 		,	"Resetting node %s with [%s]"
 		,	nodename
-		,	s->s_ops->getinfo(s, ST_DEVICEID));
+		,	stonith_get_info(s, ST_DEVICEID));
 	}else{
 		cl_log(LOG_INFO
 		,	"Checking status of STONITH device [%s]"
-		,	s->s_ops->getinfo(s, ST_DEVICEID));
+		,	stonith_get_info(s, ST_DEVICEID));
 	}
 
 	if (doreset) {
-		rc = s->s_ops->reset_req(s, ST_GENERIC_RESET, nodename);
+		rc = stonith_req_reset(s, ST_GENERIC_RESET, nodename);
 	}else{
-		rc = s->s_ops->status(s);
+		rc = stonith_get_status(s);
 	}
 	switch (rc) {
 
@@ -2129,7 +2129,7 @@ Initiate_Reset(Stonith* s, const char * nodename, gboolean doreset)
 	case S_BADHOST:
 		cl_log(LOG_ERR
 		,	"Device %s cannot reset host %s."
-		,	s->s_ops->getinfo(s, ST_DEVICEID)
+		,	stonith_get_info(s, ST_DEVICEID)
 		,	nodename);
 		exitcode = 100;
 		result = T_STONITH_BADHOST;
@@ -2140,7 +2140,7 @@ Initiate_Reset(Stonith* s, const char * nodename, gboolean doreset)
 			cl_log(LOG_ERR, "Host %s not reset!", nodename);
 		}else{
 			cl_log(LOG_ERR, "STONITH device %s not operational!"
-			,	s->s_ops->getinfo(s, ST_DEVICEID));
+			,	stonith_get_info(s, ST_DEVICEID));
 		}
 		exitcode = 1;
 		result = T_STONITH_BAD;
@@ -2416,6 +2416,13 @@ StonithStatProcessName(ProcTrack* p)
 
 /*
  * $Log: hb_resource.c,v $
+ * Revision 1.70  2005/01/03 18:12:10  alan
+ * Stonith version 2.
+ * Some compatibility with old versions is still missing.
+ * Basically, you can't (yet) use files for config information.
+ * But, we'll fix that :-).
+ * Right now ssh, null and baytech all work.
+ *
  * Revision 1.69  2004/11/17 21:00:14  msoffen
  * Moved initialization of standby_running and going_standby to compile on BSD
  *
