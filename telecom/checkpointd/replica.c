@@ -1217,8 +1217,8 @@ SaCkptSectionFind(SaCkptReplicaT* replica, SaCkptSectionIdT* sectionID)
 int
 SaCkptSectionRead(SaCkptReplicaT* replica,
 	SaCkptSectionT* sec,
-	int offset, 
-	int* dataLength,
+	size_t offset, 
+	size_t* dataLength,
 	void** data)
 {
 	if (offset > sec->dataLength[sec->dataIndex]) {
@@ -1270,7 +1270,7 @@ SaCkptSectionRead(SaCkptReplicaT* replica,
 int 
 SaCkptSectionCreate(SaCkptReplicaT* replica, 
 	SaCkptReqSecCrtParamT* secCrtParam, 
-	int dataLength, void* data,
+	size_t dataLength, void* data,
 	SaCkptSectionT** pSec)
 {
 	SaCkptSectionT* sec = NULL;
@@ -1349,7 +1349,7 @@ SaCkptSectionDelete(SaCkptReplicaT* replica,
 int
 SaCkptSectionWrite(SaCkptReplicaT* replica,
 	SaCkptSectionT* sec,
-	int offset, int dataLength, void* data)
+	size_t offset, size_t dataLength, void* data)
 {
 	int	index = 0;
 	
@@ -1388,7 +1388,7 @@ SaCkptSectionWrite(SaCkptReplicaT* replica,
 int
 SaCkptSectionOverwrite(SaCkptReplicaT* replica, 
 	SaCkptSectionT* sec,
-	int dataLength, void* data)
+	size_t dataLength, void* data)
 {
 	int	index = 0;
 

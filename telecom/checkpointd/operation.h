@@ -47,7 +47,7 @@ typedef struct _SaCkptOperationT{
 	SaCkptOpT 	operation;
 	int		paramLength;
 	void*		param;
-	int		dataLength;
+	size_t		dataLength;
 	void*		data;
 
 	/* operation timeout handler tag */

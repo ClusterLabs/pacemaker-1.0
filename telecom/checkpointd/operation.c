@@ -440,7 +440,8 @@ SaCkptOperationNodeFailure(gpointer key,
 	GList* list = NULL;
 	int finished = TRUE;
 
-	int opState = -1;
+	unsigned opState = 0;
+	gboolean statesetyet = FALSE;
 
 	ckptOp = (SaCkptOperationT*)value;
 	replica = ckptOp->replica;
@@ -469,8 +470,9 @@ SaCkptOperationNodeFailure(gpointer key,
 					ckptOp->stateList,
 					(gpointer)state);
 			} else {
-				if (opState == -1) {
+				if (!statesetyet) {
 					opState = state->state;
+					statesetyet=TRUE;
 				} else {
 					if (opState != state->state) {
 						finished = FALSE;

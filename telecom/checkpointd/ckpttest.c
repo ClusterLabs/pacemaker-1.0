@@ -44,7 +44,7 @@ int main(void)
 	SaCkptCheckpointHandleT	checkpoint_handle;
 	SaVersionT 		ckpt_version = {'A', '0', '1'};
 	SaNameT 		ckpt_name = {9, "testckpt"};
-	SaTimeT  		open_timeout = ((SaTimeT)10000000000)*90 ;
+	SaTimeT  		open_timeout = ((SaTimeT)LONG_MAX);
 
 	SaCkptCheckpointCreationAttributesT ckpt_create_attri ;
 	SaCkptIOVectorElementT	io_write;

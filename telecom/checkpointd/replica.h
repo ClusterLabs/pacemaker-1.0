@@ -18,8 +18,8 @@ typedef enum {
 } SaCkptReplicaStateT;
 
 typedef struct _SaCkptStateT {
-	char	nodeName[SA_MAX_NAME_LENGTH];
-	int	state;
+	char		nodeName[SA_MAX_NAME_LENGTH];
+	unsigned	state;
 } SaCkptStateT;
 
 typedef struct _SaCkptReplicaT {
@@ -29,7 +29,7 @@ typedef struct _SaCkptReplicaT {
 
 	/* Section restrictions */
 	int	maxSectionNumber;
-	int	maxSectionSize;
+	size_t	maxSectionSize;
 	int	maxSectionIDSize;
 	
 	/* retention duration in seconds */
@@ -172,7 +172,7 @@ typedef struct _SaCkptSectionT{
 	/* 
 	 * the real data 
 	 */
-	int	dataLength[2];
+	size_t	dataLength[2];
 	void*	data[2];
 
 	/* 
@@ -253,15 +253,15 @@ int SaCkptReplicaRead(SaCkptReplicaT*,
 	int*, void**, int, void*);
 
 int SaCkptSectionRead(SaCkptReplicaT*,	SaCkptSectionT*,
-	int, int*, void**);
+	size_t, size_t*, void**);
 
 int SaCkptSectionCreate(SaCkptReplicaT*, 
-	SaCkptReqSecCrtParamT*, int, void*, SaCkptSectionT**);
+	SaCkptReqSecCrtParamT*, size_t, void*, SaCkptSectionT**);
 int SaCkptSectionDelete(SaCkptReplicaT*, SaCkptSectionIdT*);
 int SaCkptSectionWrite(SaCkptReplicaT*,	SaCkptSectionT*, 
-	int, int, void*);
+	size_t, size_t, void*);
 int SaCkptSectionOverwrite(SaCkptReplicaT*, SaCkptSectionT*, 
-	int, void*);
+	size_t, void*);
 
 SaCkptSectionT* SaCkptSectionFind(SaCkptReplicaT*, SaCkptSectionIdT*);
 

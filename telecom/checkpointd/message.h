@@ -122,7 +122,7 @@ typedef struct _SaCkptMessageT {
 	
 	int		paramLength;
 	void*		param;
-	int		dataLength;
+	size_t		dataLength;
 	void*		data;
 
 	SaErrorT	retVal;
