@@ -1,4 +1,4 @@
-static const char * _ha_msg_c_Id = "$Id: ha_msg.c,v 1.48 2004/01/21 11:34:14 horms Exp $";
+/* $Id: ha_msg.c,v 1.49 2004/02/17 22:11:57 lars Exp $ */
 /*
  * Heartbeat messaging object.
  *
@@ -56,9 +56,6 @@ ha_msg_new(nfields)
 	struct ha_msg *	ret;
 	int	nalloc;
 
-	(void)_heartbeat_h_Id;
-	(void)_ha_msg_c_Id;
-	(void)_ha_msg_h_Id;
 	ret = MALLOCT(struct ha_msg);
 	if (ret) {
 		ret->nfields = 0;
@@ -741,6 +738,9 @@ main(int argc, char ** argv)
 #endif
 /*
  * $Log: ha_msg.c,v $
+ * Revision 1.49  2004/02/17 22:11:57  lars
+ * Pet peeve removal: _Id et al now gone, replaced with consistent Id header.
+ *
  * Revision 1.48  2004/01/21 11:34:14  horms
  * - Replaced numerous malloc + strcpy/strncpy invocations with strdup
  *   * This usually makes the code a bit cleaner

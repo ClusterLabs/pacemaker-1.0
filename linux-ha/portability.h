@@ -1,3 +1,4 @@
+/* $Id: portability.h,v 1.32 2004/02/17 22:12:00 lars Exp $ */
 #ifndef PORTABILITY_H
 #  define PORTABILITY_H
 

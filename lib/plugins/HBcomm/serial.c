@@ -1,5 +1,4 @@
-const static char _serial_c_Id [] = "$Id: serial.c,v 1.29 2004/01/21 11:34:15 horms Exp $";
-
+/* $Id: serial.c,v 1.30 2004/02/17 22:11:59 lars Exp $ */
 /*
  * Linux-HA serial heartbeat code
  *
@@ -197,9 +196,6 @@ serial_isping (void) {
 static int
 serial_init (void)
 {
-	(void)_serial_c_Id;
-	(void)_heartbeat_h_Id;
-	(void)_ha_msg_h_Id;	/* ditto */
 	lastserialport = NULL;
 
 	/* This eventually ought be done through the configuration API */
@@ -677,6 +673,9 @@ ttygets(char * inbuf, int length, struct serial_private *tty)
 }
 /*
  * $Log: serial.c,v $
+ * Revision 1.30  2004/02/17 22:11:59  lars
+ * Pet peeve removal: _Id et al now gone, replaced with consistent Id header.
+ *
  * Revision 1.29  2004/01/21 11:34:15  horms
  * - Replaced numerous malloc + strcpy/strncpy invocations with strdup
  *   * This usually makes the code a bit cleaner

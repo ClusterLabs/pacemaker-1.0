@@ -1,3 +1,4 @@
+/* $Id: ccm.c,v 1.38 2004/02/17 22:12:00 lars Exp $ */
 /* 
  * ccm.c: Consensus Cluster Service Program 
  *
@@ -3957,10 +3958,6 @@ ccm_initialize()
 	ll_cluster_t*	hb_fd;
 	ccm_t		*ccmret;
 	int		facility;
-
-
-	(void)_heartbeat_h_Id;
-	(void)_ha_msg_h_Id;
 
 	if(global_debug) {
 		cl_log(LOG_DEBUG, "========================== Starting CCM ===="

@@ -1,3 +1,4 @@
+/* $Id: ccm.h,v 1.20 2004/02/17 22:12:00 lars Exp $ */
 /*
  * ccm.h: definitions Consensus Cluster Manager internal header
  *				file

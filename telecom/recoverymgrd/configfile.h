@@ -1,3 +1,4 @@
+/* $Id: configfile.h,v 1.3 2004/02/17 22:12:02 lars Exp $ */
 /*
  *
  *

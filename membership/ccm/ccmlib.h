@@ -1,3 +1,4 @@
+/* $Id: ccmlib.h,v 1.14 2004/02/17 22:12:00 lars Exp $ */
 /*
  * ccmlib.h: internal definations for ccm library files.
  *

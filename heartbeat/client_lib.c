@@ -1,3 +1,4 @@
+/* $Id: client_lib.c,v 1.48 2004/02/17 22:11:57 lars Exp $ */
 /* 
  * client_lib: heartbeat API client side code
  *
@@ -212,9 +213,6 @@ static struct ha_msg*
 hb_api_boilerplate(const char * apitype)
 {
 	struct ha_msg*	msg;
-
-	(void)_heartbeat_h_Id;
-	(void)_ha_msg_h_Id;
 
 	if ((msg = ha_msg_new(4)) == NULL) {
 		ha_api_log(LOG_ERR, "boilerplate: out of memory");

@@ -1,3 +1,4 @@
+/* $Id: hb_api.c,v 1.95 2004/02/17 22:11:57 lars Exp $ */
 /*
  * hb_api: Server-side heartbeat API code
  *
@@ -183,12 +184,6 @@ api_heartbeat_monitor(struct ha_msg *msg, int msgtype, const char *iface)
 	const char*	clientid;
 	client_proc_t*	client;
 	client_proc_t*	nextclient;
-
-	(void)_heartbeat_h_Id;
-	(void)_ha_msg_h_Id;
-	(void)_hb_config_h_Id;
-	(void)_heartbeat_private_h_Id;
-
 
 	/* This kicks out most messages, since debug clients are rare */
 

@@ -1,3 +1,4 @@
+/* $Id: client.c,v 1.6 2004/02/17 22:12:02 lars Exp $ */
 /* 
  * client.c: 
  *
@@ -63,9 +64,6 @@ SaCkptClientDelete(SaCkptClientT** pClient)
 {
 	SaCkptClientT* client = *pClient;
 
-	(void)_ha_msg_h_Id;
-	(void)_heartbeat_h_Id;
-	
 	cl_log(LOG_INFO, 
 		"Client %d deleted, PID %d, ThreadID %d",
 		client->clientHandle,

@@ -1,3 +1,4 @@
+/* $Id: ckpttest.c,v 1.7 2004/02/17 22:12:02 lars Exp $ */
 /* 
  * ckpttest.c: data checkpoint service test program
  *

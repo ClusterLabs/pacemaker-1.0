@@ -1,3 +1,4 @@
+/* $Id: heartbeat.h,v 1.40 2004/02/17 22:11:58 lars Exp $ */
 /*
  * heartbeat.h: core definitions for the Linux-HA heartbeat program
  *
@@ -20,8 +21,6 @@
  */
 #ifndef _HEARTBEAT_H
 #	define _HEARTBEAT_H 1
-
-static const char * _heartbeat_h_Id = "$Id: heartbeat.h,v 1.39 2004/01/21 05:54:20 horms Exp $";
 
 #ifdef SYSV
 #	include <sys/termio.h>

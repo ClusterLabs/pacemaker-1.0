@@ -1,3 +1,4 @@
+/* $Id: haclient.h,v 1.5 2004/02/17 22:12:01 lars Exp $ */
 #ifndef __libhasubagent_h__
 #define __libhasubagent_h__
 

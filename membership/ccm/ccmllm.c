@@ -1,3 +1,4 @@
+/* $Id: ccmllm.c,v 1.5 2004/02/17 22:12:00 lars Exp $ */
 /* 
  * ccmllm.c: Low Level membership routines.
  *
@@ -165,8 +166,6 @@ llm_is_valid_node(llm_info_t *llm,
 void 
 llm_init(llm_info_t *llm)
 {
-	(void)_heartbeat_h_Id; /* keeping compiler happy */
-	(void)_ha_msg_h_Id; /* keeping compiler happy */
 	LLM_SET_NODECOUNT(llm,0);
 	LLM_SET_MYNODE(llm,-1);
 	return;

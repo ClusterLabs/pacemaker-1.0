@@ -1,4 +1,4 @@
-static const char _module_c_Id [] = "$Id: module.c,v 1.53 2003/07/01 02:36:22 alan Exp $";
+/* $Id: module.c,v 1.54 2004/02/17 22:11:57 lars Exp $ */
 /*
  * module: Dynamic module support code
  *
@@ -97,12 +97,6 @@ module_init(void)
 	int errors = 0;
 #endif
 	PIL_rc	rc;
-
-	(void)_module_c_Id;
-	(void)_heartbeat_h_Id;
-	(void)_hb_signal_h_Id;
-	(void)_hb_config_h_Id;
-	(void)_ha_msg_h_Id;
 
 	/* Perform the init only once */
 	if (initialised) {

@@ -1,3 +1,4 @@
+/* $Id: lock.c,v 1.15 2004/02/17 22:11:57 lars Exp $ */
 #include <portability.h>
 
 #include <stdio.h>
@@ -82,8 +83,6 @@ ttylock(const char *serial_device)
 {
 	char rawname[64];
 
-	(void)_ha_msg_h_Id;
-	(void)_heartbeat_h_Id;
 	raw_device (serial_device, rawname, sizeof(rawname));
 	return(DoLock("LCK..", rawname));
 }

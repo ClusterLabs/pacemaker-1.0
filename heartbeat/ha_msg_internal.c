@@ -1,4 +1,4 @@
-static const char * _ha_msg_c_Id = "$Id: ha_msg_internal.c,v 1.39 2003/12/19 17:28:01 alan Exp $";
+/* $Id: ha_msg_internal.c,v 1.40 2004/02/17 22:11:57 lars Exp $ */
 /*
  * ha_msg_internal: heartbeat internal messaging functions
  *
@@ -72,11 +72,6 @@ add_control_msg_fields(struct ha_msg* ret)
 	const char *	type;
 	int		j;
 	int		noseqno;
-
-	(void)_ha_msg_c_Id;
-	(void)_heartbeat_h_Id;
-	(void)_ha_msg_h_Id;
-	(void)_heartbeat_private_h_Id;
 
 	if ((type = ha_msg_value(ret, F_TYPE)) == NULL) {
 		ha_log(LOG_ERR, "No type (add_control_msg_fields): ");
@@ -363,6 +358,9 @@ main(int argc, char ** argv)
 #endif
 /*
  * $Log: ha_msg_internal.c,v $
+ * Revision 1.40  2004/02/17 22:11:57  lars
+ * Pet peeve removal: _Id et al now gone, replaced with consistent Id header.
+ *
  * Revision 1.39  2003/12/19 17:28:01  alan
  * Incorporated a patch from Guochun Shi <gshi@ncsa.uiuc.edu> to allow
  * the authentication facility to be able to authenticate binary messages.

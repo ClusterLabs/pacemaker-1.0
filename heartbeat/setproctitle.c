@@ -1,5 +1,4 @@
-const static char * _setproctitle_c_Id = "$Id: setproctitle.c,v 1.10 2004/01/21 11:34:15 horms Exp $";
-
+/* $Id: setproctitle.c,v 1.11 2004/02/17 22:11:57 lars Exp $ */
 /*
  * setproctitle.c
  *
@@ -152,12 +151,6 @@ error_environ:
 	}
 	ha_free(environ);
 	return -1;
-
-	/* Have to use these somewhere */
-	(void)_setproctitle_h_Id;
-	(void)_setproctitle_c_Id;
-	(void)_heartbeat_h_Id;
-	(void)_ha_msg_h_Id;
 }    
 
 void set_proc_title(const char *fmt,...)

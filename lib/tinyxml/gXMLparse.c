@@ -1,3 +1,4 @@
+/* $Id: gXMLparse.c,v 1.5 2004/02/17 22:12:00 lars Exp $ */
 /* gXMLparse.c : implementation file for gXML parser for Linux-HA
  * 
  * Copyright (C) 2001 Tom Darrow <tdarrow@epsnorthwest.com>

@@ -1,3 +1,4 @@
+/* $Id: recmgr.c,v 1.2 2004/02/17 22:11:59 lars Exp $ */
 /*
  * recmgr.c: Recovery manager client plug-in implementation
  * 

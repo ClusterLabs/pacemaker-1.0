@@ -1,3 +1,4 @@
+/* $Id: api_test.c,v 1.48 2004/02/17 22:11:57 lars Exp $ */
 /* 
  * api_test: Test program for testing the heartbeat API
  *
@@ -103,8 +104,6 @@ main(int argc, char ** argv)
 	char *		ctmp;
 	const char *	cval;
 	int		j;
-
-	(void)_ha_msg_h_Id;
 
 	cl_log_set_entity(argv[0]);
 	cl_log_enable_stderr(TRUE);

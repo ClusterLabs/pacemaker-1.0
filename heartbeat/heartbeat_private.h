@@ -1,3 +1,4 @@
+/* $Id: heartbeat_private.h,v 1.7 2004/02/17 22:11:57 lars Exp $ */
 /*
  * heartbeat_private.h: definitions for the Linux-HA heartbeat program
  * that are defined in heartbeat.c and are used by other .c files
@@ -35,8 +36,6 @@
 
 #include <clplumbing/proctrack.h>
 #include <hb_proc.h>
-
-static const char * _heartbeat_private_h_Id = "$Id: heartbeat_private.h,v 1.6 2003/05/22 23:13:26 alan Exp $";
 
 extern const char *	cmdname;
 extern int		nice_failback;

@@ -1,4 +1,4 @@
-static const char * _ha_malloc_c_id = "$Id: ha_malloc.c,v 1.21 2004/01/21 00:54:29 horms Exp $";
+/* $Id: ha_malloc.c,v 1.22 2004/02/17 22:11:57 lars Exp $ */
 #include <portability.h>
 #include <unistd.h>
 #include <stdlib.h>
@@ -175,10 +175,6 @@ ha_malloc(size_t size)
 	int			numbuck = NOBUCKET;
 	struct ha_bucket*	buckptr = NULL;
 	void*			ret;
-
-	(void)_heartbeat_h_Id;
-	(void)_ha_msg_h_Id;
-	(void)_ha_malloc_c_id;
 
 	if (!ha_malloc_inityet) {
 		ha_malloc_init();

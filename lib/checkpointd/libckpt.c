@@ -1,3 +1,4 @@
+/* $Id: libckpt.c,v 1.5 2004/02/17 22:11:58 lars Exp $ */
 /* 
  * ckptlib.c: data checkpoint API library
  *

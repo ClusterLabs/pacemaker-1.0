@@ -1,3 +1,4 @@
+/* $Id: ha_msg.h,v 1.25 2004/02/17 22:11:58 lars Exp $ */
 /*
  * Intracluster message object (struct ha_msg)
  *
@@ -22,7 +23,6 @@
 
 #ifndef _HA_MSG_H
 #	define _HA_MSG_H 1
-static const char * _ha_msg_h_Id = "$Id: ha_msg.h,v 1.24 2003/11/20 03:13:55 alan Exp $";
 #include <stdio.h>
 #include <clplumbing/ipc.h>
 

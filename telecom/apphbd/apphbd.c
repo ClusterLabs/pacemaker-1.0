@@ -1,3 +1,4 @@
+/* $Id: apphbd.c,v 1.52 2004/02/17 22:12:01 lars Exp $ */
 /*
  * apphbd:	application heartbeat daemon
  *

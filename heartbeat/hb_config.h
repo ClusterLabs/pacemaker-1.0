@@ -1,4 +1,4 @@
-const static char * _hb_config_h_Id = "$Id: hb_config.h,v 1.2 2003/07/01 02:36:22 alan Exp $";
+/* $Id: hb_config.h,v 1.3 2004/02/17 22:11:57 lars Exp $ */
 /*
  * Parse various heartbeat configuration files...
  *

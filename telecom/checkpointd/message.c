@@ -1,3 +1,4 @@
+/* $Id: message.c,v 1.9 2004/02/17 22:12:02 lars Exp $ */
 /* 
  * message.c
  *
@@ -129,9 +130,6 @@ SaCkptClusterMsgProcess()
 
 	SaErrorT	retVal;
 
-	(void)_ha_msg_h_Id;
-	(void)_heartbeat_h_Id;
-	
 	ckptMsg = SaCkptMessageReceive();
 	if (ckptMsg == NULL) {
 		return FALSE;

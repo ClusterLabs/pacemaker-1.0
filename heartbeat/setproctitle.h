@@ -1,5 +1,4 @@
-const static char * _setproctitle_h_Id = "$Id: setproctitle.h,v 1.3 2004/01/21 11:34:15 horms Exp $";
-
+/* $Id: setproctitle.h,v 1.4 2004/02/17 22:11:57 lars Exp $ */
 /*
  * setproctitle.h
  *

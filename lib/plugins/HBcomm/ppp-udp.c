@@ -1,4 +1,4 @@
-static const char _ppp_udp_Id [] = "$Id: ppp-udp.c,v 1.14 2004/01/21 11:34:15 horms Exp $";
+/* $Id: ppp-udp.c,v 1.15 2004/02/17 22:11:59 lars Exp $ */
 /*
  *	ppp-udp.c:	Implements UDP over PPP for bidirectional ring
  *			heartbeats.
@@ -200,9 +200,6 @@ static int hb_dev_isping (void) {
 static int
 hb_dev_init(void)
 {
-	(void)_heartbeat_h_Id;
-	(void)_ppp_udp_Id;
-	(void)_ha_msg_h_Id;
 	udpport = UDPPORT;
 	last_udp_ppp_interface = NULL;
 	return(HA_OK);
@@ -1225,6 +1222,9 @@ ppp_localdie(void)
 }
 /*
  * $Log: ppp-udp.c,v $
+ * Revision 1.15  2004/02/17 22:11:59  lars
+ * Pet peeve removal: _Id et al now gone, replaced with consistent Id header.
+ *
  * Revision 1.14  2004/01/21 11:34:15  horms
  * - Replaced numerous malloc + strcpy/strncpy invocations with strdup
  *   * This usually makes the code a bit cleaner

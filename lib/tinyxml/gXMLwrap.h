@@ -1,3 +1,4 @@
+/* $Id: gXMLwrap.h,v 1.2 2004/02/17 22:12:00 lars Exp $ */
 // gXMLwrap.h
 // for the gXML library
 // library of functions to wrap and unwrap data using the gXML_wrapper

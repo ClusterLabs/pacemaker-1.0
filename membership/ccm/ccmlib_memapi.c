@@ -1,3 +1,4 @@
+/* $Id: ccmlib_memapi.c,v 1.17 2004/02/17 22:12:00 lars Exp $ */
 /* 
  * ccmlib_memapi.c: Consensus Cluster Membership API
  *

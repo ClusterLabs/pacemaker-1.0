@@ -1,3 +1,4 @@
+/* $Id: ucd_util_funcs.h,v 1.2 2004/02/17 22:12:01 lars Exp $ */
 /*
  *  util_funcs.h:  utilitiy functions for extensible groups.
  */

@@ -1,3 +1,4 @@
+/* $Id: auth.c,v 1.15 2004/02/17 22:11:57 lars Exp $ */
 /*
  * auth.c: Authentication code for heartbeat
  *
@@ -46,9 +47,6 @@ struct HBAuthOps *
 findauth(const char * type, char ** tptr)
 {
 	struct HBAuthOps*	ret;
-
-	(void)_heartbeat_h_Id;
-	(void)_ha_msg_h_Id;
 
 	/* Look and see if we already have the module loaded in memory */
 	if (!g_hash_table_lookup_extended(AuthFunctions, type
@@ -297,6 +295,9 @@ parse_authfile(void)
 }
 /*
  * $Log: auth.c,v $
+ * Revision 1.15  2004/02/17 22:11:57  lars
+ * Pet peeve removal: _Id et al now gone, replaced with consistent Id header.
+ *
  * Revision 1.14  2004/02/10 05:32:43  alan
  * Suppress unloading authentication modules for now.
  *

@@ -1,3 +1,4 @@
+/* $Id: response.c,v 1.6 2004/02/17 22:12:02 lars Exp $ */
 /* 
  * response.c
  *
@@ -71,9 +72,6 @@ SaCkptResponseSend(SaCkptResponseT** pCkptResp)
 
 	char* strErr = NULL;
 	char* strReq = NULL;
-
-	(void)_ha_msg_h_Id;
-	(void)_heartbeat_h_Id;
 
 	if (saCkptService->flagVerbose) {
 		strReq = SaCkptReq2String(ckptReq->clientRequest->req);

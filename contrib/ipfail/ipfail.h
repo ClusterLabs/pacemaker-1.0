@@ -1,3 +1,4 @@
+/* $Id: ipfail.h,v 1.5 2004/02/17 22:11:56 lars Exp $ */
 /* ipfail.h: ipfail header file
  *
  * Copyright (C) 2003 Kevin Dwyer <kevin@pheared.net>

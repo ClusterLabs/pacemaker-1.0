@@ -1,3 +1,4 @@
+/* $Id: generic.c,v 1.19 2004/02/17 22:11:59 lars Exp $ */
 /*
  * 
  * Generic interface (implementation) manager

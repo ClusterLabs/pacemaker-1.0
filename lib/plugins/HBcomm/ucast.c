@@ -1,4 +1,4 @@
-static const char _ucast_Id [] = "$Id: ucast.c,v 1.17 2004/01/21 11:34:15 horms Exp $";
+/* $Id: ucast.c,v 1.18 2004/02/17 22:11:59 lars Exp $ */
 /*
  * Adapted from alanr's UDP broadcast heartbeat bcast.c by Stéphane Billiart
  *	<stephane@reefedge.com>
@@ -265,10 +265,6 @@ static int ucast_isping(void)
 static int ucast_init(void)
 {
 	struct servent *service;
-
-	(void)_heartbeat_h_Id;
-	(void)_ha_msg_h_Id;
-	(void)_ucast_Id;
 
 	g_assert(OurImports != NULL);
 

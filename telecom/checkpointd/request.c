@@ -1,3 +1,4 @@
+/* $Id: request.c,v 1.6 2004/02/17 22:12:02 lars Exp $ */
 /* 
  * request.c: 
  *
@@ -62,9 +63,6 @@ gboolean
 SaCkptRequestProcess(IPC_Channel* clientChannel)
 {
 	SaCkptRequestT 		*ckptReq = NULL;
-
-	(void)_ha_msg_h_Id;
-	(void)_heartbeat_h_Id;
 
 	ckptReq = SaCkptRequestReceive(clientChannel);
 	if (ckptReq != NULL) {

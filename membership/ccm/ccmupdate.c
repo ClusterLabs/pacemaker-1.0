@@ -1,3 +1,4 @@
+/* $Id: ccmupdate.c,v 1.8 2004/02/17 22:12:00 lars Exp $ */
 /* 
  * update.c: functions that track the votes during the voting protocol
  *
@@ -510,8 +511,5 @@ update_strcreate(ccm_update_t *tab,
 void
 update_strdelete(char *memlist)
 {
-	(void)_heartbeat_h_Id; /* keeping compiler happy */
-	(void)_ha_msg_h_Id; /* keeping compiler happy */
-
 	g_free(memlist);
 }

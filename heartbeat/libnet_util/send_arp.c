@@ -1,4 +1,4 @@
-const static char * _send_arp_c = "$Id: send_arp.c,v 1.7 2004/01/22 01:53:35 alan Exp $";
+/* $Id: send_arp.c,v 1.8 2004/02/17 22:11:57 lars Exp $ */
 /* 
  * send_arp
  * 
@@ -102,7 +102,6 @@ main(int argc, char *argv[])
 	char    pidfilenamebuf[64];
 	char    *pidfilename = NULL;
 
-	(void)_send_arp_c;
 	CL_SIGINTERRUPT(SIGTERM, 1);
 	CL_SIGNAL(SIGTERM, byebye);
 
@@ -546,6 +545,9 @@ write_pid_file(const char *pidfilename)
 
 /*
  * $Log: send_arp.c,v $
+ * Revision 1.8  2004/02/17 22:11:57  lars
+ * Pet peeve removal: _Id et al now gone, replaced with consistent Id header.
+ *
  * Revision 1.7  2004/01/22 01:53:35  alan
  * Changed send_arp to exit(0) when killed by SIGTERM.
  *

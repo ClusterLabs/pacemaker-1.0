@@ -1,3 +1,4 @@
+/* $Id: ccmgraph.c,v 1.9 2004/02/17 22:12:00 lars Exp $ */
 /* 
  * ccmgraph.c: Keeps track of the connectivity within the cluster members
  *		to derive the largest totally connected subgraph.
@@ -362,9 +363,6 @@ graph_init()
 {
 	int i;
 	graph_t *gr;
-
-	(void)_heartbeat_h_Id; /* keeping compiler happy */
-	(void)_ha_msg_h_Id; /* keeping compiler happy */
 
 	if((gr = (graph_t *)g_malloc(sizeof(graph_t))) == NULL)
 		return NULL;

@@ -1,5 +1,4 @@
-const static char * _heartbeat_c_Id = "$Id: heartbeat.c,v 1.291 2004/02/17 21:10:30 alan Exp $";
-
+/* $Id: heartbeat.c,v 1.292 2004/02/17 22:11:57 lars Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -443,14 +442,6 @@ init_procinfo()
 {
 	int	ipcid;
 	struct pstat_shm *	shm;
-
-	(void)_heartbeat_c_Id;
-	(void)_heartbeat_h_Id;
-	(void)_heartbeat_private_h_Id;
-	(void)_ha_msg_h_Id;
-	(void)_hb_signal_h_Id;
-	(void)_hb_config_h_Id;
-	(void)_setproctitle_h_Id;
 
 	if ((ipcid = shmget(IPC_PRIVATE, sizeof(*procinfo), 0666)) < 0) {
 		cl_perror("Cannot shmget for process status");
@@ -4033,9 +4024,6 @@ IncrGeneration(seqno_t * generation)
 	int		fd;
 	int		flags = 0;
 
-	(void)_ha_msg_h_Id;
-	(void)_heartbeat_h_Id;
-
 	if ((fd = open(HB_VERS_FILE, O_RDONLY)) < 0
 	||	read(fd, buf, sizeof(buf)) < 1) {
 		cl_log(LOG_WARNING, "No Previous generation - starting at 1");
@@ -4117,6 +4105,9 @@ get_localnodeinfo(void)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.292  2004/02/17 22:11:57  lars
+ * Pet peeve removal: _Id et al now gone, replaced with consistent Id header.
+ *
  * Revision 1.291  2004/02/17 21:10:30  alan
  * I'm removing this patch:
  *   When a node shuts down gracefully, we now mark it dead instead of

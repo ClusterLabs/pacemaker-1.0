@@ -1,6 +1,5 @@
+/* $Id: proc_ha.c,v 1.8 2004/02/17 22:12:01 lars Exp $ */
 /*
- * $Id: proc_ha.c,v 1.7 2003/02/07 08:37:18 horms Exp $
- *
  * Linux-HA /proc interface
  *
  * Author(s): Volker Wiegand <wiegand@suse.de>
@@ -946,6 +945,9 @@ void cleanup_module(void)
 
 /****************************************************
  * $Log: proc_ha.c,v $
+ * Revision 1.8  2004/02/17 22:12:01  lars
+ * Pet peeve removal: _Id et al now gone, replaced with consistent Id header.
+ *
  * Revision 1.7  2003/02/07 08:37:18  horms
  * Removed inclusion of portability.h from .h files
  * so that it does not need to be installed.

@@ -1,3 +1,4 @@
+/* $Id: hb_signal.h,v 1.4 2004/02/17 22:11:57 lars Exp $ */
 /*
  * hb_signal.h: signal handling routines to be used by Heartbeat
  *
@@ -24,9 +25,6 @@
 
 #ifndef _HB_SIGNAL_H
 #define _HB_SIGNAL_H
-
-static const char * _hb_signal_h_Id = "$Id: hb_signal.h,v 1.3 2003/04/15 23:06:53 alan Exp $";
-
 
 #include <clplumbing/cl_signal.h>
 

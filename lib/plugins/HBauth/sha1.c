@@ -1,3 +1,4 @@
+/* $Id: sha1.c,v 1.11 2004/02/17 22:11:59 lars Exp $ */
 /*
 SHA-1 in C
 By Steve Reid <steve@edmweb.com>

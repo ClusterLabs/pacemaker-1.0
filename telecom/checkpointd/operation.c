@@ -1,3 +1,4 @@
+/* $Id: operation.c,v 1.8 2004/02/17 22:12:02 lars Exp $ */
 /* 
  * operation.c: 
  *
@@ -71,9 +72,6 @@ SaCkptOperationTimeout(gpointer timeout_data)
 	SaCkptMessageT* ckptMsg = NULL;
 	
 	char* strOp = NULL;
-
-	(void)_ha_msg_h_Id;
-	(void)_heartbeat_h_Id;
 
 	strOp = SaCkptOp2String(ckptOp->operation);
 	cl_log(LOG_INFO, "Replica %s operation %d (%s) timeout",

@@ -1,3 +1,4 @@
+/* $Id: recoverymgr.c,v 1.3 2004/02/17 22:12:00 lars Exp $ */
 /*
  * recoverymgr.c: recovery manager client library code.
  *

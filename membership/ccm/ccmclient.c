@@ -1,3 +1,4 @@
+/* $Id: ccmclient.c,v 1.12 2004/02/17 22:12:00 lars Exp $ */
 /* 
  * client.c: Consensus Cluster Client tracker
  *
@@ -70,10 +71,6 @@ static void
 send_message(ccm_client_t *ccm_client, ccm_ipc_t *msg)
 {
 	struct IPC_CHANNEL *ipc_client = ccm_client->ccm_ipc_client;
-
-
-	(void)_heartbeat_h_Id; /* Make the compiler happy */
-	(void)_ha_msg_h_Id; /* Make the compiler happy */
 
 	++(msg->count);
 

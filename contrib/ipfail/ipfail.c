@@ -1,3 +1,4 @@
+/* $Id: ipfail.c,v 1.25 2004/02/17 22:11:56 lars Exp $ */
 /* ipfail: IP Failover plugin for Linux-HA
  *
  * Copyright (C) 2002-2003 Kevin Dwyer <kevin@pheared.net>
@@ -79,8 +80,6 @@ main(int argc, char **argv)
 	char *bname, *parameter;
 	int apifd;
 
-	(void)_heartbeat_h_Id;
-	(void)_ha_msg_h_Id;
 	cl_log_enable_stderr(TRUE);
 	
 	/* Get the name of the binary for logging purposes */

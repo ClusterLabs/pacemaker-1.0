@@ -1,3 +1,4 @@
+/* $Id: ccmversion.c,v 1.5 2004/02/17 22:12:00 lars Exp $ */
 /* 
  * ccmversion.c: routines that handle information while in the version 
  * request state
@@ -53,8 +54,6 @@ version_timeout_expired(ccm_version_t *ver, longclock_t timeout)
 void
 version_reset(ccm_version_t *ver)
 {
-	(void)_heartbeat_h_Id; /* keeping compiler happy */
-	(void)_ha_msg_h_Id; /* keeping compiler happy */
 	VERSION_SET_TIMER(ver,ccm_get_time());
 	VERSION_RESET_TRIES(ver);
 	VERSION_SET_NRESP(ver,0);

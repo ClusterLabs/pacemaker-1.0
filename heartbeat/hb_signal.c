@@ -1,3 +1,4 @@
+/* $Id: hb_signal.c,v 1.10 2004/02/17 22:11:57 lars Exp $ */
 /*
  * hb_signal.c: signal handling routines to be used by Heartbeat
  *
@@ -21,9 +22,6 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
  */
-
-static const char * _hb_signal_c_Id = "$Id: hb_signal.c,v 1.9 2003/04/15 23:06:53 alan Exp $";
-
 
 #define _USE_BSD
 #include <portability.h>
@@ -122,17 +120,6 @@ hb_signal_signal_all(int sig)
 	}
 
 	return;
-
-	/* We have to use these somwhere, but we have no use for them */
-	{       
-		(void)_heartbeat_h_Id; 
-		(void)_ha_msg_h_Id;
-		(void)_hb_signal_h_Id;
-		(void)_hb_signal_c_Id;
-		(void)_hb_config_h_Id;
-		(void)_heartbeat_private_h_Id;
-		(void)_setproctitle_h_Id;
-	}
 }
 
 

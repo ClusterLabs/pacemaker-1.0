@@ -1,3 +1,4 @@
+/* $Id: hasubagent.c,v 1.11 2004/02/17 22:12:01 lars Exp $ */
 #include <portability.h>
 
 #include <stdio.h>
@@ -103,7 +104,6 @@ main(int argc, char **argv)
 	/* hasubagent will be used to read hasubagent.conf files. */
 	init_snmp(LINUXHA_SUBAGENT_ENTITY_NAME);
 
-	(void) _ha_msg_h_Id;
 	if ((ret = init_heartbeat()) != HA_OK) {
                 return -1;
         }

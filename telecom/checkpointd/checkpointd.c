@@ -1,3 +1,4 @@
+/* $Id: checkpointd.c,v 1.12 2004/02/17 22:12:02 lars Exp $ */
 /* 
  * checkpointd.c: data checkpoint service
  *
@@ -286,9 +287,6 @@ main(int argc, char ** argv)
 		{0, 0, 0, 0}
 	};
 #endif
-
-	(void)_ha_msg_h_Id;
-	(void)_heartbeat_h_Id;
 
 	saCkptService = (SaCkptServiceT*)SaCkptMalloc(sizeof(SaCkptServiceT));
 	if (saCkptService == NULL) {

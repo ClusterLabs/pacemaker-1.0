@@ -1,4 +1,4 @@
-static const char _findif_c [] = "$Id: findif.c,v 1.32 2004/01/20 10:16:08 horms Exp $";
+/* $Id: findif.c,v 1.33 2004/02/17 22:11:57 lars Exp $ */
 /*
  * findif.c:	Finds an interface which can route a given address
  *
@@ -452,7 +452,6 @@ main(int argc, char ** argv) {
 	unsigned long	best_netmask = INT_MAX;
 	int		argerrs	= 0;
 
-	(void)_findif_c;
 	cmdname=argv[0];
 
 
@@ -678,6 +677,9 @@ ff02::%lo0/32                     fe80::1%lo0                   UC          lo0
 
 /* 
  * $Log: findif.c,v $
+ * Revision 1.33  2004/02/17 22:11:57  lars
+ * Pet peeve removal: _Id et al now gone, replaced with consistent Id header.
+ *
  * Revision 1.32  2004/01/20 10:16:08  horms
  * Should be strncpy not strncmp
  *

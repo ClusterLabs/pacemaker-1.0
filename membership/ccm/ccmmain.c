@@ -1,3 +1,4 @@
+/* $Id: ccmmain.c,v 1.16 2004/02/17 22:12:00 lars Exp $ */
 /* 
  * ccm.c: Consensus Cluster Service Program 
  *
@@ -263,7 +264,4 @@ main(int argc, char **argv)
 	free(tmp_cmdname);
 	/*this program should never terminate,unless killed*/
 	return(1);
-
-	(void)_heartbeat_h_Id; /* keeping compiler happy */
-	(void)_ha_msg_h_Id; /* keeping compiler happy */
 }

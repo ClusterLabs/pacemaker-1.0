@@ -1,3 +1,4 @@
+/* $Id: gXMLparse.h,v 1.6 2004/02/17 22:12:00 lars Exp $ */
 /* gXMLparse.h : header file for the gXML recursive descent parser for Linux-HA
  * Copyright (C) 2001 Tom Darrow <tdarrow@epsnorthwest.com>
  *  Bryan Weatherly <bryanweatherly@yahoo.com>

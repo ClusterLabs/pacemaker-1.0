@@ -1,3 +1,4 @@
+/* $Id: ccmmisc.c,v 1.16 2004/02/17 22:12:00 lars Exp $ */
 /* 
  * ccmmisc.c: Miscellaneous Consensus Cluster Service functions
  *
@@ -34,9 +35,6 @@ ccm_str2bitmap(const char *memlist, unsigned char **bitlist)
 {
 	size_t str_len =  strlen(memlist);
 	int    outbytes = B64_maxbytelen(str_len);
-
-	(void)_heartbeat_h_Id; /* Make compiler happy */
-	(void)_ha_msg_h_Id; /* Make compiler happy */
 
 	if (str_len == 0) {
 	   	return bitmap_create(bitlist, MAXNODE);

@@ -1,4 +1,4 @@
-
+/* $Id: hb_resource.c,v 1.49 2004/02/17 22:11:57 lars Exp $ */
 /*
  * hb_resource: Linux-HA heartbeat resource management code
  *
@@ -176,11 +176,6 @@ CreateInitialFilter(void)
 	struct dirent*	dep;
 	static char foo[] = "bar";
 	RCScriptNames = g_hash_table_new(g_str_hash, g_str_equal);
-
-	(void)_heartbeat_h_Id;
-	(void)_heartbeat_private_h_Id;
-	(void)_ha_msg_h_Id;
-	(void)_setproctitle_h_Id;
 
 	if ((dp = opendir(HB_RC_DIR)) == NULL) {
 		ha_perror("Cannot open directory " HB_RC_DIR);
@@ -2127,6 +2122,9 @@ StonithProcessName(ProcTrack* p)
 
 /*
  * $Log: hb_resource.c,v $
+ * Revision 1.49  2004/02/17 22:11:57  lars
+ * Pet peeve removal: _Id et al now gone, replaced with consistent Id header.
+ *
  * Revision 1.48  2004/02/13 17:57:31  alan
  * Changed the code so in comm_up_resource_action, so that when
  * no other nodes are down when we first start up, that we

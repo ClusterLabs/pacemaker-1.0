@@ -1,3 +1,4 @@
+/* $Id: HBauth.c,v 1.10 2004/02/17 22:11:59 lars Exp $ */
 /*
  *	Heartbeat authentication interface manager
  *

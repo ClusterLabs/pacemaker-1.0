@@ -1,3 +1,4 @@
+/* $Id: oc_membership.h,v 1.4 2004/02/17 22:11:58 lars Exp $ */
 #ifndef OCF_OC_MEMBERSHIP_H
 #	define OCF_OC_MEMBERSHIP_H
 /*

@@ -1,3 +1,4 @@
+/* $Id: request.h,v 1.2 2004/02/17 22:12:02 lars Exp $ */
 #ifndef _CKPT_REQUEST_H
 #define _CKPT_REQUEST_H
 

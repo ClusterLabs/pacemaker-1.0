@@ -1,4 +1,4 @@
-const static char * _hb_config_c_Id = "$Id: config.c,v 1.113 2004/02/10 19:58:48 alan Exp $";
+/* $Id: config.c,v 1.114 2004/02/17 22:11:57 lars Exp $ */
 /*
  * Parse various heartbeat configuration files...
  *
@@ -204,11 +204,6 @@ init_config(const char * cfgfile)
 	int	j;
 	int	err;
 
-	/* This may be dumb.  I'll decide later */
-	(void)_hb_config_h_Id;	/* Make warning go away */
-	(void)_hb_config_c_Id;	/* ditto */
-	(void)_heartbeat_h_Id;	/* ditto */
-	(void)_ha_msg_h_Id;	/* ditto */
 /*
  *	'Twould be good to move this to a shared memory segment
  *	Then we could share this information with others
@@ -1966,6 +1961,9 @@ baddirective:
 
 /*
  * $Log: config.c,v $
+ * Revision 1.114  2004/02/17 22:11:57  lars
+ * Pet peeve removal: _Id et al now gone, replaced with consistent Id header.
+ *
  * Revision 1.113  2004/02/10 19:58:48  alan
  * Decreased startup debugging at lowest level.
  *

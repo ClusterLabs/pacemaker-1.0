@@ -1,3 +1,4 @@
+/* $Id: haclient.c,v 1.5 2004/02/17 22:12:01 lars Exp $ */
 #include "haclient.h"
 
 #include <sys/types.h>
@@ -56,7 +57,6 @@ LinkStatus(const char * node, const char * lnk, const char * status
 int
 init_heartbeat(void)
 {
-	(void)_ha_msg_h_Id;
 	hb = NULL;
 
 	cl_log_set_entity("hasubagent");

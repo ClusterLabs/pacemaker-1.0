@@ -1,3 +1,4 @@
+/* $Id: testclient.c,v 1.3 2004/02/17 22:12:01 lars Exp $ */
 #include "haclient.h"
 
 int main(void)
@@ -5,8 +6,6 @@ int main(void)
 	size_t count;
 	const char * str;
 	int i;
-
-	(void) _ha_msg_h_Id;
 
 	if (init_heartbeat() != HA_OK) {
 		printf("init_heartbeat error\n");

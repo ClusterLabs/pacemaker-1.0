@@ -1,4 +1,4 @@
-static const char _bcast_Id [] = "$Id: bcast.c,v 1.33 2004/01/21 11:34:15 horms Exp $";
+/* $Id: bcast.c,v 1.34 2004/02/17 22:11:59 lars Exp $ */
 /*
  * bcast.c: UDP/IP broadcast-based communication code for heartbeat.
  *
@@ -186,10 +186,6 @@ static int
 bcast_init(void)
 {
 	struct servent*	service;
-
-	(void)_heartbeat_h_Id;
-	(void)_bcast_Id;
-	(void)_ha_msg_h_Id;
 
 	g_assert(OurImports != NULL);
 
@@ -730,10 +726,6 @@ if_get_broadaddr(const char *ifn, struct in_addr *broadaddr)
 	int		fd = -1;
 	struct ifreq ifr; /* points to one interface returned from ioctl */
 
-	/* get rid of compiler warnings about unreferenced variables */
-	(void)_heartbeat_h_Id;
-	(void)_ha_msg_h_Id;
-	
 	fd = socket (PF_INET, SOCK_DGRAM, 0);
 	
 	if (fd < 0) {
@@ -781,6 +773,9 @@ if_get_broadaddr(const char *ifn, struct in_addr *broadaddr)
 
 /*
  * $Log: bcast.c,v $
+ * Revision 1.34  2004/02/17 22:11:59  lars
+ * Pet peeve removal: _Id et al now gone, replaced with consistent Id header.
+ *
  * Revision 1.33  2004/01/21 11:34:15  horms
  * - Replaced numerous malloc + strcpy/strncpy invocations with strdup
  *   * This usually makes the code a bit cleaner

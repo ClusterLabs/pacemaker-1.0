@@ -1,3 +1,4 @@
+/* $Id: ccmbitmap.c,v 1.3 2004/02/17 22:12:00 lars Exp $ */
 /* 
  * ccmbitmap.c: functions that manipulate bitmaps
  *
@@ -37,9 +38,6 @@ int
 bitmap_create(unsigned char **map, int numBits)
 { 
 	int i, numBytes;
-
-	(void)_heartbeat_h_Id; /* Make compiler happy */
-	(void)_ha_msg_h_Id; /* Make compiler happy */
 
 	if (numBits%BitsInByte == 0) {
 	  numBytes =  numBits/BitsInByte;

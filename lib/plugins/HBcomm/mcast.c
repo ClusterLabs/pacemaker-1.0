@@ -1,4 +1,4 @@
-static const char _mcast_Id [] = "$Id: mcast.c,v 1.15 2004/01/21 11:34:15 horms Exp $";
+/* $Id: mcast.c,v 1.16 2004/02/17 22:11:59 lars Exp $ */
 /*
  * mcast.c: implements hearbeat API for UDP multicast communication
  *
@@ -134,9 +134,6 @@ PIL_PLUGIN_INIT(PILPlugin*us, const PILPluginImports* imports)
 {
 	/* Force the compiler to do a little type checking */
 	(void)(PILPluginInitFun)PIL_PLUGIN_INIT;
-	(void)_heartbeat_h_Id;
-	(void)_ha_msg_h_Id;
-	(void)_mcast_Id;
 
 	PluginImports = imports;
 	OurPlugin = us;
@@ -823,6 +820,9 @@ get_loop(const char *loop, u_char *l)
 
 /*
  * $Log: mcast.c,v $
+ * Revision 1.16  2004/02/17 22:11:59  lars
+ * Pet peeve removal: _Id et al now gone, replaced with consistent Id header.
+ *
  * Revision 1.15  2004/01/21 11:34:15  horms
  * - Replaced numerous malloc + strcpy/strncpy invocations with strdup
  *   * This usually makes the code a bit cleaner

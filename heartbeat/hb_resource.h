@@ -1,3 +1,4 @@
+/* $Id: hb_resource.h,v 1.4 2004/02/17 22:11:57 lars Exp $ */
 #ifndef _HB_RESOURCE_H
 #define _HB_RESOURCE_H
 #include <heartbeat.h>

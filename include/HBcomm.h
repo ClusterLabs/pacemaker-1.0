@@ -1,3 +1,4 @@
+/* $Id: HBcomm.h,v 1.6 2004/02/17 22:11:58 lars Exp $ */
 /*
  * HBcomm.h: Communication functions for Linux-HA
  *
