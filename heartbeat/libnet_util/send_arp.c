@@ -1,4 +1,4 @@
-const static char * _send_arp_c = "$Id: send_arp.c,v 1.2 2003/10/15 17:03:23 horms Exp $";
+const static char * _send_arp_c = "$Id: send_arp.c,v 1.3 2003/10/23 07:36:29 horms Exp $";
 /* 
  * send_arp
  * 
@@ -45,15 +45,20 @@ const static char * _send_arp_c = "$Id: send_arp.c,v 1.2 2003/10/15 17:03:23 hor
 #	define	LTYPE	libnet_t
 #endif
 
-int send_arp(LTYPE* l, u_long ip, u_char *device, u_char mac[6], u_char *broadcast, u_char *netmask, u_short arptype);
+#define PIDFILE_BASE HA_VARLIBDIR "/" PACKAGE "/send_arp-"
 
-char print_usage[]={"send_arp: sends out custom ARP packet. packetfactory.net\n"
+static int send_arp(LTYPE* l, u_long ip, u_char *device, u_char mac[6], u_char *broadcast, u_char *netmask, u_short arptype);
+
+static char print_usage[]={
+"send_arp: sends out custom ARP packet. packetfactory.net\n"
 "\tusage: send_arp [-i repeatinterval-ms] [-r repeatcount]"
-" device src_ip_addr src_hw_addr broadcast_ip_addr netmask\n"
+" [-p pidfile] device src_ip_addr src_hw_addr broadcast_ip_addr netmask\n"
 "\tIf src_hw_addr is \"auto\" then the address of device will be used"};
 
-void convert_macaddr (u_char *macaddr, u_char enet_src[6]);
-int get_hw_addr(char *device, u_char mac[6]);
+static void convert_macaddr (u_char *macaddr, u_char enet_src[6]);
+static int get_hw_addr(char *device, u_char mac[6]);
+int write_pid_file(const char *pidfilename);
+
 
 #define AUTO_MAC_ADDR "auto"
 
@@ -78,18 +83,23 @@ main(int argc, char *argv[])
 	int	j;
 	long	msinterval = 1000;
 	int	flag;
+	char    pidfilenamebuf[64];
+	char    *pidfilename = NULL;
 
 	(void)_send_arp_c;
 
+	openlog("send_arp", LOG_CONS | LOG_PID, LOG_USER);
 
-
-	while ((flag = getopt(argc, argv, "i:r:")) != EOF) {
+	while ((flag = getopt(argc, argv, "i:r:p:")) != EOF) {
 		switch(flag) {
 
 		case 'i':	msinterval= atol(optarg);
 				break;
 
 		case 'r':	repeatcount= atoi(optarg);
+				break;
+
+		case 'p':	pidfilename= optarg;
 				break;
 
 		default:	fprintf(stderr, "usage: %s\n\n", print_usage);
@@ -115,6 +125,20 @@ main(int argc, char *argv[])
 	macaddr   = argv[optind+2];
 	broadcast = argv[optind+3];
 	netmask   = argv[optind+4];
+
+	if (!pidfilename) {
+		if (snprintf(pidfilenamebuf, sizeof(pidfilenamebuf), "%s%s", 
+					PIDFILE_BASE, ipaddr) >= 
+				sizeof(pidfilenamebuf)) {
+			syslog(LOG_INFO, "Pid file truncated");
+			exit(EXIT_FAILURE);
+		}
+		pidfilename = pidfilenamebuf;
+	}
+
+	if(write_pid_file(pidfilename) < 0) {
+		exit(EXIT_FAILURE);
+	}
 
 #if defined(HAVE_LIBNET_1_0_API)
 	if ((ip = libnet_name_resolve(ipaddr, 1)) == -1UL) {
@@ -164,6 +188,8 @@ main(int argc, char *argv[])
 			mssleep(msinterval);
 		}
 	}
+
+	unlink(pidfilename);
 	return (c < 0  ? EXIT_FAILURE : EXIT_SUCCESS);
 }
 
@@ -323,8 +349,120 @@ send_arp(libnet_t* lntag, u_long ip, u_char *device, u_char macaddr[6], u_char *
 }
 #endif /* HAVE_LIBNET_1_1_API */
 
+
+int
+write_pid_file(const char *pidfilename)  
+{
+
+	int     pidfilefd;
+	char    pidbuf[11];
+	pid_t   pid;
+	size_t  bytes;
+
+	while (1) {
+		pidfilefd = open(pidfilename, O_CREAT|O_EXCL|O_RDWR, 
+				S_IRUSR|S_IWUSR);
+		if (pidfilefd < 0) {
+			if (errno != EEXIST) { /* Old PID file */
+				syslog(LOG_INFO, "Could not open pid file "
+						"[%s]: %s", pidfilename, 
+						strerror(errno));
+				return -1;
+			}
+		}
+		else {
+			break;
+		}
+
+		pidfilefd = open(pidfilename, O_RDONLY, S_IRUSR|S_IWUSR);
+		if (pidfilefd < 0) {
+			syslog(LOG_INFO, "Could not open pid file " 
+					"[%s]: %s", pidfilename, 
+					strerror(errno));
+			return -1;
+		}
+
+		while (1) {
+			bytes = read(pidfilefd, pidbuf, sizeof(pidbuf)-1);
+			if (bytes < 0) {
+				if (errno == EINTR) {
+					continue;
+				}
+				syslog(LOG_INFO, "Could not read pid file " 
+						"[%s]: %s", pidfilename, 
+						strerror(errno));
+				return -1;
+			}
+			pidbuf[bytes] = '\0';
+			break;
+		}
+
+		if(unlink(pidfilename) < 0) {
+			syslog(LOG_INFO, "Could not delete pid file "
+	 				"[%s]: %s", pidfilename, 
+					strerror(errno));
+			return -1;
+		}
+
+		if (!bytes) {
+			syslog(LOG_INFO, "Invalid pid in pid file "
+	 				"[%s]: %s", pidfilename, 
+					strerror(errno));
+			return -1;
+		}
+
+		close(pidfilefd);
+
+		pid = strtoul(pidbuf, NULL, 10);
+		if (pid == ULONG_MAX && errno == ERANGE) {
+			syslog(LOG_INFO, "Invalid pid in pid file "
+	 				"[%s]: %s", pidfilename, 
+					strerror(errno));
+			return -1;
+		}
+
+		if (kill(pid, SIGKILL) < 0 && errno != ESRCH) {
+			syslog(LOG_INFO, "Error killing old proccess [%u] "
+	 				"from pid file [%s]: %s", pid,
+					pidfilename, strerror(errno));
+			return -1;
+		}
+
+		syslog(LOG_INFO, "Killed old send_arp process [%u]\n",
+				pid);
+	}
+
+	if (snprintf(pidbuf, sizeof(pidbuf), "%u", 
+				getpid()) >= sizeof(pidbuf)) {
+		syslog(LOG_INFO, "Pid too long for buffer [%u]", getpid());
+		return -1;
+	}
+
+	while (1) {
+		bytes = write(pidfilefd, pidbuf, strlen(pidbuf));
+		if (bytes != strlen(pidbuf)) {
+			if (bytes < 0 && errno == EINTR) {
+				continue;
+			}
+			syslog(LOG_INFO, "Could not write pid file "
+					"[%s]: %s", pidfilename,
+					strerror(errno));
+			return -1;
+		}
+		break;
+	}
+
+	close(pidfilefd);
+
+	return 0;
+}
+
+
 /*
  * $Log: send_arp.c,v $
+ * Revision 1.3  2003/10/23 07:36:29  horms
+ * added pid file to sendarp
+ *
  * Revision 1.2  2003/10/15 17:03:23  horms
  * Merged  get_hw_addr into and send_arp
  *
