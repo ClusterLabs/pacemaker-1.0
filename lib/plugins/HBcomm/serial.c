@@ -1,4 +1,4 @@
-/* $Id: serial.c,v 1.31 2004/03/03 05:31:51 alan Exp $ */
+/* $Id: serial.c,v 1.32 2004/04/29 16:23:16 msoffen Exp $ */
 /*
  * Linux-HA serial heartbeat code
  *
@@ -165,7 +165,9 @@ PIL_PLUGIN_INIT(PILPlugin*us, const PILPluginImports* imports)
 }
 
 #define		IsTTYOBJECT(mp)	((mp) && ((mp)->vf == (void*)&serial_media_fns))
-//#define		TTYASSERT(mp)	ASSERT(IsTTYOBJECT(mp))
+/*
+#define		TTYASSERT(mp)	ASSERT(IsTTYOBJECT(mp))
+*/
 #define		TTYASSERT(mp)
 #define		RTS_WARNTIME	3600
 
@@ -535,7 +537,9 @@ serial_read(struct hb_media* mp, int *lenp)
 	
 	*lenp = len;
 	
-	//LOG(PIL_INFO, "final msgstring=%s", msgstring);
+	/*
+	LOG(PIL_INFO, "final msgstring=%s", msgstring);
+	*/
 	
 	return(msgstring);	
 }
@@ -694,6 +698,9 @@ ttygets(char * inbuf, int length, struct serial_private *tty)
 }
 /*
  * $Log: serial.c,v $
+ * Revision 1.32  2004/04/29 16:23:16  msoffen
+ * Changed // comments to /* */ comments.
+ *
  * Revision 1.31  2004/03/03 05:31:51  alan
  * Put in Gochun Shi's new netstrings on-the-wire data format code.
  * this allows sending binary data, among many other things!
