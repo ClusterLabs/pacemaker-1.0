@@ -1,4 +1,4 @@
-/* $Id: mcast.c,v 1.18 2004/04/28 22:30:29 alan Exp $ */
+/* $Id: mcast.c,v 1.19 2004/05/11 22:04:35 alan Exp $ */
 /*
  * mcast.c: implements hearbeat API for UDP multicast communication
  *
@@ -235,7 +235,7 @@ mcast_parse(const char *line)
 
 	if (*dev != EOS)  {
 		if (!is_valid_dev(dev)) {
-			LOG(PIL_CRIT, "mcast bad device [%s]", dev);
+			PILCallLog(LOG, PIL_CRIT, "mcast bad device [%s]", dev);
 			return HA_FAIL;
 		}
 		/* Skip over white space, then grab the multicast group */
@@ -246,12 +246,12 @@ mcast_parse(const char *line)
 		mcast[toklen] = EOS;
 	
 		if (*mcast == EOS)  {
-			LOG(PIL_CRIT, "mcast [%s] missing mcast address",
+			PILCallLog(LOG, PIL_CRIT, "mcast [%s] missing mcast address",
 				dev);
 			return(HA_FAIL);
 		}
 		if (!is_valid_mcast_addr(mcast)) {
-			LOG(PIL_CRIT, "mcast [%s] bad addr [%s]", dev, mcast);
+			PILCallLog(LOG, PIL_CRIT, "mcast [%s] bad addr [%s]", dev, mcast);
 			return(HA_FAIL);
 		}
 
@@ -263,11 +263,11 @@ mcast_parse(const char *line)
 		token[toklen] = EOS;
 
 		if (*token == EOS)  {
-			LOG(PIL_CRIT, "mcast [%s] missing port", dev);
+			PILCallLog(LOG, PIL_CRIT, "mcast [%s] missing port", dev);
 			return(HA_FAIL);
 		}
 		if (get_port(token, &port) == -1) {
-			LOG(PIL_CRIT, " mcast [%s] bad port [%s]", dev, port);
+			PILCallLog(LOG, PIL_CRIT, " mcast [%s] bad port [%d]", dev, port);
 			return HA_FAIL;
 		}
 
@@ -279,11 +279,11 @@ mcast_parse(const char *line)
 		token[toklen] = EOS;
 
 		if (*token == EOS)  {
-			LOG(PIL_CRIT, "mcast [%s] missing ttl", dev);
+			PILCallLog(LOG, PIL_CRIT, "mcast [%s] missing ttl", dev);
 			return(HA_FAIL);
 		}
 		if (get_ttl(token, &ttl) == -1) {
-			LOG(PIL_CRIT, " mcast [%s] bad ttl [%s]", dev, ttl);
+			PILCallLog(LOG, PIL_CRIT, " mcast [%s] bad ttl [%d]", dev, ttl);
 			return HA_FAIL;
 		}
 
@@ -295,11 +295,11 @@ mcast_parse(const char *line)
 		token[toklen] = EOS;
 
 		if (*token == EOS)  {
-			LOG(PIL_CRIT, "mcast [%s] missing loop", dev);
+			PILCallLog(LOG, PIL_CRIT, "mcast [%s] missing loop", dev);
 			return(HA_FAIL);
 		}
 		if (get_loop(token, &loop) == -1) {
-			LOG(PIL_CRIT, " mcast [%s] bad loop [%s]", dev, loop);
+			PILCallLog(LOG, PIL_CRIT, " mcast [%s] bad loop [%d]", dev, loop);
 			return HA_FAIL;
 		}
 
@@ -328,7 +328,7 @@ mcast_new(const char * intf, const char *mcast, u_short port,
 	/* create new mcast_private struct...hmmm...who frees it? */
 	mcp = new_mcast_private(intf, mcast, port, ttl, loop);
 	if (mcp == NULL) {
-		LOG(PIL_WARN, "Error creating mcast_private(%s, %s, %d, %d, %d)",
+		PILCallLog(LOG, PIL_WARN, "Error creating mcast_private(%s, %s, %d, %d, %d)",
 			 intf, mcast, port, ttl, loop);
 		return(NULL);
 	}
@@ -372,7 +372,7 @@ mcast_open(struct hb_media* hbm)
 		return(HA_FAIL);
 	}
 
-	LOG(PIL_INFO, "UDP multicast heartbeat started for group %s "
+	PILCallLog(LOG, PIL_INFO, "UDP multicast heartbeat started for group %s "
 		"port %d interface %s (ttl=%d loop=%d)" , inet_ntoa(mcp->mcast),
 		mcp->port, mcp->interface, mcp->ttl, mcp->loop);
 
@@ -424,7 +424,7 @@ mcast_read(struct hb_media* hbm, int *lenp)
 	if ((numbytes=recvfrom(mcp->rsocket, buf, MAXLINE-1, 0
 			       ,(struct sockaddr *)&their_addr, &addr_len)) < 0) {
 		if (errno != EINTR) {
-			LOG(PIL_CRIT, "Error receiving from socket: %s"
+			PILCallLog(LOG, PIL_CRIT, "Error receiving from socket: %s"
 			    ,	strerror(errno));
 		}
 		return NULL;
@@ -433,16 +433,16 @@ mcast_read(struct hb_media* hbm, int *lenp)
 	buf[numbytes] = EOS;
 	
 	if (Debug >= PKTTRACE) {
-		LOG(PIL_DEBUG, "got %d byte packet from %s"
+		PILCallLog(LOG, PIL_DEBUG, "got %d byte packet from %s"
 		    ,	numbytes, inet_ntoa(their_addr.sin_addr));
 	}
 	if (Debug >= PKTCONTTRACE && numbytes > 0) {
-		LOG(PIL_DEBUG, buf);
+		PILCallLog(LOG, PIL_DEBUG, "%s", buf);
 	}
 	
 	pkt = ha_malloc(numbytes + 1);
 	if(!pkt){
-		LOG(PIL_CRIT
+		PILCallLog(LOG, PIL_CRIT
 		    ,	"Error in allocating memory");
 		return(NULL);
 	}
@@ -471,17 +471,17 @@ mcast_write(struct hb_media* hbm, void *pkt, int len)
 	if ((rc=sendto(mcp->wsocket, pkt, len, 0
 	,	(struct sockaddr *)&mcp->addr
 	,	sizeof(struct sockaddr))) != len) {
-		LOG(PIL_CRIT, "Unable to send mcast packet [%d]: %s"
+		PILCallLog(LOG, PIL_CRIT, "Unable to send mcast packet [%d]: %s"
 		,	rc, strerror(errno));
 		return(HA_FAIL);
 	}
 	
 	if (Debug >= PKTTRACE) {
-		LOG(PIL_DEBUG, "sent %d bytes to %s"
+		PILCallLog(LOG, PIL_DEBUG, "sent %d bytes to %s"
 		    ,	rc, inet_ntoa(mcp->addr.sin_addr));
    	}
 	if (Debug >= PKTCONTTRACE) {
-		LOG(PIL_DEBUG, pkt);
+		PILCallLog(LOG, PIL_DEBUG, "%s", (const char *)pkt);
    	}
 	return(HA_OK);
 
@@ -503,24 +503,24 @@ mcast_make_send_sock(struct hb_media * hbm)
 	mcp = (struct mcast_private *) hbm->pd;
 
 	if ((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
-		LOG(PIL_WARN, "Error getting socket: %s", strerror(errno));
+		PILCallLog(LOG, PIL_WARN, "Error getting socket: %s", strerror(errno));
 		return(sockfd);
    	}
 
 	if (set_mcast_if(sockfd, mcp->interface) < 0) {
-		LOG(PIL_WARN, "Error setting outbound mcast interface: %s", strerror(errno));
+		PILCallLog(LOG, PIL_WARN, "Error setting outbound mcast interface: %s", strerror(errno));
 	}
 
 	if (set_mcast_loop(sockfd, mcp->loop) < 0) {
-		LOG(PIL_WARN, "Error setting outbound mcast loopback value: %s", strerror(errno));
+		PILCallLog(LOG, PIL_WARN, "Error setting outbound mcast loopback value: %s", strerror(errno));
 	}
 
 	if (set_mcast_ttl(sockfd, mcp->ttl) < 0) {
-		LOG(PIL_WARN, "Error setting outbound mcast TTL: %s", strerror(errno));
+		PILCallLog(LOG, PIL_WARN, "Error setting outbound mcast TTL: %s", strerror(errno));
 	}
 
 	if (fcntl(sockfd,F_SETFD, FD_CLOEXEC)) {
-		LOG(PIL_WARN, "Error setting the close-on-exec flag: %s", strerror(errno));
+		PILCallLog(LOG, PIL_WARN, "Error setting the close-on-exec flag: %s", strerror(errno));
 	}
 	return(sockfd);
 }
@@ -546,13 +546,13 @@ mcast_make_receive_sock(struct hb_media * hbm)
 	mcp = (struct mcast_private *) hbm->pd;
 
 	if ((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) == -1) {
-		LOG(PIL_CRIT, "Error getting socket");
+		PILCallLog(LOG, PIL_CRIT, "Error getting socket");
 		return -1;
 	}
 	/* set REUSEADDR option on socket so you can bind a multicast */
 	/* reader to multiple interfaces */
 	if(setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, (void *)&one, sizeof(one)) < 0){
-		LOG(PIL_CRIT, "Error setsockopt(SO_REUSEADDR)");
+		PILCallLog(LOG, PIL_CRIT, "Error setsockopt(SO_REUSEADDR)");
 	}        
 
 	/* ripped off from udp.c, if we all use SO_REUSEADDR */
@@ -567,7 +567,7 @@ mcast_make_receive_sock(struct hb_media * hbm)
 			boundyet=1;
 		} else if (rc == -1) {
 			if (binderr == EADDRINUSE) {
-				LOG(PIL_CRIT, "Can't bind (EADDRINUSE), "
+				PILCallLog(LOG, PIL_CRIT, "Can't bind (EADDRINUSE), "
 					"retrying");
 				sleep(1);
 			} else	{ 
@@ -580,15 +580,15 @@ mcast_make_receive_sock(struct hb_media * hbm)
 	if (!boundyet) {
 		if (binderr == EADDRINUSE) {
 			/* This happens with multiple udp or ppp interfaces */
-			LOG(PIL_INFO
+			PILCallLog(LOG, PIL_INFO
 			,	"Someone already listening on port %d [%s]"
 			,	mcp->port
 			,	mcp->interface);
-			LOG(PIL_INFO, "multicast read process exiting");
+			PILCallLog(LOG, PIL_INFO, "multicast read process exiting");
 			close(sockfd);
 			cleanexit(0);
 		} else {
-			LOG(PIL_WARN, "Unable to bind socket. Giving up: %s", strerror(errno));
+			PILCallLog(LOG, PIL_WARN, "Unable to bind socket. Giving up: %s", strerror(errno));
 			close(sockfd);
 			return(-1);
 		}
@@ -596,18 +596,18 @@ mcast_make_receive_sock(struct hb_media * hbm)
 	/* join the multicast group...this is what really makes this a */
 	/* multicast reader */
 	if (join_mcast_group(sockfd, &mcp->mcast, mcp->interface) == -1) {
-		LOG(PIL_CRIT, "Can't join multicast group %s on interface %s",
+		PILCallLog(LOG, PIL_CRIT, "Can't join multicast group %s on interface %s",
 			inet_ntoa(mcp->mcast), mcp->interface);
-		LOG(PIL_INFO, "multicast read process exiting");
+		PILCallLog(LOG, PIL_INFO, "multicast read process exiting");
 		close(sockfd);
 		cleanexit(0);
 	}
 	if (ANYDEBUG) 
-		LOG(PIL_DEBUG, "Successfully joined multicast group %s on"
+		PILCallLog(LOG, PIL_DEBUG, "Successfully joined multicast group %s on"
 			"interface %s", inet_ntoa(mcp->mcast), mcp->interface);
 		
 	if (fcntl(sockfd,F_SETFD, FD_CLOEXEC)) {
-		LOG(PIL_WARN, "Error setting the close-on-exec flag: %s", strerror(errno));
+		PILCallLog(LOG, PIL_WARN, "Error setting the close-on-exec flag: %s", strerror(errno));
 	}
 	return(sockfd);
 }
@@ -746,15 +746,15 @@ if_getaddr(const char *ifname, struct in_addr *addr)
 	}
 
 	if ((fd=socket(AF_INET, SOCK_DGRAM, 0)) == -1)	{
-		LOG(PIL_CRIT, "Error getting socket");
+		PILCallLog(LOG, PIL_CRIT, "Error getting socket");
 		return -1;
 	}
 	if (Debug > 0) {
-		LOG(PIL_DEBUG,	"looking up address for %s"
+		PILCallLog(LOG, PIL_DEBUG,	"looking up address for %s"
 		,	if_info.ifr_name);
 	}
 	if (ioctl(fd, SIOCGIFADDR, &if_info) == -1) {
-		LOG(PIL_CRIT, "Error ioctl(SIOCGIFADDR)");
+		PILCallLog(LOG, PIL_CRIT, "Error ioctl(SIOCGIFADDR)");
 		close(fd);
 		return -1;
 	}
@@ -831,6 +831,12 @@ get_loop(const char *loop, u_char *l)
 
 /*
  * $Log: mcast.c,v $
+ * Revision 1.19  2004/05/11 22:04:35  alan
+ * Changed all the HBcomm plugins to use PILCallLog() for logging instead of calling
+ * the function pointer directly.
+ * Also, in the process fixed several mismatches between arguments and format strings, and
+ * a couple of format string vulnerabilities.
+ *
  * Revision 1.18  2004/04/28 22:30:29  alan
  * Put in some fixes for extra freeing of memory in the communications plugins.
  *

@@ -1,4 +1,4 @@
-/* $Id: serial.c,v 1.33 2004/04/29 16:24:34 msoffen Exp $ */
+/* $Id: serial.c,v 1.34 2004/05/11 22:04:35 alan Exp $ */
 /*
  * Linux-HA serial heartbeat code
  *
@@ -213,7 +213,7 @@ serial_init (void)
 		baudstring  = DEFAULTBAUDSTR;
 	}
 	if (ANYDEBUG) {
-		LOG(PIL_DEBUG, "serial_init: serial_baud = 0x%x"
+		PILCallLog(LOG, PIL_DEBUG, "serial_init: serial_baud = 0x%x"
 		,	serial_baud);
 	}
 	return(HA_OK);
@@ -229,19 +229,19 @@ serial_new (const char * port)
 
 	/* Let's see if this looks like it might be a serial port... */
 	if (*port != '/') {
-		LOG(PIL_CRIT
+		PILCallLog(LOG, PIL_CRIT
 		,	"Serial port not full pathname [%s] in config file"
 		,	port);
 		return(NULL);
 	}
 
 	if (stat(port, &sbuf) < 0) {
-		LOG(PIL_CRIT, "Nonexistent serial port [%s] in config file"
+		PILCallLog(LOG, PIL_CRIT, "Nonexistent serial port [%s] in config file"
 		,	port);
 		return(NULL);
 	}
 	if (!S_ISCHR(sbuf.st_mode)) {
-		LOG(PIL_CRIT
+		PILCallLog(LOG, PIL_CRIT
 		,	"Serial port [%s] not a char device in config file"
 		,	port);
 		return(NULL);
@@ -273,10 +273,10 @@ serial_new (const char * port)
 		if (sp == NULL) {
 			FREE(ret);
 			ret = NULL;
-			LOG(PIL_CRIT, "Out of memory (private serial data)");
+			PILCallLog(LOG, PIL_CRIT, "Out of memory (private serial data)");
 		}
 	}else{
-		LOG(PIL_CRIT, "Out of memory (serial data)");
+		PILCallLog(LOG, PIL_CRIT, "Out of memory (serial data)");
 	}
 	return(ret);
 }
@@ -289,13 +289,13 @@ serial_open (struct hb_media* mp)
 	TTYASSERT(mp);
 	sp = (struct serial_private*)mp->pd;
 	if (OurImports->devlock(sp->ttyname) < 0) {
-		LOG(PIL_CRIT, "cannot lock line %s", sp->ttyname);
+		PILCallLog(LOG, PIL_CRIT, "cannot lock line %s", sp->ttyname);
 		return(HA_FAIL);
 	}
 	if ((sp->ttyfd = opentty(sp->ttyname)) < 0) {
 		return(HA_FAIL);
 	}
-	LOG(PIL_INFO, "Starting serial heartbeat on tty %s (%s baud)"
+	PILCallLog(LOG, PIL_INFO, "Starting serial heartbeat on tty %s (%s baud)"
 	,	sp->ttyname, baudstring);
 	return(HA_OK);
 }
@@ -320,7 +320,7 @@ ttysetup(int fd, const char * ourtty)
 	struct TERMIOS	ti;
 
 	if (GETATTR(fd, &ti) < 0) {
-		LOG(PIL_CRIT, "cannot get tty attributes: %s", strerror(errno));
+		PILCallLog(LOG, PIL_CRIT, "cannot get tty attributes: %s", strerror(errno));
 		return(HA_FAIL);
 	}
 
@@ -362,17 +362,17 @@ ttysetup(int fd, const char * ourtty)
 	ti.c_cc[VMIN] = 1;
 	ti.c_cc[VTIME] = 1;
 	if (SETATTR(fd, &ti) < 0) {
-		LOG(PIL_CRIT, "cannot set tty attributes: %s"
+		PILCallLog(LOG, PIL_CRIT, "cannot set tty attributes: %s"
 		,	strerror(errno));
 		return(HA_FAIL);
 	}
 	if (ANYDEBUG) {
-		LOG(PIL_DEBUG, "tty setup on %s complete.", ourtty);
-		LOG(PIL_DEBUG, "Baud rate set to: 0x%x", serial_baud);
-		LOG(PIL_DEBUG, "ti.c_iflag = 0x%x", ti.c_iflag);
-		LOG(PIL_DEBUG, "ti.c_oflag = 0x%x", ti.c_oflag);
-		LOG(PIL_DEBUG, "ti.c_cflag = 0x%x", ti.c_cflag);
-		LOG(PIL_DEBUG, "ti.c_lflag = 0x%x", ti.c_lflag);
+		PILCallLog(LOG, PIL_DEBUG, "tty setup on %s complete.", ourtty);
+		PILCallLog(LOG, PIL_DEBUG, "Baud rate set to: 0x%x", serial_baud);
+		PILCallLog(LOG, PIL_DEBUG, "ti.c_iflag = 0x%x", ti.c_iflag);
+		PILCallLog(LOG, PIL_DEBUG, "ti.c_oflag = 0x%x", ti.c_oflag);
+		PILCallLog(LOG, PIL_DEBUG, "ti.c_cflag = 0x%x", ti.c_cflag);
+		PILCallLog(LOG, PIL_DEBUG, "ti.c_lflag = 0x%x", ti.c_lflag);
 	}
 	/* For good measure */
 	FLUSH(fd);
@@ -391,7 +391,7 @@ opentty(char * serial_device)
 	int	fd;
 
 	if ((fd=open(serial_device, O_RDWR|O_NOCTTY)) < 0 ) {
-		LOG(LOG_CRIT, "cannot open %s: %s", serial_device
+		PILCallLog(LOG, PIL_CRIT, "cannot open %s: %s", serial_device
 		,	strerror(errno));
 		return(fd);
 	}
@@ -400,7 +400,7 @@ opentty(char * serial_device)
 		return(-1);
 	}
 	if (fcntl(fd, F_SETFD, FD_CLOEXEC)) {
-		LOG(PIL_WARN,"Error setting the close-on-exec flag: %s"
+		PILCallLog(LOG, PIL_WARN,"Error setting the close-on-exec flag: %s"
 		,	strerror(errno));
 	}
 	/* Cause the other guy to flush his I/O */
@@ -420,7 +420,7 @@ serial_localdie(void)
 	ourtty = ((struct serial_private*)(ourmedia->pd))->ttyfd;
 	if (ourtty >= 0) {
 		if (ANYDEBUG) {
-			LOG(PIL_DEBUG, "serial_localdie: Flushing tty");
+			PILCallLog(LOG, PIL_DEBUG, "serial_localdie: Flushing tty");
 		}
 		tcflush(ourtty, TCIOFLUSH);
 	}
@@ -460,7 +460,7 @@ serial_read(struct hb_media* mp, int *lenp)
 	
 	msgstring = ha_calloc(MAXMSG,1 );
 	if(!msgstring){
-		LOG(PIL_CRIT, "serial_read: cannot allocate memory to msgstring ");
+		PILCallLog(LOG, PIL_CRIT, "serial_read: cannot allocate memory to msgstring ");
 		return(NULL);
 	}
 	msgstring[0] = 0;
@@ -477,7 +477,7 @@ serial_read(struct hb_media* mp, int *lenp)
 	
 	len = strnlen(buf, MAXLINE) + 1;
 	if(len >=  MAXMSG){
-		LOG(PIL_CRIT,  "serial_read:MSG_START exceeds MAXMSG");
+		PILCallLog(LOG, PIL_CRIT,  "serial_read:MSG_START exceeds MAXMSG");
 		ha_free(msgstring);
 		return(NULL);
 	}
@@ -495,7 +495,7 @@ serial_read(struct hb_media* mp, int *lenp)
 		
 		len += strnlen(buf, MAXLINE) + 1;
 		if(len >= MAXMSG){
-			LOG(PIL_CRIT, "serial_read:msgstring exceeds MAXMSG");
+			PILCallLog(LOG, PIL_CRIT, "serial_read:msgstring exceeds MAXMSG");
 			ha_free(msgstring);
 			return(NULL);
 		}
@@ -513,7 +513,7 @@ serial_read(struct hb_media* mp, int *lenp)
 		
 		len += strnlen(buf, MAXLINE) + 2;
 		if(len >= MAXMSG){
-			LOG(PIL_CRIT, "serial_read:msgstring exceeds MAXMSG after adding MSG_END");
+			PILCallLog(LOG, PIL_CRIT, "serial_read:msgstring exceeds MAXMSG after adding MSG_END");
 			ha_free(msgstring);
 			return(NULL);
 		}
@@ -538,7 +538,7 @@ serial_read(struct hb_media* mp, int *lenp)
 	*lenp = len;
 	
 	/*
-	LOG(PIL_INFO, "final msgstring=%s", msgstring);
+	PILCallLog(LOG, PIL_INFO, "final msgstring=%s", msgstring);
 	*/
 	
 	return(msgstring);	
@@ -575,7 +575,7 @@ serial_write(struct hb_media* mp, void *p, int len)
 		
 		msg = wirefmt2msg(p, len);
 		if(!msg){
-			ha_log(LOG_WARNING, "serial_write(): wirefmt2msg() failed");
+			ha_log(PIL_WARN, "serial_write(): wirefmt2msg() failed");
 			return(HA_FAIL);
 		}
 		
@@ -601,22 +601,22 @@ serial_write(struct hb_media* mp, void *p, int len)
 	ourtty = ((struct serial_private*)(mp->pd))->ttyfd;
 
 	if (DEBUGPKT) {
-		LOG(PIL_DEBUG, "Sending pkt to %s [%d bytes]"
+		PILCallLog(LOG, PIL_DEBUG, "Sending pkt to %s [%d bytes]"
 		,	mp->name, size);
 	}
 	if (DEBUGPKTCONT) {
-		LOG(PIL_DEBUG, str);
+		PILCallLog(LOG, PIL_DEBUG, "%s", str);
 	}
 	setmsalarm(500);
 	wrc = write(ourtty, str, size);
 	cancelmstimer();
 	if (DEBUGPKTCONT) {
-		LOG(PIL_DEBUG, "serial write returned %d", wrc);
+		PILCallLog(LOG, PIL_DEBUG, "serial write returned %d", wrc);
 	}
 	
 	if (wrc < 0 || wrc != size) {
 		if (DEBUGPKTCONT && wrc < 0) {
-			LOG(PIL_DEBUG, "serial write errno was %d", errno);
+			PILCallLog(LOG, PIL_DEBUG, "serial write errno was %d", errno);
 		}
 		if (wrc > 0 || (wrc < 0 && errno == EINTR)) {
 			longclock_t	now = time_longclock();
@@ -628,14 +628,14 @@ serial_write(struct hb_media* mp, void *p, int len)
 
 				lastwarn = now;
 				warnyet = TRUE;
-				LOG(LOG_ERR
+				PILCallLog(LOG, PIL_CRIT
 				,	"TTY write timeout on [%s]"
 				" (no connection or bad cable"
 				"? [see documentation])"
 				,	mp->name);
 			}
 		}else{
-			LOG(PIL_CRIT, "TTY write failure on [%s]: %s"
+			PILCallLog(LOG, PIL_CRIT, "TTY write failure on [%s]: %s"
 			    ,	mp->name, strerror(errno));
 		}
 	}
@@ -667,16 +667,16 @@ ttygets(char * inbuf, int length, struct serial_private *tty)
 		errno = saverr;
 		if (rc != 1) {
 			if (rc == 0 || errno == EINTR) {
-				LOG(PIL_CRIT, "EOF in ttygets [%s]: %s [%d]"
+				PILCallLog(LOG, PIL_CRIT, "EOF in ttygets [%s]: %s [%d]"
 				,	tty->ttyname, strerror(errno), rc);
 				++tty->consecutive_errors;
 				tcsetpgrp(fd, getsid(getpid()));
 				if ((tty->consecutive_errors % 10) == 0) {
-					LOG(PIL_WARN
+					PILCallLog(LOG, PIL_WARN
 					,	"10 consecutive EOF"
 					" errors from serial port %s"
 					,	tty->ttyname);
-					LOG(PIL_INFO
+					PILCallLog(LOG, PIL_INFO
 					,	"%s pgrp: %d", tty->ttyname
 					,	tcgetpgrp(fd));
 					sleep(10);
@@ -698,6 +698,12 @@ ttygets(char * inbuf, int length, struct serial_private *tty)
 }
 /*
  * $Log: serial.c,v $
+ * Revision 1.34  2004/05/11 22:04:35  alan
+ * Changed all the HBcomm plugins to use PILCallLog() for logging instead of calling
+ * the function pointer directly.
+ * Also, in the process fixed several mismatches between arguments and format strings, and
+ * a couple of format string vulnerabilities.
+ *
  * Revision 1.33  2004/04/29 16:24:34  msoffen
  * fixed comment in Log
  *

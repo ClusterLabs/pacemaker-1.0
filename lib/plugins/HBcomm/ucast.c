@@ -1,4 +1,4 @@
-/* $Id: ucast.c,v 1.20 2004/04/28 22:30:29 alan Exp $ */
+/* $Id: ucast.c,v 1.21 2004/05/11 22:04:35 alan Exp $ */
 /*
  * Adapted from alanr's UDP broadcast heartbeat bcast.c by Stéphane Billiart
  *	<stephane@reefedge.com>
@@ -208,7 +208,7 @@ static int ucast_parse(const char *line)
 	if (*dev != EOS)  {
 #ifdef NOTYET
 		if (!is_valid_dev(dev)) {
-			LOG(PIL_CRIT, "ucast: bad device [%s]", dev);
+			PILCallLog(LOG, PIL_CRIT, "ucast: bad device [%s]", dev);
 			return HA_FAIL;
 		}
 #endif
@@ -219,7 +219,7 @@ static int ucast_parse(const char *line)
 		ucast[toklen] = EOS;
 	
 		if (*ucast == EOS)  {
-			LOG(PIL_CRIT,
+			PILCallLog(LOG, PIL_CRIT,
 			  "ucast: [%s] missing target IP address/hostname",
 			  dev);
 			return HA_FAIL;
@@ -237,7 +237,7 @@ static int ucast_mtype(char **buffer)
 {
 	*buffer = STRDUP(PIL_PLUGIN_S);
 	if (!*buffer) {
-		LOG(PIL_CRIT, "ucast: memory allocation error (line %d)",
+		PILCallLog(LOG, PIL_CRIT, "ucast: memory allocation error (line %d)",
 				(__LINE__ - 2) );
 		return 0;
 	}
@@ -249,7 +249,7 @@ static int ucast_descr(char **buffer)
 { 
 	*buffer = strdup(hb_media_name);
 	if (!*buffer) {
-		LOG(PIL_CRIT, "ucast: memory allocation error (line %d)",
+		PILCallLog(LOG, PIL_CRIT, "ucast: memory allocation error (line %d)",
 				(__LINE__ - 2) );
 		return 0;
 	}
@@ -306,11 +306,11 @@ ucast_new(const char *intf, const char *addr)
 	ucast_init();
 
 	if (!(ipi = new_ip_interface(intf, addr, localudpport))) {
-		LOG(PIL_CRIT, "ucast: interface [%s] does not exist", intf);
+		PILCallLog(LOG, PIL_CRIT, "ucast: interface [%s] does not exist", intf);
 		return NULL;
 	}
 	if (!(ret = (struct hb_media*)MALLOC(sizeof(struct hb_media)))) {
-		LOG(PIL_CRIT, "ucast: memory allocation error (line %d)",
+		PILCallLog(LOG, PIL_CRIT, "ucast: memory allocation error (line %d)",
 			(__LINE__ - 2) );
 		FREE(ipi->interface);
 		FREE(ipi);
@@ -318,7 +318,7 @@ ucast_new(const char *intf, const char *addr)
 	else {
 		ret->pd = (void*)ipi;
 		if (!(name = STRDUP(intf))) {
-			LOG(PIL_CRIT,
+			PILCallLog(LOG, PIL_CRIT,
 				"ucast: memory allocation error (line %d)",
 				(__LINE__ - 3) );
 			FREE(ipi->interface);
@@ -351,7 +351,7 @@ static int ucast_open(struct hb_media* mp)
 		return HA_FAIL;
 	}
 
-	LOG(PIL_INFO, "ucast: started on port %d interface %s to %s",
+	PILCallLog(LOG, PIL_INFO, "ucast: started on port %d interface %s to %s",
 		localudpport, ei->interface, inet_ntoa(ei->addr.sin_addr));
 
 	return HA_OK;
@@ -401,24 +401,24 @@ ucast_read(struct hb_media* mp, int *lenp)
 	if ((numbytes = recvfrom(ei->rsocket, buf, MAXLINE-1, 0,
 		(struct sockaddr *)&their_addr, &addr_len)) == -1) {
 		if (errno != EINTR) {
-			LOG(PIL_CRIT, "ucast: error receiving from socket: %s",
+			PILCallLog(LOG, PIL_CRIT, "ucast: error receiving from socket: %s",
 				strerror(errno));
 		}
 		return NULL;
 	}
 	if (numbytes == 0) {
-		LOG(PIL_CRIT, "ucast: received zero bytes");
+		PILCallLog(LOG, PIL_CRIT, "ucast: received zero bytes");
 		return NULL;
 	}
 
 	buf[numbytes] = EOS;
 
 	if (DEBUGPKT) {
-		LOG(LOG_DEBUG, "ucast: received %d byte packet from %s",
+		PILCallLog(LOG, PIL_DEBUG, "ucast: received %d byte packet from %s",
 			numbytes, inet_ntoa(their_addr.sin_addr));
 	}
 	if (DEBUGPKTCONT) {
-		LOG(LOG_DEBUG, buf);
+		PILCallLog(LOG, PIL_DEBUG, "%s", buf);
 	}
 
 		
@@ -453,21 +453,19 @@ ucast_write(struct hb_media* mp, void *pkt, int len)
 	if ((rc = sendto(ei->wsocket, pkt, len, 0
 	,		(struct sockaddr *)&ei->addr
 	,		 sizeof(struct sockaddr))) != len) {
-		LOG(PIL_CRIT, "Unable to send [%d] ucast packet: %s"
+		PILCallLog(LOG, PIL_CRIT, "Unable to send [%d] ucast packet: %s"
 		,	rc, strerror(errno));
 		return HA_FAIL;
 	}
 	
 	if (DEBUGPKT) {
-		LOG(LOG_DEBUG, "ucast: sent %d bytes to %s", rc,
+		PILCallLog(LOG, PIL_DEBUG, "ucast: sent %d bytes to %s", rc,
 		    inet_ntoa(ei->addr.sin_addr));
    	}
 	if (DEBUGPKTCONT) {
-		LOG(LOG_DEBUG, pkt);
+		PILCallLog(LOG, PIL_DEBUG, "%s", (const char*)pkt);
    	}
-	
 	return HA_OK;	
-	
 }
 
 /*
@@ -487,7 +485,7 @@ static int HB_make_send_sock(struct hb_media *mp)
 	ei = (struct ip_private*)mp->pd;
 
 	if ((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
-		LOG(PIL_CRIT, "ucast: Error creating write socket: %s",
+		PILCallLog(LOG, PIL_CRIT, "ucast: Error creating write socket: %s",
 			strerror(errno));
    	}
 
@@ -498,11 +496,11 @@ static int HB_make_send_sock(struct hb_media *mp)
 	tos = IPTOS_LOWDELAY;
 	if (setsockopt(sockfd, IPPROTO_IP, IP_TOS,
 				&tos, sizeof(tos)) < 0) {
-		LOG(PIL_CRIT, "ucast: error setting socket option IP_TOS: %s",
+		PILCallLog(LOG, PIL_CRIT, "ucast: error setting socket option IP_TOS: %s",
 					strerror(errno));
 	}
 	else {
-		LOG(PIL_INFO,
+		PILCallLog(LOG, PIL_INFO,
 		  "ucast: write socket priority set to IPTOS_LOWDELAY on %s",
 		  ei->interface);
 	}
@@ -518,18 +516,18 @@ static int HB_make_send_sock(struct hb_media *mp)
 
 		if (setsockopt(sockfd, SOL_SOCKET, SO_BINDTODEVICE,
 				&i, sizeof(i)) == -1) {
-			LOG(PIL_CRIT,
+			PILCallLog(LOG, PIL_CRIT,
 			  "ucast: error setting option SO_BINDTODEVICE(w) on %s: %s",
 			  i.ifr_name, strerror(errno));
 			close(sockfd);
 			return -1;
 		}
-		LOG(PIL_INFO, "ucast: bound send socket to device: %s",
+		PILCallLog(LOG, PIL_INFO, "ucast: bound send socket to device: %s",
 			i.ifr_name);
 	}
 #endif
 	if (fcntl(sockfd,F_SETFD, FD_CLOEXEC) < 0) {
-		LOG(PIL_CRIT, "ucast: error setting close-on-exec flag: %s",
+		PILCallLog(LOG, PIL_CRIT, "ucast: error setting close-on-exec flag: %s",
 			strerror(errno));
 	}
 
@@ -558,7 +556,7 @@ static int HB_make_receive_sock(struct hb_media *mp) {
 	my_addr.sin_addr.s_addr = INADDR_ANY;	/* auto-fill with my IP */
 
 	if ((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) == -1) {
-		LOG(PIL_CRIT, "ucast: error creating read socket: %s",
+		PILCallLog(LOG, PIL_CRIT, "ucast: error creating read socket: %s",
 			strerror(errno));
 		return -1;
 	}
@@ -574,7 +572,7 @@ static int HB_make_receive_sock(struct hb_media *mp) {
 	if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR,
 			(void *)&j, sizeof j) < 0) {
 		/* Ignore it.  It will almost always be OK anyway. */
-		LOG(PIL_CRIT,
+		PILCallLog(LOG, PIL_CRIT,
 			"ucast: error setting socket option SO_REUSEADDR: %s",
 			strerror(errno));
 	}        
@@ -588,13 +586,13 @@ static int HB_make_receive_sock(struct hb_media *mp) {
 
 		if (setsockopt(sockfd, SOL_SOCKET, SO_BINDTODEVICE,
 				&i, sizeof(i)) == -1) {
-			LOG(PIL_CRIT,
+			PILCallLog(LOG, PIL_CRIT,
 			  "ucast: error setting option SO_BINDTODEVICE(r) on %s: %s",
 			  i.ifr_name, strerror(errno));
 			close(sockfd);
 			return -1;
 		}
-		LOG(PIL_INFO, "ucast: bound receive socket to device: %s",
+		PILCallLog(LOG, PIL_INFO, "ucast: bound receive socket to device: %s",
 			i.ifr_name);
 	}
 #endif
@@ -605,7 +603,7 @@ static int HB_make_receive_sock(struct hb_media *mp) {
 	for (bindtries=0; !boundyet && bindtries < MAXBINDTRIES; ++bindtries) {
 		if (bind(sockfd, (struct sockaddr *)&my_addr,
 				sizeof(struct sockaddr)) < 0) {
-			LOG(PIL_CRIT, "ucast: error binding socket. Retrying: %s",
+			PILCallLog(LOG, PIL_CRIT, "ucast: error binding socket. Retrying: %s",
 				strerror(errno));
 			sleep(1);
 		}
@@ -617,22 +615,22 @@ static int HB_make_receive_sock(struct hb_media *mp) {
 #if !defined(SO_BINDTODEVICE)
 		if (errno == EADDRINUSE) {
 			/* This happens with multiple udp or ppp interfaces */
-			LOG(PIL_INFO,
+			PILCallLog(LOG, PIL_INFO,
 			  "ucast: someone already listening on port %d [%s]",
 			  ei->port, ei->interface);
-			LOG(PIL_INFO, "ucast: UDP read process exiting");
+			PILCallLog(LOG, PIL_INFO, "ucast: UDP read process exiting");
 			close(sockfd);
 			cleanexit(0);
 		}
 #else
-		LOG(PIL_CRIT, "ucast: unable to bind socket. Giving up: %s",
+		PILCallLog(LOG, PIL_CRIT, "ucast: unable to bind socket. Giving up: %s",
 			strerror(errno));
 		close(sockfd);
 		return -1;
 #endif
 	}
 	if (fcntl(sockfd,F_SETFD, FD_CLOEXEC) < 0) {
-		LOG(PIL_CRIT, "ucast: error setting close-on-exec flag: %s",
+		PILCallLog(LOG, PIL_CRIT, "ucast: error setting close-on-exec flag: %s",
 			strerror(errno));
 	}
 	return sockfd;
@@ -649,12 +647,12 @@ static struct ip_private* new_ip_interface(const char *ifn,
  	 * Added by Brian TInsley <btinsley@emageon.com>
  	 */
 	if (!(h = gethostbyname(hbaddr))) {
-		LOG(PIL_CRIT, "ucast: cannot resolve hostname");
+		PILCallLog(LOG, PIL_CRIT, "ucast: cannot resolve hostname");
 		return NULL;
 	}
 
 	if (!(ep = (struct ip_private*) MALLOC(sizeof(struct ip_private)))) {
-		LOG(PIL_CRIT, "ucast: memory allocation error (line %d)",
+		PILCallLog(LOG, PIL_CRIT, "ucast: memory allocation error (line %d)",
 			(__LINE__ - 2) );
 		return NULL;
 	}
@@ -665,7 +663,7 @@ static struct ip_private* new_ip_interface(const char *ifn,
 	memcpy(&ep->heartaddr, h->h_addr_list[0], sizeof(ep->heartaddr));
 
 	if (!(ep->interface = STRDUP(ifn))) {
-		LOG(PIL_CRIT, "ucast: memory allocation error (line %d)",
+		PILCallLog(LOG, PIL_CRIT, "ucast: memory allocation error (line %d)",
 			(__LINE__ - 2) );
 		FREE(ep);
 		return NULL;
