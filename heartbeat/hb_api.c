@@ -1,4 +1,4 @@
-/* $Id: hb_api.c,v 1.112 2004/09/10 22:47:40 alan Exp $ */
+/* $Id: hb_api.c,v 1.113 2004/10/06 19:08:46 andrew Exp $ */
 /*
  * hb_api: Server-side heartbeat API code
  *
@@ -1254,6 +1254,7 @@ api_check_client_credentials(client_proc_t* client, uid_t uid, gid_t gid)
 	int		one = 1;
 	gboolean	result = TRUE;
 
+	int auth_result = IPC_FAIL;
 	GHashTable*	uidlist
 	=		g_hash_table_new(g_direct_hash, g_direct_equal);
 
@@ -1261,9 +1262,12 @@ api_check_client_credentials(client_proc_t* client, uid_t uid, gid_t gid)
 	g_hash_table_insert(uidlist, GUINT_TO_POINTER(id), &one);
 	auth.uid = uidlist;
 	auth.gid = NULL;
-	if (client->chan->ops->verify_auth(client->chan, &auth) != IPC_OK) {
+	auth_result = client->chan->ops->verify_auth(client->chan, &auth);
+
+	if (auth_result != IPC_OK) {
 		result = FALSE;
-	}else {
+
+	} else {
 		GHashTable*	gidlist
 		=		g_hash_table_new(g_direct_hash
 		,		g_direct_equal);
@@ -1271,13 +1275,17 @@ api_check_client_credentials(client_proc_t* client, uid_t uid, gid_t gid)
 		g_hash_table_insert(gidlist, GUINT_TO_POINTER(id), &one);
 		auth.uid = NULL;
 		auth.gid = gidlist;
-		if (client->chan->ops->verify_auth(client->chan, &auth)
-		!=	IPC_OK) {
-			result =  FALSE;
+
+		auth_result = client->chan->ops->verify_auth(
+			client->chan, &auth);
+		
+		if (auth_result != IPC_OK && auth_result != IPC_BROKEN) {
+			result = FALSE;
 		}
 		g_hash_table_destroy(gidlist);
 	}
 	g_hash_table_destroy(uidlist);
+
 	return result;
 }
 
@@ -1378,7 +1386,8 @@ api_check_client_authorization(client_proc_t* client)
 {
 	gpointer	gauth = NULL;
 	IPC_Auth*	auth;
-
+	int auth_result = IPC_FAIL;
+	
 	/* If client is casual, or type of client not in authorization table
 	 * then default to the "default" authorization category.
 	 * otherwise, use the client type's authorization list
@@ -1405,8 +1414,13 @@ api_check_client_authorization(client_proc_t* client)
 		,	client->client_id
 		,	(long)client->uid, (long)client->gid);
 	}
-	if (auth == NULL
-	||	client->chan->ops->verify_auth(client->chan, auth) == IPC_OK) {
+
+	if (auth != NULL) {
+		auth_result = client->chan->ops->verify_auth(
+			client->chan, auth);
+	}
+	
+	if (auth == NULL || auth_result == IPC_OK) {
 		if (client->chan->farside_pid > 0) {
 			if (client->chan->farside_pid != client->pid) {
 				client->removereason = "pid mismatch";
@@ -1418,7 +1432,11 @@ api_check_client_authorization(client_proc_t* client)
 			}
 		}
 		return TRUE;
+
+	} else if(auth_result == IPC_BROKEN) {
+		return TRUE;
 	}
+	
 	client->removereason = "client failed authorization";
 	return FALSE;
 }
