@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.360 2005/02/19 16:13:27 alan Exp $ */
+/* $Id: heartbeat.c,v 1.361 2005/02/20 03:11:40 alan Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -3408,7 +3408,8 @@ main(int argc, char * argv[], char **envp)
 	,	cl_glib_msg_handler, NULL);
 
 	cl_log_enable_stderr(TRUE);
-	g_log_set_always_fatal((GLogLevelFlags)0);
+	/* Weird enum (bitfield) */
+	g_log_set_always_fatal((GLogLevelFlags)0); /*value out of range*/  
 
 	if ((tmp_cmdname = ha_strdup(argv[0])) == NULL) {
 		cl_perror("Out of memory in main.");
@@ -5097,6 +5098,9 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.361  2005/02/20 03:11:40  alan
+ * Suppressed BEAM warning for weird bitfield/enum.
+ *
  * Revision 1.360  2005/02/19 16:13:27  alan
  * Added a tiny bit more debug.
  *
