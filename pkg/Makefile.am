@@ -1,4 +1,4 @@
-# $Id: Makefile.am,v 1.10 2004/11/04 11:55:45 davidlee Exp $
+# $Id: Makefile.am,v 1.11 2004/11/04 15:19:22 davidlee Exp $
 #
 # Open-HA "pkg" Makefile for Solaris etc.
 #
@@ -65,29 +65,23 @@ stamp-tmpinst:
 ## for the files, directories, named pipes, etc.  Most should end up as
 ## "root:sys", but a few should have either HA_CCMUSER or HA_APIGROUP or both.
 ##
-## Ideally it would use "@localstatedir@".  But this has a leading "/",
-## whereas our $3 names typically lack this.
-##
-## But note, too, there is the wider problem of maintaining this information
+## Note that there is the wider problem of maintaining this information
 ## (owner, group, etc.) across the various operating system package mechanisms.
 $(INFOFILES)/prototype:	stamp-tmpinst
 	-mkdir $(INFOFILES)
 	(cd $(TMPINSTDIR) && pkgproto .) \
 	  | $(AWK) ' \
-	    BEGIN \
-	      { existingdirs = "^(etc|etc/init.d|opt|usr|var|var/run)$$" ; \
-	      } \
 	    $$1 !~ /^[ils]$$/ \
 	      { $$(NF-1) = "root" ; $$(NF) = "sys" } \
-	    $$3 ~ existingdirs \
+	    "/" $$3 ~ /^(\/etc|\/etc\/init.d|\/opt|\/usr|\/var|\/var\/run)$$/ \
 	      { $$4 = $$5 = $$6 = "?" } \
-	    $$3 ~ /\/lib\/@HB_PKG@\/(api|casual|register)$$/ \
-	      { $$6 = "@HA_APIGROUP@" } \
-	    $$3 ~ /\/lib\/@HB_PKG@\/api\// \
+	    "/" $$3 == "@HA_VARLIBDIR@/@HB_PKG@/ccm" \
 	      { $$5 = "@HA_CCMUSER@" ; $$6 = "@HA_APIGROUP@" } \
-	    $$3 ~ /.*var.*\/lib\/@HB_PKG@\/ccm$$/ \
-	      { $$5 = "@HA_CCMUSER@" ; $$6 = "@HA_APIGROUP@" } \
-	    $$3 ~ /\/bin\/cl_status$$/ \
+	    "/" $$3 == "@HA_COREDIR@/@HA_CCMUSER@" \
+	      { $$5 = "@HA_CCMUSER@" } \
+	    "/" $$3 == "@HA_COREDIR@/nobody" \
+	      { $$5 = "nobody" } \
+	    "/" $$3 == "@bindir@/cl_status" \
 	      { $$5 = "@HA_CCMUSER@" ; $$6 = "@HA_APIGROUP@" } \
 	    { print ; } \
 	  ' > $@
@@ -95,10 +89,10 @@ $(INFOFILES)/prototype:	stamp-tmpinst
 	echo "d none etc/rc0.d ? ? ?" >> $@
 	echo "d none etc/rc1.d ? ? ?" >> $@
 	echo "d none etc/rcS.d ? ? ?" >> $@
-	echo "s none etc/rc2.d/S@HB_INITSTARTPRI@heartbeat=../init.d/heartbeat@INIT_EXT@" >> $@
-	echo "s none etc/rc0.d/K@HB_INITSTOPPRI@heartbeat=../init.d/heartbeat@INIT_EXT@" >> $@
-	echo "s none etc/rc1.d/K@HB_INITSTOPPRI@heartbeat=../init.d/heartbeat@INIT_EXT@" >> $@
-	echo "s none etc/rcS.d/K@HB_INITSTOPPRI@heartbeat=../init.d/heartbeat@INIT_EXT@" >> $@
+	echo "s none etc/rc2.d/S@HB_INITSTARTPRI@heartbeat=@INITDIR@/heartbeat@INIT_EXT@" >> $@
+	echo "s none etc/rc0.d/K@HB_INITSTOPPRI@heartbeat=@INITDIR@/heartbeat@INIT_EXT@" >> $@
+	echo "s none etc/rc1.d/K@HB_INITSTOPPRI@heartbeat=@INITDIR@/heartbeat@INIT_EXT@" >> $@
+	echo "s none etc/rcS.d/K@HB_INITSTOPPRI@heartbeat=@INITDIR@/heartbeat@INIT_EXT@" >> $@
 	echo "i pkginfo" >> $@
 	echo "i preinstall" >> $@
 	echo "i postinstall" >> $@
