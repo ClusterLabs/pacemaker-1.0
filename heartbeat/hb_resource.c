@@ -1,4 +1,4 @@
-/* $Id: hb_resource.c,v 1.72 2005/02/28 21:23:30 gshi Exp $ */
+/* $Id: hb_resource.c,v 1.73 2005/03/03 16:22:07 andrew Exp $ */
 /*
  * hb_resource: Linux-HA heartbeat resource management code
  *
@@ -1947,7 +1947,9 @@ hb_giveup_resources(void)
 	static int	resource_shutdown_in_progress = FALSE;
 	
 	if (!DoManageResources){
-		hb_initiate_shutdown(FALSE);
+		if (!shutdown_in_progress) {
+			hb_initiate_shutdown(FALSE);
+		}
 		return;
 	}
 
@@ -2421,6 +2423,10 @@ StonithStatProcessName(ProcTrack* p)
 
 /*
  * $Log: hb_resource.c,v $
+ * Revision 1.73  2005/03/03 16:22:07  andrew
+ * Fix from gshi for bug #302
+ *  - seems to work well
+ *
  * Revision 1.72  2005/02/28 21:23:30  gshi
  * giveup_resources() servers as two purposes in 1.x series:
  * 1) give up all resources
