@@ -1,4 +1,4 @@
-/* $Id: client_lib.c,v 1.7 2004/07/07 19:07:15 gshi Exp $ */
+/* $Id: client_lib.c,v 1.8 2004/07/26 11:43:25 andrew Exp $ */
 /* 
  * client_lib: heartbeat API client side code
  *
@@ -2264,7 +2264,7 @@ get_uuid(llc_private_t* pi, const char* nodename, uuid_t uuid)
 	struct ha_msg*		reply;
 	const char *		result;
 	const char *		tmp;
-	int			len;
+	size_t			len;
 	
 	if (!pi->SignedOn) {
 		ha_api_log(LOG_ERR, "not signed on");
