@@ -343,7 +343,7 @@ main(int argc, char ** argv)
 	g_hash_table_destroy(saCkptService->replicaHash);
 	g_hash_table_destroy(saCkptService->clientHash);
 	g_hash_table_destroy(saCkptService->openCheckpointHash);
-	SaCkptFree((void**)&saCkptService);
+	SaCkptFree((void*)&saCkptService);
 
 #ifdef USE_DMALLOC
 	dmalloc_shutdown();

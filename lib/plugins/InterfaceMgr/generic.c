@@ -236,7 +236,7 @@ AddAnInterfaceType(PILPlugin*us, GHashTable* MasterTable, PILGenericIfMgmtRqst* 
 	,	&GenIfOps
 	,	CloseGenInterfaceManager
 	,	&GenIf
-	,	(void**)&GenIfImports
+	,	(void*)&GenIfImports
 	,	MasterTable);	/* Point ud_interface to MasterTable */
 
 	/* We don't ever want to be unloaded... */

@@ -77,7 +77,7 @@ SaCkptOperationTimeout(gpointer timeout_data)
 	cl_log(LOG_INFO, "Replica %s operation %d (%s) timeout",
 		replica->checkpointName,
 		ckptOp->operationNO, strOp);
-	SaCkptFree((void**)&strOp);
+	SaCkptFree((void*)&strOp);
 
 	if (ckptOp->state == OP_STATE_PENDING) {
 		/* 
@@ -310,7 +310,7 @@ SaCkptOperationRemove(SaCkptOperationT** pCkptOp)
 	}
 	g_list_free(ckptOp->stateList);
 	
-	SaCkptFree((void**)&ckptOp);
+	SaCkptFree((void*)&ckptOp);
 
 	*pCkptOp = NULL;
 
@@ -344,7 +344,7 @@ SaCkptOperationStartTimer(SaCkptOperationT* ckptOp)
 				"Start timer %u for op %d (%s)",
 				ckptOp->timeoutTag, 
 				ckptOp->operationNO, strOp);
-			SaCkptFree((void**)&strOp);
+			SaCkptFree((void*)&strOp);
 		}
 	}
 
@@ -363,7 +363,7 @@ SaCkptOperationStopTimer(SaCkptOperationT* ckptOp)
 				"delete timer %u for op %d (%s)",
 				ckptOp->timeoutTag,
 				ckptOp->operationNO, strOp);
-			SaCkptFree((void**)&strOp);
+			SaCkptFree((void*)&strOp);
 		}
 		
 		g_source_remove(ckptOp->timeoutTag);
@@ -440,7 +440,7 @@ SaCkptOp2String(SaCkptOpT op)
 	}
 	memcpy(strOp, strTemp, strlen(strTemp)+1);
 
-	SaCkptFree((void**)&strTemp);
+	SaCkptFree((void*)&strTemp);
 
 	return strOp;
 }
@@ -515,7 +515,7 @@ SaCkptOperationNodeFailure(gpointer key,
 				}
 				SaCkptMessageMulticast(ckptMsg, 
 					ckptOp->stateList);
-				SaCkptFree((void**)&ckptMsg);
+				SaCkptFree((void*)&ckptMsg);
 				
 				break;
 				
@@ -532,7 +532,7 @@ SaCkptOperationNodeFailure(gpointer key,
 				}
 				SaCkptMessageSend(ckptMsg, 
 					ckptOp->clientHostName);
-				SaCkptFree((void**)&ckptMsg);
+				SaCkptFree((void*)&ckptMsg);
 
 				replica->flagLockReplica = FALSE;
 				if (saCkptService->flagVerbose) {
@@ -558,7 +558,7 @@ SaCkptOperationNodeFailure(gpointer key,
 				ckptMsg->retVal = SA_ERR_FAILED_OPERATION;
 				SaCkptMessageSend(ckptMsg, 
 					ckptOp->clientHostName);
-				SaCkptFree((void**)&ckptMsg);
+				SaCkptFree((void*)&ckptMsg);
 
 				replica->flagLockReplica = FALSE;
 				if (saCkptService->flagVerbose) {

@@ -77,7 +77,7 @@ SaCkptClientDelete(SaCkptClientT** pClient)
 	g_list_free(client->openCheckpointList);
 	g_list_free(client->pendingRequestList);
 
-	SaCkptFree((void**)&client);
+	SaCkptFree((void*)&client);
 
 	*pClient = NULL;
 

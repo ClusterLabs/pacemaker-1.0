@@ -230,7 +230,7 @@ SaCkptReplicaFree(SaCkptReplicaT** pReplica)
 			if (sec->data[1] != NULL) {
 				SaCkptFree((void**)&(sec->data[1]));
 			}
-			SaCkptFree((void**)&sec);
+			SaCkptFree((void*)&sec);
 		}
 		list = list->next;
 	}
@@ -238,7 +238,7 @@ SaCkptReplicaFree(SaCkptReplicaT** pReplica)
 
 	g_hash_table_destroy(replica->operationHash);
 
-	SaCkptFree((void**)&replica);
+	SaCkptFree((void*)&replica);
 
 	*pReplica = NULL;
 
@@ -353,7 +353,7 @@ SaCkptCheckpointClose(SaCkptOpenCheckpointT** pOpenCkpt)
 		 }
 	}
 
-	SaCkptFree((void**)&openCkpt);
+	SaCkptFree((void*)&openCkpt);
 
 	*pOpenCkpt = openCkpt;
 
@@ -498,7 +498,7 @@ SaCkptReplicaPack(void** data, int* dataLength,
 	SACKPTASSERT(*data != NULL);
 	memcpy(*data, q, *dataLength);
 
-	SaCkptFree((void**)&q);
+	SaCkptFree((void*)&q);
 
 	return HA_OK;
 }
@@ -664,7 +664,7 @@ SaCkptReplicaUnpack(void* data, int dataLength)
 		g_hash_table_new(g_int_hash, g_int_equal);
 	replica->openCheckpointList= NULL;
 
-	SaCkptFree((void**)&q);
+	SaCkptFree((void*)&q);
 
 	cl_log(LOG_INFO, "Replica %s was copied from node %s",
 		replica->checkpointName,
@@ -755,7 +755,7 @@ SaCkptReplicaUpdate(SaCkptReplicaT* replica, SaCkptReqT req,
 				"Update: section %s deleted from replica %s",
 				strSectionID,
 				replica->checkpointName);
-			SaCkptFree((void**)&strSectionID);
+			SaCkptFree((void*)&strSectionID);
 		}
 		
 		/* free section */
@@ -765,7 +765,7 @@ SaCkptReplicaUpdate(SaCkptReplicaT* replica, SaCkptReqT req,
 		if (sec->data[1] != NULL) {
 			SaCkptFree((void**)&(sec->data[1]));
 		}
-		SaCkptFree((void**)&sec);
+		SaCkptFree((void*)&sec);
 		break;
 		
 	case REQ_SEC_WRT:
@@ -839,8 +839,8 @@ SaCkptReplicaUpdate(SaCkptReplicaT* replica, SaCkptReqT req,
 		cl_log(LOG_INFO, 
 			"Replica %s update, request %s, status %s",
 			replica->checkpointName, strReq, strErr);
-		SaCkptFree((void**)&strReq);
-		SaCkptFree((void**)&strErr);
+		SaCkptFree((void*)&strReq);
+		SaCkptFree((void*)&strErr);
 	}
 
 	return retVal;
@@ -938,8 +938,8 @@ SaCkptReplicaUpdPrepare(SaCkptReplicaT* replica, SaCkptReqT req,
 		cl_log(LOG_INFO, 
 			"Replica %s update prepared, request %s, status %s",
 			replica->checkpointName, strReq, strErr);
-		SaCkptFree((void**)&strReq);
-		SaCkptFree((void**)&strErr);
+		SaCkptFree((void*)&strReq);
+		SaCkptFree((void*)&strErr);
 	}
 
 	return retVal;
@@ -1013,7 +1013,7 @@ SaCkptReplicaUpdCommit(SaCkptReplicaT* replica, SaCkptReqT req,
 				"Commit: section %s deleted from replica %s",
 				strSectionID,
 				replica->checkpointName);
-			SaCkptFree((void**)&strSectionID);
+			SaCkptFree((void*)&strSectionID);
 		}
 		
 		/* free section */
@@ -1023,7 +1023,7 @@ SaCkptReplicaUpdCommit(SaCkptReplicaT* replica, SaCkptReqT req,
 		if (sec->data[1] != NULL) {
 			SaCkptFree((void**)&(sec->data[1]));
 		}
-		SaCkptFree((void**)&sec);
+		SaCkptFree((void*)&sec);
 		break;
 		
 	case REQ_SEC_WRT:
@@ -1094,8 +1094,8 @@ SaCkptReplicaUpdCommit(SaCkptReplicaT* replica, SaCkptReqT req,
 		cl_log(LOG_INFO, 
 			"Replica %s update committed, request %s, status %s",
 			replica->checkpointName, strReq, strErr);
-		SaCkptFree((void**)&strReq);
-		SaCkptFree((void**)&strErr);
+		SaCkptFree((void*)&strReq);
+		SaCkptFree((void*)&strErr);
 	}
 	
 	return SA_OK;
@@ -1146,7 +1146,7 @@ SaCkptReplicaUpdRollback(SaCkptReplicaT* replica, SaCkptReqT req,
 				"Rollback: section %s deleted from replica %s",
 				strSectionID,
 				replica->checkpointName);
-			SaCkptFree((void**)&strSectionID);
+			SaCkptFree((void*)&strSectionID);
 		}
 		
 		/* free section */
@@ -1156,7 +1156,7 @@ SaCkptReplicaUpdRollback(SaCkptReplicaT* replica, SaCkptReqT req,
 		if (sec->data[1] != NULL) {
 			SaCkptFree((void**)&(sec->data[1]));
 		}
-		SaCkptFree((void**)&sec);
+		SaCkptFree((void*)&sec);
 		break;
 		
 	case REQ_SEC_DEL:
@@ -1227,8 +1227,8 @@ SaCkptReplicaUpdRollback(SaCkptReplicaT* replica, SaCkptReqT req,
 		cl_log(LOG_INFO, 
 			"Replica %s update rollbacked, request %s, status %s",
 			replica->checkpointName, strReq, strErr);
-		SaCkptFree((void**)&strReq);
-		SaCkptFree((void**)&strErr);
+		SaCkptFree((void*)&strReq);
+		SaCkptFree((void*)&strErr);
 	}
 	
 	return SA_OK;
@@ -1354,7 +1354,7 @@ SaCkptSectionCreate(SaCkptReplicaT* replica,
 	if (dataLength > 0) {
 		sec->data[0] = SaCkptMalloc(dataLength);
 		if (sec->data[0] == NULL) {
-			SaCkptFree((void**)&sec);
+			SaCkptFree((void*)&sec);
 			cl_log(LOG_ERR,
 				"Section create failed, no memory");
 			return SA_ERR_NO_MEMORY;
@@ -1377,7 +1377,7 @@ SaCkptSectionCreate(SaCkptReplicaT* replica,
 			"Section %s created in replica %s",
 			strSectionID,
 			replica->checkpointName);
-		SaCkptFree((void**)&strSectionID);
+		SaCkptFree((void*)&strSectionID);
 	}
 
 	*pSec = sec;
@@ -1407,7 +1407,7 @@ SaCkptSectionDelete(SaCkptReplicaT* replica,
 	if (sec->data[1] != NULL) {
 		SaCkptFree((void**)&(sec->data[1]));
 	}
-	SaCkptFree((void**)&sec);
+	SaCkptFree((void*)&sec);
 
 	return HA_OK;
 }

@@ -52,7 +52,7 @@ findauth(const char * type, char ** tptr)
 
 	/* Look and see if we already have the module loaded in memory */
 	if (!g_hash_table_lookup_extended(AuthFunctions, type
-	,	(gpointer*) tptr, (gpointer*) &ret)) {
+	,	(gpointer) tptr, (gpointer) &ret)) {
 
 		PIL_rc	rc;
 
@@ -67,7 +67,7 @@ findauth(const char * type, char ** tptr)
 		}
 		
 		if (!g_hash_table_lookup_extended(AuthFunctions, type
-		,       (gpointer*) tptr, (gpointer*)&ret)) {
+		,       (gpointer) tptr, (gpointer)&ret)) {
 			ha_log(LOG_ERR, "Lookup extended#2 returned FALSE for %s"
 			,	type);
 			ha_log(LOG_ERR, "Table size: %d"
@@ -294,6 +294,9 @@ parse_authfile(void)
 }
 /*
  * $Log: auth.c,v $
+ * Revision 1.12  2003/12/21 11:18:37  horms
+ * Don't used type-pruned pointers. Fixed some uninitialised variables
+ *
  * Revision 1.11  2003/02/07 08:37:16  horms
  * Removed inclusion of portability.h from .h files
  * so that it does not need to be installed.

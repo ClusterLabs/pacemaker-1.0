@@ -1117,7 +1117,7 @@ api_add_client(client_proc_t* client, struct ha_msg* msg)
 	pid_t		pid = 0;
 	const char*	cpid;
 	const char *	fromid;
-	const char *	cgid;
+	const char *	cgid = NULL;
 	const char *	cuid;
 	long		luid;
 	long		lgid;

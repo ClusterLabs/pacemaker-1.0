@@ -317,7 +317,7 @@ static SaErrorT
 doDispatch(SaInt32T fd, struct timeval *tv/*[in/out]*/)
 {
 	SaErrorT retcode = SA_OK;
-	ReqListDataT* pReqData;
+	ReqListDataT* pReqData = NULL;
 	SaCkptResponseHeadT resphead;
 	SaCkptCheckpointHandleT checkpointHandle;
 	SaCkptCallbacksT *callbacks = &(pReqData->pInit->callbacks);
@@ -1544,7 +1544,7 @@ saCkptCheckpointWrite(
 	SaUint32T *erroneousVectorIndex/*[out]*/)
 {
 	SaInt32T sockfd;
-	SaErrorT retcode;
+	SaErrorT retcode = SA_OK;
 	SaUint32T i;
 	size_t len;
 	CkptListDataT* pCkptData;
@@ -1747,7 +1747,7 @@ saCkptCheckpointRead(
 	SaUint32T *erroneousVectorIndex/*[out]*/)
 {
 	SaInt32T sockfd;
-	SaErrorT retcode;
+	SaErrorT retcode = SA_OK;
 	SaUint32T i;
 	size_t len;
 	CkptListDataT* pCkptData;

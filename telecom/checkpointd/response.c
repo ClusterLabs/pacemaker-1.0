@@ -83,8 +83,8 @@ SaCkptResponseSend(SaCkptResponseT** pCkptResp)
 			"\tclient %d, data length %lu, status %s",
 			ckptResp->resp->clientHandle, 
 			ckptResp->resp->dataLength, strErr);
-		SaCkptFree((void**)&strErr);
-		SaCkptFree((void**)&strReq);
+		SaCkptFree((void*)&strErr);
+		SaCkptFree((void*)&strReq);
 	}
 
 	/* build response message */
@@ -132,7 +132,7 @@ SaCkptResponseSend(SaCkptResponseT** pCkptResp)
 		if (ipcMsg->msg_body != NULL) {
 			SaCkptFree((void**)&(ipcMsg->msg_body));
 		}
-		SaCkptFree((void**)&ipcMsg);
+		SaCkptFree((void*)&ipcMsg);
 	}
 
 	/* free response */
@@ -142,7 +142,7 @@ SaCkptResponseSend(SaCkptResponseT** pCkptResp)
 		}
 		SaCkptFree((void**)&(ckptResp->resp));
 	}
-	SaCkptFree((void**)&ckptResp);
+	SaCkptFree((void*)&ckptResp);
 
 	*pCkptResp = NULL;
 

@@ -212,7 +212,7 @@ SaCkptRequestStart(SaCkptRequestT* ckptReq)
 				M_CKPT_OPEN_BCAST);
 			strcpy(ckptMsg->checkpointName, openParam->ckptName.value);
 			SaCkptMessageBroadcast(ckptMsg);
-			SaCkptFree((void**)&ckptMsg);
+			SaCkptFree((void*)&ckptMsg);
 			
 			SaCkptRequestStartTimer(ckptReq);
 		}
@@ -244,7 +244,7 @@ SaCkptRequestStart(SaCkptRequestT* ckptReq)
 			ckptMsg = SaCkptMessageCreateReq(ckptReq, 
 				M_CKPT_CLOSE_REMOTE);
 			SaCkptMessageSend(ckptMsg, openCkpt->activeNodeName);
-			SaCkptFree((void**)&ckptMsg);
+			SaCkptFree((void*)&ckptMsg);
 			
 			SaCkptRequestStartTimer(ckptReq);
 			 
@@ -296,7 +296,7 @@ SaCkptRequestStart(SaCkptRequestT* ckptReq)
 		}
 		SaCkptMessageSend(ckptMsg, openCkpt->activeNodeName);
 //		SaCkptMessageBroadcast(ckptMsg);
-		SaCkptFree((void**)&ckptMsg);
+		SaCkptFree((void*)&ckptMsg);
 		ckptMsg = NULL;
 		
 		SaCkptRequestStartTimer(ckptReq);
@@ -315,7 +315,7 @@ SaCkptRequestStart(SaCkptRequestT* ckptReq)
 			}
 			SaCkptFree((void**)&(ckptResp->resp));
 		}
-		SaCkptFree((void**)&ckptResp);
+		SaCkptFree((void*)&ckptResp);
 	}
 	
 	return HA_OK;
@@ -342,7 +342,7 @@ SaCkptRequestTimeout(gpointer timeout_data)
 		"Request timeout, client %d, request %lu (%s)", 
 		ckptReq->clientRequest->clientHandle,
 		ckptReq->clientRequest->requestNO, strReq);
-	SaCkptFree((void**)&strReq);
+	SaCkptFree((void*)&strReq);
 
 	ckptResp = SaCkptResponseCreate(ckptReq);
 	
@@ -464,7 +464,7 @@ SaCkptRequestReceive(IPC_Channel* clientChannel)
 	if (ipcMsg->msg_body != NULL) {
 		SaCkptFree((void**)&(ipcMsg->msg_body));
 	}
-	SaCkptFree((void**)&ipcMsg);
+	SaCkptFree((void*)&ipcMsg);
 
 	if (saCkptService->flagVerbose) {
 		strReq = SaCkptReq2String(clientRequest->req);
@@ -474,7 +474,7 @@ SaCkptRequestReceive(IPC_Channel* clientChannel)
 			"Receive request %lu (%s), client %d",
 			clientRequest->requestNO, strReq,
 			clientRequest->clientHandle);
-		SaCkptFree((void**)&strReq);
+		SaCkptFree((void*)&strReq);
 	}
 
 	ckptReq = SaCkptMalloc(sizeof(SaCkptRequestT));
@@ -541,7 +541,7 @@ SaCkptRequestRemove(SaCkptRequestT** pCkptReq)
 		SaCkptFree((void**)&(ckptReq->clientRequest->reqParam));
 	}
 	SaCkptFree((void**)&(ckptReq->clientRequest));
-	SaCkptFree((void**)&ckptReq);
+	SaCkptFree((void*)&ckptReq);
 
 #if 0
 	/* start pending request */
@@ -589,7 +589,7 @@ SaCkptRequestStartTimer(SaCkptRequestT* ckptReq)
 			ckptReq->timeoutTag,
 			ckptReq->clientRequest->requestNO, strReq,
 			ckptReq->client->clientHandle);
-			SaCkptFree((void**)&strReq);
+			SaCkptFree((void*)&strReq);
 		}
 	}
 
@@ -610,7 +610,7 @@ SaCkptRequestStopTimer(SaCkptRequestT* ckptReq)
 			ckptReq->timeoutTag,
 			ckptReq->clientRequest->requestNO, strReq,
 			ckptReq->client->clientHandle);
-			SaCkptFree((void**)&strReq);
+			SaCkptFree((void*)&strReq);
 		}
 		
 		g_source_remove(ckptReq->timeoutTag);
@@ -686,7 +686,7 @@ SaCkptReq2String(SaCkptReqT req)
 	}
 	memcpy(strReq, strTemp, strlen(strTemp)+1);
 
-	SaCkptFree((void**)&strTemp);
+	SaCkptFree((void*)&strTemp);
 
 	return strReq;
 }

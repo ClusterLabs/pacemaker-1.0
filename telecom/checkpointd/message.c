@@ -1321,7 +1321,7 @@ SaCkptMessageReceive()
 			"Message from %s, type %s, subtype %s",
 			ckptMsg->fromNodeName,
 			ckptMsg->msgType, strSubtype);
-		SaCkptFree((void**)&strSubtype);
+		SaCkptFree((void*)&strSubtype);
 	}
 	
 	ha_msg_del(haMsg);
@@ -1514,8 +1514,8 @@ SaCkptMessage2Hamsg(SaCkptMessageT* ckptMsg) {
 			F_CKPT_RETVAL);
 	}
 
-	SaCkptFree((void**)&strTemp);
-	SaCkptFree((void**)&strVersion);
+	SaCkptFree((void*)&strTemp);
+	SaCkptFree((void*)&strVersion);
 
 	return haMsg;
 }
@@ -1678,7 +1678,7 @@ SaCkptMessageSend(SaCkptMessageT* ckptMsg, char* nodename)
 				cl_log(LOG_INFO, 
 				"Send message to %s, type %s, subtype %s",
 				nodename, ckptMsg->msgType, strSubtype);
-				SaCkptFree((void**)&strSubtype);
+				SaCkptFree((void*)&strSubtype);
 			}
 
 #ifdef CKPTDEBUG
@@ -1733,7 +1733,7 @@ SaCkptMessageBroadcast(SaCkptMessageT* ckptMsg)
 				cl_log(LOG_INFO, 
 				"Broadcast message, type %s, subtype %s",
 				ckptMsg->msgType, strMsgSubtype);
-				SaCkptFree((void**)&strMsgSubtype);
+				SaCkptFree((void*)&strMsgSubtype);
 			}
 
 #ifdef CKPTDEBUG			
@@ -1790,7 +1790,7 @@ SaCkptMessageMulticast(SaCkptMessageT* ckptMsg, GList* list)
 				"Send message to %s, type %s, subtype %s",
 				state->nodeName,
 				ckptMsg->msgType, strMsgSubtype);
-				SaCkptFree((void**)&strMsgSubtype);
+				SaCkptFree((void*)&strMsgSubtype);
 			}
 		} else {
 			cl_log(LOG_ERR, 
@@ -1968,7 +1968,7 @@ SaCkptMsgSubtype2String(SaCkptMsgSubtypeT msgSubtype)
 	}
 	memcpy(strMsgSubtype, strTemp, strlen(strTemp)+1);
 
-	SaCkptFree((void**)&strTemp);
+	SaCkptFree((void*)&strTemp);
 
 	return strMsgSubtype;
 }
@@ -2135,7 +2135,7 @@ SaCkptMessageDelete(SaCkptMessageT** pCkptMsg)
 		SaCkptFree((void**)&(ckptMsg->data));
 	}
 
-	SaCkptFree((void**)&ckptMsg);
+	SaCkptFree((void*)&ckptMsg);
 
 	*pCkptMsg = NULL;
 
