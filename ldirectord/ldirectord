@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-my($VERSION)=(qw$Id: ldirectord,v 1.81 2004/03/08 12:29:00 horms Exp $)[2];
+my($VERSION)=(qw$Id: ldirectord,v 1.82 2004/03/10 02:25:03 horms Exp $)[2];
 
 ######################################################################
 # ldirectord                 http://www.vergenet.net/linux/ldirectord/
@@ -2749,7 +2749,7 @@ sub ld_open_socket
 # started by `inetd'.  In that case, stdin, stdout and stderr are all set up
 # for you to refer to the network connection, and the `fork()'s and session
 # manipulation should *not* be done (to avoid confusing `inetd').  Only the
-# `chdir()' and `umask()' steps remain as useful.
+# `chdir()' step remains useful.
 #
 # Gratuitously over documented, because it can be
 #
@@ -2783,10 +2783,6 @@ sub ld_daemon
 	if(chdir("/")<0){
 		&ld_exit(-1, "ld_daemon: Could not chdir");
 	}
-
-	# `umask(0)' so that we have complete control over the permissions of
-	# anything we write. We don't know what umask we may have inherited.
-	umask(0);
 
 	# `close()' fds 0, 1, and 2. This releases the standard in, out, and
 	# error we inherited from our parent process. We have no way of knowing
