@@ -52,4 +52,4 @@ case "$OPT" in
 	;;
 esac
 
-exit 1
+exit $?
