@@ -294,6 +294,9 @@ TestHeartbeat() {
      exit 1
     fi
   fi
+
+ sleep 5
+
   j=0
   while
     [ "$j" -lt 30 ]
