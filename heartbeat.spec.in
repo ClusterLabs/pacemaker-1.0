@@ -1,4 +1,4 @@
-#	$Id: heartbeat.spec.in,v 1.77 2004/02/06 07:11:28 horms Exp $
+#	$Id: heartbeat.spec.in,v 1.78 2004/02/11 03:27:13 alan Exp $
 
 # Workaround for a change in RPM 4.1.x; needs proper fixing soon!
 %define _unpackaged_files_terminate_build 0
@@ -73,17 +73,75 @@ PILS is designed to support any number of plugins
 implementing any number of interfaces.
 
 %changelog
+* Tue Feb 10 2004  Alan Robertson <alanr@unix.sh> (see doc/AUTHORS file)
++ Version 1.1.5
+  + ipfail now has "hysteresis" so that it doesn't respond immediately
+	to a network failure, but waits a little while so that the
+	damage can be properly assessed and extraneous takeovers avoided
+  + Several fixes to cl_poll()
+  + More fixes to the IPC code - especially handling data reception
+	after EOF
+  + removed some unclean code from GSource for treating EOF conditions
+  + Several bugs concerning hanging when shutting down early during startup
+  + A few BasicSanityCheck bug fixes
+  + CTS now allows a single machine to be able to monitor several clusters
+  + Most former CTS options are now either unneeded or on the command line
+  + Increased number of ARPs and how long they're being sent out
+  + Fixed uncommon (authorization) memory leak
+  + Some Solaris portability fixes.
+  + Made init script handle standby correctly for new config files
+  + Improved the fast failure detection test
+  + Added some backwards compatibility for nice_failback and some default
+	authentication directives
+  + Corrected the 1.1.4 change log
+  
+
 * Fri Jan 22 2004  Alan Robertson <alanr@unix.sh> (see doc/AUTHORS file)
 + Version 1.1.4
+  + ipfail now works properly with auto_failback on (active/active)
   + Changed the API to use sockets (IPC library) instead of FIFOs.
   + Added new apiauth directives to provide authorization information
 	formerly provided by the FIFO permissions.
-  + Added Intel's implementation of the SAF data checkpointing API
+  + Added Intel's implementation of the SAF data checkpointing API and daemon
   + Added a cleanup suggested by Emily Ratliff.
+  + IPMILan STONITH plugin added to CVS
+  + Added IPaddr2 resource script
   + Various cleanups due to horms.
+  + Fixed authentication to work on 64-bit platforms(!)
+  + Fixed the cl_poll() code to handle corner cases better
+  + Made heartbeat close watchdog device before re-execing itself
+  + New CTS improvements from Mi, Jun <jun.mi@intel.com>
   + Various minor bug fixes.
-  + probably a bunch of other things I don't have time to research
-	right now :-)
+      . Several shutdown bugs addressed
+      . fixed sendarp to make a pid file, so we can shut it down
+          when we shut everything else down in case it's still running.
+      . Lots of minor bug fixes to IPC code
+      . Lots of minor bug fixes to ipctest program
+      . made BasicSanityCheck more tolerant of delays
+      . Fixed IPC code to authenticate based on ints, not int*s.
+      . Check properly for strnlen instead of strlen...
+      . Several signed/unsigned fixes
+      . A few uninitialized vars now are inited
+      . Switched to compiling lex/yacc sources the automake way
+      . Lots of minor CTS fixes...
+
+  + ldirectord bug fixes:
+    . When new real servers are added on initialisation or when
+        the configuration file is reread they are marked with status
+        of -1 (uninitialised) so they will be checked and inserted
+        into the virtual service as required
+    . All checks use the checkport if set, otherwise the port set for
+        the individual real server. This was the case for http and
+        connect checks, but others had variations on this theme.
+    . When the configuration file is reread because it changed
+        on disk and autoreload is set, check the real servers
+        immediately rather than waiting for checkinterval to expire
+    . Already running message sent to stderr instead of stdout
+    . Support alternate server in real-server specific URL
+    . Treat the same real server with different weights as a different
+        real server. Fixes bug reported by Philip Hayward whereby the same
+        real-server would always have the same weight, regardless of
+        the ldirectord.cf
 
 * Fri Sep 26 2003  Alan Robertson <alanr@unix.sh> (see doc/AUTHORS file)
 + Version 1.1.3
