@@ -37,7 +37,7 @@ stonith_ops_cb(stonith_ops_t * op, void * private_data)
 {
 	printf("optype=%d, node_name=%s, result=%d, node_list=%s\n",op->optype,
 		op->node_name, op->op_result, (char *)op->node_list);
-	if (atoi(private_data) != op->op_result) {
+	if (atoi(private_data) != (int)op->op_result) {
 		g_rc = -1;
 	}
 }
