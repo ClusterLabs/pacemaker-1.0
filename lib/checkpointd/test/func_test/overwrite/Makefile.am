@@ -36,7 +36,7 @@ havarlibdir		= $(localstatedir)/lib/@HB_PKG@
 ckptvarlibdir		= $(havarlibdir)/ckpt
 havarrundir		= $(localstatedir)/run/
 
-test_LDADD		= $(GLIBLIB) \
+test_linkfiles		= $(GLIBLIB) \
 	 		$(top_builddir)/lib/checkpointd/libckpt.la \
 			$(top_builddir)/replace/libreplace.la \
 			$(top_builddir)/lib/clplumbing/libplumb.la \
@@ -46,54 +46,54 @@ noinst_PROGRAMS	= overwrite1node1 overwrite1node2 overwrite2node1 overwrite2node
 halib_PROGRAMS	= overwrite1node1 overwrite1node2 overwrite2node1 overwrite2node2  overwrite3node1 overwrite3node2  overwrite4node1 overwrite4node2 overwrite5node1 overwrite5node2 overwrite6node1 overwrite6node2 
 
 overwrite1node1_SOURCES	= overwrite1node1.c
-overwrite1node1_LDADD	= $(test_LDADD) 
+overwrite1node1_LDADD	= $(test_linkfiles) 
 overwrite1node1_LDFLAGS	= 
 
 overwrite1node2_SOURCES	= overwrite1node2.c
-overwrite1node2_LDADD	= $(test_LDADD) 
+overwrite1node2_LDADD	= $(test_linkfiles) 
 overwrite1node2_LDFLAGS	= 
 
 overwrite2node1_SOURCES	= overwrite2node1.c
-overwrite2node1_LDADD	= $(test_LDADD) 
+overwrite2node1_LDADD	= $(test_linkfiles) 
 overwrite2node1_LDFLAGS	= 
 
 overwrite2node2_SOURCES	= overwrite2node2.c
-overwrite2node2_LDADD	= $(test_LDADD) 
+overwrite2node2_LDADD	= $(test_linkfiles) 
 overwrite2node2_LDFLAGS	= 
 
 
 overwrite3node1_SOURCES	= overwrite3node1.c
-overwrite3node1_LDADD	= $(test_LDADD) 
+overwrite3node1_LDADD	= $(test_linkfiles) 
 overwrite3node1_LDFLAGS	= 
 
 overwrite3node2_SOURCES	= overwrite3node2.c
-overwrite3node2_LDADD	= $(test_LDADD) 
+overwrite3node2_LDADD	= $(test_linkfiles) 
 overwrite3node2_LDFLAGS	= 
 
 
 overwrite4node1_SOURCES	= overwrite4node1.c
-overwrite4node1_LDADD	= $(test_LDADD) 
+overwrite4node1_LDADD	= $(test_linkfiles) 
 overwrite4node1_LDFLAGS	= 
 
 overwrite4node2_SOURCES	= overwrite4node2.c
-overwrite4node2_LDADD	= $(test_LDADD) 
+overwrite4node2_LDADD	= $(test_linkfiles) 
 overwrite4node2_LDFLAGS	= 
 
 
 overwrite5node1_SOURCES	= overwrite5node1.c
-overwrite5node1_LDADD	= $(test_LDADD) 
+overwrite5node1_LDADD	= $(test_linkfiles) 
 overwrite5node1_LDFLAGS	= 
 
 overwrite5node2_SOURCES	= overwrite5node2.c
-overwrite5node2_LDADD	= $(test_LDADD) 
+overwrite5node2_LDADD	= $(test_linkfiles) 
 overwrite5node2_LDFLAGS	= 
 
 
 overwrite6node1_SOURCES	= overwrite6node1.c
-overwrite6node1_LDADD	= $(test_LDADD) 
+overwrite6node1_LDADD	= $(test_linkfiles) 
 overwrite6node1_LDFLAGS	= 
 
 overwrite6node2_SOURCES	= overwrite6node2.c
-overwrite6node2_LDADD	= $(test_LDADD) 
+overwrite6node2_LDADD	= $(test_linkfiles) 
 overwrite6node2_LDFLAGS	= 
 

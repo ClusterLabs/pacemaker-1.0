@@ -36,7 +36,7 @@ havarlibdir		= $(localstatedir)/lib/@HB_PKG@
 ckptvarlibdir		= $(havarlibdir)/ckpt
 havarrundir		= $(localstatedir)/run/
 
-test_LDADD		= $(GLIBLIB) \
+test_linkfiles		= $(GLIBLIB) \
 	 		$(top_builddir)/lib/checkpointd/libckpt.la \
 			$(top_builddir)/replace/libreplace.la \
 			$(top_builddir)/lib/clplumbing/libplumb.la \
@@ -51,49 +51,49 @@ halib_PROGRAMS	=	sect_delete1node1 sect_delete1node2 sect_delete2node1 sect_dele
 					sect_delete5node1 sect_delete5node2 sect_delete6node1 sect_delete6node2  
 
 sect_delete1node1_SOURCES	= sect_delete1node1.c
-sect_delete1node1_LDADD	= $(test_LDADD) 
+sect_delete1node1_LDADD	= $(test_linkfiles) 
 sect_delete1node1_LDFLAGS	= 
 
 sect_delete1node2_SOURCES	= sect_delete1node2.c
-sect_delete1node2_LDADD	= $(test_LDADD) 
+sect_delete1node2_LDADD	= $(test_linkfiles) 
 sect_delete1node2_LDFLAGS	= 
 
 sect_delete2node1_SOURCES	= sect_delete2node1.c
-sect_delete2node1_LDADD	= $(test_LDADD) 
+sect_delete2node1_LDADD	= $(test_linkfiles) 
 sect_delete2node1_LDFLAGS	= 
 
 sect_delete2node2_SOURCES	= sect_delete2node2.c
-sect_delete2node2_LDADD	= $(test_LDADD) 
+sect_delete2node2_LDADD	= $(test_linkfiles) 
 sect_delete2node2_LDFLAGS	= 
 
 sect_delete3node1_SOURCES	= sect_delete3node1.c
-sect_delete3node1_LDADD	= $(test_LDADD) 
+sect_delete3node1_LDADD	= $(test_linkfiles) 
 sect_delete3node1_LDFLAGS	= 
 
 sect_delete3node2_SOURCES	= sect_delete3node2.c
-sect_delete3node2_LDADD	= $(test_LDADD) 
+sect_delete3node2_LDADD	= $(test_linkfiles) 
 sect_delete3node2_LDFLAGS	= 
 
 sect_delete4node1_SOURCES	= sect_delete4node1.c
-sect_delete4node1_LDADD	= $(test_LDADD) 
+sect_delete4node1_LDADD	= $(test_linkfiles) 
 sect_delete4node1_LDFLAGS	= 
 
 sect_delete4node2_SOURCES	= sect_delete4node2.c
-sect_delete4node2_LDADD	= $(test_LDADD) 
+sect_delete4node2_LDADD	= $(test_linkfiles) 
 sect_delete4node2_LDFLAGS	= 
 
 sect_delete5node1_SOURCES	= sect_delete5node1.c
-sect_delete5node1_LDADD	= $(test_LDADD) 
+sect_delete5node1_LDADD	= $(test_linkfiles) 
 sect_delete5node1_LDFLAGS	= 
 
 sect_delete5node2_SOURCES	= sect_delete5node2.c
-sect_delete5node2_LDADD	= $(test_LDADD) 
+sect_delete5node2_LDADD	= $(test_linkfiles) 
 sect_delete5node2_LDFLAGS	= 
 
 sect_delete6node1_SOURCES	= sect_delete6node1.c
-sect_delete6node1_LDADD	= $(test_LDADD) 
+sect_delete6node1_LDADD	= $(test_linkfiles) 
 sect_delete6node1_LDFLAGS	= 
 
 sect_delete6node2_SOURCES	= sect_delete6node2.c
-sect_delete6node2_LDADD	= $(test_LDADD) 
+sect_delete6node2_LDADD	= $(test_linkfiles) 
 sect_delete6node2_LDFLAGS	= 

@@ -36,7 +36,7 @@ havarlibdir		= $(localstatedir)/lib/@HB_PKG@
 ckptvarlibdir		= $(havarlibdir)/ckpt
 havarrundir		= $(localstatedir)/run/
 
-test_LDADD		= $(GLIBLIB) \
+test_linkfiles		= $(GLIBLIB) \
 	 		$(top_builddir)/lib/checkpointd/libckpt.la \
 			$(top_builddir)/replace/libreplace.la \
 			$(top_builddir)/lib/clplumbing/libplumb.la \
@@ -46,42 +46,42 @@ noinst_PROGRAMS	= sync1node1 sync1node2 sync2node1 sync2node2 sync3node1 sync3no
 halib_PROGRAMS		= sync1node1 sync1node2  sync2node1 sync2node2 sync3node1 sync3node2   sync4node1 sync4node2 sync5node1 sync5node2
 
 sync1node1_SOURCES	= sync1node1.c
-sync1node1_LDADD	= $(test_LDADD) 
+sync1node1_LDADD	= $(test_linkfiles) 
 sync1node1_LDFLAGS	= 
 
 sync1node2_SOURCES	= sync1node2.c
-sync1node2_LDADD	= $(test_LDADD) 
+sync1node2_LDADD	= $(test_linkfiles) 
 sync1node2_LDFLAGS	=
 
 sync2node1_SOURCES	= sync2node1.c
-sync2node1_LDADD	= $(test_LDADD) 
+sync2node1_LDADD	= $(test_linkfiles) 
 sync2node1_LDFLAGS	= 
 
 sync2node2_SOURCES	= sync2node2.c
-sync2node2_LDADD	= $(test_LDADD) 
+sync2node2_LDADD	= $(test_linkfiles) 
 sync2node2_LDFLAGS	= 
 
 
 sync3node1_SOURCES	= sync3node1.c
-sync3node1_LDADD	= $(test_LDADD) 
+sync3node1_LDADD	= $(test_linkfiles) 
 sync3node1_LDFLAGS	= 
 
 sync3node2_SOURCES	= sync3node2.c
-sync3node2_LDADD	= $(test_LDADD) 
+sync3node2_LDADD	= $(test_linkfiles) 
 sync3node2_LDFLAGS	= 
 
 sync4node1_SOURCES	= sync4node1.c
-sync4node1_LDADD	= $(test_LDADD) 
+sync4node1_LDADD	= $(test_linkfiles) 
 sync4node1_LDFLAGS	= 
 
 sync4node2_SOURCES	= sync4node2.c
-sync4node2_LDADD	= $(test_LDADD) 
+sync4node2_LDADD	= $(test_linkfiles) 
 sync4node2_LDFLAGS	= 
 
 sync5node1_SOURCES	= sync5node1.c
-sync5node1_LDADD	= $(test_LDADD) 
+sync5node1_LDADD	= $(test_linkfiles) 
 sync5node1_LDFLAGS	= 
 
 sync5node2_SOURCES	= sync5node2.c
-sync5node2_LDADD	= $(test_LDADD) 
+sync5node2_LDADD	= $(test_linkfiles) 
 sync5node2_LDFLAGS	= 

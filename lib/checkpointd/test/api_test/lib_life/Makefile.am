@@ -36,7 +36,7 @@ havarlibdir		= $(localstatedir)/lib/@HB_PKG@
 ckptvarlibdir		= $(havarlibdir)/ckpt
 havarrundir		= $(localstatedir)/run/
 
-test_LDADD		= $(GLIBLIB) \
+test_linkfiles		= $(GLIBLIB) \
 	 		$(top_builddir)/lib/checkpointd/libckpt.la \
 			$(top_builddir)/replace/libreplace.la \
 			$(top_builddir)/lib/clplumbing/libplumb.la \
@@ -49,20 +49,20 @@ halib_PROGRAMS		= init finalize fdget dispatch
 #ckpttest
 
 init_SOURCES		= init.c
-init_LDADD		= $(test_LDADD)
+init_LDADD		= $(test_linkfiles)
 init_LDFLAGS	= 
 
 finalize_SOURCES		= finalize.c
-finalize_LDADD		= $(test_LDADD)
+finalize_LDADD		= $(test_linkfiles)
 finalize_LDFLAGS	= 
 
 fdget_SOURCES		= fdget.c
-fdget_LDADD		= $(test_LDADD)
+fdget_LDADD		= $(test_linkfiles)
 fdget_LDFLAGS	= 
 
 
 dispatch_SOURCES		= dispatch.c
-dispatch_LDADD		= $(test_LDADD)
+dispatch_LDADD		= $(test_linkfiles)
 dispatch_LDFLAGS	= 
 
 

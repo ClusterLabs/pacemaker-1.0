@@ -36,7 +36,7 @@ havarlibdir		= $(localstatedir)/lib/@HB_PKG@
 ckptvarlibdir		= $(havarlibdir)/ckpt
 havarrundir		= $(localstatedir)/run/
 
-test_LDADD		= $(GLIBLIB) \
+test_linkfiles		= $(GLIBLIB) \
 	 		$(top_builddir)/lib/checkpointd/libckpt.la \
 			$(top_builddir)/replace/libreplace.la \
 			$(top_builddir)/lib/clplumbing/libplumb.la \
@@ -51,49 +51,49 @@ halib_PROGRAMS	=	sect_create1node1 sect_create1node2 sect_create2node1 sect_crea
 					sect_create5node1 sect_create5node2 sect_create6node1 sect_create6node2
 
 sect_create1node1_SOURCES	= sect_create1node1.c
-sect_create1node1_LDADD	= $(test_LDADD) 
+sect_create1node1_LDADD	= $(test_linkfiles) 
 sect_create1node1_LDFLAGS	= 
 
 sect_create1node2_SOURCES	= sect_create1node2.c
-sect_create1node2_LDADD	= $(test_LDADD) 
+sect_create1node2_LDADD	= $(test_linkfiles) 
 sect_create1node2_LDFLAGS	= 
 
 sect_create2node1_SOURCES	= sect_create2node1.c
-sect_create2node1_LDADD	= $(test_LDADD) 
+sect_create2node1_LDADD	= $(test_linkfiles) 
 sect_create2node1_LDFLAGS	= 
 
 sect_create2node2_SOURCES	= sect_create2node2.c
-sect_create2node2_LDADD	= $(test_LDADD) 
+sect_create2node2_LDADD	= $(test_linkfiles) 
 sect_create2node2_LDFLAGS	= 
 
 sect_create3node1_SOURCES	= sect_create3node1.c
-sect_create3node1_LDADD	= $(test_LDADD) 
+sect_create3node1_LDADD	= $(test_linkfiles) 
 sect_create3node1_LDFLAGS	= 
 
 sect_create3node2_SOURCES	= sect_create3node2.c
-sect_create3node2_LDADD	= $(test_LDADD) 
+sect_create3node2_LDADD	= $(test_linkfiles) 
 sect_create3node2_LDFLAGS	= 
 
 sect_create4node1_SOURCES	= sect_create4node1.c
-sect_create4node1_LDADD	= $(test_LDADD) 
+sect_create4node1_LDADD	= $(test_linkfiles) 
 sect_create4node1_LDFLAGS	= 
 
 sect_create4node2_SOURCES	= sect_create4node2.c
-sect_create4node2_LDADD	= $(test_LDADD) 
+sect_create4node2_LDADD	= $(test_linkfiles) 
 sect_create4node2_LDFLAGS	= 
 
 sect_create5node1_SOURCES	= sect_create5node1.c
-sect_create5node1_LDADD	= $(test_LDADD) 
+sect_create5node1_LDADD	= $(test_linkfiles) 
 sect_create5node1_LDFLAGS	= 
 
 sect_create5node2_SOURCES	= sect_create5node2.c
-sect_create5node2_LDADD	= $(test_LDADD) 
+sect_create5node2_LDADD	= $(test_linkfiles) 
 sect_create5node2_LDFLAGS	= 
 
 sect_create6node1_SOURCES	= sect_create6node1.c
-sect_create6node1_LDADD	= $(test_LDADD) 
+sect_create6node1_LDADD	= $(test_linkfiles) 
 sect_create6node1_LDFLAGS	= 
 
 sect_create6node2_SOURCES	= sect_create6node2.c
-sect_create6node2_LDADD	= $(test_LDADD) 
+sect_create6node2_LDADD	= $(test_linkfiles) 
 sect_create6node2_LDFLAGS	= 

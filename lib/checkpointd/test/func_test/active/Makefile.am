@@ -37,7 +37,7 @@ havarlibdir		= $(localstatedir)/lib/@HB_PKG@
 ckptvarlibdir	= $(havarlibdir)/ckpt
 havarrundir		= $(localstatedir)/run/
 
-test_LDADD	= $(GLIBLIB) \
+test_linkfiles	= $(GLIBLIB) \
 	 		$(top_builddir)/lib/checkpointd/libckpt.la \
 			$(top_builddir)/replace/libreplace.la \
 			$(top_builddir)/lib/clplumbing/libplumb.la \
@@ -48,36 +48,36 @@ noinst_PROGRAMS	= active1node1 active1node2 active2node1 active2node2 active3nod
 halib_PROGRAMS		= active1node1 active1node2 active2node1 active2node2 active3node1 active3node2 active4node1 active4node2
 
 active1node1_SOURCES	= active1node1.c
-active1node1_LDADD	= $(test_LDADD) 
+active1node1_LDADD	= $(test_linkfiles) 
 active1node1_LDFLAGS	= 
 
 active1node2_SOURCES	= active1node2.c
-active1node2_LDADD	= $(test_LDADD) 
+active1node2_LDADD	= $(test_linkfiles) 
 active1node2_LDFLAGS		= 
 
 active2node1_SOURCES	= active2node1.c
-active2node1_LDADD	= $(test_LDADD) 
+active2node1_LDADD	= $(test_linkfiles) 
 active2node1_LDFLAGS	= 
 
 active2node2_SOURCES	= active2node2.c
-active2node2_LDADD	= $(test_LDADD) 
+active2node2_LDADD	= $(test_linkfiles) 
 active2node2_LDFLAGS		= 
 
 active3node1_SOURCES	= active3node1.c
-active3node1_LDADD	= $(test_LDADD) 
+active3node1_LDADD	= $(test_linkfiles) 
 active3node1_LDFLAGS	= 
 
 active3node2_SOURCES	= active3node2.c
-active3node2_LDADD	= $(test_LDADD) 
+active3node2_LDADD	= $(test_linkfiles) 
 active3node2_LDFLAGS	= 
 
 
 active4node1_SOURCES	= active4node1.c
-active4node1_LDADD	= $(test_LDADD) 
+active4node1_LDADD	= $(test_linkfiles) 
 active4node1_LDFLAGS	= 
 
 active4node2_SOURCES	= active4node2.c
-active4node2_LDADD	= $(test_LDADD) 
+active4node2_LDADD	= $(test_linkfiles) 
 active4node2_LDFLAGS	= 
 
 

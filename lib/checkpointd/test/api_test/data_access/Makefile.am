@@ -36,7 +36,7 @@ havarlibdir		= $(localstatedir)/lib/@HB_PKG@
 ckptvarlibdir		= $(havarlibdir)/ckpt
 havarrundir		= $(localstatedir)/run/
 
-test_LDADD		= $(GLIBLIB) \
+test_linkfiles		= $(GLIBLIB) \
 	 		$(top_builddir)/lib/checkpointd/libckpt.la \
 			$(top_builddir)/replace/libreplace.la \
 			$(top_builddir)/lib/clplumbing/libplumb.la \
@@ -46,21 +46,21 @@ noinst_PROGRAMS		= read write overwrite asynchronize synchronize
 halib_PROGRAMS		= read write overwrite asynchronize synchronize 
 
 read_SOURCES		= read.c
-read_LDADD		= $(test_LDADD)
+read_LDADD		= $(test_linkfiles)
 read_LDFLAGS		= 
 
 write_SOURCES		= write.c
-write_LDADD		= $(test_LDADD) 
+write_LDADD		= $(test_linkfiles) 
 write_LDFLAGS		= 
 
 overwrite_SOURCES	= overwrite.c
-overwrite_LDADD		= $(test_LDADD) 
+overwrite_LDADD		= $(test_linkfiles) 
 overwrite_LDFLAGS	= 
 
 asynchronize_SOURCES	= asynchronize.c
-asynchronize_LDADD	= $(test_LDADD) 
+asynchronize_LDADD	= $(test_linkfiles) 
 asynchronize_LDFLAGS	= 
 
 synchronize_SOURCES	= synchronize.c
-synchronize_LDADD	= $(test_LDADD) 
+synchronize_LDADD	= $(test_linkfiles) 
 synchronize_LDFLAGS	=

@@ -37,7 +37,7 @@ ckptvarlibdir		= $(havarlibdir)/ckpt
 havarrundir		= $(localstatedir)/run/
 
 
-test_LDADD		= $(GLIBLIB) \
+test_linkfiles		= $(GLIBLIB) \
 	 		$(top_builddir)/lib/checkpointd/libckpt.la \
 			$(top_builddir)/replace/libreplace.la \
 			$(top_builddir)/lib/clplumbing/libplumb.la \
@@ -47,29 +47,29 @@ noinst_PROGRAMS	= close1node1 close1node2 close2node1 close2node2 close3node1 cl
 halib_PROGRAMS		= close1node1 close1node2 close2node1 close2node2 close3node1 close3node2
 
 close1node1_SOURCES	= close1node1.c
-close1node1_LDADD	= $(test_LDADD)
+close1node1_LDADD	= $(test_linkfiles)
 close1node1_LDFLAGS	= 
 
 close1node2_SOURCES	= close1node2.c
-close1node2_LDADD	= $(test_LDADD)
+close1node2_LDADD	= $(test_linkfiles)
 close1node2_LDFLAGS	= 
 
 
 close2node1_SOURCES	= close2node1.c
-close2node1_LDADD	= $(test_LDADD)
+close2node1_LDADD	= $(test_linkfiles)
 close2node1_LDFLAGS	= 
 
 close2node2_SOURCES	= close2node2.c
-close2node2_LDADD	= $(test_LDADD)
+close2node2_LDADD	= $(test_linkfiles)
 close2node2_LDFLAGS	= 
 
 
 close3node1_SOURCES	= close3node1.c
-close3node1_LDADD	= $(test_LDADD)
+close3node1_LDADD	= $(test_linkfiles)
 close3node1_LDFLAGS	= 
 
 close3node2_SOURCES	= close3node2.c
-close3node2_LDADD	= $(test_LDADD)
+close3node2_LDADD	= $(test_linkfiles)
 close3node2_LDFLAGS	= 
 
 

@@ -36,7 +36,7 @@ havarlibdir		= $(localstatedir)/lib/@HB_PKG@
 ckptvarlibdir		= $(havarlibdir)/ckpt
 havarrundir		= $(localstatedir)/run/
 
-test_LDADD		= $(GLIBLIB) \
+test_linkfiles		= $(GLIBLIB) \
 	 		$(top_builddir)/lib/checkpointd/libckpt.la \
 			$(top_builddir)/replace/libreplace.la \
 			$(top_builddir)/lib/clplumbing/libplumb.la \
@@ -46,57 +46,57 @@ noinst_PROGRAMS	= write1node1 write1node2  write2node1 write2node2 write3node1 w
 halib_PROGRAMS		= write1node1 write1node2 write2node1 write2node2 write3node1 write3node2 write4node1 write4node2 write5node1 write5node2 write6node1 write6node2 write7node1 write7node2
 
 write1node1_SOURCES	= write1node1.c
-write1node1_LDADD	= $(test_LDADD) 
+write1node1_LDADD	= $(test_linkfiles) 
 write1node1_LDFLAGS	= 
 
 write1node2_SOURCES	= write1node2.c
-write1node2_LDADD	= $(test_LDADD) 
+write1node2_LDADD	= $(test_linkfiles) 
 write1node2_LDFLAGS	= 
 
 write2node1_SOURCES	= write2node1.c
-write2node1_LDADD	= $(test_LDADD) 
+write2node1_LDADD	= $(test_linkfiles) 
 write2node1_LDFLAGS	= 
 
 write2node2_SOURCES	= write2node2.c
-write2node2_LDADD	= $(test_LDADD) 
+write2node2_LDADD	= $(test_linkfiles) 
 write2node2_LDFLAGS	= 
 
-write3node1_LDADD	= $(test_LDADD) 
+write3node1_LDADD	= $(test_linkfiles) 
 write3node1_LDFLAGS	= 
 
 write3node2_SOURCES	= write3node2.c
-write3node2_LDADD	= $(test_LDADD) 
+write3node2_LDADD	= $(test_linkfiles) 
 write3node2_LDFLAGS	= 
 
 write4node1_SOURCES	= write4node1.c
-write4node1_LDADD	= $(test_LDADD) 
+write4node1_LDADD	= $(test_linkfiles) 
 write4node1_LDFLAGS	= 
 
 write4node2_SOURCES	= write4node2.c
-write4node2_LDADD	= $(test_LDADD) 
+write4node2_LDADD	= $(test_linkfiles) 
 write4node2_LDFLAGS	= 
 
 write5node1_SOURCES	= write5node1.c
-write5node1_LDADD	= $(test_LDADD) 
+write5node1_LDADD	= $(test_linkfiles) 
 write5node1_LDFLAGS	= 
 
 write5node2_SOURCES	= write5node2.c
-write5node2_LDADD	= $(test_LDADD) 
+write5node2_LDADD	= $(test_linkfiles) 
 write5node2_LDFLAGS	= 
 
 write6node1_SOURCES	= write6node1.c
-write6node1_LDADD	= $(test_LDADD) 
+write6node1_LDADD	= $(test_linkfiles) 
 write6node1_LDFLAGS	= 
 
 write6node2_SOURCES	= write6node2.c
-write6node2_LDADD	= $(test_LDADD) 
+write6node2_LDADD	= $(test_linkfiles) 
 write6node2_LDFLAGS	= 
 
 write7node1_SOURCES	= write7node1.c
-write7node1_LDADD	= $(test_LDADD) 
+write7node1_LDADD	= $(test_linkfiles) 
 write7node1_LDFLAGS	= 
 
 write7node2_SOURCES	= write7node2.c
-write7node2_LDADD	= $(test_LDADD) 
+write7node2_LDADD	= $(test_linkfiles) 
 write7node2_LDFLAGS	= 
 

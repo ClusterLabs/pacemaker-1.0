@@ -37,7 +37,7 @@ havarlibdir		= $(localstatedir)/lib/@HB_PKG@
 ckptvarlibdir		= $(havarlibdir)/ckpt
 havarrundir		= $(localstatedir)/run/
 
-test_LDADD	= $(GLIBLIB) \
+test_linkfiles	= $(GLIBLIB) \
 	 		$(top_builddir)/lib/checkpointd/libckpt.la \
 			$(top_builddir)/replace/libreplace.la \
 			$(top_builddir)/lib/clplumbing/libplumb.la \
@@ -48,19 +48,19 @@ noinst_PROGRAMS	= open1node1 open1node2 open2node1  open2node2
 halib_PROGRAMS		= open1node1 open1node2 open2node1  open2node2
 
 open1node1_SOURCES	= open1node1.c
-open1node1_LDADD	= $(test_LDADD) 
+open1node1_LDADD	= $(test_linkfiles) 
 open1node1_LDFLAGS	= 
 
 open1node2_SOURCES	= open1node2.c
-open1node2_LDADD	= $(test_LDADD) 
+open1node2_LDADD	= $(test_linkfiles) 
 open1node2_LDFLAGS	= 
 
 open2node1_SOURCES	= open2node1.c
-open2node1_LDADD	= $(test_LDADD) 
+open2node1_LDADD	= $(test_linkfiles) 
 open2node1_LDFLAGS	= 
 
 open2node2_SOURCES	= open2node2.c
-open2node2_LDADD	= $(test_LDADD) 
+open2node2_LDADD	= $(test_linkfiles) 
 open2node2_LDFLAGS	= 
 
 

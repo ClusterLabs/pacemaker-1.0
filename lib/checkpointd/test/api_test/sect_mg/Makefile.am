@@ -36,7 +36,7 @@ havarlibdir		= $(localstatedir)/lib/@HB_PKG@
 ckptvarlibdir		= $(havarlibdir)/ckpt
 havarrundir		= $(localstatedir)/run/
 
-test_LDADD		= $(GLIBLIB) \
+test_linkfiles		= $(GLIBLIB) \
 	 		$(top_builddir)/lib/checkpointd/libckpt.la \
 			$(top_builddir)/replace/libreplace.la \
 			$(top_builddir)/lib/clplumbing/libplumb.la \
@@ -47,27 +47,27 @@ halib_PROGRAMS		= create delete iterator_finalize iterator_init iterator_next ex
 
 #ckpttest
 create_SOURCES		= create.c
-create_LDADD		= $(test_LDADD)
+create_LDADD		= $(test_linkfiles)
 create_LDFLAGS	= 
 
 delete_SOURCES		= delete.c
-delete_LDADD		= $(test_LDADD) 
+delete_LDADD		= $(test_linkfiles) 
 delete_LDFLAGS	= 
 
 iterator_finalize_SOURCES	= iterator_finalize.c
-iterator_finalize_LDADD		= $(test_LDADD) 
+iterator_finalize_LDADD		= $(test_linkfiles) 
 iterator_finalize_LDFLAGS	= 
 
 iterator_next_SOURCES	= iterator_next.c
-iterator_next_LDADD	= $(test_LDADD) 
+iterator_next_LDADD	= $(test_linkfiles) 
 iterator_next_LDFLAGS	= 
 
 iterator_init_SOURCES	= iterator_init.c
-iterator_init_LDADD	= $(test_LDADD)
+iterator_init_LDADD	= $(test_linkfiles)
 iterator_init_LDFLAGS	= 
 
 expire_time_set_SOURCES	= expire_time_set.c
-expire_time_set_LDADD	= $(test_LDADD) 
+expire_time_set_LDADD	= $(test_linkfiles) 
 expire_time_set_LDFLAGS	= 
 
 

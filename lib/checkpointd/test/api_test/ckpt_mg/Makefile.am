@@ -36,7 +36,7 @@ havarlibdir		= $(localstatedir)/lib/@HB_PKG@
 ckptvarlibdir		= $(havarlibdir)/ckpt
 havarrundir		= $(localstatedir)/run/
 
-test_LDADD		= $(GLIBLIB) \
+test_linkfiles		= $(GLIBLIB) \
 	 		$(top_builddir)/lib/checkpointd/libckpt.la \
 			$(top_builddir)/replace/libreplace.la \
 			$(top_builddir)/lib/clplumbing/libplumb.la \
@@ -47,25 +47,25 @@ noinst_PROGRAMS		= open close unlink set_duration get_status set_active
 halib_PROGRAMS		= open close unlink set_duration get_status set_active
 
 open_SOURCES		= open.c
-open_LDADD		= $(test_LDADD)
+open_LDADD		= $(test_linkfiles)
 open_LDFLAGS		= 
 
 close_SOURCES		= close.c
-close_LDADD		= $(test_LDADD)
+close_LDADD		= $(test_linkfiles)
 close_LDFLAGS		= 
 
 unlink_SOURCES		= unlink.c
-unlink_LDADD		= $(test_LDADD)
+unlink_LDADD		= $(test_linkfiles)
 unlink_LDFLAGS		= 
 
 set_duration_SOURCES	= set_duration.c
-set_duration_LDADD	= $(test_LDADD)
+set_duration_LDADD	= $(test_linkfiles)
 set_duration_LDFLAGS	= 
 
 get_status_SOURCES = get_status.c
-get_status_LDADD = $(test_LDADD)
+get_status_LDADD = $(test_linkfiles)
 get_status_LDFLAGS = 
 
 set_active_SOURCES = set_active.c
-set_active_LDADD = $(test_LDADD) 
+set_active_LDADD = $(test_linkfiles) 
 set_active_LDFLAGS = 
