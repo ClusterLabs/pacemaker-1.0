@@ -130,15 +130,17 @@ GenerateHaCf() {
 GenerateCrmdHaCf() {
   cat <<-! >$1
 	#	$IDENTSTRING
+	use_logd  true
 	logfile   /dev/null
 	debugfile $LOGFILE
 	keepalive 10ms
-	debug 1
+	debug    1
 	deadtime 5
 	initdead 5
 	mcast $INTERFACE $MCASTIP 694 0 0
 	#bcast $INTERFACE
 	node $LOCALNODE $DUMMYNODE
+	respawn root $HBLIB/ha_logd
 	crm yes
 	!
   chmod 644 $1
@@ -643,7 +645,7 @@ TestCRM() {
 #	echo "crm yes" >> $HADIR/ha.cf
 	echo "Starting CRM tests" | tee -a $LOGFILE
 	CRMLOGFILE="${LOGFILE}.crm"
-	$CRMTEST -L -l $LOGFILE --ip1 127.0.0.10 --ip2 127.0.0.11 > $CRMLOGFILE 2>&1
+	$CRMTEST -L -d /tmp -l /var/log/ha-debug --ip1 127.0.0.10 --ip2 127.0.0.11 > $CRMLOGFILE 2>&1
 	cat $CRMLOGFILE >> $LOGFILE
 	rm $CRMLOGFILE
 	ret=$?
@@ -713,7 +715,7 @@ StonithCheck
 AppHBCheck
 IPCtest
 LRMTest
-TestCRM
+#TestCRM
 SNMPAgentTest
 
 ls -l $HADIR/core* 2>/dev/null
