@@ -544,7 +544,7 @@ walk_nodetable(void)
 		status = hb->llc_ops->node_status(hb, name);
 		type = hb->llc_ops->node_type(hb, name);
 
-		cl_log(LOG_INFO, "node %d: %s, type: %s, status: %s", id, name 
+		cl_log(LOG_INFO, "node %ld: %s, type: %s, status: %s", (unsigned long)id, name 
 		,	type, status);
 
 		node = (struct hb_nodeinfo *) ha_malloc(sizeof(struct hb_nodeinfo));
