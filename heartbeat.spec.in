@@ -1,4 +1,4 @@
-#	$Id: heartbeat.spec.in,v 1.98 2004/09/29 03:42:57 zhenh Exp $
+#	$Id: heartbeat.spec.in,v 1.99 2004/10/06 16:39:40 alan Exp $
 
 # Workaround for a change in RPM 4.1.x; needs proper fixing soon!
 ##%define _unpackaged_files_terminate_build 0
@@ -73,6 +73,86 @@ PILS is designed to support any number of plugins
 implementing any number of interfaces.
 
 %changelog
+
+* Wed Oct 06 2004  Alan Robertson <alanr@unix.sh> (see doc/AUTHORS file)
++ Version 1.99.0 - *early* beta series - preparing for 2.0.0
+  + All STABLE changes noted below have been ported to this branch
+  + Andrew's comments on the CRM/LRM go here.
+
+* Sat Sep 18 2004  Alan Robertson <alanr@unix.sh> (see doc/AUTHORS file)
++ Version 1.2.3 (stable)
+  + fixed a serious error which causes heartbeat to misbehave after about
+        10 months of continuous operation
+  + Made our ARP packets more RFC compliant
+  + Extended apcmastersnmp code to deal with new devices
+  + fixed a bug concerning simultaneous stops of both machines causing one
+        of them to not shut down.
+  + added an option to suppress reporting on packet corruption
+  + fixed it so that we don't create the FIFO by the RPM
+  + made cl_status setgid so anyone can run it, and fixed exit codes
+  + eliminated a serious memory leak associated with client code
+  + packaged doc files which had been missed before
+  + fixed many many small bugs and memory leaks detected by BEAM
+  + added several new test cases
+  + fixed longstanding bug in plugin unloading
+  + fixed a shutdown hang problem
+  + several fixes for Solaris, FreeBSD
+  + Solaris packaging now included in base
+  + fixed a bug related to the apache resource agent not handling
+        quoted parameters
+  + added use_apphbd parameter to have heartbeat register
+        with apphbd instead of watchdog device when desired
+  + changed apphbd to default its config file to /etc
+  + added snmp subagent code
+  + added hbaping communications plugin
+  + added external STONITH plugin
+  + ldirectord: fixed a bug where real servers that were are
+        present in multiple virtual services will only be added
+        to one virtual service.
+
+* Mon May 11 2004  Alan Robertson <alanr@unix.sh> (see doc/AUTHORS file)
++ Version 1.2.2 (stable)
+  + Fixed several format string errors in communication plugins
+  + Fixed a bug which kept us from diagnosing errors in non-aliased interfaces
+  + Fixed a bug in ipaddr which caused an infinite loop when auto_failback on
+  + Updated Debian things...
+  + Added IPv6addr resource agent
+  + Added ibmhmc STONITH plugin
+  + Added cl_status command
+  + Fixed a bug regarding restarts when auto_failback is on...
+  + Fixed a couple of bugs in sha1 authentication method for very long keys
+  + Fixed a bug in the portblock resource agent so that it no longer blocks
+          ports on the loopback interface
+  + Increased the time allowed for split brain test before it declares failure
+
++ Version 1.2.1 (stable)
+  + Netstrings can now be used for our on-the-wire data format
+  + Perl/SWIG bindings added for some heartbeat libraries
+  + Significant improvements to SAF data checkpointing API
+  + Implemented unbuffered ipcsocket code for SAF APIs
+  + Many Solaris fixes -- except for ipfail, Solaris works
+  + Significant library restructuring
+  + Watchdog device NOWAYOUT is now overridded if defaulted
+  + Watchdog device now kills machine instantly after deadtime
+        instead of after one minute
+  + Hostnames should now be treated case-independently...
+  + Added new client status APIs - client_status() and cstatus_callback()
+  + Fixed bug with auto_failback and quick full restarts
+  + We now automatically reboot when resources fail to stop correctly...
+  + We now check the status of the configured STONITH device hourly...
+  + STONITH operations repeat after a 5 second delay, not immediately...
+  + Added hb_takeover command - complement to hb_standby
+  + Added documentation on how to use evlog/TCP to enable testing to
+        take place without losing messages due to UDP message forwarding
+  + Several new tests from Mi, Jun - split brain, bandwidth, failure
+        detection time.
+  + Fix to LVM resource from Harald Milz <hm@muc.de>
+  + Fixed FreeBSD authentication problems breaking ipfail
+  + Fixed .so loading on Debian
+  + Fixed false complaints about resource scripts (from Jens Schmalzing)
+  + Fixed false stop failure from LinuxSCSI  (from Jens Schmalzing <j.s@lmu.de>)
+
+
 
 * Thu Apr 15 2004  Alan Robertson <alanr@unix.sh> (see doc/AUTHORS file)
 + Version 1.3.0 - beta series
