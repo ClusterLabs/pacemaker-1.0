@@ -1874,7 +1874,19 @@ RscMgmtProcessDied(ProcTrack* p, int status, int signo, int exitcode
 	||	 strcmp(RscMgmtProcessName(p), "ip-request-resp") == 0) {
 		local_takeover_completed = TRUE;
 		AnnounceTakeover(RscMgmtProcessName(p));
+	}else if (!nice_failback
+	&&	strcmp(RscMgmtProcessName(p), "status") == 0) {
+		int	deadcount = countbystatus(DEADSTATUS, TRUE);
+		if (deadcount > 0) {
+			/* Must be our partner is dead...
+			 * Status would have invoked mach_down
+			 * and now all their resource are belong to us
+			 */
+			foreign_takeover_completed = TRUE;
+			AnnounceTakeover(RscMgmtProcessName(p));
+		}
 	}
+
 	p->privatedata = NULL;
 	StartNextRemoteRscReq();
 	shutdown_if_needed();
@@ -2056,6 +2068,13 @@ StonithProcessName(ProcTrack* p)
 
 /*
  * $Log: hb_resource.c,v $
+ * Revision 1.46  2004/02/12 09:30:05  alan
+ * Put in a very small change to allow CTS to work with
+ * auto_failback 'legacy' configurations.
+ * We didn't print a message when we took over resources from a machine which was
+ * dead when we first came up.  CTS was triggering off that message.
+ * So, it thought things were broken.
+ *
  * Revision 1.45  2004/02/12 08:55:44  alan
  * Neatend up the code for printing a takeover complete message for the
  * CTS tests to look for.
