@@ -1,4 +1,4 @@
-/* $Id: hb_resource.c,v 1.71 2005/01/18 20:33:03 andrew Exp $ */
+/* $Id: hb_resource.c,v 1.72 2005/02/28 21:23:30 gshi Exp $ */
 /*
  * hb_resource: Linux-HA heartbeat resource management code
  *
@@ -1945,6 +1945,11 @@ hb_giveup_resources(void)
 	pid_t		pid;
 	struct ha_msg *	m;
 	static int	resource_shutdown_in_progress = FALSE;
+	
+	if (!DoManageResources){
+		hb_initiate_shutdown(FALSE);
+		return;
+	}
 
 	if (!hb_rsc_isstable()) {
 		/* Try again later... */
@@ -2416,6 +2421,15 @@ StonithStatProcessName(ProcTrack* p)
 
 /*
  * $Log: hb_resource.c,v $
+ * Revision 1.72  2005/02/28 21:23:30  gshi
+ * giveup_resources() servers as two purposes in 1.x series:
+ * 1) give up all resources
+ * 2) shutdown heartbeat
+ *
+ * since in V2 all resources are managed in crm/lrm, this function
+ * should not do any thing with the first purpose,therefore it should
+ * start shutdown phase if it is in version 2
+ *
  * Revision 1.71  2005/01/18 20:33:03  andrew
  * Appologies for the top-level commit, one change necessitated another which
  *   exposed some bugs... etc etc
