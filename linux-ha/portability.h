@@ -1,4 +1,4 @@
-/* $Id: portability.h,v 1.35 2004/04/21 16:39:47 msoffen Exp $ */
+/* $Id: portability.h,v 1.36 2004/09/14 15:07:30 gshi Exp $ */
 #ifndef PORTABILITY_H
 #  define PORTABILITY_H
 
@@ -44,12 +44,14 @@
 #	define SCANSEL_CAST	/* Nothing */
 #endif
 
+/*
 #if	__GNUC__ > 2 || (__GNUC__ == 2 && __GNUC_MINOR__ > 4)
 #define G_GNUC_PRINTF( format_idx, arg_idx )	\
   __attribute__((format (printf, format_idx, arg_idx)))
-#else	/* !__GNUC__ */
+#else	
 #define G_GNUC_PRINTF( format_idx, arg_idx )
-#endif	/* !__GNUC__ */
+#endif
+*/
 
 #ifdef HAVE_CONFIG_H
 #include <config.h>

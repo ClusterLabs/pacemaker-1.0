@@ -54,6 +54,7 @@
 #include <clplumbing/cl_signal.h>
 #include <clplumbing/uids.h>
 #include <clplumbing/lsb_exitcodes.h>
+#include <clplumbing/GSource.h>
 #include <apphb.h>
 
 static const char * Simple_helpscreen =
@@ -73,14 +74,14 @@ static const char * Simple_helpscreen =
 "-h	Display this simple help.\n";
 
 
-static gboolean on_polled_input_prepare(gpointer source_data,
-		GTimeVal* current_time, gint* timeout, gpointer user_data);
+static gboolean on_polled_input_prepare(GSource* source,
+					gint* timeout);
 
-static gboolean on_polled_input_check(gpointer source_data,
-		GTimeVal* current_time, gpointer user_data);
+static gboolean on_polled_input_check(GSource* source);
 
-static gboolean on_polled_input_dispatch(gpointer source_data,
-		GTimeVal* current_time, gpointer user_data);
+static gboolean on_polled_input_dispatch(GSource* source, 
+					 GSourceFunc callback,
+					 gpointer user_data);
 
 static void become_deamon(void);
 static int  run_client_as_child(void);
@@ -273,8 +274,13 @@ int main(int argc, char * argv[])
 	mainloop = g_main_new(FALSE);
 	g_timeout_add(apphb_interval - APPHB_INTVL_DETLA, emit_apphb, NULL);
 	if ( IS_RECOVERY == FALSE ) {
-		g_source_add(G_PRIORITY_HIGH, FALSE, &polled_input_SourceFuncs,
-			NULL, NULL, NULL);
+		
+		if (G_main_add_input(G_PRIORITY_HIGH, FALSE, 
+				     &polled_input_SourceFuncs) ==NULL){
+			cl_log(LOG_ERR, "cl_respawn: G_main_add_input failed");
+		}
+
+
 	}
 	
 	/* To avoid the warning message when app_interval is very small. */
@@ -382,8 +388,12 @@ emit_apphb(gpointer data)
 			cl_respawn_quit(3);		
 		}
 
-		g_source_add(G_PRIORITY_HIGH, FALSE, &polled_input_SourceFuncs,
-			NULL, NULL, NULL);
+
+		if (G_main_add_input(G_PRIORITY_HIGH, FALSE, 
+				     &polled_input_SourceFuncs) ==NULL){
+			cl_log(LOG_ERR, "cl_respawn: G_main_add_input failed");
+		}
+		
 	}
 
 	return TRUE;
@@ -461,21 +471,21 @@ deal_cmd_str(char * cmd_str, char * execv_argv[])
  * This method is used to avoid high cpu usage or reentrance issue.
  */
 static gboolean
-on_polled_input_prepare(gpointer source_data, GTimeVal* current_time,
-			gint* timeout, gpointer user_data)
+on_polled_input_prepare(GSource* source,
+			gint* timeout)
 {
 	return monitored_prog_quit;
 }
 
 static gboolean
-on_polled_input_check(gpointer source_data, GTimeVal* current_time,
-		      gpointer user_data)
+on_polled_input_check(GSource* source)
 {
 	return monitored_prog_quit;
 }
 
 static gboolean
-on_polled_input_dispatch(gpointer source_data, GTimeVal* current_time,
+on_polled_input_dispatch(GSource* source,
+			 GSourceFunc callback,
 			 gpointer user_data)
 {
 	int exit_status;	

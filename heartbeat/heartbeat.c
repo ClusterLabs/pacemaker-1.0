@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.319 2004/09/10 22:47:40 alan Exp $ */
+/* $Id: heartbeat.c,v 1.320 2004/09/14 15:07:28 gshi Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -419,15 +419,12 @@ static void (*comm_up_callback)(void) = NULL;
 /*
  * Glib Mainloop Source functions...
  */
-static gboolean	polled_input_prepare(gpointer source_data
-,			GTimeVal* current_time
-,			gint* timeout, gpointer user_data);
-static gboolean	polled_input_check(gpointer source_data
-,			GTimeVal* current_time
-,			gpointer user_data);
-static gboolean	polled_input_dispatch(gpointer source_data
-,			GTimeVal* current_time
-,			gpointer user_data);
+static gboolean	polled_input_prepare(GSource* source,
+				     gint* timeout);
+static gboolean	polled_input_check(GSource* source);
+static gboolean	polled_input_dispatch(GSource* source,
+				      GSourceFunc callback,
+				      gpointer user_data);
 
 static gboolean	APIregistration_dispatch(IPC_Channel* chan, gpointer user_data);
 static gboolean	FIFO_child_msg_dispatch(IPC_Channel* chan, gpointer udata);
@@ -1235,8 +1232,11 @@ master_control_process(IPC_Channel* fifoproc)
 	}
 	send_local_status();
 
-	g_source_add(G_PRIORITY_HIGH, FALSE, &polled_input_SourceFuncs
-	,	NULL, NULL, NULL);
+	if (G_main_add_input(G_PRIORITY_HIGH, FALSE, 
+			     &polled_input_SourceFuncs) ==NULL){
+		cl_log(LOG_ERR, "cl_respawn: G_main_add_input failed");
+	}
+
 
 
 	/* We only read from this source, we never write to it */
@@ -1445,41 +1445,41 @@ LookForClockJumps(void)
 #define	POLL_INTERVAL	250 /* milliseconds */
 
 static gboolean
-polled_input_prepare(gpointer source_data, GTimeVal* current_time
-,	gint* timeout, gpointer user_data)
+polled_input_prepare(GSource* source,
+		     gint* timeout)
 {
 
 	if (DEBUGDETAILS){
 		cl_log(LOG_DEBUG,"polled_input_prepare(): timeout=%d"
-		,	*timeout);
+		       ,	*timeout);
 	}
 	LookForClockJumps();
-
+	
 	return ((hb_signal_pending() != 0)
 	||	ClockJustJumped);
 }
 
 
 static gboolean
-polled_input_check(gpointer source_data, GTimeVal* current_time
-,	gpointer	user_data)
+polled_input_check(GSource* source)
 {
 	longclock_t		now = time_longclock();
-
+	
 	LookForClockJumps();
-
+	
 	if (DEBUGDETAILS) {
 		cl_log(LOG_DEBUG,"polled_input_check(): result = %d"
 		,	cmp_longclock(now, NextPoll) >= 0);
 	}
-
+	
 	/* FIXME:?? should this say pending_handlers || cmp...? */
 	return (cmp_longclock(now, NextPoll) >= 0);
 }
 
 static gboolean
-polled_input_dispatch(gpointer source_data, GTimeVal* current_time
-,	gpointer	user_data)
+polled_input_dispatch(GSource* source,
+		      GSourceFunc callback,
+		      gpointer	user_data)
 {
 	longclock_t	now = time_longclock();
 
@@ -4461,6 +4461,9 @@ hb_unregister_to_apphbd(void)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.320  2004/09/14 15:07:28  gshi
+ * change glib API to glib2 API
+ *
  * Revision 1.319  2004/09/10 22:47:40  alan
  * BEAM FIXES:  various minor fixes related to running out of memory.
  *
