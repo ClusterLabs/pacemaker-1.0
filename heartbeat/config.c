@@ -1,4 +1,4 @@
-/* $Id: config.c,v 1.128 2004/09/10 22:47:40 alan Exp $ */
+/* $Id: config.c,v 1.129 2004/09/18 22:43:08 alan Exp $ */
 /*
  * Parse various heartbeat configuration files...
  *
@@ -125,7 +125,7 @@ struct directive {
 , {KEY_DEBUGLEVEL,set_debuglevel, TRUE, NULL, "debug level"}
 , {KEY_NORMALPOLL,set_normalpoll, TRUE, "true", "Use system poll(2) function?"}
 , {KEY_MSGFMT,    set_msgfmt, TRUE, "classic", "message format in the wire"}
-, {KEY_REGAPPHBD, set_register_to_apphbd, FALSE, NULL, "register to apphbd"}
+, {KEY_REGAPPHBD, set_register_to_apphbd, FALSE, NULL, "register with apphbd"}
 , {KEY_BADPACK,   set_badpack_warn, TRUE, "true", "warn about bad packets"}
 };
 
@@ -461,7 +461,7 @@ parse_config(const char * cfgfile, char *nodename)
 	{	{"ipfail",	"uid=" HA_CCMUSER}
 	,	{"ccm",		"uid=" HA_CCMUSER}
 	,	{"ping",	"gid=" HA_APIGROUP}
-	,	{"cl_status",	"uid=" HA_CCMUSER}
+	,	{"cl_status",	"gid=" HA_APIGROUP}
 	};
 
 	if ((f = fopen(cfgfile, "r")) == NULL) {
@@ -1291,13 +1291,7 @@ set_auto_failback(const char * value)
 static int 
 set_register_to_apphbd(const char * value)
 {
-	int	ret;
-	ret = str_to_boolean(value, &UseApphbd);
-	if (ret == HA_FAIL) {
-		UseApphbd = FALSE;
-		ret = HA_OK;
-	}
-	return ret;
+	return str_to_boolean(value, &UseApphbd);
 }
 
 /*
@@ -2027,6 +2021,9 @@ baddirective:
 
 /*
  * $Log: config.c,v $
+ * Revision 1.129  2004/09/18 22:43:08  alan
+ * Merged in changes from 1.2.3
+ *
  * Revision 1.128  2004/09/10 22:47:40  alan
  * BEAM FIXES:  various minor fixes related to running out of memory.
  *
