@@ -1,4 +1,4 @@
-/* $Id: stonithd.c,v 1.15 2005/02/15 17:40:44 alan Exp $ */
+/* $Id: stonithd.c,v 1.16 2005/02/16 21:40:06 gshi Exp $ */
 
 /* File: stonithd.c
  * Description: STONITH deamon for node fencing
@@ -732,7 +732,7 @@ stonithd_hb_msg_dispatch(IPC_Channel * ipcchan, gpointer user_data)
     
 	while (hb->llc_ops->msgready(hb)) {
 		/* FIXME:  This should be a higher-level API function (broken API) */
-		if (hb->llc_ops->ipcchan(hb)->ch_status != IPC_DISCONNECT) {
+		if (hb->llc_ops->ipcchan(hb)->ch_status == IPC_DISCONNECT) {
 			stonithd_quit(0);
 		}
 		/* invoke the callbacks with none-block mode */
@@ -2827,6 +2827,9 @@ free_common_op_t(gpointer data)
 
 /* 
  * $Log: stonithd.c,v $
+ * Revision 1.16  2005/02/16 21:40:06  gshi
+ * stonithd should quit when IPC is disconnected instead of when IPC is not disconnected
+ *
  * Revision 1.15  2005/02/15 17:40:44  alan
  * Hopefully got rid of an infinite loop in STONITHd.
  *
