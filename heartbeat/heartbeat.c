@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.351 2005/02/12 17:15:16 alan Exp $ */
+/* $Id: heartbeat.c,v 1.352 2005/02/14 07:40:34 horms Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -987,7 +987,7 @@ fifo_child(IPC_Channel* chan)
 	open(FIFONAME, O_WRONLY);	/* Keep reads from getting EOF */
 	
 	flags = fcntl(fiforfd, F_GETFL);
-	flags &= ~O_NONBLOCK;
+	flags &= ~(O_NONBLOCK|O_NDELAY);
 	fcntl(fiforfd, F_SETFL, flags);
 	fifo = fdopen(fiforfd, "r");
 	if (fifo == NULL) {
@@ -4992,6 +4992,9 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.352  2005/02/14 07:40:34  horms
+ * On Sparc Linux O_NONBLOCK!=O_NDELAY and this is needed to avoid a loop.
+ *
  * Revision 1.351  2005/02/12 17:15:16  alan
  * Forced code to use cl_malloc() for glib use.
  *
