@@ -145,10 +145,8 @@ LHANodeEntry OBJECT-TYPE
 lhaNodeEntry ::= SEQUENCE {
     LHANodeIndex	    Integer32,
     LHANodeName	    	    DisplayString,
-    LHANodeTypeString       DisplayString,
-    LHANodeTypeValue        INTEGER,
-    LHANodeStatusString	    DisplayString,
-    LHANodeStatusValue	    INTEGER,
+    LHANodeType		    INTEGER,
+    LHANodeStatus           INTEGER,
     LHANodeUUID		    DisplayString,
     LHANodeIFCount	    Counter32,
 }
@@ -170,18 +168,7 @@ LHANodeName OBJECT-TYPE
 	"A human readable name that represents that node."
     ::= { LHANodeEntry 2 }
 
-LHANodeTypeString OBJECT-TYPE
-    SYNTAX	DisplayString
-    MAX-ACCESS	read-only
-    STATUS	current
-    DESCRIPTION
-	"There could be many types of nodes in the cluster.  For
-	example, a node could be a normal node, or a ping node
-	depending on the configuration.  This object shows the
-	type of this node in a human readble string format."
-    ::= { LHANodeEntry 3 }
-
-LHANodeTypeValue OBJECT-TYPE
+LHANodeType OBJECT-TYPE
     SYNTAX	INTEGER {
 	    	    unknown (0),
 		    normal (1),
@@ -197,18 +184,9 @@ LHANodeTypeValue OBJECT-TYPE
 	
 	So far only the normal node and ping node are defined.  All
 	the rest will fall into the 'unknown' catagory. "
-    ::= { LHANodeEntry 4 }
+    ::= { LHANodeEntry 3 }
 
-LHANodeStatusString OBJECT-TYPE
-    SYNTAX	DisplayString 
-    MAX-ACCESS	read-only
-    STATUS	current
-    DESCRIPTION
-	"The status of the node in human readable format. For
-	heartbeat, this would normally be init, up, active, or dead."
-    ::= { LHANodeEntry 5 }
-
-LHANodeStatusValue OBJECT-TYPE
+LHANodeStatus OBJECT-TYPE
     SYNTAX	INTEGER {
 	    	    unknown (0),
 		    init (1),
@@ -224,7 +202,7 @@ LHANodeStatusValue OBJECT-TYPE
 
 	So far, only these four states are defined.  All the rest
 	falls in 'unknown' catagory."
-    ::= { LHANodeEntry 6 }
+    ::= { LHANodeEntry 4 }
 
 LHANodeUUID OBJECT-TYPE
     SYNTAX	LHAUUIDString
@@ -234,7 +212,7 @@ LHANodeUUID OBJECT-TYPE
 	"The UUID of the current node in string representatio.  This
 	UUID will be persisted over the heartbeat session.  So it can
 	be used as a unique identifier for a node."
-    ::= { LHANodeEntry 7 }
+    ::= { LHANodeEntry 5 }
 
 LHANodeIFCount OBJECT-TYPE
     SYNTAX	Counter32
@@ -243,7 +221,7 @@ LHANodeIFCount OBJECT-TYPE
     DESCRIPTION
 	"The number of interfaces that is used by heartbeat
 	for this node."
-    ::= { LHANodeEntry 8 }
+    ::= { LHANodeEntry 6 }
 
 LHAIFStatusTable OBJECT-TYPE
     SYNTAX	SEQUENCE OF lhaIFEntry
@@ -267,8 +245,7 @@ LHAIFStatusEntry OBJECT-TYPE
 lhaIFStatusEntry ::= SEQUENCE {
     LHAIFIndex	    	Integer32,
     LHAIFName	    	DisplayString,
-    LHAIFStatusString	DisplayString,
-    LHAIFStatusValue	INTEGER
+    LHAIFStatus		INTEGER
 }
 
 LHAIFIndex OBJECT-TYPE
@@ -281,28 +258,13 @@ LHAIFIndex OBJECT-TYPE
 
 LHAIFName OBJECT-TYPE
     SYNTAX	DisplayString
-    MAX-ACCESS	not-accessible
+    MAX-ACCESS	read-only
     STATUS	current
     DESCRIPTION
 	"A name for this interface."
     ::= { LHAIFStatusEntry 2 }
 
-LHAIFStatusString OBJECT-TYPE
-    SYNTAX	DisplayString
-    MAX-ACCESS	read-only
-    STATUS	current
-    DESCRIPTION
-	"The status for this interface in human readable format. 
-
-				NOTE WELL
-	
-	This is somewhat confusing as Linux-HA only reports if the
-	heartbeat can be heard on that interfce or not. So for
-	ethernet interfaces, the interfaces for the node itself is
-	always dead as no heartbeat can be heard on that interface."
-    ::= { LHAIFStatusEntry 3 }
-
-LHAIFStatusValue OBJECT-TYPE
+LHAIFStatus OBJECT-TYPE
     SYNTAX	INTEGER {
 	    	    unknown (0),
 		    up (1),
@@ -315,7 +277,7 @@ LHAIFStatusValue OBJECT-TYPE
 	
 	Currently only up and down are defined as the interface
 	status.  All the others will fall into the unknown catagory."
-    ::= { LHAIFStatusEntry 4 }
+    ::= { LHAIFStatusEntry 3 }
 
 
 LHAResourceGroupTable OBJECT-TYPE
