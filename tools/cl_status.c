@@ -462,7 +462,8 @@ nodestatus(ll_cluster_t *hb, int argc, char ** argv, const char * optstr)
 		printf("%s\n", status);
 	}
 
-	if ( strncmp(status, "active", 6) == 0 ) {
+       if ( strncmp(status, "active", 6) == 0 
+       ||      strncmp(status, "up", 3) == 0) {
 		ret = OK;   /* the node is active */
 	} else {
 		ret = NORMAL_FAIL;  /* the status = "dead" */
