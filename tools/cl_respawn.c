@@ -42,7 +42,9 @@
 #include <stdlib.h>
 #include <fcntl.h>
 #include <signal.h>
+#ifdef HAVE_GETOPT_H
 #include <getopt.h>
+#endif
 #include <stdarg.h>
 #include <errno.h>
 #include <string.h>
