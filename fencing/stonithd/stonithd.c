@@ -1,4 +1,4 @@
-/* $Id: stonithd.c,v 1.18 2005/02/22 01:26:58 sunjd Exp $ */
+/* $Id: stonithd.c,v 1.19 2005/02/24 06:51:49 sunjd Exp $ */
 
 /* File: stonithd.c
  * Description: STONITH daemon for node fencing
@@ -284,6 +284,7 @@ static const char * simple_help_screen =
 "	-a	Start up alone outside of heartbeat.\n" 
 "		By default suppose it be started up and monitored by heartbeat.\n"
 "	-h	This help information\n";
+/*	-t	Test mode only.\n" 	*/
 
 static const char * optstr = "anskdht";
 /* Will replace it with dynamical a config variable */
@@ -363,7 +364,10 @@ int main(int argc, char ** argv)
 				return (STARTUP_ALONE == TRUE) ? 
 					LSB_EXIT_OK : MAGIC_EC;
 
-			case 't': /* test only */
+			case 't':
+				/* For test only, when the node handle the 
+				 * message sent from itself.
+				 */
 				TEST = TRUE;	
 				break;
 
@@ -637,6 +641,7 @@ on_polled_input_dispatch(GSource * source, GSourceFunc callback,
 						      op->result_receiver);
 			post_handle_raop(op->op_union.ra_op);
 			g_hash_table_remove(executing_queue, &pid);
+
 			continue;
 		}
 
@@ -1059,7 +1064,10 @@ init_client_API_handler(void)
 				sock);
 		return LSB_EXIT_EPERM;
 	}
-	/* Need to destroy the chanattrs? */
+	/* Need to destroy the item of the hash table chanattrs? yes, will be.
+	 * Look likely there are many same  'memory leak's in linux-ha code.
+	 */
+	g_hash_table_destroy(chanattrs);
 
 	/* Make up ipc auth struct. Now only allow the clients with uid=root or
 	 * uid=hacluster to connect.
@@ -2083,6 +2091,8 @@ on_stonithd_virtual_stonithRA_ops(const struct ha_msg * request, gpointer data)
 
 	/* handle the RA operations such as 'start' 'stop', 'monitor' and etc */
 	ra_op = g_new(stonithRA_ops_t, 1);
+	ra_op->private_data = NULL;
+
 	if ((tmpstr = cl_get_string(request, F_STONITHD_RSCID)) != NULL) {
 		ra_op->rsc_id = g_strdup(tmpstr);
 		stonithd_log(LOG_DEBUG, "ra_op->rsc_id=%s.", ra_op->rsc_id);
@@ -2116,8 +2126,8 @@ on_stonithd_virtual_stonithRA_ops(const struct ha_msg * request, gpointer data)
 	ra_op->params = NULL;
 	if ((ra_op->params = cl_get_hashtable(request, F_STONITHD_PARAMS))
 	    != NULL) {
-		stonithd_log(LOG_DEBUG, "ra_op->params address:=%p.", 
-			     ra_op->params);
+		stonithd_log(LOG_DEBUG, "on_stonithd_virtual_stonithRA_ops:"
+			     "ra_op->params address:=%p.", ra_op->params);
 	} else {
 		stonithd_log(LOG_ERR, "on_stonithd_virtual_stonithRA_ops: the "
 			     "request msg contains no parameter field.");
@@ -2349,21 +2359,20 @@ stonithRA_start( stonithRA_ops_t * op, gpointer data)
 	}
 
 	srsc = get_started_stonith_resource(op->rsc_id);
-	if (srsc != NULL && srsc->rsc_id == op->rsc_id) {
+	if (srsc != NULL) {
 		/* seems started, just to confirm it */
 		stonith_obj = srsc->stonith_obj;
 		goto probe_status;
 	}
 
 	/* Don't find in local_started_stonith_rsc, not on start status */
-	stonithd_log(LOG_DEBUG, "op->params' address=%p", op->params);
+	stonithd_log(LOG_DEBUG, "stonithRA_start: op->params' address=%p"
+		     , op->params);
 	if (DEBUG_MODE == TRUE) {
 		print_str_hashtable(op->params);
 	}
 
-
 	stonith_obj = stonith_new(op->ra_name);
-
 	if (stonith_obj == NULL) {
 		stonithd_log(LOG_ERR, "Invalid RA/device type: '%s'", 
 		             op->ra_name);
@@ -2388,7 +2397,7 @@ stonithRA_start( stonithRA_ops_t * op, gpointer data)
 		free_NVpair(snv);
 		snv = NULL;
 	}
-	
+
 	op->private_data = stonith_obj;
 
 probe_status:
@@ -2420,6 +2429,11 @@ stonithRA_start_post( stonithRA_ops_t * ra_op, gpointer data )
 		return ST_FAIL;	
 	}
 
+	srsc = get_started_stonith_resource(ra_op->rsc_id);
+	if (srsc != NULL) { /* Already started before this operation */
+		return ST_OK;
+	}
+
 	srsc = g_new(stonith_rsc_t, 1);
 	srsc->rsc_id = ra_op->rsc_id;
 	ra_op->rsc_id = NULL;
@@ -2434,6 +2448,7 @@ stonithRA_start_post( stonithRA_ops_t * ra_op, gpointer data )
 	if (srsc->node_list == NULL) {
 		stonithd_log(LOG_ERR, "Could not list nodes for stonith RA %s."
 		,	srsc->ra_name);
+		/* Need more error handlings? */
 	}
 
 	local_started_stonith_rsc = 
@@ -2459,7 +2474,7 @@ stonithRA_stop( stonithRA_ops_t * ra_op, gpointer data )
 		stonith_delete(srsc->stonith_obj);
 		srsc->stonith_obj = NULL;
 		local_started_stonith_rsc = 
-		g_list_remove(local_started_stonith_rsc, srsc);
+			g_list_remove(local_started_stonith_rsc, srsc);
 		free_stonith_rsc(srsc);	
 	}
 
@@ -2582,7 +2597,12 @@ free_stonithRA_ops_t(stonithRA_ops_t * ra_op)
 	ZAPGDOBJ(ra_op->rsc_id);
        	ZAPGDOBJ(ra_op->ra_name);
 	ZAPGDOBJ(ra_op->op_type);
-        stonith_delete((Stonith *)(ra_op->private_data));
+	
+	stonithd_log(LOG_DEBUG, "free_stonithRA_ops_t: ra_op->private_data.=%p"
+		     , (Stonith *)(ra_op->private_data));
+	if (ra_op->private_data != NULL ) {
+		stonith_delete((Stonith *)(ra_op->private_data));
+	}
 	/* Has used g_hash_table_new_full to create params */
 	g_hash_table_destroy(ra_op->params);
 	ZAPGDOBJ(ra_op);
@@ -2887,6 +2907,9 @@ free_common_op_t(gpointer data)
 
 /* 
  * $Log: stonithd.c,v $
+ * Revision 1.19  2005/02/24 06:51:49  sunjd
+ * fix a initializing bug; add some logs and comments
+ *
  * Revision 1.18  2005/02/22 01:26:58  sunjd
  * add cl_malloc_forced_for_glib;
  * add authority verification to IPC channel
