@@ -466,7 +466,7 @@ AppHBCheck() {
 	!
 	echo "Performing apphbd success case tests" | tee -a $LOGFILE
 	if
-          $APPHBD -s >/dev/null 2>&2
+          $APPHBD -s >/dev/null 2>&1
         then
           echo "That's odd, $APPHBD is already running."
 	  killcount=2
