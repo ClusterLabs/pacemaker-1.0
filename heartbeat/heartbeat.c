@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.332 2004/10/24 14:47:31 lge Exp $ */
+/* $Id: heartbeat.c,v 1.333 2004/10/25 06:15:43 zhenh Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -1706,6 +1706,9 @@ hb_mcp_final_shutdown(gpointer p)
 
 	case 1:		/* From ManagedChildDied() (or above) */
 		shutdown_phase = 2;
+		if (procinfo->restart_after_shutdown) {
+                	hb_add_deadtime(30000);
+                }
 		send_local_status();
 		/* THIS IS RESOURCE WORK!  FIXME */
 		if (procinfo->giveup_resources) {
@@ -2559,8 +2562,6 @@ restart_heartbeat(void)
 	for (j=3; j < oflimits.rlim_cur; ++j) {
 		close(j);
 	}
-
-	hb_add_deadtime(30000);
 
 	hb_close_watchdog();
 	
@@ -4624,6 +4625,9 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.333  2004/10/25 06:15:43  zhenh
+ * move the code of adjust deadtime to right place to avoid error logs
+ *
  * Revision 1.332  2004/10/24 14:47:31  lge
  * -pedantic-errors fixes 4:
  *  * Warning: static declaration for `verbose' follows non-static
