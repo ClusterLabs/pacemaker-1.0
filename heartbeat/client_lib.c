@@ -909,7 +909,7 @@ get_parameter(ll_cluster_t* lcl, const char* pname)
 	if ((result = ha_msg_value(reply, F_APIRESULT)) != NULL
 	&&	strcmp(result, API_OK) == 0
 	&&	(pvalue = ha_msg_value(reply, F_PVALUE)) != NULL) {
-		ret = strdup(pvalue);
+		ret = ha_strdup(pvalue);
 	}else{
 		ret = NULL;
 	}
@@ -2242,6 +2242,12 @@ void *
 ha_calloc(size_t size, size_t nrep)
 {
 	return(calloc(size, nrep));
+}
+
+char *
+ha_strdup(const char *s)
+{
+	return strdup(s);
 }
 
 void

@@ -1,4 +1,4 @@
-const static char * _hb_config_c_Id = "$Id: config.c,v 1.107 2004/01/20 08:58:29 horms Exp $";
+const static char * _hb_config_c_Id = "$Id: config.c,v 1.108 2004/01/21 00:54:29 horms Exp $";
 /*
  * Parse various heartbeat configuration files...
  *
@@ -555,7 +555,7 @@ parse_config(const char * cfgfile, char *nodename)
 			}
 			sysmedia[num_save]->vf = funs;
 			if(!sysmedia[num_save]->name) {
-				char *		pname = strdup(bp);
+				char *		pname = ha_strdup(bp);
 				sysmedia[num_save]->name = pname;
 			}
 			funs->mtype(&sysmedia[num_save]->type);
@@ -869,7 +869,7 @@ add_option(const char *	option, const char * value)
 			g_assert(mp->description[0] != '(');
 			mp->vf = funs;
 			if (!mp->name)
-				mp->name = strdup(value);
+				mp->name = ha_strdup(value);
 			++nummedia;
 			PILIncrIFRefCount(PluginLoadingSystem
 			,	HB_COMM_TYPE_S, option, +1);
@@ -1921,6 +1921,9 @@ baddirective:
 
 /*
  * $Log: config.c,v $
+ * Revision 1.108  2004/01/21 00:54:29  horms
+ * Added ha_strdup, so strdup allocations are audited
+ *
  * Revision 1.107  2004/01/20 08:58:29  horms
  * Removed unused variables
  *

@@ -1,4 +1,4 @@
-const static char * _setproctitle_c_Id = "$Id: setproctitle.c,v 1.8 2003/02/07 08:37:17 horms Exp $";
+const static char * _setproctitle_c_Id = "$Id: setproctitle.c,v 1.9 2004/01/21 00:54:30 horms Exp $";
 
 /*
  * setproctitle.c
@@ -56,6 +56,7 @@ const static char * _setproctitle_c_Id = "$Id: setproctitle.c,v 1.8 2003/02/07 0
  */
 
 #include <portability.h>
+#include <heartbeat.h>
 
 #ifdef HAVE_CONFIG_H
 #include <config.h>
@@ -93,8 +94,6 @@ init_set_proc_title(int argc, char *argv[], char *envp[])
   int i, envpsize;
   char **p;
   
-  (void)_setproctitle_h_Id;
-  (void)_setproctitle_c_Id;
   /* Move the environment so setproctitle can use the space.
    */
   for(i = envpsize = 0; envp[i] != NULL; i++)
@@ -127,8 +126,8 @@ init_set_proc_title(int argc, char *argv[], char *envp[])
   /* Set the __progname and __progname_full variables so glibc and company don't
    * go nuts. - MacGyver
    */
-  __progname = strdup("heartbeat");
-  __progname_full = strdup(argv[0]);
+  __progname = ha_strdup("heartbeat");
+  __progname_full = ha_strdup(argv[0]);
 #endif /* HAVE___PROGNAME */
   
 #if 0
@@ -140,6 +139,14 @@ init_set_proc_title(int argc, char *argv[], char *envp[])
 
   LastArgv = envp[-1] + strlen(envp[-1]);
 #endif
+
+  return;
+
+  /* Have to use these somewhere */
+  (void)_setproctitle_h_Id;
+  (void)_setproctitle_c_Id;
+  (void)_heartbeat_h_Id;
+  (void)_ha_msg_h_Id;
 }    
 
 void set_proc_title(const char *fmt,...)

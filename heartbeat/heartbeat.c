@@ -1,4 +1,4 @@
-const static char * _heartbeat_c_Id = "$Id: heartbeat.c,v 1.282 2004/01/08 08:38:01 horms Exp $";
+const static char * _heartbeat_c_Id = "$Id: heartbeat.c,v 1.283 2004/01/21 00:54:30 horms Exp $";
 
 /*
  * heartbeat: Linux-HA heartbeat code
@@ -2737,7 +2737,7 @@ main(int argc, char * argv[], char **envp)
 	cl_log_enable_stderr(TRUE);
 	g_log_set_always_fatal((GLogLevelFlags)0);
 
-	tmp_cmdname=strdup(argv[0]);
+	tmp_cmdname = ha_strdup(argv[0]);
 	if ((cmdname = strrchr(tmp_cmdname, '/')) != NULL) {
 		++cmdname;
 	}else{
@@ -4111,6 +4111,9 @@ get_localnodeinfo(void)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.283  2004/01/21 00:54:30  horms
+ * Added ha_strdup, so strdup allocations are audited
+ *
  * Revision 1.282  2004/01/08 08:38:01  horms
  * Post API clean up of API Register fifo which it is a unix socket now - Alan, hb_api.py still needs to be updated
  *

@@ -1,4 +1,4 @@
-static const char * _ha_malloc_c_id = "$Id: ha_malloc.c,v 1.20 2003/07/22 09:51:35 alan Exp $";
+static const char * _ha_malloc_c_id = "$Id: ha_malloc.c,v 1.21 2004/01/21 00:54:29 horms Exp $";
 #include <portability.h>
 #include <unistd.h>
 #include <stdlib.h>
@@ -418,6 +418,24 @@ ha_calloc(size_t nmemb, size_t size)
 		
 	return(ret);
 }
+
+
+/*
+ * ha_strdup: strdup clone
+ */
+
+char *
+ha_strdup(const char *s)
+{
+	void * ret = ha_malloc((strlen(s) + 1) * sizeof(char *));
+
+	if (ret) {
+		strcpy(ret, s);
+	}
+		
+	return(ret);
+}
+
 
 /*
  * ha_malloc_init():	initialize our malloc wrapper things
