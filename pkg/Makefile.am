@@ -1,4 +1,4 @@
-# $Id: Makefile.am,v 1.5 2004/04/26 20:22:16 msoffen Exp $
+# $Id: Makefile.am,v 1.6 2004/09/11 18:25:13 alan Exp $
 #
 # Open-HA "pkg" Makefile for Solaris etc.
 #
@@ -23,8 +23,17 @@
 # 2. "pkgmk" from whatever is in $(TMPINSTDIR) into a pkg area $(PKGDIR)
 
 MAINTAINERCLEANFILES    = Makefile.in
-CLEANFILES	= $(INFOFILES)/pkginfo $(INFOFILES)/prototype stamp-tmpinst
-EXTRA_DIST	= $(INFOFILES)/pkginfo.in
+
+PKGINFO =	$(INFOFILES)/prototype		\
+		$(INFOFILES)/pkginfo		\
+		$(INFOFILES)/preinstall		\
+		$(INFOFILES)/postinstall
+
+EXTRA_DIST =	$(INFOFILES)/pkginfo.in		\
+		$(INFOFILES)/preinstall.in	\
+		$(INFOFILES)/postinstall.in
+
+CLEANFILES = $(PKGINFO) stamp-tmpinst
 
 PKGNAME		= OPENHA
 
@@ -40,7 +49,7 @@ TMPINSTDIR	= tmpinst
 pkg:	$(PKGDIR)/$(PKGNAME)/pkgmap
 
 # Build the "pkg" from the pseudo-install
-$(PKGDIR)/$(PKGNAME)/pkgmap:	$(INFOFILES)/prototype $(INFOFILES)/pkginfo
+$(PKGDIR)/$(PKGNAME)/pkgmap:	$(PKGINFO)
 	-rm -rf  $(PKGDIR)
 	-mkdir  $(PKGDIR)
 	cd $(INFOFILES) && pkgmk -d ../$(PKGDIR) -r ../$(TMPINSTDIR)
@@ -82,11 +91,13 @@ $(INFOFILES)/prototype:	stamp-tmpinst
 	echo "d none etc/rc0.d ? ? ?" >> $@
 	echo "d none etc/rc1.d ? ? ?" >> $@
 	echo "d none etc/rcS.d ? ? ?" >> $@
-	echo "s none etc/rc2.d/S@HB_INITSTARTPRI@heartbeat=../init.d/heartbeat" >> $@
-	echo "s none etc/rc0.d/K@HB_INITSTOPPRI@heartbeat=../init.d/heartbeat" >> $@
-	echo "s none etc/rc1.d/K@HB_INITSTOPPRI@heartbeat=../init.d/heartbeat" >> $@
-	echo "s none etc/rcS.d/K@HB_INITSTOPPRI@heartbeat=../init.d/heartbeat" >> $@
+	echo "s none etc/rc2.d/S@HB_INITSTARTPRI@heartbeat=../init.d/heartbeat@INIT_EXT@" >> $@
+	echo "s none etc/rc0.d/K@HB_INITSTOPPRI@heartbeat=../init.d/heartbeat@INIT_EXT@" >> $@
+	echo "s none etc/rc1.d/K@HB_INITSTOPPRI@heartbeat=../init.d/heartbeat@INIT_EXT@" >> $@
+	echo "s none etc/rcS.d/K@HB_INITSTOPPRI@heartbeat=../init.d/heartbeat@INIT_EXT@" >> $@
 	echo "i pkginfo" >> $@
+	echo "i preinstall" >> $@
+	echo "i postinstall" >> $@
 
 clean:
 	rm -rf $(TMPINSTDIR) $(PKGDIR)

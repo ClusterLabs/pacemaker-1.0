@@ -1,0 +1,7 @@
+#!/bin/sh
+#
+# Solaris pkg post-install script.
+#	Nothing yet.  Might start heartbeat.
+#
+# (c) 2004 David Lee <t.d.lee@durham.ac.uk>
+
