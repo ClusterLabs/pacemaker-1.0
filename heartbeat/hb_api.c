@@ -1,4 +1,4 @@
-/* $Id: hb_api.c,v 1.118 2004/10/20 19:31:46 gshi Exp $ */
+/* $Id: hb_api.c,v 1.119 2004/10/24 14:47:31 lge Exp $ */
 /*
  * hb_api: Server-side heartbeat API code
  *
@@ -832,7 +832,7 @@ api_get_nodename(const struct ha_msg* msg, struct ha_msg* resp,
 		 client_proc_t* client, const char** failreason)
 {
 	const char* nodename;
-	const char * query_uuid;
+	const unsigned char* query_uuid;
 	size_t	  len;
 	
 	if ((query_uuid = cl_get_binary(msg, F_QUERYUUID, &len))== NULL){

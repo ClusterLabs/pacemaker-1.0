@@ -1,4 +1,4 @@
-/* $Id: findif.c,v 1.41 2004/09/18 23:11:54 alan Exp $ */
+/* $Id: findif.c,v 1.42 2004/10/24 14:47:31 lge Exp $ */
 /*
  * findif.c:	Finds an interface which can route a given address
  *
@@ -229,7 +229,7 @@ SearchUsingProcRoute (char *address, struct in_addr *in
 ,	unsigned long *best_netmask
 ,	char *errmsg, int errmsglen)
 {
-	long    	flags, refcnt, use, metric, gw, mask;
+	unsigned long	flags, refcnt, use, metric, gw, mask;
 	unsigned long   dest;
 	long		best_metric = LONG_MAX;
 	
@@ -702,6 +702,19 @@ ff02::%lo0/32                     fe80::1%lo0                   UC          lo0
 
 /* 
  * $Log: findif.c,v $
+ * Revision 1.42  2004/10/24 14:47:31  lge
+ * -pedantic-errors fixes 4:
+ *  * Warning: static declaration for `verbose' follows non-static
+ *    warning: overflow in implicit constant conversion
+ *    Warning: unsigned int format, int arg (arg #)
+ *   only casted, not "fixed":
+ *    warning: long unsigned int format, long int arg (arg #)
+ *    would include changing all deadtime_ms and similar to unsigned long.
+ *    needs to be discussed first.
+ *    offending idiom is:
+ *    long l;
+ *    sscanf(buf,"%lx",&l);
+ *
  * Revision 1.41  2004/09/18 23:11:54  alan
  * Bringing forward trivial changes from 1.2 version.
  *

@@ -362,10 +362,7 @@ find_if(struct in6_addr* addr_target, int* plen_target)
 	static char devname[20]="";
 	struct in6_addr addr;
 	struct in6_addr mask;
-	int		plen;
-	int		scope;
-	int		dad_status;
-	int		if_idx;
+	unsigned int plen, scope, dad_status, if_idx;
 	char addr6p[8][5];
 
 	/* open /proc/net/if_inet6 file */
@@ -444,7 +441,7 @@ get_if(struct in6_addr* addr_target, int* plen_target)
 	char addr6[40];
 	static char devname[20]="";
 	struct in6_addr addr;
-	int plen, scope, dad_status, if_idx;
+	unsigned int plen, scope, dad_status, if_idx;
 	char addr6p[8][5];
 
 	/* open /proc/net/if_inet6 file */

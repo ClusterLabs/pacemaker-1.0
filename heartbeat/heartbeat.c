@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.331 2004/10/22 14:23:09 alan Exp $ */
+/* $Id: heartbeat.c,v 1.332 2004/10/24 14:47:31 lge Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -307,7 +307,7 @@ volatile struct process_info *	curproc = NULL;
 struct TestParms *		TestOpts;
 
 int				debug = 0;
-static gboolean			verbose = FALSE;
+gboolean			verbose = FALSE;
 int				timebasedgenno = FALSE;
 int				parse_only = FALSE;
 static gboolean			killrunninghb = FALSE;
@@ -1864,7 +1864,7 @@ HBDoMsg_T_STATUS(const char * type, struct node_info * fromnode
 		heartbeat_monitor(msg, NOCHANGE, iface);
 	}
 	if ((tmpstr = ha_msg_value(msg, F_DT)) != NULL
-	&&	sscanf(tmpstr, "%lx", &deadtime) == 1) {
+	&&	sscanf(tmpstr, "%lx", (unsigned long*)&deadtime) == 1) {
 		fromnode->dead_ticks = msto_longclock(deadtime);	
 	}
 	
@@ -4624,6 +4624,19 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.332  2004/10/24 14:47:31  lge
+ * -pedantic-errors fixes 4:
+ *  * Warning: static declaration for `verbose' follows non-static
+ *    warning: overflow in implicit constant conversion
+ *    Warning: unsigned int format, int arg (arg #)
+ *   only casted, not "fixed":
+ *    warning: long unsigned int format, long int arg (arg #)
+ *    would include changing all deadtime_ms and similar to unsigned long.
+ *    needs to be discussed first.
+ *    offending idiom is:
+ *    long l;
+ *    sscanf(buf,"%lx",&l);
+ *
  * Revision 1.331  2004/10/22 14:23:09  alan
  * Added comments explaining the shutdown phases.
  *

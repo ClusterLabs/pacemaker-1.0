@@ -1,4 +1,4 @@
-/* $Id: client_lib.c,v 1.13 2004/10/08 19:53:13 gshi Exp $ */
+/* $Id: client_lib.c,v 1.14 2004/10/24 14:47:31 lge Exp $ */
 /* 
  * client_lib: heartbeat API client side code
  *
@@ -394,14 +394,14 @@ hb_api_signon(struct ll_cluster* cinfo, const char * clientid)
 		pi->SignedOn = 1;
 
 		if ((tmpstr = ha_msg_value(reply, F_DEADTIME)) == NULL
-		||	sscanf(tmpstr, "%lx", &(pi->deadtime_ms)) != 1) {
+		||	sscanf(tmpstr, "%lx", (unsigned long*)&(pi->deadtime_ms)) != 1) {
 			ha_api_log(LOG_ERR
 			,	"hb_api_signon: Can't get deadtime ");
 			ZAPMSG(reply);
 			return HA_FAIL;
 		}
 		if ((tmpstr = ha_msg_value(reply, F_KEEPALIVE)) == NULL
-		||	sscanf(tmpstr, "%lx", &(pi->keepalive_ms)) != 1) {
+		||	sscanf(tmpstr, "%lx", (unsigned long*)&(pi->keepalive_ms)) != 1) {
 			ha_api_log(LOG_ERR
 			,	"hb_api_signon: Can't get keepalive time ");
 			ZAPMSG(reply);
