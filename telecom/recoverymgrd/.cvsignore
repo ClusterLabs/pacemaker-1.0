@@ -1,8 +1,8 @@
 .deps
 Makefile.in
 Makefile
-y.tab.c
-y.tab.h
-lex.yy.c
+conf_lex.c
+conf_yacc.c
+conf_yacc.h
 .libs
 recoverymgrd

@@ -23,9 +23,12 @@
 #include <string.h>
 
 #define  YY_NO_UNPUT
-#include "y.tab.h"
-extern char * yylval;
+#define  YYSTYPE char *
+#include "conf_yacc.h"
 extern int yylex(void);
+
+extern void *yy_flex_realloc( void *ptr, yy_size_t size );
+extern int yy_flex_strlen( yyconst char *s );
 
 #ifdef FLEX_SCANNER
 #	define	MAKE_WARNINGS_GO_AWAY	(void)yy_flex_realloc; 	\

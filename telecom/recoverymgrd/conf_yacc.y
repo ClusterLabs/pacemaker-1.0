@@ -45,6 +45,9 @@ extern int yylex(void);
 #	define	MAKE_WARNINGS_GO_AWAY	/* Nothing */
 #endif
 
+int yyget_lineno(void);
+
+
 %}
 
 %token PID APPHB_HUP_L APPHB_NOHB_L APPHB_HBAGAIN_L APPHB_HBWARN_L 

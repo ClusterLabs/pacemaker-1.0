@@ -53,7 +53,6 @@
 #include <apphb_notify.h>
 #include <recoverymgr.h>
 
-#include "y.tab.h"
 #include "recoverymgrd.h"
 #include "configfile.h"
 

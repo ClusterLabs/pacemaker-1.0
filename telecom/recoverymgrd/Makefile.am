@@ -34,32 +34,50 @@ LIBRT 			= @LIBRT@
 
 AM_CFLAGS		=  -DPIDFILE='"$(PIDFILE)"'
 
+YFLAGS			= -d
+
 
 ## binary progs
 halib_PROGRAMS		= recoverymgrd 
 
 ## SOURCES
 
-recoverymgrd_SOURCES	= conf_yacc.yacc conf_lex.lex recoverymgrd.c lex.yy.c y.tab.c y.tab.h
-noinst_HEADERS = recoverymgrd.h configfile.h
+recoverymgrd_SOURCES	= conf_yacc.y conf_lex.l recoverymgrd.c
+noinst_HEADERS 		= recoverymgrd.h configfile.h
 
-recoverymgrd_CFLAGS		= -DHA_VARLIBDIR='"@HA_VARLIBDIR@"'
-recoverymgrd_LDADD		= $(COMMONLIBS) 			\
+recoverymgrd_CFLAGS	= -DHA_VARLIBDIR='"@HA_VARLIBDIR@"'
+recoverymgrd_LDADD	= $(COMMONLIBS) 				\
 			$(top_builddir)/lib/pils/libpils.la		\
 			$(top_builddir)/lib/apphb/libapphb.la		\
 			$(top_builddir)/replace/libreplace.la		\
 			$(LIBRT)
 
-recoverymgrd_LDFLAGS	= @LIBADD_DL@ @LIBLTDL@ -export-dynamic	\
-			-dlpreopen force \
-			-dlopen self
+recoverymgrd_LDFLAGS	= @LIBADD_DL@ @LIBLTDL@ -export-dynamic		\
+			-dlpreopen-force 				\
+			-dlopen-self
 
-lex.yy.c: conf_lex.lex
-	lex conf_lex.lex
+#lex.yy.c: conf_lex.lex
+#	lex conf_lex.lex
 
-y.tab.c: conf_yacc.yacc lex.yy.c recoverymgrd.c
-	yacc -d conf_yacc.yacc
+#y.tab.c: conf_yacc.yacc lex.yy.c recoverymgrd.c
+#	yacc -d conf_yacc.yacc
 
-y.tab.h: y.tab.c # Automatically built at the same time
+#y.tab.h: y.tab.c # Automatically built at the same time
 
-recoverymgrd-recoverymgrd.$(OBJEXT): y.tab.h y.tab.c
+#recoverymgrd.$(OBJEXT): y.tab.h y.tab.c lex.yy.c lex.yy.o
+
+# Lex can't be relied on to produce code that won't produce any errors
+# So we make sure that this code is never compiled with -Werror
+lex.yy.$(OBJEXT): lex.yy.c
+	( old_pwd=`pwd` ; cd $(srcdir) && 				\
+		$(CC) $(DEFS) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS)	\
+		$(LEX_SOURCE_CFLAGS) -c lex.yy.c			\
+		-o $$old_pwd/$@  $(LEX_SOURCE_CFLAGS) -Wall )
+
+# Yacc can't be relied on to produce code that won't produce any errors
+# So we make sure that this code is never compiled with -Werror
+conf_lex.$(OBJEXT): conf_lex.c
+	( old_pwd=`pwd` ; cd $(srcdir) && 				\
+		$(CC) $(DEFS) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS)	\
+		$(YACC_SOURCE_CFLAGS) -c conf_lex.c			\
+		-o $$old_pwd/$@  $(LEX_SOURCE_CFLAGS) -Wall )
