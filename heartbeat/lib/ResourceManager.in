@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-#	$Id: ResourceManager.in,v 1.19 2004/04/15 18:15:50 alan Exp $
+#	$Id: ResourceManager.in,v 1.20 2004/04/16 04:48:05 alan Exp $
 #
 #	New haresources format:
 #
@@ -91,15 +91,14 @@ ipres() {
 	#	3) Append a blank to the end of the line
 	#	4) Compress multiple blanks/tabs into a single blank
 	#	5) Strip off a leading space (if any)
-	#       6) Lower-case the first word (hostname)
 	#
 	sed						\
 		-e  's%#.*%%'				\
 		-e :a -e '/\\$/N; s/\\\n//; ta'		\
 		-e  's%$% %'				\
 		-e  's%[	 ][	 ]*% %g' 	\
-		-e  's%^ %%' 				\
-		-e  's%^\([^ ]*\)%\L\1%'		|
+		-e  's%^ %%' 				|
+	awk '/.*/ {$1 = tolower($1); print $0, ""}'	|
   	egrep $grepflags "$pat"
 }
 
@@ -433,9 +432,12 @@ esac
 
 #
 #	$Log: ResourceManager.in,v $
+#	Revision 1.20  2004/04/16 04:48:05  alan
+#	Put in a fix which gets rid of LMB's non-portable sed expression.
+#
 #	Revision 1.19  2004/04/15 18:15:50  alan
 #	Fixed a bug in the last fix to ResourceManager - I didn't check return codes correctly.
-#
+#	
 #	Revision 1.18  2004/04/15 13:18:38  alan
 #	Put in a kludge to permit the new code to avoid an unnecessary reboot for
 #	Red Hat and other non-LSB-compliant init scripts.
