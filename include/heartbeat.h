@@ -1,4 +1,4 @@
-/* $Id: heartbeat.h,v 1.61 2005/03/21 17:51:57 gshi Exp $ */
+/* $Id: heartbeat.h,v 1.62 2005/04/05 20:55:42 gshi Exp $ */
 /*
  * heartbeat.h: core definitions for the Linux-HA heartbeat program
  *
@@ -207,7 +207,7 @@
 #define HA_FUNCS	HA_D "/shellfuncs"
 
 #define	RC_ARG0		"harc"
-
+#define ENV_PREFIX	"HA_"
 
 
 /* Which side of a pipe is which? */
