@@ -1,4 +1,4 @@
-/* $Id: portability.h,v 1.40 2004/10/08 20:11:16 alan Exp $ */
+/* $Id: portability.h,v 1.41 2004/10/08 20:55:55 alan Exp $ */
 #ifndef PORTABILITY_H
 #  define PORTABILITY_H
 
@@ -62,6 +62,8 @@
 
 #if defined(ANSI_ONLY) && !defined(inline)
 #	define inline	/* nothing */
+#	undef	NETSNMP_ENABLE_INLINE
+#	define	NETSNMP_NO_INLINE 1
 #endif
 
 #ifndef HA_HAVE_SETENV
