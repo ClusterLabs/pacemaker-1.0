@@ -456,6 +456,10 @@ hb_rsc_isstable(void)
 		,	longclockto_ms(standby_running)
 		,	resourcestate);
 	}
+	/* Special case for early shutdown requests */
+	if (shutdown_in_progress && resourcestate == HB_R_INIT) {
+		return TRUE;
+	}
 	return	other_is_stable
 	&&	!takeover_in_progress
 	&&	going_standby == NOT
@@ -2030,9 +2034,9 @@ StonithProcessName(ProcTrack* p)
 
 /*
  * $Log: hb_resource.c,v $
- * Revision 1.41  2004/02/03 04:44:21  alan
- * Fixed two different early shutdown hangs.  That is, when shutdown is requested
- * early enough, heartbeat would hang.
+ * Revision 1.42  2004/02/03 07:10:51  alan
+ * Put in yet another early shutdown special case.
+ * I can't seem to hang it any more this way in hundreds of attempts :-)
  *
  * Revision 1.40  2004/01/30 22:45:17  alan
  * Fixed a hole where very early shutdown requests with the other node
