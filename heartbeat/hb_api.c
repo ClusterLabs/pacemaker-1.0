@@ -1,4 +1,4 @@
-/* $Id: hb_api.c,v 1.128 2005/01/31 22:57:27 gshi Exp $ */
+/* $Id: hb_api.c,v 1.129 2005/02/14 21:06:10 gshi Exp $ */
 /*
  * hb_api: Server-side heartbeat API code
  *
@@ -191,8 +191,7 @@ should_msg_sendto_client(client_proc_t* client, struct ha_msg* msg)
 	GHashTable* table;
 	struct node_info *	thisnode = NULL;	
 	const char *		from;
-	const char *		fromuuid;
-	size_t			uuidlen;
+	uuid_t			fromuuid;
 	struct seq_snapshot*	snapshot;
 	const char *		cseq;
 	const char *		cgen;
@@ -231,7 +230,7 @@ should_msg_sendto_client(client_proc_t* client, struct ha_msg* msg)
 		return FALSE;
 	}
 	
-	fromuuid = cl_get_binary(msg, F_ORIGUUID, &uuidlen);
+	cl_get_uuid(msg, F_ORIGUUID, fromuuid);
 	thisnode = lookup_tables(from, fromuuid);
 	if ( thisnode == NULL){
 		cl_log(LOG_ERR, "should_msg_sendto_client:"
@@ -242,7 +241,7 @@ should_msg_sendto_client(client_proc_t* client, struct ha_msg* msg)
 	t = &thisnode->track;
 
 	/*if uuid is not found, then it always passes the first restriction*/
-	if ( fromuuid == NULL
+	if ( uuid_is_null(fromuuid)
 	     || (table = client->seq_snapshot_table)== NULL
 	     || (snapshot= (struct seq_snapshot*)
 		 g_hash_table_lookup(table, fromuuid)) == NULL){
@@ -870,20 +869,20 @@ static int
 api_get_uuid (const struct ha_msg* msg, struct ha_msg* resp,
 	      client_proc_t* client, const char** failreason)
 {
-	const char* query_nodename;
-	const char * uuid;
+	const char*	query_nodename;
+	uuid_t		uuid;
 	
 	if ((query_nodename = ha_msg_value(msg, F_QUERYNAME))== NULL){
 		*failreason = "no query node name found";
 		return I_API_BADREQ;
 	}
 	
-	if ((uuid = nodename2uuid(query_nodename)) == NULL){
+	if (nodename2uuid(query_nodename, uuid) != HA_OK){
 		return I_API_RET;
 	}
 	
-	if (cl_msg_modbin(resp, F_QUERYUUID, 
-			  uuid, sizeof(uuid_t)) != HA_OK){
+	if (cl_msg_moduuid(resp, F_QUERYUUID, 
+			   uuid) != HA_OK){
 		cl_log(LOG_ERR, "api_get_uuid: cannnot add"
 		       F_QUERYUUID " field to message");
 		return I_API_RET;
@@ -897,18 +896,11 @@ static int
 api_get_nodename(const struct ha_msg* msg, struct ha_msg* resp,
 		 client_proc_t* client, const char** failreason)
 {
-	const char* nodename;
-	const unsigned char* query_uuid;
-	size_t	  len;
-	
-	if ((query_uuid = cl_get_binary(msg, F_QUERYUUID, &len))== NULL){
+	const char*	nodename;
+	uuid_t		query_uuid;
+
+	if (cl_get_uuid(msg, F_QUERYUUID, query_uuid) != HA_OK){
 		*failreason = "no query node name found";
-		return I_API_BADREQ;
-	}
-	
-	if ( len !=  sizeof(uuid_t)){
-		*failreason = "uuid value len in message does not match"
-			"the length of uuid_t structure";
 		return I_API_BADREQ;
 	}
 	

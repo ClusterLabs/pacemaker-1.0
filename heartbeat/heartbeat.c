@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.352 2005/02/14 07:40:34 horms Exp $ */
+/* $Id: heartbeat.c,v 1.353 2005/02/14 21:06:11 gshi Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -2167,12 +2167,14 @@ static void
 send_ack_if_necessary(const struct ha_msg* m)
 {
 	const char*	fromnode = ha_msg_value(m, F_ORIG);
-	size_t		uuidlen;	
-	const char*	fromuuid = cl_get_binary(m, F_ORIGUUID, &uuidlen);
+	uuid_t		fromuuid;
 	const char*	seq_str = ha_msg_value(m, F_SEQ);
 	seqno_t		seq;
 	struct	node_info*	thisnode = NULL;
 	
+	if ( cl_get_uuid(m, F_ORIGUUID, fromuuid) != HA_OK){
+		uuid_clear(fromuuid);
+	}
 	
 	if (fromnode == NULL ||
 	    seq_str == NULL ||
@@ -2205,8 +2207,7 @@ process_clustermsg(struct ha_msg* msg, struct link* lnk)
 	TIME_T			msgtime = 0;
 	longclock_t		now = time_longclock();
 	const char *		from;
-	const char *		fromuuid;
-	size_t			uuidlen;
+	uuid_t			fromuuid;
 	const char *		ts;
 	const char *		type;
 	int			action;
@@ -2248,7 +2249,10 @@ process_clustermsg(struct ha_msg* msg, struct link* lnk)
 	/* Extract message type, originator, timestamp, auth */
 	type = ha_msg_value(msg, F_TYPE);
 	from = ha_msg_value(msg, F_ORIG);
-	fromuuid = cl_get_binary(msg, F_ORIGUUID, &uuidlen);
+	
+	if ( cl_get_uuid(msg, F_ORIGUUID, fromuuid) != HA_OK){
+		uuid_clear(fromuuid);
+	}
 	ts = ha_msg_value(msg, F_TIME);
 	cseq = ha_msg_value(msg, F_SEQ);
 
@@ -4022,13 +4026,9 @@ should_drop_message(struct node_info * thisnode, const struct ha_msg *msg,
 	struct seqtrack *	t = &thisnode->track;
 	const char *		cseq = ha_msg_value(msg, F_SEQ);
 	const char *		to = ha_msg_value(msg, F_TO);
-	size_t			touuid_len;
-	const char *		touuid  = NULL;
+	uuid_t			touuid;
 	const char *		from= ha_msg_value(msg, F_ORIG);
-	size_t			fromuuid_len;
-	const char *		fromuuid = 
-		cl_get_binary(msg, F_ORIGUUID, &fromuuid_len);
-	
+	uuid_t			fromuuid;
 	const char *		type = ha_msg_value(msg, F_TYPE);
 	const char *		cgen = ha_msg_value(msg, F_HBGENERATION);
 	seqno_t			seq;
@@ -4039,10 +4039,15 @@ should_drop_message(struct node_info * thisnode, const struct ha_msg *msg,
 	int			ishealedpartition = 0;
 	int			is_status = 0;
 	
-	if (from && fromuuid && (fromuuid_len == sizeof(uuid_t))){
+	
+	if ( cl_get_uuid(msg, F_ORIGUUID, fromuuid) != HA_OK){
+		uuid_clear(fromuuid);
+	}
+	
+	if (from && !uuid_is_null(fromuuid)){
 		update_tables(from, fromuuid);
 	}
-
+	
 	if (is_missing_packet == NULL){
 		cl_log(LOG_ERR, "should_drop_message: "
 		       "NULL input is_missing_packet");
@@ -4085,9 +4090,12 @@ should_drop_message(struct node_info * thisnode, const struct ha_msg *msg,
 		sscanf(cgen, "%lx", &gen);
 	}
 	
-	touuid= cl_get_binary(msg, F_TOUUID, &touuid_len);
+	if ( cl_get_uuid(msg, F_TOUUID, touuid) != HA_OK){
+		uuid_clear(touuid);
+	}
 	
-	if(touuid && touuid_len == sizeof(uuid_t)){
+	
+	if(!uuid_is_null(touuid)){
 		IsToUs = (uuid_compare(touuid, config->uuid) == 0);
 	}else{
 		IsToUs = (to == NULL) || (strcmp(to, curnode->nodename) == 0);
@@ -4992,6 +5000,11 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.353  2005/02/14 21:06:11  gshi
+ * BEAM fix:
+ *
+ * replacing the binary usage in core code with uuid function
+ *
  * Revision 1.352  2005/02/14 07:40:34  horms
  * On Sparc Linux O_NONBLOCK!=O_NDELAY and this is needed to avoid a loop.
  *

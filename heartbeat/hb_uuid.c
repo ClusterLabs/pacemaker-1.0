@@ -241,23 +241,26 @@ uuid2nodename(const uuid_t uuid)
 }
 
 
-const char *
-nodename2uuid(const char* nodename)
+int
+nodename2uuid(const char* nodename, uuid_t id)
 {
 	struct node_info* hip; 
-
+	
+	if (nodename == NULL){
+		cl_log(LOG_ERR, "nodename2uuid:"
+		       "nodename is NULL ");
+		return HA_FAIL;
+	}
+	uuid_clear(id);
 	hip = g_hash_table_lookup(name_table, nodename);
 	
-	if (hip){
-		if( uuid_is_null(hip->uuid)){
-			return NULL;
-		}
-
-		return hip->uuid;
-		
-	} else {
-		return NULL;
+	if (!hip){		
+		return HA_FAIL;
 	}
+	
+	uuid_copy(id, hip->uuid);		
+	
+	return HA_OK;
 }
 
 

@@ -1,4 +1,4 @@
-/* $Id: client_lib.c,v 1.19 2005/01/18 20:33:04 andrew Exp $ */
+/* $Id: client_lib.c,v 1.20 2005/02/14 21:06:11 gshi Exp $ */
 /* 
  * client_lib: heartbeat API client side code
  *
@@ -2399,6 +2399,7 @@ get_ipcchan(ll_cluster_t* ci)
  * Return TRUE (1) if there is a message ready to read.
  */
 static int
+
 msgready(ll_cluster_t*ci )
 {
 	llc_private_t* pi;
@@ -2546,7 +2547,7 @@ sendnodemsg_byuuid(ll_cluster_t* lcl, struct ha_msg* msg,
 		ha_api_log(LOG_ERR, "uuid is NULL");
 		return HA_FAIL;
 	}
-	if (cl_msg_modbin(msg, F_TOUUID, uuid, sizeof(uuid_t)) != HA_OK) {
+	if (cl_msg_moduuid(msg, F_TOUUID, uuid) != HA_OK) {
 		ha_api_log(LOG_ERR, "sendnodemsg_byuuid: "
 			   "cannot set F_TOUUID field");
 		return(HA_FAIL);
@@ -2561,8 +2562,7 @@ get_uuid(llc_private_t* pi, const char* nodename, uuid_t uuid)
 	struct ha_msg*		request;
 	struct ha_msg*		reply;
 	const char *		result;
-	const char *		tmp;
-	size_t			len;
+	uuid_t			tmp;
 	
 	if (!pi->SignedOn) {
 		ha_api_log(LOG_ERR, "not signed on");
@@ -2586,12 +2586,11 @@ get_uuid(llc_private_t* pi, const char* nodename, uuid_t uuid)
 		return HA_FAIL;
 	}
 	ZAPMSG(request);
-
+	
 	if ((reply=read_api_msg(pi)) != NULL
 	    && 	(result = ha_msg_value(reply, F_APIRESULT)) != NULL
 	    &&	(strcmp(result, API_OK) == 0)
-	    &&	(tmp =  cl_get_binary(reply, F_QUERYUUID, &len)) != NULL
-	    &&  len == sizeof(uuid_t)){
+	    &&	(cl_get_uuid(reply, F_QUERYUUID, tmp)) == HA_OK){
 		
 		uuid_copy(uuid, tmp);
 		ZAPMSG(reply);
@@ -2648,7 +2647,7 @@ get_name(llc_private_t* pi, const uuid_t uuid, char* name, int maxnamlen)
 		ha_api_log(LOG_ERR, "get_name: can't create msg");
 		return HA_FAIL;
 	}
-	if (ha_msg_addbin(request, F_QUERYUUID, uuid, sizeof(uuid_t)) != HA_OK) {
+	if (ha_msg_adduuid(request, F_QUERYUUID, uuid) != HA_OK) {
 		ha_api_log(LOG_ERR, "get_uuid: cannot add field");
 		ZAPMSG(request);
 		return HA_FAIL;

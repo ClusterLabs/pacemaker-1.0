@@ -1,4 +1,4 @@
-/* $Id: heartbeat.h,v 1.57 2005/01/20 19:17:50 gshi Exp $ */
+/* $Id: heartbeat.h,v 1.58 2005/02/14 21:06:11 gshi Exp $ */
 /*
  * heartbeat.h: core definitions for the Linux-HA heartbeat program
  *
@@ -395,7 +395,7 @@ guint		uuid_hash(gconstpointer key);
 void		add_nametable(const char* nodename, char* value);
 void		add_uuidtable(const char* uuid, char* value);
 const char *	uuid2nodename(const uuid_t uuid);
-const char *	nodename2uuid(const char* nodename);
+int		nodename2uuid(const char* nodename, uuid_t);
 int		inittable(void);
 void		update_tables(const char* nodename, const char* uuid);
 struct node_info* lookup_tables(const char* nodename, const char* uuid);

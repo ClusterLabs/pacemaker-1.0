@@ -1,4 +1,4 @@
-/* $Id: ha_msg_internal.c,v 1.50 2005/02/11 05:06:01 alan Exp $ */
+/* $Id: ha_msg_internal.c,v 1.51 2005/02/14 21:06:10 gshi Exp $ */
 /*
  * ha_msg_internal: heartbeat internal messaging functions
  *
@@ -82,19 +82,16 @@ add_control_msg_fields(struct ha_msg* ret)
 	int		j;
 	int		noseqno;
 	const char *	to;
-	const char *	touuid;
-	size_t		uuidlen;
+	uuid_t		touuid;
 	
-	/* To ensure that the variable has an initial value */
-	uuidlen = 0;
 
 	/* if F_TO field is present
 	   this message is for one specific node
 	   attach the uuid for that node*/
 	
 	if ((to = ha_msg_value(ret, F_TO)) != NULL ) {
-		if ( (touuid = nodename2uuid(to)) != NULL){
-			cl_msg_modbin(ret, F_TOUUID, touuid, sizeof(uuid_t));
+		if (nodename2uuid(to, touuid) == HA_OK){
+			cl_msg_moduuid(ret, F_TOUUID, touuid);
 		} else{
 			/* working with previous non-uuid version */
 			/*
@@ -103,8 +100,7 @@ add_control_msg_fields(struct ha_msg* ret)
 			/* do nothing */
 
 		}		
-	} else if ((touuid = cl_get_binary(ret, F_TOUUID, &uuidlen)) != NULL 
-		   && uuidlen ==  sizeof(uuid_t)){
+	} else if (cl_get_uuid(ret, F_TOUUID, touuid) == HA_OK){
 		if ((to = uuid2nodename(touuid)) != NULL){
 			if (ha_msg_mod(ret, F_TO, to) != HA_OK){
 				ha_log(LOG_WARNING, " adding field to message failed");
@@ -152,8 +148,8 @@ add_control_msg_fields(struct ha_msg* ret)
 		}
 		
 		if( defaults[j].flags & IS_UUID){
-			if (cl_msg_modbin(ret, defaults[j].name,
-					  defaults[j].value(), sizeof(uuid_t)) != HA_OK ){
+			if (cl_msg_moduuid(ret, defaults[j].name,
+					   defaults[j].value()) != HA_OK ){
 				ha_msg_del(ret);
 				return(NULL);
 			}
@@ -416,6 +412,11 @@ main(int argc, char ** argv)
 #endif
 /*
  * $Log: ha_msg_internal.c,v $
+ * Revision 1.51  2005/02/14 21:06:10  gshi
+ * BEAM fix:
+ *
+ * replacing the binary usage in core code with uuid function
+ *
  * Revision 1.50  2005/02/11 05:06:01  alan
  * Undid some accidental (but sloppy) name-mangling by alsoran...
  *
