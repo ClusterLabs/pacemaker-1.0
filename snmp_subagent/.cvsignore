@@ -5,4 +5,8 @@ Makefile
 *.la
 *.lo
 .*.swp
-hasubagent
+hbagent
+*.beam
+MISC_ERRORS
+parser-messages
+SNMPAgentSanityCheck
