@@ -49,7 +49,7 @@ LOGFILE=/tmp/linux-ha.testlog
 RSCDIR=$HADIR/resource.d
 errcount=0
 
-cd @sysconfdir@/ha.d
+cd $HADIR
 ulimit -c unlimited
 
 GetAllIFNames() {
@@ -273,7 +273,6 @@ TestHeartbeat() {
     HBStatus
   then
     echo "That's weird.  Heartbeat seems to be running..."
-    HBStatus
     HBStop
   fi
   if
