@@ -1,4 +1,4 @@
-const static char * _hb_config_c_Id = "$Id: config.c,v 1.95 2003/08/06 13:48:46 horms Exp $";
+const static char * _hb_config_c_Id = "$Id: config.c,v 1.96 2003/08/14 06:24:13 horms Exp $";
 /*
  * Parse various heartbeat configuration files...
  *
@@ -507,18 +507,19 @@ parse_config(const char * cfgfile, char *nodename)
 		/* Check first for whole line media-type  directives */
 		if (funs && funs->parse)  {
 			int num_save = nummedia;
-			char *		pname = strdup(bp);
 			IsOptionDirective=0;
 			if (funs->parse(bp) != HA_OK) {
 				PILIncrIFRefCount(PluginLoadingSystem
 				,	HB_COMM_TYPE_S, directive, -1);
 				errcount++;
-				free(pname); pname=NULL;
 				*bp = EOS;	/* Stop parsing now */
 				continue;
 			}
 			sysmedia[num_save]->vf = funs;
-			sysmedia[num_save]->name = pname;
+			if(!sysmedia[num_save]->name) {
+				char *		pname = strdup(bp);
+				sysmedia[num_save]->name = pname;
+			}
 			funs->mtype(&sysmedia[num_save]->type);
 			funs->descr(&sysmedia[num_save]->description);
 			g_assert(sysmedia[num_save]->type);
@@ -1600,6 +1601,9 @@ add_client_child(const char * directive)
 }
 /*
  * $Log: config.c,v $
+ * Revision 1.96  2003/08/14 06:24:13  horms
+ * Don't override names modules give themselves
+ *
  * Revision 1.95  2003/08/06 13:48:46  horms
  * Allow respawn programmes to have arguments. Diarmuid O'Neill + Horms
  *
