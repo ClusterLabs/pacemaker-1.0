@@ -1,4 +1,4 @@
-/* $Id: config.c,v 1.143 2005/02/12 10:38:51 alan Exp $ */
+/* $Id: config.c,v 1.144 2005/02/12 10:53:39 alan Exp $ */
 /*
  * Parse various heartbeat configuration files...
  *
@@ -471,6 +471,7 @@ parse_config(const char * cfgfile, char *nodename)
 		const char *	authspec;
 	} defserv[] = 
 	{	{"ipfail",	"uid=" HA_CCMUSER}
+	,	{"ccm",		"uid=" HA_CCMUSER}
 	,	{"ping",	"gid=" HA_APIGROUP}
 	,	{"cl_status",	"gid=" HA_APIGROUP}
 	,	{"lha-snmpagent","uid=root"}
@@ -2092,8 +2093,8 @@ set_release2mode(const char* value)
 		const char * dname;
 		const char * dval;
 	} r2dirs[] =
-	{	{"apiauth", "ccm 	uid=" HA_CCMUSER}
-	,	{"apiauth", "cib 	uid=" HA_CCMUSER}
+		/* CCM already implicit */
+	{	{"apiauth", "cib 	uid=" HA_CCMUSER}
 	,	{"apiauth", "stonithd   uid=root"}
 		/* LRM is not a heartbeat API client */
 	,	{"apiauth", "crmd   	uid=" HA_CCMUSER}
@@ -2142,6 +2143,10 @@ set_release2mode(const char* value)
 
 /*
  * $Log: config.c,v $
+ * Revision 1.144  2005/02/12 10:53:39  alan
+ * Put CCM back as an implicit apiauth because the tests require it,
+ * and changing it is probably a bad idea :-).
+ *
  * Revision 1.143  2005/02/12 10:38:51  alan
  * Added debugging to newly modified implicit CRM directives.
  *
