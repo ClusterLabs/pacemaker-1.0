@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.311 2004/08/29 03:01:12 msoffen Exp $ */
+/* $Id: heartbeat.c,v 1.312 2004/08/29 04:33:41 msoffen Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -4448,8 +4448,11 @@ hb_unregister_to_apphbd(void)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.312  2004/08/29 04:33:41  msoffen
+ * Fixed comments to properly compile
+ *
  * Revision 1.311  2004/08/29 03:01:12  msoffen
- * Replaced all // COMMENTs with /* COMMENT */
+ * Replaced all // COMMENTs with / * COMMENT * /
  *
  * Revision 1.310  2004/08/26 00:52:42  gshi
  * fixed a bug which will make ping node unrecognizable

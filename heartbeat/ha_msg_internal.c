@@ -1,4 +1,4 @@
-/* $Id: ha_msg_internal.c,v 1.45 2004/08/29 03:01:12 msoffen Exp $ */
+/* $Id: ha_msg_internal.c,v 1.46 2004/08/29 04:33:41 msoffen Exp $ */
 /*
  * ha_msg_internal: heartbeat internal messaging functions
  *
@@ -411,8 +411,11 @@ main(int argc, char ** argv)
 #endif
 /*
  * $Log: ha_msg_internal.c,v $
+ * Revision 1.46  2004/08/29 04:33:41  msoffen
+ * Fixed comments to properly compile
+ *
  * Revision 1.45  2004/08/29 03:01:12  msoffen
- * Replaced all // COMMENTs with /* COMMENT */
+ * Replaced all // COMMENTs with / * COMMENT * /
  *
  * Revision 1.44  2004/07/26 12:39:46  andrew
  * Change the type of some int's to size_t to stop OSX complaining
