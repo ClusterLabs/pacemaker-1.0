@@ -1465,7 +1465,7 @@ SaCkptMessage2Hamsg(SaCkptMessageT* ckptMsg) {
 	
 	if (ckptMsg->paramLength > 0) {
 		strTemp[0] = 0;
-		sprintf(strTemp, "%d", ckptMsg->paramLength);
+		sprintf(strTemp, "%d", (int)ckptMsg->paramLength);
 		rc = ha_msg_mod(haMsg, F_CKPT_PARAM_LENGTH, strTemp);
 		if (rc != HA_OK) {
 			cl_log(LOG_ERR, 
@@ -1486,7 +1486,7 @@ SaCkptMessage2Hamsg(SaCkptMessageT* ckptMsg) {
 	
 	if (ckptMsg->dataLength > 0) {
 		strTemp[0] = 0;
-		sprintf(strTemp, "%d", ckptMsg->dataLength);
+		sprintf(strTemp, "%d", (int)ckptMsg->dataLength);
 		rc = ha_msg_mod(haMsg, F_CKPT_DATA_LENGTH, strTemp);
 		if (rc != HA_OK) {
 			cl_log(LOG_ERR, 

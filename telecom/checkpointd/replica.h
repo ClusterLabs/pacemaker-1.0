@@ -237,7 +237,7 @@ SaCkptReplicaT* SaCkptReplicaCreate(SaCkptReqOpenParamT*);
 int SaCkptReplicaRemove(SaCkptReplicaT**);
 int SaCkptReplicaFree(SaCkptReplicaT**);
 
-int SaCkptReplicaPack(void**, int*, SaCkptReplicaT*);
+int SaCkptReplicaPack(void**, size_t*, SaCkptReplicaT*);
 SaCkptReplicaT* SaCkptReplicaUnpack(void*, int);
 
 int SaCkptReplicaUpdate(SaCkptReplicaT*, SaCkptReqT, 
@@ -250,7 +250,7 @@ int SaCkptReplicaUpdRollback(SaCkptReplicaT*, SaCkptReqT,
 	int, void*, int, void*);
 
 int SaCkptReplicaRead(SaCkptReplicaT*,  
-	int*, void**, int, void*);
+	size_t*, void**, size_t, void*);
 
 int SaCkptSectionRead(SaCkptReplicaT*,	SaCkptSectionT*,
 	size_t, size_t*, void**);

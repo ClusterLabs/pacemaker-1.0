@@ -120,7 +120,7 @@ typedef struct _SaCkptMessageT {
 	SaCkptOpT	operation;
 	int		operationNO;
 	
-	int		paramLength;
+	size_t		paramLength;
 	void*		param;
 	size_t		dataLength;
 	void*		data;

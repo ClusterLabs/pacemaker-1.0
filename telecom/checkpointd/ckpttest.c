@@ -63,7 +63,7 @@ int main(void)
 	ckpt_create_attri.maxSections = 10 ;
 	ckpt_create_attri.maxSectionIdSize = SA_MAX_ID_LENGTH ;
 	
-	io_write.sectionId.id[0] = 0;
+	io_write.sectionId.id = NULL;
 	io_write.sectionId.idLen = 0;
 	io_write.dataBuffer = &requestNumber;
 	io_write.dataSize = sizeof(int);

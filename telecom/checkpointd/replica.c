@@ -362,7 +362,7 @@ SaCkptCheckpointClose(SaCkptOpenCheckpointT** pOpenCkpt)
 
 /* pack the replica so that it can be sent in a ckpt message */
 int 
-SaCkptReplicaPack(void** data, int* dataLength,
+SaCkptReplicaPack(void** data, size_t* dataLength,
 	SaCkptReplicaT* replica)
 {
 	SaCkptSectionT* sec = NULL;
@@ -524,70 +524,76 @@ SaCkptReplicaUnpack(void* data, int dataLength)
 
 	p = data;
 
-	n = (int)*p;
+	memcpy(&n, p, sizeof(n));
 	p += sizeof(n);
 
 	memcpy(replica->checkpointName, p, n);
+	replica->checkpointName[n] = 0;
 	p += n;
 
-	replica->checkpointName[n] = 0;
-
-	replica->maxSectionNumber = *(int*)p;
+	memcpy(&(replica->maxSectionNumber), p,
+		sizeof(replica->maxSectionNumber));
 	p += sizeof(replica->maxSectionNumber);
 
-	replica->maxSectionSize = *(int*)p;
+	memcpy(&(replica->maxSectionSize), p,
+		sizeof(replica->maxSectionSize));
 	p += sizeof(replica->maxSectionSize);
 
-	replica->maxSectionIDSize = *(int*)p;
+	memcpy(&(replica->maxSectionIDSize), p, 
+		sizeof(replica->maxSectionIDSize));
 	p += sizeof(replica->maxSectionIDSize);
 
-	replica->retentionDuration = *(int*)p;
+	memcpy(&(replica->retentionDuration), p, 
+		sizeof(replica->retentionDuration));
 	p += sizeof(replica->retentionDuration);
 
-	replica->checkpointSize = *(int*)p;
+	memcpy(&(replica->checkpointSize), p, 
+		sizeof(replica->checkpointSize));
 	p += sizeof(replica->checkpointSize);
 
-	replica->sectionNumber = *(int*)p;
+	memcpy(&(replica->sectionNumber), p, 
+		sizeof(replica->sectionNumber));
 	p += sizeof(replica->sectionNumber);
 
-	replica->createFlag = *(int*)p;
+	memcpy(&(replica->createFlag), p, 
+		sizeof(replica->createFlag));
 	p += sizeof(replica->createFlag);
 
-	replica->ownerPID = *(int*)p;
+	memcpy(&(replica->ownerPID), p, 
+		sizeof(replica->ownerPID));
 	p += sizeof(replica->ownerPID);
 
 	list = replica->nodeList = NULL;
 
-	n = *(int*)p;
+	memcpy(&n, p, sizeof(n));
 	p += sizeof(n);
 
 	for(i=0; i<n; i++) {
 		state = (SaCkptStateT*)SaCkptMalloc(sizeof(SaCkptStateT));
 		SACKPTASSERT(state != NULL);
 		
-		m = *(int*)p;
+		memcpy(&m, p, sizeof(m));
 		p += sizeof(m);
 
 		memcpy(state->nodeName, p, m);
+		state->nodeName[m] = 0;
 		p += m;
 
-		state->nodeName[m] = 0;
-
-		state->state = *(int*)p;
+		memcpy(&(state->state), p, sizeof(state->state));
 		p += sizeof(state->state);
 
 		list = g_list_append(list, (gpointer)state);
 	}
 
-	n = *(int*)p;
+	memcpy(&n, p, sizeof(n));
 	p += sizeof(n);
 
 	memcpy(replica->activeNodeName, p, n);
+	replica->activeNodeName[n] = 0;
 	p += n;
 
-	replica->activeNodeName[n] = 0;
-
-	replica->nextOperationNumber = *(int*)p;
+	memcpy(&(replica->nextOperationNumber), p, 
+		sizeof(replica->nextOperationNumber));
 	p += sizeof(replica->nextOperationNumber);
 
 	list = replica->sectionList;
@@ -595,11 +601,11 @@ SaCkptReplicaUnpack(void* data, int dataLength)
 		sec = (SaCkptSectionT*)SaCkptMalloc(sizeof(SaCkptSectionT));
 		SACKPTASSERT (sec != NULL);
 		
-		replica->sectionList = g_list_append(
-			replica->sectionList, 
+		replica->sectionList = g_list_append(replica->sectionList, 
 			(gpointer)sec);
 
-		sec->sectionID.idLen = *(int*)p;
+		memcpy(&(sec->sectionID.idLen), p, 
+			sizeof(sec->sectionID.idLen));
 		p += sizeof(sec->sectionID.idLen);
 
 		if (sec->sectionID.idLen > 0) {
@@ -607,21 +613,24 @@ SaCkptReplicaUnpack(void* data, int dataLength)
 			p += sec->sectionID.idLen;
 		} 
 
-		sec->dataState = *(int*)p;
+		memcpy(&(sec->dataState), p, sizeof(sec->dataState));
 		p += sizeof(sec->dataState);
 
 		if (sec->dataState == SA_CKPT_SECTION_CORRUPTED) {
 			continue;
 		}
 
-		sec->expirationTime = *(int*)p;
+		memcpy(&(sec->expirationTime), p, 
+			sizeof(sec->expirationTime));
 		p += sizeof(sec->expirationTime);
 
-		sec->lastUpdateTime = *(int*)p;
+		memcpy(&(sec->lastUpdateTime), p, 
+			sizeof(sec->lastUpdateTime));
 		p += sizeof(sec->lastUpdateTime);
 
 		/* by default , 0 will be the active copy */
-		sec->dataLength[0] = *(int*)p;
+		memcpy(&(sec->dataLength[0]), p, 
+			sizeof(sec->dataLength[0]));
 		p += sizeof(sec->dataLength[0]);
 
 		if (sec->dataLength[0] > 0) {
@@ -675,8 +684,8 @@ SaCkptReplicaUnpack(void* data, int dataLength)
 
 int 
 SaCkptReplicaRead(SaCkptReplicaT* replica, 
-	int* dataLength, void** data,
-	int paramLength, void* param)
+	size_t* dataLength, void** data,
+	size_t paramLength, void* param)
 {
 	SaCkptSectionT* sec = NULL;
 	SaCkptReqSecReadParamT* secReadParam = NULL;
