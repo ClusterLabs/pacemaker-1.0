@@ -1,4 +1,4 @@
-# $Id: Makefile.am,v 1.6 2004/09/11 18:25:13 alan Exp $
+# $Id: Makefile.am,v 1.7 2004/10/13 19:36:40 davidlee Exp $
 #
 # Open-HA "pkg" Makefile for Solaris etc.
 #
@@ -33,7 +33,7 @@ EXTRA_DIST =	$(INFOFILES)/pkginfo.in		\
 		$(INFOFILES)/preinstall.in	\
 		$(INFOFILES)/postinstall.in
 
-CLEANFILES = $(PKGINFO) stamp-tmpinst
+CLEANFILES = stamp-tmpinst
 
 PKGNAME		= OPENHA
 
@@ -99,5 +99,5 @@ $(INFOFILES)/prototype:	stamp-tmpinst
 	echo "i preinstall" >> $@
 	echo "i postinstall" >> $@
 
-clean:
+clean-local:
 	rm -rf $(TMPINSTDIR) $(PKGDIR)
