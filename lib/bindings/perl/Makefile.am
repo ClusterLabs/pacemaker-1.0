@@ -20,6 +20,14 @@
 
 noinst_DATA = .made_mod
 
+EXTRA_DIST	= MANIFEST test.pl \
+		  cl_raw/Makefile.PL.in cl_raw/Makefile.PL \
+		  cl_raw/cl_log_wrappers.c cl_raw/cl_log_wrappers.h \
+		  cl_raw/cl_raw.i \
+		  cl_raw/ipc_wrappers.c cl_raw/ipc_wrappers.h \
+		  lib/heartbeat/clplumbing/ipc.pm \
+		  lib/heartbeat/clplumbing/log.pm
+
 INCLUDES = -I$(top_builddir)/include -I$(top_srcdir)/include \
 	-I$(top_builddir)/linux-ha -I$(top_srcdir)/linux-ha  \
 	-I$(top_builddir)/libltdl -I$(top_srcdir)/libltdl
@@ -29,18 +37,25 @@ SUB_INCLUDES = -I$(top_builddir)/../include -I$(top_srcdir)/../include \
 	-I$(top_builddir)/../libltdl -I$(top_srcdir)/../libltdl
 
 Makefile.perl: Makefile.PL
-	$(PERL) $<
+	( old_pwd=`pwd` ; cd $(srcdir) && \
+	$(PERL) $< && \
+	test $@ -ef $$old_pwd/$@ || mv $@ $$old_pwd/; )
 
 .made_mod: cl_raw/cl_raw.pm Makefile.perl
-	$(MAKE) -fMakefile.perl INCLUDES="$(SUB_INCLUDES)"
+	( old_pwd=`pwd` ; cd $(srcdir) && \
+	$(MAKE) -f$$old_pwd/Makefile.perl INCLUDES="$(SUB_INCLUDES)" )
 	touch $@
 
 cl_raw/cl_raw.pm: cl_raw/cl_raw.i
-	cd cl_raw && \
-	$(SWIG) $(SWIG_OPTIONS) $(SUB_INCLUDES) -perl cl_raw.i
+	( old_pwd=`pwd` ; cd $(srcdir)/cl_raw && \
+	$(SWIG) $(SWIG_OPTIONS) $(SUB_INCLUDES) -perl cl_raw.i && \
+	test cl_raw.pm -ef $$old_pwd/cl_raw/cl_raw.pm || \
+	mv $@ $$old_pwd/cl_raw/; )
 
 install-data-local:
-	$(MAKE) -fMakefile.perl PREFIX=$(prefix) $(PERL_INSTALL_TARGET)
+	( old_pwd=`pwd` ; cd $(srcdir) && \
+	$(MAKE) -f$$old_pwd/Makefile.perl PREFIX=$(prefix) \
+	$(PERL_INSTALL_TARGET) )
 
 CLEANFILES = .made_mod cl_raw/cl_raw.pm cl_raw/cl_raw_wrap.c
 

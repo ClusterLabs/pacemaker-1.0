@@ -19,7 +19,11 @@
 #
 MAINTAINERCLEANFILES    = Makefile.in
 
-SUBDIRS                 = @hbaping@
+if HBAAPI_BUILD
+HBAAPI_DIR = hbaping
+endif
+
+SUBDIRS                 = $(HBAAPI_DIR)
 
 INCLUDES                = -I$(top_builddir)/include -I$(top_srcdir)/include \
 			-I$(top_builddir)/linux-ha -I$(top_srcdir)/linux-ha  \

@@ -19,5 +19,11 @@
 #
 MAINTAINERCLEANFILES    = Makefile.in
 
-## Subdirectories...
-SUBDIRS			=  apphbd recoverymgrd @EVENTD_DIR@ @CHECKPOINTD_DIR@
+if EVENTD_BUILD
+EVENTD_DIR = eventd
+endif
+if CHECKPOINTD_BUILD
+CHECKPOINTD_DIR = checkpointd
+endif
+
+SUBDIRS			=  apphbd recoverymgrd $(EVENTD_DIR) $(CHECKPOINTD_DIR)
