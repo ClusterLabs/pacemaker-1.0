@@ -1,4 +1,4 @@
-/* $Id: ha_msg_internal.c,v 1.43 2004/07/07 19:07:14 gshi Exp $ */
+/* $Id: ha_msg_internal.c,v 1.44 2004/07/26 12:39:46 andrew Exp $ */
 /*
  * ha_msg_internal: heartbeat internal messaging functions
  *
@@ -82,7 +82,7 @@ add_control_msg_fields(struct ha_msg* ret)
 	int		noseqno;
 	const char *	to;
 	const char *	touuid;
-	int		uuidlen;
+	size_t		uuidlen;
 	
 	/* if F_TO field is present
 	   this message is for one specific node
@@ -406,6 +406,9 @@ main(int argc, char ** argv)
 #endif
 /*
  * $Log: ha_msg_internal.c,v $
+ * Revision 1.44  2004/07/26 12:39:46  andrew
+ * Change the type of some int's to size_t to stop OSX complaining
+ *
  * Revision 1.43  2004/07/07 19:07:14  gshi
  * implemented uuid as nodeid
  *

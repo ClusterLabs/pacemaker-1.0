@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.305 2004/07/07 19:07:14 gshi Exp $ */
+/* $Id: heartbeat.c,v 1.306 2004/07/26 12:39:46 andrew Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -1698,7 +1698,7 @@ process_clustermsg(struct ha_msg* msg, struct link* lnk)
 	longclock_t		now = time_longclock();
 	const char *		from;
 	const char *		fromuuid;
-	int			uuidlen;
+	size_t			uuidlen;
 	const char *		ts;
 	const char *		type;
 	int			action;
@@ -3480,10 +3480,10 @@ should_drop_message(struct node_info * thisnode, const struct ha_msg *msg,
 	struct seqtrack *	t = &thisnode->track;
 	const char *		cseq = ha_msg_value(msg, F_SEQ);
 	const char *		to = ha_msg_value(msg, F_TO);
-	int			touuid_len;
+	size_t			touuid_len;
 	const char *		touuid  = NULL;
 	const char *		from= ha_msg_value(msg, F_ORIG);
-	int			fromuuid_len;
+	size_t			fromuuid_len;
 	const char *		fromuuid = 
 		cl_get_binary(msg, F_ORIGUUID, &fromuuid_len);
 	
@@ -4387,6 +4387,9 @@ hb_unregister_to_apphbd(void)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.306  2004/07/26 12:39:46  andrew
+ * Change the type of some int's to size_t to stop OSX complaining
+ *
  * Revision 1.305  2004/07/07 19:07:14  gshi
  * implemented uuid as nodeid
  *

@@ -1,4 +1,4 @@
-/* $Id: hb_api.c,v 1.102 2004/07/07 19:07:14 gshi Exp $ */
+/* $Id: hb_api.c,v 1.103 2004/07/26 12:39:46 andrew Exp $ */
 /*
  * hb_api: Server-side heartbeat API code
  *
@@ -712,7 +712,7 @@ api_get_nodename(const struct ha_msg* msg, struct ha_msg* resp,
 {
 	const char* nodename;
 	const char * query_uuid;
-	int	  len;
+	size_t	  len;
 	
 	if ((query_uuid = cl_get_binary(msg, F_QUERYUUID, &len))== NULL){
 		*failreason = "no query node name found";
