@@ -1,3 +1,15 @@
+heartbeat (1.3.0-1) unstable; urgency=low
+
+  * New Upstream
+  * ldirectord uses host portion of request string as documented in
+    the man page. (closes: Bug#242220)
+  * ldirectord check_ftp no longer uses pipes. (closes: #243157)
+  * The binary-arch and binary-indep targets did not conform to Debian policy.
+    It is rather difficult to implement them correctly given the heartbeat
+    build system, and the policy allows them not to exist. (closes: #188835)
+
+ -- Simon Horman <horms@debian.org>  Mon, 12 Apr 2004 15:02:28 +0900
+
 heartbeat (1.2.0-1) unstable; urgency=low
 
   * New Upstream
