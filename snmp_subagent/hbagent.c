@@ -34,10 +34,10 @@
 #define LHAAGENTID "lha-snmpagent"
 
 static unsigned long hbInitialized = 0;
-static unsigned long clmInitialized = 0;
 static ll_cluster_t * hb = NULL; // heartbeat handle
 static const char * myid = NULL; // my node id
 static SaClmHandleT clm = 0;
+static unsigned long clmInitialized = 0;
 
 static GArray * gNodeTable = NULL;
 static GArray * gIFTable = NULL;
@@ -280,7 +280,7 @@ main(int argc, char ** argv)
 
 		FD_ZERO(&fdset);
                 FD_SET(hb_fd, &fdset);
-		numfds = hb_fd+1;
+		numfds = hb_fd + 1;
 
 		if (clmInitialized) {
 			FD_SET(mem_fd, &fdset);
@@ -677,7 +677,7 @@ clm_track_cb(SaClmClusterNotificationT *nbuf, SaUint32T nitem,
 
         for (i = 0; i < nitem; i++) {
 
-	    	// cl_log(LOG_INFO, "adding %s in membership table", nbuf[i].clusterNode.nodeName.value);
+	    	cl_log(LOG_INFO, "adding %s in membership table", nbuf[i].clusterNode.nodeName.value);
                 g_array_insert_val(gMembershipTable, i, nbuf[i]);
         }
 

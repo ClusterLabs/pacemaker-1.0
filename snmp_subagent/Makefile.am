@@ -33,7 +33,7 @@ halibdir		= $(libdir)/@HB_PKG@
 NET_SNMP_CONFIG		= @NET_SNMP_CONFIG@
 
 # binary programs
-halib_PROGRAMS		= hbagent
+halib_PROGRAMS		= hbagent 
 
 hbagent_SOURCES		= snmp-config-resolve.h hbagent.h hbagent.c \
 			  LHAClusterInfo.h LHAClusterInfo.c \
