@@ -16,6 +16,8 @@
 #
 MAINTAINERCLEANFILES    = Makefile.in
 
+EXTRA_DIST		= func.h
+
 INCLUDES                = -I$(top_builddir)/include \
 			-I$(top_srcdir)/include \
 			-I$(top_builddir)/libltdl \

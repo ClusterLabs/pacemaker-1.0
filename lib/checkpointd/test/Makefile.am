@@ -19,5 +19,7 @@
 #
 MAINTAINERCLEANFILES    = Makefile.in
 
+EXTRA_DIST		= ckpt_test.h
+
 ## Subdirectories...
 SUBDIRS			= api_test func_test
