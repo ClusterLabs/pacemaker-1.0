@@ -225,6 +225,7 @@ main(int argc, char ** argv)
 		cl_log(LOG_INFO, "Sent ping request to cluster\n");
 	}else{
 		cl_log(LOG_ERR, "PING request FAIL to cluster\n");
+		cl_log(LOG_ERR, "REASON: %s\n", hb->llc_ops->errmsg(hb));
 	}
 	cl_log(LOG_INFO, "Waiting for messages...\n");
 	errno = 0;

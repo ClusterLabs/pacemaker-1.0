@@ -1,4 +1,4 @@
-const static char * _hb_config_c_Id = "$Id: config.c,v 1.105 2004/01/08 08:23:50 horms Exp $";
+const static char * _hb_config_c_Id = "$Id: config.c,v 1.106 2004/01/18 21:15:14 alan Exp $";
 /*
  * Parse various heartbeat configuration files...
  *
@@ -1688,6 +1688,39 @@ unametonum(const char * lname, int llen)
 	return (int)pwd->pw_uid;
 }
 
+#if 0
+static void
+id_table_dump(gpointer key, gpointer value, gpointer user_data)
+{
+	unsigned int	ikey = GPOINTER_TO_UINT(key);
+
+	cl_log(LOG_DEBUG, "%s %u"
+	,	(const char *)user_data, ikey);
+	if (value == NULL) {
+		cl_log(LOG_ERR, "Key %u has NULL data!!", ikey);
+	}
+}
+
+static void
+dump_auth_tables(struct IPC_AUTH* auth, const char * clientname)
+{
+	char	uid [] = "uid = ";
+	char	gid [] = "gid = ";
+
+
+	if (auth->uid ) {
+		cl_log(LOG_DEBUG, "Dumping uid authorization info for client %s"
+		,	clientname);
+		g_hash_table_foreach(auth->uid, id_table_dump, uid);
+	}
+	if (auth->gid) {
+		cl_log(LOG_DEBUG, "Dumping gid authorization info for client %s"
+		,	clientname);
+		g_hash_table_foreach(auth->gid, id_table_dump, gid);
+	}
+}
+#endif
+
 static GHashTable*
 make_id_table(const char * list, int listlen, int (*map)(const char *, int))
 {
@@ -1696,6 +1729,7 @@ make_id_table(const char * list, int listlen, int (*map)(const char *, int))
 	const char *	lastid = list + listlen;
 	int		idlen;
 	int		idval;
+	static int	one = 1;
 
 	ret = g_hash_table_new(g_direct_hash, g_direct_equal);
 
@@ -1709,7 +1743,12 @@ make_id_table(const char * list, int listlen, int (*map)(const char *, int))
 		if (idval < 0) {
 			return NULL;
 		}
-		g_hash_table_insert(ret, &idval, &idval);
+		if (ANYDEBUG) {
+			cl_log(LOG_DEBUG
+			,	"Adding [ug]id %*s [%d] to authorization g_hash_table"
+			,	idlen, id, idval);
+		}
+		g_hash_table_insert(ret, GUINT_TO_POINTER(idval), &one);
 		id += idlen;
 		if (id < lastid) {
 			id += strspn(id, ",");
@@ -1814,6 +1853,7 @@ set_api_authorization(const char * directive)
 	memset(auth, 0, sizeof(auth));
 
 	if (uidlist) {
+		char uid [] = "uid = ";
 		auth->uid = make_id_table(uidlist, uidlen, unametonum);
 		if (auth->uid == NULL) {
 			cl_log(LOG_ERR 
@@ -1823,6 +1863,7 @@ set_api_authorization(const char * directive)
 		}
 	}
 	if (gidlist) {
+		char gid [] = "gid = ";
 		auth->gid = make_id_table(gidlist, gidlen, gnametonum);
 		if (auth->gid == NULL) {
 			cl_log(LOG_ERR 
@@ -1839,6 +1880,11 @@ set_api_authorization(const char * directive)
 		return HA_FAIL;
 	}
 	g_hash_table_insert(APIAuthorization, clname, auth);
+	if (DEBUGDETAILS) {
+		cl_log(LOG_DEBUG
+		,	"Creating authentication: uidptr=0x%lx gidptr=0x%lx"
+		,	(unsigned long)auth->uid, (unsigned long)auth->gid);
+	}
 
 	return HA_OK;
 
@@ -1877,6 +1923,10 @@ baddirective:
 
 /*
  * $Log: config.c,v $
+ * Revision 1.106  2004/01/18 21:15:14  alan
+ * Put in various fixes associated with authentication bugs and also
+ * with an infinite loop bug.
+ *
  * Revision 1.105  2004/01/08 08:23:50  horms
  * typo
  *

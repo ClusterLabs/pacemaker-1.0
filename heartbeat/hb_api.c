@@ -639,17 +639,32 @@ api_process_request(client_proc_t* fromclient, struct ha_msg * msg)
 		}
 		/* Is this too restrictive? */
 		/* We also put their client ID info in the packet as F_TOID */
-#ifndef	WITH_CRM
+
 		/* XXX
 		 * It appears this *is* too restrictive for use with
 		 * CRM. We'll clean this up soon and then also fix the
-		 * comment at the top of this file. (lmb 2004-01-14) */
+		 * comment at the top of this file. (lmb 2004-01-14)
+		 */
+
+		/*
+		 * N.B.:  This restriction exists because of security concerns
+		 * It would be imprudent to remove it without a lot
+		 * of thought and proof of safety.   In fact, as of right
+		 * now, without some enhancements, it would be quite unsafe.
+		 *
+		 * The right way to talk to something that's has an API
+		 * and is running on every machine is probably to use it's
+		 * API, and not talk crosstalk through the core heartbeat
+		 * messaging service, and compromise interface safety for
+		 * every application using the API.
+ 		 * (ALR - 17 January 2004)
+		 */
+
  		if (ha_msg_mod(msg, F_TOID, fromclient->client_id) != HA_OK) {
  			ha_log(LOG_ERR, "api_process_request: "
  			"cannot add F_TOID field");
  			goto freeandexit;
  		}
-#endif
 		if (DEBUGDETAILS) {
 			ha_log(LOG_DEBUG, "Sending API message to cluster...");
 			ha_log_message(msg);
@@ -843,6 +858,11 @@ api_process_registration_msg(client_proc_t* client, struct ha_msg * msg)
 		ha_log(LOG_ERR
 		,	"api_process_registration_msg: no fromid in msg");
 		return;
+	}
+	if (DEBUGDETAILS) {
+		ha_log(LOG_ERR
+		,	"api_process_registration_msg(%s, %s, %s)"
+		,	msgtype, pid, (fromid==NULL ?"nullfrom" : fromid));
 	}
 
 	/*
@@ -1201,9 +1221,13 @@ api_add_client(client_proc_t* client, struct ha_msg* msg)
 static gboolean
 api_check_client_authorization(client_proc_t* client)
 {
-	gpointer	gauth;
+	gpointer	gauth = NULL;
 	IPC_Auth*	auth;
 
+	/* If client is casual, or type of client not in authorization table
+	 * then default to the "default" authorization category.
+	 * otherwise, use the client type's authorization list
+	 */
 	if (client->iscasual
 	||	(gauth = g_hash_table_lookup(APIAuthorization
 	,	client->client_id))	==  NULL) {
@@ -1215,7 +1239,15 @@ api_check_client_authorization(client_proc_t* client)
 		
 	}
 	auth = gauth;
-	if (client->chan->ops->verify_auth(client->chan, gauth)) {
+	if (ANYDEBUG) {
+
+		cl_log(LOG_DEBUG
+		,	"Checking client authorization for client %s (%ld:%ld)"
+		,	client->client_id
+		,	(long)client->uid, (long)client->gid);
+	}
+	if (auth == NULL
+	||	client->chan->ops->verify_auth(client->chan, auth) == IPC_OK) {
 		if (client->chan->farside_pid != 0) {
 			if (client->chan->farside_pid != client->pid) {
 				client->removereason = "pid mismatch";
@@ -1265,7 +1297,7 @@ APIclients_input_dispatch(IPC_Channel* chan, gpointer user_data)
 	client_proc_t*	client = user_data;
 	gboolean	ret = TRUE;
 
-	if (ANYDEBUG) {
+	if (DEBUGDETAILS) {
 		cl_log(LOG_DEBUG
 		,	"APIclients_input_dispatch() {");
 	}
@@ -1294,7 +1326,7 @@ APIclients_input_dispatch(IPC_Channel* chan, gpointer user_data)
 	}
 
 getout:
-	if (ANYDEBUG) {
+	if (DEBUGDETAILS) {
 		cl_log(LOG_DEBUG
 		,	"return %d;", ret);
 		cl_log(LOG_DEBUG
@@ -1311,20 +1343,11 @@ ProcessAnAPIRequest(client_proc_t*	client)
 	static int	consecutive_failures = 0;
 	gboolean	rc = FALSE;
 
-	if (ANYDEBUG) {
+	if (DEBUGDETAILS) {
 		cl_log(LOG_DEBUG
 		,	"ProcessAnAPIRequest() {");
 	}
 
-	/* May have gotten a message from 'client' */
-	if (CL_KILL(client->pid, 0) < 0 && errno == ESRCH) {
-		/* Oops... he's dead */
-		ha_log(LOG_INFO
-		,	"Client pid %ld died (input)"
-		,	(long)client->pid);
-		client->removereason = "died";
-		goto getout;
-	}
 
 	if (!client->chan->ops->is_message_pending(client->chan)) {
 		goto getout;
@@ -1377,7 +1400,15 @@ ProcessAnAPIRequest(client_proc_t*	client)
 	rc = TRUE;
 
 getout:
-	if (ANYDEBUG) {
+	/* May have gotten a message from 'client' */
+	if (CL_KILL(client->pid, 0) < 0 && errno == ESRCH) {
+		/* Oops... he's dead */
+		ha_log(LOG_INFO
+		,	"Client pid %ld died (input)"
+		,	(long)client->pid);
+		client->removereason = "died";
+	}
+	if (DEBUGDETAILS) {
 		cl_log(LOG_DEBUG, "\treturn %s;"
 		,	(rc ? "TRUE" : "FALSE"));
 		cl_log(LOG_DEBUG, "}/*ProcessAnAPIRequest*/;");
