@@ -18,12 +18,6 @@ build: checkbuild build-stamp
 build-stamp:
 	dh_testdir
 	./configure $(cfg)
-	# Lame libtool workaround that lintian seems keen on
-	sed < libtool > libtool-2 \
-                -e 's/^hardcode_libdir_flag_spec.*$$/hardcode_libdir_flag_spec=" -D__LIBTOOL_IS_A_FOOL__ "/' \
-                -e '/^archive_cmds="/s/"$$/ \\$$deplibs"/'
-	mv libtool-2 libtool
-	chmod 755 libtool
 	$(MAKE)
 	touch build-stamp
 
@@ -70,12 +64,7 @@ install: build
 
 	dh_movefiles --source=debian/tmp
 
-# Build architecture-independent files here.
-binary-indep: build install
-# We have nothing to do by default.
-
-# Build architecture-dependent files here.
-binary-arch: build install
+binary: build install
 	dh_testdir
 	dh_testroot
 #	dh_installdebconf	
@@ -103,10 +92,8 @@ binary-arch: build install
 	dh_md5sums
 	dh_builddeb
 
-binary: binary-indep binary-arch
-
 checkbuild:
 	chmod u+x ./debian/dpkg-checkbuild
 	./debian/dpkg-checkbuild debian/control
 
-.PHONY: build clean binary-indep binary-arch binary install checkbuild
+.PHONY: build clean binary install checkbuild
