@@ -1,4 +1,4 @@
-#	$Id: heartbeat.spec.in,v 1.108 2004/11/09 18:27:40 davidlee Exp $
+#	$Id: heartbeat.spec.in,v 1.109 2005/01/10 09:59:38 alan Exp $
 
 # Workaround for a change in RPM 4.1.x; needs proper fixing soon!
 ##%define _unpackaged_files_terminate_build 0
@@ -885,6 +885,7 @@ make DESTDIR=$RPM_BUILD_ROOT install
 @libdir@/libccmclient.*
 @libdir@/libclm.*
 @libdir@/libplumb.*
+@libdir@/libstonithd.*
 @libdir@/libapphb.*
 @libdir@/librecoverymgr.*
 @RPM_FILES_LIBCKPT@
