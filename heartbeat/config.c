@@ -1,4 +1,4 @@
-const static char * _hb_config_c_Id = "$Id: config.c,v 1.102 2003/10/29 04:05:00 alan Exp $";
+const static char * _hb_config_c_Id = "$Id: config.c,v 1.103 2003/11/20 03:13:55 alan Exp $";
 /*
  * Parse various heartbeat configuration files...
  *
@@ -109,7 +109,7 @@ struct directive {
 , {KEY_WARNTIME,  set_warntime_ms, TRUE, NULL, "warning time"}
 , {KEY_WATCHDOG,  set_watchdogdev, TRUE, NULL, "watchdog device"}
 , {KEY_BAUDRATE,  set_baudrate, TRUE, "19200", "baud rate"}
-, {KEY_UDPPORT,	  set_udpport, TRUE, "694", "UDP port number"}
+, {KEY_UDPPORT,	  set_udpport, TRUE, NULL, "UDP port number"}
 , {KEY_FACILITY,  set_facility, TRUE, NULL, "syslog log facility"}
 , {KEY_LOGFILE,   set_logfile, TRUE, NULL, "log file"}
 , {KEY_DBGFILE,   set_dbgfile, TRUE, NULL, "debug file"}
@@ -356,6 +356,19 @@ init_config(const char * cfgfile)
 		" compared to keeplive [%ld]"
 		,	config->deadping_ms, config->heartbeat_ms);
 		++errcount;
+	}
+	if (GetParameterValue(KEY_UDPPORT) == NULL) {
+		struct servent*	service;
+		int		udpport;
+		char		tmp[32];
+ 		/* If our service name is in /etc/services, then use it */
+		if ((service=getservbyname(HA_SERVICENAME, "udp")) != NULL){
+			udpport = ntohs(service->s_port);
+		}else{
+			udpport = UDPPORT;
+		}
+		snprintf(tmp, (sizeof(tmp)-1), "%d", udpport);
+		SetParameterValue(KEY_UDPPORT, tmp);
 	}
 
 	if (!nice_failback) {
@@ -1684,7 +1697,7 @@ make_id_table(const char * list, int listlen, int (*map)(const char *, int))
 	int		idlen;
 	int		idval;
 
-	ret = g_hash_table_new(g_int_hash, g_int_equal);
+	ret = g_hash_table_new(g_direct_hash, g_direct_equal);
 
 	id = list;
 	while (id < lastid && *id != EOS) {
@@ -1864,6 +1877,18 @@ baddirective:
 
 /*
  * $Log: config.c,v $
+ * Revision 1.103  2003/11/20 03:13:55  alan
+ * Fixed a bug where we always waited forever for client messages once
+ * we got the first one.
+ *
+ * Added real authentication code to the API infrastructure.
+ *
+ * Added lots of debugging messages.
+ *
+ * Changed the IPC code to authenticate based on int values, not on int *'s, since the
+ * latter had no advantage and required malloc/freeing storage - which mostly wasn't
+ * being done.
+ *
  * Revision 1.102  2003/10/29 04:05:00  alan
  * Changed things so that the API uses IPC instead of FIFOs.
  * This isn't 100% done - python API code needs updating, and need to check authorization

@@ -271,6 +271,8 @@ hb_api_signon(struct ll_cluster* cinfo, const char * clientid)
         char		regpath[] = API_REGFIFO;
 	char		path[] = IPC_PATH_ATTR;
 	GHashTable*	wchanattrs;
+	char		cuid[20];
+	char		cgid[20];
 
 	if (!ISOURS(cinfo)) {
 		ha_api_log(LOG_ERR, "hb_api_signon: bad cinfo");
@@ -314,6 +316,20 @@ hb_api_signon(struct ll_cluster* cinfo, const char * clientid)
 
 	/* Crank out the boilerplate */
 	if ((request = hb_api_boilerplate(API_SIGNON)) == NULL) {
+		return HA_FAIL;
+	}
+	snprintf(cuid, sizeof(cuid)-1, "%ld",  (long)getuid());
+	/* Add our UID to the message */
+	if (ha_msg_add(request, F_UID, cuid) != HA_OK) {
+		ha_api_log(LOG_ERR, "hb_api_signon: cannot add F_UID field");
+		ZAPMSG(request);
+		return HA_FAIL;
+	}
+	snprintf(cgid, sizeof(cgid)-1, "%ld",  (long)getgid());
+	/* Add our GID to the message */
+	if (ha_msg_add(request, F_GID, cgid) != HA_OK) {
+		ha_api_log(LOG_ERR, "hb_api_signon: cannot add F_GID field");
+		ZAPMSG(request);
 		return HA_FAIL;
 	}
 	wchanattrs = g_hash_table_new(g_str_hash, g_str_equal);
@@ -1525,19 +1541,25 @@ read_hb_msg(ll_cluster_t* llc, int blocking)
 		if ((retmsg = process_hb_msg(pi, msg)))
 			return retmsg;
 	}
-	/* Process msg from FIFO */
-	while (msgready(llc)){
-		msg = msgfromIPC(pi->chan);
-		if ((retmsg = process_hb_msg(pi, msg)))
-			return retmsg;
-	}
-	/* Process msg from orderQ */
 	for (oq = pi->order_queue_head; oq != NULL; oq = oq->next){
 		if ((retmsg = pop_orderQ(&oq->node)))
 			return retmsg;
 		if ((retmsg = pop_orderQ(&oq->cluster)))
 			return retmsg;
 	}
+	/* Process msg from FIFO */
+	while (msgready(llc)){
+		msg = msgfromIPC(pi->chan);
+		if (msg == NULL) {
+			if (pi->chan->ch_status != IPC_CONNECT) {
+				pi->SignedOn = FALSE;
+				return NULL;
+			}
+		}else if ((retmsg = process_hb_msg(pi, msg))) {
+			return retmsg;
+		}
+	}
+	/* Process msg from orderQ */
 
 	if (!blocking)
 		return NULL;
@@ -1545,12 +1567,18 @@ read_hb_msg(ll_cluster_t* llc, int blocking)
 	/* If this is a blocking call, we keep on reading from FIFO, so
          * that we can finally return a non-NULL msg to user.
          */
-	while (1){
+	for(;;) {
+		pi->chan->ops->waitin(pi->chan);
 		msg = msgfromIPC(pi->chan);
-		if (!msg)
+		if (msg == NULL) {
+			if (pi->chan->ch_status != IPC_CONNECT) {
+				pi->SignedOn = FALSE;
+			}
 			return NULL;
-		if ((retmsg = process_hb_msg(pi, msg)))
+		}
+		if ((retmsg = process_hb_msg(pi, msg))) {
 			return retmsg;
+		}
 	}
 }
 

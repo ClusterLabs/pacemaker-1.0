@@ -776,6 +776,10 @@ process_registerevent(IPC_Channel* chan,  gpointer user_data)
 		chan->ops->destroy(chan);
 		return;
 	}
+	if (ANYDEBUG) {
+		cl_log(LOG_DEBUG
+		,	"process_registerevent() {");
+	}
 	/* Zap! */
 	memset(client, 0, sizeof(*client));
 	client->pid = 0;
@@ -786,10 +790,19 @@ process_registerevent(IPC_Channel* chan,  gpointer user_data)
 	,	chan, FALSE
 	,	APIclients_input_dispatch
 	,	client, G_remove_client);
+	if (ANYDEBUG) {
+		cl_log(LOG_DEBUG
+		,	"client->gsource = 0x%lx"
+		,	(unsigned long)client->gsource);
+	}
 
 	client->next = client_list;
 	client_list = client;
 	total_client_count++;
+	if (ANYDEBUG) {
+		cl_log(LOG_DEBUG
+		,	"}/*process_registerevent*/;");
+	}
 }
 
 /*
@@ -984,8 +997,17 @@ G_remove_client(gpointer Client)
 	const char *	reason;
 
 	reason = client->removereason ? client->removereason : "?";
+	if (ANYDEBUG) {
+		cl_log(LOG_DEBUG
+		,	"G_remove_client(pid=%d, reason='%s' gsource=0x%lx) {"
+		,	client->pid, reason, (unsigned long) client->gsource);
+	}
 
 	api_remove_client_int(client, reason);
+	if (ANYDEBUG) {
+		cl_log(LOG_DEBUG
+		,	"}/*G_remove_client;*/");
+	}
 }
 /*
  *	Make this client no longer a client ;-)
@@ -1043,6 +1065,43 @@ api_remove_client_int(client_proc_t* req, const char * reason)
 }
 
 
+/* Validate client credentials against the real world */
+ 
+static gboolean
+api_check_client_credentials(client_proc_t* client, uid_t uid, gid_t gid)
+{
+	IPC_Auth	auth;
+	guint		id;
+	int		one = 1;
+	gboolean	result = TRUE;
+
+	GHashTable*	uidlist
+	=		g_hash_table_new(g_direct_hash, g_direct_equal);
+
+	id = (guint) uid;
+	g_hash_table_insert(uidlist, GUINT_TO_POINTER(id), &one);
+	auth.uid = uidlist;
+	auth.gid = NULL;
+	if (client->chan->ops->verify_auth(client->chan, &auth) != IPC_OK) {
+		result = FALSE;
+	}else {
+		GHashTable*	gidlist
+		=		g_hash_table_new(g_direct_hash
+		,		g_direct_equal);
+		id = (guint) gid;
+		g_hash_table_insert(gidlist, GUINT_TO_POINTER(id), &one);
+		auth.uid = NULL;
+		auth.gid = gidlist;
+		if (client->chan->ops->verify_auth(client->chan, &auth)
+		!=	IPC_OK) {
+			result =  FALSE;
+		}
+		g_hash_table_destroy(gidlist);
+	}
+	g_hash_table_destroy(uidlist);
+	return result;
+}
+
 /*
  *	Add the process described in this message to our list of clients.
  *
@@ -1058,6 +1117,12 @@ api_add_client(client_proc_t* client, struct ha_msg* msg)
 	pid_t		pid = 0;
 	const char*	cpid;
 	const char *	fromid;
+	const char *	cgid;
+	const char *	cuid;
+	long		luid;
+	long		lgid;
+	uid_t		uid = (uid_t)-1;
+	gid_t		gid = (gid_t)-1;
 
 	
 	if ((cpid = ha_msg_value(msg, F_PID)) != NULL) {
@@ -1093,22 +1158,47 @@ api_add_client(client_proc_t* client, struct ha_msg* msg)
 		,	"%d", pid);
 		client->iscasual = 1;
 	}
+
+
+	if ((cuid = ha_msg_value(msg, F_UID)) == NULL
+	||	(cgid = ha_msg_value(msg, F_GID)) == NULL
+	||	sscanf(cuid, "%ld", &luid) != 1
+	||	sscanf(cgid, "%ld", &lgid) != 1) {
+		ha_log_message(msg);
+		client->removereason = "invalid id info";
+		ha_log(LOG_ERR, "Client user/group id is incorrect"
+		" [%s] => %ld [%s] => %ld"
+		,	cuid, luid, cgid, lgid);
+		return FALSE;
+	}
+
+	uid = (uid_t)luid;
+	gid = (gid_t)lgid;
+
+	if (!api_check_client_credentials(client, uid, gid)) {
+		client->removereason = "incorrect/false credentials";
+		return FALSE;
+	}
+	client->uid = uid;
+	client->gid = gid;
 	if (api_check_client_authorization(client)) {
 		api_send_client_status(client, JOINSTATUS, API_SIGNON);
 	}else{
 		ha_log(LOG_WARNING
 		,	"Client [%s] pid %d failed authorization [%s]"
 		,	client->client_id, pid, client->removereason);
-		api_send_client_status(client, JOINSTATUS, API_SIGNOFF);
+		api_send_client_status(client, LEAVESTATUS, "auth failure");
 		return FALSE;
 	}
 	return TRUE;
 }
+
 static gboolean
 api_check_client_authorization(client_proc_t* client)
 {
 	gpointer	gauth;
 	IPC_Auth*	auth;
+
 	if (client->iscasual
 	||	(gauth = g_hash_table_lookup(APIAuthorization
 	,	client->client_id))	==  NULL) {
@@ -1136,7 +1226,6 @@ api_check_client_authorization(client_proc_t* client)
 	client->removereason = "client failed authorization";
 	return FALSE;
 }
-
 
 
 /*
@@ -1169,15 +1258,22 @@ static gboolean
 APIclients_input_dispatch(IPC_Channel* chan, gpointer user_data)
 {
 	client_proc_t*	client = user_data;
+	gboolean	ret = TRUE;
 
+	if (ANYDEBUG) {
+		cl_log(LOG_DEBUG
+		,	"APIclients_input_dispatch() {");
+	}
 	if (chan != client->chan) {
 		/* Bad boojum! */
 		ha_log(LOG_ERR
 		,	"APIclients_input_dispatch chan mismatch");
-		return FALSE;
+		ret = FALSE;
+		goto getout;
 	}
 	if (client->removereason) {
-		return FALSE;
+		ret = FALSE;
+		goto getout;
 	}
 
 	/* Process a single API client request */
@@ -1188,10 +1284,18 @@ APIclients_input_dispatch(IPC_Channel* chan, gpointer user_data)
 	client->isindispatch = FALSE;
 
 	if (client->removereason) {
-		return FALSE;
+		ret = FALSE;
+		goto getout;
 	}
 
-	return TRUE;
+getout:
+	if (ANYDEBUG) {
+		cl_log(LOG_DEBUG
+		,	"return %d;", ret);
+		cl_log(LOG_DEBUG
+		,	"}/*APIclients_input_dispatch*/;");
+	}
+	return ret;
 }
 
 
@@ -1199,17 +1303,28 @@ gboolean
 ProcessAnAPIRequest(client_proc_t*	client)
 {
 	struct ha_msg*	msg;
-	static int		consecutive_failures = 0;
+	static int	consecutive_failures = 0;
+	gboolean	rc = FALSE;
 
-	/* Supposedly got a message from 'client' */
-	if (CL_KILL(client->pid, 0) < 0 &&	errno == ESRCH) {
+	if (ANYDEBUG) {
+		cl_log(LOG_DEBUG
+		,	"ProcessAnAPIRequest() {");
+	}
+
+	/* May have gotten a message from 'client' */
+	if (CL_KILL(client->pid, 0) < 0 && errno == ESRCH) {
 		/* Oops... he's dead */
 		ha_log(LOG_INFO
 		,	"Client pid %ld died (input)"
 		,	(long)client->pid);
 		client->removereason = "died";
-		return FALSE;
+		goto getout;
 	}
+
+	if (!client->chan->ops->is_message_pending(client->chan)) {
+		goto getout;
+	}
+
 
 	/* See if we can read the message */
 	if ((msg = msgfromIPC(client->chan)) == NULL) {
@@ -1220,7 +1335,7 @@ ProcessAnAPIRequest(client_proc_t*	client)
 			,	"EOF from client pid %ld"
 			,	(long)client->pid);
 			client->removereason = "EOF";
-			return FALSE;
+			goto getout;
 		}
 
 		/* None of the above... */
@@ -1239,7 +1354,7 @@ ProcessAnAPIRequest(client_proc_t*	client)
 			client->removereason = "noinput";
 			consecutive_failures = 0;
 		}
-		return FALSE;
+		goto getout;
 	}
 	consecutive_failures = 0;
 
@@ -1254,6 +1369,14 @@ ProcessAnAPIRequest(client_proc_t*	client)
 		api_process_request(client, msg);
 	}
 	msg = NULL;
+	rc = TRUE;
 
-	return TRUE;
+getout:
+	if (ANYDEBUG) {
+		cl_log(LOG_DEBUG, "\treturn %s;"
+		,	(rc ? "TRUE" : "FALSE"));
+		cl_log(LOG_DEBUG, "}/*ProcessAnAPIRequest*/;");
+	}
+
+	return rc;
 }

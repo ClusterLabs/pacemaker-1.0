@@ -240,9 +240,15 @@ main(int argc, char ** argv)
 		}
 		cl_log(LOG_NOTICE, "Got message %d of type [%s] from [%s]\n"
 		,	msgcount, type, orig);
+		if (strcasecmp(type, T_APICLISTAT) == 0) {
+			ha_log_message(reply);
+			cl_log(LOG_NOTICE, "%s", hb->llc_ops->errmsg(hb));
+		}
 #if 0
-		ha_log_message(reply);
-		cl_log(LOG_NOTICE, "%s", hb->llc_ops->errmsg(hb));
+		else {
+			ha_log_message(reply);
+			cl_log(LOG_NOTICE, "%s", hb->llc_ops->errmsg(hb));
+		}
 #endif
 		if (strcmp(type, "ping") ==0) {
 			struct ha_msg*	pingreply = ha_msg_new(4);

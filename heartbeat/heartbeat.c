@@ -1,4 +1,4 @@
-const static char * _heartbeat_c_Id = "$Id: heartbeat.c,v 1.279 2003/10/29 04:05:01 alan Exp $";
+const static char * _heartbeat_c_Id = "$Id: heartbeat.c,v 1.280 2003/11/20 03:13:55 alan Exp $";
 
 /*
  * heartbeat: Linux-HA heartbeat code
@@ -981,11 +981,14 @@ FIFO_child_msg_dispatch(IPC_Channel* source, gpointer user_data)
 	struct ha_msg*	msg = msgfromIPC(source);
 
 	if (DEBUGDETAILS) {
-		cl_log(LOG_DEBUG, "FIFO_child_msg_dispatch() called.");
+		cl_log(LOG_DEBUG, "FIFO_child_msg_dispatch() {");
 	}
 	if (msg != NULL) {
 		/* send_cluster_msg disposes of "msg" */
 		send_cluster_msg(msg);
+	}
+	if (DEBUGDETAILS) {
+		cl_log(LOG_DEBUG, "}/*FIFO_child_msg_dispatch*/;");
 	}
 	return TRUE;
 }
@@ -1006,6 +1009,10 @@ read_child_dispatch(IPC_Channel* source, gpointer user_data)
 		ha_msg_del(msg); msg = NULL;
 		return TRUE;
 	}
+	if (DEBUGDETAILS) {
+		cl_log(LOG_DEBUG
+		,	"read_child_dispatch() {");
+	}
 	if (msg != NULL) {
 		const char * from = ha_msg_value(msg, F_ORIG);
 		struct link* lnk = NULL;
@@ -1017,6 +1024,10 @@ read_child_dispatch(IPC_Channel* source, gpointer user_data)
 
 		process_clustermsg(msg, lnk);
 		ha_msg_del(msg);  msg = NULL;
+	}
+	if (DEBUGDETAILS) {
+		cl_log(LOG_DEBUG
+		,	"}/*read_child_dispatch*/;");
 	}
 	return TRUE;
 }
@@ -1378,7 +1389,7 @@ polled_input_dispatch(gpointer source_data, GTimeVal* current_time
 	longclock_t	now = time_longclock();
 
 	if (DEBUGDETAILS){
-		cl_log(LOG_DEBUG,"polled_input_dispatch()");
+		cl_log(LOG_DEBUG,"polled_input_dispatch() {");
 	}
 	NextPoll = add_longclock(now, msto_longclock(POLL_INTERVAL));
 
@@ -1414,6 +1425,9 @@ polled_input_dispatch(gpointer source_data, GTimeVal* current_time
 		cl_log(LOG_INFO,"local resource transition completed.");
 		hb_send_resources_held(TRUE, NULL);
 		AuditResources();
+	}
+	if (DEBUGDETAILS){
+		cl_log(LOG_DEBUG,"}/*polled_input_dispatch*/;");
 	}
 
 	return TRUE;
@@ -1453,10 +1467,12 @@ static gboolean
 APIregistration_dispatch(IPC_Channel* chan,  gpointer user_data)
 {
 	if (ANYDEBUG) {
-		cl_log(LOG_DEBUG
-		,	"Processing register event.");
+		cl_log(LOG_DEBUG, "APIregistration_dispatch() {");
 	}
 	process_registerevent(chan, user_data);
+	if (ANYDEBUG) {
+		cl_log(LOG_DEBUG, "}/*APIregistration_dispatch*/;");
+	}
 	return TRUE;
 }
 
@@ -2538,7 +2554,13 @@ send_local_status()
 gboolean
 hb_send_local_status(gpointer p)
 {
+	if (DEBUGDETAILS) {
+		cl_log(LOG_DEBUG, "hb_send_local_status() {");
+	}
 	send_local_status();
+	if (DEBUGDETAILS) {
+		cl_log(LOG_DEBUG, "}/*hb_send_local_status*/;");
+	}
 	return TRUE;
 }
 
@@ -4088,6 +4110,18 @@ get_localnodeinfo(void)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.280  2003/11/20 03:13:55  alan
+ * Fixed a bug where we always waited forever for client messages once
+ * we got the first one.
+ *
+ * Added real authentication code to the API infrastructure.
+ *
+ * Added lots of debugging messages.
+ *
+ * Changed the IPC code to authenticate based on int values, not on int *'s, since the
+ * latter had no advantage and required malloc/freeing storage - which mostly wasn't
+ * being done.
+ *
  * Revision 1.279  2003/10/29 04:05:01  alan
  * Changed things so that the API uses IPC instead of FIFOs.
  * This isn't 100% done - python API code needs updating, and need to check authorization

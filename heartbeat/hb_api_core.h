@@ -52,6 +52,7 @@ typedef struct client_process {
     char	client_id[32];  /* Client identification */
     pid_t	pid;		/* PID of client process */
     uid_t	uid;		/* UID of client  process */
+    gid_t	gid;		/* GID of client  process */
     int		iscasual;	/* 1 if this is a "casual" client */
     int		isindispatch;	/* TRUE if we're in dispatch now */
     const char*	removereason;/* non-NULL if client is being removed */

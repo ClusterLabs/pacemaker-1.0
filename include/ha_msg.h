@@ -22,7 +22,7 @@
 
 #ifndef _HA_MSG_H
 #	define _HA_MSG_H 1
-static const char * _ha_msg_h_Id = "$Id: ha_msg.h,v 1.23 2003/10/29 04:05:01 alan Exp $";
+static const char * _ha_msg_h_Id = "$Id: ha_msg.h,v 1.24 2003/11/20 03:13:55 alan Exp $";
 #include <stdio.h>
 #include <clplumbing/ipc.h>
 
@@ -57,14 +57,16 @@ struct ha_msg {
 #define	F_LOAD		"ld"		/* Load average */
 #define	F_COMMENT	"info"		/* Comment */
 #define	F_TTL		"ttl"		/* Time To Live */
-#define F_AUTH          "auth"		/* Authentication string */
+#define F_AUTH		"auth"		/* Authentication string */
 #define F_HBGENERATION	"hg"		/* Heartbeat generation number */
-#define F_FIRSTSEQ      "firstseq"	/* Lowest seq # to retransmit */
-#define F_LASTSEQ       "lastseq"	/* Highest seq # to retransmit */
-#define F_RESOURCES	"rsc_hold"      /* What resources do we hold? */
+#define F_FIRSTSEQ	"firstseq"	/* Lowest seq # to retransmit */
+#define F_LASTSEQ	"lastseq"	/* Highest seq # to retransmit */
+#define F_RESOURCES	"rsc_hold"	/* What resources do we hold? */
 #define F_FROMID	"from_id"	/* from Client id */
 #define F_TOID		"to_id"		/* To client id */
 #define F_PID		"pid"		/* PID of client */
+#define F_UID		"uid"		/* uid of client */
+#define F_GID		"gid"		/* gid of client */
 #define F_ISSTABLE	"isstable"	/* true/false for RESOURCES */
 #define F_APIREQ	"reqtype"	/* API request type for "hbapi" */
 #define F_APIRESULT	"result"	/* API request result code */
