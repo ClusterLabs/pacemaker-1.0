@@ -1,4 +1,4 @@
-/* $Id: ha_msg.h,v 1.48 2005/01/28 09:10:15 gshi Exp $ */
+/* $Id: ha_msg.h,v 1.49 2005/02/07 11:28:34 andrew Exp $ */
 /*
  * Intracluster message object (struct ha_msg)
  *
@@ -72,7 +72,7 @@ struct ha_msg {
 	int *	types;
 };
 
-
+typedef struct ha_msg HA_Message;
 
 struct fieldtypefuncs_s{
 
@@ -170,7 +170,9 @@ extern struct fieldtypefuncs_s fieldtypefuncs[4];
 #define F_ORDERSEQ	"oseq"		/* Order Sequence number */
 #define F_DT		"dt"		/* Dead time field for heartbeat*/
 #define F_ACKSEQ	"ackseq"	/* The seq number this msg is acking*/
-#define F_CRM_DATA	"crm_xml" 
+#define F_CRM_DATA	"crm_xml"
+#define F_XML_TAGNAME	"__name__"
+#define F_XML_PARENT	"__parent__"
 
 	/* Message types */
 #define	T_STATUS	"status"	/* Status (heartbeat) */
@@ -232,6 +234,8 @@ int		ha_msg_add(struct ha_msg * msg
 		,	const char* name, const char* value);
 
 int		cl_msg_remove(struct ha_msg* msg, const char* name);
+int		cl_msg_remove_value(struct ha_msg* msg, const void* value);
+int		cl_msg_remove_offset(struct ha_msg* msg, int offset);
 
 /* Modify null-terminated name and a value to the message */
 int		cl_msg_modstring(struct ha_msg * msg,
