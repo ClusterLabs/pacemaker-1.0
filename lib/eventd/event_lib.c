@@ -1,11 +1,11 @@
-/* $Id: event_lib.c,v 1.7 2004/03/26 05:33:55 forrest Exp $ */
+/* $Id: event_lib.c,v 1.8 2004/04/07 01:17:45 forrest Exp $ */
 /* 
  * event_lib.c: source file for event library
  *
  * Copyright (C) 2004 Forrest,Zhao <forrest.zhao@intel.com>
  * 
  * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public
+ * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
  * version 2.1 of the License, or (at your option) any later version.
  * 
