@@ -1,4 +1,4 @@
-/* $Id: ccm.c,v 1.73 2005/03/24 23:55:10 alan Exp $ */
+/* $Id: ccm.c,v 1.74 2005/04/01 18:20:52 gshi Exp $ */
 /* 
  * ccm.c: Consensus Cluster Service Program 
  *
@@ -2266,6 +2266,7 @@ ccm_state_joined(enum ccm_type ccm_msg_type,
 				break;
 			}
 
+
 			/* If the dead node is the partition leader, go to
 			 * JOINING state
 			 */
@@ -3889,20 +3890,17 @@ repeat:
 			/* ignore heartbeat shutdone message */
 			return TRUE;
 			
-		} else if((strcasecmp(type, T_STATUS) == 0
-			        || strcasecmp(type, T_NS_STATUS) == 0)) {
-			/* process only messages indicating heartbeat on some */
-			/* node has moved to active status */
+		} else if(strcasecmp(type, T_STATUS) == 0){
+			
 			int 	gen_val;
 			const char *gen = ha_msg_value(reply, F_HBGENERATION);
-
+			
 			gen_val = atoi(gen?gen:"-1");
-			if(strcmp(status, ACTIVESTATUS) == 0) {
-				nodelist_update(orig, ACTIVESTATUS, gen_val, 
-						info);
-			}
+			nodelist_update(orig, status, gen_val, 
+					info);
 			ha_msg_del(reply);
 			return TRUE;
+
 		} else if(strcasecmp(type, T_STONITH) == 0) {
 			/* update any node death status only after stonith */
 			/* is complete irrespective of stonith being 	   */
