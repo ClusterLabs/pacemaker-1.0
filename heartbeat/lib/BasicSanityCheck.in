@@ -90,6 +90,8 @@ GenerateAuthKeys() {
 	#
 	auth 1
 	1 sha1 SuperSecretKey--SHHH!!!
+	2 md5  Encript-string-for-md5!!
+	3 crc
 	!
   chmod 600 $1
 }
@@ -220,6 +222,18 @@ LookForString() {
   return 1
 }
 
+changeAuthkeys(){
+ awk 'BEGIN{method = 1; done =0 ; pass=1} \
+{ if(pass == 2){ if ($1 == "auth")print "auth " method; \
+else print $0 ; next } \
+if (done ==1 || $1 == "#" || $1 == " ") next; \
+if ($1 == "auth") {method = $2; next} \
+if ($1 !=  method) {done=1; method =$1;  pass=2; nextfile}}' \
+$HADIR/authkeys $HADIR/authkeys >/tmp/tmpfile
+
+mv /tmp/tmpfile  $HADIR/authkeys
+chmod 600 $HADIR/authkeys
+}
 #	Check for the given count of the given string
 #	Complain unless the right number are there.
 CheckPat()
@@ -406,11 +420,11 @@ TestHeartbeat() {
   #	Reload test -- authkeys changed
   #
   echo "Performing authkeys reload test" >> $LOGFILE
-  touch $HADIR/authkeys
+  changeAuthkeys
   if
     HBReload
   then
-    : OK! reload after touching authkeys worked!
+    : OK! reload after changing authkeys worked!
   else
     echo "Heartbeat reload operation returned $?" | tee -a $LOGFILE
     errcount=`expr $errcount + 1`
