@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.371 2005/03/04 04:44:11 zhenh Exp $ */
+/* $Id: heartbeat.c,v 1.372 2005/03/04 15:34:59 alan Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -3371,7 +3371,7 @@ int
 main(int argc, char * argv[], char **envp)
 {
 	int		flag;
-	int		j;
+	unsigned	j;
 	struct rlimit	oflimits;
 	int		argerrs = 0;
 	char *		CurrentStatus=NULL;
@@ -5120,6 +5120,9 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.372  2005/03/04 15:34:59  alan
+ * Fixed various signed/unsigned errors...
+ *
  * Revision 1.371  2005/03/04 04:44:11  zhenh
  * make heartbeat can simulate the broken of more than one nodes, for the split-brain cts test
  *

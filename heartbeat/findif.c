@@ -1,4 +1,4 @@
-/* $Id: findif.c,v 1.43 2005/02/17 17:21:55 alan Exp $ */
+/* $Id: findif.c,v 1.44 2005/03/04 15:34:59 alan Exp $ */
 /*
  * findif.c:	Finds an interface which can route a given address
  *
@@ -229,8 +229,9 @@ SearchUsingProcRoute (char *address, struct in_addr *in
 ,	unsigned long *best_netmask
 ,	char *errmsg, int errmsglen)
 {
-	unsigned long	flags, refcnt, use, metric, gw, mask;
+	unsigned long	flags, refcnt, use, gw, mask;
 	unsigned long   dest;
+	long		metric = LONG_MAX;
 	long		best_metric = LONG_MAX;
 	
 	char	buf[2048];
@@ -704,6 +705,9 @@ ff02::%lo0/32                     fe80::1%lo0                   UC          lo0
 
 /* 
  * $Log: findif.c,v $
+ * Revision 1.44  2005/03/04 15:34:59  alan
+ * Fixed various signed/unsigned errors...
+ *
  * Revision 1.43  2005/02/17 17:21:55  alan
  * Put in missing {}s
  *

@@ -1,4 +1,4 @@
-/* $Id: ha_msg_internal.c,v 1.51 2005/02/14 21:06:10 gshi Exp $ */
+/* $Id: ha_msg_internal.c,v 1.52 2005/03/04 15:34:59 alan Exp $ */
 /*
  * ha_msg_internal: heartbeat internal messaging functions
  *
@@ -245,7 +245,7 @@ isauthentic(const struct ha_msg * m)
 	struct HBauth_info*	which;
 	
 	
-	if (get_stringlen(m) >= sizeof(msgbody)) {
+	if (get_stringlen(m) >= (ssize_t)sizeof(msgbody)) {
 		return(0);
 	}
 	
@@ -412,6 +412,9 @@ main(int argc, char ** argv)
 #endif
 /*
  * $Log: ha_msg_internal.c,v $
+ * Revision 1.52  2005/03/04 15:34:59  alan
+ * Fixed various signed/unsigned errors...
+ *
  * Revision 1.51  2005/02/14 21:06:10  gshi
  * BEAM fix:
  *
