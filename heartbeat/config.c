@@ -1,4 +1,4 @@
-/* $Id: config.c,v 1.148 2005/02/21 10:27:10 alan Exp $ */
+/* $Id: config.c,v 1.149 2005/03/03 16:21:03 andrew Exp $ */
 /*
  * Parse various heartbeat configuration files...
  *
@@ -265,7 +265,8 @@ init_config(const char * cfgfile)
 		return(HA_FAIL);
 	}
 	if (config->log_facility >= 0) {
-		openlog(cmdname, LOG_CONS | LOG_PID, config->log_facility);
+		cl_log_set_entity(cmdname);
+		cl_log_set_facility(config->log_facility);
 	}
 
 
@@ -2153,6 +2154,9 @@ set_release2mode(const char* value)
 
 /*
  * $Log: config.c,v $
+ * Revision 1.149  2005/03/03 16:21:03  andrew
+ * Use the common logging setup calls (change cleared by gshi)
+ *
  * Revision 1.148  2005/02/21 10:27:10  alan
  * Put in the fix in config.c I meant to put in last time...
  *
