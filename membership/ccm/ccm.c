@@ -1,4 +1,4 @@
-/* $Id: ccm.c,v 1.69 2005/03/08 01:09:59 gshi Exp $ */
+/* $Id: ccm.c,v 1.70 2005/03/14 20:10:39 gshi Exp $ */
 /* 
  * ccm.c: Consensus Cluster Service Program 
  *
@@ -3735,10 +3735,17 @@ switchstatement:
 
 		case CCM_TYPE_RES_MEMLIST:
 		case CCM_TYPE_FINAL_MEMLIST:
+			/* this message is from other partitions*/
+			cl_log(LOG_WARNING, "ccm_state_joinging: received a %s message", 
+			       ccm_type2string(ccm_msg_type));
+			cl_log(LOG_WARNING, "We probably have different partitions");
+			break;
+			
+			
 		default:
 			cl_log(LOG_ERR, "ccm_state_joining: dropping message "
-				"of type %s. Is this a Byzantine failure?", 
-					ccm_type2string(ccm_msg_type));
+			       "of type %s. Is this a Byzantine failure?", 
+			       ccm_type2string(ccm_msg_type));
 			/* nothing to do. Just forget the message */
 			break;
 	}
