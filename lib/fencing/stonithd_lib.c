@@ -62,7 +62,9 @@ static const char * stonith_op_strname[] =
 */
 
 static stonith_ops_callback_t stonith_ops_cb = NULL; 
+static void * stonith_ops_cb_private_data = NULL;
 static stonithRA_ops_callback_t stonithRA_ops_cb = NULL;
+static void * stonithRA_ops_cb_private_data = NULL;
 
 static struct ha_msg * create_basic_reqmsg_fields(const char * apitype);
 static gboolean is_expected_msg(const struct ha_msg * msg,
@@ -440,7 +442,7 @@ stonithd_receive_ops_result(gboolean blocking)
 		
 		if (stonith_ops_cb != NULL) {
 			stdlib_log(LOG_DEBUG, "trigger stonith op callback.");
-			stonith_ops_cb(st_op, NULL);
+			stonith_ops_cb(st_op, stonith_ops_cb_private_data);
 		} else { 
 			stdlib_log(LOG_DEBUG, "No stonith op callback.");
 		}
@@ -525,7 +527,7 @@ stonithd_receive_ops_result(gboolean blocking)
 		/* if ( rc == ST_OK && stonithRA_ops_cb != NULL)  */
 		if ( stonithRA_ops_cb != NULL) {
 			stdlib_log(LOG_DEBUG, "trigger stonithRA op callback.");
-			stonithRA_ops_cb(ra_op, NULL);
+			stonithRA_ops_cb(ra_op, stonithRA_ops_cb_private_data);
 		} else {
 			stdlib_log(LOG_DEBUG, "No stonithRA op callback.");
 		}
@@ -548,6 +550,7 @@ stonithd_set_stonith_ops_callback(stonith_ops_callback_t callback,
 {
 	if ( SIGNONED_TO_STONITHD == TRUE ) {
 		stonith_ops_cb = callback;
+		stonith_ops_cb_private_data = private_data;
 		stdlib_log(LOG_DEBUG, "setted stonith ops callback.");
 	} else {
 		stdlib_log(LOG_ERR, "stonithd_set_stonith_ops_callback: "\
@@ -661,6 +664,7 @@ stonithd_set_stonithRA_ops_callback(stonithRA_ops_callback_t callback,
 {
 	if ( SIGNONED_TO_STONITHD == TRUE ) {
 		stonithRA_ops_cb = callback;
+		stonithRA_ops_cb_private_data = private_data;
 		stdlib_log(LOG_DEBUG, "setted stonith ops callback.");
 	} else {
 		stdlib_log(LOG_ERR, "stonithd_set_stonithRA_ops_callback: "
