@@ -1,4 +1,4 @@
-/* $Id: ipfail.c,v 1.37 2004/08/29 03:01:12 msoffen Exp $ */
+/* $Id: ipfail.c,v 1.38 2004/10/01 13:01:42 kevin Exp $ */
 /* ipfail: IP Failover plugin for Linux-HA
  *
  * Copyright (C) 2002-2004 Kevin Dwyer <kevin@pheared.net>
@@ -101,6 +101,10 @@ main(int argc, char **argv)
 	open_api(hb);
 
 	node_stable = is_stable(hb);
+	if (node_stable == -1) {
+		cl_log(LOG_ERR, "No managed resources");
+		exit(100);
+	}
 
 	/* Obtain our local node name */
 	node_name = hb->llc_ops->get_mynodeid(hb);
@@ -184,7 +188,12 @@ main(int argc, char **argv)
 int
 is_stable(ll_cluster_t *hb)
 {
-	if (!strcmp(hb->llc_ops->get_resources(hb), "transition"))
+	const char *resources = hb->llc_ops->get_resources(hb);
+	if (!resources)
+		/* Heartbeat is not providing resource management */
+	        return -1;
+	
+	if (!strcmp(resources, "transition"))
 		return 0;
 
 	return 1;
