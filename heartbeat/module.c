@@ -1,4 +1,4 @@
-/* $Id: module.c,v 1.56 2005/03/09 16:07:45 andrew Exp $ */
+/* $Id: module.c,v 1.57 2005/03/15 01:18:22 gshi Exp $ */
 /*
  * module: Dynamic module support code
  *
@@ -162,8 +162,14 @@ SetParameterValue(const char * name, const char * value)
 	void *	gname;
 	void *	gval;
 	int	name_len = strlen(name?name:"");
-	char *  env_name = cl_malloc(name_len + 4);
+	char *  env_name = cl_malloc(name_len + 4);		
 	
+	if (env_name == NULL){
+		cl_log(LOG_ERR, "SetParameterValue():"
+		       "memory allocation failed");
+		return;
+	}
+
 	if (Parameters == NULL) {
 		Parameters = g_hash_table_new(g_str_hash, g_str_equal);
 		if (Parameters == NULL) {
