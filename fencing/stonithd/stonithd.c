@@ -1,4 +1,4 @@
-/* $Id: stonithd.c,v 1.10 2005/01/03 18:12:10 alan Exp $ */
+/* $Id: stonithd.c,v 1.11 2005/02/02 09:42:03 sunjd Exp $ */
 
 /* File: stonithd.c
  * Description: STONITH deamon for node fencing
@@ -60,6 +60,9 @@
 #include <lrm/raexec.h>
 #include <fencing/stonithd_msg.h>
 #include <fencing/stonithd_api.h>
+
+/* For integration with heartbeat */
+#define MAGIC_EC 100
 
 typedef struct {
 	char * name;
@@ -128,7 +131,7 @@ struct RA_operation_to_handler
 };
 
 /* Miscellaneous functions such as deamon routines and others. */
-static void become_deamon(void);
+static void become_deamon(gboolean);
 static void show_deamon_status(const char * pidfile);
 static int kill_running_deamon(const char * pidfile);
 static pid_t running_deamon_pid(const char * pidfile);
@@ -276,9 +279,11 @@ static const char * simple_help_screen =
 "	-k	Kill the deamon.\n"
 "	-d	Run the stonithd in debug mode. Under debug mode more\n"
 "		debug information is written to log file.\n"
+"	-a	Start up alone outside of heartbeat.\n" 
+"		By default suppose it be started up and monitored by heartbeat.\n"
 "	-h	This help information\n";
 
-static const char * optstr = "nskdht";
+static const char * optstr = "anskdht";
 /* Will replace it with dynamical a config variable */
 #define PIDFILE         "/var/run/stonithd.pid"
 
@@ -297,6 +302,7 @@ static GSourceFuncs polled_input_SourceFuncs = {
 static const char * 	local_nodename		= NULL;
 static GMainLoop *	mainloop 		= NULL;
 static const char * 	stonithd_name		= "stonithd";
+static gboolean		STARTUP_ALONE 		= FALSE;
 static gboolean 	SIGNONED_TO_HB		= FALSE;
 static gboolean 	SIGNONED_TO_APPHBD	= FALSE;
 static gboolean 	NEED_SIGNON_TO_APPHBD	= FALSE;
@@ -322,13 +328,18 @@ int main(int argc, char ** argv)
 		}
 
 		switch (option_char) {
+			case 'a': /* Start up alone */
+				STARTUP_ALONE = TRUE;
+				break;
+
 			case 'n': /* Do not register to apphbd */
 				NEED_SIGNON_TO_APPHBD = FALSE;
 				break;
 			
 			case 's': /* Show deamon status */
 				show_deamon_status(PIDFILE);
-				return 0;
+				return (STARTUP_ALONE == TRUE) ? 
+					LSB_EXIT_OK : MAGIC_EC;
 				break; /* Never reach here, just for uniform */
 
 			case 'k': /* kill the running deamon */
@@ -343,7 +354,8 @@ int main(int argc, char ** argv)
 
 			case 'h':
 				printf("%s\n",simple_help_screen);
-				return LSB_EXIT_OK;
+				return (STARTUP_ALONE == TRUE) ? 
+					LSB_EXIT_OK : MAGIC_EC;
 
 			case 't': /* test only */
 				TEST = TRUE;	
@@ -353,23 +365,24 @@ int main(int argc, char ** argv)
 				stonithd_log(LOG_ERR, "Error:getopt returned"
 					" character code %c.", option_char);
 				printf("%s\n", simple_help_screen);
-				return LSB_EXIT_EINVAL;
+				return (STARTUP_ALONE == TRUE) ? 
+					LSB_EXIT_EINVAL : MAGIC_EC;
 		}
 	} while (1);
 
 	if ( running_deamon_pid(PIDFILE) > 0 ) {
 		stonithd_log(LOG_NOTICE, "%s %s", argv[0], M_RUNNING);
-		return LSB_EXIT_OK;	
+		return (STARTUP_ALONE == TRUE) ? LSB_EXIT_OK : MAGIC_EC;
 	}
 
 	/* Not use deamon() API, since it's not POSIX compliant */
-	become_deamon();
+	become_deamon(STARTUP_ALONE);
 
 	hb = ll_cluster_new("heartbeat");
 	if ( hb == NULL ) {
 		stonithd_log(LOG_ERR, "ll_cluster_new failed.");
 		stonithd_log(LOG_ERR, "%s %s", argv[0], M_ABORT);
-		return LSB_EXIT_GENERIC;
+		return (STARTUP_ALONE == TRUE) ? LSB_EXIT_GENERIC : MAGIC_EC;
 	}
 
 	if (hb->llc_ops->signon(hb, stonithd_name)!= HA_OK) {
@@ -478,7 +491,7 @@ delhb_quit:
 		stonithd_log(LOG_NOTICE, "%s %s", argv[0], M_ABORT );
 	}
 
-	return main_rc;
+	return (STARTUP_ALONE == TRUE) ? main_rc : MAGIC_EC;
 }
 
 /* 
@@ -486,19 +499,23 @@ delhb_quit:
  * 1) Not use deamon() API for its portibility, any comment?
 */
 static void
-become_deamon(void)
+become_deamon(gboolean startup_alone)
 {
 	pid_t pid;
 	int j;
 
-	pid = fork();
+	if (startup_alone == TRUE) {
+		pid = fork();
 
-	if (pid < 0) { /* in parent process and fork failed. */
-		stonithd_log(LOG_ERR, "become_deamon: forking a child failed.");
-		stonithd_log(LOG_ERR, "exit due to not becoming a daemon.");
-		exit(LSB_EXIT_GENERIC);
-	} else if (pid > 0) {  /* in parent process and fork is ok */
-		exit(LSB_EXIT_OK);
+		if (pid < 0) { /* in parent process and fork failed. */
+			stonithd_log(LOG_ERR, 
+				     "become_deamon: forking a child failed.");
+			stonithd_log(LOG_ERR, 
+				     "exit due to not becoming a daemon.");
+			exit(LSB_EXIT_GENERIC);
+		} else if (pid > 0) {  /* in parent process and fork is ok */
+			exit(LSB_EXIT_OK);
+		}
 	}
 
 	chdir("/");
@@ -518,7 +535,7 @@ become_deamon(void)
 	
 	if (0 != create_pidfile(PIDFILE)) {
 		stonithd_log(LOG_ERR, "%s %s", stonithd_name, M_ABORT);
-		exit(LSB_EXIT_GENERIC);
+		exit((STARTUP_ALONE == TRUE) ? LSB_EXIT_GENERIC : MAGIC_EC);
 	}
 }
 
@@ -529,7 +546,7 @@ stonithd_quit(int signo)
 		g_main_quit(mainloop);
 	} else {
 		/*apphb_unregister();*/
-		exit(LSB_EXIT_OK);
+		exit((STARTUP_ALONE == TRUE) ? LSB_EXIT_OK : MAGIC_EC);
 	}
 }
 
@@ -2677,7 +2694,7 @@ create_pidfile(const char * pidfile)
 	pid_t   pid;
 	FILE *  fd;
 
-	fd = fopen(pidfile, "w");
+	fd = fopen(pidfile, "w+");
 	if (fd == NULL) {
 		stonithd_log(LOG_ERR, "cannot create PID file: %s", pidfile);
 		return LSB_EXIT_GENERIC;
@@ -2806,6 +2823,9 @@ free_common_op_t(gpointer data)
 
 /* 
  * $Log: stonithd.c,v $
+ * Revision 1.11  2005/02/02 09:42:03  sunjd
+ * Take it into account that it may be started up by heartbeat.
+ *
  * Revision 1.10  2005/01/03 18:12:10  alan
  * Stonith version 2.
  * Some compatibility with old versions is still missing.
