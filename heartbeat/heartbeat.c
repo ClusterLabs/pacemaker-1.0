@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.383 2005/03/21 18:40:57 gshi Exp $ */
+/* $Id: heartbeat.c,v 1.384 2005/03/22 21:19:11 gshi Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -1968,11 +1968,15 @@ HBDoMsg_T_ACKMSG(const char * type, struct node_info * fromnode,
 			
 			if (STRNCMP_CONST(hip->status,DEADSTATUS) == 0
 			    || STRNCMP_CONST(hip->status, INITSTATUS) == 0
+			    /*although the status is active, but no ACK message
+			     *has arrived from that node yet
+			     */
+			    || hip->track.ackseq == 0 
 			    || hip->nodetype == PINGNODE_I){
 				continue;
 			}
-
-			if (minidx == -1 ||
+			
+			if (minidx == -1 || 
 			    hip->track.ackseq < minseq){
 				minseq = hip->track.ackseq;
 				minidx = i;
@@ -5191,6 +5195,10 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.384  2005/03/22 21:19:11  gshi
+ * if we have not got any ACK message from a node yet,
+ * we exclude it in compuation.
+ *
  * Revision 1.383  2005/03/21 18:40:57  gshi
  * we don't pause clients if flow control is not enabled
  *
