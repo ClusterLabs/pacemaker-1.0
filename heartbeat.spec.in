@@ -1,4 +1,4 @@
-#	$Id: heartbeat.spec.in,v 1.92 2004/08/28 15:23:21 alan Exp $
+#	$Id: heartbeat.spec.in,v 1.93 2004/08/30 19:27:43 alan Exp $
 
 # Workaround for a change in RPM 4.1.x; needs proper fixing soon!
 ##%define _unpackaged_files_terminate_build 0
@@ -841,7 +841,6 @@ install -m 644 rc.config.heartbeat $TEMPL
 %define ENABLE_LRM @LRM_ENABLED@
 %if %{ENABLE_LRM}
 	@libdir@/liblrm.*
-	%dir %attr (755, @HA_CCMUSER@, @HA_APIGROUP@) @libdir@/@HB_PKG@/lrm
 %endif
 
 ###########################################################
