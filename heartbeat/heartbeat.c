@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.335 2004/11/08 20:48:36 gshi Exp $ */
+/* $Id: heartbeat.c,v 1.336 2004/11/16 05:58:00 zhenh Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -281,10 +281,6 @@
 #define REREAD_CONFIG_SIG	0x0040UL
 #define FALSE_ALARM_SIG		0x0080UL
 
-enum comm_state {
-	COMM_STARTING,
-	COMM_LINKSUP
-};
 
 static char 			hbname []= "heartbeat";
 const char *			cmdname = hbname;
@@ -358,7 +354,7 @@ const char*	CoreProcessName(ProcTrack* p);
 void		hb_kill_managed_children(int nsig);
 void		hb_kill_rsc_mgmt_children(int nsig);
 void		hb_kill_core_children(int nsig);
-static gboolean	hb_mcp_final_shutdown(gpointer p);
+gboolean	hb_mcp_final_shutdown(gpointer p);
 
 
 static void	ManagedChildRegistered(ProcTrack* p);
@@ -417,8 +413,6 @@ static gboolean	HBDoMsgCallback(const char * type, struct node_info* fromnode
 static void HBDoMsg_T_REXMIT(const char * type, struct node_info * fromnode
 ,	TIME_T msgtime, seqno_t seqno, const char * iface, struct ha_msg * msg);
 static void HBDoMsg_T_STATUS(const char * type, struct node_info * fromnode
-,	TIME_T msgtime, seqno_t seqno, const char * iface, struct ha_msg * msg);
-static void HBDoMsg_T_SHUTDONE(const char * type, struct node_info * fromnode
 ,	TIME_T msgtime, seqno_t seqno, const char * iface, struct ha_msg * msg);
 static void HBDoMsg_T_QCSTATUS(const char * type, struct node_info * fromnode
 ,	TIME_T msgtime, seqno_t seqno, const char * iface, struct ha_msg * msg);
@@ -1650,7 +1644,7 @@ hb_initiate_shutdown(int quickshutdown)
 		return;
 	}
 	send_local_status();
-	if (!quickshutdown) {
+	if (!quickshutdown && DoManageResources) {
 		/* THIS IS RESOURCE WORK!  FIXME */
 		procinfo->giveup_resources = TRUE;
 		hb_giveup_resources();
@@ -1681,7 +1675,7 @@ hb_initiate_shutdown(int quickshutdown)
  *	dies.
  */
 
-static gboolean
+gboolean
 hb_mcp_final_shutdown(gpointer p)
 {
 	static int shutdown_phase = 0;
@@ -1882,39 +1876,6 @@ HBDoMsg_T_STATUS(const char * type, struct node_info * fromnode
 
 }
 
-static void /* Received a "SHUTDONE" message from someone... */
-HBDoMsg_T_SHUTDONE(const char * type, struct node_info * fromnode
-,	TIME_T msgtime, seqno_t seqno, const char * iface, struct ha_msg * msg)
-{
-	if (heartbeat_comm_state == COMM_LINKSUP) {
-		/* THIS IS RESOURCE WORK!  FIXME */
-		process_resources(type, msg, fromnode);
-	}
-	heartbeat_monitor(msg, KEEPIT, iface);
-	if (fromnode == curnode) {
-		if (ANYDEBUG) {
-			cl_log(LOG_DEBUG
-			,	"Received T_SHUTDONE from us.");
-		}
-		if (ANYDEBUG) {
-			cl_log(LOG_DEBUG
-			,	"Calling hb_mcp_final_shutdown"
-			" in a second.");
-		}
-		/* Trigger next phase of final shutdown process in a second */
-		Gmain_timeout_add(1000, hb_mcp_final_shutdown, NULL); /* phase 0 - normal */
-	}else{
-		/* THIS IS RESOURCE WORK!  FIXME */
-		fromnode->has_resources = FALSE;
-		other_is_stable = 0;
-		other_holds_resources= HB_NO_RSC;
-
-		cl_log(LOG_INFO
-		,	"Received shutdown notice from '%s'."
-		,	fromnode->nodename);
-		takeover_from_node(fromnode->nodename);
-	}
-}
 
 
 static void /* This is a client status query from remote client */
@@ -3213,7 +3174,6 @@ main(int argc, char * argv[], char **envp)
 	hb_register_msg_callback(T_REXMIT,	HBDoMsg_T_REXMIT);
 	hb_register_msg_callback(T_STATUS,	HBDoMsg_T_STATUS);
 	hb_register_msg_callback(T_NS_STATUS,	HBDoMsg_T_STATUS);
-	hb_register_msg_callback(T_SHUTDONE,	HBDoMsg_T_SHUTDONE);
 	hb_register_msg_callback(T_QCSTATUS,	HBDoMsg_T_QCSTATUS);
 
 	if (init_set_proc_title(argc, argv, envp) < 0) {
@@ -4762,6 +4722,9 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.336  2004/11/16 05:58:00  zhenh
+ * 1.Make the ordering shutdown work. 2.Move HBDoMsg_T_SHUTDONE() to hb_resource.c
+ *
  * Revision 1.335  2004/11/08 20:48:36  gshi
  * implemented logging daemon
  *
