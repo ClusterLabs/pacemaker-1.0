@@ -39,36 +39,36 @@ ConfigureLinux() {
   if
     [ -f /etc/UnitedLinux-release -a -s /etc/UnitedLinux-release ]
   then
-    distro=UL
+    distro="United Linux"
     PACKAGECMD="$MAKE_CMD rpm"
     DFLAGS="--with-ucd-snmp-devel=ucdsnmp --with-group-id=90 --with-ccmuser-id=90"
   elif
     [ -f /etc/SuSE-release -a -s /etc/SuSE-release ]
   then
-    distro=SuSE
+    distro="SuSE Linux"
     PACKAGECMD="$MAKE_CMD rpm"
     DFLAGS="--with-ucd-snmp-devel=ucdsnmp --with-group-id=90 --with-ccmuser-id=90"
   elif
     [ -f /etc/redhat-release -a -s /etc/redhat-release ] 
   then
-    distro=RedHat
+    distro="RedHat Linux"
     PACKAGECMD="$MAKE_CMD rpm"
   elif
     [ -f /etc/conectiva-release -a -s /etc/conectiva-release ]
   then
-    distro=Conectiva
+    distro="Conectiva Linux"
     PACKAGECMD="$MAKE_CMD rpm"
     DFLAGS="--with-group-id=17 --mandir=/usr/share/man --infodir=/usr/share/info --with-ccmuser-id=17"
   elif
     [ -f /etc/debian_version -a -s /etc/debian_version ]
   then
-    distro="Debian/GNU"
+    distro="Debian GNU/Linux"
     PACKAGECMD="$MAKE_CMD deb"
     DFLAGS="--mandir=/usr/share/man"
   else
-    distro="Generic"
+    distro="Generic Linux"
   fi
-  CFENV="$distro Linux"
+  CFENV="$distro"
   FLAGS="--prefix=/usr --sysconfdir=/etc --localstatedir=/var $DFLAGS"
 }
 
