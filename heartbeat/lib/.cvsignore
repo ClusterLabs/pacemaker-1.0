@@ -8,4 +8,4 @@ mach_down
 hb_standby
 ha_config
 TestHeartbeatComm
-ha_takeover
+hb_takeover

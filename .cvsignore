@@ -23,3 +23,5 @@ autom4te*
 README
 patches
 updates
+libtool.m4
+ltdl.m4
