@@ -42,8 +42,15 @@ hadate() {
 }
 
 ha_log() {
-# TODO: Revisit as soon as the logging daemon is implemented.
-#
+	if [ "x${HA_LOGD}" = "xyes" ] ; then 
+		${HA_BIN}/ha_logger ha-log "${*}"
+		rc=$?
+		if [ "$rc" -eq "0" ] ; then
+			return 0
+		fi
+	fi
+
+	
 	if
 	  [ -n "$HA_LOGFACILITY" ]
         then
@@ -75,6 +82,15 @@ ha_log() {
 }
 
 ha_debug() {
+
+        if [ "x${HA_LOGD}" = "xyes" ] ; then  
+                ${HA_BIN}/ha_logger ha-debug "${*}"
+                rc=$?
+                if [ "$rc" -eq "0" ] ; then
+                        return 0
+                fi
+        fi
+
 	if
 	  [ -n "$HA_LOGFACILITY" ]
 	then

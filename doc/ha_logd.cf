@@ -1,0 +1,27 @@
+#	File to write debug messages to
+#	Default: /var/log/ha-debug
+#debugfile /var/log/ha-debug
+
+#
+#
+# 	File to write other messages to
+#	Default: /var/log/ha-log
+#logfile	/var/log/ha-log
+
+#
+#
+#	Facility to use for syslog()/logger 
+#	Default: local7
+#logfacility	local7
+
+
+#	Entity to be shown at beginning of a message
+# 	Default: "heartbeat"
+#entity heartbeat
+
+
+#	Do we register to apphbd
+#	Default: no
+#useapphbd no
+
+#

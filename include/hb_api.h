@@ -1,4 +1,4 @@
-/* $Id: hb_api.h,v 1.25 2004/10/16 04:12:56 alan Exp $ */
+/* $Id: hb_api.h,v 1.26 2004/11/08 20:48:36 gshi Exp $ */
 /*
  * Client-side Low-level clustering API for heartbeat.
  *
@@ -388,6 +388,8 @@ struct llc_ops {
 #define KEY_NORMALPOLL	"normalpoll"
 #define KEY_APIPERM	"apiauth"
 #define KEY_MSGFMT      "msgfmt"
+#define KEY_LOGDAEMON   "use_logd"
+#define KEY_CONNINTVAL	"conn_logd_intval"
 #define KEY_BADPACK	"log_badpack"
 #define KEY_REGAPPHBD	"use_apphbd"
 #define KEY_COREDUMP	"coredumps"

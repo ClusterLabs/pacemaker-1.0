@@ -1,4 +1,4 @@
-/* $Id: config.c,v 1.132 2004/10/20 19:26:55 gshi Exp $ */
+/* $Id: config.c,v 1.133 2004/11/08 20:48:36 gshi Exp $ */
 /*
  * Parse various heartbeat configuration files...
  *
@@ -89,6 +89,8 @@ static int set_debuglevel(const char *);
 static int set_normalpoll(const char *);
 static int set_api_authorization(const char *);
 static int set_msgfmt(const char*);
+static int set_logdaemon(const char*);
+static int set_connintval(const char *);
 static int set_register_to_apphbd(const char *);
 static int set_badpack_warn(const char*);
 static int set_coredump(const char*);
@@ -128,6 +130,8 @@ struct directive {
 , {KEY_DEBUGLEVEL,set_debuglevel, TRUE, NULL, "debug level"}
 , {KEY_NORMALPOLL,set_normalpoll, TRUE, "true", "Use system poll(2) function?"}
 , {KEY_MSGFMT,    set_msgfmt, TRUE, "classic", "message format in the wire"}
+, {KEY_LOGDAEMON, set_logdaemon, TRUE, "no", "use logging daemon"}  
+, {KEY_CONNINTVAL,set_connintval, TRUE, "60", "the interval to reconnect to logd"}  
 , {KEY_REGAPPHBD, set_register_to_apphbd, FALSE, NULL, "register with apphbd"}
 , {KEY_BADPACK,   set_badpack_warn, TRUE, "true", "warn about bad packets"}
 , {KEY_COREDUMP,  set_coredump, TRUE, "true", "enable Linux-HA core dumps"}
@@ -167,6 +171,8 @@ extern int    				timebasedgenno;
 int    					enable_realtime = TRUE;
 extern int    				debug;
 int					netstring_format = FALSE;
+extern int				use_logging_daemon;
+extern int				conn_logd_intval;
 extern int				UseApphbd;
 
 static int	islegaldirective(const char *directive);
@@ -1634,6 +1640,29 @@ set_msgfmt(const char* value)
 	
 	return HA_FAIL;
 }
+
+static int
+set_logdaemon(const char * value)
+{
+	int	rc;
+	
+	rc = str_to_boolean(value, &use_logging_daemon);
+       
+	return rc;
+}
+
+static int
+set_connintval(const char * value)
+{
+	conn_logd_intval = get_msec(value);
+
+	if (conn_logd_intval > 0) {
+		return(HA_OK);
+	}
+	return(HA_FAIL);
+
+}
+
 static int
 set_badpack_warn(const char* value)
 {
@@ -2047,6 +2076,12 @@ set_corerootdir(const char* value)
 
 /*
  * $Log: config.c,v $
+ * Revision 1.133  2004/11/08 20:48:36  gshi
+ * implemented logging daemon
+ *
+ * The logging daemon is to double-buffer log messages to protect us from blocking
+ * writes to syslog / logfiles.
+ *
  * Revision 1.132  2004/10/20 19:26:55  gshi
  * temporary fix for memory free problem in media failure
  *

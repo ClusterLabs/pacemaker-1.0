@@ -1,4 +1,4 @@
-/* $Id: hb_resource.c,v 1.65 2004/10/20 15:31:00 alan Exp $ */
+/* $Id: hb_resource.c,v 1.66 2004/11/08 20:48:36 gshi Exp $ */
 /*
  * hb_resource: Linux-HA heartbeat resource management code
  *
@@ -96,6 +96,7 @@ enum hb_rsc_state		resourcestate = HB_R_INIT;
 enum standby			going_standby = NOT;
 longclock_t			standby_running = 0L;
 static int			standby_rsctype = HB_ALL_RSC;
+extern int			use_logging_daemon;
 
 #define	INITMSG			"Initial resource acquisition complete"
 
@@ -404,6 +405,10 @@ notify_world(struct ha_msg * msg, const char * ostatus)
 				if (nice_failback) {
 					setenv(HANICEFAILBACK, "yes", 1);
 				}
+				
+				/*should we use logging daemon or not in script*/
+				setenv(HALOGD, use_logging_daemon?
+				       "yes":"no", 1);
 				
 				if (ANYDEBUG) {
 					cl_log(LOG_DEBUG
@@ -1348,6 +1353,10 @@ req_our_resources(int getthemanyway)
 			cl_log(LOG_DEBUG, "req_our_resources()"
 			": running [%s]",	getcmd);
 		}
+		/*should we use logging daemon or not in script*/
+		setenv(HALOGD, use_logging_daemon?
+		       "yes":"no", 1);				
+
 		if ((rc=system(getcmd)) != 0) {
 			cl_perror("%s returned %d", getcmd, rc);
 			finalrc=HA_FAIL;
@@ -1816,6 +1825,11 @@ go_standby(enum standby who, int resourceset) /* Which resources to give up */
 		}
 		sprintf(cmd, HALIB "/ResourceManager %s %s"
 		,	actioncmds[action], buf);
+
+		/*should we use logging daemon or not in script*/
+		setenv(HALOGD, use_logging_daemon?
+		       "yes":"no", 1);
+		
 		if ((rc=system(cmd)) != 0) {
 			cl_log(LOG_ERR, "%s returned %d", cmd, rc);
 			finalrc=HA_FAIL;
@@ -1947,6 +1961,11 @@ hb_giveup_resources(void)
 		if (buf[strlen(buf)-1] == '\n') {
 			buf[strlen(buf)-1] = EOS;
 		}
+
+		/*should we use logging daemon or not in script*/
+		setenv(HALOGD, use_logging_daemon?
+		       "yes":"no", 1);
+		
 		sprintf(cmd, HALIB "/ResourceManager givegroup %s", buf);
 		if ((rc=system(cmd)) != 0) {
 			cl_log(LOG_ERR, "%s returned %d", cmd, rc);
@@ -2335,6 +2354,12 @@ StonithStatProcessName(ProcTrack* p)
 
 /*
  * $Log: hb_resource.c,v $
+ * Revision 1.66  2004/11/08 20:48:36  gshi
+ * implemented logging daemon
+ *
+ * The logging daemon is to double-buffer log messages to protect us from blocking
+ * writes to syslog / logfiles.
+ *
  * Revision 1.65  2004/10/20 15:31:00  alan
  * Fixed a bug in STONITH retries where it frees something
  * prematurely.

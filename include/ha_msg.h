@@ -1,4 +1,4 @@
-/* $Id: ha_msg.h,v 1.40 2004/11/02 20:47:49 gshi Exp $ */
+/* $Id: ha_msg.h,v 1.41 2004/11/08 20:48:36 gshi Exp $ */
 /*
  * Intracluster message object (struct ha_msg)
  *
@@ -29,8 +29,6 @@
 #include <clplumbing/longclock.h>
 #include <uuid/uuid.h>
 
-#define	HA_FAIL		0
-#define	HA_OK		1
 
 enum cl_netstring_type{
 	FT_STRING,

@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.334 2004/11/02 20:47:49 gshi Exp $ */
+/* $Id: heartbeat.c,v 1.335 2004/11/08 20:48:36 gshi Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -621,7 +621,7 @@ hb_setup_child(void)
 	int	j;
 
 	for (j=3; j < 50; j++) {
-		(void)close(j);
+/*  		(void)close(j); */
 	}
 	close(watchdogfd);
 	cl_make_normaltime();
@@ -3585,7 +3585,7 @@ make_daemon(void)
 	/* A precautionary measure */
 	getrlimit(RLIMIT_NOFILE, &oflimits);
 	for (j=FD_STDERR+1; j < oflimits.rlim_cur; ++j) {
-		close(j);
+/*  		close(j); */
 	}
 	cl_cdtocoredir();
 	/* We need to at least ignore SIGINTs early on */
@@ -4762,6 +4762,12 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.335  2004/11/08 20:48:36  gshi
+ * implemented logging daemon
+ *
+ * The logging daemon is to double-buffer log messages to protect us from blocking
+ * writes to syslog / logfiles.
+ *
  * Revision 1.334  2004/11/02 20:47:49  gshi
  * the patch ensures the following:
  * 1. in heartbeat, it will not deliver client join/leave messages

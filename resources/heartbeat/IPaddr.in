@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-#	$Id: IPaddr.in,v 1.2 2004/08/27 15:22:00 andrew Exp $
+#	$Id: IPaddr.in,v 1.3 2004/11/08 20:48:36 gshi Exp $
 #
 #	This script manages IP alias IP addresses
 #
@@ -658,7 +658,7 @@ ip_monitor() {
 
 usage() {
   echo $USAGE >&2
-  echo "$Id: IPaddr.in,v 1.2 2004/08/27 15:22:00 andrew Exp $"
+  echo "$Id: IPaddr.in,v 1.3 2004/11/08 20:48:36 gshi Exp $"
 }
 
 #
@@ -702,9 +702,17 @@ case $2 in
  		exit 1
 		;;
 esac
+
+exit 0
 #
 #
 # $Log: IPaddr.in,v $
+# Revision 1.3  2004/11/08 20:48:36  gshi
+# implemented logging daemon
+#
+# The logging daemon is to double-buffer log messages to protect us from blocking
+# writes to syslog / logfiles.
+#
 # Revision 1.2  2004/08/27 15:22:00  andrew
 # Changes required for 2-node testing to complete:
 # - Fix issues stemming from node UUID support.

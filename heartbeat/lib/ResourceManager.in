@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-#	$Id: ResourceManager.in,v 1.23 2004/10/01 13:10:34 lge Exp $
+#	$Id: ResourceManager.in,v 1.24 2004/11/08 20:48:36 gshi Exp $
 #
 #	New haresources format:
 #
@@ -426,14 +426,21 @@ case $1 in
 		exit 1;;
 esac
 
+exit 0
 #
 #	$Log: ResourceManager.in,v $
+#	Revision 1.24  2004/11/08 20:48:36  gshi
+#	implemented logging daemon
+#
+#	The logging daemon is to double-buffer log messages to protect us from blocking
+#	writes to syslog / logfiles.
+#
 #	Revision 1.23  2004/10/01 13:10:34  lge
 #	micro fixes
 #	 initialize logfacility = -1 in hb_cluster_new()
 #	 fix off by one error in media_idx range check in read_child_dispatch()
 #	 add commented out "not running" branch to we_own_resource() in ResourceManager.in
-#
+#	
 #	Revision 1.22  2004/04/16 19:01:00  gshi
 #	added a missing 'done' statement
 #	

@@ -1,4 +1,4 @@
-/* $Id: heartbeat.h,v 1.55 2004/11/02 20:47:49 gshi Exp $ */
+/* $Id: heartbeat.h,v 1.56 2004/11/08 20:48:36 gshi Exp $ */
 /*
  * heartbeat.h: core definitions for the Linux-HA heartbeat program
  *
@@ -164,7 +164,7 @@
 #define HANICEFAILBACK	"HA_NICEFAILBACK" /* "yes" when nice_failback is on */
 #define HADONTASK	"HA_DONTASK"	/* "yes" when no other nodes "active" ...*/
 #define HADEBUGVAL	"HA_DEBUG"	/* current debug value (if nonzero) */
-
+#define HALOGD		"HA_LOGD"	/* whether we use logging daemon or not */
 
 #define	DEFAULTBAUD	B19200	/* Default serial link speed */
 #define	DEFAULTBAUDRATE	19200	/* Default serial link speed as int */

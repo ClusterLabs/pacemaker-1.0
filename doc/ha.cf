@@ -311,8 +311,16 @@ auto_failback on
 #apiauth ping gid=haclient uid=alanr,root
 #apiauth default gid=haclient
 
-# message format in the wire, it can be classic or netstring, default is classic
-#msgfmt  netstring
+# 	message format in the wire, it can be classic or netstring, 
+#	default: classic
+#msgfmt  classic/netstring
 
+#	do we use logging daemon?
+#	default: no
+# use_logd yes/no
+
+#	the interval we  reconnect to logging daemon if the previous connection failed
+#	default: 60 (seconds)
+#conn_logd_intval 60
 
 

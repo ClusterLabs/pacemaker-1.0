@@ -1,0 +1,33 @@
+.TH HA_LOGGER 1 "5th Nov 2004"
+.SH NAME
+ha_logger \- Log a message to files/syslog through the HA Logging Daemon
+.SH SYNOPSIS
+.B ha_logger
+.nh
+.RI "<destination> <message>"
+.P
+.SH DESCRIPTION
+\fBha_logger\fP is used to log a message to files/syslog through the HA Logging Daemon
+.PP
+.IP destination 
+It can be either ha-log or ha-debug
+.IP message
+The message you want to log on
+.PP
+.SH SEE ALSO
+ha_logd(8) heartbeat(8) 
+
+.SH DOCUMENTATION
+More information may be found at
+.UR http://www.linux-ha.org/
+http://www.linux-ha.org/
+.UE
+
+.SH AUTHORS
+.nf
+ Guochun Shi <gshi@ncsa.uiuc.edu>
+ Alan Robertson <alanr@unix.sh>
+ Lars Marowsky-Bree <lmb@suse.de>
+.fi
+
+
