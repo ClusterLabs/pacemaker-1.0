@@ -1,4 +1,4 @@
-const static char * _hb_config_c_Id = "$Id: config.c,v 1.103 2003/11/20 03:13:55 alan Exp $";
+const static char * _hb_config_c_Id = "$Id: config.c,v 1.104 2003/12/11 23:00:47 alan Exp $";
 /*
  * Parse various heartbeat configuration files...
  *
@@ -1653,7 +1653,7 @@ gnametonum(const char * gname, int gnlen)
 	if (isdigit(gname[0])) {
 		return atoi(gname);
 	}
-	if (gnlen >= sizeof(grpname)) {
+	if (gnlen >= (int)sizeof(grpname)) {
 		return -1;
 	}
 	strncpy(grpname, gname, gnlen);
@@ -1675,7 +1675,7 @@ unametonum(const char * lname, int llen)
 	if (isdigit(loginname[0])) {
 		return atoi(loginname);
 	}
-	if (llen >= sizeof(loginname)) {
+	if (llen >= (int)sizeof(loginname)) {
 		return -1;
 	}
 	strncpy(loginname, lname, llen);
@@ -1753,7 +1753,7 @@ set_api_authorization(const char * directive)
 	if (clientlen <= 0) {
 		goto baddirective;
 	}
-	if (clientlen >= sizeof(dummy.client_id)) {
+	if (clientlen >= (int)sizeof(dummy.client_id)) {
 		cl_log(LOG_ERR, "client name [%*s] too long"
 		,	clientlen, client);
 		goto baddirective;
@@ -1877,6 +1877,9 @@ baddirective:
 
 /*
  * $Log: config.c,v $
+ * Revision 1.104  2003/12/11 23:00:47  alan
+ * Fixed a couple of signed/unsigned problems (warnings) in the code.
+ *
  * Revision 1.103  2003/11/20 03:13:55  alan
  * Fixed a bug where we always waited forever for client messages once
  * we got the first one.
