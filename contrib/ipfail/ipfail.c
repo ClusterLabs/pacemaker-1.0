@@ -1,4 +1,4 @@
-/* $Id: ipfail.c,v 1.27 2004/04/01 17:16:26 alan Exp $ */
+/* $Id: ipfail.c,v 1.28 2004/04/01 17:30:37 alan Exp $ */
 /* ipfail: IP Failover plugin for Linux-HA
  *
  * Copyright (C) 2002-2003 Kevin Dwyer <kevin@pheared.net>
@@ -538,16 +538,15 @@ msg_resources(const struct ha_msg *msg, void *private)
 	 * find out when stability is achieved among the cluster
 	 */
 	if (!orig || !isstable) {
-		cl_log(LOG_ERR, "Missing orig or isstable value in msg!");
-		cl_log_message(msg);
+		return;	/* No stability info in this message... */
 	}
 
 	/* Right now there are two stable messages sent out, we are
 	 * only concerned with the one that has no info= line on it.
 	 */
-	if (orig && !strcmp(orig, other_node) &&
+	if (!strcmp(orig, other_node) &&
 	    !ha_msg_value(msg, F_COMMENT) &&
-	    isstable && !strcmp(isstable, "1")) {
+	    !strcmp(isstable, "1")) {
 
 		cl_log(LOG_DEBUG, "Other side is now stable.");
 		node_stable = 1;
@@ -579,8 +578,8 @@ msg_resources(const struct ha_msg *msg, void *private)
 		}
 	}
 
-	else if (orig && !strcmp(orig, other_node) &&
-		 isstable && !strcmp(isstable, "0")) {
+	else if (!strcmp(orig, other_node) &&
+		 !strcmp(isstable, "0")) {
 
 		cl_log(LOG_DEBUG, "Other side is unstable.");
 		node_stable = 0;
