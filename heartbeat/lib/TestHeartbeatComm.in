@@ -1,9 +1,9 @@
 #!/bin/sh
 # The purpose of this script is to break or fix the communication in the cluster.
 #
-HADIR=/etc/ha.d
-INITDIR=/etc/init.d
-LIBDIR=/usr/lib/
+HADIR=@sysconfdir@/ha.d
+INITDIR=@INITDIR@
+LIBDIR=@libdir@/
 HBLIB=$LIBDIR/heartbeat
 TESTFILE=OnlyForTesting
 
@@ -16,7 +16,7 @@ then
   exit 1;
 fi
 
-cd /etc/ha.d
+cd @sysconfdir@/ha.d
 
 # Create OnlyForTesting File. It is invoked by ParseTestOpts() in heartbeat.c
 
