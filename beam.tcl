@@ -158,12 +158,28 @@ beam::attribute_by_signature {
 } "cl_calloc"
 
 beam::attribute_by_signature {
+	allocator (
+		return_index = return,
+		initial_state = initialized_to_unknown,
+		if_out_of_memory = return_null,
+		resource = heap_memory
+	),
+	property (index = return,
+		type = provides,
+                num_dereference = 0,
+		property_name = "memory allocation source",
+		property_value = "from cl_malloc"
+	)
+} "cl_strdup"
+
+beam::attribute_by_signature {
 	deallocator (
 		pointer_index = 1,
 		resource = heap_memory
 	),
 	property (index = 1,
 		type = requires,
+                num_dereference = 0,
 		property_name = "memory allocation source",
 		property_value = "from cl_malloc"
 	)
