@@ -28,7 +28,7 @@ habindir		= @bindir@
 halibdir		= $(libdir)/@HB_PKG@
 commmoddir		= $(halibdir)/modules/comm
 havarlibdir		= $(localstatedir)/lib/@HB_PKG@
-havarrundir		= $(localstatedir)/run/
+havarrundir		= $(localstatedir)/run
 apidir		       	= $(havarlibdir)/api
 apicasualdir		= $(havarlibdir)/casual
 # fifos with path
