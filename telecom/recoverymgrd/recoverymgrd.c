@@ -1,4 +1,4 @@
-/* $Id: recoverymgrd.c,v 1.11 2004/11/22 20:06:42 gshi Exp $ */
+/* $Id: recoverymgrd.c,v 1.12 2005/02/20 03:02:43 alan Exp $ */
 /*
  * Generic Recovery manager implementation
  * 
@@ -718,8 +718,9 @@ recover_app(RecoveryInfo *info, int eventindex)
 			cl_log(LOG_DEBUG,"args = %s\n", info->event[eventindex].args);
 		}
 	
-		if (eventindex > MAXEVENTS) eventindex = 0;
-
+		if (eventindex > MAXEVENTS) {
+			eventindex = 0;
+		}
  	 	if (execl(info->scriptname, info->scriptname,
 			  info->event[eventindex].args, (const char *)NULL) < 0)
 		{
