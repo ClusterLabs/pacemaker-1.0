@@ -571,33 +571,19 @@ LHALogFacility OBJECT-TYPE
 
 LHATrapTable                    OBJECT IDENTIFIER ::= { LinuxHA 900 }
 
-LHANodeDown NOTIFICATION-TYPE
-    OBJECTS { LHANodeName }
+LHANodeStatusUpdate NOTIFICATION-TYPE
+    OBJECTS { LHANodeName LHANodeStatus }
     STATUS  current
     DESCRIPTION
-    	"A node just went down.  Recovery needed."
+    	"A node status change event just happened."
     ::= { LHATrapTable 1 }
 
-LHANodeUp NOTIFICATION-TYPE
-    OBJECTS { LHANodeName }
+LHAIFStatusUpdate NOTIFICATION-TYPE
+    OBJECTS { LHANodeName LHAIFName LHAIFStatus }
     STATUS  current
     DESCRIPTION
-    	"A node just got up.  Recovery might be needed."
-    ::= { LHATrapTable 2 }
-
-LHALinkDown NOTIFICATION-TYPE
-    OBJECTS { LHANodeName LHAIFName }
-    STATUS  current
-    DESCRIPTION
-    	"A link just went down."
+    	"A link status just changed."
     ::= { LHATrapTable 3 }
-
-LHALinkUp NOTIFICATION-TYPE
-    OBJECTS { LHANodeName LHAIFName }
-    STATUS  current
-    DESCRIPTION
-    	"A node just got up.  Recovery might be needed."
-    ::= { LHATrapTable 4 }
 
 LHAMembershipJoined NOTIFICATION-TYPE
     OBJECTS { LHANodeName }

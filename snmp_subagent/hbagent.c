@@ -63,6 +63,10 @@ void free_storage(void);
 int walk_node_table(void);
 int walk_if_table(void);
 
+int nodestatus_trap(const char * node, const char * status);
+int ifstatus_trap(const char * node, const char * lnk, const char * status);
+int membership_change(void);
+
 static RETSIGTYPE
 stop_server(int a) {
     keep_running = 0;
@@ -339,6 +343,8 @@ NodeStatus(const char * node, const char * status, void * private)
         cl_log(LOG_NOTICE, "Status update: Node %s now has status %s\n"
         ,       node, status);
 	walk_node_table();
+
+	nodestatus_trap(node, status);
 }
 
 static void
@@ -348,6 +354,8 @@ LinkStatus(const char * node, const char * lnk, const char * status
         cl_log(LOG_NOTICE, "Link Status update: Link %s/%s now has status %s\n"
         ,       node, lnk, status);
 	walk_if_table();
+
+	ifstatus_trap(node, lnk, status);
 }
 
 int
@@ -858,6 +866,128 @@ rsinfo_get_int_value(lha_attribute_t attr, size_t index, int32_t * value)
 }
 
 
+int 
+nodestatus_trap(const char * node, const char * status)
+{
+    oid objid_snmptrap[] = { 1, 3, 6, 1, 6, 3, 1, 1, 4, 1, 0 };
+    size_t objid_snmptrap_len = OID_LENGTH(objid_snmptrap);
+
+    oid  trap_oid[] = { 1, 3, 6, 1, 4, 1, 4682, 900, 1 };
+    size_t trap_oid_len = OID_LENGTH(trap_oid);
+
+    oid  nodename_oid[] = { 1, 3, 6, 1, 4, 1, 4682, 2, 1, 2 };
+    size_t nodename_oid_len = OID_LENGTH(nodename_oid);
+
+    oid  nodestatus_oid[] = { 1, 3, 6, 1, 4, 1, 4682, 2, 1, 4 };
+    size_t nodestatus_oid_len = OID_LENGTH(nodestatus_oid);
+
+    netsnmp_variable_list *notification_vars = NULL;
+
+    snmp_varlist_add_variable(&notification_vars,
+                              /*
+                               * the snmpTrapOID.0 variable
+                               */
+                              objid_snmptrap, objid_snmptrap_len,
+                              /*
+                               * value type is an OID
+                               */
+                              ASN_OBJECT_ID,
+                              /*
+                               * value contents is our notification OID
+                               */
+                              (u_char *) trap_oid,
+                              /*
+                               * size in bytes = oid length * sizeof(oid)
+                               */
+                              trap_oid_len * sizeof(oid));
+
+
+    snmp_varlist_add_variable(&notification_vars,
+                              nodename_oid, 
+			      nodename_oid_len,
+                              ASN_OCTET_STR,
+                              (const u_char *) node,
+                              strlen(node)); /* do NOT use strlen() +1 */
+
+    snmp_varlist_add_variable(&notification_vars,
+                              nodestatus_oid, 
+			      nodestatus_oid_len,
+                              ASN_OCTET_STR,
+                              (const u_char *) status,
+                              strlen(status)); /* do NOT use strlen() +1 */
+
+    fprintf(stderr, "node %s: status %s, sending trap now", node, status);
+    send_v2trap(notification_vars);
+    snmp_free_varbind(notification_vars);
+
+    return HA_OK;
+}
+
+int 
+ifstatus_trap(const char * node, const char * lnk, const char * status)
+{
+    oid objid_snmptrap[] = { 1, 3, 6, 1, 6, 3, 1, 1, 4, 1, 0 };
+    size_t objid_snmptrap_len = OID_LENGTH(objid_snmptrap);
+
+    oid  trap_oid[] = { 1, 3, 6, 1, 4, 1, 4682, 900, 3 };
+    size_t trap_oid_len = OID_LENGTH(trap_oid);
+
+    oid  nodename_oid[] = { 1, 3, 6, 1, 4, 1, 4682, 2, 1, 2 };
+    size_t nodename_oid_len = OID_LENGTH(nodename_oid);
+
+    oid  ifname_oid[] = { 1, 3, 6, 1, 4, 1, 4682, 3, 1, 2 };
+    size_t ifname_oid_len = OID_LENGTH(ifname_oid);
+
+    oid  ifstatus_oid[] = { 1, 3, 6, 1, 4, 1, 4682, 3, 1, 3 };
+    size_t ifstatus_oid_len = OID_LENGTH(ifstatus_oid);
+
+    netsnmp_variable_list *notification_vars = NULL;
+
+    snmp_varlist_add_variable(&notification_vars,
+                              /*
+                               * the snmpTrapOID.0 variable
+                               */
+                              objid_snmptrap, objid_snmptrap_len,
+                              /*
+                               * value type is an OID
+                               */
+                              ASN_OBJECT_ID,
+                              /*
+                               * value contents is our notification OID
+                               */
+                              (u_char *) trap_oid,
+                              /*
+                               * size in bytes = oid length * sizeof(oid)
+                               */
+                              trap_oid_len * sizeof(oid));
+
+    snmp_varlist_add_variable(&notification_vars,
+                              nodename_oid, 
+			      nodename_oid_len,
+                              ASN_OCTET_STR,
+                              (const u_char *) node,
+                              strlen(node)); /* do NOT use strlen() +1 */
+
+    snmp_varlist_add_variable(&notification_vars,
+                              ifname_oid, 
+			      ifname_oid_len,
+                              ASN_OCTET_STR,
+                              (const u_char *) lnk,
+                              strlen(lnk)); /* do NOT use strlen() +1 */
+
+    snmp_varlist_add_variable(&notification_vars,
+                              ifstatus_oid, 
+			      ifstatus_oid_len,
+                              ASN_OCTET_STR,
+                              (const u_char *) status,
+                              strlen(status)); /* do NOT use strlen() +1 */
+
+    fprintf(stderr, "node:%s, lnk: %s, status:%s, sending trap", node, lnk, status);
+    send_v2trap(notification_vars);
+    snmp_free_varbind(notification_vars);
+
+    return HA_OK;
+}
 
 
 
