@@ -1,4 +1,4 @@
-/* $Id: ccmmain.c,v 1.17 2004/08/29 03:01:14 msoffen Exp $ */
+/* $Id: ccmmain.c,v 1.18 2004/10/01 00:52:55 yixiong Exp $ */
 /* 
  * ccm.c: Consensus Cluster Service Program 
  *
@@ -33,7 +33,7 @@ int global_verbose=0;
  * hearbeat event source.
  *   
  */
-static gboolean hb_input_dispatch(int, gpointer);
+static gboolean hb_input_dispatch(IPC_Channel *, gpointer);
 static void hb_input_destroy(gpointer);
 static gboolean hb_timeout_dispatch(gpointer);
 
@@ -43,10 +43,13 @@ typedef struct hb_usrdata_s {
 } hb_usrdata_t;
 
 static gboolean
-hb_input_dispatch(int fd, gpointer user_data)
+hb_input_dispatch(IPC_Channel * channel, gpointer user_data)
 {
+	if (channel && (channel->ch_status == IPC_DISCONNECT)) {
+		cl_log(LOG_INFO, "Lost connection to heartbeat service. Need to bail out.");
+		return FALSE;
+	}
 	if (ccm_take_control(((hb_usrdata_t *)user_data)->ccmdata)) {
-		g_main_quit(((hb_usrdata_t *)user_data)->mainloop);
 		return FALSE;
 	}
 	return TRUE;
@@ -57,6 +60,7 @@ hb_input_destroy(gpointer user_data)
 {
 	/* close connections to all the clients */
 	client_delete_all();
+	g_main_quit(((hb_usrdata_t *)user_data)->mainloop);
 	return;
 }
 
@@ -66,7 +70,7 @@ hb_timeout_dispatch(gpointer user_data)
 	if(global_debug) {
 		ccm_check_memoryleak();
 	}
-	return hb_input_dispatch(-1, user_data);
+	return hb_input_dispatch(0, user_data);
 }
 
 
@@ -243,7 +247,7 @@ main(int argc, char **argv)
 	/* we want hb_input_dispatch to be called when some input is
 	 * pending on the heartbeat fd, and every 1 second 
 	 */
-	G_main_add_fd(G_PRIORITY_HIGH, ccm_get_fd(usrdata.ccmdata), 
+	G_main_add_IPC_Channel(G_PRIORITY_HIGH, ccm_get_ipcchan(usrdata.ccmdata), 
 			FALSE, hb_input_dispatch, &usrdata, hb_input_destroy);
 	Gmain_timeout_add_full(G_PRIORITY_HIGH, SECOND, hb_timeout_dispatch,
 				&usrdata, hb_input_destroy);

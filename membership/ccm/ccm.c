@@ -1,4 +1,4 @@
-/* $Id: ccm.c,v 1.48 2004/09/20 18:59:51 msoffen Exp $ */
+/* $Id: ccm.c,v 1.49 2004/10/01 00:52:55 yixiong Exp $ */
 /* 
  * ccm.c: Consensus Cluster Service Program 
  *
@@ -4138,12 +4138,12 @@ ccm_take_control(void *data)
 	return  ccm_control_process(info, hbfd);
 }
 
-int
-ccm_get_fd(void *data)
+IPC_Channel *
+ccm_get_ipcchan(void *data)
 {
 	ll_cluster_t *hbfd = (ll_cluster_t *)((ccm_t *)data)->hbfd;
 
-	return hbfd->llc_ops->inputfd(hbfd);
+	return hbfd->llc_ops->ipcchan(hbfd);
 }
 
 

@@ -1,4 +1,4 @@
-/* $Id: ccm.h,v 1.23 2004/09/20 18:59:16 msoffen Exp $ */
+/* $Id: ccm.h,v 1.24 2004/10/01 00:52:55 yixiong Exp $ */
 /*
  * ccm.h: definitions Consensus Cluster Manager internal header
  *				file
@@ -138,7 +138,7 @@ int ccm_timeout(longclock_t, longclock_t, unsigned long);
 int ccm_need_control(void *);
 int ccm_take_control(void *);
 void* ccm_initialize(void);
-int ccm_get_fd(void *);
+IPC_Channel * ccm_get_ipcchan(void *);
 void ccm_send_init_state(void *);
 void ccm_check_memoryleak(void);
 
