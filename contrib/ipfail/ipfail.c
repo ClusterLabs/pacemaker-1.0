@@ -1,7 +1,7 @@
-/* $Id: ipfail.c,v 1.31 2004/04/27 14:27:54 kevin Exp $ */
+/* $Id: ipfail.c,v 1.32 2004/04/28 16:28:01 kevin Exp $ */
 /* ipfail: IP Failover plugin for Linux-HA
  *
- * Copyright (C) 2002-2003 Kevin Dwyer <kevin@pheared.net>
+ * Copyright (C) 2002-2004 Kevin Dwyer <kevin@pheared.net>
  *
  * This plugin uses ping nodes to determine a failure in an
  * interface's connectivity and forces a hb_standby. It is based on the
@@ -334,9 +334,9 @@ NodeStatus(const char *node, const char *status, void *private)
 		/* Lets make sure we weren't both down, and now half up. */
 		int num_ping;
 
+		cl_log(LOG_INFO, "A ping node just came up.");
 		num_ping = ping_node_status(private);
 		ask_ping_nodes(private, num_ping);
-		cl_log(LOG_INFO, "Checking remote count of ping nodes.");
 	}
 }
 
@@ -411,7 +411,7 @@ giveup(gpointer user_data)
 	struct ha_msg *msg;
 	char pid[10];
 
-	cl_log(LOG_DEBUG, "giveup() called (timeout worked)");
+	cl_log(LOG_INFO, "giveup() called (timeout worked)");
 
 	if (is_stable(hb)) {
 		memset(pid, 0, sizeof(pid));
@@ -454,7 +454,7 @@ delay_giveup(ll_cluster_t *hb, const char *res_type, int mseconds)
 		mseconds = hb->llc_ops->get_keepalive(hb) * 2;
 	}
 
-	cl_log(LOG_DEBUG, "Delayed giveup in %i seconds.", mseconds / 1000);
+	cl_log(LOG_INFO, "Delayed giveup in %i seconds.", mseconds / 1000);
 
 	if (delay_giveup_tag) {
 		/* A timer exists already? */
@@ -489,7 +489,7 @@ abort_giveup()
 		Gmain_timeout_remove(delay_giveup_tag);
 		delay_giveup_tag = 0;
 	} else {
-		cl_log(LOG_DEBUG, "No giveup timer to abort.");
+		cl_log(LOG_INFO, "No giveup timer to abort.");
 	}
 }
 
@@ -607,7 +607,7 @@ ask_ping_nodes(ll_cluster_t *hb, int num_ping)
 	struct ha_msg *msg;
 	char pid[10], np[5];
 
-	cl_log(LOG_DEBUG, "Asking other side for num_ping.");
+	cl_log(LOG_INFO, "Asking other side for ping node count.");
 	memset(pid, 0, sizeof(pid));
 	snprintf(pid, sizeof(pid), "%ld", (long)getpid());
 	memset(np, 0, sizeof(np));
@@ -636,14 +636,18 @@ msg_ping_nodes(const struct ha_msg *msg, void *private)
 	cl_log(LOG_DEBUG, "Got asked for num_ping.");
 	num_nodes = ping_node_status(hb);
 	if (num_nodes > atoi(ha_msg_value(msg, F_NUMPING))) {
+                cl_log(LOG_INFO, 
+                       "Telling other node that we have more visible ping "
+                       "nodes.");
 		you_are_dead(hb);
 	}
 	else if (num_nodes < atoi(ha_msg_value(msg, F_NUMPING))) {
-		cl_log(LOG_DEBUG, "Giving up because we have less num_nodes.");
+		cl_log(LOG_INFO, 
+                       "Giving up because we have less visible ping nodes.");
 		delay_giveup(hb, HB_ALL_RESOURCES, -1);
 	}
 	else {
-		cl_log(LOG_DEBUG, "num_nodes is the same for both sides.");
+		cl_log(LOG_INFO, "Ping node count is balanced.");
 		send_abort_giveup(hb);
 		if (delay_giveup_tag) {
 			/* We've got a delayed giveup, and we're now balanced*/
@@ -655,7 +659,8 @@ msg_ping_nodes(const struct ha_msg *msg, void *private)
 			/* We're balanced, so make sure we don't have foreign 
 			 * stuff
 			 */
-			cl_log(LOG_INFO, "Giving up for auto_failback");
+			cl_log(LOG_INFO, 
+                               "Giving up foreign resources (auto_failback).");
 			delay_giveup(hb, HB_FOREIGN_RESOURCES, -1);
 		}
 	}
@@ -692,7 +697,8 @@ i_am_dead(const struct ha_msg *msg, void *private)
 	 * Callback for the you_are_dead message.
 	 */
 
-	cl_log(LOG_DEBUG, "Got you_are_dead.");
+	cl_log(LOG_INFO, 
+               "Giving up because we were told that we have less ping nodes.");
 	delay_giveup(private, HB_ALL_RESOURCES, -1);
 }
 
