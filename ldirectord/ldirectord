@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-my($VERSION)=(qw$Id: ldirectord,v 1.75 2003/12/16 03:47:16 horms Exp $)[2];
+my($VERSION)=(qw$Id: ldirectord,v 1.76 2004/01/06 08:31:25 horms Exp $)[2];
 
 ######################################################################
 # ldirectord                 http://www.vergenet.net/linux/ldirectord/
@@ -209,9 +209,8 @@ optional and defines the weight for that real server. The last two
 arguments are optional. They define a request-receive pair to be used to
 check if a server is alive. They override the request-receive pair in the
 virtual server section. These two strings must be quoted. If the request
-string starts with I<http://...> the IP-address of the real server is
-overridden, otherwise the IP-address of the real server is used. This may
-be used to send a request over a transparent proxy.
+string starts with I<http://...> the IP-address and port of the real server is
+overridden, otherwise the IP-address and port of the real server is used.
 
 =head2 More than one of these entries may be inside a virtual section:
 
@@ -1246,8 +1245,7 @@ sub ld_setup
 				my $uri = $$r{request};
 				$uri =~ s/^\///g;
 				if ($$r{request} =~ /$$v{service}:\/\//) {
-					my $port=(defined $$v{checkport}?$$v{checkport}:$$r{port});
-					$$r{url} = "$$v{service}:\/\/$$r{server}:$port\/$uri";
+					$$r{url} = "$uri";
 				} else {
 					my $port=(defined $$v{checkport}?$$v{checkport}:$$r{port});
 					$$r{url} = "$$v{service}:\/\/$$r{server}:$port\/$uri";
