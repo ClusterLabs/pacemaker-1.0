@@ -1,4 +1,4 @@
-/* $Id: ccm.h,v 1.28 2005/02/24 00:27:24 gshi Exp $ */
+/* $Id: ccm.h,v 1.29 2005/03/01 00:30:30 gshi Exp $ */
 /*
  * ccm.h: definitions Consensus Cluster Manager internal header
  *				file
@@ -264,20 +264,19 @@ void client_evicted(void);
 /* */
 enum ccm_state  {
 	CCM_STATE_NONE=0,		/* is in NULL state  */
-	CCM_STATE_VERSION_REQUEST=10,	/* sent a request for protocol version */
-	CCM_STATE_JOINING=20,  		/* has initiated a join protocol  */
-	CCM_STATE_RCVD_UPDATE=30,	/* has recevied the updates from other nodes */
-	CCM_STATE_SENT_MEMLISTREQ=40,	/* CL has sent a request for member list  */
+	CCM_STATE_VERSION_REQUEST,	/* sent a request for protocol version */
+	CCM_STATE_JOINING,  		/* has initiated a join protocol  */
+	CCM_STATE_RCVD_UPDATE,	/* has recevied the updates from other nodes */
+	CCM_STATE_SENT_MEMLISTREQ,	/* CL has sent a request for member list  */
 					/* this state is applicable only on CL */
-	CCM_STATE_REQ_MEMLIST=50,	/* CL has requested member list */
+	CCM_STATE_REQ_MEMLIST,	/* CL has requested member list */
 				  	/* this state is applicable only on non-CL */
-	CCM_STATE_MEMLIST_RES=60,	/* Responded member list to the Cluster  */
+	CCM_STATE_MEMLIST_RES,	/* Responded member list to the Cluster  */
 				 	/* Leader */
-	CCM_STATE_JOINED=70,    /* PART of the CCM cluster membership! */
-	CCM_STATE_WAIT_FOR_MEM_LIST=80,
-	CCM_STATE_WAIT_FOR_CHANGE=90,
-	CCM_STATE_NEW_NODE_WAIT_FOR_MEM_LIST=100,
-
+	CCM_STATE_JOINED,    /* PART of the CCM cluster membership! */
+	CCM_STATE_WAIT_FOR_MEM_LIST,
+	CCM_STATE_WAIT_FOR_CHANGE,
+	CCM_STATE_NEW_NODE_WAIT_FOR_MEM_LIST,
 	CCM_STATE_END
 };
 

@@ -1,4 +1,4 @@
-/* $Id: ccm.c,v 1.63 2005/02/24 20:46:29 gshi Exp $ */
+/* $Id: ccm.c,v 1.64 2005/03/01 00:30:30 gshi Exp $ */
 /* 
  * ccm.c: Consensus Cluster Service Program 
  *
@@ -62,13 +62,13 @@ extern int global_debug;
 					info->ccm_transition_major = 0
 #define		CCM_RESET_MINORTRANS(info) 	\
 					info->ccm_transition_minor = 0
-#define		CCM_SET_STATE(info, istate) 	\
-		{  \
-			if(global_debug) \
-				cl_log(LOG_DEBUG,"state=%d",(istate)); \
-			info->ccm_node_state = (istate); \
-			if((istate)==CCM_STATE_JOINING) \
-				client_influx(); \
+#define		CCM_SET_STATE(info, istate)				\
+		{							\
+			cl_log(LOG_INFO,"change state from %s to %s",   \
+			       state_string(info->ccm_node_state),state_string(istate)); \
+			info->ccm_node_state = (istate);		\
+			if((istate)==CCM_STATE_JOINING)			\
+				client_influx();			\
 		}
 
 
@@ -149,7 +149,33 @@ static int ccm_send_to_all(ll_cluster_t *hb, ccm_info_t *info, char *memlist,
 static void ccm_fill_update_table(ccm_info_t *info, 
 		ccm_update_t *update_table, const void *uptime_list);
 
+
 static longclock_t change_time;
+
+const char state_strings[12][64]={
+	"CCM_STATE_NONE",
+	"CCM_STATE_VERSION_REQUEST",
+	"CCM_STATE_JOINING",  		
+	"CCM_STATE_RCVD_UPDATE",	
+	"CCM_STATE_SENT_MEMLISTREQ",					
+	"CCM_STATE_REQ_MEMLIST",	
+	"CCM_STATE_MEMLIST_RES",				
+	"CCM_STATE_JOINED",    
+	"CCM_STATE_WAIT_FOR_MEM_LIST",
+	"CCM_STATE_WAIT_FOR_CHANGE",
+	"CCM_STATE_NEW_NODE_WAIT_FOR_MEM_LIST",
+	"CCM_STATE_END"		
+};
+
+static inline const char*
+state_string(int state){
+	if (state > CCM_STATE_END){
+		return "INVALID STATE";
+	}
+	
+	return state_strings[state];
+}
+
 static void
 change_time_init(void)
 {
