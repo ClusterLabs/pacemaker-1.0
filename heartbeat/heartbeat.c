@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.314 2004/09/05 02:34:56 alan Exp $ */
+/* $Id: heartbeat.c,v 1.315 2004/09/05 05:05:29 alan Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -929,9 +929,9 @@ write_child(struct hb_media* mp)
 	curproc->pstat = RUNNING;
 
 	if (ANYDEBUG) {
-		/* Limit ourselves to 20% of the CPU */
+		/* Limit ourselves to 30% of the CPU */
 		/* This seems like a lot, but pings are expensive :-( */
-		cl_cpu_limit_setpercent(20);
+		cl_cpu_limit_setpercent(30);
 	}
 	for (;;) {
 		IPC_Message*	ipcmsg = ipcmsgfromIPC(ourchan);
@@ -940,7 +940,7 @@ write_child(struct hb_media* mp)
 			continue;
 		}
 
-		
+		cl_cpu_limit_update();
 		if (mp->vf->write(mp, ipcmsg->msg_body, ipcmsg->msg_len) != HA_OK) {
 			cl_perror("write failure on %s %s."
 			,	mp->type, mp->name);
@@ -4444,6 +4444,9 @@ hb_unregister_to_apphbd(void)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.315  2004/09/05 05:05:29  alan
+ * Upped the CPU limit for write children -- running 10ms heartbeat interval
+ *
  * Revision 1.314  2004/09/05 02:34:56  alan
  * HEAD change to up % of CPU heartbeat main process is allowed to use to 30%
  * I've been testing with 10ms heartbeat intervals...
