@@ -1,5 +1,5 @@
 /* File: stonithd_api.h
- * Description: Head file which define stonith deamon APIs for clients. 
+ * Description: Head file which define stonith daemon APIs for clients. 
  *
  * Author: Sun Jiang Dong <sunjd@cn.ibm.com>
  * Copyright (c) 2004 International Business Machines
@@ -54,7 +54,7 @@ typedef struct
 	stonith_type_t 	optype;
 	/* Temporarily only use node_name until having a good idea about it */
 	char *		node_name;
-	uuid_t		node_uuid;
+	char * 		node_uuid;
 	int 		timeout; /* its unit is millisecond */
 
 /* Only output fields */
@@ -82,6 +82,10 @@ int stonithd_signoff(void);
  *	op:		Contain the detailed information to stonith a node or
  *			query who can stonith a node.
  *	return value: 	ST_OK or ST_FAIL.
+ *
+ *	Note:		Now op->node_uuid will not be a input field, just be a
+ *			storage field of a pointer to a 36-byte string uuid 
+ *			corresponding to 'node_name'.
  */
 int stonithd_node_fence(stonith_ops_t * op);
 
