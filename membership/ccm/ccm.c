@@ -1,4 +1,4 @@
-/* $Id: ccm.c,v 1.74 2005/04/01 18:20:52 gshi Exp $ */
+/* $Id: ccm.c,v 1.75 2005/04/04 16:07:00 gshi Exp $ */
 /* 
  * ccm.c: Consensus Cluster Service Program 
  *
@@ -1113,7 +1113,7 @@ ccm_get_all_active_join_request(ccm_info_t* info)
 	size_t i;
 	
 	for (i = 0 ; i < llm->nodecount; i++){
-		if (strncmp(llm->nodes[i].status,"active",STATUSSIZE)
+		if (STRNCMP_CONST(llm->nodes[i].status,"active")
 		    || llm->nodes[i].join_request == FALSE ){
 			return FALSE;
 		}
