@@ -1,4 +1,4 @@
-/* $Id: findif.c,v 1.44 2005/03/04 15:34:59 alan Exp $ */
+/* $Id: findif.c,v 1.45 2005/03/11 10:03:19 zhaokai Exp $ */
 /*
  * findif.c:	Finds an interface which can route a given address
  *
@@ -376,6 +376,22 @@ SearchUsingRouteCmd (char *address, struct in_addr *in
 	return (0);
 }
 
+/*
+ *	GetAddress can deal with the condition of inputaddress= "192.168.0.1///" , 
+ *      which perhaps produced by empty parameters of OCF
+ *      
+ *      E.g. OCF parameter
+ *
+ *	    BASEIP=135.9.216.100
+ *	    NETMASK=""
+ *	    NIC=""
+ *	    BRDCAST=""
+ *      So , When we call findif function...
+ *      findif -C "$BASEIP/$NETMASK/$NIC/$BRDCAST"
+ *
+ *      inputaddress=135.9.216.100///
+ *
+ */
 void
 GetAddress (char *inputaddress, char **address, char **netmaskbits
 ,	 char **bcast_arg, char **if_specified)
@@ -392,10 +408,32 @@ GetAddress (char *inputaddress, char **address, char **netmaskbits
 	if ((*netmaskbits = strchr(*address, DELIM)) != NULL) {
 		**netmaskbits = EOS;
 		++(*netmaskbits);
-
+		
+		/*
+		 *	filter redundancy '/'  
+		 *      E.g.  'inputaddress=135.9.216.100///'
+		 */
+		while (**netmaskbits == DELIM) {
+			++(*netmaskbits);
+		}
+		if (**netmaskbits == EOS) {
+			*netmaskbits = NULL;
+			return ;
+		}
+		
 		if ((*bcast_arg=strchr(*netmaskbits, DELIM)) != NULL) {
 			**bcast_arg = EOS;
 			++*bcast_arg;
+			/*      filter redundancy '/'
+			 *      E.g.  'inputaddress=135.9.216.100/24//'
+			 */
+			while (**bcast_arg == DELIM) {
+				++*bcast_arg;
+			}
+			if ( **bcast_arg == EOS) {
+				*bcast_arg = NULL;
+				return ;
+			}
 			/* Did they specify the interface to use? */
 			if (!isdigit((int)**bcast_arg)) {
 				*if_specified = *bcast_arg;
@@ -403,6 +441,13 @@ GetAddress (char *inputaddress, char **address, char **netmaskbits
 				!=	NULL){
 					**bcast_arg = EOS;
 					++*bcast_arg;
+					/*      filter redundancy '/'
+					 *	E.g.  'inputaddress=135.9.216.100/24/eth0/'
+					 */
+					if ( **bcast_arg == EOS) {
+						*bcast_arg = NULL;
+						return;
+					}
 				}else{
 					*bcast_arg = NULL;
 				}
@@ -705,6 +750,9 @@ ff02::%lo0/32                     fe80::1%lo0                   UC          lo0
 
 /* 
  * $Log: findif.c,v $
+ * Revision 1.45  2005/03/11 10:03:19  zhaokai
+ * polished function GetAddress to compatible OCF empty parameter
+ *
  * Revision 1.44  2005/03/04 15:34:59  alan
  * Fixed various signed/unsigned errors...
  *
