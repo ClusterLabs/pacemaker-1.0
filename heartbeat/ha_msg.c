@@ -1,4 +1,4 @@
-/* $Id: ha_msg.c,v 1.50 2004/03/03 05:31:50 alan Exp $ */
+/* $Id: ha_msg.c,v 1.51 2004/03/05 17:25:18 alan Exp $ */
 /*
  * Heartbeat messaging object.
  *
@@ -10,12 +10,12 @@
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
  * version 2.1 of the License, or (at your option) any later version.
- * 
+ *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * Lesser General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Lesser General Public
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
@@ -57,7 +57,7 @@ int		SPECIAL_SYMS[]={
 	26,
 	27,
 	28,
-	29	
+	29
 };
 
 
@@ -100,55 +100,58 @@ static int
 convert(char* s, int len, int depth, int direction)
 {
 	int	i;
-	
-	if(direction != NL_TO_SYM && direction != SYM_TO_NL){
+
+	if (direction != NL_TO_SYM && direction != SYM_TO_NL){
 		ha_log(LOG_ERR, "convert(): direction not defined!");
 		return(HA_FAIL);
 	}
 
-	
-	if(depth >= MAXDEPTH ){
+
+	if (depth >= MAXDEPTH ){
 		ha_log(LOG_ERR, "convert(): MAXDEPTH exceeded");
 		return(HA_FAIL);
 	}
-	
-	for(i = 0; i < len; i++){
-		
+
+	for (i = 0; i < len; i++){
+
 		switch(direction){
 		case NL_TO_SYM :
-			if(s[i] == '\n'){
+			if (s[i] == '\n'){
 				s[i] = SPECIAL_SYMS[depth];
 				break;
 			}
-			
-			if(s[i] == SPECIAL_SYMS[depth]){
-				ha_log(LOG_ERR, "convert(): sepcial symbol found in string");
+
+			if (s[i] == SPECIAL_SYMS[depth]){
+				ha_log(LOG_ERR
+				, "convert(): special symbol found in string");
 				return(HA_FAIL);
 			}
-			
+
 			break;
-			
+
 		case SYM_TO_NL:
-			
-			if(s[i] == '\n'){
-				ha_log(LOG_ERR, "convert(): new line found in converted string");
-				return(HA_FAIL);		
+
+			if (s[i] == '\n'){
+				ha_log(LOG_ERR
+				,	"convert(): new line found in"
+				" converted string");
+				return(HA_FAIL);
 			}
-			
-			if(s[i] == SPECIAL_SYMS[depth]){				
+
+			if (s[i] == SPECIAL_SYMS[depth]){
 				s[i] = '\n';
-				break;							
-			}			
+				break;
+			}
 			break;
 		default:
 			/* nothing, never executed*/;
-			
+
 		}
 	}
-	
+
 	return(HA_OK);
 }
- 
+
 
 
 /* Create a new (empty) message */
@@ -174,11 +177,14 @@ ha_msg_new(nfields)
 		ret->values    = (char **)ha_calloc(sizeof(char *), nalloc);
 		ret->vlens     = (int *)ha_calloc(sizeof(int), nalloc);
 		ret->stringlen = sizeof(MSG_START)+sizeof(MSG_END)-1;
-		ret->netstringlen = sizeof(MSG_START_NETSTRING) + sizeof(MSG_END_NETSTRING) - 1 + MAX_AUTH_BYTES;
+		ret->netstringlen = sizeof(MSG_START_NETSTRING)
+		+	sizeof(MSG_END_NETSTRING) - 1 + MAX_AUTH_BYTES;
 		ret->types	= (int*)ha_calloc(sizeof(int), nalloc);
-		
+
 		if (ret->names == NULL || ret->values == NULL
-		    ||	ret->nlens == NULL || ret->vlens == NULL||ret->types == NULL) {
+		||	ret->nlens == NULL || ret->vlens == NULL
+		||	ret->types == NULL) {
+
 			ha_log(LOG_ERR, "%s"
 			,	"ha_msg_new: out of memory for ha_msg");
 			ha_msg_del(ret);
@@ -214,7 +220,8 @@ ha_msg_del(struct ha_msg *msg)
 		}
 		if (msg->values) {
 			for (j=0; j < msg->nfields; ++j) {
-				if (msg->values[j] && msg->types[j] != FT_STRUCT ) {
+				if (msg->values[j] && msg->types[j]
+				!=	FT_STRUCT) {
 					ha_free(msg->values[j]);
 					msg->values[j] = NULL;
 				}else{
@@ -274,23 +281,27 @@ ha_msg_copy(const struct ha_msg *msg)
 	memcpy(ret->types, msg->types, sizeof(msg->types[0])*msg->nfields);
 
 	for (j=0; j < msg->nfields; ++j) {
-		
+
 		if ((ret->names[j] = ha_malloc(msg->nlens[j]+1)) == NULL) {
 			goto freeandleave;
 		}
 		memcpy(ret->names[j], msg->names[j], msg->nlens[j]+1);
-		
-		if(ret->types[j] == FT_STRUCT){
-			if((ret->values[j] = (void*)ha_msg_copy((struct ha_msg*)msg->values[j]))==NULL){
-				ha_log(LOG_ERR, "ha_msg_copy(): copy child message failed");
+
+		if (ret->types[j] == FT_STRUCT){
+			if ((ret->values[j]
+			=	(void*)ha_msg_copy((struct ha_msg*)msg->values[j]))
+			==	NULL){
+
+				ha_log(LOG_ERR
+				, "ha_msg_copy(): copy child message failed");
 				goto freeandleave;
 			}
-		}else if ((ret->values[j] = ha_malloc(msg->vlens[j]+1)) == NULL) {
+		}else if ((ret->values[j] = ha_malloc(msg->vlens[j]+1))==NULL){
 			goto freeandleave;
 		}else{
 			memcpy(ret->values[j], msg->values[j], msg->vlens[j]+1);
 		}
-		
+
 	}
 	return ret;
 
@@ -379,11 +390,11 @@ ha_msg_audit(const struct ha_msg* msg)
 }
 #endif
 
-/* low level implementation for ha_msg_add 
+/* low level implementation for ha_msg_add
 
    the caller is responsible to allocate/free memories
-   for @name and @value. 
-   
+   for @name and @value.
+
    @type could be FT_STRING, FT_BINARY, FT_STRUCT
 
    1. FT_STRING:
@@ -396,7 +407,7 @@ ha_msg_audit(const struct ha_msg* msg)
 
    2. FT_BINARY
 	@type equals to FT_BINARY implies it is called by a client
-   to add a binary field to a message because heartbeat itself does not 
+   to add a binary field to a message because heartbeat itself does not
    add any binary field.
 
    3. FT_STRUCT
@@ -408,13 +419,14 @@ ha_msg_audit(const struct ha_msg* msg)
 
 static int
 ha_msg_addraw_ll(struct ha_msg * msg, char * name, size_t namelen,
-		 void * value, size_t vallen, int type, int depth){
-	
+		 void * value, size_t vallen, int type, int depth)
+{
+
 	int	next;
 	int	startlen = sizeof(MSG_START)-1;
 	int	startlen_netstring = sizeof(MSG_START_NETSTRING) -1 ;
 	int	newstringlen ;
-	
+
 	char	*cp_name;
 	int	cp_namelen;
 	int	cp_vallen;
@@ -429,9 +441,9 @@ ha_msg_addraw_ll(struct ha_msg * msg, char * name, size_t namelen,
 
 	if (namelen >= startlen && strncmp(name, MSG_START, startlen) == 0) {
 		ha_log(LOG_ERR, "ha_msg_addraw_ll: illegal field");
-		return(HA_FAIL); 
+		return(HA_FAIL);
 	}
-	if (namelen >= startlen_netstring 
+	if (namelen >= startlen_netstring
 	    && strncmp(name, MSG_START_NETSTRING, startlen_netstring == 0)){
 		ha_log(LOG_ERR, "ha_msg_addraw_ll: illegal field");
 	}
@@ -442,210 +454,219 @@ ha_msg_addraw_ll(struct ha_msg * msg, char * name, size_t namelen,
 		       "cannot add name/value to ha_msg");
 		return(HA_FAIL);
 	}
-	
+
 	switch(type){
-		
+
 	case FT_BINARY:
 
 		/* 3 == "(type)" and 2 == "=" + "\n" */
 		newstringlen = msg->stringlen + (namelen + 3 + B64_stringlen(vallen)+2);
-		
+
 		cp_name = name;
 		cp_namelen = namelen;
 		cp_value = value;
 		cp_vallen = vallen;
-		
+
 		break;
 	case FT_STRUCT:
-		
+
 		/* 3 == "(type)" and 2 == "=" + "\n" */
 		newstringlen = msg->stringlen + namelen + 3 +  2;
-		
+
 		next = msg->nfields;
 		msg->names[next] = name;
 		msg->nlens[next] = namelen;
 		msg->values[next] = value;
 		msg->vlens[next] = vallen;
 		msg->stringlen = newstringlen;
-		msg->netstringlen += 0;// intlen(namelen) + (namelen) + intlen(vallen) + vallen + 4 ;
+		msg->netstringlen += 0;
+		/*  intlen(namelen) + (namelen) + intlen(vallen) + vallen + 4 */
 		msg->netstringlen += 0; //4; /* for type*/
 		msg->types[next] = FT_STRUCT;
-		
+
 		msg->nfields++;
 
 		return(HA_OK);
-		
+
 	default: //case FT_STRING:
 		newstringlen =  msg->stringlen + (namelen+vallen+2);
-		
+
 		internal_type = FT_STRING;
-		if(name[0] == '('){
-			
-			if(name[2] != ')'){
-				ha_log(LOG_ERR, "ha_msg_addraw_ll(): no closing parensese");
+		if (name[0] == '('){
+
+			if (name[2] != ')'){
+				ha_log(LOG_ERR
+				, "ha_msg_addraw_ll(): no closing parentheses");
 				return(HA_FAIL);
 			}
-			sscanf(name + 1, "%d", &internal_type);			
-			
-			if(internal_type ==  FT_STRING){
-				ha_log(LOG_ERR, "ha_msg_addraw_ll(): wrong type");
+			sscanf(name + 1, "%d", &internal_type);
+
+			if (internal_type ==  FT_STRING){
+				ha_log(LOG_ERR
+				,	"ha_msg_addraw_ll(): wrong type");
 				return(HA_FAIL);
 			}
 		}
-		
-		
-		if(internal_type == FT_BINARY){
+
+
+		if (internal_type == FT_BINARY){
 			char	tmpbuf[MAXMSG];
 			int	nlo = 3; //name length overhead
 
 			cp_name = name;
 			cp_namelen = namelen - nlo ;
-			memmove(cp_name, name + nlo, namelen - nlo);			
+			memmove(cp_name, name + nlo, namelen - nlo);
 			cp_name[namelen - nlo] = EOS;
 
 			memcpy(tmpbuf, value,vallen);
-			cp_vallen = base64_to_binary(tmpbuf, vallen, value ,vallen);				       			
+			cp_vallen = base64_to_binary(tmpbuf, vallen
+			,	value, vallen);				
 			cp_value = value;
 
-		}else if (internal_type ==  FT_STRUCT ){			
+		}else if (internal_type ==  FT_STRUCT ){
 			struct ha_msg	*tmpmsg;
 			int	nlo = 3; //name length overhead
-			
+
 			cp_name = name;
-			cp_namelen = namelen - nlo ;			
-			memmove(cp_name, name + nlo, namelen - nlo);			
-			cp_name[namelen - nlo] = EOS;			
-			
-			if(convert(value, vallen, depth,SYM_TO_NL) != HA_OK){
-				ha_log(LOG_ERR, "ha_msg_addraw_ll(): convert failed");
+			cp_namelen = namelen - nlo ;
+			memmove(cp_name, name + nlo, namelen - nlo);
+			cp_name[namelen - nlo] = EOS;
+
+			if (convert(value, vallen, depth,SYM_TO_NL) != HA_OK){
+				ha_log(LOG_ERR
+				,	"ha_msg_addraw_ll(): convert failed");
 				return(HA_FAIL);
 			}
-			
+
 			tmpmsg = string2msg_ll(value, vallen,depth + 1, 0);
-			if(tmpmsg == NULL){
-				ha_log(LOG_ERR, "ha_msg_addraw_ll(): string2msg_ll failed");
+			if (tmpmsg == NULL){
+				ha_log(LOG_ERR
+				,	"ha_msg_addraw_ll()"
+				": string2msg_ll failed");
 				return(HA_FAIL);
 			}
-			
+
 			cp_value = (void*) tmpmsg;
 			cp_vallen = sizeof(struct ha_msg);
-			
+
 		}else{
 			cp_name = name;
-			cp_namelen = namelen;		       
+			cp_namelen = namelen;		
 			cp_value = value;
 			cp_vallen = vallen;
-			
+
 		}
-		
+
 	}
-	
+
 	if (newstringlen >= MAXMSG) {
 		ha_log(LOG_ERR, "ha_msg_addraw_ll(): "
 		       "cannot add name/value to ha_msg");
 		return(HA_FAIL);
 	}
-	
-       	
+
+
 	next = msg->nfields;
 	msg->values[next] = cp_value;
 	msg->vlens[next] = cp_vallen;
 	msg->names[next] = cp_name;
 	msg->nlens[next] = cp_namelen;
 	msg->stringlen = newstringlen;
-	
-	msg->netstringlen += intlen(cp_namelen) + (cp_namelen) + intlen(cp_vallen) + cp_vallen + 4 ;
-	msg->netstringlen += 4; /* for type*/
-	
-	if(type == FT_BINARY || internal_type == FT_BINARY){
 
+	msg->netstringlen += intlen(cp_namelen) + (cp_namelen)
+	+	intlen(cp_vallen) + cp_vallen + 4 ;
+	msg->netstringlen += 4; /* for type*/
+
+	if (type == FT_BINARY || internal_type == FT_BINARY){
 		msg->types[next] = FT_BINARY;
-		
-	}else if(internal_type == FT_STRUCT){
-		
+	}else if (internal_type == FT_STRUCT){
 		msg->types[next] = FT_STRUCT;
-		
+
 	}
-	
-	
+
+
 	msg->nfields++;
 	AUDITMSG(msg);
-	
-	return(HA_OK);	
+
+	return(HA_OK);
 
 
 }
 
 static int
 ha_msg_addraw(struct ha_msg * msg, const char * name, size_t namelen,
-	      const void * value, size_t vallen, int type, int depth){
+	      const void * value, size_t vallen, int type, int depth)
+{
 
 	char	*cpvalue;
 	char	*cpname;
 	int	ret;
-	
+
 	if ((cpname = ha_malloc(namelen+1)) == NULL) {
 		ha_log(LOG_ERR, "ha_msg_addraw: no memory for string (name)");
 		return(HA_FAIL);
 	}
-	strncpy(cpname, name, namelen); 
-	cpname[namelen] = EOS;   
-	
+	strncpy(cpname, name, namelen);
+	cpname[namelen] = EOS;
+
 	if ((cpvalue = ha_malloc(vallen+1)) == NULL) {
 		ha_log(LOG_ERR, "ha_msg_addraw: no memory for string (value)");
 		return(HA_FAIL);
-	}	
-	memcpy(cpvalue, value, vallen);	
-	cpvalue[vallen] = EOS; 	          
-	
-	ret = ha_msg_addraw_ll(msg, cpname, namelen, cpvalue, vallen, type, depth);
-	
-	if(ret != HA_OK){
+	}
+	memcpy(cpvalue, value, vallen);
+	cpvalue[vallen] = EOS; 	
+
+	ret = ha_msg_addraw_ll(msg, cpname, namelen, cpvalue, vallen
+	,	type, depth);
+
+	if (ret != HA_OK){
 		ha_log(LOG_ERR, "ha_msg_addraw(): ha_msg_addraw_ll failed");
 		ha_free(cpname);
 		ha_free(cpvalue);
 	}
-	
+
 	return(ret);
-	
+
 }
 
 /*Add a null-terminated name and binary value to a message*/
 int
-ha_msg_addbin(struct ha_msg * msg, const char * name, 
-	      const void * value, size_t vallen){
-	
+ha_msg_addbin(struct ha_msg * msg, const char * name,
+	      const void * value, size_t vallen)
+{
+
 	return(ha_msg_addraw(msg, name, strlen(name),
 			     value, vallen, FT_BINARY, 0));
-	
+
 }
 
 /*Add a null-terminated name and struct value to a message*/
 int
-ha_msg_addstruct(struct ha_msg * msg, const char * name, void * value){
-	
+ha_msg_addstruct(struct ha_msg * msg, const char * name, void * value)
+{
+
 	char	*cpname;
 	int	namelen = strlen(name);
 	int	ret;
-	
+
 	if ((cpname = ha_malloc(namelen+1)) == NULL) {
 		ha_log(LOG_ERR, "ha_msg_addstruct():"
 		       "allocate memory for name failed");
-		
+
 		return(HA_FAIL);
-		
+
 	}
-	strncpy(cpname, name, namelen); 
-	cpname[namelen] = EOS;       
-	
+	strncpy(cpname, name, namelen);
+	cpname[namelen] = EOS;
+
 	ret = ha_msg_addraw_ll(msg, cpname, namelen, value,
 			       sizeof(struct ha_msg), FT_STRUCT, 0);
 
-	if(ret !=  HA_OK){
+	if (ret !=  HA_OK){
 		ha_log(LOG_ERR, "ha_msg_addstruct(): ha_msg_addraw_ll failed");
 		ha_free(cpname);
 	}
-	
+
 	return(ret);
 }
 
@@ -662,8 +683,8 @@ int
 ha_msg_nadd(struct ha_msg * msg, const char * name, int namelen
 	    ,	const char * value, int vallen)
 {
-	return(ha_msg_addraw(msg, name, namelen, value, vallen, FT_STRING, 0));	
-	
+	return(ha_msg_addraw(msg, name, namelen, value, vallen, FT_STRING, 0));
+
 }
 
 /* Add a name/value/type to a message (with sizes for name and value) */
@@ -671,15 +692,15 @@ int
 ha_msg_nadd_type(struct ha_msg * msg, const char * name, int namelen
 	    ,	const char * value, int vallen, int type)
 {
-	return(ha_msg_addraw(msg, name, namelen, value, vallen, type, 0));	
-	
+	return(ha_msg_addraw(msg, name, namelen, value, vallen, type, 0));
+
 }
 
 
 
 /* Add a "name=value" line to the name, value pairs in a message */
 static int
-ha_msg_add_nv_depth(struct ha_msg* msg, const char * nvline, 
+ha_msg_add_nv_depth(struct ha_msg* msg, const char * nvline,
 		    const char * bufmax, int depth)
 {
 	int		namelen;
@@ -703,114 +724,120 @@ ha_msg_add_nv_depth(struct ha_msg* msg, const char * nvline,
 	if ((valp + vallen) >= bufmax)	return HA_FAIL;
 
 	/* Call ha_msg_nadd to actually add the name/value pair */
-	return(ha_msg_addraw(msg, nvline, namelen, valp, vallen, FT_STRING, depth));
-	
+	return(ha_msg_addraw(msg, nvline, namelen, valp, vallen
+	,	FT_STRING, depth));
+
 }
 
 int
-ha_msg_add_nv(struct ha_msg* msg, const char * nvline, 
-	      const char * bufmax){
-	
+ha_msg_add_nv(struct ha_msg* msg, const char * nvline,
+	      const char * bufmax)
+{
+
 	return(ha_msg_add_nv_depth(msg, nvline, bufmax, 0));
-	
+
 }
 
 
 static void *
-cl_get_value(const struct ha_msg * msg, const char * name, 
-	     size_t * vallen, int *type){
-	
+cl_get_value(const struct ha_msg * msg, const char * name,
+	     size_t * vallen, int *type)
+{
+
 	int	j;
 	if (!msg || !msg->names || !msg->values) {
 		ha_log(LOG_ERR, "ha_msg_value: NULL msg");
 		return(NULL);
 	}
-	
+
 	AUDITMSG(msg);
 	for (j=0; j < msg->nfields; ++j) {
 		if (strcmp(name, msg->names[j]) == 0) {
-			if(vallen){
+			if (vallen){
 				*vallen = msg->vlens[j];
 			}
-			if(type){
+			if (type){
 				*type = msg->types[j];
 			}
 			return(msg->values[j]);
 		}
 	}
-	return(NULL);	
+	return(NULL);
 }
 
 
 const void *
-cl_get_binary(const struct ha_msg *msg, 
-	      const char * name, size_t * vallen){
-	
+cl_get_binary(const struct ha_msg *msg,
+	      const char * name, size_t * vallen)
+{
+
 	const void	*ret;
 	int		type;
-	
+
 	ret = cl_get_value( msg, name, vallen, &type);
 
-	if(ret == NULL || type != FT_BINARY){
+	if (ret == NULL || type != FT_BINARY){
 		ha_log(LOG_WARNING, "field %s not found or "
 		       "it is not binary", name);
 		return(NULL);
 	}
-	
+
 	return(ret);
 }
 
 const char *
-cl_get_string(const struct ha_msg *msg, const char *name){
+cl_get_string(const struct ha_msg *msg, const char *name)
+{
 
 	const void	*ret;
 	int		type;
 	ret = cl_get_value( msg, name, NULL, &type);
-	
-	if(ret == NULL || type != FT_STRING){
+
+	if (ret == NULL || type != FT_STRING){
 		return(NULL);
 	}
 
-	return(ret);	
-	
+	return(ret);
+
 }
 
-int 
-cl_get_type(const struct ha_msg *msg, const char *name){
-	
+int
+cl_get_type(const struct ha_msg *msg, const char *name)
+{
+
 	const void	*ret;
 	int		type;
-	
+
 	ret =  cl_get_value( msg, name, NULL, &type);
-	
-	if(ret == NULL ||( type != FT_STRING && 
+
+	if (ret == NULL ||( type != FT_STRING &&
 			   type != FT_BINARY && type != FT_STRUCT)) {
-		
+
 		ha_log(LOG_WARNING, "field %s not found or "
 		       "it is not any valid type", name);
-		return(-1);		
+		return(-1);
 	}
-	
+
 	return(type);
-	
+
 }
 
 struct ha_msg *
-cl_get_struct(const struct ha_msg *msg, const char* name){
-	
+cl_get_struct(const struct ha_msg *msg, const char* name)
+{
+
 	struct ha_msg	*ret;
 	int		type;
-	int		vallen;
-	
+	size_t		vallen;
+
 	ret = (struct ha_msg *)cl_get_value(msg, name, &vallen, &type);
-	
-	if( ret == NULL || type != FT_STRUCT){
-		
-		ha_log(LOG_ERR, "filed %s not found or "
-		       "it is not a struct", name);
-		return(NULL);		
+
+	if (ret == NULL || type != FT_STRUCT){
+		ha_log(LOG_ERR, "filed %s not found or"
+	       " it is not a struct", name);
+		return(NULL);
 	}
-	
+
 	return(ret);
 }
 
@@ -840,9 +867,9 @@ ha_msg_mod(struct ha_msg * msg, const char * name, const char * value)
 			newlen = strlen(value);
 			sizediff = newlen - msg->vlens[j];
 			msg->stringlen += sizediff;
-			msg->netstringlen +=
-				intlen(newlen) + newlen - intlen(msg->vlens[j]) - msg->vlens[j];
-			
+			msg->netstringlen += intlen(newlen) + newlen
+			-	intlen(msg->vlens[j]) - msg->vlens[j];
+
 			msg->vlens[j] = newlen;
 			AUDITMSG(msg);
 			return(HA_OK);
@@ -857,23 +884,23 @@ ha_msg_mod(struct ha_msg * msg, const char * name, const char * value)
 struct ha_msg *
 msgfromstream(FILE * f)
 {
-	char		buf[MAXLINE];	
+	char		buf[MAXLINE];
 	char *		getsret;
 	clearerr(f);
 	/* Skip until we find a MSG_START (hopefully we skip nothing) */
 	while(1) {
 		getsret = fgets(buf, MAXLINE, f);
-		if(!getsret) {
+		if (!getsret) {
 			break;
 		}
-		if(strcmp(buf, MSG_START) == 0) {
+		if (strcmp(buf, MSG_START) == 0) {
 			return msgfromstream_string(f);
 
-		} 
-		if(strcmp(buf, MSG_START_NETSTRING) == 0){
+		}
+		if (strcmp(buf, MSG_START_NETSTRING) == 0){
 			return msgfromstream_netstring(f);
 		}
-		
+
 	}
 
 	return NULL;
@@ -902,17 +929,17 @@ msgfromstream_string(FILE * f)
 	/* Add Name=value pairs until we reach MSG_END or EOF */
 	while(1) {
 		getsret = fgets(buf, MAXLINE, f);
-		if(!getsret) {
+		if (!getsret) {
 			break;
 		}
 
-		if(strlen(buf) > MAXLINE - 2) {
+		if (strlen(buf) > MAXLINE - 2) {
 			ha_log(LOG_DEBUG
 			,	"msgfromstream: field too long [%s]"
 			,	buf);
 		}
 
-		if(!strcmp(buf, MSG_END)) {
+		if (!strcmp(buf, MSG_END)) {
 			break;
 		}
 
@@ -936,131 +963,155 @@ msgfromstream_netstring(FILE * f)
 {
 	struct ha_msg *		ret;
 	char			total_databuf[MAXMSG];
-	char *			sp = total_databuf;	
-	
+	char *			sp = total_databuf;
+
 
 	if ((ret = ha_msg_new(0)) == NULL) {
 		/* Getting an error with EINTR is pretty normal */
 		/* (so is EOF) */
 		if (   (!ferror(f) || (errno != EINTR && errno != EAGAIN))
 		&&	!feof(f)) {
-			ha_log(LOG_ERR, "msgfromstream_netstring(): cannot get message");
+			ha_log(LOG_ERR
+			, "msgfromstream_netstring(): cannot get message");
 		}
 		return(NULL);
 	}
-	
+
 	while(1) {
 		int	namelen=-1;
 		char *	name;
 		char *	namebuf;
-		int	datalen;		
+		int	datalen;
 		char *	data;
 		char *	databuf;
 		int	n;
 		int	typelen;
 		char *  type;
 		char *	typebuf;
-		
-		if(fscanf(f, "%d:", &namelen) <= 0 || namelen <= 0){
-			ha_log(LOG_WARNING, " msgfromstream_netstring(): scanning for namelen failed");
+
+		if (fscanf(f, "%d:", &namelen) <= 0 || namelen <= 0){
+			ha_log(LOG_WARNING
+			,	" msgfromstream_netstring()"
+			": scanning for namelen failed");
 			ha_msg_del(ret);
 			return(NULL);
 		}
-		
+
 		namebuf = ha_malloc(namelen + 2);
-		
-		if((n = fread(namebuf, 1, namelen + 1, f)) != namelen + 1){
-			ha_log(LOG_WARNING, "msgfromstream_netstring(): Can't get enough name string,"
-			       "expecting %d bytes long name, got %d bytes", namelen, n);
+
+		if ((n = fread(namebuf, 1, namelen + 1, f)) != namelen + 1){
+			ha_log(LOG_WARNING, "msgfromstream_netstring()"
+			": Can't get enough name string,"
+			"expecting %d bytes long name, got %d bytes"
+			,	namelen, n);
 			ha_msg_del(ret);
 			return(NULL);
 		}
-		
-		if(*(namebuf + namelen) != ',' ){
-			ha_log(LOG_WARNING, "msgfromstream_netstring(): \",\" is missing in netstring for name");
+
+		if (*(namebuf + namelen) != ',' ){
+			ha_log(LOG_WARNING
+			,	"msgfromstream_netstring()"
+			": \",\" is missing in netstring for name");
 			ha_msg_del(ret);
 			return(NULL);
 		}
-		
+
 		namebuf[namelen] = 0;
 		name = namebuf;
-		
-		if(fscanf(f, "%d:", &typelen) <= 0 || typelen <= 0){
-			
-			if(!is_auth_netstring(total_databuf, sp - total_databuf, name,namelen) ){
-				ha_log(LOG_ERR, "msgfromstream_netstring(): netstring authentication "
-				       "failed msgfromstream_netstring()");
+
+		if (fscanf(f, "%d:", &typelen) <= 0 || typelen <= 0){
+
+			if (!is_auth_netstring(total_databuf
+			,	sp - total_databuf, name,namelen) ){
+				ha_log(LOG_ERR
+				,	"msgfromstream_netstring()"
+				": netstring authentication"
+				" failed msgfromstream_netstring()");
 				ha_log_message(ret);
 				ha_msg_del(ret);
 				return(NULL);
 			}
-			
+
 			return(ret);
 		}
-		
+
 		typebuf = ha_malloc(typelen + 2);
-		if((n = fread(typebuf, 1, typelen + 1, f)) != typelen + 1){
-			ha_log(LOG_WARNING, "msgfromstream_netstring(): Can't get enough type string,"
-			       "expecting %dd bytes long type, got %d types", typelen, n);
+		if ((n = fread(typebuf, 1, typelen + 1, f)) != typelen + 1){
+			ha_log(LOG_WARNING
+			,	"msgfromstream_netstring()"
+			": Can't get enough type string,"
+			"expecting %d bytes long type, got %d type"
+			,	typelen, n);
 			ha_msg_del(ret);
 			return(NULL);
 		}
-		
-		if(*(typebuf + typelen) != ',' ){
-			ha_log(LOG_WARNING, "msgfromstream_netstring(): \",\" is missing in netstring for type");
+
+		if (*(typebuf + typelen) != ',' ){
+			ha_log(LOG_WARNING
+			,	"msgfromstream_netstring()"
+			": \",\" is missing in netstring for type");
 			ha_msg_del(ret);
 			return(NULL);
 		}
-		
+
 		typebuf[typelen] = 0;
 		type = typebuf;
-		
-		if(fscanf(f, "%d:", &datalen) <=0){
-			ha_log(LOG_WARNING, "msgfromstream_netstring(): scanning for datalen failed");
-			ha_msg_del(ret);			
-			return(NULL); 
+
+		if (fscanf(f, "%d:", &datalen) <= 0) {
+			ha_log(LOG_WARNING
+			,	"msgfromstream_netstring()"
+			": scanning for datalen failed");
+			ha_msg_del(ret);
+			return(NULL);
 		}
-		
+
 		databuf = ha_malloc(datalen + 2);
-		
-		if((n = fread(databuf, 1, datalen + 1, f)) != datalen + 1){
-			ha_log(LOG_WARNING, "msgfromstream_netstring(): Can't get enough data, "
-			       "expecting %d bytes long data, got %d bytes", datalen, n);
-			ha_msg_del(ret);
-			return(NULL);
-		} 
-		
-		if(*(databuf + datalen ) != ',' ){
-			ha_log(LOG_WARNING, "msgfromstream_netstring(): \",\" is missing in netstring for data");
+
+		if ((n = fread(databuf, 1, datalen + 1, f)) != datalen + 1) {
+			ha_log(LOG_WARNING
+			,	"msgfromstream_netstring()"
+			": Can't get enough data"
+			", expecting %d bytes long data, got %d bytes"
+			,	datalen, n);
 			ha_msg_del(ret);
 			return(NULL);
 		}
-		
-		databuf[datalen ] =0;
+
+		if (*(databuf + datalen ) != ',' ){
+			ha_log(LOG_WARNING
+			,	"msgfromstream_netstring()"
+			": \",\" is missing in netstring for data");
+			ha_msg_del(ret);
+			return(NULL);
+		}
+
+		databuf[datalen] = 0;
 		data = databuf ;
-		
-		sp += sprintf(sp, "%d:%s,",namelen,name);
-		sp += sprintf(sp, "%d:%s,",typelen,type);
-		sp += sprintf(sp, "%d:%s,",datalen,data);		
-		
-		if(atoi(type) == FT_STRUCT){
+
+		sp += sprintf(sp, "%d:%s,", namelen, name);
+		sp += sprintf(sp, "%d:%s,", typelen, type);
+		sp += sprintf(sp, "%d:%s,", datalen, data);
+
+		if (atoi(type) == FT_STRUCT){
 			struct ha_msg	*tmpmsg;
-			
+
 			tmpmsg = netstring2msg(data, datalen, 1);
 			data = (char*)tmpmsg;
 			datalen = sizeof(struct ha_msg);
 		}
 
-		if (ha_msg_nadd_type(ret, name, namelen, data, datalen, atoi(type)) != HA_OK){
-			ha_log(LOG_WARNING, "msgfromstream_netstring(): ha_msg_nadd_type fails");
+		if (ha_msg_nadd_type(ret, name, namelen, data, datalen
+		,	atoi(type)) != HA_OK){
+			ha_log(LOG_WARNING
+			,  "msgfromstream_netstring(): ha_msg_nadd_type fails");
 			ha_msg_del(ret);
 			return(NULL);
 		}
-		
+
 		ha_free(namebuf);
 		ha_free(databuf);
 	}
-	
+
 }
 
 
@@ -1105,10 +1156,10 @@ msgfromIPC_ll(IPC_Channel * ch, int need_auth)
 	if (rc != IPC_OK) {
 		return NULL;
 	}
-	
-	
+
+
 	hmsg = wirefmt2msg_ll((char *)ipcmsg->msg_body, ipcmsg->msg_len, need_auth);
-	if(ipcmsg->msg_done) {
+	if (ipcmsg->msg_done) {
 		ipcmsg->msg_done(ipcmsg);
 	}
 
@@ -1174,18 +1225,19 @@ ipcmsgfromIPC(IPC_Channel * ch)
 	if (rc != IPC_OK) {
 		return NULL;
 	}
-	
-	
+
+
 	return(ipcmsg);
 }
 
 
 /* Writes a message into a stream - used for serial lines */
-int	
+int
 msg2stream(struct ha_msg* m, FILE * f)
 {
-	int	len;
+	size_t	len;
 	char *	s  = msg2wirefmt(m, &len);
+
 	if (s != NULL) {
 		int	rc = HA_OK;
 		if (fputs(s, f) == EOF) {
@@ -1219,13 +1271,14 @@ ipcmsg_done(IPC_Message* m)
 
 
 IPC_Message*
-wirefmt2ipcmsg(void* p, int len, IPC_Channel* ch){
+wirefmt2ipcmsg(void* p, size_t len, IPC_Channel* ch)
+{
 	IPC_Message*	ret = NULL;
 
-	if( p == NULL){
+	if (p == NULL){
 	  return(NULL);
 	}
-	
+
 	ret = MALLOCT(IPC_Message);
 	if (!ret) {
 		return(NULL);
@@ -1243,7 +1296,7 @@ wirefmt2ipcmsg(void* p, int len, IPC_Channel* ch){
 IPC_Message*
 hamsg2ipcmsg(struct ha_msg* m, IPC_Channel* ch)
 {
-	int		len;
+	size_t		len;
 	char *		s  = msg2wirefmt(m, &len);
 	IPC_Message*	ret = NULL;
 
@@ -1270,7 +1323,7 @@ struct ha_msg*
 ipcmsg2hamsg(IPC_Message*m)
 {
 	struct ha_msg*	ret = NULL;
-	
+
 
 	ret = wirefmt2msg(m->msg_body, m->msg_len);
 	return ret;
@@ -1286,7 +1339,7 @@ msg2ipcchan(struct ha_msg*m, IPC_Channel*ch)
 		errno = EINVAL;
 		return HA_FAIL;
 	}
-	
+
 	if ((imsg = hamsg2ipcmsg(m, ch)) == NULL) {
 		ha_log(LOG_ERR, "hamsg2ipcmsg() failure");
 		return HA_FAIL;
@@ -1340,7 +1393,7 @@ string2msg_ll(const char * s, size_t length,int depth, int need_auth)
 		/* Skip over initial CR/NL things */
 		sp += strspn(sp, CRNL);
 		if (sp >= smax)		return(NULL);
-		
+
 		/* End of message marker? */
 		if (strncmp(sp, MSG_END, endlen) == 0) {
 			break;
@@ -1355,7 +1408,7 @@ string2msg_ll(const char * s, size_t length,int depth, int need_auth)
 		if (sp >= smax)		return(NULL);
 		sp += strcspn(sp, CRNL);
 	}
-	
+
 	if (need_auth && config && !isauthentic(ret)) {
 		const char* from = ha_msg_value(ret, F_ORIG);
 		cl_log(LOG_WARNING
@@ -1374,52 +1427,54 @@ string2msg(const char * s, size_t length)
 }
 
 
-/* Converts a message into a string (for sending out UDP interface) 
-   
+/* Converts a message into a string (for sending out UDP interface)
+
    used in two places:
 
    1.called by msg2string as a implementation for computing string for a
    message provided the buffer
-   
-   2.called by is_authentic. In this case, there are no start/end string 
-   and the "auth" field is not included in the string 
+
+   2.called by is_authentic. In this case, there are no start/end string
+   and the "auth" field is not included in the string
 
    rules for generating a string:
 
-   1) if the field is a string, then add "name=value" in the string followed by 
+   1) if the field is a string, then add "name=value" in the string followed by
    new line
 
    2) if the field is binary data, then add "(FT_BINARY)name=
    base64-version-of-binary-data" followed by a new line
-   
+
    3) if the field is a child message, then add "(FT_STRUCT)name=
    converted-string-for-child-message" followed by a new line
-   
-   
+
+
 */
 
 
 int
-msg2string_buf(const struct ha_msg *m, char* buf, int len, int depth,int needhead){
-	
+msg2string_buf(const struct ha_msg *m, char* buf, size_t len
+,	int depth,int needhead)
+{
+
 	char *	bp = NULL;
 	int	j;
-	
+
 	buf[0]=0;
 	bp = buf;
 
-	if(needhead){
-		strcpy(bp, MSG_START);	
+	if (needhead){
+		strcpy(bp, MSG_START);
 		bp += strlen(MSG_START);
 	}
-	
+
 	for (j=0; j < m->nfields; ++j) {
-		
-		if ( needhead == NOHEAD && strcmp(m->names[j], F_AUTH) == 0) {
+
+		if (needhead == NOHEAD && strcmp(m->names[j], F_AUTH) == 0) {
 			continue;
 		}
-		
-		if( m->types[j] == FT_BINARY || m->types[j] == FT_STRUCT){
+
+		if (m->types[j] == FT_BINARY || m->types[j] == FT_STRUCT){
 			strcat(bp, "(");
 			bp++;
 			strcat(bp,FT_strings[m->types[j]]);
@@ -1427,69 +1482,75 @@ msg2string_buf(const struct ha_msg *m, char* buf, int len, int depth,int needhea
 			strcat(bp,")");
 			bp++;
 		}
-		
+
 		strcat(bp, m->names[j]);
 		bp += m->nlens[j];
 		strcat(bp, "=");
 		bp++;
-		
-		if( m->types[j] == FT_STRING ){
-			
+
+		if (m->types[j] == FT_STRING ){
+
 			strcat(bp, m->values[j]);
 			bp += m->vlens[j];
 
-		} else if(m->types[j] == FT_BINARY){
-			int baselen; 
+		} else if (m->types[j] == FT_BINARY){
+			int baselen;
 			int truelen = 0;
-			
-			baselen = B64_stringlen(m->vlens[j]) + 1; 
-			truelen = binary_to_base64(m->values[j], m->vlens[j], bp, baselen);
+
+			baselen = B64_stringlen(m->vlens[j]) + 1;
+			truelen = binary_to_base64(m->values[j]
+			,	m->vlens[j], bp, baselen);
 			bp += truelen;
 		} else{
-			int	baselen = get_stringlen((struct ha_msg*)m->values[j], 0);			
-			
-			if( msg2string_buf((struct ha_msg*)m->values[j], bp,baselen,depth + 1, NEEDHEAD) != HA_OK){
-				
-				ha_log(LOG_ERR, "msg2string_buf(): msg2string_buf for child message failed");
-				
+			int	baselen = get_stringlen(
+			(struct ha_msg*)	m->values[j], 0);
+
+			if (msg2string_buf((struct ha_msg*)m->values[j]
+			,	bp,baselen,depth + 1, NEEDHEAD) != HA_OK){
+
+				ha_log(LOG_ERR
+				, "msg2string_buf(): msg2string_buf for"
+				" child message failed");
+
 				return(HA_FAIL);
-				
+
 			}
-			if(convert(bp, baselen, depth, NL_TO_SYM) != HA_OK){
-				
-				ha_log(LOG_ERR, "msg2string_buf(): convert failed");
-				
-				return(HA_FAIL);				
-				
+			if (convert(bp, baselen, depth, NL_TO_SYM) != HA_OK){
+
+				ha_log(LOG_ERR
+				,	"msg2string_buf(): convert failed");
+
+				return(HA_FAIL);
+
 			}
-			
-			bp += strlen(bp);			
+
+			bp += strlen(bp);
 		}
-		
+
 		strcat(bp,"\n");
 		bp++;
-		
-		
+
+
 	}
-	if(needhead){
+	if (needhead){
 		strcat(bp, MSG_END);
 		bp += strlen(MSG_END);
 	}
-	
+
 	bp[0] = 0;
-	
-	if(bp > buf + len){
-		
+
+	if (bp > buf + len){
+
 		ha_log(LOG_ERR, "msg2string_buf: out of memory bound,"
 		       "bp=%p, buf + len=%p, len=%d\n",
 		       bp, buf + len, len);
-		
+
 		ha_log_message(m);
-		
+
 		return(HA_FAIL);
-		
+
 	}
-	
+
 	return(HA_OK);
 }
 
@@ -1507,120 +1568,125 @@ msg2string(const struct ha_msg *m)
 	}
 
 	len = get_stringlen(m, 0);
-	
+
 	buf = ha_malloc(len);
-	
+
 
 	if (buf == NULL) {
 		ha_log(LOG_ERR, "msg2string: no memory for string");
 		return(NULL);
-	}else if(msg2string_buf(m, buf, len ,0, NEEDHEAD) != HA_OK){
+	}else if (msg2string_buf(m, buf, len ,0, NEEDHEAD) != HA_OK){
 		ha_log(LOG_ERR, "msg2string: msg2string_buf failed");
 		ha_free(buf);
 		return(NULL);
 	}
-	
-	
 	return(buf);
 }
 
 
-int 
+int
 get_stringlen(const struct ha_msg *m, int depth)
 {
 	int	stringlen = m->stringlen;
 	int	i;
-	
-	if( depth >= MAXDEPTH){
+
+	if (depth >= MAXDEPTH){
 		ha_log(LOG_ERR, "get_stringlen(), MAXDEPTH exceeded");
 		return(0);
 	}
-	for( i = 0; i < m->nfields; i++){
-		if( m->types[i] == FT_STRUCT){
+	for (i = 0; i < m->nfields; i++){
+		if (m->types[i] == FT_STRUCT){
 			int tmp;
-			tmp = get_stringlen((struct ha_msg*)m->values[i], depth + 1);
-			if(tmp == 0){
+			tmp = get_stringlen((struct ha_msg*)m->values[i]
+			,	depth + 1);
+			if (tmp == 0){
 				ha_log(LOG_ERR, "get_stringlen(), 0 is returned");
 				return(0);
 			}
 			stringlen += tmp;
 		}
-		
+
 	}
-	
+
 	return(stringlen);
 }
 
-int 
+int
 get_netstringlen(const struct ha_msg *m, int depth)
 {
 
 	int	netstringlen = m->netstringlen;
 	int	i;
-	
-	if( depth >= MAXDEPTH){
+
+	if (depth >= MAXDEPTH){
 		ha_log(LOG_ERR, "get_netstringlen(), MAXDEPTH exceeded");
 		return(0);
 	}
-	for( i = 0; i < m->nfields; i++){
-		if( m->types[i] == FT_STRUCT){
+	for (i = 0; i < m->nfields; i++){
+		if (m->types[i] == FT_STRUCT){
 			int	tmp;
 			int	namelen = m->nlens[i];
 
-			tmp = get_netstringlen((struct ha_msg*)m->values[i], depth + 1);
-			if(tmp <= 0){
-				ha_log(LOG_ERR, "get_stringlen(), %d is returned", tmp);
+			tmp = get_netstringlen((struct ha_msg*)m->values[i]
+			,	depth + 1);
+			if (tmp <= 0){
+				ha_log(LOG_ERR
+				,	"get_stringlen(), %d is returned"
+				,	tmp);
 				return(0);
 			}
-			netstringlen += intlen(namelen) + namelen + 2; //for name
-			netstringlen += 4 ;//for type
-			netstringlen += intlen(tmp) + tmp + 2; //for child message
+			netstringlen += intlen(namelen) + namelen + 2;
+						/* for name */
+			netstringlen += 4;	/* for type */
+			netstringlen += intlen(tmp) + tmp + 2;
+						/* for child message */
 		}
-		
+
 	}
-	
-	return(netstringlen);	
-	
+
+	return(netstringlen);
+
 
 }
 
-char* 
+char*
 msg2wirefmt(const struct ha_msg*m, size_t* len)
 {
 
-	if(netstring_format){
+	if (netstring_format){
 		return(msg2netstring(m, len));
 	}
 	else{
 		char	*tmp;
-		
+
 		tmp = msg2string(m);
 		//*len = m->stringlen;
 		//ha_log(LOG_INFO, "m->stringlen =%d,strlen(tmp)=%d",
 		//m->stringlen, strlen(tmp));
-		*len = strlen(tmp) + 1; 
+		*len = strlen(tmp) + 1;
 		return(tmp);
 	}
 }
 
 
 static struct ha_msg*
-wirefmt2msg_ll(const char* s, size_t length, int need_auth){
-	
+wirefmt2msg_ll(const char* s, size_t length, int need_auth)
+{
+
 	int startlen;
-	
+
 	startlen = sizeof(MSG_START)-1;
 	if (strncmp(s, MSG_START, startlen) == 0) {
-		return(string2msg_ll(s, length, 0, need_auth));		
-	} 
-	
+		return(string2msg_ll(s, length, 0, need_auth));
+	}
+
 	startlen = sizeof(MSG_START_NETSTRING) - 1;
 	if (strncmp(s, MSG_START_NETSTRING, startlen) == 0) {
-		return netstring2msg(s, length, need_auth);		
+		return netstring2msg(s, length, need_auth);
 	}
-	
+
 	return NULL;
-	
+
 }
 
 
@@ -1637,29 +1703,30 @@ void
 ha_log_message (const struct ha_msg *m)
 {
 	int	j;
-	
+
 	AUDITMSG(m);
 	ha_log(LOG_INFO, "MSG: Dumping message with %d fields", m->nfields);
 
-	for (j=0; j < m->nfields; ++j) { 
+	for (j=0; j < m->nfields; ++j) {
 		switch(m->types[j]){
 		case(FT_BINARY):
 		case(FT_STRUCT):
-			ha_log(LOG_INFO, "MSG[%d] : [(%s)%s=%p]",j, FT_strings[m->types[j]]
-			       ,	m->names[j] ? m->names[j] : "NULL"
-			       ,	m->values[j] ? m->values[j] : "NULL");
-			
-			if(m->types[j] == FT_STRUCT && m->values[j]){
+			ha_log(LOG_INFO, "MSG[%d] : [(%s)%s=%p]",j
+			,	FT_strings[m->types[j]]
+			,	m->names[j] ? m->names[j] : "NULL"
+			,	m->values[j] ? m->values[j] : "NULL");
+
+			if (m->types[j] == FT_STRUCT && m->values[j]){
 				ha_log_message((struct ha_msg*)m->values[j]);
 			}
-			
+
 			break;
-			
-		default: //case(FT_STRING):
-			ha_log(LOG_INFO, "MSG[%d] : [%s=%s]",j
-			       ,	m->names[j] ? m->names[j] : "NULL"
-			       ,	m->values[j] ? m->values[j] : "NULL");
-			
+
+		default: /* case(FT_STRING): */
+			ha_log(LOG_INFO, "MSG[%d] : [%s=%s]", j
+		       ,	m->names[j] ? m->names[j] : "NULL"
+		       ,	m->values[j] ? m->values[j] : "NULL");
+
 		}
 	}
 }
@@ -1672,7 +1739,7 @@ main(int argc, char ** argv)
 	struct ha_msg*	m;
 	while (!feof(stdin)) {
 		if ((m=controlfifo2msg(stdin)) != NULL) {
-			fprintf(stderr, "Got message!\n");	
+			fprintf(stderr, "Got message!\n");
 			if (msg2stream(m, stdout) == HA_OK) {
 				fprintf(stderr, "Message output OK!\n");
 			}else{
@@ -1687,6 +1754,10 @@ main(int argc, char ** argv)
 #endif
 /*
  * $Log: ha_msg.c,v $
+ * Revision 1.51  2004/03/05 17:25:18  alan
+ * cleanup of netstring patch.
+ * Hopefully it also cleaned up the size_t vs int problems in the code.
+ *
  * Revision 1.50  2004/03/03 05:31:50  alan
  * Put in Gochun Shi's new netstrings on-the-wire data format code.
  * this allows sending binary data, among many other things!

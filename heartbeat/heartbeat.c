@@ -1,4 +1,4 @@
-/* $Id: heartbeat.c,v 1.293 2004/03/03 05:31:50 alan Exp $ */
+/* $Id: heartbeat.c,v 1.294 2004/03/05 17:25:19 alan Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -2462,7 +2462,7 @@ send_cluster_msg(struct ha_msg* msg)
 		int	ffd = -1;
 		char *	smsg = NULL;
 		int	needprivs = !cl_have_full_privs();
-		int	len;
+		size_t	len;
 
 		if (needprivs) {
 			return_to_orig_privs();
@@ -3501,7 +3501,7 @@ process_outbound_packet(struct msg_xmit_hist*	hist
 	seqno_t		seqno = -1;
 	const  char *	to;
 	int		IsToUs;
-	int		len;
+	size_t		len;
 
 	if (DEBUGPKTCONT) {
 		cl_log(LOG_DEBUG, "got msg in process_outbound_packet");
@@ -3861,7 +3861,7 @@ process_rexmit(struct msg_xmit_hist * hist, struct ha_msg* msg)
 			char *		smsg;
 			longclock_t	now = time_longclock();
 			longclock_t	last_rexmit;
-			int		len;
+			size_t		len;
 
 			if (msgslot < 0) {
 				msgslot = MAXMSGHIST;
@@ -4107,6 +4107,10 @@ get_localnodeinfo(void)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.294  2004/03/05 17:25:19  alan
+ * cleanup of netstring patch.
+ * Hopefully it also cleaned up the size_t vs int problems in the code.
+ *
  * Revision 1.293  2004/03/03 05:31:50  alan
  * Put in Gochun Shi's new netstrings on-the-wire data format code.
  * this allows sending binary data, among many other things!

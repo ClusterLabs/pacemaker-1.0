@@ -1,4 +1,4 @@
-/* $Id: ping_group.c,v 1.7 2004/03/03 05:31:51 alan Exp $ */
+/* $Id: ping_group.c,v 1.8 2004/03/05 17:25:20 alan Exp $ */
 /*
  * ping_group.c: ICMP-echo-based heartbeat code for heartbeat.
  *
@@ -123,7 +123,7 @@ static int		ping_group_write (struct hb_media* mp
 					  ,void* msg, int len);
 
 static struct hb_media * ping_group_new(const char *name);
-static int		in_cksum (u_short * buf, int nbytes);
+static int		in_cksum (u_short * buf, size_t nbytes);
 
 static int		ping_group_mtype(char **buffer);
 static int		ping_group_descr(char **buffer);
@@ -545,9 +545,9 @@ ping_group_write(struct hb_media* mp, void *p, int len)
 		char*			buf;
 		struct icmp		ipkt;
 	}*icmp_pkt;
-	int			size;
+	size_t			size;
 	struct icmp *		icp;
-	int			pktsize;
+	size_t			pktsize;
 	const char *		type;
 	const char *		ts;
 	struct ha_msg *		nmsg;
@@ -616,7 +616,7 @@ ping_group_write(struct hb_media* mp, void *p, int len)
 
 	pktsize = size + ICMP_HDR_SZ;
 
-	if ((icmp_pkt = MALLOC(size + ICMP_HDR_SZ)) == NULL) {
+	if ((icmp_pkt = MALLOC(pktsize)) == NULL) {
 		LOG(PIL_CRIT, "out of memory");
 		ha_free(pkt);
 		ha_msg_del(msg);
@@ -705,9 +705,9 @@ ping_group_open(struct hb_media* mp)
  *	This function taken from Mike Muuss' ping program.
  */
 static int
-in_cksum (u_short *addr, int len)
+in_cksum (u_short *addr, size_t len)
 {
-	int		nleft = len;
+	size_t		nleft = len;
 	u_short *	w = addr;
 	int		sum = 0;
 	u_short		answer = 0;

@@ -1,4 +1,4 @@
-/* $Id: ha_msg.h,v 1.26 2004/03/03 05:31:50 alan Exp $ */
+/* $Id: ha_msg.h,v 1.27 2004/03/05 17:25:19 alan Exp $ */
 /*
  * Intracluster message object (struct ha_msg)
  *
@@ -196,7 +196,7 @@ char *		msg2string(const struct ha_msg *m);
 /* Converts a message into a string in the provided buffer with certain 
 depth and with or without start/end */
 int		msg2string_buf(const struct ha_msg *m, char* buf,
-			       int len, int depth, int needhead);
+			       size_t len, int depth, int needhead);
 
 /* Converts a message into wire format */
 char*		msg2wirefmt(const struct ha_msg *m, size_t* );
@@ -205,7 +205,7 @@ char*		msg2wirefmt(const struct ha_msg *m, size_t* );
 struct ha_msg*	wirefmt2msg(const char* s, size_t length);
 
 /* Convets wire format data into an IPC message */
-IPC_Message*	wirefmt2ipcmsg(void* p, int len, IPC_Channel* ch);
+IPC_Message*	wirefmt2ipcmsg(void* p, size_t len, IPC_Channel* ch);
 
 /* Converts an ha_msg into an IPC message */
 IPC_Message* hamsg2ipcmsg(struct ha_msg* m, IPC_Channel* ch);
