@@ -1,4 +1,4 @@
-/* $Id: bcast.c,v 1.36 2004/04/28 22:30:29 alan Exp $ */
+/* $Id: bcast.c,v 1.37 2004/04/29 16:22:36 msoffen Exp $ */
 /*
  * bcast.c: UDP/IP broadcast-based communication code for heartbeat.
  *
@@ -686,7 +686,7 @@ new_ip_interface(const char * ifn, int port)
  * Works on HP_UX 10.20, freebsd, linux rh6.2
  * Works on solaris or Unixware (SVR4) with:
  *   gcc -DBSD_COMP -c ha_if.c
- * Doesn't seem to work at all on Digital Unix (???)
+ * Doesn't seem to work at all on Digital Unix (?)
  *
  * Author: Eric Z. Ayers <eric.ayers@compgen.com>
  *
@@ -783,6 +783,9 @@ if_get_broadaddr(const char *ifn, struct in_addr *broadaddr)
 
 /*
  * $Log: bcast.c,v $
+ * Revision 1.37  2004/04/29 16:22:36  msoffen
+ * Changed ??? to ? ( picked up as trigraph )
+ *
  * Revision 1.36  2004/04/28 22:30:29  alan
  * Put in some fixes for extra freeing of memory in the communications plugins.
  *
