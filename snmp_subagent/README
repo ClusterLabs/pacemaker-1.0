@@ -8,7 +8,7 @@ through the SNMP interface so that the cluster can be monitored
 remotely.  
 
     Currently, node, link, membership and heartbeat configuration 
-parameters can be viewed through SNMP command.  In addtion, SNMP traps
+parameters can be viewed through SNMP command.  In addition, SNMP traps
 will be sent for node, link, and membership events.  
 
     Cluster Resources are not well supported.  It only displays 
