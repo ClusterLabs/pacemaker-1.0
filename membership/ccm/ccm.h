@@ -86,6 +86,7 @@ typedef struct NodeList_s {
 		uint  NodeUuid;  /* a cluster unique id for the node */
 		char NodeID[NODEIDSIZE];
 		char Status[STATUSSIZE];
+		uint received_change_msg;
 } NodeList_t;
 typedef struct llm_info_s { /* information about low level membership info */
 	uint	   llm_nodeCount; //number of nodes in the cluster 
