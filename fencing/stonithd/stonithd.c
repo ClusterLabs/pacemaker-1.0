@@ -1,4 +1,4 @@
-/* $Id: stonithd.c,v 1.28 2005/03/18 10:38:43 andrew Exp $ */
+/* $Id: stonithd.c,v 1.29 2005/03/18 11:00:04 sunjd Exp $ */
 
 /* File: stonithd.c
  * Description: STONITH daemon for node fencing
@@ -1491,7 +1491,7 @@ on_stonithd_node_fence(const struct ha_msg * request, gpointer data)
 		goto sendback_reply;
 	}
 
-	if ((tmpstr = cl_get_string(request, F_STONITHD_NODE)) != NULL ) {
+	if ((tmpstr = cl_get_string(request, F_STONITHD_NODE_UUID)) != NULL ) {
 		st_op->node_uuid = g_strdup(tmpstr);	
 	} else {
 		stonithd_log(LOG_WARNING, "The stonith requirement message"
@@ -2978,6 +2978,9 @@ free_common_op_t(gpointer data)
 
 /* 
  * $Log: stonithd.c,v $
+ * Revision 1.29  2005/03/18 11:00:04  sunjd
+ * fix a 'mispell' error ;-)
+ *
  * Revision 1.28  2005/03/18 10:38:43  andrew
  * Make sure node_uuid doesnt contain random data
  * I reccomend a common function for packing and unpacking stonith_ops be
