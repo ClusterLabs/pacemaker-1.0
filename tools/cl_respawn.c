@@ -82,8 +82,8 @@ static gboolean on_polled_input_check(gpointer source_data,
 static gboolean on_polled_input_dispatch(gpointer source_data,
 		GTimeVal* current_time, gpointer user_data);
 
-static void become_deamon();
-static int  run_client_as_child();
+static void become_deamon(void);
+static int  run_client_as_child(void);
 static gboolean emit_apphb(gpointer data);
 static void child_quit(int signo);
 static void cl_respawn_quit(int signo);
@@ -138,7 +138,7 @@ int main(int argc, char * argv[])
 	cl_log_set_facility(LOG_USER);
 
 	if (argc == 1) { /* no arguments */
-		printf(Simple_helpscreen);
+		printf("%s\n",Simple_helpscreen);
 	}
 	
 	/* code for debug */
@@ -186,13 +186,13 @@ int main(int argc, char * argv[])
 				return LSB_EXIT_OK;
 
 			case 'h':
-				printf(Simple_helpscreen);
+				printf("%s\n",Simple_helpscreen);
 				return LSB_EXIT_OK;
 
 			default:
 				cl_log(LOG_ERR, "Error:getopt returned" 
 					"character code %c.", option_char);
-				printf(Simple_helpscreen);
+				printf("%s\n",Simple_helpscreen);
 				return LSB_EXIT_EINVAL;
 		}
 	} while (1);
@@ -289,7 +289,7 @@ int main(int argc, char * argv[])
 }
 
 static int
-run_client_as_child()
+run_client_as_child(void)
 {
 	long	pid;
 	int	i;
@@ -313,7 +313,7 @@ run_client_as_child()
  	/* Now in child process */
 	execvp(execv_argv[0], execv_argv);
 	/* if go here, there must be something wrong */
-	cl_log(LOG_ERR, strerror(errno));
+	cl_log(LOG_ERR, "%s\n",strerror(errno));
 	cl_log(LOG_ERR, "execving monitored program %s failed.", execv_argv[0]);
 
 	i = 0;
@@ -330,7 +330,7 @@ run_client_as_child()
  * pathname or it's located in the system PATH
 */
 static void
-become_deamon()
+become_deamon(void)
 {
 	pid_t pid;
 	int j;
