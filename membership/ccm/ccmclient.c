@@ -1,4 +1,4 @@
-/* $Id: ccmclient.c,v 1.23 2005/03/16 17:50:00 gshi Exp $ */
+/* $Id: ccmclient.c,v 1.24 2005/03/29 18:48:54 gshi Exp $ */
 /* 
  * client.c: Consensus Cluster Client tracker
  *
@@ -361,6 +361,14 @@ mem_quorum(llm_info_t* llm, int member_count)
 	}
 	return TRUE;
 }
+static void
+display_func(gpointer key, gpointer value, gpointer user_data)
+{
+	ccm_client_t * ccm_client = (ccm_client_t*) value;
+	cl_log(LOG_INFO, "client: pid =%d", ccm_client->ccm_ipc_client->farside_pid);	
+	
+	return;
+}
 
 void
 client_new_mbrship(ccm_info_t* info, void* borndata)
@@ -400,9 +408,19 @@ client_new_mbrship(ccm_info_t* info, void* borndata)
 		delete_message(ipc_born_message);
 	}
 	ipc_born_message = create_message(ipc_born_chk, born, 
-		 sizeof(ccm_born_t )+n*sizeof(struct born_s));
+					  sizeof(ccm_born_t )+n*sizeof(struct born_s));
 	ipc_born_message->count++;
 	
+#if 1
+	cl_log(LOG_INFO, "delivering new membership to %d clients: ",
+	       g_hash_table_size(ccm_hashclient));
+	if(g_hash_table_size(ccm_hashclient)){
+		g_hash_table_foreach(ccm_hashclient, display_func, NULL);	
+	}
+#else
+	(void)display_func;
+#endif 
+
 	send_all();
 	if(global_verbose) {
 		cl_log(LOG_DEBUG, "membership state: new membership");

@@ -1,4 +1,4 @@
-/* $Id: ccmlib_memapi.c,v 1.27 2005/03/22 00:13:22 gshi Exp $ */
+/* $Id: ccmlib_memapi.c,v 1.28 2005/03/29 18:48:54 gshi Exp $ */
 /* 
  * ccmlib_memapi.c: Consensus Cluster Membership API
  *
@@ -55,6 +55,15 @@ typedef struct mbr_private_s {
 } mbr_private_t;
 
 
+static char event_strings[5][32]={
+	"OC_EV_MS_INVALID",
+	"OC_EV_MS_NEW_MEMBERSHIP",
+	"OC_EV_MS_NOT_PRIMARY",
+	"OC_EV_MS_PRIMARY_RESTORED",
+	"OC_EV_MS_EVICTED"
+};
+
+#define EVENT_STRING(x) event_strings[x - OC_EV_MS_INVALID]
 #define OC_EV_SET_INSTANCE(m,trans)  m->m_mem.m_instance=trans
 #define OC_EV_SET_N_MEMBER(m,n)  m->m_mem.m_n_member=n
 #define OC_EV_SET_MEMB_IDX(m,idx)  m->m_mem.m_memb_idx=idx
@@ -508,6 +517,7 @@ mem_handle_event(class_t *class)
 		
 		if(ret != IPC_OK){
 			/* this should never happen*/			
+			cl_log(LOG_ERR, "mem_handle_func:IPC broken, something is wrong!");
 			abort();			
 		}
 		
@@ -634,6 +644,9 @@ mem_handle_event(class_t *class)
 			}
 			break;
 		}
+
+		
+		cl_log(LOG_INFO, "Got an event %s from ccm",EVENT_STRING(oc_type));
 		if(private->callback && private->client_report && cookie){
 			cookie_ref(cookie);
 			private->callback(oc_type,
