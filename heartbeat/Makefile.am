@@ -29,6 +29,7 @@ halibdir		= $(libdir)/@HB_PKG@
 commmoddir		= $(halibdir)/modules/comm
 havarlibdir		= $(localstatedir)/lib/@HB_PKG@
 havarrundir		= $(localstatedir)/run
+havarrunhbdir		= $(localstatedir)/run/@HB_PKG@
 # fifos with path
 hafifo			= $(havarlibdir)/fifo
 apigid			= @HA_APIGID@
@@ -91,9 +92,12 @@ EXTRA_DIST              = $(ha_DATA) $(ha_SCRIPTS)
 install-exec-local:
 	$(mkinstalldirs) $(DESTDIR)$(havarrundir) 
 	$(mkinstalldirs) $(DESTDIR)$(havarlibdir)
+	$(mkinstalldirs) $(DESTDIR)$(havarrunhbdir)
 	-chmod 750 $(DESTDIR)$(havarrundir)
+	-chmod 750 $(DESTDIR)$(havarrunhbdir)
 
 uninstall-local:
 	-test -p $(DESTDIR)$(hafifo) && rm $(DESTDIR)$(hafifo)
-	rm -rf $(DESTDIR)$(havarrundir) 
+	rm -rf $(DESTDIR)$(havarrundir)
+	rm -rf $(DESTDIR)$(havarrunhbdir)
 
