@@ -29,6 +29,7 @@
 #include <config.h>
 #endif
 
+#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -43,15 +44,30 @@
 #include <clplumbing/cl_log.h>
 #include <hb_api.h>
 
+/* exit code */
+const int OK = 0,
+	  NORMAL_FAIL = 1,		/* such as the local node is down */
+	  PARAMETER_ERROR = 11,
+	  TIMEOUT = 12,
+	  UNKNOWN_ERROR = 13;		/* error due to unkown causes */ 
+/*
+ * The exit values under some situations proposed by Alan.
+ * nodestatus    fail when the node is down
+ * clientstatus  fail when client not accessible (offline?)
+ * hbstatus      fail when heartbeat not running locally
+ * hblinkstatus  fail if the given heartbeat link is down
+ * hbparameter   fail if the given parameter is not set to any value
+*/
+
 /*
  * Important
  * General return value for the following functions, and it is actually 
  * as this program cl_status' return value:
- * 	0: on success.
- * 	>10: on error.
- *		11: heartbeat is stopped or cannot be signed on.   
- *		12: parameter error.
- *		13: other errors.
+ * 	0(OK):   on success, including the node status is ok.
+ * 	<>0: on fail
+		1(NORMAL_FAIL):     for a "normal" failure (like node is down)
+ * 		2(PARAMETER_ERROR):  
+ *		3(OTHER_ERROR):	    error due to unkown causes
  */
 
 /* 
@@ -62,83 +78,87 @@
  *	Obvious. ;-) 
  *
  * Return Value:
- * 	<10: on success.
- *		0: In local machine, heartbeat is stopped.
- *		1: In local machine, heartbeat is running.
+ *	OK: 		In local machine, heartbeat is running.
+ *	NORMAL_FAIL:    In local machine, heartbeat is stopped.
  */
-static int hbstatus(ll_cluster_t *hb, int argc, char ** argv, const char * optstr);
+static int
+hbstatus(ll_cluster_t *hb, int argc, char ** argv, const char * optstr);
 
 /*
  * Return Value:
- * 	<10: on success.
- *		0: success
+ * 	OK:  	      In local machine, this operation succeed.
+ *	NORMAL_FAIL:  In local machine, heartbeat is stopped.
  */
-static int listnodes(ll_cluster_t *hb, int argc, char ** argv, const char * optstr);
+static int
+listnodes(ll_cluster_t *hb, int argc, char ** argv, const char * optstr);
 
 /*
  * Return Value:
- * 	<10: on success.
- *		0: stopped
- *		1: running
- *		3: unknown status
+ * 	OK: 	     the node is active.
+ *	NORMAL_FAIL: the node is down
+ */
+static int
+nodestatus(ll_cluster_t *hb, int argc, char ** argv, const char * optstr);
+
+/*
+ * Return Value:
+ *	0: normal
+ *	1: ping
+ *	3: unknown type
  * Notes: not map string std_output to return value yet 
  */
-static int nodestatus(ll_cluster_t *hb, int argc, char ** argv, const char * optstr);
+static int
+nodetype(ll_cluster_t *hb, int argc, char ** argv, const char * optstr);
 
 /*
  * Return Value:
- * 	<10: on success.
- *		0: normal
- *		1: ping
- *		3: unknown type
- * Notes: not map string std_output to return value yet 
+ *	0(OK):		sucess
+ * 	1(NORMAL_FAIL): the node is down.
  */
-static int nodetype(ll_cluster_t *hb, int argc, char ** argv, const char * optstr);
+static int
+listhblinks(ll_cluster_t *hb, int argc, char ** argv, const char * optstr);
 
 /*
  * Return Value:
- * 	<10: on success.
- *		0: success
+ *	0(OK):		the link is up
+ *	1(NORMAL_FAIL): the link is down
  */
-static int listhblinks(ll_cluster_t *hb, int argc, char ** argv, const char * optstr);
+static int
+hblinkstatus(ll_cluster_t *hb, int argc, char ** argv, const char * optstr);
 
 /*
  * Return Value:
- * 	<10: on success.
- *		0: dead
- *		1: startup
- * Notes: not map string std_output to return value yet 
+ * 	0(OK): 		online
+ *	1(NORMAL_FAIL): offline
+ *	2:		join
+ *	3: 		leave
+ *
+ *   When sucess and without -m option, at the meantime on stdout print one 
+ *   of the following string to reflect the status of the client: 
+ *	online, offline, join, leave
  */
-static int hblinkstatus(ll_cluster_t *hb, int argc, char ** argv, const char * optstr);
+static int
+clientstatus(ll_cluster_t *hb, int argc, char ** argv, const char * optstr);
 
 /*
  * Return Value:
- * 	<10: on success.
- *		0: offline
- *		1: online
- *		2: join
- *		3: leave
- * Notes: not map string std_output to return value yet 
+ * 	0(OK): 		on success.
+ *	1(NORMAL_FAIL): the node is down.
+ *
+ *   When sucess and without -m option, on stdout print one of the following
+ *   string to reflect the status of the resource: 
+ * 	none, local, foreign, all
  */
-static int clientstatus(ll_cluster_t *hb, int argc, char ** argv, const char * optstr);
+static int
+rscstatus(ll_cluster_t *hb, int argc, char ** argv, const char * optstr);
 
 /*
  * Return Value:
- * 	<10: on success.
- *		0: none
- *		1: local
- *		2: foreign
- *		3: all
- * Notes: not map string std_output to return value yet 
+ *	0: success
+ *	1: fail if the given parameter is not set to any value
  */
-static int rscstatus(ll_cluster_t *hb, int argc, char ** argv, const char * optstr);
-
-/*
- * Return Value:
- * 	<10: on success.
- *		0: success
- */
-static int hbparameter(ll_cluster_t *hb, int argc, char ** argv, const char * optstr);
+static int
+hbparameter(ll_cluster_t *hb, int argc, char ** argv, const char * optstr);
 
 /* miscellaneous functions */
 static int test(ll_cluster_t *hb, int argc, char ** argv, const char * optstr);
@@ -225,6 +245,14 @@ static const char * simple_help_screen =
 static const char * cl_status_name = "cl_status";
 static gboolean HB_SIGNON = FALSE;
 
+/*
+ * The following is to avoid cl_status sleeping forever. This is due to the 
+ * hearbeat's abnormal status or even its crash.  
+ */
+unsigned int DEFAULT_TIMEOUT = 2;
+/* the handler of signal SIGALRM */
+static void quit(int signum);
+
 int
 main(int argc, char ** argv)
 {
@@ -249,6 +277,15 @@ main(int argc, char ** argv)
 
 	cl_log(LOG_INFO, "start:optind: %d  argv[optind+1]: %s", optind, 
 		argv[optind+1]);
+
+	/*
+	 * To avoid cl_status sleep forever, trigger a timer and dealing with 
+	 * signal SIGALRM. This sleep is due to hearbeat's abnormal status or
+	 * its crash during cl_status' execution.  
+	 */
+	 alarm(DEFAULT_TIMEOUT);
+	 signal(SIGALRM, quit);
+	
 	/*
 	 * Don't use getopt_long since its portibility is not good.
 	 * Why to using long command, because long commands are natural and 
@@ -259,15 +296,15 @@ main(int argc, char ** argv)
 			GOOD_CMD = TRUE;
 			hb = ll_cluster_new("heartbeat");
 			if ( hb == NULL ) {
-				return 11;
+				return UNKNOWN_ERROR;
 			}
 
 			//cl_log(LOG_INFO, "Signing in with heartbeat.");
 			if (hb->llc_ops->signon(hb, cl_status_name)!= HA_OK) {
-				cl_log(LOG_ERR, "Cannot sign on with heartbeat");
+				cl_log(LOG_ERR, "Cannot signon with heartbeat");
 				cl_log(LOG_ERR, "REASON: %s", 
 					hb->llc_ops->errmsg(hb));
-				ret_value = 11;
+				ret_value = 1;
 			}else{
 				HB_SIGNON = TRUE;
 			}
@@ -278,7 +315,7 @@ main(int argc, char ** argv)
 	}
 	if (GOOD_CMD == FALSE) {
 		cl_log(LOG_ERR, "%s is not a correct sub-command.", argv[1]);
-		ret_value = 12;
+		ret_value = PARAMETER_ERROR;
 	}
 
 	cl_log(LOG_INFO, "End: optind: %d  argv[optind+1]: %s", optind, 
@@ -288,14 +325,18 @@ main(int argc, char ** argv)
 		if (hb->llc_ops->signoff(hb) != HA_OK) {
 			cl_log(LOG_ERR, "Cannot sign off from heartbeat.");
 			cl_log(LOG_ERR, "REASON: %s\n", hb->llc_ops->errmsg(hb));
-			ret_value = 13;
+			/* Comment it to avoid to mask the subcommand's return
+			 * ret_value = UNKNOWN_ERROR;
+			 */
 		}
 	}
 	if (hb != NULL) {
 		if (hb->llc_ops->delete(hb) != HA_OK) {
 			cl_log(LOG_ERR, "Cannot delete API object.");
 			cl_log(LOG_ERR, "REASON: %s", hb->llc_ops->errmsg(hb));
-			ret_value = 13;
+			/* Comment it to avoid to mask the subcommand's return
+			 * ret_value = UNKNOWN_ERROR;
+			 */
 		}
 	}
 
@@ -350,14 +391,14 @@ listnodes(ll_cluster_t *hb, int argc, char ** argv, const char * optstr)
 			default:
 				cl_log(LOG_ERR, "Error:getopt returned" 
 					"character code %c.", option_char);
-				return 12;
+				return PARAMETER_ERROR;
 		}
 	} while (1);
 
 	if (hb->llc_ops->init_nodewalk(hb) != HA_OK) {
 			cl_log(LOG_ERR, "Cannot start node walk.");
 			cl_log(LOG_ERR, "REASON: %s", hb->llc_ops->errmsg(hb));
-			return 13;
+			return UNKNOWN_ERROR;
 	}
 
 	if ( (ONLY_LIST_NORAMAL == TRUE) && (ONLY_LIST_PING == TRUE) ) {
@@ -384,7 +425,7 @@ listnodes(ll_cluster_t *hb, int argc, char ** argv, const char * optstr)
 	if (hb->llc_ops->end_nodewalk(hb) != HA_OK) {
 		cl_log(LOG_ERR, "Cannot end node walk.");
 		cl_log(LOG_ERR, "REASON: %s", hb->llc_ops->errmsg(hb));
-		return 13;
+		return UNKNOWN_ERROR;
 	}
 	return 0;
 }
@@ -396,15 +437,16 @@ static int
 nodestatus(ll_cluster_t *hb, int argc, char ** argv, const char * optstr)
 {
 	const char * status;
+	int ret = UNKNOWN_ERROR;
 
 	if ( general_simple_opt_deal(argc, argv, optstr) < 0 ) {
 		/* There are option errors */
-		return 12;
+		return PARAMETER_ERROR;
 	};
 
 	if (argc <= optind+1) {
 		fprintf(stderr, "No enough parameter.\n");
-		return 12;
+		return PARAMETER_ERROR;
 	}
 
 	cl_log(LOG_INFO, "optind: %d   argv[optindex+1]: %s", optind, 
@@ -412,7 +454,7 @@ nodestatus(ll_cluster_t *hb, int argc, char ** argv, const char * optstr)
 	status = hb->llc_ops->node_status(hb, argv[optind+1]);
 	if ( status == NULL ) {
 		fprintf(stderr, "Error. May be due to incorrect node name\n");
-		return 12;
+		return PARAMETER_ERROR;
 	}
 	if (FOR_HUMAN_READ == TRUE) {
 		printf("The cluster nodes %s is %s\n", argv[optind+1], status);
@@ -420,10 +462,19 @@ nodestatus(ll_cluster_t *hb, int argc, char ** argv, const char * optstr)
 		printf("%s\n", status);
 	}
 
-	return 0;
+	if ( strncmp(status, "active", 6) == 0 ) {
+		ret = OK;   /* the node is active */
+	} else {
+		ret = NORMAL_FAIL;  /* the status = "dead" */
+	}
+	/* Should there be other status? According the comment in heartbeat.c
+	   three status: active, up, down. But it's not like that. 
+	*/
+	
+	return ret;
 }
 
-/* Map string std_output to return value ? 
+/* Map string std_output to return value ? No
  * NORMAL PING UNKNOWN
  */
 static int 
@@ -433,12 +484,12 @@ nodetype(ll_cluster_t *hb, int argc, char ** argv, const char * optstr)
 
 	if ( general_simple_opt_deal(argc, argv, optstr) < 0 ) {
 		/* There are option errors */
-		return 12;
+		return PARAMETER_ERROR;
 	};
 
 	if (argc <= optind+1) {
 		fprintf(stderr, "No enough parameter.\n");
-		return 12;
+		return PARAMETER_ERROR;
 	}
 
 	cl_log(LOG_INFO, "optind: %d   argv[optindex+1]: %s", optind, 
@@ -446,7 +497,7 @@ nodetype(ll_cluster_t *hb, int argc, char ** argv, const char * optstr)
 	type = hb->llc_ops->node_type(hb, argv[optind+1]);
 	if ( type == NULL ) {
 		fprintf(stderr, "Error. May be due to incorrect node name\n");
-		return 12;
+		return PARAMETER_ERROR;
 	}
 	if (FOR_HUMAN_READ == TRUE) {
 		printf("The node %s's type: %s\n", argv[optind+1], type);
@@ -464,12 +515,12 @@ listhblinks(ll_cluster_t *hb, int argc, char ** argv, const char * optstr)
 
 	if ( general_simple_opt_deal(argc, argv, optstr) < 0 ) {
 		/* There are option errors */
-		return 12;
+		return PARAMETER_ERROR;
 	};
 
 	if (argc <= optind+1) {
 		fprintf(stderr, "No enough parameter.\n");
-		return 12;
+		return PARAMETER_ERROR;
 	}
 
 	cl_log(LOG_INFO, "optind: %d   argv[optindex+1]: %s", optind, 
@@ -478,7 +529,7 @@ listhblinks(ll_cluster_t *hb, int argc, char ** argv, const char * optstr)
 	if (hb->llc_ops->init_ifwalk(hb, argv[optind+1]) != HA_OK) {
 		cl_log(LOG_ERR, "Cannot start heartbeat link interface walk.");
 		cl_log(LOG_ERR, "REASON: %s", hb->llc_ops->errmsg(hb));
-		return 13;
+		return UNKNOWN_ERROR;
 	}
 
 	if (FOR_HUMAN_READ == TRUE) {
@@ -492,7 +543,7 @@ listhblinks(ll_cluster_t *hb, int argc, char ** argv, const char * optstr)
 	if (hb->llc_ops->end_ifwalk(hb) != HA_OK) {
 		cl_log(LOG_ERR, "Cannot end heartbeat link interface walk");
 		cl_log(LOG_ERR, "REASON: %s", hb->llc_ops->errmsg(hb));
-		return 13;
+		return UNKNOWN_ERROR;
 	}
 
 	return 0;
@@ -502,22 +553,23 @@ static int
 hblinkstatus(ll_cluster_t *hb, int argc, char ** argv, const char * optstr)
 {
 	const char * if_status;	
+	int 	ret = UNKNOWN_ERROR;
 
 	if ( general_simple_opt_deal(argc, argv, optstr) < 0 ) {
 		/* There are option errors */
-		return 12;
+		return PARAMETER_ERROR;
 	};
 
 	if (argc <= optind+2) {
 		fprintf(stderr, "No enough parameter.\n");
-		return 12;
+		return PARAMETER_ERROR;
 	}
 
 	if_status = hb->llc_ops->if_status(hb, argv[optind+1], argv[optind+2]);
 	if (if_status == NULL) { /* Shoud be error ? */
 		cl_log(LOG_ERR, "Cannot get heartbeat link status");
 		cl_log(LOG_ERR, "REASON: %s", hb->llc_ops->errmsg(hb));
-		return 13;
+		return UNKNOWN_ERROR;
 	}
 
 	if (FOR_HUMAN_READ == TRUE) {
@@ -527,7 +579,13 @@ hblinkstatus(ll_cluster_t *hb, int argc, char ** argv, const char * optstr)
 		printf("%s\n", if_status);
 	}
 
-	return 0;
+	if ( strncmp(if_status, "up", 3) == 0 ) {
+		ret = OK; /* the link is up */
+	} else {
+		ret = NORMAL_FAIL; /* the link is dead */
+	}
+
+	return ret;
 }
 
 static int 
@@ -536,15 +594,16 @@ clientstatus(ll_cluster_t *hb, int argc, char ** argv, const char * optstr)
 	/* Default value, its unit is milliseconds */
 	int timeout = 100;  
 	const char * cstatus;
+	int ret = UNKNOWN_ERROR;
 
 	if ( general_simple_opt_deal(argc, argv, optstr) < 0 ) {
 		/* There are option errors */
-		return 12;
+		return PARAMETER_ERROR;
 	};
 
 	if (argc <= optind+2) {
 		fprintf(stderr, "No enough parameter.\n");
-		return 12;
+		return PARAMETER_ERROR;
 	}
 
 	if ( argc > optind+3 ) {
@@ -556,13 +615,23 @@ clientstatus(ll_cluster_t *hb, int argc, char ** argv, const char * optstr)
 	if (cstatus == NULL) { /* Error */
 		cl_log(LOG_ERR, "Cannot get client %s's status", argv[optind+2]);
 		cl_log(LOG_ERR, "REASON: %s", hb->llc_ops->errmsg(hb));
-		return 13;
+		return UNKNOWN_ERROR;
 	} else {
-		/* offline or online */
+		/* online, offline, join, leave */
 		printf("%s\n", cstatus);
 	}
+
+	if ( strncmp(cstatus, "online", 6) == 0 ) {
+		ret = OK; 
+	} else if ( strncmp(cstatus, "offline", 7) == 0 ) {
+		ret = NORMAL_FAIL; /* the client is offline */
+	} else if ( strncmp(cstatus, "join", 4) == 0 ) {
+		ret = 2;
+	} else if ( strncmp(cstatus, "leave", 5) == 0 ) {
+		ret = 3;
+	}
 	
-	return 0;
+	return ret;
 }
 
 static int 
@@ -572,14 +641,14 @@ rscstatus(ll_cluster_t *hb, int argc, char ** argv, const char * optstr)
 
 	if ( general_simple_opt_deal(argc, argv, optstr) < 0 ) {
 		/* There are option errors */
-		return 12;
+		return PARAMETER_ERROR;
 	};
 
 	rstatus = hb->llc_ops->get_resources(hb);
 	if ( rstatus == NULL ) {
 		cl_log(LOG_ERR, "Cannot get client %s's status", argv[optind+2]);
 		cl_log(LOG_ERR, "REASON: %s", hb->llc_ops->errmsg(hb));
-		return 13;
+		return UNKNOWN_ERROR;
 	}
 	if (FOR_HUMAN_READ == TRUE) {
 		printf("This node is holding %s resources.\n", rstatus);
@@ -621,7 +690,7 @@ hbparameter(ll_cluster_t *hb, int argc, char ** argv, const char * optstr)
 				if (paramname != NULL) {
 					g_free(paramname);
 				}
-				return 12;
+				return PARAMETER_ERROR;
 		}
 	} while (1);
 
@@ -633,7 +702,7 @@ hbparameter(ll_cluster_t *hb, int argc, char ** argv, const char * optstr)
 			cl_log(LOG_ERR, "Cannot get parameter %s's value", 
 				argv[optind+2]);
 			cl_log(LOG_ERR, "REASON: %s", hb->llc_ops->errmsg(hb));
-			ret_value = 13;
+			ret_value = NORMAL_FAIL;
 		} else {
 			if (FOR_HUMAN_READ == TRUE) {
 				printf("Heartbeat parameter %s's value: %s\n",
@@ -646,7 +715,7 @@ hbparameter(ll_cluster_t *hb, int argc, char ** argv, const char * optstr)
 		g_free(paramname);
 	} else {
 		cl_log(LOG_ERR, "Need parameter's name");
-		ret_value = 12;
+		ret_value = PARAMETER_ERROR;
 	}
 
 	return ret_value;
@@ -671,17 +740,27 @@ general_simple_opt_deal(int argc, char ** argv, const char * optstr)
 			default:
 				cl_log(LOG_ERR, "Error:getopt returned"
 					"character code %c.", option_char);
-				return 12;
+				return PARAMETER_ERROR;
 		}
 	} while (1);
 	return 0;
 }
 
-static int test(ll_cluster_t *hb, int argc, char ** argv, const char * optstr)
+static int
+test(ll_cluster_t *hb, int argc, char ** argv, const char * optstr)
 {
 	printf("Dead time: %d\n keeplive time: %d\n mynodeid: %s\n rsc: %s\n",
 		(int)hb->llc_ops->get_deadtime(hb), 
 		(int)hb->llc_ops->get_keepalive(hb),
 		hb->llc_ops->get_mynodeid(hb), hb->llc_ops->get_resources(hb));
 	return 0;
+}
+
+/* the handler of signal SIGALRM */
+static void
+quit(int signum)
+{
+	if ( signum == SIGALRM ) {
+		exit(TIMEOUT);
+	}
 }
