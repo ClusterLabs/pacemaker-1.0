@@ -1,4 +1,4 @@
-/* $Id: ccmmain.c,v 1.21 2005/02/21 21:11:09 gshi Exp $ */
+/* $Id: ccmmain.c,v 1.22 2005/02/22 07:02:45 gshi Exp $ */
 /* 
  * ccm.c: Consensus Cluster Service Program 
  *
@@ -47,7 +47,7 @@ static gboolean
 hb_input_dispatch(IPC_Channel * channel, gpointer user_data)
 {
 	if (channel && (channel->ch_status == IPC_DISCONNECT)) {
-		cl_log(LOG_INFO, "Lost connection to heartbeat service. Need to bail out.");
+		cl_log(LOG_ERR, "Lost connection to heartbeat service. Need to bail out.");
 		return FALSE;
 	}
 	
