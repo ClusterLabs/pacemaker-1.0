@@ -1,4 +1,4 @@
-/* $Id: findif.c,v 1.35 2004/04/27 11:25:59 horms Exp $ */
+/* $Id: findif.c,v 1.36 2004/04/27 11:33:19 horms Exp $ */
 /*
  * findif.c:	Finds an interface which can route a given address
  *
@@ -125,6 +125,8 @@ void GetAddress (char *inputaddress, char **address, char **netmaskbits
 ,	 char **bcast_arg, char **if_specified);
 
 void ValidateNetmaskBits (char *netmaskbits, unsigned long *netmask);
+
+int netmask_bits (unsigned long netmask);
 
 const char *	cmdname = "findif";
 void usage(void);
@@ -439,6 +441,21 @@ ValidateNetmaskBits (char *netmaskbits, unsigned long *netmask)
 }
 
 int
+netmask_bits(unsigned long netmask) {
+	int	j;
+
+	netmask = netmask & 0xFFFFFFFFUL;
+
+	for (j=0; j <= 32; ++j) {
+		if ((netmask >> j)&0x1) {
+			break;
+		}
+	}
+
+	return 32 - j;
+}
+
+int
 main(int argc, char ** argv) {
 
 	char *	iparg = NULL;
@@ -537,13 +554,20 @@ main(int argc, char ** argv) {
 	if (bcast_arg) {
 		best_netmask = htonl(best_netmask);
 		/* Yes, they gave us a broadcast address */
-		printf("%s\t netmask %d.%d.%d.%d\tbroadcast %s\n"
-		,	best_if
-                ,       (int)((best_netmask>>24) & 0xff)
-                ,       (int)((best_netmask>>16) & 0xff)
-                ,       (int)((best_netmask>>8) & 0xff)
-                ,       (int)(best_netmask & 0xff)
-		,	bcast_arg);
+		if (!OutputInCIDR) {
+			printf("%s\t netmask %d.%d.%d.%d\tbroadcast %s\n"
+			,	best_if
+                	,       (int)((best_netmask>>24) & 0xff)
+                	,       (int)((best_netmask>>16) & 0xff)
+                	,       (int)((best_netmask>>8) & 0xff)
+                	,       (int)(best_netmask & 0xff)
+			,	bcast_arg);
+		}else{
+			printf("%s\t netmask %d\tbroadcast %s\n"
+			,	best_if
+			,	netmask_bits(best_netmask)
+			,	bcast_arg);
+		}
 	}else{
 		/* No, we use a common broadcast address convention */
 		unsigned long	def_bcast;
@@ -570,18 +594,9 @@ main(int argc, char ** argv) {
 			,       (int)((def_bcast>>8) & 0xff)
 			,       (int)(def_bcast & 0xff));
 		}else{
-			int	j;
-
-			best_netmask = best_netmask & 0xFFFFFFFFUL;
-
-			for (j=0; j <= 32; ++j) {
-				if ((best_netmask >> j)&0x1) {
-					break;
-				}
-			}
 			printf("%s\tnetmask %d\tbroadcast %d.%d.%d.%d\n"
 			,       best_if
-			,	32-j
+			,	netmask_bits(best_netmask)
 			,       (int)((def_bcast>>24) & 0xff)
 			,       (int)((def_bcast>>16) & 0xff)
 			,       (int)((def_bcast>>8) & 0xff)
@@ -682,6 +697,9 @@ ff02::%lo0/32                     fe80::1%lo0                   UC          lo0
 
 /* 
  * $Log: findif.c,v $
+ * Revision 1.36  2004/04/27 11:33:19  horms
+ * Honour -C flag when broadcast is supplied
+ *
  * Revision 1.35  2004/04/27 11:25:59  horms
  * Document -C option to findif
  *
