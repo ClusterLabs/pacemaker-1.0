@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-#	$Id: ResourceManager.in,v 1.17 2004/04/12 21:43:43 alan Exp $
+#	$Id: ResourceManager.in,v 1.18 2004/04/15 13:18:38 alan Exp $
 #
 #	New haresources format:
 #
@@ -232,6 +232,18 @@ giveupresourcegroup() {
       ha_log "info: Retrying failed stop operation [$j]"
     done
     if
+      we_own_resource $j 
+    then
+      : We still own $j
+    else
+      # Red Hat (and probably others) Kludge!
+      ha_log "WARN: Resource script for $j probably not LSB-compliant."
+      ha_log "WARN: it ($j) MUST succeed on a stop when already stopped"
+      ha_log "WARN: Machine reboot narrowly avoided!"
+      rc1=0
+    fi
+      
+    if
       [ $rc -eq 0 ]
     then
       rc=$rc1
@@ -421,9 +433,13 @@ esac
 
 #
 #	$Log: ResourceManager.in,v $
+#	Revision 1.18  2004/04/15 13:18:38  alan
+#	Put in a kludge to permit the new code to avoid an unnecessary reboot for
+#	Red Hat and other non-LSB-compliant init scripts.
+#
 #	Revision 1.17  2004/04/12 21:43:43  alan
 #	Changed the function that runs scripts to return the proper return code.
-#
+#	
 #	Revision 1.16  2004/03/31 22:17:10  alan
 #	Minor changes to the reboot-on-stop-failure patch.
 #	These changes suggested by Jan-Frode Myklebust <janfrode@parallab.uib.no>
