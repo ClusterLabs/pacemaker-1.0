@@ -1,4 +1,4 @@
-# $Id: Makefile.am,v 1.9 2004/10/14 09:17:40 davidlee Exp $
+# $Id: Makefile.am,v 1.10 2004/11/04 11:55:45 davidlee Exp $
 #
 # Open-HA "pkg" Makefile for Solaris etc.
 #
@@ -73,7 +73,7 @@ stamp-tmpinst:
 $(INFOFILES)/prototype:	stamp-tmpinst
 	-mkdir $(INFOFILES)
 	(cd $(TMPINSTDIR) && pkgproto .) \
-	  | nawk ' \
+	  | $(AWK) ' \
 	    BEGIN \
 	      { existingdirs = "^(etc|etc/init.d|opt|usr|var|var/run)$$" ; \
 	      } \
