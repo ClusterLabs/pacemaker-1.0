@@ -1,4 +1,4 @@
-/* $Id: ccm.c,v 1.51 2004/10/07 20:04:05 alan Exp $ */
+/* $Id: ccm.c,v 1.52 2004/10/07 23:14:16 alan Exp $ */
 /* 
  * ccm.c: Consensus Cluster Service Program 
  *
@@ -4197,6 +4197,7 @@ ccm_initialize()
 
 	if((hname = hb_fd->llc_ops->get_mynodeid(hb_fd)) == NULL) {
 		cl_log(LOG_ERR, "get_mynodeid() failed");
+		g_free(ccmret);
 		return NULL;
 	}
 	cl_log(LOG_INFO, "Hostname: %s", hname);
@@ -4206,6 +4207,7 @@ ccm_initialize()
 					!=HA_OK){
 		cl_log(LOG_ERR, "Cannot set if status callback");
 		cl_log(LOG_ERR, "REASON: %s", hb_fd->llc_ops->errmsg(hb_fd));
+		g_free(ccmret);
 		return NULL;
 	}
 	
@@ -4213,6 +4215,7 @@ ccm_initialize()
 	if (hb_fd->llc_ops->setfmode(hb_fd, fmask) != HA_OK) {
 		cl_log(LOG_ERR, "Cannot set filter mode");
 		cl_log(LOG_ERR, "REASON: %s", hb_fd->llc_ops->errmsg(hb_fd));
+		g_free(ccmret);
 		return NULL;
 	}
 
@@ -4224,6 +4227,7 @@ ccm_initialize()
 	if (hb_fd->llc_ops->init_nodewalk(hb_fd) != HA_OK) {
 		cl_log(LOG_ERR, "Cannot start node walk");
 		cl_log(LOG_ERR, "REASON: %s", hb_fd->llc_ops->errmsg(hb_fd));
+		g_free(ccmret);
 		return NULL;
 	}
 
@@ -4238,6 +4242,7 @@ ccm_initialize()
 			if(strcmp(node,hname) == 0) {
 				cl_log(LOG_ERR, "This cluster node: %s: "
 						"is a ping node", node);
+				g_free(ccmret);
 				return NULL;
 			}
 			continue;
@@ -4258,6 +4263,7 @@ ccm_initialize()
 	if (hb_fd->llc_ops->end_nodewalk(hb_fd) != HA_OK) {
 		cl_log(LOG_ERR, "Cannot end node walk");
 		cl_log(LOG_ERR, "REASON: %s", hb_fd->llc_ops->errmsg(hb_fd));
+		g_free(ccmret);
 		return NULL;
 	}
 
@@ -4271,6 +4277,7 @@ ccm_initialize()
 	if (hb_fd->llc_ops->setmsgsignal(hb_fd, 0) != HA_OK) {
 		cl_log(LOG_ERR, "Cannot set message signal");
 		cl_log(LOG_ERR, "REASON: %s", hb_fd->llc_ops->errmsg(hb_fd));
+		g_free(ccmret);
 		return NULL;
 	}
 
