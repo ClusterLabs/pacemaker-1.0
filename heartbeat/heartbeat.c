@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.306 2004/07/26 12:39:46 andrew Exp $ */
+/* $Id: heartbeat.c,v 1.307 2004/08/09 05:05:39 alan Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -401,6 +401,22 @@ static void	start_a_child_client(gpointer childentry, gpointer pidtable);
 static void	LookForClockJumps(void);
 static void	get_localnodeinfo(void);
 static gboolean EmergencyShutdown(gpointer p);
+
+typedef void (*HBmsgcallback) (const char * type, struct node_info* fromnode
+,	TIME_T msgtime, seqno_t seqno, const char * iface, struct ha_msg * msg);
+
+void hb_register_msg_callback(const char * msgtype, HBmsgcallback callback);
+static GHashTable*	message_callbacks;
+static gboolean	HBDoMsgCallback(const char * type, struct node_info* fromnode
+,	TIME_T msgtime, seqno_t seqno, const char * iface, struct ha_msg * msg);
+static void HBDoMsg_T_REXMIT(const char * type, struct node_info * fromnode
+,	TIME_T msgtime, seqno_t seqno, const char * iface, struct ha_msg * msg);
+static void HBDoMsg_T_STATUS(const char * type, struct node_info * fromnode
+,	TIME_T msgtime, seqno_t seqno, const char * iface, struct ha_msg * msg);
+static void HBDoMsg_T_SHUTDONE(const char * type, struct node_info * fromnode
+,	TIME_T msgtime, seqno_t seqno, const char * iface, struct ha_msg * msg);
+static void HBDoMsg_T_QCSTATUS(const char * type, struct node_info * fromnode
+,	TIME_T msgtime, seqno_t seqno, const char * iface, struct ha_msg * msg);
 
 /*
  * Glib Mainloop Source functions...
@@ -1684,17 +1700,205 @@ hb_mcp_final_shutdown(gpointer p)
 	return FALSE;
 }
 
+
+
+void
+hb_register_msg_callback(const char * mtype, HBmsgcallback callback)
+{
+	char * msgtype = g_strdup(mtype);
+	
+	if (message_callbacks == NULL) {
+		message_callbacks = g_hash_table_new(g_str_hash, g_str_equal);
+	}
+	g_hash_table_insert(message_callbacks, msgtype, callback);
+}
+
+static gboolean
+HBDoMsgCallback(const char * type, struct node_info * fromnode
+,	TIME_T msgtime, seqno_t seqno, const char * iface, struct ha_msg * msg)
+{
+	HBmsgcallback cb;
+
+	if ((cb = g_hash_table_lookup(message_callbacks, type))) {
+		cb(type, fromnode, msgtime, seqno, iface, msg);
+		return TRUE;
+	}
+	/* It's OK to register for "no one else wants it" with "" */
+	if ((cb = g_hash_table_lookup(message_callbacks, ""))) {
+		cb(type, fromnode, msgtime, seqno, iface, msg);
+		return TRUE;
+	}
+	return FALSE;
+}
+
+static void
+HBDoMsg_T_REXMIT(const char * type, struct node_info * fromnode
+,	TIME_T msgtime, seqno_t seqno, const char * iface, struct ha_msg * msg)
+{
+	heartbeat_monitor(msg, PROTOCOL, iface);
+	if (fromnode != curnode) {
+		process_rexmit(&msghist, msg);
+	}
+}
+
+/* Process status update (i.e., "heartbeat") message? */
+static void
+HBDoMsg_T_STATUS(const char * type, struct node_info * fromnode
+,	TIME_T msgtime, seqno_t seqno, const char * iface, struct ha_msg * msg)
+{
+
+	const char *	status;
+	longclock_t		messagetime = time_longclock();
+
+
+	status = ha_msg_value(msg, F_STATUS);
+	if (status == NULL)  {
+		cl_log(LOG_ERR, "HBDoMsg_T_STATUS: "
+		"status update without "
+		F_STATUS " field");
+		return;
+	}
+
+	/* Do we already have a newer status? */
+	if (msgtime < fromnode->rmt_lastupdate
+	&&		seqno < fromnode->status_seqno) {
+		return;
+	}
+
+	/* Have we seen an update from here before? */
+
+	if (fromnode->local_lastupdate) {
+		long		heartbeat_ms;
+		heartbeat_ms = longclockto_ms(sub_longclock
+		(	messagetime, fromnode->local_lastupdate));
+
+		if (heartbeat_ms > config->warntime_ms) {
+			cl_log(LOG_WARNING
+			,	"Late heartbeat: Node %s:"
+			" interval %ld ms"
+			,	fromnode->nodename
+			,	heartbeat_ms);
+		}
+	}
+
+
+	/* Is the node status the same? */
+	if (strcasecmp(fromnode->status, status) != 0
+	&&	fromnode != curnode) {
+		cl_log(LOG_INFO
+		,	"Status update for node %s: status %s"
+		,	fromnode->nodename
+		,	status);
+		if (ANYDEBUG) {
+			cl_log(LOG_DEBUG
+			,	"Status seqno: %ld msgtime: %ld"
+			,	seqno, msgtime);
+		}
+		
+		QueueRemoteRscReq(PerformQueuedNotifyWorld, msg);
+		strncpy(fromnode->status, status
+		, 	sizeof(fromnode->status));
+		heartbeat_monitor(msg, KEEPIT, iface);
+	}else{
+		heartbeat_monitor(msg, NOCHANGE, iface);
+	}
+
+	/* Did we get a status update on ourselves? */
+	if (fromnode == curnode) {
+		if (UseApphbd == TRUE) {
+			hb_apphb_hb();
+		} else { 
+			hb_tickle_watchdog();
+		}
+	}
+
+	fromnode->rmt_lastupdate = msgtime;
+	fromnode->local_lastupdate = messagetime;
+	fromnode->status_seqno = seqno;
+
+}
+
+static void /* Received a "SHUTDONE" message from someone... */
+HBDoMsg_T_SHUTDONE(const char * type, struct node_info * fromnode
+,	TIME_T msgtime, seqno_t seqno, const char * iface, struct ha_msg * msg)
+{
+	if (heartbeat_comm_state == COMM_LINKSUP) {
+		process_resources(type, msg, fromnode);
+	}
+	heartbeat_monitor(msg, KEEPIT, iface);
+	if (fromnode == curnode) {
+		if (ANYDEBUG) {
+			cl_log(LOG_DEBUG
+			,	"Received T_SHUTDONE from us.");
+		}
+		if (ANYDEBUG) {
+			cl_log(LOG_DEBUG
+			,	"Calling hb_mcp_final_shutdown"
+			" in a second.");
+		}
+		/* Trigger final shutdown in a second */
+		Gmain_timeout_add(1, hb_mcp_final_shutdown, NULL);
+	}else{
+		/* This is resource work!!! FIXME!!!  */
+		fromnode->has_resources = FALSE;
+		other_is_stable = 0;
+		other_holds_resources= HB_NO_RSC;
+
+		cl_log(LOG_INFO
+		,	"Received shutdown notice from '%s'."
+		,	fromnode->nodename);
+		takeover_from_node(fromnode->nodename);
+	}
+}
+
+
+static void /* This is a client status query from remote client */
+HBDoMsg_T_QCSTATUS(const char * type, struct node_info * fromnode
+,	TIME_T msgtime, seqno_t seqno, const char * iface, struct ha_msg * msg)
+{
+	const char * clientid;
+	struct ha_msg * m = NULL;
+	int ret = HA_FAIL;
+	
+	if ((clientid = ha_msg_value(msg, F_CLIENTNAME)) == NULL) {
+		cl_log(LOG_ERR, "%s ha_msg_value failed", __FUNCTION__);
+		return;
+	}
+	if ((m = ha_msg_new(0)) == NULL){
+		cl_log(LOG_ERR, "%s Cannot add field", __FUNCTION__);
+		return;
+	}
+	if (ha_msg_add(m, F_TYPE, T_RCSTATUS) != HA_OK
+	||	ha_msg_add(m, F_TO, fromnode->nodename) != HA_OK
+	||	ha_msg_add(m, F_APIRESULT, API_OK) != HA_OK
+	||	ha_msg_add(m, F_CLIENTNAME, clientid) != HA_OK) {
+		cl_log(LOG_ERR, "Cannot create clent status msg");
+		return;
+	}
+	if (find_client(clientid, NULL) != NULL) {
+		ret = ha_msg_add(m, F_CLIENTSTATUS, ONLINESTATUS);
+	}else{
+		ret = ha_msg_add(m, F_CLIENTSTATUS, OFFLINESTATUS);
+	}
+
+	if (ret != HA_OK) {
+		cl_log(LOG_ERR, "Cannot create clent status msg");
+		return;
+	}
+	send_cluster_msg(m);
+	heartbeat_monitor(msg, KEEPIT, iface);
+}
+
 /*
- * Process an incoming message from our read child processes
- * That is, packets coming from other nodes.
- */
+* Process an incoming message from our read child processes
+* That is, packets coming from other nodes.
+*/
 static void
 process_clustermsg(struct ha_msg* msg, struct link* lnk)
 {
 	struct node_info *	thisnode = NULL;
 	const char*		iface;
 
-	TIME_T			msgtime = 0;
 	longclock_t		now = time_longclock();
 	const char *		from;
 	const char *		fromuuid;
@@ -1702,9 +1906,10 @@ process_clustermsg(struct ha_msg* msg, struct link* lnk)
 	const char *		ts;
 	const char *		type;
 	int			action;
-	longclock_t		messagetime;
 	const char *		cseq;
 	seqno_t			seqno = 0;
+	longclock_t		messagetime = time_longclock();
+	TIME_T			msgtime;
 
 
 
@@ -1713,7 +1918,6 @@ process_clustermsg(struct ha_msg* msg, struct link* lnk)
 	}else{
 		iface = lnk->name;
 	}
-	messagetime = time_longclock();
 
 	/* FIXME: We really ought to use gmainloop timers for this */
 	if (cmp_longclock(standby_running, zero_longclock) != 0) {
@@ -1745,7 +1949,7 @@ process_clustermsg(struct ha_msg* msg, struct link* lnk)
 	ts = ha_msg_value(msg, F_TIME);
 	cseq = ha_msg_value(msg, F_SEQ);
 
-if (DEBUGDETAILS) {
+	if (DEBUGDETAILS) {
 		cl_log(LOG_DEBUG
 		       ,       "process_clustermsg: node [%s]"
 		,	from ? from :"?");
@@ -1850,127 +2054,10 @@ if (DEBUGDETAILS) {
 	thisnode->track.last_iface = iface;
 
 
-	/*
-	 * FIXME: ALL messages ought to go through a GHashTable
-	 * and get called as functions so it's easily extensible
-	 * without messing up this logic.  It would be faster, too!
-	 * parameters to these functions should be:
-	 *	type
-	 *	thisnode
-	 *	iface
-	 *	msg
-	 */
+	if (HBDoMsgCallback(type, thisnode, msgtime, seqno, iface, msg)) {
+		/* Good.  No need to process it further... */
 
-	if (strcasecmp(type, T_STATUS) == 0
-	||	strcasecmp(type, T_NS_STATUS) == 0) {
-
-	/* Is this a status update (i.e., "heartbeat") message? */
-		const char *	status;
-
-		status = ha_msg_value(msg, F_STATUS);
-		if (status == NULL)  {
-			cl_log(LOG_ERR, "process_status_message: "
-			"status update without "
-			F_STATUS " field");
-			return;
-		}
-
-		/* Do we already have a newer status? */
-		if (msgtime < thisnode->rmt_lastupdate
-		&&		seqno < thisnode->status_seqno) {
-			return;
-		}
-
-		/* Have we seen an update from here before? */
-
-		if (thisnode->local_lastupdate) {
-			long		heartbeat_ms;
-			heartbeat_ms = longclockto_ms(sub_longclock
-			(	messagetime, thisnode->local_lastupdate));
-
-			if (heartbeat_ms > config->warntime_ms) {
-				cl_log(LOG_WARNING
-				,	"Late heartbeat: Node %s:"
-				" interval %ld ms"
-				,	thisnode->nodename
-				,	heartbeat_ms);
-			}
-		}
-
-
-		/* Is the node status the same? */
-		if (strcasecmp(thisnode->status, status) != 0
-		&&	thisnode != curnode) {
-			cl_log(LOG_INFO
-			,	"Status update for node %s: status %s"
-			,	thisnode->nodename
-			,	status);
-			if (ANYDEBUG) {
-				cl_log(LOG_DEBUG
-				,	"Status seqno: %ld msgtime: %ld"
-				,	seqno, msgtime);
-			}
-			
-			QueueRemoteRscReq(PerformQueuedNotifyWorld, msg);
-			strncpy(thisnode->status, status
-			, 	sizeof(thisnode->status));
-			heartbeat_monitor(msg, action, iface);
-		}else{
-			heartbeat_monitor(msg, NOCHANGE, iface);
-		}
-
-		/* Did we get a status update on ourselves? */
-		if (thisnode == curnode) {
-			if (UseApphbd == TRUE) {
-				hb_apphb_hb();
-			} else { 
-				hb_tickle_watchdog();
-			}
-		}
-
-		thisnode->rmt_lastupdate = msgtime;
-		thisnode->local_lastupdate = messagetime;
-		thisnode->status_seqno = seqno;
-
-	}else if (strcasecmp(type, T_REXMIT) == 0) {
-		heartbeat_monitor(msg, PROTOCOL, iface);
-		if (thisnode != curnode) {
-			process_rexmit(&msghist, msg);
-		}
-
-	/* END OF STATUS/ LINK PROTOCOL CODE */
-
-
-	/* Did we get a "shutdown complete" message? */
-
-	}else if (strcasecmp(type, T_SHUTDONE) == 0) {
-		if (heartbeat_comm_state == COMM_LINKSUP) {
-			process_resources(type, msg, thisnode);
-		}
-	    	heartbeat_monitor(msg, action, iface);
-		if (thisnode == curnode) {
-			if (ANYDEBUG) {
-				cl_log(LOG_DEBUG
-				,	"Received T_SHUTDONE from us.");
-		    	}
-			if (ANYDEBUG) {
-				cl_log(LOG_DEBUG
-				,	"Calling hb_mcp_final_shutdown"
-				" in a second.");
-		    	}
-			/* Trigger final shutdown in a second */
-			Gmain_timeout_add(1, hb_mcp_final_shutdown, NULL);
-		}else{
-			thisnode->has_resources = FALSE;
-			other_is_stable = 0;
-			other_holds_resources= HB_NO_RSC;
-
-		    	cl_log(LOG_INFO
-			,	"Received shutdown notice from '%s'."
-			,	thisnode->nodename);
-			takeover_from_node(thisnode->nodename);
-		}
-
+		/* Did we get a "shutdown complete" message? */
 	}else if (strcasecmp(type, T_STARTING) == 0
 	||	strcasecmp(type, T_RESOURCES) == 0) {
 		/*
@@ -1983,12 +2070,11 @@ if (DEBUGDETAILS) {
 		heartbeat_monitor(msg, action, iface);
 
 	}else if (strcasecmp(type, T_ASKRESOURCES) == 0) {
-
 		/* Someone wants to go standby!!! */
 		heartbeat_monitor(msg, action, iface);
 		ask_for_resources(msg);
 
-	}else	if (strcasecmp(type, T_ASKRELEASE) == 0) {
+	}else if (strcasecmp(type, T_ASKRELEASE) == 0) {
 		heartbeat_monitor(msg, action, iface);
 		if (thisnode != curnode) {
 			/*
@@ -2007,38 +2093,6 @@ if (DEBUGDETAILS) {
 		heartbeat_monitor(msg, action, iface);
 		QueueRemoteRscReq(PerformQueuedNotifyWorld, msg);
 
-	}else if (strcasecmp(type, T_QCSTATUS) == 0) {
-		/* This is a client status query from remote client */
-		const char * clientid;
-		struct ha_msg * m = NULL;
-		int ret = HA_FAIL;
-		
-		if ((clientid = ha_msg_value(msg, F_CLIENTNAME)) == NULL) {
-			cl_log(LOG_ERR, "%s ha_msg_value failed", __FUNCTION__);
-			return;
-		}
-		if ((m = ha_msg_new(0)) == NULL){
-			cl_log(LOG_ERR, "%s Cannot add field", __FUNCTION__);
-			return;
-		}
-		if (ha_msg_add(m, F_TYPE, T_RCSTATUS) != HA_OK
-		||	ha_msg_add(m, F_TO, from) != HA_OK
-		||	ha_msg_add(m, F_APIRESULT, API_OK) != HA_OK
-		||	ha_msg_add(m, F_CLIENTNAME, clientid) != HA_OK) {
-			cl_log(LOG_ERR, "Cannot create clent status msg");
-			return;
-		}
-		if (find_client(clientid, NULL) != NULL)
-			ret = ha_msg_add(m, F_CLIENTSTATUS, ONLINESTATUS);
-		else
-			ret = ha_msg_add(m, F_CLIENTSTATUS, OFFLINESTATUS);
-
-		if (ret != HA_OK) {
-			cl_log(LOG_ERR, "Cannot create clent status msg");
-			return;
-		}
-		send_cluster_msg(m);
-		return;
 	}else{
 		/* None of the above... */
 		heartbeat_monitor(msg, action, iface);
@@ -2962,6 +3016,13 @@ main(int argc, char * argv[], char **envp)
 
 	get_localnodeinfo();
 	SetParameterValue(KEY_HBVERSION, VERSION);
+
+	/* Default message handling... */
+	hb_register_msg_callback(T_REXMIT,	HBDoMsg_T_REXMIT);
+	hb_register_msg_callback(T_STATUS,	HBDoMsg_T_STATUS);
+	hb_register_msg_callback(T_NS_STATUS,	HBDoMsg_T_STATUS);
+	hb_register_msg_callback(T_SHUTDONE,	HBDoMsg_T_SHUTDONE);
+	hb_register_msg_callback(T_QCSTATUS,	HBDoMsg_T_QCSTATUS);
 
 	if (init_set_proc_title(argc, argv, envp) < 0) {
 		cl_log(LOG_ERR, "Allocation of proc title failed.");
@@ -4387,6 +4448,13 @@ hb_unregister_to_apphbd(void)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.307  2004/08/09 05:05:39  alan
+ * Added code to allow heartbeat packet processing by callback functions,
+ * and moved a couple of (non-resource) functions over to use this new
+ * callback processing.  Looks like it's working.  Still need to move
+ * over the resource packet handling over.  This is groundwork for making
+ * the '-M' flag work correctly.
+ *
  * Revision 1.306  2004/07/26 12:39:46  andrew
  * Change the type of some int's to size_t to stop OSX complaining
  *
