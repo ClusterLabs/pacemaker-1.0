@@ -1,4 +1,4 @@
-/* $Id: heartbeat.c,v 1.295 2004/03/17 18:04:05 msoffen Exp $ */
+/* $Id: heartbeat.c,v 1.296 2004/03/25 07:55:40 alan Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -227,6 +227,12 @@
 #	include <sched.h>
 #endif
 
+#if HAVE_LINUX_WATCHDOG_H
+#	include <sys/ioctl.h>
+#	include <linux/types.h>
+#	include <linux/watchdog.h>
+#endif
+
 #include <clplumbing/Gmain_timeout.h>
 #include <clplumbing/longclock.h>
 #include <clplumbing/proctrack.h>
@@ -239,6 +245,7 @@
 #include <clplumbing/GSource.h>
 #include <clplumbing/cl_signal.h>
 #include <clplumbing/cpulimits.h>
+#include <clplumbing/netstring.h>
 #include <heartbeat.h>
 #include <ha_msg.h>
 #include <hb_api.h>
@@ -303,6 +310,7 @@ static long			hb_pid_in_file = 0L;
 int				hb_realtime_prio = -1;
 char *				watchdogdev = NULL;
 static int			watchdogfd = -1;
+static int			watchdog_timeout_ms = 0L;
 
 int				shutdown_in_progress = FALSE;
 int				WeAreRestarting = FALSE;
@@ -666,6 +674,8 @@ initialize_heartbeat()
 	ourproc = procinfo->nprocs;
 	curproc = &procinfo->info[ourproc];
 	curproc->type = PROC_MST_CONTROL;
+	cl_malloc_setstats(&curproc->memstats);
+	cl_msg_setstats(&curproc->msgstats);
 	NewTrackedProc(getpid(), 0, PT_LOGVERBOSE, GINT_TO_POINTER(ourproc)
 	,	&CoreProcessTrackOps);
 
@@ -697,7 +707,10 @@ initialize_heartbeat()
 				break;
 
 		case 0:		/* Child */
+				close(watchdogfd);
 				curproc = &procinfo->info[ourproc];
+				cl_malloc_setstats(&curproc->memstats);
+				cl_msg_setstats(&curproc->msgstats);
 				curproc->type = PROC_HBFIFO;
 				while (curproc->pid != getpid()) {
 					sleep(1);
@@ -726,7 +739,10 @@ initialize_heartbeat()
 					break;
 
 			case 0:		/* Child */
+					close(watchdogfd);
 					curproc = &procinfo->info[ourproc];
+					cl_malloc_setstats(&curproc->memstats);
+					cl_msg_setstats(&curproc->msgstats);
 					curproc->type = PROC_HBWRITE;
 					while (curproc->pid != getpid()) {
 						sleep(1);
@@ -751,7 +767,10 @@ initialize_heartbeat()
 					break;
 
 			case 0:		/* Child */
+					close(watchdogfd);
 					curproc = &procinfo->info[ourproc];
+					cl_malloc_setstats(&curproc->memstats);
+					cl_msg_setstats(&curproc->msgstats);
 					curproc->type = PROC_HBREAD;
 					while (curproc->pid != getpid()) {
 						sleep(1);
@@ -907,6 +926,7 @@ fifo_child(IPC_Channel* chan)
 		exit(1);
 	}
 	open(FIFONAME, O_WRONLY);	/* Keep reads from getting EOF */
+	
 	flags = fcntl(fiforfd, F_GETFL);
 	flags &= ~O_NONBLOCK;
 	fcntl(fiforfd, F_SETFL, flags);
@@ -934,7 +954,7 @@ fifo_child(IPC_Channel* chan)
 			IPC_Message*	m;
 			if (DEBUGDETAILS) {
 				cl_log(LOG_DEBUG, "fifo_child message:");
-				ha_log_message(msg);
+				cl_log_message(msg);
 			}
 			m = hamsg2ipcmsg(msg, chan);
 			if (m) {
@@ -1670,7 +1690,7 @@ if (DEBUGDETAILS) {
 		,	"missing from/ts/type"
 		,	iface
 		,	(from? from : "<?>"));
-		ha_log_message(msg);
+		cl_log_message(msg);
 		return;
 	}
 	if (cseq != NULL) {
@@ -1683,7 +1703,7 @@ if (DEBUGDETAILS) {
 			,	"missing seqno"
 			,	iface
 			,	(from? from : "<?>"));
-			ha_log_message(msg);
+			cl_log_message(msg);
 			return;
 		}
 	}
@@ -1714,7 +1734,7 @@ if (DEBUGDETAILS) {
 		cl_log(LOG_ERR
 		,   "process_status_message: bad node [%s] in message"
 		,	from);
-		ha_log_message(msg);
+		cl_log_message(msg);
 		return;
 #endif
 	}
@@ -1948,6 +1968,30 @@ check_auth_change(struct sys_config *conf)
 		conf->rereadauth = FALSE;
 	}
 }
+static int
+hb_compute_authentication(int authindex, const void * data, size_t datalen
+,	char * authstr, size_t authlen)
+{
+	struct HBAuthOps *	at;
+
+	check_auth_change(config);
+	if (authindex < 0) {
+		authindex = config->authnum;
+	}
+	if (authindex < 0 || authindex >= MAXAUTH
+	||	 ((at = config->auth_config[authindex].auth)) == NULL) {
+		return HA_FAIL;
+	}
+	if (!at->auth(config->authmethod, data, datalen, authstr, authlen)) {
+		ha_log(LOG_ERR 
+		,	"Cannot compute message auth string [%s/%s/%s]"
+		,	config->authmethod->authname
+		,	config->authmethod->key
+		,	(const char *)data);
+		return -2;
+	}
+	return authindex;
+}
 
 
 /***********************************************************************
@@ -2151,6 +2195,7 @@ start_a_child_client(gpointer childentry, gpointer pidtable)
 				break;
 	}
 
+	close(watchdogfd);
 	/* Child process:  start the managed child */
 	cl_make_normaltime();
 	setpgid(0,0);
@@ -2220,6 +2265,7 @@ hb_dump_proc_stats(volatile struct process_info * proc)
 {
 	const char *	ct;
 	unsigned long	curralloc;
+	volatile cl_mem_stats_t	*ms;
 
 	if (!proc) {
 		return;
@@ -2227,25 +2273,29 @@ hb_dump_proc_stats(volatile struct process_info * proc)
 
 	ct = core_proc_name(proc->type);
 
-	cl_log(LOG_INFO, "MSG stats: %ld/%ld age %ld [pid%d/%s]"
-	,	proc->allocmsgs, proc->totalmsgs
-	,	time(NULL) - proc->lastmsg, (int) proc->pid, ct);
+	cl_log(LOG_INFO, "MSG stats: %ld/%ld ms age %ld [pid%d/%s]"
+	,	proc->msgstats.allocmsgs, proc->msgstats.totalmsgs
+	,	longclockto_ms(sub_longclock(time_longclock()
+	,		proc->msgstats.lastmsg))
+	,	(int) proc->pid, ct);
 
-	if (proc->numalloc > proc->numfree) {
-		curralloc = proc->numalloc - proc->numfree;
+	
+	ms = &proc->memstats;
+	if (ms->numalloc > ms->numfree) {
+		curralloc = ms->numalloc - ms->numfree;
 	}else{
 		curralloc = 0;
 	}
 
 	cl_log(LOG_INFO, "ha_malloc stats: %lu/%lu  %lu/%lu [pid%d/%s]"
-	,	curralloc, proc->numalloc
-	,	proc->nbytes_alloc, proc->nbytes_req, (int) proc->pid, ct);
+	,	curralloc, ms->numalloc
+	,	ms->nbytes_alloc, ms->nbytes_req, (int) proc->pid, ct);
 
 	cl_log(LOG_INFO, "RealMalloc stats: %lu total malloc bytes."
-	" pid [%d/%s]", proc->mallocbytes, (int) proc->pid, ct);
+	" pid [%d/%s]", ms->mallocbytes, (int) proc->pid, ct);
 
 #ifdef HAVE_MALLINFO
-	cl_log(LOG_INFO, "Current arena value: %lu", proc->arena);
+	cl_log(LOG_INFO, "Current arena value: %lu", ms->arena);
 #endif
 }
 
@@ -2475,17 +2525,16 @@ send_cluster_msg(struct ha_msg* msg)
 		/*
 		 * Convert the message to a string, and write it to the FIFO
 		 * It will then get written to the cluster properly.
-		 * NOTE: stringlen includes room for the EOS byte.
 		 */
 
 
 		if (	(smsg = msg2wirefmt(msg, &len)) == NULL
 		||	(ffd = open(FIFONAME, O_WRONLY|O_NDELAY|O_APPEND)) < 0
 		||	write(ffd, smsg, len -1 )
-		!=	len -1){
+		!=	(ssize_t)(len -1)){
 			cl_perror("Cannot write message to " FIFONAME
 			" [%d vs %d]", getpid(), processes[0]);
-			ha_log_message(msg);
+			cl_log_message(msg);
 			rc = HA_FAIL;
 			
 		}
@@ -2740,6 +2789,8 @@ main(int argc, char * argv[], char **envp)
 		cleanexit(generic_error);
 	}
 	init_procinfo();
+	cl_set_oldmsgauthfunc(isauthentic);
+	cl_set_authentication_computation_method(hb_compute_authentication);
 
 	Argc = argc;
 
@@ -3159,6 +3210,30 @@ make_daemon(void)
 	}
 }
 
+static void
+hb_init_watchdog_interval(void)
+{
+	if (watchdogfd < 0) {
+		return;
+	}
+	if (watchdog_timeout_ms == 0L) {
+		watchdog_timeout_ms = config->deadtime_ms + 10;
+	}
+#ifdef WDIOC_SETTIMEOUT
+	{
+		longclock_t	timeout;
+		int timeout_ticks;
+
+		timeout = msto_longclock(watchdog_timeout_ms);
+		timeout_ticks = (int)longclockto_long(timeout);
+
+		if (ioctl(watchdogfd, WDIOC_SETTIMEOUT, &timeout_ticks) < 0) {
+			cl_perror("Failed to set watchdog timer to %d ticks"
+			,	timeout_ticks);
+		}
+	}
+#endif
+}
 void
 hb_init_watchdog(void)
 {
@@ -3171,6 +3246,7 @@ hb_init_watchdog(void)
 			}
 			cl_log(LOG_NOTICE, "Using watchdog device: %s"
 			,	watchdogdev);
+			hb_init_watchdog_interval();
 			hb_tickle_watchdog();
 		}else{
 			cl_log(LOG_ERR, "Cannot open watchdog device: %s"
@@ -3200,8 +3276,18 @@ hb_close_watchdog(void)
 			cl_perror(
 			"Watchdog write magic character failure: closing %s!"
 			,	watchdogdev);
+		}else{
+			if (ANYDEBUG) {
+				cl_log(LOG_INFO, "Successful watchdog 'V' write");
+			}
 		}
-		close(watchdogfd);
+		if (close(watchdogfd) < 0) {
+			cl_perror("Watchdog close(2) failed.");
+		}else{
+			if (ANYDEBUG) {
+				cl_log(LOG_INFO, "Successful watchdog close");
+			}
+		}
 		watchdogfd=-1;
 	}
 }
@@ -3307,7 +3393,7 @@ should_drop_message(struct node_info * thisnode, const struct ha_msg *msg,
 
 	if (cseq  == NULL || sscanf(cseq, "%lx", &seq) != 1 ||	seq <= 0) {
 		cl_log(LOG_ERR, "should_drop_message: bad sequence number");
-		ha_log_message(msg);
+		cl_log_message(msg);
 		return DROPIT;
 	}
 
@@ -3472,7 +3558,7 @@ should_drop_message(struct node_info * thisnode, const struct ha_msg *msg,
 	/* This is a DUP packet (or a really old one we lost track of) */
 	if (DEBUGPKT) {
 		cl_log(LOG_DEBUG, "should_drop_message: Duplicate packet");
-		ha_log_message(msg);
+		cl_log_message(msg);
 	}
 	return DROPIT;
 
@@ -3829,7 +3915,7 @@ process_rexmit(struct msg_xmit_hist * hist, struct ha_msg* msg)
 	||	(fseq=atoi(cfseq)) <= 0 || (lseq=atoi(clseq)) <= 0
 	||	fseq > lseq) {
 		cl_log(LOG_ERR, "Invalid rexmit seqnos");
-		ha_log_message(msg);
+		cl_log_message(msg);
 	}
 
 	for (thisseq = lseq; thisseq >= fseq; --thisseq) {
@@ -3903,7 +3989,7 @@ process_rexmit(struct msg_xmit_hist * hist, struct ha_msg* msg)
 			smsg = msg2wirefmt(hist->msgq[msgslot], &len);
 
 			if (DEBUGPKT) {
-				ha_log_message(hist->msgq[msgslot]);
+				cl_log_message(hist->msgq[msgslot]);
 				cl_log(LOG_INFO
 				,	"Rexmit STRING conversion: [%s]"
 				,	smsg);
@@ -4107,6 +4193,9 @@ get_localnodeinfo(void)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.296  2004/03/25 07:55:40  alan
+ * Moved heartbeat libraries to the lib directory.
+ *
  * Revision 1.295  2004/03/17 18:04:05  msoffen
  * Changes to make the FIFO work on Solaris
  *

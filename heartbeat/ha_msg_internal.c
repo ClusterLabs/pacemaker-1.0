@@ -1,4 +1,4 @@
-/* $Id: ha_msg_internal.c,v 1.41 2004/03/03 05:31:50 alan Exp $ */
+/* $Id: ha_msg_internal.c,v 1.42 2004/03/25 07:55:39 alan Exp $ */
 /*
  * ha_msg_internal: heartbeat internal messaging functions
  *
@@ -77,14 +77,14 @@ add_control_msg_fields(struct ha_msg* ret)
 
 	if ((type = ha_msg_value(ret, F_TYPE)) == NULL) {
 		ha_log(LOG_ERR, "No type (add_control_msg_fields): ");
-		ha_log_message(ret);
+		cl_log_message(ret);
 		ha_msg_del(ret);
 		return(NULL);
 	}
 
 	if (DEBUGPKTCONT) {
 		ha_log(LOG_DEBUG, "add_control_msg_fields: input packet");
-		ha_log_message(ret);
+		cl_log_message(ret);
 	}
 
 	noseqno = (strncmp(type, NOSEQ_PREFIX, sizeof(NOSEQ_PREFIX)-1) == 0);
@@ -122,7 +122,7 @@ add_control_msg_fields(struct ha_msg* ret)
 	}
 	if (DEBUGPKTCONT) {
 		ha_log(LOG_DEBUG, "add_control_msg_fields: packet returned");
-		ha_log_message(ret);
+		cl_log_message(ret);
 	}
 	return ret;
 }
@@ -151,7 +151,7 @@ add_msg_auth(struct ha_msg * m)
 			,	"add_msg_auth: %s:  from %s"
 			,	"missing from/ts/type"
 			,	(from? from : "<?>"));
-			ha_log_message(m);
+			cl_log_message(m);
 		}
 	}
 
@@ -184,7 +184,7 @@ add_msg_auth(struct ha_msg * m)
 	return(ha_msg_mod(m, F_AUTH, authstring));
 }
 
-int
+gboolean
 isauthentic(const struct ha_msg * m)
 {
 	char	msgbody[MAXMSG];
@@ -352,6 +352,9 @@ main(int argc, char ** argv)
 #endif
 /*
  * $Log: ha_msg_internal.c,v $
+ * Revision 1.42  2004/03/25 07:55:39  alan
+ * Moved heartbeat libraries to the lib directory.
+ *
  * Revision 1.41  2004/03/03 05:31:50  alan
  * Put in Gochun Shi's new netstrings on-the-wire data format code.
  * this allows sending binary data, among many other things!

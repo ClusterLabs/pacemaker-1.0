@@ -1,4 +1,4 @@
-/* $Id: hb_resource.c,v 1.49 2004/02/17 22:11:57 lars Exp $ */
+/* $Id: hb_resource.c,v 1.50 2004/03/25 07:55:39 alan Exp $ */
 /*
  * hb_resource: Linux-HA heartbeat resource management code
  *
@@ -178,7 +178,7 @@ CreateInitialFilter(void)
 	RCScriptNames = g_hash_table_new(g_str_hash, g_str_equal);
 
 	if ((dp = opendir(HB_RC_DIR)) == NULL) {
-		ha_perror("Cannot open directory " HB_RC_DIR);
+		cl_perror("Cannot open directory " HB_RC_DIR);
 		return;
 	}
 	while((dep = readdir(dp)) != NULL) {
@@ -186,7 +186,7 @@ CreateInitialFilter(void)
 			continue;
 		}
 		if (ANYDEBUG) {
-			ha_log(LOG_DEBUG
+			cl_log(LOG_DEBUG
 			,	"CreateInitialFilter: %s", dep->d_name);
 		}
 		g_hash_table_insert(RCScriptNames, g_strdup(dep->d_name),foo);
@@ -203,7 +203,7 @@ FilterNotifications(const char * msgtype)
 	rc = g_hash_table_lookup(RCScriptNames, msgtype) != NULL;
 
 	if (DEBUGDETAILS) {
-		ha_log(LOG_DEBUG
+		cl_log(LOG_DEBUG
 		,	"FilterNotifications(%s) => %d"
 		,	msgtype, rc);
 	}
@@ -215,7 +215,7 @@ static void
 PerformAutoFailback(void)
 {
 	if (ANYDEBUG) {
-		ha_log(LOG_DEBUG, "Calling PerformAutoFailback()");
+		cl_log(LOG_DEBUG, "Calling PerformAutoFailback()");
 	}
 	if ((procinfo->i_hold_resources & HB_FOREIGN_RSC) == 0
 	||	!rsc_needs_failback || !auto_failback) {
@@ -225,12 +225,12 @@ PerformAutoFailback(void)
 	}
 
 	if (going_standby != NOT) {
-		ha_log(LOG_ERR, "Auto failback ignored.");
+		cl_log(LOG_ERR, "Auto failback ignored.");
 		rsc_needs_failback = FALSE;
 		return;
 	}
 	if (ANYDEBUG) {
-		ha_log(LOG_DEBUG, "Auto failback triggered.");
+		cl_log(LOG_DEBUG, "Auto failback triggered.");
 	}
 
 	failback_in_progress = TRUE;
@@ -283,7 +283,7 @@ notify_world(struct ha_msg * msg, const char * ostatus)
 	}
 
 	if (ANYDEBUG) {
-		ha_log(LOG_DEBUG
+		cl_log(LOG_DEBUG
 		,	"notify_world: invoking %s: OLD status: %s"
 		,	RC_ARG0,	(ostatus ? ostatus : "(none)"));
 	}
@@ -302,7 +302,7 @@ notify_world(struct ha_msg * msg, const char * ostatus)
 
 	switch ((pid=fork())) {
 
-		case -1:	ha_perror("Can't fork to notify world!");
+		case -1:	cl_perror("Can't fork to notify world!");
 				break;
 
 
@@ -313,7 +313,7 @@ notify_world(struct ha_msg * msg, const char * ostatus)
 				setpgid(0,0);
 				CL_SIGACTION(SIGCHLD, NULL, &sa);
 				if (sa.sa_handler != SIG_DFL) {
-					ha_log(LOG_DEBUG
+					cl_log(LOG_DEBUG
 					,	"notify_world: setting SIGCHLD"
 					" Handler to SIG_DFL");
 					CL_SIGNAL(SIGCHLD,SIG_DFL);
@@ -332,13 +332,13 @@ notify_world(struct ha_msg * msg, const char * ostatus)
 				}
 				
 				if (ANYDEBUG) {
-					ha_log(LOG_DEBUG
+					cl_log(LOG_DEBUG
 					,	"notify_world: Running %s %s"
 					,	argv[0], argv[1]);
 				}
 				execv(RCSCRIPT, argv);
 
-				ha_log(LOG_ERR, "cannot exec %s", RCSCRIPT);
+				cl_log(LOG_ERR, "cannot exec %s", RCSCRIPT);
 				cleanexit(1);
 				/*NOTREACHED*/
 				break;
@@ -350,7 +350,7 @@ notify_world(struct ha_msg * msg, const char * ostatus)
 				/* So this use of "command" is OK */
 				HB_RSCMGMTPROC(pid, command);
 				if (ANYDEBUG) {
-					ha_log(LOG_DEBUG
+					cl_log(LOG_DEBUG
 					,	"Starting notify process [%s]"
 					,	command);
 				}
@@ -430,11 +430,11 @@ hb_rsc_recover_dead_resources(struct node_info* hip)
 			return;
 		}else{
 			send_stonith_msg(hip->nodename, T_STONITH_NOTCONFGD);
-			ha_log(LOG_WARNING, "No STONITH device configured.");
-			ha_log(LOG_WARNING, "Shared disks are not protected.");
+			cl_log(LOG_WARNING, "No STONITH device configured.");
+			cl_log(LOG_WARNING, "Shared disks are not protected.");
 		}
 	}else{
-		ha_log(LOG_INFO, "Dead node %s held no resources."
+		cl_log(LOG_INFO, "Dead node %s held no resources."
 		,	hip->nodename);
 		send_stonith_msg(hip->nodename, T_STONITH_UNNEEDED);
 	}
@@ -600,7 +600,7 @@ AnnounceTakeover(const char * reason)
 	||	!local_takeover_work_done || !foreign_takeover_work_done) {
 		return;
 	}
-	ha_log(LOG_INFO, INITMSG " (%s)", reason);
+	cl_log(LOG_INFO, INITMSG " (%s)", reason);
 	init_takeover_announced = TRUE;
 }
 void
@@ -652,18 +652,18 @@ process_resources(const char * type, struct ha_msg* msg
 			break;
 
 		default:
-			ha_log(LOG_ERR, "Received '%s' message in state %d"
+			cl_log(LOG_ERR, "Received '%s' message in state %d"
 			,	T_STARTING, resourcestate);
 			return;
 
 		}
 		other_is_stable = 0;
 		if (ANYDEBUG) {
-			ha_log(LOG_DEBUG
+			cl_log(LOG_DEBUG
 			, "process_resources: other now unstable");
 		}
 		if (takeover_in_progress) {
-			ha_log(LOG_WARNING
+			cl_log(LOG_WARNING
 			,	"T_STARTING received during takeover.");
 		}
 		hb_send_resources_held(resourcestate == HB_R_STABLE, NULL);
@@ -686,7 +686,7 @@ process_resources(const char * type, struct ha_msg* msg
 
 		p=ha_msg_value(msg, F_RESOURCES);
 		if (p == NULL) {
-			ha_log(LOG_ERR
+			cl_log(LOG_ERR
 			,	T_RESOURCES " message without " F_RESOURCES
 			" field.");
 			return;
@@ -717,7 +717,7 @@ process_resources(const char * type, struct ha_msg* msg
 		case HB_R_SHUTDOWN:
 					break;
 
-		default:		ha_log(LOG_ERR,	T_RESOURCES
+		default:		cl_log(LOG_ERR,	T_RESOURCES
 					" message received in state %d"
 					,	resourcestate);
 					return;
@@ -735,7 +735,7 @@ process_resources(const char * type, struct ha_msg* msg
 			if ((f_stable = ha_msg_value(msg, F_ISSTABLE)) != NULL){
 				if (strcmp(f_stable, "1") == 0) {
 					if (!other_is_stable) {
-						ha_log(LOG_INFO
+						cl_log(LOG_INFO
 						,	"remote resource"
 						" transition completed.");
 						other_is_stable = 1;
@@ -744,7 +744,7 @@ process_resources(const char * type, struct ha_msg* msg
 				}else{
 					other_is_stable = 0;
 					if (ANYDEBUG) {
-						ha_log(LOG_DEBUG
+						cl_log(LOG_DEBUG
 						, "process_resources(2): %s"
 						, " other now unstable");
 					}
@@ -754,7 +754,7 @@ process_resources(const char * type, struct ha_msg* msg
 			other_holds_resources
 			=	HB_UPD_RSC(fullupdate, other_holds_resources, n);
 			if (ANYDEBUG) {
-				ha_log(LOG_INFO
+				cl_log(LOG_INFO
 				,	"other_holds_resources: %d"
 				,	other_holds_resources);
 			}
@@ -762,7 +762,7 @@ process_resources(const char * type, struct ha_msg* msg
 			if ((resourcestate != HB_R_STABLE
 			&&   resourcestate != HB_R_SHUTDOWN)
 			&&	other_is_stable) {
-				ha_log(LOG_INFO
+				cl_log(LOG_INFO
 				,	"remote resource transition completed."
 				);
 				req_our_resources(FALSE);
@@ -814,7 +814,7 @@ process_resources(const char * type, struct ha_msg* msg
 
 			if (comment) {
 				if (strcmp(comment, "mach_down") == 0) {
-					ha_log(LOG_INFO
+					cl_log(LOG_INFO
 					,	"mach_down takeover complete.");
 					takeover_in_progress = FALSE;
 					/* FYI: This also got noted earlier */
@@ -822,7 +822,7 @@ process_resources(const char * type, struct ha_msg* msg
 					|=	HB_FOREIGN_RSC;
 					other_is_stable = 1;
 					if (ANYDEBUG) {
-						ha_log(LOG_DEBUG
+						cl_log(LOG_DEBUG
 						, "process_resources(3): %s"
 						, " other now stable");
 					}
@@ -839,7 +839,7 @@ process_resources(const char * type, struct ha_msg* msg
 			other_is_stable = 0;
 			other_holds_resources = HB_NO_RSC;
 			if (ANYDEBUG) {
-				ha_log(LOG_DEBUG
+				cl_log(LOG_DEBUG
 				, "process_resources(4): %s"
 				, " other now stable - T_SHUTDONE");
 			}
@@ -851,7 +851,7 @@ process_resources(const char * type, struct ha_msg* msg
 
 	if (resourcestate != newrstate) {
 		if (ANYDEBUG) {
-			ha_log(LOG_INFO
+			cl_log(LOG_INFO
 			,	"STATE %d => %d", resourcestate, newrstate);
 		}
 	}
@@ -884,7 +884,7 @@ AuditResources(void)
 
 	if ((procinfo->i_hold_resources & HB_LOCAL_RSC) != 0
 	&&	(other_holds_resources & HB_FOREIGN_RSC) != 0) {
-		ha_log(LOG_ERR, "Both machines own our resources!");
+		cl_log(LOG_ERR, "Both machines own our resources!");
 	}
 
 	/*
@@ -893,7 +893,7 @@ AuditResources(void)
 
 	if ((other_holds_resources & HB_LOCAL_RSC) != 0
 	&&	(procinfo->i_hold_resources & HB_FOREIGN_RSC) != 0) {
-		ha_log(LOG_ERR, "Both machines own foreign resources!");
+		cl_log(LOG_ERR, "Both machines own foreign resources!");
 	}
 
 	/*
@@ -908,7 +908,7 @@ AuditResources(void)
 
 		if ((procinfo->i_hold_resources & HB_LOCAL_RSC) == 0
 		&&	(other_holds_resources & HB_FOREIGN_RSC) == 0) {
-			ha_log(LOG_ERR, "No one owns our local resources!");
+			cl_log(LOG_ERR, "No one owns our local resources!");
 		}
 
 		/*
@@ -917,7 +917,7 @@ AuditResources(void)
 
 		if ((other_holds_resources & HB_LOCAL_RSC) == 0
 		&&	(procinfo->i_hold_resources & HB_FOREIGN_RSC) == 0) {
-			ha_log(LOG_ERR, "No one owns foreign resources!");
+			cl_log(LOG_ERR, "No one owns foreign resources!");
 		}
 	}
 }
@@ -939,7 +939,7 @@ encode_resources(const char *p)
 			break;
 		}
 	}
-	ha_log(LOG_ERR, "encode_resources: bad resource type [%s]", p);
+	cl_log(LOG_ERR, "encode_resources: bad resource type [%s]", p);
 	return 0;
 }
 
@@ -959,19 +959,19 @@ hb_send_resources_held(int stable, const char * comment)
 	sprintf(timestamp, TIME_X, (TIME_T) time(NULL));
 
 	if (ANYDEBUG) {
-		ha_log(LOG_DEBUG
+		cl_log(LOG_DEBUG
 		,	"Sending hold resources msg: %s, stable=%d # %s"
 		,	str, stable, (comment ? comment : "<none>"));
 	}
 	if ((m=ha_msg_new(0)) == NULL) {
-		ha_log(LOG_ERR, "Cannot send local starting msg");
+		cl_log(LOG_ERR, "Cannot send local starting msg");
 		return(HA_FAIL);
 	}
 	if ((ha_msg_add(m, F_TYPE, T_RESOURCES) != HA_OK)
 	||  (ha_msg_add(m, F_RESOURCES, str) != HA_OK)
 	||  (ha_msg_add(m, F_RTYPE, "full") != HA_OK)
 	||  (ha_msg_add(m, F_ISSTABLE, (stable ? "1" : "0")) != HA_OK)) {
-		ha_log(LOG_ERR, "hb_send_resources_held: Cannot create local msg");
+		cl_log(LOG_ERR, "hb_send_resources_held: Cannot create local msg");
 		rc = HA_FAIL;
 	}else if (comment) {
 		rc = ha_msg_add(m, F_COMMENT, comment);
@@ -997,16 +997,16 @@ send_local_starting(void)
 		return HA_OK;
 	}
 	if (ANYDEBUG) {
-		ha_log(LOG_DEBUG
+		cl_log(LOG_DEBUG
 		,	"Sending local starting msg: resourcestate = %d"
 		,	resourcestate);
 	}
 	if ((m=ha_msg_new(0)) == NULL) {
-		ha_log(LOG_ERR, "Cannot send local starting msg");
+		cl_log(LOG_ERR, "Cannot send local starting msg");
 		return(HA_FAIL);
 	}
 	if ((ha_msg_add(m, F_TYPE, T_STARTING) != HA_OK)) {
-		ha_log(LOG_ERR, "send_local_starting: "
+		cl_log(LOG_ERR, "send_local_starting: "
 		"Cannot create local starting msg");
 		rc = HA_FAIL;
 		ha_msg_del(m); m = NULL;
@@ -1029,17 +1029,17 @@ takeover_from_node(const char * nodename)
 		return;
 	}
 	if (shutdown_in_progress) {
-		ha_log(LOG_INFO
+		cl_log(LOG_INFO
 		,	"Resource takeover cancelled - shutdown in progress.");
 		shutdown_if_needed();
 		return;
 	}else if (hip->nodetype != PINGNODE_I) {
-		ha_log(LOG_INFO
+		cl_log(LOG_INFO
 		,	"Resources being acquired from %s."
 		,	hip->nodename);
 	}
 	if ((hmsg = ha_msg_new(6)) == NULL) {
-		ha_log(LOG_ERR, "no memory to takeover_from_node");
+		cl_log(LOG_ERR, "no memory to takeover_from_node");
 		return;
 	}
 
@@ -1050,14 +1050,14 @@ takeover_from_node(const char * nodename)
 	||	ha_msg_add(hmsg, F_TIME, timestamp) != HA_OK
 	||	ha_msg_add(hmsg, F_ORIG, hip->nodename) != HA_OK
 	||	ha_msg_add(hmsg, F_STATUS, DEADSTATUS) != HA_OK) {
-		ha_log(LOG_ERR, "no memory to takeover_from_node");
+		cl_log(LOG_ERR, "no memory to takeover_from_node");
 		ha_msg_del(hmsg);
 		return;
 	}
 
 	if (hip->nodetype == PINGNODE_I) {
 		if (ha_msg_add(hmsg, F_COMMENT, "ping") != HA_OK) {
-			ha_log(LOG_ERR, "no memory to mark ping node dead");
+			cl_log(LOG_ERR, "no memory to mark ping node dead");
 			ha_msg_del(hmsg);
 			return;
 		}
@@ -1082,7 +1082,7 @@ takeover_from_node(const char * nodename)
 			other_is_stable = 1;	/* Not going anywhere */
 			takeover_in_progress = TRUE;
 			if (ANYDEBUG) {
-				ha_log(LOG_DEBUG
+				cl_log(LOG_DEBUG
 				,	"takeover_from_node: other now stable");
 			}
 			/*
@@ -1128,7 +1128,7 @@ req_our_resources(int getthemanyway)
 
 			if (going_standby == NOT) {
 				/* Someone already owns our resources */
-				ha_log(LOG_INFO
+				cl_log(LOG_INFO
 				,   "Local Resource acquisition completed"
 				". (none)");
 				return;
@@ -1152,7 +1152,7 @@ req_our_resources(int getthemanyway)
 	/* We need to fork so we can make child procs not real time */
 	switch(pid=fork()) {
 
-		case -1:	ha_log(LOG_ERR, "Cannot fork.");
+		case -1:	cl_log(LOG_ERR, "Cannot fork.");
 				return;
 		default:
 				if (upcount < 2) {
@@ -1168,6 +1168,7 @@ req_our_resources(int getthemanyway)
 				break;
 	}
 
+	hb_close_watchdog();
 	cl_make_normaltime();
 	set_proc_title("%s: req_our_resources()", cmdname);
 	setpgid(0,0);
@@ -1187,7 +1188,7 @@ req_our_resources(int getthemanyway)
 	sprintf(cmd, HALIB "/ResourceManager listkeys %s", curnode->nodename);
 
 	if ((rkeys = popen(cmd, "r")) == NULL) {
-		ha_log(LOG_ERR, "Cannot run command %s", cmd);
+		cl_log(LOG_ERR, "Cannot run command %s", cmd);
 		exit(1);
 	}
 
@@ -1196,7 +1197,7 @@ req_our_resources(int getthemanyway)
 		errno = 0;
 		if (fgets(buf, MAXLINE, rkeys) == NULL) {
 			if (ferror(rkeys)) {
-				ha_perror("req_our_resources: fgets failure");
+				cl_perror("req_our_resources: fgets failure");
 			}
 			break;
 		}
@@ -1206,30 +1207,30 @@ req_our_resources(int getthemanyway)
 			buf[strlen(buf)-1] = EOS;
 		}
 		if (ANYDEBUG) {
-			ha_log(LOG_INFO, "req_our_resources()"
+			cl_log(LOG_INFO, "req_our_resources()"
 			": " HALIB "/req_resource %s", buf);
 		}
 		sprintf(getcmd, HALIB "/req_resource %s", buf);
 		if ((rc=system(getcmd)) != 0) {
-			ha_perror("%s returned %d", getcmd, rc);
+			cl_perror("%s returned %d", getcmd, rc);
 			finalrc=HA_FAIL;
 		}
 	}
 	rc=pclose(rkeys);
 	if (rc < 0 && errno != ECHILD) {
-		ha_perror("pclose(%s) returned %d", cmd, rc);
+		cl_perror("pclose(%s) returned %d", cmd, rc);
 	}else if (rc > 0) {
-		ha_log(LOG_ERR, "[%s] exited with 0x%x", cmd, rc);
+		cl_log(LOG_ERR, "[%s] exited with 0x%x", cmd, rc);
 	}
 
 	if (rsc_count == 0) {
-		ha_log(LOG_INFO, "No local resources [%s] to acquire.", cmd);
+		cl_log(LOG_INFO, "No local resources [%s] to acquire.", cmd);
 	}else{
 		if (ANYDEBUG) {
-			ha_log(LOG_INFO, "%d local resources from [%s]"
+			cl_log(LOG_INFO, "%d local resources from [%s]"
 			,	rsc_count, cmd);
 		}
-		ha_log(LOG_INFO, "Local Resource acquisition completed.");
+		cl_log(LOG_INFO, "Local Resource acquisition completed.");
 	}
 	hb_send_resources_held(TRUE, "req_our_resources()");
 	exit(0);
@@ -1247,11 +1248,11 @@ send_standby_msg(enum standby state)
 	sprintf(timestamp, TIME_X, (TIME_T) time(NULL));
 
 	if (ANYDEBUG) {
-		ha_log(LOG_DEBUG, "Sending standby [%s] msg"
+		cl_log(LOG_DEBUG, "Sending standby [%s] msg"
 		,			standby_msg[state]);
 	}
 	if ((m=ha_msg_new(0)) == NULL) {
-		ha_log(LOG_ERR, "Cannot send standby [%s] msg"
+		cl_log(LOG_ERR, "Cannot send standby [%s] msg"
 		,			standby_msg[state]);
 		return(HA_FAIL);
 	}
@@ -1259,7 +1260,7 @@ send_standby_msg(enum standby state)
 	||  ha_msg_add(m, F_RESOURCES, decode_resources(standby_rsctype))
 	!= HA_OK
 	||  ha_msg_add(m, F_COMMENT, standby_msg[state]) != HA_OK) {
-		ha_log(LOG_ERR, "send_standby_msg: "
+		cl_log(LOG_ERR, "send_standby_msg: "
 		"Cannot create standby reply msg");
 		rc = HA_FAIL;
 		ha_msg_del(m); m = NULL;
@@ -1276,7 +1277,7 @@ send_stonith_msg(const char *nodename, const char *result)
 	struct ha_msg*	hmsg;
 
 	if ((hmsg = ha_msg_new(6)) == NULL) {
-		ha_log(LOG_ERR, "no memory for " T_STONITH);
+		cl_log(LOG_ERR, "no memory for " T_STONITH);
 	}
 
 	if (	hmsg != NULL
@@ -1284,12 +1285,12 @@ send_stonith_msg(const char *nodename, const char *result)
 	&&	ha_msg_add(hmsg, F_NODE, nodename) == HA_OK
 	&&	ha_msg_add(hmsg, F_APIRESULT, result) == HA_OK) {
 		if (send_cluster_msg(hmsg) != HA_OK) {
-			ha_log(LOG_ERR, "cannot send " T_STONITH
+			cl_log(LOG_ERR, "cannot send " T_STONITH
 			" request for %s", nodename);
 		}
 		hmsg = NULL;
 	}else{
-		ha_log(LOG_ERR
+		cl_log(LOG_ERR
 		,	"Cannot send reset reply message [%s] for %s", result
 		,	nodename);
 		ha_msg_del(hmsg);
@@ -1319,7 +1320,7 @@ ask_for_resources(struct ha_msg *msg)
 	int		rtype;
 
 	if (!nice_failback) {
-		ha_log(LOG_INFO
+		cl_log(LOG_INFO
 		,	"Standby mode only implemented when nice_failback on");
 		return;
 	}
@@ -1334,13 +1335,13 @@ ask_for_resources(struct ha_msg *msg)
 
 
 	if (info == NULL || from == NULL) {
-		ha_log(LOG_ERR, "Received standby message without info/from");
+		cl_log(LOG_ERR, "Received standby message without info/from");
 		return;
 	}
 	msgfromme = strcmp(from, curnode->nodename) == 0;
 
 	if (ANYDEBUG){
-		ha_log(LOG_DEBUG
+		cl_log(LOG_DEBUG
 		,	"Received standby message %s from %s in state %d "
 		,	info, from, going_standby);
 	}
@@ -1354,7 +1355,7 @@ ask_for_resources(struct ha_msg *msg)
 
 		secs_left = (secs_left+999)/1000;
 
-		ha_log(LOG_WARNING
+		cl_log(LOG_WARNING
 		,	"Standby in progress"
 		"- new request from %s ignored [%ld seconds left]"
 		,	from, secs_left);
@@ -1367,12 +1368,12 @@ ask_for_resources(struct ha_msg *msg)
 	switch(going_standby) {
 	case NOT:
 		if (!other_is_stable) {
-			ha_log(LOG_WARNING, "standby message [%s] from %s"
+			cl_log(LOG_WARNING, "standby message [%s] from %s"
 			" ignored.  Other side is in flux.", info, from);
 			return;
 		}
 		if (resourcestate != HB_R_STABLE) {
-			ha_log(LOG_WARNING, "standby message [%s] from %s"
+			cl_log(LOG_WARNING, "standby message [%s] from %s"
 			" ignored.  local resources in flux.", info, from);
 			return;
 		}
@@ -1380,16 +1381,16 @@ ask_for_resources(struct ha_msg *msg)
 		if (strcasecmp(info, "me") == 0) {
 
 			if (ANYDEBUG) {
-				ha_log(LOG_DEBUG
+				cl_log(LOG_DEBUG
 				, "ask_for_resources: other now unstable");
 			}
 			other_is_stable = 0;
-			ha_log(LOG_INFO, "%s wants to go standby [%s]"
+			cl_log(LOG_INFO, "%s wants to go standby [%s]"
 			,	from, decode_resources(rtype));
 			if (msgfromme) {
 				/* We want to go standby */
 				if (ANYDEBUG) {
-					ha_log(LOG_INFO
+					cl_log(LOG_INFO
 					,	"i_hold_resources: %d"
 					,	procinfo->i_hold_resources);
 				}
@@ -1397,7 +1398,7 @@ ask_for_resources(struct ha_msg *msg)
 				going_standby = ME;
 			}else{
 				if (ANYDEBUG) {
-					ha_log(LOG_INFO
+					cl_log(LOG_INFO
 					,	"standby"
 					": other_holds_resources: %d"
 					,	other_holds_resources);
@@ -1419,7 +1420,7 @@ ask_for_resources(struct ha_msg *msg)
 			standby_rsctype = rtype;
 			standby_running = add_longclock(now, standby_rsc_to);
 			if (strcasecmp(info,"other") == 0) {
-				ha_log(LOG_INFO
+				cl_log(LOG_INFO
 				,	"standby: %s can take our %s resources"
 				,	from, decode_resources(rtype));
 				go_standby(ME, rtype);
@@ -1433,7 +1434,7 @@ ask_for_resources(struct ha_msg *msg)
 			 * The "done" message came from our child process
 			 * indicating resources are completely released now.
 			 */
-			ha_log(LOG_INFO
+			cl_log(LOG_INFO
 			,	"Local standby process completed [%s]."
 			,	decode_resources(rtype));
 			going_standby = DONE;
@@ -1451,7 +1452,7 @@ ask_for_resources(struct ha_msg *msg)
 			if (!msgfromme) {
 				/* It's time to acquire resources */
 
-				ha_log(LOG_INFO
+				cl_log(LOG_INFO
 				,	"standby: acquire [%s] resources"
 				" from %s"
 				,	decode_resources(rtype), from);
@@ -1475,7 +1476,7 @@ ask_for_resources(struct ha_msg *msg)
 			going_standby = NOT;
 			if (msgfromme) {
 				int	rup = HB_NO_RSC;
-				ha_log(LOG_INFO
+				cl_log(LOG_INFO
 				,	"Standby resource"
 				" acquisition done [%s]."
 				,	decode_resources(rtype));
@@ -1494,7 +1495,7 @@ ask_for_resources(struct ha_msg *msg)
 
 				procinfo->i_hold_resources |= rup;
 			}else{
-				ha_log(LOG_INFO
+				cl_log(LOG_INFO
 				,	"Other node completed standby"
 				" takeover of %s resources."
 				,	decode_resources(rtype));
@@ -1507,12 +1508,12 @@ ask_for_resources(struct ha_msg *msg)
 		break;
 	}
 	if (message_ignored){
-		ha_log(LOG_ERR
+		cl_log(LOG_ERR
 		,	"Ignored standby message '%s' from %s in state %d"
 		,	info, from, orig_standby);
 	}
 	if (ANYDEBUG) {
-		ha_log(LOG_INFO, "New standby state: %d", going_standby);
+		cl_log(LOG_INFO, "New standby state: %d", going_standby);
 	}
 	shutdown_if_needed();
 }
@@ -1564,7 +1565,7 @@ go_standby(enum standby who, int resourceset) /* Which resources to give up */
 	if (who == ME) {
 		other_is_stable = 0;
 		if (ANYDEBUG) {
-			ha_log(LOG_DEBUG, "go_standby: other is unstable");
+			cl_log(LOG_DEBUG, "go_standby: other is unstable");
 		}
 		/* Make sure they know what we're doing and that we're
 		 * not done yet (not stable)
@@ -1584,7 +1585,7 @@ go_standby(enum standby who, int resourceset) /* Which resources to give up */
 
 	switch((pid=fork())) {
 
-		case -1:	ha_log(LOG_ERR, "Cannot fork.");
+		case -1:	cl_log(LOG_ERR, "Cannot fork.");
 				return;
 
 				/*
@@ -1599,6 +1600,7 @@ go_standby(enum standby who, int resourceset) /* Which resources to give up */
 				break;
 	}
 
+	hb_close_watchdog();
 	cl_make_normaltime();
 	setpgid(0,0);
 	CL_SIGNAL(SIGCHLD, SIG_DFL);
@@ -1621,7 +1623,7 @@ go_standby(enum standby who, int resourceset) /* Which resources to give up */
 		break;
 
 		default:
-			ha_log(LOG_ERR, "no resources to %s"
+			cl_log(LOG_ERR, "no resources to %s"
 			,	actionnames[action]);
 			exit(10);
 	}
@@ -1639,15 +1641,15 @@ go_standby(enum standby who, int resourceset) /* Which resources to give up */
 			break;
 	}
 
-	ha_log(LOG_INFO
+	cl_log(LOG_INFO
 	,	"%s %s HA resources (standby)."
 	,	actionnames[action]
 	,	rsc_msg[actresources]);
 
 	if (ANYDEBUG) {
-		ha_log(LOG_INFO, "go_standby: who: %d resource set: %s"
+		cl_log(LOG_INFO, "go_standby: who: %d resource set: %s"
 		,	who, rsc_msg[actresources]);
-		ha_log(LOG_INFO, "go_standby: (query/action): (%s/%s)"
+		cl_log(LOG_INFO, "go_standby: (query/action): (%s/%s)"
 		,	querycmd, actioncmds[action]);
 	}
 
@@ -1658,7 +1660,7 @@ go_standby(enum standby who, int resourceset) /* Which resources to give up */
 	sprintf(cmd, HALIB "/ResourceManager %s", querycmd);
 
 	if ((rkeys = popen(cmd, "r")) == NULL) {
-		ha_log(LOG_ERR, "Cannot run command %s", cmd);
+		cl_log(LOG_ERR, "Cannot run command %s", cmd);
 		return;
 	}
 
@@ -1669,12 +1671,12 @@ go_standby(enum standby who, int resourceset) /* Which resources to give up */
 		sprintf(cmd, HALIB "/ResourceManager %s %s"
 		,	actioncmds[action], buf);
 		if ((rc=system(cmd)) != 0) {
-			ha_log(LOG_ERR, "%s returned %d", cmd, rc);
+			cl_log(LOG_ERR, "%s returned %d", cmd, rc);
 			finalrc=HA_FAIL;
 		}
 	}
 	pclose(rkeys);
-	ha_log(LOG_INFO, "%s HA resource %s completed (standby)."
+	cl_log(LOG_INFO, "%s HA resource %s completed (standby)."
 	,	rsc_msg[actresources]
 	,	action == ACTION_ACQUIRE ? "acquisition" : "release");
 
@@ -1732,12 +1734,12 @@ hb_giveup_resources(void)
 
 
 	if (resource_shutdown_in_progress) {
-		ha_log(LOG_INFO, "Heartbeat shutdown already underway.");
+		cl_log(LOG_INFO, "Heartbeat shutdown already underway.");
 		return;
 	}
 	resource_shutdown_in_progress = TRUE;
 	if (ANYDEBUG) {
-		ha_log(LOG_INFO, "hb_giveup_resources(): "
+		cl_log(LOG_INFO, "hb_giveup_resources(): "
 			"current status: %s", curnode->status);
 	}
 	hb_close_watchdog();
@@ -1748,14 +1750,14 @@ hb_giveup_resources(void)
 	if (nice_failback) {
 		hb_send_resources_held(FALSE, "shutdown");
 	}
-	ha_log(LOG_INFO, "Heartbeat shutdown in progress. (%d)"
+	cl_log(LOG_INFO, "Heartbeat shutdown in progress. (%d)"
 	,	(int) getpid());
 
 	/* We need to fork so we can make child procs not real time */
 
 	switch((pid=fork())) {
 
-		case -1:	ha_log(LOG_ERR, "Cannot fork.");
+		case -1:	cl_log(LOG_ERR, "Cannot fork.");
 				return;
 
 		default:
@@ -1767,6 +1769,7 @@ hb_giveup_resources(void)
 				break;
 	}
 
+	hb_close_watchdog();
 	cl_make_normaltime();
 	setpgid(0,0);
 	set_proc_title("%s: hb_signal_giveup_resources()", cmdname);
@@ -1783,7 +1786,7 @@ hb_giveup_resources(void)
 	CL_IGNORE_SIG(SIGTERM);
 	/* CL_SIGINTERRUPT(SIGTERM, 0); */
 
-	ha_log(LOG_INFO, "Giving up all HA resources.");
+	cl_log(LOG_INFO, "Giving up all HA resources.");
 	/*
 	 *	We could do this ourselves fairly easily...
 	 */
@@ -1791,7 +1794,7 @@ hb_giveup_resources(void)
 	sprintf(cmd, HALIB "/ResourceManager listkeys '.*'");
 
 	if ((rkeys = popen(cmd, "r")) == NULL) {
-		ha_log(LOG_ERR, "Cannot run command %s", cmd);
+		cl_log(LOG_ERR, "Cannot run command %s", cmd);
 		exit(1);
 	}
 
@@ -1801,7 +1804,7 @@ hb_giveup_resources(void)
 		}
 		sprintf(cmd, HALIB "/ResourceManager givegroup %s", buf);
 		if ((rc=system(cmd)) != 0) {
-			ha_log(LOG_ERR, "%s returned %d", cmd, rc);
+			cl_log(LOG_ERR, "%s returned %d", cmd, rc);
 			finalrc=HA_FAIL;
 		}
 	}
@@ -1813,20 +1816,20 @@ hb_giveup_resources(void)
 	ForEachProc(&hb_rsc_RscMgmtProcessTrackOps, hb_kill_tracked_process
 	,	GINT_TO_POINTER(SIGKILL));
 
-	ha_log(LOG_INFO, "All HA resources relinquished.");
+	cl_log(LOG_INFO, "All HA resources relinquished.");
 
 	if ((m=ha_msg_new(0)) == NULL) {
-		ha_log(LOG_ERR, "Cannot send final shutdown msg");
+		cl_log(LOG_ERR, "Cannot send final shutdown msg");
 		exit(1);
 	}
 	if ((ha_msg_add(m, F_TYPE, T_SHUTDONE) != HA_OK
 	||	ha_msg_add(m, F_STATUS, DEADSTATUS) != HA_OK)) {
-		ha_log(LOG_ERR, "hb_signal_giveup_resources: "
+		cl_log(LOG_ERR, "hb_signal_giveup_resources: "
 			"Cannot create local msg");
 		ha_msg_del(m);
 	}else{
 		if (ANYDEBUG) {
-			ha_log(LOG_DEBUG, "Sending T_SHUTDONE.");
+			cl_log(LOG_DEBUG, "Sending T_SHUTDONE.");
 		}
 		rc = send_cluster_msg(m); m = NULL;
 	}
@@ -1848,7 +1851,7 @@ Initiate_Reset(Stonith* s, const char * nodename)
 	 */
 	switch((pid=fork())) {
 
-		case -1:	ha_log(LOG_ERR, "Cannot fork.");
+		case -1:	cl_log(LOG_ERR, "Cannot fork.");
 				return;
 		default:
 				h = g_new(struct StonithProcHelper, 1);
@@ -1862,13 +1865,14 @@ Initiate_Reset(Stonith* s, const char * nodename)
 				break;
 
 	}
+	hb_close_watchdog();
 	/* Guard against possibly hanging Stonith code... */
 	cl_make_normaltime();
 	setpgid(0,0);
 	set_proc_title("%s: Initiate_Reset()", cmdname);
 	CL_SIGNAL(SIGCHLD,SIG_DFL);
 
-	ha_log(LOG_INFO
+	cl_log(LOG_INFO
 	,	"Resetting node %s with [%s]"
 	,	nodename
 	,	s->s_ops->getinfo(s, ST_DEVICEID));
@@ -1877,13 +1881,13 @@ Initiate_Reset(Stonith* s, const char * nodename)
 
 	case S_OK:
 		result=T_STONITH_OK;
-		ha_log(LOG_INFO
+		cl_log(LOG_INFO
 		,	"node %s now reset.", nodename);
 		exitcode = 0;
 		break;
 
 	case S_BADHOST:
-		ha_log(LOG_ERR
+		cl_log(LOG_ERR
 		,	"Device %s cannot reset host %s."
 		,	s->s_ops->getinfo(s, ST_DEVICEID)
 		,	nodename);
@@ -1892,7 +1896,7 @@ Initiate_Reset(Stonith* s, const char * nodename)
 		break;
 
 	default:
-		ha_log(LOG_ERR, "Host %s not reset!", nodename);
+		cl_log(LOG_ERR, "Host %s not reset!", nodename);
 		exitcode = 1;
 		result = T_STONITH_BAD;
 	}
@@ -1907,7 +1911,7 @@ RscMgmtProcessRegistered(ProcTrack* p)
 {
 	ResourceMgmt_child_count ++;
 	if (ANYDEBUG) {
-		ha_log(LOG_DEBUG, "Process [%s] started pid %d"
+		cl_log(LOG_DEBUG, "Process [%s] started pid %d"
 		,	p->ops->proctype(p)
 		,	p->pid
 		);
@@ -2008,17 +2012,17 @@ QueueRemoteRscReq(RemoteRscReqFunc func, struct ha_msg* msg)
 	fp  = ha_msg_value(msg, F_TYPE);
 
 	if (DEBUGDETAILS) {
-		ha_log(LOG_DEBUG
+		cl_log(LOG_DEBUG
 		,	"Queueing remote resource request (hook = 0x%p) %s"
 		,	(void *)hook, fp);
-		ha_log_message(msg);
+		cl_log_message(msg);
 	}
 
 	if (fp == NULL || !FilterNotifications(fp)) {
 		if (DEBUGDETAILS) {
-			ha_log(LOG_DEBUG
+			cl_log(LOG_DEBUG
 			,	"%s: child process unneeded.", fp);
-			ha_log_message(msg);
+			cl_log_message(msg);
 		}
 		return;
 	}
@@ -2039,7 +2043,7 @@ StartNextRemoteRscReq(void)
 
 	/* We can only run one of these at a time... */
 	if (ResourceMgmt_child_count != 0) {
-		ha_log(LOG_DEBUG, "StartNextRemoteRscReq(): child count %d"
+		cl_log(LOG_DEBUG, "StartNextRemoteRscReq(): child count %d"
 		,	ResourceMgmt_child_count);
 		return;
 	}
@@ -2059,7 +2063,7 @@ StartNextRemoteRscReq(void)
 	func = hook->func;
 
 	if (ANYDEBUG) {
-		ha_log(LOG_DEBUG, "StartNextRemoteRscReq() - calling hook");
+		cl_log(LOG_DEBUG, "StartNextRemoteRscReq() - calling hook");
 	}
 	/* Call the hook... */
 	func(hook);
@@ -2084,8 +2088,8 @@ PerformQueuedNotifyWorld(GHook* hook)
 	 * we would like to have done earlier...
 	 */
 	if (DEBUGDETAILS) {
-		ha_log(LOG_DEBUG, "PerformQueuedNotifyWorld() msg follows");
-		ha_log_message(m);
+		cl_log(LOG_DEBUG, "PerformQueuedNotifyWorld() msg follows");
+		cl_log_message(m);
 	}
 	notify_world(m, curnode->status);
 	/* "m" is automatically destroyed when "hook" is */
@@ -2100,7 +2104,7 @@ StonithProcessDied(ProcTrack* p, int status, int signo, int exitcode, int waslog
 	struct StonithProcHelper*	h = p->privatedata;
 
 	if (signo != 0 || exitcode != 0) {
-		ha_log(LOG_ERR, "STONITH of %s failed.  Retrying..."
+		cl_log(LOG_ERR, "STONITH of %s failed.  Retrying..."
 		,	h->nodename);
 		Initiate_Reset(config->stonith, h->nodename);
 	}else{
@@ -2122,6 +2126,9 @@ StonithProcessName(ProcTrack* p)
 
 /*
  * $Log: hb_resource.c,v $
+ * Revision 1.50  2004/03/25 07:55:39  alan
+ * Moved heartbeat libraries to the lib directory.
+ *
  * Revision 1.49  2004/02/17 22:11:57  lars
  * Pet peeve removal: _Id et al now gone, replaced with consistent Id header.
  *

@@ -1,4 +1,4 @@
-/* $Id: config.c,v 1.115 2004/03/03 05:31:50 alan Exp $ */
+/* $Id: config.c,v 1.116 2004/03/25 07:55:38 alan Exp $ */
 /*
  * Parse various heartbeat configuration files...
  *
@@ -440,9 +440,9 @@ parse_config(const char * cfgfile, char *nodename)
 	char		buf[MAXLINE];
 	char *		cp;
 	char		directive[MAXLINE];
-	int		dirlength;
+	size_t		dirlength;
 	char		option[MAXLINE];
-	int		optionlength;
+	size_t		optionlength;
 	int		errcount = 0;
 	int		j;
 	int		i;
@@ -1594,10 +1594,12 @@ set_msgfmt(const char* value)
 {
 	if( strcmp(value, "classic") ==0 ){
 		netstring_format = FALSE;
+		cl_set_msg_format(MSGFMT_NVPAIR);
 		return HA_OK;
 	}
 	if( strcmp(value,"netstring") == 0){
 		netstring_format = TRUE;
+		cl_set_msg_format(MSGFMT_NETSTRING);
 		return HA_OK;
 	}
 	
@@ -1978,6 +1980,9 @@ baddirective:
 
 /*
  * $Log: config.c,v $
+ * Revision 1.116  2004/03/25 07:55:38  alan
+ * Moved heartbeat libraries to the lib directory.
+ *
  * Revision 1.115  2004/03/03 05:31:50  alan
  * Put in Gochun Shi's new netstrings on-the-wire data format code.
  * this allows sending binary data, among many other things!

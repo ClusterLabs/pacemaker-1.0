@@ -1,4 +1,4 @@
-/* $Id: hb_proc.h,v 1.15 2004/02/17 22:11:57 lars Exp $ */
+/* $Id: hb_proc.h,v 1.16 2004/03/25 07:55:39 alan Exp $ */
 /*
  * hb_proc.h: definitions of heartbeat child process info
  *
@@ -26,6 +26,8 @@
 #ifndef _HB_PROC_H
 #	define _HB_PROC_H 1
 
+#include <clplumbing/cl_malloc.h>
+#include <ha_msg.h>
 #include <clplumbing/longclock.h>
 
 /*
@@ -46,7 +48,7 @@ enum process_type {
 	PROC_HBREAD,		/* Read process */
 	PROC_HBWRITE,		/* Write process */
 	PROC_HBFIFO,		/* FIFO process */
-	PROC_PPP		/* (Obsolescent) PPP process */
+	PROC_PPP		/* (Obsolete) PPP process */
 };
 
 enum process_status { 
@@ -54,22 +56,13 @@ enum process_status {
 	RUNNING=2,	/* This process is fully active, and open for business*/
 };
 
+
 struct process_info {
 	enum process_type	type;		/* Type of process */
 	enum process_status	pstat;		/* Is it running yet? */
 	pid_t			pid;		/* Process' PID */
-	unsigned long		totalmsgs;	/* Total # of messages */
-						/* ever handled */
-	unsigned long		allocmsgs;	/* # Msgs currently allocated */
-	unsigned long		numalloc;	/* # of ha_malloc calls */
-	unsigned long		numfree;	/* # of ha_free calls */
-	unsigned long		nbytes_req;	/* # malloc bytes req'd */
-	unsigned long		nbytes_alloc;	/* # bytes currently allocated 
-						 */
-	unsigned long		mallocbytes;	/* total # bytes malloc()ed  */
-	unsigned long		arena;		/* Most recent mallinfo */
-						/* arena value */
-	TIME_T			lastmsg;
+	hb_msg_stats_t		msgstats;
+	cl_mem_stats_t		memstats;
 };
 
 /*

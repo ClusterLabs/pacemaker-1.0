@@ -45,32 +45,24 @@ AM_CFLAGS			= @CFLAGS@ \
 ## script subdirs
 SUBDIRS			= init.d lib logrotate.d rc.d resource.d libnet_util
 
-noinst_HEADERS		=	hb_api_core.h		\
-				hb_config.h		\
+noinst_HEADERS		=	hb_config.h		\
 				hb_module.h		\
 				hb_proc.h		\
 				hb_resource.h		\
 				hb_signal.h		\
 				heartbeat_private.h	\
-				lock.h			\
 				setproctitle.h		\
 				test.h
 
-## libraries
-
-lib_LTLIBRARIES		= libhbclient.la 
-
-libhbclient_la_SOURCES	= client_lib.c lock.c ha_msg.c netstring.c
-libhbclient_la_LDFLAGS	= -version-info 0:0:0
 
 ## binary progs
-halib_PROGRAMS		= heartbeat findif api_test netstring_test
+halib_PROGRAMS		= heartbeat findif
 
 ## SOURCES
 heartbeat_SOURCES	= heartbeat.c auth.c				\
-			config.c ha_malloc.c ha_msg.c netstring.c	\
+			config.c \
 			ha_msg_internal.c hb_api.c hb_resource.c	\
-			hb_signal.c lock.c module.c setproctitle.c
+			hb_signal.c module.c setproctitle.c
 
 heartbeat_LDADD		= $(top_builddir)/lib/stonith/libstonith.la	\
 			$(top_builddir)/replace/libreplace.la		\
@@ -86,14 +78,6 @@ heartbeat_CFLAGS       = $(AM_CFLAGS)
 
 findif_SOURCES		= findif.c
 findif_LDADD		=$(top_builddir)/replace/libreplace.la
-
-api_test_SOURCES	= api_test.c
-api_test_LDADD		= $(top_builddir)/lib/clplumbing/libplumb.la	\
-			libhbclient.la $(gliblib)
-
-netstring_test_SOURCES	= netstring_test.c
-netstring_test_LDADD	= $(top_builddir)/lib/clplumbing/libplumb.la	\
-			libhbclient.la $(gliblib)
 
 
 ## SCRIPTS/DATA

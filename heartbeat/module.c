@@ -1,4 +1,4 @@
-/* $Id: module.c,v 1.54 2004/02/17 22:11:57 lars Exp $ */
+/* $Id: module.c,v 1.55 2004/03/25 07:55:40 alan Exp $ */
 /*
  * module: Dynamic module support code
  *
@@ -48,7 +48,7 @@
 #include <pils/generic.h>
 #include <HBcomm.h>
 #include <hb_config.h>
-#include "lock.h"
+#include <clplumbing/ttylock.h>
 
 #ifndef RTLD_NOW
 #	define RTLD_NOW 0

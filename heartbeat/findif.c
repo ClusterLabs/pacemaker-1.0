@@ -1,4 +1,4 @@
-/* $Id: findif.c,v 1.33 2004/02/17 22:11:57 lars Exp $ */
+/* $Id: findif.c,v 1.34 2004/03/25 07:55:39 alan Exp $ */
 /*
  * findif.c:	Finds an interface which can route a given address
  *
@@ -227,8 +227,9 @@ SearchUsingProcRoute (char *address, struct in_addr *in
 ,	unsigned long *best_netmask
 ,	char *errmsg, int errmsglen)
 {
-	long    flags, refcnt, use, metric, dest, gw, mask;
-	long	best_metric = LONG_MAX;
+	long    	flags, refcnt, use, metric, gw, mask;
+	unsigned long   dest;
+	long		best_metric = LONG_MAX;
 	
 	char	buf[2048];
 	char	interface[MAXSTR];
@@ -677,6 +678,9 @@ ff02::%lo0/32                     fe80::1%lo0                   UC          lo0
 
 /* 
  * $Log: findif.c,v $
+ * Revision 1.34  2004/03/25 07:55:39  alan
+ * Moved heartbeat libraries to the lib directory.
+ *
  * Revision 1.33  2004/02/17 22:11:57  lars
  * Pet peeve removal: _Id et al now gone, replaced with consistent Id header.
  *
