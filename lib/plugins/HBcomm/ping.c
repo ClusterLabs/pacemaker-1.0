@@ -1,4 +1,4 @@
-static const char _ping_Id [] = "$Id: ping.c,v 1.24 2004/01/21 11:34:15 horms Exp $";
+static const char _ping_Id [] = "$Id: ping.c,v 1.25 2004/02/03 14:55:43 msoffen Exp $";
 /*
  * ping.c: ICMP-echo-based heartbeat code for heartbeat.
  *
@@ -39,23 +39,16 @@ static const char _ping_Id [] = "$Id: ping.c,v 1.24 2004/01/21 11:34:15 horms Ex
 #include <fcntl.h>
 #include <sys/types.h>
 #include <sys/socket.h>
-#include <netinet/in.h>
 #include <arpa/inet.h>
 #include <sys/param.h>
+
+#ifdef HAVE_NETINET_IN_H
+#include <netinet/in.h>
+#endif /* HAVE_NETINET_IN_H */
 
 #ifdef HAVE_NETINET_IN_SYSTM_H
 #	include <netinet/in_systm.h>
 #endif /* HAVE_NETINET_IN_SYSTM_H */
-
-#ifdef HAVE_NETINET_IP_H
-#	include <netinet/ip.h>
-#endif /* HAVE_NETINET_IP_H */
-
-#include <netinet/ip_icmp.h>
-
-#ifdef HAVE_NETINET_IP_H
-#	include <netinet/ip.h>
-#endif /* HAVE_NETINET_IP_H */
 
 #ifdef HAVE_NETINET_IP_VAR_H
 #	include <netinet/ip_var.h>
@@ -68,6 +61,12 @@ static const char _ping_Id [] = "$Id: ping.c,v 1.24 2004/01/21 11:34:15 horms Ex
 #ifdef HAVE_NETINET_IP_FW_H
 #	include <netinet/ip_fw.h>
 #endif /* HAVE_NETINET_IP_FW_H */
+
+#ifdef HAVE_NETINET_IP_H
+#	include <netinet/ip.h>
+#endif /* HAVE_NETINET_IP_H */
+
+#include <netinet/ip_icmp.h>
 
 #include <netdb.h>
 #include <heartbeat.h>
