@@ -1,4 +1,4 @@
-/* $Id: config.c,v 1.118 2004/05/15 09:28:08 andrew Exp $ */
+/* $Id: config.c,v 1.119 2004/05/17 15:12:07 lars Exp $ */
 /*
  * Parse various heartbeat configuration files...
  *
@@ -74,10 +74,8 @@ static int set_udpport(const char *);
 static int set_facility(const char *);
 static int set_logfile(const char *);
 static int set_dbgfile(const char *);
-#ifndef WITH_CRM
 static int set_nice_failback(const char *);
 static int set_auto_failback(const char *);
-#endif
 static int set_warntime_ms(const char *);
 static int set_stonith_info(const char *);
 static int set_stonith_host_info(const char *);
@@ -116,10 +114,8 @@ struct directive {
 , {KEY_FACILITY,  set_facility, TRUE, NULL, "syslog log facility"}
 , {KEY_LOGFILE,   set_logfile, TRUE, NULL, "log file"}
 , {KEY_DBGFILE,   set_dbgfile, TRUE, NULL, "debug file"}
-#ifndef WITH_CRM
 , {KEY_FAILBACK,  set_nice_failback, FALSE, NULL, NULL}
 , {KEY_AUTOFAIL,  set_auto_failback, TRUE, "legacy","auto failback"}
-#endif  
 , {KEY_RT_PRIO,	  set_realtime_prio, TRUE, NULL, "realtime priority"}
 , {KEY_GEN_METH,  set_generation_method, TRUE, "file", "protocol generation computation method"}
 , {KEY_REALTIME,  set_realtime, TRUE, "true", "enable realtime behavior?"}
@@ -149,11 +145,9 @@ extern volatile struct pstat_shm *	procinfo;
 extern volatile struct process_info *	curproc;
 extern char *				watchdogdev;
 extern int				nummedia;
-#ifndef WITH_CRM
 extern int                              nice_failback;
 extern int                              auto_failback;
 extern int				DoManageResources;
-#endif
 extern int				hb_realtime_prio;
 extern PILPluginUniv*			PluginLoadingSystem;
 extern GHashTable*			CommFunctions;
@@ -375,7 +369,6 @@ init_config(const char * cfgfile)
 		SetParameterValue(KEY_UDPPORT, tmp);
 	}
 
-#ifndef WITH_CRM
 	if (!nice_failback) {
 		ha_log(LOG_WARNING
 		,	"Deprecated 'legacy' auto_failback option selected.");
@@ -384,7 +377,6 @@ init_config(const char * cfgfile)
 		ha_log(LOG_WARNING
 		,	"See documentation for conversion details.");
 	}
-#endif	
 
 	if (*(config->logfile) == EOS) {
                  if (config->log_facility > 0) {
@@ -424,9 +416,7 @@ init_config(const char * cfgfile)
 		" Starting heartbeat %s", VERSION);
 	}
 	for (j=0; j < config->nodecount; ++j) {
-#ifndef WITH_CRM
 		config->nodes[j].has_resources = DoManageResources;
-#endif		
 		if (config->nodes[j].nodetype == PINGNODE_I) {
 			config->nodes[j].dead_ticks
 			=	msto_longclock(config->deadping_ms);
@@ -725,7 +715,6 @@ dump_config(void)
 	printf("#---------------------------------------------------\n");
 }
 
-#ifndef WITH_CRM
 /*
  *	Check the /etc/ha.d/haresources file
  *
@@ -796,7 +785,6 @@ parse_ha_resources(const char * cfgfile)
 	fclose(f);
 	return(rc);
 }
-#endif
 
 /*
  *	Is this a legal directive name?
@@ -938,9 +926,7 @@ add_node(const char * value, int nodetype)
 	strncpy(hip->nodename, value, sizeof(hip->nodename));
 	g_strdown(hip->nodename);
 	hip->rmt_lastupdate = 0L;
-#ifndef WITH_CRM
 	hip->has_resources = TRUE;
-#endif	
 	hip->anypacketsyet  = 0;
 	hip->local_lastupdate = time_longclock();
 	hip->track.nmissing = 0;
@@ -1231,7 +1217,6 @@ set_logfile(const char * value)
 	return(HA_OK);
 }
 
-#ifndef WITH_CRM
 /* sets nice_failback behavior on/off */
 static int
 set_nice_failback(const char * value)
@@ -1285,7 +1270,7 @@ set_auto_failback(const char * value)
 	}
 	return rc;
 }
-#endif
+
 /*
  *	Convert a string into a positive, rounded number of milliseconds.
  *
@@ -1997,6 +1982,9 @@ baddirective:
 
 /*
  * $Log: config.c,v $
+ * Revision 1.119  2004/05/17 15:12:07  lars
+ * Reverting over-eager approach to disabling old resource manager code.
+ *
  * Revision 1.118  2004/05/15 09:28:08  andrew
  * Disable ALL legacy resource management iff configured with --enable-crm
  * Possibly I have been a little over-zealous but likely the feature(s)

@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-#	$Id: heartbeat.in,v 1.35 2004/05/15 09:28:09 andrew Exp $
+#	$Id: heartbeat.in,v 1.36 2004/05/17 15:12:08 lars Exp $
 #
 # heartbeat     Start high-availability services
 #
@@ -48,7 +48,6 @@ CONFIG=$HA_DIR/ha.cf
 
 LOCKDIR=@localstatedir@/lock/subsys
 RUNDIR=@localstatedir@/run
-WITH_CRM=@CRM_ENABLED@
 
 if
   [ -r /etc/SuSE-release ]
@@ -214,9 +213,7 @@ start_heartbeat() {
 
 StartHA() {
   EchoNoNl "Starting High-Availability services: "
-  if [ "$WITH_CRM" != "1" ]; then
-      $HA_BIN/ResourceManager verifyallidle
-  fi
+  $HA_BIN/ResourceManager verifyallidle
   if
     [ $USE_MODULES = 1 ]
   then
@@ -224,12 +221,10 @@ StartHA() {
     init_watchdog
   fi
   rm -f $RUNDIR/ppp.d/*
-  if [ "$WITH_CRM" != "1" ]; then
-      if
-	  [  -f $HA_DIR/ipresources -a ! -f $HA_DIR/haresources ]
-	  then
-	  mv $HA_DIR/ipresources $HA_DIR/haresources
-      fi
+  if
+    [  -f $HA_DIR/ipresources -a ! -f $HA_DIR/haresources ]
+  then
+    mv $HA_DIR/ipresources $HA_DIR/haresources
   fi
   #	Start heartbeat daemon
   if
@@ -326,12 +321,10 @@ ReloadHA() {
 
 RunStartStop() {
   # Run pre-startup script if it exists
-  if [ "$WITH_CRM" != "1" ]; then
-      if
-	  [  -f $HA_DIR/resource.d/startstop ]
-	  then
-	  $HA_DIR/resource.d/startstop  "$@"
-      fi
+  if
+    [  -f $HA_DIR/resource.d/startstop ]
+  then
+    $HA_DIR/resource.d/startstop  "$@"
   fi
 }
 
@@ -402,6 +395,9 @@ exit $RC
 #
 #
 #  $Log: heartbeat.in,v $
+#  Revision 1.36  2004/05/17 15:12:08  lars
+#  Reverting over-eager approach to disabling old resource manager code.
+#
 #  Revision 1.35  2004/05/15 09:28:09  andrew
 #  Disable ALL legacy resource management iff configured with --enable-crm
 #  Possibly I have been a little over-zealous but likely the feature(s)

@@ -1,4 +1,4 @@
-/* $Id: heartbeat.h,v 1.44 2004/05/15 09:28:09 andrew Exp $ */
+/* $Id: heartbeat.h,v 1.45 2004/05/17 15:12:08 lars Exp $ */
 /*
  * heartbeat.h: core definitions for the Linux-HA heartbeat program
  *
@@ -178,9 +178,7 @@
 
 #define	RCSCRIPT		HA_D "/harc"
 #define CONFIG_NAME		HA_D "/ha.cf"
-#ifndef WITH_CRM
 #define RESOURCE_CFG		HA_D "/haresources"
-#endif
 
 /* dynamic module directories */
 #define COMM_MODULE_DIR	HA_MODULE_D "/comm"
@@ -252,9 +250,7 @@ struct node_info {
 	longclock_t	local_lastupdate;/* Date of last update in clock_t time*/
 	int		anypacketsyet;	 /* True after reception of 1st pkt */
 	struct seqtrack	track;
-#ifndef WITH_CRM
 	int		has_resources;	/* TRUE if node may have resources */
-#endif		
 };
 
 

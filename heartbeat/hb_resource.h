@@ -1,9 +1,8 @@
-/* $Id: hb_resource.h,v 1.5 2004/05/15 09:28:08 andrew Exp $ */
+/* $Id: hb_resource.h,v 1.6 2004/05/17 15:12:08 lars Exp $ */
 #ifndef _HB_RESOURCE_H
 #define _HB_RESOURCE_H
 #include <heartbeat.h>
 #include <heartbeat_private.h>
-#include <config.h>
 /* Resource-related types and variables */
 
 enum standby { NOT, ME, OTHER, DONE };
@@ -35,7 +34,6 @@ enum hb_rsc_state {
 
 typedef void	(*RemoteRscReqFunc)	(GHook *  data);
 
-#ifndef WITH_CRM
 extern int		DoManageResources;
 extern int 		nice_failback;
 extern int		other_holds_resources;
@@ -47,11 +45,9 @@ extern longclock_t	standby_running;
 extern longclock_t	local_takeover_time;
 extern int		DoManageResources;
 /* Also: procinfo->i_hold_resources */
-#endif
 
 /* Resource-related functions */
 
-#ifndef WITH_CRM
 void		notify_world(struct ha_msg * msg, const char * ostatus);
 void		PerformQueuedNotifyWorld(GHook* g);
 int		parse_ha_resources(const char * cfgfile);
@@ -67,8 +63,5 @@ void		AuditResources(void);
 void		QueueRemoteRscReq(RemoteRscReqFunc, struct ha_msg* data);
 void		hb_rsc_recover_dead_resources(struct node_info* hip);
 const char *	hb_rsc_resource_state(void);
-#else
-extern void Initiate_Reset(Stonith* s, const char * nodename, gboolean doreset);
-#endif
 
 #endif
