@@ -377,6 +377,8 @@ hb_rsc_recover_dead_resources(struct node_info* hip)
 	 */
 	if (shutdown_in_progress) {
 		switch(resourcestate) {
+
+
 		case HB_R_SHUTDOWN:
 		case HB_R_STABLE:	break;
 					
@@ -386,12 +388,11 @@ hb_rsc_recover_dead_resources(struct node_info* hip)
 				" during shutdown"
 				": state %d", resourcestate);
 				/* FALL THROUGH! */
+		case HB_R_INIT:	
 		case HB_R_BOTHSTARTING:
 		case HB_R_RSCRCVD:
 		case HB_R_STARTING:	hb_giveup_resources();
 					return;
-			hb_giveup_resources();
-			return;
 		}
 	}
 	rsc_needs_failback = TRUE;
@@ -460,7 +461,8 @@ hb_rsc_isstable(void)
 	&&	going_standby == NOT
 	&&	standby_running == 0L
 	&&	ResourceMgmt_child_count == 0
-	&&	(resourcestate == HB_R_STABLE||resourcestate==HB_R_SHUTDOWN);
+	&&	(resourcestate == HB_R_STABLE||resourcestate==HB_R_SHUTDOWN
+	||	 resourcestate == HB_R_INIT);
 }
 
 
@@ -2028,6 +2030,10 @@ StonithProcessName(ProcTrack* p)
 
 /*
  * $Log: hb_resource.c,v $
+ * Revision 1.41  2004/02/03 04:44:21  alan
+ * Fixed two different early shutdown hangs.  That is, when shutdown is requested
+ * early enough, heartbeat would hang.
+ *
  * Revision 1.40  2004/01/30 22:45:17  alan
  * Fixed a hole where very early shutdown requests with the other node
  * dead could cause problems.
