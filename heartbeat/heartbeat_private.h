@@ -1,4 +1,4 @@
-/* $Id: heartbeat_private.h,v 1.10 2004/05/24 09:21:29 sunjd Exp $ */
+/* $Id: heartbeat_private.h,v 1.11 2004/08/10 04:55:25 alan Exp $ */
 /*
  * heartbeat_private.h: definitions for the Linux-HA heartbeat program
  * that are defined in heartbeat.c and are used by other .c files
@@ -31,9 +31,11 @@
 #ifndef _HEARTBEAT_PRIVATE_H
 #define _HEARTBEAT_PRIVATE_H
 
+#include <heartbeat.h>
 #include <ha_msg.h>
 #include <glib.h>
 
+#include <clplumbing/longclock.h>
 #include <clplumbing/proctrack.h>
 #include <hb_proc.h>
 
@@ -53,7 +55,15 @@ void hb_init_watchdog(void);
 void hb_tickle_watchdog(void);
 void hb_close_watchdog(void);
 
+/* Used to register with heartbeat for receiving messages directly */
+typedef void (*HBmsgcallback) (const char * type, struct node_info* fromnode
+,	TIME_T msgtime, seqno_t seqno, const char * iface, struct ha_msg * msg);
+void hb_register_msg_callback(const char * msgtype, HBmsgcallback callback);
+void hb_register_comm_up_callback(void(*callback)(void));
+
+
 int  hb_send_resources_held(int stable, const char * comment);
+void init_resource_module(void);
 
 gboolean hb_mcp_final_shutdown(gpointer p);
 gboolean hb_send_local_status(gpointer p);

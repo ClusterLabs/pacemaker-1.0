@@ -1,4 +1,4 @@
-/* $Id: hb_resource.c,v 1.57 2004/07/02 03:34:21 sunjd Exp $ */
+/* $Id: hb_resource.c,v 1.58 2004/08/10 04:55:24 alan Exp $ */
 /*
  * hb_resource: Linux-HA heartbeat resource management code
  *
@@ -168,6 +168,66 @@ static ProcTrack_ops StonithStatProcessTrackOps = {
 	NULL,
 	StonithStatProcessName
 };
+
+
+void
+init_resource_module(void)
+{
+	hb_register_comm_up_callback(comm_up_resource_action);
+}
+
+static void
+HBDoMsg_T_STARTING_or_RESOURCES(const char * type, struct node_info * fromnode
+,	TIME_T msgtime, seqno_t seqno, const char * iface, struct ha_msg * msg)
+{
+	/*
+	 * process_resources() will deal with T_STARTING
+	 * and T_RESOURCES messages appropriately.
+	 */
+	process_resources(type, msg, fromnode);
+	heartbeat_monitor(msg, KEEPIT, iface);
+}
+
+/* Someone wants to go standby!!! */
+static void
+HBDoMsg_T_ASKRESOURCES(const char * type, struct node_info * fromnode
+,	TIME_T msgtime, seqno_t seqno, const char * iface, struct ha_msg * msg)
+{
+	heartbeat_monitor(msg, KEEPIT, iface);
+	ask_for_resources(msg);
+}
+
+static void
+HBDoMsg_T_ASKRELEASE(const char * type, struct node_info * fromnode
+,	TIME_T msgtime, seqno_t seqno, const char * iface, struct ha_msg * msg)
+{
+	heartbeat_monitor(msg, KEEPIT, iface);
+	if (fromnode != curnode) {
+		/*
+		 * Queue for later handling...
+		 */
+		QueueRemoteRscReq(PerformQueuedNotifyWorld, msg);
+	}
+}
+
+static void
+HBDoMsg_T_ACKRELEASE(const char * type, struct node_info * fromnode
+,	TIME_T msgtime, seqno_t seqno, const char * iface, struct ha_msg * msg)
+{
+	/* Ignore this if we're shutting down! */
+	if (shutdown_in_progress) {
+		return;
+	}
+	heartbeat_monitor(msg, KEEPIT, iface);
+	QueueRemoteRscReq(PerformQueuedNotifyWorld, msg);
+}
+/* Process a message no one recognizes */
+static void
+HBDoMsg_default(const char * type, struct node_info * fromnode
+,	TIME_T msgtime, seqno_t seqno, const char * iface, struct ha_msg * msg)
+{
+	QueueRemoteRscReq(PerformQueuedNotifyWorld, msg);
+}
 
 static const char *	rsc_msg[] =	{HB_NO_RESOURCES, HB_LOCAL_RESOURCES
 ,	HB_FOREIGN_RESOURCES, HB_ALL_RESOURCES};
@@ -572,6 +632,14 @@ comm_up_resource_action(void)
 	static int	resources_requested_yet = 0;
 	int		deadcount = countbystatus(DEADSTATUS, TRUE);
 
+
+	hb_register_msg_callback(T_STARTING,		HBDoMsg_T_STARTING_or_RESOURCES);
+	hb_register_msg_callback(T_RESOURCES,		HBDoMsg_T_STARTING_or_RESOURCES);
+	hb_register_msg_callback(T_ASKRESOURCES,	HBDoMsg_T_ASKRESOURCES);
+	hb_register_msg_callback(T_ASKRELEASE,		HBDoMsg_T_ASKRELEASE);
+	hb_register_msg_callback(T_ACKRELEASE,		HBDoMsg_T_ACKRELEASE);
+	hb_register_msg_callback("",			HBDoMsg_default);
+
 	if (deadcount == 0) {
 		/*
 		 * If all nodes are up, we won't have to acquire
@@ -626,11 +694,7 @@ process_resources(const char * type, struct ha_msg* msg
 	static int			first_time = 1;
 
 	shutdown_if_needed();
-	if (!DoManageResources) {
-		return;
-	}
-
-	if (!nice_failback) {
+	if (!DoManageResources || !nice_failback) {
 		return;
 	}
 
@@ -2057,6 +2121,9 @@ QueueRemoteRscReq(RemoteRscReqFunc func, struct ha_msg* msg)
 	GHook*		hook;
 	const char *	fp;
 
+	if (!DoManageResources) {
+		return;
+	}
 	InitRemoteRscReqQueue();
 	hook = g_hook_alloc(&RemoteRscReqQueue);
 
@@ -2213,6 +2280,11 @@ StonithStatProcessName(ProcTrack* p)
 
 /*
  * $Log: hb_resource.c,v $
+ * Revision 1.58  2004/08/10 04:55:24  alan
+ * Completed first pass of -M flag reorganization.
+ * It passes BasicSanityCheck.
+ * But, I haven't actually tried -M yet ;-)
+ *
  * Revision 1.57  2004/07/02 03:34:21  sunjd
  * Fix cannot stop two nodes simultaneously, pls help to test more
  *

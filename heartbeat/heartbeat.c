@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.307 2004/08/09 05:05:39 alan Exp $ */
+/* $Id: heartbeat.c,v 1.308 2004/08/10 04:55:24 alan Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -402,11 +402,7 @@ static void	LookForClockJumps(void);
 static void	get_localnodeinfo(void);
 static gboolean EmergencyShutdown(gpointer p);
 
-typedef void (*HBmsgcallback) (const char * type, struct node_info* fromnode
-,	TIME_T msgtime, seqno_t seqno, const char * iface, struct ha_msg * msg);
-
-void hb_register_msg_callback(const char * msgtype, HBmsgcallback callback);
-static GHashTable*	message_callbacks;
+static GHashTable*	message_callbacks = NULL;
 static gboolean	HBDoMsgCallback(const char * type, struct node_info* fromnode
 ,	TIME_T msgtime, seqno_t seqno, const char * iface, struct ha_msg * msg);
 static void HBDoMsg_T_REXMIT(const char * type, struct node_info * fromnode
@@ -417,6 +413,8 @@ static void HBDoMsg_T_SHUTDONE(const char * type, struct node_info * fromnode
 ,	TIME_T msgtime, seqno_t seqno, const char * iface, struct ha_msg * msg);
 static void HBDoMsg_T_QCSTATUS(const char * type, struct node_info * fromnode
 ,	TIME_T msgtime, seqno_t seqno, const char * iface, struct ha_msg * msg);
+
+static void (*comm_up_callback)(void) = NULL;
 
 /*
  * Glib Mainloop Source functions...
@@ -1535,8 +1533,9 @@ comm_now_up()
 	/* Update our local status... */
 	set_local_status(ACTIVESTATUS);
 
-	comm_up_resource_action();
-
+	if (comm_up_callback) {
+		comm_up_callback();
+	}
 
 	/* Start each of our known child clients */
 	g_list_foreach(config->client_list
@@ -1711,6 +1710,12 @@ hb_register_msg_callback(const char * mtype, HBmsgcallback callback)
 		message_callbacks = g_hash_table_new(g_str_hash, g_str_equal);
 	}
 	g_hash_table_insert(message_callbacks, msgtype, callback);
+}
+
+void
+hb_register_comm_up_callback(void (*callback)(void))
+{
+	comm_up_callback = callback;
 }
 
 static gboolean
@@ -2053,61 +2058,27 @@ process_clustermsg(struct ha_msg* msg, struct link* lnk)
 
 	thisnode->track.last_iface = iface;
 
-
 	if (HBDoMsgCallback(type, thisnode, msgtime, seqno, iface, msg)) {
-		/* Good.  No need to process it further... */
-
-		/* Did we get a "shutdown complete" message? */
-	}else if (strcasecmp(type, T_STARTING) == 0
-	||	strcasecmp(type, T_RESOURCES) == 0) {
-		/*
-		 * process_resources() will deal with T_STARTING
-		 * and T_RESOURCES messages appropriately.
-		 */
-		if (heartbeat_comm_state == COMM_LINKSUP) {
-			process_resources(type, msg, thisnode);
-		}
-		heartbeat_monitor(msg, action, iface);
-
-	}else if (strcasecmp(type, T_ASKRESOURCES) == 0) {
-		/* Someone wants to go standby!!! */
-		heartbeat_monitor(msg, action, iface);
-		ask_for_resources(msg);
-
-	}else if (strcasecmp(type, T_ASKRELEASE) == 0) {
-		heartbeat_monitor(msg, action, iface);
-		if (thisnode != curnode) {
-			/*
-			 * Queue for later handling...
-			 */
-			QueueRemoteRscReq(PerformQueuedNotifyWorld, msg);
-			return;
-		}
-
-	}else if (strcasecmp(type, T_ACKRELEASE) == 0) {
-
-		/* Ignore this, we're shutting down! */
-		if (shutdown_in_progress) {
-			return;
-		}
-		heartbeat_monitor(msg, action, iface);
-		QueueRemoteRscReq(PerformQueuedNotifyWorld, msg);
-
-	}else{
-		/* None of the above... */
-		heartbeat_monitor(msg, action, iface);
-		QueueRemoteRscReq(PerformQueuedNotifyWorld, msg);
+		/* See if our comm channels are working yet... */
 		if (heartbeat_comm_state != COMM_LINKSUP) {
 			check_comm_isup();
-		}
-		if (heartbeat_comm_state == COMM_LINKSUP) {
-			process_resources(type, msg, thisnode);
+		}	
+	}else{
+		/* Not a message anyone wants (yet) */
+		if (heartbeat_comm_state != COMM_LINKSUP) {
+			check_comm_isup();
+			/* Make sure we don't lose this one message... */
+			if (heartbeat_comm_state == COMM_LINKSUP) {
+				/* Someone may have registered for this one */
+				if (!HBDoMsgCallback(type, thisnode, msgtime
+					,	seqno, iface,msg)) {
+					heartbeat_monitor(msg, action, iface);
+				}
+			}
+		}else{
+			heartbeat_monitor(msg, action, iface);
 		}
 	}
-	/* See if our comm channels are working yet... */
-	if (heartbeat_comm_state != COMM_LINKSUP) {
-		check_comm_isup();
-	}	
 }
 
 void
@@ -3043,6 +3014,9 @@ main(int argc, char * argv[], char **envp)
 		static char cdebug[8];
 		snprintf(cdebug, sizeof(debug), "%d", debug);
 		setenv(HADEBUGVAL, cdebug, TRUE);
+	}
+	if (DoManageResources) {
+		init_resource_module();
 	}
 
 
@@ -4448,6 +4422,11 @@ hb_unregister_to_apphbd(void)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.308  2004/08/10 04:55:24  alan
+ * Completed first pass of -M flag reorganization.
+ * It passes BasicSanityCheck.
+ * But, I haven't actually tried -M yet ;-)
+ *
  * Revision 1.307  2004/08/09 05:05:39  alan
  * Added code to allow heartbeat packet processing by callback functions,
  * and moved a couple of (non-resource) functions over to use this new
