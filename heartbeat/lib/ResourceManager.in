@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-#	$Id: ResourceManager.in,v 1.24 2004/11/08 20:48:36 gshi Exp $
+#	$Id: ResourceManager.in,v 1.25 2004/11/09 22:05:34 gshi Exp $
 #
 #	New haresources format:
 #
@@ -426,15 +426,19 @@ case $1 in
 		exit 1;;
 esac
 
-exit 0
+exit $?
 #
 #	$Log: ResourceManager.in,v $
+#	Revision 1.25  2004/11/09 22:05:34  gshi
+#	the return value should be the return value of the exec funcion
+#	instead of 0
+#
 #	Revision 1.24  2004/11/08 20:48:36  gshi
 #	implemented logging daemon
-#
+#	
 #	The logging daemon is to double-buffer log messages to protect us from blocking
 #	writes to syslog / logfiles.
-#
+#	
 #	Revision 1.23  2004/10/01 13:10:34  lge
 #	micro fixes
 #	 initialize logfacility = -1 in hb_cluster_new()
