@@ -66,11 +66,14 @@ recoverymgrd_LDFLAGS	= @LIBADD_DL@ @LIBLTDL@ -export-dynamic		\
 #	it.  This has been done for the current Linux lex/yacc
 #
 lex.yy.$(OBJEXT): lex.yy.c
+	( old_pwd=`pwd` ; cd $(srcdir) &&			\
 	$(CC) $(DEFS) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS)	\
 	-c lex.yy.c				\
-	-o $@  $(LEX_SOURCE_CFLAGS) -Wall
+	-o $$old_pwd/$@  $(LEX_SOURCE_CFLAGS) -Wall )
 
 conf_lex.$(OBJEXT): conf_lex.c
+	( old_pwd=`pwd` ; cd $(srcdir) &&			\
 	$(CC) $(DEFS) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS)	\
 	-c conf_lex.c			\
-	-o $@  $(LEX_SOURCE_CFLAGS) -Wall
+	-o $$old_pwd/$@  $(LEX_SOURCE_CFLAGS) -Wall )
+
