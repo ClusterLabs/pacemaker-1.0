@@ -1,4 +1,4 @@
-/* $Id: client_lib.c,v 1.6 2004/05/17 15:12:08 lars Exp $ */
+/* $Id: client_lib.c,v 1.7 2004/07/07 19:07:15 gshi Exp $ */
 /* 
  * client_lib: heartbeat API client side code
  *
@@ -2225,6 +2225,189 @@ sendnodemsg(ll_cluster_t* lcl, struct ha_msg* msg
 	return(msg2ipcchan(msg, pi->chan));
 }
 
+static int
+sendnodemsg_byuuid(ll_cluster_t* lcl, struct ha_msg* msg,
+		   uuid_t uuid)
+{
+	llc_private_t* pi;
+	ClearLog();
+	if (!ISOURS(lcl)) {
+		ha_api_log(LOG_ERR, "sendnodemsg_byuuid: bad cinfo");
+		return HA_FAIL;
+	}
+	pi = (llc_private_t*)lcl->ll_cluster_private;
+	if (!pi->SignedOn) {
+		ha_api_log(LOG_ERR, "not signed on");
+		return HA_FAIL;
+	}
+	if (pi->iscasual) {
+		ha_api_log(LOG_ERR, "sendnodemsg_byuuid: casual client");
+		return HA_FAIL;
+	}
+	if (!uuid){
+		ha_api_log(LOG_ERR, "uuid is NULL");
+		return HA_FAIL;
+	}
+	if (cl_msg_modbin(msg, F_TOUUID, uuid, sizeof(uuid_t)) != HA_OK) {
+		ha_api_log(LOG_ERR, "sendnodemsg_byuuid: "
+			   "cannot set F_TOUUID field");
+		return(HA_FAIL);
+	}
+	return(msg2ipcchan(msg, pi->chan));	
+}
+
+
+static int
+get_uuid(llc_private_t* pi, const char* nodename, uuid_t uuid)
+{
+	struct ha_msg*		request;
+	struct ha_msg*		reply;
+	const char *		result;
+	const char *		tmp;
+	int			len;
+	
+	if (!pi->SignedOn) {
+		ha_api_log(LOG_ERR, "not signed on");
+		return HA_FAIL;
+	}
+
+	if ((request = hb_api_boilerplate(API_GETUUID)) == NULL) {
+		ha_api_log(LOG_ERR, "get_uuid: can't create msg");
+		return HA_FAIL;
+	}
+	if (ha_msg_add(request, F_QUERYNAME, nodename) != HA_OK) {
+		ha_api_log(LOG_ERR, "get_uuid: cannot add field");
+		ZAPMSG(request);
+		return HA_FAIL;
+	}
+
+	/* Send message */
+	if (msg2ipcchan(request, pi->chan) != HA_OK) {
+		ZAPMSG(request);
+		ha_api_perror("Can't send message to IPC Channel");
+		return HA_FAIL;
+	}
+	ZAPMSG(request);
+
+	if ((reply=read_api_msg(pi)) != NULL
+	    && 	(result = ha_msg_value(reply, F_APIRESULT)) != NULL
+	    &&	(strcmp(result, API_OK) == 0)
+	    &&	(tmp =  cl_get_binary(reply, F_QUERYUUID, &len)) != NULL
+	    &&  len == sizeof(uuid_t)){
+		
+		uuid_copy(uuid, tmp);
+		ZAPMSG(reply);
+		
+		return HA_OK;
+		
+	}
+	
+	if (reply != NULL) {
+		ZAPMSG(reply);
+	}
+	
+	return HA_FAIL;
+}
+
+static int
+get_uuid_by_name(ll_cluster_t* ci, const char* nodename, uuid_t uuid)
+{
+	llc_private_t* pi;
+	ClearLog();
+	if (!ISOURS(ci)) {
+		ha_api_log(LOG_ERR, "get_nodeID_from_name: bad cinfo");
+		return HA_FAIL;
+	}
+	pi = (llc_private_t*)ci->ll_cluster_private;
+	if (!pi->SignedOn) {
+		ha_api_log(LOG_ERR, "not signed on");
+		return HA_FAIL;
+	}	
+	
+	if(!uuid || !nodename){
+		ha_api_log(LOG_ERR, "get_uuid_by_name: uuid or nodename is NULL");
+		return HA_FAIL;
+	}
+	return get_uuid(pi, nodename, uuid);
+}
+
+
+
+static int
+get_name(llc_private_t* pi, const uuid_t uuid, char* name, int maxnamlen)
+{
+	struct ha_msg*		request;
+	struct ha_msg*		reply;
+	const char *		result;
+	const char *		tmp;
+	
+	if (!pi->SignedOn) {
+		ha_api_log(LOG_ERR, "not signed on");
+		return HA_FAIL;
+	}
+	
+	if ((request = hb_api_boilerplate(API_GETNAME)) == NULL) {
+		ha_api_log(LOG_ERR, "get_name: can't create msg");
+		return HA_FAIL;
+	}
+	if (ha_msg_addbin(request, F_QUERYUUID, uuid, sizeof(uuid_t)) != HA_OK) {
+		ha_api_log(LOG_ERR, "get_uuid: cannot add field");
+		ZAPMSG(request);
+		return HA_FAIL;
+	}
+	
+	/* Send message */
+	if (msg2ipcchan(request, pi->chan) != HA_OK) {
+		ZAPMSG(request);
+		ha_api_perror("Can't send message to IPC Channel");
+		return HA_FAIL;
+	}
+	ZAPMSG(request);
+	
+	if ((reply=read_api_msg(pi)) != NULL
+	    && 	(result = ha_msg_value(reply, F_APIRESULT)) != NULL
+	    &&	(strcmp(result, API_OK) == 0)
+	    &&	(tmp =  ha_msg_value(reply, F_QUERYNAME)) != NULL){
+		
+		strncpy(name, tmp, maxnamlen -1 );
+		name[maxnamlen-1] = 0;
+		ZAPMSG(reply);
+		
+		return HA_OK;		
+	}
+	
+	if (reply != NULL) {
+		ZAPMSG(reply);
+	}
+	
+	return HA_FAIL;
+}
+
+
+static int
+get_name_by_uuid(ll_cluster_t* ci, uuid_t uuid, 
+		 char* nodename, size_t  maxnamlen){
+	
+	llc_private_t* pi;
+	ClearLog();
+	if (!ISOURS(ci)) {
+		ha_api_log(LOG_ERR, "get_nodeID_from_name: bad cinfo");
+		return HA_FAIL;
+	}
+	pi = (llc_private_t*)ci->ll_cluster_private;
+	if (!pi->SignedOn) {
+		ha_api_log(LOG_ERR, "not signed on");
+		return HA_FAIL;
+	}	
+	
+	if(!uuid || !nodename || maxnamlen <= 0){
+		ha_api_log(LOG_ERR, "get_name_by_uuid: bad paramter");
+		return HA_FAIL;
+	}
+	return get_name(pi, uuid, nodename, maxnamlen);
+}
+
+
 /* Add order sequence number field */
 STATIC  void
 add_order_seq(llc_private_t* pi, struct ha_msg* msg)
@@ -2383,41 +2566,44 @@ ha_api_perror(const char * fmt, ...)
  *	Our vector of member functions...
  */
 static struct llc_ops heartbeat_ops = {
-	hb_api_signon,		/* signon */
-	hb_api_signoff,		/* signoff */
-	hb_api_delete,		/* delete */
-	set_msg_callback,	/* set_msg_callback */
-	set_nstatus_callback,	/* set_nstatus_callback */
-	set_ifstatus_callback,	/* set_ifstatus_callback */
-	set_cstatus_callback,	/* set_cstatus_callback */
-	init_nodewalk,		/* init_nodewalk */
-	nextnode,		/* nextnode */
-	end_nodewalk,		/* end_nodewalk */
-	get_nodestatus,		/* node_status */
-	get_nodetype,		/* node_type */
-	init_ifwalk,		/* init_ifwalk */
-	nextif,			/* nextif */
-	end_ifwalk,		/* end_ifwalk */
-	get_ifstatus,		/* if_status */
-	get_clientstatus,	/* client_status */
-	sendclustermsg,		/* sendclustermsg */
-	sendnodemsg,		/* sendnodemsg */
-	send_ordered_clustermsg,/* send_ordered_clustermsg */
-	send_ordered_nodemsg,	/* send_ordered_nodemsg */
-	get_inputfd,		/* inputfd */
-	get_ipcchan,		/* ipcchan */
-	msgready,		/* msgready */
-	hb_api_setsignal,	/* setmsgsignal */
-	rcvmsg,			/* rcvmsg */
-	read_msg_w_callbacks,	/* readmsg */
-	setfmode,		/* setfmode */
-	get_parameter,		/* get_parameter */
-	get_deadtime,		/* get_deadtime */
-	get_keepalive,		/* get_keepalive */
-	get_mynodeid,		/* get_mynodeid */
-	get_logfacility,	/* suggested logging facility */
-	get_resources,		/* Get current resource allocation */
-	APIError,		/* errormsg */
+	signon:			hb_api_signon,		
+	signoff:		hb_api_signoff,		
+	delete:			hb_api_delete,		
+	set_msg_callback:	set_msg_callback,	
+	set_nstatus_callback:	set_nstatus_callback,	
+	set_ifstatus_callback:	set_ifstatus_callback,	
+	set_cstatus_callback:	set_cstatus_callback,	
+	init_nodewalk:		init_nodewalk,		
+	nextnode:		nextnode,		
+	end_nodewalk:		end_nodewalk,		
+	node_status:		get_nodestatus,		
+	node_type:		get_nodetype,		
+	init_ifwalk:		init_ifwalk,		
+	nextif:			nextif,			
+	end_ifwalk:		end_ifwalk,		
+	if_status:		get_ifstatus,		
+	client_status:		get_clientstatus,	
+	get_uuid_by_name:	get_uuid_by_name,
+	get_name_by_uuid:	get_name_by_uuid,
+	sendclustermsg:		sendclustermsg,		
+	sendnodemsg:		sendnodemsg,		
+	sendnodemsg_byuuid:	sendnodemsg_byuuid,	
+	send_ordered_clustermsg:send_ordered_clustermsg,
+	send_ordered_nodemsg:	send_ordered_nodemsg,	
+	inputfd:		get_inputfd,		
+	ipcchan:		get_ipcchan,		
+	msgready:		msgready,		
+	setmsgsignal:		hb_api_setsignal,	
+	rcvmsg:			rcvmsg,			
+	readmsg:		read_msg_w_callbacks,	
+	setfmode:		setfmode,		
+	get_parameter:		get_parameter,		
+	get_deadtime:		get_deadtime,		
+	get_keepalive:		get_keepalive,		
+	get_mynodeid:		get_mynodeid,		
+	get_logfacility:	get_logfacility,	
+	get_resources:		get_resources,		
+	errmsg:			APIError,		
 };
 
 

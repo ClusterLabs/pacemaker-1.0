@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.304 2004/05/24 09:18:49 sunjd Exp $ */
+/* $Id: heartbeat.c,v 1.305 2004/07/07 19:07:14 gshi Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -264,6 +264,7 @@
 #include <hb_config.h>
 #include <hb_resource.h>
 #include <apphb.h>
+#include <uuid/uuid.h>
 
 #include "setproctitle.h"
 
@@ -330,7 +331,6 @@ int				UseOurOwnPoll = FALSE;
 static longclock_t		NextPoll = 0UL;
 static int			ClockJustJumped = FALSE;
 longclock_t			local_takeover_time = 0L;
-
 
 #undef DO_AUDITXMITHIST
 #ifdef DO_AUDITXMITHIST
@@ -498,6 +498,9 @@ init_procinfo()
 	procinfo->i_hold_resources = HB_NO_RSC;
 }
 
+
+
+
 void
 hb_versioninfo(void)
 {
@@ -627,6 +630,14 @@ initialize_heartbeat()
 		return HA_FAIL;
 	}
 	cl_log(LOG_INFO, "Heartbeat generation: %lu", config->generation);
+	
+	if(GetUUID(config->uuid) != HA_OK){
+		cl_log(LOG_ERR, "getting uuid for the local node failed");
+		return HA_FAIL;
+	}
+	
+	add_uuidtable(config->uuid, (char*)curnode);
+	uuid_copy(curnode->uuid, config->uuid);
 
 	if (stat(FIFONAME, &buf) < 0 ||	!S_ISFIFO(buf.st_mode)) {
 		cl_log(LOG_INFO, "Creating FIFO %s.", FIFONAME);
@@ -1663,6 +1674,8 @@ hb_mcp_final_shutdown(gpointer p)
 	if (procinfo->restart_after_shutdown) {
 		cl_log(LOG_INFO, "Heartbeat restart triggered.");
 		restart_heartbeat();
+	} else{
+		cleanuptable();
 	}
 
 	/*NOTREACHED*/
@@ -1684,6 +1697,8 @@ process_clustermsg(struct ha_msg* msg, struct link* lnk)
 	TIME_T			msgtime = 0;
 	longclock_t		now = time_longclock();
 	const char *		from;
+	const char *		fromuuid;
+	int			uuidlen;
 	const char *		ts;
 	const char *		type;
 	int			action;
@@ -1726,6 +1741,7 @@ process_clustermsg(struct ha_msg* msg, struct link* lnk)
 	/* Extract message type, originator, timestamp, auth */
 	type = ha_msg_value(msg, F_TYPE);
 	from = ha_msg_value(msg, F_ORIG);
+	fromuuid = cl_get_binary(msg, F_ORIGUUID, &uuidlen);
 	ts = ha_msg_value(msg, F_TIME);
 	cseq = ha_msg_value(msg, F_SEQ);
 
@@ -1765,10 +1781,11 @@ if (DEBUGDETAILS) {
 	if (ts == 0 || msgtime == 0) {
 		return;
 	}
-
-
-	thisnode = lookup_node(from);
-
+	
+	
+	//thisnode = lookup_node(from);
+	thisnode = (struct node_info*) lookup_tables(from, fromuuid);
+	
 	if (thisnode == NULL) {
 #if defined(MITJA)
 		/* If a node isn't in the configfile, add it... */
@@ -1809,7 +1826,7 @@ if (DEBUGDETAILS) {
 		/* Ignore it */
 		heartbeat_monitor(msg, action, iface);
 		return;
-
+		
 		case DUPLICATE:
 		heartbeat_monitor(msg, action, iface);
 		case KEEPIT:
@@ -3135,7 +3152,10 @@ main(int argc, char * argv[], char **envp)
 
 StartHeartbeat:
 
-
+	/*init table for nodename/uuid lookup*/
+	inittable();
+	
+	
         /* We have already initialized configs in case WeAreRestarting. */
         if (WeAreRestarting
         ||      (init_config(CONFIG_NAME)
@@ -3460,6 +3480,13 @@ should_drop_message(struct node_info * thisnode, const struct ha_msg *msg,
 	struct seqtrack *	t = &thisnode->track;
 	const char *		cseq = ha_msg_value(msg, F_SEQ);
 	const char *		to = ha_msg_value(msg, F_TO);
+	int			touuid_len;
+	const char *		touuid  = NULL;
+	const char *		from= ha_msg_value(msg, F_ORIG);
+	int			fromuuid_len;
+	const char *		fromuuid = 
+		cl_get_binary(msg, F_ORIGUUID, &fromuuid_len);
+	
 	const char *		type = ha_msg_value(msg, F_TYPE);
 	const char *		cgen = ha_msg_value(msg, F_HBGENERATION);
 	seqno_t			seq;
@@ -3469,6 +3496,10 @@ should_drop_message(struct node_info * thisnode, const struct ha_msg *msg,
 	int			isrestart = 0;
 	int			ishealedpartition = 0;
 	int			is_status = 0;
+	
+	if (from && fromuuid && (fromuuid_len == sizeof(uuid_t))){
+		update_tables(from, fromuuid);
+	}
 
 	/* Some packet types shouldn't have sequence numbers */
 	if (type != NULL
@@ -3495,7 +3526,7 @@ should_drop_message(struct node_info * thisnode, const struct ha_msg *msg,
 	if (strcasecmp(type, T_STATUS) == 0) {
 		is_status = 1;
 	}
-
+	
 	if (cseq  == NULL || sscanf(cseq, "%lx", &seq) != 1 ||	seq <= 0) {
 		cl_log(LOG_ERR, "should_drop_message: bad sequence number");
 		cl_log_message(msg);
@@ -3507,12 +3538,21 @@ should_drop_message(struct node_info * thisnode, const struct ha_msg *msg,
 		sscanf(cgen, "%lx", &gen);
 	}
 
+
+	
+	touuid= cl_get_binary(msg, F_TOUUID, &touuid_len);
+	
+	if(touuid && touuid_len == sizeof(uuid_t)){
+		IsToUs = (uuid_compare(touuid, config->uuid) == 0);
+	}
+	else{
+		IsToUs = (to == NULL) || (strcmp(to, curnode->nodename) == 0);
+	}
+	
 	/*
 	 * We need to do sequence number processing on every
 	 * packet, even those that aren't sent to us.
 	 */
-	IsToUs = (to == NULL) || (strcmp(to, curnode->nodename) == 0);
-
 	/* Does this looks like a replay attack... */
 	if (gen < t->generation) {
 		cl_log(LOG_ERR
@@ -4200,7 +4240,6 @@ ParseTestOpts()
 #define	GENLEN	16	/* Number of chars on disk for gen # and '\n' */
 
 
-
 /*
  *	Increment our generation number
  *	It goes up each time we restart to prevent replay attacks.
@@ -4261,6 +4300,8 @@ IncrGeneration(seqno_t * generation)
 #endif
 	return HA_OK;
 }
+
+
 
 static int
 GetTimeBasedGeneration(seqno_t * generation)
@@ -4346,6 +4387,9 @@ hb_unregister_to_apphbd(void)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.305  2004/07/07 19:07:14  gshi
+ * implemented uuid as nodeid
+ *
  * Revision 1.304  2004/05/24 09:18:49  sunjd
  * make heartbeat an apphbd client
  *

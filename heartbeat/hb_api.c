@@ -1,4 +1,4 @@
-/* $Id: hb_api.c,v 1.101 2004/05/17 15:12:07 lars Exp $ */
+/* $Id: hb_api.c,v 1.102 2004/07/07 19:07:14 gshi Exp $ */
 /*
  * hb_api: Server-side heartbeat API code
  *
@@ -127,6 +127,14 @@ static int api_get_parameter (const struct ha_msg* msg, struct ha_msg* resp
 static int api_get_resources (const struct ha_msg* msg, struct ha_msg* resp
 ,	client_proc_t* client, const char** failreason);
 
+static int api_get_uuid (const struct ha_msg* msg, struct ha_msg* resp
+,	client_proc_t* client, const char** failreason);
+
+static int api_get_nodename (const struct ha_msg* msg, struct ha_msg* resp
+,	client_proc_t* client, const char** failreason);
+
+
+
 gboolean ProcessAnAPIRequest(client_proc_t* client);
 
 struct api_query_handler query_handler_list [] = {
@@ -141,6 +149,8 @@ struct api_query_handler query_handler_list [] = {
 	{ API_CLIENTSTATUS, api_clientstatus },
 	{ API_GETPARM, api_get_parameter},
 	{ API_GETRESOURCES, api_get_resources},
+	{ API_GETUUID, api_get_uuid},
+	{ API_GETNAME, api_get_nodename}
 };
 
 extern int	UseOurOwnPoll;
@@ -664,6 +674,72 @@ api_get_resources (const struct ha_msg* msg, struct ha_msg* resp
 		" field to message");
 	}
 	return I_API_RET;
+}
+
+
+static int
+api_get_uuid (const struct ha_msg* msg, struct ha_msg* resp,
+	      client_proc_t* client, const char** failreason)
+{
+	const char* query_nodename;
+	const char * uuid;
+	
+	if ((query_nodename = ha_msg_value(msg, F_QUERYNAME))== NULL){
+		*failreason = "no query node name found";
+		return I_API_BADREQ;
+	}
+	
+	if ((uuid = nodename2uuid(query_nodename)) == NULL){
+		cl_log(LOG_ERR, "api_get_uuid: uuid not found"
+		       " in map table for %s", query_nodename);
+		return I_API_RET;
+	}
+	
+	if (cl_msg_modbin(resp, F_QUERYUUID, 
+			  uuid, sizeof(uuid_t)) != HA_OK){
+		cl_log(LOG_ERR, "api_get_uuid: cannnot add"
+		       F_QUERYUUID " field to message");
+		return I_API_RET;
+	}
+	
+	return I_API_RET;
+}
+
+
+static int
+api_get_nodename(const struct ha_msg* msg, struct ha_msg* resp,
+		 client_proc_t* client, const char** failreason)
+{
+	const char* nodename;
+	const char * query_uuid;
+	int	  len;
+	
+	if ((query_uuid = cl_get_binary(msg, F_QUERYUUID, &len))== NULL){
+		*failreason = "no query node name found";
+		return I_API_BADREQ;
+	}
+	
+	if ( len !=  sizeof(uuid_t)){
+		*failreason = "uuid value len in message does not match"
+			"the length of uuid_t structure";
+		return I_API_BADREQ;
+	}
+	
+	if ((nodename = uuid2nodename(query_uuid)) == NULL){
+		cl_log(LOG_ERR, "api_get_nodename: nodename not found"
+		       " in map table");
+		return I_API_RET;
+	}
+	
+	if (ha_msg_mod(resp, F_QUERYNAME, 
+		       nodename) != HA_OK){
+		cl_log(LOG_ERR, "api_get_nodename: cannnot add"
+		       F_QUERYNAME " field to message");
+		return I_API_RET;
+	}
+	
+	return I_API_RET;	
+	
 }
 
 /*

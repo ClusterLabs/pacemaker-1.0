@@ -1,4 +1,4 @@
-/* $Id: ha_msg.h,v 1.32 2004/06/24 20:44:28 gshi Exp $ */
+/* $Id: ha_msg.h,v 1.33 2004/07/07 19:07:15 gshi Exp $ */
 /*
  * Intracluster message object (struct ha_msg)
  *
@@ -79,8 +79,10 @@ struct ha_msg {
 #define	F_TYPE		"t"		/* Message type */
 #define	F_SUBTYPE	"subt"		/* Message type */
 #define	F_ORIG		"src"		/* Real Originator */
+#define	F_ORIGUUID	"srcuuid"	/* Real Originator uuid*/
 #define	F_NODE		"node"		/* Node being described */
 #define	F_TO		"dest"		/* Destination (optional) */
+#define F_TOUUID	"destuuid"	/* Destination uuid(optional) */
 #define	F_STATUS	"st"		/* New status (type = status) */
 #define	F_CLIENTNAME	"cn"		/* Client name */
 #define	F_CLIENTSTATUS	"cs"		/* Client status */

@@ -1,4 +1,4 @@
-/* $Id: heartbeat.h,v 1.45 2004/05/17 15:12:08 lars Exp $ */
+/* $Id: heartbeat.h,v 1.46 2004/07/07 19:07:15 gshi Exp $ */
 /*
  * heartbeat.h: core definitions for the Linux-HA heartbeat program
  *
@@ -58,7 +58,7 @@
 #include <glib.h>
 #undef index
 #undef time
-
+#include <uuid/uuid.h>
 /*
  * <syslog.h> might not contain LOG_PRI...
  * So, we define it ourselves, or error out if we can't...
@@ -241,6 +241,7 @@ struct link {
 struct node_info {
 	int		nodetype;
 	char		nodename[HOSTLENG];	/* Host name from config file */
+	uuid_t		uuid;
 	char		status[STATUSLENG];	/* Status from heartbeat */
 	struct link	links[MAXMEDIA];
 	int		nlinks;
@@ -276,6 +277,7 @@ struct sys_config {
         int    		use_dbgfile;            /* Flag to use the debug file*/
 	int		rereadauth;		/* 1 if we need to reread auth file */
 	seqno_t		generation;	/* Heartbeat generation # */
+	uuid_t		uuid;		/* uuid for this node*/
 	int		authnum;
 	Stonith*	stonith;	/* Stonith method: WE NEED A LIST TO SUPPORT MULTIPLE STONITH DEVICES PER NODE -EZA */
 	struct HBauth_info* authmethod;	/* auth_config[authnum] */
@@ -370,6 +372,15 @@ struct link *  iface_lookup_node(const char *);
 int	add_node(const char * value, int nodetype);
 void	SetParameterValue(const char * name, const char * value);
 
+void		add_nametable(const char* nodename, char* value);
+void		add_uuidtable(const char* uuid, char* value);
+const char *	uuid2nodename(const uuid_t uuid);
+const char *	nodename2uuid(const char* nodename);
+int		inittable(void);
+void		update_tables(const char* nodename, const char* uuid);
+char*		lookup_tables(const char* nodename, const char* uuid);
+void		cleanuptable(void);
+int		GetUUID(uuid_t uuid);
 
 #ifndef HA_HAVE_SETENV
 int setenv(const char *name, const char * value, int why);

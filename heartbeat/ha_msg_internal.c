@@ -1,4 +1,4 @@
-/* $Id: ha_msg_internal.c,v 1.42 2004/03/25 07:55:39 alan Exp $ */
+/* $Id: ha_msg_internal.c,v 1.43 2004/07/07 19:07:14 gshi Exp $ */
 /*
  * ha_msg_internal: heartbeat internal messaging functions
  *
@@ -44,23 +44,29 @@
 
 extern int		netstring_format;
 
+#define IS_SEQ 1	/* the name is seq*/
+#define IS_UUID 2  /* the value is uuid*/
+
+
 /* The value functions are expected to return pointers to static data */
 struct default_vals {
 	const char *	name;
 	const char * 	(*value)(void);
-	int		seqfield;
+	int		flags;
 };
 
 static	const char * ha_msg_seq(void);
 static	const char * ha_msg_timestamp(void);
 static	const char * ha_msg_loadavg(void);
 static	const char * ha_msg_from(void);
+static  const char * ha_msg_fromuuid(void);
 static	const char * ha_msg_ttl(void);
 static	const char * ha_msg_hbgen(void);
 
 /* Each of these functions returns static data requiring copying */
 struct default_vals defaults [] = {
 	{F_ORIG,	ha_msg_from,	0},
+	{F_ORIGUUID,	ha_msg_fromuuid, 2},
 	{F_SEQ,		ha_msg_seq,	1},
 	{F_HBGENERATION,ha_msg_hbgen,	0},
 	{F_TIME,	ha_msg_timestamp,0},
@@ -74,6 +80,35 @@ add_control_msg_fields(struct ha_msg* ret)
 	const char *	type;
 	int		j;
 	int		noseqno;
+	const char *	to;
+	const char *	touuid;
+	int		uuidlen;
+	
+	/* if F_TO field is present
+	   this message is for one specific node
+	   attach the uuid for that node*/
+	
+	if ((to = ha_msg_value(ret, F_TO)) != NULL ) {
+		if ( (touuid = nodename2uuid(to)) != NULL){
+			cl_msg_modbin(ret, F_TOUUID, touuid, sizeof(uuid_t));
+		} else{
+			//working with previous non-uuid version
+			//ha_log(LOG_WARNING, " destnation %s uuid not found", to);
+			//do nothing
+
+		}		
+	} else if ((touuid = cl_get_binary(ret, F_TOUUID, &uuidlen)) != NULL 
+		   && uuidlen ==  sizeof(uuid_t)){
+		if ((to = uuid2nodename(touuid)) != NULL){
+			if (ha_msg_mod(ret, F_TO, to) != HA_OK){
+				ha_log(LOG_WARNING, " adding field to message failed");
+			}
+		}else {
+			ha_log(LOG_WARNING, " nodename not found for uuid");
+		}
+	}
+	
+	
 
 	if ((type = ha_msg_value(ret, F_TYPE)) == NULL) {
 		ha_log(LOG_ERR, "No type (add_control_msg_fields): ");
@@ -81,7 +116,7 @@ add_control_msg_fields(struct ha_msg* ret)
 		ha_msg_del(ret);
 		return(NULL);
 	}
-
+	
 	if (DEBUGPKTCONT) {
 		ha_log(LOG_DEBUG, "add_control_msg_fields: input packet");
 		cl_log_message(ret);
@@ -100,7 +135,7 @@ add_control_msg_fields(struct ha_msg* ret)
 		 * need to be outside the normal retransmission protocol.
 		 * To accomplish that, we avoid giving them sequence numbers.
 		 */
-		if (noseqno && defaults[j].seqfield) {
+		if (noseqno && (defaults[j].flags & IS_SEQ)) {
 			continue;
 		}
 
@@ -109,12 +144,23 @@ add_control_msg_fields(struct ha_msg* ret)
 			/* This keeps us from adding another "from" field */
 			continue;
 		}
-
-		if (ha_msg_mod(ret, defaults[j].name, defaults[j].value())
-		!=	HA_OK)  {
-			ha_msg_del(ret);
-			return(NULL);
+		
+		if( defaults[j].flags & IS_UUID){
+			if (cl_msg_modbin(ret, defaults[j].name,
+					  defaults[j].value(), sizeof(uuid_t)) != HA_OK ){
+				ha_msg_del(ret);
+				return(NULL);
+			}
+			
+		}else {		
+			if (ha_msg_mod(ret, defaults[j].name, 
+				       defaults[j].value())
+			    !=	HA_OK)  {
+				ha_msg_del(ret);
+				return(NULL);
+			}
 		}
+
 	} 
 	if (!netstring_format && !add_msg_auth(ret)) {
 		ha_msg_del(ret);
@@ -124,6 +170,7 @@ add_control_msg_fields(struct ha_msg* ret)
 		ha_log(LOG_DEBUG, "add_control_msg_fields: packet returned");
 		cl_log_message(ret);
 	}
+
 	return ret;
 }
 
@@ -259,6 +306,13 @@ ha_msg_from(void)
 	return localnodename;
 }
 
+/*Add field to say the node uuid this packet is from */
+STATIC const char*
+ha_msg_fromuuid()
+{
+  return config->uuid;
+}
+
 /* Add sequence number field */
 STATIC	const char *
 ha_msg_seq(void)
@@ -352,6 +406,9 @@ main(int argc, char ** argv)
 #endif
 /*
  * $Log: ha_msg_internal.c,v $
+ * Revision 1.43  2004/07/07 19:07:14  gshi
+ * implemented uuid as nodeid
+ *
  * Revision 1.42  2004/03/25 07:55:39  alan
  * Moved heartbeat libraries to the lib directory.
  *

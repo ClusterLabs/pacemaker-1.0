@@ -1,4 +1,4 @@
-/* $Id: config.c,v 1.120 2004/05/24 09:20:08 sunjd Exp $ */
+/* $Id: config.c,v 1.121 2004/07/07 19:07:14 gshi Exp $ */
 /*
  * Parse various heartbeat configuration files...
  *
@@ -928,6 +928,7 @@ add_node(const char * value, int nodetype)
 	strncpy(hip->status, INITSTATUS, sizeof(hip->status));
 	strncpy(hip->nodename, value, sizeof(hip->nodename));
 	g_strdown(hip->nodename);
+	uuid_clear(hip->uuid);
 	hip->rmt_lastupdate = 0L;
 	hip->has_resources = TRUE;
 	hip->anypacketsyet  = 0;
@@ -935,6 +936,7 @@ add_node(const char * value, int nodetype)
 	hip->track.nmissing = 0;
 	hip->track.last_seq = NOSEQUENCE;
 	hip->nodetype = nodetype;
+	add_nametable(hip->nodename, (char*)hip);
 	return(HA_OK);
 }
 
@@ -1997,6 +1999,9 @@ baddirective:
 
 /*
  * $Log: config.c,v $
+ * Revision 1.121  2004/07/07 19:07:14  gshi
+ * implemented uuid as nodeid
+ *
  * Revision 1.120  2004/05/24 09:20:08  sunjd
  * make heartbeat an apphbd client
  *

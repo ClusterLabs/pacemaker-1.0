@@ -1,4 +1,4 @@
-/* $Id: hb_api_core.h,v 1.6 2004/05/17 15:12:08 lars Exp $ */
+/* $Id: hb_api_core.h,v 1.7 2004/07/07 19:07:15 gshi Exp $ */
 /*
  * hb_api_core_h: Internal definitions and functions for the heartbeat API
  *
@@ -112,6 +112,10 @@ typedef struct client_process {
 #define	API_GETPARM		"getparm"
 #define	API_GETRESOURCES	"getrsc"
 
+#define API_GETUUID		"getuuid"
+#	define F_QUERYUUID	"queryuuid"
+#define API_GETNAME		"getnodename"
+#	define F_QUERYNAME      "queryname"
 #define API_CLIENTSTATUS	"clientstatus"
 
 #define	API_OK			"OK"

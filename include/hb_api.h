@@ -1,4 +1,4 @@
-/* $Id: hb_api.h,v 1.19 2004/05/24 09:09:13 sunjd Exp $ */
+/* $Id: hb_api.h,v 1.20 2004/07/07 19:07:15 gshi Exp $ */
 /*
  * Client-side Low-level clustering API for heartbeat.
  *
@@ -177,6 +177,25 @@ struct llc_ops {
 	const char*	(*client_status)(ll_cluster_t*, const char *host,
 			const char *clientid, int timeout);
 
+/*
+ *	get_uuid_by_name:
+ *			return the uuid for the node which has the given name
+ */
+
+	int		(*get_uuid_by_name)(ll_cluster_t*,
+					    const char*,
+					    uuid_t);
+/*
+ *	get_name_by_uuid:
+ *			return the name for the node which has the given uuid
+ */
+	
+	int		(*get_name_by_uuid)(ll_cluster_t*,
+					    uuid_t,
+					    char*,
+					    size_t);
+	
+	
 /*************************************************************************
  * Intracluster messaging
  *************************************************************************/
@@ -192,6 +211,15 @@ struct llc_ops {
 	int		(*sendnodemsg)(ll_cluster_t*
 ,			struct ha_msg* msg
 ,			const char * nodename);
+
+/*
+ *	sendnodemsg_byuuid: 
+ *			Send the given message to the given node in cluster.
+ */
+
+	int		(*sendnodemsg_byuuid)(ll_cluster_t*,
+					      struct ha_msg* msg,
+					      uuid_t);
 
 /*
  *	send_ordered_clustermsg: Send ordered message to all cluster members.
