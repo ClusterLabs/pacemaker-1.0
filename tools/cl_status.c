@@ -335,7 +335,6 @@ main(int argc, char ** argv)
 		}
 	}
 
-	cl_log(LOG_ERR ,"return value:%d", ret_value);
 	return ret_value;
 }
 
