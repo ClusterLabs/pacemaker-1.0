@@ -17,27 +17,36 @@ set -e
 #          <conflicting-package> <version>
 #
 
-HARCDIR=/etc/heartbeat
-HARCLINK=/etc/ha.d
-# heartbeat config files
-HACF=${HARCDIR}/ha.cf
-HACF_TEMPLATE=/usr/share/doc/heartbeat/examples/ha.cf.gz
-AKCF=${HARCDIR}/authkeys
-AKCF_TEMPLATE=/usr/share/doc/heartbeat/examples/authkeys
-HRCF=${HARCDIR}/haresources
-HRCF_TEMPLATE=/usr/share/doc/heartbeat/examples/haresources.gz
-
 case "$1" in
     configure)
-        if ! getent group "$HA_APIGROUP" > /dev/null ; then
-                addgroup --system "$HA_APIGROUP" > /dev/null
+        if getent group "$HA_APIGROUP" > /dev/null ; then
+                TMP_GID=`getent group "$HA_APIGROUP" | cut -d: -f3`
+                if test "$TMP_GID" != "$HA_APIGID"; then
+                        echo "Group ID missmatch for group " \
+                                "\"$HA_APIGROUP\": " \
+                                "needs to be \"$HA_APIGID\" but " \
+                                "it already exists with group id " \
+                                "\"$TMP_GID\"" >& 2
+                        exit 1
+                fi
+        else
+                adduser --group --no-create-home --gid "$HA_APIGID" \
+                        --gecos "Heartbeat System Account" \
+                        --disabled-password "$HA_APIGROUP" > /dev/null
         fi
-        if ! getent passwd "$HA_CCMUSER" > /dev/null ; then
-                adduser --system --no-create-home --shell /bin/false \
-                        --ingroup "$HA_APIGROUP" \
-			--gecos "Heartbeat System Account" \
-                        --disabled-password --disabled-login \
-			"$HA_CCMUSER" > /dev/null
+        if getent passwd "$HA_CCMUSER" > /dev/null ; then
+                TMP_UID=`getent passwd "$HA_CCMUSER" | cut -d: -f3`
+                if test "$TMP_UID" != "$HA_CCMUID"; then
+                        echo "User ID missmatch for group \"$HA_CCMUSER\": " \
+                                "needs to be \"$HA_CCMUID\" but " \
+                                "it already exists with user id " \
+                                "\"$TMP_UID\"" >& 2
+                        exit 1
+                fi
+        else
+                adduser --no-create-home --uid "$HA_CCMUID" \
+                        --gid "$HA_APIGID" --gecos "Heartbeat System Account" \
+                        --disabled-password "$HA_CCMUSER" > /dev/null
         fi
 
 	#
@@ -51,12 +60,6 @@ case "$1" in
 	chmod 755 /var/lib/heartbeat/ccm || true
 	chown "$HA_CCMUSER" /var/lib/heartbeat/ccm || true
 	chgrp "$HA_APIGROUP" /var/lib/heartbeat/ccm || true
-	chgrp "$HA_APIGROUP" /var/lib/heartbeat/register || true
-	#
-	#ckpt
-	#
-	chmod 775 /var/lib/heartbeat/ckpt || true
-	chgrp "$HA_APIGROUP" /var/lib/heartbeat/ckpt || true
 	#
 	#api
 	#
@@ -77,42 +80,6 @@ case "$1" in
 	  fi
         fi
 	update-rc.d heartbeat start 75 2 3 4 5 . stop 05 0 1 6 . >/dev/null || true
-
-	# test for existence of 'old' config dir and that it's not a symlink
-	if [ -d ${HARCLINK} -a ! -L ${HARCLINK} ]; then
-	    # files in /etc/ha.d have not been updated in the installation
-	    # preserve them
-	    mv -f ${HARCLINK}/shellfuncs ${HARCLINK}/shellfuncs.old 2> /dev/null || true
-	    mv -f ${HARCLINK}/harc ${HARCLINK}/harc.old 2> /dev/null || true
-	    mv -f ${HARCLINK}/rc.d ${HARCLINK}/rc.d.old 2> /dev/null || true
-	    mv -f ${HARCLINK}/resource.d ${HARCLINK}/resource.d.old 2> /dev/null || true
-            #
-	    # move to new location
-	    cp -a ${HARCLINK}/* ${HARCDIR}/.
-	    rm -rf ${HARCLINK}
-	fi
-
-	# create link when it's not already existing
-	if [ ! -e ${HARCLINK} ]; then
-	    ln -s ${HARCDIR} ${HARCLINK} || true
-	fi
-
-	# if config file doesn't exist, copy template file
-	if [ ! -e $HACF ]; then
-	    gzip -dc $HACF_TEMPLATE > $HACF
-	fi
-	# if authkey file doesn't exist, copy template file
-	if [ ! -e $AKCF ]; then
-	    cp $AKCF_TEMPLATE $AKCF
-	fi
-	# if resource file doesn't exist, copy template file
-	if [ ! -e $HRCF ]; then
-	    gzip -dc $HRCF_TEMPLATE > $HRCF
-	fi
-
-	# make sure that secrets are not traded
-	chown root.root ${AKCF}
-	chmod 0600 ${AKCF} # asure that it's only readable by root
 
 	ldconfig
 
