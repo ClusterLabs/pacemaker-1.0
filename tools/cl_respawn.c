@@ -435,12 +435,20 @@ deal_cmd_str(char * cmd_str, char * execv_argv[])
 		if (next == NULL) {
 			len_tmp = strnlen(pre,20);	
 			execv_argv[index] = malloc(len_tmp+1);
+			if ((execv_argv[index]) == NULL ) {
+				cl_log(LOG_ERR, "malloc error");
+				return LSB_EXIT_GENERIC;
+			}
 			memset(execv_argv[index], '\0', len_tmp+1);
 			strncpy(execv_argv[index], pre, len_tmp);
 			break;
 		}
 
 		execv_argv[index] = malloc(next-pre+1);
+		if ((execv_argv[index]) == NULL ) {
+			cl_log(LOG_ERR, "malloc error");
+			return LSB_EXIT_GENERIC;
+		}
 		memset(execv_argv[index], '\0', next-pre+1);
 		strncpy(execv_argv[index], pre, next-pre);
 
