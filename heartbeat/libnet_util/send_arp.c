@@ -1,4 +1,4 @@
-/* $Id: send_arp.c,v 1.11 2004/04/27 11:55:54 horms Exp $ */
+/* $Id: send_arp.c,v 1.12 2004/06/15 01:49:04 horms Exp $ */
 /* 
  * send_arp
  * 
@@ -303,13 +303,54 @@ get_hw_addr(char *device, u_char mac[6])
 }
 #endif
 
+
+/*
+ * Notes on send_arp() behaviour. Horms, 15th June 2004
+ *
+ * 1. Target Hardware Address
+ *    (In the ARP portion of the packet)
+ *
+ *    a) ARP Reply
+ *
+ *       Set to the MAC address we want associated with the VIP,
+ *       as per RFC2002 (4.6).
+ *
+ *       Previously set to ff:ff:ff:ff:ff:ff
+ *
+ *    b) ARP Request
+ *
+ *       Set to 00:00:00:00:00:00. According to RFC2002 (4.6)
+ *       this value is not used in an ARP request, so the value should
+ *       not matter. However, I observed that typically (always?) this value
+ *       is set to 00:00:00:00:00:00. It seems harmless enough to follow
+ *       this trend.
+ *
+ *       Previously set to ff:ff:ff:ff:ff:ff
+ *
+ *  2. Source Hardware Address
+ *     (Ethernet Header, not in the ARP portion of the packet)
+ *
+ *     Set to the MAC address of the interface that the packet is being
+ *     sent to. Actually, due to the way that send_arp is called this would
+ *     usually (always?) be the case anyway. Although this value should not
+ *     really matter, it seems sensible to set the source address to where
+ *     the packet is really coming from.  The other obvious choice would be
+ *     the MAC address that is being associated for the VIP. Which was the
+ *     previous values.  Again, these are typically the same thing.
+ *
+ *     Previously set to MAC address being associated with the VIP
+ */
+
 #ifdef HAVE_LIBNET_1_0_API
 int
 send_arp(struct libnet_link_int *l, u_long ip, u_char *device, u_char *macaddr, u_char *broadcast, u_char *netmask, u_short arptype)
 {
 	int n;
 	u_char *buf;
-	u_char enet_dst[6] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
+	u_char *target_mac;
+	u_char device_mac[6];
+	u_char bcast_mac[6] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
+	u_char zero_mac[6] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 
 
 	if (libnet_init_packet(LIBNET_ARP_H + LIBNET_ETH_H, &buf) == -1) {
@@ -320,10 +361,27 @@ send_arp(struct libnet_link_int *l, u_long ip, u_char *device, u_char *macaddr, 
 	/* Convert ASCII Mac Address to 6 Hex Digits. */
 
 	/* Ethernet header */
-	if (libnet_build_ethernet(enet_dst, macaddr, ETHERTYPE_ARP, NULL, 0
+	if (get_hw_addr(device, device_mac) < 0) {
+		syslog(LOG_ERR, "Cannot find mac address for %s",
+				device);
+		return -1;
+	}
+
+	if (libnet_build_ethernet(bcast_mac, device_mac, ETHERTYPE_ARP, NULL, 0
 	,	buf) == -1) {
 		syslog(LOG_ERR, "libnet_build_ethernet failed:");
 		libnet_destroy_packet(&buf);
+		return -1;
+	}
+
+	if (arptype == ARPOP_REQUEST) {
+		target_mac = zero_mac;
+	}
+	else if (arptype == ARPOP_REPLY) {
+		target_mac = macaddr;
+	}
+	else {
+		syslog(LOG_ERR, "unkonwn arptype:");
 		return -1;
 	}
 
@@ -337,7 +395,7 @@ send_arp(struct libnet_link_int *l, u_long ip, u_char *device, u_char *macaddr, 
 		arptype,			/* ARP operation */
 		macaddr,			/* Source hardware addr */
 		(u_char *)&ip,			/* Target hardware addr */
-		enet_dst,			/* Destination hw addr */
+		target_mac,			/* Destination hw addr */
 		(u_char *)&ip,			/* Target protocol address */
 		NULL,				/* Payload */
 		0,				/* Payload length */
@@ -365,7 +423,21 @@ int
 send_arp(libnet_t* lntag, u_long ip, u_char *device, u_char macaddr[6], u_char *broadcast, u_char *netmask, u_short arptype)
 {
 	int n;
-	u_char enet_dst[6] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
+	u_char *target_mac;
+	u_char device_mac[6];
+	u_char bcast_mac[6] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
+	u_char zero_mac[6] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+
+	if (arptype == ARPOP_REQUEST) {
+		target_mac = zero_mac;
+	}
+	else if (arptype == ARPOP_REPLY) {
+		target_mac = macaddr;
+	}
+	else {
+		syslog(LOG_ERR, "unkonwn arptype:");
+		return -1;
+	}
 
 	/*
 	 *  ARP header
@@ -377,7 +449,7 @@ send_arp(libnet_t* lntag, u_long ip, u_char *device, u_char macaddr[6], u_char *
 		arptype,	/* ARP operation type */
 		macaddr,	/* sender Hardware address */
 		(u_char *)&ip,	/* sender protocol address */
-		enet_dst,	/* target hardware address */
+		target_mac,	/* target hardware address */
 		(u_char *)&ip,	/* target protocol address */
 		NULL,		/* Payload */
 		0,		/* Length of payload */
@@ -389,7 +461,13 @@ send_arp(libnet_t* lntag, u_long ip, u_char *device, u_char macaddr[6], u_char *
 	}
 
 	/* Ethernet header */
-	if (libnet_build_ethernet(enet_dst, macaddr, ETHERTYPE_ARP, NULL, 0
+	if (get_hw_addr(device, device_mac) < 0) {
+		syslog(LOG_ERR, "Cannot find mac address for %s",
+				device);
+		return -1;
+	}
+
+	if (libnet_build_ethernet(bcast_mac, device_mac, ETHERTYPE_ARP, NULL, 0
 	,	lntag, 0) == -1 ) {
 		syslog(LOG_ERR, "libnet_build_ethernet failed:");
 		return -1;
@@ -574,6 +652,9 @@ write_pid_file(const char *pidfilename)
 
 /*
  * $Log: send_arp.c,v $
+ * Revision 1.12  2004/06/15 01:49:04  horms
+ * Changes to make gratuitous ARP Packets RFC2002 (4.6) compliant
+ *
  * Revision 1.11  2004/04/27 11:55:54  horms
  * Slightly better error checking
  *
