@@ -43,7 +43,7 @@ halib_PROGRAMS		= recoverymgrd
 ## SOURCES
 
 recoverymgrd_SOURCES	= conf_yacc.y conf_lex.l recoverymgrd.c
-noinst_HEADERS 		= recoverymgrd.h configfile.h
+noinst_HEADERS 		= recoverymgrd.h configfile.h conf_yacc.h
 
 recoverymgrd_CFLAGS	= -DHA_VARLIBDIR='"@HA_VARLIBDIR@"'
 recoverymgrd_LDADD	= $(COMMONLIBS) 				\
