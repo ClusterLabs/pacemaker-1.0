@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.321 2004/09/18 23:13:37 alan Exp $ */
+/* $Id: heartbeat.c,v 1.322 2004/10/01 13:10:33 lge Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -1079,7 +1079,7 @@ read_child_dispatch(IPC_Channel* source, gpointer user_data)
 	struct hb_media** mp = user_data;
 	int	media_idx = mp - &sysmedia[0];
 
-	if (media_idx < 0 || media_idx > MAXMEDIA) {
+	if (media_idx < 0 || media_idx >= MAXMEDIA) {
 		cl_log(LOG_ERR, "read child_dispatch: media index is %d"
 		,	media_idx);
 		ha_msg_del(msg); msg = NULL;
@@ -4473,6 +4473,12 @@ get_localnodeinfo(void)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.322  2004/10/01 13:10:33  lge
+ * micro fixes
+ *  initialize logfacility = -1 in hb_cluster_new()
+ *  fix off by one error in media_idx range check in read_child_dispatch()
+ *  add commented out "not running" branch to we_own_resource() in ResourceManager.in
+ *
  * Revision 1.321  2004/09/18 23:13:37  alan
  * Brought forward changes from 1.2 CVS - and added portability macros
  * for STRLEN_CONST and STRNCMP_CONST

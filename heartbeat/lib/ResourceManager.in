@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-#	$Id: ResourceManager.in,v 1.22 2004/04/16 19:01:00 gshi Exp $
+#	$Id: ResourceManager.in,v 1.23 2004/10/01 13:10:34 lge Exp $
 #
 #	New haresources format:
 #
@@ -181,6 +181,9 @@ we_own_resource() {
   spath=`scriptpath $1`;
 
   case `$spath $arg status` in
+    # uncomment next line if you have misbehaving scripts,
+    # and you don't want to fix each single one of them...
+    #  *not\ [Rr]unning*)	return 3;;
     *[Rr]unning*|*OK*)	return 0;;
     *)			return 3;;
   esac
@@ -425,9 +428,15 @@ esac
 
 #
 #	$Log: ResourceManager.in,v $
+#	Revision 1.23  2004/10/01 13:10:34  lge
+#	micro fixes
+#	 initialize logfacility = -1 in hb_cluster_new()
+#	 fix off by one error in media_idx range check in read_child_dispatch()
+#	 add commented out "not running" branch to we_own_resource() in ResourceManager.in
+#
 #	Revision 1.22  2004/04/16 19:01:00  gshi
 #	added a missing 'done' statement
-#
+#	
 #	Revision 1.21  2004/04/16 17:06:10  alan
 #	Fixed a bug in ResourceManager where it warns about bad resource scripts
 #	when they're OK.  Problem noted by Jens Schmalzing <j.s@lmu.de>.  Thanks Jens!
