@@ -346,7 +346,13 @@ stonithd_op_result_ready(void)
 		return FALSE;
 	}
 	
-	return chan->ops->is_message_pending(chan);
+	/* 
+	 * Regards IPC_DISCONNECT as a special result, so to prevent the caller
+	 * from the possible endless waiting. That can be caused by the way
+	 * in which the caller uses it.
+	 */
+	return (chan->ops->is_message_pending(chan)
+		|| chan->ch_status == IPC_DISCONNECT);
 }
 
 int
