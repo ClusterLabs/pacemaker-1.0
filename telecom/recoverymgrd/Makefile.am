@@ -71,7 +71,7 @@ recoverymgrd_LDFLAGS	= @LIBADD_DL@ @LIBLTDL@ -export-dynamic		\
 lex.yy.$(OBJEXT): lex.yy.c
 	( old_pwd=`pwd` ; cd $(srcdir) && 				\
 		$(CC) $(DEFS) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS)	\
-		$(LEX_SOURCE_CFLAGS) -c lex.yy.c			\
+		$(NON_FATAL_CFLAGS) -c lex.yy.c				\
 		-o $$old_pwd/$@  $(LEX_SOURCE_CFLAGS) -Wall )
 
 # Yacc can't be relied on to produce code that won't produce any errors
@@ -79,5 +79,5 @@ lex.yy.$(OBJEXT): lex.yy.c
 conf_lex.$(OBJEXT): conf_lex.c
 	( old_pwd=`pwd` ; cd $(srcdir) && 				\
 		$(CC) $(DEFS) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS)	\
-		$(YACC_SOURCE_CFLAGS) -c conf_lex.c			\
+		$(NON_FATAL_CFLAGS) -c conf_lex.c			\
 		-o $$old_pwd/$@  $(LEX_SOURCE_CFLAGS) -Wall )
