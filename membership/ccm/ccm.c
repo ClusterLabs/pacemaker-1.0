@@ -1,4 +1,4 @@
-/* $Id: ccm.c,v 1.68 2005/03/07 22:58:51 gshi Exp $ */
+/* $Id: ccm.c,v 1.69 2005/03/08 01:09:59 gshi Exp $ */
 /* 
  * ccm.c: Consensus Cluster Service Program 
  *
@@ -321,7 +321,7 @@ ccm_type2string(enum ccm_type type)
 /* */
 /* given a string representation return the string type. */
 /* */
-static enum ccm_type 
+static int
 ccm_string2type(const char *type)
 {
 	enum ccm_type i;
@@ -331,9 +331,12 @@ ccm_string2type(const char *type)
 			return i;
 		}
 	}
-	cl_log(LOG_ERR, "Wrong message type: %s", type);	
-	abort();
-	return 0;
+
+	/* this message is not any type of ccm state messages
+	 * but some other message from heartbeat
+	 */
+	
+	return -1;
 }
 
 /* END OF TYPE_STR datastructure and associated functions */
@@ -3850,7 +3853,7 @@ ccm_control_process(ccm_info_t *info, ll_cluster_t * hb)
 {
 	struct ha_msg *reply, *newreply;
 	const char *type;
-	enum ccm_type ccm_msg_type;
+	int	ccm_msg_type;
 	const char *orig=NULL;
 	const char *status=NULL;
 	int tmp_repeat;
@@ -3916,12 +3919,17 @@ repeat:
 
 	type = ha_msg_value(reply, F_TYPE);
 	ccm_msg_type = ccm_string2type(type);
-	if(global_debug)
+	if(global_debug){
 		cl_log(LOG_DEBUG, "received message %s orig=%s", 
-			type, ha_msg_value(reply, F_ORIG));
+		       type, ha_msg_value(reply, F_ORIG));
+	}
+	
+	if (ccm_msg_type < 0){
+		goto out;
+	}
 
 	switch(CCM_GET_STATE(info)) {
-
+		
 	case CCM_STATE_NONE:
 		/* request for protocol version and transition 
 		 * number for compatibility 
@@ -3989,10 +3997,12 @@ repeat:
 		break;
 		
 	default:
-		cl_log(LOG_ERR, "INTERNAL LOGIC ERROR");
-		return(FALSE);
+		/*some other heartbeat message*/
+		break;
 	}
 	
+
+ out:
 	if(ccm_msg_type != CCM_TYPE_TIMEOUT) {
 		ha_msg_del(reply);
 	}
