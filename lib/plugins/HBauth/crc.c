@@ -1,4 +1,4 @@
-/* $Id: crc.c,v 1.8 2004/10/06 10:55:17 lars Exp $ */
+/* $Id: crc.c,v 1.9 2004/10/24 13:00:13 lge Exp $ */
 #include <portability.h> 
 #include <stdio.h> 
 #include <string.h> 
@@ -78,7 +78,7 @@ static unsigned long const crctab[256] =
 };
 
 
-PIL_PLUGIN_BOILERPLATE2("1.0", Debug);
+PIL_PLUGIN_BOILERPLATE2("1.0", Debug)
 static const PILPluginImports*  PluginImports;
 static PILPlugin*               OurPlugin;
 static PILInterface*		OurInterface;

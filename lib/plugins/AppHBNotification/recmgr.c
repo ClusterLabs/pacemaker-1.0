@@ -1,4 +1,4 @@
-/* $Id: recmgr.c,v 1.4 2004/10/06 10:55:17 lars Exp $ */
+/* $Id: recmgr.c,v 1.5 2004/10/24 13:00:12 lge Exp $ */
 /*
  * recmgr.c: Recovery manager client plug-in implementation
  * 
@@ -81,7 +81,7 @@ int	debug = 0;
 /* 
  * use the built-in definitions for PILPluginOps 
  */
-PIL_PLUGIN_BOILERPLATE2("1.0", Debug);
+PIL_PLUGIN_BOILERPLATE2("1.0", Debug)
 
 /* 
  * Locations to store info aquired during registration 

@@ -1,4 +1,4 @@
-/* $Id: bcast.c,v 1.39 2004/10/06 10:55:17 lars Exp $ */
+/* $Id: bcast.c,v 1.40 2004/10/24 13:00:13 lge Exp $ */
 /*
  * bcast.c: UDP/IP broadcast-based communication code for heartbeat.
  *
@@ -92,7 +92,7 @@ static struct hb_media_fns bcastOps ={
 	bcast_isping,
 };
 
-PIL_PLUGIN_BOILERPLATE2("1.0", Debug);
+PIL_PLUGIN_BOILERPLATE2("1.0", Debug)
 static const PILPluginImports*  PluginImports;
 static PILPlugin*               OurPlugin;
 static PILInterface*		OurInterface;
@@ -759,6 +759,12 @@ if_get_broadaddr(const char *ifn, struct in_addr *broadaddr)
 
 /*
  * $Log: bcast.c,v $
+ * Revision 1.40  2004/10/24 13:00:13  lge
+ * -pedantic-errors fixes 2:
+ *  * error: ISO C forbids forward references to 'enum' types
+ *    error: comma at end of enumerator list
+ *    error: ISO C does not allow extra ';' outside of a function
+ *
  * Revision 1.39  2004/10/06 10:55:17  lars
  * - Define PIL_PLUGIN_BOILERPLATE() as it used to be, which implies a
  *   prototype for the closepi function.

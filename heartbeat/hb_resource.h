@@ -1,4 +1,4 @@
-/* $Id: hb_resource.h,v 1.6 2004/05/17 15:12:08 lars Exp $ */
+/* $Id: hb_resource.h,v 1.7 2004/10/24 13:00:12 lge Exp $ */
 #ifndef _HB_RESOURCE_H
 #define _HB_RESOURCE_H
 #include <heartbeat.h>
@@ -14,7 +14,7 @@ enum hb_rsc_state {
 				/* BOTHSTARTING now equiv to STARTING (?) */
 	HB_R_RSCRCVD,		/* Resource Message received */
 	HB_R_STABLE,		/* Local resources acquired, too... */
-	HB_R_SHUTDOWN,		/* We're in shutdown... */
+	HB_R_SHUTDOWN		/* We're in shutdown... */
 };
 
 /*

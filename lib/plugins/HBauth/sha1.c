@@ -1,4 +1,4 @@
-/* $Id: sha1.c,v 1.13 2004/10/06 10:55:17 lars Exp $ */
+/* $Id: sha1.c,v 1.14 2004/10/24 13:00:13 lge Exp $ */
 /*
 SHA-1 in C
 By Steve Reid <steve@edmweb.com>
@@ -61,7 +61,7 @@ static struct HBAuthOps sha1Ops =
 ,	sha1_auth_needskey
 };
 
-PIL_PLUGIN_BOILERPLATE2("1.0", Debug);
+PIL_PLUGIN_BOILERPLATE2("1.0", Debug)
 static const PILPluginImports*  PluginImports;
 static PILPlugin*               OurPlugin;
 static PILInterface*		OurInterface;

@@ -1,4 +1,4 @@
-/* $Id: apphb_notify.h,v 1.3 2004/02/17 22:11:58 lars Exp $ */
+/* $Id: apphb_notify.h,v 1.4 2004/10/24 13:00:12 lge Exp $ */
 #ifndef _APPHB_NOTIFY_H
 #	define _APPHB_NOTIFY_H
 /*
@@ -7,7 +7,6 @@
 
 typedef struct AppHBNotifyOps_s AppHBNotifyOps;
 typedef struct AppHBNotifyImports_s AppHBNotifyImports;
-typedef enum apphb_event apphb_event_t;
 
 /*
  * Apphb event types
@@ -17,8 +16,9 @@ enum apphb_event {
 	APPHB_NOHB	= 2,	/* Failed to heartbeat as requested */
 	APPHB_HBAGAIN	= 3,	/* Heartbeating restarted */
 	APPHB_HBWARN	= 4,	/* Heartbeat outside warning interval */
-	APPHB_HBUNREG	= 5,	/* Application unregistered */
+	APPHB_HBUNREG	= 5	/* Application unregistered */
 };
+typedef enum apphb_event apphb_event_t;
 
 /*
  * Plugin exported functions.

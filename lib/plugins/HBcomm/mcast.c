@@ -1,4 +1,4 @@
-/* $Id: mcast.c,v 1.21 2004/10/06 10:55:17 lars Exp $ */
+/* $Id: mcast.c,v 1.22 2004/10/24 13:00:13 lge Exp $ */
 /*
  * mcast.c: implements hearbeat API for UDP multicast communication
  *
@@ -89,7 +89,7 @@ static struct hb_media_fns mcastOps ={
 	mcast_isping,
 };
 
-PIL_PLUGIN_BOILERPLATE2("1.0", Debug);
+PIL_PLUGIN_BOILERPLATE2("1.0", Debug)
 static const PILPluginImports*  PluginImports;
 static PILPlugin*               OurPlugin;
 static PILInterface*		OurInterface;
@@ -809,6 +809,12 @@ get_loop(const char *loop, u_char *l)
 
 /*
  * $Log: mcast.c,v $
+ * Revision 1.22  2004/10/24 13:00:13  lge
+ * -pedantic-errors fixes 2:
+ *  * error: ISO C forbids forward references to 'enum' types
+ *    error: comma at end of enumerator list
+ *    error: ISO C does not allow extra ';' outside of a function
+ *
  * Revision 1.21  2004/10/06 10:55:17  lars
  * - Define PIL_PLUGIN_BOILERPLATE() as it used to be, which implies a
  *   prototype for the closepi function.

@@ -1,4 +1,4 @@
-/* $Id: md5.c,v 1.12 2004/10/06 10:55:17 lars Exp $ */
+/* $Id: md5.c,v 1.13 2004/10/24 13:00:13 lge Exp $ */
 /*
  * This code implements the MD5 message-digest algorithm.
  * The algorithm is due to Ron Rivest.  This code was
@@ -50,7 +50,7 @@ static struct HBAuthOps md5ops =
 ,	md5_auth_needskey
 };
 
-PIL_PLUGIN_BOILERPLATE2("1.0", Debug);
+PIL_PLUGIN_BOILERPLATE2("1.0", Debug)
 
 static const PILPluginImports*  PluginImports;
 static PILPlugin*               OurPlugin;

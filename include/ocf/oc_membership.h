@@ -1,4 +1,4 @@
-/* $Id: oc_membership.h,v 1.6 2004/04/20 20:14:30 msoffen Exp $ */
+/* $Id: oc_membership.h,v 1.7 2004/10/24 13:00:12 lge Exp $ */
 #ifndef OCF_OC_MEMBERSHIP_H
 #	define OCF_OC_MEMBERSHIP_H
 /*
@@ -57,10 +57,24 @@
 	typedef unsigned char uuid_t[16];
 #endif
 #endif
+
+/*
+ * This enumeration is used both to indicated the type of an event
+ * received, and to request the types of events one wants delivered.
+ * (see oc_member_request_events() and oc_member_etype() for more
+ * details on how this is used).
+ */
+
+enum oc_member_eventtype_e {
+	OC_NOT_MEMBERSHIP,	/* Not a (valid) membership event */
+	OC_FULL_MEMBERSHIP,	/* full membership update */
+	OC_INCR_MEMBERSHIP	/* incremental membership update */
+};
+typedef enum oc_member_eventtype_e		oc_member_eventtype_t;
+
 						/* controversial? */
 typedef void *					oc_cluster_handle_t;
 typedef uuid_t					oc_node_id_t;
-typedef enum oc_member_eventtype_e		oc_member_eventtype_t;
 typedef struct oc_member_uniqueid_s		oc_member_uniqueid_t;
 
 /*
@@ -106,19 +120,6 @@ struct oc_member_uniqueid_s {
 	unsigned	m_instance;
 	oc_mbr_uniqueid	uniqueid;
 };
-/*
- * This enumeration is used both to indicated the type of an event
- * received, and to request the types of events one wants delivered.
- * (see oc_member_request_events() and oc_member_etype() for more
- * details on how this is used).
- */
-
-enum oc_member_eventtype_e {
-	OC_NOT_MEMBERSHIP,	/* Not a (valid) membership event */
-	OC_FULL_MEMBERSHIP,	/* full membership update */
-	OC_INCR_MEMBERSHIP,	/* incremental membership update */
-};
-
 
 #ifdef __cplusplus
 extern "C" {

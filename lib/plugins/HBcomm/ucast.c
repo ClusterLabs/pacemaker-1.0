@@ -1,4 +1,4 @@
-/* $Id: ucast.c,v 1.22 2004/10/06 10:55:17 lars Exp $ */
+/* $Id: ucast.c,v 1.23 2004/10/24 13:00:13 lge Exp $ */
 /*
  * Adapted from alanr's UDP broadcast heartbeat bcast.c by Stéphane Billiart
  *	<stephane@reefedge.com>
@@ -148,7 +148,7 @@ static struct hb_media_fns ucastOps = {
 	ucast_isping
 };
 
-PIL_PLUGIN_BOILERPLATE2("1.0", Debug);
+PIL_PLUGIN_BOILERPLATE2("1.0", Debug)
 static const PILPluginImports*  PluginImports;
 static PILPlugin*               OurPlugin;
 static PILInterface*		OurInterface;

@@ -1,4 +1,4 @@
-/* $Id: serial.c,v 1.37 2004/10/06 10:55:17 lars Exp $ */
+/* $Id: serial.c,v 1.38 2004/10/24 13:00:13 lge Exp $ */
 /*
  * Linux-HA serial heartbeat code
  *
@@ -98,7 +98,7 @@ static struct hb_media_fns serialOps ={
 	serial_isping,
 };
 
-PIL_PLUGIN_BOILERPLATE2("1.0", Debug);
+PIL_PLUGIN_BOILERPLATE2("1.0", Debug)
 static const PILPluginImports*  PluginImports;
 static PILPlugin*               OurPlugin;
 static PILInterface*		OurInterface;
@@ -677,6 +677,12 @@ ttygets(char * inbuf, int length, struct serial_private *tty)
 }
 /*
  * $Log: serial.c,v $
+ * Revision 1.38  2004/10/24 13:00:13  lge
+ * -pedantic-errors fixes 2:
+ *  * error: ISO C forbids forward references to 'enum' types
+ *    error: comma at end of enumerator list
+ *    error: ISO C does not allow extra ';' outside of a function
+ *
  * Revision 1.37  2004/10/06 10:55:17  lars
  * - Define PIL_PLUGIN_BOILERPLATE() as it used to be, which implies a
  *   prototype for the closepi function.

@@ -1,4 +1,4 @@
-/* $Id: ping_group.c,v 1.12 2004/10/06 10:55:17 lars Exp $ */
+/* $Id: ping_group.c,v 1.13 2004/10/24 13:00:13 lge Exp $ */
 /*
  * ping_group.c: ICMP-echo-based heartbeat code for heartbeat.
  *
@@ -147,7 +147,7 @@ static struct hb_media_fns ping_group_ops ={
 	ping_group_isping,
 };
 
-PIL_PLUGIN_BOILERPLATE2("1.0", Debug);
+PIL_PLUGIN_BOILERPLATE2("1.0", Debug)
 
 static const PILPluginImports*  PluginImports;
 static PILPlugin*               OurPlugin;

@@ -1,4 +1,4 @@
-/* $Id: hb_proc.h,v 1.16 2004/03/25 07:55:39 alan Exp $ */
+/* $Id: hb_proc.h,v 1.17 2004/10/24 13:00:12 lge Exp $ */
 /*
  * hb_proc.h: definitions of heartbeat child process info
  *
@@ -53,7 +53,7 @@ enum process_type {
 
 enum process_status { 
 	FORKED=1,	/* This process is forked, but not yet really running */
-	RUNNING=2,	/* This process is fully active, and open for business*/
+	RUNNING=2	/* This process is fully active, and open for business*/
 };
 
 

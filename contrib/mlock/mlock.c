@@ -1,4 +1,4 @@
-/* $Id: mlock.c,v 1.7 2004/09/10 01:58:58 alan Exp $ */
+/* $Id: mlock.c,v 1.8 2004/10/24 13:00:11 lge Exp $ */
 /*
  *
  * multi-clients NFS lock test code
@@ -85,7 +85,7 @@ enum{
 	TRUNC,
 	FORK,
 	KILL,
-	OUTPUT,	
+	OUTPUT
 };
 
 struct run_param{

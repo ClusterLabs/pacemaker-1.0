@@ -1,4 +1,4 @@
-/* $Id: ha_msg.h,v 1.38 2004/10/19 09:46:46 zhenh Exp $ */
+/* $Id: ha_msg.h,v 1.39 2004/10/24 13:00:12 lge Exp $ */
 /*
  * Intracluster message object (struct ha_msg)
  *
@@ -36,12 +36,12 @@ enum cl_netstring_type{
 	FT_STRING,
 	FT_BINARY,
 	FT_STRUCT,
-	FT_LIST,
+	FT_LIST
 };
 
 enum cl_msgfmt{
 	MSGFMT_NVPAIR,
-	MSGFMT_NETSTRING,
+	MSGFMT_NETSTRING
 };
 
 
