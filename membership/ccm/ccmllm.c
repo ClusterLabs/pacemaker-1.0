@@ -1,4 +1,4 @@
-/* $Id: ccmllm.c,v 1.7 2005/02/02 19:38:37 gshi Exp $ */
+/* $Id: ccmllm.c,v 1.8 2005/02/17 17:28:50 alan Exp $ */
 /* 
  * ccmllm.c: Low Level membership routines.
  *
@@ -31,7 +31,7 @@ llm_get_active_nodecount(llm_info_t *llm)
 {
 	uint count=0, i;
 	for ( i = 0 ; i < LLM_GET_NODECOUNT(llm) ; i++ ) {
-		if(strncmp(LLM_GET_STATUS(llm, i), "active", STATUSSIZE) == 0) {
+		if (STRNCMP_CONST(LLM_GET_STATUS(llm, i), "active") == 0) {
 			count++;
 		}
 	}
@@ -46,9 +46,10 @@ llm_only_active_node(llm_info_t *llm)
 {
 	uint  i;
 	for ( i = 0 ; i < LLM_GET_NODECOUNT(llm) ; i++ ) {
-		if(i == (uint)LLM_GET_MYNODE(llm)) continue;
-		if(strncmp(LLM_GET_STATUS(llm, i), 
-			CLUST_INACTIVE, STATUSSIZE) != 0) {
+		if (i == (uint)LLM_GET_MYNODE(llm)) {
+			continue;
+		}
+		if (0!=STRNCMP_CONST(LLM_GET_STATUS(llm, i), CLUST_INACTIVE)){
 			return FALSE;
 		}
 	}
@@ -128,8 +129,8 @@ llm_status_update(llm_info_t *llm, const char *node, const char *status)
 	}
 
 	LLM_SET_STATUS(llm,i,status);
-	if((strncmp(status, DEADSTATUS, STATUSSIZE) == 0) || 
-		strncmp(status, CLUST_INACTIVE, STATUSSIZE) == 0) {
+	if ((STRNCMP_CONST(status, DEADSTATUS) == 0) || 
+		STRNCMP_CONST(status, CLUST_INACTIVE) == 0) {
 		return TRUE;
 	}
 	return FALSE;
@@ -146,9 +147,8 @@ llm_get_inactive_node_count(llm_info_t *llm)
 		cl_log(LOG_INFO, "node=%s  status=%s",
 		       llm->llm_nodes[i].NodeID, 
 		       llm->llm_nodes[i].Status);
-		if (strncmp(llm->llm_nodes[i].Status, 
-			    CLUST_INACTIVE, 
-			    STATUSSIZE) == 0 ){
+		if (STRNCMP_CONST(llm->llm_nodes[i].Status, 
+			    CLUST_INACTIVE) == 0){
 			count ++;
 		}
 	}
@@ -216,7 +216,7 @@ llm_add(llm_info_t *llm,
 	char value;
 
 
-	/* since this function is called only once, don't bother to
+	/* Since this function is called only once, don't bother to
 	 * program a great insert algorithm. Something that works
 	 * correctly is good enough 
 	 */
