@@ -26,7 +26,9 @@
 #include <clplumbing/cl_log.h>
 #include <fencing/stonithd_msg.h>
 
+static const gboolean DEBUG_MODE = FALSE;
 /* Internally used function to free the string item of a hash table */
+static void stdmsg_log(int priority, const char * fmt, ...)G_GNUC_PRINTF(2,3);
 static void free_str_key(gpointer data);
 static void free_str_val(gpointer data);
 
@@ -37,17 +39,17 @@ ha_msg_addhash(struct ha_msg * msg, const char * name, GHashTable * htable)
 	struct ha_msg * msg_tmp = NULL;
 
 	if (msg == NULL || htable == NULL ) {
-		cl_log(LOG_ERR, "ha_msg_addhash: NULL parameter pointers.");
+		stdmsg_log(LOG_ERR, "ha_msg_addhash: NULL parameter pointers.");
 		return HA_FAIL;
 	}
 
 	if ((msg_tmp = hashtable_to_hamsg(htable)) == NULL ) {
-		cl_log(LOG_ERR, "hashtable_to_hamsg failed.");
+		stdmsg_log(LOG_ERR, "hashtable_to_hamsg failed.");
 		return HA_FAIL;
 	}
 	
 	if ( ha_msg_addstruct(msg, name, msg_tmp) != HA_OK ) {
-		cl_log(LOG_ERR, "ha_msg_addhash: ha_msg_addstruct failed.");
+		stdmsg_log(LOG_ERR, "ha_msg_addhash: ha_msg_addstruct failed.");
 		ZAPMSG(msg_tmp);
 		return HA_FAIL;
 	}
@@ -77,7 +79,7 @@ insert_data_pairs(gpointer key, gpointer value, gpointer user_data)
 	
 	if ( ha_msg_add(msg_tmp, (const char *)key, (const char *)value) 
 		!= HA_OK ) {
-		cl_log(LOG_ERR, "insert_data_pairs: ha_msg_add failed.");
+		stdmsg_log(LOG_ERR, "insert_data_pairs: ha_msg_add failed.");
 	}
 }
 /* Now just handle string hash table correctly */
@@ -89,12 +91,12 @@ cl_get_hashtable(const struct ha_msg * msg, const char * name)
 	int i;
 
 	if (msg==NULL || name==NULL) {
-		cl_log(LOG_ERR, "cl_get_hashtable: parameter error.");
+		stdmsg_log(LOG_ERR, "cl_get_hashtable: parameter error.");
 		return NULL;
 	}
 
 	if ((tmp_msg = cl_get_struct(msg, name)) == NULL) {
-		cl_log(LOG_ERR, "cl_get_hashtable: get NULL field.");
+		stdmsg_log(LOG_ERR, "cl_get_hashtable: get NULL field.");
 		return NULL;
 	}
 
@@ -103,19 +105,19 @@ cl_get_hashtable(const struct ha_msg * msg, const char * name)
 
 	for (i = 0; i < tmp_msg->nfields; i++) {
 		if( FT_STRING != tmp_msg->types[i] ) {
-			cl_log(LOG_ERR, "cl_get_hashtable: "
+			stdmsg_log(LOG_ERR, "cl_get_hashtable: "
 					"field data type error.");
 			continue;
 		}
 		g_hash_table_insert(htable,
 			    g_strndup(tmp_msg->names[i], tmp_msg->nlens[i]),
 			    g_strndup(tmp_msg->values[i], tmp_msg->vlens[i]));
-		cl_log(LOG_DEBUG, "cl_get_hashtable: field[%d]: "
+		stdmsg_log(LOG_DEBUG, "cl_get_hashtable: field[%d]: "
 			"name=%s, value=%s", i, tmp_msg->names[i],
 			(const char *)tmp_msg->values[i]);
 	}
 
-	cl_log(LOG_DEBUG, "cl_get_hashtable: table's address=%p", htable);
+	stdmsg_log(LOG_DEBUG, "cl_get_hashtable: table's address=%p", htable);
 	return htable;
 }
 
@@ -135,7 +137,7 @@ void
 print_str_hashtable(GHashTable * htable)
 {
 	if (htable == NULL) {
-		cl_log(LOG_DEBUG, "printf_str_hashtable: htable==NULL");
+		stdmsg_log(LOG_DEBUG, "printf_str_hashtable: htable==NULL");
 		return;
 	}
 
@@ -145,6 +147,25 @@ print_str_hashtable(GHashTable * htable)
 void
 print_str_item(gpointer key, gpointer value, gpointer user_data)
 {
-	cl_log(LOG_INFO, "key=%s, value=%s", 
+	stdmsg_log(LOG_DEBUG, "key=%s, value=%s", 
 		     (const char *)key,(const char *)value);
+}
+/* copied from stdmsg_log.c, need to be the same */
+#ifndef MAXLINE
+#	define MAXLINE	512
+#endif
+static void
+stdmsg_log(int priority, const char * fmt, ...)
+{
+	va_list		ap;
+	char		buf[MAXLINE];
+
+	if ( DEBUG_MODE == FALSE && priority == LOG_DEBUG ) {
+		return;
+	}
+	
+	va_start(ap, fmt);
+	vsnprintf(buf, sizeof(buf)-1, fmt, ap);
+	va_end(ap);
+	stdmsg_log(priority, "%s", buf);
 }
