@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-#	$Id: IPaddr.in,v 1.50 2003/10/29 11:40:50 horms Exp $
+#	$Id: IPaddr.in,v 1.51 2004/01/30 22:49:54 alan Exp $
 #
 #	This script manages IP alias IP addresses
 #
@@ -586,14 +586,14 @@ ip_status() {
 	then
 		echo "running"
 	else
-		echo "stopped"
+		echo "stopped"; return 3
 	fi;;
 
     Linux)		
 	if
 		[ -z "$IF" ]
 	then
-		echo "stopped"
+		echo "stopped"; return 3
 	else
 		case $IF in
 		  lo*)
@@ -608,7 +608,7 @@ ip_status() {
 	if
 		[ -z "$IF" ]
 	then
-		echo "stopped"
+		echo "stopped"; return 3
 	else
 		echo "running"
 	fi;;
@@ -637,7 +637,7 @@ ip_monitor() {
 
 usage() {
   echo $USAGE >&2
-  echo "$Id: IPaddr.in,v 1.50 2003/10/29 11:40:50 horms Exp $"
+  echo "$Id: IPaddr.in,v 1.51 2004/01/30 22:49:54 alan Exp $"
 }
 
 #
@@ -684,6 +684,10 @@ esac
 #
 #
 # $Log: IPaddr.in,v $
+# Revision 1.51  2004/01/30 22:49:54  alan
+# Changed IPaddr so it exits with proper LSB exit codes
+# for status.
+#
 # Revision 1.50  2003/10/29 11:40:50  horms
 # Send arp  creates a driectory to store its pid file in on-the-fly. IPaddr does likewise for state files.
 #
