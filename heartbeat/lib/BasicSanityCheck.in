@@ -629,6 +629,8 @@ SNMPAgentTest() {
 	        [ $ret != 0 ]
 	    then 
 	        echo "SNMP Agent tests failed."
+	    else 
+	    	echo "SNMP Agent tests pass."
 	    fi
 	    HBStop
 	fi

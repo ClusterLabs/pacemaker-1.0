@@ -10,23 +10,46 @@ set +x
 NODE0=`uname -n`
 NODE1=imalwaysdead.com
 
-# make sure the subagent is dead
+# make sure the agent and the subagent are dead
 killall -9 hbagent
+killall -9 snmpd
 
-# make sure the snmpd is running
-@INITDIR@/snmpd status 
+# make sure the snmpd is running and agentX support is turned on
+GenerateSNMPDConf() {
+	cat <<-! >$1
+		rocommunity public
+		master yes
+		trap2sink localhost
+		!
+	chmod 644 $1
+}
+
+which snmpd
 ret=$?
 if test $ret != 0 
-	then echo "snmpd not running, starting snmpd now..."
-	@INITDIR@/snmpd restart
-	ret=$?
-	if test $ret != 0
-		then echo "Starting snmpd failed"
-		exit $ret
-	fi
-else 
-	echo "snmpd is already running, good"
+	then echo "snmpd file is not in the path, skip agent test..."
+	exit $ret
 fi
+
+# start the snmpd manually with our own config file
+SNMPDCONF=/tmp/testsnmpd.conf
+SNMPD=`which snmpd`
+GenerateSNMPDConf $SNMPDCONF
+$SNMPD -C -c $SNMPDCONF 
+
+#@INITDIR@/snmpd status 
+#ret=$?
+#if test $ret != 0 
+#	then echo "snmpd cannot be started correctly. skip agent test..."
+#	exit $ret
+#else 
+#	echo "snmpd is already running, good"
+#fi
+
+# we want to wait for a couple seconds to let the master agent fully
+# ready before we start the subagent.
+sleep 3
+
 
 # start the linux-ha snmp subagent
 @libdir@/heartbeat/hbagent -d &
