@@ -100,7 +100,7 @@ GenerateAuthKeys() {
 GenerateHaCf() {
   cat <<-! >$1
 	#	$IDENTSTRING
-	logfile   $LOGFILE
+	logfile   /dev/null
 	debugfile $LOGFILE
 	keepalive 10ms
 	debug 1
@@ -541,7 +541,7 @@ AppHBCheck() {
 		realtime yes
 		debug_level	1
 		debugfile	$LOGFILE
-		logfile		$LOGFILE
+		logfile		/dev/null
 	!
 	echo "Performing apphbd success case tests" | tee -a $LOGFILE
 	if
