@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-#	$Id: ResourceManager.in,v 1.20 2004/04/16 04:48:05 alan Exp $
+#	$Id: ResourceManager.in,v 1.21 2004/04/16 17:06:10 alan Exp $
 #
 #	New haresources format:
 #
@@ -231,28 +231,20 @@ giveupresourcegroup() {
       ha_log "info: Retrying failed stop operation [$j]"
     done
     if
-      [ $rc1 -ne 0 ] && we_own_resource $j 
+      [ $rc1 -ne 0 ]
     then
-      : We still own $j
-    else
-      # Red Hat (and probably others) Kludge!
-      ha_log "WARN: Resource script for $j probably not LSB-compliant."
-      ha_log "WARN: it ($j) MUST succeed on a stop when already stopped"
-      ha_log "WARN: Machine reboot narrowly avoided!"
-      rc1=0
+      if
+        we_own_resource $j
+      then
+        rc=$rc1
+        RecoverFromFailedStop	# Bye Bye!
+      else
+        # Red Hat (and probably others) Kludge!
+        ha_log "ERROR: Resource script for $j probably not LSB-compliant."
+        ha_log "WARN: it ($j) MUST succeed on a stop when already stopped"
+        ha_log "WARN: Machine reboot narrowly avoided!"
+      fi
     fi
-      
-    if
-      [ $rc -eq 0 ]
-    then
-      rc=$rc1
-    fi
-  done
-  if
-    [ "$rc" -ne 0 ]
-  then
-    RecoverFromFailedStop
-  fi
   return $rc
 }
 
@@ -432,9 +424,13 @@ esac
 
 #
 #	$Log: ResourceManager.in,v $
+#	Revision 1.21  2004/04/16 17:06:10  alan
+#	Fixed a bug in ResourceManager where it warns about bad resource scripts
+#	when they're OK.  Problem noted by Jens Schmalzing <j.s@lmu.de>.  Thanks Jens!
+#
 #	Revision 1.20  2004/04/16 04:48:05  alan
 #	Put in a fix which gets rid of LMB's non-portable sed expression.
-#
+#	
 #	Revision 1.19  2004/04/15 18:15:50  alan
 #	Fixed a bug in the last fix to ResourceManager - I didn't check return codes correctly.
 #	
