@@ -1,4 +1,4 @@
-/* $Id: portability.h,v 1.41 2004/10/08 20:55:55 alan Exp $ */
+/* $Id: portability.h,v 1.42 2004/12/06 12:41:27 andrew Exp $ */
 #ifndef PORTABILITY_H
 #  define PORTABILITY_H
 
@@ -135,12 +135,17 @@ inet_pton(int af, const char *src, void *dst);
 	typedef unsigned int nfds_t;
 #endif
 
-
 #ifdef HAVE_STRUCT_UCRED_DARWIN
 #	include <sys/utsname.h>
 #	ifndef SYS_NMLN
 #		define SYS_NMLN _SYS_NAMELEN
 #	endif /* SYS_NMLN */
+#endif
+
+#include <signal.h>
+#ifdef _SYS_SIGNAL_H_
+/* This appears to be a BSD variant which also uses a different type name */
+	typedef sig_t sighandler_t;
 #endif
 
 #endif /* PORTABILITY_H */
