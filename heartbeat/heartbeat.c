@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.315 2004/09/05 05:05:29 alan Exp $ */
+/* $Id: heartbeat.c,v 1.316 2004/09/07 14:51:12 alan Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -929,9 +929,9 @@ write_child(struct hb_media* mp)
 	curproc->pstat = RUNNING;
 
 	if (ANYDEBUG) {
-		/* Limit ourselves to 30% of the CPU */
+		/* Limit ourselves to 40% of the CPU */
 		/* This seems like a lot, but pings are expensive :-( */
-		cl_cpu_limit_setpercent(30);
+		cl_cpu_limit_setpercent(40);
 	}
 	for (;;) {
 		IPC_Message*	ipcmsg = ipcmsgfromIPC(ourchan);
@@ -4100,7 +4100,7 @@ add2_xmit_hist (struct msg_xmit_hist * hist, struct ha_msg* msg
 }
 
 
-#define	MAX_REXMIT_BATCH	10
+#define	MAX_REXMIT_BATCH	50
 static void
 process_rexmit(struct msg_xmit_hist * hist, struct ha_msg* msg)
 {
@@ -4120,7 +4120,10 @@ process_rexmit(struct msg_xmit_hist * hist, struct ha_msg* msg)
 		cl_log_message(msg);
 	}
 
-	for (thisseq = lseq; thisseq >= fseq; --thisseq) {
+	/*
+	 * Retransmit missing packets in proper sequence.
+	 */
+	for (thisseq = fseq; thisseq <= lseq; ++thisseq) {
 		int	msgslot;
 		int	foundit = 0;
 		if (thisseq <= hist->lowseq) {
@@ -4444,6 +4447,14 @@ hb_unregister_to_apphbd(void)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.316  2004/09/07 14:51:12  alan
+ * Increased the size of a set of retransmissions that are sent all at once
+ * to 50.  At high heartbeat rates a short glitch can lose more packets at once
+ * than originally anticipated when the code was written.
+ * Changed code to retransmit missing packets in the original order, not
+ * in reverse order as it had done before... (one of those ideas that
+ * seemed like a good idea for some reason at the time.  Sigh...)
+ *
  * Revision 1.315  2004/09/05 05:05:29  alan
  * Upped the CPU limit for write children -- running 10ms heartbeat interval
  *
