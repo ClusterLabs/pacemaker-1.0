@@ -56,7 +56,7 @@ LinuxHA	MODULE-IDENTITY
 -- Current LinuxHA core MIB entries
 --  LHAClusterInfo		    OBJECT IDENTIFIER ::= { LinuxHA 1 }
 --  LHANodeTable		    OBJECT IDENTIFIER ::= { LinuxHA 2 }
---  LHAIFTable		    	    OBJECT IDENTIFIER ::= { LinuxHA 3 }
+--  LHAIFStatusTable		    OBJECT IDENTIFIER ::= { LinuxHA 3 }
 --  LHAResourceGroupTable	    OBJECT IDENTIFIER ::= { LinuxHA 4 }
 --  LHAMembershipTable		    OBJECT IDENTIFIER ::= { LinuxHA 6 }
 --  LHAHeartbeatConfigInfo	    OBJECT IDENTIFIER ::= { LinuxHA 7 }
@@ -99,10 +99,9 @@ LHANodeEntry OBJECT-TYPE
 
 lhaNodeEntry ::= SEQUENCE {
     LHANodeIndex	    Integer32,
-    LHANodeName	    DisplayString,
-    LHANodeType	    DisplayString,
+    LHANodeName	    	    DisplayString,
+    LHANodeType	            DisplayString,
     LHANodeStatus	    DisplayString,
-    LHANodeIFCount   Integer32
 }
 
 LHANodeIndex OBJECT-TYPE    
@@ -141,15 +140,7 @@ LHANodeStatus OBJECT-TYPE
 	it is defined as a DisplayString instead of an INTEGER."
     ::= { LHANodeEntry 4 }
 
-LHANodeHAIFCount OBJECT-TYPE
-    SYNTAX	Integer32 (0..65535)
-    MAX-ACCESS	read-only
-    STATUS	current
-    DESCRIPTION
-	"The number of heartbeat interfaces presents on that node."
-    ::= { LHANodeEntry 5 }
-
-LHAIFTable OBJECT-TYPE
+LHAIFStatusTable OBJECT-TYPE
     SYNTAX	SEQUENCE OF lhaIFEntry
     MAX-ACCESS	not-accessible
     STATUS	current
@@ -157,16 +148,16 @@ LHAIFTable OBJECT-TYPE
 	"A table containing all the interfaces of a node."
     ::= { LinuxHA 3 }
 
-LHAIFEntry OBJECT-TYPE
-    SYNTAX	lhaIFEntry
+LHAIFStatusEntry OBJECT-TYPE
+    SYNTAX	lhaIFStatusEntry
     MAX-ACCESS	not-accessible
     STATUS	current
     DESCRIPTION
 	"An entry containing information about that interface."
-    INDEX	{ LHANodeIndex, LHAIFIndex }
-    ::= { LHAIFTable 1 }
+    INDEX	{ LHANodeName, LHAIFIndex, LHAIFName }
+    ::= { LHAIFStatusTable 1 }
 
-lhaIFEntry ::= SEQUENCE {
+lhaIFStatusEntry ::= SEQUENCE {
     LHAIFIndex	    Integer32,
     LHAIFName	    DisplayString,
     LHAIFStatus	    DisplayString
@@ -178,15 +169,15 @@ LHAIFIndex OBJECT-TYPE
     STATUS	current
     DESCRIPTION
 	"An unique integer identifies this interface."
-    ::= { LHAIFEntry 1 }
+    ::= { LHAIFStatusEntry 1 }
 
 LHAIFName OBJECT-TYPE
     SYNTAX	DisplayString
-    MAX-ACCESS	read-only
+    MAX-ACCESS	not-accessible
     STATUS	current
     DESCRIPTION
 	"A name for this interface."
-    ::= { LHAIFEntry 2 }
+    ::= { LHAIFStatusEntry 2 }
 
 LHAIFStatus OBJECT-TYPE
     SYNTAX	DisplayString
@@ -195,13 +186,13 @@ LHAIFStatus OBJECT-TYPE
     DESCRIPTION
 	"The status for this interface. 
 
-				NOT WELL
+				NOTE WELL
 	
 	This is somewhat confusing as Linux-HA only reports if the heartbeat
 	can be heard on that interfce or not. So for ethernet interfaces, the
 	interfaces for the node itself is always dead as no heartbeat can be
 	heard on that interface."
-    ::= { LHAIFEntry 3 }
+    ::= { LHAIFStatusEntry 3 }
 
 LHAResourceGroupTable OBJECT-TYPE
     SYNTAX	SEQUENCE OF lhaResourceGroupEntry

@@ -16,7 +16,7 @@
 
 #include "LHAClusterInfo.h"
 #include "LHANodeTable.h"
-#include "LHAIFTable.h"
+#include "LHAIFStatusTable.h"
 #include "LHAMembershipTable.h"
 #include "LHAResourceGroupTable.h"
 #include "LHAHeartbeatConfigInfo.h"
@@ -80,7 +80,7 @@ get_int_value(lha_group_t group, lha_attribute_t attr, size_t index, int * value
 
 		case LHA_NODEINFO:
 
-		case LHA_IFINFO:
+		case LHA_IFSTATUSINFO:
 
 
 		default:
@@ -97,7 +97,7 @@ get_str_value(lha_group_t group, lha_attribute_t attr, size_t index, char * * va
 
 		case LHA_NODEINFO:
 
-		case LHA_IFINFO:
+		case LHA_IFSTATUSINFO:
 
 		case LHA_RESOURCEINFO:
 
@@ -175,7 +175,7 @@ get_hb_info(lha_group_t group)
 	case LHA_NODEINFO:
 	    return gNodeTable;
 
-	case LHA_IFINFO:
+	case LHA_IFSTATUSINFO:
 	    return gIFTable;
 
 	case LHA_RESOURCEINFO:
@@ -249,7 +249,7 @@ main(int argc, char ** argv)
 
 	init_LHAClusterInfo();
 	init_LHANodeTable();
-	init_LHAIFTable();
+	init_LHAIFStatusTable();
 	init_LHAResourceGroupTable();
 	init_LHAMembershipTable();
 	init_LHAHeartbeatConfigInfo();
@@ -622,8 +622,6 @@ walk_if_table(void)
 			return HA_FAIL;
 		}
 
-		/* assign ifcount to the node */
-		node->ifcount = ifcount;
 	}
 	return HA_OK;
 }

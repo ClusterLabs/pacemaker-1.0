@@ -10,7 +10,7 @@
 typedef enum lha_group {
 	LHA_CLUSTERINFO,
 	LHA_NODEINFO,
-	LHA_IFINFO,
+	LHA_IFSTATUSINFO,
 	LHA_RESOURCEINFO,
 	LHA_MEMBERSHIPINFO,
 	LHA_HBCONFIGINFO,
@@ -42,7 +42,6 @@ struct hb_nodeinfo {
 	char * name;
 	char * type;
 	char * status;
-	size_t ifcount;
 };
 
 struct hb_ifinfo {

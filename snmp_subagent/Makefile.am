@@ -38,7 +38,7 @@ halib_PROGRAMS		= hbagent
 hbagent_SOURCES		= snmp-config-resolve.h hbagent.h hbagent.c \
 			  LHAClusterInfo.h LHAClusterInfo.c \
 			  LHANodeTable.h LHANodeTable_enums.h LHANodeTable_columns.h LHANodeTable.c \
-			  LHAIFTable.h LHAIFTable_enums.h LHAIFTable_columns.h LHAIFTable.c \
+			  LHAIFStatusTable.h LHAIFStatusTable_enums.h LHAIFStatusTable_columns.h LHAIFStatusTable.c \
 			  LHAMembershipTable_columns.h LHAMembershipTable_enums.h LHAMembershipTable.h LHAMembershipTable.c \
 			  LHAHeartbeatConfigInfo.c LHAHeartbeatConfigInfo.h \
 			  LHAResourceGroupTable.c LHAResourceGroupTable_columns.h LHAResourceGroupTable_enums.h LHAResourceGroupTable.h

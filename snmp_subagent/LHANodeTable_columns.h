@@ -10,5 +10,4 @@
        #define COLUMN_LHANODENAME		2
        #define COLUMN_LHANODETYPE		3
        #define COLUMN_LHANODESTATUS		4
-       #define COLUMN_LHANODEHAIFCOUNT		5
 #endif /* LHANODETABLE_COLUMNS_H */

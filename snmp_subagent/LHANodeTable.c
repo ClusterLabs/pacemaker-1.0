@@ -52,7 +52,7 @@ initialize_table_LHANodeTable(void)
     /** Define the minimum and maximum accessible columns.  This
         optimizes retrival. */
     table_info->min_column = COLUMN_LHANODENAME;
-    table_info->max_column = COLUMN_LHANODEHAIFCOUNT;
+    table_info->max_column = COLUMN_LHANODESTATUS;
 
     /* iterator access routines */
     iinfo->get_first_data_point = LHANodeTable_get_first_data_point;
@@ -225,13 +225,6 @@ LHANodeTable_handler(
 				ASN_OCTET_STR, 
 				(u_char *) (entry->status), 
 				strlen(entry->status) + 1);
-                        break;
-
-                    case COLUMN_LHANODEHAIFCOUNT:
-                        snmp_set_var_typed_value(var, 
-				ASN_INTEGER, 
-				(u_char *) &(entry->ifcount), 
-				sizeof(entry->ifcount));
                         break;
 
                     default:

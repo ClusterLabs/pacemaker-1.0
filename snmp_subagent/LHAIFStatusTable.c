@@ -6,20 +6,20 @@
 #include <net-snmp/net-snmp-config.h>
 #include <net-snmp/net-snmp-includes.h>
 #include <net-snmp/agent/net-snmp-agent-includes.h>
-#include "LHAIFTable.h"
+#include "LHAIFStatusTable.h"
 
 #include "hbagent.h"
 
 static GArray * gIFInfo = NULL;
 
-int LHAIFTable_load(netsnmp_cache *cache, void *vmagic); 
-void LHAIFTable_free(netsnmp_cache *cache, void *vmagic); 
+int LHAIFStatusTable_load(netsnmp_cache *cache, void *vmagic); 
+void LHAIFStatusTable_free(netsnmp_cache *cache, void *vmagic); 
 
-/** Initialize the LHAIFTable table by defining its contents and how it's structured */
+/** Initialize the LHAIFStatusTable table by defining its contents and how it's structured */
 void
-initialize_table_LHAIFTable(void)
+initialize_table_LHAIFStatusTable(void)
 {
-    static oid LHAIFTable_oid[] = {1,3,6,1,4,1,4682,3};
+    static oid LHAIFStatusTable_oid[] = {1,3,6,1,4,1,4682,3};
     netsnmp_table_registration_info *table_info;
     netsnmp_handler_registration *my_handler;
     netsnmp_iterator_info *iinfo;
@@ -30,14 +30,14 @@ initialize_table_LHAIFTable(void)
 
     /** if your table is read only, it's easiest to change the
         HANDLER_CAN_RWRITE definition below to HANDLER_CAN_RONLY */
-    my_handler = netsnmp_create_handler_registration("LHAIFTable",
-                                             LHAIFTable_handler,
-                                             LHAIFTable_oid,
-                                             OID_LENGTH(LHAIFTable_oid),
-                                             HANDLER_CAN_RONLY);
+    my_handler = netsnmp_create_handler_registration("LHAIFStatusTable",
+                                             LHAIFStatusTable_handler,
+                                             LHAIFStatusTable_oid,
+                                             OID_LENGTH(LHAIFStatusTable_oid),
+                                             HANDLER_CAN_RWRITE);
             
     if (!my_handler || !table_info || !iinfo) {
-        snmp_log(LOG_ERR, "malloc failed in initialize_table_LHAIFTable");
+        snmp_log(LOG_ERR, "malloc failed in initialize_table_LHAIFStatusTable");
         return; /* Serious error. */
     }
 
@@ -45,18 +45,29 @@ initialize_table_LHAIFTable(void)
      * Setting up the table's definition
      */
     netsnmp_table_helper_add_indexes(table_info,
-                                  ASN_INTEGER, /* index: LHANodeIndex */
+                                  ASN_OCTET_STR, /* index: LHANodeName */
                                   ASN_INTEGER, /* index: LHAIFIndex */
+                                  ASN_OCTET_STR, /* index: LHAIFName */
                              0);
 
     /** Define the minimum and maximum accessible columns.  This
         optimizes retrival. */
-    table_info->min_column = 2;
+    table_info->min_column = 3;
     table_info->max_column = 3;
 
     /* iterator access routines */
-    iinfo->get_first_data_point = LHAIFTable_get_first_data_point;
-    iinfo->get_next_data_point = LHAIFTable_get_next_data_point;
+    iinfo->get_first_data_point = LHAIFStatusTable_get_first_data_point;
+    iinfo->get_next_data_point = LHAIFStatusTable_get_next_data_point;
+
+    /** you may wish to set these as well */
+#ifdef MAYBE_USE_THESE
+    iinfo->make_data_context = LHAIFStatusTable_context_convert_function;
+    iinfo->free_data_context = LHAIFStatusTable_data_free;
+
+    /** pick *only* one of these if you use them */
+    iinfo->free_loop_context = LHAIFStatusTable_loop_free;
+    iinfo->free_loop_context_at_end = LHAIFStatusTable_loop_free;
+#endif
 
     /** tie the two structures together */
     iinfo->table_reginfo = table_info;
@@ -64,8 +75,8 @@ initialize_table_LHAIFTable(void)
     /***************************************************
      * registering the table with the master agent
      */
-    DEBUGMSGTL(("initialize_table_LHAIFTable",
-                "Registering table LHAIFTable as a table iterator\n"));		 
+    DEBUGMSGTL(("initialize_table_LHAIFStatusTable",
+                "Registering table LHAIFStatusTable as a table iterator\n"));		 
     netsnmp_register_table_iterator(my_handler, iinfo);
 
     /*
@@ -73,22 +84,22 @@ initialize_table_LHAIFTable(void)
      */
     netsnmp_inject_handler(my_handler,
 	 netsnmp_get_cache_handler(CACHE_TIME_OUT, 
-				   LHAIFTable_load,
-				   LHAIFTable_free,
-				   LHAIFTable_oid,
-				   OID_LENGTH(LHAIFTable_oid)));
+				   LHAIFStatusTable_load,
+				   LHAIFStatusTable_free,
+				   LHAIFStatusTable_oid,
+				   OID_LENGTH(LHAIFStatusTable_oid)));
 }
 
-/** Initializes the LHAIFTable module */
+/** Initializes the LHAIFStatusTable module */
 void
-init_LHAIFTable(void)
+init_LHAIFStatusTable(void)
 {
 
   /** here we initialize all the tables we're planning on supporting */
-    initialize_table_LHAIFTable();
+    initialize_table_LHAIFStatusTable();
 }
 
-/** returns the first data point within the LHAIFTable table data.
+/** returns the first data point within the LHAIFStatusTable table data.
 
     Set the my_loop_context variable to the first data point structure
     of your choice (from which you can find the next one).  This could
@@ -96,7 +107,7 @@ init_LHAIFTable(void)
     pointer containing the beginning of an array variable.
 
     Set the my_data_context variable to something to be returned to
-    you later (in your main LHAIFTable_handler routine) that will provide
+    you later (in your main LHAIFStatusTable_handler routine) that will provide
     you with the data to return in a given row.  This could be the
     same pointer as what my_loop_context is set to, or something
     different.
@@ -107,36 +118,37 @@ init_LHAIFTable(void)
     and return the put_index_data variable at the end of the function.
 */
 netsnmp_variable_list *
-LHAIFTable_get_first_data_point(void **my_loop_context, void **my_data_context,
+LHAIFStatusTable_get_first_data_point(void **my_loop_context, void **my_data_context,
                           netsnmp_variable_list *put_index_data,
                           netsnmp_iterator_info *mydata)
 {
+
     if (gIFInfo && gIFInfo->len == 0) 
 	return NULL;
 
     *my_loop_context = NULL;
-    return LHAIFTable_get_next_data_point(my_loop_context, 
+    return LHAIFStatusTable_get_next_data_point(my_loop_context, 
 	    				my_data_context,
 					put_index_data,
 					mydata);
 }
 
-/** functionally the same as LHAIFTable_get_first_data_point, but
+/** functionally the same as LHAIFStatusTable_get_first_data_point, but
    my_loop_context has already been set to a previous value and should
    be updated to the next in the list.  For example, if it was a
    linked list, you might want to cast it to your local data type and
    then return my_loop_context->next.  The my_data_context pointer
    should be set to something you need later (in your main
-   LHAIFTable_handler routine) and the indexes in put_index_data updated
+   LHAIFStatusTable_handler routine) and the indexes in put_index_data updated
    again. */
 netsnmp_variable_list *
-LHAIFTable_get_next_data_point(void **my_loop_context, void **my_data_context,
+LHAIFStatusTable_get_next_data_point(void **my_loop_context, void **my_data_context,
                          netsnmp_variable_list *put_index_data,
                          netsnmp_iterator_info *mydata)
 {
     static size_t i = 0;
-    netsnmp_variable_list *vptr;
     struct hb_ifinfo * info;
+    netsnmp_variable_list *vptr;
 
     if (*my_loop_context != NULL) {
 	i = *((size_t *) *my_loop_context);
@@ -150,22 +162,23 @@ LHAIFTable_get_next_data_point(void **my_loop_context, void **my_data_context,
     vptr = put_index_data;
     info = & g_array_index(gIFInfo, struct hb_ifinfo, i);
 
-    snmp_set_var_value(vptr, (u_char *) &(info->nodeid), sizeof(size_t));
+    snmp_set_var_value(vptr, (u_char *) info->node, strlen(info->node) + 1);
     vptr = vptr->next_variable;
-
     snmp_set_var_value(vptr, (u_char *) &(info->id), sizeof(size_t));
     vptr = vptr->next_variable;
+    snmp_set_var_value(vptr, (u_char *) info->name, strlen(info->name) + 1);
+    vptr = vptr->next_variable;
 
-    i++; 
+    i++;
     *my_loop_context = (void *) &i;
     *my_data_context = (void *) info;
 
     return put_index_data;
 }
 
-/** handles requests for the LHAIFTable table, if anything else needs to be done */
+/** handles requests for the LHAIFStatusTable table, if anything else needs to be done */
 int
-LHAIFTable_handler(
+LHAIFStatusTable_handler(
     netsnmp_mib_handler               *handler,
     netsnmp_handler_registration      *reginfo,
     netsnmp_agent_request_info        *reqinfo,
@@ -187,7 +200,7 @@ LHAIFTable_handler(
 
         /** the following extracts the my_data_context pointer set in
            the loop functions above.  You can then use the results to
-           help return data for the columns of the LHAIFTable table in question */
+           help return data for the columns of the LHAIFStatusTable table in question */
         entry = (struct hb_ifinfo *) netsnmp_extract_iterator_context(request);
         if (entry == NULL) {
             if (reqinfo->mode == MODE_GET) {
@@ -216,13 +229,6 @@ LHAIFTable_handler(
                to be dealt with here */
             case MODE_GET:
                 switch(table_info->colnum) {
-                    case COLUMN_LHAIFNAME:
-                        snmp_set_var_typed_value(var, 
-				ASN_OCTET_STR, 
-				(u_char *) entry->name, 
-				strlen(entry->name) + 1);
-                        break;
-
                     case COLUMN_LHAIFSTATUS:
                         snmp_set_var_typed_value(var, 
 				ASN_OCTET_STR, 
@@ -232,7 +238,7 @@ LHAIFTable_handler(
 
                     default:
                         /** We shouldn't get here */
-                        snmp_log(LOG_ERR, "problem encountered in LHAIFTable_handler: unknown column\n");
+                        snmp_log(LOG_ERR, "problem encountered in LHAIFStatusTable_handler: unknown column\n");
                 }
                 break;
 
@@ -240,25 +246,30 @@ LHAIFTable_handler(
                 /** set handling... */
 
             default:
-                snmp_log(LOG_ERR, "problem encountered in LHAIFTable_handler: unsupported mode\n");
+                snmp_log(LOG_ERR, "problem encountered in LHAIFStatusTable_handler: unsupported mode\n");
         }
     }
     return SNMP_ERR_NOERROR;
 }
 
-int
-LHAIFTable_load(netsnmp_cache *cache, void *vmagic) 
+int 
+LHAIFStatusTable_load(netsnmp_cache *cache, void *vmagic)
 {
-    LHAIFTable_free(cache, vmagic);
+    	LHAIFStatusTable_free(cache, vmagic);
 
-    gIFInfo = get_hb_info(LHA_IFINFO);
+	gIFInfo = get_hb_info(LHA_IFSTATUSINFO);
 
-    return 0;
+	return 0;
 }
 
-void
-LHAIFTable_free(netsnmp_cache *cache, void *vmagic)
+
+void 
+LHAIFStatusTable_free(netsnmp_cache *cache, void *vmagic)
 {
-    return;
+    	return;
 }
+
+
+
+
 
