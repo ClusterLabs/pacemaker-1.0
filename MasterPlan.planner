@@ -89,7 +89,7 @@
       <task id="2" name="2.0.0 test preparation" note="" work="115200" duration="144000" start="20050115T000000Z" end="20050120T170000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-duration"/>
       <task id="3" name="2.0.0 testing" note="" work="142560" duration="432000" start="20050125T170000Z" end="20050211T170000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-duration">
         <predecessors>
-          <predecessor id="1" predecessor-id="42" type="FS"/>
+          <predecessor id="1" predecessor-id="43" type="FS"/>
           <predecessor id="1" predecessor-id="2" type="FS"/>
           <predecessor id="1" predecessor-id="28" type="SS" lag="36000"/>
         </predecessors>
@@ -118,9 +118,9 @@
       </task>
       <task id="9" name="2.0.1 testing" note="" work="288000" start="20050308T170000Z" end="20050322T170000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-work">
         <predecessors>
+          <predecessor id="1" predecessor-id="47" type="FS"/>
           <predecessor id="1" predecessor-id="46" type="FS"/>
           <predecessor id="1" predecessor-id="45" type="FS"/>
-          <predecessor id="1" predecessor-id="44" type="FS"/>
           <predecessor id="1" predecessor-id="8" type="FS"/>
         </predecessors>
       </task>
@@ -148,12 +148,12 @@
       </task>
       <task id="15" name="2.0.2 testing" note="" work="144000" duration="432000" start="20050425T170000Z" end="20050516T170000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-duration">
         <predecessors>
+          <predecessor id="1" predecessor-id="54" type="FS"/>
           <predecessor id="1" predecessor-id="53" type="FS"/>
           <predecessor id="1" predecessor-id="52" type="FS"/>
           <predecessor id="1" predecessor-id="51" type="FS"/>
           <predecessor id="1" predecessor-id="50" type="FS"/>
           <predecessor id="1" predecessor-id="49" type="FS"/>
-          <predecessor id="1" predecessor-id="48" type="FS"/>
           <predecessor id="1" predecessor-id="14" type="FS"/>
         </predecessors>
       </task>
@@ -217,96 +217,103 @@
     <task id="39" name="1042.10: Certification with IBM storage" note="" work="576000" start="20050115T000000Z" end="20050211T170000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-work"/>
     <task id="40" name="1044.09: Create new test cases" note="" work="576000" start="20050115T000000Z" end="20050211T170000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-work"/>
     <task id="41" name="1044.11: Create certification process" note="" work="432000" start="20050115T000000Z" end="20050204T170000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-work"/>
-    <task id="42" name="Fencing Integration" note="" work="259200" start="20050115T000000Z" end="20050125T170000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-work"/>
-    <task id="43" name="General CRM bug fixes - 2.0.0" note="" work="144000" start="20050125T210000Z" end="20050201T170000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-work">
-      <predecessors>
-        <predecessor id="1" predecessor-id="3" type="SS" lag="14400"/>
-      </predecessors>
+    <task id="42" name="Larger Clusters (CRM development)" note="" work="1987200" start="20050115T000000Z" end="20050421T170000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-work">
+      <task id="43" name="Fencing Integration" note="" work="259200" start="20050115T000000Z" end="20050125T170000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-work"/>
+      <task id="44" name="General CRM bug fixes - 2.0.0" note="" work="144000" start="20050125T170000Z" end="20050201T170000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-work">
+        <predecessors>
+          <predecessor id="1" predecessor-id="43" type="FS"/>
+        </predecessors>
+      </task>
+      <task id="45" name="Master / Slave incarnation states" note="" work="576000" start="20050201T170000Z" end="20050224T170000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-work">
+        <predecessors>
+          <predecessor id="1" predecessor-id="44" type="FS"/>
+        </predecessors>
+      </task>
+      <task id="46" name="Standby support" note="" work="144000" start="20050224T170000Z" end="20050302T170000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-work">
+        <predecessors>
+          <predecessor id="1" predecessor-id="45" type="FS"/>
+        </predecessors>
+      </task>
+      <task id="47" name="Quorum support" note="" work="144000" start="20050302T170000Z" end="20050308T170000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-work">
+        <predecessors>
+          <predecessor id="1" predecessor-id="46" type="FS"/>
+        </predecessors>
+      </task>
+      <task id="48" name="General CRM bug fixes - 2.0.1" note="" work="86400" start="20050308T170000Z" end="20050311T170000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-work">
+        <predecessors>
+          <predecessor id="1" predecessor-id="47" type="FS"/>
+        </predecessors>
+      </task>
+      <task id="49" name="Constraint lifespans" note="" work="432000" start="20050311T170000Z" end="20050329T170000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-work">
+        <predecessors>
+          <predecessor id="1" predecessor-id="48" type="FS"/>
+        </predecessors>
+      </task>
+      <task id="50" name="Misc CRM cleanups and enhancements - 1" note="" work="288000" start="20050329T170000Z" end="20050409T170000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-work">
+        <predecessors>
+          <predecessor id="1" predecessor-id="49" type="FS"/>
+        </predecessors>
+      </task>
+      <task id="51" name="Misc CRM cleanups and enhancements - 2" note="" work="288000" start="20050409T170000Z" end="20050421T170000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-work">
+        <predecessors>
+          <predecessor id="1" predecessor-id="50" type="FS"/>
+        </predecessors>
+      </task>
     </task>
-    <task id="44" name="Master / Slave incarnation states" note="" work="576000" start="20050201T180000Z" end="20050224T170000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-work">
-      <predecessors>
-        <predecessor id="1" predecessor-id="43" type="FS" lag="3600"/>
-      </predecessors>
-    </task>
-    <task id="45" name="Standby support" note="" work="144000" start="20050224T170000Z" end="20050302T170000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-work">
-      <predecessors>
-        <predecessor id="1" predecessor-id="44" type="FS"/>
-      </predecessors>
-    </task>
-    <task id="46" name="Quorum support" note="" work="144000" start="20050302T170000Z" end="20050308T170000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-work">
-      <predecessors>
-        <predecessor id="1" predecessor-id="45" type="FS"/>
-      </predecessors>
-    </task>
-    <task id="47" name="General CRM bug fixes - 2.0.1" note="" work="86400" start="20050308T170000Z" end="20050311T170000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-work">
-      <predecessors>
-        <predecessor id="1" predecessor-id="9" type="SS"/>
-      </predecessors>
-    </task>
-    <task id="48" name="Constraint lifespans" note="" work="432000" start="20050311T170000Z" end="20050329T170000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-work">
-      <predecessors>
-        <predecessor id="1" predecessor-id="47" type="FS"/>
-      </predecessors>
-    </task>
-    <task id="49" name="Misc CRM cleanups and enhancements - 1" note="" work="288000" start="20050329T170000Z" end="20050409T170000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-work">
-      <predecessors>
-        <predecessor id="1" predecessor-id="48" type="FS"/>
-      </predecessors>
-    </task>
-    <task id="50" name="Misc CRM cleanups and enhancements - 2" note="" work="288000" start="20050409T170000Z" end="20050421T170000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-work">
-      <predecessors>
-        <predecessor id="1" predecessor-id="49" type="FS"/>
-      </predecessors>
-    </task>
-    <task id="51" name="CCM Maturation" note="Wed 19 Jan 2005, 15:39 heal split brain, separate info gathering from reporting" work="1728000" start="20050115T000000Z" end="20050325T170000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-work"/>
-    <task id="52" name="NUT STONITH plugin" note="" work="403200" start="20050325T170000Z" end="20050411T170000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-work">
-      <predecessors>
-        <predecessor id="1" predecessor-id="51" type="FS"/>
-      </predecessors>
-    </task>
-    <task id="53" name="Serial Link disconnect check" note="" work="201600" start="20050411T170000Z" end="20050419T170000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-work">
+    <task id="52" name="CCM Maturation" note="Wed 19 Jan 2005, 15:39 heal split brain, separate info gathering from reporting" work="1728000" start="20050115T000000Z" end="20050325T170000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-work"/>
+    <task id="53" name="NUT STONITH plugin" note="" work="403200" start="20050325T170000Z" end="20050411T170000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-work">
       <predecessors>
         <predecessor id="1" predecessor-id="52" type="FS"/>
       </predecessors>
     </task>
-    <task id="54" name="?Total Ordered messaging" note="" work="1152000" start="20050115T000000Z" end="20050302T170000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-work"/>
-    <task id="55" name="Resource Dependency Analysis" note="" work="0" start="20050115T000000Z" end="20050117T080000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-work"/>
-    <task id="56" name="Delay (C.L. start)" note="" work="0" duration="316800" start="20050115T000000Z" end="20050131T170000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-duration"/>
-    <task id="57" name="Management GUI" note="" work="806400" start="20050131T170000Z" end="20050310T170000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-work">
-      <task id="58" name="config daemon architecture" note="" work="144000" start="20050131T170000Z" end="20050203T120000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-work">
+    <task id="54" name="Serial Link disconnect check" note="" work="201600" start="20050411T170000Z" end="20050419T170000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-work">
+      <predecessors>
+        <predecessor id="1" predecessor-id="53" type="FS"/>
+      </predecessors>
+    </task>
+    <task id="55" name="?Total Ordered messaging" note="" work="1152000" start="20050115T000000Z" end="20050302T170000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-work"/>
+    <task id="56" name="Resource Dependency Analysis" note="" work="0" start="20050115T000000Z" end="20050117T080000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-work"/>
+    <task id="57" name="Delay (C.L. start)" note="" work="0" duration="316800" start="20050115T000000Z" end="20050131T170000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-duration"/>
+    <task id="58" name="Management GUI" note="" work="806400" start="20050131T170000Z" end="20050310T170000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-work">
+      <task id="59" name="config daemon architecture" note="" work="144000" start="20050131T170000Z" end="20050203T120000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-work">
         <predecessors>
-          <predecessor id="1" predecessor-id="56" type="FS"/>
+          <predecessor id="1" predecessor-id="57" type="FS"/>
         </predecessors>
       </task>
-      <task id="59" name="config/status API design" note="" work="316800" start="20050203T120000Z" end="20050210T170000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-work">
-        <predecessors>
-          <predecessor id="1" predecessor-id="58" type="FS"/>
-        </predecessors>
-      </task>
-      <task id="60" name="config/status Daemon (for GUI)" note="" work="576000" start="20050210T170000Z" end="20050310T170000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-work">
+      <task id="60" name="config/status API design" note="" work="316800" start="20050203T120000Z" end="20050210T170000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-work">
         <predecessors>
           <predecessor id="1" predecessor-id="59" type="FS"/>
         </predecessors>
       </task>
-      <task id="61" name="GTK GUI" note="" work="576000" start="20050210T170000Z" end="20050310T170000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-work">
+      <task id="61" name="config/status Daemon (for GUI)" note="" work="576000" start="20050210T170000Z" end="20050310T170000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-work">
         <predecessors>
-          <predecessor id="1" predecessor-id="59" type="FS"/>
+          <predecessor id="1" predecessor-id="60" type="FS"/>
         </predecessors>
       </task>
-      <task id="62" name="Other GUI?" note="" work="28800" start="20050210T170000Z" end="20050211T170000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-work">
+      <task id="62" name="GTK GUI" note="" work="576000" start="20050210T170000Z" end="20050310T170000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-work">
         <predecessors>
-          <predecessor id="1" predecessor-id="59" type="FS"/>
+          <predecessor id="1" predecessor-id="60" type="FS"/>
+        </predecessors>
+      </task>
+      <task id="63" name="Other GUI?" note="" work="28800" start="20050210T170000Z" end="20050211T170000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-work">
+        <predecessors>
+          <predecessor id="1" predecessor-id="60" type="FS"/>
         </predecessors>
       </task>
     </task>
-    <task id="63" name="1042.06: (DONE) DRBD/DB2 performance testing" note="" work="0" start="20050115T000000Z" end="20050117T080000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-work"/>
-    <task id="64" name="1041.23: ?Make SAF libraries thread-safe" note="This is likely to translate into integration with OpenAIS, and contributing to it." work="576000" start="20050115T000000Z" end="20050211T170000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-work"/>
-    <task id="65" name="1040.06: !Move web site to new format" note="Tue 18 Jan 2005, 21:54 - Some community resources have been identified who will do this.&#10;" work="288000" start="20050115T000000Z" end="20050128T170000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-work"/>
-    <task id="66" name="1044.08: ?Merge two test tools" note="" work="288000" start="20050115T000000Z" end="20050128T170000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-work"/>
-    <task id="67" name="229.21: ?Internationalization" note="Tue 18 Jan 2005, 21:39:&#10;Probably won't get done.&#10;The customer we were doing this for/with has backed out." work="576000" start="20050115T000000Z" end="20050211T170000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-work"/>
-    <task id="68" name="1041.25: ?TIPC Integration" note="Tue 18 Jan 2005, 21:42 This may no longer make much sense, since we probably won't be doing major heartbeat-communication-based work.&#10;&#10;" work="432000" start="20050115T000000Z" end="20050204T170000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-work"/>
-    <task id="69" name="1044.09: ?Creation of new test cases" note="" work="576000" start="20050115T000000Z" end="20050211T170000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-work"/>
-    <task id="70" name="1044.10: ?Fully automated nightly tests" note="" work="432000" start="20050115T000000Z" end="20050204T170000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-work"/>
+    <task id="64" name="Dynamic Node Adds / Deletes" note="" work="432000" start="20050115T000000Z" end="20050204T170000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-work">
+      <task id="65" name="Heartbeat effort" note="" work="432000" start="20050115T000000Z" end="20050204T170000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-work"/>
+      <task id="66" name="CCM effort" note="" work="28800" start="20050115T000000Z" end="20050115T170000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-work"/>
+      <task id="67" name="CRM effort" note="" work="28800" start="20050115T000000Z" end="20050115T170000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-work"/>
+    </task>
+    <task id="68" name="1042.06: (DONE) DRBD/DB2 performance testing" note="" work="0" start="20050115T000000Z" end="20050117T080000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-work"/>
+    <task id="69" name="1041.23: ?Make SAF libraries thread-safe" note="This is likely to translate into integration with OpenAIS, and contributing to it." work="576000" start="20050115T000000Z" end="20050211T170000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-work"/>
+    <task id="70" name="1040.06: !Move web site to new format" note="Tue 18 Jan 2005, 21:54 - Some community resources have been identified who will do this.&#10;" work="288000" start="20050115T000000Z" end="20050128T170000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-work"/>
+    <task id="71" name="1044.08: ?Merge two test tools" note="" work="288000" start="20050115T000000Z" end="20050128T170000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-work"/>
+    <task id="72" name="229.21: ?Internationalization" note="Tue 18 Jan 2005, 21:39:&#10;Probably won't get done.&#10;The customer we were doing this for/with has backed out." work="576000" start="20050115T000000Z" end="20050211T170000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-work"/>
+    <task id="73" name="1041.25: ?TIPC Integration" note="Tue 18 Jan 2005, 21:42 This may no longer make much sense, since we probably won't be doing major heartbeat-communication-based work.&#10;&#10;" work="432000" start="20050115T000000Z" end="20050204T170000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-work"/>
+    <task id="74" name="1044.09: ?Creation of new test cases" note="" work="576000" start="20050115T000000Z" end="20050211T170000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-work"/>
+    <task id="75" name="1044.10: ?Fully automated nightly tests" note="" work="432000" start="20050115T000000Z" end="20050204T170000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-work"/>
   </tasks>
   <resource-groups>
     <group id="1" name="IBM.US" admin-name="Jeff Heroux" admin-phone="+1 845-433-8992" admin-email="heroux@us.ibm.com"/>
@@ -379,24 +386,26 @@
     <allocation task-id="4" resource-id="2" units="100"/>
     <allocation task-id="2" resource-id="2" units="80"/>
     <allocation task-id="27" resource-id="2" units="20"/>
+    <allocation task-id="66" resource-id="3" units="100"/>
+    <allocation task-id="55" resource-id="3" units="100"/>
     <allocation task-id="54" resource-id="3" units="100"/>
-    <allocation task-id="53" resource-id="3" units="100"/>
-    <allocation task-id="51" resource-id="3" units="100"/>
     <allocation task-id="52" resource-id="3" units="100"/>
+    <allocation task-id="53" resource-id="3" units="100"/>
     <allocation task-id="34" resource-id="4" units="100"/>
     <allocation task-id="28" resource-id="4" units="100"/>
-    <allocation task-id="45" resource-id="9" units="100"/>
-    <allocation task-id="50" resource-id="9" units="100"/>
-    <allocation task-id="49" resource-id="9" units="100"/>
-    <allocation task-id="44" resource-id="9" units="100"/>
+    <allocation task-id="67" resource-id="9" units="100"/>
     <allocation task-id="46" resource-id="9" units="100"/>
-    <allocation task-id="48" resource-id="9" units="100"/>
-    <allocation task-id="42" resource-id="9" units="100"/>
-    <allocation task-id="59" resource-id="10" units="100"/>
-    <allocation task-id="58" resource-id="10" units="100"/>
+    <allocation task-id="51" resource-id="9" units="100"/>
+    <allocation task-id="50" resource-id="9" units="100"/>
+    <allocation task-id="45" resource-id="9" units="100"/>
+    <allocation task-id="47" resource-id="9" units="100"/>
+    <allocation task-id="49" resource-id="9" units="100"/>
+    <allocation task-id="43" resource-id="9" units="100"/>
     <allocation task-id="60" resource-id="10" units="100"/>
+    <allocation task-id="59" resource-id="10" units="100"/>
+    <allocation task-id="61" resource-id="10" units="100"/>
+    <allocation task-id="60" resource-id="11" units="100"/>
     <allocation task-id="59" resource-id="11" units="100"/>
-    <allocation task-id="58" resource-id="11" units="100"/>
-    <allocation task-id="61" resource-id="11" units="100"/>
+    <allocation task-id="62" resource-id="11" units="100"/>
   </allocations>
 </project>
