@@ -7,12 +7,12 @@
 # modify it under the terms of the GNU General Public License
 # as published by the Free Software Foundation; either version 2
 # of the License, or (at your option) any later version.
-# 
+#
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
@@ -35,14 +35,28 @@ COMMONLIBS		= $(top_builddir)/lib/clplumbing/libplumb.la	\
 
 LIBRT 			= @LIBRT@
 
-CFLAGS			= $(NON_FATAL_CFLAGS)
+	
+#
+#	Since all this code compiles cleanly without warnings, we
+#	disallow all warnings here just like everywhere else.	
+#	If your version of lex or yacc is broken, then work around	
+#	it.  This has been done for the current Linux lex/yacc
+#	(bison version 1.875  and flex version 2.5.4 and others)
+#
+#	Setting CFLAGS here is specifically disallowed by automake
+#	and causes a warning.
+#
+#	So, I reverted an incorrect  CFLAGS change and restored the comments
+#	above which used to be here for these two reasons.  Before you remove
+#	these comments or turn off warnings *again*, let's discuss this.
+#
 AM_CFLAGS		=  -DPIDFILE='"$(PIDFILE)"'
 
 AM_YFLAGS		= -d
 
 
 ## binary progs
-halib_PROGRAMS		= recoverymgrd 
+halib_PROGRAMS		= recoverymgrd
 
 ## SOURCES
 
