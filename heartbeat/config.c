@@ -1,4 +1,4 @@
-const static char * _hb_config_c_Id = "$Id: config.c,v 1.98 2003/09/23 06:40:55 alan Exp $";
+const static char * _hb_config_c_Id = "$Id: config.c,v 1.99 2003/09/25 15:17:55 alan Exp $";
 /*
  * Parse various heartbeat configuration files...
  *
@@ -434,6 +434,13 @@ parse_config(const char * cfgfile, char *nodename)
 
 	if ((f = fopen(cfgfile, "r")) == NULL) {
 		ha_log(LOG_ERR, "Cannot open config file [%s]", cfgfile);
+		ha_log(LOG_INFO
+		,       "An annotated sample %s file is provided in the documentation."
+		,       cfgfile);
+		ha_log(LOG_INFO
+		,       "Please copy it to %s, read it, customize it, and try again."
+		,       cfgfile);
+
 		return(HA_FAIL);
 	}
 
@@ -686,7 +693,13 @@ parse_ha_resources(const char * cfgfile)
 	FILE *		f;
 
 	if ((f = fopen(cfgfile, "r")) == NULL) {
-		ha_log(LOG_ERR, "Cannot open config file [%s]", cfgfile);
+		ha_log(LOG_ERR, "Cannot open resources file [%s]", cfgfile);
+		ha_log(LOG_INFO
+		,       "An annotated sample %s file is provided in the documentation."
+		,       cfgfile);
+		ha_log(LOG_INFO
+		,       "Please copy it to %s, read it, customize it, and try again."
+		,       cfgfile);
 		return(HA_FAIL);
 	}
 
@@ -1610,6 +1623,9 @@ add_client_child(const char * directive)
 }
 /*
  * $Log: config.c,v $
+ * Revision 1.99  2003/09/25 15:17:55  alan
+ * Improved "no configuration file" messages for newbies.
+ *
  * Revision 1.98  2003/09/23 06:40:55  alan
  * Put in extra explanatory text for explaining that nodes are named by uname -n.
  *
