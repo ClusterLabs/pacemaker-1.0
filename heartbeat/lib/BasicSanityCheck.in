@@ -33,6 +33,7 @@ STONITH=@sbindir@/stonith
 LIBDIR=@libdir@/
 HBLIB=$LIBDIR/heartbeat
 APPHBD=$HBLIB/apphbd
+CLSTATUS=$HBLIB/cl_status
 APPHBTEST=$HBLIB/apphbtest
 IPCTEST=$HBLIB/ipctest
 #
@@ -96,7 +97,7 @@ GenerateHaCf() {
 	#	$IDENTSTRING
 	logfile   $LOGFILE
 	debugfile $LOGFILE
-	keepalive 500ms
+	keepalive 10ms
 	debug 1
 	deadtime 10
 	initdead 10
@@ -105,6 +106,7 @@ GenerateHaCf() {
 	mcast $INTERFACE $MCASTIP 694 0 0
 	#bcast $INTERFACE
 	node $LOCALNODE $DUMMYNODE
+	apiauth default uid=root
 	!
   chmod 644 $1
 }
@@ -249,6 +251,13 @@ TestHeartbeat() {
     HBStop
   fi
   if
+   $CLSTATUS hbstatus >/dev/null 2>&1
+  then
+    echo "$CLSTATUS shows heartbeat running" | tee -a $LOGFILE
+    errcount=`expr $errcount + 1`
+  fi
+   
+  if
     HBStart
   then
     if
@@ -259,6 +268,22 @@ TestHeartbeat() {
      echo "Heartbeat did not start." | tee -a $LOGFILE
      exit 1
     fi
+  fi
+  if
+   $CLSTATUS hbstatus >/dev/null 2>&1
+  then
+   : OK
+  else
+    echo "$CLSTATUS shows heartbeat not running ($?)" | tee -a $LOGFILE
+    errcount=`expr $errcount + 1`
+  fi
+  if
+   $CLSTATUS nodestatus $LOCALNODE >/dev/null 2>&1
+  then
+   : OK
+  else
+    echo "$CLSTATUS shows local status as dead ($?)" | tee -a $LOGFILE
+    errcount=`expr $errcount + 1`
   fi
 
   #
@@ -273,6 +298,13 @@ TestHeartbeat() {
     echo "Does not look like we noticed $DUMMYNODE was dead" | tee -a $LOGFILE
     errcount=`expr $errcount + 1`
   fi
+  if
+   $CLSTATUS nodestatus $DUMMYNODE >/dev/null 2>&1
+  then
+    echo "$CLSTATUS shows $DUMMYNODE status as alive(!)" | tee -a $LOGFILE
+    errcount=`expr $errcount + 1`
+  fi
+
 
   if
     LookForString "Resetting node $DUMMYNODE with" >/dev/null &&
@@ -311,6 +343,18 @@ TestHeartbeat() {
     : COOL!
   else
     echo "Looks like monitor operation failed" | tee -a $LOGFILE
+    errcount=`expr $errcount + 1`
+  fi
+  if
+   STAT=`$CLSTATUS rscstatus 2>/dev/null`
+  then
+    case $STAT in
+      all)	;;
+      *)	echo "$CLSTATUS shows resource status as $STAT" | tee -a $LOGFILE
+    		errcount=`expr $errcount + 1`;;
+    esac
+  else
+    echo "$CLSTATUS rscstatus failed [$?]" | tee -a $LOGFILE
     errcount=`expr $errcount + 1`
   fi
 
