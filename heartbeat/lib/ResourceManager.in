@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-#	$Id: ResourceManager.in,v 1.16 2004/03/31 22:17:10 alan Exp $
+#	$Id: ResourceManager.in,v 1.17 2004/04/12 21:43:43 alan Exp $
 #
 #	New haresources format:
 #
@@ -205,7 +205,7 @@ doscript() {
       0);;
       *) ha_log "ERROR: Return code $RC from $spath";;
     esac
-    return 0;
+    return $RC;
   fi
   ha_log "ERROR: Cannot locate resource script $script"
   return 1;
@@ -421,12 +421,15 @@ esac
 
 #
 #	$Log: ResourceManager.in,v $
+#	Revision 1.17  2004/04/12 21:43:43  alan
+#	Changed the function that runs scripts to return the proper return code.
+#
 #	Revision 1.16  2004/03/31 22:17:10  alan
 #	Minor changes to the reboot-on-stop-failure patch.
 #	These changes suggested by Jan-Frode Myklebust <janfrode@parallab.uib.no>
 #	They make it more solaris-compatible, and also give an additional reboot attempt
 #	option.
-#
+#	
 #	Revision 1.15  2004/03/31 17:52:25  alan
 #	Put in code to cause the machine to (eventually) reboot if a resource
 #	stop fails.
