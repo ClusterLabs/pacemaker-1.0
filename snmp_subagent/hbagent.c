@@ -1147,7 +1147,7 @@ main(int argc, char ** argv)
 		exit(1);
 
 	/* initialize the agent library */
-	if (!init_agent("LHA-agent")) {
+	if (init_agent("LHA-agent")) {
 		cl_log(LOG_ERR, "AgentX initialization failure.  This is unrecoverable.  Make sure that the master snmpd is started and is accepting AgentX connetions.  The subagent will not be respawned.");
 
 		return 100;
