@@ -1,4 +1,4 @@
-/* $Id: libckpt.c,v 1.10 2004/04/02 05:15:25 deng.pan Exp $ */
+/* $Id: libckpt.c,v 1.11 2004/04/06 07:23:01 deng.pan Exp $ */
 /* 
  * ckptlib.c: data checkpoint API library
  *
@@ -2751,8 +2751,7 @@ saCkptSectionIteratorNext(
 	memcpy(sectionDescriptor, secDescriptor, 
 		sizeof(SaCkptSectionDescriptorT));
 	if (secDescriptor->sectionId.idLen > 0) {
-		sectionDescriptor->sectionId.id = realloc(
-			sectionDescriptor->sectionId.id,
+		sectionDescriptor->sectionId.id = ha_malloc(
 			secDescriptor->sectionId.idLen);
 		memcpy(sectionDescriptor->sectionId.id,
 			secDescriptor->sectionId.id,
