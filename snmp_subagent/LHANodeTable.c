@@ -255,12 +255,14 @@ LHANodeTable_handler(
 				sizeof(entry->status));
                         break;
 
+#ifdef HAVE_NEW_HB_API
                     case COLUMN_LHANODEUUID:
                         snmp_set_var_typed_value(var, 
 				ASN_OCTET_STR, 
 				(u_char *) entry->uuid, 
 				16);
                         break;
+#endif /* HAVE_NEW_HB_API */
 
                     case COLUMN_LHANODEIFCOUNT:
                         snmp_set_var_typed_value(var, 

@@ -563,7 +563,7 @@ walk_nodetable(void)
 		if (hb->llc_ops->get_uuid_by_name(hb, name, uuid) == HA_FAIL) {
 			cl_log(LOG_DEBUG, "Cannot get the uuid for node: %s", name);
 		}
-#endif
+#endif /* HAVE_NEW_HB_API */
 		memcpy(node->uuid, uuid, sizeof(uuid_t));
 
 		node->type = get_status_value(type, NODE_TYPE, NODE_TYPE_VALUE);
