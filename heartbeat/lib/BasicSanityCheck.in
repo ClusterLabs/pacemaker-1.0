@@ -295,6 +295,7 @@ TestHeartbeat() {
   sleep 5
 
   if
+    $RSCDIR/IPaddr $TESTIP status >/dev/null 2>&1 &&
     $RSCDIR/IPaddr $TESTIP monitor >/dev/null 2>&1
   then
     : COOL!
@@ -383,6 +384,7 @@ TestHeartbeat() {
   fi
 
   if
+    $RSCDIR/IPaddr $TESTIP status >/dev/null 2>&1 &&
     $RSCDIR/IPaddr $TESTIP monitor >/dev/null 2>&1
   then
     echo "Looks like the test IP address is still live..."
@@ -465,7 +467,7 @@ AppHBCheck() {
 	
 	echo "Performing apphbd failure case tests"
 	$APPHBTEST -F -i 1000 -p 1 -n 5 >>$CFFILE 2>&1
-	for pat in "'failtest'.* failed to heartbeat" "'failtest'.* resumed heartbeats" "info:.*HANGUP"
+	for pat in "'failtest'.* failed to heartbeat" "'failtest'.* resumed heartbeats" "WARN:.*hangup"
 	do
           CheckPat "$pat" 1
 	done
