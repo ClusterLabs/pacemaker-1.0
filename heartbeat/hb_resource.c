@@ -1,4 +1,4 @@
-/* $Id: hb_resource.c,v 1.53 2004/04/14 00:31:00 alan Exp $ */
+/* $Id: hb_resource.c,v 1.54 2004/04/27 18:29:03 gshi Exp $ */
 /*
  * hb_resource: Linux-HA heartbeat resource management code
  *
@@ -745,6 +745,9 @@ process_resources(const char * type, struct ha_msg* msg
 
 			const char *	f_stable;
 
+                        other_holds_resources
+                        =       HB_UPD_RSC(fullupdate, other_holds_resources, n);
+
 			/* f_stable is NULL when msg from takeover script */
 			if ((f_stable = ha_msg_value(msg, F_ISSTABLE)) != NULL){
 				if (strcmp(f_stable, "1") == 0) {
@@ -753,6 +756,7 @@ process_resources(const char * type, struct ha_msg* msg
 						,	"remote resource"
 						" transition completed.");
 						other_is_stable = 1;
+					 	hb_send_resources_held(resourcestate == HB_R_STABLE, NULL);	
 						PerformAutoFailback();
 					}
 				}else{
@@ -765,8 +769,6 @@ process_resources(const char * type, struct ha_msg* msg
 				}
 			}
 
-			other_holds_resources
-			=	HB_UPD_RSC(fullupdate, other_holds_resources, n);
 			if (ANYDEBUG) {
 				cl_log(LOG_INFO
 				,	"other_holds_resources: %d"
@@ -2199,6 +2201,12 @@ StonithStatProcessName(ProcTrack* p)
 
 /*
  * $Log: hb_resource.c,v $
+ * Revision 1.54  2004/04/27 18:29:03  gshi
+ * send a stability message back to the sender
+ * unon recving that kind of message
+ * this is to fix a bug that after a node re-read config file and restart
+ * the other node will think that node is unstable.
+ *
  * Revision 1.53  2004/04/14 00:31:00  alan
  * Added to code to check STONITH device every hour.
  *
