@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-#	$Id: ResourceManager.in,v 1.14 2004/03/26 05:00:47 alan Exp $
+#	$Id: ResourceManager.in,v 1.15 2004/03/31 17:52:25 alan Exp $
 #
 #	New haresources format:
 #
@@ -46,6 +46,8 @@ export HA_DIR HA_FUNCS
 INITDIR=@INITDIR@
 USAGE="usage: $0 listkeys machine | takegroup key | givegroup key|status resource";
 . $HA_FUNCS
+
+: ${HA_STOPRETRYMAX=10}
 
 isip() {
   case $1 in
@@ -218,14 +220,28 @@ giveupresourcegroup() {
   rc=0
   for j in `reverseargs $*`
   do
-    if
+    retries=0
+    while
       doscript $j stop >>$HA_DEBUGLOG 2>&1
+      rc1=$?
+      [ $HA_STOPRETRYMAX -le 0 -o  $retries -lt $HA_STOPRETRYMAX ] &&
+      [ $rc1 -ne 0 ]
+    do
+      sleep 1
+      retries=`expr 1 + "$retries"`
+      ha_log "info: Retrying failed stop operation [$j]"
+    done
+    if
+      [ $rc -eq 0 ]
     then
-      : $j stop succeeded
-    else
-      rc=$?
+      rc=$rc1
     fi
   done
+  if
+    [ "$rc" -ne 0 ]
+  then
+    RecoverFromFailedStop
+  fi
   return $rc
 }
 
@@ -354,6 +370,23 @@ VerifyAllIdle() {
   exit $rc
 }
 
+#
+#	If we are unable to stop a resource, then everything is in a
+#	hosed state.  The only way out is through a reboot...
+#
+RecoverFromFailedStop() {
+  ha_log "CRIT: Resource STOP failure. Reboot required!"
+  ha_log "CRIT: Killing heartbeat ungracefully!"
+  killall -9 heartbeat ipfail ccm
+  if
+    [ -x /sbin/reboot ] && /sbin/reboot -f
+  then
+    : OK
+  else
+    ha_log "CRIT: Unable to force reboot."
+  fi
+}
+
 case $1 in
 
   listkeys)	KeyResources "$2";;
@@ -381,9 +414,13 @@ esac
 
 #
 #	$Log: ResourceManager.in,v $
+#	Revision 1.15  2004/03/31 17:52:25  alan
+#	Put in code to cause the machine to (eventually) reboot if a resource
+#	stop fails.
+#
 #	Revision 1.14  2004/03/26 05:00:47  alan
 #	Added the Local Resource Manager from Zhen Huang and Jiang Dong Sun to CVS.
-#
+#	
 #	Revision 1.13  2004/03/25 10:17:28  lars
 #	Part I: Lower-case hostnames whereever they are coming in. STONITH
 #	module audit to follow.
