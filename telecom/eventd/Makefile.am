@@ -53,7 +53,7 @@ eventd_SOURCES	= eventd.c event.h
 eventd_CFLAGS	= $(AM_CFLAGS)
 eventd_LDADD	= \
 		$(top_builddir)/lib/clplumbing/libplumb.la \
-		$(top_builddir)/heartbeat/libhbclient.la \
+		$(top_builddir)/lib/hbclient/libhbclient.la \
 		$(GLIBLIB)
 eventd_LDFLAGS	= 
 
