@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.326 2004/10/08 21:31:48 alan Exp $ */
+/* $Id: heartbeat.c,v 1.327 2004/10/16 04:12:56 alan Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -250,6 +250,7 @@
 #include <clplumbing/cl_signal.h>
 #include <clplumbing/cpulimits.h>
 #include <clplumbing/netstring.h>
+#include <clplumbing/coredumps.h>
 #include <heartbeat.h>
 #include <ha_msg.h>
 #include <hb_api.h>
@@ -874,6 +875,7 @@ read_child(struct hb_media* mp)
 	cl_make_realtime(-1, hb_realtime_prio, 16, 8);
 	set_proc_title("%s: read: %s %s", cmdname, mp->type, mp->name);
 	drop_privs(0, 0);	/* Become nobody */
+	cl_cdtocoredir();
 
 	hb_signal_process_pending();
 	curproc->pstat = RUNNING;
@@ -931,6 +933,7 @@ write_child(struct hb_media* mp)
 	set_proc_title("%s: write: %s %s", cmdname, mp->type, mp->name);
 	cl_make_realtime(-1, hb_realtime_prio, 16, 8);
 	drop_privs(0, 0);	/* Become nobody */
+	cl_cdtocoredir();
 	curproc->pstat = RUNNING;
 
 	if (ANYDEBUG) {
@@ -1001,6 +1004,7 @@ fifo_child(IPC_Channel* chan)
 
 	cl_make_realtime(-1, hb_realtime_prio, 16, 32);
 	drop_privs(0, 0);	/* Become nobody */
+	cl_cdtocoredir();
 	curproc->pstat = RUNNING;
 
 	if (ANYDEBUG) {
@@ -3449,7 +3453,7 @@ make_daemon(void)
 	for (j=FD_STDERR+1; j < oflimits.rlim_cur; ++j) {
 		close(j);
 	}
-	chdir(HA_D);
+	cl_cdtocoredir();
 	/* We need to at least ignore SIGINTs early on */
 	hb_signal_set_common(NULL);
 	if (getsid(0) != pid) {
@@ -4553,6 +4557,12 @@ get_localnodeinfo(void)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.327  2004/10/16 04:12:56  alan
+ * Added core dump directories, and a bunch of code to cd into the
+ * right core dump directory, and activated that code in several
+ * different applications.  Note that I didn't do them all -- in particular
+ * the SAF/AIS applications haven't been touched yet.
+ *
  * Revision 1.326  2004/10/08 21:31:48  alan
  * BEAM fix:  potentially tried to free a NULL pointer.
  *

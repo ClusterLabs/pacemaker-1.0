@@ -1,4 +1,4 @@
-/* $Id: ccm.c,v 1.53 2004/10/08 22:02:08 alan Exp $ */
+/* $Id: ccm.c,v 1.54 2004/10/16 04:12:56 alan Exp $ */
 /* 
  * ccm.c: Consensus Cluster Service Program 
  *
@@ -27,6 +27,7 @@
 #include <stdint.h>
 #endif
 #include <clplumbing/cl_signal.h>
+#include <clplumbing/coredumps.h>
 
 
 extern int global_verbose;
@@ -4159,6 +4160,7 @@ ccm_initialize()
 	ll_cluster_t*	hb_fd;
 	ccm_t		*ccmret;
 	int		facility;
+	const char *	parameter;
 
 	if(global_debug) {
 		cl_log(LOG_DEBUG, "========================== Starting CCM ===="
@@ -4176,6 +4178,13 @@ ccm_initialize()
 		cl_log(LOG_ERR, "REASON: %s", hb_fd->llc_ops->errmsg(hb_fd));
 		return NULL;
 	}
+
+	/* See if we should drop cores somewhere odd... */
+	parameter = hb_fd->llc_ops->get_parameter(hb_fd, KEY_COREROOTDIR);
+	if (parameter) {
+		cl_set_corerootdir(parameter);
+	}
+	cl_cdtocoredir();
 
 	/* change the logging facility to the one used by heartbeat daemon
 	 * the signon MUST BE FIRST! */

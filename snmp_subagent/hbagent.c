@@ -32,6 +32,7 @@
 #include "hb_api.h"
 #include "heartbeat.h"
 #include "clplumbing/cl_log.h"
+#include "clplumbing/coredumps.h"
 
 #include <net-snmp/net-snmp-config.h>
 #include <net-snmp/net-snmp-includes.h>
@@ -359,6 +360,7 @@ free_storage(void)
 int
 init_heartbeat(void)
 {
+	const char * parameter;
 	hb = NULL;
 
 	cl_log_set_entity("lha-snmpagent");
@@ -374,6 +376,13 @@ init_heartbeat(void)
 		cl_log(LOG_ERR, "REASON: %s\n", hb->llc_ops->errmsg(hb));
 		return HA_FAIL;
 	}
+
+	/* See if we should drop cores somewhere odd... */
+	parameter = hb->llc_ops->get_parameter(hb, KEY_COREROOTDIR);
+	if (parameter) {
+		cl_set_corerootdir(parameter);
+	}
+	cl_cdtocoredir();
 
 	if (NULL == (myid = hb->llc_ops->get_mynodeid(hb))) {
 		cl_log(LOG_ERR, "Cannot get mynodeid\n");

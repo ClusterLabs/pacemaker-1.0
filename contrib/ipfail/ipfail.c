@@ -1,4 +1,4 @@
-/* $Id: ipfail.c,v 1.38 2004/10/01 13:01:42 kevin Exp $ */
+/* $Id: ipfail.c,v 1.39 2004/10/16 04:12:56 alan Exp $ */
 /* ipfail: IP Failover plugin for Linux-HA
  *
  * Copyright (C) 2002-2004 Kevin Dwyer <kevin@pheared.net>
@@ -60,6 +60,7 @@
 #include <clplumbing/cl_malloc.h>
 #include <clplumbing/GSource.h>
 #include <clplumbing/Gmain_timeout.h>
+#include <clplumbing/coredumps.h>
 #include "ipfail.h"
 
 /* ICK! global vars. */
@@ -125,16 +126,24 @@ main(int argc, char **argv)
 			exit(100);
 		}
 
-		if (!strcmp(parameter, "on"))
+		if (!strcmp(parameter, "on")) {
 			auto_failback = 1;
-		else
+		}else{
 			auto_failback = 0;
-
+		}
 		cl_log(LOG_DEBUG, "auto_failback -> %i (%s)", auto_failback,
 		       parameter);
 		cl_free(parameter);
-	} else
+	}else{
 		cl_log(LOG_ERR, "Couldn't get auto_failback setting.");
+	}
+	/* See if we should drop cores somewhere odd... */
+	parameter = hb->llc_ops->get_parameter(hb, KEY_COREROOTDIR);
+	if (parameter) {
+		cl_set_corerootdir(parameter);
+		cl_cdtocoredir();
+	}
+	cl_cdtocoredir();
 
 
 	set_callbacks(hb);

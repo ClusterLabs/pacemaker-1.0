@@ -1,4 +1,4 @@
-/* $Id: recoverymgrd.c,v 1.9 2004/02/17 22:12:02 lars Exp $ */
+/* $Id: recoverymgrd.c,v 1.10 2004/10/16 04:12:57 alan Exp $ */
 /*
  * Generic Recovery manager implementation
  * 
@@ -51,6 +51,7 @@
 #include <clplumbing/uids.h>
 #include <clplumbing/recoverymgr_cs.h>
 #include <clplumbing/lsb_exitcodes.h>
+#include <clplumbing/coredumps.h>
 #include <apphb_notify.h>
 #include <recoverymgr.h>
 
@@ -58,8 +59,8 @@
 #include "configfile.h"
 
 
-/* indicates how many microseconds between heartbeats */
-#define HBINTERVAL_USEC		2000
+/* indicates how many milliseconds between heartbeats */
+#define HBINTERVAL_MSEC		2000
 
 #define CONFIG_FILE	"./recoverymgrd.conf"
 
@@ -123,11 +124,13 @@ parseConfigFile(const char* conf_file)
 }
 
 
-int main(int argc, char *argv[])
+int
+main(int argc, char *argv[])
 {
    	int rc; 
    	int retval = 0;  
    	const char* conf_file = CONFIG_FILE;
+	cl_cdtocoredir();
 	
 	if(argc == 2){
 		conf_file = argv[1];
@@ -191,7 +194,7 @@ register_hb(void)
       		return 1;
    	}
 
-   	rc = apphb_setinterval(HBINTERVAL_USEC);
+   	rc = apphb_setinterval(HBINTERVAL_MSEC);
    	if (rc < 0) 
    	{
       		cl_perror("setinterval failure");
@@ -217,9 +220,9 @@ setup_hb_callback(void)
    	signal(SIGALRM, (void (*) (int)) (apphb_hb));
 
    	itimerValue.it_interval.tv_sec = 0;
-   	itimerValue.it_interval.tv_usec = HBINTERVAL_USEC;
+   	itimerValue.it_interval.tv_usec = HBINTERVAL_MSEC;
    	itimerValue.it_value.tv_sec = 0;
-   	itimerValue.it_value.tv_usec = HBINTERVAL_USEC;
+   	itimerValue.it_value.tv_usec = HBINTERVAL_MSEC;
 
    	if (setitimer(ITIMER_REAL, &itimerValue, &itimerOldValue)!=0) 
   	{

@@ -1,4 +1,4 @@
-/* $Id: apphbd.c,v 1.52 2004/02/17 22:12:01 lars Exp $ */
+/* $Id: apphbd.c,v 1.53 2004/10/16 04:12:56 alan Exp $ */
 /*
  * apphbd:	application heartbeat daemon
  *
@@ -90,6 +90,7 @@
 
 #include <clplumbing/cl_signal.h>
 #include <clplumbing/lsb_exitcodes.h>
+#include <clplumbing/coredumps.h>
 
 
 #ifndef PIDFILE
@@ -866,13 +867,14 @@ usage(const char* cmd, int exit_status)
 int
 main(int argc, char ** argv)
 {
-	int	flag;
-	int	req_restart = FALSE;
-	int	req_status = FALSE;
-	int	req_stop = FALSE;
-	int	argerr = 0;
-	const char* cfgfile = CONFIG_FILE;
+	int		flag;
+	int		req_restart = FALSE;
+	int		req_status = FALSE;
+	int		req_stop = FALSE;
+	int		argerr = 0;
+	const char*	cfgfile = CONFIG_FILE;
 
+	cl_cdtocoredir();
 	cl_log_set_entity(cmdname);
 	cl_log_enable_stderr(TRUE);
 	cl_log_set_facility(LOG_USER);

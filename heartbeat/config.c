@@ -1,4 +1,4 @@
-/* $Id: config.c,v 1.130 2004/10/08 18:37:06 alan Exp $ */
+/* $Id: config.c,v 1.131 2004/10/16 04:12:56 alan Exp $ */
 /*
  * Parse various heartbeat configuration files...
  *
@@ -54,6 +54,7 @@
 #include <pils/plugin.h>
 #include <clplumbing/realtime.h>
 #include <clplumbing/netstring.h>
+#include <clplumbing/coredumps.h>
 #include <HBcomm.h>
 #include <hb_module.h>
 #include <hb_api.h>
@@ -90,6 +91,8 @@ static int set_api_authorization(const char *);
 static int set_msgfmt(const char*);
 static int set_register_to_apphbd(const char *);
 static int set_badpack_warn(const char*);
+static int set_coredump(const char*);
+static int set_corerootdir(const char*);
 
 /*
  * Each of these parameters is is automatically recorded by
@@ -127,6 +130,8 @@ struct directive {
 , {KEY_MSGFMT,    set_msgfmt, TRUE, "classic", "message format in the wire"}
 , {KEY_REGAPPHBD, set_register_to_apphbd, FALSE, NULL, "register with apphbd"}
 , {KEY_BADPACK,   set_badpack_warn, TRUE, "true", "warn about bad packets"}
+, {KEY_COREDUMP,  set_coredump, TRUE, "true", "enable Linux-HA core dumps"}
+, {KEY_COREROOTDIR,set_corerootdir, TRUE, NULL, "set root directory of core dump area"}
 };
 
 static const struct WholeLineDirective {
@@ -2015,11 +2020,39 @@ baddirective:
 
 }
 
+static int
+set_coredump(const char* value)
+{
+	gboolean	docore;
+	int		rc;
+	if ((rc = str_to_boolean(value, &docore)) == HA_OK) {
+		if (cl_enable_coredumps(docore) < 0 ) {
+			rc = HA_FAIL;
+		}
+	}
+	return rc;
+}
+
+static int
+set_corerootdir(const char* value)
+{
+	if (cl_set_corerootdir(value) < 0) {
+		cl_perror("Invalid core directory [%s]", value);
+		return HA_FAIL;
+	}
+	return HA_OK;
+}
 
 
 
 /*
  * $Log: config.c,v $
+ * Revision 1.131  2004/10/16 04:12:56  alan
+ * Added core dump directories, and a bunch of code to cd into the
+ * right core dump directory, and activated that code in several
+ * different applications.  Note that I didn't do them all -- in particular
+ * the SAF/AIS applications haven't been touched yet.
+ *
  * Revision 1.130  2004/10/08 18:37:06  alan
  * Put in two things:
  * 	Got rid of old SUSEisms in the install process
