@@ -786,13 +786,13 @@ is_expected_msg(const struct ha_msg * msg,
 		if (  ( (tmpstr = cl_get_string(msg, field_name2)) != NULL )
 		    && strncmp(tmpstr, field_content2, strlen(field_content2)) 
 			== 0)  {
-			stdlib_log(LOG_DEBUG, "%s = %s\n", field_name2, tmpstr);
+			stdlib_log(LOG_DEBUG, "%s = %s.", field_name2, tmpstr);
 			rc= TRUE;
 		} else {
-			stdlib_log(LOG_DEBUG, "%s = %s\n", field_name2, tmpstr);
+			stdlib_log(LOG_DEBUG, "no field %s.", field_name2);
 		}
 	} else {
-		stdlib_log(LOG_DEBUG, "%s = %s\n", field_name1, tmpstr);
+		stdlib_log(LOG_DEBUG, "No field %s", field_name1);
 	}
 
 	return rc;
