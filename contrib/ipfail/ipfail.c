@@ -155,9 +155,10 @@ main(int argc, char **argv)
 	for(; !quitnow && (reply=hb->llc_ops->readmsg(hb, 1)) != NULL;) {
 		ha_log_message(reply);
 		ha_msg_del(reply); reply=NULL;
+		errno = 0;
 	}
 
-	if (!quitnow) {
+	if (!quitnow && errno != EAGAIN && errno != EINTR) {
 		cl_perror("read_hb_msg returned NULL");
 		cl_log(LOG_ERR, "REASON: %s", hb->llc_ops->errmsg(hb));
 	}
@@ -272,6 +273,8 @@ set_signals(ll_cluster_t *hb)
 
 	CL_SIGINTERRUPT(SIGINT, 1);
 	CL_SIGNAL(SIGINT, gotsig);
+	CL_SIGINTERRUPT(SIGTERM, 1);
+	CL_SIGNAL(SIGTERM, gotsig);
 
 	cl_log(LOG_DEBUG, "Setting message signal");
 	if (hb->llc_ops->setmsgsignal(hb, 0) != HA_OK) {
