@@ -1,4 +1,4 @@
-/* $Id: ha_msg.h,v 1.30 2004/03/26 07:50:05 chuyee Exp $ */
+/* $Id: ha_msg.h,v 1.31 2004/04/17 07:58:53 alan Exp $ */
 /*
  * Intracluster message object (struct ha_msg)
  *
@@ -61,9 +61,9 @@ struct ha_msg {
 	size_t  netstringlen;
 	char **	names;
 	int  *	nlens;
-	char **	values;
-	int  *	vlens;
-	int  *  types;
+	void **	values;
+	size_t*	vlens;
+	int *	types;
 };
 #define	IFACE		"!^!\n"  
 #define	MSG_START	">>>\n"
