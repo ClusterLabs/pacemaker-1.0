@@ -8,7 +8,7 @@
 Usage() {
   cat <<-!
 
-	Usage: $0 [configure|make|install|package|flags]
+	Usage: $0 [configure|make|install|dist|distcheck|package|flags|bootstrap]
 
 	$0 configures the system with options that match common conventions
 	associated with this machine (i.e. $CFENV)
@@ -198,6 +198,19 @@ PackageItUp() {
   fi
 }
 
+do_configure () {
+	# Do autotools bootstrap if needed.
+	# Should only be needed by developers and geeks because any
+	# distributed stable versions (tar.gz etc.) should already have
+	# "configure" etc. set up.
+	if [ ! -x ${pathtotop}/configure ]
+	then
+		Run ${pathtotop}/bootstrap $@
+	else
+		Run ${pathtotop}/configure $@
+	fi
+}
+
 cmd=`echo $1 | lcase`
 
 case $cmd in
@@ -223,26 +236,30 @@ case $cmd in
   	echo $FLAGS $@
 	;;
   cf|conf|configure)		
-  	Run "${pathtotop}/bootstrap" $FLAGS $@
+  	do_configure $FLAGS $@
+	;;
+  bootstrap)		
+  	rm -f ${pathtotop}/configure
+  	do_configure $FLAGS $@
 	;;
   make|build)			
-  	Run "${pathtotop}/bootstrap" $FLAGS $@ && \
+  	do_configure $FLAGS $@ && \
   	Run $MAKE_CMD;;
   install)			
-  	Run "${pathtotop}/bootstrap" $FLAGS $@ && \
+  	do_configure $FLAGS $@ && \
 	Run $MAKE_CMD install
 	;;
   dist)				
-  	Run echo ./bootstrap $FLAGS $@ && \
+  	do_configure $FLAGS $@ && \
   	Run $MAKE_CMD dist
 	;;
   distcheck)			
-  	Run "${pathtotop}/bootstrap" $FLAGS $@ && \
+  	do_configure $FLAGS $@ && \
 	source ./heartbeat/lib/ha_config && \
 	Run $MAKE_CMD DESTDIR="$PWD/heartbeat-$VERSION/=inst" distcheck
 	;;
   pkg|package|rpm|deb|dpkg)	
-  	Run "${pathtotop}/bootstrap" $FLAGS $@ && \
+  	do_configure $FLAGS $@ && \
 	PackageItUp
 	;;
   *)	
