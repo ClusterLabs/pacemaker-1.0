@@ -1,4 +1,4 @@
-#	$Id: heartbeat.spec.in,v 1.101 2004/10/07 14:01:53 lars Exp $
+#	$Id: heartbeat.spec.in,v 1.102 2004/10/07 19:41:03 alan Exp $
 
 # Workaround for a change in RPM 4.1.x; needs proper fixing soon!
 ##%define _unpackaged_files_terminate_build 0
@@ -90,8 +90,8 @@ implementing any number of interfaces.
     - The external STONITH plug-in has undergone major surgery and
       probably doesn't work yet.
     - the new CRM is not perfectly stable with 3 nodes yet.
-  + PLEASE see http://www.osdl.org/developer_bugzilla/ and use it to
-    report quirks and issues you find!
+  + PLEASE see http://osdl.org/developer_bugzilla/enter_bug.cgi?product=Linux-HA
+    and use it to report quirks and issues you find!
   
 * Sat Sep 18 2004  Alan Robertson <alanr@unix.sh> (see doc/AUTHORS file)
 + Version 1.2.3 (stable)
