@@ -206,6 +206,13 @@ AC_DEFUN([LIB_SNMP],
 	if test x"have_net_snmp_config" = x"no"; then
 	    AC_MSG_ERROR([NET-SNMP: program "net-snmp-config" not found in default path.])
 	else
+	    dnl test net-snmp version
+	    NET_SNMP_VERSION=`net-snmp-config --version`
+	    AC_MSG_WARN([NET-SNMP: verion = $NET_SNMP_VERSION])
+	    if test x"$NET_SNMP_VERSION" \< x"5.1" ; then
+		AC_MSG_ERROR([NET-SNMP: you need NET-SNMP 5.1 or above. ])
+	    fi
+
 	    NET_SNMP_LIBS=`net-snmp-config --agent-libs`
 
  	    LIBS=$NET_SNMP_LIBS
