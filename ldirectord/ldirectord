@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-my($VERSION)=(qw$Id: ldirectord,v 1.71 2003/08/02 07:21:26 horms Exp $)[2];
+my($VERSION)=(qw$Id: ldirectord,v 1.72 2003/09/08 04:08:18 horms Exp $)[2];
 
 ######################################################################
 # ldirectord                 http://www.vergenet.net/linux/ldirectord/
@@ -1560,6 +1560,7 @@ sub check_http
 	my ($v, $r) = @_;
 	
 	my $ua = new LWP::UserAgent();
+	$ua->timeout($$v{negotiatetimeout});
 	my $req = new HTTP::Request(GET=>"$$r{url}");
 	my $res;
 	{
@@ -1570,7 +1571,8 @@ sub check_http
 		$res = $ua->request($req);
 	}
 	my $recstr = $$r{receive};
-	if ($res->is_success && (!($recstr =~ /.+/) || $res->content =~ /$recstr/)) {
+	if ($res->is_success && (!($recstr =~ /.+/) || 
+				$res->content =~ /$recstr/)) {
 		service_set($v, $r, "up");
 		&ld_debug(2, "check_http: $$r{url} is up\n");
 		return 1;
@@ -1812,7 +1814,8 @@ sub check_ftp
 	pipe(\*READ_FH, \*WRITE_FH);
 	select(\*WRITE_FH); $| = 1; select(STDERR);
 
-	unless ($ftp = Net::FTP->new("$$r{server}:$$r{port}", Timeout=>$$v{negotiatetimeout})) {
+	unless ($ftp = Net::FTP->new("$$r{server}:$$r{port}", 
+				Timeout=>$$v{negotiatetimeout})) {
 		service_set($v, $r, "down");
 		return 0;
 	}
