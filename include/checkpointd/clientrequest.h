@@ -1,4 +1,4 @@
-/* $Id: clientrequest.h,v 1.4 2004/03/12 02:55:05 deng.pan Exp $ */
+/* $Id: clientrequest.h,v 1.5 2004/04/07 17:22:16 alan Exp $ */
 /* checkpoint request.h */
 #ifndef _CKPT_CLIENT_REQUEST_H
 #define _CKPT_CLIENT_REQUEST_H
@@ -33,7 +33,7 @@ typedef enum {
 
 typedef struct {
 	SaUint8T	id[SA_MAX_ID_LENGTH];
-	SaUint32T	idLen;
+	SaSizeT		idLen;
 } SaCkptFixLenSectionIdT;
 
 /* saCkptInitialize() */
@@ -114,7 +114,7 @@ typedef struct {
 typedef struct {
 	SaCkptCheckpointHandleT checkpointHandle;
 	SaCkptFixLenSectionIdT	sectionID;
-	SaUint32T 		offset; 
+	SaSizeT	 		offset; 
 } SaCkptReqSecWrtParamT;
 
 
@@ -129,8 +129,8 @@ typedef struct {
 typedef struct {
 	SaCkptCheckpointHandleT checkpointHandle;
 	SaCkptFixLenSectionIdT	sectionID;
-	SaUint32T		offset; 
-	SaUint32T		dataSize; 
+	SaSizeT			offset; 
+	SaSizeT			dataSize; 
 } SaCkptReqSecReadParamT;
 
 /* saCkptSectionExpirationTimeSet */
@@ -166,8 +166,8 @@ typedef struct _SaCkptClientRequestT{
 
 	SaCkptReqT		req;
 
-	SaUint32T		reqParamLength;
-	SaUint32T		dataLength;
+	SaSizeT			reqParamLength;
+	SaSizeT		dataLength;
 	void*			reqParam;
 	void*			data;
 } SaCkptClientRequestT;
@@ -179,7 +179,7 @@ typedef struct _SaCkptClientResponseT {
 
 	SaErrorT	retVal;
 
-	SaUint32T	dataLength;
+	SaSizeT		dataLength;
 	void*		data;
 } SaCkptClientResponseT;
 

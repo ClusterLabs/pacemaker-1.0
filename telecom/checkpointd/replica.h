@@ -1,4 +1,4 @@
-/* $Id: replica.h,v 1.8 2004/04/06 07:24:59 deng.pan Exp $ */
+/* $Id: replica.h,v 1.9 2004/04/07 17:22:16 alan Exp $ */
 #ifndef _CKPT_REPLICA_H
 #define _CKPT_REPLICA_H
 
@@ -29,11 +29,15 @@ typedef struct _SaCkptReplicaT {
 	char	checkpointName[SA_MAX_NAME_LENGTH];
 
 	/* Section restrictions */
-	int	maxSectionNumber;
-	size_t	maxSectionSize;
-	int	maxSectionIDSize;
+	SaUint32T	maxSectionNumber;
+#if 0
+	size_t		maxSectionSize;
+#else
+	SaSizeT		maxSectionSize;
+#endif
+	SaUint32T	maxSectionIDSize;
 
-	int	maxCheckpointSize;
+	SaSizeT		maxCheckpointSize;
 	
 	/*
 	 * The total number of bytes of the checkpoint, not including 
@@ -43,7 +47,7 @@ typedef struct _SaCkptReplicaT {
 	int	checkpointSize;
 	
 	/* Number of sections in the checkpoint */
-	int	sectionNumber;
+	SaUint32T	sectionNumber;
 	
 	/* retention duration in seconds */
 	SaTimeT	retentionDuration; 
@@ -182,7 +186,7 @@ typedef struct _SaCkptSectionT{
 	/* 
 	 * the real data 
 	 */
-	size_t	dataLength[2];
+	SaSizeT	dataLength[2];
 	void*	data[2];
 
 	/* 
@@ -247,11 +251,11 @@ SaCkptReplicaT* SaCkptReplicaCreate(SaCkptReqOpenParamT*);
 int SaCkptReplicaRemove(SaCkptReplicaT**);
 int SaCkptReplicaFree(SaCkptReplicaT**);
 
-int SaCkptReplicaPack(void**, size_t*, SaCkptReplicaT*);
+int SaCkptReplicaPack(void**, SaSizeT*, SaCkptReplicaT*);
 SaCkptReplicaT* SaCkptReplicaUnpack(void*, int);
 
 int SaCkptReplicaUpdate(SaCkptReplicaT*, SaCkptReqT, 
-	int, void*, int, void*);
+	SaSizeT, void*, int, void*);
 int SaCkptReplicaUpdPrepare(SaCkptReplicaT*, SaCkptReqT, 
 	int, void*, int, void*);
 int SaCkptReplicaUpdCommit(SaCkptReplicaT*, SaCkptReqT, 
@@ -260,18 +264,18 @@ int SaCkptReplicaUpdRollback(SaCkptReplicaT*, SaCkptReqT,
 	int, void*, int, void*);
 
 int SaCkptReplicaRead(SaCkptReplicaT*,  
-	size_t*, void**, size_t, void*);
+	SaSizeT*, void**, SaSizeT, void*);
 
 int SaCkptSectionRead(SaCkptReplicaT*,	SaCkptSectionT*,
-	size_t, size_t*, void**);
+	SaSizeT, SaSizeT*, void**);
 
 int SaCkptSectionCreate(SaCkptReplicaT*, 
-	SaCkptReqSecCrtParamT*, size_t, void*, SaCkptSectionT**);
+	SaCkptReqSecCrtParamT*, SaSizeT, void*, SaCkptSectionT**);
 int SaCkptSectionDelete(SaCkptReplicaT*, SaCkptFixLenSectionIdT*);
 int SaCkptSectionWrite(SaCkptReplicaT*,	SaCkptSectionT*, 
-	size_t, size_t, void*);
+	SaSizeT, SaSizeT, void*);
 int SaCkptSectionOverwrite(SaCkptReplicaT*, SaCkptSectionT*, 
-	size_t, void*);
+	SaSizeT, void*);
 
 SaCkptSectionT* SaCkptSectionFind(SaCkptReplicaT*, SaCkptFixLenSectionIdT*);
 

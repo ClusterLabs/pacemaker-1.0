@@ -1,4 +1,4 @@
-/* $Id: response.c,v 1.8 2004/04/02 05:16:48 deng.pan Exp $ */
+/* $Id: response.c,v 1.9 2004/04/07 17:22:16 alan Exp $ */
 /* 
  * response.c
  *
@@ -82,7 +82,7 @@ SaCkptResponseSend(SaCkptResponseT** pCkptResp)
 		cl_log(LOG_INFO,
 			"\tclient %d, data length %lu, status %s",
 			ckptResp->resp->clientHandle, 
-			ckptResp->resp->dataLength, strErr);
+			(unsigned long) ckptResp->resp->dataLength, strErr);
 		SaCkptFree((void*)&strErr);
 		SaCkptFree((void*)&strReq);
 	}

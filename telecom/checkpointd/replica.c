@@ -1,4 +1,4 @@
-/* $Id: replica.c,v 1.12 2004/04/02 05:16:48 deng.pan Exp $ */
+/* $Id: replica.c,v 1.13 2004/04/07 17:22:16 alan Exp $ */
 /* 
  * replica.c: 
  *
@@ -363,7 +363,7 @@ SaCkptCheckpointClose(SaCkptOpenCheckpointT** pOpenCkpt)
 
 /* pack the replica so that it can be sent in a ckpt message */
 int 
-SaCkptReplicaPack(void** data, size_t* dataLength,
+SaCkptReplicaPack(void** data, SaSizeT* dataLength,
 	SaCkptReplicaT* replica)
 {
 	SaCkptSectionT* sec = NULL;
@@ -514,8 +514,8 @@ SaCkptReplicaUnpack(void* data, int dataLength)
 {
 	char* p = NULL;
 	char* q = NULL;
-	int i = 0;
-	int n = 0;
+	SaUint32T i = 0;
+	SaUint32T n = 0;
 	int m = 0;
 
 	GList* list = NULL;
@@ -606,7 +606,7 @@ SaCkptReplicaUnpack(void* data, int dataLength)
 	p += sizeof(replica->nextOperationNumber);
 
 	list = replica->sectionList;
-	for(i=0; i<replica->sectionNumber; i++) {
+	for(i=0; i < replica->sectionNumber; i++) {
 		sec = (SaCkptSectionT*)SaCkptMalloc(sizeof(SaCkptSectionT));
 		SACKPTASSERT (sec != NULL);
 		
@@ -693,8 +693,8 @@ SaCkptReplicaUnpack(void* data, int dataLength)
 
 int 
 SaCkptReplicaRead(SaCkptReplicaT* replica, 
-	size_t* dataLength, void** data,
-	size_t paramLength, void* param)
+	SaSizeT* dataLength, void** data,
+	SaSizeT paramLength, void* param)
 {
 	SaCkptSectionT* sec = NULL;
 	SaCkptReqSecReadParamT* secReadParam = NULL;
@@ -714,7 +714,7 @@ SaCkptReplicaRead(SaCkptReplicaT* replica,
 
 int 
 SaCkptReplicaUpdate(SaCkptReplicaT* replica, SaCkptReqT req, 
-	int dataLength, void* data,
+	SaSizeT dataLength, void* data,
 	int paramLength, void* param)
 {
 	SaCkptSectionT* sec = NULL;
@@ -1322,8 +1322,8 @@ SaCkptSectionFind(SaCkptReplicaT* replica, SaCkptFixLenSectionIdT* sectionID)
 int
 SaCkptSectionRead(SaCkptReplicaT* replica,
 	SaCkptSectionT* sec,
-	size_t offset, 
-	size_t* dataLength,
+	SaSizeT offset, 
+	SaSizeT* dataLength,
 	void** data)
 {
 	if (offset > sec->dataLength[sec->dataIndex]) {
@@ -1375,7 +1375,7 @@ SaCkptSectionRead(SaCkptReplicaT* replica,
 int 
 SaCkptSectionCreate(SaCkptReplicaT* replica, 
 	SaCkptReqSecCrtParamT* secCrtParam, 
-	size_t dataLength, void* data,
+	SaSizeT dataLength, void* data,
 	SaCkptSectionT** pSec)
 {
 	SaCkptSectionT* sec = NULL;
@@ -1483,7 +1483,7 @@ SaCkptSectionDelete(SaCkptReplicaT* replica,
 int
 SaCkptSectionWrite(SaCkptReplicaT* replica,
 	SaCkptSectionT* sec,
-	size_t offset, size_t dataLength, void* data)
+	SaSizeT offset, SaSizeT dataLength, void* data)
 {
 	int	index = 0;
 	
@@ -1526,7 +1526,7 @@ SaCkptSectionWrite(SaCkptReplicaT* replica,
 int
 SaCkptSectionOverwrite(SaCkptReplicaT* replica, 
 	SaCkptSectionT* sec,
-	size_t dataLength, void* data)
+	SaSizeT dataLength, void* data)
 {
 	int	index = 0;
 
@@ -1672,7 +1672,7 @@ SaCkptSectionId2String(SaCkptFixLenSectionIdT sectionId)
 {
 	char* strSectionId = NULL;
 	char	buf[3] = {0};	
-	 SaUint32T	i = 0;
+	SaSizeT	i = 0;
 
 	strSectionId = (char*)SaCkptMalloc(2*SA_MAX_ID_LENGTH + 3);
 	SACKPTASSERT(strSectionId != NULL);
