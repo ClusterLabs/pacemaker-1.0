@@ -1,4 +1,4 @@
-/* $Id: clientrequest.h,v 1.6 2004/09/20 07:45:05 deng.pan Exp $ */
+/* $Id: clientrequest.h,v 1.7 2004/09/21 06:13:50 deng.pan Exp $ */
 /* checkpoint request.h */
 #ifndef _CKPT_CLIENT_REQUEST_H
 #define _CKPT_CLIENT_REQUEST_H
@@ -8,7 +8,7 @@
 #define CKPTIPC CKPTVARLIBDIR "/ckpt.sock"
 #define DEBUGIPC CKPTVARLIBDIR "/debug.sock"
 
-#define SA_MAX_ID_LENGTH	32
+// #define SA_MAX_ID_LENGTH	32
 
 typedef enum {
 	REQ_SERVICE_INIT 	= 1,	/* service initialization*/
