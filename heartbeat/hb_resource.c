@@ -1,4 +1,4 @@
-/* $Id: hb_resource.c,v 1.73 2005/03/03 16:22:07 andrew Exp $ */
+/* $Id: hb_resource.c,v 1.74 2005/03/28 15:41:49 alan Exp $ */
 /*
  * hb_resource: Linux-HA heartbeat resource management code
  *
@@ -520,6 +520,10 @@ hb_rsc_recover_dead_resources(struct node_info* hip)
 	heartbeat_monitor(hmsg, KEEPIT, "<internal>");
 	ha_msg_del(hmsg);
 	hmsg = NULL;
+
+	if (!DoManageResources) {
+		return;
+	}
 
 	if (hip->nodetype == PINGNODE_I) {
 		takeover_from_node(hip->nodename);
@@ -2423,6 +2427,10 @@ StonithStatProcessName(ProcTrack* p)
 
 /*
  * $Log: hb_resource.c,v $
+ * Revision 1.74  2005/03/28 15:41:49  alan
+ * BUG 49: Some of the STONITH logic (and other things) shouldn't be
+ * executed if heartbeat isn't managing resources.
+ *
  * Revision 1.73  2005/03/03 16:22:07  andrew
  * Fix from gshi for bug #302
  *  - seems to work well
