@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $Id: LVM.in,v 1.3 2004/04/15 16:05:37 alan Exp $
+# $Id: LVM.in,v 1.4 2004/06/18 03:09:09 alan Exp $
 # 
 # LVM
 #
@@ -17,7 +17,7 @@
 #
 #
 # An example usage in /etc/ha.d/haresources: 
-#       node1  10.0.0.170 LinuxSCSI::0:0 ServeRAID::1::1 LVM::myvolname
+#       node1  10.0.0.170 ServeRAID::1::1 LVM::myvolname
 #
 # See usage() function below for more details...
 #
@@ -48,7 +48,7 @@ usage() {
 	The 'monitor' operation reports whether the volume seems present
 	The 'methods' operation reports on the methods $0 supports
 
-	$Id: LVM.in,v 1.3 2004/04/15 16:05:37 alan Exp $
+	$Id: LVM.in,v 1.4 2004/06/18 03:09:09 alan Exp $
 	!
   exit 1
 
