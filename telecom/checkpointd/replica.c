@@ -1,4 +1,4 @@
-/* $Id: replica.c,v 1.11 2004/03/17 02:10:10 deng.pan Exp $ */
+/* $Id: replica.c,v 1.12 2004/04/02 05:16:48 deng.pan Exp $ */
 /* 
  * replica.c: 
  *
@@ -140,7 +140,8 @@ SaCkptReplicaCreate(SaCkptReqOpenParamT* openParam)
 	replica->maxSectionIDSize = openParam->attr.maxSectionIdSize;
 	replica->maxSectionNumber = openParam->attr.maxSections;
 	replica->maxSectionSize = openParam->attr.maxSectionSize;
-	replica->checkpointSize= openParam->attr.checkpointSize;
+	replica->maxCheckpointSize= openParam->attr.checkpointSize;
+	replica->checkpointSize = 0;
 	replica->retentionDuration = openParam->attr.retentionDuration;
 	replica->flagRetentionTimeout = FALSE;
 
@@ -402,6 +403,10 @@ SaCkptReplicaPack(void** data, size_t* dataLength,
 		sizeof(replica->retentionDuration));
 	p += sizeof(replica->retentionDuration);
 
+	memcpy(p, &replica->maxCheckpointSize, 
+		sizeof(replica->maxCheckpointSize));
+	p += sizeof(replica->maxCheckpointSize);
+
 	memcpy(p, &replica->checkpointSize, 
 		sizeof(replica->checkpointSize));
 	p += sizeof(replica->checkpointSize);
@@ -546,6 +551,10 @@ SaCkptReplicaUnpack(void* data, int dataLength)
 	memcpy(&(replica->retentionDuration), p, 
 		sizeof(replica->retentionDuration));
 	p += sizeof(replica->retentionDuration);
+
+	memcpy(&(replica->maxCheckpointSize), p, 
+		sizeof(replica->maxCheckpointSize));
+	p += sizeof(replica->maxCheckpointSize);
 
 	memcpy(&(replica->checkpointSize), p, 
 		sizeof(replica->checkpointSize));
@@ -1084,6 +1093,7 @@ SaCkptReplicaUpdCommit(SaCkptReplicaT* replica, SaCkptReqT req,
 		sec->dataLength[index] = 0;
 		sec->dataIndex = (index + 1) % 2;
 		sec->dataUpdateState = OP_STATE_COMMITTED;
+		sec->lastUpdateTime = time_longclock();
 		
 		break;
 		
@@ -1115,6 +1125,7 @@ SaCkptReplicaUpdCommit(SaCkptReplicaT* replica, SaCkptReqT req,
 		sec->dataLength[index]= 0;
 		sec->dataIndex = (index + 1) % 2;
 		sec->dataUpdateState = OP_STATE_COMMITTED;
+		sec->lastUpdateTime = time_longclock();
 		
 		break;
 		
@@ -1385,7 +1396,8 @@ SaCkptSectionCreate(SaCkptReplicaT* replica,
 	sec = SaCkptSectionFind(replica, &(secCrtParam->sectionID));
 	if (sec != NULL) {
 		cl_log(LOG_ERR,
-			"Section create failed, section already existed");
+			"Section create failed, section %d already existed",
+			*(int*)sec->sectionID.id);
 		return SA_ERR_EXIST;
 	}
 

@@ -1,4 +1,4 @@
-/* $Id: checkpointd.c,v 1.12 2004/02/17 22:12:02 lars Exp $ */
+/* $Id: checkpointd.c,v 1.13 2004/04/02 05:16:48 deng.pan Exp $ */
 /* 
  * checkpointd.c: data checkpoint service
  *
@@ -120,6 +120,7 @@ SaCkptCheckpointdInit(void)
 	cl_log(LOG_INFO, "Node id: %s", strNode);
 	
 	CL_SIGNAL(SIGINT, SaCkptDmalloc);
+	CL_SIGNAL(SIGTERM, SaCkptDmalloc);
 
 	saCkptService->heartbeat = hb;
 	strcpy(saCkptService->nodeName, strNode);
@@ -129,6 +130,8 @@ SaCkptCheckpointdInit(void)
 		g_hash_table_new(g_str_hash, g_str_equal);
 	saCkptService->openCheckpointHash = 
 		g_hash_table_new(g_int_hash, g_int_equal);
+	saCkptService->unlinkedCheckpointHash = 
+		g_hash_table_new(g_str_hash, g_str_equal);
 	
 	saCkptService->nextClientHandle = 0;
 	saCkptService->nextCheckpointHandle = 0;
@@ -176,6 +179,8 @@ static void
 SaCkptClientChannelDestroy(gpointer user_data)
 {
 	cl_log(LOG_INFO, "Client disconnected");
+
+	// FIXME: delete client and remove all its requests and timers
 	return;
 }
 
@@ -354,9 +359,14 @@ main(int argc, char ** argv)
 	g_main_run(mainloop);
 	g_main_destroy(mainloop);
 
+	/*
+	 * FIXME: 
+	 * free all its elements before destory the hash table
+	 */
 	g_hash_table_destroy(saCkptService->replicaHash);
 	g_hash_table_destroy(saCkptService->clientHash);
 	g_hash_table_destroy(saCkptService->openCheckpointHash);
+	g_hash_table_destroy(saCkptService->unlinkedCheckpointHash);
 	SaCkptFree((void*)&saCkptService);
 
 #ifdef USE_DMALLOC

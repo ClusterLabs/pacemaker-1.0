@@ -1,4 +1,4 @@
-/* $Id: message.h,v 1.5 2004/03/12 02:59:38 deng.pan Exp $ */
+/* $Id: message.h,v 1.6 2004/04/02 05:16:48 deng.pan Exp $ */
 #ifndef _CKPT_MESSAGE_H
 #define _CKPT_MESSAGE_H
 
@@ -57,6 +57,9 @@ typedef enum {
 	/* open checkpoint without COLOCATED flag */
 	M_CKPT_OPEN_REMOTE,
 	M_CKPT_OPEN_REMOTE_REPLY,
+
+	/* checkpoint unlink */
+	M_CKPT_UNLINK_BCAST,
 
 	/* close remote checkpoint message */
 	M_CKPT_CLOSE_REMOTE,

@@ -1,4 +1,4 @@
-/* $Id: response.c,v 1.7 2004/03/12 02:59:38 deng.pan Exp $ */
+/* $Id: response.c,v 1.8 2004/04/02 05:16:48 deng.pan Exp $ */
 /* 
  * response.c
  *
@@ -122,12 +122,14 @@ SaCkptResponseSend(SaCkptResponseT** pCkptResp)
 #endif 
 
 	/* send response message */
-	while (chan->ops->send(chan, ipcMsg) == IPC_FAIL) {
-		cl_log(LOG_ERR, "Send response failed");
-		cl_log(LOG_ERR, "Sleep for a while and try again");
-		cl_shortsleep();
+	if (chan->ch_status == IPC_CONNECT) {
+		while (chan->ops->send(chan, ipcMsg) == IPC_FAIL) {
+			cl_log(LOG_ERR, "Send response failed");
+			cl_log(LOG_ERR, "Sleep for a while and try again");
+			cl_shortsleep();
+		}
+		chan->ops->waitout(chan);
 	}
-	chan->ops->waitout(chan);
 	
 	/* free ipc message */
 	if (ipcMsg != NULL) {

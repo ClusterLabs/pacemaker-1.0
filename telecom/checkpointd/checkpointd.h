@@ -1,4 +1,4 @@
-/* $Id: checkpointd.h,v 1.3 2004/03/12 02:59:38 deng.pan Exp $ */
+/* $Id: checkpointd.h,v 1.4 2004/04/02 05:16:48 deng.pan Exp $ */
 #ifndef _CHECKPOINTD_H
 #define _CHECKPOINTD_H
 
@@ -38,6 +38,11 @@ typedef struct _SaCkptServiceT {
 	 * the checkpoint handle is the hash table key
 	 */
 	GHashTable	*openCheckpointHash;
+
+	/* 
+	 * the unlinked checkpoint name
+	 */
+	GHashTable	*unlinkedCheckpointHash;
 	
 	int	nextClientHandle;
 	int	nextCheckpointHandle;

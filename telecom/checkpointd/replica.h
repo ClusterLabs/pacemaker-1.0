@@ -1,4 +1,4 @@
-/* $Id: replica.h,v 1.6 2004/03/12 02:59:38 deng.pan Exp $ */
+/* $Id: replica.h,v 1.7 2004/04/02 05:16:48 deng.pan Exp $ */
 #ifndef _CKPT_REPLICA_H
 #define _CKPT_REPLICA_H
 
@@ -32,6 +32,18 @@ typedef struct _SaCkptReplicaT {
 	int	maxSectionNumber;
 	size_t	maxSectionSize;
 	int	maxSectionIDSize;
+
+	int	maxCheckpointSize;
+	
+	/*
+	 * The total number of bytes of the checkpoint, not including 
+	 * the header information. Actually, it is the sum of all 
+	 * section size
+	 */
+	int	checkpointSize;
+	
+	/* Number of sections in the checkpoint */
+	int	sectionNumber;
 	
 	/* retention duration in seconds */
 	longclock_t 	retentionDuration; 
@@ -48,22 +60,13 @@ typedef struct _SaCkptReplicaT {
 	 */
 	int	referenceCount;	
 
-	/*
-	 * The total number of bytes of the checkpoint, not including 
-	 * the header information. Actually, it is the sum of all 
-	 * section size
-	 */
-	int	checkpointSize;
-	
-	/* Number of sections in the checkpoint */
-	int	sectionNumber;
 
 	/*
 	 * Synchronization flag when creating the checkpoint. The valid values
 	 * are SA_CKPT_WR_ALL_REPLICAS, SA_CKPT_WR_ACTIVE_REPLICAS and
 	 * SA_CKPT_WR_ACTIVE_REPLICAS_WEAK. Defined in AIS section 7.3.2.1
 	 */
-	gboolean	createFlag;
+	SaCkptCheckpointCreationFlagsT	createFlag;
 
 
 	/*

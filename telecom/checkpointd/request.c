@@ -1,4 +1,4 @@
-/* $Id: request.c,v 1.8 2004/03/17 02:10:10 deng.pan Exp $ */
+/* $Id: request.c,v 1.9 2004/04/02 05:16:48 deng.pan Exp $ */
 /* 
  * request.c: 
  *
@@ -91,22 +91,33 @@ SaCkptRequestStart(SaCkptRequestT* ckptReq)
 	SaCkptReplicaT		*replica = NULL;
 	SaCkptOpenCheckpointT	*openCkpt = NULL;
 
-	SaCkptReqInitParamT*	initParam = NULL;
-	SaCkptReqOpenParamT*	openParam = NULL;
-	SaCkptReqCloseParamT*	closeParam = NULL;
-	SaCkptReqSecExpSetParamT* secExpSetParam = NULL;
-	SaCkptReqRtnParamT* rtnParam = NULL;
-	SaCkptReqUlnkParamT* unlinkParam = NULL;
+	SaCkptReqInitParamT	*initParam = NULL;
+	SaCkptReqOpenParamT	*openParam = NULL;
+	SaCkptReqCloseParamT	*closeParam = NULL;
+	SaCkptReqSecExpSetParamT	*secExpSetParam = NULL;
+	SaCkptReqRtnParamT	*rtnParam = NULL;
+//	SaCkptReqUlnkParamT	*unlinkParam = NULL;
+	SaCkptReqSecQueryParamT	*secQueryParam = NULL;
 	
-	SaCkptSectionT*	section = NULL;
+	SaCkptSectionT		*section = NULL;
 	SaCkptCheckpointStatusT *checkpointStatus = NULL;
-	SaCkptCheckpointCreationAttributesT* attr = NULL;
+	SaCkptCheckpointCreationAttributesT	*attr = NULL;
 	
-	SaCkptHandleT		clientHandle;
-	SaCkptCheckpointHandleT	checkpointHandle;
-	void*			reqParam = NULL;
+	SaCkptHandleT		clientHandle = 0;
+	SaCkptCheckpointHandleT	checkpointHandle = 0;
+	void			*reqParam = NULL;
+	SaNameT			*unlinkName = NULL;
 
-	SaTimeT			timeout;
+	SaTimeT			timeout = 0;
+	
+	SaCkptSectionDescriptorT	*sectionDescriptor = NULL;
+	int			sectNumber = 0;
+	int			descNumber = 0;
+	
+	char			*p = NULL;
+	int			sectSelected = 0;
+	
+	GList			*list = NULL;
 
 	timeout = REQUEST_TIMEOUT * 1000LL * 1000LL * 1000LL;
 
@@ -179,8 +190,21 @@ SaCkptRequestStart(SaCkptRequestT* ckptReq)
 	case REQ_CKPT_OPEN:
 	case REQ_CKPT_OPEN_ASYNC:
 		ckptReq->operation = OP_CKPT_OPEN;
-		
+
 		openParam = reqParam;
+
+		unlinkName = g_hash_table_lookup(
+			saCkptService->unlinkedCheckpointHash,
+			(gconstpointer)(openParam->ckptName.value));
+		if (unlinkName != NULL) {
+			cl_log(LOG_ERR, 
+				"checkpoint has already been unlinked");
+			
+			ckptResp->resp->retVal = 
+				SA_ERR_FAILED_OPERATION;
+			SaCkptResponseSend(&ckptResp);
+			break;
+		}
 
 		replica = g_hash_table_lookup(saCkptService->replicaHash, 
 			(gconstpointer)(openParam->ckptName.value));
@@ -189,17 +213,44 @@ SaCkptRequestStart(SaCkptRequestT* ckptReq)
 		if (replica != NULL) { 
 			/* if unlinked, return error */
 			if (replica->flagUnlink == TRUE) {
+				cl_log(LOG_ERR, 
+				"checkpoint has already been unlinked");
+				
 				ckptResp->resp->retVal = 
 					SA_ERR_FAILED_OPERATION;
 				SaCkptResponseSend(&ckptResp);
 				break;
 			}
 
+			/* 
+			 * if the createattribute is not null and is 
+			 * different from the replica, return error
+			 */
+			attr = &(openParam->attr);
+			if ((attr->checkpointSize != 
+				replica->maxCheckpointSize) ||
+			    (attr->creationFlags != 
+				replica->createFlag) || 
+			    (attr->maxSectionIdSize !=
+				replica->maxSectionIDSize) || 
+			    (attr->maxSections != 
+				replica->maxSectionNumber) ||
+			    (attr->maxSectionSize !=
+				replica->maxSectionSize)) {
+				cl_log(LOG_ERR, 
+					"Attribute is different");
+				
+				ckptResp->resp->retVal = 
+					SA_ERR_FAILED_OPERATION;
+				SaCkptResponseSend(&ckptResp);
+				break;
+			}
+			
 			/* if the retention timer started, stop it */
 			if (replica->retentionTimeoutTag > 0) {
 				SaCkptReplicaStopTimer(replica);
 			}
-			
+
 			openCkpt = SaCkptCheckpointOpen(client, 
 				replica, openParam);
 			/* update the request */
@@ -265,6 +316,13 @@ SaCkptRequestStart(SaCkptRequestT* ckptReq)
 
 			ckptMsg = SaCkptMessageCreateReq(ckptReq, 
 				M_CKPT_CLOSE_REMOTE);
+			ckptMsg->data = SaCkptMalloc(
+				sizeof(openCkpt->checkpointRemoteHandle));
+			ckptMsg->dataLength = 
+				sizeof(openCkpt->checkpointRemoteHandle);
+			memcpy(ckptMsg->data, 
+				&(openCkpt->checkpointRemoteHandle),
+				sizeof(openCkpt->checkpointRemoteHandle));
 			SaCkptMessageSend(ckptMsg, openCkpt->activeNodeName);
 			SaCkptFree((void*)&ckptMsg);
 			
@@ -460,14 +518,14 @@ SaCkptRequestStart(SaCkptRequestT* ckptReq)
 
 		attr = &(checkpointStatus->checkpointCreationAttributes);
 		
-		attr->checkpointSize = replica->checkpointSize;
+		attr->checkpointSize = replica->maxCheckpointSize;
 		attr->creationFlags = replica->createFlag;
 		attr->maxSectionIdSize = replica->maxSectionIDSize;
 		attr->maxSections = replica->maxSectionNumber;
 		attr->maxSectionSize = replica->maxSectionSize;
 		attr->retentionDuration = replica->retentionDuration;
 		checkpointStatus->numberOfSections = replica->sectionNumber;
-		checkpointStatus->memoryUsed = 0; // FIXME
+		checkpointStatus->memoryUsed = replica->checkpointSize; 
 					
 		ckptResp->resp->retVal = SA_OK;
 		ckptResp->resp->data = checkpointStatus;
@@ -500,8 +558,135 @@ SaCkptRequestStart(SaCkptRequestT* ckptReq)
 		
 		break;	
 
+	case REQ_SEC_QUERY:
+		secQueryParam = reqParam;
+		checkpointHandle= secQueryParam->checkpointHandle;
+
+		openCkpt = g_hash_table_lookup(
+			saCkptService->openCheckpointHash,
+			(gpointer)&(checkpointHandle));
+		if ((openCkpt == NULL) || 
+			(openCkpt->replica == NULL)) {
+			ckptResp->resp->retVal = SA_ERR_LIBRARY;
+			SaCkptResponseSend(&ckptResp);
+			break;
+		}
+		replica = openCkpt->replica;
+
+		sectionDescriptor = (SaCkptSectionDescriptorT*)SaCkptMalloc(
+			sizeof(SaCkptSectionDescriptorT));
+		if (sectionDescriptor == NULL) {
+			ckptResp->resp->retVal = SA_ERR_NO_MEMORY;
+			SaCkptResponseSend(&ckptResp);
+		}
+
+		sectNumber = g_list_length(replica->sectionList);
+		ckptResp->resp->data = SaCkptMalloc(
+			sectNumber * sizeof(SaCkptSectionDescriptorT) +
+			sectNumber * SA_MAX_ID_LENGTH);
+		if (ckptResp->resp->data == NULL) {
+			ckptResp->resp->retVal = SA_ERR_NO_MEMORY;
+			SaCkptFree((void**)&sectionDescriptor);
+			SaCkptResponseSend(&ckptResp);
+		}
+		p = ckptResp->resp->data;
+		
+		descNumber = 0;
+		list = replica->sectionList;
+		while (list != NULL) {
+			sectSelected = 0;
+			
+			section = (SaCkptSectionT*)list->data;
+			switch (secQueryParam->chosenFlag) {
+			case SA_CKPT_SECTIONS_FOREVER:
+				if (section->expirationTime == SA_TIME_END) {
+					sectSelected = 1;
+				} 
+				break;
+				
+			case SA_CKPT_SECTIONS_LEQ_EXPIRATION_TIME:
+				if ((section->expirationTime <= 
+					secQueryParam->expireTime) &&
+					(section->expirationTime != 
+					SA_TIME_END)){
+					sectSelected = 1;
+				}
+				break;
+				
+			case SA_CKPT_SECTIONS_GEQ_EXPIRATION_TIME:
+				if ((section->expirationTime >= 
+					secQueryParam->expireTime) &&
+					(section->expirationTime != 
+					SA_TIME_END)){
+					sectSelected = 1;
+				}
+				break;
+				
+			case SA_CKPT_SECTIONS_CORRUPTED:
+				if (section->dataState == 
+					SA_CKPT_SECTION_CORRUPTED) {
+					sectSelected = 1;
+				}
+				break;
+				
+			case SA_CKPT_SECTIONS_ANY:
+				sectSelected = 1;
+				break;
+				
+			default:
+				cl_log(LOG_ERR, "Unknown section chosenFlag");
+				
+				SaCkptFree((void**)&sectionDescriptor);
+				ckptResp->resp->retVal = SA_ERR_LIBRARY;
+				SaCkptResponseSend(&ckptResp);
+				break;
+			}
+
+			if (sectSelected == 1) {
+				descNumber++;
+				
+				sectionDescriptor->sectionId.idLen= 
+					section->sectionID.idLen;
+				sectionDescriptor->sectionId.id = NULL;
+				sectionDescriptor->expirationTime = 
+					section->expirationTime;
+				sectionDescriptor->lastUpdate = 
+					section->lastUpdateTime;
+				sectionDescriptor->sectionSize = 
+					section->dataLength[section->dataIndex];
+				sectionDescriptor->sectionState = 
+					section->dataState;
+				
+				memcpy(p, sectionDescriptor, 
+					sizeof(SaCkptSectionDescriptorT));
+				p += sizeof(SaCkptSectionDescriptorT);
+
+				if (section->sectionID.id != NULL) {
+					memcpy(p, section->sectionID.id,
+						SA_MAX_ID_LENGTH);
+				}
+				p += SA_MAX_ID_LENGTH;
+				
+			}
+			
+			list = list->next;
+		}
+
+		SaCkptFree((void**)&sectionDescriptor);
+
+		ckptResp->resp->dataLength = 
+			descNumber * sizeof(SaCkptSectionDescriptorT) +
+			descNumber * SA_MAX_ID_LENGTH;
+		ckptResp->resp->retVal = SA_OK;
+		SaCkptResponseSend(&ckptResp);
+		
+		break;
+
 	case REQ_CKPT_ULNK:
-		unlinkParam = reqParam;
+		ckptReq->operation = OP_CKPT_ULNK;
+		ckptMsg = SaCkptMessageCreateReq(ckptReq, M_CKPT_UNLINK_BCAST);
+		SaCkptMessageBroadcast(ckptMsg);
+		SaCkptFree((void**)&ckptMsg);
 		
 		ckptResp->resp->retVal = SA_OK;
 		SaCkptResponseSend(&ckptResp);
@@ -555,6 +740,7 @@ SaCkptRequestTimeout(gpointer timeout_data)
 	
 	switch (ckptReq->clientRequest->req) {
 	case REQ_CKPT_OPEN:
+	case REQ_CKPT_OPEN_ASYNC:
 		openParam = ckptReq->clientRequest->reqParam;
 
 		if (openParam->openFlag & 
@@ -674,9 +860,9 @@ SaCkptRequestReceive(IPC_Channel* clientChannel)
 
 	/* free ipc message */
 	if (ipcMsg->msg_body != NULL) {
-		SaCkptFree((void**)&(ipcMsg->msg_body));
+		free(ipcMsg->msg_body);
 	}
-	SaCkptFree((void*)&ipcMsg);
+	free(ipcMsg);
 
 	if (saCkptService->flagVerbose) {
 		strReq = SaCkptReq2String(clientRequest->req);

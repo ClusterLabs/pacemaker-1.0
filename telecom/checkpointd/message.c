@@ -1,4 +1,4 @@
-/* $Id: message.c,v 1.10 2004/03/12 02:59:38 deng.pan Exp $ */
+/* $Id: message.c,v 1.11 2004/04/02 05:16:48 deng.pan Exp $ */
 /* 
  * message.c
  *
@@ -119,6 +119,9 @@ SaCkptClusterMsgProcess()
 
 	SaCkptReqOpenParamT* openParam = NULL;
 	SaCkptReqCloseParamT* closeParam = NULL;
+	SaCkptCheckpointCreationAttributesT*	attr = NULL;
+	SaCkptReqUlnkParamT* unlinkParam = NULL;
+	SaNameT*	unlinkName = NULL;
 
 	SaCkptStateT*	state = NULL;
 
@@ -152,6 +155,40 @@ SaCkptClusterMsgProcess()
 
 		switch (ckptMsg->msgSubtype) {
 
+		/*
+		 * unlink the checkpoint
+		 * add its name to the unlinkCheckpointHash
+		 */
+		case M_CKPT_UNLINK_BCAST:
+			unlinkParam = ckptMsg->param;
+
+			unlinkName = g_hash_table_lookup(
+				saCkptService->unlinkedCheckpointHash,
+				unlinkParam->ckptName.value);
+			if (unlinkName != NULL) {
+				cl_log(LOG_INFO, 
+				"Name %s has already been in unlink hashtable",
+				unlinkParam->ckptName.value);
+				break;
+			}
+
+			unlinkName = SaCkptMalloc(sizeof(SaNameT));
+			if (unlinkName == NULL) {
+				cl_log(LOG_ERR, "No memory in daemon");
+				break;
+			} 
+			
+			unlinkName->length = 
+				unlinkParam->ckptName.length;
+			g_hash_table_insert(
+				saCkptService->unlinkedCheckpointHash,
+				(gpointer)(unlinkParam->ckptName.value), 
+				(gpointer)unlinkName);
+			cl_log(LOG_INFO, 
+				"Name %s is added into unlink hash table",
+				unlinkParam->ckptName.value);
+			break;
+
 		/* 
 		 * the first checkpoint message 
 		 * before create local checkpoint, it has to broadcast this
@@ -177,8 +214,40 @@ SaCkptClusterMsgProcess()
 				break;	
 			}
 
+			openParam = (SaCkptReqOpenParamT*)ckptMsg->param;
+
+			/* 
+			 * if the createattribute is not null and is 
+			 * different from the replica, return error
+			 */
+			attr = &(openParam->attr);
+			if ((attr->checkpointSize != 
+				replica->maxCheckpointSize) ||
+			    (attr->maxSectionIdSize !=
+				replica->maxSectionIDSize) || 
+			    (attr->maxSections != 
+				replica->maxSectionNumber) ||
+			    (attr->maxSectionSize !=
+				replica->maxSectionSize) ||
+			    (attr->creationFlags !=
+			    	replica->createFlag)) {
+				cl_log(LOG_ERR, 
+					"create attribute is different");
+				
+				ckptMsg->msgSubtype = 
+					M_CKPT_OPEN_BCAST_REPLY;
+				ckptMsg->retVal = 
+					SA_ERR_FAILED_OPERATION;
+				SaCkptMessageSend(ckptMsg, 
+					ckptMsg->clientHostName);
+				break;
+			}
+			
 			/* if replica is unlinked, open should fail */
 			if (replica->flagUnlink == TRUE) {
+				cl_log(LOG_ERR, 
+					"checkpoint %s has been unlinked",
+					replica->checkpointName);
 				ckptMsg->retVal = SA_ERR_FAILED_OPERATION;
 			} else {
 				strcpy(ckptMsg->activeNodeName,
@@ -246,6 +315,33 @@ SaCkptClusterMsgProcess()
 
 			openParam = (SaCkptReqOpenParamT*)ckptMsg->param;
 
+			/* 
+			 * if the createattribute is not null and is 
+			 * different from the replica, return error
+			 */
+			attr = &(openParam->attr);
+			if ((attr->checkpointSize != 
+				replica->maxCheckpointSize) ||
+			    (attr->maxSectionIdSize !=
+				replica->maxSectionIDSize) || 
+			    (attr->maxSections != 
+				replica->maxSectionNumber) ||
+			    (attr->maxSectionSize !=
+				replica->maxSectionSize) ||
+			    (attr->creationFlags !=
+			    	replica->createFlag)) {
+				cl_log(LOG_ERR, 
+					"create attribute is different");
+				
+				ckptMsg->msgSubtype = 
+					M_CKPT_OPEN_REMOTE_REPLY;
+				ckptMsg->retVal = 
+					SA_ERR_FAILED_OPERATION;
+				SaCkptMessageSend(ckptMsg, 
+					ckptMsg->clientHostName);
+				break;
+			}
+			
 			openCkpt = SaCkptCheckpointOpen(NULL, replica, 
 				openParam);
 			SACKPTASSERT(openCkpt != NULL);
@@ -279,6 +375,13 @@ SaCkptClusterMsgProcess()
 
 			SACKPTMESSAGEVALIDATEREQ(ckptMsg);
 			SaCkptRequestStopTimer(ckptReq);
+
+			if (ckptMsg->retVal != SA_OK) {
+				ckptResp = SaCkptResponseCreate(ckptReq);
+				ckptResp->resp->retVal = ckptMsg->retVal;
+				SaCkptResponseSend(&ckptResp);
+				break;
+			}
 	
 			openParam = ckptReq->clientRequest->reqParam;
 			openCkpt = SaCkptCheckpointOpen(client, NULL,
@@ -1351,12 +1454,13 @@ SaCkptClusterMsgProcess()
 		case M_CKPT_UPD_REPLY:
 		case M_CKPT_READ_REPLY:
 		case M_CKPT_SYNC_REPLY:
+#if 0			
 			if (replica == NULL) {
 				cl_log(LOG_INFO, 
 					"No replica, ignore message");
 				break;
 			}
-			
+#endif
 			SACKPTMESSAGEVALIDATEREQ(ckptMsg);
 			SaCkptRequestStopTimer(ckptReq);
 			
@@ -1378,7 +1482,7 @@ SaCkptClusterMsgProcess()
 			SaCkptResponseSend(&ckptResp);
 
 			break;
-			
+
 		default:
 			
 			break;
@@ -2100,6 +2204,9 @@ SaCkptMsgSubtype2String(SaCkptMsgSubtypeT msgSubtype)
 		break;
 	case M_CKPT_READ_REPLY:
 		strcpy(strTemp, "M_CKPT_READ_REPLY");
+		break;
+	case M_CKPT_UNLINK_BCAST:
+		strcpy(strTemp, "M_CKPT_UNLINK_BCAST");
 		break;
 	default:
 		strcpy(strTemp, "NULL");
