@@ -31,7 +31,7 @@
 
 #include "hbagent.h"
 
-static GArray * gMembershipInfo = NULL;
+static GPtrArray * gMembershipInfo = NULL;
 
 int LHAMembershipTable_load(netsnmp_cache *cache, void *vmagic);
 void LHAMembershipTable_free(netsnmp_cache *cache, void *vmagic);
@@ -168,7 +168,7 @@ LHAMembershipTable_get_next_data_point(void **my_loop_context, void **my_data_co
 	return NULL;
 
     vptr = put_index_data;
-    info = & g_array_index(gMembershipInfo, SaClmClusterNotificationT, i);
+    info = (SaClmClusterNotificationT *) g_ptr_array_index(gMembershipInfo, i);
 
     snmp_set_var_value(vptr, (u_char *) &i, sizeof(i));
     vptr = vptr->next_variable;

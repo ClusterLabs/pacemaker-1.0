@@ -59,7 +59,7 @@ int rsinfo_get_int_value(lha_attribute_t attr, size_t index, int32_t * value);
 
 int hbconfig_get_str_value(const char * attr, char * * value);
 
-GArray * get_hb_info(lha_group_t group);
+GPtrArray * get_hb_info(lha_group_t group);
 
 struct hb_nodeinfo {
 	char * name;

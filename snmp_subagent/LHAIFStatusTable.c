@@ -31,7 +31,7 @@
 
 #include "hbagent.h"
 
-static GArray * gIFInfo = NULL;
+static GPtrArray * gIFInfo = NULL;
 
 int LHAIFStatusTable_load(netsnmp_cache *cache, void *vmagic); 
 void LHAIFStatusTable_free(netsnmp_cache *cache, void *vmagic); 
@@ -181,7 +181,7 @@ LHAIFStatusTable_get_next_data_point(void **my_loop_context, void **my_data_cont
 	return NULL;
 
     vptr = put_index_data;
-    info = & g_array_index(gIFInfo, struct hb_ifinfo, i);
+    info = (struct hb_ifinfo *) g_ptr_array_index(gIFInfo, i);
 
     snmp_set_var_value(vptr, (u_char *) info->node, strlen(info->node) + 1);
     vptr = vptr->next_variable;

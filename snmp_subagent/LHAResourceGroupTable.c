@@ -31,7 +31,7 @@
 
 #include "hbagent.h"
 
-static GArray * gResourceGroupInfo = NULL;
+static GPtrArray * gResourceGroupInfo = NULL;
 
 int LHAResourceGroupTable_load(netsnmp_cache *cache, void *vmagic); 
 void LHAResourceGroupTable_free(netsnmp_cache *cache, void *vmagic); 
@@ -180,7 +180,7 @@ LHAResourceGroupTable_get_next_data_point(void **my_loop_context, void **my_data
 	return NULL;
 
     vptr = put_index_data;
-    info = & g_array_index(gResourceGroupInfo, struct hb_rsinfo, i);
+    info = (struct hb_rsinfo *) g_ptr_array_index(gResourceGroupInfo, i);
 
     rsinfo_get_int_value(RESOURCE_STATUS, i, &status);
     info->status = status;

@@ -63,10 +63,10 @@ static const char * myid = NULL; /* my node id */
 static SaClmHandleT clm = 0;
 static unsigned long clmInitialized = 0;
 
-static GArray * gNodeTable = NULL;
-static GArray * gIFTable = NULL;
-static GArray * gMembershipTable = NULL;
-static GArray * gResourceTable = NULL;
+static GPtrArray * gNodeTable = NULL;
+static GPtrArray * gIFTable = NULL;
+static GPtrArray * gMembershipTable = NULL;
+static GPtrArray * gResourceTable = NULL;
 
 static int keep_running;
 
@@ -84,8 +84,8 @@ int init_storage(void);
 
 void free_storage(void);
 
-int walk_node_table(void);
-int walk_if_table(void);
+int walk_nodetable(void);
+int walk_iftable(void);
 
 int nodestatus_trap(const char * node, const char * status);
 int ifstatus_trap(const char * node, const char * lnk, const char * status);
@@ -158,7 +158,7 @@ clusterinfo_get_int_value(lha_attribute_t attr, size_t index, int32_t * value)
 	    count = 0;
 
 	    for (i = 0; i < gNodeTable->len; i++) {
-		status = g_array_index(gNodeTable, struct hb_nodeinfo, i).status;
+		status = ((struct hb_nodeinfo *) g_ptr_array_index(gNodeTable, i))->status;
 		if (strcmp(status, DEADSTATUS) != 0) {
 		    count++;
 		}
@@ -196,7 +196,7 @@ hbconfig_get_str_value(const char * attr, char * * value)
     return HA_OK;
 }
 
-GArray *
+GPtrArray *
 get_hb_info(lha_group_t group)
 {
     switch (group) {
@@ -224,7 +224,7 @@ NodeStatus(const char * node, const char * status, void * private)
 {
         cl_log(LOG_NOTICE, "Status update: Node %s now has status %s\n"
         ,       node, status);
-	walk_node_table();
+	walk_nodetable();
 
 	nodestatus_trap(node, status);
 }
@@ -235,7 +235,7 @@ LinkStatus(const char * node, const char * lnk, const char * status
 {
         cl_log(LOG_NOTICE, "Link Status update: Link %s/%s now has status %s\n"
         ,       node, lnk, status);
-	walk_if_table();
+	walk_iftable();
 
 	ifstatus_trap(node, lnk, status);
 }
@@ -243,11 +243,10 @@ LinkStatus(const char * node, const char * lnk, const char * status
 int
 init_storage(void)
 {
-	gNodeTable = g_array_new(TRUE, TRUE, sizeof (struct hb_nodeinfo));
-	gIFTable = g_array_new(TRUE, TRUE, sizeof (struct hb_ifinfo));
-	gResourceTable = g_array_new(TRUE, TRUE, sizeof (struct hb_rsinfo));
-	gMembershipTable = g_array_new(TRUE, TRUE, 
-			sizeof (SaClmClusterNotificationT));
+	gNodeTable = g_ptr_array_new();
+	gIFTable = g_ptr_array_new();
+	gResourceTable = g_ptr_array_new();
+	gMembershipTable = g_ptr_array_new();
 
 	if (!gNodeTable || !gIFTable || !gResourceTable || !gMembershipTable){
 	    	cl_log(LOG_ERR, "Storage allocation failure.  Out of Memory.");
@@ -267,13 +266,12 @@ free_nodetable(void)
 
 	while (gNodeTable->len) {
 
-	    	node = &g_array_index(gNodeTable, struct hb_nodeinfo, 0);
+		node = (struct hb_nodeinfo *) g_ptr_array_remove_index_fast(gNodeTable, 0);
 
 		free(node->name);
 		free(node->type);
 		free(node->status);
-
-		gNodeTable = g_array_remove_index_fast(gNodeTable, 0);
+		ha_free(node);
 	}
 
 	return;
@@ -288,13 +286,12 @@ free_iftable(void)
 		return;
 
 	while (gIFTable->len) {
-		interface = &g_array_index(gIFTable, struct hb_ifinfo, 0);
+		interface = (struct hb_ifinfo *) g_ptr_array_remove_index_fast(gIFTable, 0);
 
 		free(interface->name);
 		free(interface->node);
 		free(interface->status);
-
-		gIFTable = g_array_remove_index_fast(gIFTable, 0);
+		ha_free(interface);
 	}
 
 	return;
@@ -310,13 +307,12 @@ free_resourcetable(void)
 
 	while (gResourceTable->len) {
 
-		resource = & g_array_index(gResourceTable, 
-			struct hb_rsinfo, 0);
+		resource = (struct hb_rsinfo *) g_ptr_array_remove_index_fast(gResourceTable, 0);
 
 		free(resource->master);
 		free(resource->resource);
+		ha_free(resource);
 
-		gResourceTable = g_array_remove_index_fast(gResourceTable, 0);
 	}
 
 	return;
@@ -333,8 +329,7 @@ free_membershiptable(void)
 	   any memory. */
 
 	while (gMembershipTable->len) {
-		gMembershipTable = 
-	    		g_array_remove_index_fast(gMembershipTable, 0);
+	    	g_ptr_array_remove_index_fast(gMembershipTable, 0);
 	}
 
 	return;
@@ -344,19 +339,19 @@ void
 free_storage(void)
 {
     	free_nodetable();
-	g_array_free(gNodeTable, 1);
+	g_ptr_array_free(gNodeTable, 0);
 	gNodeTable = NULL;
 
 	free_iftable();
-	g_array_free(gIFTable, 1);
+	g_ptr_array_free(gIFTable, 0);
 	gIFTable = NULL;
 
 	free_resourcetable();
-	g_array_free(gResourceTable, 1);
+	g_ptr_array_free(gResourceTable, 0);
 	gResourceTable = NULL;
 
 	free_membershiptable();
-	g_array_free(gMembershipTable, 1);
+	g_ptr_array_free(gMembershipTable, 0);
 	gResourceTable = NULL;
 
 }
@@ -400,7 +395,7 @@ init_heartbeat(void)
 
 #if 1
 	/* walk the node table */
-	if ( HA_OK != walk_node_table() || HA_OK != walk_if_table() ) {
+	if ( HA_OK != walk_nodetable() || HA_OK != walk_iftable() ) {
 		return HA_FAIL;
 	}
 #endif
@@ -428,10 +423,10 @@ get_heartbeat_fd(void)
 }
 
 int
-walk_node_table(void)
+walk_nodetable(void)
 {
 	const char *name, *type, *status;
-	struct hb_nodeinfo node;
+	struct hb_nodeinfo * node;
 
 	if (gNodeTable) {
 		free_nodetable();
@@ -453,10 +448,17 @@ walk_node_table(void)
 		cl_log(LOG_DEBUG, "Cluster node: %s: type: %s\n", name 
 		,	type);
 
-		node.name =  g_strdup(name);
-		node.type =  g_strdup(type);
-		node.status = g_strdup(status);
-		g_array_append_val(gNodeTable, node); 
+		node = (struct hb_nodeinfo *) ha_malloc(sizeof(struct hb_nodeinfo));
+		if (!node) {
+			cl_log(LOG_CRIT, "malloc failed for node info.");
+			return HA_FAIL;
+		}
+
+		node->name =  g_strdup(name);
+		node->type =  g_strdup(type);
+		node->status = g_strdup(status);
+
+		g_ptr_array_add(gNodeTable, (gpointer *) node); 
 	}
 	if (hb->llc_ops->end_nodewalk(hb) != HA_OK) {
 		cl_log(LOG_ERR, "Cannot end node walk\n");
@@ -467,11 +469,11 @@ walk_node_table(void)
 }
 
 int
-walk_if_table(void)
+walk_iftable(void)
 {
 	const char *name, * status;
 	struct hb_nodeinfo * node;
-	struct hb_ifinfo interface;
+	struct hb_ifinfo * interface;
 	int i, ifcount;
 
 	if (gIFTable) {
@@ -479,7 +481,7 @@ walk_if_table(void)
 	}
 
 	for (i = 0; i < gNodeTable->len; i++) {
-		node = &g_array_index(gNodeTable, struct hb_nodeinfo, i);
+		node = (struct hb_nodeinfo *) g_ptr_array_index(gNodeTable, i);
 		ifcount = 0;
 
 		if (hb->llc_ops->init_ifwalk(hb, node->name) != HA_OK) {
@@ -494,12 +496,19 @@ walk_if_table(void)
 			cl_log(LOG_DEBUG, "node interface: %s: status: %s\n",
 					name,	status);
 
-			interface.name = g_strdup(name);
-			interface.node = g_strdup(node->name);
-			interface.status = g_strdup(status);
-			interface.nodeid= i;
-			interface.id = ifcount++;
-			g_array_append_val(gIFTable, interface);
+			interface = (struct hb_ifinfo *) ha_malloc(sizeof(struct hb_ifinfo));
+			if (!interface) {
+				cl_log(LOG_CRIT, "malloc failed for if info.");
+				return HA_FAIL;
+			}
+
+			interface->name = g_strdup(name);
+			interface->node = g_strdup(node->name);
+			interface->status = g_strdup(status);
+			interface->nodeid= i;
+			interface->id = ifcount++;
+
+			g_ptr_array_add(gIFTable, (gpointer *) interface);
 		}
 
 		if (hb->llc_ops->end_ifwalk(hb) != HA_OK) {
@@ -555,7 +564,8 @@ clm_track_cb(SaClmClusterNotificationT *nbuf, SaUint32T nitem,
         for (i = 0; i < nitem; i++) {
 
 	    	cl_log(LOG_INFO, "adding %s in membership table", nbuf[i].clusterNode.nodeName.value);
-                g_array_insert_val(gMembershipTable, i, nbuf[i]);
+
+                g_ptr_array_add(gMembershipTable, (gpointer *) &nbuf[i]);
         }
 
 	if (clmInitialized) {
@@ -663,7 +673,7 @@ init_resource_table(void)
 	FILE * rcsf;
 	char buf[MAXLINE];
 	char host[MAXLINE], pad[MAXLINE];
-	struct hb_rsinfo resource;
+	struct hb_rsinfo * resource;
 	char * node;
 
 	if (gResourceTable) {
@@ -695,14 +705,19 @@ init_resource_table(void)
 		    	cl_log(LOG_WARNING, "%s syntax error?", RESOURCE_CFG);
 		};
 
-		resource.master = g_strdup(host);
-		resource.resource = g_strdup(pad);
+		resource = (struct hb_rsinfo *) ha_malloc(sizeof(struct hb_rsinfo));
+		if (!resource) {
+			cl_log(LOG_CRIT, "malloc resource info failed.");
+			return HA_FAIL;
+		}
+
+		resource->master = g_strdup(host);
+		resource->resource = g_strdup(pad);
 
 		/* make sure that the master node is in the node list */
 		found = 0;
 		for (i = 0; i < gNodeTable->len; i++) {
-		    	node = g_array_index(gNodeTable, 
-				struct hb_nodeinfo, i).name;
+		    	node = ((struct hb_nodeinfo *) g_ptr_array_index(gNodeTable, i))->name;
 			if (strcmp(node, host) == 0) {
 			    	found = 1;
 			    	break;
@@ -713,17 +728,16 @@ init_resource_table(void)
 
 		mcount = 0;
 		for (i = 0; i < gResourceTable->len; i++) {
-		    	node = g_array_index(gResourceTable, 
-				struct hb_rsinfo, i).master;
+		    	node = ((struct hb_rsinfo *) g_ptr_array_index(gResourceTable, i))->master;
 
 			if (strcmp(node, host) == 0) {
 			    mcount++;
 			}
 		}
 
-		resource.index = mcount + 1;
+		resource->index = mcount + 1;
 
-		g_array_append_val(gResourceTable, resource);
+		g_ptr_array_add(gResourceTable, (gpointer *) resource);
 	}
 
 	return HA_OK;
@@ -743,7 +757,7 @@ rsinfo_get_int_value(lha_attribute_t attr, size_t index, int32_t * value)
 
     switch (attr) {
 	case RESOURCE_STATUS:
-	    resource = g_array_index(gResourceTable, struct hb_rsinfo, index).resource;
+	    resource = ((struct hb_rsinfo *) g_ptr_array_index(gResourceTable, index))->resource;
 	    sprintf(getcmd, HALIB "/ResourceManager status %s", resource);
 	    rc = system(getcmd);
 	    cl_log(LOG_INFO, "resource [%s] status: [%d]", resource, WEXITSTATUS(rc));

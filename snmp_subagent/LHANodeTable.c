@@ -31,7 +31,7 @@
 
 #include "hbagent.h"
 
-static GArray * gNodeInfo = NULL;
+static GPtrArray * gNodeInfo = NULL;
 
 int LHANodeTable_load(netsnmp_cache *cache, void *vmagic);
 void LHANodeTable_free(netsnmp_cache *cache, void *vmagic);
@@ -169,7 +169,7 @@ LHANodeTable_get_next_data_point(void **my_loop_context, void **my_data_context,
     snmp_set_var_value(vptr, (u_char *) &i, sizeof(size_t));
     vptr = vptr->next_variable;
 
-    *my_data_context = (void *) & g_array_index(gNodeInfo, struct hb_nodeinfo, i);
+    *my_data_context = (void *) g_ptr_array_index(gNodeInfo, i);
     *my_loop_context = (void *) ++i;
 
     return put_index_data;
