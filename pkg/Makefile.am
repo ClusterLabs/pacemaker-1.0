@@ -35,7 +35,7 @@ INFOFILES	= InfoFiles
 TMPINSTDIR	= tmpinst
 
 # Main target
-all:	$(PKGDIR)/$(PKGNAME)/pkgmap
+pkg:	$(PKGDIR)/$(PKGNAME)/pkgmap
 
 # Build the "pkg" from the pseudo-install
 $(PKGDIR)/$(PKGNAME)/pkgmap:	$(INFOFILES)/prototype $(INFOFILES)/pkginfo
