@@ -19,6 +19,8 @@
 #
 MAINTAINERCLEANFILES    = Makefile.in
 
+INCLUDES = -I$(top_srcdir)/linux-ha -I$(top_builddir)/linux-ha
+
 m4files			= \
 			snmp_subagent.m4
 
