@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.365 2005/02/21 02:24:09 alan Exp $ */
+/* $Id: heartbeat.c,v 1.366 2005/02/21 05:30:25 alan Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -1593,6 +1593,7 @@ comm_now_up()
 	if (!startup_complete) {
 		startup_complete = TRUE;
 		if (shutdown_in_progress) {
+			shutdown_in_progress = FALSE;
 			hb_initiate_shutdown(FALSE);
 		}
 	}
@@ -2548,15 +2549,15 @@ ManagedChildDied(ProcTrack* p, int status, int signo, int exitcode
 
 
 	/* Log anything out of the ordinary... */
-	if (!shutdown_in_progress && !waslogged) {
+	if ((!shutdown_in_progress && !waslogged) || (ANYDEBUG)) {
 		if (0 != exitcode) {
-			cl_log(LOG_ERR
+			cl_log(shutdown_in_progress ? LOG_DEBUG : LOG_ERR
 			,	"Client %s exited with return code %d."
 			,	managedchild->command
 			,	exitcode);
 		}
 		if (0 != signo) {
-			cl_log(LOG_ERR
+			cl_log(shutdown_in_progress ? LOG_DEBUG : LOG_ERR
 			,	"Client %s killed by signal %d."
 			,	managedchild->command
 			,	signo);
@@ -2604,6 +2605,7 @@ ManagedChildDied(ProcTrack* p, int status, int signo, int exitcode
 			}
 			return; 
 		}
+		config->last_client = config->last_client->prev;
 		if (!shutdown_last_client_child(SIGTERM)) {
 			if (config->last_client) {
 				cl_log(LOG_ERR
@@ -2616,7 +2618,8 @@ ManagedChildDied(ProcTrack* p, int status, int signo, int exitcode
 				,	managedchild->command);
 			}
                        /* Trigger next shutdown phase */
-			hb_mcp_final_shutdown(NULL); /* phase 1 (last child died) */
+			hb_mcp_final_shutdown(NULL); /* phase 1 -	*/
+						     /* last child died	*/
 		}
 	}
 }
@@ -2781,8 +2784,6 @@ shutdown_last_client_child(int nsig)
 
 	if (NULL == (last = config->last_client)) {
 		return FALSE;
-	}else{
-		config->last_client = config->last_client->prev;
 	}
 	lastclient = last->data;
 	if (lastclient) {
@@ -5065,6 +5066,10 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.366  2005/02/21 05:30:25  alan
+ * Made heartbeat pass BasicSanityCheck again...
+ * Now on to better tests :-)
+ *
  * Revision 1.365  2005/02/21 02:24:09  alan
  * More diddles in new client shutdown code...
  *
