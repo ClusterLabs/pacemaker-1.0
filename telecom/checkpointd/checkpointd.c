@@ -113,8 +113,7 @@ SaCkptCheckpointdInit(void)
 	CL_SIGNAL(SIGINT, SaCkptDmalloc);
 
 	saCkptService->heartbeat = hb;
-	memset(saCkptService->nodeName, 0, SA_MAX_NAME_LENGTH - 1);
-	strncpy(saCkptService->nodeName, strNode, SA_MAX_NAME_LENGTH - 1);
+	strcpy(saCkptService->nodeName, strNode);
 	saCkptService->clientHash = 
 		g_hash_table_new(g_int_hash, g_int_equal);
 	saCkptService->replicaHash = 
@@ -328,7 +327,7 @@ main(int argc, char ** argv)
 	 * listen to this source at a relatively lower priority.
 	 */
 	memset (pathname, 0, sizeof(pathname));
-	strncpy (pathname, CKPTIPC, sizeof(pathname) - 1) ;
+	strcpy (pathname, CKPTIPC) ;
 	waitConnection = SaCkptWaitChannelInit(pathname);
 	G_main_add_IPC_WaitConnection(G_PRIORITY_LOW, 
 		waitConnection, 

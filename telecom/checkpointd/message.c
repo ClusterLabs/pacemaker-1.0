@@ -1546,8 +1546,6 @@ SaHamsg2CkptMessage(struct ha_msg* haMsg)
 	const char	*strStatus		= NULL;
 	
 	SaCkptMessageT	*ckptMsg = NULL;
-
-	memset(ckptMsg, 0, sizeof(SaCkptMessageT));
 	
 	ckptMsg = SaCkptMalloc(sizeof(SaCkptMessageT));
 	if (ckptMsg == NULL) {
@@ -1556,7 +1554,7 @@ SaHamsg2CkptMessage(struct ha_msg* haMsg)
 	
 	strType = ha_msg_value(haMsg, F_TYPE);
 	if (strType != NULL) {
-		strncpy(ckptMsg->msgType, strType, SA_MAX_NAME_LENGTH - 1);
+		strcpy(ckptMsg->msgType, strType);
 	}
 	
 	strSubtype = ha_msg_value(haMsg, F_CKPT_SUBTYPE);
@@ -1571,25 +1569,22 @@ SaHamsg2CkptMessage(struct ha_msg* haMsg)
 
 	strOrig = ha_msg_value(haMsg, F_ORIG);
 	if (strOrig != NULL) {
-		strncpy(ckptMsg->fromNodeName, strOrig, SA_MAX_NAME_LENGTH - 1);
+		strcpy(ckptMsg->fromNodeName, strOrig);
 	}
 	
 	strCheckpointName = ha_msg_value(haMsg, F_CKPT_CHECKPOINT_NAME);
 	if (strCheckpointName != NULL) {
-		strncpy(ckptMsg->checkpointName, strCheckpointName,
-				SA_MAX_NAME_LENGTH - 1);
+		strcpy(ckptMsg->checkpointName, strCheckpointName);
 	}
 	
 	strActiveHostname = ha_msg_value(haMsg, F_CKPT_ACTIVE_NODENAME);
 	if (strActiveHostname != NULL) {
-		strncpy(ckptMsg->activeNodeName, strActiveHostname,
-				SA_MAX_NAME_LENGTH - 1);
+		strcpy(ckptMsg->activeNodeName, strActiveHostname);
 	}
 	
 	strClientHostname = ha_msg_value(haMsg, F_CKPT_CLIENT_HOSTNAME);
 	if (strClientHostname != NULL) {
-		strncpy(ckptMsg->clientHostName, strClientHostname,
-				SA_MAX_NAME_LENGTH - 1);
+		strcpy(ckptMsg->clientHostName, strClientHostname);
 	}
 	
 	strClientHandle = ha_msg_value(haMsg, F_CKPT_CLIENT_HANDLE);
@@ -1646,14 +1641,12 @@ SaHamsg2CkptMessage(struct ha_msg* haMsg)
 	
 	strHostname = ha_msg_value(haMsg, F_ORIG);
 	if (strHostname != NULL) {
-		strncpy(ckptMsg->fromNodeName, strHostname,
-				SA_MAX_NAME_LENGTH - 1);
+		strcpy(ckptMsg->fromNodeName, strHostname);
 	}
 	
 	strStatus = ha_msg_value(haMsg, F_STATUS);
 	if (strStatus != NULL) {
-		strncpy(ckptMsg->hamsgStatus, strStatus, 
-				SA_MAX_NAME_LENGTH - 1);
+		strcpy(ckptMsg->hamsgStatus, strStatus);
 	}
 	
 	return ckptMsg;
