@@ -6,20 +6,25 @@
 
 /* Chapter 8 */
 
-typedef OPAQUE_TYPE SaEvtHandleT;
-typedef OPAQUE_TYPE SaEvtEventHandleT;
-typedef OPAQUE_TYPE SaEvtChannelHandleT;
+typedef SaUint32T SaEvtHandleT;
+typedef SaUint32T SaEvtEventHandleT;
+typedef SaUint32T SaEvtChannelHandleT;
 typedef SaUint32T SaEvtSubscriptionIdT;
 
 
 typedef void
-(*SaEvtEventDeliverCallbackT)(const SaEvtChannelHandleT *channelHandle,
-                              SaEvtSubscriptionIdT subscriptionId,
-                              const SaEvtEventHandleT *eventHandle,
+(*SaEvtEventDeliverCallbackT)(SaEvtSubscriptionIdT subscriptionId,
+                              const SaEvtEventHandleT eventHandle,
                               const SaSizeT eventDataSize);
 
+typedef void (*SaEvtChannelOpenCallbackT)(SaInvocationT invocation,
+		SaEvtChannelHandleT channelHandle,
+		SaErrorT error);
+
 typedef struct{
-    const SaEvtEventDeliverCallbackT saEvtEventDeliverCallback; } SaEvtCallbacksT;
+    SaEvtEventDeliverCallbackT saEvtEventDeliverCallback;
+	SaEvtChannelOpenCallbackT saEvtChannelOpenCallback;
+} SaEvtCallbacksT;
 
 #define SA_EVT_CHANNEL_PUBLISHER  0X1
 #define SA_EVT_CHANNEL_SUBSCRIBER 0X2
@@ -43,7 +48,7 @@ typedef struct {
 } SaEvtEventPatternArrayT;
 
 typedef SaUint8T SaEvtEventPriorityT;
-typedef SaUint32T SaEvtEventIdT;
+typedef SaUint64T SaEvtEventIdT;
 
 typedef enum {
     SA_EVT_PREFIX_FILTER = 1,
@@ -64,73 +69,83 @@ typedef struct {
 
     SaErrorT 
 saEvtInitialize(SaEvtHandleT *evtHandle, const SaEvtCallbacksT *callbacks,
-                const SaVersionT *version);
+                SaVersionT *version);
 
     SaErrorT 
-saEvtSelectionObjectGet(const SaEvtHandleT *evtHandle,
+saEvtSelectionObjectGet(SaEvtHandleT evtHandle,
                         SaSelectionObjectT *selectionObject);
 
     SaErrorT 
-saEvtDispatch(const SaEvtHandleT *evtHandle, SaDispatchFlagsT dispatchFlags);
+saEvtDispatch(const SaEvtHandleT evtHandle, SaDispatchFlagsT dispatchFlags);
 
     SaErrorT 
-saEvtFinalize(SaEvtHandleT *evtHandle);
+saEvtFinalize(SaEvtHandleT evtHandle);
 
     SaErrorT 
-saEvtChannelOpen(const SaEvtHandleT *evtHandle, const SaNameT *channelName,
-                 SaEvtChannelOpenFlagsT channelOpenFlags,
-                 SaEvtChannelHandleT *channelHandle);
+saEvtChannelOpen(const SaEvtHandleT evtHandle, const SaNameT *channelName,
+         SaEvtChannelOpenFlagsT channelOpenFlags,
+		 SaTimeT timeout,
+		 SaEvtChannelHandleT *channelHandle);
+
+	SaErrorT
+saEvtChannelOpenAsync(
+		SaEvtHandleT evtHandle,
+		SaInvocationT invocation,
+		const SaNameT *channelName,
+		SaEvtChannelOpenFlagsT channelOpenFlags);
+
 
     SaErrorT 
-saEvtChannelClose(SaEvtChannelHandleT *channelHandle);
+saEvtChannelClose(SaEvtChannelHandleT channelHandle);
 
     SaErrorT 
-saEvtEventAllocate(const SaEvtChannelHandleT *channelHandle,
+saEvtEventAllocate(const SaEvtChannelHandleT channelHandle,
                    SaEvtEventHandleT *eventHandle);
 
     SaErrorT 
-saEvtEventFree(SaEvtEventHandleT *eventHandle);
+saEvtEventFree(SaEvtEventHandleT eventHandle);
 
     SaErrorT 
-saEvtEventAttributesSet(const SaEvtEventHandleT *eventHandle,
+saEvtEventAttributesSet(const SaEvtEventHandleT eventHandle,
                         const SaEvtEventPatternArrayT *patternArray,
                         SaUint8T priority,
                         SaTimeT retentionTime,
                         const SaNameT *publisherName);
 
     SaErrorT 
-saEvtEventAttributesGet(const SaEvtChannelHandleT *channelHandle,
-                        const SaEvtEventHandleT *eventHandle,
+saEvtEventAttributesGet(const SaEvtEventHandleT eventHandle,
                         SaEvtEventPatternArrayT *patternArray,
                         SaUint8T *priority,
                         SaTimeT *retentionTime,
                         SaNameT *publisherName,
-                        SaClmNodeIdT *publisherNodeId,
                         SaTimeT *publishTime,
                         SaEvtEventIdT *eventId);
 
     SaErrorT 
-saEvtEventDataGet(const SaEvtEventHandleT *eventHandle,
+saEvtEventDataGet(const SaEvtEventHandleT eventHandle,
                   void *eventData,
                   SaSizeT *eventDataSize);
 
     SaErrorT 
-saEvtEventPublish(const SaEvtChannelHandleT *channelHandle,
-                  const SaEvtEventHandleT *eventHandle,
+saEvtEventPublish(const SaEvtEventHandleT eventHandle,
                   const void *eventData,
-                  SaSizeT eventDataSize);
+                  SaSizeT eventDataSize,
+				  SaEvtEventIdT *eventId);
 
     SaErrorT 
-saEvtEventSubscribe(const SaEvtChannelHandleT *channelHandle,
+saEvtEventSubscribe(const SaEvtChannelHandleT channelHandle,
                     const SaEvtEventFilterArrayT *filters,
                     SaEvtSubscriptionIdT subscriptionId);
 
     SaErrorT 
-saEvtEventUnsubscribe(const SaEvtChannelHandleT *channelHandle,
+saEvtEventUnsubscribe(const SaEvtChannelHandleT channelHandle,
                       SaEvtSubscriptionIdT subscriptionId);
 
+SaErrorT saEvtChannelUnlink(SaEvtHandleT evtHandle,
+				const SaNameT *channelName);
+
     SaErrorT 
-saEvtEventRetentionTimeClear(const SaEvtChannelHandleT *channelHandle,
-                             const SaEvtEventHandleT *eventHandle);
+saEvtEventRetentionTimeClear(SaEvtChannelHandleT channelHandle,
+                             const SaEvtEventIdT eventHandle);
 
 #endif /* _AIS_EVENT_H_ */
