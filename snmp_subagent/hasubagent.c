@@ -1,4 +1,4 @@
-/* $Id: hasubagent.c,v 1.12 2004/06/07 21:26:51 msoffen Exp $ */
+/* $Id: hasubagent.c,v 1.13 2004/07/09 16:21:06 msoffen Exp $ */
 #include <portability.h>
 
 #ifdef HAVE_CONFIG_H
@@ -8,6 +8,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <limits.h>
+#include <sys/types.h>
+#include <sys/select.h>
+#include <sys/time.h>
+#include <unistd.h>
+
 
 #ifdef HAVE_NET_SNMP
 #	define	USE_NET_SNMP
@@ -183,6 +188,9 @@ main(int argc, char **argv)
 
 /*
  * $Log: hasubagent.c,v $
+ * Revision 1.13  2004/07/09 16:21:06  msoffen
+ * Added a standard headers for BSD/Solaris
+ *
  * Revision 1.12  2004/06/07 21:26:51  msoffen
  * Added log entry and moved header includes
  *
