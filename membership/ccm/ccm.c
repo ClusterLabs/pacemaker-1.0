@@ -2419,7 +2419,8 @@ static void ccm_state_wait_for_change(enum ccm_type ccm_msg_type,
 			ccm_info_t *info)
 {
 	const char *orig, *trans, *uptime, *node;
-	uint trans_majorval=0, trans_minorval=0, uptime_val=-1;
+	uint trans_majorval=0, trans_minorval=0, uptime_val=0;
+	gboolean uptime_set = FALSE;
 
 	if ((orig = ha_msg_value(reply, F_ORIG)) == NULL) {
 		cl_log(LOG_WARNING, "ccm_state_joined: received message "
@@ -2485,19 +2486,21 @@ static void ccm_state_wait_for_change(enum ccm_type ccm_msg_type,
 			node = orig;
 			orig = CCM_GET_MYNODE_ID(info);
 			uptime_val = CCM_GET_JOINED_TRANSITION(info);
+			uptime_set = TRUE;
 
 		case CCM_TYPE_NODE_LEAVE:               
 			/* only leader can stay in this state */
 			if(!ccm_am_i_leader(info))
 				break;
 
-			if(uptime_val == -1){
+			if (!uptime_set){
 				if ((uptime = ha_msg_value(reply, CCM_UPTIME)) == NULL){
 					cl_log(LOG_WARNING, "ccm_state_wait_for_change: no update "
 						"information");
 					return;
 				}
 				uptime_val = atoi(uptime);
+				uptime_set = TRUE;
 			}
 
 			/* Record received LEAVE message by orig.
@@ -2544,19 +2547,21 @@ static void ccm_state_wait_for_change(enum ccm_type ccm_msg_type,
 			node = orig;	
 			orig = CCM_GET_MYNODE_ID(info);
 			uptime_val = CCM_GET_JOINED_TRANSITION(info);
+			uptime_set = TRUE;
 	    	
 		case CCM_TYPE_NEW_NODE:
 			/* only leader can stay in this state */
 			if(!ccm_am_i_leader(info))
 				assert(0);
 
-			if (uptime_val == -1){
+			if (!uptime_set){
 				if ((uptime = ha_msg_value(reply, CCM_UPTIME)) == NULL){
 					cl_log(LOG_WARNING, "ccm_state_wait_for_change: no update "
 						"information");
 					return;
 				}
 				uptime_val = atoi(uptime);
+				uptime_set = TRUE;
 			}
 
 			if(is_expected_change_msg(info,node, NEW_NODE)){
@@ -2621,6 +2626,7 @@ static void ccm_state_wait_for_change(enum ccm_type ccm_msg_type,
 				return;
 			}
 			uptime_val = atoi(uptime);
+			uptime_set = TRUE;
 
 			/* update the minor transition number if it is of 
 			 * higher value and send a fresh JOIN message 
@@ -4336,10 +4342,12 @@ static void ccm_state_wait_for_mem_list(enum ccm_type ccm_msg_type,
 	}
 }
 
-static void update_membership(ccm_info_t *info, const char *node, 
+static void
+update_membership(ccm_info_t *info, const char *node, 
 		enum change_event_type change_type)
 {
-	int i, index;
+	unsigned	i;
+	int		index;
 	llm_info_t *llm = CCM_GET_LLM(info);
     
 	if (change_type == NODE_LEAVE){
@@ -4358,13 +4366,15 @@ static void update_membership(ccm_info_t *info, const char *node,
 	return;
 }
 
-static void reset_change_info(ccm_info_t *info)
+static void
+reset_change_info(ccm_info_t *info)
 {
 	llm_info_t *llm = CCM_GET_LLM(info);
-	int i;
+	unsigned i;
 
-	for(i=0; i<LLM_GET_NODECOUNT(llm); i++)
+	for(i=0; i<LLM_GET_NODECOUNT(llm); i++) {
 		llm->llm_nodes[i].received_change_msg = 0;
+	}
 	return;
 }
 
