@@ -19,6 +19,7 @@
  *
  */
 
+#include <config.h>
 #include <uuid/uuid.h>
 #include <heartbeat.h>
 #include <string.h>
@@ -26,6 +27,10 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <unistd.h>
+
+#ifndef O_SYNC
+#	define O_SYNC 0
+#endif
 
 GHashTable*			name_table = NULL;
 GHashTable*			uuid_table = NULL;
