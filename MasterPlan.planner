@@ -163,7 +163,7 @@
       </task>
     </task>
     <task id="24" name="229.19: Community (RH) Cluster Integration" note="" work="864000" start="20050116T000000Z" end="20050225T170000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-work"/>
-    <task id="25" name="229.20: project leadership, etc." note="Ongoing..." work="1440000" duration="4780800" start="20050116T000000Z" end="20060206T170000Z" percent-complete="100" priority="1" type="normal" scheduling="fixed-duration"/>
+    <task id="25" name="229.20: project leadership, etc." note="Ongoing..." work="633600" duration="3196800" start="20050116T000000Z" end="20050928T170000Z" percent-complete="100" priority="1" type="normal" scheduling="fixed-duration"/>
     <task id="26" name="229.23: revised STONITH API" note="" work="432000" start="20050116T000000Z" end="20050216T170000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-work"/>
     <task id="27" name="1039.14: CIM support" note="" work="432000" start="20050116T000000Z" end="20050204T170000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-work"/>
     <task id="28" name="1040.04: Internal IBM support" note="" work="576000" start="20050116T000000Z" end="20050211T170000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-work"/>
@@ -245,7 +245,7 @@
     <allocation task-id="10" resource-id="2" units="100"/>
     <allocation task-id="4" resource-id="2" units="100"/>
     <allocation task-id="2" resource-id="2" units="60"/>
-    <allocation task-id="25" resource-id="2" units="30"/>
+    <allocation task-id="25" resource-id="2" units="20"/>
     <allocation task-id="26" resource-id="4" units="100"/>
   </allocations>
 </project>
