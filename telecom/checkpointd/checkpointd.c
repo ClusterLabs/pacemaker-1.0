@@ -278,7 +278,7 @@ main(int argc, char ** argv)
 	int	fd;
 
 	int c;
-#if HAVE_GETOPT_H
+#ifdef HAVE_GETOPT_H
 	static struct option long_options[] = {
 		{"daemon", 0, 0, 'd'},
 		{"verbose", 0, 0, 'v'},
@@ -297,7 +297,7 @@ main(int argc, char ** argv)
 
 	// get options
 	while (1) {
-#if HAVE_GETOPT_H
+#ifdef HAVE_GETOPT_H
 		c = getopt_long(argc, argv, OPTARGS, long_options, NULL);
 #else
 		c = getopt(argc, argv, OPTARGS);
