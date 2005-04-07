@@ -1,4 +1,4 @@
-#	$Id: heartbeat.spec.in,v 1.114 2005/03/30 06:35:48 alan Exp $
+#	$Id: heartbeat.spec.in,v 1.115 2005/04/07 04:23:24 alan Exp $
 
 # Workaround for a change in RPM 4.1.x; needs proper fixing soon!
 ##%define _unpackaged_files_terminate_build 0
@@ -77,6 +77,22 @@ PILS is designed to support any number of plugins
 implementing any number of interfaces.
 
 %changelog
+
+* Thu Apr 07 2005  Alan Robertson <alanr@unix.sh> (see doc/AUTHORS file)
++ Version 1.99.4 - Near-final beta of 2.0.0 release
+  + many bug fixes since 1.99.1
+  + new external STONITH model - fully supports scripting interface
+  + tested through 12 node clusters successfully
+  + No serious defects found in testing
+  + Easier-to-understand locational constraints model
+  + Many bug fixes of many kinds
+  + Important bug fixes to OCF IPaddr resource agent
+  + Resources are monitored only on request
+  + See http://wiki.linux-ha.org/ClusterResourceManager/Setup
+    for basic ideas about getting started.
+  + Release 1 style (2-node) clusters still fully supported
+  + Release 2 style clusters support 1-N node clusters
+	(where N is probably something like 8-32)
 
 * Tue Mar 20 2005  Alan Robertson <alanr@unix.sh> (see doc/AUTHORS file)
 + Version 1.99.3 - Near-final beta "technology preview" of 2.0.0 release
