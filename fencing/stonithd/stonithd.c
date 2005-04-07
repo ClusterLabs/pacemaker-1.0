@@ -1,4 +1,4 @@
-/* $Id: stonithd.c,v 1.35 2005/04/06 18:07:52 gshi Exp $ */
+/* $Id: stonithd.c,v 1.36 2005/04/07 07:46:18 sunjd Exp $ */
 
 /* File: stonithd.c
  * Description: STONITH daemon for node fencing
@@ -790,7 +790,7 @@ handle_msg_twhocan(const struct ha_msg* msg, void* private_data)
 	}
 
 	/* Don't handle the message sent by myself when not in TEST mode */
-	if ( strncmp(from, local_nodename, strlen(local_nodename)) 
+	if ( STRNCMP_CONST(from, local_nodename) 
 		== 0) {
 		stonithd_log(LOG_DEBUG, "received a T_WHOCANST msg from myself.");
 		if (TEST == FALSE) {
@@ -868,7 +868,7 @@ handle_msg_ticanst(const struct ha_msg* msg, void* private_data)
 	}
 
 	/* Don't handle the message sent by myself when not TEST mode */
-	if ( (strncmp(from, local_nodename, strlen(local_nodename)) 
+	if ( (STRNCMP_CONST(from, local_nodename) 
 		== 0) && ( TEST == FALSE ) ){
 		stonithd_log(LOG_DEBUG, "received a T_ICANST msg from myself.");
 		return;
@@ -914,7 +914,7 @@ handle_msg_tstit(const struct ha_msg* msg, void* private_data)
 	}
 
 	/* Don't handle the message sent by myself */
-	if ( strncmp(from, local_nodename, strlen(local_nodename)) 
+	if ( STRNCMP_CONST(from, local_nodename) 
 		== 0 && TEST == FALSE ) {
 		stonithd_log(LOG_DEBUG, "received a T_STIT msg from myself, "
 			     "will abandon it.");
@@ -928,7 +928,7 @@ handle_msg_tstit(const struct ha_msg* msg, void* private_data)
 	}
 
 	/* Don't handle the message about stonithing myself */
-	if ( strncmp(target, local_nodename, strlen(local_nodename)) 
+	if ( STRNCMP_CONST(target, local_nodename) 
 		== 0) {
 		stonithd_log(LOG_DEBUG, "received a T_STIT message to require "
 				"to stonith myself.");
@@ -1021,7 +1021,7 @@ handle_msg_trstit(const struct ha_msg* msg, void* private_data)
 
 	/* Don't handle the message sent by myself when not in TEST mode */
 	if ( TEST == FALSE &&
-	     strncmp(from, local_nodename, strlen(local_nodename)) == 0) {
+	     STRNCMP_CONST(from, local_nodename) == 0) {
 		stonithd_log(LOG_DEBUG, "received a T_RSTIT msg from myself.");
 		return;
 	}
@@ -1208,7 +1208,7 @@ stonithd_process_client_msg(struct ha_msg * msg, gpointer data)
 	int i, rc;
 	
 	if (  ((msg_type = cl_get_string(msg, F_STONITHD_TYPE)) != NULL)
-	    && (strncmp(msg_type, ST_APIREQ, strlen(ST_APIREQ)) == 0) ) {
+	    && (STRNCMP_CONST(msg_type, ST_APIREQ) == 0) ) {
 		stonithd_log(LOG_DEBUG, "received an API request msg.");	
 	} else {
 		stonithd_log(LOG_ERR, "received a msg of none-API request.");
@@ -1225,8 +1225,8 @@ stonithd_process_client_msg(struct ha_msg * msg, gpointer data)
 	stonithd_log(LOG_DEBUG, "begin to dealing with a api msg %s from "
 			"a client.", api_type);
 	for (i=0; i<DIMOF(api_msg_to_handlers); i++) {
-		if ( strncmp(api_type, api_msg_to_handlers[i].msg_type, 
-			MAXLEN_SMTYPE) == 0 ) {
+		if ( STRNCMP_CONST(api_type, api_msg_to_handlers[i].msg_type)
+			 == 0 ) {
 			/*call the handler of the message*/
 			rc = api_msg_to_handlers[i].handler(msg, ch);
 			if (rc != ST_OK) {
@@ -1328,7 +1328,7 @@ on_stonithd_signon(const struct ha_msg * request, gpointer data)
 	
 	/* lack the authority check from uid&gid */
 	/* add the client to client list */
- 	if ( strncmp(api_reply, ST_APIOK, strlen(ST_APIOK)) == 0 ) {
+ 	if ( STRNCMP_CONST(api_reply, ST_APIOK) == 0 ) {
 		client_list = g_list_append(client_list, client);
 		stonithd_log(LOG_DEBUG,"client %s (pid=%d) succeeded to "
 			"signon to stonithd.", client->name, client->pid);
@@ -1399,7 +1399,7 @@ on_stonithd_signoff(const struct ha_msg * request, gpointer data)
 			     "signed off ", tmpint);
 	}
 
- 	if ( strncmp(api_reply, ST_APIOK, strlen(ST_APIOK)) == 0 ) {
+ 	if ( STRNCMP_CONST(api_reply, ST_APIOK) == 0 ) {
 		stonithd_log(LOG_DEBUG,"client pid=%d has sign off stonithd "
 				"succeedly.", tmpint);
 	} else {
@@ -1996,8 +1996,8 @@ get_local_stonithobj_can_stonith( const char * node_name,
 		      tmplist = g_list_next(tmplist)) {
 		      	tmp_srsc = (stonith_rsc_t *)tmplist->data;
 			if ( tmp_srsc != NULL && 
-			     strncmp(tmp_srsc->rsc_id, begin_rsc_id, 
-				strlen(begin_rsc_id)) == 0) {
+			     STRNCMP_CONST(tmp_srsc->rsc_id, begin_rsc_id)
+				 == 0) {
 				begin_search_list = g_list_next(tmplist);
 				break;
 			}
@@ -2018,8 +2018,7 @@ get_local_stonithobj_can_stonith( const char * node_name,
 			for(this=tmp_srsc->node_list; *this; ++this) {
 				stonithd_log(LOG_DEBUG, "get_local_stonithobj_"
 					"can_stonith: host=%s.", *this);
-				if ( strncmp(node_name, *this, 
-					strlen(node_name)) == 0 ) {
+				if ( STRNCMP_CONST(node_name, *this) == 0 ) {
 					return tmp_srsc;
 				}
 			}
@@ -2316,8 +2315,8 @@ post_handle_raop(stonithRA_ops_t * ra_op)
 	int i;
 
 	for (i = 0; i < DIMOF(raop_handler); i++) {
-		if ( strncmp(ra_op->op_type, raop_handler[i].op_type,
-			strlen(ra_op->op_type)) == 0 ) {
+		if ( STRNCMP_CONST(ra_op->op_type, raop_handler[i].op_type)
+			== 0 ) {
 			/* call the handler of the operation */
 			if (raop_handler[i].post_handler != NULL) {
 				return raop_handler[i].post_handler(ra_op, NULL);
@@ -2396,8 +2395,8 @@ stonithRA_operate( stonithRA_ops_t * op, gpointer data )
 	 * and monitor.
 	 */
 	for (i = 0; i < DIMOF(raop_handler); i++) {
-		if ( strncmp(op->op_type, raop_handler[i].op_type,
-			strlen(op->op_type)) == 0 ) {
+		if ( STRNCMP_CONST(op->op_type, raop_handler[i].op_type)
+			 == 0 ) {
 			/* call the handler of the operation */
 			 return raop_handler[i].handler(op, data);
 		}
@@ -2612,7 +2611,7 @@ get_started_stonith_resource(char * rsc_id )
 	      tmplist = g_list_next(tmplist)) {
 		srsc = (stonith_rsc_t *)tmplist->data;
 		if (srsc != NULL && 
-		    strncmp(rsc_id, srsc->rsc_id, strlen(rsc_id)) == 0) {
+		    STRNCMP_CONST(rsc_id, srsc->rsc_id) == 0) {
 			return srsc;
 		}
 	}
@@ -2970,6 +2969,9 @@ free_common_op_t(gpointer data)
 
 /* 
  * $Log: stonithd.c,v $
+ * Revision 1.36  2005/04/07 07:46:18  sunjd
+ * use STRLEN_CONST & STRNCMP_CONST instead
+ *
  * Revision 1.35  2005/04/06 18:07:52  gshi
  * bug 433
  *
