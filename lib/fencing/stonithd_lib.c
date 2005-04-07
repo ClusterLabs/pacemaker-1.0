@@ -169,7 +169,7 @@ stonithd_signon(const char * client_name)
 	if ( TRUE == is_expected_msg(reply, F_STONITHD_TYPE, ST_APIRPL, 
 			     F_STONITHD_APIRPL, ST_RSIGNON) ) {
 		if ( ((tmpstr=cl_get_string(reply, F_STONITHD_APIRET)) != NULL)
-	   	    && (strncmp(tmpstr, ST_APIOK, strlen(ST_APIOK)) == 0) ) {
+	   	    && (STRNCMP_CONST(tmpstr, ST_APIOK) == 0) ) {
 			SIGNONED_TO_STONITHD = TRUE;
 			rc = ST_OK;
 			stdlib_log(LOG_DEBUG, "signoned to the stonithd.");
@@ -230,7 +230,7 @@ stonithd_signoff(void)
 	if ( TRUE == is_expected_msg(reply, F_STONITHD_TYPE, ST_APIRPL, 
 			     F_STONITHD_APIRPL, ST_RSIGNOFF) ) {
 		if ( ((tmpstr=cl_get_string(reply, F_STONITHD_APIRET)) != NULL)
-	   	    && (strncmp(tmpstr, ST_APIOK, strlen(ST_APIOK)) == 0) ) {
+	   	    && (STRNCMP_CONST(tmpstr, ST_APIOK) == 0) ) {
 			SIGNONED_TO_STONITHD = FALSE;
 			CLIENT_NAME = NULL;
 			rc = ST_OK;
@@ -319,7 +319,7 @@ stonithd_node_fence(stonith_ops_t * op)
 	if ( TRUE == is_expected_msg(reply, F_STONITHD_TYPE, ST_APIRPL, 
 			     F_STONITHD_APIRPL, ST_RSTONITH) ) {
 		if ( ((tmpstr = cl_get_string(reply, F_STONITHD_APIRET)) != NULL) 
-	   	    && (strncmp(tmpstr, ST_APIOK, strlen(ST_APIOK)) == 0) ) {
+	   	    && (STRNCMP_CONST(tmpstr, ST_APIOK) == 0) ) {
 			rc = ST_OK;
 			stdlib_log(LOG_DEBUG, "stonith msg is sent to stonithd.");
 		} else {
@@ -648,7 +648,7 @@ stonithd_virtual_stonithRA_ops( stonithRA_ops_t * op, int * call_id)
 	}
 
 	if ( ((tmpstr = cl_get_string(reply, F_STONITHD_APIRET)) != NULL) 
-	   	    && (strncmp(tmpstr, ST_APIOK, strlen(ST_APIOK)) == 0) ) {
+	   	    && (STRNCMP_CONST(tmpstr, ST_APIOK) == 0) ) {
 		int tmpint;
 
 		if ( ha_msg_value_int(reply, F_STONITHD_CALLID, &tmpint)
@@ -738,7 +738,7 @@ int stonithd_list_stonith_types(GList ** types)
 	if ( TRUE == is_expected_msg(reply, F_STONITHD_TYPE, ST_APIRPL, 
 			     F_STONITHD_APIRPL, ST_RLTYPES) ) {
 		if ( ((tmpstr = cl_get_string(reply, F_STONITHD_APIRET)) != NULL) 
-	   	    && (strncmp(tmpstr, ST_APIOK, strlen(ST_APIOK)) == 0) ) {
+	   	    && (STRNCMP_CONST(tmpstr, ST_APIOK) == 0) ) {
 			int i, len;
 			if ((len=cl_msg_list_length(reply, F_STONITHD_STTYPES))
 			    < 0) {
@@ -804,10 +804,10 @@ is_expected_msg(const struct ha_msg * msg,
 	}
 
 	if (   ( (tmpstr = cl_get_string(msg, field_name1)) != NULL )
-	    && (strncmp(tmpstr, field_content1, strlen(field_content1))==0) ) {
+	    && (STRNCMP_CONST(tmpstr, field_content1)==0) ) {
 		stdlib_log(LOG_DEBUG, "%s = %s", field_name1, tmpstr);
 		if (  ( (tmpstr = cl_get_string(msg, field_name2)) != NULL )
-		    && strncmp(tmpstr, field_content2, strlen(field_content2)) 
+		    && STRNCMP_CONST(tmpstr, field_content2) 
 			== 0)  {
 			stdlib_log(LOG_DEBUG, "%s = %s.", field_name2, tmpstr);
 			rc= TRUE;
