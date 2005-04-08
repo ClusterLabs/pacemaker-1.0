@@ -1,4 +1,4 @@
-/* $Id: stonithd.c,v 1.36 2005/04/07 07:46:18 sunjd Exp $ */
+/* $Id: stonithd.c,v 1.37 2005/04/08 07:32:48 sunjd Exp $ */
 
 /* File: stonithd.c
  * Description: STONITH daemon for node fencing
@@ -38,6 +38,9 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
+/* Should copy the facilitynames struct here? */
+#define SYSLOG_NAMES
+#include <syslog.h>
 #ifdef HAVE_GETOPT_H
 #include <getopt.h>
 #endif /* HAVE_GETOPT_H */
@@ -66,6 +69,18 @@
 
 /* For integration with heartbeat */
 #define MAGIC_EC 100
+#define stonithd_log(priority, fmt...); \
+	if ( debug_level == 0 && priority == LOG_DEBUG ) { \
+		; \
+	} else { \
+		cl_log(priority, fmt); \
+	}
+
+/* Only export logs when debug_level >= 2 */
+#define stonithd_log2(priority, fmt...); \
+	if ( debug_level == 2 && priority == LOG_DEBUG ) { \
+		cl_log(priority, fmt); \
+	}
 
 typedef struct {
 	char * name;
@@ -139,7 +154,8 @@ static int show_daemon_status(const char * pidfile);
 static int kill_running_daemon(const char * pidfile);
 static pid_t running_daemon_pid(const char * pidfile);
 static int create_pidfile(const char * pidfile);
-static void stonithd_log(int priority, const char * fmt, ...)G_GNUC_PRINTF(2,3);
+static void inherit_config_from_environment(void);
+static int facility_name_to_value(const char * name);
 static void stonithd_quit(int signo);
 
 /* Dealing with the child quit/abort event when executing STONTIH RA plugins. 
@@ -277,18 +293,18 @@ static const char * M_STARTUP = "start up successfully.",
 		  * M_STONITH_FAIL    = "Failed to STONITH the node";
 
 static const char * simple_help_screen =
-"Usage: stonithd [-nskdh]\n"
+"Usage: stonithd [-nskvh]\n"
 "	-n	Do not register to apphbd. Now donnot register to apphbd by default.\n"
 "	-s	Show the status of the daemons.\n"
 "	-k	Kill the daemon.\n"
-"	-d	Run the stonithd in debug mode. Under debug mode more\n"
+"	-v	Run the stonithd in debug mode. Under debug mode more\n"
 "		debug information is written to log file.\n"
 "	-a	Start up alone outside of heartbeat.\n" 
 "		By default suppose it be started up and monitored by heartbeat.\n"
 "	-h	This help information\n";
 /*	-t	Test mode only.\n" 	*/
 
-static const char * optstr = "anskdht";
+static const char * optstr = "anskvht";
 /* Will replace it with dynamical a config variable */
 #define STD_PIDFILE         "/var/run/stonithd.pid"
 
@@ -313,9 +329,9 @@ static gboolean 	SIGNONED_TO_APPHBD	= FALSE;
 static gboolean 	NEED_SIGNON_TO_APPHBD	= FALSE;
 static ll_cluster_t *	hb			= NULL;
 static gboolean 	childs_quit		= FALSE;
-static gboolean 	DEBUG_MODE		= FALSE;
 static gboolean 	TEST 			= FALSE;
 static IPC_Auth* 	ipc_auth 		= NULL;
+static int	 	debug_level		= 0;
 
 int main(int argc, char ** argv)
 {
@@ -353,10 +369,11 @@ int main(int argc, char ** argv)
 				return(kill_running_daemon(STD_PIDFILE));
 				break; /* Never reach here, just for uniform */
 
-			case 'd': /* Run with debug mode */
-				DEBUG_MODE = TRUE;
+			case 'v': /* Run with debug mode */
+				debug_level++;
 				/* adjust the PILs' debug level */ 
 				PILpisysSetDebugLevel(7);
+				printf("TEST\n");
 				break;
 
 			case 'h':
@@ -379,6 +396,8 @@ int main(int argc, char ** argv)
 					LSB_EXIT_EINVAL : MAGIC_EC;
 		}
 	} while (1);
+
+	inherit_config_from_environment();
 	
 	if ( STARTUP_ALONE == TRUE ) {
 		/* enable coredump by itself, or depend on its parent */
@@ -431,7 +450,7 @@ int main(int argc, char ** argv)
 		main_rc = LSB_EXIT_GENERIC;
 		goto signoff_quit;
 	}
-	stonithd_log(LOG_DEBUG, "address %p", &polled_input_SourceFuncs);
+	stonithd_log2(LOG_DEBUG, "address %p", &polled_input_SourceFuncs);
 
 	/*
 	 * Initialize the handler of IPC messages from hearbteat, including
@@ -466,7 +485,7 @@ int main(int argc, char ** argv)
 	/* To avoid the warning message when app_interval is very small. */
 	MY_APPHB_HB
 	/* drop_privs(0, 0); */  /* very important. cpu limit */
-	stonithd_log(LOG_DEBUG, "Enter g_mainloop\n");
+	stonithd_log2(LOG_DEBUG, "Enter g_mainloop\n");
 	stonithd_log(LOG_NOTICE, "%s %s", argv[0], M_STARTUP );
 	 
 	drop_privs(0, 0); /* become "nobody" */
@@ -605,7 +624,7 @@ on_polled_input_dispatch(GSource * source, GSourceFunc callback,
 	common_op_t * op = NULL;
 	int * orignal_key = NULL;
 
-	stonithd_log(LOG_DEBUG, "on_polled_input_dispatch: begin"); 
+	stonithd_log2(LOG_DEBUG, "on_polled_input_dispatch: begin"); 
 	while ((pid = wait(&exit_status)) > 0) {
 		num_of_quitted_childs++;
 		stonithd_log(LOG_DEBUG, "child %d exit code : %d", 
@@ -700,7 +719,7 @@ init_hb_msg_handler(void)
 	IPC_Channel * hbapi_ipc = NULL;
 	unsigned int msg_mask;
 	
-	stonithd_log(LOG_DEBUG, "init_hb_msg_handler: begin");
+	stonithd_log2(LOG_DEBUG, "init_hb_msg_handler: begin");
 
 	/* Set message callback */
 	if (hb->llc_ops->set_msg_callback(hb, T_WHOCANST, 
@@ -763,7 +782,7 @@ stonithd_hb_msg_dispatch(IPC_Channel * ipcchan, gpointer user_data)
 			stonithd_quit(0);
 		}
 		/* invoke the callbacks with none-block mode */
-		stonithd_log(LOG_DEBUG, "there are hb msg received.");
+		stonithd_log2(LOG_DEBUG, "there are hb msg received.");
 		hb->llc_ops->rcvmsg(hb, 0);
 	}
 	/* deal with some abnormal errors/bugs? */
@@ -1053,7 +1072,7 @@ handle_msg_trstit(const struct ha_msg* msg, void* private_data)
 			"receiving this message", call_id);
 	}
 
-	stonithd_log(LOG_DEBUG, "handle_msg_trstit: end");	
+	stonithd_log2(LOG_DEBUG, "handle_msg_trstit: end");	
 }
 
 static int 
@@ -1068,7 +1087,7 @@ init_client_API_handler(void)
 	GHashTable*     	uid_hashtable;
 	int             	tmp = 1;
 
-	stonithd_log(LOG_DEBUG, "init_client_API_handler: begin");
+	stonithd_log2(LOG_DEBUG, "init_client_API_handler: begin");
 
 	chanattrs = g_hash_table_new(g_str_hash, g_str_equal);
         g_hash_table_insert(chanattrs, path, sock);
@@ -1140,7 +1159,7 @@ stonithd_client_dispatch(IPC_Channel * ch, gpointer user_data)
 {
 	struct ha_msg *	msg = NULL;
 
-	stonithd_log(LOG_DEBUG, "stonithd_client_dispatch: begin");
+	stonithd_log2(LOG_DEBUG, "stonithd_client_dispatch: begin");
 
 	if (ch == NULL) {
 		stonithd_log(LOG_ERR, "stonithd_client_dispatch: ch==NULL.");
@@ -1243,7 +1262,7 @@ stonithd_process_client_msg(struct ha_msg * msg, gpointer data)
         }
 
         ZAPMSG(msg);
-        stonithd_log(LOG_DEBUG, "stonithd_process_client_msg: end.");
+        stonithd_log2(LOG_DEBUG, "stonithd_process_client_msg: end.");
 
         return TRUE;
 }
@@ -1258,7 +1277,7 @@ on_stonithd_signon(const struct ha_msg * request, gpointer data)
 	int  tmpint;
 	IPC_Channel * ch = (IPC_Channel *) data;
 
-	stonithd_log(LOG_DEBUG, "on_stonithd_signon: begin.");
+	stonithd_log2(LOG_DEBUG, "on_stonithd_signon: begin.");
 	/* parameter check, maybe redundant */
 	if ( ch == NULL || request == NULL ) {
 		stonithd_log(LOG_ERR, "parameter error, signon failed.");
@@ -1441,7 +1460,7 @@ on_stonithd_node_fence(const struct ha_msg * request, gpointer data)
 	stonithd_client_t * client = NULL;
 	stonith_rsc_t * srsc = NULL;
 
-	stonithd_log(LOG_DEBUG, "stonithd_node_fence: begin.");
+	stonithd_log2(LOG_DEBUG, "stonithd_node_fence: begin.");
 	/* parameter check, maybe redundant */
 	if ( ch == NULL || request == NULL ) {
 		stonithd_log(LOG_ERR, "stonithd_node_fence: parameter error.");
@@ -1546,7 +1565,7 @@ sendback_reply:
 		return ST_FAIL;
 	}
 
-	stonithd_log(LOG_DEBUG, "stonithd_node_fence: end");
+	stonithd_log2(LOG_DEBUG, "stonithd_node_fence: end");
 	return ST_OK;
 }
 
@@ -1597,7 +1616,7 @@ continue_local_stonithop(int old_key)
 	common_op_t * op = NULL;
 	int * orignal_key = NULL;
 
-	stonithd_log(LOG_DEBUG, "continue_local_stonithop: begin.");
+	stonithd_log2(LOG_DEBUG, "continue_local_stonithop: begin.");
 	if (FALSE == g_hash_table_lookup_extended(executing_queue, &old_key, 
 			(gpointer *)&orignal_key, (gpointer *)&op)) {
 		stonithd_log(LOG_ERR, "continue_local_stonithop: No old_key's "
@@ -1695,7 +1714,7 @@ changeto_remote_stonithop(int old_key)
 	common_op_t * op = NULL;
 	int * orignal_key = NULL;
 
-	stonithd_log(LOG_DEBUG, "changeto_remote_stonithop: begin.");
+	stonithd_log2(LOG_DEBUG, "changeto_remote_stonithop: begin.");
 	if (FALSE == g_hash_table_lookup_extended(executing_queue, &old_key, 
 			(gpointer *)&orignal_key, (gpointer *)&op)) {
 		stonithd_log(LOG_ERR, "changeto_remote_stonithop: no old_key's "
@@ -1741,7 +1760,7 @@ send_stonithop_final_result( common_op_t * op)
 			     "op == NULL");
 		return ST_FAIL;
 	}
-	stonithd_log(LOG_DEBUG, "send_stonithop_final_result: begin.");
+	stonithd_log2(LOG_DEBUG, "send_stonithop_final_result: begin.");
 
 	if (op->scenario == STONITH_INIT) {
 		return stonithop_result_to_local_client(
@@ -1763,7 +1782,7 @@ stonithop_result_to_local_client( stonith_ops_t * st_op, gpointer data)
 	struct ha_msg * reply = NULL;
 	IPC_Channel * ch = (IPC_Channel *)data;
 
-	stonithd_log(LOG_DEBUG, "stonithop_result_to_local_client: begin.");
+	stonithd_log2(LOG_DEBUG, "stonithop_result_to_local_client: begin.");
 	if ( st_op == NULL || data == NULL ) {
 		stonithd_log(LOG_ERR, "stonithop_result_to_local_client: "
 				      "parameter error.");
@@ -1819,7 +1838,7 @@ stonithop_result_to_local_client( stonith_ops_t * st_op, gpointer data)
 	}
 
 	ZAPMSG(reply);
-	stonithd_log(LOG_DEBUG, "stonithop_result_to_local_client: end.");
+	stonithd_log2(LOG_DEBUG, "stonithop_result_to_local_client: end.");
 	return ST_OK;
 }
 
@@ -1889,7 +1908,7 @@ stonith_operate_locally( stonith_ops_t * st_op, stonith_rsc_t * srsc)
 	}
 
 	if (st_op->optype == QUERY) {
-		stonithd_log(LOG_DEBUG, "query operation.");
+		stonithd_log2(LOG_DEBUG, "query operation.");
 		return -1;
 	}
 
@@ -1927,7 +1946,7 @@ require_others_to_stonith(stonith_ops_t * st_op)
 		return ST_FAIL;
 	}
 
-	stonithd_log(LOG_DEBUG, "require_others_to_stonith: begin.");
+	stonithd_log2(LOG_DEBUG, "require_others_to_stonith: begin.");
 	if ( (ha_msg_add(msg, F_TYPE, (st_op->optype == QUERY) ? 
 					T_WHOCANST : T_STIT) != HA_OK)
 	    ||(ha_msg_add(msg, F_ORIG, local_nodename) != HA_OK)
@@ -1958,7 +1977,7 @@ require_others_to_stonith(stonith_ops_t * st_op)
 	}
 
 	ZAPMSG(msg);
-	stonithd_log(LOG_DEBUG,"require_others_to_stonith: end.");
+	stonithd_log2(LOG_DEBUG,"require_others_to_stonith: end.");
 	return ST_OK;	
 }
 
@@ -1970,7 +1989,7 @@ get_local_stonithobj_can_stonith( const char * node_name,
 	GList * begin_search_list = NULL;
 	stonith_rsc_t * tmp_srsc = NULL;
 
-	stonithd_log(LOG_DEBUG, "get_local_stonithobj_can_stonith: begin.");
+	stonithd_log2(LOG_DEBUG, "get_local_stonithobj_can_stonith: begin.");
 	if (local_started_stonith_rsc == NULL) {
 		stonithd_log(LOG_ERR, "get_local_stonithobj_can_stonith: "
 				"local_started_stonith_rsc == NULL");
@@ -2049,7 +2068,7 @@ stonithop_timeout(gpointer data)
 		return FALSE;
 	}
 
-	stonithd_log(LOG_DEBUG, "stonithop_timeout: begin.");
+	stonithd_log2(LOG_DEBUG, "stonithop_timeout: begin.");
 	/* since g_hash_table_find donnot exist in early version of glib-2.0 */
 	my_hash_table_find(executing_queue, (gpointer *)&orig_key, 
 			   (gpointer *)&op, call_id);
@@ -2141,7 +2160,7 @@ on_stonithd_virtual_stonithRA_ops(const struct ha_msg * request, gpointer data)
 	int * child_pid = NULL;
 	stonithd_client_t * client = NULL;
 
-	stonithd_log(LOG_DEBUG, "on_stonithd_stonithRA_ops: begin.");
+	stonithd_log2(LOG_DEBUG, "on_stonithd_stonithRA_ops: begin.");
 	/* parameter check, maybe redundant */
 	if ( ch == NULL || request == NULL ) {
 		stonithd_log(LOG_ERR, "on_virtual_stonithRA_ops: "
@@ -2257,7 +2276,7 @@ send_back_reply:
 		return ST_FAIL;
 	}
 
-	stonithd_log(LOG_DEBUG, "on_stonithd_virtaul_stonithRA_ops: end");
+	stonithd_log2(LOG_DEBUG, "on_stonithd_virtaul_stonithRA_ops: end");
 }
 
 static int
@@ -2266,7 +2285,7 @@ send_stonithRAop_final_result( stonithRA_ops_t * ra_op, gpointer data)
 	struct ha_msg * reply = NULL;
 	IPC_Channel * ch = (IPC_Channel *)data;
 
-	stonithd_log(LOG_DEBUG, "send_stonithRAop_final_result: begin.");
+	stonithd_log2(LOG_DEBUG, "send_stonithRAop_final_result: begin.");
 	if ( ra_op == NULL || data == NULL ) {
 		stonithd_log(LOG_ERR, "send_stonithRAop_final_result: "
 				      "parameter error.");
@@ -2436,7 +2455,7 @@ stonithRA_start( stonithRA_ops_t * op, gpointer data)
 	/* Don't find in local_started_stonith_rsc, not on start status */
 	stonithd_log(LOG_DEBUG, "stonithRA_start: op->params' address=%p"
 		     , op->params);
-	if (DEBUG_MODE == TRUE) {
+	if (debug_level > 0) {
 		print_str_hashtable(op->params);
 	}
 
@@ -2513,10 +2532,12 @@ stonithRA_start_post( stonithRA_ops_t * ra_op, gpointer data )
 	ra_op->private_data = NULL;
 	srsc->node_list = NULL;
 	srsc->node_list = stonith_get_hostlist(srsc->stonith_obj);
-	char **	this;
-	stonithd_log(LOG_DEBUG, "Got HOSTLIST");
-	for(this=srsc->node_list; *this; ++this) {
-		stonithd_log(LOG_DEBUG, "%s", *this);
+	if ( debug_level >= 2 ) {
+		char **	this;
+		stonithd_log2(LOG_DEBUG, "Got HOSTLIST");
+		for(this=srsc->node_list; *this; ++this) {
+			stonithd_log2(LOG_DEBUG, "%s", *this);
+		}
 	}
 
 	if (srsc->node_list == NULL) {
@@ -2544,7 +2565,8 @@ stonithRA_stop( stonithRA_ops_t * ra_op, gpointer data )
 
 	srsc = get_started_stonith_resource(ra_op->rsc_id);
 	if (srsc != NULL) {
-		stonithd_log(LOG_DEBUG, "got the active stonith_rsc.");
+		stonithd_log2(LOG_DEBUG, "got the active stonith_rsc: " 
+			"RA name = %s.", srsc->ra_name);
 		stonith_delete(srsc->stonith_obj);
 		srsc->stonith_obj = NULL;
 		local_started_stonith_rsc = 
@@ -2654,7 +2676,7 @@ free_stonithRA_ops_t(stonithRA_ops_t * ra_op)
        	ZAPGDOBJ(ra_op->ra_name);
 	ZAPGDOBJ(ra_op->op_type);
 	
-	stonithd_log(LOG_DEBUG, "free_stonithRA_ops_t: ra_op->private_data.=%p"
+	stonithd_log2(LOG_DEBUG, "free_stonithRA_ops_t: ra_op->private_data.=%p"
 		     , (Stonith *)(ra_op->private_data));
 	if (ra_op->private_data != NULL ) {
 		stonith_delete((Stonith *)(ra_op->private_data));
@@ -2672,14 +2694,14 @@ free_stonith_ops_t(stonith_ops_t * st_op)
 		return;
 	}
 
-	stonithd_log(LOG_DEBUG, "free_stonith_ops_t: begin.");
+	stonithd_log2(LOG_DEBUG, "free_stonith_ops_t: begin.");
 	ZAPGDOBJ(st_op->node_name);
 	if (st_op->node_list != NULL) {
 		g_string_free(st_op->node_list, TRUE);
 		st_op->node_list = NULL;
 	}
 	ZAPGDOBJ(st_op);
-	stonithd_log(LOG_DEBUG, "free_stonith_ops_t: end.");
+	stonithd_log2(LOG_DEBUG, "free_stonith_ops_t: end.");
 }
 
 static void
@@ -2690,16 +2712,16 @@ free_stonith_rsc(stonith_rsc_t * srsc)
 		return;
 	}
 	
-	stonithd_log(LOG_DEBUG, "free_stonith_rsc: begin.");
+	stonithd_log2(LOG_DEBUG, "free_stonith_rsc: begin.");
 	
 	ZAPGDOBJ(srsc->rsc_id);
 	ZAPGDOBJ(srsc->ra_name);
-	stonithd_log(LOG_DEBUG, "free_stonith_rsc: destroy params.");
+	stonithd_log2(LOG_DEBUG, "free_stonith_rsc: destroy params.");
 	g_hash_table_destroy(srsc->params);
 	srsc->params = NULL;
 
 	if (srsc->stonith_obj != NULL ) {
-		stonithd_log(LOG_DEBUG, "free_stonith_rsc: destroy stonith_obj.");
+		stonithd_log2(LOG_DEBUG, "free_stonith_rsc: destroy stonith_obj.");
 		stonith_delete(srsc->stonith_obj);
 		srsc->stonith_obj = NULL;
 	}
@@ -2707,7 +2729,7 @@ free_stonith_rsc(stonith_rsc_t * srsc)
 	stonith_free_hostlist(srsc->node_list);
 	srsc->node_list = NULL;
 
-	stonithd_log(LOG_DEBUG, "free_stonith_rsc: finished.");
+	stonithd_log2(LOG_DEBUG, "free_stonith_rsc: finished.");
 }
 
 static stonithd_client_t *
@@ -2716,7 +2738,7 @@ get_exist_client_by_chan(GList * client_list, IPC_Channel * ch)
 	stonithd_client_t * client;
 	GList * tmplist = NULL;
 	
-	stonithd_log(LOG_DEBUG, "get_exist_client_by_chan: begin.");
+	stonithd_log2(LOG_DEBUG, "get_exist_client_by_chan: begin.");
 	if (client_list == NULL) {
 		stonithd_log(LOG_DEBUG, "get_exist_client_by_chan: "
 			     "client_list == NULL");
@@ -2731,7 +2753,7 @@ get_exist_client_by_chan(GList * client_list, IPC_Channel * ch)
 	tmplist = g_list_first(client_list);
 	for (tmplist = g_list_first(client_list); tmplist != NULL; 
 	     tmplist = g_list_next(tmplist)) {
-		stonithd_log(LOG_DEBUG, "tmplist=%p", tmplist);
+		stonithd_log2(LOG_DEBUG, "tmplist=%p", tmplist);
 		client = (stonithd_client_t *)tmplist->data;
 		if (client != NULL && client->ch == ch) {
 			stonithd_log(LOG_DEBUG, "get_exist_client_by_chan: "
@@ -2740,7 +2762,7 @@ get_exist_client_by_chan(GList * client_list, IPC_Channel * ch)
 		}
 	}
 
-	stonithd_log(LOG_DEBUG, "get_exist_client_by_chan: end.");
+	stonithd_log2(LOG_DEBUG, "get_exist_client_by_chan: end.");
 	return NULL;
 }
 
@@ -2782,7 +2804,7 @@ delete_client_by_chan(GList ** client_list, IPC_Channel * ch)
 		*client_list = g_list_remove(*client_list, client);
 		free_client(client);
 		client = NULL;
-		stonithd_log(LOG_DEBUG, "delete_client_by_chan: return OK.");
+		stonithd_log2(LOG_DEBUG, "delete_client_by_chan: return OK.");
 		stonithd_log(LOG_DEBUG, "delete_client_by_chan: new "
 			     "client_list = %p", *client_list);
 		return ST_OK;
@@ -2791,6 +2813,53 @@ delete_client_by_chan(GList ** client_list, IPC_Channel * ch)
 			"using this channel, so no client deleted.");
 		return ST_FAIL;
 	}
+}
+
+static void
+inherit_config_from_environment(void)
+{
+	char * inherit_env = NULL;
+
+	/* Donnot need to free the return pointer from getenv */
+	inherit_env = getenv(HADEBUGVAL);
+	if (inherit_env != NULL && atoi(inherit_env) != 0 ) {
+		debug_level = atoi(inherit_env);
+		inherit_env = NULL;
+	}
+
+	inherit_env = getenv(LOGFENV);
+	if (inherit_env != NULL) {
+		cl_log_set_logfile(inherit_env);
+		inherit_env = NULL;
+	}
+
+	inherit_env = getenv(DEBUGFENV);
+	if (inherit_env != NULL) {
+		cl_log_set_debugfile(inherit_env);
+		inherit_env = NULL;
+	}
+
+	inherit_env = getenv(LOGFACILITY);
+	if (inherit_env != NULL) {
+		int facility = -1;
+		facility = facility_name_to_value(inherit_env);
+		if ( facility != -1 ) {
+			cl_log_set_facility(facility);
+		}
+		inherit_env = NULL;
+	}
+}
+
+static int
+facility_name_to_value(const char * name)
+{
+	int i;
+	for (i = 0; facilitynames[i].c_name != NULL; i++) {
+		if (strcmp(name, facilitynames[i].c_name) == 0) {
+			return facilitynames[i].c_val;
+		}
+	}
+	return -1;
 }
 
 /* make the apphb_interval, apphb_warntime adjustable important */
@@ -2909,30 +2978,6 @@ kill_running_daemon(const char * pidfile)
 	} 
 }
 
-/* copied from cl_log.c, need to be the same */
-#ifndef MAXLINE
-#	define MAXLINE	512
-#endif
-
-/* Support the switch for debug message 
- * Need to support a separate debug log file?
- */
-static void
-stonithd_log(int priority, const char * fmt, ...)
-{
-	va_list		ap;
-	char		buf[MAXLINE];
-
-	if ( DEBUG_MODE == FALSE && priority == LOG_DEBUG ) {
-		return;
-	}
-	
-	va_start(ap, fmt);
-	vsnprintf(buf, sizeof(buf)-1, fmt, ap);
-	va_end(ap);
-	cl_log(priority, "%s", buf);
-}
-
 static void
 destory_key_of_op_htable(gpointer data)
 {
@@ -2949,7 +2994,7 @@ free_common_op_t(gpointer data)
 		return;
 	}
 
-	stonithd_log(LOG_DEBUG, "free_common_op_t: begin.");
+	stonithd_log2(LOG_DEBUG, "free_common_op_t: begin.");
 	
 	if ( op->scenario == STONITH_RA_OP ) {
 		free_stonithRA_ops_t(op->op_union.ra_op);
@@ -2964,11 +3009,16 @@ free_common_op_t(gpointer data)
 	}	
 
 	/* Donnot need to free 'data' field */
-	stonithd_log(LOG_DEBUG, "free_common_op_t: end.");
+	stonithd_log2(LOG_DEBUG, "free_common_op_t: end.");
 }
 
 /* 
  * $Log: stonithd.c,v $
+ * Revision 1.37  2005/04/08 07:32:48  sunjd
+ * Replace log function with macro to enhance the running efficiency.
+ * Make internal loglevel more granular.
+ * Inherit configurations from environment variables set by heartbeat.
+ *
  * Revision 1.36  2005/04/07 07:46:18  sunjd
  * use STRLEN_CONST & STRNCMP_CONST instead
  *
