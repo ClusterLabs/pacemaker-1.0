@@ -1,4 +1,4 @@
-/* $Id: ccmllm.c,v 1.13 2005/03/29 18:47:52 gshi Exp $ */
+/* $Id: ccmllm.c,v 1.14 2005/04/08 18:02:00 gshi Exp $ */
 /* 
  * ccmllm.c: Low Level membership routines.
  *
@@ -27,36 +27,19 @@
 /* return the number of nodes in the cluster that are in a active state. */
 /* */
 int
-llm_get_active_nodecount(llm_info_t *llm)
+llm_get_live_nodecount(llm_info_t *llm)
 {
 	uint count=0, i;
 	for ( i = 0 ; i < LLM_GET_NODECOUNT(llm) ; i++ ) {
-		if (STRNCMP_CONST(LLM_GET_STATUS(llm, i), "active") == 0) {
-			count++;
+		const char* status = LLM_GET_STATUS(llm,i);
+		if (STRNCMP_CONST(status, DEADSTATUS) != 0
+		    && STRNCMP_CONST(status, CLUST_INACTIVE) != 0) {
+			    count++;
 		}
 	}
 	return count;
 }
 
-/* return TRUE if we are the only active node and all other nodes
- * are stonith'ed
- */
-gboolean
-llm_only_active_node(llm_info_t *llm)
-{
-	uint  i;
-	for ( i = 0 ; i < LLM_GET_NODECOUNT(llm) ; i++ ) {
-
-		if (i == (uint)LLM_GET_MYNODE(llm)) {
-			continue;
-		}
-		if (0!=STRNCMP_CONST(LLM_GET_STATUS(llm, i), CLUST_INACTIVE)){
-
-			return FALSE;
-		}
-	}
-	return TRUE;
-}
 
 /* */
 /* return the nodename of the node with the specified uuid. */
