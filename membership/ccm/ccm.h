@@ -1,4 +1,4 @@
-/* $Id: ccm.h,v 1.32 2005/03/16 17:50:00 gshi Exp $ */
+/* $Id: ccm.h,v 1.33 2005/04/08 22:06:51 gshi Exp $ */
 /*
  * ccm.h: definitions Consensus Cluster Manager internal header
  *				file
@@ -122,7 +122,7 @@ typedef struct llm_info_s { /* information about low level membership info */
 			(strncpy(llm->nodes[i].status,status,STATUSSIZE))
 #define LLM_COPY(llm,dst,src) (llm->nodes[dst] = llm->nodes[src])
 #define LLM_GET_NODEIDSIZE(llm) NODEIDSIZE
-int llm_get_active_nodecount(llm_info_t *);
+int llm_get_live_nodecount(llm_info_t *);
 gboolean llm_only_active_node(llm_info_t *);
 int llm_get_uuid(llm_info_t *, const char *);
 char *llm_get_nodeid_from_uuid(llm_info_t *, const int );
