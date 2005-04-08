@@ -1,4 +1,4 @@
-/* $Id: ccm.c,v 1.77 2005/04/07 22:53:10 gshi Exp $ */
+/* $Id: ccm.c,v 1.78 2005/04/08 22:09:40 gshi Exp $ */
 /* 
  * ccm.c: Consensus Cluster Service Program 
  *
@@ -2009,8 +2009,8 @@ ccm_state_version_request(enum ccm_type ccm_msg_type,
 				return;
 			}
 			clsize_val = atoi(clsize);
-			if((clsize_val+1) <=
-			   ((llm_get_active_nodecount(CCM_GET_LLM(info))+1)/2)) {
+			if((clsize_val+1) <=  
+			   (LLM_GET_NODECOUNT(CCM_GET_LLM(info))+1)/2) {
 				/* drop the response. We will wait for 
 			  	 * a response from a bigger group 
 				 */
@@ -3762,7 +3762,7 @@ ccm_control_init(ccm_info_t *info)
 
 	/* if this is the only active node in the cluster, go to the 
 			JOINED state */
-	if (llm_get_active_nodecount(CCM_GET_LLM(info)) == 1) {
+	if (llm_get_live_nodecount(CCM_GET_LLM(info)) == 1) {
 		ccm_init_to_joined(info);
 	} else {
 		ccm_set_state(info, CCM_STATE_NONE, NULL);
