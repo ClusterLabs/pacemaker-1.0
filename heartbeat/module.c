@@ -1,4 +1,4 @@
-/* $Id: module.c,v 1.57 2005/03/15 01:18:22 gshi Exp $ */
+/* $Id: module.c,v 1.58 2005/04/08 05:35:42 alan Exp $ */
 /*
  * module: Dynamic module support code
  *
@@ -154,6 +154,7 @@ RegisterNewMedium(struct hb_media* mp)
  * file so they can be passed to the plugins their use. This avoids coupling
  * through global variables which is problematic for plugins on some platforms.
  */
+#define		PREFIX "HA_"
 void
 SetParameterValue(const char * name, const char * value)
 {
@@ -162,13 +163,6 @@ SetParameterValue(const char * name, const char * value)
 	void *	gname;
 	void *	gval;
 	int	name_len = strlen(name?name:"");
-	char *  env_name = cl_malloc(name_len + 4);		
-	
-	if (env_name == NULL){
-		cl_log(LOG_ERR, "SetParameterValue():"
-		       "memory allocation failed");
-		return;
-	}
 
 	if (Parameters == NULL) {
 		Parameters = g_hash_table_new(g_str_hash, g_str_equal);
@@ -189,15 +183,23 @@ SetParameterValue(const char * name, const char * value)
 	g_hash_table_insert(Parameters, namedup, valdup);
 
 	if(name_len > 0) {
-		snprintf(env_name, name_len+4, "HA_%s", name);
-		env_name[name_len+3] = 0;
+		char *  env_name = cl_malloc(name_len + STRLEN_CONST(PREFIX)+1);		
+		if (env_name == NULL){
+			cl_log(LOG_ERR, "SetParameterValue():"
+			       "setenv() memory allocation failed.");
+			return;
+		}
+		snprintf(env_name, name_len+4, PREFIX "%s", name);
+		env_name[name_len+STRLEN_CONST(PREFIX)] = EOS;
+		/*
+		 * It is unclear whether any given version of setenv
+		 * makes a copy of the name or value, or both.
+		 * Therefore it is UNSAFE to free either one.
+		 * Fortunately the size of the resulting potential memory leak
+		 * is small for this particular situation.
+		 */
 		setenv(env_name, value, 1);
 	}
-	
-	/* It may not always be safe to free env_name (man putenv, setenv)
-	 * Free it for now pending compaints from the field
-	 */
- 	cl_free(env_name);
 }
 /* 
  * GetParameterValue() provides information from the configuration file
