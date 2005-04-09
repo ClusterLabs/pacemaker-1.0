@@ -16,8 +16,9 @@
 
 
 #	Entity to be shown at beginning of a message
-# 	Default: "heartbeat"
-#entity heartbeat
+# 	for logging daemon
+# 	Default: "logd"
+#entity logd
 
 
 #	Do we register to apphbd
