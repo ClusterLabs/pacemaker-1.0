@@ -1,4 +1,4 @@
-/* $Id: ccm.c,v 1.78 2005/04/08 22:09:40 gshi Exp $ */
+/* $Id: ccm.c,v 1.79 2005/04/10 21:50:47 alan Exp $ */
 /* 
  * ccm.c: Consensus Cluster Service Program 
  *
@@ -1034,7 +1034,7 @@ ccm_get_membership_index(ccm_info_t *info, const char *node)
 static int
 ccm_get_index(ccm_info_t* info, const char* node)
 {
-	int i;
+	uint i;
 	llm_info_t *llm = CCM_GET_LLM(info);
 	for ( i = 0 ; i < llm->nodecount ; i++ ) {
 		if(strncmp(LLM_GET_NODEID(llm, i), node, 
@@ -1960,7 +1960,8 @@ ccm_state_version_request(enum ccm_type ccm_msg_type,
 {
 	const char *orig, *proto, *cookie, *trans, *clsize;
 	uint trans_val;
-	int  proto_val, clsize_val;
+	int  proto_val;
+	uint clsize_val;
 	int try;
 	int repeat;
 	
