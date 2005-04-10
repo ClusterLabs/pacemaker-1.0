@@ -1,4 +1,4 @@
-/* $Id: mcast.c,v 1.22 2004/10/24 13:00:13 lge Exp $ */
+/* $Id: mcast.c,v 1.23 2005/04/10 20:10:53 lars Exp $ */
 /*
  * mcast.c: implements hearbeat API for UDP multicast communication
  *
@@ -390,7 +390,7 @@ mcast_read(struct hb_media* hbm, int *lenp)
 {
 	struct mcast_private *	mcp;
 	char			buf[MAXLINE];
-	int			addr_len = sizeof(struct sockaddr);
+	socklen_t		addr_len = sizeof(struct sockaddr);
    	struct sockaddr_in	their_addr; /* connector's addr information */
 	int	numbytes;
 	void	*pkt;
@@ -809,6 +809,9 @@ get_loop(const char *loop, u_char *l)
 
 /*
  * $Log: mcast.c,v $
+ * Revision 1.23  2005/04/10 20:10:53  lars
+ * int -> socklen_t where needed
+ *
  * Revision 1.22  2004/10/24 13:00:13  lge
  * -pedantic-errors fixes 2:
  *  * error: ISO C forbids forward references to 'enum' types

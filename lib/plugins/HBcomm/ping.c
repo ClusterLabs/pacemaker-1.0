@@ -1,4 +1,4 @@
-/* $Id: ping.c,v 1.38 2005/03/15 11:30:45 alan Exp $ */
+/* $Id: ping.c,v 1.39 2005/04/10 20:10:53 lars Exp $ */
 /*
  * ping.c: ICMP-echo-based heartbeat code for heartbeat.
  *
@@ -298,7 +298,7 @@ ping_read(struct hb_media* mp, int *lenp)
 	}buf;
 	const char *		bufmax = ((char *)&buf)+sizeof(buf);
 	char *			msgstart;
-	int			addr_len = sizeof(struct sockaddr);
+	socklen_t		addr_len = sizeof(struct sockaddr);
    	struct sockaddr_in	their_addr; /* connector's addr information */
 	struct ip *		ip;
 	struct icmp		icp;

@@ -1,4 +1,4 @@
-/* $Id: bcast.c,v 1.40 2004/10/24 13:00:13 lge Exp $ */
+/* $Id: bcast.c,v 1.41 2005/04/10 20:10:53 lars Exp $ */
 /*
  * bcast.c: UDP/IP broadcast-based communication code for heartbeat.
  *
@@ -315,7 +315,7 @@ bcast_read(struct hb_media* mp, int * lenp)
 {
 	struct ip_private *	ei;
 	char			buf[MAXLINE];
-	int			addr_len = sizeof(struct sockaddr);
+	socklen_t		addr_len = sizeof(struct sockaddr);
    	struct sockaddr_in	their_addr; /* connector's addr information */
 	int	numbytes;
 	void	*pkt;
@@ -759,6 +759,9 @@ if_get_broadaddr(const char *ifn, struct in_addr *broadaddr)
 
 /*
  * $Log: bcast.c,v $
+ * Revision 1.41  2005/04/10 20:10:53  lars
+ * int -> socklen_t where needed
+ *
  * Revision 1.40  2004/10/24 13:00:13  lge
  * -pedantic-errors fixes 2:
  *  * error: ISO C forbids forward references to 'enum' types

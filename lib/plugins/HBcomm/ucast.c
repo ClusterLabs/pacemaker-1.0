@@ -1,4 +1,4 @@
-/* $Id: ucast.c,v 1.23 2004/10/24 13:00:13 lge Exp $ */
+/* $Id: ucast.c,v 1.24 2005/04/10 20:10:53 lars Exp $ */
 /*
  * Adapted from alanr's UDP broadcast heartbeat bcast.c by Stéphane Billiart
  *	<stephane@reefedge.com>
@@ -376,7 +376,7 @@ static void *
 ucast_read(struct hb_media* mp, int *lenp)
 {
 	struct ip_private *ei;
-	int addr_len;
+	socklen_t addr_len;
 	struct sockaddr_in their_addr;
 	int numbytes;
 	char buf[MAXLINE];
