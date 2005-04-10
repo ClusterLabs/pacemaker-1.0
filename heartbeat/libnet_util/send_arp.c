@@ -1,4 +1,4 @@
-/* $Id: send_arp.c,v 1.14 2005/03/04 15:27:04 alan Exp $ */
+/* $Id: send_arp.c,v 1.15 2005/04/10 05:34:02 alan Exp $ */
 /* 
  * send_arp
  * 
@@ -102,8 +102,8 @@ main(int argc, char *argv[])
 	char    pidfilenamebuf[64];
 	char    *pidfilename = NULL;
 
-	CL_SIGINTERRUPT(SIGTERM, 1);
 	CL_SIGNAL(SIGTERM, byebye);
+	CL_SIGINTERRUPT(SIGTERM, 1);
 
 	openlog("send_arp", LOG_CONS | LOG_PID, LOG_USER);
 
@@ -510,7 +510,7 @@ create_pid_directory(const char *pidfilename)
 		return -1;
 	}
 	
-	if (!status) {
+	if (status >= 0) {
 		if (S_ISDIR(stat_buf.st_mode)) {
 			return 0;
 		}
@@ -521,6 +521,11 @@ create_pid_directory(const char *pidfilename)
         }
 
 	if (mkdir(dir, S_IRUSR|S_IWUSR|S_IXUSR | S_IRGRP|S_IXGRP) < 0) {
+		/* Did someone else make it while we were trying ? */
+		if (errno == EEXIST && stat(dir, &stat_buf) >= 0
+		&&	S_ISDIR(stat_buf.st_mode)) {
+			return 0;
+		}
 		syslog(LOG_INFO, "Could not create pid-file directory "
 				"[%s]: %s", dir, strerror(errno));
 		free(pidfilename_cpy);
@@ -652,6 +657,9 @@ write_pid_file(const char *pidfilename)
 
 /*
  * $Log: send_arp.c,v $
+ * Revision 1.15  2005/04/10 05:34:02  alan
+ * BUG 459: Fixed a directory-creation race condition in send_arp.
+ *
  * Revision 1.14  2005/03/04 15:27:04  alan
  * Fixed a signed/unsigned bug in send_arp.c
  *
