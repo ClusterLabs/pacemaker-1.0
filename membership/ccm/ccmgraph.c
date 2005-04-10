@@ -1,4 +1,4 @@
-/* $Id: ccmgraph.c,v 1.11 2005/02/17 19:08:20 gshi Exp $ */
+/* $Id: ccmgraph.c,v 1.12 2005/04/10 19:49:34 lars Exp $ */
 /* 
  * ccmgraph.c: Keeps track of the connectivity within the cluster members
  *		to derive the largest totally connected subgraph.
@@ -499,7 +499,8 @@ graph_filled_all(graph_t *gr)
 int
 graph_get_maxclique(graph_t *gr, unsigned char **bitmap)
 {
-	int loc, i, size, numBytes;
+	int loc = 0;
+	int i, size, numBytes;
 
 	graph_sanitize(gr);
 	size = get_max_clique(gr->graph_node, gr->graph_nodes, 
