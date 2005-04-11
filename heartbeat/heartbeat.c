@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.386 2005/04/01 20:17:29 gshi Exp $ */
+/* $Id: heartbeat.c,v 1.387 2005/04/11 19:51:23 gshi Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -1210,7 +1210,9 @@ master_control_process(IPC_Channel* fifoproc)
 	init_xmit_hist (&msghist);
 
 	hb_init_watchdog();
-
+	
+	/*add logging channel into mainloop*/
+	cl_log_set_logd_channel_source(NULL, NULL);
 
 	if (hb_signal_set_master_control_process(NULL) < 0) {
 		cl_log(LOG_ERR, "master_control_process(): "
@@ -5207,6 +5209,9 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.387  2005/04/11 19:51:23  gshi
+ * add logging channel to main loop
+ *
  * Revision 1.386  2005/04/01 20:17:29  gshi
  * set channel peer pid correctly bwteeen heartbeat and write/read/fifo child
  *
