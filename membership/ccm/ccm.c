@@ -1,4 +1,4 @@
-/* $Id: ccm.c,v 1.79 2005/04/10 21:50:47 alan Exp $ */
+/* $Id: ccm.c,v 1.80 2005/04/12 19:57:16 gshi Exp $ */
 /* 
  * ccm.c: Consensus Cluster Service Program 
  *
@@ -1030,6 +1030,23 @@ ccm_get_membership_index(ccm_info_t *info, const char *node)
 	}
 	return -1;
 }
+
+static gboolean
+node_is_member(ccm_info_t* info, const char* node)
+{
+	int i,indx;
+	llm_info_t *llm = CCM_GET_LLM(info);
+	for ( i = 0 ; i < CCM_GET_MEMCOUNT(info) ; i++ ) {
+		indx =  CCM_GET_MEMINDEX(info, i);
+		if(strncmp(LLM_GET_NODEID(llm, indx), node, 
+			   LLM_GET_NODEIDSIZE(llm)) == 0){
+			return TRUE;
+		}
+	}	
+	
+	return FALSE;
+}
+
 
 static int
 ccm_get_index(ccm_info_t* info, const char* node)
@@ -2263,6 +2280,10 @@ ccm_state_joined(enum ccm_type ccm_msg_type,
 
 		case CCM_TYPE_LEAVE: 
 			
+			if (!node_is_member(info, orig)){
+				return;
+			}
+			
 			/* If the dead node is the partition leader, go to
 			 * JOINING state
 			 */
@@ -2495,6 +2516,11 @@ static void ccm_state_wait_for_change(enum ccm_type ccm_msg_type,
 			break;
 
 		case CCM_TYPE_LEAVE:
+
+			if (!node_is_member(info, orig)){
+				return;
+			}			
+
 			node = orig;
 			orig = CCM_GET_MYNODE_ID(info);
 			uptime_val = CCM_GET_JOINED_TRANSITION(info);
