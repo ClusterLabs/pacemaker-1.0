@@ -1,4 +1,4 @@
-/* $Id: config.c,v 1.149 2005/03/03 16:21:03 andrew Exp $ */
+/* $Id: config.c,v 1.150 2005/04/13 11:47:51 zhenh Exp $ */
 /*
  * Parse various heartbeat configuration files...
  *
@@ -1617,6 +1617,11 @@ set_debuglevel(const char * value)
 {
 	debug = atoi(value);
 	if (debug >= 0 && debug < 256) {
+		if (debug > 0) {
+			static char cdebug[8];
+			snprintf(cdebug, sizeof(debug), "%d", debug);
+			setenv(HADEBUGVAL, cdebug, TRUE);
+		}
 		return(HA_OK);
 	}
 	return(HA_FAIL);
@@ -2154,6 +2159,9 @@ set_release2mode(const char* value)
 
 /*
  * $Log: config.c,v $
+ * Revision 1.150  2005/04/13 11:47:51  zhenh
+ * set the env variable of debug level
+ *
  * Revision 1.149  2005/03/03 16:21:03  andrew
  * Use the common logging setup calls (change cleared by gshi)
  *
