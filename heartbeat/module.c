@@ -1,4 +1,4 @@
-/* $Id: module.c,v 1.58 2005/04/08 05:35:42 alan Exp $ */
+/* $Id: module.c,v 1.59 2005/04/13 23:21:47 alan Exp $ */
 /*
  * module: Dynamic module support code
  *
@@ -48,7 +48,7 @@
 #include <pils/generic.h>
 #include <HBcomm.h>
 #include <hb_config.h>
-#include <clplumbing/ttylock.h>
+#include <stonith/st_ttylock.h>
 
 #ifndef RTLD_NOW
 #	define RTLD_NOW 0
@@ -70,8 +70,8 @@ static void		RegisterCleanup(void(*)(void));
 struct hb_media_imports	CommImports =
 {	GetParameterValue	/* So plugins can get option values */
 ,	RegisterNewMedium
-,	ttylock
-,	ttyunlock
+,	st_ttylock
+,	st_ttyunlock
 ,	StringToBaud
 ,	RegisterCleanup
 ,	hb_signal_process_pending
