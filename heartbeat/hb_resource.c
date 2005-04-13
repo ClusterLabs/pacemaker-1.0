@@ -1,4 +1,4 @@
-/* $Id: hb_resource.c,v 1.74 2005/03/28 15:41:49 alan Exp $ */
+/* $Id: hb_resource.c,v 1.75 2005/04/13 18:04:46 gshi Exp $ */
 /*
  * hb_resource: Linux-HA heartbeat resource management code
  *
@@ -96,7 +96,6 @@ enum hb_rsc_state		resourcestate = HB_R_INIT;
 enum standby			going_standby = NOT;
 longclock_t			standby_running = 0L;
 static int			standby_rsctype = HB_ALL_RSC;
-extern int			use_logging_daemon;
 
 #define	INITMSG			"Initial resource acquisition complete"
 
@@ -442,7 +441,7 @@ notify_world(struct ha_msg * msg, const char * ostatus)
 				}
 				
 				/*should we use logging daemon or not in script*/
-				setenv(HALOGD, use_logging_daemon?
+				setenv(HALOGD, cl_log_get_uselogd()?
 				       "yes":"no", 1);
 				
 				if (ANYDEBUG) {
@@ -1426,7 +1425,7 @@ req_our_resources(int getthemanyway)
 			": running [%s]",	getcmd);
 		}
 		/*should we use logging daemon or not in script*/
-		setenv(HALOGD, use_logging_daemon?
+		setenv(HALOGD, cl_log_get_uselogd()?
 		       "yes":"no", 1);				
 
 		if ((rc=system(getcmd)) != 0) {
@@ -1899,7 +1898,7 @@ go_standby(enum standby who, int resourceset) /* Which resources to give up */
 		,	actioncmds[action], buf);
 
 		/*should we use logging daemon or not in script*/
-		setenv(HALOGD, use_logging_daemon?
+		setenv(HALOGD, cl_log_get_uselogd()?
 		       "yes":"no", 1);
 		
 		if ((rc=system(cmd)) != 0) {
@@ -2042,7 +2041,7 @@ hb_giveup_resources(void)
 		}
 
 		/*should we use logging daemon or not in script*/
-		setenv(HALOGD, use_logging_daemon?
+		setenv(HALOGD, cl_log_get_uselogd()?
 		       "yes":"no", 1);
 		
 		sprintf(cmd, HALIB "/ResourceManager givegroup %s", buf);
@@ -2427,6 +2426,12 @@ StonithStatProcessName(ProcTrack* p)
 
 /*
  * $Log: hb_resource.c,v $
+ * Revision 1.75  2005/04/13 18:04:46  gshi
+ * bug 442:
+ *
+ * Enable logging daemon  by default
+ * use static variables in cl_log and export interfaces to get/set variables
+ *
  * Revision 1.74  2005/03/28 15:41:49  alan
  * BUG 49: Some of the STONITH logic (and other things) shouldn't be
  * executed if heartbeat isn't managing resources.

@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.387 2005/04/11 19:51:23 gshi Exp $ */
+/* $Id: heartbeat.c,v 1.388 2005/04/13 18:04:46 gshi Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -3779,6 +3779,7 @@ StartHeartbeat:
 		make_daemon();	/* Only child processes returns. */
 		setenv(LOGFENV, config->logfile, 1);
 		setenv(DEBUGFENV, config->dbgfile, 1);
+		setenv(HALOGD, cl_log_get_uselogd()? "yes":"no", 1);
 		if (config->log_facility >= 0) {
 			char	facility[40];
 			snprintf(facility, sizeof(facility)
@@ -5209,6 +5210,12 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.388  2005/04/13 18:04:46  gshi
+ * bug 442:
+ *
+ * Enable logging daemon  by default
+ * use static variables in cl_log and export interfaces to get/set variables
+ *
  * Revision 1.387  2005/04/11 19:51:23  gshi
  * add logging channel to main loop
  *

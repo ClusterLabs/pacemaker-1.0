@@ -1,4 +1,4 @@
-/* $Id: config.c,v 1.150 2005/04/13 11:47:51 zhenh Exp $ */
+/* $Id: config.c,v 1.151 2005/04/13 18:04:46 gshi Exp $ */
 /*
  * Parse various heartbeat configuration files...
  *
@@ -133,7 +133,7 @@ struct directive {
 , {KEY_DEBUGLEVEL,set_debuglevel, TRUE, NULL, "debug level"}
 , {KEY_NORMALPOLL,set_normalpoll, TRUE, "true", "Use system poll(2) function?"}
 , {KEY_MSGFMT,    set_msgfmt, TRUE, "classic", "message format in the wire"}
-, {KEY_LOGDAEMON, set_logdaemon, TRUE, "no", "use logging daemon"}  
+, {KEY_LOGDAEMON, set_logdaemon, TRUE, "yes", "use logging daemon"}  
 , {KEY_CONNINTVAL,set_logdconntime, TRUE, "60", "the interval to reconnect to logd"}  
 , {KEY_REGAPPHBD, set_register_to_apphbd, FALSE, NULL, "register with apphbd"}
 , {KEY_BADPACK,   set_badpack_warn, TRUE, "true", "warn about bad packets"}
@@ -175,8 +175,6 @@ extern int    				timebasedgenno;
 int    					enable_realtime = TRUE;
 extern int    				debug;
 int					netstring_format = FALSE;
-extern int				use_logging_daemon;
-extern int				conn_logd_intval;
 extern int				UseApphbd;
 
 static int	islegaldirective(const char *directive);
@@ -1659,18 +1657,27 @@ static int
 set_logdaemon(const char * value)
 {
 	int	rc;
+	int	uselogd;
+	rc = str_to_boolean(value, &uselogd);
 	
-	rc = str_to_boolean(value, &use_logging_daemon);
-       
+	cl_log_set_uselogd(uselogd);
+	
+	if (!uselogd){
+		cl_log(LOG_WARNING, "Using logging daemon is disabled!");
+	}
+
 	return rc;
 }
 
 static int
 set_logdconntime(const char * value)
 {
-	conn_logd_intval = get_msec(value);
-
-	if (conn_logd_intval > 0) {
+	int logdtime;
+	logdtime = get_msec(value);
+	
+	cl_log_set_logdtime(logdtime);
+	
+	if (logdtime > 0) {
 		return(HA_OK);
 	}
 	return(HA_FAIL);
@@ -2159,6 +2166,12 @@ set_release2mode(const char* value)
 
 /*
  * $Log: config.c,v $
+ * Revision 1.151  2005/04/13 18:04:46  gshi
+ * bug 442:
+ *
+ * Enable logging daemon  by default
+ * use static variables in cl_log and export interfaces to get/set variables
+ *
  * Revision 1.150  2005/04/13 11:47:51  zhenh
  * set the env variable of debug level
  *
