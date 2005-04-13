@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.389 2005/04/13 22:26:20 alan Exp $ */
+/* $Id: heartbeat.c,v 1.390 2005/04/13 23:01:19 alan Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -908,7 +908,7 @@ read_child(struct hb_media* mp)
 	cl_make_realtime(-1, hb_realtime_prio, 16, 8);
 	set_proc_title("%s: read: %s %s", cmdname, mp->type, mp->name);
 	cl_cdtocoredir();
-	cl_set_all_coredump_signal_handlers(void);
+	cl_set_all_coredump_signal_handlers();
 	drop_privs(0, 0);	/* Become nobody */
 
 	hb_signal_process_pending();
@@ -968,7 +968,7 @@ write_child(struct hb_media* mp)
 	set_proc_title("%s: write: %s %s", cmdname, mp->type, mp->name);
 	cl_make_realtime(-1, hb_realtime_prio, 16, 8);
 	cl_cdtocoredir();
-	cl_set_all_coredump_signal_handlers(void);
+	cl_set_all_coredump_signal_handlers();
 	drop_privs(0, 0);	/* Become nobody */
 	curproc->pstat = RUNNING;
 
@@ -1040,7 +1040,7 @@ fifo_child(IPC_Channel* chan)
 
 	cl_make_realtime(-1, hb_realtime_prio, 16, 32);
 	cl_cdtocoredir();
-	cl_set_all_coredump_signal_handlers(void);
+	cl_set_all_coredump_signal_handlers();
 	drop_privs(0, 0);	/* Become nobody */
 	curproc->pstat = RUNNING;
 
@@ -5213,6 +5213,9 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.390  2005/04/13 23:01:19  alan
+ * fixed stupid syntax error that somehow escaped me.
+ *
  * Revision 1.389  2005/04/13 22:26:20  alan
  * Put in code to cause us to dump core - even if we're running seteuid to nobody.
  *
