@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.388 2005/04/13 18:04:46 gshi Exp $ */
+/* $Id: heartbeat.c,v 1.389 2005/04/13 22:26:20 alan Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -907,8 +907,9 @@ read_child(struct hb_media* mp)
 
 	cl_make_realtime(-1, hb_realtime_prio, 16, 8);
 	set_proc_title("%s: read: %s %s", cmdname, mp->type, mp->name);
-	drop_privs(0, 0);	/* Become nobody */
 	cl_cdtocoredir();
+	cl_set_all_coredump_signal_handlers(void);
+	drop_privs(0, 0);	/* Become nobody */
 
 	hb_signal_process_pending();
 	curproc->pstat = RUNNING;
@@ -966,8 +967,9 @@ write_child(struct hb_media* mp)
 
 	set_proc_title("%s: write: %s %s", cmdname, mp->type, mp->name);
 	cl_make_realtime(-1, hb_realtime_prio, 16, 8);
-	drop_privs(0, 0);	/* Become nobody */
 	cl_cdtocoredir();
+	cl_set_all_coredump_signal_handlers(void);
+	drop_privs(0, 0);	/* Become nobody */
 	curproc->pstat = RUNNING;
 
 	if (ANYDEBUG) {
@@ -1037,8 +1039,9 @@ fifo_child(IPC_Channel* chan)
 	}
 
 	cl_make_realtime(-1, hb_realtime_prio, 16, 32);
-	drop_privs(0, 0);	/* Become nobody */
 	cl_cdtocoredir();
+	cl_set_all_coredump_signal_handlers(void);
+	drop_privs(0, 0);	/* Become nobody */
 	curproc->pstat = RUNNING;
 
 	if (ANYDEBUG) {
@@ -5210,6 +5213,9 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.389  2005/04/13 22:26:20  alan
+ * Put in code to cause us to dump core - even if we're running seteuid to nobody.
+ *
  * Revision 1.388  2005/04/13 18:04:46  gshi
  * bug 442:
  *
