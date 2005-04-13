@@ -119,6 +119,7 @@ GenerateHaCf() {
 	mcast $INTERFACE $MCASTIP 694 0 0
 	#bcast $INTERFACE
 	node $LOCALNODE $DUMMYNODE
+	use_logd off
 	respawn @HA_CCMUSER@ $HBLIB/ccm
 	respawn @HA_CCMUSER@ $HBLIB/ipfail
 	apiauth stonithd uid=root
@@ -141,6 +142,7 @@ GenerateCrmdHaCf() {
 	mcast $INTERFACE $MCASTIP 694 0 0
 	#bcast $INTERFACE
 	node $LOCALNODE $DUMMYNODE
+	use_logd off
 	crm yes
 	!
   chmod 644 $1
