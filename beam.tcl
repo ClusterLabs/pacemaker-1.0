@@ -18,7 +18,7 @@ set beam::PORTABILITY5::enabling_policy "always"
 
 beam::attribute_by_signature {
 	advisory (
-	explanation = "Never use g_timeout_add() and friends. They are buggy.  Use our Gmain_timeout_add() instead.  It works correctly.",
+	explanation = "Never use g_timeout_add() and friends. They are buggy.  Use our Gmain_timeout_add() or Gmain_timeout_add_full() instead.  They work correctly.",
 	category = unsafe
        )
 } "g_timeout_add" "g_timeout_add_full"
