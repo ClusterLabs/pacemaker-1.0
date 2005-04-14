@@ -1,4 +1,4 @@
-/* $Id: ccm.c,v 1.80 2005/04/12 19:57:16 gshi Exp $ */
+/* $Id: ccm.c,v 1.81 2005/04/14 22:07:44 gshi Exp $ */
 /* 
  * ccm.c: Consensus Cluster Service Program 
  *
@@ -251,6 +251,7 @@ enum ccm_type {
 	CCM_TYPE_ABORT,
 	CCM_TYPE_LEAVE,
 	CCM_TYPE_TIMEOUT,
+	CCM_TYPE_NODE_LEAVE_NOTICE,
 	CCM_TYPE_NODE_LEAVE,
 	CCM_TYPE_MEM_LIST,
 	CCM_TYPE_ALIVE,
@@ -281,6 +282,7 @@ char  ccm_type_str[CCM_TYPE_LAST + 1][TYPESTRSIZE] = {
 	"CCM_TYPE_ABORT",
 	"CCM_TYPE_LEAVE",
 	"CCM_TYPE_TIMEOUT",
+	"CCM_TYPE_NODE_LEAVE_NOTICE",
 	"CCM_TYPE_NODE_LEAVE",
 	"CCM_TYPE_MEM_LIST",
 	"CCM_TYPE_ALIVE",
@@ -1185,6 +1187,54 @@ ccm_remove_new_joiner(ccm_info_t *info, const char *orig)
 
 
 
+/*broadcast CCM_TYPE_NODE_LEAVE_NOTICE */
+static int
+ccm_bcast_node_leave_notice(ll_cluster_t* hb, 
+			    ccm_info_t* info,
+			    const char* node)
+{
+
+	struct ha_msg *m;
+	char majortrans[15]; /* 10 is the maximum number of digits in 
+				UINT_MAX , adding a buffer of 5 */
+	char minortrans[15]; /*		ditto 	*/
+	char joinedtrans[15]; /*	ditto 	*/			
+	char *cookie;
+	int  rc;
+
+	if ((m=ha_msg_new(0)) == NULL) {
+		cl_log(LOG_ERR, "ccm_bcast_node_leave_notice:"
+		       "Cannot send CCM node leave msg");
+		return(HA_FAIL);
+	}
+	
+	snprintf(majortrans, sizeof(majortrans), "%d", 
+		 CCM_GET_MAJORTRANS(info));
+	snprintf(minortrans, sizeof(minortrans), "%d", 
+		 CCM_GET_MINORTRANS(info));
+	snprintf(joinedtrans, sizeof(joinedtrans), "%d", 
+		 CCM_GET_JOINED_TRANSITION(info));
+	cookie = CCM_GET_COOKIE(info);
+	assert(cookie && *cookie);
+	
+	
+	if((ha_msg_add(m, F_TYPE, ccm_type2string(CCM_TYPE_NODE_LEAVE_NOTICE)) == HA_FAIL)
+	   ||(ha_msg_add(m, CCM_COOKIE, cookie) == HA_FAIL)
+	   ||(ha_msg_add(m, CCM_MAJORTRANS, majortrans) == HA_FAIL)
+	   ||(ha_msg_add(m, CCM_MINORTRANS, minortrans) == HA_FAIL)
+	   ||(ha_msg_add(m, CCM_UPTIME, joinedtrans) == HA_FAIL)
+	   ||(ha_msg_add(m, F_NODE, node) == HA_FAIL)) {
+		cl_log(LOG_ERR, "ccm_bcast_node_leave_notice:"
+		       "Cannot create NODE_LEAVE message ");
+		rc = HA_FAIL;
+	} else {
+		rc = hb->llc_ops->sendclustermsg(hb, m);
+	}
+	ha_msg_del(m);
+	return(rc);
+}
+
+
 /* 
  * send a reply to the potential joiner, containing the neccessary 
  * context needed by the joiner, to initiate a new round of a ccm  
@@ -1234,6 +1284,7 @@ ccm_send_one_join_reply(ll_cluster_t *hb, ccm_info_t *info, const char *joiner)
 	ha_msg_del(m);
 	return(rc);
 }
+
 
 /* send reply to a join quest and clear the request*/
 
@@ -1502,47 +1553,6 @@ ccm_send_abort(ll_cluster_t *hb, ccm_info_t *info,
 	return(rc);
 }
 
-
-
-/* */
-/* send out a leave message to indicate to everybody that it is leaving */
-/* the cluster. */
-/* */
-static int
-ccm_send_leave(ll_cluster_t *hb, ccm_info_t *info)
-{
-	struct ha_msg *m;
-	char majortrans[15]; /* 10 is the maximum number of digits in 
-				UINT_MAX , adding a buffer of 5 */
-	char minortrans[15]; /*		ditto 	*/
-	char *cookie;
-	int  rc;
-
-	if ((m=ha_msg_new(0)) == NULL) {
-		cl_log(LOG_ERR, "Cannot send CCM version msg");
-		return(HA_FAIL);
-	}
-	
-	snprintf(majortrans, sizeof(majortrans), "%d", 
-				CCM_GET_MAJORTRANS(info));
-	snprintf(minortrans, sizeof(minortrans), "%d", 
-				CCM_GET_MINORTRANS(info));
-	cookie = CCM_GET_COOKIE(info);
-	assert(cookie && *cookie);
-
-	if ((ha_msg_add(m, F_TYPE, ccm_type2string(CCM_TYPE_LEAVE)) == HA_FAIL)
-		||(ha_msg_add(m, CCM_COOKIE, cookie) == HA_FAIL)
-		||(ha_msg_add(m, CCM_MAJORTRANS, majortrans) == HA_FAIL)
-		||(ha_msg_add(m, CCM_MINORTRANS, minortrans) == HA_FAIL)){
-			cl_log(LOG_ERR, "ccm_send_leave: Cannot create leave "
-						    "message");
-		rc = HA_FAIL;
-	} else {
-		rc = hb->llc_ops->sendclustermsg(hb, m);
-	}
-	ha_msg_del(m);
-	return(rc);
-}
 
 /* */
 /* send out a join message. THis message will initiate a new instance of */
@@ -2159,12 +2169,13 @@ ccm_state_joined(enum ccm_type ccm_msg_type,
 	const char *orig,  *trans, *uptime;
 	uint  trans_majorval=0, trans_minorval=0, uptime_val;
 	int repeat;
-	
 	if ((orig = ha_msg_value(reply, F_ORIG)) == NULL) {
 		cl_log(LOG_WARNING, "ccm_state_joined: received message "
 							"from unknown");
 		return;
 	}
+
+
 
 	if(!llm_is_valid_node(CCM_GET_LLM(info), orig)) { 
 		cl_log(LOG_WARNING, "ccm_state_joined: received message "
@@ -2328,16 +2339,35 @@ ccm_state_joined(enum ccm_type ccm_msg_type,
 					return;
 				}
 				change_time_init();
+				ccm_bcast_node_leave_notice(hb,info, orig);
 				ccm_set_state(info, CCM_STATE_WAIT_FOR_CHANGE, reply);	
-                         
-			}else {
-				/* I'm not leader, send CCM_TYPE_NODE_LEAVE to leader */
-				send_node_leave_to_leader(hb, info, orig);
+				
+				
+			}
+
+			break;
+			
+		case CCM_TYPE_NODE_LEAVE_NOTICE:{
+			const char* node;
+
+			node = ha_msg_value(reply, F_NODE);
+			if(node == NULL){
+				cl_log(LOG_ERR, "ccm_state_wait_for_memlist:"
+				       "node not found in the message");
+				cl_log_message(LOG_INFO, reply);
+				return;
+			}
+			
+			if (!node_is_member(info, node)){
+				return;
+			}			
+			
+			if( !ccm_am_i_leader(info)){				
+				send_node_leave_to_leader(hb, info, node);
 				mem_list_time_init();
 				ccm_set_state(info,CCM_STATE_WAIT_FOR_MEM_LIST, reply);
 			}
-			break;
-
+		}
 		case CCM_TYPE_NODE_LEAVE:
 			if ((uptime = ha_msg_value(reply, CCM_UPTIME)) == NULL){
 				cl_log(LOG_WARNING, "ccm_state_joined: no update "
@@ -2514,13 +2544,25 @@ static void ccm_state_wait_for_change(enum ccm_type ccm_msg_type,
 			 */
 			ccm_add_new_joiner(info, orig);
 			break;
-
+			
+		case CCM_TYPE_NODE_LEAVE_NOTICE:
+			/* It is my own message, then I can ignore it
+			 * or from another lead, i.e. we are in split-brain
+			 * and I can do nothing about it
+			 */
+			break;
 		case CCM_TYPE_LEAVE:
-
+			
 			if (!node_is_member(info, orig)){
 				return;
 			}			
-
+			
+			if(strcmp(info->change_node_id, orig) == 0
+			   && info->change_type == NODE_LEAVE){
+				/*It is the same node leaving*/
+				return;
+			}
+			
 			node = orig;
 			orig = CCM_GET_MYNODE_ID(info);
 			uptime_val = CCM_GET_JOINED_TRANSITION(info);
@@ -2831,30 +2873,8 @@ switchstatement:
 				/* we waited long for membership response 
 				 * from all nodes, stop waiting and send
 				 * final membership list
-				 */
-				if(ccm_memcomp_timeout(info,
-					CCM_TMOUT_GET_ITF(info))){
-					/* its too long since I declared myself
-					 * as the leader. Nobody else will
-					 * be waiting on us. So just send
-					 * leave message and reset.
-				 	 */
-					repeat = 0;
-					while (ccm_send_leave(hb, info) != HA_OK) {
-						if(repeat < REPEAT_TIMES){
-							cl_log(LOG_ERR,
-							"ccm_state_memlistreq:"
-							"failure to send leave");
-							cl_shortsleep();
-							repeat++;
-						}else{
-							break;
-						}
-					}
-					ccm_reset(info);
-				} else {
-					ccm_compute_and_send_final_memlist(hb, info);
-				}
+				 */				
+				ccm_compute_and_send_final_memlist(hb, info);
 			}
 			break;
 
@@ -2924,32 +2944,8 @@ switchstatement:
 
 			ccm_memcomp_note(info, orig, trans_maxval, memlist);
 
-			if (ccm_memcomp_rcvd_all(info)) {
-				if(ccm_memcomp_timeout(info,
-					CCM_TMOUT_GET_ITF(info))){
-					/* its too long since I declared myself
-					 * as the leader. Nobody else will
-					 * be waiting on us. So just send
-					 * leave message and reset.
-				 	 */
-					repeat = 0;
-					while (ccm_send_leave(hb, info) 
-							!= HA_OK) {
-						if(repeat < REPEAT_TIMES){
-							cl_log(LOG_ERR, 
-							"ccm_state_memlistreq:"
-						 	"failure to send leave");
-							cl_shortsleep();
-							repeat++;
-						}else{
-							break;
-						}
-					}
-					ccm_reset(info);
-				} else {
-					ccm_compute_and_send_final_memlist(hb, 
-							info);
-				}
+			if (ccm_memcomp_rcvd_all(info)) {				
+				ccm_compute_and_send_final_memlist(hb,info);
 			}
 			break;
 
@@ -2973,31 +2969,7 @@ switchstatement:
 			ccm_memcomp_note(info, orig, 0, "");
 
 			if (ccm_memcomp_rcvd_all(info)) {
-				if(ccm_memcomp_timeout(info,
-					CCM_TMOUT_GET_ITF(info))){
-					/* its too long since I declared myself
-					 * as the leader. Nobody else will
-					 * be waiting on us. So just send
-					 * leave message and reset.
-				 	 */
-					repeat = 0;
-					while (ccm_send_leave(hb, info) 
-							!= HA_OK) {
-						if(repeat < REPEAT_TIMES){
-							cl_log(LOG_ERR, 
-						 	"ccm_state_memlistreq: "
-						 	"failure to send leave");
-							cl_shortsleep();
-							repeat++;
-						}else{
-							break;
-						}
-					}
-					ccm_reset(info);
-				} else {
-					ccm_compute_and_send_final_memlist(hb, 
-							info);
-				}
+				ccm_compute_and_send_final_memlist(hb, info);
 			}
 			break;
 				
@@ -3033,7 +3005,7 @@ ccm_state_memlist_res(enum ccm_type ccm_msg_type,
 
 	if ((orig = ha_msg_value(reply, F_ORIG)) == NULL) {
 		cl_log(LOG_WARNING, "ccm_state_memlist_res: received message "
-							"from unknown");
+		       "from unknown");
 		return;
 	}
 
@@ -3205,23 +3177,6 @@ switchstatement:
 				break;
 			}
 
-			/* all other cases are cases of byzantine failure 
-			 * We leave the cluster
-			 */
-			repeat = 0;
-			while (ccm_send_leave(hb, info) != HA_OK) {
-				if(repeat < REPEAT_TIMES){
-					cl_log(LOG_ERR,
-						"ccm_state_memlist_res: "
-						"failure to send join");
-					cl_shortsleep();
-					repeat++;
-				}else{
-					break;
-				}
-			}
-
-			ccm_reset(info); 
 			break;
 
         	case CCM_TYPE_TIMEOUT:
@@ -3681,24 +3636,6 @@ switchstatement:
 					finallist_init();
 					ccm_set_state(info, 
 						      CCM_STATE_MEMLIST_RES, reply);
-				} else if(update_timeout_expired(
-						CCM_GET_UPDATETABLE(info),
-						CCM_TMOUT_GET_LU(info))) {
-					repeat = 0;
-					while (ccm_send_leave(hb, info) 
-							!= HA_OK) {
-						if(repeat < REPEAT_TIMES){
-					   		cl_log(LOG_ERR, 
-							"ccm_state_joining: "
-					 		"failure to send leave");
-							cl_shortsleep();
-							repeat++;
-						}else{
-							break;
-						}
-					}
-					ccm_reset(info);
-					ccm_set_state(info, CCM_STATE_NONE, reply);
 				}
 			}
 			break;
