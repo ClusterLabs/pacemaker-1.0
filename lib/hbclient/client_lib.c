@@ -1,4 +1,4 @@
-/* $Id: client_lib.c,v 1.28 2005/04/06 18:07:53 gshi Exp $ */
+/* $Id: client_lib.c,v 1.29 2005/04/14 06:31:29 gshi Exp $ */
 /* 
  * client_lib: heartbeat API client side code
  *
@@ -48,7 +48,6 @@
 #include <heartbeat.h>
 #include <hb_api_core.h>
 #include <hb_api.h>
-#include <clplumbing/ttylock.h>
 #include <glib.h>
 
 struct sys_config *		config  = NULL;
