@@ -49,7 +49,7 @@ DUMMYNODE=ImAlwaysDead.com
 LOCALNODE=`uname -n`
 LOGFILE=/tmp/linux-ha.testlog
 RSCDIR=$HADIR/resource.d
-PATH=$PATH:/sbin;/usr/sbin
+PATH=$PATH:/sbin:/usr/sbin
 export PATH
 errcount=0
 
