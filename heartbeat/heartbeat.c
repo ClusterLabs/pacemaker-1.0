@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.390 2005/04/13 23:01:19 alan Exp $ */
+/* $Id: heartbeat.c,v 1.391 2005/04/14 04:59:19 gshi Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -3782,7 +3782,6 @@ StartHeartbeat:
 		make_daemon();	/* Only child processes returns. */
 		setenv(LOGFENV, config->logfile, 1);
 		setenv(DEBUGFENV, config->dbgfile, 1);
-		setenv(HALOGD, cl_log_get_uselogd()? "yes":"no", 1);
 		if (config->log_facility >= 0) {
 			char	facility[40];
 			snprintf(facility, sizeof(facility)
@@ -5213,6 +5212,10 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.391  2005/04/14 04:59:19  gshi
+ * remove a setenv for uselogd;
+ * the parameter has already been exported in add_option() funciton
+ *
  * Revision 1.390  2005/04/13 23:01:19  alan
  * fixed stupid syntax error that somehow escaped me.
  *
