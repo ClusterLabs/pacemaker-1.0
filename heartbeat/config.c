@@ -1,4 +1,4 @@
-/* $Id: config.c,v 1.151 2005/04/13 18:04:46 gshi Exp $ */
+/* $Id: config.c,v 1.152 2005/04/14 05:56:44 gshi Exp $ */
 /*
  * Parse various heartbeat configuration files...
  *
@@ -133,7 +133,7 @@ struct directive {
 , {KEY_DEBUGLEVEL,set_debuglevel, TRUE, NULL, "debug level"}
 , {KEY_NORMALPOLL,set_normalpoll, TRUE, "true", "Use system poll(2) function?"}
 , {KEY_MSGFMT,    set_msgfmt, TRUE, "classic", "message format in the wire"}
-, {KEY_LOGDAEMON, set_logdaemon, TRUE, "yes", "use logging daemon"}  
+, {KEY_LOGDAEMON, set_logdaemon, TRUE, NULL, "use logging daemon"}  
 , {KEY_CONNINTVAL,set_logdconntime, TRUE, "60", "the interval to reconnect to logd"}  
 , {KEY_REGAPPHBD, set_register_to_apphbd, FALSE, NULL, "register with apphbd"}
 , {KEY_BADPACK,   set_badpack_warn, TRUE, "true", "warn about bad packets"}
@@ -214,6 +214,44 @@ str_to_boolean(const char * s, int * ret)
 	return HA_FAIL;
 }
 
+static void
+check_logd_usage(int* errcount)
+{
+	const char* value;
+	int	truefalse = FALSE;
+	/*we set uselogd to TRUE here so the next message can be logged*/
+	value = GetParameterValue(KEY_LOGDAEMON);
+	if (value != NULL){
+		if(str_to_boolean(value, &truefalse) == HA_FAIL){
+			cl_log(LOG_ERR, "str_to_boolean failed[%s]", value);
+			(*errcount)++;
+			return;
+		}
+		
+	}
+	
+	if (*(config->logfile) == EOS 
+	    && *(config->dbgfile) == EOS
+	    && config->log_facility <= 0){
+		cl_log_set_uselogd(TRUE);
+		if (value == NULL){
+			cl_log(LOG_INFO, "No log entry found in ha.cf -- use logd");
+			add_option(KEY_LOGDAEMON,"yes");
+			return;
+		}
+		
+		if (truefalse == FALSE){
+			(*errcount)++;
+			cl_log(LOG_ERR, "No log entry found in ha.cf "
+			       "and use_logd is set to off");				
+			return;
+		}		
+	}else if (value == NULL || truefalse == FALSE){
+		cl_log(LOG_WARNING, "Logging daemon is disabled --"
+		       "enabling logging daemon is recommended");
+	}
+}
+
 /*
  *	Read in and validate the configuration file.
  *	Act accordingly.
@@ -232,6 +270,7 @@ init_config(const char * cfgfile)
  */
 	/* config = (struct sys_config *)ha_calloc(1
 	,	sizeof(struct sys_config)); */
+	memset(&config_init_value, 0, sizeof(config_init_value));
 	config = &config_init_value;
 	if (config == NULL) {
 		ha_log(LOG_ERR, "Heartbeat not started: "
@@ -402,33 +441,24 @@ init_config(const char * cfgfile)
                         /* 
                          * Set to DEVNULL in case a stray script outputs logs
                          */
-                        strncpy(config->logfile, DEVNULL
-			, 	sizeof(config->logfile));
+			 strncpy(config->logfile, DEVNULL
+				, 	sizeof(config->logfile));
                         config->use_logfile=0;
-                  }else{
-		        add_option(KEY_LOGFILE, DEFAULTLOG);
-                        config->use_logfile=1;
-		        if (!parse_only) {
-			        ha_log(LOG_INFO
-			        ,	"Neither logfile nor "
-				        "logfacility found.");
-			        ha_log(LOG_INFO, "Logging defaulting to " 
-                                                DEFAULTLOG);
-		        }
-                }
+                  }
 	}
 	if (*(config->dbgfile) == EOS) {
 	        if (config->log_facility > 0) {
 		        /* 
-		        * Set to DEVNULL in case a stray script outputs errors
+			 * Set to DEVNULL in case a stray script outputs errors
 		        */
 		        strncpy(config->dbgfile, DEVNULL
 			,	sizeof(config->dbgfile));
                         config->use_dbgfile=0;
-	        }else{
-		        add_option(KEY_DBGFILE, DEFAULTDEBUG);
 	        }
         }
+	
+	check_logd_usage(&errcount);
+
 	if (!RestartRequested && errcount == 0 && !parse_only) {
 		ha_log(LOG_INFO, "**************************");
 		ha_log(LOG_INFO, "Configuration validated."
@@ -1663,9 +1693,14 @@ set_logdaemon(const char * value)
 	cl_log_set_uselogd(uselogd);
 	
 	if (!uselogd){
-		cl_log(LOG_WARNING, "Using logging daemon is disabled!");
+		cl_log(LOG_WARNING, "Logging daemon is disabled --"
+		       "enabling logging daemon is recommended");
+	}else{
+		cl_log(LOG_INFO, "Enabling logging daemon ");
+		cl_log(LOG_INFO, "logfile and debug file are those specified"
+		       "in logd config file (default /etc/logd.cf)");
 	}
-
+	
 	return rc;
 }
 
@@ -2166,6 +2201,23 @@ set_release2mode(const char* value)
 
 /*
  * $Log: config.c,v $
+ * Revision 1.152  2005/04/14 05:56:44  gshi
+ * We do not enable logd by default unless there is no
+ * entry about debug/logfile/logfcility found in ha.cf
+ *
+ * The detailed policy is:
+ *
+ * 1. if there is any entry for debugfile/logfile/logfacility in ha.cf
+ *      a) if use_logd is not set, logging daemon will not be used
+ *      b) if use_logd is set to on, logging daemon will be used
+ *      c) if use_logd is set to off, logging daemon will not be used
+ *
+ * 2. if there is no entry for debugfile/logfile/logfacility in ha.cf
+ *      a) if use_logd is not set, logging daemon will be used
+ *      b) if use_logd is set to on, logging daemon will be used
+ *      c) if use_logd is set to off, config error, i.e. you can not turn
+ * 	off all logging options
+ *
  * Revision 1.151  2005/04/13 18:04:46  gshi
  * bug 442:
  *
