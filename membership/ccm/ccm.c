@@ -1,4 +1,4 @@
-/* $Id: ccm.c,v 1.81 2005/04/14 22:07:44 gshi Exp $ */
+/* $Id: ccm.c,v 1.82 2005/04/15 17:11:08 gshi Exp $ */
 /* 
  * ccm.c: Consensus Cluster Service Program 
  *
@@ -2367,6 +2367,7 @@ ccm_state_joined(enum ccm_type ccm_msg_type,
 				mem_list_time_init();
 				ccm_set_state(info,CCM_STATE_WAIT_FOR_MEM_LIST, reply);
 			}
+			break;
 		}
 		case CCM_TYPE_NODE_LEAVE:
 			if ((uptime = ha_msg_value(reply, CCM_UPTIME)) == NULL){
