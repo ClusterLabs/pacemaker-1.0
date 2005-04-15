@@ -1,4 +1,4 @@
-/* $Id: config.c,v 1.152 2005/04/14 05:56:44 gshi Exp $ */
+/* $Id: config.c,v 1.153 2005/04/15 06:21:59 alan Exp $ */
 /*
  * Parse various heartbeat configuration files...
  *
@@ -158,7 +158,6 @@ extern int				parse_only;
 extern struct hb_media*			sysmedia[MAXMEDIA];
 extern struct sys_config *		config;
 extern struct sys_config  		config_init_value;
-extern int				verbose;
 extern volatile struct pstat_shm *	procinfo;
 extern volatile struct process_info *	curproc;
 extern char *				watchdogdev;
@@ -2201,6 +2200,9 @@ set_release2mode(const char* value)
 
 /*
  * $Log: config.c,v $
+ * Revision 1.153  2005/04/15 06:21:59  alan
+ * Fixed an extern/static verbose problem pointed out by Peter Billam <peter.billam@dpiwe.tas.gov.au>.
+ *
  * Revision 1.152  2005/04/14 05:56:44  gshi
  * We do not enable logd by default unless there is no
  * entry about debug/logfile/logfcility found in ha.cf

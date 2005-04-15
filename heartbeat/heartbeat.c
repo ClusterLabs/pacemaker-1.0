@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.391 2005/04/14 04:59:19 gshi Exp $ */
+/* $Id: heartbeat.c,v 1.392 2005/04/15 06:21:59 alan Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -3543,7 +3543,7 @@ main(int argc, char * argv[], char **envp)
 				break;
 
 			case 'v':
-				++verbose;
+				verbose=TRUE;
 				break;
 
 			default:
@@ -5212,6 +5212,9 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.392  2005/04/15 06:21:59  alan
+ * Fixed an extern/static verbose problem pointed out by Peter Billam <peter.billam@dpiwe.tas.gov.au>.
+ *
  * Revision 1.391  2005/04/14 04:59:19  gshi
  * remove a setenv for uselogd;
  * the parameter has already been exported in add_option() funciton

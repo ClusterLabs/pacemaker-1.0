@@ -1,4 +1,4 @@
-/* $Id: heartbeat.h,v 1.62 2005/04/05 20:55:42 gshi Exp $ */
+/* $Id: heartbeat.h,v 1.63 2005/04/15 06:21:59 alan Exp $ */
 /*
  * heartbeat.h: core definitions for the Linux-HA heartbeat program
  *
@@ -359,7 +359,6 @@ int api_remove_client_pid(pid_t c_pid, const char * reason);
 
 
 extern struct sys_config *	config;
-extern int			verbose;
 extern int			debug;
 extern int			udpport;
 extern int			RestartRequested;
