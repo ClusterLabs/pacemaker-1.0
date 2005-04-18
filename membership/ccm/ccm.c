@@ -1,4 +1,4 @@
-/* $Id: ccm.c,v 1.82 2005/04/15 17:11:08 gshi Exp $ */
+/* $Id: ccm.c,v 1.83 2005/04/18 20:53:08 gshi Exp $ */
 /* 
  * ccm.c: Consensus Cluster Service Program 
  *
@@ -3799,8 +3799,8 @@ ccm_handle_hbapiclstat(ccm_info_t *info,
 
 	assert(status);
 	if(strncmp(status, JOINSTATUS, 5) == 0) {
-		cl_log(LOG_INFO, "ignoring join "
-		"message from orig=%s", orig);
+		cl_log(LOG_INFO,
+		       "ccm from %s started", orig);
 		return NULL;
 	}
 
