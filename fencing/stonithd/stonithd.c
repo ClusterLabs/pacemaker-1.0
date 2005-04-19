@@ -1,4 +1,4 @@
-/* $Id: stonithd.c,v 1.37 2005/04/08 07:32:48 sunjd Exp $ */
+/* $Id: stonithd.c,v 1.38 2005/04/19 10:21:22 sunjd Exp $ */
 
 /* File: stonithd.c
  * Description: STONITH daemon for node fencing
@@ -569,10 +569,16 @@ become_daemon(gboolean startup_alone)
 	}
 
 	CL_IGNORE_SIG(SIGINT);
+	cl_signal_set_interrupt(SIGINT, 0);
+	CL_IGNORE_SIG(SIGHUP);
+	cl_signal_set_interrupt(SIGHUP, 0);
 	CL_IGNORE_SIG(SIGHUP);
 	CL_SIGNAL(SIGTERM, stonithd_quit);
+	cl_signal_set_interrupt(SIGTERM, 1);
 	CL_SIGNAL(SIGQUIT, stonithd_quit);
+	cl_signal_set_interrupt(SIGQUIT, 1);
 	CL_SIGNAL(SIGCHLD, child_quit);
+	cl_signal_set_interrupt(SIGCHLD, 0);
 	
 	/* Temporarily donnot abort even failed to create the pidfile according
 	 * to Andrew's suggestion. In the future will disable pidfile functions
@@ -3014,6 +3020,9 @@ free_common_op_t(gpointer data)
 
 /* 
  * $Log: stonithd.c,v $
+ * Revision 1.38  2005/04/19 10:21:22  sunjd
+ * changes the restart behaviour of system calls when interrupted by a signal
+ *
  * Revision 1.37  2005/04/08 07:32:48  sunjd
  * Replace log function with macro to enhance the running efficiency.
  * Make internal loglevel more granular.
