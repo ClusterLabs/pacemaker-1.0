@@ -8,7 +8,7 @@ LIBDIR=@libdir@/
 HBLIB=$LIBDIR/heartbeat
 TESTFILE=OnlyForTesting
 
-USAGE="Usage: 'TestHeartbeatComm break-communication allow-nodes-list|reduce-communication  xmit_loss recv_loss allow-nodes-list|fix-communication|delete-testingfile|restore-communication testingfile'"
+USAGE="Usage: 'TestHeartbeatComm break-communication allow-nodes-list|reduce-communication  xmit_loss recv_loss allow-nodes-list|fix-communication|delete-testingfile|save-testingfile testingfile|restore-communication testingfile'"
 
 if 
   [ $# -lt 1 ]
@@ -45,11 +45,13 @@ DeleteTestingFile(){
 RestoreTestingFile(){
   if [ -f $1 ]
   then 
-      set -x
-      echo $TESTFILE
       cp $1 $TESTFILE
       exit $?
   fi
+}
+SaveTestingFile(){
+  cp $TESTFILE $1 
+  exit $?
 }
 
 HBReload(){
@@ -75,6 +77,10 @@ case "$OPT" in
 	;;
   delete-testingfile)
 	DeleteTestingFile
+	;;
+  save-testingfile)
+	shift
+	SaveTestingFile $1
 	;;
   restore-communication)
 	shift
