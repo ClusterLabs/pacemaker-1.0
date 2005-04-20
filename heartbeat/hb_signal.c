@@ -1,4 +1,4 @@
-/* $Id: hb_signal.c,v 1.10 2004/02/17 22:11:57 lars Exp $ */
+/* $Id: hb_signal.c,v 1.11 2005/04/20 23:45:17 gshi Exp $ */
 /*
  * hb_signal.c: signal handling routines to be used by Heartbeat
  *
@@ -46,7 +46,7 @@
 #include <hb_proc.h>
 #include <heartbeat_private.h>
 #include <heartbeat.h>
-#include <setproctitle.h>
+#include <clplumbing/setproctitle.h>
 #include <pils/plugin.h>
 #include <test.h>
 

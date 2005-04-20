@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.392 2005/04/15 06:21:59 alan Exp $ */
+/* $Id: heartbeat.c,v 1.393 2005/04/20 23:45:17 gshi Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -266,8 +266,7 @@
 #include <hb_resource.h>
 #include <apphb.h>
 #include <uuid/uuid.h>
-
-#include "setproctitle.h"
+#include "clplumbing/setproctitle.h"
 
 #define OPTARGS			"dkMrRsvlC:"
 #define	ONEDAY			(24*60*60)	/* Seconds in a day */
@@ -5212,6 +5211,9 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.393  2005/04/20 23:45:17  gshi
+ * change the path for setproctitle.h
+ *
  * Revision 1.392  2005/04/15 06:21:59  alan
  * Fixed an extern/static verbose problem pointed out by Peter Billam <peter.billam@dpiwe.tas.gov.au>.
  *

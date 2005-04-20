@@ -1,4 +1,4 @@
-/* $Id: hb_resource.c,v 1.75 2005/04/13 18:04:46 gshi Exp $ */
+/* $Id: hb_resource.c,v 1.76 2005/04/20 23:45:17 gshi Exp $ */
 /*
  * hb_resource: Linux-HA heartbeat resource management code
  *
@@ -34,7 +34,7 @@
 #include <hb_resource.h>
 #include <heartbeat_private.h>
 #include <hb_api_core.h>
-#include <setproctitle.h>
+#include <clplumbing/setproctitle.h>
 #include <clplumbing/cl_signal.h>
 #include <clplumbing/Gmain_timeout.h>
 #include <clplumbing/realtime.h>
@@ -2426,6 +2426,9 @@ StonithStatProcessName(ProcTrack* p)
 
 /*
  * $Log: hb_resource.c,v $
+ * Revision 1.76  2005/04/20 23:45:17  gshi
+ * change the path for setproctitle.h
+ *
  * Revision 1.75  2005/04/13 18:04:46  gshi
  * bug 442:
  *
