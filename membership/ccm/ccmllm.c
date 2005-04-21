@@ -1,4 +1,4 @@
-/* $Id: ccmllm.c,v 1.15 2005/04/21 20:49:02 gshi Exp $ */
+/* $Id: ccmllm.c,v 1.16 2005/04/21 21:58:15 gshi Exp $ */
 /* 
  * ccmllm.c: Low Level membership routines.
  *
@@ -67,7 +67,7 @@ llm_nodeid_cmp(llm_info_t *llm, int indx1, int indx2)
 
 
 
-static void
+void
 display_llm(llm_info_t *llm)
 {
 	int i;
@@ -86,7 +86,7 @@ int
 llm_get_index(llm_info_t *llm, const char *node)
 {
 	int low,high,mid;
-	char value;
+	int value;
 
 	/* lets do a binary search */
 	low = 0;
@@ -233,7 +233,7 @@ llm_add(llm_info_t *llm,
 	const char *mynode)
 {
 	int nodecount, mynode_idx, i, j;
-	char value;
+	int value;
 
 
 	/* Since this function is called only once, don't bother to
