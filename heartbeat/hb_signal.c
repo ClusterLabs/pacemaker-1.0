@@ -1,4 +1,4 @@
-/* $Id: hb_signal.c,v 1.11 2005/04/20 23:45:17 gshi Exp $ */
+/* $Id: hb_signal.c,v 1.12 2005/04/21 19:12:44 gshi Exp $ */
 /*
  * hb_signal.c: signal handling routines to be used by Heartbeat
  *
@@ -47,6 +47,7 @@
 #include <heartbeat_private.h>
 #include <heartbeat.h>
 #include <clplumbing/setproctitle.h>
+#include <clplumbing/GSource.h>
 #include <pils/plugin.h>
 #include <test.h>
 
@@ -479,7 +480,6 @@ hb_signal_set_common(sigset_t *set)
 	,	{SIGALRM,	hb_signal_false_alarm_handler,	1}
 	,	{SIGUSR1,	hb_signal_debug_usr1_handler,	1}
 	,	{SIGUSR2,	hb_signal_debug_usr2_handler,	1}
-	,	{SIGCHLD,	hb_signal_reaper_handler,	1}
 	,	{0,		0,				0}
 	};
 
@@ -523,6 +523,37 @@ hb_signal_set_common(sigset_t *set)
 	return(0);
 }
 
+
+static gboolean
+child_death_dispatch(int sig, gpointer userdata)
+{
+	int status;
+	pid_t	pid;
+	int waitflags = WNOHANG;
+	
+	while((pid=wait3(&status, waitflags, NULL)) > 0
+	      ||	(pid == -1 && errno == EINTR)) {
+		
+		if (pid > 0) {
+			/* If they're in the API client table, 
+			 * remove them... */
+			api_remove_client_pid(pid, "died");
+			ReportProcHasDied(pid, status);
+		}
+		
+	}
+	
+	return TRUE;
+}
+
+static void
+set_sigchld_handler(int sig)
+{
+	G_main_add_SignalHandler(G_PRIORITY_HIGH, SIGCHLD,
+				 child_death_dispatch,NULL, NULL);
+	
+	return;
+}
 
 
 int
@@ -632,7 +663,8 @@ hb_signal_set_master_control_process(sigset_t *set)
 			"cl_signal_set_handler_mode()");
 		return(-1);
 	}
-
+	
+	set_sigchld_handler(SIGCHLD);
 	hb_signal_process_pending_set_mask_set(use_set);
 
 	return(0);
