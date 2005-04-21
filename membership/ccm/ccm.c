@@ -1,4 +1,4 @@
-/* $Id: ccm.c,v 1.83 2005/04/18 20:53:08 gshi Exp $ */
+/* $Id: ccm.c,v 1.84 2005/04/21 21:56:46 gshi Exp $ */
 /* 
  * ccm.c: Consensus Cluster Service Program 
  *
@@ -4157,6 +4157,9 @@ ccm_initialize()
 
 	}
 	llm_end(llm);
+
+	
+	display_llm(llm);
 
 	if (hb_fd->llc_ops->end_nodewalk(hb_fd) != HA_OK) {
 		cl_log(LOG_ERR, "Cannot end node walk");
