@@ -1,4 +1,4 @@
-/* $Id: ccmllm.c,v 1.14 2005/04/08 18:02:00 gshi Exp $ */
+/* $Id: ccmllm.c,v 1.15 2005/04/21 20:49:02 gshi Exp $ */
 /* 
  * ccmllm.c: Low Level membership routines.
  *
@@ -66,6 +66,19 @@ llm_nodeid_cmp(llm_info_t *llm, int indx1, int indx2)
 }
 
 
+
+static void
+display_llm(llm_info_t *llm)
+{
+	int i;
+	cl_log(LOG_INFO, "total node number is %d", LLM_GET_NODECOUNT(llm));
+	for (i = 0 ;i < LLM_GET_NODECOUNT(llm) ; i++){
+		cl_log(LOG_INFO, "node %d =%s", 
+		       i,    llm->nodes[i].nodename);		
+	}
+	
+}
+
 /* */
 /* Get the index of the node with the given nodename  */
 /* */
@@ -96,6 +109,8 @@ llm_get_index(llm_info_t *llm, const char *node)
 			low=mid+1;
 		}
 	} while(high>=low);
+
+	display_llm(llm);
 	return -1;
 }
 
