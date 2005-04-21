@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.393 2005/04/20 23:45:17 gshi Exp $ */
+/* $Id: heartbeat.c,v 1.394 2005/04/21 01:25:18 alan Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -441,6 +441,7 @@ static gboolean	read_child_dispatch(IPC_Channel* chan, gpointer user_data);
 static gboolean hb_update_cpu_limit(gpointer p);
 
 
+static int	SetupFifoChild(void);
 /*
  * The biggies
  */
@@ -448,7 +449,7 @@ static void	read_child(struct hb_media* mp);
 static void	write_child(struct hb_media* mp);
 static void	fifo_child(IPC_Channel* chan);		/* Reads from FIFO */
 		/* The REAL biggie ;-) */
-static void	master_control_process(IPC_Channel* fifoproc);
+static void	master_control_process(void);
 
 /*
  * Structures initialized to function pointer values...
@@ -647,6 +648,72 @@ change_logfile_ownership(void)
 }
 
 /*
+ * We can call this function once when we first start up and we can
+ * also be called later to restart the FIFO process if it dies.
+ * For R1-style clusters, the FIFO process is necessary for graceful
+ * shutdown and restart.
+ */
+static int
+SetupFifoChild(void) {
+	static IPC_Channel*	fifochildipc[2] = {NULL, NULL};
+	static GCHSource*	FifoChildSource = NULL;
+	static int		fifoproc = -1;
+	int			pid;
+
+	if (FifoChildSource != NULL) {
+		/* Not sure if this is really right... */
+		G_main_del_IPC_Channel(FifoChildSource);
+		fifochildipc[P_READFD] = NULL;
+	}
+	if (fifochildipc[P_WRITEFD] != NULL) {
+		IPC_Channel* ch = fifochildipc[P_WRITEFD];
+		ch->ops->destroy(ch);
+		fifochildipc[P_WRITEFD] = NULL;
+	}
+			
+	if (ipc_channel_pair(fifochildipc) != IPC_OK) {
+		cl_perror("cannot create FIFO ipc channel");
+		return HA_FAIL;
+	}
+	/* Fork FIFO process... */
+	if (fifoproc < 0) {
+		fifoproc = procinfo->nprocs;
+	}
+	switch ((pid=fork())) {
+		case -1:	cl_perror("Can't fork FIFO process!");
+				return HA_FAIL;
+				break;
+
+		case 0:		/* Child */
+				close(watchdogfd);
+				curproc = &procinfo->info[fifoproc];
+				cl_malloc_setstats(&curproc->memstats);
+				cl_msg_setstats(&curproc->msgstats);
+				curproc->type = PROC_HBFIFO;
+				while (curproc->pid != getpid()) {
+					sleep(1);
+				}
+				fifo_child(fifochildipc[P_WRITEFD]);
+				cl_perror("FIFO child process exiting!");
+				cleanexit(1);
+		default:
+				fifochildipc[P_READFD]->farside_pid = pid;
+
+	}
+	NewTrackedProc(pid, 0, PT_LOGVERBOSE, GINT_TO_POINTER(fifoproc)
+	,	&CoreProcessTrackOps);
+
+	if (ANYDEBUG) {
+		cl_log(LOG_DEBUG, "FIFO process pid: %d", pid);
+	}
+	/* We only read from this source, we never write to it */
+	FifoChildSource = G_main_add_IPC_Channel(PRI_FIFOMSG
+	,	fifochildipc[P_READFD]
+	,	FALSE, FIFO_child_msg_dispatch, NULL, NULL);
+	return HA_OK;
+}
+
+/*
  *	This routine starts everything up and kicks off the heartbeat
  *	process.
  */
@@ -668,7 +735,6 @@ initialize_heartbeat()
 	struct stat	buf;
 	int		pid;
 	int		ourproc = 0;
-	IPC_Channel*	fifochildipc[2];
 	int	(*getgen)(seqno_t * generation) = IncrGeneration;
 
 	localdie = NULL;
@@ -769,10 +835,6 @@ initialize_heartbeat()
 	/* We need to at least ignore SIGINTs early on */
 	hb_signal_set_common(NULL);
 
-	if (ipc_channel_pair(fifochildipc) != IPC_OK) {
-		cl_perror("cannot create FIFO ipc channel");
-		return HA_FAIL;
-	}
 
 	/* Now the fun begins... */
 /*
@@ -784,35 +846,7 @@ initialize_heartbeat()
  *
  */
 
-	/* Fork FIFO process... */
-	ourproc = procinfo->nprocs;
-	switch ((pid=fork())) {
-		case -1:	cl_perror("Can't fork FIFO process!");
-				return HA_FAIL;
-				break;
-
-		case 0:		/* Child */
-				close(watchdogfd);
-				curproc = &procinfo->info[ourproc];
-				cl_malloc_setstats(&curproc->memstats);
-				cl_msg_setstats(&curproc->msgstats);
-				curproc->type = PROC_HBFIFO;
-				while (curproc->pid != getpid()) {
-					sleep(1);
-				}
-				fifo_child(fifochildipc[P_WRITEFD]);
-				cl_perror("FIFO child process exiting!");
-				cleanexit(1);
-		default:
-				fifochildipc[P_READFD]->farside_pid = pid;
-
-	}
-	NewTrackedProc(pid, 0, PT_LOGVERBOSE, GINT_TO_POINTER(ourproc)
-	,	&CoreProcessTrackOps);
-
-	if (ANYDEBUG) {
-		cl_log(LOG_DEBUG, "FIFO process pid: %d", pid);
-	}
+	SetupFifoChild();
 
 	ourproc = procinfo->nprocs;
 
@@ -884,7 +918,7 @@ initialize_heartbeat()
 
 
 	ourproc = procinfo->nprocs;
-	master_control_process(fifochildipc[P_READFD]);
+	master_control_process();
 
 	/*NOTREACHED*/
 	cl_log(LOG_ERR, "master_control_process exiting?");
@@ -1175,7 +1209,7 @@ read_child_dispatch(IPC_Channel* source, gpointer user_data)
  */
 
 static void
-master_control_process(IPC_Channel* fifoproc)
+master_control_process(void)
 {
 /*
  *	Create glib sources for:
@@ -1204,7 +1238,6 @@ master_control_process(IPC_Channel* fifoproc)
 	volatile struct process_info *	pinfo;
 	int			allstarted;
 	int			j;
-	GCHSource*		FifoChildSource;
 	GMainLoop*		mainloop;
 	long			memstatsinterval;
 
@@ -1272,11 +1305,6 @@ master_control_process(IPC_Channel* fifoproc)
 		cl_log(LOG_ERR, "master_control_process: G_main_add_input failed");
 	}
 
-
-
-	/* We only read from this source, we never write to it */
-	FifoChildSource = G_main_add_IPC_Channel(PRI_FIFOMSG, fifoproc
-	,	FALSE, FIFO_child_msg_dispatch, NULL, NULL);
 
 
 	if (ANYDEBUG) {
@@ -5211,6 +5239,10 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.394  2005/04/21 01:25:18  alan
+ * Moved the code for starting up the FIFO process to a separate function
+ * so that we can eventually restart it if it dies.
+ *
  * Revision 1.393  2005/04/20 23:45:17  gshi
  * change the path for setproctitle.h
  *
