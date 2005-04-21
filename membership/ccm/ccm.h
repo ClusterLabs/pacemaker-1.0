@@ -1,4 +1,4 @@
-/* $Id: ccm.h,v 1.33 2005/04/08 22:06:51 gshi Exp $ */
+/* $Id: ccm.h,v 1.34 2005/04/21 21:56:09 gshi Exp $ */
 /*
  * ccm.h: definitions Consensus Cluster Manager internal header
  *				file
@@ -135,6 +135,7 @@ int llm_status_update(llm_info_t *, const char *, const char *);
  */
 int	llm_get_inactive_node_count(llm_info_t *llm);
 
+void	display_llm(llm_info_t *llm);
 void llm_init(llm_info_t *);
 void llm_end(llm_info_t *);
 int llm_is_valid_node(llm_info_t *, const char *);
