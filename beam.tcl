@@ -224,7 +224,7 @@ beam::attribute_by_signature {
 		property_name = "memory allocation source",
 		property_value = "from msg_to_op"
 	)
-} "msg_to_op"
+} "msg_to_op" "lrm_op_new"
 
 beam::attribute_by_signature {
 	deallocator (
