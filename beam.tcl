@@ -214,7 +214,7 @@ beam::attribute_by_signature {
 beam::attribute_by_signature {
 	allocator (
 		return_index = return,
-		initial_state = initialized_to_zero,
+		initial_state = initialized_to_unknown,
 		if_out_of_memory = ok,
 		resource = heap_memory
 	),
@@ -224,7 +224,7 @@ beam::attribute_by_signature {
 		property_name = "memory allocation source",
 		property_value = "from msg_to_op"
 	)
-}"msg_to_op"
+} "msg_to_op"
 
 beam::attribute_by_signature {
 	deallocator (
@@ -237,7 +237,7 @@ beam::attribute_by_signature {
 		property_name = "memory allocation source",
 		property_value = "from msg_to_op"
 	)
-}"free_op"
+} "free_op"
 
 beam::resource_create { 
     name = "cl_msg",
