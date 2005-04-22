@@ -1,4 +1,4 @@
-/* $Id: hb_signal.c,v 1.12 2005/04/21 19:12:44 gshi Exp $ */
+/* $Id: hb_signal.c,v 1.13 2005/04/22 17:40:09 gshi Exp $ */
 /*
  * hb_signal.c: signal handling routines to be used by Heartbeat
  *
@@ -524,37 +524,6 @@ hb_signal_set_common(sigset_t *set)
 }
 
 
-static gboolean
-child_death_dispatch(int sig, gpointer userdata)
-{
-	int status;
-	pid_t	pid;
-	int waitflags = WNOHANG;
-	
-	while((pid=wait3(&status, waitflags, NULL)) > 0
-	      ||	(pid == -1 && errno == EINTR)) {
-		
-		if (pid > 0) {
-			/* If they're in the API client table, 
-			 * remove them... */
-			api_remove_client_pid(pid, "died");
-			ReportProcHasDied(pid, status);
-		}
-		
-	}
-	
-	return TRUE;
-}
-
-static void
-set_sigchld_handler(int sig)
-{
-	G_main_add_SignalHandler(G_PRIORITY_HIGH, SIGCHLD,
-				 child_death_dispatch,NULL, NULL);
-	
-	return;
-}
-
 
 int
 hb_signal_set_write_child(sigset_t *set)
@@ -664,7 +633,7 @@ hb_signal_set_master_control_process(sigset_t *set)
 		return(-1);
 	}
 	
-	set_sigchld_handler(SIGCHLD);
+	set_sigchld_proctrack();
 	hb_signal_process_pending_set_mask_set(use_set);
 
 	return(0);

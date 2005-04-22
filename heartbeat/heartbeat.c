@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.394 2005/04/21 01:25:18 alan Exp $ */
+/* $Id: heartbeat.c,v 1.395 2005/04/22 17:40:09 gshi Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -2667,6 +2667,9 @@ ManagedChildDied(ProcTrack* p, int status, int signo, int exitcode
 ,	int waslogged)
 {
 	struct client_child*	managedchild = p->privatedata;
+	
+	/*remove the child from API client table*/
+	api_remove_client_pid(p->pid, "died");
 
 	managedchild->pid = 0;
 	managedchild->proctrack = NULL;
@@ -5239,6 +5242,12 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.395  2005/04/22 17:40:09  gshi
+ * bug 413 again:
+ *
+ * move the sigchld proctrack function to GSource.c so it can be available
+ * to other besides heartbeat
+ *
  * Revision 1.394  2005/04/21 01:25:18  alan
  * Moved the code for starting up the FIFO process to a separate function
  * so that we can eventually restart it if it dies.
