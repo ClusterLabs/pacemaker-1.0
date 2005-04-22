@@ -47,6 +47,7 @@ hard_SCRIPTS	=			\
 			db2		\
 			Delay		\
 			Filesystem	\
+			hto-mapfuncs	\
 			ICP		\
 			IPaddr		\
 			IPaddr2		\
