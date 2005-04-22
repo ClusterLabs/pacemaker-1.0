@@ -14,7 +14,8 @@ exec_prefix=@exec_prefix@
 : ${HA_DATEFMT="%Y/%m/%d_%T "}
 : ${HA_RESOURCEDIR=$HA_DIR/resource.d}
 : ${HA_DOCDIR=@datadir@/doc/heartbeat}
-: ${HA_LOGTAG=heartbeat}
+: ${__SCRIPT_NAME=`basename $0`}
+: ${HA_LOGTAG=$__SCRIPT_NAME[$$]}
 : ${HA_VARRUN=@localstatedir@/run/}
 : ${HA_VARLOCK=@localstatedir@/lock/subsys/}
 
@@ -43,13 +44,12 @@ hadate() {
 
 ha_log() {
 	if [ "x${HA_LOGD}" = "xyes" ] ; then 
-		${HA_BIN}/ha_logger ha-log "${*}"
+		${HA_BIN}/ha_logger -E "${HA_LOGTAG}" "$@"
 		if [ "$?" -eq "0" ] ; then
 			return 0
 		fi
 	fi
 
-	
 	if
 	  [ -n "$HA_LOGFACILITY" ]
         then
@@ -60,13 +60,13 @@ ha_log() {
             *ERROR*)	loglevel=err;;
             *WARN*)	loglevel=warning;;
 	  esac
-	  logger -t $HA_LOGTAG -p ${HA_LOGFACILITY}.${loglevel} "${*}"
+	  logger -t "$HA_LOGTAG" -p ${HA_LOGFACILITY}.${loglevel} "${*}"
         fi	
         if
 	  [ -n "$HA_LOGFILE" ]
 	then
 	  : appending to $HA_LOGFILE
-	  Echo "$HA_LOGTAG: "`hadate`"${*}" >> $HA_LOGFILE
+	  Echo "$HA_LOGTAG:	"`hadate`"${*}" >> $HA_LOGFILE
 	else
 	  Echo `hadate`"${*}" >&2
 	fi
@@ -74,16 +74,14 @@ ha_log() {
           [ -n "$HA_DEBUGLOG" ]
         then
           : appending to $HA_DEBUGLOG
-          Echo "$HA_LOGTAG: "`hadate`"${*}" >> $HA_DEBUGLOG
+          Echo "$HA_LOGTAG:	"`hadate`"${*}" >> $HA_DEBUGLOG
         fi
-
-
 }
 
 ha_debug() {
 
         if [ "x${HA_LOGD}" = "xyes" ] ; then  
-                ${HA_BIN}/ha_logger ha-debug "${*}"
+		${HA_BIN}/ha_logger -E "${__SCRIPT_NAME}[$$]" ha-debug "[$$]: $@"
                 if [ "$?" -eq "0" ] ; then
                         return 0
                 fi
@@ -93,15 +91,15 @@ ha_debug() {
 	  [ -n "$HA_LOGFACILITY" ]
 	then
 	  : logging through syslog
-	  logger -t $HA_LOGTAG -p ${HA_LOGFACILITY}.debug "${*}"
+	  logger -t "$HA_LOGTAG" -p "${HA_LOGFACILITY}.debug" "${*}"
 	fi
         if
 	  [ -n "$HA_DEBUGLOG" ]
 	then
 	  : appending to $HA_DEBUGLOG
-	  Echo "$HA_LOGTAG: "`hadate`"${*}" >> $HA_DEBUGLOG
+	  Echo "$HA_LOGTAG:	"`hadate`"${*}" >> $HA_DEBUGLOG
 	else
-	  Echo `hadate`"${*}" .$HA_LOGFACILITY. >&2
+	  Echo "$HA_LOGTAG:	`hadate`${*}:	${HA_LOGFACILITY}" >&2
 	fi
 }
 
