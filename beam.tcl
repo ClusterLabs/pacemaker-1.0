@@ -211,6 +211,34 @@ beam::attribute_by_signature {
 	)
 } "cl_free"
 
+beam::attribute_by_signature {
+	allocator (
+		return_index = return,
+		initial_state = initialized_to_zero,
+		if_out_of_memory = ok,
+		resource = heap_memory
+	),
+	property (index = return,
+		type = provides,
+                num_dereference = 0,
+		property_name = "memory allocation source",
+		property_value = "from msg_to_op"
+	)
+}"msg_to_op"
+
+beam::attribute_by_signature {
+	deallocator (
+		pointer_index = 1,
+		resource = heap_memory
+	),
+	property (index = 1,
+		type = requires,
+                num_dereference = 0,
+		property_name = "memory allocation source",
+		property_value = "from msg_to_op"
+	)
+}"free_op"
+
 beam::resource_create { 
     name = "cl_msg",
     display = "cl_msg",       
