@@ -1,0 +1,172 @@
+#!/bin/sh
+#Author: Zhao Kai <zhaokai@cn.ibm.com>
+#set -x
+
+
+PARAMETER_SPLIT_SIGN="="
+exec_prefix=@exec_prefix@
+HA_DIR=@sysconfdir@/ha.d
+OCF_ROOT_DIR=@OCF_ROOT_DIR@
+OCF_RA_DIR=@OCF_RA_DIR@
+
+BASENAME=@BASENAME@
+
+#
+# rsc_id=rsc1 rsc_type=IPaddr2 provide=heartbeat start ip=192.168.0.1 .....
+#
+ra_execocf(){
+	ra_ocfinit $*
+	shift 4
+	ra_setenv $*
+
+	ra_getpathname
+	
+	if [ ! -e $RAOCFPATH ]
+	then
+		ha_log "ERR $RAOCFPATH is not in existence"
+		exit 1
+	fi
+
+	if [ ! -x $RAOCFPATH ] 
+	then
+		ha_log "ERR $RAOCFPATH is'nt executable file "
+		exit 1
+
+	fi
+
+	# execute ocf ra and get return value
+	case $OPERATION in
+	start)		`$RAOCFPATH start`;;
+	stop)		`$RAOCFPATH stop `;;
+	monitor|status)	`$RAOCFPATH monitor`;;
+
+	usage|help)	usage;;
+	*)		ha_log "ERROR: Mismatching operation : $OPERATION"
+			usage
+			exit 1;;
+	esac
+	
+	case $? in
+	$OCF_SUCCESS)
+		case $OPERATION in
+		monitor|status)		ha_log "$rsc_type Running OK";;
+		*)			ha_log "$rsc_type Success";;
+		esac
+		;;
+
+	$OCF_ERR_GENERIC)
+		ha_log $rsc_type Generic error 
+		;;
+
+	$OCF_ERR_ARGS)
+		ha_log $rsc_type Incompliant argument 
+		;;
+	$OCF_ERR_UNIMPLEMENTED)
+		ha_log $rsc_type Function unimplemented
+		;;
+	$OCF_ERR_PERM)
+		ha_log %rsc_type User had insufficient privilege
+		;;
+	$OCF_ERR_INSTALLED)
+		ha_log $rsc_type Program is not installed
+		;;
+	$OCF_ERR_CONFIGURED)
+		ha_log $rsc_type Program is not configured
+		;;
+	$OCF_NOT_RUNNING)
+		ha_log $rsc_type Program is not running
+		;;
+	*)
+		echo $?
+		ha_log $rsc_type Unknown error
+		exit 1
+		;;
+	esac
+
+	return
+}
+
+ra_ocfinit(){
+
+	RSCIDPAIR=$1
+	RSCTYPEPAIR=$2
+	
+	RSCTYPE=`echo "$RSCTYPEPAIR" | cut -d${PARAMETER_SPLIT_SIGN} -f2`
+	PROVIDERPAIR=$3
+	PROVIDER=`echo "$PROVIDERPAIR" | cut -d${PARAMETER_SPLIT_SIGN} -f2`
+	OPERATION=$4
+
+
+	setup_OCF_env_vars $RSCIDPAIR
+	setup_OCF_env_vars $RSCTYPEPAIR
+	setup_OCF_env_vars $PRIVADEPAIR
+	
+	export "OCF_RA_VERSION_MAJOR"=1
+	export "OCF_RA_VERSION_MINOR"=0
+	export "OCF_ROOT"=$OCF_ROOT_DIR
+
+	. @hb_libdir@/ocf-shellfuncs
+}
+
+ra_getpathname(){
+	BASENAME=`basename $RSCTYPE`
+	if [ $BASENAME == $RSCTYPE ]
+	then
+		RAOCFPATH="${OCF_RA_DIR}${PROVIDER}/${BASENAME}"
+	else
+		RAOCFPATH="${RSCTYPE}"
+	fi
+
+
+}
+
+ra_setenv(){
+
+	for envar in $*
+	do
+		setup_OCF_prefix $envar
+	done
+
+
+}
+
+setup_OCF_prefix(){
+	
+	hbvarname=`echo "$envar" | cut -d${PARAMETER_SPLIT_SIGN} -f1`
+	hbvarvalue=`echo "$envar" | cut -d${PARAMETER_SPLIT_SIGN} -f2`
+	ocfvarname="OCF_RESKEY_${hbvarname}"
+
+	export $ocfvarname=$hbvarvalue
+}
+
+setup_OCF_env_vars(){
+	hbvarname=`echo "$1" | cut -d${PARAMETER_SPLIT_SIGN} -f1`
+	hbvarvalue=`echo "$1" | cut -d${PARAMETER_SPLIT_SIGN} -f2`
+
+	case $hbvarname in 
+		rsc_id)
+			if [ ! -z "$hbvarvalue" ]
+			then
+				ocfvarname="OCF_RESOURCE_INSTANCE"
+				export $ocfvarname=$hbvarvalue
+			fi
+			;;
+		rsc_type)
+			if [ ! -z "hbvarvalue" ]
+			then
+				ocfvarname="OCF_RESOURCE_TYPE"
+				export $ocfvarname=$hbvarvalue
+			fi
+			;;
+		provider)
+			if [ ! -z "hbvarvalue" ]
+			then
+				ocfvarname="OCF_RESOURCE_PROVIDER"
+				export $ocfvarname=$hbvarvalue
+			fi
+			;;
+		*)
+			;;
+		esac
+	
+}
