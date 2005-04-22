@@ -26,7 +26,7 @@ hbagent_srces  = snmp-config-resolve.h	\
 	LHANodeTable_columns.h		\
 	LHANodeTable_enums.h		\
 	LHANodeTable.c			\
-	HAClusterInfo.h			\
+	LHAClusterInfo.h		\
 	LHAClusterInfo.c		\
 	LHAIFStatusTable.h		\
 	LHAIFStatusTable_enums.h	\
