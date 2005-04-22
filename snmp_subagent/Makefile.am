@@ -19,10 +19,39 @@
 
 MAINTAINERCLEANFILES    = Makefile.in
 
+hbagent_srces  = snmp-config-resolve.h	\
+	hbagent.h			\
+	hbagent.c			\
+	LHANodeTable.h			\
+	LHANodeTable_columns.h		\
+	LHANodeTable_enums.h		\
+	LHANodeTable.c			\
+	HAClusterInfo.h			\
+	LHAClusterInfo.c		\
+	LHAIFStatusTable.h		\
+	LHAIFStatusTable_enums.h	\
+	LHAIFStatusTable_columns.h	\
+	LHAIFStatusTable.c		\
+	LHAMembershipTable_columns.h	\
+	LHAMembershipTable_enums.h	\
+	LHAMembershipTable.h		\
+	LHAMembershipTable.c		\
+	LHAHeartbeatConfigInfo.c	\
+	LHAHeartbeatConfigInfo.h	\
+	LHAResourceGroupTable_columns.h	\
+	LHAResourceGroupTable_enums.h	\
+	LHAResourceGroupTable.h		\
+	LHAResourceGroupTable.c	
+
+test_scrs	=	SNMPAgentSanityCheck
+
+
 mibsdir			= @MIBS_DIR@
 mibs_DATA		= LINUX-HA-MIB.mib
 
 EXTRA_DIST		= SNMPAgentSanityCheck.in $(mibs_DATA)
+
+if SNMP_SUBAGENT_BUILD
 
 INCLUDES                = -I$(top_builddir)/include -I$(top_srcdir)/include \
 			-I$(top_builddir)/linux-ha -I$(top_srcdir)/linux-ha  \
@@ -35,13 +64,7 @@ NET_SNMP_CONFIG		= @NET_SNMP_CONFIG@
 # binary programs
 halib_PROGRAMS		= hbagent 
 
-hbagent_SOURCES		= snmp-config-resolve.h hbagent.h hbagent.c \
-			  LHAClusterInfo.h LHAClusterInfo.c \
-			  LHANodeTable.h LHANodeTable_enums.h LHANodeTable_columns.h LHANodeTable.c \
-			  LHAIFStatusTable.h LHAIFStatusTable_enums.h LHAIFStatusTable_columns.h LHAIFStatusTable.c \
-			  LHAMembershipTable_columns.h LHAMembershipTable_enums.h LHAMembershipTable.h LHAMembershipTable.c \
-			  LHAHeartbeatConfigInfo.c LHAHeartbeatConfigInfo.h \
-			  LHAResourceGroupTable.c LHAResourceGroupTable_columns.h LHAResourceGroupTable_enums.h LHAResourceGroupTable.h
+hbagent_SOURCES		= $(hbagent_srces)
 
 
 
@@ -56,6 +79,8 @@ hbagent_LDFLAGS		= @SNMP_LIBS@
 
 # test cases
 testdir			= $(libdir)/heartbeat
-test_SCRIPTS		= SNMPAgentSanityCheck
+test_SCRIPTS		= $(test_scrs)
 
-
+else
+EXTRA_DIST += $(hbagent_srces) $(test_scrs)
+endif
