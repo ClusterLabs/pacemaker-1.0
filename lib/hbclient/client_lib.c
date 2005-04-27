@@ -1,4 +1,4 @@
-/* $Id: client_lib.c,v 1.29 2005/04/14 06:31:29 gshi Exp $ */
+/* $Id: client_lib.c,v 1.30 2005/04/27 05:31:42 gshi Exp $ */
 /* 
  * client_lib: heartbeat API client side code
  *
@@ -2576,7 +2576,7 @@ sendnodemsg(ll_cluster_t* lcl, struct ha_msg* msg
 
 static int
 sendnodemsg_byuuid(ll_cluster_t* lcl, struct ha_msg* msg,
-		   uuid_t uuid)
+		   cl_uuid_t* uuid)
 {
 	llc_private_t* pi;
 	ClearLog();
@@ -2607,12 +2607,12 @@ sendnodemsg_byuuid(ll_cluster_t* lcl, struct ha_msg* msg,
 
 
 static int
-get_uuid(llc_private_t* pi, const char* nodename, uuid_t uuid)
+get_uuid(llc_private_t* pi, const char* nodename, cl_uuid_t* uuid)
 {
 	struct ha_msg*		request;
 	struct ha_msg*		reply;
 	const char *		result;
-	uuid_t			tmp;
+	cl_uuid_t		tmp;
 	
 	if (!pi->SignedOn) {
 		ha_api_log(LOG_ERR, "not signed on");
@@ -2640,9 +2640,9 @@ get_uuid(llc_private_t* pi, const char* nodename, uuid_t uuid)
 	if ((reply=read_api_msg(pi)) != NULL
 	    && 	(result = ha_msg_value(reply, F_APIRESULT)) != NULL
 	    &&	(strcmp(result, API_OK) == 0)
-	    &&	(cl_get_uuid(reply, F_QUERYUUID, tmp)) == HA_OK){
+	    &&	(cl_get_uuid(reply, F_QUERYUUID, &tmp)) == HA_OK){
 		
-		uuid_copy(uuid, tmp);
+		cl_uuid_copy(uuid, &tmp);
 		ZAPMSG(reply);
 		
 		return HA_OK;
@@ -2657,7 +2657,7 @@ get_uuid(llc_private_t* pi, const char* nodename, uuid_t uuid)
 }
 
 static int
-get_uuid_by_name(ll_cluster_t* ci, const char* nodename, uuid_t uuid)
+get_uuid_by_name(ll_cluster_t* ci, const char* nodename, cl_uuid_t* uuid)
 {
 	llc_private_t* pi;
 	ClearLog();
@@ -2681,7 +2681,7 @@ get_uuid_by_name(ll_cluster_t* ci, const char* nodename, uuid_t uuid)
 
 
 static int
-get_name(llc_private_t* pi, const uuid_t uuid, char* name, int maxnamlen)
+get_name(llc_private_t* pi, const cl_uuid_t* uuid, char* name, int maxnamlen)
 {
 	struct ha_msg*		request;
 	struct ha_msg*		reply;
@@ -2732,7 +2732,7 @@ get_name(llc_private_t* pi, const uuid_t uuid, char* name, int maxnamlen)
 
 
 static int
-get_name_by_uuid(ll_cluster_t* ci, uuid_t uuid, 
+get_name_by_uuid(ll_cluster_t* ci, cl_uuid_t* uuid, 
 		 char* nodename, size_t  maxnamlen){
 	
 	llc_private_t* pi;

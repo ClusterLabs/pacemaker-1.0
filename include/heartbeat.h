@@ -1,4 +1,4 @@
-/* $Id: heartbeat.h,v 1.63 2005/04/15 06:21:59 alan Exp $ */
+/* $Id: heartbeat.h,v 1.64 2005/04/27 05:31:42 gshi Exp $ */
 /*
  * heartbeat.h: core definitions for the Linux-HA heartbeat program
  *
@@ -260,7 +260,7 @@ struct link {
 struct node_info {
 	int		nodetype;
 	char		nodename[HOSTLENG];	/* Host name from config file */
-	uuid_t		uuid;
+	cl_uuid_t	uuid;
 	char		status[STATUSLENG];	/* Status from heartbeat */
 	struct link	links[MAXMEDIA];
 	int		nlinks;
@@ -300,7 +300,7 @@ struct sys_config {
         int    		use_dbgfile;            /* Flag to use the debug file*/
 	int		rereadauth;		/* 1 if we need to reread auth file */
 	seqno_t		generation;	/* Heartbeat generation # */
-	uuid_t		uuid;		/* uuid for this node*/
+	cl_uuid_t	uuid;		/* uuid for this node*/
 	int		authnum;
 	Stonith*	stonith;	/* Stonith method: WE NEED A LIST TO SUPPORT MULTIPLE STONITH DEVICES PER NODE -EZA */
 	struct HBauth_info* authmethod;	/* auth_config[authnum] */
@@ -394,15 +394,15 @@ void	SetParameterValue(const char * name, const char * value);
 
 gint		uuid_equal(gconstpointer v, gconstpointer v2);
 guint		uuid_hash(gconstpointer key);
-void		add_nametable(const char* nodename, char* value);
-void		add_uuidtable(const char* uuid, char* value);
-const char *	uuid2nodename(const uuid_t uuid);
-int		nodename2uuid(const char* nodename, uuid_t);
+void		add_nametable(const char* nodename, struct node_info* value);
+void		add_uuidtable(cl_uuid_t*, struct node_info* value);
+const char *	uuid2nodename(cl_uuid_t* uuid);
+int		nodename2uuid(const char* nodename, cl_uuid_t*);
 int		inittable(void);
-void		update_tables(const char* nodename, const char* uuid);
-struct node_info* lookup_tables(const char* nodename, const char* uuid);
+void		update_tables(const char* nodename, cl_uuid_t* uuid);
+struct node_info* lookup_tables(const char* nodename, cl_uuid_t* uuid);
 void		cleanuptable(void);
-int		GetUUID(uuid_t uuid);
+int		GetUUID(cl_uuid_t* uuid);
 
 #ifndef HA_HAVE_SETENV
 int setenv(const char *name, const char * value, int why);

@@ -33,14 +33,14 @@
 #	define O_SYNC 0
 #endif
 
-GHashTable*			name_table = NULL;
-GHashTable*			uuid_table = NULL;
+static GHashTable*			name_table = NULL;
+static GHashTable*			uuid_table = NULL;
 
 guint 
 uuid_hash(gconstpointer key)
 {
 	const char *p = key;
-	const char *pmax = p + sizeof(uuid_t);
+	const char *pmax = p + sizeof(cl_uuid_t);
 	guint h = *p;
 	
 	if (h){
@@ -66,7 +66,7 @@ print_key_value(gpointer key, gpointer value, gpointer user_data)
 	struct node_info* hip = (struct node_info*)value;
 	
 	cl_log(LOG_INFO, "key=%s, value=%s", (char*)key, 
-	       uuid_is_null(hip->uuid)?"null":"not null");
+	       uuid_is_null(&hip->uuid)?"null":"not null");
 }
 
 static void
@@ -89,13 +89,13 @@ lookup_nametable(const char* nodename)
 }
 
 static struct node_info*
-lookup_uuidtable(const char* uuid)
+lookup_uuidtable(cl_uuid_t* uuid)
 {
 	return (struct node_info*)g_hash_table_lookup(uuid_table, uuid);
 }
 
 struct node_info*
-lookup_tables(const char* nodename, const char* uuid)
+lookup_tables(const char* nodename, cl_uuid_t* uuid)
 {
 	
 	struct node_info* hip = NULL;
@@ -119,12 +119,12 @@ lookup_tables(const char* nodename, const char* uuid)
 }
 
 void
-update_tables(const char* nodename, const char* uuid)
+update_tables(const char* nodename, cl_uuid_t* uuid)
 {
 
 	struct node_info*  hip ;
 
-	if(!uuid || uuid_is_null(uuid)){
+	if(!uuid || cl_uuid_is_null(uuid)){
 		cl_log(LOG_ERR,"update_tables: bad parameters");	
 		return;
 	}
@@ -135,7 +135,7 @@ update_tables(const char* nodename, const char* uuid)
 			cl_log(LOG_WARNING, "nodename %s"
 			       " changed to %s?", hip->nodename, nodename);	
 			strncpy(hip->nodename, nodename, sizeof(hip->nodename));
-			add_nametable(nodename, (char*)hip);
+			add_nametable(nodename, hip);
 		}
 		
 	} else {
@@ -146,11 +146,13 @@ update_tables(const char* nodename, const char* uuid)
 			return;
 		}
 		
-		if (uuid_is_null(hip->uuid) || !uuid_compare(uuid, hip->uuid)){
-			uuid_copy(hip->uuid, uuid);
-		}
-		
-		add_uuidtable(uuid, (char*)hip);
+		if (cl_uuid_is_null(&hip->uuid)){
+			cl_uuid_copy(&hip->uuid, uuid);
+		}else if (cl_uuid_compare(&hip->uuid, uuid) != 0){
+			cl_log(LOG_ERR, "node %s changed its uuid", nodename);			
+			
+		}		
+		add_uuidtable(uuid, hip);
 		
 	}
 	
@@ -163,17 +165,17 @@ update_tables(const char* nodename, const char* uuid)
 
 
 void
-add_nametable(const char* nodename, char* value)
+add_nametable(const char* nodename, struct node_info* value)
 {
 	char * ds = ha_strdup(nodename);
 	g_hash_table_insert(name_table, ds, value);
 }
 
 void
-add_uuidtable(const char* uuid, char* value)
+add_uuidtable(cl_uuid_t* uuid, struct node_info* value)
 {
-	char* du = ha_malloc(sizeof(uuid_t));
-	uuid_copy(du, uuid);
+	cl_uuid_t* du = (cl_uuid_t*)ha_malloc(sizeof(cl_uuid_t));
+	cl_uuid_copy(du, uuid);
 	
 	g_hash_table_insert(uuid_table, du, value);
 }
@@ -227,7 +229,7 @@ cleanuptable(void){
 
 
 const char* 
-uuid2nodename(const uuid_t uuid)
+uuid2nodename(cl_uuid_t* uuid)
 {
 	struct node_info* hip;
 
@@ -242,7 +244,7 @@ uuid2nodename(const uuid_t uuid)
 
 
 int
-nodename2uuid(const char* nodename, uuid_t id)
+nodename2uuid(const char* nodename, cl_uuid_t* id)
 {
 	struct node_info* hip; 
 	
@@ -251,14 +253,14 @@ nodename2uuid(const char* nodename, uuid_t id)
 		       "nodename is NULL ");
 		return HA_FAIL;
 	}
-	uuid_clear(id);
+	cl_uuid_clear(id);
 	hip = g_hash_table_lookup(name_table, nodename);
 	
 	if (!hip){		
 		return HA_FAIL;
 	}
 	
-	uuid_copy(id, hip->uuid);		
+	cl_uuid_copy(id, &hip->uuid);		
 	
 	return HA_OK;
 }
@@ -269,14 +271,14 @@ nodename2uuid(const char* nodename, uuid_t id)
 #endif
 
 int
-GetUUID(uuid_t uuid)
+GetUUID(cl_uuid_t* uuid)
 {
 	int		fd;
 	int		flags = 0;
-	int		uuid_len = sizeof(uuid_t);
-
+	int		uuid_len = sizeof(uuid->uuid);
+	
 	if ((fd = open(HB_UUID_FILE, O_RDONLY)) > 0
-	    &&	read(fd, uuid, uuid_len) == uuid_len) {
+	    &&	read(fd, uuid->uuid, uuid_len) == uuid_len) {
 		close(fd);
 		return HA_OK;
 	}
@@ -288,9 +290,9 @@ GetUUID(uuid_t uuid)
 		return HA_FAIL;
 	}
 	
-	uuid_generate(uuid);
+	cl_uuid_generate(uuid);
 	
-	if (write(fd, uuid, uuid_len) != uuid_len) {
+	if (write(fd, uuid->uuid, uuid_len) != uuid_len) {
 		close(fd);
 		return HA_FAIL;
 	}

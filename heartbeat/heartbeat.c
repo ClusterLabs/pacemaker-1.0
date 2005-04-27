@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.395 2005/04/22 17:40:09 gshi Exp $ */
+/* $Id: heartbeat.c,v 1.396 2005/04/27 05:31:42 gshi Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -265,7 +265,7 @@
 #include <hb_config.h>
 #include <hb_resource.h>
 #include <apphb.h>
-#include <uuid/uuid.h>
+#include <clplumbing/cl_uuid.h>
 #include "clplumbing/setproctitle.h"
 
 #define OPTARGS			"dkMrRsvlC:"
@@ -751,13 +751,13 @@ initialize_heartbeat()
 	}
 	cl_log(LOG_INFO, "Heartbeat generation: %lu", config->generation);
 	
-	if(GetUUID(config->uuid) != HA_OK){
+	if(GetUUID(&config->uuid) != HA_OK){
 		cl_log(LOG_ERR, "getting uuid for the local node failed");
 		return HA_FAIL;
 	}
 	
-	add_uuidtable(config->uuid, (char*)curnode);
-	uuid_copy(curnode->uuid, config->uuid);
+	add_uuidtable(&config->uuid, curnode);
+	cl_uuid_copy(&curnode->uuid, &config->uuid);
 
 	if (stat(FIFONAME, &buf) < 0 ||	!S_ISFIFO(buf.st_mode)) {
 		cl_log(LOG_INFO, "Creating FIFO %s.", FIFONAME);
@@ -2310,7 +2310,7 @@ static void
 send_ack_if_necessary(const struct ha_msg* m)
 {
 	const char*	fromnode = ha_msg_value(m, F_ORIG);
-	uuid_t		fromuuid;
+	cl_uuid_t	fromuuid;
 	const char*	seq_str = ha_msg_value(m, F_SEQ);
 	seqno_t		seq;
 	struct	node_info*	thisnode = NULL;
@@ -2319,8 +2319,8 @@ send_ack_if_necessary(const struct ha_msg* m)
 		return;
 	}
 	
-	if ( cl_get_uuid(m, F_ORIGUUID, fromuuid) != HA_OK){
-		uuid_clear(fromuuid);
+	if ( cl_get_uuid(m, F_ORIGUUID, &fromuuid) != HA_OK){
+		cl_uuid_clear(&fromuuid);
 	}
 	
 	if (fromnode == NULL ||
@@ -2329,7 +2329,7 @@ send_ack_if_necessary(const struct ha_msg* m)
 		return;
 	}
 	
-	thisnode = lookup_tables(fromnode, fromuuid);
+	thisnode = lookup_tables(fromnode, &fromuuid);
 	if (thisnode == NULL){
 		
 		cl_log(LOG_ERR, "node %s not found "
@@ -2337,7 +2337,7 @@ send_ack_if_necessary(const struct ha_msg* m)
 		       fromnode);
 		return;		
 	}
-
+	
 	send_ack_if_needed(thisnode, seq);
 	
 }
@@ -2354,7 +2354,7 @@ process_clustermsg(struct ha_msg* msg, struct link* lnk)
 	TIME_T			msgtime = 0;
 	longclock_t		now = time_longclock();
 	const char *		from;
-	uuid_t			fromuuid;
+	cl_uuid_t		fromuuid;
 	const char *		ts;
 	const char *		type;
 	int			action;
@@ -2397,8 +2397,8 @@ process_clustermsg(struct ha_msg* msg, struct link* lnk)
 	type = ha_msg_value(msg, F_TYPE);
 	from = ha_msg_value(msg, F_ORIG);
 	
-	if ( cl_get_uuid(msg, F_ORIGUUID, fromuuid) != HA_OK){
-		uuid_clear(fromuuid);
+	if ( cl_get_uuid(msg, F_ORIGUUID, &fromuuid) != HA_OK){
+		cl_uuid_clear(&fromuuid);
 	}
 	ts = ha_msg_value(msg, F_TIME);
 	cseq = ha_msg_value(msg, F_SEQ);
@@ -2440,7 +2440,7 @@ process_clustermsg(struct ha_msg* msg, struct link* lnk)
 		return;
 	}
 	
-	thisnode = lookup_tables(from, fromuuid);
+	thisnode = lookup_tables(from, &fromuuid);
 	
 	if (thisnode == NULL) {
 #if defined(MITJA)
@@ -4221,9 +4221,9 @@ should_drop_message(struct node_info * thisnode, const struct ha_msg *msg,
 	struct seqtrack *	t = &thisnode->track;
 	const char *		cseq = ha_msg_value(msg, F_SEQ);
 	const char *		to = ha_msg_value(msg, F_TO);
-	uuid_t			touuid;
+	cl_uuid_t		touuid;
 	const char *		from= ha_msg_value(msg, F_ORIG);
-	uuid_t			fromuuid;
+	cl_uuid_t		fromuuid;
 	const char *		type = ha_msg_value(msg, F_TYPE);
 	const char *		cgen = ha_msg_value(msg, F_HBGENERATION);
 	seqno_t			seq;
@@ -4235,12 +4235,12 @@ should_drop_message(struct node_info * thisnode, const struct ha_msg *msg,
 	int			is_status = 0;
 	
 	
-	if ( cl_get_uuid(msg, F_ORIGUUID, fromuuid) != HA_OK){
-		uuid_clear(fromuuid);
+	if ( cl_get_uuid(msg, F_ORIGUUID, &fromuuid) != HA_OK){
+		cl_uuid_clear(&fromuuid);
 	}
 	
-	if (from && !uuid_is_null(fromuuid)){
-		update_tables(from, fromuuid);
+	if (from && !cl_uuid_is_null(&fromuuid)){
+		update_tables(from, &fromuuid);
 	}
 	
 	if (is_missing_packet == NULL){
@@ -4298,13 +4298,13 @@ should_drop_message(struct node_info * thisnode, const struct ha_msg *msg,
 		sscanf(cgen, "%lx", &gen);
 	}
 	
-	if ( cl_get_uuid(msg, F_TOUUID, touuid) != HA_OK){
-		uuid_clear(touuid);
+	if ( cl_get_uuid(msg, F_TOUUID, &touuid) != HA_OK){
+		cl_uuid_clear(&touuid);
 	}
 	
 	
-	if(!uuid_is_null(touuid)){
-		IsToUs = (uuid_compare(touuid, config->uuid) == 0);
+	if(!cl_uuid_is_null(&touuid)){
+		IsToUs = (cl_uuid_compare(&touuid, &config->uuid) == 0);
 	}else{
 		IsToUs = (to == NULL) || (strcmp(to, curnode->nodename) == 0);
 	}
@@ -5242,6 +5242,10 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.396  2005/04/27 05:31:42  gshi
+ *  use struct cl_uuid_t to replace uuid_t
+ * use cl_uuid_xxx to replace uuid_xxx funcitons
+ *
  * Revision 1.395  2005/04/22 17:40:09  gshi
  * bug 413 again:
  *

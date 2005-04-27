@@ -1,4 +1,4 @@
-/* $Id: ha_msg.h,v 1.57 2005/03/21 17:51:57 gshi Exp $ */
+/* $Id: ha_msg.h,v 1.58 2005/04/27 05:31:42 gshi Exp $ */
 /*
  * Intracluster message object (struct ha_msg)
  *
@@ -27,7 +27,7 @@
 #include <clplumbing/cl_log.h>
 #include <clplumbing/ipc.h>
 #include <clplumbing/longclock.h>
-#include <uuid/uuid.h>
+#include <clplumbing/cl_uuid.h>
 
 
 enum cl_netstring_type{
@@ -229,7 +229,7 @@ int		ha_msg_addbin(struct ha_msg * msg, const char * name,
 				  const void * value, size_t vallen);
 
 int		ha_msg_adduuid(struct ha_msg * msg, const char * name, 
-			       const uuid_t	uuid);
+			       const cl_uuid_t*	uuid);
 
 /* Add null-terminated name and a value to the message */
 int		ha_msg_add(struct ha_msg * msg
@@ -249,7 +249,7 @@ int		cl_msg_modbin(struct ha_msg * msg,
 			      size_t vlen);
 
 int		cl_msg_moduuid(struct ha_msg * msg, const char * name, 
-			       const uuid_t	uuid);
+			       const cl_uuid_t*	uuid);
 
 int		cl_msg_modstruct(struct ha_msg * msg,
 				 const char* name, 
@@ -348,7 +348,7 @@ int ha_msg_addstruct(struct ha_msg * msg, const char * name, const void* ptr);
 const void * cl_get_binary(const struct ha_msg *msg, const char * name, size_t * vallen);
 
 /* Get uuid data from a message */
-int cl_get_uuid(const struct ha_msg *msg, const char * name, uuid_t retval);
+int cl_get_uuid(const struct ha_msg *msg, const char * name, cl_uuid_t* retval);
 
 /* Get string data from a message */
 const char * cl_get_string(const struct ha_msg *msg, const char *name);
@@ -383,8 +383,8 @@ int	ha_msg_mod_int(struct ha_msg * msg, const char * name, int value);
 int	ha_msg_value_int(const struct ha_msg * msg, const char * name, int* value);
 
 /* Functions to add/get a uuid*/
-int	ha_msg_add_uuid(struct ha_msg * msg, const char * name, const uuid_t id);
-int	ha_msg_value_uuid(struct ha_msg * msg, const char * name, uuid_t id);
+int	ha_msg_add_uuid(struct ha_msg * msg, const char * name, cl_uuid_t* id);
+int	ha_msg_value_uuid(struct ha_msg * msg, const char * name, cl_uuid_t* id);
 
 /* Functions to add/get a string list*/
 GList*	ha_msg_value_str_list(struct ha_msg * msg, const char * name);

@@ -1,4 +1,4 @@
-/* $Id: ha_msg_internal.c,v 1.52 2005/03/04 15:34:59 alan Exp $ */
+/* $Id: ha_msg_internal.c,v 1.53 2005/04/27 05:31:42 gshi Exp $ */
 /*
  * ha_msg_internal: heartbeat internal messaging functions
  *
@@ -82,7 +82,7 @@ add_control_msg_fields(struct ha_msg* ret)
 	int		j;
 	int		noseqno;
 	const char *	to;
-	uuid_t		touuid;
+	cl_uuid_t	touuid;
 	
 
 	/* if F_TO field is present
@@ -90,8 +90,8 @@ add_control_msg_fields(struct ha_msg* ret)
 	   attach the uuid for that node*/
 	
 	if ((to = ha_msg_value(ret, F_TO)) != NULL ) {
-		if (nodename2uuid(to, touuid) == HA_OK){
-			cl_msg_moduuid(ret, F_TOUUID, touuid);
+		if (nodename2uuid(to, &touuid) == HA_OK){
+			cl_msg_moduuid(ret, F_TOUUID, &touuid);
 		} else{
 			/* working with previous non-uuid version */
 			/*
@@ -100,8 +100,8 @@ add_control_msg_fields(struct ha_msg* ret)
 			/* do nothing */
 
 		}		
-	} else if (cl_get_uuid(ret, F_TOUUID, touuid) == HA_OK){
-		if ((to = uuid2nodename(touuid)) != NULL){
+	} else if (cl_get_uuid(ret, F_TOUUID, &touuid) == HA_OK){
+		if ((to = uuid2nodename(&touuid)) != NULL){
 			if (ha_msg_mod(ret, F_TO, to) != HA_OK){
 				ha_log(LOG_WARNING, " adding field to message failed");
 			}
@@ -149,7 +149,7 @@ add_control_msg_fields(struct ha_msg* ret)
 		
 		if( defaults[j].flags & IS_UUID){
 			if (cl_msg_moduuid(ret, defaults[j].name,
-					   defaults[j].value()) != HA_OK ){
+					   (const cl_uuid_t*)defaults[j].value()) != HA_OK ){
 				ha_msg_del(ret);
 				return(NULL);
 			}
@@ -316,7 +316,7 @@ ha_msg_from(void)
 STATIC const char*
 ha_msg_fromuuid()
 {
-  return config->uuid;
+	return (char*)&config->uuid;
 }
 
 /* Add sequence number field */
@@ -412,6 +412,10 @@ main(int argc, char ** argv)
 #endif
 /*
  * $Log: ha_msg_internal.c,v $
+ * Revision 1.53  2005/04/27 05:31:42  gshi
+ *  use struct cl_uuid_t to replace uuid_t
+ * use cl_uuid_xxx to replace uuid_xxx funcitons
+ *
  * Revision 1.52  2005/03/04 15:34:59  alan
  * Fixed various signed/unsigned errors...
  *

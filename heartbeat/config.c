@@ -1,4 +1,4 @@
-/* $Id: config.c,v 1.153 2005/04/15 06:21:59 alan Exp $ */
+/* $Id: config.c,v 1.154 2005/04/27 05:31:42 gshi Exp $ */
 /*
  * Parse various heartbeat configuration files...
  *
@@ -987,7 +987,7 @@ add_node(const char * value, int nodetype)
 	strncpy(hip->status, INITSTATUS, sizeof(hip->status));
 	strncpy(hip->nodename, value, sizeof(hip->nodename));
 	g_strdown(hip->nodename);
-	uuid_clear(hip->uuid);
+	cl_uuid_clear(&hip->uuid);
 	hip->rmt_lastupdate = 0L;
 	hip->has_resources = TRUE;
 	hip->anypacketsyet  = 0;
@@ -998,7 +998,7 @@ add_node(const char * value, int nodetype)
 	srand(time(NULL));
 	hip->track.ack_trigger = rand()%ACK_MSG_DIV;
 	hip->nodetype = nodetype;
-	add_nametable(hip->nodename, (char*)hip);
+	add_nametable(hip->nodename, hip);
 	return(HA_OK);
 }
 
@@ -2200,6 +2200,10 @@ set_release2mode(const char* value)
 
 /*
  * $Log: config.c,v $
+ * Revision 1.154  2005/04/27 05:31:42  gshi
+ *  use struct cl_uuid_t to replace uuid_t
+ * use cl_uuid_xxx to replace uuid_xxx funcitons
+ *
  * Revision 1.153  2005/04/15 06:21:59  alan
  * Fixed an extern/static verbose problem pointed out by Peter Billam <peter.billam@dpiwe.tas.gov.au>.
  *
