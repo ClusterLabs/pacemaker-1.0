@@ -527,7 +527,7 @@ walk_nodetable(void)
 	const char *name, *type, *status;
 	struct hb_nodeinfo * node;
 	size_t id = 0;
-	uuid_t uuid;
+	cl_uuid_t uuid;
 
 	if (gNodeTable) {
 		free_nodetable();
@@ -557,15 +557,15 @@ walk_nodetable(void)
 		node->ifcount = 0;
 		node->id = id;
 
-		memset(uuid, 0, sizeof(uuid_t));
+		memset(&uuid, 0, sizeof(cl_uuid_t));
 
 #ifdef HAVE_NEW_HB_API
 		/* the get_uuid_by_name is not available for STABLE_1_2 branch. */
-		if (hb->llc_ops->get_uuid_by_name(hb, name, uuid) == HA_FAIL) {
+		if (hb->llc_ops->get_uuid_by_name(hb, name, &uuid) == HA_FAIL) {
 			cl_log(LOG_DEBUG, "Cannot get the uuid for node: %s", name);
 		}
 #endif /* HAVE_NEW_HB_API */
-		memcpy(node->uuid, uuid, sizeof(uuid_t));
+		node->uuid = uuid;
 
 		node->type = get_status_value(type, NODE_TYPE, NODE_TYPE_VALUE);
 		node->status = get_status_value(status, NODE_STATUS,

@@ -28,7 +28,7 @@
 #include <glib.h>
 #include "saf/ais.h"
 #include "snmp-config-resolve.h"
-#include <uuid/uuid.h>
+#include <clplumbing/cl_uuid.h>
 
 #define CACHE_TIME_OUT 5
 
@@ -71,7 +71,7 @@ struct hb_nodeinfo {
 	uint32_t type;
 	uint32_t status;
 	size_t ifcount;
-	uuid_t uuid;
+	cl_uuid_t uuid;
 };
 
 struct hb_ifinfo {
