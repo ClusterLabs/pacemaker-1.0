@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.397 2005/04/28 21:16:40 gshi Exp $ */
+/* $Id: heartbeat.c,v 1.398 2005/04/28 21:18:57 gshi Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -2044,7 +2044,7 @@ HBDoMsg_T_ACKMSG(const char * type, struct node_info * fromnode,
 		}
 	}
  out:
-#if 1
+#if 0
 	cl_log(LOG_INFO, "hist->ackseq =%ld, node %s's ackseq=%ld",
 	       hist->ackseq, fromnode->nodename,
 	       fromnode->track.ackseq);
@@ -5242,6 +5242,11 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.398  2005/04/28 21:18:57  gshi
+ * correct the previous wrong commit:
+ *
+ * the debug print in flow control in heartbeat should not be enabled.
+ *
  * Revision 1.397  2005/04/28 21:16:40  gshi
  * all_clients_running should be a static variable
  *
