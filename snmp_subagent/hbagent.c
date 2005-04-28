@@ -1184,6 +1184,7 @@ main(int argc, char ** argv)
 	fd_set fdset;
 	struct timeval tv, *tvp;
 	int flag, block = 0, numfds, hb_fd = 0, mem_fd = 0, debug = 0;
+	int hb_already_dead = 0;
 
 	/* change this if you want to be a SNMP master agent */
 	int agentx_subagent=1; 
@@ -1335,6 +1336,7 @@ main(int argc, char ** argv)
 
 			if ((ret = handle_heartbeat_msg()) == HA_FAIL) {
 				cl_log(LOG_DEBUG, "no heartbeat. quit now.");
+				hb_already_dead = 1;
 				break;
 			}
 		} else  if (clmInitialized && FD_ISSET(mem_fd, &fdset)) {
@@ -1359,7 +1361,7 @@ main(int argc, char ** argv)
 	ha_free(myid);
 	free_storage();
 
-        if (hb->llc_ops->signoff(hb, TRUE) != HA_OK) {
+        if (!hb_already_dead && hb->llc_ops->signoff(hb, TRUE) != HA_OK) {
                 cl_log(LOG_ERR, "Cannot sign off from heartbeat.");
                 cl_log(LOG_ERR, "REASON: %s", hb->llc_ops->errmsg(hb));
                 exit(10);
