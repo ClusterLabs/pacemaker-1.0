@@ -1,4 +1,4 @@
-/* $Id: hb_api.c,v 1.132 2005/04/27 05:31:42 gshi Exp $ */
+/* $Id: hb_api.c,v 1.133 2005/04/28 21:16:40 gshi Exp $ */
 /*
  * hb_api: Server-side heartbeat API code
  *
@@ -1873,7 +1873,7 @@ getout:
 }
 
 
-gboolean all_clients_running = TRUE;
+static gboolean all_clients_running = TRUE;
 gboolean
 all_clients_pause(void)
 {

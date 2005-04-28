@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.396 2005/04/27 05:31:42 gshi Exp $ */
+/* $Id: heartbeat.c,v 1.397 2005/04/28 21:16:40 gshi Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -2044,7 +2044,7 @@ HBDoMsg_T_ACKMSG(const char * type, struct node_info * fromnode,
 		}
 	}
  out:
-#if 0
+#if 1
 	cl_log(LOG_INFO, "hist->ackseq =%ld, node %s's ackseq=%ld",
 	       hist->ackseq, fromnode->nodename,
 	       fromnode->track.ackseq);
@@ -5242,6 +5242,9 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.397  2005/04/28 21:16:40  gshi
+ * all_clients_running should be a static variable
+ *
  * Revision 1.396  2005/04/27 05:31:42  gshi
  *  use struct cl_uuid_t to replace uuid_t
  * use cl_uuid_xxx to replace uuid_xxx funcitons
