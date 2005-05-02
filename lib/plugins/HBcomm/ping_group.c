@@ -1,4 +1,4 @@
-/* $Id: ping_group.c,v 1.15 2005/04/10 20:10:53 lars Exp $ */
+/* $Id: ping_group.c,v 1.16 2005/05/02 20:00:04 gshi Exp $ */
 /*
  * ping_group.c: ICMP-echo-based heartbeat code for heartbeat.
  *
@@ -458,7 +458,7 @@ ping_group_read(struct hb_media* mp, int *lenp)
 		return(NULL);
 	}
 
-	msg = wirefmt2msg(msgstart, bufmax - msgstart);
+	msg = wirefmt2msg(msgstart, bufmax - msgstart, MSG_NEEDAUTH);
 	if(msg == NULL) {
 		return(NULL);
 	}
@@ -522,11 +522,11 @@ ping_group_write(struct hb_media* mp, void *p, int len)
 	struct ha_msg *		nmsg;
 	ping_group_node_t *	node;
 	struct ha_msg*		msg;
-
-	PINGGROUPASSERT(mp);
-
 	
-	if ((msg = wirefmt2msg(p, len)) == NULL) {
+	PINGGROUPASSERT(mp);
+	
+	
+	if ((msg = wirefmt2msg(p, len, MSG_NEEDAUTH)) == NULL) {
 		PILCallLog(LOG, PIL_CRIT, "ping_write(): cannot convert wirefmt to msg");
 		return(HA_FAIL);
 	}

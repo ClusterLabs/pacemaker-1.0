@@ -1,4 +1,4 @@
-/* $Id: serial.c,v 1.38 2004/10/24 13:00:13 lge Exp $ */
+/* $Id: serial.c,v 1.39 2005/05/02 20:00:04 gshi Exp $ */
 /*
  * Linux-HA serial heartbeat code
  *
@@ -552,7 +552,7 @@ serial_write(struct hb_media* mp, void *p, int len)
 		
 		struct ha_msg * msg;
 		
-		msg = wirefmt2msg(p, len);
+		msg = wirefmt2msg(p, len, MSG_NEEDAUTH);
 		if(!msg){
 			ha_log(PIL_WARN, "serial_write(): wirefmt2msg() failed");
 			return(HA_FAIL);
@@ -677,6 +677,16 @@ ttygets(char * inbuf, int length, struct serial_private *tty)
 }
 /*
  * $Log: serial.c,v $
+ * Revision 1.39  2005/05/02 20:00:04  gshi
+ * change wirefmt2msg() from
+ * struct ha_msg* wirefmt2msg(char* string, int len)
+ * to
+ * struct ha_msg* wirefmt2msg(char* string, int len, int flag)
+ * (flag can be 0 or MSG_NEEDAUTH right now)
+ *
+ * so that we allow a user to convert a string to an ha_msg without
+ * authentication.
+ *
  * Revision 1.38  2004/10/24 13:00:13  lge
  * -pedantic-errors fixes 2:
  *  * error: ISO C forbids forward references to 'enum' types

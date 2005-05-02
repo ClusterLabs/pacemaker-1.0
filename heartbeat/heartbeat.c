@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.398 2005/04/28 21:18:57 gshi Exp $ */
+/* $Id: heartbeat.c,v 1.399 2005/05/02 20:00:03 gshi Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -1957,13 +1957,13 @@ HBDoMsg_T_ACKMSG(const char * type, struct node_info * fromnode,
 		goto out;
 	}
 
-
+	
 	if (ackseq == fromnode->track.ackseq){
 		/*dup message*/
 		goto out;
 	}
-
-	if (ackseq < hist->ackseq){
+	
+	if (ackseq <= hist->ackseq){
 		/* late or dup ack
 		 * ignored
 		 */
@@ -2043,7 +2043,6 @@ HBDoMsg_T_ACKMSG(const char * type, struct node_info * fromnode,
 			all_clients_resume();
 		}
 	}
- out:
 #if 0
 	cl_log(LOG_INFO, "hist->ackseq =%ld, node %s's ackseq=%ld",
 	       hist->ackseq, fromnode->nodename,
@@ -2052,7 +2051,9 @@ HBDoMsg_T_ACKMSG(const char * type, struct node_info * fromnode,
 	if (hist->lowest_acknode){
 		cl_log(LOG_INFO,"expecting from %s",hist->lowest_acknode->nodename);
 	}
+
 #endif 
+ out:
 
 	return;
 }
@@ -5242,6 +5243,16 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.399  2005/05/02 20:00:03  gshi
+ * change wirefmt2msg() from
+ * struct ha_msg* wirefmt2msg(char* string, int len)
+ * to
+ * struct ha_msg* wirefmt2msg(char* string, int len, int flag)
+ * (flag can be 0 or MSG_NEEDAUTH right now)
+ *
+ * so that we allow a user to convert a string to an ha_msg without
+ * authentication.
+ *
  * Revision 1.398  2005/04/28 21:18:57  gshi
  * correct the previous wrong commit:
  *

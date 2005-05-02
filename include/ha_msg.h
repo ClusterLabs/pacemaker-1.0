@@ -1,4 +1,4 @@
-/* $Id: ha_msg.h,v 1.58 2005/04/27 05:31:42 gshi Exp $ */
+/* $Id: ha_msg.h,v 1.59 2005/05/02 20:00:03 gshi Exp $ */
 /*
  * Intracluster message object (struct ha_msg)
  *
@@ -310,7 +310,7 @@ int		msg2string_buf(const struct ha_msg *m, char* buf,
 char*		msg2wirefmt(const struct ha_msg *m, size_t* );
 
 /* Converts wire format data into a message */
-struct ha_msg*	wirefmt2msg(const char* s, size_t length);
+struct ha_msg*	wirefmt2msg(const char* s, size_t length, int flag);
 
 /* Convets wire format data into an IPC message */
 IPC_Message*	wirefmt2ipcmsg(void* p, size_t len, IPC_Channel* ch);
