@@ -1,4 +1,4 @@
-/* $Id: hb_api.h,v 1.32 2005/04/27 05:31:42 gshi Exp $ */
+/* $Id: hb_api.h,v 1.33 2005/05/04 16:57:48 gshi Exp $ */
 /*
  * Client-side Low-level clustering API for heartbeat.
  *
@@ -371,6 +371,15 @@ struct llc_ops {
 	
 	int	(*set_sendq_len)(ll_cluster_t* lcl, int length);
 	     
+	/* set the send blocking mode
+	 * TRUE indicate blocking, i.e if the send queue is full
+	 * the function will block there until there are slots available
+	 * or the IPC is disconnected
+	 * FALSE indicates the function will return immediately even 
+	 * if there is no slot available
+	 */	
+	int (*set_send_block_mode)(ll_cluster_t*, gboolean);
+	
 	     
 	const char * (*errmsg)(ll_cluster_t*);
 };
