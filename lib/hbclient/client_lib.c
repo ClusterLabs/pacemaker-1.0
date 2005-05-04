@@ -1,4 +1,4 @@
-/* $Id: client_lib.c,v 1.30 2005/04/27 05:31:42 gshi Exp $ */
+/* $Id: client_lib.c,v 1.31 2005/05/04 16:59:54 gshi Exp $ */
 /* 
  * client_lib: heartbeat API client side code
  *
@@ -204,7 +204,7 @@ static int		sendclustermsg(ll_cluster_t*, struct ha_msg* msg);
 static int		sendnodemsg(ll_cluster_t*, struct ha_msg* msg
 ,			const char * nodename);
 
-STATIC void		add_order_seq(llc_private_t*, struct ha_msg* msg);
+STATIC order_seq_t*	add_order_seq(llc_private_t*, struct ha_msg* msg);
 static int		send_ordered_clustermsg(ll_cluster_t* lcl, struct ha_msg* msg);
 static int		send_ordered_nodemsg(ll_cluster_t* lcl, struct ha_msg* msg
 ,			const char * nodename);
@@ -2512,6 +2512,26 @@ set_sendq_len(ll_cluster_t* lcl, int length)
 	return HA_OK;
 }
 
+static int
+socket_set_send_block_mode(ll_cluster_t* lcl, gboolean truefalse)
+{
+	llc_private_t* pi;
+	ClearLog();
+	if (!ISOURS(lcl)) {
+		ha_api_log(LOG_ERR, "sendnodemsg: bad cinfo");
+		return HA_FAIL;
+	}
+	pi = (llc_private_t*)lcl->ll_cluster_private;
+	
+	if (pi->chan){
+		pi->chan->should_send_block = truefalse;
+		return HA_OK;
+	}else{
+		return HA_FAIL;
+	}
+	
+}
+
 /*
  * Send a message to the cluster.
  */
@@ -2756,7 +2776,7 @@ get_name_by_uuid(ll_cluster_t* ci, cl_uuid_t* uuid,
 
 
 /* Add order sequence number field */
-STATIC  void
+STATIC  order_seq_t*
 add_order_seq(llc_private_t* pi, struct ha_msg* msg)
 {
         order_seq_t *	order_seq = &pi->order_seq_head;
@@ -2776,7 +2796,7 @@ add_order_seq(llc_private_t* pi, struct ha_msg* msg)
 		if (order_seq == NULL){
 			ha_api_log(LOG_ERR
 			,	"add_order_seq: order_seq_t malloc failed!");
-			return;
+			return NULL;
             	}
 		strncpy(order_seq->to_node, to_node, HOSTLENG);
 		order_seq->seqno = 1;
@@ -2784,8 +2804,9 @@ add_order_seq(llc_private_t* pi, struct ha_msg* msg)
 		pi->order_seq_head.next = order_seq;
         }
         sprintf(seq, "%lx", order_seq->seqno);
-        order_seq->seqno++;
         ha_msg_mod(msg, F_ORDERSEQ, seq);
+	
+	return order_seq;
 }
 
 /*
@@ -2796,6 +2817,9 @@ static int
 send_ordered_clustermsg(ll_cluster_t* lcl, struct ha_msg* msg)
 {
 	llc_private_t* pi;
+	order_seq_t* order_seq;
+	int ret;
+
 	ClearLog();
 	if (!ISOURS(lcl)) {
 		ha_api_log(LOG_ERR, "%s: bad cinfo", __FUNCTION__);
@@ -2814,9 +2838,19 @@ send_ordered_clustermsg(ll_cluster_t* lcl, struct ha_msg* msg)
 		return HA_FAIL;
 	}
 
-	add_order_seq(pi, msg);
+	order_seq = add_order_seq(pi, msg);
+	if (order_seq == NULL){
+		ha_api_log(LOG_ERR, "add_order_seq failed");
+		return HA_FAIL;
+	}
 
-	return(msg2ipcchan(msg, pi->chan));
+	ret = msg2ipcchan(msg, pi->chan);
+	
+	if (ret == HA_OK){
+		order_seq->seqno++;
+	}
+	
+	return ret;
 }
 
 static int
@@ -2824,6 +2858,9 @@ send_ordered_nodemsg(ll_cluster_t* lcl, struct ha_msg* msg
 ,			const char * nodename)
 {
 	llc_private_t* pi;
+	order_seq_t* order_seq;
+	int ret;
+
 	ClearLog();
 	if (!ISOURS(lcl)) {
 		ha_api_log(LOG_ERR, "sendnodemsg: bad cinfo");
@@ -2846,8 +2883,19 @@ send_ordered_nodemsg(ll_cluster_t* lcl, struct ha_msg* msg
 		ha_api_log(LOG_ERR, "sendnodemsg: cannot set F_TO field");
 		return(HA_FAIL);
 	}
-	add_order_seq(pi, msg);
-	return(msg2ipcchan(msg, pi->chan));
+	
+	order_seq = add_order_seq(pi, msg);
+	if (order_seq == NULL){
+		ha_api_log(LOG_ERR, "add_order_seq failed");
+		return HA_FAIL;
+	}
+	ret = msg2ipcchan(msg, pi->chan);
+	
+	if (ret == HA_OK){
+		order_seq->seqno++;
+	}
+	
+	return ret;
 }
 
 static char	APILogBuf[MAXLINE] = "";
@@ -2980,6 +3028,7 @@ static struct llc_ops heartbeat_ops = {
 	get_resources:		get_resources,		
 	chan_is_connected:	chan_is_connected,
 	set_sendq_len:		set_sendq_len,
+	set_send_block_mode:	socket_set_send_block_mode,
 	errmsg:			APIError,		
 };
 
