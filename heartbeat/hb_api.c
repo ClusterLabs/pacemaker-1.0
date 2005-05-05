@@ -1,4 +1,4 @@
-/* $Id: hb_api.c,v 1.133 2005/04/28 21:16:40 gshi Exp $ */
+/* $Id: hb_api.c,v 1.134 2005/05/05 17:42:24 gshi Exp $ */
 /*
  * hb_api: Server-side heartbeat API code
  *
@@ -1488,7 +1488,11 @@ api_send_client_msg(client_proc_t* client, struct ha_msg *msg)
 {
 	if (msg2ipcchan(msg, client->chan) != HA_OK) {
 		if (!client->removereason) {
-			client->removereason = "sendfail";
+			if (client->chan->failreason[0] == '\0'){
+				client->removereason = "sendfail";
+			}else {
+				client->removereason = client->chan->failreason;
+			}
 		}
 	}
 
