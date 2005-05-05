@@ -1,4 +1,4 @@
-/* $Id: hb_signal.c,v 1.13 2005/04/22 17:40:09 gshi Exp $ */
+/* $Id: hb_signal.c,v 1.14 2005/05/05 14:36:58 alan Exp $ */
 /*
  * hb_signal.c: signal handling routines to be used by Heartbeat
  *
@@ -633,7 +633,7 @@ hb_signal_set_master_control_process(sigset_t *set)
 		return(-1);
 	}
 	
-	set_sigchld_proctrack();
+	set_sigchld_proctrack(G_PRIORITY_HIGH);
 	hb_signal_process_pending_set_mask_set(use_set);
 
 	return(0);
