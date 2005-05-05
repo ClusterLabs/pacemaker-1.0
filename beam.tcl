@@ -239,6 +239,92 @@ beam::attribute_by_signature {
 	)
 } "free_op"
 
+beam::attribute_by_signature {
+	allocator (
+		return_index = return,
+		initial_state = initialized_to_unknown,
+		if_out_of_memory = ok,
+		resource = heap_memory
+	),
+	property (index = return,
+		type = provides,
+                num_dereference = 0,
+		property_name = "memory allocation source",
+		property_value = "from lrmd_op_new"
+	)
+} "lrmd_op_new" "lrmd_op_copy"
+
+beam::attribute_by_signature {
+	deallocator (
+		pointer_index = 1,
+		resource = heap_memory
+	),
+	property (index = 1,
+		type = requires,
+                num_dereference = 0,
+		property_name = "memory allocation source",
+		property_value = "from lrmd_op_new"
+	)
+} "lrmd_op_destroy"
+
+beam::attribute_by_signature {
+	allocator (
+		return_index = return,
+		initial_state = initialized_to_unknown,
+		if_out_of_memory = ok,
+		resource = heap_memory
+	),
+	property (index = return,
+		type = provides,
+                num_dereference = 0,
+		property_name = "memory allocation source",
+		property_value = "from lrmd_client_new"
+	)
+} "lrmd_client_new"
+
+beam::attribute_by_signature {
+	deallocator (
+		pointer_index = 1,
+		resource = heap_memory
+	),
+	property (index = 1,
+		type = requires,
+                num_dereference = 0,
+		property_name = "memory allocation source",
+		property_value = "from lrmd_client_new"
+	)
+} "lrmd_client_destroy"
+
+beam::attribute_by_signature {
+	allocator (
+		return_index = return,
+		initial_state = initialized_to_unknown,
+		if_out_of_memory = ok,
+		resource = heap_memory
+	),
+	property (index = return,
+		type = provides,
+                num_dereference = 0,
+		property_name = "memory allocation source",
+		property_value = "from lrmd_rsc_new"
+	)
+} "lrmd_rsc_new"
+
+beam::attribute_by_signature {
+	deallocator (
+		pointer_index = 1,
+		resource = heap_memory
+	),
+	property (index = 1,
+		type = requires,
+                num_dereference = 0,
+		property_name = "memory allocation source",
+		property_value = "from lrmd_rsc_new"
+	)
+} "lrmd_rsc_destroy"
+
+
+
 beam::resource_create { 
     name = "cl_msg",
     display = "cl_msg",       
