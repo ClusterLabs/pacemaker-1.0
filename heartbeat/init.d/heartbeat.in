@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-#	$Id: heartbeat.in,v 1.37 2005/03/15 21:37:53 gshi Exp $
+#	$Id: heartbeat.in,v 1.38 2005/05/05 19:49:23 gshi Exp $
 #
 # heartbeat     Start high-availability services
 #
@@ -122,7 +122,7 @@ fi
 
 StartLogd() {
 
-    $HA_BIN/ha_logd -s 2>&1 >/dev/null
+    $HA_BIN/ha_logd -s >/dev/null 2>&1
 
     if 
 	[ $? -eq 0 ]
@@ -132,7 +132,7 @@ StartLogd() {
     fi
     
 
-    $HA_BIN/ha_logd -d
+    $HA_BIN/ha_logd -d >/dev/null 2>&1
     if 
 	[ $? -ne 0 ]
     then
@@ -142,7 +142,7 @@ StartLogd() {
 }
 
 StopLogd() {
-    $HA_BIN/ha_logd -s 2>&1 >/dev/null
+    $HA_BIN/ha_logd -s >/dev/null 2>&1
     
     if 
 	[ $? -ne 0 ] 
@@ -151,7 +151,7 @@ StopLogd() {
 	   return 0
     fi
 
-    $HA_BIN/ha_logd -k
+    $HA_BIN/ha_logd -k >/dev/null 2>&1
     if 
 	[ $? -ne 0 ]	
     then
@@ -436,6 +436,9 @@ exit $RC
 #
 #
 #  $Log: heartbeat.in,v $
+#  Revision 1.38  2005/05/05 19:49:23  gshi
+#  don't print log info from logd to stdout when starting heartbeat
+#
 #  Revision 1.37  2005/03/15 21:37:53  gshi
 #  start logging daemon before starting heartbeat
 #  stop logging daemon after heartbeat has been stopped
