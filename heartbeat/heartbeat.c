@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.399 2005/05/02 20:00:03 gshi Exp $ */
+/* $Id: heartbeat.c,v 1.400 2005/05/05 17:44:17 gshi Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -4210,7 +4210,7 @@ client_status_msg_queue_cleanup(GList* list)
  *	I suspect that there are better ways to do this, but this will
  *	do for now...
  */
-#define	SEQGAP	100	/* A heuristic number */
+#define	SEQGAP	500	/* A heuristic number */
 
 /*
  *	Should we ignore this packet, or pay attention to it?
@@ -5243,6 +5243,10 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.400  2005/05/05 17:44:17  gshi
+ * this number should agree with the flow control code;
+ * set it to half of the heartbeat queue size; i.e. the flow control's thresh hold
+ *
  * Revision 1.399  2005/05/02 20:00:03  gshi
  * change wirefmt2msg() from
  * struct ha_msg* wirefmt2msg(char* string, int len)
