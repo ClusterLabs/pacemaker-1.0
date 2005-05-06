@@ -1,4 +1,4 @@
-/* $Id: ccmlib_memapi.c,v 1.30 2005/05/06 15:43:04 gshi Exp $ */
+/* $Id: ccmlib_memapi.c,v 1.31 2005/05/06 22:06:59 gshi Exp $ */
 /* 
  * ccmlib_memapi.c: Consensus Cluster Membership API
  *
@@ -180,11 +180,9 @@ reset_llm(mbr_private_t *private)
 static int
 init_llmborn(mbr_private_t *private)
 {
-	fd_set rset;
 	struct IPC_CHANNEL *ch;
 	int 	sockfd, i=0, ret;
 	struct IPC_MESSAGE *msg;
-	struct timeval tv;
 
 	if(private->llm) {
 		return 0;
@@ -199,15 +197,8 @@ init_llmborn(mbr_private_t *private)
 	*  second iteration 
 	*/
 	while( i < 2) {
-
-		FD_ZERO(&rset);
-		FD_SET(sockfd,&rset);
-		tv.tv_sec = 1;
-		tv.tv_usec = 0;
-
-		if(!ch->ops->is_message_pending(ch) && (select(sockfd + 1, 
-				&rset, NULL,NULL,&tv)) == -1){
-			perror("select");
+		
+		if(!ch->ops->is_message_pending(ch) && ch->ops->waitin(ch) != IPC_OK){
 			ch->ops->destroy(ch);
 			return -1;
 		}
