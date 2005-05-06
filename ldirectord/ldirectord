@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-my($VERSION)=(qw$Id: ldirectord,v 1.99 2005/02/24 09:07:00 horms Exp $)[2];
+my($VERSION)=(qw$Id: ldirectord,v 1.100 2005/05/06 06:45:58 horms Exp $)[2];
 
 ######################################################################
 # ldirectord                 http://www.vergenet.net/linux/ldirectord/
@@ -225,13 +225,13 @@ answers and in much longer intervalls a negotiating check is done.  Off
 means no checking will take place and no real or fallback servers will be
 activated. Default is I<negotiate>.
 
-B<service = ftp>|B<smtp>|B<http>|B<pop>|B<nntp>|B<imap>|B<ldap>|B<https>|B<dns>|B<mysql>|B<none>
+B<service = ftp>|B<smtp>|B<http>|B<pop>|B<nntp>|B<imap>|B<ldap>|B<https>|B<dns>|B<mysql>|B<pgsql>B<none>
 
 The type of service to monitor when using checktype=negotiate. None denotes
 a service that will not be monitored. If the port specfied for the virtual
 server is 21, 25, 80, 110, 119, 143, 389, 443 or 3306, the default B<ftp>,
-B<smtp>, B<http>, B<pop>, B<nntp>, B<imap>, B<ldap>, B<https> or B<mysql> 
-respectivly.
+B<smtp>, B<http>, B<pop>, B<nntp>, B<imap>, B<ldap>, B<https>, B<mysql> or
+B<pgsql> respectivly.
 Otherwise the default service is B<none>.
 
 B<checkport = >I<n>
@@ -248,9 +248,9 @@ overridden by an optional per real-server based request-string.
 For a DNS check this should the name of an A record, or the address
 of a PTR record to look up.
 
-For a MySQL check, this should be a SQL query performed from the mysql 
-client prompt.  The data returned is not checked, only that the answer
-is one or more rows.  This is a required setting.
+For a MySQL or PostgeSQL checks, this should be a SQL query.
+The data returned is not checked, only that the
+answer is one or more rows.  This is a required setting.
 
 B<receive = ">I<regexp to compare>B<">
 
@@ -826,8 +826,8 @@ sub read_config
 				} elsif ($rcmd =~ /^service\s*=\s*(.*)/) {
 					lc($1);
 					$1 =~ /(\w+)/ && ($1 eq "http" || $1 eq "https" || $1 eq "ldap"
-					    || $1 eq "ftp" || $1 eq "none" || $1 eq "smtp" || $1 eq "pop" || $1 eq "imap" || $1 eq "nntp" || $1 eq "dns")
-					    or &config_error($line, "service must be http, https, ftp, smtp, pop, imap, ldap, nntp, dns or none");
+					    || $1 eq "ftp" || $1 eq "none" || $1 eq "smtp" || $1 eq "pop" || $1 eq "imap" || $1 eq "nntp" || $1 eq "dns" || $1 eq "mysql")
+					    or &config_error($line, "service must be http, https, ftp, smtp, pop, imap, ldap, nntp, dns, mysql or none");
 					$vsrv{service} = $1;
 					if($vsrv{service} eq "ftp" and 
 							$vsrv{login} eq "") {
@@ -1004,6 +1004,9 @@ sub _ld_read_config_virtual_resolve
 			} 
 			elsif ($vsrv->{port} eq "3306") {
 				$vsrv->{service} = "mysql";
+			} 
+			elsif ($vsrv->{port} eq "5432") {
+				$vsrv->{service} = "pgsql";
 			} 
 			else {
 				$vsrv->{service} = "none";
@@ -1607,6 +1610,8 @@ sub ld_main
 						$$r{num_connects} = 0 if (check_dns($v, $r));
 					} elsif ($$v{service} eq "mysql") {
 						$$r{num_connects} = 0 if (check_mysql($v, $r));
+					} elsif ($$v{service} eq "pgsql") {
+						$$r{num_connects} = 0 if (check_pgsql($v, $r));
 					} else {
 						$$r{num_connects} = 0 if (check_none($v, $r));
 					}
@@ -1971,11 +1976,20 @@ sub check_nntp
         return 0;
 }
 
-
 sub check_mysql
 {
+	check_sql(@_, "mysql", "database");
+}
+
+sub check_pgsql
+{
+	check_sql(@_, "Pg", "dbname");
+}
+
+sub check_sql
+{
 	require DBI;
-	my ($v, $r) = @_;
+	my ($v, $r, $dbd, $dbname) = @_;
 	my $port=(defined $$v{checkport}?$$v{checkport}:$$r{port});
 	my ($dbh, $sth, $query, $rows, $result);   # Local variables
 	$query = $$r{request};
@@ -1986,8 +2000,8 @@ sub check_mysql
 		return 1;
 	}
 	$result=2;   # Set result flag.  Only ok if ends up at zero.
-	&ld_debug(2, "Checking mysql server=$$r{server} port=$port\n");
-	$dbh = DBI->connect("dbi:mysql:database=$$v{database};host=$$r{server};port=$port", $$v{login}, $$v{passwd});
+	&ld_debug(2, "Checking $$v{server} server=$$r{server} port=$port\n");
+	$dbh = DBI->connect("dbi:$dbd:$dbname=$$v{database};host=$$r{server};port=$port", $$v{login}, $$v{passwd});
 	unless ($dbh) {
 		&ld_debug(4, "Failed to bind to $$r{server} with $dbh->err");
 		service_set($v, $r, "down");
