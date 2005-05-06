@@ -1,4 +1,4 @@
-/* $Id: ccmlib_memapi.c,v 1.29 2005/03/30 16:49:20 gshi Exp $ */
+/* $Id: ccmlib_memapi.c,v 1.30 2005/05/06 15:43:04 gshi Exp $ */
 /* 
  * ccmlib_memapi.c: Consensus Cluster Membership API
  *
@@ -700,6 +700,7 @@ mem_activate(class_t *class)
 		return -1;
 	}
 
+	ch->ops->set_recv_qlen(ch, 0);
 	sockfd = ch->ops->get_recv_select_fd(ch);
 
 	return sockfd;
