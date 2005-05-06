@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-my($VERSION)=(qw$Id: ldirectord,v 1.100 2005/05/06 06:45:58 horms Exp $)[2];
+my($VERSION)=(qw$Id: ldirectord,v 1.101 2005/05/06 06:48:27 horms Exp $)[2];
 
 ######################################################################
 # ldirectord                 http://www.vergenet.net/linux/ldirectord/
@@ -826,8 +826,8 @@ sub read_config
 				} elsif ($rcmd =~ /^service\s*=\s*(.*)/) {
 					lc($1);
 					$1 =~ /(\w+)/ && ($1 eq "http" || $1 eq "https" || $1 eq "ldap"
-					    || $1 eq "ftp" || $1 eq "none" || $1 eq "smtp" || $1 eq "pop" || $1 eq "imap" || $1 eq "nntp" || $1 eq "dns" || $1 eq "mysql")
-					    or &config_error($line, "service must be http, https, ftp, smtp, pop, imap, ldap, nntp, dns, mysql or none");
+					    || $1 eq "ftp" || $1 eq "none" || $1 eq "smtp" || $1 eq "pop" || $1 eq "imap" || $1 eq "nntp" || $1 eq "dns" || $1 eq "mysql" || $1 eq "pgsql")
+					    or &config_error($line, "service must be http, https, ftp, smtp, pop, imap, ldap, nntp, dns, mysql, pgsql or none");
 					$vsrv{service} = $1;
 					if($vsrv{service} eq "ftp" and 
 							$vsrv{login} eq "") {
