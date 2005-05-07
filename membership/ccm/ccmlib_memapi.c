@@ -1,4 +1,4 @@
-/* $Id: ccmlib_memapi.c,v 1.31 2005/05/06 22:06:59 gshi Exp $ */
+/* $Id: ccmlib_memapi.c,v 1.32 2005/05/07 16:14:29 alan Exp $ */
 /* 
  * ccmlib_memapi.c: Consensus Cluster Membership API
  *
@@ -638,7 +638,29 @@ mem_handle_event(class_t *class)
 		}
 
 		
-		cl_log(LOG_INFO, "Got an event %s from ccm",EVENT_STRING(oc_type));
+		cl_log(LOG_INFO, "%s: Got an event %s from ccm"
+		,	__FUNCTION__
+		,	EVENT_STRING(oc_type));
+#define ALAN_DEBUG 1
+#ifdef ALAN_DEBUG
+		if (!mbr_track) {
+			cl_log(LOG_INFO, "%s: no mbr_track info"
+			,	__FUNCTION__);
+		}else{
+			cl_log(LOG_INFO
+			,	"%s: instance=%d, nodes=%d, new=%d, lost=%d"
+			", n_idx=%d, new_idx=%d, old_idx=%d"
+			,	__FUNCTION__
+			,	mbr_track->m_mem.m_instance
+			,	mbr_track->m_mem.m_n_member
+			,	mbr_track->m_mem.m_n_in
+			,	mbr_track->m_mem.m_n_out
+			,	mbr_track->m_mem.m_memb_idx
+			,	mbr_track->m_mem.m_in_idx
+			,	mbr_track->m_mem.m_out_idx);
+		}
+#endif
+
 		if(private->callback && private->client_report && cookie){
 			cookie_ref(cookie);
 			private->callback(oc_type,
