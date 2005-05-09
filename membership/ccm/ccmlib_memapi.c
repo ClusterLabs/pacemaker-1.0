@@ -1,4 +1,4 @@
-/* $Id: ccmlib_memapi.c,v 1.32 2005/05/07 16:14:29 alan Exp $ */
+/* $Id: ccmlib_memapi.c,v 1.33 2005/05/09 15:57:27 gshi Exp $ */
 /* 
  * ccmlib_memapi.c: Consensus Cluster Membership API
  *
@@ -198,7 +198,7 @@ init_llmborn(mbr_private_t *private)
 	*/
 	while( i < 2) {
 		
-		if(!ch->ops->is_message_pending(ch) && ch->ops->waitin(ch) != IPC_OK){
+		if(ch->ops->waitin(ch) != IPC_OK){
 			ch->ops->destroy(ch);
 			return -1;
 		}
