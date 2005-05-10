@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.401 2005/05/10 17:04:02 gshi Exp $ */
+/* $Id: heartbeat.c,v 1.402 2005/05/10 20:37:15 gshi Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -268,7 +268,7 @@
 #include <clplumbing/cl_uuid.h>
 #include "clplumbing/setproctitle.h"
 
-#define OPTARGS			"dkMrRsvlC:"
+#define OPTARGS			"dkMrRsvlC:V"
 #define	ONEDAY			(24*60*60)	/* Seconds in a day */
 #define REAPER_SIG		0x0001UL
 #define TERM_SIG		0x0002UL
@@ -3453,6 +3453,12 @@ heartbeat_monitor(struct ha_msg * msg, int msgtype, const char * iface)
 }
 
 
+static void
+printversion(void)
+{	
+	printf("%s\n", VERSION);
+	return;
+}
 /*
  * Print our usage statement.
  */
@@ -3585,7 +3591,10 @@ main(int argc, char * argv[], char **envp)
 			case 'v':
 				verbose=TRUE;
 				break;
-
+			case 'V':
+				printversion();
+				cleanexit(LSB_EXIT_OK);
+				
 			default:
 				++argerrs;
 				break;
@@ -5250,6 +5259,10 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.402  2005/05/10 20:37:15  gshi
+ * add -V option to heartbeat
+ * -V: print out heartbeat version
+ *
  * Revision 1.401  2005/05/10 17:04:02  gshi
  * 1. Enable restart on healed partition only if we are managing resources(crm not enabled)
  *
