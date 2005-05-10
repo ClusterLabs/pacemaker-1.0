@@ -1,4 +1,4 @@
-/* $Id: ccm.c,v 1.84 2005/04/21 21:56:46 gshi Exp $ */
+/* $Id: ccm.c,v 1.85 2005/05/10 17:34:21 gshi Exp $ */
 /* 
  * ccm.c: Consensus Cluster Service Program 
  *
@@ -34,6 +34,8 @@ extern int global_verbose;
 extern int global_debug;
 
 
+int ccm_send_node_msg(ll_cluster_t* hb, struct ha_msg* msg,  const char* node);
+int ccm_send_cluster_msg(ll_cluster_t* hb, struct ha_msg* msg);
 
 #define		CCM_SET_ACTIVEPROTO(info, val) \
 					info->ccm_active_proto = val
@@ -141,6 +143,7 @@ static void ccm_fill_update_table(ccm_info_t *info,
 
 
 static longclock_t change_time;
+static gboolean gl_membership_converged = FALSE;
 
 const char state_strings[12][64]={
 	"CCM_STATE_NONE",
@@ -158,7 +161,7 @@ const char state_strings[12][64]={
 };
 
 static inline const char*
-state_string(int state){
+state2string(int state){
 	if (state > CCM_STATE_END){
 		return "INVALID STATE";
 	}
@@ -166,13 +169,37 @@ state_string(int state){
 	return state_strings[state];
 }
 
+static inline int
+string2state(const char* state_str)
+{
+	int  i; 
+	
+	if (state_str == NULL){
+		cl_log(LOG_ERR, "%s: state_str is NULL", __FUNCTION__);
+		return -1;
+	}
+
+	for (i = 0 ; i < DIMOF(state_strings); i++){
+		if (strncmp(state_strings[i], state_str, 64) == 0){
+			return i;
+		}		
+	}
+	
+	cl_log(LOG_ERR, "%s: Cannot find a match for string %s", 
+	       __FUNCTION__, state_str);
+
+	return -1;
+	
+}
+
+
 static void
 ccm_set_state(ccm_info_t* info, int istate,const struct ha_msg*  msg)	
 {									
 			int leader = info->ccm_cluster_leader;		
 			
 			cl_log(LOG_INFO,"change state from %s to %s, current leader is %s",   
-			       state_string(info->ccm_node_state),state_string(istate), 
+			       state2string(info->ccm_node_state),state2string(istate), 
 			       leader < 0 ?"none": info->llm.nodes[leader].nodename); 
 #if 1
 			if (msg) {
@@ -183,6 +210,10 @@ ccm_set_state(ccm_info_t* info, int istate,const struct ha_msg*  msg)
 			if((istate)==CCM_STATE_JOINING){
 				client_influx();	
 			}		
+
+			if (istate == CCM_STATE_JOINED){
+				gl_membership_converged =TRUE;
+			}
 }
 
 
@@ -256,6 +287,8 @@ enum ccm_type {
 	CCM_TYPE_MEM_LIST,
 	CCM_TYPE_ALIVE,
 	CCM_TYPE_NEW_NODE,
+	CCM_TYPE_STATE_INFO, 
+	CCM_TYPE_RESTART,
 	CCM_TYPE_LAST
 };
 
@@ -287,6 +320,8 @@ char  ccm_type_str[CCM_TYPE_LAST + 1][TYPESTRSIZE] = {
 	"CCM_TYPE_MEM_LIST",
 	"CCM_TYPE_ALIVE",
 	"CCM_TYPE_NEW_NODE",
+	"CCM_TYPE_STATE_INFO", 
+	"CCM_TYPE_RESTART",
 	"CCM_TYPE_LAST"
 	};
 
@@ -1501,15 +1536,15 @@ ccm_send_protoversion(ll_cluster_t *hb, ccm_info_t *info)
 	}
 	
 	snprintf(version, sizeof(version), "%d",  CCM_GET_HIPROTO(info));
-
+	
 	if ((ha_msg_add(m, F_TYPE, ccm_type2string(CCM_TYPE_PROTOVERSION)) 
-							== HA_FAIL)) {
+	     == HA_FAIL)) {
 		cl_log(LOG_ERR, "ccm_send_join: Cannot create PROTOVERSION "
-						    "message");
-		rc = HA_FAIL;
-	} else {		
-		rc = hb->llc_ops->sendclustermsg(hb, m);
-	}
+		       "message");
+		ha_msg_del(m);
+		return HA_FAIL;
+	} 
+	rc = ccm_send_cluster_msg(hb, m);	
 	ha_msg_del(m);
 	return(rc);
 }
@@ -1974,6 +2009,150 @@ ccm_init_to_joined(ccm_info_t *info)
 }
 
 
+static gboolean 
+part_of_cluster(int state)
+{
+	if (state >= CCM_STATE_END 
+	    || state < 0){
+		cl_log(LOG_ERR, "wrong state(%d)", state);
+		return FALSE;
+	}
+	
+	if (state == CCM_STATE_VERSION_REQUEST
+	    || state == CCM_STATE_NONE){
+		return FALSE;
+	}
+	
+	return TRUE;
+	
+	
+}
+
+/* send a message to node 
+ * the message contains my state informaton
+ */
+
+static int
+ccm_send_state_info(ll_cluster_t* hb, ccm_info_t* info, const char* node)
+{
+	
+	struct ha_msg *m;
+	char *cookie;
+	int  rc;
+	
+	if ((m=ha_msg_new(0)) == NULL) {
+		cl_log(LOG_ERR, "%s:Cannot send CCM version msg",
+		       __FUNCTION__);
+		return(HA_FAIL);
+	}
+
+	cookie = CCM_GET_COOKIE(info);
+	assert(cookie && *cookie);
+	
+	if ( ha_msg_add(m, F_TYPE, ccm_type2string(CCM_TYPE_STATE_INFO)) == HA_FAIL
+	     || ha_msg_add(m, F_STATE, state2string(info->ccm_node_state)) == HA_FAIL
+	     || ha_msg_add(m, CCM_COOKIE, cookie) == HA_FAIL) {
+		cl_log(LOG_ERR, "ccm_send_alive: Cannot create ALIVE "
+		       "message");
+		rc = HA_FAIL;
+	} else {
+		rc = hb->llc_ops->sendnodemsg(hb, m, node);
+	}
+	ha_msg_del(m);
+	return(rc);	
+}
+
+static int
+ccm_send_restart_msg(ll_cluster_t* hb, ccm_info_t* info)
+{
+	
+	struct ha_msg *m;
+	int  rc;
+	
+	if ((m=ha_msg_new(0)) == NULL) {
+		cl_log(LOG_ERR, "%s:Cannot send CCM version msg",
+		       __FUNCTION__);
+		return(HA_FAIL);
+	}
+	
+	if ( ha_msg_add(m, F_TYPE, ccm_type2string(CCM_TYPE_RESTART)) == HA_FAIL){
+		cl_log(LOG_ERR, "ccm_send_alive: Cannot create ALIVE "
+		       "message");
+		rc = HA_FAIL;
+	} else {
+		rc = hb->llc_ops->sendclustermsg(hb, m);
+	}
+	ha_msg_del(m);
+	return(rc);	
+}
+
+
+static void
+ccm_all_restart(ll_cluster_t* hb, ccm_info_t* info, struct ha_msg* msg)
+{
+	const char * orig;
+	llm_info_t* llm = & info->llm;
+
+	if ( (orig = ha_msg_value(msg, F_ORIG)) ==NULL){
+		cl_log(LOG_ERR, "orig not found in message");
+		return ; 
+	}
+	
+	if (strncmp(orig, LLM_GET_MYNODEID(llm), NODEIDSIZE) == 0){
+		/*don't react to our own message*/
+		return ;
+	}
+	
+	if (info->ccm_node_state != CCM_STATE_VERSION_REQUEST
+	    && gl_membership_converged ){
+		gl_membership_converged = FALSE;
+		ccm_set_state(info, CCM_STATE_NONE, NULL);
+		
+		if (ccm_send_restart_msg(hb, info) != HA_OK){
+			cl_log(LOG_ERR, "sending out restart msg failed");
+			return;
+		}
+		
+		if (ccm_send_protoversion(hb, info) != HA_OK){
+			cl_log(LOG_ERR, "sending protoversion failed");
+			return;
+		}
+		ccm_set_state(info, CCM_STATE_VERSION_REQUEST, NULL);
+	}
+	
+}
+
+static int
+ccm_handle_state_info(ll_cluster_t* hb, ccm_info_t* info, struct ha_msg* msg)
+{
+	const char* other_node_state;
+	int state;
+	
+	if (!part_of_cluster(info->ccm_node_state)){
+		return HA_OK;
+	}
+	
+	other_node_state = ha_msg_value(msg, F_STATE);
+	state =  string2state(other_node_state);
+	
+	if (state < 0){
+		cl_log(LOG_ERR, "%s: wrong state", __FUNCTION__);
+		return HA_FAIL;
+	}
+	
+	if (!part_of_cluster(state)){
+		return HA_OK;
+	}
+	
+	/*both machine are already part of a cluster, 
+	  i.e. we are merging two partitions
+	*/
+	ccm_all_restart(hb, info, msg);
+	
+	return HA_OK;
+		
+}
+
 
 /* */
 /* The state machine that processes message when it is */
@@ -2143,6 +2322,7 @@ ccm_state_version_request(enum ccm_type ccm_msg_type,
 		
 		break;
 
+
 	case CCM_TYPE_ABORT:
 		/* note down there is some activity going 
 		 * on and we are not yet alone in the cluster 
@@ -2182,9 +2362,11 @@ ccm_state_joined(enum ccm_type ccm_msg_type,
 				"from unknown host %s", orig);
 		return;
 	}
-
-	if(ccm_msg_type != CCM_TYPE_PROTOVERSION) {
-
+	
+	if(ccm_msg_type != CCM_TYPE_PROTOVERSION
+	   && ccm_msg_type !=  CCM_TYPE_STATE_INFO
+	   && ccm_msg_type != CCM_TYPE_RESTART) {
+		
 		if(strncmp(CCM_GET_COOKIE(info), 
 			ha_msg_value(reply, CCM_COOKIE), COOKIESIZE) != 0){
 			cl_log(LOG_WARNING, "ccm_state_joined: received message "
@@ -2330,7 +2512,8 @@ ccm_state_joined(enum ccm_type ccm_msg_type,
 				if(received_all_change_msg(info)){
 					char *newcookie = ccm_generate_random_cookie();
 
-					update_membership(info, orig, NODE_LEAVE);                             
+					update_membership(info, orig, NODE_LEAVE);          
+					send_mem_list_to_all(hb, info, newcookie);
 					CCM_SET_MAJORTRANS(info, trans_majorval+1); 
 					CCM_RESET_MINORTRANS(info);
 					CCM_SET_COOKIE(info, newcookie); 
@@ -2458,6 +2641,33 @@ ccm_state_joined(enum ccm_type ccm_msg_type,
 			}
 			break;
 
+		case CCM_TYPE_STATE_INFO:
+			ccm_handle_state_info(hb, info, reply);
+			break;			
+		case CCM_TYPE_RESTART:
+			ccm_all_restart(hb, info, reply);
+			break;
+		case CCM_TYPE_MEM_LIST:{
+			const char* memlist;
+			if (strncmp(orig, LLM_GET_MYNODEID((&info->llm) ), NODEIDSIZE) == 0){
+				/*this message is from myself, ignore it*/
+				break;
+			}
+
+			memlist = ha_msg_value(reply, CCM_MEMLIST);
+			if (memlist == NULL){
+				break;
+			}
+			
+			if (node_is_leader(info, orig)
+			    && !ccm_am_i_member(info, memlist)){
+				ccm_set_state(info, CCM_STATE_NONE, reply);
+				break;
+			}
+
+			break;
+		}
+
 		case CCM_TYPE_REQ_MEMLIST:
 		case CCM_TYPE_RES_MEMLIST:
 		case CCM_TYPE_FINAL_MEMLIST:
@@ -2499,8 +2709,10 @@ static void ccm_state_wait_for_change(enum ccm_type ccm_msg_type,
 	}
 	node = ha_msg_value(reply, F_NODE);
 
-	if(ccm_msg_type != CCM_TYPE_PROTOVERSION) {
-
+	if(ccm_msg_type != CCM_TYPE_PROTOVERSION
+	   && ccm_msg_type !=  CCM_TYPE_STATE_INFO
+	   && ccm_msg_type != CCM_TYPE_RESTART) {
+		
 		if(strncmp(CCM_GET_COOKIE(info),
 			ha_msg_value(reply, CCM_COOKIE), COOKIESIZE) != 0){
 			cl_log(LOG_WARNING, "ccm_state_joined: received message "
@@ -2745,7 +2957,14 @@ static void ccm_state_wait_for_change(enum ccm_type ccm_msg_type,
 
 			ccm_set_state(info, CCM_STATE_JOINING, reply);
 			break;		
-	        
+
+		case CCM_TYPE_STATE_INFO:
+			ccm_handle_state_info(hb, info, reply);
+			break;			
+		case CCM_TYPE_RESTART:
+			ccm_all_restart(hb, info, reply);
+			break;
+
 		default:  
 			cl_log(LOG_ERR, "ccm_state_joined: dropping message "
 				"of type %s. Is this a Byzantine failure?", 
@@ -2782,8 +3001,10 @@ ccm_state_sent_memlistreq(enum ccm_type ccm_msg_type,
 				"from unknown host %s", orig);
 		return;
 	}
-
-	if(ccm_msg_type ==  CCM_TYPE_PROTOVERSION) {
+	
+	if(ccm_msg_type == CCM_TYPE_PROTOVERSION
+	   || ccm_msg_type ==  CCM_TYPE_STATE_INFO
+	   || ccm_msg_type == CCM_TYPE_RESTART) {		
 		goto switchstatement;
 	}
 
@@ -2973,7 +3194,14 @@ switchstatement:
 				ccm_compute_and_send_final_memlist(hb, info);
 			}
 			break;
-				
+			
+		case CCM_TYPE_STATE_INFO:
+			ccm_handle_state_info(hb, info, reply);
+			break;
+		case CCM_TYPE_RESTART:
+			ccm_all_restart(hb, info, reply);
+			break;
+
 		case CCM_TYPE_FINAL_MEMLIST:
 		case CCM_TYPE_ABORT:
 		default:
@@ -3015,8 +3243,9 @@ ccm_state_memlist_res(enum ccm_type ccm_msg_type,
 				"from unknown host %s", orig);
 		return;
 	}
-
-	if(ccm_msg_type ==  CCM_TYPE_PROTOVERSION) {
+	if(ccm_msg_type == CCM_TYPE_PROTOVERSION
+	   || ccm_msg_type ==  CCM_TYPE_STATE_INFO
+	   || ccm_msg_type == CCM_TYPE_RESTART) {
 		goto switchstatement;
 	}
 
@@ -3328,6 +3557,13 @@ switchstatement:
 					CCM_GET_MAJORTRANS(info));
 			break;
 
+		case CCM_TYPE_STATE_INFO:
+			ccm_handle_state_info(hb, info, reply);
+			break;		
+
+		case CCM_TYPE_RESTART:
+			ccm_all_restart(hb, info, reply);
+			break;
 
 		case CCM_TYPE_ABORT:
 		case CCM_TYPE_RES_MEMLIST:
@@ -3370,7 +3606,9 @@ ccm_state_joining(enum ccm_type ccm_msg_type,
 		return;
 	}
 
-	if(ccm_msg_type ==  CCM_TYPE_PROTOVERSION) {
+	if(ccm_msg_type == CCM_TYPE_PROTOVERSION
+	   || ccm_msg_type ==  CCM_TYPE_STATE_INFO
+	   || ccm_msg_type == CCM_TYPE_RESTART) {
 		goto switchstatement;
 	}
 
@@ -3695,7 +3933,13 @@ switchstatement:
 			 */
 			ccm_remove_new_joiner(info, orig);
 			break;
-
+			
+		case CCM_TYPE_STATE_INFO:
+			ccm_handle_state_info(hb, info, reply);
+			break;
+		case CCM_TYPE_RESTART:
+			ccm_all_restart(hb, info, reply);
+			break;
 
 		case CCM_TYPE_RES_MEMLIST:
 		case CCM_TYPE_FINAL_MEMLIST:
@@ -3758,9 +4002,9 @@ LinkStatus(const char * node, const char * lnk, const char * status ,
 /* changes. */
 /* */
 static void
-nodelist_update(const char *id, const char *status, int hbgen, void *private)
+nodelist_update(ll_cluster_t* hb, ccm_info_t* info, 
+		const char *id, const char *status, int hbgen)
 {
-	ccm_info_t *info = (ccm_info_t *)private;
 	llm_info_t *llm;
 	int indx, uuid;
 	
@@ -3781,6 +4025,16 @@ nodelist_update(const char *id, const char *status, int hbgen, void *private)
 			leave_cache(uuid);
 		}
 	}
+	
+	if ( strncmp(LLM_GET_MYNODEID(llm), id,NODEIDSIZE ) == 0){
+		return ;
+	}
+	if ( part_of_cluster(info->ccm_node_state)
+	     && STRNCMP_CONST(status, ACTIVESTATUS) == 0){
+		ccm_send_state_info(hb, info, id);
+	}
+	
+	
 	return;
 }
 
@@ -3855,9 +4109,10 @@ repeat:
 			int 	gen_val;
 			const char *gen = ha_msg_value(reply, F_HBGENERATION);
 			
+			cl_log_message(LOG_INFO, reply);
 			gen_val = atoi(gen?gen:"-1");
-			nodelist_update(orig, status, gen_val, 
-					info);
+			nodelist_update(hb, info,orig, status, gen_val);
+
 			ha_msg_del(reply);
 			return TRUE;
 
@@ -3868,17 +4123,22 @@ repeat:
 			/* NOTE: heartbeat informs us			   */
 			/* Receipt of this message indicates 'loss of	   */
 			/* connectivity or death' of some node		   */
+			
+			/*
 			const char *result = ha_msg_value(reply, F_APIRESULT);
 			const char *node = ha_msg_value(reply, F_NODE);
 			
 			
 			if(strcmp(result,T_STONITH_OK)==0){
-				nodelist_update(node, CLUST_INACTIVE, -1, info);
+				nodelist_update(hb, info, node, CLUST_INACTIVE, -1);
 				report_mbrs(info);
 			} else {
-				nodelist_update(node, DEADSTATUS, -1, info);
+				nodelist_update(hb,info, node, DEADSTATUS, -1);
 			}
 			ha_msg_del(reply);
+
+			*/
+
 			return TRUE;
 		}
 	} else {
@@ -4302,8 +4562,10 @@ static void ccm_state_wait_for_mem_list(enum ccm_type ccm_msg_type,
 		return;
 	}
 
-	if(ccm_msg_type != CCM_TYPE_PROTOVERSION) {
-
+	
+	if(ccm_msg_type != CCM_TYPE_PROTOVERSION
+	   && ccm_msg_type !=  CCM_TYPE_STATE_INFO
+	   && ccm_msg_type != CCM_TYPE_RESTART) {
 		if(strncmp(CCM_GET_COOKIE(info),
 			ha_msg_value(reply, CCM_COOKIE), COOKIESIZE) != 0){
 			cl_log(LOG_WARNING, "ccm_state_wait_for_mem_list: received message"
@@ -4477,6 +4739,16 @@ static void ccm_state_wait_for_mem_list(enum ccm_type ccm_msg_type,
 			 */
 			break;
 
+
+		case CCM_TYPE_STATE_INFO:
+			ccm_handle_state_info(hb, info, reply);
+			break;		
+		case CCM_TYPE_RESTART:
+			ccm_all_restart(hb, info, reply);
+			break;
+
+
+	
 		default:
 			cl_log(LOG_ERR, "ccm_state_wait_for_mem_list: dropping message "
 				"of type %s. Is this a Byzantine failure?",
@@ -4727,8 +4999,10 @@ static void ccm_state_new_node_wait_for_mem_list(enum ccm_type ccm_msg_type,
 		return;
 	}
 
-	if(ccm_msg_type != CCM_TYPE_PROTOVERSION) {
-
+	if(ccm_msg_type != CCM_TYPE_PROTOVERSION
+	   && ccm_msg_type !=  CCM_TYPE_STATE_INFO
+	   && ccm_msg_type != CCM_TYPE_RESTART) {
+		
 		if(strncmp(CCM_GET_COOKIE(info), 
 			ha_msg_value(reply, CCM_COOKIE), COOKIESIZE) != 0){
 			cl_log(LOG_WARNING, "ccm_state_new_node_wait_for_mem_list: "
@@ -4906,6 +5180,12 @@ static void ccm_state_new_node_wait_for_mem_list(enum ccm_type ccm_msg_type,
 			
 			break;
 
+		case CCM_TYPE_STATE_INFO:
+			ccm_handle_state_info(hb, info, reply);
+			break;
+		case CCM_TYPE_RESTART:
+			ccm_all_restart(hb, info, reply);
+			break;
 		default:
 			cl_log(LOG_ERR,"ccm_state_new_node_waitfor_memlst:dropping message"
 				" of type %s. Is this a Byzantine failure?", 

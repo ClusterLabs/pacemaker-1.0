@@ -65,7 +65,8 @@ ccm_SOURCES	= ccm.c \
 		  ccmbitmap.c \
 		  ccm.h \
 		  ccmmain.c \
-		  ccmclient.c
+		  ccmclient.c \
+		  ccmmsg.c
 
 ccm_LDADD	= $(top_builddir)/lib/clplumbing/libplumb.la	\
 		$(top_builddir)/lib/hbclient/libhbclient.la  	\
