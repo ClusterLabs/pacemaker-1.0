@@ -1,4 +1,4 @@
-/* $Id: hb_api.h,v 1.33 2005/05/04 16:57:48 gshi Exp $ */
+/* $Id: hb_api.h,v 1.34 2005/05/10 20:18:02 gshi Exp $ */
 /*
  * Client-side Low-level clustering API for heartbeat.
  *
@@ -52,7 +52,7 @@
 #include <ha_msg.h>
 #include <clplumbing/ipc.h>
 
-#define	LLC_PROTOCOL_VERSION	1
+#define	LLC_PROTOCOL_VERSION	2
 
 #include <clplumbing/cl_uuid.h>
 
@@ -76,8 +76,8 @@ typedef struct ll_cluster {
 }ll_cluster_t;
 
 struct llc_ops {
-	int		(*signon) (ll_cluster_t*, const char * service);
-	int		(*signoff) (ll_cluster_t*, gboolean);
+	int		(*signon) (ll_cluster_t*, const char * clientid);
+	int		(*signoff) (ll_cluster_t*, gboolean destroy_channel);
 	int		(*delete) (ll_cluster_t*);
 	
 /*
