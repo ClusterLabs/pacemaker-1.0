@@ -1,4 +1,4 @@
-/* $Id: ccmlib_memapi.c,v 1.33 2005/05/09 15:57:27 gshi Exp $ */
+/* $Id: ccmlib_memapi.c,v 1.34 2005/05/10 18:56:34 gshi Exp $ */
 /* 
  * ccmlib_memapi.c: Consensus Cluster Membership API
  *
@@ -556,18 +556,18 @@ mem_handle_event(class_t *class)
 			*/
 			if (membership_unchanged(private, mbr_track)){
 				mbr_track_t* old_mbr_track;
-
+				
 				old_mbr_track = (mbr_track_t *)
 					cookie_get_data(private->cookie);
 				
 				if (mbr_track->quorum == old_mbr_track->quorum){
-					/* nothing has changed*/
-					return TRUE;
-				}else if (mbr_track->quorum){
 					oc_type = OC_EV_MS_PRIMARY_RESTORED;
-				}else{
-					oc_type = OC_EV_MS_INVALID;
+				}else {
+					cl_log(LOG_ERR, "membership unchanged but quorum changed"
+					       "something is wrong!!!");
+					return FALSE;
 				}
+
 			} else {
 				oc_type = quorum?
 					OC_EV_MS_NEW_MEMBERSHIP:
