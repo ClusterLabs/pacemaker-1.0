@@ -1,4 +1,4 @@
-/* $Id: oc_event.h,v 1.3 2004/03/05 12:55:21 andrew Exp $ */
+/* $Id: oc_event.h,v 1.4 2005/05/10 18:47:42 gshi Exp $ */
 /*
  * oc_event.h
  *
@@ -84,9 +84,28 @@ typedef enum {
 } oc_conn_event_t;
 
 
-/*
- * Node Membership Events
+/* Node Membership Events
+ * (see http://wiki.linux-ha.org/CCM/MembershipCallback for more info)
+ *
+ *OC_EV_MS_NEW_MEMBERSHIP 
+ *	CCM: membership with quorum 
+ *
+ *OC_EV_MS_MS_INVALID 
+ *	CCM: membership without quorum 
+ *
+ *OC_EV_MS_NOT_PRIMARY 
+ *	CCM: old membership (not valid any longer) 
+ *
+ *OC_EV_MS_PRIMARY_RESTORED 
+ *	This event mean the cluster restores to a stable state that has the same membership as before. 
+ *	It also implies it has the same quorum as before. 
+ *	CCM: old membership restored (same membership as before) 
+ *
+ *OC_EV_MS_EVICTED 
+ *	CCM: the client is evicted from ccm. 
+ *
  */
+
 typedef enum {
 	OC_EV_MS_INVALID = OC_EV_SET_CLASS(OC_EV_MEMB_CLASS, 0),
 	OC_EV_MS_NEW_MEMBERSHIP,
