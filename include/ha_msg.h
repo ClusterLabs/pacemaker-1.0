@@ -1,4 +1,4 @@
-/* $Id: ha_msg.h,v 1.59 2005/05/02 20:00:03 gshi Exp $ */
+/* $Id: ha_msg.h,v 1.60 2005/05/10 17:35:38 gshi Exp $ */
 /*
  * Intracluster message object (struct ha_msg)
  *
@@ -175,6 +175,8 @@ extern struct fieldtypefuncs_s fieldtypefuncs[4];
 #define F_CRM_DATA	"crm_xml"
 #define F_XML_TAGNAME	"__name__"
 #define F_XML_PARENT	"__parent__"
+#define F_STATE		"state"		/*used in ccm for state info*/
+
 
 	/* Message types */
 #define	T_STATUS	"status"	/* Status (heartbeat) */
