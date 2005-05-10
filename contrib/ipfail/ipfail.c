@@ -1,4 +1,4 @@
-/* $Id: ipfail.c,v 1.40 2005/04/06 18:07:51 gshi Exp $ */
+/* $Id: ipfail.c,v 1.41 2005/05/10 02:00:25 kevin Exp $ */
 /* ipfail: IP Failover plugin for Linux-HA
  *
  * Copyright (C) 2002-2004 Kevin Dwyer <kevin@pheared.net>
@@ -80,7 +80,7 @@ main(int argc, char **argv)
 	ll_cluster_t *hb;
 	char pid[10];
 	char *bname, *parameter;
-	int apifd;
+	IPC_Channel *apiIPC;
 
 	cl_log_enable_stderr(TRUE);
 	
@@ -171,11 +171,12 @@ main(int argc, char **argv)
 	 */
 	mainloop = g_main_new(TRUE);
 	
-	apifd = hb->llc_ops->inputfd(hb);
-	
-	/* Watch the API's fd for input */
-	G_main_add_fd(G_PRIORITY_HIGH, apifd, FALSE, ipfail_dispatch, 
-		      (gpointer)hb, ipfail_dispatch_destroy);
+        apiIPC = hb->llc_ops->ipcchan(hb);
+
+	/* Watch the API IPC for input */
+        G_main_add_IPC_Channel(G_PRIORITY_HIGH, apiIPC, FALSE, 
+                               ipfail_dispatch, (gpointer)hb,
+                               ipfail_dispatch_destroy);
 
 	Gmain_timeout_add_full(G_PRIORITY_DEFAULT, 1000, 
 	                     ipfail_timeout_dispatch, (gpointer)hb, 
@@ -730,7 +731,7 @@ gotsig(int nsig)
 
 /* Used to handle the API in the gmainloop */
 gboolean 
-ipfail_dispatch(int fd, gpointer user_data)
+ipfail_dispatch(IPC_Channel* ipc, gpointer user_data)
 {
 	struct ha_msg *reply;
 	ll_cluster_t *hb = user_data;
@@ -773,7 +774,7 @@ ipfail_timeout_dispatch(gpointer user_data)
 
 	if (hb->llc_ops->msgready(hb)) {
 		/* cl_log(LOG_DEBUG, "Msg ready! [2]"); */
-		return ipfail_dispatch(-1, user_data);
+		return ipfail_dispatch(NULL, user_data);
 	}
 	return TRUE;
 }

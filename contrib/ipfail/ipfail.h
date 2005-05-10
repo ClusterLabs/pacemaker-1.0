@@ -1,4 +1,4 @@
-/* $Id: ipfail.h,v 1.5 2004/02/17 22:11:56 lars Exp $ */
+/* $Id: ipfail.h,v 1.6 2005/05/10 02:00:25 kevin Exp $ */
 /* ipfail.h: ipfail header file
  *
  * Copyright (C) 2003 Kevin Dwyer <kevin@pheared.net>
@@ -51,7 +51,7 @@ void ask_ping_nodes(ll_cluster_t *, int);
 void set_callbacks(ll_cluster_t *);
 void open_api(ll_cluster_t *);
 void close_api(ll_cluster_t *);
-gboolean ipfail_dispatch(int, gpointer);
+gboolean ipfail_dispatch(IPC_Channel *, gpointer);
 void ipfail_dispatch_destroy(gpointer);
 gboolean ipfail_timeout_dispatch(gpointer);
 void delay_giveup(ll_cluster_t *, const char *, int);
