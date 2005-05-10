@@ -19,6 +19,7 @@ Contributors, ordered by last name:
 	Gregor Binder <gbinder@sysfive.com> - "meatware" STONITH support
         Juan Pedro Paredes Caballero <juampe@retemail.es> - Debian support
 	Dusan Djordjevic <dj.dule@linux.org.yu> - documentation
+	Kevin Dwyer <kevin@pheared.net> - ipfail, bug fixes.
 	Joachim Gleissner <jg@suse.de> ssh STONITH support
 	Luis Claudio R. Gonçalves <lclaudio@conectiva.com.br>
 		nice_failback code, hb_standby code, fixes
