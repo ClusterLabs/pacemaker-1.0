@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.400 2005/05/05 17:44:17 gshi Exp $ */
+/* $Id: heartbeat.c,v 1.401 2005/05/10 17:04:02 gshi Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -3403,8 +3403,17 @@ mark_node_dead(struct node_info *hip)
 	}
 
 	strncpy(hip->status, DEADSTATUS, sizeof(hip->status));
+	
+
 	/* THIS IS RESOURCE WORK!  FIXME */
 	hb_rsc_recover_dead_resources(hip);
+	
+	hip->rmt_lastupdate = 0L;
+	hip->anypacketsyet  = 0;
+	hip->track.nmissing = 0;
+	hip->track.last_seq = NOSEQUENCE;
+	hip->track.ackseq = 0;	
+
 }
 
 
@@ -4347,15 +4356,13 @@ should_drop_message(struct node_info * thisnode, const struct ha_msg *msg,
 
 				/* THIS IS RESOURCE WORK!  FIXME */
 				/* IS THIS RIGHT??? FIXME ?? */
-#ifndef ALWAYSRESTART_ON_SPLITBRAIN
 				if (DoManageResources) {
-#endif
 					send_local_status();
-					Gmain_timeout_add(2000
-					,	CauseShutdownRestart, NULL);
-#ifndef ALWAYSRESTART_ON_SPLITBRAIN
+					
+					(void)CauseShutdownRestart;
+					Gmain_timeout_add(2000 ,	CauseShutdownRestart, NULL);
+
 				}
-#endif
 				ishealedpartition=1;
 			}
 		}else if (gen > t->generation) {
@@ -5243,6 +5250,13 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.401  2005/05/10 17:04:02  gshi
+ * 1. Enable restart on healed partition only if we are managing resources(crm not enabled)
+ *
+ * 2. After we mark one node dead, we clear its message track. The reason is that the dead node may
+ * come back later. If the old track is there, it will ask for retransmission for lost messages
+ * We don't want that to happen.
+ *
  * Revision 1.400  2005/05/05 17:44:17  gshi
  * this number should agree with the flow control code;
  * set it to half of the heartbeat queue size; i.e. the flow control's thresh hold
