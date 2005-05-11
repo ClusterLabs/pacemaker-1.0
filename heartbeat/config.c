@@ -1,4 +1,4 @@
-/* $Id: config.c,v 1.154 2005/04/27 05:31:42 gshi Exp $ */
+/* $Id: config.c,v 1.155 2005/05/11 00:44:56 gshi Exp $ */
 /*
  * Parse various heartbeat configuration files...
  *
@@ -1829,52 +1829,7 @@ add_client_child(const char * directive)
 	return HA_OK;
 }
 
-static int
-gnametonum(const char * gname, int gnlen)
-{
-	char	grpname[64];
-	struct group*	grp;
 
-	if (isdigit(gname[0])) {
-		return atoi(gname);
-	}
-	if (gnlen >= (int)sizeof(grpname)) {
-		return -1;
-	}
-	strncpy(grpname, gname, gnlen);
-	grpname[gnlen] = EOS;
-	if ((grp = getgrnam(grpname)) == NULL) {
-		cl_log(LOG_ERR 
-		,	"Invalid group name [%s]", grpname);
-		return -1;
-	}
-	return (int)grp->gr_gid;
-}
-
-static int
-unametonum(const char * lname, int llen)
-{
-	char	loginname[64];
-	struct passwd*	pwd;
-
-	if (llen >= (int)sizeof(loginname)) {
-		cl_log(LOG_ERR 
-		,	"user id name [%s] is too long", loginname);
-		return -1;
-	}
-	strncpy(loginname, lname, llen);
-	loginname[llen] = EOS;
-
-	if (isdigit(loginname[0])) {
-		return atoi(loginname);
-	}
-	if ((pwd = getpwnam(loginname)) == NULL) {
-		cl_log(LOG_ERR 
-		,	"Invalid user id name [%s]", loginname);
-		return -1;
-	}
-	return (int)pwd->pw_uid;
-}
 
 #if 0
 static void
@@ -1909,42 +1864,7 @@ dump_auth_tables(struct IPC_AUTH* auth, const char * clientname)
 }
 #endif
 
-static GHashTable*
-make_id_table(const char * list, int listlen, int (*map)(const char *, int))
-{
-	GHashTable*	ret;
-	const char *	id;
-	const char *	lastid = list + listlen;
-	int		idlen;
-	int		idval;
-	static int	one = 1;
 
-	ret = g_hash_table_new(g_direct_hash, g_direct_equal);
-
-	id = list;
-	while (id < lastid && *id != EOS) {
-		idlen = strcspn(id, ",");
-		if (id+idlen >= lastid) {
-			idlen = (lastid - id);
-		}
-		idval = map(id, idlen);
-		if (idval < 0) {
-			g_hash_table_destroy(ret);
-			return NULL;
-		}
-		if (ANYDEBUG) {
-			cl_log(LOG_DEBUG
-			,	"Adding [ug]id %*s [%d] to authorization g_hash_table"
-			,	idlen, id, idval);
-		}
-		g_hash_table_insert(ret, GUINT_TO_POINTER(idval), &one);
-		id += idlen;
-		if (id < lastid) {
-			id += strspn(id, ",");
-		}
-	}
-	return ret;
-}
 
 /*
  * apiauth client-name gid=gidlist uid=uidlist
@@ -2033,31 +1953,9 @@ set_api_authorization(const char * directive)
 		goto baddirective;
 	}
 
-	auth = MALLOCT(struct IPC_AUTH);
-	if (auth == NULL) {
-		cl_log(LOG_ERR, "Out of memory for IPC_AUTH");
+	auth = ipc_str_to_auth(uidlist, gidlist);
+	if (auth == NULL){
 		goto baddirective;
-	}
-
-	memset(auth, 0, sizeof(*auth));
-
-	if (uidlist) {
-		auth->uid = make_id_table(uidlist, uidlen, unametonum);
-		if (auth->uid == NULL) {
-			cl_log(LOG_ERR 
-			,	"Bad uid list [%*s] in " KEY_APIPERM
-			,	uidlen, uidlist);
-			goto baddirective;
-		}
-	}
-	if (gidlist) {
-		auth->gid = make_id_table(gidlist, gidlen, gnametonum);
-		if (auth->gid == NULL) {
-			cl_log(LOG_ERR 
-			,	"Bad gid list [%*s] in " KEY_APIPERM
-			,	gidlen, gidlist);
-			goto baddirective;
-		}
 	}
 
 	if (g_hash_table_lookup(APIAuthorization, clname) != NULL) {
@@ -2072,10 +1970,10 @@ set_api_authorization(const char * directive)
 		,	"Creating authentication: uidptr=0x%lx gidptr=0x%lx"
 		,	(unsigned long)auth->uid, (unsigned long)auth->gid);
 	}
-
+	
 	return HA_OK;
-
-baddirective:
+	
+ baddirective:
 	cl_log(LOG_ERR, "Invalid %s directive [%s]", KEY_APIPERM, directive);
 	cl_log(LOG_INFO, "Syntax: %s [uid=uidlist] [gid=gidlist]"
 	,	KEY_APIPERM);
@@ -2200,6 +2098,9 @@ set_release2mode(const char* value)
 
 /*
  * $Log: config.c,v $
+ * Revision 1.155  2005/05/11 00:44:56  gshi
+ * pull the code config.c together to implement ipc_str_to_auth() and use it
+ *
  * Revision 1.154  2005/04/27 05:31:42  gshi
  *  use struct cl_uuid_t to replace uuid_t
  * use cl_uuid_xxx to replace uuid_xxx funcitons
