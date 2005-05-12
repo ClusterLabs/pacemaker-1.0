@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-my($VERSION)=(qw$Id: ldirectord,v 1.102 2005/05/12 06:37:44 horms Exp $)[2];
+my($VERSION)=(qw$Id: ldirectord,v 1.103 2005/05/12 14:23:16 horms Exp $)[2];
 
 ######################################################################
 # ldirectord                 http://www.vergenet.net/linux/ldirectord/
@@ -2079,7 +2079,7 @@ sub check_ftp
 
 	&ld_debug(2, "Checking ftp server=$$r{server} port=$port");
 	
-	open(TMP,'>', undef);
+	open(TMP,'+>', undef);
 
 	unless ($ftp = Net::FTP->new("$$r{server}:$port", 
 			Timeout=>$$v{negotiatetimeout})) {
@@ -2094,8 +2094,7 @@ sub check_ftp
 	$ftp->quit();
 
 	seek TMP, 0, 0;
-	select TMP;
-	undef $/;
+	local $/;
 	$memory = <TMP>;
 	close TMP;
 
