@@ -1,4 +1,4 @@
-/* $Id: ccmlib_memapi.c,v 1.34 2005/05/10 18:56:34 gshi Exp $ */
+/* $Id: ccmlib_memapi.c,v 1.35 2005/05/13 16:30:42 gshi Exp $ */
 /* 
  * ccmlib_memapi.c: Consensus Cluster Membership API
  *
@@ -310,12 +310,13 @@ get_new_membership(mbr_private_t *private,
 	int n_members,uuid;
 	
 	int n_nodes = CLLM_GET_NODECOUNT(private->llm);
-
+	
 	int size    = sizeof(oc_ev_membership_t) + 
 		2*n_nodes*sizeof(oc_node_t);
 
- 	newmbr = *mbr = (mbr_track_t *) g_malloc(size+sizeof(int));
-
+ 	newmbr = *mbr = (mbr_track_t *)g_malloc(size +
+						sizeof(mbr_track_t)-sizeof(newmbr->m_mem));
+	
 	trans = OC_EV_SET_INSTANCE(newmbr,mbrinfo->trans);
 	n_members = OC_EV_SET_N_MEMBER(newmbr,mbrinfo->n);
 	OC_EV_SET_SIZE(newmbr, size);
