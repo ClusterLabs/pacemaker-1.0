@@ -1,4 +1,4 @@
-/* $Id: stonithd.c,v 1.38 2005/04/19 10:21:22 sunjd Exp $ */
+/* $Id: stonithd.c,v 1.39 2005/05/13 23:58:13 gshi Exp $ */
 
 /* File: stonithd.c
  * Description: STONITH daemon for node fencing
@@ -66,6 +66,7 @@
 #include <lrm/raexec.h>
 #include <fencing/stonithd_msg.h>
 #include <fencing/stonithd_api.h>
+#include <clplumbing/cl_pidfile.h>
 
 /* For integration with heartbeat */
 #define MAGIC_EC 100
@@ -152,8 +153,6 @@ struct RA_operation_to_handler
 static void become_daemon(gboolean);
 static int show_daemon_status(const char * pidfile);
 static int kill_running_daemon(const char * pidfile);
-static pid_t running_daemon_pid(const char * pidfile);
-static int create_pidfile(const char * pidfile);
 static void inherit_config_from_environment(void);
 static int facility_name_to_value(const char * name);
 static void stonithd_quit(int signo);
@@ -405,7 +404,7 @@ int main(int argc, char ** argv)
 		cl_enable_coredumps(TRUE);
 	}
 
-	if ( running_daemon_pid(STD_PIDFILE) > 0 ) {
+	if (cl_read_pidfile(STD_PIDFILE) > 0 ) {
 		stonithd_log(LOG_NOTICE, "%s %s", argv[0], M_RUNNING);
 		return (STARTUP_ALONE == TRUE) ? LSB_EXIT_OK : MAGIC_EC;
 	}
@@ -520,8 +519,8 @@ delhb_quit:
 		g_hash_table_destroy(ipc_auth->uid); /* ? */
 		cl_free(ipc_auth); /* ? */
 	}
-
-	if (unlink(PID_FILE) != 0) {
+	
+	if (cl_unlock_pidfile(PID_FILE) != 0) {
                 stonithd_log(LOG_ERR, "it failed to remove pidfile %s.", STD_PIDFILE);
 		main_rc = LSB_EXIT_GENERIC;
         }
@@ -584,8 +583,8 @@ become_daemon(gboolean startup_alone)
 	 * to Andrew's suggestion. In the future will disable pidfile functions
 	 * when started up by heartbeat.
 	 */
-	if (0 != create_pidfile(STD_PIDFILE)) {
-		stonithd_log(LOG_ERR, "%s not %s, although failed to create the"
+	if (cl_lock_pidfile(STD_PIDFILE) < 0) {
+		stonithd_log(LOG_ERR, "%s not %s, although failed to lock the"
 			     "pid file.", stonithd_name, M_ABORT);
 	}
 }
@@ -2908,53 +2907,9 @@ emit_apphb(gpointer data)
 }
 
 static int
-create_pidfile(const char * pidfile)
-{
-	pid_t   pid;
-	FILE *  fd;
-
-	fd = fopen(pidfile, "w+");
-	if (fd == NULL) {
-		stonithd_log(LOG_ERR, "cannot create PID file: %s", pidfile);
-		return LSB_EXIT_GENERIC;
-	} else {
-		pid = getpid();
-		fprintf(fd, "%d\n", pid);
-		fclose(fd);
-	}
-
-	return 0;
-}
-
-static pid_t
-running_daemon_pid(const char * pidfile)
-{
-	FILE * fd;
-	pid_t pid;
-
-	if (NULL == (fd = fopen(pidfile, "r")) ) {
-		stonithd_log(LOG_DEBUG, "cannot open PID file: %s", pidfile);
-		return -1;	
-	}
-
-	if ( (fscanf(fd, "%d", &pid) == 1) && ( pid > 0)) {
-		if (CL_PID_EXISTS(pid)) {
-			fclose(fd);
-			return pid;
-		} else {
-			stonithd_log(LOG_NOTICE,"although PID file exists but "
-			"is not running.");
-		}
-	}
-
-	fclose(fd);
-	return -1;
-}
-
-static int
 show_daemon_status(const char * pidfile)
 {
-	if (running_daemon_pid(STD_PIDFILE) > 0) {
+	if (cl_read_pidfile(STD_PIDFILE) > 0) {
 		stonithd_log(LOG_INFO, "%s %s", stonithd_name, M_RUNNING);
 		return 0;
 	} else {
@@ -2968,7 +2923,7 @@ kill_running_daemon(const char * pidfile)
 {
 	pid_t pid;
 
-	if ( (pid = running_daemon_pid(STD_PIDFILE)) < 0 ) {
+	if ( (pid = cl_read_pidfile(STD_PIDFILE)) < 0 ) {
 		stonithd_log(LOG_NOTICE, "cannot get daemon PID to kill it.");
 		return LSB_EXIT_GENERIC;	
 	}
@@ -3020,6 +2975,9 @@ free_common_op_t(gpointer data)
 
 /* 
  * $Log: stonithd.c,v $
+ * Revision 1.39  2005/05/13 23:58:13  gshi
+ * use cl_xxx_pidfile functions
+ *
  * Revision 1.38  2005/04/19 10:21:22  sunjd
  * changes the restart behaviour of system calls when interrupted by a signal
  *
