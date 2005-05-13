@@ -1,4 +1,4 @@
-/* $Id: ccm.c,v 1.85 2005/05/10 17:34:21 gshi Exp $ */
+/* $Id: ccm.c,v 1.86 2005/05/13 21:37:54 gshi Exp $ */
 /* 
  * ccm.c: Consensus Cluster Service Program 
  *
@@ -169,7 +169,7 @@ state2string(int state){
 	return state_strings[state];
 }
 
-static inline int
+static int
 string2state(const char* state_str)
 {
 	int  i; 
