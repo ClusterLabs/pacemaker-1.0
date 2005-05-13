@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.402 2005/05/10 20:37:15 gshi Exp $ */
+/* $Id: heartbeat.c,v 1.403 2005/05/13 23:08:22 gshi Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -267,6 +267,7 @@
 #include <apphb.h>
 #include <clplumbing/cl_uuid.h>
 #include "clplumbing/setproctitle.h"
+#include <clplumbing/cl_pidfile.h>
 
 #define OPTARGS			"dkMrRsvlC:V"
 #define	ONEDAY			(24*60*60)	/* Seconds in a day */
@@ -311,7 +312,6 @@ int				parse_only = FALSE;
 static gboolean			killrunninghb = FALSE;
 static gboolean			rpt_hb_status = FALSE;
 int				RestartRequested = FALSE;
-static long			hb_pid_in_file = 0L;
 int				hb_realtime_prio = -1;
 
 int	 			UseApphbd = FALSE;
@@ -378,7 +378,6 @@ static void	mark_node_dead(struct node_info* hip);
 static void	change_link_status(struct node_info* hip, struct link *lnk
 ,			const char * new);
 static void	comm_now_up(void);
-static long	get_running_hb_pid(void);
 static void	make_daemon(void);
 static void	hb_del_ipcmsg(IPC_Message* m);
 static
@@ -3038,7 +3037,7 @@ restart_heartbeat(void)
 		/* Make sure they notice we're dead */
 		sleep((config->deadtime_ms+999)/1000+1);
 		/* "Normal" restart (not quick) */
-		unlink(PIDFILE);
+		cl_unlock_pidfile(PIDFILE);
 		execl(HALIB "/heartbeat", "heartbeat", (const char *)NULL);
 	}
 	cl_log(LOG_ERR, "Could not exec " HALIB "/heartbeat");
@@ -3505,7 +3504,7 @@ main(int argc, char * argv[], char **envp)
 	int		argerrs = 0;
 	char *		CurrentStatus=NULL;
 	char *		tmp_cmdname;
-	long		running_hb_pid = get_running_hb_pid();
+	long		running_hb_pid =  cl_read_pidfile(PIDFILE);
 	int		generic_error = LSB_EXIT_GENERIC;
 
 	cl_malloc_forced_for_glib();
@@ -3678,8 +3677,8 @@ main(int argc, char * argv[], char **envp)
 
 		if (running_hb_pid < 0) {
 			printf("%s is stopped. No process\n", cmdname);
-			cleanexit(hb_pid_in_file ? LSB_STATUS_VAR_PID
-			:	LSB_STATUS_STOPPED);
+			cleanexit( cl_read_pidfile_no_checking(PIDFILE) > 0 ?
+				   LSB_STATUS_VAR_PID:LSB_STATUS_STOPPED);
 		}else{
 			struct utsname u;
 			uname(&u);
@@ -3899,25 +3898,6 @@ hb_emergency_shutdown(void)
 	cleanexit(100);
 }
 
-static long
-get_running_hb_pid()
-{
-	long	pid;
-	FILE *	lockfd;
-	if ((lockfd = fopen(PIDFILE, "r")) != NULL
-	&&	fscanf(lockfd, "%ld", &pid) == 1 && pid > 0) {
-		hb_pid_in_file = pid;
-		if (CL_KILL((pid_t)pid, 0) >= 0 || errno != ESRCH) {
-			fclose(lockfd);
-			return pid;
-		}
-	}
-	if (lockfd != NULL) {
-		fclose(lockfd);
-	}
-	return -1L;
-}
-
 
 extern pid_t getsid(pid_t);
 
@@ -3926,12 +3906,11 @@ static void
 make_daemon(void)
 {
 	long			pid;
-	FILE *			lockfd;
 	const char *		devnull = "/dev/null";
 
 	/* See if heartbeat is already running... */
 
-	if ((pid=get_running_hb_pid()) > 0 && pid != getpid()) {
+	if ((pid=cl_read_pidfile(PIDFILE)) > 0 && pid != getpid()) {
 		cl_log(LOG_INFO, "%s: already running [pid %ld]."
 		,	cmdname, pid);
 		exit(LSB_EXIT_OK);
@@ -3954,16 +3933,15 @@ make_daemon(void)
 			exit(LSB_EXIT_OK);
 		}
 	}
-	pid = (long) getpid();
-	lockfd = fopen(PIDFILE, "w");
-	if (lockfd != NULL) {
-		fprintf(lockfd, "%ld\n", pid);
-		fclose(lockfd);
-	}else{
-		fprintf(stderr, "%s: could not create pidfile [%s]\n"
-		,	cmdname, PIDFILE);
+
+	
+	if ( cl_lock_pidfile(PIDFILE) < 0){
+		fprintf(stderr, "%s: could not create pidfile [%s]\n",
+			cmdname, PIDFILE);
 		exit(LSB_EXIT_EPERM);
 	}
+
+
 
 	cl_log_enable_stderr(FALSE);
 
@@ -5259,6 +5237,9 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.403  2005/05/13 23:08:22  gshi
+ * use cl_xxx_pidfile functions in heartbeat to handle pidfile
+ *
  * Revision 1.402  2005/05/10 20:37:15  gshi
  * add -V option to heartbeat
  * -V: print out heartbeat version
