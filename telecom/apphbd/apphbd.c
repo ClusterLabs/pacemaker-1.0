@@ -1,4 +1,4 @@
-/* $Id: apphbd.c,v 1.58 2005/03/16 17:11:15 lars Exp $ */
+/* $Id: apphbd.c,v 1.59 2005/05/13 22:15:53 gshi Exp $ */
 /*
  * apphbd:	application heartbeat daemon
  *
@@ -92,7 +92,7 @@
 #include <clplumbing/lsb_exitcodes.h>
 #include <clplumbing/coredumps.h>
 #include <clplumbing/cl_malloc.h>
-
+#include <clplumbing/cl_pidfile.h>
 
 #ifndef PIDFILE
 #	define		PIDFILE "/var/run/apphbd.pid"
@@ -145,7 +145,6 @@ AppHBNotifyOps*	NotificationPlugins[MAXNOTIFYPLUGIN];
 int		n_Notification_Plugins = 0;
 
 static void apphb_notify(apphb_client_t* client, apphb_event_t event);
-static long get_running_pid(gboolean * anypidfile);
 static void make_daemon(void);
 static int init_start(void);
 static int init_stop(void);
@@ -978,12 +977,12 @@ init_start()
 	struct IPC_WAIT_CONNECTION*	wconn;
 	GHashTable*	wconnattrs;
 
-	if ((pid = get_running_pid(NULL)) > 0) {
-		cl_log(LOG_CRIT, "already running: [pid %ld]."
-		,	pid);
+	if ((pid = cl_read_pidfile(PIDFILE)) > 0) {
+		cl_log(LOG_CRIT, "already running: [pid %ld].",
+		       pid);
 		exit(LSB_EXIT_OK);
 	}
-
+	
 	if (apphbd_config.debug_level) {
 		if (apphbd_config.logfile[0] != EOS) {
 			cl_log_set_logfile(apphbd_config.logfile);
@@ -1057,7 +1056,7 @@ make_daemon(void)
 {
 	int	j;
 	long	pid;
-	FILE *	lockfd;
+
 
 #ifndef NOFORK
 	pid = fork();
@@ -1069,17 +1068,14 @@ make_daemon(void)
 		exit(LSB_EXIT_OK);
 	}
 #endif
-
-	lockfd = fopen(PIDFILE, "w");
-	if (lockfd == NULL) {
-		cl_log(LOG_CRIT, "cannot create pid file" PIDFILE);
-		exit(LSB_EXIT_GENERIC);
-	}else{
-		pid = getpid();
-		fprintf(lockfd, "%ld\n", pid);
-		fclose(lockfd);
+		
+	if (cl_lock_pidfile(PIDFILE) < 0) {
+		cl_log(LOG_CRIT, "already running: [pid %d].",
+		       cl_read_pidfile(PIDFILE));
+		exit(LSB_EXIT_OK);
 	}
 
+	
 	umask(022);
 	getsid(0);
 	if (!apphbd_config.debug_level) {
@@ -1095,37 +1091,13 @@ make_daemon(void)
 
 }
 
-static long
-get_running_pid(gboolean* anypidfile)
-{
-	long    pid;
-	FILE *  lockfd;
-	lockfd = fopen(PIDFILE, "r");
-
-	if (anypidfile) {
-		*anypidfile = (lockfd != NULL);
-	}
-
-	if (lockfd != NULL
-	&&      fscanf(lockfd, "%ld", &pid) == 1 && pid > 0) {
-		if (CL_PID_EXISTS((pid_t)pid)) {
-			fclose(lockfd);
-			return(pid);
-		}
-	}
-	if (lockfd != NULL) {
-		fclose(lockfd);
-	}
-	return(-1L);
-}
-
 static int
 init_stop(void)
 {
 	long	pid;
 	int	rc = LSB_EXIT_OK;
-	pid =	get_running_pid(NULL);
-
+	pid =	cl_read_pidfile(PIDFILE);
+	
 	if (pid > 0) {
 		if (CL_KILL((pid_t)pid, SIGTERM) < 0) {
 			rc = (errno == EPERM
@@ -1142,18 +1114,12 @@ init_stop(void)
 static int
 init_status(void)
 {
-	gboolean	anypidfile;
-	long	pid =	get_running_pid(&anypidfile);
+	long	pid =	cl_read_pidfile(PIDFILE);
 
 	if (pid > 0) {
 		fprintf(stderr, "%s is running [pid: %ld]\n"
 		,	cmdname, pid);
 		return LSB_STATUS_OK;
-	}
-	if (anypidfile) {
-		fprintf(stderr, "%s is stopped [pidfile exists]\n"
-		,	cmdname);
-		return LSB_STATUS_VAR_PID;
 	}
 	fprintf(stderr, "%s is stopped.\n", cmdname);
 	return LSB_STATUS_STOPPED;
