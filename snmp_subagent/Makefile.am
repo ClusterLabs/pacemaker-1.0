@@ -49,9 +49,9 @@ test_scrs	=	SNMPAgentSanityCheck
 mibsdir			= @MIBS_DIR@
 mibs_DATA		= LINUX-HA-MIB.mib
 
+if SNMP_SUBAGENT_BUILD
 EXTRA_DIST		= SNMPAgentSanityCheck.in $(mibs_DATA)
 
-if SNMP_SUBAGENT_BUILD
 
 INCLUDES                = -I$(top_builddir)/include -I$(top_srcdir)/include \
 			-I$(top_builddir)/linux-ha -I$(top_srcdir)/linux-ha  \
@@ -82,5 +82,5 @@ testdir			= $(libdir)/heartbeat
 test_SCRIPTS		= $(test_scrs)
 
 else
-EXTRA_DIST += $(hbagent_srces) $(test_scrs)
+EXTRA_DIST = $(hbagent_srces) $(test_scrs)
 endif
