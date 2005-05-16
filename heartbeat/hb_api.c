@@ -1,4 +1,4 @@
-/* $Id: hb_api.c,v 1.134 2005/05/05 17:42:24 gshi Exp $ */
+/* $Id: hb_api.c,v 1.135 2005/05/16 19:17:22 gshi Exp $ */
 /*
  * hb_api: Server-side heartbeat API code
  *
@@ -1980,6 +1980,14 @@ ProcessAnAPIRequest(client_proc_t*	client)
 	}
 	msg = NULL;
 	rc = TRUE;
+	
+	if (!all_clients_running){
+		/* This is a new client,
+		 * this allows a client to sign on but further action will be blocked
+		 */
+		G_main_IPC_Channel_pause(client->gsource);
+		rc = FALSE;
+	}
 
 getout:
 	/* May have gotten a message from 'client' */
