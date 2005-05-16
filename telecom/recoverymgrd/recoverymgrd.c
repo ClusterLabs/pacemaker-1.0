@@ -1,4 +1,4 @@
-/* $Id: recoverymgrd.c,v 1.13 2005/03/16 17:11:16 lars Exp $ */
+/* $Id: recoverymgrd.c,v 1.14 2005/05/16 18:50:53 gshi Exp $ */
 /*
  * Generic Recovery manager implementation
  * 
@@ -54,6 +54,7 @@
 #include <clplumbing/coredumps.h>
 #include <apphb_notify.h>
 #include <recoverymgr.h>
+#include <clplumbing/cl_pidfile.h>
 
 #include "recoverymgrd.h"
 #include "configfile.h"
@@ -63,7 +64,7 @@
 #define HBINTERVAL_MSEC		2000
 
 #define CONFIG_FILE	"./recoverymgrd.conf"
-
+#define PIDFILE		VAR_RUN_D "/recoverymgrd.pid"
 #define DEBUG 
 #define         DBGMIN          1
 #define         DBGDETAIL       3
@@ -130,6 +131,7 @@ main(int argc, char *argv[])
    	int rc; 
    	int retval = 0;  
    	const char* conf_file = CONFIG_FILE;
+	int pid;
 	cl_cdtocoredir();
 	
 	if(argc == 2){
@@ -138,9 +140,17 @@ main(int argc, char *argv[])
 		printf("Usage: %s [config_file]\n", cmdname);
 		exit(LSB_EXIT_NOTCONFIGED);
 	}
+
+   	cl_log_enable_stderr(TRUE);
+
+	pid = cl_read_pidfile(PIDFILE);
+	if (pid > 0 && pid != getpid()){
+		cl_log(LOG_INFO, "recovermgrd is already running[%d]",
+		       pid);
+		return 0;
+	}
    	
 	cl_log_set_entity(argv[0]);
-   	cl_log_enable_stderr(TRUE);
    	cl_log_set_facility(LOG_USER);
    	cl_log(LOG_INFO, "Starting %s", argv[0]);
    	signal(SIGCHLD, sigchld_handler);
@@ -156,6 +166,13 @@ main(int argc, char *argv[])
    	printf("Debug mode -- non daemon\n");
 #endif
 
+	if (cl_lock_pidfile(PIDFILE) < 0){
+		
+		cl_log(LOG_INFO, "recoverymgrd is already running[%d]",
+		       cl_read_pidfile(PIDFILE));
+		return 0;
+	}
+
    	/* register with apphbd as a client and send pings */
    	retval = register_hb();
    	if (0 != retval)
@@ -169,11 +186,12 @@ main(int argc, char *argv[])
    	/* unregister and shutdown */
    	rc = apphb_unregister();
    	if (rc < 0) 
-   	{
+		{
       		cl_perror("apphb_unregister failure");
       		exit(3);
    	}
-
+	
+	cl_unlock_pidfile(PIDFILE);
    	return 0; 
 }
 
