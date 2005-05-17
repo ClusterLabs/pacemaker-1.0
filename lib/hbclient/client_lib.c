@@ -1,4 +1,4 @@
-/* $Id: client_lib.c,v 1.31 2005/05/04 16:59:54 gshi Exp $ */
+/* $Id: client_lib.c,v 1.32 2005/05/17 18:51:22 gshi Exp $ */
 /* 
  * client_lib: heartbeat API client side code
  *
@@ -1849,7 +1849,7 @@ process_client_status_msg(llc_private_t* pi, struct ha_msg* msg,
 }
 
 /*
- *	Process msg gotten from FIFO or msgQ.
+ *	Process msg gotten from IPC or msgQ.
  */
 static struct ha_msg *
 process_hb_msg(llc_private_t* pi, struct ha_msg* msg)
@@ -1982,7 +1982,7 @@ read_hb_msg(ll_cluster_t* llc, int blocking)
 			goto process_oq;
 		}		
 	}
-	/* Process msg from FIFO */
+	/* Process msg from channel */
 	while (msgready(llc)){
 		msg = msgfromIPC(pi->chan, 0);
 		if (msg == NULL) {
@@ -1999,7 +1999,7 @@ read_hb_msg(ll_cluster_t* llc, int blocking)
 	if (!blocking)
 		return NULL;
 
-	/* If this is a blocking call, we keep on reading from FIFO, so
+	/* If this is a blocking call, we keep on reading from channel, so
          * that we can finally return a non-NULL msg to user.
          */
 	for(;;) {
