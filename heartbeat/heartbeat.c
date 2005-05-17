@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.403 2005/05/13 23:08:22 gshi Exp $ */
+/* $Id: heartbeat.c,v 1.404 2005/05/17 19:11:24 gshi Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -3677,8 +3677,7 @@ main(int argc, char * argv[], char **envp)
 
 		if (running_hb_pid < 0) {
 			printf("%s is stopped. No process\n", cmdname);
-			cleanexit( cl_read_pidfile_no_checking(PIDFILE) > 0 ?
-				   LSB_STATUS_VAR_PID:LSB_STATUS_STOPPED);
+			cleanexit(-running_hb_pid);
 		}else{
 			struct utsname u;
 			uname(&u);
@@ -5237,6 +5236,10 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.404  2005/05/17 19:11:24  gshi
+ * use the return code from cl_read_pidfile()
+ * in stead of using cl_read_pidfile_no_checking()
+ *
  * Revision 1.403  2005/05/13 23:08:22  gshi
  * use cl_xxx_pidfile functions in heartbeat to handle pidfile
  *
