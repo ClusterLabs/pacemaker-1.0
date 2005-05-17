@@ -1,4 +1,4 @@
-/* $Id: hb_api.c,v 1.135 2005/05/16 19:17:22 gshi Exp $ */
+/* $Id: hb_api.c,v 1.136 2005/05/17 18:47:20 gshi Exp $ */
 /*
  * hb_api: Server-side heartbeat API code
  *
@@ -1856,12 +1856,11 @@ APIclients_input_dispatch(IPC_Channel* chan, gpointer user_data)
 
 	/* Process a single API client request */
 	client->isindispatch = TRUE;
-	while (ProcessAnAPIRequest(client)) {
-		/* Do nothing */;
-	}
+	ProcessAnAPIRequest(client);
 	client->isindispatch = FALSE;
 
 	if (client->removereason) {
+		
 		ret = FALSE;
 		goto getout;
 	}
