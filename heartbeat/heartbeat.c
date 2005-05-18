@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.404 2005/05/17 19:11:24 gshi Exp $ */
+/* $Id: heartbeat.c,v 1.405 2005/05/18 20:30:03 alan Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -931,6 +931,8 @@ static void
 read_child(struct hb_media* mp)
 {
 	IPC_Channel* ourchan =	mp->rchan[P_READFD];
+	int		nullcount=0;
+	const int	maxnullcount=100;
 
 	if (hb_signal_set_read_child(NULL) < 0) {
 		cl_log(LOG_ERR, "read_child(): hb_signal_set_read_child(): "
@@ -959,13 +961,28 @@ read_child(struct hb_media* mp)
 
 		hb_signal_process_pending();
 		if ((pkt=mp->vf->read(mp, &pktlen)) == NULL) {
+			++nullcount;
+			if (nullcount > maxnullcount) {
+				cl_perror("%d NULL vf->read() returns in a"
+				" row. Exiting."
+				,	maxnullcount);
+				exit(10);
+			}
 			continue;
 		}
 		hb_signal_process_pending();
 		
 		imsg = wirefmt2ipcmsg(pkt, pktlen, ourchan);
 		ha_free(pkt);
-		if (imsg != NULL) {
+		if (NULL == imsg) {
+			++nullcount;
+			if (nullcount > maxnullcount) {
+				cl_perror("%d NULL wirefmt2ipcmsg() returns"
+				" in a row. Exiting.", maxnullcount);
+				exit(10);
+			}
+		}else{
+			nullcount = 0;
 			/* Send frees "imsg" "at the right time" */
 			rc = ourchan->ops->send(ourchan, imsg);
 			rc2 = ourchan->ops->waitout(ourchan);
@@ -1568,6 +1585,7 @@ polled_input_dispatch(GSource* source,
 
 
 	LookForClockJumps();
+	cl_realtime_malloc_check();
 
 	hb_signal_process_pending();
 
@@ -5236,6 +5254,10 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.405  2005/05/18 20:30:03  alan
+ * Put in a call to realtime malloc check code in heartbeat.
+ * Plus exit if we get too many read errors in a row in a child process.
+ *
  * Revision 1.404  2005/05/17 19:11:24  gshi
  * use the return code from cl_read_pidfile()
  * in stead of using cl_read_pidfile_no_checking()
