@@ -1,4 +1,4 @@
-/* $Id: config.c,v 1.155 2005/05/11 00:44:56 gshi Exp $ */
+/* $Id: config.c,v 1.156 2005/05/19 23:07:33 gshi Exp $ */
 /*
  * Parse various heartbeat configuration files...
  *
@@ -509,6 +509,7 @@ parse_config(const char * cfgfile, char *nodename)
 	,	{"ping",	"gid=" HA_APIGROUP}
 	,	{"cl_status",	"gid=" HA_APIGROUP}
 	,	{"lha-snmpagent","uid=root"}
+	,	{"anon",	"uid=" HA_CCMUSER}
 	};
 
 	if ((f = fopen(cfgfile, "r")) == NULL) {
@@ -2098,6 +2099,10 @@ set_release2mode(const char* value)
 
 /*
  * $Log: config.c,v $
+ * Revision 1.156  2005/05/19 23:07:33  gshi
+ * add "anon" authorization for anonymous client authorization
+ * any casual client matches the "anon" uid/gid authorization will be allowed to login
+ *
  * Revision 1.155  2005/05/11 00:44:56  gshi
  * pull the code config.c together to implement ipc_str_to_auth() and use it
  *

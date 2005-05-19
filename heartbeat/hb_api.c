@@ -1,4 +1,4 @@
-/* $Id: hb_api.c,v 1.136 2005/05/17 18:47:20 gshi Exp $ */
+/* $Id: hb_api.c,v 1.137 2005/05/19 23:07:33 gshi Exp $ */
 /*
  * hb_api: Server-side heartbeat API code
  *
@@ -1757,16 +1757,22 @@ api_check_client_authorization(client_proc_t* client)
 	 * then default to the "default" authorization category.
 	 * otherwise, use the client type's authorization list
 	 */
-	if (client->iscasual
-	||	(gauth = g_hash_table_lookup(APIAuthorization
-	,	client->client_id))	==  NULL) {
+	if (client->iscasual){
+		gauth = g_hash_table_lookup(APIAuthorization, "anon");
+		if (gauth == NULL){
+			cl_log(LOG_ERR, "NO auth found for anonymous");
+			return FALSE;
+		}
+		
+	}else if((gauth = g_hash_table_lookup(APIAuthorization,
+					client->client_id)) ==  NULL) {
 		if ((gauth = g_hash_table_lookup(APIAuthorization, "default"))
 		== NULL) {
 			client->removereason = "no default client auth";
 			return FALSE;
 		}
-		
 	}
+	
 	auth = gauth;
 	if ((long)auth->gid == (long)-1L) {
 		cl_log(LOG_DEBUG, "Darn!  -1 gid ptr in api_check_client_authorization");
