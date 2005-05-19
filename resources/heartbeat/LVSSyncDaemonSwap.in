@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-#        $Id: LVSSyncDaemonSwap.in,v 1.1 2005/02/14 11:15:51 horms Exp $
+#        $Id: LVSSyncDaemonSwap.in,v 1.2 2005/05/19 07:29:14 horms Exp $
 #
 #        Copyright (C) 2005 Horms <horms@verge.net.au>
 #
@@ -9,7 +9,7 @@
 #       Please note that as of 2.4.29, this is no longer needed
 #       as both the master and backup daemon can run simultaneously
 #
-#        usage: $0 {master|backup} {start|stop|status|monitor|cleanup}
+#        usage: $0 {master|backup} {start|stop|status|monitor|cleanup} {interface}
 #
 #        The first argument, master or backup, is the YING.
 #        The YANG is internally calculated to be which ever or master and
@@ -34,7 +34,7 @@ prefix=@prefix@
 exec_prefix=@exec_prefix@
 . @sysconfdir@/ha.d/shellfuncs
 
-USAGE="usage: $0 {master|backup} {start|stop|status|monitor|cleanup}\n\nNote: $0 only works on Linux";
+USAGE="usage: $0 {master|backup} {start|stop|status|monitor|cleanup} {interface}\n\nNote: $0 only works on Linux";
 
 # This is consistent with ldirectord's behaviour
 # Except that this script does not have a debug mode
@@ -107,7 +107,7 @@ start_stop() {
         ha_log "info: ipvs_sync$YANG down"
     fi
 
-    run_ipvsadm --start-daemon $YING || return $?
+    run_ipvsadm --start-daemon $YING --mcast-interface=$IFACE || return $?
 
     ha_log "info: ipvs_sync$YING up"
     return 0
@@ -145,7 +145,7 @@ usage() {
 }
 
 if
-    [ $# -ne 2 ]
+    [ $# -lt 2 -o $# -gt 3 ]
 then
     usage
     exit 1
@@ -153,7 +153,16 @@ fi
 
 PS=$(ps ax | grep " \[ipvs[ _]sync")
 
-case $2 in
+if [ $# -eq 3 ]
+then
+    CMD=$3
+    IFACE=$2
+else
+    CMD=$2
+    IFACE=eth0
+fi
+
+case $CMD in
     start)
         start $1
         ;;
