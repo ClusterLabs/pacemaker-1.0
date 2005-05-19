@@ -214,9 +214,9 @@ static const char * simple_help_screen =
 "	Retrieve the value of a cluster parameter.\n"
 "	As for the valid parameter names, please refer to the man page.\n";
 
-static const char * cl_status_name = "cl_status";
 static gboolean HB_SIGNON = FALSE;
 
+static const char * cl_status_name = "cl_status";
 /*
  * The following is to avoid cl_status sleeping forever. This is due to the 
  * hearbeat's abnormal status or even its crash.  
@@ -269,7 +269,7 @@ main(int argc, char ** argv)
 			}
 
 			/* cl_log(LOG_DEBUG, "Signing in with heartbeat."); */
-			if (hb->llc_ops->signon(hb, cl_status_name)!= HA_OK) {
+			if (hb->llc_ops->signon(hb, NULL)!= HA_OK) {
 				cl_log(LOG_ERR, "Cannot signon with heartbeat");
 				cl_log(LOG_ERR, "REASON: %s", 
 					hb->llc_ops->errmsg(hb));
