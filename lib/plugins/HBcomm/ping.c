@@ -1,4 +1,4 @@
-/* $Id: ping.c,v 1.40 2005/05/02 20:00:04 gshi Exp $ */
+/* $Id: ping.c,v 1.41 2005/05/19 14:29:07 msoffen Exp $ */
 /*
  * ping.c: ICMP-echo-based heartbeat code for heartbeat.
  *
@@ -32,6 +32,7 @@
 #include <portability.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <stddef.h>
 #include <unistd.h>
 #include <errno.h>
 #include <string.h>
