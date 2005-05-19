@@ -1,4 +1,4 @@
-/* $Id: config.c,v 1.156 2005/05/19 23:07:33 gshi Exp $ */
+/* $Id: config.c,v 1.157 2005/05/19 23:31:36 gshi Exp $ */
 /*
  * Parse various heartbeat configuration files...
  *
@@ -507,9 +507,8 @@ parse_config(const char * cfgfile, char *nodename)
 	{	{"ipfail",	"uid=" HA_CCMUSER}
 	,	{"ccm",		"uid=" HA_CCMUSER}
 	,	{"ping",	"gid=" HA_APIGROUP}
-	,	{"cl_status",	"gid=" HA_APIGROUP}
 	,	{"lha-snmpagent","uid=root"}
-	,	{"anon",	"uid=" HA_CCMUSER}
+	,	{"anon",	"gid=" HA_APIGROUP}
 	};
 
 	if ((f = fopen(cfgfile, "r")) == NULL) {
@@ -2099,6 +2098,10 @@ set_release2mode(const char* value)
 
 /*
  * $Log: config.c,v $
+ * Revision 1.157  2005/05/19 23:31:36  gshi
+ * remove the entry for cl_status
+ * change apiauth for anon to gid=HA_APIGROUP
+ *
  * Revision 1.156  2005/05/19 23:07:33  gshi
  * add "anon" authorization for anonymous client authorization
  * any casual client matches the "anon" uid/gid authorization will be allowed to login
