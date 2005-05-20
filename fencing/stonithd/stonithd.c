@@ -1,4 +1,4 @@
-/* $Id: stonithd.c,v 1.41 2005/05/20 15:46:31 alan Exp $ */
+/* $Id: stonithd.c,v 1.42 2005/05/20 16:15:30 alan Exp $ */
 
 /* File: stonithd.c
  * Description: STONITH daemon for node fencing
@@ -68,6 +68,7 @@
 #include <fencing/stonithd_msg.h>
 #include <fencing/stonithd_api.h>
 #include <clplumbing/cl_pidfile.h>
+#include <clplumbing/Gmain_timeout.h>
 
 /* For integration with heartbeat */
 #define MAGIC_EC 100
@@ -333,7 +334,8 @@ static gboolean 	TEST 			= FALSE;
 static IPC_Auth* 	ipc_auth 		= NULL;
 static int	 	debug_level		= 0;
 
-int main(int argc, char ** argv)
+int
+main(int argc, char ** argv)
 {
 	int main_rc = LSB_EXIT_OK;
 	int option_char;
@@ -399,11 +401,6 @@ int main(int argc, char ** argv)
 
 	inherit_config_from_environment();
 	
-	if ( STARTUP_ALONE == TRUE ) {
-		/* enable coredump by itself, or depend on its parent */
-		cl_cdtocoredir();
-		cl_enable_coredumps(TRUE);
-	}
 
 	if (cl_read_pidfile(STD_PIDFILE) > 0 ) {
 		stonithd_log(LOG_NOTICE, "%s %s", argv[0], M_RUNNING);
@@ -441,7 +438,7 @@ int main(int argc, char ** argv)
 
 	/*
 	 * Initialize the handler of the child quit event. Since the stonith 
-	 * plugin will be runned in a child process.
+	 * plugin will be run in a child process.
 	 */
 	if ( NULL == G_main_add_input(G_PRIORITY_DEFAULT, FALSE,
                                         &polled_input_SourceFuncs)) {
@@ -453,7 +450,7 @@ int main(int argc, char ** argv)
 	stonithd_log2(LOG_DEBUG, "address %p", &polled_input_SourceFuncs);
 
 	/*
-	 * Initialize the handler of IPC messages from hearbteat, including
+	 * Initialize the handler of IPC messages from heartbeat, including
 	 * the messages produced by myself as a client of heartbeat.
 	 */
 	if ( (main_rc = init_hb_msg_handler()) != 0) {
@@ -535,6 +532,12 @@ delhb_quit:
 	return (STARTUP_ALONE == TRUE) ? main_rc : MAGIC_EC;
 }
 
+static gboolean
+check_memory(gpointer unused)
+{
+	cl_realtime_malloc_check();
+	return TRUE;
+}
 /* 
  * Notes: 
  * 1) Not use daemon() API for its portibility, any comment?
@@ -559,13 +562,14 @@ become_daemon(gboolean startup_alone)
 		}
 	}
 
-	chdir("/");
 	umask(022);
 	setsid();
+	cl_cdtocoredir();
+	cl_enable_coredumps(TRUE);
 
 	for (j=0; j < 3; ++j) {
 		close(j);
-		(void)open("/dev/null", j == 0 ? O_RDONLY : O_RDONLY);
+		(void)open("/dev/null", j == 0 ? O_RDONLY : O_WRONLY);
 	}
 
 	CL_IGNORE_SIG(SIGINT);
@@ -582,9 +586,12 @@ become_daemon(gboolean startup_alone)
 	 * when started up by heartbeat.
 	 */
 	if (cl_lock_pidfile(STD_PIDFILE) < 0) {
-		stonithd_log(LOG_ERR, "%s not %s, although failed to lock the"
+		stonithd_log(LOG_ERR, "%s did not %s, although failed to lock the"
 			     "pid file.", stonithd_name, M_ABORT);
 	}
+	cl_make_realtime(SCHED_OTHER, 0, 32, 128);
+	Gmain_timeout_add(60*1000, check_memory, NULL);
+
 }
 
 static void
@@ -1018,7 +1025,7 @@ require_local_stonithop(stonith_ops_t * st_op, stonith_rsc_t * srsc,
 		g_hash_table_insert(executing_queue, child_id, op);
 		tmp_callid = g_new(int, 1);
 		*tmp_callid = *child_id;
-		g_timeout_add_full(G_PRIORITY_HIGH_IDLE, st_op->timeout,
+		Gmain_timeout_add_full(G_PRIORITY_HIGH_IDLE, st_op->timeout,
 		   		   stonithop_timeout, tmp_callid, NULL);
 		stonithd_log(LOG_DEBUG, "require_local_stonithop: inserted "
 			    "optype=%d, child_id=%d", st_op->optype, *child_id);
@@ -1602,7 +1609,7 @@ initiate_local_stonithop(stonith_ops_t * st_op, stonith_rsc_t * srsc,
 		g_hash_table_insert(executing_queue, tmp_callid, op);
 		tmp_callid = g_new(int, 1);
 		*tmp_callid = call_id;
-		g_timeout_add_full(G_PRIORITY_HIGH_IDLE, st_op->timeout,
+		Gmain_timeout_add_full(G_PRIORITY_HIGH_IDLE, st_op->timeout,
 		   		   stonithop_timeout, tmp_callid, NULL);
 		stonithd_log(LOG_DEBUG, "initiate_local_stonithop: inserted "
 			    "optype=%d, child_id=%d", st_op->optype, call_id);
@@ -1700,7 +1707,7 @@ initiate_remote_stonithop(stonith_ops_t * st_op, stonith_rsc_t * srsc,
 		g_hash_table_insert(executing_queue, tmp_callid, op);
 		tmp_callid = g_new(int, 1);
 		*tmp_callid = st_op->call_id;
-		g_timeout_add_full(G_PRIORITY_HIGH_IDLE, st_op->timeout,
+		Gmain_timeout_add_full(G_PRIORITY_HIGH_IDLE, st_op->timeout,
 				   stonithop_timeout, tmp_callid, NULL);
 
 		stonithd_log(LOG_DEBUG, "initiate_remote_stonithop: inserted "
@@ -2884,7 +2891,7 @@ init_using_apphb(void)
         apphb_setinterval(apphb_interval);
         apphb_setwarn(apphb_warntime);
 
-        g_timeout_add(apphb_interval - APPHB_INTVL_DETLA, emit_apphb, NULL);
+        Gmain_timeout_add(apphb_interval - APPHB_INTVL_DETLA, emit_apphb, NULL);
 
 	return 0;
 }
@@ -2973,6 +2980,14 @@ free_common_op_t(gpointer data)
 
 /* 
  * $Log: stonithd.c,v $
+ * Revision 1.42  2005/05/20 16:15:30  alan
+ * Replaced calls to g_main_timeout* functions to ours -- because ours work.
+ * Made stonithd lock itself into memory.
+ * corrected the opening of /dev/null to allow writing to stdout and stderr
+ * Fixed a few spelling errors.
+ * Changed it to always enable the ability to take core dumps.
+ * Made sure it changed into the core dump directory - and stayed there.
+ *
  * Revision 1.41  2005/05/20 15:46:31  alan
  * Made it so SIGCHLD can interrupt stonithd - otherwise hangs can occur.
  *
