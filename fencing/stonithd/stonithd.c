@@ -1,4 +1,4 @@
-/* $Id: stonithd.c,v 1.40 2005/05/20 15:42:53 alan Exp $ */
+/* $Id: stonithd.c,v 1.41 2005/05/20 15:46:31 alan Exp $ */
 
 /* File: stonithd.c
  * Description: STONITH daemon for node fencing
@@ -569,14 +569,13 @@ become_daemon(gboolean startup_alone)
 	}
 
 	CL_IGNORE_SIG(SIGINT);
-	cl_signal_set_interrupt(SIGINT, 0);
+	cl_signal_set_interrupt(SIGINT, FALSE);
 	CL_IGNORE_SIG(SIGHUP);
-	cl_signal_set_interrupt(SIGHUP, 0);
-	CL_IGNORE_SIG(SIGHUP);
+	cl_signal_set_interrupt(SIGHUP, FALSE);
 	CL_SIGNAL(SIGTERM, stonithd_quit);
-	cl_signal_set_interrupt(SIGTERM, 1);
+	cl_signal_set_interrupt(SIGTERM, TRUE);
 	CL_SIGNAL(SIGCHLD, child_quit);
-	cl_signal_set_interrupt(SIGCHLD, 0);
+	cl_signal_set_interrupt(SIGCHLD, TRUE);
 	
 	/* Temporarily donnot abort even failed to create the pidfile according
 	 * to Andrew's suggestion. In the future will disable pidfile functions
@@ -2974,6 +2973,9 @@ free_common_op_t(gpointer data)
 
 /* 
  * $Log: stonithd.c,v $
+ * Revision 1.41  2005/05/20 15:46:31  alan
+ * Made it so SIGCHLD can interrupt stonithd - otherwise hangs can occur.
+ *
  * Revision 1.40  2005/05/20 15:42:53  alan
  * Removed code to handle SIGQUIT - that's used for forcing a core dump.
  *
