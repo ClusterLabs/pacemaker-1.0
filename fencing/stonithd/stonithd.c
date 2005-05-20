@@ -1,4 +1,4 @@
-/* $Id: stonithd.c,v 1.39 2005/05/13 23:58:13 gshi Exp $ */
+/* $Id: stonithd.c,v 1.40 2005/05/20 15:42:53 alan Exp $ */
 
 /* File: stonithd.c
  * Description: STONITH daemon for node fencing
@@ -59,6 +59,7 @@
 #include <clplumbing/cl_log.h>
 #include <clplumbing/cl_malloc.h>
 #include <clplumbing/coredumps.h>
+#include <clplumbing/realtime.h>
 #include <apphb.h>
 #include <heartbeat.h>
 #include <ha_msg.h>
@@ -574,8 +575,6 @@ become_daemon(gboolean startup_alone)
 	CL_IGNORE_SIG(SIGHUP);
 	CL_SIGNAL(SIGTERM, stonithd_quit);
 	cl_signal_set_interrupt(SIGTERM, 1);
-	CL_SIGNAL(SIGQUIT, stonithd_quit);
-	cl_signal_set_interrupt(SIGQUIT, 1);
 	CL_SIGNAL(SIGCHLD, child_quit);
 	cl_signal_set_interrupt(SIGCHLD, 0);
 	
@@ -2975,6 +2974,9 @@ free_common_op_t(gpointer data)
 
 /* 
  * $Log: stonithd.c,v $
+ * Revision 1.40  2005/05/20 15:42:53  alan
+ * Removed code to handle SIGQUIT - that's used for forcing a core dump.
+ *
  * Revision 1.39  2005/05/13 23:58:13  gshi
  * use cl_xxx_pidfile functions
  *
