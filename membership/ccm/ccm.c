@@ -1,4 +1,4 @@
-/* $Id: ccm.c,v 1.86 2005/05/13 21:37:54 gshi Exp $ */
+/* $Id: ccm.c,v 1.87 2005/05/23 19:22:12 gshi Exp $ */
 /* 
  * ccm.c: Consensus Cluster Service Program 
  *
@@ -2106,7 +2106,7 @@ ccm_all_restart(ll_cluster_t* hb, ccm_info_t* info, struct ha_msg* msg)
 	if (info->ccm_node_state != CCM_STATE_VERSION_REQUEST
 	    && gl_membership_converged ){
 		gl_membership_converged = FALSE;
-		ccm_set_state(info, CCM_STATE_NONE, NULL);
+		ccm_set_state(info, CCM_STATE_NONE, msg);
 		
 		if (ccm_send_restart_msg(hb, info) != HA_OK){
 			cl_log(LOG_ERR, "sending out restart msg failed");
