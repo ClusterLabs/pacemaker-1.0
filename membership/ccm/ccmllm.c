@@ -1,4 +1,4 @@
-/* $Id: ccmllm.c,v 1.17 2005/05/24 18:39:33 gshi Exp $ */
+/* $Id: ccmllm.c,v 1.18 2005/05/24 18:59:47 gshi Exp $ */
 /* 
  * ccmllm.c: Low Level membership routines.
  *
@@ -124,7 +124,7 @@ llm_get_index(llm_info_t *llm, const char *node)
 /* BUT CLUST_INACTIVE confirms that the node is really cluster inactive. */
 /* */
 int
-llm_status_update(llm_info_t *llm, const char *node, const char *status)
+llm_status_update(llm_info_t *llm, const char *node, const char *status, char* oldstatus)
 {
 	int i;
 
@@ -133,6 +133,10 @@ llm_status_update(llm_info_t *llm, const char *node, const char *status)
 		return FALSE;
 	}
 
+	if (oldstatus){
+		strncpy(oldstatus, status, STATUSSIZE);
+	}
+	
 	/* if there is no status change for this node just return */
 	/*  FALSE 						  */
 	if(strncmp(LLM_GET_STATUS(llm,i), status, 

@@ -1,4 +1,4 @@
-/* $Id: ccm.h,v 1.34 2005/04/21 21:56:09 gshi Exp $ */
+/* $Id: ccm.h,v 1.35 2005/05/24 18:59:47 gshi Exp $ */
 /*
  * ccm.h: definitions Consensus Cluster Manager internal header
  *				file
@@ -127,7 +127,7 @@ gboolean llm_only_active_node(llm_info_t *);
 int llm_get_uuid(llm_info_t *, const char *);
 char *llm_get_nodeid_from_uuid(llm_info_t *, const int );
 int llm_nodeid_cmp(llm_info_t *, int , int );
-int llm_status_update(llm_info_t *, const char *, const char *);
+int llm_status_update(llm_info_t *, const char *, const char *, char*);
 
 /*	Get the number of nodes that are inactive 
  *	inactive means this node is STONITHed

@@ -1,4 +1,4 @@
-/* $Id: ccm.c,v 1.88 2005/05/24 17:11:47 gshi Exp $ */
+/* $Id: ccm.c,v 1.89 2005/05/24 18:59:47 gshi Exp $ */
 /* 
  * ccm.c: Consensus Cluster Service Program 
  *
@@ -4007,7 +4007,7 @@ nodelist_update(ll_cluster_t* hb, ccm_info_t* info,
 {
 	llm_info_t *llm;
 	int indx, uuid;
-	
+	char oldstatus[STATUSSIZE];
 	/* update the low level membership of the node
 	 * if the status moves from active to dead and if the member
 	 * is already part of the ccm, then we have to mimic a
@@ -4018,7 +4018,7 @@ nodelist_update(ll_cluster_t* hb, ccm_info_t* info,
 		"nodelist update: Node %s now has status %s gen=%d", 
 		id,  status, hbgen);
 	llm = CCM_GET_LLM(info);
-	if(llm_status_update(llm, id, status)) {
+	if(llm_status_update(llm, id, status,oldstatus)) {
 		indx = ccm_get_membership_index(info,id);
 		if(indx != -1) {
 			uuid = llm_get_uuid(llm, id);
@@ -4030,7 +4030,11 @@ nodelist_update(ll_cluster_t* hb, ccm_info_t* info,
 		return ;
 	}
 	if ( part_of_cluster(info->ccm_node_state)
-	     && STRNCMP_CONST(status, ACTIVESTATUS) == 0){
+	     && (STRNCMP_CONST(oldstatus, DEADSTATUS) 
+		 || STRNCMP_CONST(oldstatus, CLUST_INACTIVE))
+	     && (STRNCMP_CONST(status, DEADSTATUS) 
+		 && STRNCMP_CONST(oldstatus, CLUST_INACTIVE))){
+		
 		ccm_send_state_info(hb, info, id);
 	}
 	
