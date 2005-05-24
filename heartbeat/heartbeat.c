@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.405 2005/05/18 20:30:03 alan Exp $ */
+/* $Id: heartbeat.c,v 1.406 2005/05/24 20:08:13 gshi Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -1953,6 +1953,29 @@ HBDoMsgCallback(const char * type, struct node_info * fromnode
 }
 
 static void
+free_one_hist_slot(struct msg_xmit_hist* hist, int slot )
+{
+	struct ha_msg* msg;
+	
+	msg = hist->msgq[slot];
+	if (msg){
+		hist->lowseq = hist->seqnos[slot];
+		hist->msgq[slot] = NULL;
+		if (!ha_is_allocated(msg)) {
+			cl_log(LOG_CRIT,
+			       "Unallocated slotmsg in %s",
+			       __FUNCTION__);
+			return;
+		}else{
+			ha_msg_del(msg);				
+		}
+	} 	
+	
+	return;
+}
+
+
+static void
 HBDoMsg_T_ACKMSG(const char * type, struct node_info * fromnode,
 	      TIME_T msgtime, seqno_t seqno, const char * iface, struct ha_msg * msg)
 {
@@ -1962,7 +1985,7 @@ HBDoMsg_T_ACKMSG(const char * type, struct node_info * fromnode,
 	const char*	to =  
 		(const char*)ha_msg_value(msg, F_TO);
 	struct node_info* tonode;
-	
+	seqno_t		old_hist_ackseq;
 	
 	if (!to || (tonode = lookup_tables(to, NULL)) == NULL
 	    || tonode != curnode){
@@ -2014,6 +2037,8 @@ HBDoMsg_T_ACKMSG(const char * type, struct node_info * fromnode,
 		hist->lowest_acknode = NULL;
 	}
 
+	old_hist_ackseq = hist->ackseq;
+	
 	if (hist->lowest_acknode == NULL ||
 	    hist->lowest_acknode == fromnode){
 		/*find the new lowest and update hist->ackseq*/
@@ -2028,11 +2053,6 @@ HBDoMsg_T_ACKMSG(const char * type, struct node_info * fromnode,
 			struct node_info* hip = &config->nodes[i];
 			
 			if (STRNCMP_CONST(hip->status,DEADSTATUS) == 0
-			    || STRNCMP_CONST(hip->status, INITSTATUS) == 0
-			    /*although the status is active, but no ACK message
-			     *has arrived from that node yet
-			     */
-			    || hip->track.ackseq == 0 
 			    || hip->nodetype == PINGNODE_I){
 				continue;
 			}
@@ -2060,6 +2080,29 @@ HBDoMsg_T_ACKMSG(const char * type, struct node_info * fromnode,
 			all_clients_resume();
 		}
 	}
+	
+	(void)free_one_hist_slot;
+#if 0	
+	cl_log(LOG_INFO, "hist->ackseq =%ld, old_hist_ackseq=%ld",
+ 	       hist->ackseq, old_hist_ackseq);
+#endif
+	if (hist->ackseq > old_hist_ackseq){
+		int count;
+		int start;
+		count = hist->ackseq - old_hist_ackseq;
+		if (old_hist_ackseq == 0){
+			start = 0;
+			count --;
+		}else{
+			start = (old_hist_ackseq -1)%MAXMSGHIST;
+		}
+		
+		while(count -- > 0){
+			free_one_hist_slot(hist, start%MAXMSGHIST);
+			start++;
+		}
+	}
+
 #if 0
 	cl_log(LOG_INFO, "hist->ackseq =%ld, node %s's ackseq=%ld",
 	       hist->ackseq, fromnode->nodename,
@@ -5254,6 +5297,9 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.406  2005/05/24 20:08:13  gshi
+ * free ACKed messages
+ *
  * Revision 1.405  2005/05/18 20:30:03  alan
  * Put in a call to realtime malloc check code in heartbeat.
  * Plus exit if we get too many read errors in a row in a child process.
