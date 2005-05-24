@@ -1,4 +1,4 @@
-#	$Id: heartbeat.spec.in,v 1.117 2005/05/24 22:40:14 alan Exp $
+#	$Id: heartbeat.spec.in,v 1.118 2005/05/24 22:54:33 alan Exp $
 
 # Workaround for a change in RPM 4.1.x; needs proper fixing soon!
 ##%define _unpackaged_files_terminate_build 0
@@ -7,7 +7,7 @@ Summary: @HB_PKG@ - heartbeat subsystem for High-Availability Linux
 Name:	@HB_PKG@
 Version:	@VERSION@
 Release:	1
-Copyright: GPL
+License: GPL/LGPL
 URL: http://linux-ha.org/
 Group: Utilities
 Packager: Alan Robertson <alanr@unix.sh>
