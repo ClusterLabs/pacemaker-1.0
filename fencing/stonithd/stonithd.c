@@ -1,4 +1,4 @@
-/* $Id: stonithd.c,v 1.42 2005/05/20 16:15:30 alan Exp $ */
+/* $Id: stonithd.c,v 1.43 2005/05/24 06:08:33 sunjd Exp $ */
 
 /* File: stonithd.c
  * Description: STONITH daemon for node fencing
@@ -158,14 +158,14 @@ static int kill_running_daemon(const char * pidfile);
 static void inherit_config_from_environment(void);
 static int facility_name_to_value(const char * name);
 static void stonithd_quit(int signo);
+static gboolean adjust_debug_level(int nsig, gpointer user_data);
 
 /* Dealing with the child quit/abort event when executing STONTIH RA plugins. 
  */
-static void child_quit(int signo);
-static gboolean on_polled_input_prepare(GSource * source, gint * timeout);
-static gboolean on_polled_input_check(GSource * source);
-static gboolean on_polled_input_dispatch(GSource * source, GSourceFunc callback,
-					 gpointer user_data);
+static void stonithdProcessDied(ProcTrack* p, int status, int signo
+				, int exitcode, int waslogged);
+static void stonithdProcessRegistered(ProcTrack* p);
+static const char * stonithdProcessName(ProcTrack* p);
 
 /* For application heartbeat related */
 static const unsigned long
@@ -314,11 +314,10 @@ static const char * optstr = "anskvht";
 #define DAEMON_DEBUG    "/var/log/stonithd.debug"
 */
 
-static GSourceFuncs polled_input_SourceFuncs = {
-	on_polled_input_prepare,
-	on_polled_input_check,
-	on_polled_input_dispatch,
-	NULL,
+static ProcTrack_ops StonithdProcessTrackOps = {
+	stonithdProcessDied,
+	stonithdProcessRegistered,
+	stonithdProcessName
 };
 
 static const char * 	local_nodename		= NULL;
@@ -329,10 +328,10 @@ static gboolean 	SIGNONED_TO_HB		= FALSE;
 static gboolean 	SIGNONED_TO_APPHBD	= FALSE;
 static gboolean 	NEED_SIGNON_TO_APPHBD	= FALSE;
 static ll_cluster_t *	hb			= NULL;
-static gboolean 	childs_quit		= FALSE;
 static gboolean 	TEST 			= FALSE;
 static IPC_Auth* 	ipc_auth 		= NULL;
 static int	 	debug_level		= 0;
+static int 		stonithd_child_count	= 0;
 
 int
 main(int argc, char ** argv)
@@ -437,19 +436,6 @@ main(int argc, char ** argv)
 	mainloop = g_main_new(FALSE);
 
 	/*
-	 * Initialize the handler of the child quit event. Since the stonith 
-	 * plugin will be run in a child process.
-	 */
-	if ( NULL == G_main_add_input(G_PRIORITY_DEFAULT, FALSE,
-                                        &polled_input_SourceFuncs)) {
-		stonithd_log(LOG_ERR, "G_main_add_input failed.");
-		stonithd_log(LOG_ERR, "Startup aborted.");
-		main_rc = LSB_EXIT_GENERIC;
-		goto signoff_quit;
-	}
-	stonithd_log2(LOG_DEBUG, "address %p", &polled_input_SourceFuncs);
-
-	/*
 	 * Initialize the handler of IPC messages from heartbeat, including
 	 * the messages produced by myself as a client of heartbeat.
 	 */
@@ -484,7 +470,9 @@ main(int argc, char ** argv)
 	/* drop_privs(0, 0); */  /* very important. cpu limit */
 	stonithd_log2(LOG_DEBUG, "Enter g_mainloop\n");
 	stonithd_log(LOG_NOTICE, "%s %s", argv[0], M_STARTUP );
-	 
+
+	cl_set_all_coredump_signal_handlers(); 
+	set_sigchld_proctrack(G_PRIORITY_HIGH);
 	drop_privs(0, 0); /* become "nobody" */
 	g_main_run(mainloop);
 	return_to_orig_privs();
@@ -572,15 +560,22 @@ become_daemon(gboolean startup_alone)
 		(void)open("/dev/null", j == 0 ? O_RDONLY : O_WRONLY);
 	}
 
+	G_main_add_SignalHandler(G_PRIORITY_HIGH, SIGUSR1, 
+		 	adjust_debug_level, NULL, NULL);
+	G_main_add_SignalHandler(G_PRIORITY_HIGH, SIGUSR2, 
+		 	adjust_debug_level, NULL, NULL);
+
+	cl_signal_set_interrupt(SIGUSR1, FALSE);
+	cl_signal_set_interrupt(SIGUSR2, FALSE);
+
 	CL_IGNORE_SIG(SIGINT);
 	cl_signal_set_interrupt(SIGINT, FALSE);
 	CL_IGNORE_SIG(SIGHUP);
 	cl_signal_set_interrupt(SIGHUP, FALSE);
 	CL_SIGNAL(SIGTERM, stonithd_quit);
 	cl_signal_set_interrupt(SIGTERM, TRUE);
-	CL_SIGNAL(SIGCHLD, child_quit);
 	cl_signal_set_interrupt(SIGCHLD, TRUE);
-	
+
 	/* Temporarily donnot abort even failed to create the pidfile according
 	 * to Andrew's suggestion. In the future will disable pidfile functions
 	 * when started up by heartbeat.
@@ -589,138 +584,118 @@ become_daemon(gboolean startup_alone)
 		stonithd_log(LOG_ERR, "%s did not %s, although failed to lock the"
 			     "pid file.", stonithd_name, M_ABORT);
 	}
+
 	cl_make_realtime(SCHED_OTHER, 0, 32, 128);
 	Gmain_timeout_add(60*1000, check_memory, NULL);
-
 }
 
 static void
 stonithd_quit(int signo)
 {
 	if (mainloop != NULL && g_main_is_running(mainloop)) {
+		DisableProcLogging();
 		g_main_quit(mainloop);
 	} else {
 		/*apphb_unregister();*/
+		DisableProcLogging();
 		exit((STARTUP_ALONE == TRUE) ? LSB_EXIT_OK : MAGIC_EC);
 	}
 }
 
-/*
- * The following three functions are for GSourceFuncs. This type of
- * source is for dealing with child signal - exit from child.
- * This method is used to avoid high cpu usage or reentrance issue.
- */
-static gboolean
-on_polled_input_prepare(GSource * source, gint * timeout)
+static void
+stonithdProcessDied(ProcTrack* p, int status, int signo
+		    , int exitcode, int waslogged)
 {
-	return childs_quit;
-}
-
-static gboolean
-on_polled_input_check(GSource * source)
-{
-	return childs_quit;
-}
-
-/* handle the child quit event */
-static gboolean
-on_polled_input_dispatch(GSource * source, GSourceFunc callback, 
-			 gpointer user_data)
-{
-	int exit_status;	
-	pid_t pid = 0;
-	int num_of_quitted_childs = 0;
+	const char * pname = p->ops->proctype(p);
 	gboolean rc;
 	common_op_t * op = NULL;
 	int * orignal_key = NULL;
 
-	stonithd_log2(LOG_DEBUG, "on_polled_input_dispatch: begin"); 
-	while ((pid = wait(&exit_status)) > 0) {
-		num_of_quitted_childs++;
-		stonithd_log(LOG_DEBUG, "child %d exit code : %d", 
-				     pid, WEXITSTATUS(exit_status));
+	stonithd_log2(LOG_DEBUG, "stonithdProcessDied: begin"); 
+	stonithd_child_count--;
+	stonithd_log2(LOG_DEBUG, "there still are %d child process running"
+			, stonithd_child_count);
+	stonithd_log(LOG_DEBUG, "child process %s[%d] exited, its exit code: %d"
+		     " when signo=%d.", pname, p->pid, exitcode, signo);
 
-		rc = g_hash_table_lookup_extended(executing_queue, &pid, 
-				(gpointer *)&orignal_key, (gpointer *)&op);
+	rc = g_hash_table_lookup_extended(executing_queue, &(p->pid) 
+			, (gpointer *)&orignal_key, (gpointer *)&op);
 
-		if (rc == FALSE) {
-			stonithd_log(LOG_NOTICE, "received child quit signal, "
-				"but no this child pid in excuting list.");
-			continue;
+	if (rc == FALSE) {
+		stonithd_log(LOG_NOTICE, "received child quit signal, "
+			"but no this child pid in excuting list.");
+		goto end;
+	}
+
+	if (op == NULL) {
+		stonithd_log(LOG_ERR, "received child quit signal: "
+			"but op==NULL");
+		goto end;
+	}
+
+	if ( op->scenario == STONITH_RA_OP ) {
+		if (op->op_union.ra_op == NULL || op->result_receiver == NULL) {
+			stonithd_log(LOG_ERR,   "stonithdProcessDied: "
+						"op->op_union.ra_op == NULL or "
+						"op->result_receiver == NULL");
+			goto end;
 		}
 
-		if (op == NULL) {
-			stonithd_log(LOG_ERR, "received child quit signal: "
-				"but op==NULL");
-			continue;
+		op->op_union.ra_op->call_id = p->pid;
+		op->op_union.ra_op->op_result = exitcode;
+		send_stonithRAop_final_result(op->op_union.ra_op, 
+				      op->result_receiver);
+		post_handle_raop(op->op_union.ra_op);
+		g_hash_table_remove(executing_queue, &(p->pid));
+		goto end;
+	}
+
+	/* next is stonith operation related */
+	if ( op->scenario == STONITH_INIT || op->scenario == STONITH_REQ ) {
+		if (op->op_union.st_op == NULL || op->result_receiver == NULL ) {
+			stonithd_log(LOG_ERR, "stonithdProcessDied: "
+					      "op->op_union.st_op == NULL or "
+					      "op->result_receiver == NULL");
+			goto end;
 		}
-
-		if ( op->scenario == STONITH_RA_OP ) {
-			if (op->op_union.ra_op == NULL || op->result_receiver == NULL) {
-				stonithd_log(LOG_ERR, 
-					"on_polled_input_dispatch: "
-					"op->op_union.ra_op == NULL or "
-					"op->result_receiver == NULL");
-				continue;
-			}
-
-			op->op_union.ra_op->call_id = pid;
-			op->op_union.ra_op->op_result = exit_status;
-			send_stonithRAop_final_result(op->op_union.ra_op, 
-						      op->result_receiver);
-			post_handle_raop(op->op_union.ra_op);
-			g_hash_table_remove(executing_queue, &pid);
-
-			continue;
-		}
-
-		/* next is stonith operation related */
-		if ( op->scenario == STONITH_INIT || 
-		     op->scenario == STONITH_REQ ) {
-			if (op->op_union.st_op == NULL || op->result_receiver == NULL ) {
-				stonithd_log(LOG_ERR, 
-					"on_polled_input_dispatch: "
-					"op->op_union.st_op == NULL or "
-					"op->result_receiver == NULL");
-				continue;
-			}
 			
-			if (WEXITSTATUS(exit_status) == S_OK) {
-				op->op_union.st_op->op_result = STONITH_SUCCEEDED;
-				send_stonithop_final_result(op); 
-				g_hash_table_remove(executing_queue, &pid);
-				continue;
-			}
-			/* Go ahead when WEXITSTATUS(exit_status) != S_OK */
-			if (ST_OK == continue_local_stonithop(pid)) {
-				continue;
-			} else {
-				if (changeto_remote_stonithop(pid) != ST_OK) {
-					op->op_union.st_op->op_result = STONITH_GENERIC;
-					send_stonithop_final_result(op);
-					g_hash_table_remove(executing_queue,
-							    &pid);
-				}
-			}		
+		if (WEXITSTATUS(exitcode) == S_OK) {
+			op->op_union.st_op->op_result = STONITH_SUCCEEDED;
+			send_stonithop_final_result(op); 
+			g_hash_table_remove(executing_queue, &(p->pid));
+			goto end;
 		}
+		/* Go ahead when WEXITSTATUS(exit_status) != S_OK */
+		if (ST_OK == continue_local_stonithop(p->pid)) {
+			goto end;
+		} else {
+			if (changeto_remote_stonithop(p->pid) != ST_OK) {
+				op->op_union.st_op->op_result = STONITH_GENERIC;
+				send_stonithop_final_result(op);
+				g_hash_table_remove(executing_queue, &(p->pid));
+			}
+		}		
 	}
-
-	/* important, or incorrectly go here repeatly */
-	childs_quit = FALSE;
-
-	if ( num_of_quitted_childs == 0) {
-		stonithd_log(LOG_ERR, "on_polled_input_dispatch: why no "
-			     "child to quit.");
-		/* To handle ? */
-	}
-
-	return TRUE;
+end:
+	g_free(p->privatedata);
+	p->privatedata = NULL;
 }
 
 static void
-child_quit(int signo)
+stonithdProcessRegistered(ProcTrack* p)
 {
-	childs_quit = TRUE;
+	stonithd_child_count++;
+	stonithd_log(LOG_DEBUG, "Child process [%s] started [ pid: %d ]."
+		     , p->ops->proctype(p), p->pid);
+	stonithd_log2(LOG_DEBUG, "there are %d child process running"
+			, stonithd_child_count);
+}
+
+static const char * 
+stonithdProcessName(ProcTrack* p)
+{
+	gchar * process_name = p->privatedata;
+	return  process_name;
 }
 
 static int
@@ -1908,6 +1883,7 @@ stonithop_result_to_other_node( stonith_ops_t * st_op, gpointer data)
 static int
 stonith_operate_locally( stonith_ops_t * st_op, stonith_rsc_t * srsc)
 {
+	char buf_tmp[40];
 	Stonith * st_obj = NULL;
 	pid_t pid;
 
@@ -1936,6 +1912,11 @@ stonith_operate_locally( stonith_ops_t * st_op, stonith_rsc_t * srsc)
 		return_to_dropped_privs();
                	return -1;
        	} else if (pid > 0) { /* in the parent process */
+		snprintf(buf_tmp, 39, "%s_%s_%d", st_obj->stype, srsc->rsc_id
+			, (int)st_op->optype); 
+		NewTrackedProc( pid, 1
+				, (debug_level>1)? PT_LOGVERBOSE : PT_LOGNORMAL
+				, g_strdup(buf_tmp), &StonithdProcessTrackOps);
 		return_to_dropped_privs();
                	return pid;
        	}
@@ -2447,6 +2428,7 @@ stonithRA_start( stonithRA_ops_t * op, gpointer data)
 	Stonith *	stonith_obj = NULL;
 	pid_t 		pid;
 	StonithNVpair*	snv;
+	char 		buf_tmp[40];
 
 	/* Check the parameter */
 	if ( op == NULL || op->rsc_id <= 0 || op->op_type == NULL
@@ -2504,6 +2486,11 @@ probe_status:
 		return_to_dropped_privs();
                 return -1;
         } else if (pid > 0) { /* in the parent process */
+		snprintf(buf_tmp, 39, "%s_%s_%s", stonith_obj->stype
+			, op->rsc_id , "start"); 
+		NewTrackedProc( pid, 1
+				, (debug_level>1)? PT_LOGVERBOSE : PT_LOGNORMAL
+				, g_strdup(buf_tmp), &StonithdProcessTrackOps);
 		return_to_dropped_privs();
                 return pid;
         }
@@ -2567,6 +2554,7 @@ stonithRA_stop( stonithRA_ops_t * ra_op, gpointer data )
 {
 	stonith_rsc_t * srsc = NULL;
 	pid_t pid;
+	char  buf_tmp[40];
 
 	if (ra_op == NULL || ra_op->rsc_id == NULL ) {
 		stonithd_log(LOG_ERR, "stonithRA_stop: parameter error.");
@@ -2577,17 +2565,27 @@ stonithRA_stop( stonithRA_ops_t * ra_op, gpointer data )
 	if (srsc != NULL) {
 		stonithd_log2(LOG_DEBUG, "got the active stonith_rsc: " 
 			"RA name = %s.", srsc->ra_name);
+		snprintf(buf_tmp, 39, "%s_%s_%s", srsc->stonith_obj->stype
+			 , ra_op->rsc_id, "stop");
 		stonith_delete(srsc->stonith_obj);
 		srsc->stonith_obj = NULL;
 		local_started_stonith_rsc = 
 			g_list_remove(local_started_stonith_rsc, srsc);
 		free_stonith_rsc(srsc);	
+	} else {
+		stonithd_log(LOG_NOTICE, "try to stop a resource %s who is not "
+			     "in started resource queue.", ra_op->rsc_id); 
+		snprintf(buf_tmp, 39, "%s_%s_%s", "unknown"
+			 , ra_op->rsc_id, "stop");
 	}
 
         if ((pid = fork()) < 0) {
                 stonithd_log(LOG_ERR, "stonithRA_stop: fork failed.");
                 return -1;
         } else if (pid > 0) { /* in the parent process */
+		NewTrackedProc( pid, 1
+				, (debug_level>1)? PT_LOGVERBOSE : PT_LOGNORMAL
+				, g_strdup(buf_tmp), &StonithdProcessTrackOps);
                 return pid;
         }
 	
@@ -2978,8 +2976,37 @@ free_common_op_t(gpointer data)
 	stonithd_log2(LOG_DEBUG, "free_common_op_t: end.");
 }
 
+static gboolean 
+adjust_debug_level(int nsig, gpointer user_data)
+{
+	switch (nsig) {
+		case SIGUSR1:
+			debug_level++;
+			if (debug_level > 2) {
+				debug_level = 2;
+			}
+			break;
+
+		case SIGUSR2:
+			debug_level--;
+			if (debug_level < 0) {
+				debug_level = 0;
+			}
+			break;
+		
+		default:
+			stonithd_log(LOG_WARNING, "adjust_debug_level: "
+				"Something wrong?.");
+	}
+
+	return TRUE;
+}
+
 /* 
  * $Log: stonithd.c,v $
+ * Revision 1.43  2005/05/24 06:08:33  sunjd
+ * Bug 563: stonithd needs to log exit codes properly; Support loglevel adjustment with SIGUSR1 and SIGUSR2
+ *
  * Revision 1.42  2005/05/20 16:15:30  alan
  * Replaced calls to g_main_timeout* functions to ours -- because ours work.
  * Made stonithd lock itself into memory.
