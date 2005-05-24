@@ -1,4 +1,4 @@
-/* $Id: ccm.c,v 1.87 2005/05/23 19:22:12 gshi Exp $ */
+/* $Id: ccm.c,v 1.88 2005/05/24 17:11:47 gshi Exp $ */
 /* 
  * ccm.c: Consensus Cluster Service Program 
  *
@@ -2107,7 +2107,7 @@ ccm_all_restart(ll_cluster_t* hb, ccm_info_t* info, struct ha_msg* msg)
 	    && gl_membership_converged ){
 		gl_membership_converged = FALSE;
 		ccm_set_state(info, CCM_STATE_NONE, msg);
-		
+		CCM_SET_CL(info,-1);
 		if (ccm_send_restart_msg(hb, info) != HA_OK){
 			cl_log(LOG_ERR, "sending out restart msg failed");
 			return;
@@ -2144,7 +2144,7 @@ ccm_handle_state_info(ll_cluster_t* hb, ccm_info_t* info, struct ha_msg* msg)
 		return HA_OK;
 	}
 	
-	/*both machine are already part of a cluster, 
+	/*both machines are already part of a cluster, 
 	  i.e. we are merging two partitions
 	*/
 	ccm_all_restart(hb, info, msg);
