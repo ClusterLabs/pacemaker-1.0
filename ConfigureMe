@@ -28,11 +28,29 @@ Usage() {
 #	then submit a patch.  Some of these conventions were wild guesses...
 #
 
+#	autoconf "--enable-XXX" options generally have their default {yes|no}
+#	set, and perhaps acted upon, in "configure.in".
+#
+#	But we will also allow many of them to take a "try" setting,
+#	interpreted there as:
+#		"try to act as if 'yes' had been specified, but if this proves
+#		troublesome, then continue as if 'no' had been specified".
+#	By using these from here in "ConfigureMe", this allows the beginner
+#	to make rapid, successful progress (albeit suboptimal) with an
+#	implicit sense of achievement, rather than the demoralisation from
+#	an unnecessarily failed 'yes' specification.
+#	(David Lee, 2005)
+
 cmd=$0
 pathtotop=`dirname ${cmd}`
 
 
 PACKAGECMD=""
+
+# autoconf options where a "try" specification can generally be useful
+# for our caller to get a reasonably successful (albeit perhaps suboptimal)
+# set of features.
+NICETRY="--enable-swig=try"
 
 ConfigureLinux() {
   DFLAGS=""
@@ -119,7 +137,7 @@ ConfigureGenericBSD() {
 }
 
 ConfigureSolaris() {
-  FLAGS="--prefix=/opt --sysconfdir=/opt/etc --localstatedir=/opt/var"
+  FLAGS="--prefix=/opt --sysconfdir=/opt/etc --localstatedir=/opt/var $NICETRY"
   CFENV="Solaris"
   PACKAGECMD="$MAKE_CMD pkg"
 }
