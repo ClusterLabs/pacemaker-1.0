@@ -20,14 +20,16 @@
 
 noinst_DATA = .made_mod
 
-EXTRA_DIST	= MANIFEST test.pl \
-		  cl_raw/Makefile.PL.in cl_raw/Makefile.PL \
-		  cl_raw/cl_log_wrappers.c cl_raw/cl_log_wrappers.h \
-		  cl_raw/cl_raw.i \
-		  cl_raw/ipc_wrappers.c cl_raw/ipc_wrappers.h \
-		  lib/heartbeat/clplumbing/ipc.pm \
-		  lib/heartbeat/clplumbing/log.pm
+EXTRA_DIST =	.cvsignore Makefile.PL.in MANIFEST test.pl 	\
+		cl_raw/.cvsignore				\
+		cl_raw/Makefile.PL.in cl_raw/Makefile.PL 	\
+		cl_raw/cl_log_wrappers.c			\
+		cl_raw/cl_log_wrappers.h  cl_raw/cl_raw.i 	\
+		cl_raw/ipc_wrappers.c cl_raw/ipc_wrappers.h	\
+		lib/heartbeat/clplumbing/ipc.pm			\
+		lib/heartbeat/clplumbing/log.pm
 
+if SWIG_BUILD
 INCLUDES = -I$(top_builddir)/include -I$(top_srcdir)/include \
 	-I$(top_builddir)/linux-ha -I$(top_srcdir)/linux-ha  \
 	-I$(top_builddir)/libltdl -I$(top_srcdir)/libltdl
@@ -62,3 +64,4 @@ CLEANFILES = .made_mod cl_raw/cl_raw.pm cl_raw/cl_raw_wrap.c
 clean-local:
 	if test -f Makefile.perl; then $(MAKE) -fMakefile.perl realclean; fi
 	rm -f Makefile.perl Makefile.perl.old cl_raw/Makefile.perl.old
+endif
