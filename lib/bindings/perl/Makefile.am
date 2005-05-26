@@ -18,7 +18,6 @@
 # Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #
 
-noinst_DATA = .made_mod
 
 EXTRA_DIST =	.cvsignore Makefile.PL.in MANIFEST test.pl 	\
 		cl_raw/.cvsignore				\
@@ -30,6 +29,9 @@ EXTRA_DIST =	.cvsignore Makefile.PL.in MANIFEST test.pl 	\
 		lib/heartbeat/clplumbing/log.pm
 
 if SWIG_BUILD
+
+noinst_DATA = .made_mod
+
 INCLUDES = -I$(top_builddir)/include -I$(top_srcdir)/include \
 	-I$(top_builddir)/linux-ha -I$(top_srcdir)/linux-ha  \
 	-I$(top_builddir)/libltdl -I$(top_srcdir)/libltdl
