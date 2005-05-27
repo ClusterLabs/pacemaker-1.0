@@ -168,7 +168,7 @@ GenerateHaResources() {
 	!
   chmod 644 $1
 }
-CONFIGFILES="ha.cf authkeys haresources"
+CONFIGFILES="$HADIR/ha.cf $HADIR/authkeys $HADIR/haresources @HA_VARLIBDIR@/heartbeat/crm/cib.xml @HA_VARLIBDIR@/heartbeat/crm/cib_backup.xml"
 
 SetUpConfigFiles() {
   if
@@ -180,11 +180,11 @@ SetUpConfigFiles() {
   for j in $CONFIGFILES
   do
     if
-      CheckConfigFile $HADIR/$j
+      CheckConfigFile $j
     then
       : OK
     else
-      echo "OOPS! $HADIR/$j already exists!"
+      echo "OOPS! $j already exists!"
       echo "Real configuration already set up."
       echo "Sorry..."
       exit 1
@@ -201,11 +201,11 @@ RemoveConfigFiles() {
   for j in $CONFIGFILES
   do
     if
-      CheckConfigFile $HADIR/$j
+      CheckConfigFile $j
     then
-      rm -f $HADIR/$j
+      rm -f $j
     else
-      echo "OOPS! Cannot remove real config file $HADIR/$j!"
+      echo "OOPS! Cannot remove real config file $j!"
     fi
   done
   RestoreConfigFiles
@@ -222,6 +222,7 @@ SaveConfigFiles() {
 }
 
 RestoreConfigFiles() {
+  mv $HADIR/.cfsave/cib*.xml @HA_VARLIBDIR@/heartbeat/crm/ >/dev/null 2>&1
   mv $HADIR/.cfsave/* $HADIR >/dev/null 2>&1
 }
 
@@ -720,6 +721,10 @@ TestCRM() {
 	
 	# stat likes dumping core when MALLOC_CHECK_=2 is specified
 	file $HADIR/core* | grep -e "from 'stat'" | rm -f `awk '{ print $1 }' | tr ':' ' '`
+
+       # So they can be deleted by BSC
+       echo "<!-- $IDENTSTRING -->" >> @HA_VARLIBDIR@/heartbeat/crm/cib.xml 
+	echo "<!-- $IDENTSTRING -->" >> @HA_VARLIBDIR@/heartbeat/crm/cib_backup.xml
 }
 
 SNMPAgentTest() {
