@@ -376,13 +376,18 @@ cms_channel_conn(void)
 	ch = ipc_channel_constructor(IPC_DOMAIN_SOCKET, attrs);
 	g_hash_table_destroy(attrs);
 
-	if (ch ) {
+	if (ch) {
 		ret = ch->ops->initiate_connection(ch);
 		if (ret != IPC_OK) {
 			cl_log(LOG_ERR, "cms_channel_conn failed, maybe "
 					"you don't have cms server running...");
 			return NULL;
 		}
+		/* Disable input buffering.
+		 * Otherwise the buffering will interfere with
+		 * waiting for input based on the fd alone
+		 */
+		ch->ops->set_recv_qlen(ch, 0);
 		return ch;
 	}
 	else 
