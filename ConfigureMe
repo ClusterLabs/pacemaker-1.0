@@ -47,10 +47,6 @@ pathtotop=`dirname ${cmd}`
 
 PACKAGECMD=""
 
-# autoconf options where a "try" specification can generally be useful
-# for our caller to get a reasonably successful (albeit perhaps suboptimal)
-# set of features.
-NICETRY="--enable-swig=try"
 
 ConfigureLinux() {
   DFLAGS=""
@@ -137,7 +133,7 @@ ConfigureGenericBSD() {
 }
 
 ConfigureSolaris() {
-  FLAGS="--prefix=/opt --sysconfdir=/opt/etc --localstatedir=/opt/var $NICETRY"
+  FLAGS="--prefix=/opt --sysconfdir=/opt/etc --localstatedir=/opt/var"
   CFENV="Solaris"
   PACKAGECMD="$MAKE_CMD pkg"
 }

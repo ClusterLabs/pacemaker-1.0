@@ -262,8 +262,7 @@ AC_DEFUN([LIB_SNMP],
     CFLAGS=$CFLAGS_BEFORE_SNMPCHECK
 
     if test x"$SNMP_LIBS_FOUND" = x"no"; then
-	AC_MSG_ERROR([
-	Despite my best effort I still cannot figure out the library 
+        MSG="Despite my best effort I still cannot figure out the library 
 	dependencies for your snmp libraries.  
 	
 	Your best bet will be compile the net-snmp package from the source and 
@@ -292,12 +291,22 @@ AC_DEFUN([LIB_SNMP],
 	    Many problems come from the lack of one of these packages
 		openssl, openssl-devel,
 		rpm, rpm-devel,
-		popt, and tcpd-devel
-	])
+		popt, and tcpd-devel"
+        if test "x${enable_snmp_subagent}"  = "xtry"; then
+	    AC_MSG_WARN([$MSG])
+            enable_snmp_subagent=no
+	    SNMP_SUBAGENT_ENABLED=0
+            AC_SUBST(SNMP_SUBAGENT_ENABLED)
+        else
+            enable_snmp_subagent=no
+	    AC_MSG_ERROR([$MSG])
+        fi
     else
-	AC_MSG_WARN([SNMP: snmp library dependency resolved. List of libraries needed to compile the subagent:])
-	AC_MSG_WARN([	$SNMP_LIBS.])
+	AC_MSG_RESULT([SNMP: snmp library dependency resolved. List of libraries needed to compile the subagent:])
+	AC_MSG_RESULT([	$SNMP_LIBS.])
 	AC_SUBST(SNMP_LIBS)
+        enable_snmp_subagent=yes
+	SNMP_SUBAGENT_ENABLED=1
     fi
 ])
 	
