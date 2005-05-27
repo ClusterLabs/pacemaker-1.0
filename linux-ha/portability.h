@@ -1,4 +1,4 @@
-/* $Id: portability.h,v 1.42 2004/12/06 12:41:27 andrew Exp $ */
+/* $Id: portability.h,v 1.43 2005/05/27 20:17:49 alan Exp $ */
 #ifndef PORTABILITY_H
 #  define PORTABILITY_H
 
@@ -40,24 +40,18 @@
 #endif
 
 
+
+/* Please leave this as the first #include - Solaris needs it there */
+
+#ifdef HAVE_CONFIG_H
+#include <config.h>
+#endif
+
 #include <sys/param.h>
 #ifdef BSD
 #	define SCANSEL_CAST	(void *)
 #else
 #	define SCANSEL_CAST	/* Nothing */
-#endif
-
-/*
-#if	__GNUC__ > 2 || (__GNUC__ == 2 && __GNUC_MINOR__ > 4)
-#define G_GNUC_PRINTF( format_idx, arg_idx )	\
-  __attribute__((format (printf, format_idx, arg_idx)))
-#else	
-#define G_GNUC_PRINTF( format_idx, arg_idx )
-#endif
-*/
-
-#ifdef HAVE_CONFIG_H
-#include <config.h>
 #endif
 
 #if defined(ANSI_ONLY) && !defined(inline)
