@@ -1,4 +1,4 @@
-/* $Id: stonithd.c,v 1.44 2005/05/27 02:57:11 sunjd Exp $ */
+/* $Id: stonithd.c,v 1.45 2005/05/27 09:16:47 sunjd Exp $ */
 
 /* File: stonithd.c
  * Description: STONITH daemon for node fencing
@@ -2602,6 +2602,7 @@ stonithRA_monitor( stonithRA_ops_t * ra_op, gpointer data )
 	stonith_rsc_t * srsc = NULL;
 	pid_t pid;
 	char  buf_tmp[40];
+	int child_exitcode = EXECRA_OK;
 
 	stonithd_log2(LOG_DEBUG, "stonithRA_monitor: begin.");
 	if (ra_op == NULL || ra_op->rsc_id == NULL ) {
@@ -2611,9 +2612,10 @@ stonithRA_monitor( stonithRA_ops_t * ra_op, gpointer data )
 
 	srsc = get_started_stonith_resource(ra_op->rsc_id);
 	if ( srsc == NULL ) {
-		stonithd_log(LOG_ERR, "stonithRA_monitor: resource is not started.");
+		stonithd_log(LOG_ERR, "stonithRA_monitor: the resource is not "
+				"started.");
 		/* This resource is not started */
-		return -1;
+		child_exitcode = EXECRA_NOT_RUNNING;
 	}
 
 	return_to_orig_privs();
@@ -2622,7 +2624,8 @@ stonithRA_monitor( stonithRA_ops_t * ra_op, gpointer data )
 		return_to_dropped_privs();
                 return -1;
         } else if (pid > 0) { /* in the parent process */
-		snprintf(buf_tmp, 39, "%s_%s_%s", srsc->stonith_obj->stype
+		snprintf(buf_tmp, 39, "%s_%s_%s", (srsc != NULL) ? 
+			 srsc->stonith_obj->stype : "unknown"
 			 , ra_op->rsc_id, "monitor");
 		NewTrackedProc( pid, 1
 				, (debug_level>1)? PT_LOGVERBOSE : PT_LOGNORMAL
@@ -2633,12 +2636,24 @@ stonithRA_monitor( stonithRA_ops_t * ra_op, gpointer data )
         }
 
 	/* Go here the child */
-	/* Need to distiguish the exit code more carefully */
+	/* When the resource is not started... */
+	if (child_exitcode == EXECRA_NOT_RUNNING) {
+		stonithd_log2(LOG_DEBUG, "stonithRA_monitor: child exit, "
+				"exitcode: EXECRA_NOT_RUNNING.");
+		exit(EXECRA_NOT_RUNNING);
+	}
+
+	/* Need to distiguish the exit code more carefully? Should 
+	   EXECRA_STATUS_UNKNOWN be EXECRA_EXEC_UNKNOWN_ERROR? likely if 
+	   according to the status code S_* value in the file stonith.c.
+	 */
 	if ( stonith_get_status(srsc->stonith_obj) == S_OK ) {
-		stonithd_log2(LOG_DEBUG, "stonithRA_monitor: child exit ok");
+		stonithd_log2(LOG_DEBUG, "stonithRA_monitor: child exit, "
+				"exitcode: EXECRA_OK");
 		exit(EXECRA_OK);
 	} else {
-		stonithd_log2(LOG_DEBUG, "stonithRA_monitor: child exit bad.");
+		stonithd_log2(LOG_DEBUG, "stonithRA_monitor: child exit, "
+				"exitcode: EXECRA_STATUS_UNKNOWN");
 		exit(EXECRA_STATUS_UNKNOWN);
 	}
 }
@@ -3017,6 +3032,9 @@ adjust_debug_level(int nsig, gpointer user_data)
 
 /* 
  * $Log: stonithd.c,v $
+ * Revision 1.45  2005/05/27 09:16:47  sunjd
+ * should report its status be not running when a stonith RA is not started; a few debug messages tweak
+ *
  * Revision 1.44  2005/05/27 02:57:11  sunjd
  * fix a silly error :-(; add several log messages
  *
