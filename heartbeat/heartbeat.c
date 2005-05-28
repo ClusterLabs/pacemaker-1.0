@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.406 2005/05/24 20:08:13 gshi Exp $ */
+/* $Id: heartbeat.c,v 1.407 2005/05/28 14:06:50 alan Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -1105,7 +1105,7 @@ fifo_child(IPC_Channel* chan)
 
 		if (msg) {
 			IPC_Message*	m;
-			if (DEBUGDETAILS) {
+			if (ANYDEBUG) { /* FIXME!! ANYDEBUG */
 				cl_log(LOG_DEBUG, "fifo_child message:");
 				cl_log_message(LOG_DEBUG, msg);
 			}
@@ -3273,7 +3273,7 @@ send_cluster_msg(struct ha_msg* msg)
 		char *	smsg = NULL;
 		int	needprivs = !cl_have_full_privs();
 		size_t	len;
-		ssize_t	writerc;
+		ssize_t	writerc = -2;
 
 		if (needprivs) {
 			return_to_orig_privs();
@@ -3293,7 +3293,7 @@ send_cluster_msg(struct ha_msg* msg)
 			,	"send_cluster_msg: cannot convert"
 			" message to wire format (pid %d)", (int)getpid());
 			rc = HA_FAIL;
-		}else if ((ffd = open(FIFONAME, O_WRONLY|O_NDELAY|O_APPEND)) < 0) {
+		}else if ((ffd = open(FIFONAME,O_WRONLY|O_APPEND)) < 0) {
 			cl_perror("send_cluster_msg: cannot open " FIFONAME);
 			rc = HA_FAIL;
 		}else if ((writerc=write(ffd, smsg, len-1))
@@ -3302,13 +3302,12 @@ send_cluster_msg(struct ha_msg* msg)
 			FIFONAME " [rc = %d]", (int)writerc);
 			cl_log_message(LOG_ERR, msg);
 			rc = HA_FAIL;
-			
 		}
 		if (smsg) {
-			if (DEBUGDETAILS) {
+			if (ANYDEBUG) { /* FIXME - ANYDEBUG! */
 				cl_log(LOG_INFO
-				,	"FIFO message [type %s] written"
-				, type);
+				,	"FIFO message [type %s] written rc=%ld"
+				, type, (long) writerc);
 			}
 			ha_free(smsg);
 		}
@@ -5297,6 +5296,11 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.407  2005/05/28 14:06:50  alan
+ * Put in some debug code to figure out why messages written to the cluster
+ * by child process aren't being received by anyone.  Also made a small
+ * correction which might conceivably help.
+ *
  * Revision 1.406  2005/05/24 20:08:13  gshi
  * free ACKed messages
  *
