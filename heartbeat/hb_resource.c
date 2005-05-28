@@ -1,4 +1,4 @@
-/* $Id: hb_resource.c,v 1.76 2005/04/20 23:45:17 gshi Exp $ */
+/* $Id: hb_resource.c,v 1.77 2005/05/28 03:57:12 alan Exp $ */
 /*
  * hb_resource: Linux-HA heartbeat resource management code
  *
@@ -263,6 +263,28 @@ init_resource_module(void)
 {
 	hb_register_msg_callback(T_SHUTDONE, HBDoMsg_T_SHUTDONE);
 	hb_register_comm_up_callback(comm_up_resource_action);
+}
+
+#ifndef WCOREDUMP
+#	define	WCOREDUMP(rc)	0
+#endif
+
+static const char *
+rctomsg(int waitrc)
+{
+	static char	retval[64];
+
+	if (WIFSIGNALED(waitrc)) {
+		snprintf(retval, sizeof(retval)
+		,	"killed by signal %d%s"
+		,	WTERMSIG(waitrc)
+		,	WCOREDUMP(waitrc) ? " (core dumped)" : "");
+	}else{
+		snprintf(retval, sizeof(retval)
+		,	"exited with return code %d"
+		,	WEXITSTATUS(waitrc));
+	}
+	return	retval;
 }
 
 static const char *	rsc_msg[] =	{HB_NO_RESOURCES, HB_LOCAL_RESOURCES
@@ -1429,16 +1451,18 @@ req_our_resources(int getthemanyway)
 		       "yes":"no", 1);				
 
 		if ((rc=system(getcmd)) != 0) {
-			cl_perror("%s returned %d", getcmd, rc);
+			cl_perror("%s %s", getcmd, rctomsg(rc));
 			finalrc=HA_FAIL;
 		}
 	}
-	rc=pclose(rkeys);
+	if ((rc = pclose(rkeys)) != 0) {
+		cl_log(LOG_ERR, "pclose(%s) %s", cmd, rctomsg(rc));
+	}
 	rkeys = NULL;
 	if (rc < 0 && errno != ECHILD) {
-		cl_perror("pclose(%s) returned %d", cmd, rc);
+		cl_perror("pclose(%s) [%s?]", cmd, rctomsg(rc));
 	}else if (rc > 0) {
-		cl_log(LOG_ERR, "[%s] exited with 0x%x", cmd, rc);
+		cl_log(LOG_ERR, "[%s] %s", cmd, rctomsg(rc));
 	}
 
 	if (rsc_count == 0) {
@@ -1902,11 +1926,13 @@ go_standby(enum standby who, int resourceset) /* Which resources to give up */
 		       "yes":"no", 1);
 		
 		if ((rc=system(cmd)) != 0) {
-			cl_log(LOG_ERR, "%s returned %d", cmd, rc);
+			cl_log(LOG_ERR, "%s %s", cmd, rctomsg(rc));
 			finalrc=HA_FAIL;
 		}
 	}
-	pclose(rkeys);
+	if ((rc = pclose(rkeys)) != 0) {
+		cl_log(LOG_ERR, "pclose(%s) %s", cmd, rctomsg(rc));
+	}
 	cl_log(LOG_INFO, "%s HA resource %s completed (standby)."
 	,	rsc_msg[actresources]
 	,	action == ACTION_ACQUIRE ? "acquisition" : "release");
@@ -2046,11 +2072,13 @@ hb_giveup_resources(void)
 		
 		sprintf(cmd, HALIB "/ResourceManager givegroup %s", buf);
 		if ((rc=system(cmd)) != 0) {
-			cl_log(LOG_ERR, "%s returned %d", cmd, rc);
+			cl_log(LOG_ERR, "%s %s", cmd, rctomsg(rc));
 			finalrc=HA_FAIL;
 		}
 	}
-	pclose(rkeys);
+	if ((rc = pclose(rkeys)) != 0) {
+		cl_log(LOG_ERR, "pclose(%s) %s", cmd, rctomsg(rc));
+	}
 
 	cl_log(LOG_INFO, "All HA resources relinquished.");
 
@@ -2426,6 +2454,9 @@ StonithStatProcessName(ProcTrack* p)
 
 /*
  * $Log: hb_resource.c,v $
+ * Revision 1.77  2005/05/28 03:57:12  alan
+ * Made exit codes more informative in resource management code.
+ *
  * Revision 1.76  2005/04/20 23:45:17  gshi
  * change the path for setproctitle.h
  *
