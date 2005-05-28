@@ -58,8 +58,9 @@ ha_log() {
 	  # loglevel is unknown, use 'notice' for now
           loglevel=notice
           case "${*}" in
-            *ERROR*)	loglevel=err;;
-            *WARN*)	loglevel=warning;;
+            *ERROR*)		loglevel=err;;
+            *WARN*)		loglevel=warning;;
+            *INFO*|info)	loglevel=info;;
 	  esac
 	  logger -t "$HA_LOGTAG" -p ${HA_LOGFACILITY}.${loglevel} "${*}"
         fi	
@@ -82,7 +83,7 @@ ha_log() {
 ha_debug() {
 
         if [ "x${HA_LOGD}" = "xyes" ] ; then  
-		${HA_BIN}/ha_logger -E "${__SCRIPT_NAME}[$$]" ha-debug "[$$]: $@"
+		${HA_BIN}/ha_logger -E "${HA_LOGTAG}" ha-debug "$@"
                 if [ "$?" -eq "0" ] ; then
                         return 0
                 fi
