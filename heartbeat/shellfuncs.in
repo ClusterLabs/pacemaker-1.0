@@ -4,21 +4,21 @@
 
 prefix=@prefix@
 exec_prefix=@exec_prefix@
-: ${HA_DIR=@sysconfdir@/ha.d}
-: ${HA_RCDIR=$HA_DIR/rc.d}
-: ${HA_CF=$HA_DIR/ha.cf}
-: ${HA_VARLIB=@localstatedir@/lib/heartbeat}
-: ${HA_RSCTMP=@localstatedir@/lib/heartbeat/rsctmp}
-: ${HA_FIFO=@localstatedir@/lib/heartbeat/fifo}
-: ${HA_BIN=@libdir@/heartbeat}
-: ${HA_DATEFMT="%Y/%m/%d_%T "}
-: ${HA_DEBUGLOG=/dev/null}
-: ${HA_RESOURCEDIR=$HA_DIR/resource.d}
-: ${HA_DOCDIR=@datadir@/doc/heartbeat}
-: ${__SCRIPT_NAME=`basename $0`}
-: ${HA_LOGTAG=$__SCRIPT_NAME[$$]}
-: ${HA_VARRUN=@localstatedir@/run/}
-: ${HA_VARLOCK=@localstatedir@/lock/subsys/}
+: ${HA_DIR:=@sysconfdir@/ha.d}
+: ${HA_RCDIR:=$HA_DIR/rc.d}
+: ${HA_CF:=$HA_DIR/ha.cf}
+: ${HA_VARLIB:=@localstatedir@/lib/heartbeat}
+: ${HA_RSCTMP:=@localstatedir@/lib/heartbeat/rsctmp}
+: ${HA_FIFO:=@localstatedir@/lib/heartbeat/fifo}
+: ${HA_BIN:=@libdir@/heartbeat}
+: ${HA_DATEFMT:="%Y/%m/%d_%T "}
+: ${HA_DEBUGLOG:=/dev/null}
+: ${HA_RESOURCEDIR:=$HA_DIR/resource.d}
+: ${HA_DOCDIR:=@datadir@/doc/heartbeat}
+: ${__SCRIPT_NAME:=`basename $0`}
+: ${HA_LOGTAG:=$__SCRIPT_NAME[$$]}
+: ${HA_VARRUN:=@localstatedir@/run/}
+: ${HA_VARLOCK:=@localstatedir@/lock/subsys/}
 
 export HA_DIR HA_RCDIR HA_FIFO HA_BIN 
 export HA_DEBUGLOG HA_LOGFILE HA_LOGFACILITY
