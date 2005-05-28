@@ -45,7 +45,7 @@ hadate() {
 
 ha_log() {
 	if [ "x${HA_LOGD}" = "xyes" ] ; then 
-		${HA_BIN}/ha_logger -E "${HA_LOGTAG}" "$@"
+		${HA_BIN}/ha_logger -E "${HA_LOGTAG}" ha-log "$@"
 		if [ "$?" -eq "0" ] ; then
 			return 0
 		fi
