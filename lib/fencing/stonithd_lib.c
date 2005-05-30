@@ -804,10 +804,10 @@ is_expected_msg(const struct ha_msg * msg,
 	}
 
 	if (   ( (tmpstr = cl_get_string(msg, field_name1)) != NULL )
-	    && (STRNCMP_CONST(tmpstr, field_content1)==0) ) {
+	    && (strncmp(tmpstr, field_content1, 80)==0) ) {
 		stdlib_log(LOG_DEBUG, "%s = %s", field_name1, tmpstr);
 		if (  ( (tmpstr = cl_get_string(msg, field_name2)) != NULL )
-		    && STRNCMP_CONST(tmpstr, field_content2) 
+		    && strncmp(tmpstr, field_content2, 80) 
 			== 0)  {
 			stdlib_log(LOG_DEBUG, "%s = %s.", field_name2, tmpstr);
 			rc= TRUE;
