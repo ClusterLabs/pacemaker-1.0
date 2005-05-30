@@ -1,4 +1,4 @@
-/* $Id: stonithd.c,v 1.45 2005/05/27 09:16:47 sunjd Exp $ */
+/* $Id: stonithd.c,v 1.46 2005/05/30 06:14:11 sunjd Exp $ */
 
 /* File: stonithd.c
  * Description: STONITH daemon for node fencing
@@ -2612,7 +2612,7 @@ stonithRA_monitor( stonithRA_ops_t * ra_op, gpointer data )
 
 	srsc = get_started_stonith_resource(ra_op->rsc_id);
 	if ( srsc == NULL ) {
-		stonithd_log(LOG_ERR, "stonithRA_monitor: the resource is not "
+		stonithd_log(LOG_DEBUG, "stonithRA_monitor: the resource is not "
 				"started.");
 		/* This resource is not started */
 		child_exitcode = EXECRA_NOT_RUNNING;
@@ -3032,6 +3032,9 @@ adjust_debug_level(int nsig, gpointer user_data)
 
 /* 
  * $Log: stonithd.c,v $
+ * Revision 1.46  2005/05/30 06:14:11  sunjd
+ * should be not an error
+ *
  * Revision 1.45  2005/05/27 09:16:47  sunjd
  * should report its status be not running when a stonith RA is not started; a few debug messages tweak
  *
