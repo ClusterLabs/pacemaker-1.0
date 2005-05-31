@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.407 2005/05/28 14:06:50 alan Exp $ */
+/* $Id: heartbeat.c,v 1.408 2005/05/31 20:36:49 gshi Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -333,7 +333,7 @@ static int			ClockJustJumped = FALSE;
 longclock_t			local_takeover_time = 0L;
 static int 			deadtime_tmpadd_count = 0;
 gboolean			enable_flow_control = TRUE;
-
+static	int			send_cluster_msg_level = 0;
 static void print_a_child_client(gpointer childentry, gpointer unused);
 
 #undef DO_AUDITXMITHIST
@@ -2089,12 +2089,12 @@ HBDoMsg_T_ACKMSG(const char * type, struct node_info * fromnode,
 	if (hist->ackseq > old_hist_ackseq){
 		int count;
 		int start;
-		count = hist->ackseq - old_hist_ackseq;
+		count = hist->ackseq - old_hist_ackseq - send_cluster_msg_level;
 		if (old_hist_ackseq == 0){
 			start = 0;
-			count --;
+			count = count - 1;
 		}else{
-			start = (old_hist_ackseq -1)%MAXMSGHIST;
+			start = (old_hist_ackseq - 1)%MAXMSGHIST;
 		}
 		
 		while(count -- > 0){
@@ -3245,12 +3245,15 @@ send_cluster_msg(struct ha_msg* msg)
 	int		rc = HA_OK;
 	pid_t		ourpid = getpid();
 
+	send_cluster_msg_level ++;
+	
 	if (msg == NULL || (type = ha_msg_value(msg, F_TYPE)) == NULL) {
 		cl_perror("Invalid message in send_cluster_msg");
 		if (msg != NULL) {
 			ha_msg_del(msg);
 		}
-		return HA_FAIL;
+		rc = HA_FAIL;
+		goto out;
 	}
 
 	/*
@@ -3322,7 +3325,9 @@ send_cluster_msg(struct ha_msg* msg)
 			return_to_dropped_privs();
 		}
 	}
-
+	
+ out:
+	send_cluster_msg_level --;
 	return rc;
 }
 
@@ -5296,6 +5301,12 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.408  2005/05/31 20:36:49  gshi
+ * bug 581:
+ *
+ * we need to track send_cluster_msg() stack and
+ * not free messages that has not been sent out
+ *
  * Revision 1.407  2005/05/28 14:06:50  alan
  * Put in some debug code to figure out why messages written to the cluster
  * by child process aren't being received by anyone.  Also made a small
