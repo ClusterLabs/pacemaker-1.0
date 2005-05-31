@@ -1,4 +1,4 @@
-/* $Id: ccm.c,v 1.90 2005/05/27 20:51:41 gshi Exp $ */
+/* $Id: ccm.c,v 1.91 2005/05/31 23:04:52 gshi Exp $ */
 /* 
  * ccm.c: Consensus Cluster Service Program 
  *
@@ -4030,11 +4030,11 @@ nodelist_update(ll_cluster_t* hb, ccm_info_t* info,
 		return ;
 	}
 	if ( part_of_cluster(info->ccm_node_state)
-	     && ((STRNCMP_CONST(oldstatus, DEADSTATUS) 
-		  || STRNCMP_CONST(oldstatus, CLUST_INACTIVE))
+	     && ((STRNCMP_CONST(oldstatus, DEADSTATUS) == 0
+		  || STRNCMP_CONST(oldstatus, CLUST_INACTIVE)==0 )
 		 && 
-		 (STRNCMP_CONST(status, DEADSTATUS) 
-		  && STRNCMP_CONST(oldstatus, CLUST_INACTIVE)))){
+		 (STRNCMP_CONST(status, DEADSTATUS) != 0
+		  && STRNCMP_CONST(oldstatus, CLUST_INACTIVE) != 0 ))){
 		
 		ccm_send_state_info(hb, info, id);
 	}
