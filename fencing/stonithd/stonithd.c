@@ -1,4 +1,4 @@
-/* $Id: stonithd.c,v 1.47 2005/05/30 08:07:15 sunjd Exp $ */
+/* $Id: stonithd.c,v 1.48 2005/05/31 06:36:17 sunjd Exp $ */
 
 /* File: stonithd.c
  * Description: STONITH daemon for node fencing
@@ -169,10 +169,10 @@ static void stonithdProcessRegistered(ProcTrack* p);
 static const char * stonithdProcessName(ProcTrack* p);
 
 /* For application heartbeat related */
-static const unsigned long
-        DEFAULT_APPHB_INTERVAL  = 2000, /* MS */
-        DEFAULT_APPHB_WARNTIME  = 6000, /* MS */
-	APPHB_INTVL_DETLA 	= 30;
+static unsigned long
+        APPHB_INTERVAL  = 2000, /* MS */
+        APPHB_WARNTIME  = 6000, /* MS */
+	APPHB_INTVL_DETLA = 30; /* MS */
 
 #define MY_APPHB_HB \
 	if (SIGNONED_TO_APPHBD == TRUE) { \
@@ -295,18 +295,19 @@ static const char * M_STARTUP = "start up successfully.",
 		  * M_STONITH_FAIL    = "Failed to STONITH the node";
 
 static const char * simple_help_screen =
-"Usage: stonithd [-nskvh]\n"
-"	-n	Do not register to apphbd. Now donnot register to apphbd by default.\n"
-"	-s	Show the status of the daemons.\n"
-"	-k	Kill the daemon.\n"
-"	-v	Run the stonithd in debug mode. Under debug mode more\n"
-"		debug information is written to log file.\n"
+"Usage: stonithd [-ahikrsv]\n"
 "	-a	Start up alone outside of heartbeat.\n" 
 "		By default suppose it be started up and monitored by heartbeat.\n"
-"	-h	This help information\n";
+"	-h	This help information\n"
+"	-i	The interval (millisecond) of emitting application hearbeat.\n"
+"	-k	Kill the daemon.\n"
+"	-r	Register to apphbd. Now not register to apphbd by default.\n"
+"	-s	Show the status of the daemons.\n"
+"	-v	Run the stonithd in debug mode. Under debug mode more\n"
+"		debug information is written to log file.\n";
 /*	-t	Test mode only.\n" 	*/
 
-static const char * optstr = "anskvht";
+static const char * optstr = "ahi:krsvt";
 /* Will replace it with dynamical a config variable */
 #define STD_PIDFILE         "/var/run/stonithd.pid"
 
@@ -359,9 +360,20 @@ main(int argc, char ** argv)
 				STARTUP_ALONE = TRUE;
 				break;
 
-			case 'n': /* Do not register to apphbd */
-				NEED_SIGNON_TO_APPHBD = FALSE;
+			case 'r': /* Register to apphbd */
+				NEED_SIGNON_TO_APPHBD = TRUE;
 				break;
+
+			 /* Get the interval to emitting the application 
+			    hearbteat to apphbd.
+			  */
+			case 'i':
+				if (optarg) {
+					APPHB_INTERVAL = atoi(optarg);		
+					APPHB_WARNTIME = 3*APPHB_INTERVAL;
+				}
+				break;
+			
 			
 			case 's': /* Show daemon status */
 				return show_daemon_status(STD_PIDFILE);
@@ -2904,8 +2916,6 @@ facility_name_to_value(const char * name)
 static int
 init_using_apphb(void)
 {
-        int apphb_interval = DEFAULT_APPHB_INTERVAL;
-        int apphb_warntime = DEFAULT_APPHB_WARNTIME;
 	char stonithd_instance[40];
 
 	sprintf(stonithd_instance, "%s_%ldd", stonithd_name, (long)getpid());
@@ -2916,10 +2926,10 @@ init_using_apphb(void)
         }
         stonithd_log(LOG_INFO, "Registered to apphbd.");
 
-        apphb_setinterval(apphb_interval);
-        apphb_setwarn(apphb_warntime);
+        apphb_setinterval(APPHB_INTERVAL);
+        apphb_setwarn(APPHB_WARNTIME);
 
-        Gmain_timeout_add(apphb_interval - APPHB_INTVL_DETLA, emit_apphb, NULL);
+        Gmain_timeout_add(APPHB_INTERVAL - APPHB_INTVL_DETLA, emit_apphb, NULL);
 
 	return 0;
 }
@@ -3034,6 +3044,10 @@ adjust_debug_level(int nsig, gpointer user_data)
 
 /* 
  * $Log: stonithd.c,v $
+ * Revision 1.48  2005/05/31 06:36:17  sunjd
+ * make the apphb interval adjustable
+ * simple help & CLI option tweak.
+ *
  * Revision 1.47  2005/05/30 08:07:15  sunjd
  * remove the incorrect uses of STRNCMP_CONST.
  *
