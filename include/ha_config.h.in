@@ -43,4 +43,7 @@
 /* heartbeat logging socket */
 #undef HA_LOGDAEMON_IPC
 
+/* Defined if clock_t is long enough for our purposes */
+#undef CLOCK_T_IS_LONG_ENOUGH
+
 #endif /* _HA_CONFIG_H */
