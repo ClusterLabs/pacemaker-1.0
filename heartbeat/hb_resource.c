@@ -1,4 +1,4 @@
-/* $Id: hb_resource.c,v 1.77 2005/05/28 03:57:12 alan Exp $ */
+/* $Id: hb_resource.c,v 1.78 2005/06/01 04:36:26 msoffen Exp $ */
 /*
  * hb_resource: Linux-HA heartbeat resource management code
  *
@@ -26,6 +26,7 @@
 #include <ctype.h>
 #include <string.h>
 #include <sys/types.h>
+#include <sys/wait.h>
 #include <errno.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -2454,6 +2455,9 @@ StonithStatProcessName(ProcTrack* p)
 
 /*
  * $Log: hb_resource.c,v $
+ * Revision 1.78  2005/06/01 04:36:26  msoffen
+ * Added sys/wait.h
+ *
  * Revision 1.77  2005/05/28 03:57:12  alan
  * Made exit codes more informative in resource management code.
  *
