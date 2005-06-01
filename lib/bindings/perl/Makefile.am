@@ -28,42 +28,8 @@ EXTRA_DIST =	.cvsignore Makefile.PL.in MANIFEST test.pl 	\
 		lib/heartbeat/clplumbing/ipc.pm			\
 		lib/heartbeat/clplumbing/log.pm
 
-if SWIG_BUILD
+MAINTAINERCLEANFILES    = Makefile.in
 
-noinst_DATA = .made_mod
-
-INCLUDES = -I$(top_builddir)/include -I$(top_srcdir)/include \
-	-I$(top_builddir)/linux-ha -I$(top_srcdir)/linux-ha  \
-	-I$(top_builddir)/libltdl -I$(top_srcdir)/libltdl
-
-SUB_INCLUDES = -I$(top_builddir)/../include -I$(top_srcdir)/../include \
-	-I$(top_builddir)/../linux-ha -I$(top_srcdir)/../linux-ha  \
-	-I$(top_builddir)/../libltdl -I$(top_srcdir)/../libltdl
-
-Makefile.perl: Makefile.PL
-	( old_pwd=`pwd` ; cd $(srcdir) && \
-	$(PERL) $< && \
-	test $@ -ef $$old_pwd/$@ || mv $@ $$old_pwd/; )
-
-.made_mod: cl_raw/cl_raw.pm Makefile.perl
-	( old_pwd=`pwd` ; cd $(srcdir) && \
-	$(MAKE) -f$$old_pwd/Makefile.perl INCLUDES="$(SUB_INCLUDES)" )
-	touch $@
-
-cl_raw/cl_raw.pm: cl_raw/cl_raw.i
-	( old_pwd=`pwd` ; cd $(srcdir)/cl_raw && \
-	$(SWIG) $(SWIG_OPTIONS) $(SUB_INCLUDES) -perl cl_raw.i && \
-	test cl_raw.pm -ef $$old_pwd/cl_raw/cl_raw.pm || \
-	mv $@ $$old_pwd/cl_raw/; )
-
-install-data-local:
-	( old_pwd=`pwd` ; cd $(srcdir) && \
-	$(MAKE) -f$$old_pwd/Makefile.perl PREFIX=$(prefix) \
-	$(PERL_INSTALL_TARGET) )
-
-CLEANFILES = .made_mod cl_raw/cl_raw.pm cl_raw/cl_raw_wrap.c
-
-clean-local:
-	if test -f Makefile.perl; then $(MAKE) -fMakefile.perl realclean; fi
-	rm -f Makefile.perl Makefile.perl.old cl_raw/Makefile.perl.old
-endif
+## Subdirectories...
+SUBDIRS			=  	\
+	cl_raw

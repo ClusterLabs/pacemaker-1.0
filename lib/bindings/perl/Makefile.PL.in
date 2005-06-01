@@ -29,6 +29,9 @@ WriteMakefile(
     PREREQ_PM => {}, # e.g., Module::Name => 1.1
     AUTHOR => 'Lars Marowsky-Brée <lmb\@suse.de>',
     MAKEFILE => 'Makefile.perl',
+    INCLUDE_EXT => ['$(top_builddir)/include',  '$(top_srcdir)/include', \
+		    '$(top_builddir)/linux-ha', '$(top_srcdir)/linux-ha',  \
+		    '$(top_builddir)/libltdl',  '$(top_srcdir)/libltdl'],
 );
 
 

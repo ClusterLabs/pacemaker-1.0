@@ -18,12 +18,15 @@
 #
 use ExtUtils::MakeMaker;
 WriteMakefile(
-	'NAME'    => 'heartbeat::cl_raw',
-	'LIBS'    => ['-lm -L../../../../lib/clplumbing/.libs/ -lplumb @GLIBLIB@'], 
-	'OBJECT'  => 'cl_raw_wrap.o ipc_wrappers.o cl_log_wrappers.o',
-	'PERL_MALLOC_OK' => 1,
-	'INC'	  => '-I. -I/usr/include @GLIBHEAD@ $(INCLUDES)',
+	NAME      => 'heartbeat::cl_raw',
+	C         => ['cl_raw_wrap.c', 'ipc_wrappers.c', 'cl_log_wrappers.c'],
+	DEFINE    => '@DEFS@',
+	#OBJECT    => 'cl_raw_wrap.o ipc_wrappers.o cl_log_wrappers.o',
+	LIBS      => ['-lm -L../../../../lib/clplumbing/.libs/ -lplumb @GLIBLIB@'], 
+	CCFLAGS  => '@CPPFLAGS@',
+	PERL_MALLOC_OK  => 1,
 	AUTHOR => 'Lars Marowsky-Brée <lmb\@suse.de>',
-	MAKEFILE => 'Makefile.perl'
+	MAKEFILE => 'Makefile.perl',
+	INC 	  => '$(INCLUDES) -I. -I/usr/local/include -I../../../../include -I../../../../lib/bindings/perl/cl_raw/ -I. @GLIBHEAD@ @CPPFLAGS@',
 );
 
