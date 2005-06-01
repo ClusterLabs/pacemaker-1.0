@@ -34,6 +34,22 @@
 #include "clplumbing/cl_log.h"
 #include "clplumbing/coredumps.h"
 
+#ifdef PACKAGE_BUGREPORT
+#undef PACKAGE_BUGREPORT
+#endif
+#ifdef PACKAGE_NAME
+#undef PACKAGE_NAME
+#endif
+#ifdef PACKAGE_STRING
+#undef PACKAGE_STRING
+#endif
+#ifdef PACKAGE_TARNAME
+#undef PACKAGE_TARNAME
+#endif
+#ifdef PACKAGE_VERSION
+#undef PACKAGE_VERSION
+#endif
+
 #include <net-snmp/net-snmp-config.h>
 #include <net-snmp/net-snmp-includes.h>
 #include <net-snmp/agent/net-snmp-agent-includes.h>
@@ -1063,6 +1079,8 @@ ifstatus_trap(const char * node, const char * lnk, const char * status)
 int 
 hbagent_trap(int online, const char * node)
 {
+    netsnmp_variable_list *notification_vars = NULL;
+
     oid objid_snmptrap[] = { 1, 3, 6, 1, 6, 3, 1, 1, 4, 1, 0 };
     size_t objid_snmptrap_len = OID_LENGTH(objid_snmptrap);
 
@@ -1078,7 +1096,6 @@ hbagent_trap(int online, const char * node)
 	    trap_oid[trap_oid_len - 1] = 9;
     }
 
-    netsnmp_variable_list *notification_vars = NULL;
 
     snmp_varlist_add_variable(&notification_vars,
                               /*

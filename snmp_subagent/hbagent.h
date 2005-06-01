@@ -24,7 +24,11 @@
 #ifndef __hasubagent_h__
 #define __hasubagent_h__
 
+#include <stdio.h>
+#ifdef HAVE_STDINT_H
 #include <stdint.h>
+#endif
+
 #include <glib.h>
 #include "saf/ais.h"
 #include "snmp-config-resolve.h"
