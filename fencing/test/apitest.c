@@ -74,7 +74,6 @@ int main(int argc, char * argv[])
 			;
 		}
 
-		cl_log(LOG_DEBUG, "Will call stonithd_receive_ops_result.");
 		if (ST_OK!=stonithd_receive_ops_result(TRUE)) {
 			return -1;
 		}
