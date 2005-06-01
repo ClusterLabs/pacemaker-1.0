@@ -163,7 +163,7 @@ fi
 echo libtoolize --ltdl --force --copy
 libtoolize --ltdl --force --copy
 
-echo automake --add-missing --include-deps
+echo automake --add-missing --include-deps --copy
 automake --add-missing --include-deps --copy
 
 echo autoconf
