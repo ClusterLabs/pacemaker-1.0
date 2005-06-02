@@ -1,4 +1,4 @@
-/* $Id: config.c,v 1.157 2005/05/19 23:31:36 gshi Exp $ */
+/* $Id: config.c,v 1.158 2005/06/02 15:54:49 gshi Exp $ */
 /*
  * Parse various heartbeat configuration files...
  *
@@ -1953,7 +1953,8 @@ set_api_authorization(const char * directive)
 		goto baddirective;
 	}
 
-	auth = ipc_str_to_auth(uidlist, gidlist);
+	cl_log(LOG_INFO, "uid=%s, gid=%s", uidlist, gidlist);
+	auth = ipc_str_to_auth(uidlist, uidlen, gidlist, gidlen);
 	if (auth == NULL){
 		goto baddirective;
 	}
@@ -2098,6 +2099,11 @@ set_release2mode(const char* value)
 
 /*
  * $Log: config.c,v $
+ * Revision 1.158  2005/06/02 15:54:49  gshi
+ * fixed a bug pointed by Steve Dobbelstein (steved@us.ibm.com)
+ * In config.c we did not seperate uid and gid string before asking ipc_str_to_auth()
+ * to generate auth. Now we use two more parameters uidlen and gidlen
+ *
  * Revision 1.157  2005/05/19 23:31:36  gshi
  * remove the entry for cl_status
  * change apiauth for anon to gid=HA_APIGROUP
