@@ -1,4 +1,4 @@
-/* $Id: config.c,v 1.158 2005/06/02 15:54:49 gshi Exp $ */
+/* $Id: config.c,v 1.159 2005/06/02 16:03:30 gshi Exp $ */
 /*
  * Parse various heartbeat configuration files...
  *
@@ -1976,7 +1976,7 @@ set_api_authorization(const char * directive)
 	
  baddirective:
 	cl_log(LOG_ERR, "Invalid %s directive [%s]", KEY_APIPERM, directive);
-	cl_log(LOG_INFO, "Syntax: %s [uid=uidlist] [gid=gidlist]"
+	cl_log(LOG_INFO, "Syntax: %s client [uid=uidlist] [gid=gidlist]"
 	,	KEY_APIPERM);
 	cl_log(LOG_INFO, "Where uidlist is a comma-separated list of uids,");
 	cl_log(LOG_INFO, "and gidlist is a comma-separated list of gids");
@@ -2099,6 +2099,9 @@ set_release2mode(const char* value)
 
 /*
  * $Log: config.c,v $
+ * Revision 1.159  2005/06/02 16:03:30  gshi
+ * modify the error message for syntax according Steve D's suggestion
+ *
  * Revision 1.158  2005/06/02 15:54:49  gshi
  * fixed a bug pointed by Steve Dobbelstein (steved@us.ibm.com)
  * In config.c we did not seperate uid and gid string before asking ipc_str_to_auth()
