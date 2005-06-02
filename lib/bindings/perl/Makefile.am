@@ -31,5 +31,5 @@ EXTRA_DIST =	.cvsignore Makefile.PL.in MANIFEST test.pl 	\
 MAINTAINERCLEANFILES    = Makefile.in
 
 ## Subdirectories...
-#SUBDIRS			=  	\
-#	cl_raw
+SUBDIRS			=  	\
+	cl_raw
