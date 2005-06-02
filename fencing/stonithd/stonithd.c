@@ -1,4 +1,4 @@
-/* $Id: stonithd.c,v 1.48 2005/05/31 06:36:17 sunjd Exp $ */
+/* $Id: stonithd.c,v 1.49 2005/06/02 07:51:05 sunjd Exp $ */
 
 /* File: stonithd.c
  * Description: STONITH daemon for node fencing
@@ -2905,7 +2905,7 @@ facility_name_to_value(const char * name)
 {
 	int i;
 	for (i = 0; facilitynames[i].c_name != NULL; i++) {
-		if (strncmp(name, facilitynames[i].c_name, MAXCMP) == 0) {
+		if (STRNCMP_CONST(name, facilitynames[i].c_name) == 0) {
 			return facilitynames[i].c_val;
 		}
 	}
@@ -3044,6 +3044,9 @@ adjust_debug_level(int nsig, gpointer user_data)
 
 /* 
  * $Log: stonithd.c,v $
+ * Revision 1.49  2005/06/02 07:51:05  sunjd
+ * For the const char array, use STRNCMP_CONST instead
+ *
  * Revision 1.48  2005/05/31 06:36:17  sunjd
  * make the apphb interval adjustable
  * simple help & CLI option tweak.
