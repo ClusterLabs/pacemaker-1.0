@@ -1,0 +1,264 @@
+
+/* general page appearance */
+
+body {
+	background: #EEEEEE;
+	margin: 0;
+	padding: 0;
+	border: 0;
+	}
+
+#_site {
+	font-family: verdana, lucida, arial, helvetica, sans-serif;
+	margin: 8pt auto;
+	padding: 0;
+	border: thick solid #CCCCCC;
+	background: #FFFFFF;
+	color: #333333;
+	font-size: 12pt;
+	}
+
+a:link, a:visited {
+	color: #202080;
+	font-weight : bold; 
+	text-decoration : none;
+	}
+
+a:hover {
+	color: #FF8000;
+	font-weight:	bold; 
+	text-decoration: underline;
+	}
+
+img	{
+	border: 0;
+	}
+
+dl,ul,ol,li,p {
+    margin-top: 1pt;
+}
+
+tt, pre	{
+    font-family: Lucida Console,Courier New,Courier,monospace;
+	}
+
+.code {
+    margin-left: 4pt;
+    margin-top: 8pt;
+    margin-bottom: 8pt;
+    background-color: #FFFFEE;
+    white-space: pre;
+    border-style: solid;
+    border-width: 1pt;
+    border-color: #999999;
+    color:#111111;
+    padding-top: 2pt;
+    padding-bottom: 2pt;
+    padding-left: 1%;
+    width: 90%;
+}
+
+	
+h1,h2,h3,h4,h5 {
+    font-family: verdana, lucida, arial, helvetica, sans-serif;
+    font-weight: normal;
+    color: #000080;
+    margin-top:2pt;
+    margin-bottom:8pt;
+    /* border-bottom:thin solid #ccc; */
+}
+h1 {
+    font-size: 150%;
+    width: 99.6%;
+}
+h2 {
+    font-size: 130%;
+    width: 99.2%;
+}
+h3 {
+    font-size: 115%;
+    width: 98.8%;
+}
+h4 {
+    font-size: 105%;
+    width: 98.4%;
+}
+h5 {
+    font-size: 95%;
+    width: 98.0%;
+}
+
+/*************************
+ * Layout
+ *************************/
+
+/* Header and Top Menu */
+
+#_header {
+	border: 0;
+	margin: 2pt;
+	padding: 2pt;
+	}
+
+#_header img	{
+	border: 0;
+	display: block;
+	margin-left: auto;
+	margin-right: auto;
+	}
+
+#_menu table {
+	background: #EEEEEE;
+	border-top: thin solid #CCCCCC;	
+	border-bottom: thin solid #CCCCCC;		
+	width: 100%;
+	}
+
+#_menu td a {
+	padding: 2pt;
+	text-decoration: none;
+	display: block;
+	text-align: center;
+	font-weight: normal;
+	width: 80pt;
+	}
+
+#_menu a:hover {
+	background: #FFFFFF;
+	}
+
+/* Content */
+
+#_pagebody {
+	padding: 0;
+	margin: 0;
+	border: 0;
+	text-align: left;
+	clear: both;
+	}
+
+#_content {
+	background: #FFFFFF;
+	margin: 0;
+	padding: 6pt;
+	}
+
+#_content table {
+	border: 1pt solid #cccccc;
+	margin: 2pt;
+	padding: 1pt;
+	}
+
+#_content tr td {
+	margin: 0;
+	padding: 0;
+	border: 0;
+	}
+
+/* Main Menu and Side Column */
+
+#_mainmenu	{
+	margin-top: 16pt;
+	margin-bottom: 16pt;
+	font-size: 11pt;
+	}
+
+#_mainmenu ul {
+	margin: 0;
+	padding: 0;
+	border: 0;
+	}
+	
+			
+#_mainmenu li {
+	margin: 0;
+	padding: 0;
+	list-style: none;
+	}	
+
+
+#_mainmenu a {
+	display: block;
+	font-weight: normal;
+	text-decoration: none;
+	}
+
+#_mainmenu b a {
+	padding-top: .25em;
+	display: block;	
+	border-bottom: thin solid #CCCCCC;	
+	font-weight: bold;
+	}
+
+#_mainmenu a:hover {
+	background: #EEEEEE;
+}
+
+#_sidebar {
+	padding: 0;
+	padding-top: 1pt;
+	border: 32pt;
+	border-left: 16pt solid #fff;		
+	padding-right: 6pt;
+	margin-bottom: 16pt;
+	/* height: 100%; No! has weird overlay effects with FireFox, maybe others, too... */
+	float: right;
+	display: block;
+	width: 130pt;
+	font-size: 10pt;
+	}
+
+#_sidebar img {
+	border: 0;
+	margin: 2pt;
+	}
+
+#_sidebar p	{
+	text-align: left;
+	}
+	
+#_sidebar table {
+	background: #FFFFFF;
+	border: thin solid #CCCCCC;
+	}
+
+#_slashboxes {
+	font-size: 8pt;
+}
+
+#_slashboxes table {
+	font-size: 11pt;
+}
+
+#_slashboxes b {
+	display: block;
+	background: #EEE;
+	border: thin solid #CCC;
+	text-align: center;
+	}
+	
+#_slashboxes a {
+	display: block;
+	text-decoration: none;
+	
+}
+
+#_slashboxes b a:hover {
+	background: #FFFFFF;
+}
+
+/* Footer */
+
+#_footer {
+	border: 0;
+	padding: 3pt 5pt 5pt 7pt;
+	text-align: left;
+	clear: both;
+	font-size: x-small;	
+	}
+
+/*  Work around IE/Win code size bug - courtesy Jesper, waffle.wootest.net  */
+
+* html code	{
+	font-size : 105%; 
+	}

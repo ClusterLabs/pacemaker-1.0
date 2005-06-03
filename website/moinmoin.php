@@ -1,0 +1,421 @@
+<?php
+
+# WikiWare - Standard MoinMoin Transclusion Function
+# Dmytri Kleiner -- dmytrik@trickmedia.com
+# Copyleft 2003 Idiosyntactix. All rights detourned.	
+
+# Usage Examples:
+#   print MoinMoin("FrontPage");
+#   print MoinMoin("FrontPage","costomregs.php");
+#   print MoinMoin("FrontPage","costomregs.php",$cachesuffix);
+
+# General Configuration
+# ... moved into trick.php
+
+#############################################################
+#############################################################
+#############################################################
+
+
+
+/*
+ *	All of these get set when a user presses shift-reload in mozilla
+ *	Apache Environment:
+ *	HTTP_CACHE_CONTROL:					"no-cache"
+ *	HTTP_PRAGMA:						"no-cache"
+ *	PHP Variables:		_SERVER["HTTP_CACHE_CONTROL"]:	"no-cache"
+ *	HTTP request headers:	Cache-Control			"no-cache"
+ *
+ *
+ *	All of these get set when a user presses reload in mozilla
+ *	HTTP_CACHE_CONTROL:					"max-age=0"
+ *	PHP Variables:		_SERVER["HTTP_CACHE_CONTROL"]:	"max-age=0"
+ *	HTTP request headers:	Cache-Control			"max-age=0"
+ *
+ *	None of these are available when a "normal" page load is performed.
+ *
+ *	For now, we only pay attention to the shift-reload sequence.
+ *
+ */
+
+function MoinMoinNoCache()
+{
+	if (isset($_SERVER["HTTP_CACHE_CONTROL"])) {
+		return (0 == strcasecmp($_SERVER["HTTP_CACHE_CONTROL"], "no-cache"));
+	}
+	return false;
+}
+
+function MoinMoin($PageTitle, $INCLUDEPHP = false, $CACHESUFFIX = "")
+{
+	global $MOINMOINurl, $MOINMOINalias, $MOINMOINcachedir, $MOINMOINfilemod, $MOINMOINstandardsearch, $MOINMOINstandardreplace;
+	global $current_cache_prefix, $current_cache_relprefix;
+
+	$PageTitle = str_replace("/","_", $PageTitle);
+	$filename = "$MOINMOINurl/$PageTitle";
+	$cachefile = "$MOINMOINcachedir/$MOINMOINalias$PageTitle$CACHESUFFIX.html";
+	# for attachments and the like
+	$current_cache_prefix = "$MOINMOINcachedir/${MOINMOINalias}${PageTitle}__";
+	$current_cache_relprefix = "${MOINMOINalias}${PageTitle}__";
+	set_time_limit(30);
+	umask(077);
+	
+	if (MoinMoinNoCache() && file_exists($cachefile)) {
+		unlink($cachefile);
+	}
+	if (!file_exists($cachefile))
+	{
+
+		$content = implode("",file($filename));
+
+		if (!$GLOBALS["MOINMOINstandardregsloaded"])
+		{
+			MOINMOINloadstandardregs();
+		}
+
+		if ($INCLUDEPHP)
+		{
+			include($INCLUDEPHP);
+			
+			$MOINMOINallsearch = array_merge($MOINMOINstandardsearch, $MOINMOINsearch);
+			$MOINMOINallreplace = array_merge($MOINMOINstandardreplace, $MOINMOINreplace);
+			
+			unset($MOINMOINsearch);
+			unset($MOINMOINreplace);
+		} else {
+			$MOINMOINallsearch = $MOINMOINstandardsearch;
+			$MOINMOINallreplace = $MOINMOINstandardreplace;
+		}
+		$body = preg_replace ($MOINMOINallsearch, $MOINMOINallreplace, $content);
+
+		$fd = fopen($cachefile, "w");
+		fwrite($fd, $body);
+		fclose ($fd);
+		chmod($cachefile, $MOINMOINfilemod);
+
+	} else {
+		$body = implode("",file($cachefile));
+	}
+
+	return $body;
+}
+
+
+function MOINMOINloadstandardregs()
+{
+	global $MOINMOINstandardsearch, $MOINMOINstandardreplace, $MOINMOINalias
+	,	$local_cache_url_prefix, $MOINMOINExtraneousImages;
+	
+	if (!isset($MOINMOINstandardsearch)) { $MOINMOINstandardsearch = array(); }
+	if (!isset($MOINMOINstandardreplace)) { $MOINMOINstandardreplace = array(); }
+	set_time_limit(60);
+		
+	# Trap Pages Not In Wiki
+	# FIXME
+	$MOINMOINstandardsearch[] = "'^.*<a href=\"[^\">]*?\?action=edit\">Create this page</a>.*$'s";
+	$MOINMOINstandardreplace[] = "<b>Not Found.</b>";
+	
+	# Eliminate Goto Link from Include Macro
+	$MOINMOINstandardsearch[] = "'<div class=\"include-link\"><a [^>]*>.*?</a></div>'s";
+	$MOINMOINstandardreplace[] = "";
+
+	# Get Content Area
+	$MOINMOINstandardsearch[] = "'^.*?<div id=\"content\"[^>]*>'s";
+	$MOINMOINstandardreplace[] = "";
+	$MOINMOINstandardsearch[] = "'</div>\s*<div id=\"footer\".*'s";
+	$MOINMOINstandardreplace[] = "";
+	
+	# Strip Wiki Class Tags
+	$MOINMOINstandardsearch[] = "'(<[^>]*) class=\"[^\"]*\"([^>]*>)'U";
+	$MOINMOINstandardreplace[] = "\\1\\2";
+	
+	# Clean Table Tags
+	$MOINMOINstandardsearch[] = "'(<table\s)[^>]*(>)'Ui";
+	$MOINMOINstandardreplace[] = "\\1\\2";
+
+	# Fix Internal Links
+	$MOINMOINstandardsearch[] = "'(<a\s[^>]*href=\")/$MOINMOINalias([^\">]*\">)'iU";
+	$MOINMOINstandardreplace[] = "\\1$local_cache_url_prefix\\2";
+
+	$MOINMOINExtraneousImages = array(
+		'/wiki/classic/img/moin-www.png',
+		'/wiki/classic/img/moin-ftp.png'
+	);
+	# Strip out [WWW] [FTP] images, etc.
+	foreach ($MOINMOINExtraneousImages as $im) {
+		$MOINMOINstandardsearch[] = "'< *img src=\"${im}\"[^>]*>'i";
+		$MOINMOINstandardreplace[] = '';
+	}
+
+	# Cache MoinMoin Images Locally
+	$MOINMOINstandardsearch[]  = "'src=\"(/[^\"]*wiki[^\"]*img/([^\"]*))\"'ie";
+	$MOINMOINstandardreplace[] = "MOINMOINcacheimages('\\1','\\2')";
+
+	# Cache inline images (Attachments) Locally
+	$MOINMOINstandardsearch[] = "'(<\s*img\s[^>]*src=\")/$MOINMOINalias([^\">]*?action=AttachFile&[^\">]*target=([^\">]*))(\"[^>]*>)'iUe";
+	$MOINMOINstandardreplace[] = "stripslashes('\\1') . MOINMOINcacheattachments('\\2','\\3') . stripslashes('\\4')";
+
+	# Cache MoinMoin Attachments Localy
+	$MOINMOINstandardsearch[] = "'(<a\s*[^>]*href=\")/$MOINMOINalias([^\">]*?action=AttachFile&[^\">]*target=([^\">]*))(\"[^>]*>)'iUe";
+	$MOINMOINstandardreplace[] = "stripslashes('\\1') . MOINMOINcacheattachments('\\2','\\3') . stripslashes('\\4')";
+
+	$GLOBALS["MOINMOINstandardregsloaded"] = true;
+}
+
+function browser_type() {
+	$Browser="unknown";
+	$Version="0.0";
+	$MajorVers="0";
+	if (isset($_SERVER["HTTP_USER_AGENT"])) {
+		$ua = $_SERVER["HTTP_USER_AGENT"];
+		if (preg_match('%MSIE  *(([1-9][0-9])*\.[0-9.]+)%', $ua, $match)) {
+			$Browser="MSIE";
+			$Version=$match[1];
+			$MajorVers=$match[2];
+		}elseif (preg_match('%^([A-Za-z][A-Za-z]*)/(([1-9][0-9]*)\.[0-9.]+)%m', $ua, $match)) {
+			$Browser=$match[1];
+			$Version=$match[2];
+			$MajorVers=$match[3];
+		}
+	}
+	return array($Browser, $Version, intval($MajorVers));
+}
+
+function browser_compatibility() {
+
+	$T=browser_type();
+	if (strcasecmp($T[0], "Mozilla") == 0 && $T[2] >= 5) {
+		return 2;
+	}
+	if (strcasecmp($T[0], "Opera") == 0) {
+		if ($T[2] >= 7) {
+			return 2;
+		}elseif ($T[2] == 6) {
+			return 1;
+		}
+	}
+	return 0;
+}
+function browser_compatibility_messages() {
+	$c = browser_compatibility();
+	$ffurl="http://www.mozilla.org/products/firefox/";
+	$ff="<a href=\"$ffurl\">Firefox </a>";
+	$imgdir="http://sfx-images.mozilla.org/affiliates/Buttons";
+	$ffbut1="<img border=\"0\" alt=\"Get Firefox!\" src=\"$imgdir/80x15/white_1.gif\"/>";
+	$ffbut2="<img border=\"0\" alt=\"Get Firefox!\" src=\"$imgdir/110x32/trust.gif\"/>";
+	$ff1="<a href=\"$ffurl\">Firefox $ffbut1</a>";
+	$ff2="<a href=\"$ffurl\">Firefox $ffbut2</a>";
+	if ($c >= 2) {
+		return;
+	}
+	echo '<font size="+1">';
+	if ($c == 1) {
+		echo "<p>This site best when viewed with a modern CSS-compatible browser. "
+		.	"We recommend $ff1</p>";
+	}else{
+		echo "<p>Your browser will likely have trouble with this site. "
+		.	"This site best when viewed with a modern browser<BR> "
+		.	"We recommend $ff2</p>";
+	}
+	echo "</font>";
+}
+
+function URLtoCacheFile($urlsuffix, $cacheprefix)
+{
+	global	$MOINMOINcachedir;
+	/* FIXME:  Clean up $urlsuffix to make sure it's safe */
+	# SECURITY ALERT
+	# need to clean up sanitize $argTar, in a specially crafted wiki page
+	# may be a special file name
+	# hope this is enough, just in case:
+	$urlsuffix = str_replace("/","_", "${cacheprefix}${urlsuffix}");
+	return "${MOINMOINcachedir}/${urlsuffix}";
+}
+
+function CleanURL($urlprefix, $urlsuffix)
+{
+	/* FIXME:  Clean up $url to make sure it's safe */
+	return $urlprefix . $urlsuffix;
+}
+
+function CacheURL($urlprefix, $urlsuffix, $cacheprefix)
+{
+	$cachefile = URLtoCacheFile($urlsuffix, $cacheprefix);
+	$url = CleanURL($urlprefix , $urlsuffix);
+	return CacheURL_ll($url, $cachefile);
+}
+
+function LogIt($message)
+{
+	$logfile="/tmp/linux-ha.web";
+	$datestamp=date("YmdHIs");
+	error_log("$datestamp:	$message\n", 3, $logfile);
+	chmod($logfile, 0644);
+}
+function ReportError($errorcode, $descr, $file, $line, $symtab)
+{
+	global $cachetmp;
+	if (!isset($file)) {
+		$file = "unknown";
+	}
+	if (!isset($line)) {
+		$file = "?";
+	}
+	echo "ERROR: $errorcode $descr [$file:$line]";
+	LogIt("ERROR: $errorcode $descr [$file:$line]");
+	error_log("ERROR: $errorcode $descr [$file:$line]", 0);
+	if (isset($cachetmp) && file_exists($cachetmp)) {
+		unlink($cachetmp);
+	}
+	exit(1);
+}
+
+function wget($url, $file) {
+	
+	if (file_exists($file)) {
+		unlink($file);
+	}
+	$WGET='/usr/bin/wget';
+	$url = preg_replace('/\\\\/', '\\\\', $url);
+	$url = preg_replace('/\'/', '\\\'', $url);
+	$CMD="$WGET -q -U 'Mozilla/5.0' -S -nd -O '$file' '" . $url . '\'';
+	system($CMD, $rc);
+	if ($rc != 0 && file_exists($file)) {
+		unlink($file);
+	}
+	return $rc;
+}
+
+#	Inputs are the results from microtime()
+function subtimes($lhs, $rhs)
+{
+	$lhsa = explode(" ", $lhs, 2);
+	$lhsusec=intval(substr($lhsa[0], 2, 6));
+	$lhssec=intval($lhsa[1]);
+
+	$rhsa = explode(" ", $rhs, 2);
+	$rhsusec=intval(substr($rhsa[0], 2, 6));
+	$rhssec=intval($rhsa[1]);
+
+	if ($lhsusec < $rhsusec) {
+		$lhssec -= 1;
+		$lhsusec += 1000000;
+	}
+	$usecs = ($lhssec - $rhssec) * 1000000;
+	$usecs += ($lhsusec - $rhsusec);
+	return (doubleval($usecs)/ 1000000.0);
+}
+
+function CacheURL_ll($url, $cachefile)
+{
+	global $MOINMOINfilemod, $MOINMOINcachedir, $MOINMOINurl;
+	global $cachetmp;
+	$cachetmp = tempnam($MOINMOINcachedir, 'TEMP_');
+	set_time_limit(60);
+	set_error_handler("ReportError");
+	if (substr($url, 0, 1) == "/") {
+		$url = "${MOINMOINurl}/${url}";
+	}
+
+	$start=microtime();
+	if (wget($url, $cachetmp) != 0) {
+		return false;
+	}
+	$end=microtime();
+	$elapsed = subtimes($end, $start);
+	chmod($cachetmp, $MOINMOINfilemod);
+	
+	$msg=sprintf("Cached %d bytes in %.3f secs into %s"
+	,	filesize($cachetmp), $elapsed, $cachefile);
+	LogIt($msg);
+
+	if (file_exists($cachefile)) {
+		unlink($cachefile);
+	}
+	rename($cachetmp, $cachefile);
+	if (file_exists($cachetmp)) {
+		unlink($cachetmp);
+		unset($cachetmp);
+	}
+	return file_exists($cachefile);
+}
+
+
+function MOINMOINcacheattachments($argSrc, $argTar)
+{
+	global $MOINMOINurl, $current_cache_prefix, $local_cache_url_prefix;
+
+	# SECURITY ALERT
+	# need to clean up sanitize $argTar, in a specially crafted wiki page
+	# may be a special file name
+	# hope this is enough, just in case:
+	$argTar = str_replace("/","_", $argTar);
+
+	$cachefile = "$current_cache_prefix$argTar";
+	if (MoinMoinNoCache() || !file_exists($cachefile)) {
+		CacheURL_ll("$MOINMOINurl/$argSrc", $cachefile);
+	}
+	return $local_cache_url_prefix . $cachefile;
+}
+
+function oldMOINMOINcacheattachments($argSrc, $argTar)
+{
+	global $MOINMOINurl, $current_cache_prefix, $local_cache_url_prefix;
+	
+	# SECURITY ALERT
+	# need to clean up sanitize $argTar, in a specially crafted wiki page
+	# may be a special file name
+	# hope this is enough, just in case:
+	$argTar = str_replace("/","_", $argTar);
+
+	$cachefile = "$current_cache_prefix$argTar";
+	if (!file_exists($cachefile))
+	{
+		$fd = fopen ("$MOINMOINurl/$argSrc", "rb");
+		$attachment = "";
+		/*
+		do {
+			$data = fread($fd, 8192);
+			if (strlen($data) == 0) { break; }
+			$attachment .= $data;
+		} while(true);
+		fclose ($fd);
+	
+		$fd = fopen($cachefile, "wb");
+		fwrite($fd, $attachment);
+		fclose ($fd);
+		*/
+
+		/* Write the file incrementally to avoid hitting the 8M barrier */
+		$fdw = fopen($cachefile, "wb");
+		do {
+			$data = fread($fd, 8192);
+			if (strlen($data) == 0) { break; }
+			fwrite($fdw, $data);
+		} while(true);
+		fclose ($fdw);
+		fclose ($fd);
+		chmod($cachefile, $MOINMOINfilemod);
+	}
+
+	return $local_cache_url_prefix . $cachefile;
+}
+
+function MOINMOINcacheimages($argSrc, $argTar)
+{
+	global $MOINMOINserver, $MOINMOINcachedir, $MOINMOINfilemod, $local_cache_url_prefix, $MOINMOINurl;
+	
+	# SECURITY ALERT
+	# need to clean up sanitize $argTar, in a specially crafted wiki page
+	# may be a special file name
+	# hope this is enough, just in case:
+
+	$argTar = str_replace("/","_", $argTar);
+
+	$cachefile = URLtoCacheFile($argSrc, "");
+	if (MoinMoinNoCache() || !file_exists($cachefile)) {
+		CacheURL($MOINMOINurl, $argSrc, "");
+	}
+	return "src=\"$local_cache_url_prefix$cachefile\" CACHED=\"yes\"";
+}
+?>

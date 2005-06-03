@@ -1,0 +1,95 @@
+/* Page */
+
+body {
+	font-family: verdana, lucida, arial, helvetica, sans-serif;
+	background: #FFFFFF;
+	font-size: 12pt;
+     }
+
+img	{
+	border: 0;
+	}
+
+
+dl,ul,ol,li,p {
+    margin-top: 1pt;
+}
+
+tt, pre	{
+    font-family: Lucida Console,Courier New,Courier,monospace;
+    font-size: small;
+	}
+
+A:LINK {
+	color: black;
+	font-weight : normal; 
+	text-decoration : underline;
+	}
+A:VISITED {
+	color: black;
+	font-weight : normal; 
+	text-decoration : underline;
+	}
+
+.code {
+    margin-left: 4pt;
+    margin-top: 8pt;
+    margin-bottom: 8pt;
+    background-color: #FFFFEE;
+    white-space: pre;
+    border-style: solid;
+    border-width: 1pt;
+    border-color: #999999;
+    padding-top: 2pt;
+    padding-bottom: 2pt;
+    padding-left: 1%;
+    width: 90%;
+}
+
+span._linktext {
+    text-color: #000000;
+    font-weight : normal; 
+    text-decoration: underline;
+}
+
+span._xref {
+    vertical-align: top;
+    font-size:	75%;
+}
+
+
+	
+h1,h2,h3,h4,h5 {
+    font-family: verdana, lucida, arial, helvetica, sans-serif;
+    font-weight: normal;
+#    color: #000080;
+    margin-top:2pt;
+    margin-bottom:8pt;
+    /* border-bottom:thin solid #ccc; */
+}
+h1 {
+    font-size: 150%;
+    width: 99.6%;
+}
+h2 {
+    font-size: 130%;
+    width: 99.2%;
+}
+h3 {
+    font-size: 115%;
+    width: 98.8%;
+}
+h4 {
+    font-size: 105%;
+    width: 98.4%;
+}
+h5 {
+    font-size: 95%;
+    width: 98.0%;
+}
+	
+/*  Work around IE/Win code size bug - courtesy Jesper, waffle.wootest.net  */
+
+* html code	{
+	font-size : 105%; 
+	}
