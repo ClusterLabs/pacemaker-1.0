@@ -3,7 +3,7 @@
 <html>
 <head>
  <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
- <meta name="author" content="wiki.linux-ha.org">
+ <meta name="author" content="http://wiki.linux-ha.org">
  <title><?php echo "$pagetitle: $sitename"; ?></title>
  <link rel="stylesheet" href="/linuxha.css" type="text/css">
 </head>
