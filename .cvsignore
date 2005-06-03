@@ -1,8 +1,10 @@
 *.spec
 heartbeat*.tar.gz
+compile
 configure
 configure.status
 configure.lineno
+depcomp
 aclocal.m4
 autom4te.cache
 libtool
