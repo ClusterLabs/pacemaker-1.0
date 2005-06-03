@@ -16,8 +16,6 @@
 #############################################################
 #############################################################
 
-
-
 /*
  *	All of these get set when a user presses shift-reload in mozilla
  *	Apache Environment:
@@ -40,6 +38,23 @@
 
 function MoinMoinNoCache()
 {
+	global $MOINMOINCacheLimit;
+	if (isset($MOINMOINCacheLimit[$PageTitle])) {
+		$cachelimit = $MOINMOINCacheLimit[$PageTitle];
+	}elseif (isset($MOINMOINCacheLimit['*'])) {
+		$cachelimit = $MOINMOINCacheLimit['*'];
+	}else{
+		$cachelimit = -1;
+	}
+	if ($cachelimit >= 0) {
+		$filename = "$MOINMOINurl/$PageTitle";
+		$now = intval(date("U"));
+		clearstatcache();
+		$mtime = filemtime($filename);
+		if (($now-$mtime) >= $cachelimit) {
+			return true;
+		}
+	}
 	if (isset($_SERVER["HTTP_CACHE_CONTROL"])) {
 		return (0 == strcasecmp($_SERVER["HTTP_CACHE_CONTROL"], "no-cache"));
 	}
@@ -48,8 +63,8 @@ function MoinMoinNoCache()
 
 function MoinMoin($PageTitle, $INCLUDEPHP = false, $CACHESUFFIX = "")
 {
-	global $MOINMOINurl, $MOINMOINalias, $MOINMOINcachedir, $MOINMOINfilemod, $MOINMOINstandardsearch, $MOINMOINstandardreplace;
-	global $current_cache_prefix, $current_cache_relprefix;
+	global $MOINMOINurl, $MOINMOINalias, $MOINMOINcachedir, $MOINMOINfilemod, $MOINMOINstandardsearch;
+	global $MOINMOINstandardreplace, $current_cache_prefix, $current_cache_relprefix;
 
 	$PageTitle = str_replace("/","_", $PageTitle);
 	$filename = "$MOINMOINurl/$PageTitle";
