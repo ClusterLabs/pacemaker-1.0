@@ -50,6 +50,8 @@ if (strlen($path_info) < 3) {
 	$path_info = "/HomePage";
 }
 
+$MOINMOINCacheLimit = array("RecentChanges" => 300);
+
 
 # Wiki Page
 $pagename = substr($path_info,1);
