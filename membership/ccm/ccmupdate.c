@@ -1,4 +1,4 @@
-/* $Id: ccmupdate.c,v 1.10 2005/02/17 19:08:20 gshi Exp $ */
+/* $Id: ccmupdate.c,v 1.11 2005/06/03 05:00:55 gshi Exp $ */
 /* 
  * update.c: functions that track the votes during the voting protocol
  *
@@ -266,6 +266,9 @@ update_find_leader(ccm_update_t *tab, llm_info_t *llm)
 		}
 	}
 
+	if (i == LLM_GET_NODECOUNT(llm)){
+		return -1;
+	}
 	leader = i;
 
 	for ( j = i+1 ; j < LLM_GET_NODECOUNT(llm); j++ ){
