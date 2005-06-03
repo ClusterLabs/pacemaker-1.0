@@ -1,4 +1,4 @@
-/* $Id: stonithd.c,v 1.49 2005/06/02 07:51:05 sunjd Exp $ */
+/* $Id: stonithd.c,v 1.50 2005/06/03 08:05:00 sunjd Exp $ */
 
 /* File: stonithd.c
  * Description: STONITH daemon for node fencing
@@ -1994,7 +1994,7 @@ get_local_stonithobj_can_stonith( const char * node_name,
 
 	stonithd_log2(LOG_DEBUG, "get_local_stonithobj_can_stonith: begin.");
 	if (local_started_stonith_rsc == NULL) {
-		stonithd_log(LOG_ERR, "get_local_stonithobj_can_stonith: "
+		stonithd_log(LOG_DEBUG, "get_local_stonithobj_can_stonith: "
 				"local_started_stonith_rsc == NULL");
 		return NULL;
 	}
@@ -3044,6 +3044,9 @@ adjust_debug_level(int nsig, gpointer user_data)
 
 /* 
  * $Log: stonithd.c,v $
+ * Revision 1.50  2005/06/03 08:05:00  sunjd
+ * should not be an error log
+ *
  * Revision 1.49  2005/06/02 07:51:05  sunjd
  * For the const char array, use STRNCMP_CONST instead
  *
