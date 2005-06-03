@@ -1,4 +1,4 @@
-/* $Id: stonithd.c,v 1.50 2005/06/03 08:05:00 sunjd Exp $ */
+/* $Id: stonithd.c,v 1.51 2005/06/03 08:37:43 sunjd Exp $ */
 
 /* File: stonithd.c
  * Description: STONITH daemon for node fencing
@@ -122,12 +122,10 @@ typedef struct stonith_rsc
 } stonith_rsc_t;
 
 /* Must correspond to stonith_type_t */
-/*
 static const char * stonith_op_strname[] =
 {
 	"QUERY", "RESET", "POWERON", "POWERON"
 };
-*/
 
 static GList * client_list = NULL;
 static GHashTable * executing_queue = NULL;
@@ -1510,6 +1508,11 @@ on_stonithd_node_fence(const struct ha_msg * request, gpointer data)
 		stonithd_log(LOG_WARNING, "The stonith requirement message"
 			     " contains no target node UUID field.");
 	}
+
+	stonithd_log(LOG_DEBUG, "client %s [pid: %d] want a STONITH "
+			"operation %s to node %s."
+		,	client->name, client->pid
+		,	stonith_op_strname[st_op->optype], st_op->node_name);
 	
 	/* If the node is me, should stonith myself. ;-) No, never come here
 	 * from this API while the node name is myself.
@@ -2215,7 +2218,7 @@ on_stonithd_virtual_stonithRA_ops(const struct ha_msg * request, gpointer data)
 	ra_op->params = NULL;
 	if ((ra_op->params = cl_get_hashtable(request, F_STONITHD_PARAMS))
 	    != NULL) {
-		stonithd_log(LOG_DEBUG, "on_stonithd_virtual_stonithRA_ops:"
+		stonithd_log2(LOG_DEBUG, "on_stonithd_virtual_stonithRA_ops:"
 			     "ra_op->params address:=%p.", ra_op->params);
 	} else {
 		stonithd_log(LOG_ERR, "on_stonithd_virtual_stonithRA_ops: the "
@@ -2223,6 +2226,11 @@ on_stonithd_virtual_stonithRA_ops(const struct ha_msg * request, gpointer data)
 		api_reply = ST_BADREQ;
 		goto send_back_reply;
 	}
+
+	stonithd_log(LOG_DEBUG, "client %s [pid: %d] want a resource "
+			"operation %s on stonith RA %s [resource id: %s]"
+		,	client->name, client->pid
+		,	ra_op->op_type, ra_op->ra_name, ra_op->rsc_id);
 
 	/* execute stonith plugin : begin */
 	/* When in parent process then be back here */
@@ -3044,6 +3052,9 @@ adjust_debug_level(int nsig, gpointer user_data)
 
 /* 
  * $Log: stonithd.c,v $
+ * Revision 1.51  2005/06/03 08:37:43  sunjd
+ * add logs
+ *
  * Revision 1.50  2005/06/03 08:05:00  sunjd
  * should not be an error log
  *
