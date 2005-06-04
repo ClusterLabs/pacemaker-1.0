@@ -1,4 +1,4 @@
-/* $Id: ccmupdate.c,v 1.11 2005/06/03 05:00:55 gshi Exp $ */
+/* $Id: ccmupdate.c,v 1.12 2005/06/04 07:50:42 gshi Exp $ */
 /* 
  * update.c: functions that track the votes during the voting protocol
  *
@@ -253,8 +253,10 @@ leader_str :
 
 
 /* */
-/* given the current members, choose the leader. */
-/* */
+/* given the current members, choose the leader. 
+* set the leader and return the leader as well
+*
+ */
 static int
 update_find_leader(ccm_update_t *tab, llm_info_t *llm) 
 {
@@ -267,9 +269,12 @@ update_find_leader(ccm_update_t *tab, llm_info_t *llm)
 	}
 
 	if (i == LLM_GET_NODECOUNT(llm)){
+		UPDATE_SET_LEADER(tab,-1);
 		return -1;
 	}
+
 	leader = i;
+        UPDATE_SET_LEADER(tab,leader);
 
 	for ( j = i+1 ; j < LLM_GET_NODECOUNT(llm); j++ ){
 
@@ -278,9 +283,11 @@ update_find_leader(ccm_update_t *tab, llm_info_t *llm)
 		}
 
 		if(update_compute_leader(tab, j, llm) == j){
+			UPDATE_SET_LEADER(tab,j);
 			leader = j;
 		}
 	}
+
 	return leader;
 }
 
