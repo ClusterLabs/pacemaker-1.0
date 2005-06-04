@@ -1,8 +1,7 @@
-
 /* general page appearance */
 
 body {
-	background: #EEEEEE;
+	background: #FFFFFF;
 	margin: 0;
 	padding: 0;
 	border: 0;
@@ -10,9 +9,9 @@ body {
 
 #_site {
 	font-family: verdana, lucida, arial, helvetica, sans-serif;
-	margin: 8pt auto;
-	padding: 0;
-	border: thick solid #CCCCCC;
+	margin: 6pt auto;
+	padding: 0pt;
+	border: thin solid red;
 	background: #FFFFFF;
 	color: #333333;
 	font-size: 12pt;
@@ -25,7 +24,7 @@ a:link, a:visited {
 	}
 
 a:hover {
-	color: #FF8000;
+	color: red;
 	font-weight:	bold; 
 	text-decoration: underline;
 	}
@@ -62,21 +61,25 @@ tt, pre	{
 h1,h2,h3,h4,h5 {
     font-family: verdana, lucida, arial, helvetica, sans-serif;
     font-weight: normal;
-    color: #000080;
+    color: #202080;
     margin-top:2pt;
     margin-bottom:8pt;
     /* border-bottom:thin solid #ccc; */
 }
 h1 {
     font-size: 150%;
+    font-weight: bold;
+    font-style: italic;
     width: 99.6%;
 }
 h2 {
     font-size: 130%;
+    font-weight: bold;
     width: 99.2%;
 }
 h3 {
     font-size: 115%;
+    font-weight: bold;
     width: 98.8%;
 }
 h4 {
@@ -107,11 +110,12 @@ h5 {
 	margin-right: auto;
 	}
 
+/* Menu across the top of the page */
 #_menu table {
-	background: #EEEEEE;
-	border-top: thin solid #CCCCCC;	
-	border-bottom: thin solid #CCCCCC;		
-	width: 100%;
+	width:		100%;
+	background:	white;
+	border-bottom:	2pt solid red;
+	border-top:	2pt solid red;
 	}
 
 #_menu td a {
@@ -125,6 +129,8 @@ h5 {
 
 #_menu a:hover {
 	background: #FFFFFF;
+	font-weight: bold;
+	background: #E0E0E0;
 	}
 
 /* Content */
@@ -154,12 +160,62 @@ h5 {
 	padding: 0;
 	border: 0;
 	}
-
-/* Main Menu and Side Column */
-
-#_mainmenu	{
-	margin-top: 16pt;
+/* Sidebar - currently on right side */
+#_sidebar {
+	padding: 0;
+	padding-top: 1pt;
+	border: 32pt;
+	padding-left: 8pt;
+	border-left: thin solid red;
+	border-bottom: thin solid red;
+	padding-right: 6pt;
 	margin-bottom: 16pt;
+	/* height: 100%; No! has weird overlay effects with FireFox, maybe others, too... */
+	float: right;
+	display: block;
+	width: 23ex;
+	font-size: 10pt;
+	}
+
+#_sidebar img {
+	border: 0;
+	margin: 2pt;
+	}
+
+#_sidebar p	{
+	text-align: left;
+	}
+	
+#_sidebar table {
+	background: #FFFFFF;
+	border: thin solid #CCCCCC;
+	border-top-width: 0pt;
+	padding-top: 0pt;
+	margin-top: 0pt;
+	}
+#_sidebar ul {
+	border-top-width:	0pt;
+	padding-top:		0pt;
+	margin-top:		0pt;
+	border-bottom-width:	0pt;
+	padding-bottom:		0pt;
+	margin-bottom:		0pt;
+}
+#_sidebar p {
+	border-top-width:	0pt;
+	padding-top:		0pt;
+	margin-top:		0.5em;
+	border-bottom-width:	0pt;
+	padding-bottom:		0pt;
+	margin-bottom:		0pt;
+}
+
+/* Menu running down the right side of the page */
+/* Contained in the sidebar */
+ 
+#_mainmenu	{
+	margin-top: 8pt;
+	margin-bottom: 12pt;
 	font-size: 11pt;
 	}
 
@@ -183,57 +239,36 @@ h5 {
 	text-decoration: none;
 	}
 
-#_mainmenu b a {
-	padding-top: .25em;
+#_mainmenu strong a {
+	/* padding-top: .25em;
+	border: thin solid #C0C0C0;
+	 */
 	display: block;	
-	border-bottom: thin solid #CCCCCC;	
 	font-weight: bold;
 	}
 
 #_mainmenu a:hover {
-	background: #EEEEEE;
+	background: #E0E0E0;
+	font-weight:	bold; 
 }
 
-#_sidebar {
-	padding: 0;
-	padding-top: 1pt;
-	border: 32pt;
-	border-left: 16pt solid #fff;		
-	padding-right: 6pt;
-	margin-bottom: 16pt;
-	/* height: 100%; No! has weird overlay effects with FireFox, maybe others, too... */
-	float: right;
-	display: block;
-	width: 130pt;
-	font-size: 10pt;
-	}
 
-#_sidebar img {
-	border: 0;
-	margin: 2pt;
-	}
-
-#_sidebar p	{
-	text-align: left;
-	}
-	
-#_sidebar table {
-	background: #FFFFFF;
-	border: thin solid #CCCCCC;
-	}
-
+/* Announcement "slashbox" area */
+/* Contained in the sidebar */
 #_slashboxes {
 	font-size: 8pt;
+	/* text-align: center; */
 }
 
 #_slashboxes table {
 	font-size: 11pt;
+	border: thin solid #C00D0D;
 }
 
-#_slashboxes b {
+#_slashboxes strong {
 	display: block;
 	background: #EEE;
-	border: thin solid #CCC;
+	border: thin solid #CCCCCC;
 	text-align: center;
 	}
 	
@@ -251,6 +286,7 @@ h5 {
 
 #_footer {
 	border: 0;
+	border-top: thin solid red;
 	padding: 3pt 5pt 5pt 7pt;
 	text-align: left;
 	clear: both;
