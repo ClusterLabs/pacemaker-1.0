@@ -41,7 +41,7 @@ tt, pre	{
     font-family: Lucida Console,Courier New,Courier,monospace;
 	}
 
-.code {
+pre {
     margin-left: 4pt;
     margin-top: 8pt;
     margin-bottom: 8pt;
@@ -160,6 +160,18 @@ h5 {
 	padding: 0;
 	border: 0;
 	}
+
+#_content ul {
+	margin-top: 14pt;
+	}
+#_content li p {
+	margin-top: -0.5em;
+	}
+#_content ul ul {
+	margin-top: -1em;
+	margin-bottom: 1em;
+	}
+
 /* Sidebar - currently on right side */
 #_sidebar {
 	padding: 0;
@@ -173,7 +185,7 @@ h5 {
 	/* height: 100%; No! has weird overlay effects with FireFox, maybe others, too... */
 	float: right;
 	display: block;
-	width: 23ex;
+	width: 25ex;
 	font-size: 10pt;
 	}
 
@@ -273,9 +285,7 @@ h5 {
 	}
 	
 #_slashboxes a {
-	display: block;
 	text-decoration: none;
-	
 }
 
 #_slashboxes b a:hover {
