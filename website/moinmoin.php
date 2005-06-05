@@ -36,9 +36,13 @@
  *
  */
 
-function MoinMoinNoCache()
+function MoinMoinNoCache($cachefile)
 {
-	global $MOINMOINCacheLimit;
+	global $MOINMOINCacheLimit, $PageTitle, $MOINMOINurl, $MOINMOINfetched;
+
+	if (isset($MOINMOINfetched[$cachefile])) {
+		return false;
+	}
 	if (isset($MOINMOINCacheLimit[$PageTitle])) {
 		$cachelimit = $MOINMOINCacheLimit[$PageTitle];
 	}elseif (isset($MOINMOINCacheLimit['*'])) {
@@ -47,10 +51,13 @@ function MoinMoinNoCache()
 		$cachelimit = -1;
 	}
 	if ($cachelimit >= 0) {
-		$filename = "$MOINMOINurl/$PageTitle";
 		$now = intval(date("U"));
-		clearstatcache();
-		$mtime = filemtime($filename);
+		if (file_exists($cachefile)) {
+			clearstatcache();
+			$mtime = filemtime($cachefile);
+		}else{
+			$mtime = $now;
+		}
 		if (($now-$mtime) >= $cachelimit) {
 			return true;
 		}
@@ -61,12 +68,13 @@ function MoinMoinNoCache()
 	return false;
 }
 
-function MoinMoin($PageTitle, $INCLUDEPHP = false, $CACHESUFFIX = "")
+function MoinMoin($ptitle, $INCLUDEPHP = false, $CACHESUFFIX = "")
 {
 	global $MOINMOINurl, $MOINMOINalias, $MOINMOINcachedir, $MOINMOINfilemod, $MOINMOINstandardsearch;
-	global $MOINMOINstandardreplace, $current_cache_prefix, $current_cache_relprefix;
+	global $MOINMOINstandardreplace, $current_cache_prefix, $current_cache_relprefix, $PageTitle;
+	global $MOINMOINfetched;
 
-	$PageTitle = str_replace("/","_", $PageTitle);
+	$PageTitle = str_replace("/","_", $ptitle);
 	$filename = "$MOINMOINurl/$PageTitle";
 	$cachefile = "$MOINMOINcachedir/$MOINMOINalias$PageTitle$CACHESUFFIX.html";
 	# for attachments and the like
@@ -75,7 +83,7 @@ function MoinMoin($PageTitle, $INCLUDEPHP = false, $CACHESUFFIX = "")
 	set_time_limit(30);
 	umask(077);
 	
-	if (MoinMoinNoCache() && file_exists($cachefile)) {
+	if (MoinMoinNoCache($cachefile) && file_exists($cachefile)) {
 		unlink($cachefile);
 	}
 	if (!file_exists($cachefile))
@@ -107,9 +115,15 @@ function MoinMoin($PageTitle, $INCLUDEPHP = false, $CACHESUFFIX = "")
 		fwrite($fd, $body);
 		fclose ($fd);
 		chmod($cachefile, $MOINMOINfilemod);
+		$msg=sprintf("EXPANDED %d bytes into %s"
+		,	filesize($cachefile), $cachefile);
+		$MOINMOINfetched[$cachefile] = true;
 
 	} else {
 		$body = implode("",file($cachefile));
+		$msg=sprintf("READ %d bytes from %s"
+		,	filesize($cachefile), $cachefile);
+		LogIt($msg);
 	}
 
 	return $body;
@@ -152,13 +166,9 @@ function MOINMOINloadstandardregs()
 	$MOINMOINstandardsearch[] = "'(<a\s[^>]*href=\")/$MOINMOINalias([^\">]*\">)'iU";
 	$MOINMOINstandardreplace[] = "\\1$local_cache_url_prefix\\2";
 
-	$MOINMOINExtraneousImages = array(
-		'/wiki/classic/img/moin-www.png',
-		'/wiki/classic/img/moin-ftp.png'
-	);
 	# Strip out [WWW] [FTP] images, etc.
 	foreach ($MOINMOINExtraneousImages as $im) {
-		$MOINMOINstandardsearch[] = "'< *img src=\"${im}\"[^>]*>'i";
+		$MOINMOINstandardsearch[] = "'< *img +src=\"${im}\"[^>]*>'i";
 		$MOINMOINstandardreplace[] = '';
 	}
 
@@ -263,8 +273,13 @@ function CacheURL($urlprefix, $urlsuffix, $cacheprefix)
 function LogIt($message)
 {
 	$logfile="/tmp/linux-ha.web";
-	$datestamp=date("YmdHIs");
-	error_log("$datestamp:	$message\n", 3, $logfile);
+	$datestamp=date("Y/m/d_H:i:s");
+	if (file_exists($logfile) && filesize($logfile) > 1000000) {
+		rename($logfile, "$logfile.OLD");
+		touch($logfile);
+		chmod($logfile, 0644);
+	}
+	error_log("$datestamp	$message\n", 3, $logfile);
 	chmod($logfile, 0644);
 }
 function ReportError($errorcode, $descr, $file, $line, $symtab)
@@ -324,7 +339,7 @@ function subtimes($lhs, $rhs)
 function CacheURL_ll($url, $cachefile)
 {
 	global $MOINMOINfilemod, $MOINMOINcachedir, $MOINMOINurl;
-	global $cachetmp;
+	global $cachetmp,  $MOINMOINfetched;
 	$cachetmp = tempnam($MOINMOINcachedir, 'TEMP_');
 	set_time_limit(60);
 	set_error_handler("ReportError");
@@ -340,7 +355,7 @@ function CacheURL_ll($url, $cachefile)
 	$elapsed = subtimes($end, $start);
 	chmod($cachetmp, $MOINMOINfilemod);
 	
-	$msg=sprintf("Cached %d bytes in %.3f secs into %s"
+	$msg=sprintf("CACHED %d bytes in %.3f secs into %s"
 	,	filesize($cachetmp), $elapsed, $cachefile);
 	LogIt($msg);
 
@@ -352,6 +367,7 @@ function CacheURL_ll($url, $cachefile)
 		unlink($cachetmp);
 		unset($cachetmp);
 	}
+	$MOINMOINfetched[$cachefile] = true;
 	return file_exists($cachefile);
 }
 
@@ -367,7 +383,7 @@ function MOINMOINcacheattachments($argSrc, $argTar)
 	$argTar = str_replace("/","_", $argTar);
 
 	$cachefile = "$current_cache_prefix$argTar";
-	if (MoinMoinNoCache() || !file_exists($cachefile)) {
+	if (MoinMoinNoCache($cachefile) || !file_exists($cachefile)) {
 		CacheURL_ll("$MOINMOINurl/$argSrc", $cachefile);
 	}
 	return $local_cache_url_prefix . $cachefile;
@@ -428,7 +444,7 @@ function MOINMOINcacheimages($argSrc, $argTar)
 	$argTar = str_replace("/","_", $argTar);
 
 	$cachefile = URLtoCacheFile($argSrc, "");
-	if (MoinMoinNoCache() || !file_exists($cachefile)) {
+	if (MoinMoinNoCache($cachefile) || !file_exists($cachefile)) {
 		CacheURL($MOINMOINurl, $argSrc, "");
 	}
 	return "src=\"$local_cache_url_prefix$cachefile\" CACHED=\"yes\"";

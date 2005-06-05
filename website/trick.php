@@ -25,10 +25,16 @@ $MOINMOINfilemod = 0664;
 #
 #	Images to delete when we see them...
 #
+global $MOINMOINCacheLimit;
+global $MOINMOINExtraneousImages;
+
 $MOINMOINExtraneousImages = array(
-	'/wiki/classic/img/moin-www.png',
-	'/wiki/classic/img/moin-ftp.png'
+	'/wiki/classic/img/moin-diff.png',
+	'/wiki/classic/img/moin-ftp.png',
+	'/wiki/classic/img/moin-rss.png',
+	'/wiki/classic/img/moin-www.png'
 );
+$MOINMOINCacheLimit = array("RecentChanges" => 300);
 
 # for http://some.server/WikiPageName
 $local_cache_url_prefix = "/";
@@ -38,6 +44,7 @@ $local_cache_url_prefix = "/";
 #############################################################
 #############################################################
 #############################################################
+
 
 include "moinmoin.php";
 
@@ -50,7 +57,6 @@ if (strlen($path_info) < 3) {
 	$path_info = "/HomePage";
 }
 
-$MOINMOINCacheLimit = array("RecentChanges" => 300);
 
 
 # Wiki Page
