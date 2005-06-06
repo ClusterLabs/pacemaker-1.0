@@ -83,7 +83,7 @@ ConfigureLinux() {
   then
     distro="Debian GNU/Linux"
     PACKAGECMD="$MAKE_CMD deb"
-    DFLAGS="--mandir=/usr/share/man"
+    DFLAGS="--mandir=/usr/share/man --disable-snmp-subagent --disable-swig"
   elif
     [ -f /etc/gentoo-release -a -s /etc/gentoo-release ]
   then
