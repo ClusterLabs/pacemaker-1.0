@@ -1,4 +1,4 @@
-/* $Id: ccm.h,v 1.35 2005/05/24 18:59:47 gshi Exp $ */
+/* $Id: ccm.h,v 1.36 2005/06/06 18:10:49 gshi Exp $ */
 /*
  * ccm.h: definitions Consensus Cluster Manager internal header
  *				file
@@ -206,6 +206,7 @@ int update_strcreate(ccm_update_t *, char **, llm_info_t *);
 void update_strdelete(char *memlist);
 int update_is_member(ccm_update_t *, llm_info_t *, const char *);
 int update_get_uptime(ccm_update_t *, llm_info_t *, int );
+void	update_display(int pri,llm_info_t* llm, ccm_update_t* tab);
 /* END OF update interfaces */
 
 

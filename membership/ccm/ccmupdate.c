@@ -1,4 +1,4 @@
-/* $Id: ccmupdate.c,v 1.12 2005/06/04 07:50:42 gshi Exp $ */
+/* $Id: ccmupdate.c,v 1.13 2005/06/06 18:10:49 gshi Exp $ */
 /* 
  * update.c: functions that track the votes during the voting protocol
  *
@@ -210,13 +210,6 @@ update_compute_leader(ccm_update_t *tab, uint j, llm_info_t *llm)
 
 	entry2 = &(tab->update[leader]);
 
-	if (entry2 == NULL) {
-		return j;	
-	}
-
-	if (entry1 == NULL) {
-		return leader;
-	}
 
 	if ((entry2->uptime == 0)  
 	    &&  (entry1->uptime == 0)) {
@@ -251,6 +244,29 @@ leader_str :
 	return j;
 }
 
+void
+update_display(int pri,llm_info_t* llm, ccm_update_t* tab)
+{
+	int i; 
+	int count;
+	
+	cl_log(pri, "diplaying update information: ");
+	cl_log(pri, "leader=%d(%s) nodeCount=%d", 
+	       tab -> leader,
+	       (tab->leader<0 || tab->leader >= LLM_GET_NODECOUNT(llm))?"":LLM_GET_NODEID(llm, tab->update[tab->leader].index),
+	       tab->nodeCount);
+	
+	count = 0;
+ 	for ( i = 0; i < LLM_GET_NODECOUNT(llm); i++){
+		if (tab->update[i].index >=0){
+			cl_log(pri, "%d:%s uptime=%d", 
+			       i,
+			       LLM_GET_NODEID(llm, tab->update[i].index),
+			       tab->update[i].uptime);		
+			count ++;
+		}
+	}
+}
 
 /* */
 /* given the current members, choose the leader. 
@@ -432,7 +448,7 @@ update_add(ccm_update_t *tab,
 /* */
 void
 update_remove(ccm_update_t *tab, 
-		llm_info_t *llm, 
+	      llm_info_t *llm, 
 		const char *orig)
 {
 	int j, idx;
