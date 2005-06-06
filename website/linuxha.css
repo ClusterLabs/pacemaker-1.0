@@ -168,6 +168,12 @@ h5 {
 	margin-top: -0.5em;
 	}
 #_content ul ul {
+	margin-left: -2ex;
+	margin-top: -1em;
+	margin-bottom: 1em;
+	}
+#_content ol ul {
+	margin-left: -3ex;
 	margin-top: -1em;
 	margin-bottom: 1em;
 	}
