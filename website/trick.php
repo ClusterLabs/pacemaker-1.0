@@ -32,6 +32,7 @@ $MOINMOINExtraneousImages = array(
 	'/wiki/classic/img/moin-diff.png',
 	'/wiki/classic/img/moin-ftp.png',
 	'/wiki/classic/img/moin-rss.png',
+	'/wiki/classic/img/moin-inter.png',
 	'/wiki/classic/img/moin-www.png'
 );
 $MOINMOINCacheLimit = array("RecentChanges" => 300);
