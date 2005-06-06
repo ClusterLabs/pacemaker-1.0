@@ -193,8 +193,12 @@ function browser_type() {
 	$MajorVers="0";
 	if (isset($_SERVER["HTTP_USER_AGENT"])) {
 		$ua = $_SERVER["HTTP_USER_AGENT"];
-		if (preg_match('%MSIE  *(([1-9][0-9])*\.[0-9.]+)%', $ua, $match)) {
+		if (preg_match('%MSIE  *(([1-9][0-9]*)\.[0-9.]+)%', $ua, $match)) {
 			$Browser="MSIE";
+			$Version=$match[1];
+			$MajorVers=$match[2];
+		}elseif (preg_match('%Opera +(([1-9][0-9]*)\.[0-9.]+)%', $ua, $match)) {
+			$Browser="Opera";
 			$Version=$match[1];
 			$MajorVers=$match[2];
 		}elseif (preg_match('%^([A-Za-z][A-Za-z]*)/(([1-9][0-9]*)\.[0-9.]+)%m', $ua, $match)) {
