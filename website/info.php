@@ -55,9 +55,12 @@ function browser_type() {
 	$MajorVers="0";
 	if (isset($_SERVER["HTTP_USER_AGENT"])) {
 		$ua = $_SERVER["HTTP_USER_AGENT"];
-
-		if (preg_match('%MSIE  *(([1-9][0-9])*\.[0-9.]+)%', $ua, $match)) {
+		if (preg_match('%MSIE  *(([1-9][0-9]*)\.[0-9.]+)%', $ua, $match)) {
 			$Browser="MSIE";
+			$Version=$match[1];
+			$MajorVers=$match[2];
+		}elseif (preg_match('%Opera +(([1-9][0-9]*)\.[0-9.]+)%', $ua, $match)) {
+			$Browser="Opera";
 			$Version=$match[1];
 			$MajorVers=$match[2];
 		}elseif (preg_match('%^([A-Za-z][A-Za-z]*)/(([1-9][0-9]*)\.[0-9.]+)%m', $ua, $match)) {
@@ -66,6 +69,7 @@ function browser_type() {
 			$MajorVers=$match[3];
 		}
 	}
+	echo "<BR><STRONG>$Browser, $Version, $MajorVers</STRONG><BR>\n";
 	return array($Browser, $Version, intval($MajorVers));
 }
 
@@ -76,13 +80,36 @@ function browser_compatibility() {
 		return 2;
 	}
 	if (strcasecmp($T[0], "Opera") == 0) {
-		if ($T[2] > 6) {
+		if ($T[2] >= 7) {
 			return 2;
 		}elseif ($T[2] == 6) {
 			return 1;
 		}
 	}
 	return 0;
+}
+function browser_compatibility_messages() {
+	$c = browser_compatibility();
+	$ffurl="http://www.mozilla.org/products/firefox/";
+	$ff="<a href=\"$ffurl\">Firefox </a>";
+	$imgdir="http://sfx-images.mozilla.org/affiliates/Buttons";
+	$ffbut1="<img border=\"0\" alt=\"Get Firefox!\" src=\"$imgdir/80x15/white_1.gif\"/>";
+	$ffbut2="<img border=\"0\" alt=\"Get Firefox!\" src=\"$imgdir/110x32/trust.gif\"/>";
+	$ff1="<a href=\"$ffurl\">Firefox $ffbut1</a>";
+	$ff2="<a href=\"$ffurl\">Firefox $ffbut2</a>";
+	if ($c >= 2) {
+		return;
+	}
+	echo '<font size="+1">';
+	if ($c == 1) {
+		echo "<p>This site best when viewed with a modern CSS-compatible browser. "
+		.	"We recommend $ff1</p>";
+	}else{
+		echo "<p>Your browser will likely have trouble with this site. "
+		.	"This site best when viewed with a modern browser<BR> "
+		.	"We recommend $ff2</p>";
+	}
+	echo "</font>";
 }
 
 	print_r(browser_type());
