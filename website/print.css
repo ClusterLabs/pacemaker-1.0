@@ -55,6 +55,11 @@ ul ul {
 	margin-top: -1em;
 	margin-bottom: 1em;
 	}
+#_content ol ul {
+	margin-top: -1em;
+	margin-left: -3ex;
+	margin-bottom: 1em;
+	}
 
 span._linktext {
     text-color: #000000;
