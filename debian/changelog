@@ -1,16 +1,81 @@
-heartbeat (1.99.1-1) unstable; urgency=low
+heartbeat (1.99.5-1) unstable; urgency=low
 
-  * Updated for 1.99.1
+  * New upstream
+  * Added dependancy on libnet-dns-perl to ldirectord
+  * Added --enable-checkpointd to configure arguments
+  * Added --disable-snmp-subagent to configure arguments
+  * Added --disable-swig to configure arguments
+
+ -- Simon Horman <horms@debian.org>  Mon,  6 Jun 2005 17:21:07 +0900
+
+heartbeat (1.2.3-8) unstable; urgency=low
+ 
+  * Added dependancy on libnet-dns-perl to ldirectord
+  * Removed Build-Dependancy on raidtools2 as it is being removed
+    from the archive and removed the Raid1 resource from the
+    heartbeat package accordingly. (closes: #296717)
+  * Added build dependancy on bison and flex.
+  
+ -- Simon Horman <horms@debian.org>  Tue, 22 Mar 2005 13:20:18 +0900
+
+heartbeat (1.2.3-7) unstable; urgency=low
+
+  * Remove the hacluser user and haclient group on purge. (closes: #29951)
+  * Note the Delay resource bug closed in 1.2.3-4 was #287848, not #28784.
+
+ -- Simon Horman <horms@debian.org>  Tue, 15 Mar 2005 12:30:45 +0900
+
+heartbeat (1.2.3-5) unstable; urgency=low
+
+  * Added missing libxml2-dev build dependancy that is required
+    for the drac3 stonith module to build. (closes: #290235)
+
+ -- Simon Horman <horms@debian.org>  Fri, 14 Jan 2005 16:23:48 +0900
+
+heartbeat (1.2.3-4) unstable; urgency=low
+
+  * Move user and group creation code from postinst to preinst
+    (Jochen Friedrich) (closes: #285603)
+  * Don't set uid of user that is created
+    (Daniel Hermann) (closes: #288818)
+  * Stonith module for EXTERNAL Stonith device
+    (Daniel Hermann) (closes: #286274)
+  * Remove control fifo in postrm
+  * Fix gcc-4.0 compile problems (Andreas Jochens) (closes: #286347)
+  * Removed stray heartbeat-stonith.files and heartbeat-ldirectord.files
+    from debian/, these have not been used for quite some time now.
+  * Added build dependancy on libcurl-dev to allow drac3 Stonith device to build
+  * Added drac3 Stonith device to build
+  * Add --disable-fatal-warnings to ./configure in debian/rules,
+    this is known not to work cleanly with debian's lex and yacc.
+    Also, reverse 02-lex_yacc_cflags.patch, which is an attempt to
+    work around this, which doesn't always work.
+  * Fix loop in FIFO reader that manifests on SPARC/Linux
+    (Jochen Friedrich) (closes: #285356)
+  * Fix typo in Delay resource that causes both stop and start to fail
+    (Daniel Hermann) (closes: #28784)
+
+ -- Simon Horman <horms@debian.org>  Wed, 12 Jan 2005 12:22:01 +0900
+
+heartbeat (1.2.3-3) unstable; urgency=low
+
+  * Removed /etc/ha.d/resource.d/apache as it does not work
+    properly _on Debian_ and by removing it /etc/init.d/apache will be used
+    which does work. Reported by Fraser Campbell. (closes: #283447)
+  * Update ldirectord from 1.77.2.5 to 1.77.2.6 for https bug.
+    http://www.gossamer-threads.com/lists/linuxha/users/22059
+    Requested by Amadeus Scherhaufer.
+
+ -- Simon Horman <horms@debian.org>  Wed,  1 Dec 2004 16:35:59 +0900
+
+heartbeat (1.2.3-2) unstable; urgency=low
+
+  * Fixed a bug related to repeat STONITHs failing because we freed some
+    data we shouldn't have.
   * Don't run exclude cl_status from dh_fixperms as it overrides permissions
     that the build system sets which are needed for correct opperation.
 
- -- Simon Horman <horms@debian.org>  Thu, 11 Nov 2004 12:02:38 +0900
-
-heartbeat (1.3.0-1) unstable; urgency=low
-
-  * Updated for 1.3.0
-
- -- Simon Horman <horms@debian.org>  Fri, 24 Sep 2004 17:15:14 +0900
+ -- Simon Horman <horms@debian.org>  Tue, 16 Nov 2004 15:54:28 +0900
 
 heartbeat (1.2.3-1) unstable; urgency=low
 

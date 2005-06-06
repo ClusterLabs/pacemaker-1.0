@@ -20,27 +20,24 @@
 #
 MAINTAINERCLEANFILES    = Makefile.in
 
-#PATCH_FILES		= $(shell find patches/ patches/series/ -maxdepth 1 -type f)
-PATCH_FILES		= patches/01-running_resource.patch \
-			  patches/00-ssh_scp_path.patch \
-			  patches/02-lex_yacc_cflags.patch \
-			  patches/03-nonroot_chroot.patch \
-			  patches/series/1.99.1-1
-
-EXTRA_DIST	        = changelog control copyright compat dpkg-checkbuild \
-                          ldirectord.files \
-                          ldirectord.postinst \
-                          ldirectord.postrm \
-                          libpils0.dirs libpils0.files \
-			  libpils-dev.dirs libpils-dev.files \
-			  stonith.files \
-                          libstonith0.dirs libstonith0.files \
-			  libstonith-dev.dirs libstonith-dev.files \
-                          libstonith0.postinst \
-                          heartbeat.dirs heartbeat.files \
+EXTRA_DIST		= apply changelog compat control copyright \
+			  dpkg-checkbuild rules \
 			  heartbeat-dev.dirs heartbeat-dev.files \
-                          heartbeat.postinst heartbeat.postrm \
-			  rules apply $(PATCH_FILES)
+			  heartbeat.dirs heartbeat.files heartbeat.postinst \
+			  heartbeat.postrm heartbeat.preinst \
+			  ldirectord.files ldirectord.postinst \
+			  ldirectord.postrm \
+			  libpils-dev.dirs libpils-dev.files \
+			  libpils0.dirs libpils0.files \
+			  libstonith-dev.dirs libstonith-dev.files \
+			  libstonith0.dirs libstonith0.files \
+			  libstonith0.postinst \
+			  stonith.files \
+			  patches/00-ssh_scp_path.patch \
+			  patches/01-conditional_build.patch \
+			  patches/02-crm_pidfile.patch \
+			  patches/series/1.99.5-1
+
 
 clean-local:
 	rm -f *.substvars *.debhelper files

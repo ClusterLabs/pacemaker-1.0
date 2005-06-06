@@ -1,4 +1,0 @@
-+ 00-ssh_scp_path.patch 
-+ 01-running_resource.patch
-+ 02-lex_yacc_cflags.patch
-+ 03-nonroot_chroot.patch

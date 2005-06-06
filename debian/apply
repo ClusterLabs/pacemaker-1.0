@@ -42,7 +42,7 @@ find_patch() {
 apply_patch() {
 	patch=$(find_patch $home/$1)
 	base=$1
-	if uncompress_patch "$patch" | patch -p1 -f -s -t --no-backup-if-mismatch; then
+	if uncompress_patch "$patch" | patch -p1 -s -t --no-backup-if-mismatch; then
 		printf "%-${length}s\tOK (+)\n" "$base"
 	else
 		printf "%-${length}s\tFAIL (+)\n" "$base"
@@ -53,7 +53,7 @@ apply_patch() {
 deapply_patch() {
 	patch=$(find_patch $home/$1)
 	base=$1
-	if uncompress_patch "$patch" | patch -p1 -f -s -t -R --no-backup-if-mismatch; then
+	if uncompress_patch "$patch" | patch -p1 -s -t -R --no-backup-if-mismatch; then
 		printf "%-${length}s\tOK (-)\n" "$base"
 	else
 		printf "%-${length}s\tFAIL (-)\n" "$base"
@@ -105,6 +105,40 @@ patch_series() {
 	echo "--> $(basename $series) fully applied."
 }
 
+bubble_sort ()
+{
+	SORTED=$@
+
+	SWAPED=1
+	while [ $SWAPED = 1 ]; do
+		X=0
+		A=""
+		SWAPED=0
+		NEW=""
+		for i in $SORTED; do
+			if [ -z "$A" ]; then
+				A="$i"
+				continue
+			fi
+			B="$i"
+		
+			if dpkg --compare-versions $A "lt" $B; then
+				SWAPED=1
+				NEW="$NEW $B"
+			else
+				NEW="$NEW $A"
+				A="$B"
+			fi
+
+			X=$(($X + 1))
+		done
+		SORTED="$NEW $A"
+	done
+
+	echo $SORTED
+}
+
+
 if ! [ -d heartbeat ]; then
 	die 'Not in heartbeat top level directory.  Exiting'
 	exit 1
@@ -141,10 +175,12 @@ target_rev=${target#*-}
 target_up=${target%-*}
 
 # Sanity checks
-if [ "$target_up" != "$upstream" ]; then
+if dpkg --compare-versions "$target_up" ne "$upstream"; then
 	die "Upstream $target_up doesn't match $upstream!"
 # We don't have that version out yet!
-elif [ ! -n "$target_rev" ] || ( [ "$target_rev" != "$target" ] && [ $target_rev -gt $revision ] ); then
+elif [ ! -n "$target_rev" ] || 
+		( dpkg --compare-versions "$target_rev" ne "$target" && 
+			dpkg --compare-versions "$target_rev" gt "$revision" ); then
 	year=$(($(date +%Y) + 1))
 	die "Can't patch to nonexistent revision $target_rev (wait until $year)"
 fi
@@ -163,39 +199,42 @@ if [ "$target_rev" = "$target" ]; then
 		exit 0
 	fi
 
-	for sver in $(ls -d $home/series/* | sort -r); do
+	for sver in $(bubble_sort $(ls -d $home/series/*) ); do
 		base=$(basename "$sver")
 		srev=${base#*-}
 		if [ -n "$srev" ]; then
-			if [ $srev -le $current_rev ]; then
+			if dpkg --compare-versions $srev "<=" $current_rev; then
 				unpatch_series $sver
 			fi
 		else
 			die "Series doesn't have a revision!"
 		fi
 	done
-elif [ "$current_rev" = "$upstream" ] || [ $target_rev -gt $current_rev ]; then
+elif dpkg --compare-versions "$current_rev" eq "$upstream" ||
+		dpkg --compare-versions "$target_rev" gt "$current_rev"; then
 	for sver in $home/series/*; do
 		base=$(basename "$sver")
 		srev=${base#*-}
 		if [ -n "$srev" ]; then
-			if [ $srev -gt $current_rev ] && [ $srev -le $target_rev ]; then
+			if dpkg --compare-versions "$srev" gt "$current_rev" && 
+						dpkg --compare-versions "$srev" le "$target_rev"; then
 				patch_series $sver
 			fi
 		else
 			die "Series doesn't have a revision!"
 		fi
 	done
-elif [ $target_rev -eq $current_rev ]; then
+elif dpkg --compare-versions "$target_rev" eq "$current_rev"; then
 	echo "Nothing to do, exiting."
 	exit 0
-elif [ $target_rev -lt $current_rev ]; then
-	for sver in $(ls -d $home/series/* | sort -r); do
+elif dpkg --compare-versions "$target_rev" lt "$current_rev"; then
+	for sver in $(bubble_sort $(ls -d $home/series/*) ); do
 		base=$(basename "$sver")
 		srev=${base#*-}
 		if [ -n "$srev" ]; then
-			# -gt because you don't want to unapply the target series
-			if [ $srev -le $current_rev ] && [ $srev -gt $target_rev ]; then
+			# gt because you don't want to unapply the target series
+			if dpkg --compare-versions "$srev" le "$current_rev" && 
+						dpkg --compare-versions "$srev" gt "$target_rev"; then
 				unpatch_series $sver
 			fi
 		else

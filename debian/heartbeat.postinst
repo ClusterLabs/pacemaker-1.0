@@ -5,8 +5,6 @@
 
 set -e
 
-. /usr/lib/heartbeat/ha_config
-
 # summary of how this script can be called:
 #        * <postinst> `configure' <most-recently-configured-version>
 #        * <old-postinst> `abort-upgrade' <new version>
@@ -19,24 +17,18 @@ set -e
 
 case "$1" in
     configure)
-        if ! getent group "$HA_APIGROUP" > /dev/null ; then
-                addgroup --system --group "$HA_APIGROUP" > /dev/null
-        fi
-        if ! getent passwd "$HA_CCMUSER" > /dev/null ; then
-                adduser --uid "$HA_CCMUID" \
-                        --ingroup "$HA_APIGROUP" \
-                        --gecos "Heartbeat System Account" \
-                        --no-create-home --disabled-login \
-                        --home "$HA_COREDIR/$HA_CCMUSER" \
-                        --shell /bin/false  \
-                        --disabled-password "$HA_CCMUSER" > /dev/null
-        fi
-
 	#
 	#fifo (0600, root, root)
 	#
         rm -f /var/lib/heartbeat/fifo
         mknod -m 0600 /var/lib/heartbeat/fifo p
+
+	chmod 750 /var/lib/heartbeat/ccm
+        chown hacluster /var/lib/heartbeat/ccm
+        chgrp haclient /var/lib/heartbeat/ccm
+
+	chmod 2555 /usr/bin/cl_status
+	chgrp haclient /usr/bin/cl_status
 	
 	# Do we want to move the old S20 symlinks to S75 ones?
 	if [ -n "$2" ] ; then
@@ -74,5 +66,3 @@ esac
 #DEBHELPER#
 
 exit 0
-
-# vim:set ai et sts=2 sw=2 tw=0:

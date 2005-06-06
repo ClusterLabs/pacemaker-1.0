@@ -1,0 +1,47 @@
+Index: Makefile.am
+===================================================================
+RCS file: /home/cvs/linux-ha/linux-ha/Makefile.am,v
+retrieving revision 1.57
+diff -u -r1.57 Makefile.am
+--- a/Makefile.am	22 Apr 2005 04:26:42 -0000	1.57
++++ b/Makefile.am	6 Jun 2005 08:11:03 -0000
+@@ -53,11 +53,15 @@
+ 
+ ## proc-ha is left out from SUBDIRS (completely obsolete)
+ 
++if SNMP_SUBAGENT_BUILD
++SNMP_SUBAGENT_DIR = snmp_subagent
++endif
++
+ SUBDIRS	=		libltdl debian pkg replace include config	\
+ 			lib						\
+ 			ldirectord heartbeat membership telecom		\
+ 			linux-ha contrib resources			\
+-			crm lrm snmp_subagent				\
++			crm lrm $(SNMP_SUBAGENT_DIR)			\
+ 			tools logd fencing doc cts
+ 
+ HANDY_DOCS = doc/ChangeLog doc/GettingStarted.html doc/DirectoryMap.txt
+Index: snmp_subagent/Makefile.am
+===================================================================
+RCS file: /home/cvs/linux-ha/linux-ha/snmp_subagent/Makefile.am,v
+retrieving revision 1.20
+diff -u -r1.20 Makefile.am
+--- a/snmp_subagent/Makefile.am	24 May 2005 22:29:34 -0000	1.20
++++ b/snmp_subagent/Makefile.am	6 Jun 2005 08:11:04 -0000
+@@ -50,7 +50,6 @@
+ mibs_DATA		= LINUX-HA-MIB.mib
+ DIST_LIST		= SNMPAgentSanityCheck.in $(mibs_DATA)
+ 
+-if SNMP_SUBAGENT_BUILD
+ EXTRA_DIST		= $(DIST_LIST)
+ 
+ 
+@@ -81,7 +80,3 @@
+ # test cases
+ testdir			= $(libdir)/heartbeat
+ test_SCRIPTS		= $(test_scrs)
+-
+-else
+-EXTRA_DIST		= $(DIST_LIST)	$(hbagent_srces) $(test_scrs)
+-endif

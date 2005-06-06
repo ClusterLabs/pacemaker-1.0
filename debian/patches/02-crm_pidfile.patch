@@ -1,0 +1,122 @@
+Index: crm//admin/Makefile.am
+===================================================================
+RCS file: /home/cvs/linux-ha/linux-ha/crm/admin/Makefile.am,v
+retrieving revision 1.16
+retrieving revision 1.17
+diff -u -r1.16 -r1.17
+--- a/crm//admin/Makefile.am	12 Apr 2005 12:57:26 -0000	1.16
++++ b/crm//admin/Makefile.am	6 Jun 2005 07:40:57 -0000	1.17
+@@ -28,7 +28,6 @@
+ halibdir		= $(libdir)/@HB_PKG@
+ commmoddir		= $(halibdir)/modules/comm
+ havarlibdir		= $(localstatedir)/lib/@HB_PKG@
+-PIDFILE			= $(localstatedir)/run/crmd.pid
+ XML_FLAGS		= `xml2-config --cflags`
+ XML_LIBS		= `xml2-config --libs`
+ 
+@@ -48,7 +47,6 @@
+ 
+ LIBRT 			= @LIBRT@
+ AM_CFLAGS		= @CFLAGS@					\
+-			-DPIDFILE='"$(PIDFILE)"' 			\
+ 			$(CRM_DEBUG_FLAGS)
+ 
+ ## libraries
+Index: crm//cib/Makefile.am
+===================================================================
+RCS file: /home/cvs/linux-ha/linux-ha/crm/cib/Makefile.am,v
+retrieving revision 1.18
+retrieving revision 1.19
+diff -u -r1.18 -r1.19
+--- a/crm//cib/Makefile.am	12 Apr 2005 12:57:28 -0000	1.18
++++ b/crm//cib/Makefile.am	6 Jun 2005 07:40:57 -0000	1.19
+@@ -26,7 +26,6 @@
+ halibdir	= $(libdir)/@HB_PKG@
+ commmoddir	= $(halibdir)/modules/comm
+ havarlibdir	= $(localstatedir)/lib/@HB_PKG@
+-PIDFILE		= $(localstatedir)/run/crmd.pid
+ XML_FLAGS	= `xml2-config --cflags`
+ XML_LIBS	= `xml2-config --libs`
+ 
+@@ -47,7 +46,7 @@
+ 		  $(LIBRT)
+ 
+ LIBRT 		= @LIBRT@
+-AM_CFLAGS	= @CFLAGS@ -DPIDFILE='"$(PIDFILE)"' $(CRM_DEBUG_FLAGS)
++AM_CFLAGS	= @CFLAGS@ $(CRM_DEBUG_FLAGS)
+ 
+ ## binary progs
+ halib_PROGRAMS	= cib cibmon
+Index: crm//crmd/Makefile.am
+===================================================================
+RCS file: /home/cvs/linux-ha/linux-ha/crm/crmd/Makefile.am,v
+retrieving revision 1.27
+retrieving revision 1.28
+diff -u -r1.27 -r1.28
+--- a/crm//crmd/Makefile.am	12 Apr 2005 12:57:29 -0000	1.27
++++ b/crm//crmd/Makefile.am	6 Jun 2005 07:40:57 -0000	1.28
+@@ -26,7 +26,6 @@
+ halibdir	= $(libdir)/@HB_PKG@
+ commmoddir	= $(halibdir)/modules/comm
+ havarlibdir	= $(localstatedir)/lib/@HB_PKG@
+-PIDFILE		= $(localstatedir)/run/crmd.pid
+ XML_FLAGS	= `xml2-config --cflags`
+ XML_LIBS	= `xml2-config --libs`
+ 
+@@ -46,7 +45,6 @@
+ 
+ LIBRT 		= @LIBRT@
+ AM_CFLAGS	= @CFLAGS@						\
+-		-DPIDFILE='"$(PIDFILE)"'				\
+ 		$(CRM_DEBUG_FLAGS)
+ 
+ ## libraries
+Index: crm//pengine/Makefile.am
+===================================================================
+RCS file: /home/cvs/linux-ha/linux-ha/crm/pengine/Makefile.am,v
+retrieving revision 1.22
+retrieving revision 1.23
+diff -u -r1.22 -r1.23
+--- a/crm//pengine/Makefile.am	20 May 2005 09:48:15 -0000	1.22
++++ b/crm//pengine/Makefile.am	6 Jun 2005 07:40:57 -0000	1.23
+@@ -28,7 +28,6 @@
+ halibdir	= $(libdir)/@HB_PKG@
+ commmoddir	= $(halibdir)/modules/comm
+ havarlibdir	= $(localstatedir)/lib/@HB_PKG@
+-PIDFILE		= $(localstatedir)/run/crmd.pid
+ XML_FLAGS	= `xml2-config --cflags`
+ XML_LIBS	= `xml2-config --libs`
+ 
+@@ -47,7 +46,6 @@
+ 
+ LIBRT 		= @LIBRT@
+ AM_CFLAGS	= @CFLAGS@						\
+-		-DPIDFILE='"$(PIDFILE)"'				\
+ 		$(CRM_DEBUG_FLAGS)
+ 
+ ## libraries
+Index: crm//tengine/Makefile.am
+===================================================================
+RCS file: /home/cvs/linux-ha/linux-ha/crm/tengine/Makefile.am,v
+retrieving revision 1.15
+retrieving revision 1.16
+diff -u -r1.15 -r1.16
+--- a/crm//tengine/Makefile.am	12 Apr 2005 12:57:31 -0000	1.15
++++ b/crm//tengine/Makefile.am	6 Jun 2005 07:40:57 -0000	1.16
+@@ -28,7 +28,6 @@
+ halibdir	= $(libdir)/@HB_PKG@
+ commmoddir	= $(halibdir)/modules/comm
+ havarlibdir	= $(localstatedir)/lib/@HB_PKG@
+-PIDFILE		= $(localstatedir)/run/crmd.pid
+ XML_FLAGS	= `xml2-config --cflags`
+ XML_LIBS	= `xml2-config --libs`
+ 
+@@ -44,7 +43,7 @@
+ 		$(LIBRT)
+ 
+ LIBRT 		= @LIBRT@
+-AM_CFLAGS	= @CFLAGS@ -DPIDFILE='"$(PIDFILE)"' $(CRM_DEBUG_FLAGS)
++AM_CFLAGS	= @CFLAGS@ $(CRM_DEBUG_FLAGS)
+ 
+ 
+ ## binary progs

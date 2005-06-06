@@ -22,7 +22,10 @@
 
 cfg:=--prefix=/usr --sysconfdir=/etc --localstatedir=/var \
   --mandir=/usr/share/man \
-  --with-ssh-path=/usr/bin/ssh --with-scp-path=/usr/bin/ssh
+  --with-ssh-path=/usr/bin/ssh --with-scp-path=/usr/bin/ssh \
+  --with-group-name=haclient --with-ccmuser-name=hacluster \
+  --disable-fatal-warnings --enable-checkpointd \
+  --disable-snmp-subagent --disable-swig
 
 # These are used for cross-compiling and for saving the configure script
 # from having to guess our platform (since we know it already)
@@ -50,27 +53,27 @@ unpatch:
 	override_version=$(RELEASE) sh debian/apply $(UPSTREAM)
 
 
-build: checkbuild patch build-stamp
+build: checkbuild build-stamp
 build-stamp:
 	dh_testdir
 	./configure $(cfg)
 	$(MAKE)
 	touch build-stamp
 
-clean: clean-stamp unpatch
-clean-stamp:
+clean:
 	dh_testdir
 	dh_testroot
 	# Add here commands to clean up after the build process.
 	-$(MAKE) clean MAKE=make
 	-$(MAKE) distclean MAKE=make
+	rm -f tools/ccdv
 	dh_clean build-stamp install-stamp
 	rm -f debian/init debian/*.debhelper debian/*.substvars config.log
 	rm -r -f debian/heartbeat debian/heartbeat-dev debian/ldirectord \
 		debian/libpils0 debian/libpils-dev \
 		debian/libstonith0 debian/libstonith-dev debian/stonith \
 		debian/tmp
-	#There is no stamp!
+
 
 install: build install-stamp
 install-stamp:
@@ -81,6 +84,7 @@ install-stamp:
 	$(MAKE) install DESTDIR=$(DTMP) \
 	  MAKE=make \
 	  docdir=/usr/share/doc/heartbeat 
+
 	find $(DTMP)/usr/share/man -type f | xargs gzip -v --best
 	install -c -m 755 heartbeat/init.d/heartbeat \
                 $(DTMP)/etc/init.d/heartbeat
@@ -93,8 +97,6 @@ install-stamp:
 	cd $(DTMP)/etc/ha.d/resource.d \
 	  && ln -s /usr/sbin/ldirectord ldirectord
 	cd $(DTMP)/etc/ && ln -s ha.d heartbeat
-	mv `pwd`/debian/tmp/usr/lib/heartbeat/cts/README \
-		`pwd`/debian/tmp/usr/share/doc/heartbeat/README.cts
 	dh_movefiles --source=debian/tmp
 
 binary-indep: build install
