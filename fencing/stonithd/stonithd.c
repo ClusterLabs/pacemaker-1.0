@@ -1,4 +1,4 @@
-/* $Id: stonithd.c,v 1.51 2005/06/03 08:37:43 sunjd Exp $ */
+/* $Id: stonithd.c,v 1.52 2005/06/06 09:20:35 sunjd Exp $ */
 
 /* File: stonithd.c
  * Description: STONITH daemon for node fencing
@@ -1793,8 +1793,9 @@ stonithop_result_to_local_client( stonith_ops_t * st_op, gpointer data)
 		stonithd_log(LOG_INFO, "%s %s: optype=%d.", M_STONITH_SUCCEED
 			     , st_op->node_name, st_op->optype);
 	} else {
-		stonithd_log(LOG_INFO, "%s %s: optype=%d.", M_STONITH_FAIL
-			     , st_op->node_name, st_op->optype);
+		stonithd_log(LOG_INFO, "%s %s: optype=%d, op_result=%d"
+			,	M_STONITH_FAIL, st_op->node_name
+			,	st_op->optype, st_op->op_result);
 	}
 
 	stonithd_log(LOG_DEBUG, "stonith finished: optype=%d, node_name=%s", 
@@ -3052,6 +3053,9 @@ adjust_debug_level(int nsig, gpointer user_data)
 
 /* 
  * $Log: stonithd.c,v $
+ * Revision 1.52  2005/06/06 09:20:35  sunjd
+ * minor log tweak
+ *
  * Revision 1.51  2005/06/03 08:37:43  sunjd
  * add logs
  *
