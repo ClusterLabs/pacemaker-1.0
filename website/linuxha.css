@@ -133,7 +133,7 @@ h5 {
 	background: #E0E0E0;
 	}
 
-/* Content */
+/* Content: the whole web site... */
 
 #_pagebody {
 	padding: 0;
@@ -193,6 +193,7 @@ h5 {
 	display: block;
 	width: 25ex;
 	font-size: 10pt;
+	background: white;
 	}
 
 #_sidebar img {
