@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.408 2005/05/31 20:36:49 gshi Exp $ */
+/* $Id: heartbeat.c,v 1.409 2005/06/07 19:43:14 gshi Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -2081,7 +2081,6 @@ HBDoMsg_T_ACKMSG(const char * type, struct node_info * fromnode,
 		}
 	}
 	
-	(void)free_one_hist_slot;
 #if 0	
 	cl_log(LOG_INFO, "hist->ackseq =%ld, old_hist_ackseq=%ld",
  	       hist->ackseq, old_hist_ackseq);
@@ -5301,6 +5300,9 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.409  2005/06/07 19:43:14  gshi
+ * this void reference is not necessary any longer
+ *
  * Revision 1.408  2005/05/31 20:36:49  gshi
  * bug 581:
  *
