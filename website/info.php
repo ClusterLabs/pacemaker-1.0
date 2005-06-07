@@ -55,18 +55,18 @@ function browser_type() {
 	$MajorVers="0";
 	if (isset($_SERVER["HTTP_USER_AGENT"])) {
 		$ua = $_SERVER["HTTP_USER_AGENT"];
-		if (preg_match('%MSIE  *(([1-9][0-9]*)\.[0-9.]+)%', $ua, $match)) {
-			$Browser="MSIE";
-			$Version=$match[1];
-			$MajorVers=$match[2];
-		}elseif (preg_match('%Opera +(([1-9][0-9]*)\.[0-9.]+)%', $ua, $match)) {
-			$Browser="Opera";
-			$Version=$match[1];
-			$MajorVers=$match[2];
-		}elseif (preg_match('%^([A-Za-z][A-Za-z]*)/(([1-9][0-9]*)\.[0-9.]+)%m', $ua, $match)) {
-			$Browser=$match[1];
-			$Version=$match[2];
-			$MajorVers=$match[3];
+
+		$BrowserPats = array('%(MSIE|Opera) + (([1-9][0-9]*)\.[0-9.]+)%'
+		,	'%; +(Konqueror|Netscape)/(([1-9][0-9]*)\.[0-9.]+)%i'
+		,	'%(Mozilla)/(([1-9][0-9]*)\.[0-9.]+)%i');
+
+		foreach ($BrowserPats as $pat) {
+			if (preg_match($pat, $ua, $match)) {
+				$Browser=$match[1];
+				$Version=$match[2];
+				$MajorVers=$match[3];
+				break;
+			}
 		}
 	}
 	echo "<BR><STRONG>$Browser, $Version, $MajorVers</STRONG><BR>\n";
@@ -78,6 +78,20 @@ function browser_compatibility() {
 	$T=browser_type();
 	if (strcasecmp($T[0], "Mozilla") == 0 && $T[2] >= 5) {
 		return 2;
+	}
+	if (strcasecmp($T[0], "Konqueror") == 0) {
+		if ($T[2] >= 3) {
+			return 2;
+		}else{
+			return 1;
+		}
+	}
+	if (strcasecmp($T[0], "Netscape") == 0) {
+		if ($T[2] >= 7) {
+			return 2;
+		}elseif ($T[2] >= 6) {
+			return 1;
+		}
 	}
 	if (strcasecmp($T[0], "Opera") == 0) {
 		if ($T[2] >= 7) {
