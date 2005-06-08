@@ -1,4 +1,4 @@
-/* $Id: send_arp.c,v 1.15 2005/04/10 05:34:02 alan Exp $ */
+/* $Id: send_arp.c,v 1.16 2005/06/08 08:15:19 sunjd Exp $ */
 /* 
  * send_arp
  * 
@@ -195,7 +195,7 @@ main(int argc, char *argv[])
 		}
 	}
 	else {
-		convert_macaddr(macaddr, src_mac);
+		convert_macaddr((unsigned char *)macaddr, src_mac);
 	}
 
 /*
@@ -204,14 +204,16 @@ main(int argc, char *argv[])
  * done by Masaki Hasegawa <masaki-h@pp.iij4u.or.jp> and his colleagues.
  */
 	for (j=0; j < repeatcount; ++j) {
-		c = send_arp(l, ip, device, src_mac, broadcast, 
-				netmask, ARPOP_REQUEST);
+		c = send_arp(l, ip, (unsigned char*)device, src_mac
+			, (unsigned char*)broadcast, (unsigned char*)netmask
+			, ARPOP_REQUEST);
 		if (c < 0) {
 			break;
 		}
 		mssleep(msinterval / 2);
-		c = send_arp(l, ip, device, src_mac, broadcast, 
-				netmask, ARPOP_REPLY);
+		c = send_arp(l, ip, (unsigned char*)device, src_mac
+			, (unsigned char *)broadcast
+			, (unsigned char *)netmask, ARPOP_REPLY);
 		if (c < 0) {
 			break;
 		}
@@ -241,7 +243,7 @@ convert_macaddr (u_char *macaddr, u_char enet_src[6])
 		bits[1] = macaddr[pos++];
 		bits[2] = '\0';
 
-		enet_src[i] = strtol(bits, (char **)NULL, 16);
+		enet_src[i] = strtol((const char *)bits, (char **)NULL, 16);
 	}
 
 }
@@ -461,7 +463,7 @@ send_arp(libnet_t* lntag, u_long ip, u_char *device, u_char macaddr[6], u_char *
 	}
 
 	/* Ethernet header */
-	if (get_hw_addr(device, device_mac) < 0) {
+	if (get_hw_addr((char *)device, device_mac) < 0) {
 		syslog(LOG_ERR, "Cannot find mac address for %s",
 				device);
 		return -1;
@@ -657,6 +659,9 @@ write_pid_file(const char *pidfilename)
 
 /*
  * $Log: send_arp.c,v $
+ * Revision 1.16  2005/06/08 08:15:19  sunjd
+ * Make GCC4 happy. unsigned<->signed
+ *
  * Revision 1.15  2005/04/10 05:34:02  alan
  * BUG 459: Fixed a directory-creation race condition in send_arp.
  *
