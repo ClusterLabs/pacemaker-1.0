@@ -1,4 +1,4 @@
-/* $Id: ccm.c,v 1.91 2005/05/31 23:04:52 gshi Exp $ */
+/* $Id: ccm.c,v 1.92 2005/06/08 08:17:39 sunjd Exp $ */
 /* 
  * ccm.c: Consensus Cluster Service Program 
  *
@@ -1000,7 +1000,7 @@ ccm_memlist_changed(ccm_info_t *info,
 		assert(indx >=0 && indx < LLM_GET_NODECOUNT(llm));
 		uuid = LLM_GET_UUID(llm,indx);
 		assert(uuid>=0 && uuid < MAXNODE);
-		if (!bitmap_test(uuid, bitmap, MAXNODE)){
+		if (!bitmap_test(uuid, (unsigned char *)bitmap, MAXNODE)){
 			return TRUE;
 		}
 	}
@@ -1034,7 +1034,7 @@ ccm_fill_memlist_from_str(ccm_info_t *info,
 	unsigned char *bitmap;
 	int ret;
 
-	(void)ccm_str2bitmap(memlist, &bitmap);
+	(void)ccm_str2bitmap((const char *)memlist, &bitmap);
 	ret = ccm_fill_memlist(info, bitmap);
 	bitmap_delete(bitmap);
 	return ret;
@@ -1395,7 +1395,7 @@ ccm_compute_and_send_final_memlist(ll_cluster_t *hb, ccm_info_t *info)
 	/* check if the membership has changed from that before. If so we
 	 * have to generate a new cookie.
 	 */
-	if(ccm_memlist_changed(info, bitmap)) {
+	if(ccm_memlist_changed(info, (char *)bitmap)) {
 		cookie = ccm_generate_random_cookie();
 	}
 	repeat = 0;
@@ -3527,7 +3527,7 @@ switchstatement:
 				break;
 			}
 
-			ccm_fill_memlist_from_str(info, memlist);
+			ccm_fill_memlist_from_str(info, (const unsigned char *)memlist);
 			/* increment the major transition number and reset the
 			 * minor transition number
 			 */
@@ -4639,7 +4639,7 @@ static void ccm_state_wait_for_mem_list(enum ccm_type ccm_msg_type,
 				return;
 			}
 
-			ccm_fill_memlist_from_str(info, memlist);
+			ccm_fill_memlist_from_str(info, (const unsigned char *)memlist);
 			CCM_SET_MAJORTRANS(info, curr_major+1);
 			CCM_RESET_MINORTRANS(info);
 			if ((cookie = ha_msg_value(reply, CCM_NEWCOOKIE))
@@ -5073,7 +5073,7 @@ static void ccm_state_new_node_wait_for_mem_list(enum ccm_type ccm_msg_type,
 				return;
 			}
 			
-			ccm_fill_memlist_from_str(info, memlist);
+			ccm_fill_memlist_from_str(info, (const unsigned char *)memlist);
 			if(ccm_get_membership_index(info, 
 					CCM_GET_MYNODE_ID(info)) == -1){
 				version_reset(CCM_GET_VERSION(info));

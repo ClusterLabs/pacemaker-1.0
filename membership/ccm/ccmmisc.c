@@ -1,4 +1,4 @@
-/* $Id: ccmmisc.c,v 1.17 2004/08/29 03:01:14 msoffen Exp $ */
+/* $Id: ccmmisc.c,v 1.18 2005/06/08 08:17:39 sunjd Exp $ */
 /* 
  * ccmmisc.c: Miscellaneous Consensus Cluster Service functions
  *
@@ -40,7 +40,7 @@ ccm_str2bitmap(const char *memlist, unsigned char **bitlist)
 	   	return bitmap_create(bitlist, MAXNODE);
 	}
 
-	while ((*bitlist = (char *)g_malloc(outbytes)) == NULL) {
+	while ((*bitlist = (unsigned  char *)g_malloc(outbytes)) == NULL) {
 		cl_shortsleep();
 	}
 	memset(*bitlist,0,outbytes);

@@ -243,7 +243,7 @@ set_misc_node_info(SaClmClusterNodeT *cn)
 {
 	cn->nodeAddress.length = 0;
 	cn->nodeAddress.value[0] = '\0';
-	cn->nodeName.length = strlen(cn->nodeName.value);
+	cn->nodeName.length = strlen((char*)cn->nodeName.value);
 	cn->clusterName.length = 0;
 	cn->clusterName.value[0] = '\0';
 	cn->bootTimestamp = 0;
@@ -262,7 +262,7 @@ retrieve_current_buffer(__clm_handle_t *hd)
 		MEMNODE(i).member = 1;
 		p = oc->m_array[oc->m_memb_idx+i].node_uname;
 		if (p) {
-			strncpy(MEMNODE(i).nodeName.value, p, 
+			strncpy((char *)MEMNODE(i).nodeName.value, p, 
 					SA_MAX_NAME_LENGTH - 1);
 			MEMNODE(i).nodeName.value[SA_MAX_NAME_LENGTH-1] = '\0';
 		} else {
@@ -289,7 +289,7 @@ retrieve_changes_buffer(__clm_handle_t *hd)
 				MEMCHANGE(j) = SA_CLM_NODE_JOINED;
 				p = oc->m_array[oc->m_in_idx+i].node_uname;
 				if (p) {
-					strncpy(MEMNODE(j).nodeName.value, p, 
+					strncpy((char*)MEMNODE(j).nodeName.value, p, 
 							SA_MAX_NAME_LENGTH-1);
 					MEMNODE(j).nodeName.value \
 						[SA_MAX_NAME_LENGTH-1] = '\0';
@@ -307,7 +307,7 @@ retrieve_changes_buffer(__clm_handle_t *hd)
 		MEMNODE(n).member = 0;
 		p = oc->m_array[oc->m_out_idx+j].node_uname;
 		if (p) {
-			strncpy(MEMNODE(n).nodeName.value, p,
+			strncpy((char*)MEMNODE(n).nodeName.value, p,
 					SA_MAX_NAME_LENGTH - 1);
 			MEMNODE(n).nodeName.value[SA_MAX_NAME_LENGTH-1] = '\0';
 		} else {
@@ -331,7 +331,7 @@ retrieve_changes_only_buffer(__clm_handle_t *hd)
 		MEMNODE(n).member = 1;
 		p = oc->m_array[oc->m_in_idx+i].node_uname;
 		if (p) {
-			strncpy(MEMNODE(n).nodeName.value, p,
+			strncpy((char*)MEMNODE(n).nodeName.value, p,
 					SA_MAX_NAME_LENGTH - 1);
 			MEMNODE(n).nodeName.value[SA_MAX_NAME_LENGTH-1] = '\0';
 		} else {
@@ -345,7 +345,7 @@ retrieve_changes_only_buffer(__clm_handle_t *hd)
 		MEMNODE(n).member = 0;
 		p = oc->m_array[oc->m_out_idx+i].node_uname;
 		if (p) {
-			strncpy(MEMNODE(n).nodeName.value, p,
+			strncpy((char *)MEMNODE(n).nodeName.value, p,
 					SA_MAX_NAME_LENGTH - 1);
 			MEMNODE(n).nodeName.value[SA_MAX_NAME_LENGTH-1] = '\0';
 		} else {
@@ -536,7 +536,7 @@ retrieve_node_buffer(SaClmNodeIdT nodeId, SaClmClusterNodeT *clusterNode)
 			clusterNode->member = 1;
 			p = oc->m_array[oc->m_memb_idx+i].node_uname;
 			if (p) {
-				strncpy(clusterNode->nodeName.value, p,
+				strncpy((char *)clusterNode->nodeName.value, p,
 						SA_MAX_NAME_LENGTH - 1);
 				clusterNode->nodeName.value \
 					[SA_MAX_NAME_LENGTH-1] = '\0';
@@ -552,7 +552,7 @@ retrieve_node_buffer(SaClmNodeIdT nodeId, SaClmClusterNodeT *clusterNode)
 			clusterNode->member = 0;
 			p = oc->m_array[oc->m_out_idx+i].node_uname;
 			if (p) {
-				strncpy(clusterNode->nodeName.value, p,
+				strncpy((char *)clusterNode->nodeName.value, p,
 						SA_MAX_NAME_LENGTH - 1);
 				clusterNode->nodeName.value \
 					[SA_MAX_NAME_LENGTH-1] = '\0';
