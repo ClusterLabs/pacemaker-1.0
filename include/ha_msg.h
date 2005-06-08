@@ -1,4 +1,4 @@
-/* $Id: ha_msg.h,v 1.60 2005/05/10 17:35:38 gshi Exp $ */
+/* $Id: ha_msg.h,v 1.61 2005/06/08 20:47:25 gshi Exp $ */
 /*
  * Intracluster message object (struct ha_msg)
  *
@@ -216,6 +216,7 @@ extern struct fieldtypefuncs_s fieldtypefuncs[4];
 
 /* Set up message statistics area */
 void cl_msg_setstats(volatile hb_msg_stats_t* stats);
+void cl_dump_msgstats(void);
 
 /* Allocate new (empty) message */
 struct ha_msg *	ha_msg_new(int nfields);
