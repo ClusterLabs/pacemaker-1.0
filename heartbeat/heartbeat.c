@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.409 2005/06/07 19:43:14 gshi Exp $ */
+/* $Id: heartbeat.c,v 1.410 2005/06/08 21:29:02 gshi Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -2088,12 +2088,12 @@ HBDoMsg_T_ACKMSG(const char * type, struct node_info * fromnode,
 	if (hist->ackseq > old_hist_ackseq){
 		int count;
 		int start;
-		count = hist->ackseq - old_hist_ackseq - send_cluster_msg_level;
+		count = hist->ackseq - hist->lowseq - send_cluster_msg_level;
 		if (old_hist_ackseq == 0){
 			start = 0;
 			count = count - 1;
 		}else{
-			start = (old_hist_ackseq - 1)%MAXMSGHIST;
+			start = hist->lowseq %MAXMSGHIST;
 		}
 		
 		while(count -- > 0){
@@ -2106,6 +2106,9 @@ HBDoMsg_T_ACKMSG(const char * type, struct node_info * fromnode,
 	cl_log(LOG_INFO, "hist->ackseq =%ld, node %s's ackseq=%ld",
 	       hist->ackseq, fromnode->nodename,
 	       fromnode->track.ackseq);
+	cl_log(LOG_INFO, "hist->lowseq =%ld, hist->hiseq=%ld", 
+	       hist->lowseq, hist->hiseq);
+	cl_dump_msgstats();
 	
 	if (hist->lowest_acknode){
 		cl_log(LOG_INFO,"expecting from %s",hist->lowest_acknode->nodename);
@@ -2357,6 +2360,7 @@ send_ack_if_needed(struct node_info* thisnode, seqno_t seq)
 			cl_log(LOG_ERR, "cannot send " T_ACKMSG
 			       " request to %s", thisnode->nodename);
 		}
+
 	}else{
 		ha_msg_del(hmsg);
 		cl_log(LOG_ERR, "Cannot create " T_REXMIT " message.");
@@ -4743,6 +4747,7 @@ request_msg_rexmit(struct node_info *node, seqno_t lowseq
 			" request to %s", node->nodename);
 		}
 		node->track.last_rexmit_req = time_longclock();
+		
 	}else{
 		ha_msg_del(hmsg);
 		cl_log(LOG_ERR, "Cannot create " T_REXMIT " message.");
@@ -5300,6 +5305,10 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.410  2005/06/08 21:29:02  gshi
+ * fixed a bug that caused 2 messages not being freed (until the whole hist queue is full)
+ * after receiving the corresponding ACK msg
+ *
  * Revision 1.409  2005/06/07 19:43:14  gshi
  * this void reference is not necessary any longer
  *
