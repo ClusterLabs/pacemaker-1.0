@@ -201,7 +201,7 @@ LHAResourceGroupTable_get_next_data_point(void **my_loop_context, void **my_data
     vptr = put_index_data;
     info = (struct hb_rsinfo *) g_ptr_array_index(gResourceGroupInfo, i);
 
-    rsinfo_get_int_value(RESOURCE_STATUS, i, &status);
+    rsinfo_get_int_value(RESOURCE_STATUS, i, (unsigned int *)&status);
     info->status = status;
 
     snmp_set_var_value(vptr, (u_char *) &info->id, sizeof(size_t));

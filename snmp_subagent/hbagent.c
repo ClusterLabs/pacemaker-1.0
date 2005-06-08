@@ -715,7 +715,7 @@ clm_track_cb(SaClmClusterNotificationT *nbuf, SaUint32T nitem,
 
 		for (i = 0; i < nitem; i++) {
 		    	status = nbuf[i].clusterChanges;
-			node = nbuf[i].clusterNode.nodeName.value;
+			node = (char *)nbuf[i].clusterNode.nodeName.value;
 
 			if (status == SA_CLM_NODE_NO_CHANGE) {
 			    	continue;

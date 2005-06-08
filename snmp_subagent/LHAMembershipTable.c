@@ -260,7 +260,7 @@ LHAMembershipTable_handler(
                         snmp_set_var_typed_value(var, 
 				ASN_OCTET_STR, 
 				(u_char *) entry->clusterNode.nodeName.value, 
-				strlen(entry->clusterNode.nodeName.value) + 1);
+				strlen((char *)entry->clusterNode.nodeName.value) + 1);
                         break;
 
                     case COLUMN_LHAMEMBERADDRESS:
@@ -274,7 +274,7 @@ LHAMembershipTable_handler(
                         snmp_set_var_typed_value(var, 
 				ASN_OCTET_STR, 
 				(u_char *) entry->clusterNode.clusterName.value, 
-				strlen(entry->clusterNode.clusterName.value) + 1);
+				strlen((char *)entry->clusterNode.clusterName.value) + 1);
                         break;
 
                     case COLUMN_LHAMEMBERISMEMBER:
