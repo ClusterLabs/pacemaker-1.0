@@ -1,4 +1,4 @@
-/* $Id: mlock.c,v 1.10 2005/02/17 15:06:35 alan Exp $ */
+/* $Id: mlock.c,v 1.11 2005/06/08 08:21:46 sunjd Exp $ */
 /*
  *
  * multi-clients NFS lock test code
@@ -481,7 +481,7 @@ init_comm(const char* servername)
 		
 		sin_size = sizeof(their_addr);
 		if(( gi.sockfd = accept(sockfd, (struct sockaddr *)&their_addr, 
-					 &sin_size)) == -1) {
+					 (socklen_t *)&sin_size)) == -1) {
 			perror("accept");
 			exit(1);
 		}
