@@ -22,6 +22,8 @@ AM_CFLAGS                       = @CFLAGS@  @LIBNETDEFINES@
 
 MAINTAINERCLEANFILES    = Makefile.in
 
+INCLUDES		= -I$(top_srcdir)/include
+
 gliblib			= @GLIBLIB@
 
 havarlibdir             = $(localstatedir)/lib/@HB_PKG@
