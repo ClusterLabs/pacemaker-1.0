@@ -21,7 +21,7 @@
 
 #ifndef _STONITD_API_H_
 #define _STONITD_API_H_
-#include <uuid/uuid.h>
+#include <clplumbing/cl_uuid.h>
 #include <clplumbing/ipc.h>
 
 #define ST_OK 	0
