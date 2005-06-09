@@ -1,4 +1,4 @@
-/* $Id: oc_membership.h,v 1.7 2004/10/24 13:00:12 lge Exp $ */
+/* $Id: oc_membership.h,v 1.8 2005/06/09 16:36:43 davidlee Exp $ */
 #ifndef OCF_OC_MEMBERSHIP_H
 #	define OCF_OC_MEMBERSHIP_H
 /*
@@ -47,16 +47,7 @@
 
 #include <stddef.h>
 #include <ocf/oc_event.h>
-
-#ifdef HAVE_UUID_UUID_H
-#	include <uuid/uuid.h>
-#else
-#ifdef HAVE_UUID_H
-#	include <uuid.h>
-#else
-	typedef unsigned char uuid_t[16];
-#endif
-#endif
+#include <clplumbing/cl_uuid.h>
 
 /*
  * This enumeration is used both to indicated the type of an event

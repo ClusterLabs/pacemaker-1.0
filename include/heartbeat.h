@@ -1,4 +1,4 @@
-/* $Id: heartbeat.h,v 1.64 2005/04/27 05:31:42 gshi Exp $ */
+/* $Id: heartbeat.h,v 1.65 2005/06/09 16:36:43 davidlee Exp $ */
 /*
  * heartbeat.h: core definitions for the Linux-HA heartbeat program
  *
@@ -64,9 +64,6 @@
 #undef index
 #undef time
 
-#ifdef HAVE_UUID_UUID_H
-#	include <uuid/uuid.h>
-#endif
 /*
  * <syslog.h> might not contain LOG_PRI...
  * So, we define it ourselves, or error out if we can't...
