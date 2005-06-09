@@ -21,7 +21,7 @@
 
 #include <portability.h>
 #include <config.h>
-#include <uuid/uuid.h>
+#include <clplumbing/cl_uuid.h>
 #include <heartbeat.h>
 #include <string.h>
 #include <sys/types.h>
