@@ -1,4 +1,4 @@
-/* $Id: portability.h,v 1.44 2005/06/09 16:36:43 davidlee Exp $ */
+/* $Id: portability.h,v 1.45 2005/06/10 03:43:25 sunjd Exp $ */
 #ifndef PORTABILITY_H
 #  define PORTABILITY_H
 
@@ -126,12 +126,6 @@ inet_pton(int af, const char *src, void *dst);
 #	ifndef SYS_NMLN
 #		define SYS_NMLN _SYS_NAMELEN
 #	endif /* SYS_NMLN */
-#endif
-
-#include <signal.h>
-#ifdef _SYS_SIGNAL_H_
-/* This appears to be a BSD variant which also uses a different type name */
-	typedef sig_t sighandler_t;
 #endif
 
 #endif /* PORTABILITY_H */
