@@ -834,7 +834,7 @@ chan_waitin_timeout(IPC_Channel * chan, unsigned int timeout)
 {
 	int ret;
 	unsigned int other_remaining;
-	sighandler_t old_handler;
+	struct sigaction old_action;
 
 	other_remaining = alarm(0);
 	if ( other_remaining > 0 ) {
@@ -844,7 +844,10 @@ chan_waitin_timeout(IPC_Channel * chan, unsigned int timeout)
 		alarm(other_remaining);
 		ret = chan->ops->waitin(chan);
 	} else {
-		old_handler = signal(SIGALRM, sigalarm_handler);
+		memset(&old_action, 0, sizeof(old_action));
+		cl_signal_set_simple_handler(SIGALRM, sigalarm_handler
+				, 	&old_action);
+		
 		INT_BY_ALARM = FALSE;
 		alarm(timeout);
 	
@@ -857,7 +860,8 @@ chan_waitin_timeout(IPC_Channel * chan, unsigned int timeout)
 			alarm(0);
 		}
 
-		signal(SIGALRM, old_handler);
+		cl_signal_set_simple_handler(SIGALRM, old_action.sa_handler
+				,	&old_action);
 		stdlib_log(LOG_DEBUG, "chan_waitin_timeout: ret=%d.", ret);
 	}
 
@@ -869,7 +873,7 @@ chan_waitout_timeout(IPC_Channel * chan, unsigned int timeout)
 {
 	int ret;
 	unsigned int other_remaining = 0;
-	sighandler_t old_handler;
+	struct sigaction old_action;
 
 	other_remaining = alarm(0);
 	if ( other_remaining > 0 ) {
@@ -878,7 +882,9 @@ chan_waitout_timeout(IPC_Channel * chan, unsigned int timeout)
 			   "using timer, I donnot use alarm.");
 		ret = chan->ops->waitout(chan);
 	} else {
-		old_handler = signal(SIGALRM, sigalarm_handler);
+		memset(&old_action, 0, sizeof(old_action));
+		cl_signal_set_simple_handler(SIGALRM, sigalarm_handler
+				, 	&old_action);
 		INT_BY_ALARM = FALSE;
 		alarm(timeout);
 
@@ -891,7 +897,8 @@ chan_waitout_timeout(IPC_Channel * chan, unsigned int timeout)
 			alarm(0);
 		}
 
-		signal(SIGALRM, old_handler);
+		cl_signal_set_simple_handler(SIGALRM, old_action.sa_handler
+				,	&old_action);
 		stdlib_log(LOG_DEBUG, "chan_waitout_timeout: ret=%d.", ret);
 	}
 
