@@ -1,4 +1,4 @@
-/* $Id: config.c,v 1.159 2005/06/02 16:03:30 gshi Exp $ */
+/* $Id: config.c,v 1.160 2005/06/11 13:42:49 alan Exp $ */
 /*
  * Parse various heartbeat configuration files...
  *
@@ -1953,7 +1953,11 @@ set_api_authorization(const char * directive)
 		goto baddirective;
 	}
 
-	cl_log(LOG_INFO, "uid=%s, gid=%s", uidlist, gidlist);
+	if (ANYDEBUG) {
+		cl_log(LOG_DEBUG, "uid=%s, gid=%s"
+		,	(uidlist == NULL ? "<null>" : uidlist)
+		,	(gidlist == NULL ? "<null>" : gidlist));
+	}
 	auth = ipc_str_to_auth(uidlist, uidlen, gidlist, gidlen);
 	if (auth == NULL){
 		goto baddirective;
@@ -2099,6 +2103,9 @@ set_release2mode(const char* value)
 
 /*
  * $Log: config.c,v $
+ * Revision 1.160  2005/06/11 13:42:49  alan
+ * Fixed a BEAM bug, and made an "info" message into a "debug" message.
+ *
  * Revision 1.159  2005/06/02 16:03:30  gshi
  * modify the error message for syntax according Steve D's suggestion
  *
