@@ -1,4 +1,4 @@
-/* $Id: oc_membership.h,v 1.8 2005/06/09 16:36:43 davidlee Exp $ */
+/* $Id: oc_membership.h,v 1.9 2005/06/12 06:54:36 alan Exp $ */
 #ifndef OCF_OC_MEMBERSHIP_H
 #	define OCF_OC_MEMBERSHIP_H
 /*
@@ -65,7 +65,7 @@ typedef enum oc_member_eventtype_e		oc_member_eventtype_t;
 
 						/* controversial? */
 typedef void *					oc_cluster_handle_t;
-typedef uuid_t					oc_node_id_t;
+typedef cl_uuid_t				oc_node_id_t;
 typedef struct oc_member_uniqueid_s		oc_member_uniqueid_t;
 
 /*
@@ -127,7 +127,7 @@ extern "C" {
  *	equality comparisons, and secondarily for use in
  *	sorting them into a canonical order.
  */
-int	oc_cmp_node_id(oc_node_id_t l, oc_node_id_t r);
+int	oc_cmp_node_id(oc_node_id_t* l, oc_node_id_t* r);
 
 
 /* Return our local node id */
