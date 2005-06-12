@@ -55,7 +55,7 @@ uuid_hash(gconstpointer key)
 gint
 uuid_equal(gconstpointer v, gconstpointer v2)
 {
-	return (uuid_compare(v, v2) == 0 );
+	return (cl_uuid_compare(v, v2) == 0 );
 }
 
 #if 0
