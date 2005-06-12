@@ -1,4 +1,4 @@
-/* $Id: oc_membership.h,v 1.9 2005/06/12 06:54:36 alan Exp $ */
+/* $Id: oc_membership.h,v 1.10 2005/06/12 07:34:42 alan Exp $ */
 #ifndef OCF_OC_MEMBERSHIP_H
 #	define OCF_OC_MEMBERSHIP_H
 /*
@@ -127,7 +127,7 @@ extern "C" {
  *	equality comparisons, and secondarily for use in
  *	sorting them into a canonical order.
  */
-int	oc_cmp_node_id(oc_node_id_t* l, oc_node_id_t* r);
+int	oc_cmp_node_id(const oc_node_id_t* l, const oc_node_id_t* r);
 
 
 /* Return our local node id */
