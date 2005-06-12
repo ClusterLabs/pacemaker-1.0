@@ -9,7 +9,7 @@ function PRLinkFix($total, $href, $linktext)
 	}
 	if (strcasecmp(substr($href, 0, strlen("mailto:")), "mailto:") == 0
 	||	$href[0] == '#') {
-		return "<SPAN CLASS=\"_linktext\">${total}</SPAN>";
+		return "<SPAN CLASS=\"i_linktext\">${total}</SPAN>";
 	}
 	if (isset($URLs) && array_key_exists($href, $URLs)) {
 		$num = $URLs[$href];
@@ -18,7 +18,7 @@ function PRLinkFix($total, $href, $linktext)
 		$URLs[$href] = count($XrefList);
 		$num = count($XrefList);
 	}
-	return "<SPAN CLASS=\"_linktext\">${total}</SPAN><SPAN CLASS=\"_xref\">[${num}]</SPAN>";
+	return "<SPAN CLASS=\"i_linktext\">${total}</SPAN><SPAN CLASS=\"i_xref\">[${num}]</SPAN>";
 }
 function PRXrefs()
 {
@@ -31,7 +31,7 @@ function PRXrefs()
 	for ($j=0; $j < count($XrefList); ++$j) {
 		$k=$j+1;
 		$ref=$XrefList[$j];
-		$ret .= "<TR><TD><SPAN CLASS=\"_refno\">[$k]</SPAN></TD><TD><SPAN CLASS=\"_href\">$ref</SPAN><BR></TD></TR>\n";
+		$ret .= "<TR><TD><SPAN CLASS=\"i_refno\">[$k]</SPAN></TD><TD><SPAN CLASS=\"_href\">$ref</SPAN><BR></TD></TR>\n";
 	}
 	$ret .= "</TABLE></DIV><BR>\n";
 	return $ret;

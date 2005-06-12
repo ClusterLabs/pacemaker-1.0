@@ -9,22 +9,22 @@
 </head>
 <body>
 <?php browser_compatibility_messages(); ?>
-<div id="_site">
- <div id="_header"><a href="/" title="<? echo "$sitename Home Page."; ?>"><?php echo MoinMoin("TopLogo"); ?></a></div>
- <div id="_menu"><?php echo MoinMoin("TopMenu"); ?></div>
- <div id="_pagebody">
-  <div id="_sidebar">
-   <div id="_mainmenu"><?php echo MoinMoin("MainMenu"); ?></div>
-   <div id="_slashboxes"><?php echo MoinMoin("SlashBoxes"); ?></div>
-   <div id="_additional_actions">
-     <?php echo "<a href=/print.php/$pagename>printer friendly view</a>"?>
-     <?php echo "<a href=/print.php/$pagename><IMG BORDER=\"0\" src=\"/img/moin-print.png\"></a>"?>
+<div id="i_site">
+ <div id="i_header"><?php echo MoinMoin("TopLogo"); ?></div>
+ <div id="i_menu"><?php echo MoinMoin("TopMenu"); ?></div>
+ <div id="i_pagebody">
+  <div id="i_sidebar">
+   <div id="i_mainmenu"><?php echo MoinMoin("MainMenu"); ?></div>
+   <div id="i_slashboxes"><?php echo MoinMoin("SlashBoxes"); ?></div>
+   <div id="i_additional_actions">
+     <?php echo '<a href="/print.php/$pagename">printer friendly view</a>'?>
+     <?php echo '<a href="/print.php/$pagename">'?><IMG src="/img/moin-print.png" alt="printer"></a>
    </div>
   </div>
-  <div id="_content">
+  <div id="i_content">
 	<?php echo $content; ?>
   </div>
-  <div id="_footer"><?php echo $sitename; ?> built by <a href="/SiteCredits">The Linux-HA crowd</a></div>
+  <div id="i_footer"><?php echo MoinMoin("PageFooter"); ?></div>
  </div>
 </div>
 </body>

@@ -252,15 +252,13 @@ function browser_compatibility_messages() {
 	if ($c >= 2) {
 		return;
 	}
-	echo '<font size="-11">';
 	if ($c == 1) {
-		echo '<p><font size="-2">This site best when viewed with a modern CSS-compatible browser. '
-		.	"We recommend $ff1.</font></p>";
+		echo '<font size="-2">This site best when viewed with a modern CSS-compatible browser. '
+		.	"We recommend $ff1.</font>\n";
 	}else{
-		echo '<p><font size="-2">This site best when viewed with a modern standards-compliant browser. '
-		.	"We recommend $ff2.</font></p>";
+		echo '<font size="-2">This site best when viewed with a modern standards-compliant browser. '
+		.	"We recommend $ff2.</font>\n";
 	}
-	echo "</font>";
 }
 
 function URLtoCacheFile($urlsuffix, $cacheprefix)
@@ -407,49 +405,6 @@ function MOINMOINcacheattachments($argSrc, $argTar)
 	return $local_cache_url_prefix . $cachefile;
 }
 
-function oldMOINMOINcacheattachments($argSrc, $argTar)
-{
-	global $MOINMOINurl, $current_cache_prefix, $local_cache_url_prefix;
-	
-	# SECURITY ALERT
-	# need to clean up sanitize $argTar, in a specially crafted wiki page
-	# may be a special file name
-	# hope this is enough, just in case:
-	$argTar = str_replace("/","_", $argTar);
-
-	$cachefile = "$current_cache_prefix$argTar";
-	if (!file_exists($cachefile))
-	{
-		$fd = fopen ("$MOINMOINurl/$argSrc", "rb");
-		$attachment = "";
-		/*
-		do {
-			$data = fread($fd, 8192);
-			if (strlen($data) == 0) { break; }
-			$attachment .= $data;
-		} while(true);
-		fclose ($fd);
-	
-		$fd = fopen($cachefile, "wb");
-		fwrite($fd, $attachment);
-		fclose ($fd);
-		*/
-
-		/* Write the file incrementally to avoid hitting the 8M barrier */
-		$fdw = fopen($cachefile, "wb");
-		do {
-			$data = fread($fd, 8192);
-			if (strlen($data) == 0) { break; }
-			fwrite($fdw, $data);
-		} while(true);
-		fclose ($fdw);
-		fclose ($fd);
-		chmod($cachefile, $MOINMOINfilemod);
-	}
-
-	return $local_cache_url_prefix . $cachefile;
-}
-
 function MOINMOINcacheimages($argSrc, $argTar)
 {
 	global $MOINMOINserver, $MOINMOINcachedir, $MOINMOINfilemod, $local_cache_url_prefix, $MOINMOINurl;
@@ -465,6 +420,6 @@ function MOINMOINcacheimages($argSrc, $argTar)
 	if (MoinMoinNoCache($cachefile) || !file_exists($cachefile)) {
 		CacheURL($MOINMOINurl, $argSrc, "");
 	}
-	return "src=\"$local_cache_url_prefix$cachefile\" CACHED=\"yes\"";
+	return "src=\"$local_cache_url_prefix$cachefile\"";
 }
 ?>

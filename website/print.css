@@ -55,19 +55,19 @@ ul ul {
 	margin-top: -1em;
 	margin-bottom: 1em;
 	}
-#_content ol ul {
+#i_content ol ul {
 	margin-top: -1em;
 	margin-left: -3ex;
 	margin-bottom: 1em;
 	}
 
-span._linktext {
+span.i__linktext {
     text-color: #000000;
     font-weight : normal; 
     text-decoration: underline;
 }
 
-span._xref {
+span.i__xref {
     vertical-align: top;
     font-size:	75%;
 }

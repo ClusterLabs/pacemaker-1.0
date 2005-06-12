@@ -7,7 +7,7 @@ body {
 	border: 0;
 	}
 
-#_site {
+#i_site {
 	font-family: verdana, lucida, arial, helvetica, sans-serif;
 	margin: 6pt auto;
 	padding: 0pt;
@@ -97,13 +97,13 @@ h5 {
 
 /* Header and Top Menu */
 
-#_header {
+#i_header {
 	border: 0;
 	margin: 2pt;
 	padding: 2pt;
 	}
 
-#_header img	{
+#i_header img	{
 	border: 0;
 	display: block;
 	margin-left: auto;
@@ -111,14 +111,14 @@ h5 {
 	}
 
 /* Menu across the top of the page */
-#_menu table {
+#i_menu table {
 	width:		100%;
 	background:	white;
 	border-bottom:	2pt solid red;
 	border-top:	2pt solid red;
 	}
 
-#_menu td a {
+#i_menu td a {
 	padding: 2pt;
 	text-decoration: none;
 	display: block;
@@ -127,7 +127,7 @@ h5 {
 	width: 80pt;
 	}
 
-#_menu a:hover {
+#i_menu a:hover {
 	background: #FFFFFF;
 	font-weight: bold;
 	background: #E0E0E0;
@@ -135,7 +135,7 @@ h5 {
 
 /* Content: the whole web site... */
 
-#_pagebody {
+#i_pagebody {
 	padding: 0;
 	margin: 0;
 	border: 0;
@@ -143,44 +143,44 @@ h5 {
 	clear: both;
 	}
 
-#_content {
+#i_content {
 	background: #FFFFFF;
 	margin: 0;
 	padding: 6pt;
 	}
 
-#_content table {
+#i_content table {
 	border: 1pt solid #cccccc;
 	margin: 2pt;
 	padding: 1pt;
 	}
 
-#_content tr td {
+#i_content tr td {
 	margin: 0;
 	padding: 0;
 	border: 0;
 	}
 
-#_content ul {
+#i_content ul {
 	margin-top: 14pt;
 	}
-#_content li p {
+#i_content li p {
 	margin-top: -0.5em;
 	}
-#_content ul ul {
+#i_content ul ul {
 	margin-left: -2ex;
 	margin-top: 0.5em;
 	margin-bottom: 1em;
 	}
 
-#_content ol ul {
+#i_content ol ul {
 	margin-left: -3ex;
 	margin-top: -1em;
 	margin-bottom: 1em;
 	}
 
 /* Sidebar - currently on right side */
-#_sidebar {
+#i_sidebar {
 	padding: 0;
 	padding-top: 1pt;
 	border: 32pt;
@@ -197,23 +197,23 @@ h5 {
 	background: white;
 	}
 
-#_sidebar img {
+#i_sidebar img {
 	border: 0;
 	margin: 2pt;
 	}
 
-#_sidebar p	{
+#i_sidebar p	{
 	text-align: left;
 	}
 	
-#_sidebar table {
+#i_sidebar table {
 	background: #FFFFFF;
 	border: thin solid #CCCCCC;
 	border-top-width: 0pt;
 	padding-top: 0pt;
 	margin-top: 0pt;
 	}
-#_sidebar ul {
+#i_sidebar ul {
 	border-top-width:	0pt;
 	padding-top:		0pt;
 	margin-top:		0pt;
@@ -221,7 +221,7 @@ h5 {
 	padding-bottom:		0pt;
 	margin-bottom:		0pt;
 }
-#_sidebar p {
+#i_sidebar p {
 	border-top-width:	0pt;
 	padding-top:		0pt;
 	margin-top:		0.5em;
@@ -233,33 +233,33 @@ h5 {
 /* Menu running down the right side of the page */
 /* Contained in the sidebar */
  
-#_mainmenu	{
+#i_mainmenu	{
 	margin-top: 8pt;
 	margin-bottom: 12pt;
 	font-size: 11pt;
 	}
 
-#_mainmenu ul {
+#i_mainmenu ul {
 	margin: 0;
 	padding: 0;
 	border: 0;
 	}
 	
 			
-#_mainmenu li {
+#i_mainmenu li {
 	margin: 0;
 	padding: 0;
 	list-style: none;
 	}	
 
 
-#_mainmenu a {
+#i_mainmenu a {
 	display: block;
 	font-weight: normal;
 	text-decoration: none;
 	}
 
-#_mainmenu strong a {
+#i_mainmenu strong a {
 	/* padding-top: .25em;
 	border: thin solid #C0C0C0;
 	 */
@@ -267,7 +267,7 @@ h5 {
 	font-weight: bold;
 	}
 
-#_mainmenu a:hover {
+#i_mainmenu a:hover {
 	background: #E0E0E0;
 	font-weight:	bold; 
 }
@@ -275,34 +275,34 @@ h5 {
 
 /* Announcement "slashbox" area */
 /* Contained in the sidebar */
-#_slashboxes {
+#i_slashboxes {
 	font-size: 8pt;
 	/* text-align: center; */
 }
 
-#_slashboxes table {
+#i_slashboxes table {
 	font-size: 11pt;
 	border: thin solid #C00D0D;
 }
 
-#_slashboxes strong {
+#i_slashboxes strong {
 	display: block;
 	background: #EEE;
 	border: thin solid #CCCCCC;
 	text-align: center;
 	}
 	
-#_slashboxes a {
+#i_slashboxes a {
 	text-decoration: none;
 }
 
-#_slashboxes b a:hover {
+#i_slashboxes b a:hover {
 	background: #FFFFFF;
 }
 
 /* Footer */
 
-#_footer {
+#i_footer {
 	border: 0;
 	border-top: thin solid red;
 	padding: 3pt 5pt 5pt 7pt;
