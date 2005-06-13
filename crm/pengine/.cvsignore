@@ -8,3 +8,4 @@ ptest
 *.beam
 parser-messages
 MISC_ERRORS
+*.lo
