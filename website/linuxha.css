@@ -8,24 +8,22 @@ body {
 	}
 
 #i_site {
-	font-family: verdana, lucida, arial, helvetica, sans-serif;
+	font-family: lucida, verdana, arial, helvetica, sans-serif;
 	margin: 6pt auto;
 	padding: 0pt;
 	border: thin solid red;
 	background: #FFFFFF;
 	color: #333333;
-	font-size: 12pt;
+	font-size: 11pt;
 	}
 
 a:link, a:visited {
-	color: #202080;
-	font-weight : bold; 
+	color: #101080;
 	text-decoration : none;
 	}
 
 a:hover {
 	color: red;
-	font-weight:	bold; 
 	text-decoration: underline;
 	}
 
@@ -59,35 +57,33 @@ pre {
 
 	
 h1,h2,h3,h4,h5 {
-    font-family: verdana, lucida, arial, helvetica, sans-serif;
+    font-family: verdana, lucida sans, lucida, FreeSans, arial, helvetica, sans-serif;
     font-weight: normal;
     color: #202080;
     margin-top:2pt;
     margin-bottom:8pt;
     /* border-bottom:thin solid #ccc; */
 }
-h1 {
-    font-size: 150%;
-    font-weight: bold;
-    font-style: italic;
+h1 {	/* no 'h1' elements come out of the wiki :-( */
+    font-family: Lucida Sans Typewriter, verdana, lucida sans, lucida, FreeSans, helvetica, sans-serif;
+    font-size: 175%;
     width: 99.6%;
 }
 h2 {
-    font-size: 130%;
-    font-weight: bold;
-    width: 99.2%;
+    font-family: lucida sans typewriter, verdana, lucida sans, FreeSans, helvetica, sans-serif;
+    font-size: 175%;
+    width: 99.6%;
 }
 h3 {
-    font-size: 115%;
-    font-weight: bold;
+    font-size: 150%;
     width: 98.8%;
 }
 h4 {
-    font-size: 105%;
+    font-size: 130%;
     width: 98.4%;
 }
 h5 {
-    font-size: 95%;
+    font-size: 115%;
     width: 98.0%;
 }
 
@@ -101,6 +97,7 @@ h5 {
 	border: 0;
 	margin: 2pt;
 	padding: 2pt;
+	text-align: center;
 	}
 
 #i_header img	{
@@ -108,7 +105,14 @@ h5 {
 	display: block;
 	margin-left: auto;
 	margin-right: auto;
+	margin-bottom: -12pt;
 	}
+#i_header a {
+	text-decoration: none;
+	font-weight: normal;
+	font-style: italic;
+	color: black;
+}
 
 /* Menu across the top of the page */
 #i_menu table {
@@ -167,6 +171,9 @@ h5 {
 #i_content li p {
 	margin-top: -0.5em;
 	}
+#i_content ul p {
+	margin-top: 0.5em;
+	}
 #i_content ul ul {
 	margin-left: -2ex;
 	margin-top: 0.5em;
@@ -194,7 +201,8 @@ h5 {
 	display: block;
 	width: 25ex;
 	font-size: 10pt;
-	background: white;
+	/* background: white; */
+	background-color:#f9f9f9;
 	}
 
 #i_sidebar img {
@@ -234,9 +242,9 @@ h5 {
 /* Contained in the sidebar */
  
 #i_mainmenu	{
-	margin-top: 8pt;
-	margin-bottom: 12pt;
-	font-size: 11pt;
+	margin-top: 4pt;
+	margin-bottom: 11pt;
+	font-size: 10pt;
 	}
 
 #i_mainmenu ul {
@@ -244,10 +252,11 @@ h5 {
 	padding: 0;
 	border: 0;
 	}
-	
-			
+
+
 #i_mainmenu li {
 	margin: 0;
+	margin-top: -0.3em;
 	padding: 0;
 	list-style: none;
 	}	
@@ -299,6 +308,16 @@ h5 {
 #i_slashboxes b a:hover {
 	background: #FFFFFF;
 }
+
+#i_search table {
+	/* background: #FFFFFF; */
+	background-color:#f9f9f9;
+	border: none;
+	padding-top: 0pt;
+	padding-bottom: 0pt;
+	margin-top: 0pt;
+	margin-bottom: 0pt;
+	}
 
 /* Footer */
 

@@ -1,7 +1,7 @@
 /* Page */
 
 body {
-	font-family: verdana, lucida, arial, helvetica, sans-serif;
+	font-family: lucida, verdana, arial, helvetica, sans-serif;
 	background: #FFFFFF;
 	font-size: 12pt;
      }
@@ -75,7 +75,7 @@ span.i__xref {
 
 	
 h1,h2,h3,h4,h5 {
-    font-family: verdana, lucida, arial, helvetica, sans-serif;
+    font-family: verdana, lucida sans, FreeSans, arial, helvetica, sans-serif;
     font-weight: normal;
 #    color: #000080;
     margin-top:2pt;
@@ -83,6 +83,7 @@ h1,h2,h3,h4,h5 {
     /* border-bottom:thin solid #ccc; */
 }
 h1 {
+    font-family: Lucida Sans Typewriter, verdana, lucida sans, FreeSans, helvetica, sans-serif;
     font-size: 150%;
     width: 99.6%;
 }
