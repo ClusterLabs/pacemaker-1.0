@@ -1,4 +1,4 @@
-/* $Id: stonithd.c,v 1.52 2005/06/06 09:20:35 sunjd Exp $ */
+/* $Id: stonithd.c,v 1.53 2005/06/15 16:13:41 davidlee Exp $ */
 
 /* File: stonithd.c
  * Description: STONITH daemon for node fencing
@@ -38,9 +38,6 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
-/* Should copy the facilitynames struct here? */
-#define SYSLOG_NAMES
-#include <syslog.h>
 #ifdef HAVE_GETOPT_H
 #include <getopt.h>
 #endif /* HAVE_GETOPT_H */
@@ -51,6 +48,7 @@
 #include <stonith/stonith.h>
 #include <pils/generic.h>
 #include <clplumbing/cl_signal.h>
+#include <clplumbing/cl_syslog.h>
 #include <clplumbing/uids.h>
 #include <clplumbing/cl_log.h>
 #include <clplumbing/lsb_exitcodes.h>
@@ -155,7 +153,6 @@ static void become_daemon(gboolean);
 static int show_daemon_status(const char * pidfile);
 static int kill_running_daemon(const char * pidfile);
 static void inherit_config_from_environment(void);
-static int facility_name_to_value(const char * name);
 static void stonithd_quit(int signo);
 static gboolean adjust_debug_level(int nsig, gpointer user_data);
 
@@ -2901,24 +2898,12 @@ inherit_config_from_environment(void)
 	inherit_env = getenv(LOGFACILITY);
 	if (inherit_env != NULL) {
 		int facility = -1;
-		facility = facility_name_to_value(inherit_env);
+		facility = cl_syslogfac_str2int(inherit_env);
 		if ( facility != -1 ) {
 			cl_log_set_facility(facility);
 		}
 		inherit_env = NULL;
 	}
-}
-
-static int
-facility_name_to_value(const char * name)
-{
-	int i;
-	for (i = 0; facilitynames[i].c_name != NULL; i++) {
-		if (STRNCMP_CONST(name, facilitynames[i].c_name) == 0) {
-			return facilitynames[i].c_val;
-		}
-	}
-	return -1;
 }
 
 /* make the apphb_interval, apphb_warntime adjustable important */
@@ -3053,6 +3038,9 @@ adjust_debug_level(int nsig, gpointer user_data)
 
 /* 
  * $Log: stonithd.c,v $
+ * Revision 1.53  2005/06/15 16:13:41  davidlee
+ * common code for syslog facility name/value conversion
+ *
  * Revision 1.52  2005/06/06 09:20:35  sunjd
  * minor log tweak
  *
