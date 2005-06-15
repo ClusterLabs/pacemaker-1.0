@@ -8,3 +8,4 @@ ccm_tool
 *.beam
 parser-messages
 MISC_ERRORS
+crm_diff

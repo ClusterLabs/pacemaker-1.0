@@ -9,3 +9,5 @@ ptest
 parser-messages
 MISC_ERRORS
 *.lo
+libpengine.la
+
