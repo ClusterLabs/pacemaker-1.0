@@ -1,5 +1,6 @@
 AC_DEFUN([LIB_RPM], [
-    AC_MSG_CHECKING("for rpm libraries")
+    AC_MSG_CHECKING([for rpm libraries])
+    AC_MSG_RESULT([])
     dnl back up the old value
     LIBS_BEFORE_RPMCHECK="$LIBS"
     CFLAGS_BEFORE_RPMCHECK="$CFLAGS"
@@ -70,37 +71,14 @@ AC_DEFUN([LIB_RPM], [
     CFLAGS=$CFLAGS_BEFORE_RPMCHECK
 ])
 
-AC_DEFUN([LIB_SNMP], 
-    [AC_MSG_CHECKING([for the SNMP libraries...])
+dnl An internal submacro
+AC_DEFUN([LIB_SNMP_LIBS], [
+    AC_MSG_CHECKING([for the SNMP libraries...])
+    AC_MSG_RESULT([])
+
     dnl back up old value
     LIBS_BEFORE_SNMPCHECK=$LIBS
     CFLAGS_BEFORE_SNMPCHECK=$CFLAGS
-
-    NET_SNMP_HEADER=no
-    dnl check net-snmp headers
-    AC_CHECK_HEADERS([net-snmp/version.h], [NET_SNMP_HEADER=yes], 
-        [AC_MSG_WARN([net-snmp header not found])], [])
-
-    UCD_SNMP_HEADER=no
-    dnl then check ucd-snmp headers 
-    AC_CHECK_HEADERS([ucd-snmp/version.h], [UCD_SNMP_HEADER=yes],
-        [AC_MSG_WARN([ucd-snmp header not found])], [#define UCD_COMPATIBLE])
-        dnl make sure net-snmp is compiled with "--enable-ucd-snmp-compatibility"
-
-    dnl if
-    dnl   test x"$NET_SNMP_HEADER" = x"yes" && test x"$UCD_SNMP_HEADER" = x"no" ;
-    dnl then
-    dnl   AC_MSG_WARN([Your NET-SNMP is not compiled with --enable-ucd-snmp-compatibility turned on.])
-    dnl   AC_MSG_ERROR([Please recompile the NET-SNMP with that option.])
-    dnl fi
-
-    dnl exit if no SNMP headers found.
-    if
-      test x$NET_SNMP_HEADER = x"no"  && test x"$UCD_SNMP_HEADER" = x"no" ;
-    then
-      AC_MSG_WARN([No NET-SNMP or UCD-SNMP headers found])
-      AC_MSG_ERROR([Please download the SNMP package from http://www.net-snmp.org.])
-    fi
 
     dnl some libs and header might be needed later
     AC_CHECK_HEADERS([tcpd.h], [], [])
@@ -260,8 +238,50 @@ AC_DEFUN([LIB_SNMP],
     dnl restore the old value
     LIBS=$LIBS_BEFORE_SNMPCHECK
     CFLAGS=$CFLAGS_BEFORE_SNMPCHECK
+])
 
-    if test x"$SNMP_LIBS_FOUND" = x"no"; then
+dnl Incoming "enable_snmp_subagent={yes|try}" ("no" filtered out beforehand)
+dnl Outgoing "enable_snmp_subagent={yes|no}"
+AC_DEFUN([LIB_SNMP], [
+
+    NET_SNMP_HEADER=no
+    dnl check net-snmp headers
+    AC_CHECK_HEADERS([net-snmp/version.h], [NET_SNMP_HEADER=yes], 
+        [AC_MSG_WARN([net-snmp header not found])], [])
+
+    UCD_SNMP_HEADER=no
+    dnl then check ucd-snmp headers 
+    AC_CHECK_HEADERS([ucd-snmp/version.h], [UCD_SNMP_HEADER=yes],
+        [AC_MSG_WARN([ucd-snmp header not found])], [#define UCD_COMPATIBLE])
+        dnl make sure net-snmp is compiled with "--enable-ucd-snmp-compatibility"
+
+    dnl if
+    dnl   test x"$NET_SNMP_HEADER" = x"yes" && test x"$UCD_SNMP_HEADER" = x"no" ;
+    dnl then
+    dnl   AC_MSG_WARN([Your NET-SNMP is not compiled with --enable-ucd-snmp-compatibility turned on.])
+    dnl   AC_MSG_ERROR([Please recompile the NET-SNMP with that option.])
+    dnl fi
+
+    dnl exit if no SNMP headers found.
+    if
+      test x$NET_SNMP_HEADER = x"no"  && test x"$UCD_SNMP_HEADER" = x"no" ;
+    then
+      AC_MSG_WARN([No NET-SNMP or UCD-SNMP headers found])
+      MSG="An SNMP package is available from http://www.net-snmp.org"
+      if test "x${enable_snmp_subagent}"  != "xtry"; then
+	enable_snmp_subagent=no
+	AC_MSG_ERROR([$MSG])
+      else
+	AC_MSG_WARN([$MSG])
+	enable_snmp_subagent=no
+      fi
+    fi
+
+    if test "x${enable_snmp_subagent}"  != "xno"; then
+      LIB_SNMP_LIBS
+      dnl Has set (among other things) SNMP_LIBS_FOUND={yes|no}
+
+      if test x"$SNMP_LIBS_FOUND" = x"no"; then
         MSG="Despite my best effort I still cannot figure out the library 
 	dependencies for your snmp libraries.  
 	
@@ -295,18 +315,16 @@ AC_DEFUN([LIB_SNMP],
         if test "x${enable_snmp_subagent}"  = "xtry"; then
 	    AC_MSG_WARN([$MSG])
             enable_snmp_subagent=no
-	    SNMP_SUBAGENT_ENABLED=0
-            AC_SUBST(SNMP_SUBAGENT_ENABLED)
         else
             enable_snmp_subagent=no
 	    AC_MSG_ERROR([$MSG])
         fi
-    else
+      else
 	AC_MSG_RESULT([SNMP: snmp library dependency resolved. List of libraries needed to compile the subagent:])
 	AC_MSG_RESULT([	$SNMP_LIBS.])
 	AC_SUBST(SNMP_LIBS)
         enable_snmp_subagent=yes
-	SNMP_SUBAGENT_ENABLED=1
+      fi
     fi
 ])
 	
