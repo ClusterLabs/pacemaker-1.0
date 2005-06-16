@@ -1,4 +1,4 @@
-/* $Id: config.c,v 1.160 2005/06/11 13:42:49 alan Exp $ */
+/* $Id: config.c,v 1.161 2005/06/16 09:24:23 davidlee Exp $ */
 /*
  * Parse various heartbeat configuration files...
  *
@@ -62,6 +62,7 @@
 #include <hb_api.h>
 #include <hb_config.h>
 #include <hb_api_core.h>
+#include <clplumbing/cl_syslog.h>
 
 #define	DIRTYALIASKLUDGE
 
@@ -1169,99 +1170,24 @@ set_udpport(const char * value)
 	return(HA_OK);
 }
 
-struct _syslog_code {
-        const char    *c_name;
-        int     c_val;
-};
-
-
-struct _syslog_code facilitynames[] =
-{
-#ifdef LOG_AUTH
-	{ "auth", LOG_AUTH },
-	{ "security", LOG_AUTH },           /* DEPRECATED */
-#endif
-#ifdef LOG_AUTHPRIV
-	{ "authpriv", LOG_AUTHPRIV },
-#endif
-#ifdef LOG_CRON
-	{ "cron", LOG_CRON },
-#endif
-#ifdef LOG_DAEMON
-	{ "daemon", LOG_DAEMON },
-#endif
-#ifdef LOG_FTP
-	{ "ftp", LOG_FTP },
-#endif
-#ifdef LOG_KERN
-	{ "kern", LOG_KERN },
-#endif
-#ifdef LOG_LPR
-	{ "lpr", LOG_LPR },
-#endif
-#ifdef LOG_MAIL
-	{ "mail", LOG_MAIL },
-#endif
-
-/*	{ "mark", INTERNAL_MARK },           * INTERNAL */
-
-#ifdef LOG_NEWS
-	{ "news", LOG_NEWS },
-#endif
-#ifdef LOG_SYSLOG
-	{ "syslog", LOG_SYSLOG },
-#endif
-#ifdef LOG_USER
-	{ "user", LOG_USER },
-#endif
-#ifdef LOG_UUCP
-	{ "uucp", LOG_UUCP },
-#endif
-#ifdef LOG_LOCAL0
-	{ "local0", LOG_LOCAL0 },
-#endif
-#ifdef LOG_LOCAL1
-	{ "local1", LOG_LOCAL1 },
-#endif
-#ifdef LOG_LOCAL2
-	{ "local2", LOG_LOCAL2 },
-#endif
-#ifdef LOG_LOCAL3
-	{ "local3", LOG_LOCAL3 },
-#endif
-#ifdef LOG_LOCAL4
-	{ "local4", LOG_LOCAL4 },
-#endif
-#ifdef LOG_LOCAL5
-	{ "local5", LOG_LOCAL5 },
-#endif
-#ifdef LOG_LOCAL6
-	{ "local6", LOG_LOCAL6 },
-#endif
-#ifdef LOG_LOCAL7
-	{ "local7", LOG_LOCAL7 },
-#endif
-	{ NULL, -1 }
-};
-
 /* set syslog facility config variable */
 static int
 set_facility(const char * value)
 {
 	int		i;
 
-	for(i = 0; facilitynames[i].c_name != NULL; ++i) {
-		if(strcmp(value, facilitynames[i].c_name) == 0) {
-			config->log_facility = facilitynames[i].c_val;
-			strncpy(config->facilityname, value
-			,	sizeof(config->facilityname)-1);
-			config->facilityname[sizeof(config->facilityname)-1]
-			=	EOS;
-			cl_log_set_facility(config->log_facility);
-			return(HA_OK);
-		}
+	i = cl_syslogfac_str2int(value);
+	if (i >= 0) {
+		config->log_facility = i;
+		strncpy(config->facilityname, value,
+		  sizeof(config->facilityname)-1);
+		config->facilityname[sizeof(config->facilityname)-1] = EOS;
+		cl_log_set_facility(config->log_facility);
+		return(HA_OK);
 	}
-	return(HA_FAIL);
+	else {
+		return(HA_FAIL);
+	}
 }
 
 /* set syslog facility config variable */
@@ -2103,6 +2029,9 @@ set_release2mode(const char* value)
 
 /*
  * $Log: config.c,v $
+ * Revision 1.161  2005/06/16 09:24:23  davidlee
+ * common code for syslog facility name/value conversion
+ *
  * Revision 1.160  2005/06/11 13:42:49  alan
  * Fixed a BEAM bug, and made an "info" message into a "debug" message.
  *
