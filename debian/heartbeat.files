@@ -69,6 +69,7 @@ usr/lib/heartbeat/cts/CTSaudits.py
 usr/lib/heartbeat/cts/CTSlab.py
 usr/lib/heartbeat/cts/CTStests.py
 usr/lib/heartbeat/cts/OCFIPraTest.py
+usr/lib/heartbeat/cts/haresources2cib.py
 usr/lib/heartbeat/cts/README
 usr/lib/heartbeat/cts/extracttests.py
 usr/lib/heartbeat/findif
