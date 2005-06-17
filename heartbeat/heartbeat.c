@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.410 2005/06/08 21:29:02 gshi Exp $ */
+/* $Id: heartbeat.c,v 1.411 2005/06/17 20:25:28 alan Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -407,6 +407,7 @@ static gboolean	shutdown_last_client_child(int nsig);
 static void	LookForClockJumps(void);
 static void	get_localnodeinfo(void);
 static gboolean EmergencyShutdown(gpointer p);
+static void	hb_check_mcp_alive(void);
 static gboolean hb_reregister_with_apphbd(gpointer dummy);
 
 static void	hb_add_deadtime(int increment);
@@ -1098,14 +1099,17 @@ fifo_child(IPC_Channel* chan)
 		cl_cpu_limit_setpercent(10);
 	}
 
+	/* Make sure we check for death of parent every so often... */
+	setmsrepeattimer(1000L);
 	for (;;) {
 
 		msg = msgfromstream(fifo);
+		hb_check_mcp_alive();
 		hb_signal_process_pending();
 
 		if (msg) {
 			IPC_Message*	m;
-			if (ANYDEBUG) { /* FIXME!! ANYDEBUG */
+			if (DEBUGDETAILS) {
 				cl_log(LOG_DEBUG, "fifo_child message:");
 				cl_log_message(LOG_DEBUG, msg);
 			}
@@ -1113,8 +1117,10 @@ fifo_child(IPC_Channel* chan)
 			if (m) {
 				/* Send frees "m" "at the right time" */
 				chan->ops->send(chan, m);
+				hb_check_mcp_alive();
 				hb_signal_process_pending();
 				chan->ops->waitout(chan);
+				hb_check_mcp_alive();
 				hb_signal_process_pending();
 			}
 			ha_msg_del(msg);
@@ -1126,15 +1132,19 @@ fifo_child(IPC_Channel* chan)
 				cl_log(LOG_DEBUG
 				,	"fifo_child: EOF on FIFO");
 			}
+			hb_check_mcp_alive();
 			exit(2);
 		}
 		cl_cpu_limit_update();
 		cl_realtime_malloc_check();
+		hb_check_mcp_alive();
+		hb_signal_process_pending();
 	}
+	/*notreached*/
 }
 
 static gboolean
-Gmain_hb_signal_process_pending(void *data)
+Gmain_hb_signal_process_pending(void *unused)
 {
 	hb_signal_process_pending();
 	return TRUE;
@@ -3953,7 +3963,7 @@ hb_emergency_shutdown(void)
 	cl_make_normaltime();
 	return_to_orig_privs();
 	CL_IGNORE_SIG(SIGTERM);
-	cl_log(LOG_ERR, "Emergency Shutdown: "
+	cl_log(LOG_CRIT, "Emergency Shutdown: "
 			"Attempting to kill everything ourselves");
 	CL_KILL(-getpgrp(), SIGTERM);
 	hb_kill_rsc_mgmt_children(SIGKILL);
@@ -3965,9 +3975,32 @@ hb_emergency_shutdown(void)
 	cleanexit(100);
 }
 
+static void
+hb_check_mcp_alive(void)
+{
+	pid_t		ourpid = getpid();
+	int		j;
+
+	if (CL_PID_EXISTS(procinfo->info[0].pid)) {
+		return;
+	}
+	return_to_orig_privs();
+	cl_log(LOG_CRIT, "Emergency Shutdown: Master Control process died.");
+
+	for (j=0; j < procinfo->nprocs; ++j) {
+		if (procinfo->info[j].pid == ourpid) {
+			continue;
+		}
+		cl_log(LOG_CRIT, "Killing pid %d with SIGTERM"
+		,	(int)procinfo->info[j].pid);
+		CL_KILL(procinfo->info[j].pid, SIGTERM);
+	}
+	/* We saved the best for last :-) */
+	cl_log(LOG_CRIT, "Emergency Shutdown(MCP dead): Killing ourselves.");
+	CL_KILL(ourpid, SIGTERM);
+}
 
 extern pid_t getsid(pid_t);
-
 
 static void
 make_daemon(void)
@@ -5305,6 +5338,10 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.411  2005/06/17 20:25:28  alan
+ * Added code to check for death of master control process and kill everything
+ * if it dies.
+ *
  * Revision 1.410  2005/06/08 21:29:02  gshi
  * fixed a bug that caused 2 messages not being freed (until the whole hist queue is full)
  * after receiving the corresponding ACK msg
