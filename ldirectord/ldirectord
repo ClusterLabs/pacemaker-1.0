@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-my($VERSION)=(qw$Id: ldirectord,v 1.103 2005/05/12 14:23:16 horms Exp $)[2];
+my($VERSION)=(qw$Id: ldirectord,v 1.104 2005/06/17 09:12:48 horms Exp $)[2];
 
 ######################################################################
 # ldirectord                 http://www.vergenet.net/linux/ldirectord/
@@ -452,18 +452,24 @@ if ($opt_h) {
 sub ld_init
 {
 	# install signal handlers (this covers TERM)
-	my $i;
-	for $i (keys %SIG) {
-		$SIG{"$i"} = \&ld_handler_term;
-	}
+	#require Net::LDAP;
+        $SIG{'INT'} = \&ld_handler_term;
+        $SIG{'QUIT'} = \&ld_handler_term;
+        $SIG{'ILL'} = \&ld_handler_term;
+        $SIG{'ABRT'} = \&ld_handler_term;
+        $SIG{'FPE'} = \&ld_handler_term;
+        $SIG{'SEGV'} = \&ld_handler_term;
+        $SIG{'TERM'} = \&ld_handler_term;
 
-	# except CHLD, USR1, USR2 and __WARN__
-	$SIG{'CHLD'} = "DEFAULT";
-	$SIG{'USR1'} = "DEFAULT";
-	$SIG{'USR2'} = "DEFAULT";
-	$SIG{'__WARN__'} = "DEFAULT";
+        $SIG{'BUS'} = \&ld_handler_term;
+        $SIG{'SYS'} = \&ld_handler_term;
+        $SIG{'XCPU'} = \&ld_handler_term;
+        $SIG{'XFSZ'} = \&ld_handler_term;
 
-	# handle PIPE separately as it probably should be ignored
+        $SIG{'IOT'} = \&ld_handler_term;
+        $SIG{'ENT'} = \&ld_handler_term;
+
+
 	# This used to call a signal handler, that logged a message
 	# However, this typically goes to syslog and if syslog
 	# is playing up a loop will occur. 
