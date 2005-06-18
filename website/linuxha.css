@@ -11,7 +11,7 @@ body {
 	font-family: lucida, verdana, arial, helvetica, sans-serif;
 	margin: 6pt auto;
 	padding: 0pt;
-	border: thin solid red;
+	border: 1px solid red;
 	background: #FFFFFF;
 	color: #333333;
 	font-size: 11pt;
@@ -108,6 +108,7 @@ h5 {
 	margin-bottom: -12pt;
 	}
 #i_header a {
+	border: 0;
 	text-decoration: none;
 	font-weight: normal;
 	font-style: italic;
@@ -118,8 +119,8 @@ h5 {
 #i_menu table {
 	width:		100%;
 	background:	white;
-	border-bottom:	2pt solid red;
-	border-top:	2pt solid red;
+	border-bottom:	3px solid red;
+	border-top:	3px solid red;
 	}
 
 #i_menu td a {
@@ -192,8 +193,8 @@ h5 {
 	padding-top: 1pt;
 	border: 32pt;
 	padding-left: 8pt;
-	border-left: thin solid red;
-	border-bottom: thin solid red;
+	border-left: 1px solid red;
+	border-bottom: 1px solid red;
 	padding-right: 6pt;
 	margin-bottom: 16pt;
 	/* height: 100%; No! has weird overlay effects with FireFox, maybe others, too... */
@@ -216,7 +217,7 @@ h5 {
 	
 #i_sidebar table {
 	background: #FFFFFF;
-	border: thin solid #CCCCCC;
+	border: 1px solid #CCCCCC;
 	border-top-width: 0pt;
 	padding-top: 0pt;
 	margin-top: 0pt;

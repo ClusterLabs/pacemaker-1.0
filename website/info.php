@@ -56,7 +56,7 @@ function browser_type() {
 	if (isset($_SERVER["HTTP_USER_AGENT"])) {
 		$ua = $_SERVER["HTTP_USER_AGENT"];
 
-		$BrowserPats = array('%(MSIE|Opera) + (([1-9][0-9]*)\.[0-9.]+)%'
+		$BrowserPats = array('%(MSIE|Opera) +(([1-9][0-9]*)\.[0-9.]+)%'
 		,	'%; +(Konqueror|Netscape)/(([1-9][0-9]*)\.[0-9.]+)%i'
 		,	'%(Mozilla)/(([1-9][0-9]*)\.[0-9.]+)%i');
 

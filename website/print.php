@@ -58,7 +58,8 @@ function PRPageFix($text)
  <link rel="stylesheet" href="/print.css" type="text/css">
 </head>
 <body>
-<img alt="Linux-HA Logo" src="/_cache/TopLogo__linux-ha.gif"><br>
+<img alt="Linux-HA Logo" src="/_cache/TopLogo__HA-100.png"><br>
+
 <?php echo PRPageFix($content); echo PRXrefs(); ?>
 <div id="_printattribution"><?php echo MoinMoin("PrintAttribution"); ?></div>
 </body>

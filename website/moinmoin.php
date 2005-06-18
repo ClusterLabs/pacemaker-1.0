@@ -194,7 +194,7 @@ function browser_type() {
 	if (isset($_SERVER["HTTP_USER_AGENT"])) {
 		$ua = $_SERVER["HTTP_USER_AGENT"];
 
-		$BrowserPats = array('%(MSIE|Opera) + (([1-9][0-9]*)\.[0-9.]+)%'
+		$BrowserPats = array('%(MSIE|Opera) +(([1-9][0-9]*)\.[0-9.]+)%'
 		,	'%; +(Konqueror|Netscape)/(([1-9][0-9]*)\.[0-9.]+)%i'
 		,	'%(Mozilla)/(([1-9][0-9]*)\.[0-9.]+)%i');
 
@@ -216,6 +216,13 @@ function browser_compatibility() {
 	if (strcasecmp($T[0], "Mozilla") == 0 && $T[2] >= 5) {
 		return 2;
 	}
+	if (strcasecmp($T[0], "MSIE") == 0) {
+		if ($T[2] >= 7) {
+			return 2;
+		}else{
+			return 0;
+		}
+	}
 	if (strcasecmp($T[0], "Konqueror") == 0) {
 		if ($T[2] >= 3) {
 			return 2;
@@ -226,14 +233,14 @@ function browser_compatibility() {
 	if (strcasecmp($T[0], "Netscape") == 0) {
 		if ($T[2] >= 7) {
 			return 2;
-		}elseif ($T[2] >= 6) {
+		}elseif ($T[2] >= 5) {
 			return 1;
 		}
 	}
 	if (strcasecmp($T[0], "Opera") == 0) {
-		if ($T[2] >= 7) {
+		if ($T[2] >= 6) {
 			return 2;
-		}elseif ($T[2] == 6) {
+		}elseif ($T[2] == 5) {
 			return 1;
 		}
 	}
@@ -246,14 +253,14 @@ function browser_compatibility_messages() {
 	$ff="<a href=\"$ffurl\">Firefox </a>";
 	$imgdir="http://sfx-images.mozilla.org/affiliates/Buttons";
 	$ffbut1="<img border=\"0\" alt=\"Get Firefox!\" src=\"$imgdir/80x15/white_1.gif\"/>";
-	$ffbut2="<img border=\"0\" alt=\"Get Firefox!\" height=\"16\" WIDTH=\"55\"src=\"$imgdir/110x32/trust.gif\"/>";
+	$ffbut2="<img border=\"0\" alt=\"Get Firefox!\" height=\"24\" WIDTH=\"83\" src=\"$imgdir/110x32/trust.gif\"/>";
 	$ff1="<a href=\"$ffurl\">Firefox $ffbut1</a>";
 	$ff2="<a href=\"$ffurl\">Firefox $ffbut2</a>";
 	if ($c >= 2) {
 		return;
 	}
 	if ($c == 1) {
-		echo '<font size="-2">This site best when viewed with a modern CSS-compatible browser. '
+		echo '<font size="-2">This site best when viewed with a CSS-compatible browser. '
 		.	"We recommend $ff1.</font>\n";
 	}else{
 		echo '<font size="-2">This site best when viewed with a modern standards-compliant browser. '
@@ -272,6 +279,17 @@ echo "<TABLE><TR ALIGN=CENTER><TD>
 <input type=hidden name=sitesearch value=\"wwnew.linux-ha.org\">
 </FORM>
 </TD></TR></TABLE>";
+}
+#	return array($Browser, $Version, intval($MajorVers));
+function stylesheet_link()
+{
+	$T=browser_type();
+	if (strcasecmp($T[0], "MSIE") == 0 && $T[2] < 7) {
+		$ss="/linuxhaIE6.css";
+	}else{
+		$ss="/linuxha.css";
+	}
+ 	echo "<link rel=\"stylesheet\" href=\"$ss\" type=\"text/css\">\n";
 }
 
 function URLtoCacheFile($urlsuffix, $cacheprefix)
