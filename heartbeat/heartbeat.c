@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.411 2005/06/17 20:25:28 alan Exp $ */
+/* $Id: heartbeat.c,v 1.412 2005/06/18 01:33:06 alan Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -1100,10 +1100,11 @@ fifo_child(IPC_Channel* chan)
 	}
 
 	/* Make sure we check for death of parent every so often... */
-	setmsrepeattimer(1000L);
 	for (;;) {
 
+		setmsalarm(1000L);
 		msg = msgfromstream(fifo);
+		setmsalarm(0L);
 		hb_check_mcp_alive();
 		hb_signal_process_pending();
 
@@ -5338,6 +5339,10 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.412  2005/06/18 01:33:06  alan
+ * Changed the code for getting off of dead center if our parent has died
+ * (for the fifo process)
+ *
  * Revision 1.411  2005/06/17 20:25:28  alan
  * Added code to check for death of master control process and kill everything
  * if it dies.
