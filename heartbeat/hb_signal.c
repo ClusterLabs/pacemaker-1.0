@@ -1,4 +1,4 @@
-/* $Id: hb_signal.c,v 1.14 2005/05/05 14:36:58 alan Exp $ */
+/* $Id: hb_signal.c,v 1.15 2005/06/18 02:03:12 alan Exp $ */
 /*
  * hb_signal.c: signal handling routines to be used by Heartbeat
  *
@@ -583,9 +583,41 @@ hb_signal_set_read_child(sigset_t *set)
 int
 hb_signal_set_fifo_child(sigset_t *set)
 {
-	if (hb_signal_set_common(set) < 0) {
-		ha_log(LOG_ERR, "hb_signal_set_read_child(): "
+	sigset_t *use_set;
+	sigset_t our_set;
+
+	const cl_signal_mode_t mode [] = { 
+		{SIGALRM,	hb_ignoresig,	1}
+	,	{0,		0,		0}
+	};
+
+	if (set) {
+		use_set = set;
+	}else{
+		use_set = &our_set;
+
+		if (CL_SIGEMPTYSET(use_set) < 0) {
+			ha_log(LOG_ERR, "hb_signal_set_write_child(): "
+				"CL_SIGEMPTYSET(): %s", strerror(errno));
+			return(-1);
+		}
+	}
+
+	if (hb_signal_set_common(use_set) < 0) {
+		ha_log(LOG_ERR, "hb_signal_set_fifo_child(): "
 			"hb_signal_set_common()");
+		return(-1);
+	}
+
+	if (cl_signal_set_handler_mode(mode, use_set) < 0) {
+		ha_log(LOG_ERR, "hb_signal_set_fifo_child(): "
+			"cl_signal_set_handler_mode()");
+		return(-1);
+	}
+
+	if (cl_signal_set_handler_mode(mode, use_set) < 0) {
+		ha_log(LOG_ERR, "%s(): cl_signal_set_handler_mode() failed."
+		,	__FUNCTION__);
 		return(-1);
 	}
 
