@@ -264,7 +264,7 @@ h5 {
 
 
 #i_mainmenu a {
-	display: block;
+	/* display: block; */
 	font-weight: normal;
 	text-decoration: none;
 	}
