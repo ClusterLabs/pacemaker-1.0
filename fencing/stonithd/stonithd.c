@@ -1,4 +1,4 @@
-/* $Id: stonithd.c,v 1.54 2005/06/20 03:04:58 sunjd Exp $ */
+/* $Id: stonithd.c,v 1.55 2005/06/20 05:52:53 sunjd Exp $ */
 
 /* File: stonithd.c
  * Description: STONITH daemon for node fencing
@@ -989,7 +989,6 @@ handle_msg_tstit(const struct ha_msg* msg, void* private_data)
 		st_op->optype  = optype;
 		st_op->call_id = call_id;
 		st_op->timeout = timeout;
-		st_op->node_list = NULL;
 		if (ST_OK != require_local_stonithop(st_op, srsc, from)) {
 			free_stonith_ops_t(st_op);
 			st_op = NULL;
@@ -1043,6 +1042,7 @@ handle_msg_trstit(const struct ha_msg* msg, void* private_data)
 		stonithd_log(LOG_ERR, "handle_msg_trstit: no F_ORIG field.");
 		return;
 	}
+	stonithd_log(LOG_DEBUG, "This T_RSTIT message is from %s.", from);	
 
 	/* Don't handle the message sent by myself when not in TEST mode */
 	if ( TEST == FALSE &&
@@ -1482,7 +1482,7 @@ on_stonithd_node_fence(const struct ha_msg * request, gpointer data)
 	}
 
 	st_op = g_new(stonith_ops_t, 1);
-	st_op->node_list = NULL;
+	st_op->node_list = g_string_new("");
 	st_op->node_uuid = NULL;
 
 	if ( HA_OK == ha_msg_value_int(request, F_STONITHD_OPTYPE, &tmpint)) {
@@ -1680,16 +1680,12 @@ static int
 initiate_remote_stonithop(stonith_ops_t * st_op, stonith_rsc_t * srsc,
                           IPC_Channel * ch)
 {
-	GString * gstr_tmp;
-
 	if (st_op->optype == QUERY) {
-		gstr_tmp = g_string_new("");
 		if ( NULL != get_local_stonithobj_can_stonith(
 				st_op->node_name, NULL)) {
-			gstr_tmp = g_string_append(gstr_tmp, local_nodename);
+			st_op->node_list = g_string_append(
+				st_op->node_list, local_nodename);
 		}
-		
-		st_op->node_list = gstr_tmp;
 	}
 
 	st_op->call_id = negative_callid_counter;
@@ -1803,35 +1799,31 @@ stonithop_result_to_local_client( stonith_ops_t * st_op, gpointer data)
 	}
 
 	if (st_op->op_result == STONITH_SUCCEEDED ) {
-		stonithd_log(LOG_INFO, "%s %s: optype=%d.", M_STONITH_SUCCEED
-			     , st_op->node_name, st_op->optype);
+		stonithd_log(LOG_INFO, "%s %s: optype=%d. whodoit: %s"
+			,	M_STONITH_SUCCEED
+			,	st_op->node_name, st_op->optype
+			,	((GString *)(st_op->node_list))->str);
 	} else {
 		stonithd_log(LOG_INFO
-			,	"%s %s: optype=%d, op_result=%d; whodo: %s"
+			,	"%s %s: optype=%d, op_result=%d" 
 			,	M_STONITH_FAIL, st_op->node_name
-			,	st_op->optype, st_op->op_result
-			,	(char *)st_op->node_list);
+			,	st_op->optype, st_op->op_result);
 	}
 
 	stonithd_log(LOG_DEBUG, "stonith finished: optype=%d, node_name=%s", 
 		     st_op->optype, st_op->node_name);
 
 	reply = ha_msg_new(0);
-	if  ( st_op->optype == QUERY) { /* QUERY operation */
-  		if (ha_msg_add(reply, F_STONITHD_APPEND, 
-			((GString *)(st_op->node_list))->str) != HA_OK ) {
-			ZAPMSG(reply);
-			stonithd_log(LOG_ERR, "stonithop_result_to_local_client:"
-				" cannot add fields.");
-			return ST_FAIL;
-		}
-	}
+
 	if ( (ha_msg_add(reply, F_STONITHD_TYPE, ST_APIRPL) != HA_OK ) 
   	    ||(ha_msg_add(reply, F_STONITHD_APIRPL, ST_STRET) != HA_OK ) 
 	    ||(ha_msg_add_int(reply, F_STONITHD_OPTYPE, st_op->optype) != HA_OK)
 	    ||(ha_msg_add(reply, F_STONITHD_NODE, st_op->node_name) != HA_OK)
 	    ||(st_op->node_uuid == NULL
-	       || ha_msg_add(reply, F_STONITHD_NODE_UUID, st_op->node_uuid) != HA_OK)
+		|| ha_msg_add(reply, F_STONITHD_NODE_UUID, st_op->node_uuid) != HA_OK)
+	    ||(st_op->node_list == NULL
+		|| ha_msg_add(reply, F_STONITHD_APPEND,
+			((GString *)(st_op->node_list))->str) != HA_OK )
 	    ||(ha_msg_add_int(reply, F_STONITHD_TIMEOUT, st_op->timeout)!=HA_OK)
 	    ||(ha_msg_add_int(reply, F_STONITHD_CALLID, st_op->call_id) !=HA_OK)
 	    ||(ha_msg_add_int(reply, F_STONITHD_FRC, st_op->op_result) 
@@ -3058,6 +3050,9 @@ adjust_debug_level(int nsig, gpointer user_data)
 
 /* 
  * $Log: stonithd.c,v $
+ * Revision 1.55  2005/06/20 05:52:53  sunjd
+ * always return the STONITHer in node_list field
+ *
  * Revision 1.54  2005/06/20 03:04:58  sunjd
  * Bug 644, including set debug level for stonith plugin;
  * add and adjust logs;
