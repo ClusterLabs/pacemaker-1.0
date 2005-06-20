@@ -61,9 +61,11 @@ typedef struct
 	int		call_id;
 	stonith_ret_t	op_result;	
 /*
- * Now just used for op==QUERY, then node_list is a char *, contain the name 
- * of the nodes who can stonith a node whose name equals node_name. The 
- * separator is blanks.
+ * By now op==QUERY node_list is only a char * type. 
+ * When op==QUERY, it contains the names of the nodes who can stonith the node 
+ * whose name is node_name. 
+ * When op!=QUERY, it contains the name of the nodes who succeeded in stonithing
+ * the node whose name is node_name. 
  */
 	void *		node_list;
 } stonith_ops_t;
