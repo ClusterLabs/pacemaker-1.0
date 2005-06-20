@@ -1,4 +1,4 @@
-/* $Id: stonithd.c,v 1.55 2005/06/20 05:52:53 sunjd Exp $ */
+/* $Id: stonithd.c,v 1.56 2005/06/20 16:20:33 sunjd Exp $ */
 
 /* File: stonithd.c
  * Description: STONITH daemon for node fencing
@@ -985,6 +985,7 @@ handle_msg_tstit(const struct ha_msg* msg, void* private_data)
 
 	if ((srsc = get_local_stonithobj_can_stonith(target, NULL)) != NULL ) {
 		st_op = g_new(stonith_ops_t, 1);
+		st_op->node_list = g_string_new("");
 		st_op->node_name = g_strdup(target);
 		st_op->optype  = optype;
 		st_op->call_id = call_id;
@@ -3050,6 +3051,9 @@ adjust_debug_level(int nsig, gpointer user_data)
 
 /* 
  * $Log: stonithd.c,v $
+ * Revision 1.56  2005/06/20 16:20:33  sunjd
+ * fix the NULL pointer issues in BSC
+ *
  * Revision 1.55  2005/06/20 05:52:53  sunjd
  * always return the STONITHer in node_list field
  *
