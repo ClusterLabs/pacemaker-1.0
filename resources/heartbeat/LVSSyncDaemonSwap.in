@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-#        $Id: LVSSyncDaemonSwap.in,v 1.3 2005/05/30 02:24:42 horms Exp $
+#        $Id: LVSSyncDaemonSwap.in,v 1.4 2005/06/20 05:47:49 horms Exp $
 #
 #        Copyright (C) 2005 Horms <horms@verge.net.au>
 #
@@ -47,6 +47,7 @@ else
 	exit 1
 fi
 
+IPVSADM_VERSION=$($IPVSADM --version | cut -d " " -f 2)
 
 get_status() {
     if echo $PS | grep " \[ipvs[ _]sync$1\]$" > /dev/null; then
@@ -103,7 +104,11 @@ start_stop() {
     fi
 
     if [ $(get_status $YANG) = "running" ]; then
+        if [ "$IPVSADM_VERSION" = "v1.21" ]; then
             run_ipvsadm --stop-daemon || return $?
+	else
+            run_ipvsadm --stop-daemon $YANG || return $?
+	fi
         ha_log "info: ipvs_sync$YANG down"
     fi
 
@@ -136,6 +141,11 @@ cleanup() {
 
     
     run_ipvsadm --stop-daemon || return $?
+    if [ "$IPVSADM_VERSION" = "v1.21" ]; then
+        run_ipvsadm --stop-daemon || return $?
+    else
+        run_ipvsadm --stop-daemon $YANG || return $?
+    fi
     ha_log "info: ipvs_sync$YING down"
     return 0
 }
