@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-my($VERSION)=(qw$Id: ldirectord,v 1.104 2005/06/17 09:12:48 horms Exp $)[2];
+my($VERSION)=(qw$Id: ldirectord,v 1.105 2005/06/20 06:57:26 horms Exp $)[2];
 
 ######################################################################
 # ldirectord                 http://www.vergenet.net/linux/ldirectord/
@@ -120,6 +120,14 @@ B<checkinterval = >I<n>
 
 Defines the number of second between server checks. Default is 10 seconds.
 
+B<checkcount = >I<n>
+
+The number of times a check will be attmpted before it is considered
+to have failed. Only works with ping checks. Note that the
+checktimeout is additive, so if checkcount is 3 and checktimeout is 2
+seconds, then a total of 6 seconds worth of timeout will occur becore
+the check fails. Default is 1.
+
 B<autoreload = >[B<yes>|B<no>]
 
 Defines if <ldirectord> should continuously check the configuration file
@@ -214,15 +222,18 @@ overridden, otherwise the IP-address and port of the real server is used.
 
 =head2 More than one of these entries may be inside a virtual section:
 
-B<checktype = >I<negotiate>|I<connect>|I<N>|I<off>|I<on>
+B<checktype = >I<negotiate>|I<connect>|I<N>|I<ping>|I<off>|I<on>
 
 Type of check to perform. Negotiate sends a request and matches a receive
 string. Connect only attemts to make a TCP/IP connection, thus the the
 request and receive strings may be omitted.  If checktype is a number then
 negotiate and connect is combined so that after each N connect attempts one
 negotiate attempt is performed. This is useful to check often if a service
-answers and in much longer intervalls a negotiating check is done.  Off
-means no checking will take place and no real or fallback servers will be
+answers and in much longer intervalls a negotiating check is done. Ping
+means that ICMP ping will be used to test the availability of real servers.
+Ping is also used as the connect check for UDP services. Off means no
+checking will take place and no real or fallback servers will be activated.
+On means no checking will take place and real servers will always be
 activated. Default is I<negotiate>.
 
 B<service = ftp>|B<smtp>|B<http>|B<pop>|B<nntp>|B<imap>|B<ldap>|B<https>|B<dns>|B<mysql>|B<pgsql>B<none>
@@ -722,6 +733,7 @@ sub read_config
 			$vsrv{database} = "mysql";
 			$vsrv{checktimeout} = 0;
 			$vsrv{connecttimeout} = 0;
+			$vsrv{checkcount} = 1;
 			$vsrv{negotiatetimeout} = 0;
 			$vsrv{num_connects} = 0;
 			$vsrv{httpmethod} = "GET";
@@ -754,10 +766,10 @@ sub read_config
 					if ($1 =~ /(\d+)/ && $1>=0) {
 						$vsrv{num_connects} = $1;
 						$vsrv{checktype} = "combined";
-					} elsif ( $1 =~ /(\w+)/ && ($1 eq "connect" || $1 eq "negotiate" || $1 eq "off" || $1 eq "on") ) {
+					} elsif ( $1 =~ /(\w+)/ && ($1 eq "connect" || $1 eq "negotiate" || $1 eq "ping" || $1 eq "off" || $1 eq "on") ) {
 						$vsrv{checktype} = $1;
 					} else {
-						&config_error($line, "checktype must be connect, negotiate, off, on or a positive number");
+						&config_error($line, "checktype must be connect, negotiate, ping, off, on or a positive number");
 					}
 				} elsif ($rcmd =~ /^checktimeout\s*=\s*(.*)/){
                                         $1 =~ /(\d+)/ && $1 or &config_error($line, "invalid check timeout");
@@ -768,6 +780,9 @@ sub read_config
 				} elsif ($rcmd =~ /^negotiatetimeout\s*=\s*(.*)/){
                                         $1 =~ /(\d+)/ && $1 or &config_error($line, "invalid check timeout");
                                         $vsrv{negotiatetimeout} = $1;
+				} elsif ($rcmd =~ /^checkcount\s*=\s*(.*)/){
+                                        $1 =~ /(\d+)/ && $1 or &config_error($line, "invalid check count");
+                                        $vsrv{checkcount} = $1;
 				} elsif ($rcmd =~ /^checkport\s*=\s*(.*)/){
 					$1 =~ /(\d+)/ or &config_error($line, "invalid port");
 					( $1 > 0 && $1 < 65536 ) or &config_error($line, "checkport must be in range 1..65536");
@@ -1572,6 +1587,7 @@ sub ld_main
 	# Main failover checking code
 	while (1) {
 		my @real_checked;
+		my @check_ping_queue;
 		foreach my $v (@VIRTUAL) {
 			my $real = $$v{real};
 			my $virtual_id = get_virtual_id_str($v);
@@ -1621,9 +1637,18 @@ sub ld_main
 					} else {
 						$$r{num_connects} = 0 if (check_none($v, $r));
 					}
-				} elsif ($$v{checktype} eq "connect" and $$v{protocol} ne "udp") {
-					&ld_debug(2, "Checking connect: real server=$real_id (virtual=$virtual_id)");
-					check_connect($v, $r);
+				} elsif ($$v{checktype} eq "connect") {
+					if ($$v{protocol} ne "udp") {
+						&ld_debug(2, "Checking connect: real server=$real_id (virtual=$virtual_id)");
+						check_connect($v, $r);
+					}
+					else {
+						&ld_debug(2, "Checking connect (queued ping): real server=$real_id (virtual=$virtual_id)");
+						push (@check_ping_queue, [$v, $r]);
+					}
+				} elsif ($$v{checktype} eq "ping") {
+					&ld_debug(2, "Checking ping (queued): real server=$real_id (virtual=$virtual_id)");
+					push (@check_ping_queue, [$v, $r]);
 				} elsif ($$v{checktype} eq "off") {
 					&ld_debug(2, "Checking off: No real or fallback servers to be added\n");
 				} elsif ($$v{checktype} eq "on") {
@@ -1640,6 +1665,7 @@ sub ld_main
 				push(@real_checked, $real_id);
 			}
 			# $ua->wait($$v{checktimeout});
+			check_ping (@check_ping_queue);
 		}
 		if (!check_cfgfile()) {
 			sleep $CHECKINTERVAL;
@@ -2163,6 +2189,86 @@ sub check_dns
  
 	service_set($v,$r,"down");
 	return 0;
+}
+
+
+sub check_ping 
+{
+	use POE qw(Component::Client::Ping);
+	my @q = @_;
+	
+	# This is the sub which is called when the session receives a "pong"
+	# event.  It handles responses from the Ping component.
+	sub check_ping_handler_pong {
+  		my ($kernel, $response, $heap) = @_[KERNEL, ARG1, HEAP];
+	
+  		my ($resp_address) = @$response;
+		my ($v, $r) = @$heap;
+	
+  		# The response address is defined if this is a response.
+  		if (defined $resp_address) {
+    			&ld_debug(2, "pong from $$r{server}\n");
+			service_set($v,$r,"up");
+    			return;
+  		}
+		
+		@$heap[3]++;
+
+		my ($max, $attempt) = @$heap[4]
+
+  		# Otherwise the timeout period has ended.
+  		&ld_debug(2, "ping to $$r{server} timed out (attempt " . 
+			@$heap[3] . "/" . @$heap[2] . ")\n");
+		if (@$heap[3] >= @$heap[2]) {
+			service_set($v,$r,"down");
+			return;
+		}
+  		$kernel->post("pinger", "ping", "pong",
+    				$$r{server}, $$v{checktimeout});
+	}
+	
+	sub check_ping_handler_start {
+  		my ($kernel, $heap, $session) = @_[KERNEL, HEAP, SESSION];
+		my ($v, $r) = @$heap;
+
+		&ld_debug(2, "Checking ping: " .  "host=\"" .  $$r{server} . 
+			"\" checktimeout=\"" . $$v{"checktimeout"} .
+			"\" checkcount=\"" . $$v{"checkcount"} . "\"\n");
+
+  		$kernel->post("pinger", "ping", "pong",
+    				$$r{server}, $$v{checktimeout});
+	}
+
+	sub check_ping_handler_stop { ; }
+
+	POE::Component::Client::Ping->spawn(
+  		Alias     => "pinger",  # defaults to "pinger"
+  		#Socket     => XXX,     # Provide a raw socket created as root
+                          		# if this code is to be run as a 
+					# non-root user
+  		Timeout   => 10,        # defaults to 1 second
+  		OneReply  => 1          # defaults to disabled
+	);
+
+	for my $h (@_) {
+		my ($v, $r) = @$h;
+		POE::Session->create(
+			inline_states => {
+				_start => \&check_ping_handler_start,
+				pong   => \&check_ping_handler_pong,
+				#ping   => \&check_ping_handler_ping,
+				_stop  => \&check_ping_handler_stop,
+			},
+			heap => [ $v, $r, $$v{checkcount}, 0], 
+		);
+	}
+
+	POE::Kernel->run();
+}
+
+while (1) {
+	check_ping('61.8.0.2', '127.0.0.1', '172.19.2.3', '10.2.0.1');
+	sleep 1;
 }
 
 

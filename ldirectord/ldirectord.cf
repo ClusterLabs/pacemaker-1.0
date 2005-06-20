@@ -194,3 +194,18 @@ virtual=192.168.6.240:80
 #	#netmask=255.255.255.255
 #	protocol=tcp
 
+# A sample virtual services that uses a ping check.
+# Note that using checktype=connect and protocol=udp
+# will also effect ping checks
+#virtual=192.168.6.240:53
+#	real=192.168.6.2:53 gate
+#	real=192.168.6.3:53 gate
+#	real=192.168.6.6:53 gate
+# 	fallback=127.0.0.1:53 gate
+#	scheduler=rr
+#	#persistent=600
+#	#netmask=255.255.255.255
+#	checktype=ping
+#	checkcount=3
+#	protocol=udp
+
