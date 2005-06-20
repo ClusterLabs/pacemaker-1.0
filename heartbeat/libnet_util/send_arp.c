@@ -1,4 +1,4 @@
-/* $Id: send_arp.c,v 1.16 2005/06/08 08:15:19 sunjd Exp $ */
+/* $Id: send_arp.c,v 1.17 2005/06/20 13:03:20 andrew Exp $ */
 /* 
  * send_arp
  * 
@@ -177,7 +177,7 @@ main(int argc, char *argv[])
 		unlink(pidfilename);
 		return EXIT_FAILURE;
 	}
-	if ((signed)(ip = libnet_name2addr4(l, ipaddr, 1)) == -1) {
+	if ((signed)(ip = libnet_name2addr4(l, (unsigned char*)ipaddr, 1)) == -1) {
 		syslog(LOG_ERR, "Cannot resolve IP address [%s]", ipaddr);
 		unlink(pidfilename);
 		return EXIT_FAILURE;
@@ -659,6 +659,9 @@ write_pid_file(const char *pidfilename)
 
 /*
  * $Log: send_arp.c,v $
+ * Revision 1.17  2005/06/20 13:03:20  andrew
+ * Signedness on Darwin
+ *
  * Revision 1.16  2005/06/08 08:15:19  sunjd
  * Make GCC4 happy. unsigned<->signed
  *
