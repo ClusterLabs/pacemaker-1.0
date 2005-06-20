@@ -1,4 +1,4 @@
-/* $Id: findif.c,v 1.45 2005/03/11 10:03:19 zhaokai Exp $ */
+/* $Id: findif.c,v 1.46 2005/06/20 11:05:11 sunjd Exp $ */
 /*
  * findif.c:	Finds an interface which can route a given address
  *
@@ -71,9 +71,13 @@
 #include <limits.h>
 #include <string.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include <ctype.h>
 #include <sys/types.h>
+#include <net/if.h>
 #include <sys/socket.h>
+#include <sys/ioctl.h>
+#include <errno.h>
 
 #ifdef __linux__
 #undef __OPTIMIZE__
@@ -128,9 +132,14 @@ void ValidateNetmaskBits (char *netmaskbits, unsigned long *netmask);
 
 int netmask_bits (unsigned long netmask);
 
+char * get_first_looback_netdev(char * ifname);
+int is_loopback_interface(char * ifname);
+char * get_ifname(char * buf, char * ifname);
+
 const char *	cmdname = "findif";
 void usage(void);
 
+#define PATH_PROC_NET_DEV "/proc/net/dev"
 #define DELIM	'/'
 #define	BAD_BROADCAST	(0L)
 #define	MAXSTR	128
@@ -505,6 +514,101 @@ netmask_bits(unsigned long netmask) {
 	return 32 - j;
 }
 
+char * 
+get_first_looback_netdev(char * output)
+{
+	char buf[512];
+	FILE * fd;
+
+	if (!output) {
+		fprintf(stderr, "output buf is a null pointer.\n");
+		return NULL;
+	}
+
+	fd = fopen(PATH_PROC_NET_DEV, "r");
+	if (!fd) {
+		fprintf(stderr, "Warning: cannot open %s (%s).\n",
+			PATH_PROC_NET_DEV, strerror(errno)); 
+		return NULL;
+	}
+
+	/* Skip the first two lines */
+	fgets(buf, sizeof(buf), fd);
+	fgets(buf, sizeof(buf), fd);
+
+	while (fgets(buf, sizeof(buf), fd)) {
+		char name[IFNAMSIZ];
+		if (NULL == get_ifname(buf, name)) {
+			/* Maybe somethin is wrong, anyway continue */
+			continue;
+		}
+		if (is_loopback_interface(name)) {
+			strncpy(output, name, IFNAMSIZ);
+			fclose(fd);
+			return output;
+		}
+	}
+
+	fclose(fd);
+	return NULL;
+}
+
+int
+is_loopback_interface(char * ifname)
+{
+	struct ifreq ifr;
+	int skfd = -1;
+
+	if ( (skfd = socket(PF_INET, SOCK_DGRAM, 0)) == -1 ) {
+		fprintf(stderr, "%s\n", strerror(errno));
+		return 0;
+	}
+
+	strncpy(ifr.ifr_name, ifname, IFNAMSIZ);
+	if (ioctl(skfd, SIOCGIFFLAGS, &ifr) < 0) {
+		fprintf(stderr, "%s: unknown interface: %s\n"
+			, ifname, strerror(errno));
+		close(skfd);
+		return 0;
+	}
+	close(skfd);
+
+	if (ifr.ifr_flags & IFF_LOOPBACK) {
+		/* this is a loopback device. */
+		close(skfd);
+		return 1;
+	} else {
+		return 0;
+	}
+}
+
+char *
+get_ifname(char * buf, char * ifname)
+{
+	char * start, * end, * buf_border;	
+
+	buf_border = buf + strnlen(buf, 512);
+
+	start = buf; 
+	while (isspace(*start) && (start != buf_border)) {
+		start++;
+	}
+	end = start;
+	while ((*end != ':') && (end != buf_border)) {
+		end++;	
+	}
+
+	if ( start == buf_border || end == buf_border ) {
+		/* Over the border of buf */ 
+		return NULL;
+	}
+
+	*end = '\0';
+	strncpy(ifname, start, IFNAMSIZ);
+	
+	return ifname;
+}
+
 int
 main(int argc, char ** argv) {
 
@@ -594,13 +698,25 @@ main(int argc, char ** argv) {
 	if (netmaskbits) {
 		best_netmask = netmask;
 	}else if (best_netmask == 0L) {
-		fprintf(stderr
-		,	"ERROR: Cannot use default route w/o netmask [%s]\n"
-		,	 address);
-		return(1);
+		/*
+		   On some distirbutions, there is no loopback related route
+		   item, this leads to the error here.
+		   My fix may be not good enough, please FIXME
+		 */
+		if (0 == strncmp(address, "127", 3)) {
+			if (NULL != get_first_looback_netdev(best_if)) {
+				best_netmask = 0x000000ff;
+			} else {
+				fprintf(stderr, "No loopback interface found.\n");
+				return(1);
+			}
+		} else {
+			fprintf(stderr
+			,	"ERROR: Cannot use default route w/o netmask [%s]\n"
+			,	 address);
+			return(1);
+		}
 	}
-		
-
 
 	/* Did they tell us the broadcast address? */
 
@@ -750,6 +866,9 @@ ff02::%lo0/32                     fe80::1%lo0                   UC          lo0
 
 /* 
  * $Log: findif.c,v $
+ * Revision 1.46  2005/06/20 11:05:11  sunjd
+ * Bug 619: let loopback interface can be bound
+ *
  * Revision 1.45  2005/03/11 10:03:19  zhaokai
  * polished function GetAddress to compatible OCF empty parameter
  *
