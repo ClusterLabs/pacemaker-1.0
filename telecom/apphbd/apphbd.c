@@ -1,4 +1,4 @@
-/* $Id: apphbd.c,v 1.59 2005/05/13 22:15:53 gshi Exp $ */
+/* $Id: apphbd.c,v 1.60 2005/06/20 13:06:34 andrew Exp $ */
 /*
  * apphbd:	application heartbeat daemon
  *
@@ -97,6 +97,21 @@
 #ifndef PIDFILE
 #	define		PIDFILE "/var/run/apphbd.pid"
 #endif
+
+/* Start: Mirrored from ipcsocket.c */
+#ifdef SO_PEERCRED
+#	define	USE_SO_PEERCRED
+#elif HAVE_GETPEEREID
+#	define USE_GETPEEREID
+#elif defined(SCM_CREDS)
+#	define	USE_SCM_CREDS
+#else
+#	define	USE_DUMMY_CREDS
+/* This will make it compile, but attempts to authenticate
+ * will fail.  This is a stopgap measure ;-)
+ */
+#endif
+/* End: Mirrored from ipcsocket.c */
 
 const char *	cmdname = "apphbd";
 #define		DBGMIN		1
@@ -336,11 +351,15 @@ apphb_client_register(apphb_client_t* client, void* Msg,  size_t length)
 		return EINVAL;
 	}
 
+#ifndef USE_SO_PEERCRED
+	if(client->ch->farside_pid == -1) {
+		client->ch->farside_pid = msg->pid;
+	}
+#endif
 	if (msg->pid < 2 || (CL_KILL(msg->pid, 0) < 0 && errno != EPERM)
 	||	(client->ch->farside_pid != msg->pid)) {
 		return EINVAL;
 	}
-
 	client->pid = msg->pid;
 
 	/* Make sure client is who they claim to be... */
