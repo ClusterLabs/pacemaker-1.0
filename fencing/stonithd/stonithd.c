@@ -1,4 +1,4 @@
-/* $Id: stonithd.c,v 1.53 2005/06/15 16:13:41 davidlee Exp $ */
+/* $Id: stonithd.c,v 1.54 2005/06/20 03:04:58 sunjd Exp $ */
 
 /* File: stonithd.c
  * Description: STONITH daemon for node fencing
@@ -666,16 +666,30 @@ stonithdProcessDied(ProcTrack* p, int status, int signo
 			goto end;
 		}
 			
-		if (WEXITSTATUS(exitcode) == S_OK) {
+		if (exitcode == S_OK) {
 			op->op_union.st_op->op_result = STONITH_SUCCEEDED;
+			op->op_union.st_op->node_list = 
+				g_string_append(op->op_union.st_op->node_list
+						, local_nodename);
 			send_stonithop_final_result(op); 
 			g_hash_table_remove(executing_queue, &(p->pid));
 			goto end;
 		}
-		/* Go ahead when WEXITSTATUS(exit_status) != S_OK */
+		/* Go ahead when exitcode != S_OK */
+		stonithd_log(LOG_DEBUG, "Failed to STONITH node %s with one " 
+			"local device, exitcode = %d. Will try to use the "
+			"next local device."
+			,	op->op_union.st_op->node_name, exitcode); 
 		if (ST_OK == continue_local_stonithop(p->pid)) {
 			goto end;
 		} else {
+			stonithd_log(LOG_DEBUG, "Failed to STONITH node %s "
+				"locally.", op->op_union.st_op->node_name);
+			if (op->scenario == STONITH_INIT) {
+				stonithd_log(LOG_DEBUG, "Will ask other nodes "
+					"to help STONITH node %s."
+					,	op->op_union.st_op->node_name); 
+			}
 			if (changeto_remote_stonithop(p->pid) != ST_OK) {
 				op->op_union.st_op->op_result = STONITH_GENERIC;
 				send_stonithop_final_result(op);
@@ -1054,6 +1068,8 @@ handle_msg_trstit(const struct ha_msg* msg, void* private_data)
 	if ( op != NULL && 
 	    (op->scenario == STONITH_INIT || op->scenario == STONITH_REQ)) {
 		op->op_union.st_op->op_result = op_result;
+		op->op_union.st_op->node_list = 
+			g_string_append(op->op_union.st_op->node_list, from);
 		send_stonithop_final_result(op);
 		stonithd_log(LOG_DEBUG, "handle_msg_trstit: clean the "
 			     "executing queue.");
@@ -1790,9 +1806,11 @@ stonithop_result_to_local_client( stonith_ops_t * st_op, gpointer data)
 		stonithd_log(LOG_INFO, "%s %s: optype=%d.", M_STONITH_SUCCEED
 			     , st_op->node_name, st_op->optype);
 	} else {
-		stonithd_log(LOG_INFO, "%s %s: optype=%d, op_result=%d"
+		stonithd_log(LOG_INFO
+			,	"%s %s: optype=%d, op_result=%d; whodo: %s"
 			,	M_STONITH_FAIL, st_op->node_name
-			,	st_op->optype, st_op->op_result);
+			,	st_op->optype, st_op->op_result
+			,	(char *)st_op->node_list);
 	}
 
 	stonithd_log(LOG_DEBUG, "stonith finished: optype=%d, node_name=%s", 
@@ -1920,19 +1938,19 @@ stonith_operate_locally( stonith_ops_t * st_op, stonith_rsc_t * srsc)
 
 	/* stonith it by myself in child */
 	return_to_orig_privs();
-       	if ((pid = fork()) < 0) {
-               	stonithd_log(LOG_ERR, "stonith_operate_locally: fork failed.");
+	if ((pid = fork()) < 0) {
+		stonithd_log(LOG_ERR, "stonith_operate_locally: fork failed.");
 		return_to_dropped_privs();
-               	return -1;
-       	} else if (pid > 0) { /* in the parent process */
+		return -1;
+	} else if (pid > 0) { /* in the parent process */
 		snprintf(buf_tmp, 39, "%s_%s_%d", st_obj->stype, srsc->rsc_id
 			, (int)st_op->optype); 
 		NewTrackedProc( pid, 1
 				, (debug_level>1)? PT_LOGVERBOSE : PT_LOGNORMAL
 				, g_strdup(buf_tmp), &StonithdProcessTrackOps);
 		return_to_dropped_privs();
-               	return pid;
-       	}
+		return pid;
+	}
 
 	/* now in child process */
 	/* this operation may be on block status */
@@ -2476,6 +2494,8 @@ stonithRA_start( stonithRA_ops_t * op, gpointer data)
 		return ST_FAIL;
 	}
 
+	/* Set the stonith plugin's debug level */
+	stonith_set_debug(stonith_obj, debug_level);
 	snv = stonith_ghash_to_NVpair(op->params);
 	if ( snv == NULL
 	||	stonith_set_config(stonith_obj, snv) != S_OK ) {
@@ -3038,6 +3058,11 @@ adjust_debug_level(int nsig, gpointer user_data)
 
 /* 
  * $Log: stonithd.c,v $
+ * Revision 1.54  2005/06/20 03:04:58  sunjd
+ * Bug 644, including set debug level for stonith plugin;
+ * add and adjust logs;
+ * format tweak,
+ *
  * Revision 1.53  2005/06/15 16:13:41  davidlee
  * common code for syslog facility name/value conversion
  *
