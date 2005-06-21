@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-#	$Id: IPaddr.in,v 1.6 2005/06/20 10:57:48 sunjd Exp $
+#	$Id: IPaddr.in,v 1.7 2005/06/21 06:25:52 sunjd Exp $
 #
 #	This script manages IP alias IP addresses
 #
@@ -366,13 +366,13 @@ ip_stop() {
 		if [ -z "$IF" ]; then
     			: Requested interface not in use
     			exit 0
-#		else
-#			case $IF in
-#			  lo*)
-#				: Requested interface is on loopback
-#				exit 0
-#				;;
-#			esac
+		else
+			case $IF in
+			  lo*)
+				: Requested interface is on loopback
+				exit 0
+				;;
+			esac
   		fi;;
 	*)
 		if [ -z "$IF" ]; then
@@ -658,7 +658,7 @@ ip_monitor() {
 
 usage() {
   echo $USAGE >&2
-  echo "$Id: IPaddr.in,v 1.6 2005/06/20 10:57:48 sunjd Exp $"
+  echo "$Id: IPaddr.in,v 1.7 2005/06/21 06:25:52 sunjd Exp $"
 }
 
 #
@@ -707,6 +707,9 @@ exit $?
 #
 #
 # $Log: IPaddr.in,v $
+# Revision 1.7  2005/06/21 06:25:52  sunjd
+# roll back my former changes, LVS needs this special handling
+#
 # Revision 1.6  2005/06/20 10:57:48  sunjd
 # Let aliases on loopback interface can be released as well.
 #
