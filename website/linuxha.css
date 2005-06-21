@@ -22,7 +22,7 @@ a:link, a:visited {
 	text-decoration : none;
 	}
 
-a:hover {
+a[href]:hover {
 	color: red;
 	text-decoration: underline;
 	}
@@ -329,6 +329,27 @@ h5 {
 	text-align: left;
 	clear: both;
 	font-size: x-small;	
+	}
+
+H3.dl_rel_Beta {
+	color: red;
+}
+.dl_plathead, .dl_srchead {
+	background-color:white;
+}
+.dl_release {
+	padding-left: 1em;
+}
+
+#i_download {
+	padding-left: 1em;
+}
+
+#i_download table {
+	/* background: #FFFFFF; */
+	background-color:#f9f9f9;
+	border: 1px solid red;
+	margin-right: 4px;
 	}
 
 /*  Work around IE/Win code size bug - courtesy Jesper, waffle.wootest.net  */
