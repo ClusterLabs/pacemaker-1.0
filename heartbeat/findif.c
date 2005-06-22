@@ -1,4 +1,4 @@
-/* $Id: findif.c,v 1.46 2005/06/20 11:05:11 sunjd Exp $ */
+/* $Id: findif.c,v 1.47 2005/06/22 11:50:32 davidlee Exp $ */
 /*
  * findif.c:	Finds an interface which can route a given address
  *
@@ -74,8 +74,13 @@
 #include <unistd.h>
 #include <ctype.h>
 #include <sys/types.h>
-#include <net/if.h>
+#ifdef HAVE_SYS_SOCKET_H
 #include <sys/socket.h>
+#endif
+#ifdef HAVE_SYS_SOCKIO_H
+#include <sys/sockio.h>
+#endif
+#include <net/if.h>
 #include <sys/ioctl.h>
 #include <errno.h>
 
@@ -866,6 +871,9 @@ ff02::%lo0/32                     fe80::1%lo0                   UC          lo0
 
 /* 
  * $Log: findif.c,v $
+ * Revision 1.47  2005/06/22 11:50:32  davidlee
+ * previous update didn't compile on Solaris (order #include)
+ *
  * Revision 1.46  2005/06/20 11:05:11  sunjd
  * Bug 619: let loopback interface can be bound
  *
