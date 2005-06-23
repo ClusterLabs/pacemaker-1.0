@@ -18,8 +18,8 @@
    <div id="i_search"><?php search_box_html(20); ?></div>
    <div id="i_slashboxes"><?php echo MoinMoin("SlashBoxes"); ?></div>
    <div id="i_additional_actions">
-     <?php echo "<a href=\"/print.php/$pagename\" >"; ?> printer friendly view</a>
-     <?php echo "<a href=\"/print.php/$pagename\">";?><IMG src="/img/moin-print.png" alt="printer"></a>
+     <?php echo "<a href=\"/print.php/$pagename\">printer friendly view</a>";
+      echo "<IMG src=\"/img/moin-print.png\" alt=\"printer\" WIDTH=16 HEIGHT=14></A>"; ?>
    </div>
   </div>
   <div id="i_content">
