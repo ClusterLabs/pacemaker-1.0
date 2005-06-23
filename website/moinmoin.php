@@ -273,7 +273,7 @@ function search_box_html($ncols)
 echo "<TABLE><TR ALIGN=CENTER><TD>
 <FORM method=GET action=\"http://www.google.com/search\">
 <input type=hidden name=ie value=UTF-8><input type=hidden name=oe value=UTF-8>
-<INPUT TYPE=text name=q size=$ncols maxlength=255 value=\"\"><BR>
+<INPUT TYPE=text name=q size=$ncols maxlength=255 value=\"Enter search here.\"><BR>
 <INPUT type=submit name=btnG VALUE=\"Site Search\"><BR>
 <input type=hidden name=domains value=\"http://wwnew.linux-ha.org\">
 <input type=hidden name=sitesearch value=\"wwnew.linux-ha.org\">
