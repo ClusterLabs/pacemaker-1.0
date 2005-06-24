@@ -1,4 +1,4 @@
-# $Id: Makefile.am,v 1.3 2005/06/14 20:25:05 msoffen Exp $
+# $Id: Makefile.am,v 1.4 2005/06/24 17:30:51 msoffen Exp $
 #
 # Open-HA "port" Makefile for FreeBSD
 #
@@ -53,7 +53,7 @@ portfile:
 	$(LS) -l ../$(TARFILE) | $(AWK) '{print "SIZE \($(TARFILE)\) = "$$5}' >> port/distinfo
 	$(RM) $(TARFILE)
 	$(CP) portMakefile port/Makefile
-	( cd port ; $(TAR) -cvf heartbeat.tar Makefile distinfo pkg-deinstall pkg-descr pkg-install pkg-plist)
+	$(TAR) -cvf heartbeat.tar heartbeat/Makefile heartbeat/distinfo heartbeat/pkg-deinstall heartbeat/pkg-descr heartbeat/pkg-install heartbeat/pkg-plist
 	$(GZIP) heartbeat.tar
 
 
