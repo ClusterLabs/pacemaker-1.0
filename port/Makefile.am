@@ -1,4 +1,4 @@
-# $Id: Makefile.am,v 1.4 2005/06/24 17:30:51 msoffen Exp $
+# $Id: Makefile.am,v 1.5 2005/06/25 18:43:30 msoffen Exp $
 #
 # Open-HA "port" Makefile for FreeBSD
 #
@@ -26,10 +26,10 @@ MAINTAINERCLEANFILES    = Makefile.in
 
 EXTRA_DIST =	\
 		portMakefile			\
-		port/pkg-deinstall		\
-		port/pkg-descr			\
-		port/pkg-install		\
-		port/pkg-plist
+		heartbeat/pkg-deinstall		\
+		heartbeat/pkg-descr		\
+		heartbeat/pkg-install		\
+		heartbeat/pkg-plist
 
 CLEANFILES = 
 
