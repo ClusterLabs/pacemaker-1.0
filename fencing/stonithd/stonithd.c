@@ -1,4 +1,4 @@
-/* $Id: stonithd.c,v 1.56 2005/06/20 16:20:33 sunjd Exp $ */
+/* $Id: stonithd.c,v 1.57 2005/06/27 07:53:51 sunjd Exp $ */
 
 /* File: stonithd.c
  * Description: STONITH daemon for node fencing
@@ -1155,7 +1155,7 @@ accept_client_dispatch(IPC_Channel * ch, gpointer user)
 		return FALSE;
 	}
 
-	stonithd_log(LOG_DEBUG, "IPC accepted a connection.");
+	stonithd_log2(LOG_DEBUG, "IPC accepted a connection.");
 	G_main_add_IPC_Channel(G_PRIORITY_HIGH, ch, FALSE, 
 			stonithd_client_dispatch, (gpointer)ch,
 			stonithd_IPC_destroy_notify);
@@ -1177,7 +1177,7 @@ stonithd_client_dispatch(IPC_Channel * ch, gpointer user_data)
 
 	while ( ch->ops->is_message_pending(ch))  {
 		if (ch->ch_status == IPC_DISCONNECT) {
-			stonithd_log(LOG_DEBUG, "IPC disconneted with a client.");
+			stonithd_log2(LOG_DEBUG, "IPC disconneted with a client.");
 #if 0
 			/* For verify the API use */
 			if  ((msg = msgfromIPC_noauth(ch)) == NULL ) {
@@ -1186,7 +1186,7 @@ stonithd_client_dispatch(IPC_Channel * ch, gpointer user_data)
 				return FALSE;
 			}
 #endif 
-			stonithd_log(LOG_DEBUG, "stonithd_client_dispatch: "
+			stonithd_log2(LOG_DEBUG, "stonithd_client_dispatch: "
 				"delete a client due to IPC_DISCONNECT.");
 			delete_client_by_chan(&client_list, ch); /* ??? */
 			return FALSE;
@@ -1210,18 +1210,18 @@ stonithd_IPC_destroy_notify(gpointer data)
 	IPC_Channel * ch = (IPC_Channel *) data;
 
 	/* deal with client disconnection event */
-	stonithd_log(LOG_DEBUG, "An IPC is destroyed.");
+	stonithd_log2(LOG_DEBUG, "An IPC is destroyed.");
 
 	if (ch == NULL) {
-		stonithd_log(LOG_DEBUG, "IPC_destroy_notify: ch==NULL");
+		stonithd_log2(LOG_DEBUG, "IPC_destroy_notify: ch==NULL");
 		return;
 	}
 
 	if ( ST_OK == delete_client_by_chan(&client_list, ch) ) {
-		stonithd_log(LOG_DEBUG, "Delete a client from client_list "
+		stonithd_log2(LOG_DEBUG, "Delete a client from client_list "
 			"in stonithd_IPC_destroy_notify.");
 	} else {
-		stonithd_log(LOG_DEBUG, "stonithd_IPC_destroy_notify: Failed "
+		stonithd_log2(LOG_DEBUG, "stonithd_IPC_destroy_notify: Failed "
 			"to delete a client from client_list, maybe it has "
 			"been deleted in signoff function.");
 	}
@@ -1237,7 +1237,7 @@ stonithd_process_client_msg(struct ha_msg * msg, gpointer data)
 	
 	if (  ((msg_type = cl_get_string(msg, F_STONITHD_TYPE)) != NULL)
 	    && (STRNCMP_CONST(msg_type, ST_APIREQ) == 0) ) {
-		stonithd_log(LOG_DEBUG, "received an API request msg.");	
+		stonithd_log2(LOG_DEBUG, "received an API request msg.");	
 	} else {
 		stonithd_log(LOG_ERR, "received a msg of none-API request.");
         	ZAPMSG(msg);
@@ -1250,7 +1250,7 @@ stonithd_process_client_msg(struct ha_msg * msg, gpointer data)
 		return TRUE;
 	}
 
-	stonithd_log(LOG_DEBUG, "begin to dealing with a api msg %s from "
+	stonithd_log2(LOG_DEBUG, "begin to dealing with a api msg %s from "
 			"a client.", api_type);
 	for (i=0; i<DIMOF(api_msg_to_handlers); i++) {
 		if ( strncmp(api_type, api_msg_to_handlers[i].msg_type, MAXCMP)
@@ -1345,7 +1345,7 @@ on_stonithd_signon(const struct ha_msg * request, gpointer data)
 
 	if ((tmpstr = cl_get_string(request, F_STONITHD_CNAME)) != NULL) {
 		client->name = g_strdup(tmpstr);
-		stonithd_log(LOG_DEBUG, "client->name=%s.", client->name);
+		stonithd_log2(LOG_DEBUG, "client->name=%s.", client->name);
 	} else {
 		stonithd_log(LOG_ERR, "signon msg contains no name field.");
 		api_reply = ST_BADREQ;
@@ -1396,7 +1396,7 @@ on_stonithd_signoff(const struct ha_msg * request, gpointer data)
 	IPC_Channel * ch = (IPC_Channel *) data;
 	int tmpint;
 
-	stonithd_log(LOG_DEBUG, "on_stonithd_signoff: begin.");
+	stonithd_log2(LOG_DEBUG, "on_stonithd_signoff: begin.");
 	/* parameter check, maybe redundant */
 	if ( ch == NULL || request == NULL ) {
 		stonithd_log(LOG_ERR, "parameter error, signoff failed.");
@@ -1615,7 +1615,7 @@ initiate_local_stonithop(stonith_ops_t * st_op, stonith_rsc_t * srsc,
 		*tmp_callid = call_id;
 		Gmain_timeout_add_full(G_PRIORITY_HIGH_IDLE, st_op->timeout,
 		   		   stonithop_timeout, tmp_callid, NULL);
-		stonithd_log(LOG_DEBUG, "initiate_local_stonithop: inserted "
+		stonithd_log2(LOG_DEBUG, "initiate_local_stonithop: inserted "
 			    "optype=%d, child_id=%d", st_op->optype, call_id);
 		return call_id;
 	}
@@ -1712,7 +1712,7 @@ initiate_remote_stonithop(stonith_ops_t * st_op, stonith_rsc_t * srsc,
 
 		stonithd_log(LOG_DEBUG, "initiate_remote_stonithop: inserted "
 			  "optype=%d, key=%d", op->op_union.st_op->optype, *tmp_callid);
-		stonithd_log(LOG_DEBUG, "initiate_remote_stonithop: "
+		stonithd_log2(LOG_DEBUG, "initiate_remote_stonithop: "
 			     "require_others_to_stonith succeed.");
 		return negative_callid_counter--;
 	}
@@ -2050,7 +2050,7 @@ get_local_stonithobj_can_stonith( const char * node_name,
 		if ( tmp_srsc != NULL && tmp_srsc->node_list != NULL ) {
 			char **	this;
 			for(this=tmp_srsc->node_list; *this; ++this) {
-				stonithd_log(LOG_DEBUG, "get_local_stonithobj_"
+				stonithd_log2(LOG_DEBUG, "get_local_stonithobj_"
 					"can_stonith: host=%s.", *this);
 				if ( strncmp(node_name, *this, MAXCMP) == 0 ) {
 					return tmp_srsc;
@@ -2058,11 +2058,11 @@ get_local_stonithobj_can_stonith( const char * node_name,
 			}
 		} else {
 			if (tmp_srsc == NULL) {
-				stonithd_log(LOG_DEBUG, "get_local_stonithobj_"
+				stonithd_log2(LOG_DEBUG, "get_local_stonithobj_"
 					"can_stonith: tmp_srsc=NULL.");
 				
 			} else {
-				stonithd_log(LOG_DEBUG, "get_local_stonithobj_"
+				stonithd_log2(LOG_DEBUG, "get_local_stonithobj_"
 				    "can_stonith: tmp_srsc->node_list = NULL.");
 			}
 		}
@@ -2196,7 +2196,7 @@ on_stonithd_virtual_stonithRA_ops(const struct ha_msg * request, gpointer data)
 
 	if ((tmpstr = cl_get_string(request, F_STONITHD_RSCID)) != NULL) {
 		ra_op->rsc_id = g_strdup(tmpstr);
-		stonithd_log(LOG_DEBUG, "ra_op->rsc_id=%s.", ra_op->rsc_id);
+		stonithd_log2(LOG_DEBUG, "ra_op->rsc_id=%s.", ra_op->rsc_id);
 	} else {
 		stonithd_log(LOG_ERR, "on_stonithd_virtual_stonithRA_ops: "
 			     "the request message contains no rsc_id field.");
@@ -2206,7 +2206,7 @@ on_stonithd_virtual_stonithRA_ops(const struct ha_msg * request, gpointer data)
 
 	if ((tmpstr = cl_get_string(request, F_STONITHD_RAOPTYPE)) != NULL) {
 		ra_op->op_type = g_strdup(tmpstr);
-		stonithd_log(LOG_DEBUG, "ra_op->op_type=%s.", ra_op->op_type);
+		stonithd_log2(LOG_DEBUG, "ra_op->op_type=%s.", ra_op->op_type);
 	} else {
 		stonithd_log(LOG_ERR, "on_stonithd_virtual_stonithRA_ops: the "
 			     "request message contains no op_type field.");
@@ -2216,7 +2216,7 @@ on_stonithd_virtual_stonithRA_ops(const struct ha_msg * request, gpointer data)
 
 	if ((tmpstr = cl_get_string(request, F_STONITHD_RANAME)) != NULL) {
 		ra_op->ra_name = g_strdup(tmpstr);
-		stonithd_log(LOG_DEBUG, "ra_op->ra_name=%s.", ra_op->ra_name);
+		stonithd_log2(LOG_DEBUG, "ra_op->ra_name=%s.", ra_op->ra_name);
 	} else {
 		stonithd_log(LOG_ERR, "on_stonithd_virtual_stonithRA_ops: the "
 			     "request message contains no ra_name field.");
@@ -2257,7 +2257,7 @@ on_stonithd_virtual_stonithRA_ops(const struct ha_msg * request, gpointer data)
 		key_tmp = g_new(int, 1);
 		*key_tmp = *child_pid;
 		g_hash_table_insert(executing_queue, key_tmp, op);
-		stonithd_log(LOG_DEBUG, "on_stonithd_virtual_stonithRA_ops: "
+		stonithd_log2(LOG_DEBUG, "on_stonithd_virtual_stonithRA_ops: "
 			     "insert child_pid=%d to table", *key_tmp);
 	}	
 	/* execute stonith plugin : end */
@@ -2874,7 +2874,7 @@ delete_client_by_chan(GList ** client_list, IPC_Channel * ch)
 		free_client(client);
 		client = NULL;
 		stonithd_log2(LOG_DEBUG, "delete_client_by_chan: return OK.");
-		stonithd_log(LOG_DEBUG, "delete_client_by_chan: new "
+		stonithd_log2(LOG_DEBUG, "delete_client_by_chan: new "
 			     "client_list = %p", *client_list);
 		return ST_OK;
 	} else {
@@ -3051,6 +3051,9 @@ adjust_debug_level(int nsig, gpointer user_data)
 
 /* 
  * $Log: stonithd.c,v $
+ * Revision 1.57  2005/06/27 07:53:51  sunjd
+ * log ouput tweak according to debuglevel
+ *
  * Revision 1.56  2005/06/20 16:20:33  sunjd
  * fix the NULL pointer issues in BSC
  *
