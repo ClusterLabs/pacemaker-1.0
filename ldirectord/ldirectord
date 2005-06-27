@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-my($VERSION)=(qw$Id: ldirectord,v 1.105 2005/06/20 06:57:26 horms Exp $)[2];
+my($VERSION)=(qw$Id: ldirectord,v 1.106 2005/06/27 08:54:44 horms Exp $)[2];
 
 ######################################################################
 # ldirectord                 http://www.vergenet.net/linux/ldirectord/
@@ -1587,7 +1587,6 @@ sub ld_main
 	# Main failover checking code
 	while (1) {
 		my @real_checked;
-		my @check_ping_queue;
 		foreach my $v (@VIRTUAL) {
 			my $real = $$v{real};
 			my $virtual_id = get_virtual_id_str($v);
@@ -1643,12 +1642,12 @@ sub ld_main
 						check_connect($v, $r);
 					}
 					else {
-						&ld_debug(2, "Checking connect (queued ping): real server=$real_id (virtual=$virtual_id)");
-						push (@check_ping_queue, [$v, $r]);
+						&ld_debug(2, "Checking connect (ping): real server=$real_id (virtual=$virtual_id)");
+						check_ping($v, $r);
 					}
 				} elsif ($$v{checktype} eq "ping") {
-					&ld_debug(2, "Checking ping (queued): real server=$real_id (virtual=$virtual_id)");
-					push (@check_ping_queue, [$v, $r]);
+					&ld_debug(2, "Checking ping: real server=$real_id (virtual=$virtual_id)");
+					check_ping($v, $r);
 				} elsif ($$v{checktype} eq "off") {
 					&ld_debug(2, "Checking off: No real or fallback servers to be added\n");
 				} elsif ($$v{checktype} eq "on") {
@@ -1665,7 +1664,6 @@ sub ld_main
 				push(@real_checked, $real_id);
 			}
 			# $ua->wait($$v{checktimeout});
-			check_ping (@check_ping_queue);
 		}
 		if (!check_cfgfile()) {
 			sleep $CHECKINTERVAL;
@@ -2194,81 +2192,27 @@ sub check_dns
 
 sub check_ping 
 {
-	use POE qw(Component::Client::Ping);
-	my @q = @_;
-	
-	# This is the sub which is called when the session receives a "pong"
-	# event.  It handles responses from the Ping component.
-	sub check_ping_handler_pong {
-  		my ($kernel, $response, $heap) = @_[KERNEL, ARG1, HEAP];
-	
-  		my ($resp_address) = @$response;
-		my ($v, $r) = @$heap;
-	
-  		# The response address is defined if this is a response.
-  		if (defined $resp_address) {
-    			&ld_debug(2, "pong from $$r{server}\n");
-			service_set($v,$r,"up");
-    			return;
-  		}
-		
-		@$heap[3]++;
+	use Net::Ping::External qw(ping);
 
-		my ($max, $attempt) = @$heap[4]
+	my ($v,$r) = (@_);
 
-  		# Otherwise the timeout period has ended.
-  		&ld_debug(2, "ping to $$r{server} timed out (attempt " . 
-			@$heap[3] . "/" . @$heap[2] . ")\n");
-		if (@$heap[3] >= @$heap[2]) {
-			service_set($v,$r,"down");
-			return;
-		}
-  		$kernel->post("pinger", "ping", "pong",
-    				$$r{server}, $$v{checktimeout});
+	&ld_debug(2, "Checking ping: " .  "host=\"" .  $$r{server} . 
+		"\" checktimeout=\"" . $$v{"checktimeout"} .
+		"\" checkcount=\"" . $$v{"checkcount"} . "\"\n");
+
+	my $alive = ping(hostname => $$r{server}, 
+			count => $$v{"checkcount"} , 
+			timeout => $$v{"checktimeout"});
+	if ($alive) {
+    		&ld_debug(2, "pong from $$r{server}\n");
+		service_set($v,$r,"up");
 	}
-	
-	sub check_ping_handler_start {
-  		my ($kernel, $heap, $session) = @_[KERNEL, HEAP, SESSION];
-		my ($v, $r) = @$heap;
-
-		&ld_debug(2, "Checking ping: " .  "host=\"" .  $$r{server} . 
-			"\" checktimeout=\"" . $$v{"checktimeout"} .
-			"\" checkcount=\"" . $$v{"checkcount"} . "\"\n");
-
-  		$kernel->post("pinger", "ping", "pong",
-    				$$r{server}, $$v{checktimeout});
+	else {
+  		&ld_debug(2, "ping to $$r{server} timed out\n");
+		service_set($v,$r,"down");
 	}
 
-	sub check_ping_handler_stop { ; }
-
-	POE::Component::Client::Ping->spawn(
-  		Alias     => "pinger",  # defaults to "pinger"
-  		#Socket     => XXX,     # Provide a raw socket created as root
-                          		# if this code is to be run as a 
-					# non-root user
-  		Timeout   => 10,        # defaults to 1 second
-  		OneReply  => 1          # defaults to disabled
-	);
-
-	for my $h (@_) {
-		my ($v, $r) = @$h;
-		POE::Session->create(
-			inline_states => {
-				_start => \&check_ping_handler_start,
-				pong   => \&check_ping_handler_pong,
-				#ping   => \&check_ping_handler_ping,
-				_stop  => \&check_ping_handler_stop,
-			},
-			heap => [ $v, $r, $$v{checkcount}, 0], 
-		);
-	}
-
-	POE::Kernel->run();
-}
-
-while (1) {
-	check_ping('61.8.0.2', '127.0.0.1', '172.19.2.3', '10.2.0.1');
-	sleep 1;
+	return;
 }
 
 
