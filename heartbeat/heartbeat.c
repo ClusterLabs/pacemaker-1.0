@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.412 2005/06/18 01:33:06 alan Exp $ */
+/* $Id: heartbeat.c,v 1.413 2005/06/27 18:32:06 gshi Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -2110,6 +2110,17 @@ HBDoMsg_T_ACKMSG(const char * type, struct node_info * fromnode,
 		while(count -- > 0){
 			free_one_hist_slot(hist, start%MAXMSGHIST);
 			start++;
+			
+			if (hist->lowseq > hist->ackseq){
+				cl_log(LOG_ERR, "lowseq cannnot be greater than ackseq");
+				cl_log(LOG_INFO, "hist->ackseq =%ld, old_hist_ackseq=%ld",
+				       hist->ackseq, old_hist_ackseq);
+				cl_log(LOG_INFO, "hist->lowseq =%ld, hist->hiseq=%ld"
+				       "send_cluster_msg_level=%d",
+				       hist->lowseq, hist->hiseq, send_cluster_msg_level);
+				abort();
+			}
+
 		}
 	}
 
@@ -5339,6 +5350,10 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.413  2005/06/27 18:32:06  gshi
+ * abort() if lowseq is greater than ackseq,
+ * which should not happen if everything works fine.
+ *
  * Revision 1.412  2005/06/18 01:33:06  alan
  * Changed the code for getting off of dead center if our parent has died
  * (for the fifo process)
