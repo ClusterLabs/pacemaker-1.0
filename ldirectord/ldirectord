@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-my($VERSION)=(qw$Id: ldirectord,v 1.106 2005/06/27 08:54:44 horms Exp $)[2];
+my($VERSION)=(qw$Id: ldirectord,v 1.107 2005/06/28 10:41:31 horms Exp $)[2];
 
 ######################################################################
 # ldirectord                 http://www.vergenet.net/linux/ldirectord/
@@ -2192,7 +2192,7 @@ sub check_dns
 
 sub check_ping 
 {
-	use Net::Ping::External qw(ping);
+	use Net::Ping;
 
 	my ($v,$r) = (@_);
 
@@ -2200,18 +2200,19 @@ sub check_ping
 		"\" checktimeout=\"" . $$v{"checktimeout"} .
 		"\" checkcount=\"" . $$v{"checkcount"} . "\"\n");
 
-	my $alive = ping(hostname => $$r{server}, 
-			count => $$v{"checkcount"} , 
-			timeout => $$v{"checktimeout"});
-	if ($alive) {
-    		&ld_debug(2, "pong from $$r{server}\n");
-		service_set($v,$r,"up");
-	}
-	else {
-  		&ld_debug(2, "ping to $$r{server} timed out\n");
-		service_set($v,$r,"down");
+	my $p = Net::Ping->new("icmp","1","64");
+	for (my $attempt = 0; $attempt < $$v{"checkcount"}; $attempt++) {
+		if ($p->ping($$r{server}, $$v{"checktimeout"})) {
+    			&ld_debug(2, "pong from $$r{server}\n");
+			service_set($v,$r,"up");
+			return;
+		}
+  		&ld_debug(2, "ping to $$r{server} timed out " .
+					"(attempt " .  ($attempt + 1) . "/" . 
+					$$v{"checkcount"} . ")\n");
 	}
 
+	service_set($v,$r,"down");
 	return;
 }
 
