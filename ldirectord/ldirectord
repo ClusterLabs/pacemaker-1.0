@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-my($VERSION)=(qw$Id: ldirectord,v 1.107 2005/06/28 10:41:31 horms Exp $)[2];
+my($VERSION)=(qw$Id: ldirectord,v 1.108 2005/06/28 10:44:53 horms Exp $)[2];
 
 ######################################################################
 # ldirectord                 http://www.vergenet.net/linux/ldirectord/
@@ -292,24 +292,24 @@ As a last resort the IP address of the real server will be used.
 
 B<login = ">I<username>B<">
 
-Username to use to login to FTP, POP, IMAP and MySQL servers. Default is 
-anonymous for FTP. For POP, IMAP, and MySQL the default is the empty string,
-in which case authentication will not be attempted.
-
-For a MySQL check, the login username is a required setting.
+Username to use to login to FTP, POP, IMAP, MySQL and PostgreSQL servers.
+For FTP, the default is anonymous. For POP and IMAP, the default is the
+empty string, in which case authentication will not be attempted.
+For a MySQL and PostgreSQL, the username must be provided.
 
 B<passwd = ">I<password>B<">
 
-Password to use to login to FTP, POP, IMAP and MySQL servers. Default is 
-ldirectord\@<hostname>, where hostname is the environment variable 
-HOSTNAME evaluated at run time.
-
-For a MySQL check, the password is a required setting.
+Password to use to login to FTP, POP, IMAP, MySQL and PostgreSQL servers.
+Default is for FTP is ldirectord\@<hostname>, where hostname is the environment
+variable HOSTNAME evaluated at run time. The default for all other
+services is an empty password, in the case of MySQL and PostgreSQL
+this means authentication will not be performed.
 
 B<database = ">I<databasename>B<">
 
-Only for MySQL servers, this is the database that the query (set by
-B<receive> above) will be performed against.  This is a required setting.
+Database to use for MySQL and PostgreSQL servers, this is the database that
+the query (set by B<receive> above) will be performed against.  This is a
+required setting.
 
 
 B<scheduler => I<scheduler_name>
@@ -729,8 +729,8 @@ sub read_config
 			$vsrv{request} = "/";
 			$vsrv{receive} = "";
 			$vsrv{login} = "";
-			$vsrv{passwd} = "ldirectord\@$ENV{HOSTNAME}";
-			$vsrv{database} = "mysql";
+			$vsrv{passwd} = "";
+			$vsrv{database} = "";
 			$vsrv{checktimeout} = 0;
 			$vsrv{connecttimeout} = 0;
 			$vsrv{checkcount} = 1;
@@ -853,6 +853,10 @@ sub read_config
 					if($vsrv{service} eq "ftp" and 
 							$vsrv{login} eq "") {
 						$vsrv{login} = "anonymous";
+					}
+					if($vsrv{service} eq "ftp" and 
+							$vsrv{passwd} eq "") {
+						$vsrv{passwd} = "ldirectord\@$ENV{HOSTNAME}";
 					}
 				} elsif ($rcmd =~ /^httpmethod\s*=\s*(.*)/) {
 					$1 =~ /(\w+)/ && (uc($1) eq "GET" || uc($1) eq "HEAD")
@@ -2024,9 +2028,9 @@ sub check_sql
 	my ($dbh, $sth, $query, $rows, $result);   # Local variables
 	$query = $$r{request};
 	$query =~ s#^/##;
-	unless ($$v{login} && $$v{passwd} && $query) {
+	unless ($$v{login} && $query) {
 		service_set($v, $r, "down");
-		&ld_log("Error: Must specify a login, passwd, and request string for mysql.  Not adding $$r{server}.\n");
+		&ld_log("Error: Must specify a login and request string for mysql and postgresql checks. Not adding $$r{server}.\n");
 		return 1;
 	}
 	$result=2;   # Set result flag.  Only ok if ends up at zero.
