@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.413 2005/06/27 18:32:06 gshi Exp $ */
+/* $Id: heartbeat.c,v 1.414 2005/06/29 20:33:10 alan Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -4443,7 +4443,7 @@ should_drop_message(struct node_info * thisnode, const struct ha_msg *msg,
 				/* They're now alive, but were dead. */
 				/* No restart occured. UhOh. */
 
-				cl_log(LOG_WARNING
+				cl_log(LOG_ERR
 				,	"Cluster node %s"
 				" returning after partition."
 				,	thisnode->nodename);
@@ -5350,6 +5350,10 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.414  2005/06/29 20:33:10  alan
+ * Made the returning after cluster partition message an error.
+ * I have NO idea why it wasn't all along.  I sure thought it was.
+ *
  * Revision 1.413  2005/06/27 18:32:06  gshi
  * abort() if lowseq is greater than ackseq,
  * which should not happen if everything works fine.
