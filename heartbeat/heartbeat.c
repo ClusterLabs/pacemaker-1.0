@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.415 2005/06/29 21:08:20 gshi Exp $ */
+/* $Id: heartbeat.c,v 1.416 2005/06/29 23:58:30 gshi Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -5116,6 +5116,7 @@ process_rexmit(struct msg_xmit_hist * hist, struct ha_msg* msg)
 				hist->lastrexmit[msgslot] = now;
 				send_to_all_media(smsg
 				  ,	len);
+				ha_free(smsg);
 			}
 
 		}
@@ -5350,6 +5351,9 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.416  2005/06/29 23:58:30  gshi
+ * fixed a memory leak in rexmit
+ *
  * Revision 1.415  2005/06/29 21:08:20  gshi
  * fix bug 645:
  *
