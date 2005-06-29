@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.414 2005/06/29 20:33:10 alan Exp $ */
+/* $Id: heartbeat.c,v 1.415 2005/06/29 21:08:20 gshi Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -4974,9 +4974,9 @@ add2_xmit_hist (struct msg_xmit_hist * hist, struct ha_msg* msg
 		slot = 0;
 	}
 	hist->hiseq = seq;
-	if (hist->lowseq == 0) {
-		hist->lowseq = seq;
-	}
+        if (hist->lowseq == 0) {
+                hist->lowseq = seq - 1;
+        }
 	slotmsg = hist->msgq[slot];
 	/* Throw away old packet in this slot */
 	if (slotmsg != NULL) {
@@ -5350,6 +5350,12 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.415  2005/06/29 21:08:20  gshi
+ * fix bug 645:
+ *
+ * lowseq should always be 1 less than the lowest seq message
+ * in the hist queue.
+ *
  * Revision 1.414  2005/06/29 20:33:10  alan
  * Made the returning after cluster partition message an error.
  * I have NO idea why it wasn't all along.  I sure thought it was.
