@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.417 2005/06/30 17:14:08 gshi Exp $ */
+/* $Id: heartbeat.c,v 1.418 2005/06/30 21:07:34 gshi Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -4521,6 +4521,10 @@ should_drop_message(struct node_info * thisnode, const struct ha_msg *msg,
 			cl_log(LOG_ERR, "lost a lot of packets!");
 			return (IsToUs ? KEEPIT : DROPIT);
 		}else{
+			if (ANYDEBUG){
+				cl_log(LOG_INFO, "calling request_msg_rexmit()"
+				       "from %s", __FUNCTION__);
+			}
 			request_msg_rexmit(thisnode, t->last_seq+1L, seq-1L);
 		}
 
@@ -4759,6 +4763,10 @@ is_lost_packet(struct node_info * thisnode, seqno_t seq)
 		}
 		
 	}else if (t->first_missing_seq != 0){
+		if (ANYDEBUG){
+			cl_log(LOG_INFO, "calling request_msg_rexmit()"
+			       "from %s", __FUNCTION__);
+		}
 		request_msg_rexmit(thisnode, t->first_missing_seq, t->first_missing_seq);
 	}
 	return ret;
@@ -4773,6 +4781,13 @@ request_msg_rexmit(struct node_info *node, seqno_t lowseq
 	struct ha_msg*	hmsg;
 	char		low[16];
 	char		high[16];
+
+	if(ANYDEBUG){
+	  cl_log(LOG_INFO, "requesting for retranmission from node %s"
+		 "[%ld-%ld]",
+		 node->nodename,lowseq, hiseq);
+	}
+
 	if ((hmsg = ha_msg_new(6)) == NULL) {
 		cl_log(LOG_ERR, "no memory for " T_REXMIT);
 		return;
@@ -4842,6 +4857,10 @@ check_rexmit_reqs(void)
 				 * The code for asking for these by groups
 				 * is complicated.  This code is not.
 				 */
+			  if (ANYDEBUG){
+			    cl_log(LOG_INFO, "calling request_msg_rexmit()"
+				   "from %s", __FUNCTION__);
+			  }
 				request_msg_rexmit(hip, t->seqmissing[seqidx]
 				,	t->seqmissing[seqidx]);
 			}
@@ -5348,6 +5367,9 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.418  2005/06/30 21:07:34  gshi
+ * add some debug information for rexmit
+ *
  * Revision 1.417  2005/06/30 17:14:08  gshi
  * The previous fix does not work because when seq =1, lowseq is set 0
  * then when seq=2, lowseq is set to 1!!!
