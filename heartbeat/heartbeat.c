@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.416 2005/06/29 23:58:30 gshi Exp $ */
+/* $Id: heartbeat.c,v 1.417 2005/06/30 17:14:08 gshi Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -4974,9 +4974,6 @@ add2_xmit_hist (struct msg_xmit_hist * hist, struct ha_msg* msg
 		slot = 0;
 	}
 	hist->hiseq = seq;
-        if (hist->lowseq == 0) {
-                hist->lowseq = seq - 1;
-        }
 	slotmsg = hist->msgq[slot];
 	/* Throw away old packet in this slot */
 	if (slotmsg != NULL) {
@@ -5351,6 +5348,11 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.417  2005/06/30 17:14:08  gshi
+ * The previous fix does not work because when seq =1, lowseq is set 0
+ * then when seq=2, lowseq is set to 1!!!
+ * The simplest fix is we don't set lowseq in add2_xmit_hist
+ *
  * Revision 1.416  2005/06/29 23:58:30  gshi
  * fixed a memory leak in rexmit
  *
