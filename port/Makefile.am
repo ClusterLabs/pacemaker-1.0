@@ -1,4 +1,4 @@
-# $Id: Makefile.am,v 1.7 2005/06/29 20:50:02 msoffen Exp $
+# $Id: Makefile.am,v 1.8 2005/06/30 13:30:37 msoffen Exp $
 #
 # Open-HA "port" Makefile for FreeBSD
 #
@@ -47,7 +47,7 @@ TMPINSTDIR	= tmpinst
 
 # Main target
 portfile:
-	$(RM) -f $(TARFILE) heartbeat.tar
+	$(RM) -f $(TARFILE) heartbeat.tar heartbeat.tar.gz
 	$(LN) -s ../$(TARFILE) $(TARFILE)
 	$(MD5) $(TARFILE) > heartbeat/distinfo
 #	 Create the DistInfo file for the port file.
