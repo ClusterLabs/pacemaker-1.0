@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.419 2005/07/01 19:50:03 gshi Exp $ */
+/* $Id: heartbeat.c,v 1.420 2005/07/01 22:03:38 gshi Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -5032,16 +5032,23 @@ process_rexmit(struct msg_xmit_hist * hist, struct ha_msg* msg)
 	int		firstslot = hist->lastmsg-1;
 	int		rexmit_pkt_count = 0;
 	const char*	fromnodename = ha_msg_value(msg, F_ORIG);
-	
+	struct node_info* fromnode = NULL;
+
 	if (fromnodename == NULL){
 		cl_log(LOG_ERR, "process_rexmit: "
 		       "from node not found in the message");
 		return;		
 	}
 	
+	fromnode = lookup_tables(fromnodename, NULL);
+	if (fromnode == NULL){
+		cl_log(LOG_ERR, "fromnode not found ");
+		return ;
+	}
+
 	if ((cfseq = ha_msg_value(msg, F_FIRSTSEQ)) == NULL
 	    ||	(clseq = ha_msg_value(msg, F_LASTSEQ)) == NULL
-	||	(fseq=atoi(cfseq)) <= 0 || (lseq=atoi(clseq)) <= 0
+	    ||	(fseq=atoi(cfseq)) <= 0 || (lseq=atoi(clseq)) <= 0
 	||	fseq > lseq) {
 		cl_log(LOG_ERR, "Invalid rexmit seqnos");
 		cl_log_message(LOG_ERR, msg);
@@ -5053,6 +5060,12 @@ process_rexmit(struct msg_xmit_hist * hist, struct ha_msg* msg)
 	for (thisseq = fseq; thisseq <= lseq; ++thisseq) {
 		int	msgslot;
 		int	foundit = 0;
+
+		if (thisseq <= fromnode->track.ackseq){
+			/* this seq has been ACKed by fromnode
+			   we can saftely ignore this request message*/
+			return;
+		}
 		if (thisseq <= hist->lowseq) {
 			/* Lowseq is less than the lowest recorded seqno */
 			nak_rexmit(hist, thisseq, fromnodename, "seqno too low");
@@ -5367,6 +5380,9 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.420  2005/07/01 22:03:38  gshi
+ * bug 671: ignore retransmission request if the message has been ACKed by that node
+ *
  * Revision 1.419  2005/07/01 19:50:03  gshi
  * small format change
  *
