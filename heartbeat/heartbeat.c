@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.418 2005/06/30 21:07:34 gshi Exp $ */
+/* $Id: heartbeat.c,v 1.419 2005/07/01 19:50:03 gshi Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -2115,7 +2115,7 @@ HBDoMsg_T_ACKMSG(const char * type, struct node_info * fromnode,
 				cl_log(LOG_ERR, "lowseq cannnot be greater than ackseq");
 				cl_log(LOG_INFO, "hist->ackseq =%ld, old_hist_ackseq=%ld",
 				       hist->ackseq, old_hist_ackseq);
-				cl_log(LOG_INFO, "hist->lowseq =%ld, hist->hiseq=%ld"
+				cl_log(LOG_INFO, "hist->lowseq =%ld, hist->hiseq=%ld,"
 				       "send_cluster_msg_level=%d",
 				       hist->lowseq, hist->hiseq, send_cluster_msg_level);
 				abort();
@@ -5367,6 +5367,9 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.419  2005/07/01 19:50:03  gshi
+ * small format change
+ *
  * Revision 1.418  2005/06/30 21:07:34  gshi
  * add some debug information for rexmit
  *
