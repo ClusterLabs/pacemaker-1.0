@@ -3,7 +3,10 @@
 <html lang="en">
 <head>
  <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
- <meta name="author" content="http://wiki.linux-ha.org">
+ <meta http-equiv="keywords"
+       content="high-availability, open source software, free software, POSIX, UNIX, FreeBSD, Solaris, cluster, reliability, availability, serviceability">
+ <meta name="author" content="wiki dot linux dash ha dot org">
+ <?php robots_metadata(); ?>
  <title><?php echo "$pagetitle: $sitename"; ?></title>
  <?php stylesheet_link(); ?>
 </head>

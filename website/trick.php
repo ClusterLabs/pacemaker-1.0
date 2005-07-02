@@ -27,17 +27,28 @@ $MOINMOINfilemod = 0664;
 #
 global $MOINMOINCacheLimit;
 global $MOINMOINExtraneousImages;
+global $MOINMOINSitesToIndex;
 
 $MOINMOINExtraneousImages = array(
 	'/wiki/classic/img/moin-diff.png',
 	'/wiki/classic/img/moin-ftp.png',
 	'/wiki/classic/img/moin-rss.png',
 	'/wiki/classic/img/moin-inter.png',
-	'/wiki/classic/img/moin-www.png'
-	'/wiki_classic_img_moin-top.png'
+	'/wiki/classic/img/moin-www.png',
+	'/wiki_classic_img_moin-top.png',
 	'/wiki_classic_img_moin-bottom.png'
 );
 $MOINMOINCacheLimit = array("RecentChanges" => 300);
+
+/* Only these sites will have this tag:
+ *	<meta name="robots" content="index,follow">
+ * When viewed via any other site name, the will say:
+ *	<meta name="robots" content="noindex,nofollow">
+ */
+
+$MOINMOINSitesToIndex = array("www.linux-ha.org" => 1, "linux-ha.org" => 1);
+
+
 
 # for http://some.server/WikiPageName
 $local_cache_url_prefix = "/";

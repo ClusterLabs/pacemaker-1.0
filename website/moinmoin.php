@@ -453,4 +453,25 @@ function MOINMOINcacheimages($argSrc, $argTar)
 	}
 	return "src=\"$local_cache_url_prefix$cachefile\"";
 }
+/*
+ *	This is what google says we ought to do..
+ *	Index the site from only one name - not from all possible names.
+ *	(in our case, we own about 6 domain names)
+ *	AND... tell robots to ignore any pages with ? in the name
+ */
+function robots_metadata()
+{
+	global $MOINMOINSitesToIndex;
+	$indexme = true;
+	if (!isset($_SERVER["HTTP_HOST"])
+	||	!isset($MOINMOINSitesToIndex[$_SERVER["HTTP_HOST"]])
+	||	(isset($_SERVER["QUERY_STRING"]) && $_SERVER["QUERY_STRING"] != "")) {
+		$indexme = false;
+	}
+	if ($indexme) {
+		echo '<meta name="robots" content="index,follow">', "\n";
+	}else{
+		echo '<meta name="robots" content="noindex,nofollow">', "\n";
+	}
+}
 ?>

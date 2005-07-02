@@ -54,6 +54,7 @@ function PRPageFix($text)
 <head>
  <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
  <meta name="author" content="www.linux-ha.org">
+ <meta name="robots" content="noindex,nofollow">
  <title><?php echo "Print $pagetitle: from $sitename"; ?></title>
  <link rel="stylesheet" href="/print.css" type="text/css">
 </head>
