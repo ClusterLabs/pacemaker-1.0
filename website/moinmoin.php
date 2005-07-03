@@ -468,6 +468,7 @@ function robots_metadata()
 	if (!isset($_SERVER["HTTP_HOST"])
 	||	!isset($MOINMOINSitesToIndex[$_SERVER["HTTP_HOST"]])
 	||	(isset($_SERVER["QUERY_STRING"]) && $_SERVER["QUERY_STRING"] != "")) {
+		$indexme = false;
 		$followme = false;
 	}
 	if (isset($MOINMOINCacheLimit[$MOINMOINpagename])) {
