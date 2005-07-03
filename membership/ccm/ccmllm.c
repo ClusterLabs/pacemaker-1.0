@@ -1,4 +1,4 @@
-/* $Id: ccmllm.c,v 1.18 2005/05/24 18:59:47 gshi Exp $ */
+/* $Id: ccmllm.c,v 1.19 2005/07/03 22:15:50 alan Exp $ */
 /* 
  * ccmllm.c: Low Level membership routines.
  *
@@ -70,7 +70,7 @@ llm_nodeid_cmp(llm_info_t *llm, int indx1, int indx2)
 void
 display_llm(llm_info_t *llm)
 {
-	int i;
+	unsigned int	i;
 	cl_log(LOG_INFO, "total node number is %d", LLM_GET_NODECOUNT(llm));
 	for (i = 0 ;i < LLM_GET_NODECOUNT(llm) ; i++){
 		cl_log(LOG_INFO, "node %d =%s, status=%s", 

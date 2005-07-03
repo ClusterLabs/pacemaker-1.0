@@ -1,4 +1,4 @@
-/* $Id: ccmupdate.c,v 1.13 2005/06/06 18:10:49 gshi Exp $ */
+/* $Id: ccmupdate.c,v 1.14 2005/07/03 22:15:50 alan Exp $ */
 /* 
  * update.c: functions that track the votes during the voting protocol
  *
@@ -247,23 +247,20 @@ leader_str :
 void
 update_display(int pri,llm_info_t* llm, ccm_update_t* tab)
 {
-	int i; 
-	int count;
+	unsigned i; 
 	
 	cl_log(pri, "diplaying update information: ");
 	cl_log(pri, "leader=%d(%s) nodeCount=%d", 
 	       tab -> leader,
-	       (tab->leader<0 || tab->leader >= LLM_GET_NODECOUNT(llm))?"":LLM_GET_NODEID(llm, tab->update[tab->leader].index),
+	       (tab->leader<0 || tab->leader >= (int)LLM_GET_NODECOUNT(llm))?"":LLM_GET_NODEID(llm, tab->update[tab->leader].index),
 	       tab->nodeCount);
 	
-	count = 0;
  	for ( i = 0; i < LLM_GET_NODECOUNT(llm); i++){
 		if (tab->update[i].index >=0){
 			cl_log(pri, "%d:%s uptime=%d", 
 			       i,
 			       LLM_GET_NODEID(llm, tab->update[i].index),
 			       tab->update[i].uptime);		
-			count ++;
 		}
 	}
 }
