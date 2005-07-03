@@ -462,10 +462,12 @@ function MOINMOINcacheimages($argSrc, $argTar)
 function robots_metadata()
 {
 	global $MOINMOINSitesToIndex;
+	global $MOINMOINCacheLimit, $PageTitle, $MOINMOINpagename;
 	$indexme = true;
 	if (!isset($_SERVER["HTTP_HOST"])
 	||	!isset($MOINMOINSitesToIndex[$_SERVER["HTTP_HOST"]])
-	||	(isset($_SERVER["QUERY_STRING"]) && $_SERVER["QUERY_STRING"] != "")) {
+	||	(isset($_SERVER["QUERY_STRING"]) && $_SERVER["QUERY_STRING"] != "")
+	||	isset($MOINMOINCacheLimit[$MOINMOINpagename])) {
 		$indexme = false;
 	}
 	if ($indexme) {

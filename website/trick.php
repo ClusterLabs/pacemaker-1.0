@@ -28,6 +28,7 @@ $MOINMOINfilemod = 0664;
 global $MOINMOINCacheLimit;
 global $MOINMOINExtraneousImages;
 global $MOINMOINSitesToIndex;
+global $MOINMOINpagename;
 
 $MOINMOINExtraneousImages = array(
 	'/wiki/classic/img/moin-diff.png',
@@ -74,17 +75,17 @@ if (strlen($path_info) < 3) {
 
 
 # Wiki Page
-$pagename = substr($path_info,1);
+$MOINMOINpagename = substr($path_info,1);
 
 # in case there is some wiki style escaped special char in the pagename derived from the url
 # $pagetitle is only used in the "title" tag, and should be readable
 # (typically displayed as window/tab title by your browser)
-$pagetitle = str_replace(array("_20","_21","_2c", "_2d","_2e","_2f","_27", "_28", "_29", "_3a"), array(" ","!",",","-",".","/","'","(",")",":"), $pagename);
+$pagetitle = str_replace(array("_20","_21","_2c", "_2d","_2e","_2f","_27", "_28", "_29", "_3a"), array(" ","!",",","-",".","/","'","(",")",":"), $MOINMOINpagename);
 
 # in case there are some special chars in the page name, that are not yet escaped ...
-# $pagename is used to request that page from the wiki, or to read in the cache file
-$pagename = str_replace(array(" ","!",",","-",".","/","'","(",")",":"), array("_20","_21","_2c", "_2d","_2e","_2f","_27", "_28", "_29", "_3a"), $pagename);
+# $MOINMOINpagename is used to request that page from the wiki, or to read in the cache file
+$MOINMOINpagename = str_replace(array(" ","!",",","-",".","/","'","(",")",":"), array("_20","_21","_2c", "_2d","_2e","_2f","_27", "_28", "_29", "_3a"), $MOINMOINpagename);
 	
-$content = MoinMoin($pagename);
+$content = MoinMoin($MOINMOINpagename);
 
 ?>
