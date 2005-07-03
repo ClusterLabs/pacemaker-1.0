@@ -464,16 +464,25 @@ function robots_metadata()
 	global $MOINMOINSitesToIndex;
 	global $MOINMOINCacheLimit, $PageTitle, $MOINMOINpagename;
 	$indexme = true;
+	$followme = true;
 	if (!isset($_SERVER["HTTP_HOST"])
 	||	!isset($MOINMOINSitesToIndex[$_SERVER["HTTP_HOST"]])
-	||	(isset($_SERVER["QUERY_STRING"]) && $_SERVER["QUERY_STRING"] != "")
-	||	isset($MOINMOINCacheLimit[$MOINMOINpagename])) {
+	||	(isset($_SERVER["QUERY_STRING"]) && $_SERVER["QUERY_STRING"] != "")) {
+		$followme = false;
+	}
+	if (isset($MOINMOINCacheLimit[$MOINMOINpagename])) {
 		$indexme = false;
 	}
 	if ($indexme) {
-		echo '<meta name="robots" content="index,follow">', "\n";
+		$policy = '<META NAME="ROBOTS" CONTENT="INDEX';
 	}else{
-		echo '<meta name="robots" content="noindex,nofollow">', "\n";
+		$policy = '<META NAME="ROBOTS" CONTENT="NOINDEX';
 	}
+	if ($followme) {
+		$policy .= ', FOLLOW">';
+	}else{
+		$policy .= ', NOFOLLOW">';
+	}
+	echo "$policy\n";
 }
 ?>
