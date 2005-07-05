@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.420 2005/07/01 22:03:38 gshi Exp $ */
+/* $Id: heartbeat.c,v 1.421 2005/07/05 23:02:04 gshi Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -4763,11 +4763,14 @@ is_lost_packet(struct node_info * thisnode, seqno_t seq)
 		}
 		
 	}else if (t->first_missing_seq != 0){
+#if 0
 		if (ANYDEBUG){
 			cl_log(LOG_INFO, "calling request_msg_rexmit()"
 			       "from %s", __FUNCTION__);
 		}
 		request_msg_rexmit(thisnode, t->first_missing_seq, t->first_missing_seq);
+#endif
+
 	}
 	return ret;
 	
@@ -5380,6 +5383,10 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.421  2005/07/05 23:02:04  gshi
+ * we don't ask for retransmission if we receive a missing packet which is not
+ * the first missing one
+ *
  * Revision 1.420  2005/07/01 22:03:38  gshi
  * bug 671: ignore retransmission request if the message has been ACKed by that node
  *
