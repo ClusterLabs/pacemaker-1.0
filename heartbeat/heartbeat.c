@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.421 2005/07/05 23:02:04 gshi Exp $ */
+/* $Id: heartbeat.c,v 1.422 2005/07/05 23:21:43 alan Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -4786,9 +4786,9 @@ request_msg_rexmit(struct node_info *node, seqno_t lowseq
 	char		high[16];
 
 	if(ANYDEBUG){
-	  cl_log(LOG_INFO, "requesting for retranmission from node %s"
-		 "[%ld-%ld]",
-		 node->nodename,lowseq, hiseq);
+		cl_log(LOG_INFO, "requesting for retransmission from node %s"
+		"[%ld-%ld]",
+		node->nodename,lowseq, hiseq);
 	}
 
 	if ((hmsg = ha_msg_new(6)) == NULL) {
@@ -4817,7 +4817,8 @@ request_msg_rexmit(struct node_info *node, seqno_t lowseq
 	}
 }
 
-#define REXMIT_MS	1000
+#define REXMIT_MS		250
+#define ACCEPT_REXMIT_REQ_MS	(REXMIT_MS-10)
 
 static void
 check_rexmit_reqs(void)
@@ -5115,7 +5116,7 @@ process_rexmit(struct msg_xmit_hist * hist, struct ha_msg* msg)
 
 			if (cmp_longclock(last_rexmit, zero_longclock) != 0
 			&&	longclockto_ms(sub_longclock(now,last_rexmit))
-			<	REXMIT_MS) {
+			<	(ACCEPT_REXMIT_REQ_MS)) {
 				/* Continue to outer loop */
 				goto NextReXmit;
 			}
@@ -5383,6 +5384,9 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.422  2005/07/05 23:21:43  alan
+ * Changed the retransmission request time to about 1/4 second
+ *
  * Revision 1.421  2005/07/05 23:02:04  gshi
  * we don't ask for retransmission if we receive a missing packet which is not
  * the first missing one
