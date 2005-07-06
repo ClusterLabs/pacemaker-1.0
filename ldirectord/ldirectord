@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-my($VERSION)=(qw$Id: ldirectord,v 1.109 2005/07/06 07:14:33 horms Exp $)[2];
+my($VERSION)=(qw$Id: ldirectord,v 1.110 2005/07/06 07:22:06 horms Exp $)[2];
 
 ######################################################################
 # ldirectord                 http://www.vergenet.net/linux/ldirectord/
@@ -863,7 +863,7 @@ sub read_config
 					    or &config_error($line, "httpmethod must be GET or HEAD");
 					$vsrv{httpmethod} = uc($1);
 				} elsif ($rcmd =~ /^virtualhost\s*=\s*(.*)/) {
-					$1 =~ /\"?([^"]*)\"?/ or
+					$1 =~ /\"?([^\"]*)\"?/ or
 					&config_error($line, "invalid virtualhost");
 					$vsrv{virtualhost} = $1;
 				} elsif ($rcmd =~ /^fallback\s*=\s*(.*)/) {    # Allow specification of a virtual-specific fallback host
