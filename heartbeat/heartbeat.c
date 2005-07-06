@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.423 2005/07/06 17:45:20 gshi Exp $ */
+/* $Id: heartbeat.c,v 1.424 2005/07/06 20:37:14 gshi Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -279,7 +279,7 @@
 #define PARENT_DEBUG_USR2_SIG	0x0020UL
 #define REREAD_CONFIG_SIG	0x0040UL
 #define FALSE_ALARM_SIG		0x0080UL
-
+#define MAX_MISSING_PKTS	20
 
 
 #define	ALWAYSRESTART_ON_SPLITBRAIN	1
@@ -4855,6 +4855,13 @@ check_rexmit_reqs(void)
 			/* Too soon to ask for retransmission */
 			continue;
 		}
+
+		
+		if (t->nmissing > MAX_MISSING_PKTS){
+			cl_log(LOG_ERR, "too many missing pkts(%d) from node %s",
+			       t->nmissing, hip->nodename);
+		}
+		
 		/* Time to ask for some packets again ... */
 		for (seqidx = 0; seqidx < t->nmissing; ++seqidx) {
 			if (t->seqmissing[seqidx] != NOSEQUENCE) {
@@ -5015,6 +5022,12 @@ add2_xmit_hist (struct msg_xmit_hist * hist, struct ha_msg* msg
 	hist->seqnos[slot] = seq;
 	hist->lastrexmit[slot] = 0L;
 	hist->lastmsg = slot;
+	
+	if ( hist->hiseq - hist->lowseq > MAXMSGHIST*3 / 4){
+		cl_log(LOG_ERR, "Message hist queue is filling up (3/4 full)");
+	}
+	
+
 	AUDITXMITHIST;
 	
 	if (enable_flow_control
@@ -5385,6 +5398,10 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.424  2005/07/06 20:37:14  gshi
+ * print error messages when there are many pkts missing(>20) or when the msg hist queue
+ * is 3/4 full
+ *
  * Revision 1.423  2005/07/06 17:45:20  gshi
  * if we don't have ACK received for one node yet
  * we don't include that node for lowackseq computing
