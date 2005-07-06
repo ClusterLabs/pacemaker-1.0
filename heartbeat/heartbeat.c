@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.422 2005/07/05 23:21:43 alan Exp $ */
+/* $Id: heartbeat.c,v 1.423 2005/07/06 17:45:20 gshi Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -2064,7 +2064,8 @@ HBDoMsg_T_ACKMSG(const char * type, struct node_info * fromnode,
 			struct node_info* hip = &config->nodes[i];
 			
 			if (STRNCMP_CONST(hip->status,DEADSTATUS) == 0
-			    || hip->nodetype == PINGNODE_I){
+			    || hip->nodetype == PINGNODE_I 
+			    || hip->track.ackseq == 0){
 				continue;
 			}
 			
@@ -5384,6 +5385,10 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.423  2005/07/06 17:45:20  gshi
+ * if we don't have ACK received for one node yet
+ * we don't include that node for lowackseq computing
+ *
  * Revision 1.422  2005/07/05 23:21:43  alan
  * Changed the retransmission request time to about 1/4 second
  *
