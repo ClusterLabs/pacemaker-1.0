@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-my($VERSION)=(qw$Id: ldirectord,v 1.108 2005/06/28 10:44:53 horms Exp $)[2];
+my($VERSION)=(qw$Id: ldirectord,v 1.109 2005/07/06 07:14:33 horms Exp $)[2];
 
 ######################################################################
 # ldirectord                 http://www.vergenet.net/linux/ldirectord/
@@ -1897,7 +1897,7 @@ sub check_https_child
 		$port=(defined $$v{checkport}?$$v{checkport}:$$r{port})
 	}
 	my $virtualhost = (defined $$v{virtualhost} ? $$v{virtualhost} : $host);
-	my ($page, $errors, $cert, $head, $body, $response, $result);
+	my ($page, $errors, $cert, $head, $body, $response);
 	my $msg = "$$v{httpmethod}" . " $uri HTTP/1.0" . $CRLF
 	        . "Host: " . $virtualhost . $CRLF
 		. "Accept: */*" . $CRLF . $CRLF;
@@ -1918,10 +1918,10 @@ sub check_https_child
 		($response, $head) = split /\s?\n/, $head, 2;
 		&ld_debug(2, "Result: $response");
 		my $recstr = $$r{receive};
-		if($result =~ /error/i ||
+		if( !($response =~ /20[0-9]/) ||
 				($recstr =~ /.+/ && !($body =~ /$recstr/))) {
 			alarm(0);
-			die("$result");
+			die("$response");
 		}
 	};
 
