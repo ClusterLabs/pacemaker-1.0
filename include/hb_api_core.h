@@ -1,4 +1,4 @@
-/* $Id: hb_api_core.h,v 1.10 2005/04/04 19:19:31 gshi Exp $ */
+/* $Id: hb_api_core.h,v 1.11 2005/07/07 19:50:33 gshi Exp $ */
 /*
  * hb_api_core_h: Internal definitions and functions for the heartbeat API
  *
@@ -41,6 +41,7 @@
 #define	PRI_APIREGISTER		(G_PRIORITY_LOW-1)
 #define	PRI_CLUSTERMSG		G_PRIORITY_DEFAULT
 #define	PRI_FIFOMSG		PRI_CLUSTERMSG-1
+#define PRI_FREEMSG		G_PRIORITY_DEFAULT
 #define	PRI_CLIENTMSG		PRI_FIFOMSG
 
 void process_registerevent(IPC_Channel* chan,  gpointer user_data);
