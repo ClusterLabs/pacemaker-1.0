@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.425 2005/07/07 16:53:57 gshi Exp $ */
+/* $Id: heartbeat.c,v 1.426 2005/07/07 18:36:51 gshi Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -335,6 +335,7 @@ static int 			deadtime_tmpadd_count = 0;
 gboolean			enable_flow_control = TRUE;
 static	int			send_cluster_msg_level = 0;
 static void print_a_child_client(gpointer childentry, gpointer unused);
+static seqno_t timer_lowseq = 0;
 
 #undef DO_AUDITXMITHIST
 #ifdef DO_AUDITXMITHIST
@@ -1212,6 +1213,24 @@ read_child_dispatch(IPC_Channel* source, gpointer user_data)
 	return TRUE;
 }
 
+#define SEQARRAYCOUNT 5
+static gboolean
+Gmain_update_msgfree_count(void *unused)
+{
+	static int seqarray[SEQARRAYCOUNT]= {0,0,0,0,0};
+	static int lastcount = -1;
+	
+	lastcount = (lastcount + 1) % SEQARRAYCOUNT;
+	
+	timer_lowseq = seqarray[lastcount];
+	
+	seqarray[lastcount] = msghist.hiseq;
+
+	return TRUE;
+}
+
+
+
 /*
  * What are our abstract event sources?
  *
@@ -1388,7 +1407,10 @@ master_control_process(void)
 	/* Check for pending signals */
 	Gmain_timeout_add_full(PRI_SENDSTATUS, config->heartbeat_ms
 	,       Gmain_hb_signal_process_pending, NULL, NULL);
-
+	
+	Gmain_timeout_add_full(PRI_FREEMSG, 500,
+			       Gmain_update_msgfree_count, NULL, NULL);
+	
 	if (UseApphbd) {
 		Gmain_timeout_add_full(PRI_DUMPSTATS
 		,	60*(1000-10) /* Not quite on a minute boundary */
@@ -2105,10 +2127,17 @@ HBDoMsg_T_ACKMSG(const char * type, struct node_info * fromnode,
 			start = 0;
 			count = count - 1;
 		}else{
-			start = hist->lowseq %MAXMSGHIST;
+			start = hist->lowseq;
 		}
 		
 		while(count -- > 0){
+			
+			/*if the seq number is greater than the lowseq number
+			  the timer set, we should not free any more messages*/
+			if (start > timer_lowseq){
+				break;
+			}
+			
 			free_one_hist_slot(hist, start%MAXMSGHIST);
 			start++;
 			
@@ -5191,11 +5220,21 @@ nak_rexmit(struct msg_xmit_hist * hist,
 {
 	struct ha_msg*	msg;
 	char	sseqno[32];
+	struct node_info* fromnode = NULL;
+
+	fromnode = lookup_tables(fromnodename, NULL);
+	if (fromnode == NULL){
+		cl_log(LOG_ERR, "fromnode not found ");
+		return ;
+	}
 	
 	snprintf(sseqno, sizeof(sseqno), "%lx", seqno);
 	cl_log(LOG_ERR, "Cannot rexmit pkt %lu for %s: %s", 
 	       seqno, fromnodename, reason);
-
+	
+	cl_log(LOG_INFO, "fromnode =%s, fromnode's ackseq = %ld", 
+	       fromnode->nodename, fromnode->track.ackseq);
+	
 	printout_histstruct(hist);
 	
 	if ((msg = ha_msg_new(6)) == NULL) {
@@ -5398,6 +5437,9 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.426  2005/07/07 18:36:51  gshi
+ * We don't free messages in the recent 2 seconds
+ *
  * Revision 1.425  2005/07/07 16:53:57  gshi
  * bug fix: we should continue to process all seq number
  *
