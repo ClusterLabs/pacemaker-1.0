@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.424 2005/07/06 20:37:14 gshi Exp $ */
+/* $Id: heartbeat.c,v 1.425 2005/07/07 16:53:57 gshi Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -5082,7 +5082,7 @@ process_rexmit(struct msg_xmit_hist * hist, struct ha_msg* msg)
 		if (thisseq <= fromnode->track.ackseq){
 			/* this seq has been ACKed by fromnode
 			   we can saftely ignore this request message*/
-			return;
+			continue;
 		}
 		if (thisseq <= hist->lowseq) {
 			/* Lowseq is less than the lowest recorded seqno */
@@ -5398,6 +5398,9 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.425  2005/07/07 16:53:57  gshi
+ * bug fix: we should continue to process all seq number
+ *
  * Revision 1.424  2005/07/06 20:37:14  gshi
  * print error messages when there are many pkts missing(>20) or when the msg hist queue
  * is 3/4 full
