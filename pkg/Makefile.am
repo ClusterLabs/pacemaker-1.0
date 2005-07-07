@@ -1,4 +1,4 @@
-# $Id: Makefile.am,v 1.11 2004/11/04 15:19:22 davidlee Exp $
+# $Id: Makefile.am,v 1.12 2005/07/07 10:17:49 davidlee Exp $
 #
 # Open-HA "pkg" Makefile for Solaris etc.
 #
@@ -58,7 +58,8 @@ $(PKGDIR)/$(PKGNAME)/pkgmap:	$(PKGINFO)
 
 # pseudo-install into $(TMPINSTDIR)
 stamp-tmpinst:
-	cd $(top_builddir) && $(MAKE) install DESTDIR=$(PWD)/$(TMPINSTDIR)
+	cd $(top_builddir) \
+	  && (umask 022 && $(MAKE) install DESTDIR=$(PWD)/$(TMPINSTDIR))
 	echo timestamp > stamp-tmpinst
 
 ## The awk in here is hacky.  Its intention is to tweak owner:group information
@@ -73,7 +74,9 @@ $(INFOFILES)/prototype:	stamp-tmpinst
 	  | $(AWK) ' \
 	    $$1 !~ /^[ils]$$/ \
 	      { $$(NF-1) = "root" ; $$(NF) = "sys" } \
-	    "/" $$3 ~ /^(\/etc|\/etc\/init.d|\/opt|\/usr|\/var|\/var\/run)$$/ \
+	    "/" $$3 ~ /^(\/etc|\/etc\/init.d|\/opt|\/var|\/var\/run)$$/ \
+	      { $$4 = $$5 = $$6 = "?" } \
+	    "/" $$3 ~ /^(\/usr|\/usr\/lib|\/usr\/lib\/ocf)$$/ \
 	      { $$4 = $$5 = $$6 = "?" } \
 	    "/" $$3 == "@HA_VARLIBDIR@/@HB_PKG@/ccm" \
 	      { $$5 = "@HA_CCMUSER@" ; $$6 = "@HA_APIGROUP@" } \
