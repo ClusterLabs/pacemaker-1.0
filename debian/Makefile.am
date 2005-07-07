@@ -35,8 +35,7 @@ EXTRA_DIST		= apply changelog compat control copyright \
 			  stonith.files \
 			  patches/00-ssh_scp_path.patch \
 			  patches/01-conditional_build.patch \
-			  patches/02-crm_pidfile.patch \
-			  patches/series/1.99.5-1
+			  patches/series/1.99.6-1
 
 
 clean-local:

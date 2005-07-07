@@ -1,4 +1,4 @@
-heartbeat (1.99.5-1) unstable; urgency=low
+heartbeat (1.99.6-1) unstable; urgency=low
 
   * New upstream
   * Added dependancy on libnet-dns-perl to ldirectord
@@ -6,7 +6,7 @@ heartbeat (1.99.5-1) unstable; urgency=low
   * Added --disable-snmp-subagent to configure arguments
   * Added --disable-swig to configure arguments
 
- -- Simon Horman <horms@debian.org>  Mon,  6 Jun 2005 17:21:07 +0900
+ -- Simon Horman <horms@debian.org>  Thu,  7 Jul 2005 15:58:22 +0900
 
 heartbeat (1.2.3-8) unstable; urgency=low
  

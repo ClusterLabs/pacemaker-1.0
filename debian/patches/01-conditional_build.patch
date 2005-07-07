@@ -1,10 +1,10 @@
 Index: Makefile.am
 ===================================================================
 RCS file: /home/cvs/linux-ha/linux-ha/Makefile.am,v
-retrieving revision 1.57
-diff -u -r1.57 Makefile.am
---- a/Makefile.am	22 Apr 2005 04:26:42 -0000	1.57
-+++ b/Makefile.am	6 Jun 2005 08:11:03 -0000
+retrieving revision 1.59
+diff -u -r1.59 Makefile.am
+--- a/Makefile.am	14 Jun 2005 14:36:12 -0000	1.59
++++ a/Makefile.am	7 Jul 2005 06:00:12 -0000
 @@ -53,11 +53,15 @@
  
  ## proc-ha is left out from SUBDIRS (completely obsolete)
@@ -13,7 +13,7 @@ diff -u -r1.57 Makefile.am
 +SNMP_SUBAGENT_DIR = snmp_subagent
 +endif
 +
- SUBDIRS	=		libltdl debian pkg replace include config	\
+ SUBDIRS	=		libltdl debian pkg port replace include config	\
  			lib						\
  			ldirectord heartbeat membership telecom		\
  			linux-ha contrib resources			\
@@ -22,13 +22,80 @@ diff -u -r1.57 Makefile.am
  			tools logd fencing doc cts
  
  HANDY_DOCS = doc/ChangeLog doc/GettingStarted.html doc/DirectoryMap.txt
+Index: lib/bindings/perl/Makefile.am
+===================================================================
+RCS file: /home/cvs/linux-ha/linux-ha/lib/bindings/perl/Makefile.am,v
+retrieving revision 1.11
+diff -u -r1.11 Makefile.am
+--- a/lib/bindings/perl/Makefile.am	2 Jun 2005 03:14:18 -0000	1.11
++++ a/lib/bindings/perl/Makefile.am	7 Jul 2005 06:00:12 -0000
+@@ -19,17 +19,16 @@
+ #
+ 
+ 
+-EXTRA_DIST =	.cvsignore Makefile.PL.in MANIFEST test.pl 	\
+-		cl_raw/.cvsignore				\
+-		cl_raw/Makefile.PL.in cl_raw/Makefile.PL 	\
+-		cl_raw/cl_log_wrappers.c			\
+-		cl_raw/cl_log_wrappers.h  cl_raw/cl_raw.i 	\
+-		cl_raw/ipc_wrappers.c cl_raw/ipc_wrappers.h	\
+-		lib/heartbeat/clplumbing/ipc.pm			\
++EXTRA_DIST =	.cvsignore Makefile.PL.in MANIFEST test.pl \
++		lib/heartbeat/clplumbing/ipc.pm \
+ 		lib/heartbeat/clplumbing/log.pm
+ 
+ MAINTAINERCLEANFILES    = Makefile.in
+ 
++if SWIG_BUILD
++SWIG_DIR = cl_raw
++endif
++
+ ## Subdirectories...
+ SUBDIRS			=  	\
+-	cl_raw
++	$(SWIG_DIR)
+Index: lib/bindings/perl/cl_raw/Makefile.am
+===================================================================
+RCS file: /home/cvs/linux-ha/linux-ha/lib/bindings/perl/cl_raw/Makefile.am,v
+retrieving revision 1.1
+diff -u -r1.1 Makefile.am
+--- a/lib/bindings/perl/cl_raw/Makefile.am	1 Jun 2005 14:51:29 -0000	1.1
++++ a/lib/bindings/perl/cl_raw/Makefile.am	7 Jul 2005 06:00:12 -0000
+@@ -18,19 +18,16 @@
+ # Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
+ #
+ 
+-if SWIG_BUILD
+-
+ noinst_DATA = .made_mod
+ 
+ MAINTAINERCLEANFILES    = Makefile.in
+ 
+ EXTRA_DIST      = \
++	.cvsignore \
+ 	Makefile.PL.in Makefile.PL \
+ 	cl_log_wrappers.c cl_log_wrappers.h \
+ 	cl_raw.i \
+-	ipc_wrappers.c ipc_wrappers.h \
+-	lib/heartbeat/clplumbing/ipc.pm \
+-	lib/heartbeat/clplumbing/log.pm
++	ipc_wrappers.c ipc_wrappers.h
+ 
+ INCLUDES = -I$(top_builddir)/include -I$(top_srcdir)/include \
+ 	-I$(top_builddir)/linux-ha -I$(top_srcdir)/linux-ha  \
+@@ -63,5 +60,3 @@
+ clean-local:
+ 	if test -f Makefile.perl; then $(MAKE) -fMakefile.perl realclean; fi
+ 	rm -f Makefile.perl Makefile.perl.old
+-
+-endif
 Index: snmp_subagent/Makefile.am
 ===================================================================
 RCS file: /home/cvs/linux-ha/linux-ha/snmp_subagent/Makefile.am,v
 retrieving revision 1.20
 diff -u -r1.20 Makefile.am
 --- a/snmp_subagent/Makefile.am	24 May 2005 22:29:34 -0000	1.20
-+++ b/snmp_subagent/Makefile.am	6 Jun 2005 08:11:04 -0000
++++ a/snmp_subagent/Makefile.am	7 Jul 2005 06:00:12 -0000
 @@ -50,7 +50,6 @@
  mibs_DATA		= LINUX-HA-MIB.mib
  DIST_LIST		= SNMPAgentSanityCheck.in $(mibs_DATA)
