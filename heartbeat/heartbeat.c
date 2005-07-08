@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.428 2005/07/08 17:32:00 gshi Exp $ */
+/* $Id: heartbeat.c,v 1.429 2005/07/08 18:51:11 alan Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -2156,7 +2156,8 @@ HBDoMsg_T_ACKMSG(const char * type, struct node_info * fromnode,
 	}
 
 	(void)dump_missing_pkts_info;
-#if 0
+#define DEBUG_FOR_GSHI	1
+#ifdef DEBUG_FOR_GSHI
 	cl_log(LOG_INFO, "hist->ackseq =%ld, node %s's ackseq=%ld",
 	       hist->ackseq, fromnode->nodename,
 	       fromnode->track.ackseq);
@@ -5465,6 +5466,9 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.429  2005/07/08 18:51:11  alan
+ * Committed some gshi debugging turned on
+ *
  * Revision 1.428  2005/07/08 17:32:00  gshi
  * add a function to print out missing pkts info
  *
