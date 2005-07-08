@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.429 2005/07/08 18:51:11 alan Exp $ */
+/* $Id: heartbeat.c,v 1.430 2005/07/08 20:54:21 gshi Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -4868,7 +4868,7 @@ dump_missing_pkts_info(void)
 		if (t->nmissing == 0){
 			continue;
 		}else{
-			cl_log(LOG_INFO, "%d pkts missing from %s",
+			cl_log(LOG_INFO, "At max %d pkts missing from %s",
 			       t->nmissing, hip->nodename);
 		}
 		for (seqidx = 0; seqidx < t->nmissing; ++seqidx) {			
@@ -4909,7 +4909,7 @@ check_rexmit_reqs(void)
 			}
 		}
 
-		if (cmp_longclock(t->last_rexmit_req, minrexmit) < 0) {
+		if (cmp_longclock(t->last_rexmit_req, minrexmit) > 0) {
 			/* Too soon to ask for retransmission */
 			continue;
 		}
@@ -5466,6 +5466,9 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.430  2005/07/08 20:54:21  gshi
+ * fixed a bug about timing in retransmission
+ *
  * Revision 1.429  2005/07/08 18:51:11  alan
  * Committed some gshi debugging turned on
  *
