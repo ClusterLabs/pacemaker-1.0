@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.426 2005/07/07 18:36:51 gshi Exp $ */
+/* $Id: heartbeat.c,v 1.427 2005/07/08 06:15:07 alan Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -5053,7 +5053,7 @@ add2_xmit_hist (struct msg_xmit_hist * hist, struct ha_msg* msg
 	hist->lastmsg = slot;
 	
 	if ( hist->hiseq - hist->lowseq > MAXMSGHIST*3 / 4){
-		cl_log(LOG_ERR, "Message hist queue is filling up (3/4 full)");
+		cl_log(LOG_WARNING, "Message hist queue is filling up (3/4 full)");
 	}
 	
 
@@ -5437,6 +5437,10 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.427  2005/07/08 06:15:07  alan
+ * Changed the "hist queue is filling up" message from an error to a warning
+ * it simply happens too often...
+ *
  * Revision 1.426  2005/07/07 18:36:51  gshi
  * We don't free messages in the recent 2 seconds
  *
