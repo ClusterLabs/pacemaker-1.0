@@ -10,7 +10,7 @@ exec_prefix=@exec_prefix@
 
 : Now running $0: $*
 
-mdown=`echo $1 | tr [A-Z] [a-z]`; # The name of the downed machine...
+mdown=`echo $1 | tr A-Z a-z`; # The name of the downed machine...
 
 #ha_log "info: DEBUG: $0 -- taking resources for $mdown"
 
