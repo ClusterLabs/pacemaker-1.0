@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.427 2005/07/08 06:15:07 alan Exp $ */
+/* $Id: heartbeat.c,v 1.428 2005/07/08 17:32:00 gshi Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -413,6 +413,7 @@ static gboolean hb_reregister_with_apphbd(gpointer dummy);
 
 static void	hb_add_deadtime(int increment);
 static gboolean	hb_pop_deadtime(gpointer p);
+static void	dump_missing_pkts_info(void);
 
 static GHashTable*	message_callbacks = NULL;
 static gboolean	HBDoMsgCallback(const char * type, struct node_info* fromnode
@@ -2154,17 +2155,19 @@ HBDoMsg_T_ACKMSG(const char * type, struct node_info * fromnode,
 		}
 	}
 
+	(void)dump_missing_pkts_info;
 #if 0
 	cl_log(LOG_INFO, "hist->ackseq =%ld, node %s's ackseq=%ld",
 	       hist->ackseq, fromnode->nodename,
 	       fromnode->track.ackseq);
 	cl_log(LOG_INFO, "hist->lowseq =%ld, hist->hiseq=%ld", 
 	       hist->lowseq, hist->hiseq);
-	cl_dump_msgstats();
+	dump_missing_pkts_info();
 	
 	if (hist->lowest_acknode){
 		cl_log(LOG_INFO,"expecting from %s",hist->lowest_acknode->nodename);
 	}
+	cl_log(LOG_INFO, " ");
 
 #endif 
  out:
@@ -4850,6 +4853,31 @@ request_msg_rexmit(struct node_info *node, seqno_t lowseq
 #define REXMIT_MS		250
 #define ACCEPT_REXMIT_REQ_MS	(REXMIT_MS-10)
 
+
+static void
+dump_missing_pkts_info(void)
+{
+	int j;
+	
+	for (j = 0; j < config->nodecount; ++j) {
+		struct node_info *	hip = &config->nodes[j];
+		struct seqtrack *	t = &hip->track;
+		int			seqidx;
+		
+		if (t->nmissing == 0){
+			continue;
+		}else{
+			cl_log(LOG_INFO, "%d pkts missing from %s",
+			       t->nmissing, hip->nodename);
+		}
+		for (seqidx = 0; seqidx < t->nmissing; ++seqidx) {			
+			if (t->seqmissing[seqidx] != NOSEQUENCE) {
+				cl_log(LOG_INFO, "%d: missing pkt: %ld", seqidx, t->seqmissing[seqidx]);
+			}
+		}
+	}	
+}
+
 static void
 check_rexmit_reqs(void)
 {
@@ -5437,6 +5465,9 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.428  2005/07/08 17:32:00  gshi
+ * add a function to print out missing pkts info
+ *
  * Revision 1.427  2005/07/08 06:15:07  alan
  * Changed the "hist queue is filling up" message from an error to a warning
  * it simply happens too often...
