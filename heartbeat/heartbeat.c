@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.430 2005/07/08 20:54:21 gshi Exp $ */
+/* $Id: heartbeat.c,v 1.431 2005/07/08 21:26:56 gshi Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -5206,6 +5206,9 @@ process_rexmit(struct msg_xmit_hist * hist, struct ha_msg* msg)
 			if (ANYDEBUG) {
 				cl_log(LOG_INFO, "Retransmitting pkt %lu"
 				,	thisseq);
+				cl_log(LOG_INFO, "msg size =%d, type=%s",
+				       get_stringlen(hist->msgq[msgslot]),
+				       ha_msg_value(hist->msgq[msgslot], F_TYPE));
 			}
 			smsg = msg2wirefmt(hist->msgq[msgslot], &len);
 
@@ -5466,6 +5469,9 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.431  2005/07/08 21:26:56  gshi
+ * log the retransmitted message type and size
+ *
  * Revision 1.430  2005/07/08 20:54:21  gshi
  * fixed a bug about timing in retransmission
  *
