@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.431 2005/07/08 21:26:56 gshi Exp $ */
+/* $Id: heartbeat.c,v 1.432 2005/07/08 21:29:26 gshi Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -4851,7 +4851,7 @@ request_msg_rexmit(struct node_info *node, seqno_t lowseq
 	}
 }
 
-#define REXMIT_MS		250
+#define REXMIT_MS		1000
 #define ACCEPT_REXMIT_REQ_MS	(REXMIT_MS-10)
 
 
@@ -5469,6 +5469,9 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.432  2005/07/08 21:29:26  gshi
+ * change the retransmission time to 1000ms
+ *
  * Revision 1.431  2005/07/08 21:26:56  gshi
  * log the retransmitted message type and size
  *
