@@ -1,4 +1,4 @@
-/* $Id: ping.c,v 1.41 2005/05/19 14:29:07 msoffen Exp $ */
+/* $Id: ping.c,v 1.42 2005/07/08 16:03:34 alan Exp $ */
 /*
  * ping.c: ICMP-echo-based heartbeat code for heartbeat.
  *
@@ -263,7 +263,7 @@ ping_new(const char * host)
 }
 
 /*
- *	Close UDP/IP broadcast heartbeat interface
+ *	Close ICMP ping heartbeat interface
  */
 
 static int
@@ -287,6 +287,8 @@ ping_close(struct hb_media* mp)
 
 /*
  * Receive a heartbeat ping reply packet.
+ * NOTE: This code only needs to run once for ALL ping nodes.
+ * FIXME!!
  */
 
 static void *
@@ -387,7 +389,7 @@ ping_read(struct hb_media* mp, int *lenp)
 }
 
 /*
- * Send a heartbeat packet over broadcast UDP/IP interface
+ * Send a heartbeat packet over ICMP ping channel
  *
  * The peculiar thing here is that we don't send the packet we're given at all
  *

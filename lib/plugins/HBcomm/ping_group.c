@@ -1,4 +1,4 @@
-/* $Id: ping_group.c,v 1.17 2005/05/19 14:29:07 msoffen Exp $ */
+/* $Id: ping_group.c,v 1.18 2005/07/08 16:03:34 alan Exp $ */
 /*
  * ping_group.c: ICMP-echo-based heartbeat code for heartbeat.
  *
@@ -448,7 +448,12 @@ ping_group_read(struct hb_media* mp, int *lenp)
 		PILCallLog(LOG, PIL_DEBUG, "%s", msgstart);
 	}
 
-
+	/*
+	 * I don't quite understand why we're doing this filtering...
+	 * If it weren't for this, we could shut off reads for all but
+	 * one ping_group process and speed things up...
+	 * 		-- Alan R.
+	 */
 	for(node = ei->node; node; node = node->next) {
 		if(!memcmp(&(their_addr.sin_addr), &(node->addr.sin_addr),
 					sizeof(struct in_addr))) {
