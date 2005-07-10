@@ -36,7 +36,7 @@ COMMONLIBS	 =  $(top_builddir)/lib/clplumbing/libplumb.la   \
 
 halib_PROGRAMS   =  stonithd
 stonithd_SOURCES =  stonithd.c
-stonithd_LDFLAGS = $(COMMONLIBS) -luuid \
+stonithd_LDFLAGS = $(COMMONLIBS) @LIBLTDL@ -luuid  \
 		   $(top_builddir)/lib/fencing/libstonithd.la
 
 AM_CFLAGS = $(INCLUDES) -DVAR_LIB_D='"$(havarlibdir)"'
