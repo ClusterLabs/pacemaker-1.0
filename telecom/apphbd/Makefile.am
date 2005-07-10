@@ -49,8 +49,7 @@ apphbd_SOURCES	= apphbd.c
 apphbd_CFLAGS		= -DHA_VARLIBDIR='"@HA_VARLIBDIR@"'
 apphbd_LDADD		= $(COMMONLIBS) 				\
 			$(top_builddir)/lib/pils/libpils.la		\
-			$(top_builddir)/libltdl/libltdlc.la 		\
-			$(LIBRT)
+			@LIBLTDL@ $(LIBRT)
 
 apphbd_LDFLAGS	= @LIBADD_DL@ @LIBLTDL@ -export-dynamic	\
 			-dlpreopen force \
