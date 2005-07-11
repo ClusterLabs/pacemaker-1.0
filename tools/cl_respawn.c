@@ -57,6 +57,7 @@
 #include <clplumbing/uids.h>
 #include <clplumbing/lsb_exitcodes.h>
 #include <clplumbing/GSource.h>
+#include <clplumbing/Gmain_timeout.h>
 #include <apphb.h>
 
 static const char * Simple_helpscreen =
@@ -70,9 +71,9 @@ static const char * Simple_helpscreen =
 "-w warntime\n"
 "	Set the warning time (ms) of application heartbeat.\n"
 "-r	Recover itself from crash. Only called by other monitor programs like"
-"	recovery manager."
-"-l	List all program monitored by cl_respawn.\n"
-"	Note: donnot support yet.\n"
+"	recovery manager.\n"
+"-l	List the program monitored by cl_respawn.\n"
+"	Notice: donnot support yet.\n"
 "-h	Display this simple help.\n";
 
 
@@ -85,7 +86,7 @@ static gboolean on_polled_input_dispatch(GSource* source,
 					 GSourceFunc callback,
 					 gpointer user_data);
 
-static void become_deamon(void);
+static void become_daemon(void);
 static int  run_client_as_child(void);
 static gboolean emit_apphb(gpointer data);
 static void child_quit(int signo);
@@ -111,6 +112,7 @@ static int MAGIC_EXIT_CODE = 100;
 
 static const char * app_name = "cl_respawn";
 static gboolean monitored_prog_quit = FALSE;
+static gboolean	REGTO_APPHBD = FALSE;
 
 /* For the monitorred program */
 static char * cmd_line = NULL;
@@ -210,7 +212,7 @@ int main(int argc, char * argv[])
 	if ((IS_RECOVERY == TRUE ) && (argv[optind] == NULL)) {
 		/* 
 		 * From the environment variables to acquire the necessary
-		 * information set by other deamon like recovery manager.
+		 * information set by other daemons like recovery manager.
 		 * RSP_PID:  the PID of the process which need to be monitored.
 		 * RSP_CMD:  the command line to restart the program, which is
 		 * the same as the input in command line as above. 
@@ -241,7 +243,8 @@ int main(int argc, char * argv[])
 		return ret_value_tmp;
 	}
 
-	become_deamon();
+	/* Not use daemon call since it's not a POSIX's */ 
+	become_daemon();
 
 	/* Code for debug
 	int k = 0;
@@ -261,20 +264,24 @@ int main(int argc, char * argv[])
 		}
 	}
 
-	sprintf(app_instance, "%s_%ldd", app_name, (long)getpid());
+	snprintf(app_instance, INSTANCE_NAME_LEN, "%s_%ldd"
+		, app_name, (long)getpid());
 
 	if (apphb_register(app_name, app_instance) != 0) {
-		cl_log(LOG_ERR, "Failed when trying to register to apphbd.");
-		cl_log(LOG_ERR, "Maybe apphd isnot running. Quit.");
-		exit(LSB_EXIT_GENERIC); 
+		cl_log(LOG_WARNING, "Failed to register to apphbd.");
+		cl_log(LOG_WARNING, "Maybe apphd isnot running.");
+		REGTO_APPHBD = FALSE;
+	} else {
+		REGTO_APPHBD = TRUE;
+		cl_log(LOG_INFO, "Registered to apphbd.");
+		apphb_setinterval(apphb_interval);
+		apphb_setwarn(apphb_warntime);
+		Gmain_timeout_add(apphb_interval - APPHB_INTVL_DETLA
+			,	emit_apphb, NULL);
+		/* To avoid the warning when app_interval is very small. */
+		apphb_hb();
 	}
-	cl_log(LOG_INFO, "Registered to apphbd.");
 
-	apphb_setinterval(apphb_interval);
-	apphb_setwarn(apphb_warntime);
-
-	mainloop = g_main_new(FALSE);
-	g_timeout_add(apphb_interval - APPHB_INTVL_DETLA, emit_apphb, NULL);
 	if ( IS_RECOVERY == FALSE ) {
 		
 		if (G_main_add_input(G_PRIORITY_HIGH, FALSE, 
@@ -285,13 +292,13 @@ int main(int argc, char * argv[])
 
 	}
 	
-	/* To avoid the warning message when app_interval is very small. */
-	apphb_hb();
-	/* drop_privs(0, 0); */
+	mainloop = g_main_new(FALSE);
 	g_main_run(mainloop);
-	/* return_to_orig_privs(); */
-	apphb_hb();
-	apphb_unregister();
+
+	if ( REGTO_APPHBD == TRUE ) {
+		apphb_hb();
+		apphb_unregister();
+	}
 	
 	return LSB_EXIT_OK;
 }
@@ -338,7 +345,7 @@ run_client_as_child(void)
  * pathname or it's located in the system PATH
 */
 static void
-become_deamon(void)
+become_daemon(void)
 {
 	pid_t pid;
 	int j;
@@ -435,23 +442,21 @@ deal_cmd_str(char * cmd_str, char * execv_argv[])
 		next = strchr(pre,' ');
 
 		if (next == NULL) {
-			len_tmp = strnlen(pre,20);	
-			execv_argv[index] = malloc(len_tmp+1);
+			len_tmp = strnlen(pre, 80);	
+			execv_argv[index] = calloc(len_tmp+1, sizeof(char));
 			if ((execv_argv[index]) == NULL ) {
-				cl_log(LOG_ERR, "malloc error");
+				cl_perror("deal_cmd_str: calloc: ");
 				return LSB_EXIT_GENERIC;
 			}
-			memset(execv_argv[index], '\0', len_tmp+1);
 			strncpy(execv_argv[index], pre, len_tmp);
 			break;
 		}
 
-		execv_argv[index] = malloc(next-pre+1);
+		execv_argv[index] = calloc(next-pre+1, sizeof(char));
 		if ((execv_argv[index]) == NULL ) {
-			cl_log(LOG_ERR, "malloc error");
+			cl_perror("deal_cmd_str: calloc: ");
 			return LSB_EXIT_GENERIC;
 		}
-		memset(execv_argv[index], '\0', next-pre+1);
 		strncpy(execv_argv[index], pre, next-pre);
 
 		/* remove redundant spaces between parametes */
@@ -516,7 +521,8 @@ on_polled_input_dispatch(GSource* source,
 
 		if (WEXITSTATUS(exit_status) == MAGIC_EXIT_CODE) {
 			cl_log(LOG_INFO, "Not restartng monitored program"
-			" %s [%d]", execv_argv[0], old_pid);
+			" %s [%d], since got a magic exit code."
+			, execv_argv[0], old_pid);
 			cl_respawn_quit(3);		
 			return TRUE;
 		}
