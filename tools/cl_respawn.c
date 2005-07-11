@@ -57,6 +57,7 @@
 #include <clplumbing/uids.h>
 #include <clplumbing/lsb_exitcodes.h>
 #include <clplumbing/GSource.h>
+#include <clplumbing/proctrack.h>
 #include <clplumbing/Gmain_timeout.h>
 #include <apphb.h>
 
@@ -77,27 +78,23 @@ static const char * Simple_helpscreen =
 "-h	Display this simple help.\n";
 
 
-static gboolean on_polled_input_prepare(GSource* source,
-					gint* timeout);
-
-static gboolean on_polled_input_check(GSource* source);
-
-static gboolean on_polled_input_dispatch(GSource* source, 
-					 GSourceFunc callback,
-					 gpointer user_data);
-
 static void become_daemon(void);
 static int  run_client_as_child(void);
 static gboolean emit_apphb(gpointer data);
-static void child_quit(int signo);
 static void cl_respawn_quit(int signo);
 static int  deal_cmd_str(char * cmd_str, char * execv_argv[]);
 
-static GSourceFuncs polled_input_SourceFuncs = {
-	on_polled_input_prepare,
-	on_polled_input_check,
-	on_polled_input_dispatch,
-	NULL,
+/* Functions for handling the child quit/abort event
+ */
+static void monitoredProcessDied(ProcTrack* p, int status, int signo
+            ,	int exitcode, int waslogged);
+static void monitoredProcessRegistered(ProcTrack* p);
+static const char * monitoredProcessName(ProcTrack* p);
+
+static ProcTrack_ops MonitoredProcessTrackOps = {
+        monitoredProcessDied,
+        monitoredProcessRegistered,
+        monitoredProcessName
 };
 
 static const int
@@ -111,7 +108,6 @@ static const unsigned long
 static int MAGIC_EXIT_CODE = 100;
 
 static const char * app_name = "cl_respawn";
-static gboolean monitored_prog_quit = FALSE;
 static gboolean	REGTO_APPHBD = FALSE;
 
 /* For the monitorred program */
@@ -140,7 +136,7 @@ int main(int argc, char * argv[])
 
 	cl_log_set_entity(app_name);
 	cl_log_enable_stderr(TRUE);
-	cl_log_set_facility(LOG_USER);
+	cl_log_set_facility(LOG_DAEMON);
 
 	if (argc == 1) { /* no arguments */
 		printf("%s\n",Simple_helpscreen);
@@ -253,11 +249,12 @@ int main(int argc, char * argv[])
 	} while (execv_argv[++k] != NULL); 
 	*/
 
+	set_sigchld_proctrack(G_PRIORITY_HIGH);
+
 	if ( IS_RECOVERY == FALSE ) {
-		CL_SIGNAL(SIGCHLD, child_quit);
 		child_tmp = run_client_as_child();
 		if (child_tmp > 0 ) {
-			cl_log(LOG_CRIT, "start the monitored program %s, whose"
+			cl_log(LOG_NOTICE, "started the monitored program %s, whose"
 			 " PID is %d", execv_argv[0], child_tmp); 
 		} else {
 			exit(LSB_EXIT_GENERIC);
@@ -282,16 +279,6 @@ int main(int argc, char * argv[])
 		apphb_hb();
 	}
 
-	if ( IS_RECOVERY == FALSE ) {
-		
-		if (G_main_add_input(G_PRIORITY_HIGH, FALSE, 
-				     &polled_input_SourceFuncs) ==NULL){
-			cl_log(LOG_ERR, "cl_respawn: G_main_add_input failed");
-		}
-
-
-	}
-	
 	mainloop = g_main_new(FALSE);
 	g_main_run(mainloop);
 
@@ -322,6 +309,8 @@ run_client_as_child(void)
 			execv_argv[0]);
 		return -1;
 	} else if (pid > 0) { /* in the parent process */
+		NewTrackedProc( pid, 1, PT_LOGVERBOSE
+			, g_strdup(execv_argv[0]), &MonitoredProcessTrackOps);
 		return pid;
 	}
 	
@@ -353,7 +342,7 @@ become_daemon(void)
 	pid = fork();
 
 	if (pid < 0) {
-		cl_log(LOG_CRIT, "cannot start daemon.");
+		cl_log(LOG_WARNING, "cannot start daemon.");
 		exit(LSB_EXIT_GENERIC);
 	} else if (pid > 0) {
 		exit(LSB_EXIT_OK);
@@ -371,7 +360,6 @@ become_daemon(void)
 	CL_IGNORE_SIG(SIGINT);
 	CL_IGNORE_SIG(SIGHUP);
 	CL_SIGNAL(SIGTERM, cl_respawn_quit);
-	CL_SIGNAL(SIGCHLD, child_quit);
 }
 
 static gboolean
@@ -379,52 +367,43 @@ emit_apphb(gpointer data)
 {
 	pid_t new_pid;
 
-	apphb_hb();
-	/* cl_log(LOG_CRIT,"donnot emit hb for test."); */
+	if ( REGTO_APPHBD == TRUE ) {
+		apphb_hb();
+	}
+	/* cl_log(LOG_NOTICE,"donnot emit hb for test."); */
 	if ( IS_RECOVERY == TRUE  && !(CL_PID_EXISTS(monitored_PID)) ) {
 		cl_log(LOG_INFO, "process %d exited.", monitored_PID);
 
-		CL_SIGNAL(SIGCHLD, child_quit);
 		new_pid = run_client_as_child();
 		if (new_pid > 0 ) {
-			cl_log(LOG_CRIT, "restart the monitored program %s, whose"
-			 " PID is %d", execv_argv[0], new_pid); 
+			cl_log(LOG_NOTICE, "restart the monitored program %s,"
+				" whose PID is %d", execv_argv[0], new_pid); 
 		} else { 
 			/* 
 			 * donnot let recovery manager restart me again, avoid
 			 * infinite loop 
 			*/
+			cl_log(LOG_ERR, "failed to restart the monitored "
+				"program %s, will exit.", execv_argv[0] );
 			cl_respawn_quit(3);		
 		}
-
-
-		if (G_main_add_input(G_PRIORITY_HIGH, FALSE, 
-				     &polled_input_SourceFuncs) ==NULL){
-			cl_log(LOG_ERR, "cl_respawn: G_main_add_input failed");
-		}
-		
 	}
 
 	return TRUE;
 }
 
 static void
-child_quit(int signo)
-{
-	monitored_prog_quit = TRUE;
-}
-
-static void
 cl_respawn_quit(int signo)
 {
 	if (mainloop != NULL && g_main_is_running(mainloop)) {
+		DisableProcLogging();
 		g_main_quit(mainloop);
 	} else {
 		apphb_unregister();
+		DisableProcLogging();
 		exit(LSB_EXIT_OK);
 	}
 }
-
 
 static int 
 deal_cmd_str(char * cmd_str, char * execv_argv[])
@@ -482,58 +461,47 @@ deal_cmd_str(char * cmd_str, char * execv_argv[])
 	return 0;
 }
 
-/*
- * The following three functions are for GSourceFuncs. This type of
- * source is for dealing with child signal - exit from child.
- * This method is used to avoid high cpu usage or reentrance issue.
- */
-static gboolean
-on_polled_input_prepare(GSource* source,
-			gint* timeout)
+static void
+monitoredProcessDied(ProcTrack* p, int status, int signo
+			, int exitcode, int waslogged)
 {
-	return monitored_prog_quit;
-}
+	pid_t new_pid;
+	const char * pname = p->ops->proctype(p);
 
-static gboolean
-on_polled_input_check(GSource* source)
-{
-	return monitored_prog_quit;
-}
-
-static gboolean
-on_polled_input_dispatch(GSource* source,
-			 GSourceFunc callback,
-			 gpointer user_data)
-{
-	int exit_status;	
-	pid_t old_pid, new_pid;
-
-	if (monitored_prog_quit == TRUE) { 
-		if ( ( old_pid = wait(&exit_status) ) <= 0) {
-			/* 
-			 * Or do not quit cl_respawn, and restart its
-			 * monitored program ?
-			*/
-			cl_perror("Quitting due to wait error.");
-			cl_respawn_quit(3);		
-			return TRUE;
-		}
-
-		if (WEXITSTATUS(exit_status) == MAGIC_EXIT_CODE) {
-			cl_log(LOG_INFO, "Not restartng monitored program"
+	if ( exitcode == MAGIC_EXIT_CODE) {
+		cl_log(LOG_INFO, "Not restartng monitored program"
 			" %s [%d], since got a magic exit code."
-			, execv_argv[0], old_pid);
-			cl_respawn_quit(3);		
-			return TRUE;
-		}
-
-		cl_log(LOG_INFO, "process %d exited, and its exit code is %d", 
-			old_pid, WEXITSTATUS(exit_status));
-		new_pid = run_client_as_child();
-		cl_log(LOG_CRIT, "restart the monitored program, whose PID is"
-			" %d", new_pid); 
-		monitored_prog_quit = FALSE;
+			, execv_argv[0], p->pid);
+        	g_free(p->privatedata);	
+		cl_respawn_quit(3);		
 	}
-	
-	return TRUE;
+
+	cl_log(LOG_INFO, "process %s[%d] exited, and its exit code is %d"
+		, pname, p->pid, exitcode);
+	if ( 0 < (new_pid = run_client_as_child()) ) {
+		cl_log(LOG_NOTICE, "restarted the monitored program, whose PID "
+			" is %d", new_pid); 
+	} else {
+		cl_log(LOG_ERR, "failed to restart the monitored program %s ,"
+			"will exit.", pname );
+        	g_free(p->privatedata);	
+		cl_respawn_quit(3);
+	}
+
+        g_free(p->privatedata);	
+	p->privatedata = NULL;
+}
+
+static void
+monitoredProcessRegistered(ProcTrack* p)
+{
+	cl_log(LOG_INFO, "Child process [%s] started [ pid: %d ]."
+			, p->ops->proctype(p), p->pid);
+}
+
+static const char *
+monitoredProcessName(ProcTrack* p)
+{
+	gchar * process_name = p->privatedata;
+	return  process_name;
 }
