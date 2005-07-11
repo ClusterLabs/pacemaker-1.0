@@ -160,13 +160,13 @@ then
   autoheader
 fi
 
-rm -rf libltdl libltdl.tar.gz
+rm -rf libltdl libltdl.tar
 echo libtoolize --ltdl --force --copy
 libtoolize --ltdl --force --copy
 
 # Emulate the old --ltdl-tar option...
 #  If the libltdl directory is required we will unpack it later
-tar -zcf libltdl.tar.gz libltdl
+tar -cf libltdl.tar libltdl
 rm -rf libltdl
 
 echo automake --add-missing --include-deps --copy
