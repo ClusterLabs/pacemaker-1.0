@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.432 2005/07/08 21:29:26 gshi Exp $ */
+/* $Id: heartbeat.c,v 1.433 2005/07/11 20:34:45 gshi Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -2158,17 +2158,19 @@ HBDoMsg_T_ACKMSG(const char * type, struct node_info * fromnode,
 	(void)dump_missing_pkts_info;
 #define DEBUG_FOR_GSHI	1
 #ifdef DEBUG_FOR_GSHI
-	cl_log(LOG_INFO, "hist->ackseq =%ld, node %s's ackseq=%ld",
-	       hist->ackseq, fromnode->nodename,
-	       fromnode->track.ackseq);
-	cl_log(LOG_INFO, "hist->lowseq =%ld, hist->hiseq=%ld", 
-	       hist->lowseq, hist->hiseq);
-	dump_missing_pkts_info();
-	
-	if (hist->lowest_acknode){
-		cl_log(LOG_INFO,"expecting from %s",hist->lowest_acknode->nodename);
+	if (DEBUGDETAILS){
+		cl_log(LOG_DEBUG, "hist->ackseq =%ld, node %s's ackseq=%ld",
+		       hist->ackseq, fromnode->nodename,
+		       fromnode->track.ackseq);
+		cl_log(LOG_DEBUG, "hist->lowseq =%ld, hist->hiseq=%ld", 
+		       hist->lowseq, hist->hiseq);
+		dump_missing_pkts_info();
+		
+		if (hist->lowest_acknode){
+			cl_log(LOG_DEBUG,"expecting from %s",hist->lowest_acknode->nodename);
+		}
+		cl_log(LOG_DEBUG, " ");
 	}
-	cl_log(LOG_INFO, " ");
 
 #endif 
  out:
@@ -4868,12 +4870,12 @@ dump_missing_pkts_info(void)
 		if (t->nmissing == 0){
 			continue;
 		}else{
-			cl_log(LOG_INFO, "At max %d pkts missing from %s",
+			cl_log(LOG_DEBUG, "At max %d pkts missing from %s",
 			       t->nmissing, hip->nodename);
 		}
 		for (seqidx = 0; seqidx < t->nmissing; ++seqidx) {			
 			if (t->seqmissing[seqidx] != NOSEQUENCE) {
-				cl_log(LOG_INFO, "%d: missing pkt: %ld", seqidx, t->seqmissing[seqidx]);
+				cl_log(LOG_DEBUG, "%d: missing pkt: %ld", seqidx, t->seqmissing[seqidx]);
 			}
 		}
 	}	
@@ -5469,6 +5471,10 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.433  2005/07/11 20:34:45  gshi
+ * change some log from info to debug
+ * print those only if debug >=2
+ *
  * Revision 1.432  2005/07/08 21:29:26  gshi
  * change the retransmission time to 1000ms
  *
