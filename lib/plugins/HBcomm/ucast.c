@@ -1,4 +1,4 @@
-/* $Id: ucast.c,v 1.24 2005/04/10 20:10:53 lars Exp $ */
+/* $Id: ucast.c,v 1.25 2005/07/13 14:55:41 lars Exp $ */
 /*
  * Adapted from alanr's UDP broadcast heartbeat bcast.c by Stéphane Billiart
  *	<stephane@reefedge.com>
@@ -259,8 +259,8 @@ static int ucast_init(void)
 	if (localudpport <= 0) {
 		const char *chport;
 		if ((chport  = OurImports->ParamValue("udpport")) != NULL) {
-			sscanf(chport, "%d", &localudpport);
-			if (localudpport <= 0) {
+			if (sscanf(chport, "%d", &localudpport) <= 0
+			    || localudpport <= 0) {
 				PILCallLog(LOG, PIL_CRIT,
 					"ucast: bad port number %s", chport);
 				return HA_FAIL;

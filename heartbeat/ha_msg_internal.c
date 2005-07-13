@@ -1,4 +1,4 @@
-/* $Id: ha_msg_internal.c,v 1.53 2005/04/27 05:31:42 gshi Exp $ */
+/* $Id: ha_msg_internal.c,v 1.54 2005/07/13 14:55:41 lars Exp $ */
 /*
  * ha_msg_internal: heartbeat internal messaging functions
  *
@@ -363,7 +363,9 @@ ha_msg_loadavg(void)
 		strcpy(loadavg, "n/a");
 	}else{
 		lseek(fd, 0, SEEK_SET);
-		read(fd, loadavg, sizeof(loadavg));
+		if (read(fd, loadavg, sizeof(loadavg)) <= 0) {
+			strcpy(loadavg, "n/a");
+		}
 		loadavg[sizeof(loadavg)-1] = EOS;
 	}
 
@@ -412,6 +414,10 @@ main(int argc, char ** argv)
 #endif
 /*
  * $Log: ha_msg_internal.c,v $
+ * Revision 1.54  2005/07/13 14:55:41  lars
+ * Compile warnings: Ignored return values from sscanf/fgets/system etc,
+ * minor signedness issues.
+ *
  * Revision 1.53  2005/04/27 05:31:42  gshi
  *  use struct cl_uuid_t to replace uuid_t
  * use cl_uuid_xxx to replace uuid_xxx funcitons

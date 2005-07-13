@@ -1,4 +1,4 @@
-/* $Id: mlock.c,v 1.11 2005/06/08 08:21:46 sunjd Exp $ */
+/* $Id: mlock.c,v 1.12 2005/07/13 14:55:41 lars Exp $ */
 /*
  *
  * multi-clients NFS lock test code
@@ -444,7 +444,7 @@ static void
 init_comm(const char* servername)
 {
 	struct sockaddr_in their_addr;
-	int sin_size;
+	socklen_t sin_size;
 	
 	if (gi.clientID == 0 ){
 		
@@ -1004,7 +1004,10 @@ main (int argc, char**  argv)
 	while ((option = getopt(argc, argv, "N:h")) != -1){
 		switch(option){
 		case 'N':
-			sscanf(optarg, "%d", &num_ites); 
+			if (sscanf(optarg, "%d", &num_ites) <= 0) {
+				usage(argv[0]);
+				exit(1);
+			}
 			break;
 		case 'h':
 		default:

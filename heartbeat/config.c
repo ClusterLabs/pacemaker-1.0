@@ -1,4 +1,4 @@
-/* $Id: config.c,v 1.161 2005/06/16 09:24:23 davidlee Exp $ */
+/* $Id: config.c,v 1.162 2005/07/13 14:55:41 lars Exp $ */
 /*
  * Parse various heartbeat configuration files...
  *
@@ -1391,7 +1391,8 @@ set_stonith_info(const char * value)
 	}
 
 	vp = evp + strspn(evp, WHITESPACE);
-	sscanf(vp, "%[^\r\n]",  StonithFile);
+	if (sscanf(vp, "%[^\r\n]",  StonithFile) <= 0) {
+	};
 
 	switch ((rc=stonith_set_config_file(s, StonithFile))) {
 		case S_OK:
@@ -2029,6 +2030,10 @@ set_release2mode(const char* value)
 
 /*
  * $Log: config.c,v $
+ * Revision 1.162  2005/07/13 14:55:41  lars
+ * Compile warnings: Ignored return values from sscanf/fgets/system etc,
+ * minor signedness issues.
+ *
  * Revision 1.161  2005/06/16 09:24:23  davidlee
  * common code for syslog facility name/value conversion
  *

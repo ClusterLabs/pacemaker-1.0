@@ -1,4 +1,4 @@
-/* $Id: findif.c,v 1.47 2005/06/22 11:50:32 davidlee Exp $ */
+/* $Id: findif.c,v 1.48 2005/07/13 14:55:41 lars Exp $ */
 /*
  * findif.c:	Finds an interface which can route a given address
  *
@@ -171,8 +171,10 @@ ConvertQuadToInt (char *dest, int destlen)
 	while (strstr (dest, ".")) {
 		*strstr(dest, ".") = ' ';
 	}
-	sscanf (dest, "%u%u%u%u", &ipquad[3], &ipquad[2], &ipquad[1]
-	,	&ipquad[0]);
+	if (sscanf(dest, "%u%u%u%u", &ipquad[3], &ipquad[2], &ipquad[1],
+				&ipquad[0]) <= 0) {
+		fprintf(stderr, "Invalid dest specification [%s]", dest);
+	}
 	
 #if useMULT
 	intdest = (ipquad[0] * 0x1000000) + (ipquad[1] * 0x10000) 
@@ -260,7 +262,12 @@ SearchUsingProcRoute (char *address, struct in_addr *in
 	}
 
 	/* Skip first (header) line */
-	fgets(buf, sizeof(buf), routefd);
+	if (fgets(buf, sizeof(buf), routefd) == NULL) {
+		snprintf(errmsg, errmsglen
+		,	"Cannot skip first line from %s"
+		,	PROCROUTE);
+		return(-1);
+	}
 	while (fgets(buf, sizeof(buf), routefd) != NULL) {
 		if (sscanf(buf, "%[^\t]\t%lx%lx%lx%lx%lx%lx%lx"
 		,	interface, &dest, &gw, &flags, &refcnt, &use
@@ -538,8 +545,11 @@ get_first_looback_netdev(char * output)
 	}
 
 	/* Skip the first two lines */
-	fgets(buf, sizeof(buf), fd);
-	fgets(buf, sizeof(buf), fd);
+	if (!fgets(buf, sizeof(buf), fd) || !fgets(buf, sizeof(buf), fd)) {
+		fprintf(stderr, "Warning: cannot read header from %s.\n",
+			PATH_PROC_NET_DEV);
+		return NULL;
+	}
 
 	while (fgets(buf, sizeof(buf), fd)) {
 		char name[IFNAMSIZ];
@@ -871,6 +881,10 @@ ff02::%lo0/32                     fe80::1%lo0                   UC          lo0
 
 /* 
  * $Log: findif.c,v $
+ * Revision 1.48  2005/07/13 14:55:41  lars
+ * Compile warnings: Ignored return values from sscanf/fgets/system etc,
+ * minor signedness issues.
+ *
  * Revision 1.47  2005/06/22 11:50:32  davidlee
  * previous update didn't compile on Solaris (order #include)
  *

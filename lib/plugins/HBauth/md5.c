@@ -1,4 +1,4 @@
-/* $Id: md5.c,v 1.14 2005/06/08 08:03:35 sunjd Exp $ */
+/* $Id: md5.c,v 1.15 2005/07/13 14:55:41 lars Exp $ */
 /*
  * This code implements the MD5 message-digest algorithm.
  * The algorithm is due to Ron Rivest.  This code was
@@ -322,7 +322,7 @@ md5_auth_calc(const struct HBauth_info *t, const void * text
 
 	MD5Context context;
 	unsigned char digest[MD5_DIGESTSIZE];
-	const char * key = t->key;
+	const unsigned char * key = (unsigned char *)t->key;
 	/* inner padding - key XORd with ipad */
 	unsigned char k_ipad[65];    
 	/* outer padding - * key XORd with opad */
@@ -334,7 +334,7 @@ md5_auth_calc(const struct HBauth_info *t, const void * text
 	if (resultlen <= (MD5_DIGESTSIZE+1) *2) {
 		return 0;
 	}
-	key_len = strlen(key);
+	key_len = strlen((const char *)key);
 	
 	/* if key is longer than MD5_BLOCKSIZE bytes reset it to key=MD5(key) */
 	if (key_len > MD5_BLOCKSIZE) { 
@@ -343,7 +343,7 @@ md5_auth_calc(const struct HBauth_info *t, const void * text
 		MD5Update(&tctx, (const unsigned char *)key, key_len);
 		MD5Final(tk, &tctx); 
 
-		key = (char *)tk;
+		key = (unsigned char *)tk;
 		key_len = MD5_DIGESTSIZE;
 	}       
 	/* start out by storing key in pads */

@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.433 2005/07/11 20:34:45 gshi Exp $ */
+/* $Id: heartbeat.c,v 1.434 2005/07/13 14:55:41 lars Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -641,10 +641,16 @@ change_logfile_ownership(void)
 	}
 	
 	if (config->use_logfile){
-		chown(config->logfile, entry->pw_uid, entry->pw_gid);
+		if (chown(config->logfile, entry->pw_uid, entry->pw_gid) < 0) {
+			cl_log(LOG_WARNING, "change_logfile_ownship:"
+			       " failed to chown logfile");
+		}
 	}
 	if (config->use_dbgfile){
-		chown(config->dbgfile, entry->pw_uid, entry->pw_gid);
+		if (chown(config->dbgfile, entry->pw_uid, entry->pw_gid) < 0) {
+			cl_log(LOG_WARNING, "change_logfile_ownship:"
+			       " failed to chown dbgfile");
+		}
 	}
 	
 }
@@ -784,7 +790,9 @@ initialize_heartbeat()
 
 	/* THIS IS RESOURCE WORK!  FIXME */
 	/* Clean up tmp files from our resource scripts */
-	system("rm -fr " RSC_TMPDIR);
+	if (system("rm -fr " RSC_TMPDIR) <= 0) {
+		cl_log(LOG_INFO, "Removing %s failed, recreating.", RSC_TMPDIR);
+	}
 
 	/* Remake the temporary directory ... */
 	mkdir(RSC_TMPDIR
@@ -2541,7 +2549,15 @@ process_clustermsg(struct ha_msg* msg, struct link* lnk)
 		return;
 	}
 	if (cseq != NULL) {
-		sscanf(cseq, "%lx", &seqno);
+		if (sscanf(cseq, "%lx", &seqno) <= 0) {
+			cl_log(LOG_ERR
+			,	"process_clustermsg: %s: iface %s, from %s"
+			,	"has bad cseq"
+			,	iface
+			,	(from? from : "<?>"));
+			cl_log_message(LOG_ERR, msg);
+			return;
+		}
 	}else{
 		seqno = 0L;
 		if (strncmp(type, NOSEQ_PREFIX, STRLEN_CONST(NOSEQ_PREFIX)) != 0) {
@@ -4439,8 +4455,10 @@ should_drop_message(struct node_info * thisnode, const struct ha_msg *msg,
 	}
 
 	/* Extract the heartbeat generation number */
-	if (cgen != NULL) {
-		sscanf(cgen, "%lx", &gen);
+	if (cgen != NULL && sscanf(cgen, "%lx", &gen) <= 0) {
+		cl_log(LOG_ERR, "should_drop_message: bad generation number");
+		cl_log_message(LOG_ERR, msg);
+		return DROPIT;
 	}
 	
 	if ( cl_get_uuid(msg, F_TOUUID, &touuid) != HA_OK){
@@ -5375,7 +5393,12 @@ IncrGeneration(seqno_t * generation)
 	close(fd);
 
 	buf[GENLEN] = EOS;
-	sscanf(buf, "%lu", generation);
+	if (sscanf(buf, "%lu", generation) <= 0) {
+		cl_log(LOG_WARNING, "BROKEN previous generation - starting at 1");
+		flags = O_CREAT;
+		generation = 0;
+	}
+	
 	++(*generation);
 	snprintf(buf, sizeof(buf), "%*lu\n", GENLEN-1, *generation);
 
@@ -5471,6 +5494,10 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.434  2005/07/13 14:55:41  lars
+ * Compile warnings: Ignored return values from sscanf/fgets/system etc,
+ * minor signedness issues.
+ *
  * Revision 1.433  2005/07/11 20:34:45  gshi
  * change some log from info to debug
  * print those only if debug >=2

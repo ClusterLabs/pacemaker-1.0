@@ -342,13 +342,17 @@ become_daemon(void)
 	pid = fork();
 
 	if (pid < 0) {
-		cl_log(LOG_WARNING, "cannot start daemon.");
+		cl_log(LOG_ERR, "cannot start daemon.");
 		exit(LSB_EXIT_GENERIC);
 	} else if (pid > 0) {
 		exit(LSB_EXIT_OK);
 	}
 
-	chdir("/");
+	if (chdir("/") < 0) {
+		cl_log(LOG_ERR, "cannot chroot to /.");
+		exit(LSB_EXIT_GENERIC);
+	}
+	
 	umask(022);
 	setsid();
 

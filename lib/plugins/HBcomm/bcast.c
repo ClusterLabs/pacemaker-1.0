@@ -1,4 +1,4 @@
-/* $Id: bcast.c,v 1.41 2005/04/10 20:10:53 lars Exp $ */
+/* $Id: bcast.c,v 1.42 2005/07/13 14:55:41 lars Exp $ */
 /*
  * bcast.c: UDP/IP broadcast-based communication code for heartbeat.
  *
@@ -168,8 +168,8 @@ bcast_init(void)
 	if (localudpport <= 0) {
 		const char *	chport;
 		if ((chport  = OurImports->ParamValue("udpport")) != NULL) {
-			sscanf(chport, "%d", &localudpport);
-			if (localudpport <= 0) {
+			if (sscanf(chport, "%d", &localudpport) <= 0
+				|| localudpport <= 0) {
 				PILCallLog(LOG, PIL_CRIT
 				,	"bad port number %s"
 				,	chport);
@@ -759,6 +759,10 @@ if_get_broadaddr(const char *ifn, struct in_addr *broadaddr)
 
 /*
  * $Log: bcast.c,v $
+ * Revision 1.42  2005/07/13 14:55:41  lars
+ * Compile warnings: Ignored return values from sscanf/fgets/system etc,
+ * minor signedness issues.
+ *
  * Revision 1.41  2005/04/10 20:10:53  lars
  * int -> socklen_t where needed
  *

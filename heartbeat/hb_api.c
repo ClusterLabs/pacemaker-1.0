@@ -1,4 +1,4 @@
-/* $Id: hb_api.c,v 1.137 2005/05/19 23:07:33 gshi Exp $ */
+/* $Id: hb_api.c,v 1.138 2005/07/13 14:55:41 lars Exp $ */
 /*
  * hb_api: Server-side heartbeat API code
  *
@@ -223,8 +223,11 @@ should_msg_sendto_client(client_proc_t* client, struct ha_msg* msg)
 		return TRUE;
 	}
 	
-	sscanf(cseq, "%lx", &seq);
-	sscanf(cgen, "%lx", &gen);
+	if (sscanf(cseq, "%lx", &seq) <= 0 || sscanf(cgen, "%lx", &gen) <= 0) {
+		cl_log(LOG_ERR, "should_msg_sendto_client:"
+		       "wrong seq/gen format");
+		return FALSE;
+	}
 	
 	if (seq < 0 || gen < 0){
 		cl_log(LOG_ERR, "should_msg_sendto_client:"
