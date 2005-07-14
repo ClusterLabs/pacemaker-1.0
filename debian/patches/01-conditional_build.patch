@@ -1,10 +1,10 @@
 Index: Makefile.am
 ===================================================================
 RCS file: /home/cvs/linux-ha/linux-ha/Makefile.am,v
-retrieving revision 1.59
-diff -u -r1.59 Makefile.am
---- a/Makefile.am	14 Jun 2005 14:36:12 -0000	1.59
-+++ a/Makefile.am	7 Jul 2005 06:00:12 -0000
+retrieving revision 1.61
+diff -u -r1.61 Makefile.am
+--- a/Makefile.am	11 Jul 2005 16:36:41 -0000	1.61
++++ b/Makefile.am	14 Jul 2005 12:51:09 -0000
 @@ -53,11 +53,15 @@
  
  ## proc-ha is left out from SUBDIRS (completely obsolete)
@@ -13,7 +13,7 @@ diff -u -r1.59 Makefile.am
 +SNMP_SUBAGENT_DIR = snmp_subagent
 +endif
 +
- SUBDIRS	=		libltdl debian pkg port replace include config	\
+ SUBDIRS	=		$(LIBLTDL_DIR) debian pkg port replace include config	\
  			lib						\
  			ldirectord heartbeat membership telecom		\
  			linux-ha contrib resources			\
