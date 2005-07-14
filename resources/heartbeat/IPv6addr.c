@@ -147,7 +147,8 @@ main(int argc, char* argv[])
 	signal(SIGTERM, byebye);
 
 	/* open system log */
-	openlog(APP_NAME, LOG_CONS | LOG_PID, LOG_USER);
+	cl_log_set_entity(APP_NAME);
+	cl_log_set_facility(LOG_DAEMON);
 
 	/* check the first parameter, should be a IPv6 address */
 	if ((cp = strchr(argv[1], '/'))) {
@@ -287,8 +288,10 @@ status_addr6(struct in6_addr* addr6, int prefix_len)
 {
 	char* if_name = get_if(addr6, &prefix_len);
 	if (NULL == if_name) {
+		printf("stopped\n");
 		return LSB_STATUS_STOPPED;
 	}
+	printf("running\n");
 	return LSB_STATUS_OK;
 }
 	
@@ -296,8 +299,10 @@ int
 monitor_addr6(struct in6_addr* addr6, int prefix_len)
 {
 	if(0 == is_addr6_available(addr6)) {
+		printf("OK\n");
 		return LSB_STATUS_OK;
 	}
+	printf("down\n");
 	return LSB_STATUS_STOPPED;
 
 }
@@ -555,8 +560,7 @@ is_addr6_available(struct in6_addr* addr6)
 	struct iovec			iov;
 	u_char				packet[MINPACKSIZE];
 	struct msghdr			msg;
-	struct in6_addr			local;
-
+	
 	icmp_sock = socket(AF_INET6, SOCK_RAW, IPPROTO_ICMPV6);
 	memset(&icmph, 0, sizeof(icmph));
 	icmph.icmp_type = ICMP6_ECHO;
@@ -595,10 +599,7 @@ is_addr6_available(struct in6_addr* addr6)
 	if (0 >= ret) {
 		return -1;
 	}
-	inet_pton(AF_INET6, "::1", &local);
-	if (0 != memcmp(&local, &addr.sin6_addr,sizeof(local))) {
-		return -1;
-	}
+	
 	return 0;
 }
 
