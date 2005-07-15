@@ -103,7 +103,6 @@ ConfigureLinux() {
 		  *)	FLAGS="$FLAGS --libexecdir=/usr/lib64 --libdir=/usr/lib64";;
 		esac
 		;;
-    ppc64)	FLAGS="$FLAGS --libexecdir=/usr/lib64 --libdir=/usr/lib64";;
    *)		;;
   esac
 }
