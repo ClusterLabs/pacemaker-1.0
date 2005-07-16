@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.435 2005/07/16 15:04:58 alan Exp $ */
+/* $Id: heartbeat.c,v 1.436 2005/07/16 15:14:07 alan Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -453,7 +453,7 @@ static void	fifo_child(IPC_Channel* chan);		/* Reads from FIFO */
 		/* The REAL biggie ;-) */
 static void	master_control_process(void);
 
-#define	CHECK_HA_RESOURCES	(DoManageResources 		\
+#define	CHECK_HA_RESOURCES()	(DoManageResources 		\
 		 ?	(parse_ha_resources(RESOURCE_CFG) == HA_OK) : TRUE)
 
 /*
@@ -5497,6 +5497,9 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.436  2005/07/16 15:14:07  alan
+ * fixed typo in last commit :(
+ *
  * Revision 1.435  2005/07/16 15:04:58  alan
  * Bug 613:  Changed heartbeat to not validate haresources file if resource management
  * is disabled.
