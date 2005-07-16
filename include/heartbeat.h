@@ -1,4 +1,4 @@
-/* $Id: heartbeat.h,v 1.66 2005/06/18 03:30:36 alan Exp $ */
+/* $Id: heartbeat.h,v 1.67 2005/07/16 15:09:18 alan Exp $ */
 /*
  * heartbeat.h: core definitions for the Linux-HA heartbeat program
  *
@@ -84,9 +84,9 @@
 #define STATUSLENG	32		/* Maximum size of status field */
 #define	MAXIFACELEN	30		/* Maximum interface length */
 #define	MAXSERIAL	4
-#define	MAXMEDIA	32
+#define	MAXMEDIA	64
 #define	MAXNODE		100
-#define	MAXPROCS	((MAXNODE*2)+2)
+#define	MAXPROCS	((2*MAXMEDIA)+2)
 
 #define	FIFOMODE	0600
 #define	RQSTDELAY	10
