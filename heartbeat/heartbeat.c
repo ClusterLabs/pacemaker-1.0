@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.434 2005/07/13 14:55:41 lars Exp $ */
+/* $Id: heartbeat.c,v 1.435 2005/07/16 15:04:58 alan Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -452,6 +452,9 @@ static void	write_child(struct hb_media* mp);
 static void	fifo_child(IPC_Channel* chan);		/* Reads from FIFO */
 		/* The REAL biggie ;-) */
 static void	master_control_process(void);
+
+#define	CHECK_HA_RESOURCES	(DoManageResources 		\
+		 ?	(parse_ha_resources(RESOURCE_CFG) == HA_OK) : TRUE)
 
 /*
  * Structures initialized to function pointer values...
@@ -3842,7 +3845,7 @@ main(int argc, char * argv[], char **envp)
 
 		if (init_config(CONFIG_NAME) != HA_OK
 			/* THIS IS RESOURCE WORK!  FIXME */
-		||	parse_ha_resources(RESOURCE_CFG) != HA_OK){
+		||	! CHECK_HA_RESOURCES()){
 			int err = errno;
 			cl_log(LOG_INFO
 			,	"Config errors: Heartbeat"
@@ -3929,7 +3932,7 @@ main(int argc, char * argv[], char **envp)
 		errno = 0;
 		if (init_config(CONFIG_NAME)
 			/* THIS IS RESOURCE WORK!  FIXME */
-		&&	parse_ha_resources(RESOURCE_CFG)){
+		&&	CHECK_HA_RESOURCES()){
 			cl_log(LOG_INFO
 			,	"Signalling heartbeat pid %ld to reread"
 			" config files", running_hb_pid);
@@ -3960,7 +3963,7 @@ StartHeartbeat:
         if (WeAreRestarting
         ||      (init_config(CONFIG_NAME)
 			/* THIS IS RESOURCE WORK!  FIXME */
-                &&      parse_ha_resources(RESOURCE_CFG))) {
+                &&      CHECK_HA_RESOURCES())) {
 		if (ANYDEBUG) {
 			cl_log(LOG_DEBUG
 			,	"HA configuration OK.  Heartbeat starting.");
@@ -5494,6 +5497,10 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.435  2005/07/16 15:04:58  alan
+ * Bug 613:  Changed heartbeat to not validate haresources file if resource management
+ * is disabled.
+ *
  * Revision 1.434  2005/07/13 14:55:41  lars
  * Compile warnings: Ignored return values from sscanf/fgets/system etc,
  * minor signedness issues.

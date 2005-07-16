@@ -1,4 +1,4 @@
-/* $Id: hb_proc.h,v 1.17 2004/10/24 13:00:12 lge Exp $ */
+/* $Id: hb_proc.h,v 1.18 2005/07/16 15:04:58 alan Exp $ */
 /*
  * hb_proc.h: definitions of heartbeat child process info
  *
@@ -29,18 +29,7 @@
 #include <clplumbing/cl_malloc.h>
 #include <ha_msg.h>
 #include <clplumbing/longclock.h>
-
-/*
- * Unfortunately, PAGESIZE (Solaris) or PAGE_SIZE is not a guaranteed
- * constant, but might rather be a function call.
- * So its later use in "struct pstat_shm { ... array[fn(PAGESIZE)]}"
- * would be faulty.  Sigh...
- *
- * Accordingly, define it to 4096, since it is a reasonable guess.
- * (which is good enough for our purposes - as described below)
- */
-
-#define OURPAGE_SIZE 4096
+#include <heartbeat.h>
 
 enum process_type {
 	PROC_UNDEF=0,		/* OOPS! ;-) */
@@ -65,25 +54,13 @@ struct process_info {
 	cl_mem_stats_t		memstats;
 };
 
-/*
- * The point of MXPROCS being defined this way is that it's nice (but
- * not essential) to have the number of processes we can manage fit
- * neatly in a page.  Nothing bad happens if it's too large or too small.
- *
- * It just appealed to me to do it this way because the shared memory
- * limitations are naturally organized in pages.
- */
-
-/* This figure contains a couple of probably unnecessary fudge factors */
-
-#define	MXPROCS	((OURPAGE_SIZE-5*sizeof(int))/sizeof(struct process_info)-1)
 
 struct pstat_shm {
 	int	nprocs;
 	int	restart_after_shutdown;
 	int	giveup_resources;
 	int	i_hold_resources;
-	struct process_info info [MXPROCS];
+	struct process_info info [MAXPROCS];
 };
 
 /* These are volatile because they're in shared memory */
