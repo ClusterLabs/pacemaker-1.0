@@ -201,7 +201,7 @@ int main(int argc, char * argv[])
 
 	if ( (IS_RECOVERY == FALSE) && (argv[optind] == NULL) ) {
 		cl_log(LOG_ERR, "Please give the program name which will be " 
-			"runned as a child process of cl_respawn.");
+			"run as a child process of cl_respawn.");
 		return LSB_EXIT_EINVAL;
 	}
 
