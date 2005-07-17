@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.436 2005/07/16 15:14:07 alan Exp $ */
+/* $Id: heartbeat.c,v 1.437 2005/07/17 10:06:41 alan Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -2132,8 +2132,8 @@ HBDoMsg_T_ACKMSG(const char * type, struct node_info * fromnode,
  	       hist->ackseq, old_hist_ackseq);
 #endif
 	if (hist->ackseq > old_hist_ackseq){
-		int count;
-		int start;
+		long count;
+		seqno_t start;
 		count = hist->ackseq - hist->lowseq - send_cluster_msg_level;
 		if (old_hist_ackseq == 0){
 			start = 0;
@@ -5497,6 +5497,9 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.437  2005/07/17 10:06:41  alan
+ * Fixed signed/unsigned comparison
+ *
  * Revision 1.436  2005/07/16 15:14:07  alan
  * fixed typo in last commit :(
  *
