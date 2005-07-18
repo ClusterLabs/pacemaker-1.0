@@ -85,6 +85,8 @@ install-stamp:
 	  MAKE=make \
 	  docdir=/usr/share/doc/heartbeat 
 
+	mv $(DTMP)/usr/lib/heartbeat/cts/README \
+		$(DTMP)/usr/share/doc/heartbeat/README.cts
 	find $(DTMP)/usr/share/man -type f | xargs gzip -v --best
 	install -c -m 755 heartbeat/init.d/heartbeat \
                 $(DTMP)/etc/init.d/heartbeat
@@ -131,7 +133,7 @@ binary-arch: build install
 	dh_testdir -a
 	dh_testroot -a
 	dh_installdebconf -a
-	dh_installdocs -a
+	dh_installdocs -a `pwd`/debian/heartbeat/usr/share/doc/heartbeat/README.cts
 	dh_installexamples -a
 #	dh_installmenu -a
 #	dh_installemacsen -a

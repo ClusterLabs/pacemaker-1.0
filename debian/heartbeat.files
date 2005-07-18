@@ -70,7 +70,6 @@ usr/lib/heartbeat/cts/CTSlab.py
 usr/lib/heartbeat/cts/CTStests.py
 usr/lib/heartbeat/cts/OCFIPraTest.py
 usr/lib/heartbeat/cts/haresources2cib.py
-usr/lib/heartbeat/cts/README
 usr/lib/heartbeat/cts/extracttests.py
 usr/lib/heartbeat/findif
 usr/lib/heartbeat/ha_config
@@ -167,6 +166,7 @@ usr/share/doc/heartbeat/GettingStarted.txt
 usr/share/doc/heartbeat/HardwareGuide.html
 usr/share/doc/heartbeat/HardwareGuide.txt
 usr/share/doc/heartbeat/README
+usr/share/doc/heartbeat/README.cts
 usr/share/doc/heartbeat/Requirements.html
 usr/share/doc/heartbeat/Requirements.txt
 usr/share/doc/heartbeat/apphbd.cf

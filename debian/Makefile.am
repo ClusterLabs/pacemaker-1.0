@@ -35,6 +35,8 @@ EXTRA_DIST		= apply changelog compat control copyright \
 			  stonith.files \
 			  patches/00-ssh_scp_path.patch \
 			  patches/01-conditional_build.patch \
+			  patches/02-confdir.patch \
+			  patches/03-LVM2.patch \
 			  patches/series/1.99.6-1
 
 

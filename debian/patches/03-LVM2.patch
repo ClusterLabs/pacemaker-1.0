@@ -1,0 +1,174 @@
+Index: heartbeat/resource.d/LVM.in
+===================================================================
+RCS file: /home/cvs/linux-ha/linux-ha/heartbeat/resource.d/Attic/LVM.in,v
+retrieving revision 1.2.4.1
+diff -p -u -r1.2.4.1 LVM.in
+--- a/resources/heartbeat/LVM.in	20 Apr 2004 05:05:29 -0000	1.2.4.1
++++ b/resources/heartbeat/LVM.in	10 Jun 2005 07:46:28 -0000
+@@ -102,8 +102,15 @@ LVM_methods() {
+ #
+ LVM_status() {
+ 
+-  vgdisplay $1 | grep -i 'Status.*available' >/dev/null
+-  
++  if 
++    [ "$LVM_VERSION" -eq "200" ]
++  then
++  	vgdisplay -v $1 | grep -i 'Status[ \t]*available' &>/dev/null
++	return $?
++  else
++  	vgdisplay $1 | grep -i 'Status.*available' >/dev/null
++	return $?
++  fi
+ }
+ 
+ #
+@@ -111,15 +118,27 @@ LVM_status() {
+ #
+ LVM_report_status() {
+ 
+-  VGOUT=`vgdisplay $1 2>&1`
++  if 
++    [ "$LVM_VERSION" -eq "200" ]
++  then
++  	VGOUT=`vgdisplay -v $1 2>&1`
++	echo "$VGOUT" | grep -i 'Status[ \t]*available' >/dev/null
++	rc=$?
++  else
++  	VGOUT=`vgdisplay $1 2>&1`
++  	echo "$VGOUT" | grep -i 'Status.*available' >/dev/null
++	rc=$?
++  fi
++
+   if
+-    echo "$VGOUT" | grep -i 'Status.*available' >/dev/null
++    [ $rc -eq 0 ]
+   then
+     : Volume $1 is available
+   else
+     echo "LVM Volume $1 is not available (stopped)"
+     return 1
+   fi
++
+   if
+     echo "$VGOUT" | grep -i 'Access.*read/write' >/dev/null
+   then
+@@ -155,7 +174,15 @@ LVM_monitor() {
+ LVM_start() {
+ 
+   ha_log "Activating volume group $1"
+-  run vgscan $1
++
++  if 
++    [ "$LVM_VERSION" -eq "200" ]
++  then
++  	run vgscan
++  else
++  	run vgscan $1
++  fi
++
+   run vgchange -a y $1 || return 1
+ 
+   if
+@@ -196,6 +223,15 @@ if
+ then
+   LVM_methods
+   exit $?
++fi
++
++LVM_VERSION=`/sbin/lvmiopversion`
++rc=$?
++if 
++  [ $rc -ne 0 ]
++then
++  ha_log "ERROR: LVM: $1 could not determine LVM version"
++  return  $rc
+ fi
+ 
+ VOLUME=$1
+
+--- a/resources/OCF/LVM.in	2005-07-18 23:39:19.000000000 +0200
++++ b/resources/OCF/LVM.in	2005-07-18 23:39:37.000000000 +0200
+@@ -139,8 +139,15 @@
+ #
+ LVM_status() {
+ 
+-  vgdisplay $1 | grep -i 'Status.*available' >/dev/null
+-  
++  if 
++    [ "$LVM_VERSION" -eq "200" ]
++  then
++       vgdisplay -v $1 | grep -i 'Status[ \t]*available' &>/dev/null
++       return $?
++  else
++       vgdisplay $1 | grep -i 'Status.*available' >/dev/null
++       return $?
++  fi
+ }
+ 
+ #
+@@ -148,9 +155,20 @@
+ #
+ LVM_report_status() {
+ 
+-  VGOUT=`vgdisplay $1 2>&1`
++  if 
++    [ "$LVM_VERSION" -eq "200" ]
++  then
++       VGOUT=`vgdisplay -v $1 2>&1`
++       echo "$VGOUT" | grep -i 'Status[ \t]*available' >/dev/null
++       rc=$?
++  else
++       VGOUT=`vgdisplay $1 2>&1`
++       echo "$VGOUT" | grep -i 'Status.*available' >/dev/null
++       rc=$?
++  fi
++
+   if
+-    echo "$VGOUT" | grep -i 'Status.*available' >/dev/null
++    [ $rc -eq 0 ]
+   then
+     : Volume $1 is available
+   else
+@@ -194,7 +212,23 @@
+ LVM_start() {
+ 
+   ocf_log info "Activating volume group $1"
+-  run vgscan $1
++
++  if 
++    [ "$LVM_VERSION" -eq "200" ]
++  then
++       run vgscan
++  else
++       run vgscan $1
++  fi
++
++  if 
++    [ "$LVM_VERSION" -eq "200" ]
++  then
++       run vgscan
++  else
++       run vgscan $1
++  fi
++
+   run vgchange -a y $1 || return 1
+ 
+   if
+@@ -246,6 +280,16 @@
+   exit $OCF_ERR_ARGS 
+ fi
+ 
++LVM_VERSION=`/sbin/lvmiopversion`
++rc=$?
++if
++  [ $rc -ne 0 ]
++then
++  ha_log "ERROR: LVM: $1 could not determine LVM version"
++  return  $rc
++fi
++
++
+ VOLUME=$OCF_RESKEY_volgrpname
+ 
+ # What kind of method was invoked?

@@ -1,0 +1,98 @@
+Index: heartbeat/shellfuncs.in
+===================================================================
+RCS file: /home/cvs/linux-ha/linux-ha/heartbeat/shellfuncs.in,v
+retrieving revision 1.15
+diff -u -r1.15 shellfuncs.in
+--- a/heartbeat/shellfuncs.in	28 May 2005 04:43:57 -0000	1.15
++++ a/heartbeat/shellfuncs.in	18 Jul 2005 21:46:57 -0000
+@@ -6,6 +6,7 @@
+ exec_prefix=@exec_prefix@
+ : ${HA_DIR:=@sysconfdir@/ha.d}
+ : ${HA_RCDIR:=$HA_DIR/rc.d}
++: ${HA_CONFDIR=$HA_DIR/conf}
+ : ${HA_CF:=$HA_DIR/ha.cf}
+ : ${HA_VARLIB:=@localstatedir@/lib/heartbeat}
+ : ${HA_RSCTMP:=@localstatedir@/lib/heartbeat/rsctmp}
+Index: resources/OCF/IPaddr.in
+===================================================================
+RCS file: /home/cvs/linux-ha/linux-ha/resources/OCF/IPaddr.in,v
+retrieving revision 1.13
+diff -u -r1.13 IPaddr.in
+--- a/resources/OCF/IPaddr.in	19 Jun 2005 05:05:40 -0000	1.13
++++ a/resources/OCF/IPaddr.in	18 Jul 2005 21:46:57 -0000
+@@ -44,7 +44,6 @@
+ prefix=@prefix@
+ exec_prefix=@exec_prefix@
+ HA_D=@sysconfdir@/ha.d
+-CONF_D=@sysconfdir@/ha.d/conf
+ . ${HA_D}/shellfuncs
+ 
+ SYSTYPE="`uname -s`"
+Index: resources/heartbeat/IPaddr.in
+===================================================================
+RCS file: /home/cvs/linux-ha/linux-ha/resources/heartbeat/IPaddr.in,v
+retrieving revision 1.7
+diff -u -r1.7 IPaddr.in
+--- a/resources/heartbeat/IPaddr.in	21 Jun 2005 06:25:52 -0000	1.7
++++ a/resources/heartbeat/IPaddr.in	18 Jul 2005 21:46:58 -0000
+@@ -24,7 +24,6 @@
+ prefix=@prefix@
+ exec_prefix=@exec_prefix@
+ HA_D=@sysconfdir@/ha.d
+-CONF_D=@sysconfdir@/ha.d/conf
+ . ${HA_D}/shellfuncs
+ 
+ IFCONFIG=@IFCONFIG@
+@@ -565,8 +564,8 @@
+ 
+   ha_log "info: Sending Gratuitous Arp for $BASEIP on $IF [$TARGET_INTERFACE]"
+ 
+-  [ -r ${CONF_D}/arp_config ] && . ${CONF_D}/arp_config
+-  [ -r "${CONF_D}/arp_config:${TARGET_INTERFACE}" ] && . "${CONF_D}/arp_config:${TARGET_INTERFACE}"
++  [ -r ${HA_CONFDIR}/arp_config ] && . ${HA_CONFDIR}/arp_config
++  [ -r "${HA_CONFDIR}/arp_config:${TARGET_INTERFACE}" ] && . "${HA_CONFDIR}/arp_config:${TARGET_INTERFACE}"
+ 
+   # Set default values (can be overridden as described above)
+ 
+Index: resources/heartbeat/IPaddr2.in
+===================================================================
+RCS file: /home/cvs/linux-ha/linux-ha/resources/heartbeat/IPaddr2.in,v
+retrieving revision 1.4
+diff -u -r1.4 IPaddr2.in
+--- a/resources/heartbeat/IPaddr2.in	4 Apr 2005 08:30:28 -0000	1.4
++++ a/resources/heartbeat/IPaddr2.in	18 Jul 2005 21:46:58 -0000
+@@ -254,10 +254,10 @@
+     #
+     # Run send_arp to note peers about new mac address
+     #
+-    [ -r ${CONF_D}/arp_config ] && . ${CONF_D}/arp_config
+-    if [ -r "${CONF_D}/arp_config:${TARGET_INTERFACE}" ]
++    [ -r ${HA_CONFDIR}/arp_config ] && . ${HA_CONFDIR}/arp_config
++    if [ -r "${HA_CONFDIR}/arp_config:${TARGET_INTERFACE}" ]
+     then
+-	. "${CONF_D}/arp_config:${TARGET_INTERFACE}"
++	. "${HA_CONFDIR}/arp_config:${TARGET_INTERFACE}"
+     fi
+ 
+     # Set default values (can be overridden as described above)
+Index: resources/heartbeat/SendArp.in
+===================================================================
+RCS file: /home/cvs/linux-ha/linux-ha/resources/heartbeat/SendArp.in,v
+retrieving revision 1.1
+diff -u -r1.1 SendArp.in
+--- a/resources/heartbeat/SendArp.in	27 Aug 2004 09:34:14 -0000	1.1
++++ a/resources/heartbeat/SendArp.in	18 Jul 2005 21:46:58 -0000
+@@ -70,10 +70,10 @@
+ 	    ;;
+     esac
+ 
+-    [ -r ${CONF_D}/arp_config ] && . ${CONF_D}/arp_config
+-    if [ -r "${CONF_D}/arp_config:${TARGET_INTERFACE}" ]
++    [ -r ${HA_CONFDIR}/arp_config ] && . ${HA_CONFDIR}/arp_config
++    if [ -r "${HA_CONFDIR}/arp_config:${TARGET_INTERFACE}" ]
+     then
+-	. "${CONF_D}/arp_config:${TARGET_INTERFACE}"
++	. "${HA_CONFDIR}/arp_config:${TARGET_INTERFACE}"
+     fi
+ 
+     # Set default values

@@ -5,17 +5,63 @@ heartbeat (1.99.6-1) unstable; urgency=low
   * Added --enable-checkpointd to configure arguments
   * Added --disable-snmp-subagent to configure arguments
   * Added --disable-swig to configure arguments
+  * Add build dependancy on uuid-dev
 
- -- Simon Horman <horms@debian.org>  Thu,  7 Jul 2005 15:58:22 +0900
+ -- Simon Horman <horms@debian.org>  Tue, 19 Jul 2005 00:00:18 +0200
+
+heartbeat (1.2.3-12) unstable; urgency=high
+
+  * 11-tmpfile-problems.patch, 12-tmpfile-problems-2.patch
+    Don't use predictable temp files
+    [heartbeat/lib/BasicSanityCheck.in, heartbeat/resource.d/WAS.in
+     lib/plugins/stonith/meatware.c, lib/stonith/meatclient.c,
+     cts/CM_hb.py.in, cts/CTStests.py.in CAN-2005-2231] (closes: #318287)
+  * debian/apply
+    Apply patches in the correct order.
+  * 12-tmpfile-problems-2.patch
+    Added CTS back in with security fix
+    [usr/lib/heartbeat/cts/CM_fs.py, usr/lib/heartbeat/cts/CM_hb.py,
+    usr/lib/heartbeat/cts/CTS.py, usr/lib/heartbeat/cts/CTSaudits.py,
+    usr/lib/heartbeat/cts/CTSlab.py, usr/lib/heartbeat/cts/CTStests.py
+    CAN-2005-2231]
+  * 13-confdir.patch
+    Change CONF_D defined (and missing) in some resources
+    to HA_CONFDIR in shelfuncs, allowing arp_config to function
+    correctly in IPaddr2 and SendArp. (closes: #318266)
+  * debian/rules
+    Include cts documentation
+  * 14-ipadd2_no_loopback_delete.patch
+    Fix IPaddr2 so it doesn't remove loopback interfaces on stop
+  * 15-LVM2.patch
+    Allow the LVM resource to work with LVM2 as well as LVM1
+    (closes: #309906)
+  * Upgrade Standards-Version from 3.6.1 to 3.6.2
+
+ -- Simon Horman <horms@debian.org>  Mon, 18 Jul 2005 22:27:29 +0200
+
+heartbeat (1.2.3-10) unstable; urgency=low
+
+  * Make signal handling less aggressive to avoid exiting in
+    FTP and LDAP chacks.  (closes: #310600)
+
+ -- Simon Horman <horms@debian.org>  Fri, 17 Jun 2005 18:17:03 +0900
+
+heartbeat (1.2.3-9) unstable; urgency=low
+
+  * Stop heartbeat in preinst so starting it in postinst
+    wont cause an error if it was already running.
+    (closes: #303149)
+
+ -- Simon Horman <horms@debian.org>  Tue,  5 Apr 2005 15:57:44 +0900
 
 heartbeat (1.2.3-8) unstable; urgency=low
- 
+
   * Added dependancy on libnet-dns-perl to ldirectord
   * Removed Build-Dependancy on raidtools2 as it is being removed
     from the archive and removed the Raid1 resource from the
     heartbeat package accordingly. (closes: #296717)
   * Added build dependancy on bison and flex.
-  
+
  -- Simon Horman <horms@debian.org>  Tue, 22 Mar 2005 13:20:18 +0900
 
 heartbeat (1.2.3-7) unstable; urgency=low
