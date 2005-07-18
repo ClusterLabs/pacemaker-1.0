@@ -2,7 +2,7 @@
 <?php include("trick.php");
 function PRLinkFix($total, $href, $linktext)
 {
-	$Root="http://wwnew.linux-ha.org";
+	$Root="http://www.linux-ha.org";
 	global $XrefList, $URLs;
 	if (substr($href, 0, 1) == "/") {
 		$href = $Root . $href;
