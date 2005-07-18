@@ -47,7 +47,7 @@ DEFAULTINTERFACE=eth0	# But we really guess it...
 IDENTSTRING="Linux-HA TEST configuration file - REMOVEME!!"
 DUMMYNODE=ImAlwaysDead.com
 LOCALNODE=`uname -n`
-LOGFILE=/tmp/linux-ha.testlog
+LOGFILE=/var/run/linux-ha.testlog
 RSCDIR=$HADIR/resource.d
 PATH=$PATH:/sbin:/usr/sbin
 export PATH
@@ -279,9 +279,9 @@ else print $0 ; next } \
 if (done ==1 || $1 == "#" || $1 == " ") next; \
 if ($1 == "auth") {method = $2; next} \
 if ($1 !=  method) {done=1; method =$1;  pass=2; nextfile}}' \
-$HADIR/authkeys $HADIR/authkeys >/tmp/tmpfile
+$HADIR/authkeys $HADIR/authkeys >/var/run/tmpfile
 
-mv /tmp/tmpfile  $HADIR/authkeys
+mv /var/run/tmpfile  $HADIR/authkeys
 chmod 600 $HADIR/authkeys
 }
 #	Check for the given count of the given string
@@ -588,7 +588,7 @@ StonithCheck() {
 
 
 AppHBCheck() {
-	CFFILE=/tmp/$$.apphbd.cf
+	CFFILE=/var/run/$$.apphbd.cf
 	clientcount=5
 	cat <<-! >$CFFILE
 		realtime yes

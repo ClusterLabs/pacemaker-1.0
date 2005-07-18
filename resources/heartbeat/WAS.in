@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $Id: WAS.in,v 1.1 2004/08/27 09:34:14 lars Exp $
+# $Id: WAS.in,v 1.2 2005/07/18 20:19:45 horms Exp $
 # 
 # WAS
 #
@@ -90,7 +90,7 @@ usage() {
 	We run servlet/snoop on the first transport port listed in
 	the config file for the "monitor" operation.
 
-	$Id: WAS.in,v 1.1 2004/08/27 09:34:14 lars Exp $
+	$Id: WAS.in,v 1.2 2005/07/18 20:19:45 horms Exp $
 	!
   exit 1
 
@@ -302,7 +302,7 @@ WAS_report_status() {
 #	This is actually faster than WAS_status above...
 #
 WAS_monitor() {
-  tmpfile=/tmp/$$.was-mon
+  tmpfile=`tempfile`
   SnoopPort=`GetWASSnoopPort $1`
   output=`$WGET -nv -O$tmpfile  http://localhost:$SnoopPort/servlet/snoop 2>&1`
   rc=$?
