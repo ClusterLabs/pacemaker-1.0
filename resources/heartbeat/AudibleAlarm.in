@@ -36,7 +36,7 @@ audiablealarm_start () {
 		# Uncomment this line to cause floppy drive light
 		# to flash (requires fdutils package).
 		# /usr/bin/floppycontrol --pollstate > /dev/null
-	done&
+	done >&2 &
 	if ! echo $! >  $PIDFILE; then
 		ha_log "info: $0: Could not write to pid file \"$PIDFILE\", bailing"
 		kill $!
@@ -93,7 +93,7 @@ case "$lastarg" in
 	echo "Usage: [node1 node2 ... ] {start|stop|restart|status}"
 	echo "  The node list is an optional space delimited"
 	echo "  list of hosts that should never sound the alarm."
-	echo "$Id: AudibleAlarm.in,v 1.1 2004/08/27 09:34:14 lars Exp $";
+	echo "$Id: AudibleAlarm.in,v 1.2 2005/07/19 07:44:24 sunjd Exp $";
 	exit 1
 esac
 
