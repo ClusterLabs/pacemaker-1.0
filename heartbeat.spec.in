@@ -1,4 +1,4 @@
-#	$Id: heartbeat.spec.in,v 1.124 2005/07/20 17:48:43 alan Exp $
+#	$Id: heartbeat.spec.in,v 1.125 2005/07/20 21:31:46 gshi Exp $
 
 # Workaround for a change in RPM 4.1.x; needs proper fixing soon!
 ##%define _unpackaged_files_terminate_build 0
@@ -81,8 +81,8 @@ implementing any number of interfaces.
 * Tue May 23 2005  Alan Robertson <alanr@unix.sh> (see doc/AUTHORS file)
 + Version 2.0.0 - First stable release of the next generation of  Heartbeat
   + Core infrastructure improvments:
-    + Messaging (gshi to fill in)
-    + Logging   (gshi to fill in)
+    + Messaging (message acknowledging and flow control)
+    + Logging   (logging daemon)
   + Release 1.x style (2-node) clusters fully supported
   + Multi-node support (so far up to 16-node clusters tested)
 	See http://linux-ha.org/GettingStartedV2 for more information
