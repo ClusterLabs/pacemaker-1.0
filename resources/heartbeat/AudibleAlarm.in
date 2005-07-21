@@ -30,13 +30,15 @@ audiablealarm_start () {
 		ha_log "info: $0: Appears to already be running, killing [$PID]"
 		kill $PID > /dev/null
 	fi
-	while [ 1 ]; do 
+	# To avoid the SIGPIPE issue when called by lrmd, redirect stdout->stderr.
+	# Use () to create a subshell to make the redirecting be synchronized.
+	( while [ 1 ]; do 
 		sleep 1  #Sleep first, incase we bail out
 		echo -ne "\a" > /dev/console 
 		# Uncomment this line to cause floppy drive light
 		# to flash (requires fdutils package).
 		# /usr/bin/floppycontrol --pollstate > /dev/null
-	done >&2 &
+	done & ) >&2
 	if ! echo $! >  $PIDFILE; then
 		ha_log "info: $0: Could not write to pid file \"$PIDFILE\", bailing"
 		kill $!
@@ -93,7 +95,7 @@ case "$lastarg" in
 	echo "Usage: [node1 node2 ... ] {start|stop|restart|status}"
 	echo "  The node list is an optional space delimited"
 	echo "  list of hosts that should never sound the alarm."
-	echo "$Id: AudibleAlarm.in,v 1.2 2005/07/19 07:44:24 sunjd Exp $";
+	echo "$Id: AudibleAlarm.in,v 1.3 2005/07/21 08:02:56 sunjd Exp $";
 	exit 1
 esac
 
