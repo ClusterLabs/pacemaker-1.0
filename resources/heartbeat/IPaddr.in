@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-#	$Id: IPaddr.in,v 1.8 2005/07/19 07:44:24 sunjd Exp $
+#	$Id: IPaddr.in,v 1.9 2005/07/21 07:56:03 sunjd Exp $
 #
 #	This script manages IP alias IP addresses
 #
@@ -579,7 +579,9 @@ ip_start() {
   ARGS="-i $ARP_INTERVAL_MS -r $ARP_REPEAT -p $SENDARPPIDFILE $TARGET_INTERFACE $BASEIP auto $BASEIP $ARP_NETMASK"
   ha_log "$SENDARP $ARGS"
   case $ARP_BACKGROUND in
-    yes) ($SENDARP $ARGS || ha_log "ERROR: Could not send gratuitous arps") >&2 &;;
+    # To avoid issues when called by lrmd, redirect stdout->stderr,
+    # and let the redirecting be synchronized
+    yes) ($SENDARP $ARGS || ha_log "ERROR: Could not send gratuitous arps" & ) >&2 ;;
     *)	  $SENDARP $ARGS || ha_log "ERROR: Could not send gratuitous arps";;
   esac
 }
@@ -658,7 +660,7 @@ ip_monitor() {
 
 usage() {
   echo $USAGE >&2
-  echo "$Id: IPaddr.in,v 1.8 2005/07/19 07:44:24 sunjd Exp $"
+  echo "$Id: IPaddr.in,v 1.9 2005/07/21 07:56:03 sunjd Exp $"
 }
 
 #
@@ -707,6 +709,9 @@ exit $?
 #
 #
 # $Log: IPaddr.in,v $
+# Revision 1.9  2005/07/21 07:56:03  sunjd
+# resolve the EAGAIN issue
+#
 # Revision 1.8  2005/07/19 07:44:24  sunjd
 # To avoid issues when called by lrmd, redirect stdout->stderr.
 #
