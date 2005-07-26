@@ -32,6 +32,8 @@ etc/init.d/heartbeat
 etc/logrotate.d/heartbeat
 usr/bin/cl_status
 usr/bin/cl_respawn
+usr/lib/heartbeat/crm_diff
+usr/lib/heartbeat/crm_mon
 usr/lib/heartbeat/BasicSanityCheck
 usr/lib/heartbeat/ResourceManager
 usr/lib/heartbeat/TestHeartbeatComm
@@ -128,6 +130,8 @@ usr/lib/libhbclient.so.1
 usr/lib/libhbclient.so.1.0.0
 usr/lib/liblrm.so.0
 usr/lib/liblrm.so.0.0.0
+usr/lib/libpengine.so.0
+usr/lib/libpengine.so.0.0.0
 usr/lib/libplumb.so.1
 usr/lib/libplumb.so.1.0.0
 usr/lib/librecoverymgr.so.1
@@ -135,6 +139,7 @@ usr/lib/librecoverymgr.so.1.0.0
 usr/lib/libstonithd.so.0
 usr/lib/libstonithd.so.0.0.0
 usr/lib/ocf/resource.d/heartbeat/AudibleAlarm
+usr/lib/ocf/resource.d/heartbeat/ClusterMon
 usr/lib/ocf/resource.d/heartbeat/Delay
 usr/lib/ocf/resource.d/heartbeat/Dummy
 usr/lib/ocf/resource.d/heartbeat/Filesystem

@@ -7,6 +7,7 @@ usr/include/clplumbing/cl_malloc.h
 usr/include/clplumbing/cl_pidfile.h
 usr/include/clplumbing/cl_poll.h
 usr/include/clplumbing/cl_signal.h
+usr/include/clplumbing/cl_syslog.h
 usr/include/clplumbing/cl_uuid.h
 usr/include/clplumbing/coredumps.h
 usr/include/clplumbing/coredumps.h
@@ -42,6 +43,7 @@ usr/include/heartbeat/msg_xml.h
 usr/include/heartbeat/racommon.h
 usr/include/heartbeat/raexec.h
 usr/include/heartbeat/recoverymgr.h
+usr/include/heartbeat/replace_uuid.h
 usr/include/heartbeat/stonithd_api.h
 usr/include/heartbeat/stonithd_msg.h
 usr/include/heartbeat/util.h
@@ -75,6 +77,9 @@ usr/lib/libhbclient.la
 usr/lib/libhbclient.so
 usr/lib/liblrm.la
 usr/lib/liblrm.so
+usr/lib/libpengine.a
+usr/lib/libpengine.la
+usr/lib/libpengine.so
 usr/lib/libplumb.a
 usr/lib/libplumb.la
 usr/lib/libplumb.so
