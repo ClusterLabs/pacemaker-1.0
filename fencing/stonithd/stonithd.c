@@ -1,4 +1,4 @@
-/* $Id: stonithd.c,v 1.57 2005/06/27 07:53:51 sunjd Exp $ */
+/* $Id: stonithd.c,v 1.58 2005/07/26 10:19:48 sunjd Exp $ */
 
 /* File: stonithd.c
  * Description: STONITH daemon for node fencing
@@ -2327,17 +2327,20 @@ send_stonithRAop_final_result( stonithRA_ops_t * ra_op, gpointer data)
 	    ||(ha_msg_add_int(reply, F_STONITHD_CALLID, ra_op->call_id)!= HA_OK)
 	    ||(ha_msg_add_int(reply, F_STONITHD_FRC, ra_op->op_result)
 		!= HA_OK )) {
-		ZAPMSG(reply);
 		stonithd_log(LOG_ERR, "send_stonithRAop_final_result: cannot "
 			     "add message fields.");
+		ZAPMSG(reply);
 		return ST_FAIL;
 	}
+	/* Just for debugging bug 730 */
+	stonithd_log(LOG_DEBUG, "send_stonithRAop_final_result: finished to prepare "
+		     "the result message.");	
 
 	if ( msg2ipcchan(reply, ch) != HA_OK) {
-		ZAPCHAN(ch); /* ? */
-		ZAPMSG(reply);
 		stonithd_log(LOG_ERR, "send_stonithRAop_final_result: cannot "
 			     "send final result message via IPC");
+		ZAPCHAN(ch); /* ? */
+		ZAPMSG(reply);
 		return ST_FAIL;
 	} else {
 		stonithd_log(LOG_DEBUG, "send_stonithRAop_final_result: "
@@ -2825,7 +2828,7 @@ get_exist_client_by_chan(GList * client_list, IPC_Channel * ch)
 		stonithd_log2(LOG_DEBUG, "tmplist=%p", tmplist);
 		client = (stonithd_client_t *)tmplist->data;
 		if (client != NULL && client->ch == ch) {
-			stonithd_log(LOG_DEBUG, "get_exist_client_by_chan: "
+			stonithd_log2(LOG_DEBUG, "get_exist_client_by_chan: "
 					"client %s.", client->name);
 			return client;
 		}
@@ -2868,7 +2871,7 @@ delete_client_by_chan(GList ** client_list, IPC_Channel * ch)
 	stonithd_client_t * client;
 
 	if ( (client = get_exist_client_by_chan(*client_list, ch)) != NULL ) {
-		stonithd_log(LOG_DEBUG, "delete_client_by_chan: delete client "
+		stonithd_log2(LOG_DEBUG, "delete_client_by_chan: delete client "
 			"%s (pid=%d)", client->name, client->pid);
 		*client_list = g_list_remove(*client_list, client);
 		free_client(client);
@@ -2878,7 +2881,7 @@ delete_client_by_chan(GList ** client_list, IPC_Channel * ch)
 			     "client_list = %p", *client_list);
 		return ST_OK;
 	} else {
-		stonithd_log(LOG_DEBUG, "delete_client_by_chan: no client "
+		stonithd_log2(LOG_DEBUG, "delete_client_by_chan: no client "
 			"using this channel, so no client deleted.");
 		return ST_FAIL;
 	}
@@ -3051,6 +3054,9 @@ adjust_debug_level(int nsig, gpointer user_data)
 
 /* 
  * $Log: stonithd.c,v $
+ * Revision 1.58  2005/07/26 10:19:48  sunjd
+ * add a log for debugging bug 730; degrade the level of several logs
+ *
  * Revision 1.57  2005/06/27 07:53:51  sunjd
  * log ouput tweak according to debuglevel
  *
