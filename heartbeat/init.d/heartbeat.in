@@ -1,10 +1,11 @@
 #!/bin/sh
 #
-#	$Id: heartbeat.in,v 1.39 2005/07/16 14:57:38 alan Exp $
+#	$Id: heartbeat.in,v 1.40 2005/07/26 09:43:01 panjiam Exp $
 #
 # heartbeat     Start high-availability services
 #
 # Author:       Alan Robertson	<alanr@unix.sh>
+# License:      GNU General Public License (GPL)
 #
 #		This script works correctly under SuSE, Debian,
 #		Conectiva, Red Hat and a few others.  Please let me know if it
@@ -449,6 +450,9 @@ exit $RC
 #
 #
 #  $Log: heartbeat.in,v $
+#  Revision 1.40  2005/07/26 09:43:01  panjiam
+#  Added license, bug #668
+#
 #  Revision 1.39  2005/07/16 14:57:38  alan
 #  Bug 613: Disabled checking for running resources when CRM is enabled.
 #
