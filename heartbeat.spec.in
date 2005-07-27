@@ -1,4 +1,4 @@
-#	$Id: heartbeat.spec.in,v 1.127 2005/07/27 17:00:54 gshi Exp $
+#	$Id: heartbeat.spec.in,v 1.128 2005/07/27 18:27:04 alan Exp $
 
 # Workaround for a change in RPM 4.1.x; needs proper fixing soon!
 ##%define _unpackaged_files_terminate_build 0
@@ -79,7 +79,7 @@ implementing any number of interfaces.
 %changelog
 
 * Tue May 23 2005  Alan Robertson <alanr@unix.sh> (see doc/AUTHORS file)
-+ Version 2.0.0 - First stable release of the next generation of  Heartbeat
++ Version 2.0.0 - First stable release of the next generation of the Linux-HA project
   + Basic Characteristics described here:
 	http://linux-ha.org/FactSheetv2
   + Core infrastructure improvments:
@@ -89,11 +89,11 @@ implementing any number of interfaces.
   + Multi-node support (so far up to 16-node clusters tested)
 	See http://linux-ha.org/GettingStartedV2 for more information
   + New components:
-    + Cluster Information Base       (replicated resource  configuration)
-    + Cluster Resource Manager   (supporting 1->N nodes)
-    + Modular Policy Engine           (controlling resource placement)
+    + Cluster Information Base    (replicated resource configuration)
+    + Cluster Resource Manager    (supporting 1->N nodes)
+    + Modular Policy Engine       (controlling resource placement)
     + Local Resource Manager      (policy free, not cluster aware)
-    + Stonith Daemon                       (stand-alone fencing  subsytem)
+    + Stonith Daemon              (stand-alone fencing  subsytem)
   + Support for OCF and LSB resource agents
   + Support for composite resource types (groups, clones)
   + Support for a rich set of resource location and ordering  constraints
@@ -103,6 +103,16 @@ implementing any number of interfaces.
   + Several failback, failure and "No Quorum" behaviours to choose  from
         (global defaults and per action or resource)
   + Sample cluster state and configuration monitoring tools
+
+  Known issues in 2.0.0:
+    - Under some rare circumstances the cluster manager will time out
+      while stabilizing a new cluster state.  This appears to be
+	otherwise harmless - the cluster is actually fine.
+	http://www.osdl.org/developer_bugzilla/show_bug.cgi?id=770
+   -  Under some rare circumstances, STONITHing an errant node will fail
+      at least with the for-test ssh STONITH plugin.
+      This does not affect resource integrity.
+	http://www.osdl.org/developer_bugzilla/show_bug.cgi?id=781
 
 
 * Tue May 23 2005  Alan Robertson <alanr@unix.sh> (see doc/AUTHORS file)
