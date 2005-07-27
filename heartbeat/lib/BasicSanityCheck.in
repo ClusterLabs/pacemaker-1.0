@@ -59,6 +59,8 @@ errcount=0
 cd $HADIR
 ulimit -c unlimited
 
+rm -f $LOGFILE
+
 GetAllIFNames() {
 
     if [ "apple" = "@build_vendor@" ]; then
