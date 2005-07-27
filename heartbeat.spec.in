@@ -1,4 +1,4 @@
-#	$Id: heartbeat.spec.in,v 1.125 2005/07/20 21:31:46 gshi Exp $
+#	$Id: heartbeat.spec.in,v 1.126 2005/07/27 01:34:44 alan Exp $
 
 # Workaround for a change in RPM 4.1.x; needs proper fixing soon!
 ##%define _unpackaged_files_terminate_build 0
@@ -80,6 +80,8 @@ implementing any number of interfaces.
 
 * Tue May 23 2005  Alan Robertson <alanr@unix.sh> (see doc/AUTHORS file)
 + Version 2.0.0 - First stable release of the next generation of  Heartbeat
+  + Basic Characteristics described here:
+	http://linux-ha.org/FactSheetv2
   + Core infrastructure improvments:
     + Messaging (message acknowledging and flow control)
     + Logging   (logging daemon)
