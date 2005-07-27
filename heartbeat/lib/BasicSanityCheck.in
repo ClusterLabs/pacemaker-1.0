@@ -50,7 +50,7 @@ DEFAULTINTERFACE=eth0	# But we really guess it...
 IDENTSTRING="Linux-HA TEST configuration file - REMOVEME!!"
 DUMMYNODE=ImAlwaysDead.com
 LOCALNODE=`uname -n`
-LOGFILE=/var/run/linux-ha.testlog
+LOGFILE=/tmp/$$.linux-ha.testlog
 RSCDIR=$HADIR/resource.d
 PATH=$PATH:/sbin:/usr/sbin
 export PATH
@@ -99,10 +99,17 @@ CheckConfigFile() {
 }
 
 GenerateAuthKeys() {
+  if
+    [ "$AuthTry" == "" ]
+  then
+    AuthTry=1
+  else
+    AuthTry=`expr "$AuthTry" + 1`
+  fi
   cat <<-! >$1
 	#	$IDENTSTRING
 	#
-	auth 1
+	auth $AuthTry
 	1 sha1 SuperSecretKey--SHHH!!!
 	2 md5  Encript-string-for-md5!!
 	3 crc
@@ -275,18 +282,6 @@ LookForString() {
   return 1
 }
 
-changeAuthkeys(){
- awk 'BEGIN{method = 1; done =0 ; pass=1} \
-{ if(pass == 2){ if ($1 == "auth")print "auth " method; \
-else print $0 ; next } \
-if (done ==1 || $1 == "#" || $1 == " ") next; \
-if ($1 == "auth") {method = $2; next} \
-if ($1 !=  method) {done=1; method =$1;  pass=2; nextfile}}' \
-$HADIR/authkeys $HADIR/authkeys >/var/run/tmpfile
-
-mv /var/run/tmpfile  $HADIR/authkeys
-chmod 600 $HADIR/authkeys
-}
 #	Check for the given count of the given string
 #	Complain unless the right number are there.
 CheckPat()
@@ -478,7 +473,7 @@ TestHeartbeat() {
   #	Reload test -- authkeys changed
   #
   echo "Performing authkeys reload test" >> $LOGFILE
-  changeAuthkeys
+  GenerateAuthKeys $HADIR/authkeys
   if
     HBReload
   then
@@ -811,5 +806,7 @@ then
   errcount=`expr $errcount + 1`
 fi
 
-echo "$errcount errors. Log file is stored in $LOGFILE"
+SAVELOG=/tmp/linux-ha.testlog
+mv $LOGFILE $SAVELOG
+echo "$errcount errors. Log file is stored in $SAVELOG"
 exit $errcount
