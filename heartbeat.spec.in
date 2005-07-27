@@ -1,4 +1,4 @@
-#	$Id: heartbeat.spec.in,v 1.126 2005/07/27 01:34:44 alan Exp $
+#	$Id: heartbeat.spec.in,v 1.127 2005/07/27 17:00:54 gshi Exp $
 
 # Workaround for a change in RPM 4.1.x; needs proper fixing soon!
 ##%define _unpackaged_files_terminate_build 0
@@ -105,11 +105,11 @@ implementing any number of interfaces.
   + Sample cluster state and configuration monitoring tools
 
 
-+ Version 1.99.5 - Near-final beta of 2.0.0 release
 * Tue May 23 2005  Alan Robertson <alanr@unix.sh> (see doc/AUTHORS file)
 + Version 1.99.5 - Near-final beta of 2.0.0 release
   + many bug fixes - code looks very stable at this point
     -- well tested at this point on 4 and 8 node clusters.
+
 * Thu Apr 07 2005  Alan Robertson <alanr@unix.sh> (see doc/AUTHORS file)
 + Version 1.99.4 - Near-final beta of 2.0.0 release
   + many bug fixes since 1.99.1
