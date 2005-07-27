@@ -1,6 +1,9 @@
 #!/bin/sh
 #
-#	$Id: ResourceManager.in,v 1.29 2005/02/14 07:37:12 horms Exp $
+#	$Id: ResourceManager.in,v 1.30 2005/07/27 02:44:49 panjiam Exp $
+#
+#   Support:      linux-ha-dev@lists.tummy.com
+#   License:      GNU General Public License (GPL)
 #
 #	New haresources format:
 #
@@ -441,9 +444,12 @@ esac
 
 #
 #	$Log: ResourceManager.in,v $
+#	Revision 1.30  2005/07/27 02:44:49  panjiam
+#	added license statementes, bug #668
+#
 #	Revision 1.29  2005/02/14 07:37:12  horms
 #	Omit blank lines from output of allkeys
-#
+#	
 #	Revision 1.28  2005/01/11 14:54:11  alan
 #	Ported forwards a fix which releases partially-acquired resource groups
 #	

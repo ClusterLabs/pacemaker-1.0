@@ -1,5 +1,9 @@
 #!/bin/sh
 #
+#       Support:      linux-ha-dev@lists.tummy.com
+#       License:      GNU General Public License (GPL)
+#
+#
 #       This script contains some variables for linux-ha which
 #       are set at configure time.
 #

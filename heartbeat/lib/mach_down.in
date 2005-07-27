@@ -1,5 +1,8 @@
 #!/bin/sh
 #
+#   Support:      linux-ha-dev@lists.tummy.com
+#   License:      GNU General Public License (GPL)
+#
 #	This script will only work for a two machine setup...
 #	More than that and you need to vote, or something...
 #

@@ -1,5 +1,9 @@
 #!/bin/sh
 
+#
+# Support:      linux-ha-dev@lists.tummy.com
+# License:      GNU General Public License (GPL)
+#
 # This script sets the node (where it was called) to *standby*
 # It forces the node to release all the held resources and lets
 # the other node do a takeover.

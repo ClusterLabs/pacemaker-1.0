@@ -1,4 +1,8 @@
 #!/bin/sh
+#
+# Support:      linux-ha-dev@lists.tummy.com
+# License:      GNU General Public License (GPL)
+#
 # The purpose of this script is to break or fix the communication in the cluster.
 #
 HADIR=@sysconfdir@/ha.d

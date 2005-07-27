@@ -1,9 +1,11 @@
 #!/bin/bash  
-
+#
+# Support:      linux-ha-dev@lists.tummy.com
+# License:      GNU General Public License (GPL)
 # This script sets the node (where it was called) to *active*
 # It forces the other node to release all the held resources and lets
 # this node do a takeover.
-
+#
 #       This script will only work for a two machine setup...
 #       More than that and you need to vote, or something...
 
