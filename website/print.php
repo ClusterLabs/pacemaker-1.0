@@ -1,3 +1,9 @@
+<!--
+Author:       Alan Robertson
+Support:      linux-ha@lists.linux-ha.org
+License:      GNU General Public License (GPL)
+Copyright:    (C) 2005 International Business Machines, Inc.
+-->
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
 <?php include("trick.php");
 function PRLinkFix($total, $href, $linktext)

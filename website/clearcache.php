@@ -1,3 +1,9 @@
+<!--
+Author:       Alan Robertson
+Support: linux-ha@lists.linux-ha.org
+License:      GNU General Public License (GPL)
+Copyright:    (C) 2005 International Business Machines, Inc.
+-->
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
 <html>
 <head>

@@ -3,6 +3,7 @@
 # WikiWare - Standard MoinMoin Transclusion Function
 # Dmytri Kleiner -- dmytrik@trickmedia.com
 # Copyleft 2003 Idiosyntactix. All rights detourned.	
+# License:      GNU General Public License (GPL)
 
 # Usage Examples:
 #   print MoinMoin("FrontPage");
