@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.437 2005/07/17 10:06:41 alan Exp $ */
+/* $Id: heartbeat.c,v 1.438 2005/07/28 22:39:07 gshi Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -4092,9 +4092,9 @@ make_daemon(void)
 		pid = 0;
 #endif
 		if (pid < 0) {
-			fprintf(stderr, "%s: could not start daemon\n"
+			cl_log(LOG_ERR, "%s: could not start daemon\n"
 			,	cmdname);
-			perror("fork");
+			cl_perror("fork");
 			exit(LSB_EXIT_GENERIC);
 		}else if (pid > 0) {
 			exit(LSB_EXIT_OK);
@@ -4103,7 +4103,7 @@ make_daemon(void)
 
 	
 	if ( cl_lock_pidfile(PIDFILE) < 0){
-		fprintf(stderr, "%s: could not create pidfile [%s]\n",
+		cl_log(LOG_ERR,"%s: could not create pidfile [%s]\n",
 			cmdname, PIDFILE);
 		exit(LSB_EXIT_EPERM);
 	}
@@ -5497,6 +5497,9 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.438  2005/07/28 22:39:07  gshi
+ *  change stderr message to cl_log
+ *
  * Revision 1.437  2005/07/17 10:06:41  alan
  * Fixed signed/unsigned comparison
  *
