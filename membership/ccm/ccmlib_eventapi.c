@@ -1,4 +1,4 @@
-/* $Id: ccmlib_eventapi.c,v 1.9 2005/02/17 19:08:20 gshi Exp $ */
+/* $Id: ccmlib_eventapi.c,v 1.10 2005/07/29 23:02:03 alan Exp $ */
 /* 
  * ccmlib_eventapi.c: OCF event API.
  *
@@ -188,7 +188,7 @@ activate_func(gpointer key,
 		gpointer user_data)
 {
 	class_t  *class = (class_t *)value;
-	oc_ev_class_t class_type = (oc_ev_class_t) GPOINTER_TO_INT(key);
+	oc_ev_class_t class_type = (oc_ev_class_t) GPOINTER_TO_SIZE(key);
 	int	*fd = (int *) user_data;
 	int	tmp;
 

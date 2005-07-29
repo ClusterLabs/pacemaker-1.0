@@ -141,7 +141,6 @@ saClmInitialize(SaClmHandleT *clmHandle, const SaClmCallbacksT *clmCallbacks,
 	int ret;
 	oc_ev_t *ev_token;
 	__clm_handle_t *hd;
-	__clm_handle_t **phd;
 	SaClmHandleT *hash_key;
 	fd_set rset;
 	struct timeval tv;
@@ -161,18 +160,13 @@ saClmInitialize(SaClmHandleT *clmHandle, const SaClmCallbacksT *clmCallbacks,
 
 	clm_init();
 
-	phd = (__clm_handle_t **)g_malloc(sizeof(__clm_handle_t *));
-	if (!phd){
-		return SA_ERR_NO_MEMORY;
-	}
 
 	hash_key = (SaClmHandleT *)g_malloc(sizeof(SaClmHandleT));
 	if (!hash_key){
 		return SA_ERR_NO_MEMORY;
 	}
 
-	*phd = (__clm_handle_t *)g_malloc(sizeof(__clm_handle_t));
-	hd = *phd;
+	hd = (__clm_handle_t *)g_malloc(sizeof(__clm_handle_t));
 	if (!hd){
 		return SA_ERR_NO_MEMORY;
 	}
@@ -215,7 +209,6 @@ saClmInitialize(SaClmHandleT *clmHandle, const SaClmCallbacksT *clmCallbacks,
 		}
 
 	}
-
 	return SA_OK;
 }
 
