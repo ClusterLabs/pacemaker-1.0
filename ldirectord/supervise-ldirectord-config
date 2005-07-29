@@ -1,4 +1,7 @@
 #!/bin/sh
+#
+# License:      GNU General Public License (GPL)
+#
 # usage: $0 name_of_configuration
 # This script shall be used to put ldirectord under
 # control of daemontools. This is safer than System V

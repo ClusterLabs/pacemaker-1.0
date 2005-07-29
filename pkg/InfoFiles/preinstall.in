@@ -4,6 +4,9 @@
 #	Keep in step with "%pre" section of "heartbeat.spec".
 #
 # (c) 2004 David Lee <t.d.lee@durham.ac.uk>
+#
+# License:      GNU General Public License (GPL)
+#
 
 if
   getent group @HA_APIGROUP@ >/dev/null

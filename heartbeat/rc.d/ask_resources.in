@@ -1,5 +1,6 @@
 #!/bin/sh
 
+# License:  GNU General Public License (GPL)
 # This script was based on mach_down
 # It may be used along with hb_standby
 

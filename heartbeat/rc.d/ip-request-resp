@@ -1,5 +1,7 @@
 #!/bin/sh
 #
+#	License:      GNU General Public License (GPL)
+#
 #	This script is called in response to an ip-request message after the
 #	one we've called calls us back.
 #

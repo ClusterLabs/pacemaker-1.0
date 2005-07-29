@@ -1,5 +1,7 @@
 #!/bin/sh
 #
+# 	License:      GNU General Public License (GPL)
+#
 #	This script is called to "give up" an IP address when requested
 #
 #	It could be that we don't have it, in which case we ignore the request.

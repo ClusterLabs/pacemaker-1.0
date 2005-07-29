@@ -1,4 +1,7 @@
 #! /bin/sh
+#
+# License:      GNU General Public License (GPL)
+#
 
 ask() {
     local question default answer

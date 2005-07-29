@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# License:      GNU General Public License (GPL)
+
 HA_DIR=@sysconfdir@/ha.d
 . ${HA_DIR}/shellfuncs
 ORIGNODE=$HA_src
