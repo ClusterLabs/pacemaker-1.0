@@ -477,7 +477,9 @@ monitoredProcessDied(ProcTrack* p, int status, int signo
 			" %s [%d], since got a magic exit code."
 			, execv_argv[0], p->pid);
         	g_free(p->privatedata);	
-		cl_respawn_quit(3);		
+		p->privatedata = NULL;
+		cl_respawn_quit(3);	/* Does NOT always exit */
+		return;
 	}
 
 	cl_log(LOG_INFO, "process %s[%d] exited, and its exit code is %d"
@@ -491,12 +493,11 @@ monitoredProcessDied(ProcTrack* p, int status, int signo
         	g_free(p->privatedata);	
 		p->privatedata = NULL;
 		cl_respawn_quit(3);	/* Does NOT always exit */
+		return;
 	}
 
-	if (p->privatedata) {
-        	g_free(p->privatedata);	
-		p->privatedata = NULL;
-	}
+        g_free(p->privatedata);	
+	p->privatedata = NULL;
 }
 
 static void
