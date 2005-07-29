@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.440 2005/07/29 23:06:46 alan Exp $ */
+/* $Id: heartbeat.c,v 1.441 2005/07/29 23:57:55 alan Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -2780,7 +2780,7 @@ CoreProcessDied(ProcTrack* p, int status, int signo
 static const char *
 CoreProcessName(ProcTrack* p)
 {
-	int	procindex = GPOINTER_TO_SIZE(p->privatedata);
+	int	procindex = POINTER_TO_SIZE_T(p->privatedata);
 	volatile struct process_info *	pi = procinfo->info+procindex;
 
 	return (pi ? core_proc_name(pi->type) : "Core heartbeat process");
@@ -2905,7 +2905,7 @@ ManagedChildName(ProcTrack* p)
 void
 hb_kill_tracked_process(ProcTrack* p, void * data)
 {
-	int	nsig = GPOINTER_TO_SIZE(data);
+	int	nsig = POINTER_TO_SIZE_T(data);
 	int	pid = p->pid;
 	const char *	porg;
 	const char * pname;
@@ -5496,6 +5496,10 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.441  2005/07/29 23:57:55  alan
+ * Trying to make some BEAM errors go away.
+ * Maybe I did it right this time...
+ *
  * Revision 1.440  2005/07/29 23:06:46  alan
  * BEAM fixes NULL pointer and some truncation errors.
  *

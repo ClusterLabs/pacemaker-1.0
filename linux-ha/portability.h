@@ -1,4 +1,4 @@
-/* $Id: portability.h,v 1.45 2005/06/10 03:43:25 sunjd Exp $ */
+/* $Id: portability.h,v 1.46 2005/07/29 23:57:55 alan Exp $ */
 #ifndef PORTABILITY_H
 #  define PORTABILITY_H
 
@@ -127,5 +127,8 @@ inet_pton(int af, const char *src, void *dst);
 #		define SYS_NMLN _SYS_NAMELEN
 #	endif /* SYS_NMLN */
 #endif
+
+#define	POINTER_TO_SIZE_T(p)	((size_t)(p))
+#define	POINTER_TO_SSIZE_T(p)	((ssize_t)(p))
 
 #endif /* PORTABILITY_H */

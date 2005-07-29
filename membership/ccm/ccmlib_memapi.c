@@ -1,4 +1,4 @@
-/* $Id: ccmlib_memapi.c,v 1.36 2005/07/29 23:02:03 alan Exp $ */
+/* $Id: ccmlib_memapi.c,v 1.37 2005/07/29 23:57:55 alan Exp $ */
 /* 
  * ccmlib_memapi.c: Consensus Cluster Membership API
  *
@@ -336,7 +336,7 @@ get_new_membership(mbr_private_t *private,
 
 		gborn = g_hash_table_lookup(private->bornon, 
 				GINT_TO_POINTER(mbrinfo->member[i]));
-		born = GPOINTER_TO_SIZE(gborn);
+		born = POINTER_TO_SIZE_T(gborn);
 
 		/* if there is already a born entry for the
 		 * node, use it. Otherwise create a born entry
