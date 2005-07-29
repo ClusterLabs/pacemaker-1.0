@@ -1,8 +1,11 @@
 #!/bin/sh
 #
-#	$Id: IPaddr2.in,v 1.4 2005/04/04 08:30:28 horms Exp $
+#	$Id: IPaddr2.in,v 1.5 2005/07/29 07:50:53 sunjd Exp $
 #
 #	Copyright (C) 2003 Tuomo Soini <tis@foobar.fi>
+#
+# 	License:      GNU General Public License (GPL)
+# 	Support:      linux-ha@lists.linux-ha.org
 #
 #	This script manages IP alias IP addresses
 #

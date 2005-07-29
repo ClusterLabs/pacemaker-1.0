@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $Id: apache.in,v 1.3 2004/11/18 20:04:36 alan Exp $
+# $Id: apache.in,v 1.4 2005/07/29 07:50:53 sunjd Exp $
 #
 #	High-Availability Apache/IBMhttp control script
 # 
@@ -12,7 +12,7 @@
 #
 # Support:	linux-ha-dev@lists.tummy.com
 #
-# License:	GNU Lesser General Public License (LGPL)
+# License:	GNU General Public License (GPL)
 #
 # Copyright:	(C) 2002 International Business Machines
 #
@@ -88,7 +88,7 @@ usage() {
 		monitor in the methods call if we don't know think
 		that the monitor call will actually work ;-)
 
-	$Id: apache.in,v 1.3 2004/11/18 20:04:36 alan Exp $
+	$Id: apache.in,v 1.4 2005/07/29 07:50:53 sunjd Exp $
 	!
   exit 1
 }

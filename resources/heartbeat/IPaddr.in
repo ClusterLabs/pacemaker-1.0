@@ -1,6 +1,9 @@
 #!/bin/sh
 #
-#	$Id: IPaddr.in,v 1.9 2005/07/21 07:56:03 sunjd Exp $
+#	$Id: IPaddr.in,v 1.10 2005/07/29 07:50:53 sunjd Exp $
+#
+# License:      GNU General Public License (GPL)
+# Support:      linux-ha@lists.linux-ha.org
 #
 #	This script manages IP alias IP addresses
 #
@@ -660,7 +663,7 @@ ip_monitor() {
 
 usage() {
   echo $USAGE >&2
-  echo "$Id: IPaddr.in,v 1.9 2005/07/21 07:56:03 sunjd Exp $"
+  echo "$Id: IPaddr.in,v 1.10 2005/07/29 07:50:53 sunjd Exp $"
 }
 
 #
@@ -709,6 +712,9 @@ exit $?
 #
 #
 # $Log: IPaddr.in,v $
+# Revision 1.10  2005/07/29 07:50:53  sunjd
+# bug668: license update
+#
 # Revision 1.9  2005/07/21 07:56:03  sunjd
 # resolve the EAGAIN issue
 #

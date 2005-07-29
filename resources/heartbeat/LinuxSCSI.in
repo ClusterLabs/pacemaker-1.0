@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $Id: LinuxSCSI.in,v 1.1 2004/08/27 09:34:14 lars Exp $
+# $Id: LinuxSCSI.in,v 1.2 2005/07/29 07:50:53 sunjd Exp $
 # 
 # LinuxSCSI
 #
@@ -9,8 +9,9 @@
 #
 #
 # Author:	Alan Robertson
-#		Support: linux-ha-dev@lists.tummy.com
-# License:	GNU Lesser General Public License (LGPL)
+# Support:      linux-ha@lists.linux-ha.org
+#
+# License:      GNU General Public License (GPL)
 # Copyright:	(C) 2002 IBM
 #
 # CAVEATS:	See the usage message for some important warnings
@@ -92,7 +93,7 @@ usage() {
 	keep in the volumes.  If you don't use a reasonable volume manager,
 	then you'll have to mount by UUID.
 
-	$Id: LinuxSCSI.in,v 1.1 2004/08/27 09:34:14 lars Exp $
+	$Id: LinuxSCSI.in,v 1.2 2005/07/29 07:50:53 sunjd Exp $
 	!
   exit 1
 }

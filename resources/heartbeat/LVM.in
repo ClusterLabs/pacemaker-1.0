@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $Id: LVM.in,v 1.1 2004/08/27 09:34:14 lars Exp $
+# $Id: LVM.in,v 1.2 2005/07/29 07:50:53 sunjd Exp $
 # 
 # LVM
 #
@@ -8,8 +8,8 @@
 #
 #
 # Author:	Alan Robertson
-# Support:	linux-ha-dev@lists.tummy.com
-# License:	GNU Lesser General Public License (LGPL)
+# License:      GNU General Public License (GPL)
+# Support:      linux-ha@lists.linux-ha.org
 # Copyright:	(C) 2002 International Business Machines, Inc.
 #
 #	This code significantly inspired by the LVM resource
@@ -48,7 +48,7 @@ usage() {
 	The 'monitor' operation reports whether the volume seems present
 	The 'methods' operation reports on the methods $0 supports
 
-	$Id: LVM.in,v 1.1 2004/08/27 09:34:14 lars Exp $
+	$Id: LVM.in,v 1.2 2005/07/29 07:50:53 sunjd Exp $
 	!
   exit 1
 

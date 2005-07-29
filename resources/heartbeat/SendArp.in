@@ -1,10 +1,13 @@
 #!/bin/sh
 #
-#	$Id: SendArp.in,v 1.1 2004/08/27 09:34:14 lars Exp $
+#	$Id: SendArp.in,v 1.2 2005/07/29 07:50:53 sunjd Exp $
 #
 #	Copyright (C) 2004 Horms <horms@verge.net.au>
 #
 #       Based on IPaddr2: Copyright (C) 2003 Tuomo Soini <tis@foobar.fi>
+#
+# 	License:      GNU General Public License (GPL)
+# 	Support:      linux-ha@lists.linux-ha.org
 #
 #	This script send out gratuitous Arp for an IP address
 #

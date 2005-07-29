@@ -10,8 +10,8 @@
 # Description:	given parameters of a service name and start|stop|status,
 #		will enable, disable or report on a specified xinetd service
 # Config:	all services must have a descriptor file in /etc/xinetd.d
-# Support:	Linux-HA mailing list -- http://linux-ha.org/contact/
-# License:	GPL
+# License:      GNU General Public License (GPL)
+# Support:      linux-ha@lists.linux-ha.org
 #
 
 VARRUN=@localstatedir@/run

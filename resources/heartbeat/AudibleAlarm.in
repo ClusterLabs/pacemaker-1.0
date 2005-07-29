@@ -9,7 +9,10 @@
 # processname: alarm
 # config: /etc/AudibleAlarm/AudibleAlarm.conf - not yet implemented
 #
-# Licence: GPL
+# License:      GNU General Public License (GPL)
+# Support:      linux-ha@lists.linux-ha.org
+#
+
 
 prefix=@prefix@
 exec_prefix=@exec_prefix@
@@ -95,7 +98,7 @@ case "$lastarg" in
 	echo "Usage: [node1 node2 ... ] {start|stop|restart|status}"
 	echo "  The node list is an optional space delimited"
 	echo "  list of hosts that should never sound the alarm."
-	echo "$Id: AudibleAlarm.in,v 1.3 2005/07/21 08:02:56 sunjd Exp $";
+	echo "$Id: AudibleAlarm.in,v 1.4 2005/07/29 07:50:53 sunjd Exp $";
 	exit 1
 esac
 

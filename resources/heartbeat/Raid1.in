@@ -1,12 +1,13 @@
 #!/bin/sh
 #
-# $Id: Raid1.in,v 1.1 2004/08/27 09:34:14 lars Exp $
+# $Id: Raid1.in,v 1.2 2005/07/29 07:50:53 sunjd Exp $
 # 
 # Raid1
 #      Description: Manages a software Raid1 device on a shared storage medium.
 #  Original Author: Eric Z. Ayers (eric.ayers@compgen.com)
 # Original Release: 25 Oct 2000
-#          Support: linux-ha-dev@lists.tummy.com
+# 	   License: GNU General Public License (GPL)
+#          Support: linux-ha@lists.linux-ha.org
 #     RAID patches: http://people.redhat.com/mingo/raid-patches/
 # Word to the Wise: http://lwn.net/2000/0810/a/raid-faq.php3
 #  Sympathetic Ear: mailto:linux-raid@vger.kernel.org
@@ -113,7 +114,7 @@ cat <<-EOT;
 	<raidtab_config_file> : name of MD configuration file. e.g. /etc/raidtab
 	<md_dev_name>         : of the form /dev/md?? (the block device to use)
 
-	$Id: Raid1.in,v 1.1 2004/08/27 09:34:14 lars Exp $
+	$Id: Raid1.in,v 1.2 2005/07/29 07:50:53 sunjd Exp $
 EOT
 }
 

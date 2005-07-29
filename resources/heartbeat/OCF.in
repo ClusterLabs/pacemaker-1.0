@@ -1,8 +1,11 @@
 #!/bin/sh
 #
 # Copyright: (C) 2003 International Business Machines Corporation
-# Author:	 Alan Robertson <alanr@unix.sh>
-# This software licensed under the GNU Lesser General Public License (LGPL)
+# Author:	Alan Robertson <alanr@unix.sh>
+# License:      GNU General Public License (GPL)
+# Support:      linux-ha@lists.linux-ha.org
+#
+
 #
 #	OCF resource agent wrapper script for "original" heartbeat
 #	resource system

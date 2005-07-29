@@ -1,6 +1,9 @@
 #!/bin/sh
 #
-#	portblock: iptables temporary portblocking control 
+# License:      GNU General Public License (GPL)
+# Support:      linux-ha@lists.linux-ha.org
+#
+# portblock: iptables temporary portblocking control 
 #
 CMD=`basename $0`
 usage()

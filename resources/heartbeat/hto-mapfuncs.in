@@ -1,7 +1,11 @@
 #!/bin/sh
-#Author: Zhao Kai <zhaokai@cn.ibm.com>
+#
+# Author: Zhao Kai <zhaokai@cn.ibm.com>
+#
+# License:      GNU General Public License (GPL)
+# Support:      linux-ha@lists.linux-ha.org
+#
 #set -x
-
 
 PARAMETER_SPLIT_SIGN="="
 exec_prefix=@exec_prefix@

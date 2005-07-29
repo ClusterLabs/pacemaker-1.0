@@ -4,6 +4,9 @@
 #
 # Author: Alan Robertson <alanr@unix.sh>
 #
+# License:      GNU General Public License (GPL)
+# Support:      linux-ha@lists.linux-ha.org
+#
 # Description: sends email to a sysadmin whenever a takeover occurs.
 #
 #	Note: This command requires an argument, unlike normal init scripts.
@@ -29,7 +32,7 @@ us=`uname -n`
 
 usage() {
   echo "Usage: $0 <email> [subject] {start|stop|status}"
-  echo "$Id: MailTo.in,v 1.1 2004/08/27 09:34:14 lars Exp $"
+  echo "$Id: MailTo.in,v 1.2 2005/07/29 07:50:53 sunjd Exp $"
   exit 1
 }
 
