@@ -2,8 +2,8 @@
 #
 # ConfigureMe: apply appropriate default local configuration options
 #
-# (c) 2001 Alan Robertson <alanr@unix.sh>
-# License: GNU General Public License (GPL)
+# Copyright: 2001 Alan Robertson <alanr@unix.sh>
+# License:   GNU General Public License (GPL)
 #
 Usage() {
   cat <<-!
