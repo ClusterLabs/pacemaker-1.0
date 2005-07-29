@@ -1,3 +1,10 @@
+dnl Author: Zou Yixiong (yixiong.zou@intel.com)
+dnl Copyright (c) 2004 Intel Corp.
+dnl
+dnl License: GNU General Public License (GPL)
+dnl 
+
+
 AC_DEFUN([LIB_RPM], [
     AC_MSG_CHECKING([for rpm libraries])
     AC_MSG_RESULT([])
