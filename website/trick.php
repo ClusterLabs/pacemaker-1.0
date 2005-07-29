@@ -1,8 +1,9 @@
 <!--
-Author:       Alan Robertson
-Support:      linux-ha@lists.linux-ha.org
-License:      GNU General Public License (GPL)
-Copyright:    (C) 2005 International Business Machines, Inc.
+Author:		Dmytri Kleiner <dk@trick.ca>
+Support:	linux-ha@lists.linux-ha.org
+License:	GNU General Public License (GPL)
+Copyright:	(C)2003-2004 Idiosyntactix.
+		(C)2005 International Business Machines, Inc.
 -->
 <?php
 # WikiWare - Standard Semantic Content Switcher

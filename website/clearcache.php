@@ -1,8 +1,8 @@
 <!--
-Author:       Alan Robertson
-Support: linux-ha@lists.linux-ha.org
-License:      GNU General Public License (GPL)
-Copyright:    (C) 2005 International Business Machines, Inc.
+Author:		Dmytri Kleiner <dk@trick.ca>
+License:	GNU General Public License (GPL)
+Copyright:	(C) Dmytri Kleiner <dk@trick.ca>
+		(C) 2005 International Business Machines, Inc.
 -->
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
 <html>

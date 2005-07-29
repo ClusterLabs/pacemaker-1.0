@@ -1,8 +1,8 @@
 <!--
-Author:       Alan Robertson
+Author:       Dmytri Kleiner <dk@trick.ca>
 Support:      linux-ha@lists.linux-ha.org
 License:      GNU General Public License (GPL)
-Copyright:    (C) 2005 International Business Machines, Inc.
+Copyright:    (C) 2005 Dmytri Kleiner <dk@trick.ca>
 -->
 <?php include("trick.php"); ?>
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
