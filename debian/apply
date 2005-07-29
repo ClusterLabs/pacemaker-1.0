@@ -1,4 +1,7 @@
 #!/bin/sh 
+#
+# License:      GNU General Public License (GPL)
+#
 # Apply script for managing patches for debian builts
 # Taken from debian kernel-source-2.4.27 package
 # Original Author: Herbert Xu

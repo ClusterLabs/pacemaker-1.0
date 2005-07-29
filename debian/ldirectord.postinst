@@ -1,4 +1,7 @@
 #! /bin/sh
+#
+# License: GNU General Public License (GPL)
+#
 # postinst script for ldirectord
 #
 # see: dh_installdeb(1)
