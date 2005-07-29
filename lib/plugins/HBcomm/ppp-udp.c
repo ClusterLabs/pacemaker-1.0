@@ -1,4 +1,4 @@
-/* $Id: ppp-udp.c,v 1.16 2004/10/09 01:49:42 lge Exp $ */
+/* $Id: ppp-udp.c,v 1.17 2005/07/29 07:18:55 sunjd Exp $ */
 /*
  *	ppp-udp.c:	Implements UDP over PPP for bidirectional ring
  *			heartbeats.
@@ -20,19 +20,19 @@
  *
  * Copyright (C) 1999, 2000, 2001 Alan Robertson <alanr@unix.sh>
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
- * 
- * This program is distributed in the hope that it will be useful,
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- * 
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
 /*
@@ -1222,6 +1222,9 @@ ppp_localdie(void)
 }
 /*
  * $Log: ppp-udp.c,v $
+ * Revision 1.17  2005/07/29 07:18:55  sunjd
+ * bug668: license update
+ *
  * Revision 1.16  2004/10/09 01:49:42  lge
  * 199Kb patch transforming all // I could find into /* */
  * have a lot of fun :-/
