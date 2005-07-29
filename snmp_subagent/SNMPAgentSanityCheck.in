@@ -1,4 +1,9 @@
 #!/bin/bash
+#
+# Copyright (C) 2002 Yixiong Zou (yixiong.zou@intel.com)
+# Support:      linux-ha-dev@lists.tummy.com
+# License:      GNU General Public License (GPL)
+#
 set +x
 
 #
