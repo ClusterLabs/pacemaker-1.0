@@ -1,5 +1,7 @@
 #!/bin/sh
 #
+# 	License:      GNU General Public License (GPL)
+# 	Support:      linux-ha@lists.linux-ha.org
 #
 #	This script is patterned after the Red Hat SysV init script system
 #

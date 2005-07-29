@@ -1,5 +1,7 @@
 #!/usr/bin/perl
-
+#
+# 	License:      GNU General Public License (GPL)
+# 	Support:      linux-ha@lists.linux-ha.org
 #
 #	TestCluster:  Test an HA cluster
 #
