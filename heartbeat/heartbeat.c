@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.439 2005/07/29 07:03:47 sunjd Exp $ */
+/* $Id: heartbeat.c,v 1.440 2005/07/29 23:06:46 alan Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -1441,7 +1441,7 @@ master_control_process(void)
 static void
 hb_del_ipcmsg(IPC_Message* m)
 {
-	int	refcnt = GPOINTER_TO_INT(m->msg_private);
+	int	refcnt = GPOINTER_TO_SIZE(m->msg_private);
 
 	if (DEBUGPKTCONT) {
 		cl_log(LOG_DEBUG
@@ -2780,7 +2780,7 @@ CoreProcessDied(ProcTrack* p, int status, int signo
 static const char *
 CoreProcessName(ProcTrack* p)
 {
-	int	procindex = GPOINTER_TO_INT(p->privatedata);
+	int	procindex = GPOINTER_TO_SIZE(p->privatedata);
 	volatile struct process_info *	pi = procinfo->info+procindex;
 
 	return (pi ? core_proc_name(pi->type) : "Core heartbeat process");
@@ -2905,7 +2905,7 @@ ManagedChildName(ProcTrack* p)
 void
 hb_kill_tracked_process(ProcTrack* p, void * data)
 {
-	int	nsig = GPOINTER_TO_INT(data);
+	int	nsig = GPOINTER_TO_SIZE(data);
 	int	pid = p->pid;
 	const char *	porg;
 	const char * pname;
@@ -5398,7 +5398,7 @@ IncrGeneration(seqno_t * generation)
 	if (sscanf(buf, "%lu", generation) <= 0) {
 		cl_log(LOG_WARNING, "BROKEN previous generation - starting at 1");
 		flags = O_CREAT;
-		generation = 0;
+		*generation = 0;
 	}
 	
 	++(*generation);
@@ -5496,6 +5496,9 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.440  2005/07/29 23:06:46  alan
+ * BEAM fixes NULL pointer and some truncation errors.
+ *
  * Revision 1.439  2005/07/29 07:03:47  sunjd
  * bug668: license update
  *
