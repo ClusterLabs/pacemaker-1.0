@@ -489,11 +489,14 @@ monitoredProcessDied(ProcTrack* p, int status, int signo
 		cl_log(LOG_ERR, "failed to restart the monitored program %s ,"
 			"will exit.", pname );
         	g_free(p->privatedata);	
-		cl_respawn_quit(3);
+		p->privatedata = NULL;
+		cl_respawn_quit(3);	/* Does NOT always exit */
 	}
 
-        g_free(p->privatedata);	
-	p->privatedata = NULL;
+	if (p->privatedata) {
+        	g_free(p->privatedata);	
+		p->privatedata = NULL;
+	}
 }
 
 static void
