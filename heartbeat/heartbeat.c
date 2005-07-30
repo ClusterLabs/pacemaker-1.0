@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.441 2005/07/29 23:57:55 alan Exp $ */
+/* $Id: heartbeat.c,v 1.442 2005/07/30 02:33:08 alan Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -1441,7 +1441,8 @@ master_control_process(void)
 static void
 hb_del_ipcmsg(IPC_Message* m)
 {
-	int	refcnt = GPOINTER_TO_SIZE(m->msg_private);
+	/* this is perfectly safe in our case - reference counts are small ints */
+	int	refcnt = POINTER_TO_SIZE_T(m->msg_private); /*pointer cast as int*/
 
 	if (DEBUGPKTCONT) {
 		cl_log(LOG_DEBUG
@@ -2780,7 +2781,8 @@ CoreProcessDied(ProcTrack* p, int status, int signo
 static const char *
 CoreProcessName(ProcTrack* p)
 {
-	int	procindex = POINTER_TO_SIZE_T(p->privatedata);
+	/* This is perfectly safe - procindex is a small int */
+	int	procindex = POINTER_TO_SIZE_T(p->privatedata);/*pointer cast as int*/
 	volatile struct process_info *	pi = procinfo->info+procindex;
 
 	return (pi ? core_proc_name(pi->type) : "Core heartbeat process");
@@ -2905,7 +2907,8 @@ ManagedChildName(ProcTrack* p)
 void
 hb_kill_tracked_process(ProcTrack* p, void * data)
 {
-	int	nsig = POINTER_TO_SIZE_T(data);
+	/* This is perfectly safe - procindex is a small int */
+	int	nsig = POINTER_TO_SIZE_T(data); /*pointer cast as int*/
 	int	pid = p->pid;
 	const char *	porg;
 	const char * pname;
@@ -5496,6 +5499,9 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.442  2005/07/30 02:33:08  alan
+ * Maybe I finally fixed these BEAM bugs correctly...
+ *
  * Revision 1.441  2005/07/29 23:57:55  alan
  * Trying to make some BEAM errors go away.
  * Maybe I did it right this time...
