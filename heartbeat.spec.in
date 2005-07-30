@@ -1,4 +1,4 @@
-#	$Id: heartbeat.spec.in,v 1.130 2005/07/30 00:02:25 alan Exp $
+#	$Id: heartbeat.spec.in,v 1.131 2005/07/30 03:39:38 alan Exp $
 
 # Workaround for a change in RPM 4.1.x; needs proper fixing soon!
 ##%define _unpackaged_files_terminate_build 0
@@ -78,7 +78,7 @@ implementing any number of interfaces.
 
 %changelog
 
-* Tue May 23 2005  Alan Robertson <alanr@unix.sh> (see doc/AUTHORS file)
+* Fri Jul 29 2005  Alan Robertson <alanr@unix.sh> (see doc/AUTHORS file)
 + Version 2.0.0 - First stable release of the next generation of the Linux-HA project
   + Basic Characteristics described here:
 	http://linux-ha.org/FactSheetv2
