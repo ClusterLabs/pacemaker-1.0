@@ -1,4 +1,4 @@
-#	$Id: heartbeat.spec.in,v 1.129 2005/07/27 19:21:54 alan Exp $
+#	$Id: heartbeat.spec.in,v 1.130 2005/07/30 00:02:25 alan Exp $
 
 # Workaround for a change in RPM 4.1.x; needs proper fixing soon!
 ##%define _unpackaged_files_terminate_build 0
@@ -109,6 +109,10 @@ implementing any number of interfaces.
       while stabilizing a new cluster state.  This appears to be
 	otherwise harmless - the cluster is actually fine.
 	http://www.osdl.org/developer_bugzilla/show_bug.cgi?id=770
+    - Under some rare circumstances, a dev assert will be triggered
+	in unpack.c.  This results in the pengine getting restarted.
+	This is annoying, but not a disaster.
+	http://www.osdl.org/developer_bugzilla/show_bug.cgi?id=797
 
 * Tue May 23 2005  Alan Robertson <alanr@unix.sh> (see doc/AUTHORS file)
 + Version 1.99.5 - Near-final beta of 2.0.0 release
