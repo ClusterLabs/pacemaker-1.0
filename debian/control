@@ -1,77 +1,30 @@
-Source: heartbeat
+Source: heartbeat-2
 Section: admin
 Priority: optional
 Maintainer: Simon Horman <horms@debian.org>
-Build-Depends: debhelper (>= 4.0.0), libsnmp5-dev | libsnmp4.2-dev, libglib1.2-dev, perl, net-tools, netkit-ping | iputils-ping, python, psmisc, modutils, libnet1-dev, iproute, libssl-dev, libtool, automake, libcurl3-dev, libxml2-dev, bison, flex, uuid-dev
+Build-Depends: debhelper (>= 4.0.0), libsnmp5-dev | libsnmp4.2-dev, libglib1.2-dev, perl, net-tools, netkit-ping | iputils-ping, python, psmisc, modutils, libnet1-dev, iproute, libssl-dev, libtool, automake, libcurl3-dev, libxml2-dev, bison, flex, uuid-dev, libopenipmi-dev (>= 2.0.1), lynx
 Standards-Version: 3.6.2
 
-Package: ldirectord
+Package: ldirectord-2
 Section: admin
 Priority: optional
 Architecture: all
 Depends: ${perl:Depends}, libdigest-md5-perl, libwww-perl, libnet-ssleay-perl, libmail-imapclient-perl, libdigest-hmac-perl, libnet-ldap-perl, libnet-dns-perl, libdbi-perl, ipvsadm
 Recommends: sysklogd|syslog-ng, logrotate
+Provides: ldirectord
 Description: Monitors virtual services provided by LVS
  ldirectord is a stand-alone daemon to monitor services of real
  for virtual services provided by The Linux Virtual Server
  (http://www.linuxvirtualserver.org/). It is simple to install
  and works with the heartbeat code (http://www.linux-ha.org/).
 
-Package: stonith
-Section: admin
-Priority: optional
-Architecture: any
-Depends: ${shlibs:Depends}
-Description: Interface for remotely powering down a node in the cluster
- The STONITH module (a.k.a. STOMITH) provides an extensible interface for
- remotely powering down a node in the cluster.  The idea is quite simple:
- When the software running on one machine wants to make sure another
- machine in the cluster is not using a resource, pull the plug on the
- other machine. It's simple and reliable, albeit admittedly brutal.
-
-Package: libstonith0
-Section: libs
-Priority: optional
-Architecture: any
-Depends: ${shlibs:Depends}
-Description: Interface for remotely powering down a node in the cluster
- Library to handle stonith modules and to register objects with stonith.
-
-Package: libstonith-dev
-Section: libdevel
-Priority: optional
-Architecture: any
-Depends: libstonith0 (= ${Source-Version})
-Description: Interface for remotely powering down a node in the cluster
- Headers and Libraries for developing modules to work with Stonith
-
-Package: libpils0
-Section: libs
-Priority: optional
-Architecture: any
-Depends: ${shlibs:Depends}
-Description: Plugin and Interface Loading System
- PILS is an generalized and portable open source Plugin and Interface
- Loading System. PILS was developed as part of the Open Cluster Framework
- reference implementation, and is designed to be directly usable by a wide
- variety of other applications.  PILS manages both plugins (loadable
- objects), and the interfaces these plugins implement.  PILS is designed to
- support any number of plugins implementing any number of interfaces.
-
-Package: libpils-dev
-Section: devel
-Priority: optional
-Architecture: any
-Depends: libpils0 (= ${Source-Version})
-Description: Plugin and Interface Loading System - development files
- Headers and Libraries for developing modules to work with PILS
-
-Package: heartbeat
+Package: heartbeat-2
 Section: admin
 Priority: optional
 Architecture: any
 Depends: ${shlibs:Depends}, python, iproute, adduser, netkit-ping | iputils-ping
 Recommends: sysklogd | syslog-ng | system-log-daemon, logrotate
+Provides: heartbeat libpils0 libstonith0 stonith
 Description: Subsystem for High-Availability Linux
  heartbeat is a basic heartbeat subsystem for Linux-HA.
  It will run scripts at initialisation, and when machines go up or down.
@@ -82,10 +35,11 @@ Description: Subsystem for High-Availability Linux
    * Bidirectional Serial Rings ("raw" serial ports)
    * UDP/IP broadcast (ethernet, etc)
 
-Package: heartbeat-dev
+Package: heartbeat-2-dev
 Section: devel
 Priority: optional
 Architecture: any
-Depends: heartbeat (= ${Source-Version}), libstonith-dev (= ${Source-Version})
+Depends: heartbeat (= ${Source-Version})
+Provides: heartbeat-dev, libstonith-dev libpils-dev
 Description: Subsystem for High-Availability Linux - development files
  Headers and Libraries for developing modules to work with Heartbeat

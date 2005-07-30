@@ -1,4 +1,4 @@
-heartbeat (1.99.6-1) unstable; urgency=low
+heartbeat-2 (2.0.0-1) unstable; urgency=low
 
   * New upstream
   * Added dependancy on libnet-dns-perl to ldirectord
@@ -6,8 +6,15 @@ heartbeat (1.99.6-1) unstable; urgency=low
   * Added --disable-snmp-subagent to configure arguments
   * Added --disable-swig to configure arguments
   * Add build dependancy on uuid-dev
+  * Readranged packages to allow heartbeat 1.2.X to exist in debian
+    and heartebat 2.X to be heartbeat-2 until heartbeat-2 gets
+    a bit more testing in the wild. Also consoldidated binary
+    packages into heartbaet-2, and development packages into
+    heartbeat-2-dev, ldirectord is still in its own package,
+    ldirectord2, as it drags in a lot of dependancies that
+    no other part of the system uses.
 
- -- Simon Horman <horms@debian.org>  Tue, 19 Jul 2005 00:00:18 +0200
+ -- Simon Horman <horms@debian.org>  Sat, 30 Jul 2005 16:20:55 +0900
 
 heartbeat (1.2.3-12) unstable; urgency=high
 

@@ -1,6 +1,0 @@
-usr/include/pils/generic.h
-usr/include/pils/interface.h
-usr/include/pils/plugin.h
-usr/lib/libpils.a
-usr/lib/libpils.la
-usr/lib/libpils.so

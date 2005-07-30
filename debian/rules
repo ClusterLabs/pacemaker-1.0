@@ -25,8 +25,8 @@ cfg:=--prefix=/usr --sysconfdir=/etc --localstatedir=/var \
   --mandir=/usr/share/man \
   --with-ssh-path=/usr/bin/ssh --with-scp-path=/usr/bin/ssh \
   --with-group-name=haclient --with-ccmuser-name=hacluster \
-  --disable-fatal-warnings --enable-checkpointd \
-  --disable-snmp-subagent --disable-swig
+  --enable-checkpointd --enable-bundled-ltdl --enable-crm --enable-lrm \
+  --disable-snmp-subagent --disable-fatal-warnings
 
 # These are used for cross-compiling and for saving the configure script
 # from having to guess our platform (since we know it already)
@@ -84,16 +84,16 @@ install-stamp:
 	dh_installdirs
 	$(MAKE) install DESTDIR=$(DTMP) \
 	  MAKE=make \
-	  docdir=/usr/share/doc/heartbeat 
+	  docdir=/usr/share/doc/heartbeat-2
 
 	mv $(DTMP)/usr/lib/heartbeat/cts/README \
-		$(DTMP)/usr/share/doc/heartbeat/README.cts
+		$(DTMP)/usr/share/doc/heartbeat-2/README.cts
 	find $(DTMP)/usr/share/man -type f | xargs gzip -v --best
 	install -c -m 755 heartbeat/init.d/heartbeat \
                 $(DTMP)/etc/init.d/heartbeat
-	-mkdir -p $(DTMP)/usr/share/doc/ldirectord/
+	-mkdir -p $(DTMP)/usr/share/doc/ldirectord-2/
 	install -c -m 644 ldirectord/ldirectord.cf \
-	  $(DTMP)/usr/share/doc/ldirectord/
+	  $(DTMP)/usr/share/doc/ldirectord-2/
 	-mkdir -p $(DTMP)/etc/init.d
 	install -c -m 755 ldirectord/init.d/ldirectord \
 		$(DTMP)/etc/init.d/ldirectord
@@ -134,7 +134,7 @@ binary-arch: build install
 	dh_testdir -a
 	dh_testroot -a
 	dh_installdebconf -a
-	dh_installdocs -a `pwd`/debian/heartbeat/usr/share/doc/heartbeat/README.cts
+	dh_installdocs -a
 	dh_installexamples -a
 #	dh_installmenu -a
 #	dh_installemacsen -a
@@ -144,7 +144,7 @@ binary-arch: build install
 	dh_installman -a
 #	dh_installinfo -a
 #	dh_undocumented -a
-	dh_installchangelogs -a `pwd`/debian/heartbeat/usr/share/doc/heartbeat/ChangeLog
+	dh_installchangelogs -a `pwd`/debian/heartbeat-2/usr/share/doc/heartbeat-2/ChangeLog
 	dh_link -a
 	dh_strip -a
 	dh_compress -a

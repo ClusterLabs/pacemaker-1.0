@@ -22,22 +22,18 @@ MAINTAINERCLEANFILES    = Makefile.in
 
 EXTRA_DIST		= apply changelog compat control copyright \
 			  dpkg-checkbuild rules \
-			  heartbeat-dev.dirs heartbeat-dev.files \
-			  heartbeat.dirs heartbeat.files heartbeat.postinst \
-			  heartbeat.postrm heartbeat.preinst \
-			  ldirectord.files ldirectord.postinst \
-			  ldirectord.postrm \
-			  libpils-dev.dirs libpils-dev.files \
-			  libpils0.dirs libpils0.files \
-			  libstonith-dev.dirs libstonith-dev.files \
-			  libstonith0.dirs libstonith0.files \
-			  libstonith0.postinst \
-			  stonith.files \
+			  heartbeat-2.dirs heartbeat-2.files \
+			  heartbeat-2.postinst heartbeat-2.postrm \
+			  heartbeat-2.preinst \
+			  heartbeat-2-dev.dirs heartbeat-2-dev.files \
+			  ldirectord-2.files ldirectord-2.postinst \
+			  ldirectord-2.postrm \
 			  patches/00-ssh_scp_path.patch \
 			  patches/01-conditional_build.patch \
 			  patches/02-confdir.patch \
 			  patches/03-LVM2.patch \
-			  patches/series/1.99.6-1
+			  patches/04-ipmilan-build.patch \
+			  patches/series/2.0.0-1
 
 
 clean-local:

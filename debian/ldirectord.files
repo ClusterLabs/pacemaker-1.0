@@ -1,8 +1,0 @@
-/etc/ha.d/resource.d/ldirectord
-/etc/logrotate.d/ldirectord
-/etc/init.d/ldirectord
-usr/sbin/ldirectord
-usr/sbin/supervise-ldirectord-config
-usr/share/man/man8/ldirectord.8.gz
-usr/share/man/man8/supervise-ldirectord-config.8.gz
-usr/share/doc/ldirectord/ldirectord.cf

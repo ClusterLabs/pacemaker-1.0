@@ -1,42 +1,42 @@
-Index: heartbeat/resource.d/LVM.in
+Index: ./resources/heartbeat/LVM.in
 ===================================================================
-RCS file: /home/cvs/linux-ha/linux-ha/heartbeat/resource.d/Attic/LVM.in,v
-retrieving revision 1.2.4.1
-diff -p -u -r1.2.4.1 LVM.in
---- a/resources/heartbeat/LVM.in	20 Apr 2004 05:05:29 -0000	1.2.4.1
-+++ b/resources/heartbeat/LVM.in	10 Jun 2005 07:46:28 -0000
-@@ -102,8 +102,15 @@ LVM_methods() {
+RCS file: /home/cvs/linux-ha/linux-ha/resources/heartbeat/LVM.in,v
+retrieving revision 1.1
+diff -u -r1.1 LVM.in
+--- ./resources/heartbeat/LVM.in	27 Aug 2004 09:34:14 -0000	1.1
++++ ./resources/heartbeat/LVM.in	26 Jul 2005 06:23:17 -0000
+@@ -102,8 +102,15 @@
  #
  LVM_status() {
  
 -  vgdisplay $1 | grep -i 'Status.*available' >/dev/null
 -  
 +  if 
-+    [ "$LVM_VERSION" -eq "200" ]
++    [ "$LVM_MAJOR" -eq "1" ]
 +  then
-+  	vgdisplay -v $1 | grep -i 'Status[ \t]*available' &>/dev/null
++  	vgdisplay $1 | grep -i 'Status.*available' >/dev/null
 +	return $?
 +  else
-+  	vgdisplay $1 | grep -i 'Status.*available' >/dev/null
++  	vgdisplay -v $1 | grep -i 'Status[ \t]*available' &>/dev/null
 +	return $?
 +  fi
  }
  
  #
-@@ -111,15 +118,27 @@ LVM_status() {
+@@ -111,15 +118,27 @@
  #
  LVM_report_status() {
  
 -  VGOUT=`vgdisplay $1 2>&1`
 +  if 
-+    [ "$LVM_VERSION" -eq "200" ]
++    [ "$LVM_MAJOR" -eq "1" ]
 +  then
-+  	VGOUT=`vgdisplay -v $1 2>&1`
-+	echo "$VGOUT" | grep -i 'Status[ \t]*available' >/dev/null
-+	rc=$?
-+  else
 +  	VGOUT=`vgdisplay $1 2>&1`
 +  	echo "$VGOUT" | grep -i 'Status.*available' >/dev/null
++	rc=$?
++  else
++  	VGOUT=`vgdisplay -v $1 2>&1`
++	echo "$VGOUT" | grep -i 'Status[ \t]*available' >/dev/null
 +	rc=$?
 +  fi
 +
@@ -53,114 +53,39 @@ diff -p -u -r1.2.4.1 LVM.in
    if
      echo "$VGOUT" | grep -i 'Access.*read/write' >/dev/null
    then
-@@ -155,7 +174,15 @@ LVM_monitor() {
+@@ -155,7 +174,15 @@
  LVM_start() {
  
    ha_log "Activating volume group $1"
 -  run vgscan $1
 +
 +  if 
-+    [ "$LVM_VERSION" -eq "200" ]
++    [ "$LVM_MAJOR" -eq "1" ]
 +  then
-+  	run vgscan
-+  else
 +  	run vgscan $1
++  else
++  	run vgscan
 +  fi
 +
    run vgchange -a y $1 || return 1
  
    if
-@@ -196,6 +223,15 @@ if
- then
-   LVM_methods
+@@ -198,6 +225,18 @@
    exit $?
-+fi
-+
-+LVM_VERSION=`/sbin/lvmiopversion`
+ fi
+ 
++LVM_VERSION=`vgchange --version 2>&1 | \
++	awk --source '/Logical Volume Manager/ {print $5"\n"; exit; } '\
++	    --source '/LVM version:/ {printf $3"\n"; exit;}'`
 +rc=$?
 +if 
 +  [ $rc -ne 0 ]
 +then
 +  ha_log "ERROR: LVM: $1 could not determine LVM version"
 +  return  $rc
- fi
- 
- VOLUME=$1
-
---- a/resources/OCF/LVM.in	2005-07-20 11:27:09.000000000 +0200
-+++ b/resources/OCF/LVM.in	2005-07-20 11:27:49.000000000 +0200
-@@ -139,8 +139,15 @@
- #
- LVM_status() {
- 
--  vgdisplay $1 | grep -i 'Status.*available' >/dev/null
--  
-+  if 
-+    [ "$LVM_VERSION" -eq "200" ]
-+  then
-+       vgdisplay -v $1 | grep -i 'Status[ \t]*available' &>/dev/null
-+       return $?
-+  else
-+       vgdisplay $1 | grep -i 'Status.*available' >/dev/null
-+       return $?
-+  fi
- }
- 
- #
-@@ -148,9 +155,20 @@
- #
- LVM_report_status() {
- 
--  VGOUT=`vgdisplay $1 2>&1`
-+  if 
-+    [ "$LVM_VERSION" -eq "200" ]
-+  then
-+       VGOUT=`vgdisplay -v $1 2>&1`
-+       echo "$VGOUT" | grep -i 'Status[ \t]*available' >/dev/null
-+       rc=$?
-+  else
-+       VGOUT=`vgdisplay $1 2>&1`
-+       echo "$VGOUT" | grep -i 'Status.*available' >/dev/null
-+       rc=$?
-+  fi
-+
-   if
--    echo "$VGOUT" | grep -i 'Status.*available' >/dev/null
-+    [ $rc -eq 0 ]
-   then
-     : Volume $1 is available
-   else
-@@ -194,7 +212,15 @@
- LVM_start() {
- 
-   ocf_log info "Activating volume group $1"
--  run vgscan $1
-+
-+  if 
-+    [ "$LVM_VERSION" -eq "200" ]
-+  then
-+       run vgscan
-+  else
-+       run vgscan $1
-+  fi
-+
-   run vgchange -a y $1 || return 1
- 
-   if
-@@ -246,6 +272,16 @@
-   exit $OCF_ERR_ARGS 
- fi
- 
-+LVM_VERSION=`/sbin/lvmiopversion`
-+rc=$?
-+if
-+  [ $rc -ne 0 ]
-+then
-+  ha_log "ERROR: LVM: $1 could not determine LVM version"
-+  return  $rc
 +fi
++LVM_MAJOR="${LVM_VERSION%%.*}"
 +
-+
- VOLUME=$OCF_RESKEY_volgrpname
+ VOLUME=$1
  
  # What kind of method was invoked?
