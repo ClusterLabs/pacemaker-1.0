@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $Id: LVM.in,v 1.2 2005/07/29 07:50:53 sunjd Exp $
+# $Id: LVM.in,v 1.3 2005/08/01 09:48:28 sunjd Exp $
 # 
 # LVM
 #
@@ -37,7 +37,7 @@ usage() {
   methods=`LVM_methods | grep -v methods`
   methods=`echo $methods | tr ' ' '|'`
   cat <<-! >&1
-	usage: $0 <LVM-configuration file> ($methods)
+	usage: $0 <LVM volume group> ($methods)
 	usage: $0 methods
 
 	$0 manages an  Linux Volume Manager volume (LVM) as an HA resource
@@ -48,7 +48,7 @@ usage() {
 	The 'monitor' operation reports whether the volume seems present
 	The 'methods' operation reports on the methods $0 supports
 
-	$Id: LVM.in,v 1.2 2005/07/29 07:50:53 sunjd Exp $
+	$Id: LVM.in,v 1.3 2005/08/01 09:48:28 sunjd Exp $
 	!
   exit 1
 
@@ -102,7 +102,15 @@ LVM_methods() {
 #
 LVM_status() {
 
-  vgdisplay $1 | grep -i 'Status.*available' >/dev/null
+  if 
+    [ "$LVM_MAJOR" -eq "1" ]
+  then
+    vgdisplay $1 | grep -i 'Status.*available' >/dev/null
+    return $?
+  else
+    vgdisplay -v $1 | grep -i 'Status[ \t]*available' >/dev/null
+    return $?
+  fi
   
 }
 
@@ -111,9 +119,19 @@ LVM_status() {
 #
 LVM_report_status() {
 
-  VGOUT=`vgdisplay $1 2>&1`
-  if
+  if 
+    [ "$LVM_MAJOR" -eq "1" ]
+  then
+    VGOUT=`vgdisplay $1 2>&1`
     echo "$VGOUT" | grep -i 'Status.*available' >/dev/null
+    rc=$?
+  else
+    VGOUT=`vgdisplay -v $1 2>&1`
+    echo "$VGOUT" | grep -i 'Status[ \t]*available' >/dev/null
+    rc=$?
+  fi
+  if
+    [ $rc -eq 0 ]
   then
     : Volume $1 is available
   else
@@ -155,7 +173,13 @@ LVM_monitor() {
 LVM_start() {
 
   ha_log "Activating volume group $1"
-  run vgscan $1
+  if 
+    [ "$LVM_MAJOR" -eq "1" ]
+  then
+    run vgscan $1
+  else
+    run vgscan
+  fi
   run vgchange -a y $1 || return 1
 
   if
@@ -197,6 +221,34 @@ then
   LVM_methods
   exit $?
 fi
+
+# Get the LVM version number, for this to work we assume(thanks to panjiam):
+# 
+# LVM1 outputs like this
+#
+#	# vgchange --version
+#	vgchange: Logical Volume Manager 1.0.3
+#	Heinz Mauelshagen, Sistina Software  19/02/2002 (IOP 10)
+#
+# LVM2 and higher versions output in this format
+#
+#	# vgchange --version
+#	LVM version:     2.00.15 (2004-04-19)
+#	Library version: 1.00.09-ioctl (2004-03-31)
+#	Driver version:  4.1.0
+
+LVM_VERSION=`vgchange --version 2>&1 | \
+	awk --source '/Logical Volume Manager/ {print $5"\n"; exit; } '\
+	    --source '/LVM version:/ {printf $3"\n"; exit;}'`
+rc=$?
+
+if
+  ( [ $rc -ne 0 ] || [ -z "$LVM_VERSION" ] )
+then
+  ha_log err "LVM: $1 could not determine LVM version. Try 'vgchange --version' manually and modify $0 ?"
+  exit 1
+fi
+LVM_MAJOR="${LVM_VERSION%%.*}"
 
 VOLUME=$1
 
