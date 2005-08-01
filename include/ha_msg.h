@@ -1,4 +1,4 @@
-/* $Id: ha_msg.h,v 1.61 2005/06/08 20:47:25 gshi Exp $ */
+/* $Id: ha_msg.h,v 1.62 2005/08/01 19:16:43 gshi Exp $ */
 /*
  * Intracluster message object (struct ha_msg)
  *
@@ -64,7 +64,6 @@ struct ha_msg {
 	int	nalloc;
 	size_t	stringlen;	/* #bytes needed to convert this to a string
 				 * including the '\0' character at the end. */
-	size_t  netstringlen;
 	char **	names;
 	size_t* nlens;
 	void **	values;
@@ -100,7 +99,8 @@ struct fieldtypefuncs_s{
 	int (*tostring)(char*, char*, void* ,size_t,int);
 	
 	/* print the field into the provided buffer*/
-	int (*tonetstring)(char*, char*, void*, size_t, size_t*);
+	int (*tonetstring)(char*, char*, char*, size_t,
+			   void*, size_t, int, size_t*);
 
 	/* convert the given string to a field
 	   note: this functions involves allocate memory for 
