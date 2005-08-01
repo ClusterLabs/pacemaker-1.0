@@ -1,5 +1,4 @@
 + 00-ssh_scp_path.patch 
 + 01-conditional_build.patch
 + 02-confdir.patch
-+ 03-LVM2.patch
 + 04-ipmilan-build.patch

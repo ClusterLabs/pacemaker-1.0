@@ -31,7 +31,6 @@ EXTRA_DIST		= apply changelog compat control copyright \
 			  patches/00-ssh_scp_path.patch \
 			  patches/01-conditional_build.patch \
 			  patches/02-confdir.patch \
-			  patches/03-LVM2.patch \
 			  patches/04-ipmilan-build.patch \
 			  patches/series/2.0.0-1
 
