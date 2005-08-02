@@ -23,7 +23,7 @@
 #ifndef _STONITHD_MSG_H_
 #define _STONITHD_MSG_H_
 
-#define STONITHD_SOCK VAR_LIB_D "/stonithd"
+#define STONITHD_SOCK HA_VARRUNDIR"/heartbeat"
 /* define the field name for messages stonithd used */
 #define F_STONITHD_TYPE   "stonithd"
 
