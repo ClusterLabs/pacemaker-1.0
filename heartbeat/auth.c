@@ -1,4 +1,4 @@
-/* $Id: auth.c,v 1.18 2004/09/18 23:10:50 alan Exp $ */
+/* $Id: auth.c,v 1.19 2005/08/02 15:27:52 gshi Exp $ */
 /*
  * auth.c: Authentication code for heartbeat
  *
@@ -50,7 +50,7 @@ findauth(const char * type, char ** tptr)
 
 	/* Look and see if we already have the module loaded in memory */
 	if (!g_hash_table_lookup_extended(AuthFunctions, type
-	,	(gpointer) tptr, (gpointer) &ret)) {
+	,	(gpointer*) tptr, (gpointer) &ret)) {
 
 		PIL_rc	rc;
 
@@ -294,6 +294,9 @@ parse_authfile(void)
 }
 /*
  * $Log: auth.c,v $
+ * Revision 1.19  2005/08/02 15:27:52  gshi
+ * it should be (gpointer*) instead of gpointer
+ *
  * Revision 1.18  2004/09/18 23:10:50  alan
  * Brought forward changes from 1.2 stable version.
  *
