@@ -93,8 +93,7 @@ install-exec-local:
 	$(mkinstalldirs) $(DESTDIR)$(havarrundir) 
 	$(mkinstalldirs) $(DESTDIR)$(havarlibdir)
 	$(mkinstalldirs) $(DESTDIR)$(havarrunhbdir)
-	-chmod 750 $(DESTDIR)$(havarrundir)
-	-chmod 750 $(DESTDIR)$(havarrunhbdir)
+	-chmod 755 $(DESTDIR)$(havarrunhbdir)
 
 uninstall-local:
 	-test -p $(DESTDIR)$(hafifo) && rm $(DESTDIR)$(hafifo)
