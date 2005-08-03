@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-#	$Id: SendArp.in,v 1.2 2005/07/29 07:50:53 sunjd Exp $
+#	$Id: SendArp.in,v 1.3 2005/08/03 14:37:08 horms Exp $
 #
 #	Copyright (C) 2004 Horms <horms@verge.net.au>
 #
@@ -73,10 +73,10 @@ start() {
 	    ;;
     esac
 
-    [ -r ${CONF_D}/arp_config ] && . ${CONF_D}/arp_config
-    if [ -r "${CONF_D}/arp_config:${TARGET_INTERFACE}" ]
+    [ -r ${HA_CONFDIR}/arp_config ] && . ${HA_CONFDIR}/arp_config
+    if [ -r "${HA_CONFDIR}/arp_config:${TARGET_INTERFACE}" ]
     then
-	. "${CONF_D}/arp_config:${TARGET_INTERFACE}"
+	. "${HA_CONFDIR}/arp_config:${TARGET_INTERFACE}"
     fi
 
     # Set default values

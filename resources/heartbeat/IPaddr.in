@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-#	$Id: IPaddr.in,v 1.10 2005/07/29 07:50:53 sunjd Exp $
+#	$Id: IPaddr.in,v 1.11 2005/08/03 14:37:08 horms Exp $
 #
 # License:      GNU General Public License (GPL)
 # Support:      linux-ha@lists.linux-ha.org
@@ -27,7 +27,6 @@ export LC_MESSAGES
 prefix=@prefix@
 exec_prefix=@exec_prefix@
 HA_D=@sysconfdir@/ha.d
-CONF_D=@sysconfdir@/ha.d/conf
 . ${HA_D}/shellfuncs
 
 IFCONFIG=@IFCONFIG@
@@ -568,8 +567,8 @@ ip_start() {
 
   ha_log "info: Sending Gratuitous Arp for $BASEIP on $IF [$TARGET_INTERFACE]"
 
-  [ -r ${CONF_D}/arp_config ] && . ${CONF_D}/arp_config
-  [ -r "${CONF_D}/arp_config:${TARGET_INTERFACE}" ] && . "${CONF_D}/arp_config:${TARGET_INTERFACE}"
+  [ -r ${HA_CONFDIR}/arp_config ] && . ${HA_CONFDIR}/arp_config
+  [ -r "${HA_CONFDIR}/arp_config:${TARGET_INTERFACE}" ] && . "${HA_CONFDIR}/arp_config:${TARGET_INTERFACE}"
 
   # Set default values (can be overridden as described above)
 
@@ -663,7 +662,7 @@ ip_monitor() {
 
 usage() {
   echo $USAGE >&2
-  echo "$Id: IPaddr.in,v 1.10 2005/07/29 07:50:53 sunjd Exp $"
+  echo "$Id: IPaddr.in,v 1.11 2005/08/03 14:37:08 horms Exp $"
 }
 
 #
@@ -712,6 +711,9 @@ exit $?
 #
 #
 # $Log: IPaddr.in,v $
+# Revision 1.11  2005/08/03 14:37:08  horms
+# standardise confdir in scripts
+#
 # Revision 1.10  2005/07/29 07:50:53  sunjd
 # bug668: license update
 #

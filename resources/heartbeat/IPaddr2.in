@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-#	$Id: IPaddr2.in,v 1.5 2005/07/29 07:50:53 sunjd Exp $
+#	$Id: IPaddr2.in,v 1.6 2005/08/03 14:37:08 horms Exp $
 #
 #	Copyright (C) 2003 Tuomo Soini <tis@foobar.fi>
 #
@@ -257,10 +257,10 @@ run_send_arp() {
     #
     # Run send_arp to note peers about new mac address
     #
-    [ -r ${CONF_D}/arp_config ] && . ${CONF_D}/arp_config
-    if [ -r "${CONF_D}/arp_config:${TARGET_INTERFACE}" ]
+    [ -r ${HA_CONFDIR}/arp_config ] && . ${HA_CONFDIR}/arp_config
+    if [ -r "${HA_CONFDIR}/arp_config:${TARGET_INTERFACE}" ]
     then
-	. "${CONF_D}/arp_config:${TARGET_INTERFACE}"
+	. "${HA_CONFDIR}/arp_config:${TARGET_INTERFACE}"
     fi
 
     # Set default values (can be overridden as described above)

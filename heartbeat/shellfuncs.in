@@ -9,6 +9,7 @@ prefix=@prefix@
 exec_prefix=@exec_prefix@
 : ${HA_DIR:=@sysconfdir@/ha.d}
 : ${HA_RCDIR:=$HA_DIR/rc.d}
+: ${HA_CONFDIR=$HA_DIR/conf}
 : ${HA_CF:=$HA_DIR/ha.cf}
 : ${HA_VARLIB:=@localstatedir@/lib/heartbeat}
 : ${HA_RSCTMP:=@localstatedir@/lib/heartbeat/rsctmp}
