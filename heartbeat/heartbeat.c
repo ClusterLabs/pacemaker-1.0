@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.442 2005/07/30 02:33:08 alan Exp $ */
+/* $Id: heartbeat.c,v 1.443 2005/08/03 14:11:48 alan Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -945,7 +945,7 @@ read_child(struct hb_media* mp)
 {
 	IPC_Channel* ourchan =	mp->rchan[P_READFD];
 	int		nullcount=0;
-	const int	maxnullcount=100;
+	const int	maxnullcount=10000;
 
 	if (hb_signal_set_read_child(NULL) < 0) {
 		cl_log(LOG_ERR, "read_child(): hb_signal_set_read_child(): "
@@ -5499,6 +5499,10 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.443  2005/08/03 14:11:48  alan
+ * Require a lot of failures in a row before we actually exit - since
+ * exiting causes a restart.
+ *
  * Revision 1.442  2005/07/30 02:33:08  alan
  * Maybe I finally fixed these BEAM bugs correctly...
  *
