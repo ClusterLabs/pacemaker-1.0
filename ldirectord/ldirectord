@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-my($VERSION)=(qw$Id: ldirectord,v 1.113 2005/08/03 06:45:43 horms Exp $)[2];
+my($VERSION)=(qw$Id: ldirectord,v 1.114 2005/08/03 11:38:40 horms Exp $)[2];
 
 ######################################################################
 # ldirectord                 http://www.vergenet.net/linux/ldirectord/
@@ -1799,13 +1799,13 @@ sub check_pop
 		if (!defined($num)) {
 			$pop->quit();
 			service_set($v, $r, "down");
-			return 1;
+			return 0;
 		}
 	}
 		
 	$pop->quit();
 	service_set($v, $r, "up");
-	return 0;
+	return 1;
 }
 
 
@@ -1854,14 +1854,14 @@ sub check_ldap
 	if(!$ldap) {
 		service_set($v, $r, "down");
 		&ld_debug(4, "Connection failed");
-		return 0;
+		return 1;
 	}
 		
 	my $mesg = $ldap->bind ;
 	if ($mesg->is_error) {
 		service_set($v, $r, "down");
 		&ld_debug(4, "Bind failed");
-		return 0;
+		return 1;
 	}
 
 	&ld_debug(4, "Base : " . substr($$r{request},1));
@@ -1874,7 +1874,7 @@ sub check_ldap
 	if($result->count != 1) {
 		service_set($v, $r, "down");
 		&ld_debug(2, "Count failed : " . $result->count);
-		return 0;
+		return 1;
 	}
 		
 	my $href = $result->as_struct;
@@ -1882,12 +1882,12 @@ sub check_ldap
 	my $recstr = $$r{receive} ;
 	if (!($recstr =~ /.+/) || @arrayOfDNs[0] =~ /$recstr/) {
 		service_set($v, $r, "up");
-		return 1;
+		return 0;
 	} else {
 		service_set($v, $r, "down");
 		&ld_debug(4,"Message differs : " . ", " . $$r{receive} 
 				. ", " . @arrayOfDNs[0] . ".");
-		return 0;
+		return 1;
 	}
 }
 
@@ -1974,10 +1974,10 @@ sub check_https
 	&ld_debug(2, "Status: $status");
 	if ($status ne 0) {
 		service_set($v, $r, "down");
-		return 0;
+		return 1;
 	}
 	service_set($v, $r, "up");
-	return 1;
+	return 0;
 }
 
 
@@ -1991,6 +1991,7 @@ sub check_nntp
         my $s;
         my $buf;
 	my $port=(defined $$v{checkport}?$$v{checkport}:$$r{port});
+	my $status = 1;
 
 	&ld_debug(2, "Checking nntp server=$$r{server} port=$port");
 	
@@ -1998,7 +1999,7 @@ sub check_nntp
                 PeerPort => $port, Proto => 'tcp',
                 TimeOut => $$v{negotiatetimeout})) {
                 service_set($v, $r, "down");
-                return 0;
+                return 1;
         }
         $s = IO::Select->new();
         $s->add($sock);
@@ -2008,6 +2009,7 @@ sub check_nntp
                 sysread($sock, $buf, 64);
                 if ($buf =~ /^2/) {
                         service_set($v, $r, "up");
+			$status = 0;
                 } else {
                         service_set($v, $r, "down");
                 }
@@ -2015,17 +2017,17 @@ sub check_nntp
         $s->remove($sock);
         $sock->close;
 
-        return 0;
+        return $status;
 }
 
 sub check_mysql
 {
-	check_sql(@_, "mysql", "database");
+	return check_sql(@_, "mysql", "database");
 }
 
 sub check_pgsql
 {
-	check_sql(@_, "Pg", "dbname");
+	return check_sql(@_, "Pg", "dbname");
 }
 
 sub check_sql
@@ -2102,11 +2104,11 @@ sub check_connect
 	if ($@) {
 		&service_set($v, $r, "down");
 		&ld_debug(3, "Deactivated service $$r{server}:$$r{port}: $@");
-		return 0;
+		return 1;
 	} else {
 		&service_set($v, $r, "up");
 		&ld_debug(3, "Activated service $$r{server}:$$r{port}");
-		return 1;
+		return 0;
 	}
 }
 
@@ -2125,8 +2127,7 @@ sub check_ftp
 
 	unless ($ftp = Net::FTP->new("$$r{server}:$port", 
 			Timeout=>$$v{negotiatetimeout})) {
-		service_set($v, $r, "down");
-		return 0;
+		service_set($v, $r, "down");OB	return 0;
 	}
 	$ftp->login($$v{login}, $$v{passwd});
 	$ftp->cwd("/");
@@ -2142,11 +2143,11 @@ sub check_ftp
 
 	if ($memory =~ /$$r{receive}/) {
 		service_set($v, $r, "up");
-		return 1;
+		return 0;
 	}
 
 	service_set($v, $r, "down");
-	return 0;
+	return 1;
 }
 
 
@@ -2186,19 +2187,19 @@ sub check_dns
  
 	if (@$ eq "timeout\n" or ! $query) {
 		 service_set($v,$r,"down");
-		 return 0;
+		 return 1;
 	}
  
 	foreach $rr ($query->answer) {
 	        if (($rr->type eq "A" and $rr->address eq $$r{"receive"}) or
 	            ($rr->type eq "PTR" and $rr->ptrdname eq $$r{"receive"})) {
 	         	service_set($v,$r,"up");
-	         	return 1;
+	         	return 0;
 		}
         }
  
 	service_set($v,$r,"down");
-	return 0;
+	return 1;
 }
 
 
@@ -2217,7 +2218,7 @@ sub check_ping
 		if ($p->ping($$r{server}, $$v{"checktimeout"})) {
     			&ld_debug(2, "pong from $$r{server}\n");
 			service_set($v,$r,"up");
-			return;
+			return 0;
 		}
   		&ld_debug(2, "ping to $$r{server} timed out " .
 					"(attempt " .  ($attempt + 1) . "/" . 
@@ -2225,7 +2226,7 @@ sub check_ping
 	}
 
 	service_set($v,$r,"down");
-	return;
+	return 1;
 }
 
 
@@ -2240,7 +2241,7 @@ sub check_none
 	&ld_debug(2, "Checking none");
 	
 	service_set($v, $r, "up");
-	return 1;
+	return 0;
 }
 
 
