@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-my($VERSION)=(qw$Id: ldirectord,v 1.112 2005/08/03 06:36:10 horms Exp $)[2];
+my($VERSION)=(qw$Id: ldirectord,v 1.113 2005/08/03 06:45:43 horms Exp $)[2];
 
 ######################################################################
 # ldirectord                 http://www.vergenet.net/linux/ldirectord/
@@ -1439,7 +1439,7 @@ sub ld_read_ipvsadm
 
 	# read status of current ipvsadm -L -n
 	unless(open(IPVS, "$IPVSADM -L -n |")){
-          &ld_exit(1, "Could not run $IPVSADM -L -n");
+          &ld_exit(1, "Could not run $IPVSADM -L -n: $!");
         }
 	$_ = <IPVS>; $_ = <IPVS>; $_ = <IPVS>;
 
@@ -2802,7 +2802,7 @@ sub system_wrapper
         &ld_log("Running system(@args)") if $DEBUG>2;
 	$status = system(@args);
 	if($status != 0) {
-		&ld_log("system(@args) failed");
+		&ld_log("system(@args) failed: $!");
 	}
 
 	return($status)
