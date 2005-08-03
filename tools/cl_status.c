@@ -42,6 +42,7 @@
 #include <syslog.h>
 #include <glib.h>
 #include <clplumbing/cl_log.h>
+#include <clplumbing/cl_malloc.h>
 #include <hb_api.h>
 
 
@@ -210,7 +211,7 @@ static const char * simple_help_screen =
 "	List the nodes of a given type.\n"
 "rscstatus\n"
 "	Show the status of cluster resources.\n"
-"hbparamter -p <parameter-name>\n"
+"hbparameter -p <parameter-name>\n"
 "	Retrieve the value of a cluster parameter.\n"
 "	As for the valid parameter names, please refer to the man page.\n";
 
@@ -675,7 +676,7 @@ hbparameter(ll_cluster_t *hb, int argc, char ** argv, const char * optstr)
 			} else {
 				printf("%s\n",pvalue);
 			}
-			free(pvalue);
+			cl_free(pvalue);
 		}
 		g_free(paramname);
 	} else {
