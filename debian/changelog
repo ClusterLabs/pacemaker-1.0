@@ -1,3 +1,9 @@
+heartbeat-2 (2.0.0-2) unstable; urgency=low
+
+  * Add /var/lib/heartbeat/ccm and /var/lib/heartbeat/cores
+
+ -- Simon Horman <horms@debian.org>  Wed,  3 Aug 2005 22:54:35 +0900
+
 heartbeat-2 (2.0.0-1) unstable; urgency=low
 
   * New upstream

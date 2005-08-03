@@ -20,6 +20,8 @@ var/lib/heartbeat
 var/lib/heartbeat/api
 var/lib/heartbeat/casual
 var/lib/heartbeat/ccm
+var/lib/heartbeat/cores
+var/lib/heartbeat/crm
 var/lib/heartbeat/ckpt
 var/lock/subsys
 var/run
