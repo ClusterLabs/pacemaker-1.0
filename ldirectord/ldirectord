@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-my($VERSION)=(qw$Id: ldirectord,v 1.111 2005/07/29 14:32:42 sunjd Exp $)[2];
+my($VERSION)=(qw$Id: ldirectord,v 1.112 2005/08/03 06:36:10 horms Exp $)[2];
 
 ######################################################################
 # ldirectord                 http://www.vergenet.net/linux/ldirectord/
@@ -686,6 +686,7 @@ sub read_config
 	undef $checksum;
 	$SUPERVISED = 0;
 	$stattime = 0;
+	my %virtual_seen;
 	open(CFGFILE, "<$CONFIG") or
 		&config_error(0, "can not open file $CONFIG");
 	my $line = 0;
@@ -696,21 +697,26 @@ sub read_config
 			my $vattr = $1;
 			my $ip_port = undef;
 			my $fwm = undef;
+			my $virtual_id;
 			my $virtual_line = $line;
 			my $fallback_line;
 			my @rsrv_todo;
 			if ($vattr =~ /^(\d+\.\d+\.\d+\.\d+):([0-9A-Za-z]+)/) {
-				$ip_port = "$1:$2";
+				$virtual_id = $ip_port = "$1:$2";
 			} elsif ($vattr =~ /^([0-9A-Za-z._+-]+):([0-9A-Za-z]+)/) {
-				$ip_port = "$1:$2";
+				$virtual_id = $ip_port = "$1:$2";
 			} elsif ($vattr =~ /^(\d+)/){
-				$fwm = $1;
-			}
-
-			unless($ip_port or $fwm) {
+				$virtual_id = $fwm = $1;
+			} else {
 				&config_error($line, 
 					"invalid address for virtual server");
 			}
+
+			if (defined $virtual_seen{$virtual_id}) {
+				&config_error($line, 
+					"duplicate virtual server");
+			}
+			$virtual_seen{$virtual_id} = 1;
 
 			my (%vsrv, @rsrv);
 			if ($ip_port) {
