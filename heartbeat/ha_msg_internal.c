@@ -1,4 +1,4 @@
-/* $Id: ha_msg_internal.c,v 1.55 2005/07/29 06:55:37 sunjd Exp $ */
+/* $Id: ha_msg_internal.c,v 1.56 2005/08/03 18:02:51 gshi Exp $ */
 /*
  * ha_msg_internal: heartbeat internal messaging functions
  *
@@ -271,6 +271,7 @@ isauthentic(const struct ha_msg * m)
 			ha_log(LOG_WARNING
 			,	"Bad/invalid auth token, authtoken=%p"
 			,	authtoken);
+			cl_log_message(LOG_INFO, m);
 		}
 		return(0);
 	}
@@ -413,6 +414,9 @@ main(int argc, char ** argv)
 #endif
 /*
  * $Log: ha_msg_internal.c,v $
+ * Revision 1.56  2005/08/03 18:02:51  gshi
+ * print out the message if authentication failed
+ *
  * Revision 1.55  2005/07/29 06:55:37  sunjd
  * bug668: license update
  *
