@@ -18,19 +18,16 @@
 # Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #
 
-if SWIG_BUILD
-
 noinst_DATA = .made_mod
 
 MAINTAINERCLEANFILES    = Makefile.in
 
 EXTRA_DIST      = \
+	.cvsignore \
 	Makefile.PL.in Makefile.PL \
 	cl_log_wrappers.c cl_log_wrappers.h \
 	cl_raw.i \
-	ipc_wrappers.c ipc_wrappers.h \
-	lib/heartbeat/clplumbing/ipc.pm \
-	lib/heartbeat/clplumbing/log.pm
+	ipc_wrappers.c ipc_wrappers.h
 
 INCLUDES = -I$(top_builddir)/include -I$(top_srcdir)/include \
 	-I$(top_builddir)/linux-ha -I$(top_srcdir)/linux-ha  \
@@ -63,5 +60,3 @@ CLEANFILES = .made_mod cl_raw.pm cl_raw_wrap.c
 clean-local:
 	if test -f Makefile.perl; then $(MAKE) -fMakefile.perl realclean; fi
 	rm -f Makefile.perl Makefile.perl.old
-
-endif

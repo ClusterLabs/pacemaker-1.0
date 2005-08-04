@@ -29,7 +29,6 @@ EXTRA_DIST		= apply changelog compat control copyright \
 			  ldirectord-2.files ldirectord-2.postinst \
 			  ldirectord-2.postrm \
 			  patches/00-ssh_scp_path.patch \
-			  patches/01-conditional_build.patch \
 			  patches/series/2.0.0-1
 
 

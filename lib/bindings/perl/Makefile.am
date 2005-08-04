@@ -19,17 +19,16 @@
 #
 
 
-EXTRA_DIST =	.cvsignore Makefile.PL.in MANIFEST test.pl 	\
-		cl_raw/.cvsignore				\
-		cl_raw/Makefile.PL.in cl_raw/Makefile.PL 	\
-		cl_raw/cl_log_wrappers.c			\
-		cl_raw/cl_log_wrappers.h  cl_raw/cl_raw.i 	\
-		cl_raw/ipc_wrappers.c cl_raw/ipc_wrappers.h	\
-		lib/heartbeat/clplumbing/ipc.pm			\
+EXTRA_DIST =	.cvsignore Makefile.PL.in MANIFEST test.pl \
+		lib/heartbeat/clplumbing/ipc.pm \
 		lib/heartbeat/clplumbing/log.pm
 
 MAINTAINERCLEANFILES    = Makefile.in
 
+if SWIG_BUILD
+SWIG_DIR = cl_raw
+endif
+
 ## Subdirectories...
 SUBDIRS			=  	\
-	cl_raw
+	$(SWIG_DIR)

@@ -50,7 +50,6 @@ mibsdir			= @MIBS_DIR@
 mibs_DATA		= LINUX-HA-MIB.mib
 DIST_LIST		= SNMPAgentSanityCheck.in $(mibs_DATA)
 
-if SNMP_SUBAGENT_BUILD
 EXTRA_DIST		= $(DIST_LIST)
 
 
@@ -81,7 +80,3 @@ hbagent_LDFLAGS		= @SNMP_LIBS@
 # test cases
 testdir			= $(libdir)/heartbeat
 test_SCRIPTS		= $(test_scrs)
-
-else
-EXTRA_DIST		= $(DIST_LIST)	$(hbagent_srces) $(test_scrs)
-endif
