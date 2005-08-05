@@ -38,4 +38,6 @@ halib_PROGRAMS		= send_arp
 
 send_arp_SOURCES	= send_arp.c
 send_arp_LDADD	 	= $(top_builddir)/lib/clplumbing/libplumb.la	\
-			$(gliblib) -L$(libdir) @LIBNETLIBS@
+			$(gliblib) -L$(libdir) @LIBNETLIBS@	\
+			  $(top_builddir)/lib/pils/libpils.la
+

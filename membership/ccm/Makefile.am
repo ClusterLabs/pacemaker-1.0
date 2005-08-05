@@ -70,14 +70,18 @@ ccm_SOURCES	= ccm.c \
 
 ccm_LDADD	= $(top_builddir)/lib/clplumbing/libplumb.la	\
 		$(top_builddir)/lib/hbclient/libhbclient.la  	\
-		$(gliblib) 
+		$(gliblib) \
+		  $(top_builddir)/lib/pils/libpils.la
+
 
 ccm_LDFLAGS		= 
 
 ccm_testclient_SOURCES	= ccm_testclient.c
 ccm_testclient_LDADD	= libccmclient.la \
 			  $(top_builddir)/lib/clplumbing/libplumb.la \
-			  $(gliblib) 
+			  $(gliblib) \
+			  $(top_builddir)/lib/pils/libpils.la
+
 
 libccmclient_la_SOURCES	= ccmlib_memapi.c ccmlib_eventapi.c ccmlib.h
 libccmclient_la_LDFLAGS	= -version-info 1:0:0
@@ -98,7 +102,9 @@ libclm_la_LDFLAGS	= -version-info 1:0:0
 clmtest_SOURCES		= clmtest.c
 clmtest_LDADD		= libclm.la libccmclient.la \
 			  $(top_builddir)/lib/clplumbing/libplumb.la \
-			  $(gliblib)
+			  $(gliblib)\
+			  $(top_builddir)/lib/pils/libpils.la
+
 
 ## additional Makefile targets
 # additional installations not covered normally
