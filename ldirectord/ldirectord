@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-my($VERSION)=(qw$Id: ldirectord,v 1.117 2005/08/05 06:12:28 horms Exp $)[2];
+my($VERSION)=(qw$Id: ldirectord,v 1.118 2005/08/05 06:15:47 horms Exp $)[2];
 
 ######################################################################
 # ldirectord                 http://www.vergenet.net/linux/ldirectord/
@@ -238,14 +238,14 @@ checking will take place and no real or fallback servers will be activated.
 On means no checking will take place and real servers will always be
 activated. Default is I<negotiate>.
 
-B<service = ftp>|B<smtp>|B<http>|B<pop>|B<nntp>|B<imap>|B<ldap>|B<https>|B<dns>|B<mysql>|B<pgsql>B<none>
+B<service = ftp>|B<smtp>|B<http>|B<pop>|B<nntp>|B<imap>|B<ldap>|B<https>|B<dns>|B<mysql>|B<pgsql>|B<sip>|B<none>
 
 The type of service to monitor when using checktype=negotiate. None denotes
 a service that will not be monitored. If the port specfied for the virtual
-server is 21, 25, 80, 110, 119, 143, 389, 443 or 3306, the default B<ftp>,
-B<smtp>, B<http>, B<pop>, B<nntp>, B<imap>, B<ldap>, B<https>, B<mysql> or
-B<pgsql> respectivly.
-Otherwise the default service is B<none>.
+server is 21, 25, 53, 80, 110, 119, 143, 389, 443, 3306, 5432 or 5060 then
+the default is B<ftp>, B<smtp>, B<dns>, B<http>, B<pop>, B<nntp>, B<imap>,
+B<ldap>, B<https>, B<mysql>, B<pgsql> or B<sip> respectivly.  Otherwise the
+default service is B<none>.
 
 B<checkport = >I<n>
 
@@ -299,13 +299,18 @@ For FTP, the default is anonymous. For POP and IMAP, the default is the
 empty string, in which case authentication will not be attempted.
 For a MySQL and PostgreSQL, the username must be provided.
 
+For SIP the username is used as both the to and from address
+for an OPTIONS query. If unset it defaults to ldirectord\@<hostname>,
+hostname is derived as per the passwd option below.
+
 B<passwd = ">I<password>B<">
 
 Password to use to login to FTP, POP, IMAP, MySQL and PostgreSQL servers.
-Default is for FTP is ldirectord\@<hostname>, where hostname is the environment
-variable HOSTNAME evaluated at run time. The default for all other
-services is an empty password, in the case of MySQL and PostgreSQL
-this means authentication will not be performed.
+Default is for FTP is ldirectord\@<hostname>, where hostname is the
+environment variable HOSTNAME evaluated at run time, or sourced from uname
+if unset. The default for all other services is an empty password, in the
+case of MySQL and PostgreSQL this means authentication will not be
+performed.
 
 B<database = ">I<databasename>B<">
 
@@ -391,6 +396,7 @@ use vars qw(
 	    @OLDVIRTUAL
 	    @REAL
 	    @VIRTUAL
+	    $HOSTNAME
 
 	    $CRLF
 );
@@ -489,6 +495,15 @@ sub ld_init
 
 	# HUP is actually used
 	$SIG{'HUP'} = \&ld_handler_hup;
+
+	if (defined $ENV{HOSTNAME}) {
+		$HOSTNAME = "$ENV{HOSTNAME}";
+	}
+	else {
+		use POSIX "uname";
+		my ($s, $n, $r, $v, $m) = uname;
+		$HOSTNAME = $n;
+	}
 
 	# search for the correct configuration file
 	if ( !defined $ARGV[0] ) {
@@ -853,17 +868,20 @@ sub read_config
 					}
 				} elsif ($rcmd =~ /^service\s*=\s*(.*)/) {
 					lc($1);
-					$1 =~ /(\w+)/ && ($1 eq "http" || $1 eq "https" || $1 eq "ldap"
-					    || $1 eq "ftp" || $1 eq "none" || $1 eq "smtp" || $1 eq "pop" || $1 eq "imap" || $1 eq "nntp" || $1 eq "dns" || $1 eq "mysql" || $1 eq "pgsql")
-					    or &config_error($line, "service must be http, https, ftp, smtp, pop, imap, ldap, nntp, dns, mysql, pgsql or none");
+					$1 =~ /(\w+)/ && ($1 eq "http" || $1 eq "https" || $1 eq "ldap" || $1 eq "ftp" || $1 eq "none" || $1 eq "smtp" || $1 eq "pop" || $1 eq "imap" || $1 eq "nntp" || $1 eq "dns" || $1 eq "mysql" || $1 eq "pgsql" || $1 eq "sip")
+					    or &config_error($line, "service must be http, https, ftp, smtp, pop, imap, ldap, nntp, dns, mysql, pgsql, sip, or none");
 					$vsrv{service} = $1;
 					if($vsrv{service} eq "ftp" and 
 							$vsrv{login} eq "") {
 						$vsrv{login} = "anonymous";
 					}
+					elsif($vsrv{service} eq "sip" and 
+							$vsrv{login} eq "") {
+						$vsrv{login} = "ldirectord\@$HOSTNAME";
+					}
 					if($vsrv{service} eq "ftp" and 
 							$vsrv{passwd} eq "") {
-						$vsrv{passwd} = "ldirectord\@$ENV{HOSTNAME}";
+						$vsrv{passwd} = "ldirectord\@$HOSTNAME";
 					}
 				} elsif ($rcmd =~ /^httpmethod\s*=\s*(.*)/) {
 					$1 =~ /(\w+)/ && (uc($1) eq "GET" || uc($1) eq "HEAD")
@@ -1039,6 +1057,9 @@ sub _ld_read_config_virtual_resolve
 			} 
 			elsif ($vsrv->{port} eq "5432") {
 				$vsrv->{service} = "pgsql";
+			} 
+			elsif ($vsrv->{port} eq "5060") {
+				$vsrv->{service} = "sip";
 			} 
 			else {
 				$vsrv->{service} = "none";
@@ -1630,6 +1651,8 @@ sub ld_main
 						$$r{num_connects} = 0 if (check_nntp($v, $r));
 					} elsif ($$v{service} eq "dns") {
 						$$r{num_connects} = 0 if (check_dns($v, $r));
+					} elsif ($$v{service} eq "sip") {
+						$$r{num_connects} = 0 if (check_sip($v, $r));
 					} elsif ($$v{service} eq "mysql") {
 						$$r{num_connects} = 0 if (check_mysql($v, $r));
 					} elsif ($$v{service} eq "pgsql") {
@@ -1972,16 +1995,109 @@ sub check_connect
 		local $SIG{'ALRM'} = sub { die "Timeout Alarm" };
 		&ld_debug(4, "Timeout is $$v{checktimeout}");
 		alarm $$v{checktimeout};
-		my $result = &ld_open_socket($$r{server}, $port, $$v{protocol});
-		if ($result == 0) {
-			# Failure to open the socket
-			alarm(0);
-			die("Couldn't open socket to $$r{server}:$port");
-		} else {
-			&ld_debug(3, "Connected to $1 (port $port)");
+		# N.B: ld_open_socket dies on error, which
+		#      will throw us out of the eval
+		my $sock = &ld_open_socket($$r{server}, $port, $$v{protocol});
+		if ($sock) {
+			close($sock);
 		}
+		&ld_debug(3, "Connected to $1 (port $port)");
 		alarm 0; # Cancel the alarm
 	};
+	if ($@) {
+		&service_set($v, $r, "down");
+		&ld_debug(3, "Deactivated service $$r{server}:$$r{port}: $@");
+		return 0;
+	} else {
+		&service_set($v, $r, "up");
+		&ld_debug(3, "Activated service $$r{server}:$$r{port}");
+		return 1;
+	}
+}
+
+
+sub check_sip
+{
+	my ($v, $r) = @_;
+	my $sip_d_port=(defined $$v{checkport}?$$v{checkport}:$$r{port});
+
+	&ld_debug(2, "Checking sip server=$$r{server} port=$sip_d_port");
+	
+
+	eval {
+		use Socket;
+
+		local $SIG{'__DIE__'} = "DEFAULT";
+		local $SIG{'ALRM'} = sub { die "Timeout Alarm" };
+		&ld_debug(4, "Timeout is $$v{checktimeout}");
+		alarm $$v{checktimeout};
+
+		# N.B: ld_open_socket dies on error, which
+		#      will throw us out of the eval
+		my $sock = &ld_open_socket($$r{server}, $sip_d_port, 
+					$$v{protocol});
+
+		my $sip_sockaddr = getsockname($sock);
+		my ($sip_s_port, $sip_s_addr) = sockaddr_in($sip_sockaddr);
+		my $sip_s_addr_str = inet_ntoa($sip_s_addr);
+
+		&ld_debug(3, "Connected from $sip_s_addr_str:$sip_s_port to " .
+			$$r{server} . ":$sip_d_port");
+
+		select $sock;
+		$|=1;
+		select STDOUT;
+
+		my $request = 
+		"OPTIONS sip:" . $$v{login} . " SIP/2.0\r\n" .
+		"Via: SIP/2.0/UDP $sip_s_addr_str:$sip_s_port;" .
+			"branch=z9hG4bKhjhs8ass877\r\n" .
+		"Max-Forwards: 70\r\n" .
+		"To: <sip:" . $$v{login} . ">\r\n" .
+		"From: <sip:" . $$v{login} . ">;tag=1928301774\r\n" .
+		"Call-ID: a84b4c76e66710\r\n" .
+		"CSeq: 63104 OPTIONS\r\n" .
+		"Contact: <sip:" . $$v{login} . ">\r\n" .
+		"Accept: application/sdp\r\n" .
+		"Content-Length: 0\r\n\r\n";
+
+		print "Request:\n$request";
+		print $sock $request;
+
+		my $ok;
+		my $reply;
+		while (<$sock>) {
+			chomp;
+			$/="\r";
+	 		chomp;
+			$/="\n";
+	
+			last if ($_ eq "");
+
+			if (!defined $ok) {
+				# Check status
+				$ok = $_;
+				if ($ok !~ m/^SIP\/2.0 200 OK/) {
+					alarm 0; # Cancel the alarm
+				       close($sock);
+					die "$ok\n";
+				}
+				next;
+			}
+			$reply .= "$_\n";
+
+			# Add more checks here as desired
+		}
+		alarm 0; # Cancel the alarm
+		close($sock);
+
+		if (!defined $ok) {
+			die "No OK\n";
+		}
+
+		print "Reply:\n$ok\n$reply\n";
+	};
+
 	if ($@) {
 		&service_set($v, $r, "down");
 		&ld_debug(3, "Deactivated service $$r{server}:$$r{port}: $@");
@@ -2984,14 +3100,22 @@ sub ld_open_socket
 {
 	my ($remote, $port, $protocol) = @_;
 	my ($iaddr, $paddr, $pro, $result);
+	local *SOCK;
 
 	$iaddr = inet_aton($remote) || die "no host: $remote";
 	$paddr = sockaddr_in($port, $iaddr);
 	$pro = getprotobyname($protocol);
-	socket(SOCK, PF_INET, SOCK_STREAM, $pro) || die "socket: $!";
+	if ($protocol eq "udp") {
+		socket(SOCK, PF_INET, SOCK_DGRAM, $pro) || die "socket: $!";
+	}
+	else {
+		socket(SOCK, PF_INET, SOCK_STREAM, $pro) || die "socket: $!";
+	}
 	$result = connect(SOCK, $paddr);
-	close(SOCK) || die "close: $!" if ($result);
-	return $result;
+	unless ($result) {
+		return undef;
+	}
+	return *SOCK;
 }
 
 
