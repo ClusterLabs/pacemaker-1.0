@@ -1,4 +1,4 @@
-/* $Id: hb_api.h,v 1.34 2005/05/10 20:18:02 gshi Exp $ */
+/* $Id: hb_api.h,v 1.35 2005/08/05 19:40:13 gshi Exp $ */
 /*
  * Client-side Low-level clustering API for heartbeat.
  *
@@ -404,6 +404,8 @@ struct llc_ops {
 #define KEY_STONITH	"stonith"
 #define KEY_STONITHHOST "stonith_host"
 #define KEY_CLIENT_CHILD "respawn"
+#define KEY_COMPRESSION "compression"
+#define KEY_COMPRESSION_THRESHOLD "compression_threshold"
 #define KEY_RT_PRIO	"rtprio"
 #define KEY_GEN_METH	"hbgenmethod"
 #define KEY_REALTIME	"realtime"

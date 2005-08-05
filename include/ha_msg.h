@@ -1,4 +1,4 @@
-/* $Id: ha_msg.h,v 1.62 2005/08/01 19:16:43 gshi Exp $ */
+/* $Id: ha_msg.h,v 1.63 2005/08/05 19:40:13 gshi Exp $ */
 /*
  * Intracluster message object (struct ha_msg)
  *
@@ -28,7 +28,7 @@
 #include <clplumbing/ipc.h>
 #include <clplumbing/longclock.h>
 #include <clplumbing/cl_uuid.h>
-
+#include <compress.h>
 
 enum cl_netstring_type{
 	FT_STRING,
@@ -117,8 +117,9 @@ struct fieldtypefuncs_s{
 
 extern struct fieldtypefuncs_s fieldtypefuncs[4];
 
-#define MSG_NEEDAUTH	0x01
-#define MSG_ALLOWINTR	0X02
+#define MSG_NEEDAUTH		0x01
+#define MSG_ALLOWINTR		0X02
+#define MSG_NEEDCOMPRESS	0x04
 
 #define	IFACE		"!^!\n"  
 #define	MSG_START	">>>\n"
@@ -217,7 +218,7 @@ extern struct fieldtypefuncs_s fieldtypefuncs[4];
 /* Set up message statistics area */
 void cl_msg_setstats(volatile hb_msg_stats_t* stats);
 void cl_dump_msgstats(void);
-
+void cl_set_compression_threshold(size_t threadhold);
 /* Allocate new (empty) message */
 struct ha_msg *	ha_msg_new(int nfields);
 
@@ -311,6 +312,7 @@ int		msg2string_buf(const struct ha_msg *m, char* buf,
 
 /* Converts a message into wire format */
 char*		msg2wirefmt(const struct ha_msg *m, size_t* );
+char*		msg2wirefmt_noac(const struct ha_msg*m, size_t* len);
 
 /* Converts wire format data into a message */
 struct ha_msg*	wirefmt2msg(const char* s, size_t length, int flag);

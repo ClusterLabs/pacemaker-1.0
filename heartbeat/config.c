@@ -1,4 +1,4 @@
-/* $Id: config.c,v 1.164 2005/08/05 15:32:43 gshi Exp $ */
+/* $Id: config.c,v 1.165 2005/08/05 19:40:13 gshi Exp $ */
 /*
  * Parse various heartbeat configuration files...
  *
@@ -57,6 +57,7 @@
 #include <clplumbing/coredumps.h>
 #include <stonith/stonith.h>
 #include <HBcomm.h>
+#include <compress.h>
 #include <hb_module.h>
 #include <hb_api.h>
 #include <hb_config.h>
@@ -85,6 +86,8 @@ static int set_stonith_info(const char *);
 static int set_stonith_host_info(const char *);
 static int set_realtime_prio(const char *);
 static int add_client_child(const char *);
+static int set_compression(const char *);
+static int set_compression_threshold(const char *);
 static int set_generation_method(const char *);
 static int set_realtime(const char *);
 static int set_debuglevel(const char *);
@@ -151,6 +154,8 @@ static const struct WholeLineDirective {
 ,	{KEY_STONITHHOST,  set_stonith_host_info}
 ,	{KEY_APIPERM,	   set_api_authorization}
 ,	{KEY_CLIENT_CHILD,  add_client_child}
+,	{KEY_COMPRESSION,   set_compression}
+,	{KEY_COMPRESSION_THRESHOLD, set_compression_threshold}
 };
 
 extern const char *			cmdname;
@@ -168,6 +173,7 @@ extern int				DoManageResources;
 extern int				hb_realtime_prio;
 extern PILPluginUniv*			PluginLoadingSystem;
 extern GHashTable*			CommFunctions;
+extern GHashTable*			CompressFuncs;
 GHashTable*				APIAuthorization = NULL;
 extern struct node_info *   			curnode;
 extern int    				timebasedgenno;
@@ -1756,6 +1762,29 @@ add_client_child(const char * directive)
 	return HA_OK;
 }
 
+static int
+set_compression(const char * directive)
+{		
+	return cl_set_compress_fns(directive);
+}
+
+static int
+set_compression_threshold(const char * value)
+{		
+	int threshold = atoi(value);
+	
+	if (threshold <=0){
+		cl_log(LOG_ERR, "%s: compress_threshhold(%s)"
+		       " invalid",
+		       __FUNCTION__,
+		       value);
+		return HA_FAIL;
+	}
+
+	cl_set_compression_threshold(threshold *1024);
+	
+	return HA_OK;
+}
 
 
 #if 0
@@ -2030,6 +2059,9 @@ set_release2mode(const char* value)
 
 /*
  * $Log: config.c,v $
+ * Revision 1.165  2005/08/05 19:40:13  gshi
+ * add compression capability
+ *
  * Revision 1.164  2005/08/05 15:32:43  gshi
  * print out an error message if setting facility failed
  *
