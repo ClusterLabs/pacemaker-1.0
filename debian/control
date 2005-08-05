@@ -9,7 +9,7 @@ Package: ldirectord-2
 Section: admin
 Priority: optional
 Architecture: all
-Depends: ${perl:Depends}, libdigest-md5-perl, libwww-perl, libnet-ssleay-perl, libmail-imapclient-perl, libdigest-hmac-perl, libnet-ldap-perl, libnet-dns-perl, libdbi-perl, ipvsadm
+Depends: ${perl:Depends}, libdigest-md5-perl, libwww-perl, libcrypt-ssleay-perl, libmail-imapclient-perl, libdigest-hmac-perl, libnet-ldap-perl, libnet-dns-perl, libdbi-perl, ipvsadm
 Recommends: sysklogd|syslog-ng, logrotate
 Provides: ldirectord
 Description: Monitors virtual services provided by LVS

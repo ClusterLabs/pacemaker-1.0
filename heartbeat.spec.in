@@ -1,4 +1,4 @@
-#	$Id: heartbeat.spec.in,v 1.131 2005/07/30 03:39:38 alan Exp $
+#	$Id: heartbeat.spec.in,v 1.132 2005/08/05 06:08:58 horms Exp $
 
 # Workaround for a change in RPM 4.1.x; needs proper fixing soon!
 ##%define _unpackaged_files_terminate_build 0
@@ -20,8 +20,8 @@ Requires: sysklogd, heartbeat-stonith = %{version}-%{release}, heartbeat-pils = 
 %package ldirectord
 Summary: Monitor daemon for maintaining high availability resources
 Group: Utilities
-Requires: perl, perl-libwww-perl perl-Net-SSLeay, ipvsadm, perl-HTML-Parser, perl-ldap, perl-Mail-IMAPClient, perl-libnet, perl-Net-DNS 
-# perl-libwww-perl, perl-Net-SSLeay, perl-HTML-Parser, perl-ldap,
+Requires: perl, perl-libwww-perl perl-Crypt-SSLeay, ipvsadm, perl-HTML-Parser, perl-ldap, perl-Mail-IMAPClient, perl-libnet, perl-Net-DNS 
+# perl-libwww-perl, perl-HTML-Parser, perl-ldap,
 # perl-Mail-IMAPClient, perl-libnet, perl-Net-DNS and ipvsadm 
 # available from www.ultramonkey.org and # others
 

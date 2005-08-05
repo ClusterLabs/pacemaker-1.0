@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-my($VERSION)=(qw$Id: ldirectord,v 1.115 2005/08/05 05:50:43 horms Exp $)[2];
+my($VERSION)=(qw$Id: ldirectord,v 1.116 2005/08/05 06:08:58 horms Exp $)[2];
 
 ######################################################################
 # ldirectord                 http://www.vergenet.net/linux/ldirectord/
@@ -1621,12 +1621,10 @@ sub ld_main
 				}
 				if ($$v{checktype} eq "negotiate" || $$r{num_connects}>=$$v{num_connects}) {
 					&ld_debug(2, "Checking negotiate: real server=$real_id (virtual=$virtual_id)");
-					if ($$v{service} eq "http") {
+					if ($$v{service} eq "http" || $$v{service} eq "https") {
 						$$r{num_connects} = 0 if (check_http($v, $r));
 						# my $req = new HTTP::Request(GET=>"$$r{url}");
 						# $ua->register($req, \&http_received);
-					} elsif ($$v{service} eq "https") {
-						$$r{num_connects} = 0 if (check_https($v, $r));
 					} elsif ($$v{service} eq "pop") {
 						$$r{num_connects} = 0 if (check_pop($v, $r));
 					} elsif ($$v{service} eq "imap") {
@@ -1727,7 +1725,7 @@ sub check_http
 	my $uri = $4;
 	my $virtualhost = (defined $$v{virtualhost} ? $$v{virtualhost} : $host);
 
-	&ld_debug(2, "Checking http: url=\"$$r{url}\" "
+	&ld_debug(2, "check_http: url=\"$$r{url}\" "
 		. "virtualhost=\"$virtualhost\"");
 	
 	my $ua = new LWP::UserAgent();
@@ -1742,18 +1740,28 @@ sub check_http
 		local $SIG{'__DIE__'} = "DEFAULT";
 		$res = $ua->request($req);
 	}
+
+	if ($$v{service} eq "https") {
+		&ld_debug(2, "SSL-Cipher: " . 
+			$res->header('Client-SSL-Cipher'));
+		&ld_debug(2, "SSL-Cert-Subject: " . 
+			$res->header('Client-SSL-Cert-Subject'));
+		&ld_debug(2, "SSL-Cert-Issuer: " . 
+			$res->header('Client-SSL-Cert-Issuer'));
+	}
+
 	my $recstr = $$r{receive};
 	if ($res->is_success && (!($recstr =~ /.+/) || 
 				$res->content =~ /$recstr/)) {
 		service_set($v, $r, "up");
 		&ld_debug(2, "check_http: $$r{url} is up\n");
 		return 1;
-	} else {
-		service_set($v, $r, "down");
-		&ld_debug(3, "Headers " .  $res->headers->as_string);
-		&ld_debug(2, "check_http: $$r{url} is down\n");
-		return 0;
 	}
+
+	service_set($v, $r, "down");
+	&ld_debug(3, "Headers " .  $res->headers->as_string);
+	&ld_debug(2, "check_http: $$r{url} is down\n");
+	return 0;
 }
 
 
@@ -1890,96 +1898,6 @@ sub check_ldap
 		return 1;
 	}
 }
-
-
-sub check_https_child
-{
-	my ($v, $r) = @_;
-	require Net::SSLeay;
-	$Net::SSLeay::trace = $DEBUG;
-	$$r{url} =~ /https:\/\/([^:\/]+)(:([^\/]+))?(\/.*)/;
-	my $host = $1;
-	my $port = $3;
-	my $uri = $4;
-	unless (defined $port) {
-		$port=(defined $$v{checkport}?$$v{checkport}:$$r{port})
-	}
-	my $virtualhost = (defined $$v{virtualhost} ? $$v{virtualhost} : $host);
-	my ($page, $errors, $cert, $head, $body, $response);
-	my $msg = "$$v{httpmethod}" . " $uri HTTP/1.0" . $CRLF
-	        . "Host: " . $virtualhost . $CRLF
-		. "Accept: */*" . $CRLF . $CRLF;
-
-	&ld_debug(2, "Checking https url=\"$$r{url}\" "
-		. "virtualhost=\"$virtualhost\"");
-	
-	eval {
-		local $SIG{__WARN__};
-		local $SIG{'__DIE__'} = "DEFAULT";
-		local $SIG{'ALRM'} = sub { die "Timeout Alarm" };
-		alarm $$v{negotiatetimeout};
-		&ld_debug(2, "Testing: $host, $port, $uri");
-		($page, $errors, $cert)  = &Net::SSLeay::sslcat($host,
-		               $port, $msg);
-		alarm 0; # Cancel the alarm
-		($head, $body) = split /\s?\n\s?\n/, $page, 2;
-		($response, $head) = split /\s?\n/, $head, 2;
-		&ld_debug(2, "Result: $response");
-		my $recstr = $$r{receive};
-		if( !($response =~ /20[0-9]/) ||
-				($recstr =~ /.+/ && !($body =~ /$recstr/))) {
-			alarm(0);
-			die("$response");
-		}
-	};
-
-	if ($@) {
-		return 1;
-	}
-	return 0;
-}
-
-
-sub check_https
-{
-	my ($v, $r) = @_;
-
-        # The SSLeay module seems to have a memory leak
-	# that I can't find, so run it in a child process
-	# to prevent the parent from contiuously growing in size.
-	my $pid;
-	my $status;
-	local $SIG{'CHLD'} = undef;
-	
-	$pid = fork();
-	if ($pid) {
-		#parent
-		while (wait < 0) {
-			if (kill 0, $pid > 0) {
-				#no child for some reason 
-				return 1;
-			}
-			# wait was interupted by a signal, try again
-		}
-		$status = $? >> 8;
-	}
-	elsif (defined $pid) {
-		exit check_https_child($v, $r);
-	}
-	else {
-		#error
-		return 1;
-	}
-
-	&ld_debug(2, "Status: $status");
-	if ($status ne 0) {
-		service_set($v, $r, "down");
-		return 1;
-	}
-	service_set($v, $r, "up");
-	return 0;
-}
-
 
 
 sub check_nntp
