@@ -1,4 +1,4 @@
-/* $Id: config.c,v 1.163 2005/07/29 06:55:37 sunjd Exp $ */
+/* $Id: config.c,v 1.164 2005/08/05 15:32:43 gshi Exp $ */
 /*
  * Parse various heartbeat configuration files...
  *
@@ -1185,6 +1185,7 @@ set_facility(const char * value)
 		return(HA_OK);
 	}
 	else {
+		ha_log(LOG_ERR, "facility(%s) not valid", value);
 		return(HA_FAIL);
 	}
 }
@@ -2029,6 +2030,9 @@ set_release2mode(const char* value)
 
 /*
  * $Log: config.c,v $
+ * Revision 1.164  2005/08/05 15:32:43  gshi
+ * print out an error message if setting facility failed
+ *
  * Revision 1.163  2005/07/29 06:55:37  sunjd
  * bug668: license update
  *
