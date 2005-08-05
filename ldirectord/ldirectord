@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-my($VERSION)=(qw$Id: ldirectord,v 1.114 2005/08/03 11:38:40 horms Exp $)[2];
+my($VERSION)=(qw$Id: ldirectord,v 1.115 2005/08/05 05:50:43 horms Exp $)[2];
 
 ######################################################################
 # ldirectord                 http://www.vergenet.net/linux/ldirectord/
@@ -2127,7 +2127,8 @@ sub check_ftp
 
 	unless ($ftp = Net::FTP->new("$$r{server}:$port", 
 			Timeout=>$$v{negotiatetimeout})) {
-		service_set($v, $r, "down");OB	return 0;
+		service_set($v, $r, "down");
+		return 0;
 	}
 	$ftp->login($$v{login}, $$v{passwd});
 	$ftp->cwd("/");
