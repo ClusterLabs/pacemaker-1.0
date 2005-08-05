@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-my($VERSION)=(qw$Id: ldirectord,v 1.116 2005/08/05 06:08:58 horms Exp $)[2];
+my($VERSION)=(qw$Id: ldirectord,v 1.117 2005/08/05 06:12:28 horms Exp $)[2];
 
 ######################################################################
 # ldirectord                 http://www.vergenet.net/linux/ldirectord/
@@ -414,7 +414,6 @@ use Getopt::Std;
 #use Time::HiRes qw( gettimeofday tv_interval );
 use Socket;
 use Sys::Hostname;
-#use LWP::Parallel::UserAgent;
 use POSIX qw(setsid);
 use Sys::Syslog qw(:DEFAULT setlogsock);
 
@@ -1603,14 +1602,6 @@ sub ld_main
 			my $real = $$v{real};
 			my $virtual_id = get_virtual_id_str($v);
 
-			# unfortunately LWP::Paralell::UserAgent
-			# does not work right now for https and
-			# has some major problems with http
-
-			# my $ua = new LWP::Parallel::UserAgent;
-			# $ua->redirect(0);
-			# $ua->max_hosts($#$real+1);
-			# $ua->max_req($#$real+1);
 			REAL: foreach my $r (@$real) {
 				my $real_id = get_real_id_str($r, $v);
 				foreach my $tmp_id (@real_checked) {
@@ -1680,34 +1671,6 @@ sub ld_main
 		}
 	}
 }
-
-
-# sub http_received
-# # callbackfunction for Parallel::UserAgent
-# {
-# 	my ($content, $respone, $proto) = @_;
-# 	my $req = $$respone{_request};
-# 	my $url = $$req{_uri};
-# 	if ($url =~ /(http\w?):\/\/([^\/:]+)(.*)/) {
-# 		my ($p, $s, $u) = ($1, $2, $3);
-# 		$url = "$p://$s:80$u" if ($p eq "http" && $u =~ /^\//);
-# 		$url = "$p://$s:443$u" if ($p eq "https" && $u =~ /^\//);
-# 	}
-# 	foreach $v (@VIRTUAL) {
-# 		my $real = $$v{real};
-# 		foreach $r (@$real) {
-# 			if ($url eq $$r{url}) {
-# 				my $receive_string = $$r{receive};
-# 				if (!($receive_string =~ /.+/) || $content =~ /$receive_string/) {
-# 					service_set($v, $r, "up");
-# 				} else {
-# 					service_set($v, $r, "down");
-# 				}
-# 			}
-# 		}
-# 	}
-# 	return C_ENDCON;
-# }
 
 
 sub check_http
