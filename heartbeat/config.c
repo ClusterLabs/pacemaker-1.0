@@ -1,4 +1,4 @@
-/* $Id: config.c,v 1.165 2005/08/05 19:40:13 gshi Exp $ */
+/* $Id: config.c,v 1.166 2005/08/06 04:35:44 alan Exp $ */
 /*
  * Parse various heartbeat configuration files...
  *
@@ -1189,9 +1189,8 @@ set_facility(const char * value)
 		config->facilityname[sizeof(config->facilityname)-1] = EOS;
 		cl_log_set_facility(config->log_facility);
 		return(HA_OK);
-	}
-	else {
-		ha_log(LOG_ERR, "facility(%s) not valid", value);
+	}else {
+		ha_log(LOG_ERR, "Log facility(%s) not valid", value);
 		return(HA_FAIL);
 	}
 }
@@ -2059,6 +2058,9 @@ set_release2mode(const char* value)
 
 /*
  * $Log: config.c,v $
+ * Revision 1.166  2005/08/06 04:35:44  alan
+ * Very minor message format change.
+ *
  * Revision 1.165  2005/08/05 19:40:13  gshi
  * add compression capability
  *
