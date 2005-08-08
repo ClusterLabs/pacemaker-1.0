@@ -90,7 +90,7 @@ bz2_compress(char* dest, size_t* destlen,
 	
 	memcpy(&src, &_src, sizeof(char*));
 	
-	ret = BZ2_bzBuffToBuffCompress(dest, destlen, src, srclen, 1, 0, 30);
+	ret = BZ2_bzBuffToBuffCompress(dest, (int*)destlen, src, srclen, 1, 0, 30);
 	if (ret != BZ_OK){
 		cl_log(LOG_ERR, "%s: compression failed",
 		       __FUNCTION__);
@@ -109,7 +109,7 @@ bz2_decompress(char* dest, size_t* destlen,
 	
 	memcpy(&src, &_src, sizeof(char*));
 
-	ret = BZ2_bzBuffToBuffDecompress(dest, destlen, src, srclen, 1, 0);
+	ret = BZ2_bzBuffToBuffDecompress(dest, (int*)destlen, src, srclen, 1, 0);
 	if (ret != BZ_OK){
 		cl_log(LOG_ERR, "%s: decompression failed",
 		       __FUNCTION__);
