@@ -1,4 +1,4 @@
-/* $Id: send_arp.c,v 1.19 2005/07/29 07:05:00 sunjd Exp $ */
+/* $Id: send_arp.c,v 1.20 2005/08/08 06:00:05 sunjd Exp $ */
 /* 
  * send_arp
  * 
@@ -35,10 +35,10 @@
 
 #include <limits.h>
 #include <libnet.h>
-#include <syslog.h>
 #include <libgen.h>
 #include <clplumbing/timers.h>
 #include <clplumbing/cl_signal.h>
+#include <clplumbing/cl_log.h>
 
 #ifdef HAVE_LIBNET_1_0_API
 #	define	LTYPE	struct libnet_link_int
@@ -60,6 +60,8 @@ static char print_usage[]={
 	"\tIf src_hw_addr is \"auto\" then the address of device will be used"
 };
 
+static const char * SENDARPNAME = "send_arp";
+
 static void convert_macaddr (u_char *macaddr, u_char enet_src[6]);
 static int get_hw_addr(char *device, u_char mac[6]);
 int write_pid_file(const char *pidfilename);
@@ -71,6 +73,14 @@ int create_pid_directory(const char *piddirectory);
 #ifndef LIBNET_ERRBUF_SIZE
 #	define LIBNET_ERRBUF_SIZE 256
 #endif
+
+
+/* 
+ * For use logd, should keep identical with the same const variables defined
+ * in heartbeat.h.
+ */
+#define ENV_PREFIX "HA_"
+#define KEY_LOGDAEMON   "use_logd"
 
 static void
 byebye(int nsig)
@@ -104,7 +114,11 @@ main(int argc, char *argv[])
 	CL_SIGNAL(SIGTERM, byebye);
 	CL_SIGINTERRUPT(SIGTERM, 1);
 
-	openlog("send_arp", LOG_CONS | LOG_PID, LOG_USER);
+        cl_log_set_entity(SENDARPNAME);
+        cl_log_enable_stderr(TRUE);
+        cl_log_set_facility(LOG_USER);
+        /* Use logd if it's enabled by heartbeat */
+        cl_inherit_use_logd(ENV_PREFIX ""KEY_LOGDAEMON, 0);
 
 	while ((flag = getopt(argc, argv, "i:r:p:")) != EOF) {
 		switch(flag) {
@@ -146,7 +160,7 @@ main(int argc, char *argv[])
 		if (snprintf(pidfilenamebuf, sizeof(pidfilenamebuf), "%s%s", 
 					PIDFILE_BASE, ipaddr) >= 
 				(int)sizeof(pidfilenamebuf)) {
-			syslog(LOG_INFO, "Pid file truncated");
+			cl_log(LOG_INFO, "Pid file truncated");
 			return EXIT_FAILURE;
 		}
 		pidfilename = pidfilenamebuf;
@@ -158,26 +172,26 @@ main(int argc, char *argv[])
 
 #if defined(HAVE_LIBNET_1_0_API)
 	if ((ip = libnet_name_resolve(ipaddr, 1)) == -1UL) {
-		syslog(LOG_ERR, "Cannot resolve IP address [%s]", ipaddr);
+		cl_log(LOG_ERR, "Cannot resolve IP address [%s]", ipaddr);
 		unlink(pidfilename);
 		return EXIT_FAILURE;
 	}
 
 	l = libnet_open_link_interface(device, errbuf);
 	if (!l) {
-		syslog(LOG_ERR, "libnet_open_link_interface on %s: %s"
+		cl_log(LOG_ERR, "libnet_open_link_interface on %s: %s"
 		,	device, errbuf);
 		unlink(pidfilename);
 		return EXIT_FAILURE;
 	}
 #elif defined(HAVE_LIBNET_1_1_API)
 	if ((l=libnet_init(LIBNET_LINK, device, errbuf)) == NULL) {
-		syslog(LOG_ERR, "libnet_init failure on %s", device);
+		cl_log(LOG_ERR, "libnet_init failure on %s", device);
 		unlink(pidfilename);
 		return EXIT_FAILURE;
 	}
 	if ((signed)(ip = libnet_name2addr4(l, ipaddr, 1)) == -1) {
-		syslog(LOG_ERR, "Cannot resolve IP address [%s]", ipaddr);
+		cl_log(LOG_ERR, "Cannot resolve IP address [%s]", ipaddr);
 		unlink(pidfilename);
 		return EXIT_FAILURE;
 	}
@@ -187,7 +201,7 @@ main(int argc, char *argv[])
 
 	if (!strcasecmp(macaddr, AUTO_MAC_ADDR)) {
 		if (get_hw_addr(device, src_mac) < 0) {
-			 syslog(LOG_ERR, "Cannot find mac address for %s", 
+			 cl_log(LOG_ERR, "Cannot find mac address for %s", 
 					 device);
 			 unlink(pidfilename);
 			 return EXIT_FAILURE;
@@ -355,7 +369,7 @@ send_arp(struct libnet_link_int *l, u_long ip, u_char *device, u_char *macaddr, 
 
 
 	if (libnet_init_packet(LIBNET_ARP_H + LIBNET_ETH_H, &buf) == -1) {
-	syslog(LOG_ERR, "libnet_init_packet memory:");
+	cl_log(LOG_ERR, "libnet_init_packet memory:");
 		return -1;
 	}
 
@@ -363,14 +377,14 @@ send_arp(struct libnet_link_int *l, u_long ip, u_char *device, u_char *macaddr, 
 
 	/* Ethernet header */
 	if (get_hw_addr(device, device_mac) < 0) {
-		syslog(LOG_ERR, "Cannot find mac address for %s",
+		cl_log(LOG_ERR, "Cannot find mac address for %s",
 				device);
 		return -1;
 	}
 
 	if (libnet_build_ethernet(bcast_mac, device_mac, ETHERTYPE_ARP, NULL, 0
 	,	buf) == -1) {
-		syslog(LOG_ERR, "libnet_build_ethernet failed:");
+		cl_log(LOG_ERR, "libnet_build_ethernet failed:");
 		libnet_destroy_packet(&buf);
 		return -1;
 	}
@@ -382,7 +396,7 @@ send_arp(struct libnet_link_int *l, u_long ip, u_char *device, u_char *macaddr, 
 		target_mac = macaddr;
 	}
 	else {
-		syslog(LOG_ERR, "unkonwn arptype:");
+		cl_log(LOG_ERR, "unkonwn arptype:");
 		return -1;
 	}
 
@@ -401,14 +415,14 @@ send_arp(struct libnet_link_int *l, u_long ip, u_char *device, u_char *macaddr, 
 		NULL,				/* Payload */
 		0,				/* Payload length */
 		buf + LIBNET_ETH_H) == -1) {
-	        syslog(LOG_ERR, "libnet_build_arp failed:");
+	        cl_log(LOG_ERR, "libnet_build_arp failed:");
 		libnet_destroy_packet(&buf);
 		return -1;
 	}
 
 	n = libnet_write_link_layer(l, device, buf, LIBNET_ARP_H + LIBNET_ETH_H);
 	if (n == -1) {
-		syslog(LOG_ERR, "libnet_build_ethernet failed:");
+		cl_log(LOG_ERR, "libnet_build_ethernet failed:");
 	}
 
 	libnet_destroy_packet(&buf);
@@ -436,7 +450,7 @@ send_arp(libnet_t* lntag, u_long ip, u_char *device, u_char macaddr[6], u_char *
 		target_mac = macaddr;
 	}
 	else {
-		syslog(LOG_ERR, "unkonwn arptype:");
+		cl_log(LOG_ERR, "unkonwn arptype:");
 		return -1;
 	}
 
@@ -457,26 +471,26 @@ send_arp(libnet_t* lntag, u_long ip, u_char *device, u_char macaddr[6], u_char *
 		lntag,		/* libnet context pointer */
 		0		/* packet id */
 	) == -1 ) {
-		syslog(LOG_ERR, "libnet_build_arp failed:");
+		cl_log(LOG_ERR, "libnet_build_arp failed:");
 		return -1;
 	}
 
 	/* Ethernet header */
 	if (get_hw_addr((char *)device, device_mac) < 0) {
-		syslog(LOG_ERR, "Cannot find mac address for %s",
+		cl_log(LOG_ERR, "Cannot find mac address for %s",
 				device);
 		return -1;
 	}
 
 	if (libnet_build_ethernet(bcast_mac, device_mac, ETHERTYPE_ARP, NULL, 0
 	,	lntag, 0) == -1 ) {
-		syslog(LOG_ERR, "libnet_build_ethernet failed:");
+		cl_log(LOG_ERR, "libnet_build_ethernet failed:");
 		return -1;
 	}
 
 	n = libnet_write(lntag);
 	if (n == -1) {
-		syslog(LOG_ERR, "libnet_build_ethernet failed:");
+		cl_log(LOG_ERR, "libnet_build_ethernet failed:");
 	}
 	libnet_clear_packet(lntag);
 
@@ -495,7 +509,7 @@ create_pid_directory(const char *pidfilename)
 
 	pidfilename_cpy = strdup(pidfilename);
 	if (!pidfilename_cpy) {
-		syslog(LOG_INFO, "Memory allocation failure: %s\n",
+		cl_log(LOG_INFO, "Memory allocation failure: %s\n",
 				strerror(errno));
 		return -1;
 	}
@@ -505,7 +519,7 @@ create_pid_directory(const char *pidfilename)
 	status = stat(dir, &stat_buf); 
 
 	if (status < 0 && errno != ENOENT && errno != ENOTDIR) {
-		syslog(LOG_INFO, "Could not stat pid-file directory "
+		cl_log(LOG_INFO, "Could not stat pid-file directory "
 				"[%s]: %s", dir, strerror(errno));
 		free(pidfilename_cpy);
 		return -1;
@@ -515,7 +529,7 @@ create_pid_directory(const char *pidfilename)
 		if (S_ISDIR(stat_buf.st_mode)) {
 			return 0;
 		}
-		syslog(LOG_INFO, "Pid-File directory exists but is "
+		cl_log(LOG_INFO, "Pid-File directory exists but is "
 				"not a directory [%s]", dir);
 		free(pidfilename_cpy);
 		return -1;
@@ -527,7 +541,7 @@ create_pid_directory(const char *pidfilename)
 		&&	S_ISDIR(stat_buf.st_mode)) {
 			return 0;
 		}
-		syslog(LOG_INFO, "Could not create pid-file directory "
+		cl_log(LOG_INFO, "Could not create pid-file directory "
 				"[%s]: %s", dir, strerror(errno));
 		free(pidfilename_cpy);
 		return -1;
@@ -548,7 +562,7 @@ write_pid_file(const char *pidfilename)
 	ssize_t 	bytes;
 
 	if (*pidfilename != '/') {
-		syslog(LOG_INFO, "Invalid pid-file name, must begin with a "
+		cl_log(LOG_INFO, "Invalid pid-file name, must begin with a "
 				"'/' [%s]\n", pidfilename);
 		return -1;
 	}
@@ -562,7 +576,7 @@ write_pid_file(const char *pidfilename)
 				S_IRUSR|S_IWUSR);
 		if (pidfilefd < 0) {
 			if (errno != EEXIST) { /* Old PID file */
-				syslog(LOG_INFO, "Could not open pid-file "
+				cl_log(LOG_INFO, "Could not open pid-file "
 						"[%s]: %s", pidfilename, 
 						strerror(errno));
 				return -1;
@@ -574,7 +588,7 @@ write_pid_file(const char *pidfilename)
 
 		pidfilefd = open(pidfilename, O_RDONLY, S_IRUSR|S_IWUSR);
 		if (pidfilefd < 0) {
-			syslog(LOG_INFO, "Could not open pid-file " 
+			cl_log(LOG_INFO, "Could not open pid-file " 
 					"[%s]: %s", pidfilename, 
 					strerror(errno));
 			return -1;
@@ -586,7 +600,7 @@ write_pid_file(const char *pidfilename)
 				if (errno == EINTR) {
 					continue;
 				}
-				syslog(LOG_INFO, "Could not read pid-file " 
+				cl_log(LOG_INFO, "Could not read pid-file " 
 						"[%s]: %s", pidfilename, 
 						strerror(errno));
 				return -1;
@@ -596,14 +610,14 @@ write_pid_file(const char *pidfilename)
 		}
 
 		if(unlink(pidfilename) < 0) {
-			syslog(LOG_INFO, "Could not delete pid-file "
+			cl_log(LOG_INFO, "Could not delete pid-file "
 	 				"[%s]: %s", pidfilename, 
 					strerror(errno));
 			return -1;
 		}
 
 		if (!bytes) {
-			syslog(LOG_INFO, "Invalid pid in pid-file "
+			cl_log(LOG_INFO, "Invalid pid in pid-file "
 	 				"[%s]: %s", pidfilename, 
 					strerror(errno));
 			return -1;
@@ -613,26 +627,26 @@ write_pid_file(const char *pidfilename)
 
 		pid = strtoul(pidbuf, NULL, 10);
 		if (pid == ULONG_MAX && errno == ERANGE) {
-			syslog(LOG_INFO, "Invalid pid in pid-file "
+			cl_log(LOG_INFO, "Invalid pid in pid-file "
 	 				"[%s]: %s", pidfilename, 
 					strerror(errno));
 			return -1;
 		}
 
 		if (kill(pid, SIGKILL) < 0 && errno != ESRCH) {
-			syslog(LOG_INFO, "Error killing old proccess [%lu] "
+			cl_log(LOG_INFO, "Error killing old proccess [%lu] "
 	 				"from pid-file [%s]: %s", pid,
 					pidfilename, strerror(errno));
 			return -1;
 		}
 
-		syslog(LOG_INFO, "Killed old send_arp process [%lu]\n",
+		cl_log(LOG_INFO, "Killed old send_arp process [%lu]\n",
 				pid);
 	}
 
 	if (snprintf(pidbuf, sizeof(pidbuf), "%u"
 	,	getpid()) >= (int)sizeof(pidbuf)) {
-		syslog(LOG_INFO, "Pid too long for buffer [%u]", getpid());
+		cl_log(LOG_INFO, "Pid too long for buffer [%u]", getpid());
 		return -1;
 	}
 
@@ -642,7 +656,7 @@ write_pid_file(const char *pidfilename)
 			if (bytes < 0 && errno == EINTR) {
 				continue;
 			}
-			syslog(LOG_INFO, "Could not write pid-file "
+			cl_log(LOG_INFO, "Could not write pid-file "
 					"[%s]: %s", pidfilename,
 					strerror(errno));
 			return -1;
@@ -658,6 +672,9 @@ write_pid_file(const char *pidfilename)
 
 /*
  * $Log: send_arp.c,v $
+ * Revision 1.20  2005/08/08 06:00:05  sunjd
+ * bug458:use cl_log() instead of syslog
+ *
  * Revision 1.19  2005/07/29 07:05:00  sunjd
  * bug668: license update
  *
