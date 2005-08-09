@@ -340,5 +340,16 @@ auto_failback on
 #	the interval we  reconnect to logging daemon if the previous connection failed
 #	default: 60 seconds
 #conn_logd_time 60
-
+#
+#
+#	Configure compression module
+#	It could be zlib or bz2, depending on whether u have the corresponding 
+#	library	in the system.
+#compression	bz2
+#
+#	Confiugre compression threshold
+#	This value determines the threshold to compress a message,
+#	e.g. if the threshold is 1, then any message with size greater than 1 KB
+#	will be compressed, the default is 2 (KB)
+#compression_threshold 2
 
