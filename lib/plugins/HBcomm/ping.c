@@ -1,4 +1,4 @@
-/* $Id: ping.c,v 1.42 2005/07/08 16:03:34 alan Exp $ */
+/* $Id: ping.c,v 1.43 2005/08/10 04:08:16 horms Exp $ */
 /*
  * ping.c: ICMP-echo-based heartbeat code for heartbeat.
  *
@@ -314,6 +314,8 @@ ping_read(struct hb_media* mp, int *lenp)
 	
 	PINGASSERT(mp);
 	ei = (struct ping_private *) mp->pd;
+
+ReRead:	/* We recv lots of packets that aren't ours */
 	
 	if ((numbytes=recvfrom(ei->sock, (void *) &buf.cbuf
 	,	sizeof(buf.cbuf)-1, 0,	(struct sockaddr *)&their_addr
@@ -343,7 +345,7 @@ ping_read(struct hb_media* mp, int *lenp)
 	memcpy(&icp, (buf.cbuf + hlen), sizeof(icp));
 	
 	if (icp.icmp_type != ICMP_ECHOREPLY || icp.icmp_id != ei->ident) {
-		return NULL;
+		goto ReRead;	/* Not one of ours */
 	}
 
 	if (DEBUGPKT) {
@@ -359,6 +361,7 @@ ping_read(struct hb_media* mp, int *lenp)
 	pktlen = numbytes - hlen - ICMP_HDR_SZ;
 
 	if ((pkt = ha_malloc(pktlen + 1)) == NULL) {
+		errno = ENOMEM;
 		return NULL;
 	}
 	
@@ -371,21 +374,19 @@ ping_read(struct hb_media* mp, int *lenp)
 	msg = wirefmt2msg(msgstart, bufmax - msgstart, MSG_NEEDAUTH);
 	if (msg == NULL) {
                 ha_free(pkt);
+		errno = EINVAL;
 		return(NULL);
 	}
 	comment = ha_msg_value(msg, F_COMMENT);
 	if (comment == NULL || strcmp(comment, PIL_PLUGIN_S)) {
                 ha_free(pkt);
 		ha_msg_del(msg);
+		errno = EINVAL;
 		return(NULL);
 	}
 	
 	ha_msg_del(msg);
-	/* return(msg); */
-	
 	return(pkt);
-
-
 }
 
 /*

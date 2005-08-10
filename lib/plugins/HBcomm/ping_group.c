@@ -1,4 +1,4 @@
-/* $Id: ping_group.c,v 1.18 2005/07/08 16:03:34 alan Exp $ */
+/* $Id: ping_group.c,v 1.19 2005/08/10 04:08:16 horms Exp $ */
 /*
  * ping_group.c: ICMP-echo-based heartbeat code for heartbeat.
  *
@@ -405,6 +405,8 @@ ping_group_read(struct hb_media* mp, int *lenp)
 	PINGGROUPASSERT(mp);
 	ei = (ping_group_private_t *) mp->pd;
 
+ReRead:	/* We recv lots of packets that aren't ours */
+
 	*lenp = 0;
 	if ((numbytes=recvfrom(ei->sock, (void *) &buf.cbuf
 	,	sizeof(buf.cbuf)-1, 0,	(struct sockaddr *)&their_addr
@@ -434,7 +436,7 @@ ping_group_read(struct hb_media* mp, int *lenp)
 	memcpy(&icp, (buf.cbuf + hlen), sizeof(icp));
 
 	if (icp.icmp_type != ICMP_ECHOREPLY || icp.icmp_id != ei->ident) {
-		return(NULL);
+		goto ReRead;	/* Not ours */
 	}
 	seq = ntohs(icp.icmp_seq);
 
@@ -448,29 +450,25 @@ ping_group_read(struct hb_media* mp, int *lenp)
 		PILCallLog(LOG, PIL_DEBUG, "%s", msgstart);
 	}
 
-	/*
-	 * I don't quite understand why we're doing this filtering...
-	 * If it weren't for this, we could shut off reads for all but
-	 * one ping_group process and speed things up...
-	 * 		-- Alan R.
-	 */
 	for(node = ei->node; node; node = node->next) {
-		if(!memcmp(&(their_addr.sin_addr), &(node->addr.sin_addr),
-					sizeof(struct in_addr))) {
+		if(!memcmp(&(their_addr.sin_addr), &(node->addr.sin_addr)
+		,	sizeof(struct in_addr))) {
 			break;
 		}
 	}
 	if(!node) {
-		return(NULL);
+		goto ReRead;	/* Not ours */
 	}
 
 	msg = wirefmt2msg(msgstart, bufmax - msgstart, MSG_NEEDAUTH);
 	if(msg == NULL) {
+		errno = EINVAL;
 		return(NULL);
 	}
 	comment = ha_msg_value(msg, F_COMMENT);
 	if(comment == NULL || strcmp(comment, PIL_PLUGIN_S)) {
 		ha_msg_del(msg);
+		errno = EINVAL;
 		return(NULL);
 	}
 
@@ -478,7 +476,7 @@ ping_group_read(struct hb_media* mp, int *lenp)
 	if(ei->slot[slotn] == seq) {
 		/* Duplicate within window */
 		ha_msg_del(msg);
-		return(NULL);
+		goto ReRead;	/* Not ours */
 	}
 
 	ei->slot[slotn] = seq;
@@ -486,6 +484,7 @@ ping_group_read(struct hb_media* mp, int *lenp)
 	pktlen = numbytes - hlen - ICMP_HDR_SZ;
 	if (NULL == (pkt = ha_malloc(pktlen + 1))) {
 		ha_msg_del(msg);
+		errno = ENOMEM;
 		return NULL;
 	}
 	pkt[pktlen] = 0;
