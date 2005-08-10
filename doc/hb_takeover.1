@@ -1,0 +1,34 @@
+.TH HB_TAKEOVER 1 "9th August 2005" 
+.SH NAME
+hb_takeover \-  hb_takeover is a simple linux-ha shell script. It issues a command to takeover resources from the other node, if available.
+.SH SYNOPSIS
+.B hb_takeover
+.nh
+.RI [all|foreign|local|failback]
+.P
+.SH DESCRIPTION
+The full path is usually /usr/lib/heartbeat/hb_takeover.
+Performing an hb_takeover on the current node is equivalent to performing an hb_standby on the other node.  
+
+.SH SEE ALSO
+hb_standby(1), heartbeat(8), cl_status(1)
+
+.SH DOCUMENTATION
+More information may be found at
+.UR http://www.linux-ha.org/hb_5ftakeover
+http://www.linux-ha.org/hb_5ftakeover
+.UE
+
+.SH AUTHORS
+
+linux-ha -- Alan Robertson
+.UR mailto:alanr@unix.sh
+<alanr@unix.sh>
+.UE
+\fIet al\fP.
+
+man page -- Guochun Shi
+.UR mailto:gshi@ncsa.uiuc.edu
+<gshi@ncsa.uiuc.edu>
+.UE
+
