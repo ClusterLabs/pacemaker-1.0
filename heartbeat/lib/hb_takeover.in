@@ -14,7 +14,9 @@ HA_DIR=@sysconfdir@/ha.d
 . ${HA_DIR}/shellfuncs
 
 usage() {
-	echo "usage:$0 [all|foreign|local|failback]" >&2
+	echo "usage:"
+	echo "$0 [all|foreign|local|failback]" >&2
+	exit 1
 }
 
 if 
@@ -33,9 +35,13 @@ else
   resources=all
 fi
 
+if [ $resources = "--help" ]; then
+	usage
+fi
+
 if [ $resources != "all" ] && [ $resources != "foreign" ] &&
    [ $resources != "local" ] && [ $resources != "failback" ]; then
-	echo "$0: wrong resource type ($resources). Maybe a typo?"
+	echo "$0: wrong resources($resources)."
 	usage
 	exit 1
 fi
