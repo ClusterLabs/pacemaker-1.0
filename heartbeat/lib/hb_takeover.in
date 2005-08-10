@@ -14,9 +14,17 @@ HA_DIR=@sysconfdir@/ha.d
 . ${HA_DIR}/shellfuncs
 
 usage() {
-	echo "usage:%0 [all|foreign|local|failback]" >&2
-	exit 1;
+	echo "usage:$0 [all|foreign|local|failback]" >&2
 }
+
+if 
+  [ $# -ge 2 ]
+then
+	echo "$0: too many arguments"
+	usage
+	exit 1
+fi
+
 if
   [ $# -ge 1 ]
 then
@@ -25,6 +33,12 @@ else
   resources=all
 fi
 
+if [ $resources != "all" ] && [ $resources != "foreign" ] &&
+   [ $resources != "local" ] && [ $resources != "failback" ]; then
+	echo "$0: wrong resource type ($resources). Maybe a typo?"
+	usage
+	exit 1
+fi
 
 ha_clustermsg <<-!MSG
 	t=hb_takeover
