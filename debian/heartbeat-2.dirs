@@ -21,6 +21,9 @@ var/lib/heartbeat/api
 var/lib/heartbeat/casual
 var/lib/heartbeat/ccm
 var/lib/heartbeat/cores
+var/lib/heartbeat/cores/root
+var/lib/heartbeat/cores/nobody
+var/lib/heartbeat/cores/hacluster
 var/lib/heartbeat/crm
 var/lib/heartbeat/ckpt
 var/lock/subsys

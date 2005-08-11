@@ -32,6 +32,12 @@ case "$1" in
 
 	chmod 2555 /usr/bin/cl_status
 	chgrp haclient /usr/bin/cl_status
+
+	for i in root nobody hacluster; do
+		chmod 700 /var/lib/heartbeat/cores/$i
+		chown $i /var/lib/heartbeat/cores/$i
+		chgrp root /var/lib/heartbeat/cores/$i
+	done
 	
 	# Do we want to move the old S20 symlinks to S75 ones?
 	if [ -n "$2" ] ; then
