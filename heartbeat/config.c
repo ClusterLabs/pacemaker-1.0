@@ -1,4 +1,4 @@
-/* $Id: config.c,v 1.166 2005/08/06 04:35:44 alan Exp $ */
+/* $Id: config.c,v 1.167 2005/08/11 20:39:43 gshi Exp $ */
 /*
  * Parse various heartbeat configuration files...
  *
@@ -63,6 +63,7 @@
 #include <hb_config.h>
 #include <hb_api_core.h>
 #include <clplumbing/cl_syslog.h>
+#include  <clplumbing/cl_misc.h>
 
 #define	DIRTYALIASKLUDGE
 
@@ -197,27 +198,6 @@ struct hb_media_fns**	hbmedia_types;
 	void setenv(const char *name, const char * value, int);
 #endif
 
-static int
-str_to_boolean(const char * s, int * ret)
-{
-	if (	strcasecmp(s, "true") == 0
-	||	strcasecmp(s, "on") == 0
-	||	strcasecmp(s, "yes") == 0
-	||	strcasecmp(s, "y") == 0
-	||	strcasecmp(s, "1") == 0){
-		*ret = TRUE;
-		return HA_OK;
-	}
-	if (	strcasecmp(s, "false") == 0
-	||	strcasecmp(s, "off") == 0
-	||	strcasecmp(s, "no") == 0
-	||	strcasecmp(s, "n") == 0
-	||	strcasecmp(s, "0") == 0){
-		*ret = FALSE;
-		return HA_OK;
-	}
-	return HA_FAIL;
-}
 
 static void
 check_logd_usage(int* errcount)
@@ -2058,6 +2038,9 @@ set_release2mode(const char* value)
 
 /*
  * $Log: config.c,v $
+ * Revision 1.167  2005/08/11 20:39:43  gshi
+ * move str_to_boolean() function to cl_misc.c file
+ *
  * Revision 1.166  2005/08/06 04:35:44  alan
  * Very minor message format change.
  *
