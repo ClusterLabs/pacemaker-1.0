@@ -1,4 +1,4 @@
-/* $Id: ipfail.c,v 1.41 2005/05/10 02:00:25 kevin Exp $ */
+/* $Id: ipfail.c,v 1.42 2005/08/11 20:41:31 gshi Exp $ */
 /* ipfail: IP Failover plugin for Linux-HA
  *
  * Copyright (C) 2002-2004 Kevin Dwyer <kevin@pheared.net>
@@ -62,6 +62,7 @@
 #include <clplumbing/Gmain_timeout.h>
 #include <clplumbing/coredumps.h>
 #include "ipfail.h"
+#include <clplumbing/cl_misc.h>
 
 /* ICK! global vars. */
 const char *node_name;	   /* The node we are connected to            */
@@ -125,12 +126,13 @@ main(int argc, char **argv)
 			       "incompatible legacy option.");
 			exit(100);
 		}
-
-		if (!strcmp(parameter, "on")) {
-			auto_failback = 1;
-		}else{
-			auto_failback = 0;
+		
+		if(str_to_boolean(parameter, &auto_failback) != HA_OK){
+			cl_log(LOG_ERR, " invalid auto_faiback value(%s)",
+			       parameter);
+			exit(100);
 		}
+
 		cl_log(LOG_DEBUG, "auto_failback -> %i (%s)", auto_failback,
 		       parameter);
 		cl_free(parameter);
