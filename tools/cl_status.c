@@ -620,7 +620,7 @@ rscstatus(ll_cluster_t *hb, int argc, char ** argv, const char * optstr)
 	if (FOR_HUMAN_READ == TRUE) {
 		printf("This node is holding %s resources.\n", rstatus);
 	} else {
-		printf("%s", rstatus);
+		printf("%s\n", rstatus);
 	}
 	return 0;
 }
