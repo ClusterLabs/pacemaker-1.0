@@ -69,6 +69,7 @@ usr/lib/heartbeat/cts/CM_hb.py
 usr/lib/heartbeat/cts/CTS.py
 usr/lib/heartbeat/cts/CTSaudits.py
 usr/lib/heartbeat/cts/CTSlab.py
+usr/lib/heartbeat/cts/CTSproxy.py
 usr/lib/heartbeat/cts/CTStests.py
 usr/lib/heartbeat/cts/OCFIPraTest.py
 usr/lib/heartbeat/cts/extracttests.py
@@ -102,6 +103,8 @@ usr/lib/heartbeat/plugins/HBcomm/ping.so
 usr/lib/heartbeat/plugins/HBcomm/ping_group.so
 usr/lib/heartbeat/plugins/HBcomm/serial.so
 usr/lib/heartbeat/plugins/HBcomm/ucast.so
+usr/lib/heartbeat/plugins/HBcompress/zlib.so
+usr/lib/heartbeat/plugins/HBcompress/bz2.so
 usr/lib/heartbeat/plugins/RAExec/heartbeat.so
 usr/lib/heartbeat/plugins/RAExec/lsb.so
 usr/lib/heartbeat/plugins/RAExec/ocf.so
@@ -213,6 +216,8 @@ usr/share/doc/heartbeat-2/rsync.txt
 usr/share/doc/heartbeat-2/startstop
 usr/share/man/man1/cl_status.1.gz
 usr/share/man/man1/ha_logger.1.gz
+usr/share/man/man1/hb_standby.1.gz
+usr/share/man/man1/hb_takeover.1.gz
 usr/share/man/man8/apphbd.8.gz
 usr/share/man/man8/ha_logd.8.gz
 usr/share/man/man8/heartbeat.8.gz

@@ -4,6 +4,7 @@ usr/include/clplumbing/apphb_cs.h
 usr/include/clplumbing/base64.h
 usr/include/clplumbing/cl_log.h
 usr/include/clplumbing/cl_malloc.h
+usr/include/clplumbing/cl_misc.h
 usr/include/clplumbing/cl_pidfile.h
 usr/include/clplumbing/cl_poll.h
 usr/include/clplumbing/cl_signal.h
@@ -29,6 +30,7 @@ usr/include/heartbeat/HBcomm.h
 usr/include/heartbeat/apphb.h
 usr/include/heartbeat/apphb_notify.h
 usr/include/heartbeat/cib.h
+usr/include/heartbeat/compress.h
 usr/include/heartbeat/crm.h
 usr/include/heartbeat/ctrl.h
 usr/include/heartbeat/ha_config.h
@@ -36,6 +38,7 @@ usr/include/heartbeat/ha_msg.h
 usr/include/heartbeat/hb_api.h
 usr/include/heartbeat/heartbeat.h
 usr/include/heartbeat/ipc.h
+usr/include/heartbeat/iso8601.h
 usr/include/heartbeat/lrm_api.h
 usr/include/heartbeat/lrm_msg.h
 usr/include/heartbeat/msg.h
