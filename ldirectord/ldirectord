@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-my($VERSION)=(qw$Id: ldirectord,v 1.118 2005/08/05 06:15:47 horms Exp $)[2];
+my($VERSION)=(qw$Id: ldirectord,v 1.119 2005/08/12 01:49:40 horms Exp $)[2];
 
 ######################################################################
 # ldirectord                 http://www.vergenet.net/linux/ldirectord/
@@ -3282,7 +3282,7 @@ sub ld_gethostservbyname{
 	my $port;
 
 	$hostserv =~ 
-		/(\d+\.\d+\.\d+\.\d+|[A-Za-z0-9.-]+)(:(\d+|[A-Za-x0-9-]+))?/ 
+		/(\d+\.\d+\.\d+\.\d+|[A-Za-z0-9.-]+)(:(\d+|[A-Za-z0-9-]+))?/ 
 		or return(undef);
 	$ip=$1;
 	$port=$3;
