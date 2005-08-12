@@ -245,7 +245,7 @@ main(int argc, char ** argv)
 	 * When the program is finished formly, all redundant cl_log clauses 
 	 * will be removed
 	 */ 
-	/* cl_log_enable_stderr(TRUE); */
+	cl_log_enable_stderr(TRUE);
 	cl_log_set_facility(LOG_USER);
 
 	/*
