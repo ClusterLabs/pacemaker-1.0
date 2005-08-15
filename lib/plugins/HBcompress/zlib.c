@@ -89,7 +89,7 @@ zlib_compress(char* dest, size_t* _destlen,
 	uLongf destlen = *_destlen;
 	uLongf srclen = _srclen;
 	
-	ret = compress(dest, &destlen, src, srclen);
+	ret = compress((Bytef *)dest, &destlen, (const Bytef *)src, srclen);
 	if (ret != Z_OK){
 		cl_log(LOG_ERR, "%s: compression failed",
 		       __FUNCTION__);
@@ -110,7 +110,7 @@ zlib_decompress(char* dest, size_t* _destlen,
 	uLongf destlen = *_destlen;
 	uLongf srclen = _srclen;
 	
-	ret = uncompress(dest, &destlen, src, srclen);
+	ret = uncompress((Bytef *)dest, &destlen, (const Bytef *)src, srclen);
 	if (ret != Z_OK){
 		cl_log(LOG_ERR, "%s: decompression failed",
 		       __FUNCTION__);
