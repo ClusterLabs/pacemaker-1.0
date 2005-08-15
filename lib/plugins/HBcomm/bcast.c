@@ -1,4 +1,4 @@
-/* $Id: bcast.c,v 1.42 2005/07/13 14:55:41 lars Exp $ */
+/* $Id: bcast.c,v 1.43 2005/08/15 21:12:16 gshi Exp $ */
 /*
  * bcast.c: UDP/IP broadcast-based communication code for heartbeat.
  *
@@ -310,15 +310,14 @@ bcast_close(struct hb_media* mp)
  * Receive a heartbeat broadcast packet from BCAST interface
  */
 
+char			bcast_pkt[MAXLINE];
 void *
 bcast_read(struct hb_media* mp, int * lenp)
 {
 	struct ip_private *	ei;
-	char			buf[MAXLINE];
 	socklen_t		addr_len = sizeof(struct sockaddr);
    	struct sockaddr_in	their_addr; /* connector's addr information */
 	int	numbytes;
-	void	*pkt;
 
 	BCASTASSERT(mp);
 	ei = (struct ip_private *) mp->pd;
@@ -329,7 +328,7 @@ bcast_read(struct hb_media* mp, int * lenp)
 			   ,	ei->rsocket, ei->wsocket);
 	}
 
-	if ((numbytes=recvfrom(ei->rsocket, buf, MAXLINE-1, MSG_WAITALL
+	if ((numbytes=recvfrom(ei->rsocket, bcast_pkt, MAXLINE-1, MSG_WAITALL
 	,	(struct sockaddr *)&their_addr, &addr_len)) == -1) {
 		if (errno != EINTR) {
 			PILCallLog(LOG, PIL_CRIT
@@ -339,27 +338,19 @@ bcast_read(struct hb_media* mp, int * lenp)
 		return NULL;
 	}
 	/* Avoid possible buffer overruns */
-	buf[numbytes] = EOS;
+	bcast_pkt[numbytes] = EOS;
 
 	if (DEBUGPKT) {
 		PILCallLog(LOG, PIL_DEBUG, "got %d byte packet from %s"
 		,	numbytes, inet_ntoa(their_addr.sin_addr));
 	}
 	if (DEBUGPKTCONT && numbytes > 0) {
-	  PILCallLog(LOG, PIL_DEBUG, "%s", buf);
+		PILCallLog(LOG, PIL_DEBUG, "%s", bcast_pkt);
 	}
 	
-	pkt = ha_malloc(numbytes + 1);
-	if(!pkt){
-		PILCallLog(LOG, PIL_CRIT
-			    ,	"Error in allocating memory");
-		return(NULL);
-	}
-	
-	memcpy(pkt, buf, numbytes + 1);
 	*lenp = numbytes +1;
 	
-	return(pkt);
+	return bcast_pkt;
 }
 
 
@@ -759,6 +750,10 @@ if_get_broadaddr(const char *ifn, struct in_addr *broadaddr)
 
 /*
  * $Log: bcast.c,v $
+ * Revision 1.43  2005/08/15 21:12:16  gshi
+ * make the media read() function returns a pointer that is a global varial
+ * This should save a malloc, free, and a memcpy for each message
+ *
  * Revision 1.42  2005/07/13 14:55:41  lars
  * Compile warnings: Ignored return values from sscanf/fgets/system etc,
  * minor signedness issues.

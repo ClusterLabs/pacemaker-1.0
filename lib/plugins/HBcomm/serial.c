@@ -1,4 +1,4 @@
-/* $Id: serial.c,v 1.39 2005/05/02 20:00:04 gshi Exp $ */
+/* $Id: serial.c,v 1.40 2005/08/15 21:12:16 gshi Exp $ */
 /*
  * Linux-HA serial heartbeat code
  *
@@ -407,6 +407,7 @@ serial_localdie(void)
 
 
 /* This function does all the reading from our tty ports */
+char			serial_pkt[MAXLINE];
 
 static void *
 serial_read(struct hb_media* mp, int *lenp)
@@ -417,7 +418,6 @@ serial_read(struct hb_media* mp, int *lenp)
 	const char *		start = MSG_START;
 	const char *		end = MSG_END;
 	int			endlen;
-	char			*msgstring;
 	char			*p;
 	int			len = 0;
 	int			tmplen;
@@ -437,14 +437,8 @@ serial_read(struct hb_media* mp, int *lenp)
 		--endlen;
 	}
 	
-	msgstring = ha_calloc(MAXMSG,1 );
-	if(!msgstring){
-		PILCallLog(LOG, PIL_CRIT, "serial_read: cannot allocate memory to msgstring ");
-		return(NULL);
-	}
-	msgstring[0] = 0;
-
-	p = msgstring;
+	serial_pkt[0] = 0;
+	p = serial_pkt;
 	
 	/* Skip until we find a MSG_START (hopefully we skip nothing) */
 	while (ttygets(buf, MAXLINE, thissp) != NULL
@@ -457,7 +451,6 @@ serial_read(struct hb_media* mp, int *lenp)
 	len = strnlen(buf, MAXLINE) + 1;
 	if(len >=  MAXMSG){
 		PILCallLog(LOG, PIL_CRIT,  "serial_read:MSG_START exceeds MAXMSG");
-		ha_free(msgstring);
 		return(NULL);
 	}
 
@@ -474,8 +467,7 @@ serial_read(struct hb_media* mp, int *lenp)
 		
 		len += strnlen(buf, MAXLINE) + 1;
 		if(len >= MAXMSG){
-			PILCallLog(LOG, PIL_CRIT, "serial_read:msgstring exceeds MAXMSG");
-			ha_free(msgstring);
+			PILCallLog(LOG, PIL_CRIT, "serial_read:serial_pkt exceeds MAXMSG");
 			return(NULL);
 		}
 		
@@ -492,8 +484,7 @@ serial_read(struct hb_media* mp, int *lenp)
 		
 		len += strnlen(buf, MAXLINE) + 2;
 		if(len >= MAXMSG){
-			PILCallLog(LOG, PIL_CRIT, "serial_read:msgstring exceeds MAXMSG after adding MSG_END");
-			ha_free(msgstring);
+			PILCallLog(LOG, PIL_CRIT, "serial_read:serial_pkt exceeds MAXMSG after adding MSG_END");
 			return(NULL);
 		}
 
@@ -507,20 +498,18 @@ serial_read(struct hb_media* mp, int *lenp)
 	}
 	
 	if (buf[0] == EOS ) {
-		ha_free(msgstring);
 		return NULL;
 	}else{
 		thissp->consecutive_errors=0;
 	}
 	
-	
 	*lenp = len;
 	
 	/*
-	PILCallLog(LOG, PIL_INFO, "final msgstring=%s", msgstring);
+	  PILCallLog(LOG, PIL_INFO, "final serial_pkt=%s", serial_pkt);
 	*/
 	
-	return(msgstring);	
+	return(serial_pkt);	
 }
 
 /* This function does all the writing to our tty ports */
@@ -677,6 +666,10 @@ ttygets(char * inbuf, int length, struct serial_private *tty)
 }
 /*
  * $Log: serial.c,v $
+ * Revision 1.40  2005/08/15 21:12:16  gshi
+ * make the media read() function returns a pointer that is a global varial
+ * This should save a malloc, free, and a memcpy for each message
+ *
  * Revision 1.39  2005/05/02 20:00:04  gshi
  * change wirefmt2msg() from
  * struct ha_msg* wirefmt2msg(char* string, int len)

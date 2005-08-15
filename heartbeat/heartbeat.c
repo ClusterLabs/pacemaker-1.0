@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.443 2005/08/03 14:11:48 alan Exp $ */
+/* $Id: heartbeat.c,v 1.444 2005/08/15 21:12:15 gshi Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -986,7 +986,6 @@ read_child(struct hb_media* mp)
 		hb_signal_process_pending();
 		
 		imsg = wirefmt2ipcmsg(pkt, pktlen, ourchan);
-		ha_free(pkt);
 		if (NULL == imsg) {
 			++nullcount;
 			if (nullcount > maxnullcount) {
@@ -5499,6 +5498,10 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.444  2005/08/15 21:12:15  gshi
+ * make the media read() function returns a pointer that is a global varial
+ * This should save a malloc, free, and a memcpy for each message
+ *
  * Revision 1.443  2005/08/03 14:11:48  alan
  * Require a lot of failures in a row before we actually exit - since
  * exiting causes a restart.

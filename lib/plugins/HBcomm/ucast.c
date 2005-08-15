@@ -1,4 +1,4 @@
-/* $Id: ucast.c,v 1.25 2005/07/13 14:55:41 lars Exp $ */
+/* $Id: ucast.c,v 1.26 2005/08/15 21:12:16 gshi Exp $ */
 /*
  * Adapted from alanr's UDP broadcast heartbeat bcast.c by Stéphane Billiart
  *	<stephane@reefedge.com>
@@ -372,6 +372,8 @@ static int ucast_close(struct hb_media* mp)
  * Receive a heartbeat unicast packet from UDP interface
  */
 
+char ucast_pkt[MAXLINE];
+
 static void *
 ucast_read(struct hb_media* mp, int *lenp)
 {
@@ -379,14 +381,12 @@ ucast_read(struct hb_media* mp, int *lenp)
 	socklen_t addr_len;
 	struct sockaddr_in their_addr;
 	int numbytes;
-	char buf[MAXLINE];
-	void	*pkt;
 	
 	UCASTASSERT(mp);
 	ei = (struct ip_private*)mp->pd;
 
 	addr_len = sizeof(struct sockaddr);
-	if ((numbytes = recvfrom(ei->rsocket, buf, MAXLINE-1, 0,
+	if ((numbytes = recvfrom(ei->rsocket, ucast_pkt, MAXLINE-1, 0,
 		(struct sockaddr *)&their_addr, &addr_len)) == -1) {
 		if (errno != EINTR) {
 			PILCallLog(LOG, PIL_CRIT, "ucast: error receiving from socket: %s",
@@ -398,29 +398,20 @@ ucast_read(struct hb_media* mp, int *lenp)
 		PILCallLog(LOG, PIL_CRIT, "ucast: received zero bytes");
 		return NULL;
 	}
-
-	buf[numbytes] = EOS;
-
+	
+	ucast_pkt[numbytes] = EOS;
+	
 	if (DEBUGPKT) {
 		PILCallLog(LOG, PIL_DEBUG, "ucast: received %d byte packet from %s",
 			numbytes, inet_ntoa(their_addr.sin_addr));
 	}
 	if (DEBUGPKTCONT) {
-		PILCallLog(LOG, PIL_DEBUG, "%s", buf);
+		PILCallLog(LOG, PIL_DEBUG, "%s", ucast_pkt);
 	}
 
-		
-	pkt = ha_malloc(numbytes + 1);
-	if(!pkt){
-		PILCallLog(LOG, PIL_CRIT
-			   ,	"Error in allocating memory");
-		return(NULL);
-	}
-	
-	memcpy(pkt, buf, numbytes + 1);		
 	*lenp = numbytes +1;
 	
-	return(pkt);	
+	return ucast_pkt;
 	
 	
 }

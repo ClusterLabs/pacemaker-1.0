@@ -274,6 +274,7 @@ hbaping_close(struct hb_media* mp)
  * successful.
  */
 
+char hbaping_pkt[MAXLINE];
 static void *
 hbaping_read(struct hb_media* mp, int *lenp)
 {
@@ -326,7 +327,10 @@ hbaping_read(struct hb_media* mp, int *lenp)
 	
 	ha_msg_del(nmsg);
 	
-	return pkt;
+	memcpy(hbaping_pkt, pkt, *lenp);
+	cl_free(pkt);
+	
+	return hbaping_pkt;
 	
 }
 

@@ -1,4 +1,4 @@
-/* $Id: ping.c,v 1.43 2005/08/10 04:08:16 horms Exp $ */
+/* $Id: ping.c,v 1.44 2005/08/15 21:12:16 gshi Exp $ */
 /*
  * ping.c: ICMP-echo-based heartbeat code for heartbeat.
  *
@@ -291,6 +291,7 @@ ping_close(struct hb_media* mp)
  * FIXME!!
  */
 
+char ping_pkt[MAXLINE];
 static void *
 ping_read(struct hb_media* mp, int *lenp)
 {
@@ -309,7 +310,6 @@ ping_read(struct hb_media* mp, int *lenp)
 	int			hlen;
 	struct ha_msg *		msg;
 	const char 		*comment;
-	char			*pkt;
 	int			pktlen;
 	
 	PINGASSERT(mp);
@@ -360,33 +360,24 @@ ReRead:	/* We recv lots of packets that aren't ours */
 	
 	pktlen = numbytes - hlen - ICMP_HDR_SZ;
 
-	if ((pkt = ha_malloc(pktlen + 1)) == NULL) {
-		errno = ENOMEM;
-		return NULL;
-	}
+	ping_pkt[pktlen] = 0;
 	
-	pkt[pktlen] = 0;
-	
-	memcpy(pkt, buf.cbuf + hlen + ICMP_HDR_SZ, pktlen);	
 	*lenp = pktlen + 1;
- 
 	
 	msg = wirefmt2msg(msgstart, bufmax - msgstart, MSG_NEEDAUTH);
 	if (msg == NULL) {
-                ha_free(pkt);
 		errno = EINVAL;
 		return(NULL);
 	}
 	comment = ha_msg_value(msg, F_COMMENT);
 	if (comment == NULL || strcmp(comment, PIL_PLUGIN_S)) {
-                ha_free(pkt);
 		ha_msg_del(msg);
 		errno = EINVAL;
 		return(NULL);
 	}
 	
 	ha_msg_del(msg);
-	return(pkt);
+	return (ping_pkt);
 }
 
 /*

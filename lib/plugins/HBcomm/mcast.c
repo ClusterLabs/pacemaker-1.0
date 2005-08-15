@@ -1,4 +1,4 @@
-/* $Id: mcast.c,v 1.23 2005/04/10 20:10:53 lars Exp $ */
+/* $Id: mcast.c,v 1.24 2005/08/15 21:12:16 gshi Exp $ */
 /*
  * mcast.c: implements hearbeat API for UDP multicast communication
  *
@@ -385,20 +385,19 @@ mcast_close(struct hb_media* hbm)
  * Receive a heartbeat multicast packet from UDP interface
  */
 
+char			mcast_pkt[MAXLINE];
 static void *
 mcast_read(struct hb_media* hbm, int *lenp)
 {
 	struct mcast_private *	mcp;
-	char			buf[MAXLINE];
 	socklen_t		addr_len = sizeof(struct sockaddr);
    	struct sockaddr_in	their_addr; /* connector's addr information */
 	int	numbytes;
-	void	*pkt;
 
 	MCASTASSERT(hbm);
 	mcp = (struct mcast_private *) hbm->pd;
 	
-	if ((numbytes=recvfrom(mcp->rsocket, buf, MAXLINE-1, 0
+	if ((numbytes=recvfrom(mcp->rsocket, mcast_pkt, MAXLINE-1, 0
 			       ,(struct sockaddr *)&their_addr, &addr_len)) < 0) {
 		if (errno != EINTR) {
 			PILCallLog(LOG, PIL_CRIT, "Error receiving from socket: %s"
@@ -407,27 +406,19 @@ mcast_read(struct hb_media* hbm, int *lenp)
 		return NULL;
 	}
 	/* Avoid possible buffer overruns */
-	buf[numbytes] = EOS;
+	mcast_pkt[numbytes] = EOS;
 	
 	if (Debug >= PKTTRACE) {
 		PILCallLog(LOG, PIL_DEBUG, "got %d byte packet from %s"
 		    ,	numbytes, inet_ntoa(their_addr.sin_addr));
 	}
 	if (Debug >= PKTCONTTRACE && numbytes > 0) {
-		PILCallLog(LOG, PIL_DEBUG, "%s", buf);
+		PILCallLog(LOG, PIL_DEBUG, "%s", mcast_pkt);
 	}
 	
-	pkt = ha_malloc(numbytes + 1);
-	if(!pkt){
-		PILCallLog(LOG, PIL_CRIT
-		    ,	"Error in allocating memory");
-		return(NULL);
-	}
-	
-	memcpy(pkt, buf, numbytes + 1);
 	*lenp = numbytes + 1 ;
 
-	return(pkt);
+	return mcast_pkt;;
 	
 	
 }
@@ -809,6 +800,10 @@ get_loop(const char *loop, u_char *l)
 
 /*
  * $Log: mcast.c,v $
+ * Revision 1.24  2005/08/15 21:12:16  gshi
+ * make the media read() function returns a pointer that is a global varial
+ * This should save a malloc, free, and a memcpy for each message
+ *
  * Revision 1.23  2005/04/10 20:10:53  lars
  * int -> socklen_t where needed
  *

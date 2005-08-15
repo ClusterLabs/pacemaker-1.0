@@ -1,4 +1,4 @@
-/* $Id: ping_group.c,v 1.19 2005/08/10 04:08:16 horms Exp $ */
+/* $Id: ping_group.c,v 1.20 2005/08/15 21:12:16 gshi Exp $ */
 /*
  * ping_group.c: ICMP-echo-based heartbeat code for heartbeat.
  *
@@ -377,6 +377,7 @@ ping_group_close(struct hb_media* mp)
  * Receive a heartbeat ping reply packet.
  */
 
+char	   pinggroup_pkt[MAXLINE];
 static void *
 ping_group_read(struct hb_media* mp, int *lenp)
 {
@@ -399,7 +400,6 @@ ping_group_read(struct hb_media* mp, int *lenp)
 	ping_group_node_t	*node;
 	struct ha_msg		*msg = NULL;
 	const char 		*comment;
-	char			*pkt;
 	int			pktlen;
 	
 	PINGGROUPASSERT(mp);
@@ -482,18 +482,13 @@ ReRead:	/* We recv lots of packets that aren't ours */
 	ei->slot[slotn] = seq;
 	
 	pktlen = numbytes - hlen - ICMP_HDR_SZ;
-	if (NULL == (pkt = ha_malloc(pktlen + 1))) {
-		ha_msg_del(msg);
-		errno = ENOMEM;
-		return NULL;
-	}
-	pkt[pktlen] = 0;
+	pinggroup_pkt[pktlen] = 0;
 	
-	memcpy(pkt, buf.cbuf + hlen + ICMP_HDR_SZ, pktlen);	
+	memcpy(pinggroup_pkt, buf.cbuf + hlen + ICMP_HDR_SZ, pktlen);	
 	*lenp = pktlen + 1;
 	
 	ha_msg_del(msg);
-	return(pkt);
+	return(pinggroup_pkt);
 }
 
 /*
