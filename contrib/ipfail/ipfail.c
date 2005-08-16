@@ -1,4 +1,4 @@
-/* $Id: ipfail.c,v 1.42 2005/08/11 20:41:31 gshi Exp $ */
+/* $Id: ipfail.c,v 1.43 2005/08/16 15:09:45 gshi Exp $ */
 /* ipfail: IP Failover plugin for Linux-HA
  *
  * Copyright (C) 2002-2004 Kevin Dwyer <kevin@pheared.net>
@@ -127,7 +127,7 @@ main(int argc, char **argv)
 			exit(100);
 		}
 		
-		if(str_to_boolean(parameter, &auto_failback) != HA_OK){
+		if(cl_str_to_boolean(parameter, &auto_failback) != HA_OK){
 			cl_log(LOG_ERR, " invalid auto_faiback value(%s)",
 			       parameter);
 			exit(100);
