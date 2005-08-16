@@ -1,4 +1,4 @@
-/* $Id: config.c,v 1.167 2005/08/11 20:39:43 gshi Exp $ */
+/* $Id: config.c,v 1.168 2005/08/16 15:08:20 gshi Exp $ */
 /*
  * Parse various heartbeat configuration files...
  *
@@ -207,8 +207,8 @@ check_logd_usage(int* errcount)
 	/*we set uselogd to TRUE here so the next message can be logged*/
 	value = GetParameterValue(KEY_LOGDAEMON);
 	if (value != NULL){
-		if(str_to_boolean(value, &truefalse) == HA_FAIL){
-			cl_log(LOG_ERR, "str_to_boolean failed[%s]", value);
+		if(cl_str_to_boolean(value, &truefalse) == HA_FAIL){
+			cl_log(LOG_ERR, "cl_str_to_boolean failed[%s]", value);
 			(*errcount)++;
 			return;
 		}
@@ -1202,7 +1202,7 @@ set_nice_failback(const char * value)
 	int	rc;
 	int	failback = 0;
 
-	rc = str_to_boolean(value, &failback);
+	rc = cl_str_to_boolean(value, &failback);
 
 	cl_log(LOG_ERR, "nice_failback flag is obsolete."
 	". Use auto_failback {on, off, legacy} instead.");
@@ -1236,7 +1236,7 @@ static int
 set_auto_failback(const char * value)
 {
 	int	rc;
-	rc = str_to_boolean(value, &auto_failback);
+	rc = cl_str_to_boolean(value, &auto_failback);
 	if (rc == HA_FAIL) {
 		if (strcasecmp(value, "legacy") == 0) {
 			nice_failback = FALSE;
@@ -1252,7 +1252,7 @@ set_auto_failback(const char * value)
 static int 
 set_register_to_apphbd(const char * value)
 {
-	return str_to_boolean(value, &UseApphbd);
+	return cl_str_to_boolean(value, &UseApphbd);
 }
 
 /*
@@ -1535,7 +1535,7 @@ set_generation_method(const char * value)
 static int
 set_realtime(const char * value)
 {
-	int	ret = str_to_boolean(value, &enable_realtime);
+	int	ret = cl_str_to_boolean(value, &enable_realtime);
 	if (ret == HA_OK) {
 		if (enable_realtime) {
 			cl_enable_realtime();
@@ -1570,7 +1570,7 @@ static int
 set_normalpoll(const char * value)
 {
 	int	normalpoll=TRUE;
-	int	ret = str_to_boolean(value, &normalpoll);
+	int	ret = cl_str_to_boolean(value, &normalpoll);
 	if (ret == HA_OK) {
 		extern int UseOurOwnPoll;
 		UseOurOwnPoll = !normalpoll;
@@ -1599,7 +1599,7 @@ set_logdaemon(const char * value)
 {
 	int	rc;
 	int	uselogd;
-	rc = str_to_boolean(value, &uselogd);
+	rc = cl_str_to_boolean(value, &uselogd);
 	
 	cl_log_set_uselogd(uselogd);
 	
@@ -1635,7 +1635,7 @@ set_badpack_warn(const char* value)
 {
 	int	warnme = TRUE;
 	int	rc;
-	rc = str_to_boolean(value, &warnme);
+	rc = cl_str_to_boolean(value, &warnme);
 
 	if (HA_OK == rc) {
 		cl_msg_quiet_fmterr = !warnme;
@@ -1948,7 +1948,7 @@ set_coredump(const char* value)
 {
 	gboolean	docore;
 	int		rc;
-	if ((rc = str_to_boolean(value, &docore)) == HA_OK) {
+	if ((rc = cl_str_to_boolean(value, &docore)) == HA_OK) {
 		if (cl_enable_coredumps(docore) < 0 ) {
 			rc = HA_FAIL;
 		}
@@ -2004,7 +2004,7 @@ set_release2mode(const char* value)
 	int		j;
 	int		rc2 = HA_OK;
 
-	if ((rc = str_to_boolean(value, &dorel2)) == HA_OK) {
+	if ((rc = cl_str_to_boolean(value, &dorel2)) == HA_OK) {
 		if (!dorel2) {
 			return HA_OK;
 		}
@@ -2038,6 +2038,10 @@ set_release2mode(const char* value)
 
 /*
  * $Log: config.c,v $
+ * Revision 1.168  2005/08/16 15:08:20  gshi
+ * change str_to_boolean to cl_str_to_boolean
+ * remove the extra copy of that function in cl_log.c
+ *
  * Revision 1.167  2005/08/11 20:39:43  gshi
  * move str_to_boolean() function to cl_misc.c file
  *
