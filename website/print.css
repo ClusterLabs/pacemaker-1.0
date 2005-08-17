@@ -9,7 +9,7 @@ Copyright:    (C) 2005 International Business Machines, Inc.
 body {
 	font-family: lucida, verdana, arial, helvetica, sans-serif;
 	background: #FFFFFF;
-	font-size: 12pt;
+	font-size: 9pt;
      }
 
 img	{
@@ -18,12 +18,12 @@ img	{
 
 
 dl,ul,ol,li,p {
-    margin-top: 1pt;
+    margin-top: 0.5em;
 }
 
 tt, pre	{
     font-family: Lucida Console,Courier New,Courier,monospace;
-    font-size: small;
+    font-size: 8pt;
 	}
 
 A:LINK {
@@ -58,11 +58,11 @@ li p {
 	margin-top: -0.5em;
 	}
 ul ul {
-	margin-top: -1em;
+	margin-top: -0.5em;
 	margin-bottom: 1em;
 	}
 #i_content ol ul {
-	margin-top: -1em;
+	margin-top: -0.5em;
 	margin-left: -3ex;
 	margin-bottom: 1em;
 	}
