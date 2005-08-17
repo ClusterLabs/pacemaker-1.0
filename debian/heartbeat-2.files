@@ -185,7 +185,6 @@ usr/lib/stonith/plugins/stonith2/null.so
 usr/lib/stonith/plugins/stonith2/nw_rpc100s.so
 usr/lib/stonith/plugins/stonith2/rcd_serial.so
 usr/lib/stonith/plugins/stonith2/ribcl.py
-usr/lib/stonith/plugins/stonith2/riloe.so
 usr/lib/stonith/plugins/stonith2/rps10.so
 usr/lib/stonith/plugins/stonith2/ssh.so
 usr/lib/stonith/plugins/stonith2/suicide.so
