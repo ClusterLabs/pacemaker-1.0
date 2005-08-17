@@ -146,7 +146,7 @@ int main(int argc, char * argv[])
 	separate_argv(&argc, &argv, &client_argv);
 	
 	/* code for debug */
-//#if 0
+/* #if 0 */
 	int j;
 	cl_log(LOG_INFO, "Called arg");
 	j = -1;
@@ -158,7 +158,7 @@ int main(int argc, char * argv[])
 	while (client_argv[++j] != NULL) {
 		cl_log(LOG_INFO, "client_argv[%d]: %s", j, client_argv[j]);
 	}
-//#endif
+/* #endif */
 
 	do {
 		option_char = getopt(argc, argv, optstr);
