@@ -1,9 +1,12 @@
-heartbeat-2 (2.0.0-3) unstable; urgency=low
+heartbeat-2 (2.0.1-1) unstable; urgency=low
 
-  * Add /var/lib/heartbeat/cores/root, /var/lib/heartbeat/cores/hacluster 
+  * New upstream 
+  * Add /var/lib/heartbeat/cores/root, /var/lib/heartbeat/cores/hacluster
     and /var/lib/heartbeat/cores/nobody
+  * Remove usr/lib/stonith/plugins/stonith2/riloe.so, its
+    no longer in the tree
 
- -- Simon Horman <horms@debian.org>  Thu, 11 Aug 2005 16:56:35 +0900
+ -- Simon Horman <horms@debian.org>  Wed, 17 Aug 2005 14:01:37 +0900
 
 heartbeat-2 (2.0.0-2) unstable; urgency=low
 
