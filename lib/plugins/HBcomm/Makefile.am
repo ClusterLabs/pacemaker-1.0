@@ -23,6 +23,10 @@ if HBAAPI_BUILD
 HBAPING = hbaping.la
 endif
 
+if BUILD_OPENAIS_MODULE
+OPENAIS=openais.la
+endif
+
 SUBDIRS                 = 
 
 INCLUDES                = -I$(top_builddir)/include -I$(top_srcdir)/include \
@@ -37,7 +41,7 @@ AM_CFLAGS		= @CFLAGS@
 halibdir		= $(libdir)/@HB_PKG@
 plugindir		= $(halibdir)/plugins/HBcomm
 plugin_LTLIBRARIES	= bcast.la mcast.la ping.la serial.la ucast.la \
-			  ping_group.la  $(HBAPING)
+			  ping_group.la  $(HBAPING) $(OPENAIS)
 
 bcast_la_SOURCES	= bcast.c
 bcast_la_LDFLAGS	= -export-dynamic -module -avoid-version
@@ -64,3 +68,6 @@ hbaping_la_SOURCES   	= hbaping.c
 hbaping_la_LDFLAGS  	 = -export-dynamic -module -avoid-version
 hbaping_la_LIBADD   	 = $(top_builddir)/replace/libreplace.la
 
+openais_la_SOURCES   	= openais.c
+openais_la_LDFLAGS  	 = -export-dynamic -module -avoid-version
+openais_la_LIBADD   	 = $(top_builddir)/replace/libreplace.la -levs
