@@ -74,4 +74,5 @@ recoverymgrd_LDFLAGS	= @LIBADD_DL@ @LIBLTDL@ -export-dynamic		\
 			-dlpreopen-force 				\
 			-dlopen-self
 
+conf_lex.c: conf_yacc.h
 
