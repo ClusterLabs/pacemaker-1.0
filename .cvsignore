@@ -1,5 +1,6 @@
 *.spec
 heartbeat*.tar.gz
+heartbeat-2.*
 compile
 configure
 configure.status
