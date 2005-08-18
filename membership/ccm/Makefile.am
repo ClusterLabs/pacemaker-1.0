@@ -33,7 +33,7 @@ commmoddir		= $(halibdir)/modules/comm
 havarlibdir		= $(localstatedir)/lib/@HB_PKG@
 havarrundir		= $(localstatedir)/run/
 
-ccmdir			= $(havarlibdir)/ccm
+ccmdir			= $(HA_VARRUNDIR)/$(HB_PKG)/ccm
 apigid			= @HA_APIGID@
 ccmuid			= @HA_CCMUID@
 gliblib			= @GLIBLIB@
