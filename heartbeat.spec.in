@@ -1,9 +1,9 @@
-#	$Id: heartbeat.spec.in,v 1.138 2005/08/17 13:04:41 andrew Exp $
+#	$Id: heartbeat.spec.in,v 1.139 2005/08/18 15:41:03 andrew Exp $
 
 # Workaround for a change in RPM 4.1.x; needs proper fixing soon!
 ##%define _unpackaged_files_terminate_build 0
 
-Summary: @HB_PKG@ - heartbeat subsystem for High-Availability Linux
+Summary: @HB_PKG@ - The Heartbeat Subsystem for High-Availability Linux
 Name:	@HB_PKG@
 Version:	@VERSION@
 Release:	1
@@ -12,7 +12,7 @@ URL: http://linux-ha.org/
 Group: Utilities
 Packager: Alan Robertson <alanr@unix.sh>
 Source: http://linux-ha.org/download/@HB_PKG@-@VERSION@.tar.gz
-Buildroot: %{_tmppath}/@HB_PKG@-root
+BuildRoot: %{_tmppath}/%{name}-%{version}-build
 BuildPrereq: glib-devel, @UCDSNMPDEVEL@, perl, iputils, /usr/bin/ssh, openssl-devel, libnet
 # libnet available from www.ultramonkey.org and others
 Requires: sysklogd, heartbeat-stonith = %{version}-%{release}, heartbeat-pils = %{version}-%{release}
@@ -943,11 +943,6 @@ make
 ###########################################################
 %install
 ###########################################################
-if
-  [ ! -z "${RPM_BUILD_ROOT}"  -a "${RPM_BUILD_ROOT}" != "/" ]
-then
-  rm -rf $RPM_BUILD_ROOT
-fi
 #make DESTDIR=$RPM_BUILD_ROOT install-strip
 make DESTDIR=$RPM_BUILD_ROOT install
 (
@@ -966,22 +961,26 @@ make DESTDIR=$RPM_BUILD_ROOT install
 @sysconfdir@/ha.d/rc.d
 @sysconfdir@/ha.d/README.config
 @libdir@/heartbeat
-@libdir@/libhbclient.*
+@libdir@/libapphb.*
 @libdir@/libccmclient.*
+@libdir@/libcib.*
 @libdir@/libclm.*
+@libdir@/libcrmcommon.*
+@libdir@/libhbclient.*
+@libdir@/liblrm.*
+@libdir@/libpengine.*
 @libdir@/libplumb.*
 @libdir@/libplumbgpl.*
-@libdir@/libstonithd.*
-@libdir@/libapphb.*
 @libdir@/librecoverymgr.*
+@libdir@/libstonithd.*
+/usr/lib/ocf
 @base_includedir@/heartbeat
 @base_includedir@/clplumbing
 @base_includedir@/saf
 @base_includedir@/ocf
 @sysconfdir@/ha.d/resource.d/
-@INITDIR@/heartbeat
-/usr/lib/ocf
-@sysconfdir@/logrotate.d/heartbeat
+%config @INITDIR@/heartbeat
+%config @sysconfdir@/logrotate.d/heartbeat
 %dir @localstatedir@/lib/@HB_PKG@
 %dir @localstatedir@/lib/@HB_PKG@/cores
 %dir %attr (0700, root, -) @localstatedir@/lib/@HB_PKG@/cores/root
@@ -991,9 +990,10 @@ make DESTDIR=$RPM_BUILD_ROOT install
 %dir @localstatedir@/run/@HB_PKG@
 %attr (2555, @HA_CCMUSER@, @HA_APIGROUP@) @bindir@/cl_status
 @bindir@/cl_respawn
-%dir %attr (755, @HA_CCMUSER@, @HA_APIGROUP@) @localstatedir@/lib/@HB_PKG@/ccm
-%dir %attr (750, @HA_CCMUSER@, @HA_APIGROUP@) @localstatedir@/lib/@HB_PKG@/crm
+%dir %attr (755, @HA_CCMUSER@, @HA_APIGROUP@) @localstatedir@/@HB_PKG@/ccm
+#%dir %attr (755, @HA_CCMUSER@, @HA_APIGROUP@) @HA_VARRUNDIR@/@HB_PKG@/ccm
 %dir %attr (750, @HA_CCMUSER@, @HA_APIGROUP@) @HA_VARRUNDIR@/@HB_PKG@/crm
+%dir %attr (750, @HA_CCMUSER@, @HA_APIGROUP@) @localstatedir@/lib/@HB_PKG@/crm
 %doc @mandir@/man1/cl_status.1*
 %doc @mandir@/man1/ha_logger.1*
 %doc @mandir@/man1/hb_standby.1*
@@ -1012,10 +1012,6 @@ make DESTDIR=$RPM_BUILD_ROOT install
 	@MIBS_DIR@/LINUX-HA-MIB.mib
 %endif
 
-@libdir@/libcib.*
-@libdir@/libcrmcommon.*
-@libdir@/libpengine.*
-@libdir@/liblrm.*
 ###########################################################
 # Files for ldirectord
 %files ldirectord
@@ -1027,8 +1023,8 @@ make DESTDIR=$RPM_BUILD_ROOT install
 @sysconfdir@/logrotate.d/ldirectord
 @INITDIR@/ldirectord
 @sysconfdir@/ha.d/resource.d/ldirectord
-@mandir@/man8/ldirectord.8*
-@mandir@/man8/supervise-ldirectord-config.8*
+%doc @mandir@/man8/ldirectord.8*
+%doc @mandir@/man8/supervise-ldirectord-config.8*
 %doc ldirectord/ldirectord.cf
 
 ###########################################################
@@ -1052,12 +1048,13 @@ make DESTDIR=$RPM_BUILD_ROOT install
 @pils_includedir@
 @libdir@/libpils.*
 @pils_plugindir@
+#@libdir@/@PILSPKG@
 
 ###########################################################
 %clean
 ###########################################################
 if
-  [ -z "${RPM_BUILD_ROOT}"  -a "${RPM_BUILD_ROOT}" != "/" ]
+  [ -n "${RPM_BUILD_ROOT}"  -a "${RPM_BUILD_ROOT}" != "/" ]
 then
   rm -rf $RPM_BUILD_ROOT
 fi
@@ -1099,7 +1096,6 @@ else
     /usr/sbin/useradd @HA_CCMUSER@
   fi
 fi
-#
 
 ###########################################################
 %post
@@ -1120,3 +1116,8 @@ then
   [ -x /sbin/chkconfig ] && /sbin/chkconfig --del heartbeat
 fi
 true
+
+###########################################################
+%postun
+###########################################################
+
