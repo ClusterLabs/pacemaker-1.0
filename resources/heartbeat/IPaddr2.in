@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-#	$Id: IPaddr2.in,v 1.6 2005/08/03 14:37:08 horms Exp $
+#	$Id: IPaddr2.in,v 1.7 2005/08/19 15:06:49 sunjd Exp $
 #
 #	Copyright (C) 2003 Tuomo Soini <tis@foobar.fi>
 #
@@ -404,10 +404,15 @@ monitor() {
     for j in 1 2 3
     do
 	if
-	    @PING@ $OPTS $BASEIP >/dev/null 2>&1
+	    status $1
 	then
-	    echo "OK"
-	    return 0
+	    @PING@ $OPTS $BASEIP >/dev/null 2>&1
+	    if
+		[ $? -eq 0 ]
+	    then
+	        echo "OK"
+	        return 0
+	    fi
 	fi
     done
     echo "down"

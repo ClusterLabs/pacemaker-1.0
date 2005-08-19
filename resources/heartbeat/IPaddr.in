@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-#	$Id: IPaddr.in,v 1.11 2005/08/03 14:37:08 horms Exp $
+#	$Id: IPaddr.in,v 1.12 2005/08/19 15:06:49 sunjd Exp $
 #
 # License:      GNU General Public License (GPL)
 # Support:      linux-ha@lists.linux-ha.org
@@ -638,22 +638,27 @@ ip_monitor() {
   case $SYSTYPE in
         Linux)
             # -c count -t timetolive -q(uiet) -n(umeric) -W timeout
-            PINGARGS="-c 1 -q -n -W $TIMEOUT $BASEIP"
+            PINGARGS="-c 1 -q -n $BASEIP"
             ;;
         SunOS)
             PINGARGS="$BASEIP $TIMEOUT"
             ;;
         *)
-            PINGARGS="-c 1 @PING_TIMEOUT_OPT@ -q $BASEIP"
+            PINGARGS="-c 1 -q $BASEIP"
             ;;
   esac
   for j in 1 2 3
   do
     if
-      @PING@ $PINGARGS >/dev/null 2>&1
+      ip_status $1
     then
-      echo "OK"
-      exit 0
+      @PING@ $PINGARGS >/dev/null 2>&1
+      if
+	[ $? -eq 0 ]
+      then
+        echo "OK"
+        exit 0
+      fi
     fi
   done
   echo "down"
@@ -662,7 +667,7 @@ ip_monitor() {
 
 usage() {
   echo $USAGE >&2
-  echo "$Id: IPaddr.in,v 1.11 2005/08/03 14:37:08 horms Exp $"
+  echo "$Id: IPaddr.in,v 1.12 2005/08/19 15:06:49 sunjd Exp $"
 }
 
 #
@@ -711,6 +716,9 @@ exit $?
 #
 #
 # $Log: IPaddr.in,v $
+# Revision 1.12  2005/08/19 15:06:49  sunjd
+# resolve the issue that ping timeout option may be invalid, found&resovled by Horms and Sun Xun
+#
 # Revision 1.11  2005/08/03 14:37:08  horms
 # standardise confdir in scripts
 #
