@@ -1345,7 +1345,7 @@ main(int argc, char ** argv)
 			/* timeout */
 			ping_membership(&mem_fd);
 			snmp_timeout();
-			continue;
+			goto process_pending;
 		} 
 
 		if (FD_ISSET(hb_fd, &fdset)) {
@@ -1368,6 +1368,11 @@ main(int argc, char ** argv)
 			/* snmp request */
 			snmp_read(&fdset);
 		}
+
+process_pending:
+		run_alarms();
+		netsnmp_check_outstanding_agent_requests();
+
 	}
 
 	/* at shutdown time */
