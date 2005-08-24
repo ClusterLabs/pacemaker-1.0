@@ -130,6 +130,9 @@ int main(int argc, char * argv[])
 	int apphb_warntime = DEFAULT_APPHB_WARNTIME;
 	char ** client_argv = NULL;
 	pid_t child_tmp = 0;
+/* #if 0 */
+	int j;
+/* #endif */
 
 	cl_log_set_entity(app_name);
 	cl_log_enable_stderr(TRUE);
@@ -147,7 +150,6 @@ int main(int argc, char * argv[])
 	
 	/* code for debug */
 /* #if 0 */
-	int j;
 	cl_log(LOG_INFO, "Called arg");
 	j = -1;
 	while (argv[++j] != NULL) {
