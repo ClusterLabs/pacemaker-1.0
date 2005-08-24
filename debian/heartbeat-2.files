@@ -33,8 +33,8 @@ etc/logrotate.d/heartbeat
 usr/bin/cl_respawn
 usr/bin/cl_status
 usr/lib/heartbeat/BasicSanityCheck
-usr/lib/heartbeat/SNMPAgentSanityCheck
 usr/lib/heartbeat/ResourceManager
+usr/lib/heartbeat/SNMPAgentSanityCheck
 usr/lib/heartbeat/TestHeartbeatComm
 usr/lib/heartbeat/api_test
 usr/lib/heartbeat/apphbd
@@ -80,14 +80,14 @@ usr/lib/heartbeat/ha_config
 usr/lib/heartbeat/ha_logd
 usr/lib/heartbeat/ha_logger
 usr/lib/heartbeat/hb_standby
-usr/lib/heartbeat/hbagent
 usr/lib/heartbeat/hb_takeover
-usr/share/snmp/mibs/LINUX-HA-MIB.mib
+usr/lib/heartbeat/hbagent
 usr/lib/heartbeat/heartbeat
 usr/lib/heartbeat/ipctest
 usr/lib/heartbeat/ipctransientclient
 usr/lib/heartbeat/ipctransientserver
 usr/lib/heartbeat/ipfail
+usr/lib/heartbeat/iso8601
 usr/lib/heartbeat/logtest
 usr/lib/heartbeat/lrmadmin
 usr/lib/heartbeat/lrmd
@@ -106,8 +106,8 @@ usr/lib/heartbeat/plugins/HBcomm/ping.so
 usr/lib/heartbeat/plugins/HBcomm/ping_group.so
 usr/lib/heartbeat/plugins/HBcomm/serial.so
 usr/lib/heartbeat/plugins/HBcomm/ucast.so
-usr/lib/heartbeat/plugins/HBcompress/zlib.so
 usr/lib/heartbeat/plugins/HBcompress/bz2.so
+usr/lib/heartbeat/plugins/HBcompress/zlib.so
 usr/lib/heartbeat/plugins/RAExec/heartbeat.so
 usr/lib/heartbeat/plugins/RAExec/lsb.so
 usr/lib/heartbeat/plugins/RAExec/ocf.so
@@ -142,6 +142,8 @@ usr/lib/libpils.so.1
 usr/lib/libpils.so.1.0.0
 usr/lib/libplumb.so.1
 usr/lib/libplumb.so.1.0.0
+usr/lib/libplumbgpl.so.1
+usr/lib/libplumbgpl.so.1.0.0
 usr/lib/librecoverymgr.so.1
 usr/lib/librecoverymgr.so.1.0.0
 usr/lib/libstonith.so.1
@@ -210,6 +212,7 @@ usr/share/doc/heartbeat-2/authkeys
 usr/share/doc/heartbeat-2/faqntips.html
 usr/share/doc/heartbeat-2/faqntips.txt
 usr/share/doc/heartbeat-2/ha.cf
+usr/share/doc/heartbeat-2/ha_logd.cf
 usr/share/doc/heartbeat-2/haresources
 usr/share/doc/heartbeat-2/heartbeat_api.html
 usr/share/doc/heartbeat-2/heartbeat_api.txt
@@ -225,3 +228,4 @@ usr/share/man/man8/ha_logd.8.gz
 usr/share/man/man8/heartbeat.8.gz
 usr/share/man/man8/meatclient.8.gz
 usr/share/man/man8/stonith.8.gz
+usr/share/snmp/mibs/LINUX-HA-MIB.mib

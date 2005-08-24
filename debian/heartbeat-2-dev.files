@@ -94,6 +94,9 @@ usr/lib/libpils.so
 usr/lib/libplumb.a
 usr/lib/libplumb.la
 usr/lib/libplumb.so
+usr/lib/libplumbgpl.a
+usr/lib/libplumbgpl.la
+usr/lib/libplumbgpl.so
 usr/lib/librecoverymgr.la
 usr/lib/librecoverymgr.so
 usr/lib/libstonith.a
