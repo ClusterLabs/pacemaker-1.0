@@ -33,6 +33,7 @@ etc/logrotate.d/heartbeat
 usr/bin/cl_respawn
 usr/bin/cl_status
 usr/lib/heartbeat/BasicSanityCheck
+usr/lib/heartbeat/SNMPAgentSanityCheck
 usr/lib/heartbeat/ResourceManager
 usr/lib/heartbeat/TestHeartbeatComm
 usr/lib/heartbeat/api_test
@@ -79,7 +80,9 @@ usr/lib/heartbeat/ha_config
 usr/lib/heartbeat/ha_logd
 usr/lib/heartbeat/ha_logger
 usr/lib/heartbeat/hb_standby
+usr/lib/heartbeat/hbagent
 usr/lib/heartbeat/hb_takeover
+usr/share/snmp/mibs/LINUX-HA-MIB.mib
 usr/lib/heartbeat/heartbeat
 usr/lib/heartbeat/ipctest
 usr/lib/heartbeat/ipctransientclient
