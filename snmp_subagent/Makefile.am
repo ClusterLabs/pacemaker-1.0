@@ -59,8 +59,6 @@ INCLUDES                = -I$(top_builddir)/include -I$(top_srcdir)/include \
 
 halibdir		= $(libdir)/@HB_PKG@
 
-NET_SNMP_CONFIG		= @NET_SNMP_CONFIG@
-
 # binary programs
 halib_PROGRAMS		= hbagent 
 
@@ -75,7 +73,7 @@ hbagent_LDADD	 	= \
 			$(top_builddir)/membership/ccm/libclm.la \
 			$(GLIBLIB)
 
-hbagent_LDFLAGS		= @SNMP_LIBS@ 
+hbagent_LDFLAGS		= @SNMPAGENTLIB@ 
 
 # test cases
 testdir			= $(libdir)/heartbeat
