@@ -37,7 +37,7 @@ if test $ret != 0
 fi
 
 # start the snmpd manually with our own config file
-SNMPDCONF=/tmp/testsnmpd.conf
+SNMPDCONF=/var/run/testsnmpd.conf
 SNMPD=`which snmpd`
 GenerateSNMPDConf $SNMPDCONF
 $SNMPD -C -c $SNMPDCONF 
