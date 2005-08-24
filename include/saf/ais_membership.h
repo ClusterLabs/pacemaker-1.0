@@ -14,7 +14,7 @@ typedef SaUint32T SaClmNodeIdT;
 #define SA_CLM_MAX_ADDRESS_LENGTH 64
 typedef struct {
     SaUint8T length;
-    unsigned char value[SA_CLM_MAX_ADDRESS_LENGTH];
+    char value[SA_CLM_MAX_ADDRESS_LENGTH];
 } SaClmNodeAddressT;
 
 typedef struct {

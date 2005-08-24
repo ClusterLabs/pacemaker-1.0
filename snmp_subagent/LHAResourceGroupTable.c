@@ -187,7 +187,7 @@ LHAResourceGroupTable_get_next_data_point(void **my_loop_context, void **my_data
     static size_t i = 0;
     netsnmp_variable_list *vptr;
     struct hb_rsinfo * info;
-    int status;
+    uint32_t status;
 
     if (*my_loop_context != NULL) {
 	i = *((size_t *) *my_loop_context);
