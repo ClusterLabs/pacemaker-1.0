@@ -754,9 +754,6 @@ TestCRM() {
 	# stat likes dumping core when MALLOC_CHECK_=2 is specified
 	file $HADIR/core* | grep -e "from 'stat'" | rm -f `awk '{ print $1 }' | tr ':' ' '`
 
-       # So they can be deleted by BSC
-       echo "<!-- $IDENTSTRING -->" >> @HA_VARLIBDIR@/heartbeat/crm/cib.xml 
-	echo "<!-- $IDENTSTRING -->" >> @HA_VARLIBDIR@/heartbeat/crm/cib_backup.xml
 	rm $CRM_LOG
 }
 
