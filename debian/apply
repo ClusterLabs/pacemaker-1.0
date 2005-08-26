@@ -1,7 +1,4 @@
 #!/bin/sh 
-#
-# License:      GNU General Public License (GPL)
-#
 # Apply script for managing patches for debian builts
 # Taken from debian kernel-source-2.4.27 package
 # Original Author: Herbert Xu
@@ -110,6 +107,8 @@ patch_series() {
 
 bubble_sort ()
 {
+	DIR=$1
+	shift
 	SORTED=$@
 
 	SWAPED=1
@@ -125,7 +124,7 @@ bubble_sort ()
 			fi
 			B="$i"
 		
-			if dpkg --compare-versions $A "lt" $B; then
+			if dpkg --compare-versions "$A" "$DIR" "$B"; then
 				SWAPED=1
 				NEW="$NEW $B"
 			else
@@ -139,6 +138,16 @@ bubble_sort ()
 	done
 
 	echo $SORTED
+}
+
+bubble_sort_fwd ()
+{
+	bubble_sort "lt" $@
+}
+
+bubble_sort_rev ()
+{
+	bubble_sort "gt" $@
 }
 
 
@@ -178,12 +187,10 @@ target_rev=${target#*-}
 target_up=${target%-*}
 
 # Sanity checks
-if dpkg --compare-versions "$target_up" ne "$upstream"; then
+if [ "$target_up" != "$upstream" ]; then
 	die "Upstream $target_up doesn't match $upstream!"
 # We don't have that version out yet!
-elif [ ! -n "$target_rev" ] || 
-		( dpkg --compare-versions "$target_rev" ne "$target" && 
-			dpkg --compare-versions "$target_rev" gt "$revision" ); then
+elif [ ! -n "$target_rev" ] || ( [ "$target_rev" != "$target" ] && dpkg --compare-versions $target_rev gt $revision ); then
 	year=$(($(date +%Y) + 1))
 	die "Can't patch to nonexistent revision $target_rev (wait until $year)"
 fi
@@ -202,43 +209,37 @@ if [ "$target_rev" = "$target" ]; then
 		exit 0
 	fi
 
-	for sver in $(bubble_sort $(ls -d $home/series/*) ); do
-		base=$(basename "$sver")
+	for base in $(cd $home/series/ && bubble_sort_fwd $(ls -d *-*)); do
 		srev=${base#*-}
 		if [ -n "$srev" ]; then
-			if dpkg --compare-versions $srev "<=" $current_rev; then
-				unpatch_series $sver
+			if dpkg --compare-versions $srev le $current_rev; then
+				unpatch_series $home/series/$base
 			fi
 		else
 			die "Series doesn't have a revision!"
 		fi
 	done
-elif dpkg --compare-versions "$current_rev" eq "$upstream" ||
-		dpkg --compare-versions "$target_rev" gt "$current_rev"; then
-	for sver in $home/series/*; do
-		base=$(basename "$sver")
+elif [ "$current_rev" = "$upstream" ] || dpkg --compare-versions $target_rev gt $current_rev; then
+	for base in $(cd $home/series/ && bubble_sort_rev $(ls -d *-*)); do
 		srev=${base#*-}
 		if [ -n "$srev" ]; then
-			if dpkg --compare-versions "$srev" gt "$current_rev" && 
-						dpkg --compare-versions "$srev" le "$target_rev"; then
-				patch_series $sver
+			if dpkg --compare-versions $srev gt $current_rev && dpkg --compare-versions $srev le $target_rev; then
+				patch_series $home/series/$base
 			fi
 		else
 			die "Series doesn't have a revision!"
 		fi
 	done
-elif dpkg --compare-versions "$target_rev" eq "$current_rev"; then
+elif [ $target_rev = $current_rev ]; then
 	echo "Nothing to do, exiting."
 	exit 0
-elif dpkg --compare-versions "$target_rev" lt "$current_rev"; then
-	for sver in $(bubble_sort $(ls -d $home/series/*) ); do
-		base=$(basename "$sver")
+elif dpkg --compare-versions $target_rev lt $current_rev; then
+        for base in $(cd $home/series/ && bubble_sort_fwd $(ls -d *-*)); do
 		srev=${base#*-}
 		if [ -n "$srev" ]; then
 			# gt because you don't want to unapply the target series
-			if dpkg --compare-versions "$srev" le "$current_rev" && 
-						dpkg --compare-versions "$srev" gt "$target_rev"; then
-				unpatch_series $sver
+			if dpkg --compare-versions $srev le $current_rev && dpkg --compare-versions $srev gt $target_rev; then
+				unpatch_series $home/series/$base
 			fi
 		else
 			die "Series doesn't have a revision!"
