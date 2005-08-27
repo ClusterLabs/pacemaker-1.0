@@ -173,6 +173,7 @@ beam::attribute_by_signature { allocator (
 beam::attribute_by_signature {
 	allocator (
 		size_index = 1,
+		multiplier_index = 2,
 		return_index = return,
 		initial_state = initialized_to_zero,
 		if_size_is_0 = error,
