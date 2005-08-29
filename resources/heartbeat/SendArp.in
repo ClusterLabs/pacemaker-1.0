@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-#	$Id: SendArp.in,v 1.3 2005/08/03 14:37:08 horms Exp $
+#	$Id: SendArp.in,v 1.4 2005/08/29 03:36:57 sunjd Exp $
 #
 #	Copyright (C) 2004 Horms <horms@verge.net.au>
 #
@@ -33,9 +33,9 @@ exec_prefix=@exec_prefix@
 . @sysconfdir@/ha.d/shellfuncs
 
 SENDARP=$HA_BIN/send_arp
-VARLIB=@localstatedir@/lib/@HB_PKG@
-VLDIR=$VARLIB/rsctmp/IPaddr
-SENDARPPIDDIR=$VARLIB/rsctmp/send_arp
+HA_VARRUNDIR=@localstatedir@/run/@HB_PKG@
+VLDIR=$HA_VARRUNDIR/rsctmp/IPaddr
+SENDARPPIDDIR=$HA_VARRUNDIR/rsctmp/send_arp
 USAGE="usage: $0 ip-address/interface {start|stop|status|monitor}";
 
 #
