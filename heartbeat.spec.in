@@ -1,4 +1,4 @@
-#	$Id: heartbeat.spec.in,v 1.141 2005/08/28 08:33:38 sunjd Exp $
+#	$Id: heartbeat.spec.in,v 1.142 2005/08/29 02:05:54 horms Exp $
 
 # Workaround for a change in RPM 4.1.x; needs proper fixing soon!
 ##%define _unpackaged_files_terminate_build 0
@@ -1001,18 +1001,10 @@ make DESTDIR=$RPM_BUILD_ROOT install
 %doc @mandir@/man8/apphbd.8*
 %doc @mandir@/man8/ha_logd.8*
 %doc @docdir@
-#
-# if ENABLE_SNMP_SUBAGENT=1; then
-#	install mib files and other subagent related stuff;
-# fi
-#
-# Temporarily comment it, this seems harmless and can remove the package 
-# building issue. FIXME!
-#
-#%define ENABLE_SNMP_SUBAGENT @SNMP_SUBAGENT_ENABLED@
-#%if %{ENABLE_SNMP_SUBAGENT}
-#	@MIBS_DIR@/LINUX-HA-MIB.mib
-#%endif
+%define ENABLE_SNMP_SUBAGENT @RPM_ENABLE_SNMP_SUBAGENT@
+%if %{ENABLE_SNMP_SUBAGENT}
+	@MIBS_DIR@/LINUX-HA-MIB.mib
+%endif
 
 ###########################################################
 # Files for ldirectord
