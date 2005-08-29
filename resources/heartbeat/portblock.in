@@ -54,7 +54,7 @@ usage()
 #	available to resources so other resource scripts could use it...
 #
 #
-VARLIB=@localstatedir@/lib/@HB_PKG@/rsctmp
+HA_VARRUNDIR=@localstatedir@/run/@HB_PKG@
 prefix=@prefix@
 exec_prefix=@exec_prefix@
 . @sysconfdir@/ha.d/shellfuncs
@@ -63,7 +63,7 @@ RSCNAME=${CMD}_${1}_${2}_${3}
 # pseudo_resource filename operation
 pseudo_resource()
 {
-  file="$VARLIB/$1"
+  file="$HA_VARRUNDIR/$1"
   case $2 in
     start|restart|reload)  touch "$file";;
     stop) rm -f $file;;

@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-#	$Id: IPaddr2.in,v 1.7 2005/08/19 15:06:49 sunjd Exp $
+#	$Id: IPaddr2.in,v 1.8 2005/08/29 02:09:28 sunjd Exp $
 #
 #	Copyright (C) 2003 Tuomo Soini <tis@foobar.fi>
 #
@@ -30,9 +30,9 @@ exec_prefix=@exec_prefix@
 IP2UTIL=@IP2UTIL@
 SENDARP=$HA_BIN/send_arp
 FINDIF=$HA_BIN/findif
-VARLIB=@localstatedir@/lib/@HB_PKG@
-VLDIR=$VARLIB/rsctmp/IPaddr
-SENDARPPIDDIR=$VARLIB/rsctmp/send_arp
+HA_VARRUNDIR=@localstatedir@/run/@HB_PKG@
+VLDIR=$HA_VARRUNDIR/rsctmp/IPaddr
+SENDARPPIDDIR=$HA_VARRUNDIR/rsctmp/send_arp
 USAGE="usage: $0 ip-address[/netmaskbits[/interface[:label][/broadcast]]]
 {start|stop|status|monitor}\n\nNote: $0 only works on Linux";
 

@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-#	$Id: IPaddr.in,v 1.12 2005/08/19 15:06:49 sunjd Exp $
+#	$Id: IPaddr.in,v 1.13 2005/08/29 02:09:28 sunjd Exp $
 #
 # License:      GNU General Public License (GPL)
 # Support:      linux-ha@lists.linux-ha.org
@@ -31,9 +31,9 @@ HA_D=@sysconfdir@/ha.d
 
 IFCONFIG=@IFCONFIG@
 IFCONFIG_A_OPT=@IFCONFIG_A_OPT@
-VARLIB=@localstatedir@/lib/@HB_PKG@
-VLDIR=$VARLIB/rsctmp/IPaddr
-SENDARPPIDDIR=$VARLIB/rsctmp/send_arp
+HA_VARRUNDIR=@localstatedir@/run/@HB_PKG@
+VLDIR=$HA_VARRUNDIR/rsctmp/IPaddr
+SENDARPPIDDIR=$HA_VARRUNDIR/rsctmp/send_arp
 ROUTE=@ROUTE@
 SENDARP=$HA_BIN/send_arp
 FINDIF=$HA_BIN/findif
@@ -667,7 +667,7 @@ ip_monitor() {
 
 usage() {
   echo $USAGE >&2
-  echo "$Id: IPaddr.in,v 1.12 2005/08/19 15:06:49 sunjd Exp $"
+  echo "$Id: IPaddr.in,v 1.13 2005/08/29 02:09:28 sunjd Exp $"
 }
 
 #
@@ -716,6 +716,9 @@ exit $?
 #
 #
 # $Log: IPaddr.in,v $
+# Revision 1.13  2005/08/29 02:09:28  sunjd
+# bug799: move rsctmp to /var/run/heartbeat
+#
 # Revision 1.12  2005/08/19 15:06:49  sunjd
 # resolve the issue that ping timeout option may be invalid, found&resovled by Horms and Sun Xun
 #
