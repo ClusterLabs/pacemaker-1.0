@@ -1,4 +1,4 @@
-/* $Id: heartbeat.h,v 1.67 2005/07/16 15:09:18 alan Exp $ */
+/* $Id: heartbeat.h,v 1.68 2005/08/29 01:49:28 sunjd Exp $ */
 /*
  * heartbeat.h: core definitions for the Linux-HA heartbeat program
  *
@@ -118,7 +118,7 @@
 #endif
 
 #ifndef RSC_TMPDIR
-#	define	RSC_TMPDIR	VAR_LIB_D "/rsctmp"
+#	define	RSC_TMPDIR	HA_VARRUNDIR "/heartbeat/rsctmp"
 #endif
 
 /* #define HA_DEBUG */

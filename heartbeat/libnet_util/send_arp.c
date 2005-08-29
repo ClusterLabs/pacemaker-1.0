@@ -1,4 +1,4 @@
-/* $Id: send_arp.c,v 1.20 2005/08/08 06:00:05 sunjd Exp $ */
+/* $Id: send_arp.c,v 1.21 2005/08/29 01:44:57 sunjd Exp $ */
 /* 
  * send_arp
  * 
@@ -47,7 +47,7 @@
 #	define	LTYPE	libnet_t
 #endif
 
-#define PIDDIR       HA_VARLIBDIR "/" PACKAGE "/rsctmp/send_arp"
+#define PIDDIR       HA_VARRUNDIR "/" PACKAGE "/rsctmp/send_arp"
 #define PIDFILE_BASE PIDDIR "/send_arp-"
 
 static int send_arp(LTYPE* l, u_long ip, u_char *device, u_char mac[6]
@@ -672,6 +672,9 @@ write_pid_file(const char *pidfilename)
 
 /*
  * $Log: send_arp.c,v $
+ * Revision 1.21  2005/08/29 01:44:57  sunjd
+ * bug799: move rsctmp to /var/run/heartbeat
+ *
  * Revision 1.20  2005/08/08 06:00:05  sunjd
  * bug458:use cl_log() instead of syslog
  *
