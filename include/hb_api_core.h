@@ -1,4 +1,4 @@
-/* $Id: hb_api_core.h,v 1.11 2005/07/07 19:50:33 gshi Exp $ */
+/* $Id: hb_api_core.h,v 1.12 2005/08/29 02:15:57 sunjd Exp $ */
 /*
  * hb_api_core_h: Internal definitions and functions for the heartbeat API
  *
@@ -29,6 +29,8 @@
 
 #ifndef _HB_API_CORE_H
 #	define _HB_API_CORE_H 1
+
+#include <config.h>
 #include <sys/types.h>
 #include <glib.h>
 #include <clplumbing/GSource.h>
@@ -137,7 +139,7 @@ typedef struct client_process {
 #define	RSP_SUFFIX	".rsp"
 
 #ifndef API_REGSOCK
-#	define	API_REGSOCK	VAR_LIB_D "/register"
+#	define	API_REGSOCK	HA_VARRUNDIR "heartbeat/register"
 #endif
 
 void api_heartbeat_monitor(struct ha_msg *msg, int msgtype, const char *iface);
