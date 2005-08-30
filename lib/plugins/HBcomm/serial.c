@@ -1,4 +1,4 @@
-/* $Id: serial.c,v 1.40 2005/08/15 21:12:16 gshi Exp $ */
+/* $Id: serial.c,v 1.41 2005/08/30 20:29:46 gshi Exp $ */
 /*
  * Linux-HA serial heartbeat code
  *
@@ -437,6 +437,7 @@ serial_read(struct hb_media* mp, int *lenp)
 		--endlen;
 	}
 	
+	memset(serial_pkt, 0, MAXLINE);
 	serial_pkt[0] = 0;
 	p = serial_pkt;
 	
@@ -477,6 +478,7 @@ serial_read(struct hb_media* mp, int *lenp)
 		p += tmplen;
 		strcat(p, "\n");
 		p++;
+		/*PILCallLog(LOG, PIL_CRIT, "serialpkt=%s", serial_pkt);*/
 	}
 
 	
@@ -505,9 +507,7 @@ serial_read(struct hb_media* mp, int *lenp)
 	
 	*lenp = len;
 	
-	/*
-	  PILCallLog(LOG, PIL_INFO, "final serial_pkt=%s", serial_pkt);
-	*/
+	/*PILCallLog(LOG, PIL_INFO, "final serial_pkt=%s", serial_pkt);*/
 	
 	return(serial_pkt);	
 }
@@ -666,6 +666,9 @@ ttygets(char * inbuf, int length, struct serial_private *tty)
 }
 /*
  * $Log: serial.c,v $
+ * Revision 1.41  2005/08/30 20:29:46  gshi
+ * reset serial_pkt to 0 everytime we start to receive a message
+ *
  * Revision 1.40  2005/08/15 21:12:16  gshi
  * make the media read() function returns a pointer that is a global varial
  * This should save a malloc, free, and a memcpy for each message
