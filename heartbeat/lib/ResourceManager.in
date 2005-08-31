@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-#	$Id: ResourceManager.in,v 1.30 2005/07/27 02:44:49 panjiam Exp $
+#	$Id: ResourceManager.in,v 1.31 2005/08/31 16:03:02 alan Exp $
 #
 #   Support:      linux-ha-dev@lists.tummy.com
 #   License:      GNU General Public License (GPL)
@@ -121,15 +121,15 @@ ipresline() {
 }
 
 KeyResources() {
-	ipres "^$1 "  | cut -d' ' -f2
+	ipres -i "^$1 "  | cut -d' ' -f2
 }
 
 OurGroupKeys() {
-	ipres "^${HA_CURHOST} "  | cut -d' ' -f2-
+	ipres -i "^${HA_CURHOST} "  | cut -d' ' -f2-
 }
 
 OtherGroupKeys() {
-	ipres -v "^${HA_CURHOST} "  | cut -d' ' -f2-
+	ipres -iv "^${HA_CURHOST} "  | cut -d' ' -f2-
 }
 
 
@@ -444,9 +444,12 @@ esac
 
 #
 #	$Log: ResourceManager.in,v $
+#	Revision 1.31  2005/08/31 16:03:02  alan
+#	Fixed a bug where hostnames had to be in lower case in haresources files.
+#
 #	Revision 1.30  2005/07/27 02:44:49  panjiam
 #	added license statementes, bug #668
-#
+#	
 #	Revision 1.29  2005/02/14 07:37:12  horms
 #	Omit blank lines from output of allkeys
 #	
