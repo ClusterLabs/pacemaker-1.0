@@ -1,4 +1,4 @@
-/* $Id: stonithd.c,v 1.59 2005/09/02 15:35:51 msoffen Exp $ */
+/* $Id: stonithd.c,v 1.60 2005/09/02 15:42:53 msoffen Exp $ */
 
 /* File: stonithd.c
  * Description: STONITH daemon for node fencing
@@ -267,7 +267,7 @@ static struct RA_operation_to_handler raop_handler[] = {
 	{ "status",	stonithRA_monitor,	NULL },
 };
 
-#define PID_FILE        HA_VARRUNDIR"/stonithd.pid"
+#define PID_FILE        HA_VARRUNDIR "/stonithd.pid"
 
 /* define the message type between stonith daemons on different nodes */
 #define T_WHOCANST  	"whocanst"	/* who can stonith a node */
@@ -307,8 +307,8 @@ static const char * optstr = "ahi:krsvt";
 #define STD_PIDFILE         HA_VARRUNDIR "/stonithd.pid"
 
 /* Do not need itselv's log file for real wotk, only for debugging
-#define DAEMON_LOG      "/var/log/stonithd.log"
-#define DAEMON_DEBUG    "/var/log/stonithd.debug"
+#define DAEMON_LOG      HA_VARRUNDIR "/stonithd.log"
+#define DAEMON_DEBUG    HA_VARRUNDIR "/stonithd.debug"
 */
 
 static ProcTrack_ops StonithdProcessTrackOps = {
@@ -3054,6 +3054,9 @@ adjust_debug_level(int nsig, gpointer user_data)
 
 /* 
  * $Log: stonithd.c,v $
+ * Revision 1.60  2005/09/02 15:42:53  msoffen
+ * Replaced /var/run with HA_VARRUNDIR
+ *
  * Revision 1.59  2005/09/02 15:35:51  msoffen
  * Changed from /var/run to use HA_VARRUNDIR
  *
