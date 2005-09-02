@@ -1,4 +1,4 @@
-/* $Id: stonithd.c,v 1.58 2005/07/26 10:19:48 sunjd Exp $ */
+/* $Id: stonithd.c,v 1.59 2005/09/02 15:35:51 msoffen Exp $ */
 
 /* File: stonithd.c
  * Description: STONITH daemon for node fencing
@@ -304,7 +304,7 @@ static const char * simple_help_screen =
 
 static const char * optstr = "ahi:krsvt";
 /* Will replace it with dynamical a config variable */
-#define STD_PIDFILE         "/var/run/stonithd.pid"
+#define STD_PIDFILE         HA_VARRUNDIR "/stonithd.pid"
 
 /* Do not need itselv's log file for real wotk, only for debugging
 #define DAEMON_LOG      "/var/log/stonithd.log"
@@ -3054,6 +3054,9 @@ adjust_debug_level(int nsig, gpointer user_data)
 
 /* 
  * $Log: stonithd.c,v $
+ * Revision 1.59  2005/09/02 15:35:51  msoffen
+ * Changed from /var/run to use HA_VARRUNDIR
+ *
  * Revision 1.58  2005/07/26 10:19:48  sunjd
  * add a log for debugging bug 730; degrade the level of several logs
  *
