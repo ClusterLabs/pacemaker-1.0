@@ -1,4 +1,4 @@
-/* $Id: apphbd.c,v 1.61 2005/07/29 06:21:10 sunjd Exp $ */
+/* $Id: apphbd.c,v 1.62 2005/09/02 15:42:53 msoffen Exp $ */
 /*
  * apphbd:	application heartbeat daemon
  *
@@ -95,7 +95,7 @@
 #include <clplumbing/cl_pidfile.h>
 
 #ifndef PIDFILE
-#	define		PIDFILE "/var/run/apphbd.pid"
+#	define		PIDFILE HA_VARRUNDIR "/apphbd.pid"
 #endif
 
 /* Start: Mirrored from ipcsocket.c */
