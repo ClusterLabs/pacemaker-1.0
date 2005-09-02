@@ -76,6 +76,8 @@
  *
  */
  
+#include "portability.h" 
+
 #include <libgen.h>
 #include <syslog.h>
 #include <clplumbing/cl_log.h>
@@ -84,7 +86,7 @@
 
 
 
-#define PIDDIR "/var/run/"
+#define PIDDIR HA_VARRUNDIR
 #define PIDFILE_BASE PIDDIR "/IPv6addr-"
 
 
