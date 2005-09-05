@@ -1,4 +1,4 @@
-/* $Id: heartbeat.h,v 1.68 2005/08/29 01:49:28 sunjd Exp $ */
+/* $Id: heartbeat.h,v 1.69 2005/09/05 03:01:48 msoffen Exp $ */
 /*
  * heartbeat.h: core definitions for the Linux-HA heartbeat program
  *
@@ -92,16 +92,16 @@
 #define	RQSTDELAY	10
 #define	ACK_MSG_DIV	10
 #ifndef HA_D
-#	define	HA_D		"/etc/ha.d"
+#	define	HA_D		HA_RC_DIR
 #endif
 #ifndef VAR_RUN_D
-#	define	VAR_RUN_D	"/var/run"
+#	define	VAR_RUN_D	HA_VARRUNDIR
 #endif
 #ifndef VAR_LOG_D
 #	define	VAR_LOG_D	"/var/log"
 #endif
 #ifndef HALIB
-#	define HALIB		"/usr/lib/heartbeat"
+#	define HALIB		HA_LIBDIR
 #endif
 #ifndef HA_MODULE_D
 #	define HA_MODULE_D	HALIB "/modules"
@@ -110,11 +110,7 @@
 #	define HA_PLUGIN_D	HALIB "/plugins"
 #endif
 #ifndef TTY_LOCK_D
-#	if defined(linux)
-#		define	TTY_LOCK_D	"/var/lock"
-#	else
-#		define	TTY_LOCK_D	"/var/spool/lock"
-#	endif
+#	define	TTY_LOCK_D	HA_LOCKDIR
 #endif
 
 #ifndef RSC_TMPDIR
