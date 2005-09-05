@@ -22,7 +22,7 @@ AM_CFLAGS                       = @CFLAGS@  @LIBNETDEFINES@
 
 MAINTAINERCLEANFILES    = Makefile.in
 
-INCLUDES		= -I$(top_srcdir)/include
+INCLUDES		= -I$(top_srcdir)/include -I$(top_srcdir)/linux-ha
 
 gliblib			= @GLIBLIB@
 
