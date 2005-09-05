@@ -1,4 +1,4 @@
-/* $Id: apphbd.c,v 1.62 2005/09/02 15:42:53 msoffen Exp $ */
+/* $Id: apphbd.c,v 1.63 2005/09/05 03:02:51 msoffen Exp $ */
 /*
  * apphbd:	application heartbeat daemon
  *
@@ -1257,7 +1257,7 @@ load_notification_plugin(const char * pluginname)
 	PIL_rc	rc;
 	void*	exports;
 	if (pisys == NULL) {
-		pisys = NewPILPluginUniv("/usr/lib/heartbeat/plugins");
+		pisys = NewPILPluginUniv(HA_LIBDIR "/heartbeat/plugins");
 		if (pisys == NULL) {
 			return FALSE;
 		}
