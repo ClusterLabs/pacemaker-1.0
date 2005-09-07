@@ -1,4 +1,4 @@
-/* $Id: heartbeat.h,v 1.69 2005/09/05 03:01:48 msoffen Exp $ */
+/* $Id: heartbeat.h,v 1.70 2005/09/07 15:38:38 msoffen Exp $ */
 /*
  * heartbeat.h: core definitions for the Linux-HA heartbeat program
  *
@@ -98,7 +98,7 @@
 #	define	VAR_RUN_D	HA_VARRUNDIR
 #endif
 #ifndef VAR_LOG_D
-#	define	VAR_LOG_D	"/var/log"
+#	define	VAR_LOG_D	HA_VARLOGDIR
 #endif
 #ifndef HALIB
 #	define HALIB		HA_LIBDIR
