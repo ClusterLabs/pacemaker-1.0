@@ -79,11 +79,7 @@ hbagent_LDFLAGS		= @SNMPAGENTLIB@
 testdir			= $(libdir)/heartbeat
 test_SCRIPTS		= $(test_scrs)
 
-AM_CFLAGS               = @CFLAGS@                                      \
-			-DVAR_RUN_D='"$(havarrundir)"'                  \
-			-DVAR_LIB_D='"$(havarlibdir)"' \
-			-DHA_D='"$(hadir)"' \
-			-DHALIB='"$(halibdir)"' \
-			-DDEFAULT_CFG_FILE='"$(defaultconfig)"' \
-			-DLOGD_PIDFILE='"$(pidfile)"'
+hadir                   = $(sysconfdir)/ha.d
 
+AM_CFLAGS               = @CFLAGS@                                      \
+			-DHA_D='"$(hadir)"'
