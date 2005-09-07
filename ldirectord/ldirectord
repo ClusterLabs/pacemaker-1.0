@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-my($VERSION)=(qw$Id: ldirectord,v 1.119 2005/08/12 01:49:40 horms Exp $)[2];
+my($VERSION)=(qw$Id: ldirectord,v 1.120 2005/09/07 07:31:23 horms Exp $)[2];
 
 ######################################################################
 # ldirectord                 http://www.vergenet.net/linux/ldirectord/
@@ -2375,7 +2375,7 @@ sub _remove_service {
         if((!defined($or) and !defined($is_quiescent)) or 
 			(defined($is_quiescent) and defined($or) and
 				$or->{"weight"} eq 0 and 
-				$or->{"forward"} eq $rforw)){
+				get_forward_flag($or->{"forward"}) eq $rforw)){
 		return;
 	}
 
@@ -2450,8 +2450,8 @@ sub _restore_service {
                 $or=$ov->{"real"}->{$rservice};
         }
         if(defined($or)){
-                unless("-r " . $or->{"weight"} eq $rwght and
-                       $or->{"forward"} eq $rforw){
+                unless($or->{"weight"} eq $rwght and
+                       get_forward_flag($or->{"forward"}) eq $rforw){
                         &system_wrapper("$IPVSADM -e $ipvsadm_args");
 	                &ld_log("Restored $log_args (Weight set to $rwght)");
                 }
