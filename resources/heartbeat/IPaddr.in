@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-#	$Id: IPaddr.in,v 1.13 2005/08/29 02:09:28 sunjd Exp $
+#	$Id: IPaddr.in,v 1.14 2005/09/08 16:41:10 alan Exp $
 #
 # License:      GNU General Public License (GPL)
 # Support:      linux-ha@lists.linux-ha.org
@@ -649,16 +649,15 @@ ip_monitor() {
   esac
   for j in 1 2 3
   do
+    # for R1 style clusters, CTS runs this on the test monitor node
+    # so we cannot check to see if the IP address is served locally
+    # This means that the ARP spoofing is also tested
+    # But we can't tell for sure which node is serving the IP
     if
-      ip_status $1
-    then
       @PING@ $PINGARGS >/dev/null 2>&1
-      if
-	[ $? -eq 0 ]
-      then
-        echo "OK"
-        exit 0
-      fi
+    then
+      echo "OK"
+      exit 0
     fi
   done
   echo "down"
@@ -667,7 +666,7 @@ ip_monitor() {
 
 usage() {
   echo $USAGE >&2
-  echo "$Id: IPaddr.in,v 1.13 2005/08/29 02:09:28 sunjd Exp $"
+  echo "$Id: IPaddr.in,v 1.14 2005/09/08 16:41:10 alan Exp $"
 }
 
 #
@@ -716,6 +715,9 @@ exit $?
 #
 #
 # $Log: IPaddr.in,v $
+# Revision 1.14  2005/09/08 16:41:10  alan
+# Made CTS tests work with respect to the IPaddr monitoring of addresses
+#
 # Revision 1.13  2005/08/29 02:09:28  sunjd
 # bug799: move rsctmp to /var/run/heartbeat
 #
