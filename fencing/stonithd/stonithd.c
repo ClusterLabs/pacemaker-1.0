@@ -1,4 +1,4 @@
-/* $Id: stonithd.c,v 1.61 2005/09/08 02:19:32 msoffen Exp $ */
+/* $Id: stonithd.c,v 1.62 2005/09/08 09:27:41 sunjd Exp $ */
 
 /* File: stonithd.c
  * Description: STONITH daemon for node fencing
@@ -107,6 +107,7 @@ typedef struct {
 		stonith_ops_t	* st_op;
 		stonithRA_ops_t * ra_op;
 	} op_union;
+	int timer_id;
 	void * data;	/* private data */
 } common_op_t;
 
@@ -1021,8 +1022,9 @@ require_local_stonithop(stonith_ops_t * st_op, stonith_rsc_t * srsc,
 		g_hash_table_insert(executing_queue, child_id, op);
 		tmp_callid = g_new(int, 1);
 		*tmp_callid = *child_id;
-		Gmain_timeout_add_full(G_PRIORITY_HIGH_IDLE, st_op->timeout,
-		   		   stonithop_timeout, tmp_callid, NULL);
+		op->timer_id = Gmain_timeout_add_full(G_PRIORITY_HIGH_IDLE
+					, st_op->timeout, stonithop_timeout
+					, tmp_callid, NULL);
 		stonithd_log(LOG_DEBUG, "require_local_stonithop: inserted "
 			    "optype=%d, child_id=%d", st_op->optype, *child_id);
 		return ST_OK;
@@ -1613,8 +1615,9 @@ initiate_local_stonithop(stonith_ops_t * st_op, stonith_rsc_t * srsc,
 		g_hash_table_insert(executing_queue, tmp_callid, op);
 		tmp_callid = g_new(int, 1);
 		*tmp_callid = call_id;
-		Gmain_timeout_add_full(G_PRIORITY_HIGH_IDLE, st_op->timeout,
-		   		   stonithop_timeout, tmp_callid, NULL);
+		op->timer_id = Gmain_timeout_add_full(G_PRIORITY_HIGH_IDLE
+					, st_op->timeout, stonithop_timeout
+					, tmp_callid, NULL);
 		stonithd_log2(LOG_DEBUG, "initiate_local_stonithop: inserted "
 			    "optype=%d, child_id=%d", st_op->optype, call_id);
 		return call_id;
@@ -1707,8 +1710,9 @@ initiate_remote_stonithop(stonith_ops_t * st_op, stonith_rsc_t * srsc,
 		g_hash_table_insert(executing_queue, tmp_callid, op);
 		tmp_callid = g_new(int, 1);
 		*tmp_callid = st_op->call_id;
-		Gmain_timeout_add_full(G_PRIORITY_HIGH_IDLE, st_op->timeout,
-				   stonithop_timeout, tmp_callid, NULL);
+		op->timer_id = Gmain_timeout_add_full(G_PRIORITY_HIGH_IDLE
+					, st_op->timeout, stonithop_timeout
+					, tmp_callid, NULL);
 
 		stonithd_log(LOG_DEBUG, "initiate_remote_stonithop: inserted "
 			  "optype=%d, key=%d", op->op_union.st_op->optype, *tmp_callid);
@@ -2254,6 +2258,7 @@ on_stonithd_virtual_stonithRA_ops(const struct ha_msg * request, gpointer data)
 		op->scenario = STONITH_RA_OP;
 		op->result_receiver = client->ch;
 		op->op_union.ra_op = ra_op;
+		op->timer_id = -1;
 		key_tmp = g_new(int, 1);
 		*key_tmp = *child_pid;
 		g_hash_table_insert(executing_queue, key_tmp, op);
@@ -3022,6 +3027,10 @@ free_common_op_t(gpointer data)
 		ZAPGDOBJ(op->result_receiver);
 	}	
 
+	if (op->timer_id != -1) {
+		Gmain_timeout_remove(op->timer_id);
+		op->timer_id = -1;
+	}
 	/* Donnot need to free 'data' field */
 	stonithd_log2(LOG_DEBUG, "free_common_op_t: end.");
 }
@@ -3054,6 +3063,9 @@ adjust_debug_level(int nsig, gpointer user_data)
 
 /* 
  * $Log: stonithd.c,v $
+ * Revision 1.62  2005/09/08 09:27:41  sunjd
+ * Fix a memory bug
+ *
  * Revision 1.61  2005/09/08 02:19:32  msoffen
  * Changed log directory from HA_VARRUNDIR to HA_VARLOGDIR
  *
