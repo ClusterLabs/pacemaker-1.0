@@ -1,4 +1,4 @@
-/* $Id: stonithd.c,v 1.60 2005/09/02 15:42:53 msoffen Exp $ */
+/* $Id: stonithd.c,v 1.61 2005/09/08 02:19:32 msoffen Exp $ */
 
 /* File: stonithd.c
  * Description: STONITH daemon for node fencing
@@ -307,8 +307,8 @@ static const char * optstr = "ahi:krsvt";
 #define STD_PIDFILE         HA_VARRUNDIR "/stonithd.pid"
 
 /* Do not need itselv's log file for real wotk, only for debugging
-#define DAEMON_LOG      HA_VARRUNDIR "/stonithd.log"
-#define DAEMON_DEBUG    HA_VARRUNDIR "/stonithd.debug"
+#define DAEMON_LOG      HA_VARLOGDIR "/stonithd.log"
+#define DAEMON_DEBUG    HA_VARLOGDIR "/stonithd.debug"
 */
 
 static ProcTrack_ops StonithdProcessTrackOps = {
@@ -3054,6 +3054,9 @@ adjust_debug_level(int nsig, gpointer user_data)
 
 /* 
  * $Log: stonithd.c,v $
+ * Revision 1.61  2005/09/08 02:19:32  msoffen
+ * Changed log directory from HA_VARRUNDIR to HA_VARLOGDIR
+ *
  * Revision 1.60  2005/09/02 15:42:53  msoffen
  * Replaced /var/run with HA_VARRUNDIR
  *
