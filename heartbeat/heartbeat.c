@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.444 2005/08/15 21:12:15 gshi Exp $ */
+/* $Id: heartbeat.c,v 1.445 2005/09/08 23:46:17 gshi Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -5105,8 +5105,9 @@ add2_xmit_hist (struct msg_xmit_hist * hist, struct ha_msg* msg
 	hist->lastrexmit[slot] = 0L;
 	hist->lastmsg = slot;
 	
-	if ( hist->hiseq - hist->lowseq > MAXMSGHIST*3 / 4){
-		cl_log(LOG_WARNING, "Message hist queue is filling up (3/4 full)");
+	if (enable_flow_control && hist->hiseq - hist->lowseq > MAXMSGHIST*3 / 4){
+		cl_log(LOG_WARNING, "Message hist queue is filling up (%d messages in queue)",
+		       (int)(hist->hiseq - hist->lowseq));
 	}
 	
 
@@ -5498,6 +5499,9 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.445  2005/09/08 23:46:17  gshi
+ * It's enable_flow_control is false, then this message should not be printed out
+ *
  * Revision 1.444  2005/08/15 21:12:15  gshi
  * make the media read() function returns a pointer that is a global varial
  * This should save a malloc, free, and a memcpy for each message
