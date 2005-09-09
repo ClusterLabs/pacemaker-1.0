@@ -1,4 +1,4 @@
-/* $Id: hb_api.c,v 1.139 2005/07/29 06:55:37 sunjd Exp $ */
+/* $Id: hb_api.c,v 1.140 2005/09/09 17:21:18 gshi Exp $ */
 /*
  * hb_api: Server-side heartbeat API code
  *
@@ -957,12 +957,12 @@ api_set_sendqlen(const struct ha_msg* msg, struct ha_msg* resp,
 }
 
 static int
-add_client_gen(struct ha_msg* msg)
+add_client_gen(client_proc_t* client, struct ha_msg* msg)
 {
 	char buf[MAX_CLIENT_GEN];
 	
 	memset(buf, 0, MAX_CLIENT_GEN);
-	snprintf(buf, MAX_CLIENT_GEN, "%ld",client_generation);	
+	snprintf(buf, MAX_CLIENT_GEN, "%d", client->cligen);	
 	if (ha_msg_add(msg, F_CLIENT_GENERATION, buf) != HA_OK){
 		cl_log(LOG_ERR, "api_send_client_status: cannot add fields");
 		ha_msg_del(msg); msg=NULL;
@@ -1042,7 +1042,7 @@ api_process_request(client_proc_t* fromclient, struct ha_msg * msg)
 		}
 
 		/* Mikey likes it! */
-		if (add_client_gen(msg) != HA_OK){
+		if (add_client_gen(fromclient, msg) != HA_OK){
 			cl_log(LOG_ERR, "api_process_request: "
 			       " add client generation to ha_msg failed ");			
 		}
@@ -1318,6 +1318,9 @@ api_process_registration_msg(client_proc_t* client, struct ha_msg * msg)
 	char		logfacility[64];
 
 
+	/*set the client generation*/
+	client->cligen =  client_generation++;
+
 	if (msg == NULL
 	||	(msgtype = ha_msg_value(msg, F_TYPE)) == NULL
 	||	(reqtype = ha_msg_value(msg, F_APIREQ)) == NULL
@@ -1461,11 +1464,7 @@ api_send_client_status(client_proc_t* client, const char * status
 		return;
 	}
 	
-	if (strcmp(status, JOINSTATUS) == 0){
-		client_generation++;
-	}
-	
-	if (add_client_gen(msg) != HA_OK){
+	if (add_client_gen(client, msg) != HA_OK){
 		cl_log(LOG_ERR, "api_send_client_status: cannot add fields");
 		ha_msg_del(msg); msg=NULL;
 		return;
