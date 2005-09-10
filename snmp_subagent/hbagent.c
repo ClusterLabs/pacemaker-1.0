@@ -900,6 +900,7 @@ init_resource_table(void)
 		resource = (struct hb_rsinfo *) ha_malloc(sizeof(struct hb_rsinfo));
 		if (!resource) {
 			cl_log(LOG_CRIT, "malloc resource info failed.");
+			fclose(rcsf);
 			return HA_FAIL;
 		}
 
@@ -910,6 +911,7 @@ init_resource_table(void)
 		g_ptr_array_add(gResourceTable, (gpointer *) resource);
 	}
 
+	fclose(rcsf);
 	return HA_OK;
 }
 
