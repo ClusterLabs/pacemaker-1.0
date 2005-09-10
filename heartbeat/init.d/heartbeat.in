@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-#	$Id: heartbeat.in,v 1.40 2005/07/26 09:43:01 panjiam Exp $
+#	$Id: heartbeat.in,v 1.41 2005/09/10 21:46:23 gshi Exp $
 #
 # heartbeat     Start high-availability services
 #
@@ -122,7 +122,7 @@ then
 fi
 
 CheckBool() {
-  case `echo "$1" | tr A-z a-z` in
+  case `echo "$1" | tr A-Z a-z` in
     y|yes|enable|on|true|1)	true;;
     *)				false;;
   esac
@@ -450,6 +450,9 @@ exit $RC
 #
 #
 #  $Log: heartbeat.in,v $
+#  Revision 1.41  2005/09/10 21:46:23  gshi
+#  fixed a typo in translating upper case to lower case
+#
 #  Revision 1.40  2005/07/26 09:43:01  panjiam
 #  Added license, bug #668
 #
