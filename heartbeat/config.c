@@ -1,4 +1,4 @@
-/* $Id: config.c,v 1.168 2005/08/16 15:08:20 gshi Exp $ */
+/* $Id: config.c,v 1.169 2005/09/10 21:51:14 gshi Exp $ */
 /*
  * Parse various heartbeat configuration files...
  *
@@ -754,6 +754,7 @@ dump_config(void)
 	}
 	printf("#---------------------------------------------------\n");
 }
+
 
 /*
  *	Check the /etc/ha.d/haresources file
@@ -2013,6 +2014,12 @@ set_release2mode(const char* value)
 	}
 
 	DoManageResources = FALSE;
+	if (cl_file_exists(RESOURCE_CFG)){
+		cl_log(LOG_WARNING, "File %s exists.", RESOURCE_CFG);
+		cl_log(LOG_WARNING, "This file is not used because crm is enabled");
+	}
+	
+
 	/* Enable release 2 style cluster management */
 	for (j=0; j < DIMOF(r2dirs); ++j) {
 		int	k;
@@ -2038,6 +2045,9 @@ set_release2mode(const char* value)
 
 /*
  * $Log: config.c,v $
+ * Revision 1.169  2005/09/10 21:51:14  gshi
+ * If crm is enabled and haresources file exists, print out a warning
+ *
  * Revision 1.168  2005/08/16 15:08:20  gshi
  * change str_to_boolean to cl_str_to_boolean
  * remove the extra copy of that function in cl_log.c
