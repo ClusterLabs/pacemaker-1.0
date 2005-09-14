@@ -154,11 +154,6 @@ update_tables(const char* nodename, cl_uuid_t* uuid)
 		add_uuidtable(uuid, hip);
 		
 	}
-	
-	
-	
-
-
 }
 
 
@@ -282,7 +277,8 @@ GetUUID(cl_uuid_t* uuid)
 		return HA_OK;
 	}
 	
-	cl_log(LOG_INFO, "No uuid found - generating an uuid");
+	cl_log(LOG_INFO, "No uuid found for current node"
+	" - generating a new uuid.");
 	flags = O_CREAT;
 	
 	if ((fd = open(HB_UUID_FILE, O_WRONLY|O_SYNC|flags, 0644)) < 0) {
@@ -313,3 +309,151 @@ GetUUID(cl_uuid_t* uuid)
 	return HA_OK;
 }
 
+
+/*
+ * Functions for writing out our current node/uuid configuration to a file
+ * as nodes are added/deleted to the configuration and for reading it back
+ * in at startup.
+ */
+
+static int
+node_uuid_file_out(FILE *f, const char * nodename, const cl_uuid_t * uu)
+{
+	char	uuid_str[UU_UNPARSE_SIZEOF];
+	cl_uuid_unparse(uu, uuid_str);
+	if (fprintf(f, "%s\t%s\n", nodename, uuid_str) > sizeof(uuid_str)) {
+		return HA_OK;
+	}
+	return HA_FAIL;
+}
+
+static int	/* Returns -, 0 + *; 0 = EOF, + = OK, - = ERROR */
+node_uuid_file_in(FILE *f, char*  nodename, cl_uuid_t * uu)
+{
+	char	linebuf[MAXLINE];
+	char *	tab;
+	int	len;
+	int	hlen;
+
+	if (fgets(linebuf, MAXLINE, f) == NULL) {
+		if (feof(f)) {
+			return 0;
+		}
+		cl_perror("Cannot read line from node/uuid file");
+		return -1;
+	}
+	len = strlen(linebuf);
+	if (len < UU_UNPARSE_SIZEOF+2) {
+		cl_perror("Malformed (short) node/uuid line [%s] (1)"
+		,	linebuf);
+		return -1;
+	}
+	tab = strchr(linebuf, '\t');
+	if (tab == NULL || (hlen=(tab - linebuf)) > (HOSTLENG-1) || hlen < 1
+	||	linebuf[len-1] != '\n')  {
+		cl_perror("Malformed node/uuid line [%s] (2)", linebuf);
+		return -1;
+	}
+	if ((len - hlen) != UU_UNPARSE_SIZEOF) {
+		cl_perror("Malformed node/uuid line [%s] (3)", linebuf);
+		return -1;
+	}
+	if (cl_uuid_parse(tab+1, uu) < 0) {
+		cl_perror("Malformed uuid in line [%s] (4)", linebuf);
+		return -1;
+	}
+	*tab = EOS;
+	strncpy(nodename, linebuf, MAXLINE);
+	return 1;
+}
+
+int
+write_node_uuid_file(struct sys_config * cfg)
+{
+	int		j;
+	const char *	tmpname =	HOSTUUIDCACHEFILETMP;
+	const char *	finalname =	HOSTUUIDCACHEFILE;
+	FILE *		f;
+
+	(void)unlink(tmpname);
+	if ((f=fopen(tmpname, "w")) == NULL) {
+		cl_perror("Cannot fopen %s for writing", tmpname);
+		return HA_FAIL;
+	}
+	for (j=0; j < cfg->nodecount; ++j) {
+		if (cfg->nodes[j].nodetype != NORMALNODE_I) {
+			continue;
+		}
+		if (node_uuid_file_out(f, cfg->nodes[j].nodename
+		,	&cfg->nodes[j].uuid) != HA_OK) {
+			fclose(f);
+			unlink(tmpname);
+			return HA_FAIL;
+		}
+	}
+	if (fflush(f) < 0) {
+		cl_perror("fflush error on %s", tmpname);
+		fclose(f);
+		unlink(tmpname);
+		return HA_FAIL;
+	}
+	if (fsync(fileno(f)) < 0) {
+		cl_perror("fsync error on %s", tmpname);
+		fclose(f);
+		unlink(tmpname);
+		return HA_FAIL;
+	}
+	if (fclose(f) < 0) {
+		cl_perror("fclose error on %s", tmpname);
+		fclose(f);	/* Can't hurt :-) */
+		unlink(tmpname);
+		return HA_FAIL;
+	}
+	if (rename(tmpname, finalname) < 0) {
+		cl_perror("Cannot rename %s to %s", tmpname, finalname);
+		unlink(tmpname);
+		return HA_FAIL;
+	}
+	sync();
+	return HA_OK;
+}
+
+int
+read_node_uuid_file(struct sys_config * cfg)
+{
+	FILE *		f;
+	char		host[HOSTLENG];
+	cl_uuid_t	uu;
+	int		rc;
+	const char *	uuidcachename = HOSTUUIDCACHEFILE;
+	gboolean	outofsync = FALSE;
+
+	if ((f=fopen(uuidcachename, "r")) == NULL) {
+		cl_perror("Cannot fopen %s for reading", uuidcachename);
+		return HA_FAIL;
+	}
+
+	while ((rc=node_uuid_file_in(f, host, &uu)) > 0) {
+		struct node_info *	thisnode = lookup_tables(host, &uu);
+		cl_uuid_t		curuuid;
+		if (thisnode == NULL) {
+			/* auto-added node */
+			add_node(host, NORMALNODE_I);
+			update_tables(host, &uu);
+			continue;
+		}
+		
+		nodename2uuid(host, &curuuid);
+		if (cl_uuid_is_null(&curuuid)) {
+			update_tables(host, &uu);
+		}else if (cl_uuid_compare(&uu, &curuuid) != 0) {
+			outofsync=TRUE;
+		}
+	}
+	fclose(f);
+	/*
+	 * If outofsync is TRUE, then we should probably write out a new
+	 * uuid cache file. FIXME??
+	 */
+	return rc < 0 ? HA_FAIL: HA_OK;
+}

@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.445 2005/09/08 23:46:17 gshi Exp $ */
+/* $Id: heartbeat.c,v 1.446 2005/09/14 20:20:21 alan Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -2219,8 +2219,7 @@ HBDoMsg_T_STATUS(const char * type, struct node_info * fromnode
 		return;
 	}
 	
-	/* Dooes it contain F_PROTOCOL field?*/
-	
+	/* Does it contain F_PROTOCOL field?*/
 	
 
 	/* Do we already have a newer status? */
@@ -2253,6 +2252,15 @@ HBDoMsg_T_STATUS(const char * type, struct node_info * fromnode
 	}
 
 
+	/* Is this a second status msg from a new node? */
+	if (fromnode->status_suppressed && fromnode->saved_status_msg) {
+		fromnode->status_suppressed = FALSE;
+		QueueRemoteRscReq(PerformQueuedNotifyWorld
+		,	fromnode->saved_status_msg);
+		heartbeat_monitor(fromnode->saved_status_msg, KEEPIT, iface);
+		ha_msg_del(fromnode->saved_status_msg);
+		fromnode->saved_status_msg = NULL;
+	}
 	/* Is the node status the same? */
 	if (strcasecmp(fromnode->status, status) != 0
 	&&	fromnode != curnode) {
@@ -2266,10 +2274,15 @@ HBDoMsg_T_STATUS(const char * type, struct node_info * fromnode
 			,	seqno, msgtime);
 		}
 		
-		QueueRemoteRscReq(PerformQueuedNotifyWorld, msg);
 		strncpy(fromnode->status, status
 		, 	sizeof(fromnode->status));
-		heartbeat_monitor(msg, KEEPIT, iface);
+		if (!fromnode->status_suppressed) {
+			QueueRemoteRscReq(PerformQueuedNotifyWorld, msg);
+			heartbeat_monitor(msg, KEEPIT, iface);
+		}else{
+			/* We know we don't already have a saved msg */
+			fromnode->saved_status_msg = ha_msg_copy(msg);
+		}
 	}else{
 		heartbeat_monitor(msg, NOCHANGE, iface);
 	}
@@ -2288,8 +2301,6 @@ HBDoMsg_T_STATUS(const char * type, struct node_info * fromnode
 	fromnode->status_seqno = seqno;
 
 }
-
-
 
 static void /* This is a client status query from remote client */
 HBDoMsg_T_QCSTATUS(const char * type, struct node_info * fromnode
@@ -2584,15 +2595,29 @@ process_clustermsg(struct ha_msg* msg, struct link* lnk)
 	
 	if (thisnode == NULL) {
 #if defined(MITJA)
-		/* If a node isn't in the configfile, add it... */
-		cl_log(LOG_WARNING
-		,   "process_status_message: new node [%s] in message"
+		/* If a node isn't in the configfile, then add it... */
+		cl_log(LOG_INFO
+		,   "process_clustermsg: Adding new node [%s] to configuration."
 		,	from);
-		add_node(from, NORMALNODE_I);
+		add_normal_node(from);
 		thisnode = lookup_node(from);
 		if (thisnode == NULL) {
 			return;
 		}
+		/*
+		 * Suppress status updates until we hear the second heartbeat
+		 * from the new node.
+		 *
+		 * We've already updated the node table and we will report
+		 * its status if asked...
+		 *
+		 * This may eliminate an extra round of the membership
+		 * protocol.
+		 */
+		thisnode->status_suppressed = TRUE;
+		update_tables(node, &fromuuid);
+		write_node_uuid_file(config);
+		return;
 #else
 		/* If a node isn't in the configfile - whine */
 		cl_log(LOG_ERR
@@ -5499,6 +5524,10 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.446  2005/09/14 20:20:21  alan
+ * Partial fix for bug 132 - allowing nodes to join hearbeat-layer cluster
+ * without formality.
+ *
  * Revision 1.445  2005/09/08 23:46:17  gshi
  * It's enable_flow_control is false, then this message should not be printed out
  *

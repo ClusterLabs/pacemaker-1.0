@@ -1,4 +1,4 @@
-/* $Id: hb_api.c,v 1.140 2005/09/09 17:21:18 gshi Exp $ */
+/* $Id: hb_api.c,v 1.141 2005/09/14 20:20:21 alan Exp $ */
 /*
  * hb_api: Server-side heartbeat API code
  *
@@ -401,7 +401,6 @@ api_heartbeat_monitor(struct ha_msg *msg, int msgtype, const char *iface)
 		/* Is this one of the types of messages we're interested in?*/
 		
 		if ((msgtype & client->desired_types) != 0) {		       	
-			
 			
 			if (should_msg_sendto_client(client, msg)){				
 				api_send_client_msg(client, msg);				
@@ -1868,7 +1867,6 @@ APIclients_input_dispatch(IPC_Channel* chan, gpointer user_data)
 	client->isindispatch = FALSE;
 
 	if (client->removereason) {
-		
 		ret = FALSE;
 		goto getout;
 	}

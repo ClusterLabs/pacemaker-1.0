@@ -1,4 +1,4 @@
-/* $Id: heartbeat.h,v 1.70 2005/09/07 15:38:38 msoffen Exp $ */
+/* $Id: heartbeat.h,v 1.71 2005/09/14 20:20:21 alan Exp $ */
 /*
  * heartbeat.h: core definitions for the Linux-HA heartbeat program
  *
@@ -176,6 +176,10 @@
 #ifndef FIFONAME
 #	define	FIFONAME	VAR_LIB_D "/fifo"
 #endif
+#ifndef	HOSTUUIDCACHEFILE
+#	define	HOSTUUIDCACHEFILE	VAR_LIB_D "/hostcache"
+#endif
+#define		HOSTUUIDCACHEFILETMP	HOSTUUIDCACHEFILE ".tmp"
 
 #define	RCSCRIPT		HA_D "/harc"
 #define CONFIG_NAME		HA_D "/ha.cf"
@@ -255,6 +259,9 @@ struct node_info {
 	char		nodename[HOSTLENG];	/* Host name from config file */
 	cl_uuid_t	uuid;
 	char		status[STATUSLENG];	/* Status from heartbeat */
+	gboolean	status_suppressed;	/* Status reports suppressed
+						   for now */
+	struct ha_msg*	saved_status_msg;	/* Last status (ignored) */
 	struct link	links[MAXMEDIA];
 	int		nlinks;
 	TIME_T		rmt_lastupdate;	/* node's idea of last update time */
@@ -387,6 +394,8 @@ void	SetParameterValue(const char * name, const char * value);
 
 gint		uuid_equal(gconstpointer v, gconstpointer v2);
 guint		uuid_hash(gconstpointer key);
+int		write_node_uuid_file(struct sys_config * cfg);
+int		read_node_uuid_file(struct sys_config * cfg);
 void		add_nametable(const char* nodename, struct node_info* value);
 void		add_uuidtable(cl_uuid_t*, struct node_info* value);
 const char *	uuid2nodename(cl_uuid_t* uuid);
