@@ -1,4 +1,4 @@
-#	$Id: heartbeat.spec.in,v 1.145 2005/09/14 16:16:02 andrew Exp $
+#	$Id: heartbeat.spec.in,v 1.146 2005/09/14 16:54:31 gshi Exp $
 
 # Workaround for a change in RPM 4.1.x; needs proper fixing soon!
 ##%define _unpackaged_files_terminate_build 0
@@ -79,6 +79,10 @@ implementing any number of interfaces.
 %changelog
 * Wed Sep 14 2005  Alan Robertson <alanr@unix.sh> (see doc/AUTHORS file)
 + Version 2.0.1 - 
+  + Communication Layer
+    + netstring encoding format is changed to be more efficient
+    + add compression capability for big messages
+  + Add man pages for hb_standby/hb_takeover	
   + The assert triggered by 2.0.0 has been fixed
   + CIB can now contain XML comments and/or be in DOS format	
   + Includes implementation of the ISO8601 date format
