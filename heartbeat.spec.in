@@ -1,4 +1,4 @@
-#	$Id: heartbeat.spec.in,v 1.142 2005/08/29 02:05:54 horms Exp $
+#	$Id: heartbeat.spec.in,v 1.143 2005/09/14 15:57:54 alan Exp $
 
 # Workaround for a change in RPM 4.1.x; needs proper fixing soon!
 ##%define _unpackaged_files_terminate_build 0
@@ -77,18 +77,25 @@ PILS is designed to support any number of plugins
 implementing any number of interfaces.
 
 %changelog
-* Fri Aug 19 2005  Alan Robertson <alanr@unix.sh> (see doc/AUTHORS file)
+* Wed Sep 14 2005  Alan Robertson <alanr@unix.sh> (see doc/AUTHORS file)
 + Version 2.0.1 - 
   + The assert triggered by 2.0.0 has been fixed
   + CIB can now contain XML comments and/or be in DOS format	
-  + Includes implementaiton of the ISO8601 date format
+  + Includes implementation of the ISO8601 date format
   + New Policy Engine features 
-    http://www.linux-ha.org/ClusterResourceManager/DTD1.0/Annotated : sections 1.5.[8,9,10,12]
+    http://www.linux-ha.org/ClusterResourceManager/DTD1.0/Annotated :
+      sections 1.5.[8,9,10,12]
     + Constraints and instance attributes can now be active conditionally
     + Rules can now contain other rules
     + Date/Time based expressions are supported
     + Cloned resources can now optionally be notified before and after
       any of its peers are stopped or started.
+  -- Known Bugs :-( --
+    - Bug 859 - FSA took too long to complete action - fully recovered from
+    - Bug 882 - IPC channel not connected during shutdown - harmless
+    - Bug 879 - Failed actions cause extra election - harmless
+ Each of these occurs about once or twice in 5000 test iterations
+       - This is probably > 10K failovers
 * Fri Jul 29 2005  Alan Robertson <alanr@unix.sh> (see doc/AUTHORS file)
 + Version 2.0.0 - First stable release of the next generation of the Linux-HA project
   + Basic Characteristics described here:
