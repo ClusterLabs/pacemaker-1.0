@@ -1,4 +1,4 @@
-#	$Id: heartbeat.spec.in,v 1.144 2005/09/14 16:04:49 alan Exp $
+#	$Id: heartbeat.spec.in,v 1.145 2005/09/14 16:16:02 andrew Exp $
 
 # Workaround for a change in RPM 4.1.x; needs proper fixing soon!
 ##%define _unpackaged_files_terminate_build 0
@@ -82,6 +82,10 @@ implementing any number of interfaces.
   + The assert triggered by 2.0.0 has been fixed
   + CIB can now contain XML comments and/or be in DOS format	
   + Includes implementation of the ISO8601 date format
+  + New CLI tools for changing cluster preferences, node attributes 
+    and node standby
+  + Improved recovery and placement of group resources
+  + Detection of failed nodes by the Policy Engine is fixed
   + New Policy Engine features 
     http://www.linux-ha.org/ClusterResourceManager/DTD1.0/Annotated :
       sections 1.5.[8,9,10,12]
@@ -90,14 +94,18 @@ implementing any number of interfaces.
     + Date/Time based expressions are supported
     + Cloned resources can now optionally be notified before and after
       any of its peers are stopped or started.
-    + Removed a flow control message which was very annoying when operating
-      in a mixed 1.x/2.x environment
+    + The cluster can re-evaluate the configuration automatically after
+      a defined interval of idleness
+  + Removed a flow control message which was very annoying when operating
+    in a mixed 1.x/2.x environment
   -- Known Bugs :-( --
     - Bug 859 - FSA took too long to complete action - fully recovered from
     - Bug 882 - IPC channel not connected during shutdown - harmless
     - Bug 879 - Failed actions cause extra election - harmless
  Each of these occurs about once or twice in 5000 test iterations
        - This is probably > 10K failovers
+    - rsc_location constraints cannot have rules that contain other rules
+      (fixed in CVS after release) 
 * Fri Jul 29 2005  Alan Robertson <alanr@unix.sh> (see doc/AUTHORS file)
 + Version 2.0.0 - First stable release of the next generation of the Linux-HA project
   + Basic Characteristics described here:
