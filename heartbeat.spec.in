@@ -1,4 +1,4 @@
-#	$Id: heartbeat.spec.in,v 1.143 2005/09/14 15:57:54 alan Exp $
+#	$Id: heartbeat.spec.in,v 1.144 2005/09/14 16:04:49 alan Exp $
 
 # Workaround for a change in RPM 4.1.x; needs proper fixing soon!
 ##%define _unpackaged_files_terminate_build 0
@@ -90,6 +90,8 @@ implementing any number of interfaces.
     + Date/Time based expressions are supported
     + Cloned resources can now optionally be notified before and after
       any of its peers are stopped or started.
+    + Removed a flow control message which was very annoying when operating
+      in a mixed 1.x/2.x environment
   -- Known Bugs :-( --
     - Bug 859 - FSA took too long to complete action - fully recovered from
     - Bug 882 - IPC channel not connected during shutdown - harmless
