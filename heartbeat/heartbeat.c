@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.447 2005/09/15 03:31:13 alan Exp $ */
+/* $Id: heartbeat.c,v 1.448 2005/09/15 03:59:09 alan Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -768,19 +768,6 @@ initialize_heartbeat()
 	
 	add_uuidtable(&config->uuid, curnode);
 	cl_uuid_copy(&curnode->uuid, &config->uuid);
-	if (access(HOSTUUIDCACHEFILE, F_OK) >= 0) {
-		if (read_node_uuid_file(config) != HA_OK) {
-			cl_log(LOG_ERR
-			,	"Invalid host/uuid map file [%s] - removed."
-			,	HOSTUUIDCACHEFILE);
-			if (unlink(HOSTUUIDCACHEFILE) < 0) {
-				cl_perror("unlink(%s) failed"
-				,	HOSTUUIDCACHEFILE);
-			}
-			write_node_uuid_file(config);
-		}
-		unlink(HOSTUUIDCACHEFILETMP); /* Can't hurt. */
-	}
 
 	if (stat(FIFONAME, &buf) < 0 ||	!S_ISFIFO(buf.st_mode)) {
 		cl_log(LOG_INFO, "Creating FIFO %s.", FIFONAME);
@@ -5537,6 +5524,16 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.448  2005/09/15 03:59:09  alan
+ * Now all the basic pieces to bug 132 are in place - except for a config option
+ * to test it with.
+ * This means there are three auto-join modes one can configure:
+ * 	none	- no nodes may autojoin
+ * 	other	- nodes other than ourselves can autojoin
+ * 	any	- any node, including ourself can autojoin
+ *
+ * None is the default.
+ *
  * Revision 1.447  2005/09/15 03:31:13  alan
  * More pieces to bug 132.
  * I think most things are ready for testing except for an option in config.c

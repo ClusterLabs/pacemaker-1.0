@@ -1,4 +1,4 @@
-/* $Id: config.c,v 1.169 2005/09/10 21:51:14 gshi Exp $ */
+/* $Id: config.c,v 1.170 2005/09/15 03:59:09 alan Exp $ */
 /*
  * Parse various heartbeat configuration files...
  *
@@ -320,9 +320,8 @@ init_config(const char * cfgfile)
 		SetParameterValue(KEY_WARNTIME, tmp);
 	}
 	
-#if !defined(MITJA)
 	/* We should probably complain if there aren't at least two... */
-	if (config->nodecount < 1) {
+	if (config->nodecount < 1 && config->rtjoinconfig != HB_JOIN_ANY) {
 		ha_log(LOG_ERR, "no nodes defined");
 		++errcount;
 	}
@@ -330,22 +329,35 @@ init_config(const char * cfgfile)
 		ha_log(LOG_ERR, "No authentication specified.");
 		++errcount;
 	}
-#endif
+	if (access(HOSTUUIDCACHEFILE, F_OK) >= 0) {
+		if (read_node_uuid_file(config) != HA_OK) {
+			cl_log(LOG_ERR
+			,	"Invalid host/uuid map file [%s] - removed."
+			,	HOSTUUIDCACHEFILE);
+			if (unlink(HOSTUUIDCACHEFILE) < 0) {
+				cl_perror("unlink(%s) failed"
+				,	HOSTUUIDCACHEFILE);
+			}
+			write_node_uuid_file(config);
+		}
+		unlink(HOSTUUIDCACHEFILETMP); /* Can't hurt. */
+	}
 	if ((curnode = lookup_node(localnodename)) == NULL) {
-#if defined(MITJA)
-		ha_log(LOG_NOTICE, "%s", msg);
-		add_normal_node(localnodename);
-		curnode = lookup_node(localnodename);
-		ha_log(LOG_NOTICE, "Current node [%s] added to configuration"
-		,	u.nodename);
-#else
-		ha_log(LOG_ERR, "Current node [%s] not in configuration!"
-		,	localnodename);
-		ha_log(LOG_INFO, "By default, cluster nodes are named"
-		" by `uname -n` and must be declared with a 'node'"
-		" directive in the ha.cf file.");
-		++errcount;
-#endif
+		if (config->rtjoinconfig == HB_JOIN_ANY) {
+			add_normal_node(localnodename);
+			curnode = lookup_node(localnodename);
+			ha_log(LOG_NOTICE, "Current node [%s] added to configuration."
+			,	localnodename);
+			write_node_uuid_file(config);
+		}else{
+			ha_log(LOG_ERR, "Current node [%s] not in configuration!"
+			,	localnodename);
+			ha_log(LOG_INFO, "By default, cluster nodes are named"
+			" by `uname -n` and must be declared with a 'node'"
+			" directive in the ha.cf file.");
+			ha_log(LOG_INFO, "See also: " HAURL("ha.cf/NodeDirective"));
+			++errcount;
+		}
 	}
 	setenv(CURHOSTENV, localnodename, 1);
 	if (config->deadtime_ms <= 2 * config->heartbeat_ms) {
@@ -2045,6 +2057,16 @@ set_release2mode(const char* value)
 
 /*
  * $Log: config.c,v $
+ * Revision 1.170  2005/09/15 03:59:09  alan
+ * Now all the basic pieces to bug 132 are in place - except for a config option
+ * to test it with.
+ * This means there are three auto-join modes one can configure:
+ * 	none	- no nodes may autojoin
+ * 	other	- nodes other than ourselves can autojoin
+ * 	any	- any node, including ourself can autojoin
+ *
+ * None is the default.
+ *
  * Revision 1.169  2005/09/10 21:51:14  gshi
  * If crm is enabled and haresources file exists, print out a warning
  *
