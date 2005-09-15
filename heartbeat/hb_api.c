@@ -1,4 +1,4 @@
-/* $Id: hb_api.c,v 1.141 2005/09/14 20:20:21 alan Exp $ */
+/* $Id: hb_api.c,v 1.142 2005/09/15 00:03:52 gshi Exp $ */
 /*
  * hb_api: Server-side heartbeat API code
  *
@@ -1516,13 +1516,12 @@ api_remove_client_pid(pid_t c_pid, const char * reason)
 	client_proc_t* 	client;
 
 	snprintf(cpid, sizeof(cpid)-1, "%d", c_pid);
-	if ((client = find_client(cpid, NULL)) == NULL) {
+	if ((client = find_client(NULL, cpid)) == NULL) {
 		return 0;
 	}
 
 	client->removereason = reason;
 	G_main_del_IPC_Channel(client->gsource);
-	client->gsource = NULL;
 	return 1;
 }
 static void
@@ -1582,13 +1581,6 @@ api_remove_client_int(client_proc_t* req, const char * reason)
 				prev->next = client->next;
 			}
 
-
-			/* Drop the source - that will destroy the 'chan' */
-			if (client->gsource) {
-
-				G_main_del_IPC_Channel(client->gsource);
-			}
-			
 			break;
 		}
 		prev = client;
@@ -1598,10 +1590,10 @@ api_remove_client_int(client_proc_t* req, const char * reason)
 	if (req == client){
 		
 		api_send_client_status(req, LEAVESTATUS, reason);
-		
 		/* Zap! */
 		memset(client, 0, sizeof(*client));
 		ha_free(client); client = NULL;
+
 	}else{
 		cl_log(LOG_ERR,	"api_remove_client_int: could not find pid [%ld]"
 		       ,	(long) req->pid);
