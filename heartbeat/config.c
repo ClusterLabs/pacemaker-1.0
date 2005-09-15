@@ -1,4 +1,4 @@
-/* $Id: config.c,v 1.171 2005/09/15 04:14:33 alan Exp $ */
+/* $Id: config.c,v 1.172 2005/09/15 06:13:13 alan Exp $ */
 /*
  * Parse various heartbeat configuration files...
  *
@@ -482,6 +482,44 @@ init_config(const char * cfgfile)
 	return(errcount ? HA_FAIL : HA_OK);
 }
 
+static void
+init_node_link_info(struct node_info *   node)
+{
+	longclock_t	cticks = time_longclock();
+	int		j;
+
+	if (node->nodetype == PINGNODE_I) {
+		node->nlinks = 1;
+		for (j=0; j < nummedia; j++) {
+			struct link *lnk = &node->links[0];
+			if (!sysmedia[j]->vf->isping()
+			||	strcmp(node->nodename
+			,	sysmedia[j]->name) != 0) {
+				continue;
+			}
+			lnk->name = node->nodename;
+			lnk->lastupdate = cticks;
+			strncpy(lnk->status, DEADSTATUS
+			,	sizeof(lnk->status));
+			lnk[1].name = NULL;
+			break;
+		}
+		return;
+	}
+	node->nlinks = 0;
+	for (j=0; j < nummedia; j++) {
+		int nc = node->nlinks;
+		struct link *lnk = &node->links[nc];
+		if (sysmedia[j]->vf->isping()) {
+			continue;
+		}
+		lnk->name = sysmedia[j]->name;
+		lnk->lastupdate = cticks;
+		strncpy(lnk->status, DEADSTATUS, sizeof(lnk->status));
+		lnk[1].name = NULL;
+		++node->nlinks;
+	}
+}
 
 /*
  *	Parse the configuration file and stash away the data
@@ -499,7 +537,6 @@ parse_config(const char * cfgfile, char *nodename)
 	int		errcount = 0;
 	int		j;
 	int		i;
-	longclock_t	cticks;
 	struct stat	sbuf;
 	struct DefServices {
 		const char *	name;
@@ -669,43 +706,15 @@ parse_config(const char * cfgfile, char *nodename)
 		}
 	}
 
-	cticks = time_longclock();
 
 	for (i=0; i < config->nodecount; ++i) {
-		if (config->nodes[i].nodetype == PINGNODE_I) {
-			config->nodes[i].nlinks = 1;
-			for (j=0; j < nummedia; j++) {
-				struct link *lnk = &config->nodes[i].links[0];
-				if (!sysmedia[j]->vf->isping()
-				||	strcmp(config->nodes[i].nodename
-				,	sysmedia[j]->name) != 0) {
-					continue;
-				}
-				lnk->name = config->nodes[i].nodename;
-				lnk->lastupdate = cticks;
-				strncpy(lnk->status, DEADSTATUS
-				,	sizeof(lnk->status));
-				lnk[1].name = NULL;
-				break;
-			}
-			continue;
-		}
-		config->nodes[i].nlinks = 0;
-		for (j=0; j < nummedia; j++) {
-			int nc = config->nodes[i].nlinks;
-			struct link *lnk = &config->nodes[i].links[nc];
-			if (sysmedia[j]->vf->isping()) {
-				continue;
-			}
-			lnk->name = sysmedia[j]->name;
-			lnk->lastupdate = cticks;
-			strncpy(lnk->status, DEADSTATUS, sizeof(lnk->status));
-			lnk[1].name = NULL;
-			++config->nodes[i].nlinks;
-		}
+		/*
+		 * We need to re-do this now, after all the
+		 * media directives were parsed.
+		 */
+		init_node_link_info(&config->nodes[i]);
 	}
 
-	j++;
 
 	fclose(f);
 	return(errcount ? HA_FAIL : HA_OK);
@@ -1001,6 +1010,7 @@ add_node(const char * value, int nodetype)
 	hip->track.ack_trigger = rand()%ACK_MSG_DIV;
 	hip->nodetype = nodetype;
 	add_nametable(hip->nodename, hip);
+	init_node_link_info(hip);
 	return(HA_OK);
 }
 
@@ -2079,6 +2089,9 @@ set_autojoin(const char* value)
 
 /*
  * $Log: config.c,v $
+ * Revision 1.172  2005/09/15 06:13:13  alan
+ * more auto-add bugfixes...
+ *
  * Revision 1.171  2005/09/15 04:14:33  alan
  * Added the code to configure in the autojoin feature.
  * Of course, if you use it, it will probably break membership at the moment :-)

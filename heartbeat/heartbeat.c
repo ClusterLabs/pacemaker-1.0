@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.448 2005/09/15 03:59:09 alan Exp $ */
+/* $Id: heartbeat.c,v 1.449 2005/09/15 06:13:13 alan Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -2612,15 +2612,15 @@ process_clustermsg(struct ha_msg* msg, struct link* lnk)
 				return;
 			}
 			/*
-		 	* Suppress status updates until we hear the second heartbeat
-		 	* from the new node.
-		 	*
-		 	* We've already updated the node table and we will report
-		 	* its status if asked...
-		 	*
-		 	* This may eliminate an extra round of the membership
-		 	* protocol.
-		 	*/
+			 * Suppress status updates until we hear the second
+			 * heartbeat from the new node.
+			 *
+			 * We've already updated the node table and we will
+			 * report its status if asked...
+			 *
+			 * This may eliminate an extra round of the membership
+			 * protocol.
+			 */
 			thisnode->status_suppressed = TRUE;
 			update_tables(from, &fromuuid);
 			write_node_uuid_file(config);
@@ -5524,6 +5524,9 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.449  2005/09/15 06:13:13  alan
+ * more auto-add bugfixes...
+ *
  * Revision 1.448  2005/09/15 03:59:09  alan
  * Now all the basic pieces to bug 132 are in place - except for a config option
  * to test it with.
