@@ -113,7 +113,7 @@ esac
 #
 CheckConfigFile() {
   if
-    [ ! -f $1 ]
+    [ ! -f $1 ] 
   then
     return 0
   fi
@@ -209,7 +209,7 @@ GenerateHaResources() {
 	!
   chmod 644 $1
 }
-CONFIGFILES="$HADIR/ha.cf $HADIR/authkeys $HADIR/haresources @HA_VARLIBDIR@/heartbeat/crm/cib.xml @HA_VARLIBDIR@/heartbeat/crm/cib_backup.xml"
+CONFIGFILES="$HADIR/ha.cf $HADIR/authkeys $HADIR/haresources @HA_VARLIBDIR@/heartbeat/crm/cib.xml @HA_VARLIBDIR@/heartbeat/crm/cib_backup.xml @HA_VARLIBDIR@/heartbeat/hostcache"
 
 SetUpConfigFiles() {
   if
@@ -263,7 +263,8 @@ SaveConfigFiles() {
 }
 
 RestoreConfigFiles() {
-  mv $HADIR/.cfsave/cib*.xml @HA_VARLIBDIR@/heartbeat/crm/ >/dev/null 2>&1
+  mv $HADIR/.cfsave/cib*.xml  @HA_VARLIBDIR@/heartbeat/crm/ >/dev/null 2>&1
+  mv $HADIR/.cfsave/hostcache @HA_VARLIBDIR@/heartbeat/ >/dev/null 2>&1
   mv $HADIR/.cfsave/* $HADIR >/dev/null 2>&1
 }
 
