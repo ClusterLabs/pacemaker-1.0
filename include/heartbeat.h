@@ -1,4 +1,4 @@
-/* $Id: heartbeat.h,v 1.71 2005/09/14 20:20:21 alan Exp $ */
+/* $Id: heartbeat.h,v 1.72 2005/09/15 03:31:13 alan Exp $ */
 /*
  * heartbeat.h: core definitions for the Linux-HA heartbeat program
  *
@@ -273,6 +273,11 @@ struct node_info {
 	int		has_resources;	/* TRUE if node may have resources */
 };
 
+typedef enum {
+	HB_JOIN_NONE	= 0,	/* Don't allow runtime joins of unknown nodes */
+	HB_JOIN_OTHER	= 1,	/* Allow runtime joins of other nodes */
+	HB_JOIN_ANY	= 2,	/* Don't even require _us_ to be in ha.cf */
+}hbjointype_t;
 
 #define MAXAUTH	16
 
@@ -299,10 +304,11 @@ struct sys_config {
 	char		dbgfile[PATH_MAX];	/* path to debug file, if any */
         int    		use_dbgfile;            /* Flag to use the debug file*/
 	int		rereadauth;		/* 1 if we need to reread auth file */
-	seqno_t		generation;	/* Heartbeat generation # */
-	cl_uuid_t	uuid;		/* uuid for this node*/
+	seqno_t		generation;		/* Heartbeat generation # */
+	cl_uuid_t	uuid;			/* uuid for this node*/
+	hbjointype_t	rtjoinconfig;		/* Runtime join behavior */
 	int		authnum;
-	Stonith*	stonith;	/* Stonith method: WE NEED A LIST TO SUPPORT MULTIPLE STONITH DEVICES PER NODE -EZA */
+	Stonith*	stonith;	/* Stonith method - r1-style cluster only */
 	struct HBauth_info* authmethod;	/* auth_config[authnum] */
 	struct node_info  nodes[MAXNODE];
 	struct HBauth_info  auth_config[MAXAUTH];

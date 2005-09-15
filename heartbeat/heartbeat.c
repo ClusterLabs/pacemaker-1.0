@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.446 2005/09/14 20:20:21 alan Exp $ */
+/* $Id: heartbeat.c,v 1.447 2005/09/15 03:31:13 alan Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -768,6 +768,19 @@ initialize_heartbeat()
 	
 	add_uuidtable(&config->uuid, curnode);
 	cl_uuid_copy(&curnode->uuid, &config->uuid);
+	if (access(HOSTUUIDCACHEFILE, F_OK) >= 0) {
+		if (read_node_uuid_file(config) != HA_OK) {
+			cl_log(LOG_ERR
+			,	"Invalid host/uuid map file [%s] - removed."
+			,	HOSTUUIDCACHEFILE);
+			if (unlink(HOSTUUIDCACHEFILE) < 0) {
+				cl_perror("unlink(%s) failed"
+				,	HOSTUUIDCACHEFILE);
+			}
+			write_node_uuid_file(config);
+		}
+		unlink(HOSTUUIDCACHEFILETMP); /* Can't hurt. */
+	}
 
 	if (stat(FIFONAME, &buf) < 0 ||	!S_ISFIFO(buf.st_mode)) {
 		cl_log(LOG_INFO, "Creating FIFO %s.", FIFONAME);
@@ -2594,38 +2607,38 @@ process_clustermsg(struct ha_msg* msg, struct link* lnk)
 	thisnode = lookup_tables(from, &fromuuid);
 	
 	if (thisnode == NULL) {
-#if defined(MITJA)
-		/* If a node isn't in the configfile, then add it... */
-		cl_log(LOG_INFO
-		,   "process_clustermsg: Adding new node [%s] to configuration."
-		,	from);
-		add_normal_node(from);
-		thisnode = lookup_node(from);
-		if (thisnode == NULL) {
+		if (config->rtjoinconfig == HB_JOIN_NONE) {
+			/* If a node isn't in our config - whine */
+			cl_log(LOG_ERR
+			,   "process_status_message: bad node [%s] in message"
+			,	from);
+			cl_log_message(LOG_ERR, msg);
+			return;
+		}else{
+			/* If a node isn't in our config, then add it... */
+			cl_log(LOG_INFO
+			,   "%s: Adding new node [%s] to configuration."
+			,	__FUNCTION__, from);
+			add_node(from, NORMALNODE_I);
+			thisnode = lookup_node(from);
+			if (thisnode == NULL) {
+				return;
+			}
+			/*
+		 	* Suppress status updates until we hear the second heartbeat
+		 	* from the new node.
+		 	*
+		 	* We've already updated the node table and we will report
+		 	* its status if asked...
+		 	*
+		 	* This may eliminate an extra round of the membership
+		 	* protocol.
+		 	*/
+			thisnode->status_suppressed = TRUE;
+			update_tables(from, &fromuuid);
+			write_node_uuid_file(config);
 			return;
 		}
-		/*
-		 * Suppress status updates until we hear the second heartbeat
-		 * from the new node.
-		 *
-		 * We've already updated the node table and we will report
-		 * its status if asked...
-		 *
-		 * This may eliminate an extra round of the membership
-		 * protocol.
-		 */
-		thisnode->status_suppressed = TRUE;
-		update_tables(node, &fromuuid);
-		write_node_uuid_file(config);
-		return;
-#else
-		/* If a node isn't in the configfile - whine */
-		cl_log(LOG_ERR
-		,   "process_status_message: bad node [%s] in message"
-		,	from);
-		cl_log_message(LOG_ERR, msg);
-		return;
-#endif
 	}
 
 	/* Throw away some incoming packets if testing is enabled */
@@ -5524,6 +5537,11 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.447  2005/09/15 03:31:13  alan
+ * More pieces to bug 132.
+ * I think most things are ready for testing except for an option in config.c
+ * to activate this feature.
+ *
  * Revision 1.446  2005/09/14 20:20:21  alan
  * Partial fix for bug 132 - allowing nodes to join hearbeat-layer cluster
  * without formality.
