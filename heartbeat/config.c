@@ -1,4 +1,4 @@
-/* $Id: config.c,v 1.170 2005/09/15 03:59:09 alan Exp $ */
+/* $Id: config.c,v 1.171 2005/09/15 04:14:33 alan Exp $ */
 /*
  * Parse various heartbeat configuration files...
  *
@@ -102,6 +102,7 @@ static int set_badpack_warn(const char*);
 static int set_coredump(const char*);
 static int set_corerootdir(const char*);
 static int set_release2mode(const char*);
+static int set_autojoin(const char*);
 
 /*
  * Each of these parameters is is automatically recorded by
@@ -145,6 +146,8 @@ struct directive {
 , {KEY_COREROOTDIR,set_corerootdir, TRUE, NULL, "set root directory of core dump area"}
 , {KEY_REL2,      set_release2mode, TRUE, "false"
 ,				"enable release 2 style resource management"}
+
+, {KEY_AUTOJOIN,  set_autojoin, TRUE, "none" ,	"set automatic join mode/style"}
 };
 
 static const struct WholeLineDirective {
@@ -2054,9 +2057,32 @@ set_release2mode(const char* value)
 	return rc2;
 }
 
+static int
+set_autojoin(const char* value)
+{
+	if (strcmp(value, "none") == 0) {
+		config->rtjoinconfig = HB_JOIN_NONE;
+		return HA_OK;
+	}
+	if (strcmp(value, "other") == 0) {
+		config->rtjoinconfig = HB_JOIN_OTHER;
+		return HA_OK;
+	}
+	if (strcmp(value, "any") == 0) {
+		config->rtjoinconfig = HB_JOIN_ANY;
+		return HA_OK;
+	}
+	cl_log(LOG_ERR, "Invalid %s directive [%s]", KEY_AUTOJOIN, value);
+	return HA_FAIL;
+}
+
 
 /*
  * $Log: config.c,v $
+ * Revision 1.171  2005/09/15 04:14:33  alan
+ * Added the code to configure in the autojoin feature.
+ * Of course, if you use it, it will probably break membership at the moment :-)
+ *
  * Revision 1.170  2005/09/15 03:59:09  alan
  * Now all the basic pieces to bug 132 are in place - except for a config option
  * to test it with.
