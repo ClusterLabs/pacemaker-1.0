@@ -344,26 +344,32 @@ node_uuid_file_in(FILE *f, char*  nodename, cl_uuid_t * uu)
 	}
 	len = strlen(linebuf);
 	if (len < UU_UNPARSE_SIZEOF+2) {
-		cl_perror("Malformed (short) node/uuid line [%s] (1)"
+		cl_log(LOG_ERR, "Malformed (short) node/uuid line [%s] (1)"
 		,	linebuf);
 		return -1;
 	}
+	len -=1;	/* fgets leaves '\n' on end of line */
+	if (linebuf[len] != '\n') {
+		cl_log(LOG_ERR, "Malformed (long) node/uuid line [%s] (2)"
+		,	linebuf);
+		return -1;
+	}
+	linebuf[len] = EOS;
 	tab = strchr(linebuf, '\t');
-	if (tab == NULL || (hlen=(tab - linebuf)) > (HOSTLENG-1) || hlen < 1
-	||	linebuf[len-1] != '\n')  {
-		cl_perror("Malformed node/uuid line [%s] (2)", linebuf);
+	if (tab == NULL || (hlen=(tab - linebuf)) > (HOSTLENG-1) || hlen < 1){
+		cl_log(LOG_ERR, "Malformed node/uuid line [%s] (3)", linebuf);
 		return -1;
 	}
 	if ((len - hlen) != UU_UNPARSE_SIZEOF) {
-		cl_perror("Malformed node/uuid line [%s] (3)", linebuf);
+		cl_log(LOG_ERR, "Malformed node/uuid line [%s] (4)", linebuf);
 		return -1;
 	}
 	if (cl_uuid_parse(tab+1, uu) < 0) {
-		cl_perror("Malformed uuid in line [%s] (4)", linebuf);
+		cl_log(LOG_ERR, "Malformed uuid in line [%s] (5)", linebuf);
 		return -1;
 	}
 	*tab = EOS;
-	strncpy(nodename, linebuf, MAXLINE);
+	strncpy(nodename, linebuf, HOSTLENG);
 	return 1;
 }
 
