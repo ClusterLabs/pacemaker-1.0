@@ -76,6 +76,10 @@ clean:
 		debian/libstonith0 debian/libstonith-dev debian/stonith \
 		debian/tmp
 
+	# Zero autoconf foo
+	rm -f config.status libltdl/config.log libltdl/config.status 
+	touch config.status libltdl/config.log libltdl/config.status 
+
 
 install: build install-stamp
 install-stamp:

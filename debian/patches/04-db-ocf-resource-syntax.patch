@@ -1,0 +1,10 @@
+--- a/resources/OCF/db2.in.orig	2005-09-15 19:48:18.000000000 +0900
++++ b/resources/OCF/db2.in	2005-09-15 19:48:32.000000000 +0900
+@@ -359,6 +359,7 @@
+ 		  echo DB2 UDB instance $instance is stopped
+ 		  exit $OCF_NOT_RUNNING
+ 		fi
++		;;
+ 
+   monitor)	db2_monitor $instance
+ 		exit $?;;

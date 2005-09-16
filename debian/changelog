@@ -1,3 +1,18 @@
+heartbeat-2 (2.0.1-2) unstable; urgency=low
+
+  * Uptream initally made the wrong tar ball avaliable for
+    2.0.1 and this was used to build 2.0.1-1.
+    I have asked 2.0.1-1 not to be accepted into the Debian Archive
+    for this reason. 2.0.1-2 uses the updated, correct tarball from
+    upstream.
+
+  * Note that this package has a binary dependancy on libssl
+    only because of linking against libsnmp9 (5.2.1.2-3)
+
+  * Add build dependancy on libsensors-dev (for libsnmp9)
+
+ -- Simon Horman <horms@debian.org>  Fri, 16 Sep 2005 11:56:35 +0900
+
 heartbeat-2 (2.0.1-1) unstable; urgency=low
 
   * New upstream
@@ -10,8 +25,19 @@ heartbeat-2 (2.0.1-1) unstable; urgency=low
   * Added new libplumbgpl
   * Added new ha_logd.cf
   * Added new iso8601 executable
+  * Temporarly remove the drac3 module as GPL code that links
+    against OpenSSL is not acceptable to Debian.
+    - http://lists.community.tummy.com/pipermail/linux-ha-dev/2005-August/011266.html
+    - http://www.osdl.org/developer_bugzilla/show_bug.cgi?id=853
+  * Update build dependncy from libsnmp5-dev to libsnmp9-dev
+  * Make configure chown test fakeroot aware to avoid build hang 
+  * Fix syntax error in db OCF resource
+  * Make crm/test/helper.sh have #! /bin/bash
+  * Make resources/OCF/ocf-shellfuncs.in have #! /bin/bash
+  * Update FSF address
+  * Zero config.status, libltdl/config.log and libltdl/config.status on clean
 
- -- Simon Horman <horms@debian.org>  Wed, 24 Aug 2005 16:25:41 +0900
+ -- Simon Horman <horms@debian.org>  Thu, 15 Sep 2005 20:24:52 +0900
 
 heartbeat-2 (2.0.0-2) unstable; urgency=low
 

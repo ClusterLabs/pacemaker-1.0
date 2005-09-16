@@ -16,7 +16,8 @@
 # 
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, write to the Free Software
-# Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
+# Free Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston,
+# MA 02110-1301, USA.
 #
 MAINTAINERCLEANFILES    = Makefile.in
 
@@ -29,7 +30,14 @@ EXTRA_DIST		= apply changelog compat control copyright \
 			  ldirectord-2.files ldirectord-2.postinst \
 			  ldirectord-2.postrm \
 			  patches/00-ssh_scp_path.patch \
-			  patches/series/2.0.0-1
+			  patches/01-no-drac3.patch \
+			  patches/02-chown-check.patch \
+			  patches/03-new-fsf-address.patch \
+			  patches/04-db-ocf-resource-syntax.patch \
+			  patches/05-crm-test-helper-script.patch \
+			  patches/06-ocf-shellfuncs-script.patch \
+			  patches/series/2.0.0-1 \
+			  patches/series/2.0.1-1
 
 
 clean-local:

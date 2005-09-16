@@ -1,0 +1,6 @@
++ 01-no-drac3.patch
++ 02-chown-check.patch
++ 03-new-fsf-address.patch
++ 04-db-ocf-resource-syntax.patch
++ 05-crm-test-helper-script.patch
++ 06-ocf-shellfuncs-script.patch

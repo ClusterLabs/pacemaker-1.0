@@ -4,8 +4,14 @@ Wed, 17 Nov 1999 17:30:23 +0100.
 The original sources can be found at:
 	http://www.linux-ha.org/download/
 
-Upstream Authors:
-	
+Upstream Authors (from doc/AUTHORS):
+
+NOTE:	The work of everyone on this project is dearly appreciated. If you
+	are not listed here but should be, please notify us!
+
+The following people have kindly helped with heartbeat development by
+providing code, documentation or testing, or fixes:
+
 	Alan Robertson <alanr@unix.sh>
 		Main architect.
 		Things other people don't want to do.
@@ -14,10 +20,14 @@ Contributors, ordered by last name:
 
 	Eric Ayers <eric@compgen.com>
 		Nightware RPC100S, and WTI RPS10 support
+	Andrew Beekhof <andrew@beekhof.net>
+	        Cluster Resource Manager
+		Darwin Cleanups
 	Stéphane Billiart <stephane@reefedge.com> - unicast support
 	Gregor Binder <gbinder@sysfive.com> - "meatware" STONITH support
         Juan Pedro Paredes Caballero <juampe@retemail.es> - Debian support
 	Dusan Djordjevic <dj.dule@linux.org.yu> - documentation
+	Kevin Dwyer <kevin@pheared.net> - ipfail, bug fixes.
 	Joachim Gleissner <jg@suse.de> ssh STONITH support
 	Luis Claudio R. Gonçalves <lclaudio@conectiva.com.br>
 		nice_failback code, hb_standby code, fixes
@@ -50,6 +60,8 @@ Contributors, ordered by last name:
 	Stefan Salzer <salt@cin.de>
 	Mitja Sarp <mitja@lysator.liu.se>
 		Initial authentication support (first big contribution)
+	Guochun Shi<gshi@ncsa.uiuc.edu>
+		Communication/core/membership layer support
 	Matthew Soffen <sirgeek@mrsucko.org>
 		FreeBSD port, Solaris fixes, and release manager
 	Guenther Thomsen <thomsen@cs.tu-berlin.de>
@@ -78,20 +90,18 @@ Code for the following pieces borrowed from code by:
 	Internet Software Consortium (bind) - replacement inet_pton()
 		function
 
-All sources are published with under following license:
+All binaries provided by this package are GNU GPL or GNU LGPL.
+Some source files are under the BSD licence or in the public domain,
+as annotated by those files. All source files without a specific
+licence statement are available licenced under the GNU GPL.
 
-  This program is free software; you can redistribute it and/or modify
-  it under the terms of the GNU General Public License as published by
-  the Free Software Foundation; either version 2 of the License, or
-  (at your option) any later version.
+A copy of the GNU GPL licence is available on Debian systems at
+/usr/share/common-licenses/GPL
 
-  This program is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-  GNU General Public License for more details.
+A copy of the GNU LGPL licence is available on Debian systems at
+/usr/share/common-licenses/LGPL
 
-  You should have received a copy of the GNU General Public License with
-  the Debian GNU/Linux distribution in file /usr/share/common-licenses/GPL ;
-  if not, write to the Free Software Foundation, Inc., 59 Temple Place,
-  Suite 330, Boston, MA  02111-1307  USA
+A copy of the BSD licence is available on Debian systems at
+/usr/share/common-licenses/BSD
+
 
