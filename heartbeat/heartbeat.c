@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.449 2005/09/15 06:13:13 alan Exp $ */
+/* $Id: heartbeat.c,v 1.450 2005/09/18 02:55:46 alan Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -3565,6 +3565,8 @@ mark_node_dead(struct node_info *hip)
 	if (hip == curnode) {
 		/* Uh, oh... we're dead! */
 		cl_log(LOG_ERR, "No local heartbeat. Forcing restart.");
+		cl_log(LOG_INFO, "See URL: %s"
+		,	HAURL("FAQ#no_local_heartbeat"));
 
 		if (!shutdown_in_progress) {
 			cause_shutdown_restart();
@@ -4526,15 +4528,22 @@ should_drop_message(struct node_info * thisnode, const struct ha_msg *msg,
 				/* They're now alive, but were dead. */
 				/* No restart occured. UhOh. */
 
-				cl_log(LOG_ERR
+				cl_log(LOG_CRIT
 				,	"Cluster node %s"
 				" returning after partition."
 				,	thisnode->nodename);
+				cl_log(LOG_INFO
+				,	"For information on cluster"
+				" partitions, See URL: %s"
+				,	HAURL("SplitBrain"));
 				cl_log(LOG_WARNING
 				,	"Deadtime value may be too small.");
 				cl_log(LOG_INFO
-				,	"See documentation for information"
+				,	"See FAQ for information"
 				" on tuning deadtime.");
+				cl_log(LOG_INFO
+				,	"URL: %s"
+				,	HAURL("FAQ#heavy_load"));
 
 				/* THIS IS RESOURCE WORK!  FIXME */
 				/* IS THIS RIGHT??? FIXME ?? */
@@ -5524,6 +5533,10 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.450  2005/09/18 02:55:46  alan
+ * Added URLs pointing to the documentation which the user should have already
+ * read - for a few common cases.
+ *
  * Revision 1.449  2005/09/15 06:13:13  alan
  * more auto-add bugfixes...
  *

@@ -1,4 +1,4 @@
-/* $Id: hb_api.c,v 1.142 2005/09/15 00:03:52 gshi Exp $ */
+/* $Id: hb_api.c,v 1.143 2005/09/18 02:55:46 alan Exp $ */
 /*
  * hb_api: Server-side heartbeat API code
  *
@@ -585,6 +585,7 @@ api_nodestatus(const struct ha_msg* msg, struct ha_msg* resp
 {
 		const char *		cnode;
 		struct node_info *	node;
+		const char *		savedstat;
 
 		if ((cnode = ha_msg_value(msg, F_NODENAME)) == NULL
 		|| (node = lookup_node(cnode)) == NULL) {
@@ -596,11 +597,17 @@ api_nodestatus(const struct ha_msg* msg, struct ha_msg* resp
 			,	"api_nodestatus: cannot add field");
 			return I_API_IGN;
 		}
+		/* Give them the "real" (non-delayed) status */
+		if (node->saved_status_msg
+		&&	(savedstat
+		=	ha_msg_value(node->saved_status_msg, F_STATUS))) {
+			ha_msg_mod(resp, F_STATUS, savedstat);
+		}
 		return I_API_RET;
 }
 
 /**********************************************************************
- * API_NODESTATUS: Return the status of the given node
+ * API_NODETYPE: Return the type of the given node
  *********************************************************************/
 
 static int
