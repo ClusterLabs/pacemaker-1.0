@@ -218,6 +218,7 @@ auto_failback on
 #
 #	Treats 10.10.10.254 as a psuedo-cluster-member
 #	Used together with ipfail below...
+#	note: don't use a cluster node as ping node	
 #
 #ping 10.10.10.254
 #
