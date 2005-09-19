@@ -316,26 +316,13 @@ auto_failback on
 #	default: classic
 #msgfmt  classic/netstring
 
-#	do we use logging daemon?
-#	detail policy:
-#	1. if there is any entry for debugfile/logfile/logfacility in ha.cf
-#     	 a) if use_logd is not set, logging daemon will not be used
-#     	 b) if use_logd is set to on, logging daemon will be used
-#     	 c) if use_logd is set to off, logging daemon will not be used
-#
-#
-#	2. if there is no entry for debugfile/logfile/logfacility in ha.cf
-#    	 a) if use_logd is not set, logging daemon will be used 
-#    	 b) if use_logd is set to on, logging daemon will be used
-#    	 c) if use_logd is set to off, config error, i.e. you can not turn
-#           off all logging options
-#	
+#	Do we use logging daemon?
 #	If logging daemon is used, logfile/debugfile/logfacility in this file
 #	are not meaningful any longer. You should check the config file for logging
 #	daemon (the default is /etc/logd.cf)
-#
-#	If you are not sure about this option, don't configure it
-#
+#	more infomartion can be fould in http://www.linux-ha.org/ha_2ecf_2fUseLogdDirective
+#	Setting use_logd to "yes" is recommended
+#	
 # use_logd yes/no
 #
 #	the interval we  reconnect to logging daemon if the previous connection failed
