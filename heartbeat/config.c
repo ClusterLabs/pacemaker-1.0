@@ -1,4 +1,4 @@
-/* $Id: config.c,v 1.172 2005/09/15 06:13:13 alan Exp $ */
+/* $Id: config.c,v 1.173 2005/09/19 19:52:05 gshi Exp $ */
 /*
  * Parse various heartbeat configuration files...
  *
@@ -237,6 +237,13 @@ check_logd_usage(int* errcount)
 	}else if (value == NULL || truefalse == FALSE){
 		cl_log(LOG_WARNING, "Logging daemon is disabled --"
 		       "enabling logging daemon is recommended");
+	}else{
+		cl_log(LOG_WARNING, "logd is enabled but %s%s%s is still"
+		       " configured in ha.cf",
+		       config->logfile?"logfile":"",
+		       config->dbgfile?"/debugfile":"",
+		       config->log_facility > 0?"/logfacility":""
+		       );
 	}
 }
 
@@ -1634,7 +1641,7 @@ set_logdaemon(const char * value)
 		       "enabling logging daemon is recommended");
 	}else{
 		cl_log(LOG_INFO, "Enabling logging daemon ");
-		cl_log(LOG_INFO, "logfile and debug file are those specified"
+		cl_log(LOG_INFO, "logfile and debug file are those specified "
 		       "in logd config file (default /etc/logd.cf)");
 	}
 	
@@ -2089,6 +2096,10 @@ set_autojoin(const char* value)
 
 /*
  * $Log: config.c,v $
+ * Revision 1.173  2005/09/19 19:52:05  gshi
+ * print out a warning if logfile/debugfile/logfacility is still configured
+ * if use_logd is set to "yes" in ha.cf
+ *
  * Revision 1.172  2005/09/15 06:13:13  alan
  * more auto-add bugfixes...
  *
