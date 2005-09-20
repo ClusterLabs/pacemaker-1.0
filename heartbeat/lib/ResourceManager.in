@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-#	$Id: ResourceManager.in,v 1.32 2005/09/20 15:54:39 alan Exp $
+#	$Id: ResourceManager.in,v 1.33 2005/09/20 16:06:46 alan Exp $
 #
 #   Support:      linux-ha-dev@lists.tummy.com
 #   License:      GNU General Public License (GPL)
@@ -131,6 +131,16 @@ OurGroupKeys() {
 
 OtherGroupKeys() {
 	ipres -iv "^${HA_CURHOST} "  | cut -d' ' -f2-
+}
+
+StandbyGroupType() {
+  if
+    OurGroupKeys | grep "^$1\$" >/dev/null 
+  then
+    echo local
+  else
+    echo foreign
+  fi
 }
 
 
@@ -281,7 +291,7 @@ acquireresourcegroup() {
       rc=$?
       ha_log "CRIT: Giving up resources due to failure of $j"
       giveupresourcegroup "$node" "$@"
-      (sleep 30; $STANDBY all) &
+      (sleep 30; $STANDBY `StandbyGroupType "$j"`) &
       break
     fi
   done
@@ -446,13 +456,16 @@ esac
 
 #
 #	$Log: ResourceManager.in,v $
+#	Revision 1.33  2005/09/20 16:06:46  alan
+#	Fixed the code to only give up failed resource types...
+#
 #	Revision 1.32  2005/09/20 15:54:39  alan
 #	Fixed a bug where resource start failure would cause resources to never be taken over by anyone
 #	It now does an hb_standby all if a start failure occurs.
 #	The only danger with this is that it might cause both local and foreign
 #	resources to go offline if only one of the two is broken and it loops indefinitely
 #	swapping resources between the two...
-#
+#	
 #	Revision 1.31  2005/08/31 16:03:02  alan
 #	Fixed a bug where hostnames had to be in lower case in haresources files.
 #	
