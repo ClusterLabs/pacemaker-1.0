@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-#	$Id: ResourceManager.in,v 1.31 2005/08/31 16:03:02 alan Exp $
+#	$Id: ResourceManager.in,v 1.32 2005/09/20 15:54:39 alan Exp $
 #
 #   Support:      linux-ha-dev@lists.tummy.com
 #   License:      GNU General Public License (GPL)
@@ -47,6 +47,7 @@ HA_DIR=@sysconfdir@/ha.d
 HA_FUNCS=$HA_DIR/shellfuncs
 export HA_DIR HA_FUNCS
 INITDIR=@INITDIR@
+STANDBY=@libdir@/@PACKAGE@/hb_standby
 USAGE="usage: $0 listkeys machine | takegroup key | givegroup key|status resource";
 . $HA_FUNCS
 
@@ -280,6 +281,7 @@ acquireresourcegroup() {
       rc=$?
       ha_log "CRIT: Giving up resources due to failure of $j"
       giveupresourcegroup "$node" "$@"
+      (sleep 30; $STANDBY all) &
       break
     fi
   done
@@ -444,9 +446,16 @@ esac
 
 #
 #	$Log: ResourceManager.in,v $
+#	Revision 1.32  2005/09/20 15:54:39  alan
+#	Fixed a bug where resource start failure would cause resources to never be taken over by anyone
+#	It now does an hb_standby all if a start failure occurs.
+#	The only danger with this is that it might cause both local and foreign
+#	resources to go offline if only one of the two is broken and it loops indefinitely
+#	swapping resources between the two...
+#
 #	Revision 1.31  2005/08/31 16:03:02  alan
 #	Fixed a bug where hostnames had to be in lower case in haresources files.
-#
+#	
 #	Revision 1.30  2005/07/27 02:44:49  panjiam
 #	added license statementes, bug #668
 #	
