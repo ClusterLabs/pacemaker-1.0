@@ -1,4 +1,4 @@
-/* $Id: ha_msg.h,v 1.63 2005/08/05 19:40:13 gshi Exp $ */
+/* $Id: ha_msg.h,v 1.64 2005/09/20 23:45:03 gshi Exp $ */
 /*
  * Intracluster message object (struct ha_msg)
  *
@@ -386,10 +386,6 @@ void* cl_msg_list_nth_data(struct ha_msg* msg, const char* name, int n);
 int	ha_msg_add_int(struct ha_msg * msg, const char * name, int value);
 int	ha_msg_mod_int(struct ha_msg * msg, const char * name, int value);
 int	ha_msg_value_int(const struct ha_msg * msg, const char * name, int* value);
-
-/* Functions to add/get a uuid*/
-int	ha_msg_add_uuid(struct ha_msg * msg, const char * name, cl_uuid_t* id);
-int	ha_msg_value_uuid(struct ha_msg * msg, const char * name, cl_uuid_t* id);
 
 /* Functions to add/get a string list*/
 GList*	ha_msg_value_str_list(struct ha_msg * msg, const char * name);
