@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-my($VERSION)=(qw$Id: ldirectord,v 1.120 2005/09/07 07:31:23 horms Exp $)[2];
+my($VERSION)=(qw$Id: ldirectord,v 1.121 2005/09/21 04:00:14 horms Exp $)[2];
 
 ######################################################################
 # ldirectord                 http://www.vergenet.net/linux/ldirectord/
@@ -1995,11 +1995,11 @@ sub check_connect
 		local $SIG{'ALRM'} = sub { die "Timeout Alarm" };
 		&ld_debug(4, "Timeout is $$v{checktimeout}");
 		alarm $$v{checktimeout};
-		# N.B: ld_open_socket dies on error, which
-		#      will throw us out of the eval
 		my $sock = &ld_open_socket($$r{server}, $port, $$v{protocol});
 		if ($sock) {
 			close($sock);
+		} else {
+			die(); #socket attempt failed immediately (not timeout)
 		}
 		&ld_debug(3, "Connected to $1 (port $port)");
 		alarm 0; # Cancel the alarm
@@ -2032,10 +2032,11 @@ sub check_sip
 		&ld_debug(4, "Timeout is $$v{checktimeout}");
 		alarm $$v{checktimeout};
 
-		# N.B: ld_open_socket dies on error, which
-		#      will throw us out of the eval
 		my $sock = &ld_open_socket($$r{server}, $sip_d_port, 
 					$$v{protocol});
+		unless ($sock) {
+			die(); #socket attempt failed immediately (not timeout)
+		}
 
 		my $sip_sockaddr = getsockname($sock);
 		my ($sip_s_port, $sip_s_addr) = sockaddr_in($sip_sockaddr);
@@ -3094,7 +3095,7 @@ sub ld_exit
 #      protocol: Prococol to use. Should be either "tcp" or "udp"
 # post: A Socket connection is opened to the remote host
 # return: Open socket
-#         Programe dies on error (may be caught by calling function)
+#         undef on error
 
 sub ld_open_socket
 {
