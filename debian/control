@@ -12,6 +12,8 @@ Architecture: all
 Depends: ${perl:Depends}, libdigest-md5-perl, libwww-perl, libcrypt-ssleay-perl, libmail-imapclient-perl, libdigest-hmac-perl, libnet-ldap-perl, libnet-dns-perl, libdbi-perl, ipvsadm
 Recommends: sysklogd|syslog-ng, logrotate
 Provides: ldirectord
+Conflicts: ldirectord
+Replaces: ldirectord
 Description: Monitors virtual services provided by LVS
  ldirectord is a stand-alone daemon to monitor services of real
  for virtual services provided by The Linux Virtual Server
@@ -24,7 +26,9 @@ Priority: optional
 Architecture: any
 Depends: ${shlibs:Depends}, python, iproute, adduser, netkit-ping | iputils-ping
 Recommends: sysklogd | syslog-ng | system-log-daemon, logrotate
-Provides: heartbeat libpils0 libstonith0 stonith
+Provides: heartbeat, libpils0, libstonith0, stonith
+Conflicts: heartbeat, libpils0, libstonith0, stonith
+Replaces: heartbeat, libpils0, libstonith0, stonith
 Description: Subsystem for High-Availability Linux
  heartbeat is a basic heartbeat subsystem for Linux-HA.
  It will run scripts at initialisation, and when machines go up or down.
@@ -39,7 +43,9 @@ Package: heartbeat-2-dev
 Section: devel
 Priority: optional
 Architecture: any
-Depends: heartbeat (= ${Source-Version})
-Provides: heartbeat-dev, libstonith-dev libpils-dev
+Depends: heartbeat-2 (= ${Source-Version})
+Provides: heartbeat-dev, libstonith-dev, libpils-dev
+Conflicts: heartbeat-dev, libstonith-dev, libpils-dev
+Replaces: heartbeat-dev, libstonith-dev, libpils-dev
 Description: Subsystem for High-Availability Linux - development files
  Headers and Libraries for developing modules to work with Heartbeat

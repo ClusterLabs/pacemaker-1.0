@@ -1,3 +1,10 @@
+heartbeat-2 (2.0.1-3) unstable; urgency=low
+
+  * Restrurctured  provides, conflicts and replaces
+  * Made heartbeat-2-dev depend on heartbeat-2, not heartbeat
+
+ -- Simon Horman <horms@debian.org>  Thu, 22 Sep 2005 17:24:19 +0900
+
 heartbeat-2 (2.0.1-2) unstable; urgency=low
 
   * Uptream initally made the wrong tar ball avaliable for
@@ -11,7 +18,7 @@ heartbeat-2 (2.0.1-2) unstable; urgency=low
 
   * Add build dependancy on libsensors-dev (for libsnmp9)
 
- -- Simon Horman <horms@debian.org>  Fri, 16 Sep 2005 11:56:35 +0900
+ -- Simon Horman <horms@debian.org>  Thu, 22 Sep 2005 12:56:11 +0900
 
 heartbeat-2 (2.0.1-1) unstable; urgency=low
 
