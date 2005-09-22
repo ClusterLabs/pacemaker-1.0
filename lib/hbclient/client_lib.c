@@ -1,4 +1,4 @@
-/* $Id: client_lib.c,v 1.32 2005/05/17 18:51:22 gshi Exp $ */
+/* $Id: client_lib.c,v 1.33 2005/09/22 17:18:55 gshi Exp $ */
 /* 
  * client_lib: heartbeat API client side code
  *
@@ -1078,6 +1078,10 @@ get_resources(ll_cluster_t* lcl)
 		retvalue[DIMOF(retvalue)-1] = EOS;
 		ret = retvalue;
 	}else{
+		const char* failreason = ha_msg_value(reply, F_COMMENT);
+		if (failreason){
+			ha_api_log(LOG_ERR,  "%s", failreason);
+		}
 		ret = NULL;
 	}
 	ZAPMSG(reply);

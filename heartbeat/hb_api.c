@@ -1,4 +1,4 @@
-/* $Id: hb_api.c,v 1.143 2005/09/18 02:55:46 alan Exp $ */
+/* $Id: hb_api.c,v 1.144 2005/09/22 17:18:55 gshi Exp $ */
 /*
  * hb_api: Server-side heartbeat API code
  *
@@ -862,7 +862,8 @@ api_get_resources (const struct ha_msg* msg, struct ha_msg* resp
 	const char *		ret;
 
 	if (!DoManageResources) {
-		*failreason = "EINVAL";
+		*failreason = "Resource is managed by crm."
+			"Use crm tool to query resource";
 		return I_API_BADREQ;
 	}
 
