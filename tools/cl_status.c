@@ -429,7 +429,8 @@ nodestatus(ll_cluster_t *hb, int argc, char ** argv, const char * optstr)
 	}
 
        if ( STRNCMP_CONST(status, "active") == 0 
-       ||      STRNCMP_CONST(status, "up") == 0) {
+       ||      STRNCMP_CONST(status, "up") == 0
+       ||      STRNCMP_CONST(status, "ping") == 0) {
 		ret = OK;   /* the node is active */
 	} else {
 		ret = NORMAL_FAIL;  /* the status = "dead" */
