@@ -1,4 +1,4 @@
-/* $Id: ping.c,v 1.44 2005/08/15 21:12:16 gshi Exp $ */
+/* $Id: ping.c,v 1.45 2005/09/22 16:52:06 alan Exp $ */
 /*
  * ping.c: ICMP-echo-based heartbeat code for heartbeat.
  *
@@ -291,7 +291,7 @@ ping_close(struct hb_media* mp)
  * FIXME!!
  */
 
-char ping_pkt[MAXLINE];
+static char ping_pkt[MAXLINE];
 static void *
 ping_read(struct hb_media* mp, int *lenp)
 {
@@ -360,8 +360,8 @@ ReRead:	/* We recv lots of packets that aren't ours */
 	
 	pktlen = numbytes - hlen - ICMP_HDR_SZ;
 
+	memcpy(ping_pkt, buf.cbuf + hlen + ICMP_HDR_SZ, pktlen);
 	ping_pkt[pktlen] = 0;
-	
 	*lenp = pktlen + 1;
 	
 	msg = wirefmt2msg(msgstart, bufmax - msgstart, MSG_NEEDAUTH);
@@ -370,7 +370,7 @@ ReRead:	/* We recv lots of packets that aren't ours */
 		return(NULL);
 	}
 	comment = ha_msg_value(msg, F_COMMENT);
-	if (comment == NULL || strcmp(comment, PIL_PLUGIN_S)) {
+	if (comment == NULL || strcmp(comment, PIL_PLUGIN_S) != 0) {
 		ha_msg_del(msg);
 		errno = EINVAL;
 		return(NULL);
