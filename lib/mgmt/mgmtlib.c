@@ -294,7 +294,7 @@ mgmt_session_recvmsg(void* session)
 
 	while(1) {
 		int rd = tls_recv(session, &c, 1);
-		if (rd == 0 && buf == NULL) {
+		if (rd <= 0 && buf == NULL) {
 			/* no msg or something wrong */
 			return NULL;
 		}
@@ -324,7 +324,7 @@ mgmt_session_recvmsg(void* session)
 			}
 		}
 		/* something wrong */
-		if (rd == -1) {
+		if (rd < 0) {
 			if(errno == EINTR) {
 				continue;
 			}
