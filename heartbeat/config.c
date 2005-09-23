@@ -1,4 +1,4 @@
-/* $Id: config.c,v 1.173 2005/09/19 19:52:05 gshi Exp $ */
+/* $Id: config.c,v 1.174 2005/09/23 22:35:26 gshi Exp $ */
 /*
  * Parse various heartbeat configuration files...
  *
@@ -996,6 +996,7 @@ int
 add_node(const char * value, int nodetype)
 {
 	struct node_info *	hip;
+	
 	if (config->nodecount >= MAXNODE) {
 		return(HA_FAIL);
 	}
@@ -1018,6 +1019,13 @@ add_node(const char * value, int nodetype)
 	hip->nodetype = nodetype;
 	add_nametable(hip->nodename, hip);
 	init_node_link_info(hip);
+	if (nodetype == PINGNODE_I) {
+		hip->dead_ticks
+			=	msto_longclock(config->deadping_ms);
+	}else{
+		hip->dead_ticks
+			=	msto_longclock(config->deadtime_ms);
+	}
 	return(HA_OK);
 }
 
@@ -2096,6 +2104,11 @@ set_autojoin(const char* value)
 
 /*
  * $Log: config.c,v $
+ * Revision 1.174  2005/09/23 22:35:26  gshi
+ * It's necessary to set dead_ticks for nodes that added dynamically.
+ * It is ok in initialization when config->deadping_ms/deadtime_ms is not set
+ * because they will be set to the correct value at the end of init_config()
+ *
  * Revision 1.173  2005/09/19 19:52:05  gshi
  * print out a warning if logfile/debugfile/logfacility is still configured
  * if use_logd is set to "yes" in ha.cf
