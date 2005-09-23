@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.450 2005/09/18 02:55:46 alan Exp $ */
+/* $Id: heartbeat.c,v 1.451 2005/09/23 22:55:20 gshi Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -768,7 +768,8 @@ initialize_heartbeat()
 	
 	add_uuidtable(&config->uuid, curnode);
 	cl_uuid_copy(&curnode->uuid, &config->uuid);
-
+	write_node_uuid_file(config);
+	
 	if (stat(FIFONAME, &buf) < 0 ||	!S_ISFIFO(buf.st_mode)) {
 		cl_log(LOG_INFO, "Creating FIFO %s.", FIFONAME);
 		unlink(FIFONAME);
@@ -5533,6 +5534,10 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.451  2005/09/23 22:55:20  gshi
+ * we need to write out the hostcache file after we get our own uuid
+ * or the uuid in the file is NULL
+ *
  * Revision 1.450  2005/09/18 02:55:46  alan
  * Added URLs pointing to the documentation which the user should have already
  * read - for a few common cases.
