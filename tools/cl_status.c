@@ -167,24 +167,25 @@ static int test(ll_cluster_t *hb, int argc, char ** argv, const char * optstr);
 static int general_simple_opt_deal(int argc, char ** argv, const char * optstr);
 
 typedef struct {
-	const char * name;
-	int (*func)(ll_cluster_t *hb, int, char **, const char *);
-	const char * optstr;
+	const char *	name;
+	int 		(*func)(ll_cluster_t *hb, int, char **, const char *);
+	const char *	optstr;
+	gboolean	needsignon;
 } cmd_t;
 
 static const size_t CMDS_MAX_LENGTH = 16;
 static gboolean FOR_HUMAN_READ = FALSE;
 static const cmd_t cmds[] = {
-	{ "hbstatus",      hbstatus, 	  "m" },
-	{ "listnodes",     listnodes, 	  "mpn" },
-	{ "nodestatus",    nodestatus, 	  "m" },
-	{ "nodetype",      nodetype, 	  "m" },
-	{ "listhblinks",   listhblinks,   "m" },
-	{ "hblinkstatus",  hblinkstatus,  "m" },
-	{ "clientstatus",  clientstatus,  "m" },
-	{ "rscstatus",     rscstatus, 	  "m"}, 
-	{ "hbparameter",   hbparameter,	  "mp:"},
-	{ "test",	   test,	  NULL},
+	{ "hbstatus",      hbstatus, 	  "m" ,		FALSE},
+	{ "listnodes",     listnodes, 	  "mpn",	TRUE},
+	{ "nodestatus",    nodestatus, 	  "m",		TRUE},
+	{ "nodetype",      nodetype, 	  "m",		TRUE },
+	{ "listhblinks",   listhblinks,   "m",		TRUE },
+	{ "hblinkstatus",  hblinkstatus,  "m",		TRUE },
+	{ "clientstatus",  clientstatus,  "m",		TRUE },
+	{ "rscstatus",     rscstatus, 	  "m",		TRUE}, 
+	{ "hbparameter",   hbparameter,	  "mp:,		TRUE"},
+	{ "test",	   test,	  NULL,		TRUE},
 	{ NULL, NULL, NULL },
 };
 
@@ -269,12 +270,18 @@ main(int argc, char ** argv)
 				return UNKNOWN_ERROR;
 			}
 
-			/* cl_log(LOG_DEBUG, "Signing in with heartbeat."); */
+			/* cl_log(LOG_DEBUG, "Signing in with heartbeat.");*/
 			if (hb->llc_ops->signon(hb, NULL)!= HA_OK) {
-				cl_log(LOG_ERR, "Cannot signon with heartbeat");
-				cl_log(LOG_ERR, "REASON: %s", 
-					hb->llc_ops->errmsg(hb));
 				ret_value = 1;
+				HB_SIGNON = FALSE;
+				if (cmds[i].needsignon) {
+					cl_log(LOG_ERR
+					,	"Cannot signon with heartbeat");
+					cl_log(LOG_ERR
+					,	"REASON: %s"
+					,	hb->llc_ops->errmsg(hb));
+					break;
+				}
 			}else{
 				HB_SIGNON = TRUE;
 			}
@@ -284,7 +291,7 @@ main(int argc, char ** argv)
 		}
 	}
 	if (GOOD_CMD == FALSE) {
-		cl_log(LOG_ERR, "%s is not a correct sub-command.", argv[1]);
+		cl_log(LOG_ERR, "%s: invalid sub-command.", argv[1]);
 		ret_value = PARAMETER_ERROR;
 	}
 
@@ -355,16 +362,16 @@ listnodes(ll_cluster_t *hb, int argc, char ** argv, const char * optstr)
 				break;
 
 			default:
-				cl_log(LOG_ERR, "Error:getopt returned" 
+				cl_log(LOG_ERR, "Error: getopt returned" 
 					"character code %c.", option_char);
 				return PARAMETER_ERROR;
 		}
 	} while (1);
 
 	if (hb->llc_ops->init_nodewalk(hb) != HA_OK) {
-			cl_log(LOG_ERR, "Cannot start node walk.");
-			cl_log(LOG_ERR, "REASON: %s", hb->llc_ops->errmsg(hb));
-			return UNKNOWN_ERROR;
+		cl_log(LOG_ERR, "Cannot start node walk.");
+		cl_log(LOG_ERR, "REASON: %s", hb->llc_ops->errmsg(hb));
+		return UNKNOWN_ERROR;
 	}
 
 	if ( (ONLY_LIST_NORAMAL == TRUE) && (ONLY_LIST_PING == TRUE) ) {
@@ -534,7 +541,7 @@ hblinkstatus(ll_cluster_t *hb, int argc, char ** argv, const char * optstr)
 	}
 
 	if_status = hb->llc_ops->if_status(hb, argv[optind+1], argv[optind+2]);
-	if (if_status == NULL) { /* Shoud be error ? */
+	if (if_status == NULL) { /* Should be error ? */
 		cl_log(LOG_ERR, "Cannot get heartbeat link status");
 		cl_log(LOG_ERR, "REASON: %s", hb->llc_ops->errmsg(hb));
 		return UNKNOWN_ERROR;
@@ -614,7 +621,9 @@ rscstatus(ll_cluster_t *hb, int argc, char ** argv, const char * optstr)
 
 	rstatus = hb->llc_ops->get_resources(hb);
 	if ( rstatus == NULL ) {
-		cl_log(LOG_ERR, "Cannot get client %s's resource status", argv[optind+2]);
+		cl_log(LOG_ERR
+		,	"Cannot get client %s's resource status"
+		,	argv[optind+2]);
 		cl_log(LOG_ERR, "REASON: %s", hb->llc_ops->errmsg(hb));
 		return UNKNOWN_ERROR;
 	}
@@ -629,9 +638,11 @@ rscstatus(ll_cluster_t *hb, int argc, char ** argv, const char * optstr)
 static int
 hbparameter(ll_cluster_t *hb, int argc, char ** argv, const char * optstr)
 {
-	int option_char;
-	int ret_value = 0;
-	gchar * paramname = NULL;
+	int		option_char;
+	int		ret_value = 0;
+	const char*	paramname = NULL;
+	char *		pvalue;
+
 	do {
 		option_char = getopt(argc, argv, optstr);
 
@@ -646,44 +657,39 @@ hbparameter(ll_cluster_t *hb, int argc, char ** argv, const char * optstr)
 
 			case 'p':
 				if (optarg) {
-					paramname = g_strdup(optarg);
-					cl_log(LOG_ERR,"parameter: %s", 
-						paramname);
+					paramname = optarg;
 				}
 				break;
 
 			default:
-				cl_log(LOG_ERR, "Error:getopt returned" 
+				cl_log(LOG_ERR, "Error: getopt returned" 
 					"character code %c.", option_char);
-				if (paramname != NULL) {
-					g_free(paramname);
-				}
 				return PARAMETER_ERROR;
 		}
 	} while (1);
 
-	if ( paramname != NULL ) {
-		char * pvalue;
-		pvalue = hb->llc_ops->get_parameter(hb, paramname);
-		if (pvalue == NULL) {
-			cl_log(LOG_ERR, "Cannot get parameter %s's value", 
-				argv[optind+2]);
-			cl_log(LOG_ERR, "REASON: %s", hb->llc_ops->errmsg(hb));
-			ret_value = NORMAL_FAIL;
-		} else {
-			if (FOR_HUMAN_READ == TRUE) {
-				printf("Heartbeat parameter %s's value: %s\n",
-					 paramname, pvalue);
-			} else {
-				printf("%s\n",pvalue);
-			}
-			cl_free(pvalue);
-		}
-		g_free(paramname);
-	} else {
-		cl_log(LOG_ERR, "Need parameter's name");
-		ret_value = PARAMETER_ERROR;
+	if ( NULL == paramname) {
+		cl_log(LOG_ERR, "parameter name required");
+		return PARAMETER_ERROR;
 	}
+
+	pvalue = hb->llc_ops->get_parameter(hb, paramname);
+
+	if (pvalue == NULL) {
+		cl_log(LOG_ERR, "Cannot get parameter %s's value"
+		,	paramname);
+		cl_log(LOG_ERR, "REASON: %s", hb->llc_ops->errmsg(hb));
+		return NORMAL_FAIL;
+	}
+
+	if (FOR_HUMAN_READ == TRUE) {
+		printf("Heartbeat parameter %s's value: %s\n",
+			 paramname, pvalue);
+	} else {
+		printf("%s\n",pvalue);
+	}
+	cl_free(pvalue);
+	pvalue = NULL;
 
 	return ret_value;
 }
@@ -705,7 +711,7 @@ general_simple_opt_deal(int argc, char ** argv, const char * optstr)
 				break;
 
 			default:
-				cl_log(LOG_ERR, "Error:getopt returned"
+				cl_log(LOG_ERR, "Error: getopt returned"
 					"character code %c.", option_char);
 				return PARAMETER_ERROR;
 		}
