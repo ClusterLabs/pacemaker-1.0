@@ -1,3 +1,10 @@
+heartbeat-2 (2.0.1-4) unstable; urgency=low
+
+  * Add /var/run/heartbeat directory to package
+    http://www.osdl.org/developer_bugzilla/show_bug.cgi?id=900
+
+ -- Simon Horman <horms@debian.org>  Sat, 24 Sep 2005 14:56:51 +0900
+
 heartbeat-2 (2.0.1-3) unstable; urgency=low
 
   * Restrurctured  provides, conflicts and replaces
