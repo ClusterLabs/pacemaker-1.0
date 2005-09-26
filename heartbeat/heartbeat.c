@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.451 2005/09/23 22:55:20 gshi Exp $ */
+/* $Id: heartbeat.c,v 1.452 2005/09/26 04:38:31 gshi Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -768,8 +768,9 @@ initialize_heartbeat()
 	
 	add_uuidtable(&config->uuid, curnode);
 	cl_uuid_copy(&curnode->uuid, &config->uuid);
-	write_node_uuid_file(config);
-	
+	if (config->rtjoinconfig != HB_JOIN_NONE){
+		write_node_uuid_file(config);
+	}
 	if (stat(FIFONAME, &buf) < 0 ||	!S_ISFIFO(buf.st_mode)) {
 		cl_log(LOG_INFO, "Creating FIFO %s.", FIFONAME);
 		unlink(FIFONAME);
@@ -2550,7 +2551,7 @@ process_clustermsg(struct ha_msg* msg, struct link* lnk)
 	if (DEBUGDETAILS) {
 		cl_log(LOG_DEBUG
 		       ,       "process_clustermsg: node [%s]"
-		,	from ? from :"?");
+		       ,	from ? from :"?");
 	}
 
 	if (from == NULL || ts == NULL || type == NULL) {
@@ -2645,7 +2646,6 @@ process_clustermsg(struct ha_msg* msg, struct link* lnk)
 	/* Is this message a duplicate, or destined for someone else? */
 
 	action=should_drop_message(thisnode, msg, iface, &missing_packet);
-
 	switch (action) {
 		case DROPIT:
 		/* Ignore it */
@@ -5534,9 +5534,8 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
- * Revision 1.451  2005/09/23 22:55:20  gshi
- * we need to write out the hostcache file after we get our own uuid
- * or the uuid in the file is NULL
+ * Revision 1.452  2005/09/26 04:38:31  gshi
+ * bug 901: we should not access hostcache file if autojoin is not set in ha.cf
  *
  * Revision 1.450  2005/09/18 02:55:46  alan
  * Added URLs pointing to the documentation which the user should have already

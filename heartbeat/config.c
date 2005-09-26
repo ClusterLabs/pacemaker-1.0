@@ -1,4 +1,4 @@
-/* $Id: config.c,v 1.174 2005/09/23 22:35:26 gshi Exp $ */
+/* $Id: config.c,v 1.175 2005/09/26 04:38:31 gshi Exp $ */
 /*
  * Parse various heartbeat configuration files...
  *
@@ -339,7 +339,8 @@ init_config(const char * cfgfile)
 		ha_log(LOG_ERR, "No authentication specified.");
 		++errcount;
 	}
-	if (access(HOSTUUIDCACHEFILE, F_OK) >= 0) {
+	if (config->rtjoinconfig != HB_JOIN_NONE && 
+	    access(HOSTUUIDCACHEFILE, F_OK) >= 0) {
 		if (read_node_uuid_file(config) != HA_OK) {
 			cl_log(LOG_ERR
 			,	"Invalid host/uuid map file [%s] - removed."
@@ -2104,6 +2105,9 @@ set_autojoin(const char* value)
 
 /*
  * $Log: config.c,v $
+ * Revision 1.175  2005/09/26 04:38:31  gshi
+ * bug 901: we should not access hostcache file if autojoin is not set in ha.cf
+ *
  * Revision 1.174  2005/09/23 22:35:26  gshi
  * It's necessary to set dead_ticks for nodes that added dynamically.
  * It is ok in initialization when config->deadping_ms/deadtime_ms is not set
