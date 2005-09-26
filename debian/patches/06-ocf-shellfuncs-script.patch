@@ -1,7 +1,0 @@
---- a/resources/OCF/ocf-shellfuncs.in	2005-09-15 20:20:17.000000000 +0900
-+++ b/resources/OCF/ocf-shellfuncs.in	2005-09-15 20:20:04.000000000 +0900
-@@ -1,3 +1,4 @@
-+#!/bin/sh
- #
- # 	$Id: 06-ocf-shellfuncs-script.patch,v 1.3 2005/09/22 09:48:05 horms Exp $
- #

@@ -97,7 +97,7 @@ diff -ru heartbeat-2.0.1/lib/plugins/stonith/drac3.c heartbeat-2.0.1.openssl/lib
 --- heartbeat-2.0.1/lib/plugins/stonith/drac3.c	2005-04-21 05:18:16.000000000 +0900
 +++ heartbeat-2.0.1.openssl/lib/plugins/stonith/drac3.c	2005-09-15 15:45:27.000000000 +0900
 @@ -1,359 +1,8 @@
--/* $Id: 01-no-drac3.patch,v 1.3 2005/09/22 09:48:05 horms Exp $ */
+-/* $Id: 01-no-drac3.patch,v 1.4 2005/09/26 07:52:46 horms Exp $ */
 -/*
 - * Stonith module for Dell DRACIII (Dell Remote Access Card)
 - *
@@ -467,7 +467,7 @@ diff -ru heartbeat-2.0.1/lib/plugins/stonith/drac3_command.c heartbeat-2.0.1.ope
 --- heartbeat-2.0.1/lib/plugins/stonith/drac3_command.c	2004-09-21 03:42:41.000000000 +0900
 +++ heartbeat-2.0.1.openssl/lib/plugins/stonith/drac3_command.c	2005-09-15 15:45:27.000000000 +0900
 @@ -1,337 +1,8 @@
--/* $Id: 01-no-drac3.patch,v 1.3 2005/09/22 09:48:05 horms Exp $ */
+-/* $Id: 01-no-drac3.patch,v 1.4 2005/09/26 07:52:46 horms Exp $ */
 -/*
 - * Stonith module for Dell DRACIII (Dell Remote Access Card)
 - *
@@ -815,7 +815,7 @@ diff -ru heartbeat-2.0.1/lib/plugins/stonith/drac3_command.h heartbeat-2.0.1.ope
 --- heartbeat-2.0.1/lib/plugins/stonith/drac3_command.h	2004-02-18 07:12:00.000000000 +0900
 +++ heartbeat-2.0.1.openssl/lib/plugins/stonith/drac3_command.h	2005-09-15 15:45:27.000000000 +0900
 @@ -1,30 +1,8 @@
--/* $Id: 01-no-drac3.patch,v 1.3 2005/09/22 09:48:05 horms Exp $ */
+-/* $Id: 01-no-drac3.patch,v 1.4 2005/09/26 07:52:46 horms Exp $ */
 -/*
 - * Stonith module for Dell DRACIII (Dell Remote Access Card)
 - *
@@ -852,11 +852,11 @@ diff -ru heartbeat-2.0.1/lib/plugins/stonith/drac3_command.h heartbeat-2.0.1.ope
 + http://www.gnome.org/~markmc/openssl-and-the-gpl.html
  
 +Horms -- August 2005
-diff -ru heartbeat-2.0.1/lib/plugins/stonith/drac3_hash.c heartbeat-2.0.1.openssl/lib/plugins/stonith/drac3_hash.c
---- heartbeat-2.0.1/lib/plugins/stonith/drac3_hash.c	2005-06-08 17:08:40.000000000 +0900
-+++ heartbeat-2.0.1.openssl/lib/plugins/stonith/drac3_hash.c	2005-09-15 15:45:27.000000000 +0900
-@@ -1,110 +1,8 @@
--/* $Id: 01-no-drac3.patch,v 1.3 2005/09/22 09:48:05 horms Exp $ */
+diff -u -r1.7 drac3_hash.c
+--- a/lib/plugins/stonith/drac3_hash.c	16 Sep 2005 13:35:17 -0000	1.7
++++ b/lib/plugins/stonith/drac3_hash.c	26 Sep 2005 07:31:18 -0000
+@@ -1,115 +1,8 @@
+-/* $Id: 01-no-drac3.patch,v 1.4 2005/09/26 07:52:46 horms Exp $ */
 -/*
 - * Stonith module for Dell DRACIII (Dell Remote Access Card)
 - *
@@ -886,7 +886,12 @@ diff -ru heartbeat-2.0.1/lib/plugins/stonith/drac3_hash.c heartbeat-2.0.1.openss
 + http://www.gnome.org/~markmc/openssl-and-the-gpl.html
  
 -#include <portability.h>
+-#ifdef HAVE_CONFIG_H
+-#include <config.h>
+-#endif
+-
 -#include <string.h>
+-#include <unistd.h>
 -#include <openssl/bio.h>
 -#include <openssl/evp.h>
 -#include <openssl/md5.h>
@@ -973,11 +978,11 @@ diff -ru heartbeat-2.0.1/lib/plugins/stonith/drac3_hash.c heartbeat-2.0.1.openss
 -    token[len-1]=0x00;
 -}
 +Horms -- August 2005
-diff -ru heartbeat-2.0.1/lib/plugins/stonith/drac3_hash.h heartbeat-2.0.1.openssl/lib/plugins/stonith/drac3_hash.h
---- heartbeat-2.0.1/lib/plugins/stonith/drac3_hash.h	2004-08-30 08:24:21.000000000 +0900
-+++ heartbeat-2.0.1.openssl/lib/plugins/stonith/drac3_hash.h	2005-09-15 15:45:27.000000000 +0900
+diff -u -r1.4 drac3_hash.h
+--- a/lib/plugins/stonith/drac3_hash.h	29 Aug 2004 23:24:21 -0000	1.4
++++ b/lib/plugins/stonith/drac3_hash.h	26 Sep 2005 07:25:03 -0000
 @@ -1,29 +1,8 @@
--/* $Id: 01-no-drac3.patch,v 1.3 2005/09/22 09:48:05 horms Exp $ */
+-/* $Id: 01-no-drac3.patch,v 1.4 2005/09/26 07:52:46 horms Exp $ */
 -/*
 - * Stonith module for Dell DRACIII (Dell Remote Access Card)
 - *
