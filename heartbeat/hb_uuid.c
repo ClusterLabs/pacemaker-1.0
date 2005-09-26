@@ -117,43 +117,53 @@ lookup_tables(const char* nodename, cl_uuid_t* uuid)
 	
 }
 
-void
+/*return value indicates where tables are changed*/
+gboolean
 update_tables(const char* nodename, cl_uuid_t* uuid)
 {
 
 	struct node_info*  hip ;
+	if (uuid == NULL){
+		cl_log(LOG_ERR, "%s: NULL uuid pointer",
+		       __FUNCTION__);
+		return FALSE;
+	}
 
-	if(!uuid || cl_uuid_is_null(uuid)){
-		cl_log(LOG_ERR,"update_tables: bad parameters");	
-		return;
+	if(cl_uuid_is_null(uuid)){
+		   cl_log(LOG_ERR,"update_tables: uuid is null");	
+		   return FALSE;
 	}
 	
 	hip =  (struct node_info*) lookup_uuidtable(uuid);
 	if (hip != NULL){
-		if (strncmp(hip->nodename, nodename, sizeof(hip->nodename))){
-			cl_log(LOG_WARNING, "nodename %s"
-			       " changed to %s?", hip->nodename, nodename);	
-			strncpy(hip->nodename, nodename, sizeof(hip->nodename));
-			add_nametable(nodename, hip);
+		if (strncmp(hip->nodename, 
+			    nodename, sizeof(hip->nodename)) ==0){
+			return FALSE;
 		}
+
+		cl_log(LOG_WARNING, "nodename %s"
+		       " changed to %s?", hip->nodename, nodename);	
+		strncpy(hip->nodename, nodename, sizeof(hip->nodename));
+		add_nametable(nodename, hip);
+		return TRUE;
 		
-	} else {
-		hip = (struct node_info*) lookup_nametable(nodename);
-		if(!hip){
-			cl_log(LOG_WARNING,  "node %s not found in table", 
-			       nodename);
-			return;
-		}
-		
-		if (cl_uuid_is_null(&hip->uuid)){
-			cl_uuid_copy(&hip->uuid, uuid);
-		}else if (cl_uuid_compare(&hip->uuid, uuid) != 0){
-			cl_log(LOG_ERR, "node %s changed its uuid", nodename);			
-			
-		}		
-		add_uuidtable(uuid, hip);
-		
+	} 
+
+	hip = (struct node_info*) lookup_nametable(nodename);
+	if(!hip){
+		cl_log(LOG_WARNING,  "node %s not found in table", 
+		       nodename);
+		return FALSE;
 	}
+	
+	if (cl_uuid_is_null(&hip->uuid)){
+		cl_uuid_copy(&hip->uuid, uuid);
+	}else if (cl_uuid_compare(&hip->uuid, uuid) != 0){
+		cl_log(LOG_ERR, "node %s changed its uuid", nodename);	
+	}		
+	add_uuidtable(uuid, hip);
+	
+	return TRUE;
 }
 
 
@@ -451,7 +461,8 @@ read_node_uuid_file(struct sys_config * cfg)
 		
 		nodename2uuid(host, &curuuid);
 		if (cl_uuid_is_null(&curuuid)) {
-			update_tables(host, &uu);
+			/* we should not write out any null uuid entry*/
+			/*update_tables(host, &uu);*/
 		}else if (cl_uuid_compare(&uu, &curuuid) != 0) {
 			outofsync=TRUE;
 		}

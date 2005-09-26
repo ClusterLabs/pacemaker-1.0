@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.452 2005/09/26 04:38:31 gshi Exp $ */
+/* $Id: heartbeat.c,v 1.453 2005/09/26 18:15:53 gshi Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -4433,7 +4433,9 @@ should_drop_message(struct node_info * thisnode, const struct ha_msg *msg,
 	}
 	
 	if (from && !cl_uuid_is_null(&fromuuid)){
-		update_tables(from, &fromuuid);
+		if (update_tables(from, &fromuuid)){
+			write_node_uuid_file(config);
+		}
 	}
 	
 	if (is_missing_packet == NULL){
@@ -5534,6 +5536,9 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.453  2005/09/26 18:15:53  gshi
+ * updated table should be written out to file
+ *
  * Revision 1.452  2005/09/26 04:38:31  gshi
  * bug 901: we should not access hostcache file if autojoin is not set in ha.cf
  *
