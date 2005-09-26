@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.453 2005/09/26 18:15:53 gshi Exp $ */
+/* $Id: heartbeat.c,v 1.454 2005/09/26 18:50:31 gshi Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -335,6 +335,7 @@ gboolean			enable_flow_control = TRUE;
 static	int			send_cluster_msg_level = 0;
 static void print_a_child_client(gpointer childentry, gpointer unused);
 static seqno_t timer_lowseq = 0;
+static	gboolean		init_deadtime_passed = FALSE;		
 
 #undef DO_AUDITXMITHIST
 #ifdef DO_AUDITXMITHIST
@@ -425,7 +426,7 @@ static void HBDoMsg_T_QCSTATUS(const char * type, struct node_info * fromnode
 ,	TIME_T msgtime, seqno_t seqno, const char * iface, struct ha_msg * msg);
 
 static void (*comm_up_callback)(void) = NULL;
-
+static gboolean set_init_deadtime_passed_flag(gpointer p);
 /*
  * Glib Mainloop Source functions...
  */
@@ -1398,7 +1399,13 @@ master_control_process(void)
 	
 	/* Send local status at the "right time" */
 	Gmain_timeout_add_full(PRI_SENDSTATUS, config->heartbeat_ms
-	,	hb_send_local_status, NULL, NULL);
+			       ,	hb_send_local_status, NULL, NULL);
+
+	Gmain_timeout_add_full(PRI_SENDSTATUS, 
+			       config->initial_deadtime_ms,
+			       set_init_deadtime_passed_flag,
+			       NULL,
+			       NULL);
 
 	/* Dump out memory stats periodically... */
 	memstatsinterval = (debug ? 10*60*1000 : ONEDAY*1000);
@@ -3300,6 +3307,12 @@ check_comm_isup(void)
 	if (heartbeat_comm_state == COMM_LINKSUP) {
 		return;
 	}
+	
+	if (config->rtjoinconfig != HB_JOIN_NONE 
+	    && !init_deadtime_passed){
+		return;
+	}
+	
 	for (j=0; j < config->nodecount; ++j) {
 		hip= &config->nodes[j];
 
@@ -3495,6 +3508,12 @@ hb_send_local_status(gpointer p)
 	return TRUE;
 }
 
+static gboolean
+set_init_deadtime_passed_flag(gpointer p)
+{
+	init_deadtime_passed =TRUE;
+	return FALSE;
+}
 static gboolean
 hb_update_cpu_limit(gpointer p)
 {
@@ -5536,6 +5555,10 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.454  2005/09/26 18:50:31  gshi
+ * if autojoin is set to other/any, heartbeat will wait for init_dead_time
+ * before it claims communication is up
+ *
  * Revision 1.453  2005/09/26 18:15:53  gshi
  * updated table should be written out to file
  *
