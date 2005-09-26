@@ -94,8 +94,6 @@ static GHashTable* clients	= NULL;
 static GHashTable* msg_map	= NULL;		
 static GHashTable* evt_map	= NULL;		
 
-
-
 int
 main(int argc, char ** argv)
 {
@@ -426,10 +424,8 @@ on_listen(GIOChannel *source, GIOCondition condition, gpointer data)
 	struct sockaddr_in addr;
 	int num = 0;
 	char** args = NULL;
-	
+
 	if (condition & G_IO_IN) {
-		mgmtd_log(LOG_DEBUG, "G_IO_IN");
-		
 		/* accept the connection */
 		ssock = g_io_channel_unix_get_fd(source);
 		laddr = sizeof(addr);
@@ -469,12 +465,6 @@ on_listen(GIOChannel *source, GIOCondition condition, gpointer data)
 		return TRUE;
 		
 	}
-	if (condition & G_IO_ERR) {
-		mgmtd_log(LOG_DEBUG, "G_IO_ERR");
-	}
-	if (condition & G_IO_HUP) {
-		mgmtd_log(LOG_DEBUG, "G_IO_HUP");
-	}
 	
 	return TRUE;
 }
@@ -486,10 +476,7 @@ on_msg_arrived(GIOChannel *source, GIOCondition condition, gpointer data)
 	char* msg;
 	char* ret;
 	
-	mgmtd_log(LOG_DEBUG, "condition:%d",condition);
 	if (condition & G_IO_IN) {
-		mgmtd_log(LOG_DEBUG, "G_IO_IN");
-		
 		client = lookup_client((int)data);
 		if (client == NULL) {
 			return TRUE;
@@ -511,12 +498,6 @@ on_msg_arrived(GIOChannel *source, GIOCondition condition, gpointer data)
 		}
 		mgmt_del_msg(msg);
 	}
-	if (condition & G_IO_ERR) {
-		mgmtd_log(LOG_DEBUG, "G_IO_ERR");
-	}
-	if (condition & G_IO_HUP) {
-		mgmtd_log(LOG_DEBUG, "G_IO_HUP");
-	}
 	
 	return TRUE;
 }
@@ -529,7 +510,7 @@ new_client(int sock, void* session)
 	client->id = id;
 	client->ch = g_io_channel_unix_new(sock);
 	g_io_add_watch(client->ch, G_IO_IN|G_IO_ERR|G_IO_HUP
-	, on_msg_arrived, (gpointer)client->id);
+	, 		on_msg_arrived, (gpointer)client->id);
 	client->session = session;
 	g_hash_table_insert(clients, (gpointer)&client->id, client);
 	id++;
@@ -575,7 +556,6 @@ pam_auth(const char* user, const char* passwd)
 		ret = pam_authenticate (pamh, 0);
 	}
 	pam_end (pamh, ret);
-	free(conv.appdata_ptr);
 	return ret == PAM_SUCCESS?0:-1;
 }
 
@@ -609,7 +589,7 @@ pam_conv(int n, const struct pam_message **msg,
 			case PAM_TEXT_INFO:
 				break;
 			default:
-				cl_free(reply);
+				free(reply);
 				return PAM_CONV_ERR;
 		}
 	}
