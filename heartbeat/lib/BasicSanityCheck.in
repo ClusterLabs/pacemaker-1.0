@@ -43,6 +43,7 @@ LRMTEST=$HBLIB/lrmtest/LRMBasicSanityCheck
 STONITHDTEST=$HBLIB/stonithdtest/STONITHDBasicSanityCheck
 CRMTEST=$HBLIB/crmtest/1node.sh
 SNMPAGENTTEST=$HBLIB/SNMPAgentSanityCheck
+BASE64_MD5_TEST=$HBLIB/base64_md5_test
 MALLOC_CHECK_=2; export MALLOC_CHECK_
 #
 DEFAULTINTERFACE=eth0	# But we really guess it...
@@ -790,6 +791,26 @@ SNMPAgentTest() {
 	fi
 }
 
+Base64MD5Test() {
+  	if
+	  [ ! -x $BASE64_MD5_TEST ] 
+	then
+	  return 0
+	fi
+	echo "Starting base64 and md5 algorithm tests" | tee -a $LOGFILE
+	$BASE64_MD5_TEST >> $LOGFILE 2>&1
+	echo $BASE64_MD5_TEST
+	ret=$?
+	errcount=`expr $errcount + $ret`
+	if
+	  [ $ret != 0 ] 
+	then
+	  echo "base64 and md5 algorithm tests failed."
+        else
+          echo "base64 and md5 algorithm tests succeeded."
+	fi
+}
+
 #
 #	Check our identity.
 #	Set Up Config Files.
@@ -818,6 +839,7 @@ then
   echo 1 > $COREPID
 fi
 
+Base64MD5Test
 TestHeartbeat
 StonithCheck
 AppHBCheck
