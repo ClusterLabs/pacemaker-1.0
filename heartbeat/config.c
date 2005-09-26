@@ -1,4 +1,4 @@
-/* $Id: config.c,v 1.175 2005/09/26 04:38:31 gshi Exp $ */
+/* $Id: config.c,v 1.176 2005/09/26 18:14:54 gshi Exp $ */
 /*
  * Parse various heartbeat configuration files...
  *
@@ -247,6 +247,27 @@ check_logd_usage(int* errcount)
 	}
 }
 
+static gboolean
+r1_style_valid(void)
+{
+	/* we cannot set autojoin to HB_JOIN_ANY or HB_JOIN_OTHER
+	 * in R1 style
+	 */
+	
+	if (!DoManageResources){
+		return TRUE;
+	}
+	
+	if (config->rtjoinconfig == HB_JOIN_NONE){
+		return TRUE;
+	}
+
+	cl_log(LOG_ERR, "R1 style resource management conflicts with "
+	       " autojoin set");
+	cl_log(LOG_ERR, "You need either unset autojoin or enable crm");
+	return FALSE;
+}
+
 /*
  *	Read in and validate the configuration file.
  *	Act accordingly.
@@ -466,7 +487,10 @@ init_config(const char * cfgfile)
         }
 	
 	check_logd_usage(&errcount);
-
+	if ( !r1_style_valid()){
+		errcount++;
+	}
+	
 	if (!RestartRequested && errcount == 0 && !parse_only) {
 		ha_log(LOG_INFO, "**************************");
 		ha_log(LOG_INFO, "Configuration validated."
@@ -2105,6 +2129,9 @@ set_autojoin(const char* value)
 
 /*
  * $Log: config.c,v $
+ * Revision 1.176  2005/09/26 18:14:54  gshi
+ * R1 style resource management and autojoin other/any should not co-exist
+ *
  * Revision 1.175  2005/09/26 04:38:31  gshi
  * bug 901: we should not access hostcache file if autojoin is not set in ha.cf
  *
