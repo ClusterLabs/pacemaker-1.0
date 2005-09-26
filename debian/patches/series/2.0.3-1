@@ -1,3 +1,2 @@
-+ 01-no-drac3.patch
 + 02-chown-check.patch
 + 04-db-ocf-resource-syntax.patch

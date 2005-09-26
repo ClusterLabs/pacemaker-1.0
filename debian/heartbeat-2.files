@@ -181,6 +181,7 @@ usr/lib/stonith/plugins/stonith2/apcmastersnmp.so
 usr/lib/stonith/plugins/stonith2/apcsmart.so
 usr/lib/stonith/plugins/stonith2/baytech.so
 usr/lib/stonith/plugins/stonith2/cyclades.so
+usr/lib/stonith/plugins/stonith2/drac3.so
 usr/lib/stonith/plugins/stonith2/external.so
 usr/lib/stonith/plugins/stonith2/ibmhmc.so
 usr/lib/stonith/plugins/stonith2/ipmilan.so
