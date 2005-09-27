@@ -33,7 +33,9 @@ plugindir		= $(halibdir)/plugins/HBauth
 plugin_LTLIBRARIES	= md5.la crc.la sha1.la
 
 md5_la_SOURCES	= md5.c
-md5_la_LDFLAGS	= -export-dynamic -module -avoid-version -lplumb
+md5_la_LDFLAGS	= -export-dynamic -module -avoid-version
+md5_la_DEPENDENCIES = $(top_builddir)/lib/clplumbing/libplumb.la
+md5_la_LIBADD	= $(top_builddir)/lib/clplumbing/libplumb.la
 
 crc_la_SOURCES	= crc.c
 crc_la_LDFLAGS	= -export-dynamic -module -avoid-version
