@@ -1,4 +1,4 @@
-/* $Id: ccm.c,v 1.93 2005/07/29 10:32:30 sunjd Exp $ */
+/* $Id: ccm.c,v 1.94 2005/09/27 23:03:45 gshi Exp $ */
 /* 
  * ccm.c: Consensus Cluster Service Program 
  *
@@ -28,7 +28,7 @@
 #endif
 #include <clplumbing/cl_signal.h>
 #include <clplumbing/coredumps.h>
-
+#include "ccmmsg.h"
 
 extern int global_verbose;
 extern int global_debug;
@@ -112,9 +112,6 @@ int ccm_send_cluster_msg(ll_cluster_t* hb, struct ha_msg* msg);
 /* PROTOTYPE */
 static void
 ccm_reset_all_join_request(ccm_info_t* info);
-static void ccm_send_join_reply(ll_cluster_t *, ccm_info_t *);
-static int ccm_send_final_memlist(ll_cluster_t *, ccm_info_t *, 
-		char *, char *, uint32_t );
 static void report_reset(void);
 static int ccm_already_joined(ccm_info_t *);
 static void ccm_memcomp_reset(ccm_info_t *);
@@ -126,18 +123,11 @@ static int is_expected_change_msg(ccm_info_t *info, const char *node,
 		enum change_event_type);
 static void add_change_msg(ccm_info_t *info, const char *node, 
 		const char *orig, enum change_event_type);
-static int send_node_leave_to_leader(ll_cluster_t *hb, ccm_info_t *info, 
-		const char *node);
 static void update_membership(ccm_info_t *info, const char *node, 
 		enum change_event_type change_type);
 static void reset_change_info(ccm_info_t *info); 
-static int ccm_send_alive_msg(ll_cluster_t *hb, ccm_info_t *info);
-static int ccm_send_newnode_to_leader(ll_cluster_t *hb, ccm_info_t *info, 
-		const char *node);
 static void send_mem_list_to_all(ll_cluster_t *hb, ccm_info_t *info, 
 		char *cookie);
-static int ccm_send_to_all(ll_cluster_t *hb, ccm_info_t *info, char *memlist, 
-		char *newcookie, int *uptime_list, size_t uptime_size);
 static void ccm_fill_update_table(ccm_info_t *info, 
 		ccm_update_t *update_table, const void *uptime_list);
 
@@ -160,7 +150,7 @@ const char state_strings[12][64]={
 	"CCM_STATE_END"		
 };
 
-static inline const char*
+const char*
 state2string(int state){
 	if (state > CCM_STATE_END){
 		return "INVALID STATE";
@@ -268,30 +258,6 @@ static int new_node_mem_list_timeout(unsigned long timeout)
 ////////////////////////////////////////////////////////////////
 */
 
-/* the ccm types tokens used locally, these are the integer equivalents */
-/* for the F_TYPE tokens. The strings defined in ccm_type_str are */
-/* communicated accross the wire. But locally they are mapped to */
-/* ccm_types for easier processing. */
-enum ccm_type {
-	CCM_TYPE_PROTOVERSION,
-	CCM_TYPE_PROTOVERSION_RESP,
-	CCM_TYPE_JOIN,
-	CCM_TYPE_REQ_MEMLIST,
-	CCM_TYPE_RES_MEMLIST,
-	CCM_TYPE_FINAL_MEMLIST,
-	CCM_TYPE_ABORT,
-	CCM_TYPE_LEAVE,
-	CCM_TYPE_TIMEOUT,
-	CCM_TYPE_NODE_LEAVE_NOTICE,
-	CCM_TYPE_NODE_LEAVE,
-	CCM_TYPE_MEM_LIST,
-	CCM_TYPE_ALIVE,
-	CCM_TYPE_NEW_NODE,
-	CCM_TYPE_STATE_INFO, 
-	CCM_TYPE_RESTART,
-	CCM_TYPE_LAST
-};
-
 static void ccm_state_wait_for_mem_list(enum ccm_type ccm_msg_type, 
 			struct ha_msg *reply, 
 			ll_cluster_t *hb, 
@@ -325,28 +291,18 @@ char  ccm_type_str[CCM_TYPE_LAST + 1][TYPESTRSIZE] = {
 	"CCM_TYPE_LAST"
 	};
 
-/* */
-/* ccm defined new type tokens used by the CCM protocol. */
-/* */
-#define CCM_VERSIONVAL  "ccmpverval" 	  /* version value token */
-#define CCM_UPTIME      "ccmuptime"       /* Uptime for Consensus  */
-#define CCM_MEMLIST     "ccmmemlist"      /* bitmap for membership */
-#define CCM_PROTOCOL    "ccmproto"        /* protocol version */
-#define CCM_MAJORTRANS  "ccmmajor"        /* major transition version*/
-#define CCM_MINORTRANS  "ccmminor"        /* minor transition version */
-#define CCM_MAXTRANS    "ccmmaxt"        /* minor transition version */
-#define CCM_COOKIE      "ccmcookie"       /* communication context */
-#define CCM_NEWCOOKIE   "ccmnewcookie"    /* new communication context */
-#define CCM_CLSIZE   	"ccmclsize"       /* new cluster size */
-#define CCM_UPTIMELIST "ccmuptimelist" /*uptime list*/
 
 /* given a ccm_type return the string representation associated with it. */
 /* NOTE: string representation is used to communicate accross node. */
 /*       and ccm_type is used for easier local processing. */
-static char *
-ccm_type2string(enum ccm_type type)
+char *
+ccm_type2string(int type)
 {
-	return ccm_type_str[type];
+	if (type < 0 || type >= DIMOF(ccm_type_str)){
+		cl_log(LOG_ERR, "%s: type(%d) out of range",
+		       __FUNCTION__, type);
+	}
+ 	return ccm_type_str[type];
 }
 
 /* */
@@ -357,6 +313,7 @@ ccm_string2type(const char *type)
 {
 	enum ccm_type i;
 
+	cl_log(LOG_INFO, "type =%s", type);
 	for ( i = CCM_TYPE_PROTOVERSION; i <= CCM_TYPE_LAST; i++ ) {
 		if (strncmp(ccm_type_str[i], type, TYPESTRSIZE) == 0){
 			return i;
@@ -413,67 +370,7 @@ ccm_get_my_hostname(ccm_info_t *info)
 /*	communicated across the nodes. */
 /* */
 
-static struct ha_msg * timeout_msg = NULL;
 
-
-
-static int
-timeout_msg_init(ccm_info_t *info)
-{
-	struct ha_msg *m;
-	char majortrans[15]; /* 10 is the maximum number of digits in 
-				UINT_MAX , adding a buffer of 5 */
-	char minortrans[15]; /*		ditto 	*/
-	char *hname;
-
-	if ((m=ha_msg_new(0)) == NULL) {
-		cl_log(LOG_ERR, "Cannot send CCM version msg");
-		return(HA_FAIL);
-	}
-
-	hname = ccm_get_my_hostname(info);
-
-	snprintf(majortrans, sizeof(majortrans), "%d", 0);
-	snprintf(minortrans, sizeof(majortrans), "%d", 0);
-	if((ha_msg_add(m, F_TYPE, ccm_type2string(CCM_TYPE_TIMEOUT)) == HA_FAIL)
-		||(ha_msg_add(m, F_ORIG, hname) == HA_FAIL) 
-		||(ha_msg_add(m, CCM_COOKIE, "  ") == HA_FAIL) 
-		||(ha_msg_add(m, CCM_COOKIE, "  ") == HA_FAIL) 
-		||(ha_msg_add(m, CCM_MAJORTRANS, majortrans) == HA_FAIL)
-		||(ha_msg_add(m, CCM_MINORTRANS, minortrans) == HA_FAIL)){
-			cl_log(LOG_ERR, "timeout_msg_create: Cannot "
-				"create timeout message");
-		return HA_FAIL;
-	}
-	timeout_msg = m;
-	return 0;
-}
-
-static struct ha_msg  *
-timeout_msg_mod(ccm_info_t *info)
-{
-	char majortrans[15]; /* 10 is the maximum number of digits in 
-				UINT_MAX , adding a buffer of 5 */
-	char minortrans[15]; /*		ditto 	*/
-
-	char *cookie = CCM_GET_COOKIE(info);
-
-	int major  = CCM_GET_MAJORTRANS(info);
-	int minor  = CCM_GET_MINORTRANS(info);
-
-	struct ha_msg *m = timeout_msg;
-	assert(m);
-	snprintf(majortrans, sizeof(majortrans), "%d", major);
-	snprintf(minortrans, sizeof(minortrans), "%d", minor);
-	if((ha_msg_mod(m, CCM_COOKIE, cookie) == HA_FAIL)
-		||(ha_msg_mod(m, CCM_MAJORTRANS, majortrans) == HA_FAIL)
-		||(ha_msg_mod(m, CCM_MINORTRANS, minortrans) == HA_FAIL)){
-			cl_log(LOG_ERR, "timeout_msg_mod: Cannot "
-				"modify timeout message");
-		return NULL;
-	}
-	return m;
-}
 
 
 #ifdef TIMEOUT_MSG_FUNCTIONS_NEEDED
@@ -1222,104 +1119,6 @@ ccm_remove_new_joiner(ccm_info_t *info, const char *orig)
 
 
 
-/*broadcast CCM_TYPE_NODE_LEAVE_NOTICE */
-static int
-ccm_bcast_node_leave_notice(ll_cluster_t* hb, 
-			    ccm_info_t* info,
-			    const char* node)
-{
-
-	struct ha_msg *m;
-	char majortrans[15]; /* 10 is the maximum number of digits in 
-				UINT_MAX , adding a buffer of 5 */
-	char minortrans[15]; /*		ditto 	*/
-	char joinedtrans[15]; /*	ditto 	*/			
-	char *cookie;
-	int  rc;
-
-	if ((m=ha_msg_new(0)) == NULL) {
-		cl_log(LOG_ERR, "ccm_bcast_node_leave_notice:"
-		       "Cannot send CCM node leave msg");
-		return(HA_FAIL);
-	}
-	
-	snprintf(majortrans, sizeof(majortrans), "%d", 
-		 CCM_GET_MAJORTRANS(info));
-	snprintf(minortrans, sizeof(minortrans), "%d", 
-		 CCM_GET_MINORTRANS(info));
-	snprintf(joinedtrans, sizeof(joinedtrans), "%d", 
-		 CCM_GET_JOINED_TRANSITION(info));
-	cookie = CCM_GET_COOKIE(info);
-	assert(cookie && *cookie);
-	
-	
-	if((ha_msg_add(m, F_TYPE, ccm_type2string(CCM_TYPE_NODE_LEAVE_NOTICE)) == HA_FAIL)
-	   ||(ha_msg_add(m, CCM_COOKIE, cookie) == HA_FAIL)
-	   ||(ha_msg_add(m, CCM_MAJORTRANS, majortrans) == HA_FAIL)
-	   ||(ha_msg_add(m, CCM_MINORTRANS, minortrans) == HA_FAIL)
-	   ||(ha_msg_add(m, CCM_UPTIME, joinedtrans) == HA_FAIL)
-	   ||(ha_msg_add(m, F_NODE, node) == HA_FAIL)) {
-		cl_log(LOG_ERR, "ccm_bcast_node_leave_notice:"
-		       "Cannot create NODE_LEAVE message ");
-		rc = HA_FAIL;
-	} else {
-		rc = hb->llc_ops->sendclustermsg(hb, m);
-	}
-	ha_msg_del(m);
-	return(rc);
-}
-
-
-/* 
- * send a reply to the potential joiner, containing the neccessary 
- * context needed by the joiner, to initiate a new round of a ccm  
- * protocol. 
- * NOTE: This function is called by the cluster leader only. 
- */
-
-static int 
-ccm_send_one_join_reply(ll_cluster_t *hb, ccm_info_t *info, const char *joiner)
-{
-	struct ha_msg *m;
-	char activeproto[3];
-	char clsize[5];
-	char majortrans[15]; /* 10 is the maximum number of digits in 
-				UINT_MAX , adding a buffer of 5 */
-	char *cookie;
-	int rc;
-
-
-	/*send the membership information to all the nodes of the cluster*/
-	if ((m=ha_msg_new(0)) == NULL) {
-		cl_log(LOG_ERR, "Cannot send CCM version msg");
-			return(HA_FAIL);
-	}
-	
-	snprintf(activeproto, sizeof(activeproto), "%d", 
-			CCM_GET_ACTIVEPROTO(info));
-	snprintf(majortrans, sizeof(majortrans), "%d", 
-				CCM_GET_MAJORTRANS(info));
-	snprintf(clsize, sizeof(clsize), "%d", 
-				CCM_GET_MEMCOUNT(info));
-	cookie = CCM_GET_COOKIE(info);
-	assert(cookie && *cookie);
-	
-	if ((ha_msg_add(m, F_TYPE, ccm_type2string(CCM_TYPE_PROTOVERSION_RESP)) 
-	     == HA_FAIL)
-	    ||(ha_msg_add(m, CCM_PROTOCOL, activeproto) == HA_FAIL) 
-	    ||(ha_msg_add(m, CCM_MAJORTRANS, majortrans) == HA_FAIL)
-	    ||(ha_msg_add(m, CCM_CLSIZE, clsize) == HA_FAIL)
-	    ||(ha_msg_add(m, CCM_COOKIE, cookie) == HA_FAIL)) {
-		cl_log(LOG_ERR, "ccm_send_one_join_reply: Cannot create JOIN "
-		       "reply message");
-		rc = HA_FAIL;
-	} else {
-		rc = hb->llc_ops->sendnodemsg(hb, m, joiner);
-		}
-	ha_msg_del(m);
-	return(rc);
-}
-
 
 /* send reply to a join quest and clear the request*/
 
@@ -1354,17 +1153,7 @@ ccm_send_join_reply(ll_cluster_t *hb, ccm_info_t *info)
 //
 /////////////////////////////////////////////////////////////////////
 */
-static void
-ccm_delay_random_interval(void)
-{
-	struct timeval tmp;
-	/* seed the random with a random value */
-	gettimeofday(&tmp, NULL);
-	srandom((unsigned int)tmp.tv_usec); 
-	usleep(random()%MAXNODE); /*sleep some random microsecond interval*/
-}
 
-/* */
 /* compute the final membership list from the acquired connectivity */
 /* information from other nodes. And send out the consolidated */
 /* members of the cluster information to the all the members of  */
@@ -1453,304 +1242,6 @@ ccm_compute_and_send_final_memlist(ll_cluster_t *hb, ccm_info_t *info)
 
 
 
-/* */
-/* send a final membership list to all the members who have participated */
-/* in the ccm protocol. */
-/* NOTE: Called by the cluster leader on. */
-/* */
-static int
-ccm_send_final_memlist(ll_cluster_t *hb, 
-			ccm_info_t *info, 
-			char *newcookie, 
-			char *finallist,
-			uint32_t max_tran)
-{  
-	struct ha_msg *m;
-	char activeproto[3];
-	char majortrans[15]; /* 10 is the maximum number of digits in 
-				UINT_MAX , adding a buffer of 5 */
-	char minortrans[15]; /* 10 is the maximum number of digits in 
-				UINT_MAX , adding a buffer of 5 */
-	char maxtrans[15]; /* 10 is the maximum number of digits in 
-				UINT_MAX , adding a buffer of 5 */
-	char *cookie;
-	int rc;
-
-
-	/*send the membership information to all the nodes of the cluster*/
-	if ((m=ha_msg_new(0)) == NULL) {
-		cl_log(LOG_ERR, "Cannot send CCM version msg");
-		return(HA_FAIL);
-	}
-	
-	snprintf(activeproto, sizeof(activeproto), "%d", 
-					CCM_GET_ACTIVEPROTO(info));
-	snprintf(majortrans, sizeof(majortrans), "%d", 
-					CCM_GET_MAJORTRANS(info));
-	snprintf(minortrans, sizeof(minortrans), "%d", 
-					CCM_GET_MINORTRANS(info));
-	snprintf(maxtrans, sizeof(maxtrans), "%d", max_tran);
-
-	cookie = CCM_GET_COOKIE(info);
-
-	assert(cookie && *cookie);
-	assert(finallist);
-
-	if ((ha_msg_add(m, F_TYPE, ccm_type2string(CCM_TYPE_FINAL_MEMLIST)) 
-							== HA_FAIL)
-		||(ha_msg_add(m, CCM_MAJORTRANS, majortrans) == HA_FAIL)
-		||(ha_msg_add(m, CCM_MINORTRANS, minortrans) == HA_FAIL)
-		||(ha_msg_add(m, CCM_MAXTRANS, maxtrans) == HA_FAIL)
-		||(ha_msg_add(m, CCM_COOKIE, cookie) == HA_FAIL)
-		||(ha_msg_add(m, CCM_MEMLIST, finallist) == HA_FAIL)
-		||(!newcookie? FALSE: (ha_msg_add(m, CCM_NEWCOOKIE, newcookie)
-							==HA_FAIL))) {
-		cl_log(LOG_ERR, "ccm_send_final_memlist: Cannot create "
-					"FINAL_MEMLIST message");
-		rc = HA_FAIL;
-	} else {
-		rc = hb->llc_ops->sendclustermsg(hb, m);
-	}
-	ha_msg_del(m);
-	return(rc);
-}
-
-
-
-/* */
-/* send out a message to the cluster asking for the context */
-/* NOTE: this context is used to intiate a new instance of  */
-/* 	a CCM protocol. */
-/* */
-static int
-ccm_send_protoversion(ll_cluster_t *hb, ccm_info_t *info)
-{
-	struct ha_msg *m;
-	char version[3]; /* in the life time of ccm, do not expect protocol
-					    versions running to 100! */
-	int  rc;
-	
-	if ((m=ha_msg_new(0)) == NULL) {
-		cl_log(LOG_ERR, "Cannot send CCM version msg");
-		return(HA_FAIL);
-	}
-	
-	snprintf(version, sizeof(version), "%d",  CCM_GET_HIPROTO(info));
-	
-	if ((ha_msg_add(m, F_TYPE, ccm_type2string(CCM_TYPE_PROTOVERSION)) 
-	     == HA_FAIL)) {
-		cl_log(LOG_ERR, "ccm_send_join: Cannot create PROTOVERSION "
-		       "message");
-		ha_msg_del(m);
-		return HA_FAIL;
-	} 
-	rc = ccm_send_cluster_msg(hb, m);	
-	ha_msg_del(m);
-	return(rc);
-}
-
-/* */
-/* send out a abort message to whoever has initiated a new instance */
-/* of ccm protocol. */
-/* */
-static int
-ccm_send_abort(ll_cluster_t *hb, ccm_info_t *info, 
-		const char *dest, 
-		const int major, 
-		const int minor)
-{
-	struct ha_msg *m;
-	char majortrans[15]; /* 10 is the maximum number of digits in 
-				UINT_MAX , adding a buffer of 5 */
-	char minortrans[15]; /*		ditto 	*/
-	char *cookie;
-	int  rc;
-
-	if ((m=ha_msg_new(0)) == NULL) {
-		cl_log(LOG_ERR, "Cannot send CCM version msg");
-		return(HA_FAIL);
-	}
-	
-	snprintf(majortrans, sizeof(majortrans), "%d", major);
-	snprintf(minortrans, sizeof(minortrans), "%d", minor);
-	cookie = CCM_GET_COOKIE(info);
-	if ((ha_msg_add(m, F_TYPE, ccm_type2string(CCM_TYPE_ABORT)) == HA_FAIL)
-		||(ha_msg_add(m, CCM_COOKIE, cookie) == HA_FAIL) 
-		||(ha_msg_add(m, CCM_MAJORTRANS, majortrans) == HA_FAIL)
-		||(ha_msg_add(m, CCM_MINORTRANS, minortrans) == HA_FAIL)){
-			cl_log(LOG_ERR, "ccm_send_abort: Cannot create ABORT "
-						    "message");
-		rc = HA_FAIL;
-	} else {
-		rc = hb->llc_ops->sendnodemsg(hb, m, dest);
-	}
-	ha_msg_del(m);
-	return(rc);
-}
-
-
-/* */
-/* send out a join message. THis message will initiate a new instance of */
-/* the ccm protocol. */
-/* */
-static int
-ccm_send_join(ll_cluster_t *hb, ccm_info_t *info)
-{
-	struct ha_msg *m;
-	char majortrans[15]; /* 10 is the maximum number of digits in 
-				UINT_MAX , adding a buffer of 5 */
-	char minortrans[15]; /*		ditto 	*/
-	char joinedtrans[15]; /*		ditto 	*/
-	int  joinedtrans_val;
-	char *cookie;
-	int  rc;
-
-	if ((m=ha_msg_new(0)) == NULL) {
-		cl_log(LOG_ERR, "Cannot send CCM version msg");
-		return(HA_FAIL);
-	}
-	
-	snprintf(majortrans, sizeof(majortrans), "%d", 
-				CCM_GET_MAJORTRANS(info));
-	snprintf(minortrans, sizeof(minortrans), "%d", 
-				CCM_GET_MINORTRANS(info));
-	/* uptime is based on the transition during which a given node
-	 * officially joined the cluster 
-	 */
-	cookie = CCM_GET_COOKIE(info);
-	assert(cookie && *cookie);
-
-	joinedtrans_val = CCM_GET_JOINED_TRANSITION(info);
-	joinedtrans_val = (joinedtrans_val == -1)? 0: joinedtrans_val;
-	snprintf(joinedtrans, sizeof(joinedtrans_val), "%d", joinedtrans_val);
-
-	if ((ha_msg_add(m, F_TYPE, ccm_type2string(CCM_TYPE_JOIN)) == HA_FAIL)
-		||(ha_msg_add(m, CCM_COOKIE, cookie) == HA_FAIL)
-		||(ha_msg_add(m, CCM_MAJORTRANS, majortrans) == HA_FAIL)
-		||(ha_msg_add(m, CCM_MINORTRANS, minortrans) == HA_FAIL)
-		||(ha_msg_add(m, CCM_UPTIME, joinedtrans) == HA_FAIL)) {
-			cl_log(LOG_ERR, "ccm_send_join: Cannot create JOIN "
-						    "message");
-		rc = HA_FAIL;
-	} else {
-		/*delay by microseconds to avoid message collision */
-		ccm_delay_random_interval();
-		rc = hb->llc_ops->sendclustermsg(hb, m);
-	}
-	ha_msg_del(m);
-	return(rc);
-}
-
-
-/* */
-/* send out the connectivity information to the cluster leader. */
-/* */
-static int
-ccm_send_memlist_res(ll_cluster_t *hb, 
-			ccm_info_t *info,
-			const char *nodename, 
-			char *memlist)
-{
-	struct ha_msg *m;
-	char majortrans[15]; /* 10 is the maximum number of digits in 
-				UINT_MAX , adding a buffer of 5 */
-	char minortrans[15]; /*		ditto 	*/
-	char maxtrans[15]; /*		ditto 	*/
-	char *cookie;
-	int  rc;
-	unsigned char *bitmap;
-	gboolean del_flag=FALSE;
-	
-	if ((m=ha_msg_new(0)) == NULL) {
-		cl_log(LOG_ERR, "ccm_send_memlist_res: Cannot allocate "
-				"memory ");
-		return(HA_FAIL);
-	}
-	
-	snprintf(majortrans, sizeof(majortrans), "%d", 
-					CCM_GET_MAJORTRANS(info));
-	snprintf(minortrans, sizeof(minortrans), "%d", 
-					CCM_GET_MINORTRANS(info));
-	snprintf(maxtrans, sizeof(maxtrans), "%d", 
-					CCM_GET_MAXTRANS(info));
-
-	cookie = CCM_GET_COOKIE(info);
-	assert(cookie && *cookie);
-
-	if (!memlist) {
-		int numBytes = bitmap_create(&bitmap, MAXNODE);
-		(void) ccm_bitmap2str(bitmap, numBytes, &memlist);
-		bitmap_delete(bitmap);
-		del_flag = TRUE;
-	} 
-
-	if ((ha_msg_add(m, F_TYPE, ccm_type2string(CCM_TYPE_RES_MEMLIST)) 
-							== HA_FAIL)
-		||(ha_msg_add(m, CCM_COOKIE, cookie) == HA_FAIL)
-		||(ha_msg_add(m, CCM_MAJORTRANS, majortrans) == HA_FAIL)
-		||(ha_msg_add(m, CCM_MINORTRANS, minortrans) == HA_FAIL)
-		||(ha_msg_add(m, CCM_MAXTRANS, maxtrans) == HA_FAIL)
-		||(ha_msg_add(m, CCM_MEMLIST, memlist) == HA_FAIL)) {
-		cl_log(LOG_ERR, "ccm_send_memlist_res: Cannot create "
-						"RES_MEMLIST message");
-		rc = HA_FAIL;
-	} else {
-		/*delay by microseconds to avoid message collision */
-		ccm_delay_random_interval();
-		rc = hb->llc_ops->sendnodemsg(hb, m, nodename);
-	}
-
-	if(del_flag) {
-		g_free(memlist);
-	}
-	
-	ha_msg_del(m);
-	return(rc);
-}
-
-/* */
-/* send out a message to all the members of the cluster, asking for */
-/* their connectivity information. */
-/* */
-/* NOTE: called by the cluster leader only. */
-/* */
-static int
-ccm_send_memlist_request(ll_cluster_t *hb, ccm_info_t *info)
-{
-	struct ha_msg *m;
-	char majortrans[15]; /* 10 is the maximum number of digits in 
-					UINT_MAX , adding a buffer of 5 */
-	char minortrans[15]; /*		ditto 	*/
-	char *cookie;
-	int  rc;
-
-	if ((m=ha_msg_new(0)) == NULL) {
-		cl_log(LOG_ERR, "ccm_send_memlist_request: Cannot allocate "
-				"memory");
-		return(HA_FAIL);
-	}
-	
-	snprintf(majortrans, sizeof(majortrans), "%d", 
-					CCM_GET_MAJORTRANS(info));
-	snprintf(minortrans, sizeof(minortrans), "%d", 
-					CCM_GET_MINORTRANS(info));
-	cookie = CCM_GET_COOKIE(info);
-	assert(cookie && *cookie);
-
-	if ((ha_msg_add(m, F_TYPE, ccm_type2string(CCM_TYPE_REQ_MEMLIST)) 
-						== HA_FAIL)
-		||(ha_msg_add(m, CCM_COOKIE, cookie) == HA_FAIL)
-		||(ha_msg_add(m, CCM_MAJORTRANS, majortrans) == HA_FAIL)
-		||(ha_msg_add(m, CCM_MINORTRANS, minortrans) == HA_FAIL)) {
-			cl_log(LOG_ERR, "ccm_send_memlist_request: Cannot "
-				"create REQ_MEMLIST message");
-		rc = HA_FAIL;
-	} else {
-		rc = hb->llc_ops->sendclustermsg(hb, m);
-	}
-	ha_msg_del(m);
-	return(rc);
-}
 
 
 
@@ -1847,53 +1338,6 @@ ccm_send_cl_reply(ll_cluster_t *hb, ccm_info_t *info)
 /////////////////////////////////////////////////////////////////////
 */
 
-
-/* */
-/* Fake up a leave message. */
-/* This is generally done when heartbeat informs ccm of the crash of */
-/* a cluster member. */
-/* */
-static struct ha_msg *
-ccm_create_leave_msg(ccm_info_t *info, int uuid)
-{
-	struct ha_msg *m;
-	char majortrans[15]; /* 10 is the maximum number of digits in 
-				UINT_MAX , adding a buffer of 5 */
-	char minortrans[15]; /*		ditto 	*/
-	llm_info_t *llm;
-	char *nodename, *cookie;
-	
-
-
-	/* find the name of the node at index */
-	llm = CCM_GET_LLM(info);
-	nodename = llm_get_nodeid_from_uuid(llm, uuid);
-
-    	if ((m=ha_msg_new(0)) == NULL) {
-		cl_log(LOG_ERR, "ccm_send_memlist_request: "
-				"Cannot allocate memory");
-		return(HA_FAIL);
-	}
-	
-	snprintf(majortrans, sizeof(majortrans), "%d", 
-				CCM_GET_MAJORTRANS(info));
-	snprintf(minortrans, sizeof(minortrans), "%d", 
-				CCM_GET_MINORTRANS(info));
-	cookie = CCM_GET_COOKIE(info);
-	assert(cookie && *cookie);
-
-	if ((ha_msg_add(m, F_TYPE, ccm_type2string(CCM_TYPE_LEAVE)) 
-							== HA_FAIL)
-		||(ha_msg_add(m, F_ORIG, nodename) == HA_FAIL) 
-		||(ha_msg_add(m, CCM_MAJORTRANS, majortrans) == HA_FAIL)
-		||(ha_msg_add(m, CCM_COOKIE, cookie) == HA_FAIL)
-		||(ha_msg_add(m, CCM_MINORTRANS, minortrans) == HA_FAIL)) {
-		cl_log(LOG_ERR, "ccm_create_leave_msg: Cannot create REQ_LEAVE "
-						    "message");
-		return NULL;
-	} 
-	return(m);
-}
 
 
 /* */
@@ -2026,64 +1470,6 @@ part_of_cluster(int state)
 	return TRUE;
 	
 	
-}
-
-/* send a message to node 
- * the message contains my state informaton
- */
-
-static int
-ccm_send_state_info(ll_cluster_t* hb, ccm_info_t* info, const char* node)
-{
-	
-	struct ha_msg *m;
-	char *cookie;
-	int  rc;
-	
-	if ((m=ha_msg_new(0)) == NULL) {
-		cl_log(LOG_ERR, "%s:Cannot send CCM version msg",
-		       __FUNCTION__);
-		return(HA_FAIL);
-	}
-
-	cookie = CCM_GET_COOKIE(info);
-	assert(cookie && *cookie);
-	
-	if ( ha_msg_add(m, F_TYPE, ccm_type2string(CCM_TYPE_STATE_INFO)) == HA_FAIL
-	     || ha_msg_add(m, F_STATE, state2string(info->ccm_node_state)) == HA_FAIL
-	     || ha_msg_add(m, CCM_COOKIE, cookie) == HA_FAIL) {
-		cl_log(LOG_ERR, "ccm_send_alive: Cannot create ALIVE "
-		       "message");
-		rc = HA_FAIL;
-	} else {
-		rc = hb->llc_ops->sendnodemsg(hb, m, node);
-	}
-	ha_msg_del(m);
-	return(rc);	
-}
-
-static int
-ccm_send_restart_msg(ll_cluster_t* hb, ccm_info_t* info)
-{
-	
-	struct ha_msg *m;
-	int  rc;
-	
-	if ((m=ha_msg_new(0)) == NULL) {
-		cl_log(LOG_ERR, "%s:Cannot send CCM version msg",
-		       __FUNCTION__);
-		return(HA_FAIL);
-	}
-	
-	if ( ha_msg_add(m, F_TYPE, ccm_type2string(CCM_TYPE_RESTART)) == HA_FAIL){
-		cl_log(LOG_ERR, "ccm_send_alive: Cannot create ALIVE "
-		       "message");
-		rc = HA_FAIL;
-	} else {
-		rc = hb->llc_ops->sendclustermsg(hb, m);
-	}
-	ha_msg_del(m);
-	return(rc);	
 }
 
 
@@ -2366,11 +1752,14 @@ ccm_state_joined(enum ccm_type ccm_msg_type,
 	if(ccm_msg_type != CCM_TYPE_PROTOVERSION
 	   && ccm_msg_type !=  CCM_TYPE_STATE_INFO
 	   && ccm_msg_type != CCM_TYPE_RESTART) {
-		
+		const char* tmpcookie =  ha_msg_value(reply, CCM_COOKIE);
+		if (tmpcookie == NULL){
+			abort();
+		}
 		if(strncmp(CCM_GET_COOKIE(info), 
 			ha_msg_value(reply, CCM_COOKIE), COOKIESIZE) != 0){
 			cl_log(LOG_WARNING, "ccm_state_joined: received message "
-					"with unknown cookie, just dropping");
+			       "with unknown cookie, just dropping");
 			return;
 		}
 
@@ -4500,48 +3889,6 @@ static int is_expected_change_msg(ccm_info_t *info, const char *node,enum change
 	return 0;
 }
 
-static int send_node_leave_to_leader(ll_cluster_t *hb, ccm_info_t *info, const char *node)
-{
-	struct ha_msg *m;
-	char majortrans[15]; /* 10 is the maximum number of digits in 
-				UINT_MAX , adding a buffer of 5 */
-	char minortrans[15]; /*		ditto 	*/
-	char joinedtrans[15]; /*	ditto 	*/			
-	char *cookie;
-	int  rc;
-
-	if ((m=ha_msg_new(0)) == NULL) {
-		cl_log(LOG_ERR, "Cannot send CCM node leave msg");
-		return(HA_FAIL);
-	}
-	
-	snprintf(majortrans, sizeof(majortrans), "%d", 
-				CCM_GET_MAJORTRANS(info));
-	snprintf(minortrans, sizeof(minortrans), "%d", 
-				CCM_GET_MINORTRANS(info));
-	snprintf(joinedtrans, sizeof(joinedtrans), "%d", 
-		              CCM_GET_JOINED_TRANSITION(info));
-	cookie = CCM_GET_COOKIE(info);
-	assert(cookie && *cookie);
-
-
-	if((ha_msg_add(m, F_TYPE, ccm_type2string(CCM_TYPE_NODE_LEAVE)) == HA_FAIL)
-		||(ha_msg_add(m, CCM_COOKIE, cookie) == HA_FAIL)
-		||(ha_msg_add(m, CCM_MAJORTRANS, majortrans) == HA_FAIL)
-		||(ha_msg_add(m, CCM_MINORTRANS, minortrans) == HA_FAIL)
-		||(ha_msg_add(m, CCM_UPTIME, joinedtrans) == HA_FAIL)
-		||(ha_msg_add(m, F_NODE, node) == HA_FAIL)) {
-			cl_log(LOG_ERR, "ccm_send_node_leave_to_leader: "
-							"Cannot create NODE_LEAVE message ");
-		rc = HA_FAIL;
-	} else {
-		/*delay by microseconds to avoid message collision */
-		ccm_delay_random_interval();
-		rc = hb->llc_ops->sendnodemsg(hb, m, CCM_GET_CL_NODEID(info));
-	}
-	ha_msg_del(m);
-	return(rc);
-}
 
 static void ccm_state_wait_for_mem_list(enum ccm_type ccm_msg_type, 
 			struct ha_msg *reply, 
@@ -4799,95 +4146,6 @@ reset_change_info(ccm_info_t *info)
 	return;
 }
 
-/* */
-/* Broadcast ALIVE msg to cluster to notify cluster */
-/*	that "I want to join this partition!" */
-/* */
-static int ccm_send_alive_msg(ll_cluster_t *hb, ccm_info_t *info)
-{
-	struct ha_msg *m;
-	char majortrans[15]; /* 10 is the maximum number of digits in 
-				UINT_MAX , adding a buffer of 5 */
-	char minortrans[15]; /*	ditto 	*/
-	char *cookie;
-	int  rc;
-
-	if ((m=ha_msg_new(0)) == NULL) {
-		cl_log(LOG_ERR, "Cannot send CCM version msg");
-		return(HA_FAIL);
-	}
-	
-	snprintf(majortrans, sizeof(majortrans), "%d", 
-				CCM_GET_MAJORTRANS(info));
-	snprintf(minortrans, sizeof(minortrans), "%d", 
-				CCM_GET_MINORTRANS(info));
-	cookie = CCM_GET_COOKIE(info);
-	assert(cookie && *cookie);
-
-	if ((ha_msg_add(m, F_TYPE, ccm_type2string(CCM_TYPE_ALIVE)) == HA_FAIL)
-		||(ha_msg_add(m, CCM_COOKIE, cookie) == HA_FAIL)
-		||(ha_msg_add(m, CCM_MAJORTRANS, majortrans) == HA_FAIL)
-		||(ha_msg_add(m, CCM_MINORTRANS, minortrans) == HA_FAIL)) {
-			cl_log(LOG_ERR, "ccm_send_alive: Cannot create ALIVE "
-						    "message");
-		rc = HA_FAIL;
-	} else {
-		/*delay by microseconds to avoid message collision */
-		ccm_delay_random_interval();
-		rc = hb->llc_ops->sendclustermsg(hb, m);
-	}
-	ha_msg_del(m);
-	return(rc);
-}
-
-/* */
-/* After certain node in partition received alive msg,  */
-/*	it send newnode msg to leader to inform the leader that */
-/*	"I detect one node want to join our partition!" */
-/* */
-static int ccm_send_newnode_to_leader(ll_cluster_t *hb, 
-		ccm_info_t *info, const char *node)
-{
-	struct ha_msg *m;
-	char majortrans[15]; /* 10 is the maximum number of digits in 
-				UINT_MAX , adding a buffer of 5 */
-	char minortrans[15]; /*		ditto 	*/
-	char joinedtrans[15]; /*	ditto 	*/						
-	char *cookie;
-	int  rc;
-
-	if ((m=ha_msg_new(0)) == NULL) {
-		cl_log(LOG_ERR, "Cannot send CCM newnode msg");
-		return(HA_FAIL);
-	}
-	
-	snprintf(majortrans, sizeof(majortrans), "%d", 
-				CCM_GET_MAJORTRANS(info));
-	snprintf(minortrans, sizeof(minortrans), "%d", 
-				CCM_GET_MINORTRANS(info));
-	snprintf(joinedtrans, sizeof(joinedtrans), "%d", 
-		              CCM_GET_JOINED_TRANSITION(info));
-
-	cookie = CCM_GET_COOKIE(info);
-	assert(cookie && *cookie);
-
-	if ((ha_msg_add(m, F_TYPE, ccm_type2string(CCM_TYPE_NEW_NODE)) == HA_FAIL)
-		||(ha_msg_add(m, CCM_COOKIE, cookie) == HA_FAIL)
-		||(ha_msg_add(m, CCM_MAJORTRANS, majortrans) == HA_FAIL)
-		||(ha_msg_add(m, CCM_MINORTRANS, minortrans) == HA_FAIL)
-		||(ha_msg_add(m, CCM_UPTIME, joinedtrans) == HA_FAIL)
-		||(ha_msg_add(m, F_NODE, node) == HA_FAIL)) {
-			cl_log(LOG_ERR, "ccm_send_newnode_to_leader:Cannot create NEW_NODE"
-						    "message");
-		rc = HA_FAIL;
-	} else {
-		/*delay by microseconds to avoid message collision */
-		ccm_delay_random_interval();
-		rc = hb->llc_ops->sendnodemsg(hb, m, CCM_GET_CL_NODEID(info));
-	}
-	ha_msg_del(m);
-	return(rc);
-}
 
 /* */
 /*  Construct and send mem_list, uptime_list to all members in the partition */
@@ -4931,53 +4189,6 @@ static void send_mem_list_to_all(ll_cluster_t *hb,
 	g_free(memlist);
 	g_free(uptime);
 	return;
-}
-
-static int ccm_send_to_all(ll_cluster_t *hb, ccm_info_t *info, 
-		char *memlist, char *newcookie,
-		int *uptime_list, size_t uptime_size)
-{  
-	struct ha_msg *m;
-	char activeproto[3];
-	char majortrans[15]; /* 10 is the maximum number of digits in 
-				UINT_MAX , adding a buffer of 5 */
-	char minortrans[15]; /* 10 is the maximum number of digits in 
-				UINT_MAX , adding a buffer of 5 */
-	char *cookie;
-	int rc;
-
-	if ((m=ha_msg_new(0)) == NULL) {
-		cl_log(LOG_ERR, "Cannot send CCM version msg");
-		return(HA_FAIL);
-	}
-	
-	snprintf(activeproto, sizeof(activeproto), "%d", 
-					CCM_GET_ACTIVEPROTO(info));
-	snprintf(majortrans, sizeof(majortrans), "%d", 
-					CCM_GET_MAJORTRANS(info));
-	snprintf(minortrans, sizeof(minortrans), "%d", 
-					CCM_GET_MINORTRANS(info));
-
-	cookie = CCM_GET_COOKIE(info);
-	
-	if ((ha_msg_add(m, F_TYPE, ccm_type2string(CCM_TYPE_MEM_LIST)) 
-							== HA_FAIL)
-		||(ha_msg_add(m, CCM_MAJORTRANS, majortrans) == HA_FAIL)
-		||(ha_msg_add(m, CCM_MINORTRANS, minortrans) == HA_FAIL)		
-		||(ha_msg_add(m, CCM_COOKIE, cookie) == HA_FAIL)
-		||(ha_msg_add(m, CCM_MEMLIST, memlist) == HA_FAIL)
-	    ||(cl_msg_add_list_int(m, CCM_UPTIMELIST, uptime_list, uptime_size)
-			 == HA_FAIL)
-		||(!newcookie? FALSE: (ha_msg_add(m, CCM_NEWCOOKIE, newcookie)
-							==HA_FAIL))) {
-		cl_log(LOG_ERR, "ccm_send_final_memlist: Cannot create "
-					"FINAL_MEMLIST message");
-		rc = HA_FAIL;
-	} else {
-		rc = hb->llc_ops->sendclustermsg(hb, m);
-	}
-	ha_msg_del(m);
-	return(rc);
 }
 
 static void ccm_state_new_node_wait_for_mem_list(enum ccm_type ccm_msg_type, 

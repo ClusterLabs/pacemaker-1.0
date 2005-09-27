@@ -1,4 +1,4 @@
-/* $Id: ccm.h,v 1.38 2005/08/18 16:33:14 andrew Exp $ */
+/* $Id: ccm.h,v 1.39 2005/09/27 23:03:45 gshi Exp $ */
 /*
  * ccm.h: definitions Consensus Cluster Manager internal header
  *				file
@@ -56,6 +56,46 @@
 
 #include <ocf/oc_event.h>
 
+
+
+/* */
+/* ccm defined new type tokens used by the CCM protocol. */
+/* */
+#define CCM_VERSIONVAL  "ccmpverval" 	  /* version value token */
+#define CCM_UPTIME      "ccmuptime"       /* Uptime for Consensus  */
+#define CCM_MEMLIST     "ccmmemlist"      /* bitmap for membership */
+#define CCM_PROTOCOL    "ccmproto"        /* protocol version */
+#define CCM_MAJORTRANS  "ccmmajor"        /* major transition version*/
+#define CCM_MINORTRANS  "ccmminor"        /* minor transition version */
+#define CCM_MAXTRANS    "ccmmaxt"        /* minor transition version */
+#define CCM_COOKIE      "ccmcookie"       /* communication context */
+#define CCM_NEWCOOKIE   "ccmnewcookie"    /* new communication context */
+#define CCM_CLSIZE   	"ccmclsize"       /* new cluster size */
+#define CCM_UPTIMELIST "ccmuptimelist" /*uptime list*/
+
+
+/* ccm_types for easier processing. */
+enum ccm_type {
+	CCM_TYPE_PROTOVERSION,
+	CCM_TYPE_PROTOVERSION_RESP,
+	CCM_TYPE_JOIN,
+	CCM_TYPE_REQ_MEMLIST,
+	CCM_TYPE_RES_MEMLIST,
+	CCM_TYPE_FINAL_MEMLIST,
+	CCM_TYPE_ABORT,
+	CCM_TYPE_LEAVE,
+	CCM_TYPE_TIMEOUT,
+	CCM_TYPE_NODE_LEAVE_NOTICE,
+	CCM_TYPE_NODE_LEAVE,
+	CCM_TYPE_MEM_LIST,
+	CCM_TYPE_ALIVE,
+	CCM_TYPE_NEW_NODE,
+	CCM_TYPE_STATE_INFO, 
+	CCM_TYPE_RESTART,
+	CCM_TYPE_LAST
+};
+
+
 #define BitsInByte CHAR_BIT
 
 /* BEGINNING OF version request tracking interfaces */
@@ -66,6 +106,7 @@ typedef struct ccm_version_s {
 				/* responses recevied from other nodes */
 				/* after we received the first response. */
 } ccm_version_t;
+char *	ccm_type2string(int type);
 void version_reset(ccm_version_t *);
 void version_some_activity(ccm_version_t *);
 int version_retry(ccm_version_t *, longclock_t);
@@ -396,4 +437,6 @@ typedef struct  ccm_s {
 
 void client_new_mbrship(ccm_info_t*, void*);
 void ccm_reset(ccm_info_t *info);
+const char*	state2string(int state);
+
 #endif /*  _CLUSTER_MANAGER_H_ */
