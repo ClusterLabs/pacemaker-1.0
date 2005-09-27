@@ -4,6 +4,14 @@ heartbeat-2 (2.0.3-1) unstable; urgency=low
 
  -- Simon Horman <horms@debian.org>  Mon, 26 Sep 2005 16:36:49 +0900
 
+heartbeat-2 (2.0.2-2) unstable; urgency=low
+
+  * Add build dependancy on libltdl3-dev 
+    (closes: #330194)
+
+ -- Simon Horman <horms@debian.org>  Tue, 27 Sep 2005 20:38:12 +0900
+
+
 heartbeat-2 (2.0.2-1) unstable; urgency=low
 
   * New upstream
