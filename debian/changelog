@@ -2,7 +2,14 @@ heartbeat-2 (2.0.3-1) unstable; urgency=low
 
   * New Upstream
 
- -- Simon Horman <horms@debian.org>  Mon, 26 Sep 2005 16:36:49 +0900
+ -- Simon Horman <horms@debian.org>  Tue, 27 Sep 2005 22:42:07 +0900
+
+heartbeat-2 (2.0.2-3) unstable; urgency=low
+
+  * Get rid of bogus touching of config.status and friends in clean target,
+    which if run as root causes build failures.
+
+ -- Simon Horman <horms@debian.org>  Tue, 27 Sep 2005 22:28:01 +0900
 
 heartbeat-2 (2.0.2-2) unstable; urgency=low
 
