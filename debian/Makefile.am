@@ -30,7 +30,6 @@ EXTRA_DIST		= apply changelog compat control copyright \
 			  ldirectord-2.postrm \
 			  patches/00-ssh_scp_path.patch \
 			  patches/02-chown-check.patch \
-			  patches/04-db-ocf-resource-syntax.patch \
 			  patches/series/2.0.0-1 \
 			  patches/series/2.0.3-1
 
