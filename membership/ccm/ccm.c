@@ -1,4 +1,4 @@
-/* $Id: ccm.c,v 1.96 2005/09/28 23:34:55 gshi Exp $ */
+/* $Id: ccm.c,v 1.97 2005/09/28 23:45:40 gshi Exp $ */
 /* 
  * ccm.c: Consensus Cluster Service Program 
  *
@@ -3739,6 +3739,8 @@ set_llm_from_heartbeat(ll_cluster_t* llc, ccm_info_t* info){
 		cl_log(LOG_DEBUG, "Total # of Nodes in the Cluster: %d", 
 		       LLM_GET_NODECOUNT(llm));
 	}		
+	
+	return HA_OK;
 }
 
 
@@ -3747,9 +3749,9 @@ ccm_initialize()
 {
 	unsigned	fmask;
 	const char *	hname;
-	ccm_info_t 	*global_info;
+	ccm_info_t 	*global_info = NULL;
 	ll_cluster_t*	hb_fd;
-	ccm_t		*ccmret;
+	ccm_t		*ccmret = NULL;
 	int		facility;
 	const char *	parameter;
 
@@ -3768,7 +3770,7 @@ ccm_initialize()
 	if (hb_fd->llc_ops->signon(hb_fd, "ccm")!= HA_OK) {
 		cl_log(LOG_ERR, "Cannot sign on with heartbeat");
 		cl_log(LOG_ERR, "REASON: %s", hb_fd->llc_ops->errmsg(hb_fd));
-		return NULL;
+		goto errout;
 	}
 
 	/* See if we should drop cores somewhere odd... */
@@ -3785,23 +3787,20 @@ ccm_initialize()
 		cl_log(LOG_INFO, "Switched to heartbeat syslog facility: %d", facility);
 		cl_log_set_facility(facility);
 	}
-
+	
 	if((global_info = (ccm_info_t *)g_malloc(sizeof(ccm_info_t))) == NULL){
 		cl_log(LOG_ERR, "Cannot allocate memory ");
-		return NULL;
+		goto errout;
 	}
 
 	if((ccmret = (ccm_t *)g_malloc(sizeof(ccm_t))) == NULL){
 		cl_log(LOG_ERR, "Cannot allocate memory");
-		g_free(global_info);
-		return NULL;
+		goto errout;
 	}
 
 	if((hname = hb_fd->llc_ops->get_mynodeid(hb_fd)) == NULL) {
 		cl_log(LOG_ERR, "get_mynodeid() failed");
-		g_free(ccmret);
-		g_free(global_info);
-		return NULL;
+		goto errout;
 	}
 	cl_log(LOG_INFO, "Hostname: %s", hname);
 
@@ -3810,22 +3809,20 @@ ccm_initialize()
 					!=HA_OK){
 		cl_log(LOG_ERR, "Cannot set if status callback");
 		cl_log(LOG_ERR, "REASON: %s", hb_fd->llc_ops->errmsg(hb_fd));
-		g_free(ccmret);
-		g_free(global_info);
-		return NULL;
+		goto errout;
 	}
 	
 	fmask = LLC_FILTER_DEFAULT;
 	if (hb_fd->llc_ops->setfmode(hb_fd, fmask) != HA_OK) {
 		cl_log(LOG_ERR, "Cannot set filter mode");
 		cl_log(LOG_ERR, "REASON: %s", hb_fd->llc_ops->errmsg(hb_fd));
-		g_free(ccmret);
-		g_free(global_info);
-		return NULL;
+		goto errout;
 	}
 
 
-	set_llm_from_heartbeat(hb_fd, global_info);
+	if (set_llm_from_heartbeat(hb_fd, global_info) != HA_OK){
+		goto errout;
+	}
 
 	ccm_control_init(global_info);
 	ccm_configure_timeout(hb_fd, global_info);
@@ -3833,6 +3830,19 @@ ccm_initialize()
 	ccmret->info = global_info;
 	ccmret->hbfd = hb_fd;
 	return  (void*)ccmret;
+
+ errout:
+	if (ccmret){
+		g_free(ccmret);
+		ccmret = NULL;
+	}
+	if (global_info){
+		g_free(global_info);
+		global_info = NULL;
+	}	
+	return NULL;
+
+
 }
 
 static void add_change_msg(ccm_info_t *info, const char *node, const char *orig, enum change_event_type type)
