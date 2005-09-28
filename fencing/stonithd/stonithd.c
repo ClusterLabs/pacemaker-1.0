@@ -1,4 +1,4 @@
-/* $Id: stonithd.c,v 1.62 2005/09/08 09:27:41 sunjd Exp $ */
+/* $Id: stonithd.c,v 1.63 2005/09/28 20:29:55 gshi Exp $ */
 
 /* File: stonithd.c
  * Description: STONITH daemon for node fencing
@@ -153,7 +153,6 @@ struct RA_operation_to_handler
 static void become_daemon(gboolean);
 static int show_daemon_status(const char * pidfile);
 static int kill_running_daemon(const char * pidfile);
-static void inherit_config_from_environment(void);
 static void stonithd_quit(int signo);
 static gboolean adjust_debug_level(int nsig, gpointer user_data);
 
@@ -328,7 +327,7 @@ static gboolean 	NEED_SIGNON_TO_APPHBD	= FALSE;
 static ll_cluster_t *	hb			= NULL;
 static gboolean 	TEST 			= FALSE;
 static IPC_Auth* 	ipc_auth 		= NULL;
-static int	 	debug_level		= 0;
+extern int	 	debug_level	       ;
 static int 		stonithd_child_count	= 0;
 
 int
@@ -406,7 +405,7 @@ main(int argc, char ** argv)
 		}
 	} while (1);
 
-	inherit_config_from_environment();
+	inherit_logconfig_from_environment();
 	
 
 	if (cl_read_pidfile(STD_PIDFILE) > 0 ) {
@@ -2892,41 +2891,6 @@ delete_client_by_chan(GList ** client_list, IPC_Channel * ch)
 	}
 }
 
-static void
-inherit_config_from_environment(void)
-{
-	char * inherit_env = NULL;
-
-	/* Donnot need to free the return pointer from getenv */
-	inherit_env = getenv(HADEBUGVAL);
-	if (inherit_env != NULL && atoi(inherit_env) != 0 ) {
-		debug_level = atoi(inherit_env);
-		inherit_env = NULL;
-	}
-
-	inherit_env = getenv(LOGFENV);
-	if (inherit_env != NULL) {
-		cl_log_set_logfile(inherit_env);
-		inherit_env = NULL;
-	}
-
-	inherit_env = getenv(DEBUGFENV);
-	if (inherit_env != NULL) {
-		cl_log_set_debugfile(inherit_env);
-		inherit_env = NULL;
-	}
-
-	inherit_env = getenv(LOGFACILITY);
-	if (inherit_env != NULL) {
-		int facility = -1;
-		facility = cl_syslogfac_str2int(inherit_env);
-		if ( facility != -1 ) {
-			cl_log_set_facility(facility);
-		}
-		inherit_env = NULL;
-	}
-}
-
 /* make the apphb_interval, apphb_warntime adjustable important */
 static int
 init_using_apphb(void)
@@ -3063,6 +3027,11 @@ adjust_debug_level(int nsig, gpointer user_data)
 
 /* 
  * $Log: stonithd.c,v $
+ * Revision 1.63  2005/09/28 20:29:55  gshi
+ * change the variable debug to debug_level
+ * define it in cl_log
+ * move a common function definition from lrmd/mgmtd/stonithd to cl_log
+ *
  * Revision 1.62  2005/09/08 09:27:41  sunjd
  * Fix a memory bug
  *
