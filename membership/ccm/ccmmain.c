@@ -1,4 +1,4 @@
-/* $Id: ccmmain.c,v 1.27 2005/07/29 10:32:30 sunjd Exp $ */
+/* $Id: ccmmain.c,v 1.28 2005/09/28 22:22:26 gshi Exp $ */
 /* 
  * ccm.c: Consensus Cluster Service Program 
  *
@@ -254,6 +254,8 @@ main(int argc, char **argv)
 	
 	cl_inherit_use_logd(ENV_PREFIX ""KEY_LOGDAEMON, 0);
 	
+	inherit_logconfig_from_environment();
+
 	/* initialize the client tracking system */
 	client_init();
 
