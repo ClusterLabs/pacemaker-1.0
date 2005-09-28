@@ -1,4 +1,4 @@
-/* $Id: heartbeat.h,v 1.73 2005/09/26 18:15:53 gshi Exp $ */
+/* $Id: heartbeat.h,v 1.74 2005/09/28 20:29:55 gshi Exp $ */
 /*
  * heartbeat.h: core definitions for the Linux-HA heartbeat program
  *
@@ -365,17 +365,17 @@ int api_remove_client_pid(pid_t c_pid, const char * reason);
 
 
 extern struct sys_config *	config;
-extern int			debug;
+extern int			debug_level;
 extern int			udpport;
 extern int			RestartRequested;
 extern char *			localnodename;
 
-#define	ANYDEBUG	(debug)
-#define	DEBUGDETAILS	(debug >= 2)
-#define	DEBUGAUTH	(debug >=3)
-#define	DEBUGMODULE	(debug >=3)
-#define	DEBUGPKT	(debug >= 4)
-#define	DEBUGPKTCONT	(debug >= 5)
+#define	ANYDEBUG	(debug_level)
+#define	DEBUGDETAILS	(debug_level >= 2)
+#define	DEBUGAUTH	(debug_level >=3)
+#define	DEBUGMODULE	(debug_level >=3)
+#define	DEBUGPKT	(debug_level >= 4)
+#define	DEBUGPKTCONT	(debug_level >= 5)
 
 #define ha_log		cl_log
 #define ha_perror	cl_perror

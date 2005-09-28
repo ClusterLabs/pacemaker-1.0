@@ -43,7 +43,6 @@
 
 /* common daemon and debug functions */
 static gboolean debug_level_adjust(int nsig, gpointer user_data);
-static void inherit_config_from_environment(void);
 static gboolean sigterm_action(int nsig, gpointer unused);
 static void usage(const char* cmd, int exit_status);
 static int init_start(void);
@@ -89,7 +88,7 @@ static char* dispatch_msg(const char* msg, int client_id);
 const char* mgmtd_name 	= "mgmtd";
 
 static GMainLoop* mainloop 	= NULL;
-int debug_level 		= 0;
+extern int debug_level;
 static GHashTable* clients	= NULL;
 static GHashTable* msg_map	= NULL;		
 static GHashTable* evt_map	= NULL;		
@@ -153,7 +152,7 @@ main(int argc, char ** argv)
 	/* Use logd if it's enabled by heartbeat */
 	cl_inherit_use_logd(ENV_PREFIX""KEY_LOGDAEMON, 0);
 
-	inherit_config_from_environment();
+	inherit_logconfig_from_environment();
 
 	if (req_status){
 		return init_status(PID_FILE, mgmtd_name);
@@ -267,35 +266,6 @@ register_pid(gboolean do_fork,
 	/* At least they are harmless, I think. ;-) */
 	cl_signal_set_interrupt(SIGINT, 0);
 	cl_signal_set_interrupt(SIGHUP, 0);
-}
-
-static void
-inherit_config_from_environment(void)
-{
-	char * inherit_env = NULL;
-
-	/* Donnot need to free the return pointer from getenv */
-	inherit_env = getenv(LOGFENV);
-	if (inherit_env != NULL) {
-		cl_log_set_logfile(inherit_env);
-		inherit_env = NULL;
-	}
-
-	inherit_env = getenv(DEBUGFENV);
-	if (inherit_env != NULL) {
-		cl_log_set_debugfile(inherit_env);
-		inherit_env = NULL;
-	}
-
-	inherit_env = getenv(LOGFACILITY);
-	if (inherit_env != NULL) {
-		int facility = -1;
-		facility = cl_syslogfac_str2int(inherit_env);
-		if ( facility != -1 ) {
-			cl_log_set_facility(facility);
-		}
-		inherit_env = NULL;
-	}
 }
 
 static gboolean 

@@ -1,4 +1,4 @@
-/* $Id: module.c,v 1.60 2005/07/29 07:03:47 sunjd Exp $ */
+/* $Id: module.c,v 1.61 2005/09/28 20:29:55 gshi Exp $ */
 /*
  * module: Dynamic module support code
  *
@@ -118,7 +118,7 @@ module_init(void)
 	}
 
 	if (DEBUGDETAILS) {
- 		PILSetDebugLevel(PluginLoadingSystem, NULL, NULL, debug);
+ 		PILSetDebugLevel(PluginLoadingSystem, NULL, NULL, debug_level);
 	}
 
 
@@ -132,7 +132,7 @@ module_init(void)
 		,	PIL_strerror(rc));
 		return HA_FAIL;
 	}
- 	PILSetDebugLevel(PluginLoadingSystem, NULL, NULL, debug);
+ 	PILSetDebugLevel(PluginLoadingSystem, NULL, NULL, debug_level);
 
 	/* init completed */
 	++initialised;

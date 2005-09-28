@@ -1,4 +1,4 @@
-/* $Id: hb_resource.c,v 1.79 2005/07/29 06:55:37 sunjd Exp $ */
+/* $Id: hb_resource.c,v 1.80 2005/09/28 20:29:55 gshi Exp $ */
 /*
  * hb_resource: Linux-HA heartbeat resource management code
  *
@@ -112,7 +112,7 @@ struct hb_const_string {
 	{							\
 	 	static struct hb_const_string cstr = {(s)};	\
 		NewTrackedProc((p), 1				\
-		,	(debug ? PT_LOGVERBOSE : PT_LOGNORMAL)	\
+		,	(debug_level ? PT_LOGVERBOSE : PT_LOGNORMAL)	\
 		,	&cstr, &hb_rsc_RscMgmtProcessTrackOps);	\
 	}
 
@@ -2454,6 +2454,11 @@ StonithStatProcessName(ProcTrack* p)
 
 /*
  * $Log: hb_resource.c,v $
+ * Revision 1.80  2005/09/28 20:29:55  gshi
+ * change the variable debug to debug_level
+ * define it in cl_log
+ * move a common function definition from lrmd/mgmtd/stonithd to cl_log
+ *
  * Revision 1.79  2005/07/29 06:55:37  sunjd
  * bug668: license update
  *

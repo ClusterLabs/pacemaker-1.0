@@ -1,4 +1,4 @@
-/* $Id: config.c,v 1.176 2005/09/26 18:14:54 gshi Exp $ */
+/* $Id: config.c,v 1.177 2005/09/28 20:29:55 gshi Exp $ */
 /*
  * Parse various heartbeat configuration files...
  *
@@ -182,7 +182,7 @@ GHashTable*				APIAuthorization = NULL;
 extern struct node_info *   			curnode;
 extern int    				timebasedgenno;
 int    					enable_realtime = TRUE;
-extern int    				debug;
+extern int    				debug_level;
 int					netstring_format = FALSE;
 extern int				UseApphbd;
 
@@ -335,7 +335,7 @@ init_config(const char * cfgfile)
 
 	if (GetParameterValue(KEY_DEBUGLEVEL) == NULL) {
 		char	debugstr[10];
-		snprintf(debugstr, sizeof(debugstr), "%d", debug);
+		snprintf(debugstr, sizeof(debugstr), "%d", debug_level);
 		add_option(KEY_DEBUGLEVEL, debugstr);
 	}
 
@@ -1620,11 +1620,11 @@ set_realtime(const char * value)
 static int
 set_debuglevel(const char * value)
 {
-	debug = atoi(value);
-	if (debug >= 0 && debug < 256) {
-		if (debug > 0) {
+	debug_level = atoi(value);
+	if (debug_level >= 0 && debug_level < 256) {
+		if (debug_level > 0) {
 			static char cdebug[8];
-			snprintf(cdebug, sizeof(debug), "%d", debug);
+			snprintf(cdebug, sizeof(debug_level), "%d", debug_level);
 			setenv(HADEBUGVAL, cdebug, TRUE);
 		}
 		return(HA_OK);
@@ -2129,6 +2129,11 @@ set_autojoin(const char* value)
 
 /*
  * $Log: config.c,v $
+ * Revision 1.177  2005/09/28 20:29:55  gshi
+ * change the variable debug to debug_level
+ * define it in cl_log
+ * move a common function definition from lrmd/mgmtd/stonithd to cl_log
+ *
  * Revision 1.176  2005/09/26 18:14:54  gshi
  * R1 style resource management and autojoin other/any should not co-exist
  *

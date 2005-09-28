@@ -1,4 +1,4 @@
-/* $Id: hb_signal.c,v 1.17 2005/08/15 04:54:58 sunjd Exp $ */
+/* $Id: hb_signal.c,v 1.18 2005/09/28 20:29:55 gshi Exp $ */
 /*
  * hb_signal.c: signal handling routines to be used by Heartbeat
  *
@@ -191,25 +191,25 @@ __hb_signal_debug_action(int sig)
 
 	switch(sig) {
 		case SIGUSR1:
-			++debug;
+			++debug_level;
 			break;
 
 		case SIGUSR2:
-			if (debug > 0) {
-				--debug;
+			if (debug_level > 0) {
+				--debug_level;
 			}else{
-				debug=0;
+				debug_level=0;
 			}
 			break;
 	}
 
- 	PILSetDebugLevel(PluginLoadingSystem, NULL, NULL , debug);
+ 	PILSetDebugLevel(PluginLoadingSystem, NULL, NULL , debug_level);
 	{
 		static char cdebug[8];
-		snprintf(cdebug, sizeof(debug), "%d", debug);
+		snprintf(cdebug, sizeof(debug_level), "%d", debug_level);
 		setenv(HADEBUGVAL, cdebug, TRUE);
 	}
-	if (debug <= 0) {
+	if (debug_level <= 0) {
 		unsetenv(HADEBUGVAL);
 	}
 }
@@ -246,14 +246,14 @@ hb_signal_debug_usr2_action(void)
 static void
 __parent_hb_signal_debug_action(int sig)
 {
-	int	olddebug = debug;
+	int	olddebug = debug_level;
 
 	__hb_signal_debug_action(sig);
 	hb_signal_signal_all(sig);
 
-	ha_log(LOG_DEBUG, "debug now set to %d [pid %d]", debug
+	ha_log(LOG_DEBUG, "debug now set to %d [pid %d]", debug_level
 	,	(int) getpid());
-	if (debug == 1 && olddebug == 0) {
+	if (debug_level == 1 && olddebug == 0) {
 		hb_versioninfo();
 		hb_dump_proc_stats(curproc);
 	}

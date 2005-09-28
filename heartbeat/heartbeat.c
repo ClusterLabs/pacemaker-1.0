@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.454 2005/09/26 18:50:31 gshi Exp $ */
+/* $Id: heartbeat.c,v 1.455 2005/09/28 20:29:55 gshi Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -304,7 +304,7 @@ volatile struct pstat_shm *	procinfo = NULL;
 volatile struct process_info *	curproc = NULL;
 struct TestParms *		TestOpts;
 
-int				debug = 0;
+extern int			debug_level;
 gboolean			verbose = FALSE;
 int				timebasedgenno = FALSE;
 int				parse_only = FALSE;
@@ -834,7 +834,7 @@ initialize_heartbeat()
 		}
 	}
 
- 	PILSetDebugLevel(PluginLoadingSystem, NULL, NULL, debug);
+ 	PILSetDebugLevel(PluginLoadingSystem, NULL, NULL, debug_level);
 	CoreProcessCount = 0;
 	procinfo->nprocs = 0;
 	ourproc = procinfo->nprocs;
@@ -1408,7 +1408,7 @@ master_control_process(void)
 			       NULL);
 
 	/* Dump out memory stats periodically... */
-	memstatsinterval = (debug ? 10*60*1000 : ONEDAY*1000);
+	memstatsinterval = (debug_level ? 10*60*1000 : ONEDAY*1000);
 	Gmain_timeout_add_full(PRI_DUMPSTATS, memstatsinterval
 	,	hb_dump_all_proc_stats, NULL, NULL);
 
@@ -3757,7 +3757,7 @@ main(int argc, char * argv[], char **envp)
 				}
 				break;
 			case 'd':
-				++debug;
+				++debug_level;
 				break;
 			case 'k':
 				++killrunninghb;
@@ -3825,9 +3825,9 @@ main(int argc, char * argv[], char **envp)
 
 
 
-	if (debug > 0) {
+	if (debug_level > 0) {
 		static char cdebug[8];
-		snprintf(cdebug, sizeof(debug), "%d", debug);
+		snprintf(cdebug, sizeof(debug_level), "%d", debug_level);
 		setenv(HADEBUGVAL, cdebug, TRUE);
 	}
 
@@ -5555,6 +5555,11 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.455  2005/09/28 20:29:55  gshi
+ * change the variable debug to debug_level
+ * define it in cl_log
+ * move a common function definition from lrmd/mgmtd/stonithd to cl_log
+ *
  * Revision 1.454  2005/09/26 18:50:31  gshi
  * if autojoin is set to other/any, heartbeat will wait for init_dead_time
  * before it claims communication is up
