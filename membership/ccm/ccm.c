@@ -1,4 +1,4 @@
-/* $Id: ccm.c,v 1.94 2005/09/27 23:03:45 gshi Exp $ */
+/* $Id: ccm.c,v 1.95 2005/09/28 18:14:18 gshi Exp $ */
 /* 
  * ccm.c: Consensus Cluster Service Program 
  *
@@ -313,7 +313,6 @@ ccm_string2type(const char *type)
 {
 	enum ccm_type i;
 
-	cl_log(LOG_INFO, "type =%s", type);
 	for ( i = CCM_TYPE_PROTOVERSION; i <= CCM_TYPE_LAST; i++ ) {
 		if (strncmp(ccm_type_str[i], type, TYPESTRSIZE) == 0){
 			return i;
