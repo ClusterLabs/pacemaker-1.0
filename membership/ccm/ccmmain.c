@@ -1,4 +1,4 @@
-/* $Id: ccmmain.c,v 1.28 2005/09/28 22:22:26 gshi Exp $ */
+/* $Id: ccmmain.c,v 1.29 2005/09/28 23:34:55 gshi Exp $ */
 /* 
  * ccm.c: Consensus Cluster Service Program 
  *
@@ -29,6 +29,7 @@
 
 int global_debug=0;
 int global_verbose=0;
+GMainLoop*	mainloop = NULL;
 
 /*
  * hearbeat event source.
@@ -37,12 +38,6 @@ int global_verbose=0;
 static gboolean hb_input_dispatch(IPC_Channel *, gpointer);
 static void hb_input_destroy(gpointer);
 static gboolean hb_timeout_dispatch(gpointer);
-
-typedef struct hb_usrdata_s {
-	void		*ccmdata;
-	GMainLoop	*mainloop;
-} hb_usrdata_t;
-
 static gboolean
 hb_input_dispatch(IPC_Channel * channel, gpointer user_data)
 {
@@ -51,7 +46,7 @@ hb_input_dispatch(IPC_Channel * channel, gpointer user_data)
 		return FALSE;
 	}
 	
-	return ccm_take_control(((hb_usrdata_t *)user_data)->ccmdata);
+	return ccm_take_control(user_data);
 }
 
 static void
@@ -59,7 +54,7 @@ hb_input_destroy(gpointer user_data)
 {
 	/* close connections to all the clients */
 	client_delete_all();
-	g_main_quit(((hb_usrdata_t *)user_data)->mainloop);
+	g_main_quit(mainloop);
 	return;
 }
 
@@ -190,13 +185,11 @@ ccm_debug(int signum)
 static gboolean
 ccm_shutdone(int sig, gpointer userdata)
 {	
-	hb_usrdata_t*	hb = (hb_usrdata_t*)userdata;
-	ccm_t*		ccm = (ccm_t*)hb->ccmdata;
+	ccm_t*		ccm = (ccm_t*)userdata;
 	ccm_info_t *	info = (ccm_info_t*)ccm->info;
-	GMainLoop *	mainloop = hb->mainloop;
-	
+
 	cl_log(LOG_INFO, "received SIGTERM in node");
-	if (info == NULL || mainloop == NULL){
+	if (info == NULL){
 		cl_log(LOG_ERR, "ccm_shutdone: invalid arguments");
 		return FALSE;
 	}
@@ -218,8 +211,8 @@ main(int argc, char **argv)
 	char *cmdname;
 	char *tmp_cmdname;
 	int  flag;
-	hb_usrdata_t	usrdata;
-
+	ccm_t*	ccm;
+	
 #if 1
 	cl_malloc_forced_for_glib();
 #endif
@@ -259,28 +252,27 @@ main(int argc, char **argv)
 	/* initialize the client tracking system */
 	client_init();
 
-	usrdata.mainloop = g_main_new(TRUE);
-
 	/* 
 	 * heartbeat is the main source of events. 
 	 * This source must be listened 
 	 * at high priority 
 	 */
-	usrdata.ccmdata = ccm_initialize();
-	if(!usrdata.ccmdata) {
+	ccm = ccm_initialize();
+	if(ccm == NULL){
+		cl_log(LOG_ERR, "Initialization failed. Exit");
 		exit(1);
 	}
 	
 	G_main_add_SignalHandler(G_PRIORITY_HIGH, SIGTERM, 
-				 ccm_shutdone, &usrdata, NULL);
+				 ccm_shutdone, ccm, NULL);
 	
 	/* we want hb_input_dispatch to be called when some input is
 	 * pending on the heartbeat fd, and every 1 second 
 	 */
-	G_main_add_IPC_Channel(G_PRIORITY_HIGH, ccm_get_ipcchan(usrdata.ccmdata), 
-			FALSE, hb_input_dispatch, &usrdata, hb_input_destroy);
+	G_main_add_IPC_Channel(G_PRIORITY_HIGH, ccm_get_ipcchan(ccm), 
+			FALSE, hb_input_dispatch, ccm, hb_input_destroy);
 	Gmain_timeout_add_full(G_PRIORITY_HIGH, SECOND, hb_timeout_dispatch,
-				&usrdata, hb_input_destroy);
+				ccm, hb_input_destroy);
 
 	/* the clients wait channel is the other source of events.
 	 * This source delivers the clients connection events.
@@ -291,10 +283,10 @@ main(int argc, char **argv)
 		FALSE, waitCh_input_dispatch, wait_ch,
 		waitCh_input_destroy);
 
-
-	g_main_run(usrdata.mainloop);
-	g_main_destroy(usrdata.mainloop);
-
+	mainloop = g_main_loop_new(NULL, FALSE);
+	g_main_run(mainloop);
+	g_main_destroy(mainloop);
+	
 	g_free(tmp_cmdname);
 	/*this program should never terminate,unless killed*/
 	return(1);

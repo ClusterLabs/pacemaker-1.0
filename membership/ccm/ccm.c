@@ -1,4 +1,4 @@
-/* $Id: ccm.c,v 1.95 2005/09/28 18:14:18 gshi Exp $ */
+/* $Id: ccm.c,v 1.96 2005/09/28 23:34:55 gshi Exp $ */
 /* 
  * ccm.c: Consensus Cluster Service Program 
  *
@@ -3684,14 +3684,69 @@ ccm_get_ipcchan(void *data)
 }
 
 
+#define	PINGNODE        "ping"
+static int
+set_llm_from_heartbeat(ll_cluster_t* llc, ccm_info_t* info){
+	llm_info_t*	llm = &info->llm;
+	struct llc_ops* ops = llc->llc_ops;
+	const char*	status;
+	const char*	node;
+	const char*	mynode = ops->get_mynodeid(llc);
+
+	
+	if (mynode == NULL){
+		cl_log(LOG_ERR, "mynode is NULL");
+		return HA_FAIL;
+	}
+
+	if(global_debug) {
+		cl_log(LOG_DEBUG, "==== Starting  Node Walk =========");
+	}
+	if (ops->init_nodewalk(llc) != HA_OK) {
+		cl_log(LOG_ERR, "Cannot start node walk");
+		cl_log(LOG_ERR, "REASON: %s", ops->errmsg(llc));
+		return HA_FAIL;
+	}
+	
+	llm = CCM_GET_LLM(info);
+	llm_init(llm);
+	while((node = ops->nextnode(llc)) != NULL) {		
+		if (strcmp(ops->node_type(llc, node), PINGNODE)==0){
+			continue;
+		}
+		
+		status = ops->node_status(llc, node);
+		if(global_debug) {
+			cl_log(LOG_DEBUG, "Cluster node: %s: status: %s", node,
+			       status);
+		}
+		
+		llm_add(llm, node, status, mynode);
+		
+	}
+	llm_end(llm);
+	
+	display_llm(llm);
+	
+	if (ops->end_nodewalk(llc) != HA_OK) {
+		cl_log(LOG_ERR, "Cannot end node walk");
+		cl_log(LOG_ERR, "REASON: %s", ops->errmsg(llc));
+		return HA_FAIL;
+	}
+	
+	if(global_debug) {
+		cl_log(LOG_DEBUG, "======= Ending  Node Walk ==========");
+		cl_log(LOG_DEBUG, "Total # of Nodes in the Cluster: %d", 
+		       LLM_GET_NODECOUNT(llm));
+	}		
+}
+
+
 void *
 ccm_initialize()
 {
 	unsigned	fmask;
-	const char *	node;
-	const char *	status;
 	const char *	hname;
-	llm_info_t 	*llm;
 	ccm_info_t 	*global_info;
 	ll_cluster_t*	hb_fd;
 	ccm_t		*ccmret;
@@ -3703,6 +3758,7 @@ ccm_initialize()
 			"======================");
 	}
 
+	CL_SIGINTERRUPT(SIGTERM, 1);
 
 	hb_fd = ll_cluster_new("heartbeat");
 
@@ -3769,75 +3825,7 @@ ccm_initialize()
 	}
 
 
-	if(global_debug) {
-		cl_log(LOG_DEBUG, "======================= Starting  Node Walk "
-				"=======================");
-	}
-	if (hb_fd->llc_ops->init_nodewalk(hb_fd) != HA_OK) {
-		cl_log(LOG_ERR, "Cannot start node walk");
-		cl_log(LOG_ERR, "REASON: %s", hb_fd->llc_ops->errmsg(hb_fd));
-		g_free(ccmret);
-		g_free(global_info);
-		return NULL;
-	}
-
-	/* ccm */
-	llm = CCM_GET_LLM((global_info));
-	llm_init(llm);
-	while((node = hb_fd->llc_ops->nextnode(hb_fd))!= NULL) {
-
-		/* ignore non normal nodes */
-		if(strcmp(hb_fd->llc_ops->node_type(hb_fd, node), 
-				"normal") != 0) {
-			if(strcmp(node,hname) == 0) {
-				cl_log(LOG_ERR, "This cluster node: %s: "
-						"is a ping node", node);
-				g_free(global_info);
-				g_free(ccmret);
-				return NULL;
-			}
-			continue;
-		}
-
-		status =  hb_fd->llc_ops->node_status(hb_fd, node);
-		if(global_debug) {
-			cl_log(LOG_DEBUG, "Cluster node: %s: status: %s", node,
-				status);
-		}
-		
-		/* add the node to the low level membership list */
-		llm_add(llm, node, status, hname);
-
-	}
-	llm_end(llm);
-
-	
-	display_llm(llm);
-
-	if (hb_fd->llc_ops->end_nodewalk(hb_fd) != HA_OK) {
-		cl_log(LOG_ERR, "Cannot end node walk");
-		cl_log(LOG_ERR, "REASON: %s", hb_fd->llc_ops->errmsg(hb_fd));
-		g_free(ccmret);
-		g_free(global_info);
-		return NULL;
-	}
-
-	if(global_debug) {
-		cl_log(LOG_DEBUG, "======================== Ending  Node Walk "
-				"========================");
-		cl_log(LOG_DEBUG, "Total # of Nodes in the Cluster: %d", 
-						LLM_GET_NODECOUNT(llm));
-	}
-	
-	if (hb_fd->llc_ops->setmsgsignal(hb_fd, 0) != HA_OK) {
-		cl_log(LOG_ERR, "Cannot set message signal");
-		cl_log(LOG_ERR, "REASON: %s", hb_fd->llc_ops->errmsg(hb_fd));
-		g_free(ccmret);
-		g_free(global_info);
-		return NULL;
-	}
-
-	CL_SIGINTERRUPT(SIGTERM, 1);
+	set_llm_from_heartbeat(hb_fd, global_info);
 
 	ccm_control_init(global_info);
 	ccm_configure_timeout(hb_fd, global_info);
