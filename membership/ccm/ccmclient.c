@@ -1,4 +1,4 @@
-/* $Id: ccmclient.c,v 1.27 2005/07/29 10:32:30 sunjd Exp $ */
+/* $Id: ccmclient.c,v 1.28 2005/09/29 22:40:11 gshi Exp $ */
 /* 
  * client.c: Consensus Cluster Client tracker
  *
@@ -342,11 +342,10 @@ client_delete_all(void)
 static gboolean
 mem_quorum(llm_info_t* llm, int member_count)
 {
-	int	inactive_count = llm_get_inactive_node_count(llm);
 	int	total_count = llm->nodecount;
 	
-	cl_log(LOG_INFO, "n_member=%d, nodecount=%d, inactive_count=%d",
-	       member_count, total_count, inactive_count); 
+	cl_log(LOG_INFO, "n_member=%d, nodecount=%d",
+	       member_count, total_count); 
 	
 	/* XXX REVISIT TODO: This is a temporary WORK-AROUND for the two
 	 * node clusters. With one node missing, always assume quorum.
@@ -356,11 +355,13 @@ mem_quorum(llm_info_t* llm, int member_count)
 		return TRUE;
 	}
 	
-	if(member_count <((total_count - inactive_count)/2 + 1)){
-		return FALSE;
+	if(member_count >  total_count/2 + 1){
+		return TRUE;
 	}
-	return TRUE;
+	
+	return FALSE;
 }
+
 static void
 display_func(gpointer key, gpointer value, gpointer user_data)
 {

@@ -1,4 +1,4 @@
-/* $Id: ccm.h,v 1.40 2005/09/29 21:54:14 gshi Exp $ */
+/* $Id: ccm.h,v 1.41 2005/09/29 22:40:11 gshi Exp $ */
 /*
  * ccm.h: definitions Consensus Cluster Manager internal header
  *				file
@@ -141,7 +141,6 @@ typedef struct llm_info_s { /* information about low level membership info */
 	llm_node_t nodes[MAXNODE];  /*information of each node */
 } llm_info_t;
 
-#define CLUST_INACTIVE  "inctv"
 #define LLM_GET_MYNODE(llm) llm->myindex
 #define LLM_GET_NODECOUNT(llm) llm->nodecount
 #define LLM_GET_UUID(llm,i) llm->nodes[i].uuid
@@ -168,12 +167,6 @@ int llm_get_uuid(llm_info_t *, const char *);
 char *llm_get_nodeid_from_uuid(llm_info_t *, const int );
 int llm_nodeid_cmp(llm_info_t *, int , int );
 int llm_status_update(llm_info_t *, const char *, const char *, char*);
-
-/*	Get the number of nodes that are inactive 
- *	inactive means this node is STONITHed
- *	therefore we don't count that in quorum computation
- */
-int	llm_get_inactive_node_count(llm_info_t *llm);
 
 void	display_llm(llm_info_t *llm);
 void llm_init(llm_info_t *);

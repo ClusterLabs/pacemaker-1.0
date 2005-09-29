@@ -76,8 +76,8 @@ nodelist_update(ll_cluster_t* hb, ccm_info_t* info,
 	 */
 	if(global_debug)
 		cl_log(LOG_DEBUG, 
-		"nodelist update: Node %s now has status %s gen=%d", 
-		id,  status, hbgen);
+		       "nodelist update: Node %s now has status %s gen=%d", 
+		       id,  status, hbgen);
 	llm = &info->llm;
 	if(llm_status_update(llm, id, status,oldstatus)) {
 		indx = ccm_get_membership_index(info,id);
@@ -91,16 +91,11 @@ nodelist_update(ll_cluster_t* hb, ccm_info_t* info,
 		return ;
 	}
 	if ( part_of_cluster(info->state)
-	     && ((STRNCMP_CONST(oldstatus, DEADSTATUS) == 0
-		  || STRNCMP_CONST(oldstatus, CLUST_INACTIVE)==0 )
-		 && 
-		 (STRNCMP_CONST(status, DEADSTATUS) != 0
-		  && STRNCMP_CONST(oldstatus, CLUST_INACTIVE) != 0 ))){
-		
+	     && ( STRNCMP_CONST(oldstatus, DEADSTATUS) == 0
+		  && STRNCMP_CONST(status, DEADSTATUS) != 0)){
 		ccm_send_state_info(hb, info, id);
 	}
-	
-	
+		
 	return;
 }
 

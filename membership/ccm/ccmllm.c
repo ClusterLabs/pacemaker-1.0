@@ -1,4 +1,4 @@
-/* $Id: ccmllm.c,v 1.20 2005/07/29 10:32:30 sunjd Exp $ */
+/* $Id: ccmllm.c,v 1.21 2005/09/29 22:40:11 gshi Exp $ */
 /* 
  * ccmllm.c: Low Level membership routines.
  *
@@ -32,9 +32,8 @@ llm_get_live_nodecount(llm_info_t *llm)
 	uint count=0, i;
 	for ( i = 0 ; i < LLM_GET_NODECOUNT(llm) ; i++ ) {
 		const char* status = LLM_GET_STATUS(llm,i);
-		if (STRNCMP_CONST(status, DEADSTATUS) != 0
-		    && STRNCMP_CONST(status, CLUST_INACTIVE) != 0) {
-			    count++;
+		if (STRNCMP_CONST(status, DEADSTATUS) != 0){
+			count++;
 		}
 	}
 	return count;
@@ -116,12 +115,7 @@ llm_get_index(llm_info_t *llm, const char *node)
 
 /* */
 /* Update the status of node 'nodename'. */
-/* return TRUE if the node transitioned to DEADSTATUS or CLUST_INACTIVE */
-/* */
-/* NOTE: CLUST_INACTIVE carries more information then DEADSTATUS */
-/* DEADSTATUS just means the node is assumed to be dead, probably because */
-/* of loss of connectivity or because of real death. */
-/* BUT CLUST_INACTIVE confirms that the node is really cluster inactive. */
+/* return TRUE if the node transitioned to DEADSTATUS  */
 /* */
 int
 llm_status_update(llm_info_t *llm, const char *node, const char *status, char* oldstatus)
@@ -145,35 +139,12 @@ llm_status_update(llm_info_t *llm, const char *node, const char *status, char* o
 	}
 
 	LLM_SET_STATUS(llm,i,status);
-	if ((STRNCMP_CONST(status, DEADSTATUS) == 0) || 
-		STRNCMP_CONST(status, CLUST_INACTIVE) == 0) {
+	if (STRNCMP_CONST(status, DEADSTATUS) == 0){
 		return TRUE;
 	}
 	return FALSE;
 }
 
-
-int
-llm_get_inactive_node_count(llm_info_t *llm)
-{
-	int		count = 0 ;
-	unsigned	i;
-	
-	cl_log(LOG_INFO, "Counting nodes(dead nodes are not shown):");
-	for (i = 0; i< llm->nodecount; i++){
-		if (STRNCMP_CONST(llm->nodes[i].status, DEADSTATUS) != 0){
-			cl_log(LOG_INFO, "node=%s  status=%s",
-			       llm->nodes[i].nodename, 
-			       llm->nodes[i].status);
-		}
-		if (STRNCMP_CONST(llm->nodes[i].status, 
-			    CLUST_INACTIVE) == 0){
-			count ++;
-		}
-	}
-	
-	return count;
-}
 
 /* */
 /* Get uuid of the node with given nodename. */
