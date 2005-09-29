@@ -1,4 +1,4 @@
-/* $Id: ccmmisc.c,v 1.19 2005/07/29 10:32:30 sunjd Exp $ */
+/* $Id: ccmmisc.c,v 1.20 2005/09/29 21:54:14 gshi Exp $ */
 /* 
  * ccmmisc.c: Miscellaneous Consensus Cluster Service functions
  *
@@ -25,6 +25,7 @@
 #ifdef HAVE_MALLINFO
 #include <malloc.h>
 #endif
+#include "ccmmisc.h"
 
 /* */
 /* Convert a given string to a bitmap. */
@@ -133,3 +134,252 @@ ccm_check_memoryleak(void)
 	}
 #endif
 }
+
+
+/* BEGINE of the functions that track asynchronous leave 
+ * 
+ * When ccm running on a  node leaves the cluster voluntarily it  
+ * sends  a  leave  message  to  the  other nodes in the cluster.
+ * Similarly  whenever  ccm  running on some node of the cluster, 
+ * dies  the  local  heartbeat   delivers a leave message to ccm. 
+ * And  whenever  some node in the cluster dies, local heartbeat  
+ * informs  the  death  through  a  callback.  
+ * In all these cases, ccm is informed about the loss of the node, 
+ * asynchronously, in  some context where immidiate processing of  
+ * the message is not possible.  
+ * The  following  set of routines act as a cache that keep track  
+ * of  message  leaves  and  facilitates  the  delivery  of these  
+ * messages at a convinient time. 
+ * 
+ */
+
+static unsigned char *leave_bitmap=NULL;
+
+void
+leave_init(void)
+{
+	int numBytes;
+	
+	assert(!leave_bitmap);
+	numBytes = bitmap_create(&leave_bitmap, MAXNODE);
+	memset(leave_bitmap, 0, numBytes);
+}
+
+void
+leave_reset(void)
+{
+	int numBytes = bitmap_size(MAXNODE);
+	if(!leave_bitmap) {
+		return;
+	}
+	memset(leave_bitmap, 0, numBytes);
+	return;
+}
+
+void
+leave_cache(int i)
+{
+	assert(leave_bitmap);
+	bitmap_mark(i, leave_bitmap, MAXNODE);
+}
+
+int
+leave_get_next(void)
+{
+	int i;
+
+	assert(leave_bitmap);
+	for ( i = 0 ; i < MAXNODE; i++ ) {
+		if(bitmap_test(i,leave_bitmap,MAXNODE)) {
+			bitmap_clear(i,leave_bitmap,MAXNODE);
+			return i;
+		}
+	}
+	return -1;
+}
+
+int
+leave_any(void)
+{
+	if(bitmap_count(leave_bitmap,MAXNODE)){
+		return TRUE;
+	}
+	return FALSE;
+}
+
+
+
+/* */
+/* BEGIN  OF  FUNCTIONS  that  keep track of stablized membership list */
+/*  */
+/* These  function  keep track of consensus membership once a instance */
+/* of the  ccm algorithm terminates and decided on the final consensus  */
+/* members of the cluster. */
+/* */
+int 
+ccm_memlist_changed(ccm_info_t *info, 
+		  char *bitmap /* the bitmap string containing bits */)
+{
+	int nodeCount, i;
+	llm_info_t *llm;
+	uint indx, uuid;
+		
+		
+	/* go through the membership list */
+	nodeCount = CCM_GET_MEMCOUNT(info);
+	llm = CCM_GET_LLM(info);
+	for ( i = 0 ; i < nodeCount; i++ ) {
+		indx = CCM_GET_MEMINDEX(info, i);
+		assert(indx >=0 && indx < LLM_GET_NODECOUNT(llm));
+		uuid = LLM_GET_UUID(llm,indx);
+		assert(uuid>=0 && uuid < MAXNODE);
+		if (!bitmap_test(uuid, (unsigned char *)bitmap, MAXNODE)){
+			return TRUE;
+		}
+	}
+	return FALSE;
+} 
+
+int 
+ccm_fill_memlist(ccm_info_t *info, 
+	const unsigned char *bitmap)
+{
+	llm_info_t *llm;
+	uint i, uuid;
+
+	llm = CCM_GET_LLM(info);
+	CCM_RESET_MEMBERSHIP(info);
+	for ( i = 0 ; i < LLM_GET_NODECOUNT(llm); i++ ) {
+		uuid = LLM_GET_UUID(llm,i);
+		if(bitmap_test(uuid, bitmap, MAXNODE)){
+			/*update the membership list with this member*/
+			CCM_ADD_MEMBERSHIP(info, i);
+		}
+	}
+
+	return FALSE;
+}
+
+int 
+ccm_fill_memlist_from_str(ccm_info_t *info, 
+			  const unsigned char *memlist)
+{
+	unsigned char *bitmap;
+	int ret;
+
+	(void)ccm_str2bitmap((const char *)memlist, &bitmap);
+	ret = ccm_fill_memlist(info, bitmap);
+	bitmap_delete(bitmap);
+	return ret;
+}
+
+									
+int 
+ccm_fill_memlist_from_bitmap(ccm_info_t *info, 
+	const unsigned char *bitmap)
+{
+	return ccm_fill_memlist(info, bitmap);
+}
+
+
+int
+ccm_get_membership_index(ccm_info_t *info, const char *node)
+{
+	int i,indx;
+	llm_info_t *llm = CCM_GET_LLM(info);
+	for ( i = 0 ; i < CCM_GET_MEMCOUNT(info) ; i++ ) {
+		indx =  CCM_GET_MEMINDEX(info, i);
+		if(strncmp(LLM_GET_NODEID(llm, indx), node, 
+			   LLM_GET_NODEIDSIZE(llm)) == 0){
+			return i;
+		}
+	}
+	return -1;
+}
+
+gboolean
+node_is_member(ccm_info_t* info, const char* node)
+{
+	int i,indx;
+	llm_info_t *llm = CCM_GET_LLM(info);
+	for ( i = 0 ; i < CCM_GET_MEMCOUNT(info) ; i++ ) {
+		indx =  CCM_GET_MEMINDEX(info, i);
+		if(strncmp(LLM_GET_NODEID(llm, indx), node, 
+			   LLM_GET_NODEIDSIZE(llm)) == 0){
+			return TRUE;
+		}
+	}	
+	
+	return FALSE;
+}
+
+
+
+gboolean 
+part_of_cluster(int state)
+{
+	if (state >= CCM_STATE_END 
+	    || state < 0){
+		cl_log(LOG_ERR, "wrong state(%d)", state);
+		return FALSE;
+	}
+	
+	if (state == CCM_STATE_VERSION_REQUEST
+	    || state == CCM_STATE_NONE){
+		return FALSE;
+	}
+	
+	return TRUE;
+	
+	
+}
+
+
+/* the ccm strings tokens communicated aross the wire. */
+/* these are the values for the F_TYPE names. */
+#define TYPESTRSIZE 32
+char  ccm_type_str[CCM_TYPE_LAST + 1][TYPESTRSIZE] = {
+	"CCM_TYPE_PROTOVERSION",
+	"CCM_TYPE_PROTOVERSION_RESP",
+	"CCM_TYPE_JOIN",
+	"CCM_TYPE_REQ_MEMLIST",
+	"CCM_TYPE_RES_MEMLIST",
+	"CCM_TYPE_FINAL_MEMLIST",
+	"CCM_TYPE_ABORT",
+	"CCM_TYPE_LEAVE",
+	"CCM_TYPE_TIMEOUT",
+	"CCM_TYPE_NODE_LEAVE_NOTICE",
+	"CCM_TYPE_NODE_LEAVE",
+	"CCM_TYPE_MEM_LIST",
+	"CCM_TYPE_ALIVE",
+	"CCM_TYPE_NEW_NODE",
+	"CCM_TYPE_STATE_INFO", 
+	"CCM_TYPE_RESTART",
+	"CCM_TYPE_LAST"
+};
+
+
+int
+ccm_string2type(const char *type)
+{
+	enum ccm_type i;
+	
+	for ( i = CCM_TYPE_PROTOVERSION; i <= CCM_TYPE_LAST; i++ ) {
+		if (strncmp(ccm_type_str[i], type, TYPESTRSIZE) == 0){
+			return i;
+		}
+	}
+	
+	/* this message is not any type of ccm state messages
+	 * but some other message from heartbeat
+	 */
+	
+	return -1;
+}
+
+char *
+ccm_type2string(enum ccm_type type)
+{
+        return ccm_type_str[type];
+}
+

@@ -1,4 +1,4 @@
-/* $Id: ccm.h,v 1.39 2005/09/27 23:03:45 gshi Exp $ */
+/* $Id: ccm.h,v 1.40 2005/09/29 21:54:14 gshi Exp $ */
 /*
  * ccm.h: definitions Consensus Cluster Manager internal header
  *				file
@@ -106,7 +106,6 @@ typedef struct ccm_version_s {
 				/* responses recevied from other nodes */
 				/* after we received the first response. */
 } ccm_version_t;
-char *	ccm_type2string(int type);
 void version_reset(ccm_version_t *);
 void version_some_activity(ccm_version_t *);
 int version_retry(ccm_version_t *, longclock_t);
@@ -314,11 +313,8 @@ enum ccm_state  {
 	CCM_STATE_NONE=0,		/* is in NULL state  */
 	CCM_STATE_VERSION_REQUEST,	/* sent a request for protocol version */
 	CCM_STATE_JOINING,  		/* has initiated a join protocol  */
-	CCM_STATE_RCVD_UPDATE,	/* has recevied the updates from other nodes */
 	CCM_STATE_SENT_MEMLISTREQ,	/* CL has sent a request for member list  */
 					/* this state is applicable only on CL */
-	CCM_STATE_REQ_MEMLIST,	/* CL has requested member list */
-				  	/* this state is applicable only on non-CL */
 	CCM_STATE_MEMLIST_RES,	/* Responded member list to the Cluster  */
 				 	/* Leader */
 	CCM_STATE_JOINED,    /* PART of the CCM cluster membership! */
@@ -364,6 +360,77 @@ typedef struct memcomp_s {
 #define 	MEMCOMP_SET_MAXT(memc, list)  	memc->mem_maxt=list
 #define 	MEMCOMP_SET_INITTIME(memc,time)	memc->mem_inittime=time
 
+#define		CCM_SET_ACTIVEPROTO(info, val) \
+					info->ccm_active_proto = val
+#define		CCM_SET_MAJORTRANS(info, val) 	\
+		{	\
+			info->ccm_transition_major = val; \
+			info->ccm_max_transition = \
+				(info->ccm_max_transition < val ? \
+				val: info->ccm_max_transition); \
+		}
+#define		CCM_SET_MINORTRANS(info, val) 	\
+					info->ccm_transition_minor = val
+#define		CCM_INIT_MAXTRANS(info) 	\
+					info->ccm_max_transition = 0
+
+/* 	NOTE the reason the increment for majortrans is done */
+/* 	as below is to force recomputation of  ccm_max_transition  */
+#define		CCM_INCREMENT_MAJORTRANS(info) 	\
+				CCM_SET_MAJORTRANS(info, \
+					CCM_GET_MAJORTRANS(info)+1)
+
+#define		CCM_INCREMENT_MINORTRANS(info) 	\
+					info->ccm_transition_minor++
+#define		CCM_RESET_MAJORTRANS(info) 	\
+					info->ccm_transition_major = 0
+#define		CCM_RESET_MINORTRANS(info) 	\
+					info->ccm_transition_minor = 0
+
+#define 	CCM_SET_JOINED_TRANSITION(info, trans) \
+					info->ccm_joined_transition = trans
+#define 	CCM_SET_COOKIE(info, val) \
+				strncpy(info->ccm_cookie, val, COOKIESIZE)
+#define 	CCM_SET_CL(info, index)	info->ccm_cluster_leader = index
+
+
+#define		CCM_GET_ACTIVEPROTO(info) info->ccm_active_proto
+#define		CCM_GET_MAJORTRANS(info) info->ccm_transition_major
+#define		CCM_GET_MINORTRANS(info) info->ccm_transition_minor
+#define 	CCM_GET_MAXTRANS(info)   info->ccm_max_transition
+#define		CCM_GET_STATE(info) 	info->state 
+#define		CCM_GET_HIPROTO(info) 	info->ccm_hiproto 
+#define 	CCM_GET_LLM(info) 	(&(info->llm))
+#define 	CCM_GET_UPDATETABLE(info) (&(info->ccm_update))
+#define 	CCM_GET_MEMCOMP(info) (&(info->ccm_memcomp))
+#define 	CCM_GET_JOINED_TRANSITION(info) info->ccm_joined_transition
+#define  	CCM_GET_LLM_NODECOUNT(info) LLM_GET_NODECOUNT(CCM_GET_LLM(info))
+#define  	CCM_GET_MY_HOSTNAME(info)  ccm_get_my_hostname(info)
+#define 	CCM_GET_COOKIE(info) info->ccm_cookie
+
+#define 	CCM_RESET_MEMBERSHIP(info)  info->ccm_nodeCount=0
+#define 	CCM_ADD_MEMBERSHIP(info, index)  \
+				info->ccm_member[info->ccm_nodeCount++] = index
+#define 	CCM_GET_MEMCOUNT(info)  info->ccm_nodeCount
+#define 	CCM_GET_MEMINDEX(info, i)	info->ccm_member[i]
+#define 	CCM_GET_MEMTABLE(info)		info->ccm_member
+#define 	CCM_GET_CL(info)  		info->ccm_cluster_leader
+#define		CCM_TRANS_EARLIER(trans1, trans2) (trans1 < trans2) /*TOBEDONE*/
+#define 	CCM_GET_VERSION(info)	&(info->ccm_version)
+
+
+#define 	CCM_TMOUT_SET_U(info,t) info->tmout.u=t
+#define 	CCM_TMOUT_SET_LU(info,t) info->tmout.lu=t
+#define 	CCM_TMOUT_SET_VRS(info,t) info->tmout.vrs=t
+#define 	CCM_TMOUT_SET_ITF(info,t) info->tmout.itf=t
+#define 	CCM_TMOUT_SET_IFF(info,t) info->tmout.iff=t
+#define 	CCM_TMOUT_SET_FL(info,t) info->tmout.fl=t
+#define 	CCM_TMOUT_GET_U(info) info->tmout.u
+#define 	CCM_TMOUT_GET_LU(info) info->tmout.lu
+#define 	CCM_TMOUT_GET_VRS(info) info->tmout.vrs
+#define 	CCM_TMOUT_GET_ITF(info) info->tmout.itf
+#define 	CCM_TMOUT_GET_IFF(info) info->tmout.iff
+#define 	CCM_TMOUT_GET_FL(info) info->tmout.fl
 
 typedef struct ccm_tmout_s {
 	long	iff;  /* membership_Info_From_Followers_timeout */
@@ -409,7 +476,7 @@ typedef struct ccm_info_s {
 					/* Should be intially set to 0 */
 	uint32_t	ccm_max_transition;	/* the maximum transition number seen */
 					/* by this node ever since it was born. */
-	enum ccm_state 	ccm_node_state;	/* cluster state of this node  */
+	enum ccm_state 	state;	/* cluster state of this node  */
 	uint32_t	ccm_transition_minor;/* minor transition number of the  */
 					/* cluster */
 
@@ -438,5 +505,11 @@ typedef struct  ccm_s {
 void client_new_mbrship(ccm_info_t*, void*);
 void ccm_reset(ccm_info_t *info);
 const char*	state2string(int state);
+int ccm_control_process(ccm_info_t *info, ll_cluster_t * hb);
 
-#endif /*  _CLUSTER_MANAGER_H_ */
+typedef void (*state_msg_handler_t)(enum ccm_type ccm_msg_type, 
+				    struct ha_msg *reply, 
+				    ll_cluster_t *hb, 
+				    ccm_info_t *info);
+
+#endif 

@@ -16,11 +16,11 @@
 
 #include "ccm.h"
 #include "ccmmsg.h"
+#include "ccmmisc.h"
 #include <config.h>
 #include <ha_config.h>
 #include <clplumbing/cl_signal.h>
 #include <clplumbing/coredumps.h>
-
 int ccm_send_cluster_msg(ll_cluster_t* hb, struct ha_msg* msg);
 int ccm_send_node_msg(ll_cluster_t* hb, struct ha_msg* msg, const char* node);
 int
@@ -70,7 +70,8 @@ ccm_create_minimum_msg(ccm_info_t * info, int type)
 		return NULL;
 	}
 
-	if( ha_msg_add(m, F_TYPE, ccm_type2string(type)) == HA_FAIL){
+	if( ha_msg_add(m, F_TYPE, ccm_type2string(type)) == HA_FAIL
+	    ||ha_msg_add_int(m, F_NUMNODES, info->llm.nodecount) == HA_FAIL){
 		cl_log(LOG_ERR, "%s: adding fields to an message failed",
 		       __FUNCTION__);
 		ha_msg_del(m);
@@ -581,7 +582,7 @@ ccm_send_state_info(ll_cluster_t* hb, ccm_info_t* info, const char* node)
 {
 	
 	return ccm_send_extra_nodemsg(hb, info, CCM_TYPE_STATE_INFO,
-				      F_STATE, state2string(info->ccm_node_state),
+				      F_STATE, state2string(info->state),
 				      node);
 	
 }
