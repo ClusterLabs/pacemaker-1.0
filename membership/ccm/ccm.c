@@ -25,13 +25,10 @@ extern int global_debug;
 
 struct ha_msg * ccm_readmsg(ccm_info_t *info, ll_cluster_t *hb);
 
-
-
-
 static struct ha_msg*
 ccm_handle_hbapiclstat(ccm_info_t *info,  
-		const char *orig, 
-		const char *status)
+		       const char *orig, 
+		       const char *status)
 {
 	int 		uuid;
 	enum ccm_state 	state = info->state;
@@ -51,12 +48,12 @@ ccm_handle_hbapiclstat(ccm_info_t *info,
 	if(!orig){
 		return NULL;
 	}
-
+	
 	uuid = llm_get_uuid(&info->llm, orig);
 	if(uuid == -1) {
 		return NULL;
 	}
-
+	
 	return(ccm_create_leave_msg(info, uuid));
 }
 
@@ -110,7 +107,7 @@ nodelist_update(ll_cluster_t* hb, ccm_info_t* info,
 int
 ccm_control_process(ccm_info_t *info, ll_cluster_t * hb)
 {
-	struct ha_msg *reply, *newreply;
+	struct ha_msg *msg, *newmsg;
 	const char *type;
 	int	ccm_msg_type;
 	const char *orig=NULL;
@@ -118,72 +115,44 @@ ccm_control_process(ccm_info_t *info, ll_cluster_t * hb)
 
 repeat:
 	/* read the next available message */
-	reply = ccm_readmsg(info, hb); /* this is non-blocking */
+	msg = ccm_readmsg(info, hb); /* this is non-blocking */
 
-	if (reply) {
-		type = ha_msg_value(reply, F_TYPE);
-		orig = ha_msg_value(reply, F_ORIG);
-		status = ha_msg_value(reply, F_STATUS);
+	if (msg) {
+		type = ha_msg_value(msg, F_TYPE);
+		orig = ha_msg_value(msg, F_ORIG);
+		status = ha_msg_value(msg, F_STATUS);
 		if(strcmp(type, T_APICLISTAT) == 0){
 			/* handle ccm status of on other nodes of the cluster */
-		       	if((newreply = ccm_handle_hbapiclstat(info, orig, 
+		       	if((newmsg = ccm_handle_hbapiclstat(info, orig, 
 				status)) == NULL) {
-				ha_msg_del(reply);
+				ha_msg_del(msg);
 				return TRUE;
 			}
-			ha_msg_del(reply);
-			reply = newreply;
-		} else if((strcmp(type, T_SHUTDONE)) == 0) {
-			/* ignore heartbeat shutdone message */
-			return TRUE;
-			
+			ha_msg_del(msg);
+			msg = newmsg;
 		} else if(strcasecmp(type, T_STATUS) == 0){
 			
 			int 	gen_val;
-			const char *gen = ha_msg_value(reply, F_HBGENERATION);
+			const char *gen = ha_msg_value(msg, F_HBGENERATION);
 			
-			cl_log_message(LOG_INFO, reply);
+			cl_log_message(LOG_INFO, msg);
 			gen_val = atoi(gen?gen:"-1");
 			nodelist_update(hb, info,orig, status, gen_val);
 
-			ha_msg_del(reply);
+			ha_msg_del(msg);
 			return TRUE;
-
-		} else if(strcasecmp(type, T_STONITH) == 0) {
-			/* update any node death status only after stonith */
-			/* is complete irrespective of stonith being 	   */
-			/* configured or not. 				   */
-			/* NOTE: heartbeat informs us			   */
-			/* Receipt of this message indicates 'loss of	   */
-			/* connectivity or death' of some node		   */
 			
-			/*
-			const char *result = ha_msg_value(reply, F_APIRESULT);
-			const char *node = ha_msg_value(reply, F_NODE);
-			
-			
-			if(strcmp(result,T_STONITH_OK)==0){
-				nodelist_update(hb, info, node, CLUST_INACTIVE, -1);
-				report_mbrs(info);
-			} else {
-				nodelist_update(hb,info, node, DEADSTATUS, -1);
-			}
-			ha_msg_del(reply);
-
-			*/
-
-			return TRUE;
-		}
+		} 
 	} else {
-		reply = timeout_msg_mod(info);
+		msg = timeout_msg_mod(info);
 	}
 
-	type = ha_msg_value(reply, F_TYPE);
+	type = ha_msg_value(msg, F_TYPE);
 	ccm_msg_type = ccm_string2type(type);
 	if(global_debug){
 		if(ccm_msg_type != CCM_TYPE_TIMEOUT){
 			cl_log(LOG_DEBUG, "received message %s orig=%s", 
-			       type, ha_msg_value(reply, F_ORIG));
+			       type, ha_msg_value(msg, F_ORIG));
 		}
 	}
 	
@@ -191,17 +160,19 @@ repeat:
 		goto out;
 	}
 
-	state_msg_handler[info->state](ccm_msg_type, reply, hb, info);
+	state_msg_handler[info->state](ccm_msg_type, msg, hb, info);
 	
 
  out:
 	if(ccm_msg_type != CCM_TYPE_TIMEOUT) {
-		ha_msg_del(reply);
+		ha_msg_del(msg);
 	}
 	
-	/* If there is another message in the channel, process it now. */
+	/* If there is another message in the channel,
+	 * process it now. 
+	 */
 	if (hb->llc_ops->msgready(hb))
 		goto repeat;
-
+	
 	return TRUE;
 }
