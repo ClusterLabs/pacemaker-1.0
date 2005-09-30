@@ -1,0 +1,27 @@
+# Classname Namespace ProviderName ProviderModule ProviderTypes ...
+# LinuxHA Cluster
+LinuxHA_Cluster root/cimv2 LinuxHA_ClusterProvider cmpiLinuxHA_ClusterProvider instance
+# LinuxHA Cluster Node
+LinuxHA_ClusterNode root/cimv2 LinuxHA_ClusterNodeProvider cmpiLinuxHA_ClusterNodeProvider instance
+# Cluster Resource
+LinuxHA_ClusterResource root/cimv2 LinuxHA_ClusterResourceProvider cmpiLinuxHA_ClusterResourceProvider instance
+# Cluster Resrouce Group
+LinuxHA_ClusterResourceGroup root/cimv2 LinuxHA_ClusterResourceGroupProvider cmpiLinuxHA_ClusterResourceGroupProvider instance
+# Software
+LinuxHA_SoftwareIdentity root/cimv2 LinuxHA_SoftwareIdentityProvider cmpiLinuxHA_SoftwareIdentityProvider instance
+# Resource Instance's Attribute
+LinuxHA_ClusterResourceInstanceAttr root/cimv2 LinuxHA_ClusterResourceInstanceAttrProvider cmpiLinuxHA_ClusterResourceInstanceAttrProvider instance
+# Association, between Cluster and Node
+LinuxHA_ParticipatingNode root/cimv2 LinuxHA_ParticipatingNodeProvider cmpiLinuxHA_ParticipatingNodeProvider instance association
+# Association, between Resource and Hosting Node
+LinuxHA_HostedResource root/cimv2 LinuxHA_HostedResourceProvider cmpiLinuxHA_HostedResourceProvider instance association
+# Association, between Cluster and Software
+LinuxHA_InstalledSoftwareIdentity root/cimv2 LinuxHA_InstalledSoftwareIdentityProvider cmpiLinuxHA_InstalledSoftwareIdentityProvider instance association
+# Association, between Resource and its instance attribute
+LinuxHA_ClusterResrouceInstance root/cimv2 LinuxHA_ClusterResourceInstanceProvider cmpiLinuxHA_ClusterResrouceInstanceProvider instance association
+# Association, between Resource Group and its sub resource
+LinuxHA_SubResource root/cimv2 LinuxHA_SubResourceProvider cmpiLinuxHA_SubResourceProvider instance association 
+# Association, between Resource Group and its sub group 
+LinuxHA_SubGroup root/cimv2 LinuxHA_SubGroupProvider cmpiLinuxHA_SubGroupProvider instance association 
+#Indication
+CIM_InstModification root/cimv2 LinuxHA_ClusterProvider cmpiLinuxHA_ClusterProvider indication

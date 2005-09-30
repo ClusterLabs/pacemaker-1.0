@@ -1,0 +1,482 @@
+/*
+ * LinuxHA : CIM MOF 
+ *
+ * Author: Jia Ming Pan <jmltc@cn.ibm.com>
+ * Copyright (c) 2005 International Business Machines
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ *              
+ */
+
+
+//-------------------------------------------------
+// LinuxHA_Cluster
+//-------------------------------------------------
+
+[ Provider("cmpi:cmpiLinuxHA_ClusterProvider") ]
+
+class LinuxHA_Cluster : CIM_Cluster {
+
+
+        [ Description("The heartbeat version")]
+        string HBVersion;
+
+        //********************************************
+        // Configuration directives
+        // refer to http://wiki.linux-ha.org/ha_2ecf for details
+        //*********************************************
+
+        [ Description(
+                "The apiauth directive specifies what users and/or groups"
+                "are allowed to connect to a specific API group name")
+        ]
+        string APIAuth;
+
+        //string NiceFailBack;
+
+        [ Description(
+                "Determins whether a resource will automatically fail back to"
+                "its primary node, or remain on whatever the node is serving."
+                "Possible values are: on, off, legacy.")
+        ]                        
+        string utoFailBack;
+
+        [ Description ( "The speed for serial communications" ) ]
+        string BaudRate;
+        
+        [ Description(
+                "Which interfaces Heartbeat sends UDP broadcast traffic on")
+        ]
+        string BroadCastPath;
+
+
+        [ Description(
+                "The time Heartbeat will reconnect to the logging daemon if"
+                "the connection between Heartbeat and the logging daemon is "
+                "broken")
+        ]
+        string ConnLogdTime = "60s";
+
+        [ Description ( "Making core dump" ) ]
+        string CoreDump;
+
+        [ Description(
+                "Whether Heartbeat should run the 1.x-style cluster manager "
+                "or the 2.x-style cluster manager that supports more than 2 "
+                "nodes" )
+        ]
+        string WithCrm ;
+
+        [ Description(
+                "How quickly Heartbeat should decide that a ping node in a "
+                "cluster is dead")
+        ]
+        string DeadPing;
+
+        
+        [ Description(
+                "How quickly Heartbeat should decide that a node in a "
+                "cluster is dead")
+        ]
+        string DeadTime;
+        
+        [ Description ( "The Level of debugging" ) ]
+        string DebugLevel;
+
+        [ Description ( "The file Heartbeat will write debug messages to" ) ]
+        string DebugFile;
+
+        [ Description ( "Declare fiber channel devices as PingNodes to "
+                "Heartbeat" ) 
+        ]
+        string Aping;
+
+        [ Description(
+                "How Heartbeat should compute its current generation number "
+                "for communications")
+        ]
+        string GenMethod = "file";
+
+        [ Description(
+                "Controls how many nodes a packet can be forwarded through "
+                "before it is thrown away in the worst case")
+        ]
+        string HOPFudge;
+
+        [ Description(
+                "The time that it takes to declare a cluster node dead when "
+                "Heartbeat is first started")
+        ]
+        string InitDead;
+
+        [ Description(
+                "The interval between heartbeat packets")
+        ]
+        string KeepAlive;
+
+        [ Description(
+                "Which syslog logging facility it should use for logging "
+                "its messages")
+        ]
+        string LogFacility;
+
+        [ Description(
+                "Configures a log file. All non-debug messages from "
+                "Heartbeat will go into this file" )
+        ]
+        string LogFile;
+
+        [ Description("Configure a multicast communication path")]
+        string MultiCastPath;
+
+        [ Description ( "The format Heartbeat uses in wire, classic or "
+                "netstring" ) ]
+        string MsgFmt = "classic";
+
+
+        [ Description("What machines are in the cluster")]
+        string Node[];        
+
+        [ Description("Declare PingNodes to Heartbeat")]
+        string PingNode;
+
+        [ Description("Declare PingNodes to Heartbeat")]
+        string PingGroup;
+
+        [ Description(
+                "The realtime directive specifies whether or not Heartbeat "
+                "should try and take advantage of the operating system's "
+                "realtime scheduling features. "
+                "When enabled, Heartbeat will lock itself into memory, and "
+                "raise its priority to a realtime priority "
+                "(as set by the rtprio directive). This feature is "
+                "mainly used for debugging various kinds of loops which "
+                "might otherwise cripple "
+                "the system and impair debugging them." )
+        ]
+        string RealTime;
+
+        [ Description(
+                "specify a program to run and monitor while it runs")
+        ]
+        string Respawn;
+
+        [ Description ("specifies Heartbeat's realtime priority" ) ]
+        string RTPriority;
+
+        [ Description ( "configure serial communication path" ) ]
+        string SerialPath;
+
+        [ Description ( "onfigure Heartbeat's (release 1), STONITH "
+                "configuration" ) ]
+        string Stonith;
+
+        [ Description ( "onfigure Heartbeat's (release 1), STONITH "
+                "configuration" ) ]
+        string StonithHost;
+
+        [ Description(
+                "configures Heartbeat to communicate over a UDP "
+                "unicast communications link")
+        ]
+        string UniCastPath;
+
+        [ Description("specifies port for UDP communication")]
+        string UDPPort;
+
+        [ Description(
+                "the directive to determine whether heartbeats use logging "
+                "daemon or not" )
+        ]
+        string UseLogd;
+        
+        [ Description(
+                "how quickly Heartbeat should issue a \"late heartbeat\" "
+                "warning" )
+        ]
+        string WarnTime;
+
+
+        [ Description("configure watchdog device")]
+        string WatchdogTimer;
+
+        string NormalPoll;
+
+        //************************************* 
+        //      methods 
+        //**************************************
+        uint32 RequestStatusChange(string action);
+
+};
+
+//----------------------------------------
+// LinuxHA_SoftwareIdentity
+//----------------------------------------
+
+[ Provider("cmpi:cmpiLinuxHA_SoftwareIdentityProvider") ]
+class LinuxHA_SoftwareIdentity : CIM_SoftwareIdentity {
+        [ Override ("InstanceID") ]
+        string InstanceID;
+
+        [ Override ("MajorVersion") ]
+        uint16 MajorVersion;
+
+        [ Override ("MinorVersion") ]
+        uint16 MinorVersion;
+
+        [ Override ("RevisionNumber") ]
+        uint16 RevisionNumber;
+
+        [ Override ("BuildNumber") ]
+        uint16 BuildNumber;
+
+        [ Override ("VersionString") ]
+        string VersionString;
+
+};
+
+
+//-----------------------------------------
+//  LinuxHA_InstallSoftwareIdentity
+//-----------------------------------------
+
+[ Provider ( "cmpi:cmpiLinuxHA_InstalledSoftwareIdentityProvider" ) ] 
+class LinuxHA_InstalledSoftwareIdentity : CIM_InstalledSoftwareIdentity {
+        [ Key, Override ( "System" ) ]
+        LinuxHA_Cluster REF System;
+
+        
+        [ Key, Override ( "InstalledSoftware" ) ]
+        LinuxHA_SoftwareIdentity REF InstalledSoftware;
+
+};
+
+
+//----------------------------------------
+//  ClusterNode
+//----------------------------------------
+
+[ Provider ( "cmpi:cmpiLinuxHA_ClusterNodeProvider" ) ]
+class LinuxHA_ClusterNode : CIM_ComputerSystem{
+
+        [ Override ( "Name" ),
+                Description ( "Node's uname" )
+        ]
+        string Name;
+
+        [ Description ("Node's UUID" )
+        ]
+        string UUID;
+
+        [ Description ( "Node's active status" )
+        ]
+        string ActiveStatus;
+
+        
+        string Status;
+
+        string IsDC;
+};
+
+
+//----------------------------------------
+//  LinuxHA_ClusterResource
+//----------------------------------------
+
+[ Description ( "LinuxHA cluster resource class" ),
+        Provider("cmpi:cmpiLinuxHA_ClusterResourceProvider") 
+]
+class LinuxHA_ClusterResource : CIM_Service {
+
+        [ Description ( "Cluster rsource's Id")
+        ]
+        string ResourceId;
+        
+        [ Description ( "Cluster rsource's type")
+        ]
+        string ResourceClass;
+
+        [ Description ( "Cluster rsource's type") 
+        ]
+        string Type;
+
+        [ Description ( "Cluster rsource's provider") 
+        ]
+        string Provider;
+
+        [ Key, Override ( "Name" ),
+                Description ( "Resource's name" )
+        ]
+        string Name;
+        
+        [ Description ("Is this resource managed?")
+        ]
+        string IsManaged;
+
+        [ Description ("Status of the resource")
+        ]
+        string Status; 
+
+        [ Description ( "The cluster node that host this resource" )
+        ]
+        string HostingNode;
+
+};
+
+
+//----------------------------------------
+//  LinuxHA_ClusterResrouceInstanceAttribute
+//----------------------------------------
+
+[ Provider ( "cmpiLinuxHA_ClusterResourceInstanceAttrProvider" ) ]
+class LinuxHA_ClusterResourceInstanceAttr {
+        string ResourceName;
+
+        [ Key,
+                Description ( "Attribute's name" ) 
+        ]
+        string AttributeName;
+        string AttributeValue;
+        string AttributeId;
+};
+
+
+
+//------------------------------------------------
+// LinuxHA_ClusterResourceInstance
+//------------------------------------------------
+
+[ Association,
+        Provider("cmpi:cmpiLinuxHA_ClusterResourceInstance") ]
+
+class LinuxHA_ClusterResourceInstance {
+        LinuxHA_ClusterResource REF ClusterResource;
+
+        [ Weak, Description ( "Instance's attribute" )  ]
+        LinuxHA_ClusterResourceInstanceAttr REF InstanceAttribute;       
+
+};
+
+//------------------------------------------------
+// LinuxHA_ClusterResourceGroup
+//------------------------------------------------
+
+[ Provider("cmpi:cmpiLinuxHA_ClusterResourceGroupProvider") ]
+class LinuxHA_ClusterResourceGroup {
+        [ Key ]
+        string GroupId;
+
+        string SubResourceNames[];
+};
+
+
+//-----------------------------------------------
+// LinuxHA_SubResource
+//-----------------------------------------------
+
+[ Association,
+        Provider ( "cmpi:cmpiLinuxHA_SubResourceProvider" ) ]
+
+class LinuxHA_SubResource {
+
+        [ Key, 
+                Description ( "Resource Group" ) ]
+        LinuxHA_ClusterResourceGroup REF Group;
+
+        [ Key,
+                Description ( "Resource" ) ]
+        LinuxHA_ClusterResource REF Resource;
+
+};
+
+
+//-----------------------------------------------
+// LinuxHA_SubGroup
+//-----------------------------------------------
+
+[ Association,
+        Provider ( "cmpi:cmpiLinuxHA_SubGroupProvider" ) ]
+
+class LinuxHA_SubGroup {
+
+        [ Key, 
+                Description ( "Resource Group" ) ]
+        LinuxHA_ClusterResourceGroup REF Group;
+
+        [ Key,
+                Description ( "SubGroup" ) ]
+        LinuxHA_ClusterResourceGroup REF SubGroup;
+
+};
+
+
+//----------------------------------------
+// LinuxHA_ClusteringService
+//----------------------------------------
+
+class LinuxHA_ClusteringService :  CIM_ClusteringService{
+
+};
+
+
+//----------------------------------------
+// LinuxHA_ClusteringSAP
+//----------------------------------------
+
+class LinuxHA_ClusteringSAP : CIM_ClusteringSAP {
+
+};
+
+
+
+//-----------------------------------------
+//  LinuxHA_ParticipatingNode
+//-----------------------------------------
+
+[ Provider("cmpi:cmpiLinuxHA_ParticipatingNodeProvider") ]
+class LinuxHA_ParticipatingNode : CIM_ParticipatingCS{
+        [ Override ("Antecedent"),
+                Description ("The LinuxHA Cluster Node.")
+        ]
+        LinuxHA_ClusterNode REF Antecedent;
+
+        [ Override ("Dependent"),
+                Description ("The LinuxHA Cluster.")
+        ]
+        LinuxHA_Cluster REF Dependent;
+};
+
+
+//-------------------------------------------
+// LinuxHA_HostedResource
+//-------------------------------------------
+
+[ Provider("cmpi:cmpiLinuxHA_HostedResourceProvider") ]
+class LinuxHA_HostedResource : CIM_HostedService{
+        [ Override ( "Antecedent" ),
+                Description ("The cluster node that host the resource.")
+        ]
+        LinuxHA_ClusterNode REF Antecedent;
+
+        [ Override ( "Dependent"),
+                Description ("The cluster resource.")
+        ]
+        LinuxHA_ClusterResource REF Dependent;
+};
+
+
+//-----------------------------------------
+// End of File
+//-----------------------------------------
