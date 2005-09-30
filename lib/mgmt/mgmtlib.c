@@ -324,7 +324,7 @@ mgmt_session_recvmsg(void* session)
 			}
 		}
 		/* something wrong */
-		if (rd < 0) {
+		if (rd <= 0) {
 			if(errno == EINTR) {
 				continue;
 			}
