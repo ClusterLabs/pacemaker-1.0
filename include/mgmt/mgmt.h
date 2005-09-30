@@ -31,16 +31,28 @@
 #define	MAX_MSGLEN	4096
 #define	MAX_STRLEN	1024
 
-#define MSG_LOGIN	"login"
-#define MSG_LOGOUT	"logout"
-#define MSG_ECHO	"echo"
-#define MSG_TEST	"test"
-#define MSG_REGEVT	"regevt"
-#define MSG_STATUS	"status"
-#define MSG_ACTIVENODES "activenodes"
-#define MSG_OK		"ok"
-#define MSG_FAIL	"fail"
-#define MSG_ALLNODES	"allnodes"
+#define MSG_LOGIN		"login"
+#define MSG_LOGOUT		"logout"
+#define MSG_ECHO		"echo"
+#define MSG_TEST		"test"
+#define MSG_REGEVT		"regevt"
+#define MSG_STATUS		"status"
+#define MSG_ACTIVENODES 	"activenodes"
+#define MSG_OK			"ok"
+#define MSG_FAIL		"fail"
+#define MSG_ALLNODES		"allnodes"
+#define MSG_DC			"dc"
+#define MSG_CRM_CONFIG		"crm_config"
+#define MSG_HB_CONFIG		"hb_config"
+#define MSG_NODE_CONFIG		"node_config"
+#define MSG_RUNNING_RSC		"running_rsc"
+#define MSG_RSC_PARAMS		"rsc_params"
+#define MSG_RSC_ATTRS		"rsc_attrs"
+#define MSG_RSC_CONS		"rsc_cons"
+#define MSG_RSC_RUNNING_ON	"rsc_running_on"
+#define MSG_RSC_LOCATION	"rsc_location"
+#define MSG_RSC_OPS		"rsc_ops"
+#define MSG_SUB_RSC		"sub_rsc"
 
 extern int mgmt_connect(const char* server, const char* user, const char*  passwd);
 extern char* mgmt_sendmsg(const char* msg);
