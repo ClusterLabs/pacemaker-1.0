@@ -23,6 +23,7 @@
 #include <unistd.h>
 #include <glib.h>
 
+
 #include <heartbeat.h>
 #include <clplumbing/cl_log.h>
 #include <clplumbing/cl_syslog.h>
@@ -36,6 +37,31 @@ void final_heartbeat(void);
 
 static ll_cluster_t * hb = NULL;
 static char* on_get_allnodes(const char* msg, int id);
+static char* on_get_hb_config(const char* msg, int id);
+
+const char* param_name[] = {
+	"apiauth",
+	"auto_failback",
+	"baud",
+	"debug",
+	"debugfile",
+	"deadping",
+	"deadtime",
+	"hbversion",
+	"hopfudge",
+	"initdead",
+	"keepalive",
+	"logfacility",
+	"logfile",
+	"msgfmt",
+	"nice_failback",
+	"node",
+	"normalpoll",
+	"stonith",
+	"udpport",
+	"warntime",
+	"watchdog"
+};
 
 char* 
 on_get_allnodes(const char* msg, int id)
@@ -49,8 +75,7 @@ on_get_allnodes(const char* msg, int id)
 		return cl_strdup(MSG_FAIL);
 	}
 	while((name = hb->llc_ops->nextnode(hb))!= NULL) {
-		mgmtd_log(LOG_ERR, "name:%s",name);
-		mgmt_msg_append(ret, name);
+		ret = mgmt_msg_append(ret, name);
 	}
 	if (hb->llc_ops->end_nodewalk(hb) != HA_OK) {
 		mgmtd_log(LOG_ERR, "Cannot end node walk");
@@ -59,6 +84,22 @@ on_get_allnodes(const char* msg, int id)
 		return cl_strdup(MSG_FAIL);
 	}
 	
+	return ret;
+}
+
+char*
+on_get_hb_config(const char* msg, int id)
+{
+	int i;
+	char* value = NULL;
+	char* ret = cl_strdup(MSG_OK);
+
+	for (i = 0; i < sizeof(param_name)/sizeof(param_name[0]); i++) {
+		value = hb->llc_ops->get_parameter(hb, param_name[i]);
+		ret = mgmt_msg_append(ret, value!=NULL?value:""); 
+		if (value != NULL) {
+			cl_free(value);
+	}	}	
 	return ret;
 }
 
@@ -75,6 +116,7 @@ init_heartbeat(void)
 	}
 	
 	reg_msg(MSG_ALLNODES, on_get_allnodes);
+	reg_msg(MSG_HB_CONFIG, on_get_hb_config);
 	return 0;
 }
 
