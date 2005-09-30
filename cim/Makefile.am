@@ -67,7 +67,7 @@ libcmpiLinuxHA_SoftwareIdentityProvider_la_LDFLAGS = $(COMMONLIBS) liblinuxha_in
 #--------------------------------------------------------------
 libcmpiLinuxHA_ClusterResourceProvider_la_SOURCES  = cmpi_utils.c cmpi_resource.c cmpi_resource_provider.c
 libcmpiLinuxHA_ClusterResourceProvider_la_CFLAGS   = -I$(CMPIHEADERS)
-libcmpiLinuxHA_ClusterResourceProvider_la_LDFLAG   = $(COMMONLIBS) liblinuxha_info.la 
+libcmpiLinuxHA_ClusterResourceProvider_la_LDFLAGS   = $(COMMONLIBS) liblinuxha_info.la 
 
 #--------------------------------------------------------------
 libcmpiLinuxHA_ClusterNodeProvider_la_SOURCES	= cmpi_utils.c cmpi_node.c cmpi_node_provider.c
