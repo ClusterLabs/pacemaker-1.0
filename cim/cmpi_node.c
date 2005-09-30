@@ -188,15 +188,22 @@ make_clusternode_instance(char * classname, CMPIBroker * broker,
         CMSetProperty(ci, "Status", status, CMPI_chars);
         CMSetProperty(ci, "ActiveStatus", active_status, CMPI_chars);
 
-        if ( strncmp(dc, uname, strlen(uname)) == 0){
-                char dc_status[] = "Yes";
-                CMSetProperty(ci, "IsDC", dc_status, CMPI_chars); 
-        }else{
-                char dc_status[] = "No";
-                CMSetProperty(ci, "IsDC", dc_status, CMPI_chars); 
+        if ( dc ) {
+                if ( strncmp(dc, uname, strlen(uname)) == 0){
+                        char dc_status[] = "Yes";
+                        CMSetProperty(ci, "IsDC", dc_status, CMPI_chars); 
+                } else {
+                        char dc_status[] = "No";
+                        CMSetProperty(ci, "IsDC", dc_status, CMPI_chars); 
+                
+                }
+
         }
 
-        free(dc);
+        if ( dc ) {
+                free(dc);
+        }
+
         free(status);
         free(active_status);
         free(uuid);
