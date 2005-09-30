@@ -25,7 +25,6 @@
 #include <regex.h>
 
 #include <hb_api.h>
-#include <heartbeat.h>
 #include <clplumbing/cl_log.h>
 
 
