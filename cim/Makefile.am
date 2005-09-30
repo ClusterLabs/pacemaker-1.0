@@ -34,6 +34,7 @@ COMMONLIBS              = $(top_builddir)/lib/clplumbing/libplumb.la      \
 GTHREADLIB              = `pkg-config --libs gthread-2.0` 
 CMPIHEADERS	        = /usr/local/include/cmpi/	
 
+cimprovidersdir         = /usr/local/lib/cmpi/
 cimproviders_LTLIBRARIES = liblinuxha_info.la                                   \
                            libcmpiLinuxHA_ClusterProvider.la  	                \
 			   libcmpiLinuxHA_ClusterResourceProvider.la            \
@@ -109,7 +110,7 @@ libcmpiLinuxHA_ClusterResourceInstanceAttrProvider_la_LDFLAGS = $(COMMONLIBS) li
 
 #--------------------------------------------------------------
 libcmpiLinuxHA_ClusterResourceGroupProvider_la_SOURCES = cmpi_utils.c     \
-                                                         cmpi_rsc_group.c \ 
+                                                         cmpi_rsc_group.c \
                                                          cmpi_rsc_group_provider.c
 libcmpiLinuxHA_ClusterResourceGroupProvider_la_CFLAGS  = -I$(CMPIHEADERS)
 libcmpiLinuxHA_ClusterResourceGroupProvider_la_LDFLAGS = $(COMMONLIBS) liblinuxha_info.la 
