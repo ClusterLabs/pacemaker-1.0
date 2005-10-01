@@ -30,7 +30,7 @@ ccm_handle_hbapiclstat(ccm_info_t *info,
 		       const char *orig, 
 		       const char *status)
 {
-	int 		uuid;
+	int 		index;
 	enum ccm_state 	state = info->state;
 	
 	if(state == CCM_STATE_NONE ||
@@ -49,12 +49,12 @@ ccm_handle_hbapiclstat(ccm_info_t *info,
 		return NULL;
 	}
 	
-	uuid = llm_get_uuid(&info->llm, orig);
-	if(uuid == -1) {
+	index = llm_get_index(&info->llm, orig);
+	if(index == -1) {
 		return NULL;
 	}
 	
-	return(ccm_create_leave_msg(info, uuid));
+	return(ccm_create_leave_msg(info, index));
 }
 
 /* 
@@ -64,10 +64,10 @@ ccm_handle_hbapiclstat(ccm_info_t *info,
 
 static void
 nodelist_update(ll_cluster_t* hb, ccm_info_t* info, 
-		const char *id, const char *status, int hbgen)
+		const char *id, const char *status)
 {
 	llm_info_t *llm;
-	int indx, uuid;
+	int indx;
 	char oldstatus[STATUSSIZE];
 	/* update the low level membership of the node
 	 * if the status moves from active to dead and if the member
@@ -76,14 +76,13 @@ nodelist_update(ll_cluster_t* hb, ccm_info_t* info,
 	 */
 	if(global_debug)
 		cl_log(LOG_DEBUG, 
-		       "nodelist update: Node %s now has status %s gen=%d", 
-		       id,  status, hbgen);
+		       "nodelist update: Node %s now has status %s", 
+		       id,  status);
 	llm = &info->llm;
 	if(llm_status_update(llm, id, status,oldstatus)) {
 		indx = ccm_get_membership_index(info,id);
 		if(indx != -1) {
-			uuid = llm_get_uuid(llm, id);
-			leave_cache(uuid);
+			leave_cache(indx);
 		}
 	}
 	
@@ -127,12 +126,8 @@ repeat:
 			msg = newmsg;
 		} else if(strcasecmp(type, T_STATUS) == 0){
 			
-			int 	gen_val;
-			const char *gen = ha_msg_value(msg, F_HBGENERATION);
-			
-			cl_log_message(LOG_INFO, msg);
-			gen_val = atoi(gen?gen:"-1");
-			nodelist_update(hb, info,orig, status, gen_val);
+			cl_log_message(LOG_DEBUG, msg);
+			nodelist_update(hb, info,orig, status);
 
 			ha_msg_del(msg);
 			return TRUE;
@@ -154,7 +149,13 @@ repeat:
 	if (ccm_msg_type < 0){
 		goto out;
 	}
-
+	
+	if (ANYDEBUG){	
+		if (ccm_msg_type != CCM_TYPE_TIMEOUT){
+			cl_log(LOG_INFO, "get a message type=%s", type);
+			cl_log_message(LOG_DEBUG, msg);
+		}
+	}
 	state_msg_handler[info->state](ccm_msg_type, msg, hb, info);
 	
 

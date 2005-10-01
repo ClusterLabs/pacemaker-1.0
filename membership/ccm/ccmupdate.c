@@ -1,4 +1,4 @@
-/* $Id: ccmupdate.c,v 1.15 2005/07/29 10:32:30 sunjd Exp $ */
+/* $Id: ccmupdate.c,v 1.16 2005/10/01 02:01:56 gshi Exp $ */
 /* 
  * update.c: functions that track the votes during the voting protocol
  *
@@ -20,7 +20,8 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  *
  */
-#include <ccm.h>
+#include "ccm.h"
+#include "ccmmisc.h"
 
 /* generic leader info */
 typedef struct leader_info_s {
@@ -538,7 +539,7 @@ update_get_next_uuid(ccm_update_t *tab, llm_info_t *llm, int *lastindex)
 	
 	*lastindex = indx+1;
 	
-	return(LLM_GET_UUID(llm,UPDATE_GET_INDEX(tab,indx)));
+	return UPDATE_GET_INDEX(tab,indx);
 }
 
 /* */
@@ -548,16 +549,16 @@ update_get_next_uuid(ccm_update_t *tab, llm_info_t *llm, int *lastindex)
 /* */
 int 
 update_strcreate(ccm_update_t *tab,
-		char **memlist,
-		llm_info_t *llm)
+		 char *memlist,
+		 llm_info_t *llm)
 {
-	uint i, uuid;
+	uint i;
 	int	indx;
 	unsigned char *bitmap;
 	int str_len;
 
 	/* create a bitmap that can accomodate MAXNODE bits */
-	int numBytes = bitmap_create(&bitmap, MAXNODE);
+	bitmap_create(&bitmap, MAXNODE);
 
 
 	/* for each node in the update list, find its uuid and
@@ -570,23 +571,11 @@ update_strcreate(ccm_update_t *tab,
 			continue;
 		}
 
-		/* get the uuid of the node from the llm table */
-		uuid = LLM_GET_UUID(llm,indx);
-
 		/* set this bit in the bitmap */
-		bitmap_mark(uuid, bitmap, MAXNODE);
+		bitmap_mark(indx, bitmap, MAXNODE);
 	}
 
-	str_len = ccm_bitmap2str(bitmap, numBytes, memlist);
+	str_len = ccm_bitmap2str(bitmap, memlist, MAX_MEMLIST_STRING);
 	bitmap_delete(bitmap);
 	return str_len;
-}
-
-/* */
-/* delete the memory used to store the string. */
-/* */
-void
-update_strdelete(char *memlist)
-{
-	g_free(memlist);
 }

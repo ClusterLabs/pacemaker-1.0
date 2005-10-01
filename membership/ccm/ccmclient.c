@@ -1,4 +1,4 @@
-/* $Id: ccmclient.c,v 1.28 2005/09/29 22:40:11 gshi Exp $ */
+/* $Id: ccmclient.c,v 1.29 2005/10/01 02:01:56 gshi Exp $ */
 /* 
  * client.c: Consensus Cluster Client tracker
  *
@@ -355,7 +355,7 @@ mem_quorum(llm_info_t* llm, int member_count)
 		return TRUE;
 	}
 	
-	if(member_count >  total_count/2 + 1){
+	if(member_count >=  total_count/2 + 1){
 		return TRUE;
 	}
 	
@@ -487,7 +487,8 @@ client_llm_init(llm_info_t *llm)
 	CLLM_SET_MYNODE(data, LLM_GET_MYNODE(llm));
 	for ( i = 0; i < maxnode; i ++ ) {
 		CLLM_SET_NODEID(data,i,LLM_GET_NODEID(llm,i));
-		CLLM_SET_UUID(data,i,LLM_GET_UUID(llm,i));
+		CLLM_SET_UUID(data,i,i);
+
 	}
 
 	ipc_llm_message = create_message(NULL, data, size);

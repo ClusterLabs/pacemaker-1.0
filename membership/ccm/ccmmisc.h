@@ -18,6 +18,13 @@
 #ifndef _CCM_MISC_H_
 #define _CCM_MISC_H_
 
+#define MAX_MEMLIST_STRING  64
+
+int		ccm_bitmap2str(const unsigned char *bitmap, 
+			       char* memlist, int size);
+int		ccm_str2bitmap(const char *_memlist, 
+			       int size, unsigned char *bitmap);
+
 void		leave_init(void);
 void		leave_reset(void);
 void		leave_cache(int i);

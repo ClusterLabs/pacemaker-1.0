@@ -1,4 +1,4 @@
-/* $Id: ccm_statemachine.c,v 1.1 2005/09/29 21:54:14 gshi Exp $ */
+/* $Id: ccm_statemachine.c,v 1.2 2005/10/01 02:01:56 gshi Exp $ */
 /* 
  * ccm.c: Consensus Cluster Service Program 
  *
@@ -120,11 +120,13 @@ ccm_set_state(ccm_info_t* info, int istate,const struct ha_msg*  msg)
 			cl_log(LOG_INFO,"change state from %s to %s, current leader is %s",   
 			       state2string(info->state),state2string(istate), 
 			       leader < 0 ?"none": info->llm.nodes[leader].nodename); 
-#if 1
-			if (msg) {
-				cl_log_message(LOG_DEBUG, msg);		
+			
+			if (ANYDEBUG){
+				if (msg) {
+					cl_log_message(LOG_DEBUG, msg);		
+				}
 			}
-#endif 
+			
 			info->state = (istate);		
 			if((istate)==CCM_STATE_JOINING){
 				client_influx();	
@@ -511,25 +513,30 @@ static void
 ccm_memcomp_note(ccm_info_t *info, const char *orig, 
 		uint32_t maxtrans, const char *memlist)
 {
-	int uuid, numbytes;
-	unsigned char *bitlist;
+	int index, numbytes;
+	unsigned char *bitmap = NULL;
 	uint32_t *ptr;
 	memcomp_t *mem_comp = CCM_GET_MEMCOMP(info);
 
-	/* find the uuid of the originator */
-	uuid = llm_get_uuid(CCM_GET_LLM(info), orig);
-
+	bitmap_create(&bitmap, MAXNODE);
+	if (bitmap == NULL){
+		cl_log(LOG_ERR, "bitmap creatation failed");
+		return;
+	}
+	/* find the index of the originator */
+	index = llm_get_index(CCM_GET_LLM(info), orig);
+	
 	/* convert the memlist into a bit map and feed it to the graph */
-	numbytes = ccm_str2bitmap(memlist, &bitlist);
+	numbytes = ccm_str2bitmap(memlist, strlen(memlist), bitmap);
 	
 	graph_update_membership(MEMCOMP_GET_GRAPH(mem_comp), 
-			uuid, bitlist);
+				index, bitmap);
 	/*NOTE DO NOT DELETE bitlist, because it is 
 	 * being handled by graph*/
 
 	ptr = (uint32_t *)g_malloc(2*sizeof(uint32_t));
 	ptr[0] = maxtrans;
-	ptr[1] = uuid;
+	ptr[1] = index;
 	MEMCOMP_SET_MAXT(mem_comp, 
 		(g_slist_insert_sorted(MEMCOMP_GET_MAXT(mem_comp), 
 			ptr, ccm_memcomp_cmpr)));
@@ -540,15 +547,13 @@ ccm_memcomp_note(ccm_info_t *info, const char *orig,
 static void
 ccm_memcomp_note_my_membership(ccm_info_t *info)
 {
-	char *memlist;
+	char memlist[MAX_MEMLIST_STRING];
 	int str_len;
 
-	/* find the uuid of the originator */
 	str_len = update_strcreate(CCM_GET_UPDATETABLE(info), 
-			&memlist, CCM_GET_LLM(info));
+			memlist, CCM_GET_LLM(info));
 	ccm_memcomp_note(info, ccm_get_my_hostname(info), 
 			CCM_GET_MAXTRANS(info), memlist);
-	update_strdelete(memlist);
 	return;
 }
 
@@ -556,15 +561,15 @@ ccm_memcomp_note_my_membership(ccm_info_t *info)
 static void
 ccm_memcomp_add(ccm_info_t *info, const char *orig)
 {
-	int uuid, myuuid;
+	int index, myindex;
 	memcomp_t *mem_comp = CCM_GET_MEMCOMP(info);
 
-	uuid = llm_get_uuid(CCM_GET_LLM(info), orig);
-	myuuid = llm_get_uuid(CCM_GET_LLM(info), 
+	index = llm_get_index(CCM_GET_LLM(info), orig);
+	myindex = llm_get_index(CCM_GET_LLM(info), 
 			ccm_get_my_hostname(info));
-	graph_add_uuid(MEMCOMP_GET_GRAPH(mem_comp), uuid);
+	graph_add_uuid(MEMCOMP_GET_GRAPH(mem_comp), index);
 	graph_add_to_membership(MEMCOMP_GET_GRAPH(mem_comp), 
-			myuuid, uuid);
+				myindex, index);
 	/* ccm_memcomp_note(info, orig, maxtrans, memlist); */
 	return;
 }
@@ -658,16 +663,22 @@ ccm_memcomp_get_maxmembership(ccm_info_t *info, unsigned char **bitmap)
 static int 
 ccm_am_i_member(ccm_info_t *info, const char *memlist)
 {
-	unsigned char *bitmap;
+	unsigned char *bitmap = NULL;
 
-	int numBytes = ccm_str2bitmap(memlist, &bitmap);
-
+	bitmap_create(&bitmap, MAXNODE);
+	if (bitmap == NULL){
+		cl_log(LOG_ERR ," bitmap creatation failed");
+		return FALSE;
+	}
+	
+	int numBytes = ccm_str2bitmap(memlist, strlen(memlist), bitmap);
+	
 	/* what is my node Uuid */
 	llm_info_t *llm = CCM_GET_LLM(info);
 
-	int my_uuid = LLM_GET_MYUUID(llm);
-
-	if (bitmap_test(my_uuid, bitmap, numBytes*BitsInByte)){
+	int myindex = llm_get_myindex(llm);
+	
+	if (bitmap_test(myindex, bitmap, numBytes*BitsInByte)){
 		bitmap_delete(bitmap);
 		return TRUE;
 	}
@@ -762,8 +773,8 @@ ccm_get_all_active_join_request(ccm_info_t* info)
 	size_t i;
 	
 	for (i = 0 ; i < llm->nodecount; i++){
-		if (STRNCMP_CONST(llm->nodes[i].status,"active")
-		    || llm->nodes[i].join_request == FALSE ){
+		if (STRNCMP_CONST(llm->nodes[i].status,"dead") != 0
+		    && llm->nodes[i].join_request == FALSE ){
 			return FALSE;
 		}
 	}
@@ -863,20 +874,18 @@ ccm_compute_and_send_final_memlist(ll_cluster_t *hb, ccm_info_t *info)
 {
 	unsigned char *bitmap;
 	uint maxtrans;
-	char *string;
+	char string[MAX_MEMLIST_STRING];
 	char *cookie = NULL;
-	int numBytes;
 	int strsize;
 	int repeat;
 
 	/* get the maxmimum membership list */
 	maxtrans = ccm_memcomp_get_maxmembership(info, &bitmap);
 
-
+	
 	/* create a string with the membership information */
-	numBytes = bitmap_size(MAXNODE);
-	strsize  = ccm_bitmap2str(bitmap, numBytes, &string);
-
+	strsize  = ccm_bitmap2str(bitmap,  string, MAX_MEMLIST_STRING);
+	
 
 	/* check if the membership has changed from that before. If so we
 	 * have to generate a new cookie.
@@ -895,7 +904,6 @@ ccm_compute_and_send_final_memlist(ll_cluster_t *hb, ccm_info_t *info)
 			repeat++;
 		}else{
 			bitmap_delete(bitmap);
-			g_free(string);
 			return;
 		}
 	}
@@ -903,7 +911,6 @@ ccm_compute_and_send_final_memlist(ll_cluster_t *hb, ccm_info_t *info)
 	/* fill my new memlist and update the new cookie if any */
 	ccm_fill_memlist_from_bitmap(info, bitmap);
 	bitmap_delete(bitmap);
-	g_free(string);
 
 	/* increment the major transition number and reset the
 	 * minor transition number
@@ -953,7 +960,8 @@ static int
 ccm_send_cl_reply(ll_cluster_t *hb, ccm_info_t *info)
 {
 	int ret=FALSE, bitmap_strlen;
-	char *memlist, *cl, *cl_tmp;
+	char memlist[MAX_MEMLIST_STRING];
+	char *cl, *cl_tmp;
 	void *cltrack;
 	uint  trans;
 	int repeat;
@@ -982,9 +990,8 @@ ccm_send_cl_reply(ll_cluster_t *hb, ccm_info_t *info)
 				return FALSE;
 			}
 			ret = TRUE;
-			bitmap_strlen = update_strcreate(
-				CCM_GET_UPDATETABLE(info), 
-				&memlist, CCM_GET_LLM(info));
+			bitmap_strlen = update_strcreate(CCM_GET_UPDATETABLE(info), 
+							 memlist, CCM_GET_LLM(info));
 
 			/* send Cluster Leader our memlist only if we are 
 			 * operating in the same transition as that of 
@@ -1004,7 +1011,6 @@ ccm_send_cl_reply(ll_cluster_t *hb, ccm_info_t *info)
 					break;
 				}
 			}
-			update_strdelete(memlist);
 		} else {
 			/* I dont trust this Cluster Leader.
 			Send NULL memlist message */
@@ -1073,7 +1079,7 @@ ccm_joining_to_joined(ll_cluster_t *hb, ccm_info_t *info)
 
 	/* create a bitmap with the membership information */
 	(void) bitmap_create(&bitmap, MAXNODE);
-	bitmap_mark(LLM_GET_MYUUID(CCM_GET_LLM(info)), bitmap, MAXNODE);
+	bitmap_mark(llm_get_myindex(&info->llm), bitmap, MAXNODE);
 
 	/* 
 	 * I am the only around! Lets discard any cookie that we
@@ -1132,7 +1138,7 @@ ccm_init_to_joined(ccm_info_t *info)
 	char *cookie;
 
 	numBytes = bitmap_create(&bitlist, MAXNODE);
-	bitmap_mark(LLM_GET_MYUUID(CCM_GET_LLM(info)), bitlist,MAXNODE);
+	bitmap_mark(llm_get_myindex(&info->llm), bitlist,MAXNODE);
 	ccm_fill_memlist_from_bitmap(info, bitlist);
 	bitmap_delete(bitlist);
 	CCM_SET_MAJORTRANS(info, 1);
@@ -1617,7 +1623,8 @@ ccm_state_joined(enum ccm_type ccm_msg_type,
 			
 		case CCM_TYPE_NODE_LEAVE_NOTICE:{
 			const char* node;
-
+			const char*	leader = orig;
+			
 			node = ha_msg_value(reply, F_NODE);
 			if(node == NULL){
 				cl_log(LOG_ERR, "ccm_state_wait_for_memlist:"
@@ -1631,7 +1638,7 @@ ccm_state_joined(enum ccm_type ccm_msg_type,
 			}			
 			
 			if( !ccm_am_i_leader(info)){				
-				send_node_leave_to_leader(hb, info, node);
+				send_node_leave_to_leader(hb, info, leader);
 				mem_list_time_init();
 				ccm_set_state(info,CCM_STATE_WAIT_FOR_MEM_LIST, reply);
 			}
@@ -3604,8 +3611,7 @@ static void send_mem_list_to_all(ll_cluster_t *hb,
 {
 	int numBytes, i, size, strsize,  j, tmp, tmp_mem[100];
 	unsigned char *bitmap;
-	char *memlist;
-	llm_info_t *llm = CCM_GET_LLM(info);
+	char memlist[MAX_MEMLIST_STRING];
 	int *uptime;
     
 	numBytes = bitmap_create(&bitmap, MAXNODE);
@@ -3626,16 +3632,15 @@ static void send_mem_list_to_all(ll_cluster_t *hb,
         }
 
 	for ( i = 0 ; i < size ; i++ ) {
-		bitmap_mark(llm->nodes[info->ccm_member[i]].uuid, 
-				bitmap, MAXNODE);
+		bitmap_mark(info->ccm_member[i], 
+			    bitmap, MAXNODE);
 		uptime[i] = htonl(update_get_uptime(CCM_GET_UPDATETABLE(info), 
-				CCM_GET_LLM(info),
-				tmp_mem[i]));
+						    CCM_GET_LLM(info),
+						    tmp_mem[i]));
 	}    
-	strsize  = ccm_bitmap2str(bitmap, numBytes, &memlist);
+	strsize  = ccm_bitmap2str(bitmap, memlist, MAX_MEMLIST_STRING);
 	bitmap_delete(bitmap);
 	ccm_send_to_all(hb, info, memlist, cookie, uptime, sizeof(int)*size);
-	g_free(memlist);
 	g_free(uptime);
 	return;
 }

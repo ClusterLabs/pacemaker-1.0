@@ -278,23 +278,17 @@ ccm_send_memlist_request(ll_cluster_t *hb, ccm_info_t *info)
 
 int
 ccm_send_memlist_res(ll_cluster_t *hb, 
-			ccm_info_t *info,
-			const char *nodename, 
-			char *memlist)
+		     ccm_info_t *info,
+		     const char *nodename, 
+		     const char *memlist)
 {
 	struct ha_msg *m = ccm_create_msg(info, CCM_TYPE_RES_MEMLIST);
 	char maxtrans[15]; 
 	int  rc;
-	unsigned char *bitmap;
-	gboolean del_flag=FALSE;
-	
 	snprintf(maxtrans, sizeof(maxtrans), "%d", 
 		 info->ccm_max_transition);
 	if (!memlist) {
-		int numBytes = bitmap_create(&bitmap, MAXNODE);
-		(void) ccm_bitmap2str(bitmap, numBytes, &memlist);
-		bitmap_delete(bitmap);
-		del_flag = TRUE;
+		memlist= "";
 	} 
 	
 	if ( (ha_msg_add(m, CCM_MAXTRANS, maxtrans) == HA_FAIL)
@@ -307,11 +301,6 @@ ccm_send_memlist_res(ll_cluster_t *hb,
 	} 
 	
 	rc = hb->llc_ops->sendnodemsg(hb, m, nodename);
-
-	if(del_flag) {
-		g_free(memlist);
-	}
-	
 	ha_msg_del(m);
 	return(rc);
 }

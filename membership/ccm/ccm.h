@@ -1,4 +1,4 @@
-/* $Id: ccm.h,v 1.41 2005/09/29 22:40:11 gshi Exp $ */
+/* $Id: ccm.h,v 1.42 2005/10/01 02:01:56 gshi Exp $ */
 /*
  * ccm.h: definitions Consensus Cluster Manager internal header
  *				file
@@ -128,10 +128,9 @@ unsigned int version_get_nresp(ccm_version_t *);
 			changed change it also in ccmlib.h */
 
 typedef struct llm_node_s {
-	uint  uuid;  /* a cluster unique id for the node */
-	gboolean join_request;
 	char nodename[NODEIDSIZE];
 	char status[STATUSSIZE];
+	gboolean join_request;
 	uint received_change_msg;
 }llm_node_t;
 
@@ -143,16 +142,12 @@ typedef struct llm_info_s { /* information about low level membership info */
 
 #define LLM_GET_MYNODE(llm) llm->myindex
 #define LLM_GET_NODECOUNT(llm) llm->nodecount
-#define LLM_GET_UUID(llm,i) llm->nodes[i].uuid
-#define LLM_GET_MYUUID(llm) LLM_GET_UUID(llm, LLM_GET_MYNODE(llm))
 #define LLM_GET_NODEID(llm,i) llm->nodes[i].nodename
 #define LLM_GET_MYNODEID(llm) LLM_GET_NODEID(llm, LLM_GET_MYNODE(llm))
 #define LLM_GET_STATUS(llm,i) llm->nodes[i].status
 #define LLM_SET_MYNODE(llm,indx) llm->myindex = indx
 #define LLM_SET_NODECOUNT(llm, count) llm->nodecount = count
 #define LLM_INC_NODECOUNT(llm) (llm->nodecount)++
-#define LLM_SET_UUID(llm,i, _uuid) llm->nodes[i].uuid = _uuid
-#define LLM_SET_MYUUID(llm, _uuid) LLM_SET_UUID(llm, LLM_GET_MYNODE(llm), _uuid)
 #define LLM_SET_NODEID(llm, i, name)  \
 			(strncpy(llm->nodes[i].nodename,name,NODEIDSIZE))
 #define LLM_SET_MYNODEID(llm, name) \
@@ -163,7 +158,6 @@ typedef struct llm_info_s { /* information about low level membership info */
 #define LLM_GET_NODEIDSIZE(llm) NODEIDSIZE
 int llm_get_live_nodecount(llm_info_t *);
 gboolean llm_only_active_node(llm_info_t *);
-int llm_get_uuid(llm_info_t *, const char *);
 char *llm_get_nodeid_from_uuid(llm_info_t *, const int );
 int llm_nodeid_cmp(llm_info_t *, int , int );
 int llm_status_update(llm_info_t *, const char *, const char *, char*);
@@ -174,12 +168,11 @@ void llm_end(llm_info_t *);
 int llm_is_valid_node(llm_info_t *, const char *);
 void llm_add(llm_info_t *, const char *, const char *, const char *);
 int llm_get_index(llm_info_t *, const char *);
+int llm_get_myindex(llm_info_t *);
 /* END OF Low Level Membership interfaces */
 
 
 /* ccm prototypes */
-int ccm_str2bitmap(const char *, unsigned char **);
-int ccm_bitmap2str(const unsigned char *, int , char **);
 longclock_t ccm_get_time(void);
 int ccm_timeout(longclock_t, longclock_t, unsigned long);
 int ccm_need_control(void *);
@@ -235,8 +228,7 @@ void * update_initlink(ccm_update_t *);
 char * update_next_link(ccm_update_t *, llm_info_t *, void *, uint *);
 void update_freelink(ccm_update_t *, void *);
 int update_get_next_uuid(ccm_update_t *, llm_info_t *, int *);
-int update_strcreate(ccm_update_t *, char **, llm_info_t *);
-void update_strdelete(char *memlist);
+int update_strcreate(ccm_update_t *tab, char *memlist,llm_info_t *llm);
 int update_is_member(ccm_update_t *, llm_info_t *, const char *);
 int update_get_uptime(ccm_update_t *, llm_info_t *, int );
 void	update_display(int pri,llm_info_t* llm, ccm_update_t* tab);

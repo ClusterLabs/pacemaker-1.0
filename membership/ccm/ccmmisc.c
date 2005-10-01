@@ -1,4 +1,4 @@
-/* $Id: ccmmisc.c,v 1.20 2005/09/29 21:54:14 gshi Exp $ */
+/* $Id: ccmmisc.c,v 1.21 2005/10/01 02:01:56 gshi Exp $ */
 /* 
  * ccmmisc.c: Miscellaneous Consensus Cluster Service functions
  *
@@ -27,9 +27,64 @@
 #endif
 #include "ccmmisc.h"
 
-/* */
-/* Convert a given string to a bitmap. */
-/* */
+#if 1
+int
+ccm_bitmap2str(const unsigned char *bitmap, char* memlist, int size)
+{
+	int	num_member = 0;
+	char*	p;
+	int	i;
+	
+	if (bitmap == NULL ||
+	    memlist == NULL ||
+	    size <= 0){
+		cl_log(LOG_ERR, "invalid arguments");
+		return -1;
+	}
+	
+	p =memlist;
+	for ( i = 0 ; i < MAXNODE; i++ ) {
+		if(bitmap_test(i, bitmap, MAXNODE)){
+			num_member++;
+			p += sprintf(p, "%d ", i);
+		}
+	}
+	
+	return  strnlen(memlist, size);
+}
+
+
+int
+ccm_str2bitmap(const char *_memlist, int size, unsigned char *bitmap)
+{
+	char	memlist[MAX_MEMLIST_STRING];
+	char*	p;
+	int	num_members = 0;
+	
+	if (memlist == NULL
+	    || size <= 0
+	    || size >= MAX_MEMLIST_STRING
+	    || bitmap == NULL){
+		cl_log(LOG_ERR, "invalid arguments");
+		return -1;
+	}
+	
+	memset(memlist, 0, MAX_MEMLIST_STRING);
+	strncpy(memlist, _memlist, size);
+
+	p = strtok(memlist, " ");
+	while ( p != NULL){
+		int i = atoi(p);
+		bitmap_mark(i, bitmap, MAXNODE);		
+		num_members ++;
+		p = strtok(NULL, " ");
+	}
+	
+	return num_members;
+	
+}	
+#else
+
 int
 ccm_str2bitmap(const char *memlist, unsigned char **bitlist)
 {
@@ -50,10 +105,6 @@ ccm_str2bitmap(const char *memlist, unsigned char **bitlist)
 	return outbytes;
 }
 
-
-/* */
-/* Convert a given bitmap to a string. */
-/* */
 int
 ccm_bitmap2str(const unsigned char *bitmap, int numBytes, char **memlist)
 {
@@ -68,11 +119,8 @@ ccm_bitmap2str(const unsigned char *bitmap, int numBytes, char **memlist)
 	return binary_to_base64(bitmap, numBytes, *memlist, maxstrsize);
 }
 
-/*  */
-/* */
-/* END OF GENERIC FUNCTION FOR BITMAP AND STRING CONVERSION. */
-/* */
 
+#endif
 
 							
 /* */
@@ -222,7 +270,7 @@ ccm_memlist_changed(ccm_info_t *info,
 {
 	int nodeCount, i;
 	llm_info_t *llm;
-	uint indx, uuid;
+	uint indx;
 		
 		
 	/* go through the membership list */
@@ -231,9 +279,7 @@ ccm_memlist_changed(ccm_info_t *info,
 	for ( i = 0 ; i < nodeCount; i++ ) {
 		indx = CCM_GET_MEMINDEX(info, i);
 		assert(indx >=0 && indx < LLM_GET_NODECOUNT(llm));
-		uuid = LLM_GET_UUID(llm,indx);
-		assert(uuid>=0 && uuid < MAXNODE);
-		if (!bitmap_test(uuid, (unsigned char *)bitmap, MAXNODE)){
+		if (!bitmap_test(indx, (unsigned char *)bitmap, MAXNODE)){
 			return TRUE;
 		}
 	}
@@ -245,29 +291,36 @@ ccm_fill_memlist(ccm_info_t *info,
 	const unsigned char *bitmap)
 {
 	llm_info_t *llm;
-	uint i, uuid;
+	uint i;
 
 	llm = CCM_GET_LLM(info);
 	CCM_RESET_MEMBERSHIP(info);
 	for ( i = 0 ; i < LLM_GET_NODECOUNT(llm); i++ ) {
-		uuid = LLM_GET_UUID(llm,i);
-		if(bitmap_test(uuid, bitmap, MAXNODE)){
+		if(bitmap_test(i, bitmap, MAXNODE)){
 			/*update the membership list with this member*/
 			CCM_ADD_MEMBERSHIP(info, i);
 		}
 	}
-
-	return FALSE;
+	
+	return HA_OK;
 }
 
 int 
 ccm_fill_memlist_from_str(ccm_info_t *info, 
 			  const unsigned char *memlist)
 {
-	unsigned char *bitmap;
+	unsigned char *bitmap = NULL;
 	int ret;
-
-	(void)ccm_str2bitmap((const char *)memlist, &bitmap);
+	
+	bitmap_create(&bitmap, MAXNODE);
+	if (bitmap == NULL){
+		cl_log(LOG_ERR, "bitmap creation failure");
+		return HA_FAIL;
+	}
+	if (ccm_str2bitmap(memlist,strlen(memlist), bitmap) < 0){
+		return HA_FAIL;
+	}
+	
 	ret = ccm_fill_memlist(info, bitmap);
 	bitmap_delete(bitmap);
 	return ret;

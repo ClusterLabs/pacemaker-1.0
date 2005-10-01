@@ -1,4 +1,4 @@
-/* $Id: ccmlib_memapi.c,v 1.38 2005/07/30 02:33:08 alan Exp $ */
+/* $Id: ccmlib_memapi.c,v 1.39 2005/10/01 02:01:56 gshi Exp $ */
 /* 
  * ccmlib_memapi.c: Consensus Cluster Membership API
  *
@@ -155,9 +155,8 @@ init_bornon(mbr_private_t *private,
 	for (i = 0 ; i < n; i++) {
 		assert(bornon[i].index <= numnodes);
 		g_hash_table_insert(private->bornon, 
-			GINT_TO_POINTER(CLLM_GET_UUID(private->llm, 
-					bornon[i].index)),
-			GINT_TO_POINTER(bornon[i].bornon+1));
+				    GINT_TO_POINTER(bornon[i].index),
+				    GINT_TO_POINTER(bornon[i].bornon+1));
 	}
 	return;
 }
@@ -307,7 +306,7 @@ get_new_membership(mbr_private_t *private,
 {
 	mbr_track_t *newmbr, *oldmbr;
 	int trans, i, j, in_index, out_index, born;
-	int n_members,uuid;
+	int n_members;
 	
 	int n_nodes = CLLM_GET_NODECOUNT(private->llm);
 	
@@ -326,13 +325,15 @@ get_new_membership(mbr_private_t *private,
 	for ( i = 0 ; i < n_members; i++ ) {
 		const char *uname = NULL;
 		gpointer	gborn; /* Help make gcc warning go away */
-		uuid =  CLLM_GET_UUID(private->llm, mbrinfo->member[i]);
+		int	index;
 
-		uname = llm_get_Id_from_Uuid(private->llm, uuid);
+		index = mbrinfo->member[i];
+
+		uname = llm_get_Id_from_Uuid(private->llm, index);
 
 		newmbr->m_mem.m_array[j].node_uname = strdup(uname); 
-
-		OC_EV_SET_NODEID(newmbr,j,uuid);
+		
+		OC_EV_SET_NODEID(newmbr,j,index);
 
 		gborn = g_hash_table_lookup(private->bornon, 
 				GINT_TO_POINTER(mbrinfo->member[i]));

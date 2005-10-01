@@ -36,7 +36,7 @@ int		ccm_send_memlist_request(ll_cluster_t *hb, ccm_info_t *info);
 int		ccm_send_memlist_res(ll_cluster_t *hb, 
 				     ccm_info_t *info,
 				     const char *nodename, 
-				     char *memlist);
+				     const char *memlist);
 int		ccm_send_final_memlist(ll_cluster_t *hb, 
 				       ccm_info_t *info, 
 				       char *newcookie, 

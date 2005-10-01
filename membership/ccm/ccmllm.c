@@ -1,4 +1,4 @@
-/* $Id: ccmllm.c,v 1.21 2005/09/29 22:40:11 gshi Exp $ */
+/* $Id: ccmllm.c,v 1.22 2005/10/01 02:01:56 gshi Exp $ */
 /* 
  * ccmllm.c: Low Level membership routines.
  *
@@ -78,9 +78,17 @@ display_llm(llm_info_t *llm)
 	
 }
 
-/* */
-/* Get the index of the node with the given nodename  */
-/* */
+int 
+llm_get_myindex(llm_info_t* llm)
+{
+	if (llm == NULL){
+		cl_log(LOG_ERR, "NULL pointer");
+		return -1;
+	}
+	return llm->myindex;
+}
+
+
 int
 llm_get_index(llm_info_t *llm, const char *node)
 {
@@ -145,21 +153,6 @@ llm_status_update(llm_info_t *llm, const char *node, const char *status, char* o
 	return FALSE;
 }
 
-
-/* */
-/* Get uuid of the node with given nodename. */
-/* */
-int 
-llm_get_uuid(llm_info_t *llm, const char *orig)
-{
-	int i;
-	i = llm_get_index(llm, orig);
-	if( i == -1 ) {
-		return i;
-	}
-
-	return LLM_GET_UUID(llm,i);
-}
 
 /* */
 /* return true if the node 'node' is a member of the */
@@ -234,13 +227,11 @@ llm_add(llm_info_t *llm,
 
 	for ( j = nodecount; j>i; j-- ) {
 		LLM_COPY(llm, j, j-1);
-		LLM_SET_UUID(llm, j, j);
 	}
 		
 	llm->nodes[i].join_request = FALSE;
 	LLM_SET_NODEID(llm, i, node);
 	LLM_SET_STATUS(llm, i, status);
-	LLM_SET_UUID(llm, i, i);
 	LLM_INC_NODECOUNT(llm);
 	if (strncmp(mynode, node, NODEIDSIZE) == 0) {
 		LLM_SET_MYNODE(llm, i);
