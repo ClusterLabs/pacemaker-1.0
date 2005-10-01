@@ -1,4 +1,4 @@
-/* $Id: heartbeat.h,v 1.74 2005/09/28 20:29:55 gshi Exp $ */
+/* $Id: heartbeat.h,v 1.75 2005/10/01 01:48:37 gshi Exp $ */
 /*
  * heartbeat.h: core definitions for the Linux-HA heartbeat program
  *
@@ -370,12 +370,6 @@ extern int			udpport;
 extern int			RestartRequested;
 extern char *			localnodename;
 
-#define	ANYDEBUG	(debug_level)
-#define	DEBUGDETAILS	(debug_level >= 2)
-#define	DEBUGAUTH	(debug_level >=3)
-#define	DEBUGMODULE	(debug_level >=3)
-#define	DEBUGPKT	(debug_level >= 4)
-#define	DEBUGPKTCONT	(debug_level >= 5)
 
 #define ha_log		cl_log
 #define ha_perror	cl_perror
