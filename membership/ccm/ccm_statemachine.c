@@ -1,4 +1,4 @@
-/* $Id: ccm_statemachine.c,v 1.2 2005/10/01 02:01:56 gshi Exp $ */
+/* $Id: ccm_statemachine.c,v 1.3 2005/10/03 06:36:00 gshi Exp $ */
 /* 
  * ccm.c: Consensus Cluster Service Program 
  *
@@ -124,6 +124,8 @@ ccm_set_state(ccm_info_t* info, int istate,const struct ha_msg*  msg)
 			if (ANYDEBUG){
 				if (msg) {
 					cl_log_message(LOG_DEBUG, msg);		
+				}else{
+					cl_log(LOG_DEBUG, "Trigging msg is NULL");
 				}
 			}
 			
@@ -3881,6 +3883,23 @@ static void ccm_fill_update_table(ccm_info_t *info,
 	}
 	return;
 } 
+
+int
+jump_to_joining_state(ll_cluster_t *hb, 
+		      ccm_info_t *info,
+		      struct ha_msg* msg){
+	
+	reset_change_info(info);
+	update_reset(CCM_GET_UPDATETABLE(info));
+	CCM_INCREMENT_MINORTRANS(info);
+	if (ccm_send_join(hb, info) != HA_OK){
+		cl_log(LOG_ERR, "sending joining message failed");
+		return HA_FAIL;
+		
+	}
+	ccm_set_state(info, CCM_STATE_JOINING, msg);
+	return HA_OK;
+}
 
 state_msg_handler_t	state_msg_handler[]={
 	ccm_state_none,

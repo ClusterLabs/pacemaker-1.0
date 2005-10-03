@@ -129,6 +129,7 @@ ccm_mod_msg(struct ha_msg* msg, ccm_info_t * info, int type)
 	char minortrans[15]; /*		ditto 	*/
 	char joinedtrans[15]; /*	ditto 	*/
 	char *cookie;
+	llm_info_t* llm =  &info->llm;
 	
 	if (msg == NULL){
 		cl_log(LOG_ERR, "NULL message");
@@ -149,11 +150,12 @@ ccm_mod_msg(struct ha_msg* msg, ccm_info_t * info, int type)
 		abort();
 	}
 	
-	if((ha_msg_mod(m, F_TYPE, ccm_type2string(type)) == HA_FAIL)
-	   ||(ha_msg_mod(m, CCM_COOKIE, cookie) == HA_FAIL) 
-	   ||(ha_msg_mod(m, CCM_MAJORTRANS, majortrans) == HA_FAIL)
-	   ||(ha_msg_mod(m, CCM_UPTIME, joinedtrans) == HA_FAIL)
-	   ||(ha_msg_mod(m, CCM_MINORTRANS, minortrans) == HA_FAIL)){
+	if(ha_msg_mod(m, F_TYPE, ccm_type2string(type)) == HA_FAIL
+	   || ha_msg_mod(m, CCM_COOKIE, cookie) == HA_FAIL
+	   || ha_msg_mod(m, CCM_MAJORTRANS, majortrans) == HA_FAIL
+	   || ha_msg_mod(m, CCM_UPTIME, joinedtrans) == HA_FAIL
+	   || ha_msg_mod(m, CCM_MINORTRANS, minortrans) == HA_FAIL
+	   || ha_msg_mod_int(m, F_NUMNODES, llm->nodecount) == HA_FAIL){
 		cl_log(LOG_ERR, "%s: moding fields to an message failed",
 		       __FUNCTION__);
 		return HA_FAIL;
@@ -463,6 +465,7 @@ timeout_msg_mod(ccm_info_t *info)
 			timeout_msg = NULL;
 			return NULL;
 		}
+		
 		return m;
 	}
 	

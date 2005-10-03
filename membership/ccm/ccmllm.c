@@ -1,4 +1,4 @@
-/* $Id: ccmllm.c,v 1.22 2005/10/01 02:01:56 gshi Exp $ */
+/* $Id: ccmllm.c,v 1.23 2005/10/03 06:36:00 gshi Exp $ */
 /* 
  * ccmllm.c: Low Level membership routines.
  *
@@ -154,10 +154,10 @@ llm_status_update(llm_info_t *llm, const char *node, const char *status, char* o
 }
 
 
-/* */
-/* return true if the node 'node' is a member of the */
-/* low level membership. */
-/* */
+/* 
+ * return true if the node 'node' is a member of the 
+ * low level membership. 
+ */
 int
 llm_is_valid_node(llm_info_t *llm, 
 	const char *node)
@@ -239,4 +239,14 @@ llm_add(llm_info_t *llm,
 		LLM_SET_MYNODE(llm, mynode_idx+1);
 	}
 	return;
+}
+
+const char*
+llm_get_mynode(llm_info_t* llm){
+	if (llm->myindex <0){
+		cl_log(LOG_ERR, "myindex is <= 0");
+		return NULL;
+	}
+	
+	return llm->nodes[llm->myindex].nodename;
 }

@@ -1,4 +1,4 @@
-/* $Id: ccm.h,v 1.42 2005/10/01 02:01:56 gshi Exp $ */
+/* $Id: ccm.h,v 1.43 2005/10/03 06:36:00 gshi Exp $ */
 /*
  * ccm.h: definitions Consensus Cluster Manager internal header
  *				file
@@ -169,6 +169,8 @@ int llm_is_valid_node(llm_info_t *, const char *);
 void llm_add(llm_info_t *, const char *, const char *, const char *);
 int llm_get_index(llm_info_t *, const char *);
 int llm_get_myindex(llm_info_t *);
+const char* llm_get_mynode(llm_info_t*);
+
 /* END OF Low Level Membership interfaces */
 
 
@@ -491,7 +493,9 @@ void client_new_mbrship(ccm_info_t*, void*);
 void ccm_reset(ccm_info_t *info);
 const char*	state2string(int state);
 int ccm_control_process(ccm_info_t *info, ll_cluster_t * hb);
-
+int	jump_to_joining_state(ll_cluster_t* hb, 
+			      ccm_info_t* info, 
+			      struct ha_msg* msg);
 typedef void (*state_msg_handler_t)(enum ccm_type ccm_msg_type, 
 				    struct ha_msg *reply, 
 				    ll_cluster_t *hb, 

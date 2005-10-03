@@ -79,6 +79,7 @@ nodelist_update(ll_cluster_t* hb, ccm_info_t* info,
 		       "nodelist update: Node %s now has status %s", 
 		       id,  status);
 	llm = &info->llm;
+       
 	if(llm_status_update(llm, id, status,oldstatus)) {
 		indx = ccm_get_membership_index(info,id);
 		if(indx != -1) {
@@ -101,13 +102,18 @@ nodelist_update(ll_cluster_t* hb, ccm_info_t* info,
 int
 ccm_control_process(ccm_info_t *info, ll_cluster_t * hb)
 {
-	struct ha_msg *msg, *newmsg;
-	const char *type;
-	int	ccm_msg_type;
-	const char *orig=NULL;
-	const char *status=NULL;
-
-repeat:
+	struct ha_msg*	msg;
+	struct ha_msg*	newmsg;
+	const char*	type;
+	int		ccm_msg_type;
+	const char*	orig=NULL;
+	const char*	status=NULL;
+	llm_info_t*	llm= &info->llm;
+	const char*	mynode = llm_get_mynode(llm);
+	const char*	numnodes;
+	int		numnodes_val;
+	
+ repeat:
 	/* read the next available message */
 	msg = ccm_readmsg(info, hb); /* this is non-blocking */
 
@@ -127,11 +133,14 @@ repeat:
 		} else if(strcasecmp(type, T_STATUS) == 0){
 			
 			cl_log_message(LOG_DEBUG, msg);
-			nodelist_update(hb, info,orig, status);
-
-			ha_msg_del(msg);
-			return TRUE;
+			if (llm_is_valid_node(&info->llm, orig)){
+				    nodelist_update(hb, info,orig, status);
+				    ha_msg_del(msg);
+				    return TRUE;
+			}
 			
+			llm_add(llm, orig, status, mynode);
+			jump_to_joining_state(hb, info, msg);
 		} 
 	} else {
 		msg = timeout_msg_mod(info);
@@ -154,6 +163,21 @@ repeat:
 		if (ccm_msg_type != CCM_TYPE_TIMEOUT){
 			cl_log(LOG_INFO, "get a message type=%s", type);
 			cl_log_message(LOG_DEBUG, msg);
+		}
+	}
+
+	numnodes = ha_msg_value(msg, F_NUMNODES);
+	if(numnodes != NULL){
+		numnodes_val = atoi(numnodes);
+		if (numnodes_val != info->llm.nodecount){
+			if (ANYDEBUG){
+				cl_log(LOG_WARNING, " node count does not agree: "
+				       "local count=%d,"
+				       "count in message =%d",
+				       info->llm.nodecount, numnodes_val);
+				cl_log_message(LOG_DEBUG, msg);
+			}
+			jump_to_joining_state(hb, info, msg);
 		}
 	}
 	state_msg_handler[info->state](ccm_msg_type, msg, hb, info);
