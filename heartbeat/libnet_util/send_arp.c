@@ -1,4 +1,4 @@
-/* $Id: send_arp.c,v 1.22 2005/09/21 10:30:16 andrew Exp $ */
+/* $Id: send_arp.c,v 1.23 2005/10/03 03:29:40 horms Exp $ */
 /* 
  * send_arp
  * 
@@ -54,10 +54,35 @@ static int send_arp(LTYPE* l, u_long ip, u_char *device, u_char mac[6]
 ,	u_char *broadcast, u_char *netmask, u_short arptype);
 
 static char print_usage[]={
-	"send_arp: sends out custom ARP packet. packetfactory.net\n"
-	"\tusage: send_arp [-i repeatinterval-ms] [-r repeatcount]"
-	" [-p pidfile] device src_ip_addr src_hw_addr broadcast_ip_addr netmask\n"
-	"\tIf src_hw_addr is \"auto\" then the address of device will be used"
+"send_arp: sends out custom ARP packet.\n"
+"  usage: send_arp [-i repeatinterval-ms] [-r repeatcount] [-p pidfile] \\\n"
+"              device src_ip_addr src_hw_addr broadcast_ip_addr netmask\n"
+"\n"
+"  where:\n"
+"    repeatinterval-ms: timing, in milliseconds of sending arp packets\n"
+"      For each ARP announcement requested, a pair of ARP packets is sent,\n"
+"      an ARP request, and an ARP reply. This is becuse some systems\n"
+"      ignore one or the other, and this combination gives the greatest\n"
+"      chance of success.\n"
+"\n"
+"      Each time an ARP is sent, if another ARP will be sent then\n"
+"      the code sleeps for half of repeatinterval-ms.\n"
+"\n"
+"    repeatcount: how many pairs of ARP packets to send.\n"
+"                 See above for why pairs are sent\n"
+"\n"
+"    pidfile: pid file to use\n"
+"\n"
+"    device: netowrk interace to use\n"
+"\n"
+"    src_ip_addr: source ip address\n"
+"\n"
+"    src_hw_addr: source hardware address.\n"
+"                 If \"auto\" then the address of device\n"
+"\n"
+"    broadcast_ip_addr: ignored\n"
+"\n"
+"    netmask: ignored\n"
 };
 
 static const char * SENDARPNAME = "send_arp";
@@ -132,13 +157,13 @@ main(int argc, char *argv[])
 		case 'p':	pidfilename= optarg;
 				break;
 
-		default:	fprintf(stderr, "usage: %s\n\n", print_usage);
+		default:	fprintf(stderr, "%s\n\n", print_usage);
 				return 1;
 				break;
 		}
 	}
 	if (argc-optind != 5) {
-		fprintf(stderr, "usage: %s\n\n", print_usage);
+		fprintf(stderr, "%s\n\n", print_usage);
 		return 1;
 	}
 
@@ -676,6 +701,9 @@ write_pid_file(const char *pidfilename)
 
 /*
  * $Log: send_arp.c,v $
+ * Revision 1.23  2005/10/03 03:29:40  horms
+ * Improve send_arp help message
+ *
  * Revision 1.22  2005/09/21 10:30:16  andrew
  * Darwin wants an unsigned char* for ipaddr
  *
