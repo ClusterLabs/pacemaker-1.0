@@ -85,7 +85,7 @@ ccm_create_minimum_msg(ccm_info_t * info, int type)
 struct ha_msg* 
 ccm_create_msg(ccm_info_t * info, int type)
 {	
-	struct ha_msg *m = ccm_create_minimum_msg(info, type);;
+	struct ha_msg *m = ccm_create_minimum_msg(info, type);
 	char majortrans[15];
 	char minortrans[15];
 	char joinedtrans[15];
