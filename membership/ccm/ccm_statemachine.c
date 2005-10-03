@@ -1,4 +1,4 @@
-/* $Id: ccm_statemachine.c,v 1.3 2005/10/03 06:36:00 gshi Exp $ */
+/* $Id: ccm_statemachine.c,v 1.4 2005/10/03 21:19:01 gshi Exp $ */
 /* 
  * ccm.c: Consensus Cluster Service Program 
  *
@@ -580,7 +580,7 @@ static void
 ccm_memcomp_init(ccm_info_t *info)
 {
 	int track=-1;
-	int uuid;
+	int index;
 	
 	memcomp_t *mem_comp = CCM_GET_MEMCOMP(info);
 
@@ -590,9 +590,9 @@ ccm_memcomp_init(ccm_info_t *info)
 	 * had participated in the join messages. We should be expecting
 	 * reply memlist bitmaps atleast from these nodes.
 	 */
-	while((uuid = update_get_next_uuid(CCM_GET_UPDATETABLE(info), 
+	while((index = update_get_next_index(CCM_GET_UPDATETABLE(info), 
 				CCM_GET_LLM(info), &track)) != -1) {
-		graph_add_uuid(MEMCOMP_GET_GRAPH(mem_comp),uuid); 
+		graph_add_uuid(MEMCOMP_GET_GRAPH(mem_comp),index); 
 	}
 	MEMCOMP_SET_MAXT(mem_comp,  NULL);
 	MEMCOMP_SET_INITTIME(mem_comp, ccm_get_time());
@@ -2275,8 +2275,8 @@ switchstatement:
 			/* if this node had not participated in the update 
 			 * exchange than just neglect it 
 			 */
-			if(!update_is_member(CCM_GET_UPDATETABLE(info), 
-					     CCM_GET_LLM(info), orig)) {
+			if(!update_is_node_updated(CCM_GET_UPDATETABLE(info), 
+						   CCM_GET_LLM(info), orig)) {
 				break;
 			}
 			

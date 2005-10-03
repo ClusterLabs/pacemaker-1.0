@@ -1,4 +1,4 @@
-/* $Id: ccm.h,v 1.43 2005/10/03 06:36:00 gshi Exp $ */
+/* $Id: ccm.h,v 1.44 2005/10/03 21:19:01 gshi Exp $ */
 /*
  * ccm.h: definitions Consensus Cluster Manager internal header
  *				file
@@ -220,7 +220,6 @@ void update_free_memlist_request(ccm_update_t *);
 void update_reset(ccm_update_t *);
 void update_init(ccm_update_t *);
 int update_timeout_expired(ccm_update_t *, unsigned long);
-int update_any(ccm_update_t *);
 void update_add(ccm_update_t *, llm_info_t *, const char *, int, gboolean);
 void update_remove(ccm_update_t *, llm_info_t *, const char *);
 int update_am_i_leader(ccm_update_t *, llm_info_t *);
@@ -229,9 +228,9 @@ char * update_get_cl_name(ccm_update_t *, llm_info_t *);
 void * update_initlink(ccm_update_t *);
 char * update_next_link(ccm_update_t *, llm_info_t *, void *, uint *);
 void update_freelink(ccm_update_t *, void *);
-int update_get_next_uuid(ccm_update_t *, llm_info_t *, int *);
+int update_get_next_index(ccm_update_t *, llm_info_t *, int *);
 int update_strcreate(ccm_update_t *tab, char *memlist,llm_info_t *llm);
-int update_is_member(ccm_update_t *, llm_info_t *, const char *);
+int update_is_node_updated(ccm_update_t *, llm_info_t *, const char *);
 int update_get_uptime(ccm_update_t *, llm_info_t *, int );
 void	update_display(int pri,llm_info_t* llm, ccm_update_t* tab);
 /* END OF update interfaces */

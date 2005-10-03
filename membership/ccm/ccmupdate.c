@@ -1,4 +1,4 @@
-/* $Id: ccmupdate.c,v 1.16 2005/10/01 02:01:56 gshi Exp $ */
+/* $Id: ccmupdate.c,v 1.17 2005/10/03 21:19:01 gshi Exp $ */
 /* 
  * update.c: functions that track the votes during the voting protocol
  *
@@ -23,75 +23,65 @@
 #include "ccm.h"
 #include "ccmmisc.h"
 
-/* generic leader info */
-typedef struct leader_info_s {
-	int		index;
-	int		trans;
-} leader_info_t;
 
-/* */
-/* BEGIN of Functions that keeps track of the memlist request messages from */
-/* cluster leaders. */
-/* */
+/* 
+ * add the node 'node' to the list of cluster leaders requesting 
+ * for membership information. 
+ */
 
-/* */
-/* add the node 'node' to the list of cluster leaders requesting */
-/* for membership information. */
-/* */
 void
 update_add_memlist_request(ccm_update_t *tab, 
 			llm_info_t *llm, 
 			const char *node,
-			const int trans)
+			const int uptime)
 {
 	int idx = llm_get_index(llm, node);
-	leader_info_t *obj;
+	update_t *obj;
 	int i=0;
-
-	while((obj = (leader_info_t *)
+	
+	while((obj = (update_t *)
 	       g_slist_nth_data(UPDATE_GET_CLHEAD(tab),i++)) != NULL){
 		if(idx == obj->index) {
-			if(trans > obj->trans) {
+			if(uptime > obj->uptime) {
 				cl_log(LOG_WARNING
 				       ,	"WARNING:update_add_memlist_request"
-				" %s already added(updating)", node);
-				obj->trans = trans;
+				       " %s already added(updating)", node);
+				obj->uptime = uptime;
 			}
 			return;
 		}
 	}
-	obj = g_malloc(sizeof(leader_info_t));
+	obj = g_malloc(sizeof(update_t));
 	obj->index = idx;
-	obj->trans = trans;
+	obj->uptime = uptime;
 	UPDATE_SET_CLHEAD(tab, g_slist_append(UPDATE_GET_CLHEAD(tab), obj));
 	return;
 }
 
-/* */
-/* free all the members in the list. */
-/* */
+/* 
+ * free all the members in the list. 
+ */
 void
 update_free_memlist_request(ccm_update_t *tab) 
 {
 	uint i;
-	leader_info_t *obj;
-
+	update_t *obj;
+	
 	for (i = 0; i < g_slist_length(UPDATE_GET_CLHEAD(tab)); i++) {
-		obj = (leader_info_t *)g_slist_nth_data(
-				UPDATE_GET_CLHEAD(tab),i);
+		obj = (update_t *)g_slist_nth_data(UPDATE_GET_CLHEAD(tab),i);
 		if(obj) {
 			g_free(obj);
 		}
-
+		
 	}
 	g_slist_free(UPDATE_GET_CLHEAD(tab));
 	UPDATE_SET_CLHEAD(tab, NULL);
 }
 
-/* */
-/* set up the context to traverse the list of  */
-/* cluster leaders. */
-/* */
+/* 
+ * set up the context to traverse the list of  
+ * cluster leaders. 
+ */
 void *
 update_initlink(ccm_update_t *tab)
 {
@@ -101,64 +91,58 @@ update_initlink(ccm_update_t *tab)
 }
 
 
-/* */
-/* return name of the cluster leader in the next element in the list. */
-/* */
+/* 
+ * return name of the cluster leader in the next element in the list. 
+ */
 char *
-update_next_link(ccm_update_t *tab, llm_info_t *llm, void *tr, uint *trans)
+update_next_link(ccm_update_t *tab, llm_info_t *llm, void *tr, uint *uptime)
 {
-	leader_info_t *node;
+	update_t *node;
 	GSList **track = (GSList **)tr;
 
-	node = (leader_info_t *)g_slist_nth_data((*track),0);
+	node = (update_t *)g_slist_nth_data((*track),0);
 	if(node==NULL) {
 		return NULL;
 	}
 
-	*trans = node->trans;
+	*uptime = node->uptime;
 	*track = g_slist_next(*track);
 	return (LLM_GET_NODEID(llm, node->index));
 }
 
-/* */
-/* free the context used for cluster leader link traversal. */
-/* */
+/* 
+ * free the context used for cluster leader link traversal. 
+ */
 void
 update_freelink(ccm_update_t *tab, void *track)
 {
 	g_free(track);
 	return;
 }
-/* */
-/* END of Functions that keeps track of the memlist request messages from */
-/* cluster leaders. */
-/* */
 
 
-/* */
-/* clear all the information that we are tracking. */
-/* */
+/*
+ * clear all the information that we are tracking. 
+ */
 void
 update_reset(ccm_update_t *tab)
 {
 	int i;
-
+	
 	UPDATE_SET_LEADER(tab, -1);
 	UPDATE_SET_NODECOUNT(tab, 0);
 	for ( i = 0 ; i < MAXNODE; i++ ) {
 		UPDATE_SET_INDEX(tab, i, -1);
 		UPDATE_SET_UPTIME(tab, i, -1);
 	}
-	/* also note down the time. this should help us in 
-	 *  determining when to timeout
- 	 */
 	UPDATE_SET_INITTIME(tab, ccm_get_time());
 	update_free_memlist_request(tab);
 }
 
-/* */
-/* initialize our datastructures. */
-/* */
+/* 
+ * initialize our datastructures. 
+ */
+
 void
 update_init(ccm_update_t *tab)
 {
@@ -166,10 +150,10 @@ update_init(ccm_update_t *tab)
 	update_reset(tab);
 }
 
-/* */
-/* return TRUE if sufficient time has expired since update messages */
-/* were exchanged. */
-/* */
+/* 
+ * return TRUE if sufficient time has expired since update messages 
+ * were exchanged. 
+ */
 int
 update_timeout_expired(ccm_update_t *tab, unsigned long timeout)
 {
@@ -177,67 +161,55 @@ update_timeout_expired(ccm_update_t *tab, unsigned long timeout)
 }
 
 
-/* */
-/* return TRUE if we have received any update messages at all. */
-/* */
-int
-update_any(ccm_update_t *tab)
-{
-	if (UPDATE_GET_LEADER(tab) == -1) {
-		return FALSE;
-	}
-
-	return TRUE;
-}
-
-/* */
-/* given two members return the leader. */
-/* */
-/* */
+/*
+ * given two members return the leader. 
+ */
 static uint
 update_compute_leader(ccm_update_t *tab, uint j, llm_info_t *llm)
 {
-	update_t *entry1, *entry2;
+	update_t *entry;
+	update_t *leader_entry;
 	int value;
-
+	
 	int leader = tab->leader;
 
 	if(leader == -1) {
 		return j;
 	}
-
-	entry1 = &(tab->update[j]);
-
-	entry2 = &(tab->update[leader]);
-
-
-	if ((entry2->uptime == 0)  
-	    &&  (entry1->uptime == 0)) {
-		goto leader_str;
+	
+	entry = &(tab->update[j]);	
+	leader_entry = &(tab->update[leader]);
+	
+	
+	if (leader_entry->uptime == entry->uptime){
+		goto namecompare;
 	}
 
-	if (entry1->uptime == 0) {
+	if (leader_entry->uptime ==0){
+		return j;
+	}
+	if (entry->uptime == 0){
+		return leader;
+	}
+	
+	if (leader_entry->uptime < entry->uptime) {
 		return leader;
 	}
 
-	if (entry2->uptime == 0) {
+	if (leader_entry->uptime > entry->uptime) {
 		return j;
 	}
 
-	if (entry2->uptime < entry1->uptime) {
-		return leader;
+ namecompare:
+	value =  llm_nodeid_cmp(llm, leader_entry->index, 
+				entry->index);
+
+	if (value == 0){
+		cl_log(LOG_ERR, "same id comparsion?");
+		abort();
 	}
-
-	if (entry2->uptime > entry1->uptime) {
-		return j;
-	}
-
-leader_str :
-	value =  llm_nodeid_cmp(llm, entry2->index, entry1->index);
-
-	assert(value != 0);
-
-	if (value < 0) {
+	
+	if (value > 0) {
 		return leader;
 	}
 
@@ -252,7 +224,8 @@ update_display(int pri,llm_info_t* llm, ccm_update_t* tab)
 	cl_log(pri, "diplaying update information: ");
 	cl_log(pri, "leader=%d(%s) nodeCount=%d", 
 	       tab -> leader,
-	       (tab->leader<0 || tab->leader >= (int)LLM_GET_NODECOUNT(llm))?"":LLM_GET_NODEID(llm, tab->update[tab->leader].index),
+	       (tab->leader<0 || tab->leader >= (int)LLM_GET_NODECOUNT(llm))?
+	       "":LLM_GET_NODEID(llm, tab->update[tab->leader].index),
 	       tab->nodeCount);
 	
  	for ( i = 0; i < LLM_GET_NODECOUNT(llm); i++){
@@ -265,10 +238,10 @@ update_display(int pri,llm_info_t* llm, ccm_update_t* tab)
 	}
 }
 
-/* */
-/* given the current members, choose the leader. 
-* set the leader and return the leader as well
-*
+/* 
+ * given the current members, choose the leader. 
+ * set the leader and return the leader as well
+ *
  */
 static int
 update_find_leader(ccm_update_t *tab, llm_info_t *llm) 
@@ -305,20 +278,20 @@ update_find_leader(ccm_update_t *tab, llm_info_t *llm)
 }
 
 
-/* return the index of the 'orig' node in the update table. */
+/* return the index of the node in the update table. */
 static int
-update_get_index(ccm_update_t *tab,
-		llm_info_t *llm,
-		const char *orig)
+update_get_position(ccm_update_t *tab,
+		 llm_info_t *llm,
+		 const char *nodename)
 {
 	int i;
 	uint j;
-
-	i = llm_get_index(llm, orig);
+	
+	i = llm_get_index(llm, nodename);
 	if ( i == -1 ){
 		return -1;
 	}
-
+	
 	/* search for the index in the update table */
 	for ( j = 0 ; j < LLM_GET_NODECOUNT(llm); j++ ){
 		if (UPDATE_GET_INDEX(tab,j) == i ){
@@ -357,43 +330,38 @@ update_get_uptime(ccm_update_t *tab,
 	return -1;
 }
 
-/* */
-/* return TRUE if 'orig' had participated in the update voting round. */
-/* */
+/* 
+ * return TRUE if the node had participated in the update voting round. 
+ *
+ */
 int
-update_is_member(ccm_update_t *tab,
-		llm_info_t *llm,
-		const char *orig)
+update_is_node_updated(ccm_update_t *tab,
+		       llm_info_t *llm,
+		       const char *node)
 {
-	if(update_get_index(tab, llm, orig) == -1 ){
+	if(update_get_position(tab, llm, node) == -1 ){
 		return FALSE;
 	}
 	return TRUE;
 }
-	
 
-/* */
-/* Update the vote of 'orig' node in the update table. */
-/* */
+
+/* 
+ * Update the vote of the node in the update table. 
+ */
 void
 update_add(ccm_update_t *tab, 
-		llm_info_t *llm, 
-		const char *orig,
-		int  uptime /*incidently its the transition number 
-			      when the node
-			     joined*/,
-		gboolean leader_flag /* should the leader be recomputed? */)
+	   llm_info_t *llm, 
+	   const char *nodename,
+	   int  uptime,
+	   gboolean leader_flag)
 {
 	int i;
 	uint j;
-
-	/* find the location of the hostname in the llm table */
-	i = llm_get_index(llm, orig);
-
+	
+	i = llm_get_index(llm, nodename);
+	
 	if( i == -1 ) {
-		/* something wrong. Better printout a error and exit 
-	 	* Lets catch this bug
-	 	*/
 		cl_log(LOG_ERR, "ccm_update_table:Internal Logic error i=%d",
 				i);
 		exit(1);
@@ -407,29 +375,22 @@ update_add(ccm_update_t *tab,
 		if (UPDATE_GET_INDEX(tab,j) == -1 ){
 			break;
 		}
-
-		/* check if this update is a duplicate update from the same node
-		 * This should not happen. But never know! 
-		*/
+		
 		if(i == UPDATE_GET_INDEX(tab,j)){
 			cl_log(LOG_ERR, "ccm_update_table:duplicate entry %s",
-						orig);
+			       nodename);
 			return;
 		}
 	}
-
+	
 	if( j == LLM_GET_NODECOUNT(llm) ) {
-		/* something wrong. Better printout a error and exit 
-	 	* Lets catch this bug
-	 	*/
 		cl_log(LOG_ERR, "ccm_update_table:Internal Logic error j=%d",
-				j);
+		       j);
 		exit(1);
 	}
-
+	
 	UPDATE_SET_INDEX(tab,j,i);
 	UPDATE_SET_UPTIME(tab,j,uptime);
-	/* increment the nodecount */
 	UPDATE_INCR_NODECOUNT(tab);
 
 	if(leader_flag) {
@@ -440,113 +401,110 @@ update_add(ccm_update_t *tab,
 
 
 
-/* */
-/* remove the vote of 'orig' from the update table. */
-/* */
+/* 
+ * remove the vote of a node from the update table. 
+ */
 void
 update_remove(ccm_update_t *tab, 
 	      llm_info_t *llm, 
-		const char *orig)
+		const char *nodename)
 {
 	int j, idx;
-	leader_info_t *obj;
+	update_t *obj;
 	int i=0;
 
-	/* find this entry's location in the update table */
-	j = update_get_index(tab, llm, orig);
+	j = update_get_position(tab, llm, nodename);
 	if( j == -1 ) {
-		/* dont worry. Just return */
 		return;
 	}
-
+	
 	UPDATE_SET_UPTIME(tab, j, 0);
 	UPDATE_SET_INDEX(tab, j, -1);
 	UPDATE_DECR_NODECOUNT(tab);
 	/* remove any request cached in our queue from this node */
-	idx =  llm_get_index(llm, orig);
-	while((obj = (leader_info_t *)g_slist_nth_data(tab->cl_head,i)) 
-			!= NULL) {
+	idx =  llm_get_index(llm, nodename);
+	while((obj = (update_t *)g_slist_nth_data(tab->cl_head,i)) 
+	      != NULL) {
 		if(obj->index == idx){
 			tab->cl_head = g_slist_remove(tab->cl_head, obj);
 		} else {
 			i++;
 		}
 	}
-
+	
 	/* recalculate the new leader if leader's entry is being removed*/
 	if (UPDATE_GET_LEADER(tab) != j) {
 		return;
 	}
-
+	
 	UPDATE_SET_LEADER(tab,update_find_leader(tab, llm));
 	return;
 }
 
 
 
-/* */
-/* return TRUE if I am the leader among the members that have */
-/* voted in this round of update exchanges. */
-/* */
+/* 
+ * return TRUE if I am the leader among the members that have 
+ * voted in this round of update exchanges. 
+ */
 int
 update_am_i_leader(ccm_update_t *tab, 
 		llm_info_t *llm)
 {
-	int leader_slot = UPDATE_GET_LEADER(tab);
-	if (LLM_GET_MYNODE(llm) == UPDATE_GET_INDEX(tab,leader_slot)) {
+	int leader = UPDATE_GET_LEADER(tab);
+	if (llm_get_myindex(llm) == UPDATE_GET_INDEX(tab,leader)) {
 		return TRUE;
 	}
 	return FALSE;
 }
 
 
-/* */
-/* return the name of the cluster leader. */
-/* */
+/*
+ * return the name of the cluster leader. 
+ */
 char *
 update_get_cl_name(ccm_update_t *tab,
-		llm_info_t *llm)
+		   llm_info_t *llm)
 {
-	int leader_slot = UPDATE_GET_LEADER(tab);
-	return(LLM_GET_NODEID(llm,UPDATE_GET_INDEX(tab,leader_slot)));
+	int leader = UPDATE_GET_LEADER(tab);
+	return(LLM_GET_NODEID(llm,UPDATE_GET_INDEX(tab,leader)));
 }
 
 
 
 
-/* */
-/* return the uuid of the next member who has voted in the update */
-/* message transfer round. */
-/* */
+/*
+ * return the uuid of the next member who has voted in the update
+ * message transfer round. 
+ */
 int
-update_get_next_uuid(ccm_update_t *tab, llm_info_t *llm, int *lastindex)
+update_get_next_index(ccm_update_t *tab, llm_info_t *llm, int *nextposition)
 {
-	uint indx;
-
-	if (*lastindex < -1 || *lastindex >= (int)LLM_GET_NODECOUNT(llm)) {
+	uint pos;
+	
+	if (*nextposition < -1 || *nextposition >= (int)LLM_GET_NODECOUNT(llm)) {
 			return -1;
 	}
-
-	indx = (*lastindex == -1 ? 0 : *lastindex);
-
-	while (UPDATE_GET_INDEX(tab,indx) == -1 && 
-	       indx < LLM_GET_NODECOUNT(llm)){ 
-		indx++;
+	
+	pos = (*nextposition == -1 ? 0 : *nextposition);
+	*nextposition = pos + 1;
+	
+	while (UPDATE_GET_INDEX(tab,pos) == -1 && 
+	       pos < LLM_GET_NODECOUNT(llm)){ 
+		pos++;
 	}
-	if (indx == LLM_GET_NODECOUNT(llm)) {
+	if (pos == LLM_GET_NODECOUNT(llm)) {
 		return -1;
 	}
 	
-	*lastindex = indx+1;
-	
-	return UPDATE_GET_INDEX(tab,indx);
+	return UPDATE_GET_INDEX(tab, pos);
 }
 
-/* */
-/* create a string that represents the members of the update */
-/* round, and return it through the memlist parameter. */
-/* also return the size of the string. */
-/* */
+/* 
+ * create a string that represents the members of the update 
+ * round, and return it through the memlist parameter. 
+ * also return the size of the string. 
+ */
 int 
 update_strcreate(ccm_update_t *tab,
 		 char *memlist,
@@ -557,21 +515,14 @@ update_strcreate(ccm_update_t *tab,
 	unsigned char *bitmap;
 	int str_len;
 
-	/* create a bitmap that can accomodate MAXNODE bits */
 	bitmap_create(&bitmap, MAXNODE);
 
-
-	/* for each node in the update list, find its uuid and
-	 * correspondingly set its bit in the bitmap 
-	 */
 	for ( i = 0 ; i < LLM_GET_NODECOUNT(llm); i ++ ) {
-		/* get the index of the node in the llm table */
 		indx = UPDATE_GET_INDEX(tab,i);
 		if (indx == -1){
 			continue;
 		}
 
-		/* set this bit in the bitmap */
 		bitmap_mark(indx, bitmap, MAXNODE);
 	}
 
