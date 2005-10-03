@@ -47,8 +47,11 @@ usr/lib/heartbeat/cib
 usr/lib/heartbeat/cibadmin
 usr/lib/heartbeat/cibmon
 usr/lib/heartbeat/clmtest
+usr/lib/heartbeat/crm_attribute
 usr/lib/heartbeat/crm_diff
+usr/lib/heartbeat/crm_master
 usr/lib/heartbeat/crm_mon
+usr/lib/heartbeat/crm_standby
 usr/lib/heartbeat/crmadmin
 usr/lib/heartbeat/crmd
 usr/lib/heartbeat/crmtest/1node.sh

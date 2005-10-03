@@ -26,9 +26,13 @@ case "$1" in
         rm -f /var/lib/heartbeat/fifo
         mknod -m 0600 /var/lib/heartbeat/fifo p
 
-	chmod 750 /var/lib/heartbeat/ccm
-        chown hacluster /var/lib/heartbeat/ccm
-        chgrp haclient /var/lib/heartbeat/ccm
+	for i in /var/lib/heartbeat/ccm /var/lib/heartbeat/crm \
+			/var/run/heartbeat/ccm /var/run/heartbeat/crm; do
+		chmod 750 $i
+		chown hacluster $i
+		chgrp haclient $i
+	done
+
 
 	chmod 2555 /usr/bin/cl_status
 	chgrp haclient /usr/bin/cl_status

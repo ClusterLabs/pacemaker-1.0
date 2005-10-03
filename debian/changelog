@@ -2,7 +2,14 @@ heartbeat-2 (2.0.3-1) unstable; urgency=low
 
   * New Upstream
 
- -- Simon Horman <horms@debian.org>  Tue, 27 Sep 2005 22:42:07 +0900
+ -- Simon Horman <horms@debian.org>  Mon,  3 Oct 2005 14:52:41 +0900
+
+heartbeat-2 (2.0.2-4) unstable; urgency=low
+
+  * Include /var/lib/heartbeat/ccm and /var/run/heartbeat/crm
+    (closes: #330634)
+
+ -- Simon Horman <horms@debian.org>  Thu, 29 Sep 2005 12:16:03 +0900
 
 heartbeat-2 (2.0.2-3) unstable; urgency=low
 
