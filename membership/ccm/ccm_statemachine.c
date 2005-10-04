@@ -1,4 +1,4 @@
-/* $Id: ccm_statemachine.c,v 1.5 2005/10/04 11:36:59 davidlee Exp $ */
+/* $Id: ccm_statemachine.c,v 1.6 2005/10/04 15:45:49 gshi Exp $ */
 /* 
  * ccm.c: Consensus Cluster Service Program 
  *
@@ -516,7 +516,7 @@ ccm_memcomp_note(ccm_info_t *info, const char *orig,
 		uint32_t maxtrans, const char *memlist)
 {
 	int index, numbytes;
-	unsigned char *bitmap = NULL;
+	char *bitmap = NULL;
 	uint32_t *ptr;
 	memcomp_t *mem_comp = CCM_GET_MEMCOMP(info);
 
@@ -632,7 +632,7 @@ ccm_memcomp_timeout(ccm_info_t *info, long timeout)
 }
 
 static int
-ccm_memcomp_get_maxmembership(ccm_info_t *info, unsigned char **bitmap)
+ccm_memcomp_get_maxmembership(ccm_info_t *info, char **bitmap)
 {
 	GSList *head;
 	uint32_t *ptr;
@@ -665,7 +665,7 @@ ccm_memcomp_get_maxmembership(ccm_info_t *info, unsigned char **bitmap)
 static int 
 ccm_am_i_member(ccm_info_t *info, const char *memlist)
 {
-	unsigned char *bitmap = NULL;
+	char *bitmap = NULL;
 	int numBytes, myindex;
 	llm_info_t *llm;
 
@@ -876,7 +876,7 @@ ccm_send_join_reply(ll_cluster_t *hb, ccm_info_t *info)
 static void
 ccm_compute_and_send_final_memlist(ll_cluster_t *hb, ccm_info_t *info)
 {
-	unsigned char *bitmap;
+	char *bitmap;
 	uint maxtrans;
 	char string[MAX_MEMLIST_STRING];
 	char *cookie = NULL;
@@ -1078,7 +1078,7 @@ ccm_readmsg(ccm_info_t *info, ll_cluster_t *hb)
 static void
 ccm_joining_to_joined(ll_cluster_t *hb, ccm_info_t *info)
 {
-	unsigned char *bitmap;
+	char *bitmap;
 	char *cookie = NULL;
 
 	/* create a bitmap with the membership information */
@@ -1138,7 +1138,7 @@ static void
 ccm_init_to_joined(ccm_info_t *info)
 {
 	int numBytes;
-	unsigned char *bitlist;
+	char *bitlist;
 	char *cookie;
 
 	numBytes = bitmap_create(&bitlist, MAXNODE);
@@ -2623,7 +2623,7 @@ switchstatement:
 				break;
 			}
 
-			ccm_fill_memlist_from_str(info, (const unsigned char *)memlist);
+			ccm_fill_memlist_from_str(info, (const char *)memlist);
 			/* increment the major transition number and reset the
 			 * minor transition number
 			 */
@@ -3446,7 +3446,7 @@ static void ccm_state_wait_for_mem_list(enum ccm_type ccm_msg_type,
 				return;
 			}
 
-			ccm_fill_memlist_from_str(info, (const unsigned char *)memlist);
+			ccm_fill_memlist_from_str(info, (const char *)memlist);
 			CCM_SET_MAJORTRANS(info, curr_major+1);
 			CCM_RESET_MINORTRANS(info);
 			if ((cookie = ha_msg_value(reply, CCM_NEWCOOKIE))
@@ -3614,7 +3614,7 @@ static void send_mem_list_to_all(ll_cluster_t *hb,
 		ccm_info_t *info, char *cookie)
 {
 	int numBytes, i, size, strsize,  j, tmp, tmp_mem[100];
-	unsigned char *bitmap;
+	char *bitmap;
 	char memlist[MAX_MEMLIST_STRING];
 	int *uptime;
     
@@ -3742,7 +3742,7 @@ static void ccm_state_new_node_wait_for_mem_list(enum ccm_type ccm_msg_type,
 				return;
 			}
 			
-			ccm_fill_memlist_from_str(info, (const unsigned char *)memlist);
+			ccm_fill_memlist_from_str(info, (const char *)memlist);
 			if(ccm_get_membership_index(info, 
 					CCM_GET_MYNODE_ID(info)) == -1){
 				version_reset(CCM_GET_VERSION(info));

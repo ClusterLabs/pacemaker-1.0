@@ -1,4 +1,4 @@
-/* $Id: ccm.h,v 1.44 2005/10/03 21:19:01 gshi Exp $ */
+/* $Id: ccm.h,v 1.45 2005/10/04 15:45:49 gshi Exp $ */
 /*
  * ccm.h: definitions Consensus Cluster Manager internal header
  *				file
@@ -240,9 +240,9 @@ void	update_display(int pri,llm_info_t* llm, ccm_update_t* tab);
 /* BEGINNING OF graph interfaces */
 
 typedef struct vertex_s {
-                unsigned char  *bitmap; /* bitmap sent by each node */
-                int    count;   /* connectivity number for each node */
-                int    uuid;   /* the uuid of the node */
+	char  *bitmap; /* bitmap sent by each node */
+	int    count;   /* connectivity number for each node */
+	int    uuid;   /* the uuid of the node */
 } vertex_t;
 
 typedef struct graph_s {
@@ -254,24 +254,24 @@ typedef struct graph_s {
 graph_t * graph_init(void);
 void graph_free(graph_t *);
 void graph_add_uuid(graph_t *, int );
-void graph_update_membership(graph_t *, int , unsigned char *);
+void graph_update_membership(graph_t *, int , char *);
 int  graph_filled_all(graph_t *);
-int graph_get_maxclique(graph_t *, unsigned char **);
+int graph_get_maxclique(graph_t *, char **);
 void graph_add_to_membership(graph_t *, int, int);
 /* END OF graph interfaces */
 
 
 /* BEGINNING OF bitmap interfaces */
-int bitmap_create(unsigned char **, int);
-void bitmap_delete(unsigned char *);
-void bitmap_mark(int, unsigned char *, int);
-void bitmap_clear(int, unsigned char *, int);
-int bitmap_test(int, const unsigned char *, int);
-int bitmap_count(const unsigned char *, int);
-void bitmap_print(unsigned char *, int, char *);
-void bitmap_reset(unsigned char *, int);
+int bitmap_create(char **, int);
+void bitmap_delete(char *);
+void bitmap_mark(int, char *, int);
+void bitmap_clear(int, char *, int);
+int bitmap_test(int, const char *, int);
+int bitmap_count(const char *, int);
+void bitmap_print(char *, int, char *);
+void bitmap_reset(char *, int);
 int  bitmap_size(int);
-int  bitmap_copy(unsigned char *, unsigned char *);
+int  bitmap_copy(char *, char *);
 /* END OF bitmap interfaces */
 
 

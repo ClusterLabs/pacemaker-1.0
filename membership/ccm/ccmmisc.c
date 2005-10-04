@@ -1,4 +1,4 @@
-/* $Id: ccmmisc.c,v 1.22 2005/10/04 09:23:38 horms Exp $ */
+/* $Id: ccmmisc.c,v 1.23 2005/10/04 15:45:49 gshi Exp $ */
 /* 
  * ccmmisc.c: Miscellaneous Consensus Cluster Service functions
  *
@@ -27,9 +27,34 @@
 #endif
 #include "ccmmisc.h"
 
+
+void            
+ccm_log(int priority, const char * fmt, ...) G_GNUC_PRINTF(2,3);
+void
+ccm_log(int pri, const char* fmt, ...){
+
+	va_list		ap;
+	char		buf[MAXLINE];
+	int		nbytes;
+	char*		p =  buf;
+
+	buf[MAXLINE-1] = 0;	
+	nbytes = snprintf(p, MAXLINE, "%s:", __FUNCTION__);
+	p += nbytes;
+	va_start(ap, fmt);
+	nbytes += vsnprintf(p, MAXLINE - nbytes, fmt, ap);
+	va_end(ap);
+	
+	if (nbytes >= (ssize_t)sizeof(buf)){
+		nbytes =  sizeof(buf) -1 ;
+	}
+	cl_log(pri, "%s", buf);
+}
+
+
 #if 1
 int
-ccm_bitmap2str(const unsigned char *bitmap, char* memlist, int size)
+ccm_bitmap2str(const char *bitmap, char* memlist, int size)
 {
 	int	num_member = 0;
 	char*	p;
@@ -55,7 +80,7 @@ ccm_bitmap2str(const unsigned char *bitmap, char* memlist, int size)
 
 
 int
-ccm_str2bitmap(const unsigned char *_memlist, int size, unsigned char *bitmap)
+ccm_str2bitmap(const char *_memlist, int size, char *bitmap)
 {
 	char	memlist[MAX_MEMLIST_STRING];
 	char*	p;
@@ -86,7 +111,7 @@ ccm_str2bitmap(const unsigned char *_memlist, int size, unsigned char *bitmap)
 #else
 
 int
-ccm_str2bitmap(const char *memlist, unsigned char **bitlist)
+ccm_str2bitmap(const char *memlist, char **bitlist)
 {
 	size_t str_len =  strlen(memlist);
 	int    outbytes = B64_maxbytelen(str_len);
@@ -95,7 +120,7 @@ ccm_str2bitmap(const char *memlist, unsigned char **bitlist)
 	   	return bitmap_create(bitlist, MAXNODE);
 	}
 
-	while ((*bitlist = (unsigned  char *)g_malloc(outbytes)) == NULL) {
+	while ((*bitlist = (  char *)g_malloc(outbytes)) == NULL) {
 		cl_shortsleep();
 	}
 	memset(*bitlist,0,outbytes);
@@ -106,7 +131,7 @@ ccm_str2bitmap(const char *memlist, unsigned char **bitlist)
 }
 
 int
-ccm_bitmap2str(const unsigned char *bitmap, int numBytes, char **memlist)
+ccm_bitmap2str(const char *bitmap, int numBytes, char **memlist)
 {
 	int maxstrsize;
 
@@ -201,7 +226,7 @@ ccm_check_memoryleak(void)
  * 
  */
 
-static unsigned char *leave_bitmap=NULL;
+static  char *leave_bitmap=NULL;
 
 void
 leave_init(void)
@@ -279,7 +304,7 @@ ccm_memlist_changed(ccm_info_t *info,
 	for ( i = 0 ; i < nodeCount; i++ ) {
 		indx = CCM_GET_MEMINDEX(info, i);
 		assert(indx >=0 && indx < LLM_GET_NODECOUNT(llm));
-		if (!bitmap_test(indx, (unsigned char *)bitmap, MAXNODE)){
+		if (!bitmap_test(indx, ( char *)bitmap, MAXNODE)){
 			return TRUE;
 		}
 	}
@@ -288,7 +313,7 @@ ccm_memlist_changed(ccm_info_t *info,
 
 int 
 ccm_fill_memlist(ccm_info_t *info, 
-	const unsigned char *bitmap)
+	const char *bitmap)
 {
 	llm_info_t *llm;
 	uint i;
@@ -309,7 +334,7 @@ int
 ccm_fill_memlist_from_str(ccm_info_t *info, 
 			  const char *memlist)
 {
-	unsigned char *bitmap = NULL;
+	 char *bitmap = NULL;
 	int ret;
 	
 	bitmap_create(&bitmap, MAXNODE);
@@ -317,7 +342,7 @@ ccm_fill_memlist_from_str(ccm_info_t *info,
 		cl_log(LOG_ERR, "bitmap creation failure");
 		return HA_FAIL;
 	}
-	if (ccm_str2bitmap((const unsigned char *) memlist, strlen(memlist), 
+	if (ccm_str2bitmap((const  char *) memlist, strlen(memlist), 
 			   bitmap) < 0){
 		return HA_FAIL;
 	}
@@ -330,7 +355,7 @@ ccm_fill_memlist_from_str(ccm_info_t *info,
 									
 int 
 ccm_fill_memlist_from_bitmap(ccm_info_t *info, 
-	const unsigned char *bitmap)
+	const char *bitmap)
 {
 	return ccm_fill_memlist(info, bitmap);
 }

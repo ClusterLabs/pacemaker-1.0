@@ -1,4 +1,4 @@
-/* $Id: ccmupdate.c,v 1.17 2005/10/03 21:19:01 gshi Exp $ */
+/* $Id: ccmupdate.c,v 1.18 2005/10/04 15:45:49 gshi Exp $ */
 /* 
  * update.c: functions that track the votes during the voting protocol
  *
@@ -512,7 +512,7 @@ update_strcreate(ccm_update_t *tab,
 {
 	uint i;
 	int	indx;
-	unsigned char *bitmap;
+	char *bitmap;
 	int str_len;
 
 	bitmap_create(&bitmap, MAXNODE);
