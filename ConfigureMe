@@ -109,7 +109,7 @@ ConfigureLinux() {
 
 ConfigureAIX() {
   CFENV="AIX (freeware toolbox)"
-  FLAGS="--prefix /opt/freeware"
+  FLAGS="--disable-ldirectord --prefix /opt/freeware"
 }
 
 ConfigureFreeBSD() {
@@ -118,28 +118,28 @@ ConfigureFreeBSD() {
 }
 
 ConfigureOpenBSD() {
-  FLAGS="--prefix=/usr/local --sysconfdir=/usr/local/etc --localstatedir=/usr/local/var"
+  FLAGS="--disable-ldirectord --prefix=/usr/local --sysconfdir=/usr/local/etc --localstatedir=/usr/local/var"
   CFENV="OpenBSD"
 }
 
 ConfigureNetBSD() {
-  FLAGS="--prefix=/usr/local --sysconfdir=/usr/local/etc --localstatedir=/usr/local/var"
+  FLAGS="--disable-ldirectord --prefix=/usr/local --sysconfdir=/usr/local/etc --localstatedir=/usr/local/var"
   CFENV="NetBSD"
 }
 
 ConfigureGenericBSD() {
-  FLAGS="--prefix=/usr/local --sysconfdir=/usr/local/etc --localstatedir=/usr/local/var"
+  FLAGS="--disable-ldirectord --prefix=/usr/local --sysconfdir=/usr/local/etc --localstatedir=/usr/local/var"
   CFENV="Generic BSD"
 }
 
 ConfigureSolaris() {
-  FLAGS="--prefix=/opt --sysconfdir=/opt/etc --localstatedir=/opt/var"
+  FLAGS="--disable-ldirectord --prefix=/opt --sysconfdir=/opt/etc --localstatedir=/opt/var"
   CFENV="Solaris"
   PACKAGECMD="$MAKE_CMD pkg"
 }
 
 ConfigureDarwin() {
-  FLAGS="--prefix=/sw --sysconfdir=/sw/etc --localstatedir=/sw/var --with-initdir=/private/etc/mach_init.d --enable-fatal-warnings=yes --with-group-id=65 --with-ccmuser-id=65"
+  FLAGS="--disable-ldirectord --prefix=/sw --sysconfdir=/sw/etc --localstatedir=/sw/var --with-initdir=/private/etc/mach_init.d --enable-fatal-warnings=yes --with-group-id=65 --with-ccmuser-id=65"
   export CFENV="Darwin"
 #  export LDFLAGS="${LDFLAGS} -bind_at_load -fno-common"
   export LIBS="$LIBS -L/usr/lib -L/sw/lib"
@@ -148,7 +148,7 @@ ConfigureDarwin() {
 
 ConfigureGenericUNIX() {
   echo "Configuring for generic UNIX system"
-  FLAGS="--prefix=/usr --sysconfdir=/etc --localstatedir=/var"
+  FLAGS="--disable-ldirectord --prefix=/usr --sysconfdir=/etc --localstatedir=/var"
   CFENV="Generic UNIX"
 }
 
