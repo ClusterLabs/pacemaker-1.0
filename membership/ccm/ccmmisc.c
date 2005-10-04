@@ -1,4 +1,4 @@
-/* $Id: ccmmisc.c,v 1.21 2005/10/01 02:01:56 gshi Exp $ */
+/* $Id: ccmmisc.c,v 1.22 2005/10/04 09:23:38 horms Exp $ */
 /* 
  * ccmmisc.c: Miscellaneous Consensus Cluster Service functions
  *
@@ -55,7 +55,7 @@ ccm_bitmap2str(const unsigned char *bitmap, char* memlist, int size)
 
 
 int
-ccm_str2bitmap(const char *_memlist, int size, unsigned char *bitmap)
+ccm_str2bitmap(const unsigned char *_memlist, int size, unsigned char *bitmap)
 {
 	char	memlist[MAX_MEMLIST_STRING];
 	char*	p;
@@ -70,7 +70,7 @@ ccm_str2bitmap(const char *_memlist, int size, unsigned char *bitmap)
 	}
 	
 	memset(memlist, 0, MAX_MEMLIST_STRING);
-	strncpy(memlist, _memlist, size);
+	memcpy(memlist, _memlist, size);
 
 	p = strtok(memlist, " ");
 	while ( p != NULL){
@@ -307,7 +307,7 @@ ccm_fill_memlist(ccm_info_t *info,
 
 int 
 ccm_fill_memlist_from_str(ccm_info_t *info, 
-			  const unsigned char *memlist)
+			  const char *memlist)
 {
 	unsigned char *bitmap = NULL;
 	int ret;
@@ -317,7 +317,8 @@ ccm_fill_memlist_from_str(ccm_info_t *info,
 		cl_log(LOG_ERR, "bitmap creation failure");
 		return HA_FAIL;
 	}
-	if (ccm_str2bitmap(memlist,strlen(memlist), bitmap) < 0){
+	if (ccm_str2bitmap((const unsigned char *) memlist, strlen(memlist), 
+			   bitmap) < 0){
 		return HA_FAIL;
 	}
 	

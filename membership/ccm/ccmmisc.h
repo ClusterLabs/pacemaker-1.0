@@ -22,7 +22,7 @@
 
 int		ccm_bitmap2str(const unsigned char *bitmap, 
 			       char* memlist, int size);
-int		ccm_str2bitmap(const char *_memlist, 
+int		ccm_str2bitmap(const unsigned char *_memlist, 
 			       int size, unsigned char *bitmap);
 
 void		leave_init(void);
@@ -34,7 +34,7 @@ int		leave_any(void);
 
 int	ccm_memlist_changed(ccm_info_t *info,char *bitmap);
 int	ccm_fill_memlist(ccm_info_t *info, const unsigned char *bitmap);
-int	ccm_fill_memlist_from_str(ccm_info_t *info, const unsigned char *memlist);
+int	ccm_fill_memlist_from_str(ccm_info_t *info, const char *memlist);
 int	ccm_fill_memlist_from_bitmap(ccm_info_t *info, 	const unsigned char *bitmap);
 int	ccm_get_membership_index(ccm_info_t *info, const char *node);
 gboolean node_is_member(ccm_info_t* info, const char* node);
