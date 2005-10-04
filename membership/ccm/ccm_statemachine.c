@@ -1,4 +1,4 @@
-/* $Id: ccm_statemachine.c,v 1.4 2005/10/03 21:19:01 gshi Exp $ */
+/* $Id: ccm_statemachine.c,v 1.5 2005/10/04 11:36:59 davidlee Exp $ */
 /* 
  * ccm.c: Consensus Cluster Service Program 
  *
@@ -666,6 +666,8 @@ static int
 ccm_am_i_member(ccm_info_t *info, const char *memlist)
 {
 	unsigned char *bitmap = NULL;
+	int numBytes, myindex;
+	llm_info_t *llm;
 
 	bitmap_create(&bitmap, MAXNODE);
 	if (bitmap == NULL){
@@ -673,12 +675,12 @@ ccm_am_i_member(ccm_info_t *info, const char *memlist)
 		return FALSE;
 	}
 	
-	int numBytes = ccm_str2bitmap(memlist, strlen(memlist), bitmap);
+	numBytes = ccm_str2bitmap(memlist, strlen(memlist), bitmap);
 	
 	/* what is my node Uuid */
-	llm_info_t *llm = CCM_GET_LLM(info);
+	llm = CCM_GET_LLM(info);
 
-	int myindex = llm_get_myindex(llm);
+	myindex = llm_get_myindex(llm);
 	
 	if (bitmap_test(myindex, bitmap, numBytes*BitsInByte)){
 		bitmap_delete(bitmap);
