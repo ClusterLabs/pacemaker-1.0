@@ -51,6 +51,22 @@ uuid_hash(gconstpointer key)
 	return h;
 }
 
+static int
+string_hash(const char* key)
+{
+	const char *p = key;
+	const char *pmax = p + strlen(key);
+	guint h = *p;
+	
+	if (h){
+		for (p += 1; p < pmax; p++){
+			h = (h << 5) - h + *p;
+		}
+	}
+	
+	return h;
+}
+
 gint
 uuid_equal(gconstpointer v, gconstpointer v2)
 {
@@ -270,16 +286,55 @@ nodename2uuid(const char* nodename, cl_uuid_t* id)
 }
 
 
+static int
+gen_uuid_from_name(const char* nodename, cl_uuid_t* uu)
+{
+	int		seed;
+	int		value;
+	int		loops[]={8,4,4, 4, 12};
+	char		buf[UU_UNPARSE_SIZEOF];
+	char		*p = buf;
+	int		i;
+	int		j;
+
+	
+	seed = string_hash(nodename);
+	cl_log(LOG_INFO, "seed is %d", seed);
+	srand(seed);
+	
+	for(i = 0; i < 5; i++){
+		for (j = 0; j < loops[i]; j++){
+			value = rand();
+			p +=sprintf(p, "%01x", value%16);
+		}
+		if (i != 4){
+			p += sprintf(p,"-");
+		}
+	}
+	
+	if (cl_uuid_parse(buf, uu) < 0){
+		cl_log(LOG_INFO, "cl_uuid_parse failed");
+		return HA_FAIL;
+	}
+	
+	return HA_OK;
+}
+
+
 #ifndef HB_UUID_FILE
 #define HB_UUID_FILE VAR_LIB_D "/hb_uuid"
 #endif
 
 int
-GetUUID(cl_uuid_t* uuid)
+GetUUID(struct sys_config* cfg, const char* nodename, cl_uuid_t* uuid)
 {
 	int		fd;
 	int		flags = 0;
 	int		uuid_len = sizeof(uuid->uuid);
+	
+	if (cfg->uuidfromname){
+		return gen_uuid_from_name(nodename, uuid);
+	}
 	
 	if ((fd = open(HB_UUID_FILE, O_RDONLY)) > 0
 	    &&	read(fd, uuid->uuid, uuid_len) == uuid_len) {

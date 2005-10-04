@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.455 2005/09/28 20:29:55 gshi Exp $ */
+/* $Id: heartbeat.c,v 1.456 2005/10/04 19:37:06 gshi Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -762,11 +762,17 @@ initialize_heartbeat()
 	}
 	cl_log(LOG_INFO, "Heartbeat generation: %lu", config->generation);
 	
-	if(GetUUID(&config->uuid) != HA_OK){
+	if(GetUUID(config, curnode->nodename, &config->uuid) != HA_OK){
 		cl_log(LOG_ERR, "getting uuid for the local node failed");
 		return HA_FAIL;
 	}
 	
+	if (ANYDEBUG){
+		char uuid_str[UU_UNPARSE_SIZEOF];
+		cl_uuid_unparse(&config->uuid, uuid_str);
+		cl_log(LOG_DEBUG, "uuid is:%s", uuid_str);
+	}
+
 	add_uuidtable(&config->uuid, curnode);
 	cl_uuid_copy(&curnode->uuid, &config->uuid);
 	if (config->rtjoinconfig != HB_JOIN_NONE){
@@ -5555,6 +5561,12 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.456  2005/10/04 19:37:06  gshi
+ * bug 144: UUIDs need to be generatable from nodenames for some cases
+ * new directive
+ * uuidfrom <file/nodename>
+ * default to file
+ *
  * Revision 1.455  2005/09/28 20:29:55  gshi
  * change the variable debug to debug_level
  * define it in cl_log

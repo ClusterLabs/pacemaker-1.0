@@ -1,4 +1,4 @@
-/* $Id: heartbeat.h,v 1.75 2005/10/01 01:48:37 gshi Exp $ */
+/* $Id: heartbeat.h,v 1.76 2005/10/04 19:37:07 gshi Exp $ */
 /*
  * heartbeat.h: core definitions for the Linux-HA heartbeat program
  *
@@ -306,6 +306,7 @@ struct sys_config {
 	int		rereadauth;		/* 1 if we need to reread auth file */
 	seqno_t		generation;		/* Heartbeat generation # */
 	cl_uuid_t	uuid;			/* uuid for this node*/
+	int		uuidfromname;		/* do we get uuid from nodename?*/
 	hbjointype_t	rtjoinconfig;		/* Runtime join behavior */
 	int		authnum;
 	Stonith*	stonith;	/* Stonith method - r1-style cluster only */
@@ -404,7 +405,7 @@ int		inittable(void);
 gboolean	update_tables(const char* nodename, cl_uuid_t* uuid);
 struct node_info* lookup_tables(const char* nodename, cl_uuid_t* uuid);
 void		cleanuptable(void);
-int		GetUUID(cl_uuid_t* uuid);
+int		GetUUID(struct sys_config*, const char*, cl_uuid_t* uuid);
 
 #ifndef HA_HAVE_SETENV
 int setenv(const char *name, const char * value, int why);

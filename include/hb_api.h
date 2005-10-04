@@ -1,4 +1,4 @@
-/* $Id: hb_api.h,v 1.36 2005/09/15 04:14:33 alan Exp $ */
+/* $Id: hb_api.h,v 1.37 2005/10/04 19:37:07 gshi Exp $ */
 /*
  * Client-side Low-level clustering API for heartbeat.
  *
@@ -421,6 +421,7 @@ struct llc_ops {
 #define KEY_COREROOTDIR	"coreroot"
 #define KEY_REL2	"crm"
 #define KEY_AUTOJOIN	"autojoin"
+#define KEY_UUIDFROM	"uuidfrom"
 
 ll_cluster_t*	ll_cluster_new(const char * llctype);
 #endif /* __HB_API_H */

@@ -1,4 +1,4 @@
-/* $Id: config.c,v 1.177 2005/09/28 20:29:55 gshi Exp $ */
+/* $Id: config.c,v 1.178 2005/10/04 19:37:06 gshi Exp $ */
 /*
  * Parse various heartbeat configuration files...
  *
@@ -103,6 +103,7 @@ static int set_coredump(const char*);
 static int set_corerootdir(const char*);
 static int set_release2mode(const char*);
 static int set_autojoin(const char*);
+static int set_uuidfrom(const char*);
 
 /*
  * Each of these parameters is is automatically recorded by
@@ -148,6 +149,7 @@ struct directive {
 ,				"enable release 2 style resource management"}
 
 , {KEY_AUTOJOIN,  set_autojoin, TRUE, "none" ,	"set automatic join mode/style"}
+, {KEY_UUIDFROM,  set_uuidfrom, TRUE, "file" ,	"set the source for uuid"}
 };
 
 static const struct WholeLineDirective {
@@ -302,7 +304,8 @@ init_config(const char * cfgfile)
 	config->log_facility = -1;
 	config->client_list = NULL;
 	config->last_client = NULL;
-
+	config->uuidfromname = FALSE;
+	
 	curnode = NULL;
 
 	if (!parse_config(cfgfile, localnodename)) {
@@ -2127,8 +2130,29 @@ set_autojoin(const char* value)
 }
 
 
+static int
+set_uuidfrom(const char* value)
+{
+	if (strcmp(value, "file") == 0) {
+		config->uuidfromname = FALSE;
+		return HA_OK;
+	}
+	if (strcmp(value, "nodename") == 0) {
+		config->uuidfromname =  TRUE;
+		return HA_OK;
+	}
+	cl_log(LOG_ERR, "Invalid %s directive [%s]", KEY_UUIDFROM, value);
+	return HA_FAIL;
+}
+
 /*
  * $Log: config.c,v $
+ * Revision 1.178  2005/10/04 19:37:06  gshi
+ * bug 144: UUIDs need to be generatable from nodenames for some cases
+ * new directive
+ * uuidfrom <file/nodename>
+ * default to file
+ *
  * Revision 1.177  2005/09/28 20:29:55  gshi
  * change the variable debug to debug_level
  * define it in cl_log
