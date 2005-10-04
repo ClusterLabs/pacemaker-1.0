@@ -1,4 +1,4 @@
-/* $Id: ha_msg.h,v 1.65 2005/09/29 21:51:47 gshi Exp $ */
+/* $Id: ha_msg.h,v 1.66 2005/10/04 22:06:58 gshi Exp $ */
 /*
  * Intracluster message object (struct ha_msg)
  *
@@ -397,6 +397,8 @@ int		cl_msg_get_list_int(struct ha_msg* msg, const char* name,
 				    int* buf, size_t* n);
 GList*		cl_msg_get_list(struct ha_msg* msg, const char* name);
 int		cl_msg_add_list(struct ha_msg* msg, const char* name, GList* list);
+int		cl_msg_add_list_str(struct ha_msg* msg, const char* name,
+				    char** buf, size_t n);
 
 /* Function to add/get a string hash table*/
 GHashTable*	ha_msg_value_str_table(struct ha_msg * msg, const char * name);
