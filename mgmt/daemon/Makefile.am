@@ -36,6 +36,7 @@ COMMONLIBS	=  $(top_builddir)/lib/clplumbing/libplumb.la   \
 		   $(CURSESLIBS)					\
 		   $(GLIBLIB)
 		   
+LRM_DIR		= lrm
 
 pamdir 		= /etc/pam.d
 pam_DATA	= mgmtd.pam
@@ -46,13 +47,14 @@ install-data-hook:
 
 halib_PROGRAMS 	=  mgmtd
 
-mgmtd_SOURCES 	=  mgmtd.c mgmtd_gen.c mgmtd_crm.c mgmtd_hb.c
+mgmtd_SOURCES 	=  mgmtd.c mgmtd_gen.c mgmtd_crm.c mgmtd_hb.c mgmtd_lrm.c
 
 mgmtd_LDFLAGS 	=  $(top_builddir)/lib/mgmt/libmgmt.la \
 		   $(top_builddir)/lib/mgmt/libtls.la \
+		   $(top_builddir)/lib/$(LRM_DIR)/liblrm.la \
 		   $(COMMONLIBS) `libgnutls-config --libs` \
 		   -lpam -ldl
 
-mgmtd_DEPENDENCIES  = $(top_builddir)/lib/mgmt/libmgmt.la \
-		     $(top_builddir)/lib/mgmt/libtls.la
-
+mgmtd_DEPENDENCIES  = 	$(top_builddir)/lib/mgmt/libmgmt.la \
+		     	$(top_builddir)/lib/mgmt/libtls.la \
+			$(top_builddir)/lib/$(LRM_DIR)/liblrm.la
