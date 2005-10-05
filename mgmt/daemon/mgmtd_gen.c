@@ -43,8 +43,8 @@ int init_general(void);
 void final_general(void);
 
 static gboolean on_timeout(gpointer data);
-static char* on_echo(const char* msg, int id);
-static char* on_reg_evt(const char* msg, int id);
+static char* on_echo(char* argv[], int argc, int client_id);
+static char* on_reg_evt(char* argv[], int argc, int client_id);
 
 gboolean
 on_timeout(gpointer data)
@@ -54,22 +54,21 @@ on_timeout(gpointer data)
 }
 
 char* 
-on_echo(const char* msg, int id)
+on_echo(char* argv[], int argc, int client_id)
 {
-	return cl_strdup(msg);
+	char* ret = cl_strdup(MSG_OK);
+	ret = mgmt_msg_append(ret, argv[1]);
+
+	return ret;
 }
 
 char* 
-on_reg_evt(const char* msg, int id)
+on_reg_evt(char* argv[], int argc, int client_id)
 {
-	int num;
-	char** args = mgmt_msg_args(msg, &num);
-	if (num != 2) {
-		mgmt_del_args(args);
+	if (argc != 2) {
 		return cl_strdup(MSG_FAIL);
 	}
-	reg_evt(args[1], id);
-	mgmt_del_args(args);
+	reg_evt(argv[1], client_id);
 	return cl_strdup(MSG_OK);
 }
 
