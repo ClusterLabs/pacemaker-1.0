@@ -31,16 +31,16 @@
 #define	MAX_MSGLEN	4096
 #define	MAX_STRLEN	1024
 
+#define MSG_OK			"ok"
+#define MSG_FAIL		"fail"
+
 #define MSG_LOGIN		"login"
 #define MSG_LOGOUT		"logout"
 #define MSG_ECHO		"echo"
 #define MSG_TEST		"test"
 #define MSG_REGEVT		"regevt"
-#define MSG_STATUS		"status"
-#define MSG_ACTIVENODES 	"activenodes"
-#define MSG_OK			"ok"
-#define MSG_FAIL		"fail"
-#define MSG_ALLNODES		"allnodes"
+#define MSG_ALLNODES		"all_nodes"
+#define MSG_ACTIVENODES 	"active_nodes"
 #define MSG_DC			"dc"
 #define MSG_CRM_CONFIG		"crm_config"
 #define MSG_HB_CONFIG		"hb_config"
@@ -52,7 +52,25 @@
 #define MSG_RSC_RUNNING_ON	"rsc_running_on"
 #define MSG_RSC_LOCATION	"rsc_location"
 #define MSG_RSC_OPS		"rsc_ops"
+
+#define MSG_ALL_RSC		"all_rsc"
+#define MSG_RSC_TYPE		"rsc_type"
 #define MSG_SUB_RSC		"sub_rsc"
+#define MSG_UP_CRM_CONFIG	"up_crm_config"
+
+#define MSG_DEL_RSC		"del_rsc"
+#define MSG_ADD_RSC		"add_rsc"
+#define MSG_ADD_GRP		"add_grp"
+
+#define MSG_RSC_CLASSES		"rsc_classes"
+#define MSG_RSC_TYPES		"rsc_types"
+#define MSG_RSC_PROVIDERS	"rsc_providers"
+
+#define MSG_UP_RSC_PARAMS	"up_rsc_params"
+#define MSG_UP_RSC_OPS		"up_rsc_ops"
+#define MSG_UP_RSC_CONS		"up_rsc_cons"
+
+#define EVT_STATUS		"evt:status"
 
 extern int mgmt_connect(const char* server, const char* user, const char*  passwd);
 extern char* mgmt_sendmsg(const char* msg);
