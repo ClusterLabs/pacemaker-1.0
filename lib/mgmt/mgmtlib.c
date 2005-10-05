@@ -180,14 +180,22 @@ mgmt_msg_append(char* msg, const char* append)
 	int msg_len;
 	int append_len;
 	int len;
-
+	
 	msg_len = strnlen(msg, MAX_MSGLEN);
-	append_len = strnlen(append, MAX_STRLEN);
-	/* +2: one is the '\n', other is the end 0*/
-	len = msg_len+append_len+2;
-	msg = (char*)mgmt_realloc(msg, len);
-	strncat(msg, "\n", len);
-	strncat(msg, append, len);
+	if (append != NULL) {
+		append_len = strnlen(append, MAX_STRLEN);
+		/* +2: one is the '\n', other is the end 0*/
+		len = msg_len+append_len+2;
+		msg = (char*)mgmt_realloc(msg, len);
+		strncat(msg, "\n", len);
+		strncat(msg, append, len);
+	}
+	else {
+		/* +2: one is the '\n', other is the end 0*/
+		len = msg_len+2;
+		msg = (char*)mgmt_realloc(msg, len);
+		strncat(msg, "\n", len);
+	}
 	return msg;
 }
 char**
