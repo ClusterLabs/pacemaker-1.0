@@ -56,6 +56,8 @@ extern int init_crm(void);
 extern void final_crm(void);
 extern int init_heartbeat(void);
 extern void final_heartbeat(void);
+extern int init_lrm(void);
+extern void final_lrm(void);
 
 /* management daemon internal data structure */
 typedef struct
@@ -336,6 +338,7 @@ init_start ()
 	/* init modules */
 	init_general();
 	init_heartbeat();
+	init_lrm();
 	init_crm();
 	/* init ham & gnutls lib */
 	tls_init_server();
@@ -375,6 +378,7 @@ init_start ()
 
 	/* exit, clean the pid file */
 	final_crm();
+	final_lrm();
 	final_heartbeat();
 	final_general();
 	if (cl_unlock_pidfile(PID_FILE) == 0) {
@@ -407,7 +411,7 @@ on_listen(GIOChannel *source, GIOCondition condition, gpointer data)
 		/* create gnutls session for the server socket */
 		session = tls_attach_server(csock);
 		msg = mgmt_session_recvmsg(session);
-		mgmtd_log(LOG_DEBUG, "get msg: %s", msg);
+		mgmtd_log(LOG_DEBUG, "recv msg: %s", msg);
 		args = mgmt_msg_args(msg, &num);
 		if (msg == NULL || num != 3 || STRNCMP_CONST(args[0], MSG_LOGIN) != 0) {
 			mgmt_del_args(args);
@@ -430,6 +434,7 @@ on_listen(GIOChannel *source, GIOCondition condition, gpointer data)
 		}
 		mgmt_del_args(args);
 		mgmt_del_msg(msg);
+		mgmtd_log(LOG_DEBUG, "send msg: %s", MSG_OK);
 		mgmt_session_sendmsg(session, MSG_OK);
 		new_client(csock, session);
 		return TRUE;
@@ -452,7 +457,7 @@ on_msg_arrived(GIOChannel *source, GIOCondition condition, gpointer data)
 			return TRUE;
 		}
 		msg = mgmt_session_recvmsg(client->session);
-		mgmtd_log(LOG_DEBUG, "get msg: %s", msg);
+		mgmtd_log(LOG_DEBUG, "recv msg: %s", msg);
 		if (msg == NULL || STRNCMP_CONST(msg, MSG_LOGOUT) == 0) {
 			mgmt_del_msg(msg);
 			del_client(client->id);
@@ -460,10 +465,12 @@ on_msg_arrived(GIOChannel *source, GIOCondition condition, gpointer data)
 		}
 		ret = dispatch_msg(msg, client->id);
 		if (ret != NULL) {
+			mgmtd_log(LOG_DEBUG, "send msg: %s", ret);
 			mgmt_session_sendmsg(client->session, ret);
 			mgmt_del_msg(ret);
 		}
 		else {
+			mgmtd_log(LOG_DEBUG, "send msg: %s", MSG_FAIL);
 			mgmt_session_sendmsg(client->session, MSG_FAIL);
 		}
 		mgmt_del_msg(msg);
@@ -606,8 +613,10 @@ fire_evt(const char* event)
 			list_changed = 1;
 			continue;
 		}
-		
+
+		mgmtd_log(LOG_DEBUG, "send evt: %s", event);
 		mgmt_session_sendmsg(client->session, event);
+		mgmtd_log(LOG_DEBUG, "send evt: %s done", event);
 		
 		node = g_list_next(node);
 	}
@@ -623,7 +632,8 @@ dispatch_msg(const char* msg, int client_id)
 {
 	msg_handler handler;
 	char* ret;
-	char** args = mgmt_msg_args(msg, NULL);
+	int num;
+	char** args = mgmt_msg_args(msg, &num);
 	if (args == NULL) {
 		return NULL;
 	}
@@ -632,7 +642,7 @@ dispatch_msg(const char* msg, int client_id)
 		mgmt_del_args(args);
 		return NULL;
 	}
-	ret = (*handler)(msg, client_id);
+	ret = (*handler)(args, num, client_id);
 	mgmt_del_args(args);
 	return ret;
 }
