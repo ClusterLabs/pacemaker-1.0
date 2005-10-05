@@ -1,4 +1,4 @@
-/* $Id: ccm_statemachine.c,v 1.6 2005/10/04 15:45:49 gshi Exp $ */
+/* $Id: ccm_statemachine.c,v 1.7 2005/10/05 17:13:07 gshi Exp $ */
 /* 
  * ccm.c: Consensus Cluster Service Program 
  *
@@ -3644,7 +3644,7 @@ static void send_mem_list_to_all(ll_cluster_t *hb,
 	}    
 	strsize  = ccm_bitmap2str(bitmap, memlist, MAX_MEMLIST_STRING);
 	bitmap_delete(bitmap);
-	ccm_send_to_all(hb, info, memlist, cookie, uptime, sizeof(int)*size);
+	ccm_send_to_all(hb, info, memlist, cookie, uptime, size);
 	g_free(uptime);
 	return;
 }
