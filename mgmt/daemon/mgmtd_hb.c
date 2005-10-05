@@ -36,8 +36,8 @@ int init_heartbeat(void);
 void final_heartbeat(void);
 
 static ll_cluster_t * hb = NULL;
-static char* on_get_allnodes(const char* msg, int id);
-static char* on_get_hb_config(const char* msg, int id);
+static char* on_get_allnodes(char* argv[], int argc, int client_id);
+static char* on_get_hb_config(char* argv[], int argc, int client_id);
 
 const char* param_name[] = {
 	"apiauth",
@@ -64,7 +64,7 @@ const char* param_name[] = {
 };
 
 char* 
-on_get_allnodes(const char* msg, int id)
+on_get_allnodes(char* argv[], int argc, int client_id)
 {
 	const char* name = NULL;
 	char* ret = cl_strdup(MSG_OK);
@@ -88,7 +88,7 @@ on_get_allnodes(const char* msg, int id)
 }
 
 char*
-on_get_hb_config(const char* msg, int id)
+on_get_hb_config(char* argv[], int argc, int client_id)
 {
 	int i;
 	char* value = NULL;
