@@ -42,7 +42,14 @@
         if ( debug_level == 2 && priority == LOG_DEBUG ) { \
                 cl_log(priority, fmt); \
 }
-typedef char* (*msg_handler)(const char* msg, int client_id);
+
+#define ARGC_CHECK(n);		\
+if (argc != (n)) {					\
+	mgmtd_log(LOG_DEBUG, "%s msg should have %d params, but %d given",argv[0],n,argc);	\
+	return cl_strdup(MSG_FAIL);			\
+}
+
+typedef char* (*msg_handler)(char* argv[], int argc, int client_id);
 extern int reg_msg(const char* type, msg_handler fun);
 extern int reg_evt(const char* type, int client_id);
 extern int fire_evt(const char* evt);
