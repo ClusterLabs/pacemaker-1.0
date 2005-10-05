@@ -1,4 +1,4 @@
-/* $Id: ccmmisc.c,v 1.23 2005/10/04 15:45:49 gshi Exp $ */
+/* $Id: ccmmisc.c,v 1.24 2005/10/05 22:36:57 gshi Exp $ */
 /* 
  * ccmmisc.c: Miscellaneous Consensus Cluster Service functions
  *
@@ -27,32 +27,7 @@
 #endif
 #include "ccmmisc.h"
 
-
-void            
-ccm_log(int priority, const char * fmt, ...) G_GNUC_PRINTF(2,3);
-void
-ccm_log(int pri, const char* fmt, ...){
-
-	va_list		ap;
-	char		buf[MAXLINE];
-	int		nbytes;
-	char*		p =  buf;
-
-	buf[MAXLINE-1] = 0;	
-	nbytes = snprintf(p, MAXLINE, "%s:", __FUNCTION__);
-	p += nbytes;
-	va_start(ap, fmt);
-	nbytes += vsnprintf(p, MAXLINE - nbytes, fmt, ap);
-	va_end(ap);
-	
-	if (nbytes >= (ssize_t)sizeof(buf)){
-		nbytes =  sizeof(buf) -1 ;
-	}
-	cl_log(pri, "%s", buf);
-}
-
-
-#if 1
+#if 0
 int
 ccm_bitmap2str(const char *bitmap, char* memlist, int size)
 {
@@ -111,58 +86,43 @@ ccm_str2bitmap(const char *_memlist, int size, char *bitmap)
 #else
 
 int
-ccm_str2bitmap(const char *memlist, char **bitlist)
+ccm_str2bitmap(const char *memlist, int size, char *bitmap)
 {
-	size_t str_len =  strlen(memlist);
-	int    outbytes = B64_maxbytelen(str_len);
-
-	if (str_len == 0) {
-	   	return bitmap_create(bitlist, MAXNODE);
+	int    outbytes = B64_maxbytelen(size);
+	
+	if (size == 0) {
+		return 0;
 	}
-
-	while ((*bitlist = (  char *)g_malloc(outbytes)) == NULL) {
-		cl_shortsleep();
-	}
-	memset(*bitlist,0,outbytes);
-
-	outbytes = base64_to_binary(memlist, str_len, *bitlist, outbytes);
+	
+	outbytes = base64_to_binary(memlist, size, bitmap, outbytes);
 
 	return outbytes;
 }
 
 int
-ccm_bitmap2str(const char *bitmap, int numBytes, char **memlist)
+ccm_bitmap2str(const char *bitmap, char *memlist, int size)
 {
 	int maxstrsize;
-
-	maxstrsize = B64_stringlen(numBytes)+1;
-	/* we want memory and we want it now */
-	while ((*memlist = (char *)g_malloc(maxstrsize)) == NULL) {
-		cl_shortsleep();
+	int bytes;
+	
+	bytes = MAXNODE / BitsInByte;
+	if (MAXNODE%BitsInByte != 0){
+		bytes++;
 	}
+	maxstrsize = B64_stringlen(bytes)+1;
 
-	return binary_to_base64(bitmap, numBytes, *memlist, maxstrsize);
+	if (maxstrsize > MAX_MEMLIST_STRING){
+		cl_log(LOG_INFO, "MAX_MEMLIST_STRING is too small(%d), sized required %d",
+		       MAX_MEMLIST_STRING, maxstrsize);
+		return -1;
+	}
+	return binary_to_base64(bitmap, bytes, memlist, size);
 }
 
 
 #endif
 
 							
-/* */
-/* BEGIN OF FUNCTIONS THAT FACILITATE A MONOTONICALLY INCREASING */
-/* LOCAL CLOCK. Useful for timeout manipulations. */
-/* */
-/* NOTE: gettimeofday() is generally helpful, but has the disadvantage */
-/* of resetting to a earlier value(in case system administrator resets */
-/* the clock) */
-/* Similarly times() is a monotonically increasing clock, but has the */
-/* disadvantage a of wrapping back on overflow. */
-/* */
-/* */
-
-/* */
-/* return the current time  */
-/*  */
 longclock_t 
 ccm_get_time(void)
 {
@@ -170,11 +130,12 @@ ccm_get_time(void)
 }
 
 
-/* */
-/* given two times, and a timeout interval(in milliseconds),  */
-/* return true if the timeout has occured, else return */
-/* false. */
-/* NOTE: 'timeout' is in milliseconds. */
+/* 
+* given two times, and a timeout interval(in milliseconds),  
+* return true if the timeout has occured, else return 
+* false. 
+* NOTE: 'timeout' is in milliseconds. 
+*/
 int
 ccm_timeout(longclock_t t1, longclock_t t2, unsigned long timeout)
 {
@@ -209,8 +170,7 @@ ccm_check_memoryleak(void)
 }
 
 
-/* BEGINE of the functions that track asynchronous leave 
- * 
+/* 
  * When ccm running on a  node leaves the cluster voluntarily it  
  * sends  a  leave  message  to  the  other nodes in the cluster.
  * Similarly  whenever  ccm  running on some node of the cluster, 
@@ -282,22 +242,21 @@ leave_any(void)
 
 
 
-/* */
-/* BEGIN  OF  FUNCTIONS  that  keep track of stablized membership list */
-/*  */
-/* These  function  keep track of consensus membership once a instance */
-/* of the  ccm algorithm terminates and decided on the final consensus  */
-/* members of the cluster. */
-/* */
+/* 
+ * These  function  keep track of consensus membership once a instance 
+ * of the  ccm algorithm terminates and decided on the final consensus 
+ * members of the cluster. 
+ *
+ */
 int 
 ccm_memlist_changed(ccm_info_t *info, 
-		  char *bitmap /* the bitmap string containing bits */)
+		    char *bitmap)
 {
 	int nodeCount, i;
 	llm_info_t *llm;
 	uint indx;
-		
-		
+	
+	
 	/* go through the membership list */
 	nodeCount = CCM_GET_MEMCOUNT(info);
 	llm = CCM_GET_LLM(info);
@@ -414,8 +373,10 @@ part_of_cluster(int state)
 }
 
 
-/* the ccm strings tokens communicated aross the wire. */
-/* these are the values for the F_TYPE names. */
+/* the ccm strings tokens communicated aross the wire. 
+ * these are the values for the F_TYPE names. 
+ */
+
 #define TYPESTRSIZE 32
 char  ccm_type_str[CCM_TYPE_LAST + 1][TYPESTRSIZE] = {
 	"CCM_TYPE_PROTOVERSION",

@@ -1,4 +1,4 @@
-/* $Id: ccm_statemachine.c,v 1.7 2005/10/05 17:13:07 gshi Exp $ */
+/* $Id: ccm_statemachine.c,v 1.8 2005/10/05 22:36:57 gshi Exp $ */
 /* 
  * ccm.c: Consensus Cluster Service Program 
  *
@@ -124,8 +124,6 @@ ccm_set_state(ccm_info_t* info, int istate,const struct ha_msg*  msg)
 			if (ANYDEBUG){
 				if (msg) {
 					cl_log_message(LOG_DEBUG, msg);		
-				}else{
-					cl_log(LOG_DEBUG, "Trigging msg is NULL");
 				}
 			}
 			

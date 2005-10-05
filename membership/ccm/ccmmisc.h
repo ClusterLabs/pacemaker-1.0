@@ -18,7 +18,7 @@
 #ifndef _CCM_MISC_H_
 #define _CCM_MISC_H_
 
-#define MAX_MEMLIST_STRING  64
+#define MAX_MEMLIST_STRING  512
 
 int		ccm_bitmap2str(const char *bitmap, 
 			       char* memlist, int size);

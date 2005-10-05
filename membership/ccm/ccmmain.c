@@ -1,4 +1,4 @@
-/* $Id: ccmmain.c,v 1.30 2005/10/04 15:45:49 gshi Exp $ */
+/* $Id: ccmmain.c,v 1.31 2005/10/05 22:36:57 gshi Exp $ */
 /* 
  * ccm.c: Consensus Cluster Service Program 
  *
@@ -266,7 +266,6 @@ main(int argc, char **argv)
 	
 	G_main_add_SignalHandler(G_PRIORITY_HIGH, SIGTERM, 
 				 ccm_shutdone, ccm, NULL);
-	ccm_log(LOG_INFO, "ccm started");
 	/* we want hb_input_dispatch to be called when some input is
 	 * pending on the heartbeat fd, and every 1 second 
 	 */
