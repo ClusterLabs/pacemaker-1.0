@@ -1,4 +1,4 @@
-/* $Id: ccmclient.c,v 1.29 2005/10/01 02:01:56 gshi Exp $ */
+/* $Id: ccmclient.c,v 1.30 2005/10/06 01:54:11 gshi Exp $ */
 /* 
  * client.c: Consensus Cluster Client tracker
  *
@@ -477,16 +477,16 @@ client_llm_init(llm_info_t *llm)
 	char memstr[] = "membership chunk";
 	char bornstr[] = "born chunk";
 	char miscstr[] = "misc chunk";
-	int  maxnode = LLM_GET_NODECOUNT(llm);
+	int  maxnode = llm_get_nodecount(llm);
        	int size = sizeof(ccm_llm_t)+ maxnode*sizeof(struct node_s);
 	ccm_llm_t *data = (ccm_llm_t *)g_malloc(size);
 	int  i;
 
 	/* copy the relevent content of llm into data */
 	CLLM_SET_NODECOUNT(data,maxnode);
-	CLLM_SET_MYNODE(data, LLM_GET_MYNODE(llm));
+	CLLM_SET_MYNODE(data, llm_get_myindex(llm));
 	for ( i = 0; i < maxnode; i ++ ) {
-		CLLM_SET_NODEID(data,i,LLM_GET_NODEID(llm,i));
+		CLLM_SET_NODEID(data,i,llm_get_nodename(llm,i));
 		CLLM_SET_UUID(data,i,i);
 
 	}

@@ -430,7 +430,7 @@ ccm_create_leave_msg(ccm_info_t *info, int uuid)
 
 	/* find the name of the node at index */
 	llm = &(info->llm);
-	nodename = llm_get_nodeid_from_uuid(llm, uuid);
+	nodename = llm_get_nodename(llm, uuid);
 	
 	if(ha_msg_add(m, F_ORIG, nodename) == HA_FAIL) {
 		cl_log(LOG_ERR, "adding field failed");

@@ -1,4 +1,4 @@
-/* $Id: ccmmisc.c,v 1.24 2005/10/05 22:36:57 gshi Exp $ */
+/* $Id: ccmmisc.c,v 1.25 2005/10/06 01:54:11 gshi Exp $ */
 /* 
  * ccmmisc.c: Miscellaneous Consensus Cluster Service functions
  *
@@ -262,7 +262,7 @@ ccm_memlist_changed(ccm_info_t *info,
 	llm = CCM_GET_LLM(info);
 	for ( i = 0 ; i < nodeCount; i++ ) {
 		indx = CCM_GET_MEMINDEX(info, i);
-		assert(indx >=0 && indx < LLM_GET_NODECOUNT(llm));
+		assert(indx >=0 && indx < llm_get_nodecount(llm));
 		if (!bitmap_test(indx, ( char *)bitmap, MAXNODE)){
 			return TRUE;
 		}
@@ -279,7 +279,7 @@ ccm_fill_memlist(ccm_info_t *info,
 
 	llm = CCM_GET_LLM(info);
 	CCM_RESET_MEMBERSHIP(info);
-	for ( i = 0 ; i < LLM_GET_NODECOUNT(llm); i++ ) {
+	for ( i = 0 ; i < llm_get_nodecount(llm); i++ ) {
 		if(bitmap_test(i, bitmap, MAXNODE)){
 			/*update the membership list with this member*/
 			CCM_ADD_MEMBERSHIP(info, i);
@@ -327,8 +327,8 @@ ccm_get_membership_index(ccm_info_t *info, const char *node)
 	llm_info_t *llm = CCM_GET_LLM(info);
 	for ( i = 0 ; i < CCM_GET_MEMCOUNT(info) ; i++ ) {
 		indx =  CCM_GET_MEMINDEX(info, i);
-		if(strncmp(LLM_GET_NODEID(llm, indx), node, 
-			   LLM_GET_NODEIDSIZE(llm)) == 0){
+		if(strncmp(llm_get_nodename(llm, indx), node, 
+			   NODEIDSIZE) == 0){
 			return i;
 		}
 	}
@@ -342,8 +342,8 @@ node_is_member(ccm_info_t* info, const char* node)
 	llm_info_t *llm = CCM_GET_LLM(info);
 	for ( i = 0 ; i < CCM_GET_MEMCOUNT(info) ; i++ ) {
 		indx =  CCM_GET_MEMINDEX(info, i);
-		if(strncmp(LLM_GET_NODEID(llm, indx), node, 
-			   LLM_GET_NODEIDSIZE(llm)) == 0){
+		if(strncmp(llm_get_nodename(llm, indx), node, 
+			   NODEIDSIZE) == 0){
 			return TRUE;
 		}
 	}	

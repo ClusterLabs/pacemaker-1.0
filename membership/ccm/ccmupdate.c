@@ -1,4 +1,4 @@
-/* $Id: ccmupdate.c,v 1.18 2005/10/04 15:45:49 gshi Exp $ */
+/* $Id: ccmupdate.c,v 1.19 2005/10/06 01:54:11 gshi Exp $ */
 /* 
  * update.c: functions that track the votes during the voting protocol
  *
@@ -107,7 +107,7 @@ update_next_link(ccm_update_t *tab, llm_info_t *llm, void *tr, uint *uptime)
 
 	*uptime = node->uptime;
 	*track = g_slist_next(*track);
-	return (LLM_GET_NODEID(llm, node->index));
+	return (llm_get_nodename(llm, node->index));
 }
 
 /* 
@@ -201,7 +201,7 @@ update_compute_leader(ccm_update_t *tab, uint j, llm_info_t *llm)
 	}
 
  namecompare:
-	value =  llm_nodeid_cmp(llm, leader_entry->index, 
+	value =  llm_node_cmp(llm, leader_entry->index, 
 				entry->index);
 
 	if (value == 0){
@@ -224,15 +224,15 @@ update_display(int pri,llm_info_t* llm, ccm_update_t* tab)
 	cl_log(pri, "diplaying update information: ");
 	cl_log(pri, "leader=%d(%s) nodeCount=%d", 
 	       tab -> leader,
-	       (tab->leader<0 || tab->leader >= (int)LLM_GET_NODECOUNT(llm))?
-	       "":LLM_GET_NODEID(llm, tab->update[tab->leader].index),
+	       (tab->leader<0 || tab->leader >= (int)llm_get_nodecount(llm))?
+	       "":llm_get_nodename(llm, tab->update[tab->leader].index),
 	       tab->nodeCount);
 	
- 	for ( i = 0; i < LLM_GET_NODECOUNT(llm); i++){
+ 	for ( i = 0; i < llm_get_nodecount(llm); i++){
 		if (tab->update[i].index >=0){
 			cl_log(pri, "%d:%s uptime=%d", 
 			       i,
-			       LLM_GET_NODEID(llm, tab->update[i].index),
+			       llm_get_nodename(llm, tab->update[i].index),
 			       tab->update[i].uptime);		
 		}
 	}
@@ -248,13 +248,13 @@ update_find_leader(ccm_update_t *tab, llm_info_t *llm)
 {
 	uint i, leader, j;
 
-	for ( i = 0 ; i < LLM_GET_NODECOUNT(llm); i++ ){
+	for ( i = 0 ; i < llm_get_nodecount(llm); i++ ){
 		if (UPDATE_GET_INDEX(tab, i) != -1) {
 			break;
 		}
 	}
 
-	if (i == LLM_GET_NODECOUNT(llm)){
+	if (i == llm_get_nodecount(llm)){
 		UPDATE_SET_LEADER(tab,-1);
 		return -1;
 	}
@@ -262,7 +262,7 @@ update_find_leader(ccm_update_t *tab, llm_info_t *llm)
 	leader = i;
         UPDATE_SET_LEADER(tab,leader);
 
-	for ( j = i+1 ; j < LLM_GET_NODECOUNT(llm); j++ ){
+	for ( j = i+1 ; j < llm_get_nodecount(llm); j++ ){
 
 		if (UPDATE_GET_INDEX(tab, j) == -1){
 			continue;
@@ -293,13 +293,13 @@ update_get_position(ccm_update_t *tab,
 	}
 	
 	/* search for the index in the update table */
-	for ( j = 0 ; j < LLM_GET_NODECOUNT(llm); j++ ){
+	for ( j = 0 ; j < llm_get_nodecount(llm); j++ ){
 		if (UPDATE_GET_INDEX(tab,j) == i ){
 			break;
 		}
 	}
 
-	if ( j == LLM_GET_NODECOUNT(llm)){
+	if ( j == llm_get_nodecount(llm)){
 		return -1;
 	}
 
@@ -314,7 +314,7 @@ update_get_uptime(ccm_update_t *tab,
 	uint count=0, j;
 	int i;
 
-	for ( j = 0 ; j < LLM_GET_NODECOUNT(llm); j++ ){
+	for ( j = 0 ; j < llm_get_nodecount(llm); j++ ){
 		i = UPDATE_GET_INDEX(tab,j);
 		if (i == -1){
 			continue;
@@ -368,10 +368,10 @@ update_add(ccm_update_t *tab,
 	}
 
 	/* find a free location in the 'table' table to fill the new
-	 * entry. A free entry should be found within LLM_GET_NODECOUNT
+	 * entry. A free entry should be found within llm_get_nodecount
 	 * entries.
 	 */
-	for ( j = 0 ; j < LLM_GET_NODECOUNT(llm); j++ ){
+	for ( j = 0 ; j < llm_get_nodecount(llm); j++ ){
 		if (UPDATE_GET_INDEX(tab,j) == -1 ){
 			break;
 		}
@@ -383,7 +383,7 @@ update_add(ccm_update_t *tab,
 		}
 	}
 	
-	if( j == LLM_GET_NODECOUNT(llm) ) {
+	if( j == llm_get_nodecount(llm) ) {
 		cl_log(LOG_ERR, "ccm_update_table:Internal Logic error j=%d",
 		       j);
 		exit(1);
@@ -467,7 +467,7 @@ update_get_cl_name(ccm_update_t *tab,
 		   llm_info_t *llm)
 {
 	int leader = UPDATE_GET_LEADER(tab);
-	return(LLM_GET_NODEID(llm,UPDATE_GET_INDEX(tab,leader)));
+	return(llm_get_nodename(llm,UPDATE_GET_INDEX(tab,leader)));
 }
 
 
@@ -482,7 +482,7 @@ update_get_next_index(ccm_update_t *tab, llm_info_t *llm, int *nextposition)
 {
 	uint pos;
 	
-	if (*nextposition < -1 || *nextposition >= (int)LLM_GET_NODECOUNT(llm)) {
+	if (*nextposition < -1 || *nextposition >= (int)llm_get_nodecount(llm)) {
 			return -1;
 	}
 	
@@ -490,10 +490,10 @@ update_get_next_index(ccm_update_t *tab, llm_info_t *llm, int *nextposition)
 	*nextposition = pos + 1;
 	
 	while (UPDATE_GET_INDEX(tab,pos) == -1 && 
-	       pos < LLM_GET_NODECOUNT(llm)){ 
+	       pos < llm_get_nodecount(llm)){ 
 		pos++;
 	}
-	if (pos == LLM_GET_NODECOUNT(llm)) {
+	if (pos == llm_get_nodecount(llm)) {
 		return -1;
 	}
 	
@@ -517,7 +517,7 @@ update_strcreate(ccm_update_t *tab,
 
 	bitmap_create(&bitmap, MAXNODE);
 
-	for ( i = 0 ; i < LLM_GET_NODECOUNT(llm); i ++ ) {
+	for ( i = 0 ; i < llm_get_nodecount(llm); i ++ ) {
 		indx = UPDATE_GET_INDEX(tab,i);
 		if (indx == -1){
 			continue;

@@ -1,4 +1,4 @@
-/* $Id: ccm.h,v 1.45 2005/10/04 15:45:49 gshi Exp $ */
+/* $Id: ccm.h,v 1.46 2005/10/06 01:54:11 gshi Exp $ */
 /*
  * ccm.h: definitions Consensus Cluster Manager internal header
  *				file
@@ -128,50 +128,37 @@ unsigned int version_get_nresp(ccm_version_t *);
 			changed change it also in ccmlib.h */
 
 typedef struct llm_node_s {
-	char nodename[NODEIDSIZE];
-	char status[STATUSSIZE];
+	char	nodename[NODEIDSIZE];
+	char	status[STATUSSIZE];
+	int	uptime;
 	gboolean join_request;
-	uint received_change_msg;
+	gboolean receive_change_msg;
 }llm_node_t;
 
-typedef struct llm_info_s { /* information about low level membership info */
-	uint	   nodecount; /*total number of nodes in the cluster  */
-	int	   myindex;	 /*index of mynode */
-	llm_node_t nodes[MAXNODE];  /*information of each node */
+typedef struct llm_info_s { 
+	int	   nodecount;
+	int	   myindex;	
+	llm_node_t nodes[MAXNODE];
 } llm_info_t;
 
-#define LLM_GET_MYNODE(llm) llm->myindex
-#define LLM_GET_NODECOUNT(llm) llm->nodecount
-#define LLM_GET_NODEID(llm,i) llm->nodes[i].nodename
-#define LLM_GET_MYNODEID(llm) LLM_GET_NODEID(llm, LLM_GET_MYNODE(llm))
-#define LLM_GET_STATUS(llm,i) llm->nodes[i].status
-#define LLM_SET_MYNODE(llm,indx) llm->myindex = indx
-#define LLM_SET_NODECOUNT(llm, count) llm->nodecount = count
-#define LLM_INC_NODECOUNT(llm) (llm->nodecount)++
-#define LLM_SET_NODEID(llm, i, name)  \
-			(strncpy(llm->nodes[i].nodename,name,NODEIDSIZE))
-#define LLM_SET_MYNODEID(llm, name) \
-			LLM_SET_NODEID(llm, LLM_GET_MYNODE(llm), name)
-#define LLM_SET_STATUS(llm,i,status) \
-			(strncpy(llm->nodes[i].status,status,STATUSSIZE))
-#define LLM_COPY(llm,dst,src) (llm->nodes[dst] = llm->nodes[src])
-#define LLM_GET_NODEIDSIZE(llm) NODEIDSIZE
-int llm_get_live_nodecount(llm_info_t *);
-gboolean llm_only_active_node(llm_info_t *);
-char *llm_get_nodeid_from_uuid(llm_info_t *, const int );
-int llm_nodeid_cmp(llm_info_t *, int , int );
-int llm_status_update(llm_info_t *, const char *, const char *, char*);
-
-void	display_llm(llm_info_t *llm);
-void llm_init(llm_info_t *);
-void llm_end(llm_info_t *);
-int llm_is_valid_node(llm_info_t *, const char *);
-void llm_add(llm_info_t *, const char *, const char *, const char *);
-int llm_get_index(llm_info_t *, const char *);
-int llm_get_myindex(llm_info_t *);
-const char* llm_get_mynode(llm_info_t*);
-
-/* END OF Low Level Membership interfaces */
+int		llm_get_live_nodecount(llm_info_t *);
+int		llm_node_cmp(llm_info_t *llm, int indx1, int indx2);
+char*		llm_get_nodename(llm_info_t *, const int );
+int		llm_status_update(llm_info_t *, const char *, 
+				  const char *, char*);
+void		llm_display(llm_info_t *llm);
+int		llm_init(llm_info_t *);
+int		llm_is_valid_node(llm_info_t *, const char *);
+int		llm_add(llm_info_t *, const char *, const char *, const char *);
+int		llm_get_index(llm_info_t *, const char *);
+int		llm_get_myindex(llm_info_t *);
+int		llm_get_nodecount(llm_info_t* llm);
+const char*	llm_get_mynodename(llm_info_t* llm);
+char*		llm_get_nodestatus(llm_info_t* llm, const int index);
+int		llm_set_joinrequest(llm_info_t* llm, int index, gboolean value);
+gboolean	llm_get_joinrequest(llm_info_t* llm, int index);
+int		llm_set_change(llm_info_t* llm, int index, gboolean value);
+gboolean	llm_get_change(llm_info_t* llm, int index);
 
 
 /* ccm prototypes */
@@ -390,7 +377,7 @@ typedef struct memcomp_s {
 #define 	CCM_GET_UPDATETABLE(info) (&(info->ccm_update))
 #define 	CCM_GET_MEMCOMP(info) (&(info->ccm_memcomp))
 #define 	CCM_GET_JOINED_TRANSITION(info) info->ccm_joined_transition
-#define  	CCM_GET_LLM_NODECOUNT(info) LLM_GET_NODECOUNT(CCM_GET_LLM(info))
+#define  	CCM_GET_LLM_NODECOUNT(info) llm_get_nodecount(&info->llm)
 #define  	CCM_GET_MY_HOSTNAME(info)  ccm_get_my_hostname(info)
 #define 	CCM_GET_COOKIE(info) info->ccm_cookie
 

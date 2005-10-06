@@ -1,4 +1,4 @@
-/* $Id: ccm_statemachine.c,v 1.8 2005/10/05 22:36:57 gshi Exp $ */
+/* $Id: ccm_statemachine.c,v 1.9 2005/10/06 01:54:11 gshi Exp $ */
 /* 
  * ccm.c: Consensus Cluster Service Program 
  *
@@ -177,10 +177,10 @@ static int new_node_mem_list_timeout(unsigned long timeout)
 	info->llm.nodes[info->llm.myindex].nodename
 #define CCM_GET_CL_NODEID(info) \
 	info->llm.nodes[CCM_GET_CL(info)].nodename 
-#define CCM_GET_RECEIVED_CHANGE_MSG(info, node) \
-	CCM_GET_LLM(info)->nodes[info->ccm_member[ccm_get_membership_index(info, node)]].received_change_msg
-#define CCM_SET_RECEIVED_CHANGE_MSG(info, node, value) \
-	CCM_GET_LLM(info)->nodes[info->ccm_member[ccm_get_membership_index(info, node)]].received_change_msg = value
+#define CCM_GET_RECEIVED_CHANGE_MSG(info, node)				\
+	llm_get_change(CCM_GET_LLM(info),info->ccm_member[ccm_get_membership_index(info, node)])
+#define CCM_SET_RECEIVED_CHANGE_MSG(info, node, value)			\
+	llm_set_change(CCM_GET_LLM(info), info->ccm_member[ccm_get_membership_index(info, node)], value)
 
 /*
 ////////////////////////////////////////////////////////////////
@@ -230,11 +230,11 @@ ccm_configure_timeout(ll_cluster_t *hb, ccm_info_t *info)
 /* */
 /* ccm_get_my_hostname: return my nodename. */
 /* */
-static char *
+static const char *
 ccm_get_my_hostname(ccm_info_t *info)
 {
 	llm_info_t *llm = CCM_GET_LLM(info);
-	return(LLM_GET_MYNODEID(llm));
+	return(llm_get_mynodename(llm));
 }
 
 
@@ -425,7 +425,7 @@ report_mbrs(ccm_info_t *info)
 	       CCM_GET_MAJORTRANS(info));
 	
 	for (i=0 ;  i < CCM_GET_MEMCOUNT(info); i++) {
-		nodename = LLM_GET_NODEID(CCM_GET_LLM(info), 
+		nodename = llm_get_nodename(CCM_GET_LLM(info), 
 					  CCM_GET_MEMINDEX(info,i));
 		cl_log(LOG_DEBUG,"\t\tnodename=%s bornon=%d", nodename, 
 		       bornon[i].bornon);
@@ -698,8 +698,8 @@ ccm_get_index(ccm_info_t* info, const char* node)
 	uint i;
 	llm_info_t *llm = CCM_GET_LLM(info);
 	for ( i = 0 ; i < llm->nodecount ; i++ ) {
-		if(strncmp(LLM_GET_NODEID(llm, i), node, 
-			   LLM_GET_NODEIDSIZE(llm)) == 0){
+		if(strncmp(llm_get_nodename(llm, i), node, 
+			   NODEIDSIZE) == 0){
 			return i;
 		}
 	}
@@ -713,7 +713,7 @@ ccm_am_i_leader(ccm_info_t *info)
 {
 	llm_info_t *llm = CCM_GET_LLM(info);
 	
-	if ( LLM_GET_MYNODE(llm) == CCM_GET_CL(info)){
+	if ( llm_get_myindex(llm) == CCM_GET_CL(info)){
 		return TRUE;
 	}
 	
@@ -761,7 +761,7 @@ ccm_add_new_joiner(ccm_info_t *info, const char *orig)
 	
 	int idx = llm_get_index(&info->llm, orig);
 	
-	llm->nodes[idx].join_request = TRUE;
+	llm_set_joinrequest(llm, idx, TRUE);
 	
 	return;
 }
@@ -776,7 +776,7 @@ ccm_get_all_active_join_request(ccm_info_t* info)
 	
 	for (i = 0 ; i < llm->nodecount; i++){
 		if (STRNCMP_CONST(llm->nodes[i].status,"dead") != 0
-		    && llm->nodes[i].join_request == FALSE ){
+		    && llm_get_joinrequest(llm, i) == FALSE ){
 			return FALSE;
 		}
 	}
@@ -793,7 +793,7 @@ ccm_reset_all_join_request(ccm_info_t* info)
 	size_t i;
 	
 	for (i = 0 ; i < llm->nodecount; i++){
-		llm->nodes[i].join_request = FALSE;		
+		llm_set_joinrequest(llm, i, FALSE);
 	}	
 }
 
@@ -808,7 +808,7 @@ ccm_am_i_highest_joiner(ccm_info_t *info)
 	int		i;
 
 	for (i = my_indx + 1 ; i < total_nodes; i++){
-		if (llm->nodes[i].join_request){
+		if (llm_get_joinrequest(llm,i)){
 			return FALSE;
 		}
 	}
@@ -822,7 +822,7 @@ ccm_remove_new_joiner(ccm_info_t *info, const char *orig)
 	llm_info_t* llm = &info->llm;
 	int index = llm_get_index(llm, orig);
 	
-	llm->nodes[index].join_request = FALSE;
+	llm_set_joinrequest(llm, index, FALSE);
 	
 	return;
 }
@@ -842,9 +842,9 @@ ccm_send_join_reply(ll_cluster_t *hb, ccm_info_t *info)
 		if ( i == (size_t)llm->myindex){
 			continue;
 		}
-		if (llm->nodes[i].join_request){
+		if (llm_get_joinrequest(llm, i)){
 			ccm_send_one_join_reply(hb,info, llm->nodes[i].nodename);
-			llm->nodes[i].join_request = FALSE;
+			llm_set_joinrequest(llm, i, FALSE);
 		}
 	}
 }
@@ -934,7 +934,7 @@ ccm_compute_and_send_final_memlist(ll_cluster_t *hb, ccm_info_t *info)
 	 */
 	ccm_send_join_reply(hb, info);
 
-	CCM_SET_CL(info, LLM_GET_MYNODE(CCM_GET_LLM(info)));
+	CCM_SET_CL(info, llm_get_myindex(CCM_GET_LLM(info)));
 	report_mbrs(info);/* call this before update_reset() */
 	update_reset(CCM_GET_UPDATETABLE(info));
 	ccm_memcomp_reset(info);
@@ -983,7 +983,7 @@ ccm_send_cl_reply(ll_cluster_t *hb, ccm_info_t *info)
 	while((cl_tmp = update_next_link(CCM_GET_UPDATETABLE(info), 
 				CCM_GET_LLM(info), cltrack, &trans)) != NULL) {
 		if(strncmp(cl, cl_tmp, 
-			LLM_GET_NODEIDSIZE(CCM_GET_LLM(info))) == 0) {
+			   NODEIDSIZE) == 0) {
 
 			if(ccm_already_joined(info) && 
 				CCM_GET_MAJORTRANS(info) != trans){
@@ -1115,7 +1115,7 @@ ccm_joining_to_joined(ll_cluster_t *hb, ccm_info_t *info)
 	 */
 	ccm_send_join_reply(hb, info);
 	
-	CCM_SET_CL(info, LLM_GET_MYNODE(CCM_GET_LLM(info)));
+	CCM_SET_CL(info, llm_get_myindex(CCM_GET_LLM(info)));
 	update_reset(CCM_GET_UPDATETABLE(info));
 	ccm_set_state(info, CCM_STATE_JOINED, NULL);
 	report_mbrs(info);
@@ -1148,7 +1148,7 @@ ccm_init_to_joined(ccm_info_t *info)
 	cookie = ccm_generate_random_cookie();
 	CCM_SET_COOKIE(info, cookie);
 	ccm_free_random_cookie(cookie);
-	CCM_SET_CL(info, LLM_GET_MYNODE(CCM_GET_LLM(info)));
+	CCM_SET_CL(info, llm_get_myindex(CCM_GET_LLM(info)));
 	ccm_set_state(info, CCM_STATE_JOINED, NULL);
 	CCM_SET_JOINED_TRANSITION(info, 1);
 	report_mbrs(info);
@@ -1170,7 +1170,7 @@ ccm_all_restart(ll_cluster_t* hb, ccm_info_t* info, struct ha_msg* msg)
 		return ; 
 	}
 	
-	if (strncmp(orig, LLM_GET_MYNODEID(llm), NODEIDSIZE) == 0){
+	if (strncmp(orig, llm_get_mynodename(llm), NODEIDSIZE) == 0){
 		/*don't react to our own message*/
 		return ;
 	}
@@ -1288,7 +1288,7 @@ ccm_state_version_request(enum ccm_type ccm_msg_type,
 			}
 			clsize_val = atoi(clsize);
 			if((clsize_val+1) <=  
-			   (LLM_GET_NODECOUNT(CCM_GET_LLM(info))+1)/2) {
+			   (llm_get_nodecount(CCM_GET_LLM(info))+1)/2) {
 				/* drop the response. We will wait for 
 			  	 * a response from a bigger group 
 				 */
@@ -1743,7 +1743,7 @@ ccm_state_joined(enum ccm_type ccm_msg_type,
 			break;
 		case CCM_TYPE_MEM_LIST:{
 			const char* memlist;
-			if (strncmp(orig, LLM_GET_MYNODEID((&info->llm) ), NODEIDSIZE) == 0){
+			if (strncmp(orig, llm_get_mynodename((&info->llm) ), NODEIDSIZE) == 0){
 				/*this message is from myself, ignore it*/
 				break;
 			}
@@ -1911,7 +1911,7 @@ static void ccm_state_wait_for_change(enum ccm_type ccm_msg_type,
 					update_reset(CCM_GET_UPDATETABLE(info));
 					ccm_free_random_cookie(newcookie);
 					ccm_send_join_reply(hb, info);
-					CCM_SET_CL(info, LLM_GET_MYNODE(CCM_GET_LLM(info)));
+					CCM_SET_CL(info, llm_get_myindex(CCM_GET_LLM(info)));
 					ccm_set_state(info, CCM_STATE_JOINED,reply);
 					return;
 				}
@@ -2198,7 +2198,7 @@ switchstatement:
 
 			/* if this is my own message just forget it */
 			if(strncmp(orig, ccm_get_my_hostname(info),
-				LLM_GET_NODEIDSIZE(CCM_GET_LLM(info))) == 0) 
+				   NODEIDSIZE) == 0) 
 				break;
 
 
@@ -2538,8 +2538,7 @@ switchstatement:
 		 	 */
 			cl = update_get_cl_name(CCM_GET_UPDATETABLE(info), 
 					CCM_GET_LLM(info));
-			if(strncmp(cl, orig, 
-				LLM_GET_NODEIDSIZE(CCM_GET_LLM(info))) == 0) {
+			if(strncmp(cl, orig, NODEIDSIZE) == 0) {
 				/* increment the current minor transition value 
 				 * and resend the join message 
 				 */
@@ -2572,8 +2571,7 @@ switchstatement:
 			cl = update_get_cl_name(CCM_GET_UPDATETABLE(info), 
 						CCM_GET_LLM(info));
 
-			if(strncmp(cl, orig, 
-				LLM_GET_NODEIDSIZE(CCM_GET_LLM(info))) != 0) {
+			if(strncmp(cl, orig, NODEIDSIZE) != 0) {
 				/* received memlist from a node we do not 
 				 * think is the leader. We just reject the 
 				 * message and wait for a message from the 
@@ -2837,7 +2835,7 @@ switchstatement:
 				 */
 				if (UPDATE_GET_NODECOUNT(
 					CCM_GET_UPDATETABLE(info)) ==
-					CCM_GET_LLM_NODECOUNT(info)) {
+				    CCM_GET_LLM_NODECOUNT(info)) {
 
 					/* check if I am the leader */
 					if (update_am_i_leader(
@@ -3055,22 +3053,19 @@ switchstatement:
 }
 
 
-/*  */
-/* The most important function which tracks the state machine. */
-/*  */
 static void
 ccm_control_init(ccm_info_t *info)
 {
 	ccm_init(info);
-
+	
 	/* if this is the only active node in the cluster, go to the 
-			JOINED state */
+	   JOINED state */
 	if (llm_get_live_nodecount(CCM_GET_LLM(info)) == 1) {
 		ccm_init_to_joined(info);
 	} else {
 		ccm_set_state(info, CCM_STATE_NONE, NULL);
 	}
-
+	
 	return;
 }
 
@@ -3182,12 +3177,16 @@ set_llm_from_heartbeat(ll_cluster_t* llc, ccm_info_t* info){
 			       status);
 		}
 		
-		llm_add(llm, node, status, mynode);
+		if (llm_add(llm, node, status, mynode)!= HA_OK){
+			cl_log(LOG_ERR, "%s: adding node %s to llm failed",
+			       __FUNCTION__, node);
+			return HA_FAIL;
+			
+		}
 		
 	}
-	llm_end(llm);
 	
-	display_llm(llm);
+	llm_display(llm);
 	
 	if (ops->end_nodewalk(llc) != HA_OK) {
 		cl_log(LOG_ERR, "Cannot end node walk");
@@ -3198,7 +3197,7 @@ set_llm_from_heartbeat(ll_cluster_t* llc, ccm_info_t* info){
 	if(global_debug) {
 		cl_log(LOG_DEBUG, "======= Ending  Node Walk ==========");
 		cl_log(LOG_DEBUG, "Total # of Nodes in the Cluster: %d", 
-		       LLM_GET_NODECOUNT(llm));
+		       llm_get_nodecount(llm));
 	}		
 	
 	return HA_OK;
@@ -3581,7 +3580,7 @@ update_membership(ccm_info_t *info, const char *node,
 		info->ccm_member[index] = info->ccm_member[info->ccm_nodeCount-1];
 		info->ccm_nodeCount--;
 	}else{
-		for ( i = 0 ; i < LLM_GET_NODECOUNT(llm); i++ ) {
+		for ( i = 0 ; i < llm_get_nodecount(llm); i++ ) {
 			if(strcmp(node, llm->nodes[i].nodename) == 0){
 				/* update the membership list with this member */
 				CCM_ADD_MEMBERSHIP(info, i);
@@ -3598,8 +3597,8 @@ reset_change_info(ccm_info_t *info)
 	llm_info_t *llm = CCM_GET_LLM(info);
 	unsigned i;
 
-	for(i=0; i<LLM_GET_NODECOUNT(llm); i++) {
-		llm->nodes[i].received_change_msg = 0;
+	for(i=0; i<llm_get_nodecount(llm); i++) {
+		llm_set_change(llm, i, FALSE);
 	}
 	return;
 }

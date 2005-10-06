@@ -62,12 +62,11 @@ ccm_handle_hbapiclstat(ccm_info_t *info,
  * of a node changes. 
  */
 
-static void
+static int
 nodelist_update(ll_cluster_t* hb, ccm_info_t* info, 
 		const char *id, const char *status)
 {
 	llm_info_t *llm;
-	int indx;
 	char oldstatus[STATUSSIZE];
 	/* update the low level membership of the node
 	 * if the status moves from active to dead and if the member
@@ -79,24 +78,30 @@ nodelist_update(ll_cluster_t* hb, ccm_info_t* info,
 		       "nodelist update: Node %s now has status %s", 
 		       id,  status);
 	llm = &info->llm;
-       
-	if(llm_status_update(llm, id, status,oldstatus)) {
-		indx = ccm_get_membership_index(info,id);
+	
+	if (llm_status_update(llm, id, status,oldstatus) != HA_OK) {
+		cl_log(LOG_ERR, "%s: updating status for node %s failed",
+		       __FUNCTION__, id);
+		return HA_FAIL;
+	}
+	
+	if (STRNCMP_CONST(status, DEADSTATUS) == 0){
+		int indx = ccm_get_membership_index(info,id);
 		if(indx != -1) {
 			leave_cache(indx);
 		}
 	}
 	
-	if ( strncmp(LLM_GET_MYNODEID(llm), id,NODEIDSIZE ) == 0){
-		return ;
+	if ( strncmp(llm_get_mynodename(llm), id,NODEIDSIZE ) == 0){
+		return HA_OK;
 	}
 	if ( part_of_cluster(info->state)
 	     && ( STRNCMP_CONST(oldstatus, DEADSTATUS) == 0
 		  && STRNCMP_CONST(status, DEADSTATUS) != 0)){
 		ccm_send_state_info(hb, info, id);
 	}
-		
-	return;
+	
+	return HA_OK;
 }
 
 int
@@ -109,7 +114,7 @@ ccm_control_process(ccm_info_t *info, ll_cluster_t * hb)
 	const char*	orig=NULL;
 	const char*	status=NULL;
 	llm_info_t*	llm= &info->llm;
-	const char*	mynode = llm_get_mynode(llm);
+	const char*	mynode = llm_get_mynodename(llm);
 	const char*	numnodes;
 	int		numnodes_val;
 	
@@ -134,13 +139,26 @@ ccm_control_process(ccm_info_t *info, ll_cluster_t * hb)
 			
 			cl_log_message(LOG_DEBUG, msg);
 			if (llm_is_valid_node(&info->llm, orig)){
-				    nodelist_update(hb, info,orig, status);
-				    ha_msg_del(msg);
-				    return TRUE;
+
+				if (nodelist_update(hb, info,orig, status) != HA_OK){
+					cl_log(LOG_ERR, "%s: updating node status for "
+					       "nodelist failed(%s-%s)",
+					       __FUNCTION__, orig, status);
+					return FALSE;
+				}
+				
+				ha_msg_del(msg);
+				return TRUE;
 			}
 			
-			llm_add(llm, orig, status, mynode);
+			if (llm_add(llm, orig, status, mynode) != HA_OK){
+				cl_log(LOG_ERR, "%s: adding node(%s) to llm failed",
+				       __FUNCTION__,orig);
+				return FALSE;
+			}
+			
 			jump_to_joining_state(hb, info, msg);
+			
 		} 
 	} else {
 		msg = timeout_msg_mod(info);
