@@ -32,18 +32,25 @@ int		leave_get_next(void);
 int		leave_any(void);
 
 
-int	ccm_memlist_changed(ccm_info_t *info,char *bitmap);
-int	ccm_fill_memlist(ccm_info_t *info, const char *bitmap);
-int	ccm_fill_memlist_from_str(ccm_info_t *info, const char *memlist);
-int	ccm_fill_memlist_from_bitmap(ccm_info_t *info, 	const char *bitmap);
-int	ccm_get_membership_index(ccm_info_t *info, const char *node);
-gboolean node_is_member(ccm_info_t* info, const char* node);
+int		ccm_mem_bitmapfill(ccm_info_t *info, const char *bitmap);
+int		ccm_mem_strfill(ccm_info_t *info, const char *memlist);
+gboolean	node_is_member(ccm_info_t* info, const char* node);
 
-gboolean part_of_cluster(int state);
-int	ccm_string2type(const char *type);
-char *	ccm_type2string(enum ccm_type type);
-void   ccm_log(int priority, const char * fmt, ...) G_GNUC_PRINTF(2,3);
+gboolean	part_of_cluster(int state);
+int		ccm_string2type(const char *type);
+char*		ccm_type2string(enum ccm_type type);
+void		ccm_log(int priority, const char * fmt, ...) G_GNUC_PRINTF(2,3);
 
+void		ccm_mem_reset(ccm_info_t* info);
+int		ccm_mem_add(ccm_info_t*, int index);
+int		ccm_get_memcount(ccm_info_t* info);
+int		ccm_mem_delete(ccm_info_t* info, int index);
+int		ccm_mem_update(ccm_info_t *info, const char *node, 
+			       enum change_event_type change_type);
+int		ccm_mem_filluptime(ccm_info_t* info, int* uptime_list, 
+				   int uptime_size);
+gboolean	i_am_member(ccm_info_t* info);
+int		am_i_member_in_memlist(ccm_info_t *info, const char *memlist);
 #endif
 
 

@@ -1,4 +1,4 @@
-/* $Id: ccm.h,v 1.46 2005/10/06 01:54:11 gshi Exp $ */
+/* $Id: ccm.h,v 1.47 2005/10/06 20:03:16 gshi Exp $ */
 /*
  * ccm.h: definitions Consensus Cluster Manager internal header
  *				file
@@ -159,7 +159,8 @@ int		llm_set_joinrequest(llm_info_t* llm, int index, gboolean value);
 gboolean	llm_get_joinrequest(llm_info_t* llm, int index);
 int		llm_set_change(llm_info_t* llm, int index, gboolean value);
 gboolean	llm_get_change(llm_info_t* llm, int index);
-
+int		llm_set_uptime(llm_info_t* llm, int index, int uptime);
+int		llm_get_uptime(llm_info_t* llm, int index);
 
 /* ccm prototypes */
 longclock_t ccm_get_time(void);
@@ -381,10 +382,6 @@ typedef struct memcomp_s {
 #define  	CCM_GET_MY_HOSTNAME(info)  ccm_get_my_hostname(info)
 #define 	CCM_GET_COOKIE(info) info->ccm_cookie
 
-#define 	CCM_RESET_MEMBERSHIP(info)  info->ccm_nodeCount=0
-#define 	CCM_ADD_MEMBERSHIP(info, index)  \
-				info->ccm_member[info->ccm_nodeCount++] = index
-#define 	CCM_GET_MEMCOUNT(info)  info->ccm_nodeCount
 #define 	CCM_GET_MEMINDEX(info, i)	info->ccm_member[i]
 #define 	CCM_GET_MEMTABLE(info)		info->ccm_member
 #define 	CCM_GET_CL(info)  		info->ccm_cluster_leader
@@ -424,7 +421,7 @@ enum change_event_type{
 typedef struct ccm_info_s {
 	llm_info_t 	llm;	/*  low level membership info */
 	
-	int		ccm_nodeCount;	/*  number of nodes in the ccm cluster */
+	int		memcount;	/*  number of nodes in the ccm cluster */
 	int		ccm_member[MAXNODE];/* members of the ccm cluster */
 	memcomp_t	ccm_memcomp;	/* the datastructure to compute the  */
 					/* final membership for each membership */

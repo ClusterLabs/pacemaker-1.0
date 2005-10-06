@@ -364,7 +364,7 @@ ccm_send_one_join_reply(ll_cluster_t *hb, ccm_info_t *info, const char *joiner)
 	snprintf(activeproto, sizeof(activeproto), "%d", 
 		 info->ccm_active_proto);
 	snprintf(clsize, sizeof(clsize), "%d", 
-		 info->ccm_nodeCount);
+		 info->memcount);
 	if ( ha_msg_add(m, CCM_PROTOCOL, activeproto) == HA_FAIL 
 	     || ha_msg_add(m, CCM_CLSIZE, clsize) == HA_FAIL){
 		cl_log(LOG_ERR, "ccm_send_one_join_reply: Cannot create JOIN "

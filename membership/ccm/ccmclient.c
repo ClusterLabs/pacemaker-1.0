@@ -1,4 +1,4 @@
-/* $Id: ccmclient.c,v 1.30 2005/10/06 01:54:11 gshi Exp $ */
+/* $Id: ccmclient.c,v 1.31 2005/10/06 20:03:16 gshi Exp $ */
 /* 
  * client.c: Consensus Cluster Client tracker
  *
@@ -379,7 +379,7 @@ client_new_mbrship(ccm_info_t* info, void* borndata)
 	ccm_meminfo_t *ccm=(ccm_meminfo_t *)bornbuffer;
 	ccm_born_t    *born=(ccm_born_t *)bornbuffer;
 	struct born_s *born_arry = (struct born_s *)borndata;
-	int		n = info->ccm_nodeCount;
+	int		n = info->memcount;
 	int		trans = info->ccm_transition_major;
 	int*		member = info->ccm_member;
 	

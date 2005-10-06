@@ -1,4 +1,4 @@
-/* $Id: ccm_statemachine.c,v 1.9 2005/10/06 01:54:11 gshi Exp $ */
+/* $Id: ccm_statemachine.c,v 1.10 2005/10/06 20:03:16 gshi Exp $ */
 /* 
  * ccm.c: Consensus Cluster Service Program 
  *
@@ -54,8 +54,6 @@ static int is_expected_change_msg(ccm_info_t *info, const char *node,
 		enum change_event_type);
 static void add_change_msg(ccm_info_t *info, const char *node, 
 		const char *orig, enum change_event_type);
-static void update_membership(ccm_info_t *info, const char *node, 
-		enum change_event_type change_type);
 static void reset_change_info(ccm_info_t *info); 
 static void send_mem_list_to_all(ll_cluster_t *hb, ccm_info_t *info, 
 		char *cookie);
@@ -178,9 +176,9 @@ static int new_node_mem_list_timeout(unsigned long timeout)
 #define CCM_GET_CL_NODEID(info) \
 	info->llm.nodes[CCM_GET_CL(info)].nodename 
 #define CCM_GET_RECEIVED_CHANGE_MSG(info, node)				\
-	llm_get_change(CCM_GET_LLM(info),info->ccm_member[ccm_get_membership_index(info, node)])
+	llm_get_change(CCM_GET_LLM(info),llm_get_index(&info->llm, node))
 #define CCM_SET_RECEIVED_CHANGE_MSG(info, node, value)			\
-	llm_set_change(CCM_GET_LLM(info), info->ccm_member[ccm_get_membership_index(info, node)], value)
+	llm_set_change(CCM_GET_LLM(info), llm_get_index(&info->llm, node), value)
 
 /*
 ////////////////////////////////////////////////////////////////
@@ -224,17 +222,6 @@ ccm_configure_timeout(ll_cluster_t *hb, ccm_info_t *info)
 	CCM_TMOUT_SET_ITF(info, 18*keepalive);
 	CCM_TMOUT_SET_IFF(info, 12*keepalive);
 	CCM_TMOUT_SET_FL(info, CCM_TMOUT_GET_ITF(info)+5);
-}
-
-
-/* */
-/* ccm_get_my_hostname: return my nodename. */
-/* */
-static const char *
-ccm_get_my_hostname(ccm_info_t *info)
-{
-	llm_info_t *llm = CCM_GET_LLM(info);
-	return(llm_get_mynodename(llm));
 }
 
 
@@ -337,11 +324,6 @@ finallist_timeout(unsigned long timeout)
 /* */
 
 
-
-
-
-
-
 /* Reset all the datastructures. Go to a state which is equivalent */
 /* to a state when the node is just about to join a cluster. */
 void 
@@ -352,7 +334,7 @@ ccm_reset(ccm_info_t *info)
 		client_evicted();
 	}
 
-	CCM_RESET_MEMBERSHIP(info);
+	ccm_mem_reset(info);
 	ccm_memcomp_reset(info);
 	CCM_SET_ACTIVEPROTO(info, CCM_VER_NONE);
 	CCM_SET_COOKIE(info,"");
@@ -407,10 +389,10 @@ report_mbrs(ccm_info_t *info)
 				stack variable*/
 	
 
-	if(CCM_GET_MEMCOUNT(info)==1){
+	if(ccm_get_memcount(info)==1){
 		bornon[0].index  = CCM_GET_MEMINDEX(info,0);
 		bornon[0].bornon = CCM_GET_MAJORTRANS(info);
-	} else for(i=0; i < CCM_GET_MEMCOUNT(info); i++){
+	} else for(i=0; i < ccm_get_memcount(info); i++){
 		bornon[i].index = CCM_GET_MEMINDEX(info,i);
 		bornon[i].bornon = update_get_uptime(CCM_GET_UPDATETABLE(info), 
 						     CCM_GET_LLM(info),
@@ -424,7 +406,7 @@ report_mbrs(ccm_info_t *info)
 	       "of the group of transition=%d",
 	       CCM_GET_MAJORTRANS(info));
 	
-	for (i=0 ;  i < CCM_GET_MEMCOUNT(info); i++) {
+	for (i=0 ;  i < ccm_get_memcount(info); i++) {
 		nodename = llm_get_nodename(CCM_GET_LLM(info), 
 					  CCM_GET_MEMINDEX(info,i));
 		cl_log(LOG_DEBUG,"\t\tnodename=%s bornon=%d", nodename, 
@@ -438,10 +420,6 @@ report_mbrs(ccm_info_t *info)
 			   bornon);
 	return;
 }
-/*
- * END OF ROUTINES THAT REPORT THE MEMBERSHIP TO CLIENTS.
- */
-
 
 
 
@@ -552,7 +530,7 @@ ccm_memcomp_note_my_membership(ccm_info_t *info)
 
 	str_len = update_strcreate(CCM_GET_UPDATETABLE(info), 
 			memlist, CCM_GET_LLM(info));
-	ccm_memcomp_note(info, ccm_get_my_hostname(info), 
+	ccm_memcomp_note(info, llm_get_mynodename(&info->llm), 
 			CCM_GET_MAXTRANS(info), memlist);
 	return;
 }
@@ -565,8 +543,7 @@ ccm_memcomp_add(ccm_info_t *info, const char *orig)
 	memcomp_t *mem_comp = CCM_GET_MEMCOMP(info);
 
 	index = llm_get_index(CCM_GET_LLM(info), orig);
-	myindex = llm_get_index(CCM_GET_LLM(info), 
-			ccm_get_my_hostname(info));
+	myindex = llm_get_myindex(&info->llm); 
 	graph_add_uuid(MEMCOMP_GET_GRAPH(mem_comp), index);
 	graph_add_to_membership(MEMCOMP_GET_GRAPH(mem_comp), 
 				myindex, index);
@@ -660,53 +637,6 @@ ccm_memcomp_get_maxmembership(ccm_info_t *info, char **bitmap)
 /* */
 
 
-static int 
-ccm_am_i_member(ccm_info_t *info, const char *memlist)
-{
-	char *bitmap = NULL;
-	int numBytes, myindex;
-	llm_info_t *llm;
-
-	bitmap_create(&bitmap, MAXNODE);
-	if (bitmap == NULL){
-		cl_log(LOG_ERR ," bitmap creatation failed");
-		return FALSE;
-	}
-	
-	numBytes = ccm_str2bitmap(memlist, strlen(memlist), bitmap);
-	
-	/* what is my node Uuid */
-	llm = CCM_GET_LLM(info);
-
-	myindex = llm_get_myindex(llm);
-	
-	if (bitmap_test(myindex, bitmap, numBytes*BitsInByte)){
-		bitmap_delete(bitmap);
-		return TRUE;
-	}
-
-	bitmap_delete(bitmap);
-	return FALSE;
-}
-
-
-
-
-static int
-ccm_get_index(ccm_info_t* info, const char* node)
-{
-	uint i;
-	llm_info_t *llm = CCM_GET_LLM(info);
-	for ( i = 0 ; i < llm->nodecount ; i++ ) {
-		if(strncmp(llm_get_nodename(llm, i), node, 
-			   NODEIDSIZE) == 0){
-			return i;
-		}
-	}
-	return -1;
-	
-	
-}
 
 static int
 ccm_am_i_leader(ccm_info_t *info)
@@ -723,7 +653,7 @@ ccm_am_i_leader(ccm_info_t *info)
 static gboolean
 node_is_leader(ccm_info_t* info, const char* nodename)
 {
-	return( ccm_get_index(info, nodename) == CCM_GET_CL(info));	
+	return( llm_get_index(&info->llm, nodename) == CCM_GET_CL(info));	
 	
 }
 
@@ -889,12 +819,8 @@ ccm_compute_and_send_final_memlist(ll_cluster_t *hb, ccm_info_t *info)
 	strsize  = ccm_bitmap2str(bitmap,  string, MAX_MEMLIST_STRING);
 	
 
-	/* check if the membership has changed from that before. If so we
-	 * have to generate a new cookie.
-	 */
-	if(ccm_memlist_changed(info, (char *)bitmap)) {
-		cookie = ccm_generate_random_cookie();
-	}
+	cookie = ccm_generate_random_cookie();
+
 	repeat = 0;
 	while (ccm_send_final_memlist(hb, info, cookie, string, maxtrans+1) 
 					!= HA_OK) {
@@ -911,7 +837,7 @@ ccm_compute_and_send_final_memlist(ll_cluster_t *hb, ccm_info_t *info)
 	}
 
 	/* fill my new memlist and update the new cookie if any */
-	ccm_fill_memlist_from_bitmap(info, bitmap);
+	ccm_mem_bitmapfill(info, bitmap);
 	bitmap_delete(bitmap);
 
 	/* increment the major transition number and reset the
@@ -1092,7 +1018,7 @@ ccm_joining_to_joined(ll_cluster_t *hb, ccm_info_t *info)
 	cookie = ccm_generate_random_cookie();
 
 	/* fill my new memlist and update the new cookie if any */
-	ccm_fill_memlist_from_bitmap(info, bitmap);
+	ccm_mem_bitmapfill(info, bitmap);
 	bitmap_delete(bitmap);
 
 	/* increment the major transition number and reset the
@@ -1125,24 +1051,31 @@ ccm_joining_to_joined(ll_cluster_t *hb, ccm_info_t *info)
 	return;
 }
 
-/* */
-/* Move the state of this ccm node, from init state directly to */
-/* the joined state. */
-/* */
-/* NOTE: this is generally called when a node when it  determines */
-/* that it is all alone in the cluster. */
-/* */
-static void
+/*
+ * Move the state of this ccm node, from init state directly to 
+ * the joined state. 
+ * 
+ * NOTE: this is generally called when a node when it  determines 
+ * that it is all alone in the cluster. 
+ */
+
+static int
 ccm_init_to_joined(ccm_info_t *info)
 {
-	int numBytes;
-	char *bitlist;
-	char *cookie;
+	char*		cookie;
+	int		ret;
+	llm_info_t*	llm = &info->llm;
+	
+	ccm_mem_reset(info);
+	ret = ccm_mem_add(info, llm_get_myindex(llm));
+	if (ret != HA_OK){
+		cl_log(LOG_ERR, "%s: adding myself to membership failed",
+		       __FUNCTION__);
+		return HA_FAIL;
+	}
+	
+	llm_set_uptime(llm, llm_get_myindex(llm), 1);
 
-	numBytes = bitmap_create(&bitlist, MAXNODE);
-	bitmap_mark(llm_get_myindex(&info->llm), bitlist,MAXNODE);
-	ccm_fill_memlist_from_bitmap(info, bitlist);
-	bitmap_delete(bitlist);
 	CCM_SET_MAJORTRANS(info, 1);
 	CCM_SET_MINORTRANS(info, 0);
 	cookie = ccm_generate_random_cookie();
@@ -1152,7 +1085,7 @@ ccm_init_to_joined(ccm_info_t *info)
 	ccm_set_state(info, CCM_STATE_JOINED, NULL);
 	CCM_SET_JOINED_TRANSITION(info, 1);
 	report_mbrs(info);
-	return;
+	return HA_OK;
 }
 
 
@@ -1605,7 +1538,7 @@ ccm_state_joined(enum ccm_type ccm_msg_type,
 				if(received_all_change_msg(info)){
 					char *newcookie = ccm_generate_random_cookie();
 
-					update_membership(info, orig, NODE_LEAVE);          
+					ccm_mem_update(info, orig, NODE_LEAVE);          
 					send_mem_list_to_all(hb, info, newcookie);
 					CCM_SET_MAJORTRANS(info, trans_majorval+1); 
 					CCM_RESET_MINORTRANS(info);
@@ -1686,7 +1619,7 @@ ccm_state_joined(enum ccm_type ccm_msg_type,
 				if(received_all_change_msg(info)){
 					char *newcookie = ccm_generate_random_cookie();
 
-					update_membership(info, orig, NEW_NODE);
+					ccm_mem_update(info, orig, NEW_NODE);
 					update_add(CCM_GET_UPDATETABLE(info),
 						CCM_GET_LLM(info),
 						info->change_node_id, trans_majorval+1, FALSE);
@@ -1754,7 +1687,7 @@ ccm_state_joined(enum ccm_type ccm_msg_type,
 			}
 			
 			if (node_is_leader(info, orig)
-			    && !ccm_am_i_member(info, memlist)){
+			    && !am_i_member_in_memlist(info, memlist)){
 				ccm_set_state(info, CCM_STATE_NONE, reply);
 				break;
 			}
@@ -1901,7 +1834,7 @@ static void ccm_state_wait_for_change(enum ccm_type ccm_msg_type,
 				if(received_all_change_msg(info)){ 
 					char *newcookie = ccm_generate_random_cookie();
 
-					update_membership(info, node, NODE_LEAVE);        
+					ccm_mem_update(info, node, NODE_LEAVE);        
      					send_mem_list_to_all(hb, info, newcookie);
 					CCM_SET_MAJORTRANS(info, trans_majorval+1); 
 					CCM_RESET_MINORTRANS(info);
@@ -1966,7 +1899,7 @@ static void ccm_state_wait_for_change(enum ccm_type ccm_msg_type,
 				if(received_all_change_msg(info)){
 					char *newcookie = ccm_generate_random_cookie();
 
-					update_membership(info, node, NEW_NODE); 
+					ccm_mem_update(info, node, NEW_NODE); 
 					update_add(CCM_GET_UPDATETABLE(info), 
 						CCM_GET_LLM(info),
 						info->change_node_id, trans_majorval+1, FALSE);                                
@@ -2197,7 +2130,7 @@ switchstatement:
 		case CCM_TYPE_REQ_MEMLIST:
 
 			/* if this is my own message just forget it */
-			if(strncmp(orig, ccm_get_my_hostname(info),
+			if(strncmp(orig, llm_get_mynodename(&info->llm),
 				   NODEIDSIZE) == 0) 
 				break;
 
@@ -2614,12 +2547,12 @@ switchstatement:
 			}
 			trans_maxval = atoi(trans);
 
-			if (!ccm_am_i_member(info, memlist)) {
+			if (!am_i_member_in_memlist(info, memlist)) {
 				ccm_reset(info); 
 				break;
 			}
 
-			ccm_fill_memlist_from_str(info, (const char *)memlist);
+			ccm_mem_strfill(info, (const char *)memlist);
 			/* increment the major transition number and reset the
 			 * minor transition number
 			 */
@@ -2636,7 +2569,7 @@ switchstatement:
 				CCM_SET_COOKIE(info, cookie); 
 			}
 
-			indx = ccm_get_index(info, cl); 
+			indx = llm_get_index(&info->llm, cl); 
 			assert(indx != -1);
 			CCM_SET_CL(info, indx); 
 			report_mbrs(info); /* call before update_reset */
@@ -3266,7 +3199,7 @@ ccm_initialize()
 
 
 	if (hb_fd->llc_ops->set_ifstatus_callback(hb_fd, LinkStatus, NULL)
-					!=HA_OK){
+	    !=HA_OK){
 		cl_log(LOG_ERR, "Cannot set if status callback");
 		cl_log(LOG_ERR, "REASON: %s", hb_fd->llc_ops->errmsg(hb_fd));
 		goto errout;
@@ -3310,9 +3243,9 @@ static void add_change_msg(ccm_info_t *info, const char *node, const char *orig,
 	strcpy(info->change_node_id, node);
 	info->change_type = type;
 	if(type == NODE_LEAVE){
-		info->change_event_remaining_count = CCM_GET_MEMCOUNT(info)-1;
+		info->change_event_remaining_count = ccm_get_memcount(info)-1;
 	}else{
-		info->change_event_remaining_count = CCM_GET_MEMCOUNT(info);
+		info->change_event_remaining_count = ccm_get_memcount(info);
 	}
 	append_change_msg(info, orig);
 	return;
@@ -3443,7 +3376,7 @@ static void ccm_state_wait_for_mem_list(enum ccm_type ccm_msg_type,
 				return;
 			}
 
-			ccm_fill_memlist_from_str(info, (const char *)memlist);
+			ccm_mem_strfill(info, (const char *)memlist);
 			CCM_SET_MAJORTRANS(info, curr_major+1);
 			CCM_RESET_MINORTRANS(info);
 			if ((cookie = ha_msg_value(reply, CCM_NEWCOOKIE))
@@ -3452,7 +3385,7 @@ static void ccm_state_wait_for_mem_list(enum ccm_type ccm_msg_type,
 					"leader  changed  cookie ");
 				CCM_SET_COOKIE(info, cookie);
 			}
-			CCM_SET_CL(info, ccm_get_index(info,orig));
+			CCM_SET_CL(info, llm_get_index(&info->llm,orig));
 			ccm_fill_update_table(info, CCM_GET_UPDATETABLE(info),
 						uptime_list);
 			report_mbrs(info);
@@ -3567,29 +3500,6 @@ static void ccm_state_wait_for_mem_list(enum ccm_type ccm_msg_type,
 	}
 }
 
-static void
-update_membership(ccm_info_t *info, const char *node, 
-		enum change_event_type change_type)
-{
-	unsigned	i;
-	int		index;
-	llm_info_t *llm = CCM_GET_LLM(info);
-    
-	if (change_type == NODE_LEAVE){
-		index = ccm_get_membership_index(info, node);
-		info->ccm_member[index] = info->ccm_member[info->ccm_nodeCount-1];
-		info->ccm_nodeCount--;
-	}else{
-		for ( i = 0 ; i < llm_get_nodecount(llm); i++ ) {
-			if(strcmp(node, llm->nodes[i].nodename) == 0){
-				/* update the membership list with this member */
-				CCM_ADD_MEMBERSHIP(info, i);
-				break;
-			}
-		}
-	}
-	return;
-}
 
 static void
 reset_change_info(ccm_info_t *info)
@@ -3613,11 +3523,10 @@ static void send_mem_list_to_all(ll_cluster_t *hb,
 	int numBytes, i, size, strsize,  j, tmp, tmp_mem[100];
 	char *bitmap;
 	char memlist[MAX_MEMLIST_STRING];
-	int *uptime;
+	int uptime[MAXNODE];
     
 	numBytes = bitmap_create(&bitmap, MAXNODE);
-	size = info->ccm_nodeCount;
-	uptime = g_malloc(sizeof(int)*size);
+	size = info->memcount;
 	
 	for (i=0; i<size; i++){
 		tmp_mem[i] = info->ccm_member[i]; 
@@ -3642,7 +3551,6 @@ static void send_mem_list_to_all(ll_cluster_t *hb,
 	strsize  = ccm_bitmap2str(bitmap, memlist, MAX_MEMLIST_STRING);
 	bitmap_delete(bitmap);
 	ccm_send_to_all(hb, info, memlist, cookie, uptime, size);
-	g_free(uptime);
 	return;
 }
 
@@ -3657,6 +3565,7 @@ static void ccm_state_new_node_wait_for_mem_list(enum ccm_type ccm_msg_type,
 	uint  trans_majorval=0,trans_minorval=0, uptime_val;
 	uint  curr_major, curr_minor;
 	int repeat;
+	int ret;
 
 	if ((orig = ha_msg_value(reply, F_ORIG)) == NULL) {
 		cl_log(LOG_WARNING, "ccm_state_new_node_wait_for_mem_list: " 
@@ -3739,14 +3648,29 @@ static void ccm_state_new_node_wait_for_mem_list(enum ccm_type ccm_msg_type,
 				return;
 			}
 			
-			ccm_fill_memlist_from_str(info, (const char *)memlist);
-			if(ccm_get_membership_index(info, 
-					CCM_GET_MYNODE_ID(info)) == -1){
+			ret = ccm_mem_strfill(info, (const char *)memlist);
+			if (ret != HA_OK){
+				cl_log(LOG_ERR, "%s: filling membership from string failed",
+				       __FUNCTION__);
+				return;
+			}
+			
+			ret = ccm_mem_filluptime(info, uptime_list, uptime_size);
+			if (ret != HA_OK){
+				cl_log(LOG_ERR, "%s: filling uptime failed",
+				       __FUNCTION__);
+				return;
+			}
+			
+			if (i_am_member(info) == FALSE){
 				version_reset(CCM_GET_VERSION(info));
 				ccm_set_state(info, CCM_STATE_NONE, reply);
 				ccm_reset_all_join_request(info);
 				break;
 			}
+			
+			
+			
 			CCM_SET_MAJORTRANS(info, curr_major+1); 
 			CCM_RESET_MINORTRANS(info);
 			if ((cookie = ha_msg_value(reply, CCM_NEWCOOKIE)) 
@@ -3755,7 +3679,7 @@ static void ccm_state_new_node_wait_for_mem_list(enum ccm_type ccm_msg_type,
 					"leader  changed  cookie ");
 				CCM_SET_COOKIE(info, cookie); 
 			}
-			CCM_SET_CL(info,ccm_get_index(info, orig));
+			CCM_SET_CL(info,llm_get_index(&info->llm, orig));
 			CCM_SET_JOINED_TRANSITION(info, CCM_GET_MAJORTRANS(info));
 			ccm_fill_update_table(info, 
 				CCM_GET_UPDATETABLE(info), uptime_list);
@@ -3875,8 +3799,8 @@ static void ccm_fill_update_table(ccm_info_t *info,
 
 	uptime = (const int *)uptime_list;
 
-	UPDATE_SET_NODECOUNT(update_table, info->ccm_nodeCount);
-	for (i = 0; i< info->ccm_nodeCount; i++){
+	UPDATE_SET_NODECOUNT(update_table, info->memcount);
+	for (i = 0; i< info->memcount; i++){
 		update_table->update[i].index = info->ccm_member[i];
 		update_table->update[i].uptime = ntohl(uptime[i]);
 	}

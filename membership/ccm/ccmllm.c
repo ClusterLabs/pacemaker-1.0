@@ -1,4 +1,4 @@
-/* $Id: ccmllm.c,v 1.24 2005/10/06 01:54:11 gshi Exp $ */
+/* $Id: ccmllm.c,v 1.25 2005/10/06 20:03:16 gshi Exp $ */
 /* 
  * ccmllm.c: Low Level membership routines.
  *
@@ -364,3 +364,50 @@ llm_get_change(llm_info_t* llm, int index)
 	return llm->nodes[index].receive_change_msg;	
 }
 
+int
+llm_set_uptime(llm_info_t* llm, int index, int uptime)
+{
+	if (llm == NULL){
+		cl_log(LOG_ERR, "%s: NULL pointer",
+		       __FUNCTION__);
+		return  FALSE;
+	}
+	
+	if (index < 0 || index > MAXNODE){
+		cl_log(LOG_ERR, "%s: index(%d) out of range",
+		       __FUNCTION__, index);
+		return FALSE;
+	}
+	
+	if (uptime < 0){
+		cl_log(LOG_ERR, "%s: Negative uptime%d",
+		       __FUNCTION__, uptime);
+		return FALSE;
+		       
+	}
+
+	llm->nodes[index].uptime = uptime;
+	
+	return HA_OK;
+}
+
+int
+llm_get_uptime(llm_info_t* llm, int index)
+{
+	
+	if (llm == NULL){
+		cl_log(LOG_ERR, "%s: NULL pointer",
+		       __FUNCTION__);
+		return  -1;
+	}
+	
+	if (index < 0 || index > MAXNODE){
+		cl_log(LOG_ERR, "%s: index(%d) out of range",
+		       __FUNCTION__, index);
+		return -1;
+	}
+	
+	return llm->nodes[index].uptime;
+
+	
+}

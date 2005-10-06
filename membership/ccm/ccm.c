@@ -86,10 +86,11 @@ nodelist_update(ll_cluster_t* hb, ccm_info_t* info,
 	}
 	
 	if (STRNCMP_CONST(status, DEADSTATUS) == 0){
-		int indx = ccm_get_membership_index(info,id);
-		if(indx != -1) {
-			leave_cache(indx);
+		
+		if(node_is_member(info, id)){
+			leave_cache(llm_get_index(llm, id));
 		}
+		
 	}
 	
 	if ( strncmp(llm_get_mynodename(llm), id,NODEIDSIZE ) == 0){
