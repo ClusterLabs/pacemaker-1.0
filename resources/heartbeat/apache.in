@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $Id: apache.in,v 1.4 2005/07/29 07:50:53 sunjd Exp $
+# $Id: apache.in,v 1.5 2005/10/08 05:56:22 sunjd Exp $
 #
 #	High-Availability Apache/IBMhttp control script
 # 
@@ -88,7 +88,7 @@ usage() {
 		monitor in the methods call if we don't know think
 		that the monitor call will actually work ;-)
 
-	$Id: apache.in,v 1.4 2005/07/29 07:50:53 sunjd Exp $
+	$Id: apache.in,v 1.5 2005/10/08 05:56:22 sunjd Exp $
 	!
   exit 1
 }
@@ -165,7 +165,7 @@ apache_param() {
 
   if
     apachecat $1 | grep -i "^$varname " | \
-        sed -e 's%^[^ ]* %%' -e 's%^"%%' -e 's%"$%%'
+        sed -e 's%^[^ ]* %%' -e 's%^"%%' -e 's%"$%%' -e 's%^[[:blank:]]*%%' -e 's%[[:blank:]]*$%%'
   then
      : OK
   else
@@ -177,7 +177,7 @@ apache_param() {
 # Return TRUE if the config file supports the given handler somewhere
 #
 SupportsHandler() {
-  apache_param $1 SetHandler | grep "^$2 *" >/dev/null
+  apache_param $1 SetHandler | grep "^ *$2 *" >/dev/null
 }
 
 #
@@ -208,6 +208,7 @@ GetParams() {
   PidFile=`apache_param $ConfigFile PidFile`
   case $PidFile in
     /*)	;;
+    [[:alnum:]]*)  PidFile=$ServerRoot/$PidFile;;
     *)	PidFile=$ServerRoot/$PidFile;;
   esac
   case "$PORT" in
