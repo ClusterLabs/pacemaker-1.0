@@ -139,7 +139,11 @@ LinuxHA_ClusterResourceProviderEnumInstanceNames(CMPIInstanceMI * mi,
         if ( ret == HA_OK ) {
                 CMReturn(CMPI_RC_OK);        
         } else {
-                CMReturn(CMPI_RC_ERR_FAILED);
+                if (rc.rc == CMPI_RC_OK ) {
+                        CMReturn(CMPI_RC_ERR_FAILED);
+                } else {
+                        return rc;
+                }
         }
 }
 
@@ -159,7 +163,11 @@ LinuxHA_ClusterResourceProviderEnumInstances(CMPIInstanceMI * mi,
         if ( ret == HA_OK ) {
                 CMReturn(CMPI_RC_OK);        
         } else {
-                CMReturn(CMPI_RC_ERR_FAILED);
+                if (rc.rc == CMPI_RC_OK ) {
+                        CMReturn(CMPI_RC_ERR_FAILED);
+                } else {
+                        return rc;
+                }
         }
 
 }
@@ -180,7 +188,7 @@ LinuxHA_ClusterResourceProviderGetInstance(CMPIInstanceMI * mi,
         if ( ret == HA_OK ){
                 CMReturn(CMPI_RC_OK);
         } else {
-                CMReturn(CMPI_RC_ERR_FAILED);
+                return rc;
         }
 }
 

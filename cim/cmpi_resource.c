@@ -36,24 +36,36 @@
 /* temporary implementaion */        
 
 
-typedef struct cluster_resource_info_s {
+struct cluster_resource_info {
         char *  name;
         char *  type;
         char *  provider;
         char *  class;
-} cluster_resource_info;
+};
 
 static char * get_hosting_node(const char * name);
+static GPtrArray * get_resource_info_table (void);
+static int free_resource_info_table ( GPtrArray * resource_info_table);
 
-static int
-get_resource_infos(GPtrArray * info_array)
+static GPtrArray * 
+get_resource_info_table ()
 {
         char ** std_out = NULL;
-        char cmnd[] = HA_LIBDIR"/heartbeat/crmadmin -R";
-        int exit_code;
-        int ret, i;
-
+        char cmnd [] = HA_LIBDIR"/heartbeat/crmadmin -R";
+        GPtrArray * resource_info_table = NULL;
+        int exit_code = 0;
+        int ret = 0;
+        int i = 0;
+        
         DEBUG_ENTER();
+
+        resource_info_table = g_ptr_array_new ();
+
+        if ( resource_info_table == NULL ) {
+                cl_log(LOG_ERR, "%s: failed to alloc array", __FUNCTION__);
+                return NULL;
+        }
+
         ret = run_shell_command(cmnd, &exit_code, &std_out, NULL);
 
         for (i = 0; std_out[i]; i++){
@@ -63,8 +75,9 @@ get_resource_infos(GPtrArray * info_array)
                                         std_out[i], &match);
 
                 if (ret == HA_OK && match[0]) {
-                        cluster_resource_info * info = NULL;
-                        info = malloc(sizeof(cluster_resource_info));
+                        struct cluster_resource_info * info = NULL;
+                        info = (struct cluster_resource_info * )
+                                malloc(sizeof(struct cluster_resource_info));
 
                         /* parse the result */
                         info->class = strdup(match[3]);
@@ -73,7 +86,7 @@ get_resource_infos(GPtrArray * info_array)
 
                         cl_log(LOG_INFO, "%s: add resource info for %s", 
                                         __FUNCTION__, info->name);
-                        g_ptr_array_add(info_array, info);
+                        g_ptr_array_add(resource_info_table, info);
 
                         /* free memory allocated */
                         free_2d_array(match);
@@ -85,6 +98,29 @@ get_resource_infos(GPtrArray * info_array)
 
         DEBUG_LEAVE();
 
+        return resource_info_table;
+}
+
+static int 
+free_resource_info_table ( GPtrArray * resource_info_table)
+{
+        struct cluster_resource_info * resource_info = NULL;
+
+        while (resource_info_table->len) {
+
+                resource_info = (struct cluster_resource_info *)
+                        g_ptr_array_remove_index_fast(resource_info_table, 0);
+                
+                free(resource_info->name);
+                free(resource_info->class);
+                free(resource_info->type);
+
+                resource_info = NULL;
+
+        }
+
+        g_ptr_array_free(resource_info_table, 0);
+
         return HA_OK;
 }
 
@@ -95,9 +131,8 @@ make_resource_instance(char * classname, CMPIBroker * broker,
 {
         CMPIInstance * ci = NULL;
         char * hosting_node = NULL;
-        GPtrArray * info_array = NULL;
-        cluster_resource_info * info = NULL;
-        int ret = 0;
+        GPtrArray * info_table = NULL;
+        struct cluster_resource_info * info = NULL;
         int i = 0;
 
 
@@ -105,35 +140,21 @@ make_resource_instance(char * classname, CMPIBroker * broker,
 
         cl_log(LOG_INFO, "%s: make instance for %s", __FUNCTION__, rsc_name);
 
-        ci = CMNewInstance(broker, op, rc);
+        info_table = get_resource_info_table ();
 
-        if ( CMIsNullObject(ci) ) {
-                ci = NULL;
-                goto out;
-        }
-         
-        info_array = g_ptr_array_new();
-        if ( info_array == NULL ) {
-                ci = NULL;
-                goto out;
-        } 
+        if ( info_table == NULL ) {
+                cl_log(LOG_ERR, "%s: can't get resource info", __FUNCTION__);
 
-        cl_log(LOG_INFO, "%s: get_resource_infos", __FUNCTION__);
-        ret = get_resource_infos(info_array);
-
-        if ( ret != HA_OK ) {
-                ci = NULL;
+	        CMSetStatusWithChars(broker, rc, 
+		       CMPI_RC_ERR_FAILED, "Can't get resource info");
                 goto out;
         }
 
-        cl_log(LOG_INFO, "%s: got resource infos", __FUNCTION__);
+        
+        for ( i = 0; i < info_table->len; i++ ) {
 
-        ASSERT(info_array);
-
-        for ( i = 0; i < info_array->len; i++ ) {
-
-                info = (cluster_resource_info *)
-                        g_ptr_array_index(info_array, i); 
+                info = (struct cluster_resource_info *)
+                        g_ptr_array_index(info_table, i); 
 
                 
                 cl_log(LOG_INFO, "%s: looking for [%s], rsc @ %d = [%s]",
@@ -146,15 +167,28 @@ make_resource_instance(char * classname, CMPIBroker * broker,
         }
 
 
-        if ( i == info_array->len ) {
-                cl_log(LOG_WARNING, "%s: can not find resource: %s",
+        if ( i == info_table->len ) {
+                cl_log(LOG_WARNING, "%s: resource %s not found!",
                                 __FUNCTION__, rsc_name);
-                ci = NULL;
+
+	        CMSetStatusWithChars(broker, rc, 
+		       CMPI_RC_ERR_NOT_FOUND, "Resource not found");
+
                 goto out;
         }
 
         ASSERT(info);
 
+        ci = CMNewInstance(broker, op, rc);
+
+        if ( CMIsNullObject(ci) ) {
+                cl_log(LOG_ERR, "%s: can't create instance", __FUNCTION__);
+
+	        CMSetStatusWithChars(broker, rc, 
+		       CMPI_RC_ERR_FAILED, "Can't get create instance");
+                goto out;
+        }
+ 
         cl_log(LOG_INFO, "%s: setting properties", __FUNCTION__);
 
         /* setting properties */
@@ -180,9 +214,11 @@ make_resource_instance(char * classname, CMPIBroker * broker,
                 CMSetProperty(ci, "Status", status, CMPI_chars);
         }
 
-        g_ptr_array_free(info_array, 0);
-
 out:
+        if ( info_table ) {
+                free_resource_info_table ( info_table );
+        }
+
         DEBUG_LEAVE();
         return ci;
 }
@@ -195,19 +231,14 @@ enumerate_resource_instances(char * classname, CMPIBroker * broker,
 
         CMPIObjectPath * op = NULL;
         char * namespace = NULL;
-        int ret, i;
-        GPtrArray * info_array = NULL;
+        int i = 0;
+        GPtrArray * info_table = NULL;
 
         
-        info_array = g_ptr_array_new(); 
-        if ( info_array == NULL ) {
-                return HA_FAIL;
-        } 
-
-        cl_log(LOG_INFO, "%s: get_resource_infos", __FUNCTION__);
-        ret = get_resource_infos(info_array);
-
-        if ( ret != HA_OK ) {
+        info_table = get_resource_info_table (); 
+        
+        if ( info_table == NULL ) {
+                cl_log(LOG_ERR, "%s: can't get resource info", __FUNCTION__);
                 return HA_FAIL;
         }
         
@@ -215,16 +246,15 @@ enumerate_resource_instances(char * classname, CMPIBroker * broker,
         op = CMNewObjectPath(broker, namespace, classname, rc);
 
         if ( CMIsNullObject(op) ){
+                free_resource_info_table ( info_table );
                 return HA_FAIL;
         }
 
-        cl_log(LOG_INFO, "%s: begin to enumerate", __FUNCTION__);
-
-        for (i = 0; i < info_array->len; i++){
-                cluster_resource_info * info = NULL;
+        for (i = 0; i < info_table->len; i++){
+                struct cluster_resource_info * info = NULL;
            
-                info = (cluster_resource_info *)
-                        g_ptr_array_index(info_array, i); 
+                info = (struct cluster_resource_info *)
+                        g_ptr_array_index(info_table, i); 
 
                 /* create an object */
                 CMAddKey(op, "Name", info->name, CMPI_chars);
@@ -235,8 +265,8 @@ enumerate_resource_instances(char * classname, CMPIBroker * broker,
 
                         if ( CMIsNullObject(ci) ){
                                 cl_log(LOG_WARNING, 
-                                        "%s: can not make instance", 
-                                        __FUNCTION__);
+                                   "%s: can not make instance", __FUNCTION__);
+                                free_resource_info_table ( info_table );
                                 return HA_FAIL;
                         }
                         
@@ -249,10 +279,10 @@ enumerate_resource_instances(char * classname, CMPIBroker * broker,
                 }
         }
         
-        cl_log(LOG_INFO, "%s: return done!", __FUNCTION__);
         CMReturnDone(rslt);
 
-        g_ptr_array_free(info_array, 0);
+        free_resource_info_table ( info_table );
+
         return HA_OK;
 }
 
@@ -343,7 +373,6 @@ get_resource_instance(char * classname,
 
         CMReturnInstance(rslt, ci);
 
-        cl_log(LOG_INFO, "%s: return done!", __FUNCTION__);
         CMReturnDone(rslt);
 
         ret = HA_OK;

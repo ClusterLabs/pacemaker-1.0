@@ -29,6 +29,8 @@
 
 #include <sys/types.h>
 #include <unistd.h>
+#include <glib.h>
+
 #include <clplumbing/cl_malloc.h>
 
 #include "linuxha_info.h"
@@ -39,9 +41,14 @@
 #define HB_CLIENT_ID "cim-provider-node"
 
 static char * get_cluster_dc(void);
-static char * get_clusternode_status(const char * node);
+static char * get_node_status(const char * node);
+static GPtrArray * get_nodeinfo_table(void);
+static int free_nodeinfo_table(GPtrArray * nodeinfo_table);
+static struct hb_nodeinfo * hb_nodeinfo_dup(const struct hb_nodeinfo * info);
+static int hb_nodeinfo_free(struct hb_nodeinfo * node_info);
 
-static CMPIInstance * make_clusternode_instance(char * classname, 
+
+static CMPIInstance * make_node_instance(char * classname, 
         CMPIBroker * broker, CMPIObjectPath * op, 
         char * uname, CMPIStatus * rc);
 
@@ -74,7 +81,7 @@ get_cluster_dc ()
 }
 
 static char *
-get_clusternode_status(const char * node)
+get_node_status(const char * node)
 {
         char ** std_out = NULL;
         char cmnd_pat [] = HA_LIBDIR"/heartbeat/crmadmin -S";
@@ -115,17 +122,126 @@ get_clusternode_status(const char * node)
 
         cl_log(LOG_INFO, "%s: status of %s is %s", 
                                 __FUNCTION__, node, status);
+
         free_2d_array(std_out);
         free(cmnd);
+
         return status;
 }
 
+static struct hb_nodeinfo *
+hb_nodeinfo_dup(const struct hb_nodeinfo * info)
+{
+        struct hb_nodeinfo * dup_info = NULL;
+
+        dup_info = (struct hb_nodeinfo *)malloc(sizeof(struct hb_nodeinfo));
+
+        if ( dup_info == NULL ) {
+                return NULL;
+        }
+
+        dup_info->id = info->id;
+        dup_info->type = info->type;
+        dup_info->status = info->status;
+        dup_info->ifcount = info->ifcount;
+        dup_info->uuid = info->uuid;
+        
+        dup_info->name = strdup(info->name);
+        
+        return dup_info;        
+}
+
+static int
+hb_nodeinfo_free(struct hb_nodeinfo * node_info)
+{
+        free(node_info->name);
+        free(node_info);
+        
+        return HA_OK;
+}
+
+
+static GPtrArray *
+get_nodeinfo_table ()
+{
+        GPtrArray * nodeinfo_table = NULL;
+        GPtrArray * hb_info = NULL;
+        struct hb_nodeinfo * node_info = NULL;
+
+        int ret = 0;
+        int i = 0;
+
+        DEBUG_ENTER();
+
+        nodeinfo_table = g_ptr_array_new ();
+
+        if ( nodeinfo_table == NULL ) {
+                cl_log(LOG_ERR, "%s: can not create array", __FUNCTION__);
+
+                DEBUG_LEAVE();
+                return NULL;
+        }
+
+
+        if ( ! get_hb_initialized() ) {
+                ret = linuxha_initialize(HB_CLIENT_ID, 0);
+
+                if (ret != HA_OK ) {
+                        cl_log(LOG_ERR, 
+                           "%s: can not initialize heartbeat", __FUNCTION__);
+
+                        DEBUG_LEAVE();
+                        return NULL;
+                }
+        }
+
+        /* get info from linuxha_info.c */
+        hb_info = get_hb_info(LHA_NODEINFO); 
+
+        for ( i = 0; i < hb_info->len; i++ ) {
+                node_info = hb_nodeinfo_dup ( (struct hb_nodeinfo *) 
+                                        g_ptr_array_index(hb_info, i) );
+                if ( node_info == NULL ) {
+                        cl_log(LOG_WARNING, 
+                                "%s: get NULL, continue", __FUNCTION__);
+                        continue;
+                }
+                g_ptr_array_add(nodeinfo_table, node_info);
+        }
+
+        if ( get_hb_initialized() ) {
+                linuxha_finalize();
+        }
+
+        DEBUG_LEAVE();
+        return nodeinfo_table;
+}
+
+static int 
+free_nodeinfo_table(GPtrArray * nodeinfo_table)
+{
+        struct hb_nodeinfo * node_info = NULL;
+
+        while (nodeinfo_table->len) {
+
+                node_info = (struct hb_nodeinfo *)
+                        g_ptr_array_remove_index_fast(nodeinfo_table, 0);
+                hb_nodeinfo_free(node_info);
+                node_info = NULL;
+
+        }
+
+        g_ptr_array_free(nodeinfo_table, 0);
+
+        return HA_OK;
+}       
+
 
 static CMPIInstance *
-make_clusternode_instance(char * classname, CMPIBroker * broker, 
+make_node_instance(char * classname, CMPIBroker * broker, 
                 CMPIObjectPath * op, char * uname, CMPIStatus * rc)
 {
-        GPtrArray * gNodeTable = NULL;
+        GPtrArray * nodeinfo_table = NULL;
         struct hb_nodeinfo * nodeinfo = NULL;
         CMPIInstance* ci = NULL;
         char * dc = NULL;
@@ -137,42 +253,55 @@ make_clusternode_instance(char * classname, CMPIBroker * broker,
 
         DEBUG_ENTER();
 
-        /*** linuxha should be init by the caller ***/
-        ASSERT( get_hb_initialized() );
 
-        gNodeTable = get_hb_info(LHA_NODEINFO);
+        nodeinfo_table = get_nodeinfo_table();
+        
+        if ( nodeinfo_table == NULL ) {
 
-        for (i = 0; i < gNodeTable->len; i++) {
+                cl_log(LOG_ERR, "%s: can not get node info", __FUNCTION__);
+
+                CMSetStatusWithChars(broker, rc,
+                       CMPI_RC_ERR_FAILED, "Can't get node info");
+
+                return NULL;
+        }       
+
+        for (i = 0; i < nodeinfo_table->len; i++) {
                 int length = 0;
+
                 nodeinfo = (struct hb_nodeinfo *) 
-                                g_ptr_array_index(gNodeTable, i);
-                length = strlen ( nodeinfo->name) + 1;
+                                g_ptr_array_index(nodeinfo_table, i);
+
+                length = strlen ( nodeinfo->name ) + 1;
+
                 if ( strncmp(nodeinfo->name, uname, length) == 0 ){
                         break;
                 }
         }
 
-        if ( i == gNodeTable->len){
+        if ( i == nodeinfo_table->len){
+
                 cl_log(LOG_WARNING, 
                         "%s: %s is not a valid cluster node", 
                         __FUNCTION__, uname); 
+
+                CMSetStatusWithChars(broker, rc,
+                       CMPI_RC_ERR_NOT_FOUND, "Node not found");
+
                 goto out;
         }
 
-
-        
         ci = CMNewInstance(broker, op, rc);
 
         if ( CMIsNullObject(ci) ) {
+                CMSetStatusWithChars(broker, rc,
+                       CMPI_RC_ERR_FAILED, "Can't create instance");
+
                 goto out;
         }
 
- 
-        cl_log(LOG_INFO, "%s: get DC", __FUNCTION__);
         dc = get_cluster_dc();
-
-        cl_log(LOG_INFO, "%s: get node's status", __FUNCTION__);
-        status = get_clusternode_status(uname);
+        status = get_node_status(uname);
 
         active_status = strdup(get_status(nodeinfo->status));
         uuid = uuid_to_str(&nodeinfo->uuid);
@@ -207,18 +336,25 @@ make_clusternode_instance(char * classname, CMPIBroker * broker,
         free(status);
         free(active_status);
         free(uuid);
+
 out:
+
+        if ( nodeinfo_table ) {
+                free_nodeinfo_table(nodeinfo_table);
+        }
+
         DEBUG_LEAVE();
         return ci;
 
 }
+
 
 int
 get_clusternode_instance(char * classname, CMPIBroker * broker,
                 CMPIContext * ctx, CMPIResult * rslt,
                 CMPIObjectPath * cop, char ** properties, CMPIStatus * rc)
 {
-        CMPIObjectPath* op = NULL;
+        CMPIObjectPath * op = NULL;
         CMPIData data_uname;
         char * uname = NULL;
         CMPIInstance * ci = NULL;
@@ -239,27 +375,10 @@ get_clusternode_instance(char * classname, CMPIBroker * broker,
                 goto out;
         }
         
-        if ( ! get_hb_initialized() ) {
-                ret = linuxha_initialize(HB_CLIENT_ID, 0);
-                if (ret != HA_OK ) {
-                        char err_info [] = "Can't initialized LinuxHA";
-
-	                CMSetStatusWithChars(broker, rc, 
-			                CMPI_RC_ERR_FAILED, err_info);
-                        cl_log(LOG_INFO, 
-                                "%s: failed to initialize LinuxHA",
-                                __FUNCTION__);
-                        goto out;
-                }
-        }
 
         cl_log(LOG_INFO, "%s: make instance", __FUNCTION__);
 
-        ci = make_clusternode_instance(classname, broker,  op, uname, rc);
-
-        if ( get_hb_initialized () ) {
-                linuxha_finalize();
-        }
+        ci = make_node_instance(classname, broker,  op, uname, rc);
 
         if ( CMIsNullObject(ci) ) {
                 ret = HA_FAIL;
@@ -270,6 +389,7 @@ get_clusternode_instance(char * classname, CMPIBroker * broker,
         CMReturnDone(rslt);
 
         ret = HA_OK;
+        
 out:
 
         DEBUG_LEAVE();
@@ -284,43 +404,33 @@ enumerate_clusternode_instances(char * classname, CMPIBroker * broker,
 {
 
         CMPIObjectPath * op = NULL;
-        GPtrArray * gNodeTable = NULL;
+        GPtrArray * nodeinfo_table = NULL;
 
         char key_name[] = "Name";
         char key_creation[] = "CreationClassName";
-        int ret = 0;
         int i = 0;
 
         DEBUG_PID();
-        if ( ! get_hb_initialized() ) {
-                ret = linuxha_initialize(HB_CLIENT_ID, 0);
-                if (ret != HA_OK ) {
 
-                        char err_info [] = "Can't initialized heartbeat";
+        nodeinfo_table = get_nodeinfo_table ();
+        
+        if ( nodeinfo_table == NULL ) {
+                cl_log(LOG_ERR, "%s: can not get node info", __FUNCTION__);
 
-	                CMSetStatusWithChars(broker, rc, 
-			                CMPI_RC_ERR_FAILED, err_info);
+                CMSetStatusWithChars(broker, rc,
+                       CMPI_RC_ERR_FAILED, "Can't get node info");
 
-                        cl_log(LOG_INFO, 
-                                "%s: failed to initialize heartbeat", 
-                                __FUNCTION__);
-                        return ret;
-                }
+                return HA_FAIL;
         }
 
-
-        gNodeTable = get_hb_info(LHA_NODEINFO); 
-
-        for (i = 0; i < gNodeTable->len; i++) {
+        for (i = 0; i < nodeinfo_table->len; i++) {
                 struct hb_nodeinfo * nodeinfo = NULL;
                 char * uname = NULL;
-                char * uuid = NULL;
 
                 nodeinfo = (struct hb_nodeinfo *) 
-                                g_ptr_array_index(gNodeTable, i);
+                                g_ptr_array_index(nodeinfo_table, i);
 
                 uname = strdup(nodeinfo->name);
-                uuid = malloc(17);
                 
                 /* create an object */
                 op = CMNewObjectPath(broker, 
@@ -330,26 +440,36 @@ enumerate_clusternode_instances(char * classname, CMPIBroker * broker,
                 CMAddKey(op, key_name, uname, CMPI_chars);
 
                 if ( enum_inst ) {
+                        /* enumerate instances */
                         CMPIInstance * ci = NULL;
-                        ci = make_clusternode_instance(classname, 
-                                broker, op, uname, rc);
+
+                        ci = make_node_instance(classname, 
+                                                broker, op, uname, rc);
+
                         if ( CMIsNullObject(ci) ) {
+                                free(uname);
+
+                                if ( nodeinfo_table ) {
+                                        free_nodeinfo_table(nodeinfo_table);
+                                }
+
                                 return HA_FAIL;
                         }
+
                         CMReturnInstance(rslt, ci);
 
-                }else {
-                        /* add object to rslt */
+                }else { /* enumerate instance names */
+                        /* add object path to rslt */
                         CMReturnObjectPath(rslt, op);
                 }
+
                 free(uname);
-                free(uuid);
         }
 
         CMReturnDone(rslt);
-        
-        if ( get_hb_initialized() ) {
-                linuxha_finalize();
+
+        if ( nodeinfo_table ) {
+                free_nodeinfo_table(nodeinfo_table);
         }
 
         return HA_OK;

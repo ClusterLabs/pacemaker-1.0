@@ -168,7 +168,12 @@ LinuxHA_ClusterNodeProviderEnumInstanceNames(CMPIInstanceMI* mi,
         if ( ret == HA_OK ) {
 	        CMReturn(CMPI_RC_OK);	
         } else {
-                CMReturn(CMPI_RC_ERR_FAILED);
+
+                if (rc.rc == CMPI_RC_OK ) {
+                        CMReturn(CMPI_RC_ERR_FAILED);
+                } else {
+                        return rc;
+                }
         }
 }
 
@@ -190,7 +195,12 @@ LinuxHA_ClusterNodeProviderEnumInstances(CMPIInstanceMI* mi,
         if ( ret == HA_OK ) {
 	        CMReturn(CMPI_RC_OK);	
         } else {
-                CMReturn(CMPI_RC_ERR_FAILED);
+
+                if (rc.rc == CMPI_RC_OK ) {
+                        CMReturn(CMPI_RC_ERR_FAILED);
+                } else {
+                        return rc;
+                }
         }
 
 }
@@ -215,7 +225,12 @@ LinuxHA_ClusterNodeProviderGetInstance(CMPIInstanceMI* mi,
 
         if ( ret != HA_OK ){
                 cl_log(LOG_WARNING, "%s: NULL instance", __FUNCTION__);
-                CMReturn(CMPI_RC_ERR_NOT_FOUND);
+
+                if (rc.rc == CMPI_RC_OK ) {
+                        CMReturn(CMPI_RC_ERR_FAILED);
+                } else {
+                        return rc;
+                }
         }
 
         DEBUG_LEAVE();

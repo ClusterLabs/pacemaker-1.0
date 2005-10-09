@@ -139,7 +139,11 @@ LinuxHA_ClusterProviderEnumInstanceNames(CMPIInstanceMI * mi,
                         ref, NULL, 0, &rc);  
 
         if ( ret != HA_OK ) {
-                return rc;
+                if (rc.rc == CMPI_RC_OK ) {
+                        CMReturn(CMPI_RC_ERR_FAILED);
+                } else {
+                        return rc;
+                }
         }
 
         CMReturn(CMPI_RC_OK);
@@ -158,7 +162,11 @@ LinuxHA_ClusterProviderEnumInstances(CMPIInstanceMI * mi,
                         ref, properties, 1, &rc);  
 
         if ( ret != HA_OK ) {
-                return rc;
+                if (rc.rc == CMPI_RC_OK ) {
+                        CMReturn(CMPI_RC_ERR_FAILED);
+                } else {
+                        return rc;
+                }        
         }
 
         CMReturn(CMPI_RC_OK);
@@ -175,12 +183,17 @@ LinuxHA_ClusterProviderGetInstance(CMPIInstanceMI * mi,
 
         init_logger(PROVIDER_ID);
 
-        ret = get_cluster_instance(ClassName, Broker, ctx, rslt,
-                        cop, &rc);  
+        ret = get_cluster_instance(ClassName, Broker, ctx, rslt, cop, &rc);
 
         if ( ret != HA_OK ) {
-                cl_log(LOG_WARNING, "%s: failed to get instance", __FUNCTION__);
-                CMReturn(CMPI_RC_ERR_FAILED);
+                cl_log(LOG_WARNING, 
+                        "%s: failed to get instance", __FUNCTION__);
+
+                if (rc.rc == CMPI_RC_OK ) {
+                        CMReturn(CMPI_RC_ERR_FAILED);
+                } else {
+                        return rc;
+                }
         }
         CMReturn(CMPI_RC_OK);
 
@@ -193,9 +206,8 @@ LinuxHA_ClusterProviderCreateInstance(CMPIInstanceMI * mi,
                 CMPIObjectPath * cop, CMPIInstance * ci)
 {
         CMPIStatus rc = {CMPI_RC_OK, NULL};
-        char err_info[] = "CIM_ERR_NOT_SUPPORTED";
         CMSetStatusWithChars(Broker, &rc, 
-                        CMPI_RC_ERR_NOT_SUPPORTED, err_info);
+                        CMPI_RC_ERR_NOT_SUPPORTED, "CIM_ERR_NOT_SUPPORTED");
         return rc;
 }
 
@@ -206,10 +218,9 @@ LinuxHA_ClusterProviderSetInstance(CMPIInstanceMI * mi,
                 CMPIObjectPath * op, CMPIInstance * inst, char ** properties)
 {
         CMPIStatus rc = {CMPI_RC_OK, NULL};
-        char err_info[] = "CIM_ERR_NOT_SUPPORTED";
 
         CMSetStatusWithChars(Broker, &rc, 
-                        CMPI_RC_ERR_NOT_SUPPORTED, err_info);
+                        CMPI_RC_ERR_NOT_SUPPORTED, "CIM_ERR_NOT_SUPPORTED");
         return rc;
 
 }
@@ -220,10 +231,9 @@ LinuxHA_ClusterProviderDeleteInstance(CMPIInstanceMI * mi,
                 CMPIContext * ctx, CMPIResult * rslt, CMPIObjectPath * cop)
 {
         CMPIStatus rc = {CMPI_RC_OK, NULL};
-        char err_info[] = "CIM_ERR_NOT_SUPPORTED";
 
         CMSetStatusWithChars(Broker, &rc, 
-                        CMPI_RC_ERR_NOT_SUPPORTED, err_info);
+                        CMPI_RC_ERR_NOT_SUPPORTED, "CIM_ERR_NOT_SUPPORTED");
         return rc;
 }
 
@@ -233,10 +243,9 @@ LinuxHA_ClusterProviderExecQuery(CMPIInstanceMI * mi,
                 char * lang, char * query)
 {
         CMPIStatus rc = {CMPI_RC_OK, NULL};
-        char err_info[] = "CIM_ERR_NOT_SUPPORTED";
         
         CMSetStatusWithChars(Broker, &rc, 
-                        CMPI_RC_ERR_NOT_SUPPORTED, err_info);
+                        CMPI_RC_ERR_NOT_SUPPORTED, "CIM_ERR_NOT_SUPPORTED");
         return rc;
 }
 

@@ -20,8 +20,10 @@ fi
 
 WBEMCLI="wbemcli -nl"
 
-#set this to your username:password@your host
-HOST=http://root:hadev@localhost
+#set to your username, password, host
+USERNAME=root
+PASSWD=hadev
+HOST=localhost
 NAMESPACE=root/cimv2
 
 INST_CLASSES="LinuxHA_Cluster 
@@ -46,7 +48,7 @@ BLUE="\33[34m"
 YELLOW="\33[33m"
 END="\33[0m"
 
-TMP=/tmp/cimxxxxxx
+TMP=`mktemp`
 
 success=0
 failure=0
@@ -108,8 +110,8 @@ relation_between () {
 
 cim_get_instance () {
         ref=$1
-        echo -en gi$'\t'$HL"http://"$ref$END 
-        result=`$WBEMCLI gi http://$ref >$TMP 2>&1`
+        echo -en gi$'\t'$HL"http://$USERNAME:$PASSWD@"$ref$END 
+        result=`$WBEMCLI gi http://$USERNAME:$PASSWD@$ref >$TMP 2>&1`
 
         if check_zero 
         then
@@ -136,7 +138,7 @@ cim_enum_instances () {
         class=$2
 
         echo -en $op$'\t'$HL$class$END 
-        result=`$WBEMCLI $op $HOST/$NAMESPACE:$class >$TMP 2>&1`
+        result=`$WBEMCLI $op http://$USERNAME:$PASSWD@$HOST/$NAMESPACE:$class >$TMP 2>&1`
         
         if check_zero 
         then
@@ -269,3 +271,4 @@ done
 total=`expr $zero + $failure + $success`
 echo Total: $total, Success: $success, Failure: $failure, Zero: $zero
 
+rm -rf $TMP

@@ -28,6 +28,8 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+#include <glib.h>
+
 #include <cmpidt.h>
 #include <cmpift.h>
 #include <cmpimacs.h>
@@ -39,16 +41,21 @@
 #define HB_CLIENT_ID "cim-provider-cluster"
 
 
-typedef struct {
-	const char* key;
-	const char* property;
-} hbconfig_map_t;
+typedef struct key_property_pair {
+	const char * key;       /* hb config key */
+	const char * property;  /* CIM property name */
+} key_property_pair_t;
 
+struct hb_config_info {
+        char * key;             /* hb config key */
+        char * property;        /* CIM property name */
+        char * value;
+};
 
 
 /* heartbeat config directives */
 
-const hbconfig_map_t hbconfig_map [] = {
+const key_property_pair_t key_property_pair [] = {
 		{KEY_HBVERSION,	"HBVersion"},
 		{KEY_HOST, 	""},
 		{KEY_HOPS, 	""},
@@ -86,35 +93,36 @@ const hbconfig_map_t hbconfig_map [] = {
 	};
 
 
-static CMPIInstance *
-make_cluster_instance(char * classname, CMPIBroker * broker, 
-                CMPIObjectPath * op, CMPIStatus * rc)
+static GPtrArray * get_config_info_table (void);
+static int free_config_info_table(GPtrArray * config_info_table);
+
+static GPtrArray *
+get_config_info_table ()
 {
-        CMPIInstance * ci = NULL;
+        GPtrArray * config_info_table = NULL;
+        int ret = 0;
+        int i = 0;
 
-        char key_creation[] = "CreationClassName";
-        char key_name[] = "Name";
-        char name[] = "LinuxHACluster";	
+        config_info_table = g_ptr_array_new ();
 
-	int i = 0;
-
-        if ( !get_hb_initialized() ) {
+        if ( config_info_table == NULL ) {
                 return NULL;
         }
 
-        ci = CMNewInstance(broker, op, rc);
+        if ( ! get_hb_initialized() ) {
+                ret = linuxha_initialize(HB_CLIENT_ID, 0);
 
-        if ( CMIsNullObject(ci) ) {
-                return NULL;
+                if (ret != HA_OK ) {
+                        return NULL;
+                }
         }
 
-        for ( i = 0; hbconfig_map[i].key != 0; i++) {
+        for ( i = 0; key_property_pair[i].key != 0; i++) {
                 const char * key = NULL;
                 char * value = NULL;
-                char * property = NULL;
+                struct hb_config_info * config_info = NULL;
 
-                key = hbconfig_map[i].key;
-		property = strdup(hbconfig_map[i].property);
+                key = key_property_pair[i].key;
 
                 if (hbconfig_get_str_value(key, &value) != HA_OK) {
                         cl_log(LOG_WARNING, 
@@ -123,18 +131,109 @@ make_cluster_instance(char * classname, CMPIBroker * broker,
                         continue;
                 }
 	
-		if ( value && property && ( strlen(property) != 0) ) {
-        		CMSetProperty(ci, property, value, CMPI_chars);
 
-                        free(property);
+                config_info = (struct hb_config_info *)
+                                           malloc(sizeof(struct hb_config_info));
+
+                if ( config_info == NULL ) {
+                        cl_log(LOG_WARNING, 
+                                "%s: failed to alloc, continue", __FUNCTION__);
+                }
+
+                config_info->key = strdup(key);
+                config_info->value = strdup(value);
+
+                config_info->property = strdup(key_property_pair[i].property);
+
+                g_ptr_array_add(config_info_table, config_info);
 
                         /*** be careful, value was malloc with ha_strdup ***/
-                        ha_free(value);
-		}
+                ha_free(value);
+
+        }
+
+        if ( get_hb_initialized() ) {
+                linuxha_finalize();
+        }
+
+        return config_info_table;
+}
+
+static int
+free_config_info_table(GPtrArray * config_info_table)
+{
+        struct hb_config_info * config_info = NULL;
+
+        while (config_info_table->len) {
+
+                config_info = (struct hb_config_info *)
+                        g_ptr_array_remove_index_fast(config_info_table, 0);
+                
+                free(config_info->key);
+                free(config_info->value);
+                free(config_info->property);
+
+                config_info = NULL;
+
+        }
+
+        g_ptr_array_free(config_info_table, 0); 
+
+        return HA_OK;
+}
+
+static CMPIInstance *
+make_cluster_instance(char * classname, CMPIBroker * broker, 
+                CMPIObjectPath * op, CMPIStatus * rc)
+{
+        CMPIInstance * ci = NULL;
+        GPtrArray * config_info_table = NULL;
+
+        char key_creation[] = "CreationClassName";
+        char key_name[] = "Name";
+        char name[] = "LinuxHACluster";	
+
+	int i = 0;
+
+        config_info_table = get_config_info_table ();
+
+        if ( config_info_table == NULL ) {
+                cl_log(LOG_ERR, "%s: can not get cluster info", __FUNCTION__);
+
+	        CMSetStatusWithChars(broker, rc, 
+		       CMPI_RC_ERR_FAILED, "Can't get cluster info");
+
+
+                return NULL;
+        }
+
+        ci = CMNewInstance(broker, op, rc);
+
+        if ( CMIsNullObject(ci) ) {
+                cl_log(LOG_ERR, "%s: can not create instance", __FUNCTION__);
+
+	        CMSetStatusWithChars(broker, rc, 
+		       CMPI_RC_ERR_FAILED, "Can't create instance");
+
+                free_config_info_table(config_info_table);
+
+                return NULL;
+        }
+
+        for ( i = 0; i < config_info_table->len; i++ ) {
+                struct hb_config_info * config_info = NULL;
+
+                config_info = (struct hb_config_info *)
+                        g_ptr_array_index(config_info_table, i); 
+
+                CMSetProperty(ci, config_info->property,
+                                config_info->value, CMPI_chars);
         }
 
         CMSetProperty(ci, key_creation, classname, CMPI_chars);
         CMSetProperty(ci, key_name, name, CMPI_chars);
+
+        free_config_info_table(config_info_table);
 
         return ci;        
 }
@@ -158,46 +257,23 @@ get_cluster_instance(char * classname, CMPIBroker * broker,
         
         op = CMNewObjectPath(broker, namespace, classname, rc);
         if ( CMIsNullObject(op) ){
-                char err_info [] = "Cann't create object path";
 	        CMSetStatusWithChars(broker, rc, 
-		       CMPI_RC_ERR_FAILED, err_info);
+		       CMPI_RC_ERR_FAILED, "Can't create object path");
 
                 cl_log(LOG_INFO, 
                         "%s: can not create object path", __FUNCTION__);
                 ret = HA_FAIL;
+
                 goto out;
         }
 
-	if ( ! get_hb_initialized() ) {
-	        ret = linuxha_initialize(HB_CLIENT_ID, 0);
-                if (ret != HA_OK ) {
-                        char err_info [] = "Cann't initialized LinuxHA";
-                        cl_log(LOG_ERR, 
-                                "%s: can not initialize linuxha", 
-                                __FUNCTION__);
-                        ret = HA_FAIL;
-
-	                CMSetStatusWithChars(broker, rc, 
-			        CMPI_RC_ERR_FAILED, err_info);
-                        goto out;
-                }
-	}
-
         ci = make_cluster_instance(classname, broker, op, rc);
-
-        if ( get_hb_initialized() ) {
-
-                linuxha_finalize();
-        }
 
 
         if ( CMIsNullObject(ci) ) {
-                char err_info [] = "Cann't make instance";
-	        CMSetStatusWithChars(broker, rc, 
-		       CMPI_RC_ERR_FAILED, err_info);
-
                 cl_log(LOG_INFO, 
                         "%s: can not make instance", __FUNCTION__);
+
                 ret = HA_FAIL;
                 goto out;
         }
@@ -238,45 +314,24 @@ enumerate_cluster_instances(char * classname, CMPIBroker * broker,
         op = CMNewObjectPath(broker, namespace, classname, rc);
 
         if ( CMIsNullObject(op) ){
-                char err_info [] = "Cann't create object path";
 	        CMSetStatusWithChars(broker, rc, 
-		       CMPI_RC_ERR_FAILED, err_info);
+		       CMPI_RC_ERR_FAILED, "Can't create object path");
 
                 ret = HA_FAIL;
                 goto out;
         }
 
         if ( ! enum_inst ) {
+                /* enumerate instance names */
 	        CMAddKey(op, key_creation, classname, CMPI_chars);
                 CMAddKey(op, key_name,  name, CMPI_chars);
 	        CMReturnObjectPath(rslt, op);
+
         } else {
-
-                if ( ! get_hb_initialized() ) {
-                        ret = linuxha_initialize(HB_CLIENT_ID, 0);
-
-                        if (ret != HA_OK ) {
-                                char err_info [] = "Cann't initialize LinuxHA";
-
-                                ret = HA_FAIL;
-
-	                        CMSetStatusWithChars(broker, rc, 
-			                CMPI_RC_ERR_FAILED, err_info);
-                                goto out;
-                        }
-                }
-
-                ci = make_cluster_instance(classname, broker, op, rc);
-
-                if ( get_hb_initialized() ) {
-                        linuxha_finalize();
-                }
+                /* enumerate instances */
+               ci = make_cluster_instance(classname, broker, op, rc);
 
                 if ( CMIsNullObject(ci) ) {
-
-                        char err_info [] = "Cann't make instance";
-	                CMSetStatusWithChars(broker, rc, 
-		                CMPI_RC_ERR_FAILED, err_info);
 
                         ret = HA_FAIL;
                         goto out;

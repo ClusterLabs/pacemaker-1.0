@@ -97,7 +97,7 @@ enumerate_sub_resource_names(const char * group_id,
 } 
 
 static int
-set_rsc_group_instance(CMPIBroker * broker, CMPIInstance *inst, 
+set_rg_instance_properties(CMPIBroker * broker, CMPIInstance *inst, 
        char * group_id, const GPtrArray * rsc_name_array, CMPIStatus * rc)
 {
         int array_length = 0;
@@ -110,7 +110,7 @@ set_rsc_group_instance(CMPIBroker * broker, CMPIInstance *inst,
 
         cmpi_array = CMNewArray(broker, array_length, CMPI_chars, rc);    
 
-        if ( cmpi_array == NULL ) {
+        if ( CMIsNullObject(cmpi_array) ) {
                 DEBUG_LEAVE();
                 return HA_FAIL;
         }
@@ -118,10 +118,12 @@ set_rsc_group_instance(CMPIBroker * broker, CMPIInstance *inst,
 
         for ( i = 0; i < rsc_name_array->len ; i++ ) {
                 char * rsc_name = NULL;
+
                 rsc_name = (char *) g_ptr_array_index(rsc_name_array, i);
+
                 if ( rsc_name == NULL ) {
                         cl_log(LOG_WARNING, 
-                                "%s: got a NULL value", __FUNCTION__);
+                              "%s: got a NULL value, continue", __FUNCTION__);
                         continue;
                 }
                 cl_log(LOG_INFO, "%s: add %s to cmpi array", 
@@ -131,11 +133,14 @@ set_rsc_group_instance(CMPIBroker * broker, CMPIInstance *inst,
         }
 
 
+        cl_log(LOG_INFO, "%s: cmpi array count: %d", 
+                        __FUNCTION__, CMGetArrayCount(cmpi_array, rc));
+
         CMSetProperty(inst, "GroupId", group_id, CMPI_chars);
 
         cl_log(LOG_INFO, 
-                        "%s: setting array property, OpenWBEM segment fault here?", 
-                        __FUNCTION__);
+               "%s: setting array property, OpenWBEM segment fault here?", 
+                __FUNCTION__);
 
         CMSetProperty(inst, "SubResourceNames", &cmpi_array, CMPI_charsA);
 
@@ -210,7 +215,7 @@ enumerate_resource_groups(char * classname, CMPIBroker * broker,
                                 cl_log(LOG_INFO, 
                                         "%s: ready to set instance", __FUNCTION__);
 
-                                set_rsc_group_instance(broker, inst, 
+                                set_rg_instance_properties(broker, inst, 
                                                 group_id, rsc_name_array, rc);
 
                                 CMReturnInstance(rslt, inst);
@@ -261,7 +266,7 @@ get_resource_group_instance(char * classname, CMPIBroker * broker,
         enumerate_sub_resource_names(group_id, rsc_name_array);
 
         cl_log(LOG_INFO, "%s: ready to set instance", __FUNCTION__);
-        set_rsc_group_instance(broker, inst,
+        set_rg_instance_properties(broker, inst,
                         group_id, rsc_name_array, rc);
 
         CMReturnInstance(rslt, inst);
