@@ -8,8 +8,6 @@
 #set -x
 
 PARAMETER_SPLIT_SIGN="="
-exec_prefix=@exec_prefix@
-HA_DIR=@sysconfdir@/ha.d
 OCF_ROOT_DIR=@OCF_ROOT_DIR@
 OCF_RA_DIR=@OCF_RA_DIR@
 
@@ -40,9 +38,9 @@ ra_execocf(){
 
 	# execute ocf ra and get return value
 	case $OPERATION in
-	start)		`$RAOCFPATH start`;;
-	stop)		`$RAOCFPATH stop `;;
-	monitor|status)	`$RAOCFPATH monitor`;;
+	start)		$RAOCFPATH start;;
+	stop)		$RAOCFPATH stop ;;
+	monitor|status)	$RAOCFPATH monitor;;
 
 	usage|help)	usage;;
 	*)		ha_log "ERROR: Mismatching operation : $OPERATION"
@@ -103,7 +101,7 @@ ra_ocfinit(){
 
 	setup_OCF_env_vars $RSCIDPAIR
 	setup_OCF_env_vars $RSCTYPEPAIR
-	setup_OCF_env_vars $PRIVADEPAIR
+	setup_OCF_env_vars $PROVIDERPAIR
 	
 	export "OCF_RA_VERSION_MAJOR"=1
 	export "OCF_RA_VERSION_MINOR"=0
@@ -120,8 +118,6 @@ ra_getpathname(){
 	else
 		RAOCFPATH="${RSCTYPE}"
 	fi
-
-
 }
 
 ra_setenv(){
@@ -130,8 +126,6 @@ ra_setenv(){
 	do
 		setup_OCF_prefix $envar
 	done
-
-
 }
 
 setup_OCF_prefix(){
@@ -158,6 +152,7 @@ setup_OCF_env_vars(){
 		rsc_type)
 			if [ ! -z "hbvarvalue" ]
 			then
+				export "$1"
 				ocfvarname="OCF_RESOURCE_TYPE"
 				export $ocfvarname=$hbvarvalue
 			fi
@@ -172,5 +167,4 @@ setup_OCF_env_vars(){
 		*)
 			;;
 		esac
-	
 }
