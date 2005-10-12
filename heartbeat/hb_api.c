@@ -1,4 +1,4 @@
-/* $Id: hb_api.c,v 1.144 2005/09/22 17:18:55 gshi Exp $ */
+/* $Id: hb_api.c,v 1.145 2005/10/12 19:32:45 gshi Exp $ */
 /*
  * hb_api: Server-side heartbeat API code
  *
@@ -1791,6 +1791,7 @@ api_check_client_authorization(client_proc_t* client)
 			client->chan, auth);
 	
 	if (auth_result == IPC_OK) {
+#ifndef GETPID_INCONSISTENT
 		if (client->chan->farside_pid > 0) {
 			if (client->chan->farside_pid != client->pid) {
 				client->removereason = "pid mismatch";
@@ -1801,6 +1802,7 @@ api_check_client_authorization(client_proc_t* client)
 				return FALSE;
 			}
 		}
+#endif
 		return TRUE;
 
 	} else if(auth_result == IPC_BROKEN) {
