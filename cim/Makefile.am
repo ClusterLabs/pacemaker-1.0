@@ -31,7 +31,10 @@ COMMONLIBS              = $(top_builddir)/lib/clplumbing/libplumb.la      \
 			  $(top_builddir)/membership/ccm/libclm.la        \
 			  $(GLIBLIB)
 
-GTHREADLIB              = `pkg-config --libs gthread-2.0` 
+#using pthread, or gthread?
+#THREADLIB              = `pkg-config --libs gthread-2.0` 
+THREADLIB               = lpthread
+
 CMPIHEADERS	        = /usr/local/include/cmpi/	
 
 cimprovidersdir         = /usr/local/lib/cmpi/
@@ -46,7 +49,9 @@ cimproviders_LTLIBRARIES = liblinuxha_info.la                                   
                            libcmpiLinuxHA_ClusterResourceInstanceProvider.la    \
                            libcmpiLinuxHA_ClusterResourceInstanceAttrProvider.la\
                            libcmpiLinuxHA_ClusterResourceGroupProvider.la       \
-                           libcmpiLinuxHA_SubResourceProvider.la
+                           libcmpiLinuxHA_SubResourceProvider.la		\
+			   libcmpiLinuxHA_IndicationProvider.la
+
 
 #--------------------------------------------------------------
 liblinuxha_info_la_SOURCES  	=	linuxha_info.c
@@ -54,10 +59,9 @@ liblinuxha_info_la_CFLAGS    	= 	-I$(CMPIHEADERS)
 liblinuxha_info_la_LDFLAGS 	= 	$(COMMONLIBS) 
 
 #--------------------------------------------------------------
-libcmpiLinuxHA_ClusterProvider_la_SOURCES = cmpi_utils.c cmpi_ha_indication.c \
-                                            cmpi_cluster.c cmpi_cluster_provider.c
+libcmpiLinuxHA_ClusterProvider_la_SOURCES = cmpi_utils.c cmpi_cluster.c cmpi_cluster_provider.c
 libcmpiLinuxHA_ClusterProvider_la_CFLAGS  = -I$(CMPIHEADERS)
-libcmpiLinuxHA_ClusterProvider_la_LDFLAGS = $(COMMONLIBS) liblinuxha_info.la $(GTHREADLIB) 
+libcmpiLinuxHA_ClusterProvider_la_LDFLAGS = $(COMMONLIBS) liblinuxha_info.la
 
 #--------------------------------------------------------------
 libcmpiLinuxHA_SoftwareIdentityProvider_la_SOURCES = cmpi_utils.c cmpi_software_identity_provider.c
@@ -122,7 +126,12 @@ libcmpiLinuxHA_SubResourceProvider_la_SOURCES =	cmpi_utils.c        \
 libcmpiLinuxHA_SubResourceProvider_la_CFLAGS  =	-I$(CMPIHEADERS)
 libcmpiLinuxHA_SubResourceProvider_la_LDFLAGS =	$(COMMONLIBS) liblinuxha_info.la 
 #--------------------------------------------------------------
+libcmpiLinuxHA_IndicationProvider_la_SOURCES = cmpi_utils.c cmpi_ha_indication.c \
+                                                      cmpi_ha_indication_provider.c
+libcmpiLinuxHA_IndicationProvider_la_CFLAGS  = -I$(CMPIHEADERS)
+libcmpiLinuxHA_IndicationProvider_la_LDFLAGS = $(COMMONLIBS) liblinuxha_info.la
 
+#--------------------------------------------------------------
 noinst_PROGRAMS	    = 	simpledemo
 simpledemo_SOURCES  = 	cmpi_cluster.c cmpi_utils.c simple_demo.c
 simpledemo_CFLAGS   =	-I$(CMPIHEADERS)
