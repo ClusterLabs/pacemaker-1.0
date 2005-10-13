@@ -21,8 +21,8 @@
  */
 
 
-#ifndef _CMPI_UTIL_H
-#define _CMPI_UTIL_H
+#ifndef _CMPI_UTILS_H
+#define _CMPI_UTILS_H
 
 #include <clplumbing/cl_uuid.h>
 
@@ -45,8 +45,22 @@
 #endif
 #endif
 
-void cmpi_assert(const char * assertion, int line, const char * file);
 
+/* return ret if obj is a NULL CMPI Object */
+#define RETURN_IFNULL_OBJ(obj, ret, n) do {                          \
+                if ( CMIsNullObject(obj) ) {                         \
+                       cl_log(LOG_ERR, "%s: CMPI Object %s is NULL", \
+                                        __FUNCTION__, n);            \
+                       return ret;                                   \
+                }                                                    \
+        } while (0)
+
+/* return HA_FAIL if obj is a NULL CMPI Object */
+#define RETURN_FAIL_IFNULL_OBJ(obj, n) RETURN_IFNULL_OBJ(obj, HA_FAIL, n)
+#define RETURN_NULL_IFNULL_OBJ(obj, n) RETURN_IFNULL_OBJ(obj, NULL, n)
+
+
+void cmpi_assert(const char * assertion, int line, const char * file);
 int run_shell_command(const char * cmnd, int * ret, 
 				char *** std_out, char *** std_err);
 int regex_search(const char * reg, const char * str, char *** match);
@@ -57,7 +71,7 @@ int assoc_source_class_is_a(const char * source_class_name, char * class_name,
                         CMPIBroker * broker, CMPIObjectPath * cop); 
 
 
-typedef int (*relation_pred) 
+typedef int (* assoc_pred_func_t) 
                 (CMPIInstance * first, CMPIInstance * second, CMPIStatus * rc);
 
 int assoc_enumerate_associators(CMPIBroker * broker, char * classname,
@@ -66,7 +80,7 @@ int assoc_enumerate_associators(CMPIBroker * broker, char * classname,
                 CMPIContext * ctx, CMPIResult * rslt,
                 CMPIObjectPath * cop, const char * assocClass, 
                 const char * resultClass, const char * role,
-                const char * resultRole, relation_pred pred,
+                const char * resultRole, assoc_pred_func_t pred,
                 int add_inst, CMPIStatus * rc);
 
 int assoc_enumerate_references(CMPIBroker * broker, char * classname,
@@ -75,14 +89,14 @@ int assoc_enumerate_references(CMPIBroker * broker, char * classname,
                 CMPIContext * ctx, CMPIResult * rslt,
                 CMPIObjectPath * cop,  
                 const char * resultClass, const char * role,
-                relation_pred pred, int add_inst, CMPIStatus * rc);
+                assoc_pred_func_t pred, int add_inst, CMPIStatus * rc);
 
 
 int assoc_enumerate_instances(CMPIBroker * broker, char * classname,
                 char * first_ref, char * second_ref,
                 char * first_class_name, char * second_class_name,
                 CMPIContext * ctx, CMPIResult * rslt,
-                CMPIObjectPath * cop, relation_pred pred,
+                CMPIObjectPath * cop, assoc_pred_func_t pred,
                 int add_inst, CMPIStatus * rc);
 
 int assoc_get_instance(CMPIBroker * broker, char * classname,

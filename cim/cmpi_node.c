@@ -60,7 +60,7 @@ get_cluster_dc ()
         char cmnd [] = HA_LIBDIR"/heartbeat/crmadmin -D";
         int ret, i;
         int exit_code;        
-        char *dc = NULL;
+        char * dc = NULL;
 
         ret = run_shell_command(cmnd, &exit_code, &std_out, NULL);
 
@@ -85,7 +85,7 @@ get_node_status(const char * node)
 {
         char ** std_out = NULL;
         char cmnd_pat [] = HA_LIBDIR"/heartbeat/crmadmin -S";
-        char *cmnd = NULL;
+        char * cmnd = NULL;
         int ret, i;
         int length = 0;
         int exit_code = 0;        
@@ -203,7 +203,7 @@ get_nodeinfo_table ()
                                         g_ptr_array_index(hb_info, i) );
                 if ( node_info == NULL ) {
                         cl_log(LOG_WARNING, 
-                                "%s: get NULL, continue", __FUNCTION__);
+                                "%s: got NULL value, continue", __FUNCTION__);
                         continue;
                 }
                 g_ptr_array_add(nodeinfo_table, node_info);
@@ -243,7 +243,7 @@ make_node_instance(char * classname, CMPIBroker * broker,
 {
         GPtrArray * nodeinfo_table = NULL;
         struct hb_nodeinfo * nodeinfo = NULL;
-        CMPIInstance* ci = NULL;
+        CMPIInstance * ci = NULL;
         char * dc = NULL;
         char * status = NULL;
         char * active_status = NULL;

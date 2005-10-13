@@ -24,7 +24,9 @@
 #include <string.h>
 #include <stdlib.h>
 
-#include "clplumbing/cl_log.h"
+#include <hb_api.h>
+#include <clplumbing/cl_log.h>
+
 #include "cmpi_hosted_resource.h"
 #include "cmpi_utils.h"
 
@@ -32,31 +34,42 @@ int
 node_host_resource(CMPIInstance * node_inst, 
                    CMPIInstance * resource_inst, CMPIStatus * rc)
 {
-        CMPIData node_name;
-        CMPIData hosting_node;
+        CMPIString * node_name = NULL;
+        CMPIString * hosting_node = NULL;
         int hosted = 0;
 
         DEBUG_ENTER();
-        node_name = CMGetProperty(node_inst, "Name", rc);
 
-        if ( node_name.value.string == NULL ) {
-                cl_log(LOG_INFO, "node_name is NULL");
+        if ( CMIsNullObject( node_inst) || CMIsNullObject( resource_inst) ) {
+                cl_log(LOG_INFO, "%s: NULL instance", __FUNCTION__);
+                hosted = 0;
+                goto out;
+
+        }        
+
+        node_name = CMGetProperty(node_inst, "Name", rc).value.string;
+
+        if ( CMIsNullObject(node_name) ) {
+                cl_log(LOG_INFO, "%s: node_name is NULL", __FUNCTION__);
                 hosted = 0;
                 goto out;
         }
 
+        cl_log(LOG_INFO, "%s: OpenWBEM segment fault here", __FUNCTION__);
         hosting_node = CMGetProperty(resource_inst, 
-                                    "HostingNode", rc);                        
+                                     "HostingNode", rc).value.string;
+        cl_log(LOG_INFO, "%s: OpenWBEM never get here", __FUNCTION__);
 
-        if ( hosting_node.value.string == NULL ){
-                cl_log(LOG_INFO, "hosting node is NULL");
+        if ( CMIsNullObject(hosting_node) ){
+                cl_log(LOG_INFO, "%s: hosting node is NULL", __FUNCTION__);
                 hosted = 0;
                 goto out;
         }
 
-        if ( strcmp((char *)hosting_node.value.string->hdl, 
-                        (char *)node_name.value.string->hdl) == 0){
-                hosted = 1;                                             
+        if (strcmp( CMGetCharPtr(hosting_node), CMGetCharPtr(node_name)) == 0){
+                cl_log(LOG_INFO, "%s: host resource", __FUNCTION__);
+                hosted = 1;
+                goto out;
         }
 out:
         DEBUG_LEAVE();

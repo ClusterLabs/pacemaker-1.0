@@ -227,12 +227,19 @@ assoc_enumerate_associators(CMPIBroker * broker, char * classname,
                 CMPIContext * ctx, CMPIResult * rslt,
                 CMPIObjectPath * cop, const char * assocClass, 
                 const char * resultClass, const char * role,
-                const char * resultRole, relation_pred pred,
+                const char * resultRole, assoc_pred_func_t pred,
                 int add_inst, CMPIStatus * rc)
 {
         CMPIObjectPath * op = NULL;
         char * nsp = NULL;
 
+        CMPIData data;
+        CMPIObjectPath * t_op = NULL;
+        CMPIEnumeration * en = NULL;
+        char * source_class = NULL;
+        char * target_class = NULL;
+        int source_is_first = 0;
+        CMPIInstance * inst = NULL;
 
         DEBUG_ENTER();
 
@@ -240,6 +247,7 @@ assoc_enumerate_associators(CMPIBroker * broker, char * classname,
                 "%s: asscClass, resultClass, role, resultRole = %s, %s, %s, %s",
                 __FUNCTION__,
                 assocClass, resultClass, role, resultRole);
+
         nsp = CMGetCharPtr(CMGetNameSpace(cop, rc));
 
         if ( assocClass ) {
@@ -249,136 +257,97 @@ assoc_enumerate_associators(CMPIBroker * broker, char * classname,
                 }               
         }
 
+        if ( assocClass && !CMClassPathIsA(broker, op, assocClass, rc) ) {
 
-        if ( !assocClass || CMClassPathIsA(broker, op, assocClass, rc) ){
-                CMPIData data;
-                CMPIObjectPath * t_op = NULL;
-                CMPIEnumeration * en = NULL;
-                char * source_class = NULL;
-                char * target_class = NULL;
-                int source_is_first = 0;
+                CMReturnDone(rslt);
+                return HA_OK;
+        }
 
-                if ( CBGetInstance( broker, ctx, cop, NULL, rc) == NULL ){
-                        cl_log(LOG_ERR, 
-                                "%s: failed to get instance", __FUNCTION__);
-                        return HA_FAIL;
-                }
-
-                source_class = CMGetCharPtr(CMGetClassName(cop, rc));
+        /* if ( !assocClass || CMClassPathIsA(broker, op, assocClass, rc) ) */
+        if ( CBGetInstance( broker, ctx, cop, NULL, rc) == NULL ){
+                cl_log(LOG_ERR, "%s: failed to get instance", __FUNCTION__);
+                return HA_FAIL;
+        }
+        
+        source_class = CMGetCharPtr(CMGetClassName(cop, rc));
+        
+        /* determine target_class */
+        if ( assoc_source_class_is_a(source_class, first_class_name, 
+                                     broker, cop) ){
+                target_class = second_class_name;
+                source_is_first = 1;
+        } else if ( assoc_source_class_is_a(source_class, second_class_name, 
+                                            broker, cop)) {
+                target_class = first_class_name;
+                source_is_first = 0;
+        }
+        
+        RETURN_FAIL_IFNULL_OBJ(target_class, "target_class");
+         
+        t_op = CMNewObjectPath(broker, nsp, target_class, rc);
+        RETURN_FAIL_IFNULL_OBJ(t_op, "t_op");
+        
+        en = CBEnumInstanceNames(broker, ctx, t_op, rc);
+        RETURN_FAIL_IFNULL_OBJ(en, "t_op");
                 
-                /* determine target_class */
-                if ( assoc_source_class_is_a(source_class, first_class_name, 
-                                                        broker, cop) ){
-                        target_class = second_class_name;
-                        source_is_first = 1;
-                } else 
-                if ( assoc_source_class_is_a(source_class, second_class_name, 
-                                                        broker, cop)) {
-                        target_class = first_class_name;
-                        source_is_first = 0;
-                }
+        while ( CMHasNext(en, rc) ){  
+                /* enumerate target instances */
+                CMPIInstance * first_inst = NULL;
+                CMPIInstance * second_inst = NULL;
+                int ret = 0;
+                
+                data = CMGetNext(en, rc);
+        
+                RETURN_FAIL_IFNULL_OBJ(data.value.ref, "target object path");
 
-                if ( CMIsNullObject( target_class )){
-                        cl_log(LOG_ERR, 
-                                "%s: target_class is NULL", __FUNCTION__);
+                if ( source_is_first ){
+                        ret = assoc_get_lr_instances(&second_inst, &first_inst,
+                                           data.value.ref, cop, broker, ctx, rc);
+                        
+                } else {
+                        ret = assoc_get_lr_instances(&second_inst, &first_inst,
+                                           cop, data.value.ref, broker, ctx, rc);
+                        
+                }
+                
+                if ( ret != HA_OK ){
+                        cl_log(LOG_ERR, "%s: failed to get lr instances.", 
+                               __FUNCTION__);
                         return HA_FAIL;
                 }
-              
-                t_op = CMNewObjectPath(broker, nsp, target_class, rc);
-
-                if ( CMIsNullObject(t_op) ){
-                        cl_log(LOG_ERR, 
-                                "%s: failed to create object path: %s",
-                                __FUNCTION__, target_class);
-
-                        return HA_FAIL;
-                }               
- 
-                en = CBEnumInstanceNames(broker, ctx, t_op, rc);
-
-
-                if ( CMIsNullObject(en) ){
-                        cl_log(LOG_ERR, 
-                                "%s: failed to enumurate instance names", 
-                                __FUNCTION__);
-                        return HA_FAIL;        
+                
+                if ( pred && ! pred(first_inst, second_inst, rc) ){
+                        continue;
                 }
+                
+                if ( !add_inst) {
+                        CMReturnObjectPath(rslt, data.value.ref);
+                        continue;
+                }        
+                
+                /*
+                  if ( source_is_first ){
+                  inst = second_inst;
+                  } else {
+                  inst = first_inst;
+                  }
+                */
+                inst = CBGetInstance(broker, ctx, data.value.ref, NULL, rc); 
+                
+                RETURN_FAIL_IFNULL_OBJ(inst, "instance");
 
-                while ( CMHasNext(en, rc) ){  
-                                /* enumerate target instances */
-                        CMPIInstance * first_inst = NULL;
-                        CMPIInstance * second_inst = NULL;
-                        int ret = 0;
-
-                        data = CMGetNext(en, rc);
-
-                        if (data.value.ref == NULL){
-                                cl_log(LOG_ERR, 
-                                       "%s: failed to get target object path", 
-                                        __FUNCTION__);
-
-                                return HA_FAIL;        
-                        }
- 
-                        if ( source_is_first ){
-                                /* source class is LinuxHA_ClusterNode */
-                                ret = 
-                                assoc_get_lr_instances(&second_inst, &first_inst,
-                                        data.value.ref, cop, broker, ctx, rc);
-
-                        } else {  /* source class is LinuxHA_ClusterResource */
-                                ret = 
-                                assoc_get_lr_instances(&second_inst, &first_inst,
-                                        cop, data.value.ref, broker, ctx, rc);
-                                 
-                        }
-
-                        if ( ret != HA_OK ){
-                                cl_log(LOG_ERR, 
-                                        "%s: failed to get lr instances.", 
-                                        __FUNCTION__);
-                                return HA_FAIL;
-                        }
-
-                       if ( pred && ! pred(first_inst, second_inst, rc) ){
-                                continue;
-                        }
-
-                        if ( add_inst ) {
-
-                                CMPIInstance * inst = NULL;
-                                /*
-                                if ( source_is_first ){
-                                        inst = second_inst;
-                                } else {
-                                        inst = first_inst;
-                                }
-                                */
-                                inst = CBGetInstance(broker, 
-                                         ctx, data.value.ref, NULL, rc); 
-
-                                if ( inst == NULL ) {
-                                        cl_log(LOG_ERR, 
-                                                "%s: failed to get instance.", 
-                                                __FUNCTION__);
-
-                                        return HA_FAIL;
-                                }
-                                CMReturnInstance(rslt, inst);
-
-                        } else {
-                                CMReturnObjectPath(rslt, data.value.ref);
-                        }
-                } /* whlie */
+                CMReturnInstance(rslt, inst);
+                
+        } /* whlie */
                  
-        } /* if */
-
+       
         CMReturnDone(rslt);
-
         DEBUG_LEAVE();
 
         return HA_OK;
 }
+
+
 
 int
 assoc_enumerate_references(CMPIBroker * broker, char * classname,
@@ -387,171 +356,126 @@ assoc_enumerate_references(CMPIBroker * broker, char * classname,
                 CMPIContext * ctx, CMPIResult * rslt,
                 CMPIObjectPath * cop,  
                 const char * resultClass, const char * role,
-                relation_pred pred, int add_inst, CMPIStatus * rc)
+                assoc_pred_func_t pred, int add_inst, CMPIStatus * rc)
 {
         CMPIObjectPath * op = NULL;
 
         char * nsp = NULL;
+        CMPIData data;
+        CMPIObjectPath * t_op = NULL;
+        CMPIEnumeration * en = NULL;
+        char * source_class = NULL;
+        char * target_class = NULL;
+        int source_is_first = 0;
 
         nsp = CMGetCharPtr(CMGetNameSpace(cop, rc));
 
         if ( resultClass ) {
                 op = CMNewObjectPath(broker, nsp, classname, rc);
-                if ( CMIsNullObject(op) ){
-                        return HA_FAIL;
-                }               
+                RETURN_FAIL_IFNULL_OBJ(op, "op");
         }
 
+        if ( resultClass && !CMClassPathIsA(broker, op, resultClass, rc) ){
+                CMReturnDone(rslt);
+                return HA_OK;
+        }
 
-        if ( !resultClass || CMClassPathIsA(broker, op, resultClass, rc) ){
-                CMPIData data;
-                CMPIObjectPath * t_op = NULL;
-                CMPIEnumeration * en = NULL;
-                char * source_class = NULL;
-                char * target_class = NULL;
-                int source_is_first = 0;
+        /* if ( !resultClass || CMClassPathIsA(broker, op, resultClass, rc) ){ */
 
-                if ( CBGetInstance( broker, ctx, cop, NULL, rc) == NULL ){
-                        cl_log(LOG_ERR, 
-                                "%s: failed to get instance", __FUNCTION__);
-                        return HA_FAIL;
-                }
+        RETURN_FAIL_IFNULL_OBJ( CBGetInstance( broker, ctx, cop, NULL, rc), 
+                                "get instance");
+
+        source_class = CMGetCharPtr(CMGetClassName(cop, rc));
                 
-                source_class = CMGetCharPtr(CMGetClassName(cop, rc));
-                
-                if ( assoc_source_class_is_a(source_class, first_class_name, 
-                                                        broker, cop) ){
-                        target_class = second_class_name;
-                        source_is_first = 1;
-                } else
-                if ( assoc_source_class_is_a(source_class, second_class_name,
-                                                        broker, cop)) {
-                        target_class = first_class_name;
-                        source_is_first = 0;
-                }
+        if ( assoc_source_class_is_a(source_class, first_class_name, 
+                                     broker, cop) ){
+                target_class = second_class_name;
+                source_is_first = 1;
+        } else if ( assoc_source_class_is_a(source_class, 
+                                            second_class_name, broker, cop)) {
+                target_class = first_class_name;
+                source_is_first = 0;
+        }
 
-                if ( CMIsNullObject(target_class) ){
-                        cl_log(LOG_ERR, 
-                                "%s: target_class is NULL", __FUNCTION__);
-                        return HA_FAIL;
-                }
-               
+        RETURN_FAIL_IFNULL_OBJ(target_class, "target_class");
 
-                t_op = CMNewObjectPath(broker, nsp, target_class, rc);
-                if ( CMIsNullObject(t_op) ){
-                        cl_log(LOG_ERR, 
-                                "%s: failed to create object path: %s",
-                                __FUNCTION__, target_class);
-                        return HA_FAIL;
-                }               
- 
-                en = CBEnumInstanceNames(broker, ctx, t_op, rc);
-                if ( en == NULL ){
-                        cl_log(LOG_ERR, 
-                                "%s: failed to enumerate instance names",
-                                __FUNCTION__);
-                        return HA_FAIL;        
-                }
+        t_op = CMNewObjectPath(broker, nsp, target_class, rc);
+        RETURN_FAIL_IFNULL_OBJ(t_op, "t_op");
+        
+        en = CBEnumInstanceNames(broker, ctx, t_op, rc);
+        RETURN_FAIL_IFNULL_OBJ(en, "en");
 
-                while ( CMHasNext(en, rc) ){
+        while ( CMHasNext(en, rc) ){
 
-                        CMPIObjectPath * top = NULL;
-                        CMPIInstance * second_inst = NULL;
-                        CMPIInstance * first_inst = NULL;
-                        int ret = 0;
+                CMPIObjectPath * top = NULL;
+                CMPIInstance * second_inst = NULL;
+                CMPIInstance * first_inst = NULL;
+                int ret = 0;
 
-                        data = CMGetNext(en, rc);
-                        if (data.value.ref == NULL){
-                                cl_log(LOG_ERR, 
-                                        "%s: ref is NULL", __FUNCTION__);
+                data = CMGetNext(en, rc);
+                RETURN_FAIL_IFNULL_OBJ(data.value.ref, "ref");
 
-                                return HA_FAIL;        
-                        }
+                top = CMNewObjectPath(broker, nsp, classname, rc);
+                RETURN_FAIL_IFNULL_OBJ(top, "top");
 
-                        top = CMNewObjectPath(broker, nsp, classname, rc);
-                        if ( CMIsNullObject(top) ){
-                                cl_log(LOG_ERR, 
-                                        "%s: failed to create object path: %s", 
-                                        __FUNCTION__, classname);
-                                return HA_FAIL;
-                        }               
 
-                        if ( source_is_first ){
-                                /* source class is LinuxHA_ClusterNode */
-                                ret = 
-                                assoc_get_lr_instances(&second_inst, &first_inst,
-                                        data.value.ref, cop, broker, ctx, rc);
-
-                        } else {  /* source class is LinuxHA_ClusterResource */
-                                ret = 
-                                assoc_get_lr_instances(&second_inst, &first_inst,
-                                        cop, data.value.ref,broker, ctx, rc);
+                if ( source_is_first ){
+                        /* source class is LinuxHA_ClusterNode */
+                        ret = assoc_get_lr_instances(&second_inst, 
+                                                 &first_inst, data.value.ref, 
+                                                 cop, broker, ctx, rc);
+                        
+                } else {  /* source class is LinuxHA_ClusterResource */
+                        ret = assoc_get_lr_instances(&second_inst, 
+                                            &first_inst, cop, 
+                                            data.value.ref,broker, ctx, rc);
                                  
-                        }
+                }
 
-                        if ( ret != HA_OK ){
-                                cl_log(LOG_ERR, 
-                                        "%s: failed to get lr instances.",
-                                        __FUNCTION__);
-                                return HA_FAIL;
-                        }
- 
-
-                        if ( pred && ! pred(first_inst, second_inst, rc) ){
-                                continue;
-                        }
-                        
-
-                        if ( source_is_first ){ 
-                                CMAddKey(top, second_ref, 
-                                        (CMPIValue *)&data.value.ref, CMPI_ref);
-                                CMAddKey(top, first_ref, 
-                                        (CMPIValue *)&cop, CMPI_ref);
-                        }else{
-
-                                CMAddKey(top, first_ref, 
-                                        (CMPIValue *)&data.value.ref, CMPI_ref);
-                                CMAddKey(top, second_ref, 
-                                        (CMPIValue *)&cop, CMPI_ref);
-                        } 
-                        
-                        if ( add_inst ){
-                                CMPIInstance * inst = NULL;
-                                /*
-                                inst = CBGetInstance(broker, ctx, top, 
-                                                                NULL, rc);
-                                */
-                                
-                                inst = CMNewInstance(broker, top, rc);
-
-                                if ( CMIsNullObject (inst) ){
-
-                                        cl_log(LOG_ERR, 
-                                                "%s: failed to create instance.",
-                                                __FUNCTION__);
-                                        return HA_FAIL;
-                                }
-                                
-                                CMSetProperty(inst, first_ref, 
-                                                &data.value.ref, CMPI_ref);
-                                CMSetProperty(inst, second_ref,
-                                                        &cop, CMPI_ref);
-
-                                CMReturnInstance(rslt, inst);
-                        } else {
-                                /* ReferenceNames */
-                                CMReturnObjectPath(rslt, top);
-                        }
-                } /* while */
+                if ( ret != HA_OK ){
+                        cl_log(LOG_ERR, "%s: failed to get lr instances.",
+                               __FUNCTION__);
+                        return HA_FAIL;
+                }
                  
-        } /* if */
+                if ( pred && ! pred(first_inst, second_inst, rc) ){
+                        continue;
+                }
+                        
+                if ( source_is_first ){ 
+                        CMAddKey(top, second_ref, 
+                                 (CMPIValue *)&data.value.ref, CMPI_ref);
+                        CMAddKey(top, first_ref, 
+                                 (CMPIValue *)&cop, CMPI_ref);
+                }else{
+                        CMAddKey(top, first_ref, 
+                                 (CMPIValue *)&data.value.ref, CMPI_ref);
+                        CMAddKey(top, second_ref, 
+                                 (CMPIValue *)&cop, CMPI_ref);
+                } 
+                
+                if ( add_inst ){
+                        CMPIInstance * inst = NULL;
 
+                        inst = CMNewInstance(broker, top, rc);
+                        RETURN_FAIL_IFNULL_OBJ(inst, "inst");
+                                
+                        CMSetProperty(inst, first_ref, 
+                                      &data.value.ref, CMPI_ref);
+                        CMSetProperty(inst, second_ref,
+                                      &cop, CMPI_ref);
+
+                        CMReturnInstance(rslt, inst);
+                } else {
+                        /* ReferenceNames */
+                        CMReturnObjectPath(rslt, top);
+                }
+        } /* while */
+                 
         CMReturnDone(rslt);
 
         return HA_OK;
 }
-
-
 
 int
 assoc_enumerate_instances(
@@ -559,7 +483,7 @@ assoc_enumerate_instances(
                 char * first_ref, char * second_ref,
                 char * first_class_name, char * second_class_name,
                 CMPIContext * ctx, CMPIResult * rslt,
-                CMPIObjectPath * cop, relation_pred pred, 
+                CMPIObjectPath * cop, assoc_pred_func_t pred, 
                 int add_inst, CMPIStatus * rc)
 {
         CMPIObjectPath * op = NULL;
@@ -576,115 +500,69 @@ assoc_enumerate_instances(
 
         namespace = CMGetCharPtr(CMGetNameSpace(cop, rc));
 
-        first_op = 
-                CMNewObjectPath(broker, namespace, first_class_name, rc);
-
+        first_op = CMNewObjectPath(broker, namespace, first_class_name, rc);
         second_op = CMNewObjectPath(broker, namespace, second_class_name, rc);
 
-        if ( CMIsNullObject(first_op) || CMIsNullObject(second_op) ){
-                cl_log(LOG_ERR, "%s: object paths is NULL", __FUNCTION__);
-                return HA_FAIL;
-        }
+        RETURN_FAIL_IFNULL_OBJ(first_op, "frist_op");
+        RETURN_FAIL_IFNULL_OBJ(second_op, "second_op");
        
         second_en = CBEnumInstanceNames(broker, ctx, second_op, rc);
-
-        if ( CMIsNullObject(second_en) ) {
-                cl_log(LOG_ERR, 
-                        "%s: failed to enum instance names", __FUNCTION__);
-                return HA_FAIL;
-        }
+        RETURN_FAIL_IFNULL_OBJ(second_en, "second_en");
 
         op = CMNewObjectPath(broker, namespace, classname, rc);
-        if ( CMIsNullObject(op) ) {
-                cl_log(LOG_ERR, 
-                        "%s: failed to create object path", __FUNCTION__);
-                return HA_FAIL;
-        }
-
-
+        RETURN_FAIL_IFNULL_OBJ(op, "op");
+        
         while ( CMHasNext(second_en, rc) ){
                 CMPIInstance * second_inst = NULL;
                 CMPIInstance * first_inst = NULL;
  
                 second_data = CMGetNext(second_en, rc);
-        
-                if ( CMIsNullObject(second_data.value.ref) ) {
-                        cl_log(LOG_ERR, "%s: ref is NULL", __FUNCTION__);
-                        return HA_FAIL;
-                }               
- 
+                RETURN_FAIL_IFNULL_OBJ(second_data.value.ref, "ref");
+                 
                 second_inst = CBGetInstance(broker, ctx,
                                 second_data.value.ref, NULL, rc);
-
-                if ( CMIsNullObject(second_inst) ){
-                        cl_log(LOG_ERR, "%s: instance is NULL", __FUNCTION__);
-                        return HA_FAIL;
-                }
-
+                
+                RETURN_FAIL_IFNULL_OBJ(second_inst, "second_inst");
                 first_en = 
                         CBEnumInstanceNames(broker, ctx, first_op, rc);
                
+                RETURN_FAIL_IFNULL_OBJ(first_en, "first_en");
+
                 while ( CMHasNext(first_en, rc) ){
                         
                         first_data = CMGetNext(first_en, rc);
-                        if ( CMIsNullObject (first_data.value.ref)) {
-                                cl_log(LOG_ERR, "%s: ref is NULL", __FUNCTION__);
-                                return HA_FAIL;
-                        }
+                        RETURN_FAIL_IFNULL_OBJ(first_data.value.ref, "ref");
 
                         first_inst = CBGetInstance(broker, ctx,
                                         first_data.value.ref, NULL, rc);
 
-                        if ( CMIsNullObject(first_inst) ){
-
-                                cl_log(LOG_ERR, "%s: instance is NULL", __FUNCTION__);
-                                return HA_FAIL;
-                        }
+                        RETURN_FAIL_IFNULL_OBJ(first_inst, "first_inst");
 
                         if ( pred && !pred(first_inst, second_inst, rc) ) {
                                 continue;
                         }
                        
                         CMAddKey(op, first_ref, 
-                                   (CMPIValue *)&first_data.value.ref, CMPI_ref);
+                                 (CMPIValue *)&first_data.value.ref, CMPI_ref);
                         
                         CMAddKey(op, second_ref,
-                                   (CMPIValue *)&second_data.value.ref, CMPI_ref); 
+                                 (CMPIValue *)&second_data.value.ref, CMPI_ref); 
                         
 
-                        if ( add_inst ) {
-                                
+                        if ( add_inst ) {    /* instances */
                                 CMPIInstance * inst = NULL;
+
                                 inst = CMNewInstance(broker, op, rc);
-
-                                if ( CMIsNullObject(inst) ) {
-
-                                        cl_log(LOG_WARNING, 
-                                                "%s: failed to create instance", 
-                                                __FUNCTION__);
-
-                                        return HA_FAIL;
-                                }
+                                RETURN_FAIL_IFNULL_OBJ(inst, "inst");
                                 
-                                CMSetProperty(inst, first_ref, &first_data.value.ref, 
-                                                        CMPI_ref);
-                                CMSetProperty(inst, second_ref, &second_data.value.ref, 
-                                                        CMPI_ref);
-                        /*
-                                inst = CBGetInstance(broker, ctx, op, NULL, rc);
-
-                                if ( inst == NULL ) {
-                                        cl_log(LOG_WARNING, 
-                                                "%s: failed to create instance", 
-                                                __FUNCTION__);
-
-                                        return HA_FAIL;
-                                }
-                        */
+                                CMSetProperty(inst, first_ref, 
+                                              &first_data.value.ref, CMPI_ref);
+                                CMSetProperty(inst, second_ref, 
+                                              &second_data.value.ref, CMPI_ref);
 
                                 CMReturnInstance(rslt, inst);
 
-                        } else { 
+                        } else {   /* instance names only */ 
                                 CMReturnObjectPath(rslt, op);
                         }
                } /* while */ 
@@ -696,6 +574,7 @@ assoc_enumerate_instances(
 
         return HA_OK;
 }
+
 
 int
 assoc_get_instance(CMPIBroker * broker, char * classname,

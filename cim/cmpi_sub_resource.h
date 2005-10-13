@@ -31,7 +31,7 @@
 
 
 
-int group_contain_resource(CMPIInstance * group_inst, 
-                        CMPIInstance * resource_inst, CMPIStatus * rc);
+int is_sub_resource_of(CMPIInstance * resource_inst, 
+                       CMPIInstance * group_inst, CMPIStatus * rc);
 
 #endif

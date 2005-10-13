@@ -24,18 +24,11 @@
 #ifndef _LINUXHA_INFO_H
 #define _LINUXHA_INFO_H
 
-#include <stdio.h>
-#ifdef HAVE_STDINT_H
-#include <stdint.h>
-#endif
 
-#include <string.h>
-#include <sys/stat.h>
-#include <sys/types.h>
-#include <glib.h>
-#include <clplumbing/cl_uuid.h>
+#include <stdint.h>     /* for uint32_t */
 #include <hb_api.h>
-#include "saf/ais.h"
+#include <clplumbing/cl_uuid.h>
+#include <saf/ais.h>
 
 
 #define CACHE_TIME_OUT 5
@@ -74,24 +67,19 @@ int get_hb_initialized (void);
 char * get_hb_client_id (void);
 
 /*************************************************
- * event handler
+ * user event hooks
  ************************************************/
 
-typedef int (*nodestatus_event_handler_t)(const char * node, const char * status);
-typedef int (*ifstatus_event_handler_t)(const char * node, const char * lnk, const char * status);
-typedef int (*membership_event_handler_t)(const char * node, SaClmClusterChangesT status);
+typedef int (* node_event_hook_t)(const char * node, const char * status);
+typedef int (* if_event_hook_t)(const char * node, 
+                                const char * lnk, const char * status);
+typedef int (* membership_event_hook_t)(const char * node, 
+                                        SaClmClusterChangesT status);
 
-typedef struct event_handler_set_s{
-        nodestatus_event_handler_t nodestatus_event;
-        ifstatus_event_handler_t ifstatus_event;
-        membership_event_handler_t membership_event; 
-        
-} ha_event_handler_set_t;
-
-int linuxha_register_event_handler(nodestatus_event_handler_t, 
-                ifstatus_event_handler_t, membership_event_handler_t);
+int ha_set_event_hooks(node_event_hook_t node_hook, if_event_hook_t if_hook, 
+                       membership_event_hook_t membership_hook);
 	
-int linuxha_unregister_event_handler(void);
+int ha_unset_event_hooks(void);
 
 
 /*****************************************

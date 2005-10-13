@@ -90,7 +90,11 @@ static GPtrArray * gIFTable = NULL;
 static GPtrArray * gMembershipTable = NULL;
 static GPtrArray * gResourceTable = NULL;
 
-static ha_event_handler_set_t * event_handler_set = NULL;
+static node_event_hook_t node_event_hook = NULL;
+static if_event_hook_t   if_event_hook   = NULL;
+static membership_event_hook_t membership_event_hook = NULL;
+
+
 uint32_t get_status_value(const char * status, const char * * status_array, 
                           uint32_t * value_array);
 
@@ -334,8 +338,9 @@ NodeStatus(const char * node, const char * status, void * private)
                 ,           node, status);
         walk_nodetable();
 
-        if ( event_handler_set && event_handler_set->nodestatus_event ){
-                event_handler_set->nodestatus_event(node, status);
+        /* user hook handler */
+        if ( node_event_hook ){
+                node_event_hook(node, status);
         }
 }
 
@@ -347,8 +352,9 @@ LinkStatus(const char * node, const char * lnk, const char * status
                 ,           node, lnk, status);
         walk_iftable();
 
-        if ( event_handler_set && event_handler_set->ifstatus_event ){
-                event_handler_set->ifstatus_event(node, lnk, status);
+        /* user hook handler */
+        if ( if_event_hook ){
+                if_event_hook(node, lnk, status);
         }
 }
 
@@ -752,9 +758,9 @@ clm_track_cb(SaClmClusterNotificationT *nbuf, SaUint32T nitem,
                                         continue;
                         }
 
-                        if ( event_handler_set 
-                             && event_handler_set->membership_event ){
-                                event_handler_set->membership_event(node, status);
+                        /* user hook handler */
+                        if ( membership_event_hook ){
+                                membership_event_hook (node, status);
                         }
                 }
         }
@@ -992,27 +998,24 @@ rsinfo_get_int_value(lha_attribute_t attr, size_t index, uint32_t * value)
 }
 
 
-int linuxha_register_event_handler(
-                nodestatus_event_handler_t nodestatus_event_handler, 
-                ifstatus_event_handler_t ifstatus_event_handler,
-                membership_event_handler_t membership_event_handler)
+int ha_set_event_hooks(node_event_hook_t node_hook, if_event_hook_t if_hook, 
+                       membership_event_hook_t membership_hook)
 {
-        event_handler_set = malloc(sizeof(ha_event_handler_set_t));
 
-        if ( event_handler_set == NULL ) {
-                return HA_FAIL;
-        }
-
-        event_handler_set->nodestatus_event = nodestatus_event_handler;
-        event_handler_set->ifstatus_event = ifstatus_event_handler;
-        event_handler_set->membership_event = membership_event_handler;
+        node_event_hook = node_hook;
+        if_event_hook = if_hook;
+        membership_event_hook = membership_hook;
 
         return HA_OK;
 }
 
-int linuxha_unregister_event_handler(){
-        free(event_handler_set);
-        event_handler_set = NULL;
+int ha_unset_event_hooks ()
+{
+
+        node_event_hook = NULL;
+        if_event_hook = NULL;
+        membership_event_hook = NULL;
+
         return HA_OK;
 }
 

@@ -33,19 +33,20 @@
 #include "cmpi_cluster.h"
 #include "cmpi_utils.h"
 
-int main(void){
-	char **std_out = NULL;
+int main(void)
+{
+	char ** std_out = NULL;
 	int rc;
 	int i;
 
-	rc = regex_search(": (.*) \\((.*)\\)", 
-			"member node: hadev4 (ac4142a9-2ee2-4c2b-81eb-8101373d03c4)", 
-			&std_out);
+        rc = regex_search(": (.*) \\((.*)\\)", 
+                          "member node: hadev4 (ac4142a9-2ee2-4c2b-81eb-8101373d03c4)", 
+                          &std_out);
 
 	i = 0;
 	while (rc == HA_OK && std_out[i] != NULL){
-		printf("%d\t%s\n", i, std_out[i]);
-		i++;
+                 printf("%d\t%s\n", i, std_out[i]);
+                 i++;
 	
 	}
 

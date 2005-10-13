@@ -150,11 +150,12 @@ LinuxHA_SubResourceProviderEnumInstanceNames(CMPIInstanceMI * mi,
         init_logger(PROVIDER_ID);
 
         DEBUG_ENTER();
+
         ret = assoc_enumerate_instances(Broker, ClassName, 
-                        group_ref, resource_ref, 
-                        group_class_name, resource_class_name,
+                        resource_ref, group_ref, 
+                        resource_class_name, group_class_name,
                         ctx, rslt, ref, 
-                        &group_contain_resource, 0, &rc);
+                        &is_sub_resource_of, 0, &rc);
 
 
         DEBUG_LEAVE();
@@ -178,12 +179,12 @@ LinuxHA_SubResourceProviderEnumInstances(CMPIInstanceMI * mi,
         init_logger(PROVIDER_ID);
 
         DEBUG_ENTER();
-        ret = assoc_enumerate_instances(Broker, ClassName, 
-                        group_ref, resource_ref, 
-                        group_class_name, resource_class_name,
-                        ctx, rslt, ref, 
-                        &group_contain_resource, 1, &rc);
 
+        ret = assoc_enumerate_instances(Broker, ClassName, 
+                        resource_ref, group_ref, 
+                        resource_class_name, group_class_name,
+                        ctx, rslt, ref, 
+                        &is_sub_resource_of, 1, &rc);
 
         DEBUG_LEAVE();
 
@@ -295,11 +296,11 @@ LinuxHA_SubResourceProviderAssociators(
         DEBUG_ENTER();
 
         ret = assoc_enumerate_associators(Broker, ClassName, 
-                        group_ref, resource_ref,
-                        group_class_name, resource_class_name, 
+                        resource_ref, group_ref,
+                        resource_class_name, group_class_name, 
                         ctx, rslt, cop, assocClass,
                         resultClass, role, resultRole, 
-                        &group_contain_resource, 1, &rc); 
+                        &is_sub_resource_of, 1, &rc); 
         
         DEBUG_LEAVE();
 
@@ -327,11 +328,11 @@ LinuxHA_SubResourceProviderAssociatorNames(
         DEBUG_ENTER();
 
         ret = assoc_enumerate_associators(Broker, ClassName, 
-                        group_ref, resource_ref,
-                        group_class_name, resource_class_name, 
+                        resource_ref, group_ref,
+                        resource_class_name, group_class_name, 
                         ctx, rslt, cop, assocClass,
                         resultClass, role, resultRole, 
-                        &group_contain_resource, 0, &rc); 
+                        &is_sub_resource_of, 0, &rc); 
 
 
         DEBUG_LEAVE();
@@ -356,10 +357,10 @@ LinuxHA_SubResourceProviderReferences(
 
         DEBUG_ENTER();
         ret = assoc_enumerate_references(Broker, ClassName, 
-                        group_ref, resource_ref, 
-                        group_class_name, resource_class_name,
+                        resource_ref, group_ref, 
+                        resource_class_name, group_class_name,
                         ctx, rslt, cop, resultClass, role,
-                        &group_contain_resource, 1, &rc);
+                        &is_sub_resource_of, 1, &rc);
 
 
         DEBUG_LEAVE();
@@ -384,12 +385,12 @@ LinuxHA_SubResourceProviderReferenceNames(
         init_logger(PROVIDER_ID);
 
         DEBUG_ENTER();
+
         ret = assoc_enumerate_references(Broker, ClassName, 
-                        group_ref, resource_ref, 
-                        group_class_name, resource_class_name,
+                        resource_ref, group_ref, 
+                        resource_class_name, group_class_name,
                         ctx, rslt, cop, resultClass, role,
-                        &group_contain_resource, 0, &rc);
-        
+                        &is_sub_resource_of, 0, &rc);
 
         DEBUG_LEAVE();
 

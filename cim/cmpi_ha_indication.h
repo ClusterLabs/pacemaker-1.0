@@ -28,23 +28,14 @@
 #include <cmpidt.h>
 #include <cmpift.h>
 #include <cmpimacs.h>
- 
-#include <hb_api.h>
 #include "linuxha_info.h"
 
 
+int ha_indication_initialize(CMPIBroker * broker, CMPIContext * ctx, 
+                             CMPISelectExp * filter, CMPIStatus * rc);
 
-int nodestatus_event_handler(const char * node, const char *status);
-int ifstatus_event_handler(const char * node, 
-                        const char * lnk, const char * status);
-
-int membership_event_handler(const char *node, SaClmClusterChangesT status);
-
-int cluster_indication_initialize(char * classname, CMPIBroker * broker, 
-                CMPIContext * ctx, CMPISelectExp * filter, CMPIStatus * rc);
-
-int cluster_indication_finalize(char * classname, CMPIBroker * broker, 
-                CMPIContext * ctx, CMPISelectExp * filter, CMPIStatus * rc);
+int ha_indication_finalize(CMPIBroker * broker, CMPIContext * ctx, 
+                           CMPISelectExp * filter, CMPIStatus * rc);
  
                         
 #endif
