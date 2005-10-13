@@ -39,117 +39,6 @@
 
 /* temporary implementaion */
 
-
-static int 
-enumerate_sub_resource_names(const char * group_id, 
-                                GPtrArray * rsc_name_array)
-{
-        char ** std_out = NULL;
-        char cmnd [] = HA_LIBDIR"/heartbeat/crmadmin -R";
-        int exit_code = 0;
-        int ret = 0;
-        int i = 0;
-        int in_group = 0;
-
-        char * rsc_name = NULL;
-
-        DEBUG_ENTER();
-
-        ret = run_shell_command(cmnd, &exit_code, &std_out, NULL);
-
-        for (i = 0; std_out[i]; i++){
-                char ** match = NULL;
-                if ( !in_group ) {
-                        ret = regex_search("group: (.*) \\((.*)\\)", 
-                                                std_out[i], &match);
-                        if ( ret != HA_OK ) {
-                                continue;
-                        }
-                } else {        /* in group */
-                        ret = regex_search("\\Wprimitive: (.*) \\((.*)::(.*)\\)",
-                                                std_out[i], &match);
-                        if ( ret != HA_OK ) {
-                                in_group = 0;
-                                continue;
-                        }
-                }
-
-                if ( !in_group && strcmp ( group_id, match[1] ) == 0 ){
-                        cl_log(LOG_INFO, "%s: found group_id: %s", 
-                                                __FUNCTION__, group_id);
-                        in_group = 1;
-                        continue;
-                }
-                
-                if ( in_group ) {
-                        cl_log(LOG_INFO, "%s: found sub resource: %s", 
-                                                __FUNCTION__, match[1]); 
-                        rsc_name = strdup(match[1]); 
-                        g_ptr_array_add ( rsc_name_array, 
-                                                (gpointer *)rsc_name);
-                        continue;
-                }
-        }
-
-
-        DEBUG_LEAVE();
-        return HA_OK;
-} 
-
-static int
-set_rg_instance_properties(CMPIBroker * broker, CMPIInstance *inst, 
-       char * group_id, const GPtrArray * rsc_name_array, CMPIStatus * rc)
-{
-        int array_length = 0;
-        CMPIArray * cmpi_array = NULL;
-        int i = 0;
-
-        DEBUG_ENTER();
-
-        array_length = rsc_name_array->len;
-
-        cmpi_array = CMNewArray(broker, array_length, CMPI_chars, rc);    
-
-        if ( CMIsNullObject(cmpi_array) ) {
-                DEBUG_LEAVE();
-                return HA_FAIL;
-        }
-
-
-        for ( i = 0; i < rsc_name_array->len ; i++ ) {
-                char * rsc_name = NULL;
-
-                rsc_name = (char *) g_ptr_array_index(rsc_name_array, i);
-
-                if ( rsc_name == NULL ) {
-                        cl_log(LOG_WARNING, 
-                              "%s: got a NULL value, continue", __FUNCTION__);
-                        continue;
-                }
-                cl_log(LOG_INFO, "%s: add %s to cmpi array", 
-                                                __FUNCTION__, rsc_name);
-
-                CMSetArrayElementAt(cmpi_array, i, rsc_name, CMPI_chars);
-        }
-
-
-        cl_log(LOG_INFO, "%s: cmpi array count: %d", 
-                        __FUNCTION__, CMGetArrayCount(cmpi_array, rc));
-
-        CMSetProperty(inst, "GroupId", group_id, CMPI_chars);
-
-        cl_log(LOG_INFO, 
-               "%s: setting array property, OpenWBEM segment fault here?", 
-                __FUNCTION__);
-
-        CMSetProperty(inst, "SubResourceNames", &cmpi_array, CMPI_charsA);
-
-        DEBUG_LEAVE();
-
-        return HA_OK;
-}
-
-
 int 
 enumerate_resource_groups(char * classname, CMPIBroker * broker,
                 CMPIContext * ctx, CMPIResult * rslt,
@@ -200,27 +89,19 @@ enumerate_resource_groups(char * classname, CMPIBroker * broker,
                         free_2d_array(match);
 
                 }else{  /* return instance */
-                        GPtrArray * rsc_name_array = NULL;
-                        rsc_name_array = g_ptr_array_new();
-                
-                        ret = enumerate_sub_resource_names(group_id, 
-                                                           rsc_name_array);
-                        if ( ret == HA_OK ) {
-                                CMPIInstance * inst = NULL;
-                                inst = CMNewInstance(broker, op, rc);
+                        CMPIInstance * inst = NULL;
+                        inst = CMNewInstance(broker, op, rc);
 
-                                if ( inst == NULL ) {
-                                        return HA_FAIL;
-                                }
-                                cl_log(LOG_INFO, 
-                                        "%s: ready to set instance", __FUNCTION__);
-
-                                set_rg_instance_properties(broker, inst, 
-                                                group_id, rsc_name_array, rc);
-
-                                CMReturnInstance(rslt, inst);
-                                g_ptr_array_free(rsc_name_array, 0);
-                        }        
+                        if ( inst == NULL ) {
+                                return HA_FAIL;
+                        }
+                        cl_log(LOG_INFO, 
+                               "%s: ready to set instance", __FUNCTION__);
+                        
+                        CMSetProperty(inst, "GroupId", group_id, CMPI_chars);
+                        
+                        CMReturnInstance(rslt, inst);
+ 
                 }
 
         }
@@ -241,7 +122,6 @@ get_resource_group_instance(char * classname, CMPIBroker * broker,
         CMPIObjectPath * op = NULL;
         CMPIInstance * inst = NULL;
 
-        GPtrArray * rsc_name_array = NULL;
         char * group_id = NULL;
         char * nsp = NULL;
 
@@ -262,18 +142,11 @@ get_resource_group_instance(char * classname, CMPIBroker * broker,
                 return HA_FAIL;
         }
 
-        rsc_name_array = g_ptr_array_new();
-        enumerate_sub_resource_names(group_id, rsc_name_array);
-
         cl_log(LOG_INFO, "%s: ready to set instance", __FUNCTION__);
-        set_rg_instance_properties(broker, inst,
-                        group_id, rsc_name_array, rc);
 
+        CMSetProperty(inst, "GroupId", group_id, CMPI_chars);
         CMReturnInstance(rslt, inst);
         CMReturnDone(rslt);
 
-        g_ptr_array_free(rsc_name_array, 0);
-
-        
         return HA_OK;
 }
