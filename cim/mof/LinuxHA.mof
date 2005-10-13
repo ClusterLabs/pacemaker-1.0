@@ -464,7 +464,7 @@ class LinuxHA_ParticipatingNode : CIM_ParticipatingCS{
 //-------------------------------------------
 
 [ Provider("cmpi:cmpiLinuxHA_HostedResourceProvider") ]
-class LinuxHA_HostedResource : CIM_HostedService{
+class LinuxHA_HostedResource : CIM_HostedService {
         [ Override ( "Antecedent" ),
                 Description ("The cluster node that host the resource.")
         ]
@@ -474,6 +474,17 @@ class LinuxHA_HostedResource : CIM_HostedService{
                 Description ("The cluster resource.")
         ]
         LinuxHA_ClusterResource REF Dependent;
+};
+
+
+
+//-------------------------------------------
+// Indication
+//-------------------------------------------
+
+[ Indication,
+        Provider ("cmpi:cmpiLinuxHA_IndicationProvider") ]
+class LinuxHA_InstModification : CIM_InstModification {
 };
 
 
