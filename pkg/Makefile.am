@@ -1,6 +1,6 @@
-# $Id: Makefile.am,v 1.12 2005/07/07 10:17:49 davidlee Exp $
+# $Id: Makefile.am,v 1.13 2005/10/13 11:36:54 davidlee Exp $
 #
-# Open-HA "pkg" Makefile for Solaris etc.
+# "pkg" Makefile for Solaris etc.
 #
 # Copyright (C) 2001, 2004 David Lee
 #
@@ -36,8 +36,6 @@ EXTRA_DIST =	$(INFOFILES)/pkginfo.in		\
 CLEANFILES = stamp-tmpinst $(INFOFILES)/prototype
 
 DISTCLEANFILES = $(PKGINFO)
-
-PKGNAME		= OPENHA
 
 PKGDIR		= packages
 

@@ -133,7 +133,9 @@ ConfigureGenericBSD() {
 }
 
 ConfigureSolaris() {
-  FLAGS="--disable-ldirectord --prefix=/opt --sysconfdir=/opt/etc --localstatedir=/opt/var"
+  # PKGNAME: see comment in "configure.in"
+  PKGNAME="OpenHA"
+  FLAGS="--disable-ldirectord --prefix=/opt/$PKGNAME --sysconfdir=/etc/opt/$PKGNAME --localstatedir=/var/opt/$PKGNAME --with-pkgname=$PKGNAME"
   CFENV="Solaris"
   PACKAGECMD="$MAKE_CMD pkg"
 }

@@ -1,7 +1,7 @@
-PKG=OPENHA
+PKG=@PKGNAME@
 ARCH=@host_cpu@
 VERSION=@VERSION@
-NAME=Open-HA hearbeat for multi-machine resilience
+NAME=Open-HA software for multi-machine resilience
 CATEGORY=system
 CLASSES=none build
 BASEDIR=/
