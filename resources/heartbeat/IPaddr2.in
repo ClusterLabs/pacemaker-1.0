@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-#	$Id: IPaddr2.in,v 1.8 2005/08/29 02:09:28 sunjd Exp $
+#	$Id: IPaddr2.in,v 1.9 2005/10/13 09:38:08 sunjd Exp $
 #
 #	Copyright (C) 2003 Tuomo Soini <tis@foobar.fi>
 #
@@ -276,7 +276,7 @@ run_send_arp() {
     case $ARP_BACKGROUND in
 	yes) 
 	    ($SENDARP $ARGS || 
-	        ha_log "ERROR: Could not send gratuitous arps") &
+	        ha_log "ERROR: Could not send gratuitous arps" &) >&2
 	    ;;
 	*)
 	    $SENDARP $ARGS || ha_log "ERROR: Could not send gratuitous arps"
