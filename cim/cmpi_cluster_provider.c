@@ -34,7 +34,7 @@
 #include "cmpi_utils.h"
 #include "cmpi_cluster.h"
 #include "linuxha_info.h"
-#include "cmpi_ha_indication.h"
+
 
 #define PROVIDER_ID  "cim-provider-cluster"
 
@@ -80,29 +80,6 @@ CMPIStatus LinuxHA_ClusterProviderInvokeMethod(CMPIMethodMI * mi,
 
 CMPIStatus LinuxHA_ClusterProviderMethodCleanup(CMPIMethodMI* mi, CMPIContext* ctx);
 
-/*----------- indication interfaces ----------*/
-CMPIStatus LinuxHA_ClusterProviderIndicationCleanup(CMPIIndicationMI * mi, 
-                CMPIContext * ctx);
-
-CMPIStatus LinuxHA_ClusterProviderAuthorizeFilter(CMPIIndicationMI * mi,
-                CMPIContext * ctx, CMPIResult * rslt,
-                CMPISelectExp * filter, const char * type,
-                CMPIObjectPath * classPath, const char * owner);
-
-CMPIStatus LinuxHA_ClusterProviderMustPoll(CMPIIndicationMI * mi,
-                CMPIContext * ctx, CMPIResult * rslt, CMPISelectExp * filter,
-                const char * indType, CMPIObjectPath* classPath);
-
-CMPIStatus LinuxHA_ClusterProviderActivateFilter(CMPIIndicationMI * mi,
-                CMPIContext * ctx, CMPIResult * rslt,
-                CMPISelectExp * filter, const char * type,
-                CMPIObjectPath * classPath, CMPIBoolean firstActivation);
-
-CMPIStatus LinuxHA_ClusterProviderDeActivateFilter(CMPIIndicationMI * mi,
-               CMPIContext * ctx, CMPIResult * rslt,
-               CMPISelectExp * filter, const char * type,
-               CMPIObjectPath * classPath, CMPIBoolean lastActivation);
-
 
 /************ etnries ********************************/
 
@@ -111,9 +88,6 @@ LinuxHA_ClusterProvider_Create_InstanceMI(CMPIBroker * brkr, CMPIContext * ctx);
 
 CMPIMethodMI *
 LinuxHA_ClusterProvider_Create_MethodMI(CMPIBroker * brkr, CMPIContext * ctx);
-
-CMPIIndicationMI *
-LinuxHA_ClusterProvider_Create_IndicationMI(CMPIBroker * brkr, CMPIContext * ctx);
 
 
 /**********************************************
@@ -301,97 +275,6 @@ LinuxHA_ClusterProviderMethodCleanup(CMPIMethodMI* mi, CMPIContext* ctx)
 }
 
 
-/**************************************************
- * Indication Interface Implementaion
- *************************************************/
-CMPIStatus 
-LinuxHA_ClusterProviderIndicationCleanup(CMPIIndicationMI * mi, 
-                CMPIContext * ctx)
-{
-        init_logger(PROVIDER_ID);
-        CMReturn(CMPI_RC_OK);
-}
-
-CMPIStatus 
-LinuxHA_ClusterProviderAuthorizeFilter(CMPIIndicationMI * mi,
-                CMPIContext * ctx, CMPIResult * rslt,
-                CMPISelectExp * filter, const char * type,
-                CMPIObjectPath * classPath, const char * owner)
-{
-
-        CMPIValue valrc;
-
-        init_logger(PROVIDER_ID);
-        /*** debug ***/
-        DEBUG_ENTER();
-
-        valrc.boolean = 1;
-
-        CMReturnData(rslt, &valrc, CMPI_boolean);
-        CMReturnDone(rslt);
-
-        CMReturn(CMPI_RC_OK);
-}
-
-CMPIStatus 
-LinuxHA_ClusterProviderMustPoll(CMPIIndicationMI * mi,
-                CMPIContext * ctx, CMPIResult * rslt, CMPISelectExp * filter,
-                const char * indType, CMPIObjectPath* classPath)
-{
-        
-        CMPIValue valrc;
-        valrc.boolean = 1;
-
-        init_logger(PROVIDER_ID);
-        /*** debug ***/
-        DEBUG_ENTER();
-        
-
-        CMReturnData(rslt, &valrc, CMPI_boolean);
-        CMReturnDone(rslt);
-        
-        DEBUG_LEAVE();
-        CMReturn(CMPI_RC_OK);
-}
-
-CMPIStatus 
-LinuxHA_ClusterProviderActivateFilter(CMPIIndicationMI * mi,
-                CMPIContext * ctx, CMPIResult * rslt,
-                CMPISelectExp * filter, const char * type,
-                CMPIObjectPath * classPath, CMPIBoolean firstActivation)
-{
-        CMPIStatus rc;
-        int ret = 0;
-
-        init_logger(PROVIDER_ID);
-        
-        DEBUG_ENTER();
-        
-        ret = cluster_indication_initialize(ClassName, 
-                                Broker, ctx, filter, &rc);
-
-        DEBUG_LEAVE();
-        CMReturn(CMPI_RC_OK);
-}
-
-CMPIStatus 
-LinuxHA_ClusterProviderDeActivateFilter(CMPIIndicationMI * mi,
-               CMPIContext * ctx, CMPIResult * rslt,
-               CMPISelectExp * filter, const char * type,
-               CMPIObjectPath * classPath, CMPIBoolean lastActivation)
-{
-        int ret = 0;
-        CMPIStatus rc;
-
-        init_logger(PROVIDER_ID);
-        DEBUG_ENTER();
-        ret = cluster_indication_finalize(ClassName, 
-                                Broker, ctx, filter, &rc);        
-        
-        DEBUG_LEAVE();
-        CMReturn(CMPI_RC_OK);
-}
-
 
 /*****************************************************
  * install interface
@@ -444,35 +327,6 @@ LinuxHA_ClusterProvider_Create_MethodMI(CMPIBroker * brkr, CMPIContext * ctx)
         };
 
         Broker = brkr;
-        CMNoHook;
         return &mi;
 }
-
-/*--------------------------------------------*/
-
-static char ind_provider_name[] = "indLinuxHA_ClusterProvider";
-static CMPIIndicationMIFT indMIFT = {
-        CMPICurrentVersion,
-        CMPICurrentVersion,
-        ind_provider_name,
-        LinuxHA_ClusterProviderIndicationCleanup,
-        LinuxHA_ClusterProviderAuthorizeFilter,
-        LinuxHA_ClusterProviderMustPoll,
-        LinuxHA_ClusterProviderActivateFilter,
-        LinuxHA_ClusterProviderDeActivateFilter
-};
-
-CMPIIndicationMI *
-LinuxHA_ClusterProvider_Create_IndicationMI(CMPIBroker * brkr, CMPIContext * ctx)
-{
-        static CMPIIndicationMI mi = {
-                NULL,
-                &indMIFT
-        };
-
-        Broker = brkr;
-        CMNoHook;
-        return &mi;
-}
-
 
