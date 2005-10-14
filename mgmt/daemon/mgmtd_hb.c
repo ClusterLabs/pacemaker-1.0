@@ -27,6 +27,7 @@
 #include <heartbeat.h>
 #include <clplumbing/cl_log.h>
 #include <clplumbing/cl_syslog.h>
+#include <clplumbing/GSource.h>
 
 #include <hb_api.h>
 
@@ -38,6 +39,8 @@ void final_heartbeat(void);
 static ll_cluster_t * hb = NULL;
 static char* on_get_allnodes(char* argv[], int argc, int client_id);
 static char* on_get_hb_config(char* argv[], int argc, int client_id);
+static gboolean on_hb_input(IPC_Channel *, gpointer);
+static void on_hb_quit(gpointer);
 
 const char* param_name[] = {
 	"apiauth",
@@ -114,6 +117,8 @@ init_heartbeat(void)
 		hb = NULL;
 		return HA_FAIL;
 	}
+	G_main_add_IPC_Channel(G_PRIORITY_HIGH, hb->llc_ops->ipcchan(hb), 
+			FALSE, on_hb_input, NULL, on_hb_quit);
 	
 	reg_msg(MSG_ALLNODES, on_get_allnodes);
 	reg_msg(MSG_HB_CONFIG, on_get_hb_config);
@@ -123,7 +128,28 @@ init_heartbeat(void)
 void
 final_heartbeat(void)
 {
-	hb->llc_ops->delete(hb);
-	hb = NULL;
+	if (hb != NULL) {
+		hb->llc_ops->delete(hb);
+		hb = NULL;
+	}
+	fire_evt(EVT_DISCONNECTED);
+}
+
+gboolean
+on_hb_input(IPC_Channel * chan, gpointer data)
+{
+	if (chan != NULL && chan->ch_status == IPC_DISCONNECT) {
+		fire_evt(EVT_DISCONNECTED);
+		mgmtd_log(LOG_ERR, "Lost connection to heartbeat service.");
+		hb = NULL;
+		return FALSE;
+	}
+	return TRUE;
+}
+void
+on_hb_quit(gpointer user_data)
+{
+	shutdown_mgmtd();
+	return;
 }
 

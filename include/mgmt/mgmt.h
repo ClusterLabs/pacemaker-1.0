@@ -48,9 +48,8 @@
 #define MSG_RUNNING_RSC		"running_rsc"
 #define MSG_RSC_PARAMS		"rsc_params"
 #define MSG_RSC_ATTRS		"rsc_attrs"
-#define MSG_RSC_CONS		"rsc_cons"
+#define MSG_RSC_COLOS		"rsc_colos"
 #define MSG_RSC_RUNNING_ON	"rsc_running_on"
-#define MSG_RSC_LOCATION	"rsc_location"
 #define MSG_RSC_OPS		"rsc_ops"
 
 #define MSG_ALL_RSC		"all_rsc"
@@ -68,9 +67,14 @@
 
 #define MSG_UP_RSC_PARAMS	"up_rsc_params"
 #define MSG_UP_RSC_OPS		"up_rsc_ops"
-#define MSG_UP_RSC_CONS		"up_rsc_cons"
+#define MSG_UP_RSC_COLO		"up_rsc_colo"
 
-#define EVT_STATUS		"evt:status"
+#define MSG_DEL_RSC_PARAM	"del_rsc_param"
+#define MSG_DEL_RSC_OP		"del_rsc_op"
+#define MSG_DEL_RSC_COLO	"del_rsc_colo"
+
+#define EVT_CIB_CHANGED		"evt:cib_changed"
+#define EVT_DISCONNECTED	"evt:disconnected"
 
 extern int mgmt_connect(const char* server, const char* user, const char*  passwd);
 extern char* mgmt_sendmsg(const char* msg);

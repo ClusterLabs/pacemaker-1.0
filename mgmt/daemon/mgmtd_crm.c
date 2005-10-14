@@ -50,9 +50,8 @@ static char* on_get_node_config(char* argv[], int argc, int client_id);
 static char* on_get_running_rsc(char* argv[], int argc, int client_id);
 static char* on_get_rsc_params(char* argv[], int argc, int client_id);
 static char* on_get_rsc_attrs(char* argv[], int argc, int client_id);
-static char* on_get_rsc_cons(char* argv[], int argc, int client_id);
+static char* on_get_rsc_colos(char* argv[], int argc, int client_id);
 static char* on_get_rsc_running_on(char* argv[], int argc, int client_id);
-static char* on_get_rsc_location(char* argv[], int argc, int client_id);
 static char* on_get_rsc_ops(char* argv[], int argc, int client_id);
 
 static char* on_get_all_rsc(char* argv[], int argc, int client_id);
@@ -63,16 +62,18 @@ static char* on_del_rsc(char* argv[], int argc, int client_id);
 static char* on_add_rsc(char* argv[], int argc, int client_id);
 static char* on_add_grp(char* argv[], int argc, int client_id);
 
-#define MSG_UP_RSC_PARAMS	"up_rsc_params"
-#define MSG_UP_RSC_OPS		"up_rsc_ops"
-#define MSG_UP_RSC_CONS		"up_rsc_cons"
-
 static char* on_update_crm_config(char* argv[], int argc, int client_id);
 static char* on_update_rsc_params(char* argv[], int argc, int client_id);
 static char* on_update_rsc_ops(char* argv[], int argc, int client_id);
-static char* on_update_rsc_cons(char* argv[], int argc, int client_id);
+static char* on_update_rsc_colo(char* argv[], int argc, int client_id);
+
+static char* on_delete_rsc_param(char* argv[], int argc, int client_id);
+static char* on_delete_rsc_op(char* argv[], int argc, int client_id);
+static char* on_delete_rsc_colo(char* argv[], int argc, int client_id);
 
 static resource_t* find_resource(GList* rsc_list, const char* id);
+static int delete_object(const char* type, const char* entry, const char* id);
+
 #define GET_RESOURCE()	if (argc != 2) { 					\
 				return cl_strdup(MSG_FAIL); 			\
 			} 							\
@@ -101,7 +102,7 @@ on_cib_query_done(const HA_Message* msg, int call_id, int rc,
 		stage0(&data_set);
 
 		mgmtd_log(LOG_INFO,"update cib finished");
-		fire_evt(EVT_STATUS);
+		fire_evt(EVT_CIB_CHANGED);
 	}
 }
 
@@ -141,9 +142,8 @@ init_crm(void)
 
 	reg_msg(MSG_RSC_PARAMS, on_get_rsc_params);
 	reg_msg(MSG_RSC_ATTRS, on_get_rsc_attrs);
-	reg_msg(MSG_RSC_CONS, on_get_rsc_cons);
+	reg_msg(MSG_RSC_COLOS, on_get_rsc_colos);
 	reg_msg(MSG_RSC_RUNNING_ON, on_get_rsc_running_on);
-	reg_msg(MSG_RSC_LOCATION, on_get_rsc_location);
 	reg_msg(MSG_RSC_OPS, on_get_rsc_ops);
 
 	reg_msg(MSG_ALL_RSC, on_get_all_rsc);
@@ -156,8 +156,11 @@ init_crm(void)
 	reg_msg(MSG_ADD_GRP, on_add_grp);
 
 	reg_msg(MSG_UP_RSC_PARAMS, on_update_rsc_params);
+	reg_msg(MSG_DEL_RSC_PARAM, on_delete_rsc_param);
 	reg_msg(MSG_UP_RSC_OPS, on_update_rsc_ops);
-	reg_msg(MSG_UP_RSC_CONS, on_update_rsc_cons);
+	reg_msg(MSG_DEL_RSC_OP, on_delete_rsc_op);
+	reg_msg(MSG_UP_RSC_COLO, on_update_rsc_colo);
+	reg_msg(MSG_DEL_RSC_COLO, on_delete_rsc_colo);
 	return 0;
 }	
 
@@ -352,7 +355,7 @@ on_get_rsc_attrs(char* argv[], int argc, int client_id)
 }
 
 char*
-on_get_rsc_cons(char* argv[], int argc, int client_id)
+on_get_rsc_colos(char* argv[], int argc, int client_id)
 {
 	resource_t* rsc;
 	char* ret;
@@ -363,13 +366,13 @@ on_get_rsc_cons(char* argv[], int argc, int client_id)
 	ret = cl_strdup(MSG_OK);
 	cur = rsc->rsc_cons;
 	while (cur != NULL) {
-		rsc_colocation_t* con = (rsc_colocation_t*)cur->data;
-		ret = mgmt_msg_append(ret, con->id);
-		ret = mgmt_msg_append(ret, con->rsc_lh->id);
-		ret = mgmt_msg_append(ret, con->rsc_rh->id);
-		ret = mgmt_msg_append(ret, con->state_lh);
-		ret = mgmt_msg_append(ret, con->state_rh);
-		switch (con->strength) {
+		rsc_colocation_t* colo = (rsc_colocation_t*)cur->data;
+		ret = mgmt_msg_append(ret, colo->id);
+		ret = mgmt_msg_append(ret, colo->rsc_lh->id);
+		ret = mgmt_msg_append(ret, colo->rsc_rh->id);
+		ret = mgmt_msg_append(ret, colo->state_lh);
+		ret = mgmt_msg_append(ret, colo->state_rh);
+		switch (colo->strength) {
 			case pecs_ignore:
 				ret = mgmt_msg_append(ret, "ignore");
 				break;
@@ -381,6 +384,9 @@ on_get_rsc_cons(char* argv[], int argc, int client_id)
 				break;
 			case pecs_startstop:
 				ret = mgmt_msg_append(ret, "startstop");
+				break;
+			default :
+				ret = mgmt_msg_append(ret, "unknown");
 				break;
 		}
 
@@ -409,54 +415,6 @@ on_get_rsc_running_on(char* argv[], int argc, int client_id)
 }
 
 char*
-on_get_rsc_location(char* argv[], int argc, int client_id)
-{
-	resource_t* rsc;
-	char* ret;
-	GList* cur;
-	GList* cur_node;
-	char buf[MAX_STRLEN];
-
-	GET_RESOURCE()
-
-	ret = cl_strdup(MSG_OK);
-	cur = rsc->rsc_location;
-	while (cur != NULL) {
-		rsc_to_node_t* location = (rsc_to_node_t*)cur->data;
-		ret = mgmt_msg_append(ret, location->id);
-		ret = mgmt_msg_append(ret, location->rsc_lh->id);
-		switch (location->role_filter) {
-			case RSC_ROLE_UNKNOWN:
-				ret = mgmt_msg_append(ret, "unknown");
-				break;		
-			case RSC_ROLE_STOPPED:
-				ret = mgmt_msg_append(ret, "stopped");
-				break;		
-			case RSC_ROLE_STARTED:
-				ret = mgmt_msg_append(ret, "started");
-				break;		
-			case RSC_ROLE_SLAVE:
-				ret = mgmt_msg_append(ret, "slave");
-				break;		
-			case RSC_ROLE_MASTER:
-				ret = mgmt_msg_append(ret, "master");
-				break;		
-		}
-		memset(buf, 0, MAX_STRLEN);
-		cur_node = location->node_list_rh;
-		while(cur_node != NULL) {
-			node_t* node = (node_t*)cur_node->data;
-			strncat(buf, node->details->uname, MAX_STRLEN);
-			strncat(buf, " ", MAX_STRLEN);
-			cur_node = g_list_next(cur_node);
-		}
-		ret = mgmt_msg_append(ret, buf);
-		cur = g_list_next(cur);
-	}
-	return ret;
-}
-
-char*
 on_get_rsc_ops(char* argv[], int argc, int client_id)
 {
 	int i;
@@ -476,8 +434,8 @@ on_get_rsc_ops(char* argv[], int argc, int client_id)
 		if (strncmp(ops->names[i], "op", sizeof("op")) == 0) {
 			op = (struct ha_msg*)ops->values[i];
 			ret = mgmt_msg_append(ret, ha_msg_value(op, "id"));
-			ret = mgmt_msg_append(ret, ha_msg_value(op, "interval"));
 			ret = mgmt_msg_append(ret, ha_msg_value(op, "name"));
+			ret = mgmt_msg_append(ret, ha_msg_value(op, "interval"));
 			ret = mgmt_msg_append(ret, ha_msg_value(op, "timeout"));
 		}
 	}
@@ -788,10 +746,118 @@ on_update_rsc_params(char* argv[], int argc, int client_id)
 char*
 on_update_rsc_ops(char* argv[], int argc, int client_id)
 {
+	int rc, i;
+	crm_data_t* fragment = NULL;
+	crm_data_t* cib_object = NULL;
+	crm_data_t* output;
+	char xml[MAX_STRLEN];
+	char buf[MAX_STRLEN];
+
+	snprintf(xml, MAX_STRLEN,
+ 		 "<primitive id=\"%s\">"
+    		 " <operations>", argv[1]);
+	for (i = 2; i < argc; i += 4) {
+		snprintf(buf, MAX_STRLEN,
+			"<op id=\"%s\" name=\"%s\" interval=\"%s\" timeout=\"%s\"/>",
+			argv[i], argv[i+1], argv[i+2], argv[i+3]);
+		strncat(xml, buf, MAX_STRLEN);
+	}
+	strncat(xml, "</operations></primitive>", MAX_STRLEN);
+
+	cib_object = string2xml(xml);
+	if(cib_object == NULL) {
+		return cl_strdup(MSG_FAIL);
+	}
+	mgmtd_log(LOG_INFO, "xml:%s",xml);
+	fragment = create_cib_fragment(cib_object, "resources");
+
+	rc = cib_conn->cmds->modify(
+			cib_conn, "resources", fragment, &output, 0);
+
+	if (rc < 0) {
+		return cl_strdup(MSG_FAIL);
+	}
 	return cl_strdup(MSG_OK);
 }
 char*
-on_update_rsc_cons(char* argv[], int argc, int client_id)
+on_update_rsc_colo(char* argv[], int argc, int client_id)
 {
+	int rc;
+	crm_data_t* fragment = NULL;
+	crm_data_t* cib_object = NULL;
+	crm_data_t* output;
+	char xml[MAX_STRLEN];
+
+	snprintf(xml, MAX_STRLEN,
+ 		 "<rsc_colocation id=\"%s\" from=\"%s\" to=\"%s\" score=\"%s\"/>",
+		 argv[2], argv[1], argv[3], argv[4]);
+
+	cib_object = string2xml(xml);
+	if(cib_object == NULL) {
+		return cl_strdup(MSG_FAIL);
+	}
+	mgmtd_log(LOG_INFO, "xml:%s",xml);
+	fragment = create_cib_fragment(cib_object, "constraints");
+
+	rc = cib_conn->cmds->modify(
+			cib_conn, "constraints", fragment, &output, 0);
+
+	if (rc < 0) {
+		return cl_strdup(MSG_FAIL);
+	}
 	return cl_strdup(MSG_OK);
+}
+char*
+on_delete_rsc_param(char* argv[], int argc, int client_id)
+{
+	ARGC_CHECK(2)
+
+	if (delete_object("resources", "nvpair", argv[1]) < 0) {
+		return cl_strdup(MSG_FAIL);
+	}
+	return cl_strdup(MSG_OK);
+}
+char*
+on_delete_rsc_op(char* argv[], int argc, int client_id)
+{
+	ARGC_CHECK(2)
+
+	if (delete_object("resources", "op", argv[1]) < 0) {
+		return cl_strdup(MSG_FAIL);
+	}
+	return cl_strdup(MSG_OK);
+}
+char*
+on_delete_rsc_colo(char* argv[], int argc, int client_id)
+{
+	ARGC_CHECK(2)
+
+	if (delete_object("constraints", "rsc_colocation", argv[1]) < 0) {
+		return cl_strdup(MSG_FAIL);
+	}
+	return cl_strdup(MSG_OK);
+}
+int
+delete_object(const char* type, const char* entry, const char* id) 
+{
+	int rc;
+	crm_data_t* cib_object = NULL;
+	crm_data_t* output;
+	char xml[MAX_STRLEN];
+
+	snprintf(xml, MAX_STRLEN, "<%s id=\"%s\">", entry, id);
+
+	cib_object = string2xml(xml);
+	if(cib_object == NULL) {
+		return -1;
+	}
+	mgmtd_log(LOG_INFO, "xml:%s",xml);
+
+	rc = cib_conn->cmds->delete(
+			cib_conn, type, cib_object, &output, 0);
+
+	if (rc < 0) {
+		return -1;
+	}
+	return 0;
 }
