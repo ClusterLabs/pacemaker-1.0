@@ -1,4 +1,4 @@
-/* $Id: ha_msg.h,v 1.66 2005/10/04 22:06:58 gshi Exp $ */
+/* $Id: ha_msg.h,v 1.67 2005/10/14 18:51:05 gshi Exp $ */
 /*
  * Intracluster message object (struct ha_msg)
  *
@@ -62,8 +62,6 @@ typedef struct hb_msg_stats_s {
 struct ha_msg {
 	int	nfields;
 	int	nalloc;
-	size_t	stringlen;	/* #bytes needed to convert this to a string
-				 * including the '\0' character at the end. */
 	char **	names;
 	size_t* nlens;
 	void **	values;
