@@ -238,12 +238,7 @@ usage(const char* cmd, int exit_status)
 gboolean
 sigterm_action(int nsig, gpointer user_data)
 {
-	mgmtd_log(LOG_INFO,"mgmtd is shutting down");
-	if (mainloop != NULL && g_main_is_running(mainloop)) {
-		g_main_quit(mainloop);
-	}else {
-		exit(LSB_EXIT_OK);
-	}
+	shutdown_mgmtd();	
 	return TRUE;
 }
 
@@ -653,4 +648,14 @@ reg_evt(const char* type, int client_id)
 	id_list = g_list_append(id_list, (gpointer)client_id);
 	g_hash_table_replace(evt_map, cl_strdup(type), (gpointer)id_list);
 	return 0;
+}
+void
+shutdown_mgmtd(void)
+{
+	mgmtd_log(LOG_INFO,"mgmtd is shutting down");
+	if (mainloop != NULL && g_main_is_running(mainloop)) {
+		g_main_quit(mainloop);
+	}else {
+		exit(LSB_EXIT_OK);
+	}
 }

@@ -53,6 +53,7 @@ typedef char* (*msg_handler)(char* argv[], int argc, int client_id);
 extern int reg_msg(const char* type, msg_handler fun);
 extern int reg_evt(const char* type, int client_id);
 extern int fire_evt(const char* evt);
+extern void shutdown_mgmtd(void);
 extern const char* mgmtd_name;
 extern int debug_level;
 #endif /* __HAMD_H */
