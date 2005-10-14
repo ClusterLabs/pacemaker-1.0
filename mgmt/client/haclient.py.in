@@ -1,0 +1,1062 @@
+#!@PYTHON@
+
+'''haclient.py, the GUI manamgement tool for Linux-HA
+'''
+
+__copyright__='''
+Author: Huang Zhen <zhenhltc@cn.ibm.com>
+Copyright (C) 2005 International Business Machines
+'''
+
+#
+# This program is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License
+# as published by the Free Software Foundation; either version 2
+# of the License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
+
+
+import sys,string,socket
+sys.path.append("@libdir@/heartbeat")
+from pymgmt import *
+
+import pygtk
+pygtk.require('2.0')
+import gtk
+import gtk.glade 
+import gobject
+
+window = None
+manager = None
+UI_FILE = "@libdir@/heartbeat/haclient.glade"
+
+def MsgBox(msg, parent = None) :
+	if parent == None :
+		parent = window.win
+	dialog = gtk.Dialog("Message", window.win, gtk.DIALOG_MODAL, (gtk.STOCK_OK, True))
+	label = gtk.Label(msg)
+	dialog.vbox.add(label)
+	label.show()
+	dialog.run()
+	dialog.destroy()
+
+def ConfirmBox(msg, parent = None) :
+	if parent == None :
+		parent = window.win
+	dialog = gtk.Dialog("Confirm", window.win, gtk.DIALOG_MODAL, (gtk.STOCK_YES, True, gtk.STOCK_NO, False))
+	label = gtk.Label(msg)
+	dialog.vbox.add(label)
+	label.show()
+	ret = dialog.run()
+	dialog.destroy()
+	return ret
+
+def KeyValueBox(title, msg, keys, values, options=None, parent=None) :
+	if parent == None :
+		parent = window.win
+	dialog = gtk.Dialog(title, parent, gtk.DIALOG_MODAL, (gtk.STOCK_OK, True, gtk.STOCK_CANCEL, False))
+	dialog.vbox.pack_start(gtk.Label(msg))
+	table = gtk.Table(2, 1, False)
+	widgets = []
+	for row in range(len(keys)):
+		table.attach(gtk.Label(keys[row]+":"), 0, 1, row, row+1)
+		if options!= None and options[row] != None:
+			combo = gtk.combo_box_entry_new_text()
+			for option in options[row]:
+				combo.append_text(option)
+			if values[row] != None :
+				combo.child.set_text(values[row])
+			else :
+				combo.child.set_text(options[row][0])
+			widgets.append(combo)
+			table.attach(combo, 1,2, row, row+1)
+		else :
+			entry = gtk.Entry()
+			if values[row]!= None :
+				entry.set_text(values[row])
+			widgets.append(entry)
+			table.attach(entry, 1,2, row, row+1)
+	
+	dialog.vbox.pack_start(table)
+	dialog.vbox.show_all()
+	ret = dialog.run()
+	if ret:
+		kv = {}
+		for row in range(len(keys)):
+			if options!= None and options[row] != None:
+				combo = widgets[row]
+				kv[keys[row]] = combo.child.get_text()
+			else :
+				entry = widgets[row]
+				kv[keys[row]] = entry.get_text()
+		dialog.destroy()
+		return kv
+	dialog.destroy()
+	return None
+	
+def AddColumn(view, label, value) :
+	tvcolumn = gtk.TreeViewColumn(label)
+	view.append_column(tvcolumn)
+	cell = gtk.CellRendererText()
+	tvcolumn.pack_start(cell, True)
+	tvcolumn.add_attribute(cell, 'text', value)
+	
+class MainWindow :
+	login = False
+	treeview = None
+	cur_name = None
+	cur_type = None
+	uimanager = None
+	ui ='''
+	<ui>
+		<menubar name="MenuBar">
+			<menu action="Connection">
+				<menuitem action="Login"/>
+				<menuitem action="Logout"/>
+				<menuitem action="Test"/>
+				<menuitem action="Quit"/>
+			</menu>
+			<menu action="Action">
+				<menuitem action="AddRsc"/>
+				<menuitem action="AddGrp"/>
+				<menuitem action="DelRsc"/>
+			</menu>
+		</menubar>
+		<toolbar name="Toolbar">
+			<toolitem action="Login"/>
+			<toolitem action="Logout"/>
+			<toolitem action="AddRsc"/>
+			<toolitem action="AddGrp"/>
+			<toolitem action="DelRsc"/>
+			<toolitem action="Test"/>
+			<toolitem action="Quit"/>
+		</toolbar>
+	</ui>'''
+	
+# command process functions
+	def OnIdle(self) :
+		if self.login :
+			self.actiongroup.get_action('Logout').set_sensitive(True)
+			self.actiongroup.get_action('Login').set_sensitive(False)
+			self.actiongroup.get_action('AddRsc').set_sensitive(True)
+			self.actiongroup.get_action('AddGrp').set_sensitive(True)
+		else :
+			self.actiongroup.get_action('Logout').set_sensitive(False)
+			self.actiongroup.get_action('Login').set_sensitive(True)
+			self.actiongroup.get_action('AddRsc').set_sensitive(False)
+			self.actiongroup.get_action('AddGrp').set_sensitive(False)
+			
+		if self.cur_type in ["resource", "group","clone"] :
+			self.actiongroup.get_action('DelRsc').set_sensitive(True)
+		else :
+			self.actiongroup.get_action('DelRsc').set_sensitive(False)
+			
+	def OnDeleteEvent(self, widget, event, data=None) :
+		self.OnQuit(None)
+		return False
+	
+	def OnQuit(self, action) :
+		manager.Exit()
+		gtk.main_quit()
+		
+		
+	def OnTest(self, action) :
+		pass
+
+	def OnLogin(self, action) :
+		dialog = gtk.Dialog("Login",self.win, gtk.DIALOG_MODAL,
+				(gtk.STOCK_OK, True,
+                      		 gtk.STOCK_CANCEL, False))
+				 
+		table = gtk.Table(2,1,False)
+		table.attach(gtk.Label("server"),0,1,0,1)
+		table.attach(gtk.Label("user"),0,1,1,2)
+		table.attach(gtk.Label("password"),0,1,2,3)
+		server = gtk.Entry()
+		user = gtk.Entry()
+		password = gtk.Entry()
+		password.set_visibility(False)
+		table.attach(server,1,2,0,1)
+		table.attach(user,1,2,1,2)
+		table.attach(password,1,2,2,3)
+		table.show_all()
+		dialog.vbox.add(table)
+
+		server.set_text("127.0.0.1")
+		user.set_text("hacluster")
+		password.set_text("hacluster")
+		
+		ret =  dialog.run()
+		s_server = server.get_text()
+		s_user = user.get_text()
+		s_password = password.get_text()
+		dialog.destroy()
+
+		if ret :
+			if manager.Login(s_server, s_user, s_password) :
+				self.SetLoginStatus(True)
+				self.treeview.expand_all()
+			
+			else :
+				MsgBox("Login Failed")
+					
+	def OnLogout(self, action) :
+		manager.Logout()
+		self.SetLoginStatus(False)
+
+
+	def SetLoginStatus(self, login) :
+		self.login = login
+			
+# functions for add rsc dialog
+
+	def OnClassChanged_AddRsc(self, widget, glade) :
+		cur_class = glade.get_widget("class").child.get_text()
+		type_list = manager.DoCmd("rsc_types\n"+cur_class)
+		store = gtk.ListStore(str)
+		for i in type_list:
+			store.append([i])
+		glade.get_widget("type").set_model(store)
+		if glade.get_widget("type").get_text_column() != 0 :
+			glade.get_widget("type").set_text_column(0)
+		if type_list != None and type_list != [] :
+			glade.get_widget("type").child.set_text(type_list[0])
+		
+	def OnTypeChanged_AddRsc(self, widget, glade) :
+		cur_class = glade.get_widget("class").child.get_text()
+		cur_type = glade.get_widget("type").child.get_text()
+		
+		provider_list = manager.DoCmd("rsc_providers\n%s\n%s"%(cur_class,cur_type))
+		store = gtk.ListStore(str)
+		for i in provider_list:
+			store.append([i])
+		glade.get_widget("provider").set_model(store)
+		if glade.get_widget("provider").get_text_column() != 0 :
+			glade.get_widget("provider").set_text_column(0)
+		if provider_list != None and provider_list != [] :
+			glade.get_widget("provider").child.set_text(provider_list[0])
+			
+				
+	
+	def OnDelItem(self, widget, listview) :
+		selection = listview.get_selection()
+		(model, iter) = selection.get_selected()
+		if iter != None :
+			model.remove(iter)
+			
+	def OnAddGrp(self, action) :
+		group = KeyValueBox("New Group", "add new group",["id"],["group_"])
+		if group != None :
+			manager.AddGrp(group)
+		
+	def OnAddRsc(self, action) :
+		dialog = gtk.Dialog("Add Resource", self.win, gtk.DIALOG_MODAL, 
+				    (gtk.STOCK_ADD, True, gtk.STOCK_CANCEL, False))
+		glade = gtk.glade.XML(UI_FILE, "AddRscLayout")
+		layout = glade.get_widget("AddRscLayout")
+		dialog.vbox.add(layout)
+		glade.get_widget("class").child.set_editable(False)
+		glade.get_widget("type").child.set_editable(False)
+		glade.get_widget("provider").child.set_editable(False)
+		glade.get_widget("class").connect("changed", self.OnClassChanged_AddRsc, glade)
+		glade.get_widget("type").connect("changed", self.OnTypeChanged_AddRsc, glade)
+		
+		class_list = manager.DoCmd("rsc_classes")
+		store = gtk.ListStore(str)
+		for i in class_list:
+			store.append([i])
+		glade.get_widget("class").set_model(store)
+		glade.get_widget("class").set_text_column(0)
+		if class_list != None and class_list != [] :
+			if "ocf" in class_list:
+				init_class = "ocf"
+			else :
+				init_class = class_list[0]
+		glade.get_widget("class").child.set_text(init_class)
+
+		store = gtk.ListStore(str)
+		store.append([""])
+		for rsc in manager.DoCmd("all_rsc") :
+			if manager.DoCmd("rsc_type\n"+rsc)[0] == "group" :
+				store.append([rsc])
+		glade.get_widget("group").set_model(store)
+		glade.get_widget("group").set_text_column(0)
+					
+		listview = glade.get_widget("Parameters")
+		AddColumn(listview, "ID", 0)
+		AddColumn(listview, "Name", 1)
+		AddColumn(listview, "Value", 2)
+		store = gtk.ListStore(str, str, str)
+		listview.set_model(store)
+
+		glade.get_widget("AddParam").connect("clicked", self.OnAddParam, listview)
+		glade.get_widget("DelParam").connect("clicked", self.OnDelItem, listview)
+		
+		ret = dialog.run()
+		if ret == True :
+			rsc = {}
+			rsc["id"] = glade.get_widget("id").get_text()
+			rsc["class"] = glade.get_widget("class").child.get_text()
+			rsc["type"] = glade.get_widget("type").child.get_text()
+			rsc["provider"] = glade.get_widget("provider").child.get_text()
+			rsc["group"] = glade.get_widget("group").child.get_text()
+			rsc["params"] = []
+			store = glade.get_widget("Parameters").get_model()
+			iter = store.get_iter_first()
+			while iter != None :
+				param = {}
+				param["id"] = store.get_value(iter, 0)
+				param["name"] = store.get_value(iter, 1)
+				param["value"] = store.get_value(iter, 2)
+				rsc["params"].append(param)
+				iter = store.iter_next(iter)
+			manager.AddRsc(rsc)
+			
+		dialog.destroy()
+		return None
+
+# del resource handler
+
+	def OnDelRsc(self, action) :
+		if ConfirmBox("Delete resource %s?"%self.cur_name) :
+			manager.DelRsc(self.cur_name)
+# tree view fucntions
+	
+	def OnTreeViewSelect(self, treeview, selection) :
+		(model, iter) = selection.get_selected()
+		if iter == None :
+			self.cur_type = None
+			self.cur_name = None
+		else :
+			self.cur_type = model.get_value(iter, 2)
+			self.cur_name = model.get_value(iter, 0)
+			
+		for child in self.rframe.get_children() :
+			self.rframe.remove(child)
+			
+		if self.cur_type == "cluster" :
+			self.rframe.add(self.CreateClusterView())
+		elif self.cur_type == "node" :
+			self.rframe.add(self.CreateNodeView(self.cur_name))
+		elif self.cur_type in ["resource", "group","clone"] :
+			self.rframe.add(self.CreateRscView(self.cur_name))
+		else :
+			self.rframe.add(self.CreateEmptyView())
+		
+	def OnTreeViewPopMenu(self, treeview, event, selection) :
+		if event.button != 3 :
+			return False
+		(model, iter) = selection.get_selected()
+		if iter == None :
+			return False
+		self.cur_type = model.get_value(iter, 2)
+		self.cur_name = model.get_value(iter, 0)
+# 		self.actiongroup.get_action('DelRsc').set_sensitive(False)
+# 		if self.cur_type in ["resource", "group","clone"] :
+# 			self.actiongroup.get_action('DelRsc').set_sensitive(True)
+			
+		popup = self.uimanager.get_widget('/MenuBar/Action').get_submenu()
+		popup.popup(None, None, None, event.button, event.time)
+		return False
+		
+	def CreateTreeView(self) :
+		treestore = gtk.TreeStore(str, str, str)
+		manager.treestore = treestore
+		
+		treeview = gtk.TreeView(treestore)
+		AddColumn(treeview, "Name", 0)
+		AddColumn(treeview, "Status", 1)
+		
+		treeview.set_size_request(250, 100)
+		treeview.connect("cursor-changed", self.OnTreeViewSelect, treeview.get_selection())
+		treeview.connect("button-press-event", self.OnTreeViewPopMenu, treeview.get_selection())
+		
+		return treeview
+	
+# cluster view functions
+
+	def OnClusterViewChanged(self, widget, glade) :
+		glade.get_widget("Apply").set_sensitive(True)
+		glade.get_widget("Reset").set_sensitive(True)
+	
+	def OnClusterViewApply(self, widget, glade):
+		new_crm_config = {}
+		new_crm_config["transition_timeout"] = glade.get_widget("transition_timeout").get_text()
+		new_crm_config["symmetric_cluster"] = str(glade.get_widget("symmetric_cluster").get_active())
+		new_crm_config["stonith_enabled"] = str(glade.get_widget("stonith_enabled").get_active())
+		new_crm_config["no_quorum_policy"] = glade.get_widget("no_quorum_policy").child.get_text()
+		new_crm_config["default_resource_stickiness"] = glade.get_widget("default_resource_stickiness").child.get_text()
+		manager.UpdateCRMConfig(new_crm_config)
+		glade.get_widget("Apply").set_sensitive(False)
+		glade.get_widget("Reset").set_sensitive(False)
+		
+	def OnClusterViewReset(self, widget, glade):
+		self.ClusterViewUpdate(glade)
+	
+	def ClusterViewUpdate(self, glade) :
+		hb_config = manager.GetHBConfig()
+		if hb_config != {} :
+			glade.get_widget("hbversion").set_text(hb_config["hbversion"])
+			glade.get_widget("debug").set_text(str(bool(hb_config["debug"])))
+			glade.get_widget("auto_failback").set_text(hb_config["auto_failback"])
+			glade.get_widget("udpport").set_text(hb_config["udpport"])
+			glade.get_widget("keepalive").set_text(hb_config["keepalive"])
+			glade.get_widget("warntime").set_text(hb_config["warntime"])
+			glade.get_widget("deadtime").set_text(hb_config["deadtime"])
+			glade.get_widget("initdead").set_text(hb_config["initdead"])
+
+		crm_config = manager.GetCRMConfig()
+		if crm_config != {} :
+			glade.get_widget("transition_timeout").set_text(crm_config["transition_timeout"])
+			glade.get_widget("symmetric_cluster").set_active("True" == crm_config["symmetric_cluster"])
+			glade.get_widget("stonith_enabled").set_active("True" == crm_config["stonith_enabled"])
+			glade.get_widget("no_quorum_policy").child.set_text(crm_config["no_quorum_policy"])
+			glade.get_widget("no_quorum_policy").child.set_editable(False)
+			glade.get_widget("default_resource_stickiness").child.set_text(crm_config["default_resource_stickiness"])
+			glade.get_widget("default_resource_stickiness").child.set_editable(False)
+
+		self.cur_crm_config = crm_config
+		glade.get_widget("Apply").set_sensitive(False)
+		glade.get_widget("Reset").set_sensitive(False)
+		
+	def CreateClusterView(self) :
+		glade = gtk.glade.XML(UI_FILE, "ClusterView")
+		table = glade.get_widget("table")
+		table.set_row_spacings(10)
+		table.set_col_spacings(10)
+
+		self.ClusterViewUpdate(glade)
+
+		glade.get_widget("transition_timeout").connect("changed", self.OnClusterViewChanged, glade)
+		glade.get_widget("symmetric_cluster").connect("toggled", self.OnClusterViewChanged, glade)
+		glade.get_widget("stonith_enabled").connect("toggled", self.OnClusterViewChanged, glade)
+		glade.get_widget("no_quorum_policy").connect("changed", self.OnClusterViewChanged, glade)
+		glade.get_widget("default_resource_stickiness").connect("changed", self.OnClusterViewChanged, glade)
+		glade.get_widget("Apply").connect("clicked", self.OnClusterViewApply, glade)
+		glade.get_widget("Reset").connect("clicked", self.OnClusterViewReset, glade)
+		
+		return glade.get_widget("ClusterView")
+
+# node view functions
+	
+	def CreateNodeView(self, name) :
+		glade = gtk.glade.XML(UI_FILE, "NodeView")
+		table = glade.get_widget("table")
+		table.set_row_spacings(10)
+		table.set_col_spacings(10)
+		
+		node_config = manager.GetNodeConfig(name)
+		if node_config != {} :
+			glade.get_widget("standby").set_text(node_config["standby"])
+			glade.get_widget("uname").set_text(node_config["uname"])
+			glade.get_widget("expected_up").set_text(node_config["expected_up"])
+			glade.get_widget("is_dc").set_text(node_config["is_dc"])
+			glade.get_widget("shutdown").set_text(node_config["shutdown"])
+			glade.get_widget("online").set_text(node_config["online"])
+			glade.get_widget("type").set_text(node_config["type"])
+			glade.get_widget("unclean").set_text(node_config["unclean"])
+
+			return glade.get_widget("NodeView")
+		
+		return self.CreateEmptyView()
+
+# resource view functions
+
+	params_save = None
+	colos_save = None
+	ops_save = None
+	glade = None
+	
+	def OnAddParam(self, widget, listview) :
+		store = listview.get_model()
+		param = KeyValueBox("Add Param","", ["id", "name","value"],[None, None,None])
+		if param != None :
+			if len(param["id"]) > 0 :
+				store.append([param["id"],param["name"],param["value"]])
+				self.OnRscViewChanged()
+			else :
+				MsgBox("the id of parameter can not be empty")
+	
+	def OnAddOp(self, widget, listview) :
+		store = listview.get_model()
+		op = KeyValueBox("Add Operation","", ["ID","Name","Interval","Timeout"],
+		                 ["op_", "monitor", "0s", "60s"])
+
+		if op != None :
+			if len(op["ID"]) > 0 :
+				store.append([op["ID"],op["Name"],op["Interval"],op["Timeout"]])
+				self.OnRscViewChanged()
+			else :
+				MsgBox("the id of operation can not be empty")
+		
+	def OnAddColo(self, widget, listview) :
+		store = listview.get_model()
+		rscs = manager.GetAllRsc()
+		if rscs != [] :
+			colo = KeyValueBox("Add Colocation","", ["ID","To","Strength"],
+		                 ["colo_",rscs[0], "must"],
+				 [None, rscs, ["must","mustnot","ignore","startstop"]])
+		else :
+			colo = KeyValueBox("Add Colocation","", ["ID","To","Strength"],
+		                 ["colo_","", "must"],
+				 [None, None, ["must","mustnot"]])
+			
+		if colo != None :
+			if len(colo["ID"]) > 0 :
+				store.append([colo["ID"],colo["To"],colo["Strength"]])
+				self.OnRscViewChanged()
+			else :
+				MsgBox("the id of colocation can not be empty")
+		
+	def OnRscViewChanged(self) :
+		self.glade.get_widget("Apply").set_sensitive(True)
+		self.glade.get_widget("Reset").set_sensitive(True)
+		
+	def OnDeleteButton(self, widget, listview) :
+		self.OnDelItem(widget, listview)
+		self.OnRscViewChanged()
+		
+	def OnRscViewApply(self, widget):
+		store = self.glade.get_widget("Parameters").get_model()
+		iter = store.get_iter_first()
+		params = []
+		while iter != None :
+			param = {}
+			param["id"] = store.get_value(iter, 0)
+			param["name"] = store.get_value(iter, 1)
+			param["value"] = store.get_value(iter, 2)
+			params.append(param)
+			iter = store.iter_next(iter)
+		if params != self.params_save :
+			manager.UpdateRscParams(self.cur_name, params)
+
+		store = self.glade.get_widget("Operations").get_model()
+		iter = store.get_iter_first()
+		ops = []
+		while iter != None :
+			op = {}
+			op["id"] = store.get_value(iter, 0)
+			op["name"] = store.get_value(iter, 1)
+			op["interval"] = store.get_value(iter, 2)
+			op["timeout"] = store.get_value(iter, 3)
+			ops.append(op)
+			iter = store.iter_next(iter)
+		if ops != self.ops_save :
+			manager.UpdateRscOps(self.cur_name, ops)
+
+		store = self.glade.get_widget("Colocations").get_model()
+		iter = store.get_iter_first()
+		colos = []
+		while iter != None :
+			colo = {}
+			colo["id"] = store.get_value(iter, 0)
+			colo["rsc_rh"] = store.get_value(iter, 1)
+			colo["strength"] = store.get_value(iter, 2)
+			colos.append(colo)
+			iter = store.iter_next(iter)
+		if colos != self.colos_save :
+			manager.UpdateRscColos(self.cur_name, colos)
+		
+		self.glade.get_widget("Apply").set_sensitive(False)
+		self.glade.get_widget("Reset").set_sensitive(False)
+		
+	def OnRscViewReset(self, widget):
+		self.RscViewUpdate(self.glade,self.cur_name)
+	
+	def RscViewUpdate(self, glade, name) :
+		(attrs, running_on, params, colos, ops) = \
+			manager.GetResourceInfo(name)
+		self.params_save = params
+		self.colos_save = colos
+		self.ops_save = ops
+		
+		if attrs != {} :
+			glade.get_widget("id").set_text(attrs["id"])
+			glade.get_widget("type").set_text(attrs["type"])
+			glade.get_widget("class").set_text(attrs["class"])
+			glade.get_widget("provider").set_text(attrs["provider"])
+
+		glade.get_widget("runningnodes").set_text(str(running_on))
+		
+		listview = glade.get_widget("Parameters")
+		store = gtk.ListStore(str, str, str)
+		if params != [] :
+			for param in params:
+				store.append([param["id"],param["name"],param["value"]])
+		listview.set_model(store)
+		
+		listview = glade.get_widget("Operations")
+		store = gtk.ListStore(str, str, str, str)
+		if ops != [] :
+			for op in ops :
+				store.append([op["id"],op["name"],op["interval"],op["timeout"]])
+			
+		listview.set_model(store)
+		
+		listview = glade.get_widget("Colocations")
+		store = gtk.ListStore(str, str, str)
+		if colos != [] :
+			for co in colos :
+				store.append([co["id"], co["rsc_rh"],co["strength"]])
+		listview.set_model(store)
+		
+		glade.get_widget("Apply").set_sensitive(False)
+		glade.get_widget("Reset").set_sensitive(False)
+
+	def CreateRscView(self, name) :
+		glade = gtk.glade.XML(UI_FILE, "ResourceView")
+		self.glade = glade
+		self.RscViewUpdate(glade, name)
+		glade.get_widget("Apply").connect("clicked", self.OnRscViewApply)
+		glade.get_widget("Reset").connect("clicked", self.OnRscViewReset)
+		
+		glade.get_widget("AddParam").connect("clicked", self.OnAddParam, glade.get_widget("Parameters"))
+ 		glade.get_widget("AddOp").connect("clicked", self.OnAddOp, glade.get_widget("Operations"))
+ 		glade.get_widget("AddColo").connect("clicked", self.OnAddColo, glade.get_widget("Colocations"))
+		glade.get_widget("DelParam").connect("clicked", self.OnDeleteButton, glade.get_widget("Parameters"))
+ 		glade.get_widget("DelOp").connect("clicked", self.OnDeleteButton, glade.get_widget("Operations"))
+ 		glade.get_widget("DelColo").connect("clicked", self.OnDeleteButton, glade.get_widget("Colocations"))
+		
+		listview = glade.get_widget("Parameters")
+		AddColumn(listview, "ID", 0)
+		AddColumn(listview, "Name", 1)
+		AddColumn(listview, "Value", 2)
+	
+		listview = glade.get_widget("Operations")
+		AddColumn(listview, "ID", 0)
+		AddColumn(listview, "Name", 1)
+		AddColumn(listview, "Interval", 2)
+		AddColumn(listview, "Timeout", 3)
+		
+		listview = glade.get_widget("Colocations")
+		AddColumn(listview, "ID", 0)
+		AddColumn(listview, "To", 1)
+		AddColumn(listview, "Strength", 2)
+		
+		return glade.get_widget("ResourceView")
+
+# empty view functions
+	
+	def CreateEmptyView(self) :
+		glade = gtk.glade.XML(UI_FILE, "EmptyView")
+		return glade.get_widget("EmptyView")
+
+# constructor
+
+	def __init__(self) :
+		
+		# create window
+		self.win = gtk.Window()
+		self.win.connect("delete_event", self.OnDeleteEvent)
+		self.win.set_title("Linux HA Management Client")
+		self.win.set_size_request(650, 650)
+		
+		# create bars
+		self.uimanager = gtk.UIManager()
+		self.actiongroup = gtk.ActionGroup('UIManagerExample')
+		self.actiongroup.add_actions([
+			('Connection', None, 'Connection'),
+			('Login', gtk.STOCK_CONNECT, 'Login...', None,'login to cluster', self.OnLogin),
+			('Logout', gtk.STOCK_DISCONNECT, 'Logout', None,'logout from cluster', self.OnLogout),
+			('Test', gtk.STOCK_OK, 'Test', None,'test for developer', self.OnTest),
+			('Quit', gtk.STOCK_QUIT, 'Quit', None,'Quit the Program', self.OnQuit),
+			('Action', None, 'Action'),
+			('AddRsc', gtk.STOCK_ADD, 'Add Resource', None,'add new resource', self.OnAddRsc),
+			('AddGrp', gtk.STOCK_NEW, 'Add Group', None,'add new group', self.OnAddGrp),
+			('DelRsc', gtk.STOCK_DELETE, 'Delete', None,'delete current resource or group', self.OnDelRsc)
+			])
+		self.SetLoginStatus(False)
+		self.uimanager.insert_action_group(self.actiongroup, 0)
+		self.uimanager.add_ui_from_string(self.ui)
+
+		menubar = self.uimanager.get_widget('/MenuBar')
+		toolbar = self.uimanager.get_widget('/Toolbar')
+		toolbar.set_style(gtk.TOOLBAR_ICONS)
+		statusbar = gtk.Statusbar()
+
+		# create left tree
+		self.treeview = self.CreateTreeView()
+
+		# create some container
+		vbox = gtk.VBox()
+		hpane = gtk.HPaned()
+		scroll = gtk.ScrolledWindow()
+		scroll.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
+		lframe = gtk.Frame()
+		self.rframe = gtk.Frame()
+
+		
+		# put together
+		self.win.add(vbox)
+		vbox.pack_start(menubar, False)
+		vbox.pack_start(toolbar, False)
+		
+		scroll.add(self.treeview)
+		lframe.add(scroll)
+		hpane.add1(lframe)
+		hpane.add2(self.rframe)
+		vbox.pack_start(hpane, True)
+		
+		vbox.pack_end(statusbar, False)
+		self.win.show_all()
+		
+class Manager :
+	tag_io = 0
+	user = ""
+	password = ""
+	servers = []
+	hb_param_name = ["apiauth","auto_failback","baud","debug","debugfile",
+			 "deadping","deadtime","hbversion","hopfudge",
+			 "initdead","keepalive","logfacility","logfile",
+			 "msgfmt","nice_failback","node","normalpoll",
+			 "stonith","udpport","warntime","watchdog"]
+
+	crm_param_name = ["transition_timeout","symmetric_cluster","stonith_enabled",
+			  "no_quorum_policy","default_resource_stickiness"]
+
+	node_param_name = ["uname", "online","standby", "unclean", "shutdown",
+			   "expected_up","is_dc","type"]
+
+	rsc_attr_name = ["id", "class", "provider","type"]
+
+	co_param_name = ["id", "rsc_lh", "rsc_rh", "state_lh", "state_rh", "strength"]
+
+	op_param_name = ["id", "name", "interval","timeout"]
+		
+	treestore = None
+	dirty = False
+	
+ 	def SelectRow(self, model, path, iter, user_data):
+		name, type, selection = user_data
+		if (name, type) == (model.get_value(iter,0), model.get_value(iter,2)) :
+			selection.select_path(path)
+			return True
+		
+	def OnEvent(self, source, condition) :
+		print "OnEvent:",
+		event =  mgmt_recvmsg()
+		if event == "evt:cib_changed" :
+			self.dirty = True
+			return True
+		elif event == "evt:disconnected" :
+			self.Logout()
+			for server in self.servers :
+				if self.Login(server, self.user, self.password) :
+					break
+		return True
+			
+	def OnIdle(self) :
+		window.OnIdle()
+		if window.login and self.dirty :
+ 			selection = window.treeview.get_selection()
+			cur_name = window.cur_name
+			cur_type = window.cur_type
+			self.Refresh()
+ 			window.treeview.expand_all()
+			self.treestore.foreach(self.SelectRow, (cur_name, cur_type, selection))
+ 			window.OnTreeViewSelect(window.treeview, selection)
+		return True
+		
+	def Login(self, server, user, password) :
+		# connect to one of the cluster
+		server_ip = socket.gethostbyname(server)
+		if mgmt_connect(server_ip, user, password) == -1:
+			return False
+
+		# get the DC node
+		dc = self.DoCmd("dc")
+		if dc != None :
+			# login to the DC node
+			dc_ip = socket.gethostbyname(dc[0])
+			if dc_ip != server_ip :
+				mgmt_disconnect()
+				if mgmt_connect(dc_ip, user, password) == -1:
+					return False
+		else :
+			mgmt_disconnect()			
+			return False
+		self.user = user
+		self.password = password
+		self.Refresh()
+		self.DoCmd("regevt\nevt:cib_changed")
+		self.DoCmd("regevt\nevt:disconnected")
+		fd = mgmt_inputfd()
+		self.tag_io = gobject.io_add_watch(fd, gobject.IO_IN, self.OnEvent)
+		window.SetLoginStatus(True)
+		return True
+	
+	def Logout(self) :
+		mgmt_disconnect()
+		self.treestore.clear()
+		self.dirty = False
+		gobject.source_remove(self.tag_io)
+		window.SetLoginStatus(False)
+		return True
+	
+	def GetHBConfig(self) :
+		values = self.DoCmd("hb_config")
+		hb_config = {}
+		if values != None :
+			for i in range (0, len(values)) :
+				hb_config[self.hb_param_name[i]] = values[i]
+		return hb_config
+		
+	def UpdateCRMConfig(self, new_crm_config) :
+		cur_crm_config = self.GetCRMConfig()
+		for k,v in new_crm_config.iteritems() :
+			if cur_crm_config[k] != v :
+				self.DoCmd("up_crm_config\n"+k+"\n"+v)
+					
+	def GetCRMConfig(self) :
+		values = self.DoCmd("crm_config")
+		crm_config = {}
+		if values != None :
+			for i in range (0, len(values)) :
+				crm_config[self.crm_param_name[i]] = values[i]
+		return crm_config
+		
+	def GetNodeConfig(self, node) :
+		values = self.DoCmd("node_config\n%s"%node)
+		node_config = {}
+		if values != None :
+			for i in range (0, len(values)) :
+				node_config[self.node_param_name[i]] = values[i]
+		return node_config
+	
+	def GetRscParams(self, name) :
+		params = []	
+		param_list = self.DoCmd("rsc_params\n%s"%name)
+		if param_list != None :
+			for i in range(0, len(param_list), 3) :
+				param = {}
+				param["id"] = param_list[i]
+				param["name"] = param_list[i+1]
+				param["value"] = param_list[i+2]
+				params.append(param)
+		return params
+
+	def GetRscOps(self, name) :
+		ops = []
+		op_list = self.DoCmd("rsc_ops\n%s"%name)
+		if op_list != None :
+			for i in range(0, len(op_list), len(self.op_param_name)) :
+				op = {}
+				for j in range (0, len(self.op_param_name)) :
+					op[self.op_param_name[j]] = op_list[i+j]
+				ops.append(op)
+		return ops
+	
+	def GetRscColos(self, name) :
+		colos = []
+		colo_list = self.DoCmd("rsc_colos\n%s"%name)
+		if colo_list != None :
+			for i in range(0, len(colo_list), len(self.co_param_name)) :
+				co = {}
+				for j in range (0, len(self.co_param_name)) :
+					co[self.co_param_name[j]] = colo_list[i+j]
+				colos.append(co)
+		return colos
+				
+	def GetResourceInfo(self, name) :
+		attr_list = self.DoCmd("rsc_attrs\n%s"%name)
+		attrs = {}
+		if attr_list != None :
+			for i in range (0, len(attr_list)) :
+				attrs[self.rsc_attr_name[i]] = attr_list[i]
+		running_on = self.DoCmd("rsc_running_on\n%s"%name)
+
+		params = self.GetRscParams(name)
+		
+		colos = self.GetRscColos(name)						
+		ops = self.GetRscOps(name)
+		
+		return (attrs, running_on, params, colos, ops)
+		
+	def DelRsc(self, name) :
+		self.DoCmd("del_rsc\n"+name)
+		
+	def AddRsc(self, rsc) :
+		if len(rsc["id"]) == 0 :
+			MsgBox ("id of resource can't be empty")
+			return
+		if self.DoCmd("rsc_attrs\n"+rsc["id"]) != None :
+			MsgBox ("id of resource already exists")
+			return
+			
+		cmd = "add_rsc"
+		cmd += "\n"+rsc["id"]
+		cmd += "\n"+rsc["class"]
+		cmd += "\n"+rsc["type"]
+		cmd += "\n"+rsc["provider"]
+		cmd += "\n"+rsc["group"]
+		for param in rsc["params"] :
+			cmd += "\n"+param["id"]
+			cmd += "\n"+param["name"]
+			cmd += "\n"+param["value"]
+		self.DoCmd(cmd)
+		
+	def AddGrp(self, group) :
+		if len(group["id"]) == 0 :
+			MsgBox ("id of group can't be empty")
+			return
+		if self.DoCmd("rsc_attrs\n"+group["id"]) != None :
+			MsgBox ("id of group already exists")
+			return
+			
+		self.DoCmd("add_grp\n"+group["id"])
+	
+	def UpdateRscColos(self, rsc, colos):
+		oldkeys = []
+		for colo in self.GetRscColos(rsc) :
+			oldkeys.append(colo["id"])
+		newkeys = []
+		for colo in colos :
+			newkeys.append(colo["id"])
+		for key in oldkeys :
+			if key not in newkeys :
+				self.DoCmd("del_rsc_colo\n"+key)
+		for colo in colos:
+			cmd = "up_rsc_colo"
+			cmd += "\n" + rsc
+			cmd += "\n" + colo["id"]
+			cmd += "\n" + colo["rsc_rh"]
+			if colo["strength"] == "must" :
+				cmd += "\n10"
+			else :
+				cmd += "\n-10"
+			self.DoCmd(cmd)
+
+	def UpdateRscParams(self, rsc, params):
+		oldkeys = []
+		for param in self.GetRscParams(rsc) :
+			oldkeys.append(param["id"])
+		newkeys = []
+		for param in params :
+			newkeys.append(param["id"])
+		for key in oldkeys :
+			if key not in newkeys :
+				self.DoCmd("del_rsc_param\n"+key)
+		cmd = "up_rsc_params"
+		cmd += "\n"+rsc
+		for param in params:
+			cmd += "\n" + param["id"]
+			cmd += "\n" + param["name"]
+			cmd += "\n" + param["value"]
+		self.DoCmd(cmd)
+			
+	def UpdateRscOps(self, rsc, ops):
+		oldkeys = []
+		for op in self.GetRscOps(rsc) :
+			oldkeys.append(op["id"])
+		newkeys = []
+		for op in ops :
+			newkeys.append(op["id"])
+		for key in oldkeys :
+			if key not in newkeys :
+				self.DoCmd("del_rsc_op\n"+key)
+		cmd = "up_rsc_ops"
+		cmd += "\n"+rsc
+		for op in ops:
+			cmd += "\n" + op["id"]
+			cmd += "\n" + op["name"]
+			cmd += "\n" + op["interval"]
+			cmd += "\n" + op["timeout"]
+		self.DoCmd(cmd)
+	
+	def DoCmd(self, command) :
+		#print string.split(command, "\n"),
+		ret_str = mgmt_sendmsg(command)
+ 		while ret_str[:4] == "evt:" :
+ 			ret_str = mgmt_recvmsg()
+		#print ":",
+		if ret_str == None :
+			print "None"
+			return None
+		ret_list = string.split(ret_str, "\n")
+		#print ret_list
+		if ret_list[0] != "ok" :
+			return None
+		return ret_list[1:]
+	def GetAllRsc(self) :
+		rscs = self.DoCmd("all_rsc")
+		for rsc in rscs :
+			type = self.DoCmd("rsc_type\n"+rsc)
+			print type
+			if type != None and type[0] == "group" :
+				rscs += (self.DoCmd("sub_rsc\n"+rsc))
+		return rscs
+				
+	def Refresh(self) :
+		nodes = self.DoCmd("all_nodes")
+		if nodes == None :
+			MsgBox("can not get all nodes from cluster!")
+			return
+
+		activenodes = self.DoCmd("active_nodes")
+		self.servers = activenodes
+		if activenodes == None :
+			MsgBox("can not get active nodes from cluster!")
+			return
+
+		self.treestore.clear()
+		root = self.treestore.append(None, ["Linux-HA cluster","", "cluster"])
+		nodes_root = self.treestore.append(root, ["nodes","", "nodes"])
+		rscs_root = self.treestore.append(root, ["resources","", "rscs"])
+		
+		for node in nodes :
+			if node in activenodes :
+				self.AddActiveNodeToTree(nodes_root, node)
+			else :
+				self.treestore.append(nodes_root,[node, "stopped", "node"])
+
+		resources = self.DoCmd("all_rsc")
+		for rsc in resources :
+			self.AddRscToTree(rscs_root, rsc)
+		self.dirty = False
+				
+	def AddRscToTree(self, parent, rsc) :
+		type = self.DoCmd("rsc_type\n%s"%rsc)[0]
+		status = ""
+		label = ""
+		if type == "native" :
+			label = "resource"
+			if self.DoCmd("rsc_running_on\n%s"%rsc) != None :
+				status = "running"
+			else :
+				status = "stopped"
+			self.treestore.append(parent,[rsc, status, label])
+		elif type == "group" or type == "clone" :
+			label = type
+			status = type
+			iter = self.treestore.append(parent,[rsc, status, label])
+			for subrsc in self.DoCmd("sub_rsc\n"+rsc) :
+				self.AddRscToTree(iter, subrsc)
+					
+	def AddActiveNodeToTree(self, nodes_root, node):
+		dc = self.DoCmd("dc")
+		node_iter = None
+		if node in dc :
+			node_iter = self.treestore.append(nodes_root,[node, "running(dc)", "node"])
+		else :
+			node_iter = self.treestore.append(nodes_root,[node, "running", "node"])
+ 		running_rsc = self.DoCmd("running_rsc\n%s"%node)
+ 		for rsc in running_rsc :
+ 			self.AddRscToTree(node_iter, rsc)
+		
+			
+	def Exit(self) :
+		mgmt_disconnect()
+				
+if __name__ == '__main__' :
+	manager = Manager()
+	window = MainWindow()
+	gobject.idle_add(manager.OnIdle)
+	gtk.main()
