@@ -1,4 +1,4 @@
-#	$Id: heartbeat.spec.in,v 1.148 2005/09/22 20:17:35 alan Exp $
+#	$Id: heartbeat.spec.in,v 1.149 2005/10/14 11:30:17 andrew Exp $
 
 # Workaround for a change in RPM 4.1.x; needs proper fixing soon!
 ##%define _unpackaged_files_terminate_build 0
@@ -1021,6 +1021,17 @@ make DESTDIR=$RPM_BUILD_ROOT install
 %dir @localstatedir@/run/@HB_PKG@
 %attr (2555, @HA_CCMUSER@, @HA_APIGROUP@) @bindir@/cl_status
 @bindir@/cl_respawn
+@bindir@/crmadmin 
+@bindir@/cibadmin 
+@bindir@/ccm_tool 
+@bindir@/crm_diff 
+@bindir@/crm_mon 
+@bindir@/iso8601			
+@bindir@/crm_master 
+@bindir@/crm_standby
+@bindir@/crm_attribute 
+@bindir@/crm_resource
+@bindir@/crm_verify
 %dir %attr (755, @HA_CCMUSER@, @HA_APIGROUP@) @HA_VARRUNDIR@/@HB_PKG@/ccm
 %dir %attr (750, @HA_CCMUSER@, @HA_APIGROUP@) @HA_VARRUNDIR@/@HB_PKG@/crm
 %dir %attr (750, @HA_CCMUSER@, @HA_APIGROUP@) @localstatedir@/lib/@HB_PKG@/crm
