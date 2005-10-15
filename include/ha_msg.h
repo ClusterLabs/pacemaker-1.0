@@ -1,4 +1,4 @@
-/* $Id: ha_msg.h,v 1.67 2005/10/14 18:51:05 gshi Exp $ */
+/* $Id: ha_msg.h,v 1.68 2005/10/15 02:52:34 gshi Exp $ */
 /*
  * Intracluster message object (struct ha_msg)
  *
@@ -31,10 +31,12 @@
 #include <compress.h>
 
 enum cl_netstring_type{
-	FT_STRING,
+	FT_STRING = 0,
 	FT_BINARY,
 	FT_STRUCT,
-	FT_LIST
+	FT_LIST,
+	FT_COMPRESS,
+	FT_UNCOMPRESS
 };
 
 enum cl_msgfmt{
@@ -111,9 +113,17 @@ struct fieldtypefuncs_s{
 	   for the field
 	*/
 	int (*netstringtofield)(const void*, size_t, void**, size_t*);
+	
+	/* action before packing*/
+	int (*prepackaction)(struct ha_msg* m, int index);
+
+	/* action before a user get the value of a field*/
+	int (*pregetaction)(struct ha_msg* m, int index);
+	
 };
 
-extern struct fieldtypefuncs_s fieldtypefuncs[4];
+#define NUM_MSG_TYPES  6
+extern struct fieldtypefuncs_s fieldtypefuncs[NUM_MSG_TYPES];
 
 #define MSG_NEEDAUTH		0x01
 #define MSG_ALLOWINTR		0X02
@@ -258,6 +268,8 @@ int		cl_msg_modstruct(struct ha_msg * msg,
 				 const char* name, 
 				 const struct ha_msg* value);
 #define ha_msg_mod(msg, name, value) cl_msg_modstring(msg, name, value)
+int	cl_msg_replace(struct ha_msg* msg, int index,
+			const char* value, size_t vlen, int type);
 
 
 /* Add name, value (with known lengths) to the message */
@@ -310,8 +322,8 @@ int		msg2string_buf(const struct ha_msg *m, char* buf,
 			       size_t len, int depth, int needhead);
 
 /* Converts a message into wire format */
-char*		msg2wirefmt(const struct ha_msg *m, size_t* );
-char*		msg2wirefmt_noac(const struct ha_msg*m, size_t* len);
+char*		msg2wirefmt(struct ha_msg *m, size_t* );
+char*		msg2wirefmt_noac(struct ha_msg*m, size_t* len);
 
 /* Converts wire format data into a message */
 struct ha_msg*	wirefmt2msg(const char* s, size_t length, int flag);
@@ -348,6 +360,8 @@ int get_netstringlen(const struct ha_msg *m);
 /* Add a child message to a message as a field */
 int ha_msg_addstruct(struct ha_msg * msg, const char * name, const void* ptr);
 
+int ha_msg_addstruct_compress(struct ha_msg*, const char*, const void*);
+
 /* Get binary data from a message */
 const void * cl_get_binary(const struct ha_msg *msg, const char * name, size_t * vallen);
 
@@ -362,6 +376,7 @@ int cl_get_type(const struct ha_msg *msg, const char *name);
 
 /* Get a child message from a message*/
 struct ha_msg *cl_get_struct(const struct ha_msg *msg, const char* name);
+struct ha_msg *cl_get_struct_compress(struct ha_msg* msg, const char* name);
 
 /* Log the contents of a  message */
 void cl_log_message (int log_level, const struct ha_msg *m);
@@ -408,5 +423,8 @@ size_t string_list_pack_length(const GList* list);
 int string_list_pack(GList* list, char* buf, char* maxp);
 GList* string_list_unpack(const char* packed_str_list, size_t length);
 void list_cleanup(GList* list);
+
+gboolean must_use_netstring(const struct ha_msg*);
+
 
 #endif /* __HA_MSG_H */
