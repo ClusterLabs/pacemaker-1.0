@@ -1,4 +1,4 @@
-/* $Id: bcast.c,v 1.43 2005/08/15 21:12:16 gshi Exp $ */
+/* $Id: bcast.c,v 1.44 2005/10/15 02:37:52 gshi Exp $ */
 /*
  * bcast.c: UDP/IP broadcast-based communication code for heartbeat.
  *
@@ -310,7 +310,7 @@ bcast_close(struct hb_media* mp)
  * Receive a heartbeat broadcast packet from BCAST interface
  */
 
-char			bcast_pkt[MAXLINE];
+char			bcast_pkt[MAXMSG];
 void *
 bcast_read(struct hb_media* mp, int * lenp)
 {
@@ -328,7 +328,7 @@ bcast_read(struct hb_media* mp, int * lenp)
 			   ,	ei->rsocket, ei->wsocket);
 	}
 
-	if ((numbytes=recvfrom(ei->rsocket, bcast_pkt, MAXLINE-1, MSG_WAITALL
+	if ((numbytes=recvfrom(ei->rsocket, bcast_pkt, MAXMSG-1, MSG_WAITALL
 	,	(struct sockaddr *)&their_addr, &addr_len)) == -1) {
 		if (errno != EINTR) {
 			PILCallLog(LOG, PIL_CRIT
@@ -750,6 +750,9 @@ if_get_broadaddr(const char *ifn, struct in_addr *broadaddr)
 
 /*
  * $Log: bcast.c,v $
+ * Revision 1.44  2005/10/15 02:37:52  gshi
+ * change MAXLINE to MAXMSG
+ *
  * Revision 1.43  2005/08/15 21:12:16  gshi
  * make the media read() function returns a pointer that is a global varial
  * This should save a malloc, free, and a memcpy for each message

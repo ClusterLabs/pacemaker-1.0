@@ -1,4 +1,4 @@
-/* $Id: mcast.c,v 1.24 2005/08/15 21:12:16 gshi Exp $ */
+/* $Id: mcast.c,v 1.25 2005/10/15 02:37:52 gshi Exp $ */
 /*
  * mcast.c: implements hearbeat API for UDP multicast communication
  *
@@ -385,7 +385,7 @@ mcast_close(struct hb_media* hbm)
  * Receive a heartbeat multicast packet from UDP interface
  */
 
-char			mcast_pkt[MAXLINE];
+char			mcast_pkt[MAXMSG];
 static void *
 mcast_read(struct hb_media* hbm, int *lenp)
 {
@@ -397,7 +397,7 @@ mcast_read(struct hb_media* hbm, int *lenp)
 	MCASTASSERT(hbm);
 	mcp = (struct mcast_private *) hbm->pd;
 	
-	if ((numbytes=recvfrom(mcp->rsocket, mcast_pkt, MAXLINE-1, 0
+	if ((numbytes=recvfrom(mcp->rsocket, mcast_pkt, MAXMSG-1, 0
 			       ,(struct sockaddr *)&their_addr, &addr_len)) < 0) {
 		if (errno != EINTR) {
 			PILCallLog(LOG, PIL_CRIT, "Error receiving from socket: %s"
@@ -800,6 +800,9 @@ get_loop(const char *loop, u_char *l)
 
 /*
  * $Log: mcast.c,v $
+ * Revision 1.25  2005/10/15 02:37:52  gshi
+ * change MAXLINE to MAXMSG
+ *
  * Revision 1.24  2005/08/15 21:12:16  gshi
  * make the media read() function returns a pointer that is a global varial
  * This should save a malloc, free, and a memcpy for each message

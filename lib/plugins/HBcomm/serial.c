@@ -1,4 +1,4 @@
-/* $Id: serial.c,v 1.41 2005/08/30 20:29:46 gshi Exp $ */
+/* $Id: serial.c,v 1.42 2005/10/15 02:37:52 gshi Exp $ */
 /*
  * Linux-HA serial heartbeat code
  *
@@ -407,12 +407,12 @@ serial_localdie(void)
 
 
 /* This function does all the reading from our tty ports */
-char			serial_pkt[MAXLINE];
+char			serial_pkt[MAXMSG];
 
 static void *
 serial_read(struct hb_media* mp, int *lenp)
 {
-	char			buf[MAXLINE];
+	char			buf[MAXMSG];
 	struct serial_private*	thissp;
 	int			startlen;
 	const char *		start = MSG_START;
@@ -437,43 +437,43 @@ serial_read(struct hb_media* mp, int *lenp)
 		--endlen;
 	}
 	
-	memset(serial_pkt, 0, MAXLINE);
+	memset(serial_pkt, 0, MAXMSG);
 	serial_pkt[0] = 0;
 	p = serial_pkt;
 	
 	/* Skip until we find a MSG_START (hopefully we skip nothing) */
-	while (ttygets(buf, MAXLINE, thissp) != NULL
+	while (ttygets(buf, MAXMSG, thissp) != NULL
 	       &&	strncmp(buf, start, startlen) != 0) {
 		
 		
 		/*nothing*/
 	}
 	
-	len = strnlen(buf, MAXLINE) + 1;
+	len = strnlen(buf, MAXMSG) + 1;
 	if(len >=  MAXMSG){
 		PILCallLog(LOG, PIL_CRIT,  "serial_read:MSG_START exceeds MAXMSG");
 		return(NULL);
 	}
 
-	tmplen = strnlen(buf, MAXLINE);
+	tmplen = strnlen(buf, MAXMSG);
 	
 	strcat(p, buf);
 	p += tmplen;
 	strcat(p, "\n");
 	p++;
 
-	while (ttygets(buf, MAXLINE, thissp) != NULL
+	while (ttygets(buf, MAXMSG, thissp) != NULL
 	       &&	strncmp(buf, MSG_END, endlen) != 0) {
 		
 		
-		len += strnlen(buf, MAXLINE) + 1;
+		len += strnlen(buf, MAXMSG) + 1;
 		if(len >= MAXMSG){
 			PILCallLog(LOG, PIL_CRIT, "serial_read:serial_pkt exceeds MAXMSG");
 			return(NULL);
 		}
 		
 		
-		tmplen = strnlen(buf, MAXLINE);
+		tmplen = strnlen(buf, MAXMSG);
 		memcpy(p, buf, tmplen);		
 		p += tmplen;
 		strcat(p, "\n");
@@ -484,13 +484,13 @@ serial_read(struct hb_media* mp, int *lenp)
 	
 	if(strncmp(buf, MSG_END, endlen) == 0){
 		
-		len += strnlen(buf, MAXLINE) + 2;
+		len += strnlen(buf, MAXMSG) + 2;
 		if(len >= MAXMSG){
 			PILCallLog(LOG, PIL_CRIT, "serial_read:serial_pkt exceeds MAXMSG after adding MSG_END");
 			return(NULL);
 		}
 
-		tmplen = strnlen(buf, MAXLINE);
+		tmplen = strnlen(buf, MAXMSG);
 		
 		memcpy(p, buf, tmplen);
 		p += tmplen;
@@ -666,6 +666,9 @@ ttygets(char * inbuf, int length, struct serial_private *tty)
 }
 /*
  * $Log: serial.c,v $
+ * Revision 1.42  2005/10/15 02:37:52  gshi
+ * change MAXLINE to MAXMSG
+ *
  * Revision 1.41  2005/08/30 20:29:46  gshi
  * reset serial_pkt to 0 everytime we start to receive a message
  *

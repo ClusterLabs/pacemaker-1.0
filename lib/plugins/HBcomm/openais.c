@@ -113,7 +113,7 @@ openais_isping(void) {
 }
 
 static gboolean openais_msg_ready = FALSE;
-static char openais_pkt[MAXLINE];
+static char openais_pkt[MAXMSG];
 static int openais_pktlen =0;
 static void
 evs_deliver_fn(struct in_addr source_addr, void* msg, 

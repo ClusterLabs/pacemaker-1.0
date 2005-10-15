@@ -1,4 +1,4 @@
-/* $Id: ucast.c,v 1.26 2005/08/15 21:12:16 gshi Exp $ */
+/* $Id: ucast.c,v 1.27 2005/10/15 02:37:52 gshi Exp $ */
 /*
  * Adapted from alanr's UDP broadcast heartbeat bcast.c by Stéphane Billiart
  *	<stephane@reefedge.com>
@@ -372,7 +372,7 @@ static int ucast_close(struct hb_media* mp)
  * Receive a heartbeat unicast packet from UDP interface
  */
 
-char ucast_pkt[MAXLINE];
+char ucast_pkt[MAXMSG];
 
 static void *
 ucast_read(struct hb_media* mp, int *lenp)
@@ -386,7 +386,7 @@ ucast_read(struct hb_media* mp, int *lenp)
 	ei = (struct ip_private*)mp->pd;
 
 	addr_len = sizeof(struct sockaddr);
-	if ((numbytes = recvfrom(ei->rsocket, ucast_pkt, MAXLINE-1, 0,
+	if ((numbytes = recvfrom(ei->rsocket, ucast_pkt, MAXMSG-1, 0,
 		(struct sockaddr *)&their_addr, &addr_len)) == -1) {
 		if (errno != EINTR) {
 			PILCallLog(LOG, PIL_CRIT, "ucast: error receiving from socket: %s",
