@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-my($VERSION)=(qw$Id: ldirectord,v 1.121 2005/09/21 04:00:14 horms Exp $)[2];
+my($VERSION)=(qw$Id: ldirectord,v 1.122 2005/10/17 08:16:23 horms Exp $)[2];
 
 ######################################################################
 # ldirectord                 http://www.vergenet.net/linux/ldirectord/
@@ -1705,7 +1705,7 @@ sub check_http
 	}
 	my ($v, $r) = @_;
 
-	$$r{url} =~ /http:\/\/([^:\/]+)(:([^\/]+))?(\/.*)/;
+	$$r{url} =~ /$$v{service}:\/\/([^:\/]+)(:([^\/]+))?(\/.*)/;
 	my $host = $1;
 	#my $port = $3;
 	my $uri = $4;
