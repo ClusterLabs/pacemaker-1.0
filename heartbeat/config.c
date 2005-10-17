@@ -1,4 +1,4 @@
-/* $Id: config.c,v 1.178 2005/10/04 19:37:06 gshi Exp $ */
+/* $Id: config.c,v 1.179 2005/10/17 19:47:44 gshi Exp $ */
 /*
  * Parse various heartbeat configuration files...
  *
@@ -89,6 +89,7 @@ static int set_realtime_prio(const char *);
 static int add_client_child(const char *);
 static int set_compression(const char *);
 static int set_compression_threshold(const char *);
+static int set_traditional_compression(const char *);
 static int set_generation_method(const char *);
 static int set_realtime(const char *);
 static int set_debuglevel(const char *);
@@ -162,6 +163,7 @@ static const struct WholeLineDirective {
 ,	{KEY_CLIENT_CHILD,  add_client_child}
 ,	{KEY_COMPRESSION,   set_compression}
 ,	{KEY_COMPRESSION_THRESHOLD, set_compression_threshold}
+,	{KEY_TRADITIONAL_COMPRESSION, set_traditional_compression}
 };
 
 extern const char *			cmdname;
@@ -1835,6 +1837,29 @@ set_compression_threshold(const char * value)
 }
 
 
+static int
+set_traditional_compression(const char * value)
+{		
+	int result;
+
+	if (value == NULL){
+		cl_log(LOG_ERR, "%s: NULL pointer",
+		       __FUNCTION__);
+		return HA_FAIL;
+	}
+	if (cl_str_to_boolean(value, &result)!= HA_OK){
+		cl_log(LOG_ERR, "%s:Invalid directive value %s", 
+		       __FUNCTION__,value);
+		return HA_FAIL;
+	}
+	
+	cl_set_traditional_compression(result);
+	
+	return HA_OK;
+}
+
+
+
 #if 0
 static void
 id_table_dump(gpointer key, gpointer value, gpointer user_data)
@@ -2147,6 +2172,11 @@ set_uuidfrom(const char* value)
 
 /*
  * $Log: config.c,v $
+ * Revision 1.179  2005/10/17 19:47:44  gshi
+ * add an option to use "traditional" compression method
+ * traditional_compression yes/no
+ * in ha.cf
+ *
  * Revision 1.178  2005/10/04 19:37:06  gshi
  * bug 144: UUIDs need to be generatable from nodenames for some cases
  * new directive

@@ -1,4 +1,4 @@
-/* $Id: hb_api.h,v 1.38 2005/10/17 19:13:47 gshi Exp $ */
+/* $Id: hb_api.h,v 1.39 2005/10/17 19:47:44 gshi Exp $ */
 /*
  * Client-side Low-level clustering API for heartbeat.
  *
@@ -406,6 +406,7 @@ struct llc_ops {
 #define KEY_CLIENT_CHILD "respawn"
 #define KEY_COMPRESSION "compression"
 #define KEY_COMPRESSION_THRESHOLD "compression_threshold"
+#define KEY_TRADITIONAL_COMPRESSION "traditional_compression"
 #define KEY_RT_PRIO	"rtprio"
 #define KEY_GEN_METH	"hbgenmethod"
 #define KEY_REALTIME	"realtime"

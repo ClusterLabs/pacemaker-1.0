@@ -1,4 +1,4 @@
-/* $Id: ha_msg.h,v 1.69 2005/10/17 19:13:47 gshi Exp $ */
+/* $Id: ha_msg.h,v 1.70 2005/10/17 19:47:44 gshi Exp $ */
 /*
  * Intracluster message object (struct ha_msg)
  *
@@ -225,9 +225,11 @@ extern struct fieldtypefuncs_s fieldtypefuncs[NUM_MSG_TYPES];
 #define T_STONITH_UNNEEDED	"unneeded" /* STONITH not required */
 
 /* Set up message statistics area */
-void cl_msg_setstats(volatile hb_msg_stats_t* stats);
-void cl_dump_msgstats(void);
-void cl_set_compression_threshold(size_t threadhold);
+void	cl_msg_setstats(volatile hb_msg_stats_t* stats);
+void	cl_dump_msgstats(void);
+void	cl_set_compression_threshold(size_t threadhold);
+void	cl_set_traditional_compression(gboolean value);
+
 /* Allocate new (empty) message */
 struct ha_msg *	ha_msg_new(int nfields);
 
