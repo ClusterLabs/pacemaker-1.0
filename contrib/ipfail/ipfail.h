@@ -1,4 +1,4 @@
-/* $Id: ipfail.h,v 1.6 2005/05/10 02:00:25 kevin Exp $ */
+/* $Id: ipfail.h,v 1.7 2005/10/17 19:13:47 gshi Exp $ */
 /* ipfail.h: ipfail header file
  *
  * Copyright (C) 2003 Kevin Dwyer <kevin@pheared.net>
@@ -39,10 +39,10 @@ void node_walk(ll_cluster_t *);
 void set_signals(ll_cluster_t *);
 void NodeStatus(const char *, const char *, void *);
 void LinkStatus(const char *, const char *, const char *, void *);
-void msg_ipfail_join(const struct ha_msg *, void *);
-void msg_ping_nodes(const struct ha_msg *, void *);
-void i_am_dead(const struct ha_msg *, void *);
-void msg_resources(const struct ha_msg *, void *);
+void msg_ipfail_join(struct ha_msg *, void *);
+void msg_ping_nodes(struct ha_msg *, void *);
+void i_am_dead(struct ha_msg *, void *);
+void msg_resources(struct ha_msg *, void *);
 void gotsig(int);
 gboolean giveup(gpointer);
 void you_are_dead(ll_cluster_t *);
@@ -58,5 +58,5 @@ void delay_giveup(ll_cluster_t *, const char *, int);
 void giveup_destroy(gpointer);
 void abort_giveup(void);
 void send_abort_giveup(ll_cluster_t *);
-void msg_abort_giveup(const struct ha_msg *, void *);
+void msg_abort_giveup(struct ha_msg *, void *);
 int is_stable(ll_cluster_t *);

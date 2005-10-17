@@ -1,4 +1,4 @@
-/* $Id: hb_api.h,v 1.37 2005/10/04 19:37:07 gshi Exp $ */
+/* $Id: hb_api.h,v 1.38 2005/10/17 19:13:47 gshi Exp $ */
 /*
  * Client-side Low-level clustering API for heartbeat.
  *
@@ -56,7 +56,7 @@
 
 #include <clplumbing/cl_uuid.h>
 
-typedef void (*llc_msg_callback_t) (const struct ha_msg* msg
+typedef void (*llc_msg_callback_t) (struct ha_msg* msg
 ,	void* private_data);
 
 typedef void (*llc_nstatus_callback_t) (const char *node, const char * status

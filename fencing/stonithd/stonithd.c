@@ -1,4 +1,4 @@
-/* $Id: stonithd.c,v 1.63 2005/09/28 20:29:55 gshi Exp $ */
+/* $Id: stonithd.c,v 1.64 2005/10/17 19:13:47 gshi Exp $ */
 
 /* File: stonithd.c
  * Description: STONITH daemon for node fencing
@@ -131,7 +131,7 @@ static GHashTable * executing_queue = NULL;
 static GList * local_started_stonith_rsc = NULL;
 static int negative_callid_counter = -2;
 
-typedef int (*stonithd_api_msg_handler)(const struct ha_msg * msg,
+typedef int (*stonithd_api_msg_handler)(struct ha_msg * msg,
 					gpointer data);
 
 struct api_msg_to_handler
@@ -185,10 +185,10 @@ static int init_using_apphb(void);
 /* Communication between nodes related.
  * For stonithing one node in the cluster.
  */
-static void handle_msg_twhocan(const struct ha_msg* msg, void* private_data);
-static void handle_msg_ticanst(const struct ha_msg* msg, void* private_data);
-static void handle_msg_tstit(const struct ha_msg* msg, void* private_data);
-static void handle_msg_trstit(const struct ha_msg* msg, void* private_data);
+static void handle_msg_twhocan(struct ha_msg* msg, void* private_data);
+static void handle_msg_ticanst(struct ha_msg* msg, void* private_data);
+static void handle_msg_tstit(struct ha_msg* msg, void* private_data);
+static void handle_msg_trstit(struct ha_msg* msg, void* private_data);
 static gboolean stonithd_hb_msg_dispatch(IPC_Channel * ch, gpointer user_data);
 static void stonithd_hb_msg_dispatch_destroy(gpointer user_data);
 static int init_hb_msg_handler(void);
@@ -208,12 +208,12 @@ static stonithd_client_t * get_exist_client_by_chan(GList * client_list,
 static int delete_client_by_chan(GList ** client_list, IPC_Channel * ch);
 
 /* Client API functions */
-static int on_stonithd_signon(const struct ha_msg * msg, gpointer data);
-static int on_stonithd_signoff(const struct ha_msg * msg, gpointer data);
-static int on_stonithd_node_fence(const struct ha_msg * request, gpointer data);
-static int on_stonithd_virtual_stonithRA_ops(const struct ha_msg * request, 
+static int on_stonithd_signon(struct ha_msg * msg, gpointer data);
+static int on_stonithd_signoff(struct ha_msg * msg, gpointer data);
+static int on_stonithd_node_fence(struct ha_msg * request, gpointer data);
+static int on_stonithd_virtual_stonithRA_ops(struct ha_msg * request, 
 					  gpointer data);
-static int on_stonithd_list_stonith_types(const struct ha_msg * request,
+static int on_stonithd_list_stonith_types(struct ha_msg * request,
 					  gpointer data);
 static int stonithRA_operate(	stonithRA_ops_t * op, gpointer data );
 static int stonithRA_start( stonithRA_ops_t * op, gpointer data );
@@ -802,7 +802,7 @@ stonithd_hb_msg_dispatch_destroy(gpointer user_data)
 }
 
 static void
-handle_msg_twhocan(const struct ha_msg* msg, void* private_data)
+handle_msg_twhocan(struct ha_msg* msg, void* private_data)
 {
 	const char * target = NULL;
 	const char * from = NULL;
@@ -879,7 +879,7 @@ handle_msg_twhocan(const struct ha_msg* msg, void* private_data)
 }
 
 static void
-handle_msg_ticanst(const struct ha_msg* msg, void* private_data)
+handle_msg_ticanst(struct ha_msg* msg, void* private_data)
 {
 	const char * from = NULL;
 	int  call_id;
@@ -922,7 +922,7 @@ handle_msg_ticanst(const struct ha_msg* msg, void* private_data)
 }
 
 static void
-handle_msg_tstit(const struct ha_msg* msg, void* private_data)
+handle_msg_tstit(struct ha_msg* msg, void* private_data)
 {
 	const char * target = NULL;
 	const char * from = NULL;
@@ -1031,7 +1031,7 @@ require_local_stonithop(stonith_ops_t * st_op, stonith_rsc_t * srsc,
 }
 
 static void
-handle_msg_trstit(const struct ha_msg* msg, void* private_data)
+handle_msg_trstit(struct ha_msg* msg, void* private_data)
 {
 	const char * from = NULL;
 	int call_id;
@@ -1278,7 +1278,7 @@ stonithd_process_client_msg(struct ha_msg * msg, gpointer data)
 }
 
 static int
-on_stonithd_signon(const struct ha_msg * request, gpointer data)
+on_stonithd_signon(struct ha_msg * request, gpointer data)
 {
 	stonithd_client_t * client = NULL;
 	struct ha_msg * reply;
@@ -1389,7 +1389,7 @@ send_back_reply:
 }
 
 static int
-on_stonithd_signoff(const struct ha_msg * request, gpointer data)
+on_stonithd_signoff(struct ha_msg * request, gpointer data)
 {
 	struct ha_msg * reply;
 	const char * api_reply = ST_APIOK;
@@ -1458,7 +1458,7 @@ send_back_reply:
 }
 
 static int
-on_stonithd_node_fence(const struct ha_msg * request, gpointer data)
+on_stonithd_node_fence(struct ha_msg * request, gpointer data)
 {
 	const char * api_reply = ST_APIOK;
 	IPC_Channel * ch = (IPC_Channel *) data;
@@ -2168,7 +2168,7 @@ has_this_callid(gpointer key, gpointer value, gpointer user_data)
 }
 
 static int
-on_stonithd_virtual_stonithRA_ops(const struct ha_msg * request, gpointer data)
+on_stonithd_virtual_stonithRA_ops(struct ha_msg * request, gpointer data)
 {
 	const char * api_reply = ST_APIOK;
 	IPC_Channel * ch = (IPC_Channel *) data;
@@ -2381,7 +2381,7 @@ post_handle_raop(stonithRA_ops_t * ra_op)
 }
 
 static int
-on_stonithd_list_stonith_types(const struct ha_msg * request, gpointer data)
+on_stonithd_list_stonith_types(struct ha_msg * request, gpointer data)
 {
 	const char * api_reply = ST_APIOK;
 	IPC_Channel * ch = (IPC_Channel *) data;
@@ -3027,6 +3027,11 @@ adjust_debug_level(int nsig, gpointer user_data)
 
 /* 
  * $Log: stonithd.c,v $
+ * Revision 1.64  2005/10/17 19:13:47  gshi
+ *  change cl_get_struct(const char* msg, ...) to cl_get_struct(char* msg, ...)
+ *
+ *  make cl_get_struct() handles three types(FT_STRUCT, FT_COMPRESS, FT_UMCOMPRESS)
+ *
  * Revision 1.63  2005/09/28 20:29:55  gshi
  * change the variable debug to debug_level
  * define it in cl_log

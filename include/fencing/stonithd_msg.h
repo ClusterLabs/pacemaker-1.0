@@ -95,7 +95,7 @@
 int ha_msg_addhash(struct ha_msg * msg, const char * name, GHashTable * htable);
 struct ha_msg * hashtable_to_hamsg(GHashTable * htable);
 void insert_data_pairs(gpointer key, gpointer value, gpointer user_data);
-GHashTable * cl_get_hashtable(const struct ha_msg *request, const char * name);
+GHashTable * cl_get_hashtable(struct ha_msg *request, const char * name);
 void print_str_hashtable(GHashTable * htable);
 void print_str_item(gpointer key, gpointer value, gpointer user_data);
 

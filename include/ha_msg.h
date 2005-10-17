@@ -1,4 +1,4 @@
-/* $Id: ha_msg.h,v 1.68 2005/10/15 02:52:34 gshi Exp $ */
+/* $Id: ha_msg.h,v 1.69 2005/10/17 19:13:47 gshi Exp $ */
 /*
  * Intracluster message object (struct ha_msg)
  *
@@ -375,8 +375,7 @@ const char * cl_get_string(const struct ha_msg *msg, const char *name);
 int cl_get_type(const struct ha_msg *msg, const char *name);
 
 /* Get a child message from a message*/
-struct ha_msg *cl_get_struct(const struct ha_msg *msg, const char* name);
-struct ha_msg *cl_get_struct_compress(struct ha_msg* msg, const char* name);
+struct ha_msg *cl_get_struct(struct ha_msg *msg, const char* name);
 
 /* Log the contents of a  message */
 void cl_log_message (int log_level, const struct ha_msg *m);
