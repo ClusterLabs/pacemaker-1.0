@@ -2,10 +2,16 @@
 #include <unistd.h>
 #include <pthread.h>
 #include <stdio.h>
-#define SAME 1
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <stdlib.h>
 
+#define SAME 1
+#define TRUE 1
+#define FALSE 0
 int childflag = 0;
 int grandchildflag = 0;
+int   pidconsistent = TRUE;
 void *
 grandchild_func(void * data)
 {
@@ -16,6 +22,7 @@ grandchild_func(void * data)
         }
 
         if (grandchildflag ^ childflag){
+		pidconsistent = FALSE;
                 printf("Inconsistency detected\n");
         }
         return NULL;
@@ -32,7 +39,7 @@ child_func(void * data)
         }
 
         pthread_create(&thread_id, NULL, grandchild_func, (void*)getpid());
-
+	
 }
 
 int
@@ -41,25 +48,40 @@ main()
         pthread_t thread_id;
         pthread_attr_t tattr;
         int  firsttime = 1;
-
+	pid_t	pid;
+	int	status;
+	
         pthread_attr_init(&tattr);
         pthread_attr_setdetachstate(&tattr, PTHREAD_CREATE_DETACHED);
 
 again:
-       if ( fork() == 0 ) { 
+	pid = fork();
+	if ( pid == 0 ) { 
                 childflag = 0; 
                 grandchildflag =0;
                 if (pthread_create(&thread_id, &tattr, child_func, (void*)getpid()) != 0){
                         printf("%s: creating thread failed", __FUNCTION__);
                 }
-                sleep(1);
+		usleep(500000);
                 if (firsttime){
                         firsttime=0;
                         goto again;
                 }
+		if (pidconsistent){
+			return 0;
+		}else{
+			return 1;
+		}
         }
-
-        sleep(5);
-        return 0;
+	if (waitpid(pid, &status, 0) <= 0){
+		printf("ERROR: wait for child %d failed\n",pid);
+	}
+	if (WIFEXITED(status)){
+		return (WEXITSTATUS(status));
+	}else{
+		printf("child process %d does not exit normally\n",pid);
+	}
+	
+	return 0;
 }
 
