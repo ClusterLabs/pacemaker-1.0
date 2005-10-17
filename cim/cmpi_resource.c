@@ -27,35 +27,58 @@
 #include <config.h>
 #endif
 
+#include <glib.h>
 #include <clplumbing/cl_malloc.h>
 
 #include "linuxha_info.h"
 #include "cmpi_resource.h"
 #include "cmpi_utils.h"
+#include "ha_resource.h"
 
-/* temporary implementaion */        
+static void add_res_for_each (gpointer data, gpointer user);
 
-
-struct cluster_resource_info {
-        char *  name;
-        char *  type;
-        char *  provider;
-        char *  class;
-};
-
-static char * get_hosting_node(const char * name);
 static GPtrArray * get_resource_info_table (void);
 static int free_resource_info_table ( GPtrArray * resource_info_table);
+
+
+static void 
+add_res_for_each (gpointer data, gpointer user)
+{
+        struct res_node * node = NULL;
+        GPtrArray * array = NULL;
+
+        node = (struct res_node *) data;
+   
+        if ( node == NULL ) {
+                return;
+        }
+
+        array = (GPtrArray *) user;
+                
+        if ( node->type == GROUP ) {
+                struct cluster_resource_group_info * info = NULL;
+                info = (struct cluster_resource_group_info *)
+                        node->res;
+                g_list_foreach(info->res_list, add_res_for_each, array);
+
+        } else {
+                struct cluster_resource_info * info = NULL;
+                info = (struct cluster_resource_info *)
+                        node->res;
+                cl_log(LOG_INFO, 
+                       "%s: add resource %s", __FUNCTION__, info->name);
+                
+                g_ptr_array_add(array, res_info_dup (info));
+        }
+}
+
 
 static GPtrArray * 
 get_resource_info_table ()
 {
-        char ** std_out = NULL;
-        char cmnd [] = HA_LIBDIR"/heartbeat/crmadmin -R";
+        
         GPtrArray * resource_info_table = NULL;
-        int exit_code = 0;
-        int ret = 0;
-        int i = 0;
+        GList * list = NULL;
         
         DEBUG_ENTER();
 
@@ -66,36 +89,12 @@ get_resource_info_table ()
                 return NULL;
         }
 
-        ret = run_shell_command(cmnd, &exit_code, &std_out, NULL);
+        list = get_res_list ();
+        
+        g_list_foreach(list, add_res_for_each, resource_info_table);
 
-        for (i = 0; std_out[i]; i++){
-               char ** match = NULL;
-
-                ret = regex_search("primitive: (.*) \\((.*)::(.*)\\)", 
-                                        std_out[i], &match);
-
-                if (ret == HA_OK && match[0]) {
-                        struct cluster_resource_info * info = NULL;
-                        info = (struct cluster_resource_info * )
-                                malloc(sizeof(struct cluster_resource_info));
-
-                        /* parse the result */
-                        info->class = strdup(match[3]);
-                        info->type = strdup(match[2]);
-                        info->name = strdup(match[1]);
-
-                        cl_log(LOG_INFO, "%s: add resource info for %s", 
-                                        __FUNCTION__, info->name);
-                        g_ptr_array_add(resource_info_table, info);
-
-                        /* free memory allocated */
-                        free_2d_array(match);
-                         
-                }
-        }
-
-        free_2d_array(std_out);
-
+        free_res_list (list);
+        
         DEBUG_LEAVE();
 
         return resource_info_table;
@@ -115,6 +114,8 @@ free_resource_info_table ( GPtrArray * resource_info_table)
                 free(resource_info->class);
                 free(resource_info->type);
 
+                free(resource_info);
+
                 resource_info = NULL;
 
         }
@@ -123,6 +124,7 @@ free_resource_info_table ( GPtrArray * resource_info_table)
 
         return HA_OK;
 }
+
 
 
 static CMPIInstance *
@@ -287,40 +289,7 @@ enumerate_resource_instances(char * classname, CMPIBroker * broker,
 }
 
 
-static char * 
-get_hosting_node(const char * name)
-{
-        char cmnd_pat[] = HA_LIBDIR"/heartbeat/crmadmin -W";
-        int lenth, i;
-        char * cmnd = NULL;
-        char ** std_out = NULL;
-        int exit_code, ret;
-        char * node = NULL;
 
-        lenth = strlen(cmnd_pat) + strlen(name) + 1;
-
-        cmnd = malloc(lenth);
-        sprintf(cmnd, "%s %s", cmnd_pat, name);
-
-        ret = run_shell_command(cmnd, &exit_code, &std_out, NULL);
-
-        for (i = 0; std_out[i]; i++){
-                char ** match;
-                ret = regex_search("running on: (\\w*)", std_out[i], &match);
-
-                if (ret == HA_OK && match[0]) {
-                        node = strdup(match[1]);
-                        free_2d_array(match);
-                } else{
-                        node = NULL;
-                }
-        }
-
-        free_2d_array(std_out);
-        free(cmnd);        
-        return node;
-
-}
 
 int
 get_resource_instance(char * classname,

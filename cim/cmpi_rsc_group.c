@@ -36,8 +36,84 @@
 #include "linuxha_info.h"
 
 #include "cmpi_rsc_group.h"
+#include "ha_resource.h"
 
-/* temporary implementaion */
+static void add_groupid_for_each (gpointer data, gpointer user);
+static GPtrArray * get_groupid_table (void);
+static int free_groupid_table ( GPtrArray * groupid_table);
+
+
+static void 
+add_groupid_for_each (gpointer data, gpointer user)
+{
+        struct res_node * node = NULL;
+        GPtrArray * array = NULL;
+
+        node = (struct res_node *) data;
+   
+        if ( node == NULL ) {
+                return;
+        }
+
+        array = (GPtrArray *) user;
+                
+        if ( node->type == GROUP ) {
+                struct cluster_resource_group_info * info = NULL;
+                info = (struct cluster_resource_group_info *) node->res;
+
+                cl_log(LOG_INFO, 
+                       "%s: add group %s", __FUNCTION__, info->id);
+
+                g_ptr_array_add(array, strdup(info->id));
+
+                g_list_foreach(info->res_list, add_groupid_for_each, array);
+
+        } else {
+        }
+}
+
+
+static GPtrArray * 
+get_groupid_table ()
+{
+        
+        GPtrArray * groupid_table = NULL;
+        GList * list = NULL;
+        
+        DEBUG_ENTER();
+
+        groupid_table = g_ptr_array_new ();
+
+        if ( groupid_table == NULL ) {
+                cl_log(LOG_ERR, "%s: failed to alloc array", __FUNCTION__);
+                return NULL;
+        }
+
+        list = get_res_list ();
+        
+        g_list_foreach(list, add_groupid_for_each, groupid_table);
+
+        free_res_list (list);
+        
+        DEBUG_LEAVE();
+
+        return groupid_table;
+}
+
+static int 
+free_groupid_table ( GPtrArray * groupid_table)
+{
+        while (groupid_table->len) {
+                char * group_id = NULL;
+                group_id = (char *)
+                        g_ptr_array_remove_index_fast(groupid_table, 0);
+                free (group_id);
+        }
+
+        g_ptr_array_free(groupid_table, 0);
+        return HA_OK;
+
+}
 
 int 
 enumerate_resource_groups(char * classname, CMPIBroker * broker,
@@ -45,38 +121,36 @@ enumerate_resource_groups(char * classname, CMPIBroker * broker,
                 CMPIObjectPath * ref, int enum_inst, CMPIStatus * rc)
 {
         CMPIObjectPath* op = NULL;
+        GPtrArray * groupid_table = NULL;
+        int i = 0;
 
-        char ** std_out = NULL;
-        char cmnd [] = HA_LIBDIR"/heartbeat/crmadmin -R";
-        int exit_code = 0;
-        int ret = 0, i = 0;
+        groupid_table = get_groupid_table ();
 
-        ret = run_shell_command(cmnd, &exit_code, &std_out, NULL);
+        if (groupid_table == NULL ) {
+                cl_log(LOG_ERR, "%s: can't get group ids", __FUNCTION__);
+                return HA_FAIL;
+        }
 
-        for (i = 0; std_out[i]; i++){
+        for ( i = 0 ; i < groupid_table->len; i++ ) {
                 char * group_id = NULL;
-                char ** match = NULL;
+
                 CMPIString * nsp = NULL;
- 
+
+                group_id = (char *) g_ptr_array_index(groupid_table, i);
+
+                if ( group_id == NULL ) {
+                        continue;
+                }
+
                 /* create an object */
                 nsp = CMGetNameSpace(ref, rc);
                 op = CMNewObjectPath(broker, (char *)nsp->hdl, classname, rc);
 
                 if ( CMIsNullObject(op) ){
+                        free_groupid_table (groupid_table);
                         return HA_FAIL;
                 }
 
-                ret = regex_search("group: (.*) \\((.*)\\)", 
-                                                std_out[i], &match);
-
-                if ( ret != HA_OK ) {
-                        continue;
-                }
-
-                /* parse the result */
-                group_id = match[1];
-                cl_log(LOG_INFO, "%s: setting keys: group_id = [%s] ", 
-                                                __FUNCTION__, group_id);
                         
                 if ( ! enum_inst ) { /* just enumerate names */
                         /* add keys */
@@ -85,14 +159,13 @@ enumerate_resource_groups(char * classname, CMPIBroker * broker,
                         /* add object to rslt */
                         CMReturnObjectPath(rslt, op);
 
-                        /* free memory allocated */
-                        free_2d_array(match);
 
                 }else{  /* return instance */
                         CMPIInstance * inst = NULL;
                         inst = CMNewInstance(broker, op, rc);
 
                         if ( inst == NULL ) {
+                                free_groupid_table (groupid_table);
                                 return HA_FAIL;
                         }
                         cl_log(LOG_INFO, 
@@ -106,9 +179,9 @@ enumerate_resource_groups(char * classname, CMPIBroker * broker,
 
         }
         
-        free_2d_array(std_out);
         CMReturnDone(rslt);
 
+        free_groupid_table (groupid_table);
         return HA_OK;
 }
 
