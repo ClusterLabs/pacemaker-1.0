@@ -15,7 +15,7 @@ int   pidconsistent = TRUE;
 void *
 grandchild_func(void * data)
 {
-        pid_t pid = (pid_t) data;
+        pid_t pid = (long) data;
 
         if (pid ==  getpid()){
                 grandchildflag = SAME;
@@ -31,14 +31,14 @@ grandchild_func(void * data)
 void *
 child_func(void * data)
 {
-        pid_t pid = (pid_t) data;
+        pid_t pid = (long) data;
         pthread_t thread_id;
 
         if (pid ==  getpid()){
                 childflag = SAME;
         }
 
-        pthread_create(&thread_id, NULL, grandchild_func, (void*)getpid());
+        pthread_create(&thread_id, NULL, grandchild_func, (void*)(long)getpid());
 	
 }
 
@@ -59,7 +59,7 @@ again:
 	if ( pid == 0 ) { 
                 childflag = 0; 
                 grandchildflag =0;
-                if (pthread_create(&thread_id, &tattr, child_func, (void*)getpid()) != 0){
+                if (pthread_create(&thread_id, &tattr, child_func, (void*)(long)getpid()) != 0){
                         printf("%s: creating thread failed", __FUNCTION__);
                 }
 		usleep(500000);
