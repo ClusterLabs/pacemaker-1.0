@@ -37,7 +37,6 @@
 #include "cmpi_node.h"
 #include "cmpi_utils.h"
 
-
 #define HB_CLIENT_ID "cim-provider-node"
 
 static char * get_cluster_dc(void);
@@ -49,8 +48,8 @@ static int hb_nodeinfo_free(struct hb_nodeinfo * node_info);
 
 
 static CMPIInstance * make_node_instance(char * classname, 
-        CMPIBroker * broker, CMPIObjectPath * op, 
-        char * uname, CMPIStatus * rc);
+                           CMPIBroker * broker, CMPIObjectPath * op, 
+                           char * uname, CMPIStatus * rc);
 
 
 static char *
@@ -58,8 +57,9 @@ get_cluster_dc ()
 {
         char ** std_out = NULL;
         char cmnd [] = HA_LIBDIR"/heartbeat/crmadmin -D";
-        int ret, i;
-        int exit_code;        
+        char regexp [] = ": (.*)";
+        int ret = 0, i = 0;
+        int exit_code = 0;
         char * dc = NULL;
 
         ret = run_shell_command(cmnd, &exit_code, &std_out, NULL);
@@ -67,7 +67,7 @@ get_cluster_dc ()
         for (i = 0; std_out[i]; i++){
 
                 char ** match;        
-                ret = regex_search(": (.*)", std_out[i], &match);
+                ret = regex_search(regexp, std_out[i], &match);
                 if (ret == HA_OK){
                         dc = strdup(match[1]);               
                         break;
@@ -85,8 +85,9 @@ get_node_status(const char * node)
 {
         char ** std_out = NULL;
         char cmnd_pat [] = HA_LIBDIR"/heartbeat/crmadmin -S";
+        char regexp [] = ": (.*)";
         char * cmnd = NULL;
-        int ret, i;
+        int ret = 0, i = 0;
         int length = 0;
         int exit_code = 0;        
         char * status = NULL;
@@ -96,8 +97,6 @@ get_node_status(const char * node)
         cmnd = malloc(length);
         sprintf(cmnd, "%s %s", cmnd_pat, node);
 
-        cl_log(LOG_INFO, "%s: run %s", __FUNCTION__, cmnd);
-        
         /*
         ret = run_shell_command(cmnd, &exit_code, &std_out, NULL);
         */
@@ -112,8 +111,7 @@ get_node_status(const char * node)
 
         for (i = 0; std_out[i]; i++){
                 char ** match = NULL;        
-
-                ret = regex_search(": (.*) ", std_out[i], &match);
+                ret = regex_search(regexp, std_out[i], &match);
                 if (ret == HA_OK){
                         status = strdup(match[1]);               
                         break;
@@ -250,44 +248,35 @@ make_node_instance(char * classname, CMPIBroker * broker,
         char * uuid = NULL;
         int i;
 
-
         DEBUG_ENTER();
-
 
         nodeinfo_table = get_nodeinfo_table();
         
         if ( nodeinfo_table == NULL ) {
-
                 cl_log(LOG_ERR, "%s: can not get node info", __FUNCTION__);
-
                 CMSetStatusWithChars(broker, rc,
                        CMPI_RC_ERR_FAILED, "Can't get node info");
-
                 return NULL;
         }       
 
         for (i = 0; i < nodeinfo_table->len; i++) {
                 int length = 0;
-
                 nodeinfo = (struct hb_nodeinfo *) 
                                 g_ptr_array_index(nodeinfo_table, i);
 
                 length = strlen ( nodeinfo->name ) + 1;
-
                 if ( strncmp(nodeinfo->name, uname, length) == 0 ){
                         break;
                 }
         }
 
         if ( i == nodeinfo_table->len){
-
                 cl_log(LOG_WARNING, 
                         "%s: %s is not a valid cluster node", 
                         __FUNCTION__, uname); 
 
                 CMSetStatusWithChars(broker, rc,
                        CMPI_RC_ERR_NOT_FOUND, "Node not found");
-
                 goto out;
         }
 
@@ -308,11 +297,8 @@ make_node_instance(char * classname, CMPIBroker * broker,
 
         /* setting properties */
 
-        cl_log(LOG_INFO, "%s: setting properties", __FUNCTION__);
-
         CMSetProperty(ci, "CreationClassName", classname, CMPI_chars);
         CMSetProperty(ci, "Name", uname, CMPI_chars);
-
         CMSetProperty(ci, "UUID", uuid, CMPI_chars);
         CMSetProperty(ci, "Status", status, CMPI_chars);
         CMSetProperty(ci, "ActiveStatus", active_status, CMPI_chars);
@@ -326,7 +312,6 @@ make_node_instance(char * classname, CMPIBroker * broker,
                         CMSetProperty(ci, "IsDC", dc_status, CMPI_chars); 
                 
                 }
-
         }
 
         if ( dc ) {
@@ -338,7 +323,6 @@ make_node_instance(char * classname, CMPIBroker * broker,
         free(uuid);
 
 out:
-
         if ( nodeinfo_table ) {
                 free_nodeinfo_table(nodeinfo_table);
         }
@@ -396,7 +380,6 @@ out:
         return ret; 
 }
 
-
 int 
 enumerate_clusternode_instances(char * classname, CMPIBroker * broker,
                 CMPIInstanceMI * mi, CMPIContext * ctx, CMPIResult * rslt,
@@ -443,8 +426,8 @@ enumerate_clusternode_instances(char * classname, CMPIBroker * broker,
                         /* enumerate instances */
                         CMPIInstance * ci = NULL;
 
-                        ci = make_node_instance(classname, 
-                                                broker, op, uname, rc);
+                        ci = make_node_instance(classname, broker, 
+                                                op, uname, rc);
 
                         if ( CMIsNullObject(ci) ) {
                                 free(uname);

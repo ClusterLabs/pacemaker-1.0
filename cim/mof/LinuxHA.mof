@@ -249,7 +249,7 @@ class LinuxHA_SoftwareIdentity : CIM_SoftwareIdentity {
 
 
 //-----------------------------------------
-//  LinuxHA_InstallSoftwareIdentity
+//  Association: LinuxHA_InstallSoftwareIdentity
 //-----------------------------------------
 
 [ Provider ( "cmpi:cmpiLinuxHA_InstalledSoftwareIdentityProvider" ) ] 

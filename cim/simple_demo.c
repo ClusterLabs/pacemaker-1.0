@@ -27,31 +27,62 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <regex.h>
-
+#include <glib.h>
 #include <clplumbing/cl_malloc.h>
 
 #include "cmpi_cluster.h"
+#include "linuxha_info.h"
 #include "cmpi_utils.h"
+#include "ha_resource.h"
+
+
+void print_for_each (gpointer data, gpointer user);
+
+void 
+print_for_each (gpointer data, gpointer user)
+{
+        struct res_node * node = NULL;
+        node = (struct res_node *) data;
+        if ( node == NULL ) {
+                return;
+        }
+
+                
+        if ( node->type == GROUP ) {
+                struct cluster_resource_group_info * info = NULL;
+                info = (struct cluster_resource_group_info *)
+                        node->res;
+                cl_log(LOG_INFO, "---- %d: %s", node->type, info->id);
+                g_list_foreach(info->res_list, print_for_each, NULL);
+                cl_log(LOG_INFO, "---- %s END", info->id);
+
+        } else {
+                struct cluster_resource_info * info = NULL;
+                info = (struct cluster_resource_info *)
+                        node->res;
+                cl_log(LOG_INFO, "---- %d: %s", node->type, info->name);
+        
+        }
+}
 
 int main(void)
 {
-	char ** std_out = NULL;
-	int rc;
-	int i;
+        GList * list = NULL;
+        GList * p = NULL;
 
-        rc = regex_search(": (.*) \\((.*)\\)", 
-                          "member node: hadev4 (ac4142a9-2ee2-4c2b-81eb-8101373d03c4)", 
-                          &std_out);
+        init_logger ("cim-demo");
+        list = get_res_list ();
 
-	i = 0;
-	while (rc == HA_OK && std_out[i] != NULL){
-                 printf("%d\t%s\n", i, std_out[i]);
-                 i++;
-	
-	}
+        g_list_foreach(list, print_for_each, NULL);
 
-        free_2d_array(std_out);
-	printf("Return value is %d\n", rc);
+        for ( p = list; ; p = g_list_next(p) ){
+                cl_log(LOG_INFO, "p @ 0x%0x", (unsigned int)p);
+                if ( p == g_list_last(list) ) {
+                        break;
+                }
+        }
 
-	return 0;
+        free_res_list(list);
+        return 0;
+
 }
