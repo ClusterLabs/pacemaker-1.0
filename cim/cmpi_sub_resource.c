@@ -29,28 +29,57 @@
 #include <clplumbing/cl_log.h>
 
 #include "cmpi_utils.h"
-
+#include "ha_resource.h"
 #include "cmpi_sub_resource.h"
-
 
 static GPtrArray * get_sub_resource_names(const char * group_id);
 static int free_sub_resource_name_array(GPtrArray * rsc_name_array);
 static int group_has_resource(const char * group_id, const char * rsc_name);
+static struct cluster_resource_group_info *
+       search_group_in_list (GList * list, const char * group_id);
 
+static struct cluster_resource_group_info *
+search_group_in_list (GList * list, const char * group_id)
+{
+        struct cluster_resource_group_info * info = NULL;
+        GList * p = NULL;
+
+        for ( p = list; ; p = g_list_next(p) ) {
+                struct res_node * node = NULL;
+                node = (struct res_node *)p->data;
+
+                if ( node == NULL || node->type == RESOURCE ) {
+                        continue;
+                }
+                
+                info = (struct cluster_resource_group_info *) node->res;
+
+                cl_log(LOG_INFO, "%s: Got group %s", __FUNCTION__, 
+                       info->id);
+
+                if ( strcmp (info->id, group_id) == 0 ) {
+                        return info;
+                } else {
+                        return search_group_in_list ( info->res_list, 
+                                                      group_id);
+                }
+
+                if ( p == g_list_last(list)) {
+                        break;
+                }
+        }
+
+        return info;
+}
 
 
 static GPtrArray *
 get_sub_resource_names(const char * group_id)
 {
-        char ** std_out = NULL;
-        char cmnd [] = HA_LIBDIR"/heartbeat/crmadmin -R";
-        int exit_code = 0;
-        int ret = 0;
-        int i = 0;
-        int in_group = 0;
-        char * rsc_name = NULL;
         GPtrArray * rsc_name_array = NULL;
-
+        GList * list = NULL;
+        GList * p = NULL;
+        struct cluster_resource_group_info * info = NULL;
 
 
         DEBUG_ENTER();
@@ -59,48 +88,46 @@ get_sub_resource_names(const char * group_id)
 
         if ( rsc_name_array == NULL ) {
                 cl_log(LOG_ERR, "%s: can't alloc array", __FUNCTION__);
+                return NULL;
         }
 
-        ret = run_shell_command(cmnd, &exit_code, &std_out, NULL);
 
-        for (i = 0; std_out[i]; i++){
-                char ** match = NULL;
-                if ( !in_group ) {
-                        ret = regex_search("group: (.*) \\((.*)\\)", 
-                                                std_out[i], &match);
-                        if ( ret != HA_OK ) {
-                                continue;
-                        }
-                } else {        /* in group */
-                        ret = regex_search("\\Wprimitive: (.*) \\((.*)::(.*)\\)",
-                                                std_out[i], &match);
-                        if ( ret != HA_OK ) {
-                                in_group = 0;
-                                continue;
-                        }
-                }
+        list = get_res_list ();
 
-                if ( !in_group && strcmp ( group_id, match[1] ) == 0 ){
-                        cl_log(LOG_INFO, "%s: found group_id: %s", 
-                                                __FUNCTION__, group_id);
-                        in_group = 1;
+        if ( list == NULL ) {
+                return rsc_name_array;
+        }
+
+        info = search_group_in_list ( list, group_id );
+        if ( info == NULL ) {
+                return rsc_name_array;
+        }
+
+        /* Attention, only add direct sub resource */
+        for ( p = info->res_list; ; p = g_list_next(p) ) {
+                struct res_node * node = NULL;
+                struct cluster_resource_info * res_info = NULL;
+
+                node = (struct res_node *)p->data;
+
+                if ( node == NULL || node->type == GROUP ) {
                         continue;
                 }
-                
-                if ( in_group ) {
-                        cl_log(LOG_INFO, "%s: found sub resource: %s", 
-                                                __FUNCTION__, match[1]); 
-                        rsc_name = strdup(match[1]); 
-                        g_ptr_array_add ( rsc_name_array, 
-                                                (gpointer *)rsc_name);
-                        continue;
+
+                res_info = (struct cluster_resource_info *) node->res;
+                g_ptr_array_add ( rsc_name_array, res_info_dup(res_info) );
+
+                if ( p == g_list_last(p) ) {
+                        break;
                 }
         }
 
+        free_res_list (list);
 
         DEBUG_LEAVE();
         return rsc_name_array;
 } 
+
 
 static int
 free_sub_resource_name_array(GPtrArray * rsc_name_array)
