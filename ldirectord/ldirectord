@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-my($VERSION)=(qw$Id: ldirectord,v 1.122 2005/10/17 08:16:23 horms Exp $)[2];
+my($VERSION)=(qw$Id: ldirectord,v 1.123 2005/10/18 03:54:40 horms Exp $)[2];
 
 ######################################################################
 # ldirectord                 http://www.vergenet.net/linux/ldirectord/
@@ -726,12 +726,6 @@ sub read_config
 					"invalid address for virtual server");
 			}
 
-			if (defined $virtual_seen{$virtual_id}) {
-				&config_error($line, 
-					"duplicate virtual server");
-			}
-			$virtual_seen{$virtual_id} = 1;
-
 			my (%vsrv, @rsrv);
 			if ($ip_port) {
 				$vsrv{checktype} = "negotiate";
@@ -913,6 +907,15 @@ sub read_config
 			&_ld_read_config_virtual_resolve($virtual_line, \%vsrv,
 				$ip_port);
 			&_ld_read_config_real_resolve(\%vsrv, \@rsrv_todo);
+
+			# Check for duplicate now we have all the
+			# information to generate the id
+			$virtual_id = get_virtual_id_str(\%vsrv);
+			if (defined $virtual_seen{$virtual_id}) {
+				&config_error($line, 
+					"duplicate virtual server");
+			}
+			$virtual_seen{$virtual_id} = 1;
 
 			#Arggh a goto :(
 			goto outer_loop;
@@ -3031,7 +3034,7 @@ sub get_virtual_id_str
 {
 	my ($v) = (@_);
 
-	my $virtual = $v->{"protocol"} . ":" .  &get_virtual($v);
+	return $v->{"protocol"} . ":" .  &get_virtual($v);
 }
 
 
