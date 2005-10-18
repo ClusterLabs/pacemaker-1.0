@@ -69,7 +69,8 @@ libcmpiLinuxHA_SoftwareIdentityProvider_la_CFLAGS  = -I$(CMPIHEADERS)
 libcmpiLinuxHA_SoftwareIdentityProvider_la_LDFLAGS = $(COMMONLIBS) liblinuxha_info.la 
 
 #--------------------------------------------------------------
-libcmpiLinuxHA_ClusterResourceProvider_la_SOURCES  = cmpi_utils.c cmpi_resource.c cmpi_resource_provider.c
+libcmpiLinuxHA_ClusterResourceProvider_la_SOURCES  = cmpi_utils.c cmpi_resource.c ha_resource.c  \
+                                                     cmpi_resource_provider.c
 libcmpiLinuxHA_ClusterResourceProvider_la_CFLAGS   = -I$(CMPIHEADERS)
 libcmpiLinuxHA_ClusterResourceProvider_la_LDFLAGS   = $(COMMONLIBS) liblinuxha_info.la 
 
@@ -113,14 +114,14 @@ libcmpiLinuxHA_ClusterResourceInstanceAttrProvider_la_CFLAGS  = -I$(CMPIHEADERS)
 libcmpiLinuxHA_ClusterResourceInstanceAttrProvider_la_LDFLAGS = $(COMMONLIBS) liblinuxha_info.la 
 
 #--------------------------------------------------------------
-libcmpiLinuxHA_ClusterResourceGroupProvider_la_SOURCES = cmpi_utils.c     \
+libcmpiLinuxHA_ClusterResourceGroupProvider_la_SOURCES = cmpi_utils.c ha_resource.c \
                                                          cmpi_rsc_group.c \
                                                          cmpi_rsc_group_provider.c
 libcmpiLinuxHA_ClusterResourceGroupProvider_la_CFLAGS  = -I$(CMPIHEADERS)
 libcmpiLinuxHA_ClusterResourceGroupProvider_la_LDFLAGS = $(COMMONLIBS) liblinuxha_info.la 
 
 #--------------------------------------------------------------
-libcmpiLinuxHA_SubResourceProvider_la_SOURCES =	cmpi_utils.c        \
+libcmpiLinuxHA_SubResourceProvider_la_SOURCES =	cmpi_utils.c ha_resource.c       \
 						cmpi_sub_resource.c \
                                                 cmpi_sub_resource_provider.c
 libcmpiLinuxHA_SubResourceProvider_la_CFLAGS  =	-I$(CMPIHEADERS)
@@ -133,6 +134,6 @@ libcmpiLinuxHA_IndicationProvider_la_LDFLAGS = $(COMMONLIBS) liblinuxha_info.la
 
 #--------------------------------------------------------------
 noinst_PROGRAMS	    = 	simpledemo
-simpledemo_SOURCES  = 	cmpi_cluster.c cmpi_utils.c simple_demo.c
+simpledemo_SOURCES  = 	ha_resource.c cmpi_utils.c simple_demo.c
 simpledemo_CFLAGS   =	-I$(CMPIHEADERS)
 simpledemo_LDFLAGS  =	$(COMMONLIBS) liblinuxha_info.la 
