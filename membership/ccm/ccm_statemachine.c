@@ -1,4 +1,4 @@
-/* $Id: ccm_statemachine.c,v 1.10 2005/10/06 20:03:16 gshi Exp $ */
+/* $Id: ccm_statemachine.c,v 1.11 2005/10/20 21:47:07 gshi Exp $ */
 /* 
  * ccm.c: Consensus Cluster Service Program 
  *
@@ -3775,6 +3775,8 @@ static void ccm_state_new_node_wait_for_mem_list(enum ccm_type ccm_msg_type,
 			
 			break;
 
+		case CCM_TYPE_PROTOVERSION_RESP:
+			break;
 		case CCM_TYPE_STATE_INFO:
 			ccm_handle_state_info(hb, info, reply);
 			break;
