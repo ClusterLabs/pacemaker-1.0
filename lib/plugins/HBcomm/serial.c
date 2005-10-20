@@ -1,4 +1,4 @@
-/* $Id: serial.c,v 1.43 2005/10/20 00:50:55 gshi Exp $ */
+/* $Id: serial.c,v 1.44 2005/10/20 17:37:06 gshi Exp $ */
 /*
  * Linux-HA serial heartbeat code
  *
@@ -190,8 +190,6 @@ compute_fragment_write_delay(void)
 static int
 serial_init (void)
 {
-	int rc;
-	
 	lastserialport = NULL;
 
 	/* This eventually ought be done through the configuration API */
@@ -205,12 +203,16 @@ serial_init (void)
 		baudstring  = DEFAULTBAUDSTR;
 	}
 
-	rc = compute_fragment_write_delay();
 	if (ANYDEBUG) {
 		PILCallLog(LOG, PIL_DEBUG, "serial_init: serial_baud = 0x%x"
 		,	serial_baud);
 	}
-	return(rc);
+	
+	if(compute_fragment_write_delay() != HA_OK){
+		return HA_FAIL;
+	}
+
+	return HA_OK;
 }
 
 /* Process a serial port declaration */
@@ -702,6 +704,9 @@ ttygets(char * inbuf, int length, struct serial_private *tty)
 }
 /*
  * $Log: serial.c,v $
+ * Revision 1.44  2005/10/20 17:37:06  gshi
+ * make the code easy to read
+ *
  * Revision 1.43  2005/10/20 00:50:55  gshi
  * fixed the serial port problem for V2
  *
