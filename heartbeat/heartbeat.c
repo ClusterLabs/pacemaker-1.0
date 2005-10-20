@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.457 2005/10/20 00:01:15 gshi Exp $ */
+/* $Id: heartbeat.c,v 1.458 2005/10/20 01:16:11 gshi Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -4801,10 +4801,12 @@ process_outbound_packet(struct msg_xmit_hist*	hist
 	if (cseq != NULL) {
 		add2_xmit_hist (hist, msg, seqno);
 	}
-
+	/*
 	if (DEBUGPKT){
 		cl_msg_stats_add(time_longclock(), len);		
 	}
+	*/
+
 	/* Direct message to "loopback" processing */
 	process_clustermsg(msg, NULL);
 
@@ -5575,6 +5577,10 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.458  2005/10/20 01:16:11  gshi
+ * Disable msg_stats dumping to a file in CVS
+ * (I accidently enable it in previous commit)
+ *
  * Revision 1.457  2005/10/20 00:01:15  gshi
  *  hip->track.ackseq == 0 is not a condition that we can skip that node for
  * lowack computation because that node might be up and ask some low seq
