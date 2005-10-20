@@ -1,4 +1,4 @@
-/* $Id: ha_msg.h,v 1.71 2005/10/19 08:46:53 andrew Exp $ */
+/* $Id: ha_msg.h,v 1.72 2005/10/20 00:47:52 gshi Exp $ */
 /*
  * Intracluster message object (struct ha_msg)
  *
@@ -29,6 +29,10 @@
 #include <clplumbing/longclock.h>
 #include <clplumbing/cl_uuid.h>
 #include <compress.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+
 
 enum cl_netstring_type{
 	FT_STRING = 0,
@@ -225,6 +229,9 @@ extern struct fieldtypefuncs_s fieldtypefuncs[NUM_MSG_TYPES];
 #define T_STONITH_UNNEEDED	"unneeded" /* STONITH not required */
 
 /* Set up message statistics area */
+
+int	cl_msg_stats_add(longclock_t time, int size);
+
 void	cl_msg_setstats(volatile hb_msg_stats_t* stats);
 void	cl_dump_msgstats(void);
 void	cl_set_compression_threshold(size_t threadhold);
