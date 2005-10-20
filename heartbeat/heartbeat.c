@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.456 2005/10/04 19:37:06 gshi Exp $ */
+/* $Id: heartbeat.c,v 1.457 2005/10/20 00:01:15 gshi Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -772,7 +772,7 @@ initialize_heartbeat()
 		cl_uuid_unparse(&config->uuid, uuid_str);
 		cl_log(LOG_DEBUG, "uuid is:%s", uuid_str);
 	}
-
+	
 	add_uuidtable(&config->uuid, curnode);
 	cl_uuid_copy(&curnode->uuid, &config->uuid);
 	if (config->rtjoinconfig != HB_JOIN_NONE){
@@ -2112,8 +2112,7 @@ HBDoMsg_T_ACKMSG(const char * type, struct node_info * fromnode,
 			struct node_info* hip = &config->nodes[i];
 			
 			if (STRNCMP_CONST(hip->status,DEADSTATUS) == 0
-			    || hip->nodetype == PINGNODE_I 
-			    || hip->track.ackseq == 0){
+			    || hip->nodetype == PINGNODE_I){
 				continue;
 			}
 			
@@ -2422,23 +2421,11 @@ update_client_status_msg_list(struct node_info* thisnode)
 	return;
 }
 static void
-send_ack_if_needed(struct node_info* thisnode, seqno_t seq)
+send_ack(struct node_info* thisnode, seqno_t seq)
 {
 	struct ha_msg*	hmsg;
 	char		seq_str[32];
-	struct seqtrack* t = &thisnode->track;
-        seqno_t		fm_seq = t->first_missing_seq;
 	
-	if (!enable_flow_control){
-		return;
-	}
-	
-	if ( (fm_seq != 0 && seq > fm_seq) ||
-	     seq % ACK_MSG_DIV != thisnode->track.ack_trigger){
-		/*no need to send ACK */
-		return;
-	}	
-
 	if ((hmsg = ha_msg_new(0)) == NULL) {
 		cl_log(LOG_ERR, "no memory for " T_ACKMSG);
 		return;
@@ -2462,6 +2449,30 @@ send_ack_if_needed(struct node_info* thisnode, seqno_t seq)
 	
 	return;
 }
+
+
+
+static void
+send_ack_if_needed(struct node_info* thisnode, seqno_t seq)
+{
+	struct seqtrack* t = &thisnode->track;
+        seqno_t		fm_seq = t->first_missing_seq;
+	
+	if (!enable_flow_control){
+		return;
+	}
+	
+	if ( (fm_seq != 0 && seq > fm_seq) ||
+	     seq % ACK_MSG_DIV != thisnode->track.ack_trigger){
+		/*no need to send ACK */
+		return;
+	}	
+	
+	send_ack(thisnode, seq);
+	return;
+}
+
+
 
 
 static void
@@ -4601,9 +4612,10 @@ should_drop_message(struct node_info * thisnode, const struct ha_msg *msg,
 
 	/* Is this packet in sequence? */
 	if (t->last_seq == NOSEQUENCE || seq == (t->last_seq+1)) {
+		
+		send_ack_if_necessary(msg);
 		t->last_seq = seq;
 		t->last_iface = iface;
-		send_ack_if_necessary(msg);
 		return (IsToUs ? KEEPIT : DROPIT);
 	}else if (seq == t->last_seq) {
 		/* Same as last-seen packet -- very common case */
@@ -4790,7 +4802,9 @@ process_outbound_packet(struct msg_xmit_hist*	hist
 		add2_xmit_hist (hist, msg, seqno);
 	}
 
-
+	if (DEBUGPKT){
+		cl_msg_stats_add(time_longclock(), len);		
+	}
 	/* Direct message to "loopback" processing */
 	process_clustermsg(msg, NULL);
 
@@ -5561,6 +5575,13 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.457  2005/10/20 00:01:15  gshi
+ *  hip->track.ackseq == 0 is not a condition that we can skip that node for
+ * lowack computation because that node might be up and ask some low seq
+ * message retransmission later
+ *
+ * some ack code cleanup
+ *
  * Revision 1.456  2005/10/04 19:37:06  gshi
  * bug 144: UUIDs need to be generatable from nodenames for some cases
  * new directive
