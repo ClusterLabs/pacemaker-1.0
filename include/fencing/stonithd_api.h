@@ -68,10 +68,15 @@ typedef struct
  * the node whose name is node_name. 
  */
 	void *		node_list;
+
+/*
+ * Will pass the value to stonith_ops_callback.	
+ */
+	char *		private_data;
 } stonith_ops_t;
 
 /* It's an asynchronus api */
-typedef void (*stonith_ops_callback_t)(stonith_ops_t * op, void * private_data);
+typedef void (*stonith_ops_callback_t)(stonith_ops_t * op);
 
 /*	return value: 	ST_OK or ST_FAIL.	*/
 int stonithd_signon(const char * client);
@@ -94,10 +99,8 @@ int stonithd_node_fence(stonith_ops_t * op);
 /*
  *	stonithd_set_stonith_callback: 
  *			Set callback for handling the stonith result.
- *	private_data:	Later passed to callback.
  */
-int stonithd_set_stonith_ops_callback(stonith_ops_callback_t callback, 
-				      void * private_data);
+int stonithd_set_stonith_ops_callback(stonith_ops_callback_t callback);
 
 /*
  *	stonithd_input_IPC_channel : 

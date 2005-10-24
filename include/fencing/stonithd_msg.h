@@ -47,7 +47,8 @@
 #define F_STONITHD_CALLID   "callid" 	/* RA executing call_id==pid */
 #define F_STONITHD_STTYPES  "sttypes" 	/* stonith device types */
 #define F_STONITHD_FRC	    "frc" 	/* final return code */
-#define F_STONITHD_APPEND   "append" 	/* append data for final return */
+#define F_STONITHD_PDATA    "pdata" 	/* private data for callback */
+#define F_STONITHD_NLIST    "nlist" 	/* node name list for final return */
 
 /* Maximum length for stonithd message type */
 #define MAXLEN_SMTYPE  18
