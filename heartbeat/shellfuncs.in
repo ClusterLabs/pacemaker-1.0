@@ -210,3 +210,31 @@ ha_pseudo_resource()
     *)	return 3;;
   esac
 }
+
+# Make temp files the paranoid way...
+maketempfile() {
+#
+#	Use mktemp if we have it, otherwise...
+#
+#	Construct a difficult-to-guess filename if we don't
+#	Make sure non-mktemp files can't be subverted
+#	$RANDOM is not strictly necessary, but nice to have...
+#
+  if
+    F=`mktemp /tmp/lha-XXXXXX` && [ ! -z "$F" -a -f "$F" ]
+  then
+    echo $F
+  else
+    while
+      echo >/dev/null &
+      F=/tmp/lha-${RANDOM}-$$-$!
+      rm -f "$F"; touch "$F"
+      # Try again if we don't own it, or it's a symlink
+      # Or somehow not a regular file...
+      test ! -O "$F" -o -L "$F" -o ! -f "$F"
+    do
+     : Try again...
+    done
+    echo $F
+  fi
+}
