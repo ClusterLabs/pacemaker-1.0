@@ -62,7 +62,6 @@ static const char * stonith_op_strname[] =
 */
 
 static stonith_ops_callback_t stonith_ops_cb = NULL; 
-static void * stonith_ops_cb_private_data = NULL;
 static stonithRA_ops_callback_t stonithRA_ops_cb = NULL;
 static void * stonithRA_ops_cb_private_data = NULL;
 
@@ -284,6 +283,8 @@ stonithd_node_fence(stonith_ops_t * op)
 	    ||(ha_msg_add(request, F_STONITHD_NODE, op->node_name ) != HA_OK)
 	    ||(op->node_uuid == NULL
 	       || ha_msg_add(request, F_STONITHD_NODE_UUID, op->node_uuid) != HA_OK)
+	    ||(op->private_data == NULL
+	       || ha_msg_add(request, F_STONITHD_PDATA, op->private_data) != HA_OK)
 	    ||(ha_msg_add_int(request, F_STONITHD_TIMEOUT, op->timeout) 
 		!= HA_OK) ) {
 		stdlib_log(LOG_ERR, "stonithd_node_fence: "
@@ -393,6 +394,7 @@ stonithd_receive_ops_result(gboolean blocking)
 		/* handle the stonith op result message */
 		st_op = g_new(stonith_ops_t, 1);	
 		st_op->node_uuid = NULL;
+		st_op->private_data = NULL;
 		
 		if ( ha_msg_value_int(reply, F_STONITHD_OPTYPE, &tmpint)
 			== HA_OK) {
@@ -445,17 +447,24 @@ stonithd_receive_ops_result(gboolean blocking)
 			rc = ST_FAIL;
 		}
 
-		if ((tmpstr=cl_get_string(reply, F_STONITHD_APPEND)) != NULL) {
+		if ((tmpstr=cl_get_string(reply, F_STONITHD_NLIST)) != NULL) {
 			st_op->node_list = g_strdup(tmpstr);
 		} else {
 			st_op->node_list = NULL;
 			stdlib_log(LOG_DEBUG, "stonithd_receive_ops_result: the "
-				   "reply message contains no appendix field.");
+				   "reply message contains no NLIST field.");
 		}
-		
+	
+		if ((tmpstr=cl_get_string(reply, F_STONITHD_PDATA)) != NULL) {
+			st_op->private_data = g_strdup(tmpstr);
+		} else {
+			stdlib_log(LOG_DEBUG, "stonithd_receive_ops_result: the "
+				   "reply message contains no PDATA field.");
+		}
+			
 		if (stonith_ops_cb != NULL) {
 			stdlib_log(LOG_DEBUG, "trigger stonith op callback.");
-			stonith_ops_cb(st_op, stonith_ops_cb_private_data);
+			stonith_ops_cb(st_op);
 		} else { 
 			stdlib_log(LOG_DEBUG, "No stonith op callback.");
 		}
@@ -558,12 +567,10 @@ stonithd_receive_ops_result(gboolean blocking)
 }
 
 int
-stonithd_set_stonith_ops_callback(stonith_ops_callback_t callback, 
-				  void * private_data)
+stonithd_set_stonith_ops_callback(stonith_ops_callback_t callback)
 {
 	if ( SIGNONED_TO_STONITHD == TRUE ) {
 		stonith_ops_cb = callback;
-		stonith_ops_cb_private_data = private_data;
 		stdlib_log(LOG_DEBUG, "setted stonith ops callback.");
 	} else {
 		stdlib_log(LOG_ERR, "stonithd_set_stonith_ops_callback: "\
@@ -956,5 +963,6 @@ free_stonith_ops_t(stonith_ops_t * st_op)
 
 	ZAPGDOBJ(st_op->node_name);
 	ZAPGDOBJ(st_op->node_list);
+	ZAPGDOBJ(st_op->private_data);
 	ZAPGDOBJ(st_op);
 }
