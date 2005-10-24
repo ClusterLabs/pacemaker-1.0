@@ -1,4 +1,4 @@
-/* $Id: stonithd.c,v 1.64 2005/10/17 19:13:47 gshi Exp $ */
+/* $Id: stonithd.c,v 1.65 2005/10/24 15:12:01 sunjd Exp $ */
 
 /* File: stonithd.c
  * Description: STONITH daemon for node fencing
@@ -1486,6 +1486,7 @@ on_stonithd_node_fence(struct ha_msg * request, gpointer data)
 	st_op = g_new(stonith_ops_t, 1);
 	st_op->node_list = g_string_new("");
 	st_op->node_uuid = NULL;
+	st_op->private_data = NULL;
 
 	if ( HA_OK == ha_msg_value_int(request, F_STONITHD_OPTYPE, &tmpint)) {
 		st_op->optype = tmpint;
@@ -1522,6 +1523,13 @@ on_stonithd_node_fence(struct ha_msg * request, gpointer data)
 	} else {
 		stonithd_log(LOG_WARNING, "The stonith requirement message"
 			     " contains no target node UUID field.");
+	}
+
+	if ((tmpstr = cl_get_string(request, F_STONITHD_PDATA)) != NULL ) {
+		st_op->private_data = g_strdup(tmpstr);	
+	} else {
+		stonithd_log(LOG_DEBUG, "The stonith requirement message"
+			     " contains no F_STONITHD_PDATA field.");
 	}
 
 	stonithd_log(LOG_DEBUG, "client %s [pid: %d] want a STONITH "
@@ -1825,8 +1833,10 @@ stonithop_result_to_local_client( stonith_ops_t * st_op, gpointer data)
 	    ||(ha_msg_add(reply, F_STONITHD_NODE, st_op->node_name) != HA_OK)
 	    ||(st_op->node_uuid == NULL
 		|| ha_msg_add(reply, F_STONITHD_NODE_UUID, st_op->node_uuid) != HA_OK)
+	    ||(st_op->private_data == NULL
+		|| ha_msg_add(reply, F_STONITHD_PDATA, st_op->private_data) != HA_OK)
 	    ||(st_op->node_list == NULL
-		|| ha_msg_add(reply, F_STONITHD_APPEND,
+		|| ha_msg_add(reply, F_STONITHD_NLIST,
 			((GString *)(st_op->node_list))->str) != HA_OK )
 	    ||(ha_msg_add_int(reply, F_STONITHD_TIMEOUT, st_op->timeout)!=HA_OK)
 	    ||(ha_msg_add_int(reply, F_STONITHD_CALLID, st_op->call_id) !=HA_OK)
@@ -2772,6 +2782,7 @@ free_stonith_ops_t(stonith_ops_t * st_op)
 
 	stonithd_log2(LOG_DEBUG, "free_stonith_ops_t: begin.");
 	ZAPGDOBJ(st_op->node_name);
+	ZAPGDOBJ(st_op->private_data);
 	if (st_op->node_list != NULL) {
 		g_string_free(st_op->node_list, TRUE);
 		st_op->node_list = NULL;
@@ -3027,6 +3038,9 @@ adjust_debug_level(int nsig, gpointer user_data)
 
 /* 
  * $Log: stonithd.c,v $
+ * Revision 1.65  2005/10/24 15:12:01  sunjd
+ * bug834:Stonith daemon API needs per-operation user_data field
+ *
  * Revision 1.64  2005/10/17 19:13:47  gshi
  *  change cl_get_struct(const char* msg, ...) to cl_get_struct(char* msg, ...)
  *

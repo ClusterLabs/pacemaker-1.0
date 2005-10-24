@@ -33,11 +33,11 @@
 static int g_rc = 0;
 
 static void
-stonith_ops_cb(stonith_ops_t * op, void * private_data)
+stonith_ops_cb(stonith_ops_t * op)
 {
 	printf("optype=%d, node_name=%s, result=%d, node_list=%s\n",op->optype,
 		op->node_name, op->op_result, (char *)op->node_list);
-	if (atoi(private_data) != (int)op->op_result) {
+	if (atoi(op->private_data) != (int)op->op_result) {
 		g_rc = -1;
 	}
 }
@@ -64,8 +64,9 @@ int main(int argc, char * argv[])
 	st_op->node_name = g_strdup(argv[2]);
 	st_op->node_uuid = g_strdup(argv[2]);
 	st_op->timeout = atoi(argv[3]);
+	st_op->private_data = g_strdup(argv[4]);
 	
-	if (ST_OK!=stonithd_set_stonith_ops_callback(stonith_ops_cb, argv[4])) {
+	if (ST_OK!=stonithd_set_stonith_ops_callback(stonith_ops_cb)) {
 		stonithd_signoff();
 		return -1;
 	}
