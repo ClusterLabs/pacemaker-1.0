@@ -35,9 +35,9 @@ COMMONLIBS              = $(top_builddir)/lib/clplumbing/libplumb.la      \
 #THREADLIB              = `pkg-config --libs gthread-2.0` 
 THREADLIB               = lpthread
 
-CMPIHEADERS	        = /usr/local/include/cmpi/	
+CMPIHEADERS	        = $(CMPI_HEADER_PATH)	
 
-cimprovidersdir         = /usr/local/lib/cmpi/
+cimprovidersdir         = $(CMPI_PROVIDER_DIR)
 cimproviders_LTLIBRARIES = liblinuxha_info.la                                   \
                            libcmpiLinuxHA_ClusterProvider.la  	                \
 			   libcmpiLinuxHA_ClusterResourceProvider.la            \
