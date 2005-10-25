@@ -1,4 +1,4 @@
-/* $Id: ccmgraph.c,v 1.14 2005/10/04 15:45:49 gshi Exp $ */
+/* $Id: ccmgraph.c,v 1.15 2005/10/25 19:46:55 gshi Exp $ */
 /* 
  * ccmgraph.c: Keeps track of the connectivity within the cluster members
  *		to derive the largest totally connected subgraph.
@@ -35,6 +35,38 @@ static char 	vyesorno='n';
 #define GRAPH_TIMEOUT  15
 #define GRAPH_TIMEOUT_TOO_LONG  25
 
+
+
+
+static void
+bitmap_display(char* bitmap)
+{
+	cl_log(LOG_INFO, "%x", (unsigned int) bitmap[0]);	
+}
+
+static void 
+graph_display(graph_t* gr)
+{
+	int i;
+
+	if (gr == NULL){
+		cl_log(LOG_ERR, "graph is NULL");
+		return;
+	}
+	
+	for ( i = 0 ; i < gr->graph_nodes; i++ ) {
+		char* bitmap = gr->graph_node[i]->bitmap;
+		int	index = gr->graph_node[i]->uuid;
+		
+		cl_log(LOG_INFO, "node[%d]'s bitmap is:", index);
+		if(bitmap != NULL) {
+			bitmap_display(bitmap);
+		}
+	}
+}
+
+
+
 /* */
 /* clean up the unneccessary bits in the graph and check for */
 /* inconsistency. */
@@ -45,6 +77,8 @@ graph_sanitize(graph_t *gr)
 	char *bitmap;
 	int i,j, uuid_i, uuid_j;
 	vertex_t **graph_node;
+
+	(void)graph_display;
 
 	graph_node = gr->graph_node;
 
@@ -426,6 +460,13 @@ graph_free(graph_t *gr)
 void
 graph_add_uuid(graph_t *gr, int uuid)
 {
+	int i;
+	for ( i = 0 ; i < gr->graph_nodes; i++ ) {
+		if(gr->graph_node[i]->uuid == uuid) {
+			return;
+		}
+	}
+
 	gr->graph_node[gr->graph_nodes++]->uuid = uuid;
 }
 
@@ -459,7 +500,6 @@ graph_update_membership(graph_t *gr,
 			char *bitlist)
 {
 	int i;
-
 	for ( i = 0 ; i < gr->graph_nodes; i++ ) {
 		if(gr->graph_node[i]->uuid == uuid) {
 			/* assert that this is not a duplicate message */
@@ -479,6 +519,7 @@ graph_update_membership(graph_t *gr,
 
 	/* make sure we have not received message from unknown node */
 	assert(i < gr->graph_nodes);
+
 	return;
 }
 
@@ -492,7 +533,6 @@ graph_filled_all(graph_t *gr)
 	return (gr->graph_rcvd == gr->graph_nodes);
 }
 
-
 /* */
 /* return the largest fully connected subgraph. */
 /* */
@@ -501,7 +541,7 @@ graph_get_maxclique(graph_t *gr, char **bitmap)
 {
 	int loc = 0;
 	int i, size, numBytes;
-
+	
 	graph_sanitize(gr);
 	size = get_max_clique(gr->graph_node, gr->graph_nodes, 
 				&loc);
