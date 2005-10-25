@@ -1,4 +1,4 @@
-#	$Id: heartbeat.spec.in,v 1.150 2005/10/14 11:39:37 andrew Exp $
+#	$Id: heartbeat.spec.in,v 1.151 2005/10/25 19:16:58 gshi Exp $
 
 # Workaround for a change in RPM 4.1.x; needs proper fixing soon!
 ##%define _unpackaged_files_terminate_build 0
@@ -1025,6 +1025,7 @@ make DESTDIR=$RPM_BUILD_ROOT install
 @sbindir@/cibadmin 
 @sbindir@/ccm_tool 
 @sbindir@/crm_diff 
+@sbindir@/crm_uuid
 @sbindir@/crm_mon 
 @sbindir@/iso8601			
 @sbindir@/crm_master 
