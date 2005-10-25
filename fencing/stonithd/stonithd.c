@@ -1,4 +1,4 @@
-/* $Id: stonithd.c,v 1.65 2005/10/24 15:12:01 sunjd Exp $ */
+/* $Id: stonithd.c,v 1.66 2005/10/25 00:33:28 sunjd Exp $ */
 
 /* File: stonithd.c
  * Description: STONITH daemon for node fencing
@@ -926,6 +926,7 @@ handle_msg_tstit(struct ha_msg* msg, void* private_data)
 {
 	const char * target = NULL;
 	const char * from = NULL;
+	const char * tmp_private_data = NULL;
 	int call_id;
 	int timeout;
 	int optype;
@@ -983,10 +984,16 @@ handle_msg_tstit(struct ha_msg* msg, void* private_data)
 		return;
 	}
 
+	if ( (tmp_private_data = cl_get_string(msg, F_STONITHD_PDATA)) == NULL) {
+		stonithd_log(LOG_DEBUG, "handle_msg_tstit: no F_STONITHD_PDATA "
+			     "field.");
+	}
+
 	if ((srsc = get_local_stonithobj_can_stonith(target, NULL)) != NULL ) {
 		st_op = g_new(stonith_ops_t, 1);
 		st_op->node_list = g_string_new("");
 		st_op->node_name = g_strdup(target);
+		st_op->private_data = g_strdup(tmp_private_data);
 		st_op->optype  = optype;
 		st_op->call_id = call_id;
 		st_op->timeout = timeout;
@@ -1889,6 +1896,8 @@ stonithop_result_to_other_node( stonith_ops_t * st_op, gpointer data)
 
 	if ( (ha_msg_add(reply, F_TYPE, T_RSTIT) != HA_OK)
     	    ||(ha_msg_add(reply, F_ORIG, local_nodename) != HA_OK)
+	    ||(st_op->private_data == NULL
+	       || ha_msg_add(reply, F_STONITHD_PDATA, st_op->private_data) != HA_OK)
     	    ||(ha_msg_add_int(reply, F_STONITHD_FRC, st_op->op_result) != HA_OK)
     	    ||(ha_msg_add_int(reply, F_STONITHD_CALLID, st_op->call_id) 
 		!= HA_OK)) {
@@ -1981,6 +1990,8 @@ require_others_to_stonith(stonith_ops_t * st_op)
 	    ||(ha_msg_add(msg, F_STONITHD_NODE, st_op->node_name) != HA_OK)
 	    ||(st_op->node_uuid == NULL
 	       || ha_msg_add(msg, F_STONITHD_NODE_UUID, st_op->node_uuid) != HA_OK)
+	    ||(st_op->private_data == NULL
+	       || ha_msg_add(msg, F_STONITHD_PDATA, st_op->private_data) != HA_OK)
 	    ||(ha_msg_add_int(msg, F_STONITHD_OPTYPE, st_op->optype) != HA_OK)
 	    ||(ha_msg_add_int(msg, F_STONITHD_TIMEOUT, st_op->timeout) != HA_OK)
 	    ||(ha_msg_add_int(msg, F_STONITHD_CALLID, st_op->call_id) 
@@ -3038,6 +3049,9 @@ adjust_debug_level(int nsig, gpointer user_data)
 
 /* 
  * $Log: stonithd.c,v $
+ * Revision 1.66  2005/10/25 00:33:28  sunjd
+ * fix the BSC failure
+ *
  * Revision 1.65  2005/10/24 15:12:01  sunjd
  * bug834:Stonith daemon API needs per-operation user_data field
  *
