@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.458 2005/10/20 01:16:11 gshi Exp $ */
+/* $Id: heartbeat.c,v 1.459 2005/10/26 00:16:27 gshi Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -2132,7 +2132,12 @@ HBDoMsg_T_ACKMSG(const char * type, struct node_info * fromnode,
 			       "minidx=%d",minidx );
 			goto out;
 		}
-		hist->ackseq = minseq;
+
+
+		if (minseq != 0){			
+			hist->ackseq = minseq;
+		}
+		
 		hist->lowest_acknode = &config->nodes[minidx];
 		
 		if (hist->hiseq - hist->ackseq < MAXMSGHIST/2){
@@ -5577,6 +5582,12 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.459  2005/10/26 00:16:27  gshi
+ * fix bug 924
+ * a new node comes could set hist->ackseq to 0 (which is wrong)
+ * Now, if the lowest ackseq is 0, we don't reset hist->ackseq
+ * but only hist->lowest_acknode.
+ *
  * Revision 1.458  2005/10/20 01:16:11  gshi
  * Disable msg_stats dumping to a file in CVS
  * (I accidently enable it in previous commit)
