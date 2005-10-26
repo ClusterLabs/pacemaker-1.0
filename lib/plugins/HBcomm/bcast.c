@@ -1,4 +1,4 @@
-/* $Id: bcast.c,v 1.44 2005/10/15 02:37:52 gshi Exp $ */
+/* $Id: bcast.c,v 1.45 2005/10/26 21:36:22 gshi Exp $ */
 /*
  * bcast.c: UDP/IP broadcast-based communication code for heartbeat.
  *
@@ -371,8 +371,8 @@ bcast_write(struct hb_media* mp, void *pkt, int len)
 	if ((rc=sendto(ei->wsocket, pkt, len, 0
 	,	(struct sockaddr *)&ei->addr
 	,	sizeof(struct sockaddr))) != len) {
-		PILCallLog(LOG, PIL_CRIT, "Unable to send bcast [%d] packet: %s"
-		,	rc, strerror(errno));
+		PILCallLog(LOG, PIL_CRIT, "Unable to send bcast [%d] packet(len=%d): %s",
+			   rc,len,  strerror(errno));
 		return(HA_FAIL);
 	}
 
@@ -750,6 +750,9 @@ if_get_broadaddr(const char *ifn, struct in_addr *broadaddr)
 
 /*
  * $Log: bcast.c,v $
+ * Revision 1.45  2005/10/26 21:36:22  gshi
+ * print out message len if write fails
+ *
  * Revision 1.44  2005/10/15 02:37:52  gshi
  * change MAXLINE to MAXMSG
  *
