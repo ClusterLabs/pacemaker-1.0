@@ -27,6 +27,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <clplumbing/cl_misc.h>
 
 #ifndef O_SYNC
 #	define O_SYNC 0
@@ -34,7 +35,7 @@
 
 static GHashTable*			name_table = NULL;
 static GHashTable*			uuid_table = NULL;
-
+extern GList*	del_node_list;
 guint 
 uuid_hash(gconstpointer key)
 {
@@ -133,7 +134,7 @@ lookup_tables(const char* nodename, cl_uuid_t* uuid)
 	
 }
 
-/*return value indicates where tables are changed*/
+/*return value indicates whether tables are changed*/
 gboolean
 update_tables(const char* nodename, cl_uuid_t* uuid)
 {
@@ -146,7 +147,6 @@ update_tables(const char* nodename, cl_uuid_t* uuid)
 	}
 
 	if(cl_uuid_is_null(uuid)){
-		   cl_log(LOG_ERR,"update_tables: uuid is null");	
 		   return FALSE;
 	}
 	
@@ -183,6 +183,56 @@ update_tables(const char* nodename, cl_uuid_t* uuid)
 }
 
 
+
+static void
+nametable_remove(const char* nodename)
+{
+	gpointer oldkey;
+	gpointer value;
+	
+	if (g_hash_table_lookup_extended(name_table, nodename, &oldkey, &value)){
+		g_hash_table_remove(name_table, nodename);
+		if(oldkey){
+			g_free(oldkey);
+		}
+	}		
+	return ;
+}
+
+static void
+uuidtable_remove(cl_uuid_t* uuid)
+{
+	gpointer oldkey;
+	gpointer value;
+
+	if (g_hash_table_lookup_extended(uuid_table, uuid, &oldkey, &value)){
+		g_hash_table_remove(uuid_table, uuid);
+		if (oldkey){
+			ha_free(oldkey);
+		}		
+	}
+
+	return;
+}
+
+int
+tables_remove(const char* nodename, cl_uuid_t* uuid)
+{
+	if (nodename == NULL
+	    || uuid == NULL){
+		cl_log(LOG_ERR, "%s: NULL parameter", __FUNCTION__);
+		return HA_FAIL;
+	}
+	
+	nametable_remove(nodename);
+	
+	if (!cl_uuid_is_null(uuid)){
+		uuidtable_remove(uuid);
+	}
+	
+	return HA_OK;
+	
+}
 
 void
 add_nametable(const char* nodename, struct node_info* value)
@@ -438,7 +488,7 @@ node_uuid_file_in(FILE *f, char*  nodename, cl_uuid_t * uu)
 	return 1;
 }
 
-int
+static int
 write_node_uuid_file(struct sys_config * cfg)
 {
 	int		j;
@@ -489,7 +539,7 @@ write_node_uuid_file(struct sys_config * cfg)
 	return HA_OK;
 }
 
-int
+static int
 read_node_uuid_file(struct sys_config * cfg)
 {
 	FILE *		f;
@@ -529,3 +579,124 @@ read_node_uuid_file(struct sys_config * cfg)
 	 */
 	return rc < 0 ? HA_FAIL: HA_OK;
 }
+
+
+static int
+write_delnode_file(struct sys_config* cfg)
+{
+	const char *	tmpname =	DELHOSTCACHEFILETMP;
+	const char *	finalname =	DELHOSTCACHEFILE;
+	FILE *		f;
+	GList*		list = NULL;
+	const struct node_info*	hip;
+
+	
+	(void)unlink(tmpname);
+	if ((f=fopen(tmpname, "w")) == NULL) {
+		cl_perror("%s:Cannot fopen %s for writing", 
+			  __FUNCTION__, tmpname);
+		return HA_FAIL;
+	}
+	
+	list = del_node_list;
+	while(list != NULL){
+		hip = (const struct node_info*) list->data;
+		if (hip == NULL){
+			break; /*list empty*/
+		}
+		
+		if (node_uuid_file_out(f, hip->nodename,
+				       &hip->uuid) != HA_OK) {
+			fclose(f);
+			unlink(tmpname);
+			return HA_FAIL;
+		}
+		list = g_list_next(list);
+	}
+	
+	if (fflush(f) < 0) {
+		cl_perror("fflush error on %s", tmpname);
+		fclose(f);
+		unlink(tmpname);
+		return HA_FAIL;
+	}
+	if (fsync(fileno(f)) < 0) {
+		cl_perror("fsync error on %s", tmpname);
+		fclose(f);
+		unlink(tmpname);
+		return HA_FAIL;
+	}
+	if (fclose(f) < 0) {
+		cl_perror("fclose error on %s", tmpname);
+		fclose(f);	/* Can't hurt :-) */
+		unlink(tmpname);
+		return HA_FAIL;
+	}
+	if (rename(tmpname, finalname) < 0) {
+		cl_perror("Cannot rename %s to %s", tmpname, finalname);
+		unlink(tmpname);
+		return HA_FAIL;
+	}
+	sync();
+	return HA_OK;	
+	
+}
+
+static int
+read_delnode_file(struct sys_config* cfg)
+{
+	FILE *		f;
+	char		host[HOSTLENG];
+	cl_uuid_t	uu;
+	int		rc;
+	const char *	filename = DELHOSTCACHEFILE;
+	struct node_info thisnode;
+
+	if (!cl_file_exists(filename)){
+		return HA_OK;
+	}
+	
+	if ((f=fopen(filename, "r")) == NULL) {
+		cl_perror("Cannot fopen %s for reading", filename);
+		return HA_FAIL;
+	}
+	
+	while ((rc=node_uuid_file_in(f, host, &uu)) > 0) {
+		strncpy(thisnode.nodename, host, HOSTLENG);
+		cl_uuid_copy(&thisnode.uuid, &uu);
+		append_to_dellist(&thisnode);
+	}
+	fclose(f);
+	/*
+	 * If outofsync is TRUE, then we should probably write out a new
+	 * uuid cache file. FIXME??
+	 */
+	return rc < 0 ? HA_FAIL: HA_OK;
+	
+}
+
+int
+write_cache_file(struct sys_config* cfg)
+{
+	if (write_node_uuid_file(cfg) != HA_OK){
+		return HA_FAIL;
+	}
+	
+	return write_delnode_file(cfg);
+
+}
+
+int 
+read_cache_file(struct sys_config* cfg)
+{
+
+	if (read_node_uuid_file(cfg) != HA_OK){
+		return HA_FAIL;
+	}
+	
+	return read_delnode_file(cfg);	
+	
+}
+
+
+

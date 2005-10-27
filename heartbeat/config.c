@@ -1,4 +1,4 @@
-/* $Id: config.c,v 1.179 2005/10/17 19:47:44 gshi Exp $ */
+/* $Id: config.c,v 1.180 2005/10/27 01:03:21 gshi Exp $ */
 /*
  * Parse various heartbeat configuration files...
  *
@@ -189,6 +189,8 @@ int    					enable_realtime = TRUE;
 extern int    				debug_level;
 int					netstring_format = FALSE;
 extern int				UseApphbd;
+GSList*					del_node_list;
+
 
 static int	islegaldirective(const char *directive);
 static int	parse_config(const char * cfgfile, char *nodename);
@@ -367,7 +369,7 @@ init_config(const char * cfgfile)
 	}
 	if (config->rtjoinconfig != HB_JOIN_NONE && 
 	    access(HOSTUUIDCACHEFILE, F_OK) >= 0) {
-		if (read_node_uuid_file(config) != HA_OK) {
+		if (read_cache_file(config) != HA_OK) {
 			cl_log(LOG_ERR
 			,	"Invalid host/uuid map file [%s] - removed."
 			,	HOSTUUIDCACHEFILE);
@@ -375,7 +377,7 @@ init_config(const char * cfgfile)
 				cl_perror("unlink(%s) failed"
 				,	HOSTUUIDCACHEFILE);
 			}
-			write_node_uuid_file(config);
+			write_cache_file(config);
 		}
 		unlink(HOSTUUIDCACHEFILETMP); /* Can't hurt. */
 	}
@@ -385,7 +387,7 @@ init_config(const char * cfgfile)
 			curnode = lookup_node(localnodename);
 			ha_log(LOG_NOTICE, "Current node [%s] added to configuration."
 			,	localnodename);
-			write_node_uuid_file(config);
+			write_cache_file(config);
 		}else{
 			ha_log(LOG_ERR, "Current node [%s] not in configuration!"
 			,	localnodename);
@@ -613,7 +615,7 @@ parse_config(const char * cfgfile, char *nodename)
 
 		/* Skip over white space */
 		bp += strspn(bp, WHITESPACE);
-
+		
 		/* Zap comments on the line */
 		if ((cp = strchr(bp, COMMENTCHAR)) != NULL)  {
 			*cp = EOS;
@@ -1012,6 +1014,40 @@ add_option(const char *	option, const char * value)
 	return(HA_FAIL);
 }
 
+
+
+
+
+static gint
+dellist_match(gconstpointer data, gconstpointer nodename)
+{
+	const struct node_info* node = (const struct node_info*) data;
+	
+	if (data == NULL){
+		/* the list is empty,i.e. not found*/
+		return 1;
+	}
+	return strncasecmp(node->nodename,nodename, HOSTLENG);
+}
+
+void
+remove_from_dellist( const char* nodename)
+{
+	GSList* listitem;
+	
+	listitem = g_slist_find_custom(del_node_list, nodename, dellist_match);
+	
+	if (listitem!= NULL){
+		if (listitem->data){
+			ha_free(listitem->data);
+		}
+		del_node_list = g_slist_delete_link(del_node_list, listitem);
+	}
+	
+	return;
+	
+}
+
 /*
  * For reliability reasons, we should probably require nodename
  * to be in /etc/hosts, so we don't lose our mind if (when) DNS goes out...
@@ -1030,6 +1066,9 @@ add_node(const char * value, int nodetype)
 	if (config->nodecount >= MAXNODE) {
 		return(HA_FAIL);
 	}
+	
+	remove_from_dellist(value);
+	
 	hip = &config->nodes[config->nodecount];
 	memset(hip, 0, sizeof(*hip));
 	++config->nodecount;
@@ -1058,6 +1097,76 @@ add_node(const char * value, int nodetype)
 	}
 	return(HA_OK);
 }
+
+void
+append_to_dellist(struct node_info* hip)
+{
+	struct node_info* dup_hip;
+	
+	dup_hip = ha_malloc(sizeof(struct node_info));
+	if (dup_hip == NULL){
+		cl_log(LOG_ERR, "%s: malloc failed",
+		       __FUNCTION__);
+		return;
+	}
+
+	memcpy(dup_hip, hip, sizeof(struct node_info));
+	
+	del_node_list = g_slist_append(del_node_list, dup_hip);
+	
+	
+}
+
+
+int 
+delete_node(const char* value)
+{
+	int i;
+	struct node_info *	hip = NULL;
+	int j;
+
+	if (value == NULL){
+		cl_log(LOG_ERR, "%s: invalid nodename",
+		       __FUNCTION__);
+		return HA_FAIL;
+	}
+	
+	for (i = 0; i < config->nodecount; i++){
+		hip = &config->nodes[i];
+		if (strncasecmp(hip->nodename, value, sizeof(hip->nodename)) ==0){
+			break;
+		}
+	}
+	
+
+	if (i == config->nodecount){
+		cl_log(LOG_ERR, "%s: node %s not found",
+		       __FUNCTION__, value);
+		return HA_FAIL;
+	}
+
+	
+	if (STRNCMP_CONST(hip->status, DEADSTATUS) != 0){
+		cl_log(LOG_ERR, "%s: node %s is %s. Cannot delete alive node",
+		       __FUNCTION__, value, hip->status);
+		return HA_FAIL;
+	}
+	
+	append_to_dellist(hip);
+
+	tables_remove(hip->nodename, &hip->uuid);	
+	
+	for (j = i; j < config->nodecount; j++){
+		memcpy(&config->nodes[j], &config->nodes[j + 1], 
+		       sizeof(config->nodes[0]));
+	}
+	
+	config->nodecount -- ;
+	
+	return(HA_OK);	
+	
+}
+
 
 /* Process a node declaration */
 static int
@@ -2172,6 +2281,18 @@ set_uuidfrom(const char* value)
 
 /*
  * $Log: config.c,v $
+ * Revision 1.180  2005/10/27 01:03:21  gshi
+ * make node deletion work
+ *
+ * 1. maintain a delhostcache file for deleted files
+ * 2. hb_delnode <node> to delete a node
+ *    hb_addnode <node> to add a node
+ *
+ * TODO:
+ * 1) make hb_delnode/hb_addnode accept multiple nodes
+ * 2) make deletion only works when all other nodes are active
+ * 3) make CCM work with node deletion
+ *
  * Revision 1.179  2005/10/17 19:47:44  gshi
  * add an option to use "traditional" compression method
  * traditional_compression yes/no

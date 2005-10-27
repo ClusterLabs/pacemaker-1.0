@@ -1,4 +1,4 @@
-/* $Id: heartbeat.h,v 1.77 2005/10/15 02:46:24 gshi Exp $ */
+/* $Id: heartbeat.h,v 1.78 2005/10/27 01:03:22 gshi Exp $ */
 /*
  * heartbeat.h: core definitions for the Linux-HA heartbeat program
  *
@@ -178,7 +178,11 @@
 #ifndef	HOSTUUIDCACHEFILE
 #	define	HOSTUUIDCACHEFILE	VAR_LIB_D "/hostcache"
 #endif
+#ifndef DELHOSTCACHEFILE
+#	define  DELHOSTCACHEFILE	VAR_LIB_D "/delhostcache"
+#endif
 #define		HOSTUUIDCACHEFILETMP	HOSTUUIDCACHEFILE ".tmp"
+#define		DELHOSTCACHEFILETMP	DELHOSTCACHEFILE ".tmp"
 
 #define	RCSCRIPT		HA_D "/harc"
 #define CONFIG_NAME		HA_D "/ha.cf"
@@ -390,12 +394,13 @@ struct node_info *	lookup_node(const char *);
 struct link * lookup_iface(struct node_info * hip, const char *iface);
 struct link *  iface_lookup_node(const char *);
 int	add_node(const char * value, int nodetype);
+int	delete_node(const char * value);
 void	SetParameterValue(const char * name, const char * value);
 
 gint		uuid_equal(gconstpointer v, gconstpointer v2);
 guint		uuid_hash(gconstpointer key);
-int		write_node_uuid_file(struct sys_config * cfg);
-int		read_node_uuid_file(struct sys_config * cfg);
+int		write_cache_file(struct sys_config * cfg);
+int		read_cache_file(struct sys_config * cfg);
 void		add_nametable(const char* nodename, struct node_info* value);
 void		add_uuidtable(cl_uuid_t*, struct node_info* value);
 const char *	uuid2nodename(cl_uuid_t* uuid);
@@ -404,7 +409,10 @@ int		inittable(void);
 gboolean	update_tables(const char* nodename, cl_uuid_t* uuid);
 struct node_info* lookup_tables(const char* nodename, cl_uuid_t* uuid);
 void		cleanuptable(void);
+int		tables_remove(const char* nodename, cl_uuid_t* uuid);
 int		GetUUID(struct sys_config*, const char*, cl_uuid_t* uuid);
+void		remove_from_dellist( const char* nodename);
+void		append_to_dellist(struct node_info* hip);
 
 #ifndef HA_HAVE_SETENV
 int setenv(const char *name, const char * value, int why);

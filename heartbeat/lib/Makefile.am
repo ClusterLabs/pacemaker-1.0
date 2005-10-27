@@ -23,4 +23,5 @@ MAINTAINERCLEANFILES    = Makefile.in
 halibdir		= "$(libdir)/@HB_PKG@"
 
 halib_SCRIPTS		= mach_down req_resource ResourceManager hb_standby \
-			BasicSanityCheck TestHeartbeatComm ha_config hb_takeover
+			BasicSanityCheck TestHeartbeatComm ha_config hb_takeover hb_addnode \
+			hb_delnode

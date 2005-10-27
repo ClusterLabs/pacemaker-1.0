@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.459 2005/10/26 00:16:27 gshi Exp $ */
+/* $Id: heartbeat.c,v 1.460 2005/10/27 01:03:21 gshi Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -776,7 +776,7 @@ initialize_heartbeat()
 	add_uuidtable(&config->uuid, curnode);
 	cl_uuid_copy(&curnode->uuid, &config->uuid);
 	if (config->rtjoinconfig != HB_JOIN_NONE){
-		write_node_uuid_file(config);
+		write_cache_file(config);
 	}
 	if (stat(FIFONAME, &buf) < 0 ||	!S_ISFIFO(buf.st_mode)) {
 		cl_log(LOG_INFO, "Creating FIFO %s.", FIFONAME);
@@ -2208,6 +2208,89 @@ HBDoMsg_T_ACKMSG(const char * type, struct node_info * fromnode,
 }
 
 
+
+static void
+HBDoMsg_T_ADDNODE(const char * type, struct node_info * fromnode,
+		  TIME_T msgtime, seqno_t seqno, const char * iface, struct ha_msg * msg)
+{
+	struct node_info* thisnode = NULL;
+	const char*	addnode;
+
+
+	addnode =  ha_msg_value(msg, F_NODE);
+	if (addnode == NULL){
+		cl_log(LOG_ERR, "%s: addnode not found in msg",
+		       __FUNCTION__);
+		return ;
+	}
+
+	
+	cl_log(LOG_INFO,
+	       "Adding new node(%s) to configuration.",
+	       addnode);
+	
+	thisnode = lookup_node(addnode);
+	if (thisnode){
+		cl_log(LOG_ERR, "%s: node(%s) already exists",
+		       __FUNCTION__, addnode);
+		return;
+	}
+	
+	add_node(addnode, NORMALNODE_I);
+	thisnode = lookup_node(addnode);
+	if (thisnode == NULL) {
+		cl_log(LOG_ERR, "%s: adding node(%s) failed",
+		       __FUNCTION__, addnode);
+		return;
+	}
+
+	write_cache_file(config);
+	
+	return ;
+	
+}
+
+
+static void
+HBDoMsg_T_DELNODE(const char * type, struct node_info * fromnode,
+		  TIME_T msgtime, seqno_t seqno, const char * iface, struct ha_msg * msg)
+{
+	struct node_info* thisnode = NULL;
+	const char*	delnode;
+	
+	
+	delnode =  ha_msg_value(msg, F_NODE);
+	if (delnode == NULL){
+		cl_log(LOG_ERR, "%s: node not found in msg",
+		       __FUNCTION__);
+		return ;
+	}
+	
+	
+	cl_log(LOG_INFO,
+	       "Deletinging node [%s] from configuration.",
+	        delnode);
+	
+	thisnode = lookup_node(delnode);
+	if (thisnode == NULL){
+		cl_log(LOG_ERR, "%s: node %s not found in config",
+		       __FUNCTION__, delnode);
+		return;
+	}
+	
+	if (delete_node(delnode) != HA_OK){
+		cl_log(LOG_ERR, "%s: Deleting node(%s) failed",
+		       __FUNCTION__, delnode);
+		return;
+	}
+	
+	write_cache_file(config);
+
+	return ;
+	
+}
+
+  
 static void
 HBDoMsg_T_REXMIT(const char * type, struct node_info * fromnode
 ,	TIME_T msgtime, seqno_t seqno, const char * iface, struct ha_msg * msg)
@@ -2654,7 +2737,7 @@ process_clustermsg(struct ha_msg* msg, struct link* lnk)
 			 */
 			thisnode->status_suppressed = TRUE;
 			update_tables(from, &fromuuid);
-			write_node_uuid_file(config);
+			write_cache_file(config);
 			return;
 		}
 	}
@@ -3831,6 +3914,8 @@ main(int argc, char * argv[], char **envp)
 	hb_register_msg_callback(T_NS_STATUS,	HBDoMsg_T_STATUS);
 	hb_register_msg_callback(T_QCSTATUS,	HBDoMsg_T_QCSTATUS);
 	hb_register_msg_callback(T_ACKMSG,	HBDoMsg_T_ACKMSG);
+	hb_register_msg_callback(T_ADDNODE,	HBDoMsg_T_ADDNODE);
+	hb_register_msg_callback(T_DELNODE,	HBDoMsg_T_DELNODE);
 
 	if (init_set_proc_title(argc, argv, envp) < 0) {
 		cl_log(LOG_ERR, "Allocation of proc title failed.");
@@ -4475,7 +4560,7 @@ should_drop_message(struct node_info * thisnode, const struct ha_msg *msg,
 	
 	if (from && !cl_uuid_is_null(&fromuuid)){
 		if (update_tables(from, &fromuuid)){
-			write_node_uuid_file(config);
+			write_cache_file(config);
 		}
 	}
 	
@@ -5582,6 +5667,18 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.460  2005/10/27 01:03:21  gshi
+ * make node deletion work
+ *
+ * 1. maintain a delhostcache file for deleted files
+ * 2. hb_delnode <node> to delete a node
+ *    hb_addnode <node> to add a node
+ *
+ * TODO:
+ * 1) make hb_delnode/hb_addnode accept multiple nodes
+ * 2) make deletion only works when all other nodes are active
+ * 3) make CCM work with node deletion
+ *
  * Revision 1.459  2005/10/26 00:16:27  gshi
  * fix bug 924
  * a new node comes could set hist->ackseq to 0 (which is wrong)
