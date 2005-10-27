@@ -19,7 +19,9 @@
 #
 MAINTAINERCLEANFILES    = Makefile.in
 
-harddir		= $(libdir)/heartbeat/
+halibdir	= $(libdir)/@HB_PKG@
+halib_SCRIPTS	= haclient.py	
+halib_DATA	= haclient.glade
 
 INCLUDES 	      =	-I$(top_builddir)/include  -I$(top_srcdir)/include \
 			-I$(top_builddir)/linux-ha -I$(top_srcdir)/linux-ha \
