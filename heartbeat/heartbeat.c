@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.460 2005/10/27 01:03:21 gshi Exp $ */
+/* $Id: heartbeat.c,v 1.461 2005/10/29 21:35:06 gshi Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -3516,7 +3516,7 @@ send_cluster_msg(struct ha_msg* msg)
 		 * It will then get written to the cluster properly.
 		 */
 
-		if ((smsg = msg2wirefmt(msg, &len)) == NULL) {
+		if ((smsg = msg2wirefmt_noac(msg, &len)) == NULL) {
 			cl_log(LOG_ERR
 			,	"send_cluster_msg: cannot convert"
 			" message to wire format (pid %d)", (int)getpid());
@@ -5667,6 +5667,9 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.461  2005/10/29 21:35:06  gshi
+ * The message from a child process to fifo should not be coded with authentication part
+ *
  * Revision 1.460  2005/10/27 01:03:21  gshi
  * make node deletion work
  *
