@@ -283,14 +283,20 @@ stonithd_node_fence(stonith_ops_t * op)
 	    ||(ha_msg_add(request, F_STONITHD_NODE, op->node_name ) != HA_OK)
 	    ||(op->node_uuid == NULL
 	       || ha_msg_add(request, F_STONITHD_NODE_UUID, op->node_uuid) != HA_OK)
-	    ||(op->private_data == NULL
-	       || ha_msg_add(request, F_STONITHD_PDATA, op->private_data) != HA_OK)
 	    ||(ha_msg_add_int(request, F_STONITHD_TIMEOUT, op->timeout) 
 		!= HA_OK) ) {
 		stdlib_log(LOG_ERR, "stonithd_node_fence: "
 			   "cannot add field to ha_msg.");
 		ZAPMSG(request);
 		return ST_FAIL;
+	}
+	if  (op->private_data != NULL) {
+	       if ( ha_msg_add(request, F_STONITHD_PDATA, op->private_data) != HA_OK) {
+			stdlib_log(LOG_ERR, "stonithd_node_fence: "
+			   "Failed to add F_STONITHD_PDATA field to ha_msg.");
+			ZAPMSG(request);
+			return ST_FAIL;
+		}
 	}
 
 	/* Send the stonith request message */
