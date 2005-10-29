@@ -1,4 +1,4 @@
-/* $Id: stonithd.c,v 1.67 2005/10/29 03:51:11 sunjd Exp $ */
+/* $Id: stonithd.c,v 1.68 2005/10/29 04:30:42 sunjd Exp $ */
 
 /* File: stonithd.c
  * Description: STONITH daemon for node fencing
@@ -2812,7 +2812,6 @@ free_stonith_ops_t(stonith_ops_t * st_op)
 	stonithd_log2(LOG_DEBUG, "free_stonith_ops_t: begin.");
 	ZAPGDOBJ(st_op->node_name);
 
-	ZAPGDOBJ(st_op->node_uuid);
 	ZAPGDOBJ(st_op->private_data);
 
 	if (st_op->node_list != NULL) {
@@ -3070,6 +3069,9 @@ adjust_debug_level(int nsig, gpointer user_data)
 
 /* 
  * $Log: stonithd.c,v $
+ * Revision 1.68  2005/10/29 04:30:42  sunjd
+ * donnot free uuid here
+ *
  * Revision 1.67  2005/10/29 03:51:11  sunjd
  * permit private_data be null
  *
