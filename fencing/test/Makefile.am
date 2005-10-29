@@ -39,4 +39,4 @@ EXTRA_DIST		=	STONITHDBasicSanityCheck
 
 test_PROGRAMS =  apitest
 apitest_SOURCES =  apitest.c
-apitest_LDFLAGS = $(COMMONLIBS) -luuid
+apitest_LDFLAGS = $(COMMONLIBS)

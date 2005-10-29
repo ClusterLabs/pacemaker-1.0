@@ -32,11 +32,11 @@ apigid                          =       @HA_APIGID@
 
 lib_LTLIBRARIES = libtls.la libmgmt.la
 libtls_la_SOURCES = tlslib.c
-libtls_la_LDFLAGS = $(COMMONLIBS) -luuid  `libgnutls-config --libs`
+libtls_la_LDFLAGS = $(COMMONLIBS) `libgnutls-config --libs`
 libtls_la_CFLAGS = $(INCLUDES) `libgnutls-config --cflags`
 
 libmgmt_la_SOURCES = mgmtlib.c
-libmgmt_la_LDFLAGS = $(COMMONLIBS) -luuid $(top_builddir)/lib/mgmt/libtls.la
+libmgmt_la_LDFLAGS = $(COMMONLIBS) $(top_builddir)/lib/mgmt/libtls.la
 libmgmt_la_CFLAGS = $(INCLUDES)
 libmgmt_la_DEPENDENCIES  = $(top_builddir)/lib/mgmt/libtls.la
 
