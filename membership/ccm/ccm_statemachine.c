@@ -1,4 +1,4 @@
-/* $Id: ccm_statemachine.c,v 1.11 2005/10/20 21:47:07 gshi Exp $ */
+/* $Id: ccm_statemachine.c,v 1.12 2005/10/29 00:02:16 gshi Exp $ */
 /* 
  * ccm.c: Consensus Cluster Service Program 
  *
@@ -2832,8 +2832,23 @@ switchstatement:
 			 * that more than one cluster leader might request
 			 * the membership list. Due to cluster partitioning :( )
 			 */
+			/* If we have received CCM_TYPE_JOIN from all nodes
+			 * we don't need wait for timeout here.
+			 */
 			update_add_memlist_request(CCM_GET_UPDATETABLE(info),
 					CCM_GET_LLM(info), orig, trans_majorval);
+
+
+			if (UPDATE_GET_NODECOUNT( CCM_GET_UPDATETABLE(info)) == CCM_GET_LLM_NODECOUNT(info)
+			    && !update_am_i_leader(CCM_GET_UPDATETABLE(info), CCM_GET_LLM(info))) {	
+				
+				if (ccm_send_cl_reply(hb,info) == TRUE) {
+					finallist_init();
+					ccm_set_state(info, CCM_STATE_MEMLIST_RES, reply);
+					break;
+				}					
+			}
+			
 			/*
 			 * FALL THROUGH
 			 */
