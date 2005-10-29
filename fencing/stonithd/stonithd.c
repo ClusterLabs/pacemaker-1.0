@@ -1,4 +1,4 @@
-/* $Id: stonithd.c,v 1.66 2005/10/25 00:33:28 sunjd Exp $ */
+/* $Id: stonithd.c,v 1.67 2005/10/29 03:51:11 sunjd Exp $ */
 
 /* File: stonithd.c
  * Description: STONITH daemon for node fencing
@@ -1840,8 +1840,6 @@ stonithop_result_to_local_client( stonith_ops_t * st_op, gpointer data)
 	    ||(ha_msg_add(reply, F_STONITHD_NODE, st_op->node_name) != HA_OK)
 	    ||(st_op->node_uuid == NULL
 		|| ha_msg_add(reply, F_STONITHD_NODE_UUID, st_op->node_uuid) != HA_OK)
-	    ||(st_op->private_data == NULL
-		|| ha_msg_add(reply, F_STONITHD_PDATA, st_op->private_data) != HA_OK)
 	    ||(st_op->node_list == NULL
 		|| ha_msg_add(reply, F_STONITHD_NLIST,
 			((GString *)(st_op->node_list))->str) != HA_OK )
@@ -1853,6 +1851,14 @@ stonithop_result_to_local_client( stonith_ops_t * st_op, gpointer data)
 		stonithd_log(LOG_ERR, "stonithop_result_to_local_client: "
 			     "cannot add fields.");
 		return ST_FAIL;
+	}
+	if (st_op->private_data != NULL) {
+		if ( ha_msg_add(reply, F_STONITHD_PDATA, st_op->private_data) != HA_OK) {
+			ZAPMSG(reply);
+			stonithd_log(LOG_ERR, "stonithop_result_to_local_client: "
+			     "Failed to  add F_STONITHD_PDATA field.");
+			return ST_FAIL;
+		}
 	}
 
 	if ( msg2ipcchan(reply, ch) != HA_OK) {
@@ -1896,8 +1902,6 @@ stonithop_result_to_other_node( stonith_ops_t * st_op, gpointer data)
 
 	if ( (ha_msg_add(reply, F_TYPE, T_RSTIT) != HA_OK)
     	    ||(ha_msg_add(reply, F_ORIG, local_nodename) != HA_OK)
-	    ||(st_op->private_data == NULL
-	       || ha_msg_add(reply, F_STONITHD_PDATA, st_op->private_data) != HA_OK)
     	    ||(ha_msg_add_int(reply, F_STONITHD_FRC, st_op->op_result) != HA_OK)
     	    ||(ha_msg_add_int(reply, F_STONITHD_CALLID, st_op->call_id) 
 		!= HA_OK)) {
@@ -1905,6 +1909,14 @@ stonithop_result_to_other_node( stonith_ops_t * st_op, gpointer data)
 			     "ha_msg_add: cannot add field.");
 		ZAPMSG(reply);
 		return ST_FAIL;
+	}
+	if (st_op->private_data == NULL) {
+		if (ha_msg_add(reply, F_STONITHD_PDATA, st_op->private_data) != HA_OK) {
+			stonithd_log(LOG_ERR, "stonithop_result_to_other_node: "
+			     "ha_msg_add: failed to add F_STONITHD_PDATA field.");
+			ZAPMSG(reply);
+			return ST_FAIL;
+		}
 	}
 
 	if (hb == NULL) {
@@ -1990,8 +2002,6 @@ require_others_to_stonith(stonith_ops_t * st_op)
 	    ||(ha_msg_add(msg, F_STONITHD_NODE, st_op->node_name) != HA_OK)
 	    ||(st_op->node_uuid == NULL
 	       || ha_msg_add(msg, F_STONITHD_NODE_UUID, st_op->node_uuid) != HA_OK)
-	    ||(st_op->private_data == NULL
-	       || ha_msg_add(msg, F_STONITHD_PDATA, st_op->private_data) != HA_OK)
 	    ||(ha_msg_add_int(msg, F_STONITHD_OPTYPE, st_op->optype) != HA_OK)
 	    ||(ha_msg_add_int(msg, F_STONITHD_TIMEOUT, st_op->timeout) != HA_OK)
 	    ||(ha_msg_add_int(msg, F_STONITHD_CALLID, st_op->call_id) 
@@ -2000,6 +2010,14 @@ require_others_to_stonith(stonith_ops_t * st_op)
 					"cannot add field.");
 		ZAPMSG(msg);
 		return ST_FAIL;
+	}
+	if (st_op->private_data != NULL) {
+		if (ha_msg_add(msg, F_STONITHD_PDATA, st_op->private_data) != HA_OK) {
+			stonithd_log(LOG_ERR, "require_others_to_stonith: "
+					"Failed to add F_STONITHD_PDATA field.");
+			ZAPMSG(msg);
+			return ST_FAIL;
+		}
 	}
 
 	if (hb == NULL) {
@@ -2793,7 +2811,10 @@ free_stonith_ops_t(stonith_ops_t * st_op)
 
 	stonithd_log2(LOG_DEBUG, "free_stonith_ops_t: begin.");
 	ZAPGDOBJ(st_op->node_name);
+
+	ZAPGDOBJ(st_op->node_uuid);
 	ZAPGDOBJ(st_op->private_data);
+
 	if (st_op->node_list != NULL) {
 		g_string_free(st_op->node_list, TRUE);
 		st_op->node_list = NULL;
@@ -3049,6 +3070,9 @@ adjust_debug_level(int nsig, gpointer user_data)
 
 /* 
  * $Log: stonithd.c,v $
+ * Revision 1.67  2005/10/29 03:51:11  sunjd
+ * permit private_data be null
+ *
  * Revision 1.66  2005/10/25 00:33:28  sunjd
  * fix the BSC failure
  *
