@@ -16,3 +16,4 @@ crm_verify
 crm_attribute
 crm_standby
 crm_master
+crm_uuid
