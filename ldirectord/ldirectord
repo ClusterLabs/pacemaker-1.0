@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-my($VERSION)=(qw$Id: ldirectord,v 1.124 2005/10/20 04:02:14 horms Exp $)[2];
+my($VERSION)=(qw$Id: ldirectord,v 1.125 2005/10/30 05:43:23 horms Exp $)[2];
 
 ######################################################################
 # ldirectord                 http://www.vergenet.net/linux/ldirectord/
@@ -294,8 +294,8 @@ As a last resort the IP address of the real server will be used.
 
 B<login = ">I<username>B<">
 
-Username to use to login to FTP, POP, IMAP, MySQL and PostgreSQL servers.
-For FTP, the default is anonymous. For POP and IMAP, the default is the
+Username to use to login to FTP, POP, IMAP, LDAP, MySQL and PostgreSQL servers.
+For FTP, the default is anonymous. For POP, IMAP and LDAP, the default is the
 empty string, in which case authentication will not be attempted.
 For a MySQL and PostgreSQL, the username must be provided.
 
@@ -305,11 +305,11 @@ hostname is derived as per the passwd option below.
 
 B<passwd = ">I<password>B<">
 
-Password to use to login to FTP, POP, IMAP, MySQL and PostgreSQL servers.
+Password to use to login to FTP, POP, IMAP, LDAP, MySQL and PostgreSQL servers.
 Default is for FTP is ldirectord\@<hostname>, where hostname is the
 environment variable HOSTNAME evaluated at run time, or sourced from uname
 if unset. The default for all other services is an empty password, in the
-case of MySQL and PostgreSQL this means authentication will not be
+case of LDAP, MySQL and PostgreSQL this means authentication will not be
 performed.
 
 B<database = ">I<databasename>B<">
@@ -1854,7 +1854,13 @@ sub check_ldap
 		return 1;
 	}
 		
-	my $mesg = $ldap->bind ;
+	my $mesg;
+	if ($$v{login} && $$v{passwd}) {
+		$mesg = $ldap->bind($$v{login}, password=>$$v{passwd}) ;
+	}
+	else {
+		$mesg = $ldap->bind ;
+	}
 	if ($mesg->is_error) {
 		service_set($v, $r, "down");
 		&ld_debug(4, "Bind failed");
