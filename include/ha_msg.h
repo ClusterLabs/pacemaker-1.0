@@ -1,4 +1,4 @@
-/* $Id: ha_msg.h,v 1.73 2005/10/27 01:03:22 gshi Exp $ */
+/* $Id: ha_msg.h,v 1.74 2005/10/31 20:40:51 gshi Exp $ */
 /*
  * Intracluster message object (struct ha_msg)
  *
@@ -149,6 +149,7 @@ extern struct fieldtypefuncs_s fieldtypefuncs[NUM_MSG_TYPES];
 #define	F_ORIG		"src"		/* Real Originator */
 #define	F_ORIGUUID	"srcuuid"	/* Real Originator uuid*/
 #define	F_NODE		"node"		/* Node being described */
+#define	F_NODELIST	"nodelist"	/* Node list being described */
 #define	F_NUMNODES	"numnode"	/* Number of nodes in cluster*/
 #define	F_TO		"dest"		/* Destination (optional) */
 #define F_TOUUID	"destuuid"	/* Destination uuid(optional) */

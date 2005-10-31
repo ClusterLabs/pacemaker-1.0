@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.461 2005/10/29 21:35:06 gshi Exp $ */
+/* $Id: heartbeat.c,v 1.462 2005/10/31 20:40:51 gshi Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -2208,41 +2208,71 @@ HBDoMsg_T_ACKMSG(const char * type, struct node_info * fromnode,
 }
 
 
+static int
+hb_add_one_node(const char* node)
+{
+	struct node_info*	thisnode = NULL;
+	
+	cl_log(LOG_INFO,
+	       "Adding new node(%s) to configuration.",
+	       node);
+	
+	thisnode = lookup_node(node);
+	if (thisnode){
+		cl_log(LOG_ERR, "%s: node(%s) already exists",
+		       __FUNCTION__, node);
+		return HA_FAIL;
+	}
+	
+	add_node(node, NORMALNODE_I);
+	thisnode = lookup_node(node);
+	if (thisnode == NULL) {
+		cl_log(LOG_ERR, "%s: adding node(%s) failed",
+		       __FUNCTION__, node);
+		return HA_FAIL;
+	}
+	
+	return HA_OK;
+	
+}
+
 
 static void
 HBDoMsg_T_ADDNODE(const char * type, struct node_info * fromnode,
 		  TIME_T msgtime, seqno_t seqno, const char * iface, struct ha_msg * msg)
 {
-	struct node_info* thisnode = NULL;
-	const char*	addnode;
+	const char* nodelist;
+	const char * p;
+	
 
-
-	addnode =  ha_msg_value(msg, F_NODE);
-	if (addnode == NULL){
-		cl_log(LOG_ERR, "%s: addnode not found in msg",
+	nodelist =  ha_msg_value(msg, F_NODELIST);
+	if (nodelist == NULL){
+		cl_log(LOG_ERR, "%s: nodelist not found in msg",		       
 		       __FUNCTION__);
+		cl_log_message(LOG_INFO, msg);
 		return ;
 	}
+	
+	p =  nodelist ; 
+	while(*p != 0){
+		char node[HOSTLENG];
+		int nodelen;
 
-	
-	cl_log(LOG_INFO,
-	       "Adding new node(%s) to configuration.",
-	       addnode);
-	
-	thisnode = lookup_node(addnode);
-	if (thisnode){
-		cl_log(LOG_ERR, "%s: node(%s) already exists",
-		       __FUNCTION__, addnode);
-		return;
+		while(*p == ' ') {
+			p++;
+		}
+		if (*p == 0){
+			break;
+		}
+		nodelen = strcspn(p, " \0") ;
+		memcpy(node, p, nodelen);
+		node[nodelen] = 0;
+		if (hb_add_one_node(node)!= HA_OK){
+			break;
+		}
+		p += nodelen;
 	}
 	
-	add_node(addnode, NORMALNODE_I);
-	thisnode = lookup_node(addnode);
-	if (thisnode == NULL) {
-		cl_log(LOG_ERR, "%s: adding node(%s) failed",
-		       __FUNCTION__, addnode);
-		return;
-	}
 
 	write_cache_file(config);
 	
@@ -2251,41 +2281,70 @@ HBDoMsg_T_ADDNODE(const char * type, struct node_info * fromnode,
 }
 
 
+static int
+hb_del_one_node(const char* node)
+{
+	struct node_info* thisnode = NULL;
+	
+	cl_log(LOG_INFO,
+	       "Deletinging node [%s] from configuration.",
+	       node);
+	
+	thisnode = lookup_node(node);
+	if (thisnode == NULL){
+		cl_log(LOG_ERR, "%s: node %s not found in config",
+		       __FUNCTION__, node);
+		return HA_FAIL;
+	}
+	
+	if (delete_node(node) != HA_OK){
+		cl_log(LOG_ERR, "%s: Deleting node(%s) failed",
+		       __FUNCTION__, node);
+		return HA_FAIL;
+	}
+	
+	return HA_OK;
+	
+}
+
+
 static void
 HBDoMsg_T_DELNODE(const char * type, struct node_info * fromnode,
 		  TIME_T msgtime, seqno_t seqno, const char * iface, struct ha_msg * msg)
 {
-	struct node_info* thisnode = NULL;
-	const char*	delnode;
+	const char*    nodelist;
+	const char*	p;
 	
-	
-	delnode =  ha_msg_value(msg, F_NODE);
-	if (delnode == NULL){
+	nodelist =  ha_msg_value(msg, F_NODELIST);
+	if (nodelist == NULL){
 		cl_log(LOG_ERR, "%s: node not found in msg",
 		       __FUNCTION__);
+		cl_log_message(LOG_INFO, msg);
 		return ;
 	}
 	
-	
-	cl_log(LOG_INFO,
-	       "Deletinging node [%s] from configuration.",
-	        delnode);
-	
-	thisnode = lookup_node(delnode);
-	if (thisnode == NULL){
-		cl_log(LOG_ERR, "%s: node %s not found in config",
-		       __FUNCTION__, delnode);
-		return;
-	}
-	
-	if (delete_node(delnode) != HA_OK){
-		cl_log(LOG_ERR, "%s: Deleting node(%s) failed",
-		       __FUNCTION__, delnode);
-		return;
+	p =  nodelist ; 
+	while(*p != 0){
+		char node[HOSTLENG];
+		int nodelen;
+		
+		while(*p == ' ') {
+			p++;
+		}
+		if (*p == 0){
+			break;
+		}
+		nodelen = strcspn(p, " \0") ;
+		memcpy(node, p, nodelen);
+		node[nodelen] = 0;
+		if (hb_del_one_node(node)!= HA_OK){
+			break;
+		}
+		p += nodelen;
 	}
 	
 	write_cache_file(config);
-
+	
 	return ;
 	
 }
@@ -5667,6 +5726,9 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.462  2005/10/31 20:40:51  gshi
+ * make hb_addnode/hb_delnode handle multiple nodes in one message
+ *
  * Revision 1.461  2005/10/29 21:35:06  gshi
  * The message from a child process to fifo should not be coded with authentication part
  *

@@ -14,7 +14,7 @@ HA_DIR=@sysconfdir@/ha.d
 . ${HA_DIR}/shellfuncs
 
 usage() {
-	echo "usage:"
+	echo "usage: hb_addnode <node> <node> ..."
 	exit 1
 }
 
@@ -24,27 +24,14 @@ then
 	usage
 fi
 
-if 
-  [ $# -ge 2 ]
-then
-	echo "$0: too many arguments"
-	usage
-	exit 1
-fi
-
-if
-  [ $# -ge 1 ]
-then
-  node=$1
-fi
-
-if [ $node = "--help" ]; then
+nodelist="$@"
+if [ "$nodelist" = "--help" ]; then
 	usage
 fi
 
 ha_clustermsg <<-!MSG
 	t=addnode
-	node=$node
+	nodelist=$nodelist
 !MSG
 
 
