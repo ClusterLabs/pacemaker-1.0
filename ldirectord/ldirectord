@@ -1,12 +1,12 @@
 #!/usr/bin/perl
-my($VERSION)=(qw$Id: ldirectord,v 1.126 2005/10/31 04:27:59 horms Exp $)[2];
+my($VERSION)=(qw$Id: ldirectord,v 1.127 2005/10/31 04:30:29 horms Exp $)[2];
 
 ######################################################################
 # ldirectord                 http://www.vergenet.net/linux/ldirectord/
 # Linux Director Daemon - run "perldoc ldirectord" for details
 #
-# (C) 1999-2003 Jacob Rief <jacob.rief@tiscover.com>
-# (C) 1999-2003 Horms <horms@verge.net.au>
+# 1999-2005 (C) Jacob Rief <jacob.rief@tiscover.com>,
+#               Horms <horms@verge.net.au> and others
 #
 # License:      GNU General Public License (GPL)
 #
@@ -41,9 +41,10 @@ Daemon to monitor remote services and control Linux Virtual Server
 
 =head1 SYNOPSIS
 
-B<ldirectord> [B<-d>] [B<-h>] I<configuration> 
+B<ldirectord> [B<-d|--debug>] [--] [I<configfile>] 
 B<start>|B<stop>|B<restart>|B<reload>|B<status>
 
+B<ldirectord> [B<-h|-?|--help|-v|--version>]
 
 =head1 DESCRIPTION
 
@@ -71,9 +72,11 @@ I<configuration>:
 This is the name for the configuration as specified in the file
 B</etc/ha.d/conf/>I<configuration>
 
-B<-d> Don't start as daemon. Useful for debugging.
+B<-d|--debug> Don't start as daemon and log verbosly. 
 
-B<-h> Help. Print user manual of ldirectord.
+B<-h|--help> Print user manual and exit.
+
+B<-v|--version> Print version and exit.
 
 B<start> the daemon for the specified configuration.
 
@@ -418,7 +421,8 @@ $QUIESCENT        = "yes";
 
 $CRLF = "\x0d\x0a";
 
-use Getopt::Std;
+use Getopt::Long;
+use Pod::Usage;
 #use English;
 #use Time::HiRes qw( gettimeofday tv_interval );
 use Socket;
@@ -428,10 +432,33 @@ use Sys::Syslog qw(:DEFAULT setlogsock);
 
 # command line options
 my @OLD_ARGV = @ARGV;
-getopts("dh");
+my $opt_d = '';
+my $opt_h = '';
+my $opt_v = '';
+Getopt::Long::Configure ("bundling", "no_auto_abbrev", "require_order");
+GetOptions("debug|d" => \$opt_d, 
+	   "help|h|?" => \$opt_h,
+	   "version|v" => \$opt_v) or usage();
 
-$DEBUG = 3 if (defined $opt_d);
+# main code
+if ($opt_h) {
+	exec_wrapper("/usr/bin/perldoc -U $LDIRECTORD");
+	&ld_exit(127, "Exec failed");
+}
+if ($opt_v) {
+	print("ldirectord  version $VERSION\n" .
+	      "1999-2005 Jacob Rief, Horms and others\n" .
+	      "<http://www.vergenet.net/linux/ldirectord/>\n".
+	      "\n" .
+	      "ldirectord comes with ABSOLUTELY NO WARRANTY.\n" .
+	      "This is free software, and you are welcome to redistribute it\n".
+	      "under certain conditions. " .
+		      "See the GNU General Public Licence for details.\n");
 
+	&ld_exit(0, "");
+}
+
+$DEBUG = 3 if ($opt_d);
 if ($DEBUG>0 and -f "./ipvsadm") {
 	$IPVSADM="./ipvsadm";
 } else {
@@ -444,27 +471,23 @@ if ($DEBUG>0 and -f "./ipvsadm") {
 	}
 }
 
-# main code
-if ($opt_h) {
-	&system_wrapper("/usr/bin/perldoc -U $LDIRECTORD");
-} else {
-	# There is a memory leak in perl's socket code when
-	# the default IO layer is used. So use "perlio" unless
-	# something else has been explicitly set.
-	# http://archive.develooper.com/perl5-porters@perl.org/msg85468.html
-	unless(defined($ENV{'PERLIO'})) {
-		$ENV{'PERLIO'} = "perlio";
-		exec_wrapper($0, @OLD_ARGV);
-	}
-
-	$initializing = 1;
-	ld_init();
-	ld_setup();
-	ld_start();
-	ld_cmd_children("start", %LD_INSTANCE);
-	$initializing = 0;
-	ld_main();
+# There is a memory leak in perl's socket code when
+# the default IO layer is used. So use "perlio" unless
+# something else has been explicitly set.
+# http://archive.develooper.com/perl5-porters@perl.org/msg85468.html
+unless(defined($ENV{'PERLIO'})) {
+	$ENV{'PERLIO'} = "perlio";
+	exec_wrapper($0, @OLD_ARGV);
 }
+
+$initializing = 1;
+ld_init();
+ld_setup();
+ld_start();
+ld_cmd_children("start", %LD_INSTANCE);
+$initializing = 0;
+ld_main();
+
 &ld_rm_file("$RUNPID.$CFGNAME.pid");
 &ld_exit(0, "Reached end of \"main\"");
 
@@ -617,10 +640,7 @@ sub ld_init
 
 sub usage
 {
-	init_error("Usage ldirectord [-d] [configfile] " .
-		"\{start|stop|restart|try-restart|reload|force-reload|" .
-		"status\}\n" .
-		"Type ldirectord -h for more information");
+	pod2usage(-input => $LDIRECTORD, -exitval => -1);
 }
 
 sub init_error
