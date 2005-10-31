@@ -24,5 +24,4 @@ LinuxHA_SubResource root/cimv2 LinuxHA_SubResourceProvider cmpiLinuxHA_SubResour
 # Association, between Resource Group and its sub group 
 LinuxHA_SubGroup root/cimv2 LinuxHA_SubGroupProvider cmpiLinuxHA_SubGroupProvider instance association 
 #Indication
-CIM_InstModification root/cimv2 LinuxHA_IndicationProvider cmpiLinuxHA_IndicationProvider indication
-LinuxHA_InstModification root/cimv2 LinuxHA_IndicationProvider cmpiLinuxHA_IndicationProvider indication
+LinuxHA_Indication root/cimv2 LinuxHA_IndicationProvider cmpiLinuxHA_IndicationProvider indication
