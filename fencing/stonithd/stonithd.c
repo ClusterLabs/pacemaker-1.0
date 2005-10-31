@@ -1,4 +1,4 @@
-/* $Id: stonithd.c,v 1.68 2005/10/29 04:30:42 sunjd Exp $ */
+/* $Id: stonithd.c,v 1.69 2005/10/31 07:36:24 sunjd Exp $ */
 
 /* File: stonithd.c
  * Description: STONITH daemon for node fencing
@@ -926,7 +926,6 @@ handle_msg_tstit(struct ha_msg* msg, void* private_data)
 {
 	const char * target = NULL;
 	const char * from = NULL;
-	const char * tmp_private_data = NULL;
 	int call_id;
 	int timeout;
 	int optype;
@@ -984,16 +983,12 @@ handle_msg_tstit(struct ha_msg* msg, void* private_data)
 		return;
 	}
 
-	if ( (tmp_private_data = cl_get_string(msg, F_STONITHD_PDATA)) == NULL) {
-		stonithd_log(LOG_DEBUG, "handle_msg_tstit: no F_STONITHD_PDATA "
-			     "field.");
-	}
-
 	if ((srsc = get_local_stonithobj_can_stonith(target, NULL)) != NULL ) {
 		st_op = g_new(stonith_ops_t, 1);
 		st_op->node_list = g_string_new("");
 		st_op->node_name = g_strdup(target);
-		st_op->private_data = g_strdup(tmp_private_data);
+		st_op->node_uuid = NULL;
+		st_op->private_data = NULL;
 		st_op->optype  = optype;
 		st_op->call_id = call_id;
 		st_op->timeout = timeout;
@@ -1123,7 +1118,7 @@ init_client_API_handler(void)
 	 * uid=hacluster to connect.
 	 */
         uid_hashtable = g_hash_table_new(g_direct_hash, g_direct_equal);
-        /* Add root;s uid */
+        /* Add root's uid */
         g_hash_table_insert(uid_hashtable, GUINT_TO_POINTER(0), &tmp);
 
         pw_entry = getpwnam(HA_CCMUSER);
@@ -1838,8 +1833,6 @@ stonithop_result_to_local_client( stonith_ops_t * st_op, gpointer data)
   	    ||(ha_msg_add(reply, F_STONITHD_APIRPL, ST_STRET) != HA_OK ) 
 	    ||(ha_msg_add_int(reply, F_STONITHD_OPTYPE, st_op->optype) != HA_OK)
 	    ||(ha_msg_add(reply, F_STONITHD_NODE, st_op->node_name) != HA_OK)
-	    ||(st_op->node_uuid == NULL
-		|| ha_msg_add(reply, F_STONITHD_NODE_UUID, st_op->node_uuid) != HA_OK)
 	    ||(st_op->node_list == NULL
 		|| ha_msg_add(reply, F_STONITHD_NLIST,
 			((GString *)(st_op->node_list))->str) != HA_OK )
@@ -1852,11 +1845,26 @@ stonithop_result_to_local_client( stonith_ops_t * st_op, gpointer data)
 			     "cannot add fields.");
 		return ST_FAIL;
 	}
-	if (st_op->private_data != NULL) {
-		if ( ha_msg_add(reply, F_STONITHD_PDATA, st_op->private_data) != HA_OK) {
+
+	if (st_op->node_uuid == NULL) {
+		ZAPMSG(reply);
+		stonithd_log(LOG_ERR, "stonithop_result_to_local_client: "
+			     "st_op->node_uuid == NULL.");
+		return ST_FAIL;
+	} else {
+		if (ha_msg_add(reply, F_STONITHD_NODE_UUID, st_op->node_uuid) != HA_OK) {
 			ZAPMSG(reply);
 			stonithd_log(LOG_ERR, "stonithop_result_to_local_client: "
-			     "Failed to  add F_STONITHD_PDATA field.");
+			     "Failed to add F_STONITHD_NODE_UUID field.");
+			return ST_FAIL;
+		}
+	}
+
+	if (st_op->private_data != NULL) {
+		if (ha_msg_add(reply, F_STONITHD_PDATA, st_op->private_data) != HA_OK) {
+			ZAPMSG(reply);
+			stonithd_log(LOG_ERR, "stonithop_result_to_local_client: "
+			     "Failed to add F_STONITHD_PDATA field.");
 			return ST_FAIL;
 		}
 	}
@@ -1909,14 +1917,6 @@ stonithop_result_to_other_node( stonith_ops_t * st_op, gpointer data)
 			     "ha_msg_add: cannot add field.");
 		ZAPMSG(reply);
 		return ST_FAIL;
-	}
-	if (st_op->private_data == NULL) {
-		if (ha_msg_add(reply, F_STONITHD_PDATA, st_op->private_data) != HA_OK) {
-			stonithd_log(LOG_ERR, "stonithop_result_to_other_node: "
-			     "ha_msg_add: failed to add F_STONITHD_PDATA field.");
-			ZAPMSG(reply);
-			return ST_FAIL;
-		}
 	}
 
 	if (hb == NULL) {
@@ -2000,8 +2000,6 @@ require_others_to_stonith(stonith_ops_t * st_op)
 					T_WHOCANST : T_STIT) != HA_OK)
 	    ||(ha_msg_add(msg, F_ORIG, local_nodename) != HA_OK)
 	    ||(ha_msg_add(msg, F_STONITHD_NODE, st_op->node_name) != HA_OK)
-	    ||(st_op->node_uuid == NULL
-	       || ha_msg_add(msg, F_STONITHD_NODE_UUID, st_op->node_uuid) != HA_OK)
 	    ||(ha_msg_add_int(msg, F_STONITHD_OPTYPE, st_op->optype) != HA_OK)
 	    ||(ha_msg_add_int(msg, F_STONITHD_TIMEOUT, st_op->timeout) != HA_OK)
 	    ||(ha_msg_add_int(msg, F_STONITHD_CALLID, st_op->call_id) 
@@ -2010,14 +2008,6 @@ require_others_to_stonith(stonith_ops_t * st_op)
 					"cannot add field.");
 		ZAPMSG(msg);
 		return ST_FAIL;
-	}
-	if (st_op->private_data != NULL) {
-		if (ha_msg_add(msg, F_STONITHD_PDATA, st_op->private_data) != HA_OK) {
-			stonithd_log(LOG_ERR, "require_others_to_stonith: "
-					"Failed to add F_STONITHD_PDATA field.");
-			ZAPMSG(msg);
-			return ST_FAIL;
-		}
 	}
 
 	if (hb == NULL) {
@@ -2811,6 +2801,7 @@ free_stonith_ops_t(stonith_ops_t * st_op)
 
 	stonithd_log2(LOG_DEBUG, "free_stonith_ops_t: begin.");
 	ZAPGDOBJ(st_op->node_name);
+	ZAPGDOBJ(st_op->node_uuid);
 
 	ZAPGDOBJ(st_op->private_data);
 
@@ -3069,6 +3060,9 @@ adjust_debug_level(int nsig, gpointer user_data)
 
 /* 
  * $Log: stonithd.c,v $
+ * Revision 1.69  2005/10/31 07:36:24  sunjd
+ * donnot keep the private_data on remote nodes; initialize and release node_uuid field
+ *
  * Revision 1.68  2005/10/29 04:30:42  sunjd
  * donnot free uuid here
  *
