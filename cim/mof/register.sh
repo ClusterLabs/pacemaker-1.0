@@ -1,7 +1,5 @@
 #!/bin/sh
 
-TMP=`mktemp`
-
 #---------- openwbem functions ---------------------------------------
 openwbem_register ()
 {
@@ -34,7 +32,7 @@ pegasus_add_module ()
 {
         mof_file=$1
         reg_file=$2
-        out_file=$TMP
+        out_file=$REGFILE
 
         modules=`cat $reg_file 2> /dev/null | grep -v '^[[:space:]]*#.*' | cut -d ' ' -f 4 | sort | uniq`
         for module in $modules; do
@@ -57,7 +55,7 @@ pegasus_add_provider ()
 {
         mof_file=$1
         reg_file=$2
-        out_file=$TMP
+        out_file=$REGFILE
 
         providers=`cat $reg_file 2> /dev/null | grep -v '^[[:space:]]*#.*' | cut -d ' ' -f 3-4 | sort | uniq`
         set -- $providers
@@ -81,7 +79,7 @@ pegasus_add_capability ()
 {
         mof_file=$1
         reg_file=$2
-        out_file=$TMP
+        out_file=$REGFILE
 
         capid=0
         cat $reg_file | grep -v '^[[:space:]]*#.*' | \
@@ -135,7 +133,7 @@ pegasus_register ()
                 state=active
         else
                 CIMMOF=cimmofl
-                PEGASUSREPOSITORY="/opt/pegasus/repository"
+                PEGASUSREPOSITORY="/opt/tog-pegasus/repository"
                 CIMMOF="$CIMMOF -R $PEGASUSREPOSITORY"
                 state=inactive
         fi
@@ -145,7 +143,7 @@ pegasus_register ()
         pegasus_add_capability $mof_file $reg_file
 
         $CIMMOF -n root/cimv2 $mof_file
-        $CIMMOF -n root/PG_Interop $TMP
+        $CIMMOF -n root/PG_Interop $REGFILE
 }
 
 pegasus_unregister ()
@@ -160,25 +158,24 @@ sfcb_do_register()
 {
         mof_file=$1
         reg_file=$2
-        out_file=$TMP
+        out_file=$REGFILE
 
         cat $reg_file | grep -v '^[[:space:]]*#.*' | \
         while read classname namespace providername providermodule types
         do
+        echo "Register class $classname"
 cat >> $out_file <<EOF
-#############################
 [$classname]
-provider: $providername
-location: $providermodule
-type: $types
-namespace: $namespace
-#############################
+    provider: $providername
+    location: $providermodule
+    type: $types
+    namespace: $namespace
+
 EOF
         done
 
-
         ## register
-        echo register to sfcb ...
+        echo register to sfcb [ mof is $mof_file ] ...
         sfcbstage -r $out_file $mof_file
         
         if [ $? -eq 1 ]; then
@@ -195,26 +192,48 @@ EOF
  
 }
 
-
-sfcb_register () {
+sfcb_running_check () 
+{
         ps -C sfcbd > /dev/null 2>&1
         if [ $? -eq 0 ];
         then
                 echo "sfcbd is running, please stop it first."
                 exit
         fi
+}
 
+sfcb_register () 
+{
+        sfcb_running_check
+
+        REGFILE=/tmp/`basename $2`.reg
         sfcb_do_register $1 $2
 
 } 
 
 sfcb_unregister () 
 {
-        echo "FixME"
-        exit
+        sfcb_running_check
+
+        echo unregister to sfcb [ mof is $mof_file ] ...
+        sfcbunstage -r `basename $2`.reg $1
+
+        if [ $? -eq 1 ]; then
+                echo failed to register, exit
+                exit
+        fi
+
+        echo rebuild sfcb repository ...
+        sfcbrepos -f
+        if [ $? -eq 1 ]; then
+                echo failed to rebuild sfcb, exit
+                exit
+        fi
 }
 
 #========== main ============================================
+
+rm -rf $REGFILE
 
 mof_file=""
 reg_file=""
@@ -287,9 +306,9 @@ UNREG_FUNC=${cimom}_unregister
 if test "x$unregister" != "xyes"; then
         $REG_FUNC $mof_file $reg_file
 else
-        $REG_UNFUNC $mof_file $reg_file
+        $UNREG_FUNC $mof_file $reg_file
 fi
- 
-rm -rf $TMP
+
+rm -rf $REGFILE
 
 #============== end of file =======================================
