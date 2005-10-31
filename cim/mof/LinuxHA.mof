@@ -487,7 +487,10 @@ class LinuxHA_HostedResource : CIM_HostedService {
 
 [ Indication,
         Provider ("cmpi:cmpiLinuxHA_IndicationProvider") ]
-class LinuxHA_InstModification : CIM_InstModification {
+class LinuxHA_Indication : CIM_ProcessIndication {
+        uint16 Type;
+        string Message;
+        datetime Time;
 };
 
 
