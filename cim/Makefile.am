@@ -128,7 +128,7 @@ libcmpiLinuxHA_SubResourceProvider_la_CFLAGS  =	-I$(CMPIHEADERS)
 libcmpiLinuxHA_SubResourceProvider_la_LDFLAGS =	$(COMMONLIBS) liblinuxha_info.la 
 #--------------------------------------------------------------
 libcmpiLinuxHA_IndicationProvider_la_SOURCES = cmpi_utils.c cmpi_ha_indication.c \
-                                                      cmpi_ha_indication_provider.c
+                                               cmpi_ha_indication_provider.c
 libcmpiLinuxHA_IndicationProvider_la_CFLAGS  = -I$(CMPIHEADERS)
 libcmpiLinuxHA_IndicationProvider_la_LDFLAGS = $(COMMONLIBS) liblinuxha_info.la
 
