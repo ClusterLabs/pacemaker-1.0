@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-my($VERSION)=(qw$Id: ldirectord,v 1.125 2005/10/30 05:43:23 horms Exp $)[2];
+my($VERSION)=(qw$Id: ldirectord,v 1.126 2005/10/31 04:27:59 horms Exp $)[2];
 
 ######################################################################
 # ldirectord                 http://www.vergenet.net/linux/ldirectord/
@@ -406,7 +406,10 @@ $AUTOCHECK        = "no";
 $CHECKINTERVAL    = 10;
 $CHECKTIMEOUT     = 5;
 $CONNECTTIMEOUT   = 0;
-$LDIRECTORD       = "/usr/sbin/ldirectord"; # path onto myself
+$LDIRECTORD       = ld_find_cmd("ldirectord", 1);
+if (! defined $LDIRECTORD) {
+	$LDIRECTORD = "/usr/sbin/ldirectord";
+}
 $LDIRLOG          = "/var/log/ldirectord.log";
 $LD_TERM_CALLED   = 0;
 $NEGOTIATETIMEOUT = 0;
@@ -3311,4 +3314,47 @@ sub ld_gethostservbyname{
 		}
 	}
 	return($ip);
+}
+
+
+# ld_find_cmd_path
+# Find executable in path
+# pre: cmd: command to find
+#      path: ':' delimited paths to check
+#      relative: if set, allow cmd to be a relative path, 
+#                which is checked first
+# return: path to command
+#         undef if not found
+sub ld_find_cmd_path
+{
+	my ($cmd, $path, $relative) = (@_);
+
+	if (defined $relative  and $relative and -f "$cmd" ) {
+		return $cmd;
+	}
+	if ($cmd =~ /^\// and -x "$cmd" ) {
+		return $cmd;
+	}
+	if ($cmd =~ /\//) {
+		return undef;
+	}
+
+	for my $p (split /:/, $path) {
+		if ( -x "$p/$cmd" ) {
+			return "$p/$cmd";
+		}
+	}
+	return undef;
+}
+
+# ld_find_cmd_path
+# Find executable in $ENV{'PATH'}
+# pre: cmd: command to find
+#      relative: if set, allow cmd to be a relative path, 
+#                which is checked first
+# return: path to command
+#         undef if not found
+sub ld_find_cmd
+{
+	return ld_find_cmd_path($_[0], $ENV{'PATH'}, $_[1]);
 }
