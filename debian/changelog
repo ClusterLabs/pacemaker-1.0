@@ -1,8 +1,10 @@
 heartbeat-2 (2.0.3-1) unstable; urgency=low
 
   * New Upstream
+  * Make sure adduser is passed the --system flag
+    (see: #336180)
 
- -- Simon Horman <horms@debian.org>  Wed, 19 Oct 2005 19:11:40 +0900
+ -- Simon Horman <horms@debian.org>  Mon, 31 Oct 2005 18:19:25 +0900
 
 heartbeat-2 (2.0.2-5) unstable; urgency=low
 

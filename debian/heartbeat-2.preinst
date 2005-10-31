@@ -12,7 +12,7 @@ if ! getent group haclient > /dev/null ; then
 	addgroup --system --group haclient > /dev/null
 fi
 if ! getent passwd hacluster > /dev/null ; then
-	adduser --no-create-home \
+	adduser --system --no-create-home \
 		--ingroup haclient \
 		--gecos "Heartbeat System Account" \
 		--no-create-home --disabled-login \
