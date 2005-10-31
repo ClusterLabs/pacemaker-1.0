@@ -45,76 +45,42 @@
 #define DEFAULT_TIME_OUT        5
 #define LOGGER_ENTITY           "cim-ind"
 #define HB_CLIENT_ID            "cmpi_indication"
-#define IND_CLASSNAME           "LinuxHA_InstModification"
 #define IND_NAMESPACE           "root/cimv2"
 
 typedef struct {
+        char * classname;
         CMPIBroker  * broker;
         CMPIContext * context;
         CMPIString  * filter;
 } cmpi_ind_env_t;
 
 
-static int nodestatus_event_hook(const char * node, const char * status);
-static int ifstatus_event_hook(const char * node, 
-                        const char * lnk, const char * status);
-static int membership_event_hook(const char * node, SaClmClusterChangesT status);
+enum ind_type { IND_TYPE_CLUSTER = 0, /* cluster-type indicatoin */
+                IND_TYPE_NODE,        /* node-type indication */
+                IND_TYPE_MEMBERSHIP,  /* membership-type indication */       
+                IND_TYPE_RESOURCE     /* resource-type indication */
+};
 
-static int ind_update_instances (char * class_name);
+struct cmpi_ind_data {
+        char * message;   /* indication message */
+        enum ind_type type;    /* type */
+};
+
+static int nodestatus_event_hook(const char * node, const char * status);
+static int ifstatus_event_hook(const char * node, const char * lnk, 
+                               const char * status);
+static int membership_event_hook(const char * node, 
+                                 SaClmClusterChangesT status);
+
 static int ind_generate_indication (void * data);
-static void ind_stop_thread(int a);
+static void ind_stop_thread(int ano);
 static int ind_main_loop (void);
 static void * ind_thread_func(void * param);
 
 
 static cmpi_ind_env_t * ind_env = NULL;
 static int keep_running = 0;
-static CMPIInstance * source_instance = NULL;
-static CMPIInstance * previous_instance = NULL;
-
-
-/* using pthread */
 static pthread_t ind_thread_id = 0;
-
-static int
-ind_update_instances (char * class_name)
-{
-        CMPIObjectPath * op = NULL;
-        CMPIInstance * new_instance = NULL;
-        CMPIStatus rc;
-        
-        ASSERT(ind_env);
-
-        /* FIXME: key:value not presented */
-        op = CMNewObjectPath(ind_env->broker, IND_NAMESPACE, class_name, &rc);
-        
-        if ( CMIsNullObject(op) ) {
-                cl_log(LOG_ERR, "%s: can't create op", __FUNCTION__);
-                return HA_FAIL;
-        }
-
-        new_instance = CBGetInstance(ind_env->broker, 
-                                     ind_env->context, op, NULL, &rc);
-
-        if ( CMIsNullObject(new_instance) ) {
-                cl_log(LOG_ERR, "%s: failed to get instance", __FUNCTION__);
-                return HA_FAIL;
-        }
-
-        if ( previous_instance ) {
-                CMRelease ( previous_instance);
-                previous_instance = NULL;
-        }
-
-        if ( source_instance ) {
-                previous_instance = CMClone(source_instance, &rc);
-                CMRelease ( source_instance );
-        }
-
-        source_instance = CMClone(new_instance, &rc);
-        
-        return HA_OK;
-}
 
 static int
 ind_generate_indication (void * data)
@@ -124,18 +90,18 @@ ind_generate_indication (void * data)
         CMPIStatus rc;
         CMPIDateTime * date_time = NULL;
         CMPIArray * array = NULL;
-        char * class_name = NULL;
+        struct cmpi_ind_data * ind_data = NULL;
 
-        cl_log(LOG_INFO, "%s: nodestatus changed", __FUNCTION__);
+
+        ind_data = (struct cmpi_ind_data *) data;
+
+        cl_log(LOG_INFO, "%s: status changed, genereate indication.", __FUNCTION__);
 
         ASSERT(ind_env);
 
-        /* update previous_instance and source_instance */
-        ind_update_instances (class_name);
-
         /* create indication instance and set properties */
         op = CMNewObjectPath(ind_env->broker, 
-                             IND_NAMESPACE, IND_CLASSNAME, &rc);
+                             IND_NAMESPACE, ind_env->classname, &rc);
 
         instance = CMNewInstance(ind_env->broker, op, &rc);
         
@@ -143,23 +109,15 @@ ind_generate_indication (void * data)
         date_time = CMNewDateTime(ind_env->broker, &rc);
         array = CMNewArray(ind_env->broker, 0, CMPI_string, &rc);
 
-        class_name = (char *)data;
-        CMSetProperty(instance, "SourceInstance", 
-                      source_instance, CMPI_instance); 
 
-        CMSetProperty(instance, "PreviousInstance",
-                      previous_instance, CMPI_instance);
-
-        CMSetProperty(instance, "IndicationTime",
-                      &date_time, CMPI_dateTime);
-
-        CMSetProperty(instance, "IndicationIdentifier",
-                      class_name, CMPI_chars);
-
-        CMSetProperty(instance, "CorrelatedIndications",
-                      &array, CMPI_stringA);
+        CMSetProperty(instance, "Message", ind_data->message, CMPI_chars);
+        CMSetProperty(instance, "Time", &date_time, CMPI_dateTime);
+        CMSetProperty(instance, "Type", &ind_data->type, CMPI_uint16);
                 
         /* deliver indication */
+
+        cl_log(LOG_INFO, "%s: deliver indication", __FUNCTION__);
+
         CBDeliverIndication(ind_env->broker, ind_env->context, 
                             IND_NAMESPACE, instance);
 
@@ -170,33 +128,64 @@ ind_generate_indication (void * data)
 static int 
 nodestatus_event_hook(const char * node, const char * status)
 {
-        /* FIXME: not completed */
-        char class_name [] = "LinuxHA_ClusterNode";
+        struct cmpi_ind_data * data = NULL;
         int ret = 0;
 
-        ret = ind_generate_indication(class_name);
-        return HA_OK;
+        cl_log(LOG_INFO, "%s: node status changed", __FUNCTION__);
+
+        data = (struct cmpi_ind_data *) 
+                malloc(sizeof(struct cmpi_ind_data));
+
+        data->type = IND_TYPE_NODE;
+        data->message = strdup("node status changed");
+
+        ret = ind_generate_indication(data);
+
+        free (data);
+
+        return ret;
 }
 
 static int 
 ifstatus_event_hook(const char * node, const char * lnk, const char * status)
 {
-        /* FIXME: not completed */
+        struct cmpi_ind_data * data = NULL;
+        int ret = 0;
+
         cl_log(LOG_INFO, "%s: ifstatus changed", __FUNCTION__);
-        return HA_OK;
+
+        data = (struct cmpi_ind_data *) 
+                malloc(sizeof(struct cmpi_ind_data));
+
+        data->type = IND_TYPE_NODE;
+        data->message = strdup("if status changed");
+
+        ret = ind_generate_indication(data);
+
+        free (data);
+
+        return ret;
 }
 
 static int 
 membership_event_hook(const char * node, SaClmClusterChangesT status)
 {
-        /* FIXME: not completed */
-        char class_name [] = "LinuxHA_ClusterNode";
+        struct cmpi_ind_data * data = NULL;
         int ret = 0;
 
-        cl_log(LOG_INFO, "%s: membership changed", __FUNCTION__);
+        cl_log(LOG_INFO, "%s: membership status changed", __FUNCTION__);
 
-        ret = ind_generate_indication(class_name);
-        return HA_OK;
+        data = (struct cmpi_ind_data *) 
+                malloc(sizeof(struct cmpi_ind_data));
+
+        data->type = IND_TYPE_MEMBERSHIP;
+        data->message = strdup("membership status changed");
+
+        ret = ind_generate_indication(data);
+
+        free (data);
+
+        return ret;
 }
 
 
@@ -211,8 +200,10 @@ ind_thread_func(void * param)
 {
         int ret = 0;
 
+
         DEBUG_ENTER();
-        DEBUG_PID();
+
+        CBAttachThread(ind_env->broker, ind_env->context);
 
         if ( ! get_hb_initialized() ) {
                 if ( linuxha_initialize(HB_CLIENT_ID, 0) != HA_OK ){
@@ -244,6 +235,9 @@ ind_thread_func(void * param)
         if ( get_hb_initialized() ) {
                 linuxha_finalize();
         }
+
+        CBDetachThread(ind_env->broker, ind_env->context);
+
 
         DEBUG_LEAVE();
 
@@ -288,6 +282,7 @@ ind_main_loop ()
                         return HA_FAIL;
                 } else if ( ret == 0 ) {         /* timeout */
                         ping_membership(&membership_fd);
+                        cl_log(LOG_INFO, "%s: i am alive", __FUNCTION__);
                         continue;
                 } 
 
@@ -320,11 +315,11 @@ ind_main_loop ()
  * interface
  ****************************************************************/
 
-
-int 
-ha_indication_initialize(CMPIBroker * broker, 
-                              CMPIContext * context, 
-                              CMPISelectExp * filter, CMPIStatus * rc)
+int
+haind_activate(char * classname, CMPIBroker * broker, CMPIContext * ctx, 
+               CMPIResult * rslt, CMPISelectExp * filter, const char * type, 
+               CMPIObjectPath * classpath, CMPIBoolean firstactivation, 
+               CMPIStatus * rc)
 {
         pthread_attr_t tattr;
 
@@ -334,8 +329,9 @@ ha_indication_initialize(CMPIBroker * broker,
         ind_env = malloc(sizeof(cmpi_ind_env_t));
 
         ind_env->broker = broker;
-        ind_env->context = context;
+        ind_env->context = ctx;
         ind_env->filter = CMGetSelExpString(filter, rc);
+        ind_env->classname = strdup(classname);
 
         ha_set_event_hooks(nodestatus_event_hook, 
                           ifstatus_event_hook, membership_event_hook);
@@ -344,6 +340,8 @@ ha_indication_initialize(CMPIBroker * broker,
         pthread_attr_init(&tattr);
         pthread_attr_setdetachstate(&tattr, PTHREAD_CREATE_DETACHED);
 
+        /* should use broker->xft->newThread(...) ? */
+        CBPrepareAttachThread(broker, ctx);
         pthread_create(&ind_thread_id, &tattr, ind_thread_func, ind_env);
 
         DEBUG_LEAVE();
@@ -353,9 +351,10 @@ ha_indication_initialize(CMPIBroker * broker,
 
 
 int 
-ha_indication_finalize(CMPIBroker * broker, 
-                            CMPIContext * context, 
-                            CMPISelectExp * filter, CMPIStatus * rc)
+haind_deactivate(char * classname, CMPIBroker * broker, CMPIContext * ctx,
+                 CMPIResult * rslt, CMPISelectExp * filter, const char * type,
+                 CMPIObjectPath * classpath, CMPIBoolean lastactivation,
+                 CMPIStatus * rc)
 {
         /* destroy the indication thread */
         keep_running = 0;

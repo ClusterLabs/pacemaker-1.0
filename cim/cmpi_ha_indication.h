@@ -31,11 +31,15 @@
 #include "linuxha_info.h"
 
 
-int ha_indication_initialize(CMPIBroker * broker, CMPIContext * ctx, 
-                             CMPISelectExp * filter, CMPIStatus * rc);
+int haind_activate(char * classname, CMPIBroker * broker, CMPIContext * ctx, 
+                   CMPIResult * rslt, CMPISelectExp * filter, const char * type, 
+                   CMPIObjectPath * classpath, CMPIBoolean firstactivation, 
+                   CMPIStatus * rc);
 
-int ha_indication_finalize(CMPIBroker * broker, CMPIContext * ctx, 
-                           CMPISelectExp * filter, CMPIStatus * rc);
+int haind_deactivate(char * classname, CMPIBroker * broker, CMPIContext * ctx,
+                     CMPIResult * rslt, CMPISelectExp * filter, const char * type,
+                     CMPIObjectPath * classpath, CMPIBoolean lastactivation,
+                     CMPIStatus * rc);
  
                         
 #endif
