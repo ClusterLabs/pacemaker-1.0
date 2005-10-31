@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.462 2005/10/31 20:40:51 gshi Exp $ */
+/* $Id: heartbeat.c,v 1.463 2005/10/31 22:37:06 gshi Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -2033,6 +2033,15 @@ free_one_hist_slot(struct msg_xmit_hist* hist, int slot )
 	return;
 }
 
+static void
+reset_lowest_acknode(void)
+{
+	struct msg_xmit_hist* hist = &msghist;	
+
+	hist->lowest_acknode = NULL;
+	
+	return;
+}
 
 static void
 HBDoMsg_T_ACKMSG(const char * type, struct node_info * fromnode,
@@ -2303,6 +2312,7 @@ hb_del_one_node(const char* node)
 		return HA_FAIL;
 	}
 	
+	reset_lowest_acknode();
 	return HA_OK;
 	
 }
@@ -5726,6 +5736,10 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.463  2005/10/31 22:37:06  gshi
+ * lowest_acknode must be reset after node deletion because the pointer
+ * saved there are not necessarily the same node as before
+ *
  * Revision 1.462  2005/10/31 20:40:51  gshi
  * make hb_addnode/hb_delnode handle multiple nodes in one message
  *
