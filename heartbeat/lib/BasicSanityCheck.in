@@ -799,7 +799,6 @@ Base64MD5Test() {
 	fi
 	echo "Starting base64 and md5 algorithm tests" | tee -a $LOGFILE
 	$BASE64_MD5_TEST >> $LOGFILE 2>&1
-	echo $BASE64_MD5_TEST
 	ret=$?
 	errcount=`expr $errcount + $ret`
 	if
