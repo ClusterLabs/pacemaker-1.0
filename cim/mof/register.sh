@@ -175,7 +175,7 @@ EOF
         done
 
         ## register
-        echo register to sfcb [ mof is $mof_file ] ...
+        echo register to sfcb ...
         sfcbstage -r $out_file $mof_file
         
         if [ $? -eq 1 ]; then
