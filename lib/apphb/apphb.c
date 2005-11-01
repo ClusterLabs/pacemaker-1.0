@@ -1,4 +1,4 @@
-/* $Id: apphb.c,v 1.22 2005/11/01 02:01:50 sunjd Exp $ */
+/* $Id: apphb.c,v 1.23 2005/11/01 15:37:57 davidlee Exp $ */
 /*
  * apphb.c: application heartbeat library code.
  *
@@ -42,8 +42,14 @@
 #define G_STATIC_MUTEX_LOCK(lock) g_static_mutex_lock(lock)
 #define G_STATIC_MUTEX_UNLOCK(lock) g_static_mutex_unlock(lock)
 
+/*
+ * G_DECLARE_STATIC_MUTEX():
+ *	An empty ";" declaration in code breaks some compilers.
+ *	So this non-empty macro definition supplies its trailing ";".
+ *	Uses of this macro should not include the ";".
+ */
 #define G_DECLARE_STATIC_MUTEX(var)	\
-	static GStaticMutex var = G_STATIC_MUTEX_INIT
+	static GStaticMutex var = G_STATIC_MUTEX_INIT;
 
 #define G_THREAD_INIT(vtable)		\
 	if ( !g_thread_supported() ) {	\
@@ -69,7 +75,7 @@ static int apphb_getrc(void);
 static int
 apphb_getrc(void)
 {
-	G_DECLARE_STATIC_MUTEX(lock);
+	G_DECLARE_STATIC_MUTEX(lock)
 	struct apphb_rc * rcs;
 	int		rc;
 	struct IPC_MESSAGE * msg;
@@ -94,7 +100,7 @@ apphb_getrc(void)
 int
 apphb_register(const char * appname, const char * appinstance)
 {
-	G_DECLARE_STATIC_MUTEX(lock);
+	G_DECLARE_STATIC_MUTEX(lock)
 	int	err;
 	struct IPC_MESSAGE Msg;
 	struct apphb_signupmsg msg;
@@ -182,7 +188,7 @@ apphb_register(const char * appname, const char * appinstance)
 int
 apphb_unregister(void)
 {
-	G_DECLARE_STATIC_MUTEX(lock);
+	G_DECLARE_STATIC_MUTEX(lock)
 	int	rc = 0;
 	int	err;
 	struct apphb_msg msg;
@@ -243,7 +249,7 @@ apphb_unregister(void)
 int
 apphb_setinterval(unsigned long hbms)
 {
-	G_DECLARE_STATIC_MUTEX(lock);
+	G_DECLARE_STATIC_MUTEX(lock)
 	struct apphb_msmsg	msg;
 	struct IPC_MESSAGE	Msg;
 	int			err;
@@ -285,7 +291,7 @@ apphb_setinterval(unsigned long hbms)
 int
 apphb_setwarn(unsigned long hbms)
 {
-	G_DECLARE_STATIC_MUTEX(lock);
+	G_DECLARE_STATIC_MUTEX(lock)
 	struct apphb_msmsg	msg;
 	struct IPC_MESSAGE	Msg;
 	int			err;
@@ -331,7 +337,7 @@ apphb_setwarn(unsigned long hbms)
 int
 apphb_hb(void)
 {
-	G_DECLARE_STATIC_MUTEX(lock);
+	G_DECLARE_STATIC_MUTEX(lock)
 	struct apphb_msg msg;
 	struct IPC_MESSAGE	Msg;
 
