@@ -8,9 +8,10 @@
 #
 #
 
-#if quite set to 1, result will not be printed
+# set quite to 0 to disable result outputs
 quite=0
 
+# loop iteration
 iteration=$1
 
 if [ X"$iteration" = "X" ]; 
@@ -18,13 +19,23 @@ then
     iteration=1
 fi
 
-WBEMCLI="wbemcli -nl"
-
 #set to your username, password, host
 USERNAME=root
 PASSWD=hadev
 HOST=localhost
 NAMESPACE=root/cimv2
+
+
+
+WBEMCLI=`which wbemcli`
+
+if test $? != 0; then
+        echo "wbemcli not found, please install sblim-wbemcli"
+        exit 1
+fi
+
+WBEMCLI="$WBEMCLI -nl"
+
 
 INST_CLASSES="LinuxHA_Cluster 
               LinuxHA_SoftwareIdentity
