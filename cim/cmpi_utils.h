@@ -39,9 +39,9 @@
 
 #ifndef ASSERT
 #ifdef HAVE_STRINGIZE
-#       define  ASSERT(X)       {if(!(X)) cmpi_assert(#X, __LINE__, __FILE__);}
+#       define  ASSERT(X)    {if(!(X)) cmpi_assert(#X, __LINE__, __FILE__);}
 #else
-#       define  ASSERT(X)       {if(!(X)) cmpi_assert("X", __LINE__, __FILE__);}
+#       define  ASSERT(X)    {if(!(X)) cmpi_assert("X", __LINE__, __FILE__);}
 #endif
 #endif
 
@@ -68,7 +68,7 @@ int free_2d_array(char ** array);
 char * uuid_to_str(const cl_uuid_t * uuid);
 
 int assoc_source_class_is_a(const char * source_class_name, char * class_name,
-                        CMPIBroker * broker, CMPIObjectPath * cop); 
+                            CMPIBroker * broker, CMPIObjectPath * cop); 
 
 
 typedef int (* assoc_pred_func_t) 
