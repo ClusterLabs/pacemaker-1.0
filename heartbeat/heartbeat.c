@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.463 2005/10/31 22:37:06 gshi Exp $ */
+/* $Id: heartbeat.c,v 1.464 2005/11/01 00:27:01 gshi Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -2218,10 +2218,65 @@ HBDoMsg_T_ACKMSG(const char * type, struct node_info * fromnode,
 
 
 static int
+getnodes(const char* nodelist, char** nodes, int* num){
+	
+	const char* p;
+	int i;
+	int j;
+	
+
+	memset(nodes, 0, *num);
+	i = 0;
+	p =  nodelist ; 
+	while(*p != 0){
+		
+		int nodelen;
+		
+		while(*p == ' ') {
+			p++;
+		}
+		if (*p == 0){
+			break;
+		}
+		nodelen = strcspn(p, " \0") ;
+		
+		if (i >= *num){
+			cl_log(LOG_ERR, "%s: more memory needed(%d given but require %d)",
+			       __FUNCTION__, *num, i+1);
+			goto errexit;
+		}
+		
+		nodes[i] = ha_malloc(nodelen + 1);
+		if (nodes[i] == NULL){
+			cl_log(LOG_ERR, "%s: malloc failed", __FUNCTION__);
+			goto errexit;
+		}
+
+		memcpy(nodes[i], p, nodelen);
+		nodes[i][nodelen] = 0;
+		p += nodelen;
+		i++;
+	}	
+	
+	*num = i;
+	return HA_OK;
+	
+	
+ errexit:
+	for (j = 0; j < i ; j++){
+		if (nodes[j]){
+			ha_free(nodes[j]);
+			nodes[j] =NULL;
+		}
+	}
+	return HA_FAIL;
+}
+
+static int
 hb_add_one_node(const char* node)
 {
-	struct node_info*	thisnode = NULL;
-	
+	struct node_info*	thisnode = NULL;	
+
 	cl_log(LOG_INFO,
 	       "Adding new node(%s) to configuration.",
 	       node);
@@ -2232,7 +2287,7 @@ hb_add_one_node(const char* node)
 		       __FUNCTION__, node);
 		return HA_FAIL;
 	}
-	
+       
 	add_node(node, NORMALNODE_I);
 	thisnode = lookup_node(node);
 	if (thisnode == NULL) {
@@ -2250,9 +2305,10 @@ static void
 HBDoMsg_T_ADDNODE(const char * type, struct node_info * fromnode,
 		  TIME_T msgtime, seqno_t seqno, const char * iface, struct ha_msg * msg)
 {
-	const char* nodelist;
-	const char * p;
-	
+	const char*	nodelist;
+	char*		nodes[MAXNODE];
+	int		num = MAXNODE;
+	int		i;
 
 	nodelist =  ha_msg_value(msg, F_NODELIST);
 	if (nodelist == NULL){
@@ -2262,27 +2318,22 @@ HBDoMsg_T_ADDNODE(const char * type, struct node_info * fromnode,
 		return ;
 	}
 	
-	p =  nodelist ; 
-	while(*p != 0){
-		char node[HOSTLENG];
-		int nodelen;
-
-		while(*p == ' ') {
-			p++;
-		}
-		if (*p == 0){
-			break;
-		}
-		nodelen = strcspn(p, " \0") ;
-		memcpy(node, p, nodelen);
-		node[nodelen] = 0;
-		if (hb_add_one_node(node)!= HA_OK){
-			break;
-		}
-		p += nodelen;
+	if (getnodes(nodelist, nodes, &num) != HA_OK){
+		cl_log(LOG_ERR, "%s: parsing failed",
+		       __FUNCTION__);
+		return;
 	}
 	
-
+	
+	for (i = 0; i < num; i++){
+		if (hb_add_one_node(nodes[i])!= HA_OK){
+			cl_log(LOG_ERR, "Add node %s failed", nodes[i]);
+		}
+		ha_free(nodes[i]);
+		nodes[i]=NULL;
+	}
+	
+	
 	write_cache_file(config);
 	
 	return ;
@@ -2318,12 +2369,16 @@ hb_del_one_node(const char* node)
 }
 
 
+
 static void
 HBDoMsg_T_DELNODE(const char * type, struct node_info * fromnode,
 		  TIME_T msgtime, seqno_t seqno, const char * iface, struct ha_msg * msg)
 {
 	const char*    nodelist;
-	const char*	p;
+	char*		nodes[MAXNODE];
+	int		num = MAXNODE;
+	int		i;
+	int		j;		
 	
 	nodelist =  ha_msg_value(msg, F_NODELIST);
 	if (nodelist == NULL){
@@ -2333,24 +2388,44 @@ HBDoMsg_T_DELNODE(const char * type, struct node_info * fromnode,
 		return ;
 	}
 	
-	p =  nodelist ; 
-	while(*p != 0){
-		char node[HOSTLENG];
-		int nodelen;
+	if (getnodes(nodelist, nodes, &num) != HA_OK){
+		cl_log(LOG_ERR, "%s: parsing failed",
+		       __FUNCTION__);
+		return ;
+	}
+	
+	for (i = 0; i < config->nodecount ;i++){
+		gboolean isdelnode =FALSE;
+		for (j = 0 ; j < num; j++){
+			if (strncmp(config->nodes[i].nodename, 
+				    nodes[j],HOSTLENG)==0){
+				isdelnode = TRUE;
+				break;
+			}
+		}
 		
-		while(*p == ' ') {
-			p++;
+		if (!isdelnode){
+			if ( STRNCMP_CONST(config->nodes[i].status,UPSTATUS) != 0
+			     && STRNCMP_CONST(config->nodes[i].status, ACTIVESTATUS) !=0
+			     && config->nodes[i].nodetype == NORMALNODE_I){
+				cl_log(LOG_ERR, "%s: deletion failed. We don't have"
+				       " all required nodes alive (%s is dead)",
+				       __FUNCTION__, config->nodes[i].nodename);
+				goto out;
+			}
+		}		
+	}
+	
+	for (i = 0; i < num; i++){
+		if (hb_del_one_node(nodes[i])!= HA_OK){
+			cl_log(LOG_ERR, "Deleing node %s failed", nodes[i]);
 		}
-		if (*p == 0){
-			break;
-		}
-		nodelen = strcspn(p, " \0") ;
-		memcpy(node, p, nodelen);
-		node[nodelen] = 0;
-		if (hb_del_one_node(node)!= HA_OK){
-			break;
-		}
-		p += nodelen;
+	}
+	
+ out:
+	for (i = 0; i < num; i++){
+		ha_free(nodes[i]);
+		nodes[i]= NULL;	
 	}
 	
 	write_cache_file(config);
@@ -5736,6 +5811,11 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.464  2005/11/01 00:27:01  gshi
+ * add restriction on node deletion:
+ * only when all nodes (excluding nodes to be deleted) are active/up
+ * that a node deletion is allowed
+ *
  * Revision 1.463  2005/10/31 22:37:06  gshi
  * lowest_acknode must be reset after node deletion because the pointer
  * saved there are not necessarily the same node as before
