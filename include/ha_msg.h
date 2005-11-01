@@ -1,4 +1,4 @@
-/* $Id: ha_msg.h,v 1.74 2005/10/31 20:40:51 gshi Exp $ */
+/* $Id: ha_msg.h,v 1.75 2005/11/01 21:50:23 gshi Exp $ */
 /*
  * Intracluster message object (struct ha_msg)
  *
@@ -86,7 +86,7 @@ struct fieldtypefuncs_s{
 	void* (*dup)(const void*, size_t);
 
 	/* display printout the field*/
-	void (*display)(int, int, char* , void*);
+	void (*display)(int, int, char* , void*, int);
 
 	/* add the field into a message*/
 	int (*addfield) (struct ha_msg* msg, char* name, size_t namelen,
