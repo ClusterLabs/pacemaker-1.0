@@ -47,12 +47,12 @@
 #define HB_CLIENT_ID            "cmpi_indication"
 #define IND_NAMESPACE           "root/cimv2"
 
-typedef struct {
+struct cmpi_ind_env{
         char * classname;
         CMPIBroker  * broker;
         CMPIContext * context;
         CMPIString  * filter;
-} cmpi_ind_env_t;
+};
 
 
 enum ind_type { IND_TYPE_CLUSTER = 0, /* cluster-type indicatoin */
@@ -78,7 +78,7 @@ static int ind_main_loop (void);
 static void * ind_thread_func(void * param);
 
 
-static cmpi_ind_env_t * ind_env = NULL;
+static struct cmpi_ind_env * ind_env = NULL;
 static int keep_running = 0;
 static pthread_t ind_thread_id = 0;
 
@@ -202,7 +202,8 @@ ind_thread_func(void * param)
 
 
         DEBUG_ENTER();
-
+        
+        /* attach thread */
         CBAttachThread(ind_env->broker, ind_env->context);
 
         if ( ! get_hb_initialized() ) {
@@ -236,8 +237,10 @@ ind_thread_func(void * param)
                 linuxha_finalize();
         }
 
+        /* detach thread */
         CBDetachThread(ind_env->broker, ind_env->context);
 
+        free(ind_env);
 
         DEBUG_LEAVE();
 
@@ -326,13 +329,14 @@ haind_activate(char * classname, CMPIBroker * broker, CMPIContext * ctx,
         init_logger(LOGGER_ENTITY);
         DEBUG_ENTER();
 
-        ind_env = malloc(sizeof(cmpi_ind_env_t));
+        ind_env = (struct cmpi_ind_env *)malloc(sizeof(struct cmpi_ind_env));
 
         ind_env->broker = broker;
         ind_env->context = ctx;
         ind_env->filter = CMGetSelExpString(filter, rc);
         ind_env->classname = strdup(classname);
 
+        /* set event hooks, noly one hook for each event currently */
         ha_set_event_hooks(nodestatus_event_hook, 
                           ifstatus_event_hook, membership_event_hook);
 
@@ -342,7 +346,7 @@ haind_activate(char * classname, CMPIBroker * broker, CMPIContext * ctx,
 
         /* should use broker->xft->newThread(...) ? */
         CBPrepareAttachThread(broker, ctx);
-        pthread_create(&ind_thread_id, &tattr, ind_thread_func, ind_env);
+        pthread_create(&ind_thread_id, &tattr, ind_thread_func, NULL);
 
         DEBUG_LEAVE();
 
