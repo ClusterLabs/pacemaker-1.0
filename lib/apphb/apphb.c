@@ -1,4 +1,4 @@
-/* $Id: apphb.c,v 1.21 2004/11/22 20:06:42 gshi Exp $ */
+/* $Id: apphb.c,v 1.22 2005/11/01 02:01:50 sunjd Exp $ */
 /*
  * apphb.c: application heartbeat library code.
  *
@@ -37,10 +37,31 @@
 
 #include <stdio.h>
 
+#ifdef THREAD_SAFE
+
+#define G_STATIC_MUTEX_LOCK(lock) g_static_mutex_lock(lock)
+#define G_STATIC_MUTEX_UNLOCK(lock) g_static_mutex_unlock(lock)
+
+#define G_DECLARE_STATIC_MUTEX(var)	\
+	static GStaticMutex var = G_STATIC_MUTEX_INIT
+
+#define G_THREAD_INIT(vtable)		\
+	if ( !g_thread_supported() ) {	\
+		g_thread_init(vtable);	\
+	}
+
+#else
+
+#define G_STATIC_MUTEX_LOCK(lock)
+#define G_STATIC_MUTEX_UNLOCK(lock)
+#define G_DECLARE_STATIC_MUTEX(var)
+#define G_THREAD_INIT(vtable)
+
+#endif
+
 static struct IPC_CHANNEL*	hbcomm = NULL;
 static GHashTable *		hbattrs;
 static int			hbstatus = -1;
-
 
 static int apphb_getrc(void);
 
@@ -48,19 +69,24 @@ static int apphb_getrc(void);
 static int
 apphb_getrc(void)
 {
+	G_DECLARE_STATIC_MUTEX(lock);
 	struct apphb_rc * rcs;
 	int		rc;
-
 	struct IPC_MESSAGE * msg;
 
+	G_STATIC_MUTEX_LOCK(&lock);
 	hbcomm->ops->waitin(hbcomm);
 	if (hbcomm->ops->recv(hbcomm, &msg) != IPC_OK) {
+		G_STATIC_MUTEX_UNLOCK(&lock);
 		perror("Receive failure:");
 		return errno;
 	}
+	G_STATIC_MUTEX_UNLOCK(&lock);
+
 	rcs = msg->msg_body;
 	rc = rcs->rc;
 	msg->msg_done(msg);
+
 	return rc;
 }
 
@@ -68,16 +94,14 @@ apphb_getrc(void)
 int
 apphb_register(const char * appname, const char * appinstance)
 {
+	G_DECLARE_STATIC_MUTEX(lock);
 	int	err;
 	struct IPC_MESSAGE Msg;
 	struct apphb_signupmsg msg;
 	static char path [] = IPC_PATH_ATTR;
 	static char sockpath []	= APPHBSOCKPATH;
 
-	if (hbcomm != NULL) {
-		errno = EEXIST;
-		return -1;
-	}
+	G_THREAD_INIT(NULL);
 
 	if (appname == NULL || appinstance == NULL) {
 		errno = EINVAL;
@@ -87,6 +111,13 @@ apphb_register(const char * appname, const char * appinstance)
 	if (strlen(appname) >= APPHB_OLEN
 	||	strlen(appinstance) >= APPHB_OLEN) {
 		errno = ENAMETOOLONG;
+		return -1;
+	}
+
+	G_STATIC_MUTEX_LOCK(&lock);
+	if (hbcomm != NULL) {
+		errno = EEXIST;
+		G_STATIC_MUTEX_UNLOCK(&lock);
 		return -1;
 	}
 
@@ -100,6 +131,7 @@ apphb_register(const char * appname, const char * appinstance)
 	if (hbcomm == NULL
 	||	(hbstatus = hbcomm->ops->initiate_connection(hbcomm)
 	!=	IPC_OK)) {
+		G_STATIC_MUTEX_UNLOCK(&lock);
 		apphb_unregister();
   		errno = EBADF;
 		return -1;
@@ -114,6 +146,7 @@ apphb_register(const char * appname, const char * appinstance)
 	 */
 	if ( getcwd(msg.curdir, APPHB_OLEN) == NULL)  {
 		apphb_unregister();
+		G_STATIC_MUTEX_UNLOCK(&lock);
 		return -1;
 	}
 	msg.pid = getpid();
@@ -130,10 +163,13 @@ apphb_register(const char * appname, const char * appinstance)
 	Msg.msg_ch = hbcomm;
 
 	if (hbcomm->ops->send(hbcomm, &Msg) != IPC_OK) {
+		G_STATIC_MUTEX_UNLOCK(&lock);
 		apphb_unregister();
   		errno = EBADF;
 		return -1;
 	}
+	G_STATIC_MUTEX_UNLOCK(&lock);
+
 	if ((err = apphb_getrc()) != 0) {
 		hbstatus = -1;
 		errno = err;
@@ -146,12 +182,14 @@ apphb_register(const char * appname, const char * appinstance)
 int
 apphb_unregister(void)
 {
+	G_DECLARE_STATIC_MUTEX(lock);
 	int	rc = 0;
 	int	err;
 	struct apphb_msg msg;
 	struct IPC_MESSAGE Msg;
 
-
+	G_THREAD_INIT(NULL);
+	G_STATIC_MUTEX_LOCK(&lock);
 	if (hbcomm == NULL || hbstatus != IPC_OK) {
 		errno = ESRCH;
 		rc = -1;
@@ -173,9 +211,11 @@ apphb_unregister(void)
 		if (hbcomm->ops->send(hbcomm, &Msg) != IPC_OK) {
 			rc = -1;
 			rc = EBADF;
-		}else if ((err = apphb_getrc()) != 0) {
-			errno = err;
-			rc = -1;
+		}else {
+			if ((err = apphb_getrc()) != 0) {
+				errno = err;
+				rc = -1;
+			}
 		}
 	}
 
@@ -187,11 +227,14 @@ apphb_unregister(void)
 		errno = ESRCH;
 		rc = -1;
 	}
+
 	/* Destroy and NULL out hbattrs */
 	if (hbattrs) {
 		g_hash_table_destroy(hbattrs);
 		hbattrs = NULL;
 	}
+
+	G_STATIC_MUTEX_LOCK(&lock);
 	
 	return rc;
 }
@@ -200,14 +243,19 @@ apphb_unregister(void)
 int
 apphb_setinterval(unsigned long hbms)
 {
+	G_DECLARE_STATIC_MUTEX(lock);
 	struct apphb_msmsg	msg;
 	struct IPC_MESSAGE	Msg;
 	int			err;
 
+	G_THREAD_INIT(NULL);
+	G_STATIC_MUTEX_LOCK(&lock);
 	if (hbcomm == NULL || hbstatus != IPC_OK) {
 		errno = ESRCH;
+		G_STATIC_MUTEX_UNLOCK(&lock);
 		return -1;
 	}
+
 	strncpy(msg.msgtype, SETINTERVAL, sizeof(msg.msgtype));
 	msg.ms = hbms;
 
@@ -221,9 +269,12 @@ apphb_setinterval(unsigned long hbms)
 	Msg.msg_ch = hbcomm;
 
 	if (hbcomm->ops->send(hbcomm, &Msg) != IPC_OK) {
+		G_STATIC_MUTEX_UNLOCK(&lock);
 		errno = EBADF;
 		return -1;
 	}
+	G_STATIC_MUTEX_UNLOCK(&lock);
+
 	if ((err = apphb_getrc()) != 0) {
 		errno = err;
 		return -1;
@@ -234,16 +285,21 @@ apphb_setinterval(unsigned long hbms)
 int
 apphb_setwarn(unsigned long hbms)
 {
+	G_DECLARE_STATIC_MUTEX(lock);
 	struct apphb_msmsg	msg;
 	struct IPC_MESSAGE	Msg;
 	int			err;
 
-	if (hbcomm == NULL || hbstatus != IPC_OK) {
-		errno = ESRCH;
-		return -1;
-	}
 	if (hbms <= 0) {
 		errno = EINVAL;
+		return -1;
+	}
+
+	G_THREAD_INIT(NULL);
+	G_STATIC_MUTEX_LOCK(&lock);
+	if (hbcomm == NULL || hbstatus != IPC_OK) {
+		errno = ESRCH;
+		G_STATIC_MUTEX_UNLOCK(&lock);
 		return -1;
 	}
 	strncpy(msg.msgtype, SETWARNTIME, sizeof(msg.msgtype));
@@ -259,9 +315,12 @@ apphb_setwarn(unsigned long hbms)
 	Msg.msg_ch = hbcomm;
 
 	if (hbcomm->ops->send(hbcomm, &Msg) != IPC_OK) {
+		G_STATIC_MUTEX_UNLOCK(&lock);
 		errno = EBADF;
 		return -1;
 	}
+	G_STATIC_MUTEX_UNLOCK(&lock);
+
 	if ((err = apphb_getrc()) != 0) {
 		errno = err;
 		return -1;
@@ -272,10 +331,14 @@ apphb_setwarn(unsigned long hbms)
 int
 apphb_hb(void)
 {
+	G_DECLARE_STATIC_MUTEX(lock);
 	struct apphb_msg msg;
 	struct IPC_MESSAGE	Msg;
 
+	G_THREAD_INIT(NULL);
+	G_STATIC_MUTEX_LOCK(&lock);
 	if (hbcomm == NULL || hbstatus != IPC_OK) {
+		G_STATIC_MUTEX_UNLOCK(&lock);
 		errno = ESRCH;
 		return -1;
 	}
@@ -291,9 +354,11 @@ apphb_hb(void)
 	Msg.msg_ch = hbcomm;
 
 	if (hbcomm->ops->send(hbcomm, &Msg) != IPC_OK) {
+		G_STATIC_MUTEX_UNLOCK(&lock);
 		errno = EBADF;
 		return -1;
 	}
+	G_STATIC_MUTEX_UNLOCK(&lock);
 	/* NOTE: we do not expect a return code from server */
 	return 0;
 }
