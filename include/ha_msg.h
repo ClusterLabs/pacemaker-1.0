@@ -1,4 +1,4 @@
-/* $Id: ha_msg.h,v 1.75 2005/11/01 21:50:23 gshi Exp $ */
+/* $Id: ha_msg.h,v 1.76 2005/11/02 21:34:44 gshi Exp $ */
 /*
  * Intracluster message object (struct ha_msg)
  *
@@ -206,6 +206,8 @@ extern struct fieldtypefuncs_s fieldtypefuncs[NUM_MSG_TYPES];
 #define T_CRM		"crmd"		/* Cluster resource manager message */
 #define T_ADDNODE	"addnode"	/* Add node message*/
 #define T_DELNODE	"delnode"	/* Delete node message*/
+#define T_REQNODES      "reqnodes"	/* Request node list */
+#define T_REPNODES	"repnodes"	/* reply node list rquest*/
 
 #define T_APIREQ	"hbapi-req"	/* Heartbeat API request */
 #define T_APIRESP	"hbapi-resp"	/* Heartbeat API response */
