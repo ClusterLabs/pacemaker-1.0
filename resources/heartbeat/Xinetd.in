@@ -44,7 +44,7 @@ fi
 
 xup_start () {
   ha_log "info: $0: enabling in $RCFILE"
-  if gawk '!/disable/' $RCFILE > $RCFILE.xup
+  if awk '!/disable/' $RCFILE > $RCFILE.xup
     then
       if mv $RCFILE.xup $RCFILE
         then
@@ -61,7 +61,7 @@ xup_start () {
 
 xup_stop () {
   ha_log "info: $0: disabling in $RCFILE"
-  if gawk '!/disable/;/{/{printf "\tdisable\t\t\t= yes\n"}' $RCFILE >$RCFILE.xup
+  if awk '!/disable/;/{/{printf "\tdisable\t\t\t= yes\n"}' $RCFILE >$RCFILE.xup
     then
       if mv $RCFILE.xup $RCFILE
         then
