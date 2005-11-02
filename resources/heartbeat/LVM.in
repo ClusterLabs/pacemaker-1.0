@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $Id: LVM.in,v 1.4 2005/08/26 19:41:01 alan Exp $
+# $Id: LVM.in,v 1.5 2005/11/02 05:57:33 horms Exp $
 # 
 # LVM
 #
@@ -47,7 +47,7 @@ usage() {
 	The 'monitor' operation reports whether the volume seems present
 	The 'methods' operation reports on the methods $0 supports
 
-	$Id: LVM.in,v 1.4 2005/08/26 19:41:01 alan Exp $
+	$Id: LVM.in,v 1.5 2005/11/02 05:57:33 horms Exp $
 	!
   exit 1
 
@@ -237,8 +237,8 @@ fi
 #	Driver version:  4.1.0
 
 LVM_VERSION=`vgchange --version 2>&1 | \
-	awk --source '/Logical Volume Manager/ {print $5"\n"; exit; } '\
-	    --source '/LVM version:/ {printf $3"\n"; exit;}'`
+	awk '/Logical Volume Manager/ {print $5"\n"; exit; }
+	     /LVM version:/ {printf $3"\n"; exit;}'`
 rc=$?
 
 if
