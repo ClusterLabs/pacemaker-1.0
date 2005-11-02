@@ -1,5 +1,5 @@
 /*
- * CIM Provider
+ * CIM _
  * 
  * Author: Jia Ming Pan <jmltc@cn.ibm.com>
  * Copyright (c) 2005 International Business Machines
@@ -53,76 +53,76 @@ static char resource_class_name []  = "LinuxHA_ClusterResource";
 
 /***************** instance interfaces *******************/
 CMPIStatus 
-LinuxHA_SubResourceProviderCleanup(CMPIInstanceMI* mi, CMPIContext* ctx);
+SubResource_Cleanup(CMPIInstanceMI* mi, CMPIContext* ctx);
 
 CMPIStatus 
-LinuxHA_SubResourceProviderEnumInstanceNames(CMPIInstanceMI * mi,
+SubResource_EnumInstanceNames(CMPIInstanceMI * mi,
                 CMPIContext * ctx, CMPIResult * rslt, CMPIObjectPath * ref);
         
 CMPIStatus 
-LinuxHA_SubResourceProviderEnumInstances(CMPIInstanceMI * mi,
+SubResource_EnumInstances(CMPIInstanceMI * mi,
                 CMPIContext * ctx, CMPIResult * rslt,
                 CMPIObjectPath * ref, char ** properties);
 
 CMPIStatus 
-LinuxHA_SubResourceProviderGetInstance(CMPIInstanceMI * mi,
+SubResource_GetInstance(CMPIInstanceMI * mi,
                 CMPIContext * ctx, CMPIResult * rslt,
                 CMPIObjectPath * cop, char ** properties);
 
 CMPIStatus 
-LinuxHA_SubResourceProviderCreateInstance(CMPIInstanceMI * mi,
+SubResource_CreateInstance(CMPIInstanceMI * mi,
                 CMPIContext * ctx, CMPIResult * rslt,
                 CMPIObjectPath * cop, CMPIInstance * ci);
 
 CMPIStatus 
-LinuxHA_SubResourceProviderSetInstance(CMPIInstanceMI * mi,
+SubResource_SetInstance(CMPIInstanceMI * mi,
                 CMPIContext * ctx, CMPIResult * rslt,
                 CMPIObjectPath * cop, CMPIInstance * ci, char ** properties);
 
 CMPIStatus 
-LinuxHA_SubResourceProviderDeleteInstance(CMPIInstanceMI * mi,
+SubResource_DeleteInstance(CMPIInstanceMI * mi,
                 CMPIContext * ctx, CMPIResult * rslt, CMPIObjectPath * cop);
 
 CMPIStatus 
-LinuxHA_SubResourceProviderExecQuery(CMPIInstanceMI * mi,
+SubResource_ExecQuery(CMPIInstanceMI * mi,
                 CMPIContext * ctx, CMPIResult * rslt,
                 CMPIObjectPath * ref, char * lang, char * query);
 
 /*********************** association interfaces ***********************/
 
 CMPIStatus 
-LinuxHA_SubResourceProviderAssociationCleanup(CMPIAssociationMI * mi, 
+SubResource_AssociationCleanup(CMPIAssociationMI * mi, 
                         CMPIContext * ctx);
 
 CMPIStatus
-LinuxHA_SubResourceProviderAssociators(
+SubResource_Associators(
                 CMPIAssociationMI * mi, CMPIContext * ctx, CMPIResult * rslt,
                 CMPIObjectPath * op, const char * asscClass, 
                 const char * resultClass,
                 const char * role, const char * resultRole, char ** properties);
 
 CMPIStatus
-LinuxHA_SubResourceProviderAssociatorNames(
+SubResource_AssociatorNames(
                 CMPIAssociationMI * mi, CMPIContext * ctx, CMPIResult * rslt,
                 CMPIObjectPath * op, const char * asscClass, 
                 const char * resultClass,
                 const char * role, const char * resultRole);
 
 CMPIStatus
-LinuxHA_SubResourceProviderReferences(
+SubResource_References(
                 CMPIAssociationMI * mi, CMPIContext * ctx, CMPIResult * rslt,
                 CMPIObjectPath * op, const char * resultClass,
                 const char * role, char ** properties);
 
 CMPIStatus
-LinuxHA_SubResourceProviderReferenceNames(CMPIAssociationMI * mi,
+SubResource_ReferenceNames(CMPIAssociationMI * mi,
                 CMPIContext * ctx, CMPIResult * rslt, CMPIObjectPath * cop,
                 const char * assocClass, const char * role);
 
 
 CMPIAssociationMI * 
-LinuxHA_SubResourceProvider_Create_AssociationMI(CMPIBroker* brkr, 
-                                CMPIContext *ctx); 
+LinuxHA_SubResourceProvider_Create_AssociationMI(CMPIBroker * brkr, 
+                                CMPIContext * ctx); 
 CMPIInstanceMI * 
 LinuxHA_SubResourceProvider_Create_InstanceMI(CMPIBroker * brkr, 
                                 CMPIContext * ctx); 
@@ -130,18 +130,18 @@ LinuxHA_SubResourceProvider_Create_InstanceMI(CMPIBroker * brkr,
 
 
 /**********************************************
- * Instance Provider Interface
+ * Instance 
  **********************************************/
 
 CMPIStatus 
-LinuxHA_SubResourceProviderCleanup(CMPIInstanceMI* mi, CMPIContext* ctx)
+SubResource_Cleanup(CMPIInstanceMI * mi, CMPIContext * ctx)
 {
         CMReturn(CMPI_RC_OK);
 }
 
 
 CMPIStatus 
-LinuxHA_SubResourceProviderEnumInstanceNames(CMPIInstanceMI * mi,
+SubResource_EnumInstanceNames(CMPIInstanceMI * mi,
                 CMPIContext* ctx, CMPIResult * rslt, CMPIObjectPath * ref)
 {
         CMPIStatus rc = {CMPI_RC_OK, NULL};
@@ -169,7 +169,7 @@ LinuxHA_SubResourceProviderEnumInstanceNames(CMPIInstanceMI * mi,
 
 
 CMPIStatus 
-LinuxHA_SubResourceProviderEnumInstances(CMPIInstanceMI * mi,
+SubResource_EnumInstances(CMPIInstanceMI * mi,
                 CMPIContext * ctx, CMPIResult * rslt,
                 CMPIObjectPath * ref, char ** properties)
 {
@@ -197,7 +197,7 @@ LinuxHA_SubResourceProviderEnumInstances(CMPIInstanceMI * mi,
 
 
 CMPIStatus 
-LinuxHA_SubResourceProviderGetInstance(CMPIInstanceMI * mi,
+SubResource_GetInstance(CMPIInstanceMI * mi,
                 CMPIContext * ctx, CMPIResult * rslt,
                 CMPIObjectPath * cop, char ** properties)
 {
@@ -225,7 +225,7 @@ LinuxHA_SubResourceProviderGetInstance(CMPIInstanceMI * mi,
 }
 
 CMPIStatus 
-LinuxHA_SubResourceProviderCreateInstance(CMPIInstanceMI * mi,
+SubResource_CreateInstance(CMPIInstanceMI * mi,
                 CMPIContext * ctx, CMPIResult * rslt,
                 CMPIObjectPath * cop, CMPIInstance * ci)
 {
@@ -237,7 +237,7 @@ LinuxHA_SubResourceProviderCreateInstance(CMPIInstanceMI * mi,
 
 
 CMPIStatus 
-LinuxHA_SubResourceProviderSetInstance(CMPIInstanceMI * mi,
+SubResource_SetInstance(CMPIInstanceMI * mi,
                 CMPIContext * ctx, CMPIResult * rslt,
                 CMPIObjectPath * cop, CMPIInstance * ci, char ** properties)
 {
@@ -250,7 +250,7 @@ LinuxHA_SubResourceProviderSetInstance(CMPIInstanceMI * mi,
 
 
 CMPIStatus 
-LinuxHA_SubResourceProviderDeleteInstance(CMPIInstanceMI * mi,
+SubResource_DeleteInstance(CMPIInstanceMI * mi,
                 CMPIContext * ctx, CMPIResult * rslt, CMPIObjectPath * cop)
 {
         CMPIStatus rc = {CMPI_RC_OK, NULL};
@@ -260,7 +260,7 @@ LinuxHA_SubResourceProviderDeleteInstance(CMPIInstanceMI * mi,
 }
 
 CMPIStatus 
-LinuxHA_SubResourceProviderExecQuery(CMPIInstanceMI * mi,
+SubResource_ExecQuery(CMPIInstanceMI * mi,
                 CMPIContext * ctx, CMPIResult * rslt, CMPIObjectPath *ref,
                 char * lang, char * query)
 {
@@ -275,14 +275,14 @@ LinuxHA_SubResourceProviderExecQuery(CMPIInstanceMI * mi,
  * Association
  ****************************************************/
 CMPIStatus 
-LinuxHA_SubResourceProviderAssociationCleanup(CMPIAssociationMI * mi, 
+SubResource_AssociationCleanup(CMPIAssociationMI * mi, 
                         CMPIContext * ctx)
 {
         CMReturn(CMPI_RC_OK);
 }
 
 CMPIStatus
-LinuxHA_SubResourceProviderAssociators(
+SubResource_Associators(
                 CMPIAssociationMI * mi, CMPIContext * ctx, CMPIResult * rslt,
                 CMPIObjectPath * cop, const char * assocClass, 
                 const char * resultClass,
@@ -313,7 +313,7 @@ LinuxHA_SubResourceProviderAssociators(
 
 
 CMPIStatus
-LinuxHA_SubResourceProviderAssociatorNames(
+SubResource_AssociatorNames(
                 CMPIAssociationMI * mi, CMPIContext * ctx, CMPIResult * rslt,
                 CMPIObjectPath * cop, const char * assocClass, 
                 const char * resultClass,
@@ -345,7 +345,7 @@ LinuxHA_SubResourceProviderAssociatorNames(
 }
 
 CMPIStatus
-LinuxHA_SubResourceProviderReferences(
+SubResource_References(
                 CMPIAssociationMI * mi, CMPIContext * ctx, CMPIResult * rslt,
                 CMPIObjectPath * cop, const char * resultClass,
                 const char * role, char ** properties)
@@ -374,7 +374,7 @@ LinuxHA_SubResourceProviderReferences(
 }
 
 CMPIStatus
-LinuxHA_SubResourceProviderReferenceNames(
+SubResource_ReferenceNames(
                 CMPIAssociationMI * mi, CMPIContext * ctx, 
                 CMPIResult * rslt, CMPIObjectPath * cop,
                 const char * resultClass, const char * role)
@@ -407,20 +407,20 @@ LinuxHA_SubResourceProviderReferenceNames(
  *************************************************************/
 
 
-static char inst_provider_name[] = "instanceLinuxHA_SubResourceProvider";
+static char inst_provider_name[] = "instanceSubResource_";
 
 static CMPIInstanceMIFT instMIFT = {
         CMPICurrentVersion,
         CMPICurrentVersion,
         inst_provider_name,
-        LinuxHA_SubResourceProviderCleanup,
-        LinuxHA_SubResourceProviderEnumInstanceNames,
-        LinuxHA_SubResourceProviderEnumInstances,
-        LinuxHA_SubResourceProviderGetInstance,
-        LinuxHA_SubResourceProviderCreateInstance,
-        LinuxHA_SubResourceProviderSetInstance, 
-        LinuxHA_SubResourceProviderDeleteInstance,
-        LinuxHA_SubResourceProviderExecQuery
+        SubResource_Cleanup,
+        SubResource_EnumInstanceNames,
+        SubResource_EnumInstances,
+        SubResource_GetInstance,
+        SubResource_CreateInstance,
+        SubResource_SetInstance, 
+        SubResource_DeleteInstance,
+        SubResource_ExecQuery
 };
 
 CMPIInstanceMI * 
@@ -431,24 +431,23 @@ LinuxHA_SubResourceProvider_Create_InstanceMI(CMPIBroker * brkr, CMPIContext * c
                 &instMIFT
         };
         Broker = brkr;
-        CMNoHook;
         return &mi;
 }
 
 
 /******************************************************************************/
 
-static char assoc_provider_name[] = "assocationLinuxHA_SubResourceProvider";
+static char assoc_provider_name[] = "assocationSubResource_";
 
 static CMPIAssociationMIFT assocMIFT = {
         CMPICurrentVersion,
         CMPICurrentVersion,
         assoc_provider_name,
-        LinuxHA_SubResourceProviderAssociationCleanup,
-        LinuxHA_SubResourceProviderAssociators,
-        LinuxHA_SubResourceProviderAssociatorNames,
-        LinuxHA_SubResourceProviderReferences,
-        LinuxHA_SubResourceProviderReferenceNames
+        SubResource_AssociationCleanup,
+        SubResource_Associators,
+        SubResource_AssociatorNames,
+        SubResource_References,
+        SubResource_ReferenceNames
 
 };
 
@@ -462,7 +461,6 @@ LinuxHA_SubResourceProvider_Create_AssociationMI(
         };
 
         Broker = brkr;
-        CMNoHook;
         return &mi;
 }
 

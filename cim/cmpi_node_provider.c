@@ -1,3 +1,25 @@
+/*
+ * CIM Provider - provider for LinuxHA_ClusterNode
+ * 
+ * Author: Jia Ming Pan <jmltc@cn.ibm.com>
+ * Copyright (c) 2005 International Business Machines
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ *
+ */
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -16,127 +38,62 @@
 
 #define PROVIDER_ID "cim-provider-node"
 
-static CMPIBroker * Broker;
-static char ClassName[] = "LinuxHA_ClusterNode";
-
-
-/***** 	prototype declare  ***/
-
-CMPIStatus 
-LinuxHA_ClusterNodeProviderCleanup(CMPIInstanceMI* mi, CMPIContext* ctx);
-
-CMPIStatus 
-LinuxHA_ClusterNodeProviderEnumInstanceNames(CMPIInstanceMI* mi,
-		CMPIContext* ctx,
-		CMPIResult* rslt,
-		CMPIObjectPath* ref);
-CMPIStatus 
-LinuxHA_ClusterNodeProviderEnumInstances(CMPIInstanceMI* mi,
-		CMPIContext* ctx,
-		CMPIResult* rslt,
-		CMPIObjectPath* ref,
-		char ** properties);
-
-CMPIStatus 
-LinuxHA_ClusterNodeProviderGetInstance(CMPIInstanceMI* mi,
-		CMPIContext* ctx,
-		CMPIResult* rslt,
-		CMPIObjectPath *cop,
-		char ** properties);
-
-CMPIStatus 
-LinuxHA_ClusterNodeProviderCreateInstance(CMPIInstanceMI* mi,
-		CMPIContext *ctx,
-		CMPIResult* rslt,
-		CMPIObjectPath* cop,
-		CMPIInstance* ci);
+static CMPIBroker * Broker = NULL;
+static char ClassName []   = "LinuxHA_ClusterNode";
 
 
 CMPIStatus 
-LinuxHA_ClusterNodeProviderSetInstance(CMPIInstanceMI* mi,
-		CMPIContext* ctx,
-		CMPIResult* rslt,
-		CMPIObjectPath* cop,
-		CMPIInstance* ci,
-		char ** properties);
+ClusterNode_Cleanup(CMPIInstanceMI * mi, CMPIContext * ctx);
 
 CMPIStatus 
-LinuxHA_ClusterNodeProviderDeleteInstance(CMPIInstanceMI* mi,
-		CMPIContext* ctx,
-		CMPIResult* rslt,
-		CMPIObjectPath* cop);
+ClusterNode_EnumInstanceNames(CMPIInstanceMI * mi, CMPIContext * ctx, 
+                CMPIResult * rslt, CMPIObjectPath * ref);
 CMPIStatus 
-LinuxHA_ClusterNodeProviderExecQuery(CMPIInstanceMI* mi,
-		CMPIContext* ctx,
-		CMPIResult* rslt,
-		CMPIObjectPath* ref,
-		char* lang,
-		char* query);
+ClusterNode_EnumInstances(CMPIInstanceMI * mi, CMPIContext* ctx,
+                CMPIResult * rslt, CMPIObjectPath * ref,
+                char ** properties);
 
 CMPIStatus 
-LinuxHA_ClusterNodeProviderInvokeMethod(CMPIMethodMI* mi,
-		CMPIContext* ctx,
-		CMPIResult* rslt,
-		CMPIObjectPath* ref,
-		char* methodName,
-		CMPIArgs* in,
-		CMPIArgs* out);
+ClusterNode_GetInstance(CMPIInstanceMI * mi, CMPIContext * ctx,
+                CMPIResult * rslt, CMPIObjectPath * cop,
+                char ** properties);
 
+CMPIStatus 
+ClusterNode_CreateInstance(CMPIInstanceMI * mi, CMPIContext * ctx,
+                CMPIResult * rslt, CMPIObjectPath * cop,
+                CMPIInstance * ci);
 
 
 CMPIStatus 
-LinuxHA_ClusterNodeProviderMethodCleanup(CMPIMethodMI* mi, CMPIContext* ctx);
+ClusterNode_SetInstance(CMPIInstanceMI * mi, CMPIContext * ctx, 
+                CMPIResult * rslt, CMPIObjectPath * cop,
+                CMPIInstance * ci, char ** properties);
 
 CMPIStatus 
-LinuxHA_ClusterNodeProviderIndicationCleanup(
-	CMPIInstanceMI * mi, 
-	CMPIContext * ctx);
+ClusterNode_DeleteInstance(CMPIInstanceMI * mi, CMPIContext * ctx,
+                CMPIResult * rslt, CMPIObjectPath * cop);
+CMPIStatus 
+ClusterNode_ExecQuery(CMPIInstanceMI * mi, CMPIContext * ctx,
+                CMPIResult * rslt, CMPIObjectPath * ref,
+                char * lang, char * query);
 
 CMPIStatus 
-LinuxHA_ClusterNodeProviderAuthorizeFilter(
-	CMPIIndicationMI * mi,
-	CMPIContext * ctx,
-	CMPIResult * rslt,
-	CMPISelectExp * filter,
-	const char * type,
-	CMPIObjectPath * classPath,
-	const char * owner);
+ClusterNode_InvokeMethod(CMPIMethodMI * mi, CMPIContext * ctx,
+                CMPIResult * rslt, CMPIObjectPath * ref,
+                char * method_name, CMPIArgs * in, CMPIArgs * out);
 
 CMPIStatus 
-LinuxHA_ClusterNodeProviderMustPoll(
-	CMPIIndicationMI * mi,
-	CMPIContext * ctx,
-	CMPIResult * rslt,
-	CMPISelectExp * filter,
-	const char * indType,
-	CMPIObjectPath* classPath);
+ClusterNode_MethodCleanup(CMPIMethodMI * mi, CMPIContext * ctx);
 
-CMPIStatus 
-LinuxHA_ClusterNodeProviderActivateFilter(
-	CMPIIndicationMI * mi,
-	CMPIContext * ctx,
-	CMPIResult * rslt,
-	CMPISelectExp * filter,
-	const char * type,
-	CMPIObjectPath * classPath,
-	CMPIBoolean firstActivation);
 
-CMPIStatus 
-LinuxHA_ClusterNodeProviderDeActivateFilter(
-	CMPIIndicationMI * mi,
-	CMPIContext * ctx,
-	CMPIResult * rslt,
-	CMPISelectExp * filter,
-	const char * type,
-	CMPIObjectPath * classPath,
-	CMPIBoolean lastActivation);
-
+/******************************************************************/
 CMPIInstanceMI * 
 LinuxHA_ClusterNodeProvider_Create_InstanceMI(CMPIBroker * brkr, 
-                        CMPIContext * ctx);
+                CMPIContext * ctx);
 
 CMPIAssociationMI *
-LinuxHA_ClusterNodeProvider_Create_AssociationMI(CMPIBroker* brkr,CMPIContext *ctx);
+LinuxHA_ClusterNodeProvider_Create_AssociationMI(CMPIBroker * brkr,
+                 CMPIContext * ctx);
 
 
 /**********************************************
@@ -144,7 +101,7 @@ LinuxHA_ClusterNodeProvider_Create_AssociationMI(CMPIBroker* brkr,CMPIContext *c
  **********************************************/
 
 CMPIStatus 
-LinuxHA_ClusterNodeProviderCleanup(CMPIInstanceMI* mi, CMPIContext* ctx)
+ClusterNode_Cleanup(CMPIInstanceMI * mi, CMPIContext * ctx)
 {
 
         cleanup_node();
@@ -153,19 +110,14 @@ LinuxHA_ClusterNodeProviderCleanup(CMPIInstanceMI* mi, CMPIContext* ctx)
 
 
 CMPIStatus 
-LinuxHA_ClusterNodeProviderEnumInstanceNames(CMPIInstanceMI* mi,
-		CMPIContext* ctx,
-		CMPIResult* rslt,
-		CMPIObjectPath* ref)
+ClusterNode_EnumInstanceNames(CMPIInstanceMI * mi, CMPIContext * ctx,
+                              CMPIResult * rslt, CMPIObjectPath * ref)
 {
 	CMPIStatus rc = {CMPI_RC_OK, NULL};
-        int ret;
 	
         init_logger( PROVIDER_ID );
-	ret = enumerate_clusternode_instances(ClassName, Broker, 
-                                mi, ctx, rslt, ref, 0, &rc);
-
-        if ( ret == HA_OK ) {
+	if ( enumerate_clusternode_instances(ClassName, Broker, mi, ctx, 
+                                             rslt, ref, 0, &rc) == HA_OK ) {
 	        CMReturn(CMPI_RC_OK);	
         } else {
 
@@ -179,20 +131,15 @@ LinuxHA_ClusterNodeProviderEnumInstanceNames(CMPIInstanceMI* mi,
 
 
 CMPIStatus 
-LinuxHA_ClusterNodeProviderEnumInstances(CMPIInstanceMI* mi,
-		CMPIContext* ctx,
-		CMPIResult* rslt,
-		CMPIObjectPath* ref,
-		char ** properties)
+ClusterNode_EnumInstances(CMPIInstanceMI * mi, CMPIContext * ctx,
+                          CMPIResult * rslt, CMPIObjectPath * ref,
+                          char ** properties)
 {
 	CMPIStatus rc = {CMPI_RC_OK, NULL};
-        int ret;
 	
         init_logger( PROVIDER_ID );
-	ret = enumerate_clusternode_instances(ClassName, Broker, 
-                                mi, ctx, rslt, ref, 1, &rc);
-
-        if ( ret == HA_OK ) {
+	if ( enumerate_clusternode_instances(ClassName, Broker, mi, ctx, 
+                                             rslt, ref, 1, &rc) == HA_OK ) {
 	        CMReturn(CMPI_RC_OK);	
         } else {
 
@@ -207,25 +154,18 @@ LinuxHA_ClusterNodeProviderEnumInstances(CMPIInstanceMI* mi,
 
 
 CMPIStatus 
-LinuxHA_ClusterNodeProviderGetInstance(CMPIInstanceMI* mi,
-		CMPIContext* ctx,
-		CMPIResult* rslt,
-		CMPIObjectPath *cop,
-		char ** properties)
+ClusterNode_GetInstance(CMPIInstanceMI * mi, CMPIContext * ctx,
+                        CMPIResult * rslt, CMPIObjectPath * cop,
+                        char ** properties)
 {
         CMPIStatus rc = {CMPI_RC_OK, NULL};
-        int ret = 0;
-
         init_logger( PROVIDER_ID );
 
         DEBUG_ENTER();
 
-	ret = get_clusternode_instance(ClassName, Broker, ctx, rslt, cop, 
-                                properties, &rc);
-
-        if ( ret != HA_OK ){
+	if ( get_clusternode_instance(ClassName, Broker, ctx, rslt, cop, 
+                                      properties, &rc) != HA_OK ) {
                 cl_log(LOG_WARNING, "%s: NULL instance", __FUNCTION__);
-
                 if (rc.rc == CMPI_RC_OK ) {
                         CMReturn(CMPI_RC_ERR_FAILED);
                 } else {
@@ -240,58 +180,48 @@ LinuxHA_ClusterNodeProviderGetInstance(CMPIInstanceMI* mi,
 
 
 CMPIStatus 
-LinuxHA_ClusterNodeProviderCreateInstance(CMPIInstanceMI* mi,
-		CMPIContext *ctx,
-		CMPIResult* rslt,
-		CMPIObjectPath* cop,
-		CMPIInstance* ci)
+ClusterNode_CreateInstance(CMPIInstanceMI * mi, CMPIContext * ctx,
+                           CMPIResult * rslt, CMPIObjectPath * cop,
+                           CMPIInstance * ci)
 {
 	CMPIStatus rc = {CMPI_RC_OK, NULL};
-	CMSetStatusWithChars(Broker, &rc, 
-			CMPI_RC_ERR_NOT_SUPPORTED, "CIM_ERR_NOT_SUPPORTED");
+	CMSetStatusWithChars(Broker, &rc, CMPI_RC_ERR_NOT_SUPPORTED, 
+                             "CIM_ERR_NOT_SUPPORTED");
 	return rc;
 }
 
 
 CMPIStatus 
-LinuxHA_ClusterNodeProviderSetInstance(CMPIInstanceMI* mi,
-		CMPIContext* ctx,
-		CMPIResult* rslt,
-		CMPIObjectPath* cop,
-		CMPIInstance* ci,
-		char ** properties)
+ClusterNode_SetInstance(CMPIInstanceMI * mi, CMPIContext * ctx,
+                        CMPIResult * rslt, CMPIObjectPath * cop,
+                        CMPIInstance * ci, char ** properties)
 {
-	CMPIStatus rc = {CMPI_RC_OK, NULL};
-	CMSetStatusWithChars(Broker, &rc, 
-			CMPI_RC_ERR_NOT_SUPPORTED, "CIM_ERR_NOT_SUPPORTED");
-	return rc;
+        CMPIStatus rc = {CMPI_RC_OK, NULL};
+        CMSetStatusWithChars(Broker, &rc, CMPI_RC_ERR_NOT_SUPPORTED, 
+                             "CIM_ERR_NOT_SUPPORTED");
+        return rc;
 
 }
 
 
 CMPIStatus 
-LinuxHA_ClusterNodeProviderDeleteInstance(CMPIInstanceMI* mi,
-		CMPIContext* ctx,
-		CMPIResult* rslt,
-		CMPIObjectPath* cop)
+ClusterNode_DeleteInstance(CMPIInstanceMI * mi, CMPIContext * ctx,
+                           CMPIResult * rslt, CMPIObjectPath * cop)
 {
-	CMPIStatus rc = {CMPI_RC_OK, NULL};
-	CMSetStatusWithChars(Broker, &rc, 
-			CMPI_RC_ERR_NOT_SUPPORTED, "CIM_ERR_NOT_SUPPORTED");
+        CMPIStatus rc = {CMPI_RC_OK, NULL};
+        CMSetStatusWithChars(Broker, &rc, CMPI_RC_ERR_NOT_SUPPORTED, 
+                             "CIM_ERR_NOT_SUPPORTED");
 	return rc;
 }
 
 CMPIStatus 
-LinuxHA_ClusterNodeProviderExecQuery(CMPIInstanceMI* mi,
-		CMPIContext* ctx,
-		CMPIResult* rslt,
-		CMPIObjectPath* ref,
-		char* lang,
-		char* query)
+ClusterNode_ExecQuery(CMPIInstanceMI * mi, CMPIContext * ctx,
+                      CMPIResult * rslt, CMPIObjectPath * ref,
+                      char * lang, char * query)
 {
-	CMPIStatus rc = {CMPI_RC_OK, NULL};
-	CMSetStatusWithChars(Broker, &rc, 
-			CMPI_RC_ERR_NOT_SUPPORTED, "CIM_ERR_NOT_SUPPORTED");
+        CMPIStatus rc = {CMPI_RC_OK, NULL};
+        CMSetStatusWithChars(Broker, &rc, CMPI_RC_ERR_NOT_SUPPORTED, 
+                             "CIM_ERR_NOT_SUPPORTED");
 	return rc;
 }
 
@@ -300,137 +230,44 @@ LinuxHA_ClusterNodeProviderExecQuery(CMPIInstanceMI* mi,
  * Method Provider 
  *************************************************/
 CMPIStatus 
-LinuxHA_ClusterNodeProviderInvokeMethod(CMPIMethodMI* mi,
-		CMPIContext* ctx,
-		CMPIResult* rslt,
-		CMPIObjectPath* ref,
-		char* methodName,
-		CMPIArgs* in,
-		CMPIArgs* out)
+ClusterNode_InvokeMethod(CMPIMethodMI * mi, CMPIContext * ctx,
+                         CMPIResult * rslt, CMPIObjectPath * ref,
+                         char * method_name, CMPIArgs * in, CMPIArgs * out)
 {
 
-	CMPIString* class_name = NULL;
-	CMPIStatus rc = {CMPI_RC_OK, NULL};
-	CMPIData arg_data;
-	CMPIValue valrc;
+        CMPIString* class_name = NULL;
+        CMPIStatus rc = {CMPI_RC_OK, NULL};
+        CMPIData arg_data;
+        CMPIValue valrc;
 	
-	class_name = CMGetClassName(ref, &rc);
-	arg_data = CMGetArg(in, "DirPathName", &rc);
+        class_name = CMGetClassName(ref, &rc);
+        arg_data = CMGetArg(in, "DirPathName", &rc);
 	
-	if(strcasecmp(CMGetCharPtr(class_name), ClassName) == 0 &&
-		strcasecmp("Send_message_to_all", methodName) == 0 ){
-		char* strArg = CMGetCharPtr(arg_data.value.string);
-		char cmd[] = "wall ";
+        if(strcasecmp(CMGetCharPtr(class_name), ClassName) == 0 &&
+           strcasecmp("Send_message_to_all", method_name) == 0 ){
+                char* strArg = CMGetCharPtr(arg_data.value.string);
+                char cmd[] = "wall ";
 
-		strcat(cmd, strArg);
-		valrc.uint32 = system(cmd);
-	}
+                strcat(cmd, strArg);
+                valrc.uint32 = system(cmd);
+        }
 
-	CMReturnData(rslt, &valrc, CMPI_uint32);
-	CMReturnDone(rslt);
+        CMReturnData(rslt, &valrc, CMPI_uint32);
+        CMReturnDone(rslt);
 
-	CMReturn(CMPI_RC_OK);
+        CMReturn(CMPI_RC_OK);
 }
 
 
 CMPIStatus 
-LinuxHA_ClusterNodeProviderMethodCleanup(CMPIMethodMI* mi, CMPIContext* ctx)
+ClusterNode_MethodCleanup(CMPIMethodMI * mi, CMPIContext * ctx)
 {
-	CMReturn(CMPI_RC_OK);
-}
-
-
-/**************************************************
- * Indication Interface Implementaion
- *************************************************/
-
-
-CMPIStatus 
-LinuxHA_ClusterNodeProviderIndicationCleanup(
-	CMPIInstanceMI * mi, 
-	CMPIContext * ctx)
-{
-	CMReturn(CMPI_RC_OK);
-}
-
-CMPIStatus 
-LinuxHA_ClusterNodeProviderAuthorizeFilter(
-	CMPIIndicationMI * mi,
-	CMPIContext * ctx,
-	CMPIResult * rslt,
-	CMPISelectExp * filter,
-	const char * type,
-	CMPIObjectPath * classPath,
-	const char * owner)
-{
-
-	CMPIValue valrc;
-	valrc.boolean = 1;
-
-	CMReturnData(rslt, &valrc, CMPI_boolean);
-	CMReturnDone(rslt);
-
-
-	/*** debug ***/
-        DEBUG_ENTER();
-        DEBUG_LEAVE();	
-	CMReturn(CMPI_RC_OK);
-}
-
-CMPIStatus 
-LinuxHA_ClusterNodeProviderMustPoll(
-	CMPIIndicationMI * mi,
-	CMPIContext * ctx,
-	CMPIResult * rslt,
-	CMPISelectExp * filter,
-	const char * indType,
-	CMPIObjectPath* classPath)
-{
-	
-	CMPIValue valrc;
-	valrc.boolean = 1;
-
-	CMReturnData(rslt, &valrc, CMPI_boolean);
-	CMReturnDone(rslt);
-	CMReturn(CMPI_RC_OK);
-}
-
-
-CMPIStatus 
-LinuxHA_ClusterNodeProviderActivateFilter(
-	CMPIIndicationMI * mi,
-	CMPIContext * ctx,
-	CMPIResult * rslt,
-	CMPISelectExp * filter,
-	const char * type,
-	CMPIObjectPath * classPath,
-	CMPIBoolean firstActivation)
-{
-
-
-        DEBUG_ENTER();
-        DEBUG_LEAVE();	
-	CMReturn(CMPI_RC_OK);
-}
-
-CMPIStatus 
-LinuxHA_ClusterNodeProviderDeActivateFilter(
-	CMPIIndicationMI * mi,
-	CMPIContext * ctx,
-	CMPIResult * rslt,
-	CMPISelectExp * filter,
-	const char * type,
-	CMPIObjectPath * classPath,
-	CMPIBoolean lastActivation)
-{
-
-
-	CMReturn(CMPI_RC_OK);
+        CMReturn(CMPI_RC_OK);
 }
 
 
 /*****************************************************
- * install interface
+ * install provider
  ****************************************************/
 
 static char inst_provider_name[] = "instanceLinuxHA_ClusterNodeProvider";
@@ -439,14 +276,14 @@ static CMPIInstanceMIFT instMIFT = {
         CMPICurrentVersion,
         CMPICurrentVersion,
         inst_provider_name,
-        LinuxHA_ClusterNodeProviderCleanup,
-        LinuxHA_ClusterNodeProviderEnumInstanceNames,
-        LinuxHA_ClusterNodeProviderEnumInstances,
-        LinuxHA_ClusterNodeProviderGetInstance,
-        LinuxHA_ClusterNodeProviderCreateInstance,
-        LinuxHA_ClusterNodeProviderSetInstance, 
-        LinuxHA_ClusterNodeProviderDeleteInstance,
-        LinuxHA_ClusterNodeProviderExecQuery
+        ClusterNode_Cleanup,
+        ClusterNode_EnumInstanceNames,
+        ClusterNode_EnumInstances,
+        ClusterNode_GetInstance,
+        ClusterNode_CreateInstance,
+        ClusterNode_SetInstance, 
+        ClusterNode_DeleteInstance,
+        ClusterNode_ExecQuery
 };
 
 CMPIInstanceMI * 
@@ -457,7 +294,6 @@ LinuxHA_ClusterNodeProvider_Create_InstanceMI(CMPIBroker * brkr, CMPIContext * c
                 &instMIFT
         };
         Broker = brkr;
-        CMNoHook;
         return &mi;
 }
 

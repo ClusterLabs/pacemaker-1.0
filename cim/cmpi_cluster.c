@@ -100,7 +100,6 @@ static GPtrArray *
 get_config_info_table ()
 {
         GPtrArray * config_info_table = NULL;
-        int ret = 0;
         int i = 0;
 
         config_info_table = g_ptr_array_new ();
@@ -110,9 +109,11 @@ get_config_info_table ()
         }
 
         if ( ! get_hb_initialized() ) {
-                ret = linuxha_initialize(HB_CLIENT_ID, 0);
 
-                if (ret != HA_OK ) {
+                if (linuxha_initialize(NULL, 0) != HA_OK ) {
+                        cl_log(LOG_ERR, "%s: failed to initialize heartbeat", 
+                               __FUNCTION__);
+
                         return NULL;
                 }
         }
@@ -147,7 +148,7 @@ get_config_info_table ()
 
                 g_ptr_array_add(config_info_table, config_info);
 
-                        /*** be careful, value was malloc with ha_strdup ***/
+                /*** be careful, value was malloc with ha_strdup ***/
                 ha_free(value);
 
         }
@@ -184,25 +185,25 @@ free_config_info_table(GPtrArray * config_info_table)
 
 static CMPIInstance *
 make_cluster_instance(char * classname, CMPIBroker * broker, 
-                CMPIObjectPath * op, CMPIStatus * rc)
+                      CMPIObjectPath * op, CMPIStatus * rc)
 {
         CMPIInstance * ci = NULL;
         GPtrArray * config_info_table = NULL;
 
-        char key_creation[] = "CreationClassName";
-        char key_name[] = "Name";
-        char name[] = "LinuxHACluster";	
+        char key_creation [] = "CreationClassName";
+        char key_name []     = "Name";
+        char name []         = "LinuxHACluster";	
 
 	int i = 0;
 
+        DEBUG_ENTER();
         config_info_table = get_config_info_table ();
 
         if ( config_info_table == NULL ) {
-                cl_log(LOG_ERR, "%s: can not get cluster info", __FUNCTION__);
+                cl_log(LOG_ERR, "%s: failed to get information from heartbeat", __FUNCTION__);
 
 	        CMSetStatusWithChars(broker, rc, 
-		       CMPI_RC_ERR_FAILED, "Can't get cluster info");
-
+		       CMPI_RC_ERR_FAILED, "Failed to get information from heartbeat");
 
                 return NULL;
         }
@@ -226,6 +227,20 @@ make_cluster_instance(char * classname, CMPIBroker * broker,
                 config_info = (struct hb_config_info *)
                         g_ptr_array_index(config_info_table, i); 
 
+                if ( config_info->property == NULL || 
+                     strlen(config_info->property) == 0 ) {
+                        cl_log(LOG_INFO, 
+                               "%s: no corresponding property for key %s, value:%s",
+                               __FUNCTION__, config_info->key, config_info->value);
+
+                        continue;
+                }
+
+                /*
+                cl_log(LOG_INFO, "%s: Set %s to %s", 
+                       __FUNCTION__, config_info->property, config_info->value);
+                */
+
                 CMSetProperty(ci, config_info->property,
                                 config_info->value, CMPI_chars);
         }
@@ -235,13 +250,14 @@ make_cluster_instance(char * classname, CMPIBroker * broker,
 
         free_config_info_table(config_info_table);
 
+        DEBUG_LEAVE();
         return ci;        
 }
 
 int
 get_cluster_instance(char * classname, CMPIBroker * broker,
-	       	CMPIContext * ctx, CMPIResult * rslt, 
-               	CMPIObjectPath * cop, CMPIStatus * rc)
+                     CMPIContext * ctx, CMPIResult * rslt, 
+                     CMPIObjectPath * cop, CMPIStatus * rc)
 {
         CMPIObjectPath* op = NULL;
         CMPIString * cmpi_namespace = NULL;
@@ -258,7 +274,7 @@ get_cluster_instance(char * classname, CMPIBroker * broker,
         op = CMNewObjectPath(broker, namespace, classname, rc);
         if ( CMIsNullObject(op) ){
 	        CMSetStatusWithChars(broker, rc, 
-		       CMPI_RC_ERR_FAILED, "Can't create object path");
+		       CMPI_RC_ERR_FAILED, "Failed to create object path");
 
                 cl_log(LOG_INFO, 
                         "%s: can not create object path", __FUNCTION__);
@@ -291,18 +307,18 @@ out:
 
 int
 enumerate_cluster_instances(char * classname, CMPIBroker * broker,
-	       	CMPIContext * ctx, CMPIResult * rslt,  
-               	CMPIObjectPath * cop, char ** properties,
-                int enum_inst, CMPIStatus * rc)
+                            CMPIContext * ctx, CMPIResult * rslt,  
+                            CMPIObjectPath * cop, char ** properties,
+                            int enum_inst, CMPIStatus * rc)
 {
 
         CMPIInstance* ci = NULL;
         CMPIObjectPath* op = NULL;
         CMPIString * cmpi_namespace = NULL;
 
-        char key_creation[] = "CreationClassName";
-        char key_name[] = "Name";
-        char name[] = "LinuxHACluster";	
+        char key_creation [] = "CreationClassName";
+        char key_name []     = "Name";
+        char name []         = "LinuxHACluster";	
         char * namespace = NULL;
         int ret = 0;
 

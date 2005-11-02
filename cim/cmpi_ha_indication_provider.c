@@ -1,5 +1,5 @@
 /*
- * CIM Provider
+ * CIM _
  * 
  * Author: Jia Ming Pan <jmltc@cn.ibm.com>
  * Copyright (c) 2005 International Business Machines
@@ -39,33 +39,33 @@
 
 static char ClassName []   = "LinuxHA_Indication";
 static CMPIBroker * Broker = NULL;
-
+static int ind_enabled     = 0;
 
 
 /*----------- indication interfaces ----------*/
 static CMPIStatus 
-LinuxHA_IndicationProviderIndicationCleanup(CMPIIndicationMI * mi, 
-                                            CMPIContext * ctx);
+Indication_IndicationCleanup(CMPIIndicationMI * mi, 
+                             CMPIContext * ctx);
 
 static CMPIStatus 
-LinuxHA_IndicationProviderAuthorizeFilter(CMPIIndicationMI * mi,
+Indication_AuthorizeFilter(CMPIIndicationMI * mi,
                 CMPIContext * ctx, CMPIResult * rslt,
                 CMPISelectExp * filter, const char * type,
                 CMPIObjectPath * classPath, const char * owner);
 
 static CMPIStatus 
-LinuxHA_IndicationProviderMustPoll(CMPIIndicationMI * mi,
+Indication_MustPoll(CMPIIndicationMI * mi,
                 CMPIContext * ctx, CMPIResult * rslt, CMPISelectExp * filter,
                 const char * indType, CMPIObjectPath * classPath);
 
 static CMPIStatus 
-LinuxHA_IndicationProviderActivateFilter(CMPIIndicationMI * mi,
+Indication_ActivateFilter(CMPIIndicationMI * mi,
                 CMPIContext * ctx, CMPIResult * rslt,
                 CMPISelectExp * filter, const char * type,
                 CMPIObjectPath * classPath, CMPIBoolean firstActivation);
 
 static CMPIStatus 
-LinuxHA_IndicationProviderDeActivateFilter(CMPIIndicationMI * mi,
+Indication_DeActivateFilter(CMPIIndicationMI * mi,
                CMPIContext * ctx, CMPIResult * rslt,
                CMPISelectExp * filter, const char * type,
                CMPIObjectPath * classPath, CMPIBoolean lastActivation);
@@ -80,7 +80,7 @@ LinuxHA_IndicationProvider_Create_IndicationMI(CMPIBroker * brkr,
  * Indication Interface Implementaion
  *************************************************/
 static CMPIStatus 
-LinuxHA_IndicationProviderIndicationCleanup(CMPIIndicationMI * mi, 
+Indication_IndicationCleanup(CMPIIndicationMI * mi, 
                 CMPIContext * ctx)
 {
         init_logger(PROVIDER_ID);
@@ -90,7 +90,7 @@ LinuxHA_IndicationProviderIndicationCleanup(CMPIIndicationMI * mi,
 }
 
 static CMPIStatus 
-LinuxHA_IndicationProviderAuthorizeFilter(CMPIIndicationMI * mi,
+Indication_AuthorizeFilter(CMPIIndicationMI * mi,
                 CMPIContext * ctx, CMPIResult * rslt,
                 CMPISelectExp * filter, const char * type,
                 CMPIObjectPath * classPath, const char * owner)
@@ -115,7 +115,7 @@ LinuxHA_IndicationProviderAuthorizeFilter(CMPIIndicationMI * mi,
 }
 
 static CMPIStatus 
-LinuxHA_IndicationProviderMustPoll(CMPIIndicationMI * mi,
+Indication_MustPoll(CMPIIndicationMI * mi,
                 CMPIContext * ctx, CMPIResult * rslt, CMPISelectExp * filter,
                 const char * indType, CMPIObjectPath * classPath)
 {
@@ -142,7 +142,7 @@ LinuxHA_IndicationProviderMustPoll(CMPIIndicationMI * mi,
 }
 
 static CMPIStatus 
-LinuxHA_IndicationProviderActivateFilter(CMPIIndicationMI * mi,
+Indication_ActivateFilter(CMPIIndicationMI * mi,
                 CMPIContext * ctx, CMPIResult * rslt,
                 CMPISelectExp * filter, const char * type,
                 CMPIObjectPath * classPath, CMPIBoolean firstActivation)
@@ -169,7 +169,7 @@ LinuxHA_IndicationProviderActivateFilter(CMPIIndicationMI * mi,
 }
 
 static CMPIStatus 
-LinuxHA_IndicationProviderDeActivateFilter(CMPIIndicationMI * mi,
+Indication_DeActivateFilter(CMPIIndicationMI * mi,
                CMPIContext * ctx, CMPIResult * rslt,
                CMPISelectExp * filter, const char * type,
                CMPIObjectPath * classPath, CMPIBoolean lastActivation)
@@ -195,42 +195,42 @@ LinuxHA_IndicationProviderDeActivateFilter(CMPIIndicationMI * mi,
 
 
 static void 
-LinuxHA_IndicationProviderEnableIndications(CMPIIndicationMI * mi )
+Indication_EnableIndications(CMPIIndicationMI * mi )
 {
 
-   /* Enable indication generation */
-
+        /* Enable indication generation */
+        ind_enabled = 1;
 
 }
 
 
 static void 
-LinuxHA_IndicationProviderDisableIndications(CMPIIndicationMI * mi )
+Indication_DisableIndications(CMPIIndicationMI * mi )
 {
-    /* Disable indication generation */
+        /* Disable indication generation */
 
-
+        ind_enabled = 0;
 }
 
 /*--------------------------------------------*/
 
 #if 0
-CMIndicationMIStub(LinuxHA_IndicationProvider, LinuxHA_IndicationProvider, Broker, CMNoHook);
+CMIndicationMIStub(Indication_, Indication_, Broker, CMNoHook);
 #endif
 
 
-static char ind_provider_name[] = "indLinuxHA_IndicationProvider";
+static char ind_provider_name[] = "indIndication_";
 static CMPIIndicationMIFT indMIFT = {
         CMPICurrentVersion,
         CMPICurrentVersion,
         ind_provider_name,
-        LinuxHA_IndicationProviderIndicationCleanup,
-        LinuxHA_IndicationProviderAuthorizeFilter,
-        LinuxHA_IndicationProviderMustPoll,
-        LinuxHA_IndicationProviderActivateFilter,
-        LinuxHA_IndicationProviderDeActivateFilter,
-        LinuxHA_IndicationProviderEnableIndications,
-        LinuxHA_IndicationProviderDisableIndications
+        Indication_IndicationCleanup,
+        Indication_AuthorizeFilter,
+        Indication_MustPoll,
+        Indication_ActivateFilter,
+        Indication_DeActivateFilter,
+        Indication_EnableIndications,
+        Indication_DisableIndications
 };
 
 CMPIIndicationMI *

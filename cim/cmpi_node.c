@@ -1,5 +1,5 @@
 /*
- * CIM Provider
+ * CIM Provider - 
  * 
  * Author: Jia Ming Pan <jmltc@cn.ibm.com>
  * Copyright (c) 2005 International Business Machines
@@ -37,7 +37,8 @@
 #include "cmpi_node.h"
 #include "cmpi_utils.h"
 
-#define HB_CLIENT_ID "cim-provider-node"
+/* #define HB_CLIENT_ID "cim-provider-node" */
+#define HB_CLIENT_ID NULL
 
 static char * get_cluster_dc(void);
 static char * get_node_status(const char * node);
@@ -47,9 +48,9 @@ static struct hb_nodeinfo * hb_nodeinfo_dup(const struct hb_nodeinfo * info);
 static int hb_nodeinfo_free(struct hb_nodeinfo * node_info);
 
 
-static CMPIInstance * make_node_instance(char * classname, 
-                           CMPIBroker * broker, CMPIObjectPath * op, 
-                           char * uname, CMPIStatus * rc);
+static CMPIInstance * 
+make_node_instance(char * classname, CMPIBroker * broker, CMPIObjectPath * op, 
+                   char * uname, CMPIStatus * rc);
 
 
 static char *
@@ -165,8 +166,6 @@ get_nodeinfo_table ()
         GPtrArray * nodeinfo_table = NULL;
         GPtrArray * hb_info = NULL;
         struct hb_nodeinfo * node_info = NULL;
-
-        int ret = 0;
         int i = 0;
 
         DEBUG_ENTER();
@@ -182,9 +181,7 @@ get_nodeinfo_table ()
 
 
         if ( ! get_hb_initialized() ) {
-                ret = linuxha_initialize(HB_CLIENT_ID, 0);
-
-                if (ret != HA_OK ) {
+                if ( linuxha_initialize(HB_CLIENT_ID, 0) != HA_OK ) {
                         cl_log(LOG_ERR, 
                            "%s: can not initialize heartbeat", __FUNCTION__);
 
@@ -193,7 +190,7 @@ get_nodeinfo_table ()
                 }
         }
 
-        /* get info from linuxha_info.c */
+        /* get info from linuxha_info */
         hb_info = get_hb_info(LHA_NODEINFO); 
 
         for ( i = 0; i < hb_info->len; i++ ) {
@@ -237,7 +234,7 @@ free_nodeinfo_table(GPtrArray * nodeinfo_table)
 
 static CMPIInstance *
 make_node_instance(char * classname, CMPIBroker * broker, 
-                CMPIObjectPath * op, char * uname, CMPIStatus * rc)
+                   CMPIObjectPath * op, char * uname, CMPIStatus * rc)
 {
         GPtrArray * nodeinfo_table = NULL;
         struct hb_nodeinfo * nodeinfo = NULL;
@@ -334,9 +331,10 @@ out:
 
 
 int
-get_clusternode_instance(char * classname, CMPIBroker * broker,
-                CMPIContext * ctx, CMPIResult * rslt,
-                CMPIObjectPath * cop, char ** properties, CMPIStatus * rc)
+get_clusternode_instance(char * classname, CMPIBroker * broker, 
+                         CMPIContext * ctx, CMPIResult * rslt, 
+                         CMPIObjectPath * cop, char ** properties, 
+                         CMPIStatus * rc)
 {
         CMPIObjectPath * op = NULL;
         CMPIData data_uname;
@@ -382,8 +380,9 @@ out:
 
 int 
 enumerate_clusternode_instances(char * classname, CMPIBroker * broker,
-                CMPIInstanceMI * mi, CMPIContext * ctx, CMPIResult * rslt,
-                CMPIObjectPath * ref, int enum_inst, CMPIStatus * rc)
+                                CMPIInstanceMI * mi, CMPIContext * ctx, 
+                                CMPIResult * rslt, CMPIObjectPath * ref, 
+                                int enum_inst, CMPIStatus * rc)
 {
 
         CMPIObjectPath * op = NULL;
@@ -398,10 +397,12 @@ enumerate_clusternode_instances(char * classname, CMPIBroker * broker,
         nodeinfo_table = get_nodeinfo_table ();
         
         if ( nodeinfo_table == NULL ) {
-                cl_log(LOG_ERR, "%s: can not get node info", __FUNCTION__);
+                cl_log(LOG_ERR, 
+                       "%s: failed to get node information from heartbeat", 
+                       __FUNCTION__);
 
                 CMSetStatusWithChars(broker, rc,
-                       CMPI_RC_ERR_FAILED, "Can't get node info");
+                       CMPI_RC_ERR_FAILED, "Failed to get node info from heartbeat");
 
                 return HA_FAIL;
         }

@@ -38,58 +38,57 @@
 #include "cmpi_utils.h"
 #include "linuxha_info.h"
 
-#define HB_CLIENT_ID "cim-provider-sw"
-#define PROVIDER_ID "cim-provider-sw"
+/* #define HB_CLIENT_ID   "cim-provider-sw" */
+#define HB_CLIENT_ID   NULL   /* casual signon */
+#define PROVIDER_ID    "cim-provider-sw"
 
-static CMPIBroker * Broker;
-static char ClassName[] = "LinuxHA_SoftwareIdentity";
+static CMPIBroker * Broker = NULL;
+static char ClassName []   = "LinuxHA_SoftwareIdentity";
 
-
-CMPIStatus 
-LinuxHA_SoftwareIdentityProviderCleanup(CMPIInstanceMI * mi, CMPIContext * ctx);
 
 CMPIStatus 
-LinuxHA_SoftwareIdentityProviderEnumInstanceNames(CMPIInstanceMI* mi,
-		CMPIContext * ctx, CMPIResult * rslt, CMPIObjectPath * ref);
-CMPIStatus 
-LinuxHA_SoftwareIdentityProviderEnumInstances(CMPIInstanceMI * mi,
-		CMPIContext * ctx, CMPIResult * rslt,
-		CMPIObjectPath * ref, char ** properties);
+SoftwareIdentity_Cleanup(CMPIInstanceMI * mi, CMPIContext * ctx);
 
 CMPIStatus 
-LinuxHA_SoftwareIdentityProviderGetInstance(CMPIInstanceMI * mi,
-		CMPIContext * ctx, CMPIResult * rslt,
-		CMPIObjectPath * cop, char ** properties);
+SoftwareIdentity_EnumInstanceNames(CMPIInstanceMI* mi, CMPIContext * ctx, 
+                                   CMPIResult * rslt, CMPIObjectPath * ref);
+CMPIStatus 
+SoftwareIdentity_EnumInstances(CMPIInstanceMI * mi, CMPIContext * ctx, 
+                               CMPIResult * rslt, CMPIObjectPath * ref, 
+                               char ** properties);
 
 CMPIStatus 
-LinuxHA_SoftwareIdentityProviderCreateInstance(CMPIInstanceMI * mi,
-		CMPIContext * ctx, CMPIResult * rslt,
-		CMPIObjectPath * cop, CMPIInstance * ci);
+SoftwareIdentity_GetInstance(CMPIInstanceMI * mi, CMPIContext * ctx, 
+                             CMPIResult * rslt, CMPIObjectPath * cop, 
+                             char ** properties);
 
 CMPIStatus 
-LinuxHA_SoftwareIdentityProviderSetInstance(CMPIInstanceMI * mi,
-		CMPIContext * ctx, CMPIResult * rslt,
-		CMPIObjectPath * cop, CMPIInstance * ci, char ** properties);
+SoftwareIdentity_CreateInstance(CMPIInstanceMI * mi, CMPIContext * ctx, 
+                                CMPIResult * rslt, CMPIObjectPath * cop, 
+                                CMPIInstance * ci);
 
 CMPIStatus 
-LinuxHA_SoftwareIdentityProviderDeleteInstance(CMPIInstanceMI * mi,
-		CMPIContext * ctx, CMPIResult * rslt, CMPIObjectPath * cop);
+SoftwareIdentity_SetInstance(CMPIInstanceMI * mi, CMPIContext * ctx, 
+                             CMPIResult * rslt,	CMPIObjectPath * cop, 
+                             CMPIInstance * ci, char ** properties);
+
 CMPIStatus 
-LinuxHA_SoftwareIdentityProviderExecQuery(CMPIInstanceMI * mi,
-		CMPIContext * ctx, CMPIResult * rslt,
-		CMPIObjectPath * ref, char * lang, char * query);
+SoftwareIdentity_DeleteInstance(CMPIInstanceMI * mi, CMPIContext * ctx, 
+                                CMPIResult * rslt, CMPIObjectPath * cop);
+CMPIStatus 
+SoftwareIdentity_ExecQuery(CMPIInstanceMI * mi,	CMPIContext * ctx, 
+                           CMPIResult * rslt, CMPIObjectPath * ref, 
+                           char * lang, char * query);
 
 CMPIInstanceMI * 
 LinuxHA_SoftwareIdentityProvider_Create_InstanceMI(CMPIBroker * brkr, 
-                CMPIContext * ctx);
+                                                   CMPIContext * ctx);
 
 
-/**********************************************
- * Instance Provider Interface
- **********************************************/
+/******************************************************************/
 
 CMPIStatus 
-LinuxHA_SoftwareIdentityProviderCleanup(CMPIInstanceMI* mi, CMPIContext* ctx)
+SoftwareIdentity_Cleanup(CMPIInstanceMI* mi, CMPIContext* ctx)
 {
 
         CMReturn(CMPI_RC_OK);
@@ -97,13 +96,13 @@ LinuxHA_SoftwareIdentityProviderCleanup(CMPIInstanceMI* mi, CMPIContext* ctx)
 
 
 CMPIStatus 
-LinuxHA_SoftwareIdentityProviderEnumInstanceNames(CMPIInstanceMI * mi,
-		CMPIContext * ctx, CMPIResult * rslt, CMPIObjectPath * ref)
+SoftwareIdentity_EnumInstanceNames(CMPIInstanceMI * mi, CMPIContext * ctx, 
+                                   CMPIResult * rslt, CMPIObjectPath * ref)
 {
         CMPIObjectPath * op = NULL;
         char * namespace = NULL;
         CMPIStatus rc;
-        char instance_id [] = "LinuxHA:LinuxHA_Cluster";
+        char instance_id [] = "LinuxHA:Cluster";
 
 
         init_logger(PROVIDER_ID);
@@ -124,9 +123,9 @@ LinuxHA_SoftwareIdentityProviderEnumInstanceNames(CMPIInstanceMI * mi,
 
 
 CMPIStatus 
-LinuxHA_SoftwareIdentityProviderEnumInstances(CMPIInstanceMI * mi,
-		CMPIContext * ctx, CMPIResult * rslt,
-		CMPIObjectPath * ref, char ** properties)
+SoftwareIdentity_EnumInstances(CMPIInstanceMI * mi, CMPIContext * ctx, 
+                               CMPIResult * rslt, CMPIObjectPath * ref, 
+                               char ** properties)
 {
         CMPIObjectPath * op = NULL;
         CMPIEnumeration * en = NULL;
@@ -176,9 +175,9 @@ LinuxHA_SoftwareIdentityProviderEnumInstances(CMPIInstanceMI * mi,
 
 
 CMPIStatus 
-LinuxHA_SoftwareIdentityProviderGetInstance(CMPIInstanceMI * mi,
-		CMPIContext * ctx, CMPIResult * rslt,
-		CMPIObjectPath * cop, char ** properties)
+SoftwareIdentity_GetInstance(CMPIInstanceMI * mi, CMPIContext * ctx, 
+                             CMPIResult * rslt, CMPIObjectPath * cop, 
+                             char ** properties)
 {
         CMPIStatus rc = {CMPI_RC_OK, NULL};
 	CMPIInstance * ci = NULL;
@@ -191,9 +190,8 @@ LinuxHA_SoftwareIdentityProviderGetInstance(CMPIInstanceMI * mi,
 
 
         init_logger(PROVIDER_ID);
-        instance_id = 
-                (char *)CMGetKey(cop, "InstanceID", &rc).value.string->hdl;
-        namespace = (char *)CMGetNameSpace(cop, &rc)->hdl;
+        instance_id = CMGetCharPtr(CMGetKey(cop, "InstanceID", &rc).value.string);
+        namespace = CMGetCharPtr(CMGetNameSpace(cop, &rc));
         
         op = CMNewObjectPath(Broker, namespace, ClassName, &rc);
 
@@ -209,14 +207,12 @@ LinuxHA_SoftwareIdentityProviderGetInstance(CMPIInstanceMI * mi,
 
 
 	if ( ! get_hb_initialized() ) {
-                int ret = 0 ;
 
-		ret = linuxha_initialize(HB_CLIENT_ID, 0);
-                if ( ret != HA_OK ){
-                        char err_info [] = "Cann't get information from heartbeat";
+                if ( linuxha_initialize(HB_CLIENT_ID, 0) != HA_OK ){
+                        char err_info [] = "Failed to get information from heartbeat";
 
 	                CMSetStatusWithChars(Broker, &rc, 
-		                CMPI_RC_ERR_FAILED, err_info);
+                                             CMPI_RC_ERR_FAILED, err_info);
 
                         return rc;
                 }
@@ -224,10 +220,10 @@ LinuxHA_SoftwareIdentityProviderGetInstance(CMPIInstanceMI * mi,
 
 
         if (hbconfig_get_str_value(KEY_HBVERSION, &hbversion) != HA_OK) {
-                char err_info [] = "Cann't get information from heartbeat";
+                char err_info [] = "Failed to get information from heartbeat";
 
 	        CMSetStatusWithChars(Broker, &rc, 
-		       CMPI_RC_ERR_FAILED, err_info);
+                                     CMPI_RC_ERR_FAILED, err_info);
 
                 if (get_hb_initialized () ) {
                         linuxha_finalize();
@@ -279,11 +275,9 @@ LinuxHA_SoftwareIdentityProviderGetInstance(CMPIInstanceMI * mi,
 
 
 CMPIStatus 
-LinuxHA_SoftwareIdentityProviderCreateInstance(CMPIInstanceMI* mi,
-		CMPIContext *ctx,
-		CMPIResult* rslt,
-		CMPIObjectPath* cop,
-		CMPIInstance* ci)
+SoftwareIdentity_CreateInstance(CMPIInstanceMI* mi, CMPIContext * ctx, 
+                                CMPIResult * rslt, CMPIObjectPath * cop,
+                                CMPIInstance * ci)
 {
 	CMPIStatus rc = {CMPI_RC_OK, NULL};
 	CMSetStatusWithChars(Broker, &rc, 
@@ -293,12 +287,9 @@ LinuxHA_SoftwareIdentityProviderCreateInstance(CMPIInstanceMI* mi,
 
 
 CMPIStatus 
-LinuxHA_SoftwareIdentityProviderSetInstance(CMPIInstanceMI * mi,
-		CMPIContext * ctx,
-		CMPIResult * rslt,
-		CMPIObjectPath * cop,
-		CMPIInstance * ci,
-		char ** properties)
+SoftwareIdentity_SetInstance(CMPIInstanceMI * mi, CMPIContext * ctx,
+                             CMPIResult * rslt, CMPIObjectPath * cop,
+                             CMPIInstance * ci,	char ** properties)
 {
 	CMPIStatus rc = {CMPI_RC_OK, NULL};
 	CMSetStatusWithChars(Broker, &rc, 
@@ -309,10 +300,8 @@ LinuxHA_SoftwareIdentityProviderSetInstance(CMPIInstanceMI * mi,
 
 
 CMPIStatus 
-LinuxHA_SoftwareIdentityProviderDeleteInstance(CMPIInstanceMI* mi,
-		CMPIContext* ctx,
-		CMPIResult* rslt,
-		CMPIObjectPath* cop)
+SoftwareIdentity_DeleteInstance(CMPIInstanceMI * mi, CMPIContext * ctx,
+                                CMPIResult * rslt, CMPIObjectPath * cop)
 {
 	CMPIStatus rc = {CMPI_RC_OK, NULL};
 	CMSetStatusWithChars(Broker, &rc, 
@@ -321,12 +310,9 @@ LinuxHA_SoftwareIdentityProviderDeleteInstance(CMPIInstanceMI* mi,
 }
 
 CMPIStatus 
-LinuxHA_SoftwareIdentityProviderExecQuery(CMPIInstanceMI* mi,
-		CMPIContext* ctx,
-		CMPIResult* rslt,
-		CMPIObjectPath* ref,
-		char* lang,
-		char* query)
+SoftwareIdentity_ExecQuery(CMPIInstanceMI * mi, CMPIContext * ctx,
+                           CMPIResult * rslt, CMPIObjectPath * ref,
+                           char * lang, char * query)
 {
 	CMPIStatus rc = {CMPI_RC_OK, NULL};
 	CMSetStatusWithChars(Broker, &rc, 
@@ -338,34 +324,34 @@ LinuxHA_SoftwareIdentityProviderExecQuery(CMPIInstanceMI* mi,
 
 
 /*****************************************************
- * install interface
+ * install provider
  ****************************************************/
 
-static char provider_name[] = "instanceLinuxHA_SoftwareIdentityProvider";
+static char provider_name[] = "instanceSoftwareIdentityProvider";
 
 static CMPIInstanceMIFT instMIFT = {
         CMPICurrentVersion,
         CMPICurrentVersion,
         provider_name,
-        LinuxHA_SoftwareIdentityProviderCleanup,
-        LinuxHA_SoftwareIdentityProviderEnumInstanceNames,
-        LinuxHA_SoftwareIdentityProviderEnumInstances,
-        LinuxHA_SoftwareIdentityProviderGetInstance,
-        LinuxHA_SoftwareIdentityProviderCreateInstance,
-        LinuxHA_SoftwareIdentityProviderSetInstance, 
-        LinuxHA_SoftwareIdentityProviderDeleteInstance,
-        LinuxHA_SoftwareIdentityProviderExecQuery
+        SoftwareIdentity_Cleanup,
+        SoftwareIdentity_EnumInstanceNames,
+        SoftwareIdentity_EnumInstances,
+        SoftwareIdentity_GetInstance,
+        SoftwareIdentity_CreateInstance,
+        SoftwareIdentity_SetInstance, 
+        SoftwareIdentity_DeleteInstance,
+        SoftwareIdentity_ExecQuery
 };
 
 CMPIInstanceMI * 
-LinuxHA_SoftwareIdentityProvider_Create_InstanceMI(CMPIBroker * brkr, CMPIContext * ctx)
+LinuxHA_SoftwareIdentityProvider_Create_InstanceMI(CMPIBroker * brkr, 
+                                                   CMPIContext * ctx)
 {
         static CMPIInstanceMI mi = {
                 NULL,
                 &instMIFT
         };
         Broker = brkr;
-        CMNoHook;
         return &mi;
 }
 

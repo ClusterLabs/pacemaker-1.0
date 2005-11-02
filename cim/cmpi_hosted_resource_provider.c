@@ -1,5 +1,5 @@
 /*
- * CIM Provider
+ * CIM _
  * 
  * Author: Jia Ming Pan <jmltc@cn.ibm.com>
  * Copyright (c) 2005 International Business Machines
@@ -55,76 +55,76 @@ static char resource_class_name []      = RESOURCE_CLASSNAME;
 
 /***************** instance interfaces *******************/
 CMPIStatus 
-LinuxHA_HostedResourceProviderCleanup(CMPIInstanceMI* mi, CMPIContext* ctx);
+HostedResource_Cleanup(CMPIInstanceMI* mi, CMPIContext* ctx);
 
 CMPIStatus 
-LinuxHA_HostedResourceProviderEnumInstanceNames(CMPIInstanceMI * mi,
+HostedResource_EnumInstanceNames(CMPIInstanceMI * mi,
                 CMPIContext * ctx, CMPIResult * rslt, CMPIObjectPath * ref);
         
 CMPIStatus 
-LinuxHA_HostedResourceProviderEnumInstances(CMPIInstanceMI * mi,
+HostedResource_EnumInstances(CMPIInstanceMI * mi,
                 CMPIContext * ctx, CMPIResult * rslt,
                 CMPIObjectPath * ref, char ** properties);
 
 CMPIStatus 
-LinuxHA_HostedResourceProviderGetInstance(CMPIInstanceMI * mi,
+HostedResource_GetInstance(CMPIInstanceMI * mi,
                 CMPIContext * ctx, CMPIResult * rslt,
                 CMPIObjectPath * cop, char ** properties);
 
 CMPIStatus 
-LinuxHA_HostedResourceProviderCreateInstance(CMPIInstanceMI * mi,
+HostedResource_CreateInstance(CMPIInstanceMI * mi,
                 CMPIContext * ctx, CMPIResult * rslt,
                 CMPIObjectPath * cop, CMPIInstance * ci);
 
 CMPIStatus 
-LinuxHA_HostedResourceProviderSetInstance(CMPIInstanceMI * mi,
+HostedResource_SetInstance(CMPIInstanceMI * mi,
                 CMPIContext * ctx, CMPIResult * rslt,
                 CMPIObjectPath * cop, CMPIInstance * ci, char ** properties);
 
 CMPIStatus 
-LinuxHA_HostedResourceProviderDeleteInstance(CMPIInstanceMI * mi,
+HostedResource_DeleteInstance(CMPIInstanceMI * mi,
                 CMPIContext * ctx, CMPIResult * rslt, CMPIObjectPath * cop);
 
 CMPIStatus 
-LinuxHA_HostedResourceProviderExecQuery(CMPIInstanceMI * mi,
+HostedResource_ExecQuery(CMPIInstanceMI * mi,
                 CMPIContext * ctx, CMPIResult * rslt,
                 CMPIObjectPath * ref, char * lang, char * query);
 
 /*********************** association interfaces ***********************/
 
 CMPIStatus 
-LinuxHA_HostedResourceProviderAssociationCleanup(CMPIAssociationMI * mi, 
+HostedResource_AssociationCleanup(CMPIAssociationMI * mi, 
                         CMPIContext * ctx);
 
 CMPIStatus
-LinuxHA_HostedResourceProviderAssociators(
+HostedResource_Associators(
                 CMPIAssociationMI * mi, CMPIContext * ctx, CMPIResult * rslt,
                 CMPIObjectPath * op, const char * asscClass, 
                 const char * resultClass,
                 const char * role, const char * resultRole, char ** properties);
 
 CMPIStatus
-LinuxHA_HostedResourceProviderAssociatorNames(
+HostedResource_AssociatorNames(
                 CMPIAssociationMI * mi, CMPIContext * ctx, CMPIResult * rslt,
                 CMPIObjectPath * op, const char * asscClass, 
                 const char * resultClass,
                 const char * role, const char * resultRole);
 
 CMPIStatus
-LinuxHA_HostedResourceProviderReferences(
+HostedResource_References(
                 CMPIAssociationMI * mi, CMPIContext * ctx, CMPIResult * rslt,
                 CMPIObjectPath * op, const char * resultClass,
                 const char * role, char ** properties);
 
 CMPIStatus
-LinuxHA_HostedResourceProviderReferenceNames(CMPIAssociationMI * mi,
+HostedResource_ReferenceNames(CMPIAssociationMI * mi,
                 CMPIContext * ctx, CMPIResult * rslt, CMPIObjectPath * cop,
                 const char * assocClass, const char * role);
 
 
 CMPIAssociationMI * 
-LinuxHA_HostedResourceProvider_Create_AssociationMI(CMPIBroker* brkr, 
-                                CMPIContext *ctx); 
+LinuxHA_HostedResourceProvider_Create_AssociationMI(CMPIBroker * brkr, 
+                                CMPIContext * ctx); 
 CMPIInstanceMI * 
 LinuxHA_HostedResourceProvider_Create_InstanceMI(CMPIBroker * brkr, 
                                 CMPIContext * ctx); 
@@ -134,14 +134,14 @@ LinuxHA_HostedResourceProvider_Create_InstanceMI(CMPIBroker * brkr,
  **********************************************/
 
 CMPIStatus 
-LinuxHA_HostedResourceProviderCleanup(CMPIInstanceMI* mi, CMPIContext* ctx)
+HostedResource_Cleanup(CMPIInstanceMI * mi, CMPIContext * ctx)
 {
         CMReturn(CMPI_RC_OK);
 }
 
 
 CMPIStatus 
-LinuxHA_HostedResourceProviderEnumInstanceNames(CMPIInstanceMI * mi,
+HostedResource_EnumInstanceNames(CMPIInstanceMI * mi,
                 CMPIContext* ctx, CMPIResult * rslt, CMPIObjectPath * ref)
 {
 
@@ -168,7 +168,7 @@ LinuxHA_HostedResourceProviderEnumInstanceNames(CMPIInstanceMI * mi,
 
 
 CMPIStatus 
-LinuxHA_HostedResourceProviderEnumInstances(CMPIInstanceMI * mi,
+HostedResource_EnumInstances(CMPIInstanceMI * mi,
                 CMPIContext * ctx, CMPIResult * rslt,
                 CMPIObjectPath * ref, char ** properties)
 {
@@ -197,7 +197,7 @@ LinuxHA_HostedResourceProviderEnumInstances(CMPIInstanceMI * mi,
 
 
 CMPIStatus 
-LinuxHA_HostedResourceProviderGetInstance(CMPIInstanceMI * mi,
+HostedResource_GetInstance(CMPIInstanceMI * mi,
                 CMPIContext * ctx, CMPIResult * rslt,
                 CMPIObjectPath * cop, char ** properties)
 {
@@ -223,7 +223,7 @@ LinuxHA_HostedResourceProviderGetInstance(CMPIInstanceMI * mi,
 }
 
 CMPIStatus 
-LinuxHA_HostedResourceProviderCreateInstance(CMPIInstanceMI * mi,
+HostedResource_CreateInstance(CMPIInstanceMI * mi,
                 CMPIContext * ctx, CMPIResult * rslt,
                 CMPIObjectPath * cop, CMPIInstance * ci)
 {
@@ -235,7 +235,7 @@ LinuxHA_HostedResourceProviderCreateInstance(CMPIInstanceMI * mi,
 
 
 CMPIStatus 
-LinuxHA_HostedResourceProviderSetInstance(CMPIInstanceMI * mi,
+HostedResource_SetInstance(CMPIInstanceMI * mi,
                 CMPIContext * ctx, CMPIResult * rslt,
                 CMPIObjectPath * cop, CMPIInstance * ci, char ** properties)
 {
@@ -248,7 +248,7 @@ LinuxHA_HostedResourceProviderSetInstance(CMPIInstanceMI * mi,
 
 
 CMPIStatus 
-LinuxHA_HostedResourceProviderDeleteInstance(CMPIInstanceMI * mi,
+HostedResource_DeleteInstance(CMPIInstanceMI * mi,
                 CMPIContext * ctx, CMPIResult * rslt, CMPIObjectPath * cop)
 {
         CMPIStatus rc = {CMPI_RC_OK, NULL};
@@ -258,7 +258,7 @@ LinuxHA_HostedResourceProviderDeleteInstance(CMPIInstanceMI * mi,
 }
 
 CMPIStatus 
-LinuxHA_HostedResourceProviderExecQuery(CMPIInstanceMI * mi,
+HostedResource_ExecQuery(CMPIInstanceMI * mi,
                 CMPIContext * ctx, CMPIResult * rslt, CMPIObjectPath *ref,
                 char * lang, char * query)
 {
@@ -273,14 +273,14 @@ LinuxHA_HostedResourceProviderExecQuery(CMPIInstanceMI * mi,
  * Association
  ****************************************************/
 CMPIStatus 
-LinuxHA_HostedResourceProviderAssociationCleanup(CMPIAssociationMI * mi, 
+HostedResource_AssociationCleanup(CMPIAssociationMI * mi, 
                         CMPIContext * ctx)
 {
         CMReturn(CMPI_RC_OK);
 }
 
 CMPIStatus
-LinuxHA_HostedResourceProviderAssociators(
+HostedResource_Associators(
                 CMPIAssociationMI * mi, CMPIContext * ctx, CMPIResult * rslt,
                 CMPIObjectPath * cop, const char * assocClass, 
                 const char * resultClass,
@@ -311,7 +311,7 @@ LinuxHA_HostedResourceProviderAssociators(
 
 
 CMPIStatus
-LinuxHA_HostedResourceProviderAssociatorNames(
+HostedResource_AssociatorNames(
                 CMPIAssociationMI * mi, CMPIContext * ctx, CMPIResult * rslt,
                 CMPIObjectPath * cop, const char * assocClass, 
                 const char * resultClass,
@@ -343,7 +343,7 @@ LinuxHA_HostedResourceProviderAssociatorNames(
 }
 
 CMPIStatus
-LinuxHA_HostedResourceProviderReferences(
+HostedResource_References(
                 CMPIAssociationMI * mi, CMPIContext * ctx, CMPIResult * rslt,
                 CMPIObjectPath * cop, const char * resultClass,
                 const char * role, char ** properties)
@@ -372,7 +372,7 @@ LinuxHA_HostedResourceProviderReferences(
 }
 
 CMPIStatus
-LinuxHA_HostedResourceProviderReferenceNames(
+HostedResource_ReferenceNames(
                 CMPIAssociationMI * mi, CMPIContext * ctx, 
                 CMPIResult * rslt, CMPIObjectPath * cop,
                 const char * resultClass, const char * role)
@@ -405,53 +405,54 @@ LinuxHA_HostedResourceProviderReferenceNames(
  *************************************************************/
 
 
-static char inst_provider_name[] = "instanceLinuxHA_HostedResourceProvider";
+static char inst_provider_name[] = "instanceHostedResource_provider";
 
 static CMPIInstanceMIFT instMIFT = {
         CMPICurrentVersion,
         CMPICurrentVersion,
         inst_provider_name,
-        LinuxHA_HostedResourceProviderCleanup,
-        LinuxHA_HostedResourceProviderEnumInstanceNames,
-        LinuxHA_HostedResourceProviderEnumInstances,
-        LinuxHA_HostedResourceProviderGetInstance,
-        LinuxHA_HostedResourceProviderCreateInstance,
-        LinuxHA_HostedResourceProviderSetInstance, 
-        LinuxHA_HostedResourceProviderDeleteInstance,
-        LinuxHA_HostedResourceProviderExecQuery
+        HostedResource_Cleanup,
+        HostedResource_EnumInstanceNames,
+        HostedResource_EnumInstances,
+        HostedResource_GetInstance,
+        HostedResource_CreateInstance,
+        HostedResource_SetInstance, 
+        HostedResource_DeleteInstance,
+        HostedResource_ExecQuery
 };
 
 CMPIInstanceMI * 
-LinuxHA_HostedResourceProvider_Create_InstanceMI(CMPIBroker * brkr, CMPIContext * ctx)
+LinuxHA_HostedResourceProvider_Create_InstanceMI(CMPIBroker * brkr, 
+        CMPIContext * ctx)
 {
         static CMPIInstanceMI mi = {
                 NULL,
                 &instMIFT
         };
         Broker = brkr;
-        CMNoHook;
         return &mi;
 }
 
 
 /******************************************************************************/
 
-static char assoc_provider_name[] = "assocationLinuxHA_HostedResourceProvider";
+static char assoc_provider_name[] = "assocationHostedResourceProvider";
 
 static CMPIAssociationMIFT assocMIFT = {
         CMPICurrentVersion,
         CMPICurrentVersion,
         assoc_provider_name,
-        LinuxHA_HostedResourceProviderAssociationCleanup,
-        LinuxHA_HostedResourceProviderAssociators,
-        LinuxHA_HostedResourceProviderAssociatorNames,
-        LinuxHA_HostedResourceProviderReferences,
-        LinuxHA_HostedResourceProviderReferenceNames
+        HostedResource_AssociationCleanup,
+        HostedResource_Associators,
+        HostedResource_AssociatorNames,
+        HostedResource_References,
+        HostedResource_ReferenceNames
 
 };
 
 CMPIAssociationMI *
-LinuxHA_HostedResourceProvider_Create_AssociationMI(CMPIBroker* brkr,CMPIContext *ctx)
+LinuxHA_HostedResourceProvider_Create_AssociationMI(CMPIBroker * brkr, 
+                CMPIContext * ctx)
 {
         static CMPIAssociationMI mi = {
                 NULL,
@@ -459,7 +460,6 @@ LinuxHA_HostedResourceProvider_Create_AssociationMI(CMPIBroker* brkr,CMPIContext
         };
 
         Broker = brkr;
-        CMNoHook;
         return &mi;
 }
 

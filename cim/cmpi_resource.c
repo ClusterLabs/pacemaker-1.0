@@ -129,7 +129,7 @@ free_resource_info_table ( GPtrArray * resource_info_table)
 
 static CMPIInstance *
 make_resource_instance(char * classname, CMPIBroker * broker, 
-                CMPIObjectPath * op, char * rsc_name, CMPIStatus * rc)
+                       CMPIObjectPath * op, char * rsc_name, CMPIStatus * rc)
 {
         CMPIInstance * ci = NULL;
         char * hosting_node = NULL;
@@ -196,14 +196,13 @@ make_resource_instance(char * classname, CMPIBroker * broker,
         /* setting properties */
 
         CMSetProperty(ci, "Type", info->type, CMPI_chars);
-
         CMSetProperty(ci, "ResourceClass", info->class, CMPI_chars);
         CMSetProperty(ci, "Name", info->name, CMPI_chars);
        
         hosting_node = get_hosting_node(rsc_name);
 
         cl_log(LOG_INFO, "%s: hosting_node of %s is %s", __FUNCTION__, 
-                                        rsc_name, hosting_node);
+               rsc_name, hosting_node);
 
         if (hosting_node){
                 char status [] = "Running";
@@ -227,10 +226,10 @@ out:
 
 int 
 enumerate_resource_instances(char * classname, CMPIBroker * broker,
-                CMPIContext * ctx, CMPIResult * rslt,
-                CMPIObjectPath * ref, int enum_inst, CMPIStatus * rc)
+                             CMPIContext * ctx, CMPIResult * rslt,
+                             CMPIObjectPath * ref, int enum_inst, 
+                             CMPIStatus * rc)
 {
-
         CMPIObjectPath * op = NULL;
         char * namespace = NULL;
         int i = 0;
@@ -292,13 +291,9 @@ enumerate_resource_instances(char * classname, CMPIBroker * broker,
 
 
 int
-get_resource_instance(char * classname,
-                CMPIBroker * broker,
-                CMPIContext * ctx,
-                CMPIResult * rslt,
-                CMPIObjectPath * cop,
-                char ** properties,
-                CMPIStatus * rc)
+get_resource_instance(char * classname, CMPIBroker * broker, CMPIContext * ctx,
+                      CMPIResult * rslt, CMPIObjectPath * cop,
+                      char ** properties, CMPIStatus * rc)
 {
         CMPIInstance* ci = NULL;
         CMPIObjectPath* op = NULL;

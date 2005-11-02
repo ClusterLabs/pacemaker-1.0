@@ -481,7 +481,9 @@ init_heartbeat(void)
 
         hb = ll_cluster_new("heartbeat");
 
-        cl_log(LOG_DEBUG, "hb_client_id = %s", hb_client_id);
+        cl_log(LOG_DEBUG, "hb_client_id = %s", 
+               hb_client_id? hb_client_id : "NULL");
+
         cl_log(LOG_DEBUG, "PID = %ld", (long)getpid());
         cl_log(LOG_DEBUG, "Signing in with heartbeat");
 
@@ -1069,50 +1071,35 @@ linuxha_initialize(const char * client_id, int force)
 
         int ret = 0;
 
-        cl_log(LOG_INFO, "%s: PID = %ld", 
-                __FUNCTION__, (long)getpid());
+        hb_client_id = client_id? strdup(client_id) : NULL;
 
-        /* casual client not allowed */
-        if ( client_id == NULL ) {
-                ret = HA_FAIL;
-                goto out;
-        }
 
-        if ( hb_client_id ){
+        if ( hb_initialized ) {
                 if ( force ){
                         cl_log(LOG_WARNING, 
-                                "%s: re-initialize heartbeat", __FUNCTION__);
+                               "%s: re-initialize heartbeat", __FUNCTION__);
 
                         linuxha_finalize();
-
+                
                 } else {
                         cl_log(LOG_WARNING, 
-                                "%s: heartbeat has been initialized",
-                                __FUNCTION__);
+                               "%s: heartbeat has been initialized", 
+                               __FUNCTION__);
                         ret = HA_OK;
                         goto out;
                 }
         }
 
-        if ( client_id ) {
-                hb_client_id = strdup(client_id);
-
-                if ( hb_client_id == NULL )  {
-                        ret = HA_FAIL;
-                        goto out;
-                }
-        } else {
-                hb_client_id = NULL;
-        }
 
         if (init_storage() != HA_OK) {
                 cl_log(LOG_ERR, 
                         "%s: failed to init storage", __FUNCTION__);
-
                 ret = HA_FAIL;
                 
-                free(hb_client_id);
-                hb_client_id = NULL;
+                if ( hb_client_id ) {
+                        free(hb_client_id);
+                        hb_client_id = NULL;
+                }
 
                 goto out;
         }
@@ -1121,11 +1108,13 @@ linuxha_initialize(const char * client_id, int force)
                         get_heartbeat_fd() <= 0) {
 
                 cl_log(LOG_ERR, 
-                        "%s: failed to init heartbeat", __FUNCTION__); 
+                       "%s: failed to init heartbeat", __FUNCTION__); 
 
                 free_storage();
-                free(hb_client_id);
-                hb_client_id = NULL;
+                if ( hb_client_id ) {
+                        free(hb_client_id);
+                        hb_client_id = NULL;
+                }
 
                 ret = HA_FAIL;
                 goto out;

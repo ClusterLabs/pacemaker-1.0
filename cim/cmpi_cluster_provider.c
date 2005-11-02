@@ -39,49 +39,57 @@
 #define PROVIDER_ID  "cim-provider-cluster"
 
 static CMPIBroker * Broker = NULL;
-static char  ClassName[] = "LinuxHA_Cluster";
+static char  ClassName []  = "LinuxHA_Cluster";
 
 
-/*---------------- instance interfaces ---------*/
-CMPIStatus LinuxHA_ClusterProviderCleanup(CMPIInstanceMI * mi, CMPIContext * ctx);
+CMPIStatus 
+Cluster_Cleanup(CMPIInstanceMI * mi, CMPIContext * ctx);
 
-CMPIStatus LinuxHA_ClusterProviderEnumInstanceNames(CMPIInstanceMI * mi,
-                CMPIContext * ctx, CMPIResult * rslt, CMPIObjectPath * ref);
+CMPIStatus 
+Cluster_EnumInstanceNames(CMPIInstanceMI * mi, CMPIContext * ctx, 
+                CMPIResult * rslt, CMPIObjectPath * ref);
 
-CMPIStatus LinuxHA_ClusterProviderEnumInstances(CMPIInstanceMI * mi,
-                CMPIContext * ctx, CMPIResult * rslt,
-                CMPIObjectPath* ref, char ** properties);
+CMPIStatus 
+Cluster_EnumInstances(CMPIInstanceMI * mi, CMPIContext * ctx, 
+                CMPIResult * rslt, CMPIObjectPath* ref, 
+                char ** properties);
                 
-CMPIStatus LinuxHA_ClusterProviderGetInstance(CMPIInstanceMI * mi,
-                CMPIContext * ctx, CMPIResult * rslt,
-                CMPIObjectPath * cop, char ** properties);
+CMPIStatus 
+Cluster_GetInstance(CMPIInstanceMI * mi, CMPIContext * ctx, 
+                CMPIResult * rslt, CMPIObjectPath * cop, 
+                char ** properties);
                
-CMPIStatus LinuxHA_ClusterProviderCreateInstance(CMPIInstanceMI * mi,
+CMPIStatus 
+Cluster_CreateInstance(CMPIInstanceMI * mi, 
                 CMPIContext * ctx, CMPIResult * rslt,
                 CMPIObjectPath * cop, CMPIInstance * ci);
                 
-CMPIStatus LinuxHA_ClusterProviderSetInstance(CMPIInstanceMI * mi, 
+CMPIStatus 
+Cluster_SetInstance(CMPIInstanceMI * mi, 
                 CMPIContext * ctx, CMPIResult * rslt,
                 CMPIObjectPath * op, CMPIInstance * inst, char ** properties);
 
 
-CMPIStatus LinuxHA_ClusterProviderDeleteInstance(CMPIInstanceMI * mi,
+CMPIStatus 
+Cluster_DeleteInstance(CMPIInstanceMI * mi,
                 CMPIContext * ctx, CMPIResult * rslt, CMPIObjectPath * cop);
 
-CMPIStatus LinuxHA_ClusterProviderExecQuery(CMPIInstanceMI * mi,
+CMPIStatus 
+Cluster_ExecQuery(CMPIInstanceMI * mi,
                 CMPIContext * ctx, CMPIResult * rslt, CMPIObjectPath * ref,
                 char * lang, char * query);
                
-/*-------- method interfaces -------------*/
-CMPIStatus LinuxHA_ClusterProviderInvokeMethod(CMPIMethodMI * mi,
+
+CMPIStatus 
+Cluster_InvokeMethod(CMPIMethodMI * mi,
                 CMPIContext * ctx, CMPIResult * rslt,
                 CMPIObjectPath * ref, const char * methodName,
                 CMPIArgs * in, CMPIArgs * out);
 
-CMPIStatus LinuxHA_ClusterProviderMethodCleanup(CMPIMethodMI* mi, CMPIContext* ctx);
+CMPIStatus 
+Cluster_MethodCleanup(CMPIMethodMI* mi, CMPIContext* ctx);
 
-
-/************ etnries ********************************/
+/**********************************************/
 
 CMPIInstanceMI * 
 LinuxHA_ClusterProvider_Create_InstanceMI(CMPIBroker * brkr, CMPIContext * ctx);
@@ -95,7 +103,7 @@ LinuxHA_ClusterProvider_Create_MethodMI(CMPIBroker * brkr, CMPIContext * ctx);
  **********************************************/
 
 CMPIStatus 
-LinuxHA_ClusterProviderCleanup(CMPIInstanceMI * mi, CMPIContext * ctx)
+Cluster_Cleanup(CMPIInstanceMI * mi, CMPIContext * ctx)
 {
 
         cleanup_cluster();
@@ -103,16 +111,13 @@ LinuxHA_ClusterProviderCleanup(CMPIInstanceMI * mi, CMPIContext * ctx)
 }
 
 CMPIStatus 
-LinuxHA_ClusterProviderEnumInstanceNames(CMPIInstanceMI * mi,
-                CMPIContext * ctx, CMPIResult * rslt, CMPIObjectPath *ref)
+Cluster_EnumInstanceNames(CMPIInstanceMI * mi, CMPIContext * ctx, 
+                          CMPIResult * rslt, CMPIObjectPath *ref)
 {
         CMPIStatus rc = {CMPI_RC_OK, NULL};
-        int ret = 0;
 
-        ret = enumerate_cluster_instances(ClassName, Broker, ctx, rslt,
-                        ref, NULL, 0, &rc);  
-
-        if ( ret != HA_OK ) {
+        if ( enumerate_cluster_instances(ClassName, Broker, ctx, rslt,
+                                         ref, NULL, 0, &rc) != HA_OK ) {
                 if (rc.rc == CMPI_RC_OK ) {
                         CMReturn(CMPI_RC_ERR_FAILED);
                 } else {
@@ -125,17 +130,13 @@ LinuxHA_ClusterProviderEnumInstanceNames(CMPIInstanceMI * mi,
 }
 
 CMPIStatus 
-LinuxHA_ClusterProviderEnumInstances(CMPIInstanceMI * mi,
-                CMPIContext * ctx, CMPIResult * rslt,
-                CMPIObjectPath* ref, char ** properties)
+Cluster_EnumInstances(CMPIInstanceMI * mi, CMPIContext * ctx, CMPIResult * rslt,
+                      CMPIObjectPath* ref, char ** properties)
 {
         CMPIStatus rc = {CMPI_RC_OK, NULL};
-        int ret = 0;
 
-        ret = enumerate_cluster_instances(ClassName, Broker, ctx, rslt,
-                        ref, properties, 1, &rc);  
-
-        if ( ret != HA_OK ) {
+        if ( enumerate_cluster_instances(ClassName, Broker, ctx, rslt,
+                                         ref, properties, 1, &rc) != HA_OK ) {
                 if (rc.rc == CMPI_RC_OK ) {
                         CMReturn(CMPI_RC_ERR_FAILED);
                 } else {
@@ -148,20 +149,15 @@ LinuxHA_ClusterProviderEnumInstances(CMPIInstanceMI * mi,
 
 
 CMPIStatus 
-LinuxHA_ClusterProviderGetInstance(CMPIInstanceMI * mi,
-                CMPIContext * ctx, CMPIResult * rslt,
-                CMPIObjectPath * cop, char ** properties)
+Cluster_GetInstance(CMPIInstanceMI * mi, CMPIContext * ctx, CMPIResult * rslt,
+                    CMPIObjectPath * cop, char ** properties)
 {
         CMPIStatus rc = {CMPI_RC_OK, NULL};
-        int ret = 0;
-
         init_logger(PROVIDER_ID);
 
-        ret = get_cluster_instance(ClassName, Broker, ctx, rslt, cop, &rc);
-
-        if ( ret != HA_OK ) {
-                cl_log(LOG_WARNING, 
-                        "%s: failed to get instance", __FUNCTION__);
+        if ( get_cluster_instance(ClassName, Broker, 
+                                  ctx, rslt, cop, &rc) != HA_OK ) {
+                cl_log(LOG_WARNING, "%s: failed to get instance", __FUNCTION__);
 
                 if (rc.rc == CMPI_RC_OK ) {
                         CMReturn(CMPI_RC_ERR_FAILED);
@@ -175,9 +171,8 @@ LinuxHA_ClusterProviderGetInstance(CMPIInstanceMI * mi,
 
 
 CMPIStatus 
-LinuxHA_ClusterProviderCreateInstance(CMPIInstanceMI * mi,
-                CMPIContext * ctx, CMPIResult * rslt,
-                CMPIObjectPath * cop, CMPIInstance * ci)
+Cluster_CreateInstance(CMPIInstanceMI * mi, CMPIContext * ctx, CMPIResult * rslt,
+                       CMPIObjectPath * cop, CMPIInstance * ci)
 {
         CMPIStatus rc = {CMPI_RC_OK, NULL};
         CMSetStatusWithChars(Broker, &rc, 
@@ -187,8 +182,7 @@ LinuxHA_ClusterProviderCreateInstance(CMPIInstanceMI * mi,
 
 
 CMPIStatus 
-LinuxHA_ClusterProviderSetInstance(CMPIInstanceMI * mi,
-                CMPIContext * ctx, CMPIResult * rslt,
+Cluster_SetInstance(CMPIInstanceMI * mi, CMPIContext * ctx, CMPIResult * rslt,
                 CMPIObjectPath * op, CMPIInstance * inst, char ** properties)
 {
         CMPIStatus rc = {CMPI_RC_OK, NULL};
@@ -201,8 +195,8 @@ LinuxHA_ClusterProviderSetInstance(CMPIInstanceMI * mi,
 
 
 CMPIStatus 
-LinuxHA_ClusterProviderDeleteInstance(CMPIInstanceMI * mi,
-                CMPIContext * ctx, CMPIResult * rslt, CMPIObjectPath * cop)
+Cluster_DeleteInstance(CMPIInstanceMI * mi,  CMPIContext * ctx, 
+                       CMPIResult * rslt, CMPIObjectPath * cop)
 {
         CMPIStatus rc = {CMPI_RC_OK, NULL};
 
@@ -212,9 +206,8 @@ LinuxHA_ClusterProviderDeleteInstance(CMPIInstanceMI * mi,
 }
 
 CMPIStatus 
-LinuxHA_ClusterProviderExecQuery(CMPIInstanceMI * mi,
-                CMPIContext * ctx, CMPIResult * rslt, CMPIObjectPath * ref,
-                char * lang, char * query)
+Cluster_ExecQuery(CMPIInstanceMI * mi, CMPIContext * ctx, CMPIResult * rslt, 
+                  CMPIObjectPath * ref, char * lang, char * query)
 {
         CMPIStatus rc = {CMPI_RC_OK, NULL};
         
@@ -225,12 +218,11 @@ LinuxHA_ClusterProviderExecQuery(CMPIInstanceMI * mi,
 
 
 /**************************************************
- * Method Provider 
+ * Method Provider Interface
  *************************************************/
 CMPIStatus 
-LinuxHA_ClusterProviderInvokeMethod(CMPIMethodMI * mi,
-                CMPIContext * ctx, CMPIResult * rslt,
-                CMPIObjectPath * ref, const char * methodName,
+Cluster_InvokeMethod(CMPIMethodMI * mi, CMPIContext * ctx, CMPIResult * rslt,
+                CMPIObjectPath * ref, const char * method_name,
                 CMPIArgs * in, CMPIArgs * out)
 {
 
@@ -245,20 +237,10 @@ LinuxHA_ClusterProviderInvokeMethod(CMPIMethodMI * mi,
 
         arg_data = CMGetArg(in, param, &rc);
 
-        if(strcasecmp((char *)class_name->hdl, ClassName) == 0 &&
-                 strcasecmp("RequestStatusChange", methodName) == 0 ){
+        if(strcasecmp(CMGetCharPtr(class_name), ClassName) == 0 &&
+           strcasecmp("RequestStatusChange", method_name) == 0 ){
 
-                char cmnd_pat[] = "/etc/init.d/heartbeat";
-                char * cmnd = malloc(256);
-                char * str_arg;
-
-                str_arg = (char *)arg_data.value.string->hdl;
-                sprintf(cmnd, "%s %s", cmnd_pat, str_arg);
-
-                cl_log(LOG_INFO, "%s: run cmnd %s", __FUNCTION__, cmnd);
-                valrc.uint32 = system(cmnd);
-
-                free(cmnd);
+                cl_log(LOG_INFO, "%s: NOT IMPLEMENTED", __FUNCTION__);
         }
 
         CMReturnData(rslt, &valrc, CMPI_uint32);
@@ -269,7 +251,7 @@ LinuxHA_ClusterProviderInvokeMethod(CMPIMethodMI * mi,
 
 
 CMPIStatus 
-LinuxHA_ClusterProviderMethodCleanup(CMPIMethodMI* mi, CMPIContext* ctx)
+Cluster_MethodCleanup(CMPIMethodMI* mi, CMPIContext* ctx)
 {
         CMReturn(CMPI_RC_OK);
 }
@@ -279,20 +261,20 @@ LinuxHA_ClusterProviderMethodCleanup(CMPIMethodMI* mi, CMPIContext* ctx)
 /*****************************************************
  * install interface
  ****************************************************/
-static char inst_provider_name[] = "instanceLinuxHA_ClusterProvider";
+static char inst_provider_name[] = "instanceClusterProvider";
 
 static CMPIInstanceMIFT instMIFT = {
         CMPICurrentVersion,
         CMPICurrentVersion,
         inst_provider_name,
-        LinuxHA_ClusterProviderCleanup,
-        LinuxHA_ClusterProviderEnumInstanceNames,
-        LinuxHA_ClusterProviderEnumInstances,
-        LinuxHA_ClusterProviderGetInstance,
-        LinuxHA_ClusterProviderCreateInstance,
-        LinuxHA_ClusterProviderSetInstance, 
-        LinuxHA_ClusterProviderDeleteInstance,
-        LinuxHA_ClusterProviderExecQuery
+        Cluster_Cleanup,
+        Cluster_EnumInstanceNames,
+        Cluster_EnumInstances,
+        Cluster_GetInstance,
+        Cluster_CreateInstance,
+        Cluster_SetInstance, 
+        Cluster_DeleteInstance,
+        Cluster_ExecQuery
 };
 
 CMPIInstanceMI * 
@@ -303,19 +285,18 @@ LinuxHA_ClusterProvider_Create_InstanceMI(CMPIBroker * brkr, CMPIContext * ctx)
                 &instMIFT
         };
         Broker = brkr;
-        CMNoHook;
         return &mi;
 }
 
 /*------------------------------------------------*/
 
-static char method_provider_name[] = "methodLinuxHA_ClusterProvider";
+static char method_provider_name[] = "methodClusterProvider";
 static CMPIMethodMIFT methMIFT = {
         CMPICurrentVersion,
         CMPICurrentVersion,
         method_provider_name,
-        LinuxHA_ClusterProviderMethodCleanup,
-        LinuxHA_ClusterProviderInvokeMethod
+        Cluster_MethodCleanup,
+        Cluster_InvokeMethod
 };
 
 CMPIMethodMI *
@@ -330,3 +311,4 @@ LinuxHA_ClusterProvider_Create_MethodMI(CMPIBroker * brkr, CMPIContext * ctx)
         return &mi;
 }
 
+/*================================================*/

@@ -37,77 +37,45 @@
 
 #define PROVIDER_ID     "cim-provider-rsc"
 
+static CMPIBroker * Broker = NULL;
+static char ClassName []   = "LinuxHA_ClusterResource";
 
-static CMPIBroker * Broker;
-static char ClassName[] = "LinuxHA_ClusterResource";
-
-
-
-/*****         prototype declare  ***/
 
 CMPIStatus 
-LinuxHA_ClusterResourceProviderCleanup(CMPIInstanceMI* mi, CMPIContext* ctx);
+ClusterResource_Cleanup(CMPIInstanceMI * mi, CMPIContext * ctx);
 
 CMPIStatus 
-LinuxHA_ClusterResourceProviderEnumInstanceNames(CMPIInstanceMI * mi,
+ClusterResource_EnumInstanceNames(CMPIInstanceMI * mi,
                 CMPIContext * ctx, CMPIResult* rslt, CMPIObjectPath* ref);
                 
 CMPIStatus 
-LinuxHA_ClusterResourceProviderEnumInstances(CMPIInstanceMI * mi,
-                CMPIContext * ctx, CMPIResult* rslt,
+ClusterResource_EnumInstances(CMPIInstanceMI * mi,
+                CMPIContext * ctx, CMPIResult * rslt,
                 CMPIObjectPath* ref, char ** properties);
 
 CMPIStatus 
-LinuxHA_ClusterResourceProviderGetInstance(CMPIInstanceMI * mi,
-                CMPIContext * ctx, CMPIResult* rslt,
+ClusterResource_GetInstance(CMPIInstanceMI * mi,
+                CMPIContext * ctx, CMPIResult * rslt,
                 CMPIObjectPath * cop, char ** properties);
 
 CMPIStatus 
-LinuxHA_ClusterResourceProviderCreateInstance(CMPIInstanceMI * mi,
+ClusterResource_CreateInstance(CMPIInstanceMI * mi,
                 CMPIContext * ctx, CMPIResult * rslt,
                 CMPIObjectPath * cop, CMPIInstance* ci);
 
 
 CMPIStatus 
-LinuxHA_ClusterResourceProviderSetInstance(CMPIInstanceMI * mi,
-                CMPIContext* ctx, CMPIResult* rslt, CMPIObjectPath* cop,
+ClusterResource_SetInstance(CMPIInstanceMI * mi,
+                CMPIContext* ctx, CMPIResult * rslt, CMPIObjectPath* cop,
                 CMPIInstance* ci, char ** properties);
 
 CMPIStatus 
-LinuxHA_ClusterResourceProviderDeleteInstance(CMPIInstanceMI * mi,
-                CMPIContext * ctx, CMPIResult* rslt, CMPIObjectPath* cop);
-CMPIStatus 
-LinuxHA_ClusterResourceProviderExecQuery(CMPIInstanceMI * mi,
+ClusterResource_DeleteInstance(CMPIInstanceMI * mi,
+                CMPIContext * ctx, CMPIResult * rslt, CMPIObjectPath* cop);
+CMPIStatus  
+ClusterResource_ExecQuery(CMPIInstanceMI * mi,
                 CMPIContext * ctx, CMPIResult * rslt, CMPIObjectPath * ref,
                 char * lang, char * query);
-
-CMPIStatus 
-LinuxHA_ClusterResourceProviderIndicationCleanup(CMPIInstanceMI * mi, 
-                CMPIContext * ctx);
-
-CMPIStatus 
-LinuxHA_ClusterResourceProviderAuthorizeFilter(CMPIIndicationMI * mi,
-                CMPIContext * ctx, CMPIResult * rslt, 
-                CMPISelectExp * filter, const char * type, 
-                CMPIObjectPath * classPath, const char * owner);
-
-CMPIStatus 
-LinuxHA_ClusterResourceProviderMustPoll(CMPIIndicationMI * mi,
-                CMPIContext * ctx, CMPIResult * rslt,
-                CMPISelectExp * filter,
-                const char * indType, CMPIObjectPath* classPath);
-
-CMPIStatus 
-LinuxHA_ClusterResourceProviderActivateFilter(CMPIIndicationMI * mi,
-                CMPIContext * ctx, CMPIResult * rslt,
-                CMPISelectExp * filter, const char * type,
-                CMPIObjectPath * classPath, CMPIBoolean firstActivation);
-
-CMPIStatus 
-LinuxHA_ClusterResourceProviderDeActivateFilter(CMPIIndicationMI * mi,
-                CMPIContext * ctx, CMPIResult * rslt,
-                CMPISelectExp * filter, const char * type,
-                CMPIObjectPath * classPath, CMPIBoolean lastActivation);
 
 CMPIInstanceMI * 
 LinuxHA_ClusterResourceProvider_Create_InstanceMI(CMPIBroker * brkr, 
@@ -119,24 +87,21 @@ LinuxHA_ClusterResourceProvider_Create_InstanceMI(CMPIBroker * brkr,
  **********************************************/
 
 CMPIStatus 
-LinuxHA_ClusterResourceProviderCleanup(CMPIInstanceMI * mi, CMPIContext * ctx)
+ClusterResource_Cleanup(CMPIInstanceMI * mi, CMPIContext * ctx)
 {
         CMReturn(CMPI_RC_OK);
 }
 
 
 CMPIStatus 
-LinuxHA_ClusterResourceProviderEnumInstanceNames(CMPIInstanceMI * mi,
-                CMPIContext * ctx, CMPIResult * rslt, CMPIObjectPath * ref)
+ClusterResource_EnumInstanceNames(CMPIInstanceMI * mi, CMPIContext * ctx, 
+                                  CMPIResult * rslt, CMPIObjectPath * ref)
 {
         CMPIStatus rc = {CMPI_RC_OK, NULL};
-        int ret ;
-        
+         
         init_logger(PROVIDER_ID);
-        ret = enumerate_resource_instances(ClassName, 
-                                Broker, ctx, rslt, ref, 0, &rc);
-
-        if ( ret == HA_OK ) {
+        if ( enumerate_resource_instances(ClassName, Broker, ctx, 
+                                          rslt, ref, 0, &rc) == HA_OK ) {
                 CMReturn(CMPI_RC_OK);        
         } else {
                 if (rc.rc == CMPI_RC_OK ) {
@@ -149,18 +114,15 @@ LinuxHA_ClusterResourceProviderEnumInstanceNames(CMPIInstanceMI * mi,
 
 
 CMPIStatus 
-LinuxHA_ClusterResourceProviderEnumInstances(CMPIInstanceMI * mi,
-                CMPIContext * ctx, CMPIResult* rslt,
-                CMPIObjectPath* ref, char ** properties)
+ClusterResource_EnumInstances(CMPIInstanceMI * mi, CMPIContext * ctx, 
+                              CMPIResult* rslt, CMPIObjectPath* ref, 
+                              char ** properties)
 {
         CMPIStatus rc = {CMPI_RC_OK, NULL};
-        int ret ;
-        
-        init_logger(PROVIDER_ID);
-        ret = enumerate_resource_instances(ClassName, 
-                                Broker, ctx, rslt, ref, 1, &rc);
 
-        if ( ret == HA_OK ) {
+        init_logger(PROVIDER_ID);
+        if ( enumerate_resource_instances(ClassName, Broker, ctx, 
+                                          rslt, ref, 1, &rc) == HA_OK ) {
                 CMReturn(CMPI_RC_OK);        
         } else {
                 if (rc.rc == CMPI_RC_OK ) {
@@ -174,18 +136,15 @@ LinuxHA_ClusterResourceProviderEnumInstances(CMPIInstanceMI * mi,
 
 
 CMPIStatus 
-LinuxHA_ClusterResourceProviderGetInstance(CMPIInstanceMI * mi,
-                CMPIContext * ctx, CMPIResult* rslt,
-                CMPIObjectPath * cop, char ** properties)
+ClusterResource_GetInstance(CMPIInstanceMI * mi, CMPIContext * ctx, 
+                            CMPIResult* rslt, CMPIObjectPath * cop, 
+                            char ** properties)
 {
         CMPIStatus rc = {CMPI_RC_OK, NULL};
-        int ret = 0;
 
         init_logger(PROVIDER_ID);
-        ret = get_resource_instance(ClassName, Broker, ctx, rslt, 
-                        cop, properties, &rc);
-
-        if ( ret == HA_OK ){
+        if ( get_resource_instance(ClassName, Broker, ctx, rslt, 
+                                   cop, properties, &rc) == HA_OK ) {
                 CMReturn(CMPI_RC_OK);
         } else {
                 return rc;
@@ -193,125 +152,49 @@ LinuxHA_ClusterResourceProviderGetInstance(CMPIInstanceMI * mi,
 }
 
 CMPIStatus 
-LinuxHA_ClusterResourceProviderCreateInstance(CMPIInstanceMI * mi,
-                CMPIContext * ctx, CMPIResult * rslt,
-                CMPIObjectPath * cop, CMPIInstance* ci)
+ClusterResource_CreateInstance(CMPIInstanceMI * mi, CMPIContext * ctx, 
+                               CMPIResult * rslt, CMPIObjectPath * cop, 
+                               CMPIInstance* ci)
 {
         CMPIStatus rc = {CMPI_RC_OK, NULL};
-        CMSetStatusWithChars(Broker, &rc, 
-                        CMPI_RC_ERR_NOT_SUPPORTED, "CIM_ERR_NOT_SUPPORTED");
+        CMSetStatusWithChars(Broker, &rc, CMPI_RC_ERR_NOT_SUPPORTED, 
+                             "CIM_ERR_NOT_SUPPORTED");
         return rc;
 }
 
 
 CMPIStatus 
-LinuxHA_ClusterResourceProviderSetInstance(CMPIInstanceMI * mi,
-                CMPIContext * ctx, CMPIResult * rslt, CMPIObjectPath * cop,
-                CMPIInstance * ci, char ** properties)
+ClusterResource_SetInstance(CMPIInstanceMI * mi, CMPIContext * ctx, 
+                            CMPIResult * rslt, CMPIObjectPath * cop,
+                            CMPIInstance * ci, char ** properties)
 {
         CMPIStatus rc = {CMPI_RC_OK, NULL};
-        CMSetStatusWithChars(Broker, &rc, 
-                        CMPI_RC_ERR_NOT_SUPPORTED, "CIM_ERR_NOT_SUPPORTED");
+        CMSetStatusWithChars(Broker, &rc, CMPI_RC_ERR_NOT_SUPPORTED, 
+                             "CIM_ERR_NOT_SUPPORTED");
         return rc;
 
 }
 
 
 CMPIStatus 
-LinuxHA_ClusterResourceProviderDeleteInstance(CMPIInstanceMI * mi,
-                CMPIContext * ctx, CMPIResult * rslt, CMPIObjectPath * cop)
+ClusterResource_DeleteInstance(CMPIInstanceMI * mi, CMPIContext * ctx, 
+                               CMPIResult * rslt, CMPIObjectPath * cop)
 {
         CMPIStatus rc = {CMPI_RC_OK, NULL};
-        CMSetStatusWithChars(Broker, &rc, 
-                        CMPI_RC_ERR_NOT_SUPPORTED, "CIM_ERR_NOT_SUPPORTED");
+        CMSetStatusWithChars(Broker, &rc, CMPI_RC_ERR_NOT_SUPPORTED, 
+                             "CIM_ERR_NOT_SUPPORTED");
         return rc;
 }
 
 CMPIStatus 
-LinuxHA_ClusterResourceProviderExecQuery(CMPIInstanceMI * mi,
-                CMPIContext * ctx, CMPIResult * rslt, CMPIObjectPath * ref,
-                char * lang, char * query)
+ClusterResource_ExecQuery(CMPIInstanceMI * mi, CMPIContext * ctx, 
+                          CMPIResult * rslt, CMPIObjectPath * ref,
+                          char * lang, char * query)
 {
         CMPIStatus rc = {CMPI_RC_OK, NULL};
-        CMSetStatusWithChars(Broker, &rc, 
-                        CMPI_RC_ERR_NOT_SUPPORTED, "CIM_ERR_NOT_SUPPORTED");
+        CMSetStatusWithChars(Broker, &rc, CMPI_RC_ERR_NOT_SUPPORTED, 
+                             "CIM_ERR_NOT_SUPPORTED");
         return rc;
-}
-
-
-
-/**************************************************
- * Indication Interface Implementaion
- *************************************************/
-
-
-CMPIStatus 
-LinuxHA_ClusterResourceProviderIndicationCleanup(CMPIInstanceMI * mi, 
-        CMPIContext * ctx)
-{
-        CMReturn(CMPI_RC_OK);
-}
-
-CMPIStatus 
-LinuxHA_ClusterResourceProviderAuthorizeFilter(CMPIIndicationMI * mi,
-        CMPIContext * ctx, CMPIResult * rslt, CMPISelectExp * filter,
-        const char * type, CMPIObjectPath * classPath, const char * owner)
-{
-
-        CMPIValue valrc;
-        valrc.boolean = 1;
-
-        DEBUG_ENTER();
-
-        CMReturnData(rslt, &valrc, CMPI_boolean);
-        CMReturnDone(rslt);
-
-
-        DEBUG_LEAVE();        
-        CMReturn(CMPI_RC_OK);
-}
-
-CMPIStatus 
-LinuxHA_ClusterResourceProviderMustPoll(CMPIIndicationMI * mi,
-        CMPIContext * ctx, CMPIResult * rslt, CMPISelectExp * filter,
-        const char * indType, CMPIObjectPath* classPath)
-{
-        
-        CMPIValue valrc;
-        valrc.boolean = 1;
-
-        DEBUG_ENTER();
-        CMReturnData(rslt, &valrc, CMPI_boolean);
-        CMReturnDone(rslt);
-        
-        DEBUG_LEAVE();
-        CMReturn(CMPI_RC_OK);
-}
-
-
-CMPIStatus 
-LinuxHA_ClusterResourceProviderActivateFilter(CMPIIndicationMI * mi,
-        CMPIContext * ctx, CMPIResult * rslt, CMPISelectExp * filter,
-        const char * type, CMPIObjectPath * classPath, 
-        CMPIBoolean firstActivation)
-{
-
-        DEBUG_ENTER();
-        DEBUG_LEAVE();
-        CMReturn(CMPI_RC_OK);
-}
-
-CMPIStatus 
-LinuxHA_ClusterResourceProviderDeActivateFilter(CMPIIndicationMI * mi,
-        CMPIContext * ctx, CMPIResult * rslt, CMPISelectExp * filter,
-        const char * type, CMPIObjectPath * classPath,
-        CMPIBoolean lastActivation)
-{
-
-        DEBUG_ENTER();
-        DEBUG_LEAVE();
-
-        CMReturn(CMPI_RC_OK);
 }
 
 
@@ -319,20 +202,20 @@ LinuxHA_ClusterResourceProviderDeActivateFilter(CMPIIndicationMI * mi,
  * install interface
  ****************************************************/
 
-static char provider_name[] = "instanceLinuxHA_ClusterResourceProvider";
+static char provider_name[] = "instanceClusterResourceProvider";
 
 static CMPIInstanceMIFT instMIFT = {
         CMPICurrentVersion,
         CMPICurrentVersion,
         provider_name,
-        LinuxHA_ClusterResourceProviderCleanup,
-        LinuxHA_ClusterResourceProviderEnumInstanceNames,
-        LinuxHA_ClusterResourceProviderEnumInstances,
-        LinuxHA_ClusterResourceProviderGetInstance,
-        LinuxHA_ClusterResourceProviderCreateInstance,
-        LinuxHA_ClusterResourceProviderSetInstance, 
-        LinuxHA_ClusterResourceProviderDeleteInstance,
-        LinuxHA_ClusterResourceProviderExecQuery
+        ClusterResource_Cleanup,
+        ClusterResource_EnumInstanceNames,
+        ClusterResource_EnumInstances,
+        ClusterResource_GetInstance,
+        ClusterResource_CreateInstance,
+        ClusterResource_SetInstance, 
+        ClusterResource_DeleteInstance,
+        ClusterResource_ExecQuery
 };
 
 CMPIInstanceMI * 
@@ -344,7 +227,6 @@ LinuxHA_ClusterResourceProvider_Create_InstanceMI(CMPIBroker * brkr,
                 &instMIFT
         };
         Broker = brkr;
-        CMNoHook;
         return &mi;
 }
 

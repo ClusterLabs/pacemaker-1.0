@@ -1,5 +1,5 @@
 /*
- * CIM Provider
+ * CIM _
  * 
  * Author: Jia Ming Pan <jmltc@cn.ibm.com>
  * Copyright (c) 2005 International Business Machines
@@ -41,92 +41,90 @@
 #define PROVIDER_ID "cim-provider-is" 
 
 static CMPIBroker * Broker = NULL;
-static char ClassName[] = "LinuxHA_InstalledSoftwareIdentity"; 
+static char ClassName []     = "LinuxHA_InstalledSoftwareIdentity"; 
 
-static char cluster_ref[] = "System";
-static char software_ref[] = "InstalledSoftware";
-static char cluster_class_name[] = "LinuxHA_Cluster";
-static char software_class_name[] = "LinuxHA_SoftwareIdentity";
+static char cluster_ref []   = "System";
+static char software_ref []  = "InstalledSoftware";
+static char cluster_class_name []  = "LinuxHA_Cluster";
+static char software_class_name [] = "LinuxHA_SoftwareIdentity";
 
 
 
 
 /***************** instance interfaces *******************/
 CMPIStatus 
-LinuxHA_InstalledSoftwareProviderCleanup(CMPIInstanceMI * mi, 
+InstalledSoftware_Cleanup(CMPIInstanceMI * mi, 
                 CMPIContext * ctx);
 
 
 CMPIStatus 
-LinuxHA_InstalledSoftwareProviderEnumInstanceNames(CMPIInstanceMI * mi,
+InstalledSoftware_EnumInstanceNames(CMPIInstanceMI * mi,
 		CMPIContext * ctx, CMPIResult * rslt, CMPIObjectPath * ref);
 	
 
 CMPIStatus 
-LinuxHA_InstalledSoftwareProviderEnumInstances(CMPIInstanceMI * mi,
+InstalledSoftware_EnumInstances(CMPIInstanceMI * mi,
 		CMPIContext * ctx, CMPIResult * rslt,
 		CMPIObjectPath * ref, char ** properties);
 
 
 CMPIStatus 
-LinuxHA_InstalledSoftwareProviderGetInstance(CMPIInstanceMI * mi,
+InstalledSoftware_GetInstance(CMPIInstanceMI * mi,
 		CMPIContext * ctx, CMPIResult * rslt,
 		CMPIObjectPath * cop,  char ** properties);
 
 CMPIStatus 
-LinuxHA_InstalledSoftwareProviderCreateInstance(CMPIInstanceMI * mi,
+InstalledSoftware_CreateInstance(CMPIInstanceMI * mi,
 		CMPIContext * ctx, CMPIResult * rslt,
 		CMPIObjectPath * cop, CMPIInstance * ci);
 
 CMPIStatus 
-LinuxHA_InstalledSoftwareProviderSetInstance(CMPIInstanceMI * mi,
+InstalledSoftware_SetInstance(CMPIInstanceMI * mi,
                 CMPIContext * ctx, CMPIResult * rslt,
 		CMPIObjectPath * cop, CMPIInstance * ci,
 		char ** properties);
 
 CMPIStatus 
-LinuxHA_InstalledSoftwareProviderDeleteInstance(CMPIInstanceMI * mi,
+InstalledSoftware_DeleteInstance(CMPIInstanceMI * mi,
 		CMPIContext * ctx, CMPIResult * rslt, CMPIObjectPath * cop);
 
 CMPIStatus 
-LinuxHA_InstalledSoftwareProviderExecQuery(CMPIInstanceMI * mi,
+InstalledSoftware_ExecQuery(CMPIInstanceMI * mi,
 		CMPIContext * ctx, CMPIResult * rslt,
 		CMPIObjectPath * ref, char * lang, char * query);
 
 /*********************** association interfaces ***********************/
 
 CMPIStatus 
-LinuxHA_InstalledSoftwareProviderAssociationCleanup(CMPIAssociationMI * mi, 
+InstalledSoftware_AssociationCleanup(CMPIAssociationMI * mi, 
                         CMPIContext * ctx);
 
 CMPIStatus
-LinuxHA_InstalledSoftwareProviderAssociators(
+InstalledSoftware_Associators(
                 CMPIAssociationMI * mi, CMPIContext * ctx, CMPIResult * rslt,
                 CMPIObjectPath * op, const char * asscClass, 
                 const char * resultClass,
                 const char * role, const char * resultRole, char ** properties);
 
 CMPIStatus
-LinuxHA_InstalledSoftwareProviderAssociatorNames(
+InstalledSoftware_AssociatorNames(
                 CMPIAssociationMI * mi, CMPIContext * ctx, CMPIResult * rslt,
                 CMPIObjectPath * op, const char * asscClass, 
                 const char * resultClass,
                 const char * role, const char * resultRole);
 
 CMPIStatus
-LinuxHA_InstalledSoftwareProviderReferences(
+InstalledSoftware_References(
                 CMPIAssociationMI * mi, CMPIContext * ctx, CMPIResult * rslt,
                 CMPIObjectPath * op, const char * resultClass,
                 const char * role, char ** properties);
 
 CMPIStatus
-LinuxHA_InstalledSoftwareProviderReferenceNames(
+InstalledSoftware_ReferenceNames(
                 CMPIAssociationMI * mi, CMPIContext * ctx, CMPIResult * rslt,
                 CMPIObjectPath * cop, const char * assocClass,
                 const char * role);
 
-
-/**************** Provider entries ************************/
 
 CMPIAssociationMI * 
 LinuxHA_InstalledSoftwareIdentityProvider_Create_AssociationMI(
@@ -137,18 +135,18 @@ LinuxHA_InstalledSoftwareIdentityProvider_Create_InstanceMI(
 
 
 /**********************************************
- * Instance Provider Interface
+ * Instance
  **********************************************/
 
 CMPIStatus 
-LinuxHA_InstalledSoftwareProviderCleanup(CMPIInstanceMI* mi, CMPIContext* ctx)
+InstalledSoftware_Cleanup(CMPIInstanceMI* mi, CMPIContext* ctx)
 {
 	CMReturn(CMPI_RC_OK);
 }
 
 
 CMPIStatus 
-LinuxHA_InstalledSoftwareProviderEnumInstanceNames(CMPIInstanceMI * mi,
+InstalledSoftware_EnumInstanceNames(CMPIInstanceMI * mi,
 		CMPIContext* ctx, CMPIResult * rslt, CMPIObjectPath * ref)
 {
 
@@ -176,7 +174,7 @@ LinuxHA_InstalledSoftwareProviderEnumInstanceNames(CMPIInstanceMI * mi,
 
 
 CMPIStatus 
-LinuxHA_InstalledSoftwareProviderEnumInstances(CMPIInstanceMI* mi,
+InstalledSoftware_EnumInstances(CMPIInstanceMI* mi,
 		CMPIContext* ctx,
 		CMPIResult* rslt,
 		CMPIObjectPath* ref,
@@ -207,7 +205,7 @@ LinuxHA_InstalledSoftwareProviderEnumInstances(CMPIInstanceMI* mi,
 
 
 CMPIStatus 
-LinuxHA_InstalledSoftwareProviderGetInstance(CMPIInstanceMI* mi,
+InstalledSoftware_GetInstance(CMPIInstanceMI* mi,
 		CMPIContext * ctx,
 		CMPIResult * rslt,
 		CMPIObjectPath * cop,
@@ -236,7 +234,7 @@ LinuxHA_InstalledSoftwareProviderGetInstance(CMPIInstanceMI* mi,
 
 
 CMPIStatus 
-LinuxHA_InstalledSoftwareProviderCreateInstance(CMPIInstanceMI* mi,
+InstalledSoftware_CreateInstance(CMPIInstanceMI* mi,
 		CMPIContext *ctx,
 		CMPIResult* rslt,
 		CMPIObjectPath* cop,
@@ -250,7 +248,7 @@ LinuxHA_InstalledSoftwareProviderCreateInstance(CMPIInstanceMI* mi,
 
 
 CMPIStatus 
-LinuxHA_InstalledSoftwareProviderSetInstance(CMPIInstanceMI* mi,
+InstalledSoftware_SetInstance(CMPIInstanceMI* mi,
 		CMPIContext* ctx,
 		CMPIResult* rslt,
 		CMPIObjectPath* cop,
@@ -266,7 +264,7 @@ LinuxHA_InstalledSoftwareProviderSetInstance(CMPIInstanceMI* mi,
 
 
 CMPIStatus 
-LinuxHA_InstalledSoftwareProviderDeleteInstance(CMPIInstanceMI* mi,
+InstalledSoftware_DeleteInstance(CMPIInstanceMI* mi,
 		CMPIContext* ctx,
 		CMPIResult* rslt,
 		CMPIObjectPath* cop)
@@ -278,7 +276,7 @@ LinuxHA_InstalledSoftwareProviderDeleteInstance(CMPIInstanceMI* mi,
 }
 
 CMPIStatus 
-LinuxHA_InstalledSoftwareProviderExecQuery(CMPIInstanceMI* mi,
+InstalledSoftware_ExecQuery(CMPIInstanceMI* mi,
 		CMPIContext* ctx,
 		CMPIResult* rslt,
 		CMPIObjectPath* ref,
@@ -296,14 +294,14 @@ LinuxHA_InstalledSoftwareProviderExecQuery(CMPIInstanceMI* mi,
  * Association
  ****************************************************/
 CMPIStatus 
-LinuxHA_InstalledSoftwareProviderAssociationCleanup(CMPIAssociationMI * mi, 
+InstalledSoftware_AssociationCleanup(CMPIAssociationMI * mi, 
                         CMPIContext * ctx)
 {
         CMReturn(CMPI_RC_OK);
 }
 
 CMPIStatus
-LinuxHA_InstalledSoftwareProviderAssociators(
+InstalledSoftware_Associators(
                 CMPIAssociationMI * mi, CMPIContext * ctx, CMPIResult * rslt,
                 CMPIObjectPath * op, const char * assocClass, 
                 const char * resultClass,
@@ -335,7 +333,7 @@ LinuxHA_InstalledSoftwareProviderAssociators(
 
 
 CMPIStatus
-LinuxHA_InstalledSoftwareProviderAssociatorNames(
+InstalledSoftware_AssociatorNames(
                 CMPIAssociationMI * mi, CMPIContext * ctx, CMPIResult * rslt,
                 CMPIObjectPath * cop, const char * assocClass, const char * resultClass,
                 const char * role, const char * resultRole)
@@ -366,7 +364,7 @@ LinuxHA_InstalledSoftwareProviderAssociatorNames(
 }
 
 CMPIStatus
-LinuxHA_InstalledSoftwareProviderReferences(
+InstalledSoftware_References(
                 CMPIAssociationMI * mi, CMPIContext * ctx, CMPIResult * rslt,
                 CMPIObjectPath * cop, const char * resultClass,
                 const char * role, char ** properties)
@@ -397,7 +395,7 @@ LinuxHA_InstalledSoftwareProviderReferences(
 }
 
 CMPIStatus
-LinuxHA_InstalledSoftwareProviderReferenceNames(
+InstalledSoftware_ReferenceNames(
                 CMPIAssociationMI * mi,
                 CMPIContext * ctx,
                 CMPIResult * rslt,
@@ -423,20 +421,20 @@ LinuxHA_InstalledSoftwareProviderReferenceNames(
  *************************************************************/
 
 
-static char inst_provider_name[] = "instanceLinuxHA_InstalledSoftwareProvider";
+static char inst_provider_name[] = "instanceInstalledSoftwareProvider";
 
 static CMPIInstanceMIFT instMIFT = {
         CMPICurrentVersion,
         CMPICurrentVersion,
         inst_provider_name,
-        LinuxHA_InstalledSoftwareProviderCleanup,
-        LinuxHA_InstalledSoftwareProviderEnumInstanceNames,
-        LinuxHA_InstalledSoftwareProviderEnumInstances,
-        LinuxHA_InstalledSoftwareProviderGetInstance,
-        LinuxHA_InstalledSoftwareProviderCreateInstance,
-        LinuxHA_InstalledSoftwareProviderSetInstance, 
-        LinuxHA_InstalledSoftwareProviderDeleteInstance,
-        LinuxHA_InstalledSoftwareProviderExecQuery
+        InstalledSoftware_Cleanup,
+        InstalledSoftware_EnumInstanceNames,
+        InstalledSoftware_EnumInstances,
+        InstalledSoftware_GetInstance,
+        InstalledSoftware_CreateInstance,
+        InstalledSoftware_SetInstance, 
+        InstalledSoftware_DeleteInstance,
+        InstalledSoftware_ExecQuery
 };
 
 CMPIInstanceMI * 
@@ -448,30 +446,29 @@ LinuxHA_InstalledSoftwareIdentityProvider_Create_InstanceMI(
                 &instMIFT
         };
         Broker = brkr;
-        CMNoHook;
         return &mi;
 }
 
 
 /******************************************************************************/
 
-static char assoc_provider_name[] = "assocationLinuxHA_InstalledSoftwareProvider";
+static char assoc_provider_name[] = "assocationInstalledSoftwareProvider";
 
 static CMPIAssociationMIFT assocMIFT = {
         CMPICurrentVersion,
         CMPICurrentVersion,
         assoc_provider_name,
-        LinuxHA_InstalledSoftwareProviderAssociationCleanup,
-        LinuxHA_InstalledSoftwareProviderAssociators,
-        LinuxHA_InstalledSoftwareProviderAssociatorNames,
-        LinuxHA_InstalledSoftwareProviderReferences,
-        LinuxHA_InstalledSoftwareProviderReferenceNames
+        InstalledSoftware_AssociationCleanup,
+        InstalledSoftware_Associators,
+        InstalledSoftware_AssociatorNames,
+        InstalledSoftware_References,
+        InstalledSoftware_ReferenceNames
 
 };
 
 CMPIAssociationMI *
 LinuxHA_InstalledSoftwareIdentityProvider_Create_AssociationMI(
-                                CMPIBroker* brkr,CMPIContext *ctx)
+                                CMPIBroker * brkr,CMPIContext * ctx)
 {
         static CMPIAssociationMI mi = {
                 NULL,
@@ -479,7 +476,6 @@ LinuxHA_InstalledSoftwareIdentityProvider_Create_AssociationMI(
         };
 
         Broker = brkr;
-        CMNoHook;
         return &mi;
 }
 
