@@ -1,10 +1,17 @@
 #!/bin/sh
 #
-# License:      GNU General Public License (GPL)
+# $Id: portblock.in,v 1.4 2005/11/03 07:45:51 xunsun Exp $
+#
+# Description:	wrapper of OCF RA portblock, based on original heartbeat RA.
+#		See OCF RA portblock for more information.
+#
+# Author:	Xun Sun <xunsun@cn.ibm.com> 
 # Support:      linux-ha@lists.linux-ha.org
+# License:      GNU General Public License (GPL)
+# Copyright:	(C) 2005 International Business Machines
 #
-# portblock: iptables temporary portblocking control 
-#
+
+. @HB_RA_DIR@/hto-mapfuncs
 CMD=`basename $0`
 usage()
 {
@@ -41,152 +48,11 @@ usage()
 	!USAGE
 	exit 1
 }
-#
-#	Because this is the normal usage, we consider "block"
-#	resources to be pseudo-resources -- that is, their status can't
-#	be reliably determined through external means.
-#	This is because we expect an "unblock" resource to come along
-#	and disable us -- but we're still in some sense active...
-#
-#	So, we track the state here using the pseudo_resource() function.
-#
-#	The psuedo_resource function should be moved into the functions
-#	available to resources so other resource scripts could use it...
-#
-#
-HA_VARRUNDIR=@localstatedir@/run/@HB_PKG@
-prefix=@prefix@
-exec_prefix=@exec_prefix@
-. @sysconfdir@/ha.d/shellfuncs
-
-RSCNAME=${CMD}_${1}_${2}_${3}
-# pseudo_resource filename operation
-pseudo_resource()
-{
-  file="$HA_VARRUNDIR/$1"
-  case $2 in
-    start|restart|reload)  touch "$file";;
-    stop) rm -f $file;;
-    status) test -f "$file";;
-    *)	exit 3;;
-  esac
-}
-iptables=/usr/sbin/iptables
-
-BlockOrUnblock=block
-
-#iptables_spec {udp|tcp} portno,portno
-iptables_spec()
-{
-  echo -D INPUT -p $1 -m multiport --dports $2 -j DROP
-}
-
-#active_grep_pat {udp|tcp} portno,portno
-active_grep_pat()
-{
-  w="[ 	][ 	]*"
-  any="0\\.0\\.0\\.0/0"
-  echo "^DROP${w}${1}${w}--${w}${any}${w}${any}${w}multiport${w}dports${w}${2} "
-}
-
-#chain_isactive  {udp|tcp} portno,portno
-chain_isactive()
-{
-  PAT=`active_grep_pat "$1" "$2"`
-  $iptables -n -L INPUT | grep "$PAT" >/dev/null
-}
-
-SayActive()
-{
-  echo "$CMD DROP rule for INPUT chain [$*]  is running (OK)"
-  return 0
-}
-SayConsideredActive()
-{
-  echo "$CMD DROP rule for INPUT chain [$*] considered to be running (OK)"
-  return 0
-}
-SayInactive()
-{
-  echo "$CMD DROP rule for INPUT chain [$*] is inactive"
-  return 1
-}
-#IptablesStatus  {udp|tcp} portno,portno {block|unblock}
-IptablesStatus()
-{
-  activewords="$CMD $1 $2 is running (OK)"
-  if
-    chain_isactive "$1" "$2"
-  then
-    case $3 in
-	  block)	SayActive $*; return $?;;
-	  *) 		SayInactive $*; return $?;;
-    esac
-  else
-    case $3 in
-	  block)
-	        if
-		  pseudo_resource "$RSCNAME" status
-		then
-		  SayConsideredActive $*; return $?
-		else
-		  SayInactive $*; return $?
-		fi;;
-
-	  *)	SayActive $*; return $?;;
-    esac
-  fi      
-}
-
-#IptablesBLOCK  {udp|tcp} portno,portno
-IptablesBLOCK()
-{
-  if
-    chain_isactive "$1" "$2"
-  then
-    : OK -- chain already active
-  else
-    $iptables -I INPUT -p "$1" -m multiport --dports "$2" -j DROP
-  fi
-}
-
-#IptablesUNBLOCK  {udp|tcp} portno,portno
-IptablesUNBLOCK()
-{
-  if
-    chain_isactive "$1" "$2"
-  then
-    $iptables -D INPUT -p "$1" -m multiport --dports "$2" -j DROP
-  else
-    : Chain Not active
-  fi
-}
-
-#IptablesStart  {udp|tcp} portno,portno {block|unblock}
-IptablesStart()
-{
-  pseudo_resource "$RSCNAME" start
-  case $3 in
-    block)	IptablesBLOCK "$@";;
-    unblock)	IptablesUNBLOCK "$@";;
-    *)		usage;
-  esac
-}
-
-#IptablesStop  {udp|tcp} portno,portno {block|unblock}
-IptablesStop()
-{
-  pseudo_resource "$RSCNAME" stop
-  case $3 in
-    block)	IptablesUNBLOCK "$@";;
-    unblock)	IptablesBLOCK "$@";;
-    *)		usage;;
-  esac
-}
 
 case $4 in
-  start)	IptablesStart "$@";;
-  stop)		IptablesStop "$@";;
-  status)	IptablesStatus "$1" "$2" "$3";;
-  *)		usage;;
+  start|stop|status)
+	;;
+  *)
+	usage;;
 esac
+ra_execocf  "rsc_id=portblock_${1}_$2" "rsc_type=portblock" "provider=heartbeat" $4 "protocol=$1" "portno=$2" "action=$3"

@@ -1,259 +1,61 @@
 #!/bin/sh
 #
-# $Id: Raid1.in,v 1.2 2005/07/29 07:50:53 sunjd Exp $
+# $Id: Raid1.in,v 1.3 2005/11/03 07:45:51 xunsun Exp $
 # 
-# Raid1
-#      Description: Manages a software Raid1 device on a shared storage medium.
-#  Original Author: Eric Z. Ayers (eric.ayers@compgen.com)
-# Original Release: 25 Oct 2000
-# 	   License: GNU General Public License (GPL)
-#          Support: linux-ha@lists.linux-ha.org
-#     RAID patches: http://people.redhat.com/mingo/raid-patches/
-# Word to the Wise: http://lwn.net/2000/0810/a/raid-faq.php3
-#  Sympathetic Ear: mailto:linux-raid@vger.kernel.org
+# Description:	wrapper of OCF RA Raid1, based on original heartbeat RA.
+#		See OCF RA Raid1 for more information.
+#
+# Author:	Xun Sun <xunsun@cn.ibm.com> 
+# Support:      linux-ha@lists.linux-ha.org
+# License:      GNU General Public License (GPL)
+# Copyright:	(C) 2005 International Business Machines
 #
 # usage: $0 <raidtab_config_file> <md_dev_name> {start|stop|status}
 #
 # in /etc/ha.d/haresources, use a line such as:
 # nodea  10.0.0.170 Raid1::/etc/raidtab.md0::/dev/md0 Filesystem::/dev/md0::/data1::ext2
 #
-# This script assumes you are running the so-called RAID v.90 patches vs.
-# the Linux 2.2 kernel (distributed with RedHat 6.2).   I have not used 
-# kernel version 2.4.   
-#
 # The "start" arg starts up the raid device
 # The "stop" arg stops it.  NOTE: all filesystems must be unmounted
 #  and no processes should be accessing the device.
 # The "status" arg just prints out whether the device is running or not
-#
 # 
-# DISCLAIMER: Use at your own risk!
-#
-#  Besides all of the usual legalese that accompanies free software, 
-#  I will warn you that I do not yet use this kind of setup (software RAID 
-#  over shared storage) in production, and I have reservations about doing so.
-#
-#  The linux md driver/scsi drivers under Raid 0.90 and kernel version 2.2 
-#  do not behave well when a drive is in the process of going bad.  
-#  The kernel slows down, but doesn't completely crash.  This is about the 
-#  worst possible thing that could happen in an un-attended HA type 
-#  environment.  (Once the system is rebooted, the sofware raid stuff works 
-#  like a champ.)  
-#  My other reservation has to do with the interation of RAID recovery with 
-#  journaling filesystems and other parts of the kernel.  Subscribe to 
-#  linux-raid@vger.kernel.org  for other opinions and possible solutions.
-#
-#  -EZA 25 Oct 2000 
-# 
-# SETUP:
-#
-# You might need to pass the command line parameter: raid=noautodetect 
-# in an HA environment so that the kernel doesn't automatically start
-# up your raid partitions when you boot the node.  This means that it isn't
-# going to work to use RAID for the system disks and the shared disks.
-#
-# 0) partition the disks to use for RAID.  Use normal Linux partition 
-#     types, not the RAID autodetect type for your partitions.
-# 1) Create /etc/raidtab.md?  on both systems (see example file below)
-# 2) Initialize your raid partition with 
-#     /sbin/mkraid --configfile /etc/raidtab.md? /dev/md?
-# 3) Format your filesystem
-#     mke2fs /dev/md0  # for ext2fs... a journaling filesystem would be nice
-# 3) Create the mount point on both systems.
-#     DO NOT add your raid filesystem to /etc/fstab
-# 4) copy this script (to /etc/rc.d/init.d if you wish) and edit it to
-#    reflect your desired settings.
-# 5) Modify the heartbeat 'haresources' setup file
-# 6) unmount the filesystem and stop the raid device with 'raidstop'
-# 7) fire up heartbeat!
-#
-# 
-# EXAMPLE config file /etc/raidtab.md0
-# This file must exist on both machines!
-#
-#  raiddev		    /dev/md0
-#  raid-level		    1
-#  nr-raid-disks		    2
-#  chunk-size		    64k
-#  persistent-superblock	    1
-#  #nr-spare-disks	    0
-#    device	    /dev/sda1
-#    raid-disk     0
-#    device	    /dev/sdb1
-#    raid-disk     1
-#
 
 unset LC_ALL; export LC_ALL
 unset LANGUAGE; export LANGUAGE
 
-prefix=@prefix@
-exec_prefix=@exec_prefix@
-. @sysconfdir@/ha.d/shellfuncs
-
-
-# Utilities used by this script
-MODPROBE=@MODPROBE@
-FSCK=@FSCK@
-FUSER=@FUSER@
-RAIDSTART=@RAIDSTART@
-MOUNT=@MOUNT@
-UMOUNT=@UMOUNT@
-RAIDSTOP=@RAIDSTOP@
-
-check_util () {
-    if [ ! -x "$1" ] ; then
-	ha_log "ERROR: setup problem: Couldn't find utility $1"
-	exit 1
-    fi
-}
+# Source function library.
+. @HB_RA_DIR@/hto-mapfuncs
 
 usage() {
-cat <<-EOT;
+cat <<-EOT
 	usage: $0 <raidtab_config_file> <md_dev_name> {start|stop|status}
 
 	<raidtab_config_file> : name of MD configuration file. e.g. /etc/raidtab
 	<md_dev_name>         : of the form /dev/md?? (the block device to use)
 
-	$Id: Raid1.in,v 1.2 2005/07/29 07:50:53 sunjd Exp $
+	$Id: Raid1.in,v 1.3 2005/11/03 07:45:51 xunsun Exp $
 EOT
 }
 
-# Check the arguments passed to this script
-RAIDTAB_CONFIG=$1
-MDDEV=$2
-
 if [ ! -f "$1" ] ; then
-	ha_log "ERROR: Couldn't open file $1"
+	echo "ERROR: Couldn't open file $1"
 	usage
 	exit 1
 fi
 
-if [ ! -b "$MDDEV" ] ; then
-	ha_log "ERROR: Couldn't find MD device $MDDEV. Expected /dev/md* to exist"
+if [ ! -b "$2" ] ; then
+	echo "ERROR: Couldn't find MD device $MDDEV. Expected /dev/md* to exist"
 	usage
 	exit 1
 fi
 
-# strip off the /dev/ prefix to get the name of the MD device
-MD=`echo $MDDEV | sed -e 's/\/dev\///'`
-
-# Check to make sure the utilites are found
-check_util $MODPROBE
-check_util $FUSER
-check_util $RAIDSTART
-check_util $MOUNT
-check_util $UMOUNT
-check_util $RAIDSTOP
-
-
-# Look for the 'start' or 'stop' argument
 case "$3" in
-
-#
-# START: Start up the RAID device
-#
-start)
-
-# See if the md device is already mounted.
-# NOTE: this will not work right if you have more than 10 md devices!
-$MOUNT | grep -e "^$MDDEV" >/dev/null
-if [ $? -ne 1 ] ; then
-    ha_log "ERROR: Device $MDDEV is already mounted!"
-    exit 1;
-fi
-
-
-# Insert SCSI module
-$MODPROBE scsi_hostadapter
-if [ $? -ne 0 ] ; then
-    ha_log "WARNING: Couldn't insert SCSI module."
-fi
-
-# Insert raid personality module
-$MODPROBE raid1
-if [ $? -ne 0 ] ; then
-    ha_log "ERROR: Couldn't insert RAID1 module"
-    exit 1
-fi
-
-# Run raidstart to start up the RAID array
-$RAIDSTART --configfile $RAIDTAB_CONFIG $MDDEV
-if [ $? -ne 0 ] ; then
-	ha_log "ERROR: Couldn't start RAID for $MDDEV"
-	exit 1
-fi
-
-;;
-
-#
-# STOP: stop the RAID device
-#
-stop)
-
-# See if the MD device is online
-grep -e "^$MD" /proc/mdstat >/dev/null
-if [ $? -ne 0 ] ; then
-        ha_log "WARNING: device $MD is not online according to kernel"
-	exit 0
-fi
-
-# See if the MD device is mounted
-# NOTE: this will not work right if you have more than 10 md devices!
-$MOUNT | grep -e "^$MDDEV" >/dev/null
-if [ $? -ne 1 ] ; then
-
-	# Kill all processes open on filesystem
-	$FUSER -mk $MOUNTPOINT
-
-	# the return from fuser doesn't tell us much
-	#if [ $? -ne 0 ] ; then
-	#	ha_log "ERROR: Couldn't kill processes on $MOUNTPOINT"
-	#	exit 1;
-	#fi
-
-	# Unmount the filesystem
-	$UMOUNT $MDDEV
-	if [ $? -ne 0 ] ; then
-		ha_log "ERROR: Couldn't unmount filesystem for $MDDEV"
+	start|stop|status)
+		;;
+	*)	usage
 		exit 1
-	fi
-
-	$MOUNT | grep -e "^$MDDEV" >/dev/null
-	if [ $? -ne 1 ] ; then
-	    ha_log "ERROR: filesystem for $MDDEV still mounted"
-	    exit 1
-	fi
-fi
-
-# Turn off raid
-$RAIDSTOP --configfile /etc/raidtab.$MD $MDDEV
-if [ $? -ne 0 ] ; then
-	ha_log "ERROR: Couldn't stop RAID for $MDDEV"
-	exit 1
-fi
-
-;;
-
-#
-# STATUS: is the raid device online or offline?
-#
-status) 
-
-# See if the MD device is online
-grep -e "^$MD" /proc/mdstat >/dev/null
-if [ $? -ne 0 ] ; then
-    echo "stopped"
-else
-    echo "running"
-fi
-    
-;;
-
-*)
-    echo "This script should be run with the third argument 'start', 'stop', or 'status'"
-    exit 1
-;;
+		;;
 esac
 
-# If you got to this point, chances are everything is O.K.
-exit 0;
+ra_execocf  "rsc_id=Raid1_$2" "rsc_type=Raid1" "provider=heartbeat" $3 "raidconf=$1" "raiddev=$2"

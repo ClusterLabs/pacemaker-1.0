@@ -1,34 +1,31 @@
 #!/bin/sh
 #
-# $Id: db2.in,v 1.4 2005/08/31 17:42:49 alan Exp $
+# $Id: db2.in,v 1.5 2005/11/03 07:45:51 xunsun Exp $
 # 
-# db2
+# Description:	wrapper of OCF RA db2, based on original heartbeat RA.
+#		See OCF RA db2 for more information. 
 #
-# Description:	Manages a DB2 Universal Database as a High-Availability
-#		resource
-#
-#
-# Author:	Alan Robertson
-#		Support: linux-ha-dev@lists.tummy.com
-# License:	GNU General Public License (LGPL)
-# Copyright:	(C) 2002 International Business Machines, Inc.
-#
-#		This code inspired by the FailSafe db2 resource script
-#		written by Joachim Gleissner <jg@suse.de>
+# Author:	Xun Sun <xunsun@cn.ibm.com>
+# Support:	linux-ha@lists.linux-ha.org
+# License:	GNU General Public License (GPL)
+# Copyright:	(C) 2005 International Business Machines, Inc.
 #
 # An example usage in /etc/ha.d/haresources: 
 #       node1  10.0.0.170 db2::db2inst1
 #
 # See usage() function below for more details...
 #
+
+. @HB_RA_DIR@/hto-mapfuncs
+
 unset LC_ALL; export LC_ALL
 unset LANGUAGE; export LANGUAGE
 
 usage() {
-  methods=`db2_methods | grep -v methods`
+  methods=`db2_methods`
   methods=`echo $methods | tr ' ' '|'`
   cat <<-! >&1
-	usage: $0 db2-database-owner-id ($methods)
+	usage: $0 db2-database-owner-id {$methods}
 	usage: $0 methods
 
 	$0 manages a DB2 Universal Database instance as an HA resource.
@@ -39,19 +36,10 @@ usage() {
 	The 'monitor' operation reports whether the database seems to be working
 	The 'methods' operation reports on the methods $0 supports
 
-	$Id: db2.in,v 1.4 2005/08/31 17:42:49 alan Exp $
+	$Id: db2.in,v 1.5 2005/11/03 07:45:51 xunsun Exp $
 	!
   exit 1
-
 }
-
-
-prefix=@prefix@
-exec_prefix=@exec_prefix@
-#. @sysconfdir@/ha.d/shellfuncs
-. @sysconfdir@/ha.d/shellfuncs
-SH=/bin/bash
-
 
 #
 # methods: What methods/operations do we support?
@@ -66,252 +54,34 @@ db2_methods() {
 	!
 }
 
-
-#	Gather up information about our db2 instance
-
-db2info() {
-	instance=$1
-	db2admin=$instance
-	db2home=`bash -c "echo ~$db2admin"`
-	db2sql=$db2home/sqllib
-	db2profile=$db2sql/db2profile
-	db2adm=$db2sql/adm
-	db2ctrl=$db2sql/ctrl
-	db2bin=$db2sql/bin
-	db2db2=$db2bin/db2
-
-	#	Let's make sure a few important things are there...
-	if
-	  [ -d "$db2sql" -a  -d "$db2bin" -a -f "$db2profile" -a \
-		-x "$db2profile" -a -x "$db2db2" ]
-	then
-	  db2instance=`runasdb2 'echo $DB2INSTANCE'`
-	  test ! -z "$db2instance"
-        else
-	  false
-	fi
-	rc=$?
-	if
-	  [ $rc -ne 0 ]
-	then
-	  ha_log "ERROR: DB2 instance [$instance] not available"
-	fi
-	return $rc
-}
-
-#
-#	Run the given command in the db2 admin environment...
-#
-runasdb2() {
-	if
-	  [ $US = $db2admin ]
-	then
-	  $SH -c ". $db2profile; $*"
-	else
-	  su $db2admin -c ". $db2profile; $*"
-	fi
-}
-
-#
-#	Run a command as the DB2 admin, and log the output
-#
-logasdb2() {
-	output=`runasdb2 $*`
-	rc=$?
-	if
-	  [ $rc -eq 0 ]
-	then
-	  ha_log "info: $output"
-	else
-	  ha_log "ERROR: $output"
-	fi
-	return $rc
-}
-
-
-#
-# db2_start: Start the given db2 instance
-#
-db2_start() {
-  if
-    output=`runasdb2 $db2adm/db2start`
-  then
-    : Hurray! DB2 started OK
-    ha_log "info: DB2 UDB instance $1 started: $output"
-  else
-    case $output in
-      SQL1026N*|*"is already active"*)
-    		ha_log "info: DB2 UDB instance $1 already running: $output";;
-
-      *)	ha_log "ERROR: $output"; return 1;;
-    esac
-  fi
-  if
-    db2_status "$1"
-  then
-    if
-      runasdb2 $db2bin/db2jstrt 
-    then
-      for DB in `db2_dblist`
-      do
-        runasdb2 $db2db2 activate database $DB
-      done
-    fi
-    return $?
-  else
-    echo "ERROR: DB2 UDB instance $1 not active!"
-    return 1
-  fi
-}
-
-#
-# db2_stop: Stop the given db2 database instance
-#
-db2_stop() {
-  # We ignore the instance, the info we need is already in $vars
-  rc=0
-  if
-    output=`runasdb2 $db2adm/db2stop force`
-  then
-    : DB2 stopped OK
-    ha_log "info: DB2 UDB instance $1 stopped: $output"
-  else
-    case $output in
-
-      SQL1032N*|*"No start database manager command"*)
-		ha_log "info: $output";;
-
-      *)	ha_log "ERROR: DB2 UDB instance $1 stop failed: $output"
-		rc=1;;
-    esac
-  fi
-  logasdb2 $db2db2 terminate
-  logasdb2 $db2bin/db2_kill
-  pids=`our_db2_ps | grep db2jd | cut -d' ' -f1`
-  for j in $pids
-  do
-    runasdb2 kill -9 $j
-  done
-  return $rc
-}
-
-
-#
-# db2_status: is the given db2 instance running?
-#
-db2_status() {
-  # We ignore the instance, the info we need is already in $vars
-  pscount=`runasdb2 $db2bin/db2_local_ps | cut -c9- |  grep ' db2[^ ]' | wc -l`
-  test $pscount -ge 5
-}
-
-our_db2_ps() {
-  ps -u $db2admin | grep db2
-}
-
-
-db2_dblist() {
-  runasdb2 $db2db2 list database directory	\
-  |	grep -i 'Database name.*=' | sed 's%.*= *%%'
-}
-
-
-#
-# db2_monitor: Can the given db2 instance do anything useful?
-#
-db2_monitor() {
-  # We ignore the instance, the info we need is already in $vars
-  for DB in `db2_dblist`
-  do
-
-  CMD="	if $db2db2 connect to $DB;
-	then 
-	  $db2db2 select \* from sysibm.sysversions ; rc=\$?;
-	  $db2db2 disconnect $DB;
-	else
-          rc=\$?;
-	fi;
-	exit \$rc"
-
-    : Running this command: $CMD
-    if
-      output=`runasdb2 $CMD`
-    then
-      : Command succeeded!
-    else
-      ha_log "ERROR: DB2 UDB instance $1 DB $DB is not working"
-      ha_log "ERROR: DB2 UDB message: $output"
-      return 1
-    fi
-  done
-  : ha_log "info: All DBs in DB2 UDB instance $1 appear to be working"
-}
-
 #
 #	'main' starts here...
 #
 
-if
-  [ $# -le 1 ]
-then
-  if
-    [ "methods" = "$1" ]
-  then
-    db2_methods
-    exit $?
-  else
-    usage
-    exit $?
-  fi
+case $# in
+  1)	if [ "methods" = "$1" ]; then
+		db2_methods
+		exit $?
+	fi;;
+  2)	;;
+  *)	usage;;
+esac
+
+if [ "$2" = "methods" ]; then
+	db2_methods
+	exit $?
 fi
 
 US=`id -u -n`
 US=`echo $US`
-if
-  [ $US != root -a $US != $1 ]
-then
-  ha_log "ERROR: $0 must be run as root or $1"
-  exit 1
+if [ $US != root -a $US != $1 ]; then
+	echo "ERROR: $0 must be run as root or $1"
+	exit 1
 fi
-
-#
-#	Grab common db2 information...
-#
-if
-  db2info $1 
-then
-  : DB2 info is OK!
-else
-  rc=$?
-  exit $rc
-fi
-
 
 # What kind of method was invoked?
 case "$2" in
-
-  start)	db2_start $instance
-		exit $?;;
-
-  stop)		db2_stop $instance
-		exit $?;;
-
-  status)	if
-		  db2_status $instance
-		then
-		  echo DB2 UDB instance $instance is running
-		  exit 0
-		else
-		  echo DB2 UDB instance $instance is stopped
-		  exit 1
-		fi
-		exit $?;;
-
-  monitor)	db2_monitor $instance
-		exit $?;;
-
-  methods)	db2_methods
-		exit $?;;
+	start|stop|status|monitor);;
+	*)	usage;;
 esac
-
-usage
+ra_execocf  "rsc_id=db2_$1" "rsc_type=db2" "provider=heartbeat" $2 "instance=$1"

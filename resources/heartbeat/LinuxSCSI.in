@@ -1,24 +1,21 @@
 #!/bin/sh
 #
-# $Id: LinuxSCSI.in,v 1.2 2005/07/29 07:50:53 sunjd Exp $
+# $Id: LinuxSCSI.in,v 1.3 2005/11/03 07:45:51 xunsun Exp $
 # 
-# LinuxSCSI
+# Description:	wrapper of OCF RA LinuxSCSI, based on original heartbeat RA.
+#		See OCF RA LinuxSCSI for more information.
 #
-# Description:	Enables/Disables SCSI devices to protect them from being
-#		used by mistake
-#
-#
-# Author:	Alan Robertson
+# Author:	Xun Sun <xunsun@cn.ibm.com>
 # Support:      linux-ha@lists.linux-ha.org
-#
 # License:      GNU General Public License (GPL)
-# Copyright:	(C) 2002 IBM
+# Copyright:	(C) 2005 International Business Machines
 #
 # CAVEATS:	See the usage message for some important warnings
 #
-# usage: ./LinuxSCSI <host>:<channel>:<target>[:<lun>] (start|stop|status)
+# usage: ./LinuxSCSI <host>:<channel>:<target>[:<lun>] {start|stop|status}
 #
-#<adapter>:	Adapter number of the SCSI device to query
+#<host>:	Host adapter number of the SCSI device to query
+#<channel>:	SCSI channel
 #<target>:	Target ID of the SCSI device under consideration
 #<lun>:		LUN of the SCSI device under consideration
 #			(optional)
@@ -27,15 +24,17 @@
 # An example usage in /etc/ha.d/haresources: 
 #       node1  10.0.0.170 LinuxSCSI:0:0:11 
 #
+. @HB_RA_DIR@/hto-mapfuncs
+
 unset LC_ALL; export LC_ALL
 unset LANGUAGE; export LANGUAGE
 
 usage() {
   cat <<-! >&1
-	usage: $0 <host>:<channel>:<target>[:<lun>] (start|stop|status)
+	usage: $0 <host>:<channel>:<target>[:<lun>] {start|stop|status}
 
 	$0 manages the availability of a SCSI device from the point
-	of view of the linux kernel.  It make Linux believe the
+	of view of the Linux kernel.  It makes Linux believe the
 	device has gone away, and it can make it come back again.
 
 	The purpose of this resource script is to keep admins from
@@ -93,18 +92,10 @@ usage() {
 	keep in the volumes.  If you don't use a reasonable volume manager,
 	then you'll have to mount by UUID.
 
-	$Id: LinuxSCSI.in,v 1.2 2005/07/29 07:50:53 sunjd Exp $
+	$Id: LinuxSCSI.in,v 1.3 2005/11/03 07:45:51 xunsun Exp $
 	!
   exit 1
 }
-
-zeropat="[ 0]0"
-
-prefix=@prefix@
-exec_prefix=@exec_prefix@
-#. @sysconfdir@/ha.d/shellfuncs
-
-PROCSCSI=/proc/scsi/scsi
 
 scsi_methods() {
   cat <<-!
@@ -115,117 +106,24 @@ scsi_methods() {
 	!
 }
 
+case $# in
+  1)	if [ $1 = "methods" ]; then
+		scsi_methods
+		exit $?
+	fi;;
+  2)	;;
+  *)	usage;;
+esac
 
-parseinst() {
-  lun=0
-  case "$1" in
-	
-    [0-9*]:[0-9]*:[0-9]*);;
-
-    [0-9*]:[0-9]*:[0-9]*:[0-9]*)
-	lun=`echo "$1" | cut -d: -f4`;;
-
-    *)	host=error
-	channel=error
-	target=error
-	lun=error
-	echo "Invalid SCSI instance $1" >&2
-  esac
-  host=`echo "$1" | cut -d: -f1`
-  channel=`echo "$1" | cut -d: -f2`
-  target=`echo "$1" | cut -d: -f3`
-}
-
-
-#
-# start: Enable the given SCSI device in the kernel
-#
-scsi_start() {
-  parseinst "$1"
-  [ $target = error ] && exit 1
-  echo "scsi-add-single-device $host $channel $target $lun" >>$PROCSCSI
-  if
-    scsi_status "$1"
-  then
-    return 0
-  else
-    echo "ERROR: SCSI device $1 not active!"
-    return 1
-  fi
-}
-
-
-#
-# stop: Disable the given SCSI device in the kernel
-#
-scsi_stop() {
-  parseinst "$1"
-  [ $target = error ] && exit 1
-  echo "scsi-remove-single-device $host $channel $target $lun" >>$PROCSCSI
-  if
-    scsi_status "$1"
-  then
-    echo "ERROR: SCSI device $1 still active!"
-    return 1
-  else
-    return 0
-  fi
-}
-
-
-#
-# status: is the given device now available?
-#
-scsi_status() {
-  parseinst "$1"
-  [ $target = error ] && exit 1
-  [ $channel -eq 0 ]	&& channel=$zeropat
-  [ $target -eq 0 ]	&& target=$zeropat
-  [ $lun -eq 0 ]	&& lun=$zeropat
-  greppat="Host: *scsi$host *Channel: *$channel *Id: *$target *Lun: *$lun"
-  grep -i "$greppat" $PROCSCSI >/dev/null
-}
-
-if
-  [ $# -eq 1 -a "X$1" = "Xmethods" ]
-then
-  scsi_methods
-  exit #?
-fi
-
-instance=$1
 # Look for the start, stop, status, or methods calls...
 case "$2" in
-  stop)
-	scsi_stop $instance
-	exit $?;;
-  start)
-	scsi_start $instance
-	exit $?;;
-  status) 
-	if
-	  scsi_status $instance
-	then
-	  echo SCSI device $instance is running
-	  exit 0
-	else
-	  echo SCSI device $instance is stopped
-	  exit 1
-	 fi
-	exit $?;;
-
-
-#
-# methods: What methods do we support?
-#
   methods) 
 	scsi_methods
 	exit $?;;
-
-*)
-    usage
-    exit 1;;
-
+  start|stop|status) 
+	;;
+  *)
+	usage;;
 esac
 
-exit 1
+ra_execocf  "rsc_id=LinuxSCSI_$1" "rsc_type=LinuxSCSI" "provider=heartbeat" $2 "scsi=$1"

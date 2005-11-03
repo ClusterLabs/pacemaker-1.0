@@ -1,105 +1,39 @@
 #!/bin/sh
 #
-# Startup script for the Audible Alarm
+# $Id: AudibleAlarm.in,v 1.5 2005/11/03 07:45:51 xunsun Exp $
 #
-# author: Kirk Lawson <lklawson@heapy.com> 
-#         Horms <horms@vergenet.net>
+# Description:	wrapper of OCF RA AudibleAlarm, based on original heartbeat RA.
+#		See OCF RA AudibleAlarm for more information.
 #
-# description: sets an audiable alarm running by beeping at a set interval
-# processname: alarm
-# config: /etc/AudibleAlarm/AudibleAlarm.conf - not yet implemented
-#
-# License:      GNU General Public License (GPL)
+# Author:	Xun Sun <xunsun@cn.ibm.com> 
 # Support:      linux-ha@lists.linux-ha.org
-#
-
-
-prefix=@prefix@
-exec_prefix=@exec_prefix@
-PIDFILE=@localstatedir@/run/heartbeat-bell
-#For testing
-#PIDFILE=/tmp/heartbeat-bell
+# License:      GNU General Public License (GPL)
+# Copyright:	(C) 2005 International Business Machines
 
 # Source function library.
-. @sysconfdir@/ha.d/shellfuncs
+. @HB_RA_DIR@/hto-mapfuncs
 
-# What host are we running on?
-us=`uname -n`
-
-audiablealarm_start () {
-	ha_log "info: $0: Starting"
-    	if [ -f $PIDFILE ]; then
-        	PID=`head -n 1 $PIDFILE`
-		ha_log "info: $0: Appears to already be running, killing [$PID]"
-		kill $PID > /dev/null
-	fi
-	# To avoid the SIGPIPE issue when called by lrmd, redirect stdout->stderr.
-	# Use () to create a subshell to make the redirecting be synchronized.
-	( while [ 1 ]; do 
-		sleep 1  #Sleep first, incase we bail out
-		echo -ne "\a" > /dev/console 
-		# Uncomment this line to cause floppy drive light
-		# to flash (requires fdutils package).
-		# /usr/bin/floppycontrol --pollstate > /dev/null
-	done & ) >&2
-	if ! echo $! >  $PIDFILE; then
-		ha_log "info: $0: Could not write to pid file \"$PIDFILE\", bailing"
-		kill $!
-		exit 1
-	fi
-}
-
-audiablealarm_stop () {
-	ha_log "info: $0: Shutting down"
-  	if [ -f $PIDFILE ]; then
-		PID=`head -n 1 $PIDFILE`
-		ha_log "info: $0: Appears to already be running, killing [$PID]"
-		kill $PID > /dev/null
-		rm -f $PIDFILE
-	fi
-}
-
-# Get last argument we are passed.
-for arg in "$@"
-  do
-    lastarg=$arg
-  done
-
-
-# See how we were called.
-case "$lastarg" in
-   start)
-	for arg in "$@"
- 	  do
-	    if [ "$us" = "$arg" ]; then
-	      # We should not start because we are on a host
-	      # listed in our argument list.
-              exit 0
-	    fi
-	  done
-	audiablealarm_start
-	;;
-  stop)
-	audiablealarm_stop
-	;;
-  restart)
-	$0 stop
-	$0 start
-	;;
-  status)
-  	if [ -f $PIDFILE ]; then
-		echo running
-	else
-		echo stopped
-	fi
-	;;
-
-  *)
-	echo "Usage: [node1 node2 ... ] {start|stop|restart|status}"
+usage() {
+	echo "Usage: $0 [node1 node2 ... ] {start|stop|restart|status}"
 	echo "  The node list is an optional space delimited"
 	echo "  list of hosts that should never sound the alarm."
-	echo "$Id: AudibleAlarm.in,v 1.4 2005/07/29 07:50:53 sunjd Exp $";
-	exit 1
+	echo "$Id: AudibleAlarm.in,v 1.5 2005/11/03 07:45:51 xunsun Exp $";
+}
+# Get operation name, which is the last argument we are passed.
+for arg in "$@"; do
+    op=$arg
+done
+
+# See how we were called.
+case "$op" in
+   start|stop|restart|status)
+	;;
+   usage)
+	usage; exit 0;;
+   *)
+	usage; exit 1;;
 esac
 
-exit 0
+nodelist=${*%$op}
+
+ra_execocf  "rsc_id=AudibleAlarm" "rsc_type=AudibleAlarm" "provider=heartbeat" $op "nodelist=$nodelist"

@@ -1,77 +1,35 @@
 #!/bin/sh
 #
-# $Id: apache.in,v 1.5 2005/10/08 05:56:22 sunjd Exp $
+# $Id: apache.in,v 1.6 2005/11/03 07:45:51 xunsun Exp $
 #
-#	High-Availability Apache/IBMhttp control script
-# 
-# apache (aka IBMhttpd)
+# Description:	wrapper of OCF RA apache, based on original heartbeat RA. See
+#		OCF RA apache for more information.
 #
-# Description:	starts/stops apache web servers.
-#
-# Author:	Alan Robertson
-#
-# Support:	linux-ha-dev@lists.tummy.com
-#
+# Author:	Xun Sun <xunsun@cn.ibm.com>
+# Support:	linux-ha@lists.linux-ha.org
 # License:	GNU General Public License (GPL)
-#
-# Copyright:	(C) 2002 International Business Machines
-#
+# Copyright:	(C) 2005 International Business Machines
 #
 # An example usage in /etc/ha.d/haresources: 
 #       node1  10.0.0.170 apache::/opt/IBMHTTPServer/conf/httpd.conf
 #       node1  10.0.0.170 IBMhttpd
 #
-# Our parsing of the Apache config files is very rudimentary.
-# It'll work with lots of different configurations - but not every
-# possible configuration.
-#
-# Patches are being accepted ;-)
-#
 unset LC_ALL; export LC_ALL
 unset LANGUAGE; export LANGUAGE
 
-prefix=@prefix@
-exec_prefix=@exec_prefix@
-. @sysconfdir@/ha.d/shellfuncs
+. @HB_RA_DIR@/hto-mapfuncs
 
-#######################################################################
-#
-#	Configuration options - usually you don't need to change these
-#
-#######################################################################
-#
-IBMHTTPD=/opt/IBMHTTPServer/bin/httpd
-HTTPDLIST="/sbin/httpd /usr/sbin/httpd"
 WGETNAME=wget
-WGETOPTS="-O- -nv"
-LOCALHOST="http://localhost"
-HTTPDOPTS="-DSTATUS"
-DEFAULT_IBMCONFIG=/opt/IBMHTTPServer/conf/httpd.conf
-DEFAULT_NORMCONFIG="/etc/httpd/httpd.conf"
-#
-# You can also set
-#	HTTPD
-#	PORT
-#	STATUSURL
-#	PIDFILE
-#	CONFIGFILE
-# in this section if what we're doing doesn't work for you...
-#
-#	End of Configuration options
-#######################################################################
 
-CMD=`basename $0`
 usage() {
-  mstr=`methods | tr '\012' '|' | sed 's%|$%%' `
+  mstr=`methods_apache | tr '\012' '|' | sed 's%|$%%' `
   cat <<-!
-	usage: $0 [config-file-pathname] ($mstr)
+	usage: $0 [config-file-pathname] {$mstr}
 
-	The config-file-pathname is the pathname to the configuration
-	file for this web server.  Various appropriate defaults are
-	assumed if no config file is specified.  If this command is
-	invoked as *IBM*, then the default config file name is
-	$DEFAULT_IBMCONFIG, otherwise the default config file
-	will be $DEFAULT_NORMCONFIG.
+	The optional [config-file-pathname] is the pathname to the configuration
+	file for this web server. Various appropriate defaults are assumed by
+	the apache OCF RA if no config file is specified, depending on how this
+	command is invoked. See apache OCF RA for more information.
 
 	start	start the web server
 
@@ -84,11 +42,10 @@ usage() {
 	monitor	return TRUE if the web server appears to be working
 		For this to be supported, you must configure mod_status
 		and give it a server-status URL.  You have to have
-		installed $WGETNAME for this to work.  We won't return
-		monitor in the methods call if we don't know think
-		that the monitor call will actually work ;-)
+		installed $WGETNAME for this to work. The monitor operation
+		won't work if the web server is not configured properly;-)
 
-	$Id: apache.in,v 1.5 2005/10/08 05:56:22 sunjd Exp $
+	$Id: apache.in,v 1.6 2005/11/03 07:45:51 xunsun Exp $
 	!
   exit 1
 }
@@ -100,320 +57,29 @@ methods_apache() {
 	status
 	methods
 	!
-  case $HasStatus in
-    yes)	echo "monitor";;
-  esac
-}
-if
-  [ "X$HTTPD" = X -o ! -f "$HTTPD" -o ! -x "$HTTPD" ]
-then
-  case $0 in
-    *IBM*)	HTTPD=$IBMHTTPD
-		DefaultConfig=$DEFAULT_IBMCONFIG;;
-    *)	for h in $HTTPDLIST
-	do
-	  if
-	    [ -f $h -a -x $h ]
-	  then
-	    HTTPD=$h
-	    break
-	  fi
-	done
-	DefaultConfig=$DEFAULT_NORMCONFIG;;
-  esac
-fi
-#
-#	Run:  Run a script, and log its output.
-#
-run() {
-  output=`"$@" 2>&1`
-  rc=$?
-  output=`echo $output`
-  if
-    [ $rc -eq 0 ]
-  then 
-    if
-      [ ! -z "$output" ]
-    then
-      ha_log "info: $output"
-    fi
-    return 0
-  else
-    if
-      [ ! -z "$output" ]
-    then
-      ha_log "ERROR: $output"
-    else
-      ha_log "ERROR: command failed: $*"
-    fi
-    return 1
-  fi
-}
-#
-# Strip comments, and initial blanks. Compress other blanks
-#
-apachecat() {
-    sed -e 's%#.*%%' -e 's%^[ 	]*%%' -e 's%[ 	]+% %g' $1
+  if which $WGETNAME > /dev/null 2>&1; then
+	echo "monitor"
+  fi 
 }
 
-#
-# Return the value of a parameter in our apache config file
-#
-apache_param() {
-  configfile=$1
-  varname=$2
-
-  if
-    apachecat $1 | grep -i "^$varname " | \
-        sed -e 's%^[^ ]* %%' -e 's%^"%%' -e 's%"$%%' -e 's%^[[:blank:]]*%%' -e 's%[[:blank:]]*$%%'
-  then
-     : OK
-  else
-     false
-  fi
-}
-
-#
-# Return TRUE if the config file supports the given handler somewhere
-#
-SupportsHandler() {
-  apache_param $1 SetHandler | grep "^ *$2 *" >/dev/null
-}
-
-#
-#	return true if the given module is loaded...
-#
-Module_loaded() {
-  apache_param $1 AddModule | grep -i "^mod_$2\." >/dev/null
-}
-
-#
-#	Return the location(s) that are handled by the given handler
-#
-FindLocationForHandler() {
-  PerlScript='while (<>) {
-	/<Location "?([^ >"]+)/i && ($loc=$1);
-	'"/SetHandler +$2"'/i && print "$loc\n"; 
-  }'
-  apachecat $1 | perl -e "$PerlScript"
-}
-
-
-#
-#	Get all the parameters we need from the Apache config file
-#
-GetParams() {
-  ConfigFile=$1
-  ServerRoot=`apache_param $ConfigFile ServerRoot`
-  PidFile=`apache_param $ConfigFile PidFile`
-  case $PidFile in
-    /*)	;;
-    [[:alnum:]]*)  PidFile=$ServerRoot/$PidFile;;
-    *)	PidFile=$ServerRoot/$PidFile;;
-  esac
-  case "$PORT" in
-    [0-9]*)	;;
-    *)	PORT=`apache_param $ConfigFile Port`
-        case "$PORT" in
-          [0-9]*)	;;
-	  *)		PORT=80;;
-        esac;;
-  esac
-  if
-    WGET=`which $WGETNAME 2>/dev/null`
-  then
-    : OK
-  else
-    WGET=""
-  fi
-  
-  #
-  # Just because they have mod_status loaded and have a server-status
-  # declared doesn't mean they support the status operation.
-  #
-  # It's actually pretty hard to tell because of run-time defines which
-  # could be turned on elsewhere...
-  #
-  # (we start our server with -DSTATUS - just in case :-))
-  #
-  # Typically (but not necessarily) the status URL is /server-status
-  #
-  # For us to think status will work, we have to have the following things:
-  #
-  # - $WGET has to exist and be executable
-  # - The mod_status module must be loaded
-  # - The server-status handler has to be mapped to some URL somewhere
-  #
-  # We assume that:
-  #
-  # - the "main" web server at $PORT will also support it if we can find it
-  #	somewhere in the file
-  # - it will be supported at the same URL as the one we find in the file
-  #
-  # If this doesn't work for you, then set STATUSURL at the top of the file
-  #
-  HasStatus=no
-  if
-    [ ! -z "$WGET" -a -x "$WGET" ]	\
-    &&	Module_loaded $ConfigFile status	\
-    &&	SupportsHandler $ConfigFile server-status
-  then
-    StatusURL=`FindLocationForHandler $1 server-status | tail -1`
-    case "$StatusURL" in
-      /*)	HasStatus=yes;;
-    esac
-    if
-       [ "X$STATUSURL" = "X" ]
-    then
-      STATUSURL="${LOCALHOST}:${PORT}$StatusURL"
-    fi
-  fi
-  if
-    [ -z "$PidFile"  -o ! -f $ConfigFile ]
-  then
-    false
-  else
-    true
-  fi
-
-}
-
-#
-# return TRUE if a process with given PID is running
-#
-ProcessRunning() {
-    ApachePID=$1
-    # Use /proc if it looks like it's here...
-    if
-      [ -d /proc -a -d /proc/1 ]
-    then
-       [ -d /proc/$ApachePID ]
-    else
-      #  This assumes we're running as root...
-      kill -0 "$ApachePID" >/dev/null 2>&1
-    fi
-}
-
-
-silent_status() {
-  if
-    [ -f $PidFile  ] 
-  then
-    ProcessRunning `cat $PidFile`
-  else
-    : No pid file
-    false
-  fi
-}
-
-start_apache() {
-  if
-    silent_status
-  then
-    echo "$CMD already running (pid $ApachePID)"
-    return 0
-  fi
-  run $HTTPD $HTTPDOPTS -f $CONFIGFILE
-}
-
-stop_apache() {
-  if
-    silent_status
-  then
-    if
-      kill $ApachePID
-    then
-      tries=0
-      while
-        ProcessRunning $ApachePID &&
-        [ $tries -lt 10 ]
-      do
-        sleep 1
-        kill $ApachePID >/dev/null 2>&1
-        ha_log "Killing apache PID $ApachePID"
-        tries=`expr $tries + 1`
-      done
-    else
-      ha_log "Killing apache PID $ApachePID FAILED."
-    fi
-    if
-      ProcessRunning $ApachePID
-    then
-      echo "$CMD still running ($ApachePID)."
-      ha_log "$CMD still running ($ApachePID)."
-      false
-    else
-      echo "$CMD stopped."
-    fi
-  else
-    echo "$CMD not running."
-    ha_log "$CMD is not running."
-  fi
-}
-
-status_apache() {
-  silent_status
-  rc=$?
-  if
-    [ $rc -eq 0 ]
-  then
-    echo "$CMD is running (pid $ApachePID)."
-  else
-    echo "$CMD is stopped."
-  fi
-  return $rc
-}
-
-
-monitor_apache() {
-  case $HasStatus in
-    no)	echo "Monitoring not supported by $CONFIGFILE"
-	return 1;;
-  esac
-  if
-    silent_status
-  then
-    run sh -c "$WGET $WGETOPTS $STATUSURL | grep -i '</ *body *></ *html *>' >/dev/null"
-  else
-    echo "$CMD not running"
-    return 1
-  fi
-}
-
-if
-  [ $# -gt 1 ]
-then
-  CONFIGFILE=$1
-  COMMAND=$2
-else
-  case "$CONFIGFILE" in
-    "") CONFIGFILE=$DefaultConfig;;
-    *)		;;
-  esac
-  COMMAND=$1
-fi
-
-if
-  [ ! -f "$CONFIGFILE" -a "X$COMMAND" = Xstop ]
-then
-  echo "$CONFIGFILE not found - apache considered stopped"
-  exit 0
-fi
-
-if
-  GetParams $CONFIGFILE
-then
-  : OK
-else
-  echo "Cannot parse config file [$CONFIGFILE]"
-  exit 1
-fi
-
-case $COMMAND in
-  start)	start_apache;;
-  stop)		stop_apache;;
-  status)	status_apache;;
-  methods)	methods_apache;;
-  monitor)	monitor_apache;;
-  *)		usage;;
+case $# in
+  1)	op=$1
+	configfile=
+	;;
+  2)	configfile=$1
+	op=$2
+	;;
+  *)	usage
+	;;
 esac
+
+case $op in
+  start|stop|status|monitor)
+	;;
+  methods)	
+	methods_apache
+	exit 0;;
+  *)
+	usage;;
+esac
+ra_execocf  "rsc_id=apache" "rsc_type=apache" "provider=heartbeat" $op "configfile=$configfile"

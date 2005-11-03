@@ -1,21 +1,22 @@
 #!/bin/sh
 #
-# $Id: Filesystem.in,v 1.4 2005/08/26 19:35:18 alan Exp $
+# $Id: Filesystem.in,v 1.5 2005/11/03 07:45:51 xunsun Exp $
 # 
-# Filesystem
-#      Description: Manages a Filesystem on a shared storage medium.
-#  Original Author: Eric Z. Ayers (eric.ayers@compgen.com)
-# Original Release: 25 Oct 2000
+# Description:	wrapper of OCF RA Filesystem, based on original heartbeat RA.
+#		See OCF RA Filesystem for more information.
 #
-# License:      GNU General Public License (GPL)
+# Author:	Xun Sun <xunsun@cn.ibm.com>
 # Support:      linux-ha@lists.linux-ha.org
+# License:      GNU General Public License (GPL)
+# Copyright:	(C) 2005 International Business Machines
 #
-# usage: ./Filesystem <device> <directory> <fstype> [<options>] {start|stop|status}
+# usage: ./Filesystem <device> <directory> [<fstype> [<options>]] {start|stop|status}
 #
 #<device>    : name of block device for the filesystem. e.g. /dev/sda1, /dev/md0
-#		Or a -U or -L option for mount, or an NFS mount specification
+#		Or a -U or -L option for mount, or an NFS mount specification,
+#		or a samba share
 #<directory> : the mount point for the filesystem
-#<fstype>    : name of the filesystem type. e.g. ext2
+#<fstype>    : optional name of the filesystem type. e.g. ext2
 #<options>   : options to be given to the mount command via -o
 #
 #
@@ -29,249 +30,41 @@
 # This assumes you want to manage a filesystem on a shared (scsi) bus.
 # Do not put this filesystem in /etc/fstab.  This script manages all of
 # that for you.
-#
-# If you are interested in High Availability, you will probably also want
-# some sort of external hardware RAID controller in front of the actual 
-# disks.  I don't mean a RAID controller embedded in the host controller -
-# it has to be a external controller.
-#
-# It can also be an internal RAID controller if the controller supports
-# failover.  IBM's ServeRAID controller does this, and it automatically
-# prohibits concurrent access too, so it's pretty cool in this application.
-#
-# There is a script for software RAID-1 included in this directory.  Right 
-# now, I wouldn't recommend using software RAID (see notes in the Raid1 script)
-#
-# NOTE: There is no locking (such as a SCSI reservation) being done here.
-#       I would if the SCSI driver could properly maintain the reservation,
-#       which it cannot, even with the 'scsi reservation' patch submitted
-#       earlier this year by James Bottomley.  The patch minimizes the
-#       bus resets caused by a RESERVATION_CONFLICT return, and helps the 
-#       reservation stay when 2 nodes contend for a reservation, 
-#       but it does not attempt to recover the reservation in the 
-#       case of a bus reset.  
-#
-#       What all this means is that if 2 nodes mount the same file system
-#       read-write, the filesystem is going to become corrupted.
-#
-#	As a result, you should use this together with the stonith option
-#	and redundant, independent communications paths.
-#
-#	If you don't do this, don't blame us when you scramble your disk.
-# 
-#	Note:  the ServeRAID controller does prohibit concurrent acess
-#	In this case, you don't actually need STONITH, but redundant comm is
-#	still an excellent idea.
-#
+
 unset LC_ALL; export LC_ALL
 unset LANGUAGE; export LANGUAGE
 
-prefix=@prefix@
-exec_prefix=@exec_prefix@
-. @sysconfdir@/ha.d/shellfuncs
-
-# Utilities used by this script
-MODPROBE=@MODPROBE@
-FSCK=@FSCK@
-FUSER=@FUSER@
-MOUNT=@MOUNT@
-UMOUNT=@UMOUNT@
-BLOCKDEV=@BLOCKDEV@
-
-check_util () {
-    if [ ! -x "$1" ] ; then
-	ha_log "ERROR: setup problem: Couldn't find utility $1"
-	exit 1
-    fi
-}
+. @HB_RA_DIR@/hto-mapfuncs
 
 usage() {
 
 cat <<-EOT;
-	usage: $0 <device> <directory> <fstype> [<options>] {start|stop|status}
+	usage: $0 <device> <directory> [<fstype> [<options>]] {start|stop|status}
 
-	<device>    : name of block device for the filesystem. e.g. /dev/sda1, /dev/md0
-	              OR -LFileSystemLabel OR -Uuuid or an NFS specification
+	<device>    : name of block device for the filesystem. e.g. /dev/sda1,
+		      /dev/md0 OR -LFileSystemLabel OR -Uuuid OR an NFS 
+		      specification or a samba share
 	<directory> : the mount point for the filesystem
-	<fstype>    : name of the filesystem type. e.g. ext2
+	<fstype>    : optional name of the filesystem type. e.g. ext2
 	<options>   : options to be given as -o options to mount.
 
-	$Id: Filesystem.in,v 1.4 2005/08/26 19:35:18 alan Exp $
+	$Id: Filesystem.in,v 1.5 2005/11/03 07:45:51 xunsun Exp $
 	EOT
 }
 
-#
-#	Make sure the kernel does the right thing with the FS buffers
-#	This function should be called after unmounting and before mounting
-#	It may not be necessary in 2.4 and later kernels, but it shouldn't hurt
-#	anything either...
-#
-#	It's really a bug that you have to do this at all...
-#
-flushbufs() {
-  if
-    [ "$BLOCKDEV" != "" -a -x "$BLOCKDEV" ]
-  then
-    case $1 in
-      -*|[^/]*:/*)	;;
-      *)		$BLOCKDEV --flushbufs $1;;
-    esac
-  fi
-}
 # Check the arguments passed to this script
-DEVICE=$1
-MOUNTPOINT=$2
-FSTYPE=$3
-
 case $# in
-  4)	operation=$4; options="";;
-  5)	operation=$5; options="-o $4";;
+  3)	fstype=""; operation=$4; options="";;
+  4)	fstype=$3; operation=$4; options="";;
+  5)	fstype=$3; operation=$5; options="$4";;
   *)	usage; exit 1;;
 esac
 
-case $DEVICE in
-  -*) # Oh... An option to mount instead...  Typically -U or -L
-	;;
-  [^/]*:/*)	# An NFS filesystem specification...
-	;;
-  *)	if [ ! -b "$DEVICE"  -a "$operation" != stop ]; then
-	  ha_log "ERROR: Couldn't find device $DEVICE. Expected /dev/??? to exist"
-	  usage
-	  exit 1
-	fi;;
-esac
-
-if [ ! -d "$MOUNTPOINT" ] ; then
-	ha_log "ERROR: Couldn't find directory  $MOUNTPOINT to use as a mount point"
-	usage
-	exit 1	
-fi
-	
-
-# Check to make sure the utilites are found
-check_util $MODPROBE
-check_util $FSCK
-check_util $FUSER
-check_util $MOUNT
-check_util $UMOUNT
-  
-
-# Look for the 'start', 'stop' or status argument
+# Look for the 'start', 'stop' or 'status' argument
 case "$operation" in
-
-#
-# START: Start up the filesystem
-#
-start)
-
-	# See if the device is already mounted.
-	$MOUNT | cut -d' ' -f3 | grep -e "^$MOUNTPOINT$" >/dev/null
-	if [ $? -ne 1 ] ; then
-	    ha_log "ERROR: Filesystem $MOUNTPOINT is already mounted!"
-	    exit 1;
-	fi
-
-	# Insert SCSI module
-	$MODPROBE scsi_hostadapter >/dev/null 2>&1
-
-	# Insert Filesystem module
-	$MODPROBE $FSTYPE >/dev/null 2>&1
-	grep -e "$FSTYPE"'$' /proc/filesystems >/dev/null
-	if [ $? != 0  ] ; then
-		ha_log "ERROR: Couldn't find filesystem $FSTYPE in /proc/filesystems"
-		usage
+	start|stop|status);;
+	*)	usage
 		exit 1
-	fi
-
-	# Check the filesystem & auto repair.  
-	# NOTE: Some filesystem types don't need this step...  Please modify
-	#       accordingly
-
-	if
-	  case $FSTYPE in
-	    ext3|reiserfs|xfs|jfs|vfat|fat|nfs)	false;;
-	    *)				true;;
-	  esac
-        then
-	  ha_log "info: Starting filesystem check on $DEVICE"
-	  $FSCK -t $FSTYPE -a $DEVICE
-	
-	  # NOTE: if any errors at all are detected, it returns non-zero
-	  # if the error is >4 then there is a big problem
-	  if
-	    [ $? -ge 4 ]
-	  then
-	    ha_log "ERROR: Couldn't sucessfully fsck filesystem for $DEVICE"
-	    exit 1	
-	  fi	
-	fi
-
-	flushbufs $DEVICE
-	# Mount the filesystem.
-	if
-	  $MOUNT -t $FSTYPE $options $DEVICE $MOUNTPOINT
-        then
-	  : Mount worked!
-        else
-	  ha_log "ERROR: Couldn't mount filesystem $DEVICE on $MOUNTPOINT"
-	  exit 1
-	fi
-
-# end of start)
-;;
-
-#
-# STOP: Unmount the filesystem
-#
-stop)
-
-	# See if the device is currently mounted
-	if
-	  $MOUNT | grep -e " on $MOUNTPOINT " >/dev/null
-	then
-		# Kill all processes open on filesystem
-		$FUSER -mk $MOUNTPOINT
-
-		# Get the current real device name...
-		# (specified devname could be -L or -U...)
-
-		DEV=`$MOUNT | grep "on $MOUNTPOINT " | cut -d' ' -f1`
-		# Unmount the filesystem
-		$UMOUNT $MOUNTPOINT
-		if [ $? -ne 0 ] ; then
-			ha_log "ERROR: Couldn't unmount $MOUNTPOINT"
-			exit 1
-		fi
-		flushbufs $DEV
-	else
-		ha_log "WARNING: Filesystem $MOUNTPOINT not mounted?"
-	fi
-
-# end of stop)
-;;
-
-#
-# STATUS: is the filesystem mounted or not?
-#
-status)
-
-	$MOUNT | grep -e "on $MOUNTPOINT " >/dev/null
-	if [ $? = 0 ] ; then
-		echo "$MOUNTPOINT is mounted (running)"
-	else
-		echo "$MOUNTPOINT is unmounted (stopped)"
-	fi
-# end of status)
-;;
-
-
-*)
-    echo "This script should be run with a fourth argument of 'start', 'stop', or 'status'"
-    usage
-    exit 1
-;;
-
+		;;
 esac
-
-# If you got to this point, chances are everything is O.K.
-exit 0;
+ra_execocf  "rsc_id=Filesystem_$1" "rsc_type=Filesystem" "provider=heartbeat" $operation "device=$1" "directory=$2" "fstype=$fstype" "options=$options"
