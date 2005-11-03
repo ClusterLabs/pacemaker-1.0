@@ -1,5 +1,5 @@
 /*
- * CIM _
+ * CIM Provider - provider for LinuxHA_SubResource
  * 
  * Author: Jia Ming Pan <jmltc@cn.ibm.com>
  * Copyright (c) 2005 International Business Machines
@@ -38,7 +38,7 @@
 #include "cmpi_sub_resource.h"
 
 
-#define PROVIDER_ID "cim-provider-sr"
+#define PROVIDER_ID "cim-sub-res"
 
 static CMPIBroker * Broker         = NULL;
 static char ClassName []           = "LinuxHA_SubResource"; 

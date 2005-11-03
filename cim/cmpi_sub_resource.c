@@ -32,153 +32,53 @@
 #include "ha_resource.h"
 #include "cmpi_sub_resource.h"
 
-static GPtrArray * get_sub_resource_names(const char * group_id);
-static int free_sub_resource_name_array(GPtrArray * rsc_name_array);
-static int group_has_resource(const char * group_id, const char * rsc_name);
-static struct cluster_resource_group_info *
-       search_group_in_list (GList * list, const char * group_id);
 
-static struct cluster_resource_group_info *
-search_group_in_list (GList * list, const char * group_id)
-{
-        struct cluster_resource_group_info * info = NULL;
-        GList * p = NULL;
-
-        for ( p = list; ; p = g_list_next(p) ) {
-                struct res_node * node = NULL;
-                node = (struct res_node *)p->data;
-
-                if ( node == NULL || node->type == RESOURCE ) {
-                        continue;
-                }
-                
-                info = (struct cluster_resource_group_info *) node->res;
-
-                cl_log(LOG_INFO, "%s: Got group %s", __FUNCTION__, 
-                       info->id);
-
-                if ( strcmp (info->id, group_id) == 0 ) {
-                        return info;
-                } else {
-                        return search_group_in_list ( info->res_list, 
-                                                      group_id);
-                }
-
-                if ( p == g_list_last(list)) {
-                        break;
-                }
-        }
-
-        return info;
-}
-
-
-static GPtrArray *
-get_sub_resource_names(const char * group_id)
-{
-        GPtrArray * rsc_name_array = NULL;
-        GList * list = NULL;
-        GList * p = NULL;
-        struct cluster_resource_group_info * info = NULL;
-
-
-        DEBUG_ENTER();
-        
-        rsc_name_array = g_ptr_array_new ();
-
-        if ( rsc_name_array == NULL ) {
-                cl_log(LOG_ERR, "%s: can't alloc array", __FUNCTION__);
-                return NULL;
-        }
-
-
-        list = get_res_list ();
-
-        if ( list == NULL ) {
-                return rsc_name_array;
-        }
-
-        info = search_group_in_list ( list, group_id );
-        if ( info == NULL ) {
-                return rsc_name_array;
-        }
-
-        /* Attention, only add direct sub resource */
-        for ( p = info->res_list; ; p = g_list_next(p) ) {
-                struct res_node * node = NULL;
-                struct cluster_resource_info * res_info = NULL;
-
-                node = (struct res_node *)p->data;
-
-                if ( node == NULL || node->type == GROUP ) {
-                        continue;
-                }
-
-                res_info = (struct cluster_resource_info *) node->res;
-                g_ptr_array_add ( rsc_name_array, res_info_dup(res_info) );
-
-                if ( p == g_list_last(p) ) {
-                        break;
-                }
-        }
-
-        free_res_list (list);
-
-        DEBUG_LEAVE();
-        return rsc_name_array;
-} 
+static int group_has_resource(const char * group_id, char * rsc_name);
 
 
 static int
-free_sub_resource_name_array(GPtrArray * rsc_name_array)
+group_has_resource(const char * group_id, char * rsc_name)
 {
-        while ( rsc_name_array->len ) {
-                char * rsc_name = NULL;
-                rsc_name = (char *)
-                        g_ptr_array_remove_index_fast(rsc_name_array, 0);
-                free(rsc_name);
-        }
-
-        g_ptr_array_free(rsc_name_array, 0);
-      
-        return HA_OK;
-}
-
-static int
-group_has_resource(const char * group_id, const char * rsc_name)
-{
-        GPtrArray * rsc_name_array = NULL;
-        int i = 0;
+        GNode * root = NULL;
+        GNode * node = NULL;
 
         cl_log(LOG_INFO, "%s: looking for %s in group %s",
                __FUNCTION__, rsc_name, group_id);
 
-        rsc_name_array = get_sub_resource_names (group_id);
+        /* TODO: optimize this, avoid to rebuild tree frequently */
 
-        if ( rsc_name_array == NULL ) {
+        root = get_res_tree ();
+        if ( root == NULL ) {
+                cl_log (LOG_ERR, "%s: failed to get resource tree", 
+                        __FUNCTION__);
                 return 0;
         }
 
-        for ( i = 0; i < rsc_name_array->len; i++ ) {
-                char * sub_rsc_name = NULL;
+        node = search_res_in_tree(root, rsc_name, RESOURCE);
+        if ( node == NULL ) {
+                cl_log(LOG_WARNING, "%s: resource %s not found in tree",
+                       __FUNCTION__, rsc_name);
+                return 0;
+        }
 
-                sub_rsc_name = (char *) g_ptr_array_index(rsc_name_array, i);
+        /* go through its parents */
 
-                if ( sub_rsc_name == NULL ) {
-                        cl_log(LOG_WARNING, 
-                               "%s: got NULL, continue",__FUNCTION__);
-                        continue;
+        while ( node && node->parent) {
+                node = node->parent;
+                if ( node->data == NULL ) break;
 
-                }
+                cl_log(LOG_INFO, "%s: found %s's parent %s", __FUNCTION__,
+                       rsc_name, GetGroupInfo(GetResNodeData(node))->id);
 
-                if ( strcmp ( rsc_name, sub_rsc_name) == 0 ) {
-                        free_sub_resource_name_array(rsc_name_array);
-                        cl_log(LOG_INFO, "%s: we got it", __FUNCTION__);
+                if ( strcmp (group_id, 
+                             GetGroupInfo(GetResNodeData(node))->id) == 0) {
+                        free_res_tree ( root );
                         return 1;
                 }
+                     
+        }
 
-        }         
-
+        free_res_tree (root);
         return 0;
 }
 
@@ -186,9 +86,6 @@ int is_sub_resource_of(CMPIInstance * resource_inst,
                        CMPIInstance * group_inst, CMPIStatus * rc)
 {
         CMPIString * rsc_name = NULL;
-        /* CMPIArray * sub_rsc_names = NULL; */
-        /* int count = 0; */
-        /* int i = 0; */
 
         CMPIString * group_id = NULL;
         int contain = 0;
@@ -221,3 +118,5 @@ out:
         return contain;
 
 }
+
+

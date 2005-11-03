@@ -24,11 +24,14 @@
 #ifndef _HA_RESOURCE_H
 #define _HA_RESOURCE_H
 
-typedef enum { GROUP = 0, RESOURCE } res_type_t;
+typedef int res_type_t;
+#define RESOURCE 1
+#define GROUP    2
 
-struct res_node {
+struct res_node_data {
         res_type_t type;
-        void * res;
+        void * res;     /* cluster_resource_group_info 
+                           or cluster_resource_info */
 };
 
 struct cluster_resource_group_info {
@@ -41,13 +44,28 @@ struct cluster_resource_info {
         char *  type;
         char *  provider;
         char *  class;
+        
 };
+
+#define GetResNodeData(node)  ((struct res_node_data *)node->data)
+#define GetResType(data)      (((struct res_node_data *)data)->type)
+#define GetResourceInfo(data) ((struct cluster_resource_info *)       \
+                                      ((struct res_node_data *)data)->res)
+#define GetGroupInfo(data)    ((struct cluster_resource_group_info *) \
+                                      ((struct res_node_data *)data)->res)
+
 
 GList * get_res_list (void);
 int free_res_list (GList * res_list);
 
+GNode * get_res_tree (void);
+int free_res_tree (GNode * root);
+GList * build_res_list ( GNode * root);
+
 struct cluster_resource_info * 
 res_info_dup (const struct cluster_resource_info * info);
+int free_res_info(struct cluster_resource_info * info);
+GNode * search_res_in_tree(GNode * root, char * name, res_type_t type);
 
 char * get_hosting_node(const char * name);
 
