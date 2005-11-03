@@ -10,6 +10,7 @@
 
 # set quite to 0 to disable result outputs
 quite=0
+color=1
 
 # loop iteration
 iteration=$1
@@ -24,8 +25,6 @@ USERNAME=root
 PASSWD=hadev
 HOST=localhost
 NAMESPACE=root/cimv2
-
-
 
 WBEMCLI=`which wbemcli`
 
@@ -51,13 +50,15 @@ ASSOC_CLASSES="LinuxHA_ParticipatingNode
 
 ALL_CLASSES="$INST_CLASSES $ASSOC_CLASSES"
 
-HL="\33[1m"
+if test $color = 1; then 
+        HL="\33[1m"   #high light
 
-RED="\33[31m"
-GREEN="\33[32m"
-BLUE="\33[34m"
-YELLOW="\33[33m"
-END="\33[0m"
+        RED="\33[31m"
+        GREEN="\33[32m"
+        BLUE="\33[34m"
+        YELLOW="\33[33m"
+        END="\33[0m"
+fi
 
 TMP=`mktemp`
 
@@ -67,174 +68,150 @@ zero=0
 total=0
 
 
-call_zero () {
+function call_zero () 
+{
         echo -e $'\t'$HL$YELLOW"[ ZERO ]"$END
         zero=`expr $zero + 1`
 }
 
-call_ok () {
+function call_ok () 
+{
         echo -e $'\t'$HL$GREEN"[ OK ]"$END
         success=`expr $success + 1`
 }
 
-call_failed () {
+function call_failed () 
+{
         echo -e $'\t'$HL$RED"[ FAILED ]"$END
         cat $TMP
         failure=`expr $failure + 1`
 }        
 
-check_zero () {
+
+ZERO=0
+ERROR=1
+SUCCESS=2
+
+function check_result () 
+{
         echo
-        if [ $quite -eq 0 ]; 
-        then
+        if test $quite = 0; then
                 cat $TMP
         fi
 
+        # zero
         lc=`cat $TMP | wc -l`
-        if [ $lc -eq 0 ]
-        then
-                return 0 
+        if [ $lc -eq 0 ]; then
+                call_zero
+                return $ZERO 
         fi
-        return 1
+       
+        # error
+        grep -e FAILED -e ERR -e "*" -e Exception -e error $TMP >/dev/null 2>&1
+        if [ $? -eq 0 ]; then
+                call_failed
+                return $ERROR 
+        fi
+ 
+        # success
+        call_ok
+        return $SUCCESS
 }
 
-check_success () {
-        grep -e ERR -e ERROR -e error $TMP >/dev/null 2>&1
-        if [ $? -eq 0 ];
-        then
-                return 1 
+function test_relation () 
+{
+        assoc_class=$1
+        inst_class=$2
+        l=""
+        r=""
+
+        case $assoc_class in
+                LinuxHA_ParticipatingNode) 
+                        l="LinuxHA_Cluster"
+                        r="LinuxHA_ClusterResource";;
+                LinuxHA_HostedResource)
+                        l="LinuxHA_ClusterNode"
+                        r="LinuxHA_ClusterResource";;
+                LinuxHA_SubResource)
+                        l="LinuxHA_ClusterResource"
+                        r="LinuxHA_ClsterResourceGroup";;
+                LinuxHA_InstalledSoftwareIdentity)
+                        l="LinuxHA_Cluster"
+                        r="LinuxHA_SoftwareIdentity";;
+        esac
+
+        if test x"$inst_class" = x"$l"; then
+                return $SUCCESS
         fi
 
-        return 0
-}
+        if test x"$inst_class" = x"$r"; then
+                return $SUCCESS
+        fi
 
-
-relation_between () {
-        ref=$1
-        assoc_class=$2
-
-        return 0
+        return $ERROR 
 }
 
 
 ################################################################
 
-cim_get_instance () {
+function cim_get_instance () 
+{
         ref=$1
         echo -en gi$'\t'$HL"http://$USERNAME:$PASSWD@"$ref$END 
         result=`$WBEMCLI gi http://$USERNAME:$PASSWD@$ref >$TMP 2>&1`
 
-        if check_zero 
-        then
-                check=2
-        else
-                if check_success
-                then
-                        check=0
-                else
-                        check=1
-                fi
-        fi
-        case $check in
-                0) call_ok 
-                   return 0;;
-                1) call_failed ;;
-                2) call_zero ;;
-        esac
-        return 1
+        check_result
+        return $?
 }
 
-cim_enum_instances () {
+function cim_enum_instances () 
+{
         op=$1
         class=$2
 
         echo -en $op$'\t'$HL$class$END 
         result=`$WBEMCLI $op http://$USERNAME:$PASSWD@$HOST/$NAMESPACE:$class >$TMP 2>&1`
         
-        if check_zero 
-        then
-                check=2
-        else
-                if check_success
-                then
-                        check=0
-                else
-                        check=1
-                fi
-        fi
-        case $check in
-                0) call_ok 
-                   return 0;;
-                1) call_failed ;;
-                2) call_zero ;;
-        esac
-        return 1
+        check_result
+        return $?
 }
 
 
-cim_enum_associators () {
+function cim_enum_associators () 
+{
         op=$1
         ref=$2
         assoc_class=$3
 
-        echo -en $op$'\t'$HL$assoc_class$'\t'http://$ref$END 
-        result=`$WBEMCLI $op http://$ref -ac $assoc_class >$TMP 2>&1`
+        echo -en $op$'\t'$HL$assoc_class$'\t'http://$USERNAME:$PASSWD@$ref$END 
+        result=`$WBEMCLI $op http://$USERNAME:$PASSWD@$ref -ac $assoc_class >$TMP 2>&1`
 
-        if check_zero 
-        then
-                check=2
-        else
-                if check_success
-                then
-                        check=0
-                else
-                        check=1
-                fi
-        fi
- 
-        case $check in
-                0) call_ok
-                   return 0 ;;
-                1) call_failed ;;
-                2) call_zero ;;
-        esac
-        return 1
+        check_result
+
+        return $?
+
 }
 
-cim_enum_references () {
+function cim_enum_references () 
+{
         op=$1
         ref=$2
         assoc_class=$3
 
-        echo -en $op$'\t'$HL$assoc_class$'\t'http://$ref$END 
-        result=`$WBEMCLI $op http://$ref -arc $assoc_class >$TMP 2>&1`
+        echo -en $op$'\t'$HL$assoc_class$'\t'http://$USERNAME:$PASSWD@$ref$END 
+        result=`$WBEMCLI $op http://$USERNAME:$PASSWD@$ref -arc $assoc_class >$TMP 2>&1`
         
-        if check_zero 
-        then
-                check=2
-        else
-                if check_success
-                then
-                        check=0
-                else
-                        check=1
-                fi
-        fi
- 
-        case $check in
-                0) call_ok 
-                   return 0;;
-                1) call_failed ;;
-                2) call_zero ;;
-        esac
-        return 1
+        check_result
+
+        return $?
 }
 
 ### EnumerateInstanceNames, EnuerateInstances, GetInstance. 
-instance_test () {
+function instance_test () 
+{
         for class in $ALL_CLASSES; do
-                if cim_enum_instances "ein" $class
-                then
+                cim_enum_instances "ein" $class
+                if [ $? -eq $SUCCESS ]; then
                         result=`cat $TMP`
                         for ref in $result; do
                                 cim_get_instance "$ref"
@@ -244,27 +221,31 @@ instance_test () {
        done
 }
 
-assoc_test () {
+function assoc_test () 
+{
 
-        for inst_class in $INST_CLASSES; do
+        for assoc_class in $ASSOC_CLASSES; do
+                for inst_class in $INST_CLASSES; do
+                        test_relation $assoc_class $inst_class
+                        if [ ! $? -eq $SUCCESS ]; then
+                                continue
+                        fi
 
-                result=""
-
-                if cim_enum_instances "ein" $inst_class
-                then
-                        result=`cat $TMP`
-                fi
-
-                for assoc_class in $ASSOC_CLASSES; do
+                        result=""
+                        cim_enum_instances "ein" $inst_class
+                        if [ $? -eq $SUCCESS ]; then
+                                result=`cat $TMP`
+                        else
+                                echo Failed to enum instances: $inst_class
+                                continue
+                        fi
+                        
                         for ref in $result; do
-                                if relation_between $ref $assoc_class
-                                then 
-                                        cim_enum_associators ain $ref $assoc_class
-                                        cim_enum_associators ai $ref $assoc_class
+                                cim_enum_associators ain $ref $assoc_class
+                                cim_enum_associators ai $ref $assoc_class
 
-                                        cim_enum_references rin $ref $assoc_class
-                                        cim_enum_references ri $ref $assoc_class
-                                fi
+                                cim_enum_references rin $ref $assoc_class
+                                cim_enum_references ri $ref $assoc_class
                         done
                 done
         done
