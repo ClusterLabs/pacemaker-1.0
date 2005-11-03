@@ -18,6 +18,8 @@
 # Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #
 
+MAINTAINERCLEANFILES    = Makefile.in
+
 
 cim-postinstall:
 	./register.sh -t $(CIMOM) -r LinuxHA.reg -m LinuxHA.mof
