@@ -1,4 +1,4 @@
-/* $Id: ha_msg.h,v 1.76 2005/11/02 21:34:44 gshi Exp $ */
+/* $Id: ha_msg.h,v 1.77 2005/11/03 20:33:53 gshi Exp $ */
 /*
  * Intracluster message object (struct ha_msg)
  *
@@ -235,6 +235,7 @@ extern struct fieldtypefuncs_s fieldtypefuncs[NUM_MSG_TYPES];
 
 /* Set up message statistics area */
 
+int	netstring_extra(int);
 int	cl_msg_stats_add(longclock_t time, int size);
 
 void	cl_msg_setstats(volatile hb_msg_stats_t* stats);
