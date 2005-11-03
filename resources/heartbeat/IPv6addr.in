@@ -1,0 +1,35 @@
+#!/bin/sh
+#
+# $Id: IPv6addr.in,v 1.1 2005/11/03 07:42:49 xunsun Exp $
+#
+# Description:	wrapper of OCF RA IPv6addr. See OCF RA IPv6addr for more information.
+#
+# Author:	Xun Sun <xunsun@cn.ibm.com> 
+# Support:      linux-ha@lists.linux-ha.org
+# License:      GNU General Public License (GPL)
+# Copyright:	(C) 2005 International Business Machines
+#
+
+# Source function library.
+. @HB_RA_DIR@/hto-mapfuncs
+
+usage () {
+        echo "Usage: $0 <ipv6addr> {start|stop|status|monitor}"
+}
+
+if [ $# -ne 2 ]; then
+	usage
+	exit 1
+fi
+
+# See how we were called.
+case "$2" in
+	start|stop|monitor|status)
+		;;
+	*)
+		usage
+		exit 1
+		;;
+esac
+
+ra_execocf  "rsc_id=IPv6addr_$1" "rsc_type=IPv6addr" "provider=heartbeat" $2 "ipv6addr=$1"
