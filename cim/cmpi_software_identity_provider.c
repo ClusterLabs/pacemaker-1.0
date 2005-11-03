@@ -1,5 +1,5 @@
 /*
- * CIM Provider
+ * CIM Provider - provider for LinuxHA_SoftwareIdentity
  * 
  * Author: Jia Ming Pan <jmltc@cn.ibm.com>
  * Copyright (c) 2005 International Business Machines
@@ -40,7 +40,7 @@
 
 /* #define HB_CLIENT_ID   "cim-provider-sw" */
 #define HB_CLIENT_ID   NULL   /* casual signon */
-#define PROVIDER_ID    "cim-provider-sw"
+#define PROVIDER_ID    "cim-sw-id"
 
 static CMPIBroker * Broker = NULL;
 static char ClassName []   = "LinuxHA_SoftwareIdentity";

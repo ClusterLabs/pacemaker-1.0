@@ -1,5 +1,5 @@
 /*
- * CIM Provider
+ * CIM Provider - provider for LinuxHA_ParticipatingNode
  * 
  * Author: Jia Ming Pan <jmltc@cn.ibm.com>
  * Copyright (c) 2005 International Business Machines
@@ -37,7 +37,7 @@
 
 #include "linuxha_info.h"
 
-#define PROVIDER_ID "cim-provider-pn"
+#define PROVIDER_ID "cim-par-node"
 
 static CMPIBroker * Broker       = NULL;
 static char ClassName         [] = "LinuxHA_ParticipatingNode"; 

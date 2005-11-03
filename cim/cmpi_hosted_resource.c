@@ -55,10 +55,11 @@ node_host_resource(CMPIInstance * node_inst,
                 goto out;
         }
 
-        cl_log(LOG_INFO, "%s: OpenWBEM segment fault here", __FUNCTION__);
+        /* OpenWBEM will segment fault if "HostingNode" not set */
+
         hosting_node = CMGetProperty(resource_inst, 
                                      "HostingNode", rc).value.string;
-        cl_log(LOG_INFO, "%s: OpenWBEM never get here", __FUNCTION__);
+
 
         if ( CMIsNullObject(hosting_node) ){
                 cl_log(LOG_INFO, "%s: hosting node is NULL", __FUNCTION__);

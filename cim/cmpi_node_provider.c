@@ -36,7 +36,7 @@
 #include "cmpi_node.h"
 
 
-#define PROVIDER_ID "cim-provider-node"
+#define PROVIDER_ID "cim-node"
 
 static CMPIBroker * Broker = NULL;
 static char ClassName []   = "LinuxHA_ClusterNode";

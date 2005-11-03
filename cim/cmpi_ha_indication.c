@@ -44,7 +44,8 @@
 
 #define DEFAULT_TIME_OUT        5
 #define LOGGER_ENTITY           "cim-ind"
-#define HB_CLIENT_ID            "cmpi_indication"
+/* #define HB_CLIENT_ID            "cmpi_indication" */
+#define HB_CLIENT_ID            NULL
 #define IND_NAMESPACE           "root/cimv2"
 
 struct cmpi_ind_env{

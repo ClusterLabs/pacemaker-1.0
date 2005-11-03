@@ -1,5 +1,5 @@
 /*
- * CIM _
+ * CIM Provider - provider for LinuxHA_HostedResource
  * 
  * Author: Jia Ming Pan <jmltc@cn.ibm.com>
  * Copyright (c) 2005 International Business Machines
@@ -35,12 +35,10 @@
 #include "cmpi_cluster.h"
 #include "cmpi_node.h"
 #include "cmpi_hosted_resource.h"
-
-
 #include "linuxha_info.h"
 
 
-#define PROVIDER_ID "cim-provider-hr"
+#define PROVIDER_ID "cim-hosted-res"
 
 static CMPIBroker * Broker      = NULL;
 static char ClassName []        = "LinuxHA_HostedResource"; 
