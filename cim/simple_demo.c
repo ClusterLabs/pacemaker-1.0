@@ -37,12 +37,19 @@
 
 
 void print_for_each (gpointer data, gpointer user);
+int tree_print_for_each ( GNode * node, gpointer user);
+
+int tree_print_for_each ( GNode * node, gpointer user) {
+        print_for_each(node->data, user );
+        return 0;
+}
 
 void 
 print_for_each (gpointer data, gpointer user)
 {
-        struct res_node * node = NULL;
-        node = (struct res_node *) data;
+        struct res_node_data * node = NULL;
+        node = (struct res_node_data *) data;
+
         if ( node == NULL ) {
                 return;
         }
@@ -53,8 +60,8 @@ print_for_each (gpointer data, gpointer user)
                 info = (struct cluster_resource_group_info *)
                         node->res;
                 cl_log(LOG_INFO, "---- %d: %s", node->type, info->id);
-                g_list_foreach(info->res_list, print_for_each, NULL);
-                cl_log(LOG_INFO, "---- %s END", info->id);
+              /*  g_list_foreach(info->res_list, print_for_each, NULL);
+                cl_log(LOG_INFO, "---- %s END", info->id); */
 
         } else {
                 struct cluster_resource_info * info = NULL;
@@ -67,10 +74,14 @@ print_for_each (gpointer data, gpointer user)
 
 int main(void)
 {
+/*
         GList * list = NULL;
         GList * p = NULL;
+*/
+        GNode * root = NULL;
 
         init_logger ("cim-demo");
+/*
         list = get_res_list ();
 
         g_list_foreach(list, print_for_each, NULL);
@@ -83,6 +94,9 @@ int main(void)
         }
 
         free_res_list(list);
+*/
+        root = get_res_tree ();
+        g_node_traverse( root, G_POST_ORDER, 0x3, 10, tree_print_for_each, NULL);   
         return 0;
 
 }

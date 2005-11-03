@@ -1,5 +1,5 @@
 /*
- * CIM _
+ * CIM Provider - provider for LinuxHA_ClusterResourceInstance
  * 
  * Author: Jia Ming Pan <jmltc@cn.ibm.com>
  * Copyright (c) 2005 International Business Machines
@@ -37,7 +37,7 @@
 #include "linuxha_info.h"
 
 
-#define PROVIDER_ID "cim-provider-ri"
+#define PROVIDER_ID "cim-res-inst"
 
 static CMPIBroker * Broker          = NULL;
 static char ClassName []            = "LinuxHA_ClusterResourceInstance"; 
