@@ -160,7 +160,25 @@ ccm_control_process(ccm_info_t *info, ll_cluster_t * hb)
 			
 			jump_to_joining_state(hb, info, msg);
 			
-		} 
+		} else if (strcasecmp(type, T_DELNODE) ==0){
+			const char* node = ha_msg_value(msg, F_NODE);
+			if (node == NULL){
+				cl_log(LOG_ERR, "%s: field node not found",
+				       __FUNCTION__);
+				cl_log_message(LOG_ERR, msg);
+				return FALSE;
+			}
+			
+			if (llm_del(llm, node) != HA_OK){
+				cl_log(LOG_ERR, "%s: adding node %s failed",
+				       __FUNCTION__, node);
+				return FALSE;
+			}
+			
+			jump_to_joining_state(hb, info, msg);
+			
+		}
+
 	} else {
 		msg = timeout_msg_mod(info);
 	}

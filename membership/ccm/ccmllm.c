@@ -1,4 +1,4 @@
-/* $Id: ccmllm.c,v 1.25 2005/10/06 20:03:16 gshi Exp $ */
+/* $Id: ccmllm.c,v 1.26 2005/11/04 22:53:35 gshi Exp $ */
 /* 
  * ccmllm.c: Low Level membership routines.
  *
@@ -176,8 +176,6 @@ llm_get_index(llm_info_t *llm, const char *node)
 		}
 	} while(high>=low);
 
-	cl_log(LOG_ERR, "node %s not found", node);
-	llm_display(llm);
 	return -1;
 }
 
@@ -225,6 +223,47 @@ llm_init(llm_info_t *llm)
 	llm->nodecount = 0;
 	llm->myindex = -1;
 	
+	return HA_OK;
+}
+
+
+int 
+llm_del(llm_info_t* llm,
+	const char* node)
+{
+	int i;
+	int j;
+
+	for ( i = 0 ;i < llm->nodecount; i++){
+		if (strncmp(llm->nodes[i].nodename, node, NODEIDSIZE)==0){
+			break;
+		}
+	}
+	
+	if (i == llm->nodecount){
+		cl_log(LOG_ERR, "%s: Node %s not found in llm",
+		       __FUNCTION__,
+		       node);
+		return HA_FAIL;
+	}
+	
+	if (llm->myindex > i){
+		llm->myindex --;
+	}else if (llm->myindex ==i){
+		cl_log(LOG_ERR, "%s: deleing myself in ccm is not allowed",
+		       __FUNCTION__);
+		return HA_FAIL;
+	}
+
+
+	for ( j = i; j< llm->nodecount - 1; j++){
+		strncpy(llm->nodes[j].nodename, llm->nodes[j+1].nodename, NODEIDSIZE);
+		strncpy(llm->nodes[j].status, llm->nodes[j+1].status, STATUSSIZE);
+		
+	}
+		
+	llm->nodecount --;
+
 	return HA_OK;
 }
 
