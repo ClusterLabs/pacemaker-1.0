@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.464 2005/11/01 00:27:01 gshi Exp $ */
+/* $Id: heartbeat.c,v 1.465 2005/11/04 22:32:08 gshi Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -324,6 +324,7 @@ int				shutdown_in_progress = FALSE;
 int				startup_complete = FALSE;
 int				WeAreRestarting = FALSE;
 enum comm_state			heartbeat_comm_state = COMM_STARTING;
+static gboolean			get_reqnodes_reply = FALSE;
 static int			CoreProcessCount = 0;
 static int			managed_child_count= 0;
 int				UseOurOwnPoll = FALSE;
@@ -1661,7 +1662,7 @@ polled_input_dispatch(GSource* source,
 
 	/* Check to see we need to resend any rexmit requests... */
 	check_rexmit_reqs();
-
+ 
 	/* See if our comm channels are working yet... */
 	if (heartbeat_comm_state != COMM_LINKSUP) {
 		check_comm_isup();
@@ -2345,6 +2346,7 @@ static int
 hb_del_one_node(const char* node)
 {
 	struct node_info* thisnode = NULL;
+	struct ha_msg* delmsg;
 	
 	cl_log(LOG_INFO,
 	       "Deletinging node [%s] from configuration.",
@@ -2363,6 +2365,19 @@ hb_del_one_node(const char* node)
 		return HA_FAIL;
 	}
 	
+	delmsg = ha_msg_new(0);
+	if (delmsg == NULL){
+		cl_log(LOG_ERR, "%s: creating new message failed",__FUNCTION__);
+		return HA_FAIL;
+	}
+	
+	if ( ha_msg_add(delmsg, F_TYPE, T_DELNODE)!= HA_OK
+	     || ha_msg_add(delmsg, F_NODE, node) != HA_OK){
+		cl_log(LOG_ERR, "%s: adding fields to msg failed", __FUNCTION__);
+		return HA_FAIL;
+	}
+
+	heartbeat_monitor(delmsg, KEEPIT, NULL);
 	reset_lowest_acknode();
 	return HA_OK;
 	
@@ -2417,6 +2432,13 @@ HBDoMsg_T_DELNODE(const char * type, struct node_info * fromnode,
 	}
 	
 	for (i = 0; i < num; i++){
+		if (strncmp(nodes[i], curnode->nodename, HOSTLENG) == 0){
+			cl_log(LOG_ERR, "I am being deleted from the cluster."
+			       " This should not happen");
+			hb_initiate_shutdown(FALSE);
+			return;
+		}
+
 		if (hb_del_one_node(nodes[i])!= HA_OK){
 			cl_log(LOG_ERR, "Deleing node %s failed", nodes[i]);
 		}
@@ -2434,7 +2456,145 @@ HBDoMsg_T_DELNODE(const char * type, struct node_info * fromnode,
 	
 }
 
-  
+static int
+get_nodelist( char* nodelist, int len)
+{
+	int i;
+	char* p;
+	int numleft = len;
+	
+	p = nodelist;
+	for (i = 0; i< config->nodecount; i++){
+		int tmplen;
+		tmplen= snprintf(p, numleft, "%s ", config->nodes[i].nodename);
+		p += tmplen;
+		numleft -= tmplen;
+		if (tmplen <= 0){
+			cl_log(LOG_ERR, "%s: not enough buffer", 
+				__FUNCTION__);
+			return HA_FAIL;
+		}
+	}
+
+	return HA_OK;
+
+}
+
+static void
+HBDoMsg_T_REQNODES(const char * type, struct node_info * fromnode,
+                  TIME_T msgtime, seqno_t seqno, const char * iface, struct ha_msg * msg)
+{
+	char nodelist[MAXLINE];
+	struct ha_msg* repmsg;
+	
+	if (fromnode == curnode){
+		cl_log(LOG_ERR,  "%s: get reqnodes msg from myself!", 
+		       __FUNCTION__);
+		return;
+	}
+
+	if (ANYDEBUG){
+		cl_log(LOG_DEBUG, "Get a reqnodes message from %s", fromnode->nodename);
+	}
+	if (get_nodelist(nodelist, MAXLINE) != HA_OK){
+		cl_log(LOG_ERR, "%s: get node list from config failed",
+		       __FUNCTION__);
+		return;
+	}
+
+	repmsg = ha_msg_new(0);
+	if ( repmsg == NULL
+	|| ha_msg_add(repmsg, F_TO, fromnode->nodename) != HA_OK
+	|| ha_msg_add(repmsg, F_TYPE, T_REPNODES) != HA_OK
+	|| ha_msg_add(repmsg, F_NODELIST, nodelist) != HA_OK){
+		cl_log(LOG_ERR, "%s: constructing REPNODES msg failed",
+			__FUNCTION__);
+		ha_msg_del(repmsg);
+		return;	
+	} 
+
+	send_cluster_msg(repmsg);
+	return;
+} 
+
+static void
+HBDoMsg_T_REPNODES(const char * type, struct node_info * fromnode,
+                  TIME_T msgtime, seqno_t seqno, const char * iface, struct ha_msg * msg)
+{
+	const char* nodelist = ha_msg_value(msg, F_NODELIST);
+	char*	nodes[MAXNODE];
+	int	num =  MAXNODE;
+	int	i;
+	int 	j;
+
+	if (ANYDEBUG){
+		cl_log(LOG_DEBUG,"Get a repnodes msg from %s", fromnode->nodename);
+	}
+	
+	if (fromnode == curnode){
+		/*our own REPNODES msg*/
+		return;
+	}
+
+	if (nodelist == NULL){
+		cl_log(LOG_ERR, "%s: nodelist not found",
+			__FUNCTION__);
+		return;
+	}
+	memset(nodes, 0, MAXNODE);
+
+	if (getnodes(nodelist, nodes, &num) != HA_OK){
+		cl_log(LOG_ERR, "%s: get nodes from nodelist failed",
+			__FUNCTION__);
+		return;
+	}
+
+	for (i =0; i < config->nodecount; i++){
+		for (j=0;j < num; j++){
+			if ( strncmp(config->nodes[i].nodename,
+				nodes[j], HOSTLENG) == 0){
+				break;
+			}	
+		}
+		if ( j == num){
+			/*this node is not found in incoming nodelist
+			* we need to delete it
+			*/
+			cl_log(LOG_ERR, "%s: Node %s is deleted and we don't know it!",
+			       __FUNCTION__, config->nodes[i].nodename);
+			hb_del_one_node(config->nodes[i].nodename);
+			
+		}
+	}
+
+	for (i =0; i < num; i++){
+		for (j = 0; j < config->nodecount; j++){
+			if (strncmp(nodes[i], config->nodes[j].nodename,
+				HOSTLENG) == 0){
+				break;
+			}
+		}
+		if ( j == config->nodecount){
+			/*this node is not found in config
+			* we need to add it 
+			*/
+			hb_add_one_node(nodes[i]);		
+		}
+	}	
+
+	for (i = 0; i< num; i++){
+		if (nodes[i]){
+			ha_free(nodes[i]);
+			nodes[i] = NULL;
+		}
+	}
+
+	get_reqnodes_reply = TRUE;
+	comm_now_up();
+        return;
+}
+
+
 static void
 HBDoMsg_T_REXMIT(const char * type, struct node_info * fromnode
 ,	TIME_T msgtime, seqno_t seqno, const char * iface, struct ha_msg * msg)
@@ -3540,11 +3700,71 @@ check_for_timeouts(void)
 	}
 }
 
+
+
+
 /*
  * The anypktsyet field in the node structure gets set to TRUE whenever we
  * either hear from a node, or we declare it dead, and issue a fake "dead"
  * status packet.
  */
+static gboolean
+send_reqnodes_msg(gpointer data){
+	struct ha_msg* msg;
+	const char* destnode = NULL;
+	int i;
+	int startindex = (int) data;
+	
+	
+	if (get_reqnodes_reply){
+		return FALSE;
+	}
+	
+	if (startindex >= config->nodecount){
+		startindex = 0;
+	}
+	
+
+	for (i = startindex; i< config->nodecount; i++){
+		if (STRNCMP_CONST(config->nodes[i].status, DEADSTATUS) != 0
+		    && (&config->nodes[i]) != curnode){
+			destnode = config->nodes[i].nodename;
+			break;
+		}
+		
+	}
+	
+	if (destnode ==NULL){
+		get_reqnodes_reply = TRUE;
+		comm_now_up();
+		return FALSE;
+	}
+	
+	msg = ha_msg_new(0);
+	if (msg == NULL){
+		cl_log(LOG_ERR, "%s: creating msg failed",
+		       __FUNCTION__);		
+		return FALSE;
+	}
+	
+	if (ANYDEBUG){
+		cl_log(LOG_DEBUG, "sending reqnodes msg to node %s", destnode);
+	}
+	
+	if (ha_msg_add(msg, F_TYPE, T_REQNODES) != HA_OK
+	    || ha_msg_add(msg, F_TO, destnode)!= HA_OK){
+		cl_log(LOG_ERR, "%s: Adding filed failed",
+		       __FUNCTION__);
+		ha_msg_del(msg);
+		return FALSE;		
+	}
+	
+	send_cluster_msg(msg);
+	
+	Gmain_timeout_add(1000, send_reqnodes_msg, (gpointer)i);
+	
+	return FALSE;
+}
 
 static void
 check_comm_isup(void)
@@ -3572,7 +3792,8 @@ check_comm_isup(void)
 
 	if (heardfromcount >= config->nodecount) {
 		heartbeat_comm_state = COMM_LINKSUP;
-		comm_now_up();
+		send_reqnodes_msg(0);
+		/*comm_now_up();*/
 	}
 }
 
@@ -4060,6 +4281,8 @@ main(int argc, char * argv[], char **envp)
 	hb_register_msg_callback(T_ACKMSG,	HBDoMsg_T_ACKMSG);
 	hb_register_msg_callback(T_ADDNODE,	HBDoMsg_T_ADDNODE);
 	hb_register_msg_callback(T_DELNODE,	HBDoMsg_T_DELNODE);
+	hb_register_msg_callback(T_REQNODES,    HBDoMsg_T_REQNODES);
+	hb_register_msg_callback(T_REPNODES, 	HBDoMsg_T_REPNODES);
 
 	if (init_set_proc_title(argc, argv, envp) < 0) {
 		cl_log(LOG_ERR, "Allocation of proc title failed.");
@@ -5811,6 +6034,9 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.465  2005/11/04 22:32:08  gshi
+ * make nodes sync happen at the heartbeat start phase
+ *
  * Revision 1.464  2005/11/01 00:27:01  gshi
  * add restriction on node deletion:
  * only when all nodes (excluding nodes to be deleted) are active/up
