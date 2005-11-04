@@ -41,6 +41,18 @@ THREADLIB               = lpthread
 CMPIHEADERS	        = $(CMPI_HEADER_PATH)	
 
 cimprovidersdir         = $(CMPI_PROVIDER_DIR)
+
+noinst_HEADERS          =  cmpi_utils.h               \
+                           cmpi_cluster.h             \
+                           cmpi_rsc_group.h           \
+                           cmpi_node.h                \
+                           ha_resource.h              \
+                           cmpi_ha_indication.h       \
+                           linuxha_info.h             \
+                           cmpi_resource.h            \
+                           cmpi_sub_resource.h        \
+                           cmpi_hosted_resource.h                          
+
 cimproviders_LTLIBRARIES = liblinuxha_info.la                                   \
                            libcmpiLinuxHA_ClusterProvider.la  	                \
 			   libcmpiLinuxHA_ClusterResourceProvider.la            \
@@ -118,14 +130,14 @@ libcmpiLinuxHA_ClusterResourceInstanceAttrProvider_la_LDFLAGS = $(COMMONLIBS) li
 
 #--------------------------------------------------------------
 libcmpiLinuxHA_ClusterResourceGroupProvider_la_SOURCES = cmpi_utils.c ha_resource.c \
-                                                         cmpi_rsc_group.c \
+                                                         cmpi_rsc_group.c           \
                                                          cmpi_rsc_group_provider.c
 libcmpiLinuxHA_ClusterResourceGroupProvider_la_CFLAGS  = -I$(CMPIHEADERS)
 libcmpiLinuxHA_ClusterResourceGroupProvider_la_LDFLAGS = $(COMMONLIBS) liblinuxha_info.la 
 
 #--------------------------------------------------------------
 libcmpiLinuxHA_SubResourceProvider_la_SOURCES =	cmpi_utils.c ha_resource.c       \
-						cmpi_sub_resource.c \
+						cmpi_sub_resource.c              \
                                                 cmpi_sub_resource_provider.c
 libcmpiLinuxHA_SubResourceProvider_la_CFLAGS  =	-I$(CMPIHEADERS)
 libcmpiLinuxHA_SubResourceProvider_la_LDFLAGS =	$(COMMONLIBS) liblinuxha_info.la 
