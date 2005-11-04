@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $Id: IPaddr.in,v 1.15 2005/11/03 07:45:51 xunsun Exp $
+# $Id: IPaddr.in,v 1.16 2005/11/04 06:19:08 xunsun Exp $
 #
 # Description:	wrapper of OCF RA IPaddr, based on original heartbeat RA.
 #		See OCF RA IPaddr for more information.
@@ -34,7 +34,7 @@ USAGE="usage: $0 <ip-address> {start|stop|status|monitor}";
 
 usage() {
   echo $USAGE >&2
-  echo "$Id: IPaddr.in,v 1.15 2005/11/03 07:45:51 xunsun Exp $"
+  echo "$Id: IPaddr.in,v 1.16 2005/11/04 06:19:08 xunsun Exp $"
 }
 
 #
@@ -73,4 +73,29 @@ case $2 in
 	;;
 esac
 
-ra_execocf  "rsc_id=IPaddr_$1" "rsc_type=IPaddr" "provider=heartbeat" $2 "ip=$1"
+# We need to split the argument into pieces that IPaddr OCF RA can
+# recognize, by performing a combination of shell builtin string
+# operations and sed commands.
+
+BASEIP=${1%%/*}
+str=${1#$BASEIP}
+str=`echo $str | sed 's%^/*%%'`
+
+NETMASK=${str%%/*}
+if [ -n $NETMASK ]; then
+  str=${str#$NETMASK}
+  str=`echo $str | sed 's%^/*%%'`
+
+  NIC=${str%%/*}
+  case $NIC in
+	[0-9]*)	BROADCAST=$NIC
+		NIC=
+		;;
+	"")	;;
+	*)	str=${str#$NIC}
+		BROADCAST=`echo $str | sed 's%^/*%%'`
+		;;
+  esac
+fi
+
+ra_execocf  "rsc_id=IPaddr_$BASEIP" "rsc_type=IPaddr" "provider=heartbeat" $2 "ip=$BASEIP" "broadcast=$BROADCAST" "nic=$NIC" "netmask=$NETMASK"
