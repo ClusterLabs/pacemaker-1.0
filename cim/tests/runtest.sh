@@ -128,7 +128,7 @@ function test_relation ()
         case $assoc_class in
                 LinuxHA_ParticipatingNode) 
                         l="LinuxHA_Cluster"
-                        r="LinuxHA_ClusterResource";;
+                        r="LinuxHA_ClusterNode";;
                 LinuxHA_HostedResource)
                         l="LinuxHA_ClusterNode"
                         r="LinuxHA_ClusterResource";;
