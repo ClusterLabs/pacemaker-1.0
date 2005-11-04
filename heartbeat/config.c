@@ -1,4 +1,4 @@
-/* $Id: config.c,v 1.180 2005/10/27 01:03:21 gshi Exp $ */
+/* $Id: config.c,v 1.181 2005/11/04 23:20:58 gshi Exp $ */
 /*
  * Parse various heartbeat configuration files...
  *
@@ -367,8 +367,7 @@ init_config(const char * cfgfile)
 		ha_log(LOG_ERR, "No authentication specified.");
 		++errcount;
 	}
-	if (config->rtjoinconfig != HB_JOIN_NONE && 
-	    access(HOSTUUIDCACHEFILE, F_OK) >= 0) {
+	if (access(HOSTUUIDCACHEFILE, F_OK) >= 0) {
 		if (read_cache_file(config) != HA_OK) {
 			cl_log(LOG_ERR
 			,	"Invalid host/uuid map file [%s] - removed."
@@ -377,8 +376,8 @@ init_config(const char * cfgfile)
 				cl_perror("unlink(%s) failed"
 				,	HOSTUUIDCACHEFILE);
 			}
-			write_cache_file(config);
 		}
+		write_cache_file(config);
 		unlink(HOSTUUIDCACHEFILETMP); /* Can't hurt. */
 	}
 	if ((curnode = lookup_node(localnodename)) == NULL) {
@@ -2281,6 +2280,10 @@ set_uuidfrom(const char* value)
 
 /*
  * $Log: config.c,v $
+ * Revision 1.181  2005/11/04 23:20:58  gshi
+ * always read hostcache file when heartbeat starts no matter what autojoin option is.
+ * This is necessary because there could be nodes added using hb_addnode command
+ *
  * Revision 1.180  2005/10/27 01:03:21  gshi
  * make node deletion work
  *
