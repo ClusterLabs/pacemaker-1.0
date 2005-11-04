@@ -20,7 +20,9 @@
 
 MAINTAINERCLEANFILES    = Makefile.in
 
+mof_DATA    = LinuxHA.mof LinuxHA.reg 
+mof_SCRIPTS = register_providers.sh unregister_providers.sh do_register.sh
+mofdir      = $(libdir)/heartbeat/cim
 
-cim-postinstall:
-	./register.sh -t $(CIMOM) -r LinuxHA.reg -m LinuxHA.mof
-
+DIST_LIST   = $(mof_DATA) $(mof_SCRIPTS)
+EXTRA_DIST  = $(DIST_LIST)
