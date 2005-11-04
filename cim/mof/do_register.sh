@@ -1,4 +1,12 @@
 #!/bin/sh
+#
+# Linux-HA: CIM Provider register tool 
+#
+# Author: Jia Ming Pan <jmltc@cn.ibm.com>
+# Copyright (c) 2005 International Business Machines
+# Licensed under the GNU GPL.
+#
+#
 
 #---------- openwbem functions ---------------------------------------
 openwbem_register ()
@@ -154,17 +162,15 @@ pegasus_unregister ()
 
 
 #---------- sfcb functions -------------------------------------------
-sfcb_do_register()
+sfcb_transform ()
 {
-        mof_file=$1
-        reg_file=$2
-        out_file=$REGFILE
+	old_file=$1
+	new_file=$2
 
-        cat $reg_file | grep -v '^[[:space:]]*#.*' | \
+        cat $old_file | grep -v '^[[:space:]]*#.*' | \
         while read classname namespace providername providermodule types
         do
-        echo "Register class $classname"
-cat >> $out_file <<EOF
+cat >> $new_file <<EOF
 [$classname]
     provider: $providername
     location: $providermodule
@@ -174,22 +180,7 @@ cat >> $out_file <<EOF
 EOF
         done
 
-        ## register
-        echo register to sfcb ...
-        sfcbstage -r $out_file $mof_file
-        
-        if [ $? -eq 1 ]; then
-                echo failed to register, exit
-                exit
-        fi
 
-        echo rebuild sfcb repository ...
-        sfcbrepos -f
-        if [ $? -eq 1 ]; then
-                echo failed to rebuild sfcb, exit
-                exit
-        fi
- 
 }
 
 sfcb_running_check () 
@@ -204,20 +195,18 @@ sfcb_running_check ()
 
 sfcb_register () 
 {
+	mof_file=$1
+	reg_file=$2
+	
         sfcb_running_check
 
-        REGFILE=/tmp/`basename $2`.reg
-        sfcb_do_register $1 $2
+        new_reg_file=/tmp/`basename $2`.reg
+	sfcb_transform $reg_file $new_reg_file  
 
-} 
-
-sfcb_unregister () 
-{
-        sfcb_running_check
-
-        echo unregister to sfcb [ mof is $mof_file ] ...
-        sfcbunstage -r `basename $2`.reg $1
-
+        ## register
+        echo register to sfcb ...
+        sfcbstage -r $new_reg_file $mof_file
+        
         if [ $? -eq 1 ]; then
                 echo failed to register, exit
                 exit
@@ -229,11 +218,41 @@ sfcb_unregister ()
                 echo failed to rebuild sfcb, exit
                 exit
         fi
+
+	rm -rf $new_reg_file 
+} 
+
+sfcb_unregister () 
+{
+        mof_file=$1
+        reg_file=$2
+
+        sfcb_running_check
+
+        new_reg_file=/tmp/`basename $2`.reg
+
+        sfcb_transform $reg_file $new_reg_file
+
+        ## register
+        echo unregister to sfcb ...
+        sfcbunstage -r $new_reg_file $mof_file
+
+        if [ $? -eq 1 ]; then
+                echo failed to unregister, exit
+                exit
+        fi
+
+        echo rebuild sfcb repository ...
+        sfcbrepos -f
+        if [ $? -eq 1 ]; then
+                echo failed to rebuild sfcb, exit
+                exit
+        fi
+
+	rm -rf $new_reg_file
 }
 
 #========== main ============================================
-
-rm -rf $REGFILE
 
 mof_file=""
 reg_file=""
@@ -288,10 +307,15 @@ while [ -n "$1" ]; do
 done
 
 
-echo CIMOM: $cimom
-echo MOF file:  $mof_file
-echo Reg file:  $reg_file
-echo Unregister? $unregister
+if test "x$unregister" != "xyes"; then
+echo registering providers ...
+else
+echo unregistering providers ...
+fi
+
+echo CIM Server: $cimom
+echo mof file  :  $mof_file
+echo registration file  :  $reg_file
 
 case $cimom in
         pegasus) ;;
@@ -309,6 +333,5 @@ else
         $UNREG_FUNC $mof_file $reg_file
 fi
 
-rm -rf $REGFILE
 
 #============== end of file =======================================
