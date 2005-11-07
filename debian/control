@@ -16,9 +16,8 @@ Conflicts: ldirectord
 Replaces: ldirectord
 Description: Monitors virtual services provided by LVS
  ldirectord is a stand-alone daemon to monitor services of real
- for virtual services provided by The Linux Virtual Server
- (http://www.linuxvirtualserver.org/). It is simple to install
- and works with the heartbeat code (http://www.linux-ha.org/).
+ for virtual services provided by The Linux Virtual Server (LVS).
+ and works with Linux-HA's heartbeat package.
 
 Package: heartbeat-2
 Section: admin
@@ -30,14 +29,13 @@ Provides: heartbeat, libpils0, libstonith0, stonith
 Conflicts: heartbeat, libpils0, libstonith0, stonith
 Replaces: heartbeat, libpils0, libstonith0, stonith
 Description: Subsystem for High-Availability Linux
- heartbeat is a basic heartbeat subsystem for Linux-HA.
- It will run scripts at initialisation, and when machines go up or down.
- This version will also perform IP address takeover using gratuitous ARPs.
- It works correctly for a 2-node configuration, and is extensible to larger
- configurations.
- It implements the following kinds of heartbeats:
-   * Bidirectional Serial Rings ("raw" serial ports)
-   * UDP/IP broadcast (ethernet, etc)
+ heartbeat is a basic heartbeat subsystem for Linux-HA which implements
+ serial, UDP, and PPP/UDP heartbeats together with IP address takeover
+ including a nice resource model including resource groups.
+ .
+ It currently supports a very sophisticated dependency model for n-node
+ clusters. It is both extremely useful and quite stable at this point in
+ time. 
 
 Package: heartbeat-2-dev
 Section: devel
@@ -48,4 +46,12 @@ Provides: heartbeat-dev, libstonith-dev, libpils-dev
 Conflicts: heartbeat-dev, libstonith-dev, libpils-dev
 Replaces: heartbeat-dev, libstonith-dev, libpils-dev
 Description: Subsystem for High-Availability Linux - development files
- Headers and Libraries for developing modules to work with Heartbeat
+ heartbeat is a basic heartbeat subsystem for Linux-HA which implements
+ serial, UDP, and PPP/UDP heartbeats together with IP address takeover
+ including a nice resource model including resource groups.
+ .
+ It currently supports a very sophisticated dependency model for n-node
+ clusters. It is both extremely useful and quite stable at this point in
+ time. 
+ .
+ This package contains development files
