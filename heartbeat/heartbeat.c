@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.466 2005/11/07 07:12:51 gshi Exp $ */
+/* $Id: heartbeat.c,v 1.467 2005/11/07 07:36:44 gshi Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -2419,6 +2419,15 @@ HBDoMsg_T_DELNODE(const char * type, struct node_info * fromnode,
 			}
 		}
 		
+		if (isdelnode){
+			if (STRNCMP_CONST(config->nodes[i].status, DEADSTATUS) != 0){
+				cl_log(LOG_WARNING, "deletion failed: node %s is not dead", 
+					config->nodes[i].nodename);
+				goto out;
+			}
+	
+		}	
+	
 		if (!isdelnode){
 			if ( STRNCMP_CONST(config->nodes[i].status,UPSTATUS) != 0
 			     && STRNCMP_CONST(config->nodes[i].status, ACTIVESTATUS) !=0
@@ -6035,6 +6044,9 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.467  2005/11/07 07:36:44  gshi
+ * fix a deletion bug: deleting an active node should not be allowed
+ *
  * Revision 1.466  2005/11/07 07:12:51  gshi
  * bug 944: we shall not send reqnodes msg to ping node
  *
