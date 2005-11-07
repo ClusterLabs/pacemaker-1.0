@@ -1,4 +1,4 @@
-/* $Id: stonithd.c,v 1.70 2005/11/07 10:42:19 sunjd Exp $ */
+/* $Id: stonithd.c,v 1.71 2005/11/07 16:59:34 sunjd Exp $ */
 
 /* File: stonithd.c
  * Description: STONITH daemon for node fencing
@@ -1128,8 +1128,9 @@ broadcast_reset_success(const char * target)
 				, __FUNCTION__, __LINE__ );
 		return ST_FAIL;
 	}
-
-	stonithd_log2(LOG_DEBUG, "%s: begin.", __FUNCTION__);
+	
+	stonithd_log(LOG_DEBUG, "%s: Broadcast the reset success message to "
+		"the whole cluster.", __FUNCTION__);
 	if ( (ha_msg_add(msg, F_TYPE, T_RESETTED) != HA_OK)
 	    ||(ha_msg_add(msg, F_ORIG, local_nodename) != HA_OK)
 	    ||(ha_msg_add(msg, F_STONITHD_NODE, target) != HA_OK)
@@ -1175,7 +1176,8 @@ handle_msg_resetted(struct ha_msg* msg, void* private_data)
 	stonithd_log(LOG_DEBUG, "Got a notification of successfully resetting"
 		" node %s from node %s with APITET.", target, from);	
 
-	timer_id = Gmain_timeout_add_full(G_PRIORITY_HIGH_IDLE, 2000
+	/* The timeout value equals 2 minutes now */
+	timer_id = Gmain_timeout_add_full(G_PRIORITY_HIGH_IDLE, 120*1000
 			, reboot_block_timeout, g_strdup(target), NULL);
 
 	g_hash_table_replace(reboot_blocked_table, g_strdup(target)
@@ -1966,7 +1968,7 @@ stonithop_result_to_local_client( stonith_ops_t * st_op, gpointer data)
 		if ( st_op->optype == 1 ) { /* RESET */
 			client = get_exist_client_by_chan(client_list, ch);
 			if (  (client != NULL) 
-			    && (STRNCMP_CONST(client->name, "apitest") )) {
+			    && (0 == STRNCMP_CONST(client->name, "apitest") )) {
 				broadcast_reset_success(st_op->node_name);
 			}
 		}
@@ -3233,6 +3235,11 @@ adjust_debug_level(int nsig, gpointer user_data)
 
 /* 
  * $Log: stonithd.c,v $
+ * Revision 1.71  2005/11/07 16:59:34  sunjd
+ * - Set the timeout value be 2 minutes
+ * - Correct a comparing condition
+ * - Log polish
+ *
  * Revision 1.70  2005/11/07 10:42:19  sunjd
  * - Bug 847 Stonithd test improvements
  * - Add memory check.
