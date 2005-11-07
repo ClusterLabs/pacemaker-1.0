@@ -214,7 +214,8 @@ GenerateHaResources() {
 	!
   chmod 644 $1
 }
-CONFIGFILES="$HADIR/ha.cf $HADIR/authkeys $HADIR/haresources @HA_VARLIBDIR@/heartbeat/crm/cib.xml @HA_VARLIBDIR@/heartbeat/crm/cib_backup.xml @HA_VARLIBDIR@/heartbeat/hostcache"
+CONFIGFILES="$HADIR/ha.cf $HADIR/authkeys $HADIR/haresources @HA_VARLIBDIR@/heartbeat/crm/cib.xml @HA_VARLIBDIR@/heartbeat/crm/cib_backup.xml"
+CACHEFILES="@HA_VARLIBDIR@/heartbeat/hostcache  @HA_VARLIBDIR@/heartbeat/delhostcache"
 
 SetUpConfigFiles() {
   if
@@ -223,7 +224,7 @@ SetUpConfigFiles() {
     echo "Should not run tests with heartbeat already running."
   fi
   SaveConfigFiles
-  for j in $CONFIGFILES
+  for j in $CONFIGFILES 
   do
     if
       CheckConfigFile $j
@@ -254,6 +255,11 @@ RemoveConfigFiles() {
       echo "OOPS! Cannot remove real config file $j!"
     fi
   done
+
+  for j in $CACHEFILES
+  do 
+	rm -f $j
+  done
   RestoreConfigFiles
 }
 
@@ -265,11 +271,13 @@ SaveConfigFiles() {
     mkdir .cfsave
   fi
   mv $CONFIGFILES .cfsave >/dev/null 2>&1
+  mv $CACHEFILES .cfsave >/dev/null 2>&1
 }
 
 RestoreConfigFiles() {
   mv $HADIR/.cfsave/cib*.xml  @HA_VARLIBDIR@/heartbeat/crm/ >/dev/null 2>&1
-  mv $HADIR/.cfsave/hostcache @HA_VARLIBDIR@/heartbeat/ >/dev/null 2>&1
+  mv $HADIR/.cfsave/hostcache @HA_VARLIBDIR@/heartbeat/  >/dev/null 2>&1
+  mv $HADIR/.cfsave/delhostcache @HA_VARLIBDIR@/heartbeat/ >/dev/null 2>&1
   mv $HADIR/.cfsave/* $HADIR >/dev/null 2>&1
 }
 
