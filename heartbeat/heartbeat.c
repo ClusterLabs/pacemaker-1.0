@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.467 2005/11/07 07:36:44 gshi Exp $ */
+/* $Id: heartbeat.c,v 1.468 2005/11/07 15:49:27 gshi Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -3721,8 +3721,8 @@ static gboolean
 send_reqnodes_msg(gpointer data){
 	struct ha_msg* msg;
 	const char* destnode = NULL;
-	int i;
-	int startindex = (int) data;
+	long i;
+	int startindex = (long) data;
 	
 	
 	if (get_reqnodes_reply){
@@ -6044,6 +6044,9 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.468  2005/11/07 15:49:27  gshi
+ * fix warnings in IA64 machines
+ *
  * Revision 1.467  2005/11/07 07:36:44  gshi
  * fix a deletion bug: deleting an active node should not be allowed
  *
