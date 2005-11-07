@@ -1,4 +1,4 @@
-/* $Id: ccm_statemachine.c,v 1.12 2005/10/29 00:02:16 gshi Exp $ */
+/* $Id: ccm_statemachine.c,v 1.13 2005/11/07 22:55:44 gshi Exp $ */
 /* 
  * ccm.c: Consensus Cluster Service Program 
  *
@@ -2861,6 +2861,7 @@ switchstatement:
 					CCM_TMOUT_GET_U(info))) {
 						break;
 			}
+			
 
 			if (update_am_i_leader(CCM_GET_UPDATETABLE(info),
 						CCM_GET_LLM(info))) {

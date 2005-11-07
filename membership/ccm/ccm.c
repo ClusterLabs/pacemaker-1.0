@@ -158,6 +158,9 @@ ccm_control_process(ccm_info_t *info, ll_cluster_t * hb)
 				return FALSE;
 			}
 			
+			cl_log(LOG_INFO, "after adding node %s", orig);
+			llm_display(llm);
+			
 			jump_to_joining_state(hb, info, msg);
 			
 		} else if (strcasecmp(type, T_DELNODE) ==0){
@@ -170,7 +173,7 @@ ccm_control_process(ccm_info_t *info, ll_cluster_t * hb)
 			}
 			
 			if (llm_del(llm, node) != HA_OK){
-				cl_log(LOG_ERR, "%s: adding node %s failed",
+				cl_log(LOG_ERR, "%s: deleting node %s failed",
 				       __FUNCTION__, node);
 				return FALSE;
 			}

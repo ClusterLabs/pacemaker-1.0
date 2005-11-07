@@ -1,4 +1,4 @@
-/* $Id: ccmllm.c,v 1.26 2005/11/04 22:53:35 gshi Exp $ */
+/* $Id: ccmllm.c,v 1.27 2005/11/07 22:55:44 gshi Exp $ */
 /* 
  * ccmllm.c: Low Level membership routines.
  *
@@ -309,12 +309,15 @@ llm_add(llm_info_t *llm,
 	strncpy(llm->nodes[i].status, status, STATUSSIZE);
 	llm->nodecount++;
 	
-	if (strncmp(mynode, node, NODEIDSIZE) == 0) {
-		llm->myindex = i;
-	} else if (llm->myindex >= i) {		
+	if (llm->myindex >= i) {		
 		llm->myindex++;		
 	}
-	
+		
+	if (llm->myindex < 0 
+	    && strncmp(mynode, node, NODEIDSIZE) == 0) {
+		llm->myindex = i;
+	} 
+
 	if (llm->myindex >= llm->nodecount){
 		cl_log(LOG_ERR, "%s: myindex(%d) out of range,"
 		       "llm->nodecount =%d",
