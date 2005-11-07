@@ -550,7 +550,6 @@ write_node_uuid_file(struct sys_config * cfg)
 	}
 	if (fclose(f) < 0) {
 		cl_perror("fclose error on %s", tmpname);
-		fclose(f);	/* Can't hurt :-) */
 		unlink(tmpname);
 		return HA_FAIL;
 	}
@@ -652,7 +651,6 @@ write_delnode_file(struct sys_config* cfg)
 	}
 	if (fclose(f) < 0) {
 		cl_perror("fclose error on %s", tmpname);
-		fclose(f);	/* Can't hurt :-) */
 		unlink(tmpname);
 		return HA_FAIL;
 	}
