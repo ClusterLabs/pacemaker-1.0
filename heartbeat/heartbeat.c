@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.468 2005/11/07 15:49:27 gshi Exp $ */
+/* $Id: heartbeat.c,v 1.469 2005/11/07 22:52:57 gshi Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -776,9 +776,8 @@ initialize_heartbeat()
 	
 	add_uuidtable(&config->uuid, curnode);
 	cl_uuid_copy(&curnode->uuid, &config->uuid);
-	if (config->rtjoinconfig != HB_JOIN_NONE){
-		write_cache_file(config);
-	}
+	write_cache_file(config);
+
 	if (stat(FIFONAME, &buf) < 0 ||	!S_ISFIFO(buf.st_mode)) {
 		cl_log(LOG_INFO, "Creating FIFO %s.", FIFONAME);
 		unlink(FIFONAME);
@@ -1705,10 +1704,9 @@ comm_now_up()
 	}
 	linksupbefore = 1;
 
-	if (ANYDEBUG){
-		cl_log(LOG_DEBUG
-		,	"Comm_now_up(): updating status to " ACTIVESTATUS);
-	}
+	cl_log(LOG_INFO
+	       ,	"Comm_now_up(): updating status to " ACTIVESTATUS);
+	
 	/* Update our local status... */
 	set_local_status(ACTIVESTATUS);
 
@@ -2034,13 +2032,31 @@ free_one_hist_slot(struct msg_xmit_hist* hist, int slot )
 	return;
 }
 
+
+
+static void 
+hist_display(struct msg_xmit_hist * hist)
+{
+	cl_log(LOG_DEBUG, "hist->ackseq =%ld",     hist->ackseq);
+	cl_log(LOG_DEBUG, "hist->lowseq =%ld, hist->hiseq=%ld", 
+	       hist->lowseq, hist->hiseq);
+	dump_missing_pkts_info();
+	
+	if (hist->lowest_acknode){
+		cl_log(LOG_DEBUG,"expecting from %s",hist->lowest_acknode->nodename);
+		cl_log(LOG_DEBUG,"it's ackseq=%ld", hist->lowest_acknode->track.ackseq);
+	}
+	cl_log(LOG_DEBUG, " ");	
+	
+}
+
 static void
 reset_lowest_acknode(void)
 {
 	struct msg_xmit_hist* hist = &msghist;	
 
-	hist->lowest_acknode = NULL;
-	
+	hist->lowest_acknode = NULL;	
+
 	return;
 }
 
@@ -2195,9 +2211,9 @@ HBDoMsg_T_ACKMSG(const char * type, struct node_info * fromnode,
 	}
 
 	(void)dump_missing_pkts_info;
-#define DEBUG_FOR_GSHI	1
+
 #ifdef DEBUG_FOR_GSHI
-	if (DEBUGDETAILS){
+	if (ANYDEBUG){
 		cl_log(LOG_DEBUG, "hist->ackseq =%ld, node %s's ackseq=%ld",
 		       hist->ackseq, fromnode->nodename,
 		       fromnode->track.ackseq);
@@ -2216,6 +2232,7 @@ HBDoMsg_T_ACKMSG(const char * type, struct node_info * fromnode,
 
 	return;
 }
+
 
 
 static int
@@ -2449,7 +2466,7 @@ HBDoMsg_T_DELNODE(const char * type, struct node_info * fromnode,
 		}
 
 		if (hb_del_one_node(nodes[i])!= HA_OK){
-			cl_log(LOG_ERR, "Deleing node %s failed", nodes[i]);
+			cl_log(LOG_ERR, "Deleting node %s failed", nodes[i]);
 		}
 	}
 	
@@ -3750,6 +3767,7 @@ send_reqnodes_msg(gpointer data){
 		return FALSE;
 	}
 	
+
 	msg = ha_msg_new(0);
 	if (msg == NULL){
 		cl_log(LOG_ERR, "%s: creating msg failed",
@@ -3782,6 +3800,7 @@ check_comm_isup(void)
 	struct node_info *	hip;
 	int	j;
 	int	heardfromcount = 0;
+
 
 	if (heartbeat_comm_state == COMM_LINKSUP) {
 		return;
@@ -5661,6 +5680,7 @@ add2_xmit_hist (struct msg_xmit_hist * hist, struct ha_msg* msg
 	if (enable_flow_control
 	    && hist->hiseq - hist->ackseq > MAXMSGHIST/2){
 		all_clients_pause();
+		hist_display(hist);
 	}
 
 }
@@ -6044,6 +6064,13 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.469  2005/11/07 22:52:57  gshi
+ * fixed a few bugs related to deletion:
+ *
+ * 1. we need to update the variable curnode since it might point to a different node or invalid node now
+ * 2. we need to update the tables stores uuid->node_info pointer and nodename->node_info pointer
+ * because the pointer no longer points to the right node
+ *
  * Revision 1.468  2005/11/07 15:49:27  gshi
  * fix warnings in IA64 machines
  *

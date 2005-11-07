@@ -36,6 +36,10 @@
 static GHashTable*			name_table = NULL;
 static GHashTable*			uuid_table = NULL;
 extern GList*	del_node_list;
+
+
+static void  remove_all(void);
+
 guint 
 uuid_hash(gconstpointer key)
 {
@@ -98,6 +102,40 @@ printout(void){
 
 #endif
 
+
+static void
+uuidtable_entry_display( gpointer key, gpointer value, gpointer userdata)
+{
+	cl_uuid_t* uuid =(cl_uuid_t*) key;
+	struct node_info* node= (struct node_info*)value;
+	char	tmpstr[UU_UNPARSE_SIZEOF];
+	
+	memset(tmpstr , 0, UU_UNPARSE_SIZEOF);
+	cl_uuid_unparse(uuid, tmpstr);
+
+	cl_log(LOG_DEBUG, "uuid=%s, name=%s",
+	       tmpstr, node->nodename);
+	
+}
+
+
+
+static void
+uuidtable_display(void)
+{
+	cl_log(LOG_DEBUG,"displaying uuid table");
+	g_hash_table_foreach(uuid_table, uuidtable_entry_display,NULL);
+	
+	return;
+}
+
+static void
+nametable_display(void)
+{
+	
+	return;
+}
+
 static struct node_info*
 lookup_nametable(const char* nodename)
 {
@@ -159,6 +197,7 @@ update_tables(const char* nodename, cl_uuid_t* uuid)
 
 		cl_log(LOG_WARNING, "nodename %s"
 		       " changed to %s?", hip->nodename, nodename);	
+		uuidtable_display();
 		strncpy(hip->nodename, nodename, sizeof(hip->nodename));
 		add_nametable(nodename, hip);
 		return TRUE;
@@ -175,7 +214,8 @@ update_tables(const char* nodename, cl_uuid_t* uuid)
 	if (cl_uuid_is_null(&hip->uuid)){
 		cl_uuid_copy(&hip->uuid, uuid);
 	}else if (cl_uuid_compare(&hip->uuid, uuid) != 0){
-		cl_log(LOG_ERR, "node %s changed its uuid", nodename);	
+		cl_log(LOG_ERR, "node %s changed its uuid", nodename);	     
+		nametable_display();
 	}		
 	add_uuidtable(uuid, hip);
 	
@@ -184,52 +224,20 @@ update_tables(const char* nodename, cl_uuid_t* uuid)
 
 
 
-static void
-nametable_remove(const char* nodename)
-{
-	gpointer oldkey;
-	gpointer value;
-	
-	if (g_hash_table_lookup_extended(name_table, nodename, &oldkey, &value)){
-		g_hash_table_remove(name_table, nodename);
-		if(oldkey){
-			g_free(oldkey);
-		}
-	}		
-	return ;
-}
 
-static void
-uuidtable_remove(cl_uuid_t* uuid)
-{
-	gpointer oldkey;
-	gpointer value;
-
-	if (g_hash_table_lookup_extended(uuid_table, uuid, &oldkey, &value)){
-		g_hash_table_remove(uuid_table, uuid);
-		if (oldkey){
-			ha_free(oldkey);
-		}		
-	}
-
-	return;
-}
 
 int
 tables_remove(const char* nodename, cl_uuid_t* uuid)
 {
-	if (nodename == NULL
-	    || uuid == NULL){
-		cl_log(LOG_ERR, "%s: NULL parameter", __FUNCTION__);
-		return HA_FAIL;
+	int i;
+
+	remove_all();
+
+	for (i = 0; i< config->nodecount; i++){
+		add_nametable(config->nodes[i].nodename, &config->nodes[i]);
+		add_uuidtable(&config->nodes[i].uuid, &config->nodes[i]);
 	}
-	
-	nametable_remove(nodename);
-	
-	if (!cl_uuid_is_null(uuid)){
-		uuidtable_remove(uuid);
-	}
-	
+
 	return HA_OK;
 	
 }
@@ -244,10 +252,26 @@ add_nametable(const char* nodename, struct node_info* value)
 void
 add_uuidtable(cl_uuid_t* uuid, struct node_info* value)
 {
-	cl_uuid_t* du = (cl_uuid_t*)ha_malloc(sizeof(cl_uuid_t));
+	cl_uuid_t* du ;
+
+	if (cl_uuid_is_null(uuid)){
+		return;
+	}
+
+	du = (cl_uuid_t*)ha_malloc(sizeof(cl_uuid_t));
 	cl_uuid_copy(du, uuid);
 	
 	g_hash_table_insert(uuid_table, du, value);
+	
+}
+
+static void
+free_data(gpointer data)
+{
+	if (data){
+		g_free(data);
+	}
+	
 }
 
 int
@@ -258,13 +282,13 @@ inittable(void)
 		cleanuptable();
 	}
 
-	uuid_table = g_hash_table_new(uuid_hash, uuid_equal);	
+	uuid_table = g_hash_table_new_full(uuid_hash, uuid_equal, free_data, NULL);	
 	if (!uuid_table){
 		cl_log(LOG_ERR, "ghash table allocation error");
 		return HA_FAIL;
 	}
 	
-	name_table = g_hash_table_new(g_str_hash, g_str_equal);
+	name_table = g_hash_table_new_full(g_str_hash, g_str_equal, free_data, NULL);
 	
 	if (!name_table){
 		cl_log(LOG_ERR, "ghash table allocation error");
@@ -274,25 +298,25 @@ inittable(void)
 	return HA_OK;
 }
 
-
-static void
-free_key(gpointer key, gpointer value, gpointer userdata)
+static gboolean
+always_true(gpointer key, gpointer value, gpointer userdata)
 {
-	
-	if(key){
-		g_free(key);
-	}
+	return 1;
 }
 
+static void
+remove_all(void)
+{
+	g_hash_table_foreach_remove(name_table, always_true, NULL);
+	g_hash_table_foreach_remove(uuid_table, always_true, NULL);
+}
 
 void
 cleanuptable(void){
 	
-	g_hash_table_foreach(name_table, free_key, NULL);
 	g_hash_table_destroy(name_table);
 	name_table  = NULL;
 	
-	g_hash_table_foreach(uuid_table, free_key, NULL);
 	g_hash_table_destroy(uuid_table);
 	uuid_table  = NULL;
 }
@@ -664,9 +688,13 @@ read_delnode_file(struct sys_config* cfg)
 	while ((rc=node_uuid_file_in(f, host, &uu)) > 0) {
 		strncpy(thisnode.nodename, host, HOSTLENG);
 		cl_uuid_copy(&thisnode.uuid, &uu);
-		append_to_dellist(&thisnode);
+		if (lookup_node(thisnode.nodename)){
+                       delete_node(thisnode.nodename);
+                }
+
 	}
 	fclose(f);
+
 	/*
 	 * If outofsync is TRUE, then we should probably write out a new
 	 * uuid cache file. FIXME??

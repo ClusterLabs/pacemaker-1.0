@@ -1,4 +1,4 @@
-/* $Id: config.c,v 1.181 2005/11/04 23:20:58 gshi Exp $ */
+/* $Id: config.c,v 1.182 2005/11/07 22:52:57 gshi Exp $ */
 /*
  * Parse various heartbeat configuration files...
  *
@@ -1145,7 +1145,8 @@ delete_node(const char* value)
 	}
 
 	
-	if (STRNCMP_CONST(hip->status, DEADSTATUS) != 0){
+	if (STRNCMP_CONST(hip->status, DEADSTATUS) != 0
+	    && STRNCMP_CONST(hip->status, INITSTATUS) != 0){
 		cl_log(LOG_ERR, "%s: node %s is %s. Cannot delete alive node",
 		       __FUNCTION__, value, hip->status);
 		return HA_FAIL;
@@ -1153,15 +1154,20 @@ delete_node(const char* value)
 	
 	append_to_dellist(hip);
 
-	tables_remove(hip->nodename, &hip->uuid);	
-	
 	for (j = i; j < config->nodecount; j++){
 		memcpy(&config->nodes[j], &config->nodes[j + 1], 
 		       sizeof(config->nodes[0]));
 	}
 	
 	config->nodecount -- ;
+
+	tables_remove(hip->nodename, &hip->uuid);		
 	
+	curnode = lookup_node(localnodename);
+	if (!curnode){
+		cl_log(LOG_ERR, "localnode not found");
+	}
+
 	return(HA_OK);	
 	
 }
@@ -2280,6 +2286,13 @@ set_uuidfrom(const char* value)
 
 /*
  * $Log: config.c,v $
+ * Revision 1.182  2005/11/07 22:52:57  gshi
+ * fixed a few bugs related to deletion:
+ *
+ * 1. we need to update the variable curnode since it might point to a different node or invalid node now
+ * 2. we need to update the tables stores uuid->node_info pointer and nodename->node_info pointer
+ * because the pointer no longer points to the right node
+ *
  * Revision 1.181  2005/11/04 23:20:58  gshi
  * always read hostcache file when heartbeat starts no matter what autojoin option is.
  * This is necessary because there could be nodes added using hb_addnode command
