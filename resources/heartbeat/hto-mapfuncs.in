@@ -114,7 +114,7 @@ ra_ocfinit(){
 
 ra_getpathname(){
 	BASENAME=`basename $RSCTYPE`
-	if [ $BASENAME == $RSCTYPE ]
+	if [ $BASENAME = $RSCTYPE ]
 	then
 		RAOCFPATH="${OCF_RA_DIR}${PROVIDER}/${BASENAME}"
 	else
