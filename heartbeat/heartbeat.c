@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.465 2005/11/04 22:32:08 gshi Exp $ */
+/* $Id: heartbeat.c,v 1.466 2005/11/07 07:12:51 gshi Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -3727,7 +3727,8 @@ send_reqnodes_msg(gpointer data){
 
 	for (i = startindex; i< config->nodecount; i++){
 		if (STRNCMP_CONST(config->nodes[i].status, DEADSTATUS) != 0
-		    && (&config->nodes[i]) != curnode){
+		    && (&config->nodes[i]) != curnode
+		    && config->nodes[i].nodetype == NORMALNODE_I){
 			destnode = config->nodes[i].nodename;
 			break;
 		}
@@ -6034,6 +6035,9 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.466  2005/11/07 07:12:51  gshi
+ * bug 944: we shall not send reqnodes msg to ping node
+ *
  * Revision 1.465  2005/11/04 22:32:08  gshi
  * make nodes sync happen at the heartbeat start phase
  *
