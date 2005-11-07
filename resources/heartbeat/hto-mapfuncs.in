@@ -53,36 +53,36 @@ ra_execocf(){
 	case $ocf_return_status in
 	$OCF_SUCCESS)
 		case $OPERATION in
-		monitor|status)		ha_log "$rsc_type Running OK";;
-		*)			ha_log "$rsc_type Success";;
+		monitor|status)		ha_log "INFO: $rsc_type Running OK";;
+		*)			ha_log "INFO: $rsc_type Success";;
 		esac
 		;;
 
 	$OCF_ERR_GENERIC)
-		ha_log $rsc_type Generic error 
+		ha_log "ERROR: " $rsc_type Generic error 
 		;;
 
 	$OCF_ERR_ARGS)
-		ha_log $rsc_type Incompliant argument 
+		ha_log "ERROR: " $rsc_type Incompliant argument 
 		;;
 	$OCF_ERR_UNIMPLEMENTED)
-		ha_log $rsc_type Function unimplemented
+		ha_log "ERROR: " $rsc_type Function unimplemented
 		;;
 	$OCF_ERR_PERM)
-		ha_log $rsc_type User had insufficient privilege
+		ha_log "ERROR: " $rsc_type User had insufficient privilege
 		;;
 	$OCF_ERR_INSTALLED)
-		ha_log $rsc_type Program is not installed
+		ha_log "ERROR: " $rsc_type Program is not installed
 		;;
 	$OCF_ERR_CONFIGURED)
-		ha_log $rsc_type Program is not configured
+		ha_log "ERROR: " $rsc_type Program is not configured
 		;;
 	$OCF_NOT_RUNNING)
-		ha_log $rsc_type Program is not running
+		ha_log "INFO: " $rsc_type Program is not running
 		;;
 	*)
 		echo $?
-		ha_log $rsc_type Unknown error
+		ha_log "ERROR: " $rsc_type Unknown error
 		exit 1
 		;;
 	esac

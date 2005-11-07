@@ -100,7 +100,7 @@ ocf_status() {
   rc=$?
   case $statoutput in
     "")	;;
-    *)  cl_log "info: $statoutput"
+    *)  ha_log "info: $statoutput"
   esac
   if
     [ $rc -eq 0 ]
