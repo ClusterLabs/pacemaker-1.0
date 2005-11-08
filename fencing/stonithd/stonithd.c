@@ -1,4 +1,4 @@
-/* $Id: stonithd.c,v 1.72 2005/11/08 05:48:54 sunjd Exp $ */
+/* $Id: stonithd.c,v 1.73 2005/11/08 07:55:59 sunjd Exp $ */
 
 /* File: stonithd.c
  * Description: STONITH daemon for node fencing
@@ -1621,7 +1621,7 @@ on_stonithd_node_fence(struct ha_msg * request, gpointer data)
 		stonithd_log(LOG_ERR, "The stonith requirement message contains"
 			     " no operation type field.");
 		api_reply = ST_BADREQ;
-		g_free(st_op);
+		free_stonith_ops_t(st_op);
 		goto sendback_reply;
 	}
 
@@ -1631,7 +1631,7 @@ on_stonithd_node_fence(struct ha_msg * request, gpointer data)
 		stonithd_log(LOG_ERR, "The stonith requirement message contains"
 			     " no timeout field.");
 		api_reply = ST_BADREQ;
-		g_free(st_op);
+		free_stonith_ops_t(st_op);
 		goto sendback_reply;
 	}
 
@@ -1641,7 +1641,7 @@ on_stonithd_node_fence(struct ha_msg * request, gpointer data)
 		stonithd_log(LOG_ERR, "The stonith requirement message contains"
 			     " no target node name field.");
 		api_reply = ST_BADREQ;
-		g_free(st_op);
+		free_stonith_ops_t(st_op);
 		goto sendback_reply;
 	}
 
@@ -1687,7 +1687,6 @@ on_stonithd_node_fence(struct ha_msg * request, gpointer data)
 			client->ch)) < 0 ) {
 			api_reply = ST_APIOK;
 		} else {
-			free_stonith_ops_t(st_op);
 			api_reply = ST_APIFAIL;
 		}
 	}	
@@ -1697,6 +1696,7 @@ sendback_reply:
 	if ((reply = ha_msg_new(3)) == NULL) {
 		stonithd_log(LOG_ERR, "%s:%d:ha_msg_new:out of memory."
 				,__FUNCTION__, __LINE__);
+		free_stonith_ops_t(st_op);
 		return ST_FAIL;
 	}
 	if ( (ha_msg_add(reply, F_STONITHD_TYPE, ST_APIRPL) != HA_OK ) 
@@ -1705,6 +1705,7 @@ sendback_reply:
 	    ||(ha_msg_add_int(reply, F_STONITHD_CALLID, call_id))
 		!= HA_OK ) {
 		ZAPMSG(reply);
+		free_stonith_ops_t(st_op);
 		stonithd_log(LOG_ERR, "stonithd_node_fence: cannot add field.");
 		return ST_FAIL;
 	}
@@ -1712,6 +1713,7 @@ sendback_reply:
 	if (msg2ipcchan(reply, ch) != HA_OK) {
 		ZAPCHAN(ch); /* ? */
 		ZAPMSG(reply);
+		free_stonith_ops_t(st_op);
 		stonithd_log(LOG_ERR, "stonithd_node_fence: cannot send reply "
 				"message to IPC");
 		return ST_FAIL;
@@ -1723,6 +1725,7 @@ sendback_reply:
 	} else {
 		stonithd_log(LOG_DEBUG, "stonithd_node_fence: end and "
 			    "failed to sent back a reply.");
+		free_stonith_ops_t(st_op);
 		return ST_FAIL;
 	}
 
@@ -1731,9 +1734,9 @@ sendback_reply:
 		st_op->node_list = g_string_append(st_op->node_list
 						, local_nodename);
 		stonithop_result_to_local_client(st_op, ch);
-		free_stonith_ops_t(st_op);
 	}
 
+	free_stonith_ops_t(st_op);
 	stonithd_log2(LOG_DEBUG, "stonithd_node_fence: end");
 	return ST_OK;
 }
@@ -2464,6 +2467,7 @@ send_back_reply:
 	if ((reply = ha_msg_new(3)) == NULL) {
 		stonithd_log(LOG_ERR, "%s:%d:ha_msg_new:out of memory."
 				,__FUNCTION__, __LINE__);
+		g_free(child_pid);
 		return ST_FAIL;
 	}
 	if ( (ha_msg_add(reply, F_STONITHD_TYPE, ST_APIRPL) != HA_OK ) 
@@ -3239,6 +3243,9 @@ adjust_debug_level(int nsig, gpointer user_data)
 
 /* 
  * $Log: stonithd.c,v $
+ * Revision 1.73  2005/11/08 07:55:59  sunjd
+ * BEAM fix: memory leak
+ *
  * Revision 1.72  2005/11/08 05:48:54  sunjd
  * Should initialize the memory
  *
