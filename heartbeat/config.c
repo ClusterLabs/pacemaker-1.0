@@ -1,4 +1,4 @@
-/* $Id: config.c,v 1.182 2005/11/07 22:52:57 gshi Exp $ */
+/* $Id: config.c,v 1.183 2005/11/08 06:27:38 gshi Exp $ */
 /*
  * Parse various heartbeat configuration files...
  *
@@ -148,9 +148,11 @@ struct directive {
 , {KEY_COREROOTDIR,set_corerootdir, TRUE, NULL, "set root directory of core dump area"}
 , {KEY_REL2,      set_release2mode, TRUE, "false"
 ,				"enable release 2 style resource management"}
-
 , {KEY_AUTOJOIN,  set_autojoin, TRUE, "none" ,	"set automatic join mode/style"}
 , {KEY_UUIDFROM,  set_uuidfrom, TRUE, "file" ,	"set the source for uuid"}
+,{KEY_COMPRESSION,   set_compression, TRUE ,"zlib", "set compression module"}
+,{KEY_COMPRESSION_THRESHOLD, set_compression_threshold, TRUE, "2", "set compression threshold"}
+,{KEY_TRADITIONAL_COMPRESSION, set_traditional_compression, TRUE, "yes", "set traditional_compression"}
 };
 
 static const struct WholeLineDirective {
@@ -161,9 +163,6 @@ static const struct WholeLineDirective {
 ,	{KEY_STONITHHOST,  set_stonith_host_info}
 ,	{KEY_APIPERM,	   set_api_authorization}
 ,	{KEY_CLIENT_CHILD,  add_client_child}
-,	{KEY_COMPRESSION,   set_compression}
-,	{KEY_COMPRESSION_THRESHOLD, set_compression_threshold}
-,	{KEY_TRADITIONAL_COMPRESSION, set_traditional_compression}
 };
 
 extern const char *			cmdname;
@@ -213,6 +212,7 @@ check_logd_usage(int* errcount)
 {
 	const char* value;
 	int	truefalse = FALSE;
+
 	/*we set uselogd to TRUE here so the next message can be logged*/
 	value = GetParameterValue(KEY_LOGDAEMON);
 	if (value != NULL){
@@ -2286,6 +2286,16 @@ set_uuidfrom(const char* value)
 
 /*
  * $Log: config.c,v $
+ * Revision 1.183  2005/11/08 06:27:38  gshi
+ * bug 949: this bcast message is caused by not compressing the message
+ * It was so because crmd/cib does not inherit the variable traditional_compression
+ * from heartbeat (clplumbing does not provide any function for that)
+ *
+ * I added inherit_compress() function and called that in crm/cib
+ *
+ * several modification are made in crm/cib since FT_UNCOMPRESS is essentially  same FT_STRUCT
+ * except it will be transmitted after compression
+ *
  * Revision 1.182  2005/11/07 22:52:57  gshi
  * fixed a few bugs related to deletion:
  *
