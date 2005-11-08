@@ -1,4 +1,4 @@
-/* $Id: stonithd.c,v 1.71 2005/11/07 16:59:34 sunjd Exp $ */
+/* $Id: stonithd.c,v 1.72 2005/11/08 05:48:54 sunjd Exp $ */
 
 /* File: stonithd.c
  * Description: STONITH daemon for node fencing
@@ -2129,8 +2129,9 @@ stonith_operate_locally( stonith_ops_t * st_op, stonith_rsc_t * srsc)
 		return_to_dropped_privs();
 		return -1;
 	} else if (pid > 0) { /* in the parent process */
-		snprintf(buf_tmp, 39, "%s_%s_%d", st_obj->stype, srsc->rsc_id
-			, (int)st_op->optype); 
+		memset(buf_tmp,	0, sizeof(buf_tmp));
+		snprintf(buf_tmp, sizeof(buf_tmp)-1, "%s_%s_%d", st_obj->stype
+			, srsc->rsc_id , (int)st_op->optype); 
 		NewTrackedProc( pid, 1
 				, (debug_level>1)? PT_LOGVERBOSE : PT_LOGNORMAL
 				, g_strdup(buf_tmp), &StonithdProcessTrackOps);
@@ -2728,7 +2729,8 @@ probe_status:
 		return_to_dropped_privs();
                 return -1;
         } else if (pid > 0) { /* in the parent process */
-		snprintf(buf_tmp, 39, "%s_%s_%s", stonith_obj->stype
+		memset(buf_tmp, 0, sizeof(buf_tmp));
+		snprintf(buf_tmp, sizeof(buf_tmp)-1, "%s_%s_%s", stonith_obj->stype
 			, op->rsc_id , "start"); 
 		NewTrackedProc( pid, 1
 				, (debug_level>1)? PT_LOGVERBOSE : PT_LOGNORMAL
@@ -2803,13 +2805,14 @@ stonithRA_stop( stonithRA_ops_t * ra_op, gpointer data )
 		return -1;
 	}
 
+	memset(buf_tmp, 0, sizeof(buf_tmp));
 	srsc = get_started_stonith_resource(ra_op->rsc_id);
 	if (srsc != NULL) {
 		stonithd_log2(LOG_DEBUG, "got the active stonith_rsc: " 
 				"RA name = %s, rsc_id = %s."
 				, srsc->ra_name, srsc->rsc_id);
-		snprintf(buf_tmp, 39, "%s_%s_%s", srsc->stonith_obj->stype
-			 , ra_op->rsc_id, "stop");
+		snprintf(buf_tmp, sizeof(buf_tmp)-1, "%s_%s_%s"
+			, srsc->stonith_obj->stype, ra_op->rsc_id, "stop");
 		stonith_delete(srsc->stonith_obj);
 		srsc->stonith_obj = NULL;
 		local_started_stonith_rsc = 
@@ -2818,7 +2821,7 @@ stonithRA_stop( stonithRA_ops_t * ra_op, gpointer data )
 	} else {
 		stonithd_log(LOG_NOTICE, "try to stop a resource %s who is not "
 			     "in started resource queue.", ra_op->rsc_id); 
-		snprintf(buf_tmp, 39, "%s_%s_%s", "unknown"
+		snprintf(buf_tmp, sizeof(buf_tmp)-1, "%s_%s_%s", "unknown"
 			 , ra_op->rsc_id, "stop");
 	}
 
@@ -2868,7 +2871,8 @@ stonithRA_monitor( stonithRA_ops_t * ra_op, gpointer data )
 		return_to_dropped_privs();
                 return -1;
         } else if (pid > 0) { /* in the parent process */
-		snprintf(buf_tmp, 39, "%s_%s_%s", (srsc != NULL) ? 
+		memset(buf_tmp, 0, sizeof(buf_tmp));
+		snprintf(buf_tmp, sizeof(buf_tmp)-1, "%s_%s_%s", (srsc!=NULL) ? 
 			 srsc->stonith_obj->stype : "unknown"
 			 , ra_op->rsc_id, "monitor");
 		NewTrackedProc( pid, 1
@@ -3235,6 +3239,9 @@ adjust_debug_level(int nsig, gpointer user_data)
 
 /* 
  * $Log: stonithd.c,v $
+ * Revision 1.72  2005/11/08 05:48:54  sunjd
+ * Should initialize the memory
+ *
  * Revision 1.71  2005/11/07 16:59:34  sunjd
  * - Set the timeout value be 2 minutes
  * - Correct a comparing condition
