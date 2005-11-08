@@ -1,4 +1,4 @@
-/* $Id: stonithd.c,v 1.73 2005/11/08 07:55:59 sunjd Exp $ */
+/* $Id: stonithd.c,v 1.74 2005/11/08 17:18:58 blaschke Exp $ */
 
 /* File: stonithd.c
  * Description: STONITH daemon for node fencing
@@ -1736,7 +1736,7 @@ sendback_reply:
 		stonithop_result_to_local_client(st_op, ch);
 	}
 
-	free_stonith_ops_t(st_op);
+	/*free_stonith_ops_t(st_op); FIXME - st_op maybe used after this*/
 	stonithd_log2(LOG_DEBUG, "stonithd_node_fence: end");
 	return ST_OK;
 }
@@ -3243,6 +3243,10 @@ adjust_debug_level(int nsig, gpointer user_data)
 
 /* 
  * $Log: stonithd.c,v $
+ * Revision 1.74  2005/11/08 17:18:58  blaschke
+ * Bug 951 - Avoid freeing st_op structure whose address was stashed in
+ * another structure for later.
+ *
  * Revision 1.73  2005/11/08 07:55:59  sunjd
  * BEAM fix: memory leak
  *
