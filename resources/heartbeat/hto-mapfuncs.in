@@ -78,7 +78,7 @@ ra_execocf(){
 		ha_log "ERROR: " $rsc_type Program is not configured
 		;;
 	$OCF_NOT_RUNNING)
-		ha_log "INFO: " $rsc_type Program is not running
+#		ha_log "INFO: " $rsc_type Program is not running
 		;;
 	*)
 		echo $?
