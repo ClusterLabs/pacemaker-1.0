@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $Id: AudibleAlarm.in,v 1.5 2005/11/03 07:45:51 xunsun Exp $
+# $Id: AudibleAlarm.in,v 1.6 2005/11/08 01:18:34 xunsun Exp $
 #
 # Description:	wrapper of OCF RA AudibleAlarm, based on original heartbeat RA.
 #		See OCF RA AudibleAlarm for more information.
@@ -17,7 +17,7 @@ usage() {
 	echo "Usage: $0 [node1 node2 ... ] {start|stop|restart|status}"
 	echo "  The node list is an optional space delimited"
 	echo "  list of hosts that should never sound the alarm."
-	echo "$Id: AudibleAlarm.in,v 1.5 2005/11/03 07:45:51 xunsun Exp $";
+	echo "$Id: AudibleAlarm.in,v 1.6 2005/11/08 01:18:34 xunsun Exp $";
 }
 # Get operation name, which is the last argument we are passed.
 for arg in "$@"; do
@@ -34,6 +34,6 @@ case "$op" in
 	usage; exit 1;;
 esac
 
-nodelist=${*%$op}
+nodelist=`echo $* | sed 's%'$op'$%%'`
 
 ra_execocf  "rsc_id=AudibleAlarm" "rsc_type=AudibleAlarm" "provider=heartbeat" $op "nodelist=$nodelist"
