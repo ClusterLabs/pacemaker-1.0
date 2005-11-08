@@ -1,4 +1,4 @@
-/* $Id: ccmmisc.c,v 1.26 2005/10/06 20:03:16 gshi Exp $ */
+/* $Id: ccmmisc.c,v 1.27 2005/11/08 21:29:59 gshi Exp $ */
 /* 
  * ccmmisc.c: Miscellaneous Consensus Cluster Service functions
  *
@@ -291,7 +291,7 @@ char  ccm_type_str[CCM_TYPE_LAST + 1][TYPESTRSIZE] = {
 int
 ccm_string2type(const char *type)
 {
-	enum ccm_type i;
+	int i;
 	
 	for ( i = CCM_TYPE_PROTOVERSION; i <= CCM_TYPE_LAST; i++ ) {
 		if (strncmp(ccm_type_str[i], type, TYPESTRSIZE) == 0){
