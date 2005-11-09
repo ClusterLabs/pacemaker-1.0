@@ -1,4 +1,4 @@
-/* $Id: findif.c,v 1.49 2005/07/29 06:55:37 sunjd Exp $ */
+/* $Id: findif.c,v 1.50 2005/11/09 16:03:22 davidlee Exp $ */
 /*
  * findif.c:	Finds an interface which can route a given address
  *
@@ -603,7 +603,7 @@ get_ifname(char * buf, char * ifname)
 	buf_border = buf + strnlen(buf, 512);
 
 	start = buf; 
-	while (isspace(*start) && (start != buf_border)) {
+	while (isspace((int) *start) && (start != buf_border)) {
 		start++;
 	}
 	end = start;
@@ -879,6 +879,9 @@ ff02::%lo0/32                     fe80::1%lo0                   UC          lo0
 
 /* 
  * $Log: findif.c,v $
+ * Revision 1.50  2005/11/09 16:03:22  davidlee
+ * For 'ctype' macros/functions, some platforms warn if argument is not of type (int)
+ *
  * Revision 1.49  2005/07/29 06:55:37  sunjd
  * bug668: license update
  *
