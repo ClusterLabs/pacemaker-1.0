@@ -27,12 +27,17 @@ if BUILD_OPENAIS_MODULE
 OPENAIS=openais.la
 endif
 
+if BUILD_TIPC_MODULE
+TIPC=tipc.la
+endif
+
 SUBDIRS                 = 
 
-INCLUDES                = -I$(top_builddir)/include -I$(top_srcdir)/include \
-			-I$(top_builddir)/linux-ha -I$(top_srcdir)/linux-ha  \
-			-I$(top_builddir)/libltdl -I$(top_srcdir)/libltdl  \
-			-I$(top_builddir)/lib/upmls -I$(top_srcdir)/lib/upmls
+INCLUDES                = -I$(top_builddir)/include -I$(top_srcdir)/include   \
+			-I$(top_builddir)/linux-ha -I$(top_srcdir)/linux-ha   \
+			-I$(top_builddir)/libltdl -I$(top_srcdir)/libltdl     \
+			-I$(top_builddir)/lib/upmls -I$(top_srcdir)/lib/upmls \
+                        @TIPC_INCLUDE@
 
 AM_CFLAGS		= @CFLAGS@
 
@@ -41,7 +46,7 @@ AM_CFLAGS		= @CFLAGS@
 halibdir		= $(libdir)/@HB_PKG@
 plugindir		= $(halibdir)/plugins/HBcomm
 plugin_LTLIBRARIES	= bcast.la mcast.la ping.la serial.la ucast.la \
-			  ping_group.la  $(HBAPING) $(OPENAIS)
+			  ping_group.la  $(HBAPING) $(OPENAIS) $(TIPC)
 
 bcast_la_SOURCES	= bcast.c
 bcast_la_LDFLAGS	= -export-dynamic -module -avoid-version
@@ -71,3 +76,7 @@ hbaping_la_LIBADD   	 = $(top_builddir)/replace/libreplace.la
 openais_la_SOURCES   	= openais.c
 openais_la_LDFLAGS  	 = -export-dynamic -module -avoid-version
 openais_la_LIBADD   	 = $(top_builddir)/replace/libreplace.la -levs
+
+tipc_la_SOURCES   	= tipc.c
+tipc_la_LDFLAGS  	= -export-dynamic -module -avoid-version
+tipc_la_LIBADD   	= $(top_builddir)/replace/libreplace.la
