@@ -1,4 +1,4 @@
-/* $Id: heartbeat.h,v 1.78 2005/10/27 01:03:22 gshi Exp $ */
+/* $Id: heartbeat.h,v 1.79 2005/11/09 15:05:16 davidlee Exp $ */
 /*
  * heartbeat.h: core definitions for the Linux-HA heartbeat program
  *
@@ -414,24 +414,4 @@ int		GetUUID(struct sys_config*, const char*, cl_uuid_t* uuid);
 void		remove_from_dellist( const char* nodename);
 void		append_to_dellist(struct node_info* hip);
 
-#ifndef HA_HAVE_SETENV
-int setenv(const char *name, const char * value, int why);
-#endif
-
-#ifndef HA_HAVE_SCANDIR
-#include <dirent.h>
-int
-scandir (const char *directory_name,
-	struct dirent ***array_pointer,
-	int (*select_function) (const struct dirent *),
-
-#ifdef USE_SCANDIR_COMPARE_STRUCT_DIRENT
-	/* This is what the Linux man page says */
-	int (*compare_function) (const struct dirent**, const struct dirent**)
-#else
-	/* This is what the Linux header file says ... */
-	int (*compare_function) (const void *, const void *)
-#endif
-	);
-#endif /* HAVE_SCANDIR */
 #endif /* _HEARTBEAT_H */
