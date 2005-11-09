@@ -1,4 +1,4 @@
-/* $Id: oc_event.h,v 1.4 2005/05/10 18:47:42 gshi Exp $ */
+/* $Id: oc_event.h,v 1.5 2005/11/09 22:22:56 gshi Exp $ */
 /*
  * oc_event.h
  *
@@ -50,7 +50,7 @@ typedef uint32_t  oc_ed_t;
 
 #define OC_EV_CLASS_SHIFT	22
 #define OC_EV_EVENT_SHIFT	10
-#define	OC_EV_EVENT_MASK	(~ ((uint)~0 << OC_EV_CLASS_SHIFT))
+#define	OC_EV_EVENT_MASK	(~ (~((uint)0) << OC_EV_CLASS_SHIFT))
 
 #define	OC_EV_GET_CLASS(ed)	((uint)(ed) >> OC_EV_CLASS_SHIFT)
 #define	OC_EV_GET_EVENT(ed)	((uint)(ed) & OC_EV_EVENT_MASK)

@@ -1,4 +1,4 @@
-/* $Id: hb_api.c,v 1.145 2005/10/12 19:32:45 gshi Exp $ */
+/* $Id: hb_api.c,v 1.146 2005/11/09 22:27:46 gshi Exp $ */
 /*
  * hb_api: Server-side heartbeat API code
  *
@@ -1675,8 +1675,8 @@ api_add_client(client_proc_t* client, struct ha_msg* msg)
 	const char *	cuid = NULL;
 	long		luid = -1;
 	long		lgid = -1;
-	uid_t		uid = (uid_t)-1;
-	gid_t		gid = (gid_t)-1;
+	int		uid = -1;
+	int		gid = -1;
 
 	
 	if ((cpid = ha_msg_value(msg, F_PID)) != NULL) {
