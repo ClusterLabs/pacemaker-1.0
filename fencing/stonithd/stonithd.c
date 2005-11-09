@@ -1,4 +1,4 @@
-/* $Id: stonithd.c,v 1.75 2005/11/09 02:26:10 sunjd Exp $ */
+/* $Id: stonithd.c,v 1.76 2005/11/09 08:18:38 sunjd Exp $ */
 
 /* File: stonithd.c
  * Description: STONITH daemon for node fencing
@@ -1500,7 +1500,6 @@ send_back_reply:
 	}
 	
 	if (msg2ipcchan(reply, ch) != HA_OK) { /* How to deal the error*/
-		ZAPCHAN(ch);
 		ZAPMSG(reply);
 		stonithd_log(LOG_ERR, "can't send signon reply message to IPC");
 		return ST_FAIL;
@@ -1573,7 +1572,6 @@ send_back_reply:
 	}
 	
 	if (msg2ipcchan(reply, ch) != HA_OK) { /* How to deal the error*/
-		ZAPCHAN(ch); /* ? */
 		ZAPMSG(reply);
 		stonithd_log(LOG_WARNING, "can't send signoff reply message to IPC");
 		return ST_FAIL;
@@ -1712,7 +1710,6 @@ sendback_reply:
 	}
 	
 	if (msg2ipcchan(reply, ch) != HA_OK) {
-		ZAPCHAN(ch); /* ? */
 		ZAPMSG(reply);
 		stonithd_log(LOG_ERR, "stonithd_node_fence: cannot send reply "
 				"message to IPC");
@@ -2033,7 +2030,6 @@ stonithop_result_to_local_client( stonith_ops_t * st_op, gpointer data)
 	}
 
 	if ( msg2ipcchan(reply, ch) != HA_OK) {
-		ZAPCHAN(ch); /* ? */
 		ZAPMSG(reply);
 		stonithd_log(LOG_ERR, "stonithop_result_to_local_client: cannot"
 			     " send final result message via IPC");
@@ -2485,7 +2481,6 @@ send_back_reply:
 	g_free(child_pid);
 
 	if (msg2ipcchan(reply, ch) != HA_OK) { /* How to deal the error*/
-		ZAPCHAN(ch); /* ? */
 		ZAPMSG(reply);
 		stonithd_log(LOG_ERR, "on_stonithd_virtual_stonithRA_ops: "
 			     "cannot send reply message to IPC");
@@ -2549,7 +2544,6 @@ send_stonithRAop_final_result( stonithRA_ops_t * ra_op, gpointer data)
 	if ( msg2ipcchan(reply, ch) != HA_OK) {
 		stonithd_log(LOG_ERR, "send_stonithRAop_final_result: cannot "
 			     "send final result message via IPC");
-		ZAPCHAN(ch); /* ? */
 		ZAPMSG(reply);
 		return ST_FAIL;
 	} else {
@@ -2629,7 +2623,6 @@ on_stonithd_list_stonith_types(struct ha_msg * request, gpointer data)
 	}
 	
 	if (msg2ipcchan(reply, ch) != HA_OK) { /* How to deal the error*/
-		ZAPCHAN(ch); /* ? */
 		ZAPMSG(reply);
 		stonithd_log(LOG_ERR, "on_stonithd_list_stonith_types: cannot "
 			     " send reply message to IPC");
@@ -3244,6 +3237,9 @@ adjust_debug_level(int nsig, gpointer user_data)
 
 /* 
  * $Log: stonithd.c,v $
+ * Revision 1.76  2005/11/09 08:18:38  sunjd
+ * remove ZAPCHAN as gshi's suggestion, since it's not needed and perhaps casue bug 730
+ *
  * Revision 1.75  2005/11/09 02:26:10  sunjd
  * bug 951: 2.0.2 BSC failure - stonithd hang
  *
