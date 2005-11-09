@@ -1,4 +1,4 @@
-/* $Id: stonithd.c,v 1.74 2005/11/08 17:18:58 blaschke Exp $ */
+/* $Id: stonithd.c,v 1.75 2005/11/09 02:26:10 sunjd Exp $ */
 
 /* File: stonithd.c
  * Description: STONITH daemon for node fencing
@@ -1611,9 +1611,8 @@ on_stonithd_node_fence(struct ha_msg * request, gpointer data)
 	}
 
 	st_op = g_new(stonith_ops_t, 1);
+	memset(st_op, 0, sizeof(stonith_ops_t));
 	st_op->node_list = g_string_new("");
-	st_op->node_uuid = NULL;
-	st_op->private_data = NULL;
 
 	if ( HA_OK == ha_msg_value_int(request, F_STONITHD_OPTYPE, &tmpint)) {
 		st_op->optype = tmpint;
@@ -1621,7 +1620,6 @@ on_stonithd_node_fence(struct ha_msg * request, gpointer data)
 		stonithd_log(LOG_ERR, "The stonith requirement message contains"
 			     " no operation type field.");
 		api_reply = ST_BADREQ;
-		free_stonith_ops_t(st_op);
 		goto sendback_reply;
 	}
 
@@ -1631,7 +1629,6 @@ on_stonithd_node_fence(struct ha_msg * request, gpointer data)
 		stonithd_log(LOG_ERR, "The stonith requirement message contains"
 			     " no timeout field.");
 		api_reply = ST_BADREQ;
-		free_stonith_ops_t(st_op);
 		goto sendback_reply;
 	}
 
@@ -1641,7 +1638,6 @@ on_stonithd_node_fence(struct ha_msg * request, gpointer data)
 		stonithd_log(LOG_ERR, "The stonith requirement message contains"
 			     " no target node name field.");
 		api_reply = ST_BADREQ;
-		free_stonith_ops_t(st_op);
 		goto sendback_reply;
 	}
 
@@ -1668,6 +1664,7 @@ on_stonithd_node_fence(struct ha_msg * request, gpointer data)
 	if ( (st_op->optype == 1) && (TEST == FALSE) && /* TEST means BSC */
 	   (NULL!=g_hash_table_lookup(reboot_blocked_table, st_op->node_name))) {
 		neednot_reboot_node = TRUE;
+		api_reply = ST_APIOK;
 		goto sendback_reply;
 	}
 	
@@ -1692,11 +1689,16 @@ on_stonithd_node_fence(struct ha_msg * request, gpointer data)
 	}	
 
 sendback_reply:
+	if (api_reply != ST_APIOK) { /* The comparison is strang. :-) */
+		/* So we donnot need st_op any more, or st_op is used. */
+		free_stonith_ops_t(st_op);
+		st_op = NULL;
+	}
+
 	/* send back the sync result */
 	if ((reply = ha_msg_new(3)) == NULL) {
 		stonithd_log(LOG_ERR, "%s:%d:ha_msg_new:out of memory."
 				,__FUNCTION__, __LINE__);
-		free_stonith_ops_t(st_op);
 		return ST_FAIL;
 	}
 	if ( (ha_msg_add(reply, F_STONITHD_TYPE, ST_APIRPL) != HA_OK ) 
@@ -1705,7 +1707,6 @@ sendback_reply:
 	    ||(ha_msg_add_int(reply, F_STONITHD_CALLID, call_id))
 		!= HA_OK ) {
 		ZAPMSG(reply);
-		free_stonith_ops_t(st_op);
 		stonithd_log(LOG_ERR, "stonithd_node_fence: cannot add field.");
 		return ST_FAIL;
 	}
@@ -1713,7 +1714,6 @@ sendback_reply:
 	if (msg2ipcchan(reply, ch) != HA_OK) {
 		ZAPCHAN(ch); /* ? */
 		ZAPMSG(reply);
-		free_stonith_ops_t(st_op);
 		stonithd_log(LOG_ERR, "stonithd_node_fence: cannot send reply "
 				"message to IPC");
 		return ST_FAIL;
@@ -1725,18 +1725,19 @@ sendback_reply:
 	} else {
 		stonithd_log(LOG_DEBUG, "stonithd_node_fence: end and "
 			    "failed to sent back a reply.");
-		free_stonith_ops_t(st_op);
 		return ST_FAIL;
 	}
 
-	if ( neednot_reboot_node == TRUE ) {
+	if ( neednot_reboot_node == TRUE ) { 
+		/* here must be api_reply==ST_APIOK */
 		st_op->op_result = STONITH_SUCCEEDED;
 		st_op->node_list = g_string_append(st_op->node_list
 						, local_nodename);
 		stonithop_result_to_local_client(st_op, ch);
+		free_stonith_ops_t(st_op);
+		st_op = NULL;
 	}
 
-	/*free_stonith_ops_t(st_op); FIXME - st_op maybe used after this*/
 	stonithd_log2(LOG_DEBUG, "stonithd_node_fence: end");
 	return ST_OK;
 }
@@ -3243,7 +3244,11 @@ adjust_debug_level(int nsig, gpointer user_data)
 
 /* 
  * $Log: stonithd.c,v $
+ * Revision 1.75  2005/11/09 02:26:10  sunjd
+ * bug 951: 2.0.2 BSC failure - stonithd hang
+ *
  * Revision 1.74  2005/11/08 17:18:58  blaschke
+ *
  * Bug 951 - Avoid freeing st_op structure whose address was stashed in
  * another structure for later.
  *
