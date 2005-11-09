@@ -137,14 +137,12 @@ stonithd_signon(const char * client_name)
 		stdlib_log(LOG_ERR, "stonithd_signon: "
 			   "cannot add field to ha_msg.");
 		ZAPMSG(request);
-		ZAPCHAN(chan);
 		return ST_FAIL;
 	}
 
 	/* Send the registration request message */
 	if (msg2ipcchan(request, chan) != HA_OK) {
 		ZAPMSG(request);
-		ZAPCHAN(chan);
 		stdlib_log(LOG_ERR, "can't send signon message to IPC");
 		return ST_FAIL;
 	}

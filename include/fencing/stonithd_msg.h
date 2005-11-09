@@ -78,12 +78,6 @@
 #define	ST_BADREQ	"badreq"
 
 #define ZAPMSG(m)       { ha_msg_del(m); (m) = NULL; }
-#define ZAPCHAN(ch)     { 					\
-				if ( (ch) != NULL ) { 		\
-					(ch)->ops->destroy(ch);	\
-	 			} 				\
-				(ch) = NULL;			\
-			}				
 
 /* free the object allocated by g_new, g_strdup and etc. */
 #define ZAPGDOBJ(m)					\
