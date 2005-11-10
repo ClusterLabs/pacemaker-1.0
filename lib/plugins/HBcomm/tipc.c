@@ -1,5 +1,5 @@
 /*
- * tipc for heartbeat
+ * tipc.c - tipc communication module for heartbeat
  * 
  * Author: Jia Ming Pan <jmltc@cn.ibm.com>
  * Copyright (c) 2005 International Business Machines
@@ -66,7 +66,7 @@ struct tipc_private {
 
 static struct hb_media *
 tipc_new(unsigned int name_type, 
-            unsigned int seq_lower, unsigned int seq_upper);
+         unsigned int seq_lower, unsigned int seq_upper);
 
 static int tipc_parse(const char * line);
 static int tipc_open(struct hb_media * mp);
@@ -129,21 +129,16 @@ tipc_new(unsigned int name_type,
 {
         struct tipc_private * tipc = NULL;
         struct hb_media * mp = NULL;
-        char * name;
 
 
         mp = MALLOC(sizeof(struct hb_media));
-        
         if ( mp == NULL ){
                 PILCallLog(LOG, PIL_CRIT, 
                            "%s: malloc failed for hb_media", __FUNCTION__);
                 return NULL;
         }
 
-        mp->name = name;
-
         tipc = MALLOC(sizeof(struct tipc_private));
-
         if ( tipc == NULL ){
                 PILCallLog(LOG, PIL_CRIT,
                            "%s: malloc failed for tipc_private", __FUNCTION__);
@@ -152,7 +147,6 @@ tipc_new(unsigned int name_type,
         }
 
         tipc->name_type = name_type;
-
         tipc->seq_lower = seq_lower;
         tipc->seq_upper = seq_upper;
 
@@ -216,7 +210,7 @@ tipc_parse(const char * line)
 
         if ( media == NULL ) {
                 PILCallLog(LOG, PIL_CRIT,
-                           "%s: alloc media failed", __FUNCTION__);
+                           "%s: Could not create media", __FUNCTION__);
                 return HA_FAIL;
         }
 
@@ -225,7 +219,7 @@ tipc_parse(const char * line)
 
         if ( media->name == NULL ) {
                 PILCallLog(LOG, PIL_CRIT,
-                           "%s: alloc media's name failed", __FUNCTION__);
+                           "%s: Could not alloc media's name", __FUNCTION__);
                 FREE(media);
                 return HA_FAIL;
         }
@@ -242,8 +236,9 @@ tipc_open(struct hb_media * mp)
         struct tipc_private * tipc = NULL;
         tipc = (struct tipc_private *) mp->pd;
 
-        PILCallLog(LOG, PIL_INFO, "%s: tipc_open called", __FUNCTION__);
-        
+
+        TIPC_ASSERT(mp);
+
         tipc->recvfd = tipc_make_receive_sock(mp);
         if ( tipc->recvfd < 0 ) {
                 PILCallLog(LOG, PIL_CRIT, "%s: Open receive socket failed",
@@ -260,7 +255,7 @@ tipc_open(struct hb_media * mp)
                 return HA_FAIL;
         }
 
-        PILCallLog(LOG, PIL_INFO, "%s: tipc_open OK", __FUNCTION__);
+        PILCallLog(LOG, PIL_INFO, "%s: Open tipc successfully", __FUNCTION__);
 
         return HA_OK;
 }
@@ -269,6 +264,8 @@ static int
 tipc_close(struct hb_media * mp)
 {
         struct tipc_private * tipc;
+
+        TIPC_ASSERT(mp);
 
         tipc = (struct tipc_private *) mp->pd;
 
@@ -283,6 +280,7 @@ tipc_close(struct hb_media * mp)
         FREE(tipc);
         FREE(mp);
 
+        PILCallLog(LOG, PIL_INFO, "%s: tipc closed", __FUNCTION__);
         return HA_OK;
 }
 
@@ -298,16 +296,19 @@ tipc_read(struct hb_media * mp, int * len)
 
         TIPC_ASSERT(mp);
 
-        /*
-        PILCallLog(LOG, PIL_INFO, "%s: reading msg", __FUNCTION__);
-        */
 
         tipc = (struct tipc_private *) mp->pd;
 
         sock_len = sizeof(struct sockaddr_tipc);
         if (( numbytes = recvfrom(tipc->recvfd, tipc_pkt, MAXMSG, 0,
-                     (struct sockaddr*)&client_addr, &sock_len)) < 0) {
-                PILCallLog(LOG, PIL_WARN, "%s: unable to read message", __FUNCTION__);
+                         (struct sockaddr*)&client_addr, &sock_len)) < 0) {
+
+                if ( errno != EINTR ) {
+                        PILCallLog(LOG, PIL_CRIT, 
+                                   "%s: Error receiving message: %s",
+                                   __FUNCTION__, strerror(errno));
+                }
+
                 return NULL;
         }
 
@@ -315,7 +316,8 @@ tipc_read(struct hb_media * mp, int * len)
         *len = numbytes + 1;
 
         if ( Debug >= PKTTRACE ) {
-                PILCallLog(LOG, PIL_INFO, "%s: Got %d bytes", __FUNCTION__, numbytes);
+                PILCallLog(LOG, PIL_INFO, "%s: Got %d bytes", 
+                           __FUNCTION__, numbytes);
         }
 
         return tipc_pkt;
@@ -339,18 +341,21 @@ tipc_write(struct hb_media * mp, void * msg, int len)
         if ( (numbytes = sendto(tipc->sendfd, msg, len, 0, 
                                 (struct sockaddr *)&tipc->maddr, 
                                 sock_len)) < 0 ){
-                PILCallLog(LOG, PIL_INFO, "%s: unable to send message", __FUNCTION__);
+                PILCallLog(LOG, PIL_CRIT, "%s: Unable to send message: %s", 
+                           __FUNCTION__, strerror(errno));
                 return HA_FAIL;
         }
 
         if ( numbytes != len ) {
-                PILCallLog(LOG, PIL_WARN, "%s: Sent %d bytes, message length is %d", 
+                PILCallLog(LOG, PIL_WARN, 
+                           "%s: Sent %d bytes, message length is %d", 
                            __FUNCTION__, numbytes, len);
                 return HA_FAIL;
         }
         
         if ( Debug >= PKTTRACE ) {
-                PILCallLog(LOG, PIL_INFO, "%s: Sent %d bytes", __FUNCTION__, numbytes);
+                PILCallLog(LOG, PIL_INFO, "%s: Sent %d bytes", 
+                           __FUNCTION__, numbytes);
         } 
 
         return HA_OK;
