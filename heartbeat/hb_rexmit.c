@@ -89,9 +89,9 @@ static void
 entry_display(gpointer key, gpointer value, gpointer user_data)
 {
 	struct rexmit_info* ri = (struct rexmit_info*)key;
-	guint  tag = (guint) value;
+	unsigned long  tag = (unsigned long) value;
 	
-	cl_log(LOG_INFO, "seq, node, nodename (%ld, %p, %s), tag = %d",
+	cl_log(LOG_INFO, "seq, node, nodename (%ld, %p, %s), tag = %ld",
 	       ri->seq, ri->node, ri->node->nodename, tag);
 }
 
@@ -188,7 +188,7 @@ send_rexmit_request( gpointer data)
 static void
 schedule_rexmit_request(struct node_info* node, seqno_t seq, int delay)    
 {
-	guint sourceid;
+	unsigned long sourceid;
 	struct rexmit_info* ri;
 	if (delay == 0){
 		srand((int)time_longclock());
@@ -240,7 +240,7 @@ remove_msg_rexmit(struct node_info *node, seqno_t seq)
 {
 	struct rexmit_info ri;
 	gpointer value;
-	guint sourceid;
+	unsigned long sourceid;
 			
 	ri.seq = seq;
 	ri.node =node;
@@ -252,7 +252,7 @@ remove_msg_rexmit(struct node_info *node, seqno_t seq)
 		       __FUNCTION__, seq);
 		return HA_FAIL;
 	}else {
-		sourceid = (guint) value;
+		sourceid = (unsigned long) value;
 		Gmain_timeout_remove(sourceid);
 		g_hash_table_remove(rexmit_hash_table, &ri);
 	}
