@@ -23,15 +23,9 @@ ra_execocf(){
 
 	ra_getpathname
 	
-	if [ ! -e $RAOCFPATH ]
-	then
-		ha_log "ERR $RAOCFPATH is not in existence"
-		exit 1
-	fi
-
 	if [ ! -x $RAOCFPATH ] 
 	then
-		ha_log "ERR $RAOCFPATH is'nt executable file "
+		ha_log "ERR $RAOCFPATH is not an executable file "
 		exit 1
 
 	fi
@@ -105,9 +99,9 @@ ra_ocfinit(){
 	setup_OCF_env_vars $RSCTYPEPAIR
 	setup_OCF_env_vars $PROVIDERPAIR
 	
-	export "OCF_RA_VERSION_MAJOR"=1
-	export "OCF_RA_VERSION_MINOR"=0
-	export "OCF_ROOT"=$OCF_ROOT_DIR
+	OCF_RA_VERSION_MAJOR=1 ; export OCF_RA_VERSION_MAJOR
+	OCF_RA_VERSION_MINOR=0 ; export OCF_RA_VERSION_MINOR
+	OCF_ROOT=$OCF_ROOT_DIR ; export OCF_ROOT
 
 	. @hb_libdir@/ocf-shellfuncs
 }
@@ -136,7 +130,8 @@ setup_OCF_prefix(){
 	hbvarvalue=`echo "$envar" | cut -d${PARAMETER_SPLIT_SIGN} -f2`
 	ocfvarname="OCF_RESKEY_${hbvarname}"
 
-	export $ocfvarname=$hbvarvalue
+	eval $ocfvarname=$hbvarvalue
+	export $ocfvarname
 }
 
 setup_OCF_env_vars(){
@@ -148,22 +143,24 @@ setup_OCF_env_vars(){
 			if [ ! -z "$hbvarvalue" ]
 			then
 				ocfvarname="OCF_RESOURCE_INSTANCE"
-				export $ocfvarname=$hbvarvalue
+				eval $ocfvarname=$hbvarvalue
+				export $ocfvarname
 			fi
 			;;
 		rsc_type)
 			if [ ! -z "hbvarvalue" ]
 			then
-				export "$1"
 				ocfvarname="OCF_RESOURCE_TYPE"
-				export $ocfvarname=$hbvarvalue
+				eval $ocfvarname=$hbvarvalue
+				export $ocfvarname
 			fi
 			;;
 		provider)
 			if [ ! -z "hbvarvalue" ]
 			then
 				ocfvarname="OCF_RESOURCE_PROVIDER"
-				export $ocfvarname=$hbvarvalue
+				eval $ocfvarname=$hbvarvalue
+				export $ocfvarname
 			fi
 			;;
 		*)
