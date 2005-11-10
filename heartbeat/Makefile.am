@@ -61,7 +61,7 @@ halib_PROGRAMS		= heartbeat findif
 heartbeat_SOURCES	= heartbeat.c auth.c				\
 			config.c \
 			ha_msg_internal.c hb_api.c hb_resource.c	\
-			hb_signal.c module.c hb_uuid.c
+			hb_signal.c module.c hb_uuid.c hb_rexmit.c
 
 heartbeat_LDADD		= $(top_builddir)/lib/stonith/libstonith.la	\
 			$(top_builddir)/lib/pils/libpils.la		\

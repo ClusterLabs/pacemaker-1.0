@@ -1,4 +1,4 @@
-/* $Id: heartbeat.h,v 1.79 2005/11/09 15:05:16 davidlee Exp $ */
+/* $Id: heartbeat.h,v 1.80 2005/11/10 01:16:42 gshi Exp $ */
 /*
  * heartbeat.h: core definitions for the Linux-HA heartbeat program
  *
@@ -413,5 +413,9 @@ int		tables_remove(const char* nodename, cl_uuid_t* uuid);
 int		GetUUID(struct sys_config*, const char*, cl_uuid_t* uuid);
 void		remove_from_dellist( const char* nodename);
 void		append_to_dellist(struct node_info* hip);
+void		request_msg_rexmit(struct node_info *node, seqno_t lowseq, seqno_t hiseq);
+int		remove_msg_rexmit(struct node_info *node, seqno_t seq);
+int		init_rexmit_hash_table(void);
+int		destroy_rexmit_hash_table(void);
 
 #endif /* _HEARTBEAT_H */

@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.469 2005/11/07 22:52:57 gshi Exp $ */
+/* $Id: heartbeat.c,v 1.470 2005/11/10 01:16:42 gshi Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -280,7 +280,6 @@
 #define FALSE_ALARM_SIG		0x0080UL
 #define MAX_MISSING_PKTS	20
 
-
 #define	ALWAYSRESTART_ON_SPLITBRAIN	1
 
 
@@ -373,8 +372,6 @@ static void	check_for_timeouts(void);
 static void	check_comm_isup(void);
 static int	send_local_status(void);
 static int	set_local_status(const char * status);
-static void	request_msg_rexmit(struct node_info *, seqno_t lowseq
-,			seqno_t hiseq);
 static void	check_rexmit_reqs(void);
 static void	mark_node_dead(struct node_info* hip);
 static void	change_link_status(struct node_info* hip, struct link *lnk
@@ -1660,7 +1657,7 @@ polled_input_dispatch(GSource* source,
 	}
 
 	/* Check to see we need to resend any rexmit requests... */
-	check_rexmit_reqs();
+	(void)check_rexmit_reqs;
  
 	/* See if our comm channels are working yet... */
 	if (heartbeat_comm_state != COMM_LINKSUP) {
@@ -5322,6 +5319,9 @@ is_lost_packet(struct node_info * thisnode, seqno_t seq)
 	for (j=0; j < t->nmissing; ++j) {
 		/* Is this one of our missing packets? */
 		if (seq == t->seqmissing[j]) {
+			
+			remove_msg_rexmit(thisnode, seq);
+
 			/* Yes.  Delete it from the list */
 			t->seqmissing[j] = NOSEQUENCE;
 			/* Did we delete the last one on the list */
@@ -5384,60 +5384,12 @@ is_lost_packet(struct node_info * thisnode, seqno_t seq)
 			send_ack_if_needed(thisnode, ack_seq);
 		}
 		
-	}else if (t->first_missing_seq != 0){
-#if 0
-		if (ANYDEBUG){
-			cl_log(LOG_INFO, "calling request_msg_rexmit()"
-			       "from %s", __FUNCTION__);
-		}
-		request_msg_rexmit(thisnode, t->first_missing_seq, t->first_missing_seq);
-#endif
-
 	}
+
 	return ret;
 	
 }
 
-
-static void
-request_msg_rexmit(struct node_info *node, seqno_t lowseq
-,	seqno_t hiseq)
-{
-	struct ha_msg*	hmsg;
-	char		low[16];
-	char		high[16];
-
-	if(ANYDEBUG){
-		cl_log(LOG_INFO, "requesting for retransmission from node %s"
-		"[%ld-%ld]",
-		node->nodename,lowseq, hiseq);
-	}
-
-	if ((hmsg = ha_msg_new(6)) == NULL) {
-		cl_log(LOG_ERR, "no memory for " T_REXMIT);
-		return;
-	}
-
-	snprintf(low, sizeof(low), "%lu", lowseq);
-	snprintf(high, sizeof(high), "%lu", hiseq);
-
-
-	if (	ha_msg_add(hmsg, F_TYPE, T_REXMIT) == HA_OK
-	&&	ha_msg_add(hmsg, F_TO, node->nodename)==HA_OK
-	&&	ha_msg_add(hmsg, F_FIRSTSEQ, low) == HA_OK
-	&&	ha_msg_add(hmsg, F_LASTSEQ, high) == HA_OK) {
-		/* Send a re-transmit request */
-		if (send_cluster_msg(hmsg) != HA_OK) {
-			cl_log(LOG_ERR, "cannot send " T_REXMIT
-			" request to %s", node->nodename);
-		}
-		node->track.last_rexmit_req = time_longclock();
-		
-	}else{
-		ha_msg_del(hmsg);
-		cl_log(LOG_ERR, "Cannot create " T_REXMIT " message.");
-	}
-}
 
 #define REXMIT_MS		1000
 #define ACCEPT_REXMIT_REQ_MS	(REXMIT_MS-10)
@@ -6064,6 +6016,18 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.470  2005/11/10 01:16:42  gshi
+ * bug 693: Spread out load for packet retransmission requests
+ *
+ * Each time a missing packet is detected, a timeout event is scheduled
+ * with a random delay between 0~MAX_REXMIT_DELAY(250ms). If the missing message
+ * is received before the timeout event happens, the timeout event is cancelled.
+ * Otherwise, in the timeout event function call, a rexmit request is sent to
+ * the source node and a new timeout event is scheduled (with delay MAX_REXMIT_DELAY).
+ * The current timeout will be removed from mainloop by returning FALSE.
+ *
+ * The previous periodic check for missing packets is disabled.
+ *
  * Revision 1.469  2005/11/07 22:52:57  gshi
  * fixed a few bugs related to deletion:
  *
