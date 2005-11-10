@@ -137,7 +137,8 @@ ccm_control_process(ccm_info_t *info, ll_cluster_t * hb)
 			ha_msg_del(msg);
 			msg = newmsg;
 		} else if(strcasecmp(type, T_STATUS) == 0){
-			
+			const char* nodetype;
+
 			cl_log_message(LOG_DEBUG, msg);
 			if (llm_is_valid_node(&info->llm, orig)){
 
@@ -149,6 +150,19 @@ ccm_control_process(ccm_info_t *info, ll_cluster_t * hb)
 				}
 				
 				ha_msg_del(msg);
+				return TRUE;
+			}
+			
+			nodetype = hb->llc_ops->node_type(hb, orig);
+			if (nodetype == NULL){
+				cl_log(LOG_ERR, "%s: get node %s's type failed",
+				       __FUNCTION__, orig);
+				return TRUE;
+			}
+			
+			if (STRNCMP_CONST(nodetype, NORMALNODE) !=0 ){
+				cl_log(LOG_ERR, "%s: wrong node type(%s) for node %s",
+				       __FUNCTION__, nodetype, orig);
 				return TRUE;
 			}
 			
