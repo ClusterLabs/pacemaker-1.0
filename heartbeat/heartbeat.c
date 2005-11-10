@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.470 2005/11/10 01:16:42 gshi Exp $ */
+/* $Id: heartbeat.c,v 1.471 2005/11/10 22:44:29 gshi Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -5136,10 +5136,6 @@ should_drop_message(struct node_info * thisnode, const struct ha_msg *msg,
 			cl_log(LOG_ERR, "lost a lot of packets!");
 			return (IsToUs ? KEEPIT : DROPIT);
 		}else{
-			if (ANYDEBUG){
-				cl_log(LOG_INFO, "calling request_msg_rexmit()"
-				       "from %s", __FUNCTION__);
-			}
 			request_msg_rexmit(thisnode, t->last_seq+1L, seq-1L);
 		}
 
@@ -6016,6 +6012,9 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.471  2005/11/10 22:44:29  gshi
+ * remove one debug message
+ *
  * Revision 1.470  2005/11/10 01:16:42  gshi
  * bug 693: Spread out load for packet retransmission requests
  *
