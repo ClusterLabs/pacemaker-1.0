@@ -161,8 +161,6 @@ ccm_control_process(ccm_info_t *info, ll_cluster_t * hb)
 			}
 			
 			if (STRNCMP_CONST(nodetype, NORMALNODE) !=0 ){
-				cl_log(LOG_ERR, "%s: wrong node type(%s) for node %s",
-				       __FUNCTION__, nodetype, orig);
 				return TRUE;
 			}
 			
