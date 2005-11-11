@@ -1,4 +1,4 @@
-/* $Id: stonithd.c,v 1.76 2005/11/09 08:18:38 sunjd Exp $ */
+/* $Id: stonithd.c,v 1.77 2005/11/11 10:06:01 sunjd Exp $ */
 
 /* File: stonithd.c
  * Description: STONITH daemon for node fencing
@@ -1960,6 +1960,13 @@ stonithop_result_to_local_client( stonith_ops_t * st_op, gpointer data)
 		return ST_FAIL;
 	}
 
+	if ( (client = get_exist_client_by_chan(client_list, ch)) == NULL ) {
+		/* Here the ch are already destroyed */
+		stonithd_log(LOG_NOTICE, "It seems the client signed off, who "
+			"raised the operation. So won't send out the result.");
+		return ST_OK;
+	}
+
 	if (st_op->op_result == STONITH_SUCCEEDED ) {
 		stonithd_log(LOG_INFO, "%s %s: optype=%d. whodoit: %s"
 			,	M_STONITH_SUCCEED
@@ -1967,9 +1974,7 @@ stonithop_result_to_local_client( stonith_ops_t * st_op, gpointer data)
 			,	((GString *)(st_op->node_list))->str);
 		
 		if ( st_op->optype == 1 ) { /* RESET */
-			client = get_exist_client_by_chan(client_list, ch);
-			if (  (client != NULL) 
-			    && (0 == STRNCMP_CONST(client->name, "apitest") )) {
+			if (0 == STRNCMP_CONST(client->name, "apitest")) {
 				broadcast_reset_success(st_op->node_name);
 			}
 		}
@@ -2505,6 +2510,7 @@ send_stonithRAop_final_result( stonithRA_ops_t * ra_op, gpointer data)
 {
 	struct ha_msg * reply = NULL;
 	IPC_Channel * ch = (IPC_Channel *)data;
+	stonithd_client_t * client = NULL;
 
 	stonithd_log2(LOG_DEBUG, "send_stonithRAop_final_result: begin.");
 	if ( ra_op == NULL || data == NULL ) {
@@ -2515,6 +2521,14 @@ send_stonithRAop_final_result( stonithRA_ops_t * ra_op, gpointer data)
 
 	stonithd_log(LOG_DEBUG, "RA %s's op %s finished.", 
 		     ra_op->ra_name, ra_op->op_type);
+
+	if ( (client = get_exist_client_by_chan(client_list, ch)) == NULL ) {
+		/* Here the ch are already destroyed */
+		stonithd_log(LOG_NOTICE, "It seems the client signed off, who "
+			"raised the operation. So won't send out the result.");
+		return ST_OK;
+	}
+
 	if ((reply = ha_msg_new(0)) == NULL) {
 		stonithd_log(LOG_ERR, "%s:%d:ha_msg_new:out of memory."
 				,__FUNCTION__, __LINE__);
@@ -3237,6 +3251,9 @@ adjust_debug_level(int nsig, gpointer user_data)
 
 /* 
  * $Log: stonithd.c,v $
+ * Revision 1.77  2005/11/11 10:06:01  sunjd
+ * Fix the bug 730: stonithd is killed by signal 11
+ *
  * Revision 1.76  2005/11/09 08:18:38  sunjd
  * remove ZAPCHAN as gshi's suggestion, since it's not needed and perhaps casue bug 730
  *
