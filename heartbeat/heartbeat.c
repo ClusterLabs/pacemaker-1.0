@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.471 2005/11/10 22:44:29 gshi Exp $ */
+/* $Id: heartbeat.c,v 1.472 2005/11/11 23:33:27 gshi Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -825,16 +825,7 @@ initialize_heartbeat()
 			cl_log(LOG_DEBUG, "opening %s %s (%s)", smj->type
 			,	smj->name, smj->description);
 		}
-		if (smj->vf->open(smj) != HA_OK) {
-			cl_log(LOG_ERR, "cannot open %s %s"
-			,	smj->type
-			,	smj->name);
-			return HA_FAIL;
-		}
-		if (ANYDEBUG) {
-			cl_log(LOG_DEBUG, "%s channel %s now open..."
-			,	smj->type, smj->name);
-		}
+		
 	}
 
  	PILSetDebugLevel(PluginLoadingSystem, NULL, NULL, debug_level);
@@ -870,8 +861,15 @@ initialize_heartbeat()
 
 	for (j=0; j < nummedia; ++j) {
 		struct hb_media* mp = sysmedia[j];
-
+		
 		ourproc = procinfo->nprocs;
+		
+		if (mp->vf->open(mp) != HA_OK){
+			cl_log(LOG_ERR, "cannot open %s %s",
+			       mp->type,
+			       mp->name);
+			return HA_FAIL;
+		}
 
 		switch ((pid=fork())) {
 			case -1:	cl_perror("Can't fork write proc.");
@@ -930,6 +928,14 @@ initialize_heartbeat()
 		}
 		NewTrackedProc(pid, 0, PT_LOGVERBOSE, GINT_TO_POINTER(ourproc)
 		,	&CoreProcessTrackOps);
+
+		
+		if (mp->vf->close(mp) != HA_OK){
+			cl_log(LOG_ERR, "cannot open %s %s",
+			       mp->type,
+			       mp->name);
+			return HA_FAIL;
+		}
 	}
 
 
@@ -6012,6 +6018,9 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.472  2005/11/11 23:33:27  gshi
+ * bug 929: Read / Write child processes should not have access to unneeded file descriptors
+ *
  * Revision 1.471  2005/11/10 22:44:29  gshi
  * remove one debug message
  *
