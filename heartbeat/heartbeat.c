@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.472 2005/11/11 23:33:27 gshi Exp $ */
+/* $Id: heartbeat.c,v 1.473 2005/11/12 18:32:22 lars Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -931,7 +931,7 @@ initialize_heartbeat()
 
 		
 		if (mp->vf->close(mp) != HA_OK){
-			cl_log(LOG_ERR, "cannot open %s %s",
+			cl_log(LOG_ERR, "cannot close %s %s",
 			       mp->type,
 			       mp->name);
 			return HA_FAIL;
@@ -6018,6 +6018,9 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.473  2005/11/12 18:32:22  lars
+ * Fix a log message.
+ *
  * Revision 1.472  2005/11/11 23:33:27  gshi
  * bug 929: Read / Write child processes should not have access to unneeded file descriptors
  *
