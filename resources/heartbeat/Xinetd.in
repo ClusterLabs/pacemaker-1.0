@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $Id: Xinetd.in,v 1.4 2005/11/03 07:45:51 xunsun Exp $
+# $Id: Xinetd.in,v 1.5 2005/11/13 17:16:43 davidlee Exp $
 #
 # Description:	wrapper of OCF RA Xinetd, based on original heartbeat RA.
 #		See OCF RA Xinetd for more information.
@@ -27,7 +27,7 @@ if [ $# -ne 2 ]; then
 fi 
 
 # Make sure the first parameter is a valid xinetd service name
-if ! [ -f $RCFILE ]; then
+if [ ! -f $RCFILE ]; then
     echo "ERROR:  Service descriptor $RCFILE not found!"
     xup_usage
     exit 1
