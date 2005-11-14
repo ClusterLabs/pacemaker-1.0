@@ -150,6 +150,7 @@ setup_OCF_env_vars(){
 		rsc_type)
 			if [ ! -z "hbvarvalue" ]
 			then
+				rsc_type=$hbvarvalue
 				ocfvarname="OCF_RESOURCE_TYPE"
 				eval $ocfvarname=$hbvarvalue
 				export $ocfvarname
