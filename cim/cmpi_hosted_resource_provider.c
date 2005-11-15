@@ -1,5 +1,5 @@
 /*
- * CIM Provider - provider for LinuxHA_HostedResource
+ * cmpi_hosted_resource_provider.c: LinuxHA_HostedResource provider
  * 
  * Author: Jia Ming Pan <jmltc@cn.ibm.com>
  * Copyright (c) 2005 International Business Machines
@@ -20,112 +20,85 @@
  *
  */
 
-
+#include <portability.h>
+#ifdef HAVE_CONFIG_H
+#include <config.h>
+#endif
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include <sys/stat.h>
 #include <sys/types.h>
-
 #include <cmpidt.h>
 #include <cmpift.h>
 #include <cmpimacs.h>
-
 #include "cmpi_utils.h"
 #include "cmpi_cluster.h"
 #include "cmpi_node.h"
 #include "cmpi_hosted_resource.h"
 #include "linuxha_info.h"
 
-
-#define PROVIDER_ID "cim-hosted-res"
-
-static CMPIBroker * Broker      = NULL;
-static char ClassName []        = "LinuxHA_HostedResource"; 
-
-static char node_ref []                 = REF_NODE;
-static char resource_ref []             = REF_RESOURCE; 
-static char node_class_name []          = NODE_CLASSNAME; 
-static char resource_class_name []      = RESOURCE_CLASSNAME;
-
-
-
+#define PROVIDER_ID                "cim-hosted-res"
+static CMPIBroker * Broker         = NULL;
+static char ClassName           [] = "LinuxHA_HostedResource"; 
+static char node_ref            [] = REF_NODE;
+static char resource_ref        [] = REF_RESOURCE; 
+static char node_class_name     [] = NODE_CLASSNAME; 
+static char resource_class_name [] = RESOURCE_CLASSNAME;
 
 /***************** instance interfaces *******************/
 CMPIStatus 
 HostedResource_Cleanup(CMPIInstanceMI* mi, CMPIContext* ctx);
-
 CMPIStatus 
 HostedResource_EnumInstanceNames(CMPIInstanceMI * mi,
                 CMPIContext * ctx, CMPIResult * rslt, CMPIObjectPath * ref);
-        
 CMPIStatus 
 HostedResource_EnumInstances(CMPIInstanceMI * mi,
                 CMPIContext * ctx, CMPIResult * rslt,
                 CMPIObjectPath * ref, char ** properties);
-
 CMPIStatus 
 HostedResource_GetInstance(CMPIInstanceMI * mi,
                 CMPIContext * ctx, CMPIResult * rslt,
                 CMPIObjectPath * cop, char ** properties);
-
 CMPIStatus 
 HostedResource_CreateInstance(CMPIInstanceMI * mi,
                 CMPIContext * ctx, CMPIResult * rslt,
                 CMPIObjectPath * cop, CMPIInstance * ci);
-
 CMPIStatus 
 HostedResource_SetInstance(CMPIInstanceMI * mi,
                 CMPIContext * ctx, CMPIResult * rslt,
                 CMPIObjectPath * cop, CMPIInstance * ci, char ** properties);
-
 CMPIStatus 
 HostedResource_DeleteInstance(CMPIInstanceMI * mi,
                 CMPIContext * ctx, CMPIResult * rslt, CMPIObjectPath * cop);
-
 CMPIStatus 
 HostedResource_ExecQuery(CMPIInstanceMI * mi,
                 CMPIContext * ctx, CMPIResult * rslt,
                 CMPIObjectPath * ref, char * lang, char * query);
 
 /*********************** association interfaces ***********************/
-
 CMPIStatus 
 HostedResource_AssociationCleanup(CMPIAssociationMI * mi, 
-                        CMPIContext * ctx);
+                CMPIContext * ctx);
 
 CMPIStatus
-HostedResource_Associators(
-                CMPIAssociationMI * mi, CMPIContext * ctx, CMPIResult * rslt,
-                CMPIObjectPath * op, const char * asscClass, 
-                const char * resultClass,
+HostedResource_Associators(CMPIAssociationMI * mi, CMPIContext * ctx, 
+                CMPIResult * rslt, CMPIObjectPath * op, 
+                const char * asscClass, const char * resultClass,
                 const char * role, const char * resultRole, char ** properties);
-
 CMPIStatus
-HostedResource_AssociatorNames(
-                CMPIAssociationMI * mi, CMPIContext * ctx, CMPIResult * rslt,
-                CMPIObjectPath * op, const char * asscClass, 
-                const char * resultClass,
+HostedResource_AssociatorNames(CMPIAssociationMI * mi, CMPIContext * ctx, 
+                CMPIResult * rslt, CMPIObjectPath * op, 
+                const char * asscClass, const char * resultClass,
                 const char * role, const char * resultRole);
-
 CMPIStatus
-HostedResource_References(
-                CMPIAssociationMI * mi, CMPIContext * ctx, CMPIResult * rslt,
-                CMPIObjectPath * op, const char * resultClass,
+HostedResource_References(CMPIAssociationMI * mi, CMPIContext * ctx, 
+                CMPIResult * rslt,CMPIObjectPath * op, const char * resultClass,
                 const char * role, char ** properties);
-
 CMPIStatus
 HostedResource_ReferenceNames(CMPIAssociationMI * mi,
                 CMPIContext * ctx, CMPIResult * rslt, CMPIObjectPath * cop,
                 const char * assocClass, const char * role);
-
-
-CMPIAssociationMI * 
-LinuxHA_HostedResourceProvider_Create_AssociationMI(CMPIBroker * brkr, 
-                                CMPIContext * ctx); 
-CMPIInstanceMI * 
-LinuxHA_HostedResourceProvider_Create_InstanceMI(CMPIBroker * brkr, 
-                                CMPIContext * ctx); 
 
 /**********************************************
  * Instance Provider Interface
@@ -137,82 +110,65 @@ HostedResource_Cleanup(CMPIInstanceMI * mi, CMPIContext * ctx)
         CMReturn(CMPI_RC_OK);
 }
 
-
 CMPIStatus 
-HostedResource_EnumInstanceNames(CMPIInstanceMI * mi,
-                CMPIContext* ctx, CMPIResult * rslt, CMPIObjectPath * ref)
+HostedResource_EnumInstanceNames(CMPIInstanceMI * mi, CMPIContext* ctx, 
+                                 CMPIResult * rslt, CMPIObjectPath * ref)
 {
 
         CMPIStatus rc = {CMPI_RC_OK, NULL};
         int ret = 0;
-
         init_logger(PROVIDER_ID);
-
         DEBUG_ENTER();
-        ret = assoc_enumerate_instances(Broker, ClassName, 
-                        node_ref, resource_ref, 
-                        node_class_name, resource_class_name,
-                        ctx, rslt, ref, 
-                        &node_host_resource, 0, &rc);
-
+        ret = enum_inst_assoc(Broker, ClassName, node_ref, resource_ref, 
+                              node_class_name, resource_class_name,
+                              ctx, rslt, ref, &node_host_resource, 0, &rc);
         DEBUG_LEAVE();
-
         if ( ret != HA_OK ){
                 return rc;
         }
-
         CMReturn(CMPI_RC_OK);
 }
 
 
 CMPIStatus 
-HostedResource_EnumInstances(CMPIInstanceMI * mi,
-                CMPIContext * ctx, CMPIResult * rslt,
-                CMPIObjectPath * ref, char ** properties)
+HostedResource_EnumInstances(CMPIInstanceMI * mi, CMPIContext * ctx, 
+                             CMPIResult * rslt, CMPIObjectPath * ref, 
+                             char ** properties)
 {
         CMPIStatus rc = {CMPI_RC_OK, NULL};
         int ret = 0;
 
         init_logger(PROVIDER_ID);
-
         DEBUG_ENTER();
-
-        ret = assoc_enumerate_instances(Broker, ClassName, 
-                        node_ref, resource_ref, 
-                        node_class_name, resource_class_name,
-                        ctx, rslt, ref, 
-                        &node_host_resource, 1, &rc);
-
+        ret = enum_inst_assoc(Broker, ClassName, node_ref, resource_ref, 
+                              node_class_name, resource_class_name,
+                              ctx, rslt, ref, &node_host_resource, 1, &rc);
+        
         DEBUG_LEAVE();
-
         if ( ret != HA_OK ){
                 return rc;
         }
-
         CMReturn(CMPI_RC_OK);
 
 }
 
 
 CMPIStatus 
-HostedResource_GetInstance(CMPIInstanceMI * mi,
-                CMPIContext * ctx, CMPIResult * rslt,
-                CMPIObjectPath * cop, char ** properties)
+HostedResource_GetInstance(CMPIInstanceMI * mi, CMPIContext * ctx, 
+                           CMPIResult * rslt, CMPIObjectPath * cop, 
+                           char ** properties)
 {
 
         CMPIStatus rc = {CMPI_RC_OK, NULL};
         int ret = 0;
-
         init_logger(PROVIDER_ID);
 
         DEBUG_ENTER();
-        ret = assoc_get_instance(Broker, ClassName, 
-                        node_ref, resource_ref, 
-                        node_class_name, resource_class_name,
-                        ctx, rslt, cop, &rc);
+        ret = get_inst_assoc(Broker, ClassName, node_ref, resource_ref, 
+                             node_class_name, resource_class_name,
+                             ctx, rslt, cop, &rc);
 
         DEBUG_LEAVE();
-
         if ( ret != HA_OK ){
                 return rc;
         }
@@ -221,9 +177,9 @@ HostedResource_GetInstance(CMPIInstanceMI * mi,
 }
 
 CMPIStatus 
-HostedResource_CreateInstance(CMPIInstanceMI * mi,
-                CMPIContext * ctx, CMPIResult * rslt,
-                CMPIObjectPath * cop, CMPIInstance * ci)
+HostedResource_CreateInstance(CMPIInstanceMI * mi, CMPIContext * ctx, 
+                              CMPIResult * rslt, CMPIObjectPath * cop, 
+                              CMPIInstance * ci)
 {
         CMPIStatus rc = {CMPI_RC_OK, NULL};
         CMSetStatusWithChars(Broker, &rc, 
@@ -233,9 +189,9 @@ HostedResource_CreateInstance(CMPIInstanceMI * mi,
 
 
 CMPIStatus 
-HostedResource_SetInstance(CMPIInstanceMI * mi,
-                CMPIContext * ctx, CMPIResult * rslt,
-                CMPIObjectPath * cop, CMPIInstance * ci, char ** properties)
+HostedResource_SetInstance(CMPIInstanceMI * mi, CMPIContext * ctx, 
+                           CMPIResult * rslt, CMPIObjectPath * cop, 
+                           CMPIInstance * ci, char ** properties)
 {
         CMPIStatus rc = {CMPI_RC_OK, NULL};
         CMSetStatusWithChars(Broker, &rc, 
@@ -246,8 +202,8 @@ HostedResource_SetInstance(CMPIInstanceMI * mi,
 
 
 CMPIStatus 
-HostedResource_DeleteInstance(CMPIInstanceMI * mi,
-                CMPIContext * ctx, CMPIResult * rslt, CMPIObjectPath * cop)
+HostedResource_DeleteInstance(CMPIInstanceMI * mi, CMPIContext * ctx, 
+                              CMPIResult * rslt, CMPIObjectPath * cop)
 {
         CMPIStatus rc = {CMPI_RC_OK, NULL};
         CMSetStatusWithChars(Broker, &rc, 
@@ -256,9 +212,9 @@ HostedResource_DeleteInstance(CMPIInstanceMI * mi,
 }
 
 CMPIStatus 
-HostedResource_ExecQuery(CMPIInstanceMI * mi,
-                CMPIContext * ctx, CMPIResult * rslt, CMPIObjectPath *ref,
-                char * lang, char * query)
+HostedResource_ExecQuery(CMPIInstanceMI * mi, CMPIContext * ctx, 
+                         CMPIResult * rslt, CMPIObjectPath *ref,
+                         char * lang, char * query)
 {
         CMPIStatus rc = {CMPI_RC_OK, NULL};
         CMSetStatusWithChars(Broker, &rc, 
@@ -272,124 +228,97 @@ HostedResource_ExecQuery(CMPIInstanceMI * mi,
  ****************************************************/
 CMPIStatus 
 HostedResource_AssociationCleanup(CMPIAssociationMI * mi, 
-                        CMPIContext * ctx)
+                                  CMPIContext * ctx)
 {
         CMReturn(CMPI_RC_OK);
 }
 
 CMPIStatus
-HostedResource_Associators(
-                CMPIAssociationMI * mi, CMPIContext * ctx, CMPIResult * rslt,
-                CMPIObjectPath * cop, const char * assocClass, 
-                const char * resultClass,
-                const char * role, const char * resultRole, char ** properties)
+HostedResource_Associators(CMPIAssociationMI * mi, CMPIContext * ctx, 
+                           CMPIResult * rslt, CMPIObjectPath * cop, 
+                           const char * assocClass,  const char * resultClass,
+                           const char * role, const char * resultRole, 
+                           char ** properties)
 {
         CMPIStatus rc = {CMPI_RC_OK, NULL};
         int ret = 0;
-
         init_logger(PROVIDER_ID);
-
         DEBUG_ENTER();
-
-        ret = assoc_enumerate_associators(Broker, ClassName, 
-                        node_ref, resource_ref,
-                        node_class_name, resource_class_name, 
-                        ctx, rslt, cop, assocClass,
-                        resultClass, role, resultRole, 
-                        &node_host_resource, 1, &rc); 
+        ret = enum_associators(Broker, ClassName, node_ref, resource_ref,
+                               node_class_name, resource_class_name, 
+                               ctx, rslt, cop, assocClass,
+                               resultClass, role, resultRole, 
+                               &node_host_resource, 1, &rc); 
         
         DEBUG_LEAVE();
-
         if ( ret != HA_OK ){
                 return rc;
         }
-
         CMReturn(CMPI_RC_OK);
 }
 
 
 CMPIStatus
-HostedResource_AssociatorNames(
-                CMPIAssociationMI * mi, CMPIContext * ctx, CMPIResult * rslt,
-                CMPIObjectPath * cop, const char * assocClass, 
-                const char * resultClass,
-                const char * role, const char * resultRole)
+HostedResource_AssociatorNames(CMPIAssociationMI * mi, CMPIContext * ctx, 
+                               CMPIResult * rslt, CMPIObjectPath * cop, 
+                               const char * assocClass, const char * resultClass,
+                               const char * role, const char * resultRole)
 {
-
         CMPIStatus rc = {CMPI_RC_OK, NULL};
         int ret = 0;
-        
         init_logger(PROVIDER_ID);
-
         DEBUG_ENTER();
-
-        ret = assoc_enumerate_associators(Broker, ClassName, 
-                        node_ref, resource_ref,
-                        node_class_name, resource_class_name, 
-                        ctx, rslt, cop, assocClass,
-                        resultClass, role, resultRole, 
-                        &node_host_resource, 0, &rc); 
-
+        ret = enum_associators(Broker, ClassName, node_ref, resource_ref,
+                               node_class_name, resource_class_name, 
+                               ctx, rslt, cop, assocClass,
+                               resultClass, role, resultRole, 
+                               &node_host_resource, 0, &rc); 
 
         DEBUG_LEAVE();
-
         if ( ret != HA_OK ){
                 return rc;
         }
-
         CMReturn(CMPI_RC_OK);
 }
 
 CMPIStatus
-HostedResource_References(
-                CMPIAssociationMI * mi, CMPIContext * ctx, CMPIResult * rslt,
-                CMPIObjectPath * cop, const char * resultClass,
-                const char * role, char ** properties)
+HostedResource_References(CMPIAssociationMI * mi, CMPIContext * ctx, 
+                          CMPIResult * rslt, CMPIObjectPath * cop, 
+                          const char * resultClass, const char * role, 
+                          char ** properties)
 {
         CMPIStatus rc = {CMPI_RC_OK, NULL};
         int ret = 0;
-
         init_logger(PROVIDER_ID);
-
         DEBUG_ENTER();
-        ret = assoc_enumerate_references(Broker, ClassName, 
-                        node_ref, resource_ref, 
-                        node_class_name, resource_class_name,
-                        ctx, rslt, cop, resultClass, role,
-                        &node_host_resource, 1, &rc);
-
+        ret = enum_references(Broker, ClassName, node_ref, resource_ref, 
+                              node_class_name, resource_class_name,
+                              ctx, rslt, cop, resultClass, role,
+                              &node_host_resource, 1, &rc);
 
         DEBUG_LEAVE();
-
         if ( ret != HA_OK ){
                 return rc;
         }
-
         CMReturn(CMPI_RC_OK);
-
 }
 
 CMPIStatus
-HostedResource_ReferenceNames(
-                CMPIAssociationMI * mi, CMPIContext * ctx, 
-                CMPIResult * rslt, CMPIObjectPath * cop,
-                const char * resultClass, const char * role)
+HostedResource_ReferenceNames(CMPIAssociationMI * mi, CMPIContext * ctx, 
+                              CMPIResult * rslt, CMPIObjectPath * cop,
+                              const char * resultClass, const char * role)
 {
         CMPIStatus rc = {CMPI_RC_OK, NULL};
         int ret = 0;
-
         init_logger(PROVIDER_ID);
 
         DEBUG_ENTER();
-        ret = assoc_enumerate_references(Broker, ClassName, 
-                        node_ref, resource_ref, 
-                        node_class_name, resource_class_name,
-                        ctx, rslt, cop, resultClass, role,
-                        &node_host_resource, 0, &rc);
+        ret = enum_references(Broker, ClassName, node_ref, resource_ref, 
+                              node_class_name, resource_class_name,
+                              ctx, rslt, cop, resultClass, role,
+                              &node_host_resource, 0, &rc);
         
-
         DEBUG_LEAVE();
-
         if ( ret != HA_OK ){
                 return rc;
         }
@@ -398,67 +327,6 @@ HostedResource_ReferenceNames(
 
 }                
 
-/**************************************************************
- *      install stub
- *************************************************************/
 
-
-static char inst_provider_name[] = "instanceHostedResource_provider";
-
-static CMPIInstanceMIFT instMIFT = {
-        CMPICurrentVersion,
-        CMPICurrentVersion,
-        inst_provider_name,
-        HostedResource_Cleanup,
-        HostedResource_EnumInstanceNames,
-        HostedResource_EnumInstances,
-        HostedResource_GetInstance,
-        HostedResource_CreateInstance,
-        HostedResource_SetInstance, 
-        HostedResource_DeleteInstance,
-        HostedResource_ExecQuery
-};
-
-CMPIInstanceMI * 
-LinuxHA_HostedResourceProvider_Create_InstanceMI(CMPIBroker * brkr, 
-        CMPIContext * ctx)
-{
-        static CMPIInstanceMI mi = {
-                NULL,
-                &instMIFT
-        };
-        Broker = brkr;
-        return &mi;
-}
-
-
-/******************************************************************************/
-
-static char assoc_provider_name[] = "assocationHostedResourceProvider";
-
-static CMPIAssociationMIFT assocMIFT = {
-        CMPICurrentVersion,
-        CMPICurrentVersion,
-        assoc_provider_name,
-        HostedResource_AssociationCleanup,
-        HostedResource_Associators,
-        HostedResource_AssociatorNames,
-        HostedResource_References,
-        HostedResource_ReferenceNames
-
-};
-
-CMPIAssociationMI *
-LinuxHA_HostedResourceProvider_Create_AssociationMI(CMPIBroker * brkr, 
-                CMPIContext * ctx)
-{
-        static CMPIAssociationMI mi = {
-                NULL,
-                &assocMIFT
-        };
-
-        Broker = brkr;
-        return &mi;
-}
-
-
+DeclareInstanceMI(HostedResource_, LinuxHA_HostedResourceProvider, Broker);
+DeclareAssociationMI(HostedResource_, LinuxHA_HostedResourceProvider, Broker);

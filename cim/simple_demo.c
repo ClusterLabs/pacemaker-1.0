@@ -96,7 +96,8 @@ int main(void)
         free_res_list(list);
 */
         root = get_res_tree ();
-        g_node_traverse( root, G_POST_ORDER, 0x3, 10, tree_print_for_each, NULL);   
+        g_node_traverse( root, G_POST_ORDER, (GTraverseFlags) 0x3, 10, 
+                         tree_print_for_each, NULL);   
         return 0;
 
 }

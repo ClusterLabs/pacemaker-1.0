@@ -1,5 +1,5 @@
 /*
- * CIM Provider - 
+ * cmpi_node.c: helper file for LinuxHA_ClusterNode class provider 
  * 
  * Author: Jia Ming Pan <jmltc@cn.ibm.com>
  * Copyright (c) 2005 International Business Machines
@@ -22,15 +22,12 @@
 
 
 #include <portability.h>
-
 #ifdef HAVE_CONFIG_H
 #include <config.h>
 #endif
-
 #include <sys/types.h>
 #include <unistd.h>
 #include <glib.h>
-
 #include <clplumbing/cl_malloc.h>
 
 #include "linuxha_info.h"
@@ -51,7 +48,6 @@ static int hb_nodeinfo_free(struct hb_nodeinfo * node_info);
 static CMPIInstance * 
 make_node_instance(char * classname, CMPIBroker * broker, CMPIObjectPath * op, 
                    char * uname, CMPIStatus * rc);
-
 
 static char *
 get_cluster_dc ()
@@ -243,6 +239,7 @@ make_node_instance(char * classname, CMPIBroker * broker,
         char * status = NULL;
         char * active_status = NULL;
         char * uuid = NULL;
+        char caption [] = "LinuxHA Cluster Node";
         int i;
 
         DEBUG_ENTER();
@@ -250,9 +247,9 @@ make_node_instance(char * classname, CMPIBroker * broker,
         nodeinfo_table = get_nodeinfo_table();
         
         if ( nodeinfo_table == NULL ) {
-                cl_log(LOG_ERR, "%s: can not get node info", __FUNCTION__);
+                cl_log(LOG_ERR, "%s: could not get node info", __FUNCTION__);
                 CMSetStatusWithChars(broker, rc,
-                       CMPI_RC_ERR_FAILED, "Can't get node info");
+                       CMPI_RC_ERR_FAILED, "Could not get node information");
                 return NULL;
         }       
 
@@ -281,7 +278,7 @@ make_node_instance(char * classname, CMPIBroker * broker,
 
         if ( CMIsNullObject(ci) ) {
                 CMSetStatusWithChars(broker, rc,
-                       CMPI_RC_ERR_FAILED, "Can't create instance");
+                       CMPI_RC_ERR_FAILED, "Create instance failed");
 
                 goto out;
         }
@@ -299,6 +296,7 @@ make_node_instance(char * classname, CMPIBroker * broker,
         CMSetProperty(ci, "UUID", uuid, CMPI_chars);
         CMSetProperty(ci, "Status", status, CMPI_chars);
         CMSetProperty(ci, "ActiveStatus", active_status, CMPI_chars);
+        CMSetProperty(ci, "Caption", caption, CMPI_chars);
 
         if ( dc ) {
                 if ( strncmp(dc, uname, strlen(uname)) == 0){
@@ -331,10 +329,10 @@ out:
 
 
 int
-get_clusternode_instance(char * classname, CMPIBroker * broker, 
-                         CMPIContext * ctx, CMPIResult * rslt, 
-                         CMPIObjectPath * cop, char ** properties, 
-                         CMPIStatus * rc)
+get_node_instance(char * classname, CMPIBroker * broker, 
+                  CMPIContext * ctx, CMPIResult * rslt, 
+                  CMPIObjectPath * cop, char ** properties, 
+                  CMPIStatus * rc)
 {
         CMPIObjectPath * op = NULL;
         CMPIData data_uname;
@@ -379,10 +377,10 @@ out:
 }
 
 int 
-enumerate_clusternode_instances(char * classname, CMPIBroker * broker,
-                                CMPIInstanceMI * mi, CMPIContext * ctx, 
-                                CMPIResult * rslt, CMPIObjectPath * ref, 
-                                int enum_inst, CMPIStatus * rc)
+enum_node_instances(char * classname, CMPIBroker * broker,
+                    CMPIInstanceMI * mi, CMPIContext * ctx, 
+                    CMPIResult * rslt, CMPIObjectPath * ref, 
+                    int enum_inst, CMPIStatus * rc)
 {
 
         CMPIObjectPath * op = NULL;
@@ -398,11 +396,11 @@ enumerate_clusternode_instances(char * classname, CMPIBroker * broker,
         
         if ( nodeinfo_table == NULL ) {
                 cl_log(LOG_ERR, 
-                       "%s: failed to get node information from heartbeat", 
+                       "%s: could not get node information", 
                        __FUNCTION__);
 
                 CMSetStatusWithChars(broker, rc,
-                       CMPI_RC_ERR_FAILED, "Failed to get node info from heartbeat");
+                       CMPI_RC_ERR_FAILED, "Could not get node information");
 
                 return HA_FAIL;
         }

@@ -28,12 +28,11 @@
 #include <cmpift.h>
 #include <cmpimacs.h>
 
-
-int enumerate_clusternode_instances(char * classname, CMPIBroker * broker,
+int enum_node_instances(char * classname, CMPIBroker * broker,
 		CMPIInstanceMI * mi, CMPIContext * ctx, CMPIResult * rslt,
                 CMPIObjectPath * ref, int enum_inst, CMPIStatus * rc);
 
-int get_clusternode_instance(char * classname, CMPIBroker * broker,
+int get_node_instance(char * classname, CMPIBroker * broker,
                 CMPIContext * ctx, CMPIResult * rslt, CMPIObjectPath * cop,
                 char ** properties, CMPIStatus * rc);
 

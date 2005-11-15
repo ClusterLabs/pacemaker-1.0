@@ -30,8 +30,21 @@ openwbem_register ()
 
 openwbem_unregister ()
 {
-        echo "FixME"
-        exit
+        mof_file=$1
+        reg_file=$2
+
+        ps -C owcimomd > /dev/null 2>&1
+        if test $? != 0; then
+                echo "owcimomd not running, start it first"
+                exit
+        fi
+
+        OWMOFC=`which owmofc`
+        if test $? != 0; then
+                echo "owmofc not found, OpenWbem not installed?"
+        fi
+
+        $OWMOFC -r $mof_file
 }
 
 #---------- pegasus functions ----------------------------------------

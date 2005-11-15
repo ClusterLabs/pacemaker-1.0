@@ -1,5 +1,5 @@
 /*
- * CIM Provider
+ * cmpi_sub_resource.c: helper file for LinuxHA_SubResource provider
  * 
  * Author: Jia Ming Pan <jmltc@cn.ibm.com>
  * Copyright (c) 2005 International Business Machines
@@ -20,11 +20,13 @@
  *
  */
 
-
+#include <portability.h>
+#ifdef HAVE_CONFIG_H
+#include <config.h>
+#endif
 #include <string.h>
 #include <stdlib.h>
 #include <glib.h>
-
 #include <hb_api.h>
 #include <clplumbing/cl_log.h>
 
@@ -34,27 +36,26 @@
 
 
 static int group_has_resource(const char * group_id, char * rsc_name);
-
+static GNode * res_tree_root = NULL;
 
 static int
 group_has_resource(const char * group_id, char * rsc_name)
 {
-        GNode * root = NULL;
         GNode * node = NULL;
 
         cl_log(LOG_INFO, "%s: looking for %s in group %s",
                __FUNCTION__, rsc_name, group_id);
 
         /* TODO: optimize this, avoid to rebuild tree frequently */
-
-        root = get_res_tree ();
-        if ( root == NULL ) {
-                cl_log (LOG_ERR, "%s: failed to get resource tree", 
-                        __FUNCTION__);
-                return 0;
+        if ( res_tree_root == NULL ) {
+                res_tree_root = get_res_tree ();
+                if ( res_tree_root == NULL ) {
+                        cl_log (LOG_ERR, "%s: failed to get resource tree", 
+                                __FUNCTION__);
+                        return 0;
+                }
         }
-
-        node = search_res_in_tree(root, rsc_name, RESOURCE);
+        node = search_res_in_tree(res_tree_root, rsc_name, RESOURCE);
         if ( node == NULL ) {
                 cl_log(LOG_WARNING, "%s: resource %s not found in tree",
                        __FUNCTION__, rsc_name);
@@ -65,20 +66,20 @@ group_has_resource(const char * group_id, char * rsc_name)
 
         while ( node && node->parent) {
                 node = node->parent;
-                if ( node->data == NULL ) break;
+                if ( node->data == NULL ) {
+                        break;
+                }
 
                 cl_log(LOG_INFO, "%s: found %s's parent %s", __FUNCTION__,
                        rsc_name, GetGroupInfo(GetResNodeData(node))->id);
 
                 if ( strcmp (group_id, 
                              GetGroupInfo(GetResNodeData(node))->id) == 0) {
-                        free_res_tree ( root );
                         return 1;
                 }
                      
         }
 
-        free_res_tree (root);
         return 0;
 }
 
@@ -103,7 +104,6 @@ int is_sub_resource_of(CMPIInstance * resource_inst,
         }
 
         group_id = CMGetProperty(group_inst, "GroupId", rc).value.string;
-
         if ( CMIsNullObject( group_id ) ) {
                 cl_log(LOG_INFO, "%s: invalid GroupId", __FUNCTION__);
                 contain = 1;
@@ -114,9 +114,21 @@ int is_sub_resource_of(CMPIInstance * resource_inst,
                                      CMGetCharPtr(rsc_name));
 out:
         DEBUG_LEAVE();
-
         return contain;
 
 }
 
 
+int 
+subres_inst_cleanup(CMPIInstanceMI * mi, CMPIContext * ctx){
+        return HA_OK;
+}
+
+int 
+subres_assoc_cleanup(CMPIAssociationMI * mi, CMPIContext * ctx){
+        if ( res_tree_root) {
+                free_res_tree(res_tree_root);
+                res_tree_root = NULL;
+        }
+        return HA_OK;
+}

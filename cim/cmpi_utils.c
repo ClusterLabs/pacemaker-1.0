@@ -1,5 +1,5 @@
 /*
- * Utils for CIM Providers
+ * cmpi_utils.c: Utils for CMPI Providers
  * 
  * Author: Jia Ming Pan <jmltc@cn.ibm.com>
  * Copyright (c) 2005 International Business Machines
@@ -20,21 +20,23 @@
  *
  */
 
-
+#include <portability.h>
+#ifdef HAVE_CONFIG_H
+#include <config.h>
+#endif
 #include <stdio.h>
 #include <regex.h>
-
 #include <hb_api.h>
+#include <heartbeat.h>
 #include <clplumbing/cl_log.h>
-
-
 #include "cmpi_utils.h"
 
-static int assoc_get_lr_instances(
-                CMPIInstance ** first_inst, CMPIInstance ** second_inst,
-                CMPIObjectPath * first_op, CMPIObjectPath * second_op,
-                CMPIBroker * broker, CMPIContext * ctx, CMPIStatus * rc);
-
+static int class_is_a(const char * source_class_name, char * class_name,
+                      CMPIBroker * broker, CMPIObjectPath * cop);
+static int get_lr_instances(CMPIInstance ** first_inst, 
+                      CMPIInstance ** second_inst,
+                      CMPIObjectPath * first_op, CMPIObjectPath * second_op,
+                      CMPIBroker * broker, CMPIContext * ctx, CMPIStatus * rc);
 
 void
 cmpi_assert(const char * assertion, int line, const char * file)
@@ -50,20 +52,17 @@ run_shell_command(const char * cmnd, int * ret,
 				/* std_err not used currently */
 {
 	FILE * fstream = NULL;
-	char * buffer = NULL;
+	char buffer [4096];
 	int cmnd_rc, rc, i;
 
 	if ( (fstream = popen(cmnd, "r")) == NULL ){
 		return HA_FAIL;
 	}
 
-	buffer = malloc(4096);
-	if ( buffer == NULL ) {
-		rc = HA_FAIL;
-		goto exit;
-	}
+	if ( (*std_out = malloc(sizeof(char*)) ) == NULL ) {
+                return HA_FAIL;
+        }
 
-	*std_out = malloc(sizeof(char*));
 	(*std_out)[0] = NULL;
 
 	i = 0;
@@ -72,7 +71,11 @@ run_shell_command(const char * cmnd, int * ret,
 		if ( fgets(buffer, 4096, fstream) != NULL ){
 			/** add buffer to std_out **/
 			*std_out = realloc(*std_out, (i+2) * sizeof(char*));	
-			(*std_out)[i] = strdup(buffer);
+                        if ( *std_out == NULL ) {
+                                rc = HA_FAIL;
+                                goto exit;
+                        }
+                        (*std_out)[i] = strdup(buffer);
 			(*std_out)[i+1] = NULL;		
 		}else{
 			continue;
@@ -81,8 +84,6 @@ run_shell_command(const char * cmnd, int * ret,
 
 	}
 	
-	free(buffer); 
-
 	rc = HA_OK;
 exit:
 	if ( (cmnd_rc = pclose(fstream)) == -1 ){
@@ -92,8 +93,6 @@ exit:
 	*ret = cmnd_rc;
 	return rc;
 }
-
-
 
 int
 regex_search(const char * reg, const char * str, char *** match)
@@ -105,14 +104,12 @@ regex_search(const char * reg, const char * str, char *** match)
 	int ret;
 
 	ret = regcomp(&regexp, reg, REG_EXTENDED);
-
 	if ( ret != 0) {
 		cl_log(LOG_ERR, "Error regcomp regex %s", reg);
 		return HA_FAIL;
 	}
 
 	ret = regexec(&regexp, str, nmatch, pm, 0);
-
 	if ( ret == REG_NOMATCH ){
 		regfree(&regexp);
 		return HA_FAIL;
@@ -124,24 +121,36 @@ regex_search(const char * reg, const char * str, char *** match)
 
 
 	*match = malloc(sizeof(char*));
+        if ( *match == NULL ) {
+                regfree(&regexp);
+                return HA_FAIL;
+        }
+
 	(*match)[0] = NULL;
 
 
 	for(i = 0; i < nmatch && pm[i].rm_so != -1; i++){
-		
 		int str_len = pm[i].rm_eo - pm[i].rm_so;
 
 		*match = realloc(*match, (i+2) * sizeof(char*));
+                if ( *match == NULL ) {
+                        regfree(&regexp);
+                        return HA_FAIL;
+                }
 
 		(*match)[i] = malloc(str_len + 1);
+                if ( (*match)[i] == NULL ) {
+                        free_2d_array(*match);
+                        regfree(&regexp);
+                        return HA_FAIL;
+                }
+
 		strncpy( (*match)[i], str + pm[i].rm_so, str_len);
 		(*match)[i][str_len] = '\0';
-
 		(*match)[i+1] = NULL;
 	}
 
 	regfree(&regexp);
-
 	return HA_OK;
 } 
 
@@ -160,14 +169,15 @@ int free_2d_array(char ** array){
 	return HA_OK;
 }
 
-
-
-
 char * 
 uuid_to_str(const cl_uuid_t * uuid){
         int i, len = 0;
         char * str = malloc(256);
-        
+
+        if ( str == NULL ) {
+                return NULL;
+        }
+
         memset(str, 0, 256);
 
         for ( i = 0; i < sizeof(cl_uuid_t); i++){
@@ -176,11 +186,9 @@ uuid_to_str(const cl_uuid_t * uuid){
         return str;
 }
 
-
-
-int 
-assoc_source_class_is_a(const char * source_class_name, char * class_name,
-                        CMPIBroker * broker, CMPIObjectPath * cop)
+static int 
+class_is_a(const char * source_class_name, char * class_name,
+           CMPIBroker * broker, CMPIObjectPath * cop)
 {
         CMPIStatus rc;
         int is_a = 0;
@@ -201,10 +209,9 @@ assoc_source_class_is_a(const char * source_class_name, char * class_name,
  ******************************************************/
 
 static int
-assoc_get_lr_instances(
-                CMPIInstance ** first_inst, CMPIInstance ** second_inst,
-                CMPIObjectPath * first_op, CMPIObjectPath * second_op,
-                CMPIBroker * broker, CMPIContext * ctx, CMPIStatus * rc) 
+get_lr_instances(CMPIInstance ** first_inst, CMPIInstance ** second_inst,
+                 CMPIObjectPath * first_op, CMPIObjectPath * second_op,
+                 CMPIBroker * broker, CMPIContext * ctx, CMPIStatus * rc) 
 {
         *first_inst =  CBGetInstance(broker, ctx, first_op, NULL, rc);
         *second_inst =  CBGetInstance(broker, ctx, second_op, NULL, rc);
@@ -219,16 +226,15 @@ assoc_get_lr_instances(
         return HA_OK;
 }
 
-
 int
-assoc_enumerate_associators(CMPIBroker * broker, char * classname,
-                char * first_ref, char * second_ref,
-                char * first_class_name, char * second_class_name,
-                CMPIContext * ctx, CMPIResult * rslt,
-                CMPIObjectPath * cop, const char * assocClass, 
-                const char * resultClass, const char * role,
-                const char * resultRole, assoc_pred_func_t pred,
-                int add_inst, CMPIStatus * rc)
+enum_associators(CMPIBroker * broker, char * classname,
+                 char * first_ref, char * second_ref,
+                 char * first_class_name, char * second_class_name,
+                 CMPIContext * ctx, CMPIResult * rslt,
+                 CMPIObjectPath * cop, const char * assocClass, 
+                 const char * resultClass, const char * role,
+                 const char * resultRole, assoc_pred_func_t pred,
+                 int add_inst, CMPIStatus * rc)
 {
         CMPIObjectPath * op = NULL;
         char * nsp = NULL;
@@ -272,12 +278,10 @@ assoc_enumerate_associators(CMPIBroker * broker, char * classname,
         source_class = CMGetCharPtr(CMGetClassName(cop, rc));
         
         /* determine target_class */
-        if ( assoc_source_class_is_a(source_class, first_class_name, 
-                                     broker, cop) ){
+        if ( class_is_a(source_class, first_class_name, broker, cop) ){
                 target_class = second_class_name;
                 source_is_first = 1;
-        } else if ( assoc_source_class_is_a(source_class, second_class_name, 
-                                            broker, cop)) {
+        } else if ( class_is_a(source_class, second_class_name, broker, cop)) {
                 target_class = first_class_name;
                 source_is_first = 0;
         }
@@ -301,13 +305,13 @@ assoc_enumerate_associators(CMPIBroker * broker, char * classname,
                 RETURN_FAIL_IFNULL_OBJ(data.value.ref, "target object path");
 
                 if ( source_is_first ){
-                        ret = assoc_get_lr_instances(&second_inst, &first_inst,
-                                           data.value.ref, cop, broker, ctx, rc);
-                        
+                        ret = get_lr_instances(&second_inst, &first_inst,
+                                               data.value.ref, cop, broker, 
+                                               ctx, rc);
                 } else {
-                        ret = assoc_get_lr_instances(&second_inst, &first_inst,
-                                           cop, data.value.ref, broker, ctx, rc);
-                        
+                        ret = get_lr_instances(&second_inst, &first_inst,
+                                               cop, data.value.ref, broker, 
+                                               ctx, rc);
                 }
                 
                 if ( ret != HA_OK ){
@@ -350,7 +354,7 @@ assoc_enumerate_associators(CMPIBroker * broker, char * classname,
 
 
 int
-assoc_enumerate_references(CMPIBroker * broker, char * classname,
+enum_references(CMPIBroker * broker, char * classname,
                 char * first_ref, char * second_ref,
                 char * first_class_name, char * second_class_name,
                 CMPIContext * ctx, CMPIResult * rslt,
@@ -387,12 +391,10 @@ assoc_enumerate_references(CMPIBroker * broker, char * classname,
 
         source_class = CMGetCharPtr(CMGetClassName(cop, rc));
                 
-        if ( assoc_source_class_is_a(source_class, first_class_name, 
-                                     broker, cop) ){
+        if ( class_is_a(source_class, first_class_name, broker, cop) ){
                 target_class = second_class_name;
                 source_is_first = 1;
-        } else if ( assoc_source_class_is_a(source_class, 
-                                            second_class_name, broker, cop)) {
+        } else if ( class_is_a(source_class, second_class_name, broker, cop)) {
                 target_class = first_class_name;
                 source_is_first = 0;
         }
@@ -421,14 +423,14 @@ assoc_enumerate_references(CMPIBroker * broker, char * classname,
 
                 if ( source_is_first ){
                         /* source class is LinuxHA_ClusterNode */
-                        ret = assoc_get_lr_instances(&second_inst, 
-                                                 &first_inst, data.value.ref, 
-                                                 cop, broker, ctx, rc);
+                        ret = get_lr_instances(&second_inst, 
+                                               &first_inst, data.value.ref, 
+                                               cop, broker, ctx, rc);
                         
                 } else {  /* source class is LinuxHA_ClusterResource */
-                        ret = assoc_get_lr_instances(&second_inst, 
-                                            &first_inst, cop, 
-                                            data.value.ref,broker, ctx, rc);
+                        ret = get_lr_instances(&second_inst, 
+                                               &first_inst, cop, 
+                                               data.value.ref,broker, ctx, rc);
                                  
                 }
 
@@ -478,8 +480,7 @@ assoc_enumerate_references(CMPIBroker * broker, char * classname,
 }
 
 int
-assoc_enumerate_instances(
-                CMPIBroker * broker, char * classname,
+enum_inst_assoc(CMPIBroker * broker, char * classname,
                 char * first_ref, char * second_ref,
                 char * first_class_name, char * second_class_name,
                 CMPIContext * ctx, CMPIResult * rslt,
@@ -551,7 +552,6 @@ assoc_enumerate_instances(
 
                         if ( add_inst ) {    /* instances */
                                 CMPIInstance * inst = NULL;
-
                                 inst = CMNewInstance(broker, op, rc);
                                 RETURN_FAIL_IFNULL_OBJ(inst, "inst");
                                 
@@ -559,7 +559,8 @@ assoc_enumerate_instances(
                                               &first_data.value.ref, CMPI_ref);
                                 CMSetProperty(inst, second_ref, 
                                               &second_data.value.ref, CMPI_ref);
-
+                                CMSetProperty(inst, "Caption", 
+                                              classname, CMPI_chars);
                                 CMReturnInstance(rslt, inst);
 
                         } else {   /* instance names only */ 
@@ -577,11 +578,11 @@ assoc_enumerate_instances(
 
 
 int
-assoc_get_instance(CMPIBroker * broker, char * classname,
-                char * first_ref, char * second_ref,
-                char * first_class_name, char * second_class_name,
-                CMPIContext * ctx, CMPIResult * rslt,
-                CMPIObjectPath * cop, CMPIStatus * rc)
+get_inst_assoc(CMPIBroker * broker, char * classname,
+               char * first_ref, char * second_ref,
+               char * first_class_name, char * second_class_name,
+               CMPIContext * ctx, CMPIResult * rslt,
+               CMPIObjectPath * cop, CMPIStatus * rc)
 {
         CMPIObjectPath * op = NULL;
         CMPIData data_first;
@@ -637,6 +638,7 @@ assoc_get_instance(CMPIBroker * broker, char * classname,
                         (CMPIValue *)&(data_first.value.ref), CMPI_ref);
         CMSetProperty(ci, second_ref, 
                         (CMPIValue *)&(data_second.value.ref), CMPI_ref);        
+        CMSetProperty(ci, "Caption", classname, CMPI_chars);
 
         CMReturnInstance(rslt, ci);
         CMReturnDone(rslt);
@@ -644,3 +646,29 @@ assoc_get_instance(CMPIBroker * broker, char * classname,
         DEBUG_LEAVE();
         return HA_OK;
 }
+
+
+static int logger_initialized = 0;
+int init_logger(const char * entity)
+{
+        char * inherit_debuglevel;
+        int debug_level = 2;
+ 
+        if ( logger_initialized ){
+                return HA_OK;
+        }
+
+	inherit_debuglevel = getenv(HADEBUGVAL);
+	if (inherit_debuglevel != NULL) {
+		debug_level = atoi(inherit_debuglevel);
+		if (debug_level > 2) {
+			debug_level = 2;
+		}
+	}
+
+	cl_log_set_entity(entity);
+	cl_log_enable_stderr(debug_level?TRUE:FALSE);
+	cl_log_set_facility(LOG_DAEMON);
+        return HA_OK;
+}
+

@@ -28,17 +28,16 @@
 #include <cmpidt.h>
 #include <cmpift.h>
 #include <cmpimacs.h>
- 
 #include <hb_api.h>
 #include "linuxha_info.h"
 
 int get_cluster_instance(char * classname, CMPIBroker * broker,
-	       	CMPIContext * ctx, CMPIResult * rslt, 
-               	CMPIObjectPath * cop, CMPIStatus * rc);
+                CMPIContext * ctx, CMPIResult * rslt, 
+                CMPIObjectPath * cop, CMPIStatus * rc);
 
-int enumerate_cluster_instances(char * classname, CMPIBroker * broker,
-	       	CMPIContext * ctx, CMPIResult * rslt,  
-               	CMPIObjectPath * cop, char ** properties,
+int enum_cluster_instances(char * classname, CMPIBroker * broker,
+                CMPIContext * ctx, CMPIResult * rslt,  
+                CMPIObjectPath * cop, char ** properties,
                 int enum_inst, CMPIStatus * rc);
 
 int cleanup_cluster(void);

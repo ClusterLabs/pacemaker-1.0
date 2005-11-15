@@ -44,14 +44,14 @@ class LinuxHA_Cluster : CIM_Cluster {
         ]
         string APIAuth;
 
-        //string NiceFailBack;
+        string NiceFailBack;
 
         [ Description(
                 "Determins whether a resource will automatically fail back to"
                 "its primary node, or remain on whatever the node is serving."
                 "Possible values are: on, off, legacy.")
         ]                        
-        string utoFailBack;
+        string AutoFailBack;
 
         [ Description ( "The speed for serial communications" ) ]
         string BaudRate;
@@ -147,7 +147,7 @@ class LinuxHA_Cluster : CIM_Cluster {
 
 
         [ Description("What machines are in the cluster")]
-        string Node[];        
+        string Node;        
 
         [ Description("Declare PingNodes to Heartbeat")]
         string PingNode;
@@ -213,6 +213,8 @@ class LinuxHA_Cluster : CIM_Cluster {
         string WatchdogTimer;
 
         string NormalPoll;
+        string CoreRootDir;
+        string LogBadPack;
 
         //************************************* 
         //      methods 
@@ -351,6 +353,7 @@ class LinuxHA_ClusterResourceInstanceAttr {
         string AttributeName;
         string AttributeValue;
         string AttributeId;
+        string Caption;
 };
 
 
@@ -360,14 +363,14 @@ class LinuxHA_ClusterResourceInstanceAttr {
 //------------------------------------------------
 
 [ Association,
-        Provider("cmpi:cmpiLinuxHA_ClusterResourceInstance") ]
+        Provider("cmpi:cmpiLinuxHA_ClusterResourceInstanceProvider") ]
 
 class LinuxHA_ClusterResourceInstance {
         LinuxHA_ClusterResource REF ClusterResource;
 
         [ Weak, Description ( "Instance's attribute" )  ]
         LinuxHA_ClusterResourceInstanceAttr REF InstanceAttribute;       
-
+        String Caption;
 };
 
 //------------------------------------------------
@@ -379,6 +382,7 @@ class LinuxHA_ClusterResourceGroup {
         [ Key ]
         string GroupId;
 
+        string Caption;
         string SubResourceNames[];
 };
 
@@ -399,7 +403,8 @@ class LinuxHA_SubResource {
         [ Key,
                 Description ( "Resource" ) ]
         LinuxHA_ClusterResource REF Resource;
-
+        
+        string Caption;
 };
 
 
@@ -420,6 +425,7 @@ class LinuxHA_SubGroup {
                 Description ( "SubGroup" ) ]
         LinuxHA_ClusterResourceGroup REF SubGroup;
 
+        String Caption;
 };
 
 

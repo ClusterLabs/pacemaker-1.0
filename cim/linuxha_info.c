@@ -1022,32 +1022,6 @@ int ha_unset_event_hooks ()
 }
 
 
-static int logger_initialized = 0;
-
-int init_logger(const char * entity)
-{
-        char * inherit_debuglevel;
-        int debug_level;
- 
-        if ( logger_initialized ){
-                return HA_OK;
-        }
-
-	inherit_debuglevel = getenv(HADEBUGVAL);
-	if (inherit_debuglevel != NULL) {
-		debug_level = atoi(inherit_debuglevel);
-		if (debug_level > 2) {
-			debug_level = 2;
-		}
-	}
-
-	cl_log_set_entity(entity);
-	cl_log_enable_stderr(debug_level?TRUE:FALSE);
-	cl_log_set_facility(LOG_DAEMON);
-        return HA_OK;
-}
-
-
 
 #define DEBUG_ENTER() cl_log(LOG_INFO, "%s: --- ENTER ---", __FUNCTION__)
 #define DEBUG_LEAVE() cl_log(LOG_INFO, "%s: --- LEAVE ---", __FUNCTION__)

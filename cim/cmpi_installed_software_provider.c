@@ -1,5 +1,6 @@
 /*
- * CIM Provider - provider for LinuxHA_InstalledSoftwareIdentity
+ * cmpi_installed_software_provider.c: 
+ *                    LinuxHA_InstalledSoftwareIdentity provider
  * 
  * Author: Jia Ming Pan <jmltc@cn.ibm.com>
  * Copyright (c) 2005 International Business Machines
@@ -20,119 +21,86 @@
  *
  */
 
-
+#include <portability.h>
+#ifdef HAVE_CONFIG_H
+#include <config.h>
+#endif
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include <sys/stat.h>
 #include <sys/types.h>
-
 #include <cmpidt.h>
 #include <cmpift.h>
 #include <cmpimacs.h>
 #include <cmpi_utils.h>
-
 #include <hb_api.h>
-
 #include "linuxha_info.h"
 
 
-
-#define PROVIDER_ID "cim-ins-sw" 
-
-static CMPIBroker * Broker   = NULL;
-static char ClassName []     = "LinuxHA_InstalledSoftwareIdentity"; 
-
-static char cluster_ref []   = "System";
-static char software_ref []  = "InstalledSoftware";
-static char cluster_class_name []  = "LinuxHA_Cluster";
+#define PROVIDER_ID                  "cim-ins-sw" 
+static CMPIBroker * Broker         = NULL;
+static char ClassName           [] = "LinuxHA_InstalledSoftwareIdentity"; 
+static char cluster_ref         [] = "System";
+static char software_ref        [] = "InstalledSoftware";
+static char cluster_class_name  [] = "LinuxHA_Cluster";
 static char software_class_name [] = "LinuxHA_SoftwareIdentity";
-
-
-
 
 /***************** instance interfaces *******************/
 CMPIStatus 
 InstalledSoftware_Cleanup(CMPIInstanceMI * mi, 
                 CMPIContext * ctx);
-
-
 CMPIStatus 
 InstalledSoftware_EnumInstanceNames(CMPIInstanceMI * mi,
 		CMPIContext * ctx, CMPIResult * rslt, CMPIObjectPath * ref);
-	
-
 CMPIStatus 
 InstalledSoftware_EnumInstances(CMPIInstanceMI * mi,
 		CMPIContext * ctx, CMPIResult * rslt,
 		CMPIObjectPath * ref, char ** properties);
-
-
 CMPIStatus 
 InstalledSoftware_GetInstance(CMPIInstanceMI * mi,
 		CMPIContext * ctx, CMPIResult * rslt,
 		CMPIObjectPath * cop,  char ** properties);
-
 CMPIStatus 
 InstalledSoftware_CreateInstance(CMPIInstanceMI * mi,
 		CMPIContext * ctx, CMPIResult * rslt,
 		CMPIObjectPath * cop, CMPIInstance * ci);
-
 CMPIStatus 
 InstalledSoftware_SetInstance(CMPIInstanceMI * mi,
                 CMPIContext * ctx, CMPIResult * rslt,
 		CMPIObjectPath * cop, CMPIInstance * ci,
 		char ** properties);
-
 CMPIStatus 
 InstalledSoftware_DeleteInstance(CMPIInstanceMI * mi,
 		CMPIContext * ctx, CMPIResult * rslt, CMPIObjectPath * cop);
-
 CMPIStatus 
 InstalledSoftware_ExecQuery(CMPIInstanceMI * mi,
 		CMPIContext * ctx, CMPIResult * rslt,
 		CMPIObjectPath * ref, char * lang, char * query);
 
 /*********************** association interfaces ***********************/
-
 CMPIStatus 
 InstalledSoftware_AssociationCleanup(CMPIAssociationMI * mi, 
-                        CMPIContext * ctx);
-
+                CMPIContext * ctx);
 CMPIStatus
-InstalledSoftware_Associators(
-                CMPIAssociationMI * mi, CMPIContext * ctx, CMPIResult * rslt,
-                CMPIObjectPath * op, const char * asscClass, 
-                const char * resultClass,
+InstalledSoftware_Associators(CMPIAssociationMI * mi, CMPIContext * ctx, 
+                CMPIResult * rslt, CMPIObjectPath * op, 
+                const char * asscClass, const char * resultClass,
                 const char * role, const char * resultRole, char ** properties);
-
 CMPIStatus
-InstalledSoftware_AssociatorNames(
-                CMPIAssociationMI * mi, CMPIContext * ctx, CMPIResult * rslt,
-                CMPIObjectPath * op, const char * asscClass, 
-                const char * resultClass,
-                const char * role, const char * resultRole);
-
+InstalledSoftware_AssociatorNames(CMPIAssociationMI * mi, CMPIContext * ctx, 
+                CMPIResult * rslt, CMPIObjectPath * op, const char * asscClass, 
+                const char * resultClass, const char * role, 
+                const char * resultRole);
 CMPIStatus
-InstalledSoftware_References(
-                CMPIAssociationMI * mi, CMPIContext * ctx, CMPIResult * rslt,
-                CMPIObjectPath * op, const char * resultClass,
+InstalledSoftware_References(CMPIAssociationMI * mi, CMPIContext * ctx, 
+                CMPIResult * rslt, CMPIObjectPath * op, const char * resultClass,
                 const char * role, char ** properties);
 
 CMPIStatus
-InstalledSoftware_ReferenceNames(
-                CMPIAssociationMI * mi, CMPIContext * ctx, CMPIResult * rslt,
-                CMPIObjectPath * cop, const char * assocClass,
+InstalledSoftware_ReferenceNames(CMPIAssociationMI * mi, CMPIContext * ctx, 
+                CMPIResult * rslt, CMPIObjectPath * cop, const char * assocClass,
                 const char * role);
-
-
-CMPIAssociationMI * 
-LinuxHA_InstalledSoftwareIdentityProvider_Create_AssociationMI(
-                        CMPIBroker* brkr, CMPIContext * ctx);
-CMPIInstanceMI * 
-LinuxHA_InstalledSoftwareIdentityProvider_Create_InstanceMI(
-                        CMPIBroker * brkr, CMPIContext * ctx); 
-
 
 /**********************************************
  * Instance
@@ -146,99 +114,74 @@ InstalledSoftware_Cleanup(CMPIInstanceMI* mi, CMPIContext* ctx)
 
 
 CMPIStatus 
-InstalledSoftware_EnumInstanceNames(CMPIInstanceMI * mi,
-		CMPIContext* ctx, CMPIResult * rslt, CMPIObjectPath * ref)
+InstalledSoftware_EnumInstanceNames(CMPIInstanceMI * mi, CMPIContext* ctx, 
+                                    CMPIResult * rslt, CMPIObjectPath * ref)
 {
 
         CMPIStatus rc = {CMPI_RC_OK, NULL};
         int ret = 0;
 
         init_logger(PROVIDER_ID);
-
         DEBUG_ENTER();
-        ret = assoc_enumerate_instances(Broker, ClassName, 
-                        cluster_ref, software_ref, 
-                        cluster_class_name, software_class_name,
-                        ctx, rslt, ref, 
-                        NULL, 0, &rc);
-
+        ret = enum_inst_assoc(Broker, ClassName, cluster_ref, software_ref, 
+                              cluster_class_name, software_class_name,
+                              ctx, rslt, ref, NULL, 0, &rc);
         DEBUG_LEAVE();
-
         if ( ret != HA_OK ){
                 return rc;
         }
-
         CMReturn(CMPI_RC_OK);
-
 }
 
 
 CMPIStatus 
-InstalledSoftware_EnumInstances(CMPIInstanceMI* mi,
-		CMPIContext* ctx,
-		CMPIResult* rslt,
-		CMPIObjectPath* ref,
-		char ** properties)
+InstalledSoftware_EnumInstances(CMPIInstanceMI * mi, CMPIContext * ctx,
+                                CMPIResult * rslt, CMPIObjectPath * ref,
+                                char ** properties)
+{
+        CMPIStatus rc = {CMPI_RC_OK, NULL};
+        int ret = 0;
+        init_logger(PROVIDER_ID);
+
+        DEBUG_ENTER();
+        ret = enum_inst_assoc(Broker, ClassName, cluster_ref, software_ref, 
+                              cluster_class_name, software_class_name,
+                              ctx, rslt, ref, NULL, 1, &rc);
+        DEBUG_LEAVE();
+        if ( ret != HA_OK ){
+                return rc;
+        }
+        CMReturn(CMPI_RC_OK);
+}
+
+
+CMPIStatus 
+InstalledSoftware_GetInstance(CMPIInstanceMI * mi, CMPIContext * ctx,
+                              CMPIResult * rslt, CMPIObjectPath * cop,
+                              char ** properties)
 {
 
         CMPIStatus rc = {CMPI_RC_OK, NULL};
         int ret = 0;
-
         init_logger(PROVIDER_ID);
 
         DEBUG_ENTER();
-        ret = assoc_enumerate_instances(Broker, ClassName, 
-                        cluster_ref, software_ref, 
-                        cluster_class_name, software_class_name,
-                        ctx, rslt, ref, 
-                        NULL, 1, &rc);
+        ret = get_inst_assoc(Broker, ClassName, cluster_ref, software_ref, 
+                             cluster_class_name, software_class_name,
+                             ctx, rslt, cop, &rc);
 
         DEBUG_LEAVE();
-
         if ( ret != HA_OK ){
                 return rc;
         }
-
-        CMReturn(CMPI_RC_OK);
-
-}
-
-
-CMPIStatus 
-InstalledSoftware_GetInstance(CMPIInstanceMI* mi,
-		CMPIContext * ctx,
-		CMPIResult * rslt,
-		CMPIObjectPath * cop,
-		char ** properties)
-{
-
-        CMPIStatus rc = {CMPI_RC_OK, NULL};
-        int ret = 0;
-
-        init_logger(PROVIDER_ID);
-
-        DEBUG_ENTER();
-        ret = assoc_get_instance(Broker, ClassName, 
-                        cluster_ref, software_ref, 
-                        cluster_class_name, software_class_name,
-                        ctx, rslt, cop, &rc);
-
-        DEBUG_LEAVE();
-
-        if ( ret != HA_OK ){
-                return rc;
-        }
-
         CMReturn(CMPI_RC_OK);
 }
 
 
 CMPIStatus 
-InstalledSoftware_CreateInstance(CMPIInstanceMI* mi,
-		CMPIContext *ctx,
-		CMPIResult* rslt,
-		CMPIObjectPath* cop,
-		CMPIInstance* ci)
+InstalledSoftware_CreateInstance(CMPIInstanceMI * mi, CMPIContext * ctx,
+                                 CMPIResult * rslt, CMPIObjectPath * cop,
+                                 CMPIInstance * ci)
 {
 	CMPIStatus rc = {CMPI_RC_OK, NULL};
 	CMSetStatusWithChars(Broker, &rc, 
@@ -248,12 +191,9 @@ InstalledSoftware_CreateInstance(CMPIInstanceMI* mi,
 
 
 CMPIStatus 
-InstalledSoftware_SetInstance(CMPIInstanceMI* mi,
-		CMPIContext* ctx,
-		CMPIResult* rslt,
-		CMPIObjectPath* cop,
-		CMPIInstance* ci,
-		char ** properties)
+InstalledSoftware_SetInstance(CMPIInstanceMI * mi, CMPIContext * ctx,
+                              CMPIResult * rslt, CMPIObjectPath * cop,
+                              CMPIInstance * ci, char ** properties)
 {
 	CMPIStatus rc = {CMPI_RC_OK, NULL};
 	CMSetStatusWithChars(Broker, &rc, 
@@ -264,10 +204,8 @@ InstalledSoftware_SetInstance(CMPIInstanceMI* mi,
 
 
 CMPIStatus 
-InstalledSoftware_DeleteInstance(CMPIInstanceMI* mi,
-		CMPIContext* ctx,
-		CMPIResult* rslt,
-		CMPIObjectPath* cop)
+InstalledSoftware_DeleteInstance(CMPIInstanceMI * mi, CMPIContext * ctx,
+                                 CMPIResult * rslt, CMPIObjectPath * cop)
 {
 	CMPIStatus rc = {CMPI_RC_OK, NULL};
 	CMSetStatusWithChars(Broker, &rc, 
@@ -276,12 +214,9 @@ InstalledSoftware_DeleteInstance(CMPIInstanceMI* mi,
 }
 
 CMPIStatus 
-InstalledSoftware_ExecQuery(CMPIInstanceMI* mi,
-		CMPIContext* ctx,
-		CMPIResult* rslt,
-		CMPIObjectPath* ref,
-		char* lang,
-		char* query)
+InstalledSoftware_ExecQuery(CMPIInstanceMI * mi, CMPIContext * ctx,
+                            CMPIResult * rslt, CMPIObjectPath * ref,
+                            char * lang, char * query)
 {
 	CMPIStatus rc = {CMPI_RC_OK, NULL};
 	CMSetStatusWithChars(Broker, &rc, 
@@ -295,17 +230,17 @@ InstalledSoftware_ExecQuery(CMPIInstanceMI* mi,
  ****************************************************/
 CMPIStatus 
 InstalledSoftware_AssociationCleanup(CMPIAssociationMI * mi, 
-                        CMPIContext * ctx)
+                                     CMPIContext * ctx)
 {
         CMReturn(CMPI_RC_OK);
 }
 
 CMPIStatus
-InstalledSoftware_Associators(
-                CMPIAssociationMI * mi, CMPIContext * ctx, CMPIResult * rslt,
-                CMPIObjectPath * op, const char * assocClass, 
-                const char * resultClass,
-                const char * role, const char * resultRole, char ** properties)
+InstalledSoftware_Associators(CMPIAssociationMI * mi, CMPIContext * ctx, 
+                              CMPIResult * rslt, CMPIObjectPath * op, 
+                              const char * assocClass, const char * resultClass,
+                              const char * role, const char * resultRole, 
+                              char ** properties)
 {
         CMPIStatus rc;
         int ret = 0;
@@ -317,14 +252,12 @@ InstalledSoftware_Associators(
                 "asscClass, resultClass, role, resultRole = %s, %s, %s, %s",
                 assocClass, resultClass, role, resultRole);
 
-        ret = assoc_enumerate_associators(Broker, ClassName, software_ref, cluster_ref,
-                        software_class_name, cluster_class_name, ctx, rslt, op, assocClass,
-                        resultClass, role, resultRole, NULL, 1, &rc);
-
+        ret = enum_associators(Broker, ClassName, software_ref, cluster_ref,
+                               software_class_name, cluster_class_name, ctx, 
+                               rslt, op, assocClass, resultClass, 
+                               role, resultRole, NULL, 1, &rc);
  
         DEBUG_LEAVE();
-
-
         if ( ret != HA_OK ){
                 return rc;
         }
@@ -333,83 +266,63 @@ InstalledSoftware_Associators(
 
 
 CMPIStatus
-InstalledSoftware_AssociatorNames(
-                CMPIAssociationMI * mi, CMPIContext * ctx, CMPIResult * rslt,
-                CMPIObjectPath * cop, const char * assocClass, const char * resultClass,
-                const char * role, const char * resultRole)
+InstalledSoftware_AssociatorNames(CMPIAssociationMI * mi, CMPIContext * ctx, 
+                                  CMPIResult * rslt, CMPIObjectPath * cop, 
+                                  const char * assocClass, const char * resultClass,
+                                  const char * role, const char * resultRole)
 {
         CMPIStatus rc;
         int ret = 0;
         init_logger(PROVIDER_ID);
-
         DEBUG_ENTER();
-
         cl_log(LOG_INFO, 
                 "asscClass, resultClass, role, resultRole = %s, %s, %s, %s",
                 assocClass, resultClass, role, resultRole);
 
-        ret = assoc_enumerate_associators(Broker, ClassName, software_ref, cluster_ref,
-                        software_class_name, cluster_class_name, ctx, rslt, cop, assocClass,
-                        resultClass, role, resultRole, NULL, 0, &rc);
-
- 
-        DEBUG_LEAVE();
-
-
+        ret = enum_associators(Broker, ClassName, software_ref, cluster_ref,
+                               software_class_name, cluster_class_name, ctx, 
+                               rslt, cop, assocClass, resultClass, 
+                               role, resultRole, NULL, 0, &rc);
+         DEBUG_LEAVE();
         if ( ret != HA_OK ){
                 return rc;
         }
         CMReturn(CMPI_RC_OK);
-
 }
 
 CMPIStatus
-InstalledSoftware_References(
-                CMPIAssociationMI * mi, CMPIContext * ctx, CMPIResult * rslt,
-                CMPIObjectPath * cop, const char * resultClass,
-                const char * role, char ** properties)
+InstalledSoftware_References(CMPIAssociationMI * mi, CMPIContext * ctx, 
+                             CMPIResult * rslt, CMPIObjectPath * cop, 
+                             const char * resultClass, const char * role, 
+                             char ** properties)
 {
         int ret = 0;
         CMPIStatus rc;
         init_logger(PROVIDER_ID);
-
         DEBUG_ENTER();
-
         cl_log(LOG_INFO, 
                 "resultClass, role = %s, %s", resultClass, role);
 
-        ret = assoc_enumerate_references(Broker, ClassName, 
-                        cluster_ref, software_ref,
-                        cluster_class_name, software_class_name,
-                        ctx, rslt, cop, resultClass, role, NULL, 1, &rc);
- 
-        DEBUG_LEAVE();
-
+        ret = enum_references(Broker, ClassName, cluster_ref, software_ref,
+                              cluster_class_name, software_class_name,
+                              ctx, rslt, cop, resultClass, role, NULL, 1, &rc);
+         DEBUG_LEAVE();
         if ( ret != HA_OK ) {
                 return rc;
         }
-
-
         CMReturn(CMPI_RC_OK);
-
 }
 
 CMPIStatus
-InstalledSoftware_ReferenceNames(
-                CMPIAssociationMI * mi,
-                CMPIContext * ctx,
-                CMPIResult * rslt,
-                CMPIObjectPath * cop,
-                const char * resultClass,
-                const char * role)
+InstalledSoftware_ReferenceNames(CMPIAssociationMI * mi, CMPIContext * ctx,
+                                 CMPIResult * rslt, CMPIObjectPath * cop,
+                                 const char * resultClass, const char * role)
 {
         int ret = 0;
         CMPIStatus rc;
-        ret = assoc_enumerate_references(Broker, ClassName, 
-                        cluster_ref, software_ref,
-                        cluster_class_name, software_class_name,
-                        ctx, rslt, cop, resultClass, role, NULL, 0, &rc);
- 
+        ret = enum_references(Broker, ClassName, cluster_ref, software_ref,
+                              cluster_class_name, software_class_name,
+                              ctx, rslt, cop, resultClass, role, NULL, 0, &rc);
         if ( ret != HA_OK ) {
                 return rc;
         }
@@ -417,66 +330,12 @@ InstalledSoftware_ReferenceNames(
 }                
 
 /**************************************************************
- *      install stub
+ *   MI stub
  *************************************************************/
+DeclareInstanceMI(InstalledSoftware_, LinuxHA_InstalledSoftwareIdentityProvider,
+                  Broker);
+DeclareAssociationMI(InstalledSoftware_, 
+                     LinuxHA_InstalledSoftwareIdentityProvider, Broker);
 
-
-static char inst_provider_name[] = "instanceInstalledSoftwareProvider";
-
-static CMPIInstanceMIFT instMIFT = {
-        CMPICurrentVersion,
-        CMPICurrentVersion,
-        inst_provider_name,
-        InstalledSoftware_Cleanup,
-        InstalledSoftware_EnumInstanceNames,
-        InstalledSoftware_EnumInstances,
-        InstalledSoftware_GetInstance,
-        InstalledSoftware_CreateInstance,
-        InstalledSoftware_SetInstance, 
-        InstalledSoftware_DeleteInstance,
-        InstalledSoftware_ExecQuery
-};
-
-CMPIInstanceMI * 
-LinuxHA_InstalledSoftwareIdentityProvider_Create_InstanceMI(
-                                CMPIBroker * brkr, CMPIContext * ctx)
-{
-        static CMPIInstanceMI mi = {
-                NULL,
-                &instMIFT
-        };
-        Broker = brkr;
-        return &mi;
-}
-
-
-/******************************************************************************/
-
-static char assoc_provider_name[] = "assocationInstalledSoftwareProvider";
-
-static CMPIAssociationMIFT assocMIFT = {
-        CMPICurrentVersion,
-        CMPICurrentVersion,
-        assoc_provider_name,
-        InstalledSoftware_AssociationCleanup,
-        InstalledSoftware_Associators,
-        InstalledSoftware_AssociatorNames,
-        InstalledSoftware_References,
-        InstalledSoftware_ReferenceNames
-
-};
-
-CMPIAssociationMI *
-LinuxHA_InstalledSoftwareIdentityProvider_Create_AssociationMI(
-                                CMPIBroker * brkr,CMPIContext * ctx)
-{
-        static CMPIAssociationMI mi = {
-                NULL,
-                &assocMIFT
-        };
-
-        Broker = brkr;
-        return &mi;
-}
 
 

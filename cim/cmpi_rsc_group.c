@@ -1,5 +1,5 @@
 /*
- * CIM Provider Header File
+ * cmpi_rsc_group.c: helper file for LinuxHA_ClusterResourceGroup provider
  * 
  * Author: Jia Ming Pan <jmltc@cn.ibm.com>
  * Copyright (c) 2005 International Business Machines
@@ -20,28 +20,28 @@
  *
  */
 
-
+#include <portability.h>
+#ifdef HAVE_CONFIG_H
+#include <config.h>
+#endif
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include <sys/stat.h>
 #include <sys/types.h>
-
 #include <cmpidt.h>
 #include <cmpift.h>
 #include <cmpimacs.h>
-
 #include <hb_api.h> 
 #include "cmpi_utils.h"
 #include "linuxha_info.h"
-
 #include "cmpi_rsc_group.h"
 #include "ha_resource.h"
 
 int 
-enumerate_resource_groups(char * classname, CMPIBroker * broker,
-                CMPIContext * ctx, CMPIResult * rslt,
-                CMPIObjectPath * ref, int enum_inst, CMPIStatus * rc)
+enum_inst_res_group(char * classname, CMPIBroker * broker,
+                    CMPIContext * ctx, CMPIResult * rslt,
+                    CMPIObjectPath * ref, int enum_inst, CMPIStatus * rc)
 {
         CMPIObjectPath* op = NULL;
         GNode * root = NULL;
@@ -65,7 +65,8 @@ enumerate_resource_groups(char * classname, CMPIBroker * broker,
                 char * group_id = NULL;
                 CMPIString * nsp = NULL;
                 GNode * node = NULL;
-                
+                char caption [] = "LinuxHA Resource Group";                
+
                 node = (GNode *) current->data;
                 if ( node == NULL || GetResNodeData(node) == NULL ||
                      GetResType(GetResNodeData(node)) == RESOURCE){
@@ -102,11 +103,9 @@ enumerate_resource_groups(char * classname, CMPIBroker * broker,
                                 free_res_tree (root);
                                 return HA_FAIL;
                         }
-                        cl_log(LOG_INFO, 
-                               "%s: ready to set instance", __FUNCTION__);
                         
                         CMSetProperty(inst, "GroupId", group_id, CMPI_chars);
-                        
+                        CMSetProperty(inst, "Caption", caption, CMPI_chars);
                         CMReturnInstance(rslt, inst);
  
                 }
@@ -127,9 +126,9 @@ enumerate_resource_groups(char * classname, CMPIBroker * broker,
 
 
 int 
-get_resource_group_instance(char * classname, CMPIBroker * broker,
-                CMPIContext * ctx, CMPIResult * rslt,
-                CMPIObjectPath * ref, CMPIStatus * rc)
+get_inst_res_group(char * classname, CMPIBroker * broker,
+                   CMPIContext * ctx, CMPIResult * rslt,
+                   CMPIObjectPath * ref, CMPIStatus * rc)
 {
         CMPIData key_data;
         CMPIObjectPath * op = NULL;
@@ -137,6 +136,7 @@ get_resource_group_instance(char * classname, CMPIBroker * broker,
 
         char * group_id = NULL;
         char * nsp = NULL;
+        char caption [] = "LinuxHA Resource Group";
 
         key_data = CMGetKey(ref, "GroupId", rc);
 
@@ -145,12 +145,10 @@ get_resource_group_instance(char * classname, CMPIBroker * broker,
         }
 
         group_id = (char *)key_data.value.string->hdl;
-
         nsp = (char *)CMGetNameSpace(ref, rc)->hdl;
         op = CMNewObjectPath(broker, nsp, classname, rc);
 
         inst = CMNewInstance(broker, op, rc);
-
         if ( inst == NULL ) {
                 return HA_FAIL;
         }
@@ -158,6 +156,7 @@ get_resource_group_instance(char * classname, CMPIBroker * broker,
         cl_log(LOG_INFO, "%s: ready to set instance", __FUNCTION__);
 
         CMSetProperty(inst, "GroupId", group_id, CMPI_chars);
+        CMSetProperty(inst, "Caption", caption, CMPI_chars);
         CMReturnInstance(rslt, inst);
         CMReturnDone(rslt);
 

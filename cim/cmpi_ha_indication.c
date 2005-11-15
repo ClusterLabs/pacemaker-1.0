@@ -1,5 +1,5 @@
 /*
- * CIM Provider
+ * cmpi_ha_indication.c: helper file for Indication provider
  * 
  * Author: Jia Ming Pan <jmltc@cn.ibm.com>
  * Copyright (c) 2005 International Business Machines
@@ -20,6 +20,10 @@
  *
  */
 
+#include <portability.h>
+#ifdef HAVE_CONFIG_H
+#include <config.h>
+#endif
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -30,11 +34,9 @@
 
 #include <pthread.h>
 #include <glib.h>
-
 #include <cmpidt.h>
 #include <cmpift.h>
 #include <cmpimacs.h>
-
 #include <hb_api.h>
 #include <clplumbing/cl_malloc.h>
 
@@ -90,13 +92,13 @@ ind_generate_indication (void * data)
         CMPIObjectPath * op = NULL;
         CMPIStatus rc;
         CMPIDateTime * date_time = NULL;
-        CMPIArray * array = NULL;
         struct cmpi_ind_data * ind_data = NULL;
 
 
         ind_data = (struct cmpi_ind_data *) data;
 
-        cl_log(LOG_INFO, "%s: status changed, genereate indication.", __FUNCTION__);
+        cl_log(LOG_INFO, "%s: status changed, genereate indication.", 
+               __FUNCTION__);
 
         ASSERT(ind_env);
 
@@ -105,20 +107,14 @@ ind_generate_indication (void * data)
                              IND_NAMESPACE, ind_env->classname, &rc);
 
         instance = CMNewInstance(ind_env->broker, op, &rc);
-        
-        
         date_time = CMNewDateTime(ind_env->broker, &rc);
-        array = CMNewArray(ind_env->broker, 0, CMPI_string, &rc);
-
 
         CMSetProperty(instance, "Message", ind_data->message, CMPI_chars);
         CMSetProperty(instance, "Time", &date_time, CMPI_dateTime);
         CMSetProperty(instance, "Type", &ind_data->type, CMPI_uint16);
                 
         /* deliver indication */
-
         cl_log(LOG_INFO, "%s: deliver indication", __FUNCTION__);
-
         CBDeliverIndication(ind_env->broker, ind_env->context, 
                             IND_NAMESPACE, instance);
 
@@ -134,14 +130,16 @@ nodestatus_event_hook(const char * node, const char * status)
 
         cl_log(LOG_INFO, "%s: node status changed", __FUNCTION__);
 
-        data = (struct cmpi_ind_data *) 
-                malloc(sizeof(struct cmpi_ind_data));
+        if ( (data = (struct cmpi_ind_data *) 
+              malloc(sizeof(struct cmpi_ind_data))) == NULL ) {
+                cl_log(LOG_ERR, "%s: could not alloc data", __FUNCTION__);
+                return HA_FAIL;
+        }
 
         data->type = IND_TYPE_NODE;
         data->message = strdup("node status changed");
-
         ret = ind_generate_indication(data);
-
+        free (data->message);
         free (data);
 
         return ret;
@@ -155,14 +153,16 @@ ifstatus_event_hook(const char * node, const char * lnk, const char * status)
 
         cl_log(LOG_INFO, "%s: ifstatus changed", __FUNCTION__);
 
-        data = (struct cmpi_ind_data *) 
-                malloc(sizeof(struct cmpi_ind_data));
+        if ( (data = (struct cmpi_ind_data *) 
+              malloc(sizeof(struct cmpi_ind_data)) ) == NULL ) {
+                cl_log(LOG_ERR, "%s: could not alloc data", __FUNCTION__);
+                return HA_FAIL;
+        }
 
         data->type = IND_TYPE_NODE;
         data->message = strdup("if status changed");
-
         ret = ind_generate_indication(data);
-
+        free (data->message);
         free (data);
 
         return ret;
@@ -176,14 +176,16 @@ membership_event_hook(const char * node, SaClmClusterChangesT status)
 
         cl_log(LOG_INFO, "%s: membership status changed", __FUNCTION__);
 
-        data = (struct cmpi_ind_data *) 
-                malloc(sizeof(struct cmpi_ind_data));
+        if ( (data = (struct cmpi_ind_data *) 
+              malloc(sizeof(struct cmpi_ind_data)) ) == NULL ) {
+                cl_log(LOG_ERR, "%s: could not alloc data", __FUNCTION__);
+                return HA_FAIL;
+        }
 
         data->type = IND_TYPE_MEMBERSHIP;
         data->message = strdup("membership status changed");
-
         ret = ind_generate_indication(data);
-
+        free (data->message);
         free (data);
 
         return ret;
@@ -330,7 +332,11 @@ haind_activate(char * classname, CMPIBroker * broker, CMPIContext * ctx,
         init_logger(LOGGER_ENTITY);
         DEBUG_ENTER();
 
-        ind_env = (struct cmpi_ind_env *)malloc(sizeof(struct cmpi_ind_env));
+        if ( (ind_env = (struct cmpi_ind_env *)
+              malloc(sizeof(struct cmpi_ind_env)) ) == NULL ) {
+                cl_log(LOG_ERR, "%s: could not alloc ind_env", __FUNCTION__);
+                return HA_FAIL;
+        }
 
         ind_env->broker = broker;
         ind_env->context = ctx;

@@ -1,5 +1,5 @@
 /*
- * CIM Provider
+ * cmpi_cluster.c: helper file for LinuxHA_Cluster class provider
  * 
  * Author: Jia Ming Pan <jmltc@cn.ibm.com>
  * Copyright (c) 2005 International Business Machines
@@ -20,20 +20,20 @@
  *
  */
 
-
+#include <portability.h>
+#ifdef HAVE_CONFIG_H
+#include <config.h>
+#endif
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
-
 #include <glib.h>
-
 #include <cmpidt.h>
 #include <cmpift.h>
 #include <cmpimacs.h>
-
 #include <clplumbing/cl_malloc.h>
 #include "cmpi_cluster.h"
 #include "cmpi_utils.h"
@@ -57,8 +57,8 @@ struct hb_config_info {
 
 const key_property_pair_t key_property_pair [] = {
 		{KEY_HBVERSION,	"HBVersion"},
-		{KEY_HOST, 	""},
-		{KEY_HOPS, 	""},
+		{KEY_HOST, 	"Node"},
+		{KEY_HOPS, 	"HOPFudge"},
 		{KEY_KEEPALIVE, "KeepAlive"},
 		{KEY_DEADTIME, 	"DeadTime"},
 		{KEY_DEADPING, 	"DeadPing"},
@@ -70,24 +70,24 @@ const key_property_pair_t key_property_pair [] = {
 		{KEY_FACILITY, 	"LogFacility"},
 		{KEY_LOGFILE, 	"LogFile"},
 		{KEY_DBGFILE,	"DebugFile"},
-		{KEY_FAILBACK, 	""},
+		{KEY_FAILBACK, 	"NiceFailBack"},
 		{KEY_AUTOFAIL, 	"AutoFailBack"},
 		{KEY_STONITH, 	"Stonith"},
 		{KEY_STONITHHOST, 	"StonithHost"},
-		{KEY_CLIENT_CHILD, 	""},
+		{KEY_CLIENT_CHILD, 	"Respawn"},
 		{KEY_RT_PRIO, 	"RTPriority"},
 		{KEY_GEN_METH, 	"GenMethod"},
 		{KEY_REALTIME, 	"RealTime"},
 		{KEY_DEBUGLEVEL,"DebugLevel"},
-		{KEY_NORMALPOLL,""},
-		{KEY_APIPERM, 	""},
+		{KEY_NORMALPOLL,"NormalPoll"},
+		{KEY_APIPERM, 	"APIAuth"},
 		{KEY_MSGFMT, 	"MsgFmt"},
 		{KEY_LOGDAEMON, "UseLogd"},
 		{KEY_CONNINTVAL,"ConnLogdTime"},
-		{KEY_BADPACK, 	""},
+		{KEY_BADPACK, 	"LogBadPack"},
 		{KEY_REGAPPHBD, "NormalPoll"},
 		{KEY_COREDUMP, 	"CoreDump"},
-		{KEY_COREROOTDIR, 	""},
+		{KEY_COREROOTDIR, 	"CoreRootDir"},
 		{KEY_REL2, 	"WithCrm"},
 		{0, 0}
 	};
@@ -111,7 +111,7 @@ get_config_info_table ()
         if ( ! get_hb_initialized() ) {
 
                 if (linuxha_initialize(NULL, 0) != HA_OK ) {
-                        cl_log(LOG_ERR, "%s: failed to initialize heartbeat", 
+                        cl_log(LOG_ERR, "%s: initialize heartbeat failed", 
                                __FUNCTION__);
 
                         return NULL;
@@ -132,13 +132,13 @@ get_config_info_table ()
                         continue;
                 }
 	
-
                 config_info = (struct hb_config_info *)
-                                           malloc(sizeof(struct hb_config_info));
+                        malloc(sizeof(struct hb_config_info));
 
                 if ( config_info == NULL ) {
                         cl_log(LOG_WARNING, 
                                 "%s: failed to alloc, continue", __FUNCTION__);
+                        continue;
                 }
 
                 config_info->key = strdup(key);
@@ -191,8 +191,9 @@ make_cluster_instance(char * classname, CMPIBroker * broker,
         GPtrArray * config_info_table = NULL;
 
         char key_creation [] = "CreationClassName";
-        char key_name []     = "Name";
-        char name []         = "LinuxHACluster";	
+        char key_name     [] = "Name";
+        char name         [] = "LinuxHACluster";	
+        char caption      [] = "LinuxHA Cluster";
 
 	int i = 0;
 
@@ -200,16 +201,15 @@ make_cluster_instance(char * classname, CMPIBroker * broker,
         config_info_table = get_config_info_table ();
 
         if ( config_info_table == NULL ) {
-                cl_log(LOG_ERR, "%s: failed to get information from heartbeat", __FUNCTION__);
+                cl_log(LOG_ERR, "%s: couldn't get config information", __FUNCTION__);
 
 	        CMSetStatusWithChars(broker, rc, 
-		       CMPI_RC_ERR_FAILED, "Failed to get information from heartbeat");
+		       CMPI_RC_ERR_FAILED, "Could not get config information");
 
                 return NULL;
         }
 
         ci = CMNewInstance(broker, op, rc);
-
         if ( CMIsNullObject(ci) ) {
                 cl_log(LOG_ERR, "%s: can not create instance", __FUNCTION__);
 
@@ -247,7 +247,7 @@ make_cluster_instance(char * classname, CMPIBroker * broker,
 
         CMSetProperty(ci, key_creation, classname, CMPI_chars);
         CMSetProperty(ci, key_name, name, CMPI_chars);
-
+        CMSetProperty(ci, "Caption", caption, CMPI_chars);
         free_config_info_table(config_info_table);
 
         DEBUG_LEAVE();
@@ -274,10 +274,10 @@ get_cluster_instance(char * classname, CMPIBroker * broker,
         op = CMNewObjectPath(broker, namespace, classname, rc);
         if ( CMIsNullObject(op) ){
 	        CMSetStatusWithChars(broker, rc, 
-		       CMPI_RC_ERR_FAILED, "Failed to create object path");
+		       CMPI_RC_ERR_FAILED, "Create object path failed");
 
                 cl_log(LOG_INFO, 
-                        "%s: can not create object path", __FUNCTION__);
+                        "%s: could not create object path", __FUNCTION__);
                 ret = HA_FAIL;
 
                 goto out;
@@ -306,10 +306,10 @@ out:
 }
 
 int
-enumerate_cluster_instances(char * classname, CMPIBroker * broker,
-                            CMPIContext * ctx, CMPIResult * rslt,  
-                            CMPIObjectPath * cop, char ** properties,
-                            int enum_inst, CMPIStatus * rc)
+enum_cluster_instances(char * classname, CMPIBroker * broker,
+                       CMPIContext * ctx, CMPIResult * rslt,  
+                       CMPIObjectPath * cop, char ** properties,
+                       int enum_inst, CMPIStatus * rc)
 {
 
         CMPIInstance* ci = NULL;
@@ -331,7 +331,7 @@ enumerate_cluster_instances(char * classname, CMPIBroker * broker,
 
         if ( CMIsNullObject(op) ){
 	        CMSetStatusWithChars(broker, rc, 
-		       CMPI_RC_ERR_FAILED, "Can't create object path");
+		       CMPI_RC_ERR_FAILED, "Create object path failed");
 
                 ret = HA_FAIL;
                 goto out;

@@ -34,13 +34,18 @@
 #define ATTR_CREATIONCLASSNAME "CreationClassName"
 #define ATTR_NAME "Name"
 
-int enumerate_resource_instances(char * classname, CMPIBroker * broker,
-                CMPIContext * ctx, CMPIResult * rslt,
-                CMPIObjectPath * ref, int enum_inst, CMPIStatus * rc);
+/* enumerate instances or enumerate instance names of this class */
+int enum_inst_resource(char * classname, CMPIBroker * broker,
+                       CMPIContext * ctx, CMPIResult * rslt,
+                       CMPIObjectPath * ref, int enum_inst, 
+                       CMPIStatus * rc);
 
-int get_resource_instance(char * classname, CMPIBroker * broker,
-                CMPIContext * ctx, CMPIResult * rslt, CMPIObjectPath * cop,
-                char ** properties, CMPIStatus *rc);
+/* get a instance of this class */
+int get_inst_resource(char * classname, CMPIBroker * broker,
+                      CMPIContext * ctx, CMPIResult * rslt, 
+                      CMPIObjectPath * cop, char ** properties, 
+                      CMPIStatus *rc);
+int resource_cleanup(CMPIInstanceMI * mi, CMPIContext * ctx);
 
 #endif
 

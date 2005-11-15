@@ -1,5 +1,5 @@
 /*
- * CIM Provider
+ * cmpi_hosted_resource.c: helper file for LinuxHA_HostedResource provider
  * 
  * Author: Jia Ming Pan <jmltc@cn.ibm.com>
  * Copyright (c) 2005 International Business Machines
@@ -20,10 +20,12 @@
  *
  */
 
-
+#include <portability.h>
+#ifdef HAVE_CONFIG_H
+#include <config.h>
+#endif
 #include <string.h>
 #include <stdlib.h>
-
 #include <hb_api.h>
 #include <clplumbing/cl_log.h>
 

@@ -67,43 +67,144 @@ int regex_search(const char * reg, const char * str, char *** match);
 int free_2d_array(char ** array);
 char * uuid_to_str(const cl_uuid_t * uuid);
 
-int assoc_source_class_is_a(const char * source_class_name, char * class_name,
-                            CMPIBroker * broker, CMPIObjectPath * cop); 
 
+int init_logger(const char * entity);
 
 typedef int (* assoc_pred_func_t) 
                 (CMPIInstance * first, CMPIInstance * second, CMPIStatus * rc);
 
-int assoc_enumerate_associators(CMPIBroker * broker, char * classname,
-                char * first_ref, char * second_ref,
-                char * first_class_name, char * second_class_name,
-                CMPIContext * ctx, CMPIResult * rslt,
-                CMPIObjectPath * cop, const char * assocClass, 
-                const char * resultClass, const char * role,
-                const char * resultRole, assoc_pred_func_t pred,
-                int add_inst, CMPIStatus * rc);
+int enum_associators(CMPIBroker * broker, char * classname,
+                     char * first_ref, char * second_ref,
+                     char * first_class_name, char * second_class_name,
+                     CMPIContext * ctx, CMPIResult * rslt,
+                     CMPIObjectPath * cop, const char * assocClass, 
+                     const char * resultClass, const char * role,
+                     const char * resultRole, assoc_pred_func_t pred,
+                     int add_inst, CMPIStatus * rc);
 
-int assoc_enumerate_references(CMPIBroker * broker, char * classname,
-                char * first_ref, char * second_ref,
-                char * first_class_name, char * second_class_name,
-                CMPIContext * ctx, CMPIResult * rslt,
-                CMPIObjectPath * cop,  
-                const char * resultClass, const char * role,
-                assoc_pred_func_t pred, int add_inst, CMPIStatus * rc);
+int enum_references(CMPIBroker * broker, char * classname,
+                    char * first_ref, char * second_ref,
+                    char * first_class_name, char * second_class_name,
+                    CMPIContext * ctx, CMPIResult * rslt,
+                    CMPIObjectPath * cop,  
+                    const char * resultClass, const char * role,
+                    assoc_pred_func_t pred, int add_inst, CMPIStatus * rc);
 
 
-int assoc_enumerate_instances(CMPIBroker * broker, char * classname,
-                char * first_ref, char * second_ref,
-                char * first_class_name, char * second_class_name,
-                CMPIContext * ctx, CMPIResult * rslt,
-                CMPIObjectPath * cop, assoc_pred_func_t pred,
-                int add_inst, CMPIStatus * rc);
+int enum_inst_assoc(CMPIBroker * broker, char * classname,
+                    char * first_ref, char * second_ref,
+                    char * first_class_name, char * second_class_name,
+                    CMPIContext * ctx, CMPIResult * rslt,
+                    CMPIObjectPath * cop, assoc_pred_func_t pred,
+                    int add_inst, CMPIStatus * rc);
 
-int assoc_get_instance(CMPIBroker * broker, char * classname,
-                char * first_ref, char * second_ref,
-                char * first_class_name, char * second_class_name,
-                CMPIContext * ctx, CMPIResult * rslt,
-                CMPIObjectPath * cop, CMPIStatus * rc);
+int get_inst_assoc(CMPIBroker * broker, char * classname,
+                   char * first_ref, char * second_ref,
+                   char * first_class_name, char * second_class_name,
+                   CMPIContext * ctx, CMPIResult * rslt,
+                   CMPIObjectPath * cop, CMPIStatus * rc);
+
+
+
+#define DeclareInstanceMI(pfx, pn, broker)                             \
+static char inst_provider_name [] = "instance"#pn;                     \
+static CMPIInstanceMIFT instMIFT = {                                   \
+        CMPICurrentVersion,                                            \
+        CMPICurrentVersion,                                            \
+        inst_provider_name,                                            \
+        pfx##Cleanup,                                                  \
+        pfx##EnumInstanceNames,                                        \
+        pfx##EnumInstances,                                            \
+        pfx##GetInstance,                                              \
+        pfx##CreateInstance,                                           \
+        pfx##SetInstance,                                              \
+        pfx##DeleteInstance,                                           \
+        pfx##ExecQuery                                                 \
+};                                                                     \
+CMPIInstanceMI *                                                       \
+pn##_Create_InstanceMI(CMPIBroker * brkr, CMPIContext * ctx);          \
+CMPIInstanceMI *                                                       \
+pn##_Create_InstanceMI(CMPIBroker * brkr, CMPIContext * ctx)           \
+{                                                                      \
+        static CMPIInstanceMI mi = {                                   \
+                NULL,                                                  \
+                &instMIFT                                              \
+        };                                                             \
+        Broker = brkr;                                                 \
+        return &mi;                                                    \
+}
+
+#define DeclareMethodMI(pfx, pn, broker)                               \
+static char method_provider_name [] = "method"#pn;                     \
+static CMPIMethodMIFT methMIFT = {                                     \
+        CMPICurrentVersion,                                            \
+        CMPICurrentVersion,                                            \
+        method_provider_name,                                          \
+        pfx##MethodCleanup,                                            \
+        pfx##InvokeMethod                                              \
+};                                                                     \
+CMPIMethodMI *                                                         \
+pn##_Create_MethodMI(CMPIBroker * brkr, CMPIContext * ctx);            \
+CMPIMethodMI *                                                         \
+pn##_Create_MethodMI(CMPIBroker * brkr, CMPIContext * ctx) {           \
+        static CMPIMethodMI mi = {                                     \
+                NULL,                                                  \
+                &methMIFT,                                             \
+        };                                                             \
+        broker=brkr;                                                   \
+        return &mi;                                                    \
+}
+
+
+#define DeclareAssociationMI(pfx, pn, broker)                          \
+static char assoc_provider_name [] = "association"#pn;                 \
+static CMPIAssociationMIFT assocMIFT = {                               \
+        CMPICurrentVersion,                                            \
+        CMPICurrentVersion,                                            \
+        assoc_provider_name,                                           \
+        pfx##AssociationCleanup,                                       \
+        pfx##Associators,                                              \
+        pfx##AssociatorNames,                                          \
+        pfx##References,                                               \
+        pfx##ReferenceNames                                            \
+};                                                                     \
+CMPIAssociationMI *                                                    \
+pn##_Create_AssociationMI(CMPIBroker * brkr, CMPIContext *ctx);        \
+CMPIAssociationMI *                                                    \
+pn##_Create_AssociationMI(CMPIBroker * brkr, CMPIContext *ctx)         \
+{                                                                      \
+        static CMPIAssociationMI mi = {                                \
+                NULL,                                                  \
+                &assocMIFT                                             \
+        };                                                             \
+        Broker = brkr;                                                 \
+        return &mi;                                                    \
+}
+
+
+
+#define DeclareIndicationMI(pfx, pn, broker)                           \
+static char ind_provider_name [] = "Indication"#pn;                    \
+static CMPIIndicationMIFT indMIFT = {                                  \
+        CMPICurrentVersion,                                            \
+        CMPICurrentVersion,                                            \
+        ind_provider_name,                                             \
+        pfx##IndicationCleanup,                                        \
+        pfx##AuthorizeFilter,                                          \
+        pfx##MustPoll,                                                 \
+        pfx##ActivateFilter,                                           \
+        pfx##DeActivateFilter,                                         \
+        CMIndicationMIStubExtensions(pfx)                              \
+};                                                                     \
+CMPIIndicationMI *                                                     \
+pn##_Create_IndicationMI(CMPIBroker * brkr, CMPIContext * ctx);        \
+CMPIIndicationMI *                                                     \
+pn##_Create_IndicationMI(CMPIBroker * brkr, CMPIContext * ctx) {       \
+        static CMPIIndicationMI mi = {                                 \
+                NULL,                                                  \
+                &indMIFT,                                              \
+        };                                                             \
+        return &mi;                                                    \
+}
 
 #endif
-

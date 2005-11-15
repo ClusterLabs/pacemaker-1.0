@@ -1,5 +1,5 @@
 /*
- * CIM Provider - provider for LinuxHA_SoftwareIdentity
+ * cmpi_software_identity_provider.c: LinuxHA_SoftwareIdentity provider
  * 
  * Author: Jia Ming Pan <jmltc@cn.ibm.com>
  * Copyright (c) 2005 International Business Machines
@@ -20,21 +20,20 @@
  *
  */
 
-
+#include <portability.h>
+#ifdef HAVE_CONFIG_H
+#include <config.h>
+#endif
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include <sys/stat.h>
 #include <sys/types.h>
-
 #include <cmpidt.h>
 #include <cmpift.h>
 #include <cmpimacs.h>
-
-#include <clplumbing/cl_log.h>
-#include <clplumbing/cl_malloc.h>
 #include <hb_api.h>
-
+#include <clplumbing/cl_malloc.h>
 #include "cmpi_utils.h"
 #include "linuxha_info.h"
 
@@ -45,47 +44,33 @@
 static CMPIBroker * Broker = NULL;
 static char ClassName []   = "LinuxHA_SoftwareIdentity";
 
-
+/**************************************************************************/
 CMPIStatus 
 SoftwareIdentity_Cleanup(CMPIInstanceMI * mi, CMPIContext * ctx);
-
 CMPIStatus 
 SoftwareIdentity_EnumInstanceNames(CMPIInstanceMI* mi, CMPIContext * ctx, 
-                                   CMPIResult * rslt, CMPIObjectPath * ref);
+               CMPIResult * rslt, CMPIObjectPath * ref);
 CMPIStatus 
 SoftwareIdentity_EnumInstances(CMPIInstanceMI * mi, CMPIContext * ctx, 
-                               CMPIResult * rslt, CMPIObjectPath * ref, 
-                               char ** properties);
-
+               CMPIResult * rslt, CMPIObjectPath * ref, char ** properties); 
 CMPIStatus 
 SoftwareIdentity_GetInstance(CMPIInstanceMI * mi, CMPIContext * ctx, 
-                             CMPIResult * rslt, CMPIObjectPath * cop, 
-                             char ** properties);
-
+               CMPIResult * rslt, CMPIObjectPath * cop, char ** properties); 
 CMPIStatus 
 SoftwareIdentity_CreateInstance(CMPIInstanceMI * mi, CMPIContext * ctx, 
-                                CMPIResult * rslt, CMPIObjectPath * cop, 
-                                CMPIInstance * ci);
-
+               CMPIResult * rslt, CMPIObjectPath * cop, CMPIInstance * ci);
 CMPIStatus 
 SoftwareIdentity_SetInstance(CMPIInstanceMI * mi, CMPIContext * ctx, 
-                             CMPIResult * rslt,	CMPIObjectPath * cop, 
-                             CMPIInstance * ci, char ** properties);
-
+               CMPIResult * rslt, CMPIObjectPath * cop, 
+               CMPIInstance * ci, char ** properties);
 CMPIStatus 
 SoftwareIdentity_DeleteInstance(CMPIInstanceMI * mi, CMPIContext * ctx, 
-                                CMPIResult * rslt, CMPIObjectPath * cop);
+               CMPIResult * rslt, CMPIObjectPath * cop);
 CMPIStatus 
 SoftwareIdentity_ExecQuery(CMPIInstanceMI * mi,	CMPIContext * ctx, 
-                           CMPIResult * rslt, CMPIObjectPath * ref, 
-                           char * lang, char * query);
-
-CMPIInstanceMI * 
-LinuxHA_SoftwareIdentityProvider_Create_InstanceMI(CMPIBroker * brkr, 
-                                                   CMPIContext * ctx);
-
-
-/******************************************************************/
+               CMPIResult * rslt, CMPIObjectPath * ref, 
+               char * lang, char * query);
+/****************************************************************************/
 
 CMPIStatus 
 SoftwareIdentity_Cleanup(CMPIInstanceMI* mi, CMPIContext* ctx)
@@ -93,7 +78,6 @@ SoftwareIdentity_Cleanup(CMPIInstanceMI* mi, CMPIContext* ctx)
 
         CMReturn(CMPI_RC_OK);
 }
-
 
 CMPIStatus 
 SoftwareIdentity_EnumInstanceNames(CMPIInstanceMI * mi, CMPIContext * ctx, 
@@ -106,11 +90,9 @@ SoftwareIdentity_EnumInstanceNames(CMPIInstanceMI * mi, CMPIContext * ctx,
 
 
         init_logger(PROVIDER_ID);
-
         namespace = (char *)CMGetNameSpace(ref, &rc)->hdl;
  
         op = CMNewObjectPath(Broker, namespace, ClassName, &rc);
-
         if ( CMIsNullObject(op) ){
                 CMReturn(CMPI_RC_ERR_FAILED);
         }
@@ -134,15 +116,12 @@ SoftwareIdentity_EnumInstances(CMPIInstanceMI * mi, CMPIContext * ctx,
 
 
         namespace = (char *)CMGetNameSpace(ref, &rc)->hdl;
- 
         op = CMNewObjectPath(Broker, namespace, ClassName, &rc);
-
         if ( CMIsNullObject(op) ){
                 CMReturn(CMPI_RC_ERR_FAILED);
         }
 
         en = CBEnumInstanceNames(Broker, ctx, ref, &rc);
-
         if ( CMIsNullObject(en) ){
                 CMReturn(CMPI_RC_ERR_FAILED);
         }
@@ -152,7 +131,6 @@ SoftwareIdentity_EnumInstances(CMPIInstanceMI * mi, CMPIContext * ctx,
                 CMPIInstance * inst = NULL;
 
                 ref_data = CMGetNext(en, &rc);
-        
                 if (ref_data.value.ref == NULL) {
                         cl_log(LOG_INFO, "failed to get ref");
                         CMReturn(CMPI_RC_ERR_FAILED);
@@ -182,19 +160,24 @@ SoftwareIdentity_GetInstance(CMPIInstanceMI * mi, CMPIContext * ctx,
         CMPIStatus rc = {CMPI_RC_OK, NULL};
 	CMPIInstance * ci = NULL;
         CMPIObjectPath * op = NULL;
+        CMPIData key;
         char * instance_id = NULL;
         char * namespace = NULL;
         char * hbversion = NULL;
         char ** match = NULL;
+        char caption [] = "Software Identity";
         int ret = 0;
 
-
         init_logger(PROVIDER_ID);
-        instance_id = CMGetCharPtr(CMGetKey(cop, "InstanceID", &rc).value.string);
+        key = CMGetKey(cop, "InstanceID", &rc);
+        if ( CMIsNullObject(key.value.string) ) {
+                CMReturn(CMPI_RC_ERR_FAILED);
+        }
+
+        instance_id = CMGetCharPtr(key.value.string);
         namespace = CMGetCharPtr(CMGetNameSpace(cop, &rc));
         
         op = CMNewObjectPath(Broker, namespace, ClassName, &rc);
-
         if ( CMIsNullObject(op) ){
                 CMReturn(CMPI_RC_ERR_FAILED);
         }
@@ -207,10 +190,8 @@ SoftwareIdentity_GetInstance(CMPIInstanceMI * mi, CMPIContext * ctx,
 
 
 	if ( ! get_hb_initialized() ) {
-
                 if ( linuxha_initialize(HB_CLIENT_ID, 0) != HA_OK ){
-                        char err_info [] = "Failed to get information from heartbeat";
-
+                        char err_info [] = "Intialize heartbeat failed";
 	                CMSetStatusWithChars(Broker, &rc, 
                                              CMPI_RC_ERR_FAILED, err_info);
 
@@ -220,25 +201,21 @@ SoftwareIdentity_GetInstance(CMPIInstanceMI * mi, CMPIContext * ctx,
 
 
         if (hbconfig_get_str_value(KEY_HBVERSION, &hbversion) != HA_OK) {
-                char err_info [] = "Failed to get information from heartbeat";
-
+                char err_info [] = "Initialize heartbeat failed";
 	        CMSetStatusWithChars(Broker, &rc, 
                                      CMPI_RC_ERR_FAILED, err_info);
-
                 if (get_hb_initialized () ) {
                         linuxha_finalize();
                 }
-
                 return rc;
         }
 
         CMSetProperty(ci, "InstanceID", instance_id, CMPI_chars);
         CMSetProperty(ci, "VersionString", hbversion, CMPI_chars);
-		
-        cl_log(LOG_INFO, "%s: HBVersion = %s", __FUNCTION__, hbversion);
+        CMSetProperty(ci, "Caption", caption, CMPI_chars);
+        
 
         ret = regex_search("(.*)\\.(.*)\\.(.*)", hbversion, &match);
-        
         if ( ret == HA_OK ){
                 int major = 0, minor = 0, revision = 0;
                 if ( match[1] )
@@ -253,8 +230,8 @@ SoftwareIdentity_GetInstance(CMPIInstanceMI * mi, CMPIContext * ctx,
 
                 CMSetProperty(ci, "MajorVersion",  &major, CMPI_uint16);
                 CMSetProperty(ci, "MinorVersion",  &minor, CMPI_uint16);
-                CMSetProperty(ci, "RevisionVersion",  &revision, CMPI_uint16);
-                
+                CMSetProperty(ci, "RevisionNumber",  &revision, CMPI_uint16);
+
         }
 
         CMReturnInstance(rslt, ci);
@@ -320,39 +297,9 @@ SoftwareIdentity_ExecQuery(CMPIInstanceMI * mi, CMPIContext * ctx,
 	return rc;
 }
 
-
-
-
 /*****************************************************
- * install provider
+ * instance MI
  ****************************************************/
-
-static char provider_name[] = "instanceSoftwareIdentityProvider";
-
-static CMPIInstanceMIFT instMIFT = {
-        CMPICurrentVersion,
-        CMPICurrentVersion,
-        provider_name,
-        SoftwareIdentity_Cleanup,
-        SoftwareIdentity_EnumInstanceNames,
-        SoftwareIdentity_EnumInstances,
-        SoftwareIdentity_GetInstance,
-        SoftwareIdentity_CreateInstance,
-        SoftwareIdentity_SetInstance, 
-        SoftwareIdentity_DeleteInstance,
-        SoftwareIdentity_ExecQuery
-};
-
-CMPIInstanceMI * 
-LinuxHA_SoftwareIdentityProvider_Create_InstanceMI(CMPIBroker * brkr, 
-                                                   CMPIContext * ctx)
-{
-        static CMPIInstanceMI mi = {
-                NULL,
-                &instMIFT
-        };
-        Broker = brkr;
-        return &mi;
-}
+DeclareInstanceMI(SoftwareIdentity_, LinuxHA_SoftwareIdentityProvider, Broker);
 
 

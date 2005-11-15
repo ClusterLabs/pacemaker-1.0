@@ -29,7 +29,8 @@
 #include <cmpift.h>
 #include <cmpimacs.h>
 
-
+int subres_inst_cleanup(CMPIInstanceMI * mi, CMPIContext * ctx);
+int subres_assoc_cleanup(CMPIAssociationMI * mi, CMPIContext * ctx);
 
 int is_sub_resource_of(CMPIInstance * resource_inst, 
                        CMPIInstance * group_inst, CMPIStatus * rc);

@@ -117,8 +117,6 @@ int linuxha_initialize(const char * client_id, int force);
 int linuxha_finalize(void);
 
 
-int init_logger(const char * entity);
-
 int init_heartbeat(void);
 int free_heartbeat(void);
 

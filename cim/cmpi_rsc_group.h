@@ -28,11 +28,11 @@
 #include <cmpift.h>
 #include <cmpimacs.h>
 
-int enumerate_resource_groups(char * classname, CMPIBroker * broker,
+int enum_inst_res_group(char * classname, CMPIBroker * broker,
                 CMPIContext * ctx, CMPIResult * rslt,
                 CMPIObjectPath * ref, int enum_inst, CMPIStatus * rc);
 
-int get_resource_group_instance(char * classname, CMPIBroker * broker,
+int get_inst_res_group(char * classname, CMPIBroker * broker,
                 CMPIContext * ctx, CMPIResult * rslt,
                 CMPIObjectPath * ref, CMPIStatus * rc);
 

@@ -1,5 +1,5 @@
 /*
- * CIM Provider - provider for LinuxHA_Indication
+ * cmpi_ha_indication_provider.c: LinuxHA_Indication provider
  * 
  * Author: Jia Ming Pan <jmltc@cn.ibm.com>
  * Copyright (c) 2005 International Business Machines
@@ -20,23 +20,23 @@
  *
  */
 
-
+#include <portability.h>
+#ifdef HAVE_CONFIG_H
+#include <config.h>
+#endif
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include <sys/stat.h>
 #include <sys/types.h>
-
 #include <cmpidt.h>
 #include <cmpift.h>
 #include <cmpimacs.h>
-
-
 #include "cmpi_utils.h"
 #include "linuxha_info.h"
 #include "cmpi_ha_indication.h"
-#define PROVIDER_ID "cim-ind"
 
+#define PROVIDER_ID          "cim-ind"
 static char ClassName []   = "LinuxHA_Indication";
 static CMPIBroker * Broker = NULL;
 static int ind_enabled     = 0;
@@ -44,40 +44,29 @@ static int ind_enabled     = 0;
 
 /*----------- indication interfaces ----------*/
 static CMPIStatus 
-Indication_IndicationCleanup(CMPIIndicationMI * mi, 
-                             CMPIContext * ctx);
-
+Indication_IndicationCleanup(CMPIIndicationMI * mi, CMPIContext * ctx);
 static CMPIStatus 
 Indication_AuthorizeFilter(CMPIIndicationMI * mi,
                 CMPIContext * ctx, CMPIResult * rslt,
                 CMPISelectExp * filter, const char * type,
                 CMPIObjectPath * classPath, const char * owner);
-
 static CMPIStatus 
 Indication_MustPoll(CMPIIndicationMI * mi,
                 CMPIContext * ctx, CMPIResult * rslt, CMPISelectExp * filter,
                 const char * indType, CMPIObjectPath * classPath);
-
 static CMPIStatus 
 Indication_ActivateFilter(CMPIIndicationMI * mi,
                 CMPIContext * ctx, CMPIResult * rslt,
                 CMPISelectExp * filter, const char * type,
                 CMPIObjectPath * classPath, CMPIBoolean firstActivation);
-
 static CMPIStatus 
 Indication_DeActivateFilter(CMPIIndicationMI * mi,
                CMPIContext * ctx, CMPIResult * rslt,
                CMPISelectExp * filter, const char * type,
                CMPIObjectPath * classPath, CMPIBoolean lastActivation);
 
-CMPIIndicationMI *
-LinuxHA_IndicationProvider_Create_IndicationMI(CMPIBroker * brkr, 
-                                               CMPIContext * ctx);
-
-
-
 /**************************************************
- * Indication Interface Implementaion
+ * Indication Interface
  *************************************************/
 static CMPIStatus 
 Indication_IndicationCleanup(CMPIIndicationMI * mi, 
@@ -150,22 +139,24 @@ Indication_ActivateFilter(CMPIIndicationMI * mi,
 
         CMPIBoolean activated = 1;
         CMPIStatus rc;
-        int ret = 0;
 
         init_logger(PROVIDER_ID);
         
         DEBUG_ENTER();
         
-        ret = haind_activate(ClassName, Broker, ctx, rslt, filter, type, 
-                             classPath, firstActivation, &rc);
+        if (  haind_activate(ClassName, Broker, ctx, rslt, filter, type, 
+                             classPath, firstActivation, &rc) == HA_OK ) {
 
-        DEBUG_LEAVE();
-
+                DEBUG_LEAVE();
+                CMReturnData(rslt, (CMPIValue *)&activated, CMPI_boolean);
+                CMReturnDone(rslt);
  
-        CMReturnData(rslt, (CMPIValue *)&activated, CMPI_boolean);
-        CMReturnDone(rslt);
- 
-        CMReturn(CMPI_RC_OK);
+                CMReturn(CMPI_RC_OK);
+        } else {
+                DEBUG_LEAVE();
+                CMReturnDone(rslt);
+                CMReturn(CMPI_RC_ERR_FAILED);
+        }
 }
 
 static CMPIStatus 
@@ -175,21 +166,23 @@ Indication_DeActivateFilter(CMPIIndicationMI * mi,
                CMPIObjectPath * classPath, CMPIBoolean lastActivation)
 {
         CMPIBoolean deactivated = 1;
-        int ret = 0;
         CMPIStatus rc;
 
         init_logger(PROVIDER_ID);
         DEBUG_ENTER();
 
-        ret = haind_deactivate(ClassName, Broker, ctx, rslt, filter, type, 
-                               classPath, lastActivation, &rc);        
+        if ( haind_deactivate(ClassName, Broker, ctx, rslt, filter, type, 
+                              classPath, lastActivation, &rc) == HA_OK ) {
         
-        DEBUG_LEAVE();
-
-        CMReturnData(rslt, (CMPIValue *)&deactivated, CMPI_boolean);
-        CMReturnDone(rslt);
-
-        CMReturn(CMPI_RC_OK);
+                DEBUG_LEAVE();
+                CMReturnData(rslt, (CMPIValue *)&deactivated, CMPI_boolean);
+                CMReturnDone(rslt);
+                CMReturn(CMPI_RC_OK);
+        } else {
+                DEBUG_LEAVE();
+                CMReturnDone(rslt);
+                CMReturn(CMPI_RC_ERR_FAILED);
+        }
 }
 
 
@@ -208,42 +201,12 @@ static void
 Indication_DisableIndications(CMPIIndicationMI * mi )
 {
         /* Disable indication generation */
-
         ind_enabled = 0;
 }
 
-/*--------------------------------------------*/
-
-#if 0
-CMIndicationMIStub(Indication_, Indication_, Broker, CMNoHook);
-#endif
-
-
-static char ind_provider_name[] = "indIndication_";
-static CMPIIndicationMIFT indMIFT = {
-        CMPICurrentVersion,
-        CMPICurrentVersion,
-        ind_provider_name,
-        Indication_IndicationCleanup,
-        Indication_AuthorizeFilter,
-        Indication_MustPoll,
-        Indication_ActivateFilter,
-        Indication_DeActivateFilter,
-        Indication_EnableIndications,
-        Indication_DisableIndications
-};
-
-CMPIIndicationMI *
-LinuxHA_IndicationProvider_Create_IndicationMI(CMPIBroker * brkr, 
-                                               CMPIContext * ctx)
-{
-        static CMPIIndicationMI mi = {
-                NULL,
-                &indMIFT
-        };
-
-        Broker = brkr;
-        return &mi;
-}
+/*****************************************************
+ * Indication
+ ****************************************************/
+DeclareIndicationMI(Indication_, LinuxHA_IndicationProvider, Broker);
 
 

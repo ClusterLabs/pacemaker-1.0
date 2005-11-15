@@ -1,5 +1,5 @@
 /*
- * HA resource info
+ * ha_resource.c: resource information routines
  * 
  * Author: Jia Ming Pan <jmltc@cn.ibm.com>
  * Copyright (c) 2005 International Business Machines
@@ -21,11 +21,9 @@
  */
 
 #include <portability.h>
-
 #ifdef HAVE_CONFIG_H
 #include <config.h>
 #endif
-
 #include <glib.h>
 #include <clplumbing/cl_malloc.h>
 
@@ -46,15 +44,8 @@ static int add_tree_node_to_list( GNode * node, gpointer user);
 static int free_each_tree_node ( GNode * node, gpointer user);
 static int search_in_tree ( GNode * node, gpointer user);
 
-/* must consider thread-safe */
-/*
-static int invalidate = 0;
-static GNode * res_tree_root = NULL;
-static GList * res_list_head = NULL;
-*/
 
 /* temporary implementation */
-
 struct cluster_resource_info * 
 res_info_dup (const struct cluster_resource_info * info)
 {
@@ -62,6 +53,11 @@ res_info_dup (const struct cluster_resource_info * info)
 
         new_info = (struct cluster_resource_info *)
                 malloc(sizeof(struct cluster_resource_info));
+
+        if ( new_info == NULL ) {
+                cl_log(LOG_ERR, "%s: alloc info failed", __FUNCTION__);
+                return NULL;
+        }
 
         new_info->name = strdup(info->name);
         new_info->type = strdup(info->type);
@@ -99,11 +95,12 @@ get_hosting_node(const char * name)
 
         lenth = strlen(cmnd_pat) + strlen(name) + 1;
 
-        cmnd = malloc(lenth);
+        if ( (cmnd = malloc(lenth)) == NULL ) {
+                return NULL;
+        }
+        
         sprintf(cmnd, "%s %s", cmnd_pat, name);
-
         ret = run_shell_command(cmnd, &exit_code, &std_out, NULL);
-
         if ( ret != HA_OK ) {
                 free(cmnd);
                 return NULL;
@@ -146,6 +143,13 @@ res_parse_group (const char * line, int depth)
         cl_log(LOG_INFO, "%s: match %s at depth: %d", 
                __FUNCTION__, line, depth);
 
+        info = (struct cluster_resource_group_info *)
+                malloc(sizeof(struct cluster_resource_group_info));
+
+        if ( info == NULL ) {
+                cl_log(LOG_ERR, "%s: alloc info failed", __FUNCTION__);
+                return NULL;
+        }
 
         if ( depth ) {
                 regex_str = "\\W+Resource Group: (.*)";
@@ -154,21 +158,16 @@ res_parse_group (const char * line, int depth)
         }
 
         ret = regex_search(regex_str, line, &match);
-
         if ( ret != HA_OK ) {
                 cl_log(LOG_WARNING, "%s: no match", __FUNCTION__);
                 return NULL;
         }
 
+        if ( (info->id = strdup(match[1])) != NULL ) {
+                info->id[strlen(info->id) - 1] = '\0';
+                cl_log(LOG_INFO, "got Group: %s", info->id);
+        }
 
-        info = (struct cluster_resource_group_info *)
-                malloc(sizeof(struct cluster_resource_group_info));
-
-        info->id = strdup(match[1]);
-        info->id[strlen(info->id) - 1] = '\0';
-
-        cl_log(LOG_INFO, "got Group: %s", info->id);
-        
         free_2d_array(match);
 
         return info;
@@ -180,12 +179,19 @@ res_parse_resource (const char * line, int depth)
         int ret = 0;
         char ** match = NULL;
         const char * regex_str = NULL;
-
         struct cluster_resource_info * info = NULL;
 
 
         cl_log(LOG_INFO, "%s: match %s at depth: %d", 
                __FUNCTION__, line, depth);
+
+        info = (struct cluster_resource_info *)
+                malloc(sizeof(struct cluster_resource_info));
+
+        if ( info == NULL ) {
+                cl_log(LOG_ERR, "%s: alloc info failed", __FUNCTION__);
+                return NULL;
+        }
 
         if ( depth ) {
                 regex_str = "\\W+([^:]*) \\((.*)::(.*):(.*)\\)";
@@ -194,22 +200,20 @@ res_parse_resource (const char * line, int depth)
         }
 
         ret = regex_search(regex_str, line, &match);
-
         if ( ret != HA_OK ) {
                 cl_log(LOG_WARNING, "%s: no match", __FUNCTION__);
                 return NULL;
         }
 
-        info = (struct cluster_resource_info *)
-                malloc(sizeof(struct cluster_resource_info));
-
-
         info->name = strdup (match[1]);
         info->provider = strdup (match[2]);
         info->type = strdup (match[3]);
         info->class = strdup (match[4]);
+        
+        if ( info->name ){
+                cl_log(LOG_INFO, "got Resource: %s", info->name);
+        }
 
-        cl_log(LOG_INFO, "got Resource: %s", info->name);
         free_2d_array(match);
 
         return info;
@@ -232,18 +236,17 @@ res_parse (char ** lines, GList * list, int ln, int depth)
                __FUNCTION__, ln, depth);
 
         while ( lines [i] ) {
-
                 if ( (g_info = res_parse_group (lines[i], depth)) != NULL ) {
                         struct res_node_data * node = NULL;
                         GList * sub_list = NULL;
 
                         /* necessary  */
-                        sub_list = g_list_alloc (); 
-
+                        if ( (sub_list = g_list_alloc () ) == NULL ){
+                                continue;
+                        }
+                        
                         /* parse begin from i + 1 */
                         i = res_parse(lines, sub_list, i + 1, depth + 1);
-
-
                         g_info->res_list = sub_list;
                         
                         cl_log(LOG_INFO, 
@@ -251,12 +254,11 @@ res_parse (char ** lines, GList * list, int ln, int depth)
 
                         node = (struct res_node_data *)
                                 malloc(sizeof(struct res_node_data));
-
-                        node->type = GROUP;
-                        node->res = (void *) g_info;
-                        
-                        g_list_append (list, (gpointer)node);
-
+                        if ( node ) {
+                                node->type = GROUP;
+                                node->res = (void *) g_info;
+                                g_list_append (list, (gpointer)node);
+                        }
                 } else if ( ( r_info = res_parse_resource (lines[i], depth) ) 
                             != NULL) {
 
@@ -267,12 +269,11 @@ res_parse (char ** lines, GList * list, int ln, int depth)
                         
                         node = (struct res_node_data *)
                                 malloc(sizeof(struct res_node_data));
-                        
-                        node->type = RESOURCE;
-                        node->res = (void *) r_info;
-
-                        g_list_append (list, (gpointer)node);
-
+                        if ( node ) {
+                                node->type = RESOURCE;
+                                node->res = (void *) r_info;
+                                g_list_append (list, (gpointer)node);
+                        }
                         /* move to next line */
                         i ++; 
 
@@ -300,7 +301,6 @@ get_res_list ()
         cl_log(LOG_WARNING, "%s: !! TEMPORARY IMPLEMENTATION", __FUNCTION__);
         
         list = g_list_alloc ();
-
         if ( list == NULL ) {
                 cl_log(LOG_ERR, "%s: can't alloc list", __FUNCTION__);
                 return NULL;
@@ -309,18 +309,15 @@ get_res_list ()
         cl_log(LOG_INFO, "%s: exec command %s", __FUNCTION__, cmnd);
 
         ret = run_shell_command(cmnd, &exit_code, &std_out, NULL);
-
         if ( ret != HA_OK ) {
                 cl_log(LOG_ERR, "%s: error exec command %s", 
                        __FUNCTION__, cmnd);
-                return NULL;
+
+                return list;
         }
 
         res_parse ( std_out, list, 0, 0);
-
-        
         free_2d_array ( std_out );
-
         DEBUG_LEAVE();
 
         return list;
@@ -385,7 +382,6 @@ res_parse_tree (char ** lines, GNode * parent, int ln, int depth)
                __FUNCTION__, ln, depth);
 
         while ( lines [i] ) {
-
                 if ( (g_info = res_parse_group (lines[i], depth)) != NULL ) {
                         /* is a resource group */
                         struct res_node_data * node_data = NULL;
@@ -393,6 +389,12 @@ res_parse_tree (char ** lines, GNode * parent, int ln, int depth)
                         
                         node_data = (struct res_node_data *)
                                     malloc(sizeof(struct res_node_data));
+                        
+                        if ( node_data == NULL ) {
+                                cl_log(LOG_ERR, "%s: alloc node data failed", 
+                                       __FUNCTION__);
+                                return HA_FAIL;
+                        }
 
                         node_data->type = GROUP;
                         node_data->res = (void *) g_info;
@@ -416,6 +418,11 @@ res_parse_tree (char ** lines, GNode * parent, int ln, int depth)
                         node_data = (struct res_node_data *)
                                 malloc(sizeof(struct res_node_data));
                         
+                        if ( node_data == NULL ) {
+                                cl_log(LOG_ERR, "%s: alloc node data failed", 
+                                       __FUNCTION__);
+                                return HA_FAIL;
+                        }
                         node_data->type = RESOURCE;
                         node_data->res = (void *) r_info;
 
@@ -454,18 +461,14 @@ get_res_tree ()
 
         cl_log(LOG_WARNING, "%s: !! TEMPORARY IMPLEMENTATION", __FUNCTION__);
 
-        root = g_node_new ( NULL );
-        root->parent = NULL;
-
-        if ( root == NULL ) {
-                cl_log(LOG_ERR, "%s: failed to alloc node", __FUNCTION__);
+        if ( (root = g_node_new ( NULL )) == NULL ) {
                 return NULL;
         }
+        
+        root->parent = NULL;
 
         cl_log(LOG_INFO, "%s: exec command %s", __FUNCTION__, cmnd);
-
         ret = run_shell_command(cmnd, &exit_code, &std_out, NULL);
-
         if ( ret != HA_OK ) {
                 cl_log(LOG_ERR, "%s: error exec command %s", 
                        __FUNCTION__, cmnd);
@@ -474,11 +477,8 @@ get_res_tree ()
 
         res_parse_tree ( std_out, root, 0, 0);
 
-        
         free_2d_array ( std_out );
-
         DEBUG_LEAVE();
-
         return root;
 }
 
@@ -487,8 +487,7 @@ int free_each_tree_node ( GNode * node, gpointer user )
         struct res_node_data * node_data = NULL;
 
         node_data = (struct res_node_data *) node->data;
-
-         if ( node_data == NULL ) {
+        if ( node_data == NULL ) {
                 return 0;
         }
         
@@ -522,7 +521,7 @@ int free_each_tree_node ( GNode * node, gpointer user )
 int
 free_res_tree ( GNode * root )
 {
-        int flag = G_TRAVERSE_LEAFS | G_TRAVERSE_NON_LEAFS;
+        GTraverseFlags flag = G_TRAVERSE_LEAFS | G_TRAVERSE_NON_LEAFS;
         g_node_traverse(root, G_POST_ORDER, flag, G_MAXINT, 
                         free_each_tree_node, NULL);
         g_node_destroy ( root );
@@ -538,7 +537,6 @@ int add_tree_node_to_list ( GNode * node, gpointer user)
         list = *(GList **) user;
 
         node_data = (struct res_node_data *) node->data;
-
         if ( node_data ==NULL ) {
                 cl_log(LOG_INFO, "%s: added a node to list", __FUNCTION__);
         } else {
@@ -556,10 +554,7 @@ GList *
 build_res_list ( GNode * root )
 {
         GList * list = NULL;
-        int traverse_flag = 0;
-
-        traverse_flag = G_TRAVERSE_LEAFS | G_TRAVERSE_NON_LEAFS;
-
+        GTraverseFlags traverse_flag = G_TRAVERSE_LEAFS | G_TRAVERSE_NON_LEAFS;
         g_node_traverse(root, G_IN_ORDER, traverse_flag, G_MAXINT, 
                         add_tree_node_to_list, &list);
 
@@ -581,7 +576,6 @@ search_in_tree ( GNode * node, gpointer user)
         name = (char *) user_data [1];
 
         node_data = (struct res_node_data *) node->data;
-
         if ( node_data == NULL ) {
                 return 0;
         }
@@ -619,7 +613,7 @@ GNode *
 search_res_in_tree (GNode * root, char * name, res_type_t type)
 {
         void * user_data [3];
-        int traverse_flag = 0;
+        GTraverseFlags traverse_flag;
 
         /* traverse tree looking for resource */
         user_data [0] = &type;

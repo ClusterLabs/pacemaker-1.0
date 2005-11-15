@@ -1,5 +1,5 @@
 /*
- * CIM Provider
+ * cmpi_resource.c: helper file for LinuxHA_ClusterResrouce class provider
  * 
  * Author: Jia Ming Pan <jmltc@cn.ibm.com>
  * Copyright (c) 2005 International Business Machines
@@ -22,11 +22,9 @@
 
 
 #include <portability.h>
-
 #ifdef HAVE_CONFIG_H
 #include <config.h>
 #endif
-
 #include <glib.h>
 #include <clplumbing/cl_malloc.h>
 
@@ -35,7 +33,7 @@
 #include "cmpi_utils.h"
 #include "ha_resource.h"
 
-static char system_name []     = "LinuxHACluster";
+static char system_name     [] = "LinuxHACluster";
 static char system_creation [] = "LinuxHA_Cluster";
 
 static CMPIInstance *
@@ -44,11 +42,12 @@ make_resource_instance(char * classname, CMPIBroker * broker,
                        CMPIStatus * rc, GNode * node);
 
 /* crm_resource -W -r requires group id */
-static char * get_res_whole_name ( GNode * node, const char * rsc_name);
-
+static char * get_res_full_name ( GNode * node, const char * rsc_name);
+static GNode * res_tree_root = NULL;
+static GList * res_list_head = NULL;
 
 static char *
-get_res_whole_name ( GNode * node, const char * rsc_name)
+get_res_full_name ( GNode * node, const char * rsc_name)
 {
         int max_len = 256;
         char long_name [max_len];
@@ -59,7 +58,8 @@ get_res_whole_name ( GNode * node, const char * rsc_name)
 
 
         cl_log(LOG_INFO, "%s: rsc_name = %s, rsc_name in node = %s",
-               __FUNCTION__, rsc_name, GetResourceInfo(GetResNodeData(node))->name);
+               __FUNCTION__, rsc_name, 
+               GetResourceInfo(GetResNodeData(node))->name);
 
         parent = node->parent;
         strcpy(long_name, rsc_name);
@@ -72,7 +72,8 @@ get_res_whole_name ( GNode * node, const char * rsc_name)
                 info = (struct cluster_resource_group_info *)node_data->res;
 
                 if ( strlen(long_name) + strlen(info->id) + 1 >= max_len ) {
-                        cl_log(LOG_INFO, "%s: exceed max length", __FUNCTION__);
+                        cl_log(LOG_INFO, "%s: exceed max length", 
+                               __FUNCTION__);
                         return NULL;
                 }
                 
@@ -97,7 +98,8 @@ make_resource_instance(char * classname, CMPIBroker * broker,
         char * hosting_node = NULL;
         struct cluster_resource_info * info = NULL;
         struct res_node_data * node_data = NULL;
-        char * whole_name = NULL;
+        char * full_name = NULL;
+        char caption [] = "LinuxHA Cluste Resource";
         
         DEBUG_ENTER();
 
@@ -105,7 +107,6 @@ make_resource_instance(char * classname, CMPIBroker * broker,
 
         
         node_data = (struct res_node_data *) node->data;
-
         if ( node_data == NULL || node_data->res == NULL ) {
                 return NULL;
         }
@@ -115,7 +116,6 @@ make_resource_instance(char * classname, CMPIBroker * broker,
         ASSERT(info);
 
         ci = CMNewInstance(broker, op, rc);
-
         if ( CMIsNullObject(ci) ) {
                 cl_log(LOG_ERR, "%s: can't create instance", __FUNCTION__);
 
@@ -125,21 +125,18 @@ make_resource_instance(char * classname, CMPIBroker * broker,
         }
  
         cl_log(LOG_INFO, "%s: setting properties", __FUNCTION__);
-
         /* setting properties */
-
         CMSetProperty(ci, "Type", info->type, CMPI_chars);
         CMSetProperty(ci, "ResourceClass", info->class, CMPI_chars);
         CMSetProperty(ci, "Name", info->name, CMPI_chars);
        
 
-        whole_name = get_res_whole_name( node, rsc_name );
-        hosting_node = whole_name ? 
-                get_hosting_node(whole_name) : NULL;
+        full_name = get_res_full_name( node, rsc_name );
+        hosting_node = full_name ? 
+                get_hosting_node(full_name) : NULL;
 
         cl_log(LOG_INFO, "%s: hosting_node of %s is %s", __FUNCTION__, 
                rsc_name, hosting_node? hosting_node: "(NULL)");
-
         if ( hosting_node ){
                 char status [] = "Running";
                 cl_log(LOG_INFO, "Hosting node is %s", hosting_node);
@@ -159,11 +156,13 @@ make_resource_instance(char * classname, CMPIBroker * broker,
 
 
         /* set other key properties inherited from super classes */
-        CMSetProperty(ci, "SystemCreationClassName", system_creation, CMPI_chars);
+        CMSetProperty(ci, "SystemCreationClassName", 
+                      system_creation, CMPI_chars);
         CMSetProperty(ci, "SystemName", system_name, CMPI_chars);
         CMSetProperty(ci, "CreationClassName", classname, CMPI_chars);
+        CMSetProperty(ci, "Caption", caption, CMPI_chars);
         
-        free (whole_name);
+        free (full_name);
         free (hosting_node);
 
 out:
@@ -172,22 +171,20 @@ out:
 }
 
 int
-get_resource_instance(char * classname, CMPIBroker * broker, CMPIContext * ctx,
-                      CMPIResult * rslt, CMPIObjectPath * cop,
-                      char ** properties, CMPIStatus * rc)
+get_inst_resource(char * classname, CMPIBroker * broker, CMPIContext * ctx,
+                  CMPIResult * rslt, CMPIObjectPath * cop,
+                  char ** properties, CMPIStatus * rc)
 {
         CMPIInstance* ci = NULL;
         CMPIObjectPath* op = NULL;
         CMPIData data_name;
         char * rsc_name = NULL;
         int ret = 0;
-        GNode * root = NULL;
         GNode * node_found = NULL;
         
         DEBUG_ENTER();
 
         data_name = CMGetKey(cop, "Name", rc);
-
         if ( data_name.value.string == NULL ) {
                 cl_log(LOG_WARNING, "key %s is NULL", "Name");
                 ret = HA_FAIL;
@@ -197,9 +194,8 @@ get_resource_instance(char * classname, CMPIBroker * broker, CMPIContext * ctx,
         rsc_name = CMGetCharPtr(data_name.value.string);
 
         cl_log(LOG_INFO, "rsc_name = %s", rsc_name);
- 
-        op = CMNewObjectPath(broker, 
-                        CMGetCharPtr(CMGetNameSpace(cop, rc)), classname, rc);
+        op = CMNewObjectPath(broker, CMGetCharPtr(CMGetNameSpace(cop, rc)), 
+                             classname, rc);
 
         if ( CMIsNullObject(op) ){
                 ret = HA_FAIL;
@@ -209,20 +205,19 @@ get_resource_instance(char * classname, CMPIBroker * broker, CMPIContext * ctx,
         }
 
         /* get resource tree */
-        root = get_res_tree ();
-
-        if ( root  == NULL ) {
-                cl_log(LOG_ERR, "%s: failed to get resource tree", __FUNCTION__);
-
-	        CMSetStatusWithChars(broker, rc, 
-		       CMPI_RC_ERR_FAILED, "Failed to get resource tree");
-                goto out;
+        if ( res_tree_root == NULL ) {
+                res_tree_root = get_res_tree ();
+                if ( res_tree_root  == NULL ) {
+                        cl_log(LOG_ERR, "%s: failed to get resource tree", 
+                               __FUNCTION__);
+	                CMSetStatusWithChars(broker, rc, CMPI_RC_ERR_FAILED, 
+                                             "Failed to get resource tree");
+                        goto out;
+                }
         }
 
-
         /* search for node */
-        node_found = search_res_in_tree(root, rsc_name, RESOURCE);
-
+        node_found = search_res_in_tree(res_tree_root, rsc_name, RESOURCE);
         if ( node_found == NULL ) {
                 cl_log(LOG_WARNING, "%s: resource %s not found!",
                                 __FUNCTION__, rsc_name);
@@ -249,66 +244,56 @@ get_resource_instance(char * classname, CMPIBroker * broker, CMPIContext * ctx,
 
         ret = HA_OK;
 out:
-        if ( root ) {
-                free_res_tree ( root );
-        }
-
         DEBUG_LEAVE();
         return ret;
 }
 
 int 
-enumerate_resource_instances(char * classname, CMPIBroker * broker,
-                             CMPIContext * ctx, CMPIResult * rslt,
-                             CMPIObjectPath * ref, int enum_inst, 
-                             CMPIStatus * rc)
+enum_inst_resource(char * classname, CMPIBroker * broker,
+                   CMPIContext * ctx, CMPIResult * rslt,
+                   CMPIObjectPath * ref, int enum_inst, 
+                   CMPIStatus * rc)
 {
 
         char * namespace = NULL;
-        GNode * root = NULL;
 
         CMPIObjectPath * op = NULL;
-        GList * list = NULL;
         GList * current = NULL;
 
         /* get resource tree */
-        root = get_res_tree ();
-        
-        if ( root == NULL ) {
-                cl_log(LOG_ERR, "%s: can't get resource tree", __FUNCTION__);
-                return HA_FAIL;
-        }
-        
+        if ( res_tree_root == NULL ) {
+                res_tree_root = get_res_tree ();
+                if ( res_tree_root == NULL ) {
+                        cl_log(LOG_ERR, "%s: can't get resource tree", __FUNCTION__);
+                        return HA_FAIL;
+                }
+        }        
         /* build list on tree */
-        list = build_res_list ( root );
 
-        if ( list == NULL ) {
-                cl_log(LOG_ERR, "%s: failed to build resource list", 
-                       __FUNCTION__);
-                free_res_tree ( root );
-                return HA_FAIL;
-        } 
-                
+        if ( res_list_head == NULL ) {
+                res_list_head = build_res_list ( res_tree_root );
+                if ( res_list_head == NULL ) {
+                        cl_log(LOG_ERR, "%s: failed to build resource list", 
+                               __FUNCTION__);
+                        return HA_FAIL;
+                } 
+        }
+
         cl_log(LOG_INFO, "%s: resource list built, %d elements",
-               __FUNCTION__, g_list_length(list) );
+               __FUNCTION__, g_list_length(res_list_head) );
 
         namespace = CMGetCharPtr(CMGetNameSpace(ref, rc));
-
         op = CMNewObjectPath(broker, namespace, classname, rc);
-
         if ( CMIsNullObject(op) ){
-                free_res_tree ( root );
                 return HA_FAIL;
         }
         
-
         /* go through the list for enumerating resource */
-        for ( current = list; current;) {
+        for ( current = res_list_head; current;) {
                 GNode * node = NULL;
                 struct res_node_data * node_data = NULL;
                 struct cluster_resource_info * info = NULL;
                 
-
                 node = (GNode *)current->data;
                 if ( node == NULL ) {
                         goto next;
@@ -351,20 +336,22 @@ enumerate_resource_instances(char * classname, CMPIBroker * broker,
 
         next:
                 current = current->next;
-                if ( current == list ) {
+                if ( current == res_list_head ) {
                         break;
                 }
 
         }
 
-        if ( root ) {
-                free_res_tree ( root );
-        }
-
-        /* TODO: free list */
-
         CMReturnDone(rslt);
         return HA_OK;
 }
 
+
+
+int
+resource_cleanup(CMPIInstanceMI * mi, CMPIContext * ctx){
+        free_res_tree(res_tree_root);
+        res_tree_root = NULL;
+        return HA_OK;
+}
 
