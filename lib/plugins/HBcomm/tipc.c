@@ -277,9 +277,6 @@ tipc_close(struct hb_media * mp)
                 close(tipc->sendfd);
         }
 
-        FREE(tipc);
-        FREE(mp);
-
         PILCallLog(LOG, PIL_INFO, "%s: tipc closed", __FUNCTION__);
         return HA_OK;
 }
@@ -291,7 +288,7 @@ tipc_read(struct hb_media * mp, int * len)
 {
         struct sockaddr_tipc client_addr;
         struct tipc_private * tipc;
-        int sock_len;
+        socklen_t sock_len;
         int numbytes;
 
         TIPC_ASSERT(mp);
@@ -328,19 +325,15 @@ static int
 tipc_write(struct hb_media * mp, void * msg, int len)
 {
         struct tipc_private * tipc;
-
         int numbytes;
-        int sock_len;
 
         TIPC_ASSERT(mp);
 
         tipc = (struct tipc_private *) mp->pd;        
 
-        sock_len = sizeof(struct sockaddr_tipc);
-
         if ( (numbytes = sendto(tipc->sendfd, msg, len, 0, 
                                 (struct sockaddr *)&tipc->maddr, 
-                                sock_len)) < 0 ){
+                                sizeof(struct sockaddr_tipc))) < 0 ){
                 PILCallLog(LOG, PIL_CRIT, "%s: Unable to send message: %s", 
                            __FUNCTION__, strerror(errno));
                 return HA_FAIL;
@@ -396,10 +389,8 @@ tipc_make_receive_sock(struct hb_media * mp)
 {
         struct sockaddr_tipc server_addr;
         struct tipc_private * tipc = NULL;
-        int sock_len;
         int sd;        
         
-        sock_len = sizeof (struct sockaddr_tipc);
         sd = socket (AF_TIPC, SOCK_RDM, 0);
 
         tipc = (struct tipc_private *) mp->pd;
@@ -413,7 +404,8 @@ tipc_make_receive_sock(struct hb_media * mp)
 
         /* Bind  port to sequence */
 
-        if (bind (sd, (struct sockaddr*)&server_addr, sock_len) != 0){
+        if (bind (sd, (struct sockaddr*)&server_addr, 
+	          sizeof(struct sockaddr_tipc)) != 0){
                 PILCallLog(LOG, PIL_CRIT, 
                            "%s: Could not bind to sequence <%u,%u,%u> scope %u",
                            __FUNCTION__, 
