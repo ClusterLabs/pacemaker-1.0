@@ -151,6 +151,7 @@ tipc_new(unsigned int name_type,
         tipc->seq_upper = seq_upper;
 
          /* setting mcast addr */
+        tipc->maddr.family = AF_TIPC;
         tipc->maddr.addrtype = TIPC_ADDR_MCAST;
         tipc->maddr.addr.name.domain = 0;
         tipc->maddr.addr.nameseq.type = name_type;
