@@ -1,4 +1,4 @@
-# $Id: Makefile.am,v 1.13 2005/10/13 11:36:54 davidlee Exp $
+# $Id: Makefile.am,v 1.14 2005/11/15 13:11:17 davidlee Exp $
 #
 # "pkg" Makefile for Solaris etc.
 #
@@ -76,7 +76,11 @@ $(INFOFILES)/prototype:	stamp-tmpinst
 	      { $$4 = $$5 = $$6 = "?" } \
 	    "/" $$3 ~ /^(\/usr|\/usr\/lib|\/usr\/lib\/ocf)$$/ \
 	      { $$4 = $$5 = $$6 = "?" } \
-	    "/" $$3 == "@HA_VARLIBDIR@/@HB_PKG@/ccm" \
+	    "/" $$3 == "@HA_VARRUNDIR@/@HB_PKG@/ccm" \
+	      { $$5 = "@HA_CCMUSER@" ; $$6 = "@HA_APIGROUP@" } \
+	    "/" $$3 == "@HA_VARRUNDIR@/@HB_PKG@/crm" \
+	      { $$5 = "@HA_CCMUSER@" ; $$6 = "@HA_APIGROUP@" } \
+	    "/" $$3 == "@HA_VARLIBDIR@/@HB_PKG@/crm" \
 	      { $$5 = "@HA_CCMUSER@" ; $$6 = "@HA_APIGROUP@" } \
 	    "/" $$3 == "@HA_COREDIR@/@HA_CCMUSER@" \
 	      { $$5 = "@HA_CCMUSER@" } \
