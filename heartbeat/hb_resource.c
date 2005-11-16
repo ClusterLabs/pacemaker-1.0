@@ -1,4 +1,4 @@
-/* $Id: hb_resource.c,v 1.80 2005/09/28 20:29:55 gshi Exp $ */
+/* $Id: hb_resource.c,v 1.81 2005/11/16 05:21:56 gshi Exp $ */
 /*
  * hb_resource: Linux-HA heartbeat resource management code
  *
@@ -453,7 +453,9 @@ notify_world(struct ha_msg * msg, const char * ostatus)
 					char ename[64];
 					snprintf(ename, sizeof(ename), "HA_%s"
 					,	msg->names[j]);
-					setenv(ename, msg->values[j], 1);
+					if (msg->types[j] == FT_STRING){
+						setenv(ename, msg->values[j], 1);
+					}
 				}
 				if (ostatus) {
 					setenv(OLDSTATUS, ostatus, 1);
@@ -2454,6 +2456,9 @@ StonithStatProcessName(ProcTrack* p)
 
 /*
  * $Log: hb_resource.c,v $
+ * Revision 1.81  2005/11/16 05:21:56  gshi
+ * we should not put non-string field into environment setting
+ *
  * Revision 1.80  2005/09/28 20:29:55  gshi
  * change the variable debug to debug_level
  * define it in cl_log
