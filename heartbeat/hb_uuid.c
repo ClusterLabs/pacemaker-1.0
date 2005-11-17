@@ -29,6 +29,8 @@
 #include <unistd.h>
 #include <clplumbing/cl_misc.h>
 
+extern int				DoManageResources;
+
 #ifndef O_SYNC
 #	define O_SYNC 0
 #endif
@@ -704,6 +706,9 @@ read_delnode_file(struct sys_config* cfg)
 int
 write_cache_file(struct sys_config* cfg)
 {
+	if (DoManageResources){
+		return HA_OK;
+	}
 	if (write_node_uuid_file(cfg) != HA_OK){
 		return HA_FAIL;
 	}
@@ -715,7 +720,10 @@ write_cache_file(struct sys_config* cfg)
 int 
 read_cache_file(struct sys_config* cfg)
 {
-
+	
+	if (DoManageResources){
+		return HA_OK;
+	}
 	if (read_node_uuid_file(cfg) != HA_OK){
 		return HA_FAIL;
 	}
