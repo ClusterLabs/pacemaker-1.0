@@ -19,7 +19,10 @@ set beam::WARNING10::enabling_policy "always"
 # We've disabled WARNING14 due to a 3.0 BEAM bug.
 #- WARNING14     /*incompatible types*/     >>>WARNING14_cib_client_connect_d323470040e402e4
 #"callbacks.c", line 216: Comparing `client_callback' of type `gboolean (*)(IPC_Channel *, gpointer)' with `cib_null_callback' of type `gboolean (*)(IPC_Channel *, gpointer)'
+# The following two are BEAM bugs...  Hope they get fixed soon...
 set beam::WARNING14::enabling_policy ""
+set beam::MISTAKE4::enabling_policy ""
+
 set beam::WARNING15::enabling_policy "same_line"
 set beam::PORTABILITY1::enabling_policy "always"
 set beam::PORTABILITY3::enabling_policy "always"
