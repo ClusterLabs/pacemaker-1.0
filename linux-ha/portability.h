@@ -1,4 +1,4 @@
-/* $Id: portability.h,v 1.49 2005/11/09 15:07:18 davidlee Exp $ */
+/* $Id: portability.h,v 1.50 2005/11/18 09:43:19 davidlee Exp $ */
 #ifndef PORTABILITY_H
 #  define PORTABILITY_H
 
@@ -67,7 +67,7 @@ int setenv(const char *name, const char * value, int why);
 
 #ifndef HA_HAVE_UNSETENV
   /* We supply a replacement function, but need a prototype */
-int unsetenv(const char *name);
+void unsetenv(const char *name);
 #endif /* HA_HAVE_UNSETENV */
 
 #ifndef HA_HAVE_STRERROR
