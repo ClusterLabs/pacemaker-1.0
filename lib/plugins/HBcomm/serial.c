@@ -1,4 +1,4 @@
-/* $Id: serial.c,v 1.44 2005/10/20 17:37:06 gshi Exp $ */
+/* $Id: serial.c,v 1.45 2005/11/18 23:02:15 alan Exp $ */
 /*
  * Linux-HA serial heartbeat code
  *
@@ -176,7 +176,7 @@ static int
 compute_fragment_write_delay(void)
 {
 	int rate_bps = atoi(baudstring);
-	if (rate_bps <= 0 ){
+	if (rate_bps < 300 ){
 		cl_log(LOG_ERR, "%s: invalid baud rate(%s)",
 		       __FUNCTION__, baudstring);
 		return HA_FAIL;
@@ -610,7 +610,7 @@ serial_write(struct hb_media* mp, void *p, int len)
 		setmsalarm(500);
 		wrc = write(ourtty, datastr, datalen);
 		cancelmstimer();
-		if (i != loop -1);{
+		if (i != (loop -1)) {
 			usleep(fragment_write_delay);
 		}
 		if (DEBUGPKTCONT) {
@@ -704,6 +704,11 @@ ttygets(char * inbuf, int length, struct serial_private *tty)
 }
 /*
  * $Log: serial.c,v $
+ * Revision 1.45  2005/11/18 23:02:15  alan
+ * Fixed two BEAM bugs:
+ * 	Check for baud rates < 300 instead of <=0
+ * 	Fixed an if-statement which had an extra ; changing it's meaning.
+ *
  * Revision 1.44  2005/10/20 17:37:06  gshi
  * make the code easy to read
  *
