@@ -1,4 +1,4 @@
-/* $Id: stonithd.c,v 1.77 2005/11/11 10:06:01 sunjd Exp $ */
+/* $Id: stonithd.c,v 1.78 2005/11/19 17:58:36 sunjd Exp $ */
 
 /* File: stonithd.c
  * Description: STONITH daemon for node fencing
@@ -123,7 +123,7 @@ typedef struct stonith_rsc
 /* Must correspond to stonith_type_t */
 static const char * stonith_op_strname[] =
 {
-	"QUERY", "RESET", "POWERON", "POWERON"
+	"QUERY", "RESET", "POWERON", "POWEROFF"
 };
 
 static GList * client_list = NULL;
@@ -3251,6 +3251,9 @@ adjust_debug_level(int nsig, gpointer user_data)
 
 /* 
  * $Log: stonithd.c,v $
+ * Revision 1.78  2005/11/19 17:58:36  sunjd
+ * correct a typo found by Joachim Banzhaf
+ *
  * Revision 1.77  2005/11/11 10:06:01  sunjd
  * Fix the bug 730: stonithd is killed by signal 11
  *
