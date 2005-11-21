@@ -1,4 +1,4 @@
-/* $Id: stonithd.c,v 1.78 2005/11/19 17:58:36 sunjd Exp $ */
+/* $Id: stonithd.c,v 1.79 2005/11/21 10:01:44 sunjd Exp $ */
 
 /* File: stonithd.c
  * Description: STONITH daemon for node fencing
@@ -1176,8 +1176,8 @@ handle_msg_resetted(struct ha_msg* msg, void* private_data)
 	stonithd_log(LOG_DEBUG, "Got a notification of successfully resetting"
 		" node %s from node %s with APITET.", target, from);	
 
-	/* The timeout value equals 2 minutes now */
-	timer_id = Gmain_timeout_add_full(G_PRIORITY_HIGH_IDLE, 120*1000
+	/* The timeout value equals 90 seconds now */
+	timer_id = Gmain_timeout_add_full(G_PRIORITY_HIGH_IDLE, 90*1000
 			, reboot_block_timeout, g_strdup(target), NULL);
 
 	g_hash_table_replace(reboot_blocked_table, g_strdup(target)
@@ -3251,6 +3251,9 @@ adjust_debug_level(int nsig, gpointer user_data)
 
 /* 
  * $Log: stonithd.c,v $
+ * Revision 1.79  2005/11/21 10:01:44  sunjd
+ * shorted the time since some machine reboots quickly
+ *
  * Revision 1.78  2005/11/19 17:58:36  sunjd
  * correct a typo found by Joachim Banzhaf
  *
