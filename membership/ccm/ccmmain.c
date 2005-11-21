@@ -1,4 +1,4 @@
-/* $Id: ccmmain.c,v 1.31 2005/10/05 22:36:57 gshi Exp $ */
+/* $Id: ccmmain.c,v 1.32 2005/11/21 21:43:30 gshi Exp $ */
 /* 
  * ccm.c: Consensus Cluster Service Program 
  *
@@ -246,7 +246,7 @@ main(int argc, char **argv)
 	CL_SIGNAL(SIGUSR2, ccm_debug);
 	CL_IGNORE_SIG(SIGPIPE);
 	
-	cl_inherit_use_logd(ENV_PREFIX ""KEY_LOGDAEMON, 0);
+	cl_inherit_use_logd(ENV_PREFIX ""KEY_LOGDAEMON, 256);
 	
 	inherit_logconfig_from_environment();
 
