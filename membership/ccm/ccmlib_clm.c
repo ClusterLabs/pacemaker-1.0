@@ -144,12 +144,14 @@ saClmInitialize(SaClmHandleT *clmHandle, const SaClmCallbacksT *clmCallbacks,
 	SaClmHandleT *hash_key;
 	fd_set rset;
 	struct timeval tv;
+        SaErrorT rc;
 
 	oc_ev_register(&ev_token);
 	if ((ret = oc_ev_set_callback(ev_token, OC_EV_MEMB_CLASS
 	,	ccm_events, NULL)) != 0) {
 		if (ret == ENOMEM){
-			return SA_ERR_NO_MEMORY;
+			rc = SA_ERR_NO_MEMORY;
+                        goto err_nomem_exit;
 		}
 		else{
 			assert(0);	/* Never runs here */
@@ -163,12 +165,15 @@ saClmInitialize(SaClmHandleT *clmHandle, const SaClmCallbacksT *clmCallbacks,
 
 	hash_key = (SaClmHandleT *)g_malloc(sizeof(SaClmHandleT));
 	if (!hash_key){
-		return SA_ERR_NO_MEMORY;
+		rc = SA_ERR_NO_MEMORY;
+                goto err_nomem_exit;
 	}
 
 	hd = (__clm_handle_t *)g_malloc(sizeof(__clm_handle_t));
 	if (!hd){
-		return SA_ERR_NO_MEMORY;
+                g_free(hash_key);
+		rc = SA_ERR_NO_MEMORY;
+                goto err_nomem_exit;
 	}
 
 	*clmHandle = __handle_counter++;
@@ -181,7 +186,8 @@ saClmInitialize(SaClmHandleT *clmHandle, const SaClmCallbacksT *clmCallbacks,
 
 	if ((ret = oc_ev_activate(hd->ev_token, &hd->fd)) != 0) {
 		cl_log(LOG_ERR, "oc_ev_activate error [%d]", ret);
-		return SA_ERR_LIBRARY;
+		rc = SA_ERR_LIBRARY;
+                goto err_lib_exit;
 	}
 
 	/* Prepare information for saClmClusterNodeGet() series calls */
@@ -195,21 +201,33 @@ saClmInitialize(SaClmHandleT *clmHandle, const SaClmCallbacksT *clmCallbacks,
 		if ((ret = select(hd->fd + 1, &rset, NULL, NULL, &tv)) == -1) {
 			cl_log(LOG_ERR, "%s: select error [%d]"
 			,	__FUNCTION__, ret);
-			return SA_ERR_LIBRARY;
+			rc = SA_ERR_LIBRARY;
+                        goto err_lib_exit;
 
 		} else if (ret == 0) {
 			cl_log(LOG_WARNING, "%s: select timeout", __FUNCTION__);
-			return SA_ERR_TIMEOUT;
+			rc = SA_ERR_TIMEOUT;
+                        goto err_lib_exit;
 		}
 
 		if ((ret = oc_ev_handle_event(hd->ev_token) != 0)) {
 			cl_log(LOG_ERR, "%s: oc_ev_handle_event error [%d]"
 			,	__FUNCTION__, ret);
-			return SA_ERR_LIBRARY;
+			rc = SA_ERR_LIBRARY;
+                        goto err_lib_exit;
 		}
 
 	}
 	return SA_OK;
+
+ err_nomem_exit:
+        g_hash_table_remove(__handle_hash, hash_key);
+        g_free(hd);
+        g_free(hash_key);
+
+ err_lib_exit:
+        oc_ev_unregister(ev_token);
+        return rc;
 }
 
 SaErrorT 

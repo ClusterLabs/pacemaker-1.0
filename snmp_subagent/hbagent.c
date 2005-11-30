@@ -817,7 +817,9 @@ handle_membership_msg(void)
 			   again later. */
 			clmInitialized = 0;
 			free_membershiptable();
-
+                        
+                        /* finalize membership */
+                        saClmFinlize(&clm);
 			return HA_OK;
 		} else {
 		    cl_log(LOG_WARNING, "saClmDispatch error, ret = [%d]", ret);
