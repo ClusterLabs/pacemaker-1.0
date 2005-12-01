@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-my($VERSION)=(qw$Id: ldirectord,v 1.127 2005/10/31 04:30:29 horms Exp $)[2];
+my($VERSION)=(qw$Id: ldirectord,v 1.128 2005/12/01 00:40:09 horms Exp $)[2];
 
 ######################################################################
 # ldirectord                 http://www.vergenet.net/linux/ldirectord/
@@ -560,6 +560,14 @@ sub ld_init
 	}
 	read_config();
 	undef @OLDVIRTUAL;
+
+	{
+		my $log_str = "Invoking ldirectord invoked as: $0 ";
+		for my $i (@ARGV) {
+			$log_str .= $i . " ";
+		}
+		ld_log($log_str);
+	}
 
 	my $oldpid;
 	my $filepid;
@@ -1578,7 +1586,7 @@ sub ld_start
 		for my $k (keys %$or) {
 			&system_wrapper("$IPVSADM -d " . $nv->{proto} .
 					&get_virtual($nv) . " -r $k");
-			&ld_log("Removed real server: $k (" . 
+			&ld_log("Removed real server (start): $k (" . 
 					#scalar(%{$nv->{real_status}}) .
 					" x " .  &get_virtual($nv) . ")\n");
 			delete($$or{$k});
@@ -1604,7 +1612,8 @@ sub ld_start
 		# service still exists, remove it
 		&system_wrapper("$IPVSADM -D " . $nv->{proto} . " " . 
 				&get_virtual($nv));
-		&ld_log("Removed virtual server: " . &get_virtual($nv) . "\n");
+		&ld_log("Removed virtual server (start): " . 
+				&get_virtual($nv) . "\n");
 	}
 }
 
@@ -1628,14 +1637,14 @@ sub ld_stop
 			if (defined $$r{virtual_status}) {
 				&system_wrapper("$IPVSADM -d $$v{proto} " . &get_virtual($v) . " -r $$r{server}:$$r{port}");
 				_status_down($v, $r);
-				&ld_log("Removed real server: " .
+				&ld_log("Removed real server (stop): " .
 					"$$r{server}:$$r{port} (" .
 					#scalar(%{$v->{real_status}}) . 
-					" x " . &get_virtual($v) );
+					" x " . &get_virtual($v) . ")" );
 			}
 		}
 		&system_wrapper("$IPVSADM -D $$v{proto} " .  &get_virtual($v));
-		&ld_log("Removed virtual server: " .  &get_virtual($v));
+		&ld_log("Removed virtual server (stop): " .  &get_virtual($v));
 	}
 }
 
@@ -2406,6 +2415,16 @@ sub _remove_service {
 		$virtual_str =~ /(.*):(.*)/;
 		$rservice .= ":" . $2;
         	$or=$ov->{"real"}->{$rservice};
+		# If this doesn't exist either, use the original service.
+		# Otherwise if masq and quescence is in use, the
+		# real server is not local, and it has an alternate port to
+		# the virtual server, using the mapped service will
+		# result in a quiescent service being created on the
+		# virtual server's port, which is not wanted.
+		if(!defined($or)) {
+			$rservice = $old_rservice;
+			$old_rservice = undef;
+		}
 	}
 
         if((!defined($or) and !defined($is_quiescent)) or 
@@ -2535,7 +2554,7 @@ sub _status_up
 }
 
 # Set the status of a server as down
-# Should onlu be called from _service_down or _ld_stop
+# Should only be called from _service_down or ld_stop
 
 sub _status_down
 {
@@ -2789,7 +2808,7 @@ sub ld_log
 		print "[$now] $message\n";
 	} elsif ( $LDIRLOG =~ /^\/(.*)/ ) {
 		unless (open(LOGFILE, ">>$LDIRLOG")
-				and print LOGFILE "[$now|$CFGNAME] $message\n"
+				and print LOGFILE "[$now|$CFGNAME|$$] $message\n"
 				and close(LOGFILE)) {
 			print STDERR "$message\n";
 	    		return 1;
