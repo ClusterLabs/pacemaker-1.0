@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.473 2005/11/12 18:32:22 lars Exp $ */
+/* $Id: heartbeat.c,v 1.474 2005/12/01 23:22:28 gshi Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -3298,8 +3298,9 @@ ManagedChildDied(ProcTrack* p, int status, int signo, int exitcode
 		}
 		if (0 != signo) {
 			cl_log(shutdown_in_progress ? LOG_DEBUG : LOG_ERR
-			,	"Client %s killed by signal %d."
+			,	"Client %s(pid=%d) killed by signal %d."
 			,	managedchild->command
+		       ,	(int)p->pid
 			,	signo);
 		}
 	}
@@ -6018,6 +6019,9 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.474  2005/12/01 23:22:28  gshi
+ * print out the pid of the process being killed
+ *
  * Revision 1.473  2005/11/12 18:32:22  lars
  * Fix a log message.
  *
