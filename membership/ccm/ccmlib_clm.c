@@ -220,12 +220,12 @@ saClmInitialize(SaClmHandleT *clmHandle, const SaClmCallbacksT *clmCallbacks,
 	}
 	return SA_OK;
 
- err_nomem_exit:
+ err_lib_exit:
         g_hash_table_remove(__handle_hash, hash_key);
         g_free(hd);
         g_free(hash_key);
 
- err_lib_exit:
+ err_nomem_exit:
         oc_ev_unregister(ev_token);
         return rc;
 }
