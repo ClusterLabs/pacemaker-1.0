@@ -1,4 +1,4 @@
-/* $Id: stonithd.c,v 1.79 2005/11/21 10:01:44 sunjd Exp $ */
+/* $Id: stonithd.c,v 1.80 2005/12/06 06:35:53 sunjd Exp $ */
 
 /* File: stonithd.c
  * Description: STONITH daemon for node fencing
@@ -72,7 +72,7 @@
 #define MAXCMP 80
 #define MAGIC_EC 100
 #define stonithd_log(priority, fmt...); \
-	if ( debug_level == 0 && priority == LOG_DEBUG ) { \
+	if ( debug_level <= 0 ) { \
 		; \
 	} else { \
 		cl_log(priority, fmt); \
@@ -80,7 +80,7 @@
 
 /* Only export logs when debug_level >= 2 */
 #define stonithd_log2(priority, fmt...); \
-	if ( debug_level == 2 && priority == LOG_DEBUG ) { \
+	if ( debug_level >= 2 ) { \
 		cl_log(priority, fmt); \
 	}
 
@@ -327,7 +327,6 @@ static const char * 	local_nodename		= NULL;
 static GMainLoop *	mainloop 		= NULL;
 static const char * 	stonithd_name		= "stonithd";
 static gboolean		STARTUP_ALONE 		= FALSE;
-static gboolean 	SIGNONED_TO_HB		= FALSE;
 static gboolean 	SIGNONED_TO_APPHBD	= FALSE;
 static gboolean 	NEED_SIGNON_TO_APPHBD	= FALSE;
 static ll_cluster_t *	hb			= NULL;
@@ -378,11 +377,9 @@ main(int argc, char ** argv)
 			
 			case 's': /* Show daemon status */
 				return show_daemon_status(STD_PIDFILE);
-				break; /* Never reach here, just for uniform */
 
 			case 'k': /* kill the running daemon */
 				return(kill_running_daemon(STD_PIDFILE));
-				break; /* Never reach here, just for uniform */
 
 			case 'v': /* Run with debug mode */
 				debug_level++;
@@ -435,7 +432,6 @@ main(int argc, char ** argv)
 		goto delhb_quit;
 	} else {
 		stonithd_log(LOG_INFO, "Signing in with heartbeat.");
-		SIGNONED_TO_HB = TRUE;
 		local_nodename = hb->llc_ops->get_mynodeid(hb);
 		if (local_nodename == NULL) {
 			stonithd_log(LOG_ERR, "Cannot get local node id");
@@ -1009,7 +1005,7 @@ handle_msg_tstit(struct ha_msg* msg, void* private_data)
 		st_op->node_name = g_strdup(target);
 		st_op->node_uuid = NULL;
 		st_op->private_data = NULL;
-		st_op->optype  = optype;
+		st_op->optype  = (stonith_type_t)optype;
 		st_op->call_id = call_id;
 		st_op->timeout = timeout;
 		if (ST_OK != require_local_stonithop(st_op, srsc, from)) {
@@ -1095,7 +1091,7 @@ handle_msg_trstit(struct ha_msg* msg, void* private_data)
 			   (gpointer *)&op, &call_id);
 	if ( op != NULL && 
 	    (op->scenario == STONITH_INIT || op->scenario == STONITH_REQ)) {
-		op->op_union.st_op->op_result = op_result;
+		op->op_union.st_op->op_result = (stonith_ret_t)op_result;
 		op->op_union.st_op->node_list = 
 			g_string_append(op->op_union.st_op->node_list, from);
 		send_stonithop_final_result(op);
@@ -1613,7 +1609,7 @@ on_stonithd_node_fence(struct ha_msg * request, gpointer data)
 	st_op->node_list = g_string_new("");
 
 	if ( HA_OK == ha_msg_value_int(request, F_STONITHD_OPTYPE, &tmpint)) {
-		st_op->optype = tmpint;
+		st_op->optype = (stonith_type_t)tmpint;
 	} else {
 		stonithd_log(LOG_ERR, "The stonith requirement message contains"
 			     " no operation type field.");
@@ -2501,8 +2497,6 @@ send_back_reply:
 			     "failed to send back a synchonrous result.");
 		return ST_FAIL;
 	}
-
-	stonithd_log2(LOG_DEBUG, "on_stonithd_virtaul_stonithRA_ops: end");
 }
 
 static int
@@ -2510,7 +2504,6 @@ send_stonithRAop_final_result( stonithRA_ops_t * ra_op, gpointer data)
 {
 	struct ha_msg * reply = NULL;
 	IPC_Channel * ch = (IPC_Channel *)data;
-	stonithd_client_t * client = NULL;
 
 	stonithd_log2(LOG_DEBUG, "send_stonithRAop_final_result: begin.");
 	if ( ra_op == NULL || data == NULL ) {
@@ -2522,7 +2515,7 @@ send_stonithRAop_final_result( stonithRA_ops_t * ra_op, gpointer data)
 	stonithd_log(LOG_DEBUG, "RA %s's op %s finished.", 
 		     ra_op->ra_name, ra_op->op_type);
 
-	if ( (client = get_exist_client_by_chan(client_list, ch)) == NULL ) {
+	if ( NULL == get_exist_client_by_chan(client_list, ch) ) {
 		/* Here the ch are already destroyed */
 		stonithd_log(LOG_NOTICE, "It seems the client signed off, who "
 			"raised the operation. So won't send out the result.");
@@ -2676,7 +2669,6 @@ stonithRA_operate( stonithRA_ops_t * op, gpointer data )
 static int
 stonithRA_start( stonithRA_ops_t * op, gpointer data)
 {
-	int		rc; /* To return compatible return code */
 	stonith_rsc_t * srsc;
 	Stonith *	stonith_obj = NULL;
 	pid_t 		pid;
@@ -2753,7 +2745,7 @@ probe_status:
 
 	/* Now in the child process */
 	/* Need to distiguish the exit code more carefully */
-	if ( (rc = stonith_get_status(stonith_obj)) == S_OK ) {
+	if ( S_OK == stonith_get_status(stonith_obj) ) {
 		exit(EXECRA_OK);
 	} else {
 		exit(EXECRA_UNKNOWN_ERROR);
@@ -3251,6 +3243,9 @@ adjust_debug_level(int nsig, gpointer user_data)
 
 /* 
  * $Log: stonithd.c,v $
+ * Revision 1.80  2005/12/06 06:35:53  sunjd
+ * BEAM fix
+ *
  * Revision 1.79  2005/11/21 10:01:44  sunjd
  * shorted the time since some machine reboots quickly
  *
