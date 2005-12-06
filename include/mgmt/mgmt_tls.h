@@ -19,8 +19,8 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
  */
-#ifndef __TLS_H
-#define __TLS_H 1
+#ifndef __MGMT_TLS_H
+#define __MGMT_TLS_H 1
 
 extern int tls_init_client(void);
 extern void* tls_attach_client(int sock);
@@ -34,4 +34,4 @@ extern ssize_t tls_send(void* s, const void *buf, size_t len);
 extern ssize_t tls_recv(void* s, void* buf, size_t len);
 extern int tls_detach(void* s);
 
-#endif /* __TLS_H */
+#endif /* __MGMT_TLS_H */
