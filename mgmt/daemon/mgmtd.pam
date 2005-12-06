@@ -1,2 +1,1 @@
-auth       required     /lib/security/pam_unix_auth.so
-
+auth    include common-auth
