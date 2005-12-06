@@ -1,5 +1,5 @@
 /*
- * Client-side Linux HA Manager API.
+ * API of management library.
  *
  * Author: Huang Zhen <zhenhltc@cn.ibm.com>
  * Copyright (C) 2005 International Business Machines
@@ -20,79 +20,15 @@
  *
  */
 
-#ifndef __HAM_H
-#define __HAM_H 1
+#ifndef __MGMT_H
+#define __MGMT_H 1
 
-#define	STRLEN_CONST(conststr)  ((size_t)((sizeof(conststr)/sizeof(char))-1))
-#define	STRNCMP_CONST(varstr, conststr) strncmp((varstr), conststr, STRLEN_CONST(conststr)+1)
+#include <mgmt/mgmt_common.h>
 
-#define PORT		5678
+extern int init_mgmtd_lib(void);
+extern int final_mgmtd_lib(void);
+typedef int (*event_handler)(const char* event);
+extern char* process_msg(const char* msg);
+extern int reg_event(const char* type, event_handler func);
 
-#define	MAX_MSGLEN	4096
-#define	MAX_STRLEN	1024
-
-#define MSG_OK			"ok"
-#define MSG_FAIL		"fail"
-
-#define MSG_LOGIN		"login"
-#define MSG_LOGOUT		"logout"
-#define MSG_ECHO		"echo"
-#define MSG_TEST		"test"
-#define MSG_REGEVT		"regevt"
-#define MSG_ALLNODES		"all_nodes"
-#define MSG_ACTIVENODES 	"active_nodes"
-#define MSG_DC			"dc"
-#define MSG_CRM_CONFIG		"crm_config"
-#define MSG_HB_CONFIG		"hb_config"
-#define MSG_NODE_CONFIG		"node_config"
-#define MSG_RUNNING_RSC		"running_rsc"
-#define MSG_RSC_PARAMS		"rsc_params"
-#define MSG_RSC_ATTRS		"rsc_attrs"
-#define MSG_RSC_COLOS		"rsc_colos"
-#define MSG_RSC_RUNNING_ON	"rsc_running_on"
-#define MSG_RSC_OPS		"rsc_ops"
-
-#define MSG_ALL_RSC		"all_rsc"
-#define MSG_RSC_TYPE		"rsc_type"
-#define MSG_SUB_RSC		"sub_rsc"
-#define MSG_UP_CRM_CONFIG	"up_crm_config"
-
-#define MSG_DEL_RSC		"del_rsc"
-#define MSG_ADD_RSC		"add_rsc"
-#define MSG_ADD_GRP		"add_grp"
-
-#define MSG_RSC_CLASSES		"rsc_classes"
-#define MSG_RSC_TYPES		"rsc_types"
-#define MSG_RSC_PROVIDERS	"rsc_providers"
-
-#define MSG_UP_RSC_PARAMS	"up_rsc_params"
-#define MSG_UP_RSC_OPS		"up_rsc_ops"
-#define MSG_UP_RSC_COLO		"up_rsc_colo"
-
-#define MSG_DEL_RSC_PARAM	"del_rsc_param"
-#define MSG_DEL_RSC_OP		"del_rsc_op"
-#define MSG_DEL_RSC_COLO	"del_rsc_colo"
-
-#define EVT_CIB_CHANGED		"evt:cib_changed"
-#define EVT_DISCONNECTED	"evt:disconnected"
-
-extern int mgmt_connect(const char* server, const char* user, const char*  passwd);
-extern char* mgmt_sendmsg(const char* msg);
-extern char* mgmt_recvmsg(void);
-extern int mgmt_inputfd(void);
-extern int mgmt_disconnect(void);
-
-typedef void* (*malloc_t)(size_t size);
-typedef void* (*realloc_t)(void* oldval, size_t newsize);
-typedef void (*free_t)(void *ptr);
-
-extern void	mgmt_set_mem_funcs(malloc_t m, realloc_t r, free_t f);
-extern char*	mgmt_new_msg(const char* type, ...);
-extern char*	mgmt_msg_append(char* msg, const char* append);
-extern char**	mgmt_msg_args(const char* msg, int* num);
-extern void	mgmt_del_msg(char* msg);
-extern void	mgmt_del_args(char** args);
-extern int 	mgmt_session_sendmsg(void* s, const char* msg);
-extern char* 	mgmt_session_recvmsg(void* s);
-
-#endif /* __HAM_H */
+#endif /* __MGMT_H */
