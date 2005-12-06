@@ -18,8 +18,6 @@
 #
 MAINTAINERCLEANFILES = Makefile.in
 
-include_HEADERS = mgmtd.h
-
 INCLUDES        = -I$(top_builddir)/include  -I$(top_srcdir)/include     \
                   -I$(top_builddir)/libltdl  -I$(top_srcdir)/libltdl     \
 		  -I$(top_builddir)/linux-ha -I$(top_srcdir)/linux-ha    \
@@ -28,12 +26,6 @@ INCLUDES        = -I$(top_builddir)/include  -I$(top_srcdir)/include     \
 halibdir	=  $(libdir)/@HB_PKG@
 
 COMMONLIBS	=  $(top_builddir)/lib/clplumbing/libplumb.la   \
-		   $(top_builddir)/lib/crm/cib/libcib.la	\
-		   $(top_builddir)/lib/crm/common/libcrmcommon.la	\
-		   $(top_builddir)/lib/apphb/libapphb.la		\
-		   $(top_builddir)/crm/pengine/libpengine.la		\
-		   $(top_builddir)/lib/hbclient/libhbclient.la \
-		   $(CURSESLIBS)					\
 		   $(GLIBLIB)
 		   
 LRM_DIR		= lrm
@@ -46,15 +38,33 @@ install-data-hook:
 
 
 halib_PROGRAMS 	=  mgmtd
-
-mgmtd_SOURCES 	=  mgmtd.c mgmtd_gen.c mgmtd_crm.c mgmtd_hb.c mgmtd_lrm.c
-
-mgmtd_LDFLAGS 	=  $(top_builddir)/lib/mgmt/libmgmt.la \
-		   $(top_builddir)/lib/mgmt/libtls.la \
+mgmtd_SOURCES 	=  mgmtd.c
+mgmtd_LDFLAGS 	=  $(top_builddir)/lib/mgmt/libmgmtclient.la \
+		   $(top_builddir)/lib/mgmt/libmgmttls.la \
+		   $(top_builddir)/mgmt/daemon/libmgmt.la \
 		   $(top_builddir)/lib/$(LRM_DIR)/liblrm.la \
-		   $(COMMONLIBS) `libgnutls-config --libs` \
-		   -lpam -ldl
-
-mgmtd_DEPENDENCIES  = 	$(top_builddir)/lib/mgmt/libmgmt.la \
-		     	$(top_builddir)/lib/mgmt/libtls.la \
+		   $(top_builddir)/lib/mgmt/libmgmtcommon.la \
+		   $(COMMONLIBS)
+mgmtd_DEPENDENCIES  = 	$(top_builddir)/lib/mgmt/libmgmtclient.la \
+		     	$(top_builddir)/lib/mgmt/libmgmttls.la \
+			$(top_builddir)/mgmt/daemon/libmgmt.la \
+			$(top_builddir)/lib/mgmt/libmgmtcommon.la \
 			$(top_builddir)/lib/$(LRM_DIR)/liblrm.la
+
+lib_LTLIBRARIES = libmgmt.la
+libmgmt_la_SOURCES = mgmt_lib.c mgmt_crm.c mgmt_lrm.c mgmt_hb.c
+libmgmt_la_LDFLAGS = $(COMMONLIBS) $(top_builddir)/lib/mgmt/libmgmttls.la \
+		   	$(top_builddir)/lib/crm/cib/libcib.la	\
+		   	$(top_builddir)/lib/crm/common/libcrmcommon.la	\
+		   	$(top_builddir)/lib/apphb/libapphb.la		\
+		   	$(top_builddir)/crm/pengine/libpengine.la		\
+		   	$(top_builddir)/lib/hbclient/libhbclient.la \
+		   	$(CURSESLIBS) `libgnutls-config --libs` \
+		   	-lpam -ldl				
+libmgmt_la_CFLAGS = $(INCLUDES)
+libmgmt_la_DEPENDENCIES  = $(top_builddir)/lib/mgmt/libmgmttls.la \
+		   	$(top_builddir)/lib/crm/cib/libcib.la	\
+		   	$(top_builddir)/lib/crm/common/libcrmcommon.la	\
+		   	$(top_builddir)/lib/apphb/libapphb.la		\
+		   	$(top_builddir)/crm/pengine/libpengine.la	\
+		   	$(top_builddir)/lib/hbclient/libhbclient.la 

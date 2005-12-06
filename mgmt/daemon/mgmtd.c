@@ -1,6 +1,5 @@
-
 /*
- * Linux HA Management Daemon
+ * Linux HA management daemon
  *
  * Author: Huang Zhen <zhenhltc@cn.ibm.com>
  * Copyright (c) 2005 International Business Machines
@@ -20,12 +19,15 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#include <portability.h>
+
 #include <unistd.h>
 #include <stdarg.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <security/pam_appl.h>
 #include <glib.h>
+
 
 #include <heartbeat.h>
 #include <clplumbing/GSource.h>
@@ -36,9 +38,10 @@
 #include <clplumbing/coredumps.h>
 #include <clplumbing/cl_pidfile.h>
 
-#include <mgmt/tls.h>
 #include <mgmt/mgmt.h>
-#include "mgmtd.h"
+#include <mgmt/mgmt_tls.h>
+#include <mgmt/mgmt_client.h>
+#include "mgmt_internal.h"
 
 
 /* common daemon and debug functions */
@@ -48,16 +51,8 @@ static void usage(const char* cmd, int exit_status);
 static int init_start(void);
 static int init_stop(const char *pid_file);
 static int init_status(const char *pid_file, const char *client_name);
-
-/* the initial func for modules */
-extern int init_general(void);
-extern void final_general(void);
-extern int init_crm(void);
-extern void final_crm(void);
-extern int init_heartbeat(void);
-extern void final_heartbeat(void);
-extern int init_lrm(void);
-extern void final_lrm(void);
+static void shutdown_mgmtd(void);
+static int on_event(const char* event);
 
 /* management daemon internal data structure */
 typedef struct
@@ -92,7 +87,6 @@ const char* mgmtd_name 	= "mgmtd";
 static GMainLoop* mainloop 	= NULL;
 extern int debug_level;
 static GHashTable* clients	= NULL;
-static GHashTable* msg_map	= NULL;		
 static GHashTable* evt_map	= NULL;		
 
 int
@@ -324,17 +318,14 @@ init_start ()
 		
 	/* create the internal data structures */
 	clients = g_hash_table_new(g_int_hash, g_int_equal);
-	msg_map = g_hash_table_new_full(g_str_hash, g_str_equal, cl_free, NULL);
 	evt_map = g_hash_table_new_full(g_str_hash, g_str_equal, cl_free, NULL);
 
 	/* create the mainloop */
 	mainloop = g_main_new(FALSE);
 		
-	/* init modules */
-	init_general();
-	init_heartbeat();
-	init_lrm();
-	init_crm();
+	/* init library */
+	init_mgmtd_lib();
+	
 	/* init ham & gnutls lib */
 	tls_init_server();
 	mgmt_set_mem_funcs(cl_malloc, cl_realloc, cl_free);
@@ -372,10 +363,7 @@ init_start ()
 	g_main_run(mainloop);
 
 	/* exit, clean the pid file */
-	final_crm();
-	final_lrm();
-	final_heartbeat();
-	final_general();
+	final_mgmtd_lib();
 	if (cl_unlock_pidfile(PID_FILE) == 0) {
 		mgmtd_log(LOG_DEBUG, "[%s] stopped", mgmtd_name);
 	}
@@ -493,9 +481,6 @@ client_t*
 lookup_client(int id)
 {
 	client_t* client = (client_t*)g_hash_table_lookup(clients, &id);
-	if (client == NULL) {
-		mgmtd_log(LOG_ERR, "no client id: %d", id);
-	}
 	return client;
 }
 int
@@ -570,17 +555,7 @@ pam_conv(int n, const struct pam_message **msg,
 	return PAM_SUCCESS;
 }
 int
-reg_msg(const char* type, msg_handler fun)
-{
-	if (g_hash_table_lookup(msg_map, type) != NULL) {
-		return -1;
-	}
-	g_hash_table_insert(msg_map, cl_strdup(type),(gpointer)fun);
-	return 0;
-}
-
-int
-fire_evt(const char* event)
+on_event(const char* event) 
 {
 	GList* id_list;
 	GList* node;
@@ -600,6 +575,7 @@ fire_evt(const char* event)
 		client_t* client;
 		
 		int id = (int)node->data;
+		
 		client = lookup_client(id);
 		if (client == NULL) {
 			/* remove the client id */
@@ -621,33 +597,28 @@ fire_evt(const char* event)
 	mgmt_del_args(args);
 	return 0;
 }
-
+		
 char*
 dispatch_msg(const char* msg, int client_id)
 {
-	msg_handler handler;
 	char* ret;
 	int num;
 	char** args = mgmt_msg_args(msg, &num);
 	if (args == NULL) {
 		return NULL;
 	}
-	handler = (msg_handler)g_hash_table_lookup(msg_map, args[0]);
-	if ( handler == NULL) {
-		mgmt_del_args(args);
-		return NULL;
+	if (strncmp(args[0], MSG_REGEVT, strlen(MSG_REGEVT)) == 0) {
+		GList* id_list = g_hash_table_lookup(evt_map, args[1]);
+		id_list = g_list_append(id_list, (gpointer)client_id);
+		g_hash_table_replace(evt_map, cl_strdup(args[1]), (gpointer)id_list);
+		reg_event(args[1], on_event);
+		ret = cl_strdup(MSG_OK);
 	}
-	ret = (*handler)(args, num, client_id);
+	else  {
+		ret = process_msg(msg);
+	}
 	mgmt_del_args(args);
 	return ret;
-}
-int
-reg_evt(const char* type, int client_id)
-{
-	GList* id_list = g_hash_table_lookup(evt_map, type);
-	id_list = g_list_append(id_list, (gpointer)client_id);
-	g_hash_table_replace(evt_map, cl_strdup(type), (gpointer)id_list);
-	return 0;
 }
 void
 shutdown_mgmtd(void)
