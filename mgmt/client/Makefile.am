@@ -21,7 +21,7 @@ MAINTAINERCLEANFILES    = Makefile.in
 
 halibdir	= $(libdir)/@HB_PKG@
 halib_SCRIPTS	= haclient.py	
-halib_DATA	= haclient.glade
+halib_DATA	= haclient.glade ha.png
 
 INCLUDES 	      =	-I$(top_builddir)/include  -I$(top_srcdir)/include \
 			-I$(top_builddir)/linux-ha -I$(top_srcdir)/linux-ha \
@@ -30,9 +30,8 @@ INCLUDES 	      =	-I$(top_builddir)/include  -I$(top_srcdir)/include \
 MGMT_DIR		=	mgmt
 
 noinst_PROGRAMS 	= 	testclient
-
 testclient_SOURCES  	= 	testclient.c
-testclient_LDFLAGS 	= 	$(top_builddir)/lib/$(MGMT_DIR)/libmgmt.la \
-				$(top_builddir)/lib/$(MGMT_DIR)/libtls.la \
+testclient_LDFLAGS 	= 	$(top_builddir)/lib/$(MGMT_DIR)/libmgmtclient.la \
+				$(top_builddir)/lib/$(MGMT_DIR)/libmgmttls.la \
+				$(top_builddir)/lib/$(MGMT_DIR)/libmgmtcommon.la \
 				`libgnutls-config --libs`
-
