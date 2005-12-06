@@ -1,6 +1,6 @@
 %module pymgmt
 %{
-#include "../../include/mgmt/mgmt.h"
+#include "../../include/mgmt/mgmt_client.h"
 %}
 
 int mgmt_connect(const char* server, const char* user, const char*  passwd);
