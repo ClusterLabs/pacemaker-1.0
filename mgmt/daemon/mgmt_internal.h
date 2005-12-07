@@ -25,8 +25,6 @@
 
 #include <mgmt/mgmt_common.h>
 
-#define OPTARGS		"skrhv"
-#define PID_FILE 	HA_VARRUNDIR"/mgmtd.pid"
 #define ENV_PREFIX 	"HA_"
 #define KEY_LOGDAEMON   "use_logd"
 #define HADEBUGVAL	"HA_DEBUG"
