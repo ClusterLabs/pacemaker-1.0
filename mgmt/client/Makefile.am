@@ -31,7 +31,7 @@ MGMT_DIR		= mgmt
 
 halib_PROGRAMS 		= mgmtdtest
 mgmtdtest_SOURCES  	= mgmtdtest.c
-mgmtdtest_LDFLAGS 	= $(top_builddir)/lib/$(MGMT_DIR)/libmgmtclient.la \
+mgmtdtest_LDADD 	= $(top_builddir)/lib/$(MGMT_DIR)/libmgmtclient.la \
 			  $(top_builddir)/lib/$(MGMT_DIR)/libmgmttls.la \
-			  $(top_builddir)/lib/$(MGMT_DIR)/libmgmtcommon.la \
-			  `libgnutls-config --libs`
+			  $(top_builddir)/lib/$(MGMT_DIR)/libmgmtcommon.la
+mgmtdtest_LDFLAGS 	= `libgnutls-config --libs`
