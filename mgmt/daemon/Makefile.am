@@ -1,6 +1,6 @@
 #
 #  Author: Sun Jiang Dong <sunjd@cn.ibm.com>
-#  Copyright (c) 2002 International Business Machines
+#  Copyright (c) 2005 International Business Machines
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -39,32 +39,21 @@ install-data-hook:
 
 halib_PROGRAMS 	=  mgmtd
 mgmtd_SOURCES 	=  mgmtd.c
-mgmtd_LDFLAGS 	=  $(top_builddir)/lib/mgmt/libmgmtclient.la \
+mgmtd_LDADD 	=  $(top_builddir)/lib/mgmt/libmgmtclient.la \
 		   $(top_builddir)/lib/mgmt/libmgmttls.la \
 		   $(top_builddir)/mgmt/daemon/libmgmt.la \
 		   $(top_builddir)/lib/$(LRM_DIR)/liblrm.la \
 		   $(top_builddir)/lib/mgmt/libmgmtcommon.la \
 		   $(COMMONLIBS)
-mgmtd_DEPENDENCIES  = 	$(top_builddir)/lib/mgmt/libmgmtclient.la \
-		     	$(top_builddir)/lib/mgmt/libmgmttls.la \
-			$(top_builddir)/mgmt/daemon/libmgmt.la \
-			$(top_builddir)/lib/mgmt/libmgmtcommon.la \
-			$(top_builddir)/lib/$(LRM_DIR)/liblrm.la
 
 lib_LTLIBRARIES = libmgmt.la
 libmgmt_la_SOURCES = mgmt_lib.c mgmt_crm.c mgmt_lrm.c mgmt_hb.c
-libmgmt_la_LDFLAGS = $(COMMONLIBS) $(top_builddir)/lib/mgmt/libmgmttls.la \
-		   	$(top_builddir)/lib/crm/cib/libcib.la	\
-		   	$(top_builddir)/lib/crm/common/libcrmcommon.la	\
-		   	$(top_builddir)/lib/apphb/libapphb.la		\
-		   	$(top_builddir)/crm/pengine/libpengine.la		\
-		   	$(top_builddir)/lib/hbclient/libhbclient.la \
-		   	$(CURSESLIBS) `libgnutls-config --libs` \
-		   	-lpam -ldl				
 libmgmt_la_CFLAGS = $(INCLUDES)
-libmgmt_la_DEPENDENCIES  = $(top_builddir)/lib/mgmt/libmgmttls.la \
-		   	$(top_builddir)/lib/crm/cib/libcib.la	\
+libmgmt_la_LDFLAGS = `libgnutls-config --libs`
+libmgmt_la_LIBADD = $(top_builddir)/lib/mgmt/libmgmttls.la 		\
+		  	$(top_builddir)/lib/crm/cib/libcib.la		\
 		   	$(top_builddir)/lib/crm/common/libcrmcommon.la	\
 		   	$(top_builddir)/lib/apphb/libapphb.la		\
 		   	$(top_builddir)/crm/pengine/libpengine.la	\
-		   	$(top_builddir)/lib/hbclient/libhbclient.la 
+		   	$(top_builddir)/lib/hbclient/libhbclient.la	\
+			$(COMMONLIBS) $(CURSESLIBS)
