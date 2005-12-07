@@ -43,6 +43,9 @@
 #include <mgmt/mgmt_client.h>
 #include "mgmt_internal.h"
 
+#define OPTARGS		"skrhvt"
+#define PID_FILE 	HA_VARRUNDIR"/mgmtd.pid"
+
 
 /* common daemon and debug functions */
 static gboolean debug_level_adjust(int nsig, gpointer user_data);
@@ -84,8 +87,9 @@ static char* dispatch_msg(const char* msg, int client_id);
 
 const char* mgmtd_name 	= "mgmtd";
 
-static GMainLoop* mainloop 	= NULL;
 extern int debug_level;
+int test_mode = FALSE;
+static GMainLoop* mainloop 	= NULL;
 static GHashTable* clients	= NULL;
 static GHashTable* evt_map	= NULL;		
 
@@ -117,6 +121,9 @@ main(int argc, char ** argv)
 				break;
 			case 'r':		/* Restart */
 				req_restart = TRUE;
+				break;
+			case 't':		/* in test mode, any password is acceptable */
+				test_mode = TRUE;
 				break;
 			default:
 				++argerr;
@@ -212,9 +219,9 @@ init_stop(const char *pid_file)
 	return rc;
 }
 
-static const char usagemsg[] = "[-srkhv]\n\ts: status\n\tr: restart"
+static const char usagemsg[] = "[-srkhvt]\n\ts: status\n\tr: restart"
 	"\n\tk: kill\n\t"
-	"h: help\n\tv: debug\n";
+	"h: help\n\tv: debug\n\tv: testmode\n";
 
 void
 usage(const char* cmd, int exit_status)
@@ -503,7 +510,10 @@ pam_auth(const char* user, const char* passwd)
 	pam_handle_t *pamh = NULL;
 	int ret;
 	struct pam_conv conv;
-
+	
+	if (test_mode) {
+		return 0;
+	}
 	conv.conv = pam_conv;
 	conv.appdata_ptr = strdup(passwd);
 
