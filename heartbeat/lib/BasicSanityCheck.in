@@ -39,6 +39,7 @@ APPHBD=$HBLIB/apphbd
 CLSTATUS=@bindir@/cl_status
 APPHBTEST=$HBLIB/apphbtest
 IPCTEST=$HBLIB/ipctest
+MGMTDTEST=$HBLIB/mgmtdtest
 LRMTEST=$HBLIB/lrmtest/LRMBasicSanityCheck
 STONITHDTEST=$HBLIB/stonithdtest/STONITHDBasicSanityCheck
 CRMTEST=$HBLIB/crmtest/1node.sh
@@ -205,6 +206,27 @@ GenerateCrmdHaCf() {
 #	entity ha_logd
 #	#useapphbd no
 #	!
+}
+GenerateMgmtdCrmdHaCf() {
+  cat <<-! >$1
+	#	$IDENTSTRING
+	logfile   /dev/null
+	debugfile $LOGFILE
+	keepalive 10ms
+	debug    1
+	deadtime 5
+	initdead 5
+	mcast $INTERFACE $MCASTIP 694 0 0
+	#bcast $INTERFACE
+        ping 127.0.0.1
+        ping_group pingus_please 127.0.0.1
+	node $LOCALNODE $DUMMYNODE
+	use_logd off
+	crm yes
+	apiauth mgmtd   uid=root
+	respawn root $HBLIB/mgmtd -t
+	!
+  chmod 644 $1
 }
 
 GenerateHaResources() {
@@ -774,6 +796,56 @@ TestCRM() {
 	rm $CRM_LOG
 }
 
+TestMgmtd() {
+  	if [ ! -f $MGMTDTEST ]; then
+	    return 0
+	fi
+	GenerateMgmtdCrmdHaCf $HADIR/ha.cf $HADIR/ha_logd.cf
+	echo "Starting Mgmtd tests" | tee -a $LOGFILE
+
+	if 
+		! HBStart
+	then
+		echo "cannot start heartbeat, so donnot start mgmt daemon test." | tee -a $LOGFILE
+		return 1
+	fi
+
+ 	i=0
+	while
+		[ "$i" -lt 10 ]
+	do
+		if
+			$CLSTATUS hbstatus >/dev/null 2>&1
+		then
+			break
+		else
+			sleep 1
+		fi
+		i=`expr "$i" + 1`
+	done
+
+	if
+		! $CLSTATUS hbstatus >/dev/null 2>&1
+	then
+		echo "There are internal errors in heartbeat, so donnot start mgmt daemon test." | tee -a $LOGFILE
+		return 1
+	fi
+
+	sleep 10
+	$MGMTDTEST > $LOGFILE 2>&1
+	ret=$?
+	if [ $ret != 0 ]; then
+	    errcount=`expr $errcount + 1`
+	    echo "Mgmtd test failed." | tee -a  $LOGFILE
+	else 
+	    echo "Mgmtd test passed."
+	fi
+
+	HBStop
+
+	
+}
+
 SNMPAgentTest() {
 	if 
 	    [ ! -f $SNMPAGENTTEST ]
@@ -855,6 +927,7 @@ LRMTest
 StonithDaemonTest
 TestCRM
 SNMPAgentTest
+#TestMgmtd
 
 ls -l $HADIR/core* 2>/dev/null
 if
