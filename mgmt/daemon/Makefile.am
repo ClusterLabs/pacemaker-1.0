@@ -34,11 +34,12 @@ pamdir 		= /etc/pam.d
 pam_DATA	= mgmtd.pam
 
 install-data-hook:
-		mv /etc/pam.d/mgmtd.pam /etc/pam.d/mgmtd
+		mv $(pamdir)/mgmtd.pam $(pamdir)/mgmtd
 
 
 halib_PROGRAMS 	=  mgmtd
 mgmtd_SOURCES 	=  mgmtd.c
+mgmtd_LDFLAGS	= -lpam
 mgmtd_LDADD 	=  $(top_builddir)/lib/mgmt/libmgmtclient.la \
 		   $(top_builddir)/lib/mgmt/libmgmttls.la \
 		   $(top_builddir)/mgmt/daemon/libmgmt.la \
