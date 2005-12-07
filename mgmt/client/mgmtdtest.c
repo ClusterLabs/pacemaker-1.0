@@ -21,14 +21,41 @@
 
 #include <unistd.h>
 #include <stdio.h>
+#include <string.h>
 #include <mgmt/mgmt_client.h>
 
 int main (int argc, char* argv[])
 {
 	char* ret;
-	mgmt_connect("127.0.0.1", "hacluster","hacluster");
+	int num;
+	char** args;
+	if(mgmt_connect("127.0.0.1", "hacluster","hacluster") != 0) {
+		printf("can't conenct to mgmtd\n");
+		return 1;
+	}
 	ret = mgmt_sendmsg(MSG_ECHO"\nhello");
-	printf("%s\n",ret);
+	if (ret == NULL) {
+		printf("can't process message\n");
+		return 1;
+	}
+	args = mgmt_msg_args(ret, &num);
+	if (ret == NULL) {
+		printf("can't parse the return message\n");
+		return 1;
+	}
+	if (num != 2) {
+		printf("the return message has wrong field number\n");
+		return 1;
+	}
+	if (strncmp(args[0],"ok",strlen("ok")) != 0) {
+		printf("the return message is not \"ok\"\n");
+		return 1;
+	}
+	if (strncmp(args[1],"hello",strlen("hello")) != 0) {
+		printf("the echo string is not same as we sent\"ok\"\n");
+		return 1;
+	}
+	mgmt_del_args(args);
 	mgmt_del_msg(ret);
 	mgmt_disconnect();
 	return 0;
