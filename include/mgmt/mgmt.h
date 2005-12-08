@@ -25,8 +25,12 @@
 
 #include <mgmt/mgmt_common.h>
 
-extern int init_mgmtd_lib(void);
-extern int final_mgmtd_lib(void);
+#define ENABLE_HB 	1
+#define ENABLE_LRM 	2
+#define ENABLE_CRM 	4
+
+extern int init_mgmt_lib(const char* client_name, int enable_components);
+extern int final_mgmt_lib(void);
 typedef int (*event_handler)(const char* event);
 extern char* process_msg(const char* msg);
 extern int reg_event(const char* type, event_handler func);
