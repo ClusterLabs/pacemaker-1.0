@@ -57,27 +57,41 @@ extern void final_lrm(void);
 
 static GHashTable* msg_map = NULL;		
 static GHashTable* event_map = NULL;		
-
+const char* client_name = NULL;
+static int components = 0;		
 int
-init_mgmtd_lib()
+init_mgmt_lib(const char* client, int enable_components)
 {
 	/* create the internal data structures */
 	msg_map = g_hash_table_new_full(g_str_hash, g_str_equal, cl_free, NULL);
 	event_map = g_hash_table_new_full(g_str_hash, g_str_equal, cl_free, NULL);
-
+	client_name = client?client:"unknown";
+	components = enable_components;
 	/* init modules */
-	init_heartbeat();
-	init_lrm();
-	init_crm();
+	if (components & ENABLE_HB) {
+		init_heartbeat();
+	}
+	if (components & ENABLE_LRM) {
+		init_lrm();
+	}
+	if (components & ENABLE_CRM) {
+		init_crm();
+	}
 	return 0;
 }
 
 int
-final_mgmtd_lib()
+final_mgmt_lib()
 {
-	final_crm();
-	final_lrm();
-	final_heartbeat();
+	if (components & ENABLE_CRM) {
+		final_crm();
+	}
+	if (components & ENABLE_LRM) {
+		final_lrm();
+	}
+	if (components & ENABLE_HB) {
+		final_heartbeat();
+	}
 	g_hash_table_destroy(msg_map);
 	g_hash_table_destroy(event_map);
 	return 0;

@@ -132,7 +132,7 @@ main(int argc, char ** argv)
 	}
 
 	if (optind > argc) {
-		mgmtd_log(LOG_ERR,"WHY WE ARE HERE?");
+		mgmt_log(LOG_ERR,"WHY WE ARE HERE?");
 		++argerr;
 	}
 
@@ -195,7 +195,7 @@ init_stop(const char *pid_file)
 
 
 	if (pid_file == NULL) {
-		mgmtd_log(LOG_ERR, "No pid file specified to kill process");
+		mgmt_log(LOG_ERR, "No pid file specified to kill process");
 		return LSB_EXIT_GENERIC;
 	}
 	pid =	cl_read_pidfile(pid_file);
@@ -206,7 +206,7 @@ init_stop(const char *pid_file)
 			      ?	LSB_EXIT_EPERM : LSB_EXIT_GENERIC);
 			fprintf(stderr, "Cannot kill pid %ld\n", pid);
 		}else{
-			mgmtd_log(LOG_INFO,
+			mgmt_log(LOG_INFO,
 			       "Signal sent to pid=%ld,"
 			       " waiting for process to exit",
 			       pid);
@@ -285,7 +285,7 @@ debug_level_adjust(int nsig, gpointer user_data)
 			break;
 		
 		default:
-			mgmtd_log(LOG_WARNING, "debug_level_adjust: Received an "
+			mgmt_log(LOG_WARNING, "debug_level_adjust: Received an "
 				"unexpected signal(%d). Something wrong?.",nsig);
 	}
 
@@ -303,16 +303,16 @@ init_start ()
 	GIOChannel* 		sch;
 	/* register pid */
 	if ((pid = cl_lock_pidfile(PID_FILE)) < 0) {
-		mgmtd_log(LOG_ERR, "already running: [pid %d]."
+		mgmt_log(LOG_ERR, "already running: [pid %d]."
 		,	 cl_read_pidfile(PID_FILE));
-		mgmtd_log(LOG_ERR, "Startup aborted (already running)."
+		mgmt_log(LOG_ERR, "Startup aborted (already running)."
 				  "Shutting down.");
 		exit(100);
 	}
 	register_pid(FALSE, sigterm_action);
 
 	/* enable coredumps */
-	mgmtd_log(LOG_DEBUG, "Enabling coredumps");
+	mgmt_log(LOG_DEBUG, "Enabling coredumps");
  	cl_cdtocoredir();
 	cl_enable_coredumps(TRUE);	
 	cl_set_all_coredump_signal_handlers();
@@ -331,7 +331,7 @@ init_start ()
 	mainloop = g_main_new(FALSE);
 		
 	/* init library */
-	init_mgmtd_lib();
+	init_mgmt_lib(mgmtd_name, ENABLE_HB|ENABLE_LRM|ENABLE_CRM);
 	
 	/* init ham & gnutls lib */
 	tls_init_server();
@@ -340,7 +340,7 @@ init_start ()
 	/* create server socket */
 	ssock = socket(AF_INET, SOCK_STREAM, 0);
 	if (ssock == -1) {
-		mgmtd_log(LOG_ERR, "Can not create server socket."
+		mgmt_log(LOG_ERR, "Can not create server socket."
 				  "Shutting down.");
 		exit(100);
 	}
@@ -350,12 +350,12 @@ init_start ()
 	saddr.sin_addr.s_addr = INADDR_ANY;
 	saddr.sin_port = htons(PORT);
 	if (bind(ssock, (struct sockaddr*)&saddr, sizeof(saddr)) == -1) {
-		mgmtd_log(LOG_ERR, "Can not bind server socket."
+		mgmt_log(LOG_ERR, "Can not bind server socket."
 				  "Shutting down.");
 		exit(100);
 	}
 	if (listen(ssock, 10) == -1) {
-		mgmtd_log(LOG_ERR, "Can not start listen."
+		mgmt_log(LOG_ERR, "Can not start listen."
 				"Shutting down.");
 		exit(100);
 	}	
@@ -365,14 +365,14 @@ init_start ()
 	g_io_add_watch(sch, G_IO_IN|G_IO_ERR|G_IO_HUP, on_listen, NULL);
 	
 	/* run the mainloop */
-	mgmtd_log(LOG_DEBUG, "main: run the loop...");
-	mgmtd_log(LOG_INFO, "Started.");
+	mgmt_log(LOG_DEBUG, "main: run the loop...");
+	mgmt_log(LOG_INFO, "Started.");
 	g_main_run(mainloop);
 
 	/* exit, clean the pid file */
-	final_mgmtd_lib();
+	final_mgmt_lib();
 	if (cl_unlock_pidfile(PID_FILE) == 0) {
-		mgmtd_log(LOG_DEBUG, "[%s] stopped", mgmtd_name);
+		mgmt_log(LOG_DEBUG, "[%s] stopped", mgmtd_name);
 	}
 
 	return 0;
@@ -395,13 +395,13 @@ on_listen(GIOChannel *source, GIOCondition condition, gpointer data)
 		laddr = sizeof(addr);
 		csock = accept(ssock, (struct sockaddr*)&addr, &laddr);
 		if (csock == -1) {
-			mgmtd_log(LOG_ERR, "%s accept socket failed", __FUNCTION__);
+			mgmt_log(LOG_ERR, "%s accept socket failed", __FUNCTION__);
 			return TRUE;
 		}	
 		/* create gnutls session for the server socket */
 		session = tls_attach_server(csock);
 		msg = mgmt_session_recvmsg(session);
-		mgmtd_log(LOG_DEBUG, "recv msg: %s", msg);
+		mgmt_log(LOG_DEBUG, "recv msg: %s", msg);
 		args = mgmt_msg_args(msg, &num);
 		if (msg == NULL || num != 3 || STRNCMP_CONST(args[0], MSG_LOGIN) != 0) {
 			mgmt_del_args(args);
@@ -409,7 +409,7 @@ on_listen(GIOChannel *source, GIOCondition condition, gpointer data)
 			mgmt_session_sendmsg(session, MSG_FAIL);
 			tls_detach(session);
 			close(csock);
-			mgmtd_log(LOG_ERR, "%s receive login msg failed", __FUNCTION__);
+			mgmt_log(LOG_ERR, "%s receive login msg failed", __FUNCTION__);
 			return TRUE;
 		}
 		/* authorization check with pam */	
@@ -419,12 +419,12 @@ on_listen(GIOChannel *source, GIOCondition condition, gpointer data)
 			mgmt_session_sendmsg(session, MSG_FAIL);
 			tls_detach(session);
 			close(csock);
-			mgmtd_log(LOG_ERR, "%s pam auth failed", __FUNCTION__);
+			mgmt_log(LOG_ERR, "%s pam auth failed", __FUNCTION__);
 			return TRUE;
 		}
 		mgmt_del_args(args);
 		mgmt_del_msg(msg);
-		mgmtd_log(LOG_DEBUG, "send msg: %s", MSG_OK);
+		mgmt_log(LOG_DEBUG, "send msg: %s", MSG_OK);
 		mgmt_session_sendmsg(session, MSG_OK);
 		new_client(csock, session);
 		return TRUE;
@@ -447,7 +447,7 @@ on_msg_arrived(GIOChannel *source, GIOCondition condition, gpointer data)
 			return TRUE;
 		}
 		msg = mgmt_session_recvmsg(client->session);
-		mgmtd_log(LOG_DEBUG, "recv msg: %s", msg);
+		mgmt_log(LOG_DEBUG, "recv msg: %s", msg);
 		if (msg == NULL || STRNCMP_CONST(msg, MSG_LOGOUT) == 0) {
 			mgmt_del_msg(msg);
 			del_client(client->id);
@@ -455,12 +455,12 @@ on_msg_arrived(GIOChannel *source, GIOCondition condition, gpointer data)
 		}
 		ret = dispatch_msg(msg, client->id);
 		if (ret != NULL) {
-			mgmtd_log(LOG_DEBUG, "send msg: %s", ret);
+			mgmt_log(LOG_DEBUG, "send msg: %s", ret);
 			mgmt_session_sendmsg(client->session, ret);
 			mgmt_del_msg(ret);
 		}
 		else {
-			mgmtd_log(LOG_DEBUG, "send msg: %s", MSG_FAIL);
+			mgmt_log(LOG_DEBUG, "send msg: %s", MSG_FAIL);
 			mgmt_session_sendmsg(client->session, MSG_FAIL);
 		}
 		mgmt_del_msg(msg);
@@ -595,9 +595,9 @@ on_event(const char* event)
 			continue;
 		}
 
-		mgmtd_log(LOG_DEBUG, "send evt: %s", event);
+		mgmt_log(LOG_DEBUG, "send evt: %s", event);
 		mgmt_session_sendmsg(client->session, event);
-		mgmtd_log(LOG_DEBUG, "send evt: %s done", event);
+		mgmt_log(LOG_DEBUG, "send evt: %s done", event);
 		
 		node = g_list_next(node);
 	}
@@ -633,7 +633,7 @@ dispatch_msg(const char* msg, int client_id)
 void
 shutdown_mgmtd(void)
 {
-	mgmtd_log(LOG_INFO,"mgmtd is shutting down");
+	mgmt_log(LOG_INFO,"mgmtd is shutting down");
 	if (mainloop != NULL && g_main_is_running(mainloop)) {
 		g_main_quit(mainloop);
 	}else {
