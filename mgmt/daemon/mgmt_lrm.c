@@ -49,7 +49,7 @@ init_lrm(void)
 	int ret;
 	int i, max_try = 5;
 
-	mgmtd_log(LOG_INFO,"init_lrm");
+	mgmt_log(LOG_INFO,"init_lrm");
 
 	lrm = ll_lrm_new("lrm");
 	for (i = 0; i < max_try ; i++) {
@@ -57,11 +57,11 @@ init_lrm(void)
 		if (ret == HA_OK) {
 			break;
 		}
-		mgmtd_log(LOG_INFO,"login to lrm: %d, ret:%d",i,ret);
+		mgmt_log(LOG_INFO,"login to lrm: %d, ret:%d",i,ret);
 		sleep(1);
 	}
 	if (ret != HA_OK) {
-		mgmtd_log(LOG_INFO,"login to lrm failed");
+		mgmt_log(LOG_INFO,"login to lrm failed");
 		lrm->lrm_ops->delete(lrm);
 		lrm = NULL;
 		return -1;

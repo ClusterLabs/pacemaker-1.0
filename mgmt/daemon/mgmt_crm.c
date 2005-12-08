@@ -140,7 +140,7 @@ delete_object(const char* type, const char* entry, const char* id)
 	if(cib_object == NULL) {
 		return -1;
 	}
-	mgmtd_log(LOG_INFO, "xml:%s",xml);
+	mgmt_log(LOG_INFO, "xml:%s",xml);
 
 	rc = cib_conn->cmds->delete(
 			cib_conn, type, cib_object, &output, 0);
@@ -158,18 +158,18 @@ init_crm(void)
 	int ret = cib_ok;
 	int i, max_try = 5;
 
-	mgmtd_log(LOG_INFO,"init_crm");
+	mgmt_log(LOG_INFO,"init_crm");
 	cib_conn = cib_new();
 	for (i = 0; i < max_try ; i++) {
-		ret = cib_conn->cmds->signon(cib_conn, mgmtd_name, cib_query);
+		ret = cib_conn->cmds->signon(cib_conn, client_name, cib_query);
 		if (ret == cib_ok) {
 			break;
 		}
-		mgmtd_log(LOG_INFO,"login to cib: %d, ret:%d",i,ret);
+		mgmt_log(LOG_INFO,"login to cib: %d, ret:%d",i,ret);
 		sleep(1);
 	}
 	if (ret != cib_ok) {
-		mgmtd_log(LOG_INFO,"login to cib failed");
+		mgmt_log(LOG_INFO,"login to cib failed");
 		cib_conn = NULL;
 		return -1;
 	}
@@ -248,7 +248,7 @@ on_cib_query_done(const HA_Message* msg, int call_id, int rc,
 		data_set.input = save;
 		stage0(&data_set);
 
-		mgmtd_log(LOG_INFO,"update cib finished");
+		mgmt_log(LOG_INFO,"update cib finished");
 		fire_event(EVT_CIB_CHANGED);
 	}
 }
@@ -553,7 +553,7 @@ on_add_rsc(char* argv[], int argc)
 	if(cib_object == NULL) {
 		return cl_strdup(MSG_FAIL);
 	}
-	mgmtd_log(LOG_INFO, "xml:%s",xml);
+	mgmt_log(LOG_INFO, "xml:%s",xml);
 	fragment = create_cib_fragment(cib_object, "resources");
 
 	if (in_group) {
@@ -585,7 +585,7 @@ on_add_grp(char* argv[], int argc)
 	if(cib_object == NULL) {
 		return cl_strdup(MSG_FAIL);
 	}
-	mgmtd_log(LOG_INFO, "xml:%s",xml);
+	mgmt_log(LOG_INFO, "xml:%s",xml);
 	fragment = create_cib_fragment(cib_object, "resources");
 	rc = cib_conn->cmds->create(cib_conn, "resources", fragment, &output, 0);
 	if (rc < 0) {
@@ -832,7 +832,7 @@ on_update_rsc_params(char* argv[], int argc)
 	if(cib_object == NULL) {
 		return cl_strdup(MSG_FAIL);
 	}
-	mgmtd_log(LOG_INFO, "xml:%s",xml);
+	mgmt_log(LOG_INFO, "xml:%s",xml);
 	fragment = create_cib_fragment(cib_object, "resources");
 
 	rc = cib_conn->cmds->update(
@@ -906,7 +906,7 @@ on_update_rsc_ops(char* argv[], int argc)
 	if(cib_object == NULL) {
 		return cl_strdup(MSG_FAIL);
 	}
-	mgmtd_log(LOG_INFO, "xml:%s",xml);
+	mgmt_log(LOG_INFO, "xml:%s",xml);
 	fragment = create_cib_fragment(cib_object, "resources");
 
 	rc = cib_conn->cmds->update(
@@ -968,7 +968,7 @@ on_update_clone(char* argv[], int argc)
 	if(cib_object == NULL) {
 		return cl_strdup(MSG_FAIL);
 	}
-	mgmtd_log(LOG_INFO, "xml:%s",xml);
+	mgmt_log(LOG_INFO, "xml:%s",xml);
 	fragment = create_cib_fragment(cib_object, "resources");
 	rc = cib_conn->cmds->update(cib_conn, "resources", fragment, &output, 0);
 	if (rc < 0) {
@@ -1026,7 +1026,7 @@ on_update_master(char* argv[], int argc)
 	if(cib_object == NULL) {
 		return cl_strdup(MSG_FAIL);
 	}
-	mgmtd_log(LOG_INFO, "xml:%s",xml);
+	mgmt_log(LOG_INFO, "xml:%s",xml);
 	fragment = create_cib_fragment(cib_object, "resources");
 	rc = cib_conn->cmds->update(cib_conn, "resources", fragment, &output, 0);
 	if (rc < 0) {
@@ -1174,7 +1174,7 @@ on_update_constraint(char* argv[], int argc)
 	if(cib_object == NULL) {
 		return cl_strdup(MSG_FAIL);
 	}
-	mgmtd_log(LOG_INFO, "xml:%s",xml);
+	mgmt_log(LOG_INFO, "xml:%s",xml);
 	fragment = create_cib_fragment(cib_object, "constraints");
 
 	rc = cib_conn->cmds->update(

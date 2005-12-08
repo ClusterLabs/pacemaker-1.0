@@ -29,20 +29,20 @@
 #define KEY_LOGDAEMON   "use_logd"
 #define HADEBUGVAL	"HA_DEBUG"
 
-#define mgmtd_log(priority, fmt...); \
+#define mgmt_log(priority, fmt...); \
                 cl_log(priority, fmt); \
 
-#define mgmtd_debug(priority, fmt...); \
+#define mgmt_debug(priority, fmt...); \
         if ( debug_level > 0 ) { \
                 cl_log(priority, fmt); \
 	}
 
 #define ARGC_CHECK(n);		\
 if (argc != (n)) {					\
-	mgmtd_log(LOG_DEBUG, "%s msg should have %d params, but %d given",argv[0],n,argc);	\
+	mgmt_log(LOG_DEBUG, "%s msg should have %d params, but %d given",argv[0],n,argc);	\
 	return cl_strdup(MSG_FAIL);			\
 }
-extern const char* mgmtd_name;
+extern const char* client_name;
 extern int debug_level;
 typedef char* (*msg_handler)(char* argv[], int argc);
 extern int reg_msg(const char* type, msg_handler fun);

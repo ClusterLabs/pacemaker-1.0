@@ -74,8 +74,8 @@ on_get_allnodes(char* argv[], int argc)
 	const char* name = NULL;
 	char* ret = cl_strdup(MSG_OK);
 	if (hb->llc_ops->init_nodewalk(hb) != HA_OK) {
-		mgmtd_log(LOG_ERR, "Cannot start node walk");
-		mgmtd_log(LOG_ERR, "REASON: %s", hb->llc_ops->errmsg(hb));
+		mgmt_log(LOG_ERR, "Cannot start node walk");
+		mgmt_log(LOG_ERR, "REASON: %s", hb->llc_ops->errmsg(hb));
 		cl_free(ret);
 		return cl_strdup(MSG_FAIL);
 	}
@@ -83,8 +83,8 @@ on_get_allnodes(char* argv[], int argc)
 		ret = mgmt_msg_append(ret, name);
 	}
 	if (hb->llc_ops->end_nodewalk(hb) != HA_OK) {
-		mgmtd_log(LOG_ERR, "Cannot end node walk");
-		mgmtd_log(LOG_ERR, "REASON: %s", hb->llc_ops->errmsg(hb));
+		mgmt_log(LOG_ERR, "Cannot end node walk");
+		mgmt_log(LOG_ERR, "REASON: %s", hb->llc_ops->errmsg(hb));
 		cl_free(ret);
 		return cl_strdup(MSG_FAIL);
 	}
@@ -112,9 +112,9 @@ int
 init_heartbeat(void)
 {
 	hb = ll_cluster_new("heartbeat");
-	if (hb->llc_ops->signon(hb, mgmtd_name)!= HA_OK) {
-		mgmtd_log(LOG_ERR, "Cannot sign on with heartbeat");
-		mgmtd_log(LOG_ERR, "REASON: %s", hb->llc_ops->errmsg(hb));
+	if (hb->llc_ops->signon(hb, client_name)!= HA_OK) {
+		mgmt_log(LOG_ERR, "Cannot sign on with heartbeat");
+		mgmt_log(LOG_ERR, "REASON: %s", hb->llc_ops->errmsg(hb));
 		hb->llc_ops->delete(hb);
 		hb = NULL;
 		return HA_FAIL;
@@ -143,7 +143,7 @@ on_hb_input(IPC_Channel * chan, gpointer data)
 {
 	if (chan != NULL && chan->ch_status == IPC_DISCONNECT) {
 		fire_event(EVT_DISCONNECTED);
-		mgmtd_log(LOG_ERR, "Lost connection to heartbeat service.");
+		mgmt_log(LOG_ERR, "Lost connection to heartbeat service.");
 		hb = NULL;
 		return FALSE;
 	}
