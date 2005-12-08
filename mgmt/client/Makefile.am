@@ -20,7 +20,7 @@
 MAINTAINERCLEANFILES    = Makefile.in
 
 halibdir		= $(libdir)/@HB_PKG@
-halib_SCRIPTS		= haclient.py	
+halib_SCRIPTS		= haclient.py mgmtcmd.py
 halib_DATA		= haclient.glade ha.png
 
 INCLUDES 	      	= -I$(top_builddir)/include  -I$(top_srcdir)/include \
