@@ -36,13 +36,10 @@
 extern resource_t *group_find_child(resource_t *rsc, const char *id);
 
 cib_t*	cib_conn = NULL;
-pe_working_set_t data_set;
 int init_crm(void);
 void final_crm(void);
 
 static void on_cib_diff(const char *event, HA_Message *msg);
-static void on_cib_query_done(const HA_Message* msg, int call_id, int rc,
-	   	  crm_data_t* output, void* user_data);
 
 static char* on_get_crm_config(char* argv[], int argc);
 static char* on_update_crm_config(char* argv[], int argc);
@@ -85,6 +82,7 @@ static char* on_delete_constraint(char* argv[], int argc);
 static resource_t* find_resource(GList* rsc_list, const char* id);
 static int delete_object(const char* type, const char* entry, const char* id);
 GList* find_xml_node_list(crm_data_t *root, const char *search_path);
+static pe_working_set_t get_data_set(void);
 
 #define GET_RESOURCE()	if (argc != 2) { 					\
 				return cl_strdup(MSG_FAIL); 			\
@@ -151,6 +149,23 @@ delete_object(const char* type, const char* entry, const char* id)
 	return 0;
 }
 
+pe_working_set_t 
+get_data_set(void) {
+	static crm_data_t* cib_xml_copy = NULL;
+	pe_working_set_t data_set;
+	
+	set_working_set_defaults(&data_set);
+	if (cib_xml_copy) {
+		ha_msg_del(cib_xml_copy);
+	}
+	cib_xml_copy = get_cib_copy(cib_conn);
+	data_set.input = cib_xml_copy;
+	data_set.now = new_ha_date(TRUE);
+	stage0(&data_set);
+	return data_set;
+}
+
+
 /* mgmtd functions */
 int
 init_crm(void)
@@ -173,9 +188,6 @@ init_crm(void)
 		cib_conn = NULL;
 		return -1;
 	}
-
-	ret = cib_conn->cmds->query(cib_conn, NULL, NULL, cib_scope_local);
-	add_cib_op_callback(ret, FALSE, NULL, on_cib_query_done);
 
 	ret = cib_conn->cmds->add_notify_callback(cib_conn, T_CIB_DIFF_NOTIFY
 						  , on_cib_diff);
@@ -229,38 +241,11 @@ final_crm(void)
 }
 
 /* event handler */
-
-void
-on_cib_query_done(const HA_Message* msg, int call_id, int rc,
-	   	  crm_data_t* output, void* user_data)
-{
-	static crm_data_t *save = NULL;
-
-	if(rc == cib_ok) {
-		crm_data_t *cib = NULL;
-		cib = find_xml_node(output,XML_TAG_CIB,TRUE);
-		/* FIXME: dealing with the situation with libxml is missing*/
-		if (save != NULL) {
-			ha_msg_del(save);
-		}
-		save = ha_msg_copy(cib);
-		set_working_set_defaults(&data_set);
-		data_set.input = save;
-		stage0(&data_set);
-
-		mgmt_log(LOG_INFO,"update cib finished");
-		fire_event(EVT_CIB_CHANGED);
-	}
-}
-
-
-
 void
 on_cib_diff(const char *event, HA_Message *msg)
 {
-	
-	int ret = cib_conn->cmds->query(cib_conn, NULL, NULL, cib_scope_local);
-	add_cib_op_callback(ret, FALSE, NULL, on_cib_query_done);
+	mgmt_log(LOG_INFO,"update cib finished");
+	fire_event(EVT_CIB_CHANGED);
 }
 
 /* cluster  functions */
@@ -268,7 +253,10 @@ char*
 on_get_crm_config(char* argv[], int argc)
 {
 	char buf [255];
+	pe_working_set_t data_set;
 	char* ret = cl_strdup(MSG_OK);
+	data_set = get_data_set();
+	
 	ret = mgmt_msg_append(ret, data_set.transition_idle_timeout);
 	ret = mgmt_msg_append(ret, data_set.symmetric_cluster?"True":"False");
 	ret = mgmt_msg_append(ret, data_set.stonith_enabled?"True":"False");
@@ -323,8 +311,13 @@ char*
 on_get_activenodes(char* argv[], int argc)
 {
 	node_t* node;
-	GList* cur = data_set.nodes;
-	char* ret = cl_strdup(MSG_OK);
+	GList* cur;
+	char* ret;
+	pe_working_set_t data_set;
+	
+	data_set = get_data_set();
+	cur = data_set.nodes;
+	ret = cl_strdup(MSG_OK);
 	while (cur != NULL) {
 		node = (node_t*) cur->data;
 		if (node->details->online) {
@@ -338,6 +331,9 @@ on_get_activenodes(char* argv[], int argc)
 char* 
 on_get_dc(char* argv[], int argc)
 {
+	pe_working_set_t data_set;
+	
+	data_set = get_data_set();
 	if (data_set.dc_node != NULL) {
 		char* ret = cl_strdup(MSG_OK);
 		ret = mgmt_msg_append(ret, data_set.dc_node->details->uname);
@@ -351,7 +347,11 @@ char*
 on_get_node_config(char* argv[], int argc)
 {
 	node_t* node;
-	GList* cur = data_set.nodes;
+	GList* cur;
+	pe_working_set_t data_set;
+	
+	data_set = get_data_set();
+	cur = data_set.nodes;
 	ARGC_CHECK(2);
 	while (cur != NULL) {
 		node = (node_t*) cur->data;
@@ -379,7 +379,11 @@ char*
 on_get_running_rsc(char* argv[], int argc)
 {
 	node_t* node;
-	GList* cur = data_set.nodes;
+	GList* cur;
+	pe_working_set_t data_set;
+	
+	data_set = get_data_set();
+	cur = data_set.nodes;
 	ARGC_CHECK(2);
 	while (cur != NULL) {
 		node = (node_t*) cur->data;
@@ -411,7 +415,9 @@ on_del_rsc(char* argv[], int argc)
 	crm_data_t* cib_object = NULL;
 	crm_data_t* output;
 	char xml[MAX_STRLEN];
-
+	pe_working_set_t data_set;
+	
+	data_set = get_data_set();
 	GET_RESOURCE()
 
 	switch (rsc->variant) {
@@ -599,7 +605,11 @@ char*
 on_get_all_rsc(char* argv[], int argc)
 {
 	GList* cur;
-	char* ret = cl_strdup(MSG_OK);
+	char* ret;
+	pe_working_set_t data_set;
+	
+	data_set = get_data_set();
+	ret = cl_strdup(MSG_OK);
 	cur = data_set.resources;
 	while (cur != NULL) {
 		resource_t* rsc = (resource_t*)cur->data;
@@ -615,7 +625,9 @@ on_get_rsc_attrs(char* argv[], int argc)
 	resource_t* rsc;
 	char* ret;
 	struct ha_msg* attrs;
-
+	pe_working_set_t data_set;
+	
+	data_set = get_data_set();
 	GET_RESOURCE()
 
 	ret = cl_strdup(MSG_OK);
@@ -633,7 +645,9 @@ on_get_rsc_running_on(char* argv[], int argc)
 	resource_t* rsc;
 	char* ret;
 	GList* cur;
-
+	pe_working_set_t data_set;
+	
+	data_set = get_data_set();
 	GET_RESOURCE()
 
 	ret = cl_strdup(MSG_OK);
@@ -650,7 +664,9 @@ on_get_rsc_status(char* argv[], int argc)
 {
 	resource_t* rsc;
 	char* ret;
-
+	pe_working_set_t data_set;
+	
+	data_set = get_data_set();
 	GET_RESOURCE()
 
 	ret = cl_strdup(MSG_OK);
@@ -692,7 +708,9 @@ on_get_rsc_type(char* argv[], int argc)
 {
 	resource_t* rsc;
 	char* ret;
-
+	pe_working_set_t data_set;
+	
+	data_set = get_data_set();
 	GET_RESOURCE()
 
 	ret = cl_strdup(MSG_OK);
@@ -758,6 +776,9 @@ on_get_sub_rsc(char* argv[], int argc)
 	resource_t* rsc;
 	char* ret;
 	GList* cur = NULL;
+	pe_working_set_t data_set;
+	
+	data_set = get_data_set();
 	GET_RESOURCE()
 
 	if (rsc->variant == pe_group) {
@@ -785,7 +806,9 @@ on_get_rsc_params(char* argv[], int argc)
 	char* ret;
 	struct ha_msg* attrs;
 	struct ha_msg* nvpair;
-
+	pe_working_set_t data_set;
+	
+	data_set = get_data_set();
 	GET_RESOURCE()
 
 	ret = cl_strdup(MSG_OK);
@@ -862,7 +885,9 @@ on_get_rsc_ops(char* argv[], int argc)
 	char* ret;
 	struct ha_msg* ops;
 	struct ha_msg* op;
-
+	pe_working_set_t data_set;
+	
+	data_set = get_data_set();
 	GET_RESOURCE()
 
 	ret = cl_strdup(MSG_OK);
@@ -935,6 +960,9 @@ on_get_clone(char* argv[], int argc)
 	char* ret;
 	clone_variant_data_t* clone_data;
 	char buf[MAX_STRLEN];
+	pe_working_set_t data_set;
+	
+	data_set = get_data_set();
 	GET_RESOURCE()
 
 	ret = cl_strdup(MSG_OK);
@@ -986,6 +1014,9 @@ on_get_master(char* argv[], int argc)
 	const char * master_max_s;
 	const char * master_node_max_s;
 	char buf[MAX_STRLEN];
+	pe_working_set_t data_set;
+	
+	data_set = get_data_set();
 	GET_RESOURCE()
 
 	master_max_s = get_rsc_param(rsc, XML_RSC_ATTR_MASTER_MAX);
@@ -1044,10 +1075,12 @@ on_get_constraints(char* argv[], int argc)
 	GList* list;
 	GList* cur;
 	crm_data_t* cos = NULL;
+	pe_working_set_t data_set;
 	const char* path[] = {"configuration","constraints"}
-	ARGC_CHECK(2);
-
 	
+	ARGC_CHECK(2);
+	
+	data_set = get_data_set();
 	cos = find_xml_node_nested(data_set.input, path, 2);
 	if (cos == NULL) {
 		return  cl_strdup(MSG_FAIL);
@@ -1075,10 +1108,11 @@ on_get_constraint(char* argv[], int argc)
 	
 	GList* expr_list, *expr_cur;
 	crm_data_t* cos = NULL;
+	pe_working_set_t data_set;
 	const char* path[] = {"configuration","constraints"}
 	ARGC_CHECK(3);
-
 	
+	data_set = get_data_set();
 	cos = find_xml_node_nested(data_set.input, path, 2);
 	if (cos == NULL) {
 		return  cl_strdup(MSG_FAIL);
