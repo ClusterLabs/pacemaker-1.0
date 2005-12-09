@@ -1,4 +1,4 @@
-/* $Id: ccmclient.c,v 1.31 2005/10/06 20:03:16 gshi Exp $ */
+/* $Id: ccmclient.c,v 1.32 2005/12/09 20:15:31 gshi Exp $ */
 /* 
  * client.c: Consensus Cluster Client tracker
  *
@@ -23,6 +23,9 @@
  */
 #include <ccm.h>
 #include <ccmlib.h>
+#include <clplumbing/cl_plugin.h>
+#include <clplumbing/cl_quorum.h>
+#include <clplumbing/cl_tiebreaker.h>
 
 typedef struct ccm_client_s {
 	int 	ccm_clid;
@@ -336,30 +339,47 @@ client_delete_all(void)
 }
 
 
-/* a sophisticated quorum algorithm has to be introduced here
- *  currently we are just using the simplest algorithm
- */
 static gboolean
-mem_quorum(llm_info_t* llm, int member_count)
+get_quorum(ccm_info_t* info)
 {
-	int	total_count = llm->nodecount;
-	
-	cl_log(LOG_INFO, "n_member=%d, nodecount=%d",
-	       member_count, total_count); 
-	
-	/* XXX REVISIT TODO: This is a temporary WORK-AROUND for the two
-	 * node clusters. With one node missing, always assume quorum.
-	 * This will be farmed out to plugins later! */
-	if (total_count == 2) {
-		cl_log(LOG_INFO, "Asserting quorum for two node cluster!");
-		return TRUE;
+	static struct hb_quorum_fns* funcs = NULL;
+	static struct hb_tiebreaker_fns* tiebreaker_funcs = NULL;
+	const char* quorum_plugin = "classic";
+	const char* tiebreaker_plugin = NULL;
+	int rc;
+
+	if (funcs == NULL){
+		funcs = cl_load_plugin("quorum", quorum_plugin);
+		if (funcs == NULL){
+			cl_log(LOG_ERR, "%s: loading plugin %s failed",
+			       __FUNCTION__, quorum_plugin);
+			return FALSE;
+		}
 	}
 	
-	if(member_count >=  total_count/2 + 1){
+        rc = funcs->getquorum(info->memcount, info->llm.nodecount);
+
+	if (rc == QUORUM_YES){
 		return TRUE;
+	}else if (rc ==  QUORUM_NO){
+		return FALSE;
 	}
 	
-	return FALSE;
+	if (tiebreaker_funcs == NULL){
+		if ( tiebreaker_plugin == NULL){
+			return FALSE;
+		}
+		
+		tiebreaker_funcs = cl_load_plugin("tiebreaker", tiebreaker_plugin);
+		if (tiebreaker_funcs == NULL){
+			cl_log(LOG_ERR, "%s: loading plugin %s failed",
+			       __FUNCTION__, tiebreaker_plugin);
+			return FALSE;
+		}
+	}
+	
+	return tiebreaker_funcs->break_tie(info->memcount, info->llm.nodecount);
+	
 }
 
 static void
@@ -392,7 +412,10 @@ client_new_mbrship(ccm_info_t* info, void* borndata)
 	ccm->ev = CCM_NEW_MEMBERSHIP;
 	ccm->n = n;
 	ccm->trans = trans;
-	ccm->quorum = mem_quorum(&info->llm, n);
+	ccm->quorum = get_quorum(info);
+	(void)get_quorum;
+	cl_log(LOG_INFO, "quorum is %d", ccm->quorum);
+
 	memcpy(ccm->member, member, n*sizeof(int));
 
 	if(ipc_mem_message && --(ipc_mem_message->count)==0){

@@ -1,7 +1,7 @@
 #
-# heartbeat lib/plugin directory: Linux-HA code
+# InterfaceMgr: Interface manager plugins for Linux-HA
 #
-# Copyright (C) 2001 Alan Robertson
+# Copyright (C) 2005 Guochun Shi <gshi@ncsa.uiuc.edu>
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -17,12 +17,24 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #
-
 MAINTAINERCLEANFILES    = Makefile.in
 
-if LRM_BUILD
-LRM_DIR = lrm
-endif
 
-SUBDIRS			= InterfaceMgr HBauth HBcomm HBcompress stonith AppHBNotification \
-			  $(LRM_DIR)  quorum  tiebreaker
+SUBDIRS                 = 
+
+INCLUDES                = -I$(top_builddir)/include -I$(top_srcdir)/include \
+			-I$(top_builddir)/linux-ha -I$(top_srcdir)/linux-ha  \
+			-I$(top_builddir)/libltdl -I$(top_srcdir)/libltdl  \
+			-I$(top_builddir)/lib/upmls -I$(top_srcdir)/lib/upmls
+
+AM_CFLAGS		= @CFLAGS@
+
+## libraries
+
+halibdir		= $(libdir)/@HB_PKG@
+plugindir		= $(halibdir)/plugins/quorum
+plugin_LTLIBRARIES	= classic.la
+
+classic_la_SOURCES		= classic.c
+classic_la_LDFLAGS		= -export-dynamic -module -avoid-version -lz
+classic_la_LIBADD		= $(top_builddir)/replace/libreplace.la 
