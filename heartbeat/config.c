@@ -1,4 +1,4 @@
-/* $Id: config.c,v 1.185 2005/12/09 21:41:24 alan Exp $ */
+/* $Id: config.c,v 1.186 2005/12/09 22:33:11 alan Exp $ */
 /*
  * Parse various heartbeat configuration files...
  *
@@ -93,7 +93,6 @@ static int set_traditional_compression(const char *);
 static int set_generation_method(const char *);
 static int set_realtime(const char *);
 static int set_debuglevel(const char *);
-static int set_normalpoll(const char *);
 static int set_api_authorization(const char *);
 static int set_msgfmt(const char*);
 static int set_logdaemon(const char*);
@@ -105,6 +104,9 @@ static int set_corerootdir(const char*);
 static int set_release2mode(const char*);
 static int set_autojoin(const char*);
 static int set_uuidfrom(const char*);
+#ifdef ALLOWPOLLCHOICE
+  static int set_normalpoll(const char *);
+#endif
 
 /*
  * Each of these parameters is is automatically recorded by
@@ -138,7 +140,9 @@ struct directive {
 , {KEY_GEN_METH,  set_generation_method, TRUE, "file", "protocol generation computation method"}
 , {KEY_REALTIME,  set_realtime, TRUE, "true", "enable realtime behavior?"}
 , {KEY_DEBUGLEVEL,set_debuglevel, TRUE, NULL, "debug level"}
+#ifdef ALLOWPOLLCHOICE
 , {KEY_NORMALPOLL,set_normalpoll, TRUE, "true", "Use system poll(2) function?"}
+#endif
 , {KEY_MSGFMT,    set_msgfmt, TRUE, "classic", "message format in the wire"}
 , {KEY_LOGDAEMON, set_logdaemon, TRUE, NULL, "use logging daemon"}  
 , {KEY_CONNINTVAL,set_logdconntime, TRUE, "60", "the interval to reconnect to logd"}  
@@ -858,11 +862,12 @@ dump_default_config(int wikiout)
 	}
 
 	if (wikiout) {
-		printf("The [wiki:ha.cf ha.cf] directives that have default"
-		" values are shown in the table below along with the default"
-		" values and a brief description.\n");
-		printf("This is the output from {{{heartbeat -DW}}}"
-		" (version %s)\n\n"
+		printf("##Put this output in the ha.cf/DefaultDirectives"
+		" page\n");
+		printf("The [wiki:ha.cf ha.cf] directives with default"
+		" values are shown below - along with a brief description.\n");
+		printf("This was produced by {{{heartbeat -DW}}}"
+		" ''# (version %s)''\n\n"
 		,	VERSION);
 
 		printf("||\'\'%s\'\'||\'\'%s\'\'||\'\'%s\'\'||\n"
@@ -886,7 +891,7 @@ dump_default_config(int wikiout)
 					}
 				}
 
-				printf("||[wiki:Self:ha.cf/%sDirective"
+				printf("||[wiki:ha.cf/%sDirective"
 				" %s]||%s||%s||\n"
 				,	WikiName
 				,	Directives[j].name
@@ -1858,6 +1863,7 @@ set_debuglevel(const char * value)
 	return(HA_FAIL);
 }
 
+#ifdef ALLOWPOLLCHOICE
 static int
 set_normalpoll(const char * value)
 {
@@ -1869,6 +1875,7 @@ set_normalpoll(const char * value)
 	}
 	return ret;
 }
+#endif
 static int
 set_msgfmt(const char* value)
 {
@@ -2393,6 +2400,10 @@ set_uuidfrom(const char* value)
 
 /*
  * $Log: config.c,v $
+ * Revision 1.186  2005/12/09 22:33:11  alan
+ * Disallowed the nomalpoll option.
+ * Fixed some text that I broke :-(
+ *
  * Revision 1.185  2005/12/09 21:41:24  alan
  * Fixed a minor complaint from amd64, plus added version information, minor URL correction, etc.
  *
