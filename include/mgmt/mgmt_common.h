@@ -492,7 +492,7 @@ or
 description:
 	get the parameters of a given constraint
 format:
-	MSG_GET_CONSTRAINT id
+	MSG_GET_CONSTRAINT (rsc_location|rsc_colocation|rsc_order) id
 return:
 	rsc_location:
 		MSG_OK id resource score expr_id1 attribute1 operation1 value1
