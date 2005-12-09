@@ -24,8 +24,9 @@ Copyright (C) 2005 International Business Machines
 # Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 
-import sys,os,string,socket,syslog,webbrowser, pickle
+import sys, os, string, socket, syslog, webbrowser, pickle, xml
 from xml.dom.minidom import parseString
+
 sys.path.append("@libdir@/heartbeat")
 from pymgmt import *
 
@@ -73,7 +74,8 @@ def check_entry_value(glade, entry, label=None) :
 		return False
 	return True
 
-def add_column(widget, label, value, icon_cell_func = None, editable = False, options=None, call_back=None) :
+def add_column(widget, label, value, icon_cell_func = None, editable = False
+		, options=None, call_back=None, visible = True) :
 	tvcolumn = gtk.TreeViewColumn(label)
 	widget.append_column(tvcolumn)
 	if options == None :
@@ -96,7 +98,8 @@ def add_column(widget, label, value, icon_cell_func = None, editable = False, op
 	tvcolumn.set_resizable(True)        
 	tvcolumn.pack_start(cell, True)
 	tvcolumn.add_attribute(cell, 'text', value)
-
+	tvcolumn.set_visible(visible)
+	
 def msgbox(msg, parent = None) :
 	if parent == None :
 		parent = window.win_widget
@@ -135,14 +138,15 @@ def kvbox(title, fields, parent=None) :
 	table = gtk.Table(2, 1, False)
 	widgets = []
 	for row in range(len(fields)):
+		if fields[row].auto_gen :
+			widgets.append(None)
+			continue
 		table.attach(gtk.Label(fields[row].label+":"), 0, 1, row, row+1)
 		if fields[row].options != None:
 			combo = gtk.combo_box_entry_new_text()
 			for option in fields[row].options:
 				combo.append_text(option)
-			if fields[row].auto_gen :
-				combo.child.set_text(uuid())
-			elif fields[row].default != None :
+			if fields[row].default != None :
 				combo.child.set_text(fields[row].default)
 			else :
 				combo.child.set_text(fields[row].options[0])
@@ -150,9 +154,7 @@ def kvbox(title, fields, parent=None) :
 			table.attach(combo, 1,2, row, row+1)
 		else :
 			entry = gtk.Entry()
-			if fields[row].auto_gen :
-				entry.set_text(uuid())
-			elif fields[row].default != None :
+			if fields[row].default != None :
 				entry.set_text(fields[row].default)
 			widgets.append(entry)
 			table.attach(entry, 1,2, row, row+1)
@@ -161,13 +163,16 @@ def kvbox(title, fields, parent=None) :
 	dialog.vbox.show_all()
 	while True :
 		ret = dialog.run()
-		if ret == gtk.RESPONSE_CANCEL :
+		if ret in [gtk.RESPONSE_CANCEL,gtk.RESPONSE_DELETE_EVENT] :
 			dialog.destroy()
 			return None
 		else :
 			kv = {}
 			passed = True
 			for row in range(len(fields)):
+				if fields[row].auto_gen :
+					kv[fields[row].key] = uuid()
+					continue
 				if fields[row].options != None :
 					combo = widgets[row]
 					kv[fields[row].key] = combo.child.get_text()
@@ -213,7 +218,8 @@ class ListWithAddDel :
 	call_back = None
 	store = None
 	fields = None
-	
+	add_btn_handler = None
+	del_btn_handler = None
 	def on_del(self, widget) :
 		selection = self.widget.get_selection()
 		(model, iter) = selection.get_selected()
@@ -242,18 +248,26 @@ class ListWithAddDel :
 		self.call_back = call_back
 		self.title = title
  		self.fields = fields
-		add_btn.connect("clicked", self.on_add)
- 		del_btn.connect("clicked", self.on_del)
+		self.add_btn_handler = add_btn.connect("clicked", self.on_add)
+		self.del_btn_handler = del_btn.connect("clicked", self.on_del)
 		self.store = self.create_store(len(fields))
 		widget.set_model(self.store)
 		
 		for i in range(len(fields)) :
-			add_column(widget, fields[i].label, i, None, fields[i].editable,fields[i].options,call_back)
+			add_column(widget, fields[i].label, i, None, fields[i].editable,
+				fields[i].options, call_back, not fields[i].auto_gen)
 			
 		
 	def clear(self) :
 		self.store.clear()
 		
+	def destory(self) :
+		self.clear()
+		for c in self.widget.get_columns() :
+			self.widget.remove_column(c)
+		self.add_btn.disconnect(self.add_btn_handler)
+ 		self.del_btn.disconnect(self.del_btn_handler)
+			
 	def insert(self, item) :
 		values = []
 		for f in self.fields :
@@ -285,7 +299,7 @@ class Tree :
 		widget.set_model(self.store)
 		add_column(widget, "Name", 0, self.render_icon)
 		add_column(widget, "Status", 1)
-		widget.set_size_request(250, 100)
+		widget.set_size_request(300, 100)
 		widget.connect("cursor-changed", self.on_cursor_changed, widget.get_selection())
 		self.widget = widget
 	
@@ -360,10 +374,11 @@ class Tree :
 
 	
 	def restore_iter_status(self, model, path, iter, user_data):
-		(select_name, select_type, expand_status) = user_data
+		(select_name, select_type, select_path, expand_status) = user_data
 		name = model.get_value(iter, 0)
 		type = model.get_value(iter, 2)
-		if name == select_name and type == select_type :
+		path = model.get_path(iter)
+		if name == select_name and type == select_type and path == select_path:
 			self.widget.get_selection().select_iter(iter)
 		if expand_status.has_key((name,type)) :
 			if expand_status[name, type] :
@@ -376,14 +391,16 @@ class Tree :
 	def save_tree_status(self) :
 		(model, iter) = self.widget.get_selection().get_selected()
 		if iter != None :
-			selected_name = model.get_value(iter, 0)
-			selected_type = model.get_value(iter, 2)
+			select_name = model.get_value(iter, 0)
+			select_type = model.get_value(iter, 2)
+			select_path = model.get_path(iter)
 		else :
-			selected_name = None
-			selected_type = None
+			select_name = None
+			select_type = None
+			select_path = None
 		expand_status = {}
 		self.store.foreach(self.save_iter_status, expand_status)
-		return (selected_name, selected_type, expand_status)
+		return (select_name, select_type, select_path, expand_status)
 
 	def restore_tree_status(self, tree_status) :
 		self.store.foreach(self.restore_iter_status, tree_status)
@@ -443,7 +460,7 @@ class Tree :
 			self.store.append(colocations_root,[colocation["id"], "", "colocation"])
 		
 		self.restore_tree_status(tree_status)
-		(name, type, expand_status) = tree_status
+		(name, type, path, expand_status) = tree_status
 		if  name == None :
 			self.widget.get_selection().select_iter(root)
 			self.widget.expand_all()
@@ -877,19 +894,35 @@ class AddNativeDlg :
 	param_list = None
 	glade = None
 	def update_param_list(self) :
-		if self.param_list == None :
-			return
-		self.param_list.clear()
+		if self.param_list :
+			self.param_list.destory()
 		cur_class = self.glade.get_widget("class").child.get_text()
 		cur_type = self.glade.get_widget("type").child.get_text()
 		cur_provider = self.glade.get_widget("provider").child.get_text()
 		meta = manager.get_rsc_meta(cur_class, cur_type, cur_provider)
-		if meta == None :
-			return
-		for param in meta.parameters :
-			param["id"] = uuid()
-			self.param_list.insert(param)
-	
+		param_names = None
+		param_descs = None
+		if meta != None :
+			param_names = [f["name"] for f in meta.parameters]
+			param_descs = [f["shortdesc"] for f in meta.parameters]
+		
+		fields = [Field("id", "ID", "id_", None, False, auto_gen = True),
+			  Field("name", "Name", "", param_names, False),
+			  Field("value", "Value", "", None, True),
+			  Field("shortdesc", "Description", "", param_descs, False,False)]
+		glade = self.glade	  
+		param_list = ListWithAddDel(glade.get_widget("parameters"),
+				       glade.get_widget("addparam"),
+				       glade.get_widget("delparam"),
+				       "", fields)
+
+		self.param_list = param_list
+		if meta != None :
+			for param in meta.parameters :
+				param["id"] = uuid()
+				self.param_list.insert(param)
+			
+			
 	def on_provider_changed(self, widget, glade) :
 		self.update_param_list()
 		
@@ -996,21 +1029,21 @@ class AddNativeDlg :
 		glade.get_widget("group").set_model(store)
 		glade.get_widget("group").set_text_column(0)
 		
-		fields = [Field("id", "ID", "id_", None, False, auto_gen = True),
-			  Field("name", "Name", "", None, False),
-			  Field("value", "Value", "", None, True),
-			  Field("shortdesc", "Description", "", None, False,False)]
-			  
-		param_list = ListWithAddDel(glade.get_widget("parameters"),
-				       glade.get_widget("addparam"),
-				       glade.get_widget("delparam"),
-				       "", fields)
-
-		self.param_list = param_list
+# 		fields = [Field("id", "ID", "id_", None, False, auto_gen = True),
+# 			  Field("name", "Name", "", None, False),
+# 			  Field("value", "Value", "", None, True),
+# 			  Field("shortdesc", "Description", "", None, False,False)]
+# 			  
+# 		param_list = ListWithAddDel(glade.get_widget("parameters"),
+# 				       glade.get_widget("addparam"),
+# 				       glade.get_widget("delparam"),
+# 				       "", fields)
+# 
+# 		self.param_list = param_list
 		self.update_param_list()
 		while True :
 			ret = dialog.run()
-			if ret == gtk.RESPONSE_CANCEL :
+			if ret in [gtk.RESPONSE_CANCEL, gtk.RESPONSE_DELETE_EVENT] :
 				dialog.destroy()
 				return None
 			else :
@@ -1212,7 +1245,7 @@ class MainWindow :
 		win_widget = gtk.Window()
 		win_widget.connect("delete_event", self.on_delete_event)
 		win_widget.set_title("Linux HA Management Client")
-		win_widget.set_size_request(650, 600)
+		win_widget.set_size_request(750, 600)
 		win_widget.set_icon_from_file("@libdir@/heartbeat/ha.png")
 		
 		# create ui-manager
@@ -1505,8 +1538,11 @@ class Manager :
 		meta_data = ""
 		for line in lines :
 			meta_data = meta_data +line
-		doc_xml = parseString(meta_data).documentElement
-
+		try :
+			doc_xml = parseString(meta_data).documentElement
+		except xml.parsers.expat.ExpatError:
+			return None
+			
 		meta = RAMeta()
 		meta.name = doc_xml.getAttribute("name")
 
