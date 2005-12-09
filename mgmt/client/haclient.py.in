@@ -24,7 +24,7 @@ Copyright (C) 2005 International Business Machines
 # Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 
-import sys,os,string,socket,syslog,webbrowser
+import sys,os,string,socket,syslog,webbrowser, pickle
 from xml.dom.minidom import parseString
 sys.path.append("@libdir@/heartbeat")
 from pymgmt import *
@@ -1132,15 +1132,17 @@ class MainWindow :
 		glade = gtk.glade.XML(UI_FILE, "logindlg_main")
 		main = glade.get_widget("logindlg_main")
 		dialog.vbox.add(main)
-
-		glade.get_widget("server").set_text("127.0.0.1")
-		glade.get_widget("username").set_text("hacluster")
-		glade.get_widget("password").set_text("hacluster")
+		(server,user) = manager.last_login_info()
+		glade.get_widget("server").set_text(server)
+		glade.get_widget("username").set_text(user)
+		glade.get_widget("password").set_text("")
 		
 		ret =  dialog.run()
 		server = glade.get_widget("server").get_text()
 		user = glade.get_widget("username").get_text()
 		password = glade.get_widget("password").get_text()
+		manager.save_login_info(server,user)
+		
 		dialog.destroy()
 
 		if ret :
@@ -1325,7 +1327,18 @@ class Manager :
 		if self.connected :
 			mgmt_disconnect()
 		
-	# connection functions		
+	# connection functions
+	def last_login_info(self) :
+		save_path = os.environ["HOME"]+"/.haclient"
+		if not os.path.exists(save_path) :
+			return ("127.0.0.1","hacluster")
+		return pickle.load(file(save_path,"r"))
+		
+	def save_login_info(self, server, user) :
+		save_path = os.environ["HOME"]+"/.haclient"
+		pickle.dump((server,user), file(save_path,"w"))
+		return
+		
 	def login(self, server, username, password) :
 		# connect to one of the cluster
 		ip = socket.gethostbyname(server)
