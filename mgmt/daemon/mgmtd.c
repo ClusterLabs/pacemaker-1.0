@@ -221,7 +221,7 @@ init_stop(const char *pid_file)
 
 static const char usagemsg[] = "[-srkhvt]\n\ts: status\n\tr: restart"
 	"\n\tk: kill\n\t"
-	"h: help\n\tv: debug\n\tv: testmode\n";
+		"h: help\n\tv: debug\n\tt: testmode(e.g. no authority checking)\n";
 
 void
 usage(const char* cmd, int exit_status)
