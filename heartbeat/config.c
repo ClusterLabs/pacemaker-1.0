@@ -1,4 +1,4 @@
-/* $Id: config.c,v 1.184 2005/12/09 16:07:38 blaschke Exp $ */
+/* $Id: config.c,v 1.185 2005/12/09 21:41:24 alan Exp $ */
 /*
  * Parse various heartbeat configuration files...
  *
@@ -860,7 +860,10 @@ dump_default_config(int wikiout)
 	if (wikiout) {
 		printf("The [wiki:ha.cf ha.cf] directives that have default"
 		" values are shown in the table below along with the default"
-		" values and a brief description.\n\n");
+		" values and a brief description.\n");
+		printf("This is the output from {{{heartbeat -DW}}}"
+		" (version %s)\n\n"
+		,	VERSION);
 
 		printf("||\'\'%s\'\'||\'\'%s\'\'||\'\'%s\'\'||\n"
 		,	lcolhdr, ccolhdr, rcolhdr);
@@ -883,7 +886,7 @@ dump_default_config(int wikiout)
 					}
 				}
 
-				printf("||[wiki:ha.cf/%sDirective"
+				printf("||[wiki:Self:ha.cf/%sDirective"
 				" %s]||%s||%s||\n"
 				,	WikiName
 				,	Directives[j].name
@@ -905,7 +908,7 @@ dump_default_config(int wikiout)
 		printf("%-*.*s  %-*.*s  %s\n", lmaxlen, lmaxlen, lcolhdr
 		,	cmaxlen, cmaxlen, ccolhdr, rcolhdr);
 		/* this 4 comes from the pair of 2 blanks between columns */
-		printf("%-*.*s\n", sizeof(dashes)
+		printf("%-*.*s\n", (int)sizeof(dashes)
 		,	lmaxlen + cmaxlen + rmaxlen + 4, dashes);
 
 		for (j=0; j < DIMOF(Directives); ++j) {
@@ -2356,15 +2359,15 @@ set_release2mode(const char* value)
 static int
 set_autojoin(const char* value)
 {
-	if (strcmp(value, "none") == 0) {
+	if (strcasecmp(value, "none") == 0) {
 		config->rtjoinconfig = HB_JOIN_NONE;
 		return HA_OK;
 	}
-	if (strcmp(value, "other") == 0) {
+	if (strcasecmp(value, "other") == 0) {
 		config->rtjoinconfig = HB_JOIN_OTHER;
 		return HA_OK;
 	}
-	if (strcmp(value, "any") == 0) {
+	if (strcasecmp(value, "any") == 0) {
 		config->rtjoinconfig = HB_JOIN_ANY;
 		return HA_OK;
 	}
@@ -2390,7 +2393,11 @@ set_uuidfrom(const char* value)
 
 /*
  * $Log: config.c,v $
+ * Revision 1.185  2005/12/09 21:41:24  alan
+ * Fixed a minor complaint from amd64, plus added version information, minor URL correction, etc.
+ *
  * Revision 1.184  2005/12/09 16:07:38  blaschke
+ *
  * Bug 990 - Added -D option to tell heartbeat to display default directive
  * values and -W option to do so in wiki format
  *
