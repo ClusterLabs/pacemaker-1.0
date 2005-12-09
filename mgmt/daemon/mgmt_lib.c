@@ -67,6 +67,8 @@ init_mgmt_lib(const char* client, int enable_components)
 	event_map = g_hash_table_new_full(g_str_hash, g_str_equal, cl_free, NULL);
 	client_name = client?client:"unknown";
 	components = enable_components;
+	mgmt_set_mem_funcs(cl_malloc, cl_realloc, cl_free);
+	
 	/* init modules */
 	if (components & ENABLE_HB) {
 		init_heartbeat();
