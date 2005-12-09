@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 #
 # Copyright (C) 2002 Yixiong Zou (yixiong.zou@intel.com)
 # Support:      linux-ha-dev@lists.tummy.com
