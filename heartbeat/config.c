@@ -1,4 +1,4 @@
-/* $Id: config.c,v 1.183 2005/11/08 06:27:38 gshi Exp $ */
+/* $Id: config.c,v 1.184 2005/12/09 16:07:38 blaschke Exp $ */
 /*
  * Parse various heartbeat configuration files...
  *
@@ -815,6 +815,110 @@ dump_config(void)
 		,	sysmedia[j]->name);
 	}
 	printf("#---------------------------------------------------\n");
+}
+
+
+/*
+ *	Dump the default configuration file values for those directives that
+ *	have them
+ *
+ *	This does not include every directive at this point.
+ */
+void
+dump_default_config(int wikiout)
+{
+	int		j, k, lmaxlen = 0, cmaxlen = 0, rmaxlen = 0;
+	const char *	dashes = "----------------------------------------"
+				 "----------------------------------------";
+	const char *	lcolhdr = "Directive";
+	const char *	ccolhdr = "Default";
+	const char *	rcolhdr = "Description";
+
+	/* First determine max name lens to help make things look nice */
+	for (j=0; j < DIMOF(Directives); ++j) {
+		struct directive * pdir = &Directives[j];
+		if (pdir->defaultvalue != NULL) {
+			if ((k = strlen(pdir->name)) > lmaxlen) {
+				lmaxlen = k;
+			}
+			if ((k = strlen(pdir->defaultvalue)) > cmaxlen) {
+				cmaxlen = k;
+			}
+			if ((pdir->explanation != NULL)
+			&& ((k = strlen(pdir->explanation)) > rmaxlen)) {
+				rmaxlen = k;
+			}
+		}
+	}
+
+	/* Don't do anything if there are no default values */
+	if (!lmaxlen) {
+		printf("There are no default values for ha.cf directives\n");
+		return;
+	}
+
+	if (wikiout) {
+		printf("The [wiki:ha.cf ha.cf] directives that have default"
+		" values are shown in the table below along with the default"
+		" values and a brief description.\n\n");
+
+		printf("||\'\'%s\'\'||\'\'%s\'\'||\'\'%s\'\'||\n"
+		,	lcolhdr, ccolhdr, rcolhdr);
+
+		for (j=0; j < DIMOF(Directives); ++j) {
+			char	WikiName[lmaxlen+1];
+			char *	pch;
+
+			if (Directives[j].defaultvalue) {
+				strcpy(WikiName, Directives[j].name);
+				WikiName[0] = toupper(WikiName[0]);
+
+				/* wiki convention is to remove underscores,
+				   slide chars to left, and capitalize */
+				while ((pch = strchr(WikiName, '_')) != NULL) {
+					char *pchplus1 = pch + 1;
+					*pch = toupper(*pchplus1);
+					while (*pchplus1) {
+						*++pch = *++pchplus1;
+					}
+				}
+
+				printf("||[wiki:ha.cf/%sDirective"
+				" %s]||%s||%s||\n"
+				,	WikiName
+				,	Directives[j].name
+				,	Directives[j].defaultvalue
+				,	Directives[j].explanation);
+			}
+		}
+	} else {
+		if ((k = strlen(lcolhdr)) > lmaxlen) {
+			lmaxlen = k;
+		}
+		if ((k = strlen(ccolhdr)) > cmaxlen) {
+			cmaxlen = k;
+		}
+		if ((k = strlen(rcolhdr)) > rmaxlen) {
+			rmaxlen = k;
+		}
+
+		printf("%-*.*s  %-*.*s  %s\n", lmaxlen, lmaxlen, lcolhdr
+		,	cmaxlen, cmaxlen, ccolhdr, rcolhdr);
+		/* this 4 comes from the pair of 2 blanks between columns */
+		printf("%-*.*s\n", sizeof(dashes)
+		,	lmaxlen + cmaxlen + rmaxlen + 4, dashes);
+
+		for (j=0; j < DIMOF(Directives); ++j) {
+			if (Directives[j].defaultvalue) {
+				printf("%-*.*s  %-*.*s  %s\n"
+				,	lmaxlen, lmaxlen
+				,	Directives[j].name
+				,	cmaxlen, cmaxlen
+				,	Directives[j].defaultvalue
+				,	Directives[j].explanation);
+			}
+		}
+	}
 }
 
 
@@ -2286,6 +2390,10 @@ set_uuidfrom(const char* value)
 
 /*
  * $Log: config.c,v $
+ * Revision 1.184  2005/12/09 16:07:38  blaschke
+ * Bug 990 - Added -D option to tell heartbeat to display default directive
+ * values and -W option to do so in wiki format
+ *
  * Revision 1.183  2005/11/08 06:27:38  gshi
  * bug 949: this bcast message is caused by not compressing the message
  * It was so because crmd/cib does not inherit the variable traditional_compression

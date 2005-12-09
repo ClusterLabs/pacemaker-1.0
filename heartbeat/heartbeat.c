@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.474 2005/12/01 23:22:28 gshi Exp $ */
+/* $Id: heartbeat.c,v 1.475 2005/12/09 16:07:38 blaschke Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -268,7 +268,7 @@
 #include "clplumbing/setproctitle.h"
 #include <clplumbing/cl_pidfile.h>
 
-#define OPTARGS			"dkMrRsvlC:V"
+#define OPTARGS			"dDkMrRsvWlC:V"
 #define	ONEDAY			(24*60*60)	/* Seconds in a day */
 #define REAPER_SIG		0x0001UL
 #define TERM_SIG		0x0002UL
@@ -336,6 +336,8 @@ static	int			send_cluster_msg_level = 0;
 static void print_a_child_client(gpointer childentry, gpointer unused);
 static seqno_t timer_lowseq = 0;
 static	gboolean		init_deadtime_passed = FALSE;		
+static int			PrintDefaults = FALSE;
+static int			WikiOutput = FALSE;
 
 #undef DO_AUDITXMITHIST
 #ifdef DO_AUDITXMITHIST
@@ -4262,6 +4264,9 @@ main(int argc, char * argv[], char **envp)
 			case 'd':
 				++debug_level;
 				break;
+			case 'D':
+				++PrintDefaults;
+				break;
 			case 'k':
 				++killrunninghb;
 				break;
@@ -4289,6 +4294,9 @@ main(int argc, char * argv[], char **envp)
 			case 'V':
 				printversion();
 				cleanexit(LSB_EXIT_OK);
+			case 'W':
+				++WikiOutput;
+				break;
 				
 			default:
 				++argerrs;
@@ -4301,6 +4309,10 @@ main(int argc, char * argv[], char **envp)
 	}
 	if (argerrs || (CurrentStatus && !WeAreRestarting)) {
 		usage();
+	}
+	if (PrintDefaults) {
+		dump_default_config(WikiOutput);
+		cleanexit(LSB_EXIT_OK);
 	}
 
 	get_localnodeinfo();
@@ -6019,6 +6031,10 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.475  2005/12/09 16:07:38  blaschke
+ * Bug 990 - Added -D option to tell heartbeat to display default directive
+ * values and -W option to do so in wiki format
+ *
  * Revision 1.474  2005/12/01 23:22:28  gshi
  * print out the pid of the process being killed
  *
