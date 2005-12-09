@@ -1,4 +1,4 @@
-/* $Id: hb_resource.c,v 1.81 2005/11/16 05:21:56 gshi Exp $ */
+/* $Id: hb_resource.c,v 1.82 2005/12/09 19:51:33 blaschke Exp $ */
 /*
  * hb_resource: Linux-HA heartbeat resource management code
  *
@@ -149,7 +149,7 @@ void	Initiate_Reset(Stonith* s, const char * nodename, gboolean doreset);
 static int FilterNotifications(const char * msgtype);
 static int countbystatus(const char * status, int matchornot);
 static gboolean hb_rsc_isstable(void);
-static void shutdown_if_needed(void);
+static void PerformAutoFailback(void);
 
 ProcTrack_ops hb_rsc_RscMgmtProcessTrackOps = {
 	RscMgmtProcessDied,
@@ -339,22 +339,31 @@ FilterNotifications(const char * msgtype)
 	return rc;
 }
 
+static gboolean
+AutoFailbackProc(gpointer dummy)
+{
+	PerformAutoFailback();
+	return FALSE;
+}
+
 static void
 PerformAutoFailback(void)
 {
 	if (ANYDEBUG) {
 		cl_log(LOG_DEBUG, "Calling PerformAutoFailback()");
 	}
-	if ((procinfo->i_hold_resources & HB_FOREIGN_RSC) == 0
+	if (shutdown_in_progress
+	||	(procinfo->i_hold_resources & HB_FOREIGN_RSC) == 0
 	||	!rsc_needs_failback || !auto_failback) {
 		rsc_needs_failback = FALSE;
-		shutdown_if_needed();
+		hb_shutdown_if_needed();
 		return;
 	}
 
-	if (going_standby != NOT) {
-		cl_log(LOG_ERR, "Auto failback ignored.");
-		rsc_needs_failback = FALSE;
+	if (going_standby != NOT 
+	||	!other_is_stable || resourcestate != HB_R_STABLE) {
+		cl_log(LOG_DEBUG, "Auto failback delayed.");
+		Gmain_timeout_add(1*1000, AutoFailbackProc, NULL);
 		return;
 	}
 	if (ANYDEBUG) {
@@ -510,8 +519,6 @@ hb_rsc_recover_dead_resources(struct node_info* hip)
 	gboolean	need_stonith = TRUE;
 	struct ha_msg *	hmsg;
 	char		timestamp[16];
-	standby_running = zero_longclock;
-	going_standby	= NOT;
 
 	
 	if ((hmsg = ha_msg_new(6)) == NULL) {
@@ -537,6 +544,22 @@ hb_rsc_recover_dead_resources(struct node_info* hip)
 			ha_msg_del(hmsg);
 			return;
 		}
+	}
+	else if (going_standby != NOT) {
+		cl_log(LOG_INFO, "Cancelling pending standby operation");
+		going_standby = NOT;
+		standby_running = zero_longclock;
+
+		if ((!other_is_stable)
+		&&	((procinfo->i_hold_resources & HB_ALL_RSC) == HB_ALL_RSC)) {
+			other_is_stable = TRUE;
+			if (ANYDEBUG) {
+				cl_log(LOG_DEBUG
+				,	"hb_rsc_recover_dead_resources:"
+				" other now stable");
+			}
+		}
+		hb_shutdown_if_needed();
 	}
 	
 	/*deliver this message to clients*/
@@ -611,6 +634,15 @@ hb_rsc_recover_dead_resources(struct node_info* hip)
 		,	hip->nodename);
 		send_stonith_msg(hip->nodename, T_STONITH_UNNEEDED);
 		if (nice_failback) {
+			if ((procinfo->i_hold_resources & HB_ALL_RSC) == HB_ALL_RSC) {
+				other_is_stable = TRUE;
+				if (ANYDEBUG) {
+					cl_log(LOG_DEBUG
+					,	"hb_rsc_recover_dead_resources:"
+					" other now stable");
+				}
+				return;
+			}
 			/* These might happen due to timing weirdnesses */
 			if (! (procinfo->i_hold_resources & HB_LOCAL_RSC)){
 				req_our_resources(TRUE);
@@ -809,7 +841,7 @@ process_resources(const char * type, struct ha_msg* msg
 	enum hb_rsc_state	newrstate = resourcestate;
 	static int			first_time = 1;
 
-	shutdown_if_needed();
+	hb_shutdown_if_needed();
 	if (!DoManageResources || !nice_failback) {
 		return;
 	}
@@ -1086,7 +1118,7 @@ process_resources(const char * type, struct ha_msg* msg
 	}
 
 	AuditResources();
-	shutdown_if_needed();
+	hb_shutdown_if_needed();
 }
 
 void
@@ -1254,7 +1286,7 @@ takeover_from_node(const char * nodename)
 	if (shutdown_in_progress) {
 		cl_log(LOG_INFO
 		,	"Resource takeover cancelled - shutdown in progress.");
-		shutdown_if_needed();
+		hb_shutdown_if_needed();
 		return;
 	}else if (hip->nodetype != PINGNODE_I) {
 		cl_log(LOG_INFO
@@ -1768,7 +1800,7 @@ ask_for_resources(struct ha_msg *msg)
 	if (ANYDEBUG) {
 		cl_log(LOG_INFO, "New standby state: %d", going_standby);
 	}
-	shutdown_if_needed();
+	hb_shutdown_if_needed();
 }
 
 static int
@@ -1944,8 +1976,8 @@ go_standby(enum standby who, int resourceset) /* Which resources to give up */
 
 }
 
-static void
-shutdown_if_needed(void)
+void
+hb_shutdown_if_needed(void)
 {
 	if (rsc_needs_shutdown) {
 		hb_giveup_resources();
@@ -1986,7 +2018,7 @@ hb_giveup_resources(void)
 
 	if (!hb_rsc_isstable()) {
 		/* Try again later... */
-		/* (through shutdown_if_needed()) */
+		/* (through hb_shutdown_if_needed()) */
 		if (!rsc_needs_shutdown) {
 			cl_log(LOG_WARNING
 			,	"Shutdown delayed until current"
@@ -2234,7 +2266,7 @@ RscMgmtProcessDied(ProcTrack* p, int status, int signo, int exitcode
 
 	p->privatedata = NULL;
 	StartNextRemoteRscReq();
-	shutdown_if_needed();
+	hb_shutdown_if_needed();
 }
 
 static const char *
@@ -2346,7 +2378,7 @@ StartNextRemoteRscReq(void)
 	hook = g_hook_first_valid(&RemoteRscReqQueue, FALSE);
 	if (hook == NULL) {
 		ResourceMgmt_child_count = 0;
-		shutdown_if_needed();
+		hb_shutdown_if_needed();
 		return;
 	}
 
@@ -2456,6 +2488,9 @@ StonithStatProcessName(ProcTrack* p)
 
 /*
  * $Log: hb_resource.c,v $
+ * Revision 1.82  2005/12/09 19:51:33  blaschke
+ * Port fixes for bugs 559, 835 and 927 from 1.2.x
+ *
  * Revision 1.81  2005/11/16 05:21:56  gshi
  * we should not put non-string field into environment setting
  *

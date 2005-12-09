@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.475 2005/12/09 16:07:38 blaschke Exp $ */
+/* $Id: heartbeat.c,v 1.476 2005/12/09 19:51:33 blaschke Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -2982,6 +2982,7 @@ process_clustermsg(struct ha_msg* msg, struct link* lnk)
 			going_standby = NOT;
 			cl_log(LOG_WARNING, "No reply to standby request"
 			".  Standby request cancelled.");
+			hb_shutdown_if_needed();
 		}
 	}
 
@@ -6031,7 +6032,11 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.476  2005/12/09 19:51:33  blaschke
+ * Port fixes for bugs 559, 835 and 927 from 1.2.x
+ *
  * Revision 1.475  2005/12/09 16:07:38  blaschke
+ *
  * Bug 990 - Added -D option to tell heartbeat to display default directive
  * values and -W option to do so in wiki format
  *

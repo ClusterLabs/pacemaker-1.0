@@ -1,4 +1,4 @@
-/* $Id: heartbeat_private.h,v 1.16 2005/07/29 07:03:47 sunjd Exp $ */
+/* $Id: heartbeat_private.h,v 1.17 2005/12/09 19:51:33 blaschke Exp $ */
 /*
  * heartbeat_private.h: definitions for the Linux-HA heartbeat program
  * that are defined in heartbeat.c and are used by other .c files
@@ -79,6 +79,7 @@ void hb_versioninfo(void);
 void hb_dump_proc_stats(volatile struct process_info * proc);
 void hb_trigger_restart(int quickrestart);
 
+void hb_shutdown_if_needed(void);
 void hb_giveup_resources(void);
 void hb_kill_tracked_process(ProcTrack* p, void * data);
 gboolean hb_mcp_final_shutdown(gpointer p);
