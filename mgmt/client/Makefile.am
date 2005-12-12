@@ -35,3 +35,9 @@ mgmtdtest_LDADD 	= $(top_builddir)/lib/$(MGMT_DIR)/libmgmtclient.la \
 			  $(top_builddir)/lib/$(MGMT_DIR)/libmgmttls.la \
 			  $(top_builddir)/lib/$(MGMT_DIR)/libmgmtcommon.la
 mgmtdtest_LDFLAGS 	= `libgnutls-config --libs`
+
+mozhCNdir		= $(datadir)/locale/zh_CN/LC_MESSAGES
+mozhCN_DATA		= haclient.zh_CN.mo
+
+.po.mo:
+	$(MSGFMT) -o $@ $<
