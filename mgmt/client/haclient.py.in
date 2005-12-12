@@ -27,6 +27,9 @@ Copyright (C) 2005 International Business Machines
 import sys, os, string, socket, syslog, webbrowser, pickle, xml
 from xml.dom.minidom import parseString
 
+import locale, gettext
+app_name = "haclient"
+
 sys.path.append("@libdir@/heartbeat")
 from pymgmt import *
 
@@ -70,7 +73,7 @@ def check_entry_value(glade, entry, label=None) :
 	if label == None :
 		label = entry
 	if glade.get_widget(entry).get_text() == "":
-		msgbox(label + " can't be null")
+		msgbox(label + _(" can't be empty"))
 		return False
 	return True
 
@@ -103,7 +106,7 @@ def add_column(widget, label, value, icon_cell_func = None, editable = False
 def msgbox(msg, parent = None) :
 	if parent == None :
 		parent = window.win_widget
-	dialog = gtk.Dialog("Message", parent, gtk.DIALOG_MODAL, (gtk.STOCK_OK, True))
+	dialog = gtk.Dialog(_("Message"), parent, gtk.DIALOG_MODAL, (gtk.STOCK_OK, True))
 	label = gtk.Label(msg)
 	dialog.vbox.add(label)
 	label.show()
@@ -113,7 +116,7 @@ def msgbox(msg, parent = None) :
 def confirmbox(msg, parent = None) :
 	if parent == None :
 		parent = window.win_widget
-	dialog = gtk.Dialog("Confirm", parent, gtk.DIALOG_MODAL, (gtk.STOCK_YES, True, gtk.STOCK_NO, False))
+	dialog = gtk.Dialog(_("Confirm"), parent, gtk.DIALOG_MODAL, (gtk.STOCK_YES, True, gtk.STOCK_NO, False))
 	label = gtk.Label(msg)
 	dialog.vbox.add(label)
 	label.show()
@@ -180,7 +183,7 @@ def kvbox(title, fields, parent=None) :
 					entry = widgets[row]
 					kv[fields[row].key] = entry.get_text()
 				if not fields[row].can_be_empty and kv[fields[row].key] == "" :
-					msgbox(fields[row].label+" can't be null")
+					msgbox(fields[row].label+_(" can't be empty"))
 					passed = False
 			if passed :
 				dialog.destroy()
@@ -297,8 +300,8 @@ class Tree :
 	def __init__(self, widget) :
 		self.store = gtk.TreeStore(str, str, str)
 		widget.set_model(self.store)
-		add_column(widget, "Name", 0, self.render_icon)
-		add_column(widget, "Status", 1)
+		add_column(widget, _("Name"), 0, self.render_icon)
+		add_column(widget, _("Status"), 1)
 		widget.set_size_request(300, 100)
 		widget.connect("cursor-changed", self.on_cursor_changed, widget.get_selection())
 		self.widget = widget
@@ -339,22 +342,22 @@ class Tree :
 		type = model.get_value(iter, 2)
 		status = model.get_value(iter, 1)
 		iter_status = 0
-		if type == "native" :
-			if string.find(status, "running") != -1 :
+		if type == _("native") :
+			if string.find(status, _("running")) != -1 :
 				iter_status = 0
-			elif string.find(status, "fail") != -1 :
+			elif string.find(status, _("fail")) != -1 :
 				iter_status = 3
 			else :
 				iter_status = 2
 		
 		elif type == "node" :
-			if string.find(status, "running") != -1 :
+			if string.find(status, _("running")) != -1 :
 				iter_status = 0
 			else :
 				iter_status = 1
-		elif type in ["group","resources","clone","master"]:
+		elif type in [_("group"),_("resources"),_("clone"),_("master")]:
 			iter_status = 0
-		elif type in ["orders", "places", "colocations"] :
+		elif type in [_("Orders"),_("Places"), _("Colocations")] :
 			iter_status = -1
 		else :
 			iter_status = -2
@@ -416,48 +419,48 @@ class Tree :
 		
 		nodes = manager.get_all_nodes()
 		if nodes == None :
-			msgbox("can not get all nodes from cluster!")
+			msgbox(_("can not get information from cluster!"))
 			return
 
 		activenodes = manager.do_cmd("active_nodes")
 		manager.activenodes = activenodes
 		if activenodes == None :
-			msgbox("can not get active nodes from cluster!")
+			msgbox(_("can not get information from cluster!"))
 			return
 
 		
 		config = manager.get_cluster_config()
 		if config["have_quorum"] == "True" :
-			status = "with quorum"
+			status = _("with quorum")
 		else :
-			status = "without quorum"
-		root = self.store.append(None, ["Linux-HA cluster",status, "cluster"])
+			status = _("without quorum")
+		root = self.store.append(None, [_("Linux-HA cluster"),status, "cluster"])
 		
-		nodes_root = self.store.append(root, ["Nodes","", "nodes"])
+		nodes_root = self.store.append(root, [_("Nodes"),"", "nodes"])
 		for node in nodes :
 			self.add_node(nodes_root, node, node in activenodes)
 
-		rscs_root = self.store.append(root, ["Resources","", "resources"])
+		rscs_root = self.store.append(root, [_("Resources"),"", "resources"])
 		rscs = manager.get_all_rsc_id()
 		for rsc in rscs :
 			self.add_rsc(rscs_root, rsc)
 
-		constraints_root = self.store.append(root, ["Constraints","", "constraints"])
+		constraints_root = self.store.append(root, [_("Constraints"),"", "constraints"])
 		
-		places_root = self.store.append(constraints_root, ["Places","", "places"])
+		places_root = self.store.append(constraints_root, [_("Places"),"", "places"])
 		places = manager.get_constraints("rsc_location")
 		for place in places :
-			self.store.append(places_root,[place["id"], "", "place"])
+			self.store.append(places_root,[place["id"], "", _("place")])
 		
-		orders_root = self.store.append(constraints_root, ["Orders","", "orders"])
+		orders_root = self.store.append(constraints_root, [_("Orders"),"", "orders"])
 		orders = manager.get_constraints("rsc_order")
 		for order in orders :
-			self.store.append(orders_root,[order["id"], "", "order"])
+			self.store.append(orders_root,[order["id"], "", _("order")])
 			
-		colocations_root = self.store.append(constraints_root, ["Colocations","", "colocations"])
+		colocations_root = self.store.append(constraints_root, [_("Colocations"),"", "colocations"])
 		colocations = manager.get_constraints("rsc_colocation")
 		for colocation in colocations :
-			self.store.append(colocations_root,[colocation["id"], "", "colocation"])
+			self.store.append(colocations_root,[colocation["id"], "", _("colocation")])
 		
 		self.restore_tree_status(tree_status)
 		(name, type, path, expand_status) = tree_status
@@ -472,32 +475,32 @@ class Tree :
 		status = ""
 		label = ""
 		if type == "native" :
-			label = "native"
+			label = _("native")
 			status = manager.do_cmd("rsc_status\n%s"%rsc)
 			node = manager.do_cmd("rsc_running_on\n%s"%rsc)
 			if node != None and len(node)>0:
-				self.store.append(parent,[rsc, status[0] + " on "+str(node[0]), label])
+				self.store.append(parent,[rsc, _(status[0]) + _(" on ")+str(node[0]), label])
 			else :
-				self.store.append(parent,[rsc, status[0], label])
+				self.store.append(parent,[rsc, _(status[0]), label])
 				
 		elif type in ["group","clone","master"] :
 			label = type
 			status = type
-			iter = self.store.append(parent,[rsc, status, label])
+			iter = self.store.append(parent,[rsc, _(status), _(label)])
 			for subrsc in manager.do_cmd("sub_rsc\n"+rsc) :
 				self.add_rsc(iter, subrsc)
 					
 	def add_node(self, nodes_root, node, active):
-		status = "unknown"
+		status = _("unknown")
 		if not active :
-			status = "stopped"
+			status = _("stopped")
 		else :		
 			dc = manager.do_cmd("dc")
 			node_iter = None
 			if node in dc :
-				status = "running(dc)"
+				status = _("running(dc)")
 			else :
-				status = "running"
+				status = _("running")
 		node_iter = self.store.append(nodes_root,[node, status, "node"])
 
 		if active :
@@ -512,7 +515,7 @@ class View :
 	
 	def __init__(self, param=None) :
 		self.param = param
-		self.glade = gtk.glade.XML(UI_FILE, self.name)
+		self.glade = gtk.glade.XML(UI_FILE, self.name, "haclient")
 		self.widget = self.glade.get_widget(self.name)
 		if self.glade.get_widget("apply") != None :
 			self.glade.get_widget("apply").connect("clicked", self.on_apply)
@@ -558,14 +561,14 @@ class NodeView(View) :
 			glade.get_widget("type").set_text(config["type"])
 			glade.get_widget("unclean").set_text(config["unclean"])
 	def on_after_show(self) :
-		make_label_active(self.glade.get_widget("l_standby"),"Standby:","www.linux-ha.org")
-		make_label_active(self.glade.get_widget("l_uname"),"Node Name:","www.linux-ha.org")
-		make_label_active(self.glade.get_widget("l_is_dc"),"Is it DC:","www.linux-ha.org")
-		make_label_active(self.glade.get_widget("l_shutdown"),"Shutdown:","www.linux-ha.org")
-		make_label_active(self.glade.get_widget("l_online"),"Online:","www.linux-ha.org")
-		make_label_active(self.glade.get_widget("l_type"),"Type:","www.linux-ha.org")
-		make_label_active(self.glade.get_widget("l_unclean"),"Unclean:","www.linux-ha.org")
-		make_label_active(self.glade.get_widget("l_expected_up"),"Expected up:","www.linux-ha.org")
+		make_label_active(self.glade.get_widget("l_standby"),_("Standby:"),"www.linux-ha.org")
+		make_label_active(self.glade.get_widget("l_uname"),_("Node Name:"),"www.linux-ha.org")
+		make_label_active(self.glade.get_widget("l_is_dc"),_("Is it DC:"),"www.linux-ha.org")
+		make_label_active(self.glade.get_widget("l_shutdown"),_("Shutdown:"),"www.linux-ha.org")
+		make_label_active(self.glade.get_widget("l_online"),_("Online:"),"www.linux-ha.org")
+		make_label_active(self.glade.get_widget("l_type"),_("Type:"),"www.linux-ha.org")
+		make_label_active(self.glade.get_widget("l_unclean"),_("Unclean:"),"www.linux-ha.org")
+		make_label_active(self.glade.get_widget("l_expected_up"),_("Expected up:"),"www.linux-ha.org")
 	
 		
 class ClusterView(View) :
@@ -606,18 +609,18 @@ class ClusterView(View) :
 		View.update(self)
 	
 	def on_after_show(self) :
-		make_label_active(self.glade.get_widget("l_hbversion"),"Version:","www.linux-ha.org")
-		make_label_active(self.glade.get_widget("l_debug"),"Debug Level:","www.linux-ha.org")
-		make_label_active(self.glade.get_widget("l_udpport"),"UDP Port:","www.linux-ha.org")
-		make_label_active(self.glade.get_widget("l_keepalive"),"Keep Alive:","www.linux-ha.org")
-		make_label_active(self.glade.get_widget("l_warntime"),"Warning Alive:","www.linux-ha.org")
-		make_label_active(self.glade.get_widget("l_deadtime"),"Dead Time:","www.linux-ha.org")
-		make_label_active(self.glade.get_widget("l_initdead"),"Intial Dead Time:","www.linux-ha.org")
-		make_label_active(self.glade.get_widget("l_transtimeout"),"Transition Timeout:","www.linux-ha.org")
-		make_label_active(self.glade.get_widget("l_rscstickiness"),"Resource Stickiness:","www.linux-ha.org")
-		make_label_active(self.glade.get_widget("l_noquorum"),"No Quorum Policy:","www.linux-ha.org")
-		make_label_active(self.glade.get_widget("l_symmetric"),"Sysmmetric Cluster","www.linux-ha.org")
-		make_label_active(self.glade.get_widget("l_stonith_enabled"),"Stonith Enabled","www.linux-ha.org")
+		make_label_active(self.glade.get_widget("l_hbversion"),_("Version:"),"www.linux-ha.org")
+		make_label_active(self.glade.get_widget("l_debug"),_("Debug Level:"),"www.linux-ha.org")
+		make_label_active(self.glade.get_widget("l_udpport"),_("UDP Port:"),"www.linux-ha.org")
+		make_label_active(self.glade.get_widget("l_keepalive"),_("Keep Alive:"),"www.linux-ha.org")
+		make_label_active(self.glade.get_widget("l_warntime"),_("Warning Alive:"),"www.linux-ha.org")
+		make_label_active(self.glade.get_widget("l_deadtime"),_("Dead Time:"),"www.linux-ha.org")
+		make_label_active(self.glade.get_widget("l_initdead"),_("Intial Dead Time:"),"www.linux-ha.org")
+		make_label_active(self.glade.get_widget("l_transtimeout"),_("Transition Timeout:"),"www.linux-ha.org")
+		make_label_active(self.glade.get_widget("l_rscstickiness"),_("Resource Stickiness:"),"www.linux-ha.org")
+		make_label_active(self.glade.get_widget("l_noquorum"),_("No Quorum Policy:"),"www.linux-ha.org")
+		make_label_active(self.glade.get_widget("l_symmetric"),_("Sysmmetric Cluster"),"www.linux-ha.org")
+		make_label_active(self.glade.get_widget("l_stonith_enabled"),_("Stonith Enabled"),"www.linux-ha.org")
 							
 	def __init__(self) :
 		View.__init__(self)
@@ -741,11 +744,11 @@ class PlaceView(View) :
 		self.expr_list = ListWithAddDel(glade.get_widget("expr_list"),
 					    glade.get_widget("add_expr"),
 					    glade.get_widget("del_expr"),
-					    "",
-					    [Field("id", "ID", "id_", None, False, auto_gen=True),
-			  		     Field("attribute", "Attribute", "#uname", ["#uname","#id", "#is_dc"], False),
-					     Field("operation", "Operation", "eq", ['lt','gt','lte','gte','eq','ne','defined','not_defined'], False),
-					     Field("value", "Value", "", manager.get_all_nodes(), False)],
+					    _("Add Expression"),
+					    [Field("id", _("ID"), "id_", None, False, auto_gen=True),
+			  		     Field("attribute", _("Attribute"), "#uname", ["#uname","#id", "#is_dc"], False),
+					     Field("operation", _("Operation"), "eq", ['lt','gt','lte','gte','eq','ne','defined','not_defined'], False),
+					     Field("value", _("Value"), "", manager.get_all_nodes(), False)],
 					    self.on_changed)
 		self.update()
 		
@@ -873,20 +876,20 @@ class RscView(View) :
 		self.param_list = ListWithAddDel(glade.get_widget("parameters"),
 					    glade.get_widget("addparam"),
 					    glade.get_widget("delparam"),
-					    "",
-					    [Field("id", "ID", "", None, False, auto_gen=True),
-			  		     Field("name", "Name", "", param_options, False),
-					     Field("value", "Value", "", None, True)],
+					    _("Add Parameter"),
+					    [Field("id", _("ID"), "", None, False, auto_gen=True),
+			  		     Field("name", _("Name"), "", param_options, False),
+					     Field("value", _("Value"), "", None, True)],
 					    self.on_changed)
 				      
 		self.op_list = ListWithAddDel(glade.get_widget("operations"),
 					 glade.get_widget("addop"),
 					 glade.get_widget("delop"),
-					 "",
-					    [Field("id", "ID", "", None, False, auto_gen=True),
-			  		     Field("name", "Name", "", op_options, False),
-					     Field("interval", "Intervel", "0s", None, True),
-					     Field("timeout", "Timeout", "60s", None, True)],
+					 _("Add Operation"),
+					    [Field("id", _("ID"), "", None, False, auto_gen=True),
+			  		     Field("name", _("Name"), "", op_options, False),
+					     Field("interval", _("Interval"), "0s", None, True),
+					     Field("timeout", _("Timeout"), "60s", None, True)],
 					 self.on_changed)
 		self.update()
 		
@@ -906,15 +909,15 @@ class AddNativeDlg :
 			param_names = [f["name"] for f in meta.parameters]
 			param_descs = [f["shortdesc"] for f in meta.parameters]
 		
-		fields = [Field("id", "ID", "id_", None, False, auto_gen = True),
-			  Field("name", "Name", "", param_names, False),
-			  Field("value", "Value", "", None, True),
-			  Field("shortdesc", "Description", "", param_descs, False,False)]
+		fields = [Field("id", _("ID"), "id_", None, False, auto_gen = True),
+			  Field("name", _("Name"), "", param_names, False),
+			  Field("value", _("Value"), "", None, True),
+			  Field("shortdesc", _("Description"), "", param_descs, False,False)]
 		glade = self.glade	  
 		param_list = ListWithAddDel(glade.get_widget("parameters"),
 				       glade.get_widget("addparam"),
 				       glade.get_widget("delparam"),
-				       "", fields)
+				       _("Add Parameter"), fields)
 
 		self.param_list = param_list
 		if meta != None :
@@ -986,9 +989,9 @@ class AddNativeDlg :
 			glade.get_widget("master_node_max").set_sensitive(False)
 		
 	def run(self):	
-		dialog = gtk.Dialog("Add Native Resource", window.win_widget, gtk.DIALOG_MODAL,
+		dialog = gtk.Dialog(_("Add Native Resource"), window.win_widget, gtk.DIALOG_MODAL,
 				    (gtk.STOCK_ADD, gtk.RESPONSE_OK, gtk.STOCK_CANCEL,gtk.RESPONSE_CANCEL))
-		glade = gtk.glade.XML(UI_FILE, "addnativedlg")
+		glade = gtk.glade.XML(UI_FILE, "addnativedlg", "haclient")
 		layout = glade.get_widget("addnativedlg")
 		dialog.vbox.add(layout)
 		glade.get_widget("class").child.set_editable(False)
@@ -1028,18 +1031,6 @@ class AddNativeDlg :
 				store.append([rsc])
 		glade.get_widget("group").set_model(store)
 		glade.get_widget("group").set_text_column(0)
-		
-# 		fields = [Field("id", "ID", "id_", None, False, auto_gen = True),
-# 			  Field("name", "Name", "", None, False),
-# 			  Field("value", "Value", "", None, True),
-# 			  Field("shortdesc", "Description", "", None, False,False)]
-# 			  
-# 		param_list = ListWithAddDel(glade.get_widget("parameters"),
-# 				       glade.get_widget("addparam"),
-# 				       glade.get_widget("delparam"),
-# 				       "", fields)
-# 
-# 		self.param_list = param_list
 		self.update_param_list()
 		while True :
 			ret = dialog.run()
@@ -1048,14 +1039,14 @@ class AddNativeDlg :
 				return None
 			else :
 				passed = True
-				passed = check_entry_value(glade, "id","in of resource")
+				passed = check_entry_value(glade, "id",_("ID"))
 
 				if glade.get_widget("is_clone").get_active() :
-					passed = check_entry_value(glade, "advance_id","id in advance")
+					passed = check_entry_value(glade, "advance_id",_("ID"))
 					passed = check_entry_value(glade, "clone_max")
 					passed = check_entry_value(glade, "clone_node_max")
 				if glade.get_widget("is_master").get_active() :
-					passed = check_entry_value(glade, "advance_id","id in advance")
+					passed = check_entry_value(glade, "advance_id",_("ID"))
 					passed = check_entry_value(glade, "clone_max")
 					passed = check_entry_value(glade, "clone_node_max")
 					passed = check_entry_value(glade, "master_max")
@@ -1063,8 +1054,9 @@ class AddNativeDlg :
 				rsc = {}
 				rsc["id"] = glade.get_widget("id").get_text()
 				if manager.do_cmd("rsc_attrs\n"+rsc["id"]) != None :
-					msgbox("the id has already exist")
+					msgbox(_("the ID already exists"))
 					passed = False
+				
 				if passed :
 					rsc = {}
 					rsc["id"] = glade.get_widget("id").get_text()
@@ -1072,7 +1064,7 @@ class AddNativeDlg :
 					rsc["type"] = glade.get_widget("type").child.get_text()
 					rsc["provider"] = glade.get_widget("provider").child.get_text()
 					rsc["group"] = glade.get_widget("group").child.get_text()
-					rsc["params"] = param_list.get_data()
+					rsc["params"] = self.param_list.get_data()
 					if glade.get_widget("is_clone").get_active() :
 						rsc["advance"] = "clone"
 					elif glade.get_widget("is_master").get_active() :
@@ -1120,8 +1112,8 @@ class MainWindow :
 		
 		self.set_action_sensitive('delrsc',
 			manager.connected
-			and self.cur_type in ["native","group","clone","place","order","colocation","master"]
-			and self.cur_status != "unmanaged")
+			and self.cur_type in [_("native"),_("group"),_("clone"),_("place"),_("order"),_("colocation"),_("master")]
+			and self.cur_status != _("unmanaged"))
 	# functions
 	def update(self) :
 		self.tree.update()
@@ -1135,19 +1127,19 @@ class MainWindow :
 		self.update_ui()
 		if type == "cluster" :
 			self.cur_view = ClusterView()
-		elif type == "node" and status != "stopped":
+		elif type == "node" and status != _("stopped"):
 			self.cur_view = NodeView(name)
-		elif type in ["native"] and string.find(status,"unmanaged")== -1:
+		elif type in [_("native")] and string.find(status,_("unmanaged"))== -1:
 			self.cur_view = RscView(name)
-		elif type == "place" :
+		elif type == _("place") :
 			self.cur_view = PlaceView(name)
-		elif type == "order" :
+		elif type == _("order") :
 			self.cur_view = OrderView(name)
-		elif type == "colocation" :
+		elif type == _("colocation") :
 			self.cur_view = ColocationView(name)
-		elif type == "clone" :
+		elif type == _("clone") :
 			self.cur_view = CloneView(name)
-		elif type == "master" :
+		elif type == _("master") :
 			self.cur_view = MasterView(name)
 		else :
 			self.cur_view = View()
@@ -1159,10 +1151,10 @@ class MainWindow :
 		gtk.main_quit()
 	
 	def on_login(self, action) :
-		dialog = gtk.Dialog("Login",self.win_widget, gtk.DIALOG_MODAL,
+		dialog = gtk.Dialog(_("Login"),self.win_widget, gtk.DIALOG_MODAL,
 				(gtk.STOCK_OK, True, gtk.STOCK_CANCEL, False))
 		
-		glade = gtk.glade.XML(UI_FILE, "logindlg_main")
+		glade = gtk.glade.XML(UI_FILE, "logindlg_main", "haclient")
 		main = glade.get_widget("logindlg_main")
 		dialog.vbox.add(main)
 		(server,user) = manager.last_login_info()
@@ -1180,7 +1172,7 @@ class MainWindow :
 
 		if ret :
 			if not manager.login(server, user, password):
-				msgbox("login failed")
+				msgbox(_("login failed"))
 	
 		self.update_ui()
 
@@ -1192,51 +1184,52 @@ class MainWindow :
 		print uuid()
 			 
 	def on_add_item(self, action) :
-		new_type = kvbox("The type of new item",
-				[Field("type","Item Type","native",["native", "group", "place","order", "colocation"])])
+		new_type = kvbox(_("The type of new item"),
+				[Field("type",_("Item Type"),_("native"),
+				[_("native"), _("group"), _("place"),_("order"), _("colocation")])])
 		if new_type == None :
 			return
-		if new_type["type"] == "native" :
+		if new_type["type"] == _("native"):
 			dlg = AddNativeDlg()
 			dlg.run()
-		elif new_type["type"] == "group" :
-			group = kvbox("Add Resource Group",[Field("id","Group ID","group_")])
+		elif new_type["type"] == _("group") :
+			group = kvbox(_("Add Resource Group"),[Field("id",_("ID"),"group_")])
 			if group != None :
 				manager.add_group(group)
-		elif new_type["type"] == "place" :
-			place = kvbox("Add Place Constraint",
-				[Field("id","ID","place_",None, False),
-				 Field("rsc","Resrouce",None, manager.get_all_rsc_id(),False),
-				 Field("score","Score","100")])
+		elif new_type["type"] == _("place") :
+			place = kvbox(_("Add Place Constraint"),
+				[Field("id",_("ID"),"place_",None, False),
+				 Field("rsc",_("Resource"),None, manager.get_all_rsc_id(),False),
+				 Field("score",_("Score"),"100")])
 			if place != None :
 				place["exprs"] = []
 				manager.update_constraint("rsc_location", place)
-		elif new_type["type"] == "order" :
-			order = kvbox("Add Order Constraint",
-				[Field("id","ID","order_",None,False),
-				 Field("from","From",None, manager.get_all_rsc_id(),False),
-				 Field("type","Type",None, ["before","after"], False),
-				 Field("to","To",None, manager.get_all_rsc_id(), False)])
+		elif new_type["type"] == _("order") :
+			order = kvbox(_("Add Order Constraint"),
+				[Field("id",_("ID"),"order_",None,False),
+				 Field("from",_("From"),None, manager.get_all_rsc_id(),False),
+				 Field("type",_("Type"),None, ["before","after"], False),
+				 Field("to",_("To"),None, manager.get_all_rsc_id(), False)])
 			if order != None :
 				manager.update_constraint("rsc_order", order)
-		elif new_type["type"] == "colocation" :
-			colocation = kvbox("Add Colocation Constraint",
-				[Field("id","ID","colocation_",None,False),
-				 Field("from","From",None, manager.get_all_rsc_id(),False),
-				 Field("to","To",None, manager.get_all_rsc_id(), False),
-				 Field("score","Score",None, ["INFINITY","0","-INFINITY"], False)])
+		elif new_type["type"] == _("colocation") :
+			colocation = kvbox(_("Add Colocation Constraint"),
+				[Field("id",_("ID"),"colocation_",None,False),
+				 Field("from",_("From"),None, manager.get_all_rsc_id(),False),
+				 Field("to",_("To"),None, manager.get_all_rsc_id(), False),
+				 Field("score",_("Score"),None, ["INFINITY","0","-INFINITY"], False)])
 			if colocation != None :
 				manager.update_constraint("rsc_colocation", colocation)
 			
 	def on_del_item(self, action) :
-		if confirmbox("Delete %s %s?"%(self.cur_type,self.cur_name)):
-			if self.cur_type in ["native","group","clone","master"] :
+		if confirmbox(_("Delete") + self.cur_type + " " + self.cur_name + "?"):
+			if self.cur_type in [_("native"),_("group"),_("clone"),_("master")] :
 				manager.do_cmd("del_rsc\n"+self.cur_name)
-			elif self.cur_type == "place" :
+			elif self.cur_type == _("place") :
 				manager.do_cmd("del_co\nrsc_location\n"+self.cur_name)
-			elif self.cur_type == "order" :
+			elif self.cur_type == _("order") :
 				manager.do_cmd("del_co\nrsc_order\n"+self.cur_name)
-			elif self.cur_type == "colocation" :
+			elif self.cur_type == _("colocation") :
 				manager.do_cmd("del_co\nrsc_colocation\n"+self.cur_name)
 	
 	# constructor	
@@ -1244,7 +1237,7 @@ class MainWindow :
 		# create window
 		win_widget = gtk.Window()
 		win_widget.connect("delete_event", self.on_delete_event)
-		win_widget.set_title("Linux HA Management Client")
+		win_widget.set_title(_("Linux HA Management Client"))
 		win_widget.set_size_request(750, 600)
 		win_widget.set_icon_from_file("@libdir@/heartbeat/ha.png")
 		
@@ -1273,13 +1266,13 @@ class MainWindow :
 		uimanager = gtk.UIManager()
 		actiongroup = gtk.ActionGroup('haclient')
 		actiongroup.add_actions([
-			('connection', None, 'Connection'),
-			('login', gtk.STOCK_CONNECT, 'Login...', None,'login to cluster', self.on_login),
-			('logout', gtk.STOCK_DISCONNECT, 'Logout', None,'logout from cluster', self.on_logout),
-			('quit', gtk.STOCK_QUIT, 'Quit', None,'Quit the Program', self.on_quit),
-			('action', None, 'Action'),
-			('addrsc', gtk.STOCK_ADD, 'Add New Item', None,'add new item', self.on_add_item),
-			('delrsc', gtk.STOCK_DELETE, 'Delete', None,'delete current item', self.on_del_item)
+			('connection', None, _('Connection')),
+			('login', gtk.STOCK_CONNECT, _('Login...'), None,_('login to cluster'), self.on_login),
+			('logout', gtk.STOCK_DISCONNECT, _('Logout'), None,_('logout from cluster'), self.on_logout),
+			('quit', gtk.STOCK_QUIT, _('Quit'), None,_('Quit the Program'), self.on_quit),
+			('action', None, _('Action')),
+			('addrsc', gtk.STOCK_ADD, _('Add New Item'), None,_('add new item'), self.on_add_item),
+			('delrsc', gtk.STOCK_DELETE, _('Delete'), None,_('delete current item'), self.on_del_item)
 			])
 		uimanager.insert_action_group(actiongroup, 0)
 		uimanager.add_ui_from_string(ui_xml)
@@ -1295,7 +1288,7 @@ class MainWindow :
 		toolbar.set_style(gtk.TOOLBAR_ICONS)
 		vbox.pack_start(toolbar, False)
 		
-		glade = gtk.glade.XML(UI_FILE, "mainwin_main")
+		glade = gtk.glade.XML(UI_FILE, "mainwin_main", "haclient")
 		main = glade.get_widget("mainwin_main")
 		vbox.pack_start(main, True)
 		
@@ -1426,7 +1419,7 @@ class Manager :
 				if self.login(server, self.username, self.password) :
 					break
 			else :
-				msgbox("can't connect to any node")
+				msgbox(_("can't connect to any node"))
 
 		return True
 		
@@ -1488,19 +1481,16 @@ class Manager :
 	# resource functions
 	def add_group(self, group) :
 		if len(group["id"]) == 0 :
-			msgbox ("id of group can't be empty")
+			msgbox (_("the ID can't be empty"))
 			return
 		if self.do_cmd("rsc_attrs\n"+group["id"]) != None :
-			msgbox ("id of group already exists")
+			msgbox (_("the ID already exists"))
 			return
 		self.do_cmd("add_grp\n"+group["id"])
 		
 	def add_native(self, rsc) :
-		if len(rsc["id"]) == 0 :
-			msgbox ("id of resource can't be empty")
-			return
 		if self.do_cmd("rsc_attrs\n"+rsc["id"]) != None :
-			msgbox ("id of resource already exists")
+			msgbox (_("the ID already exists"))
 			return
 			
 		cmd = "add_rsc"
@@ -1720,6 +1710,13 @@ class Manager :
 
 if __name__ == '__main__' :
 	syslog.openlog("haclient", 0, syslog.LOG_USER)
+	locale.setlocale(locale.LC_ALL, '')
+	gettext.bindtextdomain(app_name)
+	gettext.textdomain(app_name)
+	gtk.glade.bindtextdomain(app_name)
+	gtk.glade.textdomain(app_name)
+	gettext.install(app_name,unicode=1)
+	
 	if "-v" in sys.argv :
 		debug_level = 1
 	manager = Manager()
