@@ -30,11 +30,11 @@ COMMONLIBS	=  $(top_builddir)/lib/clplumbing/libplumb.la   \
 		   
 LRM_DIR		= lrm
 
-pamdir 		= $(DESTDIR)/etc/pam.d
+pamdir 		= /etc/pam.d
 pam_DATA	= mgmtd.pam
 
 install-data-hook:
-		mv $(pamdir)/mgmtd.pam $(pamdir)/mgmtd
+		mv $(DESTDIR)$(pamdir)/mgmtd.pam $(DESTDIR)$(pamdir)/mgmtd
 
 
 halib_PROGRAMS 	=  mgmtd
