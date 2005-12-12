@@ -42,7 +42,7 @@ mgmtd_SOURCES 	=  mgmtd.c
 mgmtd_LDFLAGS	= -lpam
 mgmtd_LDADD 	=  $(top_builddir)/lib/mgmt/libmgmtclient.la \
 		   $(top_builddir)/lib/mgmt/libmgmttls.la \
-		   $(top_builddir)/mgmt/daemon/libmgmt.la \
+		   libmgmt.la \
 		   $(top_builddir)/lib/$(LRM_DIR)/liblrm.la \
 		   $(top_builddir)/lib/mgmt/libmgmtcommon.la \
 		   $(COMMONLIBS)
