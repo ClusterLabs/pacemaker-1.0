@@ -1,4 +1,4 @@
-/* $Id: config.c,v 1.186 2005/12/09 22:33:11 alan Exp $ */
+/* $Id: config.c,v 1.187 2005/12/12 14:27:45 blaschke Exp $ */
 /*
  * Parse various heartbeat configuration files...
  *
@@ -896,7 +896,8 @@ dump_default_config(int wikiout)
 				,	WikiName
 				,	Directives[j].name
 				,	Directives[j].defaultvalue
-				,	Directives[j].explanation);
+				,	Directives[j].explanation
+				?	Directives[j].explanation : "");
 			}
 		}
 	} else {
@@ -923,7 +924,8 @@ dump_default_config(int wikiout)
 				,	Directives[j].name
 				,	cmaxlen, cmaxlen
 				,	Directives[j].defaultvalue
-				,	Directives[j].explanation);
+				,	Directives[j].explanation
+				?	Directives[j].explanation : "");
 			}
 		}
 	}
@@ -2400,6 +2402,9 @@ set_uuidfrom(const char* value)
 
 /*
  * $Log: config.c,v $
+ * Revision 1.187  2005/12/12 14:27:45  blaschke
+ * Fix BEAM "errors" from bug 990
+ *
  * Revision 1.186  2005/12/09 22:33:11  alan
  * Disallowed the nomalpoll option.
  * Fixed some text that I broke :-(
