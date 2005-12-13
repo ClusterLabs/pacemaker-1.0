@@ -54,6 +54,8 @@ halib_SCRIPTS = pymgmt.py
 pymgmt_wrap.c : pymgmt.i
 	$(SWIG) -python -o $@ $^
 
+pymgmt.py: pymgmt_wrap.c
+
 install-exec-local:
 	$(mkinstalldirs) $(DESTDIR)$(mgmtdir)
 	-chgrp $(apigid) $(DESTDIR)/$(mgmtdir)
