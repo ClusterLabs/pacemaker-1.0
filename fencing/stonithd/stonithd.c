@@ -1,4 +1,4 @@
-/* $Id: stonithd.c,v 1.80 2005/12/06 06:35:53 sunjd Exp $ */
+/* $Id: stonithd.c,v 1.81 2005/12/13 07:56:29 sunjd Exp $ */
 
 /* File: stonithd.c
  * Description: STONITH daemon for node fencing
@@ -83,6 +83,10 @@
 	if ( debug_level >= 2 ) { \
 		cl_log(priority, fmt); \
 	}
+
+static int pil_loglevel_to_cl_loglevel[] = {
+	0, 1, 2, 4, 6, 7
+	};
 
 typedef struct {
 	char * name;
@@ -256,6 +260,7 @@ static int changeto_remote_stonithop(int old_key);
 static int require_local_stonithop(stonith_ops_t * st_op, stonith_rsc_t * srsc, 
 				   const char * asker_node);
 static int broadcast_reset_success(const char * target);
+static void trans_log(int priority, const char * fmt, ...)G_GNUC_PRINTF(2,3);
 
 static struct api_msg_to_handler api_msg_to_handlers[] = {
 	{ ST_SIGNON,	on_stonithd_signon },
@@ -2705,6 +2710,8 @@ stonithRA_start( stonithRA_ops_t * op, gpointer data)
 
 	/* Set the stonith plugin's debug level */
 	stonith_set_debug(stonith_obj, debug_level);
+	stonith_set_log(stonith_obj, trans_log);
+
 	snv = stonith_ghash_to_NVpair(op->params);
 	if ( snv == NULL
 	||	stonith_set_config(stonith_obj, snv) != S_OK ) {
@@ -3241,8 +3248,25 @@ adjust_debug_level(int nsig, gpointer user_data)
 	return TRUE;
 }
 
+static void
+trans_log(int priority, const char * fmt, ...)
+{
+	va_list         ap;
+	char            buf[MAXLINE];
+
+        va_start(ap, fmt);
+        vsnprintf(buf, sizeof(buf)-1, fmt, ap);
+        va_end(ap);
+        cl_log(pil_loglevel_to_cl_loglevel[ priority % sizeof
+		(pil_loglevel_to_cl_loglevel) ], "%s", buf);
+}
+
+
 /* 
  * $Log: stonithd.c,v $
+ * Revision 1.81  2005/12/13 07:56:29  sunjd
+ * bug918:redirect stonith library messages
+ *
  * Revision 1.80  2005/12/06 06:35:53  sunjd
  * BEAM fix
  *
