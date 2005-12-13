@@ -25,7 +25,9 @@
 #define _LINUXHA_INFO_H
 
 
-#include <stdint.h>     /* for uint32_t */
+#ifdef HAVE_STDINT_H
+#include <stdint.h>     /* location of uint32_t on some OSes */
+#endif
 #include <hb_api.h>
 #include <clplumbing/cl_uuid.h>
 #include <saf/ais.h>
