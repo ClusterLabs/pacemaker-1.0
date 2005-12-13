@@ -68,71 +68,71 @@ cimproviders_LTLIBRARIES = liblinuxha_info.la                                   
 
 #--------------------------------------------------------------
 liblinuxha_info_la_SOURCES  	=	linuxha_info.c
-liblinuxha_info_la_LDFLAGS 	= 	$(COMMONLIBS) 
+liblinuxha_info_la_LIBADD 	= 	$(COMMONLIBS) 
 
 #--------------------------------------------------------------
 libcmpiLinuxHA_ClusterProvider_la_SOURCES = cmpi_utils.c cmpi_cluster.c cmpi_cluster_provider.c
-libcmpiLinuxHA_ClusterProvider_la_LDFLAGS = $(COMMONLIBS) liblinuxha_info.la
+libcmpiLinuxHA_ClusterProvider_la_LIBADD  = $(COMMONLIBS) liblinuxha_info.la
 
 #--------------------------------------------------------------
 libcmpiLinuxHA_SoftwareIdentityProvider_la_SOURCES = cmpi_utils.c cmpi_software_identity_provider.c
-libcmpiLinuxHA_SoftwareIdentityProvider_la_LDFLAGS = $(COMMONLIBS) liblinuxha_info.la 
+libcmpiLinuxHA_SoftwareIdentityProvider_la_LIBADD  = $(COMMONLIBS) liblinuxha_info.la 
 
 #--------------------------------------------------------------
 libcmpiLinuxHA_ClusterResourceProvider_la_SOURCES  = cmpi_utils.c cmpi_resource.c ha_resource.c  \
                                                      cmpi_resource_provider.c
-libcmpiLinuxHA_ClusterResourceProvider_la_LDFLAGS   = $(COMMONLIBS) liblinuxha_info.la 
+libcmpiLinuxHA_ClusterResourceProvider_la_LIBADD   = $(COMMONLIBS) liblinuxha_info.la 
 
 #--------------------------------------------------------------
 libcmpiLinuxHA_ClusterNodeProvider_la_SOURCES	= cmpi_utils.c cmpi_node.c cmpi_node_provider.c
-libcmpiLinuxHA_ClusterNodeProvider_la_LDFLAGS	= $(COMMONLIBS) liblinuxha_info.la 
+libcmpiLinuxHA_ClusterNodeProvider_la_LIBADD	= $(COMMONLIBS) liblinuxha_info.la 
 
 #--------------------------------------------------------------
 libcmpiLinuxHA_ParticipatingNodeProvider_la_SOURCES = cmpi_utils.c \
                                                       cmpi_participating_node_provider.c
-libcmpiLinuxHA_ParticipatingNodeProvider_la_LDFLAGS = $(COMMONLIBS) liblinuxha_info.la 
+libcmpiLinuxHA_ParticipatingNodeProvider_la_LIBADD  = $(COMMONLIBS) liblinuxha_info.la 
 
 
 #--------------------------------------------------------------
 libcmpiLinuxHA_HostedResourceProvider_la_SOURCES = cmpi_utils.c                   \
 						   cmpi_hosted_resource.c         \
 						   cmpi_hosted_resource_provider.c
-libcmpiLinuxHA_HostedResourceProvider_la_LDFLAGS = $(COMMONLIBS) liblinuxha_info.la 
+libcmpiLinuxHA_HostedResourceProvider_la_LIBADD  = $(COMMONLIBS) liblinuxha_info.la 
 
 #--------------------------------------------------------------
 libcmpiLinuxHA_InstalledSoftwareIdentityProvider_la_SOURCES = cmpi_utils.c    \
                                                               cmpi_installed_software_provider.c
-libcmpiLinuxHA_InstalledSoftwareIdentityProvider_la_LDFLAGS = $(COMMONLIBS) liblinuxha_info.la 
+libcmpiLinuxHA_InstalledSoftwareIdentityProvider_la_LIBADD  = $(COMMONLIBS) liblinuxha_info.la 
 
 #--------------------------------------------------------------
 
 libcmpiLinuxHA_ClusterResourceInstanceProvider_la_SOURCES = cmpi_utils.c    \
 							    cmpi_rsc_instance_provider.c
-libcmpiLinuxHA_ClusterResourceInstanceProvider_la_LDFLAGS = $(COMMONLIBS) liblinuxha_info.la 
+libcmpiLinuxHA_ClusterResourceInstanceProvider_la_LIBADD  = $(COMMONLIBS) liblinuxha_info.la 
 
 #--------------------------------------------------------------
 
 libcmpiLinuxHA_ClusterResourceInstanceAttrProvider_la_SOURCES = cmpi_utils.c \
                                                                 cmpi_rsc_attribute_provider.c
-libcmpiLinuxHA_ClusterResourceInstanceAttrProvider_la_LDFLAGS = $(COMMONLIBS) liblinuxha_info.la 
+libcmpiLinuxHA_ClusterResourceInstanceAttrProvider_la_LIBADD  = $(COMMONLIBS) liblinuxha_info.la 
 
 #--------------------------------------------------------------
 libcmpiLinuxHA_ClusterResourceGroupProvider_la_SOURCES = cmpi_utils.c ha_resource.c \
                                                          cmpi_rsc_group.c           \
                                                          cmpi_rsc_group_provider.c
-libcmpiLinuxHA_ClusterResourceGroupProvider_la_LDFLAGS = $(COMMONLIBS) liblinuxha_info.la 
+libcmpiLinuxHA_ClusterResourceGroupProvider_la_LIBADD  = $(COMMONLIBS) liblinuxha_info.la 
 
 #--------------------------------------------------------------
 libcmpiLinuxHA_SubResourceProvider_la_SOURCES =	cmpi_utils.c ha_resource.c       \
 						cmpi_sub_resource.c              \
                                                 cmpi_sub_resource_provider.c
-libcmpiLinuxHA_SubResourceProvider_la_LDFLAGS =	$(COMMONLIBS) liblinuxha_info.la 
+libcmpiLinuxHA_SubResourceProvider_la_LIBADD  =	$(COMMONLIBS) liblinuxha_info.la 
 #--------------------------------------------------------------
 libcmpiLinuxHA_IndicationProvider_la_SOURCES = cmpi_utils.c cmpi_ha_indication.c \
                                                cmpi_ha_indication_provider.c
-libcmpiLinuxHA_IndicationProvider_la_LDFLAGS = $(COMMONLIBS) liblinuxha_info.la
+libcmpiLinuxHA_IndicationProvider_la_LIBADD  = $(COMMONLIBS) liblinuxha_info.la
 
 #--------------------------------------------------------------
 noinst_PROGRAMS	    = 	simpledemo
 simpledemo_SOURCES  = 	ha_resource.c cmpi_utils.c simple_demo.c
-simpledemo_LDFLAGS  =	$(COMMONLIBS) liblinuxha_info.la 
+simpledemo_LDADD    =	$(COMMONLIBS) liblinuxha_info.la 
