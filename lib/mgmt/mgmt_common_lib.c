@@ -111,7 +111,7 @@ mgmt_result_ok(char* msg)
 	if (args == NULL || num ==0) {
 		ret = 0;
 	}
-	else if (strncmp(args[0],MSG_OK,MAX_STRLEN)!=0) {
+	else if (STRNCMP_CONST(args[0], MSG_OK)!=0) {
 		ret = 0;
 	}
 	else {

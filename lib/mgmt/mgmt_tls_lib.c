@@ -82,7 +82,6 @@ tls_send(void* s, const void *buf, size_t len)
 			return ret;
 		}
 	}
-	return 0;
 }
 ssize_t
 tls_recv(void* s, void* buf, size_t len)
@@ -94,7 +93,6 @@ tls_recv(void* s, void* buf, size_t len)
 			return ret;
 		}
 	}
-	return 0;
 }
 int
 tls_detach(void* s)

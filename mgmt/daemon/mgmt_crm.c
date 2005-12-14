@@ -495,8 +495,8 @@ on_add_rsc(char* argv[], int argc)
 	}
 	xml[0]=0;
 	in_group = (strlen(argv[5]) != 0);
-	clone = (strncmp(argv[6], "clone", MAX_STRLEN) == 0);
-	master = (strncmp(argv[6], "master", MAX_STRLEN) == 0);
+	clone = (STRNCMP_CONST(argv[6], "clone") == 0);
+	master = (STRNCMP_CONST(argv[6], "master") == 0);
 	has_param = (argc > 11);
 	if (in_group) {
 		snprintf(buf, MAX_STRLEN, "<group id=\"%s\">", argv[5]);
@@ -821,7 +821,7 @@ on_get_rsc_params(char* argv[], int argc)
 		return ret;
 	}
 	for (i = 0; i < attrs->nfields; i++) {
-		if (strncmp(attrs->names[i], "nvpair", sizeof("nvpair")) == 0) {
+		if (STRNCMP_CONST(attrs->names[i], "nvpair") == 0) {
 			nvpair = (struct ha_msg*)attrs->values[i];
 			ret = mgmt_msg_append(ret, ha_msg_value(nvpair, "id"));
 			ret = mgmt_msg_append(ret, ha_msg_value(nvpair, "name"));
@@ -896,7 +896,7 @@ on_get_rsc_ops(char* argv[], int argc)
 		return ret;
 	}
 	for (i = 0; i < ops->nfields; i++) {
-		if (strncmp(ops->names[i], "op", sizeof("op")) == 0) {
+		if (STRNCMP_CONST(ops->names[i], "op") == 0) {
 			op = (struct ha_msg*)ops->values[i];
 			ret = mgmt_msg_append(ret, ha_msg_value(op, "id"));
 			ret = mgmt_msg_append(ret, ha_msg_value(op, "name"));
@@ -1123,7 +1123,7 @@ on_get_constraint(char* argv[], int argc)
 	while (cur != NULL) {
 		crm_data_t* constraint = (crm_data_t*)cur->data;
 		if (strncmp(argv[2],ha_msg_value(constraint, "id"), MAX_STRLEN)==0) {
-			if (strncmp(argv[1],"rsc_location", MAX_STRLEN)==0) {
+			if (STRNCMP_CONST(argv[1],"rsc_location")==0) {
 				ret = mgmt_msg_append(ret, ha_msg_value(constraint, "id"));
 				ret = mgmt_msg_append(ret, ha_msg_value(constraint, "rsc"));
 				rule = find_xml_node(constraint,"rule",TRUE);
@@ -1140,13 +1140,13 @@ on_get_constraint(char* argv[], int argc)
 				}
 				g_list_free(expr_list);
 			}
-			else if (strncmp(argv[1],"rsc_order", MAX_STRLEN)==0) {
+			else if (STRNCMP_CONST(argv[1],"rsc_order")==0) {
 				ret = mgmt_msg_append(ret, ha_msg_value(constraint, "id"));
 				ret = mgmt_msg_append(ret, ha_msg_value(constraint, "from"));
 				ret = mgmt_msg_append(ret, ha_msg_value(constraint, "type"));
 				ret = mgmt_msg_append(ret, ha_msg_value(constraint, "to"));
 			}
-			else if (strncmp(argv[1],"rsc_colocation", MAX_STRLEN)==0) {
+			else if (STRNCMP_CONST(argv[1],"rsc_colocation")==0) {
 				ret = mgmt_msg_append(ret, ha_msg_value(constraint, "id"));
 				ret = mgmt_msg_append(ret, ha_msg_value(constraint, "from"));
 				ret = mgmt_msg_append(ret, ha_msg_value(constraint, "to"));
@@ -1180,7 +1180,7 @@ on_update_constraint(char* argv[], int argc)
 	int i;
 	char xml[MAX_STRLEN];
 
-	if (strncmp(argv[1],"rsc_location", MAX_STRLEN)==0) {
+	if (STRNCMP_CONST(argv[1],"rsc_location")==0) {
 		snprintf(xml, MAX_STRLEN,
 			 "<rsc_location id=\"%s\" rsc=\"%s\">" \
 				"<rule id=\"prefered_%s\" score=\"%s\">",
@@ -1194,12 +1194,12 @@ on_update_constraint(char* argv[], int argc)
 		}
 		strncat(xml, "</rule></rsc_location>", MAX_STRLEN);
 	}
-	else if (strncmp(argv[1],"rsc_order", MAX_STRLEN)==0) {
+	else if (STRNCMP_CONST(argv[1],"rsc_order")==0) {
 		snprintf(xml, MAX_STRLEN,
 			 "<rsc_order id=\"%s\" from=\"%s\" type=\"%s\" to=\"%s\"/>",
 			 argv[2], argv[3], argv[4], argv[5]);
 	}
-	else if (strncmp(argv[1],"rsc_colocation", MAX_STRLEN)==0) {
+	else if (STRNCMP_CONST(argv[1],"rsc_colocation")==0) {
 		snprintf(xml, MAX_STRLEN,
 			 "<rsc_colocation id=\"%s\" from=\"%s\" to=\"%s\" score=\"%s\"/>",
 			 argv[2], argv[3], argv[4], argv[5]);

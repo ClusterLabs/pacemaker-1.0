@@ -119,7 +119,7 @@ fire_event(const char* event)
 		return -1;
 	}
 	
-	func = g_hash_table_lookup(event_map, args[0]);
+	func = (event_handler)g_hash_table_lookup(event_map, args[0]);
 	if (func != NULL) {
 		func(event);
 	}

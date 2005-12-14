@@ -212,6 +212,5 @@ mgmt_session_recvmsg(void* session)
 			return NULL;
 		}
 	}
-	return NULL;
 }
 
