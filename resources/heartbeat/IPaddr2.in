@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $Id: IPaddr2.in,v 1.10 2005/11/03 07:45:51 xunsun Exp $
+# $Id: IPaddr2.in,v 1.11 2005/12/14 15:39:38 xunsun Exp $
 #
 # Description:	wrapper of OCF RA IPaddr2, based on original heartbeat RA.
 #		See OCF RA IPaddr2 for more information.
@@ -44,6 +44,28 @@ then
     exit 1
 fi
 
+# We need to split the argument into pieces that IPaddr2 OCF RA can
+# recognize, sed is prefered over Bash specific builtin functions
+# for portability.
+
+BASEIP=`echo $1 | sed 's%/.*%%'`
+str=`echo $1 | sed 's%^'$BASEIP'/*%%'`
+
+if [ ! -z "$str" ]; then
+  NETMASK=`echo $str | sed 's%/.*%%'`
+  str=`echo $str | sed 's%^'$NETMASK'/*%%'`
+
+  NIC=`echo $str | sed 's%/.*%%'`
+  case $NIC in
+       [0-9]*) BROADCAST=$NIC
+               NIC=
+               ;;
+       "")     ;;
+       *)      BROADCAST=`echo $str | sed -e 's%^'$NIC'/*%%' -e 's%/.*%%'`
+               ;;
+  esac
+fi
+
 case $2 in
     start|stop|status|monitor)	;;
     *)	usage
@@ -51,4 +73,4 @@ case $2 in
 	;;
 esac
 
-ra_execocf  "rsc_id=IPaddr2_$1" "rsc_type=IPaddr2" "provider=heartbeat" $2 "ip=$1"
+ra_execocf  "rsc_id=IPaddr2_$BASEIP" "rsc_type=IPaddr2" "provider=heartbeat" $2 "ip=$BASEIP" "broadcast=$BROADCAST" "nic=$NIC" "netmask=$NETMASK"
