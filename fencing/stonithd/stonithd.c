@@ -1,4 +1,4 @@
-/* $Id: stonithd.c,v 1.81 2005/12/13 07:56:29 sunjd Exp $ */
+/* $Id: stonithd.c,v 1.82 2005/12/14 05:46:45 sunjd Exp $ */
 
 /* File: stonithd.c
  * Description: STONITH daemon for node fencing
@@ -85,7 +85,10 @@
 	}
 
 static int pil_loglevel_to_cl_loglevel[] = {
-	0, 1, 2, 4, 6, 7
+	/* Indices: <none>=0, PIL_FATAL=1, PIL_CRIT=2, PIL_WARN=3,
+	   PIL_INFO=4, PIL_DEBUG=5 
+	*/
+	LOG_EMERG, LOG_ALERT, LOG_CRIT, LOG_WARNING, LOG_INFO, LOG_DEBUG
 	};
 
 typedef struct {
@@ -3264,6 +3267,9 @@ trans_log(int priority, const char * fmt, ...)
 
 /* 
  * $Log: stonithd.c,v $
+ * Revision 1.82  2005/12/14 05:46:45  sunjd
+ * Make the loglevel mapping more obvious
+ *
  * Revision 1.81  2005/12/13 07:56:29  sunjd
  * bug918:redirect stonith library messages
  *
