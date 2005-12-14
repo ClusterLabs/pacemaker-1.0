@@ -133,6 +133,3 @@ libcmpiLinuxHA_IndicationProvider_la_SOURCES = cmpi_utils.c cmpi_ha_indication.c
 libcmpiLinuxHA_IndicationProvider_la_LIBADD  = $(COMMONLIBS) liblinuxha_info.la
 
 #--------------------------------------------------------------
-noinst_PROGRAMS	    = 	simpledemo
-simpledemo_SOURCES  = 	ha_resource.c cmpi_utils.c simple_demo.c
-simpledemo_LDADD    =	$(COMMONLIBS) liblinuxha_info.la 
