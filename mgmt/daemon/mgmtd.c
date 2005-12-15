@@ -297,12 +297,11 @@ debug_level_adjust(int nsig, gpointer user_data)
 int
 init_start ()
 {
-	long 			pid;
 	int 			ssock;
 	struct sockaddr_in 	saddr;
 	GIOChannel* 		sch;
 	/* register pid */
-	if ((pid = cl_lock_pidfile(PID_FILE)) < 0) {
+	if (cl_lock_pidfile(PID_FILE) < 0) {
 		mgmt_log(LOG_ERR, "already running: [pid %d]."
 		,	 cl_read_pidfile(PID_FILE));
 		mgmt_log(LOG_ERR, "Startup aborted (already running)."
@@ -474,6 +473,10 @@ new_client(int sock, void* session)
 {
 	static int id = 1;
 	client_t* client = cl_malloc(sizeof(client_t));
+	if (client == NULL) {
+		mgmt_log(LOG_ERR, "cl_malloc failed for new client");
+		return -1;
+	}
 	client->id = id;
 	client->ch = g_io_channel_unix_new(sock);
 	g_io_add_watch(client->ch, G_IO_IN|G_IO_ERR|G_IO_HUP
