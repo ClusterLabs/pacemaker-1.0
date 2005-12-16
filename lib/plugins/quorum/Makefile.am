@@ -33,8 +33,8 @@ AM_CFLAGS		= @CFLAGS@
 
 halibdir		= $(libdir)/@HB_PKG@
 plugindir		= $(halibdir)/plugins/quorum
-plugin_LTLIBRARIES	= classic.la
+plugin_LTLIBRARIES	= majority.la
 
-classic_la_SOURCES		= classic.c
-classic_la_LDFLAGS		= -export-dynamic -module -avoid-version -lz
-classic_la_LIBADD		= $(top_builddir)/replace/libreplace.la 
+majority_la_SOURCES		= majority.c
+majority_la_LDFLAGS		= -export-dynamic -module -avoid-version -lz
+majority_la_LIBADD		= $(top_builddir)/replace/libreplace.la 

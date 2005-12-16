@@ -33,8 +33,8 @@ AM_CFLAGS		= @CFLAGS@
 
 halibdir		= $(libdir)/@HB_PKG@
 plugindir		= $(halibdir)/plugins/tiebreaker
-plugin_LTLIBRARIES	= grant.la
+plugin_LTLIBRARIES	= twonodes.la
 
-grant_la_SOURCES		= grant.c
-grant_la_LDFLAGS		= -export-dynamic -module -avoid-version -lz
-grant_la_LIBADD		= $(top_builddir)/replace/libreplace.la 
+twonodes_la_SOURCES		= twonodes.c
+twonodes_la_LDFLAGS		= -export-dynamic -module -avoid-version -lz
+twonodes_la_LIBADD		= $(top_builddir)/replace/libreplace.la 

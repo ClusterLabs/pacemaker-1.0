@@ -1,4 +1,4 @@
-/* $Id: config.c,v 1.187 2005/12/12 14:27:45 blaschke Exp $ */
+/* $Id: config.c,v 1.188 2005/12/16 02:11:59 gshi Exp $ */
 /*
  * Parse various heartbeat configuration files...
  *
@@ -90,6 +90,7 @@ static int add_client_child(const char *);
 static int set_compression(const char *);
 static int set_compression_threshold(const char *);
 static int set_traditional_compression(const char *);
+static int set_env(const char *);
 static int set_generation_method(const char *);
 static int set_realtime(const char *);
 static int set_debuglevel(const char *);
@@ -157,6 +158,7 @@ struct directive {
 ,{KEY_COMPRESSION,   set_compression, TRUE ,"zlib", "set compression module"}
 ,{KEY_COMPRESSION_THRESHOLD, set_compression_threshold, TRUE, "2", "set compression threshold"}
 ,{KEY_TRADITIONAL_COMPRESSION, set_traditional_compression, TRUE, "yes", "set traditional_compression"}
+,{KEY_ENV, set_env, FALSE, NULL, "set environment variable"}
 };
 
 static const struct WholeLineDirective {
@@ -2088,6 +2090,61 @@ set_traditional_compression(const char * value)
 	return HA_OK;
 }
 
+static int
+set_env(const char * nvpair)
+{		
+
+	int nlen;
+	int vlen;
+	char* env_name;
+	char*	value;
+
+	nlen = strcspn(nvpair, "=");
+	if (nlen >= MAXLINE || nlen <=0){
+		cl_log(LOG_ERR, "%s: invalid nvpair(%s)",
+		       __FUNCTION__, nvpair);
+		return HA_FAIL;
+	}
+	
+	env_name = cl_malloc(nlen + 4);
+	if (env_name == NULL){
+		cl_log(LOG_ERR, "%s: malloc failed",
+		       __FUNCTION__);
+		return HA_FAIL;
+	}
+	
+	memcpy(env_name, "HA_", 3);
+	memcpy(env_name + 3, nvpair, nlen);
+	env_name[nlen + 3] = 0;
+	
+	vlen = strlen(nvpair + nlen + 1);
+	if (vlen >= MAXLINE || nlen <=0){
+		cl_log(LOG_ERR, "%s: invalid value(%s)",
+		       __FUNCTION__, nvpair);
+		return HA_FAIL;
+	}
+	
+	value = cl_malloc(vlen + 1);
+	if (value == NULL){
+		cl_log(LOG_ERR, "%s: malloc failed for value",
+		       __FUNCTION__);
+		return HA_FAIL;
+	}	
+	memcpy(value, nvpair+nlen +1  , vlen);
+	value[vlen] = 0;
+	/*
+	 * It is unclear whether any given version of setenv
+	 * makes a copy of the name or value, or both.
+	 * Therefore it is UNSAFE to free either one.
+	 * Fortunately the size of the resulting potential memory leak
+	 * is small for this particular situation.
+	 */
+	setenv(env_name, value, 1);
+	if (ANYDEBUG){
+		cl_log(LOG_DEBUG, "setting env(%s=%s), nvpair(%s)", env_name, value,nvpair);
+	}
+	return HA_OK;
+}
 
 
 #if 0
@@ -2402,7 +2459,13 @@ set_uuidfrom(const char* value)
 
 /*
  * $Log: config.c,v $
+ * Revision 1.188  2005/12/16 02:11:59  gshi
+ * add an entry "env" to tell heartbeat to set environment variable
+ * change classic.c quorum module to majority.c
+ * change grant.c tiebreaker module to twonodes.c
+ *
  * Revision 1.187  2005/12/12 14:27:45  blaschke
+ *
  * Fix BEAM "errors" from bug 990
  *
  * Revision 1.186  2005/12/09 22:33:11  alan

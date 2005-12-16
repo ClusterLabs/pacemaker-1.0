@@ -1,4 +1,7 @@
- /* classic.c: quorum module 
+/* majority.c: quorum module
+ * policy ---  if it has more than half of total number of nodes, you have the quorum
+ *		if you have exactly half othe total number of nodes, you don't have the quorum
+ *		otherwise you have a tie
  *
  * Copyright (C) 2005 Guochun Shi <gshi@ncsa.uiuc.edu>
  *
@@ -25,18 +28,6 @@
  *
  */
 
-/* policy for classic quorum module:
-
-   if n_nodes == 2 then
-	return quorum
-   endif
-
-   if n_members > (n_nodes/2 +1) then
-	return quorum
-   else
-        return no_quorum
-   endif
-*/
 
 #include <portability.h>
 #include <pils/plugin.h>
@@ -47,12 +38,12 @@
 
 #define PIL_PLUGINTYPE          HB_QUORUM_TYPE
 #define PIL_PLUGINTYPE_S        HB_QUORUM_TYPE_S
-#define PIL_PLUGIN              classic
-#define PIL_PLUGIN_S            "classic"
+#define PIL_PLUGIN              majority
+#define PIL_PLUGIN_S            "majority"
 #define PIL_PLUGINLICENSE	LICENSE_LGPL
 #define PIL_PLUGINLICENSEURL	URL_LGPL
 
-static struct hb_quorum_fns classicOps;
+static struct hb_quorum_fns majorityOps;
 
 PIL_PLUGIN_BOILERPLATE2("1.0", Debug)
      
@@ -85,7 +76,7 @@ PIL_PLUGIN_INIT(PILPlugin*us, const PILPluginImports* imports)
 	/*  Register our interface implementation */
  	return imports->register_interface(us, PIL_PLUGINTYPE_S,
 					   PIL_PLUGIN_S,
-					   &classicOps,
+					   &majorityOps,
 					   NULL,
 					   &OurInterface,
 					   (void*)&OurImports,
@@ -93,17 +84,12 @@ PIL_PLUGIN_INIT(PILPlugin*us, const PILPluginImports* imports)
 }
 
 static int
-classic_getquorum(int member_count, int total_count)
+majority_getquorum(int member_count, int total_count)
 {
 	
  	cl_log(LOG_INFO, "n_member=%d, nodecount=%d", 
  	       member_count, total_count);  
-	
- 	if (total_count == 2) { 
- 		cl_log(LOG_INFO, "Asserting quorum for two node cluster!"); 
- 		return QUORUM_YES; 
- 	} 
-	
+		
  	if(member_count >=  total_count/2 + 1){ 
  		return QUORUM_YES; 
  	} else if ( total_count % 2 == 0 && member_count == total_count/2){
@@ -113,6 +99,6 @@ classic_getquorum(int member_count, int total_count)
  	return QUORUM_NO; 
 }
 
-static struct hb_quorum_fns classicOps ={
-	classic_getquorum
+static struct hb_quorum_fns majorityOps ={
+	majority_getquorum
 };

@@ -1,5 +1,6 @@
- /* classic.c: tiebreaker module 
- *		this module always grant the quorum
+ /* twonodes.c: tiebreaker module 
+ *		this module breaks the tie if number of nodes is 2, otherwise the tie 
+ * is not broken.
  *
  * Copyright (C) 2005 Guochun Shi <gshi@ncsa.uiuc.edu>
  *
@@ -29,12 +30,12 @@
 
 #define PIL_PLUGINTYPE          HB_TIEBREAKER_TYPE
 #define PIL_PLUGINTYPE_S        HB_TIEBREAKER_TYPE_S
-#define PIL_PLUGIN              grant
-#define PIL_PLUGIN_S            "grant"
+#define PIL_PLUGIN              twonodes
+#define PIL_PLUGIN_S            "twonodes"
 #define PIL_PLUGINLICENSE	LICENSE_LGPL
 #define PIL_PLUGINLICENSEURL	URL_LGPL
 
-static struct hb_tiebreaker_fns grantOps;
+static struct hb_tiebreaker_fns twonodesOps;
 
 PIL_PLUGIN_BOILERPLATE2("1.0", Debug)
      
@@ -67,7 +68,7 @@ PIL_PLUGIN_INIT(PILPlugin*us, const PILPluginImports* imports)
 	/*  Register our interface implementation */
  	return imports->register_interface(us, PIL_PLUGINTYPE_S,
 					   PIL_PLUGIN_S,
-					   &grantOps,
+					   &twonodesOps,
 					   NULL,
 					   &OurInterface,
 					   (void*)&OurImports,
@@ -75,11 +76,16 @@ PIL_PLUGIN_INIT(PILPlugin*us, const PILPluginImports* imports)
 }
 
 static int
-grant_break_tie(int member_count, int total_count)
+twonodes_break_tie(int member_count, int total_count)
 {
-	return TRUE;
+ 	if (total_count == 2) { 
+ 		cl_log(LOG_INFO, "Break tie for 2 nodes cluster");
+ 		return TRUE; 
+ 	} 
+	
+	return FALSE;
 }
 
-static struct hb_tiebreaker_fns grantOps ={
-	grant_break_tie
+static struct hb_tiebreaker_fns twonodesOps ={
+	twonodes_break_tie
 };

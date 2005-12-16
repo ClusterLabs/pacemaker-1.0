@@ -1,4 +1,4 @@
-/* $Id: ccmclient.c,v 1.32 2005/12/09 20:15:31 gshi Exp $ */
+/* $Id: ccmclient.c,v 1.33 2005/12/16 02:12:00 gshi Exp $ */
 /* 
  * client.c: Consensus Cluster Client tracker
  *
@@ -26,6 +26,7 @@
 #include <clplumbing/cl_plugin.h>
 #include <clplumbing/cl_quorum.h>
 #include <clplumbing/cl_tiebreaker.h>
+#include <clplumbing/cl_misc.h>
 
 typedef struct ccm_client_s {
 	int 	ccm_clid;
@@ -339,15 +340,37 @@ client_delete_all(void)
 }
 
 
+#define QUORUM_S "HA_quorum"
+#define TIEBREAKER_S "HA_tiebreaker"
+
 static gboolean
 get_quorum(ccm_info_t* info)
 {
 	static struct hb_quorum_fns* funcs = NULL;
 	static struct hb_tiebreaker_fns* tiebreaker_funcs = NULL;
-	const char* quorum_plugin = "classic";
+	const char* quorum_plugin = NULL;
 	const char* tiebreaker_plugin = NULL;
 	int rc;
-
+	
+	if (funcs == NULL){
+		quorum_plugin = cl_get_env(QUORUM_S);
+		if (quorum_plugin == NULL){
+			cl_log(LOG_INFO, "No quorum selected,"
+			       "using default quorum plugin(majority)");
+			quorum_plugin  = "majority";
+		}
+	}
+	
+	if (tiebreaker_funcs == NULL){
+		tiebreaker_plugin = cl_get_env(TIEBREAKER_S);
+		if (tiebreaker_plugin == NULL){
+			cl_log(LOG_INFO, "No tiebreaker selected,"
+			       "using default tiebreaker plugin(twonodes)");
+			tiebreaker_plugin = "twonodes";
+		}
+		
+	}
+	
 	if (funcs == NULL){
 		funcs = cl_load_plugin("quorum", quorum_plugin);
 		if (funcs == NULL){
