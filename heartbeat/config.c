@@ -1,4 +1,4 @@
-/* $Id: config.c,v 1.188 2005/12/16 02:11:59 gshi Exp $ */
+/* $Id: config.c,v 1.189 2005/12/18 21:59:12 alan Exp $ */
 /*
  * Parse various heartbeat configuration files...
  *
@@ -864,7 +864,7 @@ dump_default_config(int wikiout)
 	}
 
 	if (wikiout) {
-		printf("##Put this output in the ha.cf/DefaultDirectives"
+		printf("##Put this output in the ha.cf/DefaultValues"
 		" page\n");
 		printf("The [wiki:ha.cf ha.cf] directives with default"
 		" values are shown below - along with a brief description.\n");
@@ -2459,6 +2459,9 @@ set_uuidfrom(const char* value)
 
 /*
  * $Log: config.c,v $
+ * Revision 1.189  2005/12/18 21:59:12  alan
+ * Changed some comments generated when printing default values.
+ *
  * Revision 1.188  2005/12/16 02:11:59  gshi
  * add an entry "env" to tell heartbeat to set environment variable
  * change classic.c quorum module to majority.c
