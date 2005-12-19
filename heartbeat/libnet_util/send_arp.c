@@ -1,4 +1,4 @@
-/* $Id: send_arp.c,v 1.23 2005/10/03 03:29:40 horms Exp $ */
+/* $Id: send_arp.c,v 1.24 2005/12/19 16:57:34 andrew Exp $ */
 /* 
  * send_arp
  * 
@@ -211,7 +211,7 @@ main(int argc, char *argv[])
 	}
 #elif defined(HAVE_LIBNET_1_1_API)
 	if ((l=libnet_init(LIBNET_LINK, device, errbuf)) == NULL) {
-		cl_log(LOG_ERR, "libnet_init failure on %s", device);
+		cl_log(LOG_ERR, "libnet_init failure on %s: %s", device, errbuf);
 		unlink(pidfilename);
 		return EXIT_FAILURE;
 	}
@@ -701,6 +701,9 @@ write_pid_file(const char *pidfilename)
 
 /*
  * $Log: send_arp.c,v $
+ * Revision 1.24  2005/12/19 16:57:34  andrew
+ * Make use of the errbuf when there was an error.
+ *
  * Revision 1.23  2005/10/03 03:29:40  horms
  * Improve send_arp help message
  *
