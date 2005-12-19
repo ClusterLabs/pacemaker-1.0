@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.476 2005/12/09 19:51:33 blaschke Exp $ */
+/* $Id: heartbeat.c,v 1.477 2005/12/19 18:41:43 gshi Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -5688,6 +5688,11 @@ process_rexmit(struct msg_xmit_hist * hist, struct ha_msg* msg)
 		cl_log_message(LOG_ERR, msg);
 	}
 
+	
+	if (ANYDEBUG){
+		cl_log(LOG_DEBUG, "rexmit request from node %s for msg(%ld-%ld)",
+		       fromnodename, fseq, lseq);
+	}
 	/*
 	 * Retransmit missing packets in proper sequence.
 	 */
@@ -6032,7 +6037,11 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.477  2005/12/19 18:41:43  gshi
+ * add debug msg for rexmit
+ *
  * Revision 1.476  2005/12/09 19:51:33  blaschke
+ *
  * Port fixes for bugs 559, 835 and 927 from 1.2.x
  *
  * Revision 1.475  2005/12/09 16:07:38  blaschke
