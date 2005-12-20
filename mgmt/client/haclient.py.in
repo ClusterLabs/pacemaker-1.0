@@ -210,6 +210,7 @@ class Field :
 class RAMeta :
 	name = ""
 	version = None
+	desc = ""
 	parameters = []
 	actions = []
 
@@ -920,11 +921,13 @@ class AddNativeDlg :
 				       _("Add Parameter"), fields)
 
 		self.param_list = param_list
+		glade.get_widget("desc").set_text("")
 		if meta != None :
 			for param in meta.parameters :
-				param["id"] = uuid()
-				self.param_list.insert(param)
-			
+				if param["required"] == "1" :
+					param["id"] = uuid()
+					self.param_list.insert(param)
+			glade.get_widget("desc").set_text(meta.desc)
 			
 	def on_provider_changed(self, widget, glade) :
 		self.update_param_list()
@@ -1527,10 +1530,11 @@ class Manager :
 			return None
 		meta_data = ""
 		for line in lines :
-			meta_data = meta_data +line
+			meta_data = meta_data + line + "\n"
 		try :
 			doc_xml = parseString(meta_data).documentElement
 		except xml.parsers.expat.ExpatError:
+			debug("fail to parse the metadata of "+rsc_type)
 			return None
 			
 		meta = RAMeta()
@@ -1538,10 +1542,17 @@ class Manager :
 
 		version_xml = doc_xml.getElementsByTagName("version")[0]
 		meta.version = version_xml.childNodes[0].data
+
+		meta.desc = ""
+		desc_xml = doc_xml.getElementsByTagName("longdesc")
+		if desc_xml != [] and desc_xml[0] in doc_xml.childNodes :
+			meta.desc = desc_xml[0].childNodes[0].data
+		
 		meta.parameters = []
 		for param_xml in doc_xml.getElementsByTagName("parameter") :
 			param = {}
 			param["name"] = param_xml.getAttribute("name")
+			param["required"] = param_xml.getAttribute("required")
 			param["unique"] = param_xml.getAttribute("unique")
 			param["longdesc"] = ""
 			for desc_xml in param_xml.getElementsByTagName("longdesc") :

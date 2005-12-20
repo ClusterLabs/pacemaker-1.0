@@ -2420,7 +2420,7 @@ freeze</property>
 		  <property name="right_padding">0</property>
 
 		  <child>
-		    <widget class="GtkLabel" id="label176">
+		    <widget class="GtkLabel" id="desc">
 		      <property name="visible">True</property>
 		      <property name="label" translatable="yes"></property>
 		      <property name="use_underline">False</property>
