@@ -47,6 +47,7 @@ SNMPAGENTTEST=$HBLIB/SNMPAgentSanityCheck
 BASE64_MD5_TEST=$HBLIB/base64_md5_test
 MALLOC_CHECK_=2; export MALLOC_CHECK_
 MKTEMP=@MKTEMP@
+TESTPROG=@TEST@
 #
 DEFAULTINTERFACE=eth0	# But we really guess it...
 #
@@ -79,7 +80,7 @@ maketempfile() {
       rm -f "$F"; touch "$F"
       # Try again if we don't own it, or it's a symlink
       # Or somehow not a regular file...
-      test ! -O "$F" -o -L "$F" -o ! -f "$F"
+      $TESTPROG ! -O "$F" -o -L "$F" -o ! -f "$F"
     do
      : Try again...
     done

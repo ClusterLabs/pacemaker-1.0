@@ -29,6 +29,7 @@ export HA_DEBUGLOG HA_LOGFILE HA_LOGFACILITY
 export HA_DATEFMT HA_RESOURCEDIR HA_DOCDIR
 
 MKTEMP=@MKTEMP@
+TESTPROG=@TEST@
 
 #	A suitable echo command
 Echo() {
@@ -234,7 +235,7 @@ maketempfile() {
       rm -f "$F"; touch "$F"
       # Try again if we don't own it, or it's a symlink
       # Or somehow not a regular file...
-      test ! -O "$F" -o -L "$F" -o ! -f "$F"
+      $TESTPROG ! -O "$F" -o -L "$F" -o ! -f "$F"
     do
      : Try again...
     done
