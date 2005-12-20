@@ -28,6 +28,8 @@ export HA_DIR HA_RCDIR HA_FIFO HA_BIN
 export HA_DEBUGLOG HA_LOGFILE HA_LOGFACILITY
 export HA_DATEFMT HA_RESOURCEDIR HA_DOCDIR
 
+MKTEMP=@MKTEMP@
+
 #	A suitable echo command
 Echo() {
   @ECHO_CMD@ "$@"
@@ -221,7 +223,8 @@ maketempfile() {
 #	$RANDOM is not strictly necessary, but nice to have...
 #
   if
-    F=`mktemp /tmp/lha-XXXXXX` && [ ! -z "$F" -a -f "$F" ]
+    test "x$MKTEMP" != "x" \
+      && F=`$MKTEMP /tmp/lha-XXXXXX` && [ ! -z "$F" -a -f "$F" ]
   then
     echo $F
   else
