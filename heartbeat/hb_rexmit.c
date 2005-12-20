@@ -191,7 +191,7 @@ schedule_rexmit_request(struct node_info* node, seqno_t seq, int delay)
 	unsigned long sourceid;
 	struct rexmit_info* ri;
 	if (delay == 0){
-		srand((int)time_longclock());
+		srand(cl_random());
 		delay = (1.0* rand()/RAND_MAX)*MAX_REXMIT_DELAY;
 	}
 	
