@@ -46,6 +46,7 @@ CRMTEST=$HBLIB/crmtest/1node.sh
 SNMPAGENTTEST=$HBLIB/SNMPAgentSanityCheck
 BASE64_MD5_TEST=$HBLIB/base64_md5_test
 MALLOC_CHECK_=2; export MALLOC_CHECK_
+MKTEMP=@MKTEMP@
 #
 DEFAULTINTERFACE=eth0	# But we really guess it...
 #
@@ -67,7 +68,8 @@ maketempfile() {
 #	$RANDOM is not strictly necessary, but nice to have...
 #
   if
-    F=`mktemp /tmp/lha-XXXXXX` && [ ! -z "$F" -a -f "$F" ]
+    test "x$MKTEMP" != "x" \
+      && F=`$MKTEMP /tmp/lha-XXXXXX` && [ ! -z "$F" -a -f "$F" ]
   then
     echo $F
   else
@@ -131,7 +133,7 @@ CheckConfigFile() {
 
 GenerateAuthKeys() {
   if
-    [ "$AuthTry" == "" ]
+    [ "$AuthTry" = "" ]
   then
     AuthTry=1
   else
