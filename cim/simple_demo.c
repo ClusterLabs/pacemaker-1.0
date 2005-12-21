@@ -26,78 +26,37 @@
 #include <string.h>
 #include <sys/stat.h>
 #include <sys/types.h>
-#include <regex.h>
 #include <glib.h>
-#include <clplumbing/cl_malloc.h>
-
-#include "cmpi_cluster.h"
-#include "linuxha_info.h"
 #include "cmpi_utils.h"
-#include "ha_resource.h"
+#include "cluster_info.h"
+#include <ha_msg.h>
+#include <hb_api.h>
+#include <unistd.h>
 
-
-void print_for_each (gpointer data, gpointer user);
-int tree_print_for_each ( GNode * node, gpointer user);
-
-int tree_print_for_each ( GNode * node, gpointer user) {
-        print_for_each(node->data, user );
-        return 0;
-}
-
-void 
-print_for_each (gpointer data, gpointer user)
+int main(int argc, char * argv[])
 {
-        struct res_node_data * node = NULL;
-        node = (struct res_node_data *) data;
+        char * msg;
+        int i;
+        char * result;
 
-        if ( node == NULL ) {
-                return;
+        if ( argc < 2 ) return 0;
+        ci_lib_initialize();
+        if ( (msg = mgmt_new_msg(argv[1], NULL)) == NULL ) {
+                return 0;
         }
 
-                
-        if ( node->type == GROUP ) {
-                struct cluster_resource_group_info * info = NULL;
-                info = (struct cluster_resource_group_info *)
-                        node->res;
-                cl_log(LOG_INFO, "---- %d: %s", node->type, info->id);
-              /*  g_list_foreach(info->res_list, print_for_each, NULL);
-                cl_log(LOG_INFO, "---- %s END", info->id); */
+        for (i = 2; i < argc; i++ ) {
+                msg = mgmt_msg_append(msg, argv[i]);
+        }
 
-        } else {
-                struct cluster_resource_info * info = NULL;
-                info = (struct cluster_resource_info *)
-                        node->res;
-                cl_log(LOG_INFO, "---- %d: %s", node->type, info->name);
+        printf("msg: [%s]\n", msg);
+        result = process_msg(msg);
+        printf("result: [%s]\n", result);
         
-        }
-}
+        ci_lib_finalize();
 
-int main(void)
-{
-/*
-        GList * list = NULL;
-        GList * p = NULL;
-*/
-        GNode * root = NULL;
+        mgmt_del_msg(msg);
+        mgmt_del_msg(result);
 
-        init_logger ("cim-demo");
-/*
-        list = get_res_list ();
-
-        g_list_foreach(list, print_for_each, NULL);
-
-        for ( p = list; ; p = g_list_next(p) ){
-                cl_log(LOG_INFO, "p @ 0x%0x", (unsigned int)p);
-                if ( p == g_list_last(list) ) {
-                        break;
-                }
-        }
-
-        free_res_list(list);
-*/
-        root = get_res_tree ();
-        g_node_traverse( root, G_POST_ORDER, (GTraverseFlags) 0x3, 10, 
-                         tree_print_for_each, NULL);   
         return 0;
-
 }
