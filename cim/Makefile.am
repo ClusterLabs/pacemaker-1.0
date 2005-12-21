@@ -20,12 +20,14 @@
 
 MAINTAINERCLEANFILES    = Makefile.in
 
-## Subdirectories
+# Subdirectories
 SUBDIRS                 = mof
 
+CMPIHEADERS	        = $(CMPI_HEADER_PATH)
 INCLUDES                = -I$(top_builddir)/include -I$(top_srcdir)/include    \
                           -I$(top_builddir)/linux-ha -I$(top_srcdir)/linux-ha  \
-                          -I$(top_builddir)/libltdl -I$(top_srcdir)/libltdl
+                          -I$(top_builddir)/libltdl -I$(top_srcdir)/libltdl    \
+                          -I$(CMPI_HEADER_PATH)
 
  
 COMMONLIBS              = $(top_builddir)/lib/clplumbing/libplumb.la      \
@@ -40,96 +42,97 @@ THREADLIB               = lpthread
 
 cimprovidersdir         = $(CMPI_PROVIDER_DIR)
 
-noinst_HEADERS          =  cmpi_utils.h               \
-                           cmpi_cluster.h             \
-                           cmpi_rsc_group.h           \
-                           cmpi_node.h                \
-                           ha_resource.h              \
-                           cmpi_ha_indication.h       \
-                           linuxha_info.h             \
-                           cmpi_resource.h            \
-                           cmpi_sub_resource.h        \
-                           cmpi_hosted_resource.h                          
+noinst_HEADERS          =  assoc_utils.h cluster_info.h cmpi_utils.h  \
+                           resource_common.h constraint_common.h
 
-cimproviders_LTLIBRARIES = liblinuxha_info.la                                   \
-                           libcmpiLinuxHA_ClusterProvider.la  	                \
-			   libcmpiLinuxHA_ClusterResourceProvider.la            \
-			   libcmpiLinuxHA_ClusterNodeProvider.la                \
-			   libcmpiLinuxHA_ParticipatingNodeProvider.la          \
-			   libcmpiLinuxHA_HostedResourceProvider.la             \
-			   libcmpiLinuxHA_SoftwareIdentityProvider.la           \
-			   libcmpiLinuxHA_InstalledSoftwareIdentityProvider.la  \
-                           libcmpiLinuxHA_ClusterResourceInstanceProvider.la    \
-                           libcmpiLinuxHA_ClusterResourceInstanceAttrProvider.la\
-                           libcmpiLinuxHA_ClusterResourceGroupProvider.la       \
-                           libcmpiLinuxHA_SubResourceProvider.la		\
-			   libcmpiLinuxHA_IndicationProvider.la
+LRM_DIR                 =  lrm
+MGMTLIBS                =  $(top_builddir)/mgmt/daemon/libmgmt.la     \
+                           $(top_builddir)/lib/mgmt/libmgmtcommon.la  \
+                           $(top_builddir)/lib/$(LRM_DIR)/liblrm.la
 
-
-#--------------------------------------------------------------
-liblinuxha_info_la_SOURCES  	=	linuxha_info.c
-liblinuxha_info_la_LIBADD 	= 	$(COMMONLIBS) 
-
-#--------------------------------------------------------------
-libcmpiLinuxHA_ClusterProvider_la_SOURCES = cmpi_utils.c cmpi_cluster.c cmpi_cluster_provider.c
-libcmpiLinuxHA_ClusterProvider_la_LIBADD  = $(COMMONLIBS) liblinuxha_info.la
+cimproviders_LTLIBRARIES = libHAClusterInfo.la                             \
+			   libHA_ClusterProvider.la                        \
+			   libHA_ClusterNodeProvider.la                    \
+                           libHA_SoftwareIdentityProvider.la               \
+                           libHA_PrimitiveResourceProvider.la              \
+                           libHA_ResourceCloneProvider.la                  \
+                           libHA_MasterSlaveResourceProvider.la            \
+                           libHA_ResourceGroupProvider.la                  \
+                           libHA_LocationConstraintProvider.la             \
+                           libHA_ColocationConstraintProvider.la           \
+                           libHA_OrderConstraintProvider.la                \
+                           libHA_HostedResourceProvider.la                 \
+                           libHA_SubResourceProvider.la                    \
+                           libHA_InstalledSoftwareIdentityProvider.la      \
+			   libHA_ParticipatingNodeProvider.la              \
+                           libHA_InstanceAttributesProvider.la             \
+                           libHA_OperationProvider.la                      \
+                           libHA_ResourceInstanceProvider.la               \
+                           libHA_OperationOnProvider.la                    \
+                           libHA_IndicationProvider.la                     
 
 #--------------------------------------------------------------
-libcmpiLinuxHA_SoftwareIdentityProvider_la_SOURCES = cmpi_utils.c cmpi_software_identity_provider.c
-libcmpiLinuxHA_SoftwareIdentityProvider_la_LIBADD  = $(COMMONLIBS) liblinuxha_info.la 
-
+libHAClusterInfo_la_SOURCES                 = cluster_info.c
+libHAClusterInfo_la_LIBADD                  = $(COMMONLIBS) $(MGMTLIBS)
 #--------------------------------------------------------------
-libcmpiLinuxHA_ClusterResourceProvider_la_SOURCES  = cmpi_utils.c cmpi_resource.c ha_resource.c  \
-                                                     cmpi_resource_provider.c
-libcmpiLinuxHA_ClusterResourceProvider_la_LIBADD   = $(COMMONLIBS) liblinuxha_info.la 
-
+libHA_ClusterProvider_la_SOURCES            = cluster_provider.c
+libHA_ClusterProvider_la_LIBADD             = libHAClusterInfo.la
 #--------------------------------------------------------------
-libcmpiLinuxHA_ClusterNodeProvider_la_SOURCES	= cmpi_utils.c cmpi_node.c cmpi_node_provider.c
-libcmpiLinuxHA_ClusterNodeProvider_la_LIBADD	= $(COMMONLIBS) liblinuxha_info.la 
-
+libHA_SoftwareIdentityProvider_la_SOURCES   = software_identity_provider.c
+libHA_SoftwareIdentityProvider_la_LIBADD    = libHAClusterInfo.la 
 #--------------------------------------------------------------
-libcmpiLinuxHA_ParticipatingNodeProvider_la_SOURCES = cmpi_utils.c \
-                                                      cmpi_participating_node_provider.c
-libcmpiLinuxHA_ParticipatingNodeProvider_la_LIBADD  = $(COMMONLIBS) liblinuxha_info.la 
-
-
+libHA_ClusterNodeProvider_la_SOURCES	    = cluster_node_provider.c
+libHA_ClusterNodeProvider_la_LIBADD	    = libHAClusterInfo.la 
 #--------------------------------------------------------------
-libcmpiLinuxHA_HostedResourceProvider_la_SOURCES = cmpi_utils.c                   \
-						   cmpi_hosted_resource.c         \
-						   cmpi_hosted_resource_provider.c
-libcmpiLinuxHA_HostedResourceProvider_la_LIBADD  = $(COMMONLIBS) liblinuxha_info.la 
-
+libHA_PrimitiveResourceProvider_la_SOURCES  = resource_common.c primitive_resource_provider.c
+libHA_PrimitiveResourceProvider_la_LIBADD   = libHAClusterInfo.la 
 #--------------------------------------------------------------
-libcmpiLinuxHA_InstalledSoftwareIdentityProvider_la_SOURCES = cmpi_utils.c    \
-                                                              cmpi_installed_software_provider.c
-libcmpiLinuxHA_InstalledSoftwareIdentityProvider_la_LIBADD  = $(COMMONLIBS) liblinuxha_info.la 
-
+libHA_ResourceCloneProvider_la_SOURCES      = resource_common.c resource_clone_provider.c
+libHA_ResourceCloneProvider_la_LIBADD       = libHAClusterInfo.la 
 #--------------------------------------------------------------
-
-libcmpiLinuxHA_ClusterResourceInstanceProvider_la_SOURCES = cmpi_utils.c    \
-							    cmpi_rsc_instance_provider.c
-libcmpiLinuxHA_ClusterResourceInstanceProvider_la_LIBADD  = $(COMMONLIBS) liblinuxha_info.la 
-
+libHA_MasterSlaveResourceProvider_la_SOURCES= resource_common.c masterslave_resource_provider.c
+libHA_MasterSlaveResourceProvider_la_LIBADD = libHAClusterInfo.la 
 #--------------------------------------------------------------
-
-libcmpiLinuxHA_ClusterResourceInstanceAttrProvider_la_SOURCES = cmpi_utils.c \
-                                                                cmpi_rsc_attribute_provider.c
-libcmpiLinuxHA_ClusterResourceInstanceAttrProvider_la_LIBADD  = $(COMMONLIBS) liblinuxha_info.la 
-
+libHA_ResourceGroupProvider_la_SOURCES      = resource_common.c resource_group_provider.c
+libHA_ResourceGroupProvider_la_LIBADD       = libHAClusterInfo.la 
 #--------------------------------------------------------------
-libcmpiLinuxHA_ClusterResourceGroupProvider_la_SOURCES = cmpi_utils.c ha_resource.c \
-                                                         cmpi_rsc_group.c           \
-                                                         cmpi_rsc_group_provider.c
-libcmpiLinuxHA_ClusterResourceGroupProvider_la_LIBADD  = $(COMMONLIBS) liblinuxha_info.la 
+libHA_ParticipatingNodeProvider_la_SOURCES  = assoc_utils.c participating_node_provider.c
+libHA_ParticipatingNodeProvider_la_LIBADD   = libHAClusterInfo.la 
+#--------------------------------------------------------------
+libHA_HostedResourceProvider_la_SOURCES     = assoc_utils.c hosted_resource_provider.c
+libHA_HostedResourceProvider_la_LIBADD      = libHAClusterInfo.la 
+#--------------------------------------------------------------
+libHA_InstalledSoftwareIdentityProvider_la_SOURCES = assoc_utils.c installed_software_provider.c
+libHA_InstalledSoftwareIdentityProvider_la_LIBADD  = libHAClusterInfo.la 
+#--------------------------------------------------------------
+libHA_ResourceInstanceProvider_la_SOURCES   = assoc_utils.c resource_instance_provider.c
+libHA_ResourceInstanceProvider_la_LIBADD    = libHAClusterInfo.la 
+#--------------------------------------------------------------
+libHA_InstanceAttributesProvider_la_SOURCES = inst_attribute_provider.c
+libHA_InstanceAttributesProvider_la_LIBADD  = libHAClusterInfo.la 
+#--------------------------------------------------------------
+libHA_SubResourceProvider_la_SOURCES        = assoc_utils.c sub_resource_provider.c
+libHA_SubResourceProvider_la_LIBADD         = libHAClusterInfo.la 
+#--------------------------------------------------------------
+libHA_OperationProvider_la_SOURCES          = operation_provider.c
+libHA_OperationProvider_la_LIBADD           = libHAClusterInfo.la
+#--------------------------------------------------------------
+libHA_LocationConstraintProvider_la_SOURCES = constraint_common.c location_constraint_provider.c
+libHA_LocationConstraintProvider_la_LIBADD  = libHAClusterInfo.la
+#--------------------------------------------------------------
+libHA_ColocationConstraintProvider_la_SOURCES = constraint_common.c colocation_constraint_provider.c
+libHA_ColocationConstraintProvider_la_LIBADD  = libHAClusterInfo.la
+#--------------------------------------------------------------
+libHA_OrderConstraintProvider_la_SOURCES    = constraint_common.c order_constraint_provider.c
+libHA_OrderConstraintProvider_la_LIBADD     = libHAClusterInfo.la
+#--------------------------------------------------------------
+libHA_IndicationProvider_la_SOURCES         = cluster_indication_provider.c
+libHA_IndicationProvider_la_LIBADD          = libHAClusterInfo.la
+#--------------------------------------------------------------
+libHA_OperationOnProvider_la_SOURCES        = assoc_utils.c operation_on_provider.c
+libHA_OperationOnProvider_la_LIBADD         = libHAClusterInfo.la
+#--------------------------------------------------------------
+noinst_PROGRAMS	    = simpledemo
+simpledemo_SOURCES  = simple_demo.c
+simpledemo_LDADD    = libHAClusterInfo.la 
 
-#--------------------------------------------------------------
-libcmpiLinuxHA_SubResourceProvider_la_SOURCES =	cmpi_utils.c ha_resource.c       \
-						cmpi_sub_resource.c              \
-                                                cmpi_sub_resource_provider.c
-libcmpiLinuxHA_SubResourceProvider_la_LIBADD  =	$(COMMONLIBS) liblinuxha_info.la 
-#--------------------------------------------------------------
-libcmpiLinuxHA_IndicationProvider_la_SOURCES = cmpi_utils.c cmpi_ha_indication.c \
-                                               cmpi_ha_indication_provider.c
-libcmpiLinuxHA_IndicationProvider_la_LIBADD  = $(COMMONLIBS) liblinuxha_info.la
-
-#--------------------------------------------------------------
