@@ -383,7 +383,7 @@ on_listen(GIOChannel *source, GIOCondition condition, gpointer data)
 	char* msg;
 	void* session;
 	int ssock, csock;
-	size_t laddr;
+	unsigned laddr;
 	struct sockaddr_in addr;
 	int num = 0;
 	char** args = NULL;
@@ -441,7 +441,7 @@ on_msg_arrived(GIOChannel *source, GIOCondition condition, gpointer data)
 	char* ret;
 	
 	if (condition & G_IO_IN) {
-		client = lookup_client((int)data);
+		client = lookup_client(GPOINTER_TO_INT(data));
 		if (client == NULL) {
 			return TRUE;
 		}
@@ -480,7 +480,7 @@ new_client(int sock, void* session)
 	client->id = id;
 	client->ch = g_io_channel_unix_new(sock);
 	g_io_add_watch(client->ch, G_IO_IN|G_IO_ERR|G_IO_HUP
-	, 		on_msg_arrived, (gpointer)client->id);
+	, 		on_msg_arrived, GINT_TO_POINTER(client->id));
 	client->session = session;
 	g_hash_table_insert(clients, (gpointer)&client->id, client);
 	id++;
@@ -587,13 +587,13 @@ on_event(const char* event)
 	while (node != NULL) {
 		client_t* client;
 		
-		int id = (int)node->data;
+		int id = GPOINTER_TO_INT(node->data);
 		
 		client = lookup_client(id);
 		if (client == NULL) {
 			/* remove the client id */
 			node = g_list_next(node);
-			id_list = g_list_remove(id_list, (gpointer)id);
+			id_list = g_list_remove(id_list, GINT_TO_POINTER(id));
 			list_changed = 1;
 			continue;
 		}
@@ -622,7 +622,7 @@ dispatch_msg(const char* msg, int client_id)
 	}
 	if (strncmp(args[0], MSG_REGEVT, strlen(MSG_REGEVT)) == 0) {
 		GList* id_list = g_hash_table_lookup(evt_map, args[1]);
-		id_list = g_list_append(id_list, (gpointer)client_id);
+		id_list = g_list_append(id_list, GINT_TO_POINTER(client_id));
 		g_hash_table_replace(evt_map, cl_strdup(args[1]), (gpointer)id_list);
 		reg_event(args[1], on_event);
 		ret = cl_strdup(MSG_OK);
