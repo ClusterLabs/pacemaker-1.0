@@ -81,7 +81,7 @@ static char* on_delete_constraint(char* argv[], int argc);
 
 static resource_t* find_resource(GList* rsc_list, const char* id);
 static int delete_object(const char* type, const char* entry, const char* id);
-GList* find_xml_node_list(crm_data_t *root, const char *search_path);
+static GList* find_xml_node_list(crm_data_t *root, const char *search_path);
 static pe_working_set_t get_data_set(void);
 
 #define GET_RESOURCE()	if (argc != 2) { 					\
