@@ -4,7 +4,7 @@ HA_Cluster root/cimv2 HA_ClusterProvider HA_ClusterProvider instance
 # HA Cluster Node
 HA_ClusterNode root/cimv2 HA_ClusterNodeProvider HA_ClusterNodeProvider instance
 #Primitve Resource
-HA_Resource root/cimv2 HA_PrimitiveResourceProvider HA_PrimitiveResourceProvider instance
+HA_PrimitiveResource root/cimv2 HA_PrimitiveResourceProvider HA_PrimitiveResourceProvider instance
 #Resource Group
 HA_ResourceGroup root/cimv2 HA_ResourceGroupProvider HA_ResourceGroupProvider instance
 # Resource Clone
@@ -30,7 +30,7 @@ HA_HostedResource root/cimv2 HA_HostedResourceProvider HA_HostedResourceProvider
 # Association, between Cluster and Software
 HA_InstalledSoftwareIdentity root/cimv2 HA_InstalledSoftwareIdentityProvider HA_InstalledSoftwareIdentityProvider instance association
 # Association, between Resource and its instance attribute
-HA_ResrouceInstance root/cimv2 HA_ResourceInstanceProvider HA_ResrouceInstanceProvider instance association
+HA_ResourceInstance root/cimv2 HA_ResourceInstanceProvider HA_ResourceInstanceProvider instance association
 # Association, between Resource (Group/MasterSlave/Clone) and its sub resource
 HA_SubResource root/cimv2 HA_SubResourceProvider HA_SubResourceProvider instance association 
 # Association, operation and resource
