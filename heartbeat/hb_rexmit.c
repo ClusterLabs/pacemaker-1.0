@@ -37,14 +37,32 @@
 
 static void	schedule_rexmit_request(struct node_info* node, seqno_t seq, int delay);
 
-#define MAX_REXMIT_DELAY	250
+static int max_rexmit_delay = 250;
 static GHashTable*		rexmit_hash_table = NULL;
+void hb_set_max_rexmit_delay(int);
+
 
 struct rexmit_info{
 	seqno_t seq;
 	struct node_info* node;
 };
 
+void
+hb_set_max_rexmit_delay(int value)
+{
+	if (value <= 0){
+		cl_log(LOG_ERR, "%s: invalid value (%d)",
+		       __FUNCTION__, value);
+		return;
+	}
+	if (ANYDEBUG){
+		cl_log(LOG_DEBUG, "Setting max_rexmit_delay to %d ms", 
+		       value);
+	}
+	max_rexmit_delay =value;
+	
+	return;
+}
 static guint
 rexmit_hash_func(gconstpointer key)
 {
@@ -180,7 +198,7 @@ send_rexmit_request( gpointer data)
 		return FALSE;
 	}
 	
-	schedule_rexmit_request(node, seq, MAX_REXMIT_DELAY);
+	schedule_rexmit_request(node, seq, max_rexmit_delay);
 	
 	return FALSE;
 }
@@ -192,7 +210,7 @@ schedule_rexmit_request(struct node_info* node, seqno_t seq, int delay)
 	struct rexmit_info* ri;
 	if (delay == 0){
 		srand(cl_random());
-		delay = (1.0* rand()/RAND_MAX)*MAX_REXMIT_DELAY;
+		delay = (1.0* rand()/RAND_MAX)*max_rexmit_delay;
 	}
 	
 	ri = ha_malloc(sizeof(struct rexmit_info));

@@ -1,4 +1,4 @@
-/* $Id: config.c,v 1.189 2005/12/18 21:59:12 alan Exp $ */
+/* $Id: config.c,v 1.190 2005/12/21 00:01:51 gshi Exp $ */
 /*
  * Parse various heartbeat configuration files...
  *
@@ -91,6 +91,7 @@ static int set_compression(const char *);
 static int set_compression_threshold(const char *);
 static int set_traditional_compression(const char *);
 static int set_env(const char *);
+static int set_max_rexmit_delay(const char *);
 static int set_generation_method(const char *);
 static int set_realtime(const char *);
 static int set_debuglevel(const char *);
@@ -109,6 +110,8 @@ static int set_uuidfrom(const char*);
   static int set_normalpoll(const char *);
 #endif
 
+
+void hb_set_max_rexmit_delay(int);
 /*
  * Each of these parameters is is automatically recorded by
  * SetParameterValue().  They are then passed to the plugins
@@ -159,6 +162,7 @@ struct directive {
 ,{KEY_COMPRESSION_THRESHOLD, set_compression_threshold, TRUE, "2", "set compression threshold"}
 ,{KEY_TRADITIONAL_COMPRESSION, set_traditional_compression, TRUE, "yes", "set traditional_compression"}
 ,{KEY_ENV, set_env, FALSE, NULL, "set environment variable"}
+,{KEY_MAX_REXMIT_DELAY, set_max_rexmit_delay, TRUE,"250", "set the maximum rexmit delay time"}
 };
 
 static const struct WholeLineDirective {
@@ -2143,9 +2147,25 @@ set_env(const char * nvpair)
 	if (ANYDEBUG){
 		cl_log(LOG_DEBUG, "setting env(%s=%s), nvpair(%s)", env_name, value,nvpair);
 	}
+	
 	return HA_OK;
 }
+static int
+set_max_rexmit_delay(const char * value)
+{
+	int foo;
 
+	foo =  atoi(value);
+	if (foo <= 0){
+		cl_log(LOG_ERR, "Invalid max_rexmit_delay time(%s)",
+		       value);
+		return HA_FAIL;
+	}
+	
+	hb_set_max_rexmit_delay(foo);
+
+	return HA_OK;
+}
 
 #if 0
 static void
@@ -2459,6 +2479,9 @@ set_uuidfrom(const char* value)
 
 /*
  * $Log: config.c,v $
+ * Revision 1.190  2005/12/21 00:01:51  gshi
+ * make max rexmit delay tunable in ha.cf
+ *
  * Revision 1.189  2005/12/18 21:59:12  alan
  * Changed some comments generated when printing default values.
  *
