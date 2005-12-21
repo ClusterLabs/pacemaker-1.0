@@ -20,4 +20,8 @@ MAINTAINERCLEANFILES = Makefile.in
                                                                                                                                                          
 includedir=$(base_includedir)/heartbeat
 
-include_HEADERS = mgmt.h
+include_HEADERS = 		\
+		mgmt_client.h	\
+		mgmt_common.h	\
+		mgmt.h		\
+		mgmt_tls.h
