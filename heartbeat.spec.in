@@ -1,4 +1,4 @@
-#	$Id: heartbeat.spec.in,v 1.152 2005/12/21 20:31:04 alan Exp $
+#	$Id: heartbeat.spec.in,v 1.153 2005/12/21 20:41:47 alan Exp $
 
 # Workaround for a change in RPM 4.1.x; needs proper fixing soon!
 ##%define _unpackaged_files_terminate_build 0
@@ -1056,6 +1056,8 @@ make DESTDIR=$RPM_BUILD_ROOT install
 	@libdir@/libmgmtclient.*
 	@libdir@/libmgmtcommon.*
 	@libdir@/libmgmttls.*
+	/etc/pam.d/mgmtd
+	/usr/share/locale/zh_CN/LC_MESSAGES/haclient.zh_CN.mo
 %endif
 
 ###########################################################
