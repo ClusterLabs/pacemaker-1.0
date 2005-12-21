@@ -132,7 +132,7 @@ libHA_IndicationProvider_la_LIBADD          = libHAClusterInfo.la
 libHA_OperationOnProvider_la_SOURCES        = assoc_utils.c operation_on_provider.c
 libHA_OperationOnProvider_la_LIBADD         = libHAClusterInfo.la
 #--------------------------------------------------------------
-noinst_PROGRAMS	    = simpledemo
-simpledemo_SOURCES  = simple_demo.c
-simpledemo_LDADD    = libHAClusterInfo.la 
+#noinst_PROGRAMS	    = simpledemo
+#simpledemo_SOURCES  = simple_demo.c
+#simpledemo_LDADD    = libHAClusterInfo.la 
 
