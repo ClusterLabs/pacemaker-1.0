@@ -1,5 +1,5 @@
 /*
- * LinuxHA : CIM MOF 
+ * LinuxHA.mof : CIM MOF file 
  *
  * Author: Jia Ming Pan <jmltc@cn.ibm.com>
  * Copyright (c) 2005 International Business Machines
@@ -22,14 +22,11 @@
 
 
 //-------------------------------------------------
-// LinuxHA_Cluster
+// HA_Cluster
 //-------------------------------------------------
 
-[ Provider("cmpi:cmpiLinuxHA_ClusterProvider") ]
-
-class LinuxHA_Cluster : CIM_Cluster {
-
-
+[ Provider("cmpi:HA_ClusterProvider") ]
+class HA_Cluster : CIM_Cluster {
         [ Description("The heartbeat version")]
         string HBVersion;
 
@@ -43,7 +40,6 @@ class LinuxHA_Cluster : CIM_Cluster {
                 "are allowed to connect to a specific API group name")
         ]
         string APIAuth;
-
         string NiceFailBack;
 
         [ Description(
@@ -85,7 +81,6 @@ class LinuxHA_Cluster : CIM_Cluster {
         ]
         string DeadPing;
 
-        
         [ Description(
                 "How quickly Heartbeat should decide that a node in a "
                 "cluster is dead")
@@ -158,14 +153,8 @@ class LinuxHA_Cluster : CIM_Cluster {
         [ Description(
                 "The realtime directive specifies whether or not Heartbeat "
                 "should try and take advantage of the operating system's "
-                "realtime scheduling features. "
-                "When enabled, Heartbeat will lock itself into memory, and "
-                "raise its priority to a realtime priority "
-                "(as set by the rtprio directive). This feature is "
-                "mainly used for debugging various kinds of loops which "
-                "might otherwise cripple "
-                "the system and impair debugging them." )
-        ]
+                "realtime scheduling features. ")
+                ]
         string RealTime;
 
         [ Description(
@@ -208,7 +197,6 @@ class LinuxHA_Cluster : CIM_Cluster {
         ]
         string WarnTime;
 
-
         [ Description("configure watchdog device")]
         string WatchdogTimer;
 
@@ -216,19 +204,26 @@ class LinuxHA_Cluster : CIM_Cluster {
         string CoreRootDir;
         string LogBadPack;
 
-        //************************************* 
-        //      methods 
-        //**************************************
+        /* CRM config */
+        string TransitionIdleTimeout;
+        string SymmetricCluster;
+        string StonithEnabled;
+        string NoQuorumPolicy;
+        string DefaultResourceStickiness;
+
+        string HaveQuorum;
+
+        /* methods */
         uint32 RequestStatusChange(string action);
 
 };
 
 //----------------------------------------
-// LinuxHA_SoftwareIdentity
+// HA_SoftwareIdentity
 //----------------------------------------
 
-[ Provider("cmpi:cmpiLinuxHA_SoftwareIdentityProvider") ]
-class LinuxHA_SoftwareIdentity : CIM_SoftwareIdentity {
+[ Provider("cmpi:HA_SoftwareIdentityProvider") ]
+class HA_SoftwareIdentity : CIM_SoftwareIdentity {
         [ Override ("InstanceID") ]
         string InstanceID;
 
@@ -246,91 +241,174 @@ class LinuxHA_SoftwareIdentity : CIM_SoftwareIdentity {
 
         [ Override ("VersionString") ]
         string VersionString;
-
 };
 
 
-//-----------------------------------------
-//  Association: LinuxHA_InstallSoftwareIdentity
-//-----------------------------------------
+//--------------------------------------------------
+//  Association: HA_InstallSoftwareIdentity
+//--------------------------------------------------
 
 [ Association,
-        Provider ( "cmpi:cmpiLinuxHA_InstalledSoftwareIdentityProvider" ) ] 
-class LinuxHA_InstalledSoftwareIdentity : CIM_InstalledSoftwareIdentity {
+        Provider ( "cmpi:HA_InstalledSoftwareIdentityProvider" ) ] 
+class HA_InstalledSoftwareIdentity : CIM_InstalledSoftwareIdentity {
         [ Key, Override ( "System" ) ]
-        LinuxHA_Cluster REF System;
+        HA_Cluster REF System;
 
-        
         [ Key, Override ( "InstalledSoftware" ) ]
-        LinuxHA_SoftwareIdentity REF InstalledSoftware;
+        HA_SoftwareIdentity REF InstalledSoftware;
 
 };
 
+/*===========================================================================*/
 
 //----------------------------------------
 //  ClusterNode
 //----------------------------------------
 
-[ Provider ( "cmpi:cmpiLinuxHA_ClusterNodeProvider" ) ]
-class LinuxHA_ClusterNode : CIM_ComputerSystem{
-
-        [ Override ( "Name" ),
-                Description ( "Node's uname" )
-        ]
+[ Provider ( "cmpi:HA_ClusterNodeProvider" ) ]
+class HA_ClusterNode : CIM_ComputerSystem {
+        [ Override ( "Name" ), Description ("Node's uname") ]
         string Name;
 
-        [ Description ("Node's UUID" )
-        ]
+        [ Description ("Node's UUID" ) ]
         string UUID;
 
-        [ Description ( "Node's active status" )
-        ]
+        [ Description ( "Node's active status" ) ]
         string ActiveStatus;
 
-        
         string Status;
-
         string IsDC;
+
+	string Standby;
+	string Unclean;
+	string Shutdown;
+	string ExpectedUp;
+	string NodePing;
+
+        /* DTD1.0/Annotated */
+        [ Description ( "weight for influencing the DC election process" ) ]
+        string DcWeight;
+        string Description;
+
 };
 
 
+/*===========================================================================*/
+/*
+[ Provider("cmpi:HA_RuleProvider") ]
+class HA_Rule {
+        [ Key, Description ("Rule's Id") ]
+        string Id;
+
+        [ Key ]
+        string CreationClassName;
+
+        [ Key ]
+        string SystemName;
+
+        [ Key ]
+        string SystemCreationClassName;
+
+        string DateExpression [];
+        string Expression [];
+};
+*/
+
+//----------------------------------------------
+// HA_InstanceAttributes
+//----------------------------------------------
+/* in DTD, InstanceAttributes contain Attributes, Rules */
+
+
+[ Provider("cmpi:HA_InstanceAttributesProvider") ]
+class HA_InstanceAttributes {
+        [ Key ]
+	string Id;
+
+        [ Key ]
+        string CreationClassName;
+
+        /* if resource, this is the resource's id */
+        [ Key ]
+        string SystemName;
+
+        [ Key ]
+        string SystemCreationClassName;  
+
+        string Caption;
+
+        /* make things simple */
+        string NVPairs [];
+        
+};
+
+//----------------------------------------------
+// Association, HA_InstanceAttributesRule
+//----------------------------------------------
+/*
+[ Association, Aggregation, Provider("cmpi:HA_InstanceAttributesRule") ]
+class HA_InstanceAttributesRule {
+        [ Key, Aggregate ]
+        HA_InstanceAttributes REF Attributes;
+        
+        [ Key ]
+        HA_Rule REF Rule;
+};
+*/
+
+//-------------------------------------------------------------------
+// HA_ClusterAbstractResource, Primitive Resource or ReousrceGroup
+//-------------------------------------------------------------------
+/* this class inherit from CIM_Service originally */
+[ Description ( "Cluster resource class") 
+	/* ,Provider("cmpi:HA_ResourceProvider") */
+]
+class HA_ClusterResource {
+        [ Key, Description("Group id, resource name, etc.") ]       
+        string Id;
+
+        [ Key, Description("ClassName that created the instance.") ]
+        string CreationClassName;
+
+        [ Key, Description("Always LinuxHACluster.") ]
+        string SystemName;
+
+        [ Key, Description("Always HA_Cluster") ]
+        string SystemCreationClassName; 
+
+        [ Description ("Status of the resource") ]
+	string ResourceStatus;  /* running or not running */
+        /* DTD1.0/Annotated */
+        
+	string Description;
+        string IsManaged = "true";              /* true|false */
+        string OnStopFail;                      /* ignore|stonith|block */
+        string RestartType = "ignore";          /* ignore|restart */
+        string MultipleActive = "stop_start";   /* stop_start|stop_only|block */
+        string ResourceStickiness = "0";        /* 0|INFINITY|-INFINITY */
+        string StartPreRep;                     /* nothing|quorum|fencing */
+
+
+	string Caption;
+
+};
+
 //----------------------------------------
-//  LinuxHA_ClusterResource
+//  HA_PrimitiveResource
 //----------------------------------------
 
 [ Description ( "LinuxHA cluster resource class" ),
-        Provider("cmpi:cmpiLinuxHA_ClusterResourceProvider") 
+        Provider("cmpi:HA_PrimitiveResourceProvider") 
 ]
-class LinuxHA_ClusterResource : CIM_Service {
-
-        [ Description ( "Cluster rsource's Id")
-        ]
-        string ResourceId;
-        
-        [ Description ( "Cluster rsource's type")
-        ]
+class HA_PrimitiveResource : HA_ClusterResource {
+        [ Description ( "Cluster rsource's type") ]
         string ResourceClass;
 
-        [ Description ( "Cluster rsource's type") 
-        ]
+        [ Description ( "Cluster rsource's type") ]
         string Type;
 
-        [ Description ( "Cluster rsource's provider") 
-        ]
+        [ Description ( "Cluster rsource's provider") ]
         string Provider;
-
-        [ Key, Override ( "Name" ),
-                Description ( "Resource's name" )
-        ]
-        string Name;
-        
-        [ Description ("Is this resource managed?")
-        ]
-        string IsManaged;
-
-        [ Description ("Status of the resource")
-        ]
-        string Status; 
 
         [ Description ( "The cluster node that host this resource" )
         ]
@@ -338,162 +416,258 @@ class LinuxHA_ClusterResource : CIM_Service {
 
 };
 
+//------------------------------------------------
+// HA_ResourceGroup
+//------------------------------------------------
+
+[ Provider("cmpi:HA_ResourceGroupProvider") ]
+class HA_ResourceGroup : HA_ClusterResource {
+};
+
 
 //----------------------------------------
-//  LinuxHA_ClusterResrouceInstanceAttribute
+//  HA_ResrouceClone
 //----------------------------------------
+[ Provider("cmpi:HA_ResourceCloneProvider") ] 
+class HA_ResourceClone : HA_ClusterResource {
+        string Notify;
+        string Ordered;
+        string Interleave;
+};
 
-[ Provider ( "cmpiLinuxHA_ClusterResourceInstanceAttrProvider" ) ]
-class LinuxHA_ClusterResourceInstanceAttr {
-        string ResourceName;
+//------------------------------------------------
+// HA_ResourceMasterSlave
+//------------------------------------------------
+[ Provider("cmpi:HA_MasterSlaveResourceProvider") ] 
+class HA_MasterSlaveResource : HA_ClusterResource {
+      string MaxMasters;
+      string MaxNodeMasters;
+};
 
-        [ Key,
-                Description ( "Attribute's name" ) 
-        ]
-        string AttributeName;
-        string AttributeValue;
-        string AttributeId;
+//----------------------------------------
+//  HA_Operation
+//----------------------------------------
+[ Provider("cmpi:HA_OperationProvider") ]
+class HA_Operation {
+        [ Key, Description ("This operation's Id.") ]
+        String Id;
+        
+        [ Key, Description ("The resource name.") ]
+        string SystemName;
+        
+        [ Key, Description ("System creation class name.") ]
+        string SystemCreationClassName;
+        
+        [ Key, Description ("The class name thatct crated this instance.") ]
+        string CreationClassName;
+        
+        [ Description ("The name of the operation") ]
+        string Name;    /* start|stop|monitor */
+
+        string Description;
+
+        [ Description ("Operation interval, only applies to monitor") ]
+        string Interval;
+
+        [ Description ("The maximum period of time before considering "
+                       "the action failed") ]
+        string Timeout;
+
+        [ Description ("What conditions need to be met before this action "
+                       "can be run") ]
+        string PreReq;  /* nothing|quorum|fencing */
+        
+        [ Description ("The action to take if this action fails") ]
+        string OnFail;  /* nothing|block|stop|fence */
+
+        string Caption;
+};
+
+//----------------------------------------
+// Association, HA_OperationOnResource
+//----------------------------------------
+[ Association, Aggregation, Provider ("cmpi:HA_OperationOnProvider") ]
+class HA_OperationOnResource {
+        [ Key, Aggregate, Description("Resource") ]
+        HA_PrimitiveResource REF Resource;
+
+        [ Key, Description("Operation") ]
+        HA_Operation REF Operation;
+
+
+        string Caption;
+};
+
+//-----------------------------------------
+// Association, HA_OperationInstance
+//-----------------------------------------
+/*
+[ Association, Aggregation, Provider("cmpi:HA_OperationInstance") ]
+class HA_OperationInstance {
+        [ Key, Aggregate ]
+        HA_Operation REF Operation;
+
+        [ Key, Description ("Attributes that belongs to this operation.") ]
+        HA_InstanceAttributes REF Attributes;
+
+};
+*/
+//------------------------------------------------
+// HA_ResourceConstraint, Abstract
+//------------------------------------------------
+class HA_ResourceConstraint {
+        [ Key, Description (" Id ") ]
+        string Id;
+        
+        [ Key ]
+        string CreationClassName;
+
+        [ Key ]
+        string SystemName;
+        
+        [ Key ]
+        string SystemCreationClassName;
+
+        string Type;    /* rsc_order|rsc_colocation|rsc_location */
         string Caption;
 };
 
 
+//------------------------------------------------
+// HA_OrderConstraint
+//------------------------------------------------
+/* rsc_order constraint */
+[ Provider ("cmpi:HA_OrderConstraintProvider" ) ]
+class HA_OrderConstraint : 
+                HA_ResourceConstraint {
+        string From;
+        string Action;
+        string OrderType;
+        string To;
+        string Symmetrical;
+};
+
 
 //------------------------------------------------
-// LinuxHA_ClusterResourceInstance
+// HA_ColocationConstraint
+//------------------------------------------------
+/* rsc_colocation constraint */
+[ Provider ("cmpi:HA_ColocationConstraintProvider" ) ]
+class HA_ColocationConstraint :
+                HA_ResourceConstraint {
+        string From;
+        string To;
+        string Score;
+};
+
+
+//------------------------------------------------
+// HA_LocationConstraint
+//------------------------------------------------
+/* rsc_location constraint */
+[ Provider ("cmpi:HA_LocationConstraintProvider" ) ]
+class HA_LocationConstraint:
+                HA_ResourceConstraint {
+        string Resource;
+        string Score;
+
+	/* Rule should be a class in future */
+	string Rule [];
+}; 
+
+//-----------------------------------------------
+// Association, HA_ResourceConstraintRules
+//-----------------------------------------------
+/*
+[ Association, Aggregation, 
+  Provider ("cmpi:HA_ResourceConstraintRulesProvider" ) ]
+class HA_ResourceConstraintRules {
+        [ Key, Aggregate ]
+        HA_ResourceConstraint REF Constraint;
+
+        [ Key ]
+        HA_Rule REF Rule;
+};
+*/
+//------------------------------------------------
+// Association, HA_ResourceInstance
 //------------------------------------------------
 
-[ Association,
-        Provider("cmpi:cmpiLinuxHA_ClusterResourceInstanceProvider") ]
+[ Association, Aggregation,
+        Provider("cmpi:HA_ResourceInstanceProvider") ]
+class HA_ResourceInstance {
+        [ Key, Aggregate ]
+        HA_ClusterResource REF Resource;
 
-class LinuxHA_ClusterResourceInstance {
-        LinuxHA_ClusterResource REF ClusterResource;
-
-        [ Weak, Description ( "Instance's attribute" )  ]
-        LinuxHA_ClusterResourceInstanceAttr REF InstanceAttribute;       
+        [ Key, Description ( "Instance's attribute" )  ]
+        HA_InstanceAttributes REF Attributes;       
         String Caption;
 };
 
-//------------------------------------------------
-// LinuxHA_ClusterResourceGroup
-//------------------------------------------------
-
-[ Provider("cmpi:cmpiLinuxHA_ClusterResourceGroupProvider") ]
-class LinuxHA_ClusterResourceGroup {
-        [ Key ]
-        string GroupId;
-
-        string Caption;
-        string SubResourceNames[];
-};
-
-
 //-----------------------------------------------
-// LinuxHA_SubResource
+// Association, HA_SubResource
 //-----------------------------------------------
 
-[ Association,
-        Provider ( "cmpi:cmpiLinuxHA_SubResourceProvider" ) ]
+[ Association, Aggregation,
+        Provider ( "cmpi:HA_SubResourceProvider" ) ]
+class HA_SubResource {
+        [ Key,  Aggregate, Description ( "Resource Group/Clone/Master" ) ]
+        HA_ClusterResource REF Antecedent;
 
-class LinuxHA_SubResource {
-
-        [ Key, 
-                Description ( "Resource Group" ) ]
-        LinuxHA_ClusterResourceGroup REF Group;
-
-        [ Key,
-                Description ( "Resource" ) ]
-        LinuxHA_ClusterResource REF Resource;
+        [ Key,  Description ( "SubResource or SubResourceGroup" ) ]
+        HA_ClusterResource REF Dependent;
         
         string Caption;
 };
 
 
-//-----------------------------------------------
-// LinuxHA_SubGroup
-//-----------------------------------------------
-
-[ Association,
-        Provider ( "cmpi:cmpiLinuxHA_SubGroupProvider" ) ]
-
-class LinuxHA_SubGroup {
-
-        [ Key, 
-                Description ( "Resource Group" ) ]
-        LinuxHA_ClusterResourceGroup REF Group;
-
-        [ Key,
-                Description ( "SubGroup" ) ]
-        LinuxHA_ClusterResourceGroup REF SubGroup;
-
-        String Caption;
-};
-
-
-//----------------------------------------
-// LinuxHA_ClusteringService
-//----------------------------------------
-
-class LinuxHA_ClusteringService :  CIM_ClusteringService{
-
-};
-
-
-//----------------------------------------
-// LinuxHA_ClusteringSAP
-//----------------------------------------
-
-class LinuxHA_ClusteringSAP : CIM_ClusteringSAP {
-
-};
-
-
-
 //-----------------------------------------
-//  LinuxHA_ParticipatingNode
+//  Association, HA_ParticipatingNode
 //-----------------------------------------
 
-[ Association,
-        Provider("cmpi:cmpiLinuxHA_ParticipatingNodeProvider") ]
-class LinuxHA_ParticipatingNode : CIM_ParticipatingCS{
-        [ Override ("Antecedent"),
-                Description ("The LinuxHA Cluster Node.")
-        ]
-        LinuxHA_ClusterNode REF Antecedent;
-
+[ Association, 
+        Provider("cmpi:HA_ParticipatingNodeProvider") ]
+class HA_ParticipatingNode : CIM_ParticipatingCS{
         [ Override ("Dependent"),
                 Description ("The LinuxHA Cluster.")
         ]
-        LinuxHA_Cluster REF Dependent;
+        HA_Cluster REF Dependent;
+
+        [ Override ("Antecedent"),
+                Description ("The LinuxHA Node.")
+        ]
+        HA_ClusterNode REF Antecedent;
+
 };
 
 
 //-------------------------------------------
-// LinuxHA_HostedResource
+// Assocition, HA_HostedResource
 //-------------------------------------------
 
 [ Association,
-        Provider("cmpi:cmpiLinuxHA_HostedResourceProvider") ]
-class LinuxHA_HostedResource : CIM_HostedService {
-        [ Override ( "Antecedent" ),
+        Provider("cmpi:HA_HostedResourceProvider") ]
+class HA_HostedResource {
+        [ Key,
                 Description ("The cluster node that host the resource.")
         ]
-        LinuxHA_ClusterNode REF Antecedent;
+        HA_ClusterNode REF Antecedent;
 
-        [ Override ( "Dependent"),
+        [ Key,
                 Description ("The cluster resource.")
         ]
-        LinuxHA_ClusterResource REF Dependent;
+        HA_PrimitiveResource REF Dependent;
 };
 
 
 
 //-------------------------------------------
-// Indication
+// Indication, HA_Indication
 //-------------------------------------------
 
 [ Indication,
-        Provider ("cmpi:cmpiLinuxHA_IndicationProvider") ]
-class LinuxHA_Indication : CIM_ProcessIndication {
+        Provider ("cmpi:HA_IndicationProvider") ]
+class HA_Indication : CIM_ProcessIndication {
         uint16 Type;
         string Message;
         datetime Time;
@@ -503,3 +677,4 @@ class LinuxHA_Indication : CIM_ProcessIndication {
 //-----------------------------------------
 // End of File
 //-----------------------------------------
+
