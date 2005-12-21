@@ -1,4 +1,4 @@
-/* $Id: client_lib.c,v 1.33 2005/09/22 17:18:55 gshi Exp $ */
+/* $Id: client_lib.c,v 1.34 2005/12/21 02:34:32 gshi Exp $ */
 /* 
  * client_lib: heartbeat API client side code
  *
@@ -49,6 +49,8 @@
 #include <hb_api_core.h>
 #include <hb_api.h>
 #include <glib.h>
+#include <clplumbing/cl_misc.h>
+
 
 struct sys_config *		config  = NULL;
 
@@ -221,6 +223,7 @@ static ll_cluster_t*	hb_cluster_new(void);
 
 static void ha_api_perror(const char * fmt, ...) G_GNUC_PRINTF(1,2);
 static void ha_api_log(int priority, const char * fmt, ...) G_GNUC_PRINTF(2,3);
+static int	get_num_nodes(ll_cluster_t* lcl);
 
 
 #define	ZAPMSG(m)	{ha_msg_del(m); (m) = NULL;}
@@ -852,7 +855,10 @@ get_clientstatus(ll_cluster_t* lcl, const char *host
 	/* If host is NULL, user choose the callback method to
 	 * get the result. This also implies timeout is useless */
 	if (host == NULL) {
+		int max_delay;
 		struct ha_msg * m = NULL;
+		int delay;
+		int num_nodes;
 
 		if ((m = ha_msg_new(0)) == NULL
 		||	ha_msg_add(m, F_TYPE, T_QCSTATUS) != HA_OK
@@ -866,6 +872,21 @@ get_clientstatus(ll_cluster_t* lcl, const char *host
 			ha_log(LOG_ERR, "%s: cannot add field", __FUNCTION__);
 			return NULL;
 		}
+		
+		/* We delay random time here to distribute requests from different nodes 
+		 * across time in a big cluster
+		 * in a 100-node cluster, the max deley is 10 seconds
+		 */
+		num_nodes = get_num_nodes(lcl);
+		max_delay =  (1.0*num_nodes /10) *1000000; /* in microsecond*/
+		srand(cl_random());
+		delay = (1.0* rand()/RAND_MAX)*max_delay;
+		if (ANYDEBUG){
+			cl_log(LOG_DEBUG, "Delaying cstatus request for %d ms", delay/1000);
+		}
+		
+		usleep(delay);
+		
 		if (sendclustermsg(lcl, m) != HA_OK) {
 			ha_log(LOG_ERR, "%s: sendclustermsg fail",__FUNCTION__);
 		}
@@ -977,6 +998,63 @@ get_nodetype(ll_cluster_t* lcl, const char *host)
 
 	return ret;
 }
+
+
+
+static int
+get_num_nodes(ll_cluster_t* lcl)
+{
+	struct ha_msg*		request;
+	struct ha_msg*		reply;
+	const char *		result;
+	llc_private_t*		pi;
+	const char*		num_s;
+	int			num;
+	
+
+	ClearLog();
+	if (!ISOURS(lcl)) {
+		ha_api_log(LOG_ERR, "%s: bad cinfo", __FUNCTION__);
+		return -1;
+	}
+	pi = (llc_private_t*)lcl->ll_cluster_private;
+
+	if (!pi->SignedOn) {
+		ha_api_log(LOG_ERR, "not signed on");
+		return -1;
+	}
+	
+	if ((request = hb_api_boilerplate(API_NUMNODES)) == NULL) {
+		return -1;
+	}
+	/* Send message */
+	if (msg2ipcchan(request, pi->chan) != HA_OK) {
+		ZAPMSG(request);
+		ha_api_perror("Can't send message to IPC Channel");
+		return -1;
+	}
+	ZAPMSG(request);
+	
+	/* Read reply... */
+	if ((reply=read_api_msg(pi)) == NULL) {
+		return -1;
+	}
+	if ((result = ha_msg_value(reply, F_APIRESULT)) != NULL
+	    &&	strcmp(result, API_OK) == 0
+	    &&	(num_s = ha_msg_value(reply, F_NUMNODES)) != NULL
+	    && (num = atoi(num_s)) > 0){
+		/*everything is good, do nothing*/		
+	}else{
+		cl_log(LOG_ERR, "Wrong reply message");
+		cl_log_message(LOG_ERR, reply);
+		num = -1;
+	}
+	ZAPMSG(reply);
+
+	return num;
+}
+
+
 static char *	
 get_parameter(ll_cluster_t* lcl, const char* pname)
 {
@@ -3004,7 +3082,8 @@ static struct llc_ops heartbeat_ops = {
 	nextnode:		nextnode,		
 	end_nodewalk:		end_nodewalk,		
 	node_status:		get_nodestatus,		
-	node_type:		get_nodetype,		
+	node_type:		get_nodetype,	
+	num_nodes:		get_num_nodes,
 	init_ifwalk:		init_ifwalk,		
 	nextif:			nextif,			
 	end_ifwalk:		end_ifwalk,		

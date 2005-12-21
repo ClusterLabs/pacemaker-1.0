@@ -1,4 +1,4 @@
-/* $Id: ha_msg.h,v 1.77 2005/11/03 20:33:53 gshi Exp $ */
+/* $Id: ha_msg.h,v 1.78 2005/12/21 02:34:32 gshi Exp $ */
 /*
  * Intracluster message object (struct ha_msg)
  *
@@ -150,7 +150,6 @@ extern struct fieldtypefuncs_s fieldtypefuncs[NUM_MSG_TYPES];
 #define	F_ORIGUUID	"srcuuid"	/* Real Originator uuid*/
 #define	F_NODE		"node"		/* Node being described */
 #define	F_NODELIST	"nodelist"	/* Node list being described */
-#define	F_NUMNODES	"numnode"	/* Number of nodes in cluster*/
 #define	F_TO		"dest"		/* Destination (optional) */
 #define F_TOUUID	"destuuid"	/* Destination uuid(optional) */
 #define	F_STATUS	"st"		/* New status (type = status) */
@@ -183,6 +182,7 @@ extern struct fieldtypefuncs_s fieldtypefuncs[NUM_MSG_TYPES];
 #define F_KEEPALIVE	"keepalive"	/* Keep alive time interval in ms. */
 #define F_LOGFACILITY	"logfacility"	/* Suggested cluster syslog facility */
 #define F_NODETYPE	"nodetype"	/* Type of node */
+#define F_NUMNODES	"numnodes"	/* num of total nodes(excluding ping nodes*/
 #define F_RTYPE		"rtype"		/* Resource type */
 #define F_ORDERSEQ	"oseq"		/* Order Sequence number */
 #define F_DT		"dt"		/* Dead time field for heartbeat*/

@@ -1,4 +1,4 @@
-/* $Id: hb_api.h,v 1.41 2005/12/21 00:01:51 gshi Exp $ */
+/* $Id: hb_api.h,v 1.42 2005/12/21 02:34:32 gshi Exp $ */
 /*
  * Client-side Low-level clustering API for heartbeat.
  *
@@ -161,6 +161,11 @@ struct llc_ops {
  *	node_type:	Return type of the given node
  */
 	const char *	(*node_type)(ll_cluster_t*, const char * nodename);
+/*
+ *	num_nodes:	Return the number of nodes(excluding ping nodes)
+ */
+	int		(*num_nodes)(ll_cluster_t*);
+
 /*
  *	init_ifwalk:	Initialize walk through list of list of known interfaces
  */

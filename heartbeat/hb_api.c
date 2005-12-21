@@ -1,4 +1,4 @@
-/* $Id: hb_api.c,v 1.146 2005/11/09 22:27:46 gshi Exp $ */
+/* $Id: hb_api.c,v 1.147 2005/12/21 02:34:32 gshi Exp $ */
 /*
  * hb_api: Server-side heartbeat API code
  *
@@ -122,6 +122,10 @@ static int api_iflist (const struct ha_msg* msg, struct ha_msg* resp
 static int api_clientstatus (const struct ha_msg* msg, struct ha_msg* resp
 ,	client_proc_t* client, const char** failreason);
 
+static int
+api_num_nodes(const struct ha_msg* msg, struct ha_msg* resp
+	      ,	client_proc_t* client, const char** failreason);
+
 static int api_get_parameter (const struct ha_msg* msg, struct ha_msg* resp
 ,	client_proc_t* client, const char** failreason);
 
@@ -149,6 +153,7 @@ struct api_query_handler query_handler_list [] = {
 	{ API_IFSTATUS, api_ifstatus },
 	{ API_IFLIST, api_iflist },
 	{ API_CLIENTSTATUS, api_clientstatus },
+	{ API_NUMNODES, api_num_nodes},
 	{ API_GETPARM, api_get_parameter},
 	{ API_GETRESOURCES, api_get_resources},
 	{ API_GETUUID, api_get_uuid},
@@ -830,6 +835,36 @@ api_clientstatus(const struct ha_msg* msg, struct ha_msg* resp
 	 */
 	return I_API_IGN;
 }
+/**********************************************************************
+ * API_NUM_NODES: Return the number of normal nodes
+ *********************************************************************/
+
+static int
+api_num_nodes(const struct ha_msg* msg, struct ha_msg* resp
+	      ,	client_proc_t* client, const char** failreason)
+{
+	int ret;
+	int num_nodes = 0;
+	int i;
+
+	for( i = 0; i < config->nodecount; i++){
+		if (config->nodes[i].nodetype == NORMALNODE_I){
+			num_nodes++;
+		}
+	}
+
+	ret = ha_msg_add_int(resp, F_NUMNODES, num_nodes);
+	if (ret != HA_OK){
+		cl_log(LOG_ERR, "%s: adding num_nodes field failed",
+		       __FUNCTION__);
+		*failreason= "adding msg field failed";
+		return I_API_BADREQ;
+	}
+	
+	return I_API_RET;
+
+}
+
 
 /**********************************************************************
  * API_GET_PARAMETER: Return the value of the given parameter...
