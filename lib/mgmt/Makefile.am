@@ -30,6 +30,8 @@ MGMT_DIR 			=	mgmt
 mgmtdir				=	$(HA_VARLIBDIR)/$(HB_PKG)/$(MGMT_DIR)
 apigid                          =       @HA_APIGID@
 
+EXTRA_DIST			=	pymgmt.i
+
 lib_LTLIBRARIES = libmgmttls.la libmgmtclient.la libmgmtcommon.la
 libmgmttls_la_SOURCES = mgmt_tls_lib.c
 libmgmttls_la_LIBADD  = $(COMMONLIBS)
