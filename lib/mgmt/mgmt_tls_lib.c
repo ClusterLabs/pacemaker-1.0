@@ -60,7 +60,7 @@ tls_attach_client(int sock)
 	gnutls_set_default_priority(*session);
 	gnutls_kx_set_priority (*session, kx_prio);
 	gnutls_credentials_set(*session, GNUTLS_CRD_ANON, anoncred_client);
-	gnutls_transport_set_ptr(*session, (gnutls_transport_ptr) sock);
+	gnutls_transport_set_ptr(*session, (gnutls_transport_ptr_t) (long)sock);
 	ret = gnutls_handshake(*session);
 	if (ret < 0) {
 		fprintf(stderr, "*** Handshake failed\n");
@@ -134,7 +134,7 @@ tls_attach_server(int sock)
 	gnutls_kx_set_priority (*session, kx_prio);
 	gnutls_credentials_set(*session, GNUTLS_CRD_ANON, anoncred_server);
 	gnutls_dh_set_prime_bits(*session, DH_BITS);
-	gnutls_transport_set_ptr(*session, (gnutls_transport_ptr) sock);
+	gnutls_transport_set_ptr(*session, (gnutls_transport_ptr_t) (long)sock);
 	ret = gnutls_handshake(*session);
 	if (ret < 0) {
 		fprintf(stderr, "*** Handshake has failed (%s)\n\n",
