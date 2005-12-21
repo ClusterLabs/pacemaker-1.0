@@ -1,4 +1,4 @@
-#	$Id: heartbeat.spec.in,v 1.151 2005/10/25 19:16:58 gshi Exp $
+#	$Id: heartbeat.spec.in,v 1.152 2005/12/21 20:31:04 alan Exp $
 
 # Workaround for a change in RPM 4.1.x; needs proper fixing soon!
 ##%define _unpackaged_files_terminate_build 0
@@ -1040,6 +1040,8 @@ make DESTDIR=$RPM_BUILD_ROOT install
 %doc @mandir@/man1/ha_logger.1*
 %doc @mandir@/man1/hb_standby.1*
 %doc @mandir@/man1/hb_takeover.1*
+%doc @mandir@/man1/hb_addnode.1*
+%doc @mandir@/man1/hb_delnode.1*
 %doc @mandir@/man8/heartbeat.8*
 %doc @mandir@/man8/apphbd.8*
 %doc @mandir@/man8/ha_logd.8*
@@ -1047,6 +1049,13 @@ make DESTDIR=$RPM_BUILD_ROOT install
 %define ENABLE_SNMP_SUBAGENT @RPM_ENABLE_SNMP_SUBAGENT@
 %if %{ENABLE_SNMP_SUBAGENT}
 	@MIBS_DIR@/LINUX-HA-MIB.mib
+%endif
+%define ENABLE_MGMT @MGMT_ENABLED@
+%if %{ENABLE_MGMT}
+	@libdir@/libmgmt.*
+	@libdir@/libmgmtclient.*
+	@libdir@/libmgmtcommon.*
+	@libdir@/libmgmttls.*
 %endif
 
 ###########################################################
