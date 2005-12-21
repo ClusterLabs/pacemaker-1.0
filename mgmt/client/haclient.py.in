@@ -116,13 +116,15 @@ def msgbox(msg, parent = None) :
 def confirmbox(msg, parent = None) :
 	if parent == None :
 		parent = window.win_widget
-	dialog = gtk.Dialog(_("Confirm"), parent, gtk.DIALOG_MODAL, (gtk.STOCK_YES, True, gtk.STOCK_NO, False))
+	dialog = gtk.Dialog(_("Confirm"), parent, gtk.DIALOG_MODAL,
+		(gtk.STOCK_YES, gtk.RESPONSE_YES, gtk.STOCK_NO, gtk.RESPONSE_NO))
 	label = gtk.Label(msg)
 	dialog.vbox.add(label)
+	dialog.set_default_response(gtk.RESPONSE_YES)
 	label.show()
 	ret = dialog.run()
 	dialog.destroy()
-	return ret
+	return ret == gtk.RESPONSE_YES
 	
 def on_label_active(event, widget, url) :
 	webbrowser.open(url)
@@ -1155,7 +1157,7 @@ class MainWindow :
 	
 	def on_login(self, action) :
 		dialog = gtk.Dialog(_("Login"),self.win_widget, gtk.DIALOG_MODAL,
-				(gtk.STOCK_OK, True, gtk.STOCK_CANCEL, False))
+			(gtk.STOCK_OK, gtk.RESPONSE_OK, gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL))
 		
 		glade = gtk.glade.XML(UI_FILE, "logindlg_main", "haclient")
 		main = glade.get_widget("logindlg_main")
@@ -1173,7 +1175,7 @@ class MainWindow :
 		
 		dialog.destroy()
 
-		if ret :
+		if ret == gtk.RESPONSE_OK:
 			if not manager.login(server, user, password):
 				msgbox(_("login failed"))
 	
