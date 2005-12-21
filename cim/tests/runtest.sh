@@ -21,8 +21,10 @@ then
 fi
 
 #set to your username, password, host
-USERNAME=root
-PASSWD=hadev
+echo -en "user: "
+read USERNAME
+echo -en "password: "
+read PASSWD
 HOST=localhost
 NAMESPACE=root/cimv2
 
@@ -36,17 +38,22 @@ fi
 WBEMCLI="$WBEMCLI -nl"
 
 
-INST_CLASSES="LinuxHA_Cluster 
-              LinuxHA_SoftwareIdentity
-              LinuxHA_ClusterNode
-              LinuxHA_ClusterResource
-              LinuxHA_ClusterResourceGroup"
+INST_CLASSES="HA_Cluster 
+              HA_SoftwareIdentity
+              HA_ClusterNode
+              HA_ResourceGroup
+              HA_ResourceClone
+              HA_PrimitiveResource
+	      HA_MasterSlaveResource
+	      HA_OrderConstraint
+	      HA_LocationConstraint
+	      HA_ColocationConstraint"
 
-ASSOC_CLASSES="LinuxHA_ParticipatingNode
-               LinuxHA_HostedResource
-               LinuxHA_SubResource
-               LinuxHA_InstalledSoftwareIdentity"
-
+ASSOC_CLASSES="HA_ParticipatingNode
+               HA_InstalledSoftwareIdentity
+	       HA_SubResource
+               HA_ResourceInstance
+               HA_OperationOnResource"
 
 ALL_CLASSES="$INST_CLASSES $ASSOC_CLASSES"
 
@@ -118,46 +125,12 @@ function check_result ()
         return $SUCCESS
 }
 
-function test_relation () 
-{
-        assoc_class=$1
-        inst_class=$2
-        l=""
-        r=""
-
-        case $assoc_class in
-                LinuxHA_ParticipatingNode) 
-                        l="LinuxHA_Cluster"
-                        r="LinuxHA_ClusterNode";;
-                LinuxHA_HostedResource)
-                        l="LinuxHA_ClusterNode"
-                        r="LinuxHA_ClusterResource";;
-                LinuxHA_SubResource)
-                        l="LinuxHA_ClusterResource"
-                        r="LinuxHA_ClsterResourceGroup";;
-                LinuxHA_InstalledSoftwareIdentity)
-                        l="LinuxHA_Cluster"
-                        r="LinuxHA_SoftwareIdentity";;
-        esac
-
-        if test x"$inst_class" = x"$l"; then
-                return $SUCCESS
-        fi
-
-        if test x"$inst_class" = x"$r"; then
-                return $SUCCESS
-        fi
-
-        return $ERROR 
-}
-
-
 ################################################################
 
 function cim_get_instance () 
 {
         ref=$1
-        echo -en gi$'\t'$HL"http://$USERNAME:$PASSWD@"$ref$END 
+        echo -en gi$'\t'$HL"http://$USERNAME:"*PASSWD*"@"$ref$END 
         result=`$WBEMCLI gi http://$USERNAME:$PASSWD@$ref >$TMP 2>&1`
 
         check_result
@@ -181,28 +154,21 @@ function cim_enum_associators ()
 {
         op=$1
         ref=$2
-        assoc_class=$3
 
-        echo -en $op$'\t'$HL$assoc_class$'\t'http://$USERNAME:$PASSWD@$ref$END 
-        result=`$WBEMCLI $op http://$USERNAME:$PASSWD@$ref -ac $assoc_class >$TMP 2>&1`
-
+        echo -en $op$'\t'$HL"http://"$USERNAME:"*PASSWD*"@$ref$END 
+        result=`$WBEMCLI $op http://$USERNAME:$PASSWD@$ref >$TMP 2>&1`
         check_result
-
         return $?
-
 }
 
 function cim_enum_references () 
 {
         op=$1
         ref=$2
-        assoc_class=$3
 
-        echo -en $op$'\t'$HL$assoc_class$'\t'http://$USERNAME:$PASSWD@$ref$END 
-        result=`$WBEMCLI $op http://$USERNAME:$PASSWD@$ref -arc $assoc_class >$TMP 2>&1`
-        
+        echo -en $op$'\t'$HL"http://"$USERNAME:"*PASSWD*"@$ref$END 
+        result=`$WBEMCLI $op http://$USERNAME:$PASSWD@$ref >$TMP 2>&1`
         check_result
-
         return $?
 }
 
@@ -224,29 +190,22 @@ function instance_test ()
 function assoc_test () 
 {
 
-        for assoc_class in $ASSOC_CLASSES; do
-                for inst_class in $INST_CLASSES; do
-                        test_relation $assoc_class $inst_class
-                        if [ ! $? -eq $SUCCESS ]; then
-                                continue
-                        fi
-
-                        result=""
-                        cim_enum_instances "ein" $inst_class
-                        if [ $? -eq $SUCCESS ]; then
-                                result=`cat $TMP`
-                        else
-                                echo Failed to enum instances: $inst_class
-                                continue
-                        fi
+        for inst_class in $INST_CLASSES; do
+                result=""
+                cim_enum_instances "ein" $inst_class
+                if [ $? -eq $SUCCESS ]; then
+                        result=`cat $TMP`
+                else
+                        echo Failed to enum instances: $inst_class
+                        continue
+                fi
                         
-                        for ref in $result; do
-                                cim_enum_associators ain $ref $assoc_class
-                                cim_enum_associators ai $ref $assoc_class
+                for ref in $result; do
+                        cim_enum_associators ain $ref
+                        cim_enum_associators ai $ref
 
-                                cim_enum_references rin $ref $assoc_class
-                                cim_enum_references ri $ref $assoc_class
-                        done
+                        cim_enum_references rin $ref
+                        cim_enum_references ri $ref
                 done
         done
 }
@@ -256,7 +215,7 @@ function assoc_test ()
 ## Main ################
 
 for i in `seq $iteration`; do
-        instance_test
+#        instance_test
         assoc_test
 done
 
