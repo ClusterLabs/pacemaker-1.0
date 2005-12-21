@@ -19,6 +19,7 @@
 #
 MAINTAINERCLEANFILES    = Makefile.in
 
+
 halibdir		= $(libdir)/@HB_PKG@
 halib_SCRIPTS		= haclient.py mgmtcmd.py
 halib_DATA		= haclient.glade ha.png
@@ -38,6 +39,8 @@ mgmtdtest_LDFLAGS 	= `libgnutls-config --libs`
 
 mozhCNdir		= $(datadir)/locale/zh_CN/LC_MESSAGES
 mozhCN_DATA		= haclient.zh_CN.mo
+
+EXTRA_DIST		= $(halib_DATA) $(mozhCN_DATA)
 
 .po.mo:
 	$(MSGFMT) -o $@ $<
