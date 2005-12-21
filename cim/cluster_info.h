@@ -2,7 +2,9 @@
 #ifndef _CLUSTER_INFO_H
 #define _CLUSTER_INFO_H
 
+#ifdef HAVE_STDINT_H
 #include <stdint.h>
+#endif /* HAVE_STDINT_H */
 #include <glib.h>
 #include <hb_api.h>
 #include <saf/ais.h>
