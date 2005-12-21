@@ -1,50 +1,24 @@
-/*
- * CIM Provider Utils Header File
- * 
- * Author: Jia Ming Pan <jmltc@cn.ibm.com>
- * Copyright (c) 2005 International Business Machines
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
- *
- */
-
-
 #ifndef _CMPI_UTILS_H
 #define _CMPI_UTILS_H
-
-#include <clplumbing/cl_uuid.h>
 
 #include <cmpidt.h>
 #include <cmpift.h>
 #include <cmpimacs.h>
 
-#define DEBUG_ENTER() cl_log(LOG_INFO, "%s: --- ENTER ---", __FUNCTION__)
-#define DEBUG_LEAVE() cl_log(LOG_INFO, "%s: --- LEAVE ---", __FUNCTION__)
 
-#define DEBUG_PID() cl_log(LOG_INFO,                    \
-                        "%s: my pid is %d", __FUNCTION__, (int)getpid())
+/* for compatibility */
+#ifndef CMPIVersion090
+#define CMPIConst 
 
+#undef CMGetCharPtr
+#define CMGetCharPtr(x) ((char *)(x)->hdl)
 
-#ifndef ASSERT
-#ifdef HAVE_STRINGIZE
-#       define  ASSERT(X)    {if(!(X)) cmpi_assert(#X, __LINE__, __FILE__);}
-#else
-#       define  ASSERT(X)    {if(!(X)) cmpi_assert("X", __LINE__, __FILE__);}
-#endif
-#endif
+#define CMIndicationMIStubExtensions(x)
 
+#else /* CMPIVersion090 */
+#define CMPIConst const
+
+#endif /* CMPIVersion090 */
 
 /* return ret if obj is a NULL CMPI Object */
 #define RETURN_IFNULL_OBJ(obj, ret, n) do {                          \
@@ -60,51 +34,131 @@
 #define RETURN_NULL_IFNULL_OBJ(obj, n) RETURN_IFNULL_OBJ(obj, NULL, n)
 
 
-void cmpi_assert(const char * assertion, int line, const char * file);
-int run_shell_command(const char * cmnd, int * ret, 
-				char *** std_out, char *** std_err);
-int regex_search(const char * reg, const char * str, char *** match);
-int free_2d_array(char ** array);
-char * uuid_to_str(const cl_uuid_t * uuid);
+
+#define DeclareInstanceCleanup(pfx)                                          \
+CMPIStatus  pfx##Cleanup(CMPIInstanceMI * mi, CMPIContext * ctx)
+
+#define DeclareInstanceEnumInstanceNames(pfx)                                \
+CMPIStatus  pfx##EnumInstanceNames(CMPIInstanceMI * mi, CMPIContext * ctx,   \
+                                   CMPIResult * rslt, CMPIObjectPath * ref)
+
+#define DeclareInstanceEnumInstances(pfx)                                    \
+CMPIStatus  pfx##EnumInstances(CMPIInstanceMI * mi, CMPIContext* ctx,        \
+                               CMPIResult * rslt, CMPIObjectPath * ref,      \
+                               char ** properties)
+
+#define DeclareInstanceGetInstance(pfx)                                      \
+CMPIStatus  pfx##GetInstance(CMPIInstanceMI * mi,  CMPIContext * ctx,        \
+                             CMPIResult * rslt, CMPIObjectPath * cop,        \
+                             char ** properties)
+
+#define DeclareInstanceCreateInstance(pfx)                                   \
+CMPIStatus  pfx##CreateInstance(CMPIInstanceMI * mi, CMPIContext * ctx,      \
+                                CMPIResult * rslt, CMPIObjectPath * cop,     \
+                                CMPIInstance * ci)
+
+#define DeclareInstanceSetInstance(pfx)                                      \
+CMPIStatus  pfx##SetInstance(CMPIInstanceMI * mi, CMPIContext * ctx,         \
+                             CMPIResult * rslt, CMPIObjectPath * cop,        \
+                             CMPIInstance * ci, char ** properties)
+
+#define DeclareInstanceDeleteInstance(pfx)                                   \
+CMPIStatus pfx##DeleteInstance(CMPIInstanceMI * mi, CMPIContext * ctx,       \
+                               CMPIResult * rslt, CMPIObjectPath * cop)
+
+#define DeclareInstanceExecQuery(pfx)                                        \
+CMPIStatus pfx##ExecQuery(CMPIInstanceMI * mi, CMPIContext * ctx,            \
+                          CMPIResult * rslt, CMPIObjectPath * ref,           \
+                          char * lang, char * query)
+
+#define DeclareInstanceFunctions(pfx)           \
+        static DeclareInstanceCleanup(pfx);            \
+        static DeclareInstanceEnumInstanceNames(pfx);  \
+        static DeclareInstanceEnumInstances(pfx);      \
+        static DeclareInstanceGetInstance(pfx);        \
+        static DeclareInstanceCreateInstance(pfx);     \
+        static DeclareInstanceSetInstance(pfx);        \
+        static DeclareInstanceDeleteInstance(pfx);     \
+        static DeclareInstanceExecQuery(pfx)
+
+#define DeclareMethodInvokeMethod(pfx)                                       \
+CMPIStatus pfx##InvokeMethod(CMPIMethodMI * mi, CMPIContext * ctx,           \
+                CMPIResult * rslt, CMPIObjectPath * ref,                     \
+                const char * method, CMPIArgs * in, CMPIArgs * out)
+
+#define DeclareMethodCleanup(pfx)                                            \
+CMPIStatus pfx##MethodCleanup(CMPIMethodMI * mi, CMPIContext * ctx) 
+
+#define DeclareMethodFunctions(pfx)             \
+        static DeclareMethodInvokeMethod(pfx);         \
+        static DeclareMethodCleanup(pfx)
+
+#define DeclareAssociationCleanup(pfx)                                       \
+CMPIStatus pfx##AssociationCleanup(CMPIAssociationMI * mi, CMPIContext * ctx) 
+
+#define DeclareAssociationAssociators(pfx)                                   \
+CMPIStatus pfx##Associators(CMPIAssociationMI * mi, CMPIContext * ctx,       \
+                CMPIResult * rslt, CMPIObjectPath * op,                      \
+                const char * asscClass, const char * resultClass,            \
+                const char * role, const char * resultRole,                  \
+                char ** properties)
+#define DeclareAssociationAssociatorNames(pfx)                               \
+CMPIStatus pfx##AssociatorNames(CMPIAssociationMI * mi, CMPIContext * ctx,   \
+                CMPIResult * rslt, CMPIObjectPath * op,                      \
+                const char * asscClass, const char * resultClass,            \
+                const char * role, const char * resultRole)
+
+#define DeclareAssociationReferences(pfx)                                    \
+CMPIStatus pfx##References(CMPIAssociationMI * mi,                           \
+                CMPIContext * ctx, CMPIResult * rslt,                        \
+                CMPIObjectPath * op, const char * resultClass,               \
+                const char * role, char ** properties)
+
+#define DeclareAssociationReferenceNames(pfx)                                \
+CMPIStatus pfx##ReferenceNames(CMPIAssociationMI * mi,                       \
+                CMPIContext * ctx, CMPIResult * rslt, CMPIObjectPath * cop,  \
+                const char * resultClass, const char * role)
+
+#define DeclareAssociationFunctions(pfx)           \
+        static DeclareAssociationCleanup(pfx);            \
+        static DeclareAssociationAssociators(pfx);        \
+        static DeclareAssociationAssociatorNames(pfx);    \
+        static DeclareAssociationReferences(pfx);         \
+        static DeclareAssociationReferenceNames(pfx)
 
 
-int init_logger(const char * entity);
+#define DeclareIndicationCleanup(pfx)                                        \
+CMPIStatus pfx##IndicationCleanup(CMPIIndicationMI * mi, CMPIContext * ctx)
 
-typedef int (* assoc_pred_func_t) 
-                (CMPIInstance * first, CMPIInstance * second, CMPIStatus * rc);
+#define DeclareIndicationAuthorizeFilter(pfx)                                \
+CMPIStatus pfx##AuthorizeFilter(CMPIIndicationMI * mi, CMPIContext * ctx,    \
+                           CMPIResult * rslt,                                \
+                           CMPISelectExp * filter, const char * type,        \
+                           CMPIObjectPath * classPath, const char * owner)
 
-int enum_associators(CMPIBroker * broker, char * classname,
-                     char * first_ref, char * second_ref,
-                     char * first_class_name, char * second_class_name,
-                     CMPIContext * ctx, CMPIResult * rslt,
-                     CMPIObjectPath * cop, const char * assocClass, 
-                     const char * resultClass, const char * role,
-                     const char * resultRole, assoc_pred_func_t pred,
-                     int add_inst, CMPIStatus * rc);
+#define DeclareIndicationMustPoll(pfx)                                       \
+CMPIStatus pfx##MustPoll(CMPIIndicationMI * mi,                              \
+                CMPIContext * ctx, CMPIResult * rslt, CMPISelectExp * filter,\
+                const char * indType, CMPIObjectPath * classPath)
 
-int enum_references(CMPIBroker * broker, char * classname,
-                    char * first_ref, char * second_ref,
-                    char * first_class_name, char * second_class_name,
-                    CMPIContext * ctx, CMPIResult * rslt,
-                    CMPIObjectPath * cop,  
-                    const char * resultClass, const char * role,
-                    assoc_pred_func_t pred, int add_inst, CMPIStatus * rc);
+#define DeclareIndicationActivateFilter(pfx)                                 \
+CMPIStatus pfx##ActivateFilter(CMPIIndicationMI * mi,                        \
+                CMPIContext * ctx, CMPIResult * rslt,                        \
+                CMPISelectExp * filter, const char * type,                   \
+                CMPIObjectPath * classPath, CMPIBoolean firstActivation)
 
+#define DeclareIndicationDeActivateFilter(pfx)                               \
+CMPIStatus pfx##DeActivateFilter(CMPIIndicationMI * mi,                      \
+               CMPIContext * ctx, CMPIResult * rslt,                         \
+               CMPISelectExp * filter, const char * type,                    \
+               CMPIObjectPath * classPath, CMPIBoolean lastActivation)
 
-int enum_inst_assoc(CMPIBroker * broker, char * classname,
-                    char * first_ref, char * second_ref,
-                    char * first_class_name, char * second_class_name,
-                    CMPIContext * ctx, CMPIResult * rslt,
-                    CMPIObjectPath * cop, assoc_pred_func_t pred,
-                    int add_inst, CMPIStatus * rc);
-
-int get_inst_assoc(CMPIBroker * broker, char * classname,
-                   char * first_ref, char * second_ref,
-                   char * first_class_name, char * second_class_name,
-                   CMPIContext * ctx, CMPIResult * rslt,
-                   CMPIObjectPath * cop, CMPIStatus * rc);
-
-
+#define DeclareIndicationFunctions(pfx)          \
+        static DeclareIndicationCleanup(pfx);           \
+        static DeclareIndicationAuthorizeFilter(pfx);   \
+        static DeclareIndicationMustPoll(pfx);          \
+        static DeclareIndicationActivateFilter(pfx);    \
+        static DeclareIndicationDeActivateFilter(pfx)
 
 #define DeclareInstanceMI(pfx, pn, broker)                             \
 static char inst_provider_name [] = "instance"#pn;                     \
@@ -130,7 +184,7 @@ pn##_Create_InstanceMI(CMPIBroker * brkr, CMPIContext * ctx)           \
                 NULL,                                                  \
                 &instMIFT                                              \
         };                                                             \
-        Broker = brkr;                                                 \
+        broker = brkr;                                                 \
         return &mi;                                                    \
 }
 
@@ -177,7 +231,7 @@ pn##_Create_AssociationMI(CMPIBroker * brkr, CMPIContext *ctx)         \
                 NULL,                                                  \
                 &assocMIFT                                             \
         };                                                             \
-        Broker = brkr;                                                 \
+        broker = brkr;                                                 \
         return &mi;                                                    \
 }
 
@@ -207,4 +261,5 @@ pn##_Create_IndicationMI(CMPIBroker * brkr, CMPIContext * ctx) {       \
         return &mi;                                                    \
 }
 
-#endif
+
+#endif /* _CMPI_UTILS_H */
