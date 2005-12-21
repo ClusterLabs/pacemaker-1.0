@@ -53,9 +53,30 @@ ASSOC_CLASSES="HA_ParticipatingNode
                HA_InstalledSoftwareIdentity
 	       HA_SubResource
                HA_ResourceInstance
-               HA_OperationOnResource"
+               HA_OperationOnResource
+               HA_HostedResource
+               HA_ResourceInstance"
 
 ALL_CLASSES="$INST_CLASSES $ASSOC_CLASSES"
+
+function get_assoc_classes_of ()
+{
+       case $1 in
+        HA_Cluster) 
+                echo "HA_ParticipatingNode HA_InstalledSoftwareIdentity";;
+        HA_ClusterNode) 
+                echo "HA_ParticipatingNode HA_HostedResource";;
+        HA_PrimitiveResource) 
+               echo "HA_SubResource HA_HostedResource
+                     HA_ResourceInstance HA_OperationOnResource";;
+        HA_MasterSlaveResource|HA_ResourceClone|HA_ResourceGroup) 
+                echo "HA_SubResource HA_ResourceInstance
+                      HA_OperationOnResource";;
+        HA_SoftwareIdentity) 
+                echo "HA_InstalledSoftwareIdentity";;
+        *) echo ""
+       esac
+}
 
 if test $color = 1; then 
         HL="\33[1m"   #high light
@@ -71,14 +92,14 @@ TMP=`mktemp`
 
 success=0
 failure=0
-zero=0
+empty=0
 total=0
 
 
-function call_zero () 
+function call_empty () 
 {
-        echo -e $'\t'$HL$YELLOW"[ ZERO ]"$END
-        zero=`expr $zero + 1`
+        echo -e $'\t'$HL$YELLOW"[ EMPTY ]"$END
+        empty=`expr $empty + 1`
 }
 
 function call_ok () 
@@ -95,7 +116,7 @@ function call_failed ()
 }        
 
 
-ZERO=0
+EMPTY=0
 ERROR=1
 SUCCESS=2
 
@@ -106,11 +127,11 @@ function check_result ()
                 cat $TMP
         fi
 
-        # zero
+        # empty
         lc=`cat $TMP | wc -l`
         if [ $lc -eq 0 ]; then
-                call_zero
-                return $ZERO 
+                call_empty
+                return $EMPTY 
         fi
        
         # error
@@ -154,9 +175,9 @@ function cim_enum_associators ()
 {
         op=$1
         ref=$2
-
-        echo -en $op$'\t'$HL"http://"$USERNAME:"*PASSWD*"@$ref$END 
-        result=`$WBEMCLI $op http://$USERNAME:$PASSWD@$ref >$TMP 2>&1`
+        assoc_class=$3
+        echo -en $op$'\t'$HL"http://"$USERNAME:"*PASSWD*"@$ref$END -ac $assoc_class
+        result=`$WBEMCLI $op http://$USERNAME:$PASSWD@$ref -ac $assoc_class >$TMP 2>&1`
         check_result
         return $?
 }
@@ -165,9 +186,9 @@ function cim_enum_references ()
 {
         op=$1
         ref=$2
-
-        echo -en $op$'\t'$HL"http://"$USERNAME:"*PASSWD*"@$ref$END 
-        result=`$WBEMCLI $op http://$USERNAME:$PASSWD@$ref >$TMP 2>&1`
+        assoc_class=$3
+        echo -en $op$'\t'$HL"http://"$USERNAME:"*PASSWD*"@$ref$END -arc $assoc_class 
+        result=`$WBEMCLI $op http://$USERNAME:$PASSWD@$ref -arc $assoc_class >$TMP 2>&1`
         check_result
         return $?
 }
@@ -201,11 +222,14 @@ function assoc_test ()
                 fi
                         
                 for ref in $result; do
-                        cim_enum_associators ain $ref
-                        cim_enum_associators ai $ref
+                        assoc_classes=`get_assoc_classes_of $inst_class`
+                        for assoc_class in $assoc_classes; do
+                                cim_enum_associators ain $ref $assoc_class
+                                cim_enum_associators ai $ref  $assoc_class
 
-                        cim_enum_references rin $ref
-                        cim_enum_references ri $ref
+                                cim_enum_references rin $ref $assoc_class
+                                cim_enum_references ri $ref $assoc_class
+                        done
                 done
         done
 }
@@ -219,7 +243,7 @@ for i in `seq $iteration`; do
         assoc_test
 done
 
-total=`expr $zero + $failure + $success`
-echo Total: $total, Success: $success, Failure: $failure, Zero: $zero
+total=`expr $empty + $failure + $success`
+echo Total: $total, Success: $success, Failure: $failure, Empty: $empty
 
 rm -rf $TMP
