@@ -1117,8 +1117,7 @@ class MainWindow :
 		
 		self.set_action_sensitive('delrsc',
 			manager.connected
-			and self.cur_type in [_("native"),_("group"),_("clone"),_("place"),_("order"),_("colocation"),_("master")]
-			and self.cur_status != _("unmanaged"))
+			and self.cur_type in [_("native"),_("group"),_("clone"),_("place"),_("order"),_("colocation"),_("master")])
 	# functions
 	def update(self) :
 		self.tree.update()
@@ -1227,9 +1226,13 @@ class MainWindow :
 				manager.update_constraint("rsc_colocation", colocation)
 			
 	def on_del_item(self, action) :
-		if confirmbox(_("Delete") + self.cur_type + " " + self.cur_name + "?"):
+		if confirmbox(_("Delete") + " "+self.cur_type + " " + self.cur_name + "?"):
 			if self.cur_type in [_("native"),_("group"),_("clone"),_("master")] :
-				manager.do_cmd("del_rsc\n"+self.cur_name)
+				if string.find(self.cur_status, _("unmanaged")) != -1 :
+					hostname = manager.do_cmd("rsc_running_on\n%s"%self.cur_name)
+					manager.do_cmd("cleanup_rsc\n"+hostname[0] + "\n" + self.cur_name)
+				else :
+					manager.do_cmd("del_rsc\n"+self.cur_name)
 			elif self.cur_type == _("place") :
 				manager.do_cmd("del_co\nrsc_location\n"+self.cur_name)
 			elif self.cur_type == _("order") :

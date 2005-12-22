@@ -352,6 +352,18 @@ or
 
 /*
 description:
+	clean up a unmanaged resource
+format:
+	MSG_CLEANUP_RSC hostname resource
+return:
+	MSG_OK
+or
+	MSG_FAIL
+*/
+#define MSG_CLEANUP_RSC		"cleanup_rsc"
+
+/*
+description:
 	return the params of a given resource
 format:
 	MSG_RSC_PARAMS resource

@@ -50,6 +50,7 @@ static char* on_get_node_config(char* argv[], int argc);
 static char* on_get_running_rsc(char* argv[], int argc);
 
 static char* on_del_rsc(char* argv[], int argc);
+static char* on_cleanup_rsc(char* argv[], int argc);
 static char* on_add_rsc(char* argv[], int argc);
 static char* on_add_grp(char* argv[], int argc);
 
@@ -83,6 +84,8 @@ static resource_t* find_resource(GList* rsc_list, const char* id);
 static int delete_object(const char* type, const char* entry, const char* id);
 static GList* find_xml_node_list(crm_data_t *root, const char *search_path);
 static pe_working_set_t get_data_set(void);
+static int refresh_lrm(IPC_Channel *crmd_channel, const char *host_uname);
+static int delete_lrm_rsc(IPC_Channel *crmd_channel, const char *host_uname, const char *rsc_id);
 
 #define GET_RESOURCE()	if (argc != 2) { 					\
 				return cl_strdup(MSG_FAIL); 			\
@@ -201,6 +204,7 @@ init_crm(void)
 	reg_msg(MSG_RUNNING_RSC, on_get_running_rsc);
 
 	reg_msg(MSG_DEL_RSC, on_del_rsc);
+	reg_msg(MSG_CLEANUP_RSC, on_cleanup_rsc);
 	reg_msg(MSG_ADD_RSC, on_add_rsc);
 	reg_msg(MSG_ADD_GRP, on_add_grp);
 	
@@ -461,6 +465,74 @@ on_del_rsc(char* argv[], int argc)
 	
 	return cl_strdup(MSG_OK);
 }
+static int
+delete_lrm_rsc(IPC_Channel *crmd_channel, const char *host_uname, const char *rsc_id)
+{
+	HA_Message *cmd = NULL;
+	crm_data_t *msg_data = NULL;
+	crm_data_t *rsc = NULL;
+	char our_pid[11];
+	char *key = NULL; 
+	
+	snprintf(our_pid, 10, "%d", getpid());
+	our_pid[10] = '\0';
+	key = crm_concat(client_name, our_pid, '-');
+	
+	
+	msg_data = create_xml_node(NULL, XML_GRAPH_TAG_RSC_OP);
+	crm_xml_add(msg_data, XML_ATTR_TRANSITION_KEY, key);
+	
+	rsc = create_xml_node(msg_data, XML_CIB_TAG_RESOURCE);
+	crm_xml_add(rsc, XML_ATTR_ID, rsc_id);
+	
+	cmd = create_request(CRM_OP_LRM_DELETE, msg_data, host_uname,
+			     CRM_SYSTEM_CRMD, client_name, our_pid);
+
+	free_xml(msg_data);
+	crm_free(key);
+
+	if(send_ipc_message(crmd_channel, cmd)) {
+		return 0;
+	}
+	return -1;
+}
+
+static int
+refresh_lrm(IPC_Channel *crmd_channel, const char *host_uname)
+{
+	HA_Message *cmd = NULL;
+	char our_pid[11];
+	
+	snprintf(our_pid, 10, "%d", getpid());
+	our_pid[10] = '\0';
+	
+	cmd = create_request(CRM_OP_LRM_REFRESH, NULL, host_uname,
+			     CRM_SYSTEM_CRMD, client_name, our_pid);
+	
+	if(send_ipc_message(crmd_channel, cmd)) {
+		return 0;
+	}
+	return -1;
+}
+
+char*
+on_cleanup_rsc(char* argv[], int argc)
+{
+	IPC_Channel *crmd_channel = NULL;
+	char our_pid[11];
+	
+	snprintf(our_pid, 10, "%d", getpid());
+	our_pid[10] = '\0';
+	
+	init_client_ipc_comms(CRM_SYSTEM_CRMD, NULL,
+				    NULL, &crmd_channel);
+
+	send_hello_message(crmd_channel, our_pid, client_name, "0", "1");
+	delete_lrm_rsc(crmd_channel, argv[1], argv[2]);
+	refresh_lrm(crmd_channel, argv[1]);
+	return cl_strdup(MSG_OK);
+}
+
 /*
 	0	cmd = "add_rsc"
 	1	cmd += "\n"+rsc["id"]
