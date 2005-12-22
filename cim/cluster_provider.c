@@ -392,14 +392,9 @@ ClusterInvokeMethod(CMPIMethodMI * mi, CMPIContext * ctx, CMPIResult * rslt,
 
         CMPIString* class_name = NULL;
         CMPIStatus rc = {CMPI_RC_OK, NULL};
-        CMPIData arg_data;
         CMPIValue valrc;
-        char param [] = "action";
-
-        init_logger(PROVIDER_ID);
+        
         class_name = CMGetClassName(ref, &rc);
-
-        arg_data = CMGetArg(in, param, &rc);
 
         if(strcasecmp(CMGetCharPtr(class_name), G_classname) == 0 &&
            strcasecmp("RequestStatusChange", method_name) == 0 ){

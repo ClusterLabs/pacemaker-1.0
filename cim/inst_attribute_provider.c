@@ -94,11 +94,10 @@ make_attrs_instance(CMPIObjectPath * op, char * id, char * sys_name,
         cl_log(LOG_INFO, "attrs: ready to iterate, size = %d", 
                attr->get_data_size(attr));
         for ( i = 0; i < attr->get_data_size(attr); i++ ) {
-                char * id, * name, * value;
-                char * tmp;
-
+                char * id, * name, * value, * tmp;
+                int len;
                 nvpair = attr->get_data_at(attr, i).value.table;
-                if ( nvpair == NULL ) continue;
+                if ( nvpair == NULL ) { continue; }
 
                 id = nvpair->get_data(nvpair, "id").value.string;
                 name = nvpair->get_data(nvpair, "name").value.string;
@@ -106,15 +105,13 @@ make_attrs_instance(CMPIObjectPath * op, char * id, char * sys_name,
 
                 cl_log(LOG_INFO, "cmpi attrs: id, name, value = %s, %s, %s",
                        id, name, value);
-                tmp = (char *)CIM_MALLOC( strlen("id") + strlen("name") 
-                                          + strlen("value") + strlen(id) 
-                                          + strlen(name) + strlen(value) 
-                                          + 8);
+                len = strlen("id") + strlen("name") + strlen("value")
+                      + strlen(id) + strlen(name) + strlen(value) + 8;
+                if ((tmp = (char *) CIM_MALLOC(len)) == NULL ) {
+                        continue;
+                }
                 sprintf(tmp, "id=%s,name=%s,value=%s", id, name, value);
                 CMSetArrayElementAt(array, i, &tmp, CMPI_chars);
-                
-                /* FIXME: free tmp will cause OpenWBEM segment fault?! */
-                /* CIM_FREE(tmp); */
         }
         
         sprintf(caption, "Attributes.%s", id);

@@ -78,9 +78,9 @@ make_operation_instance(CMPIObjectPath * op, char * id, char * sys_name,
         interval = CITableGet(operation, "interval").value.string;
         timeout = CITableGet(operation, "timeout").value.string;
 
-        if (interval) CMSetProperty(ci, "Interval", interval, CMPI_chars);
-        if (timeout)  CMSetProperty(ci, "Timeout", timeout, CMPI_chars);
-        if (name)     CMSetProperty(ci, "Name", name, CMPI_chars);
+        if (interval) { CMSetProperty(ci, "Interval", interval, CMPI_chars); }
+        if (timeout)  { CMSetProperty(ci, "Timeout", timeout, CMPI_chars);   }
+        if (name)     { CMSetProperty(ci, "Name", name, CMPI_chars);         }
         
         sprintf(caption, "Operation.%s", id);
         CMSetProperty(ci, "Id", id, CMPI_chars);

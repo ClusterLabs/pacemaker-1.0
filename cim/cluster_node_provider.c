@@ -76,8 +76,9 @@ make_node_instance(CMPIObjectPath * op, char * uname, CMPIStatus * rc)
         }       
 
         active_status = CITableGet(nodeinfo, "active_status").value.string;
-        if(active_status) CMSetProperty(ci, "ActiveStatus", active_status, CMPI_chars);
-
+        if(active_status) {
+                CMSetProperty(ci, "ActiveStatus", active_status, CMPI_chars);
+        }
         if ( active_status && strcmp (active_status, "True") == 0) {
                 char * standby, * unclean, * shutdown, * expected_up, * node_ping;
                 standby = CITableGet(nodeinfo, "standby").value.string;
@@ -86,13 +87,22 @@ make_node_instance(CMPIObjectPath * op, char * uname, CMPIStatus * rc)
                 expected_up = CITableGet(nodeinfo, "expected_up").value.string;
                 node_ping = CITableGet(nodeinfo, "node_ping").value.string;
 
-                if (standby) CMSetProperty(ci, "Standby", standby, CMPI_chars);
-                if (unclean) CMSetProperty(ci, "Unclean", unclean, CMPI_chars);
-                if (shutdown) CMSetProperty(ci, "Shutdown", shutdown, CMPI_chars);
-                if (expected_up) CMSetProperty(ci, "ExpectedUp", expected_up, CMPI_chars);
-                if (node_ping) CMSetProperty(ci, "NodePing", node_ping, CMPI_chars);
+                if (standby) { 
+                        CMSetProperty(ci, "Standby", standby, CMPI_chars);
+                }
+                if (unclean) { 
+                        CMSetProperty(ci, "Unclean", unclean, CMPI_chars);
+                }
+                if (shutdown) { 
+                        CMSetProperty(ci, "Shutdown", shutdown, CMPI_chars);
+                }
+                if (expected_up) { 
+                        CMSetProperty(ci, "ExpectedUp", expected_up, CMPI_chars);
+                }
+                if (node_ping) { 
+                        CMSetProperty(ci, "NodePing", node_ping, CMPI_chars);
+                }       
         }
-
         dc = ci_get_cluster_dc();
         uuid = CIM_STRDUP("N/A");
         

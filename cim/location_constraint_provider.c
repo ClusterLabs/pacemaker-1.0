@@ -62,15 +62,14 @@ LocationConstraintEnumInstanceNames(CMPIInstanceMI * mi, CMPIContext * ctx,
                               CMPIResult * rslt, CMPIObjectPath * ref)
 {
         CMPIStatus rc;
-        init_logger( PROVIDER_ID );
 
+        init_logger( PROVIDER_ID );
         if ( enum_inst_cons(G_broker, G_classname, ctx, rslt, 
                             ref, 0, TID_CONS_LOCATION, &rc) == HA_OK ) {
                 CMReturn(CMPI_RC_OK);        
         } else {
                 return rc;
         }
-        CMReturn(CMPI_RC_OK);	
 }
 
 
@@ -88,7 +87,6 @@ LocationConstraintEnumInstances(CMPIInstanceMI * mi, CMPIContext * ctx,
         } else {
                 return rc;
         }
-        CMReturn(CMPI_RC_OK);	
 }
 
 static CMPIStatus 
@@ -96,15 +94,13 @@ LocationConstraintGetInstance(CMPIInstanceMI * mi, CMPIContext * ctx,
                         CMPIResult * rslt, CMPIObjectPath * cop,
                         char ** properties)
 {
-        CMPIStatus rc;
+        CMPIStatus rc = {CMPI_RC_OK, NULL};
+
         init_logger( PROVIDER_ID );
-
-        if ( get_inst_cons(G_broker, G_classname, ctx, rslt, cop, 
-                           properties, TID_CONS_LOCATION, &rc) != HA_OK ) {
-                return rc;
-        }
-
-        CMReturn(CMPI_RC_OK);
+        get_inst_cons(G_broker, G_classname, ctx, rslt, cop, 
+                      properties, TID_CONS_LOCATION, &rc);
+        
+        return rc; 
 }
 
 static CMPIStatus 

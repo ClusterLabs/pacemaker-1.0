@@ -139,7 +139,7 @@ ind_event_handler(const char * event)
         struct cmpi_ind_data data ;
         char msg[256];
 
-        if ( event == NULL ) return HA_FAIL;
+        if ( event == NULL ) { return HA_FAIL; }
         cl_log(LOG_INFO, "ind_event_handler: got event: %s", event);
         sprintf(msg, "Got an indication: %s", event);
 
@@ -173,8 +173,6 @@ ind_stop_thread(int a)
 static void *
 ind_thread_func(void * param)
 {
-        int ret = 0;
-
         /* attach thread */
         CBAttachThread(ind_env->broker, ind_env->context);
 
@@ -182,7 +180,7 @@ ind_thread_func(void * param)
         signal(SIGINT, ind_stop_thread);
 
         /* main loop */
-        ret = ind_main_loop();
+        ind_main_loop();
 
 
         /* detach thread */
@@ -371,10 +369,8 @@ IndicationDeActivateFilter(CMPIIndicationMI * mi,
 static void 
 IndicationEnableIndications(CMPIIndicationMI * mi )
 {
-
         /* Enable indication generation */
         ind_enabled = 1;
-
 }
 
 

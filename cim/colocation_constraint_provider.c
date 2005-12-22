@@ -68,7 +68,6 @@ ColocationConstraintEnumInstanceNames(CMPIInstanceMI * mi, CMPIContext * ctx,
         } else {
                 return rc;
         }
-        CMReturn(CMPI_RC_OK);
 }
 
 
@@ -86,7 +85,6 @@ ColocationConstraintEnumInstances(CMPIInstanceMI * mi, CMPIContext * ctx,
         } else {
                 return rc;
         }
-        CMReturn(CMPI_RC_OK);	
 }
 
 static CMPIStatus 

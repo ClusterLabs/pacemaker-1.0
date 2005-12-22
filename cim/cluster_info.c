@@ -91,6 +91,7 @@ GHashTable * G_result_cache = NULL;
 
 #define ClientGetAt(x,i)  (x)->get_nth_value(x, i)
 #define ClientSize(x)     (x)->rlen
+#define ClientFree(x)     (x)->free(x)
 
 struct mgmt_client {
         char ** rdata;
@@ -149,7 +150,7 @@ mgmt_client_process_cmnd(struct mgmt_client * client,  const char * type, ... )
         va_start(ap, type);
         while (1) {
                 char * arg = va_arg(ap, char *);
-                if ( arg == NULL ) break;
+                if ( arg == NULL ) { break; }
                 msg = mgmt_msg_append(msg, arg);
         }
         va_end(ap);
@@ -189,8 +190,8 @@ mgmt_client_process_cmnd(struct mgmt_client * client,  const char * type, ... )
 
         rc = HA_OK;
 out:	
-        if (msg) mgmt_del_msg(msg);
-	if (result) mgmt_del_msg(result);
+        if (msg) { mgmt_del_msg(msg); }
+	if (result) { mgmt_del_msg(result); }
 
         ci_lib_finalize();
         return rc;
@@ -199,12 +200,10 @@ out:
 static char *
 mgmt_client_get_nth_value(struct mgmt_client * client, uint32_t index) 
 {
-        if ( client == NULL ) return NULL;
-
+        if ( client == NULL ) { return NULL; }
 	if ( index >= client->rlen ) {
 		return NULL;
 	}
-
         return client->rdata[index];
 }
 
@@ -212,10 +211,10 @@ static void
 mgmt_client_free(struct mgmt_client * client)
 {
         char ** args;
-        if (client == NULL ) return ;
+        if (client == NULL ) { return ; }
         if ( client->rdata ) {
                 args = --client->rdata;
-                if ( args ) mgmt_del_args(args);
+                if ( args ) { mgmt_del_args(args); }
         }
 
         CIM_FREE(client);
@@ -235,6 +234,7 @@ mgmt_client_new (void)
 {
         struct mgmt_client * client;
         client = (struct mgmt_client *)CIM_MALLOC(sizeof(struct mgmt_client));
+        if ( client == NULL ) { return NULL; }
         memset(client, 0, sizeof(struct mgmt_client));
         
         client->free = mgmt_client_free;
@@ -282,7 +282,7 @@ make_table_data(const char * key, const void * value, int type)
 {
         struct ci_data * data;
         
-        if ( value == NULL ) return NULL;
+        if ( value == NULL ) { return NULL; }
         if ( ( data = (struct ci_data *)
                CIM_MALLOC(sizeof(struct ci_data))) == NULL ) {
                 return NULL;
@@ -325,7 +325,7 @@ ci_table_private_insert_value(struct ci_table_private * private,
                               const char * key, const void * value, int type)
 {
         struct ci_data * data;
-        if ( key == NULL || value == NULL ) return HA_FAIL;   
+        if ( key == NULL || value == NULL ) { return HA_FAIL; }
 
         if ( ! private->withkey ) {
                 cl_log(LOG_INFO, "add: without key, please use add instead");
@@ -354,7 +354,7 @@ ci_table_private_add_value(struct ci_table_private * private,
                              const void * value, int type)
 {
         struct ci_data * data;
-        if (  value == NULL ) return HA_FAIL;   
+        if (  value == NULL ) { return HA_FAIL;  } 
         
         if ( private->withkey ) {
                 cl_log(LOG_INFO, "add: withkey, please use insert instead");
@@ -373,24 +373,26 @@ static void
 ci_table_private_free(struct ci_table_private * private)
 {
         int i;
-        if ( private == NULL ) return;
+        if ( private == NULL ) { return; }
         if ( private->array == NULL ) {
                 CIM_FREE(private);
                 return;
         }
-
         cl_log(LOG_INFO, "freeing (private: 0x%0x)", (POINTER_t)private);
         for ( i = 0; i < private->array->len; i ++ ) {
                 struct ci_data * data;
                 data = (struct ci_data *) 
                         g_ptr_array_index(private->array, i);
-                if ( data == NULL ) continue;
-                if (data->key) CIM_FREE(data->key);
+                if ( data == NULL ) { continue; }
+                if (data->key) { CIM_FREE(data->key); }
+
                 switch(data->type){
                 case CI_uint32:
                         break;
                 case CI_string:
-                        if (data->value.string)CIM_FREE(data->value.string);
+                        if (data->value.string){ 
+                                CIM_FREE(data->value.string);
+                        }
                         break;
                 case CI_table:
                         if ( data->value.table){
@@ -404,8 +406,9 @@ ci_table_private_free(struct ci_table_private * private)
         if ( private->withkey ) {
                 g_hash_table_destroy(private->map);
         }
-        CIM_FREE(private);
+
         cl_log(LOG_INFO, "(private: 0x%0x) freed", (POINTER_t)private);
+        CIM_FREE(private);
 }
 
 static struct ci_table_private *
@@ -454,7 +457,7 @@ ci_table_get_data_size(const struct ci_table * table)
 {
         struct ci_table_private * private;
         
-        if (table == NULL ) return 0;
+        if (table == NULL ) { return 0; }
         if (( private = CITablePrivate(table)) == NULL ) {
                 return 0;
         }
@@ -483,7 +486,10 @@ ci_table_get_data(const struct ci_table * table, const char * key)
         }
 
         data =(struct ci_data *)g_hash_table_lookup(private->map, key);
-        if ( data == NULL ) return zero_data;
+        if ( data == NULL ) {
+                return zero_data;
+        }
+
         cl_log(LOG_INFO, "got %s from (private: 0x%0x, map: 0x%0x), type: %d", 
                key, (POINTER_t)private, (POINTER_t)private->map, data->type);
         return * data;
@@ -495,7 +501,7 @@ ci_table_get_data_at(const struct ci_table * table, int index)
         struct ci_table_private * private;
         struct ci_data * data;
 
-        if (table == NULL ) return zero_data;
+        if (table == NULL ) { return zero_data; }
         if (( private = CITablePrivate(table)) == NULL ) {
                 return zero_data;
         }
@@ -508,7 +514,7 @@ ci_table_get_data_at(const struct ci_table * table, int index)
         }
 
         data = (struct ci_data *)g_ptr_array_index(private->array, index);
-        if ( data == NULL ) return zero_data;
+        if ( data == NULL ) { return zero_data; }
 
         cl_log(LOG_INFO, "got data %d from (private: 0x%0x, array: 0x%0x), type: %d", 
                index, (POINTER_t)private, (POINTER_t)private->array, data->type);
@@ -530,7 +536,7 @@ ci_table_free(struct ci_table * data)
 {
         struct ci_table_private * private;
 
-        if ( data == NULL ) return;
+        if ( data == NULL ) { return; }
         private = (struct ci_table_private *) data->private;
         if (private) {
                 private->free(private);
@@ -773,9 +779,9 @@ ci_get_node_name_table ()
 
         for( i = 0; i < client->get_size(client); i++ ) {
         	char * node = client->get_nth_value(client, i);
-                if ( node == NULL ) continue;
+                if ( node == NULL ) { continue; }
                 node = CIM_STRDUP(node);
-                if ( node == NULL ) continue;
+                if ( node == NULL ) { continue; }
                 g_ptr_array_add(node_table, node);
         };
         
@@ -907,13 +913,13 @@ ci_get_resource_instattrs_table(const char * id)
         
         /* instattr->atrr->nvpairs */
 	if ( ( instattr = ci_table_new (TRUE)) == NULL ) {
-                array->free(array);
-		return NULL;
+		CITableFree(array);
+                return NULL;
 	}
 
 	attr = ci_get_attributes (id);
 	if ( attr == NULL ) {
-                attr->free(instattr);
+                CITableFree(instattr);
 		return NULL;
 	}
 
@@ -931,7 +937,7 @@ ci_get_resource_type(const char * id)
         char * type = NULL;
         uint32_t rc = 0;
 
-        if ( id == NULL) return 0;
+        if ( id == NULL) { return 0; }
         
         if ((client = mgmt_client_new()) == NULL ) {
                 return 0;
@@ -989,12 +995,19 @@ ci_get_primitive_resource (const char * id)
         provider = client->get_nth_value(client, 2);
         type = client->get_nth_value(client, 3);
 
+        if ( strcmp(lid, id) != 0 ) {
+                cl_log(LOG_ERR, "get_primitive: id not match: %s vs %s", lid, id);
+                ClientFree(client);
+                CITableFree(primitive);
+                return NULL;
+        }
+
         CITableInsert(primitive, "id", id, CI_string);
         CITableInsert(primitive, "class", class, CI_string);
-        CITableInsert(primitive, "provider", class, CI_string);
+        CITableInsert(primitive, "provider", provider, CI_string);
         CITableInsert(primitive, "type", type, CI_string);
 
-        client->free(client);
+        ClientFree(client);
         return primitive;
 }
 
@@ -1170,7 +1183,7 @@ ci_get_res_running_node(const char * id)
         char * node;
         struct mgmt_client * client;
         
-        if ( id == NULL ) return NULL;
+        if ( id == NULL ) { return NULL; }
         if ( (client = mgmt_client_new()) == NULL ) {
                 return NULL;
         }
@@ -1197,7 +1210,7 @@ ci_get_resource_status(const char * id)
         char * status;
         struct mgmt_client * client;
         
-        if ( id == NULL ) return NULL;
+        if ( id == NULL ) { return NULL; }
         if ( (client = mgmt_client_new()) == NULL ) {
                 return NULL;
         }
@@ -1229,7 +1242,7 @@ ci_get_order_constraint (const char * id)
 	char * lid, * from, * type, * to;
         struct mgmt_client * client;
         
-        if ( id == NULL ) return NULL;
+        if ( id == NULL ) { return NULL; }
         if ( (client = mgmt_client_new()) == NULL ) {
                 return NULL;
         }
@@ -1249,6 +1262,13 @@ ci_get_order_constraint (const char * id)
 	from = client->get_nth_value(client, 1);
 	type = client->get_nth_value(client, 2);
 	to = client->get_nth_value(client, 3);
+
+        if ( strcmp(lid, id) != 0 ) {
+                cl_log(LOG_ERR, "get_order_constraint: id not match: %s vs %s", 
+                       lid, id);
+                ClientFree(client);
+                CITableFree(rsc_order);
+        }
 
         CITableInsert(rsc_order, "id", id, CI_string);
         CITableInsert(rsc_order, "from", from, CI_string);
@@ -1278,7 +1298,7 @@ ci_get_location_constraint (const char * id)
         struct mgmt_client * client;
         int i;
 
-        if ( id == NULL ) return NULL;
+        if ( id == NULL ) { return NULL; }
         if ( (client = mgmt_client_new()) == NULL ) {
                 return NULL;
         }
@@ -1358,6 +1378,13 @@ ci_get_colocation_constraint (const char * id)
 	to = client->get_nth_value(client, 2);
 	score = client->get_nth_value(client, 3);
 
+        if ( strcmp(lid, id) != 0 ) {
+                cl_log(LOG_ERR, "get_colocation_constraint: id not match: %s vs %s",
+                       lid, id);
+                ClientFree(client);
+                CITableFree(rsc_colocation);
+        }
+
         CITableInsert(rsc_colocation, "id", id, CI_string);
         CITableInsert(rsc_colocation, "from", from, CI_string);
         CITableInsert(rsc_colocation, "to", to, CI_string);
@@ -1405,7 +1432,7 @@ ci_get_constraint_name_table (uint32_t type)
 
         for ( i = 0; i < client->get_size(client); i++ ) {
                 char * consid = client->get_nth_value(client, i);
-                if ( consid == NULL ) continue;
+                if ( consid == NULL ) { continue; }
                 if ( (consid = CIM_STRDUP(consid)) == NULL ) {
                         continue;
                 }
@@ -1446,7 +1473,7 @@ ci_get_res_class_table ()
 
 	for ( i = 0; i < client->get_size(client); i ++ ) {
 		char * class = client->get_nth_value(client, i);
-		if ( class == NULL ) continue;
+		if ( class == NULL ) { continue; }
 		g_ptr_array_add(classes, CIM_STRDUP(class));
 	} 
         client->free(client);
@@ -1460,7 +1487,7 @@ ci_get_res_type_table (const char * class)
         int i;
         struct mgmt_client * client;
 
-        if ( class == NULL ) return NULL;
+        if ( class == NULL ) { return NULL; }
         if ( (client = mgmt_client_new()) == NULL ) {
                 return NULL;
         }
@@ -1476,7 +1503,7 @@ ci_get_res_type_table (const char * class)
 
         for ( i = 0; i < client->get_size(client); i++ ) {
                 char * type = client->get_nth_value(client, i);
-                if ( type == NULL ) continue;
+                if ( type == NULL ) { continue; }
                 
                 g_ptr_array_add(types, CIM_STRDUP(type));
         }
@@ -1492,7 +1519,7 @@ ci_get_res_provider_table(const char * class, const char * type)
         int i;
         struct mgmt_client * client;
 
-        if ( class == NULL || type == NULL ) return NULL;
+        if ( class == NULL || type == NULL ) { return NULL; }
         if ((client = mgmt_client_new()) == NULL ) {
                 return NULL;
         }
@@ -1508,7 +1535,7 @@ ci_get_res_provider_table(const char * class, const char * type)
 
         for ( i = 0; i < client->get_size(client); i++ ) {
                 char * provider = client->get_nth_value(client, i);
-                if ( provider == NULL ) continue;
+                if ( provider == NULL ) { continue; }
                 g_ptr_array_add(providers, CIM_STRDUP(provider));
         }
 
@@ -1570,10 +1597,9 @@ run_shell_command(const char * cmnd, int * ret,
 
 	i = 0;
 	while (!feof(fstream)) {
-
 		if ( fgets(buffer, 4096, fstream) != NULL ){
 			/** add buffer to std_out **/
-			*std_out = realloc(*std_out, (i+2) * sizeof(char*));	
+			*std_out = CIM_REALLOC(*std_out, (i+2) * sizeof(char*));	
                         if ( *std_out == NULL ) {
                                 rc = HA_FAIL;
                                 goto exit;
@@ -1584,7 +1610,6 @@ run_shell_command(const char * cmnd, int * ret,
 			continue;
 		}
 		i++;
-
 	}
 	
 	rc = HA_OK;
@@ -1717,5 +1742,5 @@ ci_free_ptr_array(GPtrArray * table, void (* free_ptr)(void * ptr))
 
 void
 ci_safe_free(void * ptr) {
-        if (ptr) CIM_FREE(ptr);
+        if (ptr) { CIM_FREE(ptr); }
 }

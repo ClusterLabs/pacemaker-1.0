@@ -39,7 +39,10 @@ int main(int argc, char * argv[])
         int i;
         char * result;
 
-        if ( argc < 2 ) return 0;
+        if ( argc < 2 ) {
+                return 0;
+        }
+
         ci_lib_initialize();
         if ( (msg = mgmt_new_msg(argv[1], NULL)) == NULL ) {
                 return 0;

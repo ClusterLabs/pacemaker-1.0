@@ -88,8 +88,6 @@ ResourceCloneEnumInstances(CMPIInstanceMI * mi, CMPIContext * ctx,
         } else {
                 CMReturn(CMPI_RC_ERR_FAILED);
         }
-        CMReturn(CMPI_RC_OK);	
-
 }
 
 static CMPIStatus 

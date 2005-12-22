@@ -119,9 +119,12 @@ default_enum_func (CMPIBroker * broker, char * classname, CMPIContext * ctx,
         i = 0;
         while(CMHasNext(en, rc)) {
                 CMPIObjectPath * top = CMGetNext(en, rc).value.ref;
-                if ( CMIsNullObject(top) ) continue;
-                if ( i == max_len ) break;
-
+                if ( CMIsNullObject(top) ) {
+                        continue;
+                }
+                if ( i == max_len ) {
+                        break;
+                }
                 CMSetArrayElementAt(array, i, &top, CMPI_ref);
                 i ++;
         }
@@ -246,7 +249,8 @@ cm_enum_associators(CMPIBroker * broker, char * classname,
                 target_role = left;
                 left_is_source = 0;
         } else {
-                cl_log(LOG_ERR, "assoc: neither lclass nor rclass");
+                cl_log(LOG_ERR, "enum_associators: lclass: %s, rclass: %s, source class: %s", 
+                      lclass, rclass, source_class);
                 return HA_FAIL;
         }
 
@@ -338,14 +342,12 @@ cm_enum_references(CMPIBroker * broker, char * classname,
                 target_role = left;
                 left_is_source = 0;
         } else {
-                cl_log(LOG_ERR, "assoc: neither lclass nor rclass");
+                cl_log(LOG_ERR, "enum_references: lcass: %s, rclass: %s, source class: %s", 
+                       lclass, rclass, source_classname);
                 return HA_FAIL;
         }
 
-        cl_log(LOG_INFO, "source_classname is %s", source_classname);
-
         /* enumerate taget object paths */
-
         if ( enum_func ) {
                 array = enum_func(broker, classname, ctx, nsp, 
                                   target_classname, target_role, cop, rc);

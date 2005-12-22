@@ -62,14 +62,12 @@ MasterSlaveResourceEnumInstanceNames(CMPIInstanceMI * mi, CMPIContext * ctx,
 {
         CMPIStatus rc;
         init_logger( PROVIDER_ID );
-
         if ( enum_inst_resource(G_broker, G_classname, ctx, rslt, ref, 0, 
                                 TID_RES_MASTER, &rc) == HA_OK ) {
                 CMReturn(CMPI_RC_OK);        
         } else {
                 return rc;
         }
-        CMReturn(CMPI_RC_OK);	
 }
 
 
@@ -87,7 +85,6 @@ MasterSlaveResourceEnumInstances(CMPIInstanceMI * mi, CMPIContext * ctx,
         } else {
                 return rc;
         }
-        CMReturn(CMPI_RC_OK);	
 }
 
 static CMPIStatus 

@@ -65,6 +65,10 @@ set_clone_properties(CMPIInstance * ci, const struct ci_table * clone)
         notify = clone->get_data(clone, "notify").value.string;
         ordered = clone->get_data(clone, "ordered").value.string;
         interleave = clone->get_data(clone, "interleave").value.string;
+        if (notify) { CMSetProperty(ci, "Notify", notify, CMPI_chars); }
+        if (ordered) { CMSetProperty(ci, "Ordered", ordered, CMPI_chars); }
+        if (interleave) { CMSetProperty(ci, "Interleave", interleave, CMPI_chars); }
+
 }
 
 static void 
@@ -88,7 +92,7 @@ make_res_inst(CMPIBroker * broker, char * classname, CMPIObjectPath * op,
         char * id , * status;
         char caption [256];
 
-        if ( info == NULL ) return NULL;
+        if ( info == NULL ) { return NULL; }
         ci = CMNewInstance(broker, op, rc);
         if ( CMIsNullObject(ci) ) {
                 cl_log(LOG_ERR, "%s: can't create instance", __FUNCTION__);
@@ -140,7 +144,7 @@ make_res_inst_by_id(CMPIBroker * broker, CMPIObjectPath * ref,
         char * namespace, * classname;
         CMPIObjectPath * op;
 
-        if ( rsc_name == NULL ) return NULL;
+        if ( rsc_name == NULL ) { return NULL; }
         namespace = CMGetCharPtr(CMGetNameSpace(ref, rc));
 
         cl_log(LOG_INFO, "%s: make instance for %s", __FUNCTION__, rsc_name);
@@ -165,7 +169,7 @@ make_res_inst_by_id(CMPIBroker * broker, CMPIObjectPath * ref,
              return NULL;
         }
 
-        if ( info == NULL ) return NULL;
+        if ( info == NULL ) { return NULL; }
 
         op = CMNewObjectPath(broker, namespace, classname, rc);
         if ( CMIsNullObject(op) ) {
@@ -186,7 +190,7 @@ make_res_op_by_id(CMPIBroker * broker, CMPIObjectPath * ref,
         char * namespace, * classname;
         CMPIObjectPath * op;
 
-        if ( rsc_name == NULL ) return NULL;
+        if ( rsc_name == NULL )  { return NULL; }
         namespace = CMGetCharPtr(CMGetNameSpace(ref, rc));
 
         switch(type) {
@@ -277,7 +281,7 @@ enum_inst_resource(CMPIBroker * broker, char * classname, CMPIContext * ctx,
         for ( i = 0; i < CITableSize(table); i++) {
                 char * rsc_id;
                 rsc_id = CITableGetAt(table, i).value.string;
-                if ( rsc_id == NULL ) continue;
+                if ( rsc_id == NULL ) { continue; }
                 /* if type == 0, enum all resources */
                 this_type =  ci_get_resource_type(rsc_id);
                 if ( type != 0 && type != this_type) {

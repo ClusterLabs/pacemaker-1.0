@@ -74,12 +74,12 @@ make_enum_for_right(CMPIBroker * broker, char * classname, CMPIContext * ctx,
         if ((s = CMGetKey(source_op, "Id", rc).value.string) == NULL ) {
                 return NULL;
         }
-        if ((rsc_id = CMGetCharPtr(s)) == NULL ) return NULL;
+        if ((rsc_id = CMGetCharPtr(s)) == NULL ) { return NULL; }
         if (( s = CMGetKey(source_op, "CreationClassName", 
                            rc).value.string) == NULL ) {
                 return NULL;
         }
-        if ((rsc_cr_name = CMGetCharPtr(s)) == NULL ) return NULL;
+        if ((rsc_cr_name = CMGetCharPtr(s)) == NULL ) { return NULL; }
 
         if ((operations = ci_get_inst_operations(rsc_id)) == NULL ) {
                 return NULL;
@@ -98,12 +98,12 @@ make_enum_for_right(CMPIBroker * broker, char * classname, CMPIContext * ctx,
                 char * operation_id;
                 
                 target_op = CMNewObjectPath(broker, namespace, G_right_class, rc);
-                if ( CMIsNullObject(target_op)) continue;
+                if ( CMIsNullObject(target_op)) { continue; }
 
                 operation = operations->get_data_at(operations, i).value.table;
-                if ( operation == NULL )  continue;
+                if ( operation == NULL )  { continue; }
                 operation_id = operation->get_data(operation, "id").value.string;
-                if (operation_id == NULL ) continue;
+                if (operation_id == NULL ) { continue; }
 
                 CMAddKey(target_op, "Id", operation_id, CMPI_chars);
                 CMAddKey(target_op, "SystemName", rsc_id, CMPI_chars);

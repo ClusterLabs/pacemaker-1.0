@@ -66,10 +66,8 @@ OrderConstraintEnumInstanceNames(CMPIInstanceMI * mi, CMPIContext * ctx,
         if ( enum_inst_cons(G_broker, G_classname, ctx, rslt, ref, 0, 
                             TID_CONS_ORDER, &rc) == HA_OK ) {
                 CMReturn(CMPI_RC_OK);        
-        } else {
-                return rc;
         }
-        CMReturn(CMPI_RC_OK);	
+        return rc;
 }
 
 
@@ -84,10 +82,9 @@ OrderConstraintEnumInstances(CMPIInstanceMI * mi, CMPIContext * ctx,
         if ( enum_inst_cons(G_broker, G_classname, ctx, rslt, ref, 1, 
                             TID_CONS_ORDER, &rc) == HA_OK ) {
                 CMReturn(CMPI_RC_OK);        
-        } else {
-                return rc;
-        }
-        CMReturn(CMPI_RC_OK);
+        } 
+
+        return rc;
 }
 
 static CMPIStatus 

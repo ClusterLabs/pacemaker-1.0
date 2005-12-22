@@ -27,7 +27,7 @@ set_location_rules(CMPIBroker * broker, CMPIInstance * ci,
         int i, size;
 
         rule = CITableGet(constraint, "rule").value.table;
-        if ( rule == NULL ) return;
+        if ( rule == NULL ) { return; }
         size = CITableSize(rule);
 
         if (( array = CMNewArray(broker, size, CMPI_chars, rc)) == NULL ){
@@ -39,7 +39,7 @@ set_location_rules(CMPIBroker * broker, CMPIInstance * ci,
                 int str_len;
                 char * tmp;
                 exp = CITableGetAt(rule, i).value.table;
-                if ( exp == NULL ) continue;
+                if ( exp == NULL ) { continue; }
 
                 id = CITableGet(exp, "id").value.string;
                 attribute = CITableGet(exp, "attribute").value.string;
@@ -50,7 +50,7 @@ set_location_rules(CMPIBroker * broker, CMPIInstance * ci,
                         strlen(operation) + strlen(value) +
                         strlen("id") + strlen("attribute") +
                         strlen("operation") + strlen("value") + 8;
-                if ( (tmp = (char *)CIM_MALLOC(str_len)) == NULL ) return;
+                if ( (tmp = (char *)CIM_MALLOC(str_len)) == NULL ) { return; }
 
                 sprintf(tmp, "id=%s,attribute=%s,operation=%s,value=%s",
                         id, attribute, operation, value);
@@ -71,7 +71,7 @@ make_cons_inst(CMPIBroker * broker, char * classname, CMPIObjectPath * op,
         char type_colocation [] = "Colocation";
         char type_order [] = "Order";
         char caption[256];
-        if ( constraint == NULL ) return NULL;
+        if ( constraint == NULL ) { return NULL; }
 
         ci = CMNewInstance(broker, op, rc);
         if ( CMIsNullObject(ci) ) {
@@ -82,7 +82,7 @@ make_cons_inst(CMPIBroker * broker, char * classname, CMPIObjectPath * op,
         }
         
         id = constraint->get_data(constraint, "id").value.string;
-        if ( id == NULL ) return NULL;
+        if ( id == NULL ) { return NULL; }
 
         /* setting properties */
         CMSetProperty(ci, "Id", id, CMPI_chars);
@@ -100,11 +100,12 @@ make_cons_inst(CMPIBroker * broker, char * classname, CMPIObjectPath * op,
                  action = order->get_data(order, "action").value.string;
                  order_type = order->get_data(order, "type").value.string;
 
-                 if(to) CMSetProperty(ci, "To", to, CMPI_chars);
-                 if(from) CMSetProperty(ci, "From", from, CMPI_chars);
-                 if(action) CMSetProperty(ci, "Action", action, CMPI_chars);
-                 if(order_type) CMSetProperty(ci, "OrderType", order_type, CMPI_chars);
-
+                 if(to) { CMSetProperty(ci, "To", to, CMPI_chars);            }
+                 if(from) { CMSetProperty(ci, "From", from, CMPI_chars);      }
+                 if(action) { CMSetProperty(ci, "Action", action, CMPI_chars);}
+                 if(order_type) { 
+                        CMSetProperty(ci, "OrderType", order_type, CMPI_chars);
+                 }
                  CMSetProperty(ci, "Type", type_order, CMPI_chars);
         } else if ( type == TID_CONS_LOCATION ) {
                  struct ci_table * location = constraint;
@@ -113,8 +114,10 @@ make_cons_inst(CMPIBroker * broker, char * classname, CMPIObjectPath * op,
                  resource = CITableGet(location, "resource").value.string;
                  score = CITableGet(location, "score").value.string;
 
-                 if(resource) CMSetProperty(ci, "Resource", resource, CMPI_chars);
-                 if(score) CMSetProperty(ci, "Score", score, CMPI_chars);
+                 if(resource) { 
+                        CMSetProperty(ci, "Resource", resource, CMPI_chars); 
+                 }
+                 if(score) { CMSetProperty(ci, "Score", score, CMPI_chars); }
                  CMSetProperty(ci, "Type", type_location, CMPI_chars);
 
                  /* currently Rules is an array, which should be modeled as a class */
@@ -127,9 +130,9 @@ make_cons_inst(CMPIBroker * broker, char * classname, CMPIObjectPath * op,
                  from = colocation->get_data(colocation, "from").value.string;
                  score = colocation->get_data(colocation, "score").value.string;
 
-                 if(to) CMSetProperty(ci, "To", to, CMPI_chars);
-                 if(from) CMSetProperty(ci, "From", from, CMPI_chars);
-                 if(score) CMSetProperty(ci, "Score", score, CMPI_chars);
+                 if(to) { CMSetProperty(ci, "To", to, CMPI_chars); }
+                 if(from) { CMSetProperty(ci, "From", from, CMPI_chars); }
+                 if(score) { CMSetProperty(ci, "Score", score, CMPI_chars); }
 
                  CMSetProperty(ci, "Type", type_colocation, CMPI_chars);
         }
@@ -148,7 +151,7 @@ make_cons_inst_by_id(CMPIBroker * broker, char * classname, CMPIObjectPath * op,
                      char * id, uint32_t type, CMPIStatus * rc) 
 {
         struct ci_table * constraint;
-        if ( id == NULL ) return NULL;
+        if ( id == NULL ) { return NULL; }
 
         switch(type) {
         case TID_CONS_LOCATION:
@@ -164,7 +167,7 @@ make_cons_inst_by_id(CMPIBroker * broker, char * classname, CMPIObjectPath * op,
              return NULL;
         }
 
-        if ( constraint == NULL ) return NULL;
+        if ( constraint == NULL ) { return NULL; }
         return make_cons_inst(broker, classname, op, constraint, type, rc);
 }
 

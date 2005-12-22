@@ -133,9 +133,9 @@ enum_func_for_right(CMPIBroker * broker, char * classname, CMPIContext * ctx,
                 char * sub_id;
                 
                 sub_id = (char *) g_ptr_array_index(sub_name_tbl, i);
-                if ( sub_id == NULL ) continue;
-                if ( CMIsNullObject(target_op) ) continue;
-
+                if ( sub_id == NULL ) {
+                        continue;
+                }
                 rsc_type = ci_get_resource_type(sub_id);
                 if (rsc_type == TID_RES_PRIMITIVE ) {
                         cr_name = cr_name_primitive;
@@ -145,10 +145,15 @@ enum_func_for_right(CMPIBroker * broker, char * classname, CMPIContext * ctx,
                         cr_name = cr_name_clone;
                 } else if ( rsc_type == TID_RES_MASTER ) {
                         cr_name = cr_name_master;
-                } else cr_name = cr_name_unknown;
-
+                } else {
+                        cr_name = cr_name_unknown;
+                }
+               
                 /* create object path */
                 target_op = CMNewObjectPath(broker, namespace, cr_name, rc);
+                if ( CMIsNullObject(target_op) ) {
+                        continue;
+                }
                 /* set keys */
                 CMAddKey(target_op, "Id", sub_id, CMPI_chars);
                 CMAddKey(target_op, "SystemName", sys_name, CMPI_chars);
@@ -243,8 +248,9 @@ group_contain(CMPIBroker * broker, char * classname, CMPIContext * ctx,
         for ( i = 0; i < sub_name_tbl->len; i++ ) {
                 char * sub_rsc_id;
                 sub_rsc_id = (char *)  g_ptr_array_index(sub_name_tbl, i);
-                if ( rsc_id == NULL ) continue;
-
+                if ( rsc_id == NULL ) {
+                        continue;
+                }
                 if ( strcmp(sub_rsc_id, rsc_id ) == 0 ) {
                         /* found */
                         return 1;
