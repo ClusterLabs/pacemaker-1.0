@@ -53,11 +53,8 @@ _pymgmt_la_LDFLAGS = -module `libgnutls-config --libs`
 
 halib_SCRIPTS = pymgmt.py
 
-pymgmt_wrap.c : pymgmt.i
-	$(SWIG) -python -o $@ $^
-
-pymgmt.py: pymgmt.i 
-	echo a dummy rule
+pymgmt_wrap.c pymgmt.py: pymgmt.i
+	$(SWIG) -python $^
 
 install-exec-local:
 	$(mkinstalldirs) $(DESTDIR)$(mgmtdir)
