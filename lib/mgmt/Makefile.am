@@ -56,7 +56,8 @@ halib_SCRIPTS = pymgmt.py
 pymgmt_wrap.c : pymgmt.i
 	$(SWIG) -python -o $@ $^
 
-pymgmt.py: pymgmt_wrap.c
+pymgmt.py: pymgmt.i 
+	echo a dummy rule
 
 install-exec-local:
 	$(mkinstalldirs) $(DESTDIR)$(mgmtdir)
