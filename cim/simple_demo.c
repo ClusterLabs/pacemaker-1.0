@@ -20,14 +20,16 @@
  *
  */
 
-
+#include <portability.h>
+#ifdef HAVE_CONFIG_H
+#include <config.h>
+#endif
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <glib.h>
-#include "cmpi_utils.h"
 #include "cluster_info.h"
 #include <ha_msg.h>
 #include <hb_api.h>
