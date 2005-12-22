@@ -1,4 +1,4 @@
-#	$Id: heartbeat.spec.in,v 1.155 2005/12/22 07:35:01 sunjd Exp $
+#	$Id: heartbeat.spec.in,v 1.156 2005/12/22 10:02:29 sunjd Exp $
 
 # Workaround for a change in RPM 4.1.x; needs proper fixing soon!
 ##%define _unpackaged_files_terminate_build 0
@@ -1056,7 +1056,6 @@ make DESTDIR=$RPM_BUILD_ROOT install
 	@libdir@/libmgmtclient.*
 	@libdir@/libmgmtcommon.*
 	@libdir@/libmgmttls.*
-	@libdir@/heartbeat/pymgmt.py
 	/etc/pam.d/mgmtd
 	/usr/share/locale/zh_CN/LC_MESSAGES/haclient.zh_CN.mo
 %endif
