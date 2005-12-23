@@ -76,7 +76,7 @@ const char * order_keys      [] = {"id", "from", "action", "type", "to",
 const char * localtion_keys  [] = {"id", "rsc"};
 const char * colocation_keys [] = {"id", "from", "to", "score"};
 
-typedef unsigned int POINTER_t;
+typedef unsigned long POINTER_t;
 /*************************************
  * mgmt lib
  *************************************/
@@ -337,11 +337,11 @@ ci_table_private_insert_value(struct ci_table_private * private,
         }
 
         /* should be atomic */
-        cl_log(LOG_INFO, "insert %s to (private: 0x%0x, array: 0x%0x), type: %d", 
+        cl_log(LOG_INFO, "insert %s to (private: 0x%0lx, array: 0x%0lx), type: %d", 
                key, (POINTER_t)private, (POINTER_t)private->array, type);
         g_ptr_array_add(private->array, data);
 
-        cl_log(LOG_INFO, "insert %s to (private: 0x%0x, map: 0x%0x), type: %d", 
+        cl_log(LOG_INFO, "insert %s to (private: 0x%0lx, map: 0x%0lx), type: %d", 
                key, (POINTER_t)private, (POINTER_t)private->map, type);
         g_hash_table_insert(private->map, CIM_STRDUP(key), data);
 
@@ -378,7 +378,7 @@ ci_table_private_free(struct ci_table_private * private)
                 CIM_FREE(private);
                 return;
         }
-        cl_log(LOG_INFO, "freeing (private: 0x%0x)", (POINTER_t)private);
+        cl_log(LOG_INFO, "freeing (private: 0x%0lx)", (POINTER_t)private);
         for ( i = 0; i < private->array->len; i ++ ) {
                 struct ci_data * data;
                 data = (struct ci_data *) 
@@ -407,7 +407,7 @@ ci_table_private_free(struct ci_table_private * private)
                 g_hash_table_destroy(private->map);
         }
 
-        cl_log(LOG_INFO, "(private: 0x%0x) freed", (POINTER_t)private);
+        cl_log(LOG_INFO, "(private: 0x%0lx) freed", (POINTER_t)private);
         CIM_FREE(private);
 }
 
@@ -490,7 +490,7 @@ ci_table_get_data(const struct ci_table * table, const char * key)
                 return zero_data;
         }
 
-        cl_log(LOG_INFO, "got %s from (private: 0x%0x, map: 0x%0x), type: %d", 
+        cl_log(LOG_INFO, "got %s from (private: 0x%0lx, map: 0x%0lx), type: %d", 
                key, (POINTER_t)private, (POINTER_t)private->map, data->type);
         return * data;
 }
@@ -516,7 +516,7 @@ ci_table_get_data_at(const struct ci_table * table, int index)
         data = (struct ci_data *)g_ptr_array_index(private->array, index);
         if ( data == NULL ) { return zero_data; }
 
-        cl_log(LOG_INFO, "got data %d from (private: 0x%0x, array: 0x%0x), type: %d", 
+        cl_log(LOG_INFO, "got data %d from (private: 0x%0lx, array: 0x%0lx), type: %d", 
                index, (POINTER_t)private, (POINTER_t)private->array, data->type);
         
         return * data;
