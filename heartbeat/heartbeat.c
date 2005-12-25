@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.477 2005/12/19 18:41:43 gshi Exp $ */
+/* $Id: heartbeat.c,v 1.478 2005/12/25 22:39:50 alan Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -1608,7 +1608,7 @@ polled_input_prepare(GSource* source,
 		     gint* timeout)
 {
 
-	if (DEBUGDETAILS){
+	if (DEBUGPKT){
 		cl_log(LOG_DEBUG,"polled_input_prepare(): timeout=%d"
 		,	*timeout);
 	}
@@ -1626,7 +1626,7 @@ polled_input_check(GSource* source)
 	
 	LookForClockJumps();
 	
-	if (DEBUGDETAILS) {
+	if (DEBUGPKT) {
 		cl_log(LOG_DEBUG,"polled_input_check(): result = %d"
 		,	cmp_longclock(now, NextPoll) >= 0);
 	}
@@ -1642,7 +1642,7 @@ polled_input_dispatch(GSource* source,
 {
 	longclock_t	now = time_longclock();
 
-	if (DEBUGDETAILS){
+	if (DEBUGPKT){
 		cl_log(LOG_DEBUG,"polled_input_dispatch() {");
 	}
 	NextPoll = add_longclock(now, msto_longclock(POLL_INTERVAL));
@@ -1682,7 +1682,7 @@ polled_input_dispatch(GSource* source,
 		hb_send_resources_held(TRUE, NULL);
 		AuditResources();
 	}
-	if (DEBUGDETAILS){
+	if (DEBUGPKT){
 		cl_log(LOG_DEBUG,"}/*polled_input_dispatch*/;");
 	}
 
@@ -6037,6 +6037,9 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.478  2005/12/25 22:39:50  alan
+ * Increased the debug level of a few messages...
+ *
  * Revision 1.477  2005/12/19 18:41:43  gshi
  * add debug msg for rexmit
  *
