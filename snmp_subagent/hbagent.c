@@ -819,7 +819,7 @@ handle_membership_msg(void)
 			free_membershiptable();
                         
                         /* finalize membership */
-                        saClmFinlize(&clm);
+                        saClmFinalize(&clm);
 			return HA_OK;
 		} else {
 		    cl_log(LOG_WARNING, "saClmDispatch error, ret = [%d]", ret);
