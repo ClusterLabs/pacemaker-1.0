@@ -83,14 +83,15 @@ static char* on_delete_constraint(char* argv[], int argc);
 static resource_t* find_resource(GList* rsc_list, const char* id);
 static int delete_object(const char* type, const char* entry, const char* id);
 static GList* find_xml_node_list(crm_data_t *root, const char *search_path);
-static pe_working_set_t get_data_set(void);
 static int refresh_lrm(IPC_Channel *crmd_channel, const char *host_uname);
 static int delete_lrm_rsc(IPC_Channel *crmd_channel, const char *host_uname, const char *rsc_id);
+static pe_working_set_t* get_data_set(void);
+static void free_data_set(pe_working_set_t* data_set);
 
 #define GET_RESOURCE()	if (argc != 2) { 					\
 				return cl_strdup(MSG_FAIL); 			\
 			} 							\
-			rsc = find_resource(data_set.resources, argv[1]); 	\
+			rsc = find_resource(data_set->resources, argv[1]); 	\
 			if (rsc == NULL) {					\
 				return cl_strdup(MSG_FAIL); 			\
 			}
@@ -152,22 +153,25 @@ delete_object(const char* type, const char* entry, const char* id)
 	return 0;
 }
 
-pe_working_set_t 
-get_data_set(void) {
-	static crm_data_t* cib_xml_copy = NULL;
-	pe_working_set_t data_set;
+pe_working_set_t*
+get_data_set(void) 
+{
+	pe_working_set_t* data_set;
 	
-	set_working_set_defaults(&data_set);
-	if (cib_xml_copy) {
-		ha_msg_del(cib_xml_copy);
-	}
-	cib_xml_copy = get_cib_copy(cib_conn);
-	data_set.input = cib_xml_copy;
-	data_set.now = new_ha_date(TRUE);
-	stage0(&data_set);
+	data_set = (pe_working_set_t*)cl_malloc(sizeof(pe_working_set_t));
+	set_working_set_defaults(data_set);
+	data_set->input = get_cib_copy(cib_conn);
+	data_set->now = new_ha_date(TRUE);
+	stage0(data_set);
 	return data_set;
 }
 
+void 
+free_data_set(pe_working_set_t* data_set)
+{
+	cleanup_calculations(data_set);
+	cl_free(data_set);
+}	
 
 /* mgmtd functions */
 int
@@ -257,15 +261,15 @@ char*
 on_get_crm_config(char* argv[], int argc)
 {
 	char buf [255];
-	pe_working_set_t data_set;
+	pe_working_set_t* data_set;
 	char* ret = cl_strdup(MSG_OK);
 	data_set = get_data_set();
 	
-	ret = mgmt_msg_append(ret, data_set.transition_idle_timeout);
-	ret = mgmt_msg_append(ret, data_set.symmetric_cluster?"True":"False");
-	ret = mgmt_msg_append(ret, data_set.stonith_enabled?"True":"False");
+	ret = mgmt_msg_append(ret, data_set->transition_idle_timeout);
+	ret = mgmt_msg_append(ret, data_set->symmetric_cluster?"True":"False");
+	ret = mgmt_msg_append(ret, data_set->stonith_enabled?"True":"False");
 	
-	switch (data_set.no_quorum_policy) {
+	switch (data_set->no_quorum_policy) {
 		case no_quorum_freeze:
 			ret = mgmt_msg_append(ret, "freeze");
 			break;
@@ -276,9 +280,10 @@ on_get_crm_config(char* argv[], int argc)
 			ret = mgmt_msg_append(ret, "ignore");
 			break;
 	}
-	snprintf(buf, 255, "%d", data_set.default_resource_stickiness);
+	snprintf(buf, 255, "%d", data_set->default_resource_stickiness);
 	ret = mgmt_msg_append(ret, buf);
-	ret = mgmt_msg_append(ret, data_set.have_quorum?"True":"False");
+	ret = mgmt_msg_append(ret, data_set->have_quorum?"True":"False");
+	free_data_set(data_set);
 	return ret;
 }
 char*
@@ -317,10 +322,10 @@ on_get_activenodes(char* argv[], int argc)
 	node_t* node;
 	GList* cur;
 	char* ret;
-	pe_working_set_t data_set;
+	pe_working_set_t* data_set;
 	
 	data_set = get_data_set();
-	cur = data_set.nodes;
+	cur = data_set->nodes;
 	ret = cl_strdup(MSG_OK);
 	while (cur != NULL) {
 		node = (node_t*) cur->data;
@@ -329,20 +334,23 @@ on_get_activenodes(char* argv[], int argc)
 		}
 		cur = g_list_next(cur);
 	}
+	free_data_set(data_set);
 	return ret;
 }
 
 char* 
 on_get_dc(char* argv[], int argc)
 {
-	pe_working_set_t data_set;
+	pe_working_set_t* data_set;
 	
 	data_set = get_data_set();
-	if (data_set.dc_node != NULL) {
+	if (data_set->dc_node != NULL) {
 		char* ret = cl_strdup(MSG_OK);
-		ret = mgmt_msg_append(ret, data_set.dc_node->details->uname);
+		ret = mgmt_msg_append(ret, data_set->dc_node->details->uname);
+		free_data_set(data_set);
 		return ret;
 	}
+	free_data_set(data_set);
 	return cl_strdup(MSG_FAIL);
 }
 
@@ -352,30 +360,33 @@ on_get_node_config(char* argv[], int argc)
 {
 	node_t* node;
 	GList* cur;
-	pe_working_set_t data_set;
+	pe_working_set_t* data_set;
 	
 	data_set = get_data_set();
-	cur = data_set.nodes;
+	cur = data_set->nodes;
 	ARGC_CHECK(2);
 	while (cur != NULL) {
 		node = (node_t*) cur->data;
-		if (node->details->online) {
-			if (strncmp(argv[1],node->details->uname,MAX_STRLEN) == 0) {
-				char* ret = cl_strdup(MSG_OK);
-				ret = mgmt_msg_append(ret, node->details->uname);
-				ret = mgmt_msg_append(ret, node->details->online?"True":"False");
-				ret = mgmt_msg_append(ret, node->details->standby?"True":"False");
-				ret = mgmt_msg_append(ret, node->details->unclean?"True":"False");
-				ret = mgmt_msg_append(ret, node->details->shutdown?"True":"False");
-				ret = mgmt_msg_append(ret, node->details->expected_up?"True":"False");
-				ret = mgmt_msg_append(ret, node->details->is_dc?"True":"False");
-				ret = mgmt_msg_append(ret, node->details->type==node_ping?"ping":"member");
-
-				return ret;
-			}
+		if (!node->details->online) {
+			cur = g_list_next(cur);
+			continue;
+		}
+		if (strncmp(argv[1],node->details->uname,MAX_STRLEN) == 0) {
+			char* ret = cl_strdup(MSG_OK);
+			ret = mgmt_msg_append(ret, node->details->uname);
+			ret = mgmt_msg_append(ret, node->details->online?"True":"False");
+			ret = mgmt_msg_append(ret, node->details->standby?"True":"False");
+			ret = mgmt_msg_append(ret, node->details->unclean?"True":"False");
+			ret = mgmt_msg_append(ret, node->details->shutdown?"True":"False");
+			ret = mgmt_msg_append(ret, node->details->expected_up?"True":"False");
+			ret = mgmt_msg_append(ret, node->details->is_dc?"True":"False");
+			ret = mgmt_msg_append(ret, node->details->type==node_ping?"ping":"member");
+			free_data_set(data_set);
+			return ret;
 		}
 		cur = g_list_next(cur);
 	}
+	free_data_set(data_set);
 	return cl_strdup(MSG_FAIL);
 }
 
@@ -384,10 +395,10 @@ on_get_running_rsc(char* argv[], int argc)
 {
 	node_t* node;
 	GList* cur;
-	pe_working_set_t data_set;
+	pe_working_set_t* data_set;
 	
 	data_set = get_data_set();
-	cur = data_set.nodes;
+	cur = data_set->nodes;
 	ARGC_CHECK(2);
 	while (cur != NULL) {
 		node = (node_t*) cur->data;
@@ -401,11 +412,13 @@ on_get_running_rsc(char* argv[], int argc)
 					ret = mgmt_msg_append(ret, rsc->id);
 					cur_rsc = g_list_next(cur_rsc);
 				}
+				free_data_set(data_set);
 				return ret;
 			}
 		}
 		cur = g_list_next(cur);
 	}
+	free_data_set(data_set);
 	return cl_strdup(MSG_FAIL);
 }
 /* resource functions */
@@ -419,7 +432,7 @@ on_del_rsc(char* argv[], int argc)
 	crm_data_t* cib_object = NULL;
 	crm_data_t* output;
 	char xml[MAX_STRLEN];
-	pe_working_set_t data_set;
+	pe_working_set_t* data_set;
 	
 	data_set = get_data_set();
 	GET_RESOURCE()
@@ -446,9 +459,10 @@ on_del_rsc(char* argv[], int argc)
 			snprintf(xml, MAX_STRLEN, "<master_slave id=\"%s\"/>", rsc->id);
 			break;
 		default:
+			free_data_set(data_set);
 			return cl_strdup(MSG_FAIL);
 	}
-			
+	free_data_set(data_set);
 
 	cib_object = string2xml(xml);
 	if(cib_object == NULL) {
@@ -462,7 +476,6 @@ on_del_rsc(char* argv[], int argc)
 		return cl_strdup(MSG_FAIL);
 	}
 
-	
 	return cl_strdup(MSG_OK);
 }
 static int
@@ -678,16 +691,17 @@ on_get_all_rsc(char* argv[], int argc)
 {
 	GList* cur;
 	char* ret;
-	pe_working_set_t data_set;
+	pe_working_set_t* data_set;
 	
 	data_set = get_data_set();
 	ret = cl_strdup(MSG_OK);
-	cur = data_set.resources;
+	cur = data_set->resources;
 	while (cur != NULL) {
 		resource_t* rsc = (resource_t*)cur->data;
 		ret = mgmt_msg_append(ret, rsc->id);
 		cur = g_list_next(cur);
 	}
+	free_data_set(data_set);
 	return ret;
 }
 /* basic information of resource */
@@ -697,7 +711,7 @@ on_get_rsc_attrs(char* argv[], int argc)
 	resource_t* rsc;
 	char* ret;
 	struct ha_msg* attrs;
-	pe_working_set_t data_set;
+	pe_working_set_t* data_set;
 	
 	data_set = get_data_set();
 	GET_RESOURCE()
@@ -708,6 +722,7 @@ on_get_rsc_attrs(char* argv[], int argc)
 	ret = mgmt_msg_append(ret, ha_msg_value(attrs, "class"));
 	ret = mgmt_msg_append(ret, ha_msg_value(attrs, "provider"));
 	ret = mgmt_msg_append(ret, ha_msg_value(attrs, "type"));
+	free_data_set(data_set);
 	return ret;
 }
 
@@ -717,7 +732,7 @@ on_get_rsc_running_on(char* argv[], int argc)
 	resource_t* rsc;
 	char* ret;
 	GList* cur;
-	pe_working_set_t data_set;
+	pe_working_set_t* data_set;
 	
 	data_set = get_data_set();
 	GET_RESOURCE()
@@ -729,6 +744,7 @@ on_get_rsc_running_on(char* argv[], int argc)
 		ret = mgmt_msg_append(ret, node->details->uname);
 		cur = g_list_next(cur);
 	}
+	free_data_set(data_set);
 	return ret;
 }
 char*
@@ -736,7 +752,7 @@ on_get_rsc_status(char* argv[], int argc)
 {
 	resource_t* rsc;
 	char* ret;
-	pe_working_set_t data_set;
+	pe_working_set_t* data_set;
 	
 	data_set = get_data_set();
 	GET_RESOURCE()
@@ -772,6 +788,7 @@ on_get_rsc_status(char* argv[], int argc)
 			ret = mgmt_msg_append(ret, "master");
 			break;
 	}
+	free_data_set(data_set);
 	return ret;
 }
 
@@ -780,7 +797,7 @@ on_get_rsc_type(char* argv[], int argc)
 {
 	resource_t* rsc;
 	char* ret;
-	pe_working_set_t data_set;
+	pe_working_set_t* data_set;
 	
 	data_set = get_data_set();
 	GET_RESOURCE()
@@ -804,7 +821,7 @@ on_get_rsc_type(char* argv[], int argc)
 			ret = mgmt_msg_append(ret, "master");
 			break;
 	}
-
+	free_data_set(data_set);
 	return ret;
 }
 /* FIXME: following two structures is copied from CRM */
@@ -848,7 +865,7 @@ on_get_sub_rsc(char* argv[], int argc)
 	resource_t* rsc;
 	char* ret;
 	GList* cur = NULL;
-	pe_working_set_t data_set;
+	pe_working_set_t* data_set;
 	
 	data_set = get_data_set();
 	GET_RESOURCE()
@@ -866,6 +883,7 @@ on_get_sub_rsc(char* argv[], int argc)
 		ret = mgmt_msg_append(ret, rsc->id);
 		cur = g_list_next(cur);
 	}
+	free_data_set(data_set);
 	return ret;
 }
 
@@ -878,7 +896,7 @@ on_get_rsc_params(char* argv[], int argc)
 	char* ret;
 	struct ha_msg* attrs;
 	struct ha_msg* nvpair;
-	pe_working_set_t data_set;
+	pe_working_set_t* data_set;
 	
 	data_set = get_data_set();
 	GET_RESOURCE()
@@ -886,10 +904,12 @@ on_get_rsc_params(char* argv[], int argc)
 	ret = cl_strdup(MSG_OK);
 	attrs = cl_get_struct((struct ha_msg*)rsc->xml, "instance_attributes");
 	if(attrs == NULL) {
+		free_data_set(data_set);
 		return ret;
 	}
 	attrs = cl_get_struct(attrs, "attributes");
 	if(attrs == NULL) {
+		free_data_set(data_set);
 		return ret;
 	}
 	for (i = 0; i < attrs->nfields; i++) {
@@ -900,6 +920,7 @@ on_get_rsc_params(char* argv[], int argc)
 			ret = mgmt_msg_append(ret, ha_msg_value(nvpair, "value"));
 		}
 	}
+	free_data_set(data_set);
 	return ret;
 }
 char*
@@ -957,7 +978,7 @@ on_get_rsc_ops(char* argv[], int argc)
 	char* ret;
 	struct ha_msg* ops;
 	struct ha_msg* op;
-	pe_working_set_t data_set;
+	pe_working_set_t* data_set;
 	
 	data_set = get_data_set();
 	GET_RESOURCE()
@@ -965,6 +986,7 @@ on_get_rsc_ops(char* argv[], int argc)
 	ret = cl_strdup(MSG_OK);
 	ops = cl_get_struct((struct ha_msg*)rsc->xml, "operations");
 	if (ops == NULL) {
+		free_data_set(data_set);
 		return ret;
 	}
 	for (i = 0; i < ops->nfields; i++) {
@@ -976,6 +998,7 @@ on_get_rsc_ops(char* argv[], int argc)
 			ret = mgmt_msg_append(ret, ha_msg_value(op, "timeout"));
 		}
 	}
+	free_data_set(data_set);
 	return ret;
 }
 char*
@@ -1032,7 +1055,7 @@ on_get_clone(char* argv[], int argc)
 	char* ret;
 	clone_variant_data_t* clone_data;
 	char buf[MAX_STRLEN];
-	pe_working_set_t data_set;
+	pe_working_set_t* data_set;
 	
 	data_set = get_data_set();
 	GET_RESOURCE()
@@ -1045,6 +1068,7 @@ on_get_clone(char* argv[], int argc)
 	ret = mgmt_msg_append(ret, buf);
 	snprintf(buf, MAX_STRLEN, "%d", clone_data->clone_node_max);
 	ret = mgmt_msg_append(ret, buf);
+	free_data_set(data_set);
 	return ret;
 }
 char*
@@ -1086,7 +1110,7 @@ on_get_master(char* argv[], int argc)
 	const char * master_max_s;
 	const char * master_node_max_s;
 	char buf[MAX_STRLEN];
-	pe_working_set_t data_set;
+	pe_working_set_t* data_set;
 	
 	data_set = get_data_set();
 	GET_RESOURCE()
@@ -1104,6 +1128,7 @@ on_get_master(char* argv[], int argc)
 	ret = mgmt_msg_append(ret, buf);
 	ret = mgmt_msg_append(ret, master_max_s);
 	ret = mgmt_msg_append(ret, master_node_max_s);
+	free_data_set(data_set);
 	return ret;
 }
 char*
@@ -1147,14 +1172,15 @@ on_get_constraints(char* argv[], int argc)
 	GList* list;
 	GList* cur;
 	crm_data_t* cos = NULL;
-	pe_working_set_t data_set;
+	pe_working_set_t* data_set;
 	const char* path[] = {"configuration","constraints"}
 	
 	ARGC_CHECK(2);
 	
 	data_set = get_data_set();
-	cos = find_xml_node_nested(data_set.input, path, 2);
+	cos = find_xml_node_nested(data_set->input, path, 2);
 	if (cos == NULL) {
+		free_data_set(data_set);
 		return  cl_strdup(MSG_FAIL);
 	}
 	ret = cl_strdup(MSG_OK);
@@ -1167,6 +1193,7 @@ on_get_constraints(char* argv[], int argc)
 		cur = g_list_next(cur);
 	}
 	g_list_free(list);
+	free_data_set(data_set);
 	return ret;
 }
 
@@ -1180,13 +1207,14 @@ on_get_constraint(char* argv[], int argc)
 	
 	GList* expr_list, *expr_cur;
 	crm_data_t* cos = NULL;
-	pe_working_set_t data_set;
+	pe_working_set_t* data_set;
 	const char* path[] = {"configuration","constraints"}
 	ARGC_CHECK(3);
 	
 	data_set = get_data_set();
-	cos = find_xml_node_nested(data_set.input, path, 2);
+	cos = find_xml_node_nested(data_set->input, path, 2);
 	if (cos == NULL) {
+		free_data_set(data_set);
 		return  cl_strdup(MSG_FAIL);
 	}
 	ret = cl_strdup(MSG_OK);
@@ -1229,6 +1257,7 @@ on_get_constraint(char* argv[], int argc)
 		cur = g_list_next(cur);
 	}
 	g_list_free(list);
+	free_data_set(data_set);
 	return ret;
 }
 char*
