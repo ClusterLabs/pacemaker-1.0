@@ -21,6 +21,8 @@
 
 #include <portability.h>
 
+#include <sys/types.h>
+#include <grp.h>
 #include <unistd.h>
 #include <stdarg.h>
 #include <errno.h>
@@ -45,7 +47,7 @@
 
 #define OPTARGS		"skrhvt"
 #define PID_FILE 	HA_VARRUNDIR"/mgmtd.pid"
-
+#define ALLOW_GRP	"haclient"
 
 /* common daemon and debug functions */
 static gboolean debug_level_adjust(int nsig, gpointer user_data);
@@ -56,6 +58,7 @@ static int init_stop(const char *pid_file);
 static int init_status(const char *pid_file, const char *client_name);
 static void shutdown_mgmtd(void);
 static int on_event(const char* event);
+static int usr_belong_grp(const char* usr, const char* grp);
 
 /* management daemon internal data structure */
 typedef struct
@@ -412,7 +415,7 @@ on_listen(GIOChannel *source, GIOCondition condition, gpointer data)
 			return TRUE;
 		}
 		/* authorization check with pam */	
-		if (pam_auth(args[1],args[2]) != 0) {
+		if (pam_auth(args[1],args[2]) != 0 || !usr_belong_grp(args[1],ALLOW_GRP)) {
 			mgmt_del_args(args);
 			mgmt_del_msg(msg);
 			mgmt_session_sendmsg(session, MSG_FAIL);
@@ -642,4 +645,23 @@ shutdown_mgmtd(void)
 	}else {
 		exit(LSB_EXIT_OK);
 	}
+}
+static int
+usr_belong_grp(const char* usr, const char* grp)
+{
+	int index = 0;
+	char* grp_usr = NULL;
+	struct group* gren = getgrnam(grp);
+	if (gren == NULL) {
+		return 0;
+	}
+	grp_usr = gren->gr_mem[index];
+	while (grp_usr != NULL) {
+		if (strncmp(usr,grp_usr,MAX_STRLEN) == 0) {
+			return 1;
+		}
+		index ++;
+		grp_usr = gren->gr_mem[index];
+	}
+	return 0;
 }
