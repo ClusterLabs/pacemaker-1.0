@@ -38,13 +38,13 @@ global $MOINMOINSitesToIndex;
 global $MOINMOINpagename;
 
 $MOINMOINExtraneousImages = array(
-	'/wiki/classic/img/moin-diff.png',
-	'/wiki/classic/img/moin-ftp.png',
-	'/wiki/classic/img/moin-rss.png',
-	'/wiki/classic/img/moin-inter.png',
-	'/wiki/classic/img/moin-www.png',
-	'/wiki/classic/img/moin-top.png',
-	'/wiki/classic/img/moin-bottom.png',
+	'/wiki/modern/img/moin-diff.png',
+	'/wiki/modern/img/moin-ftp.png',
+	'/wiki/modern/img/moin-rss.png',
+	'/wiki/modern/img/moin-inter.png',
+	'/wiki/modern/img/moin-www.png',
+	'/wiki/modern/img/moin-top.png',
+	'/wiki/modern/img/moin-bottom.png',
 );
 $MOINMOINCacheLimit = array("RecentChanges" => 300);
 

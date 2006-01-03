@@ -150,9 +150,9 @@ function MOINMOINloadstandardregs()
 	$MOINMOINstandardreplace[] = "";
 
 	# Get Content Area
-	$MOINMOINstandardsearch[] = "'^.*?<div id=\"content\"[^>]*>'s";
+	$MOINMOINstandardsearch[] = "'^.*?<a  *id=\"top\"[^>]*></a>'s";
 	$MOINMOINstandardreplace[] = "";
-	$MOINMOINstandardsearch[] = "'</div>\s*<div id=\"footer\".*'s";
+	$MOINMOINstandardsearch[] = "'<a *id=\"bottom\"[^>]*>.*?$'s";
 	$MOINMOINstandardreplace[] = "";
 	
 	# Strip Wiki Class Tags
@@ -167,9 +167,14 @@ function MOINMOINloadstandardregs()
 	$MOINMOINstandardsearch[] = "'(<a\s[^>]*href=\")/$MOINMOINalias([^\">]*\">)'iU";
 	$MOINMOINstandardreplace[] = "\\1$local_cache_url_prefix\\2";
 
+	# Someone needs to fix "illegal" id fields
+	#   ID and NAME tokens must begin with a letter ([A-Za-z]) and may be
+	#   followed by any number of letters, digits ([0-9]), hyphens ("-"),
+	#   underscores ("_"), colons (":"), and periods (".").
+
 	# Strip out [WWW] [FTP] images, etc.
 	foreach ($MOINMOINExtraneousImages as $im) {
-		$MOINMOINstandardsearch[] = "'< *img +src=\"${im}\"[^>]*>'i";
+		$MOINMOINstandardsearch[] = "'< *img +src=\"${im}\"[^>]*> 'i";
 		$MOINMOINstandardreplace[] = '';
 	}
 
