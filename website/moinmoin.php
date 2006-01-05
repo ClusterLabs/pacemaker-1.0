@@ -75,21 +75,25 @@ function MoinMoin($ptitle, $INCLUDEPHP = false, $CACHESUFFIX = "")
 	global $MOINMOINstandardreplace, $current_cache_prefix, $current_cache_relprefix, $PageTitle;
 	global $MOINMOINfetched;
 
-	$PageTitle = str_replace("/","_", $ptitle);
+	# $PageTitle = str_replace("/","_", $ptitle);
+	$PageTitle = $ptitle;
 	$filename = "$MOINMOINurl/$PageTitle";
-	$cachefile = "$MOINMOINcachedir/$MOINMOINalias$PageTitle$CACHESUFFIX.html";
+	# $cachefile = "$MOINMOINcachedir/$MOINMOINalias$PageTitle$CACHESUFFIX.html";
+	$cachefile = sprintf("%s/%s%s%s.html", $MOINMOINcachedir, $MOINMOINalias, str_replace("/","_2f", $ptitle), $CACHESUFFIX);
 	# for attachments and the like
 	$current_cache_prefix = "$MOINMOINcachedir/${MOINMOINalias}${PageTitle}__";
 	$current_cache_relprefix = "${MOINMOINalias}${PageTitle}__";
 	set_time_limit(30);
 	umask(077);
 	
-	if (MoinMoinNoCache($cachefile) && file_exists($cachefile)) {
-		unlink($cachefile);
-	}
-	if (!file_exists($cachefile))
-	{
-
+	if (!MoinMoinNoCache($cachefile) && file_exists($cachefile)) {
+		$body = implode("",file($cachefile));
+		$msg=sprintf("READ %d bytes from %s"
+		,	filesize($cachefile), $cachefile);
+		LogIt($msg);
+	} else {
+		if (!file_exists($filename))
+			return "<b>Not Found.</b>";
 		$content = implode("",file($filename));
 
 		if (!$GLOBALS["MOINMOINstandardregsloaded"])
@@ -112,19 +116,17 @@ function MoinMoin($ptitle, $INCLUDEPHP = false, $CACHESUFFIX = "")
 		}
 		$body = preg_replace ($MOINMOINallsearch, $MOINMOINallreplace, $content);
 
-		$fd = fopen($cachefile, "w");
-		fwrite($fd, $body);
-		fclose ($fd);
-		chmod($cachefile, $MOINMOINfilemod);
-		$msg=sprintf("EXPANDED %d bytes into %s"
-		,	filesize($cachefile), $cachefile);
-		$MOINMOINfetched[$cachefile] = true;
+		if($fd = fopen($cachefile, "w"))
+		{
+			fwrite($fd, $body);
+			fclose ($fd);
+			chmod($cachefile, $MOINMOINfilemod);
+			$msg=sprintf("EXPANDED %d bytes into %s"
+			,	filesize($cachefile), $cachefile);
+			LogIt($msg);
+			$MOINMOINfetched[$cachefile] = true;
+		}
 
-	} else {
-		$body = implode("",file($cachefile));
-		$msg=sprintf("READ %d bytes from %s"
-		,	filesize($cachefile), $cachefile);
-		LogIt($msg);
 	}
 
 	return $body;
@@ -329,8 +331,6 @@ function LogIt($message)
 	$datestamp=date("Y/m/d_H:i:s");
 	if (file_exists($logfile) && filesize($logfile) > 1000000) {
 		rename($logfile, "$logfile.OLD");
-		touch($logfile);
-		chmod($logfile, 0644);
 	}
 	error_log("$datestamp	$message\n", 3, $logfile);
 	chmod($logfile, 0644);
