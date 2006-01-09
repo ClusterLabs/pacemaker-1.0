@@ -1,4 +1,4 @@
-/* $Id: bcast.c,v 1.46 2005/11/01 21:51:11 gshi Exp $ */
+/* $Id: bcast.c,v 1.47 2006/01/09 21:30:38 alan Exp $ */
 /*
  * bcast.c: UDP/IP broadcast-based communication code for heartbeat.
  *
@@ -374,14 +374,16 @@ bcast_write(struct hb_media* mp, void *pkt, int len)
 
 		struct ha_msg* m;
 
+		int		err = errno;
 		PILCallLog(LOG, PIL_CRIT, "Unable to send bcast [%d] packet(len=%d): %s",
-			   rc,len,  strerror(errno));
+			   rc,len,  strerror(err));
 		
 		m =  wirefmt2msg(pkt, len,MSG_NEEDAUTH);
 		if (m){
 			cl_log_message(LOG_ERR, m);
 			ha_msg_del(m);
 		}
+		errno = err;
 		return(HA_FAIL);
 	}
 
@@ -759,6 +761,9 @@ if_get_broadaddr(const char *ifn, struct in_addr *broadaddr)
 
 /*
  * $Log: bcast.c,v $
+ * Revision 1.47  2006/01/09 21:30:38  alan
+ * Made sure errno gets preserved in bcast writes with errors...
+ *
  * Revision 1.46  2005/11/01 21:51:11  gshi
  * log the message if bcast_write fails
  *
