@@ -1,4 +1,4 @@
-/* $Id: serial.c,v 1.45 2005/11/18 23:02:15 alan Exp $ */
+/* $Id: serial.c,v 1.46 2006/01/10 15:36:26 alan Exp $ */
 /*
  * Linux-HA serial heartbeat code
  *
@@ -632,10 +632,13 @@ serial_write(struct hb_media* mp, void *p, int len)
 					lastwarn = now;
 					warnyet = TRUE;
 					PILCallLog(LOG, PIL_WARN
-						   ,	"TTY write timeout on [%s]"
-				" (no connection or bad cable"
-						   "? [see documentation])"
-						   ,	mp->name);
+					,	"TTY write timeout on [%s]"
+					" (no connection or bad cable"
+					"? [see documentation])"
+					,	mp->name);
+					PILCallLog(LOG, PIL_INFO
+					,	"See %s for details"
+					,	HAURL("FAQ#TTYtimeout"));
 				}
 			}else{
 				PILCallLog(LOG, PIL_CRIT, "TTY write failure on [%s]: %s"
@@ -704,6 +707,9 @@ ttygets(char * inbuf, int length, struct serial_private *tty)
 }
 /*
  * $Log: serial.c,v $
+ * Revision 1.46  2006/01/10 15:36:26  alan
+ * Added a URL in the FAQ to the tty timeout message.
+ *
  * Revision 1.45  2005/11/18 23:02:15  alan
  * Fixed two BEAM bugs:
  * 	Check for baud rates < 300 instead of <=0
