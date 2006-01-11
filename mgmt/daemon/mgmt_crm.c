@@ -252,7 +252,9 @@ final_crm(void)
 void
 on_cib_diff(const char *event, HA_Message *msg)
 {
-	mgmt_log(LOG_INFO,"update cib finished");
+	if (debug_level) {
+		mgmt_log(LOG_DEBUG,"update cib finished");
+	}
 	fire_event(EVT_CIB_CHANGED);
 }
 
