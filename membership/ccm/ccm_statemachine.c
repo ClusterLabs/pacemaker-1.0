@@ -1,4 +1,4 @@
-/* $Id: ccm_statemachine.c,v 1.14 2006/01/15 16:24:46 xunsun Exp $ */
+/* $Id: ccm_statemachine.c,v 1.15 2006/01/15 16:27:36 xunsun Exp $ */
 /* 
  * ccm.c: Consensus Cluster Service Program 
  *
@@ -2409,7 +2409,7 @@ switchstatement:
 			 * the master,(though we dont think so). Send 
 			 * a NULL membership list to him immidiately.
 			 * 2. Because of byzantine failures, though we have 
-			 * not recieved the membership list in the last 
+			 * not received the membership list in the last 
 			 * round. We have waited to such an exent that some 
 			 * node already thinks he is the master of the
 			 * the new group transition. Well, there is something 
