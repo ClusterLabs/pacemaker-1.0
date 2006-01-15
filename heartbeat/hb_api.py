@@ -37,7 +37,7 @@ import select
 class ha_msg (UserDict): 
 
     '''ha_msg is the Heartbeat messaging class.  It is the bottle into
-    which you put messages before throwing them out onto the the sea
+    which you put messages before throwing them out onto the sea
     of cluster :-)  Not surprisingly, it is also the bottle which you
     receive them in.  It is also the way you communicate with heartbeat
     itself using its API

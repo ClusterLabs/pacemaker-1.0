@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.478 2005/12/25 22:39:50 alan Exp $ */
+/* $Id: heartbeat.c,v 1.479 2006/01/15 16:20:54 xunsun Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -1386,7 +1386,7 @@ master_control_process(void)
 	/* Child I/O processes */
 	for(j = 0; j < nummedia; j++) {
 		/*
-		 * We cannot share a socket between the the write and read
+		 * We cannot share a socket between the write and read
 		 * children, though it might sound like it would work ;-)
 		 */
 
@@ -6037,6 +6037,9 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.479  2006/01/15 16:20:54  xunsun
+ * popular "the the" typo
+ *
  * Revision 1.478  2005/12/25 22:39:50  alan
  * Increased the debug level of a few messages...
  *

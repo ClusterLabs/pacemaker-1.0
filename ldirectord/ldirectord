@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-my($VERSION)=(qw$Id: ldirectord,v 1.128 2005/12/01 00:40:09 horms Exp $)[2];
+my($VERSION)=(qw$Id: ldirectord,v 1.129 2006/01/15 16:25:19 xunsun Exp $)[2];
 
 ######################################################################
 # ldirectord                 http://www.vergenet.net/linux/ldirectord/
@@ -81,7 +81,7 @@ B<-v|--version> Print version and exit.
 B<start> the daemon for the specified configuration.
 
 B<stop> the daemon for the specified configuration. This is the same as sending
-a TERM signal the the running daemon.
+a TERM signal to the running daemon.
 
 B<restart> the daemon for the specified configuration. The same as stopping and starting.
 
@@ -230,7 +230,7 @@ overridden, otherwise the IP-address and port of the real server is used.
 B<checktype = >I<negotiate>|I<connect>|I<N>|I<ping>|I<off>|I<on>
 
 Type of check to perform. Negotiate sends a request and matches a receive
-string. Connect only attemts to make a TCP/IP connection, thus the the
+string. Connect only attemts to make a TCP/IP connection, thus the
 request and receive strings may be omitted.  If checktype is a number then
 negotiate and connect is combined so that after each N connect attempts one
 negotiate attempt is performed. This is useful to check often if a service
