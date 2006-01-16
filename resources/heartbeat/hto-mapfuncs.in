@@ -117,29 +117,28 @@ ra_getpathname(){
 }
 
 ra_setenv(){
-	i=1
-	hbvarname=`echo "$*" | cut -d${PARAMETER_SPLIT_SIGN} -f$i`
-	while [ 1==1 ]; do
-		let i=i+1
-		hbvarvalue=`echo "$*" | cut -d${PARAMETER_SPLIT_SIGN} -f$i | fmt -u`
-		let j=i+1
-		nextvarvalue=`echo "$*" | cut -d${PARAMETER_SPLIT_SIGN} -f$j`
-		if [ ! -z "$nextvarvalue" ]; then
-			k=`echo $hbvarvalue | wc -w`
-			nextvarname=`echo $hbvarvalue | cut -d" " -f$k`
-			let k=k-1
-			havarvalue=`echo $hbvarvalue | cut -d" " -f1-$k`
-			
-			ocfvarname="OCF_RESKEY_${hbvarname}"
-			export `echo $ocfvarname`="$havarvalue"
-			hbvarname=$nextvarname
-			continue
+
+	lastenvar=
+	for envar in $*
+	do
+		ifvarname=`echo $envar | cut -s -d${PARAMETER_SPLIT_SIGN} -f1`
+		if [ -z $ifvarname ]; then
+			envar="$lastenvar $envar"
+			setup_OCF_prefix $envar
 		else
-			ocfvarname="OCF_RESKEY_${hbvarname}"
-			export `echo $ocfvarname`="$hbvarvalue"
-			return	
-		fi	
+			setup_OCF_prefix $envar
+		fi
+		lastenvar=$envar
 	done
+}
+
+setup_OCF_prefix(){
+	
+	hbvarname=`echo "$envar" | cut -d${PARAMETER_SPLIT_SIGN} -f1`
+	hbvarvalue=`echo "$envar" | cut -d${PARAMETER_SPLIT_SIGN} -f2`
+	ocfvarname="OCF_RESKEY_${hbvarname}"
+
+	export `echo $ocfvarname`="$hbvarvalue"
 }
 
 setup_OCF_env_vars(){
