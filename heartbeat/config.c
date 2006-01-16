@@ -1,4 +1,4 @@
-/* $Id: config.c,v 1.190 2005/12/21 00:01:51 gshi Exp $ */
+/* $Id: config.c,v 1.191 2006/01/16 09:16:32 andrew Exp $ */
 /*
  * Parse various heartbeat configuration files...
  *
@@ -106,6 +106,7 @@ static int set_corerootdir(const char*);
 static int set_release2mode(const char*);
 static int set_autojoin(const char*);
 static int set_uuidfrom(const char*);
+static int ha_config_check_boolean(const char *);
 #ifdef ALLOWPOLLCHOICE
   static int set_normalpoll(const char *);
 #endif
@@ -163,7 +164,11 @@ struct directive {
 ,{KEY_TRADITIONAL_COMPRESSION, set_traditional_compression, TRUE, "yes", "set traditional_compression"}
 ,{KEY_ENV, set_env, FALSE, NULL, "set environment variable"}
 ,{KEY_MAX_REXMIT_DELAY, set_max_rexmit_delay, TRUE,"250", "set the maximum rexmit delay time"}
+,{KEY_LOG_CONFIG_CHANGES, ha_config_check_boolean, TRUE,"on", "record changes to the cib (valid only with: "KEY_REL2" on)"}
+,{KEY_LOG_PENGINE_INPUTS, ha_config_check_boolean, TRUE,"on", "record the input used by the policy engine (valid only with: "KEY_REL2" on)"}
+,{KEY_CONFIG_WRITES_ENABLED, ha_config_check_boolean, TRUE,"on", "write configuration changes to disk (valid only with: "KEY_REL2" on)"}
 };
+
 
 static const struct WholeLineDirective {
 	const char * type;
@@ -2477,8 +2482,44 @@ set_uuidfrom(const char* value)
 	return HA_FAIL;
 }
 
+static int
+ha_config_check_boolean(const char *value)
+{
+	int result;
+
+	if (value == NULL){
+		cl_log(LOG_ERR, "%s: NULL pointer",
+		       __FUNCTION__);
+		return HA_FAIL;
+	}
+
+	if (cl_str_to_boolean(value, &result)!= HA_OK){
+		cl_log(LOG_ERR, "%s:Invalid directive value %s", 
+		       __FUNCTION__,value);
+		return HA_FAIL;
+	}
+	
+	return HA_OK;
+}
+
 /*
  * $Log: config.c,v $
+ * Revision 1.191  2006/01/16 09:16:32  andrew
+ * Three new ha.cf options:
+ *  - record_config_changes (on/off)
+ *  on: the current implementation logs config changes at the value of "debug"
+ *  off: the current implementation logs config changes at the value of "debug" + 1
+ *  - record_pengine_inputs (on/off)
+ *  on: the current implementation logs config changes at the value of "debug"
+ *  off: the current implementation logs config changes at the value of "debug" + 1
+ *  - enable_config_writes (on/off)
+ *  on: write (CIB) config changes to disk
+ *  off: do NOT write (CIB) config changes to disk
+ *
+ * Remove the old enable_config_writes option from the CIB, it was broken and
+ *   required linking against the pengine library to fix as correct interpretation
+ *   required understanding the CIB's contents.
+ *
  * Revision 1.190  2005/12/21 00:01:51  gshi
  * make max rexmit delay tunable in ha.cf
  *
