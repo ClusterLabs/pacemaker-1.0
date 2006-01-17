@@ -1,4 +1,4 @@
-/* $Id: client_lib.c,v 1.34 2005/12/21 02:34:32 gshi Exp $ */
+/* $Id: client_lib.c,v 1.35 2006/01/17 17:44:39 alan Exp $ */
 /* 
  * client_lib: heartbeat API client side code
  *
@@ -2265,7 +2265,7 @@ read_msg_w_callbacks(ll_cluster_t* llc, int blocking)
 
 	if (!ISOURS(llc)) {
 		ha_api_log(LOG_ERR, "read_msg_w_callbacks: bad cinfo");
-		return HA_FAIL;
+		return NULL;
 	}
 	pi = (llc_private_t*) llc->ll_cluster_private;
 
