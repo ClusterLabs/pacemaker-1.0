@@ -117,53 +117,28 @@ ra_getpathname(){
 }
 
 ra_setenv(){
-	
-	if [ $# -eq 0 ]; then
-	    return
-	fi
 
-	# get the first word
+	lastenvar=
 	for envar in $*
 	do
-	    assignment=$envar
-	    shift
-	    break
+		ifvarname=`echo $envar | cut -s -d${PARAMETER_SPLIT_SIGN} -f1`
+		if [ -z $ifvarname ]; then
+			envar="$lastenvar $envar"
+			setup_OCF_prefix $envar
+		else
+			setup_OCF_prefix $envar
+		fi
+		lastenvar=$envar
 	done
-
-	# look forward as far as it can until meeting a word
-	# with ${PARAMETER_SPLIT_SIGN}, then do a setup_OCF_prefix
-	for envar in $*
-	do
-	    case $envar in
-		[!${PARAMETER_SPLIT_SIGN}]*${PARAMETER_SPLIT_SIGN}*)
-			setup_OCF_prefix $assignment
-			assignment=$envar
-			;;
-		*)	# escape the blank so that eval can deal with it
-			assignment="$assignment\ $envar"
-			;;
-	    esac
-	done
-                                                                                
-	# the last assignment is not performed within the for loop
-        setup_OCF_prefix $assignment
-
 }
 
 setup_OCF_prefix(){
 	
-	hbvarname=`echo "$*" | cut -s -d${PARAMETER_SPLIT_SIGN} -f1`
-	if [ -z "$hbvarname" ]; then
-	    return
-	fi
-
-	hbvarvalue=`echo "$*" | cut -s -d${PARAMETER_SPLIT_SIGN} -f2`
+	hbvarname=`echo "$envar" | cut -d${PARAMETER_SPLIT_SIGN} -f1`
+	hbvarvalue=`echo "$envar" | cut -d${PARAMETER_SPLIT_SIGN} -f2`
 	ocfvarname="OCF_RESKEY_${hbvarname}"
 
-	# for debug
-	#echo $ocfvarname="$hbvarvalue"
-
-	eval $ocfvarname="$hbvarvalue"
+	eval $ocfvarname='$hbvarvalue'
 	export $ocfvarname
 }
 
