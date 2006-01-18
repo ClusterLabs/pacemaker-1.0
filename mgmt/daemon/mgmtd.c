@@ -361,7 +361,7 @@ init_start ()
 				"Shutting down.");
 		exit(100);
 	}	
-			
+
 	/* create source for server socket and add to the mainloop */
 	sch = g_io_channel_unix_new(ssock);
 	g_io_add_watch(sch, G_IO_IN|G_IO_ERR|G_IO_HUP, on_listen, NULL);
