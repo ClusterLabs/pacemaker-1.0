@@ -1,0 +1,9 @@
+Makefile.in
+Makefile
+*.beam
+.deps
+.libs
+*.la
+*.lo
+pymgmt.py
+pymgmt_wrap.c
