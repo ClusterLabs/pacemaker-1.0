@@ -13,6 +13,11 @@ OCF_RA_DIR=@OCF_RA_DIR@
 
 BASENAME=@BASENAME@
 
+log_and_print(){
+	ha_log "$*"
+	echo "$*"
+}
+
 #
 # rsc_id=rsc1 rsc_type=IPaddr2 provide=heartbeat start ip=192.168.0.1 .....
 #
@@ -25,7 +30,7 @@ ra_execocf(){
 	
 	if [ ! -x $RAOCFPATH ] 
 	then
-		ha_log "ERR $RAOCFPATH is not an executable file "
+		log_and_print "ERR $RAOCFPATH is not an executable file "
 		exit 1
 
 	fi
@@ -38,7 +43,7 @@ ra_execocf(){
 	status)		$RAOCFPATH status;;
 
 	usage|help)	usage;;
-	*)		ha_log "ERROR: Mismatching operation : $OPERATION"
+	*)		log_and_print "ERROR: Unknown operation: $OPERATION"
 			usage
 			exit 1;;
 	esac
@@ -47,36 +52,36 @@ ra_execocf(){
 	case $ocf_return_status in
 	$OCF_SUCCESS)
 		case $OPERATION in
-		monitor|status)		ha_log "INFO: $rsc_type Running OK";;
-		*)			ha_log "INFO: $rsc_type Success";;
+		monitor|status)		log_and_print "INFO: $rsc_type Running OK";;
+		*)			log_and_print "INFO: $rsc_type Success";;
 		esac
 		;;
 
 	$OCF_ERR_GENERIC)
-		ha_log "ERROR: " $rsc_type Generic error 
+		log_and_print "ERROR: " $rsc_type Generic error 
 		;;
 
 	$OCF_ERR_ARGS)
-		ha_log "ERROR: " $rsc_type Incompliant argument 
+		log_and_print "ERROR: " $rsc_type Incompliant argument 
 		;;
 	$OCF_ERR_UNIMPLEMENTED)
-		ha_log "ERROR: " $rsc_type Function unimplemented
+		log_and_print "ERROR: " $rsc_type Function unimplemented
 		;;
 	$OCF_ERR_PERM)
-		ha_log "ERROR: " $rsc_type User had insufficient privilege
+		log_and_print "ERROR: " $rsc_type User had insufficient privilege
 		;;
 	$OCF_ERR_INSTALLED)
-		ha_log "ERROR: " $rsc_type Program is not installed
+		log_and_print "ERROR: " $rsc_type Program is not installed
 		;;
 	$OCF_ERR_CONFIGURED)
-		ha_log "ERROR: " $rsc_type Program is not configured
+		log_and_print "ERROR: " $rsc_type Program is not configured
 		;;
 	$OCF_NOT_RUNNING)
-		ha_log "INFO: " $rsc_type Resource is stopped
+		log_and_print "INFO: " $rsc_type Resource is stopped
 		;;
 	*)
 		echo $?
-		ha_log "ERROR: " $rsc_type Unknown error
+		log_and_print "ERROR: " $rsc_type Unknown error
 		exit 1
 		;;
 	esac
