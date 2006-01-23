@@ -147,7 +147,7 @@ def kvbox(title, fields, parent=None) :
 			widgets.append(None)
 			continue
 		table.attach(gtk.Label(fields[row].label+":"), 0, 1, row, row+1)
-		if fields[row].options != None:
+		if fields[row].options != None and fields[row].options!=[]:
 			combo = gtk.combo_box_entry_new_text()
 			for option in fields[row].options:
 				combo.append_text(option)
@@ -1377,6 +1377,7 @@ class Manager :
 		# connect to one of the cluster
 		ip = socket.gethostbyname(server)
 		if mgmt_connect(ip, username, password) == -1:
+			mgmt_disconnect()
 			return False
 		self.connected = True
 		self.username = username
@@ -1393,11 +1394,11 @@ class Manager :
 		
 	def do_cmd(self, command) :
 		ret_str = mgmt_sendmsg(command)
- 		while len(ret_str)>=4 and ret_str[:4] == "evt:" :
- 			ret_str = mgmt_recvmsg()
 		if ret_str == None :
 			debug(str(string.split(command, "\n"))+":None")
 			return None
+ 		while len(ret_str)>=4 and ret_str[:4] == "evt:" :
+ 			ret_str = mgmt_recvmsg()
 		ret_list = string.split(ret_str, "\n")
 		if ret_list[0] != "ok" :
 			debug(str(string.split(command, "\n"))+":"+ str(ret_list))
