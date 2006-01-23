@@ -27,6 +27,8 @@
 #include <heartbeat.h>
 #include <clplumbing/cl_log.h>
 #include <clplumbing/cl_syslog.h>
+#include <clplumbing/lsb_exitcodes.h>
+
 #include "mgmt_internal.h"
 
 #include <crm/cib.h>
@@ -87,6 +89,7 @@ static int refresh_lrm(IPC_Channel *crmd_channel, const char *host_uname);
 static int delete_lrm_rsc(IPC_Channel *crmd_channel, const char *host_uname, const char *rsc_id);
 static pe_working_set_t* get_data_set(void);
 static void free_data_set(pe_working_set_t* data_set);
+void on_cib_connection_destroy(gpointer user_data);
 
 #define GET_RESOURCE()	if (argc != 2) { 					\
 				return cl_strdup(MSG_FAIL); 			\
@@ -198,6 +201,8 @@ init_crm(void)
 
 	ret = cib_conn->cmds->add_notify_callback(cib_conn, T_CIB_DIFF_NOTIFY
 						  , on_cib_diff);
+	ret = cib_conn->cmds->set_connection_dnotify(cib_conn
+			, on_cib_connection_destroy);
 
 	reg_msg(MSG_CRM_CONFIG, on_get_crm_config);
 	reg_msg(MSG_UP_CRM_CONFIG, on_update_crm_config);
@@ -256,6 +261,15 @@ on_cib_diff(const char *event, HA_Message *msg)
 		mgmt_log(LOG_DEBUG,"update cib finished");
 	}
 	fire_event(EVT_CIB_CHANGED);
+}
+void
+on_cib_connection_destroy(gpointer user_data)
+{
+	mgmt_log(LOG_ERR,"Connection to the CIB terminated... exiting");
+	fire_event(EVT_DISCONNECTED);
+	cib_conn = NULL;
+	exit(LSB_EXIT_OK);
+	return;
 }
 
 /* cluster  functions */
