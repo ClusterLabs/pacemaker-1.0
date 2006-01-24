@@ -89,6 +89,7 @@ static int pam_conv(int n, const struct pam_message **msg,
 static char* dispatch_msg(const char* msg, int client_id);
 
 const char* mgmtd_name 	= "mgmtd";
+const char* mgmtd_pam 	= "hbmgmtd";
 
 extern int debug_level;
 int test_mode = FALSE;
@@ -523,7 +524,7 @@ pam_auth(const char* user, const char* passwd)
 	conv.conv = pam_conv;
 	conv.appdata_ptr = strdup(passwd);
 
-	ret = pam_start (mgmtd_name, user, &conv, &pamh);
+	ret = pam_start (mgmtd_pam, user, &conv, &pamh);
 
 	if (ret == PAM_SUCCESS) {
 		ret = pam_authenticate (pamh, 0);
@@ -652,6 +653,10 @@ usr_belong_grp(const char* usr, const char* grp)
 	int index = 0;
 	char* grp_usr = NULL;
 	struct group* gren = getgrnam(grp);
+	if (test_mode) {
+		return 1;
+	}
+
 	if (gren == NULL) {
 		return 0;
 	}
