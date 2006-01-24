@@ -46,8 +46,8 @@ noinst_HEADERS          =  assoc_utils.h cluster_info.h cmpi_utils.h  \
                            resource_common.h constraint_common.h
 
 LRM_DIR                 =  lrm
-MGMTLIBS                =  $(top_builddir)/mgmt/daemon/libmgmt.la     \
-                           $(top_builddir)/lib/mgmt/libmgmtcommon.la  \
+MGMTLIBS                =  $(top_builddir)/mgmt/daemon/libhbmgmt.la     \
+                           $(top_builddir)/lib/mgmt/libhbmgmtcommon.la  \
                            $(top_builddir)/lib/$(LRM_DIR)/liblrm.la
 
 cimproviders_LTLIBRARIES = libHAClusterInfo.la                             \

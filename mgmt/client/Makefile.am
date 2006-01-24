@@ -32,9 +32,9 @@ MGMT_DIR		= mgmt
 
 halib_PROGRAMS 		= mgmtdtest
 mgmtdtest_SOURCES  	= mgmtdtest.c
-mgmtdtest_LDADD 	= $(top_builddir)/lib/$(MGMT_DIR)/libmgmtclient.la \
-			  $(top_builddir)/lib/$(MGMT_DIR)/libmgmttls.la \
-			  $(top_builddir)/lib/$(MGMT_DIR)/libmgmtcommon.la
+mgmtdtest_LDADD 	= $(top_builddir)/lib/$(MGMT_DIR)/libhbmgmtclient.la \
+			  $(top_builddir)/lib/$(MGMT_DIR)/libhbmgmttls.la \
+			  $(top_builddir)/lib/$(MGMT_DIR)/libhbmgmtcommon.la
 mgmtdtest_LDFLAGS 	= `libgnutls-config --libs`
 
 mozhCNdir		= $(datadir)/locale/zh_CN/LC_MESSAGES

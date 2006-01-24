@@ -36,24 +36,24 @@ pamdir 		= /etc/pam.d
 pam_DATA	= mgmtd.pam
 
 install-data-hook:
-		mv $(DESTDIR)$(pamdir)/mgmtd.pam $(DESTDIR)$(pamdir)/mgmtd
+		mv $(DESTDIR)$(pamdir)/mgmtd.pam $(DESTDIR)$(pamdir)/hbmgmtd
 
 
 halib_PROGRAMS 	=  mgmtd
 mgmtd_SOURCES 	=  mgmtd.c
 mgmtd_LDFLAGS	= -lpam
-mgmtd_LDADD 	=  $(top_builddir)/lib/mgmt/libmgmtclient.la \
-		   $(top_builddir)/lib/mgmt/libmgmttls.la \
-		   libmgmt.la \
+mgmtd_LDADD 	=  $(top_builddir)/lib/mgmt/libhbmgmtclient.la \
+		   $(top_builddir)/lib/mgmt/libhbmgmttls.la \
+		   libhbmgmt.la \
 		   $(top_builddir)/lib/$(LRM_DIR)/liblrm.la \
-		   $(top_builddir)/lib/mgmt/libmgmtcommon.la \
+		   $(top_builddir)/lib/mgmt/libhbmgmtcommon.la \
 		   $(COMMONLIBS)
 
-lib_LTLIBRARIES = libmgmt.la
-libmgmt_la_SOURCES = mgmt_lib.c mgmt_crm.c mgmt_lrm.c mgmt_hb.c
-libmgmt_la_CFLAGS = $(INCLUDES)
-libmgmt_la_LDFLAGS = `libgnutls-config --libs`
-libmgmt_la_LIBADD = $(top_builddir)/lib/mgmt/libmgmttls.la 		\
+lib_LTLIBRARIES = libhbmgmt.la
+libhbmgmt_la_SOURCES = mgmt_lib.c mgmt_crm.c mgmt_lrm.c mgmt_hb.c
+libhbmgmt_la_CFLAGS = $(INCLUDES)
+libhbmgmt_la_LDFLAGS = `libgnutls-config --libs`
+libhbmgmt_la_LIBADD = $(top_builddir)/lib/mgmt/libhbmgmttls.la 		\
 		  	$(top_builddir)/lib/crm/cib/libcib.la		\
 		   	$(top_builddir)/lib/crm/common/libcrmcommon.la	\
 		   	$(top_builddir)/lib/apphb/libapphb.la		\

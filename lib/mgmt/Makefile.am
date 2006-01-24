@@ -32,19 +32,19 @@ apigid                          =       @HA_APIGID@
 
 EXTRA_DIST			=	pymgmt.i
 
-lib_LTLIBRARIES = libmgmttls.la libmgmtclient.la libmgmtcommon.la
-libmgmttls_la_SOURCES = mgmt_tls_lib.c
-libmgmttls_la_LIBADD  = $(COMMONLIBS)
-libmgmttls_la_LDFLAGS = `libgnutls-config --libs`
-libmgmttls_la_CFLAGS = $(INCLUDES) `libgnutls-config --cflags`
+lib_LTLIBRARIES = libhbmgmttls.la libhbmgmtclient.la libhbmgmtcommon.la
+libhbmgmttls_la_SOURCES = mgmt_tls_lib.c
+libhbmgmttls_la_LIBADD  = $(COMMONLIBS)
+libhbmgmttls_la_LDFLAGS = `libgnutls-config --libs`
+libhbmgmttls_la_CFLAGS = $(INCLUDES) `libgnutls-config --cflags`
 
-libmgmtclient_la_SOURCES = mgmt_client_lib.c
-libmgmtclient_la_LIBADD = $(COMMONLIBS) libmgmttls.la
-libmgmtclient_la_CFLAGS = $(INCLUDES)
+libhbmgmtclient_la_SOURCES = mgmt_client_lib.c
+libhbmgmtclient_la_LIBADD = $(COMMONLIBS) libhbmgmttls.la
+libhbmgmtclient_la_CFLAGS = $(INCLUDES)
 
-libmgmtcommon_la_SOURCES = mgmt_common_lib.c
-libmgmtcommon_la_LIBADD = $(COMMONLIBS) 
-libmgmtcommon_la_CFLAGS = $(INCLUDES)
+libhbmgmtcommon_la_SOURCES = mgmt_common_lib.c
+libhbmgmtcommon_la_LIBADD = $(COMMONLIBS) 
+libhbmgmtcommon_la_CFLAGS = $(INCLUDES)
 
 halib_LTLIBRARIES = _pymgmt.la
 _pymgmt_la_SOURCES = pymgmt_wrap.c mgmt_client_lib.c mgmt_tls_lib.c mgmt_common_lib.c
