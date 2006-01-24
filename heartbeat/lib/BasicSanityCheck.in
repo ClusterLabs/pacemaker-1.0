@@ -731,8 +731,10 @@ StonithDaemonTest() {
 		return 1
 	fi
 	if 
-		! HBStart
+		HBStart
 	then
+		:
+	else
 		echo "cannot start heartbeat, so donnot start stonith daemon test." | tee -a $LOGFILE
 		return 1
 	fi
@@ -752,8 +754,10 @@ StonithDaemonTest() {
 	done
 
 	if
-		! $CLSTATUS hbstatus >/dev/null 2>&1
+		$CLSTATUS hbstatus >/dev/null 2>&1
 	then
+		:
+	else
 		echo "There are internal errors in heartbeat, so donnot start stonith daemon test." | tee -a $LOGFILE
 		return 1
 	fi
@@ -807,8 +811,10 @@ TestMgmtd() {
 	echo "Starting Mgmtd tests" | tee -a $LOGFILE
 
 	if 
-		! HBStart
+		HBStart
 	then
+		:
+	else
 		echo "cannot start heartbeat, so donnot start mgmt daemon test." | tee -a $LOGFILE
 		return 1
 	fi
@@ -828,8 +834,10 @@ TestMgmtd() {
 	done
 
 	if
-		! $CLSTATUS hbstatus >/dev/null 2>&1
+		$CLSTATUS hbstatus >/dev/null 2>&1
 	then
+		:
+	else
 		echo "There are internal errors in heartbeat, so donnot start mgmt daemon test." | tee -a $LOGFILE
 		return 1
 	fi
