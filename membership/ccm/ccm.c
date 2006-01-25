@@ -222,15 +222,15 @@ ccm_control_process(ccm_info_t *info, ll_cluster_t * hb)
 	if(numnodes != NULL){
 		numnodes_val = atoi(numnodes);
 		if (numnodes_val != info->llm.nodecount){
-			if (ANYDEBUG){
-				cl_log(LOG_ERR, "Node count from node %s does not agree"
-				": local count=%d, count in message=%d"
-				,	orig, info->llm.nodecount, numnodes_val);
+			cl_log(LOG_ERR, "Node count from node %s does not agree"
+			": local count=%d, count in message=%d"
+			,	orig, info->llm.nodecount, numnodes_val);
+			if (ANYDEBUG) {
 				cl_log_message(LOG_DEBUG, msg);
-				/* We need to do something better to recover from this
-				 * FIXME!!
-				 */
 			}
+			/* We need to do something better to recover from this
+			 * FIXME!! (as of now it crashes (!))
+			 */
 			jump_to_joining_state(hb, info, msg);
 		}
 	}
