@@ -142,14 +142,19 @@ gboolean
 on_hb_input(IPC_Channel * chan, gpointer data)
 {
 	struct ha_msg* msg;
-	if (chan != NULL && chan->ch_status == IPC_DISCONNECT) {
+	if (chan == NULL) {
+		return FALSE;
+	}
+	if (!IPC_ISRCONN(chan)) {
 		fire_event(EVT_DISCONNECTED);
 		mgmt_log(LOG_ERR, "Lost connection to heartbeat service.");
 		hb = NULL;
 		return FALSE;
 	}
 	msg = hb->llc_ops->readmsg(hb, 0);
-	ha_msg_del(msg);
+	if (msg != NULL) {
+		ha_msg_del(msg);
+	}
 	return TRUE;
 }
 void
