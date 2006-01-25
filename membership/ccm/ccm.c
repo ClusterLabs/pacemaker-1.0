@@ -223,11 +223,13 @@ ccm_control_process(ccm_info_t *info, ll_cluster_t * hb)
 		numnodes_val = atoi(numnodes);
 		if (numnodes_val != info->llm.nodecount){
 			if (ANYDEBUG){
-				cl_log(LOG_WARNING, " node count does not agree: "
-				       "local count=%d,"
-				       "count in message =%d",
-				       info->llm.nodecount, numnodes_val);
+				cl_log(LOG_ERR, "Node count from node %s does not agree"
+				": local count=%d, count in message=%d"
+				,	orig, info->llm.nodecount, numnodes_val);
 				cl_log_message(LOG_DEBUG, msg);
+				/* We need to do something better to recover from this
+				 * FIXME!!
+				 */
 			}
 			jump_to_joining_state(hb, info, msg);
 		}
