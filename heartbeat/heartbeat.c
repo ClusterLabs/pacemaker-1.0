@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.479 2006/01/15 16:20:54 xunsun Exp $ */
+/* $Id: heartbeat.c,v 1.480 2006/01/25 16:41:36 alan Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -2587,12 +2587,17 @@ HBDoMsg_T_REPNODES(const char * type, struct node_info * fromnode,
 				break;
 			}	
 		}
-		if ( j == num){
-			/*this node is not found in incoming nodelist
-			* we need to delete it
-			*/
-			cl_log(LOG_ERR, "%s: Node %s is deleted and we don't know it!",
-			       __FUNCTION__, config->nodes[i].nodename);
+		if (j == num){
+			/* This node is not found in incoming nodelist,
+			 * therefore, we need to delete it.
+			 *
+			 * Of course, this assumes everyone has correct node lists
+			 * lists - which may not be the case :-(  FIXME???
+			 * And it assumes autojoin is on - which it may not be...
+			 */
+			cl_log(LOG_ERR, "%s: Node %s is deleted (according to %s) and we don't know it!"
+			,	__FUNCTION__, config->nodes[i].nodename
+			,	fromnode->nodename);
 			hb_del_one_node(config->nodes[i].nodename);
 			
 		}
@@ -6037,6 +6042,9 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.480  2006/01/25 16:41:36  alan
+ * Put in a little clarification on a disagreeing membership message.
+ *
  * Revision 1.479  2006/01/15 16:20:54  xunsun
  * popular "the the" typo
  *
