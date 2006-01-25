@@ -22,6 +22,7 @@
 #include <portability.h>
 
 #include <sys/types.h>
+#include <pwd.h>
 #include <grp.h>
 #include <unistd.h>
 #include <stdarg.h>
@@ -652,11 +653,20 @@ usr_belong_grp(const char* usr, const char* grp)
 {
 	int index = 0;
 	char* grp_usr = NULL;
-	struct group* gren = getgrnam(grp);
+	struct group *gren = NULL;
+	struct passwd *pwd = NULL;
+	
 	if (test_mode) {
 		return 1;
 	}
 
+	pwd = getpwnam (usr);
+	gren = getgrgid(pwd->pw_gid);
+	if (strncmp(grp, gren->gr_name,MAX_STRLEN) == 0) {
+		return 1;
+	}
+	
+	gren = getgrnam(grp);
 	if (gren == NULL) {
 		return 0;
 	}
