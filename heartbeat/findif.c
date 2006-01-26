@@ -1,4 +1,4 @@
-/* $Id: findif.c,v 1.50 2005/11/09 16:03:22 davidlee Exp $ */
+/* $Id: findif.c,v 1.51 2006/01/26 12:59:14 davidlee Exp $ */
 /*
  * findif.c:	Finds an interface which can route a given address
  *
@@ -95,6 +95,23 @@
 #include <arpa/inet.h>
 
 #define DEBUG 0
+
+/*
+ * "route -n get iii.jjj.kkk.lll" can, on Solaris at least,
+ * return the word "default" as the value from "mask" and "dest",
+ * typically if the host is remote, reached over a default route. 
+ * We should probably treat such a mask as "0.0.0.0".
+ *
+ * Define "MASK_DEFAULT_TO_ZERO" to enable this interpretation.
+ *
+ * This is better for Solaris and is probably suitable (or irrelevant)
+ * for others OSes also.  But if it breaks another OS, then reduce the
+ * "hash-if 1" below to exclude that OS. 
+ * (David Lee, Jan 2006)
+ */
+#if 1
+# define MASK_DEFAULT_TO_ZERO
+#endif
 
 int	OutputInCIDR=0;
 
@@ -367,6 +384,26 @@ SearchUsingRouteCmd (char *address, struct in_addr *in
 	if (strnlen(mask, sizeof(mask)) == 0) {
 		strncpy (mask, "255.255.255.255", sizeof(mask));
 	}
+
+	/*
+	 * Solaris (at least) can return the word "default" for mask and dest.
+	 * For the moment, let's interpret this pair as:
+	 *	mask: 0.0.0.0
+	 *	destination: <original IP>
+	 * (Does "dest" ever get used?)
+	 * This was manifesting itself under "BasicSanityCheck", which tries
+	 * to use a remote IP number; these typically use the "default" route.
+	 * Better schemes are warmly invited...
+	 */
+#ifdef MASK_DEFAULT_TO_ZERO
+	if (strncmp(mask, "default", sizeof("default")) == 0) {
+		strncpy (mask, "0.0.0.0", sizeof(mask));
+	}
+	if (strncmp(dest, "default", sizeof("default")) == 0) {
+		strncpy (dest, address, sizeof(dest));
+	}
+#endif
+
 	ConvertQuadToInt  (dest, sizeof(dest));
 	ConvertBitsToMask (mask, sizeof(mask));
 /*
@@ -879,6 +916,9 @@ ff02::%lo0/32                     fe80::1%lo0                   UC          lo0
 
 /* 
  * $Log: findif.c,v $
+ * Revision 1.51  2006/01/26 12:59:14  davidlee
+ * Handle: 'mask: default' from 'route get ...'
+ *
  * Revision 1.50  2005/11/09 16:03:22  davidlee
  * For 'ctype' macros/functions, some platforms warn if argument is not of type (int)
  *
