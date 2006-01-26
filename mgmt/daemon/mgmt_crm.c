@@ -145,7 +145,8 @@ delete_object(const char* type, const char* entry, const char* id)
 	if(cib_object == NULL) {
 		return -1;
 	}
-	mgmt_log(LOG_INFO, "xml:%s",xml);
+	
+	mgmt_log(LOG_DEBUG, "(delete)xml:%s",xml);
 
 	rc = cib_conn->cmds->delete(
 			cib_conn, type, cib_object, &output, 0);
@@ -321,6 +322,8 @@ on_update_crm_config(char* argv[], int argc)
 
 	fragment = create_cib_fragment(cib_object, "crm_config");
 
+	mgmt_log(LOG_DEBUG, "(update)xml:%s",xml);
+
 	rc = cib_conn->cmds->update(
 			cib_conn, "crm_config", fragment, &output, 0);
 
@@ -485,6 +488,7 @@ on_del_rsc(char* argv[], int argc)
 		return cl_strdup(MSG_FAIL);
 	}
 
+	mgmt_log(LOG_DEBUG, "(delete resources)xml:%s",xml);
 	rc = cib_conn->cmds->delete(
 			cib_conn, "resources", cib_object, &output, 0);
 
