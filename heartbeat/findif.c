@@ -1,4 +1,4 @@
-/* $Id: findif.c,v 1.51 2006/01/26 12:59:14 davidlee Exp $ */
+/* $Id: findif.c,v 1.52 2006/01/26 16:46:59 davidlee Exp $ */
 /*
  * findif.c:	Finds an interface which can route a given address
  *
@@ -117,8 +117,6 @@ int	OutputInCIDR=0;
 
 void ConvertQuadToInt (char *dest, int destlen);
 
-void ConvertBitsToMask (char *mask, int masklen);
-
 /*
  * Different OSes offer different mechnisms to obtain this information.
  * Not all this can be determined at configure-time; need a run-time element.
@@ -203,57 +201,6 @@ ConvertQuadToInt (char *dest, int destlen)
 	snprintf (dest, destlen, "%ld", intdest);
 }
 
-void
-ConvertBitsToMask (char *mask, int masklen)
-{
-	int maskbits;
-	unsigned long int maskflag = 0x1;
-	unsigned long int longmask = 0;
-	int i;
-	int count;
-	char *p;
-	char *lastp=mask+masklen;
-	char maskwithoutdots[12];
-
-	/*
-	 * Are there '.'s inside ?
-	 * (like from the output of the "route get" command)
-	 */
-	if ((p = strtok(mask, ".")) != NULL) {
-		i = strnlen(p, masklen);
-
-		strncpy(maskwithoutdots, p, (i <= 3 ? i : 3));
-
-		for (count=0; count < 3; count++) {
-			p=strtok(NULL, ".");
-			if (p != NULL) {
-				i = strnlen(p, lastp-p);
-				strncat(maskwithoutdots, p
-				,	(i <= 3 && p != NULL ? i : 3));
-			}
-			else {
-				count = 3;
-			}
-		}
-
-		maskbits = atoi(maskwithoutdots);
-
-	}else{
-		maskbits = atoi(mask);
-	}
-
-	for (i = 0; i < 32; i++) {
-		if (i <  maskbits) {
-			longmask |= maskflag;
-		}
-		/* printf ("%d:%x:%x\n", i, longmask, maskflag); */
-		maskflag = maskflag << 1;
-	}
-
-	/* printf ("longmask: %u (%X)\n", longmask, longmask); */
-	snprintf (mask, masklen, "%ld", longmask);
-}
-
 static int
 SearchUsingProcRoute (char *address, struct in_addr *in
 , 	struct in_addr *addr_out, char *best_if, size_t best_iflen
@@ -323,6 +270,7 @@ SearchUsingRouteCmd (char *address, struct in_addr *in
 	char  *cp, *sp;
 	int done = 0;
 	FILE *routefd = NULL;
+	uint32_t maskbits;
 
 	
 	/* Open route and get the information */
@@ -368,6 +316,7 @@ SearchUsingRouteCmd (char *address, struct in_addr *in
                   	done++;
 		}
 	}
+	fclose(routefd);
 
 	/*
 	 * Check to see if mask isn't available.  It may not be
@@ -404,11 +353,14 @@ SearchUsingRouteCmd (char *address, struct in_addr *in
 	}
 #endif
 
+	/* FIXME ... is this used at all?  Delete? */
 	ConvertQuadToInt  (dest, sizeof(dest));
-	ConvertBitsToMask (mask, sizeof(mask));
-/*
-	ConvertMaskToInt (mask);
-*/
+
+	if (inet_pton(AF_INET, mask, &maskbits) <= 0) {
+		snprintf(errmsg, errmsglen,
+		  "mask [%s] not valid.", mask);
+		return(1);
+	}
 
 	if (inet_pton(AF_INET, address, addr_out) <= 0) {
 		snprintf(errmsg, errmsglen
@@ -417,13 +369,12 @@ SearchUsingRouteCmd (char *address, struct in_addr *in
 		return(1);
 	}
 
-	if ((in->s_addr & atoi(mask)) == (addr_out->s_addr & atoi(mask))) {
+	if ((in->s_addr & maskbits) == (addr_out->s_addr & maskbits)) {
 		best_metric = 0;
-		*best_netmask = atoi(mask);
+		*best_netmask = maskbits;
 		strncpy(best_if, interface, best_iflen);
 	}
 
-	fclose(routefd);
 	if (best_metric == INT_MAX) {
 		snprintf(errmsg, errmsglen, "No route to %s\n", address);
 		return(1);
@@ -916,6 +867,9 @@ ff02::%lo0/32                     fe80::1%lo0                   UC          lo0
 
 /* 
  * $Log: findif.c,v $
+ * Revision 1.52  2006/01/26 16:46:59  davidlee
+ * 'ConvertBitsToMask()' was buggy.  Remove, replacing with call to OS-native 'inet_pton()'.
+ *
  * Revision 1.51  2006/01/26 12:59:14  davidlee
  * Handle: 'mask: default' from 'route get ...'
  *
