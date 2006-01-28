@@ -844,40 +844,6 @@ on_get_rsc_type(char* argv[], int argc)
 	free_data_set(data_set);
 	return ret;
 }
-/* FIXME: following two structures is copied from CRM */
-typedef struct group_variant_data_s
-{
-		int num_children;
-		GListPtr child_list; /* resource_t* */
-		resource_t *self;
-		resource_t *first_child;
-		resource_t *last_child;
-
-		gboolean child_starting;
-		gboolean child_stopping;
-		
-} group_variant_data_t;
-
-typedef struct clone_variant_data_s
-{
-	resource_t *self;
-
-	int clone_max;
-	int clone_node_max;
-
-	int active_clones;
-	int max_nodes;
-		
-	gboolean interleave;
-	gboolean ordered;
-
-	crm_data_t *xml_obj_child;
-		
-	gboolean notify_confirm;
-		
-	GListPtr child_list; /* resource_t* */
-		
-} clone_variant_data_t;
 
 char*
 on_get_sub_rsc(char* argv[], int argc)
@@ -889,14 +855,9 @@ on_get_sub_rsc(char* argv[], int argc)
 	
 	data_set = get_data_set();
 	GET_RESOURCE()
-
-	if (rsc->variant == pe_group) {
-		cur = ((group_variant_data_t*)rsc->variant_opaque)->child_list;
-	}
-	if (rsc->variant == pe_clone || rsc->variant == pe_master) {
-		cur = ((clone_variant_data_t*)rsc->variant_opaque)->child_list;
-	}
-
+		
+	cur = rsc->fns->children(rsc);
+	
 	ret = cl_strdup(MSG_OK);
 	while (cur != NULL) {
 		resource_t* rsc = (resource_t*)cur->data;
@@ -1073,21 +1034,25 @@ on_get_clone(char* argv[], int argc)
 {
 	resource_t* rsc;
 	char* ret;
-	clone_variant_data_t* clone_data;
-	char buf[MAX_STRLEN];
+	char* parameter=NULL;
 	pe_working_set_t* data_set;
 	
 	data_set = get_data_set();
 	GET_RESOURCE()
 
 	ret = cl_strdup(MSG_OK);
-	clone_data = (clone_variant_data_t*)rsc->variant_opaque;
-	
 	ret = mgmt_msg_append(ret, rsc->id);
-	snprintf(buf, MAX_STRLEN, "%d", clone_data->clone_max);
-	ret = mgmt_msg_append(ret, buf);
-	snprintf(buf, MAX_STRLEN, "%d", clone_data->clone_node_max);
-	ret = mgmt_msg_append(ret, buf);
+
+	parameter = rsc->fns->parameter(rsc, NULL, FALSE
+	,	XML_RSC_ATTR_INCARNATION_MAX, data_set);
+	ret = mgmt_msg_append(ret, parameter);
+	cl_free(parameter);
+	
+	parameter = rsc->fns->parameter(rsc, NULL, FALSE
+	,	XML_RSC_ATTR_INCARNATION_NODEMAX, data_set);
+	ret = mgmt_msg_append(ret, parameter);
+	cl_free(parameter);
+
 	free_data_set(data_set);
 	return ret;
 }
@@ -1126,28 +1091,35 @@ on_get_master(char* argv[], int argc)
 {
 	resource_t* rsc;
 	char* ret;
-	clone_variant_data_t* clone_data;
-	const char * master_max_s;
-	const char * master_node_max_s;
-	char buf[MAX_STRLEN];
+	char* parameter=NULL;
 	pe_working_set_t* data_set;
 	
 	data_set = get_data_set();
 	GET_RESOURCE()
-
-	master_max_s = get_rsc_param(rsc, XML_RSC_ATTR_MASTER_MAX);
-	master_node_max_s = get_rsc_param(rsc, XML_RSC_ATTR_MASTER_NODEMAX);
-
-	ret = cl_strdup(MSG_OK);
-	clone_data = (clone_variant_data_t*)rsc->variant_opaque;
 	
+	ret = cl_strdup(MSG_OK);
 	ret = mgmt_msg_append(ret, rsc->id);
-	snprintf(buf, MAX_STRLEN, "%d", clone_data->clone_max);
-	ret = mgmt_msg_append(ret, buf);
-	snprintf(buf, MAX_STRLEN, "%d", clone_data->clone_node_max);
-	ret = mgmt_msg_append(ret, buf);
-	ret = mgmt_msg_append(ret, master_max_s);
-	ret = mgmt_msg_append(ret, master_node_max_s);
+	
+	parameter = rsc->fns->parameter(rsc, NULL, FALSE
+	,	XML_RSC_ATTR_INCARNATION_MAX, data_set);
+	ret = mgmt_msg_append(ret, parameter);
+	cl_free(parameter);
+
+	parameter = rsc->fns->parameter(rsc, NULL, FALSE
+	,	XML_RSC_ATTR_INCARNATION_NODEMAX, data_set);
+	ret = mgmt_msg_append(ret, parameter);
+	cl_free(parameter);
+
+	parameter = rsc->fns->parameter(rsc, NULL, FALSE
+	,	XML_RSC_ATTR_MASTER_MAX, data_set);
+	ret = mgmt_msg_append(ret, parameter);
+	cl_free(parameter);
+
+	parameter = rsc->fns->parameter(rsc, NULL, FALSE
+	,	XML_RSC_ATTR_MASTER_NODEMAX, data_set);
+	ret = mgmt_msg_append(ret, parameter);
+	cl_free(parameter);
+
 	free_data_set(data_set);
 	return ret;
 }
