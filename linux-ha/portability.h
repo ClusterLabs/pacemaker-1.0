@@ -1,4 +1,4 @@
-/* $Id: portability.h,v 1.50 2005/11/18 09:43:19 davidlee Exp $ */
+/* $Id: portability.h,v 1.51 2006/01/30 18:41:59 alan Exp $ */
 #ifndef PORTABILITY_H
 #  define PORTABILITY_H
 
@@ -128,8 +128,9 @@ inet_pton(int af, const char *src, void *dst);
 #	endif /* SYS_NMLN */
 #endif
 
-#define	POINTER_TO_SIZE_T(p)	((size_t)(p)) /*pointer cast as int*/
-#define	POINTER_TO_SSIZE_T(p)	((ssize_t)(p)) /*pointer cast as int*/
+#define	POINTER_TO_SIZE_T(p)	((size_t)(p)) /*pointer cast as size_t*/
+#define	POINTER_TO_SSIZE_T(p)	((ssize_t)(p)) /*pointer cast as ssize_t*/
+#define	POINTER_TO_ULONG(p)	((unsigned long)(p)) /*pointer cast as unsigned long*/
 
 #define	HAURL(url)	HA_URLBASE url
 
