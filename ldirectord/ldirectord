@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-my($VERSION)=(qw$Id: ldirectord,v 1.129 2006/01/15 16:25:19 xunsun Exp $)[2];
+my($VERSION)=(qw$Id: ldirectord,v 1.130 2006/01/31 00:38:02 horms Exp $)[2];
 
 ######################################################################
 # ldirectord                 http://www.vergenet.net/linux/ldirectord/
@@ -2040,7 +2040,8 @@ sub check_connect
 		if ($sock) {
 			close($sock);
 		} else {
-			die(); #socket attempt failed immediately (not timeout)
+			alarm 0; # Cancel the alarm
+			die("Socket Connect Failed");
 		}
 		&ld_debug(3, "Connected to $1 (port $port)");
 		alarm 0; # Cancel the alarm
@@ -2076,7 +2077,8 @@ sub check_sip
 		my $sock = &ld_open_socket($$r{server}, $sip_d_port, 
 					$$v{protocol});
 		unless ($sock) {
-			die(); #socket attempt failed immediately (not timeout)
+			alarm 0;
+			die("Socket Connect Failed");
 		}
 
 		my $sip_sockaddr = getsockname($sock);
@@ -3038,6 +3040,7 @@ sub get_real_id_str
 	my $request = "";
 	my $receive = "";
 	my $checkport = "";
+	my $virtualhost = "";
 	my $check;
 	my $real;
 
@@ -3067,10 +3070,14 @@ sub get_real_id_str
 		$checkport = $v->{"checkport"};
 	}
 
+	if(defined($v->{"virtualhost"})) {
+		$virtualhost = $v->{"virtualhost"};
+	}
 
         $real    = $check . ":" . $v->{"protocol"} . ":" 
 	         . $r->{"server"} . ":" . $r->{"port"} . ":" 
-		 . $checkport . ":" . $r->{"weight"} . ":"
+		 . $virtualhost . ":" . $checkport . ":" 
+		 . $r->{"weight"} . ":"
 		 . quotemeta($request) . ":" . quotemeta($receive);
 }
 
