@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.480 2006/01/25 16:41:36 alan Exp $ */
+/* $Id: heartbeat.c,v 1.481 2006/01/31 04:30:37 alan Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -721,6 +721,9 @@ SetupFifoChild(void) {
 	FifoChildSource = G_main_add_IPC_Channel(PRI_FIFOMSG
 	,	fifochildipc[P_READFD]
 	,	FALSE, FIFO_child_msg_dispatch, NULL, NULL);
+	G_main_setmaxdispatchdelay((GSource*)FifoChildSource, 2000);
+	G_main_setmaxdispatchtime((GSource*)FifoChildSource, 10);
+	
 	return HA_OK;
 }
 
@@ -1385,21 +1388,26 @@ master_control_process(void)
 
 	/* Child I/O processes */
 	for(j = 0; j < nummedia; j++) {
+		GCHSource*	s;
 		/*
 		 * We cannot share a socket between the write and read
 		 * children, though it might sound like it would work ;-)
 		 */
 
 		/* Connect up the write child IPC channel... */
-		G_main_add_IPC_Channel(PRI_CLUSTERMSG
+		s = G_main_add_IPC_Channel(PRI_CLUSTERMSG
 		,	sysmedia[j]->wchan[P_WRITEFD], FALSE
 		,	NULL, sysmedia+j, NULL);
+		G_main_setmaxdispatchdelay((GSource*)s, 50);
+		G_main_setmaxdispatchtime((GSource*)s, 10);
 
 		
 		/* Connect up the read child IPC channel... */
 		G_main_add_IPC_Channel(PRI_CLUSTERMSG
 		,	sysmedia[j]->rchan[P_WRITEFD], FALSE
 		,	read_child_dispatch, sysmedia+j, NULL);
+		G_main_setmaxdispatchdelay((GSource*)s, 50);
+		G_main_setmaxdispatchtime((GSource*)s, 10);
 
 }	
 	
@@ -1735,6 +1743,8 @@ comm_now_up()
 
 	regsource = G_main_add_IPC_WaitConnection(PRI_APIREGISTER, regwchan
 	,	NULL, FALSE, APIregistration_dispatch, NULL, NULL);
+	G_main_setmaxdispatchdelay((GSource*)regsource, 500);
+	G_main_setmaxdispatchtime((GSource*)regsource, 10);
 	
 
 	if (regsource == NULL) {
@@ -3752,6 +3762,8 @@ send_reqnodes_msg(gpointer data){
 	const char* destnode = NULL;
 	long i;
 	int startindex = (long) data;
+	GSource *	gs;
+	guint		id;
 	
 	
 	if (get_reqnodes_reply){
@@ -3801,8 +3813,13 @@ send_reqnodes_msg(gpointer data){
 	
 	send_cluster_msg(msg);
 	
-	Gmain_timeout_add(1000, send_reqnodes_msg, (gpointer)i);
-	
+	id = Gmain_timeout_add(1000, send_reqnodes_msg, (gpointer)i);
+	gs = g_main_context_find_source_by_id(NULL, id);
+
+	if (gs) {
+		G_main_setmaxdispatchdelay(gs, 100);
+		G_main_setmaxdispatchtime(gs, 10);
+	}
 	return FALSE;
 }
 
@@ -5095,11 +5112,16 @@ should_drop_message(struct node_info * thisnode, const struct ha_msg *msg,
 				/* THIS IS RESOURCE WORK!  FIXME */
 				/* IS THIS RIGHT??? FIXME ?? */
 				if (DoManageResources) {
+					guint id;
+					GSource * gs;
 					send_local_status();
-					
 					(void)CauseShutdownRestart;
-					Gmain_timeout_add(2000 ,	CauseShutdownRestart, NULL);
-
+					id = Gmain_timeout_add(2000, CauseShutdownRestart,NULL);
+					gs = g_main_context_find_source_by_id(NULL, id);
+					if (gs) {
+						G_main_setmaxdispatchdelay(gs, 1000);
+						G_main_setmaxdispatchtime(gs, 50);
+					}
 				}
 				ishealedpartition=1;
 			}
@@ -6042,6 +6064,9 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.481  2006/01/31 04:30:37  alan
+ * Put in code to detect and log whenever heartbeat functions take too long or are delayed too long...
+ *
  * Revision 1.480  2006/01/25 16:41:36  alan
  * Put in a little clarification on a disagreeing membership message.
  *

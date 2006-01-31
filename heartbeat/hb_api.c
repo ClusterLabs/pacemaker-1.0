@@ -1,4 +1,4 @@
-/* $Id: hb_api.c,v 1.147 2005/12/21 02:34:32 gshi Exp $ */
+/* $Id: hb_api.c,v 1.148 2006/01/31 04:30:37 alan Exp $ */
 /*
  * hb_api: Server-side heartbeat API code
  *
@@ -1230,6 +1230,8 @@ process_registerevent(IPC_Channel* chan,  gpointer user_data)
 	,	chan, FALSE
 	,	APIclients_input_dispatch
 	,	client, G_remove_client);
+	G_main_setmaxdispatchdelay((GSource*)client->gsource, 500);
+	G_main_setmaxdispatchtime((GSource*)client->gsource, 10);
 	if (ANYDEBUG) {
 		cl_log(LOG_DEBUG
 		,	"client->gsource = 0x%lx"
