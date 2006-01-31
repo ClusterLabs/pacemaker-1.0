@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.482 2006/01/31 16:20:30 alan Exp $ */
+/* $Id: heartbeat.c,v 1.483 2006/01/31 19:59:50 alan Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -722,7 +722,8 @@ SetupFifoChild(void) {
 	,	fifochildipc[P_READFD]
 	,	FALSE, FIFO_child_msg_dispatch, NULL, NULL);
 	G_main_setmaxdispatchdelay((GSource*)FifoChildSource, 2000);
-	G_main_setmaxdispatchtime((GSource*)FifoChildSource, 10);
+	G_main_setmaxdispatchtime((GSource*)FifoChildSource, 50);
+	G_main_setdescription((GSource*)FifoChildSource, "FIFO");
 	
 	return HA_OK;
 }
@@ -1401,7 +1402,8 @@ master_control_process(void)
 		,	sysmedia[j]->wchan[P_WRITEFD], FALSE
 		,	NULL, sysmedia+j, NULL);
 		G_main_setmaxdispatchdelay((GSource*)s, 50);
-		G_main_setmaxdispatchtime((GSource*)s, 10);
+		G_main_setmaxdispatchtime((GSource*)s, 50);
+		G_main_setdescription((GSource*)s, "write child");
 
 		
 		/* Connect up the read child IPC channel... */
@@ -1409,7 +1411,8 @@ master_control_process(void)
 		,	sysmedia[j]->rchan[P_WRITEFD], FALSE
 		,	read_child_dispatch, sysmedia+j, NULL);
 		G_main_setmaxdispatchdelay((GSource*)s, 50);
-		G_main_setmaxdispatchtime((GSource*)s, 10);
+		G_main_setmaxdispatchtime((GSource*)s, 50);
+		G_main_setdescription((GSource*)s, "read child");
 
 }	
 	
@@ -1771,7 +1774,8 @@ comm_now_up()
 	regsource = G_main_add_IPC_WaitConnection(PRI_APIREGISTER, regwchan
 	,	NULL, FALSE, APIregistration_dispatch, NULL, NULL);
 	G_main_setmaxdispatchdelay((GSource*)regsource, 500);
-	G_main_setmaxdispatchtime((GSource*)regsource, 10);
+	G_main_setmaxdispatchtime((GSource*)regsource, 20);
+	G_main_setdescription((GSource*)regsource, "client registration");
 	
 
 	if (regsource == NULL) {
@@ -3845,7 +3849,7 @@ send_reqnodes_msg(gpointer data){
 
 	if (gs) {
 		Gmain_timeout_setmaxdispatchdelay(gs, 100);
-		Gmain_timeout_setmaxdispatchtime(gs, 10);
+		Gmain_timeout_setmaxdispatchtime(gs, 50);
 	}
 	return FALSE;
 }
@@ -6095,6 +6099,9 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.483  2006/01/31 19:59:50  alan
+ * Added code to be able to tell what source it is that is misbehaving and/or getting the shaft.
+ *
  * Revision 1.482  2006/01/31 16:20:30  alan
  * Fixed some wrong calls for measuring dispatch time / latency
  *
