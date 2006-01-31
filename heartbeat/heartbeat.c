@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.481 2006/01/31 04:30:37 alan Exp $ */
+/* $Id: heartbeat.c,v 1.482 2006/01/31 16:20:30 alan Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -1313,6 +1313,8 @@ master_control_process(void)
 	int			j;
 	GMainLoop*		mainloop;
 	long			memstatsinterval;
+	guint			id;
+	GSource*		idg;
 
 
 	init_xmit_hist (&msghist);
@@ -1417,14 +1419,24 @@ master_control_process(void)
 	 */
 	
 	/* Send local status at the "right time" */
-	Gmain_timeout_add_full(PRI_SENDSTATUS, config->heartbeat_ms
-			       ,	hb_send_local_status, NULL, NULL);
+	id=Gmain_timeout_add_full(PRI_SENDSTATUS, config->heartbeat_ms
+	,	hb_send_local_status, NULL, NULL);
+	idg=g_main_context_find_source_by_id(NULL, id);
+	if (idg) {
+		Gmain_timeout_setmaxdispatchdelay(idg, 50);
+		Gmain_timeout_setmaxdispatchtime(idg, 50);
+	}
 
-	Gmain_timeout_add_full(PRI_SENDSTATUS, 
-			       config->initial_deadtime_ms,
-			       set_init_deadtime_passed_flag,
-			       NULL,
-			       NULL);
+	id=Gmain_timeout_add_full(PRI_SENDSTATUS
+	,	config->initial_deadtime_ms
+	,	set_init_deadtime_passed_flag
+	,	NULL
+	,	NULL);
+	idg=g_main_context_find_source_by_id(NULL, id);
+	if (idg) {
+		Gmain_timeout_setmaxdispatchdelay(idg, 50);
+		Gmain_timeout_setmaxdispatchtime(idg, 50);
+	}
 
 	/* Dump out memory stats periodically... */
 	memstatsinterval = (debug_level ? 10*60*1000 : ONEDAY*1000);
@@ -1432,8 +1444,13 @@ master_control_process(void)
 	,	hb_dump_all_proc_stats, NULL, NULL);
 
 	/* Audit clients for liveness periodically */
-	Gmain_timeout_add_full(PRI_AUDITCLIENT, 9*1000
+	id=Gmain_timeout_add_full(PRI_AUDITCLIENT, 9*1000
 	,	api_audit_clients, NULL, NULL);
+	idg=g_main_context_find_source_by_id(NULL, id);
+	if (idg) {
+		Gmain_timeout_setmaxdispatchdelay(idg, 5000);
+		Gmain_timeout_setmaxdispatchtime(idg, 50);
+	}
 
 	/* Reset timeout times to "now" */
 	for (j=0; j < config->nodecount; ++j) {
@@ -1443,11 +1460,21 @@ master_control_process(void)
 	}
 
 	/* Check for pending signals */
-	Gmain_timeout_add_full(PRI_SENDSTATUS, config->heartbeat_ms
+	id=Gmain_timeout_add_full(PRI_SENDSTATUS, config->heartbeat_ms
 	,       Gmain_hb_signal_process_pending, NULL, NULL);
+	idg=g_main_context_find_source_by_id(NULL, id);
+	if (idg) {
+		Gmain_timeout_setmaxdispatchdelay(idg, 1000);
+		Gmain_timeout_setmaxdispatchtime(idg, 50);
+	}
 	
-	Gmain_timeout_add_full(PRI_FREEMSG, 500,
-			       Gmain_update_msgfree_count, NULL, NULL);
+	id=Gmain_timeout_add_full(PRI_FREEMSG, 500
+	,	Gmain_update_msgfree_count, NULL, NULL);
+	idg=g_main_context_find_source_by_id(NULL, id);
+	if (idg) {
+		Gmain_timeout_setmaxdispatchdelay(idg, 1000);
+		Gmain_timeout_setmaxdispatchtime(idg, 50);
+	}
 	
 	if (UseApphbd) {
 		Gmain_timeout_add_full(PRI_DUMPSTATS
@@ -3817,8 +3844,8 @@ send_reqnodes_msg(gpointer data){
 	gs = g_main_context_find_source_by_id(NULL, id);
 
 	if (gs) {
-		G_main_setmaxdispatchdelay(gs, 100);
-		G_main_setmaxdispatchtime(gs, 10);
+		Gmain_timeout_setmaxdispatchdelay(gs, 100);
+		Gmain_timeout_setmaxdispatchtime(gs, 10);
 	}
 	return FALSE;
 }
@@ -5116,11 +5143,15 @@ should_drop_message(struct node_info * thisnode, const struct ha_msg *msg,
 					GSource * gs;
 					send_local_status();
 					(void)CauseShutdownRestart;
-					id = Gmain_timeout_add(2000, CauseShutdownRestart,NULL);
-					gs = g_main_context_find_source_by_id(NULL, id);
+					id = Gmain_timeout_add(2000
+					,	CauseShutdownRestart,NULL);
+					gs = g_main_context_find_source_by_id
+					(	NULL, id);
 					if (gs) {
-						G_main_setmaxdispatchdelay(gs, 1000);
-						G_main_setmaxdispatchtime(gs, 50);
+						Gmain_timeout_setmaxdispatchdelay
+						(gs,	1000);
+						Gmain_timeout_setmaxdispatchtime
+						(gs, 50);
 					}
 				}
 				ishealedpartition=1;
@@ -6064,6 +6095,9 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.482  2006/01/31 16:20:30  alan
+ * Fixed some wrong calls for measuring dispatch time / latency
+ *
  * Revision 1.481  2006/01/31 04:30:37  alan
  * Put in code to detect and log whenever heartbeat functions take too long or are delayed too long...
  *
