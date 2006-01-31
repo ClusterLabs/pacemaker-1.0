@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-my($VERSION)=(qw$Id: ldirectord,v 1.130 2006/01/31 00:38:02 horms Exp $)[2];
+my($VERSION)=(qw$Id: ldirectord,v 1.131 2006/01/31 00:49:59 horms Exp $)[2];
 
 ######################################################################
 # ldirectord                 http://www.vergenet.net/linux/ldirectord/
@@ -634,7 +634,7 @@ sub ld_init
 	}
 
 	# Run as daemon
-	if ($SUPERVISED || defined $opt_d) {
+	if ($SUPERVISED || $opt_d) {
 		&ld_log("Starting Linux Director v$VERSION with pid: $$");
         } else {
 		&ld_log("Starting Linux Director v$VERSION as daemon");
