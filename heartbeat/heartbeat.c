@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.483 2006/01/31 19:59:50 alan Exp $ */
+/* $Id: heartbeat.c,v 1.484 2006/02/01 05:34:12 alan Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -1339,7 +1339,7 @@ master_control_process(void)
 		,	cl_cpu_limit_ms_interval()
 		,	hb_update_cpu_limit, NULL, NULL);
 	}
-	cl_make_realtime(-1, hb_realtime_prio, 32, 150);
+	cl_make_realtime(-1, hb_realtime_prio, 32, 1024);
 
 	set_proc_title("%s: master control process", cmdname);
 
@@ -6099,6 +6099,9 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.484  2006/02/01 05:34:12  alan
+ * Increased the amount of memory the main heartbeat process asks for when it preallocates memory.
+ *
  * Revision 1.483  2006/01/31 19:59:50  alan
  * Added code to be able to tell what source it is that is misbehaving and/or getting the shaft.
  *
