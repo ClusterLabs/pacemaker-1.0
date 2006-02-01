@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.484 2006/02/01 05:34:12 alan Exp $ */
+/* $Id: heartbeat.c,v 1.485 2006/02/01 06:27:28 alan Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -1339,7 +1339,7 @@ master_control_process(void)
 		,	cl_cpu_limit_ms_interval()
 		,	hb_update_cpu_limit, NULL, NULL);
 	}
-	cl_make_realtime(-1, hb_realtime_prio, 32, 1024);
+	cl_make_realtime(-1, hb_realtime_prio, 32, 4096);
 
 	set_proc_title("%s: master control process", cmdname);
 
@@ -6099,6 +6099,9 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.485  2006/02/01 06:27:28  alan
+ * Grabbed an even bigger chunk of memory when starting up heartbeat.
+ *
  * Revision 1.484  2006/02/01 05:34:12  alan
  * Increased the amount of memory the main heartbeat process asks for when it preallocates memory.
  *
