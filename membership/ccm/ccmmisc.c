@@ -1,4 +1,4 @@
-/* $Id: ccmmisc.c,v 1.27 2005/11/08 21:29:59 gshi Exp $ */
+/* $Id: ccmmisc.c,v 1.28 2006/02/01 20:53:05 alan Exp $ */
 /* 
  * ccmmisc.c: Miscellaneous Consensus Cluster Service functions
  *
@@ -156,15 +156,22 @@ ccm_check_memoryleak(void)
 	/* check for memory leaks */
 	struct mallinfo i;
 	static int arena=0;
-	i = mallinfo();
-	if(arena==0) {
-		arena = i.arena;
-	} else if(arena < i.arena) {
-		cl_log(LOG_WARNING, 
-			"leaking memory? previous arena=%d "
-			"present arena=%d", 
-			arena, i.arena);
-		arena=i.arena;
+	static int	count = 0;
+
+	++count;
+	/* Mallinfo is surprisingly expensive */
+	if (count >= 60) {
+		count = 0;
+		i = mallinfo();
+		if(arena==0) {
+			arena = i.arena;
+		} else if(arena < i.arena) {
+			cl_log(LOG_WARNING, 
+				"leaking memory? previous arena=%d "
+				"present arena=%d", 
+				arena, i.arena);
+			arena=i.arena;
+		}
 	}
 #endif
 }
