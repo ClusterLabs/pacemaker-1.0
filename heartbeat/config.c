@@ -1,4 +1,4 @@
-/* $Id: config.c,v 1.191 2006/01/16 09:16:32 andrew Exp $ */
+/* $Id: config.c,v 1.192 2006/02/01 14:59:10 alan Exp $ */
 /*
  * Parse various heartbeat configuration files...
  *
@@ -107,6 +107,7 @@ static int set_release2mode(const char*);
 static int set_autojoin(const char*);
 static int set_uuidfrom(const char*);
 static int ha_config_check_boolean(const char *);
+static int set_memreserve(const char *);
 #ifdef ALLOWPOLLCHOICE
   static int set_normalpoll(const char *);
 #endif
@@ -167,6 +168,7 @@ struct directive {
 ,{KEY_LOG_CONFIG_CHANGES, ha_config_check_boolean, TRUE,"on", "record changes to the cib (valid only with: "KEY_REL2" on)"}
 ,{KEY_LOG_PENGINE_INPUTS, ha_config_check_boolean, TRUE,"on", "record the input used by the policy engine (valid only with: "KEY_REL2" on)"}
 ,{KEY_CONFIG_WRITES_ENABLED, ha_config_check_boolean, TRUE,"on", "write configuration changes to disk (valid only with: "KEY_REL2" on)"}
+,{KEY_MEMRESERVE, set_memreserve, TRUE, "6500", "number of kbytes to preallocate in heartbeat"}
 };
 
 
@@ -2481,6 +2483,17 @@ set_uuidfrom(const char* value)
 	cl_log(LOG_ERR, "Invalid %s directive [%s]", KEY_UUIDFROM, value);
 	return HA_FAIL;
 }
+/* Set the memory reserve amount for heartbeat (in kbytes) */
+static int
+set_memreserve(const char * value)
+{
+	config->memreserve = atoi(value);
+
+	if (config->memreserve > 0) {
+		return(HA_OK);
+	}
+	return(HA_FAIL);
+}
 
 static int
 ha_config_check_boolean(const char *value)
@@ -2504,6 +2517,9 @@ ha_config_check_boolean(const char *value)
 
 /*
  * $Log: config.c,v $
+ * Revision 1.192  2006/02/01 14:59:10  alan
+ * Added some code to allow memory pre-reserve for heartbeat a configuration problem.
+ *
  * Revision 1.191  2006/01/16 09:16:32  andrew
  * Three new ha.cf options:
  *  - record_config_changes (on/off)

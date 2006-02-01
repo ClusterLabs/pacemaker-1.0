@@ -1,4 +1,4 @@
-/* $Id: hb_api.h,v 1.43 2006/01/16 09:16:32 andrew Exp $ */
+/* $Id: hb_api.h,v 1.44 2006/02/01 14:59:09 alan Exp $ */
 /*
  * Client-side Low-level clustering API for heartbeat.
  *
@@ -429,6 +429,7 @@ struct llc_ops {
 #define KEY_AUTOJOIN	"autojoin"
 #define KEY_UUIDFROM	"uuidfrom"
 #define KEY_ENV		"env"
+#define KEY_MEMRESERVE	"memreserve"
 #define KEY_MAX_REXMIT_DELAY "max_rexmit_delay"
 #define KEY_LOG_CONFIG_CHANGES "record_config_changes"
 #define KEY_LOG_PENGINE_INPUTS "record_pengine_inputs"

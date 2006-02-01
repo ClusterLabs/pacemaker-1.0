@@ -1,4 +1,4 @@
-/* $Id: heartbeat.h,v 1.80 2005/11/10 01:16:42 gshi Exp $ */
+/* $Id: heartbeat.h,v 1.81 2006/02/01 14:59:10 alan Exp $ */
 /*
  * heartbeat.h: core definitions for the Linux-HA heartbeat program
  *
@@ -253,9 +253,9 @@ struct link {
 
 #define	NORMALNODE_I	0
 #define	PINGNODE_I	1
-#define	NORMALNODE      "normal"
-#define	PINGNODE        "ping"
-#define	UNKNOWNNODE     "unknown"
+#define	NORMALNODE	"normal"
+#define	PINGNODE	"ping"
+#define	UNKNOWNNODE	"unknown"
 
 struct node_info {
 	int		nodetype;
@@ -300,12 +300,13 @@ struct sys_config {
 	long		initial_deadtime_ms;	/* Ticks before saying dead 1st time*/
 	long		warntime_ms;		/* Ticks before issuing warning */
 	int		hopfudge;		/* hops beyond nodecount allowed */
-	int    		log_facility;		/* syslog facility, if any */
+	int		log_facility;		/* syslog facility, if any */
 	char		facilityname[PATH_MAX];	/* syslog facility name (if any) */
 	char   		logfile[PATH_MAX];	/* path to log file, if any */
         int    		use_logfile;            /* Flag to use the log file*/
 	char		dbgfile[PATH_MAX];	/* path to debug file, if any */
-        int    		use_dbgfile;            /* Flag to use the debug file*/
+	int    		use_dbgfile;            /* Flag to use the debug file*/
+	int		memreserve;		/* number of kbytes to preallocate in heartbeat */
 	int		rereadauth;		/* 1 if we need to reread auth file */
 	seqno_t		generation;		/* Heartbeat generation # */
 	cl_uuid_t	uuid;			/* uuid for this node*/
