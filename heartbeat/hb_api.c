@@ -1,4 +1,4 @@
-/* $Id: hb_api.c,v 1.149 2006/01/31 19:59:50 alan Exp $ */
+/* $Id: hb_api.c,v 1.150 2006/02/02 19:46:48 alan Exp $ */
 /*
  * hb_api: Server-side heartbeat API code
  *
@@ -1751,6 +1751,8 @@ api_add_client(client_proc_t* client, struct ha_msg* msg)
 		client->iscasual = 1;
 	}
 
+	/* Encourage better realtime behavior by heartbeat */
+	client->chan->ops->set_recv_qlen(client->chan, 0);
 
 	if ((cuid = ha_msg_value(msg, F_UID)) == NULL
 	||	(cgid = ha_msg_value(msg, F_GID)) == NULL

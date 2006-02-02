@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.488 2006/02/02 18:27:49 alan Exp $ */
+/* $Id: heartbeat.c,v 1.489 2006/02/02 19:46:48 alan Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -686,6 +686,8 @@ SetupFifoChild(void) {
 		cl_perror("cannot create FIFO ipc channel");
 		return HA_FAIL;
 	}
+	/* Encourage better real-time behavior */
+	fifochildipc[P_READFD]->ops->set_recv_qlen(fifochildipc[P_READFD], 0); 
 	/* Fork FIFO process... */
 	if (fifoproc < 0) {
 		fifoproc = procinfo->nprocs;
@@ -1406,6 +1408,9 @@ master_control_process(void)
 		G_main_setdescription((GSource*)s, "write child");
 
 		
+		/* Encourage better real-time behavior */
+		sysmedia[j]->rchan[P_READFD]->ops->set_recv_qlen
+		(	sysmedia[j]->rchan[P_READFD], 0); 
 		/* Connect up the read child IPC channel... */
 		s = G_main_add_IPC_Channel(PRI_CLUSTERMSG
 		,	sysmedia[j]->rchan[P_WRITEFD], FALSE
@@ -6068,6 +6073,10 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.489  2006/02/02 19:46:48  alan
+ * Changed heartbeat's inbound IPC channels so that they're all unbuffered.
+ * Although this decreases efficiency, it does improve realtime behavior.
+ *
  * Revision 1.488  2006/02/02 18:27:49  alan
  * Fixed up a mistake in adding code to check timeouts.
  * An IPC channel in heartbeat wound up not getting a description,
