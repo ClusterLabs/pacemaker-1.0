@@ -37,8 +37,8 @@
 
 static void	schedule_rexmit_request(struct node_info* node, seqno_t seq, int delay);
 
-static int max_rexmit_delay = 250;
-static GHashTable*		rexmit_hash_table = NULL;
+static int		max_rexmit_delay = 250;
+static GHashTable*	rexmit_hash_table = NULL;
 void hb_set_max_rexmit_delay(int);
 
 
@@ -46,6 +46,8 @@ struct rexmit_info{
 	seqno_t seq;
 	struct node_info* node;
 };
+
+static gboolean rand_seed_set = FALSE;
 
 void
 hb_set_max_rexmit_delay(int value)
@@ -60,6 +62,8 @@ hb_set_max_rexmit_delay(int value)
 		       value);
 	}
 	max_rexmit_delay =value;
+	srand(cl_random());
+	rand_seed_set = TRUE;
 	
 	return;
 }
@@ -203,14 +207,20 @@ send_rexmit_request( gpointer data)
 	return FALSE;
 }
 
+#define	RANDROUND	(RAND_MAX/2)
+
 static void
 schedule_rexmit_request(struct node_info* node, seqno_t seq, int delay)    
 {
-	unsigned long sourceid;
-	struct rexmit_info* ri;
+	unsigned long		sourceid;
+	struct rexmit_info*	ri;
+
 	if (delay == 0){
-		srand(cl_random());
-		delay = (1.0* rand()/RAND_MAX)*max_rexmit_delay;
+		if (!rand_seed_set) {
+			srand(cl_random());
+			rand_seed_set = TRUE;
+		}
+		delay = ((rand()*max_rexmit_delay)+RANDROUND)/RAND_MAX;
 	}
 	
 	ri = ha_malloc(sizeof(struct rexmit_info));
