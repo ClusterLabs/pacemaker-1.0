@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.486 2006/02/01 14:59:10 alan Exp $ */
+/* $Id: heartbeat.c,v 1.487 2006/02/02 14:58:23 alan Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -1315,8 +1315,6 @@ master_control_process(void)
 	GMainLoop*		mainloop;
 	long			memstatsinterval;
 	guint			id;
-	GSource*		idg;
-
 
 	init_xmit_hist (&msghist);
 
@@ -1335,9 +1333,10 @@ master_control_process(void)
 		/* Limit ourselves to 50% of the CPU */
 		cl_cpu_limit_setpercent(50);
 		/* Update our CPU limit periodically */
-		Gmain_timeout_add_full(G_PRIORITY_HIGH-1
+		id=Gmain_timeout_add_full(G_PRIORITY_HIGH-5
 		,	cl_cpu_limit_ms_interval()
 		,	hb_update_cpu_limit, NULL, NULL);
+		G_main_setall_id(id, "cpu limit", 50, 10);
 	}
 	cl_make_realtime(-1, hb_realtime_prio, 32, config->memreserve);
 
@@ -1366,7 +1365,8 @@ master_control_process(void)
 	}while (!allstarted);
 	
 	hb_add_deadtime(2000);
-	Gmain_timeout_add(5000, hb_pop_deadtime, NULL);
+	id = Gmain_timeout_add(5000, hb_pop_deadtime, NULL);
+	G_main_setall_id(id, "hb_pop_deadtime", 500, 100);
 
 	set_local_status(UPSTATUS);	/* We're pretty sure we're up ;-) */
 	if (ANYDEBUG) {
@@ -1424,36 +1424,25 @@ master_control_process(void)
 	/* Send local status at the "right time" */
 	id=Gmain_timeout_add_full(PRI_SENDSTATUS, config->heartbeat_ms
 	,	hb_send_local_status, NULL, NULL);
-	idg=g_main_context_find_source_by_id(NULL, id);
-	if (idg) {
-		Gmain_timeout_setmaxdispatchdelay(idg, 50);
-		Gmain_timeout_setmaxdispatchtime(idg, 50);
-	}
+	G_main_setall_id(id, "send local status", 50, 50);
 
-	id=Gmain_timeout_add_full(PRI_SENDSTATUS
+	id=Gmain_timeout_add_full(PRI_AUDITCLIENT
 	,	config->initial_deadtime_ms
 	,	set_init_deadtime_passed_flag
 	,	NULL
 	,	NULL);
-	idg=g_main_context_find_source_by_id(NULL, id);
-	if (idg) {
-		Gmain_timeout_setmaxdispatchdelay(idg, 50);
-		Gmain_timeout_setmaxdispatchtime(idg, 50);
-	}
+	G_main_setall_id(id, "init deadtime passed", 500, 50);
 
 	/* Dump out memory stats periodically... */
 	memstatsinterval = (debug_level ? 10*60*1000 : ONEDAY*1000);
-	Gmain_timeout_add_full(PRI_DUMPSTATS, memstatsinterval
+	id=Gmain_timeout_add_full(PRI_DUMPSTATS, memstatsinterval
 	,	hb_dump_all_proc_stats, NULL, NULL);
+	G_main_setall_id(id, "memory stats", 5000, 100);
 
 	/* Audit clients for liveness periodically */
 	id=Gmain_timeout_add_full(PRI_AUDITCLIENT, 9*1000
 	,	api_audit_clients, NULL, NULL);
-	idg=g_main_context_find_source_by_id(NULL, id);
-	if (idg) {
-		Gmain_timeout_setmaxdispatchdelay(idg, 5000);
-		Gmain_timeout_setmaxdispatchtime(idg, 50);
-	}
+	G_main_setall_id(id, "client audit", 5000, 100);
 
 	/* Reset timeout times to "now" */
 	for (j=0; j < config->nodecount; ++j) {
@@ -1465,19 +1454,11 @@ master_control_process(void)
 	/* Check for pending signals */
 	id=Gmain_timeout_add_full(PRI_SENDSTATUS, config->heartbeat_ms
 	,       Gmain_hb_signal_process_pending, NULL, NULL);
-	idg=g_main_context_find_source_by_id(NULL, id);
-	if (idg) {
-		Gmain_timeout_setmaxdispatchdelay(idg, 1000);
-		Gmain_timeout_setmaxdispatchtime(idg, 50);
-	}
+	G_main_setall_id(id, "check for signals", 500, 50);
 	
 	id=Gmain_timeout_add_full(PRI_FREEMSG, 500
 	,	Gmain_update_msgfree_count, NULL, NULL);
-	idg=g_main_context_find_source_by_id(NULL, id);
-	if (idg) {
-		Gmain_timeout_setmaxdispatchdelay(idg, 1000);
-		Gmain_timeout_setmaxdispatchtime(idg, 50);
-	}
+	G_main_setall_id(id, "update msgfree count", 500, 50);
 	
 	if (UseApphbd) {
 		Gmain_timeout_add_full(PRI_DUMPSTATS
@@ -1929,7 +1910,8 @@ hb_initiate_shutdown(int quickshutdown)
 gboolean
 hb_mcp_final_shutdown(gpointer p)
 {
-	static int shutdown_phase = 0;
+	static int	shutdown_phase = 0;
+	guint		id;
 
 	if (ANYDEBUG) {
 		cl_log(LOG_DEBUG, "hb_mcp_final_shutdown() phase %d"
@@ -1970,8 +1952,9 @@ hb_mcp_final_shutdown(gpointer p)
 			/* Shouldn't *really* need this */
 			hb_kill_rsc_mgmt_children(SIGTERM);
 		}
-		Gmain_timeout_add(1000, hb_mcp_final_shutdown /* phase 2 */
+		id=Gmain_timeout_add(1000, hb_mcp_final_shutdown /* phase 2 */
 		,	NULL);
+		G_main_setall_id(id, "shutdown phase 2", 500, 100);
 		return FALSE;
 
 	case 2: /* From 1-second delay above */
@@ -3793,7 +3776,6 @@ send_reqnodes_msg(gpointer data){
 	const char* destnode = NULL;
 	long i;
 	int startindex = (long) data;
-	GSource *	gs;
 	guint		id;
 	
 	
@@ -3845,12 +3827,7 @@ send_reqnodes_msg(gpointer data){
 	send_cluster_msg(msg);
 	
 	id = Gmain_timeout_add(1000, send_reqnodes_msg, (gpointer)i);
-	gs = g_main_context_find_source_by_id(NULL, id);
-
-	if (gs) {
-		Gmain_timeout_setmaxdispatchdelay(gs, 100);
-		Gmain_timeout_setmaxdispatchtime(gs, 50);
-	}
+	G_main_setall_id(id, "send_reqnodes_msg", 500, 100);
 	return FALSE;
 }
 
@@ -5144,19 +5121,11 @@ should_drop_message(struct node_info * thisnode, const struct ha_msg *msg,
 				/* IS THIS RIGHT??? FIXME ?? */
 				if (DoManageResources) {
 					guint id;
-					GSource * gs;
 					send_local_status();
 					(void)CauseShutdownRestart;
 					id = Gmain_timeout_add(2000
 					,	CauseShutdownRestart,NULL);
-					gs = g_main_context_find_source_by_id
-					(	NULL, id);
-					if (gs) {
-						Gmain_timeout_setmaxdispatchdelay
-						(gs,	1000);
-						Gmain_timeout_setmaxdispatchtime
-						(gs, 50);
-					}
+					G_main_setall_id(id, "shutdown restart", 1000, 50);
 				}
 				ishealedpartition=1;
 			}
@@ -6099,6 +6068,13 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.487  2006/02/02 14:58:23  alan
+ * Moved our timeout functions to GSource.c.
+ * Fixed a bug in the timing code in GSource.c (it almost never worked)
+ * Added code to time the prepare check functions.
+ * Added simpler ways to check for timeouts
+ * Changed heartbeat to use these simpler ways, and checked more timeouts.
+ *
  * Revision 1.486  2006/02/01 14:59:10  alan
  * Added some code to allow memory pre-reserve for heartbeat a configuration problem.
  *
