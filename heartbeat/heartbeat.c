@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.487 2006/02/02 14:58:23 alan Exp $ */
+/* $Id: heartbeat.c,v 1.488 2006/02/02 18:27:49 alan Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -1407,7 +1407,7 @@ master_control_process(void)
 
 		
 		/* Connect up the read child IPC channel... */
-		G_main_add_IPC_Channel(PRI_CLUSTERMSG
+		s = G_main_add_IPC_Channel(PRI_CLUSTERMSG
 		,	sysmedia[j]->rchan[P_WRITEFD], FALSE
 		,	read_child_dispatch, sysmedia+j, NULL);
 		G_main_setmaxdispatchdelay((GSource*)s, 50);
@@ -6068,6 +6068,12 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.488  2006/02/02 18:27:49  alan
+ * Fixed up a mistake in adding code to check timeouts.
+ * An IPC channel in heartbeat wound up not getting a description,
+ * and another one got the wrong description.  Both from a single bug -
+ * two missing characters.
+ *
  * Revision 1.487  2006/02/02 14:58:23  alan
  * Moved our timeout functions to GSource.c.
  * Fixed a bug in the timing code in GSource.c (it almost never worked)
