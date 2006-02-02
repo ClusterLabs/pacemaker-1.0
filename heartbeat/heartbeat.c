@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.490 2006/02/02 20:00:21 alan Exp $ */
+/* $Id: heartbeat.c,v 1.491 2006/02/02 20:58:56 alan Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -1400,7 +1400,7 @@ master_control_process(void)
 		 */
 
 		/* Connect up the write child IPC channel... */
-		s = G_main_add_IPC_Channel(PRI_CLUSTERMSG
+		s = G_main_add_IPC_Channel(PRI_SENDPKT
 		,	sysmedia[j]->wchan[P_WRITEFD], FALSE
 		,	NULL, sysmedia+j, NULL);
 		G_main_setmaxdispatchdelay((GSource*)s, 50);
@@ -1409,7 +1409,7 @@ master_control_process(void)
 
 		
 		/* Connect up the read child IPC channel... */
-		s = G_main_add_IPC_Channel(PRI_CLUSTERMSG
+		s = G_main_add_IPC_Channel(PRI_READPKT
 		,	sysmedia[j]->rchan[P_WRITEFD], FALSE
 		,	read_child_dispatch, sysmedia+j, NULL);
 		/* Encourage better real-time behavior */
@@ -1457,7 +1457,7 @@ master_control_process(void)
 	}
 
 	/* Check for pending signals */
-	id=Gmain_timeout_add_full(PRI_SENDSTATUS, config->heartbeat_ms
+	id=Gmain_timeout_add_full(PRI_CHECKSIGS, config->heartbeat_ms
 	,       Gmain_hb_signal_process_pending, NULL, NULL);
 	G_main_setall_id(id, "check for signals", 500, 50);
 	
@@ -6073,6 +6073,9 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.491  2006/02/02 20:58:56  alan
+ * Changed the priorities of a few of the realtime events in heartbeat.
+ *
  * Revision 1.490  2006/02/02 20:00:21  alan
  * Made a small correction to the last realtime behavior change.
  *
