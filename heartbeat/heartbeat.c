@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.489 2006/02/02 19:46:48 alan Exp $ */
+/* $Id: heartbeat.c,v 1.490 2006/02/02 20:00:21 alan Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -1408,13 +1408,13 @@ master_control_process(void)
 		G_main_setdescription((GSource*)s, "write child");
 
 		
-		/* Encourage better real-time behavior */
-		sysmedia[j]->rchan[P_READFD]->ops->set_recv_qlen
-		(	sysmedia[j]->rchan[P_READFD], 0); 
 		/* Connect up the read child IPC channel... */
 		s = G_main_add_IPC_Channel(PRI_CLUSTERMSG
 		,	sysmedia[j]->rchan[P_WRITEFD], FALSE
 		,	read_child_dispatch, sysmedia+j, NULL);
+		/* Encourage better real-time behavior */
+		sysmedia[j]->rchan[P_WRITEFD]->ops->set_recv_qlen
+		(	sysmedia[j]->rchan[P_WRITEFD], 0); 
 		G_main_setmaxdispatchdelay((GSource*)s, 50);
 		G_main_setmaxdispatchtime((GSource*)s, 50);
 		G_main_setdescription((GSource*)s, "read child");
@@ -6073,6 +6073,9 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.490  2006/02/02 20:00:21  alan
+ * Made a small correction to the last realtime behavior change.
+ *
  * Revision 1.489  2006/02/02 19:46:48  alan
  * Changed heartbeat's inbound IPC channels so that they're all unbuffered.
  * Although this decreases efficiency, it does improve realtime behavior.
