@@ -34,8 +34,8 @@ case "$1" in
 	done
 
 
-	chmod 2555 /usr/bin/cl_status
 	chgrp haclient /usr/bin/cl_status
+	chmod 2555 /usr/bin/cl_status
 
 	for i in root nobody hacluster; do
 		chmod 700 /var/lib/heartbeat/cores/$i
