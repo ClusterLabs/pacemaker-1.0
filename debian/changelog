@@ -3,7 +3,7 @@ heartbeat-2 (2.0.3-1) unstable; urgency=low
   * New Upstream
   * Make sure adduser is passed the --system flag
     (closes: #336580)
-  * Slightly Enhanced package descriptions 
+  * Slightly Enhanced package descriptions
     (closes: #337030)
   * Add build dependancy on swig
   * As PYTHON_PATH has been added to configure.in it seems that autoconf1.4
@@ -11,7 +11,7 @@ heartbeat-2 (2.0.3-1) unstable; urgency=low
     autoconf1.4, and autoconfn is a virtual package provided by autoconf1.7,
     1.8 and 1.9.  Accordingly, replace the autoconf build dependancy with
     autoconf1.9 | autoconfn.  And add a build conflict on autoconf1.4. This
-    way the autoconf command should be autoconf1.7, 1.8 or 1.9, but not 1.4 
+    way the autoconf command should be autoconf1.7, 1.8 or 1.9, but not 1.4
     as was previously the case.
   * Don't apply 00-ssh_scp_path.patch as it should no longer be needed,
     instead add a build dependancy on openssh-client.
@@ -23,8 +23,10 @@ heartbeat-2 (2.0.3-1) unstable; urgency=low
   * Add build dependancy on libgnutls11-dev, as 1.0 probably doesn't
     compile as _t types don't exist.
     http://lists.gnu.org/archive/html/help-gnutls/2004-08/msg00001.html
+  * Fix insonsistency between hb_stanby(1) man page, an the wiki
+    (closes: #339016)
 
- -- Simon Horman <horms@debian.org>  Mon,  7 Nov 2005 13:20:57 +0900
+ -- Simon Horman <horms@verge.net.au>  Fri,  3 Feb 2006 10:22:00 +0900
 
 heartbeat-2 (2.0.2-5) unstable; urgency=low
 
