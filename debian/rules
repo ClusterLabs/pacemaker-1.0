@@ -23,9 +23,7 @@
 
 cfg:=--prefix=/usr --sysconfdir=/etc --localstatedir=/var \
   --mandir=/usr/share/man \
-  --with-ssh-path=/usr/bin/ssh --with-scp-path=/usr/bin/ssh \
   --with-group-name=haclient --with-ccmuser-name=hacluster \
-  --enable-checkpointd --enable-crm --enable-lrm \
   --enable-snmp-subagent --with-mibsdir=/usr/share/snmp/mibs \
   --disable-fatal-warnings
 

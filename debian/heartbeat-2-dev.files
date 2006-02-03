@@ -6,9 +6,12 @@ usr/include/clplumbing/cl_log.h
 usr/include/clplumbing/cl_malloc.h
 usr/include/clplumbing/cl_misc.h
 usr/include/clplumbing/cl_pidfile.h
+usr/include/clplumbing/cl_plugin.h
 usr/include/clplumbing/cl_poll.h
 usr/include/clplumbing/cl_signal.h
 usr/include/clplumbing/cl_syslog.h
+usr/include/clplumbing/cl_tiebreaker.h
+usr/include/clplumbing/cl_quorum.h
 usr/include/clplumbing/cl_uuid.h
 usr/include/clplumbing/coredumps.h
 usr/include/clplumbing/coredumps.h
@@ -17,6 +20,7 @@ usr/include/clplumbing/ipc.h
 usr/include/clplumbing/loggingdaemon.h
 usr/include/clplumbing/longclock.h
 usr/include/clplumbing/lsb_exitcodes.h
+usr/include/clplumbing/md5.h
 usr/include/clplumbing/mkstemp_mode.h
 usr/include/clplumbing/netstring.h
 usr/include/clplumbing/proctrack.h
@@ -41,6 +45,10 @@ usr/include/heartbeat/ipc.h
 usr/include/heartbeat/iso8601.h
 usr/include/heartbeat/lrm_api.h
 usr/include/heartbeat/lrm_msg.h
+usr/include/heartbeat/mgmt_client.h
+usr/include/heartbeat/mgmt_common.h
+usr/include/heartbeat/mgmt.h
+usr/include/heartbeat/mgmt_tls.h
 usr/include/heartbeat/msg.h
 usr/include/heartbeat/msg_xml.h
 usr/include/heartbeat/racommon.h

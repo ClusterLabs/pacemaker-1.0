@@ -28,9 +28,7 @@ EXTRA_DIST		= apply changelog compat control copyright \
 			  heartbeat-2-dev.dirs heartbeat-2-dev.files \
 			  ldirectord-2.files ldirectord-2.postinst \
 			  ldirectord-2.postrm \
-			  patches/00-ssh_scp_path.patch \
 			  patches/02-chown-check.patch \
-			  patches/series/2.0.0-1 \
 			  patches/series/2.0.3-1
 
 

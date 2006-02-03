@@ -5,6 +5,24 @@ heartbeat-2 (2.0.3-1) unstable; urgency=low
     (closes: #336580)
   * Slightly Enhanced package descriptions 
     (closes: #337030)
+  * Add build dependancy on swig
+  * As PYTHON_PATH has been added to configure.in it seems that autoconf1.4
+    can no longer build this tree.  Currently autoconf is provided by
+    autoconf1.4, and autoconfn is a virtual package provided by autoconf1.7,
+    1.8 and 1.9.  Accordingly, replace the autoconf build dependancy with
+    autoconf1.9 | autoconfn.  And add a build conflict on autoconf1.4. This
+    way the autoconf command should be autoconf1.7, 1.8 or 1.9, but not 1.4 
+    as was previously the case.
+  * Don't apply 00-ssh_scp_path.patch as it should no longer be needed,
+    instead add a build dependancy on openssh-client.
+    Also removed call to relevant configure options.
+  * Removed configure option that no longer exists
+    --enable-checkpointd
+  * Removed configure options that are now on by default
+    --enable-crm --enable-lrm
+  * Add build dependancy on libgnutls11-dev, as 1.0 probably doesn't
+    compile as _t types don't exist.
+    http://lists.gnu.org/archive/html/help-gnutls/2004-08/msg00001.html
 
  -- Simon Horman <horms@debian.org>  Mon,  7 Nov 2005 13:20:57 +0900
 
