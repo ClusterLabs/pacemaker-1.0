@@ -27,8 +27,11 @@ heartbeat-2 (2.0.3-1) unstable; urgency=low
     (closes: #339016)
   * Make /usr/bin/cl_status setgid
     (closes: #351178)
+  * Make sure that /var/run/heartbeat/{ccm,crm} exist on install
+    else postinst, and thus the install will abort.
+    (closes: #351181)
 
- -- Simon Horman <horms@debian.org>  Fri,  3 Feb 2006 11:11:44 +0900
+ -- Simon Horman <horms@debian.org>  Fri,  3 Feb 2006 11:21:53 +0900
 
 heartbeat-2 (2.0.2-5) unstable; urgency=low
 

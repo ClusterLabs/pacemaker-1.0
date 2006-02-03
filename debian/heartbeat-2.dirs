@@ -28,3 +28,5 @@ var/lib/heartbeat/crm
 var/lib/heartbeat/ckpt
 var/lock/subsys
 var/run/heartbeat
+var/run/heartbeat/ccm 
+var/run/heartbeat/crm
