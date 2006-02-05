@@ -187,7 +187,7 @@ init_crm(void)
 	mgmt_log(LOG_INFO,"init_crm");
 	cib_conn = cib_new();
 	for (i = 0; i < max_try ; i++) {
-		ret = cib_conn->cmds->signon(cib_conn, client_name, cib_query);
+		ret = cib_conn->cmds->signon(cib_conn, client_name, cib_command);
 		if (ret == cib_ok) {
 			break;
 		}
