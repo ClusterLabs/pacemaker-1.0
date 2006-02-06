@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.492 2006/02/06 04:34:36 alan Exp $ */
+/* $Id: heartbeat.c,v 1.493 2006/02/06 14:00:43 alan Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -974,7 +974,9 @@ read_child(struct hb_media* mp)
 		"Soldiering on...");
 	}
 
-	cl_make_realtime(-1, hb_realtime_prio, 16, 8);
+	cl_make_realtime(-1
+	,	(hb_realtime_prio > 1 ? hb_realtime_prio-1 : hb_realtime_prio)
+	,	16, 64);
 	set_proc_title("%s: read: %s %s", cmdname, mp->type, mp->name);
 	cl_cdtocoredir();
 	cl_set_all_coredump_signal_handlers();
@@ -1049,7 +1051,9 @@ write_child(struct hb_media* mp)
 	}
 
 	set_proc_title("%s: write: %s %s", cmdname, mp->type, mp->name);
-	cl_make_realtime(-1, hb_realtime_prio, 16, 8);
+	cl_make_realtime(-1
+	,	hb_realtime_prio > 1 ? hb_realtime_prio-1 : hb_realtime_prio
+	,	16, 64);
 	cl_cdtocoredir();
 	cl_set_all_coredump_signal_handlers();
 	drop_privs(0, 0);	/* Become nobody */
@@ -1121,7 +1125,9 @@ fifo_child(IPC_Channel* chan)
 		exit(1);
 	}
 
-	cl_make_realtime(-1, hb_realtime_prio, 16, 32);
+	cl_make_realtime(-1
+	,	(hb_realtime_prio > 1 ? hb_realtime_prio-1 : hb_realtime_prio)
+	,	16, 8);
 	cl_cdtocoredir();
 	cl_set_all_coredump_signal_handlers();
 	drop_privs(0, 0);	/* Become nobody */
@@ -6084,6 +6090,10 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.493  2006/02/06 14:00:43  alan
+ * Changed heartbeat's child processes to run one notch lower than it in realtime
+ * priority.
+ *
  * Revision 1.492  2006/02/06 04:34:36  alan
  * Removed two cases where we could possibly block (but we didn't realize it)
  * They've been in the code since a very long time ago.
