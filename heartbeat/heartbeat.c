@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.491 2006/02/02 20:58:56 alan Exp $ */
+/* $Id: heartbeat.c,v 1.492 2006/02/06 04:34:36 alan Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -250,6 +250,7 @@
 #include <clplumbing/cpulimits.h>
 #include <clplumbing/netstring.h>
 #include <clplumbing/coredumps.h>
+#include <clplumbing/cl_random.h>
 #include <heartbeat.h>
 #include <ha_msg.h>
 #include <hb_api.h>
@@ -779,6 +780,7 @@ initialize_heartbeat()
 		cl_log(LOG_DEBUG, "uuid is:%s", uuid_str);
 	}
 	
+	/* We only need to add our uuid if it's not already in table */
 	add_uuidtable(&config->uuid, curnode);
 	cl_uuid_copy(&curnode->uuid, &config->uuid);
 	write_cache_file(config);
@@ -1189,11 +1191,15 @@ Gmain_hb_signal_process_pending(void *unused)
 static gboolean
 FIFO_child_msg_dispatch(IPC_Channel* source, gpointer user_data)
 {
-	struct ha_msg*	msg = msgfromIPC(source, 0);
+	struct ha_msg*	msg;
 
 	if (DEBUGDETAILS) {
 		cl_log(LOG_DEBUG, "FIFO_child_msg_dispatch() {");
 	}
+	if (!source->ops->is_message_pending(source)) {
+		return TRUE;
+	}
+	msg = msgfromIPC(source, 0);
 	if (msg != NULL) {
 		/* send_cluster_msg disposes of "msg" */
 		send_cluster_msg(msg);
@@ -1210,7 +1216,7 @@ FIFO_child_msg_dispatch(IPC_Channel* source, gpointer user_data)
 static gboolean
 read_child_dispatch(IPC_Channel* source, gpointer user_data)
 {
-	struct ha_msg*	msg = msgfromIPC(source, MSG_NEEDAUTH);
+	struct ha_msg*	msg;
 	struct hb_media** mp = user_data;
 	int	media_idx = mp - &sysmedia[0];
 
@@ -1224,6 +1230,14 @@ read_child_dispatch(IPC_Channel* source, gpointer user_data)
 		cl_log(LOG_DEBUG
 		,	"read_child_dispatch() {");
 	}
+	if (!source->ops->is_message_pending(source)) {
+		if (DEBUGDETAILS) {
+			cl_log(LOG_DEBUG
+			,	"}/*read_child_dispatch(0)*/;");
+		}
+		return TRUE;
+	}
+	msg = msgfromIPC(source, MSG_NEEDAUTH);
 	if (msg != NULL) {
 		const char * from = ha_msg_value(msg, F_ORIG);
 		struct link* lnk = NULL;
@@ -2384,12 +2398,8 @@ HBDoMsg_T_ADDNODE(const char * type, struct node_info * fromnode,
 		ha_free(nodes[i]);
 		nodes[i]=NULL;
 	}
-	
-	
 	write_cache_file(config);
-	
-	return ;
-	
+	return;
 }
 
 
@@ -2400,7 +2410,7 @@ hb_del_one_node(const char* node)
 	struct ha_msg* delmsg;
 	
 	cl_log(LOG_INFO,
-	       "Deletinging node [%s] from configuration.",
+	       "Deleting node [%s] from configuration.",
 	       node);
 	
 	thisnode = lookup_node(node);
@@ -3096,8 +3106,8 @@ process_clustermsg(struct ha_msg* msg, struct link* lnk)
 				return;
 			}
 			/*
-			 * Suppress status updates until we hear the second
-			 * heartbeat from the new node.
+			 * Suppress status updates to our clients until we
+			 * hear the second heartbeat from the new node.
 			 *
 			 * We've already updated the node table and we will
 			 * report its status if asked...
@@ -5007,6 +5017,7 @@ should_drop_message(struct node_info * thisnode, const struct ha_msg *msg,
 	}
 	
 	if (from && !cl_uuid_is_null(&fromuuid)){
+		/* We didn't know their uuid before, but now we do... */
 		if (update_tables(from, &fromuuid)){
 			write_cache_file(config);
 		}
@@ -6073,6 +6084,14 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.492  2006/02/06 04:34:36  alan
+ * Removed two cases where we could possibly block (but we didn't realize it)
+ * They've been in the code since a very long time ago.
+ * One was for reading FIFO messages (unusual) and one for reading messages
+ * from the network - very common.
+ * This latter case has been implicated in several of our extra long delays
+ * in heartbeat.
+ *
  * Revision 1.491  2006/02/02 20:58:56  alan
  * Changed the priorities of a few of the realtime events in heartbeat.
  *
