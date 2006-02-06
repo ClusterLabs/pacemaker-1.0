@@ -1,4 +1,4 @@
-/* $Id: hb_api_core.h,v 1.16 2006/02/02 20:58:56 alan Exp $ */
+/* $Id: hb_api_core.h,v 1.17 2006/02/06 04:57:33 alan Exp $ */
 /*
  * hb_api_core_h: Internal definitions and functions for the heartbeat API
  *
@@ -47,7 +47,8 @@
 #define	PRI_CLIENTMSG		(PRI_FREEMSG+1)
 
 #define	PRI_APIREGISTER		(G_PRIORITY_LOW)
-#define	PRI_AUDITCLIENT		(PRI_APIREGISTER+1)
+#define	PRI_RANDOM		(PRI_APIREGISTER+1)
+#define	PRI_AUDITCLIENT		(PRI_RANDOM+1)
 #define	PRI_DUMPSTATS		(G_PRIORITY_LOW+20)
 
 void process_registerevent(IPC_Channel* chan,  gpointer user_data);
