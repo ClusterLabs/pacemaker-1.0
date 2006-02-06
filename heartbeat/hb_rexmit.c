@@ -20,7 +20,6 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
  */
-
 #include <portability.h>
 #include <config.h>
 #include <clplumbing/cl_uuid.h>
@@ -33,6 +32,8 @@
 #include <clplumbing/cl_misc.h>
 #include <glib.h>
 #include <clplumbing/Gmain_timeout.h>
+#include <clplumbing/GSource.h>
+#include <clplumbing/cl_random.h>
 
 
 static void	schedule_rexmit_request(struct node_info* node, seqno_t seq, int delay);
@@ -62,7 +63,7 @@ hb_set_max_rexmit_delay(int value)
 		       value);
 	}
 	max_rexmit_delay =value;
-	srand(cl_random());
+	srand(cl_randseed());
 	rand_seed_set = TRUE;
 	
 	return;
@@ -217,7 +218,7 @@ schedule_rexmit_request(struct node_info* node, seqno_t seq, int delay)
 
 	if (delay == 0){
 		if (!rand_seed_set) {
-			srand(cl_random());
+			srand(cl_randseed());
 			rand_seed_set = TRUE;
 		}
 		delay = ((rand()*max_rexmit_delay)+RANDROUND)/RAND_MAX;
@@ -234,6 +235,7 @@ schedule_rexmit_request(struct node_info* node, seqno_t seq, int delay)
 	
 	sourceid = Gmain_timeout_add_full(G_PRIORITY_HIGH - 1, delay, 
 					  send_rexmit_request, ri, NULL);
+	G_main_setall_id(sourceid, "retransmit request", 100, 10);
 	
 	if (sourceid == 0){
 		cl_log(LOG_ERR, "%s: scheduling a timeout event failed", 
@@ -287,4 +289,3 @@ remove_msg_rexmit(struct node_info *node, seqno_t seq)
 	
 	return HA_OK;
 }
-
