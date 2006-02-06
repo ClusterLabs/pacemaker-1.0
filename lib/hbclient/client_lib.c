@@ -1,4 +1,4 @@
-/* $Id: client_lib.c,v 1.35 2006/01/17 17:44:39 alan Exp $ */
+/* $Id: client_lib.c,v 1.36 2006/02/06 05:06:31 alan Exp $ */
 /* 
  * client_lib: heartbeat API client side code
  *
@@ -49,7 +49,7 @@
 #include <hb_api_core.h>
 #include <hb_api.h>
 #include <glib.h>
-#include <clplumbing/cl_misc.h>
+#include <clplumbing/cl_random.h>
 
 
 struct sys_config *		config  = NULL;
@@ -879,7 +879,7 @@ get_clientstatus(ll_cluster_t* lcl, const char *host
 		 */
 		num_nodes = get_num_nodes(lcl);
 		max_delay =  (1.0*num_nodes /10) *1000000; /* in microsecond*/
-		srand(cl_random());
+		srand(cl_randseed());
 		delay = (1.0* rand()/RAND_MAX)*max_delay;
 		if (ANYDEBUG){
 			cl_log(LOG_DEBUG, "Delaying cstatus request for %d ms", delay/1000);
