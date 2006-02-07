@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.495 2006/02/07 17:18:24 alan Exp $ */
+/* $Id: heartbeat.c,v 1.496 2006/02/07 17:33:30 alan Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -3445,6 +3445,7 @@ TmpProcessDied(ProcTrack* p, int status, int signo, int exitcode
 		 * when the new fork, etc. happens.
 		 */
 	}
+	p->privatedata = NULL;
 	return;
 }
 static const char *
@@ -6232,6 +6233,10 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.496  2006/02/07 17:33:30  alan
+ * Cleaned up (set to NULL) the private data for our hostcache write processes
+ * when they exit so the bad message will go away...
+ *
  * Revision 1.495  2006/02/07 17:18:24  alan
  * Added a brand new mechanism for creating child processes to do things for us
  * to keep us from taking a realtime hit for certain operations.
