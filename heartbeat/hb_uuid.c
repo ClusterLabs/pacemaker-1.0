@@ -606,7 +606,7 @@ read_node_uuid_file(struct sys_config * cfg)
 }
 
 
-static int
+int
 write_delnode_file(struct sys_config* cfg)
 {
 	const char *	tmpname =	DELHOSTCACHEFILETMP;
@@ -713,8 +713,7 @@ write_cache_file(struct sys_config* cfg)
 		return HA_FAIL;
 	}
 	
-	return write_delnode_file(cfg);
-
+	return HA_OK;
 }
 
 int 

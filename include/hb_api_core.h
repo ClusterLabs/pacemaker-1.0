@@ -1,4 +1,4 @@
-/* $Id: hb_api_core.h,v 1.17 2006/02/06 04:57:33 alan Exp $ */
+/* $Id: hb_api_core.h,v 1.18 2006/02/07 17:18:24 alan Exp $ */
 /*
  * hb_api_core_h: Internal definitions and functions for the heartbeat API
  *
@@ -37,7 +37,7 @@
 #include <ha_msg.h>
 
 /* Dispatch priorities for various kinds of events */
-#define	PRI_SENDSTATUS		(G_PRIORITY_HIGH)
+#define	PRI_SENDSTATUS		(G_PRIORITY_HIGH-5)
 #define	PRI_SENDPKT		(PRI_SENDSTATUS+1)
 #define	PRI_READPKT		(PRI_SENDPKT+1)
 #define	PRI_FIFOMSG		(PRI_READPKT+1)
@@ -49,7 +49,8 @@
 #define	PRI_APIREGISTER		(G_PRIORITY_LOW)
 #define	PRI_RANDOM		(PRI_APIREGISTER+1)
 #define	PRI_AUDITCLIENT		(PRI_RANDOM+1)
-#define	PRI_DUMPSTATS		(G_PRIORITY_LOW+20)
+#define	PRI_WRITECACHE		(PRI_AUDITCLIENT+1)
+#define	PRI_DUMPSTATS		(PRI_WRITECACHE+20)
 
 void process_registerevent(IPC_Channel* chan,  gpointer user_data);
 

@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.494 2006/02/07 10:06:22 sunjd Exp $ */
+/* $Id: heartbeat.c,v 1.495 2006/02/07 17:18:24 alan Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -339,6 +339,9 @@ static seqno_t timer_lowseq = 0;
 static	gboolean		init_deadtime_passed = FALSE;		
 static int			PrintDefaults = FALSE;
 static int			WikiOutput = FALSE;
+GTRIGSource*			write_hostcachefile = NULL;
+GTRIGSource*			write_delcachefile = NULL;
+
 
 #undef DO_AUDITXMITHIST
 #ifdef DO_AUDITXMITHIST
@@ -359,6 +362,11 @@ static void	CoreProcessDied(ProcTrack* p, int status, int signo
 ,			int exitcode, int waslogged);
 static
 const char*	CoreProcessName(ProcTrack* p);
+static void	TmpProcessRegistered(ProcTrack* p);
+static void	TmpProcessDied(ProcTrack* p, int status, int signo
+,			int exitcode, int waslogged);
+static
+const char*	TmpProcessName(ProcTrack* p);
 
 void		hb_kill_managed_children(int nsig);
 void		hb_kill_rsc_mgmt_children(int nsig);
@@ -415,6 +423,8 @@ static gboolean hb_reregister_with_apphbd(gpointer dummy);
 static void	hb_add_deadtime(int increment);
 static gboolean	hb_pop_deadtime(gpointer p);
 static void	dump_missing_pkts_info(void);
+static gboolean	write_hostcachedata(gpointer ginfo);
+static gboolean	write_delcachedata(gpointer ginfo);
 
 static GHashTable*	message_callbacks = NULL;
 static gboolean	HBDoMsgCallback(const char * type, struct node_info* fromnode
@@ -471,6 +481,11 @@ static ProcTrack_ops		CoreProcessTrackOps = {
 	CoreProcessDied,
 	CoreProcessRegistered,
 	CoreProcessName
+};
+static ProcTrack_ops		TmpProcessTrackOps = {
+	TmpProcessDied,
+	TmpProcessRegistered,
+	TmpProcessName
 };
 
 
@@ -622,6 +637,83 @@ lookup_node(const char * h)
 	}
 }
 
+struct tmpproc_track {
+	const char *	procname;
+	GTRIGSource*	trigger;
+	gboolean	isrunning;
+	gboolean	runagain;
+};
+
+/*
+ *	 We make sure only one copy is running at a time.
+ */
+static gboolean
+write_hostcachedata(gpointer ginfo)
+{
+	struct tmpproc_track*	info = ginfo;
+	int			pid;
+
+ 	/* Make sure only one copy is running at a time. */
+	/* This avoids possible concurrency problems. */
+	if (info->isrunning) {
+		info->runagain = TRUE;
+		return TRUE;
+	}
+	info->procname	= __FUNCTION__;
+	info->isrunning = TRUE;
+
+	switch ((pid=fork())) {
+		case -1:	cl_perror("%s: Can't fork writeprocess!", __FUNCTION__);
+				return TRUE;
+				break;
+
+		case 0:		/* Child */
+				if (write_cache_file(config) == HA_OK) {
+					exit(0);
+				}
+				exit(1);
+				break;
+		default:
+				/* Fall out */;
+
+	}
+	NewTrackedProc(pid, 0, PT_LOGVERBOSE, ginfo,	&TmpProcessTrackOps);
+	return TRUE;
+}
+
+static gboolean
+write_delcachedata(gpointer ginfo)
+{
+	struct tmpproc_track*	info = ginfo;
+	int			pid;
+
+ 	/* Make sure only one copy is running at a time. */
+	/* This avoids possible concurrency problems. */
+	if (info->isrunning) {
+		info->runagain = TRUE;
+		return TRUE;
+	}
+	info->procname	= __FUNCTION__;
+	info->isrunning	= TRUE;
+
+	switch ((pid=fork())) {
+		case -1:	cl_perror("%s: Can't fork write process!", __FUNCTION__);
+				return TRUE;
+				break;
+
+		case 0:		/* Child */
+				if (write_delnode_file(config) == HA_OK) {
+					exit(0);
+				}
+				exit(1);
+		default:
+				/* Fall out */;
+
+	}
+	NewTrackedProc(pid, 0, PT_LOGVERBOSE, ginfo, &TmpProcessTrackOps);
+	return TRUE;
+}
+
 void
 hb_setup_child(void)
 {
@@ -754,6 +846,8 @@ initialize_heartbeat()
 	int		pid;
 	int		ourproc = 0;
 	int	(*getgen)(seqno_t * generation) = IncrGeneration;
+	struct tmpproc_track	hostcache_info;
+	struct tmpproc_track	delcache_info;
 
 	localdie = NULL;
 
@@ -780,10 +874,24 @@ initialize_heartbeat()
 		cl_log(LOG_DEBUG, "uuid is:%s", uuid_str);
 	}
 	
-	/* We only need to add our uuid if it's not already in table */
+	memset(&hostcache_info, 0, sizeof(hostcache_info));
+	write_hostcachefile = G_main_add_TriggerHandler(PRI_WRITECACHE
+	,	write_hostcachedata, &hostcache_info, NULL);
+	hostcache_info.trigger = write_hostcachefile;
+
+	memset(&delcache_info, 0, sizeof(delcache_info));
+	write_delcachefile = G_main_add_TriggerHandler(PRI_WRITECACHE
+	,	write_delcachedata, &delcache_info, NULL);
+	hostcache_info.trigger = write_delcachefile;
+
 	add_uuidtable(&config->uuid, curnode);
 	cl_uuid_copy(&curnode->uuid, &config->uuid);
-	write_cache_file(config);
+
+	/*
+	 * We _really_ only need to write out the uuid file if we're not yet
+	 * in the host cache file on disk.
+	 */
+	G_main_set_trigger(write_hostcachefile);
 
 	if (stat(FIFONAME, &buf) < 0 ||	!S_ISFIFO(buf.st_mode)) {
 		cl_log(LOG_INFO, "Creating FIFO %s.", FIFONAME);
@@ -2404,7 +2512,7 @@ HBDoMsg_T_ADDNODE(const char * type, struct node_info * fromnode,
 		ha_free(nodes[i]);
 		nodes[i]=NULL;
 	}
-	write_cache_file(config);
+	G_main_set_trigger(write_hostcachefile);
 	return;
 }
 
@@ -2526,7 +2634,8 @@ HBDoMsg_T_DELNODE(const char * type, struct node_info * fromnode,
 		nodes[i]= NULL;	
 	}
 	
-	write_cache_file(config);
+	write_delnode_file(config);
+	G_main_set_trigger(write_delcachefile);
 	
 	return ;
 	
@@ -3123,7 +3232,7 @@ process_clustermsg(struct ha_msg* msg, struct link* lnk)
 			 */
 			thisnode->status_suppressed = TRUE;
 			update_tables(from, &fromuuid);
-			write_cache_file(config);
+			G_main_set_trigger(write_hostcachefile);
 			return;
 		}
 	}
@@ -3310,6 +3419,39 @@ CoreProcessName(ProcTrack* p)
 
 	return (pi ? core_proc_name(pi->type) : "Core heartbeat process");
 	
+}
+/***********************************************************************
+ * Track our temporary child processes...
+ ***********************************************************************/
+static void
+TmpProcessRegistered(ProcTrack* p)
+{
+	return;
+}
+static void
+TmpProcessDied(ProcTrack* p, int status, int signo, int exitcode
+,	int waslogged)
+{
+	struct tmpproc_track *	pt = p->privatedata;
+ 
+	pt->isrunning=FALSE;
+	if (pt->runagain) {
+		pt->runagain=FALSE;
+ 		/*  Do it again! */
+		G_main_set_trigger(pt->trigger);
+		/* Note that we set the trigger for this, we don't
+		 * call the function again directly.
+		 * This allows the scheduler to have a vote on
+		 * when the new fork, etc. happens.
+		 */
+	}
+	return;
+}
+static const char *
+TmpProcessName(ProcTrack* p)
+{
+	struct tmpproc_track *	pt = p->privatedata;
+	return pt->procname;
 }
 
 /***********************************************************************
@@ -5025,7 +5167,7 @@ should_drop_message(struct node_info * thisnode, const struct ha_msg *msg,
 	if (from && !cl_uuid_is_null(&fromuuid)){
 		/* We didn't know their uuid before, but now we do... */
 		if (update_tables(from, &fromuuid)){
-			write_cache_file(config);
+			G_main_set_trigger(write_hostcachefile);
 		}
 	}
 	
@@ -6090,6 +6232,14 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.495  2006/02/07 17:18:24  alan
+ * Added a brand new mechanism for creating child processes to do things for us
+ * to keep us from taking a realtime hit for certain operations.
+ * Initially, this mechanism is being used to write out the host cache data
+ * and also the deleted node cache data - which causes us a realtime hit
+ * when we need to write it out.
+ * This happens on startup and when nodes join or are deleted at runtime.
+ *
  * Revision 1.494  2006/02/07 10:06:22  sunjd
  * make some versions of gcc not complain: used uninitialized
  *
