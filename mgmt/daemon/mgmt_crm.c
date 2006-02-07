@@ -38,6 +38,7 @@
 extern resource_t *group_find_child(resource_t *rsc, const char *id);
 
 cib_t*	cib_conn = NULL;
+int in_shutdown = FALSE;
 int init_crm(void);
 void final_crm(void);
 
@@ -183,9 +184,11 @@ init_crm(void)
 {
 	int ret = cib_ok;
 	int i, max_try = 5;
-
+	
 	mgmt_log(LOG_INFO,"init_crm");
 	cib_conn = cib_new();
+	in_shutdown = FALSE;
+	
 	for (i = 0; i < max_try ; i++) {
 		ret = cib_conn->cmds->signon(cib_conn, client_name, cib_command);
 		if (ret == cib_ok) {
@@ -249,8 +252,10 @@ void
 final_crm(void)
 {
 	if(cib_conn != NULL) {
+		in_shutdown = TRUE;
 		cib_conn->cmds->signoff(cib_conn);
 		cib_conn = NULL;
+		
 	}
 }
 
@@ -266,10 +271,14 @@ on_cib_diff(const char *event, HA_Message *msg)
 void
 on_cib_connection_destroy(gpointer user_data)
 {
-	mgmt_log(LOG_ERR,"Connection to the CIB terminated... exiting");
 	fire_event(EVT_DISCONNECTED);
 	cib_conn = NULL;
-	exit(LSB_EXIT_OK);
+	if (!in_shutdown) {
+		mgmt_log(LOG_ERR,"Connection to the CIB terminated... exiting");
+		/*cib exits abnormally, mgmtd exits too and
+		wait heartbeat	restart us in order*/
+		exit(LSB_EXIT_OK);
+	}
 	return;
 }
 
