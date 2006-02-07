@@ -1,4 +1,4 @@
-/* $Id: mcast.c,v 1.25 2005/10/15 02:37:52 gshi Exp $ */
+/* $Id: mcast.c,v 1.26 2006/02/07 21:55:35 alan Exp $ */
 /*
  * mcast.c: implements hearbeat API for UDP multicast communication
  *
@@ -211,7 +211,7 @@ mcast_parse(const char *line)
 
 	if (*dev != EOS)  {
 		if (!is_valid_dev(dev)) {
-			PILCallLog(LOG, PIL_CRIT, "mcast bad device [%s]", dev);
+			PILCallLog(LOG, PIL_CRIT, "mcast device [%s] is invalid or not set up properly", dev);
 			return HA_FAIL;
 		}
 		/* Skip over white space, then grab the multicast group */
@@ -398,7 +398,7 @@ mcast_read(struct hb_media* hbm, int *lenp)
 	mcp = (struct mcast_private *) hbm->pd;
 	
 	if ((numbytes=recvfrom(mcp->rsocket, mcast_pkt, MAXMSG-1, 0
-			       ,(struct sockaddr *)&their_addr, &addr_len)) < 0) {
+	,	(struct sockaddr *)&their_addr, &addr_len)) < 0) {
 		if (errno != EINTR) {
 			PILCallLog(LOG, PIL_CRIT, "Error receiving from socket: %s"
 			    ,	strerror(errno));
@@ -419,8 +419,6 @@ mcast_read(struct hb_media* hbm, int *lenp)
 	*lenp = numbytes + 1 ;
 
 	return mcast_pkt;;
-	
-	
 }
 
 /*
@@ -497,7 +495,7 @@ mcast_make_send_sock(struct hb_media * hbm)
  * Set up socket for listening to heartbeats (UDP multicasts)
  */
 
-#define	MAXBINDTRIES	10
+#define	MAXBINDTRIES	50
 static int
 mcast_make_receive_sock(struct hb_media * hbm)
 {
@@ -722,8 +720,10 @@ if_getaddr(const char *ifname, struct in_addr *addr)
 		,	if_info.ifr_name);
 	}
 	if (ioctl(fd, SIOCGIFADDR, &if_info) < 0) {
-		PILCallLog(LOG, PIL_CRIT, "Error ioctl(SIOCGIFADDR): %s"
-		,	strerror(errno));
+		PILCallLog(LOG, PIL_CRIT
+		,	"Unable to retrieve local interface address"
+		" for interface [%s] using ioctl(SIOCGIFADDR): %s"
+		,	ifname, strerror(errno));
 		close(fd);
 		return -1;
 	}
@@ -800,6 +800,9 @@ get_loop(const char *loop, u_char *l)
 
 /*
  * $Log: mcast.c,v $
+ * Revision 1.26  2006/02/07 21:55:35  alan
+ * Clarified a few error messages.
+ *
  * Revision 1.25  2005/10/15 02:37:52  gshi
  * change MAXLINE to MAXMSG
  *
