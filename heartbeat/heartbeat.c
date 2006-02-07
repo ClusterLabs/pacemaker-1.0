@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.493 2006/02/06 14:00:43 alan Exp $ */
+/* $Id: heartbeat.c,v 1.494 2006/02/07 10:06:22 sunjd Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -1222,7 +1222,7 @@ FIFO_child_msg_dispatch(IPC_Channel* source, gpointer user_data)
 static gboolean
 read_child_dispatch(IPC_Channel* source, gpointer user_data)
 {
-	struct ha_msg*	msg;
+	struct ha_msg*	msg = NULL;
 	struct hb_media** mp = user_data;
 	int	media_idx = mp - &sysmedia[0];
 
@@ -6090,6 +6090,9 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.494  2006/02/07 10:06:22  sunjd
+ * make some versions of gcc not complain: used uninitialized
+ *
  * Revision 1.493  2006/02/06 14:00:43  alan
  * Changed heartbeat's child processes to run one notch lower than it in realtime
  * priority.
