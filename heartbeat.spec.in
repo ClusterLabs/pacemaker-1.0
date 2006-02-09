@@ -1,4 +1,4 @@
-#	$Id: heartbeat.spec.in,v 1.158 2006/02/09 20:12:04 andrew Exp $
+#	$Id: heartbeat.spec.in,v 1.159 2006/02/09 21:36:14 andrew Exp $
 
 # Workaround for a change in RPM 4.1.x; needs proper fixing soon!
 ##%define _unpackaged_files_terminate_build 0
@@ -159,6 +159,8 @@ implementing any number of interfaces.
     + Support migration and un-migration of resources and resource groups
     + Create crm_verify for checking configuration validity
     + Simplify the passing of XML to cibadmin
+  + Open bugs
+    + 1075, 1080, 1081, 1084
 
 * Thu Sep 22 2005  Alan Robertson <alanr@unix.sh> (see doc/AUTHORS file)
 + Version 2.0.2 - small bug fix only release
