@@ -1,4 +1,4 @@
-#	$Id: heartbeat.spec.in,v 1.157 2006/01/24 15:38:10 zhenh Exp $
+#	$Id: heartbeat.spec.in,v 1.158 2006/02/09 20:12:04 andrew Exp $
 
 # Workaround for a change in RPM 4.1.x; needs proper fixing soon!
 ##%define _unpackaged_files_terminate_build 0
@@ -77,6 +77,89 @@ PILS is designed to support any number of plugins
 implementing any number of interfaces.
 
 %changelog
+* Thu Feb 10 2006  Alan Robertson <alanr@unix.sh> (see doc/AUTHORS file)
++ Version 2.0.3 - 
+  + CRM General
+    + All shutdowns go via the PE/TE - preserves inter-resource ordering
+    + Support for future changes to the CIB (depreciation of cib_fragment)
+    + Overhaul of IPC and HA channel callback logic
+    + Many improvments to the quality and quantity (reduced) of logging
+  + CRMd
+    + Timerless elections - when everyone has voted we're done
+    + Use the replace notification from the CIB to re-update our copy with 
+      our view of our peers.
+    + Reliably detect if the LRM connection is still active.
+    + Elections
+      + newer versions defer to older ones in DC elections 
+        (opposite of current behavior)
+      + this means that only once the complete cluster has been upgraded will
+        we start acting like the new version and accept new config options
+      + it also means newer PE's and TE's (the most complex pieces) don't need
+        "act like the old version" options and can rely on all slaves being at
+        least as up-to-date as they are
+      + people can run mixed clusters as long as they want
+        (until they want the new PE features)
+      + new DCs only update the version number in the CIB if they have a 
+        higher value
+      + nodes that start and have a lower version than that stored in the CIB
+        shut themselves down (the CRM part anyway)
+      + this prevents an admin from introducing old nodes back into an upgraded
+        cluster. It probably doesn't fully understand the config and may not
+        support the actions the PE/TE requires.
+  + CIB
+    + Make sure "query only" connections cant modify the CIB
+    + Periodically dump some stats about what the CIB has been doing.
+    + Verify there are no memory leaks
+    + Performance enhancements
+    + Prevent a single CIB client from blocking everyone else
+    + Clients Can be notified of full CIB replacements
+    + record_config_changes option in ha.cf for those worried about 
+      the amount of logging.  Defaults to "on".
+    + suppress_cib_writes CIB option replaced with in enable_config_writes ha.cf 
+      (enable_config_writes to be removed in 2.0.4)
+    + Never write the status section to disk
+    + Check permissions for the on-disk CIB at startup
+    + Dont trash unreadable on-disk CIBs
+    + Fix for updates made against the whole CIB (not just one section) 
+  + PEngine
+    + Many improvements to the handling of resource groups
+    + Support "anonymous" clones
+    + Fix stonith ordering
+    + Order DC shutdowns after everyone else's
+    + Support short resource names (for group and clone resources)
+    + The ordering and colocation of grouped resources is now optional
+    + Support probing new nodes for active resources.
+    + All "probe" actions are controlled by the PE.
+      + No resource may be started until the probing is complete.
+      + Do not probe for resources we know to be active on unprobed nodes
+    + When looking for monitor ops, only mark it optional if it was already
+      active on the node we're interested in.
+    + Detect changes to class/type/provider/parameters and force a restart
+      of the resource
+    + New record_pengine_inputs option in ha.cf for those worried about 
+      the amount of logging.  Defaults to "on".
+    + Differentiate between config and processing errors
+      + reduces the frequency that we need to log the complete CIB
+    + Make notify for master/slave work
+    + New CIB option: stop_orphan_actions (boolean)
+      If a resource is no longer defined, we can optionally stop it
+    + New CIB option: stop_orphan_actions (boolean)
+      If a monitor op for a given interval is no longer defined, we can
+      optionally stop it
+    + Add support for time and phase-of-the-moon based constraints
+    + Improved failure handling: avoiding false positives
+    + Always create orphaned resources - so they show up in crm_mon
+    + Do not require sequential clone numbers starting at 0
+  + TEngine
+    + Detect old stonith ops
+  + CLIs
+    + Create a --one-shot option for crm_mon
+    + Switch a number of CLI tools to use the new syncronous connections
+    + Log errors to stderr where they will be seen and therefore useful
+    + Support migration and un-migration of resources and resource groups
+    + Create crm_verify for checking configuration validity
+    + Simplify the passing of XML to cibadmin
+
 * Thu Sep 22 2005  Alan Robertson <alanr@unix.sh> (see doc/AUTHORS file)
 + Version 2.0.2 - small bug fix only release
   + Fixed a bug in ping directive - it works again
