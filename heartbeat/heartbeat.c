@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.496 2006/02/07 17:33:30 alan Exp $ */
+/* $Id: heartbeat.c,v 1.497 2006/02/09 19:04:04 alan Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -816,7 +816,7 @@ SetupFifoChild(void) {
 	FifoChildSource = G_main_add_IPC_Channel(PRI_FIFOMSG
 	,	fifochildipc[P_READFD]
 	,	FALSE, FIFO_child_msg_dispatch, NULL, NULL);
-	G_main_setmaxdispatchdelay((GSource*)FifoChildSource, 2000);
+	G_main_setmaxdispatchdelay((GSource*)FifoChildSource, config->heartbeat_ms);
 	G_main_setmaxdispatchtime((GSource*)FifoChildSource, 50);
 	G_main_setdescription((GSource*)FifoChildSource, "FIFO");
 	
@@ -1531,7 +1531,7 @@ master_control_process(void)
 		s = G_main_add_IPC_Channel(PRI_SENDPKT
 		,	sysmedia[j]->wchan[P_WRITEFD], FALSE
 		,	NULL, sysmedia+j, NULL);
-		G_main_setmaxdispatchdelay((GSource*)s, 50);
+		G_main_setmaxdispatchdelay((GSource*)s, config->heartbeat_ms/4);
 		G_main_setmaxdispatchtime((GSource*)s, 50);
 		G_main_setdescription((GSource*)s, "write child");
 
@@ -1543,7 +1543,7 @@ master_control_process(void)
 		/* Encourage better real-time behavior */
 		sysmedia[j]->rchan[P_WRITEFD]->ops->set_recv_qlen
 		(	sysmedia[j]->rchan[P_WRITEFD], 0); 
-		G_main_setmaxdispatchdelay((GSource*)s, 50);
+		G_main_setmaxdispatchdelay((GSource*)s, config->heartbeat_ms/4);
 		G_main_setmaxdispatchtime((GSource*)s, 50);
 		G_main_setdescription((GSource*)s, "read child");
 
@@ -1557,14 +1557,14 @@ master_control_process(void)
 	/* Send local status at the "right time" */
 	id=Gmain_timeout_add_full(PRI_SENDSTATUS, config->heartbeat_ms
 	,	hb_send_local_status, NULL, NULL);
-	G_main_setall_id(id, "send local status", 50, 50);
+	G_main_setall_id(id, "send local status", config->heartbeat_ms/2, 50);
 
 	id=Gmain_timeout_add_full(PRI_AUDITCLIENT
 	,	config->initial_deadtime_ms
 	,	set_init_deadtime_passed_flag
 	,	NULL
 	,	NULL);
-	G_main_setall_id(id, "init deadtime passed", 500, 50);
+	G_main_setall_id(id, "init deadtime passed", config->warntime_ms, 50);
 
 	/* Dump out memory stats periodically... */
 	memstatsinterval = (debug_level ? 10*60*1000 : ONEDAY*1000);
@@ -1587,11 +1587,11 @@ master_control_process(void)
 	/* Check for pending signals */
 	id=Gmain_timeout_add_full(PRI_CHECKSIGS, config->heartbeat_ms
 	,       Gmain_hb_signal_process_pending, NULL, NULL);
-	G_main_setall_id(id, "check for signals", 500, 50);
+	G_main_setall_id(id, "check for signals", config->heartbeat_ms/2, 50);
 	
 	id=Gmain_timeout_add_full(PRI_FREEMSG, 500
 	,	Gmain_update_msgfree_count, NULL, NULL);
-	G_main_setall_id(id, "update msgfree count", 500, 50);
+	G_main_setall_id(id, "update msgfree count", config->deadtime_ms, 50);
 	
 	if (UseApphbd) {
 		Gmain_timeout_add_full(PRI_DUMPSTATS
@@ -1887,7 +1887,7 @@ comm_now_up()
 
 	regsource = G_main_add_IPC_WaitConnection(PRI_APIREGISTER, regwchan
 	,	NULL, FALSE, APIregistration_dispatch, NULL, NULL);
-	G_main_setmaxdispatchdelay((GSource*)regsource, 500);
+	G_main_setmaxdispatchdelay((GSource*)regsource, config->deadtime_ms);
 	G_main_setmaxdispatchtime((GSource*)regsource, 20);
 	G_main_setdescription((GSource*)regsource, "client registration");
 	
@@ -3991,7 +3991,7 @@ send_reqnodes_msg(gpointer data){
 	send_cluster_msg(msg);
 	
 	id = Gmain_timeout_add(1000, send_reqnodes_msg, (gpointer)i);
-	G_main_setall_id(id, "send_reqnodes_msg", 500, 100);
+	G_main_setall_id(id, "send_reqnodes_msg", config->heartbeat_ms, 100);
 	return FALSE;
 }
 
@@ -6233,6 +6233,11 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.497  2006/02/09 19:04:04  alan
+ * Changed default timeouts for heartbeat events to be based largely on heartbeat
+ * configuration parameters.
+ * Also print out a message if a client disconnects with unread msgs in their queue
+ *
  * Revision 1.496  2006/02/07 17:33:30  alan
  * Cleaned up (set to NULL) the private data for our hostcache write processes
  * when they exit so the bad message will go away...

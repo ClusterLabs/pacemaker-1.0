@@ -235,7 +235,7 @@ schedule_rexmit_request(struct node_info* node, seqno_t seq, int delay)
 	
 	sourceid = Gmain_timeout_add_full(G_PRIORITY_HIGH - 1, delay, 
 					  send_rexmit_request, ri, NULL);
-	G_main_setall_id(sourceid, "retransmit request", 100, 10);
+	G_main_setall_id(sourceid, "retransmit request", config->heartbeat_ms/2, 10);
 	
 	if (sourceid == 0){
 		cl_log(LOG_ERR, "%s: scheduling a timeout event failed", 

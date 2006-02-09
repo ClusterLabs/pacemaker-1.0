@@ -1,4 +1,4 @@
-/* $Id: hb_api.c,v 1.150 2006/02/02 19:46:48 alan Exp $ */
+/* $Id: hb_api.c,v 1.151 2006/02/09 19:04:04 alan Exp $ */
 /*
  * hb_api: Server-side heartbeat API code
  *
@@ -423,11 +423,13 @@ api_heartbeat_monitor(struct ha_msg *msg, int msgtype, const char *iface)
 			
 			if (client->removereason && !client->isindispatch) {
 				if (ANYDEBUG){
-					cl_log(LOG_DEBUG, "api_remove_client_pid: client is "
-					       "%s", client->client_id);
+					cl_log(LOG_DEBUG
+					,	"%s: client is %s"
+					,	__FUNCTION__
+					,	client->client_id);
 				}
 				api_remove_client_pid(client->pid
-						      ,	client->removereason);
+				,	client->removereason);
 			}
 		}
 
@@ -1231,7 +1233,7 @@ process_registerevent(IPC_Channel* chan,  gpointer user_data)
 	,	APIclients_input_dispatch
 	,	client, G_remove_client);
 	G_main_setdescription((GSource*)client->gsource, "API client");
-	G_main_setmaxdispatchdelay((GSource*)client->gsource, 500);
+	G_main_setmaxdispatchdelay((GSource*)client->gsource, config->heartbeat_ms);
 	G_main_setmaxdispatchtime((GSource*)client->gsource, 100);
 	if (ANYDEBUG) {
 		cl_log(LOG_DEBUG
@@ -1535,7 +1537,7 @@ api_send_client_msg(client_proc_t* client, struct ha_msg *msg)
 {
 	if (msg2ipcchan(msg, client->chan) != HA_OK) {
 		if (!client->removereason) {
-			if (client->chan->failreason[0] == '\0'){
+			if (client->chan->failreason[0] == EOS){
 				client->removereason = "sendfail";
 			}else {
 				client->removereason = client->chan->failreason;
@@ -1567,7 +1569,15 @@ api_remove_client_pid(pid_t c_pid, const char * reason)
 	}
 
 	client->removereason = reason;
+	if (client->chan->recv_queue->current_qlen > 0) {
+		cl_log(LOG_ERR
+		,	"%s client %d disconnected, with %d messages pending"
+		,	__FUNCTION__, client->pid
+		,	client->chan->recv_queue->current_qlen);
+	}
+
 	G_main_del_IPC_Channel(client->gsource);
+	/* Should trigger G_remove_client (below) */
 	return 1;
 }
 static void
