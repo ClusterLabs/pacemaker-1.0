@@ -1,4 +1,4 @@
-#	$Id: heartbeat.spec.in,v 1.159 2006/02/09 21:36:14 andrew Exp $
+#	$Id: heartbeat.spec.in,v 1.160 2006/02/10 16:17:18 alan Exp $
 
 # Workaround for a change in RPM 4.1.x; needs proper fixing soon!
 ##%define _unpackaged_files_terminate_build 0
@@ -77,9 +77,16 @@ PILS is designed to support any number of plugins
 implementing any number of interfaces.
 
 %changelog
-* Thu Feb 10 2006  Alan Robertson <alanr@unix.sh> (see doc/AUTHORS file)
-+ Version 2.0.3 - 
-  + CRM General
+* Fri Feb 10 2006  Alan Robertson <alanr@unix.sh> (see doc/AUTHORS file)
++ Version 2.0.3 - Bug fixes and significant new features.
+  + Management Daemon/Library and GUI client
+    + provide a management library for manamgement daemon and CIM provider
+    + provide a management daemon and a basic GUI management tool
+  + CIM enablement
+    + CIM (Common Information Model) enablement - works with
+      sblim-sfcb, OpenWBEM, and Pegasus CIMOMs
+    - not yet compiled into our binary RPMs because of dependencies
+  + CRM (Cluster Resource Manager) General
     + All shutdowns go via the PE/TE - preserves inter-resource ordering
     + Support for future changes to the CIB (depreciation of cib_fragment)
     + Overhaul of IPC and HA channel callback logic
@@ -106,7 +113,7 @@ implementing any number of interfaces.
       + this prevents an admin from introducing old nodes back into an upgraded
         cluster. It probably doesn't fully understand the config and may not
         support the actions the PE/TE requires.
-  + CIB
+  + CIB (Common Information Base daemon)
     + Make sure "query only" connections cant modify the CIB
     + Periodically dump some stats about what the CIB has been doing.
     + Verify there are no memory leaks
@@ -121,7 +128,7 @@ implementing any number of interfaces.
     + Check permissions for the on-disk CIB at startup
     + Dont trash unreadable on-disk CIBs
     + Fix for updates made against the whole CIB (not just one section) 
-  + PEngine
+  + PEngine (Policy Engine)
     + Many improvements to the handling of resource groups
     + Support "anonymous" clones
     + Fix stonith ordering
@@ -150,17 +157,19 @@ implementing any number of interfaces.
     + Improved failure handling: avoiding false positives
     + Always create orphaned resources - so they show up in crm_mon
     + Do not require sequential clone numbers starting at 0
-  + TEngine
+  + TEngine (transition engine)
     + Detect old stonith ops
-  + CLIs
+  + CLIs (Command Line interfaces)
     + Create a --one-shot option for crm_mon
     + Switch a number of CLI tools to use the new syncronous connections
     + Log errors to stderr where they will be seen and therefore useful
     + Support migration and un-migration of resources and resource groups
     + Create crm_verify for checking configuration validity
     + Simplify the passing of XML to cibadmin
-  + Open bugs
-    + 1075, 1080, 1081, 1084
+  + Known open bugs worth mentioning:
+    + 1075, 1080, 1081, 1084, 1085, 1064, 1069, 756, 984
+    + 1050, 1082, 1037, 1079
+    
 
 * Thu Sep 22 2005  Alan Robertson <alanr@unix.sh> (see doc/AUTHORS file)
 + Version 2.0.2 - small bug fix only release
