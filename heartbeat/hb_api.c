@@ -1,4 +1,4 @@
-/* $Id: hb_api.c,v 1.152 2006/02/10 08:17:57 andrew Exp $ */
+/* $Id: hb_api.c,v 1.153 2006/02/10 13:19:54 alan Exp $ */
 /*
  * hb_api: Server-side heartbeat API code
  *
@@ -1569,11 +1569,9 @@ api_remove_client_pid(pid_t c_pid, const char * reason)
 	}
 
 	client->removereason = reason;
-	if (client->chan->recv_queue->current_qlen > 0) {
-		cl_log(LOG_ERR
-		,	"%s client %d disconnected, with %d messages pending"
-		,	__FUNCTION__, client->pid
-		       ,	(int)client->chan->recv_queue->current_qlen);
+	while (client->chan->recv_queue->current_qlen > 0
+	&&	(!reason || strcmp(reason, API_SIGNOFF) != 0)) {
+		ProcessAnAPIRequest(client);
 	}
 
 	G_main_del_IPC_Channel(client->gsource);
@@ -1995,13 +1993,15 @@ ProcessAnAPIRequest(client_proc_t*	client)
 	if ((msg = msgfromIPC(client->chan, 0)) == NULL) {
 		
 		/* EOF? */
-		if (client->chan->ch_status == IPC_DISCONNECT) {
+		if (!IPC_ISRCONN(client->chan)) {
 			if (ANYDEBUG) {
 				cl_log(LOG_DEBUG
 				,	"EOF from client pid %ld"
 				,	(long)client->pid);
 			}
-			client->removereason = "EOF";
+			if (!client->removereason) {
+				client->removereason = "EOF";
+			}
 			goto getout;
 		}
 
