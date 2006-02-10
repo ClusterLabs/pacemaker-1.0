@@ -25,6 +25,7 @@ Section: admin
 Priority: optional
 Architecture: any
 Depends: ${shlibs:Depends}, python, iproute, adduser, netkit-ping | iputils-ping
+Pre-Depends: adduser
 Recommends: sysklogd | syslog-ng | system-log-daemon, logrotate
 Provides: heartbeat, libpils0, libstonith0, stonith
 Conflicts: heartbeat, libpils0, libstonith0, stonith

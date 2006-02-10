@@ -32,8 +32,10 @@ heartbeat-2 (2.0.3-1) unstable; urgency=low
     (closes: #351181)
   * Fix inconsistency between hb_standb(1) man page and wiki
     (closes: #339016)
+  * Add Pre-Depends on adduser
+    (closes: #352158)
 
- -- Simon Horman <horms@debian.org>  Fri,  3 Feb 2006 16:27:11 +0900
+ -- Simon Horman <horms@debian.org>  Fri, 10 Feb 2006 12:19:56 +0900
 
 heartbeat-2 (2.0.2-5) unstable; urgency=low
 
