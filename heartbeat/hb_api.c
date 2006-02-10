@@ -1,4 +1,4 @@
-/* $Id: hb_api.c,v 1.151 2006/02/09 19:04:04 alan Exp $ */
+/* $Id: hb_api.c,v 1.152 2006/02/10 08:17:57 andrew Exp $ */
 /*
  * hb_api: Server-side heartbeat API code
  *
@@ -1573,7 +1573,7 @@ api_remove_client_pid(pid_t c_pid, const char * reason)
 		cl_log(LOG_ERR
 		,	"%s client %d disconnected, with %d messages pending"
 		,	__FUNCTION__, client->pid
-		,	client->chan->recv_queue->current_qlen);
+		       ,	(int)client->chan->recv_queue->current_qlen);
 	}
 
 	G_main_del_IPC_Channel(client->gsource);
