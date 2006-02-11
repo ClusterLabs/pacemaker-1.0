@@ -140,7 +140,7 @@ ra_setenv(){
 setup_OCF_prefix(){
 	
 	hbvarname=`echo "$envar" | cut -d${PARAMETER_SPLIT_SIGN} -f1`
-	hbvarvalue=`echo "$envar" | cut -d${PARAMETER_SPLIT_SIGN} -f2`
+	hbvarvalue=`echo "$envar" | cut -d${PARAMETER_SPLIT_SIGN} -f2-`
 	ocfvarname="OCF_RESKEY_${hbvarname}"
 
 	eval $ocfvarname='$hbvarvalue'
