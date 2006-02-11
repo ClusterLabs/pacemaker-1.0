@@ -58,30 +58,30 @@ ra_execocf(){
 		;;
 
 	$OCF_ERR_GENERIC)
-		log_and_print "ERROR: " $rsc_type Generic error 
+		log_and_print "ERROR: $rsc_type Generic error"
 		;;
 
 	$OCF_ERR_ARGS)
-		log_and_print "ERROR: " $rsc_type Incompliant argument 
+		log_and_print "ERROR: $rsc_type Incompliant argument"
 		;;
 	$OCF_ERR_UNIMPLEMENTED)
-		log_and_print "ERROR: " $rsc_type Function unimplemented
+		log_and_print "ERROR: $rsc_type Function unimplemented"
 		;;
 	$OCF_ERR_PERM)
-		log_and_print "ERROR: " $rsc_type User had insufficient privilege
+		log_and_print "ERROR: $rsc_type User had insufficient privilege"
 		;;
 	$OCF_ERR_INSTALLED)
-		log_and_print "ERROR: " $rsc_type Program is not installed
+		log_and_print "ERROR: $rsc_type Program is not installed"
 		;;
 	$OCF_ERR_CONFIGURED)
-		log_and_print "ERROR: " $rsc_type Program is not configured
+		log_and_print "ERROR: $rsc_type Program is not configured"
 		;;
 	$OCF_NOT_RUNNING)
-		log_and_print "INFO: " $rsc_type Resource is stopped
+		log_and_print "INFO: $rsc_type Resource is stopped"
 		;;
 	*)
 		echo $?
-		log_and_print "ERROR: " $rsc_type Unknown error
+		log_and_print "ERROR: $rsc_type Unknown error"
 		exit 1
 		;;
 	esac
