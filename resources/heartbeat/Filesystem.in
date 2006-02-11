@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $Id: Filesystem.in,v 1.5 2005/11/03 07:45:51 xunsun Exp $
+# $Id: Filesystem.in,v 1.6 2006/02/11 13:40:42 xunsun Exp $
 # 
 # Description:	wrapper of OCF RA Filesystem, based on original heartbeat RA.
 #		See OCF RA Filesystem for more information.
@@ -48,13 +48,13 @@ cat <<-EOT;
 	<fstype>    : optional name of the filesystem type. e.g. ext2
 	<options>   : options to be given as -o options to mount.
 
-	$Id: Filesystem.in,v 1.5 2005/11/03 07:45:51 xunsun Exp $
+	$Id: Filesystem.in,v 1.6 2006/02/11 13:40:42 xunsun Exp $
 	EOT
 }
 
 # Check the arguments passed to this script
 case $# in
-  3)	fstype=""; operation=$4; options="";;
+  3)	fstype=""; operation=$3; options="";;
   4)	fstype=$3; operation=$4; options="";;
   5)	fstype=$3; operation=$5; options="$4";;
   *)	usage; exit 1;;
