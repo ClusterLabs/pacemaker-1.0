@@ -1,4 +1,3 @@
-
 /etc/ha.d/README.config
 /etc/ha.d/harc
 /etc/ha.d/rc.d/ask_resources
@@ -29,6 +28,7 @@
 /etc/ha.d/resource.d/portblock
 /etc/ha.d/shellfuncs
 /etc/heartbeat
+/etc/pam.d/hbmgmtd
 etc/init.d/heartbeat
 etc/logrotate.d/heartbeat
 usr/bin/cl_respawn
@@ -37,6 +37,9 @@ usr/lib/heartbeat/BasicSanityCheck
 usr/lib/heartbeat/ResourceManager
 usr/lib/heartbeat/SNMPAgentSanityCheck
 usr/lib/heartbeat/TestHeartbeatComm
+usr/lib/heartbeat/_pymgmt.so
+usr/lib/heartbeat/_pymgmt.so.0
+usr/lib/heartbeat/_pymgmt.so.0.0.0
 usr/lib/heartbeat/api_test
 usr/lib/heartbeat/apphbd
 usr/lib/heartbeat/apphbtest
@@ -72,9 +75,12 @@ usr/lib/heartbeat/cts/CTStests.py
 usr/lib/heartbeat/cts/OCFIPraTest.py
 usr/lib/heartbeat/cts/extracttests.py
 usr/lib/heartbeat/findif
+usr/lib/heartbeat/ha.png
 usr/lib/heartbeat/ha_config
 usr/lib/heartbeat/ha_logd
 usr/lib/heartbeat/ha_logger
+usr/lib/heartbeat/haclient.glade
+usr/lib/heartbeat/haclient.py
 usr/lib/heartbeat/haresources2cib.py
 usr/lib/heartbeat/hb_addnode
 usr/lib/heartbeat/hb_delnode
@@ -91,6 +97,9 @@ usr/lib/heartbeat/lrmadmin
 usr/lib/heartbeat/lrmd
 usr/lib/heartbeat/lrmtest/LRMBasicSanityCheck
 usr/lib/heartbeat/mach_down
+usr/lib/heartbeat/mgmtcmd.py
+usr/lib/heartbeat/mgmtd
+usr/lib/heartbeat/mgmtdtest
 usr/lib/heartbeat/mlock
 usr/lib/heartbeat/ocf-shellfuncs
 usr/lib/heartbeat/pengine
@@ -114,6 +123,7 @@ usr/lib/heartbeat/plugins/quorum/majority.so
 usr/lib/heartbeat/plugins/test/test.so
 usr/lib/heartbeat/plugins/tiebreaker/twonodes.so
 usr/lib/heartbeat/ptest
+usr/lib/heartbeat/pymgmt.py
 usr/lib/heartbeat/recoverymgrd
 usr/lib/heartbeat/req_resource
 usr/lib/heartbeat/send_arp
@@ -134,6 +144,18 @@ usr/lib/libcrmcommon.so.1
 usr/lib/libcrmcommon.so.1.0.0
 usr/lib/libhbclient.so.1
 usr/lib/libhbclient.so.1.0.0
+usr/lib/libhbmgmt.so
+usr/lib/libhbmgmt.so.0
+usr/lib/libhbmgmt.so.0.0.0
+usr/lib/libhbmgmtclient.so
+usr/lib/libhbmgmtclient.so.0
+usr/lib/libhbmgmtclient.so.0.0.0
+usr/lib/libhbmgmtcommon.so
+usr/lib/libhbmgmtcommon.so.0
+usr/lib/libhbmgmtcommon.so.0.0.0
+usr/lib/libhbmgmttls.so
+usr/lib/libhbmgmttls.so.0
+usr/lib/libhbmgmttls.so.0.0.0
 usr/lib/liblrm.so.0
 usr/lib/liblrm.so.0.0.0
 usr/lib/libpengine.so.1
@@ -230,6 +252,7 @@ usr/share/doc/heartbeat-2/heartbeat_api.txt
 usr/share/doc/heartbeat-2/rsync.html
 usr/share/doc/heartbeat-2/rsync.txt
 usr/share/doc/heartbeat-2/startstop
+usr/share/locale/zh_CN/LC_MESSAGES/haclient.zh_CN.mo
 usr/share/man/man1/cl_status.1.gz
 usr/share/man/man1/ha_logger.1.gz
 usr/share/man/man1/hb_addnode.1.gz

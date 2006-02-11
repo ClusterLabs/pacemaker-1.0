@@ -8,6 +8,7 @@ usr/include/clplumbing/cl_misc.h
 usr/include/clplumbing/cl_pidfile.h
 usr/include/clplumbing/cl_plugin.h
 usr/include/clplumbing/cl_poll.h
+usr/include/clplumbing/cl_random.h
 usr/include/clplumbing/cl_signal.h
 usr/include/clplumbing/cl_syslog.h
 usr/include/clplumbing/cl_tiebreaker.h
