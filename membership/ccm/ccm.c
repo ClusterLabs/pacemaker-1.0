@@ -228,10 +228,10 @@ ccm_control_process(ccm_info_t *info, ll_cluster_t * hb)
 			if (ANYDEBUG) {
 				cl_log_message(LOG_DEBUG, msg);
 			}
-			/* We need to do something better to recover from this
-			 * FIXME!! (as of now it crashes (!))
-			 */
-			jump_to_joining_state(hb, info, msg);
+			cl_log(LOG_ERR, "Please make sure ha.cf files on all"
+			" nodes have same nodes list or add \"autojoin any\" "
+			"to ha.cf");
+			exit(100);
 		}
 	}
 	state_msg_handler[info->state](ccm_msg_type, msg, hb, info);
