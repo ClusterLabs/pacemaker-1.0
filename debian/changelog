@@ -1,3 +1,10 @@
+heartbeat-2 (2.0.3-2) unstable; urgency=low
+
+  * Add build dependancy on libncurses-dev to allow crm_mon to work
+    Thanks to Guy Coates
+
+ -- Simon Horman <horms@debian.org>  Tue, 14 Feb 2006 11:22:10 +0900
+
 heartbeat-2 (2.0.3-1) unstable; urgency=low
 
   * New Upstream
