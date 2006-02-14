@@ -13,3 +13,5 @@ hb_takeover
 *.beam
 parser-messages
 MISC_ERRORS
+hb_addnode
+hb_delnode
