@@ -2,8 +2,18 @@ heartbeat-2 (2.0.3-2) unstable; urgency=low
 
   * Add build dependancy on libncurses-dev to allow crm_mon to work
     Thanks to Guy Coates
+  * Move hacluster user and haclient group creation (don't ask me why the
+    user and group names are different) from preinst to postinst.
+    Once upon a time there might have been a need for it in preinst,
+    but the current packaging changes files to have the hacluster user
+    and haclient group as neccessary in the postinst. So there is
+    no need to create them before postinst.
+    This is a better fix to #352158, and the pre-depends on adduser
+    has been changed to a depends accordingly.
+    (closes: #352158)
+  * Stop heartbeat in preinst
 
- -- Simon Horman <horms@debian.org>  Tue, 14 Feb 2006 11:22:10 +0900
+ -- Simon Horman <horms@debian.org>  Tue, 14 Feb 2006 13:42:37 +0900
 
 heartbeat-2 (2.0.3-1) unstable; urgency=low
 

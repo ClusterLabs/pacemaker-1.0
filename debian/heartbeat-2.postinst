@@ -20,6 +20,18 @@ set -e
 
 case "$1" in
     configure)
+	if ! getent group haclient > /dev/null ; then
+		addgroup --system --group haclient > /dev/null
+	fi
+	if ! getent passwd hacluster > /dev/null ; then
+		adduser --system --no-create-home \
+			--ingroup haclient \
+			--gecos "Heartbeat System Account" \
+			--no-create-home --disabled-login \
+			--home /usr/lib/heartbeat --shell /bin/false  \
+			--disabled-password hacluster > /dev/null
+	fi
+
 	#
 	#fifo (0600, root, root)
 	#

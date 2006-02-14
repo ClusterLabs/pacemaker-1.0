@@ -10,7 +10,7 @@ Package: ldirectord-2
 Section: admin
 Priority: optional
 Architecture: all
-Depends: ${perl:Depends}, libdigest-md5-perl, libwww-perl, libcrypt-ssleay-perl, libmail-imapclient-perl, libdigest-hmac-perl, libnet-ldap-perl, libnet-dns-perl, libdbi-perl, ipvsadm
+Depends: ${perl:Depends}, libdigest-md5-perl, libwww-perl, libcrypt-ssleay-perl, libmail-imapclient-perl, libdigest-hmac-perl, libnet-ldap-perl, libnet-dns-perl, libdbi-perl, ipvsadm, adduser
 Recommends: sysklogd|syslog-ng, logrotate
 Provides: ldirectord
 Conflicts: ldirectord
@@ -25,7 +25,6 @@ Section: admin
 Priority: optional
 Architecture: any
 Depends: ${shlibs:Depends}, python, iproute, adduser, netkit-ping | iputils-ping
-Pre-Depends: adduser
 Recommends: sysklogd | syslog-ng | system-log-daemon, logrotate
 Provides: heartbeat, libpils0, libstonith0, stonith
 Conflicts: heartbeat, libpils0, libstonith0, stonith
