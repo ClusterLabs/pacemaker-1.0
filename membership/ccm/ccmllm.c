@@ -1,4 +1,4 @@
-/* $Id: ccmllm.c,v 1.27 2005/11/07 22:55:44 gshi Exp $ */
+/* $Id: ccmllm.c,v 1.28 2006/02/15 08:50:36 zhenh Exp $ */
 /* 
  * ccmllm.c: Low Level membership routines.
  *
@@ -191,7 +191,7 @@ llm_status_update(llm_info_t *llm, const char *node,
 	}
 	
 	if (oldstatus){
-		strncpy(oldstatus, status, STATUSSIZE);
+		strncpy(oldstatus, llm->nodes[i].status, STATUSSIZE);
 	}
 	
 	strncpy(llm->nodes[i].status, status, STATUSSIZE);
