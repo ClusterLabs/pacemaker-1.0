@@ -1,4 +1,4 @@
-/* $Id: findif.c,v 1.52 2006/01/26 16:46:59 davidlee Exp $ */
+/* $Id: findif.c,v 1.53 2006/02/16 13:14:49 xunsun Exp $ */
 /*
  * findif.c:	Finds an interface which can route a given address
  *
@@ -51,7 +51,7 @@
  *	If the broadcast address was omitted, we assume the highest address
  *	in the subnet.
  *
- *	If the interfaceis omitted, we choose the interface associated with
+ *	If the interface is omitted, we choose the interface associated with
  *	the route we selected.
  *
  *
@@ -148,9 +148,11 @@ void GetAddress (char *inputaddress, char **address, char **netmaskbits
 
 void ValidateNetmaskBits (char *netmaskbits, unsigned long *netmask);
 
+int ValidateIFName (const char *ifname, struct ifreq *ifr);
+
 int netmask_bits (unsigned long netmask);
 
-char * get_first_looback_netdev(char * ifname);
+char * get_first_loopback_netdev(char * ifname);
 int is_loopback_interface(char * ifname);
 char * get_ifname(char * buf, char * ifname);
 
@@ -451,6 +453,9 @@ GetAddress (char *inputaddress, char **address, char **netmaskbits
 					/*      filter redundancy '/'
 					 *	E.g.  'inputaddress=135.9.216.100/24/eth0/'
 					 */
+					while (**bcast_arg == DELIM) {
+						++*bcast_arg;
+					}
 					if ( **bcast_arg == EOS) {
 						*bcast_arg = NULL;
 						return;
@@ -498,6 +503,28 @@ ValidateNetmaskBits (char *netmaskbits, unsigned long *netmask)
 }
 
 int
+ValidateIFName(const char *ifname, struct ifreq *ifr) 
+{
+ 	int skfd = -1;
+ 
+ 	if ( (skfd = socket(PF_INET, SOCK_DGRAM, 0)) == -1 ) {
+ 		fprintf(stderr, "%s\n", strerror(errno));
+ 		return 0;
+ 	}
+ 
+	strncpy(ifr->ifr_name, ifname, IFNAMSIZ);
+ 	if (ioctl(skfd, SIOCGIFFLAGS, ifr) < 0) {
+ 		fprintf(stderr, "%s: unknown interface: %s\n"
+ 			, ifr->ifr_name, strerror(errno));
+ 		close(skfd);
+		/* return -1 only if ifname is known to be invalid */
+		return -1;
+ 	}
+ 	close(skfd);
+ 	return 0;
+} 
+
+int
 netmask_bits(unsigned long netmask) {
 	int	j;
 
@@ -513,7 +540,7 @@ netmask_bits(unsigned long netmask) {
 }
 
 char * 
-get_first_looback_netdev(char * output)
+get_first_loopback_netdev(char * output)
 {
 	char buf[512];
 	FILE * fd;
@@ -558,25 +585,12 @@ int
 is_loopback_interface(char * ifname)
 {
 	struct ifreq ifr;
-	int skfd = -1;
-
-	if ( (skfd = socket(PF_INET, SOCK_DGRAM, 0)) == -1 ) {
-		fprintf(stderr, "%s\n", strerror(errno));
+	memset(&ifr, 0, sizeof(ifr));
+	if (ValidateIFName(ifname, &ifr) < 0)
 		return 0;
-	}
-
-	strncpy(ifr.ifr_name, ifname, IFNAMSIZ);
-	if (ioctl(skfd, SIOCGIFFLAGS, &ifr) < 0) {
-		fprintf(stderr, "%s: unknown interface: %s\n"
-			, ifname, strerror(errno));
-		close(skfd);
-		return 0;
-	}
-	close(skfd);
 
 	if (ifr.ifr_flags & IFF_LOOPBACK) {
 		/* this is a loopback device. */
-		close(skfd);
 		return 1;
 	} else {
 		return 0;
@@ -622,6 +636,7 @@ main(int argc, char ** argv) {
 	unsigned long	netmask;
 	char	best_if[MAXSTR];
 	char *	if_specified = NULL;
+	struct ifreq	ifr;
 	unsigned long	best_netmask = INT_MAX;
 	int		argerrs	= 0;
 
@@ -630,6 +645,7 @@ main(int argc, char ** argv) {
 
 	memset(&addr_out, 0, sizeof(addr_out));
 	memset(&in, 0, sizeof(in));
+	memset(&ifr, 0, sizeof(ifr));
 
 	switch (argc) {
 	case 2:	/* No -C argument */
@@ -669,6 +685,9 @@ main(int argc, char ** argv) {
 	ValidateNetmaskBits (netmaskbits, &netmask);
 
 	if (if_specified != NULL) {
+		if(ValidateIFName(if_specified, &ifr) < 0) {
+			usage();
+		}
 		strncpy(best_if, if_specified, sizeof(best_if));
 		*(best_if + sizeof(best_if) - 1) = '\0';
 	}else{
@@ -705,7 +724,7 @@ main(int argc, char ** argv) {
 		   My fix may be not good enough, please FIXME
 		 */
 		if (0 == strncmp(address, "127", 3)) {
-			if (NULL != get_first_looback_netdev(best_if)) {
+			if (NULL != get_first_loopback_netdev(best_if)) {
 				best_netmask = 0x000000ff;
 			} else {
 				fprintf(stderr, "No loopback interface found.\n");
@@ -722,8 +741,16 @@ main(int argc, char ** argv) {
 	/* Did they tell us the broadcast address? */
 
 	if (bcast_arg) {
+		/* Yes, they gave us a broadcast address.
+		 * It at least should be a valid IP address
+		 */
+ 		struct in_addr bcast_addr;
+ 		if (inet_pton(AF_INET, bcast_arg, (void *)&bcast_addr) <= 0) {
+ 			fprintf(stderr, "Invalid broadcast address [%s].", bcast_arg);
+ 			usage();
+ 		}
+
 		best_netmask = htonl(best_netmask);
-		/* Yes, they gave us a broadcast address */
 		if (!OutputInCIDR) {
 			printf("%s\t netmask %d.%d.%d.%d\tbroadcast %s\n"
 			,	best_if
@@ -867,6 +894,9 @@ ff02::%lo0/32                     fe80::1%lo0                   UC          lo0
 
 /* 
  * $Log: findif.c,v $
+ * Revision 1.53  2006/02/16 13:14:49  xunsun
+ * check both interface name and broadcast address specified by user
+ *
  * Revision 1.52  2006/01/26 16:46:59  davidlee
  * 'ConvertBitsToMask()' was buggy.  Remove, replacing with call to OS-native 'inet_pton()'.
  *
