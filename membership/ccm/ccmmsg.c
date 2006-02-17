@@ -23,15 +23,18 @@
 #include <clplumbing/coredumps.h>
 int ccm_send_cluster_msg(ll_cluster_t* hb, struct ha_msg* msg);
 int ccm_send_node_msg(ll_cluster_t* hb, struct ha_msg* msg, const char* node);
+static void dump_sending_msg(struct ha_msg* msg, const char* node);
+
 int
 ccm_send_cluster_msg(ll_cluster_t* hb, struct ha_msg* msg)
 {
 	int rc;
 	
+	dump_sending_msg(msg, NULL);
 	rc = hb->llc_ops->sendclustermsg(hb, msg);
 	if (rc != HA_OK){
-		cl_log(LOG_INFO, "sending out message failed");
-		cl_log_message(LOG_INFO, msg);
+		ccm_log(LOG_ERR, "sending out message failed");
+		ccm_message_debug2(LOG_DEBUG, msg);
 		return rc;
 	}
 	
@@ -46,10 +49,11 @@ ccm_send_node_msg(ll_cluster_t* hb,
 {
 	int rc;
 	
+	dump_sending_msg(msg, NULL);
 	rc = hb->llc_ops->sendclustermsg(hb, msg);
 	if (rc != HA_OK){
-		cl_log(LOG_INFO, "sending out message failed");
-		cl_log_message(LOG_INFO, msg);
+		ccm_log(LOG_ERR, "sending out message failed");
+		ccm_message_debug2(LOG_DEBUG, msg);
 		return rc;
 	}
 	
@@ -65,14 +69,14 @@ ccm_create_minimum_msg(ccm_info_t * info, int type)
 	struct ha_msg *m;
 
 	if ((m=ha_msg_new(0)) == NULL) {
-		cl_log(LOG_ERR, "%s: creating a new message failed",
+		ccm_log(LOG_ERR, "%s: creating a new message failed",
 		       __FUNCTION__);
 		return NULL;
 	}
 
 	if( ha_msg_add(m, F_TYPE, ccm_type2string(type)) == HA_FAIL
 	    ||ha_msg_add_int(m, F_NUMNODES, info->llm.nodecount) == HA_FAIL){
-		cl_log(LOG_ERR, "%s: adding fields to an message failed",
+		ccm_log(LOG_ERR, "%s: adding fields to an message failed",
 		       __FUNCTION__);
 		ha_msg_del(m);
 		return NULL;
@@ -92,7 +96,7 @@ ccm_create_msg(ccm_info_t * info, int type)
 	char *cookie;
 	
 	if (m == NULL) {
-		cl_log(LOG_ERR, "%s: creating a new message failed",
+		ccm_log(LOG_ERR, "%s: creating a new message failed",
 		       __FUNCTION__);
 		return NULL;
 	}
@@ -110,7 +114,7 @@ ccm_create_msg(ccm_info_t * info, int type)
 	   ||(ha_msg_add(m, CCM_MAJORTRANS, majortrans) == HA_FAIL)
 	   ||(ha_msg_add(m, CCM_UPTIME, joinedtrans) == HA_FAIL)
 	   ||(ha_msg_add(m, CCM_MINORTRANS, minortrans) == HA_FAIL)){
-		cl_log(LOG_ERR, "%s: adding fields to an message failed",
+		ccm_log(LOG_ERR, "%s: adding fields to an message failed",
 		       __FUNCTION__);
 		ha_msg_del(m);
 		return NULL;
@@ -132,7 +136,7 @@ ccm_mod_msg(struct ha_msg* msg, ccm_info_t * info, int type)
 	llm_info_t* llm =  &info->llm;
 	
 	if (msg == NULL){
-		cl_log(LOG_ERR, "NULL message");
+		ccm_log(LOG_ERR, "NULL message");
 		return HA_FAIL;
 	}
 
@@ -156,7 +160,7 @@ ccm_mod_msg(struct ha_msg* msg, ccm_info_t * info, int type)
 	   || ha_msg_mod(m, CCM_UPTIME, joinedtrans) == HA_FAIL
 	   || ha_msg_mod(m, CCM_MINORTRANS, minortrans) == HA_FAIL
 	   || ha_msg_mod_int(m, F_NUMNODES, llm->nodecount) == HA_FAIL){
-		cl_log(LOG_ERR, "%s: moding fields to an message failed",
+		ccm_log(LOG_ERR, "%s: moding fields to an message failed",
 		       __FUNCTION__);
 		return HA_FAIL;
 	}
@@ -173,9 +177,10 @@ ccm_send_standard_clustermsg(ll_cluster_t* hb, ccm_info_t* info, int type)
 	struct ha_msg *m = ccm_create_msg(info, type);
 	int  rc;
 	if (m == NULL){
-		cl_log(LOG_ERR, "creating message failed");
+		ccm_log(LOG_ERR, "creating message failed");
 		return HA_FAIL;
 	}
+	dump_sending_msg(m, NULL);
 	rc = hb->llc_ops->sendclustermsg(hb, m);
 	ha_msg_del(m);
 	return(rc);
@@ -188,10 +193,11 @@ ccm_send_minimum_clustermsg(ll_cluster_t* hb, ccm_info_t* info, int type)
 	int  rc;	
 	
 	if (m == NULL) {
-		cl_log(LOG_ERR, "creating a new message failed");
+		ccm_log(LOG_ERR, "creating a new message failed");
 		return(HA_FAIL);
 	}
 	
+	dump_sending_msg(m, NULL);
 	rc = hb->llc_ops->sendclustermsg(hb, m);
 	ha_msg_del(m);
 	return(rc);	
@@ -207,22 +213,23 @@ ccm_send_extra_clustermsg(ll_cluster_t* hb, ccm_info_t* info, int type,
 	int rc;
 
 	if (fieldname == NULL || fieldvalue == NULL){
-		cl_log(LOG_ERR, "NULL argument");
+		ccm_log(LOG_ERR, "NULL argument");
 		return HA_FAIL;
 	}
 	
 	if (m == NULL){
-		cl_log(LOG_ERR, "message creating failed");
+		ccm_log(LOG_ERR, "message creating failed");
 		return HA_FAIL;
 	}
 	
 	if ( ha_msg_add(m, fieldname, fieldvalue) == HA_FAIL){
-		cl_log(LOG_ERR, "Adding a field failed");
+		ccm_log(LOG_ERR, "Adding a field failed");
 		ha_msg_del(m);
 		return HA_FAIL;
 	} 
 	
-	rc = hb->llc_ops->sendclustermsg(hb, m);		
+	dump_sending_msg(m, NULL);
+	rc = hb->llc_ops->sendclustermsg(hb, m);
 	ha_msg_del(m);
 	return(rc);
 	
@@ -238,22 +245,22 @@ ccm_send_extra_nodemsg(ll_cluster_t* hb, ccm_info_t* info, int type,
 	int rc;
 
 	if (fieldname == NULL || fieldvalue == NULL){
-		cl_log(LOG_ERR, "NULL argument");
+		ccm_log(LOG_ERR, "NULL argument");
 		return HA_FAIL;
 	}
 	
 	if (m == NULL){
-		cl_log(LOG_ERR, "message creating failed");
+		ccm_log(LOG_ERR, "message creating failed");
 		return HA_FAIL;
 	}
 	
 	if ( ha_msg_add(m, fieldname, fieldvalue) == HA_FAIL){
-		cl_log(LOG_ERR, "Adding a field failed");
+		ccm_log(LOG_ERR, "Adding a field failed");
 		ha_msg_del(m);
 		return HA_FAIL;
 	} 
-	
-	rc = hb->llc_ops->sendnodemsg(hb, m, nodename);		
+	dump_sending_msg(m, nodename);
+	rc = hb->llc_ops->sendnodemsg(hb, m, nodename);
 	ha_msg_del(m);
 	return(rc);
 
@@ -295,13 +302,14 @@ ccm_send_memlist_res(ll_cluster_t *hb,
 	
 	if ( (ha_msg_add(m, CCM_MAXTRANS, maxtrans) == HA_FAIL)
 	     || (ha_msg_add(m, CCM_MEMLIST, memlist) == HA_FAIL)) {
-		cl_log(LOG_ERR, "ccm_send_memlist_res: Cannot create "
+		ccm_log(LOG_ERR, "ccm_send_memlist_res: Cannot create "
 		       "RES_MEMLIST message");
 		rc = HA_FAIL;
 		ha_msg_del(m);
 		return HA_FAIL;
 	} 
 	
+	dump_sending_msg(m, nodename);
 	rc = hb->llc_ops->sendnodemsg(hb, m, nodename);
 	ha_msg_del(m);
 	return(rc);
@@ -320,7 +328,7 @@ ccm_send_final_memlist(ll_cluster_t *hb,
 
 
 	if (m == NULL){
-		cl_log(LOG_ERR, "msg creation failure");
+		ccm_log(LOG_ERR, "msg creation failure");
 		return HA_FAIL;
 	}
 
@@ -333,10 +341,11 @@ ccm_send_final_memlist(ll_cluster_t *hb,
 	    || ha_msg_add(m, CCM_MEMLIST, finallist) == HA_FAIL
 	    ||(!newcookie? FALSE: (ha_msg_add(m, CCM_NEWCOOKIE, newcookie)
 				   ==HA_FAIL))) {
-		cl_log(LOG_ERR, "ccm_send_final_memlist: Cannot create "
+		ccm_log(LOG_ERR, "ccm_send_final_memlist: Cannot create "
 		       "FINAL_MEMLIST message");
 		rc = HA_FAIL;
 	} else {
+		dump_sending_msg(m, NULL);
 		rc = hb->llc_ops->sendclustermsg(hb, m);
 	}
 	ha_msg_del(m);
@@ -356,7 +365,7 @@ ccm_send_one_join_reply(ll_cluster_t *hb, ccm_info_t *info, const char *joiner)
 	/*send the membership information to all the nodes of the cluster*/
 	m=ccm_create_msg(info, CCM_TYPE_PROTOVERSION_RESP);
 	if (m == NULL){
-		cl_log(LOG_ERR, "%s: creating a message failed",
+		ccm_log(LOG_ERR, "%s: creating a message failed",
 		       __FUNCTION__);
 		return(HA_FAIL);
 	}
@@ -367,10 +376,11 @@ ccm_send_one_join_reply(ll_cluster_t *hb, ccm_info_t *info, const char *joiner)
 		 info->memcount);
 	if ( ha_msg_add(m, CCM_PROTOCOL, activeproto) == HA_FAIL 
 	     || ha_msg_add(m, CCM_CLSIZE, clsize) == HA_FAIL){
-		cl_log(LOG_ERR, "ccm_send_one_join_reply: Cannot create JOIN "
+		ccm_log(LOG_ERR, "ccm_send_one_join_reply: Cannot create JOIN "
 		       "reply message");
 		rc = HA_FAIL;
 	} else {
+		dump_sending_msg(m, joiner);
 		rc = hb->llc_ops->sendnodemsg(hb, m, joiner);
 	}
 	ha_msg_del(m);
@@ -399,11 +409,11 @@ ccm_send_abort(ll_cluster_t *hb, ccm_info_t *info,
 	
 	if (ha_msg_mod(m,CCM_MAJORTRANS ,majortrans) != HA_OK
 	    || ha_msg_mod(m,CCM_MINORTRANS ,majortrans) != HA_OK){
-		cl_log(LOG_ERR, "modifying fields failed");
+		ccm_log(LOG_ERR, "modifying fields failed");
 		ha_msg_del(m);
 		return HA_FAIL;
 	}
-	
+	dump_sending_msg(m, dest);
 	rc = hb->llc_ops->sendnodemsg(hb, m, dest);
 	ha_msg_del(m);
 	return(rc);
@@ -424,7 +434,7 @@ ccm_create_leave_msg(ccm_info_t *info, int uuid)
 	char *nodename;
 	
 	if (m == NULL){
-		cl_log(LOG_ERR, "message creating failed");
+		ccm_log(LOG_ERR, "message creating failed");
 		return NULL;
 	}
 
@@ -433,7 +443,7 @@ ccm_create_leave_msg(ccm_info_t *info, int uuid)
 	nodename = llm_get_nodename(llm, uuid);
 	
 	if(ha_msg_add(m, F_ORIG, nodename) == HA_FAIL) {
-		cl_log(LOG_ERR, "adding field failed");
+		ccm_log(LOG_ERR, "adding field failed");
 		ha_msg_del(m);
 		return NULL;
 	}
@@ -460,7 +470,7 @@ timeout_msg_mod(ccm_info_t *info)
 	
 	if (m !=NULL){
 		if (ccm_mod_msg(m, info, CCM_TYPE_TIMEOUT) != HA_OK){
-			cl_log(LOG_ERR, "mod message failed");
+			ccm_log(LOG_ERR, "mod message failed");
 			ha_msg_del(timeout_msg);
 			timeout_msg = NULL;
 			return NULL;
@@ -471,7 +481,7 @@ timeout_msg_mod(ccm_info_t *info)
 	
 	m = ccm_create_minimum_msg(info, CCM_TYPE_TIMEOUT);
 	if (m == NULL){
-		cl_log(LOG_ERR, "creating a message failed");
+		ccm_log(LOG_ERR, "creating a message failed");
 		return NULL;
 	}
 	
@@ -481,7 +491,7 @@ timeout_msg_mod(ccm_info_t *info)
 	    || ha_msg_add(m, CCM_COOKIE, "  ") == HA_FAIL
 	    || ha_msg_add(m, CCM_MAJORTRANS, "0") == HA_FAIL
 	    ||(ha_msg_add(m, CCM_MINORTRANS, "0") == HA_FAIL)){
-		cl_log(LOG_ERR, "Adding field to a message failed");       
+		ccm_log(LOG_ERR, "Adding field to a message failed");       
 		ha_msg_del(m);
 		return NULL;
 	}
@@ -523,7 +533,7 @@ ccm_send_to_all(ll_cluster_t *hb, ccm_info_t *info,
 	int rc;
 
 	if (m == NULL){
-		cl_log(LOG_ERR, "creating msg failed");
+		ccm_log(LOG_ERR, "creating msg failed");
 		return HA_FAIL;
 	}
 	
@@ -534,12 +544,13 @@ ccm_send_to_all(ll_cluster_t *hb, ccm_info_t *info,
 	     == HA_FAIL
 	     || !newcookie? FALSE: (ha_msg_add(m, CCM_NEWCOOKIE, newcookie)
 				    ==HA_FAIL)) {
-		cl_log(LOG_ERR, "ccm_send_final_memlist: Cannot create "
+		ccm_log(LOG_ERR, "ccm_send_final_memlist: Cannot create "
 		       "FINAL_MEMLIST message");
 		ha_msg_del(m);
 		return HA_FAIL;
 	}
 	
+	dump_sending_msg(m, NULL);
 	rc = hb->llc_ops->sendclustermsg(hb, m);
 	ha_msg_del(m);
 	return(rc);
@@ -585,4 +596,18 @@ int
 ccm_send_restart_msg(ll_cluster_t* hb, ccm_info_t* info)
 {
 	return ccm_send_minimum_clustermsg(hb, info, CCM_TYPE_RESTART);
+}
+
+static void 
+dump_sending_msg(struct ha_msg* msg, const char* node) 
+{
+	const char* type;
+	const char* status;
+	
+	type = ha_msg_value(msg, F_TYPE);
+	status = ha_msg_value(msg, F_STATUS);
+	
+	ccm_debug(LOG_DEBUG, "send msg %s to %s, status:%s"
+	,	type, node==NULL?"cluster":node, status);
+	ccm_message_debug2(LOG_DEBUG, msg);
 }

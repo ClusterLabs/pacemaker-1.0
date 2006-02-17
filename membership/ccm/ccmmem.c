@@ -38,12 +38,12 @@ ccm_mem_add(ccm_info_t* info, int index)
 	int count;
 
 	if (info == NULL){
-		cl_log(LOG_ERR, "%s: NULL pointer",
+		ccm_log(LOG_ERR, "%s: NULL pointer",
 		       __FUNCTION__);
 		return HA_FAIL;
 	}
 	if (index < 0 || index > llm_get_nodecount(&info->llm)){
-		cl_log(LOG_ERR, "%s: index(%d) out of range",
+		ccm_log(LOG_ERR, "%s: index(%d) out of range",
 		       __FUNCTION__, index);
 		return HA_FAIL;
 	}
@@ -54,7 +54,7 @@ ccm_mem_add(ccm_info_t* info, int index)
 	info->memcount++;
 	
 	if (info->memcount >= MAXNODE){
-		cl_log(LOG_ERR, "%s: membership count(%d) out of range",
+		ccm_log(LOG_ERR, "%s: membership count(%d) out of range",
 		       __FUNCTION__, info->memcount);
 		return HA_FAIL;
 	}
@@ -66,7 +66,7 @@ int
 ccm_get_memcount(ccm_info_t* info){
 
 	if (info == NULL){
-		cl_log(LOG_ERR, "%s: NULL pointer",
+		ccm_log(LOG_ERR, "%s: NULL pointer",
 		       __FUNCTION__);
 		return -1;
 	}
@@ -87,7 +87,7 @@ ccm_mem_bitmapfill(ccm_info_t *info,
 	for ( i = 0 ; i < llm_get_nodecount(llm); i++ ) {
 		if(bitmap_test(i, bitmap, MAXNODE)){
 			if (ccm_mem_add(info, i) != HA_OK){
-				cl_log(LOG_ERR, "%s: adding node(%s)"
+				ccm_log(LOG_ERR, "%s: adding node(%s)"
 				       "to member failed",
 				       __FUNCTION__, 
 				       llm_get_nodename(llm, i));
@@ -108,13 +108,13 @@ ccm_mem_strfill(ccm_info_t *info,
 	
 	bitmap_create(&bitmap, MAXNODE);
 	if (bitmap == NULL){
-		cl_log(LOG_ERR, "%s:bitmap creation failure", 
+		ccm_log(LOG_ERR, "%s:bitmap creation failure", 
 		       __FUNCTION__);
 		return HA_FAIL;
 	}
 	if (ccm_str2bitmap((const  char *) memlist, strlen(memlist), 
 			   bitmap) < 0){
-		cl_log(LOG_ERR, "%s: string(%s) to bitmap conversion failed",
+		ccm_log(LOG_ERR, "%s: string(%s) to bitmap conversion failed",
 		       __FUNCTION__, memlist);
 		return HA_FAIL;
 	}
@@ -133,7 +133,7 @@ node_is_member(ccm_info_t* info, const char* node)
 	llm_info_t *llm = &info->llm;
 
 	if (info == NULL || node == NULL){
-		cl_log(LOG_ERR, "%s: NULL pointer",
+		ccm_log(LOG_ERR, "%s: NULL pointer",
 		       __FUNCTION__);
 		return HA_FAIL;
 	}
@@ -156,14 +156,14 @@ i_am_member(ccm_info_t* info)
 	int i;
 
 	if (info == NULL){
-		cl_log(LOG_ERR, "%s: NULL pointer",
+		ccm_log(LOG_ERR, "%s: NULL pointer",
 		       __FUNCTION__);
 		return FALSE;
 	}	
 	
 	llm = &info->llm;
 	if (llm->myindex <0){
-		cl_log(LOG_ERR, "%s: myindex in llm is not set",
+		ccm_log(LOG_ERR, "%s: myindex in llm is not set",
 		       __FUNCTION__);
 		return FALSE;
 	}
@@ -183,12 +183,12 @@ ccm_mem_delete(ccm_info_t* info, int index)
 	int memcount;
 	
 	if (info == NULL){
-		cl_log(LOG_ERR, "%s: NULL pointer",
+		ccm_log(LOG_ERR, "%s: NULL pointer",
 		       __FUNCTION__);
 		return HA_FAIL;
 	}
 	if (index < 0 || index > llm_get_nodecount(&info->llm)){
-		cl_log(LOG_ERR, "%s: index(%d) out of range",
+		ccm_log(LOG_ERR, "%s: index(%d) out of range",
 		       __FUNCTION__, index);
 		return HA_FAIL;
 	}
@@ -202,7 +202,7 @@ ccm_mem_delete(ccm_info_t* info, int index)
 		}
 	}       
 	
-	cl_log(LOG_ERR, "%s: node index(%d) not found in membership",
+	ccm_log(LOG_ERR, "%s: node index(%d) not found in membership",
 	       __FUNCTION__, index);
 	return HA_FAIL;
 
@@ -227,7 +227,7 @@ ccm_mem_filluptime(ccm_info_t* info, int* uptime_list, int uptime_size)
 	int i;
 
 	if (uptime_size != info->memcount){
-		cl_log(LOG_ERR, "%s: uptime_list size (%d) != memcount(%d)",
+		ccm_log(LOG_ERR, "%s: uptime_list size (%d) != memcount(%d)",
 		       __FUNCTION__, uptime_size, info->memcount);
 		return HA_FAIL;		
 	}
@@ -247,7 +247,7 @@ am_i_member_in_memlist(ccm_info_t *info, const char *memlist)
 	llm_info_t *llm;
 	
 	if (info == NULL || memlist == NULL){
-		cl_log(LOG_ERR, "%s: NULL pointer",
+		ccm_log(LOG_ERR, "%s: NULL pointer",
 		       __FUNCTION__);
 		return FALSE;
 	}
@@ -255,7 +255,7 @@ am_i_member_in_memlist(ccm_info_t *info, const char *memlist)
 	llm = &info->llm;
 	bitmap_create(&bitmap, MAXNODE);
 	if (bitmap == NULL){
-		cl_log(LOG_ERR ,"%s: bitmap creatation failed",
+		ccm_log(LOG_ERR ,"%s: bitmap creatation failed",
 		       __FUNCTION__);
 		return FALSE;
 	}

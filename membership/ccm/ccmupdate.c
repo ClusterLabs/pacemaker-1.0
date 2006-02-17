@@ -1,4 +1,4 @@
-/* $Id: ccmupdate.c,v 1.19 2005/10/06 01:54:11 gshi Exp $ */
+/* $Id: ccmupdate.c,v 1.20 2006/02/17 05:48:24 zhenh Exp $ */
 /* 
  * update.c: functions that track the votes during the voting protocol
  *
@@ -43,7 +43,7 @@ update_add_memlist_request(ccm_update_t *tab,
 	       g_slist_nth_data(UPDATE_GET_CLHEAD(tab),i++)) != NULL){
 		if(idx == obj->index) {
 			if(uptime > obj->uptime) {
-				cl_log(LOG_WARNING
+				ccm_debug(LOG_WARNING
 				       ,	"WARNING:update_add_memlist_request"
 				       " %s already added(updating)", node);
 				obj->uptime = uptime;
@@ -205,7 +205,7 @@ update_compute_leader(ccm_update_t *tab, uint j, llm_info_t *llm)
 				entry->index);
 
 	if (value == 0){
-		cl_log(LOG_ERR, "same id comparsion?");
+		ccm_log(LOG_ERR, "update_compute_leader:same id comparsion?");
 		abort();
 	}
 	
@@ -221,8 +221,8 @@ update_display(int pri,llm_info_t* llm, ccm_update_t* tab)
 {
 	unsigned i; 
 	
-	cl_log(pri, "diplaying update information: ");
-	cl_log(pri, "leader=%d(%s) nodeCount=%d", 
+	ccm_debug(pri, "diplaying update information: ");
+	ccm_debug(pri, "leader=%d(%s) nodeCount=%d", 
 	       tab -> leader,
 	       (tab->leader<0 || tab->leader >= (int)llm_get_nodecount(llm))?
 	       "":llm_get_nodename(llm, tab->update[tab->leader].index),
@@ -230,7 +230,7 @@ update_display(int pri,llm_info_t* llm, ccm_update_t* tab)
 	
  	for ( i = 0; i < llm_get_nodecount(llm); i++){
 		if (tab->update[i].index >=0){
-			cl_log(pri, "%d:%s uptime=%d", 
+			ccm_debug(pri, "%d:%s uptime=%d", 
 			       i,
 			       llm_get_nodename(llm, tab->update[i].index),
 			       tab->update[i].uptime);		
@@ -362,7 +362,7 @@ update_add(ccm_update_t *tab,
 	i = llm_get_index(llm, nodename);
 	
 	if( i == -1 ) {
-		cl_log(LOG_ERR, "ccm_update_table:Internal Logic error i=%d",
+		ccm_log(LOG_ERR, "ccm_update_table:Internal Logic error i=%d",
 				i);
 		exit(1);
 	}
@@ -377,14 +377,14 @@ update_add(ccm_update_t *tab,
 		}
 		
 		if(i == UPDATE_GET_INDEX(tab,j)){
-			cl_log(LOG_ERR, "ccm_update_table:duplicate entry %s",
+			ccm_log(LOG_ERR, "ccm_update_table:duplicate entry %s",
 			       nodename);
 			return;
 		}
 	}
 	
 	if( j == llm_get_nodecount(llm) ) {
-		cl_log(LOG_ERR, "ccm_update_table:Internal Logic error j=%d",
+		ccm_log(LOG_ERR, "ccm_update_table:Internal Logic error j=%d",
 		       j);
 		exit(1);
 	}

@@ -1,4 +1,4 @@
-/* $Id: ccmclient.c,v 1.33 2005/12/16 02:12:00 gshi Exp $ */
+/* $Id: ccmclient.c,v 1.34 2006/02/17 05:48:24 zhenh Exp $ */
 /* 
  * client.c: Consensus Cluster Client tracker
  *
@@ -39,8 +39,6 @@ typedef struct ccm_client_s {
 #define CL_MEM    	0x2
 #define CL_ERROR    	0x4
 
-extern int global_verbose;
-extern int global_debug;
 
 typedef struct ccm_ipc_s {
 	int		   count;
@@ -86,7 +84,7 @@ send_message(ccm_client_t *ccm_client, ccm_ipc_t *msg)
 		}
 		if(send_rc != IPC_OK){
 			if (chan->ops->get_chan_status(chan) != IPC_CONNECT){
-				cl_log(LOG_WARNING, "Channel is dead.  Cannot send message.");
+				ccm_debug(LOG_WARNING, "Channel is dead.  Cannot send message.");
 				break;
 			}else {
 				cl_shortsleep();				
@@ -227,7 +225,7 @@ flush_func(gpointer key, gpointer value, gpointer user_data)
 {
 	struct IPC_CHANNEL *ipc_client = (struct IPC_CHANNEL *)key;
 	while(ipc_client->ops->is_sending_blocked(ipc_client)) {
-		cl_log(LOG_WARNING, "ipc channel blocked");
+		ccm_debug(LOG_WARNING, "ipc channel blocked");
 		cl_shortsleep();
 		if(ipc_client->ops->resume_io(ipc_client) == IPC_BROKEN) {
 			break;
@@ -269,7 +267,7 @@ void
 client_init(void)
 {
 	if(ccm_hashclient) {
-		cl_log(LOG_INFO, "ccm: client already initialized");
+		ccm_log(LOG_INFO, "client already initialized");
 		return;
 	}
 	ccm_hashclient =  g_hash_table_new(g_direct_hash, 
@@ -284,7 +282,7 @@ client_add(struct IPC_CHANNEL *ipc_client)
 	ccm_client_t  *ccm_client;
 
 	if(!ccm_hashclient) {
-		cl_log(LOG_ERR, "ccm: client subsystem not initialized");
+		ccm_log(LOG_ERR, "client subsystem not initialized");
 		return -1;
 	}
 
@@ -355,7 +353,7 @@ get_quorum(ccm_info_t* info)
 	if (funcs == NULL){
 		quorum_plugin = cl_get_env(QUORUM_S);
 		if (quorum_plugin == NULL){
-			cl_log(LOG_INFO, "No quorum selected,"
+			ccm_debug2(LOG_DEBUG, "No quorum selected,"
 			       "using default quorum plugin(majority)");
 			quorum_plugin  = "majority";
 		}
@@ -364,7 +362,7 @@ get_quorum(ccm_info_t* info)
 	if (tiebreaker_funcs == NULL){
 		tiebreaker_plugin = cl_get_env(TIEBREAKER_S);
 		if (tiebreaker_plugin == NULL){
-			cl_log(LOG_INFO, "No tiebreaker selected,"
+			ccm_debug2(LOG_DEBUG, "No tiebreaker selected,"
 			       "using default tiebreaker plugin(twonodes)");
 			tiebreaker_plugin = "twonodes";
 		}
@@ -374,7 +372,7 @@ get_quorum(ccm_info_t* info)
 	if (funcs == NULL){
 		funcs = cl_load_plugin("quorum", quorum_plugin);
 		if (funcs == NULL){
-			cl_log(LOG_ERR, "%s: loading plugin %s failed",
+			ccm_log(LOG_ERR, "%s: loading plugin %s failed",
 			       __FUNCTION__, quorum_plugin);
 			return FALSE;
 		}
@@ -395,7 +393,7 @@ get_quorum(ccm_info_t* info)
 		
 		tiebreaker_funcs = cl_load_plugin("tiebreaker", tiebreaker_plugin);
 		if (tiebreaker_funcs == NULL){
-			cl_log(LOG_ERR, "%s: loading plugin %s failed",
+			ccm_log(LOG_ERR, "%s: loading plugin %s failed",
 			       __FUNCTION__, tiebreaker_plugin);
 			return FALSE;
 		}
@@ -409,7 +407,7 @@ static void
 display_func(gpointer key, gpointer value, gpointer user_data)
 {
 	ccm_client_t * ccm_client = (ccm_client_t*) value;
-	cl_log(LOG_INFO, "client: pid =%d", ccm_client->ccm_ipc_client->farside_pid);	
+	ccm_debug(LOG_DEBUG, "client: pid =%d", ccm_client->ccm_ipc_client->farside_pid);	
 	
 	return;
 }
@@ -437,7 +435,7 @@ client_new_mbrship(ccm_info_t* info, void* borndata)
 	ccm->trans = trans;
 	ccm->quorum = get_quorum(info);
 	(void)get_quorum;
-	cl_log(LOG_INFO, "quorum is %d", ccm->quorum);
+	ccm_debug(LOG_DEBUG, "quorum is %d", ccm->quorum);
 
 	memcpy(ccm->member, member, n*sizeof(int));
 
@@ -454,12 +452,13 @@ client_new_mbrship(ccm_info_t* info, void* borndata)
 	if(ipc_born_message && --(ipc_born_message->count)==0){
 		delete_message(ipc_born_message);
 	}
+
 	ipc_born_message = create_message(ipc_born_chk, born, 
 					  sizeof(ccm_born_t )+n*sizeof(struct born_s));
 	ipc_born_message->count++;
 	
 #if 1
-	cl_log(LOG_INFO, "delivering new membership to %d clients: ",
+	ccm_debug(LOG_DEBUG, "delivering new membership to %d clients: ",
 	       g_hash_table_size(ccm_hashclient));
 	if(g_hash_table_size(ccm_hashclient)){
 		g_hash_table_foreach(ccm_hashclient, display_func, NULL);	
@@ -469,9 +468,7 @@ client_new_mbrship(ccm_info_t* info, void* borndata)
 #endif 
 	
 	send_all();
-	if(global_verbose) {
-		cl_log(LOG_DEBUG, "membership state: new membership");
-	}
+	ccm_debug2(LOG_DEBUG, "membership state: new membership");
 }
 
 
@@ -492,8 +489,7 @@ client_influx(void)
 		send_all();
 	}
 
-	if(global_verbose)
-		cl_log(LOG_DEBUG, "membership state: not primary");
+	ccm_debug2(LOG_DEBUG, "membership state: not primary");
 }
 
 
@@ -512,8 +508,7 @@ client_evicted(void)
 		send_all();
 	}
 	cleanup();
-	if(global_verbose)
-		cl_log(LOG_DEBUG, "membership state: evicted");
+	ccm_debug2(LOG_DEBUG, "membership state: evicted");
 }
 
 

@@ -1,4 +1,4 @@
-/* $Id: ccmgraph.c,v 1.15 2005/10/25 19:46:55 gshi Exp $ */
+/* $Id: ccmgraph.c,v 1.16 2006/02/17 05:48:24 zhenh Exp $ */
 /* 
  * ccmgraph.c: Keeps track of the connectivity within the cluster members
  *		to derive the largest totally connected subgraph.
@@ -41,7 +41,7 @@ static char 	vyesorno='n';
 static void
 bitmap_display(char* bitmap)
 {
-	cl_log(LOG_INFO, "%x", (unsigned int) bitmap[0]);	
+	ccm_debug2(LOG_DEBUG, "bitmap_display:%x", (unsigned int) bitmap[0]);	
 }
 
 static void 
@@ -50,7 +50,7 @@ graph_display(graph_t* gr)
 	int i;
 
 	if (gr == NULL){
-		cl_log(LOG_ERR, "graph is NULL");
+		ccm_log(LOG_ERR, "graph_display:graph is NULL");
 		return;
 	}
 	
@@ -58,7 +58,7 @@ graph_display(graph_t* gr)
 		char* bitmap = gr->graph_node[i]->bitmap;
 		int	index = gr->graph_node[i]->uuid;
 		
-		cl_log(LOG_INFO, "node[%d]'s bitmap is:", index);
+		ccm_debug2(LOG_DEBUG, "graph_display:node[%d]'s bitmap is:", index);
 		if(bitmap != NULL) {
 			bitmap_display(bitmap);
 		}
@@ -243,8 +243,8 @@ find_best_candidate(vertex_t **vertex, int startindx,
 		}
 		if(count == min_count) {
 			if (vyesorno == 'y') {
-				cl_log(LOG_DEBUG
-				,	"probably 1 more group exists");
+				ccm_debug2(LOG_DEBUG
+				,	"find_best_candidate:probably 1 more group exists");
 			}
 		}
 		if(count < min_count) {
@@ -283,7 +283,7 @@ delete_entry(vertex_t **vertex, int indx, int size,
 	 * entries up
 	 */
 	if (vyesorno == 'y') {
-		cl_log(LOG_DEBUG, "k=%d is being removed",indx);
+		ccm_debug2(LOG_DEBUG, "delete_entry:k=%d is being removed",indx);
 	}
 	tmp_vertex = vertex[indx];
 	tmp_vertex->count--;
@@ -382,8 +382,8 @@ get_max_clique(vertex_t **vertex,  int maxnode, int *loc)
 		k = find_best_candidate(vertex, j-num+1, j+1, indxtab, 
 					maxnode); 
 		if (vyesorno == 'y') {
-			cl_log(LOG_DEBUG
-			,	"k=%d is the best candidate for removal",k);
+			ccm_debug2(LOG_DEBUG
+			,	"get_max_clique:k=%d is the best candidate for removal",k);
 		}
 
 		/* delete the candidate */

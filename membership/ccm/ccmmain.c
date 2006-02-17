@@ -1,4 +1,4 @@
-/* $Id: ccmmain.c,v 1.32 2005/11/21 21:43:30 gshi Exp $ */
+/* $Id: ccmmain.c,v 1.33 2006/02/17 05:48:24 zhenh Exp $ */
 /* 
  * ccm.c: Consensus Cluster Service Program 
  *
@@ -28,8 +28,6 @@
 #define SECOND   1000
 #define OPTARGS  "dv"
 
-int global_debug=0;
-int global_verbose=0;
 GMainLoop*	mainloop = NULL;
 
 /*
@@ -43,7 +41,7 @@ static gboolean
 hb_input_dispatch(IPC_Channel * channel, gpointer user_data)
 {
 	if (channel && (channel->ch_status == IPC_DISCONNECT)) {
-		cl_log(LOG_ERR, "Lost connection to heartbeat service. Need to bail out.");
+		ccm_log(LOG_ERR, "Lost connection to heartbeat service. Need to bail out.");
 		return FALSE;
 	}
 	
@@ -62,7 +60,7 @@ hb_input_destroy(gpointer user_data)
 static gboolean
 hb_timeout_dispatch(gpointer user_data)
 {	
-	if(global_debug) {
+	if(debug_level > 0) {
 		ccm_check_memoryleak();
 	}
 	return hb_input_dispatch(0, user_data);
@@ -82,7 +80,7 @@ clntCh_input_dispatch(IPC_Channel *client,
 	      gpointer        user_data)
 {
 	if(client->ch_status == IPC_DISCONNECT){
-		cl_log(LOG_INFO, "client (pid=%d) removed from ccm", 
+		ccm_log(LOG_INFO, "client (pid=%d) removed from ccm", 
 		       client->farside_pid);
 		
 		client_delete(client);
@@ -156,7 +154,7 @@ wait_channel_init(void)
 static void
 usage(const char *cmd)
 {
-	fprintf(stderr, "\nUsage: %s [-dv]\n", cmd);
+	fprintf(stderr, "\nUsage: %s [-v]\n", cmd);
 }
 
 
@@ -164,22 +162,27 @@ usage(const char *cmd)
 /* debug facilitator. */
 /* */
 static void
-ccm_debug(int signum) 
+usr_signal_handler(int signum) 
 {
 	switch(signum) {
 	case SIGUSR1:
-		global_debug = !global_debug;
+		debug_level++;
 		break;
+
 	case SIGUSR2:
-		global_verbose = !global_verbose;
+		debug_level--;
+		if (debug_level < 0) {
+			debug_level = 0;
+		}
 		break;
 	}
-
-	if(global_debug || global_verbose){
+	
+	if(debug_level > 0){
 		cl_log_enable_stderr(TRUE);
 	} else {
 		cl_log_enable_stderr(FALSE);
 	}
+	ccm_log(LOG_INFO, "set debug_level to %d", debug_level);
 
 }
 
@@ -189,9 +192,9 @@ ccm_shutdone(int sig, gpointer userdata)
 	ccm_t*		ccm = (ccm_t*)userdata;
 	ccm_info_t *	info = (ccm_info_t*)ccm->info;
 
-	cl_log(LOG_INFO, "received SIGTERM in node");
+	ccm_log(LOG_INFO, "received SIGTERM, goint to shut down");
 	if (info == NULL){
-		cl_log(LOG_ERR, "ccm_shutdone: invalid arguments");
+		ccm_log(LOG_ERR, "ccm_shutdone: invalid arguments");
 		return FALSE;
 	}
 	
@@ -227,23 +230,20 @@ main(int argc, char **argv)
 	cl_log_set_facility(LOG_DAEMON);
 	while ((flag = getopt(argc, argv, OPTARGS)) != EOF) {
 		switch(flag) {
-			case 'v':
-				global_verbose = 1;
-				break;
-			case 'd': 
-				global_debug = 1;
+		case 'v':		/* Debug mode, more logs*/
+				++debug_level;
 				break;
 		default:
 				usage(cmdname);
 				return 1;
 		}
 	}
-	if(global_verbose || global_debug)
+	if(debug_level > 0)
 		cl_log_enable_stderr(TRUE);
 
 
-	CL_SIGNAL(SIGUSR1, ccm_debug);
-	CL_SIGNAL(SIGUSR2, ccm_debug);
+	CL_SIGNAL(SIGUSR1, usr_signal_handler);
+	CL_SIGNAL(SIGUSR2, usr_signal_handler);
 	CL_IGNORE_SIG(SIGPIPE);
 	
 	cl_inherit_use_logd(ENV_PREFIX ""KEY_LOGDAEMON, 256);
@@ -260,7 +260,7 @@ main(int argc, char **argv)
 	 */
 	ccm = ccm_initialize();
 	if(ccm == NULL){
-		cl_log(LOG_ERR, "Initialization failed. Exit");
+		ccm_log(LOG_ERR, "Initialization failed. Exit");
 		exit(1);
 	}
 	

@@ -1,4 +1,4 @@
-/* $Id: ccmversion.c,v 1.7 2005/07/29 10:32:30 sunjd Exp $ */
+/* $Id: ccmversion.c,v 1.8 2006/02/17 05:48:24 zhenh Exp $ */
 /* 
  * ccmversion.c: routines that handle information while in the version 
  * request state
@@ -35,7 +35,6 @@
 #define VERSION_GET_NRESP(ver) ver->n_resp
 
 
-extern int global_debug;
 /* */
 /* return true if we have waited long enough for a response */
 /* for our version request. */
@@ -67,10 +66,8 @@ int
 version_retry(ccm_version_t *ver, longclock_t timeout)
 {
 	if(version_timeout_expired(ver, timeout)) {
-		if(global_debug) {
-			cl_log(LOG_DEBUG, "%d tries left" 
+		ccm_debug2(LOG_DEBUG, "version_retry:%d tries left" 
 			,	3-VERSION_GET_TRIES(ver));
-		}
 		if(VERSION_GET_TRIES(ver) == MAXTRIES) {
 			return VER_TRY_END;
 		} else {

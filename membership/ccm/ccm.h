@@ -1,4 +1,4 @@
-/* $Id: ccm.h,v 1.48 2005/11/04 22:53:35 gshi Exp $ */
+/* $Id: ccm.h,v 1.49 2006/02/17 05:48:24 zhenh Exp $ */
 /*
  * ccm.h: definitions Consensus Cluster Manager internal header
  *				file
@@ -485,4 +485,22 @@ typedef void (*state_msg_handler_t)(enum ccm_type ccm_msg_type,
 				    ll_cluster_t *hb, 
 				    ccm_info_t *info);
 
+#define ccm_log(priority, fmt...); \
+		cl_log(priority, fmt); \
+
+#define ccm_debug(priority, fmt...); \
+        if ( debug_level >= 1 ) { \
+                cl_log(priority, fmt); \
+        }
+
+#define ccm_debug2(priority, fmt...); \
+        if ( debug_level >= 2 ) { \
+                cl_log(priority, fmt); \
+        }
+	
+#define ccm_message_debug2(priority,msg); \
+	if ( debug_level >= 2) { \
+		cl_log_message(priority, msg); \
+	}
+	
 #endif 

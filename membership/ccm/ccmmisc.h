@@ -39,7 +39,6 @@ gboolean	node_is_member(ccm_info_t* info, const char* node);
 gboolean	part_of_cluster(int state);
 int		ccm_string2type(const char *type);
 char*		ccm_type2string(enum ccm_type type);
-void		ccm_log(int priority, const char * fmt, ...) G_GNUC_PRINTF(2,3);
 
 void		ccm_mem_reset(ccm_info_t* info);
 int		ccm_mem_add(ccm_info_t*, int index);

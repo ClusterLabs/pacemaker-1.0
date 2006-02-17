@@ -1,4 +1,4 @@
-/* $Id: ccmmisc.c,v 1.28 2006/02/01 20:53:05 alan Exp $ */
+/* $Id: ccmmisc.c,v 1.29 2006/02/17 05:48:24 zhenh Exp $ */
 /* 
  * ccmmisc.c: Miscellaneous Consensus Cluster Service functions
  *
@@ -38,7 +38,7 @@ ccm_bitmap2str(const char *bitmap, char* memlist, int size)
 	if (bitmap == NULL ||
 	    memlist == NULL ||
 	    size <= 0){
-		cl_log(LOG_ERR, "invalid arguments");
+		ccm_log(LOG_ERR, "invalid arguments");
 		return -1;
 	}
 	
@@ -65,7 +65,7 @@ ccm_str2bitmap(const char *_memlist, int size, char *bitmap)
 	    || size <= 0
 	    || size >= MAX_MEMLIST_STRING
 	    || bitmap == NULL){
-		cl_log(LOG_ERR, "invalid arguments");
+		ccm_log(LOG_ERR, "invalid arguments");
 		return -1;
 	}
 	
@@ -112,7 +112,7 @@ ccm_bitmap2str(const char *bitmap, char *memlist, int size)
 	maxstrsize = B64_stringlen(bytes)+1;
 
 	if (maxstrsize > MAX_MEMLIST_STRING){
-		cl_log(LOG_INFO, "MAX_MEMLIST_STRING is too small(%d), sized required %d",
+		ccm_log(LOG_ERR, "MAX_MEMLIST_STRING is too small(%d), sized required %d",
 		       MAX_MEMLIST_STRING, maxstrsize);
 		return -1;
 	}
@@ -166,7 +166,7 @@ ccm_check_memoryleak(void)
 		if(arena==0) {
 			arena = i.arena;
 		} else if(arena < i.arena) {
-			cl_log(LOG_WARNING, 
+			ccm_debug(LOG_WARNING, 
 				"leaking memory? previous arena=%d "
 				"present arena=%d", 
 				arena, i.arena);
@@ -254,7 +254,7 @@ part_of_cluster(int state)
 {
 	if (state >= CCM_STATE_END 
 	    || state < 0){
-		cl_log(LOG_ERR, "wrong state(%d)", state);
+		ccm_log(LOG_ERR, "part_of_cluster:wrong state(%d)", state);
 		return FALSE;
 	}
 	
