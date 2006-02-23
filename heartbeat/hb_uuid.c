@@ -619,6 +619,9 @@ read_node_uuid_file(struct sys_config * cfg)
 	if (outofsync) {
 		write_node_uuid_file(cfg);
 	}
+	if (ANYDEBUG) {
+		uuidtable_display();
+	}
 	return rc < 0 ? HA_FAIL: HA_OK;
 }
 
