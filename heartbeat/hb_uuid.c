@@ -29,15 +29,20 @@
 #include <unistd.h>
 #include <clplumbing/cl_misc.h>
 
-extern int				DoManageResources;
+extern int			DoManageResources;
 
 #ifndef O_SYNC
 #	define O_SYNC 0
 #endif
 
-static GHashTable*			name_table = NULL;
-static GHashTable*			uuid_table = NULL;
-extern GList*	del_node_list;
+static GHashTable*		name_table = NULL;
+static GHashTable*		uuid_table = NULL;
+static gboolean			nodecache_read_yet = FALSE;
+static gboolean			delcache_read_yet = FALSE;
+extern GList*			del_node_list;
+
+static int			read_node_uuid_file(struct sys_config * cfg);
+static int			read_delnode_file(struct sys_config* cfg);
 
 
 static void  remove_all(void);
@@ -197,8 +202,8 @@ update_tables(const char* nodename, cl_uuid_t* uuid)
 			return FALSE;
 		}
 
-		cl_log(LOG_WARNING, "nodename %s"
-		       " changed to %s?", hip->nodename, nodename);	
+		cl_log(LOG_WARNING, "nodename %s uuid changed to %s"
+		,	hip->nodename, nodename);	
 		uuidtable_display();
 		strncpy(hip->nodename, nodename, sizeof(hip->nodename));
 		add_nametable(nodename, hip);
@@ -522,9 +527,13 @@ write_node_uuid_file(struct sys_config * cfg)
 	const char *	finalname =	HOSTUUIDCACHEFILE;
 	FILE *		f;
 
+	if (!nodecache_read_yet) {
+		read_node_uuid_file(cfg);
+	}
 	(void)unlink(tmpname);
 	if ((f=fopen(tmpname, "w")) == NULL) {
-		cl_perror("Cannot fopen %s for writing", tmpname);
+		cl_perror("%s: Cannot fopen %s for writing"
+		,	__FUNCTION__, tmpname);
 		return HA_FAIL;
 	}
 	for (j=0; j < cfg->nodecount; ++j) {
@@ -574,8 +583,13 @@ read_node_uuid_file(struct sys_config * cfg)
 	const char *	uuidcachename = HOSTUUIDCACHEFILE;
 	gboolean	outofsync = FALSE;
 
+	nodecache_read_yet = TRUE;
+	if (!cl_file_exists(uuidcachename)){
+		return HA_OK;
+	}
 	if ((f=fopen(uuidcachename, "r")) == NULL) {
-		cl_perror("Cannot fopen %s for reading", uuidcachename);
+		cl_perror("%s: Cannot fopen %s for reading"
+		,	__FUNCTION__, uuidcachename);
 		return HA_FAIL;
 	}
 
@@ -590,18 +604,21 @@ read_node_uuid_file(struct sys_config * cfg)
 		}
 		
 		nodename2uuid(host, &curuuid);
-		if (cl_uuid_is_null(&curuuid)) {
-			/* we should not write out any null uuid entry*/
-			/*update_tables(host, &uu);*/
-		}else if (cl_uuid_compare(&uu, &curuuid) != 0) {
-			outofsync=TRUE;
+		if (cl_uuid_compare(&uu, &curuuid) != 0) {
+			if (!cl_uuid_is_null(&uu)) {
+				update_tables(host, &uu);
+				outofsync=TRUE;
+			}
 		}
 	}
 	fclose(f);
 	/*
-	 * If outofsync is TRUE, then we should probably write out a new
-	 * uuid cache file. FIXME??
+	 * If outofsync is TRUE, then we need to write out a new
+	 * uuid cache file.
 	 */
+	if (outofsync) {
+		write_node_uuid_file(cfg);
+	}
 	return rc < 0 ? HA_FAIL: HA_OK;
 }
 
@@ -614,11 +631,13 @@ write_delnode_file(struct sys_config* cfg)
 	FILE *		f;
 	GList*		list = NULL;
 	const struct node_info*	hip;
-
 	
+	if (!delcache_read_yet) {
+		read_delnode_file(cfg);
+	}
 	(void)unlink(tmpname);
 	if ((f=fopen(tmpname, "w")) == NULL) {
-		cl_perror("%s:Cannot fopen %s for writing", 
+		cl_perror("%s: Cannot fopen %s for writing", 
 			  __FUNCTION__, tmpname);
 		return HA_FAIL;
 	}
@@ -676,12 +695,14 @@ read_delnode_file(struct sys_config* cfg)
 	const char *	filename = DELHOSTCACHEFILE;
 	struct node_info thisnode;
 
+	delcache_read_yet = TRUE;
 	if (!cl_file_exists(filename)){
 		return HA_OK;
 	}
 	
 	if ((f=fopen(filename, "r")) == NULL) {
-		cl_perror("Cannot fopen %s for reading", filename);
+		cl_perror("%s: Cannot fopen %s for reading"
+		,	__FUNCTION__, filename);
 		return HA_FAIL;
 	}
 	
@@ -695,10 +716,6 @@ read_delnode_file(struct sys_config* cfg)
 	}
 	fclose(f);
 
-	/*
-	 * If outofsync is TRUE, then we should probably write out a new
-	 * uuid cache file. FIXME??
-	 */
 	return rc < 0 ? HA_FAIL: HA_OK;
 	
 }
