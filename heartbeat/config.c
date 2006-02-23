@@ -1,4 +1,4 @@
-/* $Id: config.c,v 1.192 2006/02/01 14:59:10 alan Exp $ */
+/* $Id: config.c,v 1.193 2006/02/23 20:12:12 alan Exp $ */
 /*
  * Parse various heartbeat configuration files...
  *
@@ -384,7 +384,7 @@ init_config(const char * cfgfile)
 		ha_log(LOG_ERR, "No authentication specified.");
 		++errcount;
 	}
-	if (access(HOSTUUIDCACHEFILE, F_OK) >= 0) {
+	if (access(HOSTUUIDCACHEFILE, R_OK) >= 0) {
 		if (read_cache_file(config) != HA_OK) {
 			cl_log(LOG_ERR
 			,	"Invalid host/uuid map file [%s] - removed."
@@ -2517,6 +2517,9 @@ ha_config_check_boolean(const char *value)
 
 /*
  * $Log: config.c,v $
+ * Revision 1.193  2006/02/23 20:12:12  alan
+ * Unimportant correction to config.c
+ *
  * Revision 1.192  2006/02/01 14:59:10  alan
  * Added some code to allow memory pre-reserve for heartbeat a configuration problem.
  *
