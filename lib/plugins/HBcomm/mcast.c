@@ -1,4 +1,4 @@
-/* $Id: mcast.c,v 1.27 2006/02/24 00:14:59 alan Exp $ */
+/* $Id: mcast.c,v 1.28 2006/02/24 02:20:24 alan Exp $ */
 /*
  * mcast.c: implements hearbeat API for UDP multicast communication
  *
@@ -696,10 +696,9 @@ join_mcast_group(int sockfd, struct in_addr *addr, char *ifname)
 static int
 if_getaddr(const char *ifname, struct in_addr *addr)
 {
-	int		fd;
 	struct ifreq	if_info;
 	int		j;
-	int		maxtry = 30;
+	int		maxtry = 120;
 	gboolean	gotaddr = FALSE;
 	int		err;
 	
@@ -716,28 +715,37 @@ if_getaddr(const char *ifname, struct in_addr *addr)
 		return 0;
 	}
 
-	if ((fd=socket(AF_INET, SOCK_DGRAM, 0)) == -1)	{
-		PILCallLog(LOG, PIL_CRIT, "Error getting socket");
-		return -1;
-	}
 	if (Debug > 0) {
 		PILCallLog(LOG, PIL_DEBUG, "looking up address for %s"
 		,	if_info.ifr_name);
 	}
 	for (j=0; j < maxtry && !gotaddr; ++j) {
-		if (ioctl(fd, SIOCGIFADDR, &if_info) < 0) {
-			err = errno;
-			sleep(1);
-		}else{
-			gotaddr = TRUE;
+		int		fd;
+		if ((fd=socket(AF_INET, SOCK_DGRAM, 0)) == -1)	{
+			PILCallLog(LOG, PIL_CRIT, "Error getting socket");
+			return -1;
 		}
+		if (ioctl(fd, SIOCGIFADDR, &if_info) >= 0) {
+			gotaddr = TRUE;
+		}else{
+			err = errno;
+			switch(err) {
+				case EADDRNOTAVAIL:
+					sleep(1);
+					break;	
+				default:
+					close(fd);
+					goto getout;
+			}
+		}
+		close(fd);
 	}
+getout:
 	if (!gotaddr) {
 		PILCallLog(LOG, PIL_CRIT
 		,	"Unable to retrieve local interface address"
 		" for interface [%s] using ioctl(SIOCGIFADDR): %s"
 		,	ifname, strerror(err));
-		close(fd);
 		return -1;
 	}
 
@@ -750,7 +758,6 @@ if_getaddr(const char *ifname, struct in_addr *addr)
 	memcpy(addr, &(SOCKADDR_IN(&if_info.ifr_addr)->sin_addr)
 	,	sizeof(struct in_addr));
 
-	close(fd);
 	return 0;
 }
 
@@ -813,6 +820,9 @@ get_loop(const char *loop, u_char *l)
 
 /*
  * $Log: mcast.c,v $
+ * Revision 1.28  2006/02/24 02:20:24  alan
+ * Increased how long we'll wait for the network interface to get an address...
+ *
  * Revision 1.27  2006/02/24 00:14:59  alan
  * Put code into mcast.c to make it retry retrieving the address from
  * the interface if it fails...
