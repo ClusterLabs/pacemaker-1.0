@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.497 2006/02/09 19:04:04 alan Exp $ */
+/* $Id: heartbeat.c,v 1.498 2006/02/24 16:52:26 gshi Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -5834,7 +5834,7 @@ add2_xmit_hist (struct msg_xmit_hist * hist, struct ha_msg* msg
 	hist->lastmsg = slot;
 	
 	if (enable_flow_control && hist->hiseq - hist->lowseq > MAXMSGHIST*3 / 4){
-		cl_log(LOG_WARNING, "Message hist queue is filling up (%d messages in queue)",
+		cl_log(LOG_ERR, "Message hist queue is filling up (%d messages in queue)",
 		       (int)(hist->hiseq - hist->lowseq));
 	}
 	
@@ -6233,6 +6233,10 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.498  2006/02/24 16:52:26  gshi
+ * This message indicates ACK is broken or there is uni-directional communication
+ * Mark it as error so that a user can report it.
+ *
  * Revision 1.497  2006/02/09 19:04:04  alan
  * Changed default timeouts for heartbeat events to be based largely on heartbeat
  * configuration parameters.
