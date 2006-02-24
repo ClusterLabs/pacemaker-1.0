@@ -1,4 +1,4 @@
-/* $Id: mcast.c,v 1.26 2006/02/07 21:55:35 alan Exp $ */
+/* $Id: mcast.c,v 1.27 2006/02/24 00:14:59 alan Exp $ */
 /*
  * mcast.c: implements hearbeat API for UDP multicast communication
  *
@@ -696,18 +696,23 @@ join_mcast_group(int sockfd, struct in_addr *addr, char *ifname)
 static int
 if_getaddr(const char *ifname, struct in_addr *addr)
 {
-	int	fd;
+	int		fd;
 	struct ifreq	if_info;
+	int		j;
+	int		maxtry = 30;
+	gboolean	gotaddr = FALSE;
+	int		err;
 	
-	if (!addr)
+	if (!addr) {
 		return -1;
+	}
 
 	addr->s_addr = INADDR_ANY;
 
 	memset(&if_info, 0, sizeof(if_info));
 	if (ifname) {
 		strncpy(if_info.ifr_name, ifname, IFNAMSIZ-1);
-	} else {	/* ifname is NULL, so use any address */
+	}else{	/* ifname is NULL, so use any address */
 		return 0;
 	}
 
@@ -719,11 +724,19 @@ if_getaddr(const char *ifname, struct in_addr *addr)
 		PILCallLog(LOG, PIL_DEBUG, "looking up address for %s"
 		,	if_info.ifr_name);
 	}
-	if (ioctl(fd, SIOCGIFADDR, &if_info) < 0) {
+	for (j=0; j < maxtry && !gotaddr; ++j) {
+		if (ioctl(fd, SIOCGIFADDR, &if_info) < 0) {
+			err = errno;
+			sleep(1);
+		}else{
+			gotaddr = TRUE;
+		}
+	}
+	if (!gotaddr) {
 		PILCallLog(LOG, PIL_CRIT
 		,	"Unable to retrieve local interface address"
 		" for interface [%s] using ioctl(SIOCGIFADDR): %s"
-		,	ifname, strerror(errno));
+		,	ifname, strerror(err));
 		close(fd);
 		return -1;
 	}
@@ -800,6 +813,10 @@ get_loop(const char *loop, u_char *l)
 
 /*
  * $Log: mcast.c,v $
+ * Revision 1.27  2006/02/24 00:14:59  alan
+ * Put code into mcast.c to make it retry retrieving the address from
+ * the interface if it fails...
+ *
  * Revision 1.26  2006/02/07 21:55:35  alan
  * Clarified a few error messages.
  *
