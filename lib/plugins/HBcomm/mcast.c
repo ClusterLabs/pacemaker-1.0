@@ -1,4 +1,4 @@
-/* $Id: mcast.c,v 1.28 2006/02/24 02:20:24 alan Exp $ */
+/* $Id: mcast.c,v 1.29 2006/02/24 16:46:39 alan Exp $ */
 /*
  * mcast.c: implements hearbeat API for UDP multicast communication
  *
@@ -700,7 +700,7 @@ if_getaddr(const char *ifname, struct in_addr *addr)
 	int		j;
 	int		maxtry = 120;
 	gboolean	gotaddr = FALSE;
-	int		err;
+	int		err = 0;
 	
 	if (!addr) {
 		return -1;
@@ -820,6 +820,9 @@ get_loop(const char *loop, u_char *l)
 
 /*
  * $Log: mcast.c,v $
+ * Revision 1.29  2006/02/24 16:46:39  alan
+ * Initialized a variable to make a semi-broken version of gcc happy.
+ *
  * Revision 1.28  2006/02/24 02:20:24  alan
  * Increased how long we'll wait for the network interface to get an address...
  *
