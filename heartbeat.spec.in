@@ -1,4 +1,4 @@
-#	$Id: heartbeat.spec.in,v 1.162 2006/02/27 14:30:56 alan Exp $
+#	$Id: heartbeat.spec.in,v 1.163 2006/02/27 16:57:57 alan Exp $
 
 # Workaround for a change in RPM 4.1.x; needs proper fixing soon!
 ##%define _unpackaged_files_terminate_build 0
@@ -82,11 +82,11 @@ implementing any number of interfaces.
   + Fixed cpu loop for LRM
   + Fixed minor bugs in Filesystem resource agent (submounts, some
 	options)
+  + make the Raid1 resource agent more mdadm friendly (Ranjan Gupta), and
+	other fix
   + Various small resource agent cleanups
   + Keep CCM from core dumping when certain conditions occur which
 	cannot be recovered from.
-  + Completely restructured the CRM transition code.
-  + Numerous related CRM fixes.
   + Revamp the CRM shutdown code - it now shuts down much more
 	reliably
   + Write out the CIB asynchronously
@@ -94,10 +94,25 @@ implementing any number of interfaces.
 	associated with clone resources
   + Bug 1084: Nodes that are offline but have active resources listed need
 	to be marked as unclean for possible fencing
-  + make the Raid1 resource agent more mdadm friendly (Ranjan Gupta), and
-	other fix
   + fix for a crash where the CRM referenced a NULL pointer.
-
+  + CIB Development
+    - Change the shutdown sequence to prevent updates being lost
+    - Handle un-wrapped CIB updates
+  + TEngine Development
+    - moved the core components into a library
+    - Avoid recursion by using Gmainloop
+    - Detect un-runnable sections of the graph without the need for timeouts
+    - Link the new library with the PE testing code and simulate the transitions
+      it generates
+  + CRM General
+   - Refine shutdown detection
+   - Review and fix the contents and timing of CIB updates that are required
+     when nodes appear, leave, and join the CRM.
+   - Ask Heartbeat for a list of known nodes and use it to populate the <nodes>
+     section in the CIB
+   - Stop the CRM shutting down all active resources at exit - it doesn't know
+     if they're managed or not
+   - Completely overhaul the CRM shutdown sequence
 
 * Fri Feb 10 2006  Alan Robertson <alanr@unix.sh> (see doc/AUTHORS file)
 + Version 2.0.3 - Bug fixes and significant new features.
