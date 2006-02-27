@@ -1,4 +1,4 @@
-/* $Id: ccmllm.c,v 1.29 2006/02/17 05:48:24 zhenh Exp $ */
+/* $Id: ccmllm.c,v 1.30 2006/02/27 14:05:12 alan Exp $ */
 /* 
  * ccmllm.c: Low Level membership routines.
  *
@@ -422,7 +422,7 @@ llm_set_uptime(llm_info_t* llm, int index, int uptime)
 	}
 	
 	if (uptime < 0){
-		ccm_log(LOG_ERR, "%s: Negative uptime%d",
+		ccm_log(LOG_ERR, "%s: Negative uptime %d",
 		       __FUNCTION__, uptime);
 		return FALSE;
 		       
