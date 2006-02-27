@@ -1,4 +1,4 @@
-#	$Id: heartbeat.spec.in,v 1.163 2006/02/27 16:57:57 alan Exp $
+#	$Id: heartbeat.spec.in,v 1.164 2006/02/27 17:01:24 andrew Exp $
 
 # Workaround for a change in RPM 4.1.x; needs proper fixing soon!
 ##%define _unpackaged_files_terminate_build 0
@@ -78,7 +78,7 @@ implementing any number of interfaces.
 
 %changelog
 * Mon Feb 27 2006  Alan Robertson <alanr@unix.sh> (see doc/AUTHORS file)
-+ Version 2.0.3 - Bug fix release - worth getting these updates
++ Version 2.0.4 - Bug fix release - worth getting these updates
   + Fixed cpu loop for LRM
   + Fixed minor bugs in Filesystem resource agent (submounts, some
 	options)
@@ -87,33 +87,34 @@ implementing any number of interfaces.
   + Various small resource agent cleanups
   + Keep CCM from core dumping when certain conditions occur which
 	cannot be recovered from.
-  + Revamp the CRM shutdown code - it now shuts down much more
-	reliably
-  + Write out the CIB asynchronously
-  + Add code to support notification data for start/stop actions
-	associated with clone resources
-  + Bug 1084: Nodes that are offline but have active resources listed need
-	to be marked as unclean for possible fencing
-  + fix for a crash where the CRM referenced a NULL pointer.
-  + CIB Development
-    - Change the shutdown sequence to prevent updates being lost
-    - Handle un-wrapped CIB updates
-  + TEngine Development
-    - moved the core components into a library
-    - Avoid recursion by using Gmainloop
-    - Detect un-runnable sections of the graph without the need for timeouts
-    - Link the new library with the PE testing code and simulate the transitions
-      it generates
+  + make the Raid1 resource agent more mdadm friendly (Ranjan Gupta), and
+	other fix
   + CRM General
-   - Refine shutdown detection
-   - Review and fix the contents and timing of CIB updates that are required
-     when nodes appear, leave, and join the CRM.
-   - Ask Heartbeat for a list of known nodes and use it to populate the <nodes>
-     section in the CIB
-   - Stop the CRM shutting down all active resources at exit - it doesn't know
-     if they're managed or not
-   - Completely overhaul the CRM shutdown sequence
-
+    + Fix for a crash where the CRM referenced a NULL pointer.
+    + Refine shutdown detection
+    + Review and fix the contents and timing of CIB updates that are required
+      when nodes appear, leave, and join the CRM.
+    + Ask Heartbeat for a list of known nodes and use it to populate the <nodes>
+      section in the CIB
+    + Stop the CRM shutting down all active resources at exit 
+      - it doesn't know if they're managed or not
+    + Completely overhaul the CRM shutdown sequence
+      - it now shuts down much more reliably
+  + TEngine
+    + Abstract out the core components into a library
+    + Avoid recursion by using Gmainloop
+    + Detect un-runnable sections of the graph without the need for timeouts
+  + PEngine
+    + Add code to support notification data for start/stop actions
+	associated with clone resources
+    + Link the new TEngine library with the PE testing code and simulate
+      the transitions it generates
+    + Bug 1084: Nodes that are offline but have active resources listed need
+      to be marked as unclean for possible fencing
+  + CIB
+    + Change the shutdown sequence to prevent updates being lost
+    + Handle un-wrapped CIB updates
+    + Write out the CIB asynchronously
 * Fri Feb 10 2006  Alan Robertson <alanr@unix.sh> (see doc/AUTHORS file)
 + Version 2.0.3 - Bug fixes and significant new features.
   + Management Daemon/Library and GUI client
