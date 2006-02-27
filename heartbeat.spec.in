@@ -1,4 +1,4 @@
-#	$Id: heartbeat.spec.in,v 1.161 2006/02/14 15:38:46 andrew Exp $
+#	$Id: heartbeat.spec.in,v 1.162 2006/02/27 14:30:56 alan Exp $
 
 # Workaround for a change in RPM 4.1.x; needs proper fixing soon!
 ##%define _unpackaged_files_terminate_build 0
@@ -77,6 +77,28 @@ PILS is designed to support any number of plugins
 implementing any number of interfaces.
 
 %changelog
+* Mon Feb 27 2006  Alan Robertson <alanr@unix.sh> (see doc/AUTHORS file)
++ Version 2.0.3 - Bug fix release - worth getting these updates
+  + Fixed cpu loop for LRM
+  + Fixed minor bugs in Filesystem resource agent (submounts, some
+	options)
+  + Various small resource agent cleanups
+  + Keep CCM from core dumping when certain conditions occur which
+	cannot be recovered from.
+  + Completely restructured the CRM transition code.
+  + Numerous related CRM fixes.
+  + Revamp the CRM shutdown code - it now shuts down much more
+	reliably
+  + Write out the CIB asynchronously
+  + Add code to support notification data for start/stop actions
+	associated with clone resources
+  + Bug 1084: Nodes that are offline but have active resources listed need
+	to be marked as unclean for possible fencing
+  + make the Raid1 resource agent more mdadm friendly (Ranjan Gupta), and
+	other fix
+  + fix for a crash where the CRM referenced a NULL pointer.
+
+
 * Fri Feb 10 2006  Alan Robertson <alanr@unix.sh> (see doc/AUTHORS file)
 + Version 2.0.3 - Bug fixes and significant new features.
   + Management Daemon/Library and GUI client
