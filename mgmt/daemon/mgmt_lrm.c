@@ -107,8 +107,10 @@ on_rsc_type(char* argv[], int argc)
 	
 	GList* types;
 	GList* cur;
-	ARGC_CHECK(2)
 	char* ret = cl_strdup(MSG_OK);
+
+	ARGC_CHECK(2)
+
 	types = lrm->lrm_ops->get_rsc_type_supported(lrm, argv[1]);
 	cur = types;
 	while (cur != NULL) {
