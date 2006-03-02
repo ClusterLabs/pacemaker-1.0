@@ -1,4 +1,4 @@
-/* $Id: ccmlib.h,v 1.19 2005/08/18 16:33:14 andrew Exp $ */
+/* $Id: ccmlib.h,v 1.20 2006/03/02 10:15:54 zhenh Exp $ */
 /*
  * ccmlib.h: internal definations for ccm library files.
  *
@@ -44,23 +44,23 @@ void oc_ev_special(const oc_ev_t *, oc_ev_class_t , int );
 			is changed change it also in ccm.h */
 
 size_t strnlen(const char *, size_t); /*TOBEDONE*/
-
+typedef struct born_s {
+		int index;
+		int bornon;
+} born_t;
 /* to be include by the client side of ccm */
 typedef struct ccm_meminfo_s {
 	int 		ev;
 	int		n;
 	int		trans;
 	int		quorum;
-	int 		member[0];
+	born_t		member[0];
 } ccm_meminfo_t;
 
 /* bornon structure sent to the client */
 typedef struct ccm_born_s {
 	int 	   n;
-	struct born_s {
-		int index;
-		int bornon;
-	} born[0];
+	born_t	   born[0];
 } ccm_born_t;
 
 typedef struct ccm_llm_s { /* information about low level membership info */

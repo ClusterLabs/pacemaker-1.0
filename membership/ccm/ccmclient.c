@@ -1,4 +1,4 @@
-/* $Id: ccmclient.c,v 1.34 2006/02/17 05:48:24 zhenh Exp $ */
+/* $Id: ccmclient.c,v 1.35 2006/03/02 10:15:54 zhenh Exp $ */
 /* 
  * client.c: Consensus Cluster Client tracker
  *
@@ -423,6 +423,7 @@ client_new_mbrship(ccm_info_t* info, void* borndata)
 	int		n = info->memcount;
 	int		trans = info->ccm_transition_major;
 	int*		member = info->ccm_member;
+	int i, j;
 	
 	assert( n<= MAXNODE);
 
@@ -437,13 +438,22 @@ client_new_mbrship(ccm_info_t* info, void* borndata)
 	(void)get_quorum;
 	ccm_debug(LOG_DEBUG, "quorum is %d", ccm->quorum);
 
-	memcpy(ccm->member, member, n*sizeof(int));
+
+	for (i = 0; i < n; i++) {
+		ccm->member[i].index = member[i];
+		ccm->member[i].bornon = -1;
+		for (j = 0; j < n; j ++) {
+			if (born_arry[j].index == ccm->member[i].index) {
+				ccm->member[i].bornon = born_arry[j].bornon;
+			}
+		}
+	}	
 
 	if(ipc_mem_message && --(ipc_mem_message->count)==0){
 		delete_message(ipc_mem_message);
 	}
 	ipc_mem_message = create_message(ipc_mem_chk, ccm, 
- 			(sizeof(ccm_meminfo_t) + n*sizeof(int)));
+ 			(sizeof(ccm_meminfo_t) + n*sizeof(born_t)));
 	ipc_mem_message->count++;
 
 	/* bornon array is sent in a seperate message */
@@ -541,7 +551,7 @@ client_llm_init(llm_info_t *llm)
 	ipc_mem_chk = g_mem_chunk_new(memstr,
 				sizeof(ccm_ipc_t)+
 				sizeof(ccm_meminfo_t)+
-				maxnode*sizeof(int), 
+				maxnode*sizeof(born_t), 
 				MAXIPC, G_ALLOC_AND_FREE);
 	ipc_born_chk = g_mem_chunk_new(bornstr,
 				sizeof(ccm_ipc_t)+

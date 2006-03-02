@@ -1,4 +1,4 @@
-/* $Id: ccmlib_memapi.c,v 1.39 2005/10/01 02:01:56 gshi Exp $ */
+/* $Id: ccmlib_memapi.c,v 1.40 2006/03/02 10:15:54 zhenh Exp $ */
 /* 
  * ccmlib_memapi.c: Consensus Cluster Membership API
  *
@@ -324,10 +324,9 @@ get_new_membership(mbr_private_t *private,
 
 	for ( i = 0 ; i < n_members; i++ ) {
 		const char *uname = NULL;
-		gpointer	gborn; /* Help make gcc warning go away */
 		int	index;
 
-		index = mbrinfo->member[i];
+		index = mbrinfo->member[i].index;
 
 		uname = llm_get_Id_from_Uuid(private->llm, index);
 
@@ -335,10 +334,8 @@ get_new_membership(mbr_private_t *private,
 		
 		OC_EV_SET_NODEID(newmbr,j,index);
 
-		gborn = g_hash_table_lookup(private->bornon, 
-				GINT_TO_POINTER(mbrinfo->member[i]));
 		/* gborn was an int to begin with - so this is safe */
-		born = POINTER_TO_SIZE_T(gborn);/*pointer cast as int*/
+		born = mbrinfo->member[i].bornon;
 
 		/* if there is already a born entry for the
 		 * node, use it. Otherwise create a born entry
@@ -347,7 +344,7 @@ get_new_membership(mbr_private_t *private,
 		 * NOTE: born==0 implies the entry has not been
 		 * 	initialized.
 		 */
-		OC_EV_SET_BORN(newmbr,j, born==0?trans:(born-1));
+		OC_EV_SET_BORN(newmbr,j, born);
 		j++;
 	}
 	/* sort the m_arry */
