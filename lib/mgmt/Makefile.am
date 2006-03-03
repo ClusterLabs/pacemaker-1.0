@@ -48,7 +48,7 @@ libhbmgmtcommon_la_CFLAGS = $(INCLUDES)
 
 halib_LTLIBRARIES = _pymgmt.la
 _pymgmt_la_SOURCES = pymgmt_wrap.c mgmt_client_lib.c mgmt_tls_lib.c mgmt_common_lib.c
-_pymgmt_la_CFLAGS = -I$(includedir)/@PYTHON_HEADER_DIR@ -I$(top_builddir)/include -w
+_pymgmt_la_CFLAGS = @PYTHON_INCLUDES@ -I$(top_builddir)/include -w
 _pymgmt_la_LDFLAGS = -module `libgnutls-config --libs`
 
 halib_SCRIPTS = pymgmt.py
