@@ -39,17 +39,18 @@ libhbmgmttls_la_LDFLAGS = `libgnutls-config --libs`
 libhbmgmttls_la_CFLAGS = $(INCLUDES) `libgnutls-config --cflags`
 
 libhbmgmtclient_la_SOURCES = mgmt_client_lib.c
-libhbmgmtclient_la_LIBADD = $(COMMONLIBS) libhbmgmttls.la
+libhbmgmtclient_la_LIBADD = $(COMMONLIBS) libhbmgmttls.la $(top_builddir)/replace/libreplace.la
 libhbmgmtclient_la_CFLAGS = $(INCLUDES)
 
 libhbmgmtcommon_la_SOURCES = mgmt_common_lib.c
-libhbmgmtcommon_la_LIBADD = $(COMMONLIBS) 
+libhbmgmtcommon_la_LIBADD = $(COMMONLIBS) $(top_builddir)/replace/libreplace.la
 libhbmgmtcommon_la_CFLAGS = $(INCLUDES)
 
 halib_LTLIBRARIES = _pymgmt.la
 _pymgmt_la_SOURCES = pymgmt_wrap.c mgmt_client_lib.c mgmt_tls_lib.c mgmt_common_lib.c
 _pymgmt_la_CFLAGS = @PYTHON_INCLUDES@ -I$(top_builddir)/include -w
 _pymgmt_la_LDFLAGS = -module `libgnutls-config --libs`
+_pymgmt_la_LIBADD = $(top_builddir)/replace/libreplace.la
 
 halib_SCRIPTS = pymgmt.py
 
