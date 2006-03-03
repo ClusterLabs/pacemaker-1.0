@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.498 2006/02/24 16:52:26 gshi Exp $ */
+/* $Id: heartbeat.c,v 1.499 2006/03/03 05:36:31 zhenh Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -5312,9 +5312,9 @@ should_drop_message(struct node_info * thisnode, const struct ha_msg *msg,
 	/* Is this packet in sequence? */
 	if (t->last_seq == NOSEQUENCE || seq == (t->last_seq+1)) {
 		
-		send_ack_if_necessary(msg);
 		t->last_seq = seq;
 		t->last_iface = iface;
+		send_ack_if_necessary(msg);
 		return (IsToUs ? KEEPIT : DROPIT);
 	}else if (seq == t->last_seq) {
 		/* Same as last-seen packet -- very common case */
@@ -6233,6 +6233,11 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.499  2006/03/03 05:36:31  zhenh
+ * The should_drop_message() may call itself in some special conditions.
+ * So the t->last_seq should be set before any chance to call itself
+ * This patch fixes bug 1103.
+ *
  * Revision 1.498  2006/02/24 16:52:26  gshi
  * This message indicates ACK is broken or there is uni-directional communication
  * Mark it as error so that a user can report it.
