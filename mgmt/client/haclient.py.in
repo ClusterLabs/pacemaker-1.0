@@ -76,12 +76,26 @@ def check_entry_value(glade, entry, label=None) :
 		msgbox(label + _(" can't be empty"))
 		return False
 	return True
+	
+def pygtk_2_6_newer () :
+	if gtk.pygtk_version[0] > 2 :
+		return True
+	if gtk.pygtk_version[0] == 2 and  gtk.pygtk_version[1] >= 6 :
+		return True
+	return False
 
+def pygtk_2_4_newer () :
+	if gtk.pygtk_version[0] > 2 :
+		return True
+	if gtk.pygtk_version[0] == 2 and  gtk.pygtk_version[1] >= 4 :
+		return True
+	return False
+	
 def add_column(widget, label, value, icon_cell_func = None, editable = False
 		, options=None, call_back=None, visible = True) :
 	tvcolumn = gtk.TreeViewColumn(label)
 	widget.append_column(tvcolumn)
-	if options == None :
+	if options == None or not pygtk_2_6_newer():
 		cell = gtk.CellRendererText()
 	else :
 		cell = gtk.CellRendererCombo()
@@ -328,7 +342,7 @@ class Tree :
 			return True
 		
 	def render_icon(self, tvcolumn, cell, model, iter):
- 		icons = {-2:gtk.STOCK_ABOUT,
+ 		icons = {-2:gtk.STOCK_DIALOG_INFO,
 			 -1:gtk.STOCK_PREFERENCES,
 			  0:gtk.STOCK_YES,
 			  1:gtk.STOCK_DIALOG_INFO,
@@ -526,20 +540,20 @@ class View :
 			self.glade.get_widget("reset").connect("clicked", self.on_reset)
 	def update(self) :
 		if self.glade.get_widget("apply") != None :
-			self.glade.get_widget("apply").set_sensitive(False)
+			self.glade.get_widget("apply").set_property("sensitive", False)
 		if self.glade.get_widget("reset") != None :
-			self.glade.get_widget("reset").set_sensitive(False)
+			self.glade.get_widget("reset").set_property("sensitive", False)
 	
 	def on_changed(self, widget) :
-		self.glade.get_widget("apply").set_sensitive(True)
-		self.glade.get_widget("reset").set_sensitive(True)
+		self.glade.get_widget("apply").set_property("sensitive", True)
+		self.glade.get_widget("reset").set_property("sensitive", True)
 	
 	def on_reset(self, widget):
 		self.update()
 		
 	def on_apply(self, widget):
-		self.glade.get_widget("apply").set_sensitive(False)
-		self.glade.get_widget("reset").set_sensitive(False)
+		self.glade.get_widget("apply").set_property("sensitive", False)
+		self.glade.get_widget("reset").set_property("sensitive", False)
 		
 	def on_after_show(self) :
 		pass	
@@ -966,32 +980,32 @@ class AddNativeDlg :
 		
 		if glade.get_widget("is_clone").get_active() :
 			glade.get_widget("is_master").set_active(False)
-			glade.get_widget("advance_id").set_sensitive(True)
-			glade.get_widget("clone_max").set_sensitive(True)
-			glade.get_widget("clone_node_max").set_sensitive(True)
-			glade.get_widget("master_max").set_sensitive(False)
-			glade.get_widget("master_node_max").set_sensitive(False)
+			glade.get_widget("advance_id").set_property("sensitive", True)
+			glade.get_widget("clone_max").set_property("sensitive", True)
+			glade.get_widget("clone_node_max").set_property("sensitive", True)
+			glade.get_widget("master_max").set_property("sensitive", False)
+			glade.get_widget("master_node_max").set_property("sensitive", False)
 		else :
-			glade.get_widget("advance_id").set_sensitive(False)
-			glade.get_widget("clone_max").set_sensitive(False)
-			glade.get_widget("clone_node_max").set_sensitive(False)
-			glade.get_widget("master_max").set_sensitive(False)
-			glade.get_widget("master_node_max").set_sensitive(False)
+			glade.get_widget("advance_id").set_property("sensitive", False)
+			glade.get_widget("clone_max").set_property("sensitive", False)
+			glade.get_widget("clone_node_max").set_property("sensitive", False)
+			glade.get_widget("master_max").set_property("sensitive", False)
+			glade.get_widget("master_node_max").set_property("sensitive", False)
 			
 	def on_master_changed(self, widget, glade) :
 		if glade.get_widget("is_master").get_active() :
 			glade.get_widget("is_clone").set_active(False)
-			glade.get_widget("advance_id").set_sensitive(True)
-			glade.get_widget("clone_max").set_sensitive(True)
-			glade.get_widget("clone_node_max").set_sensitive(True)
-			glade.get_widget("master_max").set_sensitive(True)
-			glade.get_widget("master_node_max").set_sensitive(True)
+			glade.get_widget("advance_id").set_property("sensitive", True)
+			glade.get_widget("clone_max").set_property("sensitive", True)
+			glade.get_widget("clone_node_max").set_property("sensitive", True)
+			glade.get_widget("master_max").set_property("sensitive", True)
+			glade.get_widget("master_node_max").set_property("sensitive", True)
 		else :
-			glade.get_widget("advance_id").set_sensitive(False)
-			glade.get_widget("clone_max").set_sensitive(False)
-			glade.get_widget("clone_node_max").set_sensitive(False)
-			glade.get_widget("master_max").set_sensitive(False)
-			glade.get_widget("master_node_max").set_sensitive(False)
+			glade.get_widget("advance_id").set_property("sensitive", False)
+			glade.get_widget("clone_max").set_property("sensitive", False)
+			glade.get_widget("clone_node_max").set_property("sensitive", False)
+			glade.get_widget("master_max").set_property("sensitive", False)
+			glade.get_widget("master_node_max").set_property("sensitive", False)
 		
 	def run(self):	
 		dialog = gtk.Dialog(_("Add Native Resource"), window.win_widget, gtk.DIALOG_MODAL,
@@ -1009,11 +1023,11 @@ class AddNativeDlg :
 		glade.get_widget("is_clone").connect("toggled", self.on_clone_changed, glade)
 		glade.get_widget("is_master").connect("toggled", self.on_master_changed, glade)
 		
-		glade.get_widget("advance_id").set_sensitive(False)
-		glade.get_widget("clone_max").set_sensitive(False)
-		glade.get_widget("clone_node_max").set_sensitive(False)
-		glade.get_widget("master_max").set_sensitive(False)
-		glade.get_widget("master_node_max").set_sensitive(False)
+		glade.get_widget("advance_id").set_property("sensitive", False)
+		glade.get_widget("clone_max").set_property("sensitive", False)
+		glade.get_widget("clone_node_max").set_property("sensitive", False)
+		glade.get_widget("master_max").set_property("sensitive", False)
+		glade.get_widget("master_node_max").set_property("sensitive", False)
 
 		self.glade = glade
 		class_list = manager.do_cmd("rsc_classes")
@@ -1028,7 +1042,8 @@ class AddNativeDlg :
 			else :
 				init_class = class_list[0]
 		glade.get_widget("class").child.set_text(init_class)
-
+		self.on_class_changed(glade.get_widget("class"), glade)
+		self.on_type_changed(glade.get_widget("type"), glade)
 		store = gtk.ListStore(str)
 		store.append([""])
 		for rsc in manager.get_all_rsc_id() :
@@ -1103,7 +1118,7 @@ class MainWindow :
 	
 	# utility functions
 	def set_action_sensitive(self, action, sensitive) :
-		self.actiongroup.get_action(action).set_sensitive(sensitive)
+		self.actiongroup.get_action(action).set_property("sensitive", sensitive)
 
 	# system event handler
 	def on_delete_event(self, widget, event, data=None) :
@@ -1275,8 +1290,8 @@ class MainWindow :
 		actiongroup = gtk.ActionGroup('haclient')
 		actiongroup.add_actions([
 			('connection', None, _('Connection')),
-			('login', gtk.STOCK_CONNECT, _('Login...'), None,_('login to cluster'), self.on_login),
-			('logout', gtk.STOCK_DISCONNECT, _('Logout'), None,_('logout from cluster'), self.on_logout),
+			('login', gtk.STOCK_NETWORK, _('Login...'), None,_('login to cluster'), self.on_login),
+			('logout', gtk.STOCK_STOP, _('Logout'), None,_('logout from cluster'), self.on_logout),
 			('quit', gtk.STOCK_QUIT, _('Quit'), None,_('Quit the Program'), self.on_quit),
 			('action', None, _('Action')),
 			('addrsc', gtk.STOCK_ADD, _('Add New Item'), None,_('add new item'), self.on_add_item),
@@ -1726,6 +1741,9 @@ class Manager :
 		self.do_cmd(cmd)
 
 if __name__ == '__main__' :
+	if not pygtk_2_4_newer () :
+		print "the pygtk 2.4 or newer is needed."
+		sys.exit()
 	syslog.openlog("haclient", 0, syslog.LOG_USER)
 	locale.setlocale(locale.LC_ALL, '')
 	gettext.bindtextdomain(app_name)
