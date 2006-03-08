@@ -64,6 +64,7 @@ usr/lib/heartbeat/crmtest/extract.logs
 usr/lib/heartbeat/crmtest/helper.sh
 usr/lib/heartbeat/crmtest/stop.sh
 usr/lib/heartbeat/crmtest/testutils.pl
+usr/lib/heartbeat/cts/CIB.py
 usr/lib/heartbeat/cts/CM_LinuxHAv2.py
 usr/lib/heartbeat/cts/CM_fs.py
 usr/lib/heartbeat/cts/CM_hb.py
@@ -137,11 +138,11 @@ usr/lib/libapphb.so.0.0.0
 usr/lib/libccmclient.so.1
 usr/lib/libccmclient.so.1.0.0
 usr/lib/libcib.so.1
-usr/lib/libcib.so.1.0.0
+usr/lib/libcib.so.1.0.1
 usr/lib/libclm.so.1
 usr/lib/libclm.so.1.0.0
 usr/lib/libcrmcommon.so.1
-usr/lib/libcrmcommon.so.1.0.0
+usr/lib/libcrmcommon.so.1.0.1
 usr/lib/libhbclient.so.1
 usr/lib/libhbclient.so.1.0.0
 usr/lib/libhbmgmt.so
@@ -159,7 +160,7 @@ usr/lib/libhbmgmttls.so.0.0.0
 usr/lib/liblrm.so.0
 usr/lib/liblrm.so.0.0.0
 usr/lib/libpengine.so.1
-usr/lib/libpengine.so.1.0.0
+usr/lib/libpengine.so.1.1.0
 usr/lib/libpils.so.1
 usr/lib/libpils.so.1.0.0
 usr/lib/libplumb.so.1
@@ -172,6 +173,8 @@ usr/lib/libstonith.so.1
 usr/lib/libstonith.so.1.0.0
 usr/lib/libstonithd.so.0
 usr/lib/libstonithd.so.0.0.0
+usr/lib/libtransitioner.so.1
+usr/lib/libtransitioner.so.1.0.0
 usr/lib/ocf/resource.d/heartbeat/AudibleAlarm
 usr/lib/ocf/resource.d/heartbeat/ClusterMon
 usr/lib/ocf/resource.d/heartbeat/Delay

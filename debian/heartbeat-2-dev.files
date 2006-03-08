@@ -58,6 +58,7 @@ usr/include/heartbeat/recoverymgr.h
 usr/include/heartbeat/replace_uuid.h
 usr/include/heartbeat/stonithd_api.h
 usr/include/heartbeat/stonithd_msg.h
+usr/include/heartbeat/transition.h
 usr/include/heartbeat/util.h
 usr/include/heartbeat/xml.h
 usr/include/ocf/oc_event.h
@@ -113,3 +114,4 @@ usr/lib/libstonith.la
 usr/lib/libstonith.so
 usr/lib/libstonithd.la
 usr/lib/libstonithd.so
+usr/lib/libtransitioner.so

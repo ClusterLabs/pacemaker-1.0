@@ -1,3 +1,11 @@
+heartbeat-2 (2.0.4-1) unstable; urgency=low
+
+  * New Upstream
+  * Don't try and stop heartbeat in preinst on the first install
+    (closes: #355719)
+
+ -- Simon Horman <horms@debian.org>  Wed,  8 Mar 2006 09:46:46 +0900
+
 heartbeat-2 (2.0.3-2) unstable; urgency=low
 
   * Add build dependancy on libncurses-dev to allow crm_mon to work
