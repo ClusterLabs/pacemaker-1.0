@@ -141,11 +141,32 @@ ConfigureSolaris() {
 }
 
 ConfigureDarwin() {
-  FLAGS="--disable-ldirectord --prefix=/sw --sysconfdir=/sw/etc --localstatedir=/sw/var --with-initdir=/private/etc/mach_init.d --enable-fatal-warnings=yes --with-group-id=65 --with-ccmuser-id=65"
+  FLAGS="--prefix=/sw --sysconfdir=/sw/etc --localstatedir=/sw/var"
+  FLAGS="$FLAGS --with-initdir=/private/etc/mach_init.d"
+  FLAGS="$FLAGS --with-group-id=65 --with-ccmuser-id=65"
+  FLAGS="$FLAGS --enable-fatal-warnings=yes"
+  FLAGS="$FLAGS --disable-ldirectord"
   export CFENV="Darwin"
-#  export LDFLAGS="${LDFLAGS} -bind_at_load -fno-common"
-  export LIBS="$LIBS -L/usr/lib -L/sw/lib"
-  export CPPFLAGS="$CPPFLAGS -I/usr/include -I/sw/usr/include -I/sw/include"
+
+# For building universal binaries
+#   http://developer.apple.com/technotes/tn2005/tn2137.html
+#
+  export SDK_ROOT=/Developer/SDKs/MacOSX10.4u.sdk
+ FLAGS="$FLAGS --disable-dependency-tracking"
+ CPPFLAGS="$CPPFLAGS -isysroot $SDK_ROOT" 
+
+# Need to make sure all dependancy libs are universal before this can 
+#  be enabled (but thats a pain so it wont happen in a hurry)
+# CPPFLAGS="$CPPFLAGS -arch ppc -arch i386" 
+
+# export LDFLAGS="$LDFLAGS -Wl,-syslibroot,$SDK_ROOT"
+# only works on 32-bit platforms but this seems to be equivilent: 
+#   export LIBS="-L$SDK_ROOT/usr/lib -L/sw/lib $LIBS"
+
+  export LIBS="-L$SDK_ROOT/usr/lib -L/sw/lib $LIBS"
+  CPPFLAGS="$CPPFLAGS -g -I$SDK_ROOT/usr/include"
+  CPPFLAGS="$CPPFLAGS -I/sw/usr/include -I/sw/include"
+  export CPPFLAGS
 }
 
 ConfigureGenericUNIX() {
