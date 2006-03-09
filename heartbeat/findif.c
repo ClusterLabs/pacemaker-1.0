@@ -1,4 +1,4 @@
-/* $Id: findif.c,v 1.53 2006/02/16 13:14:49 xunsun Exp $ */
+/* $Id: findif.c,v 1.54 2006/03/09 04:52:29 xunsun Exp $ */
 /*
  * findif.c:	Finds an interface which can route a given address
  *
@@ -752,7 +752,7 @@ main(int argc, char ** argv) {
 
 		best_netmask = htonl(best_netmask);
 		if (!OutputInCIDR) {
-			printf("%s\t netmask %d.%d.%d.%d\tbroadcast %s\n"
+			printf("%s\tnetmask %d.%d.%d.%d\tbroadcast %s\n"
 			,	best_if
                 	,       (int)((best_netmask>>24) & 0xff)
                 	,       (int)((best_netmask>>16) & 0xff)
@@ -760,7 +760,7 @@ main(int argc, char ** argv) {
                 	,       (int)(best_netmask & 0xff)
 			,	bcast_arg);
 		}else{
-			printf("%s\t netmask %d\tbroadcast %s\n"
+			printf("%s\tnetmask %d\tbroadcast %s\n"
 			,	best_if
 			,	netmask_bits(best_netmask)
 			,	bcast_arg);
@@ -894,6 +894,9 @@ ff02::%lo0/32                     fe80::1%lo0                   UC          lo0
 
 /* 
  * $Log: findif.c,v $
+ * Revision 1.54  2006/03/09 04:52:29  xunsun
+ * removed the extra blanks which would cause problems when parsed by OCF IPaddr RA
+ *
  * Revision 1.53  2006/02/16 13:14:49  xunsun
  * check both interface name and broadcast address specified by user
  *
