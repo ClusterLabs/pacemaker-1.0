@@ -1,4 +1,4 @@
-/* $Id: ccmmain.c,v 1.33 2006/02/17 05:48:24 zhenh Exp $ */
+/* $Id: ccmmain.c,v 1.34 2006/03/09 09:59:44 zhenh Exp $ */
 /* 
  * ccm.c: Consensus Cluster Service Program 
  *
@@ -192,7 +192,7 @@ ccm_shutdone(int sig, gpointer userdata)
 	ccm_t*		ccm = (ccm_t*)userdata;
 	ccm_info_t *	info = (ccm_info_t*)ccm->info;
 
-	ccm_log(LOG_INFO, "received SIGTERM, goint to shut down");
+	ccm_log(LOG_INFO, "received SIGTERM, going to shut down");
 	if (info == NULL){
 		ccm_log(LOG_ERR, "ccm_shutdone: invalid arguments");
 		return FALSE;
