@@ -238,7 +238,11 @@ GenerateHaResources() {
 	!
   chmod 644 $1
 }
-CONFIGFILES="$HADIR/ha.cf $HADIR/authkeys $HADIR/haresources @HA_VARLIBDIR@/heartbeat/crm/cib.xml @HA_VARLIBDIR@/heartbeat/crm/cib_backup.xml"
+CONFIGFILES="$HADIR/ha.cf $HADIR/authkeys $HADIR/haresources"
+CONFIGFILES="$CONFIGFILES @HA_VARLIBDIR@/heartbeat/crm/cib.xml"
+CONFIGFILES="$CONFIGFILES @HA_VARLIBDIR@/heartbeat/crm/cib.xml.sig"
+CONFIGFILES="$CONFIGFILES @HA_VARLIBDIR@/heartbeat/crm/cib.xml.last"
+CONFIGFILES="$CONFIGFILES @HA_VARLIBDIR@/heartbeat/crm/cib.xml.sig.last"
 CACHEFILES="@HA_VARLIBDIR@/heartbeat/hostcache  @HA_VARLIBDIR@/heartbeat/delhostcache"
 
 SetUpConfigFiles() {
