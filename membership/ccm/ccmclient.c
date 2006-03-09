@@ -1,4 +1,4 @@
-/* $Id: ccmclient.c,v 1.35 2006/03/02 10:15:54 zhenh Exp $ */
+/* $Id: ccmclient.c,v 1.36 2006/03/09 10:01:58 zhenh Exp $ */
 /* 
  * client.c: Consensus Cluster Client tracker
  *
@@ -48,13 +48,11 @@ typedef struct ccm_ipc_s {
 
 static ccm_ipc_t *ipc_llm_message  = NULL; /* active low level membership */
 static ccm_ipc_t *ipc_mem_message  = NULL; /* active membership           */
-static ccm_ipc_t *ipc_born_message = NULL; /* active bornon information   */
 static ccm_ipc_t *ipc_misc_message = NULL; /* active misc information     */
 
 #define MAXIPC 100
 
 static GMemChunk *ipc_mem_chk  = NULL;
-static GMemChunk *ipc_born_chk = NULL;
 static GMemChunk *ipc_misc_chk = NULL;
 
 static gboolean llm_flag      = FALSE;
@@ -132,8 +130,6 @@ send_func(gpointer key, gpointer value, gpointer user_data)
 		 */
 	case CL_LLM:
 		if(prim_flag) {
-			/* send born message */
-			send_message(ccm_client, ipc_born_message);
 			/* send mem message */
 			send_message(ccm_client, ipc_mem_message);
 			ccm_client->ccm_flags = CL_MEM;
@@ -250,10 +246,8 @@ cleanup(void)
 	restored_flag=FALSE;
 	flush_all(); /* flush out all the messages to all the clients*/
 	g_mem_chunk_reset(ipc_mem_chk);
-	g_mem_chunk_reset(ipc_born_chk);
 	g_mem_chunk_reset(ipc_misc_chk);
 	ipc_mem_message = NULL;
-	ipc_born_message = NULL;
 	ipc_misc_message = NULL;
 
 	/* NOTE: ipc_llm_message is never destroyed. */
@@ -418,7 +412,6 @@ client_new_mbrship(ccm_info_t* info, void* borndata)
 	/* creating enough heap memory in order to avoid allocation */
 	static struct born_s	bornbuffer[MAXNODE+10];
 	ccm_meminfo_t *ccm=(ccm_meminfo_t *)bornbuffer;
-	ccm_born_t    *born=(ccm_born_t *)bornbuffer;
 	struct born_s *born_arry = (struct born_s *)borndata;
 	int		n = info->memcount;
 	int		trans = info->ccm_transition_major;
@@ -456,17 +449,6 @@ client_new_mbrship(ccm_info_t* info, void* borndata)
  			(sizeof(ccm_meminfo_t) + n*sizeof(born_t)));
 	ipc_mem_message->count++;
 
-	/* bornon array is sent in a seperate message */
-	born->n = n;
-	memcpy(born->born, born_arry, n*sizeof(struct born_s));
-	if(ipc_born_message && --(ipc_born_message->count)==0){
-		delete_message(ipc_born_message);
-	}
-
-	ipc_born_message = create_message(ipc_born_chk, born, 
-					  sizeof(ccm_born_t )+n*sizeof(struct born_s));
-	ipc_born_message->count++;
-	
 #if 1
 	ccm_debug(LOG_DEBUG, "delivering new membership to %d clients: ",
 	       g_hash_table_size(ccm_hashclient));
@@ -526,7 +508,6 @@ void
 client_llm_init(llm_info_t *llm)
 {
 	char memstr[] = "membership chunk";
-	char bornstr[] = "born chunk";
 	char miscstr[] = "misc chunk";
 	int  maxnode = llm_get_nodecount(llm);
        	int size = sizeof(ccm_llm_t)+ maxnode*sizeof(struct node_s);
@@ -552,11 +533,6 @@ client_llm_init(llm_info_t *llm)
 				sizeof(ccm_ipc_t)+
 				sizeof(ccm_meminfo_t)+
 				maxnode*sizeof(born_t), 
-				MAXIPC, G_ALLOC_AND_FREE);
-	ipc_born_chk = g_mem_chunk_new(bornstr,
-				sizeof(ccm_ipc_t)+
-				sizeof(ccm_born_t)+
-				maxnode*sizeof(struct born_s), 
 				MAXIPC, G_ALLOC_AND_FREE);
 	ipc_misc_chk = g_mem_chunk_new(miscstr,
 				sizeof(ccm_ipc_t)+

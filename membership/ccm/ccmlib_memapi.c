@@ -1,4 +1,4 @@
-/* $Id: ccmlib_memapi.c,v 1.40 2006/03/02 10:15:54 zhenh Exp $ */
+/* $Id: ccmlib_memapi.c,v 1.41 2006/03/09 10:01:58 zhenh Exp $ */
 /* 
  * ccmlib_memapi.c: Consensus Cluster Membership API
  *
@@ -118,7 +118,7 @@ static const char *llm_get_Id_from_Uuid(ccm_llm_t *stuff, uint uuid);
 
 
 static void
-init_llm(mbr_private_t *mem, struct IPC_MESSAGE *msg)
+on_llm_msg(mbr_private_t *mem, struct IPC_MESSAGE *msg)
 {
 	unsigned long len = msg->msg_len;
 	int	numnodes;
@@ -136,30 +136,6 @@ init_llm(mbr_private_t *mem, struct IPC_MESSAGE *msg)
 	return;
 }
 
-static void
-init_bornon(mbr_private_t *private, 
-		struct IPC_MESSAGE *msg)
-{
-	ccm_born_t *born;
-	int numnodes, i, n;
-	struct born_s *bornon;
-
-	numnodes = CLLM_GET_NODECOUNT(private->llm);
-
-	born = (ccm_born_t *)msg->msg_body;
-
-	n = born->n;
-	assert(msg->msg_len == sizeof(ccm_born_t)
-			+n*sizeof(struct born_s));
-	bornon = born->born;
-	for (i = 0 ; i < n; i++) {
-		assert(bornon[i].index <= numnodes);
-		g_hash_table_insert(private->bornon, 
-				    GINT_TO_POINTER(bornon[i].index),
-				    GINT_TO_POINTER(bornon[i].bornon+1));
-	}
-	return;
-}
 
 
 static void
@@ -177,10 +153,10 @@ reset_llm(mbr_private_t *private)
 }
 
 static int
-init_llmborn(mbr_private_t *private)
+init_llm(mbr_private_t *private)
 {
 	struct IPC_CHANNEL *ch;
-	int 	sockfd, i=0, ret;
+	int 	sockfd, ret;
 	struct IPC_MESSAGE *msg;
 
 	if(private->llm) {
@@ -189,14 +165,7 @@ init_llmborn(mbr_private_t *private)
 
 	ch 	   = private->channel;
 	sockfd = ch->ops->get_recv_select_fd(ch);
-
-	/* receive the initiale low level membership 
-	*  information in the first iteration, and 
-	*  recieve the bornon information in the 
-	*  second iteration 
-	*/
-	while( i < 2) {
-		
+	while(1) {
 		if(ch->ops->waitin(ch) != IPC_OK){
 			ch->ops->destroy(ch);
 			return -1;
@@ -206,22 +175,16 @@ init_llmborn(mbr_private_t *private)
 			fprintf(stderr, "connection denied\n");
 			return -1;
 		}
-	 	if(ret == IPC_FAIL){
+ 		if(ret == IPC_FAIL){
 			fprintf(stderr, ".");
 			cl_shortsleep();
 			continue;
 		}
-
-		switch(i) {
-		case 0: init_llm(private, msg);
-			break;
-		case 1: init_bornon(private, msg);
-			private->client_report = TRUE;
-			break;
-		}
-		i++;
-		msg->msg_done(msg);
+		break;
 	}
+	on_llm_msg(private, msg);
+	private->client_report = TRUE;
+	msg->msg_done(msg);
 	return 0;
 }
 
@@ -492,7 +455,7 @@ mem_handle_event(class_t *class)
 	private = (mbr_private_t *)class->private;
 	ch 	   = private->channel;
 
-	if(init_llmborn(private)){
+	if(init_llm(private)){
 		return FALSE;
 	}
 	
