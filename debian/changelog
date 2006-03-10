@@ -1,3 +1,13 @@
+heartbeat-2 (2.0.4-2) UNRELEASED; urgency=low
+
+  * Removed build depenancy on openssl-devel,
+    as heartbeat no longer uses openssl directly.
+    (Libraries that heartbeat depends on may in turn
+     depend on openssl creating an indirect depenancy
+     or build-dependancy).
+
+ -- Simon Horman <horms@debian.org>  Fri, 10 Mar 2006 10:12:24 +0900
+
 heartbeat-2 (2.0.4-1) unstable; urgency=low
 
   * New Upstream
