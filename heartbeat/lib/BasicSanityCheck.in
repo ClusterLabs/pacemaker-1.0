@@ -240,10 +240,10 @@ GenerateHaResources() {
 }
 CONFIGFILES="$HADIR/ha.cf $HADIR/authkeys $HADIR/haresources"
 CONFIGFILES="$CONFIGFILES @HA_VARLIBDIR@/heartbeat/crm/cib.xml"
-CONFIGFILES="$CONFIGFILES @HA_VARLIBDIR@/heartbeat/crm/cib.xml.sig"
 CONFIGFILES="$CONFIGFILES @HA_VARLIBDIR@/heartbeat/crm/cib.xml.last"
-CONFIGFILES="$CONFIGFILES @HA_VARLIBDIR@/heartbeat/crm/cib.xml.sig.last"
 CACHEFILES="@HA_VARLIBDIR@/heartbeat/hostcache  @HA_VARLIBDIR@/heartbeat/delhostcache"
+CACHEFILES="$CACHEFILES @HA_VARLIBDIR@/heartbeat/crm/cib.xml.sig"
+CACHEFILES="$CACHEFILES @HA_VARLIBDIR@/heartbeat/crm/cib.xml.sig.last"
 
 SetUpConfigFiles() {
   if
@@ -303,7 +303,7 @@ SaveConfigFiles() {
 }
 
 RestoreConfigFiles() {
-  mv $HADIR/.cfsave/cib*.xml  @HA_VARLIBDIR@/heartbeat/crm/ >/dev/null 2>&1
+ mv $HADIR/.cfsave/cib.xml*  @HA_VARLIBDIR@/heartbeat/crm/ >/dev/null 2>&1
   mv $HADIR/.cfsave/hostcache @HA_VARLIBDIR@/heartbeat/  >/dev/null 2>&1
   mv $HADIR/.cfsave/delhostcache @HA_VARLIBDIR@/heartbeat/ >/dev/null 2>&1
   mv $HADIR/.cfsave/* $HADIR >/dev/null 2>&1
