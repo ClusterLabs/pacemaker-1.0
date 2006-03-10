@@ -632,11 +632,11 @@ class ClusterView(View) :
 		make_label_active(self.glade.get_widget("l_keepalive"),_("Keep Alive:"),"www.linux-ha.org")
 		make_label_active(self.glade.get_widget("l_warntime"),_("Warning Alive:"),"www.linux-ha.org")
 		make_label_active(self.glade.get_widget("l_deadtime"),_("Dead Time:"),"www.linux-ha.org")
-		make_label_active(self.glade.get_widget("l_initdead"),_("Intial Dead Time:"),"www.linux-ha.org")
+		make_label_active(self.glade.get_widget("l_initdead"),_("Initial Dead Time:"),"www.linux-ha.org")
 		make_label_active(self.glade.get_widget("l_transtimeout"),_("Transition Timeout:"),"www.linux-ha.org")
 		make_label_active(self.glade.get_widget("l_rscstickiness"),_("Resource Stickiness:"),"www.linux-ha.org")
 		make_label_active(self.glade.get_widget("l_noquorum"),_("No Quorum Policy:"),"www.linux-ha.org")
-		make_label_active(self.glade.get_widget("l_symmetric"),_("Sysmmetric Cluster"),"www.linux-ha.org")
+		make_label_active(self.glade.get_widget("l_symmetric"),_("Symmetric Cluster"),"www.linux-ha.org")
 		make_label_active(self.glade.get_widget("l_stonith_enabled"),_("Stonith Enabled"),"www.linux-ha.org")
 							
 	def __init__(self) :
