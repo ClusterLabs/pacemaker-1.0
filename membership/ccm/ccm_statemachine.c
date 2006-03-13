@@ -1,4 +1,4 @@
-/* $Id: ccm_statemachine.c,v 1.16 2006/02/17 05:48:24 zhenh Exp $ */
+/* $Id: ccm_statemachine.c,v 1.17 2006/03/13 08:06:26 zhenh Exp $ */
 /* 
  * ccm.c: Consensus Cluster Service Program 
  *
@@ -3057,12 +3057,6 @@ ccm_take_control(void *data)
 {
 	ccm_info_t *info =  (ccm_info_t *)((ccm_t *)data)->info;
 	ll_cluster_t *hbfd = (ll_cluster_t *)((ccm_t *)data)->hbfd;
-	static gboolean client_flag=FALSE;
-
-	if(!client_flag) {
-		client_llm_init(CCM_GET_LLM(info));
-		client_flag=TRUE;
-	}
 
 	return  ccm_control_process(info, hbfd);
 }
@@ -3217,6 +3211,8 @@ ccm_initialize()
 
 	ccmret->info = global_info;
 	ccmret->hbfd = hb_fd;
+	client_llm_init(&global_info->llm);
+
 	return  (void*)ccmret;
 
  errout:
