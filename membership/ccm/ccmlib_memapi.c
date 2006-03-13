@@ -1,4 +1,4 @@
-/* $Id: ccmlib_memapi.c,v 1.41 2006/03/09 10:01:58 zhenh Exp $ */
+/* $Id: ccmlib_memapi.c,v 1.42 2006/03/13 08:14:53 zhenh Exp $ */
 /* 
  * ccmlib_memapi.c: Consensus Cluster Membership API
  *
@@ -214,8 +214,7 @@ already_present(oc_node_t *arr, uint size, oc_node_t node)
 {
 	uint i;
 	for ( i = 0 ; i < size ; i ++ ) {
-		if(arr[i].node_id == node.node_id &&
-			arr[i].node_born_on >= node.node_born_on) {
+		if(arr[i].node_id == node.node_id) {
 			return TRUE;
 		}
 	}
