@@ -61,13 +61,13 @@ typedef struct
 	int		call_id;
 	stonith_ret_t	op_result;	
 /*
- * By now op==QUERY node_list is only a char * type. 
+ * By now node_list is only a char * type. 
  * When op==QUERY, it contains the names of the nodes who can stonith the node 
- * whose name is node_name. 
+ * whose name is node_name. Blank is the delimit.
  * When op!=QUERY, it contains the name of the nodes who succeeded in stonithing
- * the node whose name is node_name. 
+ * the node whose name is node_name. Blank is the delimit.
  */
-	void *		node_list;
+	void *	node_list;
 
 /*
  * Will pass the value to stonith_ops_callback.	
@@ -144,7 +144,7 @@ typedef struct stonithRA_ops
 	int		op_result;	/* exit code as the real OCF RA */
 
 /* Internally use only */
-	void *		private_data;
+	void *		stonith_obj;
 } stonithRA_ops_t;
 
 /* It's an asynchronus api */
