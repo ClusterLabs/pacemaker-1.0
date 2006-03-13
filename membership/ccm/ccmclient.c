@@ -1,4 +1,4 @@
-/* $Id: ccmclient.c,v 1.36 2006/03/09 10:01:58 zhenh Exp $ */
+/* $Id: ccmclient.c,v 1.37 2006/03/13 08:11:14 zhenh Exp $ */
 /* 
  * client.c: Consensus Cluster Client tracker
  *
@@ -55,10 +55,7 @@ static ccm_ipc_t *ipc_misc_message = NULL; /* active misc information     */
 static GMemChunk *ipc_mem_chk  = NULL;
 static GMemChunk *ipc_misc_chk = NULL;
 
-static gboolean llm_flag      = FALSE;
-static gboolean evicted_flag  = FALSE;
-static gboolean prim_flag     = FALSE;
-static gboolean restored_flag = FALSE;
+static gboolean membership_ready     = FALSE;
 
 
 /* 
@@ -99,9 +96,9 @@ static void
 send_func(gpointer key, gpointer value, gpointer user_data)
 {
 	ccm_client_t  	   *ccm_client = (ccm_client_t *)value;
-
-	if(evicted_flag) {
-		/*send evicted message*/
+	int msg_type = (int) user_data;
+	switch (msg_type) {
+	case CCM_EVICTED:
 		if(ccm_client->ccm_flags == CL_MEM) {
 			struct IPC_CHANNEL* chan = ccm_client->ccm_ipc_client;
 			
@@ -114,45 +111,20 @@ send_func(gpointer key, gpointer value, gpointer user_data)
 			}
 			ccm_client->ccm_flags = CL_INIT;
 		}
-		return;
-	}
-
-	switch(ccm_client->ccm_flags) {
-	case CL_INIT:
-		if(!llm_flag) {
-			break;
-		}
-		/* send llm message */
+		break;
+	case CCM_INFLUX:
+		send_message(ccm_client, ipc_misc_message);
+		break;
+	case CCM_LLM:	
 		send_message(ccm_client, ipc_llm_message);
-		ccm_client->ccm_flags = CL_LLM;
-		/* 
-		 * FALL THROUGH
-		 */
-	case CL_LLM:
-		if(prim_flag) {
-			/* send mem message */
-			send_message(ccm_client, ipc_mem_message);
-			ccm_client->ccm_flags = CL_MEM;
-		} 
 		break;
-
-	case CL_MEM:
-		if(restored_flag){
-			/* send restored message */
-			send_message(ccm_client, 
-					ipc_misc_message);
-		}else if(prim_flag) {
-			/* send mem message */
-			send_message(ccm_client, 
-					ipc_mem_message);
-		}else {
-			/* send nonprimary message */
-			send_message(ccm_client, 
-					ipc_misc_message);
+	case CCM_NEW_MEMBERSHIP:
+		if(membership_ready) {
+			send_message(ccm_client, ipc_mem_message);
 		}
 		break;
-	default :
-		break;
+	default:
+		ccm_log(LOG_ERR, "send_func:unknown message");
 	}
 }
 
@@ -208,10 +180,10 @@ create_message(GMemChunk *chk, void *data, int size)
 
 
 static void 
-send_all(void)
+send_all(int msg_type)
 {
 	if(g_hash_table_size(ccm_hashclient)) {
-		g_hash_table_foreach(ccm_hashclient, send_func, NULL);
+		g_hash_table_foreach(ccm_hashclient, send_func, (gpointer)msg_type);
 	}
 	return;
 }
@@ -241,9 +213,7 @@ flush_all(void)
 static void
 cleanup(void)
 {
-	evicted_flag=FALSE;
-	prim_flag=FALSE;
-	restored_flag=FALSE;
+	membership_ready=FALSE;
 	flush_all(); /* flush out all the messages to all the clients*/
 	g_mem_chunk_reset(ipc_mem_chk);
 	g_mem_chunk_reset(ipc_misc_chk);
@@ -287,7 +257,8 @@ client_add(struct IPC_CHANNEL *ipc_client)
 	ccm_client->ccm_ipc_client = ipc_client;
 	ccm_client->ccm_flags = CL_INIT;
 
-	send_func(ipc_client, ccm_client, NULL);
+	send_func(ipc_client, ccm_client, (gpointer)CCM_LLM);
+	send_func(ipc_client, ccm_client, (gpointer)CCM_NEW_MEMBERSHIP);
 
 	g_hash_table_insert(ccm_hashclient, ipc_client, ccm_client);
 	return 0;
@@ -420,8 +391,7 @@ client_new_mbrship(ccm_info_t* info, void* borndata)
 	
 	assert( n<= MAXNODE);
 
-	prim_flag=TRUE;
-	restored_flag=FALSE;
+	membership_ready=TRUE;
 
 
 	ccm->ev = CCM_NEW_MEMBERSHIP;
@@ -459,7 +429,7 @@ client_new_mbrship(ccm_info_t* info, void* borndata)
 	(void)display_func;
 #endif 
 	
-	send_all();
+	send_all(CCM_NEW_MEMBERSHIP);
 	ccm_debug2(LOG_DEBUG, "membership state: new membership");
 }
 
@@ -469,16 +439,15 @@ client_influx(void)
 {
 	int type = CCM_INFLUX;
 
-	if(prim_flag){
-		prim_flag = FALSE;
-		restored_flag = FALSE;
+	if(membership_ready){
+		membership_ready = FALSE;
 		if(ipc_misc_message && --(ipc_misc_message->count)==0){
 			delete_message(ipc_misc_message);
 		}
 		ipc_misc_message = create_message(ipc_misc_chk, 
 				&type, sizeof(int));
 		ipc_misc_message->count++;
-		send_all();
+		send_all(CCM_INFLUX);
 	}
 
 	ccm_debug2(LOG_DEBUG, "membership state: not primary");
@@ -489,16 +458,14 @@ void
 client_evicted(void)
 {
 	int type = CCM_EVICTED;
-	evicted_flag=TRUE;
-	if(llm_flag) {
-		if(ipc_misc_message && --(ipc_misc_message->count)==0){
-			delete_message(ipc_misc_message);
-		}
-		ipc_misc_message = create_message(ipc_misc_chk, 
-				&type, sizeof(int));
-		ipc_misc_message->count++;
-		send_all();
+	if(ipc_misc_message && --(ipc_misc_message->count)==0){
+		delete_message(ipc_misc_message);
 	}
+	ipc_misc_message = create_message(ipc_misc_chk, 
+			&type, sizeof(int));
+	ipc_misc_message->count++;
+	send_all(CCM_EVICTED);
+
 	cleanup();
 	ccm_debug2(LOG_DEBUG, "membership state: evicted");
 }
@@ -527,7 +494,6 @@ client_llm_init(llm_info_t *llm)
 	g_free(data);
 	ipc_llm_message->count++; /* make sure it never gets
 				     	dellocated */
-	llm_flag = TRUE;
 
 	ipc_mem_chk = g_mem_chunk_new(memstr,
 				sizeof(ccm_ipc_t)+
@@ -538,8 +504,5 @@ client_llm_init(llm_info_t *llm)
 				sizeof(ccm_ipc_t)+
 				sizeof(int), 
 				MAXIPC, G_ALLOC_AND_FREE);
-
-	/* check if anybody is waiting */
-	send_all();
 	return;
 }
