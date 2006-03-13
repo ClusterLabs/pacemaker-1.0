@@ -54,6 +54,7 @@ ha_msg_addhash(struct ha_msg * msg, const char * name, GHashTable * htable)
 		return HA_FAIL;
 	}
 	
+	ZAPMSG(msg_tmp);
 	return HA_OK;
 }
 
