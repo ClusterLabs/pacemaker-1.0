@@ -1,4 +1,4 @@
-/* $Id: ccmlib.h,v 1.20 2006/03/02 10:15:54 zhenh Exp $ */
+/* $Id: ccmlib.h,v 1.21 2006/03/13 07:54:05 zhenh Exp $ */
 /*
  * ccmlib.h: internal definations for ccm library files.
  *
@@ -104,5 +104,7 @@ class_t *oc_ev_memb_class(oc_ev_callback_t  *);
 #define CCM_EVICTED 		1
 #define CCM_NEW_MEMBERSHIP 	2
 #define CCM_INFLUX 		3
+#define CCM_LLM 		4
+
 
 #endif  /* __CCMLIB_H_ */
