@@ -1,4 +1,4 @@
-/* $Id: stonithd.c,v 1.84 2006/03/15 03:12:10 sunjd Exp $ */
+/* $Id: stonithd.c,v 1.85 2006/03/15 17:13:19 davidlee Exp $ */
 
 /* File: stonithd.c
  * Description: STONITH daemon for node fencing
@@ -1334,6 +1334,7 @@ static void
 stonithd_IPC_destroy_notify(gpointer data)
 {
 	IPC_Channel * ch = (IPC_Channel *) data;
+	GCHSource * tmp_gsrc = NULL;
 
 	/* deal with client disconnection event */
 	stonithd_log2(LOG_DEBUG, "An IPC is destroyed.");
@@ -1351,8 +1352,6 @@ stonithd_IPC_destroy_notify(gpointer data)
 			"to delete a client from client_list, maybe it has "
 			"been deleted in signoff function.");
 	}
-	
-	GCHSource * tmp_gsrc = NULL;
 
 	if ( NULL != (tmp_gsrc = g_hash_table_lookup(chan_gsource_pairs, ch)) ) {
 		G_main_del_IPC_Channel(tmp_gsrc);
@@ -3362,6 +3361,9 @@ trans_log(int priority, const char * fmt, ...)
 
 /* 
  * $Log: stonithd.c,v $
+ * Revision 1.85  2006/03/15 17:13:19  davidlee
+ * Declarations must be at head, not in middle, of a block
+ *
  * Revision 1.84  2006/03/15 03:12:10  sunjd
  * log output tweak
  *
