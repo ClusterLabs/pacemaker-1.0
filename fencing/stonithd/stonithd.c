@@ -1,4 +1,4 @@
-/* $Id: stonithd.c,v 1.83 2006/03/13 08:47:55 sunjd Exp $ */
+/* $Id: stonithd.c,v 1.84 2006/03/15 03:12:10 sunjd Exp $ */
 
 /* File: stonithd.c
  * Description: STONITH daemon for node fencing
@@ -647,8 +647,8 @@ stonithdProcessDied(ProcTrack* p, int status, int signo
 	stonithd_child_count--;
 	stonithd_log2(LOG_DEBUG, "there still are %d child process running"
 			, stonithd_child_count);
-	stonithd_log(LOG_DEBUG, "child process %s[%d] exited, its exit code: %d"
-		     " when signo=%d.", pname, p->pid, exitcode, signo);
+	stonithd_log(LOG_DEBUG, "Child process %s [%d] exited, its exit code:"
+		     " %d when signo=%d.", pname, p->pid, exitcode, signo);
 
 	rc = g_hash_table_lookup_extended(executing_queue, &(p->pid) 
 			, (gpointer *)&orignal_key, (gpointer *)&op);
@@ -732,7 +732,7 @@ static void
 stonithdProcessRegistered(ProcTrack* p)
 {
 	stonithd_child_count++;
-	stonithd_log(LOG_DEBUG, "Child process [%s] started [ pid: %d ]."
+	stonithd_log2(LOG_DEBUG, "Child process [%s] started [ pid: %d ]."
 		     , p->ops->proctype(p), p->pid);
 	stonithd_log2(LOG_DEBUG, "there are %d child process running"
 			, stonithd_child_count);
@@ -1556,7 +1556,7 @@ on_stonithd_signoff(struct ha_msg * request, gpointer data)
 
 	if ( (client = get_exist_client_by_chan(client_list, ch)) != NULL ) {
 		if (client->pid == tmpint) {
-			stonithd_log(LOG_DEBUG, "have the client %s (pid=%d) "
+			stonithd_log2(LOG_DEBUG, "Have the client %s (pid=%d) "
 				     "sign off.", client->name, client->pid);
 			delete_client_by_chan(&client_list, ch);
 			client = NULL;
@@ -2443,7 +2443,7 @@ send_back_reply:
 		return ST_FAIL;
 	}
 
-	stonithd_log(LOG_DEBUG, "on_stonithd_virtual_stonithRA_ops: "
+	stonithd_log2(LOG_DEBUG, "on_stonithd_virtual_stonithRA_ops: "
 		     "sent back a synchonrous result.");
 	ZAPMSG(reply);
 	return ST_OK;
@@ -2462,8 +2462,9 @@ send_stonithRAop_final_result( stonithRA_ops_t * ra_op, gpointer data)
 		return ST_FAIL;
 	}
 
-	stonithd_log(LOG_DEBUG, "RA %s's op %s finished.", 
-		     ra_op->ra_name, ra_op->op_type);
+	stonithd_log(LOG_DEBUG
+		     , "RA %s's op %s finished. op_result=%d"
+		     , ra_op->ra_name, ra_op->op_type, ra_op->op_result);
 
 	if ( NULL == get_exist_client_by_chan(client_list, ch) ) {
 		/* Here the ch are already destroyed */
@@ -2478,8 +2479,8 @@ send_stonithRAop_final_result( stonithRA_ops_t * ra_op, gpointer data)
 		return ST_FAIL;
 	}
 
-	stonithd_log(LOG_DEBUG, "ra_op->op_type=%s, ra_op->ra_name=%s",
-		     ra_op->op_type, ra_op->ra_name); /* can be deleted*/
+	stonithd_log2(LOG_DEBUG, "ra_op->op_type=%s, ra_op->ra_name=%s",
+		     ra_op->op_type, ra_op->ra_name);
 	if ( (ha_msg_add(reply, F_STONITHD_TYPE, ST_APIRPL) != HA_OK ) 
   	    ||(ha_msg_add(reply, F_STONITHD_APIRPL, ST_RAOPRET) != HA_OK ) 
 	    ||(ha_msg_add(reply, F_STONITHD_RAOPTYPE, ra_op->op_type) != HA_OK)
@@ -2504,7 +2505,7 @@ send_stonithRAop_final_result( stonithRA_ops_t * ra_op, gpointer data)
 		ZAPMSG(reply);
 		return ST_FAIL;
 	} else {
-		stonithd_log(LOG_DEBUG, "send_stonithRAop_final_result: "
+		stonithd_log2(LOG_DEBUG, "send_stonithRAop_final_result: "
 			     "succeed in sending back final result message.");
 	}
 
@@ -2640,7 +2641,7 @@ stonithRA_start( stonithRA_ops_t * op, gpointer data)
 	}
 
 	/* Don't find in local_started_stonith_rsc, not on start status */
-	stonithd_log(LOG_DEBUG, "stonithRA_start: op->params' address=%p"
+	stonithd_log2(LOG_DEBUG, "stonithRA_start: op->params' address=%p"
 		     , op->params);
 	if (debug_level > 0) {
 		print_str_hashtable(op->params);
@@ -3361,6 +3362,9 @@ trans_log(int priority, const char * fmt, ...)
 
 /* 
  * $Log: stonithd.c,v $
+ * Revision 1.84  2006/03/15 03:12:10  sunjd
+ * log output tweak
+ *
  * Revision 1.83  2006/03/13 08:47:55  sunjd
  * stonithd.c
  *
