@@ -1,4 +1,4 @@
-/* $Id: ccmclient.c,v 1.38 2006/03/16 01:24:56 zhenh Exp $ */
+/* $Id: ccmclient.c,v 1.39 2006/03/16 10:24:14 davidlee Exp $ */
 /* 
  * client.c: Consensus Cluster Client tracker
  *
@@ -183,7 +183,7 @@ static void
 send_all(int msg_type)
 {
 	if(g_hash_table_size(ccm_hashclient)) {
-		g_hash_table_foreach(ccm_hashclient, send_func, (gpointer)msg_type);
+		g_hash_table_foreach(ccm_hashclient, send_func, GINT_TO_POINTER(msg_type));
 	}
 	return;
 }
