@@ -1,4 +1,4 @@
-/* $Id: ccmclient.c,v 1.37 2006/03/13 08:11:14 zhenh Exp $ */
+/* $Id: ccmclient.c,v 1.38 2006/03/16 01:24:56 zhenh Exp $ */
 /* 
  * client.c: Consensus Cluster Client tracker
  *
@@ -96,7 +96,7 @@ static void
 send_func(gpointer key, gpointer value, gpointer user_data)
 {
 	ccm_client_t  	   *ccm_client = (ccm_client_t *)value;
-	int msg_type = (int) user_data;
+	int msg_type = GPOINTER_TO_INT(user_data);
 	switch (msg_type) {
 	case CCM_EVICTED:
 		if(ccm_client->ccm_flags == CL_MEM) {
