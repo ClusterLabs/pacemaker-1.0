@@ -40,7 +40,7 @@
 #define ARGC_CHECK(n);		\
 if (argc != (n)) {					\
 	mgmt_log(LOG_DEBUG, "%s msg should have %d params, but %d given",argv[0],n,argc);	\
-	return cl_strdup(MSG_FAIL);			\
+	return cl_strdup(MSG_FAIL"\nwrong parameter number");			\
 }
 extern const char* client_name;
 extern int debug_level;
