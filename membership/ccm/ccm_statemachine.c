@@ -1,4 +1,4 @@
-/* $Id: ccm_statemachine.c,v 1.17 2006/03/13 08:06:26 zhenh Exp $ */
+/* $Id: ccm_statemachine.c,v 1.18 2006/03/17 23:10:38 lars Exp $ */
 /* 
  * ccm.c: Consensus Cluster Service Program 
  *
@@ -3855,7 +3855,7 @@ dump_mbrs(ccm_info_t *info)
 		if(bornon[i].bornon==0) 
 			bornon[i].bornon=CCM_GET_MAJORTRANS(info);
 	}
-	ccm_debug(LOG_DEBUG,"dump current memember ship");
+	ccm_debug(LOG_DEBUG,"dump current membership");
 	leader = info->ccm_cluster_leader;
 	ccm_debug(LOG_DEBUG,"\tleader=%s"
 	,	leader < 0 ?"none": info->llm.nodes[leader].nodename);
