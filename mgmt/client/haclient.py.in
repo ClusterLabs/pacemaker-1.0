@@ -1254,6 +1254,8 @@ class MainWindow :
 				manager.do_cmd("del_co\nrsc_order\n"+self.cur_name)
 			elif self.cur_type == _("colocation") :
 				manager.do_cmd("del_co\nrsc_colocation\n"+self.cur_name)
+			if manager.failed_reason != "" :
+				msgbox(manager.failed_reason)
 	
 	# constructor	
 	def __init__(self) :
@@ -1342,7 +1344,7 @@ class Manager :
 	cache = {}
 	io_tag = None
 	active_nodes = []
-	
+	failed_reason = ""
 		
 	# cache functions
 
@@ -1408,15 +1410,19 @@ class Manager :
 		return True
 		
 	def do_cmd(self, command) :
+		self.failed_reason = ""
 		ret_str = mgmt_sendmsg(command)
 		if ret_str == None :
 			debug(str(string.split(command, "\n"))+":None")
+			self.failed_reason = "return None"
 			return None
  		while len(ret_str)>=4 and ret_str[:4] == "evt:" :
  			ret_str = mgmt_recvmsg()
 		ret_list = string.split(ret_str, "\n")
 		if ret_list[0] != "ok" :
 			debug(str(string.split(command, "\n"))+":"+ str(ret_list))
+			if len(ret_list) > 1 :
+				self.failed_reason = string.join(ret_list[1:],",")
 			return None
 		debug(str(string.split(command, "\n"))+":"+ str(ret_list))
 		return ret_list[1:]
@@ -1478,6 +1484,9 @@ class Manager :
 		for k,v in new_crm_config.iteritems() :
 			if cur_crm_config[k] != v :
 				self.do_cmd("up_crm_config\n"+k+"\n"+v)
+				if self.failed_reason != "" :
+					msgbox(self.failed_reason)
+
 				
 	# node functions
 	def get_all_nodes(self) :
@@ -1511,6 +1520,8 @@ class Manager :
 			msgbox (_("the ID already exists"))
 			return
 		self.do_cmd("add_grp\n"+group["id"])
+		if self.failed_reason != "" :
+			msgbox(self.failed_reason)
 		
 	def add_native(self, rsc) :
 		if self.do_cmd("rsc_attrs\n"+rsc["id"]) != None :
@@ -1534,6 +1545,8 @@ class Manager :
 			cmd += "\n"+param["name"]
 			cmd += "\n"+param["value"]
 		self.do_cmd(cmd)
+		if self.failed_reason != "" :
+			msgbox (self.failed_reason)
 
 	def get_all_rsc_id(self) :
 		if self.cache_lookup("all_rsc") != None:
@@ -1637,12 +1650,17 @@ class Manager :
 		for key in oldkeys :
 			if key not in newkeys :
 				self.do_cmd(del_cmd+"\n"+key)
+				if self.failed_reason != "" :
+					msgbox(self.failed_reason)
+
 		if new_attrs != [] :		
 			for attr in new_attrs:
 				cmd = up_cmd
 				for key in keys :
 					cmd += "\n" + attr[key]
 				self.do_cmd(cmd)
+				if self.failed_reason != "" :
+					msgbox(self.failed_reason)
 				
 	# clone functions
 	def get_clone(self, clone_id) :
@@ -1659,6 +1677,8 @@ class Manager :
 	def update_clone(self, clone) :
 		cmd = "up_clone\n%s\n%s\n%s"%(clone["id"],clone["clone_max"],clone["clone_node_max"])
 		self.do_cmd(cmd)
+		if self.failed_reason != "" :
+			msgbox(self.failed_reason)
 		
 	# master functions
 	def get_master(self, master_id) :
@@ -1677,6 +1697,8 @@ class Manager :
 			master["clone_max"],master["clone_node_max"],
 			master["master_max"],master["master_node_max"])
 		self.do_cmd(cmd)
+		if self.failed_reason != "" :
+			msgbox(self.failed_reason)
 		
 	# constraint functions
 	def get_constraints(self, type) :
@@ -1730,6 +1752,8 @@ class Manager :
 			self.do_cmd("del_co\n"+type+"\n" + constraint["id"])
 		if type == "rsc_location" :
 			manager.do_cmd("del_co\nrsc_location\n"+constraint["id"])
+			if self.failed_reason != "" :
+				msgbox(self.failed_reason)
 			cmd = "up_co\nrsc_location\n%s\n%s\n%s"%(constraint["id"],constraint["rsc"],constraint["score"])
 			for expr in constraint["exprs"] :
 				cmd = cmd + "\n" + expr["id"] + "\n" + expr["attribute"] + \
@@ -1739,6 +1763,8 @@ class Manager :
 		elif type == "rsc_colocation" :
 			cmd = "up_co\nrsc_colocation\n%s\n%s\n%s\n%s"% (constraint["id"],constraint["from"],constraint["to"],constraint["score"])
 		self.do_cmd(cmd)
+		if self.failed_reason != "" :
+			msgbox(self.failed_reason)
 
 if __name__ == '__main__' :
 	if not pygtk_2_4_newer () :
