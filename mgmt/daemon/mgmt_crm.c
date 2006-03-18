@@ -753,7 +753,9 @@ on_get_all_rsc(char* argv[], int argc)
 	cur = data_set->resources;
 	while (cur != NULL) {
 		resource_t* rsc = (resource_t*)cur->data;
-		ret = mgmt_msg_append(ret, rsc->id);
+		if(rsc->orphan == FALSE || rsc->role != RSC_ROLE_STOPPED) {
+			ret = mgmt_msg_append(ret, rsc->id);
+		}
 		cur = g_list_next(cur);
 	}
 	free_data_set(data_set);
