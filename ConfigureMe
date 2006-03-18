@@ -151,7 +151,10 @@ ConfigureDarwin() {
 # For building universal binaries
 #   http://developer.apple.com/technotes/tn2005/tn2137.html
 #
-  export SDK_ROOT=/Developer/SDKs/MacOSX10.4u.sdk
+# latest_SDK should be MacOSX10.4u.sdk or later
+
+ export latest_SDK=`ls -1tr /Developer/SDKs | tail -n 1`
+ export SDK_ROOT=/Developer/SDKs/$latest_SDK
  FLAGS="$FLAGS --disable-dependency-tracking"
  CPPFLAGS="$CPPFLAGS -isysroot $SDK_ROOT" 
 
