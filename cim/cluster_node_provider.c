@@ -37,201 +37,171 @@
 #include "cmpi_utils.h"
 #include "cluster_info.h"
 
-static const char * PROVIDER_ID = "cim-node";
-static CMPIBroker * G_broker    = NULL;
-static char G_classname []      = "HA_ClusterNode";
+static const char * 	PROVIDER_ID  = "cim-node";
+static CMPIBroker * 	Broker       = NULL;
+static char 		ClassName [] = "HA_ClusterNode";
+static const mapping_t	NodeMap   [] = { MAPPING_HA_ClusterNode };
 
-static CMPIInstance *
-make_node_instance(CMPIObjectPath * op, char * uname, CMPIStatus * rc);
-static int
-get_inst_node(CMPIContext * ctx, CMPIResult * rslt, CMPIObjectPath * cop,
-              char ** properties,  CMPIStatus * rc);
-static int
-enum_inst_node(CMPIInstanceMI * mi, CMPIContext * ctx, CMPIResult * rslt,
-               CMPIObjectPath * ref, int enum_inst, CMPIStatus * rc);
-static int cleanup_node(void);
+static CMPIInstance *   make_instance(CMPIObjectPath * op, char * uname, 
+				CMPIStatus * rc);
+static int              get_node(CMPIContext * ctx, CMPIResult * rslt, 
+				CMPIObjectPath * cop, char ** properties,  
+				CMPIStatus * rc);
+static int              enumerate_node(CMPIInstanceMI * mi, CMPIContext * ctx, 
+				CMPIResult * rslt, CMPIObjectPath * ref, 
+				int EnumInst, CMPIStatus * rc);
+static int 		cleanup_node(void);
+
 DeclareInstanceFunctions(ClusterNode);
 
 static CMPIInstance *
-make_node_instance(CMPIObjectPath * op, char * uname, CMPIStatus * rc)
+make_instance(CMPIObjectPath * op, char * uname, CMPIStatus * rc)
 {
-        struct ci_table * nodeinfo = NULL;
+	CIMTable * nodeinfo = NULL;
         CMPIInstance * ci = NULL;
-        char * active_status, * dc = NULL, * uuid = NULL;
-        char caption [256];
+        char caption[MAXLEN];
 
-        ci = CMNewInstance(G_broker, op, rc);
+	DEBUG_ENTER();
+        ci = CMNewInstance(Broker, op, rc);
         if ( CMIsNullObject(ci) ) {
-                CMSetStatusWithChars(G_broker, rc, CMPI_RC_ERR_FAILED, 
+                CMSetStatusWithChars(Broker, rc, CMPI_RC_ERR_FAILED, 
                                      "Create instance failed");
-
                 return NULL;
         }
 
-        if ( ( nodeinfo = ci_get_nodeinfo(uname))== NULL ) {
-                cl_log(LOG_ERR, "%s: could not get node info", __FUNCTION__);
-                CMSetStatusWithChars(G_broker, rc, CMPI_RC_ERR_FAILED, 
-                                     "Could not get node information");
-                return NULL;
-        }       
-
-        active_status = CITableGet(nodeinfo, "active_status").value.string;
-        if(active_status) {
-                CMSetProperty(ci, "ActiveStatus", active_status, CMPI_chars);
-        }
-        if ( active_status && strcmp (active_status, "True") == 0) {
-                char * standby, * unclean, * shutdown, * expected_up, * node_ping;
-                standby = CITableGet(nodeinfo, "standby").value.string;
-                unclean = CITableGet(nodeinfo, "unclean").value.string;
-                shutdown = CITableGet(nodeinfo, "shutdown").value.string;
-                expected_up = CITableGet(nodeinfo, "expected_up").value.string;
-                node_ping = CITableGet(nodeinfo, "node_ping").value.string;
-
-                if (standby) { 
-                        CMSetProperty(ci, "Standby", standby, CMPI_chars);
-                }
-                if (unclean) { 
-                        CMSetProperty(ci, "Unclean", unclean, CMPI_chars);
-                }
-                if (shutdown) { 
-                        CMSetProperty(ci, "Shutdown", shutdown, CMPI_chars);
-                }
-                if (expected_up) { 
-                        CMSetProperty(ci, "ExpectedUp", expected_up, CMPI_chars);
-                }
-                if (node_ping) { 
-                        CMSetProperty(ci, "NodePing", node_ping, CMPI_chars);
-                }       
-        }
-        dc = ci_get_cluster_dc();
-        uuid = CIM_STRDUP("N/A");
-        
-        sprintf(caption, "Node.%s", uname);
-        /* setting properties */
-        CMSetProperty(ci, "CreationClassName", G_classname, CMPI_chars);
+        snprintf(caption, MAXLEN, "Node.%s", uname);
+        CMSetProperty(ci, "CreationClassName", ClassName, CMPI_chars);
         CMSetProperty(ci, "Name", uname, CMPI_chars);
-        CMSetProperty(ci, "UUID", uuid, CMPI_chars);
         CMSetProperty(ci, "Caption", caption, CMPI_chars);
 
-        if ( dc ) {
+	nodeinfo = cim_get_table(GET_NODE_INFO, uname, NULL);
+        if(nodeinfo){	
+		cmpi_set_properties(Broker, ci, nodeinfo, NodeMap, 
+			MAPDIM(NodeMap),rc); 
+	}
+	/*
+        if ( (dc = cim_get_str(GET_DC, NULL, NULL)) ) {
                 if ( strncmp(dc, uname, strlen(uname)) == 0){
-                        char dc_status[] = "True";
+                        char dc_status[] = "true";
                         CMSetProperty(ci, "IsDC", dc_status, CMPI_chars); 
                 } else {
-                        char dc_status[] = "False";
+                        char dc_status[] = "false";
                         CMSetProperty(ci, "IsDC", dc_status, CMPI_chars); 
                 
                 }
-        }
 
-        if ( dc ) {
-                CIM_FREE(dc);
-        }
-        CIM_FREE(uuid);
+        	cim_free(dc);
+	}
+	*/
+	if (nodeinfo) {
+		cim_table_free(nodeinfo);
+	}
+	DEBUG_LEAVE();
         return ci;
-
 }
 
 static int
-get_inst_node(CMPIContext * ctx, CMPIResult * rslt, CMPIObjectPath * cop, 
+get_node(CMPIContext * ctx, CMPIResult * rslt, CMPIObjectPath * cop, 
               char ** properties,  CMPIStatus * rc)
 {
         CMPIObjectPath * op = NULL;
-        CMPIData data_uname;
+        CMPIString * tmp;
         char * uname = NULL;
         CMPIInstance * ci = NULL;
-        int ret = 0;
 
-        data_uname = CMGetKey(cop, "Name", rc);
-        uname = CMGetCharPtr(data_uname.value.string);
-
-        op = CMNewObjectPath(G_broker, 
-                CMGetCharPtr(CMGetNameSpace(cop, rc)), G_classname, rc);
+        tmp = CMGetKey(cop, "Name", rc).value.string;
+	if ( tmp == NULL ) {
+		cl_log(LOG_ERR, "get_node: Failed to get key:Name");
+		return HA_FAIL;
+	}
+        uname = CMGetCharPtr(tmp);
+        op = CMNewObjectPath(Broker, CMGetCharPtr(CMGetNameSpace(cop, rc)), 
+			ClassName, rc);
 
         if ( CMIsNullObject(op) ){
-                ret = HA_FAIL;
-                goto out;
-        }
+		cl_log(LOG_ERR, "get_node: Alloc ObjectPath failed.");
+        	return HA_FAIL;
+	}
         
-        ci = make_node_instance(op, uname, rc);
+        ci = make_instance(op, uname, rc);
         if ( CMIsNullObject(ci) ) {
-                ret = HA_FAIL;
-                goto out;
-        }
+        	return HA_FAIL;
+	}
 
         CMReturnInstance(rslt, ci);
         CMReturnDone(rslt);
-
-        ret = HA_OK;
-        
-out:
-        return ret; 
+       	return HA_OK; 
 }
 
 static int
-enum_inst_node(CMPIInstanceMI * mi, CMPIContext * ctx, CMPIResult * rslt, 
-               CMPIObjectPath * ref, int enum_inst, CMPIStatus * rc)
+enumerate_node(CMPIInstanceMI * mi, CMPIContext * ctx, CMPIResult * rslt, 
+               CMPIObjectPath * ref, int EnumInst, CMPIStatus * rc)
 {
         CMPIObjectPath * op = NULL;
-        GPtrArray * nodeinfo_table = NULL;
-
+	int hbstatus;
         int i = 0;
+	CIMArray* nodes;
 
-        nodeinfo_table = ci_get_node_name_table ();
-        
-        if ( nodeinfo_table == NULL ) {
-                cl_log(LOG_ERR, 
-                       "%s: could not get node information", 
-                       __FUNCTION__);
+	DEBUG_ENTER();
+	if ((hbstatus = cim_get_hb_status()) != HB_RUNNING ) {
+		CMReturnDone(rslt);
+		DEBUG_LEAVE();
+		return HA_OK;
+	}
 
-                CMSetStatusWithChars(G_broker, rc,
+	nodes = cim_get_array(GET_NODE_LIST, NULL, NULL); 
+        if ( nodes == NULL ) {
+                cl_log(LOG_ERR, "Can not get node information"); 
+                CMSetStatusWithChars(Broker, rc,
                        CMPI_RC_ERR_FAILED, "Could not get node information");
-
+		DEBUG_LEAVE();
                 return HA_FAIL;
         }
 
-        for (i = 0; i < nodeinfo_table->len; i++) {
+        for (i = 0; i < cim_array_len(nodes); i++) {
                 char * uname = NULL;
                 char * space = NULL;
-                uname = (char *) g_ptr_array_index(nodeinfo_table, i);
-                
+                if ((uname = cim_array_index_v(nodes,i).v.str)==NULL){
+			continue;
+		}
                 space = CMGetCharPtr(CMGetNameSpace(ref, rc));
                 if ( space == NULL ) {
-                        ci_free_ptr_array(nodeinfo_table, CIM_FREE);
+			cim_array_free(nodes);
                         return HA_FAIL;
                 }
 
                 /* create an object */
-                op = CMNewObjectPath(G_broker, space, G_classname, rc);
-                if ( enum_inst ) {
+                op = CMNewObjectPath(Broker, space, ClassName, rc);
+		if (op == NULL ){
+			cim_array_free(nodes);
+			return HA_FAIL;
+		}
+                if ( EnumInst ) {
                         /* enumerate instances */
                         CMPIInstance * ci = NULL;
-                        ci = make_node_instance(op, uname, rc);
-                        if ( CMIsNullObject(ci) ) {
-                                ci_free_ptr_array(nodeinfo_table, CIM_FREE);
+                        if ((ci = make_instance(op, uname, rc))==NULL) {
+				cim_array_free(nodes);
+				rc->rc = CMPI_RC_ERR_FAILED;
+				DEBUG_LEAVE();
                                 return HA_FAIL;
                         }
-
                         CMReturnInstance(rslt, ci);
-
                 } else { /* enumerate instance names */
-                        CMAddKey(op, "CreationClassName", G_classname, CMPI_chars);
+                        CMAddKey(op, "CreationClassName", ClassName, CMPI_chars);
                         CMAddKey(op, "Name", uname, CMPI_chars);
-                        /* add object path to rslt */
                         CMReturnObjectPath(rslt, op);
                 }
-
         }
 
         CMReturnDone(rslt);
-        ci_free_ptr_array(nodeinfo_table, CIM_FREE);
-
+	cim_array_free(nodes);
+	DEBUG_LEAVE();
         return HA_OK;
 }
 
 static int
-cleanup_node () {
-
+cleanup_node () 
+{
         cl_log(LOG_INFO, "%s: clean up", __FUNCTION__);
         return HA_OK;
 }
@@ -243,7 +213,6 @@ cleanup_node () {
 static CMPIStatus 
 ClusterNodeCleanup(CMPIInstanceMI * mi, CMPIContext * ctx)
 {
-
         cleanup_node();
 	CMReturn(CMPI_RC_OK);
 }
@@ -253,13 +222,9 @@ ClusterNodeEnumInstanceNames(CMPIInstanceMI * mi, CMPIContext * ctx,
                               CMPIResult * rslt, CMPIObjectPath * ref)
 {
 	CMPIStatus rc = {CMPI_RC_OK, NULL};
-	
-        init_logger( PROVIDER_ID );
-	if ( enum_inst_node(mi, ctx, rslt, ref, 0, &rc) == HA_OK ) {
-	        CMReturn(CMPI_RC_OK);	
-        } else {
-                return rc;
-        }
+        PROVIDER_INIT_LOGGER();
+        enumerate_node(mi, ctx, rslt, ref, FALSE, &rc);
+	return rc;
 }
 
 
@@ -269,13 +234,9 @@ ClusterNodeEnumInstances(CMPIInstanceMI * mi, CMPIContext * ctx,
                           char ** properties)
 {
 	CMPIStatus rc = {CMPI_RC_OK, NULL};
-	
-        init_logger( PROVIDER_ID );
-        if ( enum_inst_node(mi, ctx, rslt, ref, 1, &rc) == HA_OK ) {
-                CMReturn(CMPI_RC_OK);	
-        } else {
-                return rc;
-        }
+        PROVIDER_INIT_LOGGER();
+        enumerate_node(mi, ctx, rslt, ref, TRUE, &rc);
+	return rc;
 }
 
 static CMPIStatus 
@@ -284,13 +245,9 @@ ClusterNodeGetInstance(CMPIInstanceMI * mi, CMPIContext * ctx,
                         char ** properties)
 {
         CMPIStatus rc = {CMPI_RC_OK, NULL};
-        init_logger( PROVIDER_ID );
-
-	if ( get_inst_node(ctx, rslt, cop, properties, &rc) != HA_OK ) {
-                cl_log(LOG_WARNING, "%s: NULL instance", __FUNCTION__);
-                return rc;
-        }
-        CMReturn(CMPI_RC_OK);
+        PROVIDER_INIT_LOGGER();
+	get_node(ctx, rslt, cop, properties, &rc);
+	return rc;
 }
 
 static CMPIStatus 
@@ -299,7 +256,7 @@ ClusterNodeCreateInstance(CMPIInstanceMI * mi, CMPIContext * ctx,
                            CMPIInstance * ci)
 {
 	CMPIStatus rc = {CMPI_RC_OK, NULL};
-	CMSetStatusWithChars(G_broker, &rc, CMPI_RC_ERR_NOT_SUPPORTED, 
+	CMSetStatusWithChars(Broker, &rc, CMPI_RC_ERR_NOT_SUPPORTED, 
                              "CIM_ERR_NOT_SUPPORTED");
 	return rc;
 }
@@ -311,7 +268,7 @@ ClusterNodeSetInstance(CMPIInstanceMI * mi, CMPIContext * ctx,
                         CMPIInstance * ci, char ** properties)
 {
         CMPIStatus rc = {CMPI_RC_OK, NULL};
-        CMSetStatusWithChars(G_broker, &rc, CMPI_RC_ERR_NOT_SUPPORTED, 
+        CMSetStatusWithChars(Broker, &rc, CMPI_RC_ERR_NOT_SUPPORTED, 
                              "CIM_ERR_NOT_SUPPORTED");
         return rc;
 }
@@ -322,7 +279,7 @@ ClusterNodeDeleteInstance(CMPIInstanceMI * mi, CMPIContext * ctx,
                            CMPIResult * rslt, CMPIObjectPath * cop)
 {
         CMPIStatus rc = {CMPI_RC_OK, NULL};
-        CMSetStatusWithChars(G_broker, &rc, CMPI_RC_ERR_NOT_SUPPORTED, 
+        CMSetStatusWithChars(Broker, &rc, CMPI_RC_ERR_NOT_SUPPORTED, 
                              "CIM_ERR_NOT_SUPPORTED");
 	return rc;
 }
@@ -333,38 +290,13 @@ ClusterNodeExecQuery(CMPIInstanceMI * mi, CMPIContext * ctx,
                       char * lang, char * query)
 {
         CMPIStatus rc = {CMPI_RC_OK, NULL};
-        CMSetStatusWithChars(G_broker, &rc, CMPI_RC_ERR_NOT_SUPPORTED, 
+        CMSetStatusWithChars(Broker, &rc, CMPI_RC_ERR_NOT_SUPPORTED, 
                              "CIM_ERR_NOT_SUPPORTED");
 	return rc;
 }
-
-
-/**************************************************
- * Method Provider 
- *************************************************/
-static CMPIStatus 
-ClusterNodeInvokeMethod(CMPIMethodMI * mi, CMPIContext * ctx,
-                         CMPIResult * rslt, CMPIObjectPath * ref,
-                         const char * method, CMPIArgs * in, CMPIArgs * out)
-{
-        CMPIStatus rc = {CMPI_RC_OK, NULL};
-        CMSetStatusWithChars(G_broker, &rc, CMPI_RC_ERR_NOT_SUPPORTED, 
-                             "CIM_ERR_NOT_SUPPORTED");
-	return rc;    
-}
-
-
-static CMPIStatus 
-ClusterNodeMethodCleanup(CMPIMethodMI * mi, CMPIContext * ctx)
-{
-        CMReturn(CMPI_RC_OK);
-}
-
 
 /*****************************************************
  * install provider
  ****************************************************/
 
-DeclareInstanceMI(ClusterNode, HA_ClusterNodeProvider, G_broker);
-DeclareMethodMI(ClusterNode, HA_ClusterNodeProvider, G_broker);
-
+DeclareInstanceMI(ClusterNode, HA_ClusterNodeProvider, Broker);
