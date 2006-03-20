@@ -38,12 +38,9 @@
 #include "cluster_info.h"
 #include "constraint_common.h"
 
-#define PROVIDER_ID            "cim-cons-lo"
-#define HB_CLIENT_ID           NULL
-
-static CMPIBroker * G_broker = NULL;
-static char G_classname []   = "HA_LocationConstraint";
-
+static const char * PROVIDER_ID	= "constraint";
+static CMPIBroker * Broker	= NULL;
+static char ClassName []	= "HA_LocationConstraint";
 DeclareInstanceFunctions(LocationConstraint);
 
 /**********************************************
@@ -53,7 +50,6 @@ DeclareInstanceFunctions(LocationConstraint);
 static CMPIStatus 
 LocationConstraintCleanup(CMPIInstanceMI * mi, CMPIContext * ctx)
 {
-
 	CMReturn(CMPI_RC_OK);
 }
 
@@ -62,14 +58,10 @@ LocationConstraintEnumInstanceNames(CMPIInstanceMI * mi, CMPIContext * ctx,
                               CMPIResult * rslt, CMPIObjectPath * ref)
 {
         CMPIStatus rc;
-
-        init_logger( PROVIDER_ID );
-        if ( enum_inst_cons(G_broker, G_classname, ctx, rslt, 
-                            ref, 0, TID_CONS_LOCATION, &rc) == HA_OK ) {
-                CMReturn(CMPI_RC_OK);        
-        } else {
-                return rc;
-        }
+        PROVIDER_INIT_LOGGER();
+	enumerate_constraint(Broker, ClassName, ctx, rslt, 
+                            ref, FALSE, TID_CONS_LOCATION, &rc);
+	return rc;
 }
 
 
@@ -79,14 +71,10 @@ LocationConstraintEnumInstances(CMPIInstanceMI * mi, CMPIContext * ctx,
                           char ** properties)
 {
         CMPIStatus rc;
-        init_logger( PROVIDER_ID );
-
-        if ( enum_inst_cons(G_broker, G_classname, ctx, rslt, 
-                            ref, 1, TID_CONS_LOCATION, &rc) == HA_OK ) {
-                CMReturn(CMPI_RC_OK);        
-        } else {
-                return rc;
-        }
+        PROVIDER_INIT_LOGGER();
+	enumerate_constraint(Broker, ClassName, ctx, rslt, 
+                            ref, TRUE, TID_CONS_LOCATION, &rc);
+	return rc;
 }
 
 static CMPIStatus 
@@ -95,9 +83,8 @@ LocationConstraintGetInstance(CMPIInstanceMI * mi, CMPIContext * ctx,
                         char ** properties)
 {
         CMPIStatus rc = {CMPI_RC_OK, NULL};
-
-        init_logger( PROVIDER_ID );
-        get_inst_cons(G_broker, G_classname, ctx, rslt, cop, 
+	PROVIDER_INIT_LOGGER();
+        get_constraint(Broker, ClassName, ctx, rslt, cop, 
                       properties, TID_CONS_LOCATION, &rc);
         
         return rc; 
@@ -109,8 +96,11 @@ LocationConstraintCreateInstance(CMPIInstanceMI * mi, CMPIContext * ctx,
                            CMPIInstance * ci)
 {
 	CMPIStatus rc = {CMPI_RC_OK, NULL};
-	CMSetStatusWithChars(G_broker, &rc, CMPI_RC_ERR_NOT_SUPPORTED, 
-                             "CIM_ERR_NOT_SUPPORTED");
+	int	ret;
+
+	PROVIDER_INIT_LOGGER();
+	ret = create_constraint(Broker, ClassName, mi, ctx, rslt, 
+			cop, ci, TID_CONS_LOCATION, &rc);
 	return rc;
 }
 
@@ -121,8 +111,11 @@ LocationConstraintSetInstance(CMPIInstanceMI * mi, CMPIContext * ctx,
                         CMPIInstance * ci, char ** properties)
 {
         CMPIStatus rc = {CMPI_RC_OK, NULL};
-        CMSetStatusWithChars(G_broker, &rc, CMPI_RC_ERR_NOT_SUPPORTED, 
-                             "CIM_ERR_NOT_SUPPORTED");
+	int ret;
+
+	PROVIDER_INIT_LOGGER();
+	ret = update_constraint(Broker, ClassName, mi, ctx, rslt, 
+			cop, ci, properties, TID_CONS_LOCATION, &rc);
         return rc;
 }
 
@@ -132,8 +125,9 @@ LocationConstraintDeleteInstance(CMPIInstanceMI * mi, CMPIContext * ctx,
                            CMPIResult * rslt, CMPIObjectPath * cop)
 {
         CMPIStatus rc = {CMPI_RC_OK, NULL};
-        CMSetStatusWithChars(G_broker, &rc, CMPI_RC_ERR_NOT_SUPPORTED, 
-                             "CIM_ERR_NOT_SUPPORTED");
+	int ret;
+	ret = delete_constraint(Broker, ClassName, mi, ctx, 
+			rslt, cop, TID_CONS_LOCATION, &rc);
 	return rc;
 }
 
@@ -143,38 +137,13 @@ LocationConstraintExecQuery(CMPIInstanceMI * mi, CMPIContext * ctx,
                       char * lang, char * query)
 {
         CMPIStatus rc = {CMPI_RC_OK, NULL};
-        CMSetStatusWithChars(G_broker, &rc, CMPI_RC_ERR_NOT_SUPPORTED, 
+        CMSetStatusWithChars(Broker, &rc, CMPI_RC_ERR_NOT_SUPPORTED, 
                              "CIM_ERR_NOT_SUPPORTED");
 	return rc;
-}
-
-
-/**************************************************
- * Method Provider 
- *************************************************/
-static CMPIStatus 
-LocationConstraintInvokeMethod(CMPIMethodMI * mi, CMPIContext * ctx,
-                         CMPIResult * rslt, CMPIObjectPath * ref,
-                         const char * method, CMPIArgs * in, CMPIArgs * out)
-{
-        CMPIStatus rc = {CMPI_RC_OK, NULL};
-        CMSetStatusWithChars(G_broker, &rc, CMPI_RC_ERR_NOT_SUPPORTED, 
-                             "CIM_ERR_NOT_SUPPORTED");
-	return rc;    
-}
-
-
-static CMPIStatus 
-LocationConstraintMethodCleanup(CMPIMethodMI * mi, CMPIContext * ctx)
-{
-        CMReturn(CMPI_RC_OK);
 }
 
 
 /*****************************************************
  * install provider
  ****************************************************/
-
-DeclareInstanceMI(LocationConstraint, HA_LocationConstraintProvider, G_broker);
-DeclareMethodMI(LocationConstraint, HA_LocationConstraintProvider, G_broker);
-
+DeclareInstanceMI(LocationConstraint, HA_LocationConstraintProvider, Broker);

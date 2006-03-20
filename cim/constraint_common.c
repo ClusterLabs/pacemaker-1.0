@@ -13,22 +13,41 @@
 #include <cmpimacs.h>
 #include "cluster_info.h"
 #include "constraint_common.h"
+#include "cmpi_utils.h"
 
-static char sys_name         [] = "LinuxHACluster";
-static char sys_cr_classname [] = "HA_Cluster";
+static char SystemName		[] = "LinuxHACluster";
+static char SystemCrName	[] = "HA_Cluster";
 
+static const mapping_t	OrderMap	[] = {MAPPING_HA_OrderConstraint};
+static const mapping_t	LocationMap	[] = {MAPPING_HA_LocationConstraint};
+static const mapping_t	ColocationMap	[] = {MAPPING_HA_ColocationConstraint};
 
+static CMPIInstance *	make_instance_byid(CMPIBroker * broker, char * classname,
+				CMPIObjectPath * op, char * id, uint32_t type, 
+				CMPIStatus * rc);
+
+static CMPIInstance *	make_instance(CMPIBroker * broker, char * classname, 
+				CMPIObjectPath * op, CIMTable * cons, int type, 
+				CMPIStatus * rc);
+static void 		location_set_rules(CMPIBroker * broker, 
+				CMPIInstance * ci, CIMTable * constraint, 
+				CMPIStatus * rc);
+static void		location_get_rules(CMPIBroker * broker, 
+				CMPIInstance * ci, CIMTable * constraint,
+				CMPIStatus * rc);
 static void 
-set_location_rules(CMPIBroker * broker, CMPIInstance * ci, 
-                   struct ci_table * constraint, CMPIStatus * rc)
+location_set_rules(CMPIBroker * broker, CMPIInstance * ci, 
+                   CIMTable * constraint, CMPIStatus * rc)
 {
         CMPIArray * array = NULL;
-        struct ci_table * rule, * exp;
-        int i, size;
+        CIMArray * rule;
+	int i, size;
 
-        rule = CITableGet(constraint, "rule").value.table;
-        if ( rule == NULL ) { return; }
-        size = CITableSize(rule);
+	DEBUG_ENTER();	
+        if((rule = cim_table_lookup_v(constraint, "array").v.array) == NULL ) {
+		return ;
+	}
+        size = cim_array_len(rule);
 
         if (( array = CMNewArray(broker, size, CMPI_chars, rc)) == NULL ){
                 return;
@@ -36,43 +55,45 @@ set_location_rules(CMPIBroker * broker, CMPIInstance * ci,
 
         for ( i = 0; i < size; i++ ) {
                 char * id, * attribute, * operation, * value;
-                int str_len;
+                int stringlen;
                 char * tmp;
-                exp = CITableGetAt(rule, i).value.table;
-                if ( exp == NULL ) { continue; }
+		CIMTable * exp = NULL;
 
-                id = CITableGet(exp, "id").value.string;
-                attribute = CITableGet(exp, "attribute").value.string;
-                operation = CITableGet(exp, "operation").value.string;
-                value = CITableGet(exp, "value").value.string;
-                
-                str_len = strlen(id) + strlen(attribute) + 
+                if ( (exp = cim_array_index_v(rule, i).v.table) == NULL ) {
+			continue; 
+		}
+                id = cim_table_lookup_v(exp, "id").v.str;
+                attribute = cim_table_lookup_v(exp, "attribute").v.str;
+                operation = cim_table_lookup_v(exp, "operation").v.str;
+                value = cim_table_lookup_v(exp, "value").v.str;
+               	cl_log(LOG_INFO, "REMOVEME: id: %s, attr: %s, op: %s, v: %s",
+				 id, attribute, operation, value);
+
+                stringlen = strlen(id) + strlen(attribute) + 
                         strlen(operation) + strlen(value) +
                         strlen("id") + strlen("attribute") +
                         strlen("operation") + strlen("value") + 8;
-                if ( (tmp = (char *)CIM_MALLOC(str_len)) == NULL ) { return; }
+                if ( (tmp = (char *)cim_malloc(stringlen)) == NULL ) { 
+			return; 
+		}
 
-                sprintf(tmp, "id=%s,attribute=%s,operation=%s,value=%s",
-                        id, attribute, operation, value);
-
+                snprintf(tmp,stringlen, "%s<%s>%s", attribute,operation,value);
                 CMSetArrayElementAt(array, i, &tmp, CMPI_chars);
         }
 
         CMSetProperty(ci, "Rule", &array, CMPI_charsA);
+	DEBUG_LEAVE();
 }
 
-CMPIInstance *
-make_cons_inst(CMPIBroker * broker, char * classname, CMPIObjectPath * op, 
-               struct ci_table * constraint, int type, CMPIStatus * rc)
+static CMPIInstance *
+make_instance(CMPIBroker * broker, char * classname, CMPIObjectPath * op, 
+               CIMTable * constraint, int type, CMPIStatus * rc)
 {
         CMPIInstance * ci = NULL;
         char * id;
-        char type_location [] = "Location";
-        char type_colocation [] = "Colocation";
-        char type_order [] = "Order";
-        char caption[256];
-        if ( constraint == NULL ) { return NULL; }
+        char caption[MAXLEN];
 
+	DEBUG_ENTER();
         ci = CMNewInstance(broker, op, rc);
         if ( CMIsNullObject(ci) ) {
                 cl_log(LOG_ERR, "%s: can't create instance", __FUNCTION__);
@@ -81,123 +102,81 @@ make_cons_inst(CMPIBroker * broker, char * classname, CMPIObjectPath * op,
                 goto out;
         }
         
-        id = constraint->get_data(constraint, "id").value.string;
+        id = cim_table_lookup_v(constraint, "id").v.str;
         if ( id == NULL ) { return NULL; }
 
+	dump_cim_table(constraint, "constraint");
         /* setting properties */
         CMSetProperty(ci, "Id", id, CMPI_chars);
 
-        CMSetProperty(ci, "SystemCreationClassName", sys_cr_classname, CMPI_chars);
-        CMSetProperty(ci, "SystemName", sys_name, CMPI_chars);
+        CMSetProperty(ci, "SystemCreationClassName", SystemCrName, CMPI_chars);
+        CMSetProperty(ci, "SystemName", SystemName, CMPI_chars);
         CMSetProperty(ci, "CreationClassName", classname, CMPI_chars);
 
         if ( type == TID_CONS_ORDER ) {
-                 struct ci_table * order = constraint;
-                 char * to, * from , * action, * order_type;
-
-                 to = order->get_data(order, "to").value.string;
-                 from = order->get_data(order, "from").value.string;
-                 action = order->get_data(order, "action").value.string;
-                 order_type = order->get_data(order, "type").value.string;
-
-                 if(to) { CMSetProperty(ci, "To", to, CMPI_chars);            }
-                 if(from) { CMSetProperty(ci, "From", from, CMPI_chars);      }
-                 if(action) { CMSetProperty(ci, "Action", action, CMPI_chars);}
-                 if(order_type) { 
-                        CMSetProperty(ci, "OrderType", order_type, CMPI_chars);
-                 }
-                 CMSetProperty(ci, "Type", type_order, CMPI_chars);
+		cmpi_set_properties(broker, ci, constraint, OrderMap, 
+				MAPDIM(OrderMap), rc); 
         } else if ( type == TID_CONS_LOCATION ) {
-                 struct ci_table * location = constraint;
-                 char * resource, * score;
-
-                 resource = CITableGet(location, "resource").value.string;
-                 score = CITableGet(location, "score").value.string;
-
-                 if(resource) { 
-                        CMSetProperty(ci, "Resource", resource, CMPI_chars); 
-                 }
-                 if(score) { CMSetProperty(ci, "Score", score, CMPI_chars); }
-                 CMSetProperty(ci, "Type", type_location, CMPI_chars);
-
-                 /* currently Rules is an array, which should be modeled as a class */
-                 set_location_rules(broker, ci, constraint, rc);
+		cmpi_set_properties(broker, ci, constraint, LocationMap,
+				MAPDIM(LocationMap), rc); 
+                location_set_rules(broker, ci, constraint, rc);
         } else if ( type == TID_CONS_COLOCATION ) {
-                 struct ci_table * colocation = constraint;
-                 char * to, * from , * score;
-
-                 to = colocation->get_data(colocation, "to").value.string;
-                 from = colocation->get_data(colocation, "from").value.string;
-                 score = colocation->get_data(colocation, "score").value.string;
-
-                 if(to) { CMSetProperty(ci, "To", to, CMPI_chars); }
-                 if(from) { CMSetProperty(ci, "From", from, CMPI_chars); }
-                 if(score) { CMSetProperty(ci, "Score", score, CMPI_chars); }
-
-                 CMSetProperty(ci, "Type", type_colocation, CMPI_chars);
+		cmpi_set_properties(broker, ci, constraint, ColocationMap, 
+				MAPDIM(ColocationMap), rc); 
         }
 
-        sprintf(caption, "Constraint.%s", id);
-        /* set Caption */
+        snprintf(caption, MAXLEN, "Constraint.%s", id);
         CMSetProperty(ci, "Caption", caption, CMPI_chars);
-        
 out:
-        constraint->free(constraint);
+	DEBUG_LEAVE();
         return ci; 
 }
 
-CMPIInstance *
-make_cons_inst_by_id(CMPIBroker * broker, char * classname, CMPIObjectPath * op, 
+static CMPIInstance *
+make_instance_byid(CMPIBroker * broker, char * classname, CMPIObjectPath * op, 
                      char * id, uint32_t type, CMPIStatus * rc) 
 {
-        struct ci_table * constraint;
-        if ( id == NULL ) { return NULL; }
+	CMPIInstance * ci;
+	CIMTable * constraint;
+	int funcid = 0;
 
+	DEBUG_ENTER();
         switch(type) {
-        case TID_CONS_LOCATION:
-             constraint = ci_get_location_constraint(id);
-             break;
-        case TID_CONS_COLOCATION:
-             constraint = ci_get_colocation_constraint(id);
-             break;
-        case TID_CONS_ORDER:
-             constraint = ci_get_order_constraint(id);
-             break;
-        default:
-             return NULL;
+        case TID_CONS_LOCATION: funcid=GET_LOCATION_CONSTRAINT; break;
+        case TID_CONS_COLOCATION: funcid=GET_COLOCATION_CONSTRAINT; break;
+        case TID_CONS_ORDER: funcid=GET_ORDER_CONSTRAINT; break;
+        default:break;
         }
 
-        if ( constraint == NULL ) { return NULL; }
-        return make_cons_inst(broker, classname, op, constraint, type, rc);
+        if ( (constraint= cim_get(funcid, id, NULL)) == NULL ) { 
+		return NULL; 
+	}
+	ci = make_instance(broker, classname, op, constraint, type, rc);
+	cim_table_free(constraint);
+	DEBUG_LEAVE();
+	return ci;
 }
 
 int
-get_inst_cons(CMPIBroker * broker, char * classname, CMPIContext * ctx, 
+get_constraint(CMPIBroker * broker, char * classname, CMPIContext * ctx, 
               CMPIResult * rslt, CMPIObjectPath * cop,
               char ** properties, uint32_t type, CMPIStatus * rc)
 {
         CMPIInstance* ci = NULL;
-        CMPIObjectPath* op = NULL;
-        CMPIString * key_id;
-        char * cons_id = NULL;
+        CMPIObjectPath * op = NULL;
+        char * consid = NULL;
         int ret = 0;
                 
+	DEBUG_ENTER();
         /* get the key from the object path */
-        if ( (key_id = CMGetKey(cop, "Id", rc).value.string) == NULL ) {
-                cl_log(LOG_WARNING, "key Id is NULL.");
-                ret = HA_FAIL;
-                goto out;
-        }
-
-        if ( ( cons_id = CMGetCharPtr(key_id)) == NULL ) {
-                ret = HA_FAIL;
-                goto out;
-        }
+	if (( consid = CMGetKeyString(cop, "Id", rc)) == NULL ) {
+		ret = HA_FAIL;
+		goto out;
+	}
 
         /* create a object path */
         op = CMNewObjectPath(broker, CMGetCharPtr(CMGetNameSpace(cop, rc)), 
                              classname, rc);
-
         if ( CMIsNullObject(op) ){
                 ret = HA_FAIL;
                 cl_log(LOG_WARNING, "Could not create object path.");
@@ -205,7 +184,7 @@ get_inst_cons(CMPIBroker * broker, char * classname, CMPIContext * ctx,
         }
 
         /* make an instance */
-        ci = make_cons_inst_by_id(broker, classname, op, cons_id, type, rc);
+        ci = make_instance_byid(broker, classname, op, consid, type, rc);
         if ( CMIsNullObject(ci) ) {
                 ret = HA_FAIL;
                 cl_log(LOG_WARNING, "Could not create instance.");
@@ -215,22 +194,22 @@ get_inst_cons(CMPIBroker * broker, char * classname, CMPIContext * ctx,
         /* add the instance to result */
         CMReturnInstance(rslt, ci);
         CMReturnDone(rslt);
-
         ret = HA_OK;
 out:
+	DEBUG_LEAVE();
         return ret;
 }
 
 int 
-enum_inst_cons(CMPIBroker * broker, char * classname, CMPIContext * ctx, 
+enumerate_constraint(CMPIBroker * broker, char * classname, CMPIContext * ctx, 
                CMPIResult * rslt, CMPIObjectPath * ref, 
                int need_inst, uint32_t type, CMPIStatus * rc)
 {
-
         char * namespace = NULL;
         CMPIObjectPath * op = NULL;
-        GPtrArray * table;
         int i;
+	CIMArray * consarray;
+	int	funcid = 0;
 
         /* create object path */
         namespace = CMGetCharPtr(CMGetNameSpace(ref, rc));
@@ -238,27 +217,32 @@ enum_inst_cons(CMPIBroker * broker, char * classname, CMPIContext * ctx,
         if ( CMIsNullObject(op) ){
                 return HA_FAIL;
         }
-        
-        /* get constraint name table */
-        if ( ( table = ci_get_constraint_name_table (type) ) == NULL ) {
+       
+	switch(type){
+		case TID_CONS_ORDER: 
+			funcid = GET_ORDER_CONS_LIST;break;
+		case TID_CONS_LOCATION: 
+			funcid = GET_LOCATION_CONS_LIST; break;
+		case TID_CONS_COLOCATION: 
+			funcid = GET_COLOCATION_CONS_LIST; break;
+		default: break;
+	} 
+
+        if ( ( consarray = cim_get_array(funcid, NULL, NULL) ) == NULL ) {
                 return HA_FAIL;
         }
-        /* for each constraint */
-        for ( i = 0; i < table->len; i++) {
-                char * consid;
-                if ( ( consid = (char *)g_ptr_array_index(table, i)) == NULL ) {
-                        continue;
-                }
 
+        /* for each constraint */
+        for ( i = 0; i < cim_array_len(consarray); i++) {
+                char * consid = cim_array_index_v(consarray,i).v.str;
                 if ( need_inst ) {
                         /* if need instance, make instance an return it */
                         CMPIInstance * ci = NULL;
-                        ci = make_cons_inst_by_id(broker, classname, op, 
-                                                  consid, type, rc); 
+                        ci = make_instance_byid(broker, classname, op, 
+                        		consid, type, rc); 
                         if ( CMIsNullObject(ci) ){
                                 cl_log(LOG_WARNING, 
                                    "%s: can not make instance", __FUNCTION__);
-                                ci_free_ptr_array(table, ci_safe_free);
                                 return HA_FAIL;
                         }
                         
@@ -267,17 +251,200 @@ enum_inst_cons(CMPIBroker * broker, char * classname, CMPIContext * ctx,
                 } else {
                         /* otherwise, just add keys to objectpath and return it */
                         CMAddKey(op, "Id", consid, CMPI_chars);      
-                        CMAddKey(op, "SystemName", sys_name, CMPI_chars);
-                        CMAddKey(op, "SystemCreationClassName", sys_cr_classname, CMPI_chars);
+                        CMAddKey(op, "SystemName", SystemName, CMPI_chars);
+                        CMAddKey(op, "SystemCreationClassName", SystemCrName, CMPI_chars);
                         CMAddKey(op, "CreationClassName", classname, CMPI_chars);
 
                         /* add object to rslt */
                         CMReturnObjectPath(rslt, op);
                 }
-
         }
-
-        ci_free_ptr_array(table, ci_safe_free);
         CMReturnDone(rslt);
+	rc->rc = CMPI_RC_OK;
+	cim_array_free(consarray);
         return HA_OK;
 }
+
+int	
+delete_constraint(CMPIBroker * broker, char * classname, 
+		CMPIInstanceMI * mi, CMPIContext * ctx, CMPIResult * rslt, 
+		CMPIObjectPath * cop, uint32_t type, CMPIStatus * rc)
+{
+	const char * key [] = {"Id", "CreationClassName", "SystemName",
+			"SystemCreationClassName"};
+	int funcid = 0;
+	char * id;
+
+	DEBUG_ENTER();
+	if ((id = CMGetKeyString(cop, key[0], rc)) == NULL ) {
+		rc->rc = CMPI_RC_ERR_FAILED;
+		cl_log(LOG_ERR, "del_cons: can't get constraint id.");
+		return HA_FAIL;
+	}
+	
+	switch(type){
+		case TID_CONS_ORDER: 
+			funcid = DEL_ORDER_CONSTRAINT;
+			break;
+		case TID_CONS_LOCATION: 
+			funcid = DEL_LOCATION_CONSTRAINT; 
+			break;
+		case TID_CONS_COLOCATION: 
+			funcid = DEL_COLOCATION_CONSTRAINT; 
+			break;
+		default: 
+			cl_log(LOG_WARNING, "del_cons: Unknown type");
+			break;
+	} 
+	if ( cim_update(funcid, id, NULL, NULL) == HA_OK ) {
+		rc->rc = CMPI_RC_OK;
+	} else {
+		rc->rc = CMPI_RC_ERR_FAILED;
+		cl_log(LOG_ERR, "del_cons: cim_update return error.");
+	}
+	DEBUG_LEAVE();
+
+	return HA_OK;
+}
+
+static void
+location_get_rules(CMPIBroker * broker, CMPIInstance * ci, 
+		CIMTable * constraint, CMPIStatus * rc)
+{
+	CMPIArray * array;
+	int len, i;
+	CIMArray * rules;
+
+	DEBUG_ENTER();
+	if ( ( rules = cim_array_new()) == NULL ) {
+		cl_log(LOG_ERR, "%s: crate array failed.", __FUNCTION__);
+		return;
+	}
+
+	array = CMGetProperty(ci, "Rule", rc).value.array;
+	if(array == NULL || rc->rc != CMPI_RC_OK ) {
+		cl_log(LOG_ERR, "%s: get array failed.", __FUNCTION__);
+		return ;
+	}
+	len = CMGetArrayCount(array, rc);
+
+	for(i=0; i<len; i++) {
+		CMPIString * s = NULL;
+		char * rule = NULL, tmp[MAXLEN]="exp_id_";
+		char ** v = NULL;
+		int vlen = 0;
+		CIMTable * t;
+
+		if( ( t = cim_table_new()) == NULL ) {
+			return;
+		}
+
+		s = CMGetArrayElementAt(array, i, rc).value.string;
+		if ( s == NULL ) {
+			continue;
+		}
+		rule = CMGetCharPtr(s);		
+		cl_log(LOG_INFO, "%s: rule = %s", __FUNCTION__, rule);
+
+		/* parse v*/
+		v = split_string(rule, &vlen, "<>");
+		cim_table_strdup_replace(t, "attribute", v[0]);
+		cim_table_strdup_replace(t, "operation", v[1]);
+		cim_table_strdup_replace(t, "value", v[2]);
+
+		strncat(tmp, v[0], MAXLEN);
+		cim_table_strdup_replace(t, "id", tmp);
+
+		cim_array_append(rules, makeTableData(t)); 
+	}
+
+	cim_table_replace(constraint,
+			cim_strdup("array"), makeArrayData(rules));
+	DEBUG_LEAVE();
+}
+
+int	
+update_constraint(CMPIBroker * broker, char * classname,
+		CMPIInstanceMI * mi, CMPIContext * ctx, CMPIResult * rslt, 
+		CMPIObjectPath * cop, CMPIInstance * ci, char ** properties,
+		uint32_t type, CMPIStatus * rc)
+{
+	CIMTable * t = NULL;
+	const char * key [] = {"Id", "CreationClassName", "SystemName",
+				"SystemCreationClassName"};
+	char * id, *crname, *sysname, *syscrname;
+	int ret = HA_FAIL;
+
+	DEBUG_ENTER();
+
+	id = CMGetKeyString(cop, key[0], rc);
+	crname = CMGetKeyString(cop, key[1], rc);
+	sysname = CMGetKeyString(cop, key[2], rc);
+	syscrname = CMGetKeyString(cop, key[3], rc);
+	
+	switch(type){
+	case TID_CONS_ORDER:
+		t = cim_get(GET_ORDER_CONSTRAINT, id, NULL); 
+		cmpi_get_properties(ci, t, OrderMap, MAPDIM(OrderMap), rc);
+		ret = cim_update(UPDATE_ORDER_CONSTRAINT, NULL, t, NULL); 
+		break;
+	case TID_CONS_LOCATION:
+		t = cim_get(GET_LOCATION_CONSTRAINT, id, NULL); 
+		cmpi_get_properties(ci,t,LocationMap,MAPDIM(LocationMap),rc);
+		location_get_rules(broker, ci, t, rc);
+		ret = cim_update(UPDATE_LOCATION_CONSTRAINT, NULL, t, NULL); 
+		break;
+	case TID_CONS_COLOCATION:
+		t = cim_get(GET_COLOCATION_CONSTRAINT, id, NULL); 
+		cmpi_get_properties(ci,t,ColocationMap,
+					MAPDIM(ColocationMap),rc);
+		ret = cim_update(UPDATE_COLOCATION_CONSTRAINT, NULL, t, NULL); 
+		break;
+	default: break;
+	}
+
+	cim_table_free(t);
+
+	/* if update OK, return CMPI_RC_OK */
+	rc->rc = (ret == HA_OK)? CMPI_RC_OK : CMPI_RC_ERR_FAILED;
+
+	DEBUG_ENTER();
+	return HA_OK;
+}
+
+int
+create_constraint(CMPIBroker * broker, char * classname,
+		CMPIInstanceMI * mi, CMPIContext * ctx, CMPIResult * rslt, 
+		CMPIObjectPath * cop, CMPIInstance * ci, uint32_t type, 
+		CMPIStatus * rc)
+{
+	CIMTable * t = NULL;
+	int ret = HA_FAIL;
+	DEBUG_ENTER();
+	if (( t = cim_table_new()) == NULL ) {
+		rc->rc = CMPI_RC_ERR_FAILED;
+		DEBUG_LEAVE();
+		return HA_FAIL;
+	}
+	switch(type){
+	case TID_CONS_ORDER:
+		cmpi_get_properties(ci, t, OrderMap, MAPDIM(OrderMap), rc);
+		ret = cim_update(UPDATE_ORDER_CONSTRAINT, NULL, t, NULL); 
+		break;
+	case TID_CONS_LOCATION:
+		cmpi_get_properties(ci,t,LocationMap,MAPDIM(LocationMap),rc);
+		location_get_rules(broker, ci, t, rc);
+		ret = cim_update(UPDATE_LOCATION_CONSTRAINT, NULL, t, NULL); 
+		break;
+	case TID_CONS_COLOCATION:
+		cmpi_get_properties(ci,t,ColocationMap,MAPDIM(ColocationMap),rc);
+		ret = cim_update(UPDATE_COLOCATION_CONSTRAINT, NULL, t, NULL); 
+		break;
+	default: break;
+	}
+	rc->rc = (ret==HA_OK)? CMPI_RC_OK : CMPI_RC_ERR_FAILED;
+	cim_table_free(t);
+	DEBUG_LEAVE();
+	return ret;
+}
+

@@ -39,8 +39,8 @@
 #include "constraint_common.h"
 
 static const char * PROVIDER_ID = "cim-colo";
-static CMPIBroker * G_broker    = NULL;
-static char G_classname []      = "HA_ColocationConstraint";
+static CMPIBroker * Broker    = NULL;
+static char ClassName []      = "HA_ColocationConstraint";
 
 DeclareInstanceFunctions(ColocationConstraint);
 
@@ -60,14 +60,11 @@ ColocationConstraintEnumInstanceNames(CMPIInstanceMI * mi, CMPIContext * ctx,
                               CMPIResult * rslt, CMPIObjectPath * ref)
 {
         CMPIStatus rc;
-        init_logger( PROVIDER_ID );
-
-        if ( enum_inst_cons(G_broker, G_classname, ctx, rslt, ref, 0, 
-                            TID_CONS_COLOCATION, &rc) == HA_OK ) {
-                CMReturn(CMPI_RC_OK);        
-        } else {
-                return rc;
-        }
+	int ret;
+	PROVIDER_INIT_LOGGER();
+        ret = enumerate_constraint(Broker, ClassName, ctx, rslt, ref, 
+			FALSE, TID_CONS_COLOCATION, &rc);
+	return rc;
 }
 
 
@@ -77,14 +74,11 @@ ColocationConstraintEnumInstances(CMPIInstanceMI * mi, CMPIContext * ctx,
                           char ** properties)
 {
         CMPIStatus rc;
-        init_logger( PROVIDER_ID );
-
-        if ( enum_inst_cons(G_broker, G_classname, ctx, rslt, ref, 1, 
-                            TID_CONS_COLOCATION, &rc) == HA_OK ) {
-                CMReturn(CMPI_RC_OK);        
-        } else {
-                return rc;
-        }
+	int ret;
+	PROVIDER_INIT_LOGGER();
+        ret = enumerate_constraint(Broker, ClassName, ctx, rslt, ref, 
+			TRUE, TID_CONS_COLOCATION, &rc);
+	return rc;
 }
 
 static CMPIStatus 
@@ -93,14 +87,12 @@ ColocationConstraintGetInstance(CMPIInstanceMI * mi, CMPIContext * ctx,
                         char ** properties)
 {
         CMPIStatus rc;
-        init_logger( PROVIDER_ID );
+	int ret;
 
-        if ( get_inst_cons(G_broker, G_classname, ctx, rslt, cop, 
-                           properties, TID_CONS_COLOCATION, &rc) != HA_OK ) {
-                return rc;
-        }
-
-        CMReturn(CMPI_RC_OK);
+	PROVIDER_INIT_LOGGER();
+        ret = get_constraint(Broker, ClassName, ctx, rslt, cop, 
+                           properties, TID_CONS_COLOCATION, &rc);
+	return rc;
 }
 
 static CMPIStatus 
@@ -109,8 +101,11 @@ ColocationConstraintCreateInstance(CMPIInstanceMI * mi, CMPIContext * ctx,
                            CMPIInstance * ci)
 {
 	CMPIStatus rc = {CMPI_RC_OK, NULL};
-	CMSetStatusWithChars(G_broker, &rc, CMPI_RC_ERR_NOT_SUPPORTED, 
-                             "CIM_ERR_NOT_SUPPORTED");
+	int	ret;
+
+	PROVIDER_INIT_LOGGER();
+	ret = create_constraint(Broker, ClassName, mi, ctx, rslt, 
+			cop, ci, TID_CONS_COLOCATION, &rc);
 	return rc;
 }
 
@@ -121,8 +116,11 @@ ColocationConstraintSetInstance(CMPIInstanceMI * mi, CMPIContext * ctx,
                         CMPIInstance * ci, char ** properties)
 {
         CMPIStatus rc = {CMPI_RC_OK, NULL};
-        CMSetStatusWithChars(G_broker, &rc, CMPI_RC_ERR_NOT_SUPPORTED, 
-                             "CIM_ERR_NOT_SUPPORTED");
+	int ret;
+
+	PROVIDER_INIT_LOGGER();
+	ret = update_constraint(Broker, ClassName, mi, ctx, rslt, 
+			cop, ci, properties, TID_CONS_COLOCATION, &rc);
         return rc;
 }
 
@@ -132,8 +130,9 @@ ColocationConstraintDeleteInstance(CMPIInstanceMI * mi, CMPIContext * ctx,
                            CMPIResult * rslt, CMPIObjectPath * cop)
 {
         CMPIStatus rc = {CMPI_RC_OK, NULL};
-        CMSetStatusWithChars(G_broker, &rc, CMPI_RC_ERR_NOT_SUPPORTED, 
-                             "CIM_ERR_NOT_SUPPORTED");
+	int ret;
+	ret = delete_constraint(Broker, ClassName, mi, ctx, 
+			rslt, cop, TID_CONS_COLOCATION, &rc);
 	return rc;
 }
 
@@ -143,7 +142,7 @@ ColocationConstraintExecQuery(CMPIInstanceMI * mi, CMPIContext * ctx,
                       char * lang, char * query)
 {
         CMPIStatus rc = {CMPI_RC_OK, NULL};
-        CMSetStatusWithChars(G_broker, &rc, CMPI_RC_ERR_NOT_SUPPORTED, 
+        CMSetStatusWithChars(Broker, &rc, CMPI_RC_ERR_NOT_SUPPORTED, 
                              "CIM_ERR_NOT_SUPPORTED");
 	return rc;
 }
@@ -158,7 +157,7 @@ ColocationConstraintInvokeMethod(CMPIMethodMI * mi, CMPIContext * ctx,
                          const char * method, CMPIArgs * in, CMPIArgs * out)
 {
         CMPIStatus rc = {CMPI_RC_OK, NULL};
-        CMSetStatusWithChars(G_broker, &rc, CMPI_RC_ERR_NOT_SUPPORTED, 
+        CMSetStatusWithChars(Broker, &rc, CMPI_RC_ERR_NOT_SUPPORTED, 
                              "CIM_ERR_NOT_SUPPORTED");
 	return rc;    
 }
@@ -175,6 +174,6 @@ ColocationConstraintMethodCleanup(CMPIMethodMI * mi, CMPIContext * ctx)
  * install provider
  ****************************************************/
 
-DeclareInstanceMI(ColocationConstraint, HA_ColocationConstraintProvider, G_broker);
-DeclareMethodMI(ColocationConstraint, HA_ColocationConstraintProvider, G_broker);
+DeclareInstanceMI(ColocationConstraint, HA_ColocationConstraintProvider, Broker);
+DeclareMethodMI(ColocationConstraint, HA_ColocationConstraintProvider, Broker);
 
