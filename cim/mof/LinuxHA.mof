@@ -39,7 +39,7 @@ class HA_Cluster : CIM_Cluster {
                 "The apiauth directive specifies what users and/or groups"
                 "are allowed to connect to a specific API group name")
         ]
-        string APIAuth;
+        string APIAuth [];
         string NiceFailBack;
 
         [ Description(
@@ -73,7 +73,7 @@ class HA_Cluster : CIM_Cluster {
                 "or the 2.x-style cluster manager that supports more than 2 "
                 "nodes" )
         ]
-        string WithCrm ;
+        string WithCrm;
 
         [ Description(
                 "How quickly Heartbeat should decide that a ping node in a "
@@ -142,13 +142,13 @@ class HA_Cluster : CIM_Cluster {
 
 
         [ Description("What machines are in the cluster")]
-        string Node;        
+        string Node [];        
 
         [ Description("Declare PingNodes to Heartbeat")]
-        string PingNode;
+        string PingNode [];
 
         [ Description("Declare PingNodes to Heartbeat")]
-        string PingGroup;
+        string PingGroup [];
 
         [ Description(
                 "The realtime directive specifies whether or not Heartbeat "
@@ -204,6 +204,13 @@ class HA_Cluster : CIM_Cluster {
         string CoreRootDir;
         string LogBadPack;
 
+        /* Authentication config */
+        [ Description("Authentication method"),
+                ValueMap { "0", "1", "2" }, 
+                Values { "sha1", "md5", "crc" } ]
+        uint32 AuthMethod;
+        string AuthKey; 
+
         /* CRM config */
         string TransitionIdleTimeout;
         string SymmetricCluster;
@@ -214,8 +221,7 @@ class HA_Cluster : CIM_Cluster {
         string HaveQuorum;
 
         /* methods */
-        uint32 RequestStatusChange(string action);
-
+	/* RequestStateChange */
 };
 
 //----------------------------------------
@@ -270,11 +276,8 @@ class HA_ClusterNode : CIM_ComputerSystem {
         [ Override ( "Name" ), Description ("Node's uname") ]
         string Name;
 
-        [ Description ("Node's UUID" ) ]
-        string UUID;
-
-        [ Description ( "Node's active status" ) ]
-        string ActiveStatus;
+        string OnLine;
+	string Unclean;
 
         string Status;
         string IsDC;
@@ -284,12 +287,6 @@ class HA_ClusterNode : CIM_ComputerSystem {
 	string Shutdown;
 	string ExpectedUp;
 	string NodePing;
-
-        /* DTD1.0/Annotated */
-        [ Description ( "weight for influencing the DC election process" ) ]
-        string DcWeight;
-        string Description;
-
 };
 
 
@@ -319,7 +316,7 @@ class HA_Rule {
 //----------------------------------------------
 /* in DTD, InstanceAttributes contain Attributes, Rules */
 
-
+/*
 [ Provider("cmpi:HA_InstanceAttributesProvider") ]
 class HA_InstanceAttributes {
         [ Key ]
@@ -328,7 +325,6 @@ class HA_InstanceAttributes {
         [ Key ]
         string CreationClassName;
 
-        /* if resource, this is the resource's id */
         [ Key ]
         string SystemName;
 
@@ -337,11 +333,10 @@ class HA_InstanceAttributes {
 
         string Caption;
 
-        /* make things simple */
-        string NVPairs [];
+        string InstAttributes [];
         
 };
-
+*/
 //----------------------------------------------
 // Association, HA_InstanceAttributesRule
 //----------------------------------------------
@@ -388,9 +383,10 @@ class HA_ClusterResource {
         string ResourceStickiness = "0";        /* 0|INFINITY|-INFINITY */
         string StartPreRep;                     /* nothing|quorum|fencing */
 
-
 	string Caption;
 
+	[ Description ("Instance attributes, in format: [key]=[value]") ]
+	string InstanceAttributes[];
 };
 
 //----------------------------------------
@@ -401,18 +397,11 @@ class HA_ClusterResource {
         Provider("cmpi:HA_PrimitiveResourceProvider") 
 ]
 class HA_PrimitiveResource : HA_ClusterResource {
-        [ Description ( "Cluster rsource's type") ]
         string ResourceClass;
-
-        [ Description ( "Cluster rsource's type") ]
         string Type;
-
-        [ Description ( "Cluster rsource's provider") ]
         string Provider;
-
-        [ Description ( "The cluster node that host this resource" )
-        ]
         string HostingNode;
+	string GroupId;
 
 };
 
@@ -424,7 +413,6 @@ class HA_PrimitiveResource : HA_ClusterResource {
 class HA_ResourceGroup : HA_ClusterResource {
 };
 
-
 //----------------------------------------
 //  HA_ResrouceClone
 //----------------------------------------
@@ -433,6 +421,8 @@ class HA_ResourceClone : HA_ClusterResource {
         string Notify;
         string Ordered;
         string Interleave;
+	string CloneMax;
+	string CloneNodeMax;
 };
 
 //------------------------------------------------
@@ -440,8 +430,10 @@ class HA_ResourceClone : HA_ClusterResource {
 //------------------------------------------------
 [ Provider("cmpi:HA_MasterSlaveResourceProvider") ] 
 class HA_MasterSlaveResource : HA_ClusterResource {
-      string MaxMasters;
-      string MaxNodeMasters;
+	string CloneMax;
+	string CloneNodeMax;
+      	string MaxMasters;
+      	string MaxNodeMasters;
 };
 
 //----------------------------------------
@@ -528,7 +520,6 @@ class HA_ResourceConstraint {
         [ Key ]
         string SystemCreationClassName;
 
-        string Type;    /* rsc_order|rsc_colocation|rsc_location */
         string Caption;
 };
 
@@ -571,7 +562,7 @@ class HA_LocationConstraint:
         string Resource;
         string Score;
 
-	/* Rule should be a class in future */
+	[ Description ("Rules, in format: [attribute]<[operation]>[value]") ]
 	string Rule [];
 }; 
 
@@ -592,7 +583,7 @@ class HA_ResourceConstraintRules {
 //------------------------------------------------
 // Association, HA_ResourceInstance
 //------------------------------------------------
-
+/*
 [ Association, Aggregation,
         Provider("cmpi:HA_ResourceInstanceProvider") ]
 class HA_ResourceInstance {
@@ -603,7 +594,7 @@ class HA_ResourceInstance {
         HA_InstanceAttributes REF Attributes;       
         String Caption;
 };
-
+*/
 //-----------------------------------------------
 // Association, HA_SubResource
 //-----------------------------------------------

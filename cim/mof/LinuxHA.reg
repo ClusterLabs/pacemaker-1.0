@@ -12,7 +12,7 @@ HA_ResourceClone root/cimv2 HA_ResourceCloneProvider HA_ResourceCloneProvider in
 # Master Slave Clone
 HA_MasterSlaveResource root/cimv2 HA_MasterSlaveResourceProvider HA_MasterSlaveResourceProvider instance
 # Resource instance
-HA_InstanceAttributes root/cimv2 HA_InstanceAttributesProvider HA_InstanceAttributesProvider instance
+#HA_InstanceAttributes root/cimv2 HA_InstanceAttributesProvider HA_InstanceAttributesProvider instance
 # Software
 HA_SoftwareIdentity root/cimv2 HA_SoftwareIdentityProvider HA_SoftwareIdentityProvider instance
 # LocationConstraint
@@ -30,7 +30,7 @@ HA_HostedResource root/cimv2 HA_HostedResourceProvider HA_HostedResourceProvider
 # Association, between Cluster and Software
 HA_InstalledSoftwareIdentity root/cimv2 HA_InstalledSoftwareIdentityProvider HA_InstalledSoftwareIdentityProvider instance association
 # Association, between Resource and its instance attribute
-HA_ResourceInstance root/cimv2 HA_ResourceInstanceProvider HA_ResourceInstanceProvider instance association
+#HA_ResourceInstance root/cimv2 HA_ResourceInstanceProvider HA_ResourceInstanceProvider instance association
 # Association, between Resource (Group/MasterSlave/Clone) and its sub resource
 HA_SubResource root/cimv2 HA_SubResourceProvider HA_SubResourceProvider instance association 
 # Association, operation and resource
