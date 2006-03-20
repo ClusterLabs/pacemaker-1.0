@@ -42,7 +42,7 @@ THREADLIB               = lpthread
 
 cimprovidersdir         = $(CMPI_PROVIDER_DIR)
 
-noinst_HEADERS          =  assoc_utils.h cluster_info.h cmpi_utils.h  \
+noinst_HEADERS          =  cluster_info.h cmpi_utils.h  mof_map.h\
                            resource_common.h constraint_common.h
 
 LRM_DIR                 =  lrm
@@ -50,32 +50,31 @@ MGMTLIBS                =  $(top_builddir)/mgmt/daemon/libhbmgmt.la     \
                            $(top_builddir)/lib/mgmt/libhbmgmtcommon.la  \
                            $(top_builddir)/lib/$(LRM_DIR)/liblrm.la
 
-cimproviders_LTLIBRARIES = libHAClusterInfo.la                             \
-			   libHA_ClusterProvider.la                        \
-			   libHA_ClusterNodeProvider.la                    \
-                           libHA_SoftwareIdentityProvider.la               \
-                           libHA_PrimitiveResourceProvider.la              \
-                           libHA_ResourceCloneProvider.la                  \
-                           libHA_MasterSlaveResourceProvider.la            \
-                           libHA_ResourceGroupProvider.la                  \
-                           libHA_LocationConstraintProvider.la             \
-                           libHA_ColocationConstraintProvider.la           \
-                           libHA_OrderConstraintProvider.la                \
-                           libHA_HostedResourceProvider.la                 \
-                           libHA_SubResourceProvider.la                    \
-                           libHA_InstalledSoftwareIdentityProvider.la      \
-			   libHA_ParticipatingNodeProvider.la              \
-                           libHA_InstanceAttributesProvider.la             \
-                           libHA_OperationProvider.la                      \
-                           libHA_ResourceInstanceProvider.la               \
-                           libHA_OperationOnProvider.la                    \
+cimproviders_LTLIBRARIES = libHAClusterInfo.la				\
+			   libHA_ClusterProvider.la			\
+			   libHA_ClusterNodeProvider.la      		\
+			   libHA_ParticipatingNodeProvider.la 		\
+                           libHA_SoftwareIdentityProvider.la		\
+                           libHA_InstalledSoftwareIdentityProvider.la	\
+                           libHA_PrimitiveResourceProvider.la		\
+                           libHA_ResourceCloneProvider.la		\
+                           libHA_MasterSlaveResourceProvider.la		\
+                           libHA_ResourceGroupProvider.la		\
+                           libHA_SubResourceProvider.la			\
+                           libHA_OperationProvider.la			\
+                           libHA_OperationOnProvider.la			\
+                           libHA_HostedResourceProvider.la		\
+                           libHA_LocationConstraintProvider.la		\
+                           libHA_ColocationConstraintProvider.la	\
+                           libHA_OrderConstraintProvider.la		\
                            libHA_IndicationProvider.la                     
 
 #--------------------------------------------------------------
-libHAClusterInfo_la_SOURCES                 = cluster_info.c
+libHAClusterInfo_la_SOURCES                 = mgmt_client.c utils.c \
+						cluster_info.c  cmpi_utils.c
 libHAClusterInfo_la_LIBADD                  = $(COMMONLIBS) $(MGMTLIBS)
 #--------------------------------------------------------------
-libHA_ClusterProvider_la_SOURCES            = cluster_provider.c
+libHA_ClusterProvider_la_SOURCES            = cluster_provider.c 
 libHA_ClusterProvider_la_LIBADD             = libHAClusterInfo.la
 #--------------------------------------------------------------
 libHA_SoftwareIdentityProvider_la_SOURCES   = software_identity_provider.c
@@ -96,25 +95,25 @@ libHA_MasterSlaveResourceProvider_la_LIBADD = libHAClusterInfo.la
 libHA_ResourceGroupProvider_la_SOURCES      = resource_common.c resource_group_provider.c
 libHA_ResourceGroupProvider_la_LIBADD       = libHAClusterInfo.la 
 #--------------------------------------------------------------
-libHA_ParticipatingNodeProvider_la_SOURCES  = assoc_utils.c participating_node_provider.c
+libHA_ParticipatingNodeProvider_la_SOURCES  =  participating_node_provider.c
 libHA_ParticipatingNodeProvider_la_LIBADD   = libHAClusterInfo.la 
 #--------------------------------------------------------------
-libHA_HostedResourceProvider_la_SOURCES     = assoc_utils.c hosted_resource_provider.c
+libHA_HostedResourceProvider_la_SOURCES     =  hosted_resource_provider.c
 libHA_HostedResourceProvider_la_LIBADD      = libHAClusterInfo.la 
 #--------------------------------------------------------------
-libHA_InstalledSoftwareIdentityProvider_la_SOURCES = assoc_utils.c installed_software_provider.c
+libHA_InstalledSoftwareIdentityProvider_la_SOURCES =  installed_software_provider.c
 libHA_InstalledSoftwareIdentityProvider_la_LIBADD  = libHAClusterInfo.la 
 #--------------------------------------------------------------
-libHA_ResourceInstanceProvider_la_SOURCES   = assoc_utils.c resource_instance_provider.c
-libHA_ResourceInstanceProvider_la_LIBADD    = libHAClusterInfo.la 
+#libHA_ResourceInstanceProvider_la_SOURCES   =  resource_instance_provider.c
+#libHA_ResourceInstanceProvider_la_LIBADD    = libHAClusterInfo.la 
 #--------------------------------------------------------------
-libHA_InstanceAttributesProvider_la_SOURCES = inst_attribute_provider.c
-libHA_InstanceAttributesProvider_la_LIBADD  = libHAClusterInfo.la 
+#libHA_InstanceAttributesProvider_la_SOURCES = instance_attributes_provider.c
+#libHA_InstanceAttributesProvider_la_LIBADD  = libHAClusterInfo.la 
 #--------------------------------------------------------------
-libHA_SubResourceProvider_la_SOURCES        = assoc_utils.c sub_resource_provider.c
+libHA_SubResourceProvider_la_SOURCES        =  subresource_provider.c
 libHA_SubResourceProvider_la_LIBADD         = libHAClusterInfo.la 
 #--------------------------------------------------------------
-libHA_OperationProvider_la_SOURCES          = operation_provider.c
+libHA_OperationProvider_la_SOURCES          = operation_provider.c 
 libHA_OperationProvider_la_LIBADD           = libHAClusterInfo.la
 #--------------------------------------------------------------
 libHA_LocationConstraintProvider_la_SOURCES = constraint_common.c location_constraint_provider.c
@@ -129,10 +128,10 @@ libHA_OrderConstraintProvider_la_LIBADD     = libHAClusterInfo.la
 libHA_IndicationProvider_la_SOURCES         = cluster_indication_provider.c
 libHA_IndicationProvider_la_LIBADD          = libHAClusterInfo.la
 #--------------------------------------------------------------
-libHA_OperationOnProvider_la_SOURCES        = assoc_utils.c operation_on_provider.c
+libHA_OperationOnProvider_la_SOURCES        =  operation_on_provider.c
 libHA_OperationOnProvider_la_LIBADD         = libHAClusterInfo.la
 #--------------------------------------------------------------
-noinst_PROGRAMS	    = simpledemo
-simpledemo_SOURCES  = simple_demo.c
-simpledemo_LDADD    = libHAClusterInfo.la 
+noinst_PROGRAMS	    = simpletest
+simpletest_SOURCES  = simple_test.c
+simpletest_LDADD    = libHAClusterInfo.la 
 
