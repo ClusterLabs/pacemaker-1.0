@@ -36,15 +36,14 @@
 #include <hb_api.h>
 #include "cluster_info.h"
 #include "cmpi_utils.h"
-#include "assoc_utils.h"
 
 static const char * PROVIDER_ID    = "cim-ins-sw"; 
-static CMPIBroker * G_broker       = NULL;
-static char G_classname         [] = "HA_InstalledSoftwareIdentity"; 
-static char G_left              [] = "System";
-static char G_right             [] = "InstalledSoftware";
-static char G_left_class        [] = "HA_Cluster";
-static char G_right_class       [] = "HA_SoftwareIdentity";
+static CMPIBroker * Broker       = NULL;
+static char ClassName         [] = "HA_InstalledSoftwareIdentity"; 
+static char Left              [] = "System";
+static char Right             [] = "InstalledSoftware";
+static char LeftClassName        [] = "HA_Cluster";
+static char RightClassName       [] = "HA_SoftwareIdentity";
 
 DeclareInstanceFunctions(InstalledSoftware);
 DeclareAssociationFunctions(InstalledSoftware);
@@ -64,18 +63,12 @@ static CMPIStatus
 InstalledSoftwareEnumInstanceNames(CMPIInstanceMI * mi, CMPIContext* ctx, 
                                    CMPIResult * rslt, CMPIObjectPath * cop)
 {
-
         CMPIStatus rc = {CMPI_RC_OK, NULL};
-
-        init_logger(PROVIDER_ID);
-
-        if (cm_assoc_enum_insts(G_broker, G_classname, ctx, rslt, cop, 
-                                G_left, G_right, G_left_class, G_right_class, 
-                                NULL, NULL, 0, &rc) != HA_OK ) {
-                return rc;
-        }
-
-        CMReturn(CMPI_RC_OK);
+        PROVIDER_INIT_LOGGER();
+        assoc_enum_insts(Broker, ClassName, ctx, rslt, cop, 
+                                Left, Right, LeftClassName, RightClassName, 
+                                NULL, NULL, FALSE, &rc);
+	return rc;
 }
 
 
@@ -85,15 +78,11 @@ InstalledSoftwareEnumInstances(CMPIInstanceMI * mi, CMPIContext * ctx,
                                char ** properties)
 {
         CMPIStatus rc = {CMPI_RC_OK, NULL};
-        init_logger(PROVIDER_ID);
-
-        if (cm_assoc_enum_insts(G_broker, G_classname, ctx, rslt, cop, 
-                                G_left, G_right, G_left_class, G_right_class,
-                                NULL, NULL, 1, &rc) != HA_OK ){
-                return rc;
-        }
-
-        CMReturn(CMPI_RC_OK);
+        PROVIDER_INIT_LOGGER();
+        assoc_enum_insts(Broker, ClassName, ctx, rslt, cop, 
+				Left, Right, LeftClassName, RightClassName,
+				NULL, NULL, TRUE, &rc);
+	return rc;
 }
 
 
@@ -104,14 +93,9 @@ InstalledSoftwareGetInstance(CMPIInstanceMI * mi, CMPIContext * ctx,
 {
 
         CMPIStatus rc = {CMPI_RC_OK, NULL};
-        init_logger(PROVIDER_ID);
-
-        if (cm_assoc_get_inst(G_broker, G_classname, ctx, rslt, cop, 
-                              G_left, G_right, &rc) != HA_OK ) {
-                return rc;
-        }
-
-        CMReturn(CMPI_RC_OK);
+        PROVIDER_INIT_LOGGER();
+        assoc_get_inst(Broker, ClassName, ctx, rslt, cop, Left, Right, &rc);
+	return rc;
 }
 
 
@@ -121,7 +105,7 @@ InstalledSoftwareCreateInstance(CMPIInstanceMI * mi, CMPIContext * ctx,
                                 CMPIInstance * ci)
 {
 	CMPIStatus rc = {CMPI_RC_OK, NULL};
-	CMSetStatusWithChars(G_broker, &rc, 
+	CMSetStatusWithChars(Broker, &rc, 
 			CMPI_RC_ERR_NOT_SUPPORTED, "CIM_ERR_NOT_SUPPORTED");
 	return rc;
 }
@@ -133,7 +117,7 @@ InstalledSoftwareSetInstance(CMPIInstanceMI * mi, CMPIContext * ctx,
                              CMPIInstance * ci, char ** properties)
 {
 	CMPIStatus rc = {CMPI_RC_OK, NULL};
-	CMSetStatusWithChars(G_broker, &rc, 
+	CMSetStatusWithChars(Broker, &rc, 
 			CMPI_RC_ERR_NOT_SUPPORTED, "CIM_ERR_NOT_SUPPORTED");
 	return rc;
 
@@ -145,7 +129,7 @@ InstalledSoftwareDeleteInstance(CMPIInstanceMI * mi, CMPIContext * ctx,
                                 CMPIResult * rslt, CMPIObjectPath * cop)
 {
 	CMPIStatus rc = {CMPI_RC_OK, NULL};
-	CMSetStatusWithChars(G_broker, &rc, 
+	CMSetStatusWithChars(Broker, &rc, 
 			CMPI_RC_ERR_NOT_SUPPORTED, "CIM_ERR_NOT_SUPPORTED");
 	return rc;
 }
@@ -156,7 +140,7 @@ InstalledSoftwareExecQuery(CMPIInstanceMI * mi, CMPIContext * ctx,
                            char * lang, char * query)
 {
 	CMPIStatus rc = {CMPI_RC_OK, NULL};
-	CMSetStatusWithChars(G_broker, &rc, 
+	CMSetStatusWithChars(Broker, &rc, 
 			CMPI_RC_ERR_NOT_SUPPORTED, "CIM_ERR_NOT_SUPPORTED");
 	return rc;
 
@@ -180,16 +164,12 @@ InstalledSoftwareAssociators(CMPIAssociationMI * mi, CMPIContext * ctx,
                              char ** properties)
 {
         CMPIStatus rc;
-        init_logger(PROVIDER_ID);
-
-        if (cm_enum_associators(G_broker, G_classname, ctx, rslt, cop, 
-                                G_left, G_right, G_left_class, G_right_class,
+        PROVIDER_INIT_LOGGER();
+        assoc_enum_associators(Broker, ClassName, ctx, rslt, cop, 
+                                Left, Right, LeftClassName, RightClassName,
                                 assoc_class, result_class, role, 
-                                result_role, NULL, NULL, 1, &rc) != HA_OK ) {
-                return rc;
-        }
-
-        CMReturn(CMPI_RC_OK);
+                                result_role, NULL, NULL, TRUE, &rc);
+	return rc;
 }
 
 
@@ -200,15 +180,12 @@ InstalledSoftwareAssociatorNames(CMPIAssociationMI * mi, CMPIContext * ctx,
                                  const char * role, const char * result_role)
 {
         CMPIStatus rc;
-        init_logger(PROVIDER_ID);
-        if (cm_enum_associators(G_broker, G_classname, ctx, rslt, cop, 
-                                G_left, G_right, G_left_class, G_right_class,
+        PROVIDER_INIT_LOGGER();
+        assoc_enum_associators(Broker, ClassName, ctx, rslt, cop, 
+                                Left, Right, LeftClassName, RightClassName,
                                 assoc_class, result_class, role, 
-                                result_role, NULL, NULL, 0, &rc) != HA_OK ) {
-                return rc;
-        }      
-
-        CMReturn(CMPI_RC_OK);
+                                result_role, NULL, NULL, FALSE, &rc);
+	return rc;
 }
 
 static CMPIStatus
@@ -218,15 +195,11 @@ InstalledSoftwareReferences(CMPIAssociationMI * mi, CMPIContext * ctx,
                             char ** properties)
 {
         CMPIStatus rc;
-        init_logger(PROVIDER_ID);
-
-        if ( cm_enum_references(G_broker, G_classname, ctx, rslt, cop, 
-                                G_left, G_right, G_left_class, G_right_class,
-                                result_class, role, NULL, NULL, 1, &rc) != HA_OK ) {
-                return rc;
-        }
-
-        CMReturn(CMPI_RC_OK);
+        PROVIDER_INIT_LOGGER();
+	assoc_enum_references(Broker, ClassName, ctx, rslt, cop, 
+                                Left, Right, LeftClassName, RightClassName,
+                                result_class, role, NULL, NULL, TRUE, &rc);
+	return rc;
 }
 
 static CMPIStatus
@@ -235,22 +208,19 @@ InstalledSoftwareReferenceNames(CMPIAssociationMI * mi, CMPIContext * ctx,
                                 const char * result_class, const char * role)
 {
         CMPIStatus rc;
-        if ( cm_enum_references(G_broker, G_classname, ctx, rslt, cop, 
-                                G_left, G_right, G_left_class, G_right_class,
-                                result_class, role, NULL, NULL, 0, &rc) != HA_OK ) {
-                return rc;
-        }
-
-        CMReturn(CMPI_RC_OK);
+	assoc_enum_references(Broker, ClassName, ctx, rslt, cop, 
+                                Left, Right, LeftClassName, RightClassName,
+                                result_class, role, NULL, NULL, FALSE, &rc);
+	return rc;
 }                
 
 /**************************************************************
  *   MI stub
  *************************************************************/
-DeclareInstanceMI(InstalledSoftware, HA_InstalledSoftwareIdentityProvider, 
-                  G_broker);
+DeclareInstanceMI(InstalledSoftware, 
+	HA_InstalledSoftwareIdentityProvider, Broker);
 DeclareAssociationMI(InstalledSoftware, 
-                     HA_InstalledSoftwareIdentityProvider, G_broker);
+	HA_InstalledSoftwareIdentityProvider, Broker);
 
 
 

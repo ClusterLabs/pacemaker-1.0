@@ -33,129 +33,106 @@
 #include <cmpift.h>
 #include <cmpimacs.h>
 #include <hb_api.h> 
-#include "assoc_utils.h"
 #include "cluster_info.h"
 #include "cmpi_utils.h"
 
-static const char * PROVIDER_ID     = "cim-op-on";
-static CMPIBroker * G_broker        = NULL;
-static char G_classname         []  = "HA_OperationOnResource"; 
-static char G_left              []  = "Resource"; 
-static char G_right             []  = "Operation";
-static char G_left_class        []  = "HA_PrimitiveResource";
-static char G_right_class       []  = "HA_Operation"; 
+static const char * PROVIDER_ID       = "cim-op-on";
+static CMPIBroker * Broker            = NULL;
+static char 	    ClassName      [] = "HA_OperationOnResource"; 
+static char 	    Left           [] = "Resource"; 
+static char 	    Right          [] = "Operation";
+static char 	    LeftClassName  [] = "HA_PrimitiveResource";
+static char 	    RightClassName [] = "HA_Operation"; 
 
-static CMPIArray *
-make_enum_for_right(CMPIBroker * broker, char * classname, CMPIContext * ctx,
-                    char * namespace, char * target_name, char * target_role,
-                    CMPIObjectPath * source_op, CMPIStatus * rc);
-static CMPIArray *
-this_enum_func(CMPIBroker * broker, char * classname, CMPIContext * ctx,
-               char * namespace, char * target_name, char * target_role,
-               CMPIObjectPath * source_op, CMPIStatus * rc);
-static int
-res_has_op(CMPIBroker * broker, char * classname, CMPIContext * ctx,
-           CMPIObjectPath * group_op, CMPIObjectPath * res_op, CMPIStatus * rc);
+static CMPIArray *  enumerate_right(CMPIBroker * broker, 
+			char * classname, CMPIContext * ctx, char * namespace, 
+			char * target_name, char * target_role,
+                    	CMPIObjectPath * source_op, CMPIStatus * rc);
+static CMPIArray *  enumerate_func(CMPIBroker * broker, char * classname, 
+			CMPIContext * ctx, char * namespace, 
+			char * target_name, char * target_role,
+               		CMPIObjectPath * source_op, CMPIStatus * rc);
 
-DeclareInstanceFunctions(OperationOn);
+DeclareInstanceFunctions   (OperationOn);
 DeclareAssociationFunctions(OperationOn);
 
 static CMPIArray *
-make_enum_for_right(CMPIBroker * broker, char * classname, CMPIContext * ctx,
+enumerate_right(CMPIBroker * broker, char * classname, CMPIContext * ctx,
                     char * namespace, char * target_name, char * target_role,
                     CMPIObjectPath * source_op, CMPIStatus * rc)
 {
-        CMPIString * s;
-        char * rsc_id, * rsc_cr_name;
-        struct ci_table * operations;
         CMPIArray * array;
         uint32_t i, len;
+	CIMArray * operations;
+	char * rscid, * crname;
 
-        if ((s = CMGetKey(source_op, "Id", rc).value.string) == NULL ) {
+	DEBUG_ENTER();
+	rscid = CMGetKeyString(source_op, "Id", rc);
+	crname = CMGetKeyString(source_op, "CreationClassName", rc);
+
+        if ((operations = cim_get_array(GET_RSC_OPERATIONS, rscid, NULL))==NULL){
+		rc->rc = CMPI_RC_ERR_FAILED;
+		cl_log(LOG_ERR, "OperationOn: can't get operations");
                 return NULL;
         }
-        if ((rsc_id = CMGetCharPtr(s)) == NULL ) { return NULL; }
-        if (( s = CMGetKey(source_op, "CreationClassName", 
-                           rc).value.string) == NULL ) {
-                return NULL;
-        }
-        if ((rsc_cr_name = CMGetCharPtr(s)) == NULL ) { return NULL; }
-
-        if ((operations = ci_get_inst_operations(rsc_id)) == NULL ) {
-                return NULL;
-        }
-        len =  operations->get_data_size(operations);
-        
-        cl_log ( LOG_INFO, "operations has %d operation(s)", len);
-
+      
+	len = cim_array_len(operations);
         if ((array = CMNewArray(broker, len, CMPI_ref, rc)) == NULL ) {
-                operations->free(operations);
-                return NULL;
-        }
-        for (i = 0; i < len; i ++ ) {
-                CMPIObjectPath * target_op;
-                struct ci_table * operation;
-                char * operation_id;
-                
-                target_op = CMNewObjectPath(broker, namespace, G_right_class, rc);
-                if ( CMIsNullObject(target_op)) { continue; }
+		cl_log(LOG_ERR, "%s: create array failed.", __FUNCTION__);
+        	goto out;
+	}
+	
+	/* make ObjPath, add it to array */
+        for (i = 0; i < cim_array_len(operations); i ++ ) {
+                CMPIObjectPath * op;
+		CIMTable * operation;
+                char * id;
+             
+		operation = cim_array_index_v(operations, i).v.table; 
+		if(operation== NULL ) {
+			cl_log(LOG_ERR, "%s: NULL at %d.", __FUNCTION__, i);
+			continue;
+		} 
+		/* create a ObjectPath */ 
+                op = CMNewObjectPath(broker, namespace, RightClassName, rc);
+                id = cim_table_lookup_v(operation, "id").v.str;
+                if ( CMIsNullObject(op) ||  id == NULL ) {
+			continue; 
+		}
 
-                operation = operations->get_data_at(operations, i).value.table;
-                if ( operation == NULL )  { continue; }
-                operation_id = operation->get_data(operation, "id").value.string;
-                if (operation_id == NULL ) { continue; }
-
-                CMAddKey(target_op, "Id", operation_id, CMPI_chars);
-                CMAddKey(target_op, "SystemName", rsc_id, CMPI_chars);
-                CMAddKey(target_op, "SystemCreationClassName", 
-                         rsc_cr_name, CMPI_chars);
-                CMAddKey(target_op, "CreationClassName", G_classname, CMPI_chars);
+                CMAddKey(op, "Id", id, CMPI_chars);
+                CMAddKey(op, "SystemName", rscid, CMPI_chars);
+                CMAddKey(op, "SystemCreationClassName", crname, CMPI_chars);
+                CMAddKey(op, "CreationClassName", ClassName, CMPI_chars);
 
                 /* add to array */
-                CMSetArrayElementAt(array, i, &target_op, CMPI_ref);
+                CMSetArrayElementAt(array, i, &op, CMPI_ref);
         }
-
-
-        operations->free(operations);
+out:
+	cim_array_free(operations);
+	DEBUG_LEAVE();
         return array;
 }
 
 static CMPIArray *
-this_enum_func(CMPIBroker * broker, char * classname, CMPIContext * ctx,
+enumerate_func(CMPIBroker * broker, char * classname, CMPIContext * ctx,
                char * namespace, char * target_name, char * target_role,
                CMPIObjectPath * source_op, CMPIStatus * rc)
 {
-        /* if it is resource, enumerate it's instance names */
-        if ( strcmp(target_name, G_left_class) == 0 ) {
-                CMPIArray * array;
+        if ( strcmp(target_name, LeftClassName) == 0 ) {
+        	/* if target is a Resource, enumerate its instance names */
                 if ( source_op ){
+			/* Operation is the source. This is not allowed, just
+			return an empty array. */
                         return CMNewArray(broker, 0, CMPI_ref, rc);
                 }
-                        
-                array = default_enum_func(broker, classname, ctx, namespace, 
-                                          target_name, target_role,
-                                          source_op, rc);
-
-                if ( CMIsNullObject(array) ) {
-                        cl_log(LOG_ERR, "group array is NULL ");
-                        return NULL;
-                }
-                return array;
-
-        } else if ( strcmp(target_name, G_right_class) == 0 ) {
-                return make_enum_for_right(broker, classname, ctx, namespace, 
-                                           target_name, target_role, 
-                                           source_op, rc);
+                return  cmpi_instance_names(broker, namespace, 
+						target_name, ctx, rc);
+        } else if ( strcmp(target_name, RightClassName) == 0 ) {
+                return enumerate_right(broker, classname, ctx, namespace, 
+				target_name, target_role, source_op, rc);
         }
-        
         return NULL;
-}
-
-static int 
-res_has_op(CMPIBroker * broker, char * classname, CMPIContext * ctx,
-           CMPIObjectPath * group_op, CMPIObjectPath * res_op, CMPIStatus * rc)
-{
-        return 1;
 }
 
 /**********************************************
@@ -170,13 +147,17 @@ OperationOnCleanup(CMPIInstanceMI * mi, CMPIContext * ctx)
 
 static CMPIStatus 
 OperationOnEnumInstanceNames(CMPIInstanceMI * mi, CMPIContext * ctx, 
-                                  CMPIResult * rslt, CMPIObjectPath * cop)
+                             CMPIResult * rslt, CMPIObjectPath * cop)
 {
         CMPIStatus rc = {CMPI_RC_OK, NULL};
-        if (cm_assoc_enum_insts(G_broker, G_classname, ctx, rslt, cop, 
-                                G_left, G_right, G_left_class, G_right_class, 
-                                res_has_op, this_enum_func, 0, 
-                                &rc) != HA_OK ) {
+	PROVIDER_INIT_LOGGER();
+	if ( cim_get_hb_status() != HB_RUNNING ) {
+		cl_log(LOG_ERR, "OperationsOn: heartbeat not running");
+		CMReturn(CMPI_RC_ERR_FAILED);
+	}
+        if (assoc_enum_insts(Broker, ClassName, ctx, rslt, cop, Left, Right, 
+			LeftClassName, RightClassName, NULL, enumerate_func, 
+			FALSE, &rc) != HA_OK ) {
                 return rc;
         }
         CMReturn(CMPI_RC_OK);
@@ -185,14 +166,18 @@ OperationOnEnumInstanceNames(CMPIInstanceMI * mi, CMPIContext * ctx,
 
 static CMPIStatus 
 OperationOnEnumInstances(CMPIInstanceMI * mi, CMPIContext * ctx, 
-                              CMPIResult * rslt, CMPIObjectPath * cop, 
-                              char ** properties)
+                         CMPIResult * rslt, CMPIObjectPath * cop, 
+                         char ** properties)
 {
         CMPIStatus rc = {CMPI_RC_OK, NULL};
-        if (cm_assoc_enum_insts(G_broker, G_classname, ctx, rslt, cop, 
-                                G_left, G_right, G_left_class, G_right_class, 
-                                res_has_op, this_enum_func, 1, 
-                                &rc) != HA_OK ) {
+	PROVIDER_INIT_LOGGER();
+	if ( cim_get_hb_status() != HB_RUNNING ) {
+		cl_log(LOG_ERR, "OperationsOn: heartbeat not running");
+		CMReturn(CMPI_RC_ERR_FAILED);
+	}
+        if (assoc_enum_insts(Broker, ClassName, ctx, rslt, cop, Left, Right, 
+			LeftClassName, RightClassName, NULL, enumerate_func, 
+			TRUE, &rc) != HA_OK ) {
                 return rc;
         }
         CMReturn(CMPI_RC_OK);
@@ -202,12 +187,17 @@ OperationOnEnumInstances(CMPIInstanceMI * mi, CMPIContext * ctx,
 
 static CMPIStatus 
 OperationOnGetInstance(CMPIInstanceMI * mi, CMPIContext * ctx, 
-                            CMPIResult * rslt, CMPIObjectPath * cop, 
-                            char ** properties)
+                       CMPIResult * rslt, CMPIObjectPath * cop, 
+                       char ** properties)
 {
         CMPIStatus rc = {CMPI_RC_OK, NULL};
-        if (cm_assoc_get_inst(G_broker, G_classname, ctx, rslt, cop, 
-                              G_left, G_right, &rc) != HA_OK ) {
+	PROVIDER_INIT_LOGGER();
+	if ( cim_get_hb_status() != HB_RUNNING ) {
+		cl_log(LOG_ERR, "OperationsOn: heartbeat not running");
+		CMReturn(CMPI_RC_ERR_FAILED);
+	}
+        if (assoc_get_inst(Broker, ClassName, ctx, rslt, cop, Left, Right, &rc)
+		!= HA_OK ) {
                 return rc;
         }
         CMReturn(CMPI_RC_OK);
@@ -216,11 +206,11 @@ OperationOnGetInstance(CMPIInstanceMI * mi, CMPIContext * ctx,
 
 static CMPIStatus 
 OperationOnCreateInstance(CMPIInstanceMI * mi, CMPIContext * ctx, 
-                               CMPIResult * rslt, CMPIObjectPath * cop, 
-                               CMPIInstance * ci)
+                          CMPIResult * rslt, CMPIObjectPath * cop, 
+                          CMPIInstance * ci)
 {
         CMPIStatus rc = {CMPI_RC_OK, NULL};
-        CMSetStatusWithChars(G_broker, &rc, 
+        CMSetStatusWithChars(Broker, &rc, 
                         CMPI_RC_ERR_NOT_SUPPORTED, "CIM_ERR_NOT_SUPPORTED");
         return rc;
 }
@@ -228,11 +218,16 @@ OperationOnCreateInstance(CMPIInstanceMI * mi, CMPIContext * ctx,
 
 static CMPIStatus 
 OperationOnSetInstance(CMPIInstanceMI * mi, CMPIContext * ctx, 
-                            CMPIResult * rslt, CMPIObjectPath * cop, 
-                            CMPIInstance * ci, char ** properties)
+                       CMPIResult * rslt, CMPIObjectPath * cop, 
+                       CMPIInstance * ci, char ** properties)
 {
         CMPIStatus rc = {CMPI_RC_OK, NULL};
-        CMSetStatusWithChars(G_broker, &rc, 
+	PROVIDER_INIT_LOGGER();
+	if ( cim_get_hb_status() != HB_RUNNING ) {
+		cl_log(LOG_ERR, "OperationsOn: heartbeat not running");
+		CMReturn(CMPI_RC_ERR_FAILED);
+	}
+        CMSetStatusWithChars(Broker, &rc, 
                         CMPI_RC_ERR_NOT_SUPPORTED, "CIM_ERR_NOT_SUPPORTED");
         return rc;
 
@@ -241,21 +236,19 @@ OperationOnSetInstance(CMPIInstanceMI * mi, CMPIContext * ctx,
 
 static CMPIStatus 
 OperationOnDeleteInstance(CMPIInstanceMI * mi, CMPIContext * ctx, 
-                               CMPIResult * rslt, CMPIObjectPath * cop)
+                          CMPIResult * rslt, CMPIObjectPath * cop)
 {
         CMPIStatus rc = {CMPI_RC_OK, NULL};
-        CMSetStatusWithChars(G_broker, &rc, 
-                        CMPI_RC_ERR_NOT_SUPPORTED, "CIM_ERR_NOT_SUPPORTED");
         return rc;
 }
 
 static CMPIStatus 
 OperationOnExecQuery(CMPIInstanceMI * mi, CMPIContext * ctx, 
-                          CMPIResult * rslt, CMPIObjectPath * cop,
-                          char * lang, char * query)
+                     CMPIResult * rslt, CMPIObjectPath * cop,
+                     char * lang, char * query)
 {
         CMPIStatus rc = {CMPI_RC_OK, NULL};
-        CMSetStatusWithChars(G_broker, &rc, 
+        CMSetStatusWithChars(Broker, &rc, 
                         CMPI_RC_ERR_NOT_SUPPORTED, "CIM_ERR_NOT_SUPPORTED");
         return rc;
 }
@@ -265,8 +258,7 @@ OperationOnExecQuery(CMPIInstanceMI * mi, CMPIContext * ctx,
  * Association
  ****************************************************/
 static CMPIStatus 
-OperationOnAssociationCleanup(CMPIAssociationMI * mi, 
-                                   CMPIContext * ctx)
+OperationOnAssociationCleanup(CMPIAssociationMI * mi, CMPIContext * ctx)
 {
         CMReturn(CMPI_RC_OK);
 }
@@ -279,16 +271,18 @@ OperationOnAssociators(CMPIAssociationMI * mi, CMPIContext * ctx,
                             char ** properties)
 {
         CMPIStatus rc = {CMPI_RC_OK, NULL};
-        init_logger(PROVIDER_ID);
-        if (cm_enum_associators(G_broker, G_classname, ctx, rslt, cop, 
-                                G_left, G_right, G_left_class, G_right_class,
-                                assoc_class, result_class, role, 
-                                result_role, res_has_op, this_enum_func, 1, 
-                                &rc) != HA_OK ) {
+	PROVIDER_INIT_LOGGER();
+	if ( cim_get_hb_status() != HB_RUNNING ) {
+		cl_log(LOG_ERR, "OperationsOn: heartbeat not running");
+		CMReturn(CMPI_RC_ERR_FAILED);
+	}
+        if (assoc_enum_associators(Broker, ClassName, ctx, rslt, cop, 
+			Left, Right, LeftClassName, RightClassName, 
+			assoc_class, result_class, role, result_role, 
+			NULL, enumerate_func, TRUE, &rc) != HA_OK ) {
                 return rc;
         }
         CMReturn(CMPI_RC_OK);
-
 }
 
 
@@ -299,16 +293,18 @@ OperationOnAssociatorNames(CMPIAssociationMI * mi, CMPIContext * ctx,
                                 const char * role, const char * result_role)
 {
         CMPIStatus rc = {CMPI_RC_OK, NULL};
-        init_logger(PROVIDER_ID);
-        if (cm_enum_associators(G_broker, G_classname, ctx, rslt, cop, 
-                                G_left, G_right, G_left_class, G_right_class,
-                                assoc_class, result_class, role, 
-                                result_role, res_has_op, this_enum_func, 0, 
-                                &rc) != HA_OK ) {
+	PROVIDER_INIT_LOGGER();
+	if ( cim_get_hb_status() != HB_RUNNING ) {
+		cl_log(LOG_ERR, "OperationsOn: heartbeat not running");
+		CMReturn(CMPI_RC_ERR_FAILED);
+	}
+        if (assoc_enum_associators(Broker, ClassName, ctx, rslt, cop, 
+			Left, Right, LeftClassName, RightClassName,
+			assoc_class, result_class, role, result_role, 
+			NULL, enumerate_func, FALSE, &rc) != HA_OK ) {
                 return rc;
         }
         CMReturn(CMPI_RC_OK);
-
 }
 
 static CMPIStatus
@@ -317,40 +313,47 @@ OperationOnReferences(CMPIAssociationMI * mi, CMPIContext * ctx,
                            const char * result_class, const char * role, 
                            char ** properties)
 {
+
         CMPIStatus rc = {CMPI_RC_OK, NULL};
-        init_logger(PROVIDER_ID); 
-        if ( cm_enum_references(G_broker, G_classname, ctx, rslt, cop, 
-                                G_left, G_right, G_left_class, G_right_class,
-                                result_class, role, res_has_op, 
-                                this_enum_func, 1, &rc) != HA_OK ) {
+	PROVIDER_INIT_LOGGER();
+	if ( cim_get_hb_status() != HB_RUNNING ) {
+		cl_log(LOG_ERR, "OperationsOn: heartbeat not running");
+		CMReturn(CMPI_RC_ERR_FAILED);
+	}
+        if ( assoc_enum_references(Broker, ClassName, ctx, rslt, cop, 
+			Left, Right, LeftClassName, RightClassName,
+			result_class, role, NULL, enumerate_func, 
+			TRUE, &rc) != HA_OK ) {
                 return rc;
-        }
-
+        
+	}
         CMReturn(CMPI_RC_OK);
-
 }
 
 static CMPIStatus
 OperationOnReferenceNames(CMPIAssociationMI * mi, CMPIContext * ctx, 
-                               CMPIResult * rslt, CMPIObjectPath * cop,
-                               const char * result_class, const char * role)
+                          CMPIResult * rslt, CMPIObjectPath * cop,
+                          const char * result_class, const char * role)
 {
         CMPIStatus rc = {CMPI_RC_OK, NULL};
-        init_logger(PROVIDER_ID); 
-        if ( cm_enum_references(G_broker, G_classname, ctx, rslt, cop, 
-                                G_left, G_right, G_left_class, G_right_class,
-                                result_class, role, res_has_op, 
-                                this_enum_func, 0, &rc) != HA_OK ) {
+	PROVIDER_INIT_LOGGER();
+	if ( cim_get_hb_status() != HB_RUNNING ) {
+		cl_log(LOG_ERR, "OperationsOn: heartbeat not running");
+		CMReturn(CMPI_RC_ERR_FAILED);
+	}
+        if ( assoc_enum_references(Broker, ClassName, ctx, rslt, cop, 
+			Left, Right, LeftClassName, RightClassName,
+			result_class, role, NULL, enumerate_func, 
+			FALSE, &rc) != HA_OK ) {
                 return rc;
         }
 
         CMReturn(CMPI_RC_OK);
-
 }                
 
 /**************************************************************
  *      MI stub
  *************************************************************/
+DeclareInstanceMI   (OperationOn, HA_OperationOnProvider, Broker);
+DeclareAssociationMI(OperationOn, HA_OperationOnProvider, Broker);
 
-DeclareInstanceMI(OperationOn, HA_OperationOnProvider, G_broker);
-DeclareAssociationMI(OperationOn, HA_OperationOnProvider, G_broker);

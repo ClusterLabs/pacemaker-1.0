@@ -32,23 +32,22 @@
 #include <cmpidt.h>
 #include <cmpift.h>
 #include <cmpimacs.h>
-#include "assoc_utils.h"
 #include "cluster_info.h"
 #include "cmpi_utils.h"
 
-static const char * PROVIDER_ID    = "cim-hosted-res";
-static CMPIBroker * G_broker       = NULL;
-static char G_classname         [] = "HA_HostedResource"; 
-static char G_left              [] = "Antecedent";
-static char G_right             [] = "Dependent"; 
-static char G_left_class        [] = "HA_ClusterNode"; 
-static char G_right_class       [] = "HA_PrimitiveResource";
+static const char * 	PROVIDER_ID    = "cim-hosted-res";
+static CMPIBroker * 	Broker       = NULL;
+static char 		ClassName         [] = "HA_HostedResource"; 
+static char 		Left              [] = "Antecedent";
+static char 		Right             [] = "Dependent"; 
+static char 		LeftClassName     [] = "HA_ClusterNode"; 
+static char 		RightClassName    [] = "HA_PrimitiveResource";
 
-static int
-node_host_res(CMPIBroker * broker, char * classname, CMPIContext * ctx,
-              CMPIObjectPath * node_op, CMPIObjectPath * res_op, 
-              CMPIStatus * rc);
-DeclareInstanceFunctions(HostedResource);
+static int 		node_host_res(CMPIBroker * broker, char * classname, 
+				CMPIContext * ctx, CMPIObjectPath * node_op, 
+				CMPIObjectPath * res_op, CMPIStatus * rc);
+
+DeclareInstanceFunctions   (HostedResource);
 DeclareAssociationFunctions(HostedResource);
 
 
@@ -58,10 +57,12 @@ node_host_res(CMPIBroker * broker, char * classname, CMPIContext * ctx,
               CMPIObjectPath * node_op, CMPIObjectPath * res_op, 
               CMPIStatus * rc)
 {
-        char * rsc_id, * uname;
-        CMPIString * cmpi_rsc_id, * cmpi_uname;
-        int host = 0;
-        char * running_node;
+        CMPIString * 	cmpi_rsc_id;
+	CMPIString * 	cmpi_uname;
+        char *		rsc_id;
+	char * 		uname;
+        int 		host = 0;
+        char * 		running_node;
 
         /* resource name */
         cmpi_rsc_id = CMGetKey(res_op, "Id", rc).value.string;
@@ -80,7 +81,7 @@ node_host_res(CMPIBroker * broker, char * classname, CMPIContext * ctx,
         uname = CMGetCharPtr(cmpi_uname);
 
         /* get running node */
-        if ((running_node = ci_get_res_running_node(rsc_id)) == NULL ) {
+        if ((running_node = cim_get(GET_RSC_HOST, rsc_id, NULL)) == NULL ) {
                 cl_log(LOG_WARNING, "running node of %s is NULL", rsc_id);
                 return 0;
         }
@@ -92,8 +93,7 @@ node_host_res(CMPIBroker * broker, char * classname, CMPIContext * ctx,
                 host = 1; 
         }
 
-        ci_safe_free(running_node);
-
+        cim_free(running_node);
         return host;
 }
 
@@ -113,8 +113,8 @@ HostedResourceEnumInstanceNames(CMPIInstanceMI * mi, CMPIContext* ctx,
                                 CMPIResult * rslt, CMPIObjectPath * cop)
 {
         CMPIStatus rc = {CMPI_RC_OK, NULL};
-        if (cm_assoc_enum_insts(G_broker, G_classname, ctx, rslt, cop, 
-                                G_left, G_right, G_left_class, G_right_class, 
+        if (assoc_enum_insts(Broker, ClassName, ctx, rslt, cop, 
+                                Left, Right, LeftClassName, RightClassName, 
                                 node_host_res, NULL, 0, &rc) != HA_OK ) {
                 return rc;
         }
@@ -129,8 +129,8 @@ HostedResourceEnumInstances(CMPIInstanceMI * mi, CMPIContext * ctx,
                             char ** properties)
 {
         CMPIStatus rc = {CMPI_RC_OK, NULL};
-        if (cm_assoc_enum_insts(G_broker, G_classname, ctx, rslt, cop, 
-                                G_left, G_right, G_left_class, G_right_class, 
+        if (assoc_enum_insts(Broker, ClassName, ctx, rslt, cop, 
+                                Left, Right, LeftClassName, RightClassName, 
                                 node_host_res, NULL, 1, &rc) != HA_OK ) {
                 return rc;
         }
@@ -145,8 +145,8 @@ HostedResourceGetInstance(CMPIInstanceMI * mi, CMPIContext * ctx,
                           char ** properties)
 {
         CMPIStatus rc = {CMPI_RC_OK, NULL};
-        if (cm_assoc_get_inst(G_broker, G_classname, ctx, rslt, cop, 
-                              G_left, G_right, &rc) != HA_OK ) {
+        if (assoc_get_inst(Broker, ClassName, ctx, rslt, cop, 
+                              Left, Right, &rc) != HA_OK ) {
                 return rc;
         }
         CMReturn(CMPI_RC_OK);
@@ -158,7 +158,7 @@ HostedResourceCreateInstance(CMPIInstanceMI * mi, CMPIContext * ctx,
                              CMPIInstance * ci)
 {
         CMPIStatus rc = {CMPI_RC_OK, NULL};
-        CMSetStatusWithChars(G_broker, &rc, 
+        CMSetStatusWithChars(Broker, &rc, 
                         CMPI_RC_ERR_NOT_SUPPORTED, "CIM_ERR_NOT_SUPPORTED");
         return rc;
 }
@@ -170,7 +170,7 @@ HostedResourceSetInstance(CMPIInstanceMI * mi, CMPIContext * ctx,
                           CMPIInstance * ci, char ** properties)
 {
         CMPIStatus rc = {CMPI_RC_OK, NULL};
-        CMSetStatusWithChars(G_broker, &rc, 
+        CMSetStatusWithChars(Broker, &rc, 
                         CMPI_RC_ERR_NOT_SUPPORTED, "CIM_ERR_NOT_SUPPORTED");
         return rc;
 
@@ -182,7 +182,7 @@ HostedResourceDeleteInstance(CMPIInstanceMI * mi, CMPIContext * ctx,
                              CMPIResult * rslt, CMPIObjectPath * cop)
 {
         CMPIStatus rc = {CMPI_RC_OK, NULL};
-        CMSetStatusWithChars(G_broker, &rc, 
+        CMSetStatusWithChars(Broker, &rc, 
                         CMPI_RC_ERR_NOT_SUPPORTED, "CIM_ERR_NOT_SUPPORTED");
         return rc;
 }
@@ -193,7 +193,7 @@ HostedResourceExecQuery(CMPIInstanceMI * mi, CMPIContext * ctx,
                         char * lang, char * query)
 {
         CMPIStatus rc = {CMPI_RC_OK, NULL};
-        CMSetStatusWithChars(G_broker, &rc, 
+        CMSetStatusWithChars(Broker, &rc, 
                         CMPI_RC_ERR_NOT_SUPPORTED, "CIM_ERR_NOT_SUPPORTED");
         return rc;
 }
@@ -218,9 +218,9 @@ HostedResourceAssociators(CMPIAssociationMI * mi, CMPIContext * ctx,
 {
 
         CMPIStatus rc = {CMPI_RC_OK, NULL};
-        init_logger(PROVIDER_ID);
-        if (cm_enum_associators(G_broker, G_classname, ctx, rslt, cop, 
-                                G_left, G_right, G_left_class, G_right_class,
+        PROVIDER_INIT_LOGGER();
+        if (assoc_enum_associators(Broker, ClassName, ctx, rslt, cop, 
+                                Left, Right, LeftClassName, RightClassName,
                                 assoc_class, result_class, role, 
                                 result_role, node_host_res, NULL, 1, 
                                 &rc) != HA_OK ) {
@@ -237,9 +237,9 @@ HostedResourceAssociatorNames(CMPIAssociationMI * mi, CMPIContext * ctx,
                               const char * role, const char * result_role)
 {
         CMPIStatus rc = {CMPI_RC_OK, NULL};
-        init_logger(PROVIDER_ID);
-        if (cm_enum_associators(G_broker, G_classname, ctx, rslt, cop, 
-                                G_left, G_right, G_left_class, G_right_class,
+        PROVIDER_INIT_LOGGER();
+        if (assoc_enum_associators(Broker, ClassName, ctx, rslt, cop, 
+                                Left, Right, LeftClassName, RightClassName,
                                 assoc_class, result_class, role, 
                                 result_role, node_host_res, NULL, 0, 
                                 &rc) != HA_OK ) {
@@ -255,9 +255,9 @@ HostedResourceReferences(CMPIAssociationMI * mi, CMPIContext * ctx,
                          char ** properties)
 {
         CMPIStatus rc = {CMPI_RC_OK, NULL};
-        init_logger(PROVIDER_ID);
-        if ( cm_enum_references(G_broker, G_classname, ctx, rslt, cop, 
-                                G_left, G_right, G_left_class, G_right_class,
+        PROVIDER_INIT_LOGGER();
+        if ( assoc_enum_references(Broker, ClassName, ctx, rslt, cop, 
+                                Left, Right, LeftClassName, RightClassName,
                                 result_class, role, node_host_res, NULL, 1, 
                                 &rc) != HA_OK ) {
                 return rc;
@@ -272,9 +272,9 @@ HostedResourceReferenceNames(CMPIAssociationMI * mi, CMPIContext * ctx,
                              const char * result_class, const char * role)
 {
         CMPIStatus rc = {CMPI_RC_OK, NULL};
-        init_logger(PROVIDER_ID);
-        if ( cm_enum_references(G_broker, G_classname, ctx, rslt, cop, 
-                                G_left, G_right, G_left_class, G_right_class,
+        PROVIDER_INIT_LOGGER();
+        if ( assoc_enum_references(Broker, ClassName, ctx, rslt, cop, 
+                                Left, Right, LeftClassName, RightClassName,
                                 result_class, role, node_host_res, NULL, 0, 
                                 &rc) != HA_OK ) {
                 return rc;
@@ -288,5 +288,5 @@ HostedResourceReferenceNames(CMPIAssociationMI * mi, CMPIContext * ctx,
 /***********************************************
  * Install MIs
  **********************************************/
-DeclareInstanceMI(HostedResource, HA_HostedResourceProvider, G_broker);
-DeclareAssociationMI(HostedResource, HA_HostedResourceProvider, G_broker);
+DeclareInstanceMI(HostedResource, HA_HostedResourceProvider, Broker);
+DeclareAssociationMI(HostedResource, HA_HostedResourceProvider, Broker);

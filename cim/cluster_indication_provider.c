@@ -35,7 +35,6 @@
 #include <cmpimacs.h>
 #include <signal.h>
 #include <glib.h>
-#include "assoc_utils.h"
 #include "cluster_info.h"
 #include "cmpi_utils.h"
 
@@ -119,7 +118,7 @@ ind_generate_indication (void * data)
         instance = CMNewInstance(ind_env->broker, op, &rc);
         date_time = CMNewDateTime(ind_env->broker, &rc);
 
-        sprintf(msg, "%s", ind_data->message);
+        snprintf(msg, 128, "%s", ind_data->message);
         CMSetProperty(instance, "Message", msg, CMPI_chars);
         CMSetProperty(instance, "Time", &date_time, CMPI_dateTime);
         CMSetProperty(instance, "Type", &ind_data->type, CMPI_uint16);
@@ -141,7 +140,7 @@ ind_event_handler(const char * event)
 
         if ( event == NULL ) { return HA_FAIL; }
         cl_log(LOG_INFO, "ind_event_handler: got event: %s", event);
-        sprintf(msg, "Got an indication: %s", event);
+        snprintf(msg, 256, "Got an indication: %s", event);
 
         data.type = IND_TYPE_CRM;
         data.message = msg;
@@ -186,7 +185,7 @@ ind_thread_func(void * param)
         /* detach thread */
         CBDetachThread(ind_env->broker, ind_env->context);
 
-        CIM_FREE(ind_env);
+        cim_free(ind_env);
 
         return NULL;
 }
@@ -217,10 +216,10 @@ haind_activate(CMPIContext * ctx, CMPIResult * rslt, CMPISelectExp * filter,
 {
         pthread_attr_t tattr;
 
-        init_logger(PROVIDER_ID);
+        PROVIDER_INIT_LOGGER();
 
         if ( (ind_env = (struct cmpi_ind_env *)
-              CIM_MALLOC(sizeof(struct cmpi_ind_env)) ) == NULL ) {
+              cim_malloc(sizeof(struct cmpi_ind_env)) ) == NULL ) {
                 cl_log(LOG_ERR, "%s: could not alloc ind_env", __FUNCTION__);
                 return HA_FAIL;
         }
@@ -252,7 +251,7 @@ haind_deactivate(CMPIContext * ctx, CMPIResult * rslt, CMPISelectExp * filter,
 {
         /* destroy the indication thread */
         ind_stop_thread(1) ;
-        CIM_FREE (ind_env);
+        cim_free (ind_env);
         return HA_OK;
 }
 
@@ -265,7 +264,7 @@ static CMPIStatus
 IndicationIndicationCleanup(CMPIIndicationMI * mi, 
                             CMPIContext * ctx)
 {
-        init_logger(PROVIDER_ID);
+        PROVIDER_INIT_LOGGER();
         CMReturn(CMPI_RC_OK);
 }
 
@@ -279,7 +278,7 @@ IndicationAuthorizeFilter(CMPIIndicationMI * mi,
         char * filter_str = NULL;
         CMPIStatus rc;
 
-        init_logger(PROVIDER_ID);
+        PROVIDER_INIT_LOGGER();
 
         filter_str = CMGetCharPtr( CMGetSelExpString(filter, &rc) );
 
@@ -301,7 +300,7 @@ IndicationMustPoll(CMPIIndicationMI * mi,
         CMPIBoolean poll = 0;
         char * filter_str = NULL;
 
-        init_logger(PROVIDER_ID);
+        PROVIDER_INIT_LOGGER();
 
         filter_str = CMGetCharPtr( CMGetSelExpString(filter, &rc) );
 
@@ -326,7 +325,7 @@ IndicationActivateFilter(CMPIIndicationMI * mi,
         CMPIBoolean activated = 1;
         CMPIStatus rc;
 
-        init_logger(PROVIDER_ID);
+        PROVIDER_INIT_LOGGER();
         
         if (  haind_activate(ctx, rslt, filter, type, 
                              classPath, firstActivation, &rc) == HA_OK ) {
@@ -350,7 +349,7 @@ IndicationDeActivateFilter(CMPIIndicationMI * mi,
         CMPIBoolean deactivated = 1;
         CMPIStatus rc;
 
-        init_logger(PROVIDER_ID);
+        PROVIDER_INIT_LOGGER();
 
         if ( haind_deactivate(ctx, rslt, filter, type, 
                               classPath, lastActivation, &rc) == HA_OK ) {

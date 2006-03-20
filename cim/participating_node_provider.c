@@ -32,27 +32,24 @@
 #include <cmpidt.h>
 #include <cmpift.h>
 #include <cmpimacs.h>
-#include "assoc_utils.h"
+#include "cmpi_utils.h"
 #include "cluster_info.h"
 #include "cmpi_utils.h"
 
-#define PROVIDER_ID "cim-par-node"
+#define PROVIDER_ID 	"cim-par-node"
+static CMPIBroker * 	Broker    	= NULL;
+static char 		ClassName      [] = "HA_ParticipatingNode"; 
+static char 		Left           [] = "Dependent";
+static char 		Right          [] = "Antecedent";
+static char 		LeftClassName  [] = "HA_Cluster";
+static char 		RightClassName [] = "HA_ClusterNode";
 
-static CMPIBroker * G_broker    = NULL;
-static char G_classname      [] = "HA_ParticipatingNode"; 
-static char G_left           [] = "Dependent";
-static char G_right          [] = "Antecedent";
-static char G_left_class     [] = "HA_Cluster";
-static char G_right_class    [] = "HA_ClusterNode";
-
-/***************** interfaces *******************/
-DeclareInstanceFunctions(ParticipatingNode);
+DeclareInstanceFunctions   (ParticipatingNode);
 DeclareAssociationFunctions(ParticipatingNode);
 
 /**********************************************
  * Instance Provider Interface
  **********************************************/
-
 static CMPIStatus 
 ParticipatingNodeCleanup(CMPIInstanceMI * mi, CMPIContext * ctx)
 {
@@ -63,17 +60,16 @@ static CMPIStatus
 ParticipatingNodeEnumInstanceNames(CMPIInstanceMI * mi, CMPIContext * ctx, 
                                    CMPIResult * rslt, CMPIObjectPath * cop)
 {
-
         CMPIStatus rc = {CMPI_RC_OK, NULL};
-        init_logger(PROVIDER_ID);
-        if (cm_assoc_enum_insts(G_broker, G_classname, ctx, rslt, cop, 
-                                G_left, G_right, G_left_class, G_right_class, 
-                                NULL, NULL, 0, &rc) != HA_OK ) {
+	PROVIDER_INIT_LOGGER();
+
+        if (assoc_enum_insts(Broker, ClassName, ctx, rslt, cop, Left, Right, 
+			LeftClassName, RightClassName, NULL, NULL, 0, &rc) 
+		!= HA_OK ) {
                 return rc;
         }
 
         CMReturn(CMPI_RC_OK);
-
 }
 
 static CMPIStatus 
@@ -81,17 +77,15 @@ ParticipatingNodeEnumInstances(CMPIInstanceMI * mi, CMPIContext * ctx,
                                CMPIResult * rslt, CMPIObjectPath * cop,
                                char ** properties)
 {
-
         CMPIStatus rc = {CMPI_RC_OK, NULL};
-        init_logger(PROVIDER_ID);
-        if (cm_assoc_enum_insts(G_broker, G_classname, ctx, rslt, cop, 
-                                G_left, G_right, G_left_class, G_right_class,
-                                NULL, NULL, 1, &rc) != HA_OK ){
+	PROVIDER_INIT_LOGGER();
+        if (assoc_enum_insts(Broker, ClassName, ctx, rslt, cop, Left, Right, 
+			LeftClassName, RightClassName, NULL, NULL, 1, &rc) 
+		!= HA_OK ){
                 return rc;
         }
 
         CMReturn(CMPI_RC_OK);
-
 }
 
 static CMPIStatus 
@@ -100,9 +94,9 @@ ParticipatingNodeGetInstance(CMPIInstanceMI * mi, CMPIContext * ctx,
                              char ** properties)
 {
         CMPIStatus rc = {CMPI_RC_OK, NULL};
-        init_logger(PROVIDER_ID);
-        if (cm_assoc_get_inst(G_broker, G_classname, ctx, rslt, cop, 
-                              G_left, G_right, &rc) != HA_OK ) {
+	PROVIDER_INIT_LOGGER();
+        if ( assoc_get_inst(Broker, ClassName, ctx, rslt, cop, 
+                              Left, Right, &rc) != HA_OK ) {
                 return rc;
         }
 
@@ -115,7 +109,7 @@ ParticipatingNodeCreateInstance(CMPIInstanceMI * mi, CMPIContext * ctx,
                                 CMPIInstance * ci)
 {
 	CMPIStatus rc = {CMPI_RC_OK, NULL};
-	CMSetStatusWithChars(G_broker, &rc, 
+	CMSetStatusWithChars(Broker, &rc, 
 			CMPI_RC_ERR_NOT_SUPPORTED, "CIM_ERR_NOT_SUPPORTED");
 	return rc;
 }
@@ -126,7 +120,7 @@ ParticipatingNodeSetInstance(CMPIInstanceMI * mi, CMPIContext * ctx,
                              CMPIInstance * ci, char ** properties)
 {
 	CMPIStatus rc = {CMPI_RC_OK, NULL};
-	CMSetStatusWithChars(G_broker, &rc, 
+	CMSetStatusWithChars(Broker, &rc, 
 			CMPI_RC_ERR_NOT_SUPPORTED, "CIM_ERR_NOT_SUPPORTED");
 	return rc;
 
@@ -137,7 +131,7 @@ ParticipatingNodeDeleteInstance(CMPIInstanceMI * mi, CMPIContext * ctx,
                                 CMPIResult * rslt, CMPIObjectPath * cop)
 {
 	CMPIStatus rc = {CMPI_RC_OK, NULL};
-	CMSetStatusWithChars(G_broker, &rc, 
+	CMSetStatusWithChars(Broker, &rc, 
 			CMPI_RC_ERR_NOT_SUPPORTED, "CIM_ERR_NOT_SUPPORTED");
 	return rc;
 }
@@ -148,7 +142,7 @@ ParticipatingNodeExecQuery(CMPIInstanceMI * mi, CMPIContext * ctx,
                            char * lang, char * query)
 {
 	CMPIStatus rc = {CMPI_RC_OK, NULL};
-	CMSetStatusWithChars(G_broker, &rc, 
+	CMSetStatusWithChars(Broker, &rc, 
 			CMPI_RC_ERR_NOT_SUPPORTED, "CIM_ERR_NOT_SUPPORTED");
 	return rc;
 }
@@ -171,13 +165,9 @@ ParticipatingNodeAssociators(CMPIAssociationMI * mi, CMPIContext * ctx,
                              char ** properties)
 {
         CMPIStatus rc;
-        init_logger(PROVIDER_ID);
-        cl_log(LOG_INFO, 
-                "%s: asscClass, resultClass, role, resultRole = %s, %s, %s, %s",
-                __FUNCTION__,
-                assoc_class, result_class, role, result_role);
-        if (cm_enum_associators(G_broker, G_classname, ctx, rslt, cop, 
-                                G_left, G_right, G_left_class, G_right_class,
+	PROVIDER_INIT_LOGGER();
+        if (assoc_enum_associators(Broker, ClassName, ctx, rslt, cop, 
+                                Left, Right, LeftClassName, RightClassName,
                                 assoc_class, result_class, role, 
                                 result_role, NULL, NULL, 1, &rc) != HA_OK ) {
                 return rc;
@@ -192,8 +182,9 @@ ParticipatingNodeAssociatorNames(CMPIAssociationMI * mi, CMPIContext * ctx,
                                  const char * role, const char * result_role)
 {
         CMPIStatus rc;
-        if (cm_enum_associators(G_broker, G_classname, ctx, rslt, cop, 
-                                G_left, G_right, G_left_class, G_right_class, 
+	PROVIDER_INIT_LOGGER();
+        if (assoc_enum_associators(Broker, ClassName, ctx, rslt, cop, 
+                                Left, Right, LeftClassName, RightClassName, 
                                 assoc_class, result_class, role, 
                                 result_role, NULL, NULL, 0, &rc) != HA_OK ) {
                 return rc;
@@ -208,9 +199,9 @@ ParticipatingNodeReferences(CMPIAssociationMI * mi, CMPIContext * ctx,
                             char ** properties)
 {
         CMPIStatus rc;
-        init_logger(PROVIDER_ID);
-        if ( cm_enum_references(G_broker, G_classname, ctx, rslt, cop, 
-                                G_left, G_right, G_left_class, G_right_class,
+	PROVIDER_INIT_LOGGER();
+        if ( assoc_enum_references(Broker, ClassName, ctx, rslt, cop, 
+                                Left, Right, LeftClassName, RightClassName,
                                 result_class, role, NULL, NULL, 1, &rc) != HA_OK ) {
                 return rc;
         }
@@ -223,18 +214,17 @@ ParticipatingNodeReferenceNames(CMPIAssociationMI * mi,
                 const char * result_class, const char * role)
 {
         CMPIStatus rc;
-        init_logger(PROVIDER_ID);
-        if (cm_enum_references(G_broker, G_classname, ctx, rslt, cop, 
-                               G_left, G_right, G_left_class, G_right_class,
+	PROVIDER_INIT_LOGGER();
+        if (assoc_enum_references(Broker, ClassName, ctx, rslt, cop, 
+                               Left, Right, LeftClassName, RightClassName,
                                result_class, role, NULL, NULL, 0, &rc) != HA_OK ){
                 return rc;
         }
         CMReturn(CMPI_RC_OK);
-
 }                
 
 /**************************************************************
  *      MI stub
  *************************************************************/
-DeclareInstanceMI(ParticipatingNode, HA_ParticipatingNodeProvider, G_broker);
-DeclareAssociationMI(ParticipatingNode, HA_ParticipatingNodeProvider, G_broker);
+DeclareInstanceMI   (ParticipatingNode, HA_ParticipatingNodeProvider, Broker);
+DeclareAssociationMI(ParticipatingNode, HA_ParticipatingNodeProvider, Broker);
