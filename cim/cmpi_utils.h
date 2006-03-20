@@ -4,7 +4,9 @@
 #include <cmpidt.h>
 #include <cmpift.h>
 #include <cmpimacs.h>
-
+#include <glib.h>
+#include "utils.h"
+#include "mof_map.h"
 
 /* for compatibility */
 #ifndef CMPIVersion090
@@ -20,13 +22,93 @@
 
 #endif /* CMPIVersion090 */
 
+#define  CMGetKeyString(op,key,rc) ({				\
+		CMPIString * s = CMGetKey(op,key,rc).value.string;\
+		char *v = NULL;					\
+		if ( s == NULL ) {				\
+			cl_log(LOG_ERR, "key %s is missing.", key);\
+		}else {						\
+			v = CMGetCharPtr(s);			\
+		}						\
+		v;						\
+	})
+
+
+int	cmpi_set_properties(CMPIBroker * broker, CMPIInstance * inst, 
+		CIMTable * t, const mapping_t * map, int count, CMPIStatus * rc);
+int	cmpi_get_properties(CMPIInstance * inst, CIMTable * t,
+                const mapping_t * map, int count, CMPIStatus * rc);
+
+/***********************************************************
+ *  assocation functions 
+ **********************************************************/
+
+typedef int 
+(* assoc_pred_func_t)(CMPIBroker * broker, char * classname, CMPIContext * ctx, 
+		CMPIObjectPath * left, CMPIObjectPath * right, CMPIStatus * rc);
+
+struct assoc_env {
+        GPtrArray * left_op_tbl;
+        GPtrArray * right_op_tbl;
+        int (*done)(struct assoc_env * env); 
+};
+
+
+/* target_name: which should be enumerated
+   source_op  : generate enumeration according to this object path */
+
+typedef CMPIArray * 
+(* assoc_enum_func_t) (CMPIBroker * broker, char * classname, CMPIContext * ctx,
+                       char * namespace, char * target_name, char * target_role, 
+                       CMPIObjectPath * source_op, /*void * user_data,*/
+                       CMPIStatus * rc);
+
+CMPIArray *
+cmpi_instance_names(CMPIBroker * broker, char * namespace, char * classname, 
+		CMPIContext * ctx, CMPIStatus *rc);
+/* get instance */
+int
+assoc_get_inst(CMPIBroker * broker, char * classname, CMPIContext * ctx, 
+		CMPIResult * rslt, CMPIObjectPath * cop, 
+		char * left, char * right, CMPIStatus * rc);
+
+/* enumerate cop's associators */
+int 
+assoc_enum_associators(CMPIBroker * broker, char * classname, 
+                    CMPIContext * ctx, CMPIResult * rslt, CMPIObjectPath * cop, 
+                    char * left, char * right, char * lclass, char * rclass,
+                    const char * assoc_class, const char * result_class, 
+                    const char * role, const char * result_role, 
+                    assoc_pred_func_t func, assoc_enum_func_t enum_func,
+                    int inst, CMPIStatus * rc);
+
+/* enum cop's references */
+int
+assoc_enum_references(CMPIBroker * broker, char * classname,
+                   CMPIContext * ctx, CMPIResult * rslt, CMPIObjectPath * cop,
+                   char * left, char * right, char * lclass, char * rclass,
+                   const char * result_class, const char * role,
+                   assoc_pred_func_t func, assoc_enum_func_t enum_func,
+                   int inst, CMPIStatus * rc);
+
+/* enum association's instances */
+int
+assoc_enum_insts(CMPIBroker * broker, char * classname,
+                    CMPIContext * ctx, CMPIResult * rslt, CMPIObjectPath * cop, 
+                    char * left, char * right, char * lclass, char * rclass,
+                    assoc_pred_func_t func, assoc_enum_func_t enum_func,
+                    int inst, CMPIStatus * rc);
+
+
+
+
 /* return ret if obj is a NULL CMPI Object */
-#define RETURN_IFNULL_OBJ(obj, ret, n) do {                          \
-                if ( CMIsNullObject(obj) ) {                         \
-                       cl_log(LOG_ERR, "%s: CMPI Object %s is NULL", \
-                                        __FUNCTION__, n);            \
-                       return ret;                                   \
-                }                                                    \
+#define RETURN_IFNULL_OBJ(obj, ret, n) do {                          	\
+                if ( CMIsNullObject(obj) ) {                         	\
+                       cl_log(LOG_ERR, "%s:%s:%d: CMPI Object: %s is NULL",\
+                                        __FUNCTION__, __FILE__, __LINE__, n);\
+                       return ret;                                   	\
+                }                                                    	\
         } while (0)
 
 /* return HA_FAIL if obj is a NULL CMPI Object */
@@ -260,6 +342,5 @@ pn##_Create_IndicationMI(CMPIBroker * brkr, CMPIContext * ctx) {       \
         };                                                             \
         return &mi;                                                    \
 }
-
 
 #endif /* _CMPI_UTILS_H */
