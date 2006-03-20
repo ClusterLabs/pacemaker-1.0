@@ -217,7 +217,6 @@ function assoc_test ()
                 if [ $? -eq $SUCCESS ]; then
                         result=`cat $TMP`
                 else
-                        echo Failed to enum instances: $inst_class
                         continue
                 fi
                         
@@ -239,7 +238,7 @@ function assoc_test ()
 ## Main ################
 
 for i in `seq $iteration`; do
-#        instance_test
+        instance_test
         assoc_test
 done
 
