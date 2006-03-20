@@ -34,13 +34,14 @@
 #include <cmpift.h>
 #include <cmpimacs.h>
 #include <hb_api.h>
+#include "utils.h"
 #include "cmpi_utils.h"
 #include "cluster_info.h"
 #include "resource_common.h"
 
-static const char * PROVIDER_ID = "cim-clone";
-static char G_classname []      = "HA_ResourceClone";
-static CMPIBroker * G_broker    = NULL;
+static const char * 	PROVIDER_ID 	= "cim-clone";
+static char 		ClassName []	= "HA_ResourceClone";
+static CMPIBroker * 	Broker    	= NULL;
 
 DeclareInstanceFunctions(ResourceClone);
 
@@ -52,7 +53,7 @@ static CMPIStatus
 ResourceCloneCleanup(CMPIInstanceMI * mi, CMPIContext * ctx)
 {
         CMPIStatus rc;
-        resource_cleanup(G_broker, G_classname, mi, ctx, TID_RES_CLONE, &rc);
+        resource_cleanup(Broker, ClassName, mi, ctx, TID_RES_CLONE, &rc);
 	CMReturn(CMPI_RC_OK);
 }
 
@@ -61,16 +62,10 @@ ResourceCloneEnumInstanceNames(CMPIInstanceMI * mi, CMPIContext * ctx,
                               CMPIResult * rslt, CMPIObjectPath * ref)
 {
         CMPIStatus rc;
-
-        init_logger( PROVIDER_ID );
-        cl_log(LOG_INFO, "%s", G_classname);
-    
-        if ( enum_inst_resource(G_broker, G_classname, ctx, rslt, ref, 0, 
-                                TID_RES_CLONE, &rc) == HA_OK ) {
-                CMReturn(CMPI_RC_OK);	
-        } else {
-                CMReturn(CMPI_RC_ERR_FAILED);
-        }
+	PROVIDER_INIT_LOGGER();
+        enumerate_resource(Broker, ClassName, ctx, rslt, ref, FALSE, 
+                                TID_RES_CLONE, &rc);
+	return rc;
 }
 
 
@@ -80,14 +75,10 @@ ResourceCloneEnumInstances(CMPIInstanceMI * mi, CMPIContext * ctx,
                           char ** properties)
 {
         CMPIStatus rc;
-
-        init_logger( PROVIDER_ID );
-        if ( enum_inst_resource(G_broker, G_classname, ctx, rslt, ref, 1, 
-                                TID_RES_CLONE, &rc) == HA_OK ) {
-                CMReturn(CMPI_RC_OK);	
-        } else {
-                CMReturn(CMPI_RC_ERR_FAILED);
-        }
+	PROVIDER_INIT_LOGGER();
+	enumerate_resource(Broker, ClassName, ctx, rslt, ref, TRUE,
+                                TID_RES_CLONE, &rc);
+	return rc;
 }
 
 static CMPIStatus 
@@ -96,14 +87,10 @@ ResourceCloneGetInstance(CMPIInstanceMI * mi, CMPIContext * ctx,
                         char ** properties)
 {
         CMPIStatus rc;
-        init_logger( PROVIDER_ID );
-        
-        if ( get_inst_resource(G_broker, G_classname, ctx, rslt, cop, properties, 
-                            TID_RES_CLONE, &rc) == HA_OK ) {
-                CMReturn(CMPI_RC_OK);
-        } else {
-                CMReturn(CMPI_RC_ERR_FAILED);
-        }
+	PROVIDER_INIT_LOGGER();
+        get_resource(Broker, ClassName, ctx, rslt, cop, properties, 
+                            TID_RES_CLONE, &rc);
+	return rc;
 }
 
 static CMPIStatus 
@@ -112,8 +99,8 @@ ResourceCloneCreateInstance(CMPIInstanceMI * mi, CMPIContext * ctx,
                            CMPIInstance * ci)
 {
 	CMPIStatus rc = {CMPI_RC_OK, NULL};
-	CMSetStatusWithChars(G_broker, &rc, CMPI_RC_ERR_NOT_SUPPORTED, 
-                             "CIM_ERR_NOT_SUPPORTED");
+	create_resource(Broker, ClassName, ctx, rslt, cop, ci, 
+				TID_RES_CLONE, &rc);
 	return rc;
 }
 
@@ -124,8 +111,9 @@ ResourceCloneSetInstance(CMPIInstanceMI * mi, CMPIContext * ctx,
                         CMPIInstance * ci, char ** properties)
 {
         CMPIStatus rc = {CMPI_RC_OK, NULL};
-        CMSetStatusWithChars(G_broker, &rc, CMPI_RC_ERR_NOT_SUPPORTED, 
-                             "CIM_ERR_NOT_SUPPORTED");
+	PROVIDER_INIT_LOGGER();	
+        update_resource(Broker, ClassName, ctx, rslt, cop, ci, properties,
+			TID_RES_CLONE, &rc);
         return rc;
 }
 
@@ -135,8 +123,8 @@ ResourceCloneDeleteInstance(CMPIInstanceMI * mi, CMPIContext * ctx,
                            CMPIResult * rslt, CMPIObjectPath * cop)
 {
         CMPIStatus rc = {CMPI_RC_OK, NULL};
-        CMSetStatusWithChars(G_broker, &rc, CMPI_RC_ERR_NOT_SUPPORTED, 
-                             "CIM_ERR_NOT_SUPPORTED");
+	PROVIDER_INIT_LOGGER();
+	delete_resource(Broker, ClassName, ctx, rslt, cop, &rc);
 	return rc;
 }
 
@@ -146,38 +134,13 @@ ResourceCloneExecQuery(CMPIInstanceMI * mi, CMPIContext * ctx,
                       char * lang, char * query)
 {
         CMPIStatus rc = {CMPI_RC_OK, NULL};
-        CMSetStatusWithChars(G_broker, &rc, CMPI_RC_ERR_NOT_SUPPORTED, 
+        CMSetStatusWithChars(Broker, &rc, CMPI_RC_ERR_NOT_SUPPORTED, 
                              "CIM_ERR_NOT_SUPPORTED");
 	return rc;
 }
-
-
-/**************************************************
- * Method Provider 
- *************************************************/
-static CMPIStatus 
-ResourceCloneInvokeMethod(CMPIMethodMI * mi, CMPIContext * ctx,
-                         CMPIResult * rslt, CMPIObjectPath * ref,
-                         const char * method, CMPIArgs * in, CMPIArgs * out)
-{
-        CMPIStatus rc = {CMPI_RC_OK, NULL};
-        CMSetStatusWithChars(G_broker, &rc, CMPI_RC_ERR_NOT_SUPPORTED, 
-                             "CIM_ERR_NOT_SUPPORTED");
-	return rc;    
-}
-
-
-static CMPIStatus 
-ResourceCloneMethodCleanup(CMPIMethodMI * mi, CMPIContext * ctx)
-{
-        CMReturn(CMPI_RC_OK);
-}
-
 
 /*****************************************************
  * install provider
  ****************************************************/
 
-DeclareInstanceMI(ResourceClone, HA_ResourceCloneProvider, G_broker);
-DeclareMethodMI(ResourceClone, HA_ResourceCloneProvider, G_broker);
-
+DeclareInstanceMI(ResourceClone, HA_ResourceCloneProvider, Broker);

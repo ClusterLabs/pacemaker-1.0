@@ -37,9 +37,9 @@
 #include "cluster_info.h"
 #include "resource_common.h"
 
-static const char * PROVIDER_ID    = "cim-res-grp";
-static CMPIBroker * G_broker       = NULL;
-static char         G_classname [] = "HA_ResourceGroup"; 
+static const char * PROVIDER_ID  = "cim-res-grp";
+static CMPIBroker * Broker       = NULL;
+static char         ClassName [] = "HA_ResourceGroup"; 
 
 DeclareInstanceFunctions(ResourceGroup);
 
@@ -51,7 +51,7 @@ static CMPIStatus
 ResourceGroupCleanup(CMPIInstanceMI * mi, CMPIContext * ctx)
 {
         CMPIStatus rc;
-        resource_cleanup(G_broker, G_classname, mi, ctx, TID_RES_GROUP, &rc);
+        resource_cleanup(Broker, ClassName, mi, ctx, TID_RES_GROUP, &rc);
         CMReturn(CMPI_RC_OK);
 }
 
@@ -60,14 +60,10 @@ ResourceGroupEnumInstanceNames(CMPIInstanceMI * mi, CMPIContext * ctx,
                                CMPIResult * rslt, CMPIObjectPath * ref)
 {
         CMPIStatus rc;
-        init_logger( PROVIDER_ID );
-        cl_log(LOG_INFO,"%s", G_classname);
-
-        if ( enum_inst_resource(G_broker, G_classname, ctx, rslt, ref, 0, 
-                                TID_RES_GROUP, &rc) != HA_OK ){
-                return rc;
-        }
-        CMReturn(CMPI_RC_OK);        
+        PROVIDER_INIT_LOGGER();
+        enumerate_resource(Broker, ClassName, ctx, rslt, ref, FALSE, 
+                                TID_RES_GROUP, &rc);
+	return rc;
 }
 
 static CMPIStatus 
@@ -76,13 +72,10 @@ ResourceGroupEnumInstances(CMPIInstanceMI * mi, CMPIContext * ctx,
                            char ** properties)
 {
         CMPIStatus rc;
-        init_logger( PROVIDER_ID );
-
-        if ( enum_inst_resource(G_broker, G_classname, ctx, rslt, ref, 1, 
-                                TID_RES_GROUP, &rc) != HA_OK ) {
-                return rc;
-        }
-        CMReturn(CMPI_RC_OK);
+        PROVIDER_INIT_LOGGER();
+        enumerate_resource(Broker, ClassName, ctx, rslt, ref, TRUE,
+                                TID_RES_GROUP, &rc);
+	return rc;
 }
 
 static CMPIStatus 
@@ -91,21 +84,21 @@ ResourceGroupGetInstance(CMPIInstanceMI * mi, CMPIContext * ctx,
                          char ** properties)
 {
         CMPIStatus rc;
-        if ( get_inst_resource(G_broker, G_classname, ctx, rslt, cop, 
-                               properties, TID_RES_GROUP, &rc) != HA_OK ) {
-                return rc;
-        }
-        CMReturn(CMPI_RC_OK);
+        PROVIDER_INIT_LOGGER();
+        get_resource(Broker, ClassName, ctx, rslt, cop, 
+                               properties, TID_RES_GROUP, &rc);
+	return rc;
 }
 
 static CMPIStatus 
 ResourceGroupCreateInstance(CMPIInstanceMI * mi, CMPIContext * ctx, 
-                                    CMPIResult * rslt, CMPIObjectPath * cop, 
-                                    CMPIInstance * ci)
+                            CMPIResult * rslt, CMPIObjectPath * cop, 
+                            CMPIInstance * ci)
 {
         CMPIStatus rc = {CMPI_RC_OK, NULL};
-        CMSetStatusWithChars(G_broker, &rc, CMPI_RC_ERR_NOT_SUPPORTED, 
-                             "CIM_ERR_NOT_SUPPORTED");
+	PROVIDER_INIT_LOGGER();
+	create_resource(Broker, ClassName, ctx, rslt, cop, ci, 
+			TID_RES_GROUP, &rc);
         return rc;
 }
 
@@ -115,21 +108,19 @@ ResourceGroupSetInstance(CMPIInstanceMI * mi, CMPIContext * ctx,
                          CMPIInstance * ci, char ** properties)
 {
         CMPIStatus rc = {CMPI_RC_OK, NULL};
-        CMSetStatusWithChars(G_broker, &rc, CMPI_RC_ERR_NOT_SUPPORTED, 
-                             "CIM_ERR_NOT_SUPPORTED");
+	update_resource(Broker, ClassName, ctx, rslt, cop, ci, properties,
+			TID_RES_GROUP, &rc);
         return rc;
-
 }
-
 
 static CMPIStatus 
 ResourceGroupDeleteInstance(CMPIInstanceMI * mi, CMPIContext * ctx, 
                             CMPIResult * rslt, CMPIObjectPath * cop)
 {
         CMPIStatus rc = {CMPI_RC_OK, NULL};
-        CMSetStatusWithChars(G_broker, &rc, CMPI_RC_ERR_NOT_SUPPORTED, 
-                             "CIM_ERR_NOT_SUPPORTED");
-        return rc;
+	PROVIDER_INIT_LOGGER();
+        delete_resource(Broker, ClassName, ctx, rslt, cop, &rc);
+	return rc;
 }
 
 static CMPIStatus 
@@ -138,7 +129,7 @@ ResourceGroupExecQuery(CMPIInstanceMI * mi, CMPIContext * ctx,
                        char * lang, char * query)
 {
         CMPIStatus rc = {CMPI_RC_OK, NULL};
-        CMSetStatusWithChars(G_broker, &rc, CMPI_RC_ERR_NOT_SUPPORTED, 
+        CMSetStatusWithChars(Broker, &rc, CMPI_RC_ERR_NOT_SUPPORTED, 
                              "CIM_ERR_NOT_SUPPORTED");
         return rc;
 }
@@ -147,5 +138,4 @@ ResourceGroupExecQuery(CMPIInstanceMI * mi, CMPIContext * ctx,
 /**************************************************************
  *   Entry
  *************************************************************/
-
-DeclareInstanceMI(ResourceGroup, HA_ResourceGroupProvider, G_broker);
+DeclareInstanceMI(ResourceGroup, HA_ResourceGroupProvider, Broker);

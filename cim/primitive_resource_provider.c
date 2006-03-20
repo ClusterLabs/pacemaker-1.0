@@ -36,21 +36,17 @@
 #include "cluster_info.h"
 #include "resource_common.h"
 
-static const char * PROVIDER_ID = "cim-res";
-static CMPIBroker * G_broker    = NULL;
-static char G_classname  []     = "HA_PrimitiveResource";
+static const char * 	PROVIDER_ID  = "cim-rsc";
+static CMPIBroker * 	Broker       = NULL;
+static char 		ClassName [] = "HA_PrimitiveResource";
 
 DeclareInstanceFunctions(PrimitiveResource);
-
-/**********************************************
- * Instance Provider Interface
- **********************************************/
 
 static CMPIStatus 
 PrimitiveResourceCleanup(CMPIInstanceMI * mi, CMPIContext * ctx)
 {
         CMPIStatus rc;
-        resource_cleanup(G_broker, G_classname, mi, ctx, TID_RES_PRIMITIVE, &rc);
+        resource_cleanup(Broker, ClassName, mi, ctx, TID_RES_PRIMITIVE, &rc);
         CMReturn(CMPI_RC_OK);
 }
 
@@ -59,13 +55,9 @@ PrimitiveResourceEnumInstanceNames(CMPIInstanceMI * mi, CMPIContext * ctx,
                                    CMPIResult * rslt, CMPIObjectPath * ref)
 {
         CMPIStatus rc = {CMPI_RC_OK, NULL};
-         
-        init_logger(PROVIDER_ID);
-        if ( enum_inst_resource(G_broker, G_classname, ctx, rslt, ref, 0, 
-                                TID_RES_PRIMITIVE, &rc) == HA_OK ) {
-                CMReturn(CMPI_RC_OK);        
-        }
-
+	PROVIDER_INIT_LOGGER();
+        enumerate_resource(Broker, ClassName, ctx, rslt, ref, FALSE, 
+                                TID_RES_PRIMITIVE, &rc);
         return rc;
 }
 
@@ -75,11 +67,9 @@ PrimitiveResourceEnumInstances(CMPIInstanceMI * mi, CMPIContext * ctx,
                                char ** properties)
 {
         CMPIStatus rc = {CMPI_RC_OK, NULL};
-        if ( enum_inst_resource(G_broker, G_classname, ctx, rslt, ref, 1, 
-                                TID_RES_PRIMITIVE, &rc) == HA_OK ) {
-                CMReturn(CMPI_RC_OK);        
-        }
-
+        PROVIDER_INIT_LOGGER();
+	enumerate_resource(Broker, ClassName, ctx, rslt, ref, TRUE, 
+                                TID_RES_PRIMITIVE, &rc);
         return rc;
 }
 
@@ -89,10 +79,9 @@ PrimitiveResourceGetInstance(CMPIInstanceMI * mi, CMPIContext * ctx,
                              char ** properties)
 {
         CMPIStatus rc = {CMPI_RC_OK, NULL};
-        if ( get_inst_resource(G_broker, G_classname, ctx, rslt, cop, 
-                               properties, TID_RES_PRIMITIVE, &rc) == HA_OK ) {
-                CMReturn(CMPI_RC_OK);
-        }
+        PROVIDER_INIT_LOGGER();
+        get_resource(Broker, ClassName, ctx, rslt, cop, 
+                               properties, TID_RES_PRIMITIVE, &rc);
         return rc;
 }
 
@@ -102,9 +91,10 @@ PrimitiveResourceCreateInstance(CMPIInstanceMI * mi, CMPIContext * ctx,
                                 CMPIInstance* ci)
 {
         CMPIStatus rc = {CMPI_RC_OK, NULL};
-        CMSetStatusWithChars(G_broker, &rc, CMPI_RC_ERR_NOT_SUPPORTED, 
-                             "CIM_ERR_NOT_SUPPORTED");
-        return rc;
+        PROVIDER_INIT_LOGGER();
+        create_resource(Broker, ClassName, ctx, rslt, cop, ci, 
+		TID_RES_PRIMITIVE, &rc);
+	return rc;
 }
 
 
@@ -114,9 +104,10 @@ PrimitiveResourceSetInstance(CMPIInstanceMI * mi, CMPIContext * ctx,
                              CMPIInstance * ci, char ** properties)
 {
         CMPIStatus rc = {CMPI_RC_OK, NULL};
-        CMSetStatusWithChars(G_broker, &rc, CMPI_RC_ERR_NOT_SUPPORTED, 
-                             "CIM_ERR_NOT_SUPPORTED");
-        return rc;
+        PROVIDER_INIT_LOGGER();
+        update_resource(Broker, ClassName, ctx, rslt, cop, ci, properties,
+			TID_RES_PRIMITIVE, &rc);
+	return rc;
 
 }
 
@@ -126,8 +117,8 @@ PrimitiveResourceDeleteInstance(CMPIInstanceMI * mi, CMPIContext * ctx,
                                 CMPIResult * rslt, CMPIObjectPath * cop)
 {
         CMPIStatus rc = {CMPI_RC_OK, NULL};
-        CMSetStatusWithChars(G_broker, &rc, CMPI_RC_ERR_NOT_SUPPORTED, 
-                             "CIM_ERR_NOT_SUPPORTED");
+        PROVIDER_INIT_LOGGER();
+        delete_resource(Broker, ClassName, ctx, rslt, cop, &rc);
         return rc;
 }
 
@@ -137,7 +128,7 @@ PrimitiveResourceExecQuery(CMPIInstanceMI * mi, CMPIContext * ctx,
                            char * lang, char * query)
 {
         CMPIStatus rc = {CMPI_RC_OK, NULL};
-        CMSetStatusWithChars(G_broker, &rc, CMPI_RC_ERR_NOT_SUPPORTED, 
+        CMSetStatusWithChars(Broker, &rc, CMPI_RC_ERR_NOT_SUPPORTED, 
                              "CIM_ERR_NOT_SUPPORTED");
         return rc;
 }
@@ -147,4 +138,4 @@ PrimitiveResourceExecQuery(CMPIInstanceMI * mi, CMPIContext * ctx,
  * instance MI
  ****************************************************/
 
-DeclareInstanceMI(PrimitiveResource, HA_PrimitiveResourceProvider, G_broker);
+DeclareInstanceMI(PrimitiveResource, HA_PrimitiveResourceProvider, Broker);
