@@ -11,6 +11,7 @@
 #include <sys/types.h>
 #include <regex.h>
 #include <hb_api.h>
+#include <errno.h>
 #include <heartbeat.h>
 #include "cluster_info.h"
 #include "utils.h"
@@ -38,19 +39,22 @@ cim_init_logger(const char * entity)
 }
 
 int 
-run_shell_cmnd(const char * cmnd, int * ret, 
-			char *** out, char *** err)
+run_shell_cmnd(const char *cmnd, int *ret, char ***out, char ***err)
 				/* err not used currently */
 {
 	FILE * fstream = NULL;
 	char buffer [4096];
 	int cmnd_rc, rc, i;
 
+	DEBUG_ENTER();
 	if ( (fstream = popen(cmnd, "r")) == NULL ){
+		cl_log(LOG_ERR, "run_shell_cmnd: popen error: %s",
+			strerror(errno));	
 		return HA_FAIL;
 	}
 
 	if ( (*out = cim_malloc(sizeof(char*)) ) == NULL ) {
+		cl_log(LOG_ERR, "run_shell_cmnd: failed malloc.");
                 return HA_FAIL;
         }
 
@@ -80,6 +84,8 @@ exit:
                 cl_log(LOG_WARNING, "failed to close pipe.");
 	}
 	*ret = cmnd_rc;
+
+	DEBUG_LEAVE();
 	return rc;
 }
 
@@ -87,51 +93,49 @@ char **
 regex_search(const char * reg, const char * str, int * len)
 {
 	regex_t regexp;
-	const size_t nmatch = 16;	/* max match times */
+	const int maxmatch = 16;
 	regmatch_t pm[16];
-	int i;
-	int ret;
-	char ** match = NULL;
+	int i, ret, nmatch = 0;
+	char **match = NULL;
 
+	DEBUG_ENTER();
+
+	*len = 0;
 	ret = regcomp(&regexp, reg, REG_EXTENDED);
 	if ( ret != 0) {
-		cl_log(LOG_ERR, "Error regcomp regex %s", reg);
+		cl_log(LOG_ERR, "regex_search: error regcomp regex %s.", reg);
 		return HA_FAIL;
 	}
 
 	ret = regexec(&regexp, str, nmatch, pm, 0);
 	if ( ret == REG_NOMATCH ){
 		regfree(&regexp);
+		cl_log(LOG_ERR, "regex_search: no match.");
 		return NULL;
 	}else if (ret != 0){
-        	cl_log(LOG_ERR, "Error regexec\n");
+        	cl_log(LOG_ERR, "regex_search: error regexec.\n");
 		regfree(&regexp);
 		return NULL;
 	}
 
-	*len = 0;
-	for(i = 0; i < nmatch && pm[i].rm_so != -1; i++){
+	for(nmatch=0; pm[nmatch++].rm_so != -1 && nmatch <= maxmatch; );
+	cl_log(LOG_INFO, "%d, matched ", nmatch);
+
+	if ( (match = cim_malloc(nmatch*sizeof(char *))) == NULL ) {
+		cl_log(LOG_ERR, "regex_search: alloc_failed.");
+		regfree(&regexp);
+		return NULL;
+	}
+	
+	*len = nmatch;
+	for(i = 0; i < maxmatch && i < nmatch; i++){
 		int str_len = pm[i].rm_eo - pm[i].rm_so;
-
-		match = cim_realloc(match, (i+1) * sizeof(char*));
-                if ( match == NULL ) {
-                        free_2d_array(match, i, cim_free);
-                        regfree(&regexp);
-                        return NULL;
-                }
-
 		match[i] = cim_malloc(str_len + 1);
-                if ( match[i] == NULL ) {
-                        free_2d_array(match, i, cim_free);
-                        regfree(&regexp);
-                        return NULL;
-                }
-
 		strncpy( match[i], str + pm[i].rm_so, str_len);
 		match[i][str_len] = EOS;
 	}
-	*len = i;
 	regfree(&regexp);
+	DEBUG_LEAVE();
 	return match;
 } 
 
@@ -213,10 +217,10 @@ dump_cim_table(CIMTable * table, const char * id)
 }
 
 char **
-split_string(const char * string, int * len, const char * delim)
+split_string(const char* string, int *len, const char *delim)
 {
-	char **	     	strings = NULL;
-	const char *  	p;
+	char **strings = NULL;
+	const char *p;
 
 	*len = 0;
 	while(*string){
