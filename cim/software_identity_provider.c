@@ -157,19 +157,20 @@ SoftwareIdentityGetInstance(CMPIInstanceMI * mi, CMPIContext * ctx,
 
         /* get config table */
         if ( ( info = cim_get_software_identity () ) == NULL ) {
+		cl_log(LOG_ERR, "can't get software_identity");
                 CMReturn(CMPI_RC_ERR_FAILED);
         }
         
         /* search KEY_HBVERSION in keys */
-        hbversion = (char *)cim_table_lookup(info, "hbversion");
-        
+        hbversion = (char *)cim_table_lookup_v(info, "hbversion").v.str;
+
         /* set properties */
         CMSetProperty(ci, "InstanceID", instance_id, CMPI_chars);
         CMSetProperty(ci, "VersionString", hbversion, CMPI_chars);
         CMSetProperty(ci, "Caption", caption, CMPI_chars);
         
         /* convert char * to int */
-        match = regex_search("(.*)\\.(.*)\\.(.*)", hbversion, &len);
+	match = split_string(hbversion, &len, ".");
         if ( match && len == 3 ){
                 int major = 0, minor = 0, revision = 0;
                 if ( match[0] )
@@ -185,12 +186,11 @@ SoftwareIdentityGetInstance(CMPIInstanceMI * mi, CMPIContext * ctx,
                 CMSetProperty(ci, "MajorVersion",  &major, CMPI_uint16);
                 CMSetProperty(ci, "MinorVersion",  &minor, CMPI_uint16);
                 CMSetProperty(ci, "RevisionNumber",  &revision, CMPI_uint16);
+        	free_2d_array(match, len, cim_free);
         }
 
         CMReturnInstance(rslt, ci);
         CMReturnDone(rslt);
-
-        free_2d_zarray(match, cim_free);
 	cim_table_free(info);
 	
 	DEBUG_LEAVE();
