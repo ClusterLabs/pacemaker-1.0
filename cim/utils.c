@@ -115,19 +115,19 @@ regex_search(const char * reg, const char * str, int * len)
 
 		match = cim_realloc(match, (i+1) * sizeof(char*));
                 if ( match == NULL ) {
-                        free_2d_array(match, cim_free, i);
+                        free_2d_array(match, i, cim_free);
                         regfree(&regexp);
                         return NULL;
                 }
 
 		match[i] = cim_malloc(str_len + 1);
                 if ( match[i] == NULL ) {
-                        free_2d_array(match, cim_free, i);
+                        free_2d_array(match, i, cim_free);
                         regfree(&regexp);
                         return NULL;
                 }
 
-		strncpy( (*match)[i], str + pm[i].rm_so, str_len);
+		strncpy( match[i], str + pm[i].rm_so, str_len);
 		match[i][str_len] = EOS;
 	}
 	*len = i;
@@ -136,27 +136,27 @@ regex_search(const char * reg, const char * str, int * len)
 } 
 
 void
-free_2d_zarray(void * a, void (*free_t)(void *))
+free_2d_zarray(void *zarray, cim_free_t free)
 {
-	void ** array = (void **)a;
-	if (array) {
-		int i = 0;
-		while ( array[i++] ){
-			free_t(array[i-1]);
-		}
-		cim_free(array);
+	void ** z = (void **)zarray;
+	int i = 0;
+	void * p;
+
+	while ((p=z[i++])) {
+		free(p);
 	}
+	cim_free(z);
 }
 
 void
-free_2d_array(void * a, int len, void (*free_t)(void *))
+free_2d_array(void * a, int len, cim_free_t free)
 {
 	int 	i;
 	void ** array = (void **)a;
 
 	for (i=0; i<len; i++){
 		if (array[i]) {
-			free_t(array[i]);
+			free(array[i]);
 		}
 	}
 	cim_free(array);
