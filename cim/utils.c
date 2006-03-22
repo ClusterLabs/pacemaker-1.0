@@ -118,8 +118,7 @@ regex_search(const char * reg, const char * str, int * len)
 		return NULL;
 	}
 
-	for(nmatch=0; pm[nmatch++].rm_so != -1 && nmatch <= maxmatch; );
-	cl_log(LOG_INFO, "%d, matched ", nmatch);
+	for(nmatch=0; pm[nmatch].rm_so != -1 && nmatch < maxmatch; nmatch++);
 
 	if ( (match = cim_malloc(nmatch*sizeof(char *))) == NULL ) {
 		cl_log(LOG_ERR, "regex_search: alloc_failed.");

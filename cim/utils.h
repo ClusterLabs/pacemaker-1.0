@@ -218,8 +218,7 @@ cimdata_free(void * data)
 void        	dump_cim_table(CIMTable *table, const char *id);
 int         	cim_init_logger(const char* entity);
 void        	cim_assert(const char* assertion, int line, const char* file);
-int         	run_shell_cmnd(const char* cmnd, 
-				int* ret, char*** out, char*** err);
+int         	run_shell_cmnd(const char* cmnd,int* ret,char*** out,char***);
 char **        	regex_search(const char * reg, const char * str, int * len);
 void		free_2d_array(void *array, int len, cim_free_t free);
 void		free_2d_zarray(void *zarray, cim_free_t free);
