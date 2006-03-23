@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-my($VERSION)=(qw$Id: ldirectord,v 1.131 2006/01/31 00:49:59 horms Exp $)[2];
+my($VERSION)=(qw$Id: ldirectord,v 1.132 2006/03/23 00:00:49 horms Exp $)[2];
 
 ######################################################################
 # ldirectord                 http://www.vergenet.net/linux/ldirectord/
@@ -342,6 +342,21 @@ Protocol to be used. If the virtual is specified as an IP address and port
 then it must be one of tcp or udp and will default to tcp. If a firewall
 mark then the protocol must be fwm, which is the default.
 
+B<emailalert = ">I<emailaddress>B<">
+
+A valid email address for sending alerts about the changed connection status
+to any real server defined in the virtual service.  This option requires
+perl module MailTools to be installed.  Automatically tries to send email
+using any of the built-in methods. See perldoc Mail::Mailer for more info on
+methods.
+
+B<emailalertfreq => I<n>
+
+Delay in seconds between repeating email alerts while any given real server
+in the virtual service remains inaccessible.  A setting of zero seconds will
+inhibit the repeating alerts.  Default setting is zero.  The email timing
+accuracy of this setting is dependent on the number of seconds defined in
+the checkinterval configuration option.
 
 =head1 FILES
 
@@ -400,6 +415,8 @@ use vars qw(
 	    @REAL
 	    @VIRTUAL
 	    $HOSTNAME
+	    @EMAILSTATUS
+	    @OLDEMAILSTATUS
 
 	    $CRLF
 );
@@ -784,6 +801,8 @@ sub read_config
 			$vsrv{negotiatetimeout} = 0;
 			$vsrv{num_connects} = 0;
 			$vsrv{httpmethod} = "GET";
+			$vsrv{emailalert} = "";
+			$vsrv{emailalertfreq} = 0;
 			push(@VIRTUAL, \%vsrv);
 			while(<CFGFILE>) {
 				$line++;
@@ -923,6 +942,12 @@ sub read_config
                                         ($1 eq "yes" || $1 eq "no")
                                                 or &config_error($line, "quiescent must be 'yes' or 'no'");
 					$vsrv{quiescent} = $1;
+				} elsif  ($rcmd =~ /^emailalert\s*=\s*(.*)/) {
+					$1 =~ /(.+)/ or &config_error($line, "no email address specified");
+					$vsrv{emailalert} = $1;
+				} elsif  ($rcmd =~ /^emailalertfreq\s*=\s*(\d*)/) {
+					$1 =~ /(\d+)/ or &config_error($line, "invalid email alert frequency");
+					$vsrv{emailalertfreq} = $1;
 				} else {
 					&config_error($line, "Unknown command $_");
 				}
@@ -1536,6 +1561,8 @@ sub ld_start
 	my $nr;
 	my $server_down = {};
 
+	undef @EMAILSTATUS;
+	
 	# read status of current ipvsadm -L -n
         $oldsrv=&ld_read_ipvsadm();
 
@@ -1568,6 +1595,11 @@ sub ld_start
 
 		for $nr (@$nreal) {
 			my $real_str = "$nr->{server}:$nr->{port}";
+			my %emailstat;
+			$emailstat{server}=$real_str . " " . $nv->{server} . ":" . $nv->{port};
+			$emailstat{emailalertfreq}=$nv->{emailalertfreq};
+			$emailstat{emailalert}=$nv->{emailalert};
+			push(@EMAILSTATUS, \%emailstat);			
 			if (! defined($or->{$real_str}) or
 					$or->{$real_str}->{weight} == 0) {
 				$server_down->{$real_str} = [$nv, $nr];
@@ -1726,6 +1758,14 @@ sub ld_main
 		}
 		if (!check_cfgfile()) {
 			sleep $CHECKINTERVAL;
+		}
+			
+		my $currenttime=time();
+		foreach my $es (@EMAILSTATUS){
+			if (($es->{alerttime} > 0 ) && ($currenttime - $es->{alerttime} >= $es->{emailalertfreq})){
+				&ld_emailalert("Inaccessible real server: $es->{server}", $es->{emailalert});
+				&ld_set_email_status($es->{server}, $currenttime);
+			}
 		}
 	}
 }
@@ -2444,6 +2484,8 @@ sub _remove_service {
 	$log_args .= "(" #. scalar(%{$v->{real_status}}) 
 		. " x $virtual_str)";
 
+	my $currentserver=$rservice . " " . $virtual_str;
+	my $currenttime=time();
 	if(defined($is_quiescent)) {
 		if (defined($or)) {
                 	&system_wrapper("$IPVSADM -e "
@@ -2455,10 +2497,18 @@ sub _remove_service {
 					. "$ipvsadm_args $rforw -w 0");
 	        	&ld_log("Quiescent $log_args (Weight set to 0)");
 		}
+		if(defined($$v{emailalert})) {
+			&ld_emailalert("Quiescent $log_args (Weight set to 0)",$$v{emailalert});
+			&ld_set_email_status($currentserver, $currenttime);
+		}
         }
 	else {
                 &system_wrapper("$IPVSADM -d $ipvsadm_args");
 	        &ld_log("Deleted $log_args");
+	        if(defined($$v{emailalert})) {
+			&ld_emailalert("Deleted $log_args",$$v{emailalert});
+			&ld_set_email_status($currentserver, $currenttime);
+		}
 	}
 }
 
@@ -2506,16 +2556,25 @@ sub _restore_service {
         if(defined($ov)){
                 $or=$ov->{"real"}->{$rservice};
         }
+        my $currentserver=$rservice . " " . $v->{server} . ":" . $v->{port};
         if(defined($or)){
                 unless($or->{"weight"} eq $rwght and
                        get_forward_flag($or->{"forward"}) eq $rforw){
                         &system_wrapper("$IPVSADM -e $ipvsadm_args");
 	                &ld_log("Restored $log_args (Weight set to $rwght)");
+	                if(defined($$v{emailalert})) { 
+				&ld_emailalert("Restored $log_args (Weight set to $rwght)",$$v{emailalert});
+				&ld_set_email_status($currentserver, "0");
+			}
                 }
         }
         else {
                 &system_wrapper("$IPVSADM -a $ipvsadm_args");
 	        &ld_log("Added $log_args (Weight set to $rwght)");
+		if(defined($$v{emailalert})) {
+			&ld_emailalert("Added $log_args (Weight set to $rwght)",$$v{emailalert});
+			&ld_set_email_status($currentserver, "0");
+		}
         }
 }
 
@@ -2646,6 +2705,17 @@ sub _service_down
 	my ($v, $r, $force) = @_;
 
 	if (! _status_down($v, $r) and ! defined($force)) {
+		my $currenttime=time();
+		foreach my $emailstats (@EMAILSTATUS) {
+			my $currentserver=$r->{server} . ":" . $r->{port} . " " . $v->{server} . ":" . $v->{port};
+			if ($currentserver eq $emailstats->{server}){
+				if ($emailstats->{alertfreq} > 0){
+					if ($currenttime - $emailstats->{alerttime} > $emailstats->{alertfreq}){
+						&ld_log("email alert freq: " . $currentserver);
+					}
+				} 
+			}
+		}
 		return;
 	}
 
@@ -2823,6 +2893,52 @@ sub ld_log
 	return(0);
 }
 
+# ld_emailalert
+# Send email alerts per virtual server
+# pre: message: Message to email
+# post: message is emailed if emailalert defined for virtualserver 
+# return: 0 on success
+#         1 on error
+sub ld_emailalert
+{
+	my ($emailsubject,$emailto) = (@_);
+	require Mail::Send;
+	my $emailmsg;
+	my $emailfh;
+	               
+	unless ($emailmsg = new Mail::Send Subject=>$emailsubject, To=>$emailto
+			and $emailfh = $emailmsg->open
+			and print $emailfh ""
+			and $emailfh->close) {
+		&ld_log("failed to send email message\n");
+		return 1;
+	}
+	return(0);
+}
+
+# ld_set_email_status
+# Change the alert time for the real server
+# pre: real server and time setting
+# post: EMAILSTATUS array is updated
+# return: none
+sub ld_set_email_status{
+	my ($currentserver, $emailtime) = (@_);
+	@OLDEMAILSTATUS = @EMAILSTATUS;
+	undef @EMAILSTATUS;
+	foreach my $es (@OLDEMAILSTATUS){
+		my (%emailstats);
+		$emailstats{server}=$es->{server};
+		$emailstats{emailalertfreq}=$es->{emailalertfreq};
+		$emailstats{emailalert}=$es->{emailalert};
+		if ($currentserver eq $emailstats{server}){
+			$emailstats{alerttime}=$emailtime;
+		}else{
+			$emailstats{alerttime}=$es->{alerttime};
+		}
+		push(@EMAILSTATUS, \%emailstats);
+	}
+	return;
+}
 
 # ld_debug
 # Log a message to a STDOUT.
