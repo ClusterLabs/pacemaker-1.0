@@ -1,4 +1,4 @@
-#	$Id: heartbeat.spec.in,v 1.164 2006/02/27 17:01:24 andrew Exp $
+#	$Id: heartbeat.spec.in,v 1.165 2006/03/24 08:16:45 zhenh Exp $
 
 # Workaround for a change in RPM 4.1.x; needs proper fixing soon!
 ##%define _unpackaged_files_terminate_build 0
@@ -16,6 +16,7 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-build
 BuildPrereq: glib-devel, @UCDSNMPDEVEL@, perl, iputils, /usr/bin/ssh, openssl-devel, libnet
 # libnet available from www.ultramonkey.org and others
 Requires: sysklogd, heartbeat-stonith = %{version}-%{release}, heartbeat-pils = %{version}-%{release}
+BuildRequires: libgcrypt-devel
 
 %package ldirectord
 Summary: Monitor daemon for maintaining high availability resources
