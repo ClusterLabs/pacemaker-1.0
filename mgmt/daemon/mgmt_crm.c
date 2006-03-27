@@ -797,9 +797,12 @@ on_get_rsc_status(char* argv[], int argc)
 				ret = mgmt_msg_append(ret, "unmanaged");
 				break;
 			}
-			if( rsc->failed 
-			  ||g_list_length(rsc->running_on) == 0) {
+			if( rsc->failed ) {
 				ret = mgmt_msg_append(ret, "failed");
+				break;
+			}
+			if( g_list_length(rsc->running_on) == 0) {
+				ret = mgmt_msg_append(ret, "not running");
 				break;
 			}
 			if( g_list_length(rsc->running_on) > 1) {
