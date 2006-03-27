@@ -77,13 +77,19 @@ init_mgmt_lib(const char* client, int enable_components)
 	
 	/* init modules */
 	if (components & ENABLE_HB) {
-		init_heartbeat();
+		if (init_heartbeat() != 0) {
+			return -1;
+		}
 	}
 	if (components & ENABLE_LRM) {
-		init_lrm();
+		if (init_lrm() != 0) {
+			return -1;
+		}
 	}
 	if (components & ENABLE_CRM) {
-		init_crm();
+		if (init_crm() != 0 ) {
+			return -1;
+		}
 	}
 	return 0;
 }
