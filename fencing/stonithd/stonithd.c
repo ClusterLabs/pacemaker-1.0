@@ -1,4 +1,4 @@
-/* $Id: stonithd.c,v 1.86 2006/03/17 09:26:37 sunjd Exp $ */
+/* $Id: stonithd.c,v 1.87 2006/03/27 07:33:40 sunjd Exp $ */
 
 /* File: stonithd.c
  * Description: STONITH daemon for node fencing
@@ -1234,7 +1234,6 @@ reboot_block_timeout(gpointer data)
 
 	if (NULL != 
 		(timer_id=g_hash_table_lookup(reboot_blocked_table, target))) {
-		Gmain_timeout_remove(*timer_id);
 		g_hash_table_remove(reboot_blocked_table, target);	
 		stonithd_log(LOG_INFO, "Unblock the reboot to node %s", target);
 	} else {
@@ -3421,6 +3420,9 @@ trans_log(int priority, const char * fmt, ...)
 
 /* 
  * $Log: stonithd.c,v $
+ * Revision 1.87  2006/03/27 07:33:40  sunjd
+ * GSource will free it when return FALSE
+ *
  * Revision 1.86  2006/03/17 09:26:37  sunjd
  * - Bug 1036, memory leak
  * - Make code more safe on memory using
