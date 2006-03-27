@@ -117,7 +117,7 @@ init_heartbeat(void)
 		mgmt_log(LOG_ERR, "REASON: %s", hb->llc_ops->errmsg(hb));
 		hb->llc_ops->delete(hb);
 		hb = NULL;
-		return HA_FAIL;
+		return -1;
 	}
 	G_main_add_IPC_Channel(G_PRIORITY_LOW, hb->llc_ops->ipcchan(hb),
 			FALSE, on_hb_input, NULL, on_hb_quit);
