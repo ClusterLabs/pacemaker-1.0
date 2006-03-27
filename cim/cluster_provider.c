@@ -355,6 +355,7 @@ process_config_data(const mapping_t * property, CIMTable * cfginfo,
 
 	cl_log(LOG_INFO, "process_config_data: %s:%s", key, val); 
 	DEBUG_LEAVE();
+	return HA_OK;
 }
 
 /* update cluster instance, this will result in modification to the 
@@ -387,7 +388,10 @@ update_inst_cluster(CMPIContext * ctx, CMPIResult * rslt,
 		CMPIData cmpidata;
 		cmpidata = CMGetProperty(inst, ClusterMap[i].name, rc);
 		if ( rc->rc == CMPI_RC_OK ) {
-			process_config_data(&ClusterMap[i], cfginfo, cmpidata, rc);
+			if (process_config_data(&ClusterMap[i], cfginfo,
+						cmpidata, rc) == HA_FAIL) {
+				return HA_FAIL;
+			}
                 }
         }
 
