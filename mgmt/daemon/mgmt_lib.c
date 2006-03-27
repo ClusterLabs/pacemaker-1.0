@@ -54,7 +54,7 @@
 /* the initial func for modules */
 extern int init_general(void);
 extern void final_general(void);
-extern int init_crm(void);
+extern int init_crm(int cache_cib);
 extern void final_crm(void);
 extern int init_heartbeat(void);
 extern void final_heartbeat(void);
@@ -87,7 +87,7 @@ init_mgmt_lib(const char* client, int enable_components)
 		}
 	}
 	if (components & ENABLE_CRM) {
-		if (init_crm() != 0 ) {
+		if (init_crm(components & CACHE_CIB) != 0 ) {
 			return -1;
 		}
 	}

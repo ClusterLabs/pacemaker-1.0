@@ -40,7 +40,7 @@ extern resource_t *group_find_child(resource_t *rsc, const char *id);
 
 cib_t*	cib_conn = NULL;
 int in_shutdown = FALSE;
-int init_crm(void);
+int init_crm(int cache_cib);
 void final_crm(void);
 
 static void on_cib_diff(const char *event, HA_Message *msg);
@@ -93,6 +93,9 @@ static void free_data_set(pe_working_set_t* data_set);
 static void on_cib_connection_destroy(gpointer user_data);
 static char* failed_msg(crm_data_t* output, int rc);
 
+pe_working_set_t* cib_cached = NULL;
+int cib_cache_enable = FALSE;
+
 #define GET_RESOURCE()	if (argc != 2) {				\
 		return cl_strdup(MSG_FAIL);				\
 	}								\
@@ -142,6 +145,11 @@ delete_object(const char* type, const char* entry, const char* id, crm_data_t** 
 pe_working_set_t*
 get_data_set(void) 
 {
+	if (cib_cache_enable) {
+		if (cib_cached != NULL) {
+			return cib_cached;
+		}
+	}
 	pe_working_set_t* data_set;
 	
 	data_set = (pe_working_set_t*)cl_malloc(sizeof(pe_working_set_t));
@@ -149,14 +157,22 @@ get_data_set(void)
 	data_set->input = get_cib_copy(cib_conn);
 	data_set->now = new_ha_date(TRUE);
 	stage0(data_set);
+	
+	if (cib_cache_enable) {
+		cib_cached = data_set;
+	}
 	return data_set;
 }
 
 void 
 free_data_set(pe_working_set_t* data_set)
 {
-	cleanup_calculations(data_set);
-	cl_free(data_set);
+	/* we only release the cib when cib is not cached.
+	   the cached cib will be released in on_cib_diff() */
+	if (!cib_cache_enable) {
+		cleanup_calculations(data_set);
+		cl_free(data_set);
+	}
 }	
 char* 
 failed_msg(crm_data_t* output, int rc) 
@@ -185,7 +201,7 @@ failed_msg(crm_data_t* output, int rc)
 
 /* mgmtd functions */
 int
-init_crm(void)
+init_crm(int cache_cib)
 {
 	int ret = cib_ok;
 	int i, max_try = 5;
@@ -194,6 +210,9 @@ init_crm(void)
 	crm_log_level = LOG_ERR;
 	cib_conn = cib_new();
 	in_shutdown = FALSE;
+	
+	cib_cache_enable = cache_cib?TRUE:FALSE;
+	cib_cached = NULL;
 	
 	for (i = 0; i < max_try ; i++) {
 		ret = cib_conn->cmds->signon(cib_conn, client_name, cib_command);
@@ -261,7 +280,6 @@ final_crm(void)
 		in_shutdown = TRUE;
 		cib_conn->cmds->signoff(cib_conn);
 		cib_conn = NULL;
-		
 	}
 }
 
@@ -272,6 +290,14 @@ on_cib_diff(const char *event, HA_Message *msg)
 	if (debug_level) {
 		mgmt_log(LOG_DEBUG,"update cib finished");
 	}
+	if (cib_cache_enable) {
+		if (cib_cached != NULL) {
+			cleanup_calculations(cib_cached);
+			cl_free(cib_cached);
+			cib_cached = NULL;
+		}
+	}
+	
 	fire_event(EVT_CIB_CHANGED);
 }
 void
