@@ -310,6 +310,7 @@ init_start ()
 	int 			ssock;
 	struct sockaddr_in 	saddr;
 	GIOChannel* 		sch;
+	int ret;
 	/* register pid */
 	if (cl_lock_pidfile(PID_FILE) < 0) {
 		mgmt_log(LOG_ERR, "already running: [pid %d]."
@@ -340,7 +341,11 @@ init_start ()
 	mainloop = g_main_new(FALSE);
 		
 	/* init library */
-	init_mgmt_lib(mgmtd_name, ENABLE_HB|ENABLE_LRM|ENABLE_CRM);
+	if ((ret = init_mgmt_lib(mgmtd_name, ENABLE_HB|ENABLE_LRM|ENABLE_CRM)) != 0) {
+		mgmt_log(LOG_ERR, "Can't initialize management library."
+				  "Shutting down.(%d)",ret);
+		exit(1);
+	}
 	
 	/* init ham & gnutls lib */
 	tls_init_server();
