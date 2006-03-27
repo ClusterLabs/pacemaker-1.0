@@ -103,6 +103,9 @@ ConfigureLinux() {
 		  *)	FLAGS="$FLAGS --libexecdir=/usr/lib64 --libdir=/usr/lib64";;
 		esac
 		;;
+# FIXME. I don't think it's a general fixing.
+    s390*)
+                FLAGS="$FLAGS --libexecdir=/usr/lib64 --libdir=/usr/lib64";;
    *)		;;
   esac
 }
