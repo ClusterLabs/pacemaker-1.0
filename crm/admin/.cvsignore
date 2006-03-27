@@ -17,3 +17,5 @@ crm_attribute
 crm_standby
 crm_master
 crm_uuid
+crm_primitive.py
+crm_failcount
