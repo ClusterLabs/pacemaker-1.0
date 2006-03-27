@@ -25,7 +25,13 @@
 #include <stdarg.h>
 #include <errno.h>
 #include <fcntl.h>
-#include <security/pam_appl.h>
+#if HAVE_SECURITY_PAM_APPL_H
+#  include <security/pam_appl.h>
+#else
+#  if HAVE_PAM_PAM_APPL_H
+#    include <pam/pam_appl.h>
+#  endif
+#endif
 #include <glib.h>
 
 
