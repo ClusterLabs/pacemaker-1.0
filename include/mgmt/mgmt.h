@@ -28,6 +28,7 @@
 #define ENABLE_HB 	1
 #define ENABLE_LRM 	2
 #define ENABLE_CRM 	4
+#define CACHE_CIB 	8
 
 extern int init_mgmt_lib(const char* client_name, int enable_components);
 extern int final_mgmt_lib(void);
