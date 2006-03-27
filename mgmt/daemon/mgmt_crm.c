@@ -34,6 +34,7 @@
 #include <crm/cib.h>
 #include <crm/msg_xml.h>
 #include <crm/pengine/pengine.h>
+#include <crm/pengine/pe_utils.h>
 
 extern resource_t *group_find_child(resource_t *rsc, const char *id);
 
@@ -83,7 +84,6 @@ static char* on_get_constraint(char* argv[], int argc);
 static char* on_update_constraint(char* argv[], int argc);
 static char* on_delete_constraint(char* argv[], int argc);
 
-static resource_t* find_resource(GList* rsc_list, const char* id);
 static int delete_object(const char* type, const char* entry, const char* id, crm_data_t** output);
 static GList* find_xml_node_list(crm_data_t *root, const char *search_path);
 static int refresh_lrm(IPC_Channel *crmd_channel, const char *host_uname);
@@ -93,14 +93,14 @@ static void free_data_set(pe_working_set_t* data_set);
 static void on_cib_connection_destroy(gpointer user_data);
 static char* failed_msg(crm_data_t* output, int rc);
 
-#define GET_RESOURCE()	if (argc != 2) { 					\
-				return cl_strdup(MSG_FAIL); 			\
-			} 							\
-			rsc = find_resource(data_set->resources, argv[1]); 	\
-			if (rsc == NULL) {					\
-				return cl_strdup(MSG_FAIL); 			\
-			}
-			
+#define GET_RESOURCE()	if (argc != 2) {				\
+		return cl_strdup(MSG_FAIL);				\
+	}								\
+	rsc = pe_find_resource(data_set->resources, argv[1]);		\
+	if (rsc == NULL) {						\
+		return cl_strdup(MSG_FAIL);				\
+	}
+
 /* internal functions */
 GList* find_xml_node_list(crm_data_t *root, const char *child_name)
 {
@@ -112,25 +112,6 @@ GList* find_xml_node_list(crm_data_t *root, const char *child_name)
 		}
 	}
 	return list;
-}
-
-resource_t*
-find_resource(GList* rsc_list, const char* id)
-{
-	resource_t* ret;
-	GList* cur = rsc_list;
-	while (cur != NULL) {
-		resource_t* rsc = (resource_t*)cur->data;
-		if (strcmp(id, rsc->id) == 0) {
-			return rsc;
-		}
-		ret = rsc->fns->find_child(rsc, id);
-		if (ret != NULL) {
-			return ret;
-		}
-		cur = g_list_next(cur);
-	}
-	return NULL;
 }
 
 int
@@ -474,6 +455,7 @@ on_get_running_rsc(char* argv[], int argc)
 	free_data_set(data_set);
 	return cl_strdup(MSG_FAIL);
 }
+
 /* resource functions */
 /* add/delete resource */
 char*
@@ -481,7 +463,6 @@ on_del_rsc(char* argv[], int argc)
 {
 	int rc;
 	resource_t* rsc;
-	const char* rsc_id;
 	crm_data_t* cib_object = NULL;
 	crm_data_t* output;
 	char xml[MAX_STRLEN];
@@ -492,15 +473,7 @@ on_del_rsc(char* argv[], int argc)
 
 	switch (rsc->variant) {
 		case pe_native:
-			/* if the resource is in group, remove the prefix */
-			rsc_id = strrchr(rsc->id, ':');
-			if (rsc_id == NULL) {
-				rsc_id = rsc->id;
-			}
-			else {
-				rsc_id ++;
-			}	
-			snprintf(xml, MAX_STRLEN, "<primitive id=\"%s\"/>", rsc_id);
+			snprintf(xml, MAX_STRLEN, "<primitive id=\"%s\"/>", rsc->id);
 			break;
 		case pe_group:
 			snprintf(xml, MAX_STRLEN, "<group id=\"%s\"/>", rsc->id);
