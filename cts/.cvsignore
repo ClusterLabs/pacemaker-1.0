@@ -10,3 +10,5 @@ local7
 *.beam
 parser-messages
 MISC_ERRORS
+OCFMSDummy
+LSBDummy
