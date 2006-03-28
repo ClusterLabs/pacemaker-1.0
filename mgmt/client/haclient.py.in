@@ -1114,6 +1114,7 @@ class MainWindow :
 	cur_name = None
 	cur_view = None
 	view_widget = None
+	statusbar = None
 	tree = None
 	
 	# utility functions
@@ -1136,8 +1137,9 @@ class MainWindow :
 	# functions
 	def update(self) :
 		self.tree.update()
+		self.statusbar.pop(1)
 		return False
-		
+
 	def select_view(self, type, name, status) :
 		for child in self.view_widget.get_children() :
 			self.view_widget.remove(child)
@@ -1317,8 +1319,8 @@ class MainWindow :
 		main = glade.get_widget("mainwin_main")
 		vbox.pack_start(main, True)
 		
-		statusbar = gtk.Statusbar()
-		vbox.pack_end(statusbar, False)
+		self.statusbar = gtk.Statusbar()
+		vbox.pack_end(self.statusbar, False)
 		
 		# show the window
 		win_widget.show_all()
@@ -1330,7 +1332,7 @@ class MainWindow :
 		self.tree = Tree(glade.get_widget("mainwin_tree"))
 		self.view_widget = glade.get_widget("mainwin_view")
 		self.update_ui()
-
+		self.statusbar.push(1,"Done")
 
 class Manager :
 	'''
@@ -1400,8 +1402,10 @@ class Manager :
 		self.username = username
 		self.password = password
 		self.active_nodes = self.do_cmd("active_nodes")
+
+		window.statusbar.push(1,"Updating data from server...")
+		gobject.timeout_add(100, window.update)
 		
-		window.update()
 		self.do_cmd("regevt\nevt:cib_changed")
 		self.do_cmd("regevt\nevt:disconnected")
 		
@@ -1441,7 +1445,8 @@ class Manager :
 		if event == "evt:cib_changed" :
 			self.dirty = True
 			self.cache_clear()
-			gobject.timeout_add(1000, window.update)
+			window.statusbar.push(1,"Updating data from server...")
+			gobject.timeout_add(100, window.update)
 			return True
 		elif event == "evt:disconnected" :
 			self.logout()
