@@ -20,56 +20,14 @@
 #	where "hosts" is a file containing the IPs/Workstation names
 #	one by line to be sent WinPopups
 #
-# License: GPL
-
-ARGS="$0 $*"
-
 
 # Source function library.
-. @sysconfdir@/ha.d/shellfuncs
-
-us=`uname -n`
+. @HB_RA_DIR@/hto-mapfuncs
 
 usage() {
   echo "Usage: $0 [workstationfile] {start|stop|status}"
-  echo "$Id: WinPopup.in,v 1.2 2005/07/29 07:50:53 sunjd Exp $"
+  echo "$Id: WinPopup.in,v 1.3 2006/03/29 15:48:55 xunsun Exp $"
   exit 1
-}
-
-sendWinPopup() {
-  # if workstation file exists and is not zero
-  if [ -s "$hostfile" ] ; then
-    subject=$1
-    shift
-
-    for i in `cat $hostfile` ; do
-      echo "$subject $*" | smbclient -M $i >/dev/null 2>&1
-    done
-  else
-    logger -is -t HA-WinPopup "ERROR: Workstation file $hostfile missing or corrupt!"
-    exit 2
-  fi
-}
-
-SubjectLine() {
-  case $1 in
-    ??*)	echo $1;;
-    *)		echo "Resource Group";;
-  esac
-}
-
-
-WinPopupStart() {
-
-	Subject="`SubjectLine $2` Takeover in progress on $us"
- 
-	sendWinPopup "$Subject" $1
-}
-
-WinPopupStop () {
-	Subject="`SubjectLine $2` Reestablishing original master connection in progress on $us"
-
-	sendWinPopup "$Subject" $1
 }
 
 # max. 2 parameters allowed
@@ -79,7 +37,7 @@ if [ $# -gt 2 ] ; then
 fi
 
 # See how we were called.
-if [ "$1" != "start" -a "$1" != "stop" ] ; then
+if [ $# -eq 2 ] ; then
   # optional parameter found
   cmd=$2
   hostfile=$1
@@ -89,21 +47,15 @@ else
 fi
 
 case "$cmd" in
-  start)
-	WinPopupStart
+  start|stop)
 	;;
-  stop)
-	WinPopupStop
-	;;
-
 	#	Not quite sure what to do with this one...
   status)
 	echo "status not implemented yet"
+	exit 0
 	;;
-
   *)
         usage
 esac
 
-exit 0
-
+ra_execocf  "rsc_id=WinPopup" "rsc_type=WinPopup" "provider=heartbeat" $cmd "hostfile=$hostfile"
