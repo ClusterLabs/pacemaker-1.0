@@ -439,7 +439,7 @@ class Tree :
 			msgbox(_("can not get information from cluster!"))
 			return
 
-		activenodes = manager.do_cmd("active_nodes")
+		activenodes = manager.get_active_nodes()
 		manager.activenodes = activenodes
 		if activenodes == None :
 			msgbox(_("can not get information from cluster!"))
@@ -488,23 +488,23 @@ class Tree :
 		
 		
 	def add_rsc(self, parent, rsc) :
-		type = manager.do_cmd("rsc_type\n%s"%rsc)[0]
+		type = manager.get_rsc_type(rsc)
 		status = ""
 		label = ""
 		if type == "native" :
 			label = _("native")
-			status = manager.do_cmd("rsc_status\n%s"%rsc)
-			node = manager.do_cmd("rsc_running_on\n%s"%rsc)
-			if node != None and len(node)>0:
-				self.store.append(parent,[rsc, _(status[0]) + _(" on ")+str(node[0]), label])
+			status = manager.get_rsc_status(rsc)
+			nodes = manager.get_rsc_running_on(rsc)
+			if nodes != None and len(nodes)>0:
+				self.store.append(parent,[rsc, _(status) + _(" on ")+str(nodes), label])
 			else :
-				self.store.append(parent,[rsc, _(status[0]), label])
+				self.store.append(parent,[rsc, _(status), label])
 				
 		elif type in ["group","clone","master"] :
 			label = type
 			status = type
 			iter = self.store.append(parent,[rsc, _(status), _(label)])
-			for subrsc in manager.do_cmd("sub_rsc\n"+rsc) :
+			for subrsc in manager.get_rsc_sub_rsc(rsc) :
 				self.add_rsc(iter, subrsc)
 					
 	def add_node(self, nodes_root, node, active):
@@ -512,7 +512,7 @@ class Tree :
 		if not active :
 			status = _("stopped")
 		else :		
-			dc = manager.do_cmd("dc")
+			dc = manager.get_dc()
 			node_iter = None
 			if node in dc :
 				status = _("running(dc)")
@@ -521,7 +521,7 @@ class Tree :
 		node_iter = self.store.append(nodes_root,[node, status, "node"])
 
 		if active :
-	 		running_rsc = manager.do_cmd("running_rsc\n%s"%node)
+	 		running_rsc = manager.get_running_rsc(node)
  			for rsc in running_rsc :
  				self.add_rsc(node_iter, rsc)
 
@@ -950,7 +950,7 @@ class AddNativeDlg :
 		
 	def on_class_changed(self, widget, glade) :
 		cur_class = glade.get_widget("class").child.get_text()
-		type_list = manager.do_cmd("rsc_types\n"+cur_class)
+		type_list = manager.get_rsc_types(cur_class)
 		store = gtk.ListStore(str)
 		for i in type_list:
 			store.append([i])
@@ -965,7 +965,7 @@ class AddNativeDlg :
 		cur_class = glade.get_widget("class").child.get_text()
 		cur_type = glade.get_widget("type").child.get_text()
 		
-		provider_list = manager.do_cmd("rsc_providers\n%s\n%s"%(cur_class,cur_type))
+		provider_list = manager.get_rsc_providers(cur_class,cur_type)
 		store = gtk.ListStore(str)
 		for i in provider_list:
 			store.append([i])
@@ -1030,7 +1030,7 @@ class AddNativeDlg :
 		glade.get_widget("master_node_max").set_property("sensitive", False)
 
 		self.glade = glade
-		class_list = manager.do_cmd("rsc_classes")
+		class_list = manager.get_rsc_classes()
 		store = gtk.ListStore(str)
 		for i in class_list:
 			store.append([i])
@@ -1047,7 +1047,7 @@ class AddNativeDlg :
 		store = gtk.ListStore(str)
 		store.append([""])
 		for rsc in manager.get_all_rsc_id() :
-			if manager.do_cmd("rsc_type\n"+rsc)[0] == "group" :
+			if manager.get_rsc_type(rsc) == "group" :
 				store.append([rsc])
 		glade.get_widget("group").set_model(store)
 		glade.get_widget("group").set_text_column(0)
@@ -1073,7 +1073,7 @@ class AddNativeDlg :
 					passed = check_entry_value(glade, "master_node_max")
 				rsc = {}
 				rsc["id"] = glade.get_widget("id").get_text()
-				if manager.do_cmd("rsc_attrs\n"+rsc["id"]) != None :
+				if manager.rsc_exists(rsc["id"]) :
 					msgbox(_("the ID already exists"))
 					passed = False
 				
@@ -1246,7 +1246,7 @@ class MainWindow :
 		if confirmbox(_("Delete") + " "+self.cur_type + " " + self.cur_name + "?"):
 			if self.cur_type in [_("native"),_("group"),_("clone"),_("master")] :
 				if string.find(self.cur_status, _("unmanaged")) != -1 :
-					hostname = manager.do_cmd("rsc_running_on\n%s"%self.cur_name)
+					hostname = manager.get_rsc_running_on(self.cur_name)
 					manager.do_cmd("cleanup_rsc\n"+hostname[0] + "\n" + self.cur_name)
 				else :
 					manager.do_cmd("del_rsc\n"+self.cur_name)
@@ -1350,16 +1350,14 @@ class Manager :
 		
 	# cache functions
 
-	def cache_lookup(self, key1, key2="no") :
-		if self.cache.has_key(key1) :
-			if self.cache[key1].has_key(key2) :
-				return self.cache[key1][key2]
+	def cache_lookup(self, key) :
+		if self.cache.has_key(key) :
+			return self.cache[key]
 		return None
 			
-	def cache_update(self, data,key1, key2="no") :
-		if not self.cache.has_key(key1) :
-			self.cache[key1] = {}
-		self.cache[key1][key2] = data
+	def cache_update(self, key, data) :
+		if not self.cache.has_key(key) :
+			self.cache[key] = data
 		
 	def cache_clear(self) :
 		self.cache.clear()
@@ -1379,7 +1377,7 @@ class Manager :
 		gtk.main()
 		if self.connected :
 			mgmt_disconnect()
-		
+	
 	# connection functions
 	def last_login_info(self) :
 		save_path = os.environ["HOME"]+"/.haclient"
@@ -1401,7 +1399,7 @@ class Manager :
 		self.connected = True
 		self.username = username
 		self.password = password
-		self.active_nodes = self.do_cmd("active_nodes")
+		self.active_nodes = self.get_active_nodes
 
 		window.statusbar.push(1,"Updating data from server...")
 		gobject.timeout_add(100, window.update)
@@ -1412,6 +1410,14 @@ class Manager :
 		fd = mgmt_inputfd()
 		self.io_tag = gobject.io_add_watch(fd, gobject.IO_IN, self.on_event)
 		return True
+	
+	def query(self, query) :
+		result = self.cache_lookup(query)
+		if  result != None :
+			return 	result
+		result = self.do_cmd(query)
+		self.cache_update(query, result)
+		return result
 		
 	def do_cmd(self, command) :
 		self.failed_reason = ""
@@ -1460,8 +1466,6 @@ class Manager :
 		
 	# cluster functions		
 	def get_cluster_config(self) :
-		if self.cache_lookup("cluster_config") != None:
-			return self.cache_lookup("cluster_config")
 		
 		hb_attr_names = ["apiauth","auto_failback","baud","debug","debugfile",
 				 "deadping","deadtime","hbversion","hopfudge",
@@ -1471,17 +1475,16 @@ class Manager :
 		crm_attr_names = ["transition_timeout","symmetric_cluster","stonith_enabled",
 				  "no_quorum_policy","default_resource_stickiness", "have_quorum"]
 				  
-		values = manager.do_cmd("hb_config")
+		values = manager.query("hb_config")
 		if values == None :
 			return None
 		config = dict(zip(hb_attr_names,values))
 				
-		values = manager.do_cmd("crm_config")
+		values = manager.query("crm_config")
 		if values == None :
 			return None
 		config.update(dict(zip(crm_attr_names,values)))
 		
-		self.cache_update(config, "cluster_config")
 		return config
 		
 	def update_crm_config(self, new_crm_config) :
@@ -1494,34 +1497,35 @@ class Manager :
 
 				
 	# node functions
+	def get_dc(self):
+		return self.query("dc")
+
 	def get_all_nodes(self) :
-		if self.cache_lookup("all_nodes") != None:
-			return self.cache_lookup("all_nodes")
-		all_nodes = manager.do_cmd("all_nodes")
-		self.cache_update(all_nodes, "all_nodes")
-		return all_nodes
+		return self.query("all_nodes")
+
+	def get_active_nodes(self):
+		return self.query("active_nodes")
 				
 	def get_node_config(self, node) :
-		if self.cache_lookup("node_config", node) != None:
-			return self.cache_lookup("node_config",node)
-			
 		node_attr_names = ["uname", "online","standby", "unclean", "shutdown",
 				   "expected_up","is_dc","type"]
 				  
-		values = manager.do_cmd("node_config\n%s"%node)
+		values = manager.query("node_config\n%s"%node)
 		if values == None :
 			return None
 		config = dict(zip(node_attr_names,values))
 		
-		self.cache_update(config, "node_config", node)
 		return config
-	
+
+	def get_running_rsc(self, node) :
+		return self.query("running_rsc\n%s"%node)	
+
 	# resource functions
 	def add_group(self, group) :
 		if len(group["id"]) == 0 :
 			msgbox (_("the ID can't be empty"))
 			return
-		if self.do_cmd("rsc_attrs\n"+group["id"]) != None :
+		if self.rsc_exists(group["id"]):
 			msgbox (_("the ID already exists"))
 			return
 		self.do_cmd("add_grp\n"+group["id"])
@@ -1529,7 +1533,7 @@ class Manager :
 			msgbox(self.failed_reason)
 		
 	def add_native(self, rsc) :
-		if self.do_cmd("rsc_attrs\n"+rsc["id"]) != None :
+		if self.rsc_exists(rsc["id"]) :
 			msgbox (_("the ID already exists"))
 			return
 			
@@ -1554,17 +1558,41 @@ class Manager :
 			msgbox (self.failed_reason)
 
 	def get_all_rsc_id(self) :
-		if self.cache_lookup("all_rsc") != None:
-			return self.cache_lookup("all_rsc")
-		all_rsc = manager.do_cmd("all_rsc")
-		self.cache_update(all_rsc, "all_rsc")
-		return all_rsc
-	
+		return self.query("all_rsc")
+
+	def get_rsc_type(self, rsc_id) :
+		return self.query("rsc_type\n"+rsc_id)[0]
+
+	def get_rsc_status(self, rsc_id) :
+		return self.query("rsc_status\n"+rsc_id)[0]
+
+	def get_rsc_running_on(self, rsc_id) :
+		return self.query("rsc_running_on\n"+rsc_id)
+
+	def get_rsc_sub_rsc(self, rsc_id) :
+		return self.query("sub_rsc\n"+rsc_id)
+
+	def get_rsc_info(self, rsc) :
+		rsc_attr_names = ["id", "class", "provider","type"]
+		op_attr_names = ["id", "name", "interval","timeout"]
+		param_attr_names = ["id", "name", "value"]
+		
+		attr_list = self.query("rsc_attrs\n%s"%rsc)
+		attrs = {}
+		if attr_list != None :
+			attrs = dict(zip(rsc_attr_names, attr_list))
+		running_on = self.query("rsc_running_on\n%s"%rsc)
+
+		raw_params = self.query("rsc_params\n%s"%rsc)
+		params = self.split_attr_list(raw_params, param_attr_names)
+		
+		raw_ops = self.query("rsc_ops\n%s"%rsc)
+		ops = self.split_attr_list(raw_ops, op_attr_names)
+
+		return (attrs, running_on, params, ops)
+
 	def get_rsc_meta(self, rsc_class, rsc_type, rsc_provider) :
-		cache_key = rsc_class+rsc_type+rsc_provider
-		if self.cache_lookup("rsc_meta", cache_key) != None:
-			return self.cache_lookup("rsc_meta", cache_key)
-		lines = self.do_cmd("rsc_metadata\n%s\n%s\n%s"%(rsc_class, rsc_type, rsc_provider))
+		lines = self.query("rsc_metadata\n%s\n%s\n%s"%(rsc_class, rsc_type, rsc_provider))
 		if lines == None :
 			return None
 		meta_data = ""
@@ -1614,33 +1642,20 @@ class Manager :
 			for key in action_xml.attributes.keys() :
 				action[key] = action_xml.getAttribute(key)
 			meta.actions.append(action)
-		self.cache_update(meta, "rsc_meta", cache_key)
 		return meta
 	
-	def get_rsc_info(self, rsc) :
-		if self.cache_lookup("rsc_info", rsc) != None:
-			return self.cache_lookup("rsc_info", rsc)
-		
-		rsc_attr_names = ["id", "class", "provider","type"]
-		op_attr_names = ["id", "name", "interval","timeout"]
-		param_attr_names = ["id", "name", "value"]
-		
-		attr_list = self.do_cmd("rsc_attrs\n%s"%rsc)
-		attrs = {}
-		if attr_list != None :
-			attrs = dict(zip(rsc_attr_names, attr_list))
-		running_on = self.do_cmd("rsc_running_on\n%s"%rsc)
+	def get_rsc_classes(self) :
+		return self.query("rsc_classes");
 
-		raw_params = self.do_cmd("rsc_params\n%s"%rsc)
-		params = self.split_attr_list(raw_params, param_attr_names)
-		
-		raw_ops = self.do_cmd("rsc_ops\n%s"%rsc)
-		ops = self.split_attr_list(raw_ops, op_attr_names)
-		
+	def get_rsc_types(self, rsc_class) :
+		return self.query("rsc_types\n"+rsc_class)
+	
+	def get_rsc_providers(self, rsc_class, rsc_type) :
+		return self.query("rsc_providers\n%s\n%s"%(rsc_class, rsc_type))
 
-		self.cache_update((attrs, running_on, params, ops),"rsc_info", rsc)
-		return (attrs, running_on, params, ops)
-		
+	def rsc_exists(self, rsc_id) :
+		return rsc_id in self.get_all_rsc_id()
+
 	def update_attrs(self, up_cmd, del_cmd, old_attrs, new_attrs, keys):
 		oldkeys = []
 		if old_attrs != None :
@@ -1669,14 +1684,11 @@ class Manager :
 				
 	# clone functions
 	def get_clone(self, clone_id) :
-		if self.cache_lookup("clone", clone_id) != None :
-			return self.cache_lookup("clone", clone_id)
-		attrs = manager.do_cmd("get_clone\n"+clone_id)
+		attrs = manager.query("get_clone\n"+clone_id)
 		if attrs == None :
 			return None
 		attrs_name = ["id","clone_max","clone_node_max"]
 		clone = dict(zip(attrs_name,attrs))
-		self.cache_update(clone, "clone", clone_id)
 		return clone
 	
 	def update_clone(self, clone) :
@@ -1687,14 +1699,11 @@ class Manager :
 		
 	# master functions
 	def get_master(self, master_id) :
-		if self.cache_lookup("master", master_id) != None :
-			return self.cache_lookup("master", master_id)
-		attrs = manager.do_cmd("get_master\n"+master_id)
+		attrs = manager.query("get_master\n"+master_id)
 		if attrs == None :
 			return None
 		attrs_name = ["id","clone_max","clone_node_max","master_max","master_node_max"]
 		master = dict(zip(attrs_name,attrs))
-		self.cache_update(master, "master", master_id)
 		return master
 	
 	def update_master(self, master) :
@@ -1707,24 +1716,19 @@ class Manager :
 		
 	# constraint functions
 	def get_constraints(self, type) :
-		if self.cache_lookup("all_constraints", type) != None:
-			return self.cache_lookup("all_constraints", type)
-		id_list = manager.do_cmd("get_cos\n"+type)
+		id_list = manager.query("get_cos\n"+type)
 		
 		constraints = []
 		for id in id_list :
 			constraints.append(self.get_constraint(type, id))
 							
-		self.cache_update(constraints,"all_constraints")
 		return constraints
 			
 	def get_constraint(self, type, id) :
-		if self.cache_lookup("constraint_"+type, id) != None:
-			return self.cache_lookup("constraint_"+type, id)
 		if type == "rsc_location" :
 			place_attr_names = ["id","rsc","score"]
 			expr_attr_names = ["id","attribute","operation","value"]
-			attrs = manager.do_cmd("get_co\nrsc_location\n"+id)
+			attrs = manager.query("get_co\nrsc_location\n"+id)
 			if attrs == None :
 				return None
 			place = dict(zip(place_attr_names,attrs[:3]))
@@ -1732,11 +1736,10 @@ class Manager :
 			for i in range((len(attrs)-len(place_attr_names))/len(expr_attr_names)) :
 				expr = dict(zip(expr_attr_names,attrs[3+i*4:7+i*4]))
 				place["exprs"].append(expr)
-			self.cache_update(place,"constraint_"+type, id)
 			return place
 		elif type == "rsc_order" :
 			order_attr_names = ["id","from","type","to"]
-			attrs = manager.do_cmd("get_co\nrsc_order\n" + id)
+			attrs = manager.query("get_co\nrsc_order\n" + id)
 			if attrs == None :
 				return None
 			order = dict(zip(order_attr_names,attrs))
@@ -1744,11 +1747,10 @@ class Manager :
 			return order
 		elif type == "rsc_colocation" :
 			colocation_attr_names = ["id","from","to","score"]
-			attrs = manager.do_cmd("get_co\nrsc_colocation\n" + id)
+			attrs = manager.query("get_co\nrsc_colocation\n" + id)
 			if attrs == None :
 				return None
 			colocation = dict(zip(colocation_attr_names,attrs))
-			self.cache_update(colocation,"constraint_"+type, id)
 			return colocation
 			
 				
