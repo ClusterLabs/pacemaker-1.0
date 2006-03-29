@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $Id: LVM.in,v 1.6 2005/11/03 07:45:51 xunsun Exp $
+# $Id: LVM.in,v 1.7 2006/03/29 13:56:30 xunsun Exp $
 # 
 # Description:	wrapper of OCF RA LVM, based on original heartbeat RA.
 #		See OCF RA LVM for more information.
@@ -17,7 +17,7 @@
 # See usage() function below for more details...
 #
 
-. /etc/ha.d/resource.d/hto-mapfuncs
+. @HB_RA_DIR@/hto-mapfuncs
 
 unset LC_ALL; export LC_ALL
 unset LANGUAGE; export LANGUAGE
@@ -37,7 +37,7 @@ usage() {
 	The 'monitor' operation reports whether the volume seems present
 	The 'methods' operation reports on the methods $0 supports
 
-	$Id: LVM.in,v 1.6 2005/11/03 07:45:51 xunsun Exp $
+	$Id: LVM.in,v 1.7 2006/03/29 13:56:30 xunsun Exp $
 	!
   exit 1
 }
