@@ -49,8 +49,6 @@ init_lrm(void)
 	int ret;
 	int i, max_try = 5;
 
-	mgmt_log(LOG_INFO,"init_lrm");
-
 	lrm = ll_lrm_new("lrm");
 	for (i = 0; i < max_try ; i++) {
 		ret = lrm->lrm_ops->signon(lrm,"mgmtd");
