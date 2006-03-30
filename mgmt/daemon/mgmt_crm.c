@@ -109,6 +109,9 @@ GList* find_xml_node_list(crm_data_t *root, const char *child_name)
 {
 	int i;
 	GList* list = NULL;
+	if (root == NULL) {
+		return NULL;
+	}
 	for (i = 0; i < root->nfields; i++ ) {
 		if (strncmp(root->names[i], child_name, MAX_STRLEN) == 0) {
 			list = g_list_append(list, root->values[i]);
