@@ -1405,7 +1405,7 @@ class Manager :
 		self.connected = True
 		self.username = username
 		self.password = password
-		self.active_nodes = self.get_active_nodes
+		self.active_nodes = self.get_active_nodes()
 
 		window.statusbar.push(1,"Updating data from server...")
 		gobject.timeout_add(100, window.update)
@@ -1460,8 +1460,9 @@ class Manager :
 			window.statusbar.push(1,"Updating data from server...")
 			gobject.timeout_add(100, window.update)
 			return True
-		elif event == "evt:disconnected" :
+		elif event == None or event == "evt:disconnected" :
 			self.logout()
+			print self.active_nodes
 			for server in self.active_nodes :
 				if self.login(server, self.username, self.password) :
 					break
