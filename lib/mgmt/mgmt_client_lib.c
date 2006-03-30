@@ -40,7 +40,12 @@
 
 int 		sock = 0;
 void*		session = NULL;
-
+/*
+ *	return value
+ *	-1:can't connect to server
+ *	-2:auth failed
+ *	0 :success
+ */
 int
 mgmt_connect(const char* server, const char* user, const char*  passwd)
 {
@@ -90,7 +95,7 @@ mgmt_connect(const char* server, const char* user, const char*  passwd)
 		mgmt_del_msg(ret);
 		close(sock);
 		tls_close_client();
-		return -1;
+		return -2;
 	}
 	
 	mgmt_del_msg(msg);

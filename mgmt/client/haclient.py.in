@@ -1193,7 +1193,7 @@ class MainWindow :
 
 		if ret == gtk.RESPONSE_OK:
 			if not manager.login(server, user, password):
-				msgbox(_("login failed"))
+				msgbox(manager.failed_reason)
 	
 		self.update_ui()
 
@@ -1392,8 +1392,14 @@ class Manager :
 		
 	def login(self, server, username, password) :
 		# connect to one of the cluster
+		self.failed_reason = ""
 		ip = socket.gethostbyname(server)
-		if mgmt_connect(ip, username, password) == -1:
+		ret = mgmt_connect(ip, username, password)
+		if ret != 0 :
+			if ret == -1 :
+				self.failed_reason = "Can't connect to server"
+			elif ret == -2 :
+				self.failed_reason = "Failed in the authentication.\n User Name or Password may be wrong."
 			mgmt_disconnect()
 			return False
 		self.connected = True
