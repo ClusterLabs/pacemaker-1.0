@@ -1345,6 +1345,7 @@ class Manager :
 	password = None
 	cache = {}
 	io_tag = None
+	update_timer = -1
 	active_nodes = []
 	failed_reason = ""
 		
@@ -1408,7 +1409,7 @@ class Manager :
 		self.active_nodes = self.get_active_nodes()
 
 		window.statusbar.push(1,"Updating data from server...")
-		gobject.timeout_add(100, window.update)
+		self.update_timer = gobject.timeout_add(100, self.update)
 		
 		self.do_cmd("regevt\nevt:cib_changed")
 		self.do_cmd("regevt\nevt:disconnected")
@@ -1455,10 +1456,10 @@ class Manager :
 		event =  mgmt_recvmsg()
 		log("on_event:"+str(event))
 		if event == "evt:cib_changed" :
-			self.dirty = True
-			self.cache_clear()
 			window.statusbar.push(1,"Updating data from server...")
-			gobject.timeout_add(100, window.update)
+			if self.update_timer != -1 :
+				gobject.source_remove(self.update_timer)
+			self.update_timer = gobject.timeout_add(100, self.update)
 			return True
 		elif event == None or event == "evt:disconnected" :
 			self.logout()
@@ -1470,7 +1471,12 @@ class Manager :
 				msgbox(_("can't connect to any node"))
 
 		return True
-		
+
+	def update(self) :
+		self.cache_clear()
+		window.update()	
+		self.update_timer = -1
+
 	# cluster functions		
 	def get_cluster_config(self) :
 		
