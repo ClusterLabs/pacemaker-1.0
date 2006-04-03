@@ -50,6 +50,7 @@ static char* on_update_crm_config(char* argv[], int argc);
 static char* on_get_activenodes(char* argv[], int argc);
 static char* on_get_dc(char* argv[], int argc);
 
+static char* on_set_node_standby(char* argv[], int argc);
 static char* on_get_node_config(char* argv[], int argc);
 static char* on_get_running_rsc(char* argv[], int argc);
 
@@ -92,6 +93,8 @@ static pe_working_set_t* get_data_set(void);
 static void free_data_set(pe_working_set_t* data_set);
 static void on_cib_connection_destroy(gpointer user_data);
 static char* failed_msg(crm_data_t* output, int rc);
+static const char* uname2id(const char* node);
+
 
 pe_working_set_t* cib_cached = NULL;
 int cib_cache_enable = FALSE;
@@ -201,6 +204,25 @@ failed_msg(crm_data_t* output, int rc)
 	
 	return ret;
 }
+const char*
+uname2id(const char* uname)
+{
+	node_t* node;
+	GList* cur;
+	pe_working_set_t* data_set;
+	
+	data_set = get_data_set();
+	cur = data_set->nodes;
+	while (cur != NULL) {
+		node = (node_t*) cur->data;
+		if (strncmp(uname,node->details->uname,MAX_STRLEN) == 0) {
+			return node->details->id;
+		}
+		cur = g_list_next(cur);
+	}
+	free_data_set(data_set);
+	return NULL;
+}
 
 /* mgmtd functions */
 int
@@ -243,7 +265,8 @@ init_crm(int cache_cib)
 	reg_msg(MSG_ACTIVENODES, on_get_activenodes);
 	reg_msg(MSG_NODE_CONFIG, on_get_node_config);
 	reg_msg(MSG_RUNNING_RSC, on_get_running_rsc);
-
+	reg_msg(MSG_STANDBY, on_set_node_standby);
+	
 	reg_msg(MSG_DEL_RSC, on_del_rsc);
 	reg_msg(MSG_CLEANUP_RSC, on_cleanup_rsc);
 	reg_msg(MSG_ADD_RSC, on_add_rsc);
@@ -484,7 +507,47 @@ on_get_running_rsc(char* argv[], int argc)
 	free_data_set(data_set);
 	return cl_strdup(MSG_FAIL);
 }
+char*
+on_set_node_standby(char* argv[], int argc)
+{
+	int rc;
+	const char* id = NULL;
+	crm_data_t* fragment = NULL;
+	crm_data_t* cib_object = NULL;
+	crm_data_t* output;
+	char xml[MAX_STRLEN];
 
+	ARGC_CHECK(3);
+	id = uname2id(argv[1]);
+	if (id == NULL) {
+		return cl_strdup(MSG_FAIL"\nno such node");
+	}
+	
+	snprintf(xml, MAX_STRLEN, 
+		"<node id=\"%s\"><instance_attributes id=\"standby-\%s\">"
+		"<attributes><nvpair id=\"standby-%s\" name=\"standby\" value=\"%s\"/>"
+           	"</attributes></instance_attributes></node>", 
+           	id, id, id, argv[2]);
+
+	cib_object = string2xml(xml);
+	if(cib_object == NULL) {
+		return cl_strdup(MSG_FAIL);
+	}
+
+	fragment = create_cib_fragment(cib_object, "nodes");
+
+	mgmt_log(LOG_DEBUG, "(update)xml:%s",xml);
+
+	rc = cib_conn->cmds->update(
+			cib_conn, "nodes", fragment, &output, cib_sync_call);
+
+	if (rc < 0) {
+		return failed_msg(output, rc);
+	}
+
+	return cl_strdup(MSG_OK);
+
+}
 /* resource functions */
 /* add/delete resource */
 char*

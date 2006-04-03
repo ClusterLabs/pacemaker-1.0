@@ -210,6 +210,19 @@ or
 
 /*
 description:
+	set standby on a node
+format:
+	MSG_STANDBY node on|off
+return:
+	MSG_OK 
+or
+	MSG_FAIL reason
+*/
+#define MSG_STANDBY		"standby"
+
+
+/*
+description:
 	return names of all running resources on a given node
 format:
 	MSG_RUNNING_RSC node
