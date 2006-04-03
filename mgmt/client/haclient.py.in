@@ -513,11 +513,14 @@ class Tree :
 			status = _("stopped")
 		else :		
 			dc = manager.get_dc()
-			node_iter = None
 			if node in dc :
 				status = _("running(dc)")
 			else :
 				status = _("running")
+
+			if manager.get_node_config(node)["standby"] == "True" :
+				status = status + "-standby"
+
 		node_iter = self.store.append(nodes_root,[node, status, "node"])
 
 		if active :
@@ -1134,6 +1137,19 @@ class MainWindow :
 		self.set_action_sensitive('delrsc',
 			manager.connected
 			and self.cur_type in [_("native"),_("group"),_("clone"),_("place"),_("order"),_("colocation"),_("master")])
+
+		self.set_action_sensitive('standby',
+			manager.connected
+			and self.cur_type in [_("node")]
+			and string.find(self.cur_status, "standby") == -1
+			and string.find(self.cur_status, "running") != -1)
+
+		self.set_action_sensitive('active',
+			manager.connected
+			and self.cur_type in [_("node")]
+			and string.find(self.cur_status, "standby") != -1
+			and string.find(self.cur_status, "running") != -1)
+
 	# functions
 	def update(self) :
 		self.tree.update()
@@ -1204,6 +1220,14 @@ class MainWindow :
 	def on_test(self, action) :
 		print uuid()
 			 
+	def on_standby(self, action) :
+		if confirmbox("Make" +" " +self.cur_name + " " +"standby"+"?") :
+			manager.do_cmd("standby\n"+self.cur_name + "\n" + "on")
+
+	def on_active(self, action) :
+		if confirmbox("Make" +" " +self.cur_name + " " + "active"+"?") :
+			manager.do_cmd("standby\n"+self.cur_name + "\n" + "off")
+
 	def on_add_item(self, action) :
 		new_type = kvbox(_("The type of new item"),
 				[Field("type",_("Item Type"),_("native"),
@@ -1280,6 +1304,8 @@ class MainWindow :
 				<menu action="action">
 					<menuitem action="addrsc"/>
 					<menuitem action="delrsc"/>
+					<menuitem action="standby"/>
+					<menuitem action="active"/>
 				</menu>
 			</menubar>
 			<toolbar name="toolbar">
@@ -1287,6 +1313,8 @@ class MainWindow :
 				<toolitem action="logout"/>
 				<toolitem action="addrsc"/>
 				<toolitem action="delrsc"/>
+				<toolitem action="standby"/>
+				<toolitem action="active"/>
 				<toolitem action="quit"/>
 			</toolbar>
 		</ui>'''
@@ -1299,7 +1327,9 @@ class MainWindow :
 			('quit', gtk.STOCK_QUIT, _('Quit'), None,_('Quit the Program'), self.on_quit),
 			('action', None, _('Action')),
 			('addrsc', gtk.STOCK_ADD, _('Add New Item'), None,_('add new item'), self.on_add_item),
-			('delrsc', gtk.STOCK_DELETE, _('Delete'), None,_('delete current item'), self.on_del_item)
+			('delrsc', gtk.STOCK_DELETE, _('Delete'), None,_('delete current item'), self.on_del_item),
+			('standby', gtk.STOCK_NO, _('Standby'), None,_('make the node standby'), self.on_standby),
+			('active', gtk.STOCK_YES, _('Active'), None,_('make the node active'), self.on_active)
 			])
 		uimanager.insert_action_group(actiongroup, 0)
 		uimanager.add_ui_from_string(ui_xml)
@@ -1456,14 +1486,14 @@ class Manager :
 		event =  mgmt_recvmsg()
 		log("on_event:"+str(event))
 		if event == "evt:cib_changed" :
-			window.statusbar.push(1,"Updating data from server...")
 			if self.update_timer != -1 :
 				gobject.source_remove(self.update_timer)
+			else :
+				window.statusbar.push(1,"Updating data from server...")
 			self.update_timer = gobject.timeout_add(100, self.update)
 			return True
 		elif event == None or event == "evt:disconnected" :
 			self.logout()
-			print self.active_nodes
 			for server in self.active_nodes :
 				if self.login(server, self.username, self.password) :
 					break
