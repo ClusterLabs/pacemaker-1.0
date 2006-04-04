@@ -45,6 +45,8 @@ void final_crm(void);
 
 static void on_cib_diff(const char *event, HA_Message *msg);
 
+static char* on_get_cib_version(char* argv[], int argc);
+
 static char* on_get_crm_config(char* argv[], int argc);
 static char* on_update_crm_config(char* argv[], int argc);
 static char* on_get_activenodes(char* argv[], int argc);
@@ -258,6 +260,7 @@ init_crm(int cache_cib)
 	ret = cib_conn->cmds->set_connection_dnotify(cib_conn
 			, on_cib_connection_destroy);
 
+	reg_msg(MSG_CIB_VERSION, on_get_cib_version);
 	reg_msg(MSG_CRM_CONFIG, on_get_crm_config);
 	reg_msg(MSG_UP_CRM_CONFIG, on_update_crm_config);
 	
@@ -341,6 +344,25 @@ on_cib_connection_destroy(gpointer user_data)
 }
 
 /* cluster  functions */
+char* 
+on_get_cib_version(char* argv[], int argc)
+{
+	const char* version = NULL;
+	pe_working_set_t* data_set;
+	char* ret;
+	
+	data_set = get_data_set();
+	version = ha_msg_value(data_set->input, "num_updates");
+	if (version != NULL) {
+		ret = cl_strdup(MSG_OK);
+		ret = mgmt_msg_append(ret, version);
+	}
+	else {
+		ret = cl_strdup(MSG_FAIL);
+	}	
+	free_data_set(data_set);
+	return ret;
+}
 char* 
 on_get_crm_config(char* argv[], int argc)
 {

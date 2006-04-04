@@ -83,6 +83,18 @@ or
 
 /*
 description:
+	return CIB version
+format:
+	MSG_CIB_VERSION
+return:
+	MSG_OK version
+or
+	MSG_FAIL
+*/
+#define MSG_CIB_VERSION		"cib_version"
+
+/*
+description:
 	return CRM configuration
 format:
 	MSG_CRM_CONFIG
