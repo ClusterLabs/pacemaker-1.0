@@ -102,11 +102,11 @@ pe_working_set_t* cib_cached = NULL;
 int cib_cache_enable = FALSE;
 
 #define GET_RESOURCE()	if (argc != 2) {				\
-		return cl_strdup(MSG_FAIL);				\
+		return cl_strdup(MSG_FAIL"\nwrong parameter number");	\
 	}								\
 	rsc = pe_find_resource(data_set->resources, argv[1]);		\
 	if (rsc == NULL) {						\
-		return cl_strdup(MSG_FAIL);				\
+		return cl_strdup(MSG_FAIL"\nno such resource");		\
 	}
 
 /* internal functions */
@@ -143,7 +143,7 @@ delete_object(const char* type, const char* entry, const char* id, crm_data_t** 
 
 	rc = cib_conn->cmds->delete(
 			cib_conn, type, cib_object, output, cib_sync_call);
-
+	free_xml(cib_object);
 	if (rc < 0) {
 		return -1;
 	}
@@ -398,7 +398,7 @@ on_update_crm_config(char* argv[], int argc)
 	int rc;
 	crm_data_t* fragment = NULL;
 	crm_data_t* cib_object = NULL;
-	crm_data_t* output;
+	crm_data_t* output = NULL;
 	char xml[MAX_STRLEN];
 
 	ARGC_CHECK(3);
@@ -415,11 +415,12 @@ on_update_crm_config(char* argv[], int argc)
 
 	rc = cib_conn->cmds->update(
 			cib_conn, "crm_config", fragment, &output, cib_sync_call);
-
+	free_xml(fragment);
+	free_xml(cib_object);
 	if (rc < 0) {
 		return failed_msg(output, rc);
 	}
-
+	free_xml(output);
 	return cl_strdup(MSG_OK);
 }
 
@@ -563,10 +564,12 @@ on_set_node_standby(char* argv[], int argc)
 	rc = cib_conn->cmds->update(
 			cib_conn, "nodes", fragment, &output, cib_sync_call);
 
+	free_xml(fragment);
+	free_xml(cib_object);
 	if (rc < 0) {
 		return failed_msg(output, rc);
 	}
-
+	free_xml(output);
 	return cl_strdup(MSG_OK);
 
 }
@@ -612,11 +615,12 @@ on_del_rsc(char* argv[], int argc)
 	mgmt_log(LOG_DEBUG, "(delete resources)xml:%s",xml);
 	rc = cib_conn->cmds->delete(
 			cib_conn, "resources", cib_object, &output, cib_sync_call);
-
+	
+	free_xml(cib_object);
 	if (rc < 0) {
 		return failed_msg(output, rc);
 	}
-
+	free_xml(output);
 	return cl_strdup(MSG_OK);
 }
 static int
@@ -646,8 +650,10 @@ delete_lrm_rsc(IPC_Channel *crmd_channel, const char *host_uname, const char *rs
 	crm_free(key);
 
 	if(send_ipc_message(crmd_channel, cmd)) {
+		free_xml(cmd);
 		return 0;
 	}
+	free_xml(cmd);
 	return -1;
 }
 
@@ -664,8 +670,10 @@ refresh_lrm(IPC_Channel *crmd_channel, const char *host_uname)
 			     CRM_SYSTEM_CRMD, client_name, our_pid);
 	
 	if(send_ipc_message(crmd_channel, cmd)) {
+		free_xml(cmd);
 		return 0;
 	}
+	free_xml(cmd);
 	return -1;
 }
 
@@ -797,9 +805,12 @@ on_add_rsc(char* argv[], int argc)
 			cib_conn, "resources", fragment, &output, cib_sync_call);
 	}
 	
+	free_xml(fragment);
+	free_xml(cib_object);
 	if (rc < 0) {
 		return failed_msg(output, rc);
 	}
+	free_xml(output);
 	return cl_strdup(MSG_OK);
 
 }
@@ -821,11 +832,14 @@ on_add_grp(char* argv[], int argc)
 	mgmt_log(LOG_INFO, "xml:%s",xml);
 	fragment = create_cib_fragment(cib_object, "resources");
 	rc = cib_conn->cmds->create(cib_conn, "resources", fragment, &output, cib_sync_call);
+	
+	free_xml(fragment);
+	free_xml(cib_object);
 	if (rc < 0) {
 		return failed_msg(output, rc);
 	}
+	free_xml(output);
 	return cl_strdup(MSG_OK);
-
 }
 /* get all resources*/
 char*
@@ -1062,9 +1076,12 @@ on_update_rsc_params(char* argv[], int argc)
 	rc = cib_conn->cmds->update(
 			cib_conn, "resources", fragment, &output, cib_sync_call);
 
+	free_xml(fragment);
+	free_xml(cib_object);
 	if (rc < 0) {
 		return failed_msg(output, rc);
 	}
+	free_xml(output);
 	return cl_strdup(MSG_OK);
 }
 char*
@@ -1142,9 +1159,12 @@ on_update_rsc_ops(char* argv[], int argc)
 	rc = cib_conn->cmds->update(
 			cib_conn, "resources", fragment, &output, cib_sync_call);
 
+	free_xml(fragment);
+	free_xml(cib_object);
 	if (rc < 0) {
 		return failed_msg(output, rc);
 	}
+	free_xml(output);
 	return cl_strdup(MSG_OK);
 }
 char*
@@ -1211,9 +1231,12 @@ on_update_clone(char* argv[], int argc)
 	mgmt_log(LOG_INFO, "xml:%s",xml);
 	fragment = create_cib_fragment(cib_object, "resources");
 	rc = cib_conn->cmds->update(cib_conn, "resources", fragment, &output, cib_sync_call);
+	free_xml(fragment);
+	free_xml(cib_object);
 	if (rc < 0) {
 		return failed_msg(output, rc);
 	}
+	free_xml(output);
 	return cl_strdup(MSG_OK);
 }
 /* master functions */
@@ -1280,9 +1303,12 @@ on_update_master(char* argv[], int argc)
 	mgmt_log(LOG_INFO, "xml:%s",xml);
 	fragment = create_cib_fragment(cib_object, "resources");
 	rc = cib_conn->cmds->update(cib_conn, "resources", fragment, &output, cib_sync_call);
+	free_xml(fragment);
+	free_xml(cib_object);
 	if (rc < 0) {
 		return failed_msg(output, rc);
 	}
+	free_xml(output);
 	return cl_strdup(MSG_OK);
 
 }
@@ -1440,9 +1466,12 @@ on_update_constraint(char* argv[], int argc)
 	rc = cib_conn->cmds->update(
 			cib_conn, "constraints", fragment, &output, cib_sync_call);
 
+	free_xml(fragment);
+	free_xml(cib_object);
 	if (rc < 0) {
 		return failed_msg(output, rc);
 	}
+	free_xml(output);
 	return cl_strdup(MSG_OK);
 }
 
