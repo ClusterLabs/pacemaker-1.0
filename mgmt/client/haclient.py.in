@@ -1786,7 +1786,6 @@ class Manager :
 			if attrs == None :
 				return None
 			order = dict(zip(order_attr_names,attrs))
-			self.cache_update(order,"constraint_"+type, id)
 			return order
 		elif type == "rsc_colocation" :
 			colocation_attr_names = ["id","from","to","score"]
