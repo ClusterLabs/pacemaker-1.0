@@ -9,6 +9,39 @@
 #
 
 #---------- openwbem functions ---------------------------------------
+
+openwbem_config=""
+openwbem_http_port=5988
+openwbem_https_port=5989
+openwbem_get_config_pathname()
+{
+	owcimomd=`which owcimomd`
+	prefix=`dirname $owcimomd`
+	prefix=`dirname $prefix`
+	echo config file: "$prefix/etc/openwbem/openwbem.conf"
+	openwbem_config="$prefix/etc/openwbem/openwbem.conf"
+}
+
+openwbem_get_http_port()
+{
+	openwbem_get_config_pathname
+	http_port=`grep -e "http_server.http_port.*=" $openwbem_config | sed -e 's/.*=\W*\(\D*\)/\1/'`
+	if [ "X$http_port" != "X" ]; then
+		openwbem_http_port=$http_port
+	fi
+	echo openwbem_http_port: $openwbem_http_port
+}
+
+openwbem_get_https_port()
+{
+	openwbem_get_config_pathname
+	https_port=`grep -e "http_server.https_port.*=" $openwbem_config | sed -e 's/.*=\W*\(\D*\)/\1/'`
+	if [ "X$https_port" != "X" ]; then
+		openwbem_https_port=$https_port
+	fi
+	echo openwbem_https_port: $openwbem_https_port
+}
+
 openwbem_register ()
 {
         mof_file=$1
@@ -24,8 +57,9 @@ openwbem_register ()
         if test $? != 0; then
                 echo "owmofc not found, OpenWbem not installed?"
         fi
-
-        $OWMOFC $mof_file
+	
+	openwbem_get_http_port
+        $OWMOFC -u "http://localhost:$openwbem_http_port/root/cimv2" $mof_file
 }
 
 openwbem_unregister ()
@@ -44,7 +78,8 @@ openwbem_unregister ()
                 echo "owmofc not found, OpenWbem not installed?"
         fi
 
-        $OWMOFC -r $mof_file
+	openwbem_get_http_port
+        $OWMOFC -u "http://localhost:$openwbem_http_port/root/cimv2" -r $mof_file
 }
 
 #---------- pegasus functions ----------------------------------------
