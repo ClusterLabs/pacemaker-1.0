@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-my($VERSION)=(qw$Id: ldirectord,v 1.135 2006/04/05 02:11:24 horms Exp $)[2];
+my($VERSION)=(qw$Id: ldirectord,v 1.136 2006/04/05 02:12:24 horms Exp $)[2];
 
 ######################################################################
 # ldirectord                 http://www.vergenet.net/linux/ldirectord/
@@ -684,7 +684,7 @@ sub init_error
 # If we get a sinal then log it and quit
 sub ld_handler_term
 {
-        my ($signal) = (@_);
+    my ($signal) = (@_);
 	if ($LD_TERM_CALLED){
 		$SIG{'__DIE__'} = "IGNORE";
 		$SIG{"$signal"} = "IGNORE";
