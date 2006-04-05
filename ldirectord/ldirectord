@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-my($VERSION)=(qw$Id: ldirectord,v 1.133 2006/04/05 02:04:37 horms Exp $)[2];
+my($VERSION)=(qw$Id: ldirectord,v 1.134 2006/04/05 02:07:41 horms Exp $)[2];
 
 ######################################################################
 # ldirectord                 http://www.vergenet.net/linux/ldirectord/
@@ -3362,14 +3362,19 @@ sub ld_daemon
 	# and open `/dev/null' as stdin; alternatively, you could open
 	# `/dev/console' as stderr and/or stdout, and `/dev/null' as stdin, or
 	# any other combination that makes sense for your particular daemon.
+    #
+    # This code used to open /dev/console for STDOUT and STDERR,
+    # but that was changed to /dev/null to stop the code hanging in
+    # the case where /dev/console is unavailable for some reason
+    # http://www.osdl.org/developer_bugzilla/show_bug.cgi?id=1180
 	if(open(STDIN, "</dev/null")<0){
 		&ld_exit(1, "ld_daemon: Could not open /dev/null");
 	}
-	if(open(STDOUT, ">>/dev/console")<0){
-		&ld_exit(-1, "ld_daemon: Could not open /dev/console");
+	if(open(STDOUT, ">>/dev/null")<0){
+		&ld_exit(-1, "ld_daemon: Could not open /dev/null");
 	}
-	if(open(STDERR, ">>/dev/console")<0){
-		&ld_exit(-1, "ld_daemon: Could not open /dev/console");
+	if(open(STDERR, ">>/dev/null")<0){
+		&ld_exit(-1, "ld_daemon: Could not open /dev/null");
 	}
 }
 
