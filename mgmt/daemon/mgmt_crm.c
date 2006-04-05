@@ -402,7 +402,9 @@ on_update_crm_config(char* argv[], int argc)
 	char xml[MAX_STRLEN];
 
 	ARGC_CHECK(3);
-	snprintf(xml, MAX_STRLEN, "<nvpair id=\"%s\" name=\"%s\" value=\"%s\"/>", argv[1],argv[1],argv[2]);
+	snprintf(xml, MAX_STRLEN, "<cluster_property_set id=\"default-options\"><attributes>"
+		"<nvpair id=\"%s\" name=\"%s\" value=\"%s\"/></attributes></cluster_property_set>"
+		, argv[1],argv[1],argv[2]);
 
 	cib_object = string2xml(xml);
 	if(cib_object == NULL) {
