@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-my($VERSION)=(qw$Id: ldirectord,v 1.134 2006/04/05 02:07:41 horms Exp $)[2];
+my($VERSION)=(qw$Id: ldirectord,v 1.135 2006/04/05 02:11:24 horms Exp $)[2];
 
 ######################################################################
 # ldirectord                 http://www.vergenet.net/linux/ldirectord/
@@ -685,7 +685,6 @@ sub init_error
 sub ld_handler_term
 {
         my ($signal) = (@_);
-	print STDERR "ldirectord $CFGNAME received signal: $signal\n";
 	if ($LD_TERM_CALLED){
 		$SIG{'__DIE__'} = "IGNORE";
 		$SIG{"$signal"} = "IGNORE";
