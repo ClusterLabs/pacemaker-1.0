@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-my($VERSION)=(qw$Id: ldirectord,v 1.132 2006/03/23 00:00:49 horms Exp $)[2];
+my($VERSION)=(qw$Id: ldirectord,v 1.133 2006/04/05 02:04:37 horms Exp $)[2];
 
 ######################################################################
 # ldirectord                 http://www.vergenet.net/linux/ldirectord/
@@ -673,7 +673,7 @@ sub init_error
 	my $msg = shift;
 	chomp($msg);
 	&ld_log("$msg");
-	unless (defined $opt_d) {
+	unless ($opt_d) {
 		print STDERR "$msg\n";
 	}
 	ld_exit(1, "Initialisation Error");
@@ -1393,7 +1393,7 @@ sub config_error
         chomp($msg);
         $msg .= "\n";
 
-	if (defined $opt_d || $initializing==1) {
+	if ($opt_d || $initializing==1) {
 		if ($line>0) {
 			print STDERR "Error [$pid] reading file $CONFIG at line $line: $msg";
 		} else {
@@ -2838,7 +2838,7 @@ sub check_cfgfile
 #         1 on error
 sub ld_openlog
 {
-	if (defined $opt_d or $SUPERVISED) {
+	if ($opt_d or $SUPERVISED) {
 		# Instantly do nothing
 		return(0);
 	}	
@@ -2874,7 +2874,7 @@ sub ld_log
 
 	&ld_debug(2, $message);
 	chomp $message;
-	if (defined $opt_d) {
+	if ($opt_d) {
 		print STDERR "$message\n";
 	} elsif ($SUPERVISED) {
 		print "[$now] $message\n";
