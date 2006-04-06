@@ -1153,7 +1153,7 @@ class MainWindow :
 	# functions
 	def update(self) :
 		self.tree.update()
-		self.statusbar.pop(1)
+		self.statusbar.pop(2)
 		return False
 
 	def select_view(self, type, name, status) :
@@ -1210,12 +1210,15 @@ class MainWindow :
 		if ret == gtk.RESPONSE_OK:
 			if not manager.login(server, user, password):
 				msgbox(manager.failed_reason)
+			else :
+				self.statusbar.push(1,"Connected to "+server)
 	
 		self.update_ui()
 
 	def on_logout(self, action) :
 		manager.logout()
 		self.update_ui()
+		self.statusbar.pop(1)
 	
 	def on_test(self, action) :
 		print uuid()
@@ -1362,7 +1365,7 @@ class MainWindow :
 		self.tree = Tree(glade.get_widget("mainwin_tree"))
 		self.view_widget = glade.get_widget("mainwin_view")
 		self.update_ui()
-		self.statusbar.push(1,"Done")
+		self.statusbar.push(0,"Not Connected")
 
 class Manager :
 	'''
@@ -1438,7 +1441,7 @@ class Manager :
 		self.password = password
 		self.active_nodes = self.get_active_nodes()
 
-		window.statusbar.push(1,"Updating data from server...")
+		window.statusbar.push(2,"Updating data from server...")
 		self.update_timer = gobject.timeout_add(100, self.update)
 		
 		self.do_cmd("regevt\nevt:cib_changed")
@@ -1489,7 +1492,7 @@ class Manager :
 			if self.update_timer != -1 :
 				gobject.source_remove(self.update_timer)
 			else :
-				window.statusbar.push(1,"Updating data from server...")
+				window.statusbar.push(2,"Updating data from server...")
 			self.update_timer = gobject.timeout_add(100, self.update)
 			return True
 		elif event == None or event == "evt:disconnected" :
