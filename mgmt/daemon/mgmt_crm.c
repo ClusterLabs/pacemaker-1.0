@@ -631,6 +631,7 @@ delete_lrm_rsc(IPC_Channel *crmd_channel, const char *host_uname, const char *rs
 	HA_Message *cmd = NULL;
 	crm_data_t *msg_data = NULL;
 	crm_data_t *rsc = NULL;
+	crm_data_t *params = NULL;
 	char our_pid[11];
 	char *key = NULL; 
 	
@@ -638,12 +639,14 @@ delete_lrm_rsc(IPC_Channel *crmd_channel, const char *host_uname, const char *rs
 	our_pid[10] = '\0';
 	key = crm_concat(client_name, our_pid, '-');
 	
-	
 	msg_data = create_xml_node(NULL, XML_GRAPH_TAG_RSC_OP);
 	crm_xml_add(msg_data, XML_ATTR_TRANSITION_KEY, key);
 	
 	rsc = create_xml_node(msg_data, XML_CIB_TAG_RESOURCE);
 	crm_xml_add(rsc, XML_ATTR_ID, rsc_id);
+
+	params = create_xml_node(msg_data, XML_TAG_ATTRS);
+	crm_xml_add(params, XML_ATTR_CRM_VERSION, CRM_FEATURE_SET);
 	
 	cmd = create_request(CRM_OP_LRM_DELETE, msg_data, host_uname,
 			     CRM_SYSTEM_CRMD, client_name, our_pid);
@@ -652,10 +655,8 @@ delete_lrm_rsc(IPC_Channel *crmd_channel, const char *host_uname, const char *rs
 	crm_free(key);
 
 	if(send_ipc_message(crmd_channel, cmd)) {
-		free_xml(cmd);
 		return 0;
 	}
-	free_xml(cmd);
 	return -1;
 }
 
@@ -672,10 +673,8 @@ refresh_lrm(IPC_Channel *crmd_channel, const char *host_uname)
 			     CRM_SYSTEM_CRMD, client_name, our_pid);
 	
 	if(send_ipc_message(crmd_channel, cmd)) {
-		free_xml(cmd);
 		return 0;
 	}
-	free_xml(cmd);
 	return -1;
 }
 
@@ -693,7 +692,7 @@ on_cleanup_rsc(char* argv[], int argc)
 
 	send_hello_message(crmd_channel, our_pid, client_name, "0", "1");
 	delete_lrm_rsc(crmd_channel, argv[1], argv[2]);
-	refresh_lrm(crmd_channel, argv[1]);
+	refresh_lrm(crmd_channel, argv[1]); 
 	return cl_strdup(MSG_OK);
 }
 
