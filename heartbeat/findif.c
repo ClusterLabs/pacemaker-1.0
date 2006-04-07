@@ -1,4 +1,4 @@
-/* $Id: findif.c,v 1.55 2006/04/07 13:00:15 lars Exp $ */
+/* $Id: findif.c,v 1.56 2006/04/07 13:03:47 lars Exp $ */
 /*
  * findif.c:	Finds an interface which can route a given address
  *
@@ -251,9 +251,10 @@ SearchUsingProcRoute (char *address, struct in_addr *in
 	}
 
 out:
-	if (routefd)
+	if (routefd) {
 		fclose(routefd);
-	
+	}
+
 	if (best_metric == LONG_MAX) {
 		snprintf(errmsg, errmsglen, "No route to %s\n", address);
 		rc = 1; 
@@ -548,24 +549,25 @@ get_first_loopback_netdev(char * output)
 {
 	char buf[512];
 	FILE * fd;
-
+	char *rc = NULL;
+	
 	if (!output) {
 		fprintf(stderr, "output buf is a null pointer.\n");
-		return NULL;
+		goto out;
 	}
 
 	fd = fopen(PATH_PROC_NET_DEV, "r");
 	if (!fd) {
 		fprintf(stderr, "Warning: cannot open %s (%s).\n",
 			PATH_PROC_NET_DEV, strerror(errno)); 
-		return NULL;
+		goto out;
 	}
 
 	/* Skip the first two lines */
 	if (!fgets(buf, sizeof(buf), fd) || !fgets(buf, sizeof(buf), fd)) {
 		fprintf(stderr, "Warning: cannot read header from %s.\n",
 			PATH_PROC_NET_DEV);
-		return NULL;
+		goto out;
 	}
 
 	while (fgets(buf, sizeof(buf), fd)) {
@@ -576,13 +578,16 @@ get_first_loopback_netdev(char * output)
 		}
 		if (is_loopback_interface(name)) {
 			strncpy(output, name, IFNAMSIZ);
-			fclose(fd);
-			return output;
+			rc = output;
+			goto out;
 		}
 	}
 
-	fclose(fd);
-	return NULL;
+out:
+	if (fd) {
+		fclose(fd);
+	}
+	return rc;
 }
 
 int
@@ -898,6 +903,9 @@ ff02::%lo0/32                     fe80::1%lo0                   UC          lo0
 
 /* 
  * $Log: findif.c,v $
+ * Revision 1.56  2006/04/07 13:03:47  lars
+ * CID 19: RESOURCE_LEAK in error leg.
+ *
  * Revision 1.55  2006/04/07 13:00:15  lars
  * CID: 18. RESOURCE_LEAK in error legs.
  *
