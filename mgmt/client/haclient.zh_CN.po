@@ -545,3 +545,25 @@ msgstr "登录失败"
 
 msgid "can not get information from cluster!"
 msgstr "无法从集群获得信息!"
+
+msgid "standby"
+msgstr "备用"
+
+msgid "Standby"
+msgstr "备用"
+
+msgid "Active"
+msgstr "活动"
+
+msgid "active"
+msgstr "活动"
+
+msgid "make the node standby"
+msgstr "让节点备用"
+
+msgid "make the node active"
+msgstr "让节点活动"
+
+msgid "Make"
+msgstr "让"
+

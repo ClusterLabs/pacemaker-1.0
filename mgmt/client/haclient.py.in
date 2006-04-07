@@ -519,7 +519,7 @@ class Tree :
 				status = _("running")
 
 			if manager.get_node_config(node)["standby"] == "True" :
-				status = status + "-standby"
+				status = status + "-"+ _("standby")
 
 		node_iter = self.store.append(nodes_root,[node, status, "node"])
 
@@ -1141,14 +1141,14 @@ class MainWindow :
 		self.set_action_sensitive('standby',
 			manager.connected
 			and self.cur_type in [_("node")]
-			and string.find(self.cur_status, "standby") == -1
-			and string.find(self.cur_status, "running") != -1)
+			and string.find(self.cur_status, _("standby")) == -1
+			and string.find(self.cur_status, _("running")) != -1)
 
 		self.set_action_sensitive('active',
 			manager.connected
 			and self.cur_type in [_("node")]
-			and string.find(self.cur_status, "standby") != -1
-			and string.find(self.cur_status, "running") != -1)
+			and string.find(self.cur_status, _("standby")) != -1
+			and string.find(self.cur_status, _("running")) != -1)
 
 	# functions
 	def update(self) :
@@ -1221,11 +1221,11 @@ class MainWindow :
 		print uuid()
 			 
 	def on_standby(self, action) :
-		if confirmbox("Make" +" " +self.cur_name + " " +"standby"+"?") :
+		if confirmbox(_("Make") +" " +self.cur_name + " " +_("standby")+"?") :
 			manager.do_cmd("standby\n"+self.cur_name + "\n" + "on")
 
 	def on_active(self, action) :
-		if confirmbox("Make" +" " +self.cur_name + " " + "active"+"?") :
+		if confirmbox(_("Make") +" " +self.cur_name + " " + _("active")+"?") :
 			manager.do_cmd("standby\n"+self.cur_name + "\n" + "off")
 
 	def on_add_item(self, action) :
@@ -1827,8 +1827,7 @@ if __name__ == '__main__' :
 	gettext.textdomain(app_name)
 	gtk.glade.bindtextdomain(app_name)
 	gtk.glade.textdomain(app_name)
-	gettext.install(app_name,unicode=1)
-	
+	gettext.install(app_name,"/usr/share/locale",unicode=1)
 	if "-v" in sys.argv :
 		debug_level = 1
 	manager = Manager()
