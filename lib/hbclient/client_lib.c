@@ -1,4 +1,4 @@
-/* $Id: client_lib.c,v 1.36 2006/02/06 05:06:31 alan Exp $ */
+/* $Id: client_lib.c,v 1.37 2006/04/07 13:36:57 lars Exp $ */
 /* 
  * client_lib: heartbeat API client side code
  *
@@ -684,10 +684,7 @@ get_nodelist(llc_private_t* pi)
 
 		ZAPMSG(reply);
 	}
-	if (reply != NULL) {
-		zap_nodelist(pi);
-		ZAPMSG(reply);
-	}
+
 	if (reply == NULL) {
 		ha_api_log(LOG_ERR, "General read_api_msg() failure");
 	}else if (result == NULL) {
@@ -700,6 +697,10 @@ get_nodelist(llc_private_t* pi)
 		ha_api_log(LOG_ERR, "new_stringlist() failure.");
 	}
 
+	if (reply != NULL) {
+		zap_nodelist(pi);
+		ZAPMSG(reply);
+	}
 	return HA_FAIL;
 }
 /*
