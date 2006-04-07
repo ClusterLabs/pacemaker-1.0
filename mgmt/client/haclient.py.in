@@ -1210,15 +1210,12 @@ class MainWindow :
 		if ret == gtk.RESPONSE_OK:
 			if not manager.login(server, user, password):
 				msgbox(manager.failed_reason)
-			else :
-				self.statusbar.push(1,"Connected to "+server)
 	
 		self.update_ui()
 
 	def on_logout(self, action) :
 		manager.logout()
 		self.update_ui()
-		self.statusbar.pop(1)
 	
 	def on_test(self, action) :
 		print uuid()
@@ -1436,6 +1433,7 @@ class Manager :
 				self.failed_reason = "Failed in the authentication.\n User Name or Password may be wrong."
 			mgmt_disconnect()
 			return False
+		window.statusbar.push(1,"Connected to "+server)
 		self.connected = True
 		self.username = username
 		self.password = password
@@ -1483,6 +1481,7 @@ class Manager :
 		gobject.source_remove(self.io_tag)
 		self.connected = False
 		window.update()
+		window.statusbar.pop(1)
 		
 	# event handler	
 	def on_event(self, source, condition) :
