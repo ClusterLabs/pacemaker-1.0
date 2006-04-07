@@ -1,4 +1,4 @@
-/* $Id: ccmupdate.c,v 1.21 2006/04/07 13:15:13 lars Exp $ */
+/* $Id: ccmupdate.c,v 1.22 2006/04/07 13:17:47 lars Exp $ */
 /* 
  * update.c: functions that track the votes during the voting protocol
  *
@@ -219,7 +219,7 @@ update_compute_leader(ccm_update_t *tab, uint j, llm_info_t *llm)
 void
 update_display(int pri,llm_info_t* llm, ccm_update_t* tab)
 {
-	unsigned i; 
+	int i; 
 	
 	ccm_debug(pri, "diplaying update information: ");
 	ccm_debug(pri, "leader=%d(%s) nodeCount=%d", 
