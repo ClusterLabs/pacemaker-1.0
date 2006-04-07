@@ -40,7 +40,11 @@ mgmtdtest_LDFLAGS 	= `libgnutls-config --libs`
 mozhCNdir		= $(datadir)/locale/zh_CN/LC_MESSAGES
 mozhCN_DATA		= haclient.zh_CN.mo
 
+install-data-hook:
+		mv $(datadir)/locale/zh_CN/LC_MESSAGES/haclient.zh_CN.mo $(datadir)/locale/zh_CN/LC_MESSAGES/haclient.mo
+
 EXTRA_DIST		= $(halib_DATA) $(mozhCN_DATA)
 
 .po.mo:
 	$(MSGFMT) -o $@ $<
+
