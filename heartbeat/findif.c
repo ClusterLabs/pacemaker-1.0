@@ -1,4 +1,4 @@
-/* $Id: findif.c,v 1.54 2006/03/09 04:52:29 xunsun Exp $ */
+/* $Id: findif.c,v 1.55 2006/04/07 13:00:15 lars Exp $ */
 /*
  * findif.c:	Finds an interface which can route a given address
  *
@@ -213,6 +213,7 @@ SearchUsingProcRoute (char *address, struct in_addr *in
 	unsigned long   dest;
 	long		metric = LONG_MAX;
 	long		best_metric = LONG_MAX;
+	int		rc;
 	
 	char	buf[2048];
 	char	interface[MAXSTR];
@@ -222,7 +223,7 @@ SearchUsingProcRoute (char *address, struct in_addr *in
 		snprintf(errmsg, errmsglen
 		,	"Cannot open %s for reading"
 		,	PROCROUTE);
-		return(-1);
+		rc = -1; goto out;
 	}
 
 	/* Skip first (header) line */
@@ -230,7 +231,7 @@ SearchUsingProcRoute (char *address, struct in_addr *in
 		snprintf(errmsg, errmsglen
 		,	"Cannot skip first line from %s"
 		,	PROCROUTE);
-		return(-1);
+		rc = -1; goto out;
 	}
 	while (fgets(buf, sizeof(buf), routefd) != NULL) {
 		if (sscanf(buf, "%[^\t]\t%lx%lx%lx%lx%lx%lx%lx"
@@ -239,7 +240,7 @@ SearchUsingProcRoute (char *address, struct in_addr *in
 		!= 8) {
 			snprintf(errmsg, errmsglen, "Bad line in %s: %s"
 			,	PROCROUTE, buf);
-			return(1);
+			rc = -1; goto out;
 		}
 		if ( (in->s_addr&mask) == (in_addr_t)(dest&mask)
 		&&	metric < best_metric) {
@@ -248,14 +249,17 @@ SearchUsingProcRoute (char *address, struct in_addr *in
 			strncpy(best_if, interface, best_iflen);
 		}
 	}
-	fclose(routefd);
 
+out:
+	if (routefd)
+		fclose(routefd);
+	
 	if (best_metric == LONG_MAX) {
 		snprintf(errmsg, errmsglen, "No route to %s\n", address);
-		return(1); 
+		rc = 1; 
 	}
 
-	return(0);
+	return(rc);
 }
 
 static int
@@ -894,6 +898,12 @@ ff02::%lo0/32                     fe80::1%lo0                   UC          lo0
 
 /* 
  * $Log: findif.c,v $
+ * Revision 1.55  2006/04/07 13:00:15  lars
+ * CID: 18. RESOURCE_LEAK in error legs.
+ *
+ * Additionally, we ought to treat the mechanism as failed if we couldn't
+ * parse the data we read.
+ *
  * Revision 1.54  2006/03/09 04:52:29  xunsun
  * removed the extra blanks which would cause problems when parsed by OCF IPaddr RA
  *
