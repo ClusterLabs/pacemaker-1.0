@@ -1,4 +1,4 @@
-/* $Id: ccmupdate.c,v 1.20 2006/02/17 05:48:24 zhenh Exp $ */
+/* $Id: ccmupdate.c,v 1.21 2006/04/07 13:15:13 lars Exp $ */
 /* 
  * update.c: functions that track the votes during the voting protocol
  *
@@ -246,7 +246,7 @@ update_display(int pri,llm_info_t* llm, ccm_update_t* tab)
 static int
 update_find_leader(ccm_update_t *tab, llm_info_t *llm) 
 {
-	uint i, leader, j;
+	int i, leader, j;
 
 	for ( i = 0 ; i < llm_get_nodecount(llm); i++ ){
 		if (UPDATE_GET_INDEX(tab, i) != -1) {
