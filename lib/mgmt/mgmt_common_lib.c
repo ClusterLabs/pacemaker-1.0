@@ -161,7 +161,7 @@ mgmt_msg_args(const char* msg, int* num)
 	/* malloc the array for args */
 	ret = (char**)mgmt_malloc(sizeof(char*)*n);
 	if (ret == NULL) {
-		mgmt_free(p);
+		mgmt_free(buf);
 		return NULL;
 	}
 
