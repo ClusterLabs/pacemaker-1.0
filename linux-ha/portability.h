@@ -1,4 +1,4 @@
-/* $Id: portability.h,v 1.51 2006/01/30 18:41:59 alan Exp $ */
+/* $Id: portability.h,v 1.52 2006/04/07 15:49:03 davidlee Exp $ */
 #ifndef PORTABILITY_H
 #  define PORTABILITY_H
 
@@ -59,6 +59,11 @@
 #	undef	NETSNMP_ENABLE_INLINE
 #	define	NETSNMP_NO_INLINE 1
 #endif
+
+#ifndef HA_HAVE_DAEMON
+  /* We supply a replacement function, but need a prototype */
+int daemon(int nochdir, int noclose);
+#endif /* HA_HAVE_DAEMON */
 
 #ifndef HA_HAVE_SETENV
   /* We supply a replacement function, but need a prototype */
