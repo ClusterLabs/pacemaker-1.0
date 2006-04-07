@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.499 2006/03/03 05:36:31 zhenh Exp $ */
+/* $Id: heartbeat.c,v 1.500 2006/04/07 12:51:25 lars Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -6093,6 +6093,9 @@ ParseTestOpts()
 		}
 	}
 	cl_log(LOG_INFO, "WARNING: Above Options Now Enabled.");
+	
+	fclose(fp);
+	
 	return something_changed;
 }
 
@@ -6233,6 +6236,9 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.500  2006/04/07 12:51:25  lars
+ * CID #25: RESOURCE_LEAK, fp was not being freed.
+ *
  * Revision 1.499  2006/03/03 05:36:31  zhenh
  * The should_drop_message() may call itself in some special conditions.
  * So the t->last_seq should be set before any chance to call itself
