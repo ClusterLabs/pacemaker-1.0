@@ -1,4 +1,4 @@
-/* $Id: findif.c,v 1.56 2006/04/07 13:03:47 lars Exp $ */
+/* $Id: findif.c,v 1.57 2006/04/08 11:07:26 lars Exp $ */
 /*
  * findif.c:	Finds an interface which can route a given address
  *
@@ -548,7 +548,7 @@ char *
 get_first_loopback_netdev(char * output)
 {
 	char buf[512];
-	FILE * fd;
+	FILE * fd = NULL;
 	char *rc = NULL;
 	
 	if (!output) {
@@ -903,6 +903,9 @@ ff02::%lo0/32                     fe80::1%lo0                   UC          lo0
 
 /* 
  * $Log: findif.c,v $
+ * Revision 1.57  2006/04/08 11:07:26  lars
+ * CID 37: Forgot to initialize the variable.
+ *
  * Revision 1.56  2006/04/07 13:03:47  lars
  * CID 19: RESOURCE_LEAK in error leg.
  *
