@@ -1,4 +1,4 @@
-#	$Id: heartbeat.spec.in,v 1.166 2006/04/03 09:51:56 andrew Exp $
+#	$Id: heartbeat.spec.in,v 1.167 2006/04/09 15:14:34 andrew Exp $
 
 # Workaround for a change in RPM 4.1.x; needs proper fixing soon!
 ##%define _unpackaged_files_terminate_build 0
@@ -1167,6 +1167,9 @@ make DESTDIR=$RPM_BUILD_ROOT install
 @sbindir@/crm_attribute 
 @sbindir@/crm_resource
 @sbindir@/crm_verify
+@sbindir@/attrd_updater
+@sbindir@/crm_failcount
+@sbindir@/crm_primitive.py
 %dir %attr (755, @HA_CCMUSER@, @HA_APIGROUP@) @HA_VARRUNDIR@/@HB_PKG@/ccm
 %dir %attr (750, @HA_CCMUSER@, @HA_APIGROUP@) @HA_VARRUNDIR@/@HB_PKG@/crm
 %dir %attr (750, @HA_CCMUSER@, @HA_APIGROUP@) @localstatedir@/lib/@HB_PKG@/crm
