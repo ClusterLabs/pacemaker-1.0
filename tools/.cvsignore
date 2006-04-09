@@ -12,4 +12,5 @@ parser-messages
 MISC_ERRORS
 ccdv
 haresources2cib.py
-
+attrd
+attrd_updater

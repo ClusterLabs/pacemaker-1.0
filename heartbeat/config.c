@@ -1,4 +1,4 @@
-/* $Id: config.c,v 1.193 2006/02/23 20:12:12 alan Exp $ */
+/* $Id: config.c,v 1.194 2006/04/09 12:50:04 andrew Exp $ */
 /*
  * Parse various heartbeat configuration files...
  *
@@ -2396,15 +2396,17 @@ set_release2mode(const char* value)
 		const char * dval;
 	} r2dirs[] =
 		/* CCM already implicit */
-	{	{"apiauth", "cib 	uid=" HA_CCMUSER}
-	,	{"apiauth", "stonithd   uid=root"}
+	{	{"apiauth", "stonithd   uid=root"}
 		/* LRM is not a heartbeat API client */
+	,	{"apiauth", "cib 	uid=" HA_CCMUSER}
 	,	{"apiauth", "crmd   	uid=" HA_CCMUSER}
+	,	{"apiauth", "attrd   	uid=" HA_CCMUSER}
 
 	,	{"respawn", " "HA_CCMUSER " " HALIB "/ccm"}
 	,	{"respawn", " "HA_CCMUSER " " HALIB "/cib"}
 	,	{"respawn", "root "	      HALIB "/stonithd"}
 	,	{"respawn", "root "           HALIB "/lrmd"}
+	,	{"respawn", " "HA_CCMUSER " " HALIB "/attrd"}
 	,	{"respawn", " "HA_CCMUSER " " HALIB "/crmd"}
 	};
 	gboolean	dorel2;
@@ -2517,6 +2519,10 @@ ha_config_check_boolean(const char *value)
 
 /*
  * $Log: config.c,v $
+ * Revision 1.194  2006/04/09 12:50:04  andrew
+ * Daemon for organising attribute updates to the CIB accross all nodes
+ *   (part of the ipfail replacement code)
+ *
  * Revision 1.193  2006/02/23 20:12:12  alan
  * Unimportant correction to config.c
  *
