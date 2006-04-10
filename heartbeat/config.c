@@ -1,4 +1,4 @@
-/* $Id: config.c,v 1.194 2006/04/09 12:50:04 andrew Exp $ */
+/* $Id: config.c,v 1.195 2006/04/10 12:50:08 andrew Exp $ */
 /*
  * Parse various heartbeat configuration files...
  *
@@ -2401,6 +2401,7 @@ set_release2mode(const char* value)
 	,	{"apiauth", "cib 	uid=" HA_CCMUSER}
 	,	{"apiauth", "crmd   	uid=" HA_CCMUSER}
 	,	{"apiauth", "attrd   	uid=" HA_CCMUSER}
+	,	{"apiauth", "pingd   	uid=" HA_CCMUSER}
 
 	,	{"respawn", " "HA_CCMUSER " " HALIB "/ccm"}
 	,	{"respawn", " "HA_CCMUSER " " HALIB "/cib"}
@@ -2519,6 +2520,9 @@ ha_config_check_boolean(const char *value)
 
 /*
  * $Log: config.c,v $
+ * Revision 1.195  2006/04/10 12:50:08  andrew
+ * Untested pingd - replacement for ipfail
+ *
  * Revision 1.194  2006/04/09 12:50:04  andrew
  * Daemon for organising attribute updates to the CIB accross all nodes
  *   (part of the ipfail replacement code)
