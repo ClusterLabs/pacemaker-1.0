@@ -416,7 +416,6 @@ on_listen(GIOChannel *source, GIOCondition condition, gpointer data)
 		/* create gnutls session for the server socket */
 		session = tls_attach_server(csock);
 		msg = mgmt_session_recvmsg(session);
-		mgmt_log(LOG_DEBUG, "recv msg: %s", msg);
 		args = mgmt_msg_args(msg, &num);
 		if (msg == NULL || num != 3 || STRNCMP_CONST(args[0], MSG_LOGIN) != 0) {
 			mgmt_del_args(args);
@@ -427,6 +426,7 @@ on_listen(GIOChannel *source, GIOCondition condition, gpointer data)
 			mgmt_log(LOG_ERR, "%s receive login msg failed", __FUNCTION__);
 			return TRUE;
 		}
+		mgmt_log(LOG_DEBUG, "recv msg: %s %s ****", args[0], args[1]);
 		/* authorization check with pam */	
 		if (pam_auth(args[1],args[2]) != 0 || !usr_belong_grp(args[1],ALLOW_GRP)) {
 			mgmt_del_args(args);
