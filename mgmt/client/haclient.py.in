@@ -439,9 +439,8 @@ class Tree :
 			msgbox(_("can not get information from cluster!"))
 			return
 
-		activenodes = manager.get_active_nodes()
-		manager.activenodes = activenodes
-		if activenodes == None :
+		active_nodes = manager.get_active_nodes()
+		if active_nodes == None :
 			msgbox(_("can not get information from cluster!"))
 			return
 
@@ -455,7 +454,7 @@ class Tree :
 		
 		nodes_root = self.store.append(root, [_("Nodes"),"", "nodes"])
 		for node in nodes :
-			self.add_node(nodes_root, node, node in activenodes)
+			self.add_node(nodes_root, node, node in active_nodes)
 
 		rscs_root = self.store.append(root, [_("Resources"),"", "resources"])
 		rscs = manager.get_all_rsc_id()
@@ -1437,7 +1436,6 @@ class Manager :
 		self.connected = True
 		self.username = username
 		self.password = password
-		self.active_nodes = self.get_active_nodes()
 
 		window.statusbar.push(2,"Updating data from server...")
 		self.update_timer = gobject.timeout_add(100, self.update)
@@ -1549,7 +1547,8 @@ class Manager :
 		return self.query("all_nodes")
 
 	def get_active_nodes(self):
-		return self.query("active_nodes")
+		self.active_nodes = self.query("active_nodes")
+		return self.active_nodes
 				
 	def get_node_config(self, node) :
 		node_attr_names = ["uname", "online","standby", "unclean", "shutdown",
