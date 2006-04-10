@@ -1,3 +1,25 @@
+/*
+ * resource_common.c: common functions for resource providers
+ *
+ * Author: Jia Ming Pan <jmltc@cn.ibm.com>
+ * Copyright (c) 2005 International Business Machines
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ *
+ */
+
 #include <portability.h>
 #ifdef HAVE_CONFIG_H
 #include <config.h>
@@ -21,26 +43,21 @@ static char 	GroupClassName     [] = "HA_ResourceGroup";
 static char 	CloneClassName     [] = "HA_ResourceClone";
 static char 	MasterClassName    [] = "HA_MasterSlaveResource";
 
-static void     primitive_set_properties(CMPIBroker * broker, 
-			CMPIInstance * ci, CIMTable *, CMPIStatus *);
-static void     group_set_properties(CMPIBroker * broker, CMPIInstance * ci, 
-			CIMTable *, CMPIStatus *);
-static void     clone_set_properties(CMPIBroker * broker, CMPIInstance * ci, 
-			CIMTable *, CMPIStatus *);
-static void     master_set_properties(CMPIBroker * broker, CMPIInstance * ci, 
-			CIMTable *, CMPIStatus *);
-static void     instance_set_attributes(CMPIBroker * broker, CMPIInstance * ci,
-			const char * rscid, CMPIStatus *);
+static void     primitive_set_instance(CMPIBroker * broker, 
+			CMPIInstance * ci, struct ha_msg *, CMPIStatus *);
+static void     group_set_instance(CMPIBroker * broker, CMPIInstance * ci, 
+			struct ha_msg *, CMPIStatus *);
+static void     clone_set_instance(CMPIBroker * broker, CMPIInstance * ci, 
+			struct ha_msg *, CMPIStatus *);
+static void     master_set_instance(CMPIBroker * broker, CMPIInstance * ci, 
+			struct ha_msg *, CMPIStatus *);
+static void     attributes2inst(CMPIBroker * broker, CMPIInstance * ci,
+			const char * rscid, struct ha_msg *, CMPIStatus *);
 
-static int      primitive_get_properties(CIMTable *, CMPIInstance *, CMPIStatus *);
-static int      clone_get_properties(CIMTable *, CMPIInstance *, CMPIStatus *);
-static int      master_get_properties(CIMTable *, CMPIInstance *, CMPIStatus *);
-static int      group_get_properties(CIMTable *, CMPIInstance *, CMPIStatus *);
-
-static CIMArray *	instance_get_attributes(CMPIObjectPath *, 
+static struct ha_msg*	inst2attributes(CMPIObjectPath *, 
 					CMPIInstance *, CMPIStatus *);
 static CMPIInstance *   make_instance(CMPIBroker * broker, char * classname, 
-					CMPIObjectPath * op, CIMTable * info, 
+					CMPIObjectPath * op, struct ha_msg *info, 
 					uint32_t type, CMPIStatus * rc);
 static CMPIInstance *   make_instance_byid(CMPIBroker * broker, 
 					CMPIObjectPath * ref, char * rscid, 
@@ -50,37 +67,37 @@ static CMPIObjectPath * make_objectpath_byid(CMPIBroker * broker,
 					uint32_t type, CMPIStatus * rc);
 
 static void     
-instance_set_attributes(CMPIBroker * broker, CMPIInstance * ci,
-			const char * rscid, CMPIStatus * rc)
+attributes2inst(CMPIBroker * broker, CMPIInstance * ci,
+	const char * rscid, struct ha_msg *resource, CMPIStatus * rc)
 {
-	CIMArray * attrs = NULL;
+	struct ha_msg *attributes = NULL;
 	CMPIArray * array = NULL;
         int len = 0, i = 0;
-	if ((attrs = cim_get_array(GET_RSC_ATTRIBUTES, rscid, NULL)) == NULL) {
-                cl_log(LOG_ERR, "Resource attribute: can't get attributes.");
-                return;
-        }
+	
+	attributes = cl_get_struct(resource, "attributes");	
 
-        len = cim_array_len(attrs);
+        len = cim_msg_children_count(attributes);
+	cim_debug2(LOG_INFO, "attirbutes len: %d", len);
+
         if ( ( array = CMNewArray(broker, len, CMPI_chars, rc)) == NULL ) {
                 cl_log(LOG_ERR, "Resource attribute: can't make CMPIArray.");
-                cim_array_free(attrs);
+		ha_msg_del(attributes);
                 return;
         }
 
-        for ( i = 0; i < cim_array_len(attrs); i++ ) {
+        for ( i = 0; i < len; i++ ) {
                 char buf[MAXLEN];
-                char * id, * name, *value, *p;
-                CIMTable *attribute;
-
-                attribute = cim_array_index_v(attrs,i).v.table;
+                const char *id, *name, *value, *p;
+		struct ha_msg *attribute;
+		
+                attribute = cim_msg_child_index(attributes, i);
                 if ( attribute == NULL ) {
                         continue;
                 }
 
-                id    = cim_table_lookup_v(attribute, "id").v.str;
-                name  = cim_table_lookup_v(attribute, "name").v.str;
-                value = cim_table_lookup_v(attribute, "value").v.str;
+                id    = cl_get_string(attribute, "id");
+                name  = cl_get_string(attribute, "name");
+                value = cl_get_string(attribute, "value");
                 snprintf(buf, MAXLEN, "%s=%s", name, value);
 
                 if ( (p = cim_strdup(buf)) ){
@@ -91,38 +108,40 @@ instance_set_attributes(CMPIBroker * broker, CMPIInstance * ci,
 
 }
 
-static CIMArray *
-instance_get_attributes(CMPIObjectPath* cop, CMPIInstance* ci, CMPIStatus* rc)
+static struct ha_msg*
+inst2attributes(CMPIObjectPath* cop, CMPIInstance* ci, CMPIStatus* rc)
 {
         char *id, *rscid, *rsc_crname;
         CMPIArray * array;
         int i, len;
-        CIMArray * attrs;
+        struct ha_msg *attributes;
 
         DEBUG_ENTER();
-        id = CMGetKeyString(cop, "Id", rc);
-        rscid = CMGetKeyString(cop, "SystemName", rc);
+        id 	   = CMGetKeyString(cop, "Id", rc);
+        rscid 	   = CMGetKeyString(cop, "SystemName", rc);
         rsc_crname = CMGetKeyString(cop, "SystemCreationClassName", rc);
 
+	cim_debug2(LOG_INFO, "%s: id, rscid, crname = %s, %s, %s", 
+			__FUNCTION__, id, rscid, rsc_crname);
         array = CMGetProperty(ci, "InstanceAttributes", rc).value.array;
         if ( array == NULL ) {
-		cl_log(LOG_ERR, "instance_get_attrs: attributes missing.");
+		cl_log(LOG_ERR, "get_attributes: attributes missing.");
 		return NULL;
         }
         len = CMGetArrayCount(array, rc);
         if ( rc->rc != CMPI_RC_OK) {
-                cl_log(LOG_ERR, "instance_get_attrs: can't get array length.");
+                cl_log(LOG_ERR, "get_attributes: can't get array length.");
                 return NULL;
         }
 
-        if ((attrs = cim_array_new()) == NULL ) {
-		cl_log(LOG_ERR, "instance_get_attrs: failed to alloc array.");
+        if ((attributes = ha_msg_new(16)) == NULL ) {
+		cl_log(LOG_ERR, "get_attributes: failed to alloc array.");
                 return NULL;
         }
 
         for(i = 0; i < len; i++) {
                 CMPIData data;
-                CIMTable * table;
+		struct ha_msg *attribute;
                 char **s, *v, tmp[MAXLEN] = "id-";
                 int len;
 
@@ -132,96 +151,95 @@ instance_get_attributes(CMPIObjectPath* cop, CMPIInstance* ci, CMPIStatus* rc)
                 }
                 v = CMGetCharPtr(data.value.string);
 
-                if((table = cim_table_new()) == NULL ) {
+                if((attribute = ha_msg_new(3)) == NULL ) {
                         continue;
                 }
 		
 		/* parse attributes, get key and value */
                 s = split_string(v, &len, " =");
                 if ( len == 2 ) {
-                        cim_table_strdup_replace(table, "name", s[0]);
-                        cim_table_strdup_replace(table, "value", s[1]);
+                        ha_msg_add(attribute, "name", s[0]);
+                        ha_msg_add(attribute, "value", s[1]);
                 }
 
 		strncat(tmp, s[0], MAXLEN);
-		cim_table_strdup_replace(table, "id", tmp);
-                free_2d_array(s, len, cim_free);
+		ha_msg_add(attribute, "id", tmp);
 
-                dump_cim_table(table, 0);
-                cim_array_append(attrs, makeTableData(table));
+		snprintf(tmp, MAXLEN, "%s-%s", s[0], id);
+		cim_msg_add_child(attributes, tmp, attribute);
+                free_2d_array(s, len, cim_free);
         }
 
         DEBUG_LEAVE();
-	return attrs;
+	return attributes;
 }
 
 static void
-primitive_set_properties(CMPIBroker * broker, CMPIInstance * ci, 
-		CIMTable * info, CMPIStatus * rc)
+primitive_set_instance(CMPIBroker * broker, CMPIInstance * ci, 
+		struct ha_msg *info, CMPIStatus * rc)
 {
-	const mapping_t map [] = { MAPPING_HA_PrimitiveResource};
-	int len = MAPDIM(map);
-        char *hosting_node = NULL, *id;
+        const char *const_host= NULL, *id;
+	char * host = NULL;
+	struct ha_msg *msg;
+	cmpi_msg2inst(broker, ci, HA_PRIMITIVE_RESOURCE, info, rc);
+	id = cl_get_string(info, "id");
 
-	cmpi_set_properties(broker, ci, info, map, len, rc);
-	id = cim_table_lookup_v(info, "id").v.str;
-
+	msg = cim_query_dispatch(GET_RSC_HOST, id, NULL);
         /* get hosting node */
-        if ( (hosting_node = cim_get(GET_RSC_HOST, id, NULL)) != NULL ){
-                cl_log(LOG_INFO, "Hosting node is %s", hosting_node);
-                CMSetProperty(ci, "HostingNode", hosting_node, CMPI_chars);
+        if ( msg && (const_host = cl_get_string(msg, "host")) != NULL ){
+		host = cim_strdup(const_host);
+                cl_log(LOG_INFO, "Hosting node is %s", host);
+                CMSetProperty(ci, "HostingNode", host, CMPI_chars);
         } else {
                /* OpenWBEM will segment fault in HostedResource provider 
                   if "HostingNode" not set */
-                hosting_node = cim_strdup ("Unknown");
-                CMSetProperty(ci, "HostingNode", hosting_node, CMPI_chars);
+                host = cim_strdup ("Unknown");
+                CMSetProperty(ci, "HostingNode", host, CMPI_chars);
         }
-        cim_free(hosting_node);
+        cim_free(host);
 }
 
 static void 
-group_set_properties(CMPIBroker * broker, CMPIInstance * ci, 
-		CIMTable * info, CMPIStatus * rc)
+group_set_instance(CMPIBroker * broker, CMPIInstance * ci, 
+		struct ha_msg *info, CMPIStatus * rc)
 {
-        /* nothing to do */
+	cmpi_msg2inst(broker, ci, HA_RESOURCE_GROUP, info, rc);
 }
 
 static void 
-clone_set_properties(CMPIBroker * broker, CMPIInstance * ci, 
-		CIMTable * clone, CMPIStatus * rc)
+clone_set_instance(CMPIBroker * broker, CMPIInstance * ci, 
+		struct ha_msg *clone, CMPIStatus * rc)
 {
-	const mapping_t map [] = { MAPPING_HA_ResourceClone };
-	int len = MAPDIM(map);
-	cmpi_set_properties(broker, ci, clone, map, len, rc);
+	cmpi_msg2inst(broker, ci, HA_RESOURCE_CLONE, clone, rc);
 }
 
 static void 
-master_set_properties(CMPIBroker * broker, CMPIInstance * ci, 
-		CIMTable * master, CMPIStatus * rc)
+master_set_instance(CMPIBroker * broker, CMPIInstance * ci, 
+		struct ha_msg *master, CMPIStatus * rc)
 {
-	const mapping_t map [] = { MAPPING_HA_MasterSlaveResource};
-	int len = MAPDIM(map);
-	cmpi_set_properties(broker, ci, master, map, len, rc);
+	cmpi_msg2inst(broker, ci, HA_MASTERSLAVE_RESOURCE, master, rc);
 }
 
 static CMPIInstance *
 make_instance(CMPIBroker * broker, char * classname, CMPIObjectPath * op, 
-              CIMTable * info, uint32_t type, CMPIStatus * rc) 
+              struct ha_msg* info, uint32_t type, CMPIStatus * rc) 
 {
         CMPIInstance * ci = NULL;
-        char * id;
-	char * status;
+        char *id, *status;
+	const char *constid, *conststatus;
         char caption [MAXLEN];
+	struct ha_msg *msg;	
 
         ci = CMNewInstance(broker, op, rc);
         if ( CMIsNullObject(ci) ) {
                 cl_log(LOG_ERR, "%s: Can't create instance.", __FUNCTION__);
 	        CMSetStatusWithChars(broker, rc, 
 		       CMPI_RC_ERR_FAILED, "Can't get create instance");
-                goto out;
-        }
+        	return NULL;
+	}
 
-	id = cim_table_lookup_v(info, "id").v.str;
+	constid = cl_get_string(info, "id");
+	id = cim_strdup(constid);
 
         snprintf(caption, MAXLEN, "Resource.%s", id);
         /* set other key properties inherited from super classes */
@@ -233,27 +251,28 @@ make_instance(CMPIBroker * broker, char * classname, CMPIObjectPath * op,
 	
         /* set Caption */
         CMSetProperty(ci, "Caption", caption, CMPI_chars);
-        if (( status = cim_get_str(GET_RSC_STATUS, id, NULL)) ) {
-                CMSetProperty(ci, "ResourceStatus", status, CMPI_chars);
-                cim_free(status);
-        }
 
-	instance_set_attributes(broker, ci, id, rc);
-        switch(type){
-        case TID_RES_PRIMITIVE:
-             primitive_set_properties(broker, ci, info, rc);
-             break;
-        case TID_RES_GROUP:
-             group_set_properties(broker, ci, info, rc);
-             break;
-        case TID_RES_CLONE:
-             clone_set_properties(broker, ci, info, rc);
-             break;
-        case TID_RES_MASTER:
-             master_set_properties(broker, ci, info, rc);
-             break;
+	if ((msg = cim_query_dispatch(GET_RSC_STATUS, id, NULL)) ){
+	        if (( conststatus = cl_get_string(msg, "status")) ) {
+			status = cim_strdup(conststatus);
+                	CMSetProperty(ci, "ResourceStatus", status, CMPI_chars);
+	                cim_free(status);
+        	}
+	}
+	ha_msg_del(msg);
+
+        if (type == TID_RES_PRIMITIVE) {
+		attributes2inst(broker, ci, id, info, rc);
+		primitive_set_instance(broker, ci, info, rc);
+	} else if ( type == TID_RES_GROUP){
+		group_set_instance(broker, ci, info, rc);
+	} else if ( type == TID_RES_CLONE){
+		clone_set_instance(broker, ci, info, rc);
+	} else if ( type == TID_RES_MASTER) {
+		master_set_instance(broker, ci, info, rc);
         }
-out:
+	cim_free(id);
+
         return ci;
 }
 
@@ -264,37 +283,52 @@ make_instance_byid(CMPIBroker * broker, CMPIObjectPath * ref,
         CMPIInstance * ci = NULL;
         char * namespace, * classname;
         CMPIObjectPath * op;
-	CIMTable * info;
+	struct ha_msg *info, *msg;
+	int i, len;
 
         namespace = CMGetCharPtr(CMGetNameSpace(ref, rc));
         switch(type) {
         case TID_RES_PRIMITIVE:
                 classname = PrimitiveClassName;
-                info = cim_get(GET_PRIMITIVE, rscid, NULL);
                 break;
         case TID_RES_GROUP:
                 classname = GroupClassName;
-                if ((info = cim_table_new())) {
-			cim_table_strdup_replace(info, "id", rscid);
-		}
                 break;
         case TID_RES_CLONE:
                 classname = CloneClassName;
-                info = cim_get(GET_CLONE, rscid, NULL);
                 break;
         case TID_RES_MASTER:
                 classname = MasterClassName;
-                info = cim_get(GET_MASTER, rscid, NULL);
                 break;
         default:
              return NULL;
         }
 
-        if ( info == NULL ) { 
+	if ((info = cim_find_rsc(type, rscid)) == NULL ) {
 		cl_log(LOG_ERR, "%s: failed to get resource", __FUNCTION__);
 		return NULL;
 	}
-
+	
+	if ( (msg = cim_get_disabled_rsc_list()) == NULL ) {
+		ha_msg_add(info, "enabled", "true");
+	} else {
+		len = cim_list_length(msg);
+		for(i = 0; i < len; i++) {
+			char *rsc = NULL;
+			if ((rsc = cim_list_index(msg, i)) == NULL ) {
+				continue;
+			}
+			if ( strncmp(rsc, rscid, MAXLEN) == 0){
+				break;
+			}
+		}
+		if(i==len) {	/* not found */
+			ha_msg_add(info, "enabled", "true");
+		}else {
+			ha_msg_add(info, "enabled", "false");
+		}
+	}
+	
         op = CMNewObjectPath(broker, namespace, classname, rc);
         if ( CMIsNullObject(op) ) {
 		cl_log(LOG_ERR, "%s: can't create objectpath", __FUNCTION__);
@@ -302,7 +336,7 @@ make_instance_byid(CMPIBroker * broker, CMPIObjectPath * ref,
         }
 
         ci = make_instance(broker, classname, op, info, type, rc);
-        cim_table_free(info);
+	ha_msg_del(info);
 	CMRelease(op);
         return ci;
 }
@@ -312,8 +346,7 @@ static CMPIObjectPath *
 make_objectpath_byid(CMPIBroker * broker, CMPIObjectPath * ref, 
                   char * rscid, uint32_t type, CMPIStatus * rc)
 {
-        char * 		 namespace;
-	char * 		 classname;
+        char *namespace, *classname;
         CMPIObjectPath * op;
 
 	DEBUG_ENTER();
@@ -352,7 +385,7 @@ make_objectpath_byid(CMPIBroker * broker, CMPIObjectPath * ref,
 }
 
 int
-get_resource(CMPIBroker * broker, char * classname, CMPIContext * ctx, 
+resource_get_inst(CMPIBroker * broker, char * classname, CMPIContext * ctx, 
                   CMPIResult * rslt, CMPIObjectPath * ref,
                   char ** properties, uint32_t type, CMPIStatus * rc)
 {
@@ -375,7 +408,7 @@ get_resource(CMPIBroker * broker, char * classname, CMPIContext * ctx,
 
         rscid = CMGetCharPtr(data_name.value.string);
         this_type = (type == 0) 
-		? cim_get_resource_type(rscid)	: type;
+		? cim_get_rsc_type(rscid)	: type;
 
         ci = make_instance_byid(broker, ref, rscid, this_type, rc);
         if ( CMIsNullObject(ci) ) {
@@ -390,12 +423,12 @@ get_resource(CMPIBroker * broker, char * classname, CMPIContext * ctx,
 
 /* should return primitives in group for primitive provider? no */
 int 
-enumerate_resource(CMPIBroker * broker, char * classname, CMPIContext * ctx, 
+resource_enum_insts(CMPIBroker * broker, char * classname, CMPIContext * ctx, 
                    CMPIResult * rslt, CMPIObjectPath * ref, int need_inst,
                    uint32_t type, CMPIStatus * rc)
 {
-        int i;
-	CIMArray * names;
+	struct ha_msg* names;
+        int i, len;
 
 	DEBUG_ENTER();
 	if ( cim_get_hb_status() != HB_RUNNING ) {
@@ -404,15 +437,19 @@ enumerate_resource(CMPIBroker * broker, char * classname, CMPIContext * ctx,
 		return HA_FAIL;
 	}
 
-        if ( ( names = cim_get_array(GET_RSC_LIST, NULL, NULL)) == NULL ) {
+        if ( ( names = cim_get_rsc_list()) == NULL ) {
 		rc->rc = CMPI_RC_ERR_FAILED;
 		cl_log(LOG_WARNING, "Get resource list failed.");
                 return HA_FAIL;
         }
 
-        for ( i = 0; i < cim_array_len(names); i++) {
-		char * rsc = cim_array_index_v(names, i).v.str;
-                if ( type != cim_get_resource_type(rsc)){
+	len = cim_list_length(names);
+        for ( i = 0; i < len; i++) {
+		char *rsc = NULL;
+		if ((rsc = cim_list_index(names, i)) == NULL) {
+			continue;
+		}	
+                if ( type != cim_get_rsc_type(rsc)){
                         continue;
                 }
 		/* should we return all sub resource of group/clone/master
@@ -420,24 +457,20 @@ enumerate_resource(CMPIBroker * broker, char * classname, CMPIContext * ctx,
                 if ( need_inst ) {
                         CMPIInstance * ci = NULL;
                         ci = make_instance_byid(broker, ref, rsc, type, rc);
-			if( ci == NULL) {
-				cim_array_free(names);
-                                return HA_FAIL;
-                        }
-                        CMReturnInstance(rslt, ci);
+			if( ci ) {
+                        	CMReturnInstance(rslt, ci);
+			}
                 } else {
                         CMPIObjectPath * op;
                         op = make_objectpath_byid(broker, ref, rsc, type, rc);
-			if (op == NULL ) {
-				cim_array_free(names);
-				return HA_FAIL;
+			if (op) {
+                        	/* add object to rslt */
+	                        CMReturnObjectPath(rslt, op);
 			}
-                        /* add object to rslt */
-                        CMReturnObjectPath(rslt, op);
                 }
         }
         CMReturnDone(rslt);
-	cim_array_free(names);
+	ha_msg_del(names);
 	DEBUG_LEAVE();
         return HA_OK;
 }
@@ -450,7 +483,7 @@ resource_cleanup(CMPIBroker * broker, char * classname, CMPIInstanceMI * mi,
 }
 
 int
-delete_resource(CMPIBroker * broker, char * classname, CMPIContext * ctx,
+resource_del_inst(CMPIBroker * broker, char * classname, CMPIContext * ctx,
                 CMPIResult * rslt, CMPIObjectPath * ref, CMPIStatus * rc)
 {
         char * rscid;
@@ -461,172 +494,185 @@ delete_resource(CMPIBroker * broker, char * classname, CMPIContext * ctx,
                 return HA_FAIL;
         }
         rscid = CMGetCharPtr(string);
-	ret = cim_update(DEL_RESOURCE, rscid, NULL, NULL);
+	ret = cim_update_dispatch(DEL_RESOURCE, rscid, NULL, NULL);
 	rc->rc = (ret==HA_OK)? CMPI_RC_OK : CMPI_RC_ERR_FAILED;
 	return ret;
 }
 
-#define GET_PROPERTY(INST,T,P,K,rc)					\
-{									\
-        CMPIData data;							\
-        data = CMGetProperty(INST, P, rc);				\
-        if ( rc->rc == CMPI_RC_OK && data.value.string != NULL ) {	\
-                char * v = CMGetCharPtr(data.value.string);		\
-                cim_table_strdup_replace(T, K, v);     			\
-        }								\
-}
-
-static int
-primitive_get_properties(CIMTable * t, CMPIInstance * ci, CMPIStatus * rc)
-{
-	char * groupid;
-	DEBUG_ENTER();
-	GET_PROPERTY(ci, t, "Id", "id", rc);
-	GET_PROPERTY(ci, t, "ResourceClass", "class", rc);
-	GET_PROPERTY(ci, t, "Provider", "provider", rc);
-	GET_PROPERTY(ci, t, "Type", "type", rc);
-	GET_PROPERTY(ci, t, "Groupid", "groupid", rc);
-
-	/* null means this primitive resource does not belong to any group */
-	groupid = cim_table_lookup_v(t, "groupid").v.str;
-	if ( groupid && strcmp(groupid, "null") == 0 ) {
-		cim_table_strdup_replace(t, "groupid", "");
-	}
-	DEBUG_LEAVE();
-	return HA_OK;
-}
-
-static int
-clone_get_properties(CIMTable * t, CMPIInstance * ci, CMPIStatus * rc)
-{
-	DEBUG_ENTER();
-        GET_PROPERTY(ci, t, "Notify", "notify", rc);
-        GET_PROPERTY(ci, t, "Ordered", "ordered", rc);
-        GET_PROPERTY(ci, t, "Interleave", "interleave", rc);
-        GET_PROPERTY(ci, t, "CloneMax", "clone_max", rc);
-        GET_PROPERTY(ci, t, "CloneNodeMax", "clone_node_max", rc);
-	DEBUG_LEAVE();
-	return HA_OK;
-}
-
-static int
-master_get_properties(CIMTable * t, CMPIInstance * ci, CMPIStatus * rc)
-{
-	DEBUG_ENTER();
-        GET_PROPERTY(ci, t, "CloneMax", "clone_max", rc);
-        GET_PROPERTY(ci, t, "CloneNodeMax", "clone_node_max", rc);
-        GET_PROPERTY(ci, t, "MaxMasters", "max_masters", rc);
-        GET_PROPERTY(ci, t, "MaxNodeMasters", "max_node_masters", rc);
-	DEBUG_LEAVE();
-	return HA_OK;
-}
-
-static int
-group_get_properties(CIMTable * t, CMPIInstance * ci, CMPIStatus * rc)
-{
-	/* nothing */
-	return HA_OK;
-}
 
 int 
-update_resource(CMPIBroker * broker, char * classname, CMPIContext * ctx,
+resource_update_inst(CMPIBroker * broker, char * classname, CMPIContext * ctx,
                 CMPIResult * rslt, CMPIObjectPath * cop, CMPIInstance * ci,
                 char ** properties, uint32_t type, CMPIStatus * rc)
 {
-	CIMTable * table = NULL;
-	CIMArray * attrs = NULL;
-	int ret = HA_FAIL;
+	struct ha_msg *resource = NULL, *attributes;
 	char * rscid;
-
+	int ret = 0;
 	DEBUG_ENTER();
 	/* get resource id */
         if ((rscid = CMGetKeyString(cop, "Id", rc)) == NULL ) {
 		return HA_FAIL;
 	}
+
 	/* get original values, and set new values */
-	switch(type){
-	case TID_RES_PRIMITIVE:
-		table = cim_get(GET_PRIMITIVE, rscid, NULL);
-		ret = primitive_get_properties(table, ci, rc);		
-		break;
-	case TID_RES_CLONE:
-		table = cim_get(GET_CLONE, rscid, NULL);
-		ret = clone_get_properties(table, ci, rc);
-		ret = cim_update(UPDATE_CLONE, NULL, table, NULL); 
-		break;
-	case TID_RES_MASTER:
-		table = cim_get(GET_MASTER, rscid, NULL);
-		ret = master_get_properties(table, ci, rc);
-		ret = cim_update(UPDATE_MASTER, NULL, table, NULL);
-		break;
-	case TID_RES_GROUP:
-		table = cim_table_new();
-		ret = group_get_properties(table, ci, rc);
-		break;
+	resource = cim_find_rsc(type, rscid);
+
+	if ( type == TID_RES_PRIMITIVE ) {
+		cl_msg_remove(resource, "attributes");
+		cmpi_inst2msg(ci, HA_PRIMITIVE_RESOURCE, resource, rc);
+		attributes = inst2attributes(cop, ci, rc);		
+		if ( attributes ) {
+			ha_msg_addstruct(resource, "attributes", attributes);
+		}
+	} else if (type == TID_RES_MASTER) {
+		cmpi_inst2msg(ci, HA_MASTERSLAVE_RESOURCE, resource, rc);
+	} else if (type == TID_RES_CLONE ) {
+		cmpi_inst2msg(ci, HA_RESOURCE_CLONE, resource, rc);
 	}
 
-	cim_table_free(table);
-        /* update attributes */
-	attrs = instance_get_attributes(cop, ci, rc);		
-	if ( attrs ) {
-		cim_update(UPDATE_ATTRIBUTES, rscid, attrs, NULL);
-		cim_array_free(attrs);
-	}
-
+        /* update resource, including their attributes */
+	ret = cim_update_rsc(type, rscid, resource);
+	ha_msg_del(resource);
 	rc->rc = (ret==HA_OK) ? CMPI_RC_OK: CMPI_RC_ERR_FAILED;
 	DEBUG_LEAVE();
 	return ret;
 }
 
 int
-create_resource(CMPIBroker * broker, char * classname, CMPIContext * ctx,
+resource_create_inst(CMPIBroker * broker, char * classname, CMPIContext * ctx,
                 CMPIResult * rslt, CMPIObjectPath * cop, CMPIInstance * ci,
                 uint32_t type, CMPIStatus * rc)
 {
-	CIMTable * table = NULL;
-	CIMArray * attrs = NULL;
+	struct ha_msg *attributes, *resource, *msgtype;
 	int ret = HA_FAIL;
 	char * rscid;
 
 	DEBUG_ENTER();
-	if((table = cim_table_new()) == NULL ) {
+	if((resource = ha_msg_new(16)) == NULL ) {
+		return HA_FAIL;
+	}
+
+	if((msgtype = ha_msg_new(1)) == NULL ) {
+		ha_msg_del(resource);
 		return HA_FAIL;
 	}
 
 	/* get resource id */
         if ((rscid = CMGetKeyString(cop, "Id", rc)) == NULL ) {
+		ha_msg_del(msgtype);
+		ha_msg_del(resource);
 		return HA_FAIL;
 	}
-
-	/* get user's attribute */
-	attrs = instance_get_attributes(cop, ci, rc);
-	if ( attrs == NULL) {
-		return HA_FAIL;
-	}
-	cim_table_replace(table, cim_strdup("array"), makeArrayData(attrs));
 
 	switch(type){
 	case TID_RES_PRIMITIVE:
-		ret = primitive_get_properties(table, ci, rc);		
+		/* get resource attributes */
+		attributes = inst2attributes(cop, ci, rc);
+		if ( attributes ) {
+			ha_msg_addstruct(resource, "attributes", attributes);
+		}
+		ret = cmpi_inst2msg(ci, HA_PRIMITIVE_RESOURCE, resource, rc);
+		ha_msg_add(msgtype, "type", "native");
 		break;
 	case TID_RES_CLONE:
-		cim_table_strdup_replace(table, "advance", "clone");
-		ret = clone_get_properties(table, ci, rc);
+		ret = cmpi_inst2msg(ci, HA_RESOURCE_CLONE, resource, rc);
+		ha_msg_add(resource, "advance", "clone");
+		ha_msg_add(msgtype, "type", "clone");
 		break;
 	case TID_RES_MASTER:
-		ret = master_get_properties(table, ci, rc);
-		cim_table_strdup_replace(table, "advance", "master");
+		ret = cmpi_inst2msg(ci, HA_MASTERSLAVE_RESOURCE, resource, rc);
+		ha_msg_add(resource, "advance", "master");
+		ha_msg_add(msgtype, "type", "master");
 		break;
 	case TID_RES_GROUP:
-		ret = group_get_properties(table, ci, rc);
+		ha_msg_add(msgtype, "type", "group");
 		break;
 	}
 
-	ret = cim_update(CREATE_RESOURCE, rscid, table, NULL);
+	ha_msg_add(resource, "enabled", "false");
+
+	/* write to disk */
+	cim_store_rsc_type(rscid, msgtype);
+	cim_store_rsc(type, rscid, resource);
+
+	/* add to list */	
+	ret = cim_update_disabled_rsc_list(1, rscid);
+
 	rc->rc = (ret==HA_OK) ? CMPI_RC_OK: CMPI_RC_ERR_FAILED;
-	cim_table_free(table);
+	ha_msg_del(resource);
 	DEBUG_LEAVE();
 	return ret;
 
+}
+
+/* add a operation to resource */
+int 
+resource_add_operation(CMPIBroker * broker, char * classname, CMPIContext * ctx,
+                CMPIResult * rslt, CMPIObjectPath * ref, uint32_t type,
+		CMPIArgs *in, CMPIArgs *out, CMPIStatus * rc)
+{
+	CMPIObjectPath * opop;
+	const char * key[] = {"Id", "SystemName", "SystemCreationClassName"};
+	char *id, *sysname, *syscrname, *namespace;
+	struct ha_msg *msg;
+
+	if((opop = CMGetArg(in, "Operation", rc).value.ref) == NULL ) {
+		cl_log(LOG_ERR, "%s: can't get Operation ObjectPath.", 
+				__FUNCTION__);
+		return HA_FAIL;
+	}
+	
+	id 	  = CMGetKeyString(opop, key[0], rc);
+        sysname   = CMGetKeyString(opop, key[1], rc);
+        syscrname = CMGetKeyString(opop, key[2], rc);
+
+        namespace = CMGetCharPtr(CMGetNameSpace(opop, rc));
+	if ((msg = cim_load_operation(sysname, id)) == NULL ) {
+		cl_log(LOG_ERR, "%s: can't find instance for %s:%s:%s:%s.",
+			__FUNCTION__, namespace, id, sysname, syscrname);
+		return HA_FAIL;
+	}
+
+	cim_add_rscop(sysname, msg);
+	ha_msg_del(msg);	
+
+	return HA_OK;
+}
+
+/* add sub resource to group/clone/master-slave */
+int 
+resource_add_subrsc(CMPIBroker * broker, char * classname, CMPIContext * ctx,
+                CMPIResult * rslt, CMPIObjectPath * ref, uint32_t type,
+		CMPIArgs *in, CMPIArgs *out, CMPIStatus * rc)
+{
+	CMPIObjectPath * rscop;
+	char *subrscid, *rscid;
+	struct ha_msg *subrsc, *resource;
+	int ret ;
+
+	rscid = CMGetKeyString(ref, "Id", rc);
+	resource = cim_find_rsc(type, rscid);
+
+	if((rscop = CMGetArg(in, "Resource", rc).value.ref) == NULL ) {
+		cl_log(LOG_ERR, "%s: can't get Resource ObjectPath.",
+			__FUNCTION__);
+		return HA_FAIL;
+	}
+	
+	subrscid = CMGetKeyString(rscop, "Id", rc);
+	subrsc = cim_find_rsc(TID_RES_PRIMITIVE, subrscid);
+	if (subrsc == NULL ) {
+		cl_log(LOG_ERR, "%s: resource %s not exist.", 
+				__FUNCTION__, subrscid);
+		return HA_FAIL;
+	}
+
+
+	ret = cim_add_subrsc(resource, subrsc);
+	ha_msg_del(subrsc);
+	ha_msg_del(resource);
+	
+	rc->rc = (ret == HA_OK) ? CMPI_RC_OK : CMPI_RC_ERR_FAILED;
+	return ret;
 }
 
