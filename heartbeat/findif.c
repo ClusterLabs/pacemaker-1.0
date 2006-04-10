@@ -1,4 +1,4 @@
-/* $Id: findif.c,v 1.58 2006/04/10 07:25:03 andrew Exp $ */
+/* $Id: findif.c,v 1.59 2006/04/10 09:55:02 andrew Exp $ */
 /*
  * findif.c:	Finds an interface which can route a given address
  *
@@ -250,14 +250,14 @@ SearchUsingProcRoute (char *address, struct in_addr *in
 		}
 	}
 
-out:
-	if (routefd) {
-		fclose(routefd);
-	}
-
 	if (best_metric == LONG_MAX) {
 		snprintf(errmsg, errmsglen, "No route to %s\n", address);
 		rc = 1; 
+	}
+
+  out:
+	if (routefd) {
+		fclose(routefd);
 	}
 
 	return(rc);
@@ -903,6 +903,9 @@ ff02::%lo0/32                     fe80::1%lo0                   UC          lo0
 
 /* 
  * $Log: findif.c,v $
+ * Revision 1.59  2006/04/10 09:55:02  andrew
+ * Fix findif for any OS that doesnt use /proc/route
+ *
  * Revision 1.58  2006/04/10 07:25:03  andrew
  * Compile warning: used unitialized
  *
