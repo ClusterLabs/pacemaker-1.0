@@ -195,6 +195,7 @@ GenerateCrmdHaCf() {
 	crm yes
 	apiauth cibmon   uid=hacluster
 	respawn hacluster $HBLIB/cibmon -d
+	respawn hacluster $HBLIB/pingd
 	!
   chmod 644 $1
 #	conn_logd_time 60
