@@ -596,7 +596,7 @@ class ClusterView(View) :
 	def on_apply(self, widget):
 		glade = self.glade
 		new_crm_config = {}
-		new_crm_config["transition_timeout"] = glade.get_widget("transition_timeout").get_text()
+		new_crm_config["transition_idle_timeout"] = glade.get_widget("transition_timeout").get_text()
 		new_crm_config["symmetric_cluster"] = str(glade.get_widget("symmetric_cluster").get_active())
 		new_crm_config["stonith_enabled"] = str(glade.get_widget("stonith_enabled").get_active())
 		new_crm_config["no_quorum_policy"] = glade.get_widget("no_quorum_policy").child.get_text()
@@ -617,7 +617,7 @@ class ClusterView(View) :
 			glade.get_widget("deadtime").set_text(config["deadtime"])
 			glade.get_widget("initdead").set_text(config["initdead"])
 
-			glade.get_widget("transition_timeout").set_text(config["transition_timeout"])
+			glade.get_widget("transition_timeout").set_text(config["transition_idle_timeout"])
 			glade.get_widget("symmetric_cluster").set_active("True" == config["symmetric_cluster"])
 			glade.get_widget("stonith_enabled").set_active("True" == config["stonith_enabled"])
 			glade.get_widget("no_quorum_policy").child.set_text(config["no_quorum_policy"])
@@ -1515,7 +1515,7 @@ class Manager :
 				 "initdead","keepalive","logfacility","logfile",
 				 "msgfmt","nice_failback","node","normalpoll",
 			 	"stonith","udpport","warntime","watchdog"]
-		crm_attr_names = ["transition_timeout","symmetric_cluster","stonith_enabled",
+		crm_attr_names = ["transition_idle_timeout","symmetric_cluster","stonith_enabled",
 				  "no_quorum_policy","default_resource_stickiness", "have_quorum"]
 				  
 		values = manager.query("hb_config")
