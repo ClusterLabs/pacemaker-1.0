@@ -44,96 +44,28 @@ static char 	    Right          [] = "Operation";
 static char 	    LeftClassName  [] = "HA_PrimitiveResource";
 static char 	    RightClassName [] = "HA_Operation"; 
 
-static CMPIArray *  enumerate_right(CMPIBroker * broker, 
-			char * classname, CMPIContext * ctx, char * namespace, 
-			char * target_name, char * target_role,
-                    	CMPIObjectPath * source_op, CMPIStatus * rc);
-static CMPIArray *  enumerate_func(CMPIBroker * broker, char * classname, 
-			CMPIContext * ctx, char * namespace, 
-			char * target_name, char * target_role,
-               		CMPIObjectPath * source_op, CMPIStatus * rc);
-
 DeclareInstanceFunctions   (OperationOn);
 DeclareAssociationFunctions(OperationOn);
 
-static CMPIArray *
-enumerate_right(CMPIBroker * broker, char * classname, CMPIContext * ctx,
-                    char * namespace, char * target_name, char * target_role,
-                    CMPIObjectPath * source_op, CMPIStatus * rc)
+static int 
+resource_has_op(CMPIBroker * broker, char * classname, CMPIContext * ctx,
+              CMPIObjectPath * rscop, CMPIObjectPath * opop,  
+              CMPIStatus * rc)
 {
-        CMPIArray * array;
-        uint32_t i, len;
-	CIMArray * operations;
-	char * rscid, * crname;
+        char *rscid, *oprscid;
 
-	DEBUG_ENTER();
-	rscid = CMGetKeyString(source_op, "Id", rc);
-	crname = CMGetKeyString(source_op, "CreationClassName", rc);
-
-        if ((operations = cim_get_array(GET_RSC_OPERATIONS, rscid, NULL))==NULL){
-		rc->rc = CMPI_RC_ERR_FAILED;
-		cl_log(LOG_ERR, "OperationOn: can't get operations");
-                return NULL;
-        }
-      
-	len = cim_array_len(operations);
-        if ((array = CMNewArray(broker, len, CMPI_ref, rc)) == NULL ) {
-		cl_log(LOG_ERR, "%s: create array failed.", __FUNCTION__);
-        	goto out;
+        rscid = CMGetKeyString(rscop, "Id", rc);
+        oprscid  = CMGetKeyString(opop, "ResourceId", rc);
+	if ( rscid == NULL || oprscid == NULL ) {
+		return FALSE;
 	}
-	
-	/* make ObjPath, add it to array */
-        for (i = 0; i < cim_array_len(operations); i ++ ) {
-                CMPIObjectPath * op;
-		CIMTable * operation;
-                char * id;
-             
-		operation = cim_array_index_v(operations, i).v.table; 
-		if(operation== NULL ) {
-			cl_log(LOG_ERR, "%s: NULL at %d.", __FUNCTION__, i);
-			continue;
-		} 
-		/* create a ObjectPath */ 
-                op = CMNewObjectPath(broker, namespace, RightClassName, rc);
-                id = cim_table_lookup_v(operation, "id").v.str;
-                if ( CMIsNullObject(op) ||  id == NULL ) {
-			continue; 
-		}
 
-                CMAddKey(op, "Id", id, CMPI_chars);
-                CMAddKey(op, "SystemName", rscid, CMPI_chars);
-                CMAddKey(op, "SystemCreationClassName", crname, CMPI_chars);
-                CMAddKey(op, "CreationClassName", ClassName, CMPI_chars);
-
-                /* add to array */
-                CMSetArrayElementAt(array, i, &op, CMPI_ref);
-        }
-out:
-	cim_array_free(operations);
-	DEBUG_LEAVE();
-        return array;
+	if ( strncmp(rscid, oprscid, MAXLEN) == 0 ) {
+		return TRUE;
+	} 
+	return FALSE;
 }
 
-static CMPIArray *
-enumerate_func(CMPIBroker * broker, char * classname, CMPIContext * ctx,
-               char * namespace, char * target_name, char * target_role,
-               CMPIObjectPath * source_op, CMPIStatus * rc)
-{
-        if ( strcmp(target_name, LeftClassName) == 0 ) {
-        	/* if target is a Resource, enumerate its instance names */
-                if ( source_op ){
-			/* Operation is the source. This is not allowed, just
-			return an empty array. */
-                        return CMNewArray(broker, 0, CMPI_ref, rc);
-                }
-                return  cmpi_instance_names(broker, namespace, 
-						target_name, ctx, rc);
-        } else if ( strcmp(target_name, RightClassName) == 0 ) {
-                return enumerate_right(broker, classname, ctx, namespace, 
-				target_name, target_role, source_op, rc);
-        }
-        return NULL;
-}
 
 /**********************************************
  * Instance 
@@ -156,7 +88,7 @@ OperationOnEnumInstanceNames(CMPIInstanceMI * mi, CMPIContext * ctx,
 		CMReturn(CMPI_RC_ERR_FAILED);
 	}
         if (assoc_enum_insts(Broker, ClassName, ctx, rslt, cop, Left, Right, 
-			LeftClassName, RightClassName, NULL, enumerate_func, 
+			LeftClassName, RightClassName, resource_has_op, NULL, 
 			FALSE, &rc) != HA_OK ) {
                 return rc;
         }
@@ -176,7 +108,7 @@ OperationOnEnumInstances(CMPIInstanceMI * mi, CMPIContext * ctx,
 		CMReturn(CMPI_RC_ERR_FAILED);
 	}
         if (assoc_enum_insts(Broker, ClassName, ctx, rslt, cop, Left, Right, 
-			LeftClassName, RightClassName, NULL, enumerate_func, 
+			LeftClassName, RightClassName, resource_has_op, NULL, 
 			TRUE, &rc) != HA_OK ) {
                 return rc;
         }
@@ -279,7 +211,7 @@ OperationOnAssociators(CMPIAssociationMI * mi, CMPIContext * ctx,
         if (assoc_enum_associators(Broker, ClassName, ctx, rslt, cop, 
 			Left, Right, LeftClassName, RightClassName, 
 			assoc_class, result_class, role, result_role, 
-			NULL, enumerate_func, TRUE, &rc) != HA_OK ) {
+			resource_has_op, NULL, TRUE, &rc) != HA_OK ) {
                 return rc;
         }
         CMReturn(CMPI_RC_OK);
@@ -301,7 +233,7 @@ OperationOnAssociatorNames(CMPIAssociationMI * mi, CMPIContext * ctx,
         if (assoc_enum_associators(Broker, ClassName, ctx, rslt, cop, 
 			Left, Right, LeftClassName, RightClassName,
 			assoc_class, result_class, role, result_role, 
-			NULL, enumerate_func, FALSE, &rc) != HA_OK ) {
+			resource_has_op, NULL, FALSE, &rc) != HA_OK ) {
                 return rc;
         }
         CMReturn(CMPI_RC_OK);
@@ -322,7 +254,7 @@ OperationOnReferences(CMPIAssociationMI * mi, CMPIContext * ctx,
 	}
         if ( assoc_enum_references(Broker, ClassName, ctx, rslt, cop, 
 			Left, Right, LeftClassName, RightClassName,
-			result_class, role, NULL, enumerate_func, 
+			result_class, role, NULL, NULL, 
 			TRUE, &rc) != HA_OK ) {
                 return rc;
         
@@ -343,7 +275,7 @@ OperationOnReferenceNames(CMPIAssociationMI * mi, CMPIContext * ctx,
 	}
         if ( assoc_enum_references(Broker, ClassName, ctx, rslt, cop, 
 			Left, Right, LeftClassName, RightClassName,
-			result_class, role, NULL, enumerate_func, 
+			result_class, role, resource_has_op, NULL, 
 			FALSE, &rc) != HA_OK ) {
                 return rc;
         }

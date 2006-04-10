@@ -37,7 +37,7 @@
 #include "cmpi_utils.h"
 
 static const char * PROVIDER_ID  = "cim-sub-res";
-static CMPIBroker * G_broker     = NULL;
+static CMPIBroker * Broker     = NULL;
 static char ClassName       	[] = "HA_SubResource"; 
 static char Left            	[] = "Antecedent";
 static char Right           	[] = "Dependent"; 
@@ -50,16 +50,16 @@ static char CloneClassName	[] = "HA_ResourceClone";
 static char MasterClassName	[] = "HA_MasterSlaveResource";
 static char UnknownClassName	[] = "Unknown";
 
-static CMPIArray * 	enum_func_for_right(CMPIBroker * broker, 
+static CMPIArray * 	make_subrsc_array(CMPIBroker * broker, 
 				char * classname, CMPIContext * ctx,
                     		char * namespace, char * target_name, 
 				char * target_role, 
 				CMPIObjectPath * source_op, CMPIStatus * rc);
-static CMPIArray * 	group_enum_func(CMPIBroker * broker, char * classname,
+static CMPIArray * 	make_resource_array(CMPIBroker * broker, char * classname,
 				CMPIContext * ctx, char * namespace, 
 				char * target_name, char * target_role,
                 		CMPIObjectPath * source_op, CMPIStatus * rc);
-static int 		group_contain(CMPIBroker * broker, char * classname, 
+static int 		subresource(CMPIBroker * broker, char * classname, 
 				CMPIContext * ctx, CMPIObjectPath * group_op, 
 				CMPIObjectPath * res_op, CMPIStatus * rc);
 
@@ -67,44 +67,50 @@ DeclareInstanceFunctions(SubResource);
 DeclareAssociationFunctions(SubResource);
 
 
+/* make an array with all sub resources of source_op */
 static CMPIArray *
-enum_func_for_right(CMPIBroker * broker, char * classname, CMPIContext * ctx,
+make_subrsc_array(CMPIBroker * broker, char * classname, CMPIContext * ctx,
                     char * namespace, char * target_name, char * target_role, 
                     CMPIObjectPath * source_op, CMPIStatus * rc)
 {
         CMPIArray * array;
-	CIMArray * sublist;
-	const char * key[] = {	"Id", "CreationClassName", 
-				"SystemName", "SystemCreationClassName"};
-	char *id, *crname, *sysname, * syscrname;
-        int i;
+	struct ha_msg *sublist;
+	const char * key[] = {	"Id", "CreationClassName", "SystemName", 
+				"SystemCreationClassName"};
 
-        /* we need to make a enumeration that contains sub resource
-           according to source_op */
+	char *id, *crname, *sysname, * syscrname;
+        int i, len;
+
+
         /* get keys */
-	id = CMGetKeyString(source_op, key[0], rc);
-	crname = CMGetKeyString(source_op, key[1], rc);
-	sysname = CMGetKeyString(source_op, key[2], rc);
+	id        = CMGetKeyString(source_op, key[0], rc);
+	crname    = CMGetKeyString(source_op, key[1], rc);
+	sysname   = CMGetKeyString(source_op, key[2], rc);
 	syscrname = CMGetKeyString(source_op, key[3], rc);
 
         if ( strcmp(crname, PrimitiveClassName) == 0 ) {
                 return CMNewArray(broker, 0, CMPI_ref, rc);
         }
-        if ((sublist = cim_get_array(GET_SUB_RSC, id, NULL))== NULL) {
+
+	if ((sublist = cim_get_subrsc_list(id)) == NULL ) {
+		cl_log(LOG_ERR, "%s: can't find subresource of %s",
+			__FUNCTION__, id);
                 return NULL;
         }
-        
+       
         /* create a array to hold the object path */
-        array = CMNewArray(broker, cim_array_len(sublist), CMPI_ref, rc);
+	len = cim_list_length(sublist);
+        array = CMNewArray(broker, len, CMPI_ref, rc);
         
         /* for each sub primitive resource */
-        for ( i = 0; i < cim_array_len(sublist); i ++ ) {
+        for ( i = 0; i < len; i++ ) {
                 uint32_t rsctype;
                 CMPIObjectPath * target_op;
                 char * 	subid;
                 
-                subid = cim_array_index_v(sublist,i).v.str;
-                rsctype = cim_get_resource_type(subid);
+                subid = cim_list_index(sublist, i);
+                rsctype = cim_get_rsc_type(subid);
+
                 if (rsctype == TID_RES_PRIMITIVE ) {
                         crname = PrimitiveClassName;
                 } else if ( rsctype == TID_RES_GROUP ) {
@@ -132,33 +138,28 @@ enum_func_for_right(CMPIBroker * broker, char * classname, CMPIContext * ctx,
                 CMSetArrayElementAt(array, i, &target_op, CMPI_ref);
         }
         
-	cim_array_free(sublist);
+	ha_msg_del(sublist);
         return array;
 }
 
 static CMPIArray *
-group_enum_func(CMPIBroker * broker, char * classname, CMPIContext * ctx,
+make_resource_array(CMPIBroker * broker, char * classname, CMPIContext * ctx,
                 char * namespace, char * target_name, char * target_role,
                 CMPIObjectPath * source_op, CMPIStatus * rc)
 {
         if ( target_name == NULL ) {
-                cl_log(LOG_ERR, "target name can not be NULL");
+                cl_log(LOG_ERR, "%s: target name can't be NULL", __FUNCTION__);
                 return NULL;
         }
 
-        if ( strcmp(target_role, Left) == 0 ) {
-                CMPIArray * left_array;
-                left_array = cmpi_instance_names(broker,namespace, 
-					target_name, ctx, rc);
-                if ( CMIsNullObject(left_array) ) {
-                        cl_log(LOG_ERR, "group array is NULL ");
-                        return NULL;
-                }
-                return left_array;
-        } else if ( strcmp(target_role, Right) == 0 ) {
-                return enum_func_for_right(broker, classname,
-				ctx, namespace, target_name, target_role, 
-                                source_op, rc);
+        if ( strcmp(target_role, Left) == 0 ) {	
+		/* target is resource group */
+		return cmpi_instance_names(broker,namespace, 
+				target_name, ctx, rc);
+        } else if ( strcmp(target_role, Right) == 0 ) {	
+		/* target is primitive */
+                return make_subrsc_array(broker, classname, ctx, namespace, 
+				target_name, target_role, source_op, rc);
         }
         
         /* else */
@@ -166,38 +167,37 @@ group_enum_func(CMPIBroker * broker, char * classname, CMPIContext * ctx,
 }
 
 static int 
-group_contain(CMPIBroker * broker, char * classname, CMPIContext * ctx,
+subresource(CMPIBroker * broker, char * classname, CMPIContext * ctx,
               CMPIObjectPath * group_op, CMPIObjectPath * res_op,  
               CMPIStatus * rc)
 {
         char *rscid, *groupid;
-        int i;
-	CIMArray * sublist;
+        int i, len;
+	struct ha_msg * sublist;
 
-	DEBUG_ENTER();
-        rscid = CMGetKeyString(res_op, "Id", rc);
+        rscid   = CMGetKeyString(res_op, "Id", rc);
         groupid = CMGetKeyString(group_op, "Id", rc);
 
 	if ( rscid == NULL || groupid == NULL ) {
-		return 0;
+		return FALSE;
 	}
-        /* get the sub resource of this group */
-        if ((sublist = cim_get_array(GET_SUB_RSC, groupid, NULL)) == NULL ){
+
+        /* get the this group's sub resources */
+	if ((sublist = cim_get_subrsc_list(groupid)) == NULL ) {
                 return 0;
         }
-        
+
         /* looking for the rsc */
-        for ( i = 0; i < cim_array_len(sublist); i++ ) {
-                char * subid;
-                subid = cim_array_index_v(sublist, i).v.str;
-                if ( strcmp(subid, rscid ) == 0 ) {
+	len = cim_list_length(sublist); 
+        for ( i = 0; i < len; i++ ) {
+                char * subid = cim_list_index(sublist, i);
+                if ( strncmp(rscid, subid?subid:"", MAXLEN ) == 0 ) {
                         /* found */
-                        return 1;
+                        return TRUE;
                 }
         }
-	cim_array_free(sublist);
-	DEBUG_LEAVE();
-	return 0;
+	ha_msg_del(sublist);
+	return FALSE;
 }
 
 /**********************************************
@@ -218,9 +218,9 @@ SubResourceEnumInstanceNames(CMPIInstanceMI * mi, CMPIContext* ctx,
 		CMReturn(CMPI_RC_ERR_FAILED);
 	}
 
-        assoc_enum_insts(G_broker, ClassName, ctx, rslt, cop, 
-				Left, Right, LeftClassName, RightClassName, 
-                                group_contain, group_enum_func, FALSE, &rc);
+        assoc_enum_insts(Broker, ClassName, ctx, rslt, cop, 
+			Left, Right, LeftClassName, RightClassName, 
+			subresource, make_resource_array, FALSE, &rc);
 	return rc;
 }
 
@@ -232,9 +232,9 @@ SubResourceEnumInstances(CMPIInstanceMI * mi, CMPIContext * ctx,
 	if (cim_get_hb_status() != HB_RUNNING ) {
 		CMReturn(CMPI_RC_ERR_FAILED);
 	}
-        assoc_enum_insts(G_broker, ClassName, ctx, rslt, cop, 
+        assoc_enum_insts(Broker, ClassName, ctx, rslt, cop, 
                                 Left, Right, LeftClassName, RightClassName,
-                                group_contain, group_enum_func, TRUE, &rc);
+                                subresource, make_resource_array, TRUE, &rc);
 	return rc;
 }
 
@@ -248,7 +248,7 @@ SubResourceGetInstance(CMPIInstanceMI * mi, CMPIContext * ctx,
 		CMReturn(CMPI_RC_ERR_FAILED);
 	}
 
-        assoc_get_inst(G_broker, ClassName, ctx, rslt, cop, Left, Right, &rc);
+        assoc_get_inst(Broker, ClassName, ctx, rslt, cop, Left, Right, &rc);
       	return rc; 
 }
 
@@ -257,7 +257,7 @@ SubResourceCreateInstance(CMPIInstanceMI * mi, CMPIContext * ctx,
 		CMPIResult * rslt, CMPIObjectPath * cop, CMPIInstance * ci)
 {
         CMPIStatus rc = {CMPI_RC_OK, NULL};
-        CMSetStatusWithChars(G_broker, &rc, 
+        CMSetStatusWithChars(Broker, &rc, 
                         CMPI_RC_ERR_NOT_SUPPORTED, "CIM_ERR_NOT_SUPPORTED");
         return rc;
 }
@@ -268,7 +268,7 @@ SubResourceSetInstance(CMPIInstanceMI * mi, CMPIContext * ctx,
                        CMPIInstance * ci, char ** properties)
 {
         CMPIStatus rc = {CMPI_RC_OK, NULL};
-        CMSetStatusWithChars(G_broker, &rc, 
+        CMSetStatusWithChars(Broker, &rc, 
                         CMPI_RC_ERR_NOT_SUPPORTED, "CIM_ERR_NOT_SUPPORTED");
         return rc;
 
@@ -288,7 +288,7 @@ SubResourceExecQuery(CMPIInstanceMI * mi, CMPIContext * ctx,
                       char * lang, char * query)
 {
         CMPIStatus rc = {CMPI_RC_OK, NULL};
-        CMSetStatusWithChars(G_broker, &rc, 
+        CMSetStatusWithChars(Broker, &rc, 
                         CMPI_RC_ERR_NOT_SUPPORTED, "CIM_ERR_NOT_SUPPORTED");
         return rc;
 }
@@ -316,10 +316,10 @@ SubResourceAssociators(CMPIAssociationMI * mi, CMPIContext * ctx,
 	if (cim_get_hb_status() != HB_RUNNING ) {
 		CMReturn(CMPI_RC_ERR_FAILED);
 	}
-        if (assoc_enum_associators(G_broker, ClassName, ctx, rslt, cop, 
+        if (assoc_enum_associators(Broker, ClassName, ctx, rslt, cop, 
                                 Left, Right, LeftClassName, RightClassName,
                                 assoc_class, result_class, role, 
-                                result_role, group_contain, group_enum_func, 1, 
+                                result_role, subresource, make_resource_array, 1, 
                                 &rc) != HA_OK ) {
                 return rc;
         }
@@ -339,10 +339,10 @@ SubResourceAssociatorNames(CMPIAssociationMI * mi, CMPIContext * ctx,
 	if (cim_get_hb_status() != HB_RUNNING ) {
 		CMReturn(CMPI_RC_ERR_FAILED);
 	}
-        if (assoc_enum_associators(G_broker, ClassName, ctx, rslt, cop, 
+        if (assoc_enum_associators(Broker, ClassName, ctx, rslt, cop, 
                                 Left, Right, LeftClassName, RightClassName,
                                 assoc_class, result_class, role, 
-                                result_role, group_contain, group_enum_func, 0, 
+                                result_role, subresource, make_resource_array, 0, 
                                 &rc) != HA_OK ) {
                 return rc;
         }      
@@ -361,10 +361,10 @@ SubResourceReferences(CMPIAssociationMI * mi, CMPIContext * ctx,
 	if (cim_get_hb_status() != HB_RUNNING ) {
 		CMReturn(CMPI_RC_ERR_FAILED);
 	}
-        if ( assoc_enum_references(G_broker, ClassName, ctx, rslt, cop, 
+        if ( assoc_enum_references(Broker, ClassName, ctx, rslt, cop, 
                                 Left, Right, LeftClassName, RightClassName,
-                                result_class, role, group_contain, 
-                                group_enum_func, 1, &rc) != HA_OK ) {
+                                result_class, role, subresource, 
+                                make_resource_array, 1, &rc) != HA_OK ) {
                 return rc;
         }
 
@@ -382,10 +382,10 @@ SubResourceReferenceNames(CMPIAssociationMI * mi, CMPIContext * ctx,
 	if (cim_get_hb_status() != HB_RUNNING ) {
 		CMReturn(CMPI_RC_ERR_FAILED);
 	}
-        if ( assoc_enum_references(G_broker, ClassName, ctx, rslt, cop, 
+        if ( assoc_enum_references(Broker, ClassName, ctx, rslt, cop, 
                                 Left, Right, LeftClassName, RightClassName,
-                                result_class, role, group_contain, 
-                                group_enum_func, 0, &rc) != HA_OK ) {
+                                result_class, role, subresource, 
+                                make_resource_array, 0, &rc) != HA_OK ) {
                 return rc;
         }
         CMReturn(CMPI_RC_OK);
@@ -396,5 +396,5 @@ SubResourceReferenceNames(CMPIAssociationMI * mi, CMPIContext * ctx,
  * installed MIs
  **************************************/
 
-DeclareInstanceMI(SubResource, HA_SubResourceProvider, G_broker);
-DeclareAssociationMI(SubResource, HA_SubResourceProvider, G_broker);
+DeclareInstanceMI(SubResource, HA_SubResourceProvider, Broker);
+DeclareAssociationMI(SubResource, HA_SubResourceProvider, Broker);

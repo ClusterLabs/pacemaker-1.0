@@ -40,14 +40,13 @@
 static const char * 	PROVIDER_ID  = "cim-node";
 static CMPIBroker * 	Broker       = NULL;
 static char 		ClassName [] = "HA_ClusterNode";
-static const mapping_t	NodeMap   [] = { MAPPING_HA_ClusterNode };
 
-static CMPIInstance *   make_instance(CMPIObjectPath * op, char * uname, 
+static CMPIInstance *   make_node_instance(CMPIObjectPath * op, char * uname, 
 				CMPIStatus * rc);
-static int              get_node(CMPIContext * ctx, CMPIResult * rslt, 
+static int              node_get_inst(CMPIContext * ctx, CMPIResult * rslt, 
 				CMPIObjectPath * cop, char ** properties,  
 				CMPIStatus * rc);
-static int              enumerate_node(CMPIInstanceMI * mi, CMPIContext * ctx, 
+static int              node_enum_insts(CMPIInstanceMI * mi, CMPIContext * ctx, 
 				CMPIResult * rslt, CMPIObjectPath * ref, 
 				int EnumInst, CMPIStatus * rc);
 static int 		cleanup_node(void);
@@ -55,17 +54,16 @@ static int 		cleanup_node(void);
 DeclareInstanceFunctions(ClusterNode);
 
 static CMPIInstance *
-make_instance(CMPIObjectPath * op, char * uname, CMPIStatus * rc)
+make_node_instance(CMPIObjectPath * op, char * uname, CMPIStatus * rc)
 {
-	CIMTable * nodeinfo = NULL;
         CMPIInstance * ci = NULL;
         char caption[MAXLEN];
+	struct ha_msg *nodeinfo;
 
-	DEBUG_ENTER();
         ci = CMNewInstance(Broker, op, rc);
         if ( CMIsNullObject(ci) ) {
-                CMSetStatusWithChars(Broker, rc, CMPI_RC_ERR_FAILED, 
-                                     "Create instance failed");
+                CMSetStatusWithChars(Broker, rc, 
+			CMPI_RC_ERR_FAILED, "Create instance failed");
                 return NULL;
         }
 
@@ -74,34 +72,16 @@ make_instance(CMPIObjectPath * op, char * uname, CMPIStatus * rc)
         CMSetProperty(ci, "Name", uname, CMPI_chars);
         CMSetProperty(ci, "Caption", caption, CMPI_chars);
 
-	nodeinfo = cim_get_table(GET_NODE_INFO, uname, NULL);
+	nodeinfo = cim_query_dispatch(GET_NODE_INFO, uname, NULL);
         if(nodeinfo){	
-		cmpi_set_properties(Broker, ci, nodeinfo, NodeMap, 
-			MAPDIM(NodeMap),rc); 
+		cmpi_msg2inst(Broker, ci, HA_CLUSTER_NODE, nodeinfo, rc); 
+		ha_msg_del(nodeinfo);
 	}
-	/*
-        if ( (dc = cim_get_str(GET_DC, NULL, NULL)) ) {
-                if ( strncmp(dc, uname, strlen(uname)) == 0){
-                        char dc_status[] = "true";
-                        CMSetProperty(ci, "IsDC", dc_status, CMPI_chars); 
-                } else {
-                        char dc_status[] = "false";
-                        CMSetProperty(ci, "IsDC", dc_status, CMPI_chars); 
-                
-                }
-
-        	cim_free(dc);
-	}
-	*/
-	if (nodeinfo) {
-		cim_table_free(nodeinfo);
-	}
-	DEBUG_LEAVE();
         return ci;
 }
 
 static int
-get_node(CMPIContext * ctx, CMPIResult * rslt, CMPIObjectPath * cop, 
+node_get_inst(CMPIContext * ctx, CMPIResult * rslt, CMPIObjectPath * cop, 
               char ** properties,  CMPIStatus * rc)
 {
         CMPIObjectPath * op = NULL;
@@ -111,7 +91,7 @@ get_node(CMPIContext * ctx, CMPIResult * rslt, CMPIObjectPath * cop,
 
         tmp = CMGetKey(cop, "Name", rc).value.string;
 	if ( tmp == NULL ) {
-		cl_log(LOG_ERR, "get_node: Failed to get key:Name");
+		cl_log(LOG_ERR, "node_get_inst: Failed to get key:Name");
 		return HA_FAIL;
 	}
         uname = CMGetCharPtr(tmp);
@@ -119,11 +99,11 @@ get_node(CMPIContext * ctx, CMPIResult * rslt, CMPIObjectPath * cop,
 			ClassName, rc);
 
         if ( CMIsNullObject(op) ){
-		cl_log(LOG_ERR, "get_node: Alloc ObjectPath failed.");
+		cl_log(LOG_ERR, "node_get_inst: Alloc ObjectPath failed.");
         	return HA_FAIL;
 	}
         
-        ci = make_instance(op, uname, rc);
+        ci = make_node_instance(op, uname, rc);
         if ( CMIsNullObject(ci) ) {
         	return HA_FAIL;
 	}
@@ -134,13 +114,14 @@ get_node(CMPIContext * ctx, CMPIResult * rslt, CMPIObjectPath * cop,
 }
 
 static int
-enumerate_node(CMPIInstanceMI * mi, CMPIContext * ctx, CMPIResult * rslt, 
+node_enum_insts(CMPIInstanceMI * mi, CMPIContext * ctx, CMPIResult * rslt, 
                CMPIObjectPath * ref, int EnumInst, CMPIStatus * rc)
 {
         CMPIObjectPath * op = NULL;
 	int hbstatus;
-        int i = 0;
-	CIMArray* nodes;
+        int i = 0, len;
+	struct ha_msg *nodes;
+	char *nspace;
 
 	DEBUG_ENTER();
 	if ((hbstatus = cim_get_hb_status()) != HB_RUNNING ) {
@@ -148,8 +129,12 @@ enumerate_node(CMPIInstanceMI * mi, CMPIContext * ctx, CMPIResult * rslt,
 		DEBUG_LEAVE();
 		return HA_OK;
 	}
+	nspace = CMGetCharPtr(CMGetNameSpace(ref, rc));
+	if ( nspace == NULL ) {
+		return HA_FAIL;
+	}
 
-	nodes = cim_get_array(GET_NODE_LIST, NULL, NULL); 
+	nodes = cim_query_dispatch(GET_NODE_LIST, NULL, NULL); 
         if ( nodes == NULL ) {
                 cl_log(LOG_ERR, "Can not get node information"); 
                 CMSetStatusWithChars(Broker, rc,
@@ -157,31 +142,24 @@ enumerate_node(CMPIInstanceMI * mi, CMPIContext * ctx, CMPIResult * rslt,
 		DEBUG_LEAVE();
                 return HA_FAIL;
         }
-
-        for (i = 0; i < cim_array_len(nodes); i++) {
-                char * uname = NULL;
-                char * space = NULL;
-                if ((uname = cim_array_index_v(nodes,i).v.str)==NULL){
+	len = cim_list_length(nodes);
+        for (i = 0; i < len; i++) {
+                char *uname;
+		if ((uname = cim_list_index(nodes, i)) == NULL ) {
 			continue;
 		}
-                space = CMGetCharPtr(CMGetNameSpace(ref, rc));
-                if ( space == NULL ) {
-			cim_array_free(nodes);
-                        return HA_FAIL;
-                }
-
                 /* create an object */
-                op = CMNewObjectPath(Broker, space, ClassName, rc);
+                op = CMNewObjectPath(Broker, nspace, ClassName, rc);
 		if (op == NULL ){
-			cim_array_free(nodes);
+			ha_msg_del(nodes);
 			return HA_FAIL;
 		}
                 if ( EnumInst ) {
                         /* enumerate instances */
                         CMPIInstance * ci = NULL;
-                        if ((ci = make_instance(op, uname, rc))==NULL) {
-				cim_array_free(nodes);
+                        if ((ci = make_node_instance(op, uname, rc))==NULL) {
 				rc->rc = CMPI_RC_ERR_FAILED;
+				ha_msg_del(nodes);
 				DEBUG_LEAVE();
                                 return HA_FAIL;
                         }
@@ -194,7 +172,7 @@ enumerate_node(CMPIInstanceMI * mi, CMPIContext * ctx, CMPIResult * rslt,
         }
 
         CMReturnDone(rslt);
-	cim_array_free(nodes);
+	ha_msg_del(nodes);
 	DEBUG_LEAVE();
         return HA_OK;
 }
@@ -223,7 +201,7 @@ ClusterNodeEnumInstanceNames(CMPIInstanceMI * mi, CMPIContext * ctx,
 {
 	CMPIStatus rc = {CMPI_RC_OK, NULL};
         PROVIDER_INIT_LOGGER();
-        enumerate_node(mi, ctx, rslt, ref, FALSE, &rc);
+        node_enum_insts(mi, ctx, rslt, ref, FALSE, &rc);
 	return rc;
 }
 
@@ -235,7 +213,7 @@ ClusterNodeEnumInstances(CMPIInstanceMI * mi, CMPIContext * ctx,
 {
 	CMPIStatus rc = {CMPI_RC_OK, NULL};
         PROVIDER_INIT_LOGGER();
-        enumerate_node(mi, ctx, rslt, ref, TRUE, &rc);
+        node_enum_insts(mi, ctx, rslt, ref, TRUE, &rc);
 	return rc;
 }
 
@@ -246,7 +224,7 @@ ClusterNodeGetInstance(CMPIInstanceMI * mi, CMPIContext * ctx,
 {
         CMPIStatus rc = {CMPI_RC_OK, NULL};
         PROVIDER_INIT_LOGGER();
-	get_node(ctx, rslt, cop, properties, &rc);
+	node_get_inst(ctx, rslt, cop, properties, &rc);
 	return rc;
 }
 

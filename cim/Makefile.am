@@ -67,11 +67,12 @@ cimproviders_LTLIBRARIES = libHAClusterInfo.la				\
                            libHA_LocationConstraintProvider.la		\
                            libHA_ColocationConstraintProvider.la	\
                            libHA_OrderConstraintProvider.la		\
-                           libHA_IndicationProvider.la                     
+                           libHA_IndicationProvider.la                  \
+                           libHA_ClusteringServiceProvider.la
 
 #--------------------------------------------------------------
 libHAClusterInfo_la_SOURCES                 = mgmt_client.c utils.c \
-						cluster_info.c  cmpi_utils.c
+						cluster_info.c  cmpi_utils.c mof_map.c
 libHAClusterInfo_la_LIBADD                  = $(COMMONLIBS) $(MGMTLIBS)
 #--------------------------------------------------------------
 libHA_ClusterProvider_la_SOURCES            = cluster_provider.c 
@@ -130,6 +131,9 @@ libHA_IndicationProvider_la_LIBADD          = libHAClusterInfo.la
 #--------------------------------------------------------------
 libHA_OperationOnProvider_la_SOURCES        =  operation_on_provider.c
 libHA_OperationOnProvider_la_LIBADD         = libHAClusterInfo.la
+#--------------------------------------------------------------
+libHA_ClusteringServiceProvider_la_SOURCES        = clustering_service_provider.c
+libHA_ClusteringServiceProvider_la_LIBADD         = libHAClusterInfo.la
 #--------------------------------------------------------------
 noinst_PROGRAMS	    = simpletest
 simpletest_SOURCES  = simple_test.c

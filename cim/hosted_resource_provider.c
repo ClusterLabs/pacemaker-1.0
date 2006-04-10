@@ -62,7 +62,8 @@ node_host_res(CMPIBroker * broker, char * classname, CMPIContext * ctx,
         char *		rsc_id;
 	char * 		uname;
         int 		host = 0;
-        char * 		running_node;
+        const char * 	running_node;
+	struct ha_msg * msg;
 
         /* resource name */
         cmpi_rsc_id = CMGetKey(res_op, "Id", rc).value.string;
@@ -81,19 +82,18 @@ node_host_res(CMPIBroker * broker, char * classname, CMPIContext * ctx,
         uname = CMGetCharPtr(cmpi_uname);
 
         /* get running node */
-        if ((running_node = cim_get(GET_RSC_HOST, rsc_id, NULL)) == NULL ) {
+        if ((msg = cim_query_dispatch(GET_RSC_HOST, rsc_id, NULL)) == NULL ) {
                 cl_log(LOG_WARNING, "running node of %s is NULL", rsc_id);
                 return 0;
         }
         
-        cl_log(LOG_INFO, "running node of %s is %s, this node is %s", 
-               rsc_id, running_node, uname);
+	running_node = cl_get_string(msg, "host");
         /* campare running node with uname */
         if ( strcmp(running_node, uname) == 0 ) {
                 host = 1; 
         }
 
-        cim_free(running_node);
+	ha_msg_del(msg);
         return host;
 }
 

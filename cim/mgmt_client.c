@@ -1,20 +1,36 @@
+/*
+ * mgmt_client.c: mgmt library client
+ *
+ * Author: Jia Ming Pan <jmltc@cn.ibm.com>
+ * Copyright (c) 2005 International Business Machines
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ *
+ */
+
+
 #include "mgmt_client.h"
 
 #define LIB_INIT_ALL (ENABLE_HB|ENABLE_LRM|ENABLE_CRM)
 
 
-/* #define	MCLIENT_DEBUG_CLASS (1<<10) */
- #define	MCLIENT_DEBUG_CLASS (0) 
-#define mclient_debug(p,fmt...) \
-		cim_debug(MCLIENT_DEBUG_CLASS,p,##fmt)
-
 #undef DEBUG_ENTER
 #undef DEBUG_LEAVE
 
-#define DEBUG_ENTER() \
-	mclient_debug(LOG_INFO, "%s: --- ENTER ---", __FUNCTION__)
-#define DEBUG_LEAVE() \
-	mclient_debug(LOG_INFO, "%s: --- LEAVE ---", __FUNCTION__)
+#define DEBUG_ENTER() 
+#define DEBUG_LEAVE() 
 
 const char *     module_name = "cim";
 static int       mgmt_lib_initialize(void);
@@ -44,20 +60,16 @@ mclient_new (void)
 		otherwise mgmt_malloc ... will not be
 		set to cl_malloc... */
         mgmt_lib_initialize();
-
-	cim_debug_set(MCLIENT_DEBUG_CLASS);
-	DEBUG_ENTER();
         client = (MClient *)cim_malloc(sizeof(MClient));
         if ( client == NULL ) { 
-		return NULL; 
 		cl_log(LOG_ERR, "mclient_new: failed to malloc client.");
+		return NULL; 
 	}
         memset(client, 0, sizeof(MClient));
 
 	client->cmnd = NULL;
 	client->rdata = NULL;
 	client->rlen  = 0;        
-	DEBUG_LEAVE();
 	
         return client;
 }
@@ -68,7 +80,6 @@ mclient_new_with_cmnd(const char * type, ... )
 	MClient *	client;
         va_list 	ap;
 
-       	DEBUG_ENTER(); 
 	if ( ( client = mclient_new()) == NULL ) {
 		cl_log(LOG_ERR, "mclient_new_with_cmnd: can't alloc client.");
 		return NULL;
@@ -83,7 +94,6 @@ mclient_new_with_cmnd(const char * type, ... )
 		mclient_cmnd_append(client, arg);
         }
         va_end(ap);
-	DEBUG_LEAVE();
         return client;
 }
 
@@ -112,8 +122,7 @@ mclient_cmnd_new(MClient * client, const char * type, ...)
 {
         va_list  ap;
 	int      rc = HA_FAIL;
-       
-	DEBUG_ENTER(); 
+
 	if ( client->cmnd ) {
 		mgmt_del_msg(client->cmnd);
 		client->cmnd = NULL;
@@ -128,20 +137,17 @@ mclient_cmnd_new(MClient * client, const char * type, ...)
                 mclient_cmnd_append(client, arg);
         }
         va_end(ap);
-	DEBUG_LEAVE();
         return rc;
 }
 
 int
 mclient_cmnd_append(MClient * client, const char * cmnd)
 {
-	DEBUG_ENTER();
 	if (client->cmnd == NULL ) {
 		client->cmnd = mgmt_new_msg(cmnd, NULL);
 	} else {
 		client->cmnd = mgmt_msg_append(client->cmnd, cmnd);
 	}
-	DEBUG_LEAVE();
 	return HA_OK;
 }
 
@@ -150,23 +156,21 @@ int
 mclient_process(MClient * client)
 {
 	char *   result;
-	int      n;
-	int      rc = HA_FAIL;
+	int      n, rc;
 	char **  args = NULL;
-
-	DEBUG_ENTER();        
-
 
         if ( ( result = process_msg(client->cmnd) ) == NULL ) {
 		cl_log(LOG_ERR, "do_process_cmnd: failed to process: %s", 
 			client->cmnd);
+		rc = MC_ERROR;
 		goto exit2;
 	}
         cl_log(LOG_INFO, "%s: cmnd: [%s], result: [%s].", 
 			__FUNCTION__, client->cmnd, result);
 
 	if ( ! mgmt_result_ok(result) )  {
-                cl_log(LOG_ERR, "do_process_cmnd: result error.");
+                cl_log(LOG_WARNING, "do_process_cmnd: client return \'failed\'.");
+		rc = MC_FAIL;
                 goto exit1;
         }
 
@@ -180,23 +184,22 @@ mclient_process(MClient * client)
         /* parse args */
         if ( ( args = mgmt_msg_args(result, &n) ) == NULL ) {
 		cl_log(LOG_ERR, "do_process_cmnd: parse args failed.");
+		rc = MC_ERROR;
 		goto exit1;
 	}
 
 	client->rlen = n - 1;
         client->rdata = args;
-        rc = HA_OK;
+        rc = MC_OK;
 exit1:
 	mgmt_del_msg(result);
 exit2:
-	DEBUG_LEAVE();
 	return rc;
 }
 
 char *
 mclient_nth_value(MClient * client, uint32_t index) 
 {
-	DEBUG_ENTER();
 	if ( client == NULL ||client->rdata == NULL) {
 		cl_log(LOG_ERR, "mclient_nth_value: parameter error.");
 		return NULL;
@@ -206,9 +209,10 @@ mclient_nth_value(MClient * client, uint32_t index)
 			index, client->rlen);
 		return NULL;
 	}
+	/*
 	cl_log(LOG_INFO, "mclient_nth_value: got value %u:%s", 
 			index, client->rdata[index + 1]);
-	DEBUG_LEAVE();
+	*/
         return client->rdata[index + 1];
 }
 

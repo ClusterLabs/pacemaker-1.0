@@ -49,40 +49,34 @@ static char     	Caption   []  = "LinuxHA Cluster";
 uint32_t        auth_valuemap [] = {0, 1, 2};
 const char *    auth_values   [] = {"sha1", "md5", "crc"};
 static uint32_t last_requested_state = 5; /* Not Changed */
-static const mapping_t ClusterMap [] = { MAPPING_HA_Cluster };
 
 static CMPIInstance * make_cluster_instance(CMPIObjectPath * op, 
 			CMPIStatus * rc);
 
-static int      get_cluster(CMPIContext * ctx, CMPIResult * rslt,
+static int      cluster_get_inst(CMPIContext * ctx, CMPIResult * rslt,
 			CMPIObjectPath * cop, CMPIStatus * rc);
 
-static int      enumerate_cluster(CMPIContext * ctx, CMPIResult * rslt, 
+static int      cluster_enum_insts(CMPIContext * ctx, CMPIResult * rslt, 
                         CMPIObjectPath * cop, char ** properties,
                         int enum_inst, CMPIStatus * rc);
 
-static uint32_t auth_value2map(const char * method);
+static int	auth_value2map(const char * method);
 static const char *   auth_map2value(uint32_t map);
 
-static void     config_set_properties(CMPIInstance * ci, CMPIStatus * rc);
-static void     auth_set_properties(CMPIInstance * ci, CMPIStatus * rc);
-static void     crm_set_properties(CMPIInstance * ci, CMPIStatus * rc);
+static void     config_set_instance(CMPIInstance * ci, CMPIStatus * rc);
+static void     auth_set_instance(CMPIInstance * ci, CMPIStatus * rc);
+static void     crm_set_instance(CMPIInstance * ci, CMPIStatus * rc);
 
 /* set instance */
-static int	process_config_data(const mapping_t * property, 
-			CIMTable * cfginfo, CMPIData cmpidata, 
-			CMPIStatus * rc);
 
-static int      update_inst_cluster(CMPIContext * ctx, CMPIResult * rslt, 
-                        CMPIObjectPath * op, CMPIInstance * inst, 
-                        CMPIStatus * rc);
+static int      cluster_update_inst(CMPIContext* ctx, CMPIResult* rslt, 
+                        CMPIObjectPath*, CMPIInstance*, CMPIStatus*);
 static int      request_state_change(int state);
 static int      cleanup_cluster(void); 
 
 DeclareInstanceFunctions(Cluster);
 
-
-static uint32_t
+static int
 auth_value2map(const char * method) 
 {
         int i;
@@ -107,9 +101,9 @@ auth_map2value(uint32_t map)
 }
 
 static void
-config_set_properties(CMPIInstance * ci, CMPIStatus * rc)
+config_set_instance(CMPIInstance * ci, CMPIStatus * rc)
 {
-	CIMTable * info;
+	struct ha_msg * info;
 
         DEBUG_ENTER();
 	/* get cluster config values */
@@ -118,56 +112,53 @@ config_set_properties(CMPIInstance * ci, CMPIStatus * rc)
                 cl_log(LOG_ERR, "%s:can not get cluster.", __FUNCTION__);
         	return;
 	}
-	dump_cim_table(info, 0);
-	cmpi_set_properties(Broker, ci, info, 
-			ClusterMap, MAPDIM(ClusterMap), rc); 
+	cmpi_msg2inst(Broker, ci, HA_CLUSTER, info, rc); 
 	DEBUG_LEAVE();
-	cim_table_free(info);
+	ha_msg_del(info);
 }
 
 static void
-auth_set_properties(CMPIInstance * ci, CMPIStatus * rc)
+auth_set_instance(CMPIInstance * ci, CMPIStatus * rc)
 {
-	CIMTable * table = NULL;
-        uint32_t   num;
+        int	   num;
         char*      method;
 	char*      key;
+	struct ha_msg *msg;
 
 	DEBUG_ENTER();
-        if ( (table = cim_get_cluster_auth()) == NULL  ){
+        if ( (msg = cim_get_authkeys()) == NULL  ){
 		cl_log(LOG_WARNING, "Can not get auth message");
                  return;
         }
 
-	dump_cim_table(table, 0);
-        method = cim_table_lookup_v(table, "authmethod").v.str;
-        key = cim_table_lookup_v(table, "authkey").v.str;
+        method = cim_strdup(cl_get_string(msg, "authmethod"));
+        key = cim_strdup(cl_get_string(msg, "authkey"));
 
         num = auth_value2map(method);
         CMSetProperty(ci, "AuthMethod", &num, CMPI_uint32);
         CMSetProperty(ci, "AuthKey", key, CMPI_chars);
 	
 	DEBUG_LEAVE();
-	cim_table_free(table);
+	ha_msg_del(msg);
 }
 
 static void
-crm_set_properties(CMPIInstance * ci, CMPIStatus * rc)
+crm_set_instance(CMPIInstance * ci, CMPIStatus * rc)
 {
-        CIMTable * crm_config;
         char * it, * sc, * se;
         char * nq, * rs, * hq;
+	struct ha_msg *msg;
 
-        if (( crm_config = cim_get(GET_CRM_CONFIG, NULL, NULL)) == NULL ) {
+        if (( msg = cim_query_dispatch(GET_CRM_CONFIG, NULL, NULL)) == NULL ){
 		return;
 	}
                 
-        it = cim_table_lookup_v(crm_config, "transition_idle_timeout").v.str;
-        sc = cim_table_lookup_v(crm_config, "symmetric_cluster").v.str;
-        se = cim_table_lookup_v(crm_config, "stonith_enabled").v.str;
-        nq = cim_table_lookup_v(crm_config, "no_quorum_policy").v.str;
-        rs = cim_table_lookup_v(crm_config, "default_resource_stickiness").v.str;
-        hq = cim_table_lookup_v(crm_config, "have_quorum").v.str;
+        it = cim_strdup(cl_get_string(msg, "transition_idle_timeout"));
+        sc = cim_strdup(cl_get_string(msg, "symmetric_cluster"));
+        se = cim_strdup(cl_get_string(msg, "stonith_enabled"));
+        nq = cim_strdup(cl_get_string(msg, "no_quorum_policy"));
+        rs = cim_strdup(cl_get_string(msg, "default_resource_stickiness"));
+        hq = cim_strdup(cl_get_string(msg, "have_quorum"));
                 
         if (it && sc && se && nq && rs && hq) {
         	CMSetProperty(ci, "TransitionIdleTimeout",     it, CMPI_chars);
@@ -178,16 +169,16 @@ crm_set_properties(CMPIInstance * ci, CMPIStatus * rc)
                 CMSetProperty(ci, "HaveQuorum",                hq, CMPI_chars);
 	}
 
-	cim_table_free(crm_config);
+	ha_msg_del(msg);
 }
 
 /* always only one cluster instance */
 static CMPIInstance *
 make_cluster_instance(CMPIObjectPath * op, CMPIStatus * rc)
 {
-        CMPIInstance *         ci = NULL;
-	uint32_t               state = 0;
-	CIMTable *           table;
+        CMPIInstance *ci = NULL;
+	uint32_t state = 0;
+	struct ha_msg *msg;
 
 	DEBUG_ENTER();
         ci = CMNewInstance(Broker, op, rc);
@@ -203,28 +194,28 @@ make_cluster_instance(CMPIObjectPath * op, CMPIStatus * rc)
         CMSetProperty(ci, "Caption", Caption, CMPI_chars);
 
 	/* set config properties */
-	config_set_properties(ci, rc);
+	config_set_instance(ci, rc);
 
         /* set auth properties */
-        auth_set_properties(ci, rc);
+        auth_set_instance(ci, rc);
 
 	state = 3;	/* Disabled */
         if( cim_get_hb_status() == HB_RUNNING) {
 		state = 2; /* Enabled */
 	       	/* set crm properties */
-		crm_set_properties(ci, rc); 
+		crm_set_instance(ci, rc); 
 	} 
 
 	CMSetProperty(ci, "EnabledState", &state, CMPI_uint32);
 	CMSetProperty(ci, "RequestedState", &last_requested_state, CMPI_uint32);
 
-	if ( (table = cim_get_software_identity() )){
+	if ( (msg = cim_get_software_identity() )){
 		char * hv;
-		hv = cim_table_lookup_v(table, "hbversion").v.str;
-		dump_cim_table(table, 0);
+		hv = cim_strdup(cl_get_string(msg, "hbversion"));
 		if (hv) {
 			CMSetProperty(ci, "HBVersion", hv, CMPI_chars);
 		}
+		cim_free(hv);
 	}
 	DEBUG_LEAVE();
         return ci;        
@@ -232,7 +223,7 @@ make_cluster_instance(CMPIObjectPath * op, CMPIStatus * rc)
 
 /* get a cluster instance */
 static int
-get_cluster(CMPIContext * ctx, CMPIResult * rslt, 
+cluster_get_inst(CMPIContext * ctx, CMPIResult * rslt, 
                  CMPIObjectPath * cop, CMPIStatus * rc)
 {
         CMPIObjectPath * op = NULL;
@@ -241,7 +232,6 @@ get_cluster(CMPIContext * ctx, CMPIResult * rslt,
         CMPIInstance *   ci = NULL;
         int              ret = 0;
 
-        DEBUG_ENTER();
 	cmpi_namespace = CMGetNameSpace(cop, rc);
         namespace = CMGetCharPtr(cmpi_namespace);
         
@@ -264,13 +254,12 @@ get_cluster(CMPIContext * ctx, CMPIResult * rslt,
         CMReturnDone(rslt);
         ret = HA_OK;
 out:
-	DEBUG_LEAVE();
         return ret;
 }
 
 /* enumerate cluster instances or instance names */
 static int
-enumerate_cluster(CMPIContext * ctx, CMPIResult * rslt, CMPIObjectPath * cop, 
+cluster_enum_insts(CMPIContext * ctx, CMPIResult * rslt, CMPIObjectPath * cop, 
                   char ** properties, int enum_inst, CMPIStatus * rc)
 {
         CMPIInstance *   ci = NULL;
@@ -279,7 +268,6 @@ enumerate_cluster(CMPIContext * ctx, CMPIResult * rslt, CMPIObjectPath * cop,
         char *           namespace = NULL;
         int              ret = 0;
 
-	DEBUG_ENTER();
         cmpi_namespace = CMGetNameSpace(cop, rc);
         namespace = CMGetCharPtr(cmpi_namespace);
         
@@ -310,99 +298,37 @@ enumerate_cluster(CMPIContext * ctx, CMPIResult * rslt, CMPIObjectPath * cop,
         CMReturnDone(rslt);
         ret = HA_OK;
 out:
-	DEBUG_LEAVE();
 	return ret;
-}
-
-static int
-process_config_data(const mapping_t * property, CIMTable * cfginfo, 
-		CMPIData cmpidata, CMPIStatus * rc)
-{
-	const char * key = property->key;
-        const char * val = NULL;
-
-	DEBUG_ENTER();
-	if ( key == NULL ) {
-		return HA_FAIL;
-	}
-	if ( property->type == CMPI_chars ){
-		if ( cmpidata.value.string == NULL ) {
-			return HA_FAIL;
-		}
-		val = CMGetCharPtr(cmpidata.value.string);
-		/* insert a data */
-		cim_table_strdup_replace(cfginfo, key, val);
-	} else if(property->type == CMPI_charsA) { /* array */
-		CMPIArray * array = cmpidata.value.array;
-		int         i;
-		int         len;
-		char        buf[MAXLEN] = "";
-
-		len = CMGetArrayCount(array, rc);
-		for ( i = 0; i < len; i++){
-			char * option;
-			cmpidata = CMGetArrayElementAt(array, i, rc);
-			if (cmpidata.value.string && rc->rc==CMPI_RC_OK){
-				option=CMGetCharPtr(cmpidata.value.string);
-				strncat(buf, option, MAXLEN);
-				strcat(buf, "\n");
-			}
-		}
-		val = buf;
-		/* insert into table */
-		cim_table_strdup_replace(cfginfo, key, val);
-	}
-
-	cl_log(LOG_INFO, "process_config_data: %s:%s", key, val); 
-	DEBUG_LEAVE();
-	return HA_OK;
 }
 
 /* update cluster instance, this will result in modification to the 
    ha.cf and authkeys */
 static int 
-update_inst_cluster(CMPIContext * ctx, CMPIResult * rslt,
+cluster_update_inst(CMPIContext * ctx, CMPIResult * rslt,
                    CMPIObjectPath * op, CMPIInstance * inst,
                    CMPIStatus * rc)
 {
-        int          ret;
-        int          authnum;
-        const char * authkey;
-	const char * authmethod;
-	CIMTable * cfginfo;
-	CIMTable * authinfo;
-	CMPIData     cmpidata;
-	int 		i;
+        int ret, authnum;
+        const char *authkey, *authmethod;
+	struct ha_msg *cfginfo, *authinfo;
 
         /* ha.cf */
-	DEBUG_ENTER();
-	cfginfo = cim_get_hacf_config();
-	if ( cfginfo == NULL ) { /* ha.cf not exist yet */
-		cfginfo = cim_table_new();
-		if ( cfginfo == NULL ) {
+        if((cfginfo = cim_get_hacf_config()) == NULL ) {
+				/* ha.cf not exist yet */
+		if ((cfginfo = ha_msg_new(16)) == NULL ) {
 			return HA_FAIL;
 		}
 	}
 
-	for ( i=0; i<sizeof(ClusterMap)/sizeof(mapping_t); i++) {
-		CMPIData cmpidata;
-		cmpidata = CMGetProperty(inst, ClusterMap[i].name, rc);
-		if ( rc->rc == CMPI_RC_OK ) {
-			if (process_config_data(&ClusterMap[i], cfginfo,
-						cmpidata, rc) == HA_FAIL) {
-				return HA_FAIL;
-			}
-                }
-        }
+	ret = cmpi_inst2msg(inst, HA_CLUSTER, cfginfo, rc);
 
 	/* update the ha.cf file */        
-        ret = cim_set_cluster_config(cfginfo);
-	cim_table_free(cfginfo);
+        ret = cim_update_hacf(cfginfo);
+	ha_msg_del(cfginfo);
 
 	/* authkeys */
-	if ( (authinfo = cim_get_cluster_auth()) == NULL ) {
-		authinfo = cim_table_new();
-		if ( authinfo == NULL ) {
+	if ( (authinfo = cim_get_authkeys()) == NULL ) {
+		if ((authinfo = ha_msg_new(2)) == NULL ) {
 			return HA_FAIL;
 		}
 	}
@@ -410,18 +336,16 @@ update_inst_cluster(CMPIContext * ctx, CMPIResult * rslt,
 	authnum = CMGetProperty(inst, "AuthMethod", rc).value.uint32;
 	if ( rc->rc == CMPI_RC_OK ) {
         	authmethod = auth_map2value(authnum);
-        	cim_table_strdup_replace(authinfo, "authmethod", authmethod);
+        	cl_msg_modstring(authinfo, "authmethod", authmethod);
 	}
-        cmpidata = CMGetProperty(inst, "AuthKey", rc);
-	if ( rc->rc == CMPI_RC_OK ) {
-		authkey = CMGetCharPtr(cmpidata.value.string);
-        	cim_table_strdup_replace(authinfo, "authkey", authkey);
+        authkey = CMGetPropertyString(inst, "AuthKey", rc);
+	if ( authkey ) {
+        	cl_msg_modstring(authinfo, "authkey", authkey);
 	}
 	
 	/* update the authkeys file */
-        ret = cim_set_cluster_auth(authinfo); 
-	cim_table_free(authinfo);
-	DEBUG_LEAVE();
+        ret = cim_update_authkeys(authinfo); 
+	ha_msg_del(authinfo);
         return HA_OK;
 }
 
@@ -469,7 +393,7 @@ ClusterEnumInstanceNames(CMPIInstanceMI * mi, CMPIContext * ctx,
         CMPIStatus rc = {CMPI_RC_OK, NULL};
 	PROVIDER_INIT_LOGGER();        
         /* enumerate instance names */
-        enumerate_cluster(ctx, rslt, ref, NULL, FALSE, &rc);
+        cluster_enum_insts(ctx, rslt, ref, NULL, FALSE, &rc);
 	return rc;
 }
 
@@ -479,7 +403,7 @@ ClusterEnumInstances(CMPIInstanceMI * mi, CMPIContext * ctx, CMPIResult * rslt,
 {
         CMPIStatus rc = {CMPI_RC_OK, NULL};
 	PROVIDER_INIT_LOGGER();        
-        enumerate_cluster(ctx, rslt, ref, NULL, TRUE, &rc);
+        cluster_enum_insts(ctx, rslt, ref, NULL, TRUE, &rc);
 	return rc;
 }
 
@@ -489,7 +413,7 @@ ClusterGetInstance(CMPIInstanceMI * mi, CMPIContext * ctx, CMPIResult * rslt,
 {
         CMPIStatus rc = {CMPI_RC_OK, NULL};
         PROVIDER_INIT_LOGGER();
-        get_cluster(ctx, rslt, cop, &rc);
+        cluster_get_inst(ctx, rslt, cop, &rc);
 	return rc;
 }
 
@@ -505,7 +429,7 @@ ClusterCreateInstance(CMPIInstanceMI * mi, CMPIContext * ctx, CMPIResult * rslt,
         	CMSetStatusWithChars(Broker, &rc, 
                         CMPI_RC_ERR_FAILED, "Only one instance is allowed.");
 	} else {
-		update_inst_cluster(ctx, rslt, cop, ci, &rc);
+		cluster_update_inst(ctx, rslt, cop, ci, &rc);
 		CMReturn(CMPI_RC_OK);
 	}
 	return rc;
@@ -520,7 +444,7 @@ ClusterSetInstance(CMPIInstanceMI * mi, CMPIContext * ctx, CMPIResult * rslt,
         /* initialize logger */
         PROVIDER_INIT_LOGGER();
         /* set instance */
-	update_inst_cluster(ctx, rslt, op, inst, &rc); 
+	cluster_update_inst(ctx, rslt, op, inst, &rc); 
 	CMReturn(CMPI_RC_OK);
 }
 

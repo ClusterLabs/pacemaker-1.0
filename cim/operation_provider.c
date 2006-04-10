@@ -40,27 +40,40 @@
 static const char * 	PROVIDER_ID 	= "cim-op";
 static char 		ClassName []  	= "HA_Operation";
 static CMPIBroker * 	Broker    	= NULL;
-static const mapping_t	OperationMap[]	= {MAPPING_HA_Operation};
 
-static CMPIInstance * 	make_operation_instance(CMPIObjectPath * op, char * opid,
-				char * sys_name, char * sys_cr_name, 
-				CMPIStatus * rc);
-static int		operation_set_instance(CMPIContext * ctx, CMPIResult * rslt, 
+static int		operation_update_inst(CMPIContext *, CMPIResult *, 
 				CMPIObjectPath * cop, CMPIInstance * ci, 
 				char ** properties, CMPIStatus * rc);
+static struct ha_msg *	find_operation(const char * rscid, const char *opid);
+static CMPIInstance *	operation_make_instance(CMPIObjectPath*, char* rscid,
+				const char * opid, struct ha_msg *operation, 
+				CMPIStatus * rc);
+
 DeclareInstanceFunctions(Operation);
 
+static struct ha_msg * 
+find_operation(const char * rscid, const char *opid)
+{
+	struct ha_msg *ops, *operation = NULL;
+	if ((ops = cim_get_rscops(rscid)) == NULL ) {
+		cl_log(LOG_WARNING, "%s: none ops of %s found.",
+			__FUNCTION__, rscid);
+		return NULL;
+	}
+	if ((operation = cim_msg_find_child(ops, opid)) ){
+		operation = ha_msg_copy(operation);
+	}
+	ha_msg_del(ops);
+	return operation;
+}
+
 static CMPIInstance *
-make_operation_instance(CMPIObjectPath * op, char * opid, char * rscid, 
-		char * crname, CMPIStatus * rc)
+operation_make_instance(CMPIObjectPath * op, char* rscid, 
+		const char * opid, struct ha_msg *operation, CMPIStatus * rc)
 {
         char caption[MAXLEN];
         CMPIInstance * ci = NULL;
-	CIMArray * ops = NULL;
-	CIMTable * operation = NULL;
-	int count, i;
 	
-	DEBUG_ENTER();
         ci = CMNewInstance(Broker, op, rc);
         if ( CMIsNullObject(ci) ) {
                 cl_log(LOG_ERR, "%s: couldn't create instance", __FUNCTION__);
@@ -68,98 +81,145 @@ make_operation_instance(CMPIObjectPath * op, char * opid, char * rscid,
 		       CMPI_RC_ERR_FAILED, "Could not create instance.");
                 return NULL;
         }
-
-        if ((ops = cim_get_array(GET_RSC_OPERATIONS, rscid, NULL)) == NULL ) {
-                cl_log(LOG_ERR, "%s: ops is NULL.", __FUNCTION__);
-		DEBUG_LEAVE();
-		return NULL;
-	}
-
-	for (i = 0; i < cim_array_len(ops); i++) {
-		char * id;
-		operation = cim_array_index_v(ops,i).v.table;
-		id = cim_table_lookup_v(operation, "id").v.str;
-		if ( strcmp(id, opid) == 0 ) {
-			break;
-		}
-	}
-
-	if ( i == cim_array_len(ops) ) {
-		cl_log(LOG_ERR, "Operation %s not found.", opid);
-		DEBUG_LEAVE();
-		return NULL;
-	}
-
-	count = MAPDIM(OperationMap);
-	cmpi_set_properties(Broker, ci, operation, OperationMap, count, rc);
-
-        CMSetProperty(ci, "SystemName", rscid, CMPI_chars);
-        CMSetProperty(ci, "SystemCreationClassName", crname, CMPI_chars);
-        CMSetProperty(ci, "CreationClassName", ClassName, CMPI_chars);
+	
+	cmpi_msg2inst(Broker, ci, HA_OPERATION, operation, rc); 
         snprintf(caption, MAXLEN, "Operation.%s", opid);
         CMSetProperty(ci, "Caption", caption, CMPI_chars);
-
-	cim_array_free(ops);
-        DEBUG_LEAVE();
+	CMSetProperty(ci, "ResourceId", rscid, CMPI_chars);
 	return ci;
 }
 
-
 static int
-operation_set_instance(CMPIContext * ctx, CMPIResult * rslt, CMPIObjectPath * cop,
+operation_update_inst(CMPIContext *ctx, CMPIResult *rslt, CMPIObjectPath *cop,
 		CMPIInstance * ci, char ** properties, CMPIStatus * rc)
 {
-	CIMArray * ops = NULL;
-	int i, len;
-	CIMTable * operation = NULL;
-	char *id, *sysname, *syscrname;
-	const char * key[] = {"Id", "SystemName", "SystemCreationClassName"};
+	struct ha_msg *operation;
+	char *id, *rscid;
 
         DEBUG_ENTER();
-	id = CMGetKeyString(cop, key[0], rc);
-        sysname = CMGetKeyString(cop, key[1], rc);
-        syscrname = CMGetKeyString(cop, key[2], rc);
-
-        if ((ops = cim_get_array(GET_RSC_OPERATIONS, sysname,NULL)) == NULL ) {
-                cl_log(LOG_ERR, "%s: ops is NULL.", __FUNCTION__);
-                return HA_FAIL;
-        }
-        for (i = 0; i < cim_array_len(ops); i++) {
-		char * lid;
-                operation = cim_array_index_v(ops,i).v.table;
-                if ((lid = cim_table_lookup_v(operation, "id").v.str)==NULL){
-			continue;
-		}
-                if ( strcmp(lid, id) == 0 ) {
-                        break;
-                }
-        }
-
-        if ( i == len || operation == NULL ) {
-                cl_log(LOG_ERR, "Operation %s not found.", id);
-                DEBUG_LEAVE();
-                return HA_FAIL;
-        }
-
-	for ( i=0; i<MAPDIM(OperationMap); i++) {
-		CMPIData data;
-		char * v = NULL;
-		data = CMGetProperty(ci, OperationMap[i].name, rc);
-		if ( data.value.string && rc->rc == CMPI_RC_OK) {
-			v = CMGetCharPtr(data.value.string);
-			cim_table_strdup_replace(operation, 
-					OperationMap[i].key, v);
-		}
+	id = CMGetKeyString(cop, "Id", rc);
+	rscid = CMGetKeyString(cop, "ResourceId", rc);
+	if ((operation = find_operation(rscid, id)) == NULL ) {
+		return HA_OK; 
 	}
-
-	cim_update(UPDATE_OPERATIONS, id, ops, &len);
-	cim_array_free(ops);
-
+	cmpi_inst2msg(ci, HA_OPERATION, operation, rc);
+	cim_update_rscop(rscid, id, operation);
 	rc->rc = CMPI_RC_OK;
 
 	DEBUG_LEAVE();
 	return HA_OK;
 }
+
+static int
+operation_create_inst(CMPIContext *ctx, CMPIResult *rslt, CMPIObjectPath *cop,
+		CMPIInstance * ci, CMPIStatus * rc)
+{
+	struct ha_msg *operation;
+	char *id, *rscid; 
+
+	id    = CMGetKeyString(cop, "Id", rc);
+        rscid = CMGetKeyString(cop, "ResourceId", rc);
+
+	/* create an empty operatoin */
+	if ((operation = ha_msg_new(16)) == NULL ) {
+                cl_log(LOG_ERR, "%s: operation alloc failed.", __FUNCTION__);
+		rc->rc = CMPI_RC_ERR_FAILED;
+		return HA_FAIL;
+	}
+
+	/* fill operation */
+	cmpi_inst2msg(ci, HA_OPERATION, operation, rc);
+
+	/* add op to resource */
+	if (cim_add_rscop(rscid, operation) != HA_OK ) {
+		rc->rc = CMPI_RC_ERR_FAILED;
+		ha_msg_del(operation);
+		return HA_FAIL;
+	} 
+	
+	ha_msg_del(operation);
+	rc->rc = CMPI_RC_OK;
+	return HA_OK;
+}
+
+
+
+static int
+operation_delete_inst(CMPIContext *ctx, CMPIResult *rslt, 
+			CMPIObjectPath *cop, CMPIStatus * rc)
+{
+	char *id, *rscid; 
+
+	id    = CMGetKeyString(cop, "Id", rc);
+        rscid = CMGetKeyString(cop, "ResourceId", rc);
+	
+	if ( cim_del_rscop(rscid, id) == HA_OK ) {
+		rc->rc = CMPI_RC_OK;
+		return HA_OK;
+	} else {
+		rc->rc = CMPI_RC_ERR_FAILED;
+		return HA_FAIL;
+	}
+}
+
+static int
+operation_enum_insts(CMPIInstanceMI * mi, CMPIContext * ctx, CMPIResult * rslt,
+               CMPIObjectPath * ref, int EnumInst, CMPIStatus * rc)
+{
+	char *namespace;
+        CMPIObjectPath * op = NULL;
+	char *opid, *rscid;
+	struct ha_msg *msg, *rsclist, *ops, *operation;
+	int i, j, rsccount, opcount;
+
+	DEBUG_ENTER();
+	namespace = CMGetCharPtr(CMGetNameSpace(ref, rc));
+	if ( namespace == NULL ) {
+		return HA_FAIL;
+	}
+
+	if ((msg = cim_get_rsc_list())== NULL 
+		|| (rsclist = cim_traverse_allrsc(msg)) == NULL ) {
+		goto done;
+	}
+	ha_msg_del(msg);
+	
+	rsccount = cim_list_length(rsclist);
+	for (i = 0; i < rsccount; i++){
+		rscid = cim_list_index(rsclist, i);
+		if (rscid == NULL || (ops = cim_get_rscops(rscid)) == NULL ){
+			continue;
+		}
+		opcount = cim_msg_children_count(ops);
+		for (j = 0; j < opcount; j++) {	
+			const char *const_opid;
+ 			if(( operation = cim_msg_child_index(ops, j)) == NULL
+			 ||(const_opid=cl_get_string(operation, "id"))== NULL){
+				continue;
+			}
+			opid = cim_strdup(const_opid);
+	                op = CMNewObjectPath(Broker, namespace, ClassName, rc);
+	                if ( EnumInst ) {
+	                        CMPIInstance * ci = NULL;
+				ci = operation_make_instance(op, rscid, 
+							opid, operation, rc);
+                	        CMReturnInstance(rslt, ci);
+	                } else { /* enumerate instance names */
+        	                CMAddKey(op, "ResourceId", rscid, CMPI_chars);
+        	                CMAddKey(op, "Id", opid, CMPI_chars); 
+                	        CMReturnObjectPath(rslt, op);
+                	}
+			cim_free(opid);
+        	}
+	}
+done:
+	rc->rc = CMPI_RC_OK;
+        CMReturnDone(rslt);
+	DEBUG_LEAVE();
+        return HA_OK;
+}
+
+
 /**********************************************
  * Instance provider functions
  **********************************************/
@@ -176,8 +236,8 @@ OperationEnumInstanceNames(CMPIInstanceMI * mi, CMPIContext * ctx,
 		CMPIResult * rslt, CMPIObjectPath * ref)
 {
 	CMPIStatus rc = {CMPI_RC_OK, NULL};
-	CMSetStatusWithChars(Broker, &rc, CMPI_RC_ERR_NOT_SUPPORTED, 
-                             "CIM_ERR_NOT_SUPPORTED");
+	PROVIDER_INIT_LOGGER();
+	operation_enum_insts(mi, ctx, rslt, ref, FALSE, &rc);
 	return rc;
 }
 
@@ -187,8 +247,8 @@ OperationEnumInstances(CMPIInstanceMI * mi, CMPIContext * ctx,
 		CMPIResult * rslt, CMPIObjectPath * ref, char ** properties)
 {
         CMPIStatus rc = {CMPI_RC_OK, NULL};
-	CMSetStatusWithChars(Broker, &rc, CMPI_RC_ERR_NOT_SUPPORTED, 
-                             "CIM_ERR_NOT_SUPPORTED");
+	PROVIDER_INIT_LOGGER();
+	operation_enum_insts(mi, ctx, rslt, ref, TRUE, &rc);
 	return rc;
 }
 
@@ -199,25 +259,33 @@ OperationGetInstance(CMPIInstanceMI * mi, CMPIContext * ctx, CMPIResult * rslt,
         CMPIObjectPath * op;
         CMPIInstance * ci;
         CMPIStatus rc;
-	const char * key[] = {"Id", "SystemName", "SystemCreationClassName"};
-	char *id, *sysname, *syscrname;
+	char *rscid, *id;
+	struct ha_msg *operation = NULL;
 
 	PROVIDER_INIT_LOGGER();
 
         DEBUG_ENTER();
-	id = CMGetKeyString(cop, key[0], &rc);
-        sysname = CMGetKeyString(cop, key[1], &rc);
-        syscrname = CMGetKeyString(cop, key[2], &rc);
+	id = CMGetKeyString(cop, "Id", &rc);
+	rscid = CMGetKeyString(cop, "ResourceId", &rc);
 
-	op = CMNewObjectPath(Broker, 
-		CMGetCharPtr(CMGetNameSpace(cop, &rc)), ClassName, &rc);
+	op = CMNewObjectPath(Broker, CMGetCharPtr(CMGetNameSpace(cop, &rc)), 
+			ClassName, &rc);
         if ( CMIsNullObject(op) ){
                 cl_log(LOG_WARNING, "inst_attr: can not create object path.");
         	CMReturnDone(rslt);
         	return rc;
 	}
 
-        ci = make_operation_instance(op, id, sysname, syscrname, &rc);
+	operation = find_operation(rscid, id);
+	if ( operation == NULL) {
+		cl_log(LOG_ERR, "%s: can't find operation for %s", 
+			__FUNCTION__, id);
+        	CMReturnDone(rslt);
+		rc.rc = CMPI_RC_ERR_FAILED;
+        	return rc;
+	}
+
+        ci = operation_make_instance(op, rscid, id, operation, &rc);
         if ( CMIsNullObject(ci) ) {
         	CMReturnDone(rslt);
         	return rc;
@@ -234,8 +302,7 @@ OperationCreateInstance(CMPIInstanceMI * mi, CMPIContext * ctx,
 		CMPIResult * rslt, CMPIObjectPath * cop, CMPIInstance * ci)
 {
 	CMPIStatus rc = {CMPI_RC_OK, NULL};
-	CMSetStatusWithChars(Broker, &rc, CMPI_RC_ERR_NOT_SUPPORTED, 
-                             "CIM_ERR_NOT_SUPPORTED");
+	operation_create_inst(ctx, rslt, cop, ci, &rc);
 	return rc;
 }
 
@@ -246,7 +313,7 @@ OperationSetInstance(CMPIInstanceMI * mi, CMPIContext * ctx,
 		CMPIInstance * ci, char ** properties)
 {
         CMPIStatus rc = {CMPI_RC_OK, NULL};
-	operation_set_instance(ctx, rslt, cop, ci, properties, &rc);
+	operation_update_inst(ctx, rslt, cop, ci, properties, &rc);
         return rc;
 }
 
@@ -256,8 +323,7 @@ OperationDeleteInstance(CMPIInstanceMI * mi, CMPIContext * ctx,
 		 CMPIResult * rslt, CMPIObjectPath * cop)
 {
         CMPIStatus rc = {CMPI_RC_OK, NULL};
-        CMSetStatusWithChars(Broker, &rc, CMPI_RC_ERR_NOT_SUPPORTED, 
-                             "CIM_ERR_NOT_SUPPORTED");
+	operation_delete_inst(ctx, rslt, cop, &rc);
 	return rc;
 }
 
@@ -272,33 +338,9 @@ OperationExecQuery(CMPIInstanceMI * mi, CMPIContext * ctx,
 	return rc;
 }
 
-
-/**************************************************
- * Method Provider 
- *************************************************/
-static CMPIStatus 
-OperationInvokeMethod(CMPIMethodMI * mi, CMPIContext * ctx,
-                      CMPIResult * rslt, CMPIObjectPath * ref,
-                      const char * method, CMPIArgs * in, CMPIArgs * out)
-{
-        CMPIStatus rc = {CMPI_RC_OK, NULL};
-        CMSetStatusWithChars(Broker, &rc, CMPI_RC_ERR_NOT_SUPPORTED, 
-                             "CIM_ERR_NOT_SUPPORTED");
-	return rc;    
-}
-
-
-static CMPIStatus 
-OperationMethodCleanup(CMPIMethodMI * mi, CMPIContext * ctx)
-{
-        CMReturn(CMPI_RC_OK);
-}
-
-
 /*****************************************************
  * install provider
  ****************************************************/
 
 DeclareInstanceMI(Operation, HA_OperationProvider, Broker);
-DeclareMethodMI(Operation, HA_OperationProvider, Broker);
 
