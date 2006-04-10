@@ -37,3 +37,4 @@ HA_SubResource root/cimv2 HA_SubResourceProvider HA_SubResourceProvider instance
 HA_OperationOnResource root/cimv2 HA_OperationOnProvider HA_OperationOnProvider instance association
 #Indication
 HA_Indication root/cimv2 HA_IndicationProvider HA_IndicationProvider indication
+HA_ClusteringService root/cimv2 HA_ClusteringServiceProvider HA_ClusteringServiceProvider instance

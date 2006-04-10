@@ -290,67 +290,6 @@ class HA_ClusterNode : CIM_ComputerSystem {
 };
 
 
-/*===========================================================================*/
-/*
-[ Provider("cmpi:HA_RuleProvider") ]
-class HA_Rule {
-        [ Key, Description ("Rule's Id") ]
-        string Id;
-
-        [ Key ]
-        string CreationClassName;
-
-        [ Key ]
-        string SystemName;
-
-        [ Key ]
-        string SystemCreationClassName;
-
-        string DateExpression [];
-        string Expression [];
-};
-*/
-
-//----------------------------------------------
-// HA_InstanceAttributes
-//----------------------------------------------
-/* in DTD, InstanceAttributes contain Attributes, Rules */
-
-/*
-[ Provider("cmpi:HA_InstanceAttributesProvider") ]
-class HA_InstanceAttributes {
-        [ Key ]
-	string Id;
-
-        [ Key ]
-        string CreationClassName;
-
-        [ Key ]
-        string SystemName;
-
-        [ Key ]
-        string SystemCreationClassName;  
-
-        string Caption;
-
-        string InstAttributes [];
-        
-};
-*/
-//----------------------------------------------
-// Association, HA_InstanceAttributesRule
-//----------------------------------------------
-/*
-[ Association, Aggregation, Provider("cmpi:HA_InstanceAttributesRule") ]
-class HA_InstanceAttributesRule {
-        [ Key, Aggregate ]
-        HA_InstanceAttributes REF Attributes;
-        
-        [ Key ]
-        HA_Rule REF Rule;
-};
-*/
-
 //-------------------------------------------------------------------
 // HA_ClusterAbstractResource, Primitive Resource or ReousrceGroup
 //-------------------------------------------------------------------
@@ -366,10 +305,10 @@ class HA_ClusterResource {
         string CreationClassName;
 
         [ Key, Description("Always LinuxHACluster.") ]
-        string SystemName;
+        string SystemName = "LinuxHACluster";
 
         [ Key, Description("Always HA_Cluster") ]
-        string SystemCreationClassName; 
+        string SystemCreationClassName = "HA_Cluster"; 
 
         [ Description ("Status of the resource") ]
 	string ResourceStatus;  /* running or not running */
@@ -385,8 +324,11 @@ class HA_ClusterResource {
 
 	string Caption;
 
-	[ Description ("Instance attributes, in format: [key]=[value]") ]
-	string InstanceAttributes[];
+	string Enabled = "false";
+
+	uint32 AddOperation(
+		[IN, Description("Resource to be added") ]
+		HA_Operation REF Operation);
 };
 
 //----------------------------------------
@@ -397,12 +339,13 @@ class HA_ClusterResource {
         Provider("cmpi:HA_PrimitiveResourceProvider") 
 ]
 class HA_PrimitiveResource : HA_ClusterResource {
-        string ResourceClass;
+        string ResourceClass = "ocf";
         string Type;
-        string Provider;
+        string Provider = "heartbeat";
         string HostingNode;
-	string GroupId;
-
+	
+	[ Description ("Instance attributes, in format: key=value") ]
+	string InstanceAttributes[];
 };
 
 //------------------------------------------------
@@ -411,6 +354,9 @@ class HA_PrimitiveResource : HA_ClusterResource {
 
 [ Provider("cmpi:HA_ResourceGroupProvider") ]
 class HA_ResourceGroup : HA_ClusterResource {
+	uint32 AddPrimitiveResource(
+		[IN, Description("Resource to be added") ]
+		HA_PrimitiveResource REF Resource);
 };
 
 //----------------------------------------
@@ -423,6 +369,9 @@ class HA_ResourceClone : HA_ClusterResource {
         string Interleave;
 	string CloneMax;
 	string CloneNodeMax;
+	uint32 AddResource(
+		[IN, Description("Resource to be added") ]
+		HA_Resource REF Resource);
 };
 
 //------------------------------------------------
@@ -434,6 +383,9 @@ class HA_MasterSlaveResource : HA_ClusterResource {
 	string CloneNodeMax;
       	string MaxMasters;
       	string MaxNodeMasters;
+	uint32 AddResource(
+		[IN, Description("Resource to be added") ]
+		HA_Resource REF Resource);
 };
 
 //----------------------------------------
@@ -443,16 +395,10 @@ class HA_MasterSlaveResource : HA_ClusterResource {
 class HA_Operation {
         [ Key, Description ("This operation's Id.") ]
         String Id;
-        
-        [ Key, Description ("The resource name.") ]
-        string SystemName;
-        
-        [ Key, Description ("System creation class name.") ]
-        string SystemCreationClassName;
-        
-        [ Key, Description ("The class name thatct crated this instance.") ]
-        string CreationClassName;
-        
+       	
+	[ Key, Description ("The resource that this operation belongs to") ]
+	String ResourceId;
+ 
         [ Description ("The name of the operation") ]
         string Name;    /* start|stop|monitor */
 
@@ -472,6 +418,7 @@ class HA_Operation {
         [ Description ("The action to take if this action fails") ]
         string OnFail;  /* nothing|block|stop|fence */
 
+	string Enabled = "true";
         string Caption;
 };
 
@@ -490,20 +437,6 @@ class HA_OperationOnResource {
         string Caption;
 };
 
-//-----------------------------------------
-// Association, HA_OperationInstance
-//-----------------------------------------
-/*
-[ Association, Aggregation, Provider("cmpi:HA_OperationInstance") ]
-class HA_OperationInstance {
-        [ Key, Aggregate ]
-        HA_Operation REF Operation;
-
-        [ Key, Description ("Attributes that belongs to this operation.") ]
-        HA_InstanceAttributes REF Attributes;
-
-};
-*/
 //------------------------------------------------
 // HA_ResourceConstraint, Abstract
 //------------------------------------------------
@@ -562,39 +495,10 @@ class HA_LocationConstraint:
         string Resource;
         string Score;
 
-	[ Description ("Rules, in format: [attribute]<[operation]>[value]") ]
+	[ Description ("Rules, in format: attribute<operation>value") ]
 	string Rule [];
 }; 
 
-//-----------------------------------------------
-// Association, HA_ResourceConstraintRules
-//-----------------------------------------------
-/*
-[ Association, Aggregation, 
-  Provider ("cmpi:HA_ResourceConstraintRulesProvider" ) ]
-class HA_ResourceConstraintRules {
-        [ Key, Aggregate ]
-        HA_ResourceConstraint REF Constraint;
-
-        [ Key ]
-        HA_Rule REF Rule;
-};
-*/
-//------------------------------------------------
-// Association, HA_ResourceInstance
-//------------------------------------------------
-/*
-[ Association, Aggregation,
-        Provider("cmpi:HA_ResourceInstanceProvider") ]
-class HA_ResourceInstance {
-        [ Key, Aggregate ]
-        HA_ClusterResource REF Resource;
-
-        [ Key, Description ( "Instance's attribute" )  ]
-        HA_InstanceAttributes REF Attributes;       
-        String Caption;
-};
-*/
 //-----------------------------------------------
 // Association, HA_SubResource
 //-----------------------------------------------
@@ -664,6 +568,16 @@ class HA_Indication : CIM_ProcessIndication {
         datetime Time;
 };
 
+
+[ Provider ("cmpi:HA_ClusteringServiceProvider") ]
+class HA_ClusteringService {
+	[ Key ]
+	string Id;
+	string Caption;
+	uint32 AddResource(
+		[IN, Description ("The resource to be added.")]
+		HA_ClusterResource REF Resource);
+};
 
 //-----------------------------------------
 // End of File
