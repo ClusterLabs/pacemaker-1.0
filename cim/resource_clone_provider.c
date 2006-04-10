@@ -63,7 +63,7 @@ ResourceCloneEnumInstanceNames(CMPIInstanceMI * mi, CMPIContext * ctx,
 {
         CMPIStatus rc;
 	PROVIDER_INIT_LOGGER();
-        enumerate_resource(Broker, ClassName, ctx, rslt, ref, FALSE, 
+        resource_enum_insts(Broker, ClassName, ctx, rslt, ref, FALSE, 
                                 TID_RES_CLONE, &rc);
 	return rc;
 }
@@ -76,7 +76,7 @@ ResourceCloneEnumInstances(CMPIInstanceMI * mi, CMPIContext * ctx,
 {
         CMPIStatus rc;
 	PROVIDER_INIT_LOGGER();
-	enumerate_resource(Broker, ClassName, ctx, rslt, ref, TRUE,
+	resource_enum_insts(Broker, ClassName, ctx, rslt, ref, TRUE,
                                 TID_RES_CLONE, &rc);
 	return rc;
 }
@@ -88,7 +88,7 @@ ResourceCloneGetInstance(CMPIInstanceMI * mi, CMPIContext * ctx,
 {
         CMPIStatus rc;
 	PROVIDER_INIT_LOGGER();
-        get_resource(Broker, ClassName, ctx, rslt, cop, properties, 
+        resource_get_inst(Broker, ClassName, ctx, rslt, cop, properties, 
                             TID_RES_CLONE, &rc);
 	return rc;
 }
@@ -99,7 +99,7 @@ ResourceCloneCreateInstance(CMPIInstanceMI * mi, CMPIContext * ctx,
                            CMPIInstance * ci)
 {
 	CMPIStatus rc = {CMPI_RC_OK, NULL};
-	create_resource(Broker, ClassName, ctx, rslt, cop, ci, 
+	resource_create_inst(Broker, ClassName, ctx, rslt, cop, ci, 
 				TID_RES_CLONE, &rc);
 	return rc;
 }
@@ -112,8 +112,8 @@ ResourceCloneSetInstance(CMPIInstanceMI * mi, CMPIContext * ctx,
 {
         CMPIStatus rc = {CMPI_RC_OK, NULL};
 	PROVIDER_INIT_LOGGER();	
-        update_resource(Broker, ClassName, ctx, rslt, cop, ci, properties,
-			TID_RES_CLONE, &rc);
+        resource_update_inst(Broker, ClassName, ctx, rslt, cop, ci, 
+			properties, TID_RES_CLONE, &rc);
         return rc;
 }
 
@@ -124,7 +124,7 @@ ResourceCloneDeleteInstance(CMPIInstanceMI * mi, CMPIContext * ctx,
 {
         CMPIStatus rc = {CMPI_RC_OK, NULL};
 	PROVIDER_INIT_LOGGER();
-	delete_resource(Broker, ClassName, ctx, rslt, cop, &rc);
+	resource_del_inst(Broker, ClassName, ctx, rslt, cop, &rc);
 	return rc;
 }
 
@@ -139,8 +139,44 @@ ResourceCloneExecQuery(CMPIInstanceMI * mi, CMPIContext * ctx,
 	return rc;
 }
 
+
+/************************************************
+ * method
+ ***********************************************/
+
+static CMPIStatus 
+ResourceCloneInvokeMethod(CMPIMethodMI * mi, CMPIContext * ctx, 
+		CMPIResult * rslt, CMPIObjectPath * ref, 
+		const char * method_name, CMPIArgs * in, CMPIArgs * out)
+{
+        CMPIString * 	classname = NULL;
+        CMPIStatus 	rc = {CMPI_RC_OK, NULL};
+	int 		ret = 0;
+       
+	PROVIDER_INIT_LOGGER(); 
+	DEBUG_ENTER();
+        classname = CMGetClassName(ref, &rc);
+        if(strcasecmp(CMGetCharPtr(classname), ClassName) == 0 &&
+           strcasecmp(METHOD_ADD_RESOURCE, method_name) == 0 ){
+		ret = resource_add_subrsc(Broker, ClassName, ctx, rslt, 
+			ref, TID_RES_CLONE, in, out, &rc); 
+        }
+
+        CMReturnData(rslt, &ret, CMPI_uint32);
+        CMReturnDone(rslt);
+	DEBUG_LEAVE();
+        CMReturn(CMPI_RC_OK);
+}
+
+
+static CMPIStatus 
+ResourceCloneMethodCleanup(CMPIMethodMI * mi, CMPIContext * ctx)
+{
+        CMReturn(CMPI_RC_OK);
+}
 /*****************************************************
  * install provider
  ****************************************************/
 
 DeclareInstanceMI(ResourceClone, HA_ResourceCloneProvider, Broker);
+DeclareMethodMI(ResourceClone, HA_ResourceCloneProvider, Broker);

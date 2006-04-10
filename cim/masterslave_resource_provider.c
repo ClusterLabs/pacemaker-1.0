@@ -61,7 +61,7 @@ MasterSlaveResourceEnumInstanceNames(CMPIInstanceMI * mi, CMPIContext * ctx,
 {
         CMPIStatus rc;
         PROVIDER_INIT_LOGGER();
-        enumerate_resource(Broker, ClassName, ctx, rslt, ref, FALSE,
+        resource_enum_insts(Broker, ClassName, ctx, rslt, ref, FALSE,
 			TID_RES_MASTER, &rc);
 	return rc;
 }
@@ -74,7 +74,7 @@ MasterSlaveResourceEnumInstances(CMPIInstanceMI * mi, CMPIContext * ctx,
 {
         CMPIStatus rc;
         PROVIDER_INIT_LOGGER();
-        enumerate_resource(Broker, ClassName, ctx, rslt, ref, TRUE, 
+        resource_enum_insts(Broker, ClassName, ctx, rslt, ref, TRUE, 
 			TID_RES_MASTER, &rc);
 	return rc;
 }
@@ -86,7 +86,7 @@ MasterSlaveResourceGetInstance(CMPIInstanceMI * mi, CMPIContext * ctx,
 {
         CMPIStatus rc;
         PROVIDER_INIT_LOGGER();
-        get_resource(Broker, ClassName, ctx, rslt, cop, 
+        resource_get_inst(Broker, ClassName, ctx, rslt, cop, 
 				properties, TID_RES_MASTER, &rc);
 	return rc;
 }
@@ -98,7 +98,7 @@ MasterSlaveResourceCreateInstance(CMPIInstanceMI * mi, CMPIContext * ctx,
 {
 	CMPIStatus rc = {CMPI_RC_OK, NULL};
 	PROVIDER_INIT_LOGGER();
-        create_resource(Broker, ClassName, ctx, rslt, cop, ci, 
+        resource_create_inst(Broker, ClassName, ctx, rslt, cop, ci, 
 		TID_RES_MASTER, &rc);
 	return rc;
 }
@@ -111,8 +111,8 @@ MasterSlaveResourceSetInstance(CMPIInstanceMI * mi, CMPIContext * ctx,
 {
         CMPIStatus rc = {CMPI_RC_OK, NULL};
 	PROVIDER_INIT_LOGGER();
-        update_resource(Broker, ClassName, ctx, rslt, cop, ci, properties,
-			TID_RES_MASTER, &rc);
+        resource_update_inst(Broker, ClassName, ctx, rslt, cop, ci, 
+			properties, TID_RES_MASTER, &rc);
         return rc;
 }
 
@@ -123,7 +123,7 @@ MasterSlaveResourceDeleteInstance(CMPIInstanceMI * mi, CMPIContext * ctx,
 {
         CMPIStatus rc = {CMPI_RC_OK, NULL};
 	PROVIDER_INIT_LOGGER();
-	delete_resource(Broker, ClassName, ctx, rslt, cop, &rc);
+	resource_del_inst(Broker, ClassName, ctx, rslt, cop, &rc);
 	return rc;
 }
 
@@ -138,9 +138,42 @@ MasterSlaveResourceExecQuery(CMPIInstanceMI * mi, CMPIContext * ctx,
 	return rc;
 }
 
+/************************************************
+ * method
+ ***********************************************/
+
+static CMPIStatus 
+MasterSlaveResourceInvokeMethod(CMPIMethodMI * mi, CMPIContext * ctx, 
+		CMPIResult * rslt, CMPIObjectPath * ref, 
+		const char * method_name, CMPIArgs * in, CMPIArgs * out)
+{
+        CMPIString * 	classname = NULL;
+        CMPIStatus 	rc = {CMPI_RC_OK, NULL};
+	int 		ret = 0;
+        
+	PROVIDER_INIT_LOGGER();
+        classname = CMGetClassName(ref, &rc);
+        if(strcasecmp(CMGetCharPtr(classname), ClassName) == 0 &&
+           strcasecmp(METHOD_ADD_RESOURCE, method_name) == 0 ){
+		ret = resource_add_subrsc(Broker, ClassName, ctx, rslt, 
+				ref, TID_RES_GROUP, in, out, &rc);
+        }
+
+        CMReturnData(rslt, &ret, CMPI_uint32);
+        CMReturnDone(rslt);
+        CMReturn(CMPI_RC_OK);
+}
+
+
+static CMPIStatus 
+MasterSlaveResourceMethodCleanup(CMPIMethodMI * mi, CMPIContext * ctx)
+{
+        CMReturn(CMPI_RC_OK);
+}
 /*****************************************************
  * install provider
  ****************************************************/
 
 DeclareInstanceMI(MasterSlaveResource, HA_MasterSlaveResourceProvider, Broker);
+DeclareMethodMI(MasterSlaveResource, HA_MasterSlaveResourceProvider, Broker);
 
