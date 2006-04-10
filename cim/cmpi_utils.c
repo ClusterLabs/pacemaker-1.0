@@ -1,5 +1,5 @@
 /*
- * assoc_utils.c: Utils for Association CMPI Providers
+ * assoc_utils.c: Utilities for CMPI Providers
  * 
  * Author: Jia Ming Pan <jmltc@cn.ibm.com>
  * Copyright (c) 2005 International Business Machines
@@ -26,6 +26,7 @@
 #endif
 #include <stdio.h>
 #include <hb_api.h>
+#include <ha_msg.h>
 #include <heartbeat.h>
 #include <clplumbing/cl_log.h>
 #include <glib.h>
@@ -40,32 +41,38 @@ static CMPIInstance * MakeInstance(CMPIBroker * broker, char * classname,
 		CMPIObjectPath * lop, CMPIObjectPath * rop, CMPIStatus * rc);
 
 int
-cmpi_set_properties(CMPIBroker * broker, CMPIInstance * inst, CIMTable * t, 
-		const mapping_t * map, int count, CMPIStatus * rc)
+cmpi_msg2inst(CMPIBroker * broker, CMPIInstance * inst, int mapid,
+		struct ha_msg *msg, CMPIStatus * rc)
 {
-	DEBUG_ENTER();
 	int i = 0;
-	for ( i=0; i<count; i++) {
-		cimdata_t data = cim_table_lookup_v(t, map[i].key);
-		if(map[i].type ==  CMPI_chars) {
-			/* set CMPI_chars */
-			if(data.v.str==NULL) {
-				cl_log(LOG_WARNING, 
-					"%s: data with key %s not found.",
-					__FUNCTION__, map[i].key);
+	const struct map_t *map = NULL;
+	
+	if ( (map = cim_query_map(mapid)) == NULL ) {
+		cl_log(LOG_ERR, "%s: map is NULL.", __FUNCTION__);
+		return HA_FAIL;
+	}
+
+	for ( i=0; i < map->len; i++) {
+		if(map->entry[i].type ==  CMPI_chars) {
+			const char *value;
+			value = cl_get_string(msg, map->entry[i].key);
+			if ( value == NULL ) {
+				cl_log(LOG_WARNING, "%s: key %s not found.",
+					__FUNCTION__, map->entry[i].key);
 				continue;
 			}
-			CMSetProperty(inst,map[i].name,data.v.str,CMPI_chars);
-		} else if ( map[i].type ==  CMPI_charsA ) {
+			cim_debug2(LOG_INFO, "%s: got %s:%s [CMPI_chars]",
+					map->entry[i].key, value, __FUNCTION__);
+
+			CMSetProperty(inst,map->entry[i].name,
+					cim_strdup(value),CMPI_chars);
+		} else if ( map->entry[i].type ==  CMPI_charsA ) {
 			/* set Array */
 			CMPIArray * array=NULL;
 			int j = 0, len = 0;
-			char ** values;
 
-			if(data.v.str==NULL) {
-				cl_log(LOG_WARNING, 
-					"%s: data with key %s not found.",
-					__FUNCTION__, map[i].key);
+			len = cl_msg_list_length(msg, map->entry[i].key);
+			if (len <= 0) {
 				continue;
 			}
 			array = CMNewArray(broker, len, CMPI_chars, rc);	
@@ -73,48 +80,72 @@ cmpi_set_properties(CMPIBroker * broker, CMPIInstance * inst, CIMTable * t,
 				DEBUG_LEAVE();
 				return HA_FAIL;
 			}
-			values = split_string(data.v.str, &len, "\n");
 			for ( j = 0; j < len; j++ ) {
-				CMSetArrayElementAt(array, j, 
-						&values[j], CMPI_chars);
+				char *value = NULL; 
+				value = (char*)cl_msg_list_nth_data(msg, 
+							map->entry[i].key, j);
+				if ( value == NULL ) {
+					continue;
+				}	
+				CMSetArrayElementAt(array, j, &value, CMPI_chars);
 			}
-			CMSetProperty(inst, map[i].name, &array, CMPI_charsA);
-		} else if (map[i].type == CMPI_uint32){
+			
+			cim_debug2(LOG_INFO, "%s: got %s [CMPI_charsA]", 
+					__FUNCTION__, map->entry[i].key);
+
+			CMSetProperty(inst, map->entry[i].name, &array, CMPI_charsA);
+		} else if (map->entry[i].type == CMPI_uint32){
 			/* set CMPI_uint32 */
-			CMSetProperty(inst, map[i].name, 
-					&data.v.uint32, CMPI_uint32);
 		}
 	}
-	DEBUG_LEAVE();
 	return HA_OK;
 }
 
-int
-cmpi_get_properties(CMPIInstance * inst, CIMTable * t, const mapping_t * map,
-		int count, CMPIStatus * rc)
+
+int 
+cmpi_inst2msg(CMPIInstance *inst, int mapid, 
+			struct ha_msg *msg, CMPIStatus *rc)
 {
-        CMPIData cmpidata;                                              	
-	DEBUG_ENTER();
         int i = 0;                                                      	
-        for( i =0; i<count; i++){                                       	
-                cmpidata = CMGetProperty(inst,map[i].name,rc);  	
-                if (rc->rc!=CMPI_RC_OK){                                	
-                        cl_log(LOG_WARNING, 
-				"Property %s missing.", map[i].name);
+	const struct map_t *map = cim_query_map(mapid);
+	CMPIData data;
+	
+	DEBUG_ENTER();
+	if ( map == NULL ) {
+		return HA_FAIL;
+	}
+
+        for( i =0; i < map->len; i++){                                       	
+		if ( strncmp(map->entry[i].key , "", MAXLEN) == 0 ) {
+			continue;
+		}
+                data = CMGetProperty(inst, map->entry[i].name, rc); 
+                if (rc->rc != CMPI_RC_OK){                                	
+                        cl_log(LOG_WARNING, "Property %s missing.", 
+				map->entry[i].name);
 			continue;
 		}
 
-		if ( cmpidata.type == CMPI_string) {
-			char * value = CMGetCharPtr(cmpidata.value.string);
-			cim_table_strdup_replace(t, map[i].key, value);
-		} else if (cmpidata.type == CMPI_stringA){
-			cl_log(LOG_ERR, "%s: Not support.", __FUNCTION__);	
-		} else if (cmpidata.type == CMPI_uint32){
+		if ( data.type == CMPI_string) {
+			char * value = CMGetCharPtr(data.value.string);
+			cl_msg_modstring(msg, map->entry[i].key, value);
+
+		} else if (data.type == CMPI_stringA){
+			CMPIArray * array = data.value.array;
+			int j, len = CMGetArrayCount(array, rc);
+			cl_msg_remove(msg, map->entry[i].key);
+			for (j=0; j<len; j++) {
+				char * value;
+				data = CMGetArrayElementAt(array, j, rc);
+				value = CMGetCharPtr(data.value.string);
+				cl_msg_list_add_string(msg, 
+					map->entry[i].key, value); 
+			}	
+		} else if (data.type == CMPI_uint32){
 			cl_log(LOG_ERR, "%s: Not support.", __FUNCTION__);	
 		}
         }
 
-	DEBUG_LEAVE();
 	return HA_OK;
 }
 
@@ -539,8 +570,8 @@ assoc_enum_insts(CMPIBroker * broker, char * classname, CMPIContext * ctx,
 					left, right, left_op, right_op, rc);
                                 CMReturnInstance(rslt, inst);
                         }
-               } /* while */ 
-        } /* while */
+               } /* for */ 
+        } /* for */
         CMReturnDone(rslt); 
 	DEBUG_LEAVE();
         return HA_OK;
