@@ -1,3 +1,26 @@
+/*
+ * utils.h: utilities header
+ * 
+ * Author: Jia Ming Pan <jmltc@cn.ibm.com>
+ * Copyright (c) 2005 International Business Machines
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ *
+ */
+
+
 #ifndef _UTILS_H
 #define _UTILS_H
 #include <portability.h>
@@ -35,16 +58,20 @@ typedef     	void (* cim_free_t)(void *);
 #endif
 #endif
 
-extern  int debug_class;
-#define cim_debug(c,priority,fmt...)	\
+extern int debug_level;
+#define cim_debug2(prio, fmt...)	\
 	do {					\
-		if(debug_class&c){		\
-			cl_log(priority, ##fmt);\
+		if(debug_level > 2){		\
+			cl_log(prio, ##fmt);	\
 		}				\
-	}while(0);
-#define cim_debug_set(c)   debug_class = debug_class | c
-#define cim_debug_clean(c)  debug_class = debug_class &(~c)
+	}while(0)
+
 #define PROVIDER_INIT_LOGGER()  cim_init_logger(PROVIDER_ID)
+#define cim_debug_msg(msg, fmt...) 		\
+	do {					\
+		cl_log(LOG_INFO, ##fmt);	\
+		cl_log(LOG_INFO, "%s", msg2string(msg));\
+	}while (0)
 
 /* container */
 enum ContainerType { T_ARRAY, T_TABLE };
@@ -120,13 +147,7 @@ typedef struct cimdata_t_s {
 	t;								\
 })
 
-static void
-cim_table_free(void * table)
-{
-	CIMTable * t = (CIMTable *)table;
-	g_hash_table_destroy(t->table);
-	cim_free(t);
-}
+
 
 #define cim_table_lookup(t,k)	((cimdata_t*)g_hash_table_lookup(t->table,k))
 #define cim_table_lookup_v(t,k)	({					\
@@ -159,72 +180,18 @@ cim_table_free(void * table)
 
 #define cim_array_len(a) ((a && a->array)?a->array->len:0)
 
-static void	cim_array_free(void*);
-static void 	cimdata_free(void * data);
-
-static void
-cim_array_free(void * array)
-{
-	int i;
-	CIMArray * a = (CIMArray*)array;
-	for (i=0; i<a->array->len; i++){
-		cimdata_t * d = cim_array_index(a,i);
-		cimdata_free(d);
-	}
-	g_ptr_array_free(a->array, FALSE);
-	cim_free(array);
-}
-
-
-static void 
-cimdata_free(void * data)
-{
-	cimdata_t * d = (cimdata_t *)data;
-	if ( d == NULL ) {
-		return ;
-	}
-	
-	switch(d->type){
-		case TYPEString: cim_free(d->v.str); break;
-		case TYPETable:  cim_table_free(d->v.table); break;
-		case TYPEArray:  cim_array_free(d->v.array); break;
-		default:
-			cl_log(LOG_WARNING, "cimdata_free: unknown data type");
-			break;
-	}
-	cim_free(d);
-}
-
-#define cim_table_strdup_replace(t,k,v) ({		\
-	char * key = NULL;				\
-	cimdata_t * data;				\
-	int ret;					\
-	if ((key = cim_strdup(k)) == NULL ) {		\
-		ret = HA_FAIL;				\
-	} else {					\
-		if ((data = makeStrData(v)) == NULL){	\
-			cim_free(key);			\
-			ret = HA_FAIL;			\
-		} else {				\
-			cl_log(LOG_INFO, "[%s] <- %s", key, v);	\
-			cim_table_replace(t, key, data);	\
-			ret = HA_OK;				\
-		}					\
-	}						\
-	ret;						\
-})
-
-
-void        	dump_cim_table(CIMTable *table, const char *id);
-int         	cim_init_logger(const char* entity);
-void        	cim_assert(const char* assertion, int line, const char* file);
-int         	run_shell_cmnd(const char* cmnd,int* ret,char*** out,char***);
-char **        	regex_search(const char * reg, const char * str, int * len);
-void		free_2d_array(void *array, int len, cim_free_t free);
-void		free_2d_zarray(void *zarray, cim_free_t free);
-char *      	uuid_to_str(const cl_uuid_t * uuid);
-char **	    	split_string(const char *string, int *len, const char *delim);
-
-
+void	cim_table_free(void * table);
+void	cim_array_free(void*);
+void 	cimdata_free(void * data);
+int	cim_table_strdup_replace(CIMTable*table, const char*key, const char*val);
+void	dump_cim_table(CIMTable *table, const char *id);
+int	cim_init_logger(const char* entity);
+void	cim_assert(const char* assertion, int line, const char* file);
+int	run_shell_cmnd(const char* cmnd,int* ret,char*** out,char***);
+char**	regex_search(const char * reg, const char * str, int * len);
+void	free_2d_array(void *array, int len, cim_free_t free);
+void	free_2d_zarray(void *zarray, cim_free_t free);
+char* 	uuid_to_str(const cl_uuid_t * uuid);
+char**	split_string(const char *string, int *len, const char *delim);
 
 #endif

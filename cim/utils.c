@@ -1,3 +1,25 @@
+/*
+ * utils.c: utilities
+ * 
+ * Author: Jia Ming Pan <jmltc@cn.ibm.com>
+ * Copyright (c) 2005 International Business Machines
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ *
+ */
+
 #include <portability.h>
 #ifdef HAVE_CONFIG_H
 #include <config.h>
@@ -16,7 +38,7 @@
 #include "cluster_info.h"
 #include "utils.h"
 
-int debug_class = 0;
+int debug_level = 10;
 
 int 
 cim_init_logger(const char * entity)
@@ -129,9 +151,10 @@ regex_search(const char * reg, const char * str, int * len)
 	*len = nmatch;
 	for(i = 0; i < maxmatch && i < nmatch; i++){
 		int str_len = pm[i].rm_eo - pm[i].rm_so;
-		match[i] = cim_malloc(str_len + 1);
-		strncpy( match[i], str + pm[i].rm_so, str_len);
-		match[i][str_len] = EOS;
+		if ((match[i] = cim_malloc(str_len + 1))) {
+			strncpy( match[i], str + pm[i].rm_so, str_len);
+			match[i][str_len] = EOS;
+		}
 	}
 	regfree(&regexp);
 	DEBUG_LEAVE();
@@ -258,4 +281,67 @@ split_string(const char* string, int *len, const char *delim)
 	}
 	return strings;	
 }
+
+int
+cim_table_strdup_replace(CIMTable *table, const char *key,const char* val)
+{
+	char * dupkey = NULL;
+	cimdata_t * data;
+	if ((dupkey = cim_strdup(key)) == NULL ) {
+		cl_log(LOG_ERR, "cim_table:can't duplicate key."); 
+		return HA_FAIL;
+	}
+	if ((data = makeStrData(val)) == NULL){
+		cl_log(LOG_ERR, "cim_table:can't make data."); 
+		cim_free(dupkey);
+		return HA_FAIL;
+	}	
+	
+	cl_log(LOG_INFO, "[%s] <- %s", dupkey, val);
+	cim_table_replace(table, dupkey, data);
+	return HA_OK;
+}
+
+
+void 
+cimdata_free(void * data)
+{
+	cimdata_t * d = (cimdata_t *)data;
+	if ( d == NULL ) {
+		return ;
+	}
+	
+	switch(d->type){
+		case TYPEString: cim_free(d->v.str); break;
+		case TYPETable:  cim_table_free(d->v.table); break;
+		case TYPEArray:  cim_array_free(d->v.array); break;
+		default:
+			cl_log(LOG_WARNING, "cimdata_free: unknown data type");
+			break;
+	}
+	cim_free(d);
+}
+
+void
+cim_array_free(void * array)
+{
+	int i;
+	CIMArray * a = (CIMArray*)array;
+	for (i=0; i<a->array->len; i++){
+		cimdata_t * d = cim_array_index(a,i);
+		cimdata_free(d);
+	}
+	g_ptr_array_free(a->array, FALSE);
+	cim_free(array);
+}
+
+void
+cim_table_free(void * table)
+{
+	CIMTable * t = (CIMTable *)table;
+	g_hash_table_destroy(t->table);
+	cim_free(t);
+}
+
+
 
