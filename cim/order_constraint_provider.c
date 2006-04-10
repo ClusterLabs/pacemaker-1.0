@@ -46,7 +46,6 @@ DeclareInstanceFunctions(OrderConstraint);
 static CMPIStatus 
 OrderConstraintCleanup(CMPIInstanceMI * mi, CMPIContext * ctx)
 {
-
 	CMReturn(CMPI_RC_OK);
 }
 
@@ -55,10 +54,9 @@ OrderConstraintEnumInstanceNames(CMPIInstanceMI * mi, CMPIContext * ctx,
                               CMPIResult * rslt, CMPIObjectPath * ref)
 {
         CMPIStatus rc;
-	int ret;
 
         PROVIDER_INIT_LOGGER();
-        ret = enumerate_constraint(Broker, ClassName, ctx, rslt, ref, 
+        constraint_enum_insts(Broker, ClassName, ctx, rslt, ref, 
 			FALSE, TID_CONS_ORDER, &rc);
         return rc;
 }
@@ -70,10 +68,9 @@ OrderConstraintEnumInstances(CMPIInstanceMI * mi, CMPIContext * ctx,
                           char ** properties)
 {
         CMPIStatus rc;
-	int ret;
 
         PROVIDER_INIT_LOGGER();
-        ret = enumerate_constraint(Broker, ClassName, ctx, rslt, ref, 
+        constraint_enum_insts(Broker, ClassName, ctx, rslt, ref, 
 			TRUE, TID_CONS_ORDER, &rc);
         return rc;
 }
@@ -84,10 +81,9 @@ OrderConstraintGetInstance(CMPIInstanceMI * mi, CMPIContext * ctx,
                         char ** properties)
 {
         CMPIStatus rc;
-	int ret;
 
         PROVIDER_INIT_LOGGER();
-        ret = get_constraint(Broker, ClassName, ctx, rslt, cop, 
+        constraing_get_inst(Broker, ClassName, ctx, rslt, cop, 
                            properties, TID_CONS_ORDER, &rc);
 	return rc;
 }
@@ -98,10 +94,9 @@ OrderConstraintCreateInstance(CMPIInstanceMI * mi, CMPIContext * ctx,
                            CMPIInstance * ci)
 {
 	CMPIStatus rc = {CMPI_RC_OK, NULL};
-	int	ret;
 
 	PROVIDER_INIT_LOGGER();
-	ret = create_constraint(Broker, ClassName, mi, ctx, rslt, 
+	constraint_create_inst(Broker, ClassName, mi, ctx, rslt, 
 			cop, ci, TID_CONS_ORDER, &rc);
 	return rc;
 }
@@ -113,10 +108,9 @@ OrderConstraintSetInstance(CMPIInstanceMI * mi, CMPIContext * ctx,
                         CMPIInstance * ci, char ** properties)
 {
         CMPIStatus rc = {CMPI_RC_OK, NULL};
-	int ret;
 
 	PROVIDER_INIT_LOGGER();
-	ret = update_constraint(Broker, ClassName, mi, ctx, rslt, 
+	constraint_update_inst(Broker, ClassName, mi, ctx, rslt, 
 			cop, ci, properties, TID_CONS_ORDER, &rc);
         return rc;
 }
@@ -127,8 +121,7 @@ OrderConstraintDeleteInstance(CMPIInstanceMI * mi, CMPIContext * ctx,
                            CMPIResult * rslt, CMPIObjectPath * cop)
 {
         CMPIStatus rc = {CMPI_RC_OK, NULL};
-	int ret;
-	ret = delete_constraint(Broker, ClassName, mi, ctx, 
+	constraint_delete_inst(Broker, ClassName, mi, ctx, 
 			rslt, cop, TID_CONS_ORDER, &rc);
 	return rc;
 }

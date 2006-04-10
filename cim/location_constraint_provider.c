@@ -59,7 +59,7 @@ LocationConstraintEnumInstanceNames(CMPIInstanceMI * mi, CMPIContext * ctx,
 {
         CMPIStatus rc;
         PROVIDER_INIT_LOGGER();
-	enumerate_constraint(Broker, ClassName, ctx, rslt, 
+	constraint_enum_insts(Broker, ClassName, ctx, rslt, 
                             ref, FALSE, TID_CONS_LOCATION, &rc);
 	return rc;
 }
@@ -72,7 +72,7 @@ LocationConstraintEnumInstances(CMPIInstanceMI * mi, CMPIContext * ctx,
 {
         CMPIStatus rc;
         PROVIDER_INIT_LOGGER();
-	enumerate_constraint(Broker, ClassName, ctx, rslt, 
+	constraint_enum_insts(Broker, ClassName, ctx, rslt, 
                             ref, TRUE, TID_CONS_LOCATION, &rc);
 	return rc;
 }
@@ -84,7 +84,7 @@ LocationConstraintGetInstance(CMPIInstanceMI * mi, CMPIContext * ctx,
 {
         CMPIStatus rc = {CMPI_RC_OK, NULL};
 	PROVIDER_INIT_LOGGER();
-        get_constraint(Broker, ClassName, ctx, rslt, cop, 
+        constraing_get_inst(Broker, ClassName, ctx, rslt, cop, 
                       properties, TID_CONS_LOCATION, &rc);
         
         return rc; 
@@ -96,10 +96,9 @@ LocationConstraintCreateInstance(CMPIInstanceMI * mi, CMPIContext * ctx,
                            CMPIInstance * ci)
 {
 	CMPIStatus rc = {CMPI_RC_OK, NULL};
-	int	ret;
 
 	PROVIDER_INIT_LOGGER();
-	ret = create_constraint(Broker, ClassName, mi, ctx, rslt, 
+	constraint_create_inst(Broker, ClassName, mi, ctx, rslt, 
 			cop, ci, TID_CONS_LOCATION, &rc);
 	return rc;
 }
@@ -114,7 +113,7 @@ LocationConstraintSetInstance(CMPIInstanceMI * mi, CMPIContext * ctx,
 	int ret;
 
 	PROVIDER_INIT_LOGGER();
-	ret = update_constraint(Broker, ClassName, mi, ctx, rslt, 
+	ret = constraint_update_inst(Broker, ClassName, mi, ctx, rslt, 
 			cop, ci, properties, TID_CONS_LOCATION, &rc);
         return rc;
 }
@@ -126,7 +125,7 @@ LocationConstraintDeleteInstance(CMPIInstanceMI * mi, CMPIContext * ctx,
 {
         CMPIStatus rc = {CMPI_RC_OK, NULL};
 	int ret;
-	ret = delete_constraint(Broker, ClassName, mi, ctx, 
+	ret = constraint_delete_inst(Broker, ClassName, mi, ctx, 
 			rslt, cop, TID_CONS_LOCATION, &rc);
 	return rc;
 }

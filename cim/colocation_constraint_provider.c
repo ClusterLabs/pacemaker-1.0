@@ -62,7 +62,7 @@ ColocationConstraintEnumInstanceNames(CMPIInstanceMI * mi, CMPIContext * ctx,
         CMPIStatus rc;
 	int ret;
 	PROVIDER_INIT_LOGGER();
-        ret = enumerate_constraint(Broker, ClassName, ctx, rslt, ref, 
+        ret = constraint_enum_insts(Broker, ClassName, ctx, rslt, ref, 
 			FALSE, TID_CONS_COLOCATION, &rc);
 	return rc;
 }
@@ -76,7 +76,7 @@ ColocationConstraintEnumInstances(CMPIInstanceMI * mi, CMPIContext * ctx,
         CMPIStatus rc;
 	int ret;
 	PROVIDER_INIT_LOGGER();
-        ret = enumerate_constraint(Broker, ClassName, ctx, rslt, ref, 
+        ret = constraint_enum_insts(Broker, ClassName, ctx, rslt, ref, 
 			TRUE, TID_CONS_COLOCATION, &rc);
 	return rc;
 }
@@ -90,7 +90,7 @@ ColocationConstraintGetInstance(CMPIInstanceMI * mi, CMPIContext * ctx,
 	int ret;
 
 	PROVIDER_INIT_LOGGER();
-        ret = get_constraint(Broker, ClassName, ctx, rslt, cop, 
+        ret = constraing_get_inst(Broker, ClassName, ctx, rslt, cop, 
                            properties, TID_CONS_COLOCATION, &rc);
 	return rc;
 }
@@ -104,7 +104,7 @@ ColocationConstraintCreateInstance(CMPIInstanceMI * mi, CMPIContext * ctx,
 	int	ret;
 
 	PROVIDER_INIT_LOGGER();
-	ret = create_constraint(Broker, ClassName, mi, ctx, rslt, 
+	ret = constraint_create_inst(Broker, ClassName, mi, ctx, rslt, 
 			cop, ci, TID_CONS_COLOCATION, &rc);
 	return rc;
 }
@@ -119,7 +119,7 @@ ColocationConstraintSetInstance(CMPIInstanceMI * mi, CMPIContext * ctx,
 	int ret;
 
 	PROVIDER_INIT_LOGGER();
-	ret = update_constraint(Broker, ClassName, mi, ctx, rslt, 
+	ret = constraint_update_inst(Broker, ClassName, mi, ctx, rslt, 
 			cop, ci, properties, TID_CONS_COLOCATION, &rc);
         return rc;
 }
@@ -131,7 +131,7 @@ ColocationConstraintDeleteInstance(CMPIInstanceMI * mi, CMPIContext * ctx,
 {
         CMPIStatus rc = {CMPI_RC_OK, NULL};
 	int ret;
-	ret = delete_constraint(Broker, ClassName, mi, ctx, 
+	ret = constraint_delete_inst(Broker, ClassName, mi, ctx, 
 			rslt, cop, TID_CONS_COLOCATION, &rc);
 	return rc;
 }
