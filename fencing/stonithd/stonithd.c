@@ -1,4 +1,4 @@
-/* $Id: stonithd.c,v 1.87 2006/03/27 07:33:40 sunjd Exp $ */
+/* $Id: stonithd.c,v 1.88 2006/04/10 08:14:37 sunjd Exp $ */
 
 /* File: stonithd.c
  * Description: STONITH daemon for node fencing
@@ -2714,7 +2714,7 @@ stonithRA_start( stonithRA_ops_t * op, gpointer data)
 
 	/* Set the stonith plugin's debug level */
 	stonith_set_debug(stonith_obj, debug_level);
-	stonith_set_log(stonith_obj, trans_log);
+	stonith_set_log(stonith_obj, (PILLogFun)trans_log);
 
 	snv = stonith_ghash_to_NVpair(op->params);
 	if ( snv == NULL
@@ -2916,7 +2916,7 @@ stonithRA_monitor( stonithRA_ops_t * ra_op, gpointer data )
 				"exitcode: EXECRA_OK");
 		exit(EXECRA_OK);
 	} else {
-		stonithd_log2(LOG_DEBUG, "stonithRA_monitor: child exit, "
+		stonithd_log(LOG_DEBUG, "stonithRA_monitor: child exit, "
 				"exitcode: EXECRA_STATUS_UNKNOWN");
 		exit(EXECRA_STATUS_UNKNOWN);
 	}
@@ -3420,6 +3420,9 @@ trans_log(int priority, const char * fmt, ...)
 
 /* 
  * $Log: stonithd.c,v $
+ * Revision 1.88  2006/04/10 08:14:37  sunjd
+ * stonithd.c
+ *
  * Revision 1.87  2006/03/27 07:33:40  sunjd
  * GSource will free it when return FALSE
  *
