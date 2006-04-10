@@ -1,4 +1,4 @@
-/* $Id: findif.c,v 1.57 2006/04/08 11:07:26 lars Exp $ */
+/* $Id: findif.c,v 1.58 2006/04/10 07:25:03 andrew Exp $ */
 /*
  * findif.c:	Finds an interface which can route a given address
  *
@@ -213,7 +213,7 @@ SearchUsingProcRoute (char *address, struct in_addr *in
 	unsigned long   dest;
 	long		metric = LONG_MAX;
 	long		best_metric = LONG_MAX;
-	int		rc;
+	int		rc = 0;
 	
 	char	buf[2048];
 	char	interface[MAXSTR];
@@ -903,6 +903,9 @@ ff02::%lo0/32                     fe80::1%lo0                   UC          lo0
 
 /* 
  * $Log: findif.c,v $
+ * Revision 1.58  2006/04/10 07:25:03  andrew
+ * Compile warning: used unitialized
+ *
  * Revision 1.57  2006/04/08 11:07:26  lars
  * CID 37: Forgot to initialize the variable.
  *
