@@ -723,21 +723,22 @@ on_add_rsc(char* argv[], int argc)
 	if (clone) {
 		snprintf(buf, MAX_STRLEN,
 			 "<clone id=\"%s\"><instance_attributes><attributes>" \
-			 "<nvpair id=\"clone_max\" name=\"clone_max\" value=\"%s\"/>" \
-			 "<nvpair id=\"clone_node_max\" name=\"clone_node_max\" value=\"%s\"/>" \
+			 "<nvpair id=\"%s_clone_max\" name=\"clone_max\" value=\"%s\"/>" \
+			 "<nvpair id=\"%s_clone_node_max\" name=\"clone_node_max\" value=\"%s\"/>" \
 			 "</attributes>	</instance_attributes> ",
-			 argv[7], argv[8], argv[9]);
+			 argv[7], argv[7], argv[8],argv[7], argv[9]);
 		strncat(xml, buf, MAX_STRLEN);
 	}
 	if (master) {
 		snprintf(buf, MAX_STRLEN,
 			 "<master_slave id=\"%s\"><instance_attributes><attributes>" \
-			 "<nvpair id=\"clone_max\" name=\"clone_max\" value=\"%s\"/>" \
-			 "<nvpair id=\"clone_node_max\" name=\"clone_node_max\" value=\"%s\"/>" \
-			 "<nvpair id=\"master_max\" name=\"master_max\" value=\"%s\"/>" \
-			 "<nvpair id=\"master_node_max\" name=\"master_node_max\" value=\"%s\"/>" \
+			 "<nvpair id=\"%s_clone_max\" name=\"clone_max\" value=\"%s\"/>" \
+			 "<nvpair id=\"%s_clone_node_max\" name=\"clone_node_max\" value=\"%s\"/>" \
+			 "<nvpair id=\"%s_master_max\" name=\"master_max\" value=\"%s\"/>" \
+			 "<nvpair id=\"%s_master_node_max\" name=\"master_node_max\" value=\"%s\"/>" \
 			 "</attributes>	</instance_attributes>",
-			 argv[7], argv[8], argv[9], argv[10], argv[11]);
+			 argv[7], argv[7], argv[8], argv[7], argv[9],
+			 argv[7], argv[10], argv[7], argv[11]);
 		strncat(xml, buf, MAX_STRLEN);
 	}
 	
@@ -1203,10 +1204,10 @@ on_update_clone(char* argv[], int argc)
 	ARGC_CHECK(4);
 	snprintf(xml,MAX_STRLEN,
 		 "<clone id=\"%s\"><instance_attributes><attributes>" \
-		 "<nvpair id=\"clone_max\" name=\"clone_max\" value=\"%s\"/>" \
-		 "<nvpair id=\"clone_node_max\" name=\"clone_node_max\" value=\"%s\"/>" \
+		 "<nvpair id=\"%s_clone_max\" name=\"clone_max\" value=\"%s\"/>" \
+		 "<nvpair id=\"%s_clone_node_max\" name=\"clone_node_max\" value=\"%s\"/>" \
 		 "</attributes></instance_attributes></clone>",
-		 argv[1],argv[2],argv[3]);
+		 argv[1],argv[1],argv[2],argv[1],argv[3]);
 
 	cib_object = string2xml(xml);
 	if(cib_object == NULL) {
@@ -1273,12 +1274,12 @@ on_update_master(char* argv[], int argc)
 	ARGC_CHECK(6);
 	snprintf(xml,MAX_STRLEN,
 		 "<master_slave id=\"%s\"><instance_attributes><attributes>" \
-		 "<nvpair id=\"clone_max\" name=\"clone_max\" value=\"%s\"/>" \
-		 "<nvpair id=\"clone_node_max\" name=\"clone_node_max\" value=\"%s\"/>" \
-		 "<nvpair id=\"master_max\" name=\"master_max\" value=\"%s\"/>" \
-		 "<nvpair id=\"master_node_max\" name=\"master_node_max\" value=\"%s\"/>" \
+		 "<nvpair id=\"%s_clone_max\" name=\"clone_max\" value=\"%s\"/>" \
+		 "<nvpair id=\"%s_clone_node_max\" name=\"clone_node_max\" value=\"%s\"/>" \
+		 "<nvpair id=\"%s_master_max\" name=\"master_max\" value=\"%s\"/>" \
+		 "<nvpair id=\"%s_master_node_max\" name=\"master_node_max\" value=\"%s\"/>" \
 		 "</attributes></instance_attributes></master_slave>",
-		 argv[1],argv[2],argv[3],argv[4],argv[5]);
+		 argv[1],argv[1],argv[2],argv[1],argv[3],argv[1],argv[4],argv[1],argv[5]);
 
 	cib_object = string2xml(xml);
 	if(cib_object == NULL) {
