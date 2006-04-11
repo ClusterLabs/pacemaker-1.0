@@ -360,7 +360,9 @@ class Tree :
 		status = model.get_value(iter, 1)
 		iter_status = 0
 		if type == _("native") :
-			if string.find(status, _("running")) != -1 :
+			if string.find(status, _("not running")) != -1 :
+				iter_status = 1
+			elif string.find(status, _("running")) != -1 :
 				iter_status = 0
 			elif string.find(status, _("fail")) != -1 :
 				iter_status = 3
