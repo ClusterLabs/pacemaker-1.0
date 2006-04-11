@@ -1290,7 +1290,22 @@ class MainWindow :
 		win_widget.set_title(_("Linux HA Management Client"))
 		win_widget.set_size_request(750, 600)
 		win_widget.set_icon_from_file("@libdir@/heartbeat/ha.png")
-		
+
+		# add the icons to gtk stock
+		icons = gtk.IconFactory()
+		icons.add("ha-login",gtk.IconSet(gtk.gdk.pixbuf_new_from_file("@libdir@/heartbeat/login.png")))
+		icons.add("ha-logout",gtk.IconSet(gtk.gdk.pixbuf_new_from_file("@libdir@/heartbeat/logout.png")))
+		icons.add("ha-exit",gtk.IconSet(gtk.gdk.pixbuf_new_from_file("@libdir@/heartbeat/exit.png")))
+		icons.add("ha-standby-node",gtk.IconSet(gtk.gdk.pixbuf_new_from_file("@libdir@/heartbeat/standby-node.png")))
+		icons.add("ha-active-node",gtk.IconSet(gtk.gdk.pixbuf_new_from_file("@libdir@/heartbeat/active-node.png")))
+		icons.add("ha-add-resource",gtk.IconSet(gtk.gdk.pixbuf_new_from_file("@libdir@/heartbeat/add-resource.png")))
+		icons.add("ha-remove-resource",gtk.IconSet(gtk.gdk.pixbuf_new_from_file("@libdir@/heartbeat/remove-resource.png")))
+		icons.add("ha-start-resource",gtk.IconSet(gtk.gdk.pixbuf_new_from_file("@libdir@/heartbeat/start-resource.png")))
+		icons.add("ha-stop-resource",gtk.IconSet(gtk.gdk.pixbuf_new_from_file("@libdir@/heartbeat/stop-resource.png")))
+		icons.add("ha-master-resource",gtk.IconSet(gtk.gdk.pixbuf_new_from_file("@libdir@/heartbeat/master-resource.png")))
+		icons.add("ha-slave-resource",gtk.IconSet(gtk.gdk.pixbuf_new_from_file("@libdir@/heartbeat/slave-resource.png")))
+		icons.add_default()
+
 		# create ui-manager
 		ui_xml = '''
 		<ui>
@@ -1321,14 +1336,14 @@ class MainWindow :
 		actiongroup = gtk.ActionGroup('haclient')
 		actiongroup.add_actions([
 			('connection', None, _('Connection')),
-			('login', gtk.STOCK_NETWORK, _('Login...'), None,_('login to cluster'), self.on_login),
-			('logout', gtk.STOCK_STOP, _('Logout'), None,_('logout from cluster'), self.on_logout),
-			('quit', gtk.STOCK_QUIT, _('Quit'), None,_('Quit the Program'), self.on_quit),
+			('login', "ha-login", _('Login...'), None,_('login to cluster'), self.on_login),
+			('logout', "ha-logout", _('Logout'), None,_('logout from cluster'), self.on_logout),
+			('quit', "ha-exit", _('Quit'), None,_('Quit the Program'), self.on_quit),
 			('action', None, _('Action')),
-			('addrsc', gtk.STOCK_ADD, _('Add New Item'), None,_('add new item'), self.on_add_item),
-			('delrsc', gtk.STOCK_DELETE, _('Delete'), None,_('delete current item'), self.on_del_item),
-			('standby', gtk.STOCK_NO, _('Standby'), None,_('make the node standby'), self.on_standby),
-			('active', gtk.STOCK_YES, _('Active'), None,_('make the node active'), self.on_active)
+			('addrsc', "ha-add-resource", _('Add New Item'), None,_('add new item'), self.on_add_item),
+			('delrsc', "ha-remove-resource", _('Delete'), None,_('delete current item'), self.on_del_item),
+			('standby', "ha-standby-node", _('Standby'), None,_('make the node standby'), self.on_standby),
+			('active', "ha-active-node", _('Active'), None,_('make the node active'), self.on_active)
 			])
 		uimanager.insert_action_group(actiongroup, 0)
 		uimanager.add_ui_from_string(ui_xml)
