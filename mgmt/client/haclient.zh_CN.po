@@ -567,3 +567,33 @@ msgstr "让节点活动"
 msgid "Make"
 msgstr "让"
 
+msgid "not running"
+msgstr "未运行"
+
+msgid "Start"
+msgstr "启动"
+
+msgid "Stop"
+msgstr "停止"
+
+msgid "stop resource"
+msgstr "停止资源"
+
+msgid "start resource"
+msgstr "启动资源"
+
+msgid "Not Connected"
+msgstr "未连接"
+
+msgid "Connected to "
+msgstr "已连接"
+
+msgid "Updating data from server..."
+msgstr "正在从服务器更新数据..."
+
+msgid "Can't connect to server"
+msgstr "连接服务器失败"
+
+msgid "Failed in the authentication.\n User Name or Password may be wrong.\n or the user doesn't belong to haclient group"
+msgstr "用户认证失败，可能是用户或密码不对，或该用户不属于haclient组"
+
