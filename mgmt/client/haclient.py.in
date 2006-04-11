@@ -1151,6 +1151,17 @@ class MainWindow :
 			and string.find(self.cur_status, _("standby")) != -1
 			and string.find(self.cur_status, _("running")) != -1)
 
+		self.set_action_sensitive('startrsc',
+			manager.connected
+			and self.cur_type in [_("native")]
+			and string.find(self.cur_status, _("not running")) != -1)
+
+		self.set_action_sensitive('stoprsc',
+			manager.connected
+			and self.cur_type in [_("native")]
+			and string.find(self.cur_status, _("not running")) == -1
+			and string.find(self.cur_status, _("running")) != -1)
+
 	# functions
 	def update(self) :
 		self.tree.update()
@@ -1283,7 +1294,23 @@ class MainWindow :
 				manager.do_cmd("del_co\nrsc_colocation\n"+self.cur_name)
 			if manager.failed_reason != "" :
 				msgbox(manager.failed_reason)
-	
+
+	def on_start_item(self, action) :
+		(attrs, running_on, params, ops) = \
+			manager.get_rsc_info(self.cur_name)
+		for param in params :
+			if param["name"] == "target_role" and param["value"] == "Stopped" :
+				manager.do_cmd("del_rsc_param\n"+param["id"])
+				return
+		
+	def on_stop_item(self, action) :
+		(attrs, running_on, params, ops) = \
+			manager.get_rsc_info(self.cur_name)
+		for param in params :
+			if param["name"] == "target_role" and param["value"] == "Stopped" :
+				return
+		manager.do_cmd("up_rsc_params\n%s\n%s_target_role\n%s\n%s"%(self.cur_name,self.cur_name,"target_role","Stopped"))
+
 	# constructor	
 	def __init__(self) :
 		# create window
@@ -1317,9 +1344,13 @@ class MainWindow :
 					<menuitem action="logout"/>
 					<menuitem action="quit"/>
 				</menu>
-				<menu action="action">
+				<menu action="resource">
 					<menuitem action="addrsc"/>
 					<menuitem action="delrsc"/>
+					<menuitem action="startrsc"/>
+					<menuitem action="stoprsc"/>
+				</menu>
+				<menu action="node">
 					<menuitem action="standby"/>
 					<menuitem action="active"/>
 				</menu>
@@ -1327,10 +1358,15 @@ class MainWindow :
 			<toolbar name="toolbar">
 				<toolitem action="login"/>
 				<toolitem action="logout"/>
+				<separator/>
 				<toolitem action="addrsc"/>
 				<toolitem action="delrsc"/>
+				<toolitem action="startrsc"/>
+				<toolitem action="stoprsc"/>
+				<separator/>
 				<toolitem action="standby"/>
 				<toolitem action="active"/>
+				<separator/>
 				<toolitem action="quit"/>
 			</toolbar>
 		</ui>'''
@@ -1341,9 +1377,12 @@ class MainWindow :
 			('login', "ha-login", _('Login...'), None,_('login to cluster'), self.on_login),
 			('logout', "ha-logout", _('Logout'), None,_('logout from cluster'), self.on_logout),
 			('quit', "ha-exit", _('Quit'), None,_('Quit the Program'), self.on_quit),
-			('action', None, _('Action')),
+			('resource', None, _('Resources')),
 			('addrsc', "ha-add-resource", _('Add New Item'), None,_('add new item'), self.on_add_item),
 			('delrsc', "ha-remove-resource", _('Delete'), None,_('delete current item'), self.on_del_item),
+			('startrsc', "ha-start-resource", _('Start'), None,_('start resource'), self.on_start_item),
+			('stoprsc', "ha-stop-resource", _('Stop'), None,_('stop resource'), self.on_stop_item),
+			('node', None, _('Nodes')),
 			('standby', "ha-standby-node", _('Standby'), None,_('make the node standby'), self.on_standby),
 			('active', "ha-active-node", _('Active'), None,_('make the node active'), self.on_active)
 			])
@@ -1378,7 +1417,7 @@ class MainWindow :
 		self.tree = Tree(glade.get_widget("mainwin_tree"))
 		self.view_widget = glade.get_widget("mainwin_view")
 		self.update_ui()
-		self.statusbar.push(0,"Not Connected")
+		self.statusbar.push(0,_("Not Connected"))
 
 class Manager :
 	'''
@@ -1444,17 +1483,18 @@ class Manager :
 		ret = mgmt_connect(ip, username, password)
 		if ret != 0 :
 			if ret == -1 :
-				self.failed_reason = "Can't connect to server"
+				self.failed_reason = _("Can't connect to server")
 			elif ret == -2 :
-				self.failed_reason = "Failed in the authentication.\n User Name or Password may be wrong."
+				self.failed_reason = _("Failed in the authentication.\n User Name or Password may be wrong." \
+						"\n or the user doesn't belong to haclient group")
 			mgmt_disconnect()
 			return False
-		window.statusbar.push(1,"Connected to "+server)
+		window.statusbar.push(1,_("Connected to ")+server)
 		self.connected = True
 		self.username = username
 		self.password = password
 
-		window.statusbar.push(2,"Updating data from server...")
+		window.statusbar.push(2,_("Updating data from server..."))
 		self.update_timer = gobject.timeout_add(100, self.update)
 		
 		self.do_cmd("regevt\nevt:cib_changed")
