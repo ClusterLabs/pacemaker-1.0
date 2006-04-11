@@ -1,4 +1,4 @@
-/* $Id: config.c,v 1.195 2006/04/10 12:50:08 andrew Exp $ */
+/* $Id: config.c,v 1.196 2006/04/11 22:11:17 lars Exp $ */
 /*
  * Parse various heartbeat configuration files...
  *
@@ -2310,7 +2310,7 @@ set_api_authorization(const char * directive)
 		cl_log(LOG_ERR
 		,	"Duplicate %s directive for API client %s: [%s]"
 		,	KEY_APIPERM, clname, directive);
-		return HA_FAIL;
+		goto baddirective;
 	}
 	g_hash_table_insert(APIAuthorization, clname, auth);
 	if (DEBUGDETAILS) {
@@ -2520,6 +2520,10 @@ ha_config_check_boolean(const char *value)
 
 /*
  * $Log: config.c,v $
+ * Revision 1.196  2006/04/11 22:11:17  lars
+ * CID 5: If we return here, the deallocation codepath at the end of the
+ * function doesn't make sense, and we would leak memory.
+ *
  * Revision 1.195  2006/04/10 12:50:08  andrew
  * Untested pingd - replacement for ipfail
  *
