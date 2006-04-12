@@ -1,4 +1,4 @@
-/* $Id: ccm_statemachine.c,v 1.18 2006/03/17 23:10:38 lars Exp $ */
+/* $Id: ccm_statemachine.c,v 1.19 2006/04/12 07:08:15 zhenh Exp $ */
 /* 
  * ccm.c: Consensus Cluster Service Program 
  *
@@ -206,7 +206,7 @@ ccm_configure_timeout(ll_cluster_t *hb, ccm_info_t *info)
 	ccm_debug2(LOG_DEBUG, "ccm_configure_timeout  "
 			"keepalive=%ld", keepalive);
 
-	CCM_TMOUT_SET_U(info, 9*keepalive);
+	CCM_TMOUT_SET_U(info, 5*keepalive);
 	CCM_TMOUT_SET_LU(info, 30*keepalive);
 	CCM_TMOUT_SET_VRS(info, 9*keepalive);
 	CCM_TMOUT_SET_ITF(info, 18*keepalive);
