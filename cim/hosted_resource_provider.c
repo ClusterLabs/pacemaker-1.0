@@ -57,40 +57,25 @@ node_host_res(CMPIBroker * broker, char * classname, CMPIContext * ctx,
               CMPIObjectPath * node_op, CMPIObjectPath * res_op, 
               CMPIStatus * rc)
 {
-        CMPIString * 	cmpi_rsc_id;
-	CMPIString * 	cmpi_uname;
         char *		rsc_id;
 	char * 		uname;
-        int 		host = 0;
+        int 		host = FALSE;
         const char * 	running_node;
 	struct ha_msg * msg;
 
-        /* resource name */
-        cmpi_rsc_id = CMGetKey(res_op, "Id", rc).value.string;
-        if ( CMIsNullObject(cmpi_rsc_id) ) {
-                cl_log(LOG_INFO, "%s: resource_name =  NULL", __FUNCTION__);
-                return 0;
-        }
-        rsc_id = CMGetCharPtr(cmpi_rsc_id);
-
-        /* uname */
-        cmpi_uname = CMGetKey(node_op, "Name", rc).value.string;
-        if ( CMIsNullObject( cmpi_uname ) ) {
-                cl_log(LOG_INFO, "%s: invalid uname", __FUNCTION__);
-                return 0;
-        }
-        uname = CMGetCharPtr(cmpi_uname);
+        rsc_id = CMGetKeyString(res_op, "Id", rc); 
+        uname  = CMGetKeyString(node_op, "Name", rc);
 
         /* get running node */
         if ((msg = cim_query_dispatch(GET_RSC_HOST, rsc_id, NULL)) == NULL ) {
                 cl_log(LOG_WARNING, "running node of %s is NULL", rsc_id);
-                return 0;
+                return FALSE;
         }
         
 	running_node = cl_get_string(msg, "host");
         /* campare running node with uname */
-        if ( strcmp(running_node, uname) == 0 ) {
-                host = 1; 
+        if ( strncmp(running_node, uname, MAXLEN) == 0 ) {
+                host = TRUE; 
         }
 
 	ha_msg_del(msg);
