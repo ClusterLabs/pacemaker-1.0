@@ -1,4 +1,4 @@
-# $Id: Makefile.am,v 1.8 2005/06/30 13:30:37 msoffen Exp $
+# $Id: Makefile.am,v 1.9 2006/04/13 09:54:19 andrew Exp $
 #
 # Open-HA "port" Makefile for FreeBSD
 #
@@ -39,7 +39,7 @@ PKGNAME		= OPENHA
 
 TARFILE		= @TARFILE@
 MD5		= @MD5@
-GZIP		= @GZIP@
+GZIP_PROG	= @GZIP_PROG@
 
 # A pseudo-install directory, so that we know what files are generated.
 # This allows libtool to maintain its flexibility.
@@ -54,7 +54,7 @@ portfile:
 	$(LS) -l ../$(TARFILE) | $(AWK) '{print "SIZE \($(TARFILE)\) = "$$5}' >> heartbeat/distinfo
 	$(CP) portMakefile heartbeat/Makefile
 	$(TAR) -cvf heartbeat.tar heartbeat/Makefile heartbeat/distinfo heartbeat/pkg-deinstall heartbeat/pkg-descr heartbeat/pkg-install heartbeat/pkg-plist
-	$(GZIP) heartbeat.tar
+	$(GZIP_PROG) heartbeat.tar
 
 
 clean:
