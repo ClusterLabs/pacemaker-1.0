@@ -1,4 +1,4 @@
-/* $Id: ccmlib_memapi.c,v 1.42 2006/03/13 08:14:53 zhenh Exp $ */
+/* $Id: ccmlib_memapi.c,v 1.43 2006/04/13 09:08:37 zhenh Exp $ */
 /* 
  * ccmlib_memapi.c: Consensus Cluster Membership API
  *
@@ -122,7 +122,10 @@ on_llm_msg(mbr_private_t *mem, struct IPC_MESSAGE *msg)
 {
 	unsigned long len = msg->msg_len;
 	int	numnodes;
-
+	
+	if (mem->llm != NULL) {
+		g_free(mem->llm);
+	}
 	mem->llm = (ccm_llm_t *)g_malloc(len);
 	memcpy(mem->llm, msg->msg_body, len);
 
@@ -130,9 +133,8 @@ on_llm_msg(mbr_private_t *mem, struct IPC_MESSAGE *msg)
 				g_direct_equal);
 
 	numnodes = CLLM_GET_NODECOUNT(mem->llm);
+	
 	mem->cookie = NULL;
-
-
 	return;
 }
 
@@ -597,6 +599,8 @@ mem_handle_event(class_t *class)
 						NULL,NULL);
 			}
 			break;
+		case CCM_LLM:
+			on_llm_msg(private, msg);
 		}
 
 		
@@ -796,7 +800,8 @@ oc_ev_memb_class(oc_ev_callback_t  *fn)
 	private->magiccookie = 0xabcdef;
 	private->client_report = FALSE;
 	private->special = 0; /* no special behaviour */
-
+	private->llm = NULL; 
+	
 	attrs = g_hash_table_new(g_str_hash,g_str_equal);
 	g_hash_table_insert(attrs, path, ccmfifo);
 	ch = ipc_channel_constructor(IPC_DOMAIN_SOCKET, attrs);
