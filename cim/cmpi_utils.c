@@ -103,8 +103,7 @@ cmpi_msg2inst(CMPIBroker * broker, CMPIInstance * inst, int mapid,
 
 
 int 
-cmpi_inst2msg(CMPIInstance *inst, int mapid, 
-			struct ha_msg *msg, CMPIStatus *rc)
+cmpi_inst2msg(CMPIInstance *inst, int mapid, struct ha_msg *msg, CMPIStatus *rc)
 {
         int i = 0;                                                      	
 	const struct map_t *map = cim_query_map(mapid);
@@ -414,6 +413,7 @@ assoc_enum_references(CMPIBroker * broker, char * classname,
         int 		i, array_size;
 	DEBUG_ENTER();
         namespace = CMGetCharPtr(CMGetNameSpace(cop, rc));
+#if 0
         if ( result_class ) {
                 CMPIObjectPath * op = NULL;
                 op = CMNewObjectPath(broker, namespace, classname, rc);
@@ -423,6 +423,7 @@ assoc_enum_references(CMPIBroker * broker, char * classname,
                         return HA_OK;
                 }
         }
+#endif
         RETURN_FAIL_IFNULL_OBJ( CBGetInstance( broker, ctx, cop, NULL, rc), 
                                 "Instance of cop");
         /* get source class */
