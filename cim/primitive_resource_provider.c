@@ -150,8 +150,11 @@ PrimitiveResourceInvokeMethod(CMPIMethodMI * mi, CMPIContext * ctx,
         classname = CMGetClassName(ref, &rc);
         if(strcasecmp(CMGetCharPtr(classname), ClassName) == 0 &&
            strcasecmp(METHOD_ADD_OPERATION, method_name) == 0 ){
+#if 0
 		ret = resource_add_operation(Broker, ClassName, ctx, rslt, 
 			ref, TID_RES_PRIMITIVE, in, out, &rc);
+#endif
+		ret = HA_OK;
         }
 
         CMReturnData(rslt, &ret, CMPI_uint32);

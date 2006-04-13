@@ -109,7 +109,7 @@ make_subrsc_array(CMPIBroker * broker, char * classname, CMPIContext * ctx,
                 char * 	subid;
                 
                 subid = cim_list_index(sublist, i);
-                rsctype = cim_get_rsc_type(subid);
+                rsctype = cim_get_rsctype(subid);
 
                 if (rsctype == TID_RES_PRIMITIVE ) {
                         crname = PrimitiveClassName;
