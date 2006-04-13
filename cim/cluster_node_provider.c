@@ -123,10 +123,8 @@ node_enum_insts(CMPIInstanceMI * mi, CMPIContext * ctx, CMPIResult * rslt,
 	struct ha_msg *nodes;
 	char *nspace;
 
-	DEBUG_ENTER();
 	if ((hbstatus = cim_get_hb_status()) != HB_RUNNING ) {
 		CMReturnDone(rslt);
-		DEBUG_LEAVE();
 		return HA_OK;
 	}
 	nspace = CMGetCharPtr(CMGetNameSpace(ref, rc));
@@ -136,10 +134,9 @@ node_enum_insts(CMPIInstanceMI * mi, CMPIContext * ctx, CMPIResult * rslt,
 
 	nodes = cim_query_dispatch(GET_NODE_LIST, NULL, NULL); 
         if ( nodes == NULL ) {
-                cl_log(LOG_ERR, "Can not get node information"); 
+                cl_log(LOG_ERR, "%s: Can not get node list.", __FUNCTION__); 
                 CMSetStatusWithChars(Broker, rc,
-                       CMPI_RC_ERR_FAILED, "Could not get node information");
-		DEBUG_LEAVE();
+                       CMPI_RC_ERR_FAILED, "Could not get node list.");
                 return HA_FAIL;
         }
 	len = cim_list_length(nodes);
@@ -160,7 +157,6 @@ node_enum_insts(CMPIInstanceMI * mi, CMPIContext * ctx, CMPIResult * rslt,
                         if ((ci = make_node_instance(op, uname, rc))==NULL) {
 				rc->rc = CMPI_RC_ERR_FAILED;
 				ha_msg_del(nodes);
-				DEBUG_LEAVE();
                                 return HA_FAIL;
                         }
                         CMReturnInstance(rslt, ci);
@@ -173,7 +169,6 @@ node_enum_insts(CMPIInstanceMI * mi, CMPIContext * ctx, CMPIResult * rslt,
 
         CMReturnDone(rslt);
 	ha_msg_del(nodes);
-	DEBUG_LEAVE();
         return HA_OK;
 }
 
