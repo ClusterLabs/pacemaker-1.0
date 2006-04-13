@@ -326,9 +326,11 @@ class HA_ClusterResource {
 
 	string Enabled = "false";
 
+	/*
 	uint32 AddOperation(
 		[IN, Description("Resource to be added") ]
 		HA_Operation REF Operation);
+	*/
 };
 
 //----------------------------------------
@@ -343,9 +345,9 @@ class HA_PrimitiveResource : HA_ClusterResource {
         string Type;
         string Provider = "heartbeat";
         string HostingNode;
-	
-	[ Description ("Instance attributes, in format: key=value") ]
-	string InstanceAttributes[];
+	/*
+	string InstanceAttributes [];
+	*/
 };
 
 //------------------------------------------------
@@ -389,6 +391,31 @@ class HA_MasterSlaveResource : HA_ClusterResource {
 };
 
 //----------------------------------------
+//  HA_InstanceAttributes
+//----------------------------------------
+[ Provider("cmpi:HA_InstanceAttributesProvider") ]
+class HA_InstanceAttributes {
+	[ Key ]
+	string Id;
+
+	[ Key ]
+	string ResourceId;
+	string Name;
+	string Value;
+	string Caption;
+};
+//----------------------------------------
+// Association, HA_AttributesOfResource
+//----------------------------------------
+[ Association, Aggregation, Provider ("cmpi:HA_AttributesOfResourceProvider") ]
+class HA_AttributesOfResource {
+        [ Key, Aggregate, Description("Resource") ]
+        HA_PrimitiveResource REF Resource;
+
+        [ Key, Description("InstanceAttributes") ]
+        HA_InstanceAttributes REF InstanceAttributes;
+};
+//----------------------------------------
 //  HA_Operation
 //----------------------------------------
 [ Provider("cmpi:HA_OperationProvider") ]
@@ -400,12 +427,12 @@ class HA_Operation {
 	String ResourceId;
  
         [ Description ("The name of the operation") ]
-        string Name;    /* start|stop|monitor */
+        string Name = "start|stop|monitor";    /* start|stop|monitor */
 
         string Description;
 
         [ Description ("Operation interval, only applies to monitor") ]
-        string Interval;
+        string Interval = "10s";
 
         [ Description ("The maximum period of time before considering "
                        "the action failed") ]
@@ -427,14 +454,11 @@ class HA_Operation {
 //----------------------------------------
 [ Association, Aggregation, Provider ("cmpi:HA_OperationOnProvider") ]
 class HA_OperationOnResource {
-        [ Key, Aggregate, Description("Resource") ]
+        [ Key, Description("Resource") ]
         HA_PrimitiveResource REF Resource;
 
         [ Key, Description("Operation") ]
         HA_Operation REF Operation;
-
-
-        string Caption;
 };
 
 //------------------------------------------------
@@ -511,8 +535,6 @@ class HA_SubResource {
 
         [ Key,  Description ( "SubResource or SubResourceGroup" ) ]
         HA_ClusterResource REF Dependent;
-        
-        string Caption;
 };
 
 
