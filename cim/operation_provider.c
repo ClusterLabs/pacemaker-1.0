@@ -41,14 +41,6 @@ static const char * 	PROVIDER_ID 	= "cim-op";
 static char 		ClassName []  	= "HA_Operation";
 static CMPIBroker * 	Broker    	= NULL;
 
-static int		operation_update_inst(CMPIContext *, CMPIResult *, 
-				CMPIObjectPath * cop, CMPIInstance * ci, 
-				char ** properties, CMPIStatus * rc);
-static struct ha_msg *	find_operation(const char * rscid, const char *opid);
-static CMPIInstance *	operation_make_instance(CMPIObjectPath*, char* rscid,
-				const char * opid, struct ha_msg *operation, 
-				CMPIStatus * rc);
-
 DeclareInstanceFunctions(Operation);
 
 static struct ha_msg * 
@@ -87,79 +79,6 @@ operation_make_instance(CMPIObjectPath * op, char* rscid,
         CMSetProperty(ci, "Caption", caption, CMPI_chars);
 	CMSetProperty(ci, "ResourceId", rscid, CMPI_chars);
 	return ci;
-}
-
-static int
-operation_update_inst(CMPIContext *ctx, CMPIResult *rslt, CMPIObjectPath *cop,
-		CMPIInstance * ci, char ** properties, CMPIStatus * rc)
-{
-	struct ha_msg *operation;
-	char *id, *rscid;
-
-        DEBUG_ENTER();
-	id = CMGetKeyString(cop, "Id", rc);
-	rscid = CMGetKeyString(cop, "ResourceId", rc);
-	if ((operation = find_operation(rscid, id)) == NULL ) {
-		return HA_OK; 
-	}
-	cmpi_inst2msg(ci, HA_OPERATION, operation, rc);
-	cim_update_rscop(rscid, id, operation);
-	rc->rc = CMPI_RC_OK;
-
-	DEBUG_LEAVE();
-	return HA_OK;
-}
-
-static int
-operation_create_inst(CMPIContext *ctx, CMPIResult *rslt, CMPIObjectPath *cop,
-		CMPIInstance * ci, CMPIStatus * rc)
-{
-	struct ha_msg *operation;
-	char *id, *rscid; 
-
-	id    = CMGetKeyString(cop, "Id", rc);
-        rscid = CMGetKeyString(cop, "ResourceId", rc);
-
-	/* create an empty operatoin */
-	if ((operation = ha_msg_new(16)) == NULL ) {
-                cl_log(LOG_ERR, "%s: operation alloc failed.", __FUNCTION__);
-		rc->rc = CMPI_RC_ERR_FAILED;
-		return HA_FAIL;
-	}
-
-	/* fill operation */
-	cmpi_inst2msg(ci, HA_OPERATION, operation, rc);
-
-	/* add op to resource */
-	if (cim_add_rscop(rscid, operation) != HA_OK ) {
-		rc->rc = CMPI_RC_ERR_FAILED;
-		ha_msg_del(operation);
-		return HA_FAIL;
-	} 
-	
-	ha_msg_del(operation);
-	rc->rc = CMPI_RC_OK;
-	return HA_OK;
-}
-
-
-
-static int
-operation_delete_inst(CMPIContext *ctx, CMPIResult *rslt, 
-			CMPIObjectPath *cop, CMPIStatus * rc)
-{
-	char *id, *rscid; 
-
-	id    = CMGetKeyString(cop, "Id", rc);
-        rscid = CMGetKeyString(cop, "ResourceId", rc);
-	
-	if ( cim_del_rscop(rscid, id) == HA_OK ) {
-		rc->rc = CMPI_RC_OK;
-		return HA_OK;
-	} else {
-		rc->rc = CMPI_RC_ERR_FAILED;
-		return HA_FAIL;
-	}
 }
 
 static int
@@ -212,6 +131,7 @@ operation_enum_insts(CMPIInstanceMI * mi, CMPIContext * ctx, CMPIResult * rslt,
 			cim_free(opid);
         	}
 	}
+	ha_msg_del(rsclist);
 done:
 	rc->rc = CMPI_RC_OK;
         CMReturnDone(rslt);
@@ -264,8 +184,7 @@ OperationGetInstance(CMPIInstanceMI * mi, CMPIContext * ctx, CMPIResult * rslt,
 
 	PROVIDER_INIT_LOGGER();
 
-        DEBUG_ENTER();
-	id = CMGetKeyString(cop, "Id", &rc);
+	id    = CMGetKeyString(cop, "Id", &rc);
 	rscid = CMGetKeyString(cop, "ResourceId", &rc);
 
 	op = CMNewObjectPath(Broker, CMGetCharPtr(CMGetNameSpace(cop, &rc)), 
@@ -293,7 +212,6 @@ OperationGetInstance(CMPIInstanceMI * mi, CMPIContext * ctx, CMPIResult * rslt,
 
         CMReturnInstance(rslt, ci);
         CMReturnDone(rslt);
-	DEBUG_LEAVE();
         CMReturn(CMPI_RC_OK);
 }
 
@@ -302,7 +220,32 @@ OperationCreateInstance(CMPIInstanceMI * mi, CMPIContext * ctx,
 		CMPIResult * rslt, CMPIObjectPath * cop, CMPIInstance * ci)
 {
 	CMPIStatus rc = {CMPI_RC_OK, NULL};
-	operation_create_inst(ctx, rslt, cop, ci, &rc);
+	struct ha_msg *operation;
+	char *id, *rscid; 
+
+	id    = CMGetKeyString(cop, "Id", &rc);
+        rscid = CMGetKeyString(cop, "ResourceId", &rc);
+
+	/* create an empty operatoin */
+	if ((operation = ha_msg_new(16)) == NULL ) {
+                cl_log(LOG_ERR, "%s: operation alloc failed.", __FUNCTION__);
+		rc.rc = CMPI_RC_ERR_FAILED;
+		goto done;
+	}
+
+	/* fill operation */
+	cmpi_inst2msg(ci, HA_OPERATION, operation, &rc);
+
+	/* add op to resource */
+	if (cim_add_rscop(rscid, operation) != HA_OK ) {
+		rc.rc = CMPI_RC_ERR_FAILED;
+		ha_msg_del(operation);
+		goto done;
+	} 
+	
+	ha_msg_del(operation);
+	rc.rc = CMPI_RC_OK;
+done:
 	return rc;
 }
 
@@ -313,7 +256,19 @@ OperationSetInstance(CMPIInstanceMI * mi, CMPIContext * ctx,
 		CMPIInstance * ci, char ** properties)
 {
         CMPIStatus rc = {CMPI_RC_OK, NULL};
-	operation_update_inst(ctx, rslt, cop, ci, properties, &rc);
+	struct ha_msg *operation;
+	char *id, *rscid;
+
+	id    = CMGetKeyString(cop, "Id", &rc);
+	rscid = CMGetKeyString(cop, "ResourceId", &rc);
+	if ((operation = find_operation(rscid, id)) == NULL ) {
+		rc.rc = CMPI_RC_ERR_FAILED;
+		goto done;
+	}
+	cmpi_inst2msg(ci, HA_OPERATION, operation, &rc);
+	cim_update_rscop(rscid, id, operation);
+	rc.rc = CMPI_RC_OK;
+done:
         return rc;
 }
 
@@ -323,7 +278,15 @@ OperationDeleteInstance(CMPIInstanceMI * mi, CMPIContext * ctx,
 		 CMPIResult * rslt, CMPIObjectPath * cop)
 {
         CMPIStatus rc = {CMPI_RC_OK, NULL};
-	operation_delete_inst(ctx, rslt, cop, &rc);
+	char *id, *rscid; 
+	id    = CMGetKeyString(cop, "Id", &rc);
+        rscid = CMGetKeyString(cop, "ResourceId", &rc);
+	
+	if ( cim_del_rscop(rscid, id) == HA_OK ) {
+		rc.rc = CMPI_RC_OK;
+	} else {
+		rc.rc = CMPI_RC_ERR_FAILED;
+	}
 	return rc;
 }
 
