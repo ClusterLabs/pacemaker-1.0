@@ -68,7 +68,10 @@ cimproviders_LTLIBRARIES = libHAClusterInfo.la				\
                            libHA_ColocationConstraintProvider.la	\
                            libHA_OrderConstraintProvider.la		\
                            libHA_IndicationProvider.la                  \
-                           libHA_ClusteringServiceProvider.la
+                           libHA_ClusteringServiceProvider.la		\
+                           libHA_InstanceAttributesProvider.la		\
+                           libHA_AttributesOfResourceProvider.la
+
 
 #--------------------------------------------------------------
 libHAClusterInfo_la_SOURCES                 = mgmt_client.c utils.c \
@@ -105,11 +108,11 @@ libHA_HostedResourceProvider_la_LIBADD      = libHAClusterInfo.la
 libHA_InstalledSoftwareIdentityProvider_la_SOURCES =  installed_software_provider.c
 libHA_InstalledSoftwareIdentityProvider_la_LIBADD  = libHAClusterInfo.la 
 #--------------------------------------------------------------
-#libHA_ResourceInstanceProvider_la_SOURCES   =  resource_instance_provider.c
-#libHA_ResourceInstanceProvider_la_LIBADD    = libHAClusterInfo.la 
+libHA_AttributesOfResourceProvider_la_SOURCES = attrs_of_resource_provider.c
+libHA_AttributesOfResourceProvider_la_LIBADD  = libHAClusterInfo.la 
 #--------------------------------------------------------------
-#libHA_InstanceAttributesProvider_la_SOURCES = instance_attributes_provider.c
-#libHA_InstanceAttributesProvider_la_LIBADD  = libHAClusterInfo.la 
+libHA_InstanceAttributesProvider_la_SOURCES = instance_attrs_provider.c
+libHA_InstanceAttributesProvider_la_LIBADD  = libHAClusterInfo.la 
 #--------------------------------------------------------------
 libHA_SubResourceProvider_la_SOURCES        =  subresource_provider.c
 libHA_SubResourceProvider_la_LIBADD         = libHAClusterInfo.la 
