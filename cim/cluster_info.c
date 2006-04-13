@@ -88,6 +88,7 @@ static char * 	   	pathname_encode(const char *);
 static int		cib_changed(void);
 static struct ha_msg* 	cim_disk2msg(const char *objpathname);
 static int		cim_msg2disk(const char *objpathname, struct ha_msg *);
+static int		cim_disk_msg_del(const char *objpathname);
 
 #define STR_CONS_ORDER        "rsc_order"
 #define STR_CONS_LOCATION     "rsc_location"
@@ -215,8 +216,8 @@ BEGIN_NODE "operations"
 END_NODE;
 
 static const char attributes []= 
-BEGIN_NODE "instance_attributes"
-	BEGIN_NODE "attributes" REPEATE ANYTIMES
+BEGIN_NODE CIM_MSG_INST_ATTR
+	BEGIN_NODE CIM_MSG_ATTR REPEATE ANYTIMES
 		BEGIN_KEY "id"		END_KEY	
 		BEGIN_KEY "name"	END_KEY	
 		BEGIN_KEY "value"	END_KEY
@@ -364,7 +365,7 @@ BEGIN_NODE
 	BEGIN_KEY "clone_node_max"	END_KEY
 	BEGIN_KEY "master_max"		END_KEY
 	BEGIN_KEY "master_node_max"	END_KEY
-	BEGIN_NODE "attributes" REPEATE
+	BEGIN_NODE CIM_MSG_ATTR REPEATE
 		BEGIN_KEY "id"		END_KEY
 		BEGIN_KEY "name"	END_KEY
 		BEGIN_KEY "value"	END_KEY
@@ -375,6 +376,8 @@ static const FunContext update_ctx_table [] = {
 	{DEL_OPERATION,		A_1(MSG_DEL_RSC_OP),  NULL, NULL},
 	{DEL_ATTRIBUTES,	A_1(MSG_DEL_RSC_PARAM),NULL, NULL},
 	{DEL_RESOURCE, 		A_1(MSG_DEL_RSC), NULL, NULL},
+	{CLEANUP_RESOURCE,	A_1(MSG_CLEANUP_RSC), NULL, NULL},
+
 	{CREATE_RSC_GROUP, 	A_1(MSG_ADD_GRP),NULL, NULL},
 	{CREATE_RESOURCE, 	A_1(MSG_ADD_RSC), resource, node_update},
 	{DEL_ORDER_CONSTRAINT, 	
@@ -524,7 +527,6 @@ cim_update_dispatch(int func_id, const char* param, void* in, void* out)
 	int ret = HA_OK;
 	int i = 0;
 
-	DEBUG_ENTER();
 	if ((ctx = find_update_ctx(func_id)) == NULL ) {
 		cl_log(LOG_ERR, "cim_update: can't find function %d", func_id);
 		return HA_FAIL; 
@@ -548,11 +550,13 @@ cim_update_dispatch(int func_id, const char* param, void* in, void* out)
 	}
 	
 	if ( ret == HA_OK ) {
-		mclient_process(client);
+		if ( mclient_process(client) != MC_OK ) {
+			cl_log(LOG_ERR, "%s: update failed.", __FUNCTION__);
+			ret = HA_FAIL;
+		}
 	}
 
 	mclient_free(client);
-	DEBUG_LEAVE();
 	return ret;
 }
 
@@ -1269,6 +1273,19 @@ cim_disk2msg(const char *objpathname)
 	return msg;
 }
 
+
+static int
+cim_disk_msg_del(const char *objpathname)
+{
+	char fullpathname[MAXLEN];
+	char * pathname = pathname_encode(objpathname);
+	snprintf(fullpathname, MAXLEN, "%s/%s", HA_CIM_VARDIR, pathname);
+	cim_debug2(LOG_INFO, "%s: unlink %s", __FUNCTION__, fullpathname);
+	unlink(fullpathname);
+	cim_free(pathname);
+	return HA_OK;
+}
+
 static char*   
 pathname_encode(const char *pathname)
 {
@@ -1297,11 +1314,51 @@ cib_changed()
 	return 1;
 }
 
+#define CLEAN_RESOURCE_RECORD(resid)	do {				\
+                cim_update_disabled_rsc_list(0, rscid);		\
+                cim_erase_rscattrs(rscid);			\
+                cim_remove_rsctype(rscid);			\
+}while(0)
+
+/****************************************************************
+ * resource list
+ ***************************************************************/
+#define CIM_DISABLED_RSC_LIST "disabled_resource_list"
+int
+cim_is_rsc_disabled(const char *rscid)
+{
+	int len, i;
+	struct ha_msg * msg = NULL;
+
+	if ((msg = cim_get_disabled_rsc_list()) == NULL ) {
+		cim_debug2(LOG_INFO, "%s: %s is enabled", __FUNCTION__, rscid);
+		return FALSE;
+	}
+	
+	len = cim_list_length(msg);
+	for(i=0; i < len; i++) {
+		char * rsc = NULL;
+		if((rsc = cim_list_index(msg, i)) == NULL ) {
+			continue;
+		}
+		if ( strncmp(rscid, rsc, MAXLEN) == 0){
+			ha_msg_del(msg);
+			cim_debug2(LOG_INFO, "%s: %s is disabled", __FUNCTION__, rscid);
+			return TRUE;
+		}
+	}
+
+	ha_msg_del(msg);
+
+	cim_debug2(LOG_INFO, "%s: %s is enabled", __FUNCTION__, rscid);
+	return FALSE;
+}
+
 struct ha_msg * 
 cim_get_disabled_rsc_list(void)
 {
 	cim_debug2(LOG_INFO, "get disabled resource list");
-	return  cim_disk2msg("disabled_rsc_list");
+	return  cim_disk2msg(CIM_DISABLED_RSC_LIST);
 }
 
 int 
@@ -1346,7 +1403,12 @@ cim_update_disabled_rsc_list(int add, const char *rscid)
 	}
 
 	/* write to disk */
-	cim_msg2disk("disabled_rsc_list", msg);	
+	if ( msg->nfields == 0 ) {
+		cim_debug2(LOG_INFO, "%s: delete %s", __FUNCTION__, CIM_DISABLED_RSC_LIST);
+		cim_disk_msg_del(CIM_DISABLED_RSC_LIST);
+	} else {
+		cim_msg2disk(CIM_DISABLED_RSC_LIST, msg);
+	}
 	ha_msg_del(msg);
 	return HA_OK;
 }	
@@ -1356,13 +1418,15 @@ cim_get_rsc_list(void)
 {
 	struct ha_msg *list1 = NULL, *list2;
 	int len2;
-
+	
+	/* list in CIB */
 	list1 = cim_query_dispatch(GET_RSC_LIST, NULL, NULL);
 	if (list1 == NULL && (list1 = ha_msg_new(1)) == NULL ) {
 		cl_log(LOG_ERR, "cim_get_rsc_list: can't get list1.");
 		return NULL;
 	}
 
+	/* merge with diabled list */
 	if ((list2 = cim_get_disabled_rsc_list())) {
 		int i;
 		len2 = cim_list_length(list2);
@@ -1399,7 +1463,7 @@ cim_traverse_allrsc(struct ha_msg* list)
 			continue;
 		}
 		cim_list_add(newlist, rscid);
-		if (cim_get_rsc_type(rscid) == TID_RES_PRIMITIVE) {
+		if (cim_get_rsctype(rscid) == TID_RES_PRIMITIVE) {
 			continue;
 		}
 	
@@ -1424,18 +1488,439 @@ cim_traverse_allrsc(struct ha_msg* list)
 	return newlist;
 }
 
+/*********************************************************
+ * resource type 
+ ********************************************************/
+
+#define CIM_RSCTYPE_TABLE_PATHNAME "resource_type_table"
+int
+cim_add_rsctype(const char* rscid, const char *type)
+{
+	struct ha_msg * typemsg;
+	int ret;
+	if ((typemsg = cim_disk2msg(CIM_RSCTYPE_TABLE_PATHNAME)) == NULL) {
+		if ((typemsg = ha_msg_new(1)) == NULL ) {
+			return HA_FAIL;
+		}
+	}
+	cl_msg_modstring(typemsg, rscid, type);
+	ret = cim_msg2disk(CIM_RSCTYPE_TABLE_PATHNAME, typemsg);
+	ha_msg_del(typemsg);
+	return ret;
+}
+
+int
+cim_remove_rsctype(const char* rscid)
+{
+	struct ha_msg * typemsg;
+	int ret;
+	if ((typemsg = cim_disk2msg(CIM_RSCTYPE_TABLE_PATHNAME)) == NULL) {
+		return HA_OK;
+	}
+	cl_msg_remove(typemsg, rscid);
+	if ( typemsg->nfields == 0 ) {
+		ret = cim_disk_msg_del(CIM_RSCTYPE_TABLE_PATHNAME);
+	} else {
+		ret = cim_msg2disk(CIM_RSCTYPE_TABLE_PATHNAME, typemsg);
+	}
+	ha_msg_del(typemsg);
+	return ret;
+}
+
+int
+cim_get_rsctype(const char * rscid)
+{
+	char * type = NULL;
+	struct ha_msg *msg;
+	int tid = TID_UNKNOWN;
+
+	if (cim_is_rsc_disabled(rscid)) {
+		const char * constype;
+		msg = cim_disk2msg(CIM_RSCTYPE_TABLE_PATHNAME);
+		if (msg) {
+			constype = cl_get_string(msg, rscid);
+			type = constype? cim_strdup(constype) : NULL;
+			ha_msg_del(msg);
+		}
+	} else {
+		msg = cim_query_dispatch(GET_RSC_TYPE, rscid, NULL);
+		if ( msg ) {
+			type = cim_strdup(cl_get_string(msg, "type"));
+			ha_msg_del(msg);
+		}
+	} 
+	if ( type == NULL ) {
+		return TID_UNKNOWN;
+	}
+
+	if(strncmp(type, "native", MAXLEN)== 0){
+		tid = TID_RES_PRIMITIVE;
+	} else if (strncmp(type, "group", MAXLEN) == 0) {
+		tid = TID_RES_GROUP;
+	} else if (strncmp(type, "clone", MAXLEN) == 0){
+		tid = TID_RES_CLONE;
+	} else if (strncmp(type, "master", MAXLEN) == 0){
+		tid = TID_RES_MASTER;
+	}
+	
+	cim_free(type);
+	return tid;
+}
+
+/*******************************************************
+ * resource operations 
+ ******************************************************/
+#define CIM_RSCOPS_PREFIX "operations_of_"
+
+struct ha_msg *
+cim_get_rscops(const char *rscid)
+{
+	struct ha_msg *ops = NULL;
+
+	if (!cim_is_rsc_disabled(rscid)) { /* from CIB */
+		ops = cim_query_dispatch(GET_RSC_OPERATIONS, rscid, NULL);
+	} else {
+		char pathname[MAXLEN] = CIM_RSCOPS_PREFIX;
+		strncat(pathname, rscid, MAXLEN);	
+		ops = cim_disk2msg(pathname);
+	}
+	return ops;
+}
+
+int
+cim_del_rscop(const char *rscid, const char *opid)
+{
+	struct ha_msg *ops;
+	int ret;
+	char pathname[MAXLEN] = CIM_RSCOPS_PREFIX;
+
+	if ( ! cim_is_rsc_disabled(rscid) ) {	/* update to CIB */
+		ret = cim_update_dispatch(DEL_OPERATION, opid, NULL, NULL);
+		return ret;
+	};
+
+	if ((ops = cim_get_rscops(rscid)) == NULL ) {
+		cl_log(LOG_WARNING, "cim_del_rscop: ops not exists");
+		return HA_OK;
+	}
+
+	cim_msg_remove_child(ops, opid);
+
+	/* write back to disk */
+	strncat(pathname, rscid, MAXLEN);
+	ret = cim_msg2disk(pathname, ops);
+	ha_msg_del(ops);	
+
+	return ret;
+}
+
+int
+cim_add_rscop(const char *rscid, struct ha_msg *op)
+{
+	struct ha_msg *ops;
+	int ret;
+
+	if ((ops = cim_get_rscops(rscid)) == NULL) {
+		if ((ops = ha_msg_new(1)) == NULL ) {
+				return HA_FAIL;
+		}
+	}
+
+	cim_msg_add_child(ops, cl_get_string(op, "id"), op);
+	if ( ! cim_is_rsc_disabled(rscid) ) {	/* update into CIB */
+		ret = cim_update_dispatch(UPDATE_OPERATIONS, rscid, ops, NULL);
+	} else {	/* write back to disk */
+		char pathname[MAXLEN] = CIM_RSCOPS_PREFIX;
+		strncat(pathname, rscid, MAXLEN);
+		/* write back to disk */
+		ret = cim_msg2disk(pathname, ops);
+	}
+	ha_msg_del(ops);
+	return ret;
+}
+
+
+int
+cim_update_rscop(const char* rscid, const char* id, struct ha_msg* op)
+{
+	struct ha_msg *ops;
+	int ret;
+
+	if ((ops = cim_get_rscops(rscid)) == NULL) {
+		cl_log(LOG_ERR, "%s: ops of %s not found.", 
+				__FUNCTION__, rscid);
+		return HA_FAIL;
+	}
+
+	/* update op */
+	cim_msg_remove_child(ops, id);
+	cim_msg_add_child(ops, id, op);
+	
+	if ( ! cim_is_rsc_disabled(rscid) ) {	/* update into CIB */
+		ret = cim_update_dispatch(UPDATE_OPERATIONS, rscid, ops, NULL);
+	} else {	/* write back to disk */
+		char pathname [MAXLEN] = CIM_RSCOPS_PREFIX;
+		strncat(pathname, rscid, MAXLEN);
+		/* write back to disk */
+		ret = cim_msg2disk(pathname, ops);
+	}
+	ha_msg_del(ops);
+	return ret;
+}
+
+/*********************************************************
+ * resource attributes 
+ ********************************************************/
+#define CIM_RSCATTRS_PREFIX "attributes_of_"
+int
+cim_erase_rscattrs(const char *rscid)
+{
+	char pathname[MAXLEN] = CIM_RSCATTRS_PREFIX;
+	strncat(pathname, rscid, MAXLEN);
+	return cim_disk_msg_del(pathname);
+}
+
+struct ha_msg *
+cim_get_rscattrs(const char *rscid)
+{
+	struct ha_msg *attrs = NULL;
+
+	if (!cim_is_rsc_disabled(rscid)) {
+		attrs = cim_query_dispatch(GET_RSC_ATTRIBUTES, rscid, NULL);
+	} else {
+		char pathname[MAXLEN] = CIM_RSCATTRS_PREFIX;
+		strncat(pathname, rscid, MAXLEN);
+		attrs = cim_disk2msg(pathname);
+	}
+	return attrs;
+}
+
+int
+cim_update_attrnvpair(const char*rscid, const char*nvid, struct ha_msg *nvpair)
+{
+	int ret;
+	struct ha_msg *attrs = cim_get_rscattrs(rscid);
+
+	DEBUG_ENTER();
+	if ( attrs == NULL ) {
+		if ((attrs = ha_msg_new(1)) == NULL ) {
+			cl_log(LOG_ERR, "%s: attributes not found for %s",
+					__FUNCTION__, rscid);
+			return HA_FAIL;
+		}
+	}
+
+	cl_msg_modstruct(attrs, nvid, nvpair);
+	if ( cim_is_rsc_disabled(rscid) ) {
+		char pathname[MAXLEN] = CIM_RSCATTRS_PREFIX;
+		strncat(pathname, rscid, MAXLEN);
+		ret = cim_msg2disk(pathname, attrs);
+		cim_debug_msg(attrs, "%s: write attributes to %s", __FUNCTION__, pathname);
+	} else {
+		ret = cim_update_dispatch(UPDATE_ATTRIBUTES, rscid, attrs, NULL);
+	}
+	ha_msg_del(attrs);
+	DEBUG_LEAVE();
+	return ret;
+}
+
+int
+cim_remove_attrnvpair(const char* rscid, const char* nvid)
+{
+	int ret;
+	struct ha_msg *attrs = cim_get_rscattrs(rscid);
+	if ( attrs == NULL ) {
+		return HA_FAIL;
+	}
+
+	cl_msg_remove(attrs, nvid);
+	if ( cim_is_rsc_disabled(rscid) ) {
+		char pathname[MAXLEN] = CIM_RSCATTRS_PREFIX;
+		strncat(pathname, rscid, MAXLEN);
+		ret = cim_msg2disk(pathname, attrs);
+	} else {
+		ret = cim_update_dispatch(DEL_ATTRIBUTES, nvid, NULL, NULL);
+	}
+
+	ha_msg_del(attrs);
+	return ret;
+}
+
+/**********************************************************
+ * resource
+ *********************************************************/
+
+static void
+AddPrimitiveForUpdate(struct ha_msg *msg, struct ha_msg* rsc, struct ha_msg *attrs)
+{
+	int len, i;
+	const char * id;
+
+	id = cl_get_string(rsc, "id");
+	ha_msg_add(msg, "id", cl_get_string(rsc, "id"));
+	ha_msg_add(msg, "provider", cl_get_string(rsc, "provider"));
+	ha_msg_add(msg, "class", cl_get_string(rsc, "class"));
+	ha_msg_add(msg, "type", cl_get_string(rsc, "type"));
+	
+	if ( attrs == NULL ) {
+		attrs = cim_get_rscattrs(id);
+	}
+	if ( attrs == NULL ) {
+		cl_log(LOG_ERR, "%s: attributes of %s not found.", __FUNCTION__, id);
+		return ;
+	}
+	len = cim_msg_children_count(attrs);
+	for (i = 0; i < len; i++) {
+		struct ha_msg *nvpair = NULL;
+		nvpair = cim_msg_child_index(attrs, i);
+		cim_msg_add_child(msg, cl_get_string(nvpair, "id"), nvpair);
+	}
+}
+
+int
+cim_cib_addrsc(const char *rscid)
+{
+	int type, ret;
+	struct ha_msg *rsc, *sublist, *msg;
+
+	if ( ! cim_is_rsc_disabled(rscid) ){
+		cl_log(LOG_ERR, "%s: resource %s is already enabled. ",
+			__FUNCTION__, rscid);
+		return HA_FAIL;
+	}
+	type = cim_get_rsctype(rscid);
+	if ( (rsc = cim_find_rsc(type, rscid)) == NULL ) {
+		cl_log(LOG_ERR, "%s: resource %s not found.",
+			__FUNCTION__, rscid);
+		return HA_FAIL;
+	}
+
+	if ( (msg = ha_msg_new(16)) == NULL ) {
+		cl_log(LOG_ERR, "%s: msg alloc failed.", __FUNCTION__);
+		return HA_FAIL;
+	}
+
+	if ( type == TID_RES_GROUP ) {
+		struct ha_msg *primitive;
+		int i, count;
+
+		if ((sublist = cim_get_subrsc_list(rscid)) == NULL ) {
+			cl_log(LOG_ERR, 
+				"%s: no primitive resource for %s found."
+				"imcomplete resource.", __FUNCTION__, rscid);
+			ha_msg_del(rsc);
+			ha_msg_del(msg);
+			return HA_FAIL;
+		}
+
+		/* first create a group in CIB */
+		ret = cim_update_dispatch(CREATE_RSC_GROUP, rscid, NULL, NULL); 
+		if ( ret == HA_FAIL) {
+			ha_msg_del(rsc);
+			ha_msg_del(msg);
+			return HA_FAIL;
+		}
+
+		/* then add sub primitive resources into group */
+		count = cim_list_length(sublist);
+		for (i = 0; i < count; i++) {
+			char *subrscid = cim_list_index(sublist, i);
+			if (subrscid == NULL ) {
+				continue;
+			}
+			primitive = cim_find_rsc(TID_RES_PRIMITIVE, subrscid);
+			cim_debug_msg(primitive, "%s: primitve to be added to group %s",
+					__FUNCTION__, rscid);
+			cim_debug2(LOG_INFO, "%s: ready to add", __FUNCTION__);
+			ret = cim_add_subrsc(rsc, primitive);
+
+			CLEAN_RESOURCE_RECORD(cl_get_string(primitive, "id"));
+		}
+
+		CLEAN_RESOURCE_RECORD(rscid);
+		ha_msg_del(sublist);
+	} else if ( type == TID_RES_CLONE || type == TID_RES_MASTER) {
+		struct ha_msg *primitive;
+		if ((sublist = cim_get_subrsc_list(rscid)) == NULL ) {
+			cl_log(LOG_ERR, 
+				"%s: no primitive resource for %s found."
+				"imcomplete resource.", __FUNCTION__, rscid);
+			ha_msg_del(rsc);
+			ha_msg_del(msg);
+			return HA_FAIL;
+		}
+		primitive = cim_find_rsc(TID_RES_PRIMITIVE, 
+						cim_list_index(sublist, 0)); 
+		if ( primitive == NULL ) {
+			cl_log(LOG_ERR, "%s: can't find primitive %s.",
+				 __FUNCTION__, cim_list_index(sublist, 0));
+			ha_msg_del(rsc);
+			ha_msg_del(msg);
+			return HA_FAIL;
+		}
+		AddPrimitiveForUpdate(msg, primitive, NULL);
+		ha_msg_add(msg, "groupid", "");	
+		ha_msg_add(msg, "advance", 
+				(type == TID_RES_CLONE) ? "clone":"master");
+		ha_msg_add(msg, "advance_id", rscid);
+		ha_msg_add(msg, "clone_max", 
+				cl_get_string(rsc, "clone_max"));
+		ha_msg_add(msg, "clone_node_max", 
+				cl_get_string(rsc, "clone_node_max"));
+		ha_msg_add(msg, "master_max", ( type == TID_RES_MASTER ) ? 
+				cl_get_string(rsc, "master_max") : "");
+		ha_msg_add(msg, "master_node_max", ( type == TID_RES_MASTER ) ? 
+				cl_get_string(rsc, "master_node_max") : "");
+
+		ret = cim_update_dispatch(CREATE_RESOURCE, NULL, msg, NULL);
+
+		CLEAN_RESOURCE_RECORD(cl_get_string(primitive, "id"));
+		ha_msg_del(sublist);
+	} else if ( type == TID_RES_PRIMITIVE ) {
+		AddPrimitiveForUpdate(msg, rsc, NULL);
+		ha_msg_add(msg, "groupid", "");	
+		ha_msg_add(msg, "advance", "");
+		ha_msg_add(msg, "advance_id", "");
+		ha_msg_add(msg, "clone_max", "");
+		ha_msg_add(msg, "clone_node_max", "");
+		ha_msg_add(msg, "master_max", "");
+		ha_msg_add(msg, "master_node_max", "");
+		ret = cim_update_dispatch(CREATE_RESOURCE, NULL, msg, NULL);
+
+		/* delete the disk image */
+
+		CLEAN_RESOURCE_RECORD(rscid);
+	}
+
+	ha_msg_del(rsc);
+	ha_msg_del(msg);
+	return HA_OK;
+}
+
+
+#define CIM_RESOURCE_PREFIX "resource_"
 int
 cim_store_rsc(int type, const char *rscid, struct ha_msg *rsc)
 {
-	char tmp[MAXLEN];
-	snprintf(tmp, MAXLEN, "resource_%d_%s", type, rscid);
-	return cim_msg2disk(tmp, rsc);
+	char pathname[MAXLEN] = CIM_RESOURCE_PREFIX;
+	strncat(pathname, rscid, MAXLEN);
+	return cim_msg2disk(pathname, rsc);
 }
 
 struct ha_msg*	
 cim_find_rsc(int type, const char * rscid)
 {
-	struct ha_msg *rsc = NULL, * attributes;
+	struct ha_msg *rsc = NULL/*, * attributes*/;
+
+	if (cim_is_rsc_disabled(rscid)) {
+		char pathname[MAXLEN] = CIM_RESOURCE_PREFIX;
+		strncat(pathname, rscid, MAXLEN);
+		cl_log(LOG_INFO, "%s: %s not in CIB, load it from disk.",
+			__FUNCTION__, rscid);
+		rsc = cim_disk2msg(pathname);
+		goto done;
+	}
+ 
 	switch(type){
 	case TID_RES_PRIMITIVE:
 		rsc = cim_query_dispatch(GET_PRIMITIVE, rscid, NULL);
@@ -1454,106 +1939,8 @@ cim_find_rsc(int type, const char * rscid)
 	default:
 		break;
 	}
-
-	if (rsc == NULL ) {
-		char tmp[MAXLEN];
-		snprintf(tmp, MAXLEN, "resource_%d_%s", type, rscid);
-		cl_log(LOG_INFO, "%s: %s not in CIB, load it from disk.",
-			__FUNCTION__, rscid);
-		rsc = cim_disk2msg(tmp);
-		cl_log(LOG_INFO, "%s: %s loaded", __FUNCTION__, rscid);
-	} else {
-		attributes=cim_query_dispatch(GET_RSC_ATTRIBUTES,rscid, NULL);
-		if (attributes) {
-			ha_msg_addstruct(rsc, "attributes", attributes);
-        	}
-	}
+done:
 	return rsc;
-}
-
-int
-cim_store_rsc_type(const char* rscid, struct ha_msg *type)
-{
-	char tmp[MAXLEN];
-	snprintf(tmp, MAXLEN, "resource_type_%s", rscid);
-	return cim_msg2disk(tmp, type);
-}
-
-int
-cim_get_rsc_type(const char * rscid)
-{
-	char * type = NULL;
-	struct ha_msg *msg;
-	int tid = TID_UNKNOWN;
-
-	msg = cim_query_dispatch(GET_RSC_TYPE, rscid, NULL);
-	if ( msg == NULL ) {	/* get msg from disk */
-		char tmp[MAXLEN];
-		snprintf(tmp, MAXLEN, "resource_type_%s", rscid);
-		msg = cim_disk2msg(tmp);	
-	}
-	if ( msg ) {
-		type = cim_strdup(cl_get_string(msg, "type"));
-		ha_msg_del(msg);
-	} 
-	if ( type == NULL ) {
-		return TID_UNKNOWN;
-	}
-
-	if(strcmp(type, "native")== 0){
-		tid = TID_RES_PRIMITIVE;
-	} else if (strcmp(type, "group") == 0) {
-		tid = TID_RES_GROUP;
-	} else if (strcmp(type, "clone") == 0){
-		tid = TID_RES_CLONE;
-	} else if (strcmp(type, "master") == 0){
-		tid = TID_RES_MASTER;
-	}
-	
-	cim_free(type);
-	return tid;
-}
-
-int
-cim_is_rsc_disabled(const char *rscid)
-{
-	int len, i;
-	struct ha_msg * msg = NULL;
-
-	if ((msg = cim_get_disabled_rsc_list()) == NULL ) {
-		return FALSE;
-	}
-	
-	len = cim_list_length(msg);
-	for(i=0; i < len; i++) {
-		char * rsc = NULL;
-		if((rsc = cim_list_index(msg, i)) == NULL ) {
-			continue;
-		}
-		if ( strncmp(rscid, rsc, MAXLEN) == 0){
-			ha_msg_del(msg);
-			return TRUE;
-		}
-	}
-
-	ha_msg_del(msg);
-	return FALSE;
-}
-
-int
-cim_store_operation(const char* rscid, const char* opid,struct ha_msg* op)
-{
-	char tmp[MAXLEN];
-	snprintf(tmp, MAXLEN, "operation_%s_%s", rscid, opid);
-	return cim_msg2disk(tmp, op);
-}
-
-struct ha_msg*	
-cim_load_operation(const char* rscid, const char * opid)
-{
-	char tmp[MAXLEN];
-	snprintf(tmp, MAXLEN, "operation_%s_%s", rscid, opid);
-	return cim_disk2msg(tmp);
 }
 
 int
@@ -1569,12 +1956,7 @@ cim_update_rsc(int type, const char *rscid, struct ha_msg *resource)
 			ret = cim_update_dispatch(UPDATE_MASTER, 
 						NULL, resource, NULL);
 		} else if (type == TID_RES_PRIMITIVE ) {
-			struct ha_msg * attributes;
-			attributes = cl_get_struct(resource, "attributes");
-			if (attributes ) {
-				ret = cim_update_dispatch(UPDATE_ATTRIBUTES, 
-						rscid, attributes, NULL);
-			}
+			ret = HA_OK;
 		}
 	} else {	/* update disk image */
 		ret = cim_store_rsc(type, rscid, resource);
@@ -1582,38 +1964,43 @@ cim_update_rsc(int type, const char *rscid, struct ha_msg *resource)
 	return ret;
 }
 
+int
+cim_remove_rsc(const char * rscid)
+{
+	int ret;
+	struct ha_msg * msg;
+	if ( !cim_is_rsc_disabled(rscid)) {
+		ret = cim_update_dispatch(DEL_RESOURCE, rscid, NULL, NULL);
+		msg = cim_query_dispatch(GET_RSC_HOST, rscid, NULL);
+		if (msg) {
+			const char * host = cl_get_string(msg, "host");
+			char * param = mclient_makeup_param(host, rscid);
+			ret = cim_update_dispatch(CLEANUP_RESOURCE, param, NULL, NULL);
+		}
+	} else {
+		CLEAN_RESOURCE_RECORD(rscid);
+		ret = HA_OK;
+	}
+	return ret;
+}
+
+/*****************************************************************
+ * sub resources 
+ ****************************************************************/
+#define CIM_SUBRSC_PREFIX "subresources_of_"
+
 struct ha_msg *
 cim_get_subrsc_list(const char *rscid)
 {
 	struct ha_msg * sublist;
-	char tmp[MAXLEN];
+	char pathname[MAXLEN];
 	sublist = cim_query_dispatch(GET_SUB_RSC, rscid, NULL);
 	if ( sublist ) {	/* found it in CIB */
 		return sublist;
 	}
 	/* not found in CIB, look for it on disk */
-	snprintf(tmp, MAXLEN, "subresource_of_%s", rscid);
-	return cim_disk2msg(tmp);
-}
-
-static void
-AddPrimitiveForUpdate(struct ha_msg *msg, struct ha_msg* rsc)
-{
-	struct ha_msg *attributes;
-	int len, i;
-
-	ha_msg_add(msg, "id", cl_get_string(rsc, "id"));
-	ha_msg_add(msg, "provider", cl_get_string(rsc, "provider"));
-	ha_msg_add(msg, "class", cl_get_string(rsc, "class"));
-	ha_msg_add(msg, "type", cl_get_string(rsc, "type"));
-	
-	attributes = cl_get_struct(rsc, "attributes");
-	len = cim_msg_children_count(attributes);
-	for (i = 0; i < len; i++) {
-		struct ha_msg *nvpair = NULL;
-		nvpair = cim_msg_child_index(attributes, i);
-		cim_msg_add_child(msg, cl_get_string(nvpair, "id"), nvpair);
-	}
+	snprintf(pathname, MAXLEN, CIM_SUBRSC_PREFIX"%s", rscid);
+	return cim_disk2msg(pathname);
 }
 
 int
@@ -1621,11 +2008,12 @@ cim_add_subrsc(struct ha_msg *rsc, struct ha_msg *subrsc)
 {
 	struct ha_msg * sublist;
 	const char * rscid, *subrscid;
-	char tmp[MAXLEN];
+	char pathname[MAXLEN];
 	int ret, type;
 
 	rscid    = cl_get_string(rsc, "id");
 	subrscid = cl_get_string(subrsc, "id");
+
 	if ( ! cim_is_rsc_disabled(subrscid) ){
 		cl_log(LOG_ERR, "%s: resource %s can't be added, "
 			"%s not an invalid resource or not disabled",
@@ -1633,9 +2021,9 @@ cim_add_subrsc(struct ha_msg *rsc, struct ha_msg *subrsc)
 		return HA_FAIL;
 	}
 
-	if ( cim_is_rsc_disabled(rscid) ) {
-		snprintf(tmp, MAXLEN, "subresource_of_%s", rscid);
-		sublist = cim_disk2msg(tmp);
+	if ( cim_is_rsc_disabled(rscid) ) {	/* write to disk */
+		snprintf(pathname, MAXLEN, CIM_SUBRSC_PREFIX"%s", rscid);
+		sublist = cim_disk2msg(pathname);
 		if (sublist == NULL ) {	/* not exist yet */
 			if ((sublist = ha_msg_new(1)) == NULL ) {
 				cl_log(LOG_ERR, "cim_add_subrsc: "
@@ -1648,25 +2036,26 @@ cim_add_subrsc(struct ha_msg *rsc, struct ha_msg *subrsc)
 
 		/* add subrscid and write back to disk */
 		cim_list_add(sublist, subrscid);
-		ret = cim_msg2disk(tmp, sublist);
-	} else {
+		ret = cim_msg2disk(pathname, sublist);
+		ha_msg_del(sublist);
+	} else {		/* update to CIB */
 		struct ha_msg * msg;
 
-		type = cim_get_rsc_type(rscid);
+		type = cim_get_rsctype(rscid);
 		if ( type != TID_RES_GROUP ){  
 			cl_log(LOG_ERR, "%s: resource %s can't be added to %s,"
 					"%s is not a resource group.",
 				__FUNCTION__, subrscid, rscid, rscid);
 			return HA_FAIL;
 		}
-
+		
+		/* create new resource */
 		if ( (msg = ha_msg_new(16)) == NULL ) {
 			cl_log(LOG_ERR, "cim_add_subrsc: copy msg failed.");
 			return HA_FAIL;
 		}
-
 		cim_debug2(LOG_INFO, "%s: call AddPrimitiveForUpdate", __FUNCTION__);
-		AddPrimitiveForUpdate(msg, subrsc);
+		AddPrimitiveForUpdate(msg, subrsc, NULL);
 		if ( type == TID_RES_GROUP ) {
 			ha_msg_add(msg, "groupid", rscid);	
 			ha_msg_add(msg, "advance", "");
@@ -1679,101 +2068,19 @@ cim_add_subrsc(struct ha_msg *rsc, struct ha_msg *subrsc)
 
 		cim_debug2(LOG_INFO, "%s: create resource.", __FUNCTION__);
 		ret = cim_update_dispatch(CREATE_RESOURCE, NULL, msg, NULL);
+	
+		/* update disk status */	
+		CLEAN_RESOURCE_RECORD(subrscid);
+
 		ha_msg_del(msg);
 	}
 	return ret;
 }
 
 
-struct ha_msg *
-cim_get_rscops(const char *rscid)
-{
-	struct ha_msg *ops;
-	char tmp[MAXLEN];
-	ops = cim_query_dispatch(GET_RSC_OPERATIONS, rscid, NULL);
-	if (ops) {
-		return ops;
-	}
-
-	snprintf(tmp, MAXLEN, "operations_of_%s", rscid);
-	return cim_disk2msg(tmp);
-}
-
-int
-cim_del_rscop(const char *rscid, const char *opid)
-{
-	struct ha_msg *ops;
-	char tmp[MAXLEN];
-	int ret;
-
-	if ( ! cim_is_rsc_disabled(rscid) ) {	/* update into CIB */
-		ret = cim_update_dispatch(DEL_OPERATION, opid, NULL, NULL);
-		return ret;
-	};
-
-	if ((ops = cim_get_rscops(rscid)) == NULL ) {
-		cl_log(LOG_WARNING, "cim_del_rscop: ops not exists");
-		return HA_OK;
-	}
-
-	cim_msg_remove_child(ops, opid);
-
-	/* write back to disk */
-	snprintf(tmp, MAXLEN, "operations_of_%s", rscid);
-	ret = cim_msg2disk(tmp, ops);
-	ha_msg_del(ops);	
-	return ret;
-}
-
-int
-cim_add_rscop(const char *rscid, struct ha_msg *op)
-{
-	struct ha_msg *ops;
-	char tmp[MAXLEN];
-	int ret;
-
-	if ((ops = cim_get_rscops(rscid)) == NULL) {
-		if ((ops = ha_msg_new(1)) == NULL ) {
-				return HA_FAIL;
-		}
-	}
-
-	cim_msg_add_child(ops, cl_get_string(op, "id"), op);
-	if ( ! cim_is_rsc_disabled(rscid) ) {	/* update into CIB */
-		ret = cim_update_dispatch(UPDATE_OPERATIONS, rscid, ops, NULL);
-	} else {	/* write back to disk */
-		snprintf(tmp, MAXLEN, "operatioins_of_%s", rscid);
-		ret = cim_msg2disk(tmp, ops);
-	}
-	ha_msg_del(ops);
-	return HA_OK;
-}
-
-
-int
-cim_update_rscop(const char* rscid, const char* id, struct ha_msg* op)
-{
-	struct ha_msg *ops;
-	char tmp[MAXLEN];
-
-	if ((ops = cim_get_rscops(rscid)) == NULL) {
-		cl_log(LOG_ERR, "%s: ops of %s not found.", 
-				__FUNCTION__, rscid);
-		return HA_FAIL;
-	}
-
-	/* update op */
-	cim_msg_remove_child(ops, id);
-	cim_msg_add_child(ops, id, op);
-	
-	if ( ! cim_is_rsc_disabled(rscid) ) {	/* update into CIB */
-		return cim_update_dispatch(UPDATE_OPERATIONS, rscid, ops, NULL);
-	} else {	/* write back to disk */
-		snprintf(tmp, MAXLEN, "operatioins_of_%s", rscid);
-		return cim_msg2disk(tmp, ops);
-	}
-}
-
+/****************************************************
+ * msg
+ ****************************************************/
 int
 cim_msg_children_count(struct ha_msg *parent)
 {
@@ -1818,119 +2125,3 @@ cim_msg_child_index(struct ha_msg *parent, int index)
 	return NULL;
 }
 
-
-int
-cim_cib_addrsc(const char *rscid)
-{
-	int type, ret;
-	struct ha_msg *rsc, *sublist, *msg;
-
-	if ( ! cim_is_rsc_disabled(rscid) ){
-		cl_log(LOG_ERR, "%s: resource %s is already enabled. ",
-			__FUNCTION__, rscid);
-		return HA_FAIL;
-	}
-	type = cim_get_rsc_type(rscid);
-	if ( (rsc = cim_find_rsc(type, rscid)) == NULL ) {
-		cl_log(LOG_ERR, "%s: resource %s not found.",
-			__FUNCTION__, rscid);
-		return HA_FAIL;
-	}
-
-	if ( (msg = ha_msg_new(16)) == NULL ) {
-		cl_log(LOG_ERR, "%s: msg alloc failed.", __FUNCTION__);
-		return HA_FAIL;
-	}
-
-	if ( type == TID_RES_GROUP ) {
-		struct ha_msg *primitive;
-		int i, count;
-
-		if ((sublist = cim_get_subrsc_list(rscid)) == NULL ) {
-			cl_log(LOG_ERR, 
-				"%s: no primitive resource for %s found."
-				"imcomplete resource.", __FUNCTION__, rscid);
-			ha_msg_del(rsc);
-			ha_msg_del(msg);
-			return HA_FAIL;
-		}
-
-		/* first create a group in CIB */
-		ret = cim_update_dispatch(CREATE_RSC_GROUP, rscid, NULL, NULL); 
-		if ( ret == HA_FAIL) {
-			ha_msg_del(rsc);
-			ha_msg_del(msg);
-			return HA_FAIL;
-		}
-		/* remove it from disabled list */
-		ret = cim_update_disabled_rsc_list(0, rscid);
-		if ( ret == HA_FAIL ){
-			ha_msg_del(rsc);
-			ha_msg_del(msg);
-			return HA_FAIL;
-		}
-		/* then add sub primitive resources into group */
-		count = cim_list_length(sublist);
-		for (i = 0; i < count; i++) {
-			char *subrscid = cim_list_index(sublist, i);
-			if (subrscid == NULL ) {
-				continue;
-			}
-			primitive = cim_find_rsc(TID_RES_PRIMITIVE, subrscid);
-			cim_debug_msg(primitive, "%s: primitve to be added to group %s",
-					__FUNCTION__, rscid);
-			cim_debug2(LOG_INFO, "%s: ready to add", __FUNCTION__);
-			ret = cim_add_subrsc(rsc, primitive);
-		}
-		ha_msg_del(sublist);
-	} else if ( type == TID_RES_CLONE || type == TID_RES_MASTER) {
-		struct ha_msg *primitive;
-		if ((sublist = cim_get_subrsc_list(rscid)) == NULL ) {
-			cl_log(LOG_ERR, 
-				"%s: no primitive resource for %s found."
-				"imcomplete resource.", __FUNCTION__, rscid);
-			ha_msg_del(rsc);
-			ha_msg_del(msg);
-			return HA_FAIL;
-		}
-		primitive = cim_find_rsc(TID_RES_PRIMITIVE, 
-						cim_list_index(sublist, 0)); 
-		if ( primitive == NULL ) {
-			cl_log(LOG_ERR, "%s: can't find primitive %s.",
-				 __FUNCTION__, cim_list_index(sublist, 0));
-			ha_msg_del(rsc);
-			ha_msg_del(msg);
-			return HA_FAIL;
-		}
-		AddPrimitiveForUpdate(msg, primitive);
-		ha_msg_add(msg, "groupid", "");	
-		ha_msg_add(msg, "advance", 
-				(type == TID_RES_CLONE) ? "clone":"master");
-		ha_msg_add(msg, "advance_id", rscid);
-		ha_msg_add(msg, "clone_max", 
-				cl_get_string(rsc, "clone_max"));
-		ha_msg_add(msg, "clone_node_max", 
-				cl_get_string(rsc, "clone_node_max"));
-		ha_msg_add(msg, "master_max", ( type == TID_RES_MASTER ) ? 
-				cl_get_string(rsc, "master_max") : "");
-		ha_msg_add(msg, "master_node_max", ( type == TID_RES_MASTER ) ? 
-				cl_get_string(rsc, "master_node_max") : "");
-		ha_msg_del(sublist);
-	} else if ( type == TID_RES_PRIMITIVE ) {
-		AddPrimitiveForUpdate(msg, rsc);
-		ha_msg_add(msg, "groupid", "");	
-		ha_msg_add(msg, "advance", "");
-		ha_msg_add(msg, "advance_id", "");
-		ha_msg_add(msg, "clone_max", "");
-		ha_msg_add(msg, "clone_node_max", "");
-		ha_msg_add(msg, "master_max", "");
-		ha_msg_add(msg, "master_node_max", "");
-		ret = cim_update_dispatch(CREATE_RESOURCE, NULL, msg, NULL);
-	}
-
-	/* FIXME: delete the disk image */
-
-	ha_msg_del(rsc);
-	ha_msg_del(msg);
-	return HA_OK;
-}

@@ -50,6 +50,8 @@
 #define	CIM_MSG_LIST		"__list__"
 #define	CIM_MSG_TAG		"__tag__"
 #define CIM_MSG_ATTR_ID		"id"	/* every node-msg should have this */
+#define CIM_MSG_INST_ATTR	"instance_attributes"
+#define CIM_MSG_ATTR		"attributes"
 
 enum { HB_RUNNING = 1, HB_STOPED = 2, HB_UNKNOWN = 3 };
 enum { START_HB   = 1, STOP_HB   = 2, RESTART_HB = 3 };
@@ -99,6 +101,8 @@ enum UPDATE_CTXIDS {
 	DEL_RESOURCE = 0	,	/* delete a resource */
 	DEL_OPERATION		,	/* delete an operation */
 	DEL_ATTRIBUTES		,	/* delete an attribute */
+	CLEANUP_RESOURCE	,
+
 	UPDATE_MASTER		,	/* update a master-slave resource */
         UPDATE_CLONE		,	/* update a clone resource */
 	UPDATE_OPERATIONS	,	/* update operations */
@@ -121,37 +125,49 @@ enum UPDATE_CTXIDS {
 struct ha_msg *	cim_query_dispatch(int id, const char* param, void* out);
 int		cim_update_dispatch(int id,const char*param, void*data, void*);
 
+/* cluster */
+struct ha_msg *	cim_get_software_identity(void);
 int             cim_get_hb_status (void);
 int             cim_change_hb_state(int state);
 struct ha_msg *	cim_get_hacf_config (void);
 struct ha_msg *	cim_get_authkeys (void);
-struct ha_msg *	cim_get_software_identity(void);
-
 int             cim_update_hacf(struct ha_msg *msg);
 int             cim_update_authkeys(struct ha_msg *msg);
 
+/* resource list */
 struct ha_msg * cim_get_disabled_rsc_list(void);
 int		cim_update_disabled_rsc_list(int add, const char *rscid);
 int		cim_is_rsc_disabled(const char *rscid);
 struct ha_msg*	cim_get_rsc_list(void);
 struct ha_msg* 	cim_traverse_allrsc(struct ha_msg* list);
 
-int		cim_store_rsc(int type, const char *rscid, struct ha_msg *rsc);
-struct ha_msg*	cim_find_rsc(int type, const char * rscid);
-int		cim_store_rsc_type(const char* rscid, struct ha_msg *type);
-int		cim_get_rsc_type(const char * rscid);
+/* resource type */
+int		cim_add_rsctype(const char* rscid, const char *type);
+int		cim_get_rsctype(const char * rscid);
+int		cim_remove_rsctype(const char* rscid);
 
-int	cim_store_operation(const char* rscid,const char* opid,struct ha_msg*);
-struct ha_msg*	cim_load_operation(const char* rscid, const char *opid);
-int		cim_update_rsc(int type, const char *rscid, struct ha_msg *);
-struct ha_msg * cim_get_subrsc_list(const char *rscid);
-int		cim_add_subrsc(struct ha_msg *rsc, struct ha_msg *subrsc);
-
+/* resource operations */
 struct ha_msg * cim_get_rscops(const char *rscid);
 int		cim_add_rscop(const char *rscid, struct ha_msg *op);
 int		cim_del_rscop(const char *rscid, const char *opid);
 int		cim_update_rscop(const char*rscid, const char*, struct ha_msg*);
+
+/* resource */
 int		cim_cib_addrsc(const char *rscid);
+int		cim_store_rsc(int type, const char *rscid, struct ha_msg *rsc);
+struct ha_msg*	cim_find_rsc(int type, const char * rscid);
+int		cim_update_rsc(int type, const char *rscid, struct ha_msg *);
+int		cim_remove_rsc(const char * rscid);
+
+/* sub resource */
+struct ha_msg * cim_get_subrsc_list(const char *rscid);
+int		cim_add_subrsc(struct ha_msg *rsc, struct ha_msg *subrsc);
+
+/* resource attributes */
+struct ha_msg *	cim_get_rscattrs(const char *rscid);
+int		cim_update_attrnvpair(const char*, const char*, struct ha_msg*);
+int		cim_remove_attrnvpair(const char* rscid, const char* attrid);
+int		cim_erase_rscattrs(const char *rscid);
 
 #define cim_list_length(msg) 		cl_msg_list_length(msg, CIM_MSG_LIST)
 #define cim_list_index(msg,index) 					\
@@ -161,7 +177,7 @@ int		cim_cib_addrsc(const char *rscid);
 	cl_msg_list_add_string(msg, CIM_MSG_LIST, value)		
 
 #define cim_msg_add_child(parent,id, child)			\
-	ha_msg_addstruct(parent, id, child)
+		ha_msg_addstruct(parent, id, child)
 #define cim_msg_find_child(parent, id)		cl_get_struct(parent,id)
 #define cim_msg_remove_child(parent, id)	cl_msg_remove(parent,id)
 
