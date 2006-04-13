@@ -52,10 +52,12 @@ int resource_create_inst(CMPIBroker* broker, char* classname, CMPIContext* ctx,
 		CMPIResult * rslt, CMPIObjectPath * cop, CMPIInstance * ci, 
 		uint32_t type, CMPIStatus * rc);
 
+#if 0
 /* add a operation to resource */
 int resource_add_operation(CMPIBroker* broker, char*classname, CMPIContext* ctx,
                 CMPIResult * rslt, CMPIObjectPath * ref, uint32_t type,
 		CMPIArgs *in, CMPIArgs *out, CMPIStatus * rc);
+#endif
 
 /* add sub resource to group/clone/master-slave */
 int resource_add_subrsc(CMPIBroker* broker, char* classname, CMPIContext* ctx,

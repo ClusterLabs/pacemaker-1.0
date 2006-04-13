@@ -51,11 +51,6 @@ static void     clone_set_instance(CMPIBroker * broker, CMPIInstance * ci,
 			struct ha_msg *, CMPIStatus *);
 static void     master_set_instance(CMPIBroker * broker, CMPIInstance * ci, 
 			struct ha_msg *, CMPIStatus *);
-static void     attributes2inst(CMPIBroker * broker, CMPIInstance * ci,
-			const char * rscid, struct ha_msg *, CMPIStatus *);
-
-static struct ha_msg*	inst2attributes(CMPIObjectPath *, 
-					CMPIInstance *, CMPIStatus *);
 static CMPIInstance *   make_instance(CMPIBroker * broker, char * classname, 
 					CMPIObjectPath * op, struct ha_msg *info, 
 					uint32_t type, CMPIStatus * rc);
@@ -65,7 +60,7 @@ static CMPIInstance *   make_instance_byid(CMPIBroker * broker,
 static CMPIObjectPath * make_objectpath_byid(CMPIBroker * broker, 
 					CMPIObjectPath * ref, char * rscid, 
 					uint32_t type, CMPIStatus * rc);
-
+#if 0
 static void     
 attributes2inst(CMPIBroker * broker, CMPIInstance * ci,
 	const char * rscid, struct ha_msg *resource, CMPIStatus * rc)
@@ -74,7 +69,9 @@ attributes2inst(CMPIBroker * broker, CMPIInstance * ci,
 	CMPIArray * array = NULL;
         int len = 0, i = 0;
 	
-	attributes = cl_get_struct(resource, "attributes");	
+	if ((attributes = cim_get_rscattrs(rscid)) == NULL ) {
+		return;
+	}
 
         len = cim_msg_children_count(attributes);
 	cim_debug2(LOG_INFO, "attirbutes len: %d", len);
@@ -98,7 +95,7 @@ attributes2inst(CMPIBroker * broker, CMPIInstance * ci,
                 id    = cl_get_string(attribute, "id");
                 name  = cl_get_string(attribute, "name");
                 value = cl_get_string(attribute, "value");
-                snprintf(buf, MAXLEN, "%s=%s", name, value);
+                snprintf(buf, MAXLEN, "%s,%s=%s", id, name, value);
 
                 if ( (p = cim_strdup(buf)) ){
                         CMSetArrayElementAt(array, i, &p, CMPI_chars);
@@ -142,7 +139,7 @@ inst2attributes(CMPIObjectPath* cop, CMPIInstance* ci, CMPIStatus* rc)
         for(i = 0; i < len; i++) {
                 CMPIData data;
 		struct ha_msg *attribute;
-                char **s, *v, tmp[MAXLEN] = "id-";
+                char **s, *v;
                 int len;
 
                 data = CMGetArrayElementAt(array, i, rc);
@@ -156,17 +153,14 @@ inst2attributes(CMPIObjectPath* cop, CMPIInstance* ci, CMPIStatus* rc)
                 }
 		
 		/* parse attributes, get key and value */
-                s = split_string(v, &len, " =");
-                if ( len == 2 ) {
-                        ha_msg_add(attribute, "name", s[0]);
-                        ha_msg_add(attribute, "value", s[1]);
+                s = split_string(v, &len, " ,=");
+                if ( len == 3 ) {
+			ha_msg_add(attribute, "id", s[0]);
+                        ha_msg_add(attribute, "name", s[1]);
+                        ha_msg_add(attribute, "value", s[2]);
                 }
 
-		strncat(tmp, s[0], MAXLEN);
-		ha_msg_add(attribute, "id", tmp);
-
-		snprintf(tmp, MAXLEN, "%s-%s", s[0], id);
-		cim_msg_add_child(attributes, tmp, attribute);
+		cim_msg_add_child(attributes, s[0], attribute);
                 free_2d_array(s, len, cim_free);
         }
 
@@ -174,17 +168,22 @@ inst2attributes(CMPIObjectPath* cop, CMPIInstance* ci, CMPIStatus* rc)
 	return attributes;
 }
 
+#endif
+
 static void
 primitive_set_instance(CMPIBroker * broker, CMPIInstance * ci, 
 		struct ha_msg *info, CMPIStatus * rc)
 {
         const char *const_host= NULL, *id;
 	char * host = NULL;
-	struct ha_msg *msg;
+	struct ha_msg *msg = NULL;
+
 	cmpi_msg2inst(broker, ci, HA_PRIMITIVE_RESOURCE, info, rc);
 	id = cl_get_string(info, "id");
-
-	msg = cim_query_dispatch(GET_RSC_HOST, id, NULL);
+	
+	if ( !cim_is_rsc_disabled(id) ) {
+		msg = cim_query_dispatch(GET_RSC_HOST, id, NULL);
+	}
         /* get hosting node */
         if ( msg && (const_host = cl_get_string(msg, "host")) != NULL ){
 		host = cim_strdup(const_host);
@@ -198,7 +197,6 @@ primitive_set_instance(CMPIBroker * broker, CMPIInstance * ci,
         }
         cim_free(host);
 }
-
 static void 
 group_set_instance(CMPIBroker * broker, CMPIInstance * ci, 
 		struct ha_msg *info, CMPIStatus * rc)
@@ -262,7 +260,7 @@ make_instance(CMPIBroker * broker, char * classname, CMPIObjectPath * op,
 	ha_msg_del(msg);
 
         if (type == TID_RES_PRIMITIVE) {
-		attributes2inst(broker, ci, id, info, rc);
+		/* attributes2inst(broker, ci, id, info, rc); */
 		primitive_set_instance(broker, ci, info, rc);
 	} else if ( type == TID_RES_GROUP){
 		group_set_instance(broker, ci, info, rc);
@@ -408,7 +406,7 @@ resource_get_inst(CMPIBroker * broker, char * classname, CMPIContext * ctx,
 
         rscid = CMGetCharPtr(data_name.value.string);
         this_type = (type == 0) 
-		? cim_get_rsc_type(rscid)	: type;
+		? cim_get_rsctype(rscid)	: type;
 
         ci = make_instance_byid(broker, ref, rscid, this_type, rc);
         if ( CMIsNullObject(ci) ) {
@@ -449,7 +447,7 @@ resource_enum_insts(CMPIBroker * broker, char * classname, CMPIContext * ctx,
 		if ((rsc = cim_list_index(names, i)) == NULL) {
 			continue;
 		}	
-                if ( type != cim_get_rsc_type(rsc)){
+                if ( type != cim_get_rsctype(rsc)){
                         continue;
                 }
 		/* should we return all sub resource of group/clone/master
@@ -494,18 +492,46 @@ resource_del_inst(CMPIBroker * broker, char * classname, CMPIContext * ctx,
                 return HA_FAIL;
         }
         rscid = CMGetCharPtr(string);
-	ret = cim_update_dispatch(DEL_RESOURCE, rscid, NULL, NULL);
+	ret = cim_remove_rsc(rscid);
 	rc->rc = (ret==HA_OK)? CMPI_RC_OK : CMPI_RC_ERR_FAILED;
 	return ret;
 }
 
+#if 0
+static int
+resource_update_instattrs(const char *rscid, struct ha_msg * attributes)
+{
+	int i, len;
+	struct ha_msg * old = cim_get_rscattrs(rscid);
+	
+	/* delete nvpair */
+	len = (old) ? cim_msg_children_count(old): 0;
+	for (i = 0; i < len; i++) {
+		const char * id = cim_msg_child_name(old, i);
+		if (id && cl_get_struct(attributes, id) == NULL ) {
+			cim_remove_attrnvpair(rscid, id);
+		}
+	}
+	len = cim_msg_children_count(attributes);
+	for (i = 0; i < len; i++) {
+		struct ha_msg * nvpair = cim_msg_child_index(attributes, i);
+		if ( nvpair ) {
+			const char * id = cim_msg_child_name(attributes, i);
+			cim_update_attrnvpair(rscid, id, nvpair);
+		} 
+	}
+
+	return HA_OK;
+}
+
+#endif
 
 int 
 resource_update_inst(CMPIBroker * broker, char * classname, CMPIContext * ctx,
                 CMPIResult * rslt, CMPIObjectPath * cop, CMPIInstance * ci,
                 char ** properties, uint32_t type, CMPIStatus * rc)
 {
-	struct ha_msg *resource = NULL, *attributes;
+	struct ha_msg *resource = NULL /*, *attributes = NULL*/;
 	char * rscid;
 	int ret = 0;
 	DEBUG_ENTER();
@@ -518,20 +544,27 @@ resource_update_inst(CMPIBroker * broker, char * classname, CMPIContext * ctx,
 	resource = cim_find_rsc(type, rscid);
 
 	if ( type == TID_RES_PRIMITIVE ) {
-		cl_msg_remove(resource, "attributes");
+		cl_msg_remove(resource, CIM_MSG_ATTR);
 		cmpi_inst2msg(ci, HA_PRIMITIVE_RESOURCE, resource, rc);
-		attributes = inst2attributes(cop, ci, rc);		
-		if ( attributes ) {
-			ha_msg_addstruct(resource, "attributes", attributes);
-		}
+		/* attributes = inst2attributes(cop, ci, rc); */
 	} else if (type == TID_RES_MASTER) {
 		cmpi_inst2msg(ci, HA_MASTERSLAVE_RESOURCE, resource, rc);
 	} else if (type == TID_RES_CLONE ) {
 		cmpi_inst2msg(ci, HA_RESOURCE_CLONE, resource, rc);
 	}
 
-        /* update resource, including their attributes */
+        /* update resource */
 	ret = cim_update_rsc(type, rscid, resource);
+	if ( type != TID_RES_PRIMITIVE) {
+		goto done;
+	}
+
+	/* update its attributes */
+	/*
+	ret = resource_update_instattrs(rscid, attributes);
+	ha_msg_del(attributes);
+	*/
+done:
 	ha_msg_del(resource);
 	rc->rc = (ret==HA_OK) ? CMPI_RC_OK: CMPI_RC_ERR_FAILED;
 	DEBUG_LEAVE();
@@ -543,23 +576,18 @@ resource_create_inst(CMPIBroker * broker, char * classname, CMPIContext * ctx,
                 CMPIResult * rslt, CMPIObjectPath * cop, CMPIInstance * ci,
                 uint32_t type, CMPIStatus * rc)
 {
-	struct ha_msg *attributes, *resource, *msgtype;
+	struct ha_msg *resource /*, *attributes*/;
 	int ret = HA_FAIL;
-	char * rscid;
+	char * rscid = NULL;
+	const char * rsctype = NULL;
 
 	DEBUG_ENTER();
 	if((resource = ha_msg_new(16)) == NULL ) {
 		return HA_FAIL;
 	}
 
-	if((msgtype = ha_msg_new(1)) == NULL ) {
-		ha_msg_del(resource);
-		return HA_FAIL;
-	}
-
 	/* get resource id */
         if ((rscid = CMGetKeyString(cop, "Id", rc)) == NULL ) {
-		ha_msg_del(msgtype);
 		ha_msg_del(resource);
 		return HA_FAIL;
 	}
@@ -567,44 +595,46 @@ resource_create_inst(CMPIBroker * broker, char * classname, CMPIContext * ctx,
 	switch(type){
 	case TID_RES_PRIMITIVE:
 		/* get resource attributes */
-		attributes = inst2attributes(cop, ci, rc);
-		if ( attributes ) {
-			ha_msg_addstruct(resource, "attributes", attributes);
-		}
+		/* attributes = inst2attributes(cop, ci, rc); */
 		ret = cmpi_inst2msg(ci, HA_PRIMITIVE_RESOURCE, resource, rc);
-		ha_msg_add(msgtype, "type", "native");
+		rsctype = "native";
 		break;
 	case TID_RES_CLONE:
 		ret = cmpi_inst2msg(ci, HA_RESOURCE_CLONE, resource, rc);
 		ha_msg_add(resource, "advance", "clone");
-		ha_msg_add(msgtype, "type", "clone");
+		rsctype = "clone";
 		break;
 	case TID_RES_MASTER:
 		ret = cmpi_inst2msg(ci, HA_MASTERSLAVE_RESOURCE, resource, rc);
 		ha_msg_add(resource, "advance", "master");
-		ha_msg_add(msgtype, "type", "master");
+		rsctype = "master";
 		break;
 	case TID_RES_GROUP:
-		ha_msg_add(msgtype, "type", "group");
+		rsctype = "group";
 		break;
 	}
 
 	ha_msg_add(resource, "enabled", "false");
 
-	/* write to disk */
-	cim_store_rsc_type(rscid, msgtype);
-	cim_store_rsc(type, rscid, resource);
-
 	/* add to list */	
 	ret = cim_update_disabled_rsc_list(1, rscid);
 
+	/* write to disk */
+	cim_add_rsctype(rscid, rsctype);
+	cim_store_rsc(type, rscid, resource);
+	/*
+	if ( type == TID_RES_PRIMITIVE) {
+		resource_update_instattrs(rscid, attributes);
+		ha_msg_del(attributes);
+	}
+	*/
 	rc->rc = (ret==HA_OK) ? CMPI_RC_OK: CMPI_RC_ERR_FAILED;
 	ha_msg_del(resource);
 	DEBUG_LEAVE();
 	return ret;
 
 }
-
+#if 0
 /* add a operation to resource */
 int 
 resource_add_operation(CMPIBroker * broker, char * classname, CMPIContext * ctx,
@@ -638,6 +668,7 @@ resource_add_operation(CMPIBroker * broker, char * classname, CMPIContext * ctx,
 
 	return HA_OK;
 }
+#endif
 
 /* add sub resource to group/clone/master-slave */
 int 
