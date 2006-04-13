@@ -48,8 +48,37 @@ const struct map_t *	cim_query_map(int mapid);
 #define HA_COLOCATION_CONSTRAINT	8
 #define HA_LOCATION_CONSTRAINT		9
 #define HA_RESOURCE_GROUP		10
+#define HA_INSTANCE_ATTRIBUTES		11
+
 
 #define METHOD_ADD_RESOURCE		"AddResource"
 #define METHOD_ADD_PRIMITIVE_RESOURCE	"AddPrimitiveResource"
+
+
+#define CLASS_HA_CLUSTER		"HA_Cluster"
+#define CLASS_HA_CLUSTER_NODE		"HA_ClusterNode"
+#define CLASS_HA_CLUSTER_RESOURCE	"HA_ClusterResource"
+
+#define CLASS_HA_SOFTWARE_IDENTITY	"HA_SoftwareIdentity"
+#define CLASS_HA_INSTALLED_SOFTWARE_IDENTITY	"HA_InstalledSoftwareIdentity"
+#define CLASS_HA_PRIMITIVE_RESOURCE	"HA_PrimitiveResource"
+#define CLASS_HA_RESOURCE_GROUP		"HA_ResourceGroup"
+#define CLASS_HA_RESOURCE_CLONE		"HA_ResourceClone"
+#define CLASS_HA_MSTERSLAVE_RESOURCE	"HA_MasterSlaveResource"
+#define CLASS_HA_INSTANCE_ATTRIBUTES	"HA_InstanceAttributes"
+#define CLASS_HA_ATTRIBUTES_OF_RESOURCE	"HA_AttributesOfResource"
+#define CLASS_HA_OPERATION		"HA_Operation"
+#define CLASS_HA_OPERATION_ON_RESOURCE	"HA_OperationOnResource"
+#define CLASS_HA_RESOURCE_CONSTRAINT	"HA_ResourceConstraint"
+#define CLASS_HA_ORDER_CONSTRAINT	"HA_OrderConstraint"
+#define CLASS_HA_COLOCATION_CONSTRAINT	"HA_ColocationConstraint"
+#define CLASS_HA_LOCATION_CONSTRAINT	"HA_LocationConstraint"
+
+#define CLASS_HA_SUBRESOURCE		"HA_SubResource"
+#define CLASS_HA_PARTICIPATING_NODE	"HA_ParticipatingNode"
+#define CLASS_HA_HOSTED_RESOURCE	"HA_HostedResource"
+#define CLASS_HA_INDICATION		"HA_Indication"
+#define CLASS_HA_CLUSTERING_SERVICE	"HA_ClusteringService"
+
 
 #endif
