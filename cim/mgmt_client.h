@@ -46,6 +46,14 @@
 #define Arg5(a,b,c,d,e)       a, b, c, d, e, NULL
 #define Arg6(a,b,c,d,e,f)     a, b, c, d, e, f, NULL
 
+#define mclient_makeup_param(a,b)			\
+	({	char param[MAXLEN] = "";		\
+		strncat(param, a, MAXLEN);		\
+		strncat(param, "\n", MAXLEN);		\
+		strncat(param, b, MAXLEN);		\
+		param;					\
+	})
+
 #define mclient_new_and_process(cmnd, arg...) 				\
 	({ 	MClient * client = mclient_new_with_cmnd(cmnd, ##arg);	\
 		if ( client ){						\
@@ -79,4 +87,7 @@ int		mclient_process(MClient * client);
 char *		mclient_nth_value(MClient * client, uint32_t index);
 char *		mclient_nth_key(MClient * client, uint32_t index);
 void		mclient_free(void * client);
+
+int		mgmt_lib_initialize(void);
+void		mgmt_lib_finalize(void);
 #endif

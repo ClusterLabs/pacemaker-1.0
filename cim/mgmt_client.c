@@ -21,9 +21,10 @@
  */
 
 
+#include <pthread.h>
 #include "mgmt_client.h"
 
-#define LIB_INIT_ALL (ENABLE_HB|ENABLE_LRM|ENABLE_CRM)
+#define LIB_INIT_ALL (ENABLE_LRM|ENABLE_CRM)
 
 
 #undef DEBUG_ENTER
@@ -33,9 +34,8 @@
 #define DEBUG_LEAVE() 
 
 const char *     module_name = "cim";
-static int       mgmt_lib_initialize(void);
-static void      mgmt_lib_finalize(void);
 
+pthread_mutex_t client_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 int
 mgmt_lib_initialize(void)
@@ -44,7 +44,7 @@ mgmt_lib_initialize(void)
         return HA_OK;
 }
 
-static void 
+void 
 mgmt_lib_finalize(void)
 {
         final_mgmt_lib(); 
@@ -159,8 +159,13 @@ mclient_process(MClient * client)
 	int      n, rc;
 	char **  args = NULL;
 
-        if ( ( result = process_msg(client->cmnd) ) == NULL ) {
-		cl_log(LOG_ERR, "do_process_cmnd: failed to process: %s", 
+
+	pthread_mutex_lock(&client_mutex);
+	result = process_msg(client->cmnd);
+	pthread_mutex_unlock(&client_mutex);
+
+        if ( result == NULL ) {
+		cl_log(LOG_ERR, "mclient_process: failed to process: %s", 
 			client->cmnd);
 		rc = MC_ERROR;
 		goto exit2;
@@ -169,7 +174,8 @@ mclient_process(MClient * client)
 			__FUNCTION__, client->cmnd, result);
 
 	if ( ! mgmt_result_ok(result) )  {
-                cl_log(LOG_WARNING, "do_process_cmnd: client return \'failed\'.");
+                cl_log(LOG_ERR, "mclient_process: client return \'failed\'.");
+		cl_log(LOG_ERR, "mclient_process: %s", result);
 		rc = MC_FAIL;
                 goto exit1;
         }
