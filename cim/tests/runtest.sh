@@ -47,13 +47,14 @@ INST_CLASSES="HA_Cluster
 	      HA_MasterSlaveResource
 	      HA_OrderConstraint
 	      HA_LocationConstraint
-	      HA_ColocationConstraint"
+	      HA_ColocationConstraint
+              HA_InstanceAttributes"
 
 ASSOC_CLASSES="HA_ParticipatingNode
                HA_InstalledSoftwareIdentity
 	       HA_SubResource
-               HA_OperationOnResource
-               HA_HostedResource"
+               HA_HostedResource
+               HA_AttributesOfResource"
 
 ALL_CLASSES="$INST_CLASSES $ASSOC_CLASSES"
 
@@ -66,10 +67,9 @@ function get_assoc_classes_of ()
                 echo "HA_ParticipatingNode HA_HostedResource";;
         HA_PrimitiveResource) 
                echo "HA_SubResource HA_HostedResource
-                     HA_OperationOnResource";;
+                     HA_AttributesOfResource";;
         HA_MasterSlaveResource|HA_ResourceClone|HA_ResourceGroup) 
-                echo "HA_SubResource
-                      HA_OperationOnResource";;
+                echo "HA_SubResource";;
         HA_SoftwareIdentity) 
                 echo "HA_InstalledSoftwareIdentity";;
         *) echo ""
