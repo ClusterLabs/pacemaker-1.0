@@ -998,7 +998,15 @@ on_get_rsc_status(char* argv[], int argc)
 				ret = mgmt_msg_append(ret, "multi-running");
 				break;
 			}
-			ret = mgmt_msg_append(ret, "running");		
+			if( rsc->role==RSC_ROLE_SLAVE ) {
+				ret = mgmt_msg_append(ret, "running(Slave)");		
+			}
+			else if( rsc->role==RSC_ROLE_MASTER) {
+				ret = mgmt_msg_append(ret, "running(Master)");		
+			}
+			else {
+				ret = mgmt_msg_append(ret, "running");		
+			}
 			break;
 		case pe_group:
 			ret = mgmt_msg_append(ret, "group");
@@ -1229,7 +1237,7 @@ on_update_rsc_ops(char* argv[], int argc)
 	if(cib_object == NULL) {
 		return cl_strdup(MSG_FAIL);
 	}
-	mgmt_log(LOG_INFO, "zhenh xml:%s",xml);
+	mgmt_log(LOG_DEBUG, "xml:%s",xml);
 	fragment = create_cib_fragment(cib_object, "resources");
 
 	rc = cib_conn->cmds->update(

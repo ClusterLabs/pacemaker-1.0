@@ -597,3 +597,8 @@ msgstr "连接服务器失败"
 msgid "Failed in the authentication.\n User Name or Password may be wrong.\n or the user doesn't belong to haclient group"
 msgstr "用户认证失败，可能是用户或密码不对，或该用户不属于haclient组"
 
+msgid "running(Master)"
+msgstr "运行(主)"
+
+msgid "running(Slave)"
+msgstr "运行(从)"
