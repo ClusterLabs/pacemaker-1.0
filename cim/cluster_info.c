@@ -1314,10 +1314,10 @@ cib_changed()
 	return 1;
 }
 
-#define CLEAN_RESOURCE_RECORD(resid)	do {				\
-                cim_update_disabled_rsc_list(0, rscid);		\
-                cim_erase_rscattrs(rscid);			\
-                cim_remove_rsctype(rscid);			\
+#define CLEAN_RESOURCE_RECORD(resid)	do {			\
+                cim_update_disabled_rsc_list(0, resid);		\
+                cim_erase_rscattrs(resid);			\
+                cim_remove_rsctype(resid);			\
 }while(0)
 
 /****************************************************************
@@ -1821,6 +1821,8 @@ cim_cib_addrsc(const char *rscid)
 			return HA_FAIL;
 		}
 
+		CLEAN_RESOURCE_RECORD(rscid);
+
 		/* then add sub primitive resources into group */
 		count = cim_list_length(sublist);
 		for (i = 0; i < count; i++) {
@@ -1837,7 +1839,6 @@ cim_cib_addrsc(const char *rscid)
 			CLEAN_RESOURCE_RECORD(cl_get_string(primitive, "id"));
 		}
 
-		CLEAN_RESOURCE_RECORD(rscid);
 		ha_msg_del(sublist);
 	} else if ( type == TID_RES_CLONE || type == TID_RES_MASTER) {
 		struct ha_msg *primitive;
