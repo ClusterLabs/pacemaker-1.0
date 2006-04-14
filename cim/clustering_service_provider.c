@@ -219,7 +219,7 @@ ClusteringServiceInvokeMethod(CMPIMethodMI * mi, CMPIContext * ctx,
            strcasecmp(METHOD_ADD_RESOURCE, method_name) == 0 ){
 		char * rscid;
 		rscid = CMGetKeyString(rscop, "Id", &rc);
-		if ( cim_cib_addrsc(rscid) == HA_FAIL ) {
+		if ( ( ret = cim_cib_addrsc(rscid)) == HA_FAIL ) {
 			cl_log(LOG_ERR, "%s: failed to add resource %s.",
 				__FUNCTION__, rscid);
 			rc.rc = CMPI_RC_ERR_FAILED;
