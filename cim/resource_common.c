@@ -610,6 +610,7 @@ resource_create_inst(CMPIBroker * broker, char * classname, CMPIContext * ctx,
 		rsctype = "master";
 		break;
 	case TID_RES_GROUP:
+		ha_msg_add(resource, "id", rscid);
 		rsctype = "group";
 		break;
 	}
