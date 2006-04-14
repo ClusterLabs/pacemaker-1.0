@@ -1,4 +1,4 @@
-/* $Id: stonithd.c,v 1.88 2006/04/10 08:14:37 sunjd Exp $ */
+/* $Id: stonithd.c,v 1.89 2006/04/14 08:07:26 sunjd Exp $ */
 
 /* File: stonithd.c
  * Description: STONITH daemon for node fencing
@@ -202,7 +202,7 @@ static gboolean stonithd_hb_msg_dispatch(IPC_Channel * ch, gpointer user_data);
 static void stonithd_hb_msg_dispatch_destroy(gpointer user_data);
 static int init_hb_msg_handler(void);
 static gboolean reboot_block_timeout(gpointer data);
-static void timerid_destroy_nodify(gpointer user_data);
+static void timerid_destroy_notify(gpointer user_data);
 static void free_timer(gpointer data);
 
 /* Local IPC communication related.
@@ -240,7 +240,7 @@ static int stonithop_result_to_other_node( stonith_ops_t * st_op,
 static int send_stonithRAop_final_result(stonithRA_ops_t * ra_op, 
 					 gpointer data);
 static int post_handle_raop(stonithRA_ops_t * ra_op);
-static void destory_key_of_op_htable(gpointer data);
+static void destroy_key_of_op_htable(gpointer data);
 
 static stonith_ops_t * dup_stonith_ops_t(stonith_ops_t * st_op);
 static stonithRA_ops_t * new_stonithRA_ops_t(struct ha_msg * request);
@@ -253,7 +253,7 @@ static stonith_rsc_t * get_started_stonith_resource(char * rsc_id);
 static stonith_rsc_t * get_local_stonithobj_can_stonith(const char * node_name,
 						const char * begin_rsc_id );
 static int stonith_operate_locally(stonith_ops_t * st_op, stonith_rsc_t * srsc);
-static void timeout_destroy_nodify(gpointer user_data);
+static void timeout_destroy_notify(gpointer user_data);
 static gboolean stonithop_timeout(gpointer data);
 static void my_hash_table_find( GHashTable * htable, gpointer * orig_key,
 				gpointer * value, gpointer user_data);
@@ -489,7 +489,7 @@ main(int argc, char ** argv)
 
 	/* Initialize some global variables */
 	executing_queue = g_hash_table_new_full(g_int_hash, g_int_equal,
-						 destory_key_of_op_htable,
+						 destroy_key_of_op_htable,
 						 free_common_op_t);
 
 	/* The following line is only for CTS test with APITEST */
@@ -1062,7 +1062,7 @@ require_local_stonithop(stonith_ops_t * st_op, stonith_rsc_t * srsc,
 		*tmp_callid = child_id;
 		op->timer_id = Gmain_timeout_add_full(G_PRIORITY_HIGH_IDLE
 					, st_op->timeout, stonithop_timeout
-					, tmp_callid, timeout_destroy_nodify);
+					, tmp_callid, timeout_destroy_notify);
 		stonithd_log(LOG_DEBUG, "require_local_stonithop: inserted "
 			    "optype=%d, child_id=%d", st_op->optype, child_id);
 		return ST_OK;
@@ -1193,7 +1193,7 @@ handle_msg_resetted(struct ha_msg* msg, void* private_data)
 	/* The timeout value equals 90 seconds now */
 	timer_id = Gmain_timeout_add_full(G_PRIORITY_HIGH_IDLE, 90*1000
 			, reboot_block_timeout, g_strdup(target)
-			, timerid_destroy_nodify);
+			, timerid_destroy_notify);
 
 	g_hash_table_replace(reboot_blocked_table, g_strdup(target)
 				, g_memdup(&timer_id, sizeof(timer_id)));
@@ -1202,7 +1202,7 @@ handle_msg_resetted(struct ha_msg* msg, void* private_data)
 }
 
 static void
-timerid_destroy_nodify(gpointer data)
+timerid_destroy_notify(gpointer data)
 {
 	gchar * target = (gchar *)data;
 
@@ -1793,7 +1793,7 @@ initiate_local_stonithop(stonith_ops_t * st_op, stonith_rsc_t * srsc,
 		*tmp_callid = call_id;
 		op->timer_id = Gmain_timeout_add_full(G_PRIORITY_HIGH_IDLE
 					, st_op->timeout, stonithop_timeout
-					, tmp_callid, timeout_destroy_nodify);
+					, tmp_callid, timeout_destroy_notify);
 		stonithd_log2(LOG_DEBUG, "initiate_local_stonithop: inserted "
 			    "optype=%d, child_id=%d", st_op->optype, call_id);
 		return call_id;
@@ -1893,7 +1893,7 @@ initiate_remote_stonithop(stonith_ops_t * st_op, stonith_rsc_t * srsc,
 		*tmp_callid = st_op->call_id;
 		op->timer_id = Gmain_timeout_add_full(G_PRIORITY_HIGH_IDLE
 					, st_op->timeout, stonithop_timeout
-					, tmp_callid, timeout_destroy_nodify);
+					, tmp_callid, timeout_destroy_notify);
 
 		stonithd_log(LOG_DEBUG, "initiate_remote_stonithop: inserted "
 			"optype=%d, key=%d", op->op_union.st_op->optype, *tmp_callid);
@@ -2301,7 +2301,7 @@ get_local_stonithobj_can_stonith( const char * node_name,
 }
 
 static void
-timeout_destroy_nodify(gpointer user_data)
+timeout_destroy_notify(gpointer user_data)
 {
 	int * call_id = (int *) user_data;
 	if (call_id != NULL) {
@@ -3335,7 +3335,7 @@ kill_running_daemon(const char * pidfile)
 }
 
 static void
-destory_key_of_op_htable(gpointer data)
+destroy_key_of_op_htable(gpointer data)
 {
 	g_free((int*)data);
 }
@@ -3420,6 +3420,9 @@ trans_log(int priority, const char * fmt, ...)
 
 /* 
  * $Log: stonithd.c,v $
+ * Revision 1.89  2006/04/14 08:07:26  sunjd
+ * typo found by Dave
+ *
  * Revision 1.88  2006/04/10 08:14:37  sunjd
  * stonithd.c
  *
