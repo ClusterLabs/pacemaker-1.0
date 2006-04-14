@@ -96,15 +96,24 @@ on_get_allnodes(char* argv[], int argc)
 char*
 on_get_hb_config(char* argv[], int argc)
 {
+	int i;
+	char* value = NULL;
+	if (hb_config == NULL) {
+		hb_config = cl_strdup(MSG_OK);
+		for (i = 0; i < sizeof(param_name)/sizeof(param_name[0]); i++) {
+			value = hb->llc_ops->get_parameter(hb, param_name[i]);
+			hb_config = mgmt_msg_append(hb_config, value!=NULL?value:""); 
+			if (value != NULL) {
+				cl_free(value);
+			}	
+		}	
+	}
 	return cl_strdup(hb_config);
 }
 
 int
 init_heartbeat(void)
 {
-	int i;
-	char* value = NULL;
-	
 	hb = ll_cluster_new("heartbeat");
 	if (hb->llc_ops->signon(hb, client_name)!= HA_OK) {
 		mgmt_log(LOG_ERR, "Cannot sign on with heartbeat");
@@ -119,15 +128,7 @@ init_heartbeat(void)
 	reg_msg(MSG_ALLNODES, on_get_allnodes);
 	reg_msg(MSG_HB_CONFIG, on_get_hb_config);
 	reg_msg(MSG_ECHO, on_echo);	
-	
-	hb_config = cl_strdup(MSG_OK);
-	for (i = 0; i < sizeof(param_name)/sizeof(param_name[0]); i++) {
-		value = hb->llc_ops->get_parameter(hb, param_name[i]);
-		hb_config = mgmt_msg_append(hb_config, value!=NULL?value:""); 
-		if (value != NULL) {
-			cl_free(value);
-	}	}	
-	
+
 	return 0;
 }
 
