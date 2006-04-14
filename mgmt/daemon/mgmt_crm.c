@@ -98,7 +98,8 @@ static void free_data_set(pe_working_set_t* data_set);
 static void on_cib_connection_destroy(gpointer user_data);
 static char* failed_msg(crm_data_t* output, int rc);
 static const char* uname2id(const char* node);
-
+static resource_t* get_parent(resource_t* child);
+static int get_fix(const char* rsc_id, char* prefix, char* suffix);
 
 pe_working_set_t* cib_cached = NULL;
 int cib_cache_enable = FALSE;
@@ -226,6 +227,80 @@ uname2id(const char* uname)
 	}
 	free_data_set(data_set);
 	return NULL;
+}
+static resource_t* 
+get_parent(resource_t* child)
+{
+	GList* cur;
+	char* ret;
+	pe_working_set_t* data_set;
+	
+	data_set = get_data_set();
+	ret = cl_strdup(MSG_OK);
+	cur = data_set->resources;
+	while (cur != NULL) {
+		resource_t* rsc = (resource_t*)cur->data;
+		if(rsc->orphan == FALSE || rsc->role != RSC_ROLE_STOPPED) {
+			GList* child_list = rsc->fns->children(rsc);
+			if (g_list_find(child_list, child) != NULL) {
+				free_data_set(data_set);
+				return rsc;
+			}
+		}
+		cur = g_list_next(cur);
+	}
+	free_data_set(data_set);
+	return NULL;
+}
+
+static int
+get_fix(const char* rsc_id, char* prefix, char* suffix)
+{
+	resource_t* rsc;
+	resource_t* parent;
+	pe_working_set_t* data_set;
+	char* colon;
+	char real_id[MAX_STRLEN];
+	char parent_type[MAX_STRLEN];
+		
+	data_set = get_data_set();
+	rsc = pe_find_resource(data_set->resources, rsc_id);	
+	if (rsc == NULL) {
+		return -1;
+	}
+	parent = get_parent(rsc);
+	if (parent == NULL) {
+		snprintf(prefix, MAX_STRLEN,"<primitive id=\"%s\">", rsc_id);
+		snprintf(suffix, MAX_STRLEN,"</primitive>");
+	}
+	else {
+		strncpy(real_id, rsc_id, MAX_STRLEN);
+		colon = strrchr(real_id, ':');
+		if (colon != NULL) {
+			*colon = '\0';
+		}
+		switch (parent->variant) {
+			case pe_group:
+				strncpy(parent_type, "group", MAX_STRLEN);
+				break;
+			case pe_clone:
+				strncpy(parent_type, "clone", MAX_STRLEN);
+				break;
+			case pe_master:
+				strncpy(parent_type, "master_slave", MAX_STRLEN);
+				break;
+			case pe_unknown:
+			case pe_native:
+				free_data_set(data_set);
+				return -1;
+		}
+		
+		snprintf(prefix, MAX_STRLEN,"<%s id=\"%s\"><primitive id=\"%s\">"
+		, 	parent_type,parent->id,real_id);
+		snprintf(suffix, MAX_STRLEN,"</primitive></%s>",parent_type);
+	}
+	free_data_set(data_set);
+	return 0;
 }
 
 /* mgmtd functions */
@@ -1040,17 +1115,23 @@ on_update_rsc_params(char* argv[], int argc)
 	crm_data_t* output;
 	char xml[MAX_STRLEN];
 	char buf[MAX_STRLEN];
+	char prefix[MAX_STRLEN];
+	char suffix[MAX_STRLEN];
+	
+	if(get_fix(argv[1], prefix, suffix) == -1) {
+		return cl_strdup(MSG_FAIL);
+	}
 
 	snprintf(xml, MAX_STRLEN,
- 		 "<primitive id=\"%s\">"
-    		 "<instance_attributes><attributes>", argv[1]);
+    		 "%s<instance_attributes><attributes>", prefix);
 	for (i = 2; i < argc; i += 3) {
 		snprintf(buf, MAX_STRLEN,
 			"<nvpair id=\"%s\" name=\"%s\" value=\"%s\"/>",
 			argv[i], argv[i+1], argv[i+2]);
 		strncat(xml, buf, MAX_STRLEN);
 	}
-	strncat(xml, "</attributes></instance_attributes></primitive>", MAX_STRLEN);
+	strncat(xml, "</attributes></instance_attributes>", MAX_STRLEN);
+	strncat(xml, suffix, MAX_STRLEN);
 
 	cib_object = string2xml(xml);
 	if(cib_object == NULL) {
@@ -1126,23 +1207,29 @@ on_update_rsc_ops(char* argv[], int argc)
 	crm_data_t* output;
 	char xml[MAX_STRLEN];
 	char buf[MAX_STRLEN];
-
+	char prefix[MAX_STRLEN];
+	char suffix[MAX_STRLEN];
+	
+	if(get_fix(argv[1], prefix, suffix) == -1) {
+		return cl_strdup(MSG_FAIL);
+	}
+	
 	snprintf(xml, MAX_STRLEN,
- 		 "<primitive id=\"%s\">"
-    		 " <operations>", argv[1]);
+ 		 "%s<operations>", prefix);
 	for (i = 2; i < argc; i += 4) {
 		snprintf(buf, MAX_STRLEN,
 			"<op id=\"%s\" name=\"%s\" interval=\"%s\" timeout=\"%s\"/>",
 			argv[i], argv[i+1], argv[i+2], argv[i+3]);
 		strncat(xml, buf, MAX_STRLEN);
 	}
-	strncat(xml, "</operations></primitive>", MAX_STRLEN);
+	strncat(xml, "</operations>", MAX_STRLEN);
+	strncat(xml, suffix, MAX_STRLEN);
 
 	cib_object = string2xml(xml);
 	if(cib_object == NULL) {
 		return cl_strdup(MSG_FAIL);
 	}
-	mgmt_log(LOG_INFO, "xml:%s",xml);
+	mgmt_log(LOG_INFO, "zhenh xml:%s",xml);
 	fragment = create_cib_fragment(cib_object, "resources");
 
 	rc = cib_conn->cmds->update(
