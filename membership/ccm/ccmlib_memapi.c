@@ -1,4 +1,4 @@
-/* $Id: ccmlib_memapi.c,v 1.43 2006/04/13 09:08:37 zhenh Exp $ */
+/* $Id: ccmlib_memapi.c,v 1.44 2006/04/14 02:41:30 zhenh Exp $ */
 /* 
  * ccmlib_memapi.c: Consensus Cluster Membership API
  *
@@ -121,20 +121,12 @@ static void
 on_llm_msg(mbr_private_t *mem, struct IPC_MESSAGE *msg)
 {
 	unsigned long len = msg->msg_len;
-	int	numnodes;
 	
 	if (mem->llm != NULL) {
 		g_free(mem->llm);
 	}
 	mem->llm = (ccm_llm_t *)g_malloc(len);
 	memcpy(mem->llm, msg->msg_body, len);
-
-	mem->bornon = g_hash_table_new(g_direct_hash, 
-				g_direct_equal);
-
-	numnodes = CLLM_GET_NODECOUNT(mem->llm);
-	
-	mem->cookie = NULL;
 	return;
 }
 
@@ -185,6 +177,11 @@ init_llm(mbr_private_t *private)
 		break;
 	}
 	on_llm_msg(private, msg);
+	
+	private->bornon = g_hash_table_new(g_direct_hash, 
+				g_direct_equal);
+	private->cookie = NULL;
+	
 	private->client_report = TRUE;
 	msg->msg_done(msg);
 	return 0;
