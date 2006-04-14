@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-#	$Id: heartbeat.in,v 1.41 2005/09/10 21:46:23 gshi Exp $
+#	$Id: heartbeat.in,v 1.42 2006/04/14 19:25:33 alan Exp $
 #
 # heartbeat     Start high-availability services
 #
@@ -80,7 +80,7 @@ fi
 DISTFUNCS=/etc/rc.d/init.d/functions
 PROC_HA=$HA_BIN/ha.o
 SUBSYS=heartbeat
-INSMOD=/sbin/insmod
+MODPROBE=/sbin/modprobe
 US=`uname -n`
 
 # Set this to a 1 if you want to automatically load kernel modules
@@ -168,7 +168,7 @@ StopLogd() {
 
 init_watchdog() {
   if
-    [  -f /proc/devices -a  -x $INSMOD ]
+    [  -f /proc/devices -a  -x $MODPROBE ]
   then
     init_watchdog_linux
   fi
@@ -202,7 +202,7 @@ init_watchdog_linux() {
   then
     : Watchdog requested by $CONFIG file
   #
-  #	We try and insmod the module if there's no dev or the dev exists
+  #	We try and modprobe the module if there's no dev or the dev exists
   #	and points to the softdog major device.
   #
     if
@@ -226,7 +226,7 @@ init_watchdog_linux() {
       then
         : softdog already loaded
       else
-        $INSMOD softdog nowayout=0 >/dev/null 2>&1
+        $MODPROBE softdog nowayout=0 >/dev/null 2>&1
       fi;;
   esac
   if
@@ -450,6 +450,9 @@ exit $RC
 #
 #
 #  $Log: heartbeat.in,v $
+#  Revision 1.42  2006/04/14 19:25:33  alan
+#  Bug 1200:  heartbeat init script should use modprobe instead of insmod
+#
 #  Revision 1.41  2005/09/10 21:46:23  gshi
 #  fixed a typo in translating upper case to lower case
 #
