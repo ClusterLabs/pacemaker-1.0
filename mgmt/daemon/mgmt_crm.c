@@ -1104,6 +1104,9 @@ on_get_rsc_ops(char* argv[], int argc)
 	}
 	for (i = 0; i < ops->nfields; i++) {
 		if (STRNCMP_CONST(ops->names[i], "op") == 0) {
+			if (ops->types[i] != FT_STRUCT) {
+				continue;
+			}
 			op = (struct ha_msg*)ops->values[i];
 			ret = mgmt_msg_append(ret, ha_msg_value(op, "id"));
 			ret = mgmt_msg_append(ret, ha_msg_value(op, "name"));
