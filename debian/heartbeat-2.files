@@ -255,7 +255,7 @@ usr/share/doc/heartbeat-2/heartbeat_api.txt
 usr/share/doc/heartbeat-2/rsync.html
 usr/share/doc/heartbeat-2/rsync.txt
 usr/share/doc/heartbeat-2/startstop
-usr/share/locale/zh_CN/LC_MESSAGES/haclient.zh_CN.mo
+usr/share/locale/zh_CN/LC_MESSAGES/haclient.mo
 usr/share/man/man1/cl_status.1.gz
 usr/share/man/man1/ha_logger.1.gz
 usr/share/man/man1/hb_addnode.1.gz
