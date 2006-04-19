@@ -1,4 +1,4 @@
-/* $Id: heartbeat.h,v 1.82 2006/02/07 17:18:24 alan Exp $ */
+/* $Id: heartbeat.h,v 1.83 2006/04/19 21:08:54 alan Exp $ */
 /*
  * heartbeat.h: core definitions for the Linux-HA heartbeat program
  *
@@ -223,7 +223,7 @@
 
 typedef unsigned long seqno_t;
 
-#define	MAXMSGHIST	1000
+#define	MAXMSGHIST	200
 #define	MAXMISSING	MAXMSGHIST
 
 #define	NOSEQUENCE	0xffffffffUL
