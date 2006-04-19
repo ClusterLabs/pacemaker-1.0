@@ -34,7 +34,7 @@ HADIR=@sysconfdir@/ha.d
 HBSCRIPT=@INITDIR@/heartbeat@INIT_EXT@
 STONITH=@sbindir@/stonith
 LIBDIR=@libdir@/
-HBLIB=$LIBDIR/heartbeat
+HBLIB=@libdir@/heartbeat
 APPHBD=$HBLIB/apphbd
 CLSTATUS=@bindir@/cl_status
 APPHBTEST=$HBLIB/apphbtest
@@ -42,7 +42,7 @@ IPCTEST=$HBLIB/ipctest
 MGMTDTEST=$HBLIB/mgmtdtest
 LRMTEST=$HBLIB/lrmtest/LRMBasicSanityCheck
 STONITHDTEST=$HBLIB/stonithdtest/STONITHDBasicSanityCheck
-CRMTEST=$HBLIB/crmtest/1node.sh
+CRMTEST="python $HBLIB/cts/CTSlab.py --bsc"
 SNMPAGENTTEST=$HBLIB/SNMPAgentSanityCheck
 BASE64_MD5_TEST=$HBLIB/base64_md5_test
 MALLOC_CHECK_=2; export MALLOC_CHECK_
@@ -781,30 +781,18 @@ StonithDaemonTest() {
 }
 
 TestCRM() {
-  	if [ ! -f $CRMTEST ]; then
-	    return 0
-	fi
-	CRM_LOG=`maketempfile`
 	GenerateCrmdHaCf $HADIR/ha.cf $HADIR/ha_logd.cf
-#	echo "crm yes" >> $HADIR/ha.cf
 	echo "Starting CRM tests" | tee -a $LOGFILE
 
-
-	$CRMTEST -B -d /tmp -l $LOGFILE --ip1 127.0.0.10 --ip2 127.0.0.11 > $CRM_LOG 2>&1
+	$CRMTEST -L $LOGFILE >/dev/null 2>&1
 	ret=$?
 	if [ $ret != 0 ]; then
 	    errcount=`expr $errcount + 1`
-	    echo "CRM tests failed."
-	    echo "Summary of CRM test" >> $LOGFILE
-	    cat $CRM_LOG >> $LOGFILE
-	else 
-	    echo "CRM tests passed."
-	fi
-	
-	# stat likes dumping core when MALLOC_CHECK_=2 is specified
-	file $HADIR/core* | grep -e "from 'stat'" | rm -f `awk '{ print $1 }' | tr ':' ' '`
-
-	rm $CRM_LOG
+	    echo "CRM tests failed (rc=$ret)." | tee -a $LOGFILE
+	    return 1
+	fi	
+	echo "CRM tests passed."  | tee -a $LOGFILE
+	return 0
 }
 
 TestMgmtd() {
