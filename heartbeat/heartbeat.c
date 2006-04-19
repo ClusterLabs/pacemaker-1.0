@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.500 2006/04/07 12:51:25 lars Exp $ */
+/* $Id: heartbeat.c,v 1.501 2006/04/19 12:15:59 andrew Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -2113,7 +2113,7 @@ hb_mcp_final_shutdown(gpointer p)
 
 	/* Whack 'em */
 	hb_kill_core_children(SIGKILL);
-	cl_log(LOG_INFO,"Heartbeat shutdown complete.");
+	cl_log(LOG_INFO,"%s Heartbeat shutdown complete.", localnodename);
 
 	if (procinfo->restart_after_shutdown) {
 		cl_log(LOG_INFO, "Heartbeat restart triggered.");
@@ -3392,7 +3392,8 @@ CoreProcessDied(ProcTrack* p, int status, int signo
 		,	(int) p->pid, CoreProcessCount);
 
 		if (CoreProcessCount <= 1) {
-			cl_log(LOG_INFO,"Heartbeat shutdown complete.");
+			cl_log(LOG_INFO,"%s Heartbeat shutdown complete.",
+			       localnodename);
 			if (procinfo->restart_after_shutdown) {
 				cl_log(LOG_INFO
 				,	"Heartbeat restart triggered.");
@@ -6236,6 +6237,9 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.501  2006/04/19 12:15:59  andrew
+ * Tweak some log patterns to work regardless of how they're logged (syslog vs. file)
+ *
  * Revision 1.500  2006/04/07 12:51:25  lars
  * CID #25: RESOURCE_LEAK, fp was not being freed.
  *
