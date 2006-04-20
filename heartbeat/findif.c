@@ -1,4 +1,4 @@
-/* $Id: findif.c,v 1.59 2006/04/10 09:55:02 andrew Exp $ */
+/* $Id: findif.c,v 1.60 2006/04/20 09:02:13 davidlee Exp $ */
 /*
  * findif.c:	Finds an interface which can route a given address
  *
@@ -511,13 +511,21 @@ int
 ValidateIFName(const char *ifname, struct ifreq *ifr) 
 {
  	int skfd = -1;
- 
+	char *colonptr;
+
  	if ( (skfd = socket(PF_INET, SOCK_DGRAM, 0)) == -1 ) {
  		fprintf(stderr, "%s\n", strerror(errno));
  		return 0;
  	}
  
 	strncpy(ifr->ifr_name, ifname, IFNAMSIZ);
+
+	/* Contain a ":"?  Probably an error, but treat as warning at present */
+	if ((colonptr = strchr(ifname, ':')) != NULL) {
+		fprintf(stderr, "%s: warning: name may be invalid\n",
+		  ifr->ifr_name);
+	}
+ 
  	if (ioctl(skfd, SIOCGIFFLAGS, ifr) < 0) {
  		fprintf(stderr, "%s: unknown interface: %s\n"
  			, ifr->ifr_name, strerror(errno));
@@ -903,6 +911,9 @@ ff02::%lo0/32                     fe80::1%lo0                   UC          lo0
 
 /* 
  * $Log: findif.c,v $
+ * Revision 1.60  2006/04/20 09:02:13  davidlee
+ * A ':' in an interface name is probably an error (but for now treat as a mere warning).
+ *
  * Revision 1.59  2006/04/10 09:55:02  andrew
  * Fix findif for any OS that doesnt use /proc/route
  *
