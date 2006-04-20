@@ -2,7 +2,7 @@
  * TODO:
  * 1) Man page update
  */
-/* $Id: heartbeat.c,v 1.502 2006/04/20 15:00:16 alan Exp $ */
+/* $Id: heartbeat.c,v 1.503 2006/04/20 17:14:56 alan Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -1388,7 +1388,7 @@ master_control_process(void)
 		id=Gmain_timeout_add_full(G_PRIORITY_HIGH-5
 		,	cl_cpu_limit_ms_interval()
 		,	hb_update_cpu_limit, NULL, NULL);
-		G_main_setall_id(id, "cpu limit", 50, 10);
+		G_main_setall_id(id, "cpu limit", 50, 20);
 	}
 	cl_make_realtime(-1, hb_realtime_prio, 32, config->memreserve);
 
@@ -1479,7 +1479,7 @@ master_control_process(void)
 	/* Send local status at the "right time" */
 	id=Gmain_timeout_add_full(PRI_SENDSTATUS, config->heartbeat_ms
 	,	hb_send_local_status, NULL, NULL);
-	G_main_setall_id(id, "send local status", config->heartbeat_ms/2, 50);
+	G_main_setall_id(id, "send local status", 10+config->heartbeat_ms/2, 50);
 
 	id=Gmain_timeout_add_full(PRI_AUDITCLIENT
 	,	config->initial_deadtime_ms
@@ -1509,7 +1509,7 @@ master_control_process(void)
 	/* Check for pending signals */
 	id=Gmain_timeout_add_full(PRI_CHECKSIGS, config->heartbeat_ms
 	,       Gmain_hb_signal_process_pending, NULL, NULL);
-	G_main_setall_id(id, "check for signals", config->heartbeat_ms/2, 50);
+	G_main_setall_id(id, "check for signals", 10+config->heartbeat_ms/2, 50);
 	
 	id=Gmain_timeout_add_full(PRI_FREEMSG, 500
 	,	Gmain_update_msgfree_count, NULL, NULL);
@@ -6132,6 +6132,9 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.503  2006/04/20 17:14:56  alan
+ * Changed some timing code to not be quite a particular as it had been...
+ *
  * Revision 1.502  2006/04/20 15:00:16  alan
  * Put in code to use the library temporary process creation/run code
  * instead of the inline heartbeat code
