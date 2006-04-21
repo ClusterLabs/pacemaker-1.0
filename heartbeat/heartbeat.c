@@ -1,8 +1,4 @@
-/*
- * TODO:
- * 1) Man page update
- */
-/* $Id: heartbeat.c,v 1.503 2006/04/20 17:14:56 alan Exp $ */
+/* $Id: heartbeat.c,v 1.504 2006/04/21 17:47:46 alan Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -283,6 +279,8 @@
 
 #define	ALWAYSRESTART_ON_SPLITBRAIN	1
 
+#define	FLOWCONTROL_LIMIT	 ((seqno_t)(MAXMSGHIST/2))
+
 
 static char 			hbname []= "heartbeat";
 const char *			cmdname = hbname;
@@ -334,8 +332,9 @@ longclock_t			local_takeover_time = 0L;
 static int 			deadtime_tmpadd_count = 0;
 gboolean			enable_flow_control = TRUE;
 static	int			send_cluster_msg_level = 0;
+static int			live_node_count = 1; /* namely us... */
 static void print_a_child_client(gpointer childentry, gpointer unused);
-static seqno_t timer_lowseq = 0;
+static seqno_t			timer_lowseq = 0;
 static	gboolean		init_deadtime_passed = FALSE;		
 static int			PrintDefaults = FALSE;
 static int			WikiOutput = FALSE;
@@ -399,6 +398,7 @@ static void	add2_xmit_hist (struct msg_xmit_hist * hist
 static void	init_xmit_hist (struct msg_xmit_hist * hist);
 static void	process_rexmit(struct msg_xmit_hist * hist
 ,			struct ha_msg* msg);
+static void	update_ackseq(seqno_t new_ackseq) ;
 static void	process_clustermsg(struct ha_msg* msg, struct link* lnk);
 extern void	process_registerevent(IPC_Channel* chan,  gpointer user_data);
 static void	nak_rexmit(struct msg_xmit_hist * hist, 
@@ -2148,21 +2148,20 @@ static void
 HBDoMsg_T_ACKMSG(const char * type, struct node_info * fromnode,
 	      TIME_T msgtime, seqno_t seqno, const char * iface, struct ha_msg * msg)
 {
-	const char*	ackseq_str = ha_msg_value(msg, F_ACKSEQ);
-	seqno_t		ackseq;
-	struct msg_xmit_hist* hist = &msghist;	
-	const char*	to =  
-		(const char*)ha_msg_value(msg, F_TO);
-	struct node_info* tonode;
-	seqno_t		old_hist_ackseq;
+	const char*		ackseq_str = ha_msg_value(msg, F_ACKSEQ);
+	seqno_t			ackseq;
+	struct msg_xmit_hist*	hist = &msghist;	
+	const char*		to =  (const char*)ha_msg_value(msg, F_TO);
+	struct node_info*	tonode;
+	seqno_t			new_ackseq = hist->ackseq;
 	
 	if (!to || (tonode = lookup_tables(to, NULL)) == NULL
-	    || tonode != curnode){
+	||	tonode != curnode){
 		return;
 	}
 
-	if (ackseq_str == NULL||
-	    sscanf(ackseq_str, "%lx", &ackseq) != 1){
+	if (ackseq_str == NULL
+	||	sscanf(ackseq_str, "%lx", &ackseq) != 1){
 		goto out;
 	}
 
@@ -2172,11 +2171,10 @@ HBDoMsg_T_ACKMSG(const char * type, struct node_info * fromnode,
 		goto out;
 	}
 	
-	if (ackseq <= hist->ackseq){
+	if (ackseq <= new_ackseq){
 		/* late or dup ack
 		 * ignored
 		 */
-		
 		goto out;
 	}else if (ackseq > hist->hiseq){
 		cl_log(LOG_ERR, "HBDoMsg_T_ACK"
@@ -2187,7 +2185,7 @@ HBDoMsg_T_ACKMSG(const char * type, struct node_info * fromnode,
 		goto out;
 	}
 	
-	if ( ackseq < fromnode->track.ackseq){
+	if (ackseq < fromnode->track.ackseq) {
 		/* late or dup ack
 		 * ignored
 		 */
@@ -2196,20 +2194,18 @@ HBDoMsg_T_ACKMSG(const char * type, struct node_info * fromnode,
 	
 	fromnode->track.ackseq = ackseq;
 	
-	if (hist->lowest_acknode != NULL &&
-	    STRNCMP_CONST(hist->lowest_acknode->status, 
-		    DEADSTATUS) == 0){
+	if (hist->lowest_acknode != NULL
+	&&	STRNCMP_CONST(hist->lowest_acknode->status,DEADSTATUS)==0){
 		/* the lowest acked node is dead
-		 * we cannnot count on that node 
+		 * we cannot count on that node 
 		 * to update our ackseq
 		 */
 		hist->lowest_acknode = NULL;
 	}
 
-	old_hist_ackseq = hist->ackseq;
 	
-	if (hist->lowest_acknode == NULL ||
-	    hist->lowest_acknode == fromnode){
+	if (hist->lowest_acknode == NULL
+	||	hist->lowest_acknode == fromnode){
 		/*find the new lowest and update hist->ackseq*/
 		seqno_t	minseq;
 		int	minidx;
@@ -2221,79 +2217,103 @@ HBDoMsg_T_ACKMSG(const char * type, struct node_info * fromnode,
 		for (i = 0; i < config->nodecount; i++){
 			struct node_info* hip = &config->nodes[i];
 			
-			if (STRNCMP_CONST(hip->status,DEADSTATUS) == 0
-			    || hip->nodetype == PINGNODE_I){
+			if (hip->nodetype == PINGNODE_I
+			||	STRNCMP_CONST(hip->status, DEADSTATUS) == 0) {
 				continue;
 			}
 			
-			if (minidx == -1 || 
-			    hip->track.ackseq < minseq){
+			if (minidx == -1
+			||	hip->track.ackseq < minseq){
 				minseq = hip->track.ackseq;
 				minidx = i;
 			}
 		}
 		
-		if (minidx == -1){
-			/*each node is in either DEASTATUS or INITSTATUS*/
+		if (minidx == -1) {
+			/* Every node is DEADSTATUS */
 			goto out;
 		}
-		if (minidx == config->nodecount){
+		if (live_node_count < 2) {
+			/*
+			 * Update hist->ackseq so we don't hang onto
+			 * messages indefinitely and flow control clients
+			 */
+			if ((hist->hiseq - new_ackseq) >= FLOWCONTROL_LIMIT) {
+				new_ackseq = hist->hiseq - (FLOWCONTROL_LIMIT-1);
+			}
+			hist->lowest_acknode = NULL;
+			goto cleanupandout;
+		}
+		if (minidx >= config->nodecount) {
 			cl_log(LOG_ERR, "minidx out of bound"
 			       "minidx=%d",minidx );
 			goto out;
 		}
 
 
-		if (minseq != 0){			
-			hist->ackseq = minseq;
+		if (minseq > 0){
+			new_ackseq = minseq;
 		}
-		
 		hist->lowest_acknode = &config->nodes[minidx];
-		
-		if (hist->hiseq - hist->ackseq < MAXMSGHIST/2){
-			all_clients_resume();
-		}
 	}
 	
-#if 0	
-	cl_log(LOG_INFO, "hist->ackseq =%ld, old_hist_ackseq=%ld",
- 	       hist->ackseq, old_hist_ackseq);
-#endif
-	if (hist->ackseq > old_hist_ackseq){
-		long count;
-		seqno_t start;
-		count = hist->ackseq - hist->lowseq - send_cluster_msg_level;
-		if (old_hist_ackseq == 0){
-			start = 0;
-			count = count - 1;
-		}else{
-			start = hist->lowseq;
-		}
-		
-		while(count -- > 0){
-			
-			/*if the seq number is greater than the lowseq number
-			  the timer set, we should not free any more messages*/
-			if (start > timer_lowseq){
-				break;
-			}
-			
-			free_one_hist_slot(hist, start%MAXMSGHIST);
-			start++;
-			
-			if (hist->lowseq > hist->ackseq){
-				cl_log(LOG_ERR, "lowseq cannnot be greater than ackseq");
-				cl_log(LOG_INFO, "hist->ackseq =%ld, old_hist_ackseq=%ld",
-				       hist->ackseq, old_hist_ackseq);
-				cl_log(LOG_INFO, "hist->lowseq =%ld, hist->hiseq=%ld,"
-				       "send_cluster_msg_level=%d",
-				       hist->lowseq, hist->hiseq, send_cluster_msg_level);
-				abort();
-			}
+cleanupandout:
+	update_ackseq(new_ackseq);
+out:
+	return;
+}
 
-		}
+static void
+update_ackseq(seqno_t new_ackseq) 
+{
+	struct msg_xmit_hist*	hist = &msghist;	
+	long			count;
+	seqno_t			start;
+	seqno_t			old_ackseq = hist->ackseq;
+
+#if 0	
+	cl_log(LOG_INFO, "new_ackseq = %ld, old_ackseq=%ld"
+	,	new_ackseq, old_ackseq);
+#endif
+	if (new_ackseq <= old_ackseq){
+		return;
+	}
+	hist->ackseq = new_ackseq;
+
+	if ((hist->hiseq - hist->ackseq) < FLOWCONTROL_LIMIT){
+		all_clients_resume();
 	}
 
+	count = hist->ackseq - hist->lowseq - send_cluster_msg_level;
+	if (old_ackseq == 0){
+		start = 0;
+		count = count - 1;
+	}else{
+		start = hist->lowseq;
+	}
+	
+	while(count -- > 0){
+		/*
+		 * If the seq number is greater than the lowseq number
+		 * the timer set, we should not free any more messages
+		 */
+		if (start > timer_lowseq){
+			break;
+		}
+	
+		free_one_hist_slot(hist, start%MAXMSGHIST);
+		start++;
+
+		if (hist->lowseq > hist->ackseq){
+			cl_log(LOG_ERR, "lowseq cannnot be greater than ackseq");
+			cl_log(LOG_INFO, "hist->ackseq =%ld, old_ackseq=%ld"
+			,	hist->ackseq, old_ackseq);
+			cl_log(LOG_INFO, "hist->lowseq =%ld, hist->hiseq=%ld"
+			", send_cluster_msg_level=%d"
+			,	hist->lowseq, hist->hiseq, send_cluster_msg_level);
+			abort();
+		}
+	}
 	(void)dump_missing_pkts_info;
 
 #ifdef DEBUG_FOR_GSHI
@@ -2312,12 +2332,7 @@ HBDoMsg_T_ACKMSG(const char * type, struct node_info * fromnode,
 	}
 
 #endif 
- out:
-
-	return;
 }
-
-
 
 static int
 getnodes(const char* nodelist, char** nodes, int* num){
@@ -2798,9 +2813,30 @@ HBDoMsg_T_STATUS(const char * type, struct node_info * fromnode
 			,	"Status seqno: %ld msgtime: %ld"
 			,	seqno, msgtime);
 		}
+		/*
+		 *   IF
+		 *	It's from a normal node
+		 *	It isn't from us
+		 *	The node's old status was dead or init
+		 *	The node's new status is up or active
+		 *   THEN
+		 *	increment the count of live nodes.
+		 */
+		if (fromnode->nodetype == NORMALNODE_I
+		&&	fromnode != curnode
+		&&	( STRNCMP_CONST(fromnode->status, DEADSTATUS) == 0
+		||	  STRNCMP_CONST(fromnode->status, INITSTATUS) == 0)
+		&&	( STRNCMP_CONST(status, UPSTATUS) == 0
+		||	  STRNCMP_CONST(status, ACTIVESTATUS) == 0)) {
+			++live_node_count;
+			if (live_node_count > config->nodecount) {
+				cl_log(LOG_ERR
+				,	"live_node_count too big (%d)"
+				,	live_node_count);
+			}
+		}
 		
-		strncpy(fromnode->status, status
-		, 	sizeof(fromnode->status));
+		strncpy(fromnode->status, status, sizeof(fromnode->status));
 		if (!fromnode->status_suppressed) {
 			QueueRemoteRscReq(PerformQueuedNotifyWorld, msg);
 			heartbeat_monitor(msg, KEEPIT, iface);
@@ -4190,6 +4226,11 @@ mark_node_dead(struct node_info *hip)
 		return;
 	}
 
+	if (hip->nodetype == NORMALNODE_I
+	&&	STRNCMP_CONST(hip->status, DEADSTATUS) != 0
+	&&	STRNCMP_CONST(hip->status, INITSTATUS) != 0) {
+		--live_node_count;
+	}
 	strncpy(hip->status, DEADSTATUS, sizeof(hip->status));
 	
 
@@ -5687,7 +5728,7 @@ heartbeat_on_congestion(void)
 	
 	struct msg_xmit_hist* hist = &msghist;
 	
-	return hist->hiseq - hist->ackseq > MAXMSGHIST/2;
+	return hist->hiseq - hist->ackseq > FLOWCONTROL_LIMIT;
 	
 }
 
@@ -5729,20 +5770,30 @@ add2_xmit_hist (struct msg_xmit_hist * hist, struct ha_msg* msg
 	hist->lastrexmit[slot] = 0L;
 	hist->lastmsg = slot;
 	
-	if (enable_flow_control && hist->hiseq - hist->lowseq > MAXMSGHIST*3 / 4){
-		cl_log(LOG_ERR, "Message hist queue is filling up (%d messages in queue)",
-		       (int)(hist->hiseq - hist->lowseq));
+	if (enable_flow_control
+	&&	live_node_count > 1
+	&&	(hist->hiseq - hist->lowseq) > ((MAXMSGHIST*3)/4)) {
+		cl_log(LOG_ERR
+		,	"Message hist queue is filling up"
+		" (%d messages in queue)"
+		,       (int)(hist->hiseq - hist->lowseq));
+		hist_display(hist);
 	}
-	
 
 	AUDITXMITHIST;
 	
 	if (enable_flow_control
-	    && hist->hiseq - hist->ackseq > MAXMSGHIST/2){
-		all_clients_pause();
-		hist_display(hist);
+	&&	hist->hiseq - hist->ackseq > FLOWCONTROL_LIMIT){
+		if (live_node_count < 2) {
+			update_ackseq(hist->hiseq - (FLOWCONTROL_LIMIT-1));
+			all_clients_resume();
+		}else{
+			cl_log(LOG_ERR, "Flow control engaged with %d live nodes"
+			,	live_node_count);
+			all_clients_pause();
+			hist_display(hist);
+		}
 	}
-
 }
 
 
@@ -6132,6 +6183,13 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.504  2006/04/21 17:47:46  alan
+ * Put in a bug fix which only occurs if we send lots of packets
+ * before initdead expires, and we're the only node up.
+ * It caused problems in BSC with a 10ms heartbeat time.
+ * What triggered the need for this patch was decreasing the window
+ * size of the protocol to "only" 200 packets (instead of 1000).
+ *
  * Revision 1.503  2006/04/20 17:14:56  alan
  * Changed some timing code to not be quite a particular as it had been...
  *
