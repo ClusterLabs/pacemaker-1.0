@@ -1,4 +1,4 @@
-/* $Id: hb_api.h,v 1.44 2006/02/01 14:59:09 alan Exp $ */
+/* $Id: hb_api.h,v 1.45 2006/04/23 22:06:10 alan Exp $ */
 /*
  * Client-side Low-level clustering API for heartbeat.
  *
@@ -436,4 +436,11 @@ struct llc_ops {
 #define KEY_CONFIG_WRITES_ENABLED "enable_config_writes"
 
 ll_cluster_t*	ll_cluster_new(const char * llctype);
+
+typedef struct GLLclusterSource_s	GLLclusterSource;
+GLLclusterSource* G_main_add_ll_cluster(int priority, ll_cluster_t* api
+,	gboolean can_recurse
+,	gboolean (*dispatch)(ll_cluster_t* source_data,gpointer user_data)
+,	gpointer userdata, GDestroyNotify notify);
+
 #endif /* __HB_API_H */
