@@ -1,4 +1,4 @@
-/* $Id: heartbeat.c,v 1.504 2006/04/21 17:47:46 alan Exp $ */
+/* $Id: heartbeat.c,v 1.505 2006/04/23 20:02:10 alan Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -5788,8 +5788,10 @@ add2_xmit_hist (struct msg_xmit_hist * hist, struct ha_msg* msg
 			update_ackseq(hist->hiseq - (FLOWCONTROL_LIMIT-1));
 			all_clients_resume();
 		}else{
-			cl_log(LOG_ERR, "Flow control engaged with %d live nodes"
+#if 0
+			cl_log(LOG_INFO, "Flow control engaged with %d live nodes"
 			,	live_node_count);
+#endif
 			all_clients_pause();
 			hist_display(hist);
 		}
@@ -6183,6 +6185,9 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.505  2006/04/23 20:02:10  alan
+ * Disabled a message put in to give me confidence a recent change.
+ *
  * Revision 1.504  2006/04/21 17:47:46  alan
  * Put in a bug fix which only occurs if we send lots of packets
  * before initdead expires, and we're the only node up.
