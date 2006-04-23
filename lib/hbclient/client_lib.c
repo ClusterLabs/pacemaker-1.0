@@ -1,4 +1,4 @@
-/* $Id: client_lib.c,v 1.37 2006/04/07 13:36:57 lars Exp $ */
+/* $Id: client_lib.c,v 1.38 2006/04/23 22:07:06 alan Exp $ */
 /* 
  * client_lib: heartbeat API client side code
  *
@@ -3156,4 +3156,129 @@ ll_cluster_new(const char * llctype)
 		return hb_cluster_new();
 	}
 	return NULL;
+}
+
+#include <clplumbing/GSource_internal.h>
+
+#define	OURMAGIC	0xbeef1234
+
+struct GLLclusterSource_s {
+	GCHSource	chsrc;
+	unsigned long	magic2;
+	ll_cluster_t*	hbchan;
+	gboolean(*dispatch)(ll_cluster_t* llc, gpointer udata);
+};
+
+
+
+static gboolean G_llc_prepare_int(GSource* source, gint* timeout);
+static gboolean G_llc_check_int(GSource* source);
+static gboolean G_llc_dispatch_int(GSource* source, GSourceFunc callback
+,	gpointer user_data);
+static void G_llc_destroy_int(GSource* source);
+
+static GSourceFuncs G_llc_SourceFuncs = {
+	G_llc_prepare_int,
+	G_llc_check_int,
+	G_llc_dispatch_int,
+	G_llc_destroy_int,
+};
+
+#define	CHECKMAGIC(s,value)	{if ((s)->magic2 != OURMAGIC) {		\
+					cl_log(LOG_ERR			\
+					,	"%s: invalid magic number"\
+					,	__FUNCTION__);		\
+					return value;			\
+				}}
+
+static gboolean
+G_llc_prepare_int(GSource* source, gint* timeout)
+{
+	GLLclusterSource*	s = (GLLclusterSource*)source;
+
+	CHECKMAGIC(s, FALSE);
+	(void)G_CH_prepare_int(source, timeout);
+	
+	return s->hbchan->llc_ops->msgready(s->hbchan);
+}
+
+static gboolean
+G_llc_check_int(GSource* source)
+{
+	GLLclusterSource*	s = (GLLclusterSource*)source;
+
+	CHECKMAGIC(s, FALSE);
+	(void)G_CH_check_int(source);
+	
+	return s->hbchan->llc_ops->msgready(s->hbchan);
+}
+
+static gboolean
+G_llc_dispatch_int(GSource* source, GSourceFunc callback
+,	gpointer user_data)
+{
+	gboolean	ret1 = TRUE;
+	gboolean	ret2 = TRUE;
+	GLLclusterSource*	s = (GLLclusterSource*)source;
+
+	CHECKMAGIC(s, FALSE);
+	ret1 = G_CH_dispatch_int(source, callback, user_data);
+	
+	if (s->hbchan->llc_ops->msgready(s->hbchan) && s->dispatch) {
+		ret2 = s->dispatch(s->hbchan, s->chsrc.udata);
+	}
+	return ret1 && ret2;
+}
+
+static
+void G_llc_destroy_int(GSource* source)
+{
+	GLLclusterSource*	s = (GLLclusterSource*)source;
+	llc_private_t*		pi;
+	pi = (llc_private_t*)s->hbchan->ll_cluster_private;
+
+	CHECKMAGIC(s, );
+	s->magic2 = 0;
+	G_CH_destroy_int(source);
+	pi->chan = NULL;
+	s->hbchan->llc_ops->delete(s->hbchan);
+}
+
+
+GLLclusterSource*
+G_main_add_ll_cluster(int priority, ll_cluster_t* api
+,	gboolean can_recurse
+,	gboolean (*dispatch)(ll_cluster_t* source_data,gpointer user_data)
+,	gpointer userdata, GDestroyNotify notify)
+{
+	GSource * source = 	g_source_new(&G_llc_SourceFuncs
+	,			sizeof(GLLclusterSource));
+	GLLclusterSource*	s = (GLLclusterSource*)source;
+	IPC_Channel*		ch;
+
+	if (source == NULL || api == NULL || api->llc_ops == NULL
+	||	(ch = api->llc_ops->ipcchan(api)) == NULL) {
+		return NULL;
+	}
+	s->magic2 = OURMAGIC;
+	(void)G_main_IPC_Channel_constructor(source, ch, userdata, notify);
+
+	s->dispatch = dispatch;
+	
+	g_source_set_priority(source, priority);
+	g_source_set_can_recurse(source, can_recurse);
+	
+	s->chsrc.description = "Heartbeat API channel";
+	s->chsrc.gsourceid = g_source_attach(source, NULL);
+
+	if (s->chsrc.gsourceid == 0) {
+		g_source_remove_poll(source, &s->chsrc.infd);
+		if (!s->chsrc.fd_fdx) {
+			g_source_remove_poll(source, &s->chsrc.outfd);
+		}
+		g_source_unref(source);
+		source = NULL;
+		s = NULL;
+	}
+	return s;
 }
