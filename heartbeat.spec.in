@@ -1,4 +1,4 @@
-#	$Id: heartbeat.spec.in,v 1.168 2006/04/14 08:06:11 zhenh Exp $
+#	$Id: heartbeat.spec.in,v 1.169 2006/04/24 02:32:17 alan Exp $
 
 # Workaround for a change in RPM 4.1.x; needs proper fixing soon!
 ##%define _unpackaged_files_terminate_build 0
@@ -78,6 +78,31 @@ PILS is designed to support any number of plugins
 implementing any number of interfaces.
 
 %changelog
+* Sun Apr 23 2006  Alan Robertson <alanr@unix.sh> (see doc/AUTHORS file)
++ Version 2.0.5 - significant bug fixes and a few feature deficits fixed
+  + various portability fixes
+  + enable GUI to run with pygtk 2.4
+  + significant GUI improvements and speedups
+  + numerous logging improvements (generally much quieter)
+  + speed up CIB processing by writing to CIB asynchronously
+  + add CIB on-disk checksums
+  + removed dependency on openssl
+  + added "failure stickiness" to the CIB/CRM
+  + Several fixes to the membership code
+  + We now log all output from resource agents
+  + fixed STONITHd memory leaks.
+  + Added an OCF RA for Xen guests
+  + Added email alerts to ldirectord
+  + Master/slave now works
+  + Improvements to the haresources2cib upgrade tool
+  + Several fixes to cibadmin
+  + Validate the CIB against the DTD on startup, and other times...
+  + Fix some autoadd-related bugs
+  + Added Chinese support to the GUI
+  + Added a new (untested) daemon to replace and generalize ipfail
+  + Significant improvements to CIM model, including modifying things
+
+
 * Mon Feb 27 2006  Alan Robertson <alanr@unix.sh> (see doc/AUTHORS file)
 + Version 2.0.4 - Bug fix release - worth getting these updates
   + Fixed cpu loop for LRM
