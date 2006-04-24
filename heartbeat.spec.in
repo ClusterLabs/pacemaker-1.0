@@ -1,4 +1,4 @@
-#	$Id: heartbeat.spec.in,v 1.169 2006/04/24 02:32:17 alan Exp $
+#	$Id: heartbeat.spec.in,v 1.170 2006/04/24 07:06:35 alan Exp $
 
 # Workaround for a change in RPM 4.1.x; needs proper fixing soon!
 ##%define _unpackaged_files_terminate_build 0
@@ -101,7 +101,11 @@ implementing any number of interfaces.
   + Added Chinese support to the GUI
   + Added a new (untested) daemon to replace and generalize ipfail
   + Significant improvements to CIM model, including modifying things
-
+  + Changed traditional_compression to default to NO.  This new default
+	is not compatible in mixed clusters running version 2.0.0-2.0.2.
+	If you are upgrading such a cluster to >= 2.0.5, either turn on
+	traditional_compression in your 2.0.5 clusters, or shut down
+	the whole cluster and upgrade it all at once.
 
 * Mon Feb 27 2006  Alan Robertson <alanr@unix.sh> (see doc/AUTHORS file)
 + Version 2.0.4 - Bug fix release - worth getting these updates
