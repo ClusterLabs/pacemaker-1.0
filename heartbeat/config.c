@@ -1,4 +1,4 @@
-/* $Id: config.c,v 1.196 2006/04/11 22:11:17 lars Exp $ */
+/* $Id: config.c,v 1.197 2006/04/24 03:23:49 alan Exp $ */
 /*
  * Parse various heartbeat configuration files...
  *
@@ -2395,20 +2395,30 @@ set_release2mode(const char* value)
 		const char * dname;
 		const char * dval;
 	} r2dirs[] =
-		/* CCM already implicit */
-	{	{"apiauth", "stonithd   uid=root"}
-		/* LRM is not a heartbeat API client */
-	,	{"apiauth", "cib 	uid=" HA_CCMUSER}
-	,	{"apiauth", "crmd   	uid=" HA_CCMUSER}
+	/*
+	 *	To whom it may concern:  Please keep the apiauth and respawn
+	 *	lines in the same order to make auditing the two against each
+	 *	other easier.
+	 *	Thank you.
+	 */
+	
+	{	/* CCM apiauth already implicit elsewhere */
+		{"apiauth", "cib 	uid=" HA_CCMUSER}
+		/* LRMd is not a heartbeat API client */
+	,	{"apiauth", "stonithd  	uid=root" }
 	,	{"apiauth", "attrd   	uid=" HA_CCMUSER}
+	,	{"apiauth", "crmd   	uid=" HA_CCMUSER}
+	,	{"apiauth", "mgmtd   	uid=root" }
 	,	{"apiauth", "pingd   	uid=" HA_CCMUSER}
 
 	,	{"respawn", " "HA_CCMUSER " " HALIB "/ccm"}
 	,	{"respawn", " "HA_CCMUSER " " HALIB "/cib"}
-	,	{"respawn", "root "	      HALIB "/stonithd"}
 	,	{"respawn", "root "           HALIB "/lrmd"}
+	,	{"respawn", "root "	      HALIB "/stonithd"}
 	,	{"respawn", " "HA_CCMUSER " " HALIB "/attrd"}
 	,	{"respawn", " "HA_CCMUSER " " HALIB "/crmd"}
+	,	{"respawn", "root "  	      HALIB "/mgmtd -v"}
+		/* Don't 'respawn' pingd - it's a resource agent */
 	};
 	gboolean	dorel2;
 	int		rc;
@@ -2520,6 +2530,9 @@ ha_config_check_boolean(const char *value)
 
 /*
  * $Log: config.c,v $
+ * Revision 1.197  2006/04/24 03:23:49  alan
+ * Made mgmtd loaded by default with 'crm on'.
+ *
  * Revision 1.196  2006/04/11 22:11:17  lars
  * CID 5: If we return here, the deallocation codepath at the end of the
  * function doesn't make sense, and we would leak memory.
