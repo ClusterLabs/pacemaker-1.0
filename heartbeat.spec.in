@@ -1,4 +1,4 @@
-#	$Id: heartbeat.spec.in,v 1.170 2006/04/24 07:06:35 alan Exp $
+#	$Id: heartbeat.spec.in,v 1.171 2006/04/24 07:22:59 andrew Exp $
 
 # Workaround for a change in RPM 4.1.x; needs proper fixing soon!
 ##%define _unpackaged_files_terminate_build 0
@@ -84,7 +84,7 @@ implementing any number of interfaces.
   + enable GUI to run with pygtk 2.4
   + significant GUI improvements and speedups
   + numerous logging improvements (generally much quieter)
-  + speed up CIB processing by writing to CIB asynchronously
+  + speed up CIB processing by writing it to disk asynchronously
   + add CIB on-disk checksums
   + removed dependency on openssl
   + added "failure stickiness" to the CIB/CRM
@@ -93,14 +93,29 @@ implementing any number of interfaces.
   + fixed STONITHd memory leaks.
   + Added an OCF RA for Xen guests
   + Added email alerts to ldirectord
-  + Master/slave now works
   + Improvements to the haresources2cib upgrade tool
   + Several fixes to cibadmin
-  + Validate the CIB against the DTD on startup, and other times...
   + Fix some autoadd-related bugs
   + Added Chinese support to the GUI
-  + Added a new (untested) daemon to replace and generalize ipfail
+  + Added a daemon to replace and generalize ipfail
+    + Limited testing only
   + Significant improvements to CIM model, including modifying things
+  + Extensive Master/slave testing and fixes
+  + Use a digest of the parameters used in an action (smaller CIB)
+  + Improved detection of "old" events that should be ignored by the PE
+    (ensures resource monitoring is active when required)
+  + Better detection of required and/or optimal behaviour in mixed
+    (and formerly mixed) clusters
+  + LRM now supports multiple concurrent monitor operations
+  + Optional startup & runtime enforcement of DTD validation
+    (Invalid changes are rejected)
+  + cibadmin tool overhauled and verified to function correctly
+  + Some depreciated CIB features now unsupported
+    + Placing nvpair objects in crm_config (must now use cluster_property_set)
+    + on_stopfail removed in favor of setting on_fail in the resource's stop operation
+    + start_prereq removed in favor of setting prereq in the resource's start operation
+  + Minimum required version for performing a rolling upgrade of a
+    crm yes" cluster to 2.0.5 is 2.0.4
   + Changed traditional_compression to default to NO.  This new default
 	is not compatible in mixed clusters running version 2.0.0-2.0.2.
 	If you are upgrading such a cluster to >= 2.0.5, either turn on
