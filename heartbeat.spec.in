@@ -1,4 +1,4 @@
-#	$Id: heartbeat.spec.in,v 1.171 2006/04/24 07:22:59 andrew Exp $
+#	$Id: heartbeat.spec.in,v 1.172 2006/04/24 07:25:18 alan Exp $
 
 # Workaround for a change in RPM 4.1.x; needs proper fixing soon!
 ##%define _unpackaged_files_terminate_build 0
@@ -118,9 +118,11 @@ implementing any number of interfaces.
     crm yes" cluster to 2.0.5 is 2.0.4
   + Changed traditional_compression to default to NO.  This new default
 	is not compatible in mixed clusters running version 2.0.0-2.0.2.
-	If you are upgrading such a cluster to >= 2.0.5, either turn on
-	traditional_compression in your 2.0.5 clusters, or shut down
-	the whole cluster and upgrade it all at once.
+	If you are upgrading a CRM-based cluster to >= 2.0.5, you
+	have to go through 2.0.4 anyway (for other reasons), so this
+	shouldn't cause any additional difficulties.
+	Non-CRM clusters shouldn't be affected by this because only
+	CRM packets are large enough to be compressed.
 
 * Mon Feb 27 2006  Alan Robertson <alanr@unix.sh> (see doc/AUTHORS file)
 + Version 2.0.4 - Bug fix release - worth getting these updates
