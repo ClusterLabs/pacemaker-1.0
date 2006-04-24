@@ -750,6 +750,3 @@ read_cache_file(struct sys_config* cfg)
 	return read_delnode_file(cfg);	
 	
 }
-
-
-
