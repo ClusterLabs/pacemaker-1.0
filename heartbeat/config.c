@@ -1,4 +1,4 @@
-/* $Id: config.c,v 1.197 2006/04/24 03:23:49 alan Exp $ */
+/* $Id: config.c,v 1.198 2006/04/24 04:52:24 alan Exp $ */
 /*
  * Parse various heartbeat configuration files...
  *
@@ -162,8 +162,8 @@ struct directive {
 , {KEY_UUIDFROM,  set_uuidfrom, TRUE, "file" ,	"set the source for uuid"}
 ,{KEY_COMPRESSION,   set_compression, TRUE ,"zlib", "set compression module"}
 ,{KEY_COMPRESSION_THRESHOLD, set_compression_threshold, TRUE, "2", "set compression threshold"}
-,{KEY_TRADITIONAL_COMPRESSION, set_traditional_compression, TRUE, "yes", "set traditional_compression"}
-,{KEY_ENV, set_env, FALSE, NULL, "set environment variable"}
+,{KEY_TRADITIONAL_COMPRESSION, set_traditional_compression, TRUE, "no", "set traditional_compression"}
+,{KEY_ENV, set_env, FALSE, NULL, "set environment variable for respawn clients"}
 ,{KEY_MAX_REXMIT_DELAY, set_max_rexmit_delay, TRUE,"250", "set the maximum rexmit delay time"}
 ,{KEY_LOG_CONFIG_CHANGES, ha_config_check_boolean, TRUE,"on", "record changes to the cib (valid only with: "KEY_REL2" on)"}
 ,{KEY_LOG_PENGINE_INPUTS, ha_config_check_boolean, TRUE,"on", "record the input used by the policy engine (valid only with: "KEY_REL2" on)"}
@@ -2530,6 +2530,9 @@ ha_config_check_boolean(const char *value)
 
 /*
  * $Log: config.c,v $
+ * Revision 1.198  2006/04/24 04:52:24  alan
+ * Disabled traditional compression because of realtime concerns.
+ *
  * Revision 1.197  2006/04/24 03:23:49  alan
  * Made mgmtd loaded by default with 'crm on'.
  *
