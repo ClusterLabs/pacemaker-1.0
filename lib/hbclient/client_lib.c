@@ -1,4 +1,4 @@
-/* $Id: client_lib.c,v 1.38 2006/04/23 22:07:06 alan Exp $ */
+/* $Id: client_lib.c,v 1.39 2006/04/24 00:01:21 alan Exp $ */
 /* 
  * client_lib: heartbeat API client side code
  *
@@ -3230,8 +3230,8 @@ G_llc_dispatch_int(GSource* source, GSourceFunc callback
 	return ret1 && ret2;
 }
 
-static
-void G_llc_destroy_int(GSource* source)
+static void
+G_llc_destroy_int(GSource* source)
 {
 	GLLclusterSource*	s = (GLLclusterSource*)source;
 	llc_private_t*		pi;
@@ -3251,19 +3251,22 @@ G_main_add_ll_cluster(int priority, ll_cluster_t* api
 ,	gboolean (*dispatch)(ll_cluster_t* source_data,gpointer user_data)
 ,	gpointer userdata, GDestroyNotify notify)
 {
-	GSource * source = 	g_source_new(&G_llc_SourceFuncs
-	,			sizeof(GLLclusterSource));
-	GLLclusterSource*	s = (GLLclusterSource*)source;
+	GSource * 		source;
 	IPC_Channel*		ch;
+	GLLclusterSource*	s;
 
+	source =  g_source_new(&G_llc_SourceFuncs , sizeof(GLLclusterSource));
 	if (source == NULL || api == NULL || api->llc_ops == NULL
 	||	(ch = api->llc_ops->ipcchan(api)) == NULL) {
 		return NULL;
 	}
+
+	s = (GLLclusterSource*)source;
 	s->magic2 = OURMAGIC;
+	s->hbchan = api;
+	s->dispatch = dispatch;
 	(void)G_main_IPC_Channel_constructor(source, ch, userdata, notify);
 
-	s->dispatch = dispatch;
 	
 	g_source_set_priority(source, priority);
 	g_source_set_can_recurse(source, can_recurse);
