@@ -47,11 +47,20 @@
 #define TID_CONS_COLOCATION  0x63
 #define TID_ARRAY            0x100
 
+#define S_RES_PRIMITIVE		"native"
+#define S_RES_GROUP		"group"
+#define S_RES_CLONE		"clone"
+#define S_RES_MASTER		"master"
+#define S_RES_UNKNOWN		"unknown"
+
 #define	CIM_MSG_LIST		"__list__"
 #define	CIM_MSG_TAG		"__tag__"
 #define CIM_MSG_ATTR_ID		"id"	/* every node-msg should have this */
 #define CIM_MSG_INST_ATTR	"instance_attributes"
 #define CIM_MSG_ATTR		"attributes"
+
+
+#define	HA_CIM_VARDIR		"/var/lib/heartbeat/cim"
 
 enum { HB_RUNNING = 1, HB_STOPED = 2, HB_UNKNOWN = 3 };
 enum { START_HB   = 1, STOP_HB   = 2, RESTART_HB = 3 };
@@ -134,17 +143,20 @@ struct ha_msg *	cim_get_authkeys (void);
 int             cim_update_hacf(struct ha_msg *msg);
 int             cim_update_authkeys(struct ha_msg *msg);
 
-/* resource list */
-struct ha_msg * cim_get_disabled_rsc_list(void);
-int		cim_update_disabled_rsc_list(int add, const char *rscid);
-int		cim_is_rsc_disabled(const char *rscid);
-struct ha_msg*	cim_get_rsc_list(void);
-struct ha_msg* 	cim_traverse_allrsc(struct ha_msg* list);
+#define RESOURCE_ENABLED(rscid) (cim_rsc_is_in_cib(rscid))
+#define RESOURCE_DISABLED(rscid) (!cim_rsc_is_in_cib(rscid))
 
-/* resource type */
-int		cim_add_rsctype(const char* rscid, const char *type);
+/* get a resource's type: TID_RES_PRIMITIVE, etc */
 int		cim_get_rsctype(const char * rscid);
-int		cim_remove_rsctype(const char* rscid);
+
+/* resource list */
+int		cim_rsc_is_in_cib(const char *rscid);
+
+/* not include sub resources */
+struct ha_msg*	cim_get_all_rsc_list(void);
+
+/* retrive the closure of the list */
+struct ha_msg* 	cim_traverse_allrsc(struct ha_msg* list);
 
 /* resource operations */
 struct ha_msg * cim_get_rscops(const char *rscid);
@@ -153,8 +165,12 @@ int		cim_del_rscop(const char *rscid, const char *opid);
 int		cim_update_rscop(const char*rscid, const char*, struct ha_msg*);
 
 /* resource */
-int		cim_cib_addrsc(const char *rscid);
-int		cim_store_rsc(int type, const char *rscid, struct ha_msg *rsc);
+/* submit a resource to CIB */
+int		cim_rsc_submit(const char *rscid);
+/* store a resource image on the disk */
+int		cim_rscdb_store(int type, const char *rscid, struct ha_msg *rsc);
+/* cleanup a resource image from the disk, as well as its attributes, type ... */
+int		cim_rscdb_cleanup(int type, const char * rscid);
 struct ha_msg*	cim_find_rsc(int type, const char * rscid);
 int		cim_update_rsc(int type, const char *rscid, struct ha_msg *);
 int		cim_remove_rsc(const char * rscid);
@@ -164,25 +180,9 @@ struct ha_msg * cim_get_subrsc_list(const char *rscid);
 int		cim_add_subrsc(struct ha_msg *rsc, struct ha_msg *subrsc);
 
 /* resource attributes */
-struct ha_msg *	cim_get_rscattrs(const char *rscid);
+struct ha_msg *	cim_rscattrs_get(const char *rscid);
+int		cim_rscattrs_del(const char *rscid);
 int		cim_update_attrnvpair(const char*, const char*, struct ha_msg*);
 int		cim_remove_attrnvpair(const char* rscid, const char* attrid);
-int		cim_erase_rscattrs(const char *rscid);
-
-#define cim_list_length(msg) 		cl_msg_list_length(msg, CIM_MSG_LIST)
-#define cim_list_index(msg,index) 					\
-	((char *)cl_msg_list_nth_data(msg, CIM_MSG_LIST, index))
-
-#define cim_list_add(msg, value)					\
-	cl_msg_list_add_string(msg, CIM_MSG_LIST, value)		
-
-#define cim_msg_add_child(parent,id, child)			\
-		ha_msg_addstruct(parent, id, child)
-#define cim_msg_find_child(parent, id)		cl_get_struct(parent,id)
-#define cim_msg_remove_child(parent, id)	cl_msg_remove(parent,id)
-
-int		cim_msg_children_count(struct ha_msg *parent);
-const char *	cim_msg_child_name(struct ha_msg * parent, int index);
-struct ha_msg * cim_msg_child_index(struct ha_msg *parent, int index);
 
 #endif    /* _CLUSTER_INFO_H */
