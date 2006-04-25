@@ -156,6 +156,7 @@ create_primitive_resource "IPaddr" "$SUB_RESOURCE_ID"
 create_attribute $SUB_RESOURCE_ID $SUB_ATTRIBUTE_ID "ip" "127.0.0.111"
 create_resource_group $GROUP_ID
 group_add_resource $GROUP_ID $SUB_RESOURCE_ID
+cib_add_resource $GROUP_ID
 wait_cib_updated
 resource_query $GROUP_ID
 
