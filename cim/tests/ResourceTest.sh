@@ -121,6 +121,7 @@ echo "---------------------------------------------------"
 RESOURCE_ID=test_primitive_resource
 ATTRIBUTE_ID=${RESOURCE_ID}_ip
 
+delete_resource HA_PrimitiveResource $RESOURCE_ID 2>/dev/null
 create_primitive_resource "IPaddr" "$RESOURCE_ID"
 create_attribute $RESOURCE_ID $ATTRIBUTE_ID "ip" "127.0.0.111"
 cib_add_resource $RESOURCE_ID
@@ -144,7 +145,7 @@ delete_resource HA_PrimitiveResource $RESOURCE_ID
 #############################################################
 
 GROUP_ID=test_resource_group
-delete_resource HA_ResourceGroup $GROUP_ID
+delete_resource HA_ResourceGroup $GROUP_ID 2>/dev/null
 
 echo "---------------------------------------------------"
 echo "Resource Group Creation test"
