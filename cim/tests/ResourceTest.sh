@@ -10,6 +10,11 @@ USER=$1
 PASSWD=$2
 CIB=/var/lib/heartbeat/crm/cib.xml
 
+function wait_cib_updated()
+{
+	sleep 2
+}
+
 function resource_query ()
 {
 	crm_resource -Q -r $1
@@ -118,9 +123,8 @@ ATTRIBUTE_ID=${RESOURCE_ID}_ip
 
 create_primitive_resource "IPaddr" "$RESOURCE_ID"
 create_attribute $RESOURCE_ID $ATTRIBUTE_ID "ip" "127.0.0.111"
-
 cib_add_resource $RESOURCE_ID
-sleep 2
+wait_cib_updated
 
 rc=0
 resource_query $RESOURCE_ID
@@ -139,21 +143,20 @@ delete_resource HA_PrimitiveResource $RESOURCE_ID
 # resource group
 #############################################################
 
+GROUP_ID=test_resource_group
+delete_resource HA_ResourceGroup $GROUP_ID
+
 echo "---------------------------------------------------"
 echo "Resource Group Creation test"
 echo "---------------------------------------------------"
 SUB_RESOURCE_ID=sub_resource_1
 SUB_ATTRIBUTE_ID=${SUB_RESOURCE_ID}_ip
-GROUP_ID=test_resource_group
 
 create_primitive_resource "IPaddr" "$SUB_RESOURCE_ID"
 create_attribute $SUB_RESOURCE_ID $SUB_ATTRIBUTE_ID "ip" "127.0.0.111"
-
 create_resource_group $GROUP_ID
 group_add_resource $GROUP_ID $SUB_RESOURCE_ID
-
-cib_add_resource $GROUP_ID
-sleep 2
+wait_cib_updated
 resource_query $GROUP_ID
 
 rc=0
@@ -167,7 +170,6 @@ resource_query $GROUP_ID | grep "$SUB_ATTRIBUTE_ID" >/dev/null	\
 if [ $rc = 0 ]; then 
 	echo "[OK] create resource group:$GROUP_ID successfully."
 fi
-
 echo "---------------------------------------------------"
 echo "Resource Group Add Resource test"
 echo "---------------------------------------------------"
@@ -177,8 +179,7 @@ SUB_ATTRIBUTE_ID2=${SUB_RESOURCE_ID2}_ip
 create_primitive_resource "IPaddr" $SUB_RESOURCE_ID2
 create_attribute $SUB_RESOURCE_ID2 $SUB_ATTRIBUTE_ID2 "ip" "127.0.0.112"
 group_add_resource $GROUP_ID $SUB_RESOURCE_ID2
-
-sleep 2
+wait_cib_updated
 resource_query $GROUP_ID
 resource_query $GROUP_ID | grep $SUB_RESOURCE_ID2 >/dev/null \
         || { echo "[FAILED] $SUB_RESOURCE_ID2 not found in CIB." && rc=1; }
