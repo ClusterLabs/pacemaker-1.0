@@ -73,118 +73,7 @@ extern int debug_level;
 		cl_log(LOG_INFO, "%s", msg2string(msg));\
 	}while (0)
 
-/* container */
-enum ContainerType { T_ARRAY, T_TABLE };
-/* container and element type */
-typedef struct {
-		GHashTable * table;	/* must be the 1st */
-		int type;
-	} CIMTable;
 
-typedef struct {
-		GPtrArray * array;	/* must be the 1st */
-		int type;
-	} CIMArray;
-
-enum DataType {	TYPEString, TYPEUint32, TYPEUint16, TYPEArray, TYPETable };
-
-typedef struct cimdata_t_s {
-	union {
-		char * str;
-		uint32_t uint32;
-		CIMArray * array;
-		CIMTable * table;
-	} v;	/* this must be the first */
-	int	type;
-} cimdata_t;
-
-#define makeStrData(s) ({						\
-	cimdata_t * data = (cimdata_t*)cim_malloc(sizeof(cimdata_t));	\
-	if(data) {							\
-		data->type = TYPEString;				\
-		data->v.str = cim_strdup(s);				\
-	};								\
-	data;								\
-})
-
-#define makeUint32Data(i) ({						\
-	cimdata_t * data = (cimdata_t*)cim_malloc(sizeof(cimdata_t));	\
-	if(data) {							\
-		data->type = TYPEUint32;				\
-		data->v.uint32 = i;					\
-	};								\
-	data;								\
-})
-
-#define makeArrayData(x) ({						\
-	cimdata_t * data = (cimdata_t*)cim_malloc(sizeof(cimdata_t));	\
-	if(data) {							\
-		data->type = TYPEArray;					\
-		data->v.array = x;					\
-	};								\
-	data;								\
-})
-
-
-#define makeTableData(x) ({						\
-	cimdata_t * data = (cimdata_t*)cim_malloc(sizeof(cimdata_t));	\
-	if(data) {							\
-		data->type = TYPETable;					\
-		data->v.table = x;					\
-	};								\
-	data;								\
-})
-
-
-/* table */
-#define cim_table_new() ({						\
-	CIMTable * t = (CIMTable*)cim_malloc(sizeof(CIMTable));		\
-	if (t) {							\
-		t->table = g_hash_table_new_full(g_str_hash, g_str_equal, \
-					cim_free, cimdata_free);	\
-		t->type = T_TABLE;					\
-	}								\
-	t;								\
-})
-
-
-
-#define cim_table_lookup(t,k)	((cimdata_t*)g_hash_table_lookup(t->table,k))
-#define cim_table_lookup_v(t,k)	({					\
-	cimdata_t zero_data = { {NULL}, 0 };				\
-	cimdata_t * d = (cimdata_t*)g_hash_table_lookup(t->table,k);	\
-	(d? (*d) : zero_data);						\
-})
-
-#define cim_table_foreach(x,a,b) g_hash_table_foreach(x->table, a,b)
-#define cim_table_replace(t,k,v) g_hash_table_replace(t->table,k,v)
-#define cim_table_insert(t,k,v)	 g_hash_table_insert(t->table,k,v)
-
-/* array */
-#define cim_array_new()		({				\
-	CIMArray * a = (CIMArray*)cim_malloc(sizeof(CIMArray));	\
-	if (a) {						\
-		a->array = g_ptr_array_new();			\
-		a->type = T_ARRAY;				\
-	};							\
-	a;							\
-})
-
-#define cim_array_append(a,p)	g_ptr_array_add(a->array,p)
-#define cim_array_index(a,i)	g_ptr_array_index(a->array,i)
-#define cim_array_index_v(a,i) ({				\
-	cimdata_t zero_data = {{NULL}, 0};			\
-	cimdata_t * d = (cimdata_t*)cim_array_index(a,i);	\
-	(d?(*d) : zero_data );					\
-})
-
-#define cim_array_len(a) ((a && a->array)?a->array->len:0)
-
-void	cim_table_free(void * table);
-void	cim_array_free(void*);
-void 	cimdata_free(void * data);
-int	cim_table_strdup_replace(CIMTable*table, const char*key, const char*val);
-void	dump_cim_table(CIMTable *table, const char *id);
 int	cim_init_logger(const char* entity);
 void	cim_assert(const char* assertion, int line, const char* file);
 int	run_shell_cmnd(const char* cmnd,int* ret,char*** out,char***);
@@ -193,5 +82,47 @@ void	free_2d_array(void *array, int len, cim_free_t free);
 void	free_2d_zarray(void *zarray, cim_free_t free);
 char* 	uuid_to_str(const cl_uuid_t * uuid);
 char**	split_string(const char *string, int *len, const char *delim);
+
+
+#define cim_dbget_msg(pathname, key) ({			\
+	struct ha_msg *msg = NULL;			\
+	char *value = cim_dbget(pathname, key);		\
+	if (value) {					\
+		msg = string2msg(value, strlen(value));	\
+		cim_free(value);			\
+	}						\
+	msg;						\
+})
+
+#define cim_dbput_msg(pathname,key,msg) \
+	cim_dbput(pathname, key, msg?msg2string(msg):NULL)
+
+struct ha_msg* 	cim_disk2msg(const char *objpathname);
+int		cim_msg2disk(const char *objpathname, struct ha_msg *);
+int		cim_disk_msg_del(const char *objpathname);
+
+char*	cim_dbget(const char *pathname, const char*key);
+int	cim_dbput(const char *pathname, const char*key, const char*value);
+int	cim_dbdel(const char *pathname, const char*key);
+struct ha_msg* cim_dbkeys(const char *pathname);	
+
+
+int		cim_list_find(struct ha_msg *list, const char *value);
+#define cim_list_length(msg) 		cl_msg_list_length(msg, CIM_MSG_LIST)
+#define cim_list_index(msg,index) 					\
+	((char *)cl_msg_list_nth_data(msg, CIM_MSG_LIST, index))
+
+#define cim_list_add(msg, value)					\
+	cl_msg_list_add_string(msg, CIM_MSG_LIST, value)		
+
+#define cim_msg_add_child(parent,id, child)			\
+		ha_msg_addstruct(parent, id, child)
+#define cim_msg_find_child(parent, id)		cl_get_struct(parent,id)
+#define cim_msg_remove_child(parent, id)	cl_msg_remove(parent,id)
+
+int		cim_msg_children_count(struct ha_msg *parent);
+const char *	cim_msg_child_name(struct ha_msg * parent, int index);
+struct ha_msg * cim_msg_child_index(struct ha_msg *parent, int index);
+
 
 #endif

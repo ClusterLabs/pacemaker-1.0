@@ -40,6 +40,8 @@
 
 int debug_level = 10;
 
+static char * 	   	pathname_encode(const char *);
+
 int 
 cim_init_logger(const char * entity)
 {
@@ -213,30 +215,6 @@ cim_assert(const char * assertion, int line, const char * file)
         exit(1);
 }
 
-static void
-dump_foreach(void * key, void * value, void * user)
-{
-	cimdata_t * d = (cimdata_t *) value;
-	if ( d == NULL ) {
-		return;
-	}
-	if ( d->type == TYPEString) {
-		cl_log(LOG_INFO, "DUMP: %s: %s", (char *)key, d->v.str);
-	} else if (d->type == TYPETable) {
-		cl_log(LOG_INFO, "DUMP: %s: <table>", (char *)key);
-	} else if ( d->type == TYPEArray ) {
-		cl_log(LOG_INFO, "DUMP: %s: <array>", (char *)key);
-	}
-}
-
-void
-dump_cim_table(CIMTable * table, const char * id)
-{
-	cl_log(LOG_INFO, "--- Begin dump %s ---", id? id : "<NULL>");
-	cim_table_foreach(table, dump_foreach, NULL);
-	cl_log(LOG_INFO, "--- End dump %s ---", id? id : "<NULL>");
-
-}
 
 char **
 split_string(const char* string, int *len, const char *delim)
@@ -282,66 +260,300 @@ split_string(const char* string, int *len, const char *delim)
 	return strings;	
 }
 
-int
-cim_table_strdup_replace(CIMTable *table, const char *key,const char* val)
+int 
+cim_msg2disk(const char *objpathname, struct ha_msg *msg)
 {
-	char * dupkey = NULL;
-	cimdata_t * data;
-	if ((dupkey = cim_strdup(key)) == NULL ) {
-		cl_log(LOG_ERR, "cim_table:can't duplicate key."); 
+	struct stat st;
+	FILE *fobj; 
+	char pathname[MAXLEN], *buf;
+	char *msgstr = NULL;
+
+	if ( stat(HA_CIM_VARDIR, &st) < 0 ) {
+		if ( errno == ENOENT ) {	/* not exist, create */
+			if (  mkdir(HA_CIM_VARDIR, 0660) < 0){
+				cl_log(LOG_ERR,"msg2disk: mkdir failed.");		
+				cl_log(LOG_ERR,"reason:%s",strerror(errno)); 
+				return HA_FAIL;
+			}
+
+		} else {
+			cl_log(LOG_ERR, "msg2disk: stat faild.");
+			cl_log(LOG_ERR,"reason:%d(%s)",errno,strerror(errno)); 
+			return HA_FAIL;
+		}
+	} 
+
+	/* check stat */
+
+	/* write msg*/
+	if((buf = pathname_encode(objpathname))== NULL ) {
 		return HA_FAIL;
 	}
-	if ((data = makeStrData(val)) == NULL){
-		cl_log(LOG_ERR, "cim_table:can't make data."); 
-		cim_free(dupkey);
+	snprintf(pathname, MAXLEN, "%s/%s", HA_CIM_VARDIR, buf);
+	cim_free(buf);
+
+        if ( ( fobj = fopen(pathname, "w") ) == NULL ) {
+		cl_log(LOG_WARNING, "msg2disk: can't open file.");
+		cl_log(LOG_WARNING, "reason:%d(%s)", errno, strerror(errno));
 		return HA_FAIL;
-	}	
-	
-	cl_log(LOG_INFO, "[%s] <- %s", dupkey, val);
-	cim_table_replace(table, dupkey, data);
+	}
+	if ( msg->nfields == 0 ) {
+		fclose(fobj);
+		return HA_OK;
+	}
+
+	if ((msgstr = msg2string(msg)) == NULL ) {
+		cl_log(LOG_ERR, "cim_msg2disk: msgstr NULL.");
+		return HA_FAIL;
+	}
+
+	fprintf(fobj, "%s", msgstr);
+	fclose(fobj); 
 	return HA_OK;
 }
 
-
-void 
-cimdata_free(void * data)
+struct ha_msg*
+cim_disk2msg(const char *objpathname)
 {
-	cimdata_t * d = (cimdata_t *)data;
-	if ( d == NULL ) {
-		return ;
+	char pathname[MAXLEN], *buf;
+	FILE *fobj = NULL;
+	int ret;
+	int bytes = 0;
+	struct stat st;
+	struct ha_msg *msg = NULL;
+
+	if((buf = pathname_encode(objpathname))== NULL ) {
+		return NULL;
+	}
+	snprintf(pathname, MAXLEN, "%s/%s", HA_CIM_VARDIR, buf);
+	cim_free(buf);
+
+	if ( ( ret = stat(pathname, &st)) < 0 ) {
+		cl_log(LOG_WARNING, "disk2msg: stat faild for %s.", pathname);
+		cl_log(LOG_WARNING,"reason:%d(%s)",errno,strerror(errno)); 
+		return NULL;
+	} 
+
+	if (st.st_size == 0 ) {
+		cl_log(LOG_WARNING, "disk2msg: size of %s is zero.", objpathname);
+		return NULL;
+	}
+
+	if ((buf = cim_malloc(st.st_size)) == NULL ) {
+		cl_log(LOG_ERR, "disk2msg: alloc msg failed for %s.", objpathname);
+		return NULL;
 	}
 	
-	switch(d->type){
-		case TYPEString: cim_free(d->v.str); break;
-		case TYPETable:  cim_table_free(d->v.table); break;
-		case TYPEArray:  cim_array_free(d->v.array); break;
-		default:
-			cl_log(LOG_WARNING, "cimdata_free: unknown data type");
-			break;
+	if ( (fobj = fopen(pathname, "r")) == NULL ) {
+		cl_log(LOG_WARNING, "msg2disk: can't open file %s.", pathname);
+		cl_log(LOG_WARNING, "reason:%d(%s)", errno, strerror(errno));
+		return NULL;
 	}
-	cim_free(d);
+
+	while ( (ret = fread(buf, st.st_size, 1, fobj))){
+		bytes += ret*st.st_size;
+	}
+	
+	if ( !feof(fobj) ) {
+		cl_log(LOG_ERR, "msg2disk: read error for %s.", objpathname);
+		cl_log(LOG_ERR, "reason: %d(%s).", errno, strerror(errno));		
+		cim_free(msg);
+		return NULL;
+	}
+
+	if ( bytes != st.st_size ) {
+		cl_log(LOG_ERR, "msg2disk: incompete read:");
+		cl_log(LOG_ERR, "read: %d vs size: %d.", bytes, (int)st.st_size);
+		cim_free(msg);
+			return NULL;
+	}
+	msg = string2msg(buf, bytes);
+	cim_free(buf);
+	fclose(fobj);
+	return msg;
 }
 
-void
-cim_array_free(void * array)
+
+int
+cim_disk_msg_del(const char *objpathname)
 {
+	char fullpathname[MAXLEN];
+	char * pathname = pathname_encode(objpathname);
+	snprintf(fullpathname, MAXLEN, "%s/%s", HA_CIM_VARDIR, pathname);
+	cim_debug2(LOG_INFO, "%s: unlink %s", __FUNCTION__, fullpathname);
+	unlink(fullpathname);
+	cim_free(pathname);
+	return HA_OK;
+}
+
+	
+char*
+cim_dbget(const char *pathname, const char*key)
+{
+	struct ha_msg *db = cim_disk2msg(pathname);
+	const char * value;
+
+	if ( db == NULL ) {
+		return NULL;
+	}
+	
+	value = cl_get_string(db, key);
+	if ( value == NULL || strncmp(value, "null", MAXLEN) == 0) {
+		return NULL;
+	}
+	return cim_strdup(value);
+}
+
+int
+cim_dbput(const char *pathname, const char*key, const char*value)
+{
+	int ret;
+	struct ha_msg* db = cim_disk2msg(pathname);
+	if ( db == NULL ) {
+		if ( (db = ha_msg_new(1)) == NULL ) {
+			cl_log(LOG_ERR, "cim_dbput: alloc db failed.");
+			return HA_FAIL;
+		}
+	}
+
+	if ((cl_msg_modstring(db, key, value?value:"null")) != HA_OK ) {
+		ha_msg_del(db);
+		cl_log(LOG_ERR, "cim_dbput: put value failed.");
+		return HA_FAIL;
+	}
+
+	ret = cim_msg2disk(pathname, db);
+	ha_msg_del(db);
+	return HA_OK;	
+}
+
+int
+cim_dbdel(const char *pathname, const char*key)
+{
+	int ret;
+	struct ha_msg* db = cim_disk2msg(pathname);
+	if ( db == NULL ) {
+		cl_log(LOG_ERR, "cim_dbdel: get db failed.");
+		return HA_FAIL;
+	}
+
+	if ((cl_msg_remove(db, key)) != HA_OK ) {
+		ha_msg_del(db);
+		cl_log(LOG_ERR, "cim_dbdel: remove failed.");
+		return HA_FAIL;
+	}
+
+	ret = cim_msg2disk(pathname, db);
+	ha_msg_del(db);
+	return HA_OK;	
+}
+
+struct ha_msg* 
+cim_dbkeys(const char *pathname)
+{
+	struct ha_msg * db = cim_disk2msg(pathname);
+	struct ha_msg * list;
 	int i;
-	CIMArray * a = (CIMArray*)array;
-	for (i=0; i<a->array->len; i++){
-		cimdata_t * d = cim_array_index(a,i);
-		cimdata_free(d);
+
+	if ( db == NULL ) {
+		cl_log(LOG_ERR, "cim_dbkeys: get db failed.");
+		return NULL;
 	}
-	g_ptr_array_free(a->array, FALSE);
-	cim_free(array);
+	
+	if ( (list = ha_msg_new(1)) == NULL ) {
+		ha_msg_del(db);
+		cl_log(LOG_ERR, "cim_dbkeys: alloc list failed.");
+		return NULL;
+	}
+	
+	for (i = 0; i < db->nfields; i++) {
+		cim_list_add(list, db->names[i]);
+	}
+
+	ha_msg_del(db);
+	return list;
 }
 
-void
-cim_table_free(void * table)
+static char*   
+pathname_encode(const char *pathname)
 {
-	CIMTable * t = (CIMTable *)table;
-	g_hash_table_destroy(t->table);
-	cim_free(t);
+	char *new_pathname = NULL;
+	char ch, *p;
+	if ((new_pathname = cim_malloc(strlen(pathname)+1)) == NULL ) {
+		cl_log(LOG_ERR, "pathname_enocde: alloc pathname failed.");
+		return NULL;
+	}
+	p = new_pathname;
+	while( (ch = *(pathname++)) ) {
+		if (ch == '\\' || ch == '/')  {
+			*(p++) = '_';
+		} else {
+			*(p++) = ch;
+		}
+	}
+	*p = EOS;
+	return new_pathname;
 }
 
 
+/****************************************************
+ * msg
+ ****************************************************/
+int
+cim_msg_children_count(struct ha_msg *parent)
+{
+	int i, count = 0;
+	for (i = 0; i < parent->nfields; i++) {
+		if ( parent->types[i] == FT_STRUCT ) {
+			count++;
+		}
+	}
+	return count;
+}
 
+
+const char *
+cim_msg_child_name(struct ha_msg *parent, int index)
+{	
+	int i, current = 0;
+	for (i = 0; i < parent->nfields; i++) {
+		if ( parent->types[i] == FT_STRUCT ) {
+			if ( index == current) {
+				return parent->names[i];
+			}
+			current++;
+		}
+	}
+	return NULL;
+}
+
+
+struct ha_msg * 
+cim_msg_child_index(struct ha_msg *parent, int index)
+{
+	int i, current = 0;
+	for (i = 0; i < parent->nfields; i++) {
+		if ( parent->types[i] == FT_STRUCT ) {
+			if ( index == current) {
+				return parent->values[i];
+			}
+			current++;
+		}
+	}
+	return NULL;
+}
+
+
+int
+cim_list_find(struct ha_msg *list, const char *value)
+{
+	int len = cim_list_length(list);
+	int i = 0;
+	for (i = 0; i<len; i++) {
+		char * v = cim_list_index(list, i);
+		if ( v && (strncmp(v, value, MAXLEN) == 0)) {
+			return TRUE;
+		}
+	}
+	return FALSE;
+}
