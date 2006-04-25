@@ -181,7 +181,7 @@ primitive_set_instance(CMPIBroker * broker, CMPIInstance * ci,
 	cmpi_msg2inst(broker, ci, HA_PRIMITIVE_RESOURCE, info, rc);
 	id = cl_get_string(info, "id");
 	
-	if ( !cim_is_rsc_disabled(id) ) {
+	if ( RESOURCE_ENABLED(id) ) {
 		msg = cim_query_dispatch(GET_RSC_HOST, id, NULL);
 	}
         /* get hosting node */
@@ -281,8 +281,7 @@ make_instance_byid(CMPIBroker * broker, CMPIObjectPath * ref,
         CMPIInstance * ci = NULL;
         char * namespace, * classname;
         CMPIObjectPath * op;
-	struct ha_msg *info, *msg;
-	int i, len;
+	struct ha_msg *info = NULL;
 
         namespace = CMGetCharPtr(CMGetNameSpace(ref, rc));
         switch(type) {
@@ -307,24 +306,10 @@ make_instance_byid(CMPIBroker * broker, CMPIObjectPath * ref,
 		return NULL;
 	}
 	
-	if ( (msg = cim_get_disabled_rsc_list()) == NULL ) {
+	if ( RESOURCE_ENABLED(rscid)) {
 		ha_msg_add(info, "enabled", "true");
 	} else {
-		len = cim_list_length(msg);
-		for(i = 0; i < len; i++) {
-			char *rsc = NULL;
-			if ((rsc = cim_list_index(msg, i)) == NULL ) {
-				continue;
-			}
-			if ( strncmp(rsc, rscid, MAXLEN) == 0){
-				break;
-			}
-		}
-		if(i==len) {	/* not found */
-			ha_msg_add(info, "enabled", "true");
-		}else {
-			ha_msg_add(info, "enabled", "false");
-		}
+		ha_msg_add(info, "enabled", "false");
 	}
 	
         op = CMNewObjectPath(broker, namespace, classname, rc);
@@ -435,7 +420,7 @@ resource_enum_insts(CMPIBroker * broker, char * classname, CMPIContext * ctx,
 		return HA_FAIL;
 	}
 
-        if ( ( names = cim_get_rsc_list()) == NULL ) {
+        if ( ( names = cim_get_all_rsc_list()) == NULL ) {
 		rc->rc = CMPI_RC_ERR_FAILED;
 		cl_log(LOG_WARNING, "Get resource list failed.");
                 return HA_FAIL;
@@ -617,18 +602,7 @@ resource_create_inst(CMPIBroker * broker, char * classname, CMPIContext * ctx,
 
 	ha_msg_add(resource, "enabled", "false");
 
-	/* add to list */	
-	ret = cim_update_disabled_rsc_list(1, rscid);
-
-	/* write to disk */
-	cim_add_rsctype(rscid, rsctype);
-	cim_store_rsc(type, rscid, resource);
-	/*
-	if ( type == TID_RES_PRIMITIVE) {
-		resource_update_instattrs(rscid, attributes);
-		ha_msg_del(attributes);
-	}
-	*/
+	ret = cim_rscdb_store(type, rscid, resource);
 	rc->rc = (ret==HA_OK) ? CMPI_RC_OK: CMPI_RC_ERR_FAILED;
 	ha_msg_del(resource);
 	DEBUG_LEAVE();

@@ -97,7 +97,7 @@ operation_enum_insts(CMPIInstanceMI * mi, CMPIContext * ctx, CMPIResult * rslt,
 		return HA_FAIL;
 	}
 
-	if ((msg = cim_get_rsc_list())== NULL 
+	if ((msg = cim_get_all_rsc_list())== NULL 
 		|| (rsclist = cim_traverse_allrsc(msg)) == NULL ) {
 		goto done;
 	}

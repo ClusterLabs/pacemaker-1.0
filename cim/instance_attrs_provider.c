@@ -47,7 +47,7 @@ find_instattrs_nvpair(const char * rscid, const char *nvid)
 {
 	struct ha_msg *instattrss = NULL, *nvpair;
 
-	if ((instattrss = cim_get_rscattrs(rscid)) == NULL ) {
+	if ((instattrss = cim_rscattrs_get(rscid)) == NULL ) {
 		return NULL;
 	}
 	if ((nvpair = cim_msg_find_child(instattrss, nvid))) {
@@ -97,7 +97,7 @@ instattrs_enum_insts(CMPIInstanceMI * mi, CMPIContext * ctx, CMPIResult * rslt,
 	namespace = CMGetCharPtr(CMGetNameSpace(ref, rc));
 
 	/* all resources, including the sub resources */
-	if ((msg = cim_get_rsc_list())== NULL 
+	if ((msg = cim_get_all_rsc_list())== NULL 
 		|| (rsclist = cim_traverse_allrsc(msg)) == NULL ) {
 		cl_log(LOG_WARNING, "%s: no resource found.", __FUNCTION__);
 		goto done;
@@ -113,7 +113,7 @@ instattrs_enum_insts(CMPIInstanceMI * mi, CMPIContext * ctx, CMPIResult * rslt,
 		}
 
 		/* get the resource's instance attributes */
-		if ((instattrs = cim_get_rscattrs(rscid)) == NULL ){
+		if ((instattrs = cim_rscattrs_get(rscid)) == NULL ){
 			continue;
 		}
 

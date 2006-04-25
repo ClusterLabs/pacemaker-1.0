@@ -38,14 +38,7 @@
 #include "cluster_info.h"
 #include "mgmt_client.h"
 
-
 int main(int argc, char * argv[])
 {
-	struct ha_msg *m;
-	//cim_query_dispatch(16, "child_DoFencing:1", NULL);
-	cim_init_logger("test");
-	
- 	m = cim_get_rscops("child_DoFencing:1");
-	cim_debug_msg(m, "operations");
         return 0;
 }
