@@ -174,9 +174,9 @@ mclient_process(MClient * client)
 			__FUNCTION__, client->cmnd, result);
 
 	if ( ! mgmt_result_ok(result) )  {
-                cl_log(LOG_WARN, "mclient_process: client return \'failed\'.");
-		cl_log(LOG_WARN, "mclient_process: cmnd %s", client->cmnd);
-		cl_log(LOG_WARN, "mclient_process: %s", result);
+                cl_log(LOG_WARNING, "mclient_process: client return \'failed\'.");
+		cl_log(LOG_WARNING, "mclient_process: cmnd %s", client->cmnd);
+		cl_log(LOG_WARNING, "mclient_process: %s", result);
 		rc = MC_FAIL;
                 goto exit1;
         }
