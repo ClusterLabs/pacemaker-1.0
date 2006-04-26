@@ -131,7 +131,7 @@ ccm_control_process(ccm_info_t *info, ll_cluster_t * hb)
 		status = ha_msg_value(msg, F_STATUS);
 		
 		ccm_debug(LOG_DEBUG, "recv msg %s from %s, status:%s"
-		,	type, orig, status);
+		,	type, orig, (status ? status : "[null ptr]"));
 		ccm_message_debug2(LOG_DEBUG, msg);
 		
 		if(strcmp(type, T_APICLISTAT) == 0){
