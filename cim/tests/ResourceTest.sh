@@ -57,6 +57,24 @@ Name="$NAME",\
 Value="$VALUE" > /dev/null
 }
 
+#create its operations
+function create_operation()
+{
+RSC_ID=$1
+OP_ID=$2
+NAME=$3
+INTERVAL=$4
+TIMEOUT=$5
+echo "creating opertion for resource: $RSC_ID, id: $OP_ID, $NAME,$INTERVAL,$TIMEOUT."
+wbemcli ci http://$USER:$PASSWD@localhost/root/cimv2:HA_Operation.Id="$OP_ID",\
+ResourceId="$RSC_ID" \
+Id="$OP_ID",\
+ResourceId="$RSC_ID",\
+Name="$NAME",\
+Interval="$INTERVAL",\
+TimeOut="$TIMEOUT" > /dev/null
+}
+
 
 #add to CIB
 function cib_add_resource()
@@ -124,7 +142,10 @@ ATTRIBUTE_ID=${RESOURCE_ID}_ip
 delete_resource HA_PrimitiveResource $RESOURCE_ID 2>/dev/null
 create_primitive_resource "IPaddr" "$RESOURCE_ID"
 create_attribute $RESOURCE_ID $ATTRIBUTE_ID "ip" "127.0.0.111"
+create_attribute $RESOURCE_ID ${RESOURCE_ID}_nic "nic" "lo"
 cib_add_resource $RESOURCE_ID
+create_attribute $RESOURCE_ID ${RESOURCE_ID}_netmask "netmask" "255.255.255.0"
+create_operation $RESOURCE_ID ${RESOURCE_ID}_monitor "monitor" "10s" "20s"
 wait_cib_updated
 
 rc=0
