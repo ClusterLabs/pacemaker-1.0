@@ -322,8 +322,6 @@ location_get_rules(CMPIBroker * broker, CMPIInstance * ci,
 	CMPIArray * array = NULL;
 	int len, i;
 
-	DEBUG_ENTER();
-
         array = CMGetProperty(ci, "Rule", rc).value.array;
 	if(array == NULL || rc->rc != CMPI_RC_OK ) {
 		cl_log(LOG_ERR, "%s: get array failed.", __FUNCTION__);
@@ -347,21 +345,21 @@ location_get_rules(CMPIBroker * broker, CMPIInstance * ci,
 			continue;
 		}
 		rule = CMGetCharPtr(s);		
-		cl_log(LOG_INFO, "%s: rule = %s", __FUNCTION__, rule);
 
 		/* parse v*/
-		v = split_string(rule, &vlen, "<>");
+		v = split_string(rule, &vlen, "< >");
+		if ( vlen != 3 ) {
+			continue;
+		}
 		ha_msg_add(t, "attribute", v[0]);
 		ha_msg_add(t, "operation", v[1]);
 		ha_msg_add(t, "value", v[2]);
 
-		strncat(tmp, v[0], MAXLEN);
+		snprintf(tmp, MAXLEN, "%s_exp_id_%d", v[0], i);
 		ha_msg_add(t, "id", tmp);
 
 		cim_msg_add_child(constraint, tmp, t);
 	}
-
-	DEBUG_LEAVE();
 }
 
 int	
