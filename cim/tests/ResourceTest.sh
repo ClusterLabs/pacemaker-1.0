@@ -93,7 +93,7 @@ RSC_ID=$2
 
 echo "deleting resource: $RSC_ID."
 wbemcli di http://$USER:$PASSWD@localhost/root/cimv2:$CLASSNAME.Id="$RSC_ID",\
-CreationClassName="HA_PrimitiveResource",\
+CreationClassName="$CLASSNAME",\
 SystemName="LinuxHACluster",\
 SystemCreationClassName="HA_LinuxHA"
 }
@@ -129,6 +129,38 @@ AddPrimitiveResource.Resource=http://localhost/root/cimv2:HA_PrimitiveResource.I
 }
 
 
+function create_location_constraint() 
+{
+CONS_ID=$1
+RSC_ID=$2
+NODE=$3
+SCORE=$4
+
+echo "creating location_constraint $CONS_ID for id: $RSC_ID, $NODE,$SCORE"
+wbemcli ci http://$USER:$PASSWD@localhost/root/cimv2:HA_LocationConstraint.Id="$CONS_ID",\
+CreationClassName="HA_LocationConstraint",\
+SystemName="LinuxHACluster",\
+SystemCreationClassName="HA_LinuxHA" \
+Id="$CONS_ID",\
+CreationClassName="HA_LocationConstraint",\
+SystemName="LinuxHACluster",\
+SystemCreationClassName="HA_LinuxHA",\
+Resource="$RSC_ID",\
+Rule="node #eq $NODE",\
+Score=$SCORE
+} 
+
+function delete_constraint()
+{
+CLASSNAME=$1
+CONS_ID=$2
+
+echo "deleting constraint: $CONS_ID."
+wbemcli di http://$USER:$PASSWD@localhost/root/cimv2:$CLASSNAME.Id="$CONS_ID",\
+CreationClassName="$CLASSNAME",\
+SystemName="LinuxHACluster",\
+SystemCreationClassName="HA_LinuxHA"
+}
 ##############################################################
 # primitive resource
 ##############################################################
@@ -159,7 +191,12 @@ if [ $rc = 0 ]; then
 fi
 
 
-delete_resource HA_PrimitiveResource $RESOURCE_ID
+#delete_resource HA_PrimitiveResource $RESOURCE_ID
+echo "---------------------------------------------------"
+echo "Location Constraint creation test"
+echo "---------------------------------------------------"
+delete_constraint HA_LocationConstraint ${RESOURCE_ID}_location_cons
+create_location_constraint ${RESOURCE_ID}_location_cons ${RESOURCE_ID} "node1" "1000"
 
 #############################################################
 # resource group
@@ -207,5 +244,7 @@ resource_query $GROUP_ID
 resource_query $GROUP_ID | grep $SUB_RESOURCE_ID2 >/dev/null \
         || { echo "[FAILED] $SUB_RESOURCE_ID2 not found in CIB." && rc=1; }
 
-delete_resource HA_ResourceGroup $GROUP_ID
+#delete_resource HA_ResourceGroup $GROUP_ID
+
+
 
