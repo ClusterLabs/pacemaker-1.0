@@ -7,3 +7,4 @@ Makefile
 *.lo
 pymgmt.py
 pymgmt_wrap.c
+pymgmt_wrap.doc
