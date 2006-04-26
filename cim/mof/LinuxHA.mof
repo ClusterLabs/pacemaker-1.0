@@ -523,6 +523,26 @@ class HA_LocationConstraint:
 	string Rule [];
 }; 
 
+[ Provider ("cmpi:HA_LocationConstraintRuleProvider" ) ]
+class HA_LocationConstraintRule {
+	[ Key ]
+	string Id;
+	[ Key ]
+	string ConstraintId;
+
+	string Attribute;
+	string Operation;
+	string Value;
+};
+
+[ Provider ("cmpi:HA_RuleOfLocationConstraintProvider" ) ]
+class HA_RuleOfLocationConstraint {
+	[Key]
+	HA_LocationConstraint REF Constraint;
+	[Key]
+	HA_LocationConstraint REF Rule;
+};
+
 //-----------------------------------------------
 // Association, HA_SubResource
 //-----------------------------------------------
