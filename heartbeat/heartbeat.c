@@ -1,4 +1,4 @@
-/* $Id: heartbeat.c,v 1.505 2006/04/23 20:02:10 alan Exp $ */
+/* $Id: heartbeat.c,v 1.506 2006/04/26 03:42:07 alan Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -340,6 +340,7 @@ static int			PrintDefaults = FALSE;
 static int			WikiOutput = FALSE;
 GTRIGSource*			write_hostcachefile = NULL;
 GTRIGSource*			write_delcachefile = NULL;
+extern GSList*			del_node_list;
 
 
 #undef DO_AUDITXMITHIST
@@ -458,6 +459,10 @@ static void	write_child(struct hb_media* mp);
 static void	fifo_child(IPC_Channel* chan);		/* Reads from FIFO */
 		/* The REAL biggie ;-) */
 static void	master_control_process(void);
+
+extern void	dellist_destroy(void);
+extern int	dellist_add(const char* nodename);
+
 
 #define	CHECK_HA_RESOURCES()	(DoManageResources 		\
 		 ?	(parse_ha_resources(RESOURCE_CFG) == HA_OK) : TRUE)
@@ -2455,13 +2460,13 @@ HBDoMsg_T_ADDNODE(const char * type, struct node_info * fromnode,
 
 
 static int
-hb_del_one_node(const char* node)
+hb_remove_one_node(const char* node, int deletion)
 {
 	struct node_info* thisnode = NULL;
-	struct ha_msg* delmsg;
+	struct ha_msg* removemsg;
 	
 	cl_log(LOG_INFO,
-	       "Deleting node [%s] from configuration.",
+	       "Removing node [%s] from configuration.",
 	       node);
 	
 	thisnode = lookup_node(node);
@@ -2471,25 +2476,25 @@ hb_del_one_node(const char* node)
 		return HA_FAIL;
 	}
 	
-	if (delete_node(node) != HA_OK){
+	if (remove_node(node, deletion) != HA_OK){
 		cl_log(LOG_ERR, "%s: Deleting node(%s) failed",
 		       __FUNCTION__, node);
 		return HA_FAIL;
 	}
 	
-	delmsg = ha_msg_new(0);
-	if (delmsg == NULL){
+	removemsg = ha_msg_new(0);
+	if (removemsg == NULL){
 		cl_log(LOG_ERR, "%s: creating new message failed",__FUNCTION__);
 		return HA_FAIL;
 	}
 	
-	if ( ha_msg_add(delmsg, F_TYPE, T_DELNODE)!= HA_OK
-	     || ha_msg_add(delmsg, F_NODE, node) != HA_OK){
+	if ( ha_msg_add(removemsg, F_TYPE, T_DELNODE)!= HA_OK
+	     || ha_msg_add(removemsg, F_NODE, node) != HA_OK){
 		cl_log(LOG_ERR, "%s: adding fields to msg failed", __FUNCTION__);
 		return HA_FAIL;
 	}
 
-	heartbeat_monitor(delmsg, KEEPIT, NULL);
+	heartbeat_monitor(removemsg, KEEPIT, NULL);
 	reset_lowest_acknode();
 	return HA_OK;
 	
@@ -2560,7 +2565,7 @@ HBDoMsg_T_DELNODE(const char * type, struct node_info * fromnode,
 			return;
 		}
 
-		if (hb_del_one_node(nodes[i])!= HA_OK){
+		if (hb_remove_one_node(nodes[i], TRUE)!= HA_OK){
 			cl_log(LOG_ERR, "Deleting node %s failed", nodes[i]);
 		}
 	}
@@ -2572,6 +2577,7 @@ HBDoMsg_T_DELNODE(const char * type, struct node_info * fromnode,
 	}
 	
 	write_delnode_file(config);
+	write_cache_file(config);
 	G_main_set_trigger(write_delcachefile);
 	
 	return ;
@@ -2593,20 +2599,67 @@ get_nodelist( char* nodelist, int len)
 		numleft -= tmplen;
 		if (tmplen <= 0){
 			cl_log(LOG_ERR, "%s: not enough buffer", 
-				__FUNCTION__);
+			       __FUNCTION__);
 			return HA_FAIL;
 		}
 	}
-
+	
 	return HA_OK;
 
 }
+
+static int
+get_delnodelist(char* delnodelist, int len)
+{
+	char* p = delnodelist;
+	int numleft = len;
+	GSList* list = NULL;
+
+	if (del_node_list == NULL){
+		delnodelist[0]= ' ';
+		delnodelist[1]=0;
+		goto out;
+	}
+	
+	list = del_node_list;
+
+	while( list){
+		struct node_info* hip;
+		int tmplen; 
+		
+		hip = (struct node_info*)list->data;
+		if (hip == NULL){
+			cl_log(LOG_ERR, "%s: null data in del node list",
+			       __FUNCTION__);
+			return HA_FAIL;
+		}
+		
+		tmplen = snprintf(p, numleft,  "%s ", hip->nodename);
+		if (tmplen <= 0){
+			cl_log(LOG_ERR, "%s: not enough buffer", 
+			       __FUNCTION__);
+			return HA_FAIL;
+		}
+		
+		p += tmplen;
+		numleft -=tmplen;
+
+		list = list->next;
+	}
+	
+ out: 
+	cl_log(LOG_DEBUG, "%s: delnodelist=%s", __FUNCTION__,  delnodelist);
+	
+	return HA_OK;
+}
+
 
 static void
 HBDoMsg_T_REQNODES(const char * type, struct node_info * fromnode,
                   TIME_T msgtime, seqno_t seqno, const char * iface, struct ha_msg * msg)
 {
 	char nodelist[MAXLINE];
+	char delnodelist[MAXLINE];
 	struct ha_msg* repmsg;
 	
 	if (fromnode == curnode){
@@ -2618,19 +2671,23 @@ HBDoMsg_T_REQNODES(const char * type, struct node_info * fromnode,
 	if (ANYDEBUG){
 		cl_log(LOG_DEBUG, "Get a reqnodes message from %s", fromnode->nodename);
 	}
-	if (get_nodelist(nodelist, MAXLINE) != HA_OK){
-		cl_log(LOG_ERR, "%s: get node list from config failed",
+	
+	if (get_nodelist(nodelist, MAXLINE) != HA_OK
+	    || get_delnodelist(delnodelist, MAXLINE) != HA_OK){
+		cl_log(LOG_ERR, "%s: get node list or del node list from config failed",
 		       __FUNCTION__);
 		return;
 	}
 
+	
 	repmsg = ha_msg_new(0);
 	if ( repmsg == NULL
 	|| ha_msg_add(repmsg, F_TO, fromnode->nodename) != HA_OK
 	|| ha_msg_add(repmsg, F_TYPE, T_REPNODES) != HA_OK
-	|| ha_msg_add(repmsg, F_NODELIST, nodelist) != HA_OK){
+	|| ha_msg_add(repmsg, F_NODELIST, nodelist) != HA_OK
+	|| ha_msg_add(repmsg, F_DELNODELIST, delnodelist) != HA_OK){
 		cl_log(LOG_ERR, "%s: constructing REPNODES msg failed",
-			__FUNCTION__);
+		       __FUNCTION__);
 		ha_msg_del(repmsg);
 		return;	
 	} 
@@ -2644,8 +2701,11 @@ HBDoMsg_T_REPNODES(const char * type, struct node_info * fromnode,
                   TIME_T msgtime, seqno_t seqno, const char * iface, struct ha_msg * msg)
 {
 	const char* nodelist = ha_msg_value(msg, F_NODELIST);
+	const char* delnodelist = ha_msg_value(msg, F_DELNODELIST);
 	char*	nodes[MAXNODE];
+	char*   delnodes[MAXNODE];
 	int	num =  MAXNODE;
+	int	delnum = MAXNODE;
 	int	i;
 	int 	j;
 
@@ -2670,52 +2730,80 @@ HBDoMsg_T_REPNODES(const char * type, struct node_info * fromnode,
 			__FUNCTION__);
 		return;
 	}
+	
+	if (getnodes(delnodelist, delnodes, &delnum) != HA_OK){	       
+		cl_log(LOG_ERR, "%s: get del nodes from nodelist failed",
+			__FUNCTION__);
+		return;
+	}
 
-#if 0
-	/* This truly is broken... -- gshi and alanr agree */
-	/* FIXME FIXME FIXME */
+	/* term definition*/
+	/* added: a node in config->nodes[] 
+	   deleted: a node in del_node_list
+	   removed: remove a node either from config->nodes[] or del_node_list
+	*/
 
+
+
+	/* process delnodelist*/
+	/* update our del node list to be the exact same list as the received one
+	 */
+	
+	dellist_destroy();
+	for (i = 0; i < delnum; i++){
+		dellist_add(delnodes[i]);
+	}	
+	
+
+
+	/* process nodelist*/
+	/* our local node list is outdated
+	 * any node that is in nodelist but not in local node list should be added
+	 * any node that is in local node list but not in nodelist should be removed
+	 * (but not deleted)
+	 */
+	if (ANYDEBUG){
+		cl_log(LOG_DEBUG, "nodelist received:%s", nodelist);
+		cl_log(LOG_DEBUG, "delnodelist received:%s", delnodelist);
+	}
+	for (i =0; i < num; i++){
+		for (j = 0; j < config->nodecount; j++){
+			if (strncmp(nodes[i], config->nodes[j].nodename,
+				    HOSTLENG) == 0){
+				break;
+			}
+		}
+		if ( j == config->nodecount){
+			/*this node is not found in config
+			 * we need to add it 
+			 */
+			hb_add_one_node(nodes[i]);		
+		}
+	}
+	
 	for (i =0; i < config->nodecount; i++){
 		for (j=0;j < num; j++){
 			if ( strncmp(config->nodes[i].nodename,
-				nodes[j], HOSTLENG) == 0){
+				     nodes[j], HOSTLENG) == 0){
 				break;
 			}	
 		}
 		if (j == num){
 			/* This node is not found in incoming nodelist,
-			 * therefore, we need to delete it.
+			 * therefore, we need to remove it from config->nodes[]
 			 *
 			 * Of course, this assumes everyone has correct node
 			 * lists - which may not be the case :-(  FIXME???
 			 * And it assumes autojoin is on - which it may
 			 * not be...
 			 */
-			cl_log(LOG_ERR, "%s: Node %s is deleted"
-			" (according to %s) and we don't know it!"
-			,	__FUNCTION__, config->nodes[i].nodename
-			,	fromnode->nodename);
-			hb_del_one_node(config->nodes[i].nodename);
+			hb_remove_one_node(config->nodes[i].nodename, FALSE);
 			
 		}
 	}
-#endif
 
-	for (i =0; i < num; i++){
-		for (j = 0; j < config->nodecount; j++){
-			if (strncmp(nodes[i], config->nodes[j].nodename,
-				HOSTLENG) == 0){
-				break;
-			}
-		}
-		if ( j == config->nodecount){
-			/*this node is not found in config
-			* we need to add it 
-			*/
-			hb_add_one_node(nodes[i]);		
-		}
-	}	
 
+	
 	for (i = 0; i< num; i++){
 		if (nodes[i]){
 			ha_free(nodes[i]);
@@ -2723,7 +2811,16 @@ HBDoMsg_T_REPNODES(const char * type, struct node_info * fromnode,
 		}
 	}
 
+	for (i = 0; i < delnum; i++){
+		if (delnodes[i]){
+			ha_free(delnodes[i]);
+			delnodes[i] = NULL;
+		}
+	}
+
 	get_reqnodes_reply = TRUE;
+	write_cache_file(config);
+	write_delnode_file(config);
 	comm_now_up();
         return;
 }
@@ -6185,6 +6282,11 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.506  2006/04/26 03:42:07  alan
+ * Committed a patch from gshi which should GREATLY improve the
+ * behavior of autojoin code.
+ * The basic idea is that anyone newly joining the cluster should listen to anyone already in the cluster for the cache file contents, etc.
+ *
  * Revision 1.505  2006/04/23 20:02:10  alan
  * Disabled a message put in to give me confidence a recent change.
  *

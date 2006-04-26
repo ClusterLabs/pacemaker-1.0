@@ -1,4 +1,4 @@
-/* $Id: config.c,v 1.198 2006/04/24 04:52:24 alan Exp $ */
+/* $Id: config.c,v 1.199 2006/04/26 03:42:07 alan Exp $ */
 /*
  * Parse various heartbeat configuration files...
  *
@@ -67,6 +67,8 @@
 
 #define	DIRTYALIASKLUDGE
 
+void dellist_destroy(void);
+int dellist_add(const char* nodename);
 
 static int add_normal_node(const char *);
 static int set_hopfudge(const char *);
@@ -1141,8 +1143,58 @@ add_option(const char *	option, const char * value)
 }
 
 
+void 
+dellist_destroy(void){
+	
+	GSList* list = del_node_list;
 
+	while (list != NULL){
+		ha_free(list->data);
+		list->data=NULL;
+		list= list->next;
+	}
 
+	g_slist_free(del_node_list);
+	del_node_list = NULL;
+	return;
+}
+
+static void
+dellist_append(struct node_info* hip)
+{
+	struct node_info* dup_hip;
+	
+	dup_hip = ha_malloc(sizeof(struct node_info));
+	if (dup_hip == NULL){
+		cl_log(LOG_ERR, "%s: malloc failed",
+		       __FUNCTION__);
+		return;
+	}
+
+	memcpy(dup_hip, hip, sizeof(struct node_info));
+	
+	del_node_list = g_slist_append(del_node_list, dup_hip);
+	
+	
+}
+int 
+dellist_add(const char* nodename){
+	struct node_info node;
+	int i;
+
+	for (i=0; i < config->nodecount; i++){
+		if (strncmp(nodename, config->nodes[i].nodename,HOSTLENG) == 0){
+			dellist_append(&config->nodes[i]);
+			return HA_OK;
+		}
+	}
+	
+	memset(&node, 0, sizeof(struct node_info));
+	strncpy(node.nodename, nodename, HOSTLENG);
+	
+	dellist_append(&node);
+	return HA_OK;
+}
 
 static gint
 dellist_match(gconstpointer data, gconstpointer nodename)
@@ -1173,6 +1225,8 @@ remove_from_dellist( const char* nodename)
 	return;
 	
 }
+
+
 
 /*
  * For reliability reasons, we should probably require nodename
@@ -1224,28 +1278,11 @@ add_node(const char * value, int nodetype)
 	return(HA_OK);
 }
 
-void
-append_to_dellist(struct node_info* hip)
-{
-	struct node_info* dup_hip;
-	
-	dup_hip = ha_malloc(sizeof(struct node_info));
-	if (dup_hip == NULL){
-		cl_log(LOG_ERR, "%s: malloc failed",
-		       __FUNCTION__);
-		return;
-	}
 
-	memcpy(dup_hip, hip, sizeof(struct node_info));
-	
-	del_node_list = g_slist_append(del_node_list, dup_hip);
-	
-	
-}
 
 
 int 
-delete_node(const char* value)
+remove_node(const char* value, int deletion)
 {
 	int i;
 	struct node_info *	hip = NULL;
@@ -1266,20 +1303,26 @@ delete_node(const char* value)
 	
 
 	if (i == config->nodecount){
-		cl_log(LOG_ERR, "%s: node %s not found",
-		       __FUNCTION__, value);
-		return HA_FAIL;
+		if (deletion){
+			cl_log(LOG_DEBUG,"Adding node(%s) to deletion list", value);
+			dellist_add(value);
+		}	
+		
+		return HA_OK;
 	}
 
 	
 	if (STRNCMP_CONST(hip->status, DEADSTATUS) != 0
 	    && STRNCMP_CONST(hip->status, INITSTATUS) != 0){
-		cl_log(LOG_ERR, "%s: node %s is %s. Cannot delete alive node",
+		cl_log(LOG_ERR, "%s: node %s is %s. Cannot remove alive node",
 		       __FUNCTION__, value, hip->status);
 		return HA_FAIL;
 	}
 	
-	append_to_dellist(hip);
+	if (deletion){
+		cl_log(LOG_DEBUG,"Adding this node to deletion list");
+		dellist_append(hip);
+	}
 
 	for (j = i; j < config->nodecount; j++){
 		memcpy(&config->nodes[j], &config->nodes[j + 1], 
@@ -2530,6 +2573,11 @@ ha_config_check_boolean(const char *value)
 
 /*
  * $Log: config.c,v $
+ * Revision 1.199  2006/04/26 03:42:07  alan
+ * Committed a patch from gshi which should GREATLY improve the
+ * behavior of autojoin code.
+ * The basic idea is that anyone newly joining the cluster should listen to anyone already in the cluster for the cache file contents, etc.
+ *
  * Revision 1.198  2006/04/24 04:52:24  alan
  * Disabled traditional compression because of realtime concerns.
  *

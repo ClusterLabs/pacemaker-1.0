@@ -705,16 +705,15 @@ read_delnode_file(struct sys_config* cfg)
 	
 	if ((f=fopen(filename, "r")) == NULL) {
 		cl_perror("%s: Cannot fopen %s for reading"
-		,	__FUNCTION__, filename);
+			  ,	__FUNCTION__, filename);
 		return HA_FAIL;
 	}
 	
 	while ((rc=node_uuid_file_in(f, host, &uu)) > 0) {
 		strncpy(thisnode.nodename, host, HOSTLENG);
 		cl_uuid_copy(&thisnode.uuid, &uu);
-		if (lookup_node(thisnode.nodename)){
-                       delete_node(thisnode.nodename);
-                }
+
+		remove_node(thisnode.nodename, TRUE);
 
 	}
 	fclose(f);
