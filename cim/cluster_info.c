@@ -1639,8 +1639,6 @@ cim_rsc_submit(const char *rscid)
 		ha_msg_add(msg, "master_node_max", "");
 		ret = cim_update_dispatch(CREATE_RESOURCE, NULL, msg, NULL);
 
-		/* delete the disk image */
-
 		cim_rscdb_cleanup(type, rscid);
 	}
 
@@ -1761,11 +1759,6 @@ cim_update_rsc(int type, const char *rscid, struct ha_msg *resource)
 			ret = HA_OK;
 		}
 	} else {	/* update disk image */
-		/*
-		char pathname[MAXLEN] = CIM_RESOURCE_PREFIX;
-		strncat(pathname, rscid, MAXLEN);
-		ret = cim_msg2disk(pathname, resource);
-		*/
 		ret = cim_dbput_msg(CIM_RESOURCE_TABLE, rscid, resource);
 	}
 	return ret;
@@ -1775,10 +1768,24 @@ int
 cim_remove_rsc(const char * rscid)
 {
 	int ret;
-	struct ha_msg * msg;
 	if ( RESOURCE_ENABLED(rscid)) {
-		ret = cim_update_dispatch(DEL_RESOURCE, rscid, NULL, NULL);
-		if ( cim_get_rsctype(rscid) == TID_RES_PRIMITIVE ) {
+		int rsctype = cim_get_rsctype(rscid);
+		/* if it's a resource container, remove its sub resource first */
+		if ( rsctype == TID_RES_GROUP || rsctype == TID_RES_CLONE ||
+				rsctype == TID_RES_MASTER) {
+			struct ha_msg *sublist = cim_get_subrsc_list(rscid);
+			if (sublist) {
+				int i , len = cim_list_length(sublist);
+				for( i =0; i < len; i++) {
+					char *subrscid = NULL;
+					subrscid = cim_list_index(sublist,i);
+					cim_remove_rsc(subrscid);
+				}
+			}
+		}
+
+		if ( rsctype == TID_RES_PRIMITIVE ) {
+			struct ha_msg * msg;
 			msg = cim_query_dispatch(GET_RSC_HOST, rscid, NULL);
 			if (msg) {
 				const char * host = cl_get_string(msg, "host");
@@ -1786,7 +1793,10 @@ cim_remove_rsc(const char * rscid)
 				ret = cim_update_dispatch(CLEANUP_RESOURCE, 
 						param, NULL, NULL);
 			}
+			ha_msg_del(msg);
 		}
+
+		ret = cim_update_dispatch(DEL_RESOURCE, rscid, NULL, NULL);
 	} else {
 		cim_rscdb_cleanup(cim_get_rsctype(rscid), rscid);
 		ret = HA_OK;
