@@ -70,7 +70,9 @@ cimproviders_LTLIBRARIES = libHAClusterInfo.la				\
                            libHA_IndicationProvider.la                  \
                            libHA_ClusteringServiceProvider.la		\
                            libHA_InstanceAttributesProvider.la		\
-                           libHA_AttributesOfResourceProvider.la
+                           libHA_AttributesOfResourceProvider.la	\
+                           libHA_LocationConstraintRuleProvider.la	\
+                           libHA_RuleOfLocationConstraintProvider.la
 
 
 #--------------------------------------------------------------
@@ -138,6 +140,13 @@ libHA_OperationOnProvider_la_LIBADD         = libHAClusterInfo.la
 libHA_ClusteringServiceProvider_la_SOURCES        = clustering_service_provider.c
 libHA_ClusteringServiceProvider_la_LIBADD         = libHAClusterInfo.la
 #--------------------------------------------------------------
+libHA_LocationConstraintRuleProvider_la_SOURCES = constraint_common.c constraint_rule_provider.c
+libHA_LocationConstraintRuleProvider_la_LIBADD  = libHAClusterInfo.la
+#--------------------------------------------------------------
+libHA_RuleOfLocationConstraintProvider_la_SOURCES = rule_of_constraint_provider.c
+libHA_RuleOfLocationConstraintProvider_la_LIBADD  = libHAClusterInfo.la
+#--------------------------------------------------------------
+
 noinst_PROGRAMS	    = simpletest
 simpletest_SOURCES  = simple_test.c
 simpletest_LDADD    = libHAClusterInfo.la 
