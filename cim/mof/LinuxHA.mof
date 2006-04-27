@@ -489,10 +489,8 @@ class HA_ResourceConstraint {
 class HA_OrderConstraint : 
                 HA_ResourceConstraint {
         string From;
-        string Action;
         string OrderType;
         string To;
-        string Symmetrical;
 };
 
 

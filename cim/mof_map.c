@@ -121,9 +121,7 @@ static const map_entry_t HA_ORDER_CONSTRAINT_entry [] = {
 	{"id",		"Id",		CMPI_chars},
 	{"from",	"From",		CMPI_chars},
 	{"type",	"OrderType",	CMPI_chars},
-        {"",		"Action",	CMPI_chars},
         {"to",		"To",		CMPI_chars},
-        {"",		"Symmetrical",  CMPI_chars}
 };
 
 static const map_entry_t HA_COLOCATION_CONSTRAINT_entry [] = {
