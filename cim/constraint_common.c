@@ -123,39 +123,35 @@ constraing_get_inst(CMPIBroker * broker, char * classname, CMPIContext * ctx,
         CMPIInstance* ci = NULL;
         CMPIObjectPath * op = NULL;
         char * consid = NULL;
-        int ret = 0;
                 
 	DEBUG_ENTER();
         /* get the key from the object path */
 	if (( consid = CMGetKeyString(cop, "Id", rc)) == NULL ) {
-		ret = HA_FAIL;
-		goto out;
+                cl_log(LOG_ERR, "%s: Id is missing.", __FUNCTION__);
+		return HA_FAIL;
 	}
 
         /* create a object path */
-        op = CMNewObjectPath(broker, CMGetCharPtr(CMGetNameSpace(cop, rc)), 
-                             classname, rc);
+        op = CMNewObjectPath(broker, 
+		CMGetCharPtr(CMGetNameSpace(cop, rc)), classname, rc);
         if ( CMIsNullObject(op) ){
-                ret = HA_FAIL;
-                cl_log(LOG_WARNING, "Could not create object path.");
-                goto out;
+                cl_log(LOG_ERR, "%s: Could not create object path.", 
+			__FUNCTION__);
+		return HA_FAIL;
         }
 
         /* make an instance */
         ci = make_instance_byid(broker, classname, op, consid, type, rc);
         if ( CMIsNullObject(ci) ) {
-                ret = HA_FAIL;
-                cl_log(LOG_WARNING, "Could not create instance.");
-                goto out;
+                cl_log(LOG_ERR, "%s: Could not create instance.", 
+			__FUNCTION__);
+		return HA_FAIL;
         }
 
         /* add the instance to result */
         CMReturnInstance(rslt, ci);
         CMReturnDone(rslt);
-        ret = HA_OK;
-out:
-	DEBUG_LEAVE();
-        return ret;
+        return HA_OK;
 }
 
 int 

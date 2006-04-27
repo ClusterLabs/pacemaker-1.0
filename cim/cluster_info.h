@@ -148,8 +148,6 @@ int             cim_update_authkeys(struct ha_msg *msg);
 
 /* get a resource's type: TID_RES_PRIMITIVE, etc */
 int		cim_get_rsctype(const char * rscid);
-
-/* resource list */
 int		cim_rsc_is_in_cib(const char *rscid);
 
 /* not include sub resources */
