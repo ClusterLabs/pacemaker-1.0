@@ -275,7 +275,7 @@ echo "---------------------------------------------------"
 SUB_RESOURCE_ID=sub_resource_1
 SUB_ATTRIBUTE_ID=${SUB_RESOURCE_ID}_ip
 create_primitive_resource "IPaddr" "$SUB_RESOURCE_ID"
-create_attribute $SUB_RESOURCE_ID $SUB_ATTRIBUTE_ID "ip" "127.0.0.111"
+create_attribute $SUB_RESOURCE_ID $SUB_ATTRIBUTE_ID "ip" "127.0.0.200"
 create_resource_group $GROUP_ID
 group_add_resource $GROUP_ID $SUB_RESOURCE_ID
 cib_add_resource $GROUP_ID
@@ -289,7 +289,7 @@ SUB_RESOURCE_ID2=sub_resource_2
 SUB_ATTRIBUTE_ID2=${SUB_RESOURCE_ID2}_ip
 
 create_primitive_resource "IPaddr" $SUB_RESOURCE_ID2
-create_attribute $SUB_RESOURCE_ID2 $SUB_ATTRIBUTE_ID2 "ip" "127.0.0.112"
+create_attribute $SUB_RESOURCE_ID2 $SUB_ATTRIBUTE_ID2 "ip" "127.0.0.201"
 group_add_resource $GROUP_ID $SUB_RESOURCE_ID2
 wait_cib_updated
 resource_query $GROUP_ID
