@@ -146,8 +146,14 @@ CreationClassName="HA_LocationConstraint",\
 SystemName="LinuxHACluster",\
 SystemCreationClassName="HA_LinuxHA",\
 Resource="$RSC_ID",\
-Rule="node #eq $NODE",\
 Score=$SCORE
+wbemcli ci http://$USER:$PASSWD@localhost/root/cimv2:HA_LocationConstraintRule.Id="${CONS_ID}_rule",\
+ConstraintId="$CONS_ID" \
+Id="${CONS_ID}_rule",\
+ConstraintId="$CONS_ID",\
+Attribute="node",\
+Operation="eq",\
+Value="$NODE"
 } 
 
 function delete_constraint()
@@ -161,6 +167,8 @@ CreationClassName="$CLASSNAME",\
 SystemName="LinuxHACluster",\
 SystemCreationClassName="HA_LinuxHA"
 }
+
+
 ##############################################################
 # primitive resource
 ##############################################################
