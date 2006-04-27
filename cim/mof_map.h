@@ -49,7 +49,7 @@ const struct map_t *	cim_query_map(int mapid);
 #define HA_LOCATION_CONSTRAINT		9
 #define HA_RESOURCE_GROUP		10
 #define HA_INSTANCE_ATTRIBUTES		11
-
+#define HA_LOCATION_CONSTRAINT_RULE	12
 
 #define METHOD_ADD_RESOURCE		"AddResource"
 #define METHOD_ADD_PRIMITIVE_RESOURCE	"AddPrimitiveResource"

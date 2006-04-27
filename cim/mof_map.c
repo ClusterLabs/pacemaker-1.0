@@ -145,6 +145,13 @@ static const map_entry_t HA_INSTANCE_ATTRIBUTES_entry [] = {
 	{"value",	"Value",	CMPI_chars}
 };
 
+static const map_entry_t HA_LOCATION_CONSTRAINT_RULE_entry [] = {
+	{"id",		"Id",		CMPI_chars},
+	{"attribute",	"Attribute",	CMPI_chars},
+	{"operation",	"Operation",	CMPI_chars},
+	{"value",	"Value",	CMPI_chars},
+};
+
 #define MAKE_ENTRY(id,entry) {id, MAPDIM(entry), entry}
 static const struct map_t map_table [] =
 {
@@ -159,6 +166,7 @@ static const struct map_t map_table [] =
 	MAKE_ENTRY(HA_COLOCATION_CONSTRAINT, HA_COLOCATION_CONSTRAINT_entry),
 	MAKE_ENTRY(HA_LOCATION_CONSTRAINT, HA_LOCATION_CONSTRAINT_entry),
 	MAKE_ENTRY(HA_INSTANCE_ATTRIBUTES, HA_INSTANCE_ATTRIBUTES_entry),
+	MAKE_ENTRY(HA_LOCATION_CONSTRAINT_RULE, HA_LOCATION_CONSTRAINT_RULE_entry),
 };
 
 
