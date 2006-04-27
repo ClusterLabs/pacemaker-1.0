@@ -46,55 +46,6 @@ static CMPIInstance *	make_instance_byid(CMPIBroker * broker, char * classname,
 static CMPIInstance *	make_instance(CMPIBroker * broker, char * classname, 
 				CMPIObjectPath *op, struct ha_msg *cons, 
 				int type, CMPIStatus * rc);
-static void 		location_set_rules(CMPIBroker * broker, 
-				CMPIInstance * ci, struct ha_msg* constraint, 
-				CMPIStatus * rc);
-static void		location_get_rules(CMPIBroker * broker, 
-				CMPIInstance * ci, struct ha_msg* constraint,
-				CMPIStatus * rc);
-static void 
-location_set_rules(CMPIBroker *broker, CMPIInstance *ci, 
-		struct ha_msg *constraint, CMPIStatus *rc)
-{
-        CMPIArray * array = NULL;
-	int i, size;
-
-	DEBUG_ENTER();	
-
-        size = cim_msg_children_count(constraint);
-        if (( array = CMNewArray(broker, size, CMPI_chars, rc)) == NULL ){
-                return;
-        }
-
-        for ( i = 0; i < size; i++ ) {
-                const char *id, *attribute, *operation, *value;
-                int stringlen;
-                char *tmp;
-		struct ha_msg *rule;
-
-		rule = cim_msg_child_index(constraint, i);
-                id        = cl_get_string(rule, "id");
-                attribute = cl_get_string(rule, "attribute");
-                operation = cl_get_string(rule, "operation");
-		value     = cl_get_string(rule, "value");
-
-                stringlen = strlen(id) + strlen(attribute) + 
-                        strlen(operation) + strlen(value) +
-                        strlen("id") + strlen("attribute") +
-                        strlen("operation") + strlen("value") + 8;
-
-                if ( (tmp = (char *)cim_malloc(stringlen)) == NULL ) { 
-			return; 
-		}
-
-                snprintf(tmp,stringlen, "%s<%s>%s", attribute,operation,value);
-                CMSetArrayElementAt(array, i, &tmp, CMPI_chars);
-        }
-
-        CMSetProperty(ci, "Rule", &array, CMPI_charsA);
-	DEBUG_LEAVE();
-}
-
 static CMPIInstance *
 make_instance(CMPIBroker *broker, char *classname, CMPIObjectPath *op, 
                struct ha_msg* constraint, int type, CMPIStatus *rc)
@@ -127,7 +78,6 @@ make_instance(CMPIBroker *broker, char *classname, CMPIObjectPath *op,
         } else if ( type == TID_CONS_LOCATION ) {
 		cmpi_msg2inst(broker, ci, 
 				HA_LOCATION_CONSTRAINT, constraint, rc);
-                location_set_rules(broker, ci, constraint, rc);
         } else if ( type == TID_CONS_COLOCATION ) {
 		cmpi_msg2inst(broker, ci, 
 				HA_COLOCATION_CONSTRAINT, constraint, rc);
@@ -315,53 +265,6 @@ constraint_delete_inst(CMPIBroker * broker, char * classname,
 	return HA_OK;
 }
 
-static void
-location_get_rules(CMPIBroker * broker, CMPIInstance * ci, 
-		struct ha_msg * constraint, CMPIStatus * rc)
-{
-	CMPIArray * array = NULL;
-	int len, i;
-
-        array = CMGetProperty(ci, "Rule", rc).value.array;
-	if(array == NULL || rc->rc != CMPI_RC_OK ) {
-		cl_log(LOG_ERR, "%s: get array failed.", __FUNCTION__);
-		return ;
-	}
-	len = CMGetArrayCount(array, rc);
-	for(i = 0; i < len; i++) {
-		CMPIString * s = NULL;
-		char * rule = NULL, tmp[MAXLEN]="exp_id_";
-		char ** v = NULL;
-		int vlen = 0;
-		struct ha_msg * t;
-
-		if( ( t = ha_msg_new(4)) == NULL ) {
-			return;
-		}
-
-		s = CMGetArrayElementAt(array, i, rc).value.string;
-		if ( s == NULL ) {
-			ha_msg_del(t);
-			continue;
-		}
-		rule = CMGetCharPtr(s);		
-
-		/* parse v*/
-		v = split_string(rule, &vlen, "< >");
-		if ( vlen != 3 ) {
-			continue;
-		}
-		ha_msg_add(t, "attribute", v[0]);
-		ha_msg_add(t, "operation", v[1]);
-		ha_msg_add(t, "value", v[2]);
-
-		snprintf(tmp, MAXLEN, "%s_exp_id_%d", v[0], i);
-		ha_msg_add(t, "id", tmp);
-
-		cim_msg_add_child(constraint, tmp, t);
-	}
-}
-
 int	
 constraint_update_inst(CMPIBroker * broker, char * classname,
 		CMPIInstanceMI * mi, CMPIContext * ctx, CMPIResult * rslt, 
@@ -389,7 +292,6 @@ constraint_update_inst(CMPIBroker * broker, char * classname,
 	case TID_CONS_LOCATION:
 		t = cim_query_dispatch(GET_LOCATION_CONSTRAINT, id, NULL); 
 		cmpi_inst2msg(ci, HA_LOCATION_CONSTRAINT, t, rc); 
-		location_get_rules(broker, ci, t, rc);
 		ret = cim_update_dispatch(UPDATE_LOCATION_CONSTRAINT, NULL, t, NULL); 
 		break;
 	case TID_CONS_COLOCATION:
@@ -429,7 +331,6 @@ constraint_create_inst(CMPIBroker * broker, char * classname,
 		break;
 	case TID_CONS_LOCATION:
 		cmpi_inst2msg(ci, HA_LOCATION_CONSTRAINT, t, rc); 
-		location_get_rules(broker, ci, t, rc);
 		ret = cim_update_dispatch(UPDATE_LOCATION_CONSTRAINT, NULL, t, NULL); 
 		break;
 	case TID_CONS_COLOCATION:
