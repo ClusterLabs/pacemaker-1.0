@@ -22,6 +22,24 @@
 
 # Run this to generate all the initial makefiles, etc.
 
+testProgram()
+{
+  if [ -z "$1" ]
+  then
+    return 0;
+  fi
+
+  cmd=""
+  arch=`uname -s`
+  if [ "$arch" = "Linux" ]
+  then
+    cmd="$1 --version </dev/null >/dev/null 2>&1"
+  else
+    cmd="which -s $1"
+  fi
+
+}
+
 srcdir=`dirname $0`
 CONFIG=$srcdir/configure
 if
@@ -51,26 +69,34 @@ cd $srcdir
 
 RC=0
 
-gnu="ftp://ftp.gnu.org/pub/gnu/"
-libtool_name="libtool";
-arch=`uname -s`
-if [ "$arch" = "Darwin" ]
-then
-    libtool_name="glibtool";
-fi
-for command in autoconf automake libtoolize
+gnu="ftp://ftp.gnu.org/pub/gnu"
+
+# Check for Autoconf
+pkg="autoconf"
+URL=$gnu/$pkg/
+for command in autoconf autoconf213 autoconf253 autoconf259 
 do
-  pkg=$command
-  case $command in 
-    libtoolize)	pkg=libtool; command=$libtool_name;;
-    libtool) command=$libtool_name;;
-  esac
-  URL=$gnu/$pkg/
+  testProgram $command
   if
-    $command --version </dev/null >/dev/null 2>&1
+	$cmd >/dev/null 2>&1
   then
     : OK $pkg is installed
-  else
+    autoconf=$command
+    autoheader=`echo  "$autoconf" | sed -e 's/autoconf/autoheader/'`
+    autom4te=`echo  "$autoconf" | sed -e 's/autoconf/autmo4te/'`
+    autoreconf=`echo  "$autoconf" | sed -e 's/autoconf/autoreconf/'`
+    autoscan=`echo  "$autoconf" | sed -e 's/autoconf/autoscan/'`
+    autoupdate=`echo  "$autoconf" | sed -e 's/autoconf/autoupdate/'`
+    ifnames=`echo  "$autoconf" | sed -e 's/autoconf/ifnames/'`
+  fi
+done
+
+# Check to see if we got a valid command.
+if 
+    $autoconf --version </dev/null >/dev/null 2>&1
+then
+    echo "Autoconf package $autoconf found."
+else
     RC=$?
     cat <<-!EOF >&2
 
@@ -78,8 +104,68 @@ do
 	Download the appropriate package for your system,
 	or get the source tarball at: $URL
 	!EOF
+fi
+
+# Check for automake
+pkg="automake"
+URL=$gnu/$pkg/
+for command in automake automake14 automake15 automake19 
+do
+  testProgram $command
+  if 
+    $cmd  >/dev/null 2>&1
+  then
+    : OK $pkg is installed
+    automake=$command
+    aclocal=`echo  "$automake" | sed -e 's/automake/aclocal/'`
+
   fi
 done
+
+# Check to see if we got a valid command.
+if 
+    $automake --version </dev/null >/dev/null 2>&1
+then
+    echo "Automake package $automake found."
+else
+    RC=$?
+    cat <<-!EOF >&2
+
+	You must have $pkg installed to compile the linux-ha package.
+	Download the appropriate package for your system,
+	or get the source tarball at: $URL
+	!EOF
+fi
+
+# Check for Libtool
+pkg="libtool"
+for command in libtool libtool14 libtool15 glibtool
+do
+  URL=$gnu/$pkg/
+  testProgram $command
+  if
+    $cmd  >/dev/null 2>&1
+  then
+    : OK $pkg is installed
+    libtool=$command
+    libtoolize=`echo  "$libtool" | sed -e 's/libtool/libtoolize/'`
+  fi
+done
+
+# Check to see if we got a valid command.
+if 
+    $libtool --version </dev/null >/dev/null 2>&1
+then
+    echo "Libtool package $libtool found."
+else
+    RC=$?
+    cat <<-!EOF >&2
+
+	You must have $pkg installed to compile the linux-ha package.
+	Download the appropriate package for your system,
+	or get the source tarball at: $URL
+	!EOF
+fi
 
 case $RC in
   0)	;;
@@ -104,7 +190,7 @@ oneline() {
   read x; echo "$x"
 }
 
-AC_version=`autoconf --version | oneline | sed -e 's%^[^0-9]*%%'`
+AC_version=`$autoconf --version | oneline | sed -e 's%^[^0-9]*%%'`
 AC_majvers=`echo "$AC_version" | sed 's%\..*%%'`
 AC_minvers=`echo "$AC_version" | sed 's%^.*\.%%'`
 AC_minnum=`echo  "$AC_minvers" | sed 's%[^0-9].*%%'`
@@ -138,7 +224,7 @@ then
 fi
 
 
-LT_version=`$libtool_name --version | oneline | sed -e 's%^[^0-9]*%%' -e s'% .*%%'`
+LT_version=`$libtool --version | oneline | sed -e 's%^[^0-9]*%%' -e s'% .*%%'`
 LT_majvers=`echo "$LT_version" | sed -e 's%\..*%%'`
 LT_minvers=`echo "$LT_version" | sed -e 's%^[^.]*\.%%' `
 LT_minnum=`echo  "$LT_minvers" | sed -e 's%[^0-9].*%%'`
@@ -146,35 +232,38 @@ LT_minnum=`echo  "$LT_minvers" | sed -e 's%[^0-9].*%%'`
 if
   [ $LT_majvers -lt 1 -o $LT_minnum -lt 4 ]
 then
-  echo "Minimum version of libtool is 1.4.  You have $LT_version installed."
+  echo "Minimum version of ol is 1.4.  You have $LT_version installed."
   exit 1
 fi
 
-echo aclocal $ACLOCAL_FLAGS
-aclocal $ACLOCAL_FLAGS
+echo $aclocal $ACLOCAL_FLAGS
+$aclocal $ACLOCAL_FLAGS
 
 if
-  echo autoheader --version  < /dev/null > /dev/null 2>&1
-  autoheader --version  < /dev/null > /dev/null 2>&1
+  echo $autoheader --version  < /dev/null > /dev/null 2>&1
+  $autoheader --version  < /dev/null > /dev/null 2>&1
 then
-  echo autoheader
-  autoheader
+  echo $autoheader
+  $autoheader
 fi
 
 rm -rf libltdl libltdl.tar
-echo libtoolize --ltdl --force --copy
-libtoolize --ltdl --force --copy
+echo $libtoolize --ltdl --force --copy
+$libtoolize --ltdl --force --copy
+
+echo $aclocal $ACLOCAL_FLAGS
+$aclocal $ACLOCAL_FLAGS
 
 # Emulate the old --ltdl-tar option...
 #  If the libltdl directory is required we will unpack it later
 tar -cf libltdl.tar libltdl
 rm -rf libltdl
 
-echo automake --add-missing --include-deps --copy
-automake --add-missing --include-deps --copy
+echo $automake --add-missing --include-deps --copy
+$automake --add-missing --include-deps --copy
 
-echo autoconf
-autoconf
+echo $autoconf
+$autoconf
 
 test -f libtool.m4 || touch libtool.m4 
 test -f ltdl.m4 || touch ltdl.m4
