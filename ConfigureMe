@@ -116,22 +116,22 @@ ConfigureAIX() {
 }
 
 ConfigureFreeBSD() {
-  FLAGS="--prefix=/usr/local --sysconfdir=/usr/local/etc --localstatedir=/usr/local/var"
+  FLAGS="--prefix=/usr/local --sysconfdir=/usr/local/etc --localstatedir=/var"
   CFENV="FreeBSD"
 }
 
 ConfigureOpenBSD() {
-  FLAGS="--disable-ldirectord --prefix=/usr/local --sysconfdir=/usr/local/etc --localstatedir=/usr/local/var"
+  FLAGS="--disable-ldirectord --prefix=/usr/local --sysconfdir=/usr/local/etc --localstatedir=/var"
   CFENV="OpenBSD"
 }
 
 ConfigureNetBSD() {
-  FLAGS="--disable-ldirectord --prefix=/usr/local --sysconfdir=/usr/local/etc --localstatedir=/usr/local/var"
+  FLAGS="--disable-ldirectord --prefix=/usr/local --sysconfdir=/usr/local/etc --localstatedir=/var"
   CFENV="NetBSD"
 }
 
 ConfigureGenericBSD() {
-  FLAGS="--disable-ldirectord --prefix=/usr/local --sysconfdir=/usr/local/etc --localstatedir=/usr/local/var"
+  FLAGS="--disable-ldirectord --prefix=/usr/local --sysconfdir=/usr/local/etc --localstatedir=/var"
   CFENV="Generic BSD"
 }
 
