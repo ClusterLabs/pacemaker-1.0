@@ -1,4 +1,4 @@
-#	$Id: heartbeat.spec.in,v 1.172 2006/04/24 07:25:18 alan Exp $
+#	$Id: heartbeat.spec.in,v 1.173 2006/04/28 11:01:27 lars Exp $
 
 # Workaround for a change in RPM 4.1.x; needs proper fixing soon!
 ##%define _unpackaged_files_terminate_build 0
@@ -1158,6 +1158,7 @@ make DESTDIR=$RPM_BUILD_ROOT install
 (
   cd $RPM_BUILD_ROOT@sysconfdir@/ha.d/resource.d
   ln -s @sbindir@/ldirectord ldirectord
+  ln -s @libdir@/heartbeat/haclient.py $RPM_BUILD_ROOT@bindir@/hb_gui
 )
 
 
@@ -1201,6 +1202,7 @@ make DESTDIR=$RPM_BUILD_ROOT install
 %dir @localstatedir@/run/@HB_PKG@
 %attr (2555, @HA_CCMUSER@, @HA_APIGROUP@) @bindir@/cl_status
 @bindir@/cl_respawn
+@bindir@/hb_gui
 @sbindir@/crmadmin 
 @sbindir@/cibadmin 
 @sbindir@/ccm_tool 
