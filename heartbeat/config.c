@@ -1,4 +1,4 @@
-/* $Id: config.c,v 1.199 2006/04/26 03:42:07 alan Exp $ */
+/* $Id: config.c,v 1.200 2006/04/29 13:12:20 alan Exp $ */
 /*
  * Parse various heartbeat configuration files...
  *
@@ -2451,7 +2451,9 @@ set_release2mode(const char* value)
 	,	{"apiauth", "stonithd  	uid=root" }
 	,	{"apiauth", "attrd   	uid=" HA_CCMUSER}
 	,	{"apiauth", "crmd   	uid=" HA_CCMUSER}
+#ifdef MGMT_ENABLED
 	,	{"apiauth", "mgmtd   	uid=root" }
+#endif
 	,	{"apiauth", "pingd   	uid=" HA_CCMUSER}
 
 	,	{"respawn", " "HA_CCMUSER " " HALIB "/ccm"}
@@ -2460,7 +2462,9 @@ set_release2mode(const char* value)
 	,	{"respawn", "root "	      HALIB "/stonithd"}
 	,	{"respawn", " "HA_CCMUSER " " HALIB "/attrd"}
 	,	{"respawn", " "HA_CCMUSER " " HALIB "/crmd"}
+#ifdef MGMT_ENABLED
 	,	{"respawn", "root "  	      HALIB "/mgmtd -v"}
+#endif
 		/* Don't 'respawn' pingd - it's a resource agent */
 	};
 	gboolean	dorel2;
@@ -2573,6 +2577,11 @@ ha_config_check_boolean(const char *value)
 
 /*
  * $Log: config.c,v $
+ * Revision 1.200  2006/04/29 13:12:20  alan
+ * Patch to allow the management daemon to not be started
+ * automatically if it's not been compiled in.
+ * This patch due to Keisuke MORI <kskmori@intellilink.co.jp>
+ *
  * Revision 1.199  2006/04/26 03:42:07  alan
  * Committed a patch from gshi which should GREATLY improve the
  * behavior of autojoin code.
