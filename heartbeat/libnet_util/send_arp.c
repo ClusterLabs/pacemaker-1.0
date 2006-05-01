@@ -1,4 +1,4 @@
-/* $Id: send_arp.c,v 1.24 2005/12/19 16:57:34 andrew Exp $ */
+/* $Id: send_arp.c,v 1.25 2006/05/01 22:57:21 msoffen Exp $ */
 /* 
  * send_arp
  * 
@@ -298,20 +298,15 @@ get_hw_addr(char *device, u_char mac[6])
 	struct libnet_link_int  *network;
 	char                    err_buf[LIBNET_ERRBUF_SIZE];
 
-	/* Get around bad prototype for libnet_error() */
-	char errmess1 [] = "libnet_open_link_interface: %s\n";
-	char errmess2 [] = "libnet_get_hwaddr: %s\n";
-
-
 	network = libnet_open_link_interface(device, err_buf);
 	if (!network) {
-		libnet_error(LIBNET_ERR_FATAL, errmess1, err_buf);
+		fprintf(stderr, "libnet_open_link_interface: %s\n", err_buf);
 		return -1;
 	}
 
 	mac_address = libnet_get_hwaddr(network, device, err_buf);
 	if (!mac_address) {
-		libnet_error(LIBNET_ERR_FATAL, errmess2, err_buf);
+		fprintf(stderr, "libnet_get_hwaddr: %s\n", err_buf);
 		return -1;
 	}
 
@@ -701,6 +696,9 @@ write_pid_file(const char *pidfilename)
 
 /*
  * $Log: send_arp.c,v $
+ * Revision 1.25  2006/05/01 22:57:21  msoffen
+ * Fixed to compile with older libnet.
+ *
  * Revision 1.24  2005/12/19 16:57:34  andrew
  * Make use of the errbuf when there was an error.
  *
