@@ -51,13 +51,17 @@ Without an argument is the same as "hb_standby all"
 \fBhb_standby failback\fP
 Same as "hb_standby foreign" 
 
+.SH CAVEATS
+\fBhb_standby\fP is only usable in R1-style configurations
+(i.e., those configured using the \fIharesources\fP file).
+
 .SH SEE ALSO
 hb_takeover(1), heartbeat(8), cl_status(1)
 
 .SH DOCUMENTATION
 More information may be found at
-.UR http://www.linux-ha.org/hb_5fstandby
-http://www.linux-ha.org/hb_5fstandby
+.UR http://linux-ha.org/hb_standby
+http://linux-ha.org/hb_standby
 .UE
 
 .SH AUTHORS
