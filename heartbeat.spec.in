@@ -1,4 +1,4 @@
-#	$Id: heartbeat.spec.in,v 1.173 2006/04/28 11:01:27 lars Exp $
+#	$Id: heartbeat.spec.in,v 1.174 2006/05/02 13:18:07 alan Exp $
 
 # Workaround for a change in RPM 4.1.x; needs proper fixing soon!
 ##%define _unpackaged_files_terminate_build 0
@@ -1231,6 +1231,7 @@ make DESTDIR=$RPM_BUILD_ROOT install
 %doc @mandir@/man8/heartbeat.8*
 %doc @mandir@/man8/apphbd.8*
 %doc @mandir@/man8/ha_logd.8*
+%doc @mandir@/man8/cibadmin.8*
 %doc @docdir@
 %define ENABLE_SNMP_SUBAGENT @RPM_ENABLE_SNMP_SUBAGENT@
 %if %{ENABLE_SNMP_SUBAGENT}
