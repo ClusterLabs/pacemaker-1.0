@@ -29,32 +29,15 @@ testProgram()
     return 0;
   fi
 
-  cmd=`which -s $1`
-  if [ ! -f "$cmd" ]; then
-      return 1
-  fi
-
+  cmd=""
   arch=`uname -s`
-  # On some systems we have to make do with the presence of the command 
-  if [ "$arch" != "Linux" -a "$arch" != "Darwin" ]; then
-      return 0;
-  fi
-
-  # The GNU standard is --version
-  if 
-      $cmd --version </dev/null >/dev/null 2>&1
+  if [ "$arch" = "Linux" -a "$arch" = "Darwin" ]
   then
-      return 0 
+    cmd="$1 --version </dev/null >/dev/null 2>&1"
+  else
+    cmd="which -s $1"
   fi
 
-  # Fall back to -V
-  if 
-      $cmd -V </dev/null >/dev/null 2>&1
-  then
-      return 0 
-  fi
-
-  return 1
 }
 
 srcdir=`dirname $0`
@@ -93,8 +76,9 @@ pkg="autoconf"
 URL=$gnu/$pkg/
 for command in autoconf autoconf213 autoconf253 autoconf259 
 do
+  testProgram $command
   if
-      testProgram $command
+	$cmd >/dev/null 2>&1
   then
     : OK $pkg is installed
     autoconf=$command
@@ -127,8 +111,9 @@ pkg="automake"
 URL=$gnu/$pkg/
 for command in automake automake14 automake15 automake19 
 do
+  testProgram $command
   if 
-      testProgram $command
+    $cmd  >/dev/null 2>&1
   then
     : OK $pkg is installed
     automake=$command
@@ -157,8 +142,9 @@ pkg="libtool"
 for command in libtool libtool14 libtool15 glibtool
 do
   URL=$gnu/$pkg/
+  testProgram $command
   if
-    testProgram $command
+    $cmd  >/dev/null 2>&1
   then
     : OK $pkg is installed
     libtool=$command
