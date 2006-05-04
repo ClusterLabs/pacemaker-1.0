@@ -24,7 +24,7 @@ USE_PERL5=	yes
 GNU_CONFIGURE=	yes
 USE_GMAKE=	yes
 USE_AUTOTOOLS=	yes
-CONFIGURE_ARGS=	
+CONFIGURE_ARGS=	 --prefix=/usr/local --sysconfdir=/usr/local/etc --localstatedir=/var --enable-all --with-group-id=90 --with-ccmuser-id=90
 
 MAN1=		cl_status.1
 MAN8=		apphbd.8 heartbeat.8 ldirectord.8 meatclient.8 \
