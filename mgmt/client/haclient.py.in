@@ -1156,14 +1156,11 @@ class MainWindow :
 
 		self.set_action_sensitive('startrsc',
 			manager.connected
-			and self.cur_type in [_("native")]
-			and string.find(self.cur_status, _("not running")) != -1)
+			and self.cur_type in [_("native")])
 
 		self.set_action_sensitive('stoprsc',
 			manager.connected
-			and self.cur_type in [_("native")]
-			and string.find(self.cur_status, _("not running")) == -1
-			and string.find(self.cur_status, _("running")) != -1)
+			and self.cur_type in [_("native")])
 
 		self.set_action_sensitive('defaultrsc',
 			manager.connected
@@ -1390,7 +1387,7 @@ class MainWindow :
 			('delrsc', "ha-remove-resource", _('Delete'), None,_('delete current item'), self.on_del_item),
 			('startrsc', "ha-start-resource", _('Start'), None,_('start resource'), self.on_item_action),
 			('stoprsc', "ha-stop-resource", _('Stop'), None,_('stop resource'), self.on_item_action),
-			('defaultrsc', "ha-default-resource", _('Default'), None,_('default'), self.on_item_action),
+			('defaultrsc', "ha-default-resource", _('Default'), None,_('start resource automatically'), self.on_item_action),
 			('node', None, _('Nodes')),
 			('standby', "ha-standby-node", _('Standby'), None,_('make the node standby'), self.on_standby),
 			('active', "ha-active-node", _('Active'), None,_('make the node active'), self.on_active)
