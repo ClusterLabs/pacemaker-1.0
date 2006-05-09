@@ -1,4 +1,4 @@
-/* $Id: ha_msg.h,v 1.80 2006/04/26 03:42:07 alan Exp $ */
+/* $Id: ha_msg.h,v 1.81 2006/05/09 06:34:04 andrew Exp $ */
 /*
  * Intracluster message object (struct ha_msg)
  *
@@ -286,8 +286,9 @@ int		cl_msg_modstruct(struct ha_msg * msg,
 				 const struct ha_msg* value);
 #define ha_msg_mod(msg, name, value) cl_msg_modstring(msg, name, value)
 int	cl_msg_replace(struct ha_msg* msg, int index,
-			const char* value, size_t vlen, int type);
-
+			const void* value, size_t vlen, int type);
+int     cl_msg_replace_value(struct ha_msg* msg, const void *old_value,
+			     const void* value, size_t vlen, int type);
 
 /* Add name, value (with known lengths) to the message */
 int		ha_msg_nadd(struct ha_msg * msg, const char * name, int namelen
