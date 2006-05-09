@@ -1227,7 +1227,10 @@ class MainWindow :
 		glade.get_widget("server").set_text(server)
 		glade.get_widget("username").set_text(user)
 		glade.get_widget("password").set_text("")
-		
+		glade.get_widget("server").set_activates_default(True)
+		glade.get_widget("username").set_activates_default(True)
+		glade.get_widget("password").set_activates_default(True)
+		dialog.set_default_response(gtk.RESPONSE_OK)
 		ret =  dialog.run()
 		server = glade.get_widget("server").get_text()
 		user = glade.get_widget("username").get_text()
