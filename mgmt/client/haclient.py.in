@@ -42,6 +42,7 @@ UI_FILE = "@libdir@/heartbeat/haclient.glade"
 window = None
 manager = None
 debug_level = 0
+top_window = None
 
 def log(string) :
 	syslog.syslog(string)
@@ -117,26 +118,31 @@ def add_column(widget, label, value, icon_cell_func = None, editable = False
 	tvcolumn.add_attribute(cell, 'text', value)
 	tvcolumn.set_visible(visible)
 	
-def msgbox(msg, parent = None) :
-	if parent == None :
-		parent = window.win_widget
-	dialog = gtk.Dialog(_("Message"), parent, gtk.DIALOG_MODAL, (gtk.STOCK_OK, True))
+def msgbox(msg) :
+	global top_window
+	dialog = gtk.Dialog(_("Message"), top_window, gtk.DIALOG_MODAL, (gtk.STOCK_OK, True))
 	label = gtk.Label(msg)
 	dialog.vbox.add(label)
 	label.show()
+	save_top_window = top_window
+	top_window = dialog
 	dialog.run()
+	top_window = save_top_window
 	dialog.destroy()
 
-def confirmbox(msg, parent = None) :
-	if parent == None :
-		parent = window.win_widget
-	dialog = gtk.Dialog(_("Confirm"), parent, gtk.DIALOG_MODAL,
+
+def confirmbox(msg) :
+	global top_window
+	dialog = gtk.Dialog(_("Confirm"),  top_window, gtk.DIALOG_MODAL,
 		(gtk.STOCK_YES, gtk.RESPONSE_YES, gtk.STOCK_NO, gtk.RESPONSE_NO))
 	label = gtk.Label(msg)
 	dialog.vbox.add(label)
 	dialog.set_default_response(gtk.RESPONSE_YES)
 	label.show()
+	save_top_window = top_window
+	top_window = dialog
 	ret = dialog.run()
+	top_window = save_top_window
 	dialog.destroy()
 	return ret == gtk.RESPONSE_YES
 	
@@ -148,11 +154,9 @@ def make_label_active(label, text, url) :
 	label.get_parent().connect("button_press_event", on_label_active, url)
 	#label.get_parent().window.set_cursor(gtk.gdk.Cursor(gtk.gdk.HAND1))
 	
-def kvbox(title, fields, parent=None) :
-	if parent == None :
-		parent = window.win_widget
-	
-	dialog = gtk.Dialog(title, parent, gtk.DIALOG_MODAL,
+def kvbox(title, fields) :
+	global top_window
+	dialog = gtk.Dialog(title, top_window, gtk.DIALOG_MODAL,
 		(gtk.STOCK_OK, gtk.RESPONSE_OK, gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL))
 	table = gtk.Table(2, 1, False)
 	widgets = []
@@ -180,9 +184,13 @@ def kvbox(title, fields, parent=None) :
 	
 	dialog.vbox.pack_start(table)
 	dialog.vbox.show_all()
+	save_top_window = top_window
+	top_window = dialog
+
 	while True :
 		ret = dialog.run()
 		if ret in [gtk.RESPONSE_CANCEL,gtk.RESPONSE_DELETE_EVENT] :
+			top_window = save_top_window
 			dialog.destroy()
 			return None
 		else :
@@ -202,6 +210,7 @@ def kvbox(title, fields, parent=None) :
 					msgbox(fields[row].label+_(" can't be empty"))
 					passed = False
 			if passed :
+				top_window = save_top_window
 				dialog.destroy()
 				return kv
 
@@ -1012,6 +1021,7 @@ class AddNativeDlg :
 			glade.get_widget("master_node_max").set_property("sensitive", False)
 		
 	def run(self):	
+		global top_window
 		dialog = gtk.Dialog(_("Add Native Resource"), window.win_widget, gtk.DIALOG_MODAL,
 				    (gtk.STOCK_ADD, gtk.RESPONSE_OK, gtk.STOCK_CANCEL,gtk.RESPONSE_CANCEL))
 		glade = gtk.glade.XML(UI_FILE, "addnativedlg", "haclient")
@@ -1056,9 +1066,12 @@ class AddNativeDlg :
 		glade.get_widget("group").set_model(store)
 		glade.get_widget("group").set_text_column(0)
 		self.update_param_list()
+		save_top_window = top_window
+		top_window = dialog
 		while True :
 			ret = dialog.run()
 			if ret in [gtk.RESPONSE_CANCEL, gtk.RESPONSE_DELETE_EVENT] :
+				top_window = save_top_window
 				dialog.destroy()
 				return None
 			else :
@@ -1105,6 +1118,7 @@ class AddNativeDlg :
 					rsc["master_node_max"] = glade.get_widget("master_node_max").get_text()
 					
 					manager.add_native(rsc)
+					top_window = save_top_window
 					dialog.destroy()
 					return None
 		
@@ -1415,7 +1429,6 @@ class MainWindow :
 		
 		# show the window
 		win_widget.show_all()
-
 		# keep some widgets
 		self.win_widget = win_widget
 		self.actiongroup = actiongroup
@@ -1894,5 +1907,6 @@ if __name__ == '__main__' :
 		debug_level = 1
 	manager = Manager()
 	window = MainWindow()
+	top_window = window.win_widget
 	manager.run()
 	syslog.closelog()
