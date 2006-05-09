@@ -939,7 +939,7 @@ class AddNativeDlg :
 				       glade.get_widget("addparam"),
 				       glade.get_widget("delparam"),
 				       _("Add Parameter"), fields)
-
+		param_list.insert({"id":uuid(),"name":"target_role","value":"stopped"})
 		self.param_list = param_list
 		glade.get_widget("desc").set_text("")
 		if meta != None :
@@ -1089,6 +1089,9 @@ class AddNativeDlg :
 					rsc["provider"] = glade.get_widget("provider").child.get_text()
 					rsc["group"] = glade.get_widget("group").child.get_text()
 					rsc["params"] = self.param_list.get_data()
+					for param in rsc["params"] :
+						if param["name"] == "target_role" :
+							param["id"] = rsc["id"]+"_target_role"
 					if glade.get_widget("is_clone").get_active() :
 						rsc["advance"] = "clone"
 					elif glade.get_widget("is_master").get_active() :
