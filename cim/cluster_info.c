@@ -867,10 +867,10 @@ InsertOption(struct ha_msg *msg, const char * directive, const char * option)
 		}
 	}	
 
-	if ( map->entry[i].type == CMPI_chars ) {
-		cl_msg_modstring(msg, directive, option);
-	} else if (map->entry[i].type == CMPI_charsA) {
+	if (map->entry[i].type == CMPI_charsA) {
 		cl_msg_list_add_string(msg, directive, option);
+	} else {
+		cl_msg_modstring(msg, directive, option);
 	}
 	return HA_OK;
 }
@@ -991,14 +991,7 @@ write_file_foreach(char *key, struct ha_msg *msg, void *user)
 			break;
 		}
 	}	
-	if ( map->entry[i].type == CMPI_chars) {
-		const char *value = cl_get_string(msg, key);
-		if (value && !StrIsEmpty(value)) {
-			fprintf(f, "%s", (char *)key);
-			FILLSPACE(f, SPACELEN - strlen(key))
-			fprintf(f, "%s\n", value);
-		}
-	} else if (map->entry[i].type == CMPI_charsA) {
+	if (map->entry[i].type == CMPI_charsA) {
 		len = cl_msg_list_length(msg, key);
 		for (i =0; i < len; i++) {
 			char * value;
@@ -1008,6 +1001,13 @@ write_file_foreach(char *key, struct ha_msg *msg, void *user)
 				FILLSPACE(f, SPACELEN - strlen(key))
 				fprintf(f, "%s\n", value);
 			}
+		}
+	} else {
+		const char *value = cl_get_string(msg, key);
+		if (value && !StrIsEmpty(value)) {
+			fprintf(f, "%s", (char *)key);
+			FILLSPACE(f, SPACELEN - strlen(key))
+			fprintf(f, "%s\n", value);
 		}
 	}
 }	
