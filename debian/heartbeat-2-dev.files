@@ -1,4 +1,5 @@
 usr/include/clplumbing/GSource.h
+usr/include/clplumbing/GSource_internal.h
 usr/include/clplumbing/Gmain_timeout.h
 usr/include/clplumbing/apphb_cs.h
 usr/include/clplumbing/base64.h
