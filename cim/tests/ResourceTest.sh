@@ -239,7 +239,7 @@ create_primitive_resource "IPaddr" "$RESOURCE_ID2"
 create_attribute $RESOURCE_ID2 $ATTRIBUTE_ID2 "ip" "127.0.0.112"
 cib_add_resource $RESOURCE_ID2
 wait_cib_updated
-resource_query $RESOURCE_ID
+resource_query $RESOURCE_ID2
 
 echo "---------------------------------------------------"
 echo "Location Constraint creation test"
