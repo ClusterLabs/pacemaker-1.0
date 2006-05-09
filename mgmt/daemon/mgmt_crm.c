@@ -79,6 +79,7 @@ static char* on_get_rsc_status(char* argv[], int argc);
 static char* on_get_rsc_params(char* argv[], int argc);
 static char* on_update_rsc_params(char* argv[], int argc);
 static char* on_delete_rsc_param(char* argv[], int argc);
+static char* on_set_target_role(char* argv[], int argc);
 
 static char* on_get_rsc_ops(char* argv[], int argc);
 static char* on_update_rsc_ops(char* argv[], int argc);
@@ -362,6 +363,7 @@ init_crm(int cache_cib)
 	reg_msg(MSG_RSC_PARAMS, on_get_rsc_params);
 	reg_msg(MSG_UP_RSC_PARAMS, on_update_rsc_params);
 	reg_msg(MSG_DEL_RSC_PARAM, on_delete_rsc_param);
+	reg_msg(MSG_SET_TARGET_ROLE, on_set_target_role);
 	
 	reg_msg(MSG_RSC_OPS, on_get_rsc_ops);
 	reg_msg(MSG_UP_RSC_OPS, on_update_rsc_ops);
@@ -1171,6 +1173,53 @@ on_delete_rsc_param(char* argv[], int argc)
 	}
 	return cl_strdup(MSG_OK);
 }
+
+char*
+on_set_target_role(char* argv[], int argc)
+{
+	int rc;
+	crm_data_t* fragment = NULL;
+	crm_data_t* cib_object = NULL;
+	crm_data_t* output;
+	char xml[MAX_STRLEN];
+	char buf[MAX_STRLEN];
+	char prefix[MAX_STRLEN];
+	char suffix[MAX_STRLEN];
+	
+	if(get_fix(argv[1], prefix, suffix) == -1) {
+		return cl_strdup(MSG_FAIL);
+	}
+
+	snprintf(xml, MAX_STRLEN,
+    		 "%s<instance_attributes><attributes>", prefix);
+	snprintf(buf, MAX_STRLEN,
+		"<nvpair id=\"%s_target_role\" " \
+		"name=\"target_role\" value=\"%s\"/>",
+		argv[1], argv[2]);
+	strncat(xml, buf, MAX_STRLEN);
+	
+	strncat(xml, "</attributes></instance_attributes>", MAX_STRLEN);
+	strncat(xml, suffix, MAX_STRLEN);
+
+	cib_object = string2xml(xml);
+	if(cib_object == NULL) {
+		return cl_strdup(MSG_FAIL);
+	}
+	mgmt_log(LOG_INFO, "xml:%s",xml);
+	fragment = create_cib_fragment(cib_object, "resources");
+
+	rc = cib_conn->cmds->update(
+			cib_conn, "resources", fragment, &output, cib_sync_call);
+
+	free_xml(fragment);
+	free_xml(cib_object);
+	if (rc < 0) {
+		return failed_msg(output, rc);
+	}
+	free_xml(output);
+	return cl_strdup(MSG_OK);
+}
+
 /* resource operations */
 char*
 on_get_rsc_ops(char* argv[], int argc)

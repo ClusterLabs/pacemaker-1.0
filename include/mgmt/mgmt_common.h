@@ -426,6 +426,18 @@ or
 
 /*
 description:
+	set the target_role of resource
+format:
+	MSG_SET_TARGET_ROLE resource "started"|"stopped"|"default"
+return:
+	MSG_OK
+or
+	MSG_FAIL
+*/
+#define MSG_SET_TARGET_ROLE	"set_target_role"
+
+/*
+description:
 	return the operations of a given resource
 format:
 	MSG_RSC_OPS resource
