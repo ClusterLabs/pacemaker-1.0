@@ -1162,6 +1162,9 @@ class MainWindow :
 			and string.find(self.cur_status, _("not running")) == -1
 			and string.find(self.cur_status, _("running")) != -1)
 
+		self.set_action_sensitive('defaultrsc',
+			manager.connected
+			and self.cur_type in [_("native")])
 	# functions
 	def update(self) :
 		self.tree.update()
@@ -1295,22 +1298,21 @@ class MainWindow :
 			if manager.failed_reason != "" :
 				msgbox(manager.failed_reason)
 
-	def on_start_item(self, action) :
+	def on_item_action(self, action) :
+		if action.get_name() == "startrsc" :
+			target_role = "started"
+		elif action.get_name() == "stoprsc" :
+			target_role = "stopped"
+		else :
+			target_role = "default"
+				
 		(attrs, running_on, params, ops) = \
 			manager.get_rsc_info(self.cur_name)
 		for param in params :
-			if param["name"] == "target_role" and param["value"] == "Stopped" :
-				manager.do_cmd("del_rsc_param\n"+param["id"])
+			if param["name"] == "target_role" and param["value"] == target_role :
 				return
-		
-	def on_stop_item(self, action) :
-		(attrs, running_on, params, ops) = \
-			manager.get_rsc_info(self.cur_name)
-		for param in params :
-			if param["name"] == "target_role" and param["value"] == "Stopped" :
-				return
-		manager.do_cmd("up_rsc_params\n%s\n%s_target_role\n%s\n%s"%(self.cur_name,self.cur_name,"target_role","Stopped"))
-
+		manager.do_cmd("set_target_role\n%s\n%s"%(self.cur_name,target_role))
+	
 	# constructor	
 	def __init__(self) :
 		# create window
@@ -1331,6 +1333,7 @@ class MainWindow :
 		icons.add("ha-remove-resource",gtk.IconSet(gtk.gdk.pixbuf_new_from_file("@libdir@/heartbeat/remove-resource.png")))
 		icons.add("ha-start-resource",gtk.IconSet(gtk.gdk.pixbuf_new_from_file("@libdir@/heartbeat/start-resource.png")))
 		icons.add("ha-stop-resource",gtk.IconSet(gtk.gdk.pixbuf_new_from_file("@libdir@/heartbeat/stop-resource.png")))
+		icons.add("ha-default-resource",gtk.IconSet(gtk.gdk.pixbuf_new_from_file("@libdir@/heartbeat/default-resource.png")))
 		icons.add("ha-master-resource",gtk.IconSet(gtk.gdk.pixbuf_new_from_file("@libdir@/heartbeat/master-resource.png")))
 		icons.add("ha-slave-resource",gtk.IconSet(gtk.gdk.pixbuf_new_from_file("@libdir@/heartbeat/slave-resource.png")))
 		icons.add_default()
@@ -1349,6 +1352,7 @@ class MainWindow :
 					<menuitem action="delrsc"/>
 					<menuitem action="startrsc"/>
 					<menuitem action="stoprsc"/>
+					<menuitem action="defaultrsc"/>
 				</menu>
 				<menu action="node">
 					<menuitem action="standby"/>
@@ -1363,6 +1367,7 @@ class MainWindow :
 				<toolitem action="delrsc"/>
 				<toolitem action="startrsc"/>
 				<toolitem action="stoprsc"/>
+				<toolitem action="defaultrsc"/>
 				<separator/>
 				<toolitem action="standby"/>
 				<toolitem action="active"/>
@@ -1380,8 +1385,9 @@ class MainWindow :
 			('resource', None, _('Resources')),
 			('addrsc', "ha-add-resource", _('Add New Item'), None,_('add new item'), self.on_add_item),
 			('delrsc', "ha-remove-resource", _('Delete'), None,_('delete current item'), self.on_del_item),
-			('startrsc', "ha-start-resource", _('Start'), None,_('start resource'), self.on_start_item),
-			('stoprsc', "ha-stop-resource", _('Stop'), None,_('stop resource'), self.on_stop_item),
+			('startrsc', "ha-start-resource", _('Start'), None,_('start resource'), self.on_item_action),
+			('stoprsc', "ha-stop-resource", _('Stop'), None,_('stop resource'), self.on_item_action),
+			('defaultrsc', "ha-default-resource", _('Default'), None,_('default'), self.on_item_action),
 			('node', None, _('Nodes')),
 			('standby', "ha-standby-node", _('Standby'), None,_('make the node standby'), self.on_standby),
 			('active', "ha-active-node", _('Active'), None,_('make the node active'), self.on_active)

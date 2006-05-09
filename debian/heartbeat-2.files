@@ -68,6 +68,7 @@ usr/lib/heartbeat/cts/LSBDummy
 usr/lib/heartbeat/cts/OCFIPraTest.py
 usr/lib/heartbeat/cts/OCFMSDummy
 usr/lib/heartbeat/cts/extracttests.py
+usr/lib/heartbeat/default-resource.png
 usr/lib/heartbeat/exit.png
 usr/lib/heartbeat/findif
 usr/lib/heartbeat/ha.png
