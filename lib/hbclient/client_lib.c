@@ -1,4 +1,4 @@
-/* $Id: client_lib.c,v 1.39 2006/04/24 00:01:21 alan Exp $ */
+/* $Id: client_lib.c,v 1.40 2006/05/10 19:14:49 lars Exp $ */
 /* 
  * client_lib: heartbeat API client side code
  *
@@ -2186,30 +2186,36 @@ CallbackCall(llc_private_t* p, struct ha_msg * msg)
 	if ((strcasecmp(mtype, T_STATUS) == 0
 	||	strcasecmp(mtype, T_NS_STATUS) == 0)) {
 		/* If DEADSTATUS, cleanup order queue for the node */
-		if (strcmp(ha_msg_value(msg, F_STATUS), DEADSTATUS) == 0) {
+		const char *mstatus = ha_msg_value(msg, F_STATUS);
+		if (mstatus && (strcmp(mstatus, DEADSTATUS) == 0)) {
 			order_queue_t *	oq = p->order_queue_head;
 			order_queue_t *	prev;
 			order_queue_t *	next;
 			int		i;
 
 			for (prev = NULL; oq != NULL; prev = oq, oq = oq->next){
-				if (strcmp(oq->from_node
-				,	ha_msg_value(msg, F_ORIG)) == 0)
+				const char *morig = ha_msg_value(msg, F_ORIG);
+				if (morig && (strcmp(oq->from_node,  morig) 
+							== 0)) {
 					break;
+				}
 			}
 			if (oq){
 				next = oq->next;
 				for (i = 0; i < MAXMSGHIST; i++){
-					if (oq->node.orderQ[i])
+					if (oq->node.orderQ[i]) {
 						ZAPMSG(oq->node.orderQ[i]);
-					if (oq->cluster.orderQ[i])
+					}
+					if (oq->cluster.orderQ[i]) {
 						ZAPMSG(oq->cluster.orderQ[i]);
+					}
 				}
 				ha_free(oq);
-				if (prev)
+				if (prev) {
 					prev->next = next;
-				else
+				} else {
 					p->order_queue_head = next;
+				}
 			}
 		}
 		if (p->node_callback) {
