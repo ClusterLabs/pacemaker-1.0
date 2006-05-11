@@ -978,7 +978,6 @@ class AddNativeDlg :
 	def on_type_changed(self, widget, glade) :
 		cur_class = glade.get_widget("class").child.get_text()
 		cur_type = glade.get_widget("type").child.get_text()
-		
 		provider_list = manager.get_rsc_providers(cur_class,cur_type)
 		store = gtk.ListStore(str)
 		for i in provider_list:
@@ -1792,7 +1791,8 @@ class Manager :
 			return None
 		meta_data = ""
 		for line in lines :
-			meta_data = meta_data + line + "\n"
+			if len(line)!= 0 :
+				meta_data = meta_data + line + "\n"
 		try :
 			doc_xml = parseString(meta_data).documentElement
 		except xml.parsers.expat.ExpatError:
@@ -1846,7 +1846,10 @@ class Manager :
 		return self.query("rsc_types\n"+rsc_class)
 	
 	def get_rsc_providers(self, rsc_class, rsc_type) :
-		return self.query("rsc_providers\n%s\n%s"%(rsc_class, rsc_type))
+		provider = self.query("rsc_providers\n%s\n%s"%(rsc_class, rsc_type))
+		if provider == [] :
+			return [""]
+		return provider
 
 	def rsc_exists(self, rsc_id) :
 		return rsc_id in self.get_all_rsc_id()
