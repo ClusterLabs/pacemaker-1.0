@@ -1,4 +1,4 @@
-/* $Id: heartbeat.c,v 1.507 2006/05/11 07:41:01 lars Exp $ */
+/* $Id: heartbeat.c,v 1.508 2006/05/11 07:52:41 lars Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -1486,16 +1486,12 @@ master_control_process(void)
 	,	hb_send_local_status, NULL, NULL);
 	G_main_setall_id(id, "send local status", 10+config->heartbeat_ms/2, 50);
 
-	if (DoManageResources == TRUE) {
-		id=Gmain_timeout_add_full(PRI_AUDITCLIENT
-		,	config->initial_deadtime_ms
-		,	set_init_deadtime_passed_flag
-		,	NULL
-		,	NULL);
-		G_main_setall_id(id, "init deadtime passed", config->warntime_ms, 50);
-	} else {
-		set_init_deadtime_passed_flag(NULL);
-	}
+	id=Gmain_timeout_add_full(PRI_AUDITCLIENT
+	,	config->initial_deadtime_ms
+	,	set_init_deadtime_passed_flag
+	,	NULL
+	,	NULL);
+	G_main_setall_id(id, "init deadtime passed", config->warntime_ms, 50);
 
 	/* Dump out memory stats periodically... */
 	memstatsinterval = (debug_level ? 10*60*1000 : ONEDAY*1000);
@@ -6286,6 +6282,9 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.508  2006/05/11 07:52:41  lars
+ * Reverting hunk which was NOT supposed to go into CVS.
+ *
  * Revision 1.507  2006/05/11 07:41:01  lars
  * Coverity #42: Static buffer overrun in our re-transit code!
  *
