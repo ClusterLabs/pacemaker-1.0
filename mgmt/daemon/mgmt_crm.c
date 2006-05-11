@@ -101,6 +101,7 @@ static char* failed_msg(crm_data_t* output, int rc);
 static const char* uname2id(const char* node);
 static resource_t* get_parent(resource_t* child);
 static int get_fix(const char* rsc_id, char* prefix, char* suffix);
+static const char* get_rsc_tag(resource_t* rsc);
 
 pe_working_set_t* cib_cached = NULL;
 int cib_cache_enable = FALSE;
@@ -253,7 +254,24 @@ get_parent(resource_t* child)
 	free_data_set(data_set);
 	return NULL;
 }
-
+static const char* 
+get_rsc_tag(resource_t* rsc)
+{
+	switch (rsc->variant) {
+		case pe_native:
+			return "primitive";
+		case pe_group:
+			return "group";
+		case pe_clone:
+			return "clone";
+		case pe_master:
+			return "master_slave";
+		case pe_unknown:
+		default:
+			return "unknown";
+	}
+	
+}
 static int
 get_fix(const char* rsc_id, char* prefix, char* suffix)
 {
@@ -262,17 +280,20 @@ get_fix(const char* rsc_id, char* prefix, char* suffix)
 	pe_working_set_t* data_set;
 	char* colon;
 	char real_id[MAX_STRLEN];
-	char parent_type[MAX_STRLEN];
+	char parent_tag[MAX_STRLEN];
+	char rsc_tag[MAX_STRLEN];
 		
 	data_set = get_data_set();
 	rsc = pe_find_resource(data_set->resources, rsc_id);	
 	if (rsc == NULL) {
 		return -1;
 	}
+	strncpy(rsc_tag, get_rsc_tag(rsc), MAX_STRLEN);
+	
 	parent = get_parent(rsc);
 	if (parent == NULL) {
-		snprintf(prefix, MAX_STRLEN,"<primitive id=\"%s\">", rsc_id);
-		snprintf(suffix, MAX_STRLEN,"</primitive>");
+		snprintf(prefix, MAX_STRLEN,"<%s id=\"%s\">",rsc_tag, rsc_id);
+		snprintf(suffix, MAX_STRLEN,"</%s>", rsc_tag);
 	}
 	else {
 		strncpy(real_id, rsc_id, MAX_STRLEN);
@@ -280,25 +301,11 @@ get_fix(const char* rsc_id, char* prefix, char* suffix)
 		if (colon != NULL) {
 			*colon = '\0';
 		}
-		switch (parent->variant) {
-			case pe_group:
-				strncpy(parent_type, "group", MAX_STRLEN);
-				break;
-			case pe_clone:
-				strncpy(parent_type, "clone", MAX_STRLEN);
-				break;
-			case pe_master:
-				strncpy(parent_type, "master_slave", MAX_STRLEN);
-				break;
-			case pe_unknown:
-			case pe_native:
-				free_data_set(data_set);
-				return -1;
-		}
+		strncpy(parent_tag, get_rsc_tag(parent), MAX_STRLEN);
 		
-		snprintf(prefix, MAX_STRLEN,"<%s id=\"%s\"><primitive id=\"%s\">"
-		, 	parent_type,parent->id,real_id);
-		snprintf(suffix, MAX_STRLEN,"</primitive></%s>",parent_type);
+		snprintf(prefix, MAX_STRLEN,"<%s id=\"%s\"><%s id=\"%s\">"
+		, 	parent_tag, parent->id, rsc_tag, real_id);
+		snprintf(suffix, MAX_STRLEN,"</%s></%s>",rsc_tag, parent_tag);
 	}
 	free_data_set(data_set);
 	return 0;
@@ -881,14 +888,23 @@ on_add_rsc(char* argv[], int argc)
 char*
 on_add_grp(char* argv[], int argc)
 {
-	int rc;
+	int rc, i;
 	crm_data_t* fragment = NULL;
 	crm_data_t* cib_object = NULL;
 	crm_data_t* output;
 	char xml[MAX_STRLEN];
+	char buf[MAX_STRLEN];
 	
-	ARGC_CHECK(2);
-	snprintf(xml, MAX_STRLEN,"<group id=\"%s\"/>", argv[1]);
+	snprintf(xml, MAX_STRLEN,"<group id=\"%s\">", argv[1]);
+	strncat(xml,"<instance_attributes> <attributes>", MAX_STRLEN);
+	for (i = 2; i < argc; i += 3) {
+		snprintf(buf, MAX_STRLEN,
+			 "<nvpair id=\"%s\" name=\"%s\" value=\"%s\"/>",
+			 argv[i], argv[i+1],argv[i+2]);
+		strncat(xml, buf, MAX_STRLEN);
+	}
+	strncat(xml,"</attributes></instance_attributes> ", MAX_STRLEN);
+	strncat(xml,"</group>",MAX_STRLEN);
 	cib_object = string2xml(xml);
 	if(cib_object == NULL) {
 		return cl_strdup(MSG_FAIL);

@@ -355,6 +355,10 @@ description:
 	add a new group
 format:
 	MSG_ADD_GRP group
+		param_id1 param_name1 param_value1
+		param_id2 param_name2 param_value2
+		...
+		param_idn param_namen param_valuen
 return:
 	MSG_OK
 or
