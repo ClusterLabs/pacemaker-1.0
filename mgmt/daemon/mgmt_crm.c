@@ -61,6 +61,7 @@ static char* on_get_running_rsc(char* argv[], int argc);
 static char* on_del_rsc(char* argv[], int argc);
 static char* on_cleanup_rsc(char* argv[], int argc);
 static char* on_add_rsc(char* argv[], int argc);
+static char* on_move_rsc(char* argv[], int argc);
 static char* on_add_grp(char* argv[], int argc);
 
 static char* on_update_clone(char* argv[], int argc);
@@ -102,15 +103,14 @@ static const char* uname2id(const char* node);
 static resource_t* get_parent(resource_t* child);
 static int get_fix(const char* rsc_id, char* prefix, char* suffix);
 static const char* get_rsc_tag(resource_t* rsc);
+static int cl_msg_swap_offset(struct ha_msg* msg, int offset1, int offset2);
 
 pe_working_set_t* cib_cached = NULL;
 int cib_cache_enable = FALSE;
 
-#define GET_RESOURCE()	if (argc != 2) {				\
-		return cl_strdup(MSG_FAIL"\nwrong parameter number");	\
-	}								\
-	rsc = pe_find_resource(data_set->resources, argv[1]);		\
+#define GET_RESOURCE()	rsc = pe_find_resource(data_set->resources, argv[1]);	\
 	if (rsc == NULL) {						\
+		free_data_set(data_set);				\
 		return cl_strdup(MSG_FAIL"\nno such resource");		\
 	}
 
@@ -358,6 +358,7 @@ init_crm(int cache_cib)
 	reg_msg(MSG_DEL_RSC, on_del_rsc);
 	reg_msg(MSG_CLEANUP_RSC, on_cleanup_rsc);
 	reg_msg(MSG_ADD_RSC, on_add_rsc);
+	reg_msg(MSG_MOVE_RSC, on_move_rsc);
 	reg_msg(MSG_ADD_GRP, on_add_grp);
 	
 	reg_msg(MSG_ALL_RSC, on_get_all_rsc);
@@ -869,6 +870,106 @@ on_add_rsc(char* argv[], int argc)
 	return cl_strdup(MSG_OK);
 
 }
+
+int
+cl_msg_swap_offset(struct ha_msg* msg, int offset1, int offset2)
+{
+	char* name;
+	int nlen;
+	void* value;
+	int vlen;
+	int type;
+	
+	name = msg->names[offset1];
+	nlen = msg->nlens[offset1];
+	value = msg->values[offset1];
+	vlen = msg->vlens[offset1];
+	type = msg->types[offset1];
+		
+	msg->names[offset1] = msg->names[offset2];
+	msg->nlens[offset1] = msg->nlens[offset2];
+	msg->values[offset1] = msg->values[offset2];
+	msg->vlens[offset1] = msg->vlens[offset2];
+	msg->types[offset1] = msg->types[offset2];
+		
+	msg->names[offset2] = name;
+	msg->nlens[offset2] = nlen;
+	msg->values[offset2] = value;
+	msg->vlens[offset2] = vlen;
+	msg->types[offset2] = type;
+	
+	return HA_OK;
+}
+
+char*
+on_move_rsc(char* argv[], int argc)
+{
+	int i, rc, pos = -1;
+	int first_child = -1;
+	int last_child = -1;
+	const char* child_id;
+	struct ha_msg* child;
+	resource_t* rsc;
+	resource_t* parent;
+	pe_working_set_t* data_set;
+	crm_data_t* output = NULL;
+	
+	data_set = get_data_set();
+	GET_RESOURCE()
+	parent = get_parent(rsc);
+	if (parent == NULL || parent->variant != pe_group) {
+		free_data_set(data_set);
+		return cl_strdup(MSG_FAIL);
+	}
+	for (i=0; i < parent->xml->nfields ; i++){
+		if (STRNCMP_CONST(parent->xml->names[i], "primitive")!=0) {
+			continue;
+		}
+		child = (struct ha_msg*)parent->xml->values[i];
+		if (first_child == -1) {
+			first_child = i;
+		}
+		last_child = i;
+		child_id = ha_msg_value(child,"id");
+		if (strcmp(child_id, argv[1]) == 0) {
+			mgmt_log(LOG_INFO,"find %s !",child_id);
+			pos = i;
+		}
+	}	
+	if (STRNCMP_CONST(argv[2],"up")==0) {
+		if (pos-1<first_child) {
+			free_data_set(data_set);
+			return cl_strdup(MSG_FAIL);
+		}
+		cl_msg_swap_offset(parent->xml, pos-1, pos);
+	}
+	if (STRNCMP_CONST(argv[2],"down")==0) {
+	{
+		if (pos+1>last_child) {
+			free_data_set(data_set);
+			return cl_strdup(MSG_FAIL);
+		}
+		cl_msg_swap_offset(parent->xml, pos, pos+1);
+	}
+	else {
+		free_data_set(data_set);
+		return cl_strdup(MSG_FAIL);
+	}
+	mgmt_log(LOG_INFO, "xml:%s",dump_xml_formatted(parent->xml));
+	free_data_set(data_set);
+	
+	rc = cib_conn->cmds->variant_op(
+			cib_conn, CIB_OP_REPLACE, NULL,"resources",
+			parent->xml, &output, cib_sync_call);
+	
+	if (rc < 0) {
+		return failed_msg(output, rc);
+	}
+	free_xml(output);
+	
+	return cl_strdup(MSG_OK);
+}
+
 char*
 on_add_grp(char* argv[], int argc)
 {

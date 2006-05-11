@@ -393,6 +393,18 @@ or
 
 /*
 description:
+	move a resource in group
+format:
+	MSG_MOVE_RSC resource up|down
+return:
+	MSG_OK
+or
+	MSG_FAIL
+*/
+#define MSG_MOVE_RSC		"move_rsc"
+
+/*
+description:
 	return the params of a given resource
 format:
 	MSG_RSC_PARAMS resource
