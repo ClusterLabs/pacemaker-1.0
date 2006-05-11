@@ -1218,6 +1218,15 @@ class MainWindow :
 		self.set_action_sensitive('defaultrsc',
 			manager.connected
 			and self.cur_type in [_("native"),_("group")])
+
+		self.set_action_sensitive('uprsc',
+			manager.connected
+			and self.cur_type in [_("native")])
+
+		self.set_action_sensitive('downrsc',
+			manager.connected
+			and self.cur_type in [_("native")])
+
 	# functions
 	def update(self) :
 		self.tree.update()
@@ -1367,6 +1376,12 @@ class MainWindow :
 				return
 		manager.do_cmd("set_target_role\n%s\n%s"%(self.cur_name,target_role))
 	
+	def on_item_move(self, action) :
+		if action.get_name() == "uprsc" :
+			manager.do_cmd("move_rsc\n%s\nup"%self.cur_name)
+		elif action.get_name() == "downrsc" :
+			manager.do_cmd("move_rsc\n%s\ndown"%self.cur_name)
+
 	# constructor	
 	def __init__(self) :
 		# create window
@@ -1388,6 +1403,8 @@ class MainWindow :
 		icons.add("ha-start-resource",gtk.IconSet(gtk.gdk.pixbuf_new_from_file("@libdir@/heartbeat/start-resource.png")))
 		icons.add("ha-stop-resource",gtk.IconSet(gtk.gdk.pixbuf_new_from_file("@libdir@/heartbeat/stop-resource.png")))
 		icons.add("ha-default-resource",gtk.IconSet(gtk.gdk.pixbuf_new_from_file("@libdir@/heartbeat/default-resource.png")))
+		icons.add("ha-up-resource",gtk.IconSet(gtk.gdk.pixbuf_new_from_file("@libdir@/heartbeat/up-resource.png")))
+		icons.add("ha-down-resource",gtk.IconSet(gtk.gdk.pixbuf_new_from_file("@libdir@/heartbeat/down-resource.png")))
 		icons.add("ha-master-resource",gtk.IconSet(gtk.gdk.pixbuf_new_from_file("@libdir@/heartbeat/master-resource.png")))
 		icons.add("ha-slave-resource",gtk.IconSet(gtk.gdk.pixbuf_new_from_file("@libdir@/heartbeat/slave-resource.png")))
 		icons.add_default()
@@ -1407,6 +1424,8 @@ class MainWindow :
 					<menuitem action="startrsc"/>
 					<menuitem action="stoprsc"/>
 					<menuitem action="defaultrsc"/>
+					<menuitem action="uprsc"/>
+					<menuitem action="downrsc"/>
 				</menu>
 				<menu action="node">
 					<menuitem action="standby"/>
@@ -1422,6 +1441,8 @@ class MainWindow :
 				<toolitem action="startrsc"/>
 				<toolitem action="stoprsc"/>
 				<toolitem action="defaultrsc"/>
+				<toolitem action="uprsc"/>
+				<toolitem action="downrsc"/>
 				<separator/>
 				<toolitem action="standby"/>
 				<toolitem action="active"/>
@@ -1442,6 +1463,8 @@ class MainWindow :
 			('startrsc', "ha-start-resource", _('Start'), None,_('start resource'), self.on_item_action),
 			('stoprsc', "ha-stop-resource", _('Stop'), None,_('stop resource'), self.on_item_action),
 			('defaultrsc', "ha-default-resource", _('Default'), None,_('start resource automatically'), self.on_item_action),
+			('uprsc', "ha-up-resource", _('Move Up'), None,_('move the resource up in the group'), self.on_item_move),
+			('downrsc', "ha-down-resource", _('Move Down'), None,_('move the resource down in the group'), self.on_item_move),
 			('node', None, _('Nodes')),
 			('standby', "ha-standby-node", _('Standby'), None,_('make the node standby'), self.on_standby),
 			('active', "ha-active-node", _('Active'), None,_('make the node active'), self.on_active)
