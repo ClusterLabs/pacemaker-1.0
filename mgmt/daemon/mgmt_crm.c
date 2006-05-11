@@ -1298,6 +1298,16 @@ on_set_target_role(char* argv[], int argc)
 	char prefix[MAX_STRLEN];
 	char suffix[MAX_STRLEN];
 	
+	if (STRNCMP_CONST(argv[2],"default") == 0 ||
+		STRNCMP_CONST(argv[2],"Default") == 0) {
+		snprintf(buf, MAX_STRLEN,"%s_target_role", argv[1]);
+		rc = delete_object("resources", "nvpair", buf, &output);
+		if (rc < 0) {
+			return failed_msg(output, rc);
+		}
+		return cl_strdup(MSG_OK);
+	}
+		
 	if(get_fix(argv[1], prefix, suffix) == -1) {
 		return cl_strdup(MSG_FAIL);
 	}
