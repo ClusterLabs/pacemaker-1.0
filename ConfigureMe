@@ -95,19 +95,6 @@ ConfigureLinux() {
   fi
   CFENV="$distro"
   FLAGS="--prefix=/usr --sysconfdir=/etc --localstatedir=/var $DFLAGS"
-  case `uname -m` in
-    x86_64)
-		# Hmmm... Let's check for building from chrooted 32-bit environment...
-		case `file /bin/uname` in
-		  *Intel*80?86*)	;;
-		  *)	FLAGS="$FLAGS --libexecdir=/usr/lib64 --libdir=/usr/lib64";;
-		esac
-		;;
-# FIXME. I don't think it's a general fixing.
-    s390*)
-                FLAGS="$FLAGS --libexecdir=/usr/lib64 --libdir=/usr/lib64";;
-   *)		;;
-  esac
 }
 
 ConfigureAIX() {
@@ -289,7 +276,7 @@ case $cmd in
   cf|conf|configure)		
   	do_configure $FLAGS $@
 	;;
-  bootstrap)		
+  boot|bootstrap)		
   	rm -f ${pathtotop}/configure
   	do_configure $FLAGS $@
 	;;
