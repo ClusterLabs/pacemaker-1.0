@@ -943,7 +943,7 @@ on_move_rsc(char* argv[], int argc)
 		}
 		cl_msg_swap_offset(parent->xml, pos-1, pos);
 	}
-	if (STRNCMP_CONST(argv[2],"down")==0) {
+	else if (STRNCMP_CONST(argv[2],"down")==0) {
 		if (pos+1>last_child) {
 			free_data_set(data_set);
 			return cl_strdup(MSG_FAIL);
