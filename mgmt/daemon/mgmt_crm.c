@@ -192,8 +192,19 @@ failed_msg(crm_data_t* output, int rc)
 {
 	const char* reason = NULL;
 	crm_data_t* failed_tag;
-	char* ret = cl_strdup(MSG_FAIL);
+	char* ret;
 	
+	/* beekhof:
+		you can pretend that the return code is success, 
+		its an internal CIB thing*/
+	if (rc == cib_diff_resync) {
+		if (output != NULL) {
+			free_xml(output);
+		}
+		return cl_strdup(MSG_OK);
+	}
+	
+	ret = cl_strdup(MSG_FAIL);
 	ret = mgmt_msg_append(ret, cib_error2string(rc));
 	
 	if (output == NULL) {
