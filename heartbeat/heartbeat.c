@@ -1,4 +1,4 @@
-/* $Id: heartbeat.c,v 1.506 2006/04/26 03:42:07 alan Exp $ */
+/* $Id: heartbeat.c,v 1.507 2006/05/11 07:41:01 lars Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -1486,12 +1486,16 @@ master_control_process(void)
 	,	hb_send_local_status, NULL, NULL);
 	G_main_setall_id(id, "send local status", 10+config->heartbeat_ms/2, 50);
 
-	id=Gmain_timeout_add_full(PRI_AUDITCLIENT
-	,	config->initial_deadtime_ms
-	,	set_init_deadtime_passed_flag
-	,	NULL
-	,	NULL);
-	G_main_setall_id(id, "init deadtime passed", config->warntime_ms, 50);
+	if (DoManageResources == TRUE) {
+		id=Gmain_timeout_add_full(PRI_AUDITCLIENT
+		,	config->initial_deadtime_ms
+		,	set_init_deadtime_passed_flag
+		,	NULL
+		,	NULL);
+		G_main_setall_id(id, "init deadtime passed", config->warntime_ms, 50);
+	} else {
+		set_init_deadtime_passed_flag(NULL);
+	}
 
 	/* Dump out memory stats periodically... */
 	memstatsinterval = (debug_level ? 10*60*1000 : ONEDAY*1000);
@@ -5976,7 +5980,7 @@ process_rexmit(struct msg_xmit_hist * hist, struct ha_msg* msg)
 			size_t		len;
 
 			if (msgslot < 0) {
-				msgslot = MAXMSGHIST;
+				msgslot = MAXMSGHIST-1;
 			}
 			if (hist->msgq[msgslot] == NULL) {
 				continue;
@@ -6282,6 +6286,9 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.507  2006/05/11 07:41:01  lars
+ * Coverity #42: Static buffer overrun in our re-transit code!
+ *
  * Revision 1.506  2006/04/26 03:42:07  alan
  * Committed a patch from gshi which should GREATLY improve the
  * behavior of autojoin code.
