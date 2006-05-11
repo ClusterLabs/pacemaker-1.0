@@ -659,23 +659,7 @@ on_del_rsc(char* argv[], int argc)
 	data_set = get_data_set();
 	GET_RESOURCE()
 
-	switch (rsc->variant) {
-		case pe_native:
-			snprintf(xml, MAX_STRLEN, "<primitive id=\"%s\"/>", rsc->id);
-			break;
-		case pe_group:
-			snprintf(xml, MAX_STRLEN, "<group id=\"%s\"/>", rsc->id);
-			break;
-		case pe_clone:
-			snprintf(xml, MAX_STRLEN, "<clone id=\"%s\"/>", rsc->id);
-			break;
-		case pe_master:
-			snprintf(xml, MAX_STRLEN, "<master_slave id=\"%s\"/>", rsc->id);
-			break;
-		default:
-			free_data_set(data_set);
-			return cl_strdup(MSG_FAIL);
-	}
+	snprintf(xml, MAX_STRLEN, "<%s id=\"%s\"/>",get_rsc_tag(rsc), rsc->id);
 	free_data_set(data_set);
 
 	cib_object = string2xml(xml);
