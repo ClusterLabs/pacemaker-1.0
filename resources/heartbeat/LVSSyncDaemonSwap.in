@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-#        $Id: LVSSyncDaemonSwap.in,v 1.6 2005/11/08 08:59:39 xunsun Exp $
+#        $Id: LVSSyncDaemonSwap.in,v 1.7 2006/05/11 01:04:34 horms Exp $
 #
 #        Copyright (C) 2005 Horms <horms@verge.net.au>
 #
@@ -67,12 +67,12 @@ status() {
     get_status $1
     RC=$?
 
-    pid=$(echo "$PS" | sed -e '% [ipvs[ _]syncmaster]$%!d' -e 's%^ *%%' -e 's% .*$%%')
+    pid=$(echo "$PS" | sed -e '/ \[ipvs[ _]syncmaster\]$/!d' -e 's/^ *//' -e 's/ .*$//')
     if [ ! -z "$pid" ]; then
         echo "(ipvs_syncmaster pid: $pid)"
     fi
 
-    pid=$(echo "$PS" | sed -e '% [ipvs[ _]syncbackup]$%!d' -e 's%^ *%%' -e 's% .*$%%')
+    pid=$(echo "$PS" | sed -e '/ \[ipvs[ _]syncbackup\]$/!d' -e 's/^ *//' -e 's/ .*$//')
     if [ ! -z "$pid" ]; then
         echo "(ipvs_syncbackup pid: $pid)"
     fi
