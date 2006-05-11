@@ -1088,9 +1088,7 @@ class AddNativeDlg :
 					passed = check_entry_value(glade, "clone_node_max")
 					passed = check_entry_value(glade, "master_max")
 					passed = check_entry_value(glade, "master_node_max")
-				rsc = {}
-				rsc["id"] = glade.get_widget("id").get_text()
-				if manager.rsc_exists(rsc["id"]) :
+				if manager.rsc_exists(glade.get_widget("id").get_text()) :
 					msgbox(_("the ID already exists"))
 					passed = False
 				
@@ -1123,6 +1121,47 @@ class AddNativeDlg :
 					return None
 		
 	
+class GrpView(View) :
+	name = "grpview"
+	param_list = None
+	params_save = None
+	
+	def on_apply(self, widget):
+		glade = self.glade
+		View.on_apply(self, widget)
+		new_params = self.param_list.get_data()
+		manager.update_attrs("up_rsc_params\n"+self.param,"del_rsc_param",
+				   self.params_save, new_params, ["id","name","value"]);
+		
+	def update(self) :
+		glade = self.glade
+		group_id = self.param
+		params = manager.get_rsc_params(group_id)
+		self.params_save = params
+		glade.get_widget("id").set_text(group_id)
+						
+		self.param_list.clear()
+		if params != [] :
+			for param in params:
+				self.param_list.insert(param)
+		
+		View.update(self)
+		
+	def __init__(self, grp) :
+		View.__init__(self, grp)
+		glade = self.glade
+			
+		self.param_list = ListWithAddDel(glade.get_widget("parameters"),
+					    glade.get_widget("addparam"),
+					    glade.get_widget("delparam"),
+					    _("Add Parameter"),
+					    [Field("id", _("ID"), "", None, False, auto_gen=True),
+			  		     Field("name", _("Name"), "", None, False),
+					     Field("value", _("Value"), "", None, True)],
+					    self.on_changed)
+				      
+		self.update()
+
 class MainWindow :
 	'''
 	Main UI window to show information to user and get user's input
@@ -1170,15 +1209,15 @@ class MainWindow :
 
 		self.set_action_sensitive('startrsc',
 			manager.connected
-			and self.cur_type in [_("native")])
+			and self.cur_type in [_("native"),_("group")])
 
 		self.set_action_sensitive('stoprsc',
 			manager.connected
-			and self.cur_type in [_("native")])
+			and self.cur_type in [_("native"),_("group")])
 
 		self.set_action_sensitive('defaultrsc',
 			manager.connected
-			and self.cur_type in [_("native")])
+			and self.cur_type in [_("native"),_("group")])
 	# functions
 	def update(self) :
 		self.tree.update()
@@ -1207,6 +1246,8 @@ class MainWindow :
 			self.cur_view = CloneView(name)
 		elif type == _("master") :
 			self.cur_view = MasterView(name)
+		elif type == _("group") :
+			self.cur_view = GrpView(name)
 		else :
 			self.cur_view = View()
 		self.view_widget.add(self.cur_view.widget)
@@ -1263,16 +1304,12 @@ class MainWindow :
 	def on_add_item(self, action) :
 		new_type = kvbox(_("The type of new item"),
 				[Field("type",_("Item Type"),_("native"),
-				[_("native"), _("group"), _("place"),_("order"), _("colocation")])])
+				[_("native"), _("place"),_("order"), _("colocation")])])
 		if new_type == None :
 			return
 		if new_type["type"] == _("native"):
 			dlg = AddNativeDlg()
 			dlg.run()
-		elif new_type["type"] == _("group") :
-			group = kvbox(_("Add Resource Group"),[Field("id",_("ID"),"group_")])
-			if group != None :
-				manager.add_group(group)
 		elif new_type["type"] == _("place") :
 			place = kvbox(_("Add Place Constraint"),
 				[Field("id",_("ID"),"place_",None, False),
@@ -1651,7 +1688,13 @@ class Manager :
 		if self.rsc_exists(group["id"]):
 			msgbox (_("the ID already exists"))
 			return
-		self.do_cmd("add_grp\n"+group["id"])
+		cmd = "add_grp\n"+group["id"]
+		for param in group["params"] :
+			cmd += "\n"+param["id"]
+			cmd += "\n"+param["name"]
+			cmd += "\n"+param["value"]
+
+		self.do_cmd(cmd)
 		if self.failed_reason != "" :
 			msgbox(self.failed_reason)
 		
@@ -1714,6 +1757,11 @@ class Manager :
 
 		return (attrs, running_on, params, ops)
 
+	def get_rsc_params(self, rsc) :
+		param_attr_names = ["id", "name", "value"]
+		raw_params = self.query("rsc_params\n%s"%rsc)
+		return self.split_attr_list(raw_params, param_attr_names)
+	
 	def get_rsc_meta(self, rsc_class, rsc_type, rsc_provider) :
 		lines = self.query("rsc_metadata\n%s\n%s\n%s"%(rsc_class, rsc_type, rsc_provider))
 		if lines == None :
