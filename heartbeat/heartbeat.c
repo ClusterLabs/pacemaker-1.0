@@ -1,4 +1,4 @@
-/* $Id: heartbeat.c,v 1.508 2006/05/11 07:52:41 lars Exp $ */
+/* $Id: heartbeat.c,v 1.509 2006/05/11 17:45:35 alan Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -5911,9 +5911,15 @@ process_rexmit(struct msg_xmit_hist * hist, struct ha_msg* msg)
 	struct node_info* fromnode = NULL;
 
 	if (fromnodename == NULL){
-		cl_log(LOG_ERR, "process_rexmit: "
-		       "from node not found in the message");
+		cl_log(LOG_ERR, "process_rexmit"
+		": from node not found in the message");
 		return;		
+	}
+	if (firstslot >= MAXMSGHIST) {
+		cl_log(LOG_ERR, "process_rexmit"
+		": firstslot out of range [%d]"
+		,	firstslot);
+		hist->lastmsg = firstslot = MAXMSGHIST-1;
 	}
 	
 	fromnode = lookup_tables(fromnodename, NULL);
@@ -5976,6 +5982,11 @@ process_rexmit(struct msg_xmit_hist * hist, struct ha_msg* msg)
 			size_t		len;
 
 			if (msgslot < 0) {
+				/* Time to wrap around */
+				if (firstslot == MAXMSGHIST-1) { 
+				  /* We're back where we started */
+					break;
+				}
 				msgslot = MAXMSGHIST-1;
 			}
 			if (hist->msgq[msgslot] == NULL) {
@@ -6282,6 +6293,9 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.509  2006/05/11 17:45:35  alan
+ * Modified a recent patch to a Coverity problem, to eliminate a possible infinite loop
+ *
  * Revision 1.508  2006/05/11 07:52:41  lars
  * Reverting hunk which was NOT supposed to go into CVS.
  *
