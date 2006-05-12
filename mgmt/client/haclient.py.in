@@ -612,6 +612,7 @@ class ClusterView(View) :
 		new_crm_config["stonith_enabled"] = str(glade.get_widget("stonith_enabled").get_active())
 		new_crm_config["no_quorum_policy"] = glade.get_widget("no_quorum_policy").child.get_text()
 		new_crm_config["default_resource_stickiness"] = glade.get_widget("default_resource_stickiness").child.get_text()
+		new_crm_config["default_resource_failure_stickiness"] = glade.get_widget("default_resource_failure_stickiness").child.get_text()
 		manager.update_crm_config(new_crm_config)
 		
 		View.on_apply(self, widget)
@@ -634,7 +635,7 @@ class ClusterView(View) :
 			glade.get_widget("no_quorum_policy").child.set_text(config["no_quorum_policy"])
 			glade.get_widget("no_quorum_policy").child.set_editable(False)
 			glade.get_widget("default_resource_stickiness").child.set_text(config["default_resource_stickiness"])
-			glade.get_widget("default_resource_stickiness").child.set_editable(False)
+			glade.get_widget("default_resource_failure_stickiness").child.set_text(config["default_resource_failure_stickiness"])
 
 		View.update(self)
 	
@@ -651,6 +652,7 @@ class ClusterView(View) :
 		make_label_active(self.glade.get_widget("l_noquorum"),_("No Quorum Policy:"),"www.linux-ha.org")
 		make_label_active(self.glade.get_widget("l_symmetric"),_("Symmetric Cluster"),"www.linux-ha.org")
 		make_label_active(self.glade.get_widget("l_stonith_enabled"),_("Stonith Enabled"),"www.linux-ha.org")
+		make_label_active(self.glade.get_widget("l_rscfailstickiness"),_("Resource Failure Stickiness:"),"www.linux-ha.org")
 							
 	def __init__(self) :
 		View.__init__(self)
@@ -661,6 +663,7 @@ class ClusterView(View) :
 		glade.get_widget("stonith_enabled").connect("toggled", self.on_changed)
 		glade.get_widget("no_quorum_policy").connect("changed", self.on_changed)
 		glade.get_widget("default_resource_stickiness").connect("changed", self.on_changed)
+		glade.get_widget("default_resource_failure_stickiness").connect("changed", self.on_changed)
 		self.update()
 		
 class OrderView(View) :
@@ -1655,7 +1658,8 @@ class Manager :
 				 "msgfmt","nice_failback","node","normalpoll",
 			 	"stonith","udpport","warntime","watchdog"]
 		crm_attr_names = ["transition_idle_timeout","symmetric_cluster","stonith_enabled",
-				  "no_quorum_policy","default_resource_stickiness", "have_quorum"]
+				  "no_quorum_policy","default_resource_stickiness", "have_quorum",
+				  "default_resource_failure_stickiness"]
 				  
 		values = manager.query("hb_config")
 		if values == None :

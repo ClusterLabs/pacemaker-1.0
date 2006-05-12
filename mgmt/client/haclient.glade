@@ -26,7 +26,7 @@
       <child>
 	<widget class="GtkTable" id="table">
 	  <property name="visible">True</property>
-	  <property name="n_rows">11</property>
+	  <property name="n_rows">12</property>
 	  <property name="n_columns">2</property>
 	  <property name="homogeneous">True</property>
 	  <property name="row_spacing">10</property>
@@ -746,6 +746,56 @@ freeze</property>
 	      <property name="bottom_attach">1</property>
 	      <property name="x_padding">10</property>
 	      <property name="y_options">expand</property>
+	    </packing>
+	  </child>
+
+	  <child>
+	    <widget class="GtkEventBox" id="eventbox35">
+	      <property name="visible">True</property>
+	      <property name="visible_window">True</property>
+	      <property name="above_child">False</property>
+
+	      <child>
+		<widget class="GtkLabel" id="l_rscfailstickiness">
+		  <property name="visible">True</property>
+		  <property name="label" translatable="yes">label103</property>
+		  <property name="use_underline">False</property>
+		  <property name="use_markup">False</property>
+		  <property name="justify">GTK_JUSTIFY_LEFT</property>
+		  <property name="wrap">False</property>
+		  <property name="selectable">False</property>
+		  <property name="xalign">1</property>
+		  <property name="yalign">0.5</property>
+		  <property name="xpad">0</property>
+		  <property name="ypad">0</property>
+		</widget>
+	      </child>
+	    </widget>
+	    <packing>
+	      <property name="left_attach">0</property>
+	      <property name="right_attach">1</property>
+	      <property name="top_attach">11</property>
+	      <property name="bottom_attach">12</property>
+	      <property name="x_padding">10</property>
+	      <property name="x_options">fill</property>
+	    </packing>
+	  </child>
+
+	  <child>
+	    <widget class="GtkComboBoxEntry" id="default_resource_failure_stickiness">
+	      <property name="visible">True</property>
+	      <property name="items" translatable="yes">INFINITY
+0
+-INFINITY</property>
+	    </widget>
+	    <packing>
+	      <property name="left_attach">1</property>
+	      <property name="right_attach">2</property>
+	      <property name="top_attach">11</property>
+	      <property name="bottom_attach">12</property>
+	      <property name="x_padding">10</property>
+	      <property name="x_options">fill</property>
+	      <property name="y_options"></property>
 	    </packing>
 	  </child>
 	</widget>

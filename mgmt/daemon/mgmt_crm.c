@@ -487,6 +487,9 @@ on_get_crm_config(char* argv[], int argc)
 	snprintf(buf, 255, "%d", data_set->default_resource_stickiness);
 	ret = mgmt_msg_append(ret, buf);
 	ret = mgmt_msg_append(ret, data_set->have_quorum?"True":"False");
+	snprintf(buf, 255, "%d", data_set->default_resource_fail_stickiness);
+	
+	ret = mgmt_msg_append(ret, buf);
 	free_data_set(data_set);
 	return ret;
 }
