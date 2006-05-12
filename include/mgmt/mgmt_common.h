@@ -101,7 +101,8 @@ format:
 return:
 	MSG_OK transition_idle_timeout symmetric_cluster(True|False)
  	  stonith_enabled(True|False) no_quorum_policy(freeze|stop|ignore)
- 	  default_resource_stickiness have_quorum(True|False)
+ 	  default_resource_stickiness have_quorum(True|False) 
+ 	  default_resource_failure_stickiness
 or
 	MSG_FAIL
 */
@@ -112,6 +113,7 @@ or
 #define F_MGMT_NO_QUORUM_POLICY			4
 #define F_MGMT_DEFAULT_RESOURCE_STICKINESS	5
 #define F_MGMT_HAVE_QUORUM			6
+#define F_MGMT_RESOURCE_FAILURE_STICKINESS	7
 
 
 /*
