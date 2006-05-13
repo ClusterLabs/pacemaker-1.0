@@ -784,7 +784,9 @@ freeze</property>
 	  <child>
 	    <widget class="GtkComboBoxEntry" id="default_resource_failure_stickiness">
 	      <property name="visible">True</property>
-	      <property name="items" translatable="yes">INFINITY</property>
+	      <property name="items" translatable="yes">INFINITY
+0
+-INFINITY</property>
 	    </widget>
 	    <packing>
 	      <property name="left_attach">1</property>
