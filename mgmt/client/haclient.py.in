@@ -928,13 +928,12 @@ class RscView(View) :
 		
 class AddNativeDlg :
 	param_list = None
+	type_list = None
 	glade = None
 	def update_param_list(self) :
 		if self.param_list :
 			self.param_list.destory()
-		cur_class = self.glade.get_widget("class").child.get_text()
-		cur_type = self.glade.get_widget("type").child.get_text()
-		cur_provider = self.glade.get_widget("provider").child.get_text()
+		(cur_class, cur_type, cur_provider) = self.get_cur_select()
 		meta = manager.get_rsc_meta(cur_class, cur_type, cur_provider)
 		param_names = None
 		param_descs = None
@@ -954,44 +953,12 @@ class AddNativeDlg :
 		param_list.insert({"id":uuid(),"name":"target_role",
 			"value":"stopped","shortdesc":"press \"Default\" or \"Start\" button in toolbar/menu to start the resource"})
 		self.param_list = param_list
-		glade.get_widget("desc").set_text("")
 		if meta != None :
 			for param in meta.parameters :
 				if param["required"] == "1" :
 					param["id"] = uuid()
 					self.param_list.insert(param)
-			glade.get_widget("desc").set_text(meta.desc)
 			
-	def on_provider_changed(self, widget, glade) :
-		self.update_param_list()
-		
-	def on_class_changed(self, widget, glade) :
-		cur_class = glade.get_widget("class").child.get_text()
-		type_list = manager.get_rsc_types(cur_class)
-		store = gtk.ListStore(str)
-		for i in type_list:
-			store.append([i])
-		glade.get_widget("type").set_model(store)
-		if glade.get_widget("type").get_text_column() != 0 :
-			glade.get_widget("type").set_text_column(0)
-		if type_list != None and type_list != [] :
-			glade.get_widget("type").child.set_text(type_list[0])
-		self.update_param_list()
-		
-	def on_type_changed(self, widget, glade) :
-		cur_class = glade.get_widget("class").child.get_text()
-		cur_type = glade.get_widget("type").child.get_text()
-		provider_list = manager.get_rsc_providers(cur_class,cur_type)
-		store = gtk.ListStore(str)
-		for i in provider_list:
-			store.append([i])
-		glade.get_widget("provider").set_model(store)
-		if glade.get_widget("provider").get_text_column() != 0 :
-			glade.get_widget("provider").set_text_column(0)
-		if provider_list != None and provider_list != [] :
-			glade.get_widget("provider").child.set_text(provider_list[0])
-		self.update_param_list()
-		
 	def on_clone_changed(self, widget, glade) :
 		
 		if glade.get_widget("is_clone").get_active() :
@@ -1022,6 +989,56 @@ class AddNativeDlg :
 			glade.get_widget("clone_node_max").set_property("sensitive", False)
 			glade.get_widget("master_max").set_property("sensitive", False)
 			glade.get_widget("master_node_max").set_property("sensitive", False)
+			
+	def get_cur_select(self) :
+		
+		(model, iter) = self.type_list.get_selection().get_selected()
+		if iter == None :
+			return (None, None, None)
+		cur_type = model.get_value(iter, 0)
+		cur_provider = model.get_value(iter, 1)
+		cur_class = "ocf"
+		if cur_provider == "(stonith)" :
+			cur_class = "stonith"
+			cur_provider = "heartbeat"
+		elif cur_provider == "(heartbeat)":
+			cur_class = "heartbeat"
+			cur_provider = "heartbeat"
+		elif cur_provider == "(lsb)":
+			cur_class = "lsb"
+			cur_provider = "heartbeat"
+		return (cur_class, cur_type, cur_provider)	
+		
+	def on_type_changed(self, type_list) :
+		self.update_param_list()
+	def init_type_list(self):
+		add_column(self.type_list, _("Name"), 0)
+		add_column(self.type_list, _("Provider"), 1)
+		add_column(self.type_list, _("Description"), 2)
+		for i in range(3) :
+			self.type_list.get_column(i).set_sort_column_id(i)
+		store = gtk.ListStore(str,str,str)
+		store.set_sort_column_id(0, gtk.SORT_ASCENDING)		
+		types = []		
+		class_list = manager.get_rsc_classes()
+		for c in class_list:
+			type_list = manager.get_rsc_types(c)
+			for t in type_list:
+				provider_list = manager.get_rsc_providers(c,t)
+				for p in provider_list :
+					desc = ""
+					meta = manager.get_rsc_meta(c,t,p)
+					if meta != None :
+						desc = meta.desc
+					if c=="heartbeat" :
+						p = "(heartbeat)"
+					elif c=="stonith" :
+						p = "(stonith)"
+					elif c=="lsb" :
+						p = "(lsb)"
+					store.append([t,p,desc])
+		self.type_list.set_model(store)
+		self.type_list.get_selection().select_path((0))
 		
 	def run(self):	
 		global top_window
@@ -1030,12 +1047,9 @@ class AddNativeDlg :
 		glade = gtk.glade.XML(UI_FILE, "addnativedlg", "haclient")
 		layout = glade.get_widget("addnativedlg")
 		dialog.vbox.add(layout)
-		glade.get_widget("class").child.set_editable(False)
-		glade.get_widget("type").child.set_editable(False)
-		glade.get_widget("provider").child.set_editable(False)
-		glade.get_widget("class").connect("changed", self.on_class_changed, glade)
-		glade.get_widget("type").connect("changed", self.on_type_changed, glade)
-		glade.get_widget("provider").connect("changed", self.on_provider_changed, glade)
+		self.type_list = glade.get_widget("types")
+		self.type_list.connect("cursor-changed", self.on_type_changed)
+		self.init_type_list()
 		
 		glade.get_widget("is_clone").connect("toggled", self.on_clone_changed, glade)
 		glade.get_widget("is_master").connect("toggled", self.on_master_changed, glade)
@@ -1047,20 +1061,7 @@ class AddNativeDlg :
 		glade.get_widget("master_node_max").set_property("sensitive", False)
 
 		self.glade = glade
-		class_list = manager.get_rsc_classes()
-		store = gtk.ListStore(str)
-		for i in class_list:
-			store.append([i])
-		glade.get_widget("class").set_model(store)
-		glade.get_widget("class").set_text_column(0)
-		if class_list != None and class_list != [] :
-			if "ocf" in class_list:
-				init_class = "ocf"
-			else :
-				init_class = class_list[0]
-		glade.get_widget("class").child.set_text(init_class)
-		self.on_class_changed(glade.get_widget("class"), glade)
-		self.on_type_changed(glade.get_widget("type"), glade)
+		
 		store = gtk.ListStore(str)
 		store.append([""])
 		for rsc in manager.get_all_rsc_id() :
@@ -1098,9 +1099,7 @@ class AddNativeDlg :
 				if passed :
 					rsc = {}
 					rsc["id"] = glade.get_widget("id").get_text()
-					rsc["class"] = glade.get_widget("class").child.get_text()
-					rsc["type"] = glade.get_widget("type").child.get_text()
-					rsc["provider"] = glade.get_widget("provider").child.get_text()
+					(rsc["class"],rsc["type"],rsc["provider"]) = self.get_cur_select()
 					rsc["group"] = glade.get_widget("group").child.get_text()
 					rsc["params"] = self.param_list.get_data()
 					for param in rsc["params"] :
@@ -1755,7 +1754,7 @@ class Manager :
 
 	def get_rsc_type(self, rsc_id) :
 		return self.query("rsc_type\n"+rsc_id)[0]
-
+	
 	def get_rsc_status(self, rsc_id) :
 		return self.query("rsc_status\n"+rsc_id)[0]
 
