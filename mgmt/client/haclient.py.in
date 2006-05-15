@@ -1851,7 +1851,7 @@ class Manager :
 	def get_rsc_providers(self, rsc_class, rsc_type) :
 		provider = self.query("rsc_providers\n%s\n%s"%(rsc_class, rsc_type))
 		if provider == [] :
-			return [""]
+			return ["heartbeat"]
 		return provider
 
 	def rsc_exists(self, rsc_id) :
