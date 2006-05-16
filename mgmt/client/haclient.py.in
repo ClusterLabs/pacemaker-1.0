@@ -1011,6 +1011,16 @@ class AddNativeDlg :
 		
 	def on_type_changed(self, type_list) :
 		self.update_param_list()
+	
+	def on_type_list_click(self, type_list, event) :
+		if event.type == gtk.gdk._2BUTTON_PRESS :
+			(cur_class, cur_type, cur_provider) = self.get_cur_select()
+			meta = manager.get_rsc_meta(cur_class, cur_type, cur_provider)
+			if meta != None :
+				msgbox (meta.longdesc)
+			
+
+	
 	def init_type_list(self):
 		add_column(self.type_list, _("Name"), 0)
 		add_column(self.type_list, _("Provider"), 1)
@@ -1029,7 +1039,7 @@ class AddNativeDlg :
 					desc = ""
 					meta = manager.get_rsc_meta(c,t,p)
 					if meta != None :
-						desc = meta.desc
+						desc = meta.shortdesc
 					if c=="heartbeat" :
 						p = "(heartbeat)"
 					elif c=="stonith" :
@@ -1049,6 +1059,7 @@ class AddNativeDlg :
 		dialog.vbox.add(layout)
 		self.type_list = glade.get_widget("types")
 		self.type_list.connect("cursor-changed", self.on_type_changed)
+		self.type_list.connect("event", self.on_type_list_click)
 		self.init_type_list()
 		
 		glade.get_widget("is_clone").connect("toggled", self.on_clone_changed, glade)
@@ -1808,10 +1819,15 @@ class Manager :
 		version_xml = doc_xml.getElementsByTagName("version")[0]
 		meta.version = version_xml.childNodes[0].data
 
-		meta.desc = ""
+		meta.longdesc = ""
 		desc_xml = doc_xml.getElementsByTagName("longdesc")
 		if desc_xml != [] and desc_xml[0] in doc_xml.childNodes :
-			meta.desc = desc_xml[0].childNodes[0].data
+			meta.longdesc = desc_xml[0].childNodes[0].data
+
+		meta.shortdesc = ""
+		desc_xml = doc_xml.getElementsByTagName("shortdesc")
+		if desc_xml != [] and desc_xml[0] in doc_xml.childNodes :
+			meta.shortdesc = desc_xml[0].childNodes[0].data
 		
 		meta.parameters = []
 		for param_xml in doc_xml.getElementsByTagName("parameter") :
