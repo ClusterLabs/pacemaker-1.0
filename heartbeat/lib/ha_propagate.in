@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!@PYTHON@
 #
 #   Support:      linux-ha-dev@lists.tummy.com
 #   License:      GNU General Public License (GPL)
