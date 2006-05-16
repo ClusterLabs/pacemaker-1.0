@@ -1369,7 +1369,7 @@ class MainWindow :
 		elif action.get_name() == "stoprsc" :
 			target_role = "stopped"
 		else :
-			target_role = "default"
+			target_role = "#default"
 				
 		(attrs, running_on, params, ops) = \
 			manager.get_rsc_info(self.cur_name)
