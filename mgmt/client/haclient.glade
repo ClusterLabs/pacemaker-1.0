@@ -1456,7 +1456,7 @@ freeze</property>
 		  <child>
 		    <widget class="GtkLabel" id="label58">
 		      <property name="visible">True</property>
-		      <property name="label" translatable="yes">ID:</property>
+		      <property name="label" translatable="yes">Resource ID:</property>
 		      <property name="use_underline">False</property>
 		      <property name="use_markup">False</property>
 		      <property name="justify">GTK_JUSTIFY_LEFT</property>
@@ -1738,7 +1738,7 @@ freeze</property>
 			  <property name="visible">True</property>
 			  <property name="can_default">True</property>
 			  <property name="can_focus">True</property>
-			  <property name="label" translatable="yes">Add</property>
+			  <property name="label" translatable="yes">Add Parameter</property>
 			  <property name="use_underline">True</property>
 			  <property name="relief">GTK_RELIEF_NORMAL</property>
 			  <property name="focus_on_click">True</property>
@@ -1750,7 +1750,7 @@ freeze</property>
 			  <property name="visible">True</property>
 			  <property name="can_default">True</property>
 			  <property name="can_focus">True</property>
-			  <property name="label" translatable="yes">Delete</property>
+			  <property name="label" translatable="yes">Delete Parameter</property>
 			  <property name="use_underline">True</property>
 			  <property name="relief">GTK_RELIEF_NORMAL</property>
 			  <property name="focus_on_click">True</property>
@@ -1857,7 +1857,7 @@ freeze</property>
 			  <property name="visible">True</property>
 			  <property name="can_default">True</property>
 			  <property name="can_focus">True</property>
-			  <property name="label" translatable="yes">Add</property>
+			  <property name="label" translatable="yes">Add Operation</property>
 			  <property name="use_underline">True</property>
 			  <property name="relief">GTK_RELIEF_NORMAL</property>
 			  <property name="focus_on_click">True</property>
@@ -1869,7 +1869,7 @@ freeze</property>
 			  <property name="visible">True</property>
 			  <property name="can_default">True</property>
 			  <property name="can_focus">True</property>
-			  <property name="label" translatable="yes">Delete</property>
+			  <property name="label" translatable="yes">Delete Operation</property>
 			  <property name="use_underline">True</property>
 			  <property name="relief">GTK_RELIEF_NORMAL</property>
 			  <property name="focus_on_click">True</property>
@@ -2007,7 +2007,7 @@ freeze</property>
 	  <child>
 	    <widget class="GtkLabel" id="label195">
 	      <property name="visible">True</property>
-	      <property name="label" translatable="yes">ID:</property>
+	      <property name="label" translatable="yes">Resource ID:</property>
 	      <property name="use_underline">False</property>
 	      <property name="use_markup">False</property>
 	      <property name="justify">GTK_JUSTIFY_LEFT</property>
@@ -2207,7 +2207,7 @@ freeze</property>
 			  <property name="visible">True</property>
 			  <property name="can_default">True</property>
 			  <property name="can_focus">True</property>
-			  <property name="label" translatable="yes">Add</property>
+			  <property name="label" translatable="yes">Add Parameter</property>
 			  <property name="use_underline">True</property>
 			  <property name="relief">GTK_RELIEF_NORMAL</property>
 			  <property name="focus_on_click">True</property>
@@ -2219,7 +2219,7 @@ freeze</property>
 			  <property name="visible">True</property>
 			  <property name="can_default">True</property>
 			  <property name="can_focus">True</property>
-			  <property name="label" translatable="yes">Delete</property>
+			  <property name="label" translatable="yes">Delete Parameter</property>
 			  <property name="use_underline">True</property>
 			  <property name="relief">GTK_RELIEF_NORMAL</property>
 			  <property name="focus_on_click">True</property>
@@ -2319,7 +2319,7 @@ freeze</property>
 		  <child>
 		    <widget class="GtkLabel" id="label159">
 		      <property name="visible">True</property>
-		      <property name="label" translatable="yes">ID:</property>
+		      <property name="label" translatable="yes">Advance ID:</property>
 		      <property name="use_underline">False</property>
 		      <property name="use_markup">False</property>
 		      <property name="justify">GTK_JUSTIFY_LEFT</property>
@@ -3174,7 +3174,7 @@ freeze</property>
 			  <property name="visible">True</property>
 			  <property name="can_default">True</property>
 			  <property name="can_focus">True</property>
-			  <property name="label" translatable="yes">Add</property>
+			  <property name="label" translatable="yes">Add Expression</property>
 			  <property name="use_underline">True</property>
 			  <property name="relief">GTK_RELIEF_NORMAL</property>
 			  <property name="focus_on_click">True</property>
@@ -3186,7 +3186,7 @@ freeze</property>
 			  <property name="visible">True</property>
 			  <property name="can_default">True</property>
 			  <property name="can_focus">True</property>
-			  <property name="label" translatable="yes">Delete</property>
+			  <property name="label" translatable="yes">Delete Expression</property>
 			  <property name="use_underline">True</property>
 			  <property name="relief">GTK_RELIEF_NORMAL</property>
 			  <property name="focus_on_click">True</property>
@@ -4568,7 +4568,7 @@ after</property>
 			  <property name="visible">True</property>
 			  <property name="can_default">True</property>
 			  <property name="can_focus">True</property>
-			  <property name="label" translatable="yes">Add</property>
+			  <property name="label" translatable="yes">Add Parameter</property>
 			  <property name="use_underline">True</property>
 			  <property name="relief">GTK_RELIEF_NORMAL</property>
 			  <property name="focus_on_click">True</property>
@@ -4580,7 +4580,7 @@ after</property>
 			  <property name="visible">True</property>
 			  <property name="can_default">True</property>
 			  <property name="can_focus">True</property>
-			  <property name="label" translatable="yes">Delete</property>
+			  <property name="label" translatable="yes">Delete Parameter</property>
 			  <property name="use_underline">True</property>
 			  <property name="relief">GTK_RELIEF_NORMAL</property>
 			  <property name="focus_on_click">True</property>
