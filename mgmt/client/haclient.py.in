@@ -1554,6 +1554,7 @@ class Manager :
 	username = None
 	password = None
 	cache = {}
+	no_update_cache = {}
 	io_tag = None
 	update_timer = -1
 	active_nodes = []
@@ -1564,12 +1565,16 @@ class Manager :
 	def cache_lookup(self, key) :
 		if self.cache.has_key(key) :
 			return self.cache[key]
+		if self.no_update_cache.has_key(key) :
+			return self.no_update_cache[key]
 		return None
 			
-	def cache_update(self, key, data) :
-		if not self.cache.has_key(key) :
+	def cache_update(self, key, data, keep_in_cache = False) :
+		if not keep_in_cache :
 			self.cache[key] = data
-		
+		else :
+			self.no_update_cache[key] = data
+					
 	def cache_clear(self) :
 		self.cache.clear()
 		
@@ -1629,12 +1634,12 @@ class Manager :
 		self.io_tag = gobject.io_add_watch(fd, gobject.IO_IN, self.on_event)
 		return True
 	
-	def query(self, query) :
+	def query(self, query, keep_in_catch = False) :
 		result = self.cache_lookup(query)
 		if  result != None :
 			return 	result
 		result = self.do_cmd(query)
-		self.cache_update(query, result)
+		self.cache_update(query, result, keep_in_catch)
 		return result
 		
 	def do_cmd(self, command) :
@@ -1830,7 +1835,7 @@ class Manager :
 		return self.split_attr_list(raw_params, param_attr_names)
 	
 	def get_rsc_meta(self, rsc_class, rsc_type, rsc_provider) :
-		lines = self.query("rsc_metadata\n%s\n%s\n%s"%(rsc_class, rsc_type, rsc_provider))
+		lines = self.query("rsc_metadata\n%s\n%s\n%s"%(rsc_class, rsc_type, rsc_provider),True)
 		if lines == None :
 			return None
 		meta_data = ""
@@ -1889,13 +1894,13 @@ class Manager :
 		return meta
 	
 	def get_rsc_classes(self) :
-		return self.query("rsc_classes");
+		return self.query("rsc_classes",True);
 
 	def get_rsc_types(self, rsc_class) :
-		return self.query("rsc_types\n"+rsc_class)
+		return self.query("rsc_types\n"+rsc_class,True)
 	
 	def get_rsc_providers(self, rsc_class, rsc_type) :
-		provider = self.query("rsc_providers\n%s\n%s"%(rsc_class, rsc_type))
+		provider = self.query("rsc_providers\n%s\n%s"%(rsc_class, rsc_type),True)
 		if provider == [] :
 			return ["heartbeat"]
 		return provider
