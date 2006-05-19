@@ -71,12 +71,20 @@ case "$1" in
 
 	ldconfig
 
-	/etc/init.d/heartbeat start || true
+	if which invoke-rc.d >/dev/null 2>&1; then
+		invoke-rc.d heartbeat start || true
+	else
+		/etc/init.d/heartbeat start || true
+	fi
     ;;
 
     abort-upgrade|abort-remove|abort-deconfigure)
 	# restart heartbeat
-	/etc/init.d/heartbeat start || true
+	if which invoke-rc.d >/dev/null 2>&1; then
+		invoke-rc.d heartbeat start || true
+	else
+		/etc/init.d/heartbeat start || true
+	fi
     ;;
 
     *)

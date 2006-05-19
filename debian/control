@@ -4,7 +4,7 @@ Priority: optional
 Maintainer: Simon Horman <horms@debian.org>
 Build-Depends: debhelper (>= 4.0.0), libsnmp9-dev, libglib2.0-dev, perl, net-tools, netkit-ping | iputils-ping, python, psmisc, modutils, libnet1-dev, iproute, libtool, automake1.9 | automaken, libcurl3-openssl-dev, libxml2-dev, bison, flex, uuid-dev, libopenipmi-dev (>= 2.0.1), lynx, libbz2-dev, zlib1g-dev, uuid-dev, libsensors-dev, libltdl3-dev, swig, openssh-client, libgnutls11-dev, python2.3-dev, libpam0g-dev, libncurses5-dev
 Build-Conflicts: automake1.4
-Standards-Version: 3.6.2
+Standards-Version: 3.7.2
 
 Package: ldirectord-2
 Section: admin
