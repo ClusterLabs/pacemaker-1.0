@@ -1,4 +1,4 @@
-/* $Id: send_arp.c,v 1.25 2006/05/01 22:57:21 msoffen Exp $ */
+/* $Id: send_arp.c,v 1.26 2006/05/23 07:50:07 andrew Exp $ */
 /* 
  * send_arp
  * 
@@ -196,7 +196,11 @@ main(int argc, char *argv[])
 	}
 
 #if defined(HAVE_LIBNET_1_0_API)
+#ifdef ON_DARWIN
+	if ((ip = libnet_name_resolve((unsigned char*)ipaddr, 1)) == -1UL) {
+#else
 	if ((ip = libnet_name_resolve(ipaddr, 1)) == -1UL) {
+#endif
 		cl_log(LOG_ERR, "Cannot resolve IP address [%s]", ipaddr);
 		unlink(pidfilename);
 		return EXIT_FAILURE;
@@ -400,7 +404,7 @@ send_arp(struct libnet_link_int *l, u_long ip, u_char *device, u_char *macaddr, 
 	/* Convert ASCII Mac Address to 6 Hex Digits. */
 
 	/* Ethernet header */
-	if (get_hw_addr(device, device_mac) < 0) {
+	if (get_hw_addr((char*)device, device_mac) < 0) {
 		cl_log(LOG_ERR, "Cannot find mac address for %s",
 				device);
 		return -1;
@@ -444,7 +448,7 @@ send_arp(struct libnet_link_int *l, u_long ip, u_char *device, u_char *macaddr, 
 		return -1;
 	}
 
-	n = libnet_write_link_layer(l, device, buf, LIBNET_ARP_H + LIBNET_ETH_H);
+	n = libnet_write_link_layer(l, (char*)device, buf, LIBNET_ARP_H + LIBNET_ETH_H);
 	if (n == -1) {
 		cl_log(LOG_ERR, "libnet_build_ethernet failed:");
 	}
@@ -696,6 +700,10 @@ write_pid_file(const char *pidfilename)
 
 /*
  * $Log: send_arp.c,v $
+ * Revision 1.26  2006/05/23 07:50:07  andrew
+ * Compilation on Darwin when using DarwinPorts instead of Fink
+ *   (apparently they have different versions of libnet)
+ *
  * Revision 1.25  2006/05/01 22:57:21  msoffen
  * Fixed to compile with older libnet.
  *
