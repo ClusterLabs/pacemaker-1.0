@@ -103,22 +103,22 @@ ConfigureAIX() {
 }
 
 ConfigureFreeBSD() {
-  FLAGS="--prefix=/usr/local --sysconfdir=/usr/local/etc --localstatedir=/var"
+  FLAGS="--prefix=/usr/local --sysconfdir=/usr/local/etc --localstatedir=/var --enable-all  --with-group-id=90 --with-ccmuser-id=90 "
   CFENV="FreeBSD"
 }
 
 ConfigureOpenBSD() {
-  FLAGS="--disable-ldirectord --prefix=/usr/local --sysconfdir=/usr/local/etc --localstatedir=/var"
+  FLAGS="--disable-ldirectord --prefix=/usr/local --sysconfdir=/usr/local/etc --localstatedir=/var  --with-group-id=90 --with-ccmuser-id=90"
   CFENV="OpenBSD"
 }
 
 ConfigureNetBSD() {
-  FLAGS="--disable-ldirectord --prefix=/usr/local --sysconfdir=/usr/local/etc --localstatedir=/var"
+  FLAGS="--disable-ldirectord --prefix=/usr/local --sysconfdir=/usr/local/etc --localstatedir=/var  --with-group-id=90 --with-ccmuser-id=90"
   CFENV="NetBSD"
 }
 
 ConfigureGenericBSD() {
-  FLAGS="--disable-ldirectord --prefix=/usr/local --sysconfdir=/usr/local/etc --localstatedir=/var"
+  FLAGS="--disable-ldirectord --prefix=/usr/local --sysconfdir=/usr/local/etc --localstatedir=/var  --with-group-id=90 --with-ccmuser-id=90"
   CFENV="Generic BSD"
 }
 
