@@ -104,7 +104,18 @@ GetAllIFNames() {
 }
 
 GuessIFname() {
-  GetAllIFNames | grep -v '^lo' | head -n 1
+  # Machines with multiple nics rarely got this right
+  #  using ip and route should prove much more reliable
+  #  for those that have it
+
+  external_host=123.0.0.1
+  if [ -x /sbin/ip ]; then
+      /sbin/ip r g $external_host | head -n 1 | awk '{print $5}'
+  elif [ `uname -s` = "Darwin" ]; then
+      route get $external_host | grep interface | awk '{print $2}'
+  else
+      GetAllIFNames | grep -v '^lo' | head -n 1
+  fi
 }
 
 INTERFACE=`GuessIFname`
@@ -112,7 +123,7 @@ INTERFACE=`GuessIFname`
 case $INTERFACE in
   "")	INTERFACE=$DEFAULTINTERFACE;;
 esac
-
+echo "Using interface: $INTERFACE"
 #
 #	Is it safe to overwrite this config file?
 #
