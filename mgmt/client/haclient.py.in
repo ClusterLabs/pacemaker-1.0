@@ -1232,10 +1232,14 @@ class MainWindow :
 			and string.find(self.cur_status, _("standby")) != -1
 			and string.find(self.cur_status, _("running")) != -1)
 
-		self.set_action_sensitive('startrsc',
+		self.set_action_sensitive('cleanuprsc',
 			manager.connected
 			and self.cur_type in [_("native"),_("group")])
 
+		self.set_action_sensitive('startrsc',
+			manager.connected
+			and self.cur_type in [_("native"),_("group")])
+		
 		self.set_action_sensitive('stoprsc',
 			manager.connected
 			and self.cur_type in [_("native"),_("group")])
@@ -1372,11 +1376,7 @@ class MainWindow :
 	def on_del_item(self, action) :
 		if confirmbox(_("Delete") + " "+self.cur_type + " " + self.cur_name + "?"):
 			if self.cur_type in [_("native"),_("group"),_("clone"),_("master")] :
-				if string.find(self.cur_status, _("unmanaged")) != -1 :
-					hostname = manager.get_rsc_running_on(self.cur_name)
-					manager.do_cmd("cleanup_rsc\n"+hostname[0] + "\n" + self.cur_name)
-				else :
-					manager.do_cmd("del_rsc\n"+self.cur_name)
+				manager.do_cmd("del_rsc\n"+self.cur_name)
 			elif self.cur_type == _("place") :
 				manager.do_cmd("del_co\nrsc_location\n"+self.cur_name)
 			elif self.cur_type == _("order") :
@@ -1406,7 +1406,11 @@ class MainWindow :
 			manager.do_cmd("move_rsc\n%s\nup"%self.cur_name)
 		elif action.get_name() == "downrsc" :
 			manager.do_cmd("move_rsc\n%s\ndown"%self.cur_name)
-
+	
+	def on_item_cleanup(self, action) :
+		hostname = manager.get_rsc_running_on(self.cur_name)
+		manager.do_cmd("cleanup_rsc\n"+hostname[0] + "\n" + self.cur_name)
+		
 	# constructor	
 	def __init__(self) :
 		# create window
@@ -1427,6 +1431,7 @@ class MainWindow :
 		icons.add("ha-remove-resource",gtk.IconSet(gtk.gdk.pixbuf_new_from_file("@libdir@/heartbeat/remove-resource.png")))
 		icons.add("ha-start-resource",gtk.IconSet(gtk.gdk.pixbuf_new_from_file("@libdir@/heartbeat/start-resource.png")))
 		icons.add("ha-stop-resource",gtk.IconSet(gtk.gdk.pixbuf_new_from_file("@libdir@/heartbeat/stop-resource.png")))
+		icons.add("ha-cleanup-resource",gtk.IconSet(gtk.gdk.pixbuf_new_from_file("@libdir@/heartbeat/cleanup-resource.png")))
 		icons.add("ha-default-resource",gtk.IconSet(gtk.gdk.pixbuf_new_from_file("@libdir@/heartbeat/default-resource.png")))
 		icons.add("ha-up-resource",gtk.IconSet(gtk.gdk.pixbuf_new_from_file("@libdir@/heartbeat/up-resource.png")))
 		icons.add("ha-down-resource",gtk.IconSet(gtk.gdk.pixbuf_new_from_file("@libdir@/heartbeat/down-resource.png")))
@@ -1446,6 +1451,7 @@ class MainWindow :
 				<menu action="resource">
 					<menuitem action="addrsc"/>
 					<menuitem action="delrsc"/>
+					<menuitem action="cleanuprsc"/>
 					<menuitem action="startrsc"/>
 					<menuitem action="stoprsc"/>
 					<menuitem action="defaultrsc"/>
@@ -1460,6 +1466,7 @@ class MainWindow :
 			<popup name="resource_popup">
 				<menuitem action="addrsc"/>
 				<menuitem action="delrsc"/>
+				<menuitem action="cleanuprsc"/>
 				<menuitem action="startrsc"/>
 				<menuitem action="stoprsc"/>
 				<menuitem action="defaultrsc"/>
@@ -1481,6 +1488,7 @@ class MainWindow :
 				<separator/>
 				<toolitem action="addrsc"/>
 				<toolitem action="delrsc"/>
+				<toolitem action="cleanuprsc"/>
 				<toolitem action="startrsc"/>
 				<toolitem action="stoprsc"/>
 				<toolitem action="defaultrsc"/>
@@ -1503,6 +1511,7 @@ class MainWindow :
 			('resource', None, _('Resources')),
 			('addrsc', "ha-add-resource", _('Add New Item'), None,_('add new item'), self.on_add_item),
 			('delrsc', "ha-remove-resource", _('Delete'), None,_('delete current item'), self.on_del_item),
+			('cleanuprsc', "ha-cleanup-resource", _('Clean up'), None,_('refresh the resource'), self.on_item_action),
 			('startrsc', "ha-start-resource", _('Start'), None,_('start resource'), self.on_item_action),
 			('stoprsc', "ha-stop-resource", _('Stop'), None,_('stop resource'), self.on_item_action),
 			('defaultrsc', "ha-default-resource", _('Default'), None,_('work as default'), self.on_item_action),
