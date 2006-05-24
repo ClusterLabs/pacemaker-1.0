@@ -25,7 +25,7 @@ halib_SCRIPTS		= haclient.py mgmtcmd.py
 halib_DATA		= haclient.glade ha.png login.png logout.png exit.png \
 			  standby-node.png active-node.png add-resource.png remove-resource.png \
 			  start-resource.png stop-resource.png master-resource.png slave-resource.png \
-			  default-resource.png up-resource.png down-resource.png
+			  default-resource.png up-resource.png down-resource.png cleanup-resource.png
 
 INCLUDES 	      	= -I$(top_builddir)/include  -I$(top_srcdir)/include \
 			  -I$(top_builddir)/linux-ha -I$(top_srcdir)/linux-ha \

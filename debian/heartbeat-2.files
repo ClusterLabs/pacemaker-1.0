@@ -52,6 +52,7 @@ usr/lib/heartbeat/ccm
 usr/lib/heartbeat/ccm_testclient
 usr/lib/heartbeat/cib
 usr/lib/heartbeat/cibmon
+usr/lib/heartbeat/cleanup-resource.png
 usr/lib/heartbeat/clmtest
 usr/lib/heartbeat/crm.dtd
 usr/lib/heartbeat/crmd
