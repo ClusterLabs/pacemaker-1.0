@@ -1451,16 +1451,20 @@ on_get_clone(char* argv[], int argc)
 
 	ret = cl_strdup(MSG_OK);
 	ret = mgmt_msg_append(ret, rsc->id);
-
+	
 	parameter = rsc->fns->parameter(rsc, NULL, FALSE
 	,	XML_RSC_ATTR_INCARNATION_MAX, data_set);
 	ret = mgmt_msg_append(ret, parameter);
-	cl_free(parameter);
+	if (parameter != NULL) {
+		cl_free(parameter);
+	}
 	
 	parameter = rsc->fns->parameter(rsc, NULL, FALSE
 	,	XML_RSC_ATTR_INCARNATION_NODEMAX, data_set);
 	ret = mgmt_msg_append(ret, parameter);
-	cl_free(parameter);
+	if (parameter != NULL) {
+		cl_free(parameter);
+	}
 
 	free_data_set(data_set);
 	return ret;
@@ -1515,22 +1519,30 @@ on_get_master(char* argv[], int argc)
 	parameter = rsc->fns->parameter(rsc, NULL, FALSE
 	,	XML_RSC_ATTR_INCARNATION_MAX, data_set);
 	ret = mgmt_msg_append(ret, parameter);
-	cl_free(parameter);
+	if (parameter != NULL) {
+		cl_free(parameter);
+	}
 
 	parameter = rsc->fns->parameter(rsc, NULL, FALSE
 	,	XML_RSC_ATTR_INCARNATION_NODEMAX, data_set);
 	ret = mgmt_msg_append(ret, parameter);
-	cl_free(parameter);
+	if (parameter != NULL) {
+		cl_free(parameter);
+	}
 
 	parameter = rsc->fns->parameter(rsc, NULL, FALSE
 	,	XML_RSC_ATTR_MASTER_MAX, data_set);
 	ret = mgmt_msg_append(ret, parameter);
-	cl_free(parameter);
+	if (parameter != NULL) {
+		cl_free(parameter);
+	}
 
 	parameter = rsc->fns->parameter(rsc, NULL, FALSE
 	,	XML_RSC_ATTR_MASTER_NODEMAX, data_set);
 	ret = mgmt_msg_append(ret, parameter);
-	cl_free(parameter);
+	if (parameter != NULL) {
+		cl_free(parameter);
+	}
 
 	free_data_set(data_set);
 	return ret;
