@@ -1268,7 +1268,7 @@ class MainWindow :
 			self.cur_view = ClusterView()
 		elif type == "node" and status != _("stopped"):
 			self.cur_view = NodeView(name)
-		elif type in [_("native")] and string.find(status,_("unmanaged"))== -1:
+		elif type in [_("native")] :
 			self.cur_view = RscView(name)
 		elif type == _("place") :
 			self.cur_view = PlaceView(name)
