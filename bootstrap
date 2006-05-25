@@ -40,11 +40,12 @@ testProgram()
   #
   # The ERR trap is not executed if the failed command is part
   #   of an until or while loop, part of an if statement, part of a &&
-  #   or  ||  list, or if the command's return value is being inverted
-  #   via !.
+  #   or  ||  list.
   if
-     ! which $WHICH_OPTS $cmd  </dev/null >/dev/null 2>&1
+     which $WHICH_OPTS $cmd  </dev/null >/dev/null 2>&1
   then
+      :
+  else
       return 1
   fi
 
