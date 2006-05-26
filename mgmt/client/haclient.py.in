@@ -473,7 +473,7 @@ class Tree :
 			status = _("with quorum")
 		else :
 			status = _("without quorum")
-		root = self.store.append(None, [_("Linux-HA cluster"),status, "cluster"])
+		root = self.store.append(None, [config["cluster"],status, "cluster"])
 		
 		nodes_root = self.store.append(root, [_("Nodes"),"", "nodes"])
 		for node in nodes :
@@ -1722,7 +1722,7 @@ class Manager :
 				 "deadping","deadtime","hbversion","hopfudge",
 				 "initdead","keepalive","logfacility","logfile",
 				 "msgfmt","nice_failback","node","normalpoll",
-			 	"stonith","udpport","warntime","watchdog"]
+			 	"stonith","udpport","warntime","watchdog", "cluster"]
 		crm_attr_names = ["transition_idle_timeout","symmetric_cluster","stonith_enabled",
 				  "no_quorum_policy","default_resource_stickiness", "have_quorum",
 				  "default_resource_failure_stickiness"]
