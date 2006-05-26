@@ -623,8 +623,10 @@ class ClusterView(View) :
 		new_crm_config["symmetric_cluster"] = str(glade.get_widget("symmetric_cluster").get_active())
 		new_crm_config["stonith_enabled"] = str(glade.get_widget("stonith_enabled").get_active())
 		new_crm_config["no_quorum_policy"] = glade.get_widget("no_quorum_policy").child.get_text()
-		new_crm_config["default_resource_stickiness"] = glade.get_widget("default_resource_stickiness").child.get_text()
-		new_crm_config["default_resource_failure_stickiness"] = glade.get_widget("default_resource_failure_stickiness").child.get_text()
+		new_crm_config["default_resource_stickiness"] = \
+				glade.get_widget("default_resource_stickiness").child.get_text()
+		new_crm_config["default_resource_failure_stickiness"] = \
+				glade.get_widget("default_resource_failure_stickiness").child.get_text()
 		manager.update_crm_config(new_crm_config)
 		
 		View.on_apply(self, widget)
@@ -647,7 +649,8 @@ class ClusterView(View) :
 			glade.get_widget("no_quorum_policy").child.set_text(config["no_quorum_policy"])
 			glade.get_widget("no_quorum_policy").child.set_editable(False)
 			glade.get_widget("default_resource_stickiness").child.set_text(config["default_resource_stickiness"])
-			glade.get_widget("default_resource_failure_stickiness").child.set_text(config["default_resource_failure_stickiness"])
+			glade.get_widget("default_resource_failure_stickiness").child.set_text \
+							 (config["default_resource_failure_stickiness"])
 
 		View.update(self)
 	
@@ -664,7 +667,8 @@ class ClusterView(View) :
 		make_label_active(self.glade.get_widget("l_noquorum"),_("No Quorum Policy:"),"www.linux-ha.org")
 		make_label_active(self.glade.get_widget("l_symmetric"),_("Symmetric Cluster"),"www.linux-ha.org")
 		make_label_active(self.glade.get_widget("l_stonith_enabled"),_("Stonith Enabled"),"www.linux-ha.org")
-		make_label_active(self.glade.get_widget("l_rscfailstickiness"),_("Resource Failure Stickiness:"),"www.linux-ha.org")
+		make_label_active(self.glade.get_widget \
+			("l_rscfailstickiness"),_("Resource Failure Stickiness:"),"www.linux-ha.org")
 							
 	def __init__(self) :
 		View.__init__(self)
@@ -787,14 +791,15 @@ class PlaceView(View) :
 		View.__init__(self, rsc)
 		glade = self.glade
 		self.expr_list = ListWithAddDel(glade.get_widget("expr_list"),
-					    glade.get_widget("add_expr"),
-					    glade.get_widget("del_expr"),
-					    _("Add Expression"),
-					    [Field("id", _("ID"), "id_", None, False, auto_gen=True),
-			  		     Field("attribute", _("Attribute"), "#uname", ["#uname","#id", "#is_dc"], False),
-					     Field("operation", _("Operation"), "eq", ['lt','gt','lte','gte','eq','ne','defined','not_defined'], False),
-					     Field("value", _("Value"), "", manager.get_all_nodes(), False)],
-					    self.on_changed)
+			glade.get_widget("add_expr"),
+			glade.get_widget("del_expr"),
+			_("Add Expression"),
+			[Field("id", _("ID"), "id_", None, False, auto_gen=True),
+			Field("attribute", _("Attribute"), "#uname", ["#uname","#id", "#is_dc"], False),
+			Field("operation", _("Operation"), "eq",
+				['lt','gt','lte','gte','eq','ne','defined','not_defined'], False),
+			Field("value", _("Value"), "", manager.get_all_nodes(), False)],
+			self.on_changed)
 		self.update()
 		
 class CloneView(View) :
@@ -963,7 +968,8 @@ class AddNativeDlg :
 				       glade.get_widget("delparam"),
 				       _("Add Parameter"), fields)
 		param_list.insert({"id":uuid(),"name":"target_role",
-			"value":"stopped","shortdesc":"press \"Default\" or \"Start\" button in toolbar/menu to start the resource"})
+				"value":"stopped","shortdesc": \
+		"press \"Default\" or \"Start\" button in toolbar/menu to start the resource"})
 		self.param_list = param_list
 		if meta != None :
 			for param in meta.parameters :
@@ -1065,7 +1071,7 @@ class AddNativeDlg :
 	def run(self):	
 		global top_window
 		dialog = gtk.Dialog(_("Add Native Resource"), window.win_widget, gtk.DIALOG_MODAL,
-				    (gtk.STOCK_ADD, gtk.RESPONSE_OK, gtk.STOCK_CANCEL,gtk.RESPONSE_CANCEL))
+			(gtk.STOCK_ADD, gtk.RESPONSE_OK, gtk.STOCK_CANCEL,gtk.RESPONSE_CANCEL))
 		glade = gtk.glade.XML(UI_FILE, "addnativedlg", "haclient")
 		layout = glade.get_widget("addnativedlg")
 		dialog.vbox.add(layout)
@@ -1218,7 +1224,8 @@ class MainWindow :
 		
 		self.set_action_sensitive('delrsc',
 			manager.connected
-			and self.cur_type in [_("native"),_("group"),_("clone"),_("place"),_("order"),_("colocation"),_("master")])
+			and self.cur_type in [_("native"),_("group"),_("clone"),
+				_("place"),_("order"),_("colocation"),_("master")])
 
 		self.set_action_sensitive('standby',
 			manager.connected
@@ -1410,7 +1417,12 @@ class MainWindow :
 	def on_item_cleanup(self, action) :
 		hostname = manager.get_rsc_running_on(self.cur_name)
 		manager.do_cmd("cleanup_rsc\n"+hostname[0] + "\n" + self.cur_name)
-		
+
+	def load_icon(self, name, file) :
+		icons = gtk.IconFactory()
+		icons.add(name,gtk.IconSet(gtk.gdk.pixbuf_new_from_file(file)))
+		icons.add_default()
+
 	# constructor	
 	def __init__(self) :
 		# create window
@@ -1421,23 +1433,21 @@ class MainWindow :
 		win_widget.set_icon_from_file("@libdir@/heartbeat/ha.png")
 
 		# add the icons to gtk stock
-		icons = gtk.IconFactory()
-		icons.add("ha-login",gtk.IconSet(gtk.gdk.pixbuf_new_from_file("@libdir@/heartbeat/login.png")))
-		icons.add("ha-logout",gtk.IconSet(gtk.gdk.pixbuf_new_from_file("@libdir@/heartbeat/logout.png")))
-		icons.add("ha-exit",gtk.IconSet(gtk.gdk.pixbuf_new_from_file("@libdir@/heartbeat/exit.png")))
-		icons.add("ha-standby-node",gtk.IconSet(gtk.gdk.pixbuf_new_from_file("@libdir@/heartbeat/standby-node.png")))
-		icons.add("ha-active-node",gtk.IconSet(gtk.gdk.pixbuf_new_from_file("@libdir@/heartbeat/active-node.png")))
-		icons.add("ha-add-resource",gtk.IconSet(gtk.gdk.pixbuf_new_from_file("@libdir@/heartbeat/add-resource.png")))
-		icons.add("ha-remove-resource",gtk.IconSet(gtk.gdk.pixbuf_new_from_file("@libdir@/heartbeat/remove-resource.png")))
-		icons.add("ha-start-resource",gtk.IconSet(gtk.gdk.pixbuf_new_from_file("@libdir@/heartbeat/start-resource.png")))
-		icons.add("ha-stop-resource",gtk.IconSet(gtk.gdk.pixbuf_new_from_file("@libdir@/heartbeat/stop-resource.png")))
-		icons.add("ha-cleanup-resource",gtk.IconSet(gtk.gdk.pixbuf_new_from_file("@libdir@/heartbeat/cleanup-resource.png")))
-		icons.add("ha-default-resource",gtk.IconSet(gtk.gdk.pixbuf_new_from_file("@libdir@/heartbeat/default-resource.png")))
-		icons.add("ha-up-resource",gtk.IconSet(gtk.gdk.pixbuf_new_from_file("@libdir@/heartbeat/up-resource.png")))
-		icons.add("ha-down-resource",gtk.IconSet(gtk.gdk.pixbuf_new_from_file("@libdir@/heartbeat/down-resource.png")))
-		icons.add("ha-master-resource",gtk.IconSet(gtk.gdk.pixbuf_new_from_file("@libdir@/heartbeat/master-resource.png")))
-		icons.add("ha-slave-resource",gtk.IconSet(gtk.gdk.pixbuf_new_from_file("@libdir@/heartbeat/slave-resource.png")))
-		icons.add_default()
+		self.load_icon("ha-login","@libdir@/heartbeat/login.png")
+		self.load_icon("ha-logout","@libdir@/heartbeat/logout.png")
+		self.load_icon("ha-exit","@libdir@/heartbeat/exit.png")
+		self.load_icon("ha-standby-node","@libdir@/heartbeat/standby-node.png")
+		self.load_icon("ha-active-node","@libdir@/heartbeat/active-node.png")
+		self.load_icon("ha-add-resource","@libdir@/heartbeat/add-resource.png")
+		self.load_icon("ha-remove-resource","@libdir@/heartbeat/remove-resource.png")
+		self.load_icon("ha-start-resource","@libdir@/heartbeat/start-resource.png")
+		self.load_icon("ha-stop-resource","@libdir@/heartbeat/stop-resource.png")
+		self.load_icon("ha-cleanup-resource","@libdir@/heartbeat/cleanup-resource.png")
+		self.load_icon("ha-default-resource","@libdir@/heartbeat/default-resource.png")
+		self.load_icon("ha-up-resource","@libdir@/heartbeat/up-resource.png")
+		self.load_icon("ha-down-resource","@libdir@/heartbeat/down-resource.png")
+		self.load_icon("ha-master-resource","@libdir@/heartbeat/master-resource.png")
+		self.load_icon("ha-slave-resource","@libdir@/heartbeat/slave-resource.png")
 
 		# create ui-manager
 		ui_xml = '''
@@ -1516,7 +1526,8 @@ class MainWindow :
 			('stoprsc', "ha-stop-resource", _('Stop'), None,_('stop resource'), self.on_item_action),
 			('defaultrsc', "ha-default-resource", _('Default'), None,_('work as default'), self.on_item_action),
 			('uprsc', "ha-up-resource", _('Move Up'), None,_('move the resource up in the group'), self.on_item_move),
-			('downrsc', "ha-down-resource", _('Move Down'), None,_('move the resource down in the group'), self.on_item_move),
+			('downrsc', "ha-down-resource", _('Move Down'), None,_('move the resource down in the group'),
+				 self.on_item_move),
 			('node', None, _('Nodes')),
 			('standby', "ha-standby-node", _('Standby'), None,_('make the node standby'), self.on_standby),
 			('active', "ha-active-node", _('Active'), None,_('make the node active'), self.on_active)
@@ -1624,8 +1635,9 @@ class Manager :
 			if ret == -1 :
 				self.failed_reason = _("Can't connect to server")
 			elif ret == -2 :
-				self.failed_reason = _("Failed in the authentication.\n User Name or Password may be wrong." \
-						"\n or the user doesn't belong to haclient group")
+				self.failed_reason =\
+				 _("Failed in the authentication.\n User Name or Password may be wrong." \
+				"\n or the user doesn't belong to haclient group")
 			mgmt_disconnect()
 			return False
 		window.statusbar.push(1,_("Connected to ")+server)
@@ -1844,7 +1856,8 @@ class Manager :
 		return self.split_attr_list(raw_params, param_attr_names)
 	
 	def get_rsc_meta(self, rsc_class, rsc_type, rsc_provider) :
-		lines = self.query("rsc_metadata\n%s\n%s\n%s"%(rsc_class, rsc_type, rsc_provider),True)
+		lines = self.query("rsc_metadata\n%s\n%s\n%s"% \
+				(rsc_class, rsc_type, rsc_provider),True)
 		if lines == None :
 			return None
 		meta_data = ""
@@ -1953,7 +1966,8 @@ class Manager :
 		return clone
 	
 	def update_clone(self, clone) :
-		cmd = "up_clone\n%s\n%s\n%s"%(clone["id"],clone["clone_max"],clone["clone_node_max"])
+		cmd = "up_clone\n%s\n%s\n%s"% \
+			(clone["id"],clone["clone_max"],clone["clone_node_max"])
 		self.do_cmd(cmd)
 		if self.failed_reason != "" :
 			msgbox(self.failed_reason)
@@ -2021,14 +2035,16 @@ class Manager :
 			manager.do_cmd("del_co\nrsc_location\n"+constraint["id"])
 			if self.failed_reason != "" :
 				msgbox(self.failed_reason)
-			cmd = "up_co\nrsc_location\n%s\n%s\n%s"%(constraint["id"],constraint["rsc"],constraint["score"])
+			cmd = "up_co\nrsc_location\n%s\n%s\n%s"% \
+					(constraint["id"],constraint["rsc"],constraint["score"])
 			for expr in constraint["exprs"] :
 				cmd = cmd + "\n" + expr["id"] + "\n" + expr["attribute"] + \
 					"\n" + expr["operation"] + "\n" + expr["value"]
 		elif type == "rsc_order" :
-			cmd = "up_co\nrsc_order\n%s\n%s\n%s\n%s"% (constraint["id"],constraint["from"],constraint["type"],constraint["to"])
+			cmd = "up_co\nrsc_order\n%s\n%s\n%s\n%s"% \
+			 (constraint["id"],constraint["from"],constraint["type"],constraint["to"])
 		elif type == "rsc_colocation" :
-			cmd = "up_co\nrsc_colocation\n%s\n%s\n%s\n%s"% (constraint["id"],constraint["from"],constraint["to"],constraint["score"])
+			cmd = "up_co\nrsc_colocation\n%s\n%s\n%s\n%s"% 	(constraint["id"],constraint["from"],constraint["to"],constraint["score"])
 		self.do_cmd(cmd)
 		if self.failed_reason != "" :
 			msgbox(self.failed_reason)
