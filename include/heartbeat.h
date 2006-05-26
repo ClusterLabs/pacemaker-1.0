@@ -1,4 +1,4 @@
-/* $Id: heartbeat.h,v 1.84 2006/04/26 03:42:07 alan Exp $ */
+/* $Id: heartbeat.h,v 1.85 2006/05/26 02:55:28 zhenh Exp $ */
 /*
  * heartbeat.h: core definitions for the Linux-HA heartbeat program
  *
@@ -311,6 +311,7 @@ struct sys_config {
 	seqno_t		generation;		/* Heartbeat generation # */
 	cl_uuid_t	uuid;			/* uuid for this node*/
 	int		uuidfromname;		/* do we get uuid from nodename?*/
+	char		cluster[PATH_MAX];	/* the name of cluster*/
 	hbjointype_t	rtjoinconfig;		/* Runtime join behavior */
 	int		authnum;
 	Stonith*	stonith;	/* Stonith method - r1-style cluster only */

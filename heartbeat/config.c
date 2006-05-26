@@ -1,4 +1,4 @@
-/* $Id: config.c,v 1.200 2006/04/29 13:12:20 alan Exp $ */
+/* $Id: config.c,v 1.201 2006/05/26 02:55:28 zhenh Exp $ */
 /*
  * Parse various heartbeat configuration files...
  *
@@ -70,6 +70,7 @@
 void dellist_destroy(void);
 int dellist_add(const char* nodename);
 
+static int set_cluster_name(const char * value);
 static int add_normal_node(const char *);
 static int set_hopfudge(const char *);
 static int set_keepalive_ms(const char *);
@@ -129,7 +130,8 @@ struct directive {
 	const char *	defaultvalue;
 	const char *	explanation;
 }Directives[] =
-{ {KEY_HOST,	add_normal_node, FALSE, NULL, NULL}
+{ {KEY_CLUSTER,	set_cluster_name, TRUE, "linux-ha", "the name of cluster"}
+, {KEY_HOST,	add_normal_node, FALSE, NULL, NULL}
 , {KEY_HOPS,	set_hopfudge, TRUE, "1", "# of hops above cluster size"}
 , {KEY_KEEPALIVE, set_keepalive_ms, TRUE, "1000ms", "keepalive time"}
 , {KEY_DEADTIME,  set_deadtime_ms,  TRUE, "30000ms", "node deadtime"}
@@ -1341,7 +1343,13 @@ remove_node(const char* value, int deletion)
 	return(HA_OK);	
 	
 }
-
+/* Set the name of cluster */
+static int 
+set_cluster_name(const char * value)
+{
+	strncpy(config->cluster, value, PATH_MAX);
+	return(HA_OK);
+}
 
 /* Process a node declaration */
 static int
@@ -2577,7 +2585,11 @@ ha_config_check_boolean(const char *value)
 
 /*
  * $Log: config.c,v $
+ * Revision 1.201  2006/05/26 02:55:28  zhenh
+ * add "cluster" directive as the name of cluster to ha.cf and parameter of cluster
+ *
  * Revision 1.200  2006/04/29 13:12:20  alan
+ *
  * Patch to allow the management daemon to not be started
  * automatically if it's not been compiled in.
  * This patch due to Keisuke MORI <kskmori@intellilink.co.jp>

@@ -1,4 +1,4 @@
-/* $Id: hb_api.h,v 1.45 2006/04/23 22:06:10 alan Exp $ */
+/* $Id: hb_api.h,v 1.46 2006/05/26 02:55:28 zhenh Exp $ */
 /*
  * Client-side Low-level clustering API for heartbeat.
  *
@@ -391,6 +391,7 @@ struct llc_ops {
 
 /* Parameters we can ask for via get_parameter */
 #define	KEY_HBVERSION	"hbversion"	/* Not a configuration parameter */
+#define	KEY_CLUSTER	"cluster"
 #define	KEY_HOST	"node"
 #define KEY_HOPS	"hopfudge"
 #define KEY_KEEPALIVE	"keepalive"
