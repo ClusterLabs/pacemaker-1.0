@@ -197,6 +197,7 @@ usr/lib/ocf/resource.d/heartbeat/LinuxSCSI
 usr/lib/ocf/resource.d/heartbeat/MailTo
 usr/lib/ocf/resource.d/heartbeat/Raid1
 usr/lib/ocf/resource.d/heartbeat/ServeRAID
+usr/lib/ocf/resource.d/heartbeat/VIPArip
 usr/lib/ocf/resource.d/heartbeat/WAS
 usr/lib/ocf/resource.d/heartbeat/WinPopup
 usr/lib/ocf/resource.d/heartbeat/Xen
