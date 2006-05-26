@@ -66,7 +66,8 @@ const char* param_name[] = {
 	"stonith",
 	"udpport",
 	"warntime",
-	"watchdog"
+	"watchdog",
+	"cluster"
 };
 
 char* 

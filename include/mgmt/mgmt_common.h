@@ -162,7 +162,7 @@ or
 #define F_MGMT_UDPPORT			19
 #define F_MGMT_WARNTIME			20
 #define F_MGMT_WATCHDOG			21
-
+#define F_MGMT_CLUSTER			22
 
 /*
 description:
