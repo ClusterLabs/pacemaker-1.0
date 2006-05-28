@@ -1,4 +1,4 @@
-/* $Id: ha_msg.h,v 1.81 2006/05/09 06:34:04 andrew Exp $ */
+/* $Id: ha_msg.h,v 1.82 2006/05/28 00:48:31 zhenh Exp $ */
 /*
  * Intracluster message object (struct ha_msg)
  *
@@ -154,6 +154,8 @@ extern struct fieldtypefuncs_s fieldtypefuncs[NUM_MSG_TYPES];
 #define	F_TO		"dest"		/* Destination (optional) */
 #define F_TOUUID	"destuuid"	/* Destination uuid(optional) */
 #define	F_STATUS	"st"		/* New status (type = status) */
+#define	F_WEIGHT	"weight"	/* weight of node */
+#define	F_SITE		"site"		/* site of node */
 #define F_PROTOCOL	"protocol"	/* Protocol number for communication*/
 #define	F_CLIENTNAME	"cn"		/* Client name */
 #define	F_CLIENTSTATUS	"cs"		/* Client status */
@@ -208,6 +210,8 @@ extern struct fieldtypefuncs_s fieldtypefuncs[NUM_MSG_TYPES];
 #define T_ATTRD		"attrd"		/* Cluster resource manager message */
 #define T_ADDNODE	"addnode"	/* Add node message*/
 #define T_DELNODE	"delnode"	/* Delete node message*/
+#define T_SETWEIGHT	"setweight"	/* Set node weight*/
+#define T_SETSITE	"setsite"	/* Set node site*/
 #define T_REQNODES      "reqnodes"	/* Request node list */
 #define T_REPNODES	"repnodes"	/* reply node list rquest*/
 
