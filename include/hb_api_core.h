@@ -1,4 +1,4 @@
-/* $Id: hb_api_core.h,v 1.18 2006/02/07 17:18:24 alan Exp $ */
+/* $Id: hb_api_core.h,v 1.19 2006/05/28 00:56:57 zhenh Exp $ */
 /*
  * hb_api_core_h: Internal definitions and functions for the heartbeat API
  *
@@ -113,6 +113,8 @@ typedef struct client_process {
 #	define	F_NODENAME	"node"
 #define	API_NODELIST_END	"nodelist-end"
 #define	API_NODESTATUS		"nodestatus"
+#define	API_NODEWEIGHT		"nodeweight"
+#define	API_NODESITE		"nodesite"
 #define	API_NODETYPE		"nodetype"
 #define	API_NUMNODES		"numnodes"
 

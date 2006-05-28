@@ -1,4 +1,4 @@
-/* $Id: hb_api.h,v 1.46 2006/05/26 02:55:28 zhenh Exp $ */
+/* $Id: hb_api.h,v 1.47 2006/05/28 00:56:57 zhenh Exp $ */
 /*
  * Client-side Low-level clustering API for heartbeat.
  *
@@ -157,6 +157,17 @@ struct llc_ops {
  *	node_status:	Return most recent heartbeat status of the given node
  */
 	const char *	(*node_status)(ll_cluster_t*, const char * nodename);
+
+/*
+ *	node_status:	Return the weight of the given node
+ */
+	int		(*node_weight)(ll_cluster_t*, const char * nodename);
+
+/*
+ *	node_status:	Return the site of the given node
+ */
+	const char *	(*node_site)(ll_cluster_t*, const char * nodename);
+
 /*
  *	node_type:	Return type of the given node
  */

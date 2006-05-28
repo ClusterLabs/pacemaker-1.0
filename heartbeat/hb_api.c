@@ -1,4 +1,4 @@
-/* $Id: hb_api.c,v 1.153 2006/02/10 13:19:54 alan Exp $ */
+/* $Id: hb_api.c,v 1.154 2006/05/28 00:56:57 zhenh Exp $ */
 /*
  * hb_api: Server-side heartbeat API code
  *
@@ -110,6 +110,12 @@ static int api_nodelist (const struct ha_msg* msg, struct ha_msg* resp
 static int api_nodestatus (const struct ha_msg* msg, struct ha_msg* resp
 ,	client_proc_t* client, const char** failreason);
 
+static int api_nodeweight (const struct ha_msg* msg, struct ha_msg* resp
+,	client_proc_t* client, const char** failreason);
+
+static int api_nodesite (const struct ha_msg* msg, struct ha_msg* resp
+,	client_proc_t* client, const char** failreason);
+
 static int api_nodetype (const struct ha_msg* msg, struct ha_msg* resp
 ,	client_proc_t* client, const char** failreason);
 
@@ -149,6 +155,8 @@ struct api_query_handler query_handler_list [] = {
 	{ API_SETSIGNAL, api_setsignal },
 	{ API_NODELIST, api_nodelist },
 	{ API_NODESTATUS, api_nodestatus },
+	{ API_NODEWEIGHT, api_nodeweight },
+	{ API_NODESITE, api_nodesite },
 	{ API_NODETYPE, api_nodetype },
 	{ API_IFSTATUS, api_ifstatus },
 	{ API_IFLIST, api_iflist },
@@ -611,6 +619,55 @@ api_nodestatus(const struct ha_msg* msg, struct ha_msg* resp
 			ha_msg_mod(resp, F_STATUS, savedstat);
 		}
 		return I_API_RET;
+}
+
+/**********************************************************************
+ * API_NODEWEIGHT: Return the weight of the given node
+ *********************************************************************/
+
+static int
+api_nodeweight(const struct ha_msg* msg, struct ha_msg* resp
+,	client_proc_t* client, const char** failreason)
+{
+	const char *		cnode;
+	struct node_info *	node;
+
+	if ((cnode = ha_msg_value(msg, F_NODENAME)) == NULL
+	|| (node = lookup_node(cnode)) == NULL) {
+		*failreason = "EINVAL";
+		return I_API_BADREQ;
+	}
+	
+	if (ha_msg_add_int(resp, F_WEIGHT, node->weight) != HA_OK) {
+		cl_log(LOG_ERR
+		,	"api_nodeweight: cannot add field");
+		return I_API_IGN;
+	}
+	return I_API_RET;
+}
+
+/**********************************************************************
+ * API_NODESITE: Return the site of the given node
+ *********************************************************************/
+
+static int
+api_nodesite(const struct ha_msg* msg, struct ha_msg* resp
+,	client_proc_t* client, const char** failreason)
+{
+	const char *		cnode;
+	struct node_info *	node;
+
+	if ((cnode = ha_msg_value(msg, F_NODENAME)) == NULL
+	|| (node = lookup_node(cnode)) == NULL) {
+		*failreason = "EINVAL";
+		return I_API_BADREQ;
+	}
+	if (ha_msg_add(resp, F_SITE, node->site) != HA_OK) {
+		cl_log(LOG_ERR
+		,	"api_nodesite: cannot add field");
+		return I_API_IGN;
+	}
+	return I_API_RET;
 }
 
 /**********************************************************************
