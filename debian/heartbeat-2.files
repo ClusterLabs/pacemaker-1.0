@@ -82,6 +82,8 @@ usr/lib/heartbeat/haclient.py
 usr/lib/heartbeat/haresources2cib.py
 usr/lib/heartbeat/hb_addnode
 usr/lib/heartbeat/hb_delnode
+usr/lib/heartbeat/hb_setsite
+usr/lib/heartbeat/hb_setweight
 usr/lib/heartbeat/hb_standby
 usr/lib/heartbeat/hb_takeover
 usr/lib/heartbeat/hbagent
