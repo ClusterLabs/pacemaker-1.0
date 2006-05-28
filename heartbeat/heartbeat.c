@@ -1,4 +1,4 @@
-/* $Id: heartbeat.c,v 1.509 2006/05/11 17:45:35 alan Exp $ */
+/* $Id: heartbeat.c,v 1.510 2006/05/28 00:54:19 zhenh Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -2458,6 +2458,58 @@ HBDoMsg_T_ADDNODE(const char * type, struct node_info * fromnode,
 	return;
 }
 
+static void
+HBDoMsg_T_SETWEIGHT(const char * type, struct node_info * fromnode,
+		  TIME_T msgtime, seqno_t seqno, const char * iface, struct ha_msg * msg)
+{
+	const char*	node;
+	int		weight;
+
+	node =  ha_msg_value(msg, F_NODE);
+	if (node == NULL){
+		cl_log(LOG_ERR, "%s: node not found in msg",		       
+		       __FUNCTION__);
+		cl_log_message(LOG_INFO, msg);
+		return ;
+	}
+	if (ha_msg_value_int(msg, F_WEIGHT, &weight) != HA_OK){			
+		cl_log(LOG_ERR, "%s: weight not found in msg",		       
+		       __FUNCTION__);
+		cl_log_message(LOG_INFO, msg);
+		return ;
+	}
+	if (set_node_weight(node, weight) == HA_OK) {
+		G_main_set_trigger(write_hostcachefile);
+	}
+	return;
+}
+
+static void
+HBDoMsg_T_SETSITE(const char * type, struct node_info * fromnode,
+		  TIME_T msgtime, seqno_t seqno, const char * iface, struct ha_msg * msg)
+{
+	const char*	node;
+	const char*	site;
+
+	node =  ha_msg_value(msg, F_NODE);
+	if (node == NULL){
+		cl_log(LOG_ERR, "%s: node not found in msg",		       
+		       __FUNCTION__);
+		cl_log_message(LOG_INFO, msg);
+		return ;
+	}
+	site =  ha_msg_value(msg, F_SITE);
+	if (node == NULL){
+		cl_log(LOG_ERR, "%s: site not found in msg",		       
+		       __FUNCTION__);
+		cl_log_message(LOG_INFO, msg);
+		return ;
+	}
+	if (set_node_site(node, site) == HA_OK) {
+		G_main_set_trigger(write_hostcachefile);
+	}
+	return;
+}
 
 static int
 hb_remove_one_node(const char* node, int deletion)
@@ -4554,6 +4606,8 @@ main(int argc, char * argv[], char **envp)
 	hb_register_msg_callback(T_QCSTATUS,	HBDoMsg_T_QCSTATUS);
 	hb_register_msg_callback(T_ACKMSG,	HBDoMsg_T_ACKMSG);
 	hb_register_msg_callback(T_ADDNODE,	HBDoMsg_T_ADDNODE);
+	hb_register_msg_callback(T_SETWEIGHT,	HBDoMsg_T_SETWEIGHT);
+	hb_register_msg_callback(T_SETSITE,	HBDoMsg_T_SETSITE);
 	hb_register_msg_callback(T_DELNODE,	HBDoMsg_T_DELNODE);
 	hb_register_msg_callback(T_REQNODES,    HBDoMsg_T_REQNODES);
 	hb_register_msg_callback(T_REPNODES, 	HBDoMsg_T_REPNODES);
@@ -6293,6 +6347,9 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.510  2006/05/28 00:54:19  zhenh
+ * add message handlers for setting the weight and site of node
+ *
  * Revision 1.509  2006/05/11 17:45:35  alan
  * Modified a recent patch to a Coverity problem, to eliminate a possible infinite loop
  *
