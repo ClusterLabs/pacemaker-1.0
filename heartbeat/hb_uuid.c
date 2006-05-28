@@ -463,24 +463,28 @@ GetUUID(struct sys_config* cfg, const char* nodename, cl_uuid_t* uuid)
  */
 
 static int
-node_uuid_file_out(FILE *f, const char * nodename, const cl_uuid_t * uu)
+node_uuid_file_out(FILE *f, const char * nodename, const cl_uuid_t * uu
+, 			int weight, const char* site)
 {
 	char	uuid_str[UU_UNPARSE_SIZEOF];
 	cl_uuid_unparse(uu, uuid_str);
-	if (fprintf(f, "%s\t%s\n", nodename, uuid_str) > sizeof(uuid_str)) {
+	if (fprintf(f, "%s\t%s\t%d\t%s\n", nodename, uuid_str, weight, site?site:"")
+		> sizeof(uuid_str)) {
 		return HA_OK;
 	}
 	return HA_FAIL;
 }
 
 static int	/* Returns -, 0 + *; 0 = EOF, + = OK, - = ERROR */
-node_uuid_file_in(FILE *f, char*  nodename, cl_uuid_t * uu)
+node_uuid_file_in(FILE *f, char* nodename, cl_uuid_t * uu, int* weight, char* site)
 {
 	char	linebuf[MAXLINE];
-	char *	tab;
+	char *	name_end;
+	char *	uuid_end;
+	char *	weight_end;
 	int	len;
 	int	hlen;
-
+	
 	if (fgets(linebuf, MAXLINE, f) == NULL) {
 		if (feof(f)) {
 			return 0;
@@ -501,21 +505,38 @@ node_uuid_file_in(FILE *f, char*  nodename, cl_uuid_t * uu)
 		return -1;
 	}
 	linebuf[len] = EOS;
-	tab = strchr(linebuf, '\t');
-	if (tab == NULL || (hlen=(tab - linebuf)) > (HOSTLENG-1) || hlen < 1){
+	name_end = strchr(linebuf, '\t');
+	if (name_end == NULL || (hlen=(name_end - linebuf)) > (HOSTLENG-1) || hlen < 1){
 		cl_log(LOG_ERR, "Malformed node/uuid line [%s] (3)", linebuf);
 		return -1;
 	}
-	if ((len - hlen) != UU_UNPARSE_SIZEOF) {
-		cl_log(LOG_ERR, "Malformed node/uuid line [%s] (4)", linebuf);
-		return -1;
+	*name_end = EOS;
+	strncpy(nodename, linebuf, HOSTLENG);
+	uuid_end = strchr(name_end+1, '\t');
+	if (uuid_end != NULL) {
+		*uuid_end = EOS;
 	}
-	if (cl_uuid_parse(tab+1, uu) < 0) {
+	if (cl_uuid_parse(name_end+1, uu) < 0) {
 		cl_log(LOG_ERR, "Malformed uuid in line [%s] (5)", linebuf);
 		return -1;
 	}
-	*tab = EOS;
-	strncpy(nodename, linebuf, HOSTLENG);
+	if (uuid_end == NULL) {
+		/* old format, no weight and site columns */
+		*weight = 100;
+		*site = 0;
+		return 1;
+	}	
+	weight_end = strchr(uuid_end+1, '\t');
+	if (weight_end != NULL) {
+		*weight_end = EOS;
+	}
+	*weight = atoi(uuid_end+1);
+	if (weight_end == NULL) {
+		/* no site columns */
+		*site = 0;
+		return 1;
+	}
+	strncpy(site, weight_end+1, HOSTLENG);
 	return 1;
 }
 
@@ -541,7 +562,8 @@ write_node_uuid_file(struct sys_config * cfg)
 			continue;
 		}
 		if (node_uuid_file_out(f, cfg->nodes[j].nodename
-		,	&cfg->nodes[j].uuid) != HA_OK) {
+		,	&cfg->nodes[j].uuid, cfg->nodes[j].weight
+		,	cfg->nodes[j].site) != HA_OK) {
 			fclose(f);
 			unlink(tmpname);
 			return HA_FAIL;
@@ -579,6 +601,8 @@ read_node_uuid_file(struct sys_config * cfg)
 	FILE *		f;
 	char		host[HOSTLENG];
 	cl_uuid_t	uu;
+	int		weight;
+	char		site[HOSTLENG];
 	int		rc;
 	const char *	uuidcachename = HOSTUUIDCACHEFILE;
 	gboolean	outofsync = FALSE;
@@ -593,12 +617,14 @@ read_node_uuid_file(struct sys_config * cfg)
 		return HA_FAIL;
 	}
 
-	while ((rc=node_uuid_file_in(f, host, &uu)) > 0) {
+	while ((rc=node_uuid_file_in(f, host, &uu, &weight, site)) > 0) {
 		struct node_info *	thisnode = lookup_tables(host, &uu);
 		cl_uuid_t		curuuid;
 		if (thisnode == NULL) {
 			/* auto-added node */
 			add_node(host, NORMALNODE_I);
+			set_node_weight(host, weight);
+			set_node_site(host, site);
 			update_tables(host, &uu);
 			continue;
 		}
@@ -610,6 +636,8 @@ read_node_uuid_file(struct sys_config * cfg)
 				outofsync=TRUE;
 			}
 		}
+		thisnode->weight = weight;
+		strncpy(thisnode->site, site, sizeof(thisnode->site));
 	}
 	fclose(f);
 	/*
@@ -653,7 +681,7 @@ write_delnode_file(struct sys_config* cfg)
 		}
 		
 		if (node_uuid_file_out(f, hip->nodename,
-				       &hip->uuid) != HA_OK) {
+			&hip->uuid, hip->weight, hip->site) != HA_OK) {
 			fclose(f);
 			unlink(tmpname);
 			return HA_FAIL;
@@ -694,6 +722,8 @@ read_delnode_file(struct sys_config* cfg)
 	FILE *		f;
 	char		host[HOSTLENG];
 	cl_uuid_t	uu;
+	int		weight;
+	char		site[HOSTLENG];
 	int		rc;
 	const char *	filename = DELHOSTCACHEFILE;
 	struct node_info thisnode;
@@ -708,11 +738,12 @@ read_delnode_file(struct sys_config* cfg)
 			  ,	__FUNCTION__, filename);
 		return HA_FAIL;
 	}
-	
-	while ((rc=node_uuid_file_in(f, host, &uu)) > 0) {
+	memset(site, 0, sizeof(site));
+	while ((rc=node_uuid_file_in(f, host, &uu, &weight, site)) > 0) {
 		strncpy(thisnode.nodename, host, HOSTLENG);
 		cl_uuid_copy(&thisnode.uuid, &uu);
-
+		thisnode.weight = weight;
+		strncpy(thisnode.site, site, HOSTLENG);
 		remove_node(thisnode.nodename, TRUE);
 
 	}
