@@ -104,6 +104,20 @@ nodestatus(ll_cluster_t *hb, int argc, char ** argv, const char * optstr);
 
 /*
  * Return Value:
+ *	the weight of the node
+ */
+static int
+nodeweight(ll_cluster_t *hb, int argc, char ** argv, const char * optstr);
+
+/*
+ * Return Value:
+ *	the site of the node
+ */
+static int
+nodesite(ll_cluster_t *hb, int argc, char ** argv, const char * optstr);
+
+/*
+ * Return Value:
  *	0: normal
  *	1: ping
  *	3: unknown type
@@ -179,6 +193,8 @@ static const cmd_t cmds[] = {
 	{ "hbstatus",      hbstatus, 	  "m" ,		FALSE},
 	{ "listnodes",     listnodes, 	  "mpn",	TRUE},
 	{ "nodestatus",    nodestatus, 	  "m",		TRUE},
+	{ "nodeweight",    nodeweight, 	  "m",		TRUE},
+	{ "nodesite",	   nodesite, 	  "m",		TRUE},
 	{ "nodetype",      nodetype, 	  "m",		TRUE },
 	{ "listhblinks",   listhblinks,   "m",		TRUE },
 	{ "hblinkstatus",  hblinkstatus,  "m",		TRUE },
@@ -208,6 +224,10 @@ static const char * simple_help_screen =
 "		-n	list only 'normal' type nodes\n"
 "nodestatus <node-name>\n"
 "	List the node status.\n"
+"nodeweight <node-name>\n"
+"	List the node weight.\n"
+"nodesite <node-name>\n"
+"	List the node site.\n"
 "nodetype <node-name>\n"
 "	List the nodes of a given type.\n"
 "rscstatus\n"
@@ -447,6 +467,75 @@ nodestatus(ll_cluster_t *hb, int argc, char ** argv, const char * optstr)
 	 */
 	
 	return ret;
+}
+static int 
+nodeweight(ll_cluster_t *hb, int argc, char ** argv, const char * optstr)
+{
+	int	weight;
+	int	ret = UNKNOWN_ERROR;
+
+	if ( general_simple_opt_deal(argc, argv, optstr) < 0 ) {
+		/* There are option errors */
+		return PARAMETER_ERROR;
+	};
+
+	if (argc <= optind+1) {
+		fprintf(stderr, "Not enough parameters.\n");
+		return PARAMETER_ERROR;
+	}
+
+	cl_log(LOG_DEBUG, "optind: %d   argv[optindex+1]: %s", optind, 
+		argv[optind+1]);
+	weight = hb->llc_ops->node_weight(hb, argv[optind+1]);
+	if ( weight == -1 ) {
+		fprintf(stderr, "Error. May be due to incorrect node name\n");
+		return PARAMETER_ERROR;
+	}
+	if (FOR_HUMAN_READ == TRUE) {
+		printf("The weight of the cluster node %s is %d\n", argv[optind+1], weight);
+	} else {
+		printf("%d\n", weight);
+	}
+
+       if (weight != -1) {
+		ret = OK; 
+	} else {
+		ret = NORMAL_FAIL;  
+	}
+	
+	return ret;
+}
+/* Map string std_output to return value ? 
+ * Active
+ */
+static int 
+nodesite(ll_cluster_t *hb, int argc, char ** argv, const char * optstr)
+{
+	const char *	site;
+
+	if ( general_simple_opt_deal(argc, argv, optstr) < 0 ) {
+		/* There are option errors */
+		return PARAMETER_ERROR;
+	};
+
+	if (argc <= optind+1) {
+		fprintf(stderr, "Not enough parameters.\n");
+		return PARAMETER_ERROR;
+	}
+
+	cl_log(LOG_DEBUG, "optind: %d   argv[optindex+1]: %s", optind, 
+		argv[optind+1]);
+	site = hb->llc_ops->node_site(hb, argv[optind+1]);
+	if ( site == NULL ) {
+		fprintf(stderr, "Error. May be due to incorrect node name\n");
+		return PARAMETER_ERROR;
+	}
+	if (FOR_HUMAN_READ == TRUE) {
+		printf("The site of the cluster node %s is %s\n", argv[optind+1], site);
+	} else {
+		printf("%s\n", site);
+	}
+	return  OK;
 }
 
 /* Map string std_output to return value ? No
