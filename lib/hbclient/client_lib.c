@@ -1,4 +1,4 @@
-/* $Id: client_lib.c,v 1.40 2006/05/10 19:14:49 lars Exp $ */
+/* $Id: client_lib.c,v 1.41 2006/05/28 00:57:55 zhenh Exp $ */
 /* 
  * client_lib: heartbeat API client side code
  *
@@ -190,6 +190,8 @@ static int init_nodewalk (ll_cluster_t*);
 static const char * nextnode (ll_cluster_t* ci);
 static int init_ifwalk (ll_cluster_t* ci, const char * host);
 static const char *	get_nodestatus(ll_cluster_t*, const char *host);
+static int 		get_nodeweight(ll_cluster_t*, const char *host);
+static const char *	get_nodesite(ll_cluster_t*, const char *host);
 static const char *
 get_clientstatus(ll_cluster_t*, const char *host, const char *clientid
 ,	int timeout);
@@ -824,6 +826,128 @@ get_nodestatus(ll_cluster_t* lcl, const char *host)
 
 	return ret;
 }
+
+/*
+ * Return the weight of the given node.
+ */
+
+static int
+get_nodeweight(ll_cluster_t* lcl, const char *host)
+{
+	struct ha_msg*		request;
+	struct ha_msg*		reply;
+	const char *		result;
+	const char *		weight_s;
+	int			ret;
+	llc_private_t*		pi;
+
+	ClearLog();
+	if (!ISOURS(lcl)) {
+		ha_api_log(LOG_ERR, "get_nodeweight: bad cinfo");
+		return -1;
+	}
+	pi = (llc_private_t*)lcl->ll_cluster_private;
+
+	if (!pi->SignedOn) {
+		ha_api_log(LOG_ERR, "not signed on");
+		return -1;
+	}
+
+	if ((request = hb_api_boilerplate(API_NODEWEIGHT)) == NULL) {
+		return -1;
+	}
+	if (ha_msg_add(request, F_NODENAME, host) != HA_OK) {
+		ha_api_log(LOG_ERR, "get_nodeweight: cannot add field");
+		ZAPMSG(request);
+		return -1;
+	}
+
+	/* Send message */
+	if (msg2ipcchan(request, pi->chan) != HA_OK) {
+		ZAPMSG(request);
+		ha_api_perror("Can't send message to IPC Channel");
+		return -1;
+	}
+	ZAPMSG(request);
+
+	/* Read reply... */
+	if ((reply=read_api_msg(pi)) == NULL) {
+		return -1;
+	}
+	if ((result = ha_msg_value(reply, F_APIRESULT)) != NULL
+	&&	strcmp(result, API_OK) == 0
+	&&	(weight_s = ha_msg_value(reply, F_WEIGHT)) != NULL) {
+		ret = atoi(weight_s);
+	}else{
+		ret = -1;
+	}
+	ZAPMSG(reply);
+
+	return ret;
+}
+
+/*
+ * Return the site of the given node.
+ */
+
+static const char *
+get_nodesite(ll_cluster_t* lcl, const char *host)
+{
+	struct ha_msg*		request;
+	struct ha_msg*		reply;
+	const char *		result;
+	const char *		site;
+	static char		sitebuf[HOSTLENG];
+	const char *		ret;
+	llc_private_t*		pi;
+
+	ClearLog();
+	if (!ISOURS(lcl)) {
+		ha_api_log(LOG_ERR, "get_nodesite: bad cinfo");
+		return NULL;
+	}
+	pi = (llc_private_t*)lcl->ll_cluster_private;
+
+	if (!pi->SignedOn) {
+		ha_api_log(LOG_ERR, "not signed on");
+		return NULL;
+	}
+
+	if ((request = hb_api_boilerplate(API_NODESITE)) == NULL) {
+		return NULL;
+	}
+	if (ha_msg_add(request, F_NODENAME, host) != HA_OK) {
+		ha_api_log(LOG_ERR, "get_nodesite: cannot add field");
+		ZAPMSG(request);
+		return NULL;
+	}
+
+	/* Send message */
+	if (msg2ipcchan(request, pi->chan) != HA_OK) {
+		ZAPMSG(request);
+		ha_api_perror("Can't send message to IPC Channel");
+		return NULL;
+	}
+	ZAPMSG(request);
+
+	/* Read reply... */
+	if ((reply=read_api_msg(pi)) == NULL) {
+		return NULL;
+	}
+	if ((result = ha_msg_value(reply, F_APIRESULT)) != NULL
+	&&	strcmp(result, API_OK) == 0
+	&&	(site = ha_msg_value(reply, F_SITE)) != NULL) {
+                memset(sitebuf, 0, sizeof(sitebuf));
+		strncpy(sitebuf, site, sizeof(sitebuf) - 1);
+		ret = sitebuf;
+	}else{
+		ret = NULL;
+	}
+	ZAPMSG(reply);
+
+	return ret;
+}
+
 /*
 * Return the status of the given client.
 */
@@ -3089,6 +3213,8 @@ static struct llc_ops heartbeat_ops = {
 	nextnode:		nextnode,		
 	end_nodewalk:		end_nodewalk,		
 	node_status:		get_nodestatus,		
+	node_weight:		get_nodeweight,		
+	node_site:		get_nodesite,		
 	node_type:		get_nodetype,	
 	num_nodes:		get_num_nodes,
 	init_ifwalk:		init_ifwalk,		
