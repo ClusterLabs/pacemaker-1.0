@@ -1,4 +1,4 @@
-/* $Id: heartbeat.h,v 1.85 2006/05/26 02:55:28 zhenh Exp $ */
+/* $Id: heartbeat.h,v 1.86 2006/05/28 00:50:45 zhenh Exp $ */
 /*
  * heartbeat.h: core definitions for the Linux-HA heartbeat program
  *
@@ -261,6 +261,8 @@ struct node_info {
 	int		nodetype;
 	char		nodename[HOSTLENG];	/* Host name from config file */
 	cl_uuid_t	uuid;
+	char		site[HOSTLENG];
+	int		weight;
 	char		status[STATUSLENG];	/* Status from heartbeat */
 	gboolean	status_suppressed;	/* Status reports suppressed
 						   for now */
@@ -396,6 +398,8 @@ struct node_info *	lookup_node(const char *);
 struct link * lookup_iface(struct node_info * hip, const char *iface);
 struct link *  iface_lookup_node(const char *);
 int	add_node(const char * value, int nodetype);
+int	set_node_weight(const char * value, int weight);
+int	set_node_site(const char * value, const char * site);
 int	remove_node(const char * value, int);
 void	SetParameterValue(const char * name, const char * value);
 
