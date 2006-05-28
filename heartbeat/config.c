@@ -1,4 +1,4 @@
-/* $Id: config.c,v 1.201 2006/05/26 02:55:28 zhenh Exp $ */
+/* $Id: config.c,v 1.202 2006/05/28 00:53:19 zhenh Exp $ */
 /*
  * Parse various heartbeat configuration files...
  *
@@ -1265,6 +1265,7 @@ add_node(const char * value, int nodetype)
 	hip->track.nmissing = 0;
 	hip->track.last_seq = NOSEQUENCE;
 	hip->track.ackseq = 0;
+	hip->weight = 100;
 	srand(time(NULL));
 	hip->track.ack_trigger = rand()%ACK_MSG_DIV;
 	hip->nodetype = nodetype;
@@ -1280,8 +1281,60 @@ add_node(const char * value, int nodetype)
 	return(HA_OK);
 }
 
+int 
+set_node_weight(const char* value, int weight)
+{
+	int i;
+	struct node_info * hip = NULL;
 
+	if (value == NULL){
+		cl_log(LOG_ERR, "%s: invalid nodename",
+		       __FUNCTION__);
+		return HA_FAIL;
+	}
+	
+	for (i = 0; i < config->nodecount; i++){
+		hip = &config->nodes[i];
+		if (strncasecmp(hip->nodename, value, sizeof(hip->nodename)) ==0){
+			break;
+		}
+	}
 
+	if (i == config->nodecount){
+		cl_log(LOG_DEBUG,"set weight to non-existing node %s", value);
+		return HA_FAIL;
+	}
+	
+	hip->weight = weight;
+	return HA_OK;	
+}
+
+int 
+set_node_site(const char* value, const char* site)
+{
+	int i;
+	struct node_info * hip = NULL;
+	
+	if (value == NULL){
+		cl_log(LOG_ERR, "%s: invalid nodename",
+		       __FUNCTION__);
+		return HA_FAIL;
+	}
+	
+	for (i = 0; i < config->nodecount; i++){
+		hip = &config->nodes[i];
+		if (strncasecmp(hip->nodename, value, sizeof(hip->nodename)) ==0){
+			break;
+		}
+	}
+
+	if (i == config->nodecount){
+		cl_log(LOG_DEBUG,"set site to non-existing node %s", value);
+		return HA_FAIL;
+	}
+	strncpy(hip->site, site, sizeof(hip->site));
+	return HA_OK;	
+}
 
 int 
 remove_node(const char* value, int deletion)
@@ -2585,6 +2638,9 @@ ha_config_check_boolean(const char *value)
 
 /*
  * $Log: config.c,v $
+ * Revision 1.202  2006/05/28 00:53:19  zhenh
+ * add functions for setting the weight and site of node
+ *
  * Revision 1.201  2006/05/26 02:55:28  zhenh
  * add "cluster" directive as the name of cluster to ha.cf and parameter of cluster
  *
