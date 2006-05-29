@@ -39,3 +39,6 @@ if nodes.count(thisnode) > 0:
 for i, v in enumerate(nodes):
     print "Propagating HA configuration files to node " + v + "."
     res = os.system("scp " + cfgfile + " " + authfile + " root@" + v + ":" + cfgdir)
+    print "Setting HA startup configuration on node " + v + "."
+    res = os.system("ssh " + " root@" + v + " chkconfig `chkconfig heartbeat`")
+
