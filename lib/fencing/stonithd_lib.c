@@ -328,11 +328,11 @@ stonithd_node_fence(stonith_ops_t * op)
 			rc = ST_OK;
 			stdlib_log(LOG_DEBUG, "stonith msg is sent to stonithd.");
 		} else {
-			stdlib_log(LOG_DEBUG, "failed to send stonith request to "
+			stdlib_log(LOG_ERR, "failed to send stonith request to "
 				   "the stonithd.");
 		}
 	} else {
-		stdlib_log(LOG_DEBUG, "stonithd_node_fence: "
+		stdlib_log(LOG_ERR, "stonithd_node_fence: "
 			   "Got an unexpected message.");
 		/* Need to handle in other way? */
 	}
