@@ -43,7 +43,7 @@ static const PILPluginImports*  PluginImports;
 static PILPlugin*               OurPlugin;
 static PILInterface*		OurInterface;
 static struct hb_media_imports*	OurImports;
-static void*			interfprivate;
+static void*			interfprivate = NULL;
 
 #define LOG	PluginImports->log
 #define MALLOC	PluginImports->alloc
