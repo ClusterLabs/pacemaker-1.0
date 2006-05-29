@@ -1,4 +1,4 @@
-/* $Id: ccmclient.c,v 1.40 2006/04/13 09:08:37 zhenh Exp $ */
+/* $Id: ccmclient.c,v 1.41 2006/05/29 08:55:24 zhenh Exp $ */
 /* 
  * client.c: Consensus Cluster Client tracker
  *
@@ -58,6 +58,7 @@ static GMemChunk *ipc_misc_chk = NULL;
 static gboolean membership_ready     = FALSE;
 static void refresh_llm_msg(llm_info_t *llm);
 
+static GList* quorum_list = NULL;
 
 /* 
  * the fully initialized clients.
@@ -308,62 +309,60 @@ client_delete_all(void)
 static gboolean
 get_quorum(ccm_info_t* info)
 {
-	static struct hb_quorum_fns* funcs = NULL;
-	static struct hb_tiebreaker_fns* tiebreaker_funcs = NULL;
-	const char* quorum_plugin = NULL;
-	const char* tiebreaker_plugin = NULL;
+	struct hb_quorum_fns* funcs = NULL;
+	const char* quorum_env = NULL;
+	char* quorum_str = NULL;
+	char* end = NULL;
+	char* begin = NULL;
+	GList* cur = NULL;
 	int rc;
 	
-	if (funcs == NULL){
-		quorum_plugin = cl_get_env(QUORUM_S);
-		if (quorum_plugin == NULL){
-			ccm_debug2(LOG_DEBUG, "No quorum selected,"
-			       "using default quorum plugin(majority)");
-			quorum_plugin  = "majority";
+	if (quorum_list == NULL){
+		quorum_env = cl_get_env(QUORUM_S);
+		if (quorum_env == NULL){
+			ccm_debug(LOG_DEBUG, "No quorum selected,"
+			       "using default quorum plugin(majority:twonodes)");
+			quorum_str = cl_strdup("majority:twonodes");
 		}
-	}
-	
-	if (tiebreaker_funcs == NULL){
-		tiebreaker_plugin = cl_get_env(TIEBREAKER_S);
-		if (tiebreaker_plugin == NULL){
-			ccm_debug2(LOG_DEBUG, "No tiebreaker selected,"
-			       "using default tiebreaker plugin(twonodes)");
-			tiebreaker_plugin = "twonodes";
+		else {
+			quorum_str = cl_strdup(quorum_env);
 		}
 		
-	}
-	
-	if (funcs == NULL){
-		funcs = cl_load_plugin("quorum", quorum_plugin);
-		if (funcs == NULL){
-			ccm_log(LOG_ERR, "%s: loading plugin %s failed",
-			       __FUNCTION__, quorum_plugin);
-			return FALSE;
+		begin = quorum_str;
+		while (begin != NULL) {
+			end = strchr(begin, ':');
+			if (end != NULL) {
+				*end = 0;
+			}
+			funcs = cl_load_plugin("quorum", begin);
+			if (funcs == NULL){
+				ccm_log(LOG_ERR, "%s: loading plugin %s failed",
+				       __FUNCTION__, begin);
+			}
+			else {
+				quorum_list = g_list_append(quorum_list, funcs);
+			}
+			begin = (end == NULL)? NULL:end+1;
 		}
+		cl_free(quorum_str);
 	}
-	
-        rc = funcs->getquorum(info->memcount, info->llm.nodecount);
-
-	if (rc == QUORUM_YES){
-		return TRUE;
-	}else if (rc ==  QUORUM_NO){
-		return FALSE;
-	}
-	
-	if (tiebreaker_funcs == NULL){
-		if ( tiebreaker_plugin == NULL){
-			return FALSE;
-		}
 		
-		tiebreaker_funcs = cl_load_plugin("tiebreaker", tiebreaker_plugin);
-		if (tiebreaker_funcs == NULL){
-			ccm_log(LOG_ERR, "%s: loading plugin %s failed",
-			       __FUNCTION__, tiebreaker_plugin);
+	cur = g_list_first(quorum_list);
+	while (cur != NULL) {
+		funcs = (struct hb_quorum_fns*)cur->data;
+	        rc = funcs->getquorum(info->memcount, info->llm.nodecount);
+		if (rc == QUORUM_YES){
+			return TRUE;
+		}
+		else if (rc == QUORUM_NO){
 			return FALSE;
 		}
+		cur = g_list_next(cur);
 	}
+	ccm_debug(LOG_ERR, "all quorum plugins can't make a decision! "
+			"assume lost quorum");
 	
-	return tiebreaker_funcs->break_tie(info->memcount, info->llm.nodecount);
+	return FALSE;
 	
 }
 

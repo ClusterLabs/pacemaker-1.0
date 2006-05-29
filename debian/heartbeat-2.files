@@ -124,6 +124,7 @@ usr/lib/heartbeat/plugins/RAExec/lsb.so
 usr/lib/heartbeat/plugins/RAExec/ocf.so
 usr/lib/heartbeat/plugins/RAExec/stonith.so
 usr/lib/heartbeat/plugins/quorum/majority.so
+usr/lib/heartbeat/plugins/quorum/twonodes.so
 usr/lib/heartbeat/plugins/test/test.so
 usr/lib/heartbeat/plugins/tiebreaker/twonodes.so
 usr/lib/heartbeat/ptest
