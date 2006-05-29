@@ -101,7 +101,7 @@ static void on_cib_connection_destroy(gpointer user_data);
 static char* failed_msg(crm_data_t* output, int rc);
 static const char* uname2id(const char* node);
 static resource_t* get_parent(resource_t* child);
-static int get_fix(const char* rsc_id, char* prefix, char* suffix);
+static int get_fix(const char* rsc_id, char* prefix, char* suffix, char* real_id);
 static const char* get_rsc_tag(resource_t* rsc);
 static int cl_msg_swap_offset(struct ha_msg* msg, int offset1, int offset2);
 
@@ -284,13 +284,12 @@ get_rsc_tag(resource_t* rsc)
 	
 }
 static int
-get_fix(const char* rsc_id, char* prefix, char* suffix)
+get_fix(const char* rsc_id, char* prefix, char* suffix, char* real_id)
 {
 	resource_t* rsc;
 	resource_t* parent;
 	pe_working_set_t* data_set;
 	char* colon;
-	char real_id[MAX_STRLEN];
 	char parent_tag[MAX_STRLEN];
 	char rsc_tag[MAX_STRLEN];
 		
@@ -300,14 +299,14 @@ get_fix(const char* rsc_id, char* prefix, char* suffix)
 		return -1;
 	}
 	strncpy(rsc_tag, get_rsc_tag(rsc), MAX_STRLEN);
-	
+	strncpy(real_id, rsc_id, MAX_STRLEN);
+
 	parent = get_parent(rsc);
 	if (parent == NULL) {
 		snprintf(prefix, MAX_STRLEN,"<%s id=\"%s\">",rsc_tag, rsc_id);
 		snprintf(suffix, MAX_STRLEN,"</%s>", rsc_tag);
 	}
 	else {
-		strncpy(real_id, rsc_id, MAX_STRLEN);
 		colon = strrchr(real_id, ':');
 		if (colon != NULL) {
 			*colon = '\0';
@@ -1241,14 +1240,15 @@ on_update_rsc_params(char* argv[], int argc)
 	char buf[MAX_STRLEN];
 	char prefix[MAX_STRLEN];
 	char suffix[MAX_STRLEN];
+	char real_id[MAX_STRLEN];
 	
-	if(get_fix(argv[1], prefix, suffix) == -1) {
+	if(get_fix(argv[1], prefix, suffix, real_id) == -1) {
 		return cl_strdup(MSG_FAIL);
 	}
 
 	snprintf(xml, MAX_STRLEN,
     		 "%s<instance_attributes id=\"ias_%s\"><attributes>",
-    		 prefix ,argv[1]);
+    		 prefix ,real_id);
 	for (i = 2; i < argc; i += 3) {
 		snprintf(buf, MAX_STRLEN,
 			"<nvpair id=\"%s\" name=\"%s\" value=\"%s\"/>",
@@ -1300,9 +1300,14 @@ on_set_target_role(char* argv[], int argc)
 	char buf[MAX_STRLEN];
 	char prefix[MAX_STRLEN];
 	char suffix[MAX_STRLEN];
+	char real_id[MAX_STRLEN];
+	
+	if(get_fix(argv[1], prefix, suffix, real_id) == -1) {
+		return cl_strdup(MSG_FAIL);
+	}
 	
 	if (STRNCMP_CONST(argv[2],"#default") == 0) {
-		snprintf(buf, MAX_STRLEN,"%s_target_role", argv[1]);
+		snprintf(buf, MAX_STRLEN,"%s_target_role", real_id);
 		rc = delete_object("resources", "nvpair", buf, &output);
 		if (rc < 0) {
 			return failed_msg(output, rc);
@@ -1310,17 +1315,14 @@ on_set_target_role(char* argv[], int argc)
 		return cl_strdup(MSG_OK);
 	}
 		
-	if(get_fix(argv[1], prefix, suffix) == -1) {
-		return cl_strdup(MSG_FAIL);
-	}
 
 	snprintf(xml, MAX_STRLEN,
     		 "%s<instance_attributes id=\"ias_%s\"><attributes>",
-    		 prefix,argv[1]);
+    		 prefix,real_id);
 	snprintf(buf, MAX_STRLEN,
 		"<nvpair id=\"%s_target_role\" " \
 		"name=\"target_role\" value=\"%s\"/>",
-		argv[1], argv[2]);
+		real_id, argv[2]);
 	strncat(xml, buf, MAX_STRLEN);
 	
 	strncat(xml, "</attributes></instance_attributes>", MAX_STRLEN);
@@ -1391,8 +1393,9 @@ on_update_rsc_ops(char* argv[], int argc)
 	char buf[MAX_STRLEN];
 	char prefix[MAX_STRLEN];
 	char suffix[MAX_STRLEN];
+	char real_id[MAX_STRLEN];
 	
-	if(get_fix(argv[1], prefix, suffix) == -1) {
+	if(get_fix(argv[1], prefix, suffix,real_id) == -1) {
 		return cl_strdup(MSG_FAIL);
 	}
 	
