@@ -472,7 +472,6 @@ static int
 nodeweight(ll_cluster_t *hb, int argc, char ** argv, const char * optstr)
 {
 	int	weight;
-	int	ret = UNKNOWN_ERROR;
 
 	if ( general_simple_opt_deal(argc, argv, optstr) < 0 ) {
 		/* There are option errors */
@@ -488,7 +487,7 @@ nodeweight(ll_cluster_t *hb, int argc, char ** argv, const char * optstr)
 		argv[optind+1]);
 	weight = hb->llc_ops->node_weight(hb, argv[optind+1]);
 	if ( weight == -1 ) {
-		fprintf(stderr, "Error. May be due to incorrect node name\n");
+		fprintf(stderr, "Error. Maybe due to incorrect node name.\n");
 		return PARAMETER_ERROR;
 	}
 	if (FOR_HUMAN_READ == TRUE) {
@@ -497,13 +496,7 @@ nodeweight(ll_cluster_t *hb, int argc, char ** argv, const char * optstr)
 		printf("%d\n", weight);
 	}
 
-       if (weight != -1) {
-		ret = OK; 
-	} else {
-		ret = NORMAL_FAIL;  
-	}
-	
-	return ret;
+	return OK;
 }
 /* Map string std_output to return value ? 
  * Active
