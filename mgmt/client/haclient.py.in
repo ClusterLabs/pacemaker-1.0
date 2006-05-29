@@ -802,67 +802,6 @@ class PlaceView(View) :
 			self.on_changed)
 		self.update()
 		
-class CloneView(View) :
-	name = "cloneview"
-	save_clone = None
-	def on_apply(self, widget):
-		glade = self.glade
-		clone = self.save_clone
-		clone["clone_max"] = glade.get_widget("clone_max").get_text()
-		clone["clone_node_max"] = glade.get_widget("clone_node_max").get_text()
-		manager.update_clone(clone)
-		View.on_apply(self, widget)
-	
-	def update(self) :
-		glade = self.glade
-		clone = manager.get_clone(self.param)
-		if clone != None :
-			glade.get_widget("id").set_text(clone["id"])
-			glade.get_widget("clone_max").set_text(clone["clone_max"])
-			glade.get_widget("clone_node_max").set_text(clone["clone_node_max"])
-			self.save_clone = clone
-		View.update(self)
-
-	def __init__(self, clone_id) :
-		View.__init__(self,clone_id)
-		glade = self.glade
-		glade.get_widget("clone_max").connect("changed", self.on_changed)
-		glade.get_widget("clone_node_max").connect("changed", self.on_changed)
-		self.update()
-		
-class MasterView(View) :
-	name = "masterview"
-	save_master = None
-	def on_apply(self, widget):
-		glade = self.glade
-		master = self.save_master
-		master["clone_max"] = glade.get_widget("clone_max").get_text()
-		master["clone_node_max"] = glade.get_widget("clone_node_max").get_text()
-		master["master_max"] = glade.get_widget("master_max").get_text()
-		master["master_node_max"] = glade.get_widget("master_node_max").get_text()
-		manager.update_master(master)
-		View.on_apply(self, widget)
-	
-	def update(self) :
-		glade = self.glade
-		master = manager.get_master(self.param)
-		if master != None :
-			glade.get_widget("id").set_text(master["id"])
-			glade.get_widget("clone_max").set_text(master["clone_max"])
-			glade.get_widget("clone_node_max").set_text(master["clone_node_max"])
-			glade.get_widget("master_max").set_text(master["master_max"])
-			glade.get_widget("master_node_max").set_text(master["master_node_max"])
-			self.save_master = master
-		View.update(self)
-
-	def __init__(self, master_id) :
-		View.__init__(self,master_id)
-		glade = self.glade
-		glade.get_widget("clone_max").connect("changed", self.on_changed)
-		glade.get_widget("clone_node_max").connect("changed", self.on_changed)
-		glade.get_widget("master_max").connect("changed", self.on_changed)
-		glade.get_widget("master_node_max").connect("changed", self.on_changed)
-		self.update()
 	
 class RscView(View) :
 	name = "rscview"
@@ -1152,24 +1091,26 @@ class AddNativeDlg :
 					return None
 		
 	
-class GrpView(View) :
-	name = "grpview"
+class CompoundRscView(View) :
+	name = "compoundrscview"
 	param_list = None
 	params_save = None
 	
 	def on_apply(self, widget):
 		glade = self.glade
 		View.on_apply(self, widget)
+		(rid,rtype) = self.param
 		new_params = self.param_list.get_data()
-		manager.update_attrs("up_rsc_params\n"+self.param,"del_rsc_param",
+		manager.update_attrs("up_rsc_params\n"+rid,"del_rsc_param",
 				   self.params_save, new_params, ["id","name","value"]);
 		
 	def update(self) :
 		glade = self.glade
-		group_id = self.param
-		params = manager.get_rsc_params(group_id)
+		(rid,rtype) = self.param
+		params = manager.get_rsc_params(rid)
 		self.params_save = params
-		glade.get_widget("id").set_text(group_id)
+		glade.get_widget("id").set_text(rid)
+		glade.get_widget("type").set_text(rtype)
 						
 		self.param_list.clear()
 		if params != [] :
@@ -1218,6 +1159,7 @@ class MainWindow :
 		return False
 	
 	def update_ui(self) :
+		all_rsc_type = [_("native"),_("group"),_("clone"),_("master")]
 		self.set_action_sensitive('logout',manager.connected)
 		self.set_action_sensitive('login',not manager.connected)
 		self.set_action_sensitive('addrsc',manager.connected)
@@ -1241,19 +1183,19 @@ class MainWindow :
 
 		self.set_action_sensitive('cleanuprsc',
 			manager.connected
-			and self.cur_type in [_("native"),_("group")])
+			and self.cur_type in all_rsc_type)
 
 		self.set_action_sensitive('startrsc',
 			manager.connected
-			and self.cur_type in [_("native"),_("group")])
+			and self.cur_type in all_rsc_type)
 		
 		self.set_action_sensitive('stoprsc',
 			manager.connected
-			and self.cur_type in [_("native"),_("group")])
+			and self.cur_type in all_rsc_type)
 
 		self.set_action_sensitive('defaultrsc',
 			manager.connected
-			and self.cur_type in [_("native"),_("group")])
+			and self.cur_type in all_rsc_type)
 
 		self.set_action_sensitive('uprsc',
 			manager.connected
@@ -1287,12 +1229,8 @@ class MainWindow :
 			self.cur_view = OrderView(name)
 		elif type == _("colocation") :
 			self.cur_view = ColocationView(name)
-		elif type == _("clone") :
-			self.cur_view = CloneView(name)
-		elif type == _("master") :
-			self.cur_view = MasterView(name)
-		elif type == _("group") :
-			self.cur_view = GrpView(name)
+		elif type in [ _("clone"), _("group"), _("master")] :
+			self.cur_view = CompoundRscView((name,type))
 		else :
 			self.cur_view = View()
 		self.view_widget.add(self.cur_view.widget)
