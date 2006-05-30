@@ -1,4 +1,4 @@
-/* $Id: stonithd.c,v 1.89 2006/04/14 08:07:26 sunjd Exp $ */
+/* $Id: stonithd.c,v 1.90 2006/05/30 10:15:56 sunjd Exp $ */
 
 /* File: stonithd.c
  * Description: STONITH daemon for node fencing
@@ -1427,7 +1427,7 @@ stonithd_process_client_msg(struct ha_msg * msg, gpointer data)
 	}
 
 	stonithd_log2(LOG_DEBUG, "begin to dealing with a api msg %s from "
-			"a client.", api_type);
+			"a client PID:%d.", api_type, ch->farside_pid);
 	for (i=0; i<DIMOF(api_msg_to_handlers); i++) {
 		if ( strncmp(api_type, api_msg_to_handlers[i].msg_type, MAXCMP)
 			 == 0 ) {
@@ -1664,6 +1664,15 @@ on_stonithd_node_fence(struct ha_msg * request, gpointer data)
 	/* Check if have signoned */
 	if ((client = get_exist_client_by_chan(client_list, ch)) == NULL ) {
 		stonithd_log(LOG_ERR, "stonithd_node_fence: not signoned yet.");
+		if ( NULL != (st_op = new_stonith_ops_t(request) )) {
+			stonithd_log2(LOG_DEBUG, "client [pid: %d] want a STONITH "
+				"operation %s to node %s."
+				, ch->farside_pid
+				, stonith_op_strname[st_op->optype]
+				, st_op->node_name);
+			free_stonith_ops_t(st_op);
+			st_op = NULL;
+		}
 		return ST_FAIL;
 	}
 
@@ -2429,6 +2438,15 @@ on_stonithd_virtual_stonithRA_ops(struct ha_msg * request, gpointer data)
 	if ((client = get_exist_client_by_chan(client_list, ch)) == NULL ) {
 		stonithd_log(LOG_ERR, "on_stonithd_virtual_stonithRA_ops: "
 			     "not signoned yet.");
+		if ( NULL!= (ra_op = new_stonithRA_ops_t(request)) ) {
+			stonithd_log2(LOG_DEBUG, "client [pid: %d] want a "
+				"resource operation %s on stonith RA %s "
+				"[resource id: %s]"
+				, ch->farside_pid, ra_op->op_type
+				, ra_op->ra_name, ra_op->rsc_id);
+			free_stonithRA_ops_t(ra_op);
+			ra_op = NULL;
+		}
 		return ST_FAIL;
 	}
 
@@ -3420,6 +3438,9 @@ trans_log(int priority, const char * fmt, ...)
 
 /* 
  * $Log: stonithd.c,v $
+ * Revision 1.90  2006/05/30 10:15:56  sunjd
+ * add two level 2 logs
+ *
  * Revision 1.89  2006/04/14 08:07:26  sunjd
  * typo found by Dave
  *
