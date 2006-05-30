@@ -91,6 +91,8 @@ static char* on_get_constraint(char* argv[], int argc);
 static char* on_update_constraint(char* argv[], int argc);
 static char* on_delete_constraint(char* argv[], int argc);
 
+static void get_instance_attributes_id(const char* rsc_id, char* id);
+static void get_attr_id(const char* rsc_id, const char* attr, char* id);
 static int delete_object(const char* type, const char* entry, const char* id, crm_data_t** output);
 static GList* find_xml_node_list(crm_data_t *root, const char *search_path);
 static int refresh_lrm(IPC_Channel *crmd_channel, const char *host_uname);
@@ -319,6 +321,89 @@ get_fix(const char* rsc_id, char* prefix, char* suffix, char* real_id)
 	}
 	free_data_set(data_set);
 	return 0;
+}
+static void
+get_instance_attributes_id(const char* rsc_id, char* id)
+{
+	resource_t* rsc;
+	const char* cur_id;
+	pe_working_set_t* data_set;
+	struct ha_msg* attrs;
+	
+	data_set = get_data_set();
+	rsc = pe_find_resource(data_set->resources, rsc_id);	
+	if (rsc == NULL) {
+		snprintf(id, MAX_STRLEN, "%s_instance_attrs", rsc_id);
+		free_data_set(data_set);
+		return;
+	}
+	attrs = cl_get_struct((struct ha_msg*)rsc->xml, "instance_attributes");
+	if (attrs == NULL) {
+		snprintf(id, MAX_STRLEN, "%s_instance_attrs", rsc_id);
+		free_data_set(data_set);
+		return;
+	}
+	cur_id = ha_msg_value(attrs, "id");
+	if (cur_id == NULL) {
+		snprintf(id, MAX_STRLEN, "%s_instance_attrs", rsc_id);
+		free_data_set(data_set);
+		return;
+	}
+	strncpy(id, cur_id, MAX_STRLEN);
+	free_data_set(data_set);
+	return;					
+
+}
+static void
+get_attr_id(const char* rsc_id, const char* attr, char* id)
+{
+	int i;
+	resource_t* rsc;
+	char* ret;
+	const char * name_nvpair;
+	const char * id_nvpair;
+	struct ha_msg* attrs;
+	struct ha_msg* nvpair;
+	pe_working_set_t* data_set;
+	
+	data_set = get_data_set();
+	rsc = pe_find_resource(data_set->resources, rsc_id);	
+	if (rsc == NULL) {
+		snprintf(id, MAX_STRLEN,  "%s_%s", rsc_id, attr);
+		free_data_set(data_set);
+		return;
+	}
+
+	ret = cl_strdup(MSG_OK);
+	attrs = cl_get_struct((struct ha_msg*)rsc->xml, "instance_attributes");
+	if(attrs == NULL) {
+		snprintf(id, MAX_STRLEN,  "%s_%s", rsc_id, attr);
+		free_data_set(data_set);
+		return;
+	}
+	attrs = cl_get_struct(attrs, "attributes");
+	if(attrs == NULL) {
+		snprintf(id, MAX_STRLEN,  "%s_%s", rsc_id, attr);
+		free_data_set(data_set);
+		return;
+	}
+	for (i = 0; i < attrs->nfields; i++) {
+		if (STRNCMP_CONST(attrs->names[i], "nvpair") == 0) {
+			nvpair = (struct ha_msg*)attrs->values[i];
+			name_nvpair = ha_msg_value(nvpair, "name");
+			if ( strncmp(name_nvpair,attr,MAX_STRLEN) == 0 ) {
+				id_nvpair = ha_msg_value(nvpair,"id");
+				if (id_nvpair != NULL) {
+					strncpy(id,id_nvpair,MAX_STRLEN);
+					free_data_set(data_set);
+					return;					
+				}
+			}
+		}
+	}
+	snprintf(id, MAX_STRLEN,  "%s_%s", rsc_id, attr);
+	free_data_set(data_set);
+	return;
 }
 
 /* mgmtd functions */
@@ -790,6 +875,7 @@ on_add_rsc(char* argv[], int argc)
 	crm_data_t* output = NULL;
 	char xml[MAX_STRLEN];
 	char buf[MAX_STRLEN];
+	char inst_attrs_id[MAX_STRLEN];
 	int clone, master, has_param;
 		
 	if (argc < 11) {
@@ -805,23 +891,25 @@ on_add_rsc(char* argv[], int argc)
 		strncat(xml, buf, MAX_STRLEN);
 	}
 	if (clone) {
+		get_instance_attributes_id(argv[7], inst_attrs_id);
 		snprintf(buf, MAX_STRLEN,
-			 "<clone id=\"%s\"><instance_attributes id=\"ias_%s\"><attributes>" \
+			 "<clone id=\"%s\"><instance_attributes id=\"%s\"><attributes>" \
 			 "<nvpair id=\"%s_clone_max\" name=\"clone_max\" value=\"%s\"/>" \
 			 "<nvpair id=\"%s_clone_node_max\" name=\"clone_node_max\" value=\"%s\"/>" \
 			 "</attributes>	</instance_attributes> ",
-			 argv[7], argv[7], argv[7], argv[8],argv[7], argv[9]);
+			 argv[7], inst_attrs_id, argv[7], argv[8],argv[7], argv[9]);
 		strncat(xml, buf, MAX_STRLEN);
 	}
 	if (master) {
+		get_instance_attributes_id(argv[7], inst_attrs_id);
 		snprintf(buf, MAX_STRLEN,
-			 "<master_slave id=\"%s\"><instance_attributes id=\"ias_%s\"><attributes>" \
+			 "<master_slave id=\"%s\"><instance_attributes id=\"%s\"><attributes>" \
 			 "<nvpair id=\"%s_clone_max\" name=\"clone_max\" value=\"%s\"/>" \
 			 "<nvpair id=\"%s_clone_node_max\" name=\"clone_node_max\" value=\"%s\"/>" \
 			 "<nvpair id=\"%s_master_max\" name=\"master_max\" value=\"%s\"/>" \
 			 "<nvpair id=\"%s_master_node_max\" name=\"master_node_max\" value=\"%s\"/>" \
 			 "</attributes>	</instance_attributes>",
-			 argv[7], argv[7], argv[7], argv[8], argv[7], argv[9],
+			 argv[7], inst_attrs_id, argv[7], argv[8], argv[7], argv[9],
 			 argv[7], argv[10], argv[7], argv[11]);
 		strncat(xml, buf, MAX_STRLEN);
 	}
@@ -835,7 +923,7 @@ on_add_rsc(char* argv[], int argc)
 	else {
 		snprintf(buf, MAX_STRLEN,
 			 "<primitive id=\"%s\" class=\"%s\" type=\"%s\" provider=\"%s\">" \
-			 "<instance_attributes id=\"ias_%s\"> <attributes>"
+			 "<instance_attributes id=\"%s_instance_attrs\"> <attributes>"
 			 , argv[1],argv[2], argv[3],argv[4], argv[1]);
 		strncat(xml, buf, MAX_STRLEN);
 	
@@ -992,7 +1080,8 @@ on_add_grp(char* argv[], int argc)
 	char xml[MAX_STRLEN];
 	char buf[MAX_STRLEN];
 	
-	snprintf(xml, MAX_STRLEN,"<group id=\"%s\"><instance_attributes id=\"ias_%s\">" \
+	snprintf(xml, MAX_STRLEN,"<group id=\"%s\">" \
+		"<instance_attributes id=\"%s_instance_attrs\">" \
 		"<attributes>", argv[1], argv[1]);
 	for (i = 2; i < argc; i += 3) {
 		snprintf(buf, MAX_STRLEN,
@@ -1241,14 +1330,15 @@ on_update_rsc_params(char* argv[], int argc)
 	char prefix[MAX_STRLEN];
 	char suffix[MAX_STRLEN];
 	char real_id[MAX_STRLEN];
+	char inst_attrs_id[MAX_STRLEN];	
 	
 	if(get_fix(argv[1], prefix, suffix, real_id) == -1) {
 		return cl_strdup(MSG_FAIL);
 	}
-
+	get_instance_attributes_id(argv[1],inst_attrs_id);
 	snprintf(xml, MAX_STRLEN,
-    		 "%s<instance_attributes id=\"ias_%s\"><attributes>",
-    		 prefix ,real_id);
+    		 "%s<instance_attributes id=\"%s\"><attributes>",
+    		 prefix , inst_attrs_id);
 	for (i = 2; i < argc; i += 3) {
 		snprintf(buf, MAX_STRLEN,
 			"<nvpair id=\"%s\" name=\"%s\" value=\"%s\"/>",
@@ -1301,13 +1391,17 @@ on_set_target_role(char* argv[], int argc)
 	char prefix[MAX_STRLEN];
 	char suffix[MAX_STRLEN];
 	char real_id[MAX_STRLEN];
+	char inst_attrs_id[MAX_STRLEN];	
+	char target_role_id[MAX_STRLEN];	
 	
 	if(get_fix(argv[1], prefix, suffix, real_id) == -1) {
 		return cl_strdup(MSG_FAIL);
 	}
+	get_instance_attributes_id(argv[1], inst_attrs_id);
+	get_attr_id(argv[1], "target_role", target_role_id);
 	
 	if (STRNCMP_CONST(argv[2],"#default") == 0) {
-		snprintf(buf, MAX_STRLEN,"%s_target_role", real_id);
+		snprintf(buf, MAX_STRLEN, "%s", target_role_id);
 		rc = delete_object("resources", "nvpair", buf, &output);
 		if (rc < 0) {
 			return failed_msg(output, rc);
@@ -1317,12 +1411,12 @@ on_set_target_role(char* argv[], int argc)
 		
 
 	snprintf(xml, MAX_STRLEN,
-    		 "%s<instance_attributes id=\"ias_%s\"><attributes>",
-    		 prefix,real_id);
+    		 "%s<instance_attributes id=\"%s\"><attributes>",
+    		 prefix,inst_attrs_id);
 	snprintf(buf, MAX_STRLEN,
-		"<nvpair id=\"%s_target_role\" " \
+		"<nvpair id=\"%s\" " \
 		"name=\"target_role\" value=\"%s\"/>",
-		real_id, argv[2]);
+		target_role_id, argv[2]);
 	strncat(xml, buf, MAX_STRLEN);
 	
 	strncat(xml, "</attributes></instance_attributes>", MAX_STRLEN);
@@ -1480,14 +1574,17 @@ on_update_clone(char* argv[], int argc)
 	crm_data_t* cib_object = NULL;
 	crm_data_t* output;
 	char xml[MAX_STRLEN];
+	char inst_attrs_id[MAX_STRLEN];	
 
 	ARGC_CHECK(4);
+	
+	get_instance_attributes_id(argv[1], inst_attrs_id);
 	snprintf(xml,MAX_STRLEN,
-		 "<clone id=\"%s\"><instance_attributes id=\"ias_%s\"><attributes>" \
+		 "<clone id=\"%s\"><instance_attributes id=\"%s\"><attributes>" \
 		 "<nvpair id=\"%s_clone_max\" name=\"clone_max\" value=\"%s\"/>" \
 		 "<nvpair id=\"%s_clone_node_max\" name=\"clone_node_max\" value=\"%s\"/>" \
 		 "</attributes></instance_attributes></clone>",
-		 argv[1],argv[1],argv[1],argv[2],argv[1],argv[3]);
+		 argv[1],inst_attrs_id,argv[1],argv[2],argv[1],argv[3]);
 
 	cib_object = string2xml(xml);
 	if(cib_object == NULL) {
@@ -1558,16 +1655,18 @@ on_update_master(char* argv[], int argc)
 	crm_data_t* cib_object = NULL;
 	crm_data_t* output;
 	char xml[MAX_STRLEN];
+	char inst_attrs_id[MAX_STRLEN];	
 
 	ARGC_CHECK(6);
+	get_instance_attributes_id(argv[1], inst_attrs_id);
 	snprintf(xml,MAX_STRLEN,
-		 "<master_slave id=\"%s\"><instance_attributes id=\"ias_%s\"><attributes>" \
+		 "<master_slave id=\"%s\"><instance_attributes id=\"%s\"><attributes>" \
 		 "<nvpair id=\"%s_clone_max\" name=\"clone_max\" value=\"%s\"/>" \
 		 "<nvpair id=\"%s_clone_node_max\" name=\"clone_node_max\" value=\"%s\"/>" \
 		 "<nvpair id=\"%s_master_max\" name=\"master_max\" value=\"%s\"/>" \
 		 "<nvpair id=\"%s_master_node_max\" name=\"master_node_max\" value=\"%s\"/>" \
 		 "</attributes></instance_attributes></master_slave>",
-		 argv[1],argv[1],argv[1],argv[2],argv[1],
+		 argv[1],inst_attrs_id,argv[1],argv[2],argv[1],
 		 argv[3],argv[1],argv[4],argv[1],argv[5]);
 
 	cib_object = string2xml(xml);
