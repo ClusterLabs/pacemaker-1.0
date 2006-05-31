@@ -1,4 +1,4 @@
-/* $Id: client_lib.c,v 1.41 2006/05/28 00:57:55 zhenh Exp $ */
+/* $Id: client_lib.c,v 1.42 2006/05/31 17:31:57 gshi Exp $ */
 /* 
  * client_lib: heartbeat API client side code
  *
@@ -51,7 +51,7 @@
 #include <glib.h>
 #include <clplumbing/cl_random.h>
 
-
+#define CLIENTID_MAXLEN		36
 struct sys_config *		config  = NULL;
 
 int			netstring_format = TRUE;
@@ -219,7 +219,7 @@ static int		rcvmsg(ll_cluster_t* llc, int blocking);
 
 volatile struct process_info *	curproc = NULL;
 static char		OurPid[16];
-static const char *	OurClientID = NULL;
+static char		OurClientID[CLIENTID_MAXLEN];
 static char 		OurNode[SYS_NMLN];
 static ll_cluster_t*	hb_cluster_new(void);
 
@@ -313,10 +313,10 @@ hb_api_signon(struct ll_cluster* cinfo, const char * clientid)
 
 	/* Create our client id */
 	if (clientid != NULL) {
-		OurClientID = clientid;
+		strncpy(OurClientID, clientid, CLIENTID_MAXLEN);
 		iscasual = 0;
 	}else{
-		OurClientID = OurPid;
+		strncpy(OurClientID, OurPid, CLIENTID_MAXLEN);
 		iscasual = 1;
 	}
 
@@ -475,7 +475,7 @@ hb_api_signoff(struct ll_cluster* cinfo,gboolean need_destroy_chan)
 	}
 	pi->chan->ops->waitout(pi->chan);
 	ZAPMSG(request);
-	OurClientID = NULL;
+	OurClientID[0] = EOS;
 	if(need_destroy_chan){
 		pi->chan->ops->destroy(pi->chan);
 	}
