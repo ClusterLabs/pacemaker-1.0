@@ -1,4 +1,4 @@
-/* $Id: heartbeat.c,v 1.510 2006/05/28 00:54:19 zhenh Exp $ */
+/* $Id: heartbeat.c,v 1.511 2006/05/31 06:32:27 zhenh Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -2769,110 +2769,99 @@ HBDoMsg_T_REPNODES(const char * type, struct node_info * fromnode,
 		/*our own REPNODES msg*/
 		return;
 	}
-
-	if (nodelist == NULL){
-		cl_log(LOG_ERR, "%s: nodelist not found",
-			__FUNCTION__);
-		return;
-	}
-	memset(nodes, 0, MAXNODE);
-
-	if (getnodes(nodelist, nodes, &num) != HA_OK){
-		cl_log(LOG_ERR, "%s: get nodes from nodelist failed",
-			__FUNCTION__);
-		return;
-	}
 	
-	if (getnodes(delnodelist, delnodes, &delnum) != HA_OK){	       
-		cl_log(LOG_ERR, "%s: get del nodes from nodelist failed",
-			__FUNCTION__);
-		return;
-	}
-
-	/* term definition*/
-	/* added: a node in config->nodes[] 
-	   deleted: a node in del_node_list
-	   removed: remove a node either from config->nodes[] or del_node_list
-	*/
-
-
-
-	/* process delnodelist*/
-	/* update our del node list to be the exact same list as the received one
-	 */
-	
-	dellist_destroy();
-	for (i = 0; i < delnum; i++){
-		dellist_add(delnodes[i]);
-	}	
-	
-
-
 	/* process nodelist*/
 	/* our local node list is outdated
 	 * any node that is in nodelist but not in local node list should be added
 	 * any node that is in local node list but not in nodelist should be removed
 	 * (but not deleted)
 	 */
-	if (ANYDEBUG){
-		cl_log(LOG_DEBUG, "nodelist received:%s", nodelist);
-		cl_log(LOG_DEBUG, "delnodelist received:%s", delnodelist);
-	}
-	for (i =0; i < num; i++){
-		for (j = 0; j < config->nodecount; j++){
-			if (strncmp(nodes[i], config->nodes[j].nodename,
-				    HOSTLENG) == 0){
-				break;
+	
+	/* term definition*/
+	/* added: a node in config->nodes[] 
+	   deleted: a node in del_node_list
+	   removed: remove a node either from config->nodes[] or del_node_list
+	*/
+
+	if (nodelist != NULL){
+		memset(nodes, 0, MAXNODE);
+		if (ANYDEBUG){
+			cl_log(LOG_DEBUG, "nodelist received:%s", nodelist);
+		}
+		if (getnodes(nodelist, nodes, &num) != HA_OK){
+			cl_log(LOG_ERR, "%s: get nodes from nodelist failed",
+				__FUNCTION__);
+			return;
+		}
+		for (i =0; i < num; i++){
+			for (j = 0; j < config->nodecount; j++){
+				if (strncmp(nodes[i], config->nodes[j].nodename,
+					HOSTLENG) == 0){
+					break;
+				}
+			}
+			if ( j == config->nodecount){
+				/*this node is not found in config
+				* we need to add it 
+				*/
+				hb_add_one_node(nodes[i]);		
 			}
 		}
-		if ( j == config->nodecount){
-			/*this node is not found in config
-			 * we need to add it 
-			 */
-			hb_add_one_node(nodes[i]);		
+		
+		for (i =0; i < config->nodecount; i++){
+			for (j=0;j < num; j++){
+				if ( strncmp(config->nodes[i].nodename,
+					nodes[j], HOSTLENG) == 0){
+					break;
+				}	
+			}
+			if (j == num){
+				/* This node is not found in incoming nodelist,
+				* therefore, we need to remove it from config->nodes[]
+				*
+				* Of course, this assumes everyone has correct node
+				* lists - which may not be the case :-(  FIXME???
+				* And it assumes autojoin is on - which it may
+				* not be...
+				*/
+				hb_remove_one_node(config->nodes[i].nodename, FALSE);
+				
+			}
 		}
+		for (i = 0; i< num; i++){
+			if (nodes[i]){
+				ha_free(nodes[i]);
+				nodes[i] = NULL;
+			}
+		}
+		get_reqnodes_reply = TRUE;
+		write_cache_file(config);
 	}
+
+	if (delnodelist != NULL) {	
+		memset(delnodes, 0, MAXNODE);
+		if (getnodes(delnodelist, delnodes, &delnum) != HA_OK){	       
+			cl_log(LOG_ERR, "%s: get del nodes from nodelist failed",
+				__FUNCTION__);
+			return;
+		}
+		/* process delnodelist*/
+		/* update our del node list to be the exact same list as the received one
+		*/
+		dellist_destroy();
+		for (i = 0; i < delnum; i++){
+			dellist_add(delnodes[i]);
+		}	
 	
-	for (i =0; i < config->nodecount; i++){
-		for (j=0;j < num; j++){
-			if ( strncmp(config->nodes[i].nodename,
-				     nodes[j], HOSTLENG) == 0){
-				break;
-			}	
+		for (i = 0; i < delnum; i++){
+			if (delnodes[i]){
+				ha_free(delnodes[i]);
+				delnodes[i] = NULL;
+			}
 		}
-		if (j == num){
-			/* This node is not found in incoming nodelist,
-			 * therefore, we need to remove it from config->nodes[]
-			 *
-			 * Of course, this assumes everyone has correct node
-			 * lists - which may not be the case :-(  FIXME???
-			 * And it assumes autojoin is on - which it may
-			 * not be...
-			 */
-			hb_remove_one_node(config->nodes[i].nodename, FALSE);
-			
-		}
+		get_reqnodes_reply = TRUE;
+		write_delnode_file(config);
 	}
-
-
-	
-	for (i = 0; i< num; i++){
-		if (nodes[i]){
-			ha_free(nodes[i]);
-			nodes[i] = NULL;
-		}
-	}
-
-	for (i = 0; i < delnum; i++){
-		if (delnodes[i]){
-			ha_free(delnodes[i]);
-			delnodes[i] = NULL;
-		}
-	}
-
-	get_reqnodes_reply = TRUE;
-	write_cache_file(config);
-	write_delnode_file(config);
 	comm_now_up();
         return;
 }
@@ -6347,6 +6336,9 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.511  2006/05/31 06:32:27  zhenh
+ * To work with nodes in 2.0.5, we have to deal with the T_REPNODES message without F_DELNODELIST field.
+ *
  * Revision 1.510  2006/05/28 00:54:19  zhenh
  * add message handlers for setting the weight and site of node
  *
