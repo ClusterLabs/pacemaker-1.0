@@ -42,12 +42,10 @@
 #include <fencing/stonithd_api.h>
 #include <fencing/stonithd_msg.h>
 
-
 static const char * CLIENT_NAME = NULL;
 static pid_t CLIENT_PID = 0;
 static char CLIENT_PID_STR[16];
 static gboolean DEBUG_MODE	   = FALSE;
-static gboolean SIGNONED_TO_STONITHD = FALSE;
 static IPC_Channel * chan	   = NULL;
 
 static gboolean INT_BY_ALARM = FALSE;
@@ -91,30 +89,25 @@ stonithd_signon(const char * client_name)
 	gid_t	my_egid;
 	const char * tmpstr;
 
-	if ( SIGNONED_TO_STONITHD ) {
-		/* if server is broken, then signoff and signon? important */
-		stdlib_log(LOG_DEBUG, "stonithd_signon: has sigoned to "
-			   "stonithd.");
-		return ST_OK;
-	}
-
-	wchanattrs = g_hash_table_new(g_str_hash, g_str_equal);
-        g_hash_table_insert(wchanattrs, path, sock);
-	/* Connect to the stonith deamon */
-	chan = ipc_channel_constructor(IPC_ANYTYPE, wchanattrs);
-	g_hash_table_destroy(wchanattrs);
+	if (chan == NULL || chan->ch_status == IPC_DISCONNECT) {
+		wchanattrs = g_hash_table_new(g_str_hash, g_str_equal);
+        	g_hash_table_insert(wchanattrs, path, sock);
+		/* Connect to the stonith deamon */
+		chan = ipc_channel_constructor(IPC_ANYTYPE, wchanattrs);
+		g_hash_table_destroy(wchanattrs);
 	
-	if (chan == NULL) {
-		stdlib_log(LOG_ERR, "stonithd_signon: Can't connect to "
-			   "stonithd");
-		return ST_FAIL;
-	}
+		if (chan == NULL) {
+			stdlib_log(LOG_ERR, "stonithd_signon: Can't connect "
+				   " to stonithd");
+			return ST_FAIL;
+		}
 
-        if (chan->ops->initiate_connection(chan) != IPC_OK) {
-		stdlib_log(LOG_ERR, "stonithd_signon: Can't initiate "
-			   "connection to stonithd");
-                return ST_FAIL;
-        }
+	        if (chan->ops->initiate_connection(chan) != IPC_OK) {
+			stdlib_log(LOG_ERR, "stonithd_signon: Can't initiate "
+				   "connection to stonithd");
+	                return ST_FAIL;
+       		}
+	}
 
 	CLIENT_PID = getpid();
 	snprintf(CLIENT_PID_STR, sizeof(CLIENT_PID_STR), "%d", CLIENT_PID);
@@ -167,7 +160,6 @@ stonithd_signon(const char * client_name)
 			     F_STONITHD_APIRPL, ST_RSIGNON) ) {
 		if ( ((tmpstr=cl_get_string(reply, F_STONITHD_APIRET)) != NULL)
 	   	    && (STRNCMP_CONST(tmpstr, ST_APIOK) == 0) ) {
-			SIGNONED_TO_STONITHD = TRUE;
 			rc = ST_OK;
 			stdlib_log(LOG_DEBUG, "signoned to the stonithd.");
 		} else {
@@ -191,7 +183,7 @@ stonithd_signoff(void)
 	struct ha_msg * request, * reply;
 	const char * tmpstr;
 	
-	if (SIGNONED_TO_STONITHD == FALSE) {
+	if (chan == NULL || chan->ch_status == IPC_DISCONNECT) {
 		stdlib_log(LOG_NOTICE, "Has been in signoff status.");
 		return ST_OK;
 	}
@@ -228,7 +220,8 @@ stonithd_signoff(void)
 			     F_STONITHD_APIRPL, ST_RSIGNOFF) ) {
 		if ( ((tmpstr=cl_get_string(reply, F_STONITHD_APIRET)) != NULL)
 	   	    && (STRNCMP_CONST(tmpstr, ST_APIOK) == 0) ) {
-			SIGNONED_TO_STONITHD = FALSE;
+			chan->ops->destroy(chan);
+			chan = NULL;
 			CLIENT_NAME = NULL;
 			rc = ST_OK;
 			stdlib_log(LOG_DEBUG, "succeeded to sign off the "
@@ -248,11 +241,11 @@ stonithd_signoff(void)
 IPC_Channel *
 stonithd_input_IPC_channel(void)
 {
-	if ( SIGNONED_TO_STONITHD == TRUE ) {
-		return chan;
-	} else {
+	if ( chan == NULL || chan->ch_status == IPC_DISCONNECT ) {
 		stdlib_log(LOG_ERR, "stonithd_input_IPC_channel: not signon.");
 		return NULL;
+	} else {
+		return chan;
 	}
 }
 
@@ -268,7 +261,7 @@ stonithd_node_fence(stonith_ops_t * op)
 		return ST_FAIL;
 	}
 	
-	if (SIGNONED_TO_STONITHD == FALSE) {
+	if (chan == NULL || chan->ch_status == IPC_DISCONNECT) {
 		stdlib_log(LOG_NOTICE, "Has been in signoff status.");
 		return ST_FAIL;
 	}
@@ -344,15 +337,9 @@ stonithd_node_fence(stonith_ops_t * op)
 gboolean 
 stonithd_op_result_ready(void)
 {
-	if ( SIGNONED_TO_STONITHD == FALSE ) {
+	if ( chan == NULL || chan->ch_status == IPC_DISCONNECT ) {
 		stdlib_log(LOG_ERR, "stonithd_op_result_ready: "
 			   "failed due to not on signon status.");
-		return FALSE;
-	}
-	
-	if ( chan == NULL ) {
-		stdlib_log(LOG_ERR, "stonithd_op_result_ready: "
-			   "failed due to IPC channel chan == NULL.");
 		return FALSE;
 	}
 	
@@ -573,13 +560,13 @@ stonithd_receive_ops_result(gboolean blocking)
 int
 stonithd_set_stonith_ops_callback(stonith_ops_callback_t callback)
 {
-	if ( SIGNONED_TO_STONITHD == TRUE ) {
-		stonith_ops_cb = callback;
-		stdlib_log(LOG_DEBUG, "setted stonith ops callback.");
-	} else {
+	if ( chan == NULL || chan->ch_status == IPC_DISCONNECT ) {
 		stdlib_log(LOG_ERR, "stonithd_set_stonith_ops_callback: "\
 		 "failed due to not on signon status.");
 		return ST_FAIL;
+	} else {
+		stonith_ops_cb = callback;
+		stdlib_log(LOG_DEBUG, "setted stonith ops callback.");
 	}
 	
 	return ST_OK;
@@ -605,7 +592,7 @@ stonithd_virtual_stonithRA_ops( stonithRA_ops_t * op, int * call_id)
 		return ST_FAIL;
 	}
 	
-	if (SIGNONED_TO_STONITHD == FALSE) {
+	if (chan == NULL || chan->ch_status == IPC_DISCONNECT) {
 		stdlib_log(LOG_ERR, "Not in signon status.");
 		return ST_FAIL;
 	}
@@ -686,14 +673,14 @@ int
 stonithd_set_stonithRA_ops_callback(stonithRA_ops_callback_t callback,
 				    void * private_data)
 {
-	if ( SIGNONED_TO_STONITHD == TRUE ) {
-		stonithRA_ops_cb = callback;
-		stonithRA_ops_cb_private_data = private_data;
-		stdlib_log(LOG_DEBUG, "setted stonith ops callback.");
-	} else {
+	if ( chan == NULL || chan->ch_status == IPC_DISCONNECT ) {
 		stdlib_log(LOG_ERR, "stonithd_set_stonithRA_ops_callback: "
 		 "failed due to not on signon status.");
 		return ST_FAIL;
+	} else {
+		stonithRA_ops_cb = callback;
+		stonithRA_ops_cb_private_data = private_data;
+		stdlib_log(LOG_DEBUG, "setted stonith ops callback.");
 	}
 	
 	return ST_OK;
@@ -705,7 +692,7 @@ int stonithd_list_stonith_types(GList ** types)
 	struct ha_msg * request, * reply;
 	const char * tmpstr;
 
-	if (SIGNONED_TO_STONITHD == FALSE) {
+	if (chan == NULL || chan->ch_status == IPC_DISCONNECT) {
 		stdlib_log(LOG_ERR, "Not in signon status.");
 		return ST_FAIL;
 	}
