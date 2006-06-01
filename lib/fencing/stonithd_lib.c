@@ -72,9 +72,13 @@ static gboolean is_expected_msg(const struct ha_msg * msg,
 static int chan_waitin_timeout(IPC_Channel * chan, unsigned int timeout);
 static int chan_waitout_timeout(IPC_Channel * chan, unsigned int timeout);
 static void sigalarm_handler(int signum);
-static void stdlib_log(int priority, const char * fmt, ...)G_GNUC_PRINTF(2,3);
 static void free_stonith_ops_t(stonith_ops_t * st_op);
 static void free_stonithRA_ops_t(stonithRA_ops_t * ra_op);
+
+#define stdlib_log(priority, fmt...); \
+        if ( ( priority != LOG_DEBUG ) || ( DEBUG_MODE != FALSE ) ) { \
+                cl_log(priority, fmt); \
+        }
 
 int
 stonithd_signon(const char * client_name)
@@ -293,7 +297,8 @@ stonithd_node_fence(stonith_ops_t * op)
 	/* Send the stonith request message */
 	if (msg2ipcchan(request, chan) != HA_OK) {
 		ZAPMSG(request);
-		stdlib_log(LOG_ERR, "can't send signoff message to IPC");
+		stdlib_log(LOG_ERR
+			   , "failed to send stonith request to the stonithd");
 		return ST_FAIL;
 	}
 
@@ -316,13 +321,16 @@ stonithd_node_fence(stonith_ops_t * op)
 	
 	if ( TRUE == is_expected_msg(reply, F_STONITHD_TYPE, ST_APIRPL, 
 			     F_STONITHD_APIRPL, ST_RSTONITH) ) {
-		if ( ((tmpstr = cl_get_string(reply, F_STONITHD_APIRET)) != NULL) 
+		if (((tmpstr = cl_get_string(reply, F_STONITHD_APIRET)) != NULL)
 	   	    && (STRNCMP_CONST(tmpstr, ST_APIOK) == 0) ) {
 			rc = ST_OK;
-			stdlib_log(LOG_DEBUG, "stonith msg is sent to stonithd.");
+			stdlib_log(LOG_DEBUG, "%s:%d: %s"
+				 , __FUNCTION__, __LINE__
+				 , "Stonithd's synchronous answer is ST_APIOK");
 		} else {
-			stdlib_log(LOG_ERR, "failed to send stonith request to "
-				   "the stonithd.");
+			stdlib_log(LOG_ERR, "%s:%d: %s"
+			       , __FUNCTION__, __LINE__
+			       , "Stonithd's synchronous answer is ST_APIFAIL");
 		}
 	} else {
 		stdlib_log(LOG_ERR, "stonithd_node_fence: "
@@ -381,7 +389,8 @@ stonithd_receive_ops_result(gboolean blocking)
 			     F_STONITHD_APIRPL, ST_STRET)  ) {
 		stonith_ops_t * st_op = NULL;
 
-		stdlib_log(LOG_DEBUG, "received stonith final ret.");
+		stdlib_log(LOG_DEBUG, "received final return value of "
+			   "a stonith operation.");
 		/* handle the stonith op result message */
 		st_op = g_new(stonith_ops_t, 1);	
 		st_op->node_uuid = NULL;
@@ -449,8 +458,8 @@ stonithd_receive_ops_result(gboolean blocking)
 		if ((tmpstr=cl_get_string(reply, F_STONITHD_PDATA)) != NULL) {
 			st_op->private_data = g_strdup(tmpstr);
 		} else {
-			stdlib_log(LOG_DEBUG, "stonithd_receive_ops_result: the "
-				   "reply message contains no PDATA field.");
+			stdlib_log(LOG_DEBUG, "stonithd_receive_ops_result: "
+				"the reply message contains no PDATA field.");
 		}
 			
 		if (stonith_ops_cb != NULL) {
@@ -469,7 +478,8 @@ stonithd_receive_ops_result(gboolean blocking)
 			     F_STONITHD_APIRPL, ST_RAOPRET ) ) {
 		stonithRA_ops_t * ra_op = NULL;
 
-		stdlib_log(LOG_DEBUG, "received stonithRA op final ret.");
+		stdlib_log(LOG_DEBUG, "received the final return value of a "
+			   "stonithRA operation.");
 		/* handle the stonithRA op result message */
 		ra_op = g_new(stonithRA_ops_t, 1);
 
@@ -698,8 +708,8 @@ int stonithd_list_stonith_types(GList ** types)
 	}
 
 	if (*types != NULL) {
-		stdlib_log(LOG_ERR, "stonithd_list_stonith_types: *types!=NULL,"
-			   " Will casue memory leak.");
+		stdlib_log(LOG_ERR, "stonithd_list_stonith_types: "
+			"*types!=NULL, will casue memory leak.");
 		*types = NULL;
 	}
 	
@@ -906,26 +916,6 @@ chan_waitout_timeout(IPC_Channel * chan, unsigned int timeout)
 void stdlib_enable_debug_mode(void)
 {
 	DEBUG_MODE = TRUE;
-}
-
-/* copied from cl_log.c, need to be the same */
-#ifndef MAXLINE
-#	define MAXLINE	512
-#endif
-static void
-stdlib_log(int priority, const char * fmt, ...)
-{
-	va_list		ap;
-	char		buf[MAXLINE];
-
-	if ( DEBUG_MODE == FALSE && priority == LOG_DEBUG ) {
-		return;
-	}
-	
-	va_start(ap, fmt);
-	vsnprintf(buf, sizeof(buf)-1, fmt, ap);
-	va_end(ap);
-	cl_log(priority, "%s", buf);
 }
 
 static void
