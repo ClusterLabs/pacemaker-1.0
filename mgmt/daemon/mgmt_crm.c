@@ -100,7 +100,7 @@ static int delete_lrm_rsc(IPC_Channel *crmd_channel, const char *host_uname, con
 static pe_working_set_t* get_data_set(void);
 static void free_data_set(pe_working_set_t* data_set);
 static void on_cib_connection_destroy(gpointer user_data);
-static char* failed_msg(crm_data_t* output, int rc);
+static char* crm_failed_msg(crm_data_t* output, int rc);
 static const char* uname2id(const char* node);
 static resource_t* get_parent(resource_t* child);
 static int get_fix(const char* rsc_id, char* prefix, char* suffix, char* real_id);
@@ -190,7 +190,7 @@ free_data_set(pe_working_set_t* data_set)
 	}
 }	
 char* 
-failed_msg(crm_data_t* output, int rc) 
+crm_failed_msg(crm_data_t* output, int rc) 
 {
 	const char* reason = NULL;
 	crm_data_t* failed_tag;
@@ -737,7 +737,7 @@ on_set_node_standby(char* argv[], int argc)
 	free_xml(fragment);
 	free_xml(cib_object);
 	if (rc < 0) {
-		return failed_msg(output, rc);
+		return crm_failed_msg(output, rc);
 	}
 	free_xml(output);
 	return cl_strdup(MSG_OK);
@@ -772,7 +772,7 @@ on_del_rsc(char* argv[], int argc)
 	
 	free_xml(cib_object);
 	if (rc < 0) {
-		return failed_msg(output, rc);
+		return crm_failed_msg(output, rc);
 	}
 	free_xml(output);
 	return cl_strdup(MSG_OK);
@@ -965,7 +965,7 @@ on_add_rsc(char* argv[], int argc)
 	free_xml(fragment);
 	free_xml(cib_object);
 	if (rc < 0) {
-		return failed_msg(output, rc);
+		return crm_failed_msg(output, rc);
 	}
 	free_xml(output);
 	return cl_strdup(MSG_OK);
@@ -1063,7 +1063,7 @@ on_move_rsc(char* argv[], int argc)
 			parent->xml, &output, cib_sync_call);
 	
 	if (rc < 0) {
-		return failed_msg(output, rc);
+		return crm_failed_msg(output, rc);
 	}
 	free_xml(output);
 	
@@ -1102,7 +1102,7 @@ on_add_grp(char* argv[], int argc)
 	free_xml(fragment);
 	free_xml(cib_object);
 	if (rc < 0) {
-		return failed_msg(output, rc);
+		return crm_failed_msg(output, rc);
 	}
 	free_xml(output);
 	return cl_strdup(MSG_OK);
@@ -1361,7 +1361,7 @@ on_update_rsc_params(char* argv[], int argc)
 	free_xml(fragment);
 	free_xml(cib_object);
 	if (rc < 0) {
-		return failed_msg(output, rc);
+		return crm_failed_msg(output, rc);
 	}
 	free_xml(output);
 	return cl_strdup(MSG_OK);
@@ -1374,7 +1374,7 @@ on_delete_rsc_param(char* argv[], int argc)
 	ARGC_CHECK(2)
 
 	if ((rc=delete_object("resources", "nvpair", argv[1], &output)) < 0) {
-		return failed_msg(output, rc);
+		return crm_failed_msg(output, rc);
 	}
 	return cl_strdup(MSG_OK);
 }
@@ -1404,7 +1404,7 @@ on_set_target_role(char* argv[], int argc)
 		snprintf(buf, MAX_STRLEN, "%s", target_role_id);
 		rc = delete_object("resources", "nvpair", buf, &output);
 		if (rc < 0) {
-			return failed_msg(output, rc);
+			return crm_failed_msg(output, rc);
 		}
 		return cl_strdup(MSG_OK);
 	}
@@ -1435,7 +1435,7 @@ on_set_target_role(char* argv[], int argc)
 	free_xml(fragment);
 	free_xml(cib_object);
 	if (rc < 0) {
-		return failed_msg(output, rc);
+		return crm_failed_msg(output, rc);
 	}
 	free_xml(output);
 	return cl_strdup(MSG_OK);
@@ -1517,7 +1517,7 @@ on_update_rsc_ops(char* argv[], int argc)
 	free_xml(fragment);
 	free_xml(cib_object);
 	if (rc < 0) {
-		return failed_msg(output, rc);
+		return crm_failed_msg(output, rc);
 	}
 	free_xml(output);
 	return cl_strdup(MSG_OK);
@@ -1530,7 +1530,7 @@ on_delete_rsc_op(char* argv[], int argc)
 	ARGC_CHECK(2)
 
 	if ((rc=delete_object("resources", "op", argv[1], &output)) < 0) {
-		return failed_msg(output, rc);
+		return crm_failed_msg(output, rc);
 	}
 	return cl_strdup(MSG_OK);
 }
@@ -1596,7 +1596,7 @@ on_update_clone(char* argv[], int argc)
 	free_xml(fragment);
 	free_xml(cib_object);
 	if (rc < 0) {
-		return failed_msg(output, rc);
+		return crm_failed_msg(output, rc);
 	}
 	free_xml(output);
 	return cl_strdup(MSG_OK);
@@ -1679,7 +1679,7 @@ on_update_master(char* argv[], int argc)
 	free_xml(fragment);
 	free_xml(cib_object);
 	if (rc < 0) {
-		return failed_msg(output, rc);
+		return crm_failed_msg(output, rc);
 	}
 	free_xml(output);
 	return cl_strdup(MSG_OK);
@@ -1790,7 +1790,7 @@ on_delete_constraint(char* argv[], int argc)
 	ARGC_CHECK(3)
 
 	if ((rc=delete_object("constraints", argv[1], argv[2], &output)) < 0) {
-		return failed_msg(output, rc);
+		return crm_failed_msg(output, rc);
 	}
 	return cl_strdup(MSG_OK);
 }
@@ -1842,7 +1842,7 @@ on_update_constraint(char* argv[], int argc)
 	free_xml(fragment);
 	free_xml(cib_object);
 	if (rc < 0) {
-		return failed_msg(output, rc);
+		return crm_failed_msg(output, rc);
 	}
 	free_xml(output);
 	return cl_strdup(MSG_OK);
