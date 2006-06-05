@@ -1,3 +1,12 @@
+heartbeat-2 (2.0.5-3) unstable; urgency=low
+
+  * Fix libgnutls binary dependancy
+    - Build-Depends on libgnutls-dev instead of libgnutls13-dev
+    - Recompile against libgnutls13 in place of libgnutls11
+    - (closes: #370423)
+
+ -- Simon Horman <horms@debian.org>  Mon,  5 Jun 2006 17:57:23 +0900
+
 heartbeat-2 (2.0.5-2) unstable; urgency=low
 
   * Make use of invoke-rc.d (closes: #367761)
