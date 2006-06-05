@@ -868,6 +868,8 @@ class RscView(View) :
 	params_save = None
 	ops_save = None
 	
+	attr_list = None
+	
 	def on_apply(self, widget):
 		glade = self.glade
 		View.on_apply(self, widget)
@@ -879,6 +881,9 @@ class RscView(View) :
 		manager.update_attrs("up_rsc_ops\n"+self.param,"del_rsc_op",
 				   self.ops_save, new_ops, ["id","name","interval","timeout"]);
 		
+		nv = self.attr_list.get_data()
+		for n in nv.keys() :
+			manager.update_rsc_attr(self.param, n, nv[n])
 				   
 	def update(self) :
 		glade = self.glade
@@ -905,6 +910,12 @@ class RscView(View) :
 		if ops != [] :
 			for op in ops:
 				self.op_list.insert(op)
+		
+		self.attr_list.clear()
+		attrs = manager.get_rsc_attrs(self.param)
+		for key in attrs.keys() :
+			if key not in ["id", "class","type","provider"] :
+				self.attr_list.insert(key, attrs[key])
 		
 		View.update(self)
 		
@@ -938,6 +949,18 @@ class RscView(View) :
 					     Field("interval", _("Interval"), "0s", None, True),
 					     Field("timeout", _("Timeout"), "60s", None, True)],
 					 self.on_changed)
+		options_dict = {"is_managed":["true","false","default"],
+			"restart_type":["ignore","restart"],
+			"multiple_active":["stop_start","stop_only","block"],
+			"ordered":["true","false"], 
+			"collocated":["true","false"], 
+			"notify":["true","false"],
+			"globally_unique":["true","false"],
+			"interleave":["true","false"]}
+		
+		self.attr_list = NVList(glade.get_widget("attributes"),
+					options_dict, self.on_changed)
+		
 		self.update()
 		
 class AddNativeDlg :
@@ -1891,7 +1914,7 @@ class Manager :
 		attr_list = self.query("rsc_attrs\n%s"%rsc)
 		attrs = {}
 		rtype = self.query("rsc_type\n"+rsc)[0]
-		if rtype == "primitive" :
+		if rtype == "native" :
 			attrs = dict(zip(rsc_attr_names, attr_list))
 		elif rtype == "group" :				
 			attrs = dict(zip(grp_attr_names, attr_list))
