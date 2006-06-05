@@ -1149,10 +1149,11 @@ on_get_rsc_attrs(char* argv[], int argc)
 	attrs = (struct ha_msg*)rsc->xml;
 	ret = mgmt_msg_append(ret, ha_msg_value(attrs, "id"));
 	ret = mgmt_msg_append(ret, ha_msg_value(attrs, "description"));
-	ret = mgmt_msg_append(ret, ha_msg_value(attrs, "class"));
-	ret = mgmt_msg_append(ret, ha_msg_value(attrs, "provider"));
-	ret = mgmt_msg_append(ret, ha_msg_value(attrs, "type"));
-	
+	if (rsc->variant == pe_native) {
+		ret = mgmt_msg_append(ret, ha_msg_value(attrs, "class"));
+		ret = mgmt_msg_append(ret, ha_msg_value(attrs, "provider"));
+		ret = mgmt_msg_append(ret, ha_msg_value(attrs, "type"));
+	}
 	value = ha_msg_value(attrs, "is_managed");
 	ret = mgmt_msg_append(ret, value?value:"default");
 	value = ha_msg_value(attrs, "restart_type");
