@@ -1359,10 +1359,16 @@ char*
 on_update_rsc_attr(char* argv[], int argc)
 {
 	int rc;
-	crm_data_t* msg_data = NULL;
+	crm_data_t* fragment = NULL;
+	crm_data_t* cib_object = NULL;
 	crm_data_t* output;
+	char xml[MAX_STRLEN];
+	char real_id[MAX_STRLEN];
+	char parent_tag[MAX_STRLEN];
+	char rsc_tag[MAX_STRLEN];
 	pe_working_set_t* data_set;
 	resource_t* rsc;
+	resource_t* parent;
 	
 	data_set = get_data_set();
 	rsc = pe_find_resource(data_set->resources, argv[1]);	
@@ -1370,17 +1376,41 @@ on_update_rsc_attr(char* argv[], int argc)
 		free_data_set(data_set);
 		return cl_strdup(MSG_FAIL);;
 	}
+	parent = get_parent(rsc);
 	
-	msg_data = create_xml_node(NULL, get_rsc_tag(rsc));
-	crm_xml_add(msg_data, XML_ATTR_ID, argv[1]);
-	crm_xml_add(msg_data, argv[2], argv[3]);
-		
-	free_data_set(data_set);
-	
-	rc = cib_conn->cmds->modify(cib_conn, XML_CIB_TAG_RESOURCES,
-				    msg_data, &output, cib_sync_call);
-	free_xml(msg_data);
+	strncpy(rsc_tag, get_rsc_tag(rsc), MAX_STRLEN);
+	strncpy(real_id, argv[1], MAX_STRLEN);
 
+	parent = get_parent(rsc);
+	if (parent == NULL) {
+		snprintf(xml, MAX_STRLEN,"<%s id=\"%s\" %s=\"%s\"/>"
+		,	rsc_tag, argv[1], argv[2], argv[3]);
+	}
+	else {
+		char* colon = strrchr(real_id, ':');
+		if (colon != NULL) {
+			*colon = '\0';
+		}
+		strncpy(parent_tag, get_rsc_tag(parent), MAX_STRLEN);
+		
+		snprintf(xml, MAX_STRLEN,"<%s id=\"%s\">" \
+			"<%s id=\"%s\" %s=\"%s\"/></%s>" \
+			,parent_tag, parent->id, rsc_tag, real_id
+			, argv[2],argv[3],parent_tag);
+	}
+
+	cib_object = string2xml(xml);
+	if(cib_object == NULL) {
+		return cl_strdup(MSG_FAIL);
+	}
+	mgmt_log(LOG_INFO, "xml:%s",xml);
+	fragment = create_cib_fragment(cib_object, "resources");
+
+	rc = cib_conn->cmds->update(
+			cib_conn, "resources", fragment, &output, cib_sync_call);
+
+	free_xml(fragment);
+	free_xml(cib_object);
 	if (rc < 0) {
 		return crm_failed_msg(output, rc);
 	}
