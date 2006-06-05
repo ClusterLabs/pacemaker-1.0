@@ -407,6 +407,18 @@ or
 
 /*
 description:
+	update attribute of a given resource
+format:
+	MSG_UP_RSC_ATTR resource name value
+return:
+	MSG_OK
+or
+	MSG_FAIL
+*/
+#define MSG_UP_RSC_ATTR		"up_rsc_attr"
+
+/*
+description:
 	return the params of a given resource
 format:
 	MSG_RSC_PARAMS resource
@@ -415,6 +427,7 @@ return:
 or
 	MSG_FAIL
 */
+
 #define MSG_RSC_PARAMS		"rsc_params"
 
 /*

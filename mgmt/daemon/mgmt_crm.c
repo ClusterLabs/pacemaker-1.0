@@ -74,6 +74,7 @@ static char* on_get_all_rsc(char* argv[], int argc);
 static char* on_get_rsc_type(char* argv[], int argc);
 static char* on_get_sub_rsc(char* argv[], int argc);
 static char* on_get_rsc_attrs(char* argv[], int argc);
+static char* on_update_rsc_attr(char* argv[], int argc);
 static char* on_get_rsc_running_on(char* argv[], int argc);
 static char* on_get_rsc_status(char* argv[], int argc);
 
@@ -298,6 +299,7 @@ get_fix(const char* rsc_id, char* prefix, char* suffix, char* real_id)
 	data_set = get_data_set();
 	rsc = pe_find_resource(data_set->resources, rsc_id);	
 	if (rsc == NULL) {
+		free_data_set(data_set);	
 		return -1;
 	}
 	strncpy(rsc_tag, get_rsc_tag(rsc), MAX_STRLEN);
@@ -462,6 +464,8 @@ init_crm(int cache_cib)
 	reg_msg(MSG_RSC_RUNNING_ON, on_get_rsc_running_on);
 	reg_msg(MSG_RSC_STATUS, on_get_rsc_status);
 	reg_msg(MSG_RSC_TYPE, on_get_rsc_type);
+	reg_msg(MSG_UP_RSC_ATTR, on_update_rsc_attr);
+		
 	
 	reg_msg(MSG_RSC_PARAMS, on_get_rsc_params);
 	reg_msg(MSG_UP_RSC_PARAMS, on_update_rsc_params);
@@ -1134,6 +1138,7 @@ on_get_rsc_attrs(char* argv[], int argc)
 {
 	resource_t* rsc;
 	char* ret;
+	const char* value;
 	struct ha_msg* attrs;
 	pe_working_set_t* data_set;
 	
@@ -1143,13 +1148,44 @@ on_get_rsc_attrs(char* argv[], int argc)
 	ret = cl_strdup(MSG_OK);
 	attrs = (struct ha_msg*)rsc->xml;
 	ret = mgmt_msg_append(ret, ha_msg_value(attrs, "id"));
+	ret = mgmt_msg_append(ret, ha_msg_value(attrs, "description"));
 	ret = mgmt_msg_append(ret, ha_msg_value(attrs, "class"));
 	ret = mgmt_msg_append(ret, ha_msg_value(attrs, "provider"));
 	ret = mgmt_msg_append(ret, ha_msg_value(attrs, "type"));
+	
+	value = ha_msg_value(attrs, "is_managed");
+	ret = mgmt_msg_append(ret, value?value:"default");
+	value = ha_msg_value(attrs, "restart_type");
+	ret = mgmt_msg_append(ret, value?value:"ignore");
+	value = ha_msg_value(attrs, "multiple_active");
+	ret = mgmt_msg_append(ret, value?value:"stop_start");
+	value = ha_msg_value(attrs, "resource_stickiness");
+	ret = mgmt_msg_append(ret, value?value:"0");
+	
+	switch (rsc->variant) {
+		case pe_group:
+			value = ha_msg_value(attrs, "ordered");
+			ret = mgmt_msg_append(ret, value?value:"true");
+			value = ha_msg_value(attrs, "collocated");
+			ret = mgmt_msg_append(ret, value?value:"true");
+			break;
+		case pe_clone:
+		case pe_master:
+			value = ha_msg_value(attrs, "notify");
+			ret = mgmt_msg_append(ret, value?value:"false");
+			value = ha_msg_value(attrs, "globally_unique");
+			ret = mgmt_msg_append(ret, value?value:"true");
+			value = ha_msg_value(attrs, "ordered");
+			ret = mgmt_msg_append(ret, value?value:"true");
+			value = ha_msg_value(attrs, "interleave");
+			ret = mgmt_msg_append(ret, value?value:"false");
+			break;
+		default:
+			break;
+	}
 	free_data_set(data_set);
 	return ret;
 }
-
 char*
 on_get_rsc_running_on(char* argv[], int argc)
 {
@@ -1318,6 +1354,39 @@ on_get_rsc_params(char* argv[], int argc)
 	free_data_set(data_set);
 	return ret;
 }
+char*
+on_update_rsc_attr(char* argv[], int argc)
+{
+	int rc;
+	crm_data_t* msg_data = NULL;
+	crm_data_t* output;
+	pe_working_set_t* data_set;
+	resource_t* rsc;
+	
+	data_set = get_data_set();
+	rsc = pe_find_resource(data_set->resources, argv[1]);	
+	if (rsc == NULL) {
+		free_data_set(data_set);
+		return cl_strdup(MSG_FAIL);;
+	}
+	
+	msg_data = create_xml_node(NULL, get_rsc_tag(rsc));
+	crm_xml_add(msg_data, XML_ATTR_ID, argv[1]);
+	crm_xml_add(msg_data, argv[2], argv[3]);
+		
+	free_data_set(data_set);
+	
+	rc = cib_conn->cmds->modify(cib_conn, XML_CIB_TAG_RESOURCES,
+				    msg_data, &output, cib_sync_call);
+	free_xml(msg_data);
+
+	if (rc < 0) {
+		return crm_failed_msg(output, rc);
+	}
+	free_xml(output);
+	return cl_strdup(MSG_OK);
+}
+
 char*
 on_update_rsc_params(char* argv[], int argc)
 {
