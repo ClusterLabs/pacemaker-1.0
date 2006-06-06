@@ -1457,8 +1457,7 @@ class MainWindow :
 			manager.do_cmd("move_rsc\n%s\ndown"%self.cur_name)
 	
 	def on_item_cleanup(self, action) :
-		hostname = manager.get_rsc_running_on(self.cur_name)
-		manager.do_cmd("cleanup_rsc\n"+hostname[0] + "\n" + self.cur_name)
+		manager.do_cmd("cleanup_rsc\n"+self.cur_name)
 
 	def load_icon(self, name, file) :
 		icons = gtk.IconFactory()
@@ -1563,7 +1562,7 @@ class MainWindow :
 			('resource', None, _('Resources')),
 			('addrsc', "ha-add-resource", _('Add New Item'), None,_('add new item'), self.on_add_item),
 			('delrsc', "ha-remove-resource", _('Delete'), None,_('delete current item'), self.on_del_item),
-			('cleanuprsc', "ha-cleanup-resource", _('Clean up'), None,_('refresh the resource'), self.on_item_action),
+			('cleanuprsc', "ha-cleanup-resource", _('Clean up'), None,_('refresh the resource'), self.on_item_cleanup),
 			('startrsc', "ha-start-resource", _('Start'), None,_('start resource'), self.on_item_action),
 			('stoprsc', "ha-stop-resource", _('Stop'), None,_('stop resource'), self.on_item_action),
 			('defaultrsc', "ha-default-resource", _('Default'), None,_('work as default'), self.on_item_action),
