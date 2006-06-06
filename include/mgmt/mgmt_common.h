@@ -385,7 +385,7 @@ or
 description:
 	clean up a unmanaged resource
 format:
-	MSG_CLEANUP_RSC hostname resource
+	MSG_CLEANUP_RSC resource
 return:
 	MSG_OK
 or
