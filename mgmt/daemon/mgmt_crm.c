@@ -847,8 +847,10 @@ on_cleanup_rsc(char* argv[], int argc)
 				    NULL, &crmd_channel);
 
 	send_hello_message(crmd_channel, our_pid, client_name, "0", "1");
-	delete_lrm_rsc(crmd_channel, argv[1], argv[2]);
-	refresh_lrm(crmd_channel, argv[1]); 
+	delete_lrm_rsc(crmd_channel, NULL, argv[1]);
+	refresh_lrm(crmd_channel, NULL); 
+
+	
 	return cl_strdup(MSG_OK);
 }
 
