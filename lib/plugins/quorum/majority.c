@@ -84,15 +84,19 @@ PIL_PLUGIN_INIT(PILPlugin*us, const PILPluginImports* imports)
 }
 
 static int
-majority_getquorum(int member_count, int total_count)
+majority_getquorum(const char* cluster
+,		int member_count, int member_quorum_votes
+,		int total_node_count, int total_quorum_votes)
 {
-	
- 	cl_log(LOG_INFO, "n_member=%d, nodecount=%d", 
- 	       member_count, total_count);  
+	cl_log(LOG_DEBUG, "quorum plugin: majority");
+ 	cl_log(LOG_DEBUG, "cluster:%s, member_count=%d, member_quorum_votes=%d", 
+ 	       cluster, member_count, member_quorum_votes);  
+ 	cl_log(LOG_DEBUG, "total_node_count=%d, total_quorum_votes=%d", 
+ 	       total_node_count, total_quorum_votes);  
 		
- 	if(member_count >=  total_count/2 + 1){ 
+ 	if(member_count >=  total_node_count/2 + 1){ 
  		return QUORUM_YES; 
- 	} else if ( total_count % 2 == 0 && member_count == total_count/2){
+ 	} else if ( total_node_count % 2 == 0 && member_count == total_node_count/2){
 		return QUORUM_TIE;
 	}
 	

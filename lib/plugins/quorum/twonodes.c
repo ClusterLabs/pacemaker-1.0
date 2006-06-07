@@ -76,13 +76,17 @@ PIL_PLUGIN_INIT(PILPlugin*us, const PILPluginImports* imports)
 }
 
 static int
-twonodes_break_tie(int member_count, int total_count)
+twonodes_break_tie(const char* cluster
+,		int member_count, int member_quorum_votes
+,		int total_node_count, int total_quorum_votes)
 {
 	cl_log(LOG_DEBUG, "quorum plugin: twonodes");
- 	cl_log(LOG_INFO, "n_member=%d, nodecount=%d", 
- 	       member_count, total_count);  
+ 	cl_log(LOG_DEBUG, "cluster:%s, member_count=%d, member_quorum_votes=%d", 
+ 	       cluster, member_count, member_quorum_votes);  
+ 	cl_log(LOG_DEBUG, "total_node_count=%d, total_quorum_votes=%d", 
+ 	       total_node_count, total_quorum_votes);  
  	       
- 	if (total_count == 2) { 
+ 	if (total_node_count == 2) { 
  		cl_log(LOG_INFO, "Break tie for 2 nodes cluster");
  		return QUORUM_YES; 
  	} 

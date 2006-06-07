@@ -1,4 +1,4 @@
-/* $Id: ccm_statemachine.c,v 1.19 2006/04/12 07:08:15 zhenh Exp $ */
+/* $Id: ccm_statemachine.c,v 1.20 2006/06/07 08:29:52 zhenh Exp $ */
 /* 
  * ccm.c: Consensus Cluster Service Program 
  *
@@ -3078,7 +3078,9 @@ set_llm_from_heartbeat(ll_cluster_t* llc, ccm_info_t* info){
 	const char*	status;
 	const char*	node;
 	const char*	mynode = ops->get_mynodeid(llc);
-
+	const char*	cluster;
+	const char*	site;
+	int		weight;
 	
 	if (mynode == NULL){
 		ccm_log(LOG_ERR, "set_llm_from_heartbeat:mynode is NULL");
@@ -3095,17 +3097,25 @@ set_llm_from_heartbeat(ll_cluster_t* llc, ccm_info_t* info){
 	
 	llm = CCM_GET_LLM(info);
 	llm_init(llm);
+	memset(info->cluster, 0, sizeof(info->cluster));
+	cluster = llc->llc_ops->get_parameter(llc, KEY_CLUSTER);
+	if (cluster != NULL) {
+		strncpy(info->cluster, cluster, PATH_MAX);
+	}
+	
+
 	while((node = ops->nextnode(llc)) != NULL) {		
 		if (strcmp(ops->node_type(llc, node), PINGNODE)==0){
 			continue;
 		}
 		
 		status = ops->node_status(llc, node);
-		
+		site = ops->node_site(llc, node);
+		weight = ops->node_weight(llc, node);
 		ccm_debug2(LOG_DEBUG, "Cluster node: %s: status: %s", node,
 			       status);
 		
-		if (llm_add(llm, node, status, mynode)!= HA_OK){
+		if (llm_add(llm, node, status, mynode, site, weight)!= HA_OK){
 			ccm_log(LOG_ERR, "%s: adding node %s to llm failed",
 			       __FUNCTION__, node);
 			return HA_FAIL;

@@ -1,4 +1,4 @@
-/* $Id: ccmclient.c,v 1.41 2006/05/29 08:55:24 zhenh Exp $ */
+/* $Id: ccmclient.c,v 1.42 2006/06/07 08:29:52 zhenh Exp $ */
 /* 
  * client.c: Consensus Cluster Client tracker
  *
@@ -349,8 +349,21 @@ get_quorum(ccm_info_t* info)
 		
 	cur = g_list_first(quorum_list);
 	while (cur != NULL) {
+		int mem_weight = 0;
+		int total_weight = 0;
+		int i, node;
+		
+		for (i=0; i<info->memcount; i++) {
+			node = info->ccm_member[i];
+			mem_weight+=info->llm.nodes[node].weight;
+		}
+		for (i=0; i<info->llm.nodecount; i++) {
+			total_weight+=info->llm.nodes[i].weight;
+		}
 		funcs = (struct hb_quorum_fns*)cur->data;
-	        rc = funcs->getquorum(info->memcount, info->llm.nodecount);
+	        rc = funcs->getquorum(info->cluster, info->memcount, mem_weight
+	        ,		info->llm.nodecount, total_weight);
+	        
 		if (rc == QUORUM_YES){
 			return TRUE;
 		}

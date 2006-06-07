@@ -145,7 +145,8 @@ ccm_control_process(ccm_info_t *info, ll_cluster_t * hb)
 			msg = newmsg;
 		} else if(strcasecmp(type, T_STATUS) == 0){
 			const char* nodetype;
-
+			const char* site;
+			int	weight;
 			if (llm_is_valid_node(&info->llm, orig)){
 
 				if (nodelist_update(hb, info,orig, status) != HA_OK){
@@ -169,8 +170,10 @@ ccm_control_process(ccm_info_t *info, ll_cluster_t * hb)
 			if (STRNCMP_CONST(nodetype, NORMALNODE) !=0 ){
 				return TRUE;
 			}
-			
-			if (llm_add(llm, orig, status, mynode) != HA_OK){
+			nodetype = hb->llc_ops->node_type(hb, orig);
+			site = hb->llc_ops->node_site(hb, orig);
+			weight = hb->llc_ops->node_weight(hb, orig);
+			if (llm_add(llm, orig, status, mynode, site, weight) != HA_OK){
 				ccm_log(LOG_ERR, "%s: adding node(%s) to llm failed",
 				       __FUNCTION__,orig);
 				return FALSE;

@@ -1,4 +1,4 @@
-/* $Id: ccm.h,v 1.49 2006/02/17 05:48:24 zhenh Exp $ */
+/* $Id: ccm.h,v 1.50 2006/06/07 08:29:52 zhenh Exp $ */
 /*
  * ccm.h: definitions Consensus Cluster Manager internal header
  *				file
@@ -133,6 +133,8 @@ typedef struct llm_node_s {
 	int	uptime;
 	gboolean join_request;
 	gboolean receive_change_msg;
+	char	site[PATH_MAX];
+	int	weight;
 }llm_node_t;
 
 typedef struct llm_info_s { 
@@ -149,7 +151,8 @@ int		llm_status_update(llm_info_t *, const char *,
 void		llm_display(llm_info_t *llm);
 int		llm_init(llm_info_t *);
 int		llm_is_valid_node(llm_info_t *, const char *);
-int		llm_add(llm_info_t *, const char *, const char *, const char *);
+int		llm_add(llm_info_t *, const char *, const char *, const char *
+,			const char *,int);
 int		llm_del(llm_info_t* llm,const char* node);
 int		llm_get_index(llm_info_t *, const char *);
 int		llm_get_myindex(llm_info_t *);
@@ -459,6 +462,7 @@ typedef struct ccm_info_s {
 	uint32_t change_event_remaining_count; 		
 	enum change_event_type change_type;
 	char change_node_id[NODEIDSIZE];
+	char		cluster[PATH_MAX];
 
 } ccm_info_t;
 

@@ -1,4 +1,4 @@
-/* $Id: ccmllm.c,v 1.30 2006/02/27 14:05:12 alan Exp $ */
+/* $Id: ccmllm.c,v 1.31 2006/06/07 08:29:52 zhenh Exp $ */
 /* 
  * ccmllm.c: Low Level membership routines.
  *
@@ -273,7 +273,9 @@ int
 llm_add(llm_info_t *llm, 
 	const char *node,
 	const char *status, 
-	const char *mynode)
+	const char *mynode,
+	const char *site,
+	int weight)
 {
 	int	nodecount;
 	int	i, j;
@@ -307,6 +309,8 @@ llm_add(llm_info_t *llm,
 	llm->nodes[i].join_request = FALSE;
 	strncpy(llm->nodes[i].nodename, node,NODEIDSIZE);
 	strncpy(llm->nodes[i].status, status, STATUSSIZE);
+	strncpy(llm->nodes[i].site, site, PATH_MAX);
+	llm->nodes[i].weight = weight;
 	llm->nodecount++;
 	
 	if (llm->myindex >= i) {		
