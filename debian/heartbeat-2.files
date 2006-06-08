@@ -170,8 +170,13 @@ usr/lib/libhbmgmttls.so.0
 usr/lib/libhbmgmttls.so.0.0.0
 usr/lib/liblrm.so.0
 usr/lib/liblrm.so.0.0.0
-usr/lib/libpengine.so.1
-usr/lib/libpengine.so.1.1.0
+usr/lib/libpengine.so.3
+usr/lib/libpengine.so.3.0.0
+usr/lib/libpe_rules.so
+usr/lib/libpe_rules.so.1
+usr/lib/libpe_rules.so.1.0.0
+usr/lib/libpe_status.so.1
+usr/lib/libpe_status.so.1.0.0
 usr/lib/libpils.so.1
 usr/lib/libpils.so.1.0.0
 usr/lib/libplumb.so.1
