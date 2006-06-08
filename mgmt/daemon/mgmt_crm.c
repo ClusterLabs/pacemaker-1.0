@@ -33,8 +33,7 @@
 
 #include <crm/cib.h>
 #include <crm/msg_xml.h>
-#include <crm/pengine/pengine.h>
-#include <crm/pengine/pe_utils.h>
+#include <crm/pengine/status.h>
 
 extern resource_t *group_find_child(resource_t *rsc, const char *id);
 extern crm_data_t * do_calculations(

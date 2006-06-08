@@ -57,6 +57,7 @@ libhbmgmt_la_LIBADD = $(top_builddir)/lib/mgmt/libhbmgmttls.la 		\
 		  	$(top_builddir)/lib/crm/cib/libcib.la		\
 		   	$(top_builddir)/lib/crm/common/libcrmcommon.la	\
 		   	$(top_builddir)/lib/apphb/libapphb.la		\
-		   	$(top_builddir)/crm/pengine/libpengine.la	\
+		   	$(top_builddir)/lib/crm/pengine/libpe_status.la	\
 		   	$(top_builddir)/lib/hbclient/libhbclient.la	\
+		   	$(top_builddir)/crm/pengine/libpengine.la	\
 			$(COMMONLIBS) $(CURSESLIBS)
