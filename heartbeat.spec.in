@@ -1,4 +1,4 @@
-#	$Id: heartbeat.spec.in,v 1.174 2006/05/02 13:18:07 alan Exp $
+#	$Id: heartbeat.spec.in,v 1.175 2006/06/09 18:59:52 alan Exp $
 
 # Workaround for a change in RPM 4.1.x; needs proper fixing soon!
 ##%define _unpackaged_files_terminate_build 0
@@ -78,6 +78,19 @@ PILS is designed to support any number of plugins
 implementing any number of interfaces.
 
 %changelog
+* Sun May 21 2006  Alan Robertson <alanr@unix.sh> (see doc/AUTHORS file)
++ Version 2.0.6 - bug fix release
+  + Fixed a long-standing problem where the .src.rpms weren't usable across
+	32/64-bit boundaries
+  + Added the ability to start/stop groups from the GUI
+  + Fixed a few monitoring bugs in the Apache resource agent
+  + Changed the name of the netmask parameter to the IPaddr and IPaddr2
+	resource agents.  This is because the netmask must be specified
+	in CIDR format.  The new name is cidr_netmask.  It will continue
+	to work the old way.
+  + Changed target_role so that when you stop a resource, all the resources
+	which depend on it also stop - all in the proper order.
+
 * Sun Apr 23 2006  Alan Robertson <alanr@unix.sh> (see doc/AUTHORS file)
 + Version 2.0.5 - significant bug fixes and a few feature deficits fixed
   + various portability fixes
