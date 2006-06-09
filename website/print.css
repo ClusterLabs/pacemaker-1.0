@@ -90,23 +90,28 @@ h1,h2,h3,h4,h5 {
 }
 h1 {
     font-family: Lucida Sans Typewriter, verdana, lucida sans, FreeSans, helvetica, sans-serif;
-    font-size: 150%;
+    font-size: 200%;
+    font-weight: bold;
     width: 99.6%;
 }
 h2 {
-    font-size: 130%;
+    font-size: 150%;
     width: 99.2%;
+    font-weight: bold;
 }
 h3 {
-    font-size: 115%;
+    font-size: 130%;
+    font-weight: bold;
     width: 98.8%;
 }
 h4 {
-    font-size: 105%;
+    font-size: 115%;
+    text-decoration : underline;
     width: 98.4%;
 }
 h5 {
-    font-size: 95%;
+    font-size: 105%;
+    text-decoration : underline;
     width: 98.0%;
 }
 	
