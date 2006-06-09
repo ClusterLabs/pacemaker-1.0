@@ -244,12 +244,15 @@ class NVList :
 	store = None
 	value_cell = None
 	options = {}
-	
+	empty_model = gtk.ListStore(str)
 	def on_cursor_changed(self, treeview, selection) :
 		(model, iter) = selection.get_selected()
 		name = model.get_value(iter, 0)
-		if self.options != None and name in self.options.keys() :
-			self.value_cell.set_property("model", self.options[name])
+		if self.options != None :
+			if name in self.options.keys() :
+				self.value_cell.set_property("model", self.options[name])
+			else :
+				self.value_cell.set_property("model", self.empty_model)
 	
 	def __init__(self, widget, options=None, call_back=None) :
 		self.widget = widget
@@ -1391,12 +1394,17 @@ class MainWindow :
 	def on_add_item(self, action) :
 		new_type = kvbox(_("The type of new item"),
 				[Field("type",_("Item Type"),_("native"),
-				[_("native"), _("place"),_("order"), _("colocation")])])
+				[_("native"), _("group"), _("place"),_("order"), _("colocation")])])
 		if new_type == None :
 			return
 		if new_type["type"] == _("native"):
 			dlg = AddNativeDlg()
 			dlg.run()
+		elif new_type["type"] == _("group") : 	 
+			group = kvbox(_("Add Resource Group"),[Field("id",_("ID"),"group_")]) 	 
+			if group != None :
+				group["params"] = [] 	 
+				manager.add_group(group)
 		elif new_type["type"] == _("place") :
 			place = kvbox(_("Add Place Constraint"),
 				[Field("id",_("ID"),"place_",None, False),
