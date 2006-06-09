@@ -1,4 +1,4 @@
-/* $Id: stonithd.c,v 1.90 2006/05/30 10:15:56 sunjd Exp $ */
+/* $Id: stonithd.c,v 1.91 2006/06/09 11:43:19 sunjd Exp $ */
 
 /* File: stonithd.c
  * Description: STONITH daemon for node fencing
@@ -799,7 +799,7 @@ init_hb_msg_handler(void)
 	}
 
 	msg_mask = LLC_FILTER_DEFAULT;
-	cl_log(LOG_DEBUG, "Setting message filter mode");
+	stonithd_log(LOG_DEBUG, "Setting message filter mode");
 	if (hb->llc_ops->setfmode(hb, msg_mask) != HA_OK) {
 		stonithd_log(LOG_ERR, "Cannot set filter mode");
 		stonithd_log(LOG_ERR, "REASON: %s", hb->llc_ops->errmsg(hb));
@@ -1299,7 +1299,7 @@ init_client_API_handler(void)
 				ipc_auth, FALSE, accept_client_dispatch, NULL, NULL);
 
 	if (api_source == NULL) {
-		cl_log(LOG_DEBUG, "Cannot create API listening source of "
+		stonithd_log(LOG_DEBUG, "Cannot create API listening source of "
 			"server side from IPC");
 		return	LSB_EXIT_GENERIC;
 	}
@@ -3438,6 +3438,9 @@ trans_log(int priority, const char * fmt, ...)
 
 /* 
  * $Log: stonithd.c,v $
+ * Revision 1.91  2006/06/09 11:43:19  sunjd
+ * use stonithd_log instead
+ *
  * Revision 1.90  2006/05/30 10:15:56  sunjd
  * add two level 2 logs
  *
