@@ -1,7 +1,7 @@
-#	$Id: heartbeat.spec.in,v 1.175 2006/06/09 18:59:52 alan Exp $
+#	$Id: heartbeat.spec.in,v 1.176 2006/06/09 22:18:42 alan Exp $
 
-# Workaround for a change in RPM 4.1.x; needs proper fixing soon!
-##%define _unpackaged_files_terminate_build 0
+%define _unpackaged_files_terminate_build 1
+%define _missing_doc_files_terminate_build 1
 
 Summary: @HB_PKG@ - The Heartbeat Subsystem for High-Availability Linux
 Name:	@HB_PKG@
@@ -1198,6 +1198,8 @@ make DESTDIR=$RPM_BUILD_ROOT install
 @libdir@/libplumbgpl.*
 @libdir@/librecoverymgr.*
 @libdir@/libstonithd.*
+@libdir@/libpe_rules.*
+@libdir@/libpe_status.*
 /usr/lib/ocf
 @base_includedir@/heartbeat
 @base_includedir@/clplumbing
