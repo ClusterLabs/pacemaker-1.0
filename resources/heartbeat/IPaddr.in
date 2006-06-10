@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $Id: IPaddr.in,v 1.18 2005/12/15 11:23:49 xunsun Exp $
+# $Id: IPaddr.in,v 1.19 2006/06/10 17:33:30 alan Exp $
 #
 # Description:	wrapper of OCF RA IPaddr, based on original heartbeat RA.
 #		See OCF RA IPaddr for more information.
@@ -34,7 +34,7 @@ USAGE="usage: $0 <ip-address> {start|stop|status|monitor}";
 
 usage() {
   echo $USAGE >&2
-  echo "$Id: IPaddr.in,v 1.18 2005/12/15 11:23:49 xunsun Exp $"
+  echo "$Id: IPaddr.in,v 1.19 2006/06/10 17:33:30 alan Exp $"
 }
 
 #
@@ -132,4 +132,4 @@ case $2 in
 	;;
 esac
 
-ra_execocf  "rsc_id=IPaddr_$BASEIP" "rsc_type=IPaddr" "provider=heartbeat" $2 "ip=$BASEIP" "broadcast=$BROADCAST" "nic=$NIC" "netmask=$NETMASK"
+ra_execocf  "rsc_id=IPaddr_$BASEIP" "rsc_type=IPaddr" "provider=heartbeat" $2 "ip=$BASEIP" "broadcast=$BROADCAST" "nic=$NIC" "cidr_netmask=$NETMASK"
