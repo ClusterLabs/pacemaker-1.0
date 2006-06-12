@@ -1,3 +1,11 @@
+heartbeat-2 (2.0.5-4) unstable; urgency=low
+
+  * Move IPv6addr from /etc/ha.d/resource.d/ into /usr/lib/heartbeat,
+    and then symlink that back into /etc/ha.d/resource.d/ as binaries
+    are not allowed in /etc (closes: #372850)
+
+ -- Simon Horman <horms@debian.org>  Mon, 12 Jun 2006 16:23:59 +0900
+
 heartbeat-2 (2.0.5-3) unstable; urgency=low
 
   * Fix libgnutls binary dependancy
