@@ -532,6 +532,10 @@ class Tree :
 			msgbox(_("can not get information from cluster!"))
 			return
 
+		crm_nodes = manager.get_crm_nodes()
+		if crm_nodes == None :
+			msgbox(_("can not get information from cluster!"))
+			return
 		
 		config = manager.get_cluster_config()
 		if config["have_quorum"] == "True" :
@@ -542,7 +546,7 @@ class Tree :
 		
 		nodes_root = self.store.append(root, [_("Nodes"),"", "nodes"])
 		for node in nodes :
-			self.add_node(nodes_root, node, node in active_nodes)
+			self.add_node(nodes_root, node, node in active_nodes, node in crm_nodes)
 
 		rscs_root = self.store.append(root, [_("Resources"),"", "resources"])
 		rscs = manager.get_all_rsc_id()
@@ -594,17 +598,19 @@ class Tree :
 			for subrsc in manager.get_rsc_sub_rsc(rsc) :
 				self.add_rsc(iter, subrsc)
 					
-	def add_node(self, nodes_root, node, active):
+	def add_node(self, nodes_root, node, active, started):
 		status = _("unknown")
-		if not active :
-			status = _("stopped")
-		else :		
-			dc = manager.get_dc()
-			if node in dc :
-				status = _("running(dc)")
-			else :
-				status = _("running")
-
+		if not started :
+			status = _("never started")
+		else :
+			if not active :
+				status = _("stopped")
+			else :		
+				dc = manager.get_dc()
+				if node in dc :
+					status = _("running(dc)")
+				else :
+					status = _("running")
 			if manager.get_node_config(node)["standby"] == "True" :
 				status = status + "-"+ _("standby")
 
@@ -1289,13 +1295,13 @@ class MainWindow :
 			manager.connected
 			and self.cur_type in [_("node")]
 			and string.find(self.cur_status, _("standby")) == -1
-			and string.find(self.cur_status, _("running")) != -1)
+			and string.find(self.cur_status, _("never started")) == -1)
 
 		self.set_action_sensitive('active',
 			manager.connected
 			and self.cur_type in [_("node")]
 			and string.find(self.cur_status, _("standby")) != -1
-			and string.find(self.cur_status, _("running")) != -1)
+			and string.find(self.cur_status, _("never started")) == -1)
 
 		self.set_action_sensitive('cleanuprsc',
 			manager.connected
@@ -1349,7 +1355,7 @@ class MainWindow :
 		self.update_ui()
 		if type == "cluster" :
 			self.cur_view = ClusterView()
-		elif type == "node" and status != _("stopped"):
+		elif type == "node" and status != _("never started"):
 			self.cur_view = NodeView(name)
 		elif type in [_("native")] :
 			self.cur_view = RscView(name)
@@ -1830,6 +1836,9 @@ class Manager :
 	def get_active_nodes(self):
 		self.active_nodes = self.query("active_nodes")
 		return self.active_nodes
+	
+	def get_crm_nodes(self):
+		return self.query("crm_nodes")
 				
 	def get_node_config(self, node) :
 		node_attr_names = ["uname", "online","standby", "unclean", "shutdown",
