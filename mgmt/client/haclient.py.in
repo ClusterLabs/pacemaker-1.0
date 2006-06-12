@@ -43,6 +43,8 @@ window = None
 manager = None
 debug_level = 0
 top_window = None
+last_rsc_view_page_num = 0	
+last_compound_view_page_num = 0
 
 def log(string) :
 	syslog.syslog(string)
@@ -878,8 +880,8 @@ class PlaceView(View) :
 			self.on_changed)
 		self.update()
 		
-	
 class RscView(View) :
+
 	name = "rscview"
 	param_list = None
 	op_list = None
@@ -936,9 +938,13 @@ class RscView(View) :
 				self.attr_list.insert(key, attrs[key])
 		
 		View.update(self)
-		
+	def on_notebook_event(self, widget, page, page_num) :
+		global last_rsc_view_page_num
+		last_rsc_view_page_num = page_num
+			
 	def __init__(self, rsc) :
 		View.__init__(self, rsc)
+		global last_rsc_view_page_num
 		glade = self.glade
 		
 		(attrs, running_on, params, ops) = manager.get_rsc_info(self.param)
@@ -978,7 +984,9 @@ class RscView(View) :
 		
 		self.attr_list = NVList(glade.get_widget("attributes"),
 					options_dict, self.on_changed)
-		
+		notebook = glade.get_widget("notebook")
+		notebook.connect("switch-page", self.on_notebook_event)
+		notebook.set_current_page(last_rsc_view_page_num)
 		self.update()
 		
 class AddNativeDlg :
@@ -1229,6 +1237,10 @@ class CompoundRscView(View) :
 				self.attr_list.insert(key, attrs[key])
 		
 		View.update(self)
+	
+	def on_notebook_event(self, widget, page, page_num) :
+		global last_compound_view_page_num
+		last_compound_view_page_num = page_num
 		
 	def __init__(self, grp) :
 		View.__init__(self, grp)
@@ -1254,6 +1266,10 @@ class CompoundRscView(View) :
 		
 		self.attr_list = NVList(glade.get_widget("attributes"),
 					options_dict, self.on_changed)
+		notebook = glade.get_widget("notebook")
+		notebook.connect("switch-page", self.on_notebook_event)
+		notebook.set_current_page(last_compound_view_page_num)
+					
 		self.update()
 
 class MainWindow :
