@@ -102,11 +102,6 @@ install-stamp:
 	cd $(DTMP)/etc/ha.d/resource.d \
 	  && ln -s /usr/sbin/ldirectord ldirectord
 	cd $(DTMP)/etc/ && ln -s ha.d heartbeat
-
-	# Binaries are not allowed in /etc
-	mv  $(DTMP)/etc/ha.d/resource.d/IPv6addr  $(DTMP)/usr/lib/heartbeat
-	cd $(DTMP)/etc/ha.d/resource.d/ && ln -s /usr/lib/heartbeat/IPv6addr .
-
 	dh_movefiles --source=debian/tmp
 
 binary-indep: build install

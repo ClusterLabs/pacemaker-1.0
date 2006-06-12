@@ -92,7 +92,6 @@ usr/lib/heartbeat/ipctest
 usr/lib/heartbeat/ipctransientclient
 usr/lib/heartbeat/ipctransientserver
 usr/lib/heartbeat/ipfail
-usr/lib/heartbeat/IPv6addr
 usr/lib/heartbeat/login.png
 usr/lib/heartbeat/logout.png
 usr/lib/heartbeat/logtest

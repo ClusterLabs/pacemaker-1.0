@@ -1,3 +1,12 @@
+heartbeat-2 (2.0.5-5) unstable; urgency=low
+
+  * Reverse the change made in 2.0.5-4
+    It turns out that in heartbeat-2 (as opposed to heartbeat) 
+    is a script which calls a binary that is located in 
+    /usr/lib/ocf/resource.d/heartbeat/
+
+ -- Simon Horman <horms@debian.org>  Mon, 12 Jun 2006 17:19:52 +0900
+
 heartbeat-2 (2.0.5-4) unstable; urgency=low
 
   * Move IPv6addr from /etc/ha.d/resource.d/ into /usr/lib/heartbeat,
