@@ -131,10 +131,9 @@ def msgbox(msg) :
 	dialog.destroy()
 
 
-def confirmbox(msg) :
+def confirmbox(msg, button=(gtk.STOCK_YES, gtk.RESPONSE_YES, gtk.STOCK_NO, gtk.RESPONSE_NO)) :
 	global top_window
-	dialog = gtk.Dialog(_("Confirm"),  top_window, gtk.DIALOG_MODAL,
-		(gtk.STOCK_YES, gtk.RESPONSE_YES, gtk.STOCK_NO, gtk.RESPONSE_NO))
+	dialog = gtk.Dialog(_("Confirm"),  top_window, gtk.DIALOG_MODAL,button)
 	label = gtk.Label(msg)
 	dialog.vbox.add(label)
 	dialog.set_default_response(gtk.RESPONSE_YES)
@@ -144,7 +143,7 @@ def confirmbox(msg) :
 	ret = dialog.run()
 	top_window = save_top_window
 	dialog.destroy()
-	return ret == gtk.RESPONSE_YES
+	return ret 
 	
 def on_label_active(event, widget, url) :
 	webbrowser.open(url)
@@ -384,6 +383,7 @@ class ListWithAddDel :
 class Tree :
 	store = None
 	widget = None
+	last_iter = None
 	def on_right_click(self, widget, event) :
 		if event.type == gtk.gdk.BUTTON_PRESS and event.button == 3 :
 			menu = None
@@ -407,14 +407,18 @@ class Tree :
 	
 	def on_cursor_changed(self, treeview, selection) :
 		(model, iter) = selection.get_selected()
+		if not window.can_change_view() :
+			if self.last_iter != None :
+				selection.select_iter(self.last_iter)
+				return
 		if iter == None :
 			window.select_view(None, None, None)
 			return
 		type = model.get_value(iter, 2)
 		name = model.get_value(iter, 0)
 		status = model.get_value(iter, 1)
-		
 		window.select_view(type, name, status)
+		self.last_iter = iter
 		
 	def select_row(self, model, path, iter, user_data):
 		name, type = user_data
@@ -615,6 +619,7 @@ class View :
 	glade = None
 	widget = None
 	name = "emptyview"
+	changed = False
 	
 	def __init__(self, param=None) :
 		self.param = param
@@ -624,15 +629,18 @@ class View :
 			self.glade.get_widget("apply").connect("clicked", self.on_apply)
 		if self.glade.get_widget("reset") != None :
 			self.glade.get_widget("reset").connect("clicked", self.on_reset)
+			
 	def update(self) :
 		if self.glade.get_widget("apply") != None :
 			self.glade.get_widget("apply").set_property("sensitive", False)
 		if self.glade.get_widget("reset") != None :
 			self.glade.get_widget("reset").set_property("sensitive", False)
+		self.changed = False
 	
 	def on_changed(self, widget) :
 		self.glade.get_widget("apply").set_property("sensitive", True)
 		self.glade.get_widget("reset").set_property("sensitive", True)
+		self.changed = True
 	
 	def on_reset(self, widget):
 		self.update()
@@ -640,6 +648,7 @@ class View :
 	def on_apply(self, widget):
 		self.glade.get_widget("apply").set_property("sensitive", False)
 		self.glade.get_widget("reset").set_property("sensitive", False)
+		self.changed = False
 		
 	def on_after_show(self) :
 		pass	
@@ -1317,7 +1326,21 @@ class MainWindow :
 		self.tree.update()
 		self.statusbar.pop(2)
 		return False
-
+	
+	def can_change_view(self) :
+		if not self.cur_view.changed :
+			return True
+		ret = confirmbox("The data of current view has been changed. \nApply the change?",
+			(gtk.STOCK_YES, gtk.RESPONSE_YES, 
+			gtk.STOCK_NO, gtk.RESPONSE_NO,
+			gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL))
+		if ret == gtk.RESPONSE_YES :
+			self.cur_view.on_apply(self.cur_view.widget)
+			return True
+		if ret == gtk.RESPONSE_NO :
+			return True
+		return False
+	
 	def select_view(self, type, name, status) :
 		for child in self.view_widget.get_children() :
 			self.view_widget.remove(child)
@@ -1384,11 +1407,11 @@ class MainWindow :
 		print uuid()
 			 
 	def on_standby(self, action) :
-		if confirmbox(_("Make") +" " +self.cur_name + " " +_("standby")+"?") :
+		if confirmbox(_("Make") +" " +self.cur_name + " " +_("standby")+"?") == gtk.RESPONSE_YES:
 			manager.do_cmd("standby\n"+self.cur_name + "\n" + "on")
 
 	def on_active(self, action) :
-		if confirmbox(_("Make") +" " +self.cur_name + " " + _("active")+"?") :
+		if confirmbox(_("Make") +" " +self.cur_name + " " + _("active")+"?") == gtk.RESPONSE_YES :
 			manager.do_cmd("standby\n"+self.cur_name + "\n" + "off")
 
 	def on_add_item(self, action) :
@@ -1431,7 +1454,7 @@ class MainWindow :
 				manager.update_constraint("rsc_colocation", colocation)
 			
 	def on_del_item(self, action) :
-		if confirmbox(_("Delete") + " "+self.cur_type + " " + self.cur_name + "?"):
+		if confirmbox(_("Delete") + " "+self.cur_type + " " + self.cur_name + "?") == gtk.RESPONSE_YES:
 			if self.cur_type in [_("native"),_("group"),_("clone"),_("master")] :
 				manager.do_cmd("del_rsc\n"+self.cur_name)
 			elif self.cur_type == _("place") :
