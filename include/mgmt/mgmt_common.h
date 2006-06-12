@@ -190,6 +190,18 @@ or
 
 /*
 description:
+	return nodes configured in crm
+format:
+	MSG_CRMNODES
+return:
+	MSG_OK node1 node2 ... noden
+or
+	MSG_FAIL
+*/
+#define MSG_CRMNODES 	"crm_nodes"
+
+/*
+description:
 	return DC in cluster
 format:
 	MSG_DC

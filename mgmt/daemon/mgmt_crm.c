@@ -51,6 +51,7 @@ static char* on_get_cib_version(char* argv[], int argc);
 static char* on_get_crm_config(char* argv[], int argc);
 static char* on_update_crm_config(char* argv[], int argc);
 static char* on_get_activenodes(char* argv[], int argc);
+static char* on_get_crmnodes(char* argv[], int argc);
 static char* on_get_dc(char* argv[], int argc);
 
 static char* on_set_node_standby(char* argv[], int argc);
@@ -447,6 +448,7 @@ init_crm(int cache_cib)
 	
 	reg_msg(MSG_DC, on_get_dc);
 	reg_msg(MSG_ACTIVENODES, on_get_activenodes);
+	reg_msg(MSG_CRMNODES, on_get_crmnodes);
 	reg_msg(MSG_NODE_CONFIG, on_get_node_config);
 	reg_msg(MSG_RUNNING_RSC, on_get_running_rsc);
 	reg_msg(MSG_STANDBY, on_set_node_standby);
@@ -620,6 +622,26 @@ on_get_activenodes(char* argv[], int argc)
 	return ret;
 }
 
+char*
+on_get_crmnodes(char* argv[], int argc)
+{
+	node_t* node;
+	GList* cur;
+	char* ret;
+	pe_working_set_t* data_set;
+	
+	data_set = get_data_set();
+	cur = data_set->nodes;
+	ret = cl_strdup(MSG_OK);
+	while (cur != NULL) {
+		node = (node_t*) cur->data;
+		ret = mgmt_msg_append(ret, node->details->uname);
+		cur = g_list_next(cur);
+	}
+	free_data_set(data_set);
+	return ret;
+}
+
 char* 
 on_get_dc(char* argv[], int argc)
 {
@@ -649,10 +671,6 @@ on_get_node_config(char* argv[], int argc)
 	ARGC_CHECK(2);
 	while (cur != NULL) {
 		node = (node_t*) cur->data;
-		if (!node->details->online) {
-			cur = g_list_next(cur);
-			continue;
-		}
 		if (strncmp(argv[1],node->details->uname,MAX_STRLEN) == 0) {
 			char* ret = cl_strdup(MSG_OK);
 			ret = mgmt_msg_append(ret, node->details->uname);
