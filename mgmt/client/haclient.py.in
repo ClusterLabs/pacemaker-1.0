@@ -1672,6 +1672,7 @@ class Manager :
 	io_tag = None
 	update_timer = -1
 	active_nodes = []
+	all_nodes = []
 	failed_reason = ""
 		
 	# cache functions
@@ -1734,13 +1735,14 @@ class Manager :
 				"\n or the user doesn't belong to haclient group")
 			mgmt_disconnect()
 			return False
+		window.statusbar.pop(1)	
 		window.statusbar.push(1,_("Connected to ")+server)
 		self.connected = True
 		self.username = username
 		self.password = password
 
 		window.statusbar.push(2,_("Updating data from server..."))
-		self.update_timer = gobject.timeout_add(100, self.update)
+		self.update_timer = gobject.timeout_add(200, self.update)
 		
 		self.do_cmd("regevt\nevt:cib_changed")
 		self.do_cmd("regevt\nevt:disconnected")
@@ -1784,6 +1786,16 @@ class Manager :
 		window.statusbar.pop(1)
 		
 	# event handler	
+	def on_reconnect(self) :
+		if self.all_nodes == [] :
+			window.statusbar.pop(1)
+			return False
+		for server in self.all_nodes :
+			if self.login(server, self.username, self.password) :
+				return False
+		return True
+		
+		
 	def on_event(self, source, condition) :
 		event =  mgmt_recvmsg()
 		log("on_event:"+str(event))
@@ -1792,7 +1804,7 @@ class Manager :
 				gobject.source_remove(self.update_timer)
 			else :
 				window.statusbar.push(2,"Updating data from server...")
-			self.update_timer = gobject.timeout_add(100, self.update)
+			self.update_timer = gobject.timeout_add(200, self.update)
 			return True
 		elif event == None or event == "evt:disconnected" :
 			self.logout()
@@ -1800,7 +1812,8 @@ class Manager :
 				if self.login(server, self.username, self.password) :
 					break
 			else :
-				msgbox(_("can't connect to any node"))
+				window.statusbar.push(1,_("Reconnecting..."))
+				gobject.timeout_add(1000, self.on_reconnect)
 
 		return True
 
@@ -1847,7 +1860,8 @@ class Manager :
 		return self.query("dc")
 
 	def get_all_nodes(self) :
-		return self.query("all_nodes")
+		self.all_nodes = self.query("all_nodes")
+		return self.all_nodes
 
 	def get_active_nodes(self):
 		self.active_nodes = self.query("active_nodes")
