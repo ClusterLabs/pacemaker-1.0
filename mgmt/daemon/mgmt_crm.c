@@ -172,7 +172,8 @@ get_data_set(void)
 	set_working_set_defaults(data_set);
 	data_set->input = get_cib_copy(cib_conn);
 	data_set->now = new_ha_date(TRUE);
-	do_calculations(data_set, data_set->input, NULL);
+
+	cluster_status(data_set);
 	
 	if (cib_cache_enable) {
 		cib_cached = data_set;
