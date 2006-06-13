@@ -1282,10 +1282,10 @@ on_get_rsc_status(char* argv[], int argc)
 				break;
 			}
 			if( rsc->role==RSC_ROLE_SLAVE ) {
-				ret = mgmt_msg_append(ret, "running(Slave)");		
+				ret = mgmt_msg_append(ret, "running (Slave)");		
 			}
 			else if( rsc->role==RSC_ROLE_MASTER) {
-				ret = mgmt_msg_append(ret, "running(Master)");		
+				ret = mgmt_msg_append(ret, "running (Master)");		
 			}
 			else {
 				ret = mgmt_msg_append(ret, "running");		
