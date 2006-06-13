@@ -586,11 +586,33 @@ char*
 on_update_crm_config(char* argv[], int argc)
 {
 	int rc;
+	GList* cur;
+	crm_data_t* attr;
+	crm_data_t* attrs;
+	const char* id = NULL;
+	pe_working_set_t* data_set;
+	const char* path[] = {"configuration","crm_config","cluster_property_set", "attributes"}
 	
 	ARGC_CHECK(3);
+	data_set = get_data_set();
+	attrs = find_xml_node_nested(data_set->input, path, 4);
+
+	if (attrs != NULL) {
+		cur = find_xml_node_list(attrs, "nvpair");
+		while (cur != NULL) {
+			attr = (crm_data_t*)cur->data;
+			if(strncmp(ha_msg_value(attr,"name"),argv[1], MAX_STRLEN)==0) {
+				id = ha_msg_value(attr,"id");
+				break;
+			}
+			cur = g_list_next(cur);
+		}
+	}
+
 	rc = update_attr(cib_conn, cib_sync_call, XML_CIB_TAG_CRMCONFIG, NULL
-	, 		CIB_OPTIONS_FIRST, NULL, argv[1], argv[2]);
+	, 		CIB_OPTIONS_FIRST, id, argv[1], argv[2]);
 	
+	free_data_set(data_set);
 	if (rc == cib_ok) {
 		return cl_strdup(MSG_OK);
 	}
