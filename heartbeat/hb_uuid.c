@@ -221,7 +221,13 @@ update_tables(const char* nodename, cl_uuid_t* uuid)
 	if (cl_uuid_is_null(&hip->uuid)){
 		cl_uuid_copy(&hip->uuid, uuid);
 	}else if (cl_uuid_compare(&hip->uuid, uuid) != 0){
-		cl_log(LOG_ERR, "node %s changed its uuid", nodename);	     
+		char	tmpstr[UU_UNPARSE_SIZEOF];
+		memset(tmpstr , 0, UU_UNPARSE_SIZEOF);
+		cl_uuid_unparse(uuid, tmpstr);
+		cl_log(LOG_INFO, "node %s changed its uuid to %s"
+		,	nodename, tmpstr);	     
+		
+		cl_uuid_copy(&hip->uuid, uuid);
 		nametable_display();
 	}		
 	add_uuidtable(uuid, hip);
