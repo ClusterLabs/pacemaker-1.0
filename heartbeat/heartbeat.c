@@ -1,4 +1,4 @@
-/* $Id: heartbeat.c,v 1.511 2006/05/31 06:32:27 zhenh Exp $ */
+/* $Id: heartbeat.c,v 1.512 2006/06/13 07:57:11 zhenh Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -2950,6 +2950,24 @@ HBDoMsg_T_STATUS(const char * type, struct node_info * fromnode
 			cl_log(LOG_DEBUG
 			,	"Status seqno: %ld msgtime: %ld"
 			,	seqno, msgtime);
+		}
+		/*
+		 * If the restart of a node is faster than deadtime,
+		 * the previous status of node would be still ACTIVE 
+		 * while current status is INITSTATUS.
+		 * So we reduce the live_node_count here.
+		 */
+		if (fromnode->nodetype == NORMALNODE_I
+		&&	fromnode != curnode
+		&&	( STRNCMP_CONST(fromnode->status, ACTIVESTATUS) == 0
+		||	  STRNCMP_CONST(fromnode->status, UPSTATUS) == 0)
+		&&	( STRNCMP_CONST(status, INITSTATUS) == 0)) {
+			--live_node_count;
+			if (live_node_count < 1) {
+				cl_log(LOG_ERR
+				,	"live_node_count too small (%d)"
+				,	live_node_count);
+			}
 		}
 		/*
 		 *   IF
@@ -6336,6 +6354,9 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.512  2006/06/13 07:57:11  zhenh
+ * deal with the situation that the time restart is shorter than deadtime, fix 1280
+ *
  * Revision 1.511  2006/05/31 06:32:27  zhenh
  * To work with nodes in 2.0.5, we have to deal with the T_REPNODES message without F_DELNODELIST field.
  *
