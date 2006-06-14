@@ -999,7 +999,7 @@ on_add_rsc(char* argv[], int argc)
 	mgmt_log(LOG_INFO, "xml:%s",xml);
 	fragment = create_cib_fragment(cib_object, "resources");
 
-	if (in_group) {
+	if (in_group || clone || master) {
 		rc = cib_conn->cmds->update(
 			cib_conn, "resources", fragment, &output, cib_sync_call);
 	}
