@@ -79,14 +79,6 @@ def check_entry_value(glade, entry, label=None) :
 		msgbox(label + _(" can't be empty"))
 		return False
 	return True
-
-def check_combo_value(glade, entry, label=None) :
-	if label == None :
-		label = entry
-	if glade.get_widget(entry).child.get_text() == "":
-		msgbox(label + _(" can't be empty"))
-		return False
-	return True
 	
 def pygtk_2_6_newer () :
 	if gtk.pygtk_version[0] > 2 :
@@ -1032,6 +1024,7 @@ class AddNativeDlg :
 					self.param_list.insert(param)
 			
 	def on_clone_changed(self, widget, glade) :
+		
 		if glade.get_widget("is_clone").get_active() :
 			glade.get_widget("is_master").set_active(False)
 			glade.get_widget("advance_id").set_property("sensitive", True)
@@ -1039,12 +1032,6 @@ class AddNativeDlg :
 			glade.get_widget("clone_node_max").set_property("sensitive", True)
 			glade.get_widget("master_max").set_property("sensitive", False)
 			glade.get_widget("master_node_max").set_property("sensitive", False)
-			store = glade.get_widget("advance_id").get_model()
-			store.clear()
-			for rsc in manager.get_all_rsc_id() :
-				if manager.get_rsc_type(rsc) == "clone" :
-					store.append([rsc])
-			
 		else :
 			glade.get_widget("advance_id").set_property("sensitive", False)
 			glade.get_widget("clone_max").set_property("sensitive", False)
@@ -1052,26 +1039,6 @@ class AddNativeDlg :
 			glade.get_widget("master_max").set_property("sensitive", False)
 			glade.get_widget("master_node_max").set_property("sensitive", False)
 			
-	def on_advance_id_changed(self, widget, glade) :
-		advance_id = glade.get_widget("advance_id").child.get_text()
-		if advance_id == None or advance_id == "":
-			return
-		
-		if glade.get_widget("is_clone").get_active() :
-			attrs = manager.get_clone(advance_id)
-			if attrs == None :
-				return
-			glade.get_widget("clone_max").set_text(attrs["clone_max"])
-			glade.get_widget("clone_node_max").set_text(attrs["clone_node_max"])
-		elif glade.get_widget("is_master").get_active() :
-			attrs = manager.get_master(advance_id)
-			if attrs == None :
-				return
-			glade.get_widget("clone_max").set_text(attrs["clone_max"])
-			glade.get_widget("clone_node_max").set_text(attrs["clone_node_max"])
-			glade.get_widget("master_max").set_text(attrs["master_max"])
-			glade.get_widget("master_node_max").set_text(attrs["master_node_max"])
-	
 	def on_master_changed(self, widget, glade) :
 		if glade.get_widget("is_master").get_active() :
 			glade.get_widget("is_clone").set_active(False)
@@ -1080,11 +1047,6 @@ class AddNativeDlg :
 			glade.get_widget("clone_node_max").set_property("sensitive", True)
 			glade.get_widget("master_max").set_property("sensitive", True)
 			glade.get_widget("master_node_max").set_property("sensitive", True)
-			store = glade.get_widget("advance_id").get_model()
-			store.clear()
-			for rsc in manager.get_all_rsc_id() :
-				if manager.get_rsc_type(rsc) == "master" :
-					store.append([rsc])
 		else :
 			glade.get_widget("advance_id").set_property("sensitive", False)
 			glade.get_widget("clone_max").set_property("sensitive", False)
@@ -1166,10 +1128,6 @@ class AddNativeDlg :
 		
 		glade.get_widget("is_clone").connect("toggled", self.on_clone_changed, glade)
 		glade.get_widget("is_master").connect("toggled", self.on_master_changed, glade)
-		glade.get_widget("advance_id").connect("changed", self.on_advance_id_changed, glade)
-		store = gtk.ListStore(str)
-		glade.get_widget("advance_id").set_model(store)
-		glade.get_widget("advance_id").set_text_column(0)
 		
 		glade.get_widget("advance_id").set_property("sensitive", False)
 		glade.get_widget("clone_max").set_property("sensitive", False)
@@ -1200,11 +1158,11 @@ class AddNativeDlg :
 				passed = check_entry_value(glade, "id",_("ID"))
 
 				if glade.get_widget("is_clone").get_active() :
-					passed = check_combo_value(glade, "advance_id",_("ID"))
+					passed = check_entry_value(glade, "advance_id",_("ID"))
 					passed = check_entry_value(glade, "clone_max")
 					passed = check_entry_value(glade, "clone_node_max")
 				if glade.get_widget("is_master").get_active() :
-					passed = check_combo_value(glade, "advance_id",_("ID"))
+					passed = check_entry_value(glade, "advance_id",_("ID"))
 					passed = check_entry_value(glade, "clone_max")
 					passed = check_entry_value(glade, "clone_node_max")
 					passed = check_entry_value(glade, "master_max")
@@ -1228,7 +1186,7 @@ class AddNativeDlg :
 						rsc["advance"] = "master"
 					else :
 						rsc["advance"] = ""
-					rsc["advance_id"] = glade.get_widget("advance_id").child.get_text()
+					rsc["advance_id"] = glade.get_widget("advance_id").get_text()
 					rsc["clone_max"] = glade.get_widget("clone_max").get_text()
 					rsc["clone_node_max"] = glade.get_widget("clone_node_max").get_text()
 					rsc["master_max"] = glade.get_widget("master_max").get_text()
