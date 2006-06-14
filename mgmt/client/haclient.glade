@@ -2037,7 +2037,8 @@ freeze</property>
 	  <child>
 	    <widget class="GtkLabel" id="label200">
 	      <property name="visible">True</property>
-	      <property name="label" translatable="yes">Group:</property>
+	      <property name="label" translatable="yes">Belong to group:
+(type for new one)</property>
 	      <property name="use_underline">False</property>
 	      <property name="use_markup">False</property>
 	      <property name="justify">GTK_JUSTIFY_LEFT</property>
@@ -2325,7 +2326,7 @@ freeze</property>
 		  <child>
 		    <widget class="GtkLabel" id="label159">
 		      <property name="visible">True</property>
-		      <property name="label" translatable="yes">Advance ID:</property>
+		      <property name="label" translatable="yes">Clone or Master/Slave ID:</property>
 		      <property name="use_underline">False</property>
 		      <property name="use_markup">False</property>
 		      <property name="justify">GTK_JUSTIFY_LEFT</property>
@@ -2585,7 +2586,7 @@ freeze</property>
 	  <child>
 	    <widget class="GtkLabel" id="label158">
 	      <property name="visible">True</property>
-	      <property name="label" translatable="yes">Advance:</property>
+	      <property name="label" translatable="yes">If belong to a clone or master/slave:</property>
 	      <property name="use_underline">False</property>
 	      <property name="use_markup">True</property>
 	      <property name="justify">GTK_JUSTIFY_LEFT</property>
