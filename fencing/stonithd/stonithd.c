@@ -1,4 +1,4 @@
-/* $Id: stonithd.c,v 1.91 2006/06/09 11:43:19 sunjd Exp $ */
+/* $Id: stonithd.c,v 1.92 2006/06/15 10:45:27 sunjd Exp $ */
 
 /* File: stonithd.c
  * Description: STONITH daemon for node fencing
@@ -95,6 +95,7 @@ typedef struct {
 	uid_t uid;		/* client UID */
 	gid_t gid;		/* client GID */
 	IPC_Channel * ch;
+	IPC_Channel * cbch;
 	char * removereason;
 } stonithd_client_t;
 
@@ -211,10 +212,13 @@ static void free_timer(gpointer data);
 static gboolean stonithd_client_dispatch(IPC_Channel * ch, gpointer user_data);
 static void stonithd_IPC_destroy_notify(gpointer data);
 static gboolean accept_client_dispatch(IPC_Channel * ch, gpointer data);
+static gboolean accept_client_connect_callback(IPC_Channel *ch, gpointer user);
 static gboolean stonithd_process_client_msg(struct ha_msg * msg, 
 					    gpointer data);
 static int init_client_API_handler(void);
 static void free_client(gpointer data, gpointer user_data);
+static stonithd_client_t * find_client_by_farpid(GList * client_list
+						 , pid_t farpid);
 static stonithd_client_t * get_exist_client_by_chan(GList * client_list, 
 						    IPC_Channel * ch);
 static int delete_client_by_chan(GList ** client_list, IPC_Channel * ch);
@@ -1249,10 +1253,12 @@ init_client_API_handler(void)
 {
 	GHashTable*		chanattrs;
 	IPC_WaitConnection*	apichan = NULL;
+	IPC_WaitConnection*	cbchan = NULL;
 	char			path[] = IPC_PATH_ATTR;
 	char			sock[] = STONITHD_SOCK;
+	char 			cbsock[] = STONITHD_CALLBACK_SOCK;
 	struct passwd*  	pw_entry;
-	GWCSource*		api_source;
+	GWCSource		* api_source, * callback_source;
 	GHashTable*     	uid_hashtable;
 	int             	tmp = 1;
 
@@ -1264,6 +1270,7 @@ init_client_API_handler(void)
 	if (apichan == NULL) {
 		stonithd_log(LOG_ERR, "Cannot open stonithd's api socket: %s",
 				sock);
+		g_hash_table_destroy(chanattrs);
 		return LSB_EXIT_EPERM;
 	}
 	/* Need to destroy the item of the hash table chanattrs? yes, will be.
@@ -1295,15 +1302,38 @@ init_client_API_handler(void)
         }
 
 	/* When to destroy the api_source */
+	stonithd_log(LOG_DEBUG, "apichan=%p", apichan);
 	api_source = G_main_add_IPC_WaitConnection(G_PRIORITY_HIGH, apichan,
-				ipc_auth, FALSE, accept_client_dispatch, NULL, NULL);
+			ipc_auth, FALSE, accept_client_dispatch, NULL, NULL);
 
 	if (api_source == NULL) {
 		stonithd_log(LOG_DEBUG, "Cannot create API listening source of "
 			"server side from IPC");
 		return	LSB_EXIT_GENERIC;
 	}
-	/* free api_source */
+
+	stonithd_log2(LOG_DEBUG, "init_client_callback_handler: begin");
+
+	chanattrs = g_hash_table_new(g_str_hash, g_str_equal);
+        g_hash_table_insert(chanattrs, path, cbsock);
+	cbchan = ipc_wait_conn_constructor(IPC_DOMAIN_SOCKET, chanattrs);
+	if (cbchan == NULL) {
+		stonithd_log(LOG_ERR, "Cannot open stonithd's callback socket:"
+				" %s", sock);
+		g_hash_table_destroy(chanattrs);
+		return LSB_EXIT_EPERM;
+	}
+	g_hash_table_destroy(chanattrs);
+
+	stonithd_log(LOG_DEBUG, "callback_chan=%p", cbchan);
+	callback_source = G_main_add_IPC_WaitConnection(G_PRIORITY_HIGH, cbchan
+		     , NULL, FALSE, accept_client_connect_callback, NULL, NULL);
+
+	if (callback_source == NULL) {
+		stonithd_log(LOG_DEBUG, "Cannot create callback listening "
+			     " source of server side from IPC");
+		return	LSB_EXIT_GENERIC;
+	}
 
 	return 0;
 }
@@ -1328,6 +1358,33 @@ accept_client_dispatch(IPC_Channel * ch, gpointer user)
 }
 
 static gboolean
+accept_client_connect_callback(IPC_Channel * ch, gpointer user)
+{
+	GCHSource * gsrc = NULL;	
+	stonithd_client_t * signed_client = NULL;
+
+	if (ch == NULL) {
+		stonithd_log(LOG_ERR, "IPC accepting a connection failed.");
+		return FALSE;
+	}
+
+	stonithd_log2(LOG_DEBUG, "IPC accepted a callback connection.");
+	
+	g_hash_table_insert(chan_gsource_pairs, ch, gsrc);
+
+	signed_client = find_client_by_farpid(client_list, ch->farside_pid);
+	if (signed_client != NULL) {
+		signed_client->cbch = ch;	
+	} else {
+		stonithd_log(LOG_ERR
+			     , "%s:%d: Cannot find a signed client pid=%d"
+			     , __FUNCTION__, __LINE__, ch->farside_pid);
+	}
+
+	return TRUE;
+}
+
+static gboolean
 stonithd_client_dispatch(IPC_Channel * ch, gpointer user_data)
 {
 	struct ha_msg *	msg = NULL;
@@ -1341,12 +1398,14 @@ stonithd_client_dispatch(IPC_Channel * ch, gpointer user_data)
 
 	while ( ch->ops->is_message_pending(ch))  {
 		if (ch->ch_status == IPC_DISCONNECT) {
-			stonithd_log2(LOG_DEBUG, "IPC disconneted with a client.");
+			stonithd_log2(LOG_DEBUG
+				, "IPC disconneted with a client: ch=%p", ch);
 #if 0
 			/* For verify the API use */
 			if  ((msg = msgfromIPC_noauth(ch)) == NULL ) {
 				/* Must be here */
-				stonithd_log(LOG_ERR, "2. Failed when receiving IPC messages.");
+				stonithd_log(LOG_ERR
+				       , "Failed when receiving IPC messages.");
 				return FALSE;
 			}
 #endif 
@@ -1358,13 +1417,15 @@ stonithd_client_dispatch(IPC_Channel * ch, gpointer user_data)
 
 		/* Authority issue ? */
 		if  ((msg = msgfromIPC_noauth(ch)) == NULL ) {
-			stonithd_log(LOG_ERR, "Failed when receiving IPC messages.");
+			stonithd_log(LOG_ERR
+				    , "Failed when receiving IPC messages.");
 			return FALSE;
 		} else {
 			stonithd_process_client_msg(msg, (gpointer)ch);
 		}
 	}
 			
+	stonithd_log2(LOG_DEBUG, "stonithd_client_dispatch: end");
 	return TRUE;
 }
 
@@ -1391,7 +1452,7 @@ stonithd_IPC_destroy_notify(gpointer data)
 			"been deleted in signoff function.");
 	}
 
-	if ( NULL != (tmp_gsrc = g_hash_table_lookup(chan_gsource_pairs, ch)) ) {
+	if ( NULL != (tmp_gsrc = g_hash_table_lookup(chan_gsource_pairs, ch))) {
 		G_main_del_IPC_Channel(tmp_gsrc);
 		g_hash_table_remove(chan_gsource_pairs, ch);
 	} else {
@@ -1496,6 +1557,7 @@ on_stonithd_signon(struct ha_msg * request, gpointer data)
 	client = g_new0(stonithd_client_t, 1);
 	client->pid = tmpint;
 	client->ch = ch;
+	client->cbch = NULL;
 	client->removereason = NULL;
 
 	if (HA_OK == ha_msg_value_int(request, F_STONITHD_CEUID, &tmpint)) {
@@ -1704,13 +1766,13 @@ on_stonithd_node_fence(struct ha_msg * request, gpointer data)
 	if ( st_op->optype != QUERY && TEST == FALSE &&
 	    (srsc = get_local_stonithobj_can_stonith(st_op->node_name, NULL)) 
 		!= NULL && 
-	    (call_id=initiate_local_stonithop(st_op, srsc, client->ch)) > 0 ) {
+	    (call_id=initiate_local_stonithop(st_op, srsc, client->cbch)) > 0 ) {
 			api_reply = ST_APIOK;
 	} else { 
 		/* including query operation */
 		/* call_id < 0 is the correct value when require others to do */
 		if ((call_id = initiate_remote_stonithop(st_op, srsc, 
-			client->ch)) < 0 ) {
+			client->cbch)) < 0 ) {
 			api_reply = ST_APIOK;
 		} else {
 			api_reply = ST_APIFAIL;
@@ -2473,7 +2535,7 @@ on_stonithd_virtual_stonithRA_ops(struct ha_msg * request, gpointer data)
 
 		op = g_new0(common_op_t, 1);
 		op->scenario = STONITH_RA_OP;
-		op->result_receiver = client->ch;
+		op->result_receiver = client->cbch;
 		op->op_union.ra_op = ra_op;
 		op->timer_id = -1;
 
@@ -2544,7 +2606,7 @@ send_stonithRAop_final_result( stonithRA_ops_t * ra_op, gpointer data)
 	if ( NULL == get_exist_client_by_chan(client_list, ch) ) {
 		/* Here the ch are already destroyed */
 		stonithd_log(LOG_NOTICE, "It seems the client signed off, who "
-			"raised the operation. So won't send out the result.");
+		      "raised the RA operation. So won't send out the result.");
 		return ST_OK;
 	}
 
@@ -2978,8 +3040,9 @@ free_client(gpointer data, gpointer user_data)
 		client->removereason = NULL;
 	}
 	
-	/* don not need to destroy it! */
+	/* don not need to destroy them! */
 	client->ch = NULL;
+	client->cbch = NULL;
 
 	g_free(client);
 }
@@ -3221,7 +3284,8 @@ get_exist_client_by_chan(GList * client_list, IPC_Channel * ch)
 	     tmplist = g_list_next(tmplist)) {
 		stonithd_log2(LOG_DEBUG, "tmplist=%p", tmplist);
 		client = (stonithd_client_t *)tmplist->data;
-		if (client != NULL && client->ch == ch) {
+		if (client != NULL 
+		    && (client->ch == ch || client->cbch == ch )) {
 			stonithd_log2(LOG_DEBUG, "get_exist_client_by_chan: "
 					"client %s.", client->name);
 			return client;
@@ -3258,6 +3322,36 @@ get_exist_client_by_pid(GList * client_list, pid_t pid)
 	return NULL;
 }
 #endif
+
+static stonithd_client_t *
+find_client_by_farpid(GList * client_list, pid_t farpid)
+{
+	stonithd_client_t * client;
+	GList * tmplist = NULL;
+	
+	stonithd_log2(LOG_DEBUG, "%s:%d: begin." , __FUNCTION__, __LINE__);
+
+	if (client_list == NULL) {
+		stonithd_log(LOG_DEBUG, "%s:%d: client_list == NULL"
+			     , __FUNCTION__, __LINE__);
+		return NULL;
+	} 
+
+	tmplist = g_list_first(client_list);
+	for (tmplist = g_list_first(client_list); tmplist != NULL; 
+	     tmplist = g_list_next(tmplist)) {
+		client = (stonithd_client_t *)tmplist->data;
+		if (client != NULL && client->pid == farpid) {
+			stonithd_log2(LOG_DEBUG, "%s:%d: client %s."
+				      , __FUNCTION__, __LINE__
+				      , client->name);
+			return client;
+		}
+	}
+
+	stonithd_log2(LOG_DEBUG, "%s:%d: end." , __FUNCTION__, __LINE__);
+	return NULL;
+}
 
 static int
 delete_client_by_chan(GList ** client_list, IPC_Channel * ch)
@@ -3438,8 +3532,8 @@ trans_log(int priority, const char * fmt, ...)
 
 /* 
  * $Log: stonithd.c,v $
- * Revision 1.91  2006/06/09 11:43:19  sunjd
- * use stonithd_log instead
+ * Revision 1.92  2006/06/15 10:45:27  sunjd
+ * bug1272: add a channel for callback functions
  *
  * Revision 1.90  2006/05/30 10:15:56  sunjd
  * add two level 2 logs

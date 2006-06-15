@@ -47,6 +47,7 @@ static pid_t CLIENT_PID = 0;
 static char CLIENT_PID_STR[16];
 static gboolean DEBUG_MODE	   = FALSE;
 static IPC_Channel * chan	   = NULL;
+static IPC_Channel * cbchan	   = NULL;
 
 static gboolean INT_BY_ALARM = FALSE;
 static unsigned int DEFAULT_TIMEOUT = 6;
@@ -86,6 +87,7 @@ stonithd_signon(const char * client_name)
 	int rc = ST_FAIL;
 	char	path[] = IPC_PATH_ATTR;
 	char	sock[] = STONITHD_SOCK;
+	char	cbsock[] = STONITHD_CALLBACK_SOCK;
 	struct  ha_msg * request;
 	struct  ha_msg * reply;
 	GHashTable *	 wchanattrs;
@@ -188,6 +190,27 @@ stonithd_signon(const char * client_name)
 		/* Handle it furtherly ? */
 	}
 
+
+	if (ST_OK == rc) { /* Signed on to stonithd daemon */
+		wchanattrs = g_hash_table_new(g_str_hash, g_str_equal);
+        	g_hash_table_insert(wchanattrs, path, cbsock);
+		/* Connect to the stonith deamon */
+		cbchan = ipc_channel_constructor(IPC_ANYTYPE, wchanattrs);
+		g_hash_table_destroy(wchanattrs);
+	
+		if (cbchan == NULL) {
+			stdlib_log(LOG_ERR, "stonithd_signon: Can't construct "
+				   "callback channel to stonithd.");
+			return ST_FAIL;
+		}
+
+	        if (cbchan->ops->initiate_connection(cbchan) != IPC_OK) {
+			stdlib_log(LOG_ERR, "stonithd_signon: Can't initiate "
+				   "connection with callback channel");
+	                return ST_FAIL;
+       		}
+	}
+
 	ZAPMSG(reply);
 	return rc;
 }
@@ -258,11 +281,11 @@ stonithd_signoff(void)
 IPC_Channel *
 stonithd_input_IPC_channel(void)
 {
-	if ( chan == NULL || chan->ch_status == IPC_DISCONNECT ) {
+	if ( cbchan == NULL || cbchan->ch_status == IPC_DISCONNECT ) {
 		stdlib_log(LOG_ERR, "stonithd_input_IPC_channel: not signon.");
 		return NULL;
 	} else {
-		return chan;
+		return cbchan;
 	}
 }
 
@@ -358,7 +381,7 @@ stonithd_node_fence(stonith_ops_t * op)
 gboolean 
 stonithd_op_result_ready(void)
 {
-	if ( chan == NULL || chan->ch_status == IPC_DISCONNECT ) {
+	if ( cbchan == NULL || cbchan->ch_status == IPC_DISCONNECT ) {
 		stdlib_log(LOG_ERR, "stonithd_op_result_ready: "
 			   "failed due to not on signon status.");
 		return FALSE;
@@ -369,8 +392,8 @@ stonithd_op_result_ready(void)
 	 * from the possible endless waiting. That can be caused by the way
 	 * in which the caller uses it.
 	 */
-	return (chan->ops->is_message_pending(chan)
-		|| chan->ch_status == IPC_DISCONNECT);
+	return (cbchan->ops->is_message_pending(cbchan)
+		|| cbchan->ch_status == IPC_DISCONNECT);
 }
 
 int
@@ -392,12 +415,12 @@ stonithd_receive_ops_result(gboolean blocking)
 
 	if (stonithd_op_result_ready() == FALSE) {
 	/* at that time, blocking must be TRUE */
-		if (IPC_OK != chan->ops->waitin(chan)) {
+		if (IPC_OK != cbchan->ops->waitin(cbchan)) {
 			return ST_FAIL;
 		}
 	}
 
-	reply = msgfromIPC_noauth(chan);
+	reply = msgfromIPC_noauth(cbchan);
 	if ( TRUE == is_expected_msg(reply, F_STONITHD_TYPE, ST_APIRPL, 
 			     F_STONITHD_APIRPL, ST_STRET)  ) {
 		stonith_ops_t * st_op = NULL;
@@ -583,7 +606,7 @@ stonithd_receive_ops_result(gboolean blocking)
 int
 stonithd_set_stonith_ops_callback(stonith_ops_callback_t callback)
 {
-	if ( chan == NULL || chan->ch_status == IPC_DISCONNECT ) {
+	if ( cbchan == NULL || cbchan->ch_status == IPC_DISCONNECT ) {
 		stdlib_log(LOG_ERR, "stonithd_set_stonith_ops_callback: "\
 		 "failed due to not on signon status.");
 		return ST_FAIL;
@@ -696,7 +719,7 @@ int
 stonithd_set_stonithRA_ops_callback(stonithRA_ops_callback_t callback,
 				    void * private_data)
 {
-	if ( chan == NULL || chan->ch_status == IPC_DISCONNECT ) {
+	if ( cbchan == NULL || cbchan->ch_status == IPC_DISCONNECT ) {
 		stdlib_log(LOG_ERR, "stonithd_set_stonithRA_ops_callback: "
 		 "failed due to not on signon status.");
 		return ST_FAIL;
