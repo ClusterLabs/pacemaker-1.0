@@ -1768,6 +1768,11 @@ class Manager :
 			return None
  		while len(ret_str)>=4 and ret_str[:4] == "evt:" :
  			ret_str = mgmt_recvmsg()
+			if ret_str == None :
+				debug(str(string.split(command, "\n"))+":None")
+				self.failed_reason = "return None"
+				return None
+
 		ret_list = string.split(ret_str, "\n")
 		if ret_list[0] != "ok" :
 			debug(str(string.split(command, "\n"))+":"+ str(ret_list))
