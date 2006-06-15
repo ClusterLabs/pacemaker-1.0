@@ -24,6 +24,7 @@
 #define _STONITHD_MSG_H_
 
 #define STONITHD_SOCK HA_VARRUNDIR"/heartbeat/stonithd"
+#define STONITHD_CALLBACK_SOCK HA_VARRUNDIR"/heartbeat/stonithd_callback"
 /* define the field name for messages stonithd used */
 #define F_STONITHD_TYPE   "stonithd"
 
