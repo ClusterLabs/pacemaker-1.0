@@ -421,6 +421,10 @@ on_listen(GIOChannel *source, GIOCondition condition, gpointer data)
 		}	
 		/* create gnutls session for the server socket */
 		session = tls_attach_server(csock);
+		if (session == NULL) {
+			mgmt_log(LOG_ERR, "%s attach server socket failed", __FUNCTION__);
+			return TRUE;
+		}
 		msg = mgmt_session_recvmsg(session);
 		args = mgmt_msg_args(msg, &num);
 		if (msg == NULL || num != 3 || STRNCMP_CONST(args[0], MSG_LOGIN) != 0) {
