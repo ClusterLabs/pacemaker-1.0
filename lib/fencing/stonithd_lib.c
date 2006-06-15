@@ -92,6 +92,7 @@ stonithd_signon(const char * client_name)
 	uid_t	my_euid;
 	gid_t	my_egid;
 	const char * tmpstr;
+	int 	rc_tmp;
 
 	if (chan == NULL || chan->ch_status == IPC_DISCONNECT) {
 		wchanattrs = g_hash_table_new(g_str_hash, g_str_equal);
@@ -137,6 +138,7 @@ stonithd_signon(const char * client_name)
 		return ST_FAIL;
 	}
 
+	stdlib_log(LOG_DEBUG, "sending out the signon msg.");
 	/* Send the registration request message */
 	if (msg2ipcchan(request, chan) != HA_OK) {
 		ZAPMSG(request);
@@ -145,13 +147,23 @@ stonithd_signon(const char * client_name)
 	}
 
 	/* waiting for the output to finish */
-	chan_waitout_timeout(chan, DEFAULT_TIMEOUT);
+	do { 
+		rc_tmp= chan_waitout_timeout(chan, DEFAULT_TIMEOUT);
+	} while (rc_tmp == IPC_INTR);
+	if (IPC_OK != rc_tmp) {
+		stdlib_log(LOG_ERR, "%s:%d: waitout failed."
+			   , __FUNCTION__, __LINE__);
+		return ST_FAIL;
+	}
+
 	ZAPMSG(request);
 
 	/* Read the reply... */
 	stdlib_log(LOG_DEBUG, "waiting for the signon reply msg.");
+
         if ( IPC_OK != chan_waitin_timeout(chan, DEFAULT_TIMEOUT) ) {
-		stdlib_log(LOG_ERR, "waitin failed."); /*  how to deal. important */
+		stdlib_log(LOG_ERR, "%s:%d: waitin failed."
+			   , __FUNCTION__, __LINE__);
 		return ST_FAIL;
 	}
 
@@ -210,7 +222,8 @@ stonithd_signoff(void)
 	/* Read the reply... */
 	stdlib_log(LOG_DEBUG, "waiting for the signoff reply msg.");
         if ( IPC_OK != chan_waitin_timeout(chan, DEFAULT_TIMEOUT) ) {
-		stdlib_log(LOG_ERR, "waitin failed.");
+		stdlib_log(LOG_ERR, "%s:%d: waitin failed."
+			   , __FUNCTION__, __LINE__);
 		return ST_FAIL;
 	}
 
@@ -309,8 +322,8 @@ stonithd_node_fence(stonith_ops_t * op)
 	/* Read the reply... */
 	stdlib_log(LOG_DEBUG, "waiting for the stonith reply msg.");
         if ( IPC_OK != chan_waitin_timeout(chan, DEFAULT_TIMEOUT) ) {
-		stdlib_log(LOG_ERR, "stonithd_node_fence: waitin failed.");
-		/* how to deal. important */
+		stdlib_log(LOG_ERR, "%s:%d: waitin failed."
+			   , __FUNCTION__, __LINE__);
 		return ST_FAIL;
 	}
 
@@ -636,8 +649,8 @@ stonithd_virtual_stonithRA_ops( stonithRA_ops_t * op, int * call_id)
 	/* Read the reply... */
 	stdlib_log(LOG_DEBUG, "waiting for the stonithRA reply msg.");
         if ( IPC_OK != chan_waitin_timeout(chan, DEFAULT_TIMEOUT) ) {
-		stdlib_log(LOG_ERR, "stonith:waitin failed.");
-		/* how to deal. important */
+		stdlib_log(LOG_ERR, "%s:%d: waitin failed."
+			   , __FUNCTION__, __LINE__);
 		return ST_FAIL;
 	}
 
@@ -731,9 +744,8 @@ int stonithd_list_stonith_types(GList ** types)
 	/* Read the reply... */
 	stdlib_log(LOG_DEBUG, "waiting for the reply to list stonith types.");
         if ( IPC_OK != chan_waitin_timeout(chan, DEFAULT_TIMEOUT) ) {
-		stdlib_log(LOG_ERR, "stonithd_list_stonith_types: "
-			   "chan_waitin failed.");
-		/* how to deal. important */
+		stdlib_log(LOG_ERR, "%s:%d: chan_waitin failed."
+			   , __FUNCTION__, __LINE__);
 		return ST_FAIL;
 	}
 
@@ -820,10 +832,14 @@ is_expected_msg(const struct ha_msg * msg,
 			stdlib_log(LOG_DEBUG, "%s = %s.", field_name2, tmpstr);
 			rc= TRUE;
 		} else {
-			stdlib_log(LOG_DEBUG, "no field %s.", field_name2);
+			stdlib_log(LOG_NOTICE, "filed <%s> content is <%s>"
+				   , field_name2
+				   , (NULL == tmpstr) ? "NULL" : tmpstr);
 		}
 	} else {
-		stdlib_log(LOG_DEBUG, "No field %s", field_name1);
+		stdlib_log(LOG_NOTICE, "filed <%s> content is <%s>"
+			   , field_name1
+			   , (NULL == tmpstr) ? "NULL" : tmpstr);
 	}
 
 	return rc;
@@ -848,8 +864,8 @@ chan_waitin_timeout(IPC_Channel * chan, unsigned int timeout)
 	if ( other_remaining > 0 ) {
 		alarm(other_remaining);
 		stdlib_log(LOG_NOTICE, "chan_waitin_timeout: There are others "
-			"using timer:%d. I donnot use alarm.", other_remaining);
-		alarm(other_remaining);
+			   "using timer: %d. I donnot use alarm."
+			   , other_remaining);
 		ret = chan->ops->waitin(chan);
 	} else {
 		memset(&old_action, 0, sizeof(old_action));
@@ -860,11 +876,16 @@ chan_waitin_timeout(IPC_Channel * chan, unsigned int timeout)
 		alarm(timeout);
 	
 		ret = chan->ops->waitin(chan);
-
-		if ( ret == IPC_INTR && INT_BY_ALARM ) {
-			stdlib_log(LOG_ERR, "chan_waitin_timeout: waitin was "
-				   "interrupted by alarm signal.");
+		if ( ret == IPC_INTR && TRUE == INT_BY_ALARM ) {
+			stdlib_log(LOG_ERR, "%s:%d: waitin was interrupted "
+				   "by the alarm set by myself."
+				   , __FUNCTION__, __LINE__);
+			ret = IPC_FAIL;
 		} else {
+			if (ret == IPC_INTR) {
+				stdlib_log(LOG_NOTICE
+					, "waitin was interrupted by others");
+			}
 			alarm(0);
 		}
 
@@ -898,10 +919,16 @@ chan_waitout_timeout(IPC_Channel * chan, unsigned int timeout)
 
 		ret = chan->ops->waitout(chan);
 
-		if ( ret == IPC_INTR && INT_BY_ALARM ) {
-			stdlib_log(LOG_ERR, "chan_waitout_timeout: waitout was "
-				   "interrupted by alarm setted by myself.");
+		if ( ret == IPC_INTR && TRUE == INT_BY_ALARM ) {
+			stdlib_log(LOG_ERR, "%s:%d: waitout was interrupted"
+				   " by the alarm set by myself."
+				   , __FUNCTION__, __LINE__);
+			ret = IPC_FAIL;
 		} else {
+			if (ret == IPC_INTR) {
+				stdlib_log(LOG_ERR
+					   , "waitin was interrupted by others");
+			}
 			alarm(0);
 		}
 
