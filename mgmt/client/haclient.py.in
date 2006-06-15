@@ -526,17 +526,14 @@ class Tree :
 		
 		nodes = manager.get_all_nodes()
 		if nodes == None :
-			msgbox(_("can not get information from cluster!"))
 			return
 
 		active_nodes = manager.get_active_nodes()
 		if active_nodes == None :
-			msgbox(_("can not get information from cluster!"))
 			return
 
 		crm_nodes = manager.get_crm_nodes()
 		if crm_nodes == None :
-			msgbox(_("can not get information from cluster!"))
 			return
 		
 		config = manager.get_cluster_config()
