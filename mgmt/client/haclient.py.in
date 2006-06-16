@@ -1994,6 +1994,8 @@ class Manager :
 		return attrs
 		
 	def get_rsc_meta(self, rsc_class, rsc_type, rsc_provider) :
+		if rsc_class == None or rsc_type == None :
+			return None
 		lines = self.query("rsc_metadata\n%s\n%s\n%s"% \
 				(rsc_class, rsc_type, rsc_provider),True)
 		if lines == None :
