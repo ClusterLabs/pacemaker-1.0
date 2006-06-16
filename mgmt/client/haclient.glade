@@ -1706,7 +1706,7 @@ freeze</property>
 	  <child>
 	    <widget class="GtkLabel" id="label209">
 	      <property name="visible">True</property>
-	      <property name="label" translatable="yes">  Attributes  </property>
+	      <property name="label" translatable="yes">Attributes</property>
 	      <property name="use_underline">False</property>
 	      <property name="use_markup">False</property>
 	      <property name="justify">GTK_JUSTIFY_LEFT</property>
@@ -1801,7 +1801,7 @@ freeze</property>
 	  <child>
 	    <widget class="GtkLabel" id="label210">
 	      <property name="visible">True</property>
-	      <property name="label" translatable="yes">  Parameters  </property>
+	      <property name="label" translatable="yes">Parameters</property>
 	      <property name="use_underline">False</property>
 	      <property name="use_markup">False</property>
 	      <property name="justify">GTK_JUSTIFY_LEFT</property>
@@ -1896,7 +1896,7 @@ freeze</property>
 	  <child>
 	    <widget class="GtkLabel" id="label211">
 	      <property name="visible">True</property>
-	      <property name="label" translatable="yes">  Operations  </property>
+	      <property name="label" translatable="yes">Operations</property>
 	      <property name="use_underline">False</property>
 	      <property name="use_markup">False</property>
 	      <property name="justify">GTK_JUSTIFY_LEFT</property>
@@ -4007,7 +4007,7 @@ after</property>
 	  <child>
 	    <widget class="GtkLabel" id="label207">
 	      <property name="visible">True</property>
-	      <property name="label" translatable="yes">  Attributes  </property>
+	      <property name="label" translatable="yes">Attributes</property>
 	      <property name="use_underline">False</property>
 	      <property name="use_markup">False</property>
 	      <property name="justify">GTK_JUSTIFY_LEFT</property>
@@ -4102,7 +4102,7 @@ after</property>
 	  <child>
 	    <widget class="GtkLabel" id="label208">
 	      <property name="visible">True</property>
-	      <property name="label" translatable="yes">  Parameters  </property>
+	      <property name="label" translatable="yes">Parameters</property>
 	      <property name="use_underline">False</property>
 	      <property name="use_markup">False</property>
 	      <property name="justify">GTK_JUSTIFY_LEFT</property>

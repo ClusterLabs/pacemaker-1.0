@@ -169,6 +169,9 @@ msgstr "口令："
 msgid "Provider:"
 msgstr "提供者："
 
+msgid "Provider"
+msgstr "提供者"
+
 #: haclient.glade.h:26
 msgid "Reset"
 msgstr "重置"
@@ -510,7 +513,7 @@ msgid "Dead Time:"
 msgstr "认定宕机时间："
 
 #: haclient.py.in:618
-msgid "Intial Dead Time:"
+msgid "Initial Dead Time:"
 msgstr "启动时认定宕机时间："
 
 #: haclient.py.in:619
@@ -521,12 +524,15 @@ msgstr "事务超时时间："
 msgid "Resource Stickiness:"
 msgstr "资源粘黏性："
 
+msgid "Resource Failure Stickiness:"
+msgstr "资源失败粘黏性："
+
 #: haclient.py.in:621
 msgid "No Quorum Policy:"
 msgstr "节点数无效策略："
 
 #: haclient.py.in:622
-msgid "Sysmmetric Cluster"
+msgid "Symmetric Cluster"
 msgstr "对称集群"
 
 #: haclient.py.in:623
@@ -597,8 +603,69 @@ msgstr "连接服务器失败"
 msgid "Failed in the authentication.\n User Name or Password may be wrong.\n or the user doesn't belong to haclient group"
 msgstr "用户认证失败，可能是用户或密码不对，或该用户不属于haclient组"
 
-msgid "running(Master)"
+msgid "running (Master)"
 msgstr "运行(主)"
 
-msgid "running(Slave)"
+msgid "running (Slave)"
 msgstr "运行(从)"
+
+msgid "cleanup resource"
+msgstr "清理资源"
+
+msgid "Cleanup resource"
+msgstr "清理资源"
+
+msgid "Default"
+msgstr "缺省"
+
+msgid "work as default"
+msgstr "缺省运行"
+
+msgid "Move Up"
+msgstr "上移"
+
+msgid "Move Down"
+msgstr "下移"
+
+msgid "move the resource down in the group"
+msgstr "在资源组里下移资源"
+
+msgid "move the resource up in the group"
+msgstr "在资源组里上移资源"
+
+msgid "Resource ID:"
+msgstr "资源 ID："
+
+msgid "Attributes"
+msgstr "属性"
+
+msgid "Parameters"
+msgstr "参数"
+
+msgid "Operations"
+msgstr "操作"
+
+msgid "Delete Parameter"
+msgstr "删除参数"
+
+msgid "Delete Operation"
+msgstr "删除操作"
+
+msgid "Delete Expression"
+msgstr "删除表达式"
+
+msgid "Belong to group:\n(type for new one)"
+msgstr "属于资源组：\n(新资源组请输入)"
+
+msgid "Type(double click for detail):"
+msgstr "类型(双击可看详细信息)"
+
+msgid "If belong to a clone or master/slave:"
+msgstr "如果属于克隆资源或主从资源："
+
+msgid "Clone or Master/Slave ID:"
+msgstr "克隆资源或主从资源的ID："
+
+msgid "press \"Default\" or \"Start\" button in toolbar/menu to start the resource"
+msgstr "点击工具条或菜单中的\"缺省\"或\"开始\"可以启动资源"
+
