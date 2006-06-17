@@ -209,7 +209,17 @@ ha_pseudo_resource()
   case $2 in
     start|restart|reload)  touch "$ha_resource_tracking_file";;
     stop) rm -f "$ha_resource_tracking_file";;
-    status) test -f "$ha_resource_tracking_file";;
+    status|monitor)
+           if
+             [ -f "$ha_resource_tracking_file" ]
+           then
+             return 0
+           else
+             case $2 in
+               status)	return 3;;
+               *)	return 7;;
+             esac
+           fi;;
     *)	return 3;;
   esac
 }
