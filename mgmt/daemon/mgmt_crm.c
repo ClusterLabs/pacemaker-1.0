@@ -879,7 +879,10 @@ on_cleanup_rsc(char* argv[], int argc)
 {
 	IPC_Channel *crmd_channel = NULL;
 	char our_pid[11];
+	char *now_s = NULL;
+	time_t now = time(NULL);
 	
+	ARGC_CHECK(2);
 	snprintf(our_pid, 10, "%d", getpid());
 	our_pid[10] = '\0';
 	
@@ -889,6 +892,13 @@ on_cleanup_rsc(char* argv[], int argc)
 	send_hello_message(crmd_channel, our_pid, client_name, "0", "1");
 	delete_lrm_rsc(crmd_channel, NULL, argv[1]);
 	refresh_lrm(crmd_channel, NULL); 
+
+	/* force the TE to start a transition */
+	sleep(5); /* wait for the refresh */
+	now_s = crm_itoa(now);
+	update_attr(cib_conn, cib_sync_call,
+		    NULL, NULL, NULL, NULL, "last-lrm-refresh", now_s);
+	crm_free(now_s);
 
 	
 	return cl_strdup(MSG_OK);
