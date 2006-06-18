@@ -606,7 +606,7 @@ class Tree :
 				status = _("stopped")
 			else :		
 				dc = manager.get_dc()
-				if node in dc :
+				if dc != None and node in dc :
 					status = _("running(dc)")
 				else :
 					status = _("running")
