@@ -1,4 +1,4 @@
-/* $Id: stonithd.c,v 1.92 2006/06/15 10:45:27 sunjd Exp $ */
+/* $Id: stonithd.c,v 1.93 2006/06/18 14:19:38 sunjd Exp $ */
 
 /* File: stonithd.c
  * Description: STONITH daemon for node fencing
@@ -199,7 +199,7 @@ static void handle_msg_ticanst(struct ha_msg* msg, void* private_data);
 static void handle_msg_tstit(struct ha_msg* msg, void* private_data);
 static void handle_msg_trstit(struct ha_msg* msg, void* private_data);
 static void handle_msg_resetted(struct ha_msg* msg, void* private_data);
-static gboolean stonithd_hb_msg_dispatch(IPC_Channel * ch, gpointer user_data);
+static gboolean stonithd_hb_msg_dispatch(ll_cluster_t * hb, gpointer user_data);
 static void stonithd_hb_msg_dispatch_destroy(gpointer user_data);
 static int init_hb_msg_handler(void);
 static gboolean reboot_block_timeout(gpointer data);
@@ -761,9 +761,13 @@ stonithdProcessName(ProcTrack* p)
 static int
 init_hb_msg_handler(void)
 {
-	IPC_Channel * hbapi_ipc = NULL;
 	unsigned int msg_mask;
 	
+	if (hb == NULL) {
+		stonithd_log(LOG_ERR, "Don't connect to heartbeat: hb==NULL");
+		return LSB_EXIT_GENERIC;	
+	}
+
 	stonithd_log2(LOG_DEBUG, "init_hb_msg_handler: begin");
 
 	/* Set message callback */
@@ -810,13 +814,9 @@ init_hb_msg_handler(void)
 		return LSB_EXIT_GENERIC;
 	}
 
-	if (NULL == (hbapi_ipc = hb->llc_ops->ipcchan(hb))) {
-		stonithd_log(LOG_ERR,"Cannot get hb's client IPC channel.");
-		return LSB_EXIT_GENERIC;
-	}
 	/* Watch the hearbeat API's IPC channel for input */
-	G_main_add_IPC_Channel(G_PRIORITY_HIGH, hbapi_ipc, FALSE, 
-				stonithd_hb_msg_dispatch, (gpointer)hb, 
+	G_main_add_ll_cluster(G_PRIORITY_HIGH, hb, FALSE, 
+				stonithd_hb_msg_dispatch, NULL, 
 				stonithd_hb_msg_dispatch_destroy);
 
 	return 0;
@@ -824,13 +824,16 @@ init_hb_msg_handler(void)
 
 
 static gboolean
-stonithd_hb_msg_dispatch(IPC_Channel * ipcchan, gpointer user_data)
+stonithd_hb_msg_dispatch(ll_cluster_t * hb, gpointer user_data)
 {
-	ll_cluster_t *hb = (ll_cluster_t*)user_data;
-    
+	if (hb == NULL) {
+		stonithd_log(LOG_ERR, "parameter error: hb==NULL");
+		return FALSE;
+	} 
 	while (hb->llc_ops->msgready(hb)) {
-		/* FIXME:  This should be a higher-level API function (broken API) */
 		if (hb->llc_ops->ipcchan(hb)->ch_status == IPC_DISCONNECT) {
+			stonithd_log(LOG_ERR
+				     , "Disconnected with heartbeat daemon");
 			stonithd_quit(0);
 		}
 		/* invoke the callbacks with none-block mode */
@@ -1360,7 +1363,6 @@ accept_client_dispatch(IPC_Channel * ch, gpointer user)
 static gboolean
 accept_client_connect_callback(IPC_Channel * ch, gpointer user)
 {
-	GCHSource * gsrc = NULL;	
 	stonithd_client_t * signed_client = NULL;
 
 	if (ch == NULL) {
@@ -1370,8 +1372,6 @@ accept_client_connect_callback(IPC_Channel * ch, gpointer user)
 
 	stonithd_log2(LOG_DEBUG, "IPC accepted a callback connection.");
 	
-	g_hash_table_insert(chan_gsource_pairs, ch, gsrc);
-
 	signed_client = find_client_by_farpid(client_list, ch->farside_pid);
 	if (signed_client != NULL) {
 		signed_client->cbch = ch;	
@@ -3532,6 +3532,9 @@ trans_log(int priority, const char * fmt, ...)
 
 /* 
  * $Log: stonithd.c,v $
+ * Revision 1.93  2006/06/18 14:19:38  sunjd
+ * bug1183: use the new API of heartbeat to avoid message delay; remove redundant code
+ *
  * Revision 1.92  2006/06/15 10:45:27  sunjd
  * bug1272: add a channel for callback functions
  *
