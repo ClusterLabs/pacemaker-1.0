@@ -40,7 +40,7 @@ void final_heartbeat(void);
 static ll_cluster_t * hb = NULL;
 static char* on_get_allnodes(char* argv[], int argc);
 static char* on_get_hb_config(char* argv[], int argc);
-static gboolean on_hb_input(IPC_Channel *, gpointer);
+static gboolean on_hb_input(ll_cluster_t* hb, gpointer data);
 static char* on_echo(char* argv[], int argc);
 static void on_hb_quit(gpointer);
 char* hb_config = NULL;
@@ -123,7 +123,7 @@ init_heartbeat(void)
 		hb = NULL;
 		return -1;
 	}
-	G_main_add_IPC_Channel(G_PRIORITY_LOW, hb->llc_ops->ipcchan(hb),
+	G_main_add_ll_cluster(G_PRIORITY_LOW, hb,
 			FALSE, on_hb_input, NULL, on_hb_quit);
 	
 	reg_msg(MSG_ALLNODES, on_get_allnodes);
@@ -144,13 +144,15 @@ final_heartbeat(void)
 }
 
 gboolean
-on_hb_input(IPC_Channel * chan, gpointer data)
+on_hb_input(ll_cluster_t *hb, gpointer data)
 {
 	struct ha_msg* msg;
-	if (chan == NULL) {
-		return FALSE;
+	IPC_Channel *chan = NULL;
+
+	if(hb != NULL) {
+		chan = hb->llc_ops->ipcchan(hb);
 	}
-	if (!IPC_ISRCONN(chan)) {
+	if (chan == NULL || !IPC_ISRCONN(chan)) {
 		fire_event(EVT_DISCONNECTED);
 		mgmt_log(LOG_ERR, "Lost connection to heartbeat service.");
 		hb = NULL;
