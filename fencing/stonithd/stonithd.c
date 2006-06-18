@@ -1,4 +1,4 @@
-/* $Id: stonithd.c,v 1.93 2006/06/18 14:19:38 sunjd Exp $ */
+/* $Id: stonithd.c,v 1.94 2006/06/18 16:57:04 sunjd Exp $ */
 
 /* File: stonithd.c
  * Description: STONITH daemon for node fencing
@@ -678,12 +678,16 @@ stonithdProcessDied(ProcTrack* p, int status, int signo
 	}
 
 	if ( op->scenario == STONITH_RA_OP ) {
-		if (op->op_union.ra_op == NULL || op->result_receiver == NULL) {
-			stonithd_log(LOG_ERR,   "stonithdProcessDied: "
-						"op->op_union.ra_op == NULL or "
-						"op->result_receiver == NULL");
+		if (op->op_union.ra_op == NULL) {
+			stonithd_log(LOG_ERR, "stonithdProcessDied: "
+					"op->op_union.ra_op == NULL");
 			goto end;
 		}
+		if (op->result_receiver == NULL) {
+			stonithd_log(LOG_ERR, "stonithdProcessDied: "
+					"op->result_receiver == NULL");
+			goto end;
+		}	
 
 		op->op_union.ra_op->call_id = p->pid;
 		op->op_union.ra_op->op_result = exitcode;
@@ -1374,7 +1378,17 @@ accept_client_connect_callback(IPC_Channel * ch, gpointer user)
 	
 	signed_client = find_client_by_farpid(client_list, ch->farside_pid);
 	if (signed_client != NULL) {
-		signed_client->cbch = ch;	
+		if (signed_client->cbch != NULL) {
+			stonithd_log(LOG_ERR
+				    , "%s:%d: signed_client->cbch is not null, "	
+				      "will cause memory leak."
+				      "resigned client: pid1=<%d>, pid2=<%d>"
+				    , __FUNCTION__, __LINE__
+				    , signed_client->cbch->farside_pid
+				    , ch->farside_pid);
+			signed_client->cbch->ops->destroy(signed_client->cbch);
+		}
+		signed_client->cbch = ch;
 	} else {
 		stonithd_log(LOG_ERR
 			     , "%s:%d: Cannot find a signed client pid=%d"
@@ -3042,7 +3056,14 @@ free_client(gpointer data, gpointer user_data)
 	
 	/* don not need to destroy them! */
 	client->ch = NULL;
-	client->cbch = NULL;
+
+	if (client->cbch != NULL) {
+		client->cbch->ops->destroy(client->cbch);
+		client->cbch = NULL;
+	} else {
+		stonithd_log(LOG_ERR, "%s:%d: client->cbch = NULL"
+			     , __FUNCTION__, __LINE__);
+	}
 
 	g_free(client);
 }
@@ -3532,6 +3553,9 @@ trans_log(int priority, const char * fmt, ...)
 
 /* 
  * $Log: stonithd.c,v $
+ * Revision 1.94  2006/06/18 16:57:04  sunjd
+ * fix a memory leak; tweak log to catch errors better
+ *
  * Revision 1.93  2006/06/18 14:19:38  sunjd
  * bug1183: use the new API of heartbeat to avoid message delay; remove redundant code
  *
