@@ -1318,7 +1318,7 @@ class MainWindow :
 
 		self.set_action_sensitive('cleanuprsc',
 			manager.connected
-			and self.cur_type in all_rsc_type)
+			and self.cur_type in [_("native")])
 
 		self.set_action_sensitive('startrsc',
 			manager.connected
