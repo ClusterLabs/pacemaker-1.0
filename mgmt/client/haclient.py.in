@@ -1318,7 +1318,7 @@ class MainWindow :
 
 		self.set_action_sensitive('cleanuprsc',
 			manager.connected
-			and self.cur_type in [_("native")])
+			and self.cur_type in all_rsc_type)
 
 		self.set_action_sensitive('startrsc',
 			manager.connected
@@ -1507,7 +1507,11 @@ class MainWindow :
 			manager.do_cmd("move_rsc\n%s\ndown"%self.cur_name)
 	
 	def on_item_cleanup(self, action) :
-		manager.do_cmd("cleanup_rsc\n"+self.cur_name)
+		if self.cur_type == _("native") :
+			manager.do_cmd("cleanup_rsc\n"+self.cur_name)
+		elif self.cur_type in [_("group"),_("clone"),_("master")] :
+			for rsc in manager.get_rsc_sub_rsc(self.cur_name) :
+				manager.do_cmd("cleanup_rsc\n"+rsc)
 
 	def load_icon(self, name, file) :
 		icons = gtk.IconFactory()
