@@ -890,6 +890,7 @@ is_expected_msg(const struct ha_msg * msg,
 
 	if ( msg == NULL ) {
 		stdlib_log(LOG_ERR, "is_expected _msg: msg==NULL");
+		return rc;
 	}
 
 	if (   ( (tmpstr = cl_get_string(msg, field_name1)) != NULL )
