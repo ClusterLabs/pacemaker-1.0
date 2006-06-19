@@ -1,4 +1,4 @@
-/* $Id: stonithd.c,v 1.94 2006/06/18 16:57:04 sunjd Exp $ */
+/* $Id: stonithd.c,v 1.95 2006/06/19 05:03:15 sunjd Exp $ */
 
 /* File: stonithd.c
  * Description: STONITH daemon for node fencing
@@ -1367,15 +1367,24 @@ accept_client_dispatch(IPC_Channel * ch, gpointer user)
 static gboolean
 accept_client_connect_callback(IPC_Channel * ch, gpointer user)
 {
+	struct ha_msg * reply = NULL;
 	stonithd_client_t * signed_client = NULL;
-
-	if (ch == NULL) {
-		stonithd_log(LOG_ERR, "IPC accepting a connection failed.");
-		return FALSE;
-	}
+	const char * api_reply = ST_APIOK;
 
 	stonithd_log2(LOG_DEBUG, "IPC accepted a callback connection.");
-	
+
+	if (ch == NULL) {
+		stonithd_log(LOG_ERR, "%s:%d: ch==NULL."
+			     , __FUNCTION__, __LINE__);
+		return TRUE;
+	}
+
+	if (ch->ch_status == IPC_DISCONNECT) {
+		stonithd_log(LOG_WARNING
+			, "callback IPC disconneted with a client: ch=%p", ch);
+		return TRUE;
+	}
+
 	signed_client = find_client_by_farpid(client_list, ch->farside_pid);
 	if (signed_client != NULL) {
 		if (signed_client->cbch != NULL) {
@@ -1393,8 +1402,30 @@ accept_client_connect_callback(IPC_Channel * ch, gpointer user)
 		stonithd_log(LOG_ERR
 			     , "%s:%d: Cannot find a signed client pid=%d"
 			     , __FUNCTION__, __LINE__, ch->farside_pid);
+		api_reply = ST_BADREQ;
 	}
 
+	if ((reply = ha_msg_new(1)) == NULL) {
+		stonithd_log(LOG_ERR, "%s:%d:ha_msg_new:out of memory."
+				,__FUNCTION__, __LINE__);
+		return TRUE;
+	}
+
+	if ( (ha_msg_add(reply, F_STONITHD_TYPE, ST_APIRPL) != HA_OK ) 
+	    ||(ha_msg_add(reply, F_STONITHD_APIRPL, ST_RSIGNON) != HA_OK ) 
+	    ||(ha_msg_add(reply, F_STONITHD_APIRET, api_reply) != HA_OK ) ) {
+		ZAPMSG(reply);
+		stonithd_log(LOG_ERR, "%s:%d: cannot add field."
+			     , __FUNCTION__, __LINE__);
+		return TRUE;
+	}
+	
+	if (msg2ipcchan(reply, ch) != HA_OK) {
+		stonithd_log(LOG_ERR
+			    , "Failed to reply sign message to callback IPC");
+	}
+
+	ZAPMSG(reply);
 	return TRUE;
 }
 
@@ -3053,7 +3084,7 @@ free_client(gpointer data, gpointer user_data)
 		g_free(client->removereason);
 		client->removereason = NULL;
 	}
-	
+
 	/* don not need to destroy them! */
 	client->ch = NULL;
 
@@ -3062,7 +3093,7 @@ free_client(gpointer data, gpointer user_data)
 		client->cbch = NULL;
 	} else {
 		stonithd_log(LOG_ERR, "%s:%d: client->cbch = NULL"
-			     , __FUNCTION__, __LINE__);
+                	     , __FUNCTION__, __LINE__);
 	}
 
 	g_free(client);
@@ -3553,6 +3584,9 @@ trans_log(int priority, const char * fmt, ...)
 
 /* 
  * $Log: stonithd.c,v $
+ * Revision 1.95  2006/06/19 05:03:15  sunjd
+ * (bug1318)Add to send back a confirmation of setting up the callback channel
+ *
  * Revision 1.94  2006/06/18 16:57:04  sunjd
  * fix a memory leak; tweak log to catch errors better
  *
