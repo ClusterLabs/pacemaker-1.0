@@ -24,7 +24,7 @@ Copyright (C) 2005 International Business Machines
 # Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 
-import sys, os, string, socket, syslog, webbrowser, pickle, xml
+import sys, os, string, socket, syslog, webbrowser, pickle, xml, gc
 from xml.dom.minidom import parseString
 
 import locale, gettext
@@ -1826,6 +1826,7 @@ class Manager :
 	def update(self) :
 		self.cache_clear()
 		window.update()	
+		gc.collect()
 		self.update_timer = -1
 
 	# cluster functions		
@@ -2199,6 +2200,7 @@ if __name__ == '__main__' :
 	if not pygtk_2_4_newer () :
 		print "the pygtk 2.4 or newer is needed."
 		sys.exit()
+	gc.enable()
 	syslog.openlog("haclient", 0, syslog.LOG_USER)
 	locale.setlocale(locale.LC_ALL, '')
 	gettext.bindtextdomain(app_name)
