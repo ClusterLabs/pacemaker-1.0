@@ -84,7 +84,7 @@ static void free_stonithRA_ops_t(stonithRA_ops_t * ra_op);
 int
 stonithd_signon(const char * client_name)
 {
-	int rc = ST_FAIL;
+	int     rc = ST_FAIL;
 	char	path[] = IPC_PATH_ATTR;
 	char	sock[] = STONITHD_SOCK;
 	char	cbsock[] = STONITHD_CALLBACK_SOCK;
@@ -152,6 +152,7 @@ stonithd_signon(const char * client_name)
 	do { 
 		rc_tmp= chan_waitout_timeout(chan, DEFAULT_TIMEOUT);
 	} while (rc_tmp == IPC_INTR);
+
 	if (IPC_OK != rc_tmp) {
 		stdlib_log(LOG_ERR, "%s:%d: waitout failed."
 			   , __FUNCTION__, __LINE__);
@@ -185,33 +186,69 @@ stonithd_signon(const char * client_name)
 				   "stonithd.");
 		}
 	} else {
-		stdlib_log(LOG_DEBUG, "stonithd_signon: "
+		stdlib_log(LOG_ERR, "stonithd_signon: "
 			   "Got an unexpected message.");
-		/* Handle it furtherly ? */
 	}
-
-
-	if (ST_OK == rc) { /* Signed on to stonithd daemon */
-		wchanattrs = g_hash_table_new(g_str_hash, g_str_equal);
-        	g_hash_table_insert(wchanattrs, path, cbsock);
-		/* Connect to the stonith deamon */
-		cbchan = ipc_channel_constructor(IPC_ANYTYPE, wchanattrs);
-		g_hash_table_destroy(wchanattrs);
-	
-		if (cbchan == NULL) {
-			stdlib_log(LOG_ERR, "stonithd_signon: Can't construct "
-				   "callback channel to stonithd.");
-			return ST_FAIL;
-		}
-
-	        if (cbchan->ops->initiate_connection(cbchan) != IPC_OK) {
-			stdlib_log(LOG_ERR, "stonithd_signon: Can't initiate "
-				   "connection with callback channel");
-	                return ST_FAIL;
-       		}
-	}
-
 	ZAPMSG(reply);
+
+	if (ST_OK != rc) { /* Something wrong when try to sign on to stonithd */
+		stonithd_signoff();
+		return rc;
+	}
+
+	/* Signed on to stonithd daemon */
+	wchanattrs = g_hash_table_new(g_str_hash, g_str_equal);
+        g_hash_table_insert(wchanattrs, path, cbsock);
+	/* Connect to the stonith deamon via callback channel */
+	cbchan = ipc_channel_constructor(IPC_ANYTYPE, wchanattrs);
+	g_hash_table_destroy(wchanattrs);
+	
+	if (cbchan == NULL) {
+		stdlib_log(LOG_ERR, "stonithd_signon: Can't construct "
+			   "callback channel to stonithd.");
+		stonithd_signoff();
+		return ST_FAIL;
+	}
+
+        if (cbchan->ops->initiate_connection(cbchan) != IPC_OK) {
+		stdlib_log(LOG_ERR, "stonithd_signon: Can't initiate "
+			   "connection with the callback channel");
+		stonithd_signoff();
+                return ST_FAIL;
+ 	}
+
+	if ( (reply = msgfromIPC_noauth(cbchan)) == NULL ) {
+		stdlib_log(LOG_ERR, "%s:%d: failed to fetch reply via the "
+			   " callback channel"
+			   , __FUNCTION__, __LINE__);
+		stonithd_signoff();
+		return ST_FAIL;
+	}
+	
+	if ( TRUE == is_expected_msg(reply, F_STONITHD_TYPE, ST_APIRPL, 
+			     F_STONITHD_APIRPL, ST_RSIGNON) ) {
+		if ( ((tmpstr=cl_get_string(reply, F_STONITHD_APIRET)) != NULL)
+	   	    && (STRNCMP_CONST(tmpstr, ST_APIOK) == 0) ) {
+			rc = ST_OK;
+			stdlib_log(LOG_DEBUG, "%s:%d: Got a good signon reply "
+				  "via the callback channel."
+				   , __FUNCTION__, __LINE__);
+		} else {
+			stdlib_log(LOG_WARNING, "%s:%d: Got a bad signon reply "
+				  "via the callback channel."
+				   , __FUNCTION__, __LINE__);
+		}
+	} else {
+		stdlib_log(LOG_ERR, "stonithd_signon: "
+			   "Got an unexpected message via the callback chan.");
+	}
+	ZAPMSG(reply);
+
+	/* Something wrong when try to sign to stonithd via callback channel */
+	if (ST_OK != rc) {
+		stonithd_signoff();
+	}
+
 	return rc;
 }
 
@@ -274,6 +311,15 @@ stonithd_signoff(void)
 			   "Got an unexpected message.");
 	}
 	ZAPMSG(reply);
+	
+	if (NULL != chan) {
+		chan->ops->destroy(chan);
+		chan = NULL;
+	}
+	if (NULL != cbchan) {
+		cbchan->ops->destroy(cbchan);
+		cbchan = NULL;
+	}
 	
 	return rc;
 }
@@ -855,14 +901,18 @@ is_expected_msg(const struct ha_msg * msg,
 			stdlib_log(LOG_DEBUG, "%s = %s.", field_name2, tmpstr);
 			rc= TRUE;
 		} else {
-			stdlib_log(LOG_NOTICE, "filed <%s> content is <%s>"
+			stdlib_log(LOG_NOTICE, "field <%s> content is <%s>, "
+			           "expected content is: <%s>"
 				   , field_name2
-				   , (NULL == tmpstr) ? "NULL" : tmpstr);
+				   , (NULL == tmpstr) ? "NULL" : tmpstr
+			   	   , field_content2);
 		}
 	} else {
-		stdlib_log(LOG_NOTICE, "filed <%s> content is <%s>"
+		stdlib_log(LOG_NOTICE, "field <%s> content is <%s>, "
+			   "expected content is: <%s>"
 			   , field_name1
-			   , (NULL == tmpstr) ? "NULL" : tmpstr);
+			   , (NULL == tmpstr) ? "NULL" : tmpstr
+			   , field_content1);
 	}
 
 	return rc;
