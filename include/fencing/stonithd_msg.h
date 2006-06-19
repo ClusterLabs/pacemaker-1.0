@@ -28,9 +28,9 @@
 /* define the field name for messages stonithd used */
 #define F_STONITHD_TYPE   "stonithd"
 
-#define F_STONITHD_APIREQ "apireq"	/* api request */
-#define F_STONITHD_APIRPL "apirpl"	/* api reply */
-#define F_STONITHD_APIRET "apiret"	/* api reply */
+#define F_STONITHD_APIREQ "reqest"	/* api request */
+#define F_STONITHD_APIRPL "reply"	/* api reply */
+#define F_STONITHD_APIRET "apiret"	/* api return code */
 #define F_STONITHD_CNAME  "cname"	/* client name */
 #define F_STONITHD_CPID   "cpid"     	/* client pid */
 #define F_STONITHD_CEUID  "ceuid"     	/* client executing uid */
