@@ -1,4 +1,4 @@
-#	$Id: heartbeat.spec.in,v 1.176 2006/06/09 22:18:42 alan Exp $
+#	$Id: heartbeat.spec.in,v 1.177 2006/06/19 19:36:48 alan Exp $
 
 %define _unpackaged_files_terminate_build 1
 %define _missing_doc_files_terminate_build 1
@@ -90,6 +90,8 @@ implementing any number of interfaces.
 	to work the old way.
   + Changed target_role so that when you stop a resource, all the resources
 	which depend on it also stop - all in the proper order.
+  + KNOWN LIMITATIONS and BUGS
+    + the GUI core dumps when run using AIX-based X servers
 
 * Sun Apr 23 2006  Alan Robertson <alanr@unix.sh> (see doc/AUTHORS file)
 + Version 2.0.5 - significant bug fixes and a few feature deficits fixed
