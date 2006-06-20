@@ -1,4 +1,4 @@
-/* $Id: stonithd.c,v 1.95 2006/06/19 05:03:15 sunjd Exp $ */
+/* $Id: stonithd.c,v 1.96 2006/06/20 09:17:30 sunjd Exp $ */
 
 /* File: stonithd.c
  * Description: STONITH daemon for node fencing
@@ -1240,11 +1240,10 @@ free_timer(gpointer data)
 static gboolean 
 reboot_block_timeout(gpointer data)
 {
-	int * timer_id;
 	gchar * target = (gchar *)data;
 
 	if (NULL != 
-		(timer_id=g_hash_table_lookup(reboot_blocked_table, target))) {
+		g_hash_table_lookup(reboot_blocked_table, target) ) {
 		g_hash_table_remove(reboot_blocked_table, target);	
 		stonithd_log(LOG_INFO, "Unblock the reboot to node %s", target);
 	} else {
@@ -3584,6 +3583,9 @@ trans_log(int priority, const char * fmt, ...)
 
 /* 
  * $Log: stonithd.c,v $
+ * Revision 1.96  2006/06/20 09:17:30  sunjd
+ * remove the redundant code
+ *
  * Revision 1.95  2006/06/19 05:03:15  sunjd
  * (bug1318)Add to send back a confirmation of setting up the callback channel
  *
