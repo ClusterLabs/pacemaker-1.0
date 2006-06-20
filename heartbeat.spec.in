@@ -1,7 +1,9 @@
-#	$Id: heartbeat.spec.in,v 1.177 2006/06/19 19:36:48 alan Exp $
+#	$Id: heartbeat.spec.in,v 1.178 2006/06/20 12:15:53 lars Exp $
 
 %define _unpackaged_files_terminate_build 1
 %define _missing_doc_files_terminate_build 1
+%define ENABLE_MGMT @MGMT_ENABLED@
+%define ENABLE_SNMP_SUBAGENT @RPM_ENABLE_SNMP_SUBAGENT@
 
 Summary: @HB_PKG@ - The Heartbeat Subsystem for High-Availability Linux
 Name:	@HB_PKG@
@@ -1173,9 +1175,11 @@ make DESTDIR=$RPM_BUILD_ROOT install
 (
   cd $RPM_BUILD_ROOT@sysconfdir@/ha.d/resource.d
   ln -s @sbindir@/ldirectord ldirectord
-  ln -s @libdir@/heartbeat/haclient.py $RPM_BUILD_ROOT@bindir@/hb_gui
 )
 
+%if %{ENABLE_MGMT}
+ln -s @libdir@/heartbeat/haclient.py $RPM_BUILD_ROOT@bindir@/hb_gui
+%endif
 
 ###########################################################
 %files
@@ -1219,7 +1223,6 @@ make DESTDIR=$RPM_BUILD_ROOT install
 %dir @localstatedir@/run/@HB_PKG@
 %attr (2555, @HA_CCMUSER@, @HA_APIGROUP@) @bindir@/cl_status
 @bindir@/cl_respawn
-@bindir@/hb_gui
 @sbindir@/crmadmin 
 @sbindir@/cibadmin 
 @sbindir@/ccm_tool 
@@ -1250,17 +1253,16 @@ make DESTDIR=$RPM_BUILD_ROOT install
 %doc @mandir@/man8/ha_logd.8*
 %doc @mandir@/man8/cibadmin.8*
 %doc @docdir@
-%define ENABLE_SNMP_SUBAGENT @RPM_ENABLE_SNMP_SUBAGENT@
 %if %{ENABLE_SNMP_SUBAGENT}
 	@MIBS_DIR@/LINUX-HA-MIB.mib
 %endif
-%define ENABLE_MGMT @MGMT_ENABLED@
 %if %{ENABLE_MGMT}
 	@libdir@/libhbmgmt.*
 	@libdir@/libhbmgmtclient.*
 	@libdir@/libhbmgmtcommon.*
 	@libdir@/libhbmgmttls.*
 	/etc/pam.d/hbmgmtd
+	@bindir@/hb_gui
 	/usr/share/locale/zh_CN/LC_MESSAGES/haclient.mo
 %endif
 
