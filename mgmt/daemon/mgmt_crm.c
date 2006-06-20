@@ -1229,7 +1229,7 @@ on_get_rsc_attrs(char* argv[], int argc)
 			value = ha_msg_value(attrs, "globally_unique");
 			ret = mgmt_msg_append(ret, value?value:"true");
 			value = ha_msg_value(attrs, "ordered");
-			ret = mgmt_msg_append(ret, value?value:"true");
+			ret = mgmt_msg_append(ret, value?value:"false");
 			value = ha_msg_value(attrs, "interleave");
 			ret = mgmt_msg_append(ret, value?value:"false");
 			break;
