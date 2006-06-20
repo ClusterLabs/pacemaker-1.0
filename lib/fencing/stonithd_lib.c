@@ -69,7 +69,8 @@ static gboolean is_expected_msg(const struct ha_msg * msg,
 				const char * field_name1,
 				const char * field_content1,
 				const char * field_name2,
-				const char * field_content2 );
+				const char * field_content2,
+				gboolean must);
 static int chan_waitin_timeout(IPC_Channel * chan, unsigned int timeout);
 static int chan_waitout_timeout(IPC_Channel * chan, unsigned int timeout);
 static void sigalarm_handler(int signum);
@@ -176,7 +177,7 @@ stonithd_signon(const char * client_name)
 	}
 	
 	if ( TRUE == is_expected_msg(reply, F_STONITHD_TYPE, ST_APIRPL, 
-			     F_STONITHD_APIRPL, ST_RSIGNON) ) {
+			     F_STONITHD_APIRPL, ST_RSIGNON, TRUE) ) {
 		if ( ((tmpstr=cl_get_string(reply, F_STONITHD_APIRET)) != NULL)
 	   	    && (STRNCMP_CONST(tmpstr, ST_APIOK) == 0) ) {
 			rc = ST_OK;
@@ -226,7 +227,7 @@ stonithd_signon(const char * client_name)
 	}
 	
 	if ( TRUE == is_expected_msg(reply, F_STONITHD_TYPE, ST_APIRPL, 
-			     F_STONITHD_APIRPL, ST_RSIGNON) ) {
+			     F_STONITHD_APIRPL, ST_RSIGNON, TRUE) ) {
 		if ( ((tmpstr=cl_get_string(reply, F_STONITHD_APIRET)) != NULL)
 	   	    && (STRNCMP_CONST(tmpstr, ST_APIOK) == 0) ) {
 			rc = ST_OK;
@@ -294,7 +295,7 @@ stonithd_signoff(void)
 	}
 	
 	if ( TRUE == is_expected_msg(reply, F_STONITHD_TYPE, ST_APIRPL, 
-			     F_STONITHD_APIRPL, ST_RSIGNOFF) ) {
+			     F_STONITHD_APIRPL, ST_RSIGNOFF, TRUE) ) {
 		if ( ((tmpstr=cl_get_string(reply, F_STONITHD_APIRET)) != NULL)
 	   	    && (STRNCMP_CONST(tmpstr, ST_APIOK) == 0) ) {
 			chan->ops->destroy(chan);
@@ -307,7 +308,7 @@ stonithd_signoff(void)
 			stdlib_log(LOG_NOTICE, "fail to sign off the stonithd.");
 		}
 	} else {
-		stdlib_log(LOG_DEBUG, "stonithd_signoff: "
+		stdlib_log(LOG_ERR, "stonithd_signoff: "
 			   "Got an unexpected message.");
 	}
 	ZAPMSG(reply);
@@ -402,7 +403,7 @@ stonithd_node_fence(stonith_ops_t * op)
 	}
 	
 	if ( TRUE == is_expected_msg(reply, F_STONITHD_TYPE, ST_APIRPL, 
-			     F_STONITHD_APIRPL, ST_RSTONITH) ) {
+			     F_STONITHD_APIRPL, ST_RSTONITH, TRUE) ) {
 		if (((tmpstr = cl_get_string(reply, F_STONITHD_APIRET)) != NULL)
 	   	    && (STRNCMP_CONST(tmpstr, ST_APIOK) == 0) ) {
 			rc = ST_OK;
@@ -468,7 +469,7 @@ stonithd_receive_ops_result(gboolean blocking)
 
 	reply = msgfromIPC_noauth(cbchan);
 	if ( TRUE == is_expected_msg(reply, F_STONITHD_TYPE, ST_APIRPL, 
-			     F_STONITHD_APIRPL, ST_STRET)  ) {
+			     F_STONITHD_APIRPL, ST_STRET, FALSE)  ) {
 		stonith_ops_t * st_op = NULL;
 
 		stdlib_log(LOG_DEBUG, "received final return value of "
@@ -557,7 +558,7 @@ stonithd_receive_ops_result(gboolean blocking)
 	}
 
 	if (  TRUE == is_expected_msg(reply, F_STONITHD_TYPE, ST_APIRPL,
-			     F_STONITHD_APIRPL, ST_RAOPRET ) ) {
+			     F_STONITHD_APIRPL, ST_RAOPRET, FALSE ) ) {
 		stonithRA_ops_t * ra_op = NULL;
 
 		stdlib_log(LOG_DEBUG, "received the final return value of a "
@@ -730,7 +731,7 @@ stonithd_virtual_stonithRA_ops( stonithRA_ops_t * op, int * call_id)
 	}
 	
 	if ( FALSE == is_expected_msg(reply, F_STONITHD_TYPE, ST_APIRPL, 
-			     F_STONITHD_APIRPL, ST_RRAOP) ) {
+			     F_STONITHD_APIRPL, ST_RRAOP, TRUE) ) {
 		ZAPMSG(reply); /* avoid to zap the msg ? */
 		stdlib_log(LOG_DEBUG, "stonithd_virtual_stonithRA_ops: "
 			   "Got an unexpected message.");
@@ -825,7 +826,7 @@ int stonithd_list_stonith_types(GList ** types)
 	}
 	
 	if ( TRUE == is_expected_msg(reply, F_STONITHD_TYPE, ST_APIRPL, 
-			     F_STONITHD_APIRPL, ST_RLTYPES) ) {
+			     F_STONITHD_APIRPL, ST_RLTYPES, TRUE) ) {
 		if ( ((tmpstr = cl_get_string(reply, F_STONITHD_APIRET)) != NULL) 
 	   	    && (STRNCMP_CONST(tmpstr, ST_APIOK) == 0) ) {
 			int i, len;
@@ -883,7 +884,8 @@ create_basic_reqmsg_fields(const char * apitype)
 static gboolean 
 is_expected_msg(const struct ha_msg * msg,  
 		const char * field_name1, const char * field_content1,
-		const char * field_name2, const char * field_content2 )
+		const char * field_name2, const char * field_content2,
+		gboolean must)
 {
 	const char * tmpstr;
 	gboolean rc = FALSE;
@@ -902,18 +904,22 @@ is_expected_msg(const struct ha_msg * msg,
 			stdlib_log(LOG_DEBUG, "%s = %s.", field_name2, tmpstr);
 			rc= TRUE;
 		} else {
-			stdlib_log(LOG_NOTICE, "field <%s> content is <%s>, "
-			           "expected content is: <%s>"
-				   , field_name2
-				   , (NULL == tmpstr) ? "NULL" : tmpstr
-			   	   , field_content2);
+			if (TRUE == must) {
+				stdlib_log(LOG_ERR, "field <%s> content is "
+				   	" <%s>, expected content is: <%s>"
+				   	, field_name2
+				   	, (NULL == tmpstr) ? "NULL" : tmpstr
+			   	   	, field_content2);
+			}
 		}
 	} else {
-		stdlib_log(LOG_NOTICE, "field <%s> content is <%s>, "
-			   "expected content is: <%s>"
-			   , field_name1
-			   , (NULL == tmpstr) ? "NULL" : tmpstr
-			   , field_content1);
+		if (TRUE == must) {
+			stdlib_log(LOG_ERR, "field <%s> content is <%s>, "
+				   "expected content is: <%s>"
+				  , field_name1
+				  , (NULL == tmpstr) ? "NULL" : tmpstr
+				  , field_content1);
+		}
 	}
 
 	return rc;
