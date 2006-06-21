@@ -204,6 +204,8 @@ usr/lib/ocf/resource.d/heartbeat/IPv6addr
 usr/lib/ocf/resource.d/heartbeat/LVM
 usr/lib/ocf/resource.d/heartbeat/LinuxSCSI
 usr/lib/ocf/resource.d/heartbeat/MailTo
+usr/lib/ocf/resource.d/heartbeat/oracle
+usr/lib/ocf/resource.d/heartbeat/oralsnr
 usr/lib/ocf/resource.d/heartbeat/Raid1
 usr/lib/ocf/resource.d/heartbeat/ServeRAID
 usr/lib/ocf/resource.d/heartbeat/VIPArip
