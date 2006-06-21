@@ -154,13 +154,12 @@ stonithd_signon(const char * client_name)
 		rc_tmp= chan_waitout_timeout(chan, DEFAULT_TIMEOUT);
 	} while (rc_tmp == IPC_INTR);
 
+	ZAPMSG(request);
 	if (IPC_OK != rc_tmp) {
 		stdlib_log(LOG_ERR, "%s:%d: waitout failed."
 			   , __FUNCTION__, __LINE__);
 		return ST_FAIL;
 	}
-
-	ZAPMSG(request);
 
 	/* Read the reply... */
 	stdlib_log(LOG_DEBUG, "waiting for the signon reply msg.");
@@ -193,60 +192,60 @@ stonithd_signon(const char * client_name)
 	ZAPMSG(reply);
 
 	if (ST_OK != rc) { /* Something wrong when try to sign on to stonithd */
-		stonithd_signoff();
-		return rc;
+		goto end;
 	}
 
-	/* Signed on to stonithd daemon */
+	/* Connect to the stonith deamon via callback channel */
 	wchanattrs = g_hash_table_new(g_str_hash, g_str_equal);
         g_hash_table_insert(wchanattrs, path, cbsock);
-	/* Connect to the stonith deamon via callback channel */
 	cbchan = ipc_channel_constructor(IPC_ANYTYPE, wchanattrs);
 	g_hash_table_destroy(wchanattrs);
 	
 	if (cbchan == NULL) {
 		stdlib_log(LOG_ERR, "stonithd_signon: Can't construct "
 			   "callback channel to stonithd.");
-		stonithd_signoff();
-		return ST_FAIL;
+		rc = ST_FAIL;
+		goto end;
 	}
 
         if (cbchan->ops->initiate_connection(cbchan) != IPC_OK) {
 		stdlib_log(LOG_ERR, "stonithd_signon: Can't initiate "
 			   "connection with the callback channel");
-		stonithd_signoff();
-                return ST_FAIL;
+		rc = ST_FAIL;
+		goto end;
  	}
 
 	if ( (reply = msgfromIPC_noauth(cbchan)) == NULL ) {
 		stdlib_log(LOG_ERR, "%s:%d: failed to fetch reply via the "
 			   " callback channel"
 			   , __FUNCTION__, __LINE__);
-		stonithd_signoff();
-		return ST_FAIL;
+		rc = ST_FAIL;
+		goto end;
 	}
 	
 	if ( TRUE == is_expected_msg(reply, F_STONITHD_TYPE, ST_APIRPL, 
 			     F_STONITHD_APIRPL, ST_RSIGNON, TRUE) ) {
 		if ( ((tmpstr=cl_get_string(reply, F_STONITHD_APIRET)) != NULL)
 	   	    && (STRNCMP_CONST(tmpstr, ST_APIOK) == 0) ) {
-			rc = ST_OK;
 			stdlib_log(LOG_DEBUG, "%s:%d: Got a good signon reply "
 				  "via the callback channel."
 				   , __FUNCTION__, __LINE__);
 		} else {
-			stdlib_log(LOG_WARNING, "%s:%d: Got a bad signon reply "
+			rc = ST_FAIL;
+			stdlib_log(LOG_ERR, "%s:%d: Got a bad signon reply "
 				  "via the callback channel."
 				   , __FUNCTION__, __LINE__);
 		}
 	} else {
+		rc = ST_FAIL;
 		stdlib_log(LOG_ERR, "stonithd_signon: "
 			   "Got an unexpected message via the callback chan.");
 	}
 	ZAPMSG(reply);
 
-	/* Something wrong when try to sign to stonithd via callback channel */
+end:
 	if (ST_OK != rc) {
+		/* Something wrong when confirm via callback channel */
 		stonithd_signoff();
 	}
 
