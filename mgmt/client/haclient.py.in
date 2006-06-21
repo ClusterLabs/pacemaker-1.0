@@ -240,11 +240,59 @@ class RAMeta :
 	parameters = []
 	actions = []
 
+def NVBox(option_dict) :
+	def on_name_change(name_combo, value_combo, option_dict) :
+		name = name_combo.child.get_text()
+		value_combo.get_model().clear()
+		value_combo.child.set_text("")
+		if name in option_dict.keys() :
+			for option in option_dict[name] :
+				value_combo.append_text(option)
+			if option_dict[name] != [] :
+				value_combo.child.set_text(option_dict[name][0])
+		
+	global top_window
+	dialog = gtk.Dialog("Add Name/Value Pair", top_window, gtk.DIALOG_MODAL,
+		(gtk.STOCK_OK, gtk.RESPONSE_OK, gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL))
+	table = gtk.Table(2, 1, False)
+	
+	table.attach(gtk.Label("Value:"), 0, 1, 1, 2)
+	value_combo = gtk.combo_box_entry_new_text()
+	table.attach(value_combo, 1, 2, 1, 2)
+	
+	table.attach(gtk.Label("Name:"), 0, 1, 0, 1)
+	name_combo = gtk.combo_box_entry_new_text()
+	for name in option_dict.keys() :
+		name_combo.append_text(name)
+	table.attach(name_combo, 1, 2, 0, 1)
+	name_combo.connect("changed", on_name_change, value_combo, option_dict)
+	name_combo.child.set_text(option_dict.keys()[0])
+	
+	dialog.vbox.pack_start(table)
+	dialog.vbox.show_all()
+	save_top_window = top_window
+	top_window = dialog
+
+	while True :
+		ret = dialog.run()
+		if ret in [gtk.RESPONSE_CANCEL,gtk.RESPONSE_DELETE_EVENT] :
+			top_window = save_top_window
+			dialog.destroy()
+			return (None,None)
+		else :
+			name = name_combo.child.get_text()
+			value = value_combo.child.get_text()
+			top_window = save_top_window
+			dialog.destroy()
+			return (name, value)
+
 class NVList :
 	widget = None
 	store = None
 	value_cell = None
+	call_back = None
 	options = {}
+	option_dict = {}
 	empty_model = gtk.ListStore(str)
 	def on_cursor_changed(self, treeview, selection) :
 		(model, iter) = selection.get_selected()
@@ -255,7 +303,22 @@ class NVList :
 			else :
 				self.value_cell.set_property("model", self.empty_model)
 	
-	def __init__(self, widget, options=None, call_back=None) :
+	def on_del(self, widget) :
+		selection = self.widget.get_selection()
+		(model, iter) = selection.get_selected()
+		if iter != None :
+			model.remove(iter)
+			if self.call_back != None :
+				self.call_back(self)
+	
+		
+	def on_add(self, widget) :
+		(name,value) = NVBox(self.option_dict)
+		if name != None :
+			self.insert(name, value) 
+			self.call_back(self)
+	
+	def __init__(self, widget, add_btn, del_btn, option_dict=None, call_back=None) :
 		self.widget = widget
 		self.store = gtk.ListStore(str, str)
 		widget.set_model(self.store)
@@ -277,12 +340,15 @@ class NVList :
 		cell.set_property('editable', True)
 		cell.connect('edited', edited_cb, (self.store, 1, call_back))
 		tvcolumn = gtk.TreeViewColumn("value",cell,text=1)
+		self.call_back = call_back
 		self.widget.append_column(tvcolumn)
-		
-		if options != None :
-			for name in options.keys() :
+		add_btn.connect("clicked", self.on_add)
+		del_btn.connect("clicked", self.on_del)
+		self.option_dict = option_dict
+		if option_dict != None :
+			for name in option_dict.keys() :
 				option_model = gtk.ListStore(str)
-				for option in options[name] :
+				for option in option_dict[name] :
 					option_model.append([option])
 				self.options[name]=option_model
 		
@@ -886,7 +952,7 @@ class RscView(View) :
 	ops_save = None
 	
 	attr_list = None
-	
+	attrs_save = None
 	def on_apply(self, widget):
 		glade = self.glade
 		View.on_apply(self, widget)
@@ -899,6 +965,10 @@ class RscView(View) :
 				   self.ops_save, new_ops, ["id","name","interval","timeout"]);
 		
 		nv = self.attr_list.get_data()
+		for n in self.attrs_save.keys():
+			if n not in ["id", "class","type","provider"] :
+				if n not in nv.keys() :
+					manager.update_rsc_attr(self.param, n, "#default")
 		for n in nv.keys() :
 			manager.update_rsc_attr(self.param, n, nv[n])
 				   
@@ -933,7 +1003,7 @@ class RscView(View) :
 		for key in attrs.keys() :
 			if key not in ["id", "class","type","provider"] :
 				self.attr_list.insert(key, attrs[key])
-		
+		self.attrs_save = attrs
 		View.update(self)
 	def on_notebook_event(self, widget, page, page_num) :
 		global last_rsc_view_page_num
@@ -970,20 +1040,102 @@ class RscView(View) :
 					     Field("interval", _("Interval"), "0s", None, True),
 					     Field("timeout", _("Timeout"), "60s", None, True)],
 					 self.on_changed)
-		options_dict = {"is_managed":["true","false","default"],
+		options_dict = {"is_managed":["default","true","false"],
 			"restart_type":["ignore","restart"],
 			"multiple_active":["stop_start","stop_only","block"],
-			"ordered":["true","false"], 
-			"collocated":["true","false"], 
-			"notify":["true","false"],
-			"globally_unique":["true","false"],
-			"interleave":["true","false"]}
-		
+			"resource_stickiness":[],
+			"description":[]}
 		self.attr_list = NVList(glade.get_widget("attributes"),
-					options_dict, self.on_changed)
+					glade.get_widget("addattr"), 
+					glade.get_widget("delattr"),
+					options_dict,
+					self.on_changed)
 		notebook = glade.get_widget("notebook")
 		notebook.connect("switch-page", self.on_notebook_event)
 		notebook.set_current_page(last_rsc_view_page_num)
+		self.update()
+		
+class CompoundRscView(View) :
+	name = "compoundrscview"
+	param_list = None
+	params_save = None
+	attr_list = None
+	attrs_save = None
+			
+	def on_apply(self, widget):
+		glade = self.glade
+		View.on_apply(self, widget)
+		(rid,rtype) = self.param
+		new_params = self.param_list.get_data()
+		manager.update_attrs("up_rsc_params\n"+rid,"del_rsc_param",
+				   self.params_save, new_params, ["id","name","value"]);
+				   
+		nv = self.attr_list.get_data()
+		for n in self.attrs_save.keys():
+			if n not in ["id", "class","type","provider"] :
+				if n not in nv.keys() :
+					manager.update_rsc_attr(rid, n, "#default")
+		for n in nv.keys() :
+			manager.update_rsc_attr(rid, n, nv[n])
+		
+	def update(self) :
+		glade = self.glade
+		(rid,rtype) = self.param
+		params = manager.get_rsc_params(rid)
+		self.params_save = params
+		glade.get_widget("id").set_text(rid)
+		glade.get_widget("type").set_text(rtype)
+						
+		self.param_list.clear()
+		if params != [] :
+			for param in params:
+				self.param_list.insert(param)
+		
+		self.attr_list.clear()
+		attrs = manager.get_rsc_attrs(rid)
+		for key in attrs.keys() :
+			if key != "id" :
+				self.attr_list.insert(key, attrs[key])
+		self.attrs_save = attrs
+		View.update(self)
+	
+	def on_notebook_event(self, widget, page, page_num) :
+		global last_compound_view_page_num
+		last_compound_view_page_num = page_num
+		
+	def __init__(self, grp) :
+		View.__init__(self, grp)
+		glade = self.glade
+			
+		self.param_list = ListWithAddDel(glade.get_widget("parameters"),
+					    glade.get_widget("addparam"),
+					    glade.get_widget("delparam"),
+					    _("Add Parameter"),
+					    [Field("id", _("ID"), "", None, False, auto_gen=True),
+			  		     Field("name", _("Name"), "", None, False),
+					     Field("value", _("Value"), "", None, True)],
+					    self.on_changed)
+					    
+		options_dict = {"is_managed":["default","true","false"],
+			"restart_type":["ignore","restart"],
+			"multiple_active":["stop_start","stop_only","block"],
+			"ordered":["false", "true"], 
+			"collocated":["true","false"], 
+			"notify":["false", "true"],
+			"globally_unique":["true","false"],
+			"interleave":["false","true"],
+			"resource_stickiness":[],
+			"description":[]}
+		
+		self.attr_list = NVList(glade.get_widget("attributes"),
+					glade.get_widget("addattr"), 
+					glade.get_widget("delattr"),
+					options_dict,
+					self.on_changed)
+		notebook = glade.get_widget("notebook")
+		notebook.connect("switch-page", self.on_notebook_event)
+		notebook.set_current_page(last_compound_view_page_num)
+					
 		self.update()
 		
 class AddNativeDlg :
@@ -1195,79 +1347,6 @@ class AddNativeDlg :
 					return None
 		
 	
-class CompoundRscView(View) :
-	name = "compoundrscview"
-	param_list = None
-	params_save = None
-	attr_list = None
-	
-			
-	def on_apply(self, widget):
-		glade = self.glade
-		View.on_apply(self, widget)
-		(rid,rtype) = self.param
-		new_params = self.param_list.get_data()
-		manager.update_attrs("up_rsc_params\n"+rid,"del_rsc_param",
-				   self.params_save, new_params, ["id","name","value"]);
-				   
-		nv = self.attr_list.get_data()
-		for n in nv.keys() :
-			manager.update_rsc_attr(rid, n, nv[n])
-		
-	def update(self) :
-		glade = self.glade
-		(rid,rtype) = self.param
-		params = manager.get_rsc_params(rid)
-		self.params_save = params
-		glade.get_widget("id").set_text(rid)
-		glade.get_widget("type").set_text(rtype)
-						
-		self.param_list.clear()
-		if params != [] :
-			for param in params:
-				self.param_list.insert(param)
-		
-		self.attr_list.clear()
-		attrs = manager.get_rsc_attrs(rid)
-		for key in attrs.keys() :
-			if key != "id" :
-				self.attr_list.insert(key, attrs[key])
-		
-		View.update(self)
-	
-	def on_notebook_event(self, widget, page, page_num) :
-		global last_compound_view_page_num
-		last_compound_view_page_num = page_num
-		
-	def __init__(self, grp) :
-		View.__init__(self, grp)
-		glade = self.glade
-			
-		self.param_list = ListWithAddDel(glade.get_widget("parameters"),
-					    glade.get_widget("addparam"),
-					    glade.get_widget("delparam"),
-					    _("Add Parameter"),
-					    [Field("id", _("ID"), "", None, False, auto_gen=True),
-			  		     Field("name", _("Name"), "", None, False),
-					     Field("value", _("Value"), "", None, True)],
-					    self.on_changed)
-					    
-		options_dict = {"is_managed":["true","false","default"],
-			"restart_type":["ignore","restart"],
-			"multiple_active":["stop_start","stop_only","block"],
-			"ordered":["true","false"], 
-			"collocated":["true","false"], 
-			"notify":["true","false"],
-			"globally_unique":["true","false"],
-			"interleave":["true","false"]}
-		
-		self.attr_list = NVList(glade.get_widget("attributes"),
-					options_dict, self.on_changed)
-		notebook = glade.get_widget("notebook")
-		notebook.connect("switch-page", self.on_notebook_event)
-		notebook.set_current_page(last_compound_view_page_num)
-					
-		self.update()
 
 class MainWindow :
 	'''
@@ -1996,6 +2075,9 @@ class Manager :
 			attrs = dict(zip(grp_attr_names, attr_list))
 		elif rtype in ["clone","master"] :
 			attrs = dict(zip(clone_attr_names, attr_list))
+		for n in attrs.keys() :
+			if attrs[n] == "#default" or attrs[n] == "" :
+				del attrs[n]
 		return attrs
 		
 	def get_rsc_meta(self, rsc_class, rsc_type, rsc_provider) :
