@@ -252,15 +252,15 @@ def NVBox(option_dict) :
 				value_combo.child.set_text(option_dict[name][0])
 		
 	global top_window
-	dialog = gtk.Dialog("Add Name/Value Pair", top_window, gtk.DIALOG_MODAL,
+	dialog = gtk.Dialog(_("Add Name/Value Pair"), top_window, gtk.DIALOG_MODAL,
 		(gtk.STOCK_OK, gtk.RESPONSE_OK, gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL))
 	table = gtk.Table(2, 1, False)
 	
-	table.attach(gtk.Label("Value:"), 0, 1, 1, 2)
+	table.attach(gtk.Label(_("Value")+":"), 0, 1, 1, 2)
 	value_combo = gtk.combo_box_entry_new_text()
 	table.attach(value_combo, 1, 2, 1, 2)
 	
-	table.attach(gtk.Label("Name:"), 0, 1, 0, 1)
+	table.attach(gtk.Label(_("Name")+":"), 0, 1, 0, 1)
 	name_combo = gtk.combo_box_entry_new_text()
 	for name in option_dict.keys() :
 		name_combo.append_text(name)
@@ -324,7 +324,7 @@ class NVList :
 		widget.set_model(self.store)
 		
 		cell = gtk.CellRendererText()
-		tvcolumn = gtk.TreeViewColumn("name",cell,text=0)
+		tvcolumn = gtk.TreeViewColumn(_("Name"),cell,text=0)
 		widget.append_column(tvcolumn)
 		
 		if pygtk_2_6_newer():
@@ -339,7 +339,7 @@ class NVList :
 			cell = gtk.CellRendererText()
 		cell.set_property('editable', True)
 		cell.connect('edited', edited_cb, (self.store, 1, call_back))
-		tvcolumn = gtk.TreeViewColumn("value",cell,text=1)
+		tvcolumn = gtk.TreeViewColumn(_("Value"),cell,text=1)
 		self.call_back = call_back
 		self.widget.append_column(tvcolumn)
 		add_btn.connect("clicked", self.on_add)
@@ -1888,7 +1888,7 @@ class Manager :
 			if self.update_timer != -1 :
 				gobject.source_remove(self.update_timer)
 			else :
-				window.statusbar.push(2,"Updating data from server...")
+				window.statusbar.push(2,_("Updating data from server..."))
 			self.update_timer = gobject.timeout_add(200, self.update)
 			return True
 		elif event == None or event == "evt:disconnected" :

@@ -669,3 +669,14 @@ msgstr "克隆资源或主从资源的ID："
 msgid "press \"Default\" or \"Start\" button in toolbar/menu to start the resource"
 msgstr "点击工具条或菜单中的\"缺省\"或\"开始\"可以启动资源"
 
+msgid "Delete Attribute"
+msgstr "删除属性"
+
+msgid "Add Attribute"
+msgstr "添加属性"
+
+msgid "Add Name/Value Pair"
+msgstr "添加名称/值对"
+
+msgid "Reconnecting..."
+msgstr "重新连接中..."
