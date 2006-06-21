@@ -1207,31 +1207,31 @@ on_get_rsc_attrs(char* argv[], int argc)
 		ret = mgmt_msg_append(ret, ha_msg_value(attrs, "type"));
 	}
 	value = ha_msg_value(attrs, "is_managed");
-	ret = mgmt_msg_append(ret, value?value:"default");
+	ret = mgmt_msg_append(ret, value?value:"#default");
 	value = ha_msg_value(attrs, "restart_type");
-	ret = mgmt_msg_append(ret, value?value:"ignore");
+	ret = mgmt_msg_append(ret, value?value:"#default");
 	value = ha_msg_value(attrs, "multiple_active");
-	ret = mgmt_msg_append(ret, value?value:"stop_start");
+	ret = mgmt_msg_append(ret, value?value:"#default");
 	value = ha_msg_value(attrs, "resource_stickiness");
-	ret = mgmt_msg_append(ret, value?value:"0");
+	ret = mgmt_msg_append(ret, value?value:"#default");
 	
 	switch (rsc->variant) {
 		case pe_group:
 			value = ha_msg_value(attrs, "ordered");
-			ret = mgmt_msg_append(ret, value?value:"true");
+			ret = mgmt_msg_append(ret, value?value:"#default");
 			value = ha_msg_value(attrs, "collocated");
-			ret = mgmt_msg_append(ret, value?value:"true");
+			ret = mgmt_msg_append(ret, value?value:"#default");
 			break;
 		case pe_clone:
 		case pe_master:
 			value = ha_msg_value(attrs, "notify");
-			ret = mgmt_msg_append(ret, value?value:"false");
+			ret = mgmt_msg_append(ret, value?value:"#default");
 			value = ha_msg_value(attrs, "globally_unique");
-			ret = mgmt_msg_append(ret, value?value:"true");
+			ret = mgmt_msg_append(ret, value?value:"#default");
 			value = ha_msg_value(attrs, "ordered");
-			ret = mgmt_msg_append(ret, value?value:"false");
+			ret = mgmt_msg_append(ret, value?value:"#default");
 			value = ha_msg_value(attrs, "interleave");
-			ret = mgmt_msg_append(ret, value?value:"false");
+			ret = mgmt_msg_append(ret, value?value:"#default");
 			break;
 		default:
 			break;
