@@ -1,4 +1,4 @@
-/* $Id: heartbeat.c,v 1.512 2006/06/13 07:57:11 zhenh Exp $ */
+/* $Id: heartbeat.c,v 1.513 2006/06/22 01:00:51 alan Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -1387,8 +1387,8 @@ master_control_process(void)
 	}
 
 	if (ANYDEBUG) {
-		/* Limit ourselves to 50% of the CPU */
-		cl_cpu_limit_setpercent(50);
+		/* Limit ourselves to 70% of the CPU */
+		cl_cpu_limit_setpercent(70);
 		/* Update our CPU limit periodically */
 		id=Gmain_timeout_add_full(G_PRIORITY_HIGH-5
 		,	cl_cpu_limit_ms_interval()
@@ -6354,6 +6354,9 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.513  2006/06/22 01:00:51  alan
+ * Raised the heartbeat (debug) CPU limit to 70%.
+ *
  * Revision 1.512  2006/06/13 07:57:11  zhenh
  * deal with the situation that the time restart is shorter than deadtime, fix 1280
  *
