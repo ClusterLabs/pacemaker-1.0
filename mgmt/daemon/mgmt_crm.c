@@ -761,7 +761,7 @@ on_set_node_standby(char* argv[], int argc)
 	}
 	
 	snprintf(xml, MAX_STRLEN, 
-		"<node id=\"%s\"><instance_attributes id=\"standby-\%s\">"
+		"<node id=\"%s\"><instance_attributes id=\"nodes-\%s\">"
 		"<attributes><nvpair id=\"standby-%s\" name=\"standby\" value=\"%s\"/>"
            	"</attributes></instance_attributes></node>", 
            	id, id, id, argv[2]);
