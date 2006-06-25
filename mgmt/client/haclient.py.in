@@ -1236,7 +1236,7 @@ class AddNativeDlg :
 	
 	def init_type_list(self):
 		add_column(self.type_list, _("Name"), 0)
-		add_column(self.type_list, _("Provider"), 1)
+		add_column(self.type_list, _("Class")+"/"+_("Provider"), 1)
 		add_column(self.type_list, _("Description"), 2)
 		for i in range(3) :
 			self.type_list.get_column(i).set_sort_column_id(i)
@@ -1254,11 +1254,13 @@ class AddNativeDlg :
 					if meta != None :
 						desc = meta.shortdesc
 					if c=="heartbeat" :
-						p = "(heartbeat)"
+						p = "heartbeat"
 					elif c=="stonith" :
-						p = "(stonith)"
+						p = "stonith"
 					elif c=="lsb" :
-						p = "(lsb)"
+						p = "lsb"
+					else :
+						p = "ocf/"+p
 					store.append([t,p,desc])
 		self.type_list.set_model(store)
 		self.type_list.get_selection().select_path((0))

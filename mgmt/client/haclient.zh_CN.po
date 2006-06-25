@@ -107,6 +107,9 @@ msgstr "属性："
 msgid "Class:"
 msgstr "类别："
 
+msgid "Class"
+msgstr "类别"
+
 #: haclient.glade.h:9
 msgid "Clone"
 msgstr "克隆资源"
