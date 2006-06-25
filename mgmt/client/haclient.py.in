@@ -1210,16 +1210,19 @@ class AddNativeDlg :
 			return (None, None, None)
 		cur_type = model.get_value(iter, 0)
 		cur_provider = model.get_value(iter, 1)
-		cur_class = "ocf"
-		if cur_provider == "(stonith)" :
+		
+		if cur_provider == "stonith" :
 			cur_class = "stonith"
 			cur_provider = "heartbeat"
-		elif cur_provider == "(heartbeat)":
+		elif cur_provider == "heartbeat":
 			cur_class = "heartbeat"
 			cur_provider = "heartbeat"
-		elif cur_provider == "(lsb)":
+		elif cur_provider == "lsb":
 			cur_class = "lsb"
 			cur_provider = "heartbeat"
+		else :
+			cur_class = "ocf"
+			cur_provider = string.split(cur_provider,"/")[1]
 		return (cur_class, cur_type, cur_provider)	
 		
 	def on_type_changed(self, type_list) :
