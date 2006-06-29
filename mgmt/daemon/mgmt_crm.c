@@ -161,12 +161,13 @@ delete_object(const char* type, const char* entry, const char* id, crm_data_t** 
 pe_working_set_t*
 get_data_set(void) 
 {
+	pe_working_set_t* data_set;
+	
 	if (cib_cache_enable) {
 		if (cib_cached != NULL) {
 			return cib_cached;
 		}
 	}
-	pe_working_set_t* data_set;
 	
 	data_set = (pe_working_set_t*)cl_malloc(sizeof(pe_working_set_t));
 	set_working_set_defaults(data_set);
