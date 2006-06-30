@@ -1,4 +1,4 @@
-/* $Id: stonithd.c,v 1.96 2006/06/20 09:17:30 sunjd Exp $ */
+/* $Id: stonithd.c,v 1.97 2006/06/30 07:43:27 sunjd Exp $ */
 
 /* File: stonithd.c
  * Description: STONITH daemon for node fencing
@@ -2829,8 +2829,10 @@ stonithRA_start( stonithRA_ops_t * op, gpointer data)
 		print_str_hashtable(op->params);
 	}
 
+	return_to_orig_privs();
 	stonith_obj = stonith_new(op->ra_name);
 	if (stonith_obj == NULL) {
+		return_to_dropped_privs();
 		stonithd_log(LOG_ERR, "Invalid RA/device type: '%s'", 
 		             op->ra_name);
 		return ST_FAIL;
@@ -2845,8 +2847,8 @@ stonithRA_start( stonithRA_ops_t * op, gpointer data)
 	||	stonith_set_config(stonith_obj, snv) != S_OK ) {
 		stonithd_log(LOG_ERR,
 			"Invalid config info for %s device.", op->ra_name);
-
 		stonith_delete(stonith_obj); 
+		return_to_dropped_privs();
 		stonith_obj = NULL;
 		if (snv != NULL) {
 			free_NVpair(snv);
@@ -2854,6 +2856,8 @@ stonithRA_start( stonithRA_ops_t * op, gpointer data)
 		}
 		return ST_FAIL; /*exit(rc);*/
 	}
+
+	return_to_dropped_privs();
 	if (snv != NULL) {
 		free_NVpair(snv);
 		snv = NULL;
@@ -2911,7 +2915,9 @@ stonithRA_start_post( stonithRA_ops_t * ra_op, gpointer data )
 	ra_op->params = NULL;
 	srsc->stonith_obj = ra_op->stonith_obj;
 	ra_op->stonith_obj = NULL;
+	return_to_orig_privs();
 	srsc->node_list = stonith_get_hostlist(srsc->stonith_obj);
+	return_to_dropped_privs();
 	if ( debug_level >= 2 ) {
 		char **	this;
 		stonithd_log2(LOG_DEBUG, "Got HOSTLIST");
@@ -2953,7 +2959,9 @@ stonithRA_stop( stonithRA_ops_t * ra_op, gpointer data )
 		snprintf(buf_tmp, sizeof(buf_tmp)-1, "%s_%s_%s"
 			, srsc->stonith_obj->stype
 			, ra_op->rsc_id, ra_op->op_type);
+		return_to_orig_privs();
 		stonith_delete(srsc->stonith_obj);
+		return_to_dropped_privs();
 		srsc->stonith_obj = NULL;
 		local_started_stonith_rsc = 
 			g_list_remove(local_started_stonith_rsc, srsc);
@@ -3170,7 +3178,9 @@ free_stonithRA_ops_t(stonithRA_ops_t * ra_op)
 	stonithd_log2(LOG_DEBUG, "free_stonithRA_ops_t: ra_op->stonith_obj.=%p"
 		     , (Stonith *)(ra_op->stonith_obj));
 	if (ra_op->stonith_obj != NULL ) {
+		return_to_orig_privs();
 		stonith_delete((Stonith *)(ra_op->stonith_obj));
+		return_to_dropped_privs();
 	}
 	/* Has used g_hash_table_new_full to create params */
 	g_hash_table_destroy(ra_op->params);
@@ -3301,7 +3311,9 @@ free_stonith_rsc(stonith_rsc_t * srsc)
 
 	if (srsc->stonith_obj != NULL ) {
 		stonithd_log2(LOG_DEBUG, "free_stonith_rsc: destroy stonith_obj.");
+		return_to_orig_privs();
 		stonith_delete(srsc->stonith_obj);
+		return_to_dropped_privs();
 		srsc->stonith_obj = NULL;
 	}
 
@@ -3583,6 +3595,9 @@ trans_log(int priority, const char * fmt, ...)
 
 /* 
  * $Log: stonithd.c,v $
+ * Revision 1.97  2006/06/30 07:43:27  sunjd
+ * give more code pieces privilege
+ *
  * Revision 1.96  2006/06/20 09:17:30  sunjd
  * remove the redundant code
  *
