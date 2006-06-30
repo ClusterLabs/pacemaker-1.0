@@ -1,3 +1,14 @@
+heartbeat-2 (2.0.5-7) unstable; urgency=low
+
+  * Don't run deluser and delgroup in postrm
+    - These commands may not be available at this time (closes: #375941)
+    - If there are any files left that belong to this user or group
+      then they will be left unowned and get inhereited by the
+      next user that comes along that happens to have hacluster's
+      old userid or the old haclient groupid respectively.
+
+ -- Simon Horman <horms@debian.org>  Thu, 29 Jun 2006 15:13:26 +0900
+
 heartbeat-2 (2.0.5-5) unstable; urgency=low
 
   * Reverse the change made in 2.0.5-4
