@@ -25,6 +25,7 @@
 #include <glib.h>
 
 #include <heartbeat.h>
+#include <clplumbing/cl_malloc.h>
 #include <clplumbing/cl_log.h>
 #include <clplumbing/cl_syslog.h>
 #include <clplumbing/lsb_exitcodes.h>
