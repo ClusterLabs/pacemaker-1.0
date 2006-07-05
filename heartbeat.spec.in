@@ -1,4 +1,4 @@
-#	$Id: heartbeat.spec.in,v 1.183 2006/07/05 03:49:45 horms Exp $
+#	$Id: heartbeat.spec.in,v 1.184 2006/07/05 03:51:54 horms Exp $
 
 %define _unpackaged_files_terminate_build 1
 %define _missing_doc_files_terminate_build 1
@@ -25,7 +25,7 @@ Summary: Monitor daemon for maintaining high availability resources
 Group: Utilities
 Requires: perl, perl-libwww-perl perl-Crypt-SSLeay, ipvsadm, perl-HTML-Parser, perl-ldap, perl-MailTools, perl-Net-IMAP-Simple, perl-Net-IMAP-Simple-SSL, perl-POP3Client, perl-libnet, perl-Net-DNS 
 # perl-libwww-perl, perl-HTML-Parser, perl-ldap, perl-MailTools,
-# perl-Mail-IMAPClient, perl-Net-IMAP-Simple-SSL, perl-POP3Client,
+# perl-Net-IMAP-Simple, perl-Net-IMAP-Simple-SSL, perl-POP3Client,
 # perl-libnet, perl-Net-DNS and ipvsadm 
 # available from www.ultramonkey.org and others
 
