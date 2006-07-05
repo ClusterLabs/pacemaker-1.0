@@ -1,3 +1,17 @@
+heartbeat-2 (2.0.5-8) unstable; urgency=low
+
+  * ldirectord-2: Add missing dependancy on libmailtools-perl
+                  (Mail::Send)
+                  (closes: #376722)
+  * ldirectord-2: Add missing dependancy on libnet-perl
+                  (Net::SMTP, Net::FTP, Net::POP3)
+  * ldirectord-2: Remove unneccesary dependancy on adduser
+  * Automake transition: http://wiki.debian.org/AutomakeTransition
+    - Remove unneccesary build-depends on automake1.9 | automaken
+    - Remove unneccesary build-conflicts on automake1.4
+
+ -- Simon Horman <horms@debian.org>  Wed,  5 Jul 2006 10:55:00 +0900
+
 heartbeat-2 (2.0.5-7) unstable; urgency=low
 
   * Don't run deluser and delgroup in postrm
