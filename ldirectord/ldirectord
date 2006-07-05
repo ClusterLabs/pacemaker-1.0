@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-my($VERSION)=(qw$Id: ldirectord,v 1.136 2006/04/05 02:12:24 horms Exp $)[2];
+my($VERSION)=(qw$Id: ldirectord,v 1.137 2006/07/05 03:40:44 horms Exp $)[2];
 
 ######################################################################
 # ldirectord                 http://www.vergenet.net/linux/ldirectord/
@@ -241,14 +241,14 @@ checking will take place and no real or fallback servers will be activated.
 On means no checking will take place and real servers will always be
 activated. Default is I<negotiate>.
 
-B<service = ftp>|B<smtp>|B<http>|B<pop>|B<nntp>|B<imap>|B<ldap>|B<https>|B<dns>|B<mysql>|B<pgsql>|B<sip>|B<none>
+B<service = ftp>|B<smtp>|B<http>|B<pop>|B<pops>|B<nntp>|B<imap>|B<imaps>|B<ldap>|B<https>|B<dns>|B<mysql>|B<pgsql>|B<sip>|B<none>
 
 The type of service to monitor when using checktype=negotiate. None denotes
 a service that will not be monitored. If the port specfied for the virtual
 server is 21, 25, 53, 80, 110, 119, 143, 389, 443, 3306, 5432 or 5060 then
-the default is B<ftp>, B<smtp>, B<dns>, B<http>, B<pop>, B<nntp>, B<imap>,
-B<ldap>, B<https>, B<mysql>, B<pgsql> or B<sip> respectivly.  Otherwise the
-default service is B<none>.
+the default is B<ftp>, B<smtp>, B<dns>, B<http>, B<pop>, B<pops>, B<nntp>,
+B<imap>, <B<imaps>, B<ldap>, B<https>, B<mysql>, B<pgsql> or B<sip> respectivly.
+Otherwise the default service is B<none>.
 
 B<checkport = >I<n>
 
@@ -911,8 +911,8 @@ sub read_config
 					}
 				} elsif ($rcmd =~ /^service\s*=\s*(.*)/) {
 					lc($1);
-					$1 =~ /(\w+)/ && ($1 eq "http" || $1 eq "https" || $1 eq "ldap" || $1 eq "ftp" || $1 eq "none" || $1 eq "smtp" || $1 eq "pop" || $1 eq "imap" || $1 eq "nntp" || $1 eq "dns" || $1 eq "mysql" || $1 eq "pgsql" || $1 eq "sip")
-					    or &config_error($line, "service must be http, https, ftp, smtp, pop, imap, ldap, nntp, dns, mysql, pgsql, sip, or none");
+					$1 =~ /(\w+)/ && ($1 eq "http" || $1 eq "https" || $1 eq "ldap" || $1 eq "ftp" || $1 eq "none" || $1 eq "smtp" || $1 eq "pop" || $1 eq "pops" || $1 eq "imap" || $1 eq "imaps" || $1 eq "nntp" || $1 eq "dns" || $1 eq "mysql" || $1 eq "pgsql" || $1 eq "sip")
+					    or &config_error($line, "service must be http, https, ftp, smtp, pop, pops, imap, imaps, ldap, nntp, dns, mysql, pgsql, sip, or none");
 					$vsrv{service} = $1;
 					if($vsrv{service} eq "ftp" and 
 							$vsrv{login} eq "") {
@@ -1061,7 +1061,7 @@ sub read_config
 # post: Take ip_port, resolve it as per ld_gethostservbyname
 #       and set $vsrv->{server} and $vsrv->{port} accordingly.
 #       If $vsrv->{service} is not set, then set it to "http",
-#       "https", "ftp", "smtp", "pop", "imap", "ldap", "nntp" or "none" 
+#       "https", "ftp", "smtp", "pop", "pops", "imap", "imaps", "ldap", "nntp" or "none" 
 #       if $vsrv->{port} is 80, 443, 21, 25, 110, 143, 389 or 
 #       any other value, respectivley
 # return: none
@@ -1098,12 +1098,18 @@ sub _ld_read_config_virtual_resolve
 			elsif ($vsrv->{port} eq "110") {
 				$vsrv->{service} = "pop";
 			} 
+			elsif ($vsrv->{port} eq "995") {
+                                $vsrv->{service} = "pops";
+                        }
 			elsif ($vsrv->{port} eq "119") {
 				$vsrv->{service} = "nntp";
 			} 
 			elsif ($vsrv->{port} eq "143") {
 				$vsrv->{service} = "imap";
 			} 
+			elsif ($vsrv->{port} eq "993") {
+				$vsrv->{service} = "imaps";
+			}
 			elsif ($vsrv->{port} eq "389") {
 				$vsrv->{service} = "ldap";
 			}
@@ -1705,8 +1711,12 @@ sub ld_main
 						# $ua->register($req, \&http_received);
 					} elsif ($$v{service} eq "pop") {
 						$$r{num_connects} = 0 if (check_pop($v, $r));
+					} elsif ($$v{service} eq "pops") {
+						$$r{num_connects} = 0 if (check_pops($v, $r));
 					} elsif ($$v{service} eq "imap") {
 						$$r{num_connects} = 0 if (check_imap($v, $r));
+					} elsif ($$v{service} eq "imaps") {
+						$$r{num_connects} = 0 if (check_imaps($v, $r));
 					} elsif ($$v{service} eq "smtp") {
 						$$r{num_connects} = 0 if (check_smtp($v, $r));
 					} elsif ($$v{service} eq "ftp") {
@@ -1876,6 +1886,40 @@ sub check_pop
 	return 1;
 }
 
+sub check_pops
+{
+        require Mail::POP3Client;
+        my ($v, $r) = @_;
+        my $port=(defined $$v{checkport}?$$v{checkport}:$$r{port});
+
+        &ld_debug(2, "Checking pops server=$$r{server} port=$port");
+
+        my $pops = new Mail::POP3Client(USER => $$v{login},
+                                        PASSWORD => $$v{passwd},
+                                        HOST => $$r{server},
+                                        USESSL => 1,
+                                        PORT => $port,
+                                        DEBUG => 0,
+                                        TIMEOUT => $$v{negotiatetimeout});
+        if (!$pops) {
+                service_set($v, $r, "down");
+                return 1;
+        }
+
+        if($$v{login} ne "") {
+                my $authres = $pops->login();
+                $pops->close();
+                if (!$authres) {
+                        service_set($v, $r, "down");
+                        return 1;
+                }
+        }
+
+
+        $pops->close();
+        service_set($v, $r, "up");
+        return 0;
+}
 
 sub check_imap
 {
@@ -1906,6 +1950,36 @@ sub check_imap
 	$imap->logout();
 	service_set($v, $r, "up");
 	return 0;
+}
+
+sub check_imaps
+{
+        require Net::IMAP::Simple::SSL;
+        my ($v, $r) = @_;
+        my $port=(defined $$v{checkport}?$$v{checkport}:$$r{port});
+
+        &ld_debug(2, "Checking imaps server=$$r{server} port=$port");
+
+        my $imaps = Net::IMAP::Simple::SSL->new($$r{server},
+                                        port => $port,
+                                        timeout => $$v{negotiatetimeout});
+        if (!$imaps) {
+                service_set($v, $r, "down");
+                return 1;
+        }
+
+        if($$v{login} ne "") {
+                my $authres = $imaps->login($$v{login},$$v{passwd});
+                $imaps->quit;
+                if (!$authres) {
+                        service_set($v, $r, "down");
+                        return 1;
+                }
+        }
+
+        $imaps->quit();
+        service_set($v, $r, "up");
+        return 0;
 }
 
 sub check_ldap

@@ -1,4 +1,4 @@
-#	$Id: heartbeat.spec.in,v 1.181 2006/07/05 03:24:37 horms Exp $
+#	$Id: heartbeat.spec.in,v 1.182 2006/07/05 03:40:44 horms Exp $
 
 %define _unpackaged_files_terminate_build 1
 %define _missing_doc_files_terminate_build 1
@@ -23,9 +23,10 @@ BuildRequires: libgcrypt-devel
 %package ldirectord
 Summary: Monitor daemon for maintaining high availability resources
 Group: Utilities
-Requires: perl, perl-libwww-perl perl-Crypt-SSLeay, ipvsadm, perl-HTML-Parser, perl-ldap, perl-MailTools, perl-Mail-IMAPClient, perl-libnet, perl-Net-DNS 
+Requires: perl, perl-libwww-perl perl-Crypt-SSLeay, ipvsadm, perl-HTML-Parser, perl-ldap, perl-MailTools, perl-Mail-IMAPClient, perl-Net-IMAP-Simple-SSL, perl-POP3Client, perl-libnet, perl-Net-DNS 
 # perl-libwww-perl, perl-HTML-Parser, perl-ldap, perl-MailTools,
-# perl-Mail-IMAPClient, perl-libnet, perl-Net-DNS and ipvsadm 
+# perl-Mail-IMAPClient, perl-Net-IMAP-Simple-SSL, perl-POP3Client,
+# perl-libnet, perl-Net-DNS and ipvsadm 
 # available from www.ultramonkey.org and others
 
 %package stonith
