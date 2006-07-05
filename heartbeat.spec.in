@@ -1,4 +1,4 @@
-#	$Id: heartbeat.spec.in,v 1.180 2006/07/05 03:21:30 horms Exp $
+#	$Id: heartbeat.spec.in,v 1.181 2006/07/05 03:24:37 horms Exp $
 
 %define _unpackaged_files_terminate_build 1
 %define _missing_doc_files_terminate_build 1
@@ -26,7 +26,7 @@ Group: Utilities
 Requires: perl, perl-libwww-perl perl-Crypt-SSLeay, ipvsadm, perl-HTML-Parser, perl-ldap, perl-MailTools, perl-Mail-IMAPClient, perl-libnet, perl-Net-DNS 
 # perl-libwww-perl, perl-HTML-Parser, perl-ldap, perl-MailTools,
 # perl-Mail-IMAPClient, perl-libnet, perl-Net-DNS and ipvsadm 
-# available from www.ultramonkey.org and # others
+# available from www.ultramonkey.org and others
 
 %package stonith
 Requires: telnet, heartbeat-pils = %{version}-%{release}
