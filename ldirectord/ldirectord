@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-my($VERSION)=(qw$Id: ldirectord,v 1.137 2006/07/05 03:40:44 horms Exp $)[2];
+my($VERSION)=(qw$Id: ldirectord,v 1.138 2006/07/05 03:49:45 horms Exp $)[2];
 
 ######################################################################
 # ldirectord                 http://www.vergenet.net/linux/ldirectord/
@@ -1855,35 +1855,39 @@ sub check_smtp
 	}
 }
 
-
 sub check_pop
 {
-	require Net::POP3;
-	my ($v, $r) = @_;
-	my $port=(defined $$v{checkport}?$$v{checkport}:$$r{port});
-	
-	&ld_debug(2, "Checking pop server=$$r{server} port=$port");
-	
-	my $pop = new Net::POP3($$r{server}, Port => $port, 
-			Timeout => $$v{negotiatetimeout});
-	if (!$pop) {
-		service_set($v, $r, "down");
-		return 1;
-	}
+        require Mail::POP3Client;
+        my ($v, $r) = @_;
+        my $port=(defined $$v{checkport}?$$v{checkport}:$$r{port});
 
-	if($$v{login} ne "") {
-		$pop->user($$v{login});
-		my $num = $pop->pass($$v{passwd});
-		if (!defined($num)) {
-			$pop->quit();
-			service_set($v, $r, "down");
-			return 0;
-		}
-	}
-		
-	$pop->quit();
-	service_set($v, $r, "up");
-	return 1;
+        &ld_debug(2, "Checking pop server=$$r{server} port=$port");
+
+        my $pop = new Mail::POP3Client(USER => $$v{login},
+                                        PASSWORD => $$v{passwd},
+                                        HOST => $$r{server},
+                                        USESSL => 0,
+                                        PORT => $port,
+                                        DEBUG => 0,
+                                        TIMEOUT => $$v{negotiatetimeout});
+
+        if (!$pop) {
+                service_set($v, $r, "down");
+                return 1;
+        }
+
+        if($$v{login} ne "") {
+                my $authres = $pop->login();
+                $pop->close();
+                if (!$authres) {
+                        service_set($v, $r, "down");
+                        return 0;
+                }
+        }
+
+        $pop->close();
+        service_set($v, $r, "up");
+        return 1;
 }
 
 sub check_pops
@@ -1923,33 +1927,33 @@ sub check_pops
 
 sub check_imap
 {
-	require Mail::IMAPClient;
-	my ($v, $r) = @_;
-	my $port=(defined $$v{checkport}?$$v{checkport}:$$r{port});
-	
-	&ld_debug(2, "Checking imap server=$$r{server} port=$port");
-	
-	my $imap = new Mail::IMAPClient(Server => $$r{server}, Port=>$port,
-					Timeout => $$v{negotiatetimeout},
-					User => $$v{login}, 
-					Password => $$v{passwd});
-	if (!$imap) {
-		service_set($v, $r, "down");
-		return 1;
-	} 
-
-	if($$v{login} ne "") {
-		my $authres = $imap->login();
-		$imap->logout();
-		if (!$authres) {
-			service_set($v, $r, "down");
-			return 1;
-		} 
-	}
-
-	$imap->logout();
-	service_set($v, $r, "up");
-	return 0;
+        require Net::IMAP::Simple;
+        my ($v, $r) = @_;
+        my $port=(defined $$v{checkport}?$$v{checkport}:$$r{port});
+        
+        &ld_debug(2, "Checking imap server=$$r{server} port=$port");
+        
+        my $imap = Net::IMAP::Simple->new($$r{server},
+                                        port => $port,
+                                        timeout => $$v{negotiatetimeout});
+        
+        if (!$imap) {
+                service_set($v, $r, "down");
+                return 1;
+        }
+        
+        if($$v{login} ne "") {
+                my $authres = $imap->login($$v{login},$$v{passwd});
+                $imap->quit;
+                if (!$authres) {
+                        service_set($v, $r, "down");
+                        return 1;
+                }
+        }
+        
+        $imap->quit();
+        service_set($v, $r, "up");
+        return 0;
 }
 
 sub check_imaps
