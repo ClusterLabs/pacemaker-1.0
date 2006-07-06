@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-my($VERSION)=(qw$Id: ldirectord,v 1.138 2006/07/05 03:49:45 horms Exp $)[2];
+my($VERSION)=(qw$Id: ldirectord,v 1.139 2006/07/06 03:51:42 horms Exp $)[2];
 
 ######################################################################
 # ldirectord                 http://www.vergenet.net/linux/ldirectord/
@@ -225,7 +225,9 @@ virtual server section. These two strings must be quoted. If the request
 string starts with I<http://...> the IP-address and port of the real server is
 overridden, otherwise the IP-address and port of the real server is used.
 
-=head2 More than one of these entries may be inside a virtual section:
+=head2 More than one of these entries may be inside a virtual section.
+The quiescent and fallback options listed above may also appear inside
+a virtual section, in which case the global setting is overridden.
 
 B<checktype = >I<negotiate>|I<connect>|I<N>|I<ping>|I<off>|I<on>
 
