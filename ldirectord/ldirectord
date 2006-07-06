@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-my($VERSION)=(qw$Id: ldirectord,v 1.140 2006/07/06 03:53:59 horms Exp $)[2];
+my($VERSION)=(qw$Id: ldirectord,v 1.141 2006/07/06 04:51:45 horms Exp $)[2];
 
 ######################################################################
 # ldirectord                 http://www.vergenet.net/linux/ldirectord/
@@ -299,23 +299,41 @@ As a last resort the IP address of the real server will be used.
 
 B<login = ">I<username>B<">
 
-Username to use to login to FTP, POP, IMAP, LDAP, MySQL and PostgreSQL servers.
-For FTP, the default is anonymous. For POP, IMAP and LDAP, the default is the
-empty string, in which case authentication will not be attempted.
-For a MySQL and PostgreSQL, the username must be provided.
+Username to use to login to FTP, IMAP, LDAP, MySQL, POP, PostgreSQL
+and SIP servers.
 
-For SIP the username is used as both the to and from address
-for an OPTIONS query. If unset it defaults to ldirectord\@<hostname>,
-hostname is derived as per the passwd option below.
+=over 4
+
+=item * For FTP, the default is anonymous.
+
+=item * For a MySQL and PostgreSQL, the username must be provided.  
+
+=item * For SIP the username is used as both the to and from address
+	for an OPTIONS query. If unset it defaults to
+	ldirectord\@<hostname>, hostname is derived as per the passwd
+	option below.
+
+=item * For all other services, the default is the empty string, in which
+	case authentication will not be attempted.
+
+=back 4
 
 B<passwd = ">I<password>B<">
 
-Password to use to login to FTP, POP, IMAP, LDAP, MySQL and PostgreSQL servers.
-Default is for FTP is ldirectord\@<hostname>, where hostname is the
-environment variable HOSTNAME evaluated at run time, or sourced from uname
-if unset. The default for all other services is an empty password, in the
-case of LDAP, MySQL and PostgreSQL this means authentication will not be
-performed.
+Password to use to login to FTP, IMAP, LDAP, MySQL, POP, PostgreSQL
+and SIP servers.
+
+=over 4
+
+=item * The default is for FTP is ldirectord\@<hostname>,
+	where hostname is the environment variable HOSTNAME evaluated at
+	run time, or sourced from uname if unset.
+
+=item * The default for all other services is an empty password.
+	In the case of LDAP, MySQL and PostgreSQL this means
+	that authentication will not be performed.
+
+=back 4
 
 B<database = ">I<databasename>B<">
 
