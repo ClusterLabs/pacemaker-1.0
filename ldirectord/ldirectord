@@ -1,11 +1,11 @@
 #!/usr/bin/perl
-my($VERSION)=(qw$Id: ldirectord,v 1.139 2006/07/06 03:51:42 horms Exp $)[2];
+my($VERSION)=(qw$Id: ldirectord,v 1.140 2006/07/06 03:53:59 horms Exp $)[2];
 
 ######################################################################
 # ldirectord                 http://www.vergenet.net/linux/ldirectord/
 # Linux Director Daemon - run "perldoc ldirectord" for details
 #
-# 1999-2005 (C) Jacob Rief <jacob.rief@tiscover.com>,
+# 1999-2006 (C) Jacob Rief <jacob.rief@tiscover.com>,
 #               Horms <horms@verge.net.au> and others
 #
 # License:      GNU General Public License (GPL)
@@ -466,7 +466,7 @@ if ($opt_h) {
 }
 if ($opt_v) {
 	print("ldirectord  version $VERSION\n" .
-	      "1999-2005 Jacob Rief, Horms and others\n" .
+	      "1999-2006 Jacob Rief, Horms and others\n" .
 	      "<http://www.vergenet.net/linux/ldirectord/>\n".
 	      "\n" .
 	      "ldirectord comes with ABSOLUTELY NO WARRANTY.\n" .
