@@ -178,6 +178,7 @@ virtual=192.168.6.240:80
 #	passwd="genericpassword"
 #	database="portal"
 #	request="SELECT * FROM link"
+#	service=mysql
 #	scheduler=wrr
 
 #Sample configuration for an unsuported protocol
