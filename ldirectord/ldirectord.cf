@@ -172,13 +172,13 @@ virtual=192.168.6.240:80
 
 #Sample configuration for a MySQL virtual service.
 #virtual = 192.168.10.74:3306
-#	real = sql01->sql03:3306 gate 10
-#	checktype = negotiate
-#	login = "readuser"
-#	passwd = "genericpassword"
-#	database = "portal"
-#	request = "SELECT * FROM link"
-#	scheduler = wrr
+#	real=sql01->sql03:3306 gate 10
+#	checktype=negotiate
+#	login="readuser"
+#	passwd="genericpassword"
+#	database="portal"
+#	request="SELECT * FROM link"
+#	scheduler=wrr
 
 #Sample configuration for an unsuported protocol
 #The real servers will just be brought up without checking for availability
