@@ -853,8 +853,10 @@ delete_lrm_rsc(IPC_Channel *crmd_channel, const char *host_uname, const char *rs
 	crm_free(key);
 
 	if(send_ipc_message(crmd_channel, cmd)) {
+		crm_msg_del(cmd);
 		return 0;
 	}
+	crm_msg_del(cmd);
 	return -1;
 }
 
@@ -871,8 +873,10 @@ refresh_lrm(IPC_Channel *crmd_channel, const char *host_uname)
 			     CRM_SYSTEM_CRMD, client_name, our_pid);
 	
 	if(send_ipc_message(crmd_channel, cmd)) {
+		crm_msg_del(cmd);
 		return 0;
 	}
+	crm_msg_del(cmd);
 	return -1;
 }
 
