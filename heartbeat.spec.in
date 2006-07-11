@@ -1,4 +1,4 @@
-#	$Id: heartbeat.spec.in,v 1.185 2006/07/10 14:20:43 davidlee Exp $
+#	$Id: heartbeat.spec.in,v 1.186 2006/07/11 03:55:49 alan Exp $
 
 %define _unpackaged_files_terminate_build 1
 %define _missing_doc_files_terminate_build 1
@@ -1356,8 +1356,10 @@ fi
 %post
 ###########################################################
 
-# Enable heartbeat on startup
-/sbin/chkconfig --add heartbeat
+# Don't enable heartbeat on startup
+#/sbin/chkconfig --add heartbeat
+# this was wrong, but it was convenient.  The time has
+# come to fix it.
 true
 
 ###########################################################
