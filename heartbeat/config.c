@@ -1,4 +1,4 @@
-/* $Id: config.c,v 1.202 2006/05/28 00:53:19 zhenh Exp $ */
+/* $Id: config.c,v 1.203 2006/07/13 16:23:55 alan Exp $ */
 /*
  * Parse various heartbeat configuration files...
  *
@@ -2495,10 +2495,14 @@ set_corerootdir(const char* value)
 static int
 set_release2mode(const char* value)
 {
-	const struct do_directive {
+	struct do_directive {
 		const char * dname;
 		const char * dval;
-	} r2dirs[] =
+	}; 
+    
+    struct do_directive *r2dirs;
+    
+    struct do_directive r2auto_dirs[] =
 	/*
 	 *	To whom it may concern:  Please keep the apiauth and respawn
 	 *	lines in the same order to make auditing the two against each
@@ -2528,17 +2532,37 @@ set_release2mode(const char* value)
 #endif
 		/* Don't 'respawn' pingd - it's a resource agent */
 	};
+
+    struct do_directive r2manual_dirs[] =	
+	{	/* CCM apiauth already implicit elsewhere */
+		{"apiauth", "cib 	uid=" HA_CCMUSER}
+	,	{"apiauth", "crmd   	uid=" HA_CCMUSER}
+
+	,	{"respawn", " "HA_CCMUSER " " HALIB "/ccm"}
+	,	{"respawn", " "HA_CCMUSER " " HALIB "/cib"}
+	,	{"respawn", "root "           HALIB "/lrmd"}
+	,	{"respawn", " "HA_CCMUSER " " HALIB "/crmd"}
+		/* Don't 'respawn' pingd - it's a resource agent */
+	};
+    
 	gboolean	dorel2;
 	int		rc;
-	int		j;
+	int		j, r2size;
 	int		rc2 = HA_OK;
 
+    r2dirs = &r2auto_dirs[0]; r2size = DIMOF(r2auto_dirs);
+    
 	if ((rc = cl_str_to_boolean(value, &dorel2)) == HA_OK) {
 		if (!dorel2) {
 			return HA_OK;
 		}
 	}else{
-		return rc;
+        if (0 == strcasecmp("manual", value)) {
+            r2dirs = &r2manual_dirs[0];
+            r2size = DIMOF(r2manual_dirs);
+        } else {
+    		return rc;
+        }
 	}
 
 	DoManageResources = FALSE;
@@ -2549,24 +2573,26 @@ set_release2mode(const char* value)
 	
 
 	/* Enable release 2 style cluster management */
-	for (j=0; j < DIMOF(r2dirs); ++j) {
+	for (j=0; j < r2size ; ++j) {
 		int	k;
 		for (k=0; k < DIMOF(WLdirectives); ++k) {
-			if (0 != strcmp(r2dirs[j].dname, WLdirectives[k].type)) {
+			if (0 != strcmp(r2dirs->dname, WLdirectives[k].type)) {
 				continue;
 			}
 			if (ANYDEBUG) {
 				cl_log(LOG_DEBUG, "Implicit directive: %s %s"
-				,	 r2dirs[j].dname
-				,	 r2dirs[j].dval);
+				,	 r2dirs->dname
+				,	 r2dirs->dval);
 			}
 			if (HA_OK
-			!= (rc2 = WLdirectives[k].parse(r2dirs[j].dval))) {
+			!= (rc2 = WLdirectives[k].parse(r2dirs->dval))) {
 				cl_log(LOG_ERR, "Directive %s %s failed"
-				,	r2dirs[j].dname, r2dirs[j].dval);
-			}
+				,	r2dirs->dname, r2dirs->dval);
+			}            
 		}
+        r2dirs++;
 	}
+    
 	return rc2;
 }
 
@@ -2638,6 +2664,9 @@ ha_config_check_boolean(const char *value)
 
 /*
  * $Log: config.c,v $
+ * Revision 1.203  2006/07/13 16:23:55  alan
+ * Patch from Serge Dubrouski for not starting any optional components.
+ *
  * Revision 1.202  2006/05/28 00:53:19  zhenh
  * add functions for setting the weight and site of node
  *
@@ -2659,7 +2688,7 @@ ha_config_check_boolean(const char *value)
  * Disabled traditional compression because of realtime concerns.
  *
  * Revision 1.197  2006/04/24 03:23:49  alan
- * Made mgmtd loaded by default with 'crm on'.
+ * Made loaded by default with 'crm on'.
  *
  * Revision 1.196  2006/04/11 22:11:17  lars
  * CID 5: If we return here, the deallocation codepath at the end of the

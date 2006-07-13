@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-#	$Id: heartbeat.in,v 1.42 2006/04/14 19:25:33 alan Exp $
+#	$Id: heartbeat.in,v 1.43 2006/07/13 16:23:55 alan Exp $
 #
 # heartbeat     Start high-availability services
 #
@@ -261,7 +261,7 @@ StartHA() {
   EchoNoNl "Starting High-Availability services: "
 
   if
-    CheckBool "`ha_parameter crm`"
+    CheckBool "`ha_parameter crm`" || [  "`ha_parameter crm`" == "manual" ]
   then
     : OK
   else
@@ -450,6 +450,9 @@ exit $RC
 #
 #
 #  $Log: heartbeat.in,v $
+#  Revision 1.43  2006/07/13 16:23:55  alan
+#  Patch from Serge Dubrouski for not starting any optional components.
+#
 #  Revision 1.42  2006/04/14 19:25:33  alan
 #  Bug 1200:  heartbeat init script should use modprobe instead of insmod
 #
