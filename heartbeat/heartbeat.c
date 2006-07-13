@@ -1,4 +1,4 @@
-/* $Id: heartbeat.c,v 1.513 2006/06/22 01:00:51 alan Exp $ */
+/* $Id: heartbeat.c,v 1.514 2006/07/13 02:39:41 alan Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -496,7 +496,7 @@ init_procinfo()
 	int	ipcid;
 	struct pstat_shm *	shm;
 
-	if ((ipcid = shmget(IPC_PRIVATE, sizeof(*procinfo), 0666)) < 0) {
+	if ((ipcid = shmget(IPC_PRIVATE, sizeof(*procinfo), 0600)) < 0) {
 		cl_perror("Cannot shmget for process status");
 		return;
 	}
@@ -6354,6 +6354,9 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.514  2006/07/13 02:39:41  alan
+ * Put in a fix for a local DOS attack on heartbeat.
+ *
  * Revision 1.513  2006/06/22 01:00:51  alan
  * Raised the heartbeat (debug) CPU limit to 70%.
  *
