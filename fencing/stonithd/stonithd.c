@@ -1,4 +1,4 @@
-/* $Id: stonithd.c,v 1.97 2006/06/30 07:43:27 sunjd Exp $ */
+/* $Id: stonithd.c,v 1.98 2006/07/13 14:22:12 sunjd Exp $ */
 
 /* File: stonithd.c
  * Description: STONITH daemon for node fencing
@@ -1864,7 +1864,7 @@ sendback_reply:
 		st_op->op_result = STONITH_SUCCEEDED;
 		st_op->node_list = g_string_append(st_op->node_list
 						, local_nodename);
-		stonithop_result_to_local_client(st_op, ch);
+		stonithop_result_to_local_client(st_op, client->cbch);
 	}
 
 del_st_op_and_return:
@@ -3099,7 +3099,7 @@ free_client(gpointer data, gpointer user_data)
 		client->cbch->ops->destroy(client->cbch);
 		client->cbch = NULL;
 	} else {
-		stonithd_log(LOG_ERR, "%s:%d: client->cbch = NULL"
+		stonithd_log(LOG_WARNING, "%s:%d: client->cbch = NULL"
                 	     , __FUNCTION__, __LINE__);
 	}
 
@@ -3595,6 +3595,9 @@ trans_log(int priority, const char * fmt, ...)
 
 /* 
  * $Log: stonithd.c,v $
+ * Revision 1.98  2006/07/13 14:22:12  sunjd
+ * bug1370: use correct channel to send back asynchronous result; bug1366: degrade the log level
+ *
  * Revision 1.97  2006/06/30 07:43:27  sunjd
  * give more code pieces privilege
  *
