@@ -1,4 +1,4 @@
-#	$Id: heartbeat.spec.in,v 1.186 2006/07/11 03:55:49 alan Exp $
+#	$Id: heartbeat.spec.in,v 1.187 2006/07/13 15:32:40 alan Exp $
 
 %define _unpackaged_files_terminate_build 1
 %define _missing_doc_files_terminate_build 1
@@ -81,10 +81,8 @@ PILS is designed to support any number of plugins
 implementing any number of interfaces.
 
 %changelog
-* Sun May 21 2006  Alan Robertson <alanr@unix.sh> (see doc/AUTHORS file)
-+ Version 2.0.6 - bug fix release
-  + Fixed a long-standing problem where the .src.rpms weren't usable across
-	32/64-bit boundaries
+* Thu July 13 2006  Alan Robertson <alanr@unix.sh> (see doc/AUTHORS file)
++ Version 2.0.6 - bug fix and a few enhancements release
   + Added the ability to start/stop groups from the GUI
   + Fixed a few monitoring bugs in the Apache resource agent
   + Changed the name of the netmask parameter to the IPaddr and IPaddr2
@@ -93,6 +91,100 @@ implementing any number of interfaces.
 	to work the old way.
   + Changed target_role so that when you stop a resource, all the resources
 	which depend on it also stop - all in the proper order.
+  + Many enhancements
+    default_resource_failure_stickiness
+    OCFS2 cluster filesystem support
+    new VIPArip resource agent
+    new SysInfo resource agent
+    new Oracle resource agents
+    Add cluster naming directive
+    Added node quorum voting weights
+    Added site declaration
+    ha_propagate command
+    allow NFS to run as a cloneable filesystem
+    haresources2cib extensions
+    added cibadmin man page
+    Make startup fencing optional (for the brave)
+    Many CIM improvements
+  + Many GUI improvements
+    added hb_gui symlink in /usr/bin
+    significant speedup
+    added support for types of groups:
+    move resources up/down in groups
+    resources default to being stopped
+    stonith RA metadata
+    basic heartbeat class RA metadata
+    reworked resource addition dialog
+    right-click menu
+    support for clones
+  + Bug fixes:
+    Fixed a long-standing problem where the .src.rpms weren't usable across
+	32/64-bit boundaries
+    Many clone resource fixes
+    autojoin works now
+    target_role is now handled completely differently
+    pingd and attrd now work
+    OSDL 1221 GUI doesn't always keep the top window on top
+    OSDL 1248 Add target_role to group causes pengine fatal assert.
+    OSDL 1252  probe for newly added resouces
+    Novell 12532 - parent options do NOT take precedence of child
+               values Use #default as a special parameter value
+    Novell #176014: wait longer before declaring attrd/pingd
+           unable to connect
+    Novell #178488: Notifications not generated for failed nodes
+    Novell #178764 - TE doesn't abort transition
+    Novell #179233 - Propagate the status of the heartbeat
+                     service toojj
+    OSDL 1276 - Broken clones cause segfaults
+    OSDL 1275: add signing off
+    Novell #180303: Filesystem returned 7 instead of 0 for
+           an already unmounted filesystem.
+    Novell #180303:  Notification ordering
+    Novell #180799: Multiple probes scheduled for non-unique clone
+    Novell #180699: Probe anonymous clones correctly
+    Novell #183221 - Resource migration
+    Deb 372850 migrate IPv6addr binary out of /etc
+    OSDL 1280: deal with the situation that the time restart
+               is shorter than deadtime
+    OSDL 1272: add a new channel for callback APIs
+    OSDL 1281: Handle anonymous clone renaming correctly when
+               we have too many instances in the status
+               section
+    OSDL 1183: use the new API of heartbeat to avoid message
+               delay; remove redundant code
+    OSDL 1318: Add to send back a confirmation of setting up the
+               callback channel
+    OSDL 1329: Fix for memory leak in CIB_OP_MODIFY
+    OSDL 1239: RPM unconditionally included files which were
+               only present when mgmtd was build.
+    OSDL 1334: When using anonymous clones, send the resource action
+               with the name that the clone uses locally, not the
+               name we use for it internally.
+    OSDL 1301: add the capacity of get_cur_state; polish on
+               memory free
+    OSDL 1340: Failure to stop a clone
+    OSDL 1300: stonithd / lrmd lose their connection
+    OSDL 1055: Add missing RPM package dependencies
+    OSDL 1349: Fix file descriptor leak on failed fork
+    Deb 375941 Don't run deluser and delgrp in postrm
+    OSDL 1356: Group colocation fixes when one group cant
+               run anywhere
+    OSDL 1350: Case sensitive searching for resources
+    OSDL 1344: when an admin replaces the nodes section we should
+               make sure that all the nodes heartbeat knows about
+               are in there.
+    OSDL 1356: reordered the "are any resources active" check to
+               happen after we've confirmed all resource actions
+               are complete
+    OSDL 1354: CRM silently ignores trailing characters in XML input
+    OSDL 1162: fix memory leak in cl_msg compression code
+    Deb 376722 Add missing debian dependencies
+    Deb 376786 Add missing debian dependencies
+    OSDL 1360: Clones enforce resource_stickiness == INFINITY
+               Move clone instances to higher preferred nodes
+    OSDL 1364: should restrict rpm-based commands to rpm-based
+               systems
+    OSDL 1269: STONITH clone stops running after some time ...
   + KNOWN LIMITATIONS and BUGS
     + the GUI core dumps when run using AIX-based X servers
 
