@@ -1,4 +1,4 @@
-#	$Id: heartbeat.spec.in,v 1.188 2006/07/13 16:32:18 alan Exp $
+#	$Id: heartbeat.spec.in,v 1.189 2006/07/14 20:21:09 alan Exp $
 
 %define _unpackaged_files_terminate_build 1
 %define _missing_doc_files_terminate_build 1
@@ -1356,7 +1356,7 @@ ln -s @libdir@/heartbeat/haclient.py $RPM_BUILD_ROOT@bindir@/hb_gui
 	@libdir@/libhbmgmttls.*
 	/etc/pam.d/hbmgmtd
 	@bindir@/hb_gui
-	/usr/share/locale/zh_CN/LC_MESSAGES/haclient.mo
+	@prefix@/share/locale/zh_CN/LC_MESSAGES/haclient.mo
 %endif
 
 ###########################################################
