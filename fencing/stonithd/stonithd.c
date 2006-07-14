@@ -1,4 +1,4 @@
-/* $Id: stonithd.c,v 1.98 2006/07/13 14:22:12 sunjd Exp $ */
+/* $Id: stonithd.c,v 1.99 2006/07/14 09:22:05 sunjd Exp $ */
 
 /* File: stonithd.c
  * Description: STONITH daemon for node fencing
@@ -3099,7 +3099,8 @@ free_client(gpointer data, gpointer user_data)
 		client->cbch->ops->destroy(client->cbch);
 		client->cbch = NULL;
 	} else {
-		stonithd_log(LOG_WARNING, "%s:%d: client->cbch = NULL"
+		stonithd_log(LOG_DEBUG, "%s:%d: client->cbch = NULL "
+				"before freeing"
                 	     , __FUNCTION__, __LINE__);
 	}
 
@@ -3595,6 +3596,9 @@ trans_log(int priority, const char * fmt, ...)
 
 /* 
  * $Log: stonithd.c,v $
+ * Revision 1.99  2006/07/14 09:22:05  sunjd
+ * log level tweak
+ *
  * Revision 1.98  2006/07/13 14:22:12  sunjd
  * bug1370: use correct channel to send back asynchronous result; bug1366: degrade the log level
  *
