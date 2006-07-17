@@ -1,4 +1,4 @@
-/* $Id: stonithd.c,v 1.99 2006/07/14 09:22:05 sunjd Exp $ */
+/* $Id: stonithd.c,v 1.100 2006/07/17 07:42:41 sunjd Exp $ */
 
 /* File: stonithd.c
  * Description: STONITH daemon for node fencing
@@ -1665,7 +1665,7 @@ send_back_reply:
 	
 	if (msg2ipcchan(reply, ch) != HA_OK) { /* How to deal the error*/
 		ZAPMSG(reply);
-		stonithd_log(LOG_ERR, "can't send signon reply message to IPC");
+		stonithd_log(LOG_WARNING, "can't send signon reply message to IPC");
 		return ST_FAIL;
 	}
 
@@ -3596,6 +3596,9 @@ trans_log(int priority, const char * fmt, ...)
 
 /* 
  * $Log: stonithd.c,v $
+ * Revision 1.100  2006/07/17 07:42:41  sunjd
+ * (bug1379) This doesnot always indicate a error scenario
+ *
  * Revision 1.99  2006/07/14 09:22:05  sunjd
  * log level tweak
  *
