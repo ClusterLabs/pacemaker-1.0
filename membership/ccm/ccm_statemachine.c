@@ -1,4 +1,4 @@
-/* $Id: ccm_statemachine.c,v 1.20 2006/06/07 08:29:52 zhenh Exp $ */
+/* $Id: ccm_statemachine.c,v 1.21 2006/07/18 12:25:05 zhenh Exp $ */
 /* 
  * ccm.c: Consensus Cluster Service Program 
  *
@@ -123,7 +123,6 @@ ccm_set_state(ccm_info_t* info, int istate,const struct ha_msg*  msg)
 	
 	ccm_debug(LOG_DEBUG,"node state %s -> %s"
 	,	state2string(oldstate),state2string(istate)); 
-	dump_mbrs(info);
 	
 }
 
