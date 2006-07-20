@@ -164,10 +164,14 @@ main(int argc, char ** argv)
 			debug_level = 2;
 		}
 	}
-
+	else {
+		debug_level = 0;
+	}
+	
 	cl_log_set_entity(mgmtd_name);
 	cl_log_enable_stderr(FALSE);
 	cl_log_set_facility(LOG_DAEMON);
+	
 
 	/* Use logd if it's enabled by heartbeat */
 	cl_inherit_use_logd(ENV_PREFIX""KEY_LOGDAEMON, 0);
@@ -437,7 +441,7 @@ on_listen(GIOChannel *source, GIOCondition condition, gpointer data)
 			mgmt_log(LOG_ERR, "%s receive login msg failed", __FUNCTION__);
 			return TRUE;
 		}
-		mgmt_log(LOG_DEBUG, "recv msg: %s %s ****", args[0], args[1]);
+		mgmt_debug(LOG_DEBUG, "recv msg: %s %s ****", args[0], args[1]);
 		/* authorization check with pam */	
 		if (pam_auth(args[1],args[2]) != 0 || !usr_belong_grp(args[1],ALLOW_GRP)) {
 			mgmt_del_args(args);
@@ -450,7 +454,7 @@ on_listen(GIOChannel *source, GIOCondition condition, gpointer data)
 		}
 		mgmt_del_args(args);
 		mgmt_del_msg(msg);
-		mgmt_log(LOG_DEBUG, "send msg: %s", MSG_OK);
+		mgmt_debug(LOG_DEBUG, "send msg: %s", MSG_OK);
 		mgmt_session_sendmsg(session, MSG_OK);
 		new_client(csock, session);
 		return TRUE;
@@ -473,7 +477,7 @@ on_msg_arrived(GIOChannel *source, GIOCondition condition, gpointer data)
 			return TRUE;
 		}
 		msg = mgmt_session_recvmsg(client->session);
-		mgmt_log(LOG_DEBUG, "recv msg: %s", msg);
+		mgmt_debug(LOG_DEBUG, "recv msg: %s", msg);
 		if (msg == NULL || STRNCMP_CONST(msg, MSG_LOGOUT) == 0) {
 			mgmt_del_msg(msg);
 			del_client(client->id);
@@ -481,12 +485,12 @@ on_msg_arrived(GIOChannel *source, GIOCondition condition, gpointer data)
 		}
 		ret = dispatch_msg(msg, client->id);
 		if (ret != NULL) {
-			mgmt_log(LOG_DEBUG, "send msg: %s", ret);
+			mgmt_debug(LOG_DEBUG, "send msg: %s", ret);
 			mgmt_session_sendmsg(client->session, ret);
 			mgmt_del_msg(ret);
 		}
 		else {
-			mgmt_log(LOG_DEBUG, "send msg: %s", MSG_FAIL);
+			mgmt_debug(LOG_DEBUG, "send msg: %s", MSG_FAIL);
 			mgmt_session_sendmsg(client->session, MSG_FAIL);
 		}
 		mgmt_del_msg(msg);
@@ -625,9 +629,9 @@ on_event(const char* event)
 			continue;
 		}
 
-		mgmt_log(LOG_DEBUG, "send evt: %s", event);
+		mgmt_debug(LOG_DEBUG, "send evt: %s", event);
 		mgmt_session_sendmsg(client->session, event);
-		mgmt_log(LOG_DEBUG, "send evt: %s done", event);
+		mgmt_debug(LOG_DEBUG, "send evt: %s done", event);
 		
 		node = g_list_next(node);
 	}
