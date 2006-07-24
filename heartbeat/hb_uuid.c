@@ -554,7 +554,7 @@ write_node_uuid_file(struct sys_config * cfg)
 	const char *	finalname =	HOSTUUIDCACHEFILE;
 	FILE *		f;
 
-	if (!nodecache_read_yet) {
+	if (!nodecache_read_yet && cfg->rtjoinconfig != HB_JOIN_NONE) {
 		read_node_uuid_file(cfg);
 	}
 	(void)unlink(tmpname);
@@ -669,7 +669,7 @@ write_delnode_file(struct sys_config* cfg)
 	GList*		list = NULL;
 	const struct node_info*	hip;
 	
-	if (!delcache_read_yet) {
+	if (!delcache_read_yet && cfg->rtjoinconfig != HB_JOIN_NONE) {
 		read_delnode_file(cfg);
 	}
 	(void)unlink(tmpname);
@@ -776,7 +776,7 @@ int
 read_cache_file(struct sys_config* cfg)
 {
 	
-	if (DoManageResources){
+	if (DoManageResources || cfg->rtjoinconfig == HB_JOIN_NONE){
 		return HA_OK;
 	}
 	if (read_node_uuid_file(cfg) != HA_OK){
