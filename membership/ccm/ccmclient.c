@@ -1,4 +1,4 @@
-/* $Id: ccmclient.c,v 1.42 2006/06/07 08:29:52 zhenh Exp $ */
+/* $Id: ccmclient.c,v 1.43 2006/07/25 10:22:48 zhenh Exp $ */
 /* 
  * client.c: Consensus Cluster Client tracker
  *
@@ -486,13 +486,12 @@ client_llm_init(llm_info_t *llm)
 {
 	char memstr[] = "membership chunk";
 	char miscstr[] = "misc chunk";
-	int  maxnode = llm_get_nodecount(llm);
 
 	refresh_llm_msg(llm);
 	ipc_mem_chk = g_mem_chunk_new(memstr,
 				sizeof(ccm_ipc_t)+
 				sizeof(ccm_meminfo_t)+
-				maxnode*sizeof(born_t), 
+				MAXNODE*sizeof(born_t), 
 				MAXIPC, G_ALLOC_AND_FREE);
 	ipc_misc_chk = g_mem_chunk_new(miscstr,
 				sizeof(ccm_ipc_t)+
