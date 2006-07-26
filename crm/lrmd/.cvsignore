@@ -1,7 +1,0 @@
-.libs
-lrmd
-Makefile
-Makefile.in
-*.beam
-parser-messages
-MISC_ERRORS
