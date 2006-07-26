@@ -1,4 +1,4 @@
-/* $Id: ccmclient.c,v 1.43 2006/07/25 10:22:48 zhenh Exp $ */
+/* $Id: ccmclient.c,v 1.44 2006/07/26 07:55:49 zhenh Exp $ */
 /* 
  * client.c: Consensus Cluster Client tracker
  *
@@ -42,7 +42,6 @@ typedef struct ccm_client_s {
 
 typedef struct ccm_ipc_s {
 	int		   count;
-	GMemChunk	   *chkptr;
 	struct IPC_MESSAGE ipcmsg;/*this should be the last field*/
 } ccm_ipc_t;
 
@@ -51,9 +50,6 @@ static ccm_ipc_t *ipc_mem_message  = NULL; /* active membership           */
 static ccm_ipc_t *ipc_misc_message = NULL; /* active misc information     */
 
 #define MAXIPC 100
-
-static GMemChunk *ipc_mem_chk  = NULL;
-static GMemChunk *ipc_misc_chk = NULL;
 
 static gboolean membership_ready     = FALSE;
 static void refresh_llm_msg(llm_info_t *llm);
@@ -131,11 +127,7 @@ send_func(gpointer key, gpointer value, gpointer user_data)
 static void
 delete_message(ccm_ipc_t *ccmipc)
 {
-	GMemChunk  *chkptr = ccmipc->chkptr;
-	if(chkptr){
-		g_mem_chunk_free(chkptr, ccmipc);
-		ccmipc->chkptr = NULL;
-	}
+	g_free(ccmipc);
 }
 
 static 
@@ -153,17 +145,12 @@ send_func_done(struct IPC_MESSAGE *ipcmsg)
 
 
 static ccm_ipc_t *
-create_message(GMemChunk *chk, void *data, int size)
+create_message(void *data, int size)
 {
 	ccm_ipc_t *ipcmsg;
 
-	if(chk){
-		ipcmsg = g_chunk_new(ccm_ipc_t, chk);
-	} else {
-		ipcmsg = g_malloc(sizeof(ccm_ipc_t)+size);
-	}
+	ipcmsg = g_malloc(sizeof(ccm_ipc_t)+size);
 
-	ipcmsg->chkptr = chk;
 	ipcmsg->count = 0;
 	
 	memset(&ipcmsg->ipcmsg, 0, sizeof(IPC_Message));
@@ -216,8 +203,12 @@ cleanup(void)
 {
 	membership_ready=FALSE;
 	flush_all(); /* flush out all the messages to all the clients*/
-	g_mem_chunk_reset(ipc_mem_chk);
-	g_mem_chunk_reset(ipc_misc_chk);
+	if (ipc_mem_message) {
+		delete_message(ipc_mem_message);
+	}
+	if (ipc_misc_message) {
+		delete_message(ipc_misc_message);
+	}
 	ipc_mem_message = NULL;
 	ipc_misc_message = NULL;
 
@@ -426,7 +417,7 @@ client_new_mbrship(ccm_info_t* info, void* borndata)
 	if(ipc_mem_message && --(ipc_mem_message->count)==0){
 		delete_message(ipc_mem_message);
 	}
-	ipc_mem_message = create_message(ipc_mem_chk, ccm, 
+	ipc_mem_message = create_message(ccm, 
  			(sizeof(ccm_meminfo_t) + n*sizeof(born_t)));
 	ipc_mem_message->count++;
 	refresh_llm_msg(&info->llm);
@@ -455,8 +446,7 @@ client_influx(void)
 		if(ipc_misc_message && --(ipc_misc_message->count)==0){
 			delete_message(ipc_misc_message);
 		}
-		ipc_misc_message = create_message(ipc_misc_chk, 
-				&type, sizeof(int));
+		ipc_misc_message = create_message(&type, sizeof(int));
 		ipc_misc_message->count++;
 		send_all(CCM_INFLUX);
 	}
@@ -472,8 +462,7 @@ client_evicted(void)
 	if(ipc_misc_message && --(ipc_misc_message->count)==0){
 		delete_message(ipc_misc_message);
 	}
-	ipc_misc_message = create_message(ipc_misc_chk, 
-			&type, sizeof(int));
+	ipc_misc_message = create_message(&type, sizeof(int));
 	ipc_misc_message->count++;
 	send_all(CCM_EVICTED);
 
@@ -484,23 +473,11 @@ client_evicted(void)
 void 
 client_llm_init(llm_info_t *llm)
 {
-	char memstr[] = "membership chunk";
-	char miscstr[] = "misc chunk";
-
 	refresh_llm_msg(llm);
-	ipc_mem_chk = g_mem_chunk_new(memstr,
-				sizeof(ccm_ipc_t)+
-				sizeof(ccm_meminfo_t)+
-				MAXNODE*sizeof(born_t), 
-				MAXIPC, G_ALLOC_AND_FREE);
-	ipc_misc_chk = g_mem_chunk_new(miscstr,
-				sizeof(ccm_ipc_t)+
-				sizeof(int), 
-				MAXIPC, G_ALLOC_AND_FREE);
 	return;
 }
 
-static void 
+void 
 refresh_llm_msg(llm_info_t *llm)
 {
 	int  maxnode = llm_get_nodecount(llm);
@@ -521,7 +498,7 @@ refresh_llm_msg(llm_info_t *llm)
 	if(ipc_llm_message && --(ipc_llm_message->count)==0){
 		delete_message(ipc_llm_message);
 	}
-	ipc_llm_message = create_message(NULL, data, size);
+	ipc_llm_message = create_message(data, size);
 	ipc_llm_message->count++;
 	g_free(data);
 	
