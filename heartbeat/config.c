@@ -1,4 +1,4 @@
-/* $Id: config.c,v 1.203 2006/07/13 16:23:55 alan Exp $ */
+/* $Id: config.c,v 1.204 2006/07/27 09:17:56 andrew Exp $ */
 /*
  * Parse various heartbeat configuration files...
  *
@@ -2519,7 +2519,7 @@ set_release2mode(const char* value)
 #ifdef MGMT_ENABLED
 	,	{"apiauth", "mgmtd   	uid=root" }
 #endif
-	,	{"apiauth", "pingd   	uid=" HA_CCMUSER}
+	,	{"apiauth", "pingd   	uid=root"}
 
 	,	{"respawn", " "HA_CCMUSER " " HALIB "/ccm"}
 	,	{"respawn", " "HA_CCMUSER " " HALIB "/cib"}
@@ -2664,6 +2664,9 @@ ha_config_check_boolean(const char *value)
 
 /*
  * $Log: config.c,v $
+ * Revision 1.204  2006/07/27 09:17:56  andrew
+ * Change the default api-auth for pingd to uid=root
+ *
  * Revision 1.203  2006/07/13 16:23:55  alan
  * Patch from Serge Dubrouski for not starting any optional components.
  *
