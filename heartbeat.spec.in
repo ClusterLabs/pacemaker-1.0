@@ -1,4 +1,4 @@
-#	$Id: heartbeat.spec.in,v 1.189 2006/07/14 20:21:09 alan Exp $
+#	$Id: heartbeat.spec.in,v 1.190 2006/07/29 09:55:56 lars Exp $
 
 %define _unpackaged_files_terminate_build 1
 %define _missing_doc_files_terminate_build 1
@@ -8,13 +8,13 @@
 Summary: @HB_PKG@ - The Heartbeat Subsystem for High-Availability Linux
 Name:	@HB_PKG@
 Version:	@VERSION@
-Release:	1
+Release:	@RPMREL@
 License: GPL/LGPL
 URL: http://linux-ha.org/
 Group: Utilities
 Packager: Alan Robertson <alanr@unix.sh>
 Source: http://linux-ha.org/download/@HB_PKG@-@VERSION@.tar.gz
-BuildRoot: %{_tmppath}/%{name}-%{version}-build
+BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-build
 BuildPrereq: glib-devel, @UCDSNMPDEVEL@, perl, iputils, /usr/bin/ssh, openssl-devel, libnet
 # libnet available from www.ultramonkey.org and others
 Requires: sysklogd, heartbeat-stonith = %{version}-%{release}, heartbeat-pils = %{version}-%{release}, @RPM_MGMT_RUNTIME_REQUIRES@
