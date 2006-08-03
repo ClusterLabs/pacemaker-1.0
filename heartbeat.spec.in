@@ -1,4 +1,4 @@
-#	$Id: heartbeat.spec.in,v 1.190 2006/07/29 09:55:56 lars Exp $
+#	$Id: heartbeat.spec.in,v 1.191 2006/08/03 10:18:51 lars Exp $
 
 %define _unpackaged_files_terminate_build 1
 %define _missing_doc_files_terminate_build 1
@@ -81,6 +81,55 @@ PILS is designed to support any number of plugins
 implementing any number of interfaces.
 
 %changelog
+* Thu Aug 03 2006  Alan Robertson <alanr@unix.sh> (see doc/AUTHORS file)
++ Version 2.0.7 - bug fix and a few enhancements release
+  + Enhancements:
+    - Improved log messages.
+    - ptest can now read compressed XML directly. Do not include
+      optional actions and dependancies in ptest output by default.
+  + Bugfixes:
+    - Small fix from Serge Dubrouski <sergefd@gmail.com> for one
+      annoying problem when PostgreSQL isn't installed on a box and one
+      tries to run the script.
+    - stonithd log message did not always indicate an error (OSDL 1379)
+    - Improvements and fixes for Solaris 10.
+    - pengine: Processing of pending probes; should not be treated as if
+      the resource is running or in a known state.
+    - cib: Detect more cases where the nodes section needs to be
+      refreshed.
+    - More accurately determine node status. (OSDL 1369)
+    - Filter out stop requests that would require a resource to be
+      added. (OSDL 1369)
+    - Send filtered resource "stops" as successes as to not block
+      waiting for filtered actions.
+    - By default pass the TE graph via IPC until its too large for IPC
+      to deal with, only then fall back to passing via the disk.
+    - Stopping of stonith resources can never require stonith, even if
+      the node its running on failed; prevent graph loop. (OSDL 1376)
+    - STONITH events need to inputs to start events (not stops), to
+      avoid graph loop in combination with "stop before" dependencies
+      (ie, groups).
+    - crmd: Dont stall the FSA if we try to invoke the TE after we've
+      stopped it.
+    - Always unpack the correct part of a diff operation; diffs should
+      now apply in more cases, reducing the need for full refreshs.
+    - Correctly observe --disable-snmp-subagent during build.
+    - In some states the membership is invalid and shouldn't be
+      referenced. (OSDL 1377)
+    - Fix a use-before-null-check issue in lrmd. (Coverity #48)
+    - OCF Resource Agents outside the default path were incorrectly
+      found to be not executable.
+    - ccm: hostcache and delnodecache files should not be authoritative
+      if autojoin is disabled. (OSDL 1226)
+    - With autojoin, llm_get_nodecount() can't return the real max nodes
+      anymore, this may cause memory corruption. (OSDL 1382)
+    - Fix a memory corruption in membership layer, more frequently
+      observed with larger (>5) clusters.
+    - Change the default api-auth for pingd to uid=root
+    - Dummy RA now OCF compliant.
+    - Fix pingd RA metadata to be XML compliant.
+    - Actually use RPMREL in the spec file.
+    
 * Thu Jul 13 2006  Alan Robertson <alanr@unix.sh> (see doc/AUTHORS file)
 + Version 2.0.6 - bug fix and a few enhancements release
   + Added the ability to start/stop groups from the GUI
