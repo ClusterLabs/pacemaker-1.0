@@ -1,4 +1,4 @@
-#	$Id: heartbeat.spec.in,v 1.191 2006/08/03 10:18:51 lars Exp $
+#	$Id: heartbeat.spec.in,v 1.192 2006/08/03 15:29:03 lars Exp $
 
 %define _unpackaged_files_terminate_build 1
 %define _missing_doc_files_terminate_build 1
@@ -83,6 +83,11 @@ implementing any number of interfaces.
 %changelog
 * Thu Aug 03 2006  Alan Robertson <alanr@unix.sh> (see doc/AUTHORS file)
 + Version 2.0.7 - bug fix and a few enhancements release
+  + Important steps:
+    - Prior to the update, make sure all elements (instance_attributes
+      etc) in the CRM configuration have valid id attributes, or set the
+      ignore_dtd option to true. Otherwise, the new version will refuse
+      to start.
   + Enhancements:
     - Improved log messages.
     - ptest can now read compressed XML directly. Do not include
@@ -95,6 +100,7 @@ implementing any number of interfaces.
     - Improvements and fixes for Solaris 10.
     - pengine: Processing of pending probes; should not be treated as if
       the resource is running or in a known state.
+    - target_role now is only taken into account for managed resources.
     - cib: Detect more cases where the nodes section needs to be
       refreshed.
     - More accurately determine node status. (OSDL 1369)
