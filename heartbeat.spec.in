@@ -1,4 +1,4 @@
-#	$Id: heartbeat.spec.in,v 1.192 2006/08/03 15:29:03 lars Exp $
+#	$Id: heartbeat.spec.in,v 1.193 2006/08/04 09:52:08 lars Exp $
 
 %define _unpackaged_files_terminate_build 1
 %define _missing_doc_files_terminate_build 1
@@ -92,6 +92,8 @@ implementing any number of interfaces.
     - Improved log messages.
     - ptest can now read compressed XML directly. Do not include
       optional actions and dependancies in ptest output by default.
+    - crm_resource will now warn and demand exact specification when
+      trying to modify an attribute while several sets are present.
   + Bugfixes:
     - Small fix from Serge Dubrouski <sergefd@gmail.com> for one
       annoying problem when PostgreSQL isn't installed on a box and one
