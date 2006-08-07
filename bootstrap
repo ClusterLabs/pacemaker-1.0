@@ -134,6 +134,7 @@ else
 fi
 
 # Create local copy so that the incremental updates will work.
+rm -f $autoconf ./autoconf
 ln -s $autoconf ./autoconf
 
 # Check for automake
@@ -167,6 +168,7 @@ else
 fi
 
 # Create local copy so that the incremental updates will work.
+rm -f $automake ./automake
 ln -s $automake ./automake
 
 # Check for Libtool
@@ -199,6 +201,7 @@ else
 fi
 
 # Create local copy so that the incremental updates will work.
+rm -f $libtool ./libtool
 ln -s $libtool ./libtool
 
 case $RC in
@@ -274,6 +277,7 @@ echo $aclocal $ACLOCAL_FLAGS
 $aclocal $ACLOCAL_FLAGS
 
 # Create local copy so that the incremental updates will work.
+rm -f $autoheader ./autoheader
 ln -s $autoheader ./autoheader
 
 if
