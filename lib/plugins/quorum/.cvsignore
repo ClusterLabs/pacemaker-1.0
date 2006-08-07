@@ -3,3 +3,5 @@
 Makefile
 Makefile.in
 majority.l*
+*.la
+*.lo
