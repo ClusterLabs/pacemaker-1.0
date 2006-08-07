@@ -77,6 +77,9 @@ case "$*" in
   *)		IsHelp=no;;
 esac
 
+arch=`uname -s`
+# Disable the errors on FreeBSD until a fix can be found.
+if [ ! "$arch" = "FreeBSD" ]; then
 set -e
 #
 #	All errors are fatal from here on out...
@@ -86,6 +89,7 @@ set -e
 #	And the trap will ensure sure some kind of error message comes out.
 #
 trap 'echo ""; echo "$0 exiting due to error (sorry!)." >&2' 0
+fi
 
 HERE=`pwd`
 cd $srcdir
@@ -100,7 +104,7 @@ URL=$gnu/$pkg/
 for command in autoconf autoconf213 autoconf253 autoconf259 
 do
   if
-      testProgram $command
+      testProgram $command == 1
   then
     : OK $pkg is installed
     autoconf=$command
@@ -112,6 +116,7 @@ do
     ifnames=`echo  "$autoconf" | sed -e 's/autoconf/ifnames/'`
   fi
 done
+
 
 # Check to see if we got a valid command.
 if 
@@ -127,6 +132,9 @@ else
 	or get the source tarball at: $URL
 	!EOF
 fi
+
+# Create local copy so that the incremental updates will work.
+ln -s $autoconf ./autoconf
 
 # Check for automake
 pkg="automake"
@@ -158,6 +166,9 @@ else
 	!EOF
 fi
 
+# Create local copy so that the incremental updates will work.
+ln -s $automake ./automake
+
 # Check for Libtool
 pkg="libtool"
 for command in libtool libtool14 libtool15 glibtool
@@ -186,6 +197,9 @@ else
 	or get the source tarball at: $URL
 	!EOF
 fi
+
+# Create local copy so that the incremental updates will work.
+ln -s $libtool ./libtool
 
 case $RC in
   0)	;;
@@ -258,6 +272,9 @@ fi
 
 echo $aclocal $ACLOCAL_FLAGS
 $aclocal $ACLOCAL_FLAGS
+
+# Create local copy so that the incremental updates will work.
+ln -s $autoheader ./autoheader
 
 if
   echo $autoheader --version  < /dev/null > /dev/null 2>&1
