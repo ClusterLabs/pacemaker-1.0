@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-my($VERSION)=(qw$Id: ldirectord,v 1.141 2006/07/06 04:51:45 horms Exp $)[2];
+my($VERSION)=(qw$Id: ldirectord,v 1.142 2006/08/08 15:56:39 lars Exp $)[2];
 
 ######################################################################
 # ldirectord                 http://www.vergenet.net/linux/ldirectord/
@@ -1789,13 +1789,7 @@ sub ld_main
 			sleep $CHECKINTERVAL;
 		}
 			
-		my $currenttime=time();
-		foreach my $es (@EMAILSTATUS){
-			if (($es->{alerttime} > 0 ) && ($currenttime - $es->{alerttime} >= $es->{emailalertfreq})){
-				&ld_emailalert("Inaccessible real server: $es->{server}", $es->{emailalert});
-				&ld_set_email_status($es->{server}, $currenttime);
-			}
-		}
+		ld_emailalert_resend();
 	}
 }
 
@@ -2594,18 +2588,14 @@ sub _remove_service {
 					. "$ipvsadm_args $rforw -w 0");
 	        	&ld_log("Quiescent $log_args (Weight set to 0)");
 		}
-		if(defined($$v{emailalert})) {
-			&ld_emailalert("Quiescent $log_args (Weight set to 0)",$$v{emailalert});
-			&ld_set_email_status($currentserver, $currenttime);
-		}
+		&ld_emailalert("Quiescent $log_args (Weight set to 0)",
+			       $$v{emailalert}, $currentserver, $currenttime);
         }
 	else {
                 &system_wrapper("$IPVSADM -d $ipvsadm_args");
 	        &ld_log("Deleted $log_args");
-	        if(defined($$v{emailalert})) {
-			&ld_emailalert("Deleted $log_args",$$v{emailalert});
-			&ld_set_email_status($currentserver, $currenttime);
-		}
+		&ld_emailalert("Deleted $log_args",$$v{emailalert},
+			       $currentserver, $currenttime);
 	}
 }
 
@@ -2659,19 +2649,16 @@ sub _restore_service {
                        get_forward_flag($or->{"forward"}) eq $rforw){
                         &system_wrapper("$IPVSADM -e $ipvsadm_args");
 	                &ld_log("Restored $log_args (Weight set to $rwght)");
-	                if(defined($$v{emailalert})) { 
-				&ld_emailalert("Restored $log_args (Weight set to $rwght)",$$v{emailalert});
-				&ld_set_email_status($currentserver, "0");
-			}
+			&ld_emailalert("Restored $log_args " .
+				       "(Weight set to $rwght)",
+				       $$v{emailalert}, $currentserver, 0);
                 }
         }
         else {
                 &system_wrapper("$IPVSADM -a $ipvsadm_args");
 	        &ld_log("Added $log_args (Weight set to $rwght)");
-		if(defined($$v{emailalert})) {
-			&ld_emailalert("Added $log_args (Weight set to $rwght)",$$v{emailalert});
-			&ld_set_email_status($currentserver, "0");
-		}
+		&ld_emailalert("Added $log_args (Weight set to $rwght)",
+			       $$v{emailalert}, $currentserver, 0);
         }
 }
 
@@ -2998,19 +2985,46 @@ sub ld_log
 #         1 on error
 sub ld_emailalert
 {
-	my ($emailsubject,$emailto) = (@_);
-	require Mail::Send;
+	my ($emailsubject, $emailto, $currentserver, $currenttime) = (@_);
 	my $emailmsg;
 	my $emailfh;
-	               
+	my $status = 0;
+
+	if ($emailto eq "") {
+		return 0;
+	}
+
+	use Mail::Send;
+
 	unless ($emailmsg = new Mail::Send Subject=>$emailsubject, To=>$emailto
 			and $emailfh = $emailmsg->open
 			and print $emailfh ""
 			and $emailfh->close) {
 		&ld_log("failed to send email message\n");
-		return 1;
+		$status = 1;
 	}
-	return(0);
+
+	&ld_set_email_status($currentserver, $currenttime);
+
+	return($status);
+}
+
+# ld_emailalert_resend
+# Resend email alerts as neccessary
+# pre: none
+# post: EMAILSTATUS array is updated and alears are sent as neccessary
+# return: none
+sub ld_emailalert_resend
+{
+	my $currenttime=time();
+	foreach my $es (@EMAILSTATUS){
+		if ($es->{alerttime} == 0 or
+		    $currenttime - $es->{alerttime} < $es->{emailalertfreq}){
+			next;
+		}
+		&ld_emailalert("Inaccessible real server: " . $es->{server}, 
+			       $es->{emailalert}, $es->{server}, $currenttime);
+	}
 }
 
 # ld_set_email_status
