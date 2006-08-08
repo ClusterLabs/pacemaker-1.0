@@ -67,6 +67,7 @@ action() {
     echo failure
   fi
   return  $stat
+}
 
 
 hadate() {
