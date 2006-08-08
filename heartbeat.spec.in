@@ -1,4 +1,4 @@
-#	$Id: heartbeat.spec.in,v 1.194 2006/08/07 16:59:57 lars Exp $
+#	$Id: heartbeat.spec.in,v 1.195 2006/08/08 11:42:33 alan Exp $
 
 %define _unpackaged_files_terminate_build 1
 %define _missing_doc_files_terminate_build 1
@@ -139,6 +139,12 @@ implementing any number of interfaces.
     - Dummy RA now OCF compliant.
     - Fix pingd RA metadata to be XML compliant.
     - Actually use RPMREL in the spec file.
+  + KNOWN BUGS:
+    - When running a cluster of nodes of very different speeds temporary
+      membership anomalies may occasionally be seen.  These correct
+      themselves and don't appear to be harmful.  They typically
+      include a message something like this:
+      WARN: Ignoring HA message (op=vote) from XXX: not in our membership list
     
 * Thu Jul 13 2006  Alan Robertson <alanr@unix.sh> (see doc/AUTHORS file)
 + Version 2.0.6 - bug fix and a few enhancements release
