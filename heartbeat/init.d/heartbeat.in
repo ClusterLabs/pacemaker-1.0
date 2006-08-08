@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-#	$Id: heartbeat.in,v 1.44 2006/08/08 13:29:34 lars Exp $
+#	$Id: heartbeat.in,v 1.45 2006/08/08 16:03:49 davidlee Exp $
 #
 # heartbeat     Start high-availability services
 #
@@ -122,7 +122,7 @@ then
 fi
 
 CrmEnabled() {
-  case `ha_parameter crm | tr A-Z a-z` in
+  case `ha_parameter crm | tr '[A-Z]' '[a-z]'` in
     y|yes|enable|on|true|1|manual)	true;;
     *)				false;;
   esac
@@ -319,8 +319,8 @@ StatusHA() {
 }
 
 StandbyHA() {
-  auto_failback=`ha_parameter auto_failback | tr 'A-Z' 'a-z'`
-  nice_failback=`ha_parameter nice_failback | tr 'A-Z' 'a-z'`
+  auto_failback=`ha_parameter auto_failback | tr '[A-Z]' '[a-z]'`
+  nice_failback=`ha_parameter nice_failback | tr '[A-Z]' '[a-z]'`
 
   case "$auto_failback" in
     *legacy*)	echo "auto_failback is set to legacy.  Cannot enter standby."
@@ -450,6 +450,9 @@ exit $RC
 #
 #
 #  $Log: heartbeat.in,v $
+#  Revision 1.45  2006/08/08 16:03:49  davidlee
+#  make 'tr' arguments portable across different 'tr' implementations
+#
 #  Revision 1.44  2006/08/08 13:29:34  lars
 #  Consolidate check and make it work on Solaris too (hopefully).
 #
