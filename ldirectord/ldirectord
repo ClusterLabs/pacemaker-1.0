@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-my($VERSION)=(qw$Id: ldirectord,v 1.142 2006/08/08 15:56:39 lars Exp $)[2];
+my($VERSION)=(qw$Id: ldirectord,v 1.143 2006/08/08 15:57:09 lars Exp $)[2];
 
 ######################################################################
 # ldirectord                 http://www.vergenet.net/linux/ldirectord/
@@ -1496,6 +1496,44 @@ sub ld_setup
 	}
 }
 
+# ld_read_ipvsadm
+#
+# Net::FTP seems to set the input record separator ($\) to null
+# putting IO into slurp (whole file at a time, rather than line at a time)
+# mode. Net::FTP does this using local $\, which should mean
+# that the change doesn' effect code here, but it does. It also
+# seems to be imposible to turn it off, by say setting $\ back to '\n'
+# Perhaps there is more to this than meets the eye. Perhaps its a perl bug.
+# In any case, this should fix the problem.
+#
+# This should not affect pid or config file parsing as they are called
+# before Net::FTP and as this appears to be a bit of a work around,
+# I'd rather use it in as few places as possible
+#
+# Observed with perl v5.8.8 (Debian's perl 5.8.8-6)
+# -- Horms, 17th July 2005
+sub ld_readline
+{
+	my ($fd, $buf) = (@_);
+	my $line;
+
+	# Uncomment the following line to turn off this work around
+	# return readline($fd);
+
+	$line = shift @$buf;
+	if (defined $line) {
+		return $line . "\n";
+	}
+
+	push @$buf, split /\n/, readline($fd);
+
+	$line = shift @$buf;
+	if (defined $line) {
+		return $line . "\n";
+	}
+
+	return undef;
+}
 
 # ld_read_ipvsadm
 # Parses the output of "ipvsadm -L -n" and puts into a structure of
@@ -1540,28 +1578,35 @@ sub ld_read_ipvsadm
 	my %oldsrv;
 	my $real_service;
 	my $fwd;
+	my $buf = [];
+	my $fh;
+	my $line;
 
 	# read status of current ipvsadm -L -n
-	unless(open(IPVS, "$IPVSADM -L -n |")){
+	unless(open($fh, "$IPVSADM -L -n 2>&1|")){
           &ld_exit(1, "Could not run $IPVSADM -L -n: $!");
         }
-	$_ = <IPVS>; $_ = <IPVS>; $_ = <IPVS>;
 
-	while (<IPVS>) {
-		if ($_ =~ /(\w+)\s+(\d+\.\d+\.\d+\.\d+\:\d+|\d+)\s+(\w+)\s+persistent\s+(\d+)\s+mask\s+(.*)/) {
+	# Skip the first three lines
+	$line = ld_readline($fh, $buf); 
+	$line = ld_readline($fh, $buf); 
+	$line = ld_readline($fh, $buf);
+
+	while ($line = ld_readline($fh, $buf)) {
+		if ($line =~ /(\w+)\s+(\d+\.\d+\.\d+\.\d+\:\d+|\d+)\s+(\w+)\s+persistent\s+(\d+)\s+mask\s+(.*)/) {
 			$real_service = "$2 ".lc($1);
 			$oldsrv{"$real_service"} = {"real"=>{}, "scheduler"=>$3, "persistent"=>$4, "netmask"=>$5};
-		} elsif ($_ =~ /(\w+)\s+(\d+\.\d+\.\d+\.\d+\:\d+|\d+)\s+(\w+)\s+persistent\s+(\d+)/) {
+		} elsif ($line =~ /(\w+)\s+(\d+\.\d+\.\d+\.\d+\:\d+|\d+)\s+(\w+)\s+persistent\s+(\d+)/) {
 			$real_service = "$2 ".lc($1);
 			$oldsrv{"$real_service"} = {"real"=>{}, "scheduler"=>$3, "persistent"=>$4};
-		} elsif ($_ =~ /(\w+)\s+(\d+\.\d+\.\d+\.\d+\:\d+|\d+)\s+(\w+)/) {
+		} elsif ($line =~ /(\w+)\s+(\d+\.\d+\.\d+\.\d+\:\d+|\d+)\s+(\w+)/) {
 			$real_service = "$2 ".lc($1);
 			$oldsrv{"$real_service"} = {"real"=>{}, "scheduler"=>$3};
 		} else {
 			next;
 		}
-		while(<IPVS>) {
-			last unless $_ =~ / ->\s+(\d+\.\d+\.\d+\.\d+\:\d+)\s+(\w+)\s+(\d+)/;
+		while ($line = ld_readline($fh, $buf)) {
+			last unless $line =~ / ->\s+(\d+\.\d+\.\d+\.\d+\:\d+)\s+(\w+)\s+(\d+)/;
 			if ($2 eq "Route") {
 				$fwd = "gate";
 			} elsif ($2 eq "Tunnel") {
@@ -1573,7 +1618,7 @@ sub ld_read_ipvsadm
 		}
 		redo;
 	}
-	close(IPVS);
+	close($fh);
 
         return(\%oldsrv);
 }
