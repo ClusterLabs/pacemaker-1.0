@@ -3,3 +3,4 @@ Makefile
 *.beam
 parser-messages
 MISC_ERRORS
+ldirectord
