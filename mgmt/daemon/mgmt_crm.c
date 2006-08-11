@@ -594,7 +594,7 @@ on_update_crm_config(char* argv[], int argc)
 	crm_data_t* attrs;
 	const char* id = NULL;
 	pe_working_set_t* data_set;
-	const char* path[] = {"configuration","crm_config","cluster_property_set", "attributes"}
+	const char* path[] = {"configuration","crm_config","cluster_property_set", "attributes"};
 	
 	ARGC_CHECK(3);
 	data_set = get_data_set();
@@ -1853,7 +1853,7 @@ on_get_constraints(char* argv[], int argc)
 	GList* cur;
 	crm_data_t* cos = NULL;
 	pe_working_set_t* data_set;
-	const char* path[] = {"configuration","constraints"}
+	const char* path[] = {"configuration","constraints"};
 	
 	ARGC_CHECK(2);
 	
@@ -1888,8 +1888,8 @@ on_get_constraint(char* argv[], int argc)
 	GList* expr_list, *expr_cur;
 	crm_data_t* cos = NULL;
 	pe_working_set_t* data_set;
-	const char* path[] = {"configuration","constraints"}
-	ARGC_CHECK(3);
+	const char* path[] = {"configuration","constraints"};
+	ARGC_CHECK(3); 
 	
 	data_set = get_data_set();
 	cos = find_xml_node_nested(data_set->input, path, 2);
