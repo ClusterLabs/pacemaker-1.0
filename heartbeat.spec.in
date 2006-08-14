@@ -1,4 +1,4 @@
-#	$Id: heartbeat.spec.in,v 1.195 2006/08/08 11:42:33 alan Exp $
+#	$Id: heartbeat.spec.in,v 1.196 2006/08/14 04:22:04 alan Exp $
 
 %define _unpackaged_files_terminate_build 1
 %define _missing_doc_files_terminate_build 1
@@ -88,6 +88,10 @@ implementing any number of interfaces.
       etc) in the CRM configuration have valid id attributes, or set the
       ignore_dtd option to true. Otherwise, the new version will refuse
       to start.
+  + SECURITY FIX:
+    - Remote Denial of Service attack (#195068, CVE-2006-3121).
+    - Local Denial of Service attack (#194444, CVE-2006-3815).
+      (actually fixed in 2.0.6)
   + Enhancements:
     - Improved log messages.
     - ptest can now read compressed XML directly. Do not include
