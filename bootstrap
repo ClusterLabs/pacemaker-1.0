@@ -134,8 +134,8 @@ else
 fi
 
 # Create local copy so that the incremental updates will work.
-rm -f $autoconf ./autoconf
-ln -s $autoconf ./autoconf
+rm -f           ./autoconf
+ln -s `which $autoconf` ./autoconf
 
 # Check for automake
 pkg="automake"
@@ -168,8 +168,8 @@ else
 fi
 
 # Create local copy so that the incremental updates will work.
-rm -f $automake ./automake
-ln -s $automake ./automake
+rm -f           ./automake
+ln -s `which $automake` ./automake
 
 # Check for Libtool
 pkg="libtool"
@@ -201,8 +201,8 @@ else
 fi
 
 # Create local copy so that the incremental updates will work.
-rm -f $libtool ./libtool
-ln -s $libtool ./libtool
+rm -f          ./libtool
+ln -s `which $libtool` ./libtool
 
 case $RC in
   0)	;;
@@ -277,8 +277,8 @@ echo $aclocal $ACLOCAL_FLAGS
 $aclocal $ACLOCAL_FLAGS
 
 # Create local copy so that the incremental updates will work.
-rm -f $autoheader ./autoheader
-ln -s $autoheader ./autoheader
+rm -f ./autoheader
+ln -s `which $autoheader` ./autoheader
 
 if
   echo $autoheader --version  < /dev/null > /dev/null 2>&1
