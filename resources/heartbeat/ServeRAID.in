@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $Id: ServeRAID.in,v 1.5 2005/11/03 07:45:51 xunsun Exp $
+# $Id: ServeRAID.in,v 1.6 2006/08/14 09:37:21 andrew Exp $
 # 
 # Description:	wrapper of OCF RA ServeRAID, based on original heartbeat RA.
 #		See OCF RA ServeRAID for more information.
@@ -21,66 +21,21 @@
 # Source function library.
 . @HB_RA_DIR@/hto-mapfuncs
 
-unset LC_ALL; export LC_ALL
-unset LANGUAGE; export LANGUAGE
-
 usage() {
-  cat <<-! >&1
-	usage: $0 <serveraid#> <sharedmergegroup#> {start|stop|status}
-
-	The serveraid# is the number of the ServeRAID adapter
-	ServeRAID adapters are numbered starting from 1.
-
-	The shared merge group number is a number between 1 and 8 inclusive.
-	It indicates to the controller which logical disk to fail over.
-
-                node1  10.0.0.170 ServeRAID::1::1
-
-	PREREQUISITES:
-	You must configure your ServeRAID adapters for clustering for this
-	to work.
-
-	To do this, you must use the bootable "ServeRAID Support CD" and right
-	click your controller and pick "configure for clustering".  The Linux
-	version of the ServeRAID manager does not have the "configure for
-	clustering" option.
-
-	You will need at least version 6.10 (~July 2003 release) of the ipssend
-	command for this script to work. The official releases are available from
-	IBM website.
-
-	$Id: ServeRAID.in,v 1.5 2005/11/03 07:45:51 xunsun Exp $
-	!
-  exit 1
+    echo "usage: $0 <serveraid#> <sharedmergegroup#> $LEGAL_ACTIONS"
+    exit 1
 }
 
-ServeRAID_methods() {
-  cat <<-!
-	start
-	stop
-	status
-	methods
-	!
-}
+if [ $# != 3 ]; then
+    usage
+fi
 
-case $# in
-  1)	if [ "$1" = "methods" ]; then
-		ServeRAID_methods
- 		exit $?
-	fi;;
-  3)	;;
-  *)	usage;;
-esac
+OCF_TYPE=ServeRAID
+OCF_RESOURCE_INSTANCE=${OCF_TYPE}_$1
+export OCF_TYPE OCF_RESOURCE_INSTANCE
 
-# Look for the start, stop, status, or methods calls...
-case "$3" in
-  stop|start|status)
-	;;
-  methods) 
-	ServeRAID_methods
-	exit $?;;
-  *)
-	usage;;
-esac
+OCF_RESKEY_serveraid=$1
+OCF_RESKEY_mergegroup=$2
+export OCF_RESKEY_mergegroup OCF_RESKEY_serveraid
 
-ra_execocf  "rsc_id=ServeRAID_$1" "rsc_type=ServeRAID" "provider=heartbeat" $3 "serveraid=$1" "mergegroup=$2"
+ra_execocf $3

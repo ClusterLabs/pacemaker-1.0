@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $Id: Raid1.in,v 1.3 2005/11/03 07:45:51 xunsun Exp $
+# $Id: Raid1.in,v 1.4 2006/08/14 09:37:21 andrew Exp $
 # 
 # Description:	wrapper of OCF RA Raid1, based on original heartbeat RA.
 #		See OCF RA Raid1 for more information.
@@ -21,41 +21,23 @@
 # The "status" arg just prints out whether the device is running or not
 # 
 
-unset LC_ALL; export LC_ALL
-unset LANGUAGE; export LANGUAGE
-
 # Source function library.
 . @HB_RA_DIR@/hto-mapfuncs
 
 usage() {
-cat <<-EOT
-	usage: $0 <raidtab_config_file> <md_dev_name> {start|stop|status}
-
-	<raidtab_config_file> : name of MD configuration file. e.g. /etc/raidtab
-	<md_dev_name>         : of the form /dev/md?? (the block device to use)
-
-	$Id: Raid1.in,v 1.3 2005/11/03 07:45:51 xunsun Exp $
-EOT
+    echo "usage: $0 <raidtab_config_file> <md_dev_name> $LEGAL_ACTIONS"
 }
 
-if [ ! -f "$1" ] ; then
-	echo "ERROR: Couldn't open file $1"
-	usage
-	exit 1
+if [ $# != 3 ]; then
+    usage
+    exit 1
 fi
 
-if [ ! -b "$2" ] ; then
-	echo "ERROR: Couldn't find MD device $MDDEV. Expected /dev/md* to exist"
-	usage
-	exit 1
-fi
+OCF_TYPE=Raid1
+OCF_RESOURCE_INSTANCE=${OCF_TYPE}_$1
+export OCF_TYPE OCF_RESOURCE_INSTANCE
 
-case "$3" in
-	start|stop|status)
-		;;
-	*)	usage
-		exit 1
-		;;
-esac
-
-ra_execocf  "rsc_id=Raid1_$2" "rsc_type=Raid1" "provider=heartbeat" $3 "raidconf=$1" "raiddev=$2"
+OCF_RESKEY_raidconf=$1
+OCF_RESKEY_raiddev=$2
+export OCF_RESKEY_raiddev OCF_RESKEY_raidconf
+ra_execocf $3

@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $Id: IPsrcaddr.in,v 1.2 2005/11/03 07:45:51 xunsun Exp $
+# $Id: IPsrcaddr.in,v 1.3 2006/08/14 09:37:21 andrew Exp $
 #
 # Description:	wrapper of OCF RA IPsrcaddr, based on original heartbeat RA.
 #		See OCF RA IPsrcaddr for more information.
@@ -36,31 +36,20 @@
 
 . @HB_RA_DIR@/hto-mapfuncs
 
-USAGE="usage: $0 ip-address {start|stop|status|monitor}";
+USAGE="usage: $0 <ip-address> $LEGAL_ACTIONS";
 
 usage() {
-	echo $USAGE >&2
+    echo $USAGE >&2
+    exit 1
 }
 
-#
-#	Add or remove the preferred source IP address to be used for packets
-#	originating on the localhost and leaving via the default route.
-#
-
-if
-	[ $# -ne 2 ]
-then
-	usage
-	exit 1
+if [ $# != 2 ]; then
+    usage
 fi
 
-case $2 in
-	start|stop|status|monitor)
-	;;
-	*)
-	usage
-	exit 1
-	;;
-esac
+OCF_TYPE=IPsrcaddr
+OCF_RESOURCE_INSTANCE=${OCF_TYPE}
+export OCF_TYPE OCF_RESOURCE_INSTANCE
 
-ra_execocf  "rsc_id=IPsrcaddr" "rsc_type=IPsrcaddr" "provider=heartbeat" $2 "ipaddress=$1"
+OCF_RESKEY_ipaddress=$1; export OCF_RESKEY_ipaddres
+ra_execocf $2

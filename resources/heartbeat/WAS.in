@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $Id: WAS.in,v 1.5 2005/11/03 07:45:51 xunsun Exp $
+# $Id: WAS.in,v 1.6 2006/08/14 09:37:21 andrew Exp $
 # 
 # Description:	wrapper of OCF RA WAS, based on original heartbeat RA.
 #		See OCF RA WAS for more information.
@@ -19,93 +19,34 @@
 # Source function library.
 . @HB_RA_DIR@/hto-mapfuncs
 
-WGET=/usr/bin/wget
-#
-#
 unset LC_ALL; export LC_ALL
 unset LANGUAGE; export LANGUAGE
 
 usage() {
-  methods=`WAS_methods | grep -v methods`
-  methods=`echo $methods | tr ' ' '|'`
   cat <<-! >&1
 	For the single server edition of WAS:
-	usage: $0 [<WAS-configuration file>] {$methods}
-	usage: $0 methods
+	usage: $0 [<WAS-configuration file>] $LEGAL_ACTIONS
 
 	For the advanced edition of WAS:
-	usage: $0 [<WAS-(snoop)-port-number>] {$methods}
-	usage: $0 methods
-
-	$0 manages a Websphere Application Server (WAS) as an HA resource
-
-	The 'start' operation starts WAS.
-	The 'stop' operation stops WAS.
-	The 'status' operation reports whether WAS is running
-	The 'monitor' operation reports whether the WAS seems to be working
-		(httpd also needs to be working for this case)
-	The 'methods' operation reports on the methods $0 supports
-
-	This is known to work with the Single Server edition of Websphere,
-	and is believed to work with the Advanced edition too.
-	Since the Advanced Edition has no configuration file (it's in a the
-	database) you need to give a port number instead of a
-	configuration file for this config parameter.
-
-	The start and stop operations must be run as root.
-
-	The status operation will report a pid of "-" for the
-	WAS root process using unless it is run as root.
-
-	If you don't have xmllint on your system, parsing of WAS
-	configuration files is very primitive.
-	In this case, the port specification we need from the XML
-	config file has to be on the same line as the
-	first part of the <transports/> tag.
-
-	We run servlet/snoop on the first transport port listed in
-	the config file for the "monitor" operation.
-
-	$Id: WAS.in,v 1.5 2005/11/03 07:45:51 xunsun Exp $
+	usage: $0 [<WAS-(snoop)-port-number>] $LEGAL_ACTIONS
 	!
   exit 1
 }
 
-#
-# methods: What methods/operations do we support?
-#
-WAS_methods() {
-  cat <<-!
-	start
-	stop
-	status
-	methods
-	!
-  if
-    [ -f $WGET -a -x $WGET ]
-  then
-    echo monitor
-  fi
-}
-
-#
-#	'main' starts here...
-#
-config=
-port=
 case $# in
   1)
     op=$1;;
   2)
     op=$2
     if [ -f $1 ]; then
-	config=$1
+	OCF_RESKEY_config=$1; export OCF_RESKEY_config
     else
 	case $1 in
 	    *[^0-9]*)	
 		echo "ERROR: $1 is neither a WAS configuration file nor a valid port number!"
   		usage;;
 	    *)
+		OCF_RESKEY_port=$1; export OCF_RESKEY_port
 		port=$1;;
 	esac
     fi;;
@@ -113,13 +54,8 @@ case $# in
     usage;;
 esac
 
-# What kind of method was invoked?
-case "$op" in
-  start|stop|status|monitor)
-		;;
-  methods)	WAS_methods
-		exit $?;;
-  *)		usage;;
-esac
+OCF_TYPE=WAS
+OCF_RESOURCE_INSTANCE=${OCF_TYPE}
+export OCF_TYPE OCF_RESOURCE_INSTANCE
 
-ra_execocf  "rsc_id=WAS" "rsc_type=WAS" "provider=heartbeat" $op "config=$config" "port=$port"
+ra_execocf $op

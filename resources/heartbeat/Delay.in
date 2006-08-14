@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-#	$Id: Delay.in,v 1.5 2006/04/02 14:35:29 xunsun Exp $
+#	$Id: Delay.in,v 1.6 2006/08/14 09:37:21 andrew Exp $
 #
 # License:      GNU General Public License (GPL)
 # Support:      linux-ha@lists.linux-ha.org
@@ -15,29 +15,28 @@
 #
 
 usage() {
-  cat <<-!
-	usage: $0 [delay [stopdelay]] {start|stop|status|monitor}";
-  	$Id: Delay.in,v 1.5 2006/04/02 14:35:29 xunsun Exp $
-	!
+  echo "usage: $0 [delay [stopdelay]] $LEGAL_ACTIONS"
   exit 1
 }
 
 . @HB_RA_DIR@/hto-mapfuncs
 
-startdelay=
-stopdelay=
-
 case $# in
   1)	op=$1;;
-  2)	startdelay=$1; op=$2;;
-  3)	startdelay=$1; stopdelay=$2; op=$3;;
+  2)	OCF_RESKEY_startdelay=$1; export OCF_RESKEY_startdelay; op=$2;;
+  3)	OCF_RESKEY_startdelay=$1; 
+	OCF_RESKEY_stopdelay=$2; 
+	export OCF_RESKEY_startdelay OCF_RESKEY_stopdelay; 
+	op=$3;;
   *)	usage;;
 esac
 
-case $op in
-  start|stop|status|monitor)
-  	;;
-  *)	
-  	usage;;
-esac
-ra_execocf  "rsc_id=Delay" "rsc_type=Delay" "provider=heartbeat" $op "startdelay=$startdelay" "stopdelay=$stopdelay"
+if [ -z $OCF_RESKEY_startdelay ]; then
+    OCF_RESKEY_startdelay=10
+fi
+
+OCF_TYPE=Delay
+OCF_RESOURCE_INSTANCE=${OCF_TYPE}_${OCF_RESKEY_startdelay}
+export OCF_TYPE OCF_RESOURCE_INSTANCE
+
+ra_execocf $op;;

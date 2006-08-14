@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $Id: apache.in,v 1.6 2005/11/03 07:45:51 xunsun Exp $
+# $Id: apache.in,v 1.7 2006/08/14 09:37:21 andrew Exp $
 #
 # Description:	wrapper of OCF RA apache, based on original heartbeat RA. See
 #		OCF RA apache for more information.
@@ -14,72 +14,26 @@
 #       node1  10.0.0.170 apache::/opt/IBMHTTPServer/conf/httpd.conf
 #       node1  10.0.0.170 IBMhttpd
 #
-unset LC_ALL; export LC_ALL
-unset LANGUAGE; export LANGUAGE
 
 . @HB_RA_DIR@/hto-mapfuncs
 
-WGETNAME=wget
-
 usage() {
-  mstr=`methods_apache | tr '\012' '|' | sed 's%|$%%' `
-  cat <<-!
-	usage: $0 [config-file-pathname] {$mstr}
-
-	The optional [config-file-pathname] is the pathname to the configuration
-	file for this web server. Various appropriate defaults are assumed by
-	the apache OCF RA if no config file is specified, depending on how this
-	command is invoked. See apache OCF RA for more information.
-
-	start	start the web server
-
-	stop	stop the web server
-
-	status	return the status of the web server
-
-	methods	return the set of commands we support
-
-	monitor	return TRUE if the web server appears to be working
-		For this to be supported, you must configure mod_status
-		and give it a server-status URL.  You have to have
-		installed $WGETNAME for this to work. The monitor operation
-		won't work if the web server is not configured properly;-)
-
-	$Id: apache.in,v 1.6 2005/11/03 07:45:51 xunsun Exp $
-	!
-  exit 1
-}
-
-methods_apache() {
-  cat <<-!
-	start
-	stop
-	status
-	methods
-	!
-  if which $WGETNAME > /dev/null 2>&1; then
-	echo "monitor"
-  fi 
+    echo "usage: $0 [config-file-pathname] $LEGAL_ACTIONS"
+    exit 1
 }
 
 case $# in
   1)	op=$1
-	configfile=
 	;;
-  2)	configfile=$1
+  2)	OCF_RESKEY_configfile=$1; export OCF_RESKEY_configfile
 	op=$2
 	;;
   *)	usage
 	;;
 esac
 
-case $op in
-  start|stop|status|monitor)
-	;;
-  methods)	
-	methods_apache
-	exit 0;;
-  *)
-	usage;;
-esac
-ra_execocf  "rsc_id=apache" "rsc_type=apache" "provider=heartbeat" $op "configfile=$configfile"
+OCF_TYPE=apache
+OCF_RESOURCE_INSTANCE=${OCF_TYPE}_$OCF_RESKEY_configfile
+export OCF_TYPE OCF_RESOURCE_INSTANCE
+
+ra_execocf $op

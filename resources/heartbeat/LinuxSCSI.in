@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $Id: LinuxSCSI.in,v 1.3 2005/11/03 07:45:51 xunsun Exp $
+# $Id: LinuxSCSI.in,v 1.4 2006/08/14 09:37:21 andrew Exp $
 # 
 # Description:	wrapper of OCF RA LinuxSCSI, based on original heartbeat RA.
 #		See OCF RA LinuxSCSI for more information.
@@ -26,104 +26,18 @@
 #
 . @HB_RA_DIR@/hto-mapfuncs
 
-unset LC_ALL; export LC_ALL
-unset LANGUAGE; export LANGUAGE
-
 usage() {
-  cat <<-! >&1
-	usage: $0 <host>:<channel>:<target>[:<lun>] {start|stop|status}
-
-	$0 manages the availability of a SCSI device from the point
-	of view of the Linux kernel.  It makes Linux believe the
-	device has gone away, and it can make it come back again.
-
-	The purpose of this resource script is to keep admins from
-	accidentally messing with a shared disk that is managed by the
-	HA subsystem and is currently owned by the other side.
-
-	To get maximum benefit from this feature, you should (manually)
-	disable the resources on boot, and let your HA software enable
-	them when it wants to acquire the disk.
-	
-	The kernel code says this is potentially dangerous.  DO NOT USE
-	IT ON AN ACTIVE DEVICE.  If the device is inactive, this script
-	will make it stay inactive, when given "off".  If you inactivate
-	the wrong device, you may have to reboot your machine, and your
-	data may take a hit.
-
-	On the other hand, at least one RAID controller requires the
-	use of this technique for it to work correctly in a failover
-	environment - so it is believed that it is more stable in this
-	usage than the comments in the code imply.
-
-	Here are the warnings from the kernel source about the "stop"
-	operation as of 2.4.10:
-
-	------------------------------
-	Consider this feature pre-BETA.
-	    CAUTION: This is not for hotplugging your peripherals. As
-	    SCSI was not designed for this, you could damage your
-	    hardware and thoroughly confuse the SCSI subsystem.
-
-	Similar warnings apply to the "start" operation...
-
-	 Consider this feature BETA.
-	     CAUTION: This is not for hotplugging your peripherals.
-	     As SCSI was not designed for this you could damage your
-	     hardware !
-	However perhaps it is legal to switch on an already connected
-	device. It is perhaps not guaranteed this device doesn't corrupt
-	an ongoing data transfer.
-	-------------------------
-
-	So, Caveat Emptor, and test this feature thoroughly on
-	your kernel and your configuration with real load on the SCSI
-	bus before using it in production!
-
-	Another potential trouble spot...
-	The order in which you bring up LinuxSCSI resources determines which
-	SCSI device they show up as on Linux.  If you have two SCSI devices
-	in different resource groups they will be brought up asyncronously
-	resulting in indeterminate device name assignments.  This usually
-	happens in an active-active configuration.
-	
-	To solve this you probably should use LVM or EVMS to manage these
-	volumes.  LVM and EVMS solve this problem for you by labels they
-	keep in the volumes.  If you don't use a reasonable volume manager,
-	then you'll have to mount by UUID.
-
-	$Id: LinuxSCSI.in,v 1.3 2005/11/03 07:45:51 xunsun Exp $
-	!
-  exit 1
+    echo "usage: $0  <host>:<channel>:<target>[:<lun>] $LEGAL_ACTIONS"
+    exit 1
 }
 
-scsi_methods() {
-  cat <<-!
-	start
-	stop
-	status
-	methods
-	!
-}
+if [ $# != 2 ]; then
+    usage
+fi
 
-case $# in
-  1)	if [ $1 = "methods" ]; then
-		scsi_methods
-		exit $?
-	fi;;
-  2)	;;
-  *)	usage;;
-esac
+OCF_TYPE=LinuxSCSI
+OCF_RESOURCE_INSTANCE=${OCF_TYPE}_$1
+export OCF_TYPE OCF_RESOURCE_INSTANCE
 
-# Look for the start, stop, status, or methods calls...
-case "$2" in
-  methods) 
-	scsi_methods
-	exit $?;;
-  start|stop|status) 
-	;;
-  *)
-	usage;;
-esac
-
-ra_execocf  "rsc_id=LinuxSCSI_$1" "rsc_type=LinuxSCSI" "provider=heartbeat" $2 "scsi=$1"
+OCF_RESKEY_scsi=$1; export OCF_RESKEY_scsi
+ra_execocf $2

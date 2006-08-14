@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $Id: IPaddr2.in,v 1.12 2006/06/10 17:33:30 alan Exp $
+# $Id: IPaddr2.in,v 1.13 2006/08/14 09:37:21 andrew Exp $
 #
 # Description:	wrapper of OCF RA IPaddr2, based on original heartbeat RA.
 #		See OCF RA IPaddr2 for more information.
@@ -27,50 +27,44 @@ export LC_ALL
 
 . @HB_RA_DIR@/hto-mapfuncs
 
-USAGE="usage: $0 ip-address[/netmaskbits[/interface[:label][/broadcast]]]
-{start|stop|status|monitor}\n\nNote: $0 only works on Linux";
+# We need to split the argument into pieces that IPaddr OCF RA can
+# recognize, sed is prefered over Bash specific builtin functions 
+# for portability.
 
 usage() {
-  echo -e $USAGE >&2
+  echo "usage: $0 <ip-address> $LEGAL_ACTIONS"
 }
 
-#
-#	Add or remove IP alias for the given IP address...
-#
-if
-    [ $# -ne 2 ]
-then
+if [ $# != 2 ]; then
     usage
     exit 1
 fi
 
-# We need to split the argument into pieces that IPaddr2 OCF RA can
-# recognize, sed is prefered over Bash specific builtin functions
-# for portability.
-
 BASEIP=`echo $1 | sed 's%/.*%%'`
+OCF_RESKEY_ip=$BASEIP; export OCF_RESKEY_ip
+
 str=`echo $1 | sed 's%^'$BASEIP'/*%%'`
-
 if [ ! -z "$str" ]; then
-  NETMASK=`echo $str | sed 's%/.*%%'`
-  str=`echo $str | sed 's%^'$NETMASK'/*%%'`
-
-  NIC=`echo $str | sed 's%/.*%%'`
-  case $NIC in
-       [0-9]*) BROADCAST=$NIC
-               NIC=
-               ;;
-       "")     ;;
-       *)      BROADCAST=`echo $str | sed -e 's%^'$NIC'/*%%' -e 's%/.*%%'`
-               ;;
-  esac
+    NETMASK=`echo $str | sed 's%/.*%%'`
+    OCF_RESKEY_cidr_netmask=$NETMASK; export OCF_RESKEY_cidr_netmask
+    
+    str=`echo $str | sed 's%^'$NETMASK'/*%%'`
+    NIC=`echo $str | sed 's%/.*%%'`
+    case $NIC in
+	[0-9]*)	BROADCAST=$NIC
+	    OCF_RESKEY_broadcast=$BROADCAST; export OCF_RESKEY_broadcast
+	    NIC=
+	    ;;
+	"")	;;
+	*)	BROADCAST=`echo $str | sed -e 's%^'$NIC'/*%%' -e 's%/.*%%'`
+	    OCF_RESKEY_nic=$NIC; export OCF_RESKEY_nic
+	    OCF_RESKEY_broadcast=$BROADCAST; export OCF_RESKEY_broadcast
+	    ;;
+    esac
 fi
 
-case $2 in
-    start|stop|status|monitor)	;;
-    *)	usage
- 	exit 1
-	;;
-esac
+OCF_TYPE=IPaddr2
+OCF_RESOURCE_INSTANCE=${OCF_TYPE}_$BASEIP
+export OCF_TYPE OCF_RESOURCE_INSTANCE
 
-ra_execocf  "rsc_id=IPaddr2_$BASEIP" "rsc_type=IPaddr2" "provider=heartbeat" $2 "ip=$BASEIP" "broadcast=$BROADCAST" "nic=$NIC" "cidr_netmask=$NETMASK"
+ra_execocf $2

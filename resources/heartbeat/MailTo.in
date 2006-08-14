@@ -18,35 +18,31 @@
 . @HB_RA_DIR@/hto-mapfuncs
 
 usage() {
-  echo "Usage: $0 <email> [<subject>] {start|stop|status}"
-  echo "$Id: MailTo.in,v 1.3 2005/11/03 07:45:51 xunsun Exp $"
+  echo "Usage: $0 <email> [<subject>] $LEGAL_ACTIONS"
   exit 1
 }
 
-# 
-# See how we were called.
-#
 case "$#" in
   0|1)	echo "At least 1 Email address has to be given!"
     	usage
 	;;
-  2)	email=$1
+  2)	
 	cmd=$2
-	subject=""
+	OCF_RESKEY_email=$1
+	export OCF_RESKEY_email
 	;;
-  3)	email=$1
+  3)	
 	cmd=$3
-	subject=$2
+	OCF_RESKEY_email=$1
+	OCF_RESKEY_subject=$2
+	export OCF_RESKEY_email OCF_RESKEY_subject
     	;;
   *)	echo "Additional parameters found: $# but max. 3 are allowed!"
 	usage;;
 esac
 
-case "$cmd" in
-  start|stop|status)
-		;;
-  *)		usage
-		;;
-esac
+OCF_TYPE=MailTo
+OCF_RESOURCE_INSTANCE=${OCF_TYPE}
+export OCF_TYPE OCF_RESOURCE_INSTANCE
 
-ra_execocf  "rsc_id=MailTo" "rsc_type=MailTo" "provider=heartbeat" $cmd "email=$email" "subject=$subject"
+ra_execocf $cmd

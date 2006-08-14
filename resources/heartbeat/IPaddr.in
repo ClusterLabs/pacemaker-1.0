@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $Id: IPaddr.in,v 1.19 2006/06/10 17:33:30 alan Exp $
+# $Id: IPaddr.in,v 1.20 2006/08/14 09:37:21 andrew Exp $
 #
 # Description:	wrapper of OCF RA IPaddr, based on original heartbeat RA.
 #		See OCF RA IPaddr for more information.
@@ -21,71 +21,45 @@
 #	Surprisingly, the "stop" arg removes one.	:-)
 #
 
-unset LC_ALL; export LC_ALL # Make ifconfig work in France for David Jules :-)
-unset LANGUAGE; export LANGUAGE # Make ifconfig work in France for Fabrice :-)
-#	make ifconfig work in Austria for Gregor Göstl
-#	I have no idea why the previous fix didn't fix it for him.
-LC_MESSAGES=C
-export LC_MESSAGES
-
 . @HB_RA_DIR@/hto-mapfuncs
 
-USAGE="usage: $0 <ip-address> {start|stop|status|monitor}";
 
 usage() {
-  echo $USAGE >&2
-  echo "$Id: IPaddr.in,v 1.19 2006/06/10 17:33:30 alan Exp $"
+    echo "usage: $0 <ip-address> $LEGAL_ACTIONS"
+    exit 1
 }
 
-#
-#	Add or remove IP alias for the given IP address...
-#
-
-case $# in
-  1)
-    case $1 in
-      info)	cat <<-!INFO
-	Abstract=IP address takeover
-	Argument=IP address OR IP address/broadcast address OR IP address/broadcast address/netmaskbits
-	Description:
-	An IPaddr resource is an IP address which is to be taken over by \\
-	the owning node.  An argument is required, and is of this form:
-	    nnn.nnn.nnn.nnn/bbb.bbb.bbb.bbb
-	Where nnn.nnn.nnn.nnn is the IP address to be taken over, and\\
-	bbb.bbb.bbb.bbb is the broadcast address to be used with this address.
-
-	Since IPaddr is the "default" resource type, it is not necessary\\
-	to prefix the IP address by "IPaddr::".
-	This allows IPaddr::192.2.4.63 to be abbreviated as 192.2.4.63.
-	!INFO
-	exit 0;;
-    esac;;
-  2)	;;
-  *)	usage
-	exit 1;;
-esac
+if [ $# != 2 ]; then
+    usage
+fi
 
 # We need to split the argument into pieces that IPaddr OCF RA can
 # recognize, sed is prefered over Bash specific builtin functions 
 # for portability.
 
 BASEIP=`echo $1 | sed 's%/.*%%'`
+OCF_RESKEY_ip=$BASEIP; export OCF_RESKEY_ip
+
 str=`echo $1 | sed 's%^'$BASEIP'/*%%'`
-
 if [ ! -z "$str" ]; then
-  NETMASK=`echo $str | sed 's%/.*%%'`
-  str=`echo $str | sed 's%^'$NETMASK'/*%%'`
+    NETMASK=`echo $str | sed 's%/.*%%'`
+    OCF_RESKEY_cidr_netmask=$NETMASK; export OCF_RESKEY_cidr_netmask
 
-  NIC=`echo $str | sed 's%/.*%%'`
-  case $NIC in
+    str=`echo $str | sed 's%^'$NETMASK'/*%%'`
+    NIC=`echo $str | sed 's%/.*%%'`
+    case $NIC in
 	[0-9]*)	BROADCAST=$NIC
-		NIC=
-		;;
+	    OCF_RESKEY_broadcast=$BROADCAST; export OCF_RESKEY_broadcast
+	    NIC=
+	    ;;
 	"")	;;
 	*)	BROADCAST=`echo $str | sed -e 's%^'$NIC'/*%%' -e 's%/.*%%'`
-		;;
-  esac
+	    OCF_RESKEY_nic=$NIC; export OCF_RESKEY_nic
+	    OCF_RESKEY_broadcast=$BROADCAST; export OCF_RESKEY_broadcast
+	    ;;
+    esac
 fi
+
 #
 # Determine if this IP address is really being served, or not.
 # Note that we don't distinguish if *we're* serving it locally...
@@ -122,14 +96,15 @@ ip_monitor() {
 }
 
 case $2 in
-  start|stop|status)
-	;;
   monitor)	
 	ip_monitor
 	;;
-  *)	usage
- 	exit 1
+  *)	
 	;;
 esac
 
-ra_execocf  "rsc_id=IPaddr_$BASEIP" "rsc_type=IPaddr" "provider=heartbeat" $2 "ip=$BASEIP" "broadcast=$BROADCAST" "nic=$NIC" "cidr_netmask=$NETMASK"
+OCF_TYPE=IPaddr
+OCF_RESOURCE_INSTANCE=${OCF_TYPE}_$BASEIP
+export OCF_TYPE OCF_RESOURCE_INSTANCE
+
+ra_execocf $2

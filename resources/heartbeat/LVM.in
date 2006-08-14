@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $Id: LVM.in,v 1.7 2006/03/29 13:56:30 xunsun Exp $
+# $Id: LVM.in,v 1.8 2006/08/14 09:37:21 andrew Exp $
 # 
 # Description:	wrapper of OCF RA LVM, based on original heartbeat RA.
 #		See OCF RA LVM for more information.
@@ -19,60 +19,18 @@
 
 . @HB_RA_DIR@/hto-mapfuncs
 
-unset LC_ALL; export LC_ALL
-unset LANGUAGE; export LANGUAGE
-
 usage() {
-  methods=`LVM_methods | grep -v methods`
-  methods=`echo $methods | tr ' ' '|'`
-  cat <<-! >&1
-	usage: $0 <LVM-configuration file> {$methods}
-	usage: $0 methods
-
-	$0 manages an Linux Volume Manager (LVM) volume as an HA resource
-
-	The 'start' operation brings the given volume online
-	The 'stop' operation takes the given volume offline
-	The 'status' operation reports whether the volume is available
-	The 'monitor' operation reports whether the volume seems present
-	The 'methods' operation reports on the methods $0 supports
-
-	$Id: LVM.in,v 1.7 2006/03/29 13:56:30 xunsun Exp $
-	!
-  exit 1
+    echo "usage: $0 <LVM-configuration file> $LEGAL_ACTIONS"
+    exit 1
 }
 
-#
-# methods: What methods/operations do we support?
-#
-LVM_methods() {
-  cat <<-!
-	start
-	stop
-	status
-	monitor
-	methods
-	!
-}
+if [ $# != 2 ]; then
+    usage
+fi
 
-#
-#	'main' starts here...
-#
+OCF_TYPE=LVM
+OCF_RESOURCE_INSTANCE=${OCF_TYPE}
+export OCF_TYPE OCF_RESOURCE_INSTANCE
 
-case $# in
-  1)	if [ "methods" = "$1" ]; then
-		LVM_methods
-		exit $?
-	fi;;
-  2)	;;
-  *)	usage;;
-esac
-# What kind of method was invoked?
-case "$2" in
-  start|stop|status|monitor)	;;
-  methods)	LVM_methods
-		exit $?;;
-  *)		usage
-esac
-
-ra_execocf  "rsc_id=LVM_$1" "rsc_type=LVM" "provider=heartbeat" $2 "volgrpname=$1"
+OCF_RESKEY_volgrpname=$1; export OCF_RESKEY_volgrpname
+ra_execocf $2

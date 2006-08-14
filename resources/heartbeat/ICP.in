@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $Id: ICP.in,v 1.4 2005/11/03 07:45:51 xunsun Exp $
+# $Id: ICP.in,v 1.5 2006/08/14 09:37:21 andrew Exp $
 # 
 # Description:	wrapper of OCF RA ICP, based on original heartbeat RA.
 #		See OCF RA ICP for more information.
@@ -21,63 +21,22 @@
 
 . @HB_RA_DIR@/hto-mapfuncs
 
-unset LC_ALL; export LC_ALL
-unset LANGUAGE; export LANGUAGE
-
 usage() {
-  methods=`ICP_methods`
-  methods=`echo $methods | tr ' ' '|'`
-  cat <<-! >&1
-	usage: $0 <ICP cluster drive ID> <device> {$methods}
-	usage: $0 methods
-
-	$0 manages an ICP Vortex clustered host drive.
-
-	The 'start' operation reserves the given host drive.
-	The 'stop' operation releses the given host drive.
-	The 'status' operation reports whether the host drive is reserved.
-	The 'monitor' operation reports whether the host drive is reserved.
-	The 'methods' operation reports on the methods $0 supports
-
-	$Id: ICP.in,v 1.4 2005/11/03 07:45:51 xunsun Exp $
-	!
-  exit 1
+    echo "usage: $0 <ICP cluster drive ID> <device> $LEGAL_ACTIONS"
+    exit 1
 }
 
-#
-# methods: What methods/operations do we support?
-#
-ICP_methods() {
-  cat <<-!
-	start
-	stop
-	status
-	monitor
-	methods
-	!
-}
+if [ $# != 3 ]; then
+    usage
+    exit 1
+fi
 
-#
-#	'main' starts here...
-#
-case $# in
-  1)	if [ "methods" = "$1" ]; then
-		ICP_methods
-		exit $?
-	fi;;
-  3)	;;
-  *)	usage;;
-esac
+OCF_TYPE=ICP
+OCF_RESOURCE_INSTANCE=${OCF_TYPE}_$1
+export OCF_TYPE OCF_RESOURCE_INSTANCE
 
-# What kind of method was invoked?
-case "$3" in
-  start|stop|status|monitor)
-	;;
-  methods)
-	ICP_methods
-	exit $?;;
-  *)
-	usage;;
-esac
+OCF_RESKEY_driveid=$1 
+OCF_RESKEY_device=$2
+export OCF_RESKEY_device OCF_RESKEY_driveid
 
-ra_execocf  "rsc_id=ICP_$1" "rsc_type=ICP" "provider=heartbeat" $3 "driveid=$1" "device=$2"
+ra_execocf $3

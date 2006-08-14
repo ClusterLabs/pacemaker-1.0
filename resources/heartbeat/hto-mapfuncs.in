@@ -7,11 +7,14 @@
 #
 #set -x
 
-PARAMETER_SPLIT_SIGN="="
 OCF_ROOT_DIR=@OCF_ROOT_DIR@
 OCF_RA_DIR=@OCF_RA_DIR@
 
-BASENAME=@BASENAME@
+OCF_RA_VERSION_MAJOR=1 ; export OCF_RA_VERSION_MAJOR
+OCF_RA_VERSION_MINOR=0 ; export OCF_RA_VERSION_MINOR
+OCF_ROOT=$OCF_ROOT_DIR ; export OCF_ROOT
+
+LEGAL_ACTIONS="(start|stop|status|usage|meta-data)"
 
 log_and_print(){
 	ha_log "$*"
@@ -22,162 +25,74 @@ log_and_print(){
 # rsc_id=rsc1 rsc_type=IPaddr2 provide=heartbeat start ip=192.168.0.1 .....
 #
 ra_execocf(){
-	ra_ocfinit $*
-	shift 4
-	ra_setenv $*
+    if [ "x${1}" = "x" ]; then
+	log_and_print "ERROR: No action specfied."
+	usage
+	exit 1
+    fi
 
-	ra_getpathname
+    . @hb_libdir@/ocf-shellfuncs
+    
+    __ACTION=$1
+    __SCRIPT_NAME="${OCF_RA_DIR}/heartbeat/${OCF_TYPE}"
+    
+    if [ "x${OCF_TYPE}" = "x" ]; then
+	log_and_print "ERROR: Internal error. No value for OCF_TYPE specified"
+	exit 1
+    fi
+    
+    if [ ! -x $__SCRIPT_NAME ] 
+    then
+	log_and_print "ERROR: $__SCRIPT_NAME is not an executable file "
+	exit 1
+    fi
+
+    # execute ocf ra and get return value
+    case $__ACTION in
+	start)		$__SCRIPT_NAME start;;
+	stop)		$__SCRIPT_NAME stop ;;
+	monitor)	$__SCRIPT_NAME monitor;;
+	status)		$__SCRIPT_NAME monitor;;
 	
-	if [ ! -x $RAOCFPATH ] 
-	then
-		log_and_print "ERR $RAOCFPATH is not an executable file "
-		exit 1
-
-	fi
-
-	# execute ocf ra and get return value
-	case $OPERATION in
-	start)		$RAOCFPATH start;;
-	stop)		$RAOCFPATH stop ;;
-	monitor)	$RAOCFPATH monitor;;
-	status)		$RAOCFPATH status;;
-
 	usage|help)	usage;;
-	*)		log_and_print "ERROR: Unknown operation: $OPERATION"
+	*)		log_and_print "ERROR: Unknown operation: $__ACTION"
 			usage
 			exit 1;;
-	esac
-	
-	ocf_return_status=$?
-	case $ocf_return_status in
+    esac
+    
+    ocf_return_status=$?
+    case $ocf_return_status in
 	$OCF_SUCCESS)
-		case $OPERATION in
-		monitor|status)		log_and_print "INFO: $rsc_type Running OK";;
-		*)			log_and_print "INFO: $rsc_type Success";;
-		esac
-		;;
+              case $__ACTION in
+		  monitor|status)	log_and_print "INFO: $rsc_type Running OK";;
+		  *)			log_and_print "INFO: $rsc_type Success";;
+	      esac;;
 
 	$OCF_ERR_GENERIC)
-		log_and_print "ERROR: $rsc_type Generic error"
-		;;
+		log_and_print "ERROR: $rsc_type Generic error";;
 
 	$OCF_ERR_ARGS)
-		log_and_print "ERROR: $rsc_type Incompliant argument"
-		;;
+		log_and_print "ERROR: $rsc_type Incompliant argument";;
+
 	$OCF_ERR_UNIMPLEMENTED)
-		log_and_print "ERROR: $rsc_type Function unimplemented"
-		;;
+		log_and_print "ERROR: $rsc_type Function unimplemented";;
+
 	$OCF_ERR_PERM)
-		log_and_print "ERROR: $rsc_type User had insufficient privilege"
-		;;
+		log_and_print "ERROR: $rsc_type User had insufficient privilege";;
+
 	$OCF_ERR_INSTALLED)
-		log_and_print "ERROR: $rsc_type Program is not installed"
-		;;
+		log_and_print "ERROR: $rsc_type Program is not installed";;
+
 	$OCF_ERR_CONFIGURED)
-		log_and_print "ERROR: $rsc_type Program is not configured"
-		;;
+		log_and_print "ERROR: $rsc_type Program is not configured";;
+
 	$OCF_NOT_RUNNING)
-		log_and_print "INFO: $rsc_type Resource is stopped"
-		;;
+		log_and_print "INFO: $rsc_type Resource is stopped";;
 	*)
-		echo $?
-		log_and_print "ERROR: $rsc_type Unknown error"
+		log_and_print "ERROR: $rsc_type Unknown error: $ocf_return_status"
 		exit 1
 		;;
 	esac
 
 	return $ocf_return_status
-}
-
-ra_ocfinit(){
-
-	RSCIDPAIR=$1
-	RSCTYPEPAIR=$2
-	
-	RSCTYPE=`echo "$RSCTYPEPAIR" | cut -d${PARAMETER_SPLIT_SIGN} -f2`
-	PROVIDERPAIR=$3
-	PROVIDER=`echo "$PROVIDERPAIR" | cut -d${PARAMETER_SPLIT_SIGN} -f2`
-	OPERATION=$4
-
-
-	setup_OCF_env_vars $RSCIDPAIR
-	setup_OCF_env_vars $RSCTYPEPAIR
-	setup_OCF_env_vars $PROVIDERPAIR
-	
-	OCF_RA_VERSION_MAJOR=1 ; export OCF_RA_VERSION_MAJOR
-	OCF_RA_VERSION_MINOR=0 ; export OCF_RA_VERSION_MINOR
-	OCF_ROOT=$OCF_ROOT_DIR ; export OCF_ROOT
-
-	. @hb_libdir@/ocf-shellfuncs
-}
-
-ra_getpathname(){
-	BASENAME=`basename $RSCTYPE`
-	if [ $BASENAME = $RSCTYPE ]
-	then
-		RAOCFPATH="${OCF_RA_DIR}${PROVIDER}/${BASENAME}"
-	else
-		RAOCFPATH="${RSCTYPE}"
-	fi
-}
-
-ra_setenv(){
-
-	lastenvar=
-	for envar in $*
-	do
-		ifvarname=`echo $envar | cut -s -d${PARAMETER_SPLIT_SIGN} -f1`
-		if [ -z $ifvarname ]; then
-			envar="$lastenvar $envar"
-			setup_OCF_prefix $envar
-		else
-			setup_OCF_prefix $envar
-		fi
-		lastenvar=$envar
-	done
-}
-
-setup_OCF_prefix(){
-	
-	hbvarname=`echo "$envar" | cut -d${PARAMETER_SPLIT_SIGN} -f1`
-	hbvarvalue=`echo "$envar" | cut -d${PARAMETER_SPLIT_SIGN} -f2-`
-	ocfvarname="OCF_RESKEY_${hbvarname}"
-
-	eval $ocfvarname='$hbvarvalue'
-	export $ocfvarname
-}
-
-setup_OCF_env_vars(){
-	hbvarname=`echo "$1" | cut -d${PARAMETER_SPLIT_SIGN} -f1`
-	hbvarvalue=`echo "$1" | cut -d${PARAMETER_SPLIT_SIGN} -f2`
-
-	case $hbvarname in 
-		rsc_id)
-			if [ ! -z "$hbvarvalue" ]
-			then
-				ocfvarname="OCF_RESOURCE_INSTANCE"
-				eval $ocfvarname=$hbvarvalue
-				export $ocfvarname
-			fi
-			;;
-		rsc_type)
-			if [ ! -z "hbvarvalue" ]
-			then
-				rsc_type=$hbvarvalue
-				ocfvarname="OCF_RESOURCE_TYPE"
-				eval $ocfvarname=$hbvarvalue
-				export $ocfvarname
-			fi
-			;;
-		provider)
-			if [ ! -z "hbvarvalue" ]
-			then
-				ocfvarname="OCF_RESOURCE_PROVIDER"
-				eval $ocfvarname=$hbvarvalue
-				export $ocfvarname
-			fi
-			;;
-		*)
-			;;
-		esac
 }
