@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-my($VERSION)=(qw$Id: ldirectord.in,v 1.30 2006/08/15 07:17:41 horms Exp $)[2];
+my($VERSION)=(qw$Id: ldirectord.in,v 1.31 2006/08/15 07:28:45 horms Exp $)[2];
 
 ######################################################################
 # ldirectord                 http://www.vergenet.net/linux/ldirectord/
@@ -203,6 +203,19 @@ configuration option.
 If defined in a virtual server section then the global value is overridden.
 
 Default: 0
+
+
+B<emailalertstatus = >B<all>|B<none>|B<starting>|B<running>|B<stopping>|B<reloading>,...
+
+Comma delimited list of server states in which email alerts should be sent.
+B<all> is a short-hand for
+"B<starting>,B<running>,B<stopping>,B<reloading>".  If B<none> is
+specified, no other option may be specified, otherwise options are ored
+with each other.
+
+If defined in a virtual server section then the global value is overridden.
+
+Default: all
 
 
 B<execute = ">I<configuration>B<">
@@ -494,6 +507,7 @@ use vars qw(
 	    $QUIESCENT
 	    $EMAILALERT
 	    $EMAILALERTFREQ
+	    $EMAILALERTSTATUS
 
 	    $CALLBACK
 	    $CFGNAME
@@ -509,6 +523,7 @@ use vars qw(
 	    $DAEMON_STATUS_RUNNING
 	    $DAEMON_STATUS_STOPPING
 	    $DAEMON_STATUS_RELOADING
+	    $DAEMON_STATUS_ALL
 	    $opt_d
 	    $opt_h
 	    $pid
@@ -527,6 +542,10 @@ $DAEMON_STATUS_STARTING  = 0x1;
 $DAEMON_STATUS_RUNNING   = 0x2;
 $DAEMON_STATUS_STOPPING  = 0x4;
 $DAEMON_STATUS_RELOADING = 0x8;
+$DAEMON_STATUS_ALL       = $DAEMON_STATUS_STARTING | 
+			   $DAEMON_STATUS_RUNNING  |
+			   $DAEMON_STATUS_STOPPING |
+			   $DAEMON_STATUS_RELOADING;
 
 # default values
 $AUTOCHECK        = "no";
@@ -858,6 +877,50 @@ sub reread_config
 	undef @OLDVIRTUAL;
 }
 
+sub parse_emailalertstatus
+{
+	my ($line, $arg) = (@_);
+
+	my @s = split/\s*,\s*/, $arg;
+	my $none = 0;
+	my $status = 0;
+
+	for my $i (@s) {
+		if ($i eq "none") {
+			$none++;
+		}
+	}
+
+	for my $i (@s) {
+		if ($i eq "none") {
+			next;
+		}
+		elsif ($i eq "all") {
+			$status = $DAEMON_STATUS_ALL;
+		}
+		elsif ($i eq "starting") {
+			$status |= $DAEMON_STATUS_STARTING;
+		}
+		elsif ($i eq "stopping") {
+			$status |= $DAEMON_STATUS_STOPPING;
+		}
+		elsif ($i eq "running") {
+			$status |= $DAEMON_STATUS_RUNNING;
+		}
+		elsif ($i eq "reloading") {
+			$status |= $DAEMON_STATUS_RELOADING;
+		}
+		else {
+			&config_error($line,
+				      "invalid email alert status at: \"$i\"")
+		}
+		if ($none > 0) {
+			&config_error($line, "invalid email alert status: " .
+				      "\"$i\" specified with \"none\"");
+		}
+	}
+	return $status;
+}
 
 sub read_config
 {
@@ -1065,6 +1128,8 @@ sub read_config
 				} elsif  ($rcmd =~ /^emailalertfreq\s*=\s*(\d*)/) {
 					$1 =~ /(\d+)/ or &config_error($line, "invalid email alert frequency");
 					$vsrv{emailalertfreq} = $1;
+				} elsif  ($_ =~ /^emailalertstatus\s*=\s*(.*)/) {
+					$vsrv{emailalertstatus} = &parse_emailalertstatus($line, $1);
 				} else {
 					&config_error($line, "Unknown command $_");
 				}
@@ -1175,6 +1240,8 @@ sub read_config
 			$1 =~ /(\d+)/ or &config_error($line,
 					"invalid email alert frequency");
 			$EMAILALERTFREQ = $1;
+		} elsif  ($_ =~ /^emailalertstatus\s*=\s*(.*)/) {
+			$EMAILALERTSTATUS = &parse_emailalertstatus($line, $1);
 		} else {
 			if ($_ =~ /^timeout\s*=\s*(.*)/) {
 				&config_error($line, 
@@ -3208,6 +3275,7 @@ sub ld_emailalert_send
 	my $frequency;
 	my $virtual_str;
 	my $id;
+	my $statusfilter;
 
 	$virtual_str = &get_virtual($v);
 	$id = "$rserver ($virtual_str)";
@@ -3218,6 +3286,12 @@ sub ld_emailalert_send
 	else {
 		$EMAILSTATUS{$id}->{v} = $v;
 		$EMAILSTATUS{$id}->{alerttime} = $currenttime;
+	}
+
+	$statusfilter = defined $v->{emailalertstatus} ?  
+			$v->{emailalertstatus} : $EMAILALERTSTATUS;
+	if (($DAEMON_STATUS & $statusfilter) == 0) {
+		return 0;
 	}
 
 	$to_addr = defined $v->{emailalert} ? $v->{emailalert} : $EMAILALERT;

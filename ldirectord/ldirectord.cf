@@ -17,6 +17,7 @@ autoreload=yes
 #logfile="local0"
 #emailalert="admin@x.y.z"
 #emailalertfreq=3600
+#emailalertstatus=all
 quiescent=yes
 
 # Sample for an http virtual service
