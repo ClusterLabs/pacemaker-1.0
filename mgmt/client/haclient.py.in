@@ -201,7 +201,7 @@ def kvbox(title, fields) :
 				if fields[row].auto_gen :
 					kv[fields[row].key] = uuid()
 					continue
-				if fields[row].options != None :
+				if fields[row].options != None and fields[row].options != []:
 					combo = widgets[row]
 					kv[fields[row].key] = combo.child.get_text()
 				else :
@@ -2105,8 +2105,10 @@ class Manager :
 		meta = RAMeta()
 		meta.name = doc_xml.getAttribute("name")
 
-		version_xml = doc_xml.getElementsByTagName("version")[0]
-		meta.version = version_xml.childNodes[0].data
+		meta.version = ""
+		version_xml = doc_xml.getElementsByTagName("version")
+		if version_xml != [] and version_xml[0] in doc_xml.childNodes :
+			meta.version = version_xml[0].childNodes[0].data
 
 		meta.longdesc = ""
 		desc_xml = doc_xml.getElementsByTagName("longdesc")
