@@ -264,6 +264,25 @@ virtual=192.168.6.240:80
 #	checktype=ping
 #	checkcount=3
 
+# A sample virtual services that uses a Radius check on UDP.
+# Note that using checktype=connect and protocol=udp
+# will also effect ping checks
+#virtual=192.168.6.240:1812
+#	real=192.168.6.2::1812 gate
+#	real=192.168.6.3::1812 gate
+#	real=192.168.6.6::1812 gate
+#	fallback=127.0.0.1:1812 gate
+#	scheduler=rr
+#	#persistent=600
+#	#netmask=255.255.255.255
+#	protocol=udp
+#	checktype=negotiate
+#	service=radius
+#	password="readuser"
+#	passwd="genericpassword"
+#	secret="somesecret"
+#	checktimeout=1
+
 # A sample virtual services that uses a SIP check on UDP.
 # Note that using checktype=connect and protocol=udp
 # will also effect ping checks
