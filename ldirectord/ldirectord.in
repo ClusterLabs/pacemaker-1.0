@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-my($VERSION)=(qw$Id: ldirectord.in,v 1.32 2006/08/15 07:31:59 horms Exp $)[2];
+my($VERSION)=(qw$Id: ldirectord.in,v 1.33 2006/08/15 07:33:40 horms Exp $)[2];
 
 ######################################################################
 # ldirectord                 http://www.vergenet.net/linux/ldirectord/
@@ -562,6 +562,8 @@ $NEGOTIATETIMEOUT = 0;
 $RUNPID           = "/var/run/ldirectord";
 $SUPERVISED       = "no";
 $QUIESCENT        = "yes";
+$EMAILALERT	  = "";
+$EMAILALERTFREQ	  = 0;
 $EMAILALERTSTATUS = $DAEMON_STATUS_ALL;
 
 
