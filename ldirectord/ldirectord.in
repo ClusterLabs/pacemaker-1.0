@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-my($VERSION)=(qw$Id: ldirectord.in,v 1.23 2006/08/15 07:10:20 horms Exp $)[2];
+my($VERSION)=(qw$Id: ldirectord.in,v 1.24 2006/08/15 07:11:09 horms Exp $)[2];
 
 ######################################################################
 # ldirectord                 http://www.vergenet.net/linux/ldirectord/
@@ -2738,8 +2738,7 @@ sub _remove_service {
 	if(defined($old_rservice)) {
 		$log_args .= "mapped from $old_rservice "
 	}
-	$log_args .= "(" #. scalar(%{$v->{real_status}}) 
-		. " x $virtual_str)";
+	$log_args .= "($virtual_str)";
 
 	my $server_str=$rservice . " " . $virtual_str;
 	my $currenttime=time();
@@ -2799,7 +2798,7 @@ sub _restore_service {
                         . " -r $rservice $rforw -w $rwght";
         $log_args = "$tag server: $rservice "
                     . "(" #. scalar(%{$v->{real_status}}) 
-		    . " x " .  &get_virtual($v) . ")";
+		    .  &get_virtual($v) . ")";
 
         #if the server exists then restore its weight
         # otherwise add the server
