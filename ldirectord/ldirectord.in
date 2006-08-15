@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-my($VERSION)=(qw$Id: ldirectord.in,v 1.8 2006/08/15 03:55:52 horms Exp $)[2];
+my($VERSION)=(qw$Id: ldirectord.in,v 1.9 2006/08/15 03:56:32 horms Exp $)[2];
 
 ######################################################################
 # ldirectord                 http://www.vergenet.net/linux/ldirectord/
@@ -830,10 +830,10 @@ sub read_config
 			$vsrv{login} = "";
 			$vsrv{passwd} = "";
 			$vsrv{database} = "";
-			$vsrv{checktimeout} = 0;
-			$vsrv{connecttimeout} = 0;
+			$vsrv{checktimeout} = -1;
+			$vsrv{connecttimeout} = -1;
 			$vsrv{checkcount} = 1;
-			$vsrv{negotiatetimeout} = 0;
+			$vsrv{negotiatetimeout} = -1;
 			$vsrv{num_connects} = 0;
 			$vsrv{httpmethod} = "GET";
 			push(@VIRTUAL, \%vsrv);
@@ -1510,11 +1510,11 @@ sub ld_setup
 				$$r{num_connects} = -1;
 			}
 		}
-		$$v{checktimeout} = $CHECKTIMEOUT if ($$v{checktimeout}<=0);
-		$$v{connecttimeout} = $CONNECTTIMEOUT if ($$v{connecttimeout}<=0);
-		$$v{connecttimeout} = $$v{checktimeout} if ($$v{connecttimeout}<=0);
-		$$v{negotiatetimeout} = $NEGOTIATETIMEOUT if ($$v{negotiatetimeout}<=0);
-		$$v{negotiatetimeout} = $$v{checktimeout} if ($$v{negotiatetimeout}<=0);
+		$$v{checktimeout} = $CHECKTIMEOUT if ($$v{checktimeout} < 0);
+		$$v{connecttimeout} = $CONNECTTIMEOUT if ($$v{connecttimeout} < 0);
+		$$v{connecttimeout} = $$v{checktimeout} if ($$v{connecttimeout} < 0);
+		$$v{negotiatetimeout} = $NEGOTIATETIMEOUT if ($$v{negotiatetimeout} < 0);
+		$$v{negotiatetimeout} = $$v{checktimeout} if ($$v{negotiatetimeout} < 0);
 	}
 }
 
