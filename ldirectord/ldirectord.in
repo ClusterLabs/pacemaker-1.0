@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-my($VERSION)=(qw$Id: ldirectord.in,v 1.22 2006/08/15 07:09:24 horms Exp $)[2];
+my($VERSION)=(qw$Id: ldirectord.in,v 1.23 2006/08/15 07:10:20 horms Exp $)[2];
 
 ######################################################################
 # ldirectord                 http://www.vergenet.net/linux/ldirectord/
@@ -3180,6 +3180,14 @@ sub ld_emailalert_send
 	my $to_addr;
 	my $frequency;
 
+	if ($currenttime == 0 or $frequency == 0) {
+		delete $EMAILSTATUS{"$server_str"};
+	}
+	else {
+		$EMAILSTATUS{$server_str}->{v} = $v;
+		$EMAILSTATUS{$server_str}->{alerttime} = $currenttime;
+	}
+
 	$to_addr = defined $v->{emailalert} ? $v->{emailalert} : $EMAILALERT;
 	if ($to_addr eq "") {
 		return 0;
@@ -3199,14 +3207,6 @@ sub ld_emailalert_send
 		&ld_log("failed to send email message\n");
 		$status = 1;
 	}
-
-        if ($currenttime == 0 or $frequency == 0) {
-                delete $EMAILSTATUS{"$server_str"};
-        }
-	else {
-		$EMAILSTATUS{$server_str}->{v} = $v;
-		$EMAILSTATUS{$server_str}->{alerttime} = $currenttime;
-        }
 
 	return($status);
 }
