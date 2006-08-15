@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-my($VERSION)=(qw$Id: ldirectord.in,v 1.19 2006/08/15 07:05:27 horms Exp $)[2];
+my($VERSION)=(qw$Id: ldirectord.in,v 1.20 2006/08/15 07:06:39 horms Exp $)[2];
 
 ######################################################################
 # ldirectord                 http://www.vergenet.net/linux/ldirectord/
@@ -1839,11 +1839,7 @@ sub ld_start
 
 		# remove remaining entries for real servers
 		for my $k (keys %$or) {
-			&system_wrapper("$IPVSADM -d " . $nv->{proto} .
-					&get_virtual($nv) . " -r $k");
-			&ld_log("Removed real server (start): $k (" . 
-					#scalar(%{$nv->{real_status}}) .
-					" x " .  &get_virtual($nv) . ")\n");
+			purge_untracked_service($nv, $k, "start");
 			delete($$or{$k});
 		}
 
@@ -1864,11 +1860,7 @@ sub ld_start
 					$nv->{protocol}})) {
 			next;
 		}
-		# service still exists, remove it
-		&system_wrapper("$IPVSADM -D " . $nv->{proto} . " " . 
-				&get_virtual($nv));
-		&ld_log("Removed virtual server (start): " . 
-				&get_virtual($nv) . "\n");
+		purge_virtual($nv, "start");
 	}
 }
 
@@ -1890,16 +1882,10 @@ sub ld_stop
 		my $real = $$v{real};
 		foreach my $r (@$real) {
 			if (defined $$r{virtual_status}) {
-				&system_wrapper("$IPVSADM -d $$v{proto} " . &get_virtual($v) . " -r $$r{server}:$$r{port}");
-				_status_down($v, $r);
-				&ld_log("Removed real server (stop): " .
-					"$$r{server}:$$r{port} (" .
-					#scalar(%{$v->{real_status}}) . 
-					" x " . &get_virtual($v) . ")" );
+				purge_service($v, $r, "stop");
 			}
 		}
-		&system_wrapper("$IPVSADM -D $$v{proto} " .  &get_virtual($v));
-		&ld_log("Removed virtual server (stop): " .  &get_virtual($v));
+		purge_virtual($v, "stop");
 	}
 }
 
@@ -3073,6 +3059,38 @@ sub fallback_find
 	}
 
 	return undef;
+}
+
+
+# Used during stop, start and reload to remove stale real servers from LVS
+sub purge_untracked_service
+{
+	my ($v, $rservice, $tag) = (@_);
+
+	&system_wrapper("$IPVSADM -d $v->{proto} " . &get_virtual($v) . 
+			" -r $rservice");
+	&ld_log("Purged real server ($tag): " .
+		"$rservice (" . &get_virtual($v) . ")");
+}
+
+
+# Used during stop, start and reload to remove stale real servers from LVS
+sub purge_service 
+{
+	my ($v, $r, $tag) = (@_);
+
+	purge_untracked_service($v, "$r->{server}:$r->{port}", $tag);
+	_status_down($v, $r);
+}
+
+
+# Used during stop, start and reload to remove stale virtual services from LVS
+sub purge_virtual 
+{
+	my ($v, $tag) = (@_);
+
+	&system_wrapper("$IPVSADM -D $v->{proto} " .  &get_virtual($v));
+	&ld_log("Purged virtual server ($tag): " .  &get_virtual($v));
 }
 
 
