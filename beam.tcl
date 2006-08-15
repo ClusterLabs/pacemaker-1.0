@@ -116,6 +116,9 @@ set  beam::MISTAKE1::disabled_functions  "yydestruct"
 set  beam::ERROR33::disabled_functions  "g_bit_nth_msf"
 lappend beam::WARNING15::disabled_files "conf_yacc.c"
 lappend beam::WARNING15::disabled_files "conf_lex.c"
+lappend beam::WARNING15::disabled_files "pymgmt_wrap.c"
+lappend beam::ERROR2::disabled_files "pymgmt_wrap.c"
+lappend beam::ERROR9::disabled_files "pymgmt_wrap.c"
 
 
 
