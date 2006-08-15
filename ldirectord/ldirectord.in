@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-my($VERSION)=(qw$Id: ldirectord.in,v 1.39 2006/08/15 07:47:14 horms Exp $)[2];
+my($VERSION)=(qw$Id: ldirectord.in,v 1.40 2006/08/15 12:48:10 horms Exp $)[2];
 
 ######################################################################
 # ldirectord                 http://www.vergenet.net/linux/ldirectord/
@@ -51,7 +51,7 @@ B<ldirectord> [B<-h|-?|--help|-v|--version>]
 B<ldirectord> is a daemon to monitor and administer real servers in a
 cluster of load balanced virtual servers. B<ldirectord> typically is
 started from heartbeat but can also be run from the command line. On
-startup B<ldirectord> reads the file B<@sysconfdir@/conf/>I<configuration>.
+startup B<ldirectord> reads the file B<@sysconfdir@/ha.d/conf/>I<configuration>.
 After parsing the file, entries for virtual servers are created on the LVS.
 Now at regular intervals the specified real servers are monitored and if
 they are considered alive, added to a list for each virtual server. If a
@@ -59,7 +59,7 @@ real server fails, it is removed from that list. Only one instance of
 B<ldirectord> can be started for each configuration, but more instances of
 B<ldirectord> may be started for different configurations. This helps to
 group clusters of services.  Normally one would put an entry inside
-B<@sysconfdir@/haresources>
+B<@sysconfdir@/ha.d/haresources>
 
 I<nodename virtual-ip-address ldirectord::configuration>
 
@@ -70,7 +70,7 @@ to start ldirectord from heartbeat.
 
 I<configuration>:
 This is the name for the configuration as specified in the file
-B<@sysconfdir@/conf/>I<configuration>
+B<@sysconfdir@/ha.d/conf/>I<configuration>
 
 B<-d|--debug> Don't start as daemon and log verbosly. 
 
@@ -484,7 +484,7 @@ Default:
 
 =head1 FILES
 
-B<@sysconfdir@/ldirectord.cf>
+B<@sysconfdir@/ha.d/ldirectord.cf>
 
 B</var/log/ldirectord.log>
 
@@ -727,10 +727,10 @@ sub ld_init
 			and $CMD ne "reload" and $CMD ne "force-reload") {
 		usage();
 	}
-	if ( -f "@sysconfdir@/$CONFIG" ) {
-		$CONFIG = "@sysconfdir@/$CONFIG";
-	} elsif ( -f "@sysconfdir@/conf/$CONFIG" ) {
-		$CONFIG = "@sysconfdir@/conf/$CONFIG";
+	if ( -f "@sysconfdir@/ha.d/$CONFIG" ) {
+		$CONFIG = "@sysconfdir@/ha.d/$CONFIG";
+	} elsif ( -f "@sysconfdir@/ha.d/conf/$CONFIG" ) {
+		$CONFIG = "@sysconfdir@/ha.d/conf/$CONFIG";
 	} elsif ( ! -f "$CONFIG" ) {
 		init_error("Config file $CONFIG not found");
 	}
