@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-my($VERSION)=(qw$Id: ldirectord.in,v 1.38 2006/08/15 07:40:50 horms Exp $)[2];
+my($VERSION)=(qw$Id: ldirectord.in,v 1.39 2006/08/15 07:47:14 horms Exp $)[2];
 
 ######################################################################
 # ldirectord                 http://www.vergenet.net/linux/ldirectord/
@@ -2727,7 +2727,7 @@ sub check_dns
 	         	service_set($v,$r,"up");
 	         	return 0;
 		}
-        }
+	}
  
 	service_set($v,$r,"down");
 	return 1;
@@ -2884,7 +2884,7 @@ sub _remove_service {
 		$is_quiescent = "quiescent";
 	}
 
-        $or=$ov->{"real"}->{$rservice};
+	$or=$ov->{"real"}->{$rservice};
 
 	# If a virtual service is a IP/port service (not fwmark)
 	# and a real-servers uses a forwarding mechanism other than masq
@@ -2915,7 +2915,7 @@ sub _remove_service {
 		}
 	}
 
-        if((!defined($or) and !defined($is_quiescent)) or 
+	if((!defined($or) and !defined($is_quiescent)) or 
 			(defined($is_quiescent) and defined($or) and
 				$or->{"weight"} eq 0 and 
 				get_forward_flag($or->{"forward"}) eq $rforw)){
@@ -3517,7 +3517,7 @@ sub exec_wrapper
 
 	my $status;
 
-        &ld_log("Running exec(@args)") if $DEBUG>2;
+	&ld_log("Running exec(@args)") if $DEBUG>2;
 	$status = exec(@args);
 	if($status != 0) {
 		&ld_log("exec(@args) failed");
