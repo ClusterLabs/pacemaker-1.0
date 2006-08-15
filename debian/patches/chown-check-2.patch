@@ -21,16 +21,16 @@
 +if test -n "$WHOAMI"  ; then
 +  IAM=`$WHOAMI`
 +fi
-+# In the cae of Debian, chown to root does not work as non-root
++# In the case of Debian, chown to root does not work as non-root
 +# And to futher complicate things, the package is often
-+# built with fakeroot, which looks like root, but issn't,
++# built with fakeroot, which looks like root, but isn't,
 +# causing the test to stall waiting for nobody's password
 +# Resolve this by checking if fakeroot is in operation,
 +# and if it is assuming the system is Debian and failing
 +# the test
 +nonroot_chown=no
 +if 
-+  test "X$FAKEROOTKEY" = "X" &&
++  test "X$FAKED_MODE" = "X" &&
    case "$IAM" in
      root)	chown nobody $F;
 -       		su nobody -c "chown root $F";;
