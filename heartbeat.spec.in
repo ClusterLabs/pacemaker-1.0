@@ -1,4 +1,4 @@
-#	$Id: heartbeat.spec.in,v 1.198 2006/08/15 07:43:39 horms Exp $
+#	$Id: heartbeat.spec.in,v 1.199 2006/08/15 07:44:30 horms Exp $
 
 %define _unpackaged_files_terminate_build 1
 %define _missing_doc_files_terminate_build 1
@@ -15,7 +15,7 @@ Group: Utilities
 Packager: Alan Robertson <alanr@unix.sh>
 Source: http://linux-ha.org/download/@HB_PKG@-@VERSION@.tar.gz
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-build
-BuildPrereq: glib-devel, @UCDSNMPDEVEL@, perl, iputils, /usr/bin/ssh, openssl-devel, libnet
+BuildPrereq: glib-devel, @UCDSNMPDEVEL@, perl, iputils, /usr/bin/ssh, openssl-devel, libnet, glib2-devel, python-devel, gnutls-devel
 # libnet available from www.ultramonkey.org and others
 Requires: sysklogd, heartbeat-stonith = %{version}-%{release}, heartbeat-pils = %{version}-%{release}, @RPM_MGMT_RUNTIME_REQUIRES@
 BuildRequires: libgcrypt-devel
