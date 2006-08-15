@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-my($VERSION)=(qw$Id: ldirectord.in,v 1.28 2006/08/15 07:16:11 horms Exp $)[2];
+my($VERSION)=(qw$Id: ldirectord.in,v 1.29 2006/08/15 07:17:06 horms Exp $)[2];
 
 ######################################################################
 # ldirectord                 http://www.vergenet.net/linux/ldirectord/
@@ -487,7 +487,6 @@ use vars qw(
 	    $CONNECTTIMEOUT
 	    $LDIRECTORD
 	    $LDIRLOG
-	    $LD_TERM_CALLED
 	    $NEGOTIATETIMEOUT
 	    $RUNPID
 	    $CHECKTIMEOUT
@@ -505,7 +504,11 @@ use vars qw(
 	    $SUPERVISED
 	    $IPVSADM
 	    $checksum
-	    $initializing
+	    $DAEMON_STATUS
+	    $DAEMON_STATUS_STARTING
+	    $DAEMON_STATUS_RUNNING
+	    $DAEMON_STATUS_STOPPING
+	    $DAEMON_STATUS_RELOADING
 	    $opt_d
 	    $opt_h
 	    $pid
@@ -520,6 +523,11 @@ use vars qw(
 	    $CRLF
 );
 
+$DAEMON_STATUS_STARTING  = 0x1;
+$DAEMON_STATUS_RUNNING   = 0x2;
+$DAEMON_STATUS_STOPPING  = 0x4;
+$DAEMON_STATUS_RELOADING = 0x8;
+
 # default values
 $AUTOCHECK        = "no";
 $CHECKINTERVAL    = 10;
@@ -531,7 +539,6 @@ if (! defined $LDIRECTORD) {
 	$LDIRECTORD = "@sbindir@/ldirectord";
 }
 $LDIRLOG          = "/var/log/ldirectord.log";
-$LD_TERM_CALLED   = 0;
 $NEGOTIATETIMEOUT = 0;
 $RUNPID           = "/var/run/ldirectord";
 $SUPERVISED       = "no";
@@ -609,12 +616,12 @@ unless(defined($ENV{'PERLIO'})) {
 	exec_wrapper($0, @OLD_ARGV);
 }
 
-$initializing = 1;
+$DAEMON_STATUS = $DAEMON_STATUS_STARTING;
 ld_init();
 ld_setup();
 ld_start();
 ld_cmd_children("start", %LD_INSTANCE);
-$initializing = 0;
+$DAEMON_STATUS = $DAEMON_STATUS_RUNNING;
 ld_main();
 
 &ld_rm_file("$RUNPID.$CFGNAME.pid");
@@ -797,12 +804,12 @@ sub init_error
 sub ld_handler_term
 {
     my ($signal) = (@_);
-	if ($LD_TERM_CALLED){
+	if ($DAEMON_STATUS == $DAEMON_STATUS_STOPPING) {
 		$SIG{'__DIE__'} = "IGNORE";
 		$SIG{"$signal"} = "IGNORE";
 		die("Exit Handler Repeatedly Called\n");
 	}
-	$LD_TERM_CALLED = 1;
+	$DAEMON_STATUS = $DAEMON_STATUS_STOPPING;
 
 	ld_cmd_children("stop", %LD_INSTANCE);
 	ld_stop();
@@ -824,6 +831,7 @@ sub reread_config
 {
 	@OLDVIRTUAL = @VIRTUAL;
 	my %OLD_INSTANCE = %LD_INSTANCE;
+	$DAEMON_STATUS = $DAEMON_STATUS_RELOADING;
 	eval {
 		&read_config();
 		my %NEW_INSTANCE = %LD_INSTANCE;
@@ -846,6 +854,7 @@ sub reread_config
 		@VIRTUAL = @OLDVIRTUAL;
 		%LD_INSTANCE = %OLD_INSTANCE;
 	}
+	$DAEMON_STATUS = $DAEMON_STATUS_RUNNING;
 	undef @OLDVIRTUAL;
 }
 
@@ -1538,7 +1547,7 @@ sub __config_log
 	}
 	$msg = "$msg_prefix: $msg";
 
-	if ($opt_d or $initializing==1) {
+	if ($opt_d or $DAEMON_STATUS == $DAEMON_STATUS_STARTING) {
 		print STDERR $msg;
 	} 
 	else {
@@ -1560,7 +1569,7 @@ sub config_error
 	my ($line, $msg) = @_;
 
 	__config_log($line, "Error", $msg);
-	if ($initializing) {
+	if ($DAEMON_STATUS == $DAEMON_STATUS_STARTING) {
 		&ld_rm_file("$RUNPID.$CFGNAME.pid");
 		&ld_exit(2, "config_error: Configuration Error");
 	} else {
