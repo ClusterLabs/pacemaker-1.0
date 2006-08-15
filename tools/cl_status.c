@@ -290,7 +290,6 @@ main(int argc, char ** argv)
 				return UNKNOWN_ERROR;
 			}
 
-			/* cl_log(LOG_DEBUG, "Signing in with heartbeat.");*/
 			if (hb->llc_ops->signon(hb, NULL)!= HA_OK) {
 				ret_value = 1;
 				HB_SIGNON = FALSE;
@@ -442,8 +441,6 @@ nodestatus(ll_cluster_t *hb, int argc, char ** argv, const char * optstr)
 		return PARAMETER_ERROR;
 	}
 
-	cl_log(LOG_DEBUG, "optind: %d   argv[optindex+1]: %s", optind, 
-		argv[optind+1]);
 	status = hb->llc_ops->node_status(hb, argv[optind+1]);
 	if ( status == NULL ) {
 		fprintf(stderr, "Error. May be due to incorrect node name\n");
@@ -483,8 +480,6 @@ nodeweight(ll_cluster_t *hb, int argc, char ** argv, const char * optstr)
 		return PARAMETER_ERROR;
 	}
 
-	cl_log(LOG_DEBUG, "optind: %d   argv[optindex+1]: %s", optind, 
-		argv[optind+1]);
 	weight = hb->llc_ops->node_weight(hb, argv[optind+1]);
 	if ( weight == -1 ) {
 		fprintf(stderr, "Error. Maybe due to incorrect node name.\n");
@@ -516,8 +511,6 @@ nodesite(ll_cluster_t *hb, int argc, char ** argv, const char * optstr)
 		return PARAMETER_ERROR;
 	}
 
-	cl_log(LOG_DEBUG, "optind: %d   argv[optindex+1]: %s", optind, 
-		argv[optind+1]);
 	site = hb->llc_ops->node_site(hb, argv[optind+1]);
 	if ( site == NULL ) {
 		fprintf(stderr, "Error. May be due to incorrect node name\n");
@@ -549,8 +542,6 @@ nodetype(ll_cluster_t *hb, int argc, char ** argv, const char * optstr)
 		return PARAMETER_ERROR;
 	}
 
-	cl_log(LOG_DEBUG, "optind: %d   argv[optindex+1]: %s", optind, 
-		argv[optind+1]);
 	type = hb->llc_ops->node_type(hb, argv[optind+1]);
 	if ( type == NULL ) {
 		fprintf(stderr, "Error. May be due to incorrect node name\n");
@@ -580,8 +571,6 @@ listhblinks(ll_cluster_t *hb, int argc, char ** argv, const char * optstr)
 		return PARAMETER_ERROR;
 	}
 
-	cl_log(LOG_DEBUG, "optind: %d   argv[optindex+1]: %s", optind, 
-		argv[optind+1]);
 
 	if (hb->llc_ops->init_ifwalk(hb, argv[optind+1]) != HA_OK) {
 		cl_log(LOG_ERR, "Cannot start heartbeat link interface walk.");
