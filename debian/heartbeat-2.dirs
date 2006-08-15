@@ -26,6 +26,7 @@ var/lib/heartbeat/cores/nobody
 var/lib/heartbeat/cores/hacluster
 var/lib/heartbeat/crm
 var/lib/heartbeat/ckpt
+var/lib/heartbeat/pengine
 var/lock/subsys
 var/run/heartbeat
 var/run/heartbeat/ccm 

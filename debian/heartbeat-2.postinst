@@ -39,7 +39,8 @@ case "$1" in
         mknod -m 0600 /var/lib/heartbeat/fifo p
 
 	for i in /var/lib/heartbeat/ccm /var/lib/heartbeat/crm \
-			/var/run/heartbeat/ccm /var/run/heartbeat/crm; do
+			/var/run/heartbeat/ccm /var/run/heartbeat/crm \
+			/var/lib/heartbeat/pengine; do
 		chmod 750 $i
 		chown hacluster $i
 		chgrp haclient $i
