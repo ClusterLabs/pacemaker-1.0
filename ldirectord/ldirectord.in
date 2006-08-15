@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-my($VERSION)=(qw$Id: ldirectord.in,v 1.26 2006/08/15 07:13:53 horms Exp $)[2];
+my($VERSION)=(qw$Id: ldirectord.in,v 1.27 2006/08/15 07:14:40 horms Exp $)[2];
 
 ######################################################################
 # ldirectord                 http://www.vergenet.net/linux/ldirectord/
@@ -2753,13 +2753,13 @@ sub _remove_service {
 		}
 	       	&ld_log("Quiescent $log_args (Weight set to 0)");
 		&ld_emailalert_send("Quiescent $log_args (Weight set to 0)",
-				    $v, $server_str, $currenttime);
+				    $v, $rservice, $currenttime);
         }
 	else {
                 &system_wrapper("$IPVSADM -d $ipvsadm_args");
 	        &ld_log("Deleted $log_args");
 		&ld_emailalert_send("Deleted $log_args", $v,
-				    $server_str, $currenttime);
+				    $rservice, $currenttime);
 	}
 }
 
@@ -2806,7 +2806,6 @@ sub _restore_service {
         if(defined($ov)){
                 $or=$ov->{"real"}->{$rservice};
         }
-        my $server_str=$rservice . " " . $v->{server} . ":" . $v->{port};
         if(defined($or)){
                 unless($or->{"weight"} eq $rwght and
                        get_forward_flag($or->{"forward"}) eq $rforw){
@@ -2814,14 +2813,14 @@ sub _restore_service {
 	                &ld_log("Restored $log_args (Weight set to $rwght)");
 			&ld_emailalert_send("Restored $log_args " .
 					    "(Weight set to $rwght)",
-					    $v, $server_str, 0);
+					    $v, $rservice, 0);
                 }
         }
         else {
                 &system_wrapper("$IPVSADM -a $ipvsadm_args");
 	        &ld_log("Added $log_args (Weight set to $rwght)");
 		&ld_emailalert_send("Added $log_args (Weight set to $rwght)",
-				    $v, $server_str, 0);
+				    $v, $rservice, 0);
         }
 }
 
@@ -3171,19 +3170,24 @@ sub ld_log
 
 sub ld_emailalert_send
 {
-	my ($subject, $v, $server_str, $currenttime) = (@_);
+	my ($subject, $v, $rserver, $currenttime) = (@_);
 	my $emailmsg;
 	my $emailfh;
 	my $status = 0;
 	my $to_addr;
 	my $frequency;
+	my $virtual_str;
+	my $id;
+
+	$virtual_str = &get_virtual($v);
+	$id = "$rserver ($virtual_str)";
 
 	if ($currenttime == 0 or $frequency == 0) {
-		delete $EMAILSTATUS{"$server_str"};
+		delete $EMAILSTATUS{"$id"};
 	}
 	else {
-		$EMAILSTATUS{$server_str}->{v} = $v;
-		$EMAILSTATUS{$server_str}->{alerttime} = $currenttime;
+		$EMAILSTATUS{$id}->{v} = $v;
+		$EMAILSTATUS{$id}->{alerttime} = $currenttime;
 	}
 
 	$to_addr = defined $v->{emailalert} ? $v->{emailalert} : $EMAILALERT;
@@ -3220,19 +3224,22 @@ sub ld_emailalert_resend
 {
 	my $currenttime = time();
 	my $es;
-	my $server_str;
+	my $id;
+	my $rserver;
 	my $frequency;
 
-	foreach $server_str (keys %EMAILSTATUS) {
-		$es = $EMAILSTATUS{$server_str};
+	foreach $id (keys %EMAILSTATUS) {
+		$es = $EMAILSTATUS{$id};
 		$frequency = defined $es->{v}->{emailalertfreq} ? 
 					$es->{v}->{emailalertfreq} :
 					$EMAILALERTFREQ;
+		$id =~ m/(.*) /;
+		$rserver = $1;
 		if ($currenttime - $es->{alerttime} < $frequency) {
 			next;
 		}
-		&ld_emailalert_send("Inaccessible real server: " . $server_str, 
-			       $es->{v}, $server_str, $currenttime);
+		&ld_emailalert_send("Inaccessible real server: $id", 
+			       $es->{v}, $rserver, $currenttime);
 	}
 }
 
