@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-my($VERSION)=(qw$Id: ldirectord.in,v 1.12 2006/08/15 03:58:38 horms Exp $)[2];
+my($VERSION)=(qw$Id: ldirectord.in,v 1.13 2006/08/15 03:59:35 horms Exp $)[2];
 
 ######################################################################
 # ldirectord                 http://www.vergenet.net/linux/ldirectord/
@@ -1446,18 +1446,16 @@ sub config_error
         chomp($msg);
         $msg .= "\n";
 
+	my $msg_prefix = "Error [$pid]";
+	if ($line > 0) {
+		$msg_prefix .= " reading file $CONFIG at line $line";
+	}
+	$msg = "$msg_prefix: $msg"
+
 	if ($opt_d || $initializing==1) {
-		if ($line>0) {
-			print STDERR "Error [$pid] reading file $CONFIG at line $line: $msg";
-		} else {
-			print STDERR "Error: $msg\n";
-		}
+		print STDERR $msg;
 	} else {
-		if ($line>0) {
-			&ld_log("Error [$pid] reading file $CONFIG at line $line: $msg");
-		} else {
-			 &ld_log("Error: $msg\n");
-		}
+		&ld_log("$msg");
 	}
 	if ($initializing) {
 		&ld_rm_file("$RUNPID.$CFGNAME.pid");
