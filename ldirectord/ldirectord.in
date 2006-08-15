@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-my($VERSION)=(qw$Id: ldirectord.in,v 1.18 2006/08/15 07:03:58 horms Exp $)[2];
+my($VERSION)=(qw$Id: ldirectord.in,v 1.19 2006/08/15 07:05:27 horms Exp $)[2];
 
 ######################################################################
 # ldirectord                 http://www.vergenet.net/linux/ldirectord/
@@ -3196,6 +3196,8 @@ sub ld_emailalert
 	}
 
 	use Mail::Send;
+
+	&ld_log("emailalert: $emailsubject");
 
 	unless ($emailmsg = new Mail::Send Subject=>$emailsubject, To=>$emailto
 			and $emailfh = $emailmsg->open

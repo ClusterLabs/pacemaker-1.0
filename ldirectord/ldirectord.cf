@@ -15,6 +15,8 @@ checkinterval=1
 autoreload=yes
 #logfile="/var/log/ldirectord.log"
 #logfile="local0"
+#emailalert="admin@x.y.z"
+#emailalertfreq=3600
 quiescent=yes
 
 # Sample for an http virtual service
