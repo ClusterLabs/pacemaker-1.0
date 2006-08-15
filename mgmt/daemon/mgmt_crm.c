@@ -171,6 +171,10 @@ get_data_set(void)
 	}
 	
 	data_set = (pe_working_set_t*)cl_malloc(sizeof(pe_working_set_t));
+	if (data_set == NULL) {
+		mgmt_log(LOG_ERR, "%s:Can't alloc memory for data set.",__FUNCTION__);
+		return NULL;
+	}
 	set_working_set_defaults(data_set);
 	data_set->input = get_cib_copy(cib_conn);
 	data_set->now = new_ha_date(TRUE);
@@ -211,7 +215,7 @@ crm_failed_msg(crm_data_t* output, int rc)
 	}
 	
 	ret = cl_strdup(MSG_FAIL);
-	ret = mgmt_msg_append(ret, cib_error2string(rc));
+	ret = mgmt_msg_append(ret, cib_error2string((enum cib_errors)rc));
 	
 	if (output == NULL) {
 		return ret;
@@ -251,11 +255,9 @@ static resource_t*
 get_parent(resource_t* child)
 {
 	GList* cur;
-	char* ret;
 	pe_working_set_t* data_set;
 	
 	data_set = get_data_set();
-	ret = cl_strdup(MSG_OK);
 	cur = data_set->resources;
 	while (cur != NULL) {
 		resource_t* rsc = (resource_t*)cur->data;
@@ -364,7 +366,6 @@ get_attr_id(const char* rsc_id, const char* attr, char* id)
 {
 	int i;
 	resource_t* rsc;
-	char* ret;
 	const char * name_nvpair;
 	const char * id_nvpair;
 	struct ha_msg* attrs;
@@ -379,7 +380,6 @@ get_attr_id(const char* rsc_id, const char* attr, char* id)
 		return;
 	}
 
-	ret = cl_strdup(MSG_OK);
 	attrs = cl_get_struct((struct ha_msg*)rsc->xml, "instance_attributes");
 	if(attrs == NULL) {
 		snprintf(id, MAX_STRLEN,  "%s_%s", rsc_id, attr);
@@ -763,7 +763,7 @@ on_set_node_standby(char* argv[], int argc)
 	}
 	
 	snprintf(xml, MAX_STRLEN, 
-		"<node id=\"%s\"><instance_attributes id=\"nodes-\%s\">"
+		"<node id=\"%s\"><instance_attributes id=\"nodes-\"%s\">"
 		"<attributes><nvpair id=\"standby-%s\" name=\"standby\" value=\"%s\"/>"
            	"</attributes></instance_attributes></node>", 
            	id, id, id, argv[2]);
