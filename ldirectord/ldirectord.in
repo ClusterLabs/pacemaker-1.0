@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-my($VERSION)=(qw$Id: ldirectord.in,v 1.14 2006/08/15 04:00:12 horms Exp $)[2];
+my($VERSION)=(qw$Id: ldirectord.in,v 1.15 2006/08/15 04:01:26 horms Exp $)[2];
 
 ######################################################################
 # ldirectord                 http://www.vergenet.net/linux/ldirectord/
@@ -195,13 +195,13 @@ Use this directive to start an instance of ldirectord for
 the named I<configuration>.
 
 
-B<supervised>
+B<supervised = >B<yes>|B<no>
 
-If this directive is specified, the daemon does not go into background mode.
+If I<yes>, then ldirectord does not go into background mode.
 All log-messages are redirected to stdout instead of a logfile.
 This is useful to run B<ldirectord> supervised from daemontools.
 See http://untroubled.org/rpms/daemontools/ or http://cr.yp.to/daemontools.html
-for details.
+for details. Default is no
 
 
 B<quiescent = >[B<yes>|B<no>]
@@ -461,6 +461,7 @@ $LDIRLOG          = "/var/log/ldirectord.log";
 $LD_TERM_CALLED   = 0;
 $NEGOTIATETIMEOUT = 0;
 $RUNPID           = "/var/run/ldirectord";
+$SUPERVISED       = "no";
 $QUIESCENT        = "yes";
 
 
@@ -689,7 +690,7 @@ sub ld_init
 	}
 
 	# Run as daemon
-	if ($SUPERVISED || $opt_d) {
+	if ($SUPERVISED eq "yes" || $opt_d) {
 		&ld_log("Starting Linux Director v$VERSION with pid: $$");
         } else {
 		&ld_log("Starting Linux Director v$VERSION as daemon");
@@ -783,7 +784,6 @@ sub read_config
 	undef $CALLBACK;
 	undef %LD_INSTANCE;
 	undef $checksum;
-	$SUPERVISED = 0;
 	$stattime = 0;
 	my %virtual_seen;
 	open(CFGFILE, "<$CONFIG") or
@@ -1066,7 +1066,20 @@ sub read_config
 		} elsif ($_ =~ /^execute\s*=\s*(.*)/) {
 			$LD_INSTANCE{$1} = 1;
 		} elsif ($_ =~ /^supervised/) {
-			$SUPERVISED = 1;
+			if (($_ =~ /^supervised\s*=\s*(.*)/) and
+			    ($1 eq "yes" || $1 eq "no")) {
+				$SUPERVISED = $1;
+			}
+			elsif ($_ =~ /^supervised\s*$/) {
+				$SUPERVISED = "yes";
+				&config_warn($line,
+					"please update your config not to " .
+					"use a bare supervised directive");
+			}
+			else {
+				&config_error($line,
+					"supervised must be 'yes' or 'no'");
+			}
 		} elsif ($_ =~ /^quiescent\s*=\s*(.*)/) {
 			($1 eq "yes" || $1 eq "no")
 			    or &config_error($line, 
@@ -3033,7 +3046,7 @@ sub check_cfgfile
 #         1 on error
 sub ld_openlog
 {
-	if ($opt_d or $SUPERVISED) {
+	if ($opt_d or $SUPERVISED eq "yes") {
 		# Instantly do nothing
 		return(0);
 	}	
@@ -3071,7 +3084,7 @@ sub ld_log
 	chomp $message;
 	if ($opt_d) {
 		print STDERR "$message\n";
-	} elsif ($SUPERVISED) {
+	} elsif ($SUPERVISED eq "yes") {
 		print "[$now] $message\n";
 	} elsif ( $LDIRLOG =~ /^\/(.*)/ ) {
 		unless (open(LOGFILE, ">>$LDIRLOG")
