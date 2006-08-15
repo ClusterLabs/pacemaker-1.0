@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-my($VERSION)=(qw$Id: ldirectord.in,v 1.35 2006/08/15 07:35:50 horms Exp $)[2];
+my($VERSION)=(qw$Id: ldirectord.in,v 1.36 2006/08/15 07:36:59 horms Exp $)[2];
 
 ######################################################################
 # ldirectord                 http://www.vergenet.net/linux/ldirectord/
@@ -524,6 +524,8 @@ use vars qw(
 	    $DAEMON_STATUS_STOPPING
 	    $DAEMON_STATUS_RELOADING
 	    $DAEMON_STATUS_ALL
+	    $DAEMON_TERM
+	    $DAEMON_HUP
 	    $opt_d
 	    $opt_h
 	    $pid
@@ -548,6 +550,8 @@ $DAEMON_STATUS_ALL       = $DAEMON_STATUS_STARTING |
 			   $DAEMON_STATUS_RELOADING;
 
 # default values
+$DAEMON_TERM      = undef;
+$DAEMON_HUP       = undef;
 $AUTOCHECK        = "no";
 $CHECKINTERVAL    = 10;
 $CHECKTIMEOUT     = 5;
@@ -825,29 +829,49 @@ sub init_error
 # If we get a sinal then log it and quit
 sub ld_handler_term
 {
-    my ($signal) = (@_);
-	if ($DAEMON_STATUS == $DAEMON_STATUS_STOPPING) {
+        my ($signal) = (@_);
+
+	if (defined $DAEMON_TERM) {
 		$SIG{'__DIE__'} = "IGNORE";
 		$SIG{"$signal"} = "IGNORE";
 		die("Exit Handler Repeatedly Called\n");
 	}
+	$DAEMON_TERM = $signal;
 	$DAEMON_STATUS = $DAEMON_STATUS_STOPPING;
-
-	ld_cmd_children("stop", %LD_INSTANCE);
-	ld_stop();
-	&ld_log("Linux Director Daemon terminated on signal: $signal");
-	&ld_rm_file("$RUNPID.$CFGNAME.pid");
-	&ld_exit(0, "Linux Director Daemon terminated on signal: $signal");
 }
 
+sub ld_process_term
+{
+	$DAEMON_STATUS = $DAEMON_STATUS_STOPPING;
+	ld_cmd_children("stop", %LD_INSTANCE);
+	ld_stop();
+	&ld_log("Linux Director Daemon terminated on signal: $DAEMON_TERM");
+	&ld_rm_file("$RUNPID.$CFGNAME.pid");
+	&ld_exit(0, "Linux Director Daemon terminated on signal: $DAEMON_TERM");
+}
 
 sub ld_handler_hup
 {
-        my ($signal) = (@_);
-	&ld_log("Reloading Linux Director Daemon config on signal: $signal");
+	$DAEMON_HUP=1;
+}
+
+sub ld_process_hup
+{
+	&ld_log("Reloading Linux Director Daemon config on signal");
+	$DAEMON_HUP = undef;
 	&reread_config();
 }
 
+
+sub check_signal
+{
+	if (defined $DAEMON_TERM) {
+		ld_process_term();
+	}
+	if (defined $DAEMON_HUP) {
+		ld_process_hup();
+	}
+}
 
 sub reread_config
 {
@@ -1962,6 +1986,7 @@ sub ld_main
 
 			REAL: foreach my $r (@$real) {
 				my $real_id = get_real_id_str($r, $v);
+				check_signal();
 				foreach my $tmp_id (@real_checked) {
 					if($real_id eq $tmp_id) {
 						&ld_debug(3, "Already checked: real server=$real_id (virtual=$virtual_id)");
@@ -2030,11 +2055,15 @@ sub ld_main
 			}
 			# $ua->wait($$v{checktimeout});
 		}
+		check_signal();
 		if (!check_cfgfile()) {
 			sleep $CHECKINTERVAL;
 		}
 			
+		check_signal();
 		ld_emailalert_resend();
+
+		check_signal();
 	}
 }
 
