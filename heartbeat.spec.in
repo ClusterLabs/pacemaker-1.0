@@ -1,4 +1,4 @@
-#	$Id: heartbeat.spec.in,v 1.200 2006/08/15 08:26:21 andrew Exp $
+#	$Id: heartbeat.spec.in,v 1.201 2006/08/15 08:29:44 andrew Exp $
 
 %define _unpackaged_files_terminate_build 1
 %define _missing_doc_files_terminate_build 1
@@ -1401,6 +1401,9 @@ ln -s @libdir@/heartbeat/haclient.py $RPM_BUILD_ROOT@bindir@/hb_gui
 @sbindir@/attrd_updater
 @sbindir@/crm_failcount
 @sbindir@/crm_primitive.py
+@sbindir@/cluster.py
+@sbindir@/crm_utils.py
+@sbindir@/crm_commands.py
 %dir %attr (755, @HA_CCMUSER@, @HA_APIGROUP@) @HA_VARRUNDIR@/@HB_PKG@/ccm
 %dir %attr (750, @HA_CCMUSER@, @HA_APIGROUP@) @HA_VARRUNDIR@/@HB_PKG@/crm
 %dir %attr (750, @HA_CCMUSER@, @HA_APIGROUP@) @localstatedir@/lib/@HB_PKG@/crm
