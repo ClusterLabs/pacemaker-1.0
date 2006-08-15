@@ -1,3 +1,13 @@
+heartbeat-2 (2.0.7-1) unstable; urgency=low
+
+  * New Upstream
+  * Dropped the following patches as they are now upstream
+    - ldirectord-1.141-emailalert-1-quiet.patch  (introduced in 2.0.6-2)
+    - ldirectord-1.141-readline_workaround.patch (introduced in 2.0.6-2)
+    - CVE-2006-3821.patch                        (introduced in 2.0.6-2)
+
+ -- Simon Horman <horms@debian.org>  Mon, 14 Aug 2006 19:00:13 +0900
+
 heartbeat-2 (2.0.6-2) unstable; urgency=high
 
   * ldirectord-1.141-emailalert-1-quiet.patch
