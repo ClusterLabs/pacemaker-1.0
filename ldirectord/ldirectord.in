@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-my($VERSION)=(qw$Id: ldirectord.in,v 1.27 2006/08/15 07:14:40 horms Exp $)[2];
+my($VERSION)=(qw$Id: ldirectord.in,v 1.28 2006/08/15 07:16:11 horms Exp $)[2];
 
 ######################################################################
 # ldirectord                 http://www.vergenet.net/linux/ldirectord/
@@ -3034,10 +3034,13 @@ sub purge_untracked_service
 {
 	my ($v, $rservice, $tag) = (@_);
 
+	my $log_arg = "Purged real server ($tag): $rservice (" . 
+		      &get_virtual($v) . ")";
+
 	&system_wrapper("$IPVSADM -d $v->{proto} " . &get_virtual($v) . 
 			" -r $rservice");
-	&ld_log("Purged real server ($tag): " .
-		"$rservice (" . &get_virtual($v) . ")");
+	&ld_log($log_arg);
+	&ld_emailalert_send($log_arg, $v, $rservice);
 }
 
 
