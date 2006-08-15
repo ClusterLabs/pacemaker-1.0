@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-my($VERSION)=(qw$Id: ldirectord.in,v 1.7 2006/08/15 03:55:06 horms Exp $)[2];
+my($VERSION)=(qw$Id: ldirectord.in,v 1.8 2006/08/15 03:55:52 horms Exp $)[2];
 
 ######################################################################
 # ldirectord                 http://www.vergenet.net/linux/ldirectord/
@@ -874,10 +874,10 @@ sub read_config
                                         $1 =~ /(\d+)/ && $1 or &config_error($line, "invalid check timeout");
                                         $vsrv{checktimeout} = $1;
 				} elsif ($rcmd =~ /^connecttimeout\s*=\s*(.*)/){
-                                        $1 =~ /(\d+)/ && $1 or &config_error($line, "invalid check timeout");
+                                        $1 =~ /(\d+)/ && $1 or &config_error($line, "invalid connect timeout");
                                         $vsrv{connecttimeout} = $1;
 				} elsif ($rcmd =~ /^negotiatetimeout\s*=\s*(.*)/){
-                                        $1 =~ /(\d+)/ && $1 or &config_error($line, "invalid check timeout");
+                                        $1 =~ /(\d+)/ && $1 or &config_error($line, "invalid negotiate timeout");
                                         $vsrv{negotiatetimeout} = $1;
 				} elsif ($rcmd =~ /^checkcount\s*=\s*(.*)/){
                                         $1 =~ /(\d+)/ && $1 or &config_error($line, "invalid check count");
