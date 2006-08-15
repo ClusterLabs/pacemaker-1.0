@@ -2,8 +2,9 @@ Source: heartbeat-2
 Section: admin
 Priority: optional
 Maintainer: Simon Horman <horms@debian.org>
-Build-Depends: debhelper (>= 4.0.0), libsnmp9-dev, libglib2.0-dev, perl, net-tools, netkit-ping | iputils-ping, python, psmisc, modutils, libnet1-dev, iproute, libtool, libcurl3-openssl-dev, libxml2-dev, bison, flex, uuid-dev, libopenipmi-dev (>= 2.0.1), lynx, libbz2-dev, zlib1g-dev, uuid-dev, libsensors-dev, libltdl3-dev, swig, openssh-client, libgnutls-dev, python2.3-dev, libpam0g-dev, libncurses5-dev
+Build-Depends: debhelper (>= 5.0.37.2), libsnmp9-dev, libglib2.0-dev, perl, net-tools, netkit-ping | iputils-ping, python, psmisc, modutils, libnet1-dev, iproute, libtool, libcurl3-openssl-dev, libxml2-dev, bison, flex, uuid-dev, libopenipmi-dev (>= 2.0.1), lynx, libbz2-dev, zlib1g-dev, uuid-dev, libsensors-dev, libltdl3-dev, swig, openssh-client, libgnutls-dev, python-central (>= 0.5), python-dev, libpam0g-dev, libncurses5-dev
 Standards-Version: 3.7.2
+XS-Python-Version: current
 
 Package: ldirectord-2
 Section: admin
@@ -14,6 +15,7 @@ Recommends: sysklogd|syslog-ng, logrotate
 Provides: ldirectord
 Conflicts: ldirectord
 Replaces: ldirectord
+XB-Python-Version: ${python:Versions}
 Description: Monitors virtual services provided by LVS
  ldirectord is a stand-alone daemon to monitor services of real
  for virtual services provided by The Linux Virtual Server (LVS).
@@ -23,11 +25,12 @@ Package: heartbeat-2
 Section: admin
 Priority: optional
 Architecture: any
-Depends: ${shlibs:Depends}, python, iproute, adduser, netkit-ping | iputils-ping
+Depends: ${shlibs:Depends}, ${python:Depends}, iproute, adduser, netkit-ping | iputils-ping
 Recommends: sysklogd | syslog-ng | system-log-daemon, logrotate, iptables
 Provides: heartbeat, libpils0, libstonith0, stonith
 Conflicts: heartbeat, libpils0, libstonith0, stonith
 Replaces: heartbeat, libpils0, libstonith0, stonith
+XB-Python-Version: ${python:Versions}
 Description: Subsystem for High-Availability Linux
  heartbeat is a basic heartbeat subsystem for Linux-HA which implements
  serial, UDP, and PPP/UDP heartbeats together with IP address takeover
@@ -45,6 +48,7 @@ Depends: heartbeat-2 (= ${Source-Version})
 Provides: heartbeat-dev, libstonith-dev, libpils-dev
 Conflicts: heartbeat-dev, libstonith-dev, libpils-dev
 Replaces: heartbeat-dev, libstonith-dev, libpils-dev
+XB-Python-Version: ${python:Versions}
 Description: Subsystem for High-Availability Linux - development files
  heartbeat is a basic heartbeat subsystem for Linux-HA which implements
  serial, UDP, and PPP/UDP heartbeats together with IP address takeover
