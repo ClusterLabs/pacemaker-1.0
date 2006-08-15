@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-my($VERSION)=(qw$Id: ldirectord.in,v 1.31 2006/08/15 07:28:45 horms Exp $)[2];
+my($VERSION)=(qw$Id: ldirectord.in,v 1.32 2006/08/15 07:31:59 horms Exp $)[2];
 
 ######################################################################
 # ldirectord                 http://www.vergenet.net/linux/ldirectord/
@@ -562,6 +562,7 @@ $NEGOTIATETIMEOUT = 0;
 $RUNPID           = "/var/run/ldirectord";
 $SUPERVISED       = "no";
 $QUIESCENT        = "yes";
+$EMAILALERTSTATUS = $DAEMON_STATUS_ALL;
 
 
 # Doctor version, as 1.n -> 1.(n + 144) the code was maintained as
