@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-my($VERSION)=(qw$Id: ldirectord.in,v 1.29 2006/08/15 07:17:06 horms Exp $)[2];
+my($VERSION)=(qw$Id: ldirectord.in,v 1.30 2006/08/15 07:17:41 horms Exp $)[2];
 
 ######################################################################
 # ldirectord                 http://www.vergenet.net/linux/ldirectord/
@@ -3173,6 +3173,24 @@ sub ld_log
 }
 
 
+sub daemon_status_str
+{
+	if ($DAEMON_STATUS == $DAEMON_STATUS_STARTING) {
+		return "starting";
+	}
+	elsif ($DAEMON_STATUS == $DAEMON_STATUS_RUNNING) {
+		return "running";
+	}
+	elsif ($DAEMON_STATUS == $DAEMON_STATUS_STOPPING) {
+		return "stopping";
+	}
+	elsif ($DAEMON_STATUS == $DAEMON_STATUS_RELOADING) {
+		return "reloading";
+	}
+	return "UNKNOWN";
+}
+
+
 # ld_emailalert_send
 # Send email alerts per virtual server
 # pre: message: Message to email
@@ -3216,7 +3234,9 @@ sub ld_emailalert_send
 
 	unless ($emailmsg = new Mail::Send Subject=>$subject, To=>$to_addr
 			and $emailfh = $emailmsg->open
-			and print $emailfh $subject
+			and print $emailfh "Log-Message: $subject\n" .
+					   "Daemon-Status: " .
+					   &daemon_status_str() . "\n"
 			and $emailfh->close) {
 		&ld_log("failed to send email message\n");
 		$status = 1;
