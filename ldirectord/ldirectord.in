@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-my($VERSION)=(qw$Id: ldirectord.in,v 1.1 2006/08/14 19:59:35 msoffen Exp $)[2];
+my($VERSION)=(qw$Id: ldirectord.in,v 1.2 2006/08/15 03:29:25 horms Exp $)[2];
 
 ######################################################################
 # ldirectord                 http://www.vergenet.net/linux/ldirectord/
@@ -455,6 +455,17 @@ $LD_TERM_CALLED   = 0;
 $NEGOTIATETIMEOUT = 0;
 $RUNPID           = "/var/run/ldirectord";
 $QUIESCENT        = "yes";
+
+
+# Doctor version, as 1.n -> 1.(n + 144) the code was maintained as
+# ldirectord in CVS up until version 1.144, then the file was renamed to
+# ldirectord, so the counter reset to 1.1.  Its probably better to manage
+# the version number a completely different way, however this has worked
+# well enough in the past, and the following munging should suffice for now
+if ($VERSION =~ m/1\.([0-9]+)/) {
+	$VERSION = $1 + 144;
+	$VERSION = "1.$VERSION";
+}
 
 $CRLF = "\x0d\x0a";
 
