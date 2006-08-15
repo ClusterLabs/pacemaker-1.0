@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-my($VERSION)=(qw$Id: ldirectord.in,v 1.15 2006/08/15 04:01:26 horms Exp $)[2];
+my($VERSION)=(qw$Id: ldirectord.in,v 1.16 2006/08/15 04:02:09 horms Exp $)[2];
 
 ######################################################################
 # ldirectord                 http://www.vergenet.net/linux/ldirectord/
@@ -108,8 +108,11 @@ service must follow this line immediately and be indented.
 B<checktimeout = >I<n>
 
 Timeout in seconds for connect checks. If the timeout is exceeded then the
-real server is declared dead.  Default is 5 seconds. If defined in virtual
-server section then the global value is overridden.
+real server is declared dead.  
+
+If defined in virtual server section then the global value is overridden.
+
+Default: 5 seconds
 
 B<connecttimeout = >I<n>
 
@@ -117,13 +120,17 @@ Not used.
 
 B<negotiatetimeout = >I<n>
 
-Timeout in seconds for negotiate checks. Default is defined by the
-operating system. If defined in virtual server section then the global
-value is overridden.
+Timeout in seconds for negotiate checks. 
+
+If defined in virtual server section then the global value is overridden.
+
+Default: defined by the operating system
 
 B<checkinterval = >I<n>
 
-Defines the number of second between server checks. Default is 10 seconds.
+Defines the number of second between server checks.
+
+Default: 10 seconds
 
 B<checkcount = >I<n>
 
@@ -131,15 +138,18 @@ The number of times a check will be attmpted before it is considered
 to have failed. Only works with ping checks. Note that the
 checktimeout is additive, so if checkcount is 3 and checktimeout is 2
 seconds, then a total of 6 seconds worth of timeout will occur becore
-the check fails. Default is 1.
+the check fails. 
+
+Default: 1
 
 B<autoreload = >[B<yes>|B<no>]
 
 Defines if <ldirectord> should continuously check the configuration file
 for modification. If this is set to 'yes' and the configuration file
 changed on disk and its modification time (mtime) is newer than the
-previous version, the configuration is automatically reloaded.  Default is
-no.
+previous version, the configuration is automatically reloaded.
+
+Default: no
 
 B<callback = ">I</path/to/callback>B<">
 
@@ -168,7 +178,7 @@ B<logfile = ">I</path/to/logfile>B<">|syslog_facility
 An alternative logfile might be specified with this directive. If the logfile
 does not have a leading '/', it is assumed to be a syslog(3) facility name.
 
-The default is to log directly to the file I</var/log/ldirectord.log>.
+Default: log directly to the file I</var/log/ldirectord.log>.
 
 
 B<emailalert = ">I<emailaddress>B<">
@@ -179,14 +189,16 @@ perl module MailTools to be installed.  Automatically tries to send email
 using any of the built-in methods. See perldoc Mail::Mailer for more info on
 methods.
 
+
 B<emailalertfreq => I<n>
 
-
 Delay in seconds between repeating email alerts while any given real server
-in the virtual service remains inaccessible.  A setting of zero seconds will
-inhibit the repeating alerts.  Default setting is zero.  The email timing
-accuracy of this setting is dependent on the number of seconds defined in
-the checkinterval configuration option.
+in the virtual service remains inaccessible.  A setting of zero seconds
+will inhibit the repeating alerts. The email timing accuracy of this
+setting is dependent on the number of seconds defined in the checkinterval
+configuration option.
+
+Default: 0
 
 
 B<execute = ">I<configuration>B<">
@@ -201,7 +213,9 @@ If I<yes>, then ldirectord does not go into background mode.
 All log-messages are redirected to stdout instead of a logfile.
 This is useful to run B<ldirectord> supervised from daemontools.
 See http://untroubled.org/rpms/daemontools/ or http://cr.yp.to/daemontools.html
-for details. Default is no
+for details.
+
+Default: I<no>
 
 
 B<quiescent = >[B<yes>|B<no>]
@@ -220,6 +234,8 @@ from the kernel's LVS table. The default is I<yes>.
 
 This directive may also appear within a virtual server, in which
 case it will overide the global fallback server, if set.
+
+Default: I<yes>
 
 
 =head2 Section virtual
@@ -265,16 +281,51 @@ activated. Default is I<negotiate>.
 B<service = ftp>|B<smtp>|B<http>|B<pop>|B<pops>|B<nntp>|B<imap>|B<imaps>|B<ldap>|B<https>|B<dns>|B<mysql>|B<pgsql>|B<sip>|B<none>
 
 The type of service to monitor when using checktype=negotiate. None denotes
-a service that will not be monitored. If the port specfied for the virtual
-server is 21, 25, 53, 80, 110, 119, 143, 389, 443, 3306, 5432 or 5060 then
-the default is B<ftp>, B<smtp>, B<dns>, B<http>, B<pop>, B<pops>, B<nntp>,
-B<imap>, <B<imaps>, B<ldap>, B<https>, B<mysql>, B<pgsql> or B<sip> respectivly.
-Otherwise the default service is B<none>.
+a service that will not be monitored. 
+
+
+Default:
+
+=over 4
+
+=item * Virtual server port is 21: ftp
+
+=item * Virtual server port is 25: smtp
+
+=item * Virtual server port is 53: dns
+
+=item * Virtual server port is 80: http
+
+=item * Virtual server port is 110: pop
+
+=item * Virtual server port is 119: nntp
+
+=item * Virtual server port is 143: imap
+
+=item * Virtual server port is 389: ldap
+
+=item * Virtual server port is 443: https
+
+=item * Virtual server port is 993: imaps
+
+=item * Virtual server port is 995: pops
+
+=item * Virtual server port is 3306: mysql
+
+=item * Virtual server port is 5432: pgsql
+
+=item * Virtual server port is 5060: sip
+
+=item * Otherwise: none
+
+=back 4
+
 
 B<checkport = >I<n>
 
 Number of port to monitor. Sometimes check port differs from service port.
-Default is port specified for the real server.
+
+Default: port specified for each real server
 
 B<request = ">I<uri to requested object>B<">
 
@@ -308,6 +359,8 @@ Sets the HTTP method which should be used to fetch the URI specified in
 the request-string. GET is the method used by default if the parameter is
 not set. If HEAD is used, the receive-string should be unset.
 
+Default: GET
+
 B<virtualhost = ">I<hostname>B<">
 
 Used when using a negotiate check with HTTP or HTTPS. Sets the host header
@@ -318,21 +371,22 @@ As a last resort the IP address of the real server will be used.
 
 B<login = ">I<username>B<">
 
-Username to use to login to FTP, IMAP, LDAP, MySQL, POP, PostgreSQL
-and SIP servers.
+Username to use to login to FTP, IMAP, LDAP, MySQL, POP, PostgreSQL.
+For SIP, the username is used as both the to and from address for an
+OPTIONS query.
+
+Default:
 
 =over 4
 
-=item * For FTP, the default is anonymous.
+=item * FTP: Anonymous
 
-=item * For a MySQL and PostgreSQL, the username must be provided.  
+=item * MySQL and PostgreSQL: Must be specified in the configuration
 
-=item * For SIP the username is used as both the to and from address
-	for an OPTIONS query. If unset it defaults to
-	ldirectord\@<hostname>, hostname is derived as per the passwd
-	option below.
+=item * SIP: ldirectord\@<hostname>, hostname is derived as per the passwd
+        option below.
 
-=item * For all other services, the default is the empty string, in which
+=item * Otherwise: empty string, which denotes that
 	case authentication will not be attempted.
 
 =back 4
@@ -342,13 +396,15 @@ B<passwd = ">I<password>B<">
 Password to use to login to FTP, IMAP, LDAP, MySQL, POP, PostgreSQL
 and SIP servers.
 
+Default:
+
 =over 4
 
-=item * The default is for FTP is ldirectord\@<hostname>,
+=item * FTP: ldirectord\@<hostname>,
 	where hostname is the environment variable HOSTNAME evaluated at
 	run time, or sourced from uname if unset.
 
-=item * The default for all other services is an empty password.
+=item * Otherwise: empty string.
 	In the case of LDAP, MySQL and PostgreSQL this means
 	that authentication will not be performed.
 
@@ -363,9 +419,11 @@ required setting.
 
 B<scheduler => I<scheduler_name>
 
-Scheduler to be used by LVS for loadbalancing. Default is "wrr".
+Scheduler to be used by LVS for loadbalancing.
 For an information on the available sehedulers please see
 the ipvsadm(8) man page.
+
+Default: "wrr"
 
 B<persistent => I<n>
 
@@ -378,8 +436,21 @@ Netmask to be used for granularity of persistent client connections.
 B<protocol = tcp>|B<udp>|B<fwm>
 
 Protocol to be used. If the virtual is specified as an IP address and port
-then it must be one of tcp or udp and will default to tcp. If a firewall
-mark then the protocol must be fwm, which is the default.
+then it must be one of tcp or udp. If a firewall
+mark then the protocol must be fwm.
+
+Default:
+
+=over 4
+
+=item * Virtual is an IP address and port, and the port is not 53: tcp
+
+=item * Virtual is an IP address and port, and the port is 53: udp
+
+=item * Virtual is a firewall mark: fwm
+
+=back 4
+
 
 =head1 FILES
 
