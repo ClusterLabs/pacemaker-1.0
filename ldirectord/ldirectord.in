@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-my($VERSION)=(qw$Id: ldirectord.in,v 1.36 2006/08/15 07:36:59 horms Exp $)[2];
+my($VERSION)=(qw$Id: ldirectord.in,v 1.37 2006/08/15 07:38:14 horms Exp $)[2];
 
 ######################################################################
 # ldirectord                 http://www.vergenet.net/linux/ldirectord/
@@ -877,24 +877,32 @@ sub reread_config
 {
 	@OLDVIRTUAL = @VIRTUAL;
 	my %OLD_INSTANCE = %LD_INSTANCE;
+	my %RELOAD;
+	my %STOP;
+	my %START;
+	my $child;
 	$DAEMON_STATUS = $DAEMON_STATUS_RELOADING;
 	eval {
 		&read_config();
-		my %NEW_INSTANCE = %LD_INSTANCE;
-		&ld_setup();
-		&ld_start();
-		my $child;
-		foreach $child (keys %OLD_INSTANCE) {
-			if (exists $NEW_INSTANCE{$child}) {
-				delete $OLD_INSTANCE{$child};
-				delete $NEW_INSTANCE{$child};
-				if (system("$LDIRECTORD $child reload")) {
-					system("$LDIRECTORD $child start");
-				}
+
+		foreach $child (keys %LD_INSTANCE) {
+			if (defined $OLD_INSTANCE{$child}) {
+				$RELOAD{$child} = 1;
+			}
+			else {
+				$START{$child} = 1;
 			}
 		}
-		&ld_cmd_children("stop", %OLD_INSTANCE);
-		&ld_cmd_children("start", %NEW_INSTANCE);
+
+		foreach $child (keys %OLD_INSTANCE) {
+			if (not defined $LD_INSTANCE{$child}) {
+				$STOP{$child} = 1;
+			}
+		}
+
+		&ld_cmd_children("stop", %STOP);
+		&ld_cmd_children("reload_or_start", %RELOAD);
+		&ld_cmd_children("start", %START);
 	};
 	if ($@) {
 		@VIRTUAL = @OLDVIRTUAL;
@@ -1956,7 +1964,14 @@ sub ld_cmd_children
 	# instantiate other ldirectord, if specified
 	my $child;
 	foreach $child (keys %children) {
-		&system_wrapper("$LDIRECTORD $child $cmd");
+		if ($cmd eq "reload_or_start") {
+			if (&system_wrapper("$LDIRECTORD $child reload")) {
+				&system_wrapper("$LDIRECTORD $child start");
+			}
+		}
+		else {
+			&system_wrapper("$LDIRECTORD $child $cmd");
+		}
 	}
 }
 
