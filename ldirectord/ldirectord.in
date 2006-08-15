@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-my($VERSION)=(qw$Id: ldirectord.in,v 1.37 2006/08/15 07:38:14 horms Exp $)[2];
+my($VERSION)=(qw$Id: ldirectord.in,v 1.38 2006/08/15 07:40:50 horms Exp $)[2];
 
 ######################################################################
 # ldirectord                 http://www.vergenet.net/linux/ldirectord/
@@ -294,7 +294,7 @@ checking will take place and no real or fallback servers will be activated.
 On means no checking will take place and real servers will always be
 activated. Default is I<negotiate>.
 
-B<service = ftp>|B<smtp>|B<http>|B<pop>|B<pops>|B<nntp>|B<imap>|B<imaps>|B<ldap>|B<https>|B<dns>|B<mysql>|B<pgsql>|B<sip>|B<none>
+B<service = ftp>|B<smtp>|B<http>|B<pop>|B<pops>|B<nntp>|B<imap>|B<imaps>|B<ldap>|B<https>|B<dns>|B<radius>|B<mysql>|B<pgsql>|B<sip>|B<none>
 
 The type of service to monitor when using checktype=negotiate. None denotes
 a service that will not be monitored. 
@@ -325,6 +325,8 @@ Default:
 =item * Virtual server port is 993: imaps
 
 =item * Virtual server port is 995: pops
+
+=item * Virtual server port is 1812: radius
 
 =item * Virtual server port is 3306: mysql
 
@@ -388,6 +390,9 @@ As a last resort the IP address of the real server will be used.
 B<login = ">I<username>B<">
 
 Username to use to login to FTP, IMAP, LDAP, MySQL, POP, PostgreSQL.
+
+For Radius the passwd is used for the attribute User-Name.
+
 For SIP, the username is used as both the to and from address for an
 OPTIONS query.
 
@@ -412,6 +417,8 @@ B<passwd = ">I<password>B<">
 Password to use to login to FTP, IMAP, LDAP, MySQL, POP, PostgreSQL
 and SIP servers.
 
+For Radius the passwd is used for the attribute User-Password.
+
 Default:
 
 =over 4
@@ -432,6 +439,13 @@ Database to use for MySQL and PostgreSQL servers, this is the database that
 the query (set by B<receive> above) will be performed against.  This is a
 required setting.
 
+B<secret = ">I<radiussecret>B<">
+
+Secret to use for Radius servers, this is the secret used to perform an
+Access-Request with the username (set by B<login> above) and passwd (set by
+B<passwd> above).
+
+Default: empty string
 
 B<scheduler => I<scheduler_name>
 
@@ -1018,6 +1032,7 @@ sub read_config
 			$vsrv{negotiatetimeout} = -1;
 			$vsrv{num_connects} = 0;
 			$vsrv{httpmethod} = "GET";
+			$vsrv{secret} = "";
 			push(@VIRTUAL, \%vsrv);
 			while(<CFGFILE>) {
 				$line++;
@@ -1077,6 +1092,9 @@ sub read_config
 				} elsif ($rcmd =~ /^database\s*=\s*\"(.*)\"/) {
 					$1 =~ /(.+)/ or &config_error($line, "invalid database");
 					$vsrv{database} = $1;
+				} elsif ($rcmd =~ /^secret\s*=\s*\"(.*)\"/) {
+					$1 =~ /(.+)/ or &config_error($line, "invalid secret");
+					$vsrv{secret} = $1;
 				} elsif ($rcmd =~ /^load\s*=\s*\"(.*)\"/) {
 					$1 =~ /(\w+)/ or &config_error($line, "invalid string for load testing");
 					$vsrv{load} = $1;
@@ -1127,8 +1145,8 @@ sub read_config
 					}
 				} elsif ($rcmd =~ /^service\s*=\s*(.*)/) {
 					lc($1);
-					$1 =~ /(\w+)/ && ($1 eq "http" || $1 eq "https" || $1 eq "ldap" || $1 eq "ftp" || $1 eq "none" || $1 eq "smtp" || $1 eq "pop" || $1 eq "pops" || $1 eq "imap" || $1 eq "imaps" || $1 eq "nntp" || $1 eq "dns" || $1 eq "mysql" || $1 eq "pgsql" || $1 eq "sip")
-					    or &config_error($line, "service must be http, https, ftp, smtp, pop, pops, imap, imaps, ldap, nntp, dns, mysql, pgsql, sip, or none");
+					$1 =~ /(\w+)/ && ($1 eq "http" || $1 eq "https" || $1 eq "ldap" || $1 eq "ftp" || $1 eq "none" || $1 eq "smtp" || $1 eq "pop" || $1 eq "pops" || $1 eq "imap" || $1 eq "imaps" || $1 eq "nntp" || $1 eq "dns" || $1 eq "mysql" || $1 eq "pgsql" || $1 eq "radius" || $1 eq "sip")
+					    or &config_error($line, "service must be http, https, ftp, smtp, pop, pops, imap, imaps, ldap, nntp, dns, mysql, pgsql, radius, sip, or none");
 					$vsrv{service} = $1;
 					if($vsrv{service} eq "ftp" and 
 							$vsrv{login} eq "") {
@@ -1361,6 +1379,9 @@ sub _ld_read_config_virtual_resolve
 			elsif ($vsrv->{port} eq "53") {
 				$vsrv->{service} = "dns";
 			} 
+			elsif ($vsrv->{port} eq "1812") {
+				$vsrv->{service} = "radius";
+			}
 			elsif ($vsrv->{port} eq "3306") {
 				$vsrv->{service} = "mysql";
 			} 
@@ -2034,6 +2055,9 @@ sub ld_main
 						$$r{num_connects} = 0 if (check_dns($v, $r));
 					} elsif ($$v{service} eq "sip") {
 						$$r{num_connects} = 0 if (check_sip($v, $r));
+					} elsif ($$v{service} eq "radius") {
+						$$r{num_connects} = 0 if (check_radius($v, $r));
+					}
 					} elsif ($$v{service} eq "mysql") {
 						$$r{num_connects} = 0 if (check_mysql($v, $r));
 					} elsif ($$v{service} eq "pgsql") {
@@ -2384,6 +2408,48 @@ sub check_nntp
 
         return $status;
 }
+
+
+sub check_radius
+{
+        use Authen::Radius;
+
+        my ($v, $r) = @_;
+
+        &ld_debug(2, "Checking radius");
+
+        my $port=(defined $$v{checkport}?$$v{checkport}:$$r{port});
+        my $radius;
+        my $result = "";
+
+        eval {
+                local $SIG{'__DIE__'} = "DEFAULT";
+                local $SIG{'ALRM'} = sub { die "Timeout Alarm" };
+                &ld_debug(4, "Timeout is $$v{checktimeout}");
+                &ld_debug(2, "Starting Check");
+                alarm $$v{checktimeout};
+
+                &ld_debug(2, "Starting Radius");
+                $radius = new Authen::Radius(Host => "$$r{server}:$port",
+					     Secret=>$$v{secret},
+					     TimeOut=>$$v{checktimeout},
+					     Errmode=>'die');
+                $result = $radius->check_pwd($$v{login}, $$v{passwd});
+                &ld_debug(2, "Finished Radius");
+                alarm 0; # Cancel the alarm
+        };
+        if ($result eq "") {
+                &service_set($v, $r, "down");
+                &ld_debug(3, "Deactivated service $$r{server}:$$r{port}: $@");
+                &ld_debug(3, "Radius Error: ".$radius->get_error);
+                return 0;
+        } else {
+                &service_set($v, $r, "up");
+                &ld_debug(3, "Activated service $$r{server}:$$r{port}");
+                return 1;
+        }
+}
+
 
 sub check_mysql
 {
