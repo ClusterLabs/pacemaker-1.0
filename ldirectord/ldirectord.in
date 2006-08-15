@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-my($VERSION)=(qw$Id: ldirectord.in,v 1.11 2006/08/15 03:57:58 horms Exp $)[2];
+my($VERSION)=(qw$Id: ldirectord.in,v 1.12 2006/08/15 03:58:38 horms Exp $)[2];
 
 ######################################################################
 # ldirectord                 http://www.vergenet.net/linux/ldirectord/
@@ -417,6 +417,7 @@ use vars qw(
 	    $NEGOTIATETIMEOUT
 	    $RUNPID
 	    $CHECKTIMEOUT
+	    $CHECKCOUNT
 	    $QUIESCENT
 	    $EMAILALERT
 	    $EMAILALERTFREQ
@@ -450,6 +451,7 @@ use vars qw(
 $AUTOCHECK        = "no";
 $CHECKINTERVAL    = 10;
 $CHECKTIMEOUT     = 5;
+$CHECKCOUNT       = 1;
 $CONNECTTIMEOUT   = 0;
 $LDIRECTORD       = ld_find_cmd("ldirectord", 1);
 if (! defined $LDIRECTORD) {
@@ -832,7 +834,7 @@ sub read_config
 			$vsrv{database} = "";
 			$vsrv{checktimeout} = -1;
 			$vsrv{connecttimeout} = -1;
-			$vsrv{checkcount} = 1;
+			$vsrv{checkcount} = -1;
 			$vsrv{negotiatetimeout} = -1;
 			$vsrv{num_connects} = 0;
 			$vsrv{httpmethod} = "GET";
@@ -1026,6 +1028,10 @@ sub read_config
 			$1 =~ /(\d+)/ && $1 or &config_error($line, 
 					"invalid check interval value");
 			$CHECKINTERVAL = $1;
+		} elsif ($_ =~ /^checkcount\s*=\s*(.*)/) {
+			$1 =~ /(\d+)/ && $1 or &config_error($line, 
+					"invalid check count value");
+			$CHECKCOUNT = $1;
 		} elsif ($_ =~ /^fallback\s*=\s*(.*)/) {
                         my $tcp = &ld_gethostservbyname($1, "tcp");
 			my $udp = &ld_gethostservbyname($1, "udp");
@@ -1524,6 +1530,9 @@ sub ld_setup
 		}
 		if ($$v{negotiatetimeout} < 0) {
 			$$v{negotiatetimeout} = $$v{checktimeout};
+		}
+		if ($$v{checkcount} < 0) {
+			$$v{checkcount} = $CHECKCOUNT;
 		}
 	}
 }
