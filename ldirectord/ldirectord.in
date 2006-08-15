@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-my($VERSION)=(qw$Id: ldirectord.in,v 1.10 2006/08/15 03:57:15 horms Exp $)[2];
+my($VERSION)=(qw$Id: ldirectord.in,v 1.11 2006/08/15 03:57:58 horms Exp $)[2];
 
 ######################################################################
 # ldirectord                 http://www.vergenet.net/linux/ldirectord/
@@ -1012,19 +1012,19 @@ sub read_config
 		next if ($_ =~ /^\s*$/ || $_ =~ /^\s*#/);
 		if ($_ =~ /^checktimeout\s*=\s*(.*)/) {
 			($1 =~ /(\d+)/ && $1 && $1>0) or &config_error($line, 
-					"invalid timeout value");
+					"invalid check timeout value");
 			$CHECKTIMEOUT = $1;
 		} elsif ($_ =~ /^connecttimeout\s*=\s*(.*)/) {
 			($1 =~ /(\d+)/ && $1 && $1>0) or &config_error($line, 
-					"invalid timeout value");
+					"invalid connect timeout value");
 			$CONNECTTIMEOUT = $1;
 		} elsif ($_ =~ /^negotiatetimeout\s*=\s*(.*)/) {
 			($1 =~ /(\d+)/ && $1 && $1>0) or &config_error($line, 
-					"invalid timeout value");
+					"invalid negotiate timeout value");
 			$NEGOTIATETIMEOUT = $1;
 		} elsif ($_ =~ /^checkinterval\s*=\s*(.*)/) {
 			$1 =~ /(\d+)/ && $1 or &config_error($line, 
-					"invalid checkinterval value");
+					"invalid check interval value");
 			$CHECKINTERVAL = $1;
 		} elsif ($_ =~ /^fallback\s*=\s*(.*)/) {
                         my $tcp = &ld_gethostservbyname($1, "tcp");
