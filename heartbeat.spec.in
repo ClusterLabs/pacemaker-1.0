@@ -1,4 +1,4 @@
-#	$Id: heartbeat.spec.in,v 1.197 2006/08/15 07:42:56 horms Exp $
+#	$Id: heartbeat.spec.in,v 1.198 2006/08/15 07:43:39 horms Exp $
 
 %define _unpackaged_files_terminate_build 1
 %define _missing_doc_files_terminate_build 1
@@ -23,10 +23,10 @@ BuildRequires: libgcrypt-devel
 %package ldirectord
 Summary: Monitor daemon for maintaining high availability resources
 Group: Utilities
-Requires: perl, perl-libwww-perl, perl-Crypt-SSLeay, ipvsadm, perl-HTML-Parser, perl-ldap, perl-MailTools, perl-Net-IMAP-Simple, perl-Net-IMAP-Simple-SSL, perl-POP3Client, perl-libnet, perl-Net-DNS
-# perl-libwww-perl, perl-HTML-Parser, perl-ldap, perl-MailTools,
-# perl-Net-IMAP-Simple, perl-Net-IMAP-Simple-SSL, perl-POP3Client,
-# perl-libnet, perl-Net-DNS and ipvsadm 
+Requires: perl, perl-libwww-perl, perl-Authen-Radius, perl-Crypt-SSLeay, ipvsadm, perl-HTML-Parser, perl-ldap, perl-MailTools, perl-Net-IMAP-Simple, perl-Net-IMAP-Simple-SSL, perl-POP3Client, perl-libnet, perl-Net-DNS
+# perl-libwww-perl, perl-Authen-Radius, perl-HTML-Parser, perl-ldap,
+# perl-MailTools, perl-Net-IMAP-Simple, perl-Net-IMAP-Simple-SSL,
+# perl-POP3Client, perl-libnet, perl-Net-DNS and ipvsadm
 # available from www.ultramonkey.org and others
 
 %package stonith
