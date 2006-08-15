@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-my($VERSION)=(qw$Id: ldirectord.in,v 1.21 2006/08/15 07:08:25 horms Exp $)[2];
+my($VERSION)=(qw$Id: ldirectord.in,v 1.22 2006/08/15 07:09:24 horms Exp $)[2];
 
 ######################################################################
 # ldirectord                 http://www.vergenet.net/linux/ldirectord/
@@ -2754,14 +2754,14 @@ sub _remove_service {
 					. "$ipvsadm_args $rforw -w 0");
 	        	&ld_log("Quiescent $log_args (Weight set to 0)");
 		}
-		&ld_emailalert("Quiescent $log_args (Weight set to 0)",
-			       $v, $server_str, $currenttime);
+		&ld_emailalert_send("Quiescent $log_args (Weight set to 0)",
+				    $v, $server_str, $currenttime);
         }
 	else {
                 &system_wrapper("$IPVSADM -d $ipvsadm_args");
 	        &ld_log("Deleted $log_args");
-		&ld_emailalert("Deleted $log_args", $v,
-			       $server_str, $currenttime);
+		&ld_emailalert_send("Deleted $log_args", $v,
+				    $server_str, $currenttime);
 	}
 }
 
@@ -2814,16 +2814,16 @@ sub _restore_service {
                        get_forward_flag($or->{"forward"}) eq $rforw){
                         &system_wrapper("$IPVSADM -e $ipvsadm_args");
 	                &ld_log("Restored $log_args (Weight set to $rwght)");
-			&ld_emailalert("Restored $log_args " .
-				       "(Weight set to $rwght)",
-				       $v, $server_str, 0);
+			&ld_emailalert_send("Restored $log_args " .
+					    "(Weight set to $rwght)",
+					    $v, $server_str, 0);
                 }
         }
         else {
                 &system_wrapper("$IPVSADM -a $ipvsadm_args");
 	        &ld_log("Added $log_args (Weight set to $rwght)");
-		&ld_emailalert("Added $log_args (Weight set to $rwght)",
-			       $v, $server_str, 0);
+		&ld_emailalert_send("Added $log_args (Weight set to $rwght)",
+				    $v, $server_str, 0);
         }
 }
 
@@ -3164,14 +3164,14 @@ sub ld_log
 }
 
 
-# ld_emailalert
+# ld_emailalert_send
 # Send email alerts per virtual server
 # pre: message: Message to email
 # post: message is emailed if emailalert defined for virtualserver 
 # return: 0 on success
 #         1 on error
 
-sub ld_emailalert
+sub ld_emailalert_send
 {
 	my ($emailsubject, $v, $server_str, $currenttime) = (@_);
 	my $emailmsg;
@@ -3233,7 +3233,7 @@ sub ld_emailalert_resend
 		if ($currenttime - $es->{alerttime} < $frequency) {
 			next;
 		}
-		&ld_emailalert("Inaccessible real server: " . $server_str, 
+		&ld_emailalert_send("Inaccessible real server: " . $server_str, 
 			       $es->{v}, $server_str, $currenttime);
 	}
 }
