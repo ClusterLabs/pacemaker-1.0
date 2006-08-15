@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-my($VERSION)=(qw$Id: ldirectord.in,v 1.16 2006/08/15 04:02:09 horms Exp $)[2];
+my($VERSION)=(qw$Id: ldirectord.in,v 1.17 2006/08/15 04:02:41 horms Exp $)[2];
 
 ######################################################################
 # ldirectord                 http://www.vergenet.net/linux/ldirectord/
@@ -110,7 +110,7 @@ B<checktimeout = >I<n>
 Timeout in seconds for connect checks. If the timeout is exceeded then the
 real server is declared dead.  
 
-If defined in virtual server section then the global value is overridden.
+If defined in a virtual server section then the global value is overridden.
 
 Default: 5 seconds
 
@@ -122,7 +122,7 @@ B<negotiatetimeout = >I<n>
 
 Timeout in seconds for negotiate checks. 
 
-If defined in virtual server section then the global value is overridden.
+If defined in a virtual server section then the global value is overridden.
 
 Default: defined by the operating system
 
@@ -139,6 +139,8 @@ to have failed. Only works with ping checks. Note that the
 checktimeout is additive, so if checkcount is 3 and checktimeout is 2
 seconds, then a total of 6 seconds worth of timeout will occur becore
 the check fails. 
+
+If defined in a virtual server section then the global value is overridden.
 
 Default: 1
 
@@ -169,9 +171,7 @@ the server onto which a webservice is redirected if all real
 servers are down. Typically this would be 127.0.0.1 with
 an emergency page.
 
-This directive may also appear within a virtual server, in which
-case it will overide the global fallback server, if set.
-
+If defined in a virtual server section then the global value is overridden.
 
 B<logfile = ">I</path/to/logfile>B<">|syslog_facility
 
@@ -189,6 +189,8 @@ perl module MailTools to be installed.  Automatically tries to send email
 using any of the built-in methods. See perldoc Mail::Mailer for more info on
 methods.
 
+If defined in a virtual server section then the global value is overridden.
+
 
 B<emailalertfreq => I<n>
 
@@ -197,6 +199,8 @@ in the virtual service remains inaccessible.  A setting of zero seconds
 will inhibit the repeating alerts. The email timing accuracy of this
 setting is dependent on the number of seconds defined in the checkinterval
 configuration option.
+
+If defined in a virtual server section then the global value is overridden.
 
 Default: 0
 
@@ -232,8 +236,7 @@ L<ipvsadm> for more information on persistant connections.
 If I<no>, then the real or failback servers will be removed
 from the kernel's LVS table. The default is I<yes>.
 
-This directive may also appear within a virtual server, in which
-case it will overide the global fallback server, if set.
+If defined in a virtual server section then the global value is overridden.
 
 Default: I<yes>
 
@@ -260,9 +263,9 @@ string starts with I<http://...> the IP-address and port of the real server is
 overridden, otherwise the IP-address and port of the real server is used.
 
 =head2 More than one of these entries may be inside a virtual section.  The
-fallback, emailalert, emailalertfreq and quiescent options listed above may
-also appear inside a virtual section, in which case the global setting is
-overridden.
+checktimeout, negotiatetimeout, checkcount, fallback, emailalert,
+emailalertfreq and quiescent options listed above may also appear inside a
+virtual section, in which case the global setting is overridden.
 
 B<checktype = >I<negotiate>|I<connect>|I<N>|I<ping>|I<off>|I<on>
 
