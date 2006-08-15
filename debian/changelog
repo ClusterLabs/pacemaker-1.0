@@ -1,3 +1,43 @@
+heartbeat-2 (2.0.6-2) unstable; urgency=high
+
+  * ldirectord-1.141-emailalert-1-quiet.patch
+    Don't send email alerts if the alert address is not configured
+    (closes: #378450)
+  * ldirectord-1.141-emailalert-2-global.patch
+    Allow emailalert and emailalertfreq directives to be global
+    as well as per-virtual service
+  * ldirectord-1.141-readline_workaround.patch
+    readline doesn't seem to return lines after Net::FTP
+    has been called, so split them up by hand.
+  * Added recommends iptables to heartbeat-2, as it is needed
+    for the portblock resource to function correctly
+  * Added /var/lib/heartbeat/pengine directory
+    (closes: #379071)
+  * Replace 02-chown-check.patch with chown-check-2.patch
+    - use the environement variable FAKED_MODE instead of FAKEROOTKEY to check
+      if code is runing in fakeroot. At some stage around fakeroot 1.5.10
+      FAKEROOTKEY disapeared. Ran autoconf manually to effect this change
+      after repatching.
+    - Updated 02-chown-check.patch: fix typos in comment
+  * CVE-2006-3821.patch
+    Fix remote denial of causes caused by insufficient bounds checking
+    on data read from the network.
+    CVE-2006-3821
+  * Python transition - http://wiki.debian.org/DebianPython/NewPolicy
+    (closes: #380842)
+    - Update build dependancy on debhelper from (>= 4.0.0) to (>= 5.0.37.2)
+    - Add dh_python call to debian/rules
+    - created debian/pycompat with contents of "2"
+    - heartebeat: deplaced depenancy on python with one on ${python:Depends}
+    - Added XB-Python-Version: ${python:Versions} to each package
+    - Replace build dependancy on python2.3-dev with one on python-dev
+    - Use python-central
+      + Add build depends on python-central (>= 0.5)
+      + Add dh_pycentral call right before dh_python in debian/rules
+      + Add XS-Python-Version: current in the source stanza of debian/control
+
+ -- Simon Horman <horms@debian.org>  Tue,  8 Aug 2006 18:49:00 +0900
+
 heartbeat-2 (2.0.5-8) unstable; urgency=low
 
   * ldirectord-2: Add missing dependancy on libmailtools-perl
