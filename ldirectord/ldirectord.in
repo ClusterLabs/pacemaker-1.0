@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-my($VERSION)=(qw$Id: ldirectord.in,v 1.24 2006/08/15 07:11:09 horms Exp $)[2];
+my($VERSION)=(qw$Id: ldirectord.in,v 1.25 2006/08/15 07:12:10 horms Exp $)[2];
 
 ######################################################################
 # ldirectord                 http://www.vergenet.net/linux/ldirectord/
@@ -2746,13 +2746,12 @@ sub _remove_service {
 		if (defined($or)) {
                 	&system_wrapper("$IPVSADM -e "
 					. "$ipvsadm_args $rforw -w 0");
-	        	&ld_log("Quiescent $log_args (Weight set to 0)");
 		}
 		else {
                 	&system_wrapper("$IPVSADM -a "
 					. "$ipvsadm_args $rforw -w 0");
-	        	&ld_log("Quiescent $log_args (Weight set to 0)");
 		}
+	       	&ld_log("Quiescent $log_args (Weight set to 0)");
 		&ld_emailalert_send("Quiescent $log_args (Weight set to 0)",
 				    $v, $server_str, $currenttime);
         }
