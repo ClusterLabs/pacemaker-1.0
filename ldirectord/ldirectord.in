@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-my($VERSION)=(qw$Id: ldirectord.in,v 1.5 2006/08/15 03:47:04 horms Exp $)[2];
+my($VERSION)=(qw$Id: ldirectord.in,v 1.6 2006/08/15 03:53:56 horms Exp $)[2];
 
 ######################################################################
 # ldirectord                 http://www.vergenet.net/linux/ldirectord/
@@ -171,6 +171,24 @@ does not have a leading '/', it is assumed to be a syslog(3) facility name.
 The default is to log directly to the file I</var/log/ldirectord.log>.
 
 
+B<emailalert = ">I<emailaddress>B<">
+
+A valid email address for sending alerts about the changed connection status
+to any real server defined in the virtual service.  This option requires
+perl module MailTools to be installed.  Automatically tries to send email
+using any of the built-in methods. See perldoc Mail::Mailer for more info on
+methods.
+
+B<emailalertfreq => I<n>
+
+
+Delay in seconds between repeating email alerts while any given real server
+in the virtual service remains inaccessible.  A setting of zero seconds will
+inhibit the repeating alerts.  Default setting is zero.  The email timing
+accuracy of this setting is dependent on the number of seconds defined in
+the checkinterval configuration option.
+
+
 B<execute = ">I<configuration>B<">
 
 Use this directive to start an instance of ldirectord for
@@ -225,9 +243,10 @@ virtual server section. These two strings must be quoted. If the request
 string starts with I<http://...> the IP-address and port of the real server is
 overridden, otherwise the IP-address and port of the real server is used.
 
-=head2 More than one of these entries may be inside a virtual section.
-The quiescent and fallback options listed above may also appear inside
-a virtual section, in which case the global setting is overridden.
+=head2 More than one of these entries may be inside a virtual section.  The
+fallback, emailalert, emailalertfreq and quiescent options listed above may
+also appear inside a virtual section, in which case the global setting is
+overridden.
 
 B<checktype = >I<negotiate>|I<connect>|I<N>|I<ping>|I<off>|I<on>
 
@@ -362,22 +381,6 @@ Protocol to be used. If the virtual is specified as an IP address and port
 then it must be one of tcp or udp and will default to tcp. If a firewall
 mark then the protocol must be fwm, which is the default.
 
-B<emailalert = ">I<emailaddress>B<">
-
-A valid email address for sending alerts about the changed connection status
-to any real server defined in the virtual service.  This option requires
-perl module MailTools to be installed.  Automatically tries to send email
-using any of the built-in methods. See perldoc Mail::Mailer for more info on
-methods.
-
-B<emailalertfreq => I<n>
-
-Delay in seconds between repeating email alerts while any given real server
-in the virtual service remains inaccessible.  A setting of zero seconds will
-inhibit the repeating alerts.  Default setting is zero.  The email timing
-accuracy of this setting is dependent on the number of seconds defined in
-the checkinterval configuration option.
-
 =head1 FILES
 
 B<@sysconfdir@/ldirectord.cf>
@@ -415,6 +418,8 @@ use vars qw(
 	    $RUNPID
 	    $CHECKTIMEOUT
 	    $QUIESCENT
+	    $EMAILALERT
+	    $EMAILALERTFREQ
 
 	    $CALLBACK
 	    $CFGNAME
@@ -831,8 +836,6 @@ sub read_config
 			$vsrv{negotiatetimeout} = 0;
 			$vsrv{num_connects} = 0;
 			$vsrv{httpmethod} = "GET";
-			$vsrv{emailalert} = "";
-			$vsrv{emailalertfreq} = 0;
 			push(@VIRTUAL, \%vsrv);
 			while(<CFGFILE>) {
 				$line++;
@@ -1063,6 +1066,14 @@ sub read_config
 			    or &config_error($line, 
 			    		"quiescent must be 'yes' or 'no'");
 			$QUIESCENT = $1;
+		} elsif  ($_ =~ /^emailalert\s*=\s*(.*)/) {
+			$1 =~ /(.+)/ or &config_error($line,
+					"no email address specified");
+			$EMAILALERT = $1;
+		} elsif  ($_ =~ /^emailalertfreq\s*=\s*(\d*)/) {
+			$1 =~ /(\d+)/ or &config_error($line,
+					"invalid email alert frequency");
+			$EMAILALERTFREQ = $1;
 		} else {
 			if ($_ =~ /^timeout\s*=\s*(.*)/) {
 				&config_error($line, 
@@ -1678,8 +1689,18 @@ sub ld_start
 			my $real_str = "$nr->{server}:$nr->{port}";
 			my %emailstat;
 			$emailstat{server}=$real_str . " " . $nv->{server} . ":" . $nv->{port};
-			$emailstat{emailalertfreq}=$nv->{emailalertfreq};
-			$emailstat{emailalert}=$nv->{emailalert};
+			if (defined $nv->{emailalertfreq}) {
+				$emailstat{emailalertfreq}=$nv->{emailalertfreq};
+			} 
+			else {
+				$emailstat{emailalertfreq}=$EMAILALERTFREQ;
+			}
+			if (defined $nv->{emailalert}) {
+				$emailstat{emailalert}=$nv->{emailalert};
+			}
+			else {
+				$emailstat{emailalert}=$EMAILALERT;
+			}
 			push(@EMAILSTATUS, \%emailstat);			
 			if (! defined($or->{$real_str}) or
 					$or->{$real_str}->{weight} == 0) {
@@ -3046,6 +3067,9 @@ sub ld_emailalert
 	my $emailfh;
 	my $status = 0;
 
+	if (not defined $emailto) {
+		$emailto = $EMAILALERT;
+	}
 	if ($emailto eq "") {
 		return 0;
 	}
