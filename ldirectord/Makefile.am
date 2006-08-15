@@ -24,8 +24,6 @@ EXTRA_DIST              = ldirectord ldirectord.cf README	\
 				supervise-ldirectord-config \
 				supervise-ldirectord-config.8
 
-harcconfdir		= $(sysconfdir)/ha.d/conf
-
 SUBDIRS			= logrotate.d init.d
 
 ldirectord.8: ldirectord
