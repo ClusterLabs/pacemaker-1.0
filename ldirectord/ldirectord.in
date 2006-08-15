@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-my($VERSION)=(qw$Id: ldirectord.in,v 1.9 2006/08/15 03:56:32 horms Exp $)[2];
+my($VERSION)=(qw$Id: ldirectord.in,v 1.10 2006/08/15 03:57:15 horms Exp $)[2];
 
 ######################################################################
 # ldirectord                 http://www.vergenet.net/linux/ldirectord/
@@ -1510,11 +1510,21 @@ sub ld_setup
 				$$r{num_connects} = -1;
 			}
 		}
-		$$v{checktimeout} = $CHECKTIMEOUT if ($$v{checktimeout} < 0);
-		$$v{connecttimeout} = $CONNECTTIMEOUT if ($$v{connecttimeout} < 0);
-		$$v{connecttimeout} = $$v{checktimeout} if ($$v{connecttimeout} < 0);
-		$$v{negotiatetimeout} = $NEGOTIATETIMEOUT if ($$v{negotiatetimeout} < 0);
-		$$v{negotiatetimeout} = $$v{checktimeout} if ($$v{negotiatetimeout} < 0);
+		if ($$v{checktimeout} < 0) {
+			$$v{checktimeout} = $CHECKTIMEOUT;
+		}
+		if ($$v{connecttimeout} < 0) {
+			$$v{connecttimeout} = $CONNECTTIMEOUT;
+		}
+		if ($$v{connecttimeout} < 0) {
+			$$v{connecttimeout} = $$v{checktimeout};
+		}
+		if ($$v{negotiatetimeout} < 0) {
+			$$v{negotiatetimeout} = $NEGOTIATETIMEOUT;
+		}
+		if ($$v{negotiatetimeout} < 0) {
+			$$v{negotiatetimeout} = $$v{checktimeout};
+		}
 	}
 }
 
