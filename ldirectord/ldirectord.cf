@@ -11,13 +11,13 @@
 # Global Directives
 checktimeout=3
 checkinterval=1
-fallback=127.0.0.1:80
+#fallback=127.0.0.1:80
 autoreload=yes
 #logfile="/var/log/ldirectord.log"
 #logfile="local0"
 quiescent=yes
 
-# A sample virual with a fallback that will override the gobal setting
+# Sample for an http virtual service
 virtual=192.168.6.240:80
 	real=192.168.6.2:80 gate
 	real=192.168.6.3:80 gate
@@ -26,11 +26,16 @@ virtual=192.168.6.240:80
 	service=http
 	request="index.html"
 	receive="Test Page"
-	virtualhost=www.x.y.z
+	virtualhost=some.domain.com.au
 	scheduler=rr
 	#persistent=600
 	#netmask=255.255.255.255
 	protocol=tcp
+  	checktype=negotiate
+  	checkport=80
+ 	request="index.html"
+ 	receive="Test Page"
+ 	virtualhost=www.x.y.z
 
 # Sample configuration for a fwmark based service For an explination of
 # fwmark see the ipvsadm(8) man page
@@ -38,26 +43,34 @@ virtual=192.168.6.240:80
 #	real=192.168.6.2 gate
 #	real=192.168.6.3 gate
 #	real=192.168.6.6 gate
+#	fallback=127.0.0.1:80 gate
 #	service=http
-#	checkport=80
-#	request="index.html"
-#	receive="Test Page"
 #	scheduler=rr
 #	#persistent=600
 #	#netmask=255.255.255.255
 #	protocol=fwm
-#	checktype=connect
+#	checktype=negotiate
+#	checkport=80
+#	request="index.html"
+#	receive="Test Page"
+#	virtualhost=x.y.z
 
 # Sample configuration for a service using a range of real servers
 # and a single real server for a virtual service
 #virtual=192.168.6.240:80
 #	real=192.168.6.2->192.168.6.7:80 gate
 #	real=192.168.6.32:80 gate
+#	fallback=127.0.0.1:80 gate
 #	service=http
+#	scheduler=rr
+#	#persistent=600
+#	#netmask=255.255.255.255
+#	protocol=tcp
+#	checktype=negotiate
+#	checkport=80
 #	request="index.html"
 #	receive="Test Page"
-#	scheduler=rr
-#	protocol=tcp
+#	virtualhost=x.y.z
 
 #Sample configuration for an https virtual service.
 #Fallback setting overides global
@@ -66,13 +79,15 @@ virtual=192.168.6.240:80
 #	real=192.168.16.5:443 masq
 #	fallback=127.0.0.1:443
 #	service=https
-#	virtualhost=x.y.z
-#	#request="index.html"
-#	#receive="Test Page"
 #	scheduler=rr
 #	#persistent=600
 #	#netmask=255.255.255.255
 #	protocol=tcp
+#	checktype=negotiate
+# 	checkport=443
+#	request="index.html"
+#	receive="Test Page"
+#	virtualhost=x.y.z
 
 #Sample configuration for an ftp virtual service.
 #Fallback setting overides global
@@ -81,14 +96,17 @@ virtual=192.168.6.240:80
 #	real=192.168.16.5:21 masq
 #	fallback=127.0.0.1:21
 #	service=ftp
+# 	checkport=21
 #	scheduler=wlc
+#	scheduler=rr
+#	#persistent=600
+#	#netmask=255.255.255.255
+#	protocol=tcp
+#	checktype=negotiate
 #	login="anonymous"
 #	passwd="ldirectord@localhost"
 #	request="welcome.msg"
 #	receive="test"
-#	persistent=600
-#	#netmask=255.255.255.255
-#	protocol=tcp
 
 #Sample configuration for an smtp virtual service.
 #Fallback setting overides global
@@ -98,10 +116,13 @@ virtual=192.168.6.240:80
 #	fallback=127.0.0.1:25
 #	service=smtp
 #	scheduler=wlc
-#	persistent=600
 #	protocol=tcp
+#	persistent=600
+#	#netmask=255.255.255.255
+#	checktype=negotiate
+# 	checkport=25
 
-#Sample configuration for an pop virtual service.
+#Sample configuration for a pop virtual service.
 #Fallback setting overides global
 #virtual=192.168.6.240:110
 #	real=192.168.16.3:110 masq
@@ -109,10 +130,13 @@ virtual=192.168.6.240:80
 #	fallback=127.0.0.1:110
 #	service=pop
 #	scheduler=wlc
+#	persistent=600
+#	#netmask=255.255.255.255
+#	protocol=tcp
+#	checktype=negotiate
+# 	checkport=110
 #	#login="test"
 #	#passwd="test"
-#	persistent=600
-#	protocol=tcp
 
 ##Sample configuration for an imap virtual service.
 #Fallback setting overides global
@@ -123,10 +147,13 @@ virtual=192.168.6.240:80
 #	fallback=127.0.0.1:143
 #	service=imap
 #	scheduler=wlc
+#	#persistent=600
+#	#netmask=255.255.255.255
+#	protocol=tcp
+#	checktype=negotiate
+# 	checkport=143
 #	#login="test"
 #	#passwd="test"
-#	persistent=600
-#	protocol=tcp
 
 #Sample configuration for an ldap virtual service.
 #Fallback setting overides global
@@ -136,13 +163,15 @@ virtual=192.168.6.240:80
 #	fallback=127.0.0.1:389
 #	service=ldap
 #	scheduler=wlc
+#	#persistent=600
+#	#netmask=255.255.255.255
+#	protocol=tcp
+#	checktype=negotiate
+# 	checkport=369
 #	request="dc=upmc, dc=fr"
 #	receive="dc=upmc, dc=fr"
 #	#login="test"
 #	#passwd="test"
-#	persistent=600
-#	#netmask=255.255.255.255
-#	protocol=tcp
 
 #Sample configuration for an nntp virtual service.
 #Fallback setting overides global
@@ -155,6 +184,8 @@ virtual=192.168.6.240:80
 #	#persistent=600
 #	#netmask=255.255.255.255
 #	protocol=tcp
+#	checktype=negotiate
+# 	checkport=119
 
 #Sample configuration for a UDP DNS virtual service.
 #Fallback setting overides global
@@ -162,50 +193,58 @@ virtual=192.168.6.240:80
 #	real=10.0.1.4:53 masq
 #	real=10.0.1.6:53 masq
 #	fallback=127.0.0.1:53
-#	request="x.y.z"
-#	recieve="127.0.0.1"
 #	service=dns
 #	scheduler=wlc
 #	#persistent=600
 #	#netmask=255.255.255.255
 #	protocol=udp
+#	checktype=negotiate
+# 	checkport=53
+#	request="x.y.z"
+#	recieve="127.0.0.1"
 
 #Sample configuration for a MySQL virtual service.
 #virtual = 192.168.10.74:3306
 #	real=sql01->sql03:3306 gate 10
+#	fallback=127.0.0.1:3306
+#	service=mysql
+#	scheduler=wrr
+#	#persistent=600
+#	#netmask=255.255.255.255
+#	protocol=tcp
 #	checktype=negotiate
 #	login="readuser"
 #	passwd="genericpassword"
 #	database="portal"
 #	request="SELECT * FROM link"
-#	service=mysql
-#	scheduler=wrr
 
 #Sample configuration for a PostgreSQL virtual service.
 #virtual = 192.168.10.74:5432
 #	real=sql01->sql03:5432 gate 10
+#	fallback=127.0.0.1:5432
+#	service=pgsql
+#	scheduler=wrr
+#	#persistent=600
+#	#netmask=255.255.255.255
+#	protocol=tcp
 #	checktype=negotiate
 #	login="readuser"
 #	passwd="genericpassword"
 #	database="portal"
 #	request="SELECT * FROM link"
-#	service=pgsql
-#	scheduler=wrr
 
 #Sample configuration for an unsuported protocol
 #The real servers will just be brought up without checking for availability
-#Fallback setting overides global
 #virtual=192.168.6.240:23
 #	real=192.168.16.3:23 masq 
 #	real=192.168.16.5:23 masq
-#	fallback=127.0.0.1:21
+#	fallback=127.0.0.1:23
 #	service=none
 #	scheduler=wlc
-#	request="welcome.msg"
-#	receive="test"         
 #	persistent=600
 #	#netmask=255.255.255.255
 #	protocol=tcp
+#	checktype=on
 
 # A sample virtual services that uses a ping check.
 # Note that using checktype=connect and protocol=udp
@@ -218,9 +257,9 @@ virtual=192.168.6.240:80
 #	scheduler=rr
 #	#persistent=600
 #	#netmask=255.255.255.255
+#	protocol=udp
 #	checktype=ping
 #	checkcount=3
-#	protocol=udp
 
 # A sample virtual services that uses a SIP check on UDP.
 # Note that using checktype=connect and protocol=udp
@@ -229,12 +268,12 @@ virtual=192.168.6.240:80
 #	real=192.168.6.2::5060 gate
 #	real=192.168.6.3::5060 gate
 #	real=192.168.6.6::5060 gate
-#	#fallback=127.0.0.1:5060 gate
+#	fallback=127.0.0.1:5060 gate
 #	scheduler=rr
 #	#persistent=600
 #	#netmask=255.255.255.255
+#	protocol=udp
 #	checktype=negotiate
 #	service=sip
 #	checktimeout=1
-#	protocol=udp
 
