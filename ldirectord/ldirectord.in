@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-my($VERSION)=(qw$Id: ldirectord.in,v 1.6 2006/08/15 03:53:56 horms Exp $)[2];
+my($VERSION)=(qw$Id: ldirectord.in,v 1.7 2006/08/15 03:55:06 horms Exp $)[2];
 
 ######################################################################
 # ldirectord                 http://www.vergenet.net/linux/ldirectord/
@@ -95,7 +95,7 @@ B<status> of the running daemon for the specified configuration.
 
 =head1 SYNTAX
 
-=head2 Description how to write configuration files
+=head2 Description of how to write configuration files
 
 B<virtual = >I<(ip_address|hostname:portnumber|servicename)|firewall-mark>
 
