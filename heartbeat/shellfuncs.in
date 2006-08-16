@@ -136,12 +136,14 @@ ha_debug() {
 	fi
 }
 
+# copy stdin (text) to FIFO, with surrounding ">>>" and "<<<" marker lines.
+# no args.; no result
+# Notes:
+#	o Using "cat -" rather than "cat" simply for clarity.
+#	o The trailing "| cat -" tries to hold things together as a single
+#	  write (which is probably preferable behaviour in this context).
 ha_clustermsg() {
-	cat $* <<-!MSG >> $HA_FIFO
->>>
-`cat`
-<<<
-!MSG
+	(echo ">>>"; cat -; echo "<<<")	| cat - >> $HA_FIFO
 }
 
 ha_parameter() {
