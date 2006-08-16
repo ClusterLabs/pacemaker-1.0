@@ -1050,6 +1050,7 @@ free_stonith_ops_t(stonith_ops_t * st_op)
 
 	ZAPGDOBJ(st_op->node_name);
 	ZAPGDOBJ(st_op->node_list);
+	ZAPGDOBJ(st_op->node_uuid);	
 	ZAPGDOBJ(st_op->private_data);
 	ZAPGDOBJ(st_op);
 }
