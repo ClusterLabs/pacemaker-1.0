@@ -436,6 +436,7 @@ on_listen(GIOChannel *source, GIOCondition condition, gpointer data)
 		session = tls_attach_server(csock);
 		if (session == NULL) {
 			mgmt_log(LOG_ERR, "%s attach server socket failed", __FUNCTION__);
+			close(csock);
 			return TRUE;
 		}
 		msg = mgmt_session_recvmsg(session);
