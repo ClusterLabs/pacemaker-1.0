@@ -307,8 +307,8 @@ get_fix(const char* rsc_id, char* prefix, char* suffix, char* real_id)
 		free_data_set(data_set);	
 		return -1;
 	}
-	strncpy(rsc_tag, get_rsc_tag(rsc), MAX_STRLEN);
-	strncpy(real_id, rsc_id, MAX_STRLEN);
+	STRNCPY(rsc_tag, get_rsc_tag(rsc), MAX_STRLEN);
+	STRNCPY(real_id, rsc_id, MAX_STRLEN);
 
 	parent = get_parent(rsc);
 	if (parent == NULL) {
@@ -320,7 +320,7 @@ get_fix(const char* rsc_id, char* prefix, char* suffix, char* real_id)
 		if (colon != NULL) {
 			*colon = '\0';
 		}
-		strncpy(parent_tag, get_rsc_tag(parent), MAX_STRLEN);
+		STRNCPY(parent_tag, get_rsc_tag(parent), MAX_STRLEN);
 		
 		snprintf(prefix, MAX_STRLEN,"<%s id=\"%s\"><%s id=\"%s\">"
 		, 	parent_tag, parent->id, rsc_tag, real_id);
@@ -356,7 +356,7 @@ get_instance_attributes_id(const char* rsc_id, char* id)
 		free_data_set(data_set);
 		return;
 	}
-	strncpy(id, cur_id, MAX_STRLEN);
+	STRNCPY(id, cur_id, MAX_STRLEN);
 	free_data_set(data_set);
 	return;					
 
@@ -399,7 +399,7 @@ get_attr_id(const char* rsc_id, const char* attr, char* id)
 			if ( strncmp(name_nvpair,attr,MAX_STRLEN) == 0 ) {
 				id_nvpair = ha_msg_value(nvpair,"id");
 				if (id_nvpair != NULL) {
-					strncpy(id,id_nvpair,MAX_STRLEN);
+					STRNCPY(id,id_nvpair,MAX_STRLEN);
 					free_data_set(data_set);
 					return;					
 				}
@@ -1436,8 +1436,8 @@ on_update_rsc_attr(char* argv[], int argc)
 	}
 	parent = get_parent(rsc);
 	
-	strncpy(rsc_tag, get_rsc_tag(rsc), MAX_STRLEN);
-	strncpy(real_id, argv[1], MAX_STRLEN);
+	STRNCPY(rsc_tag, get_rsc_tag(rsc), MAX_STRLEN);
+	STRNCPY(real_id, argv[1], MAX_STRLEN);
 
 	parent = get_parent(rsc);
 	if (parent == NULL) {
@@ -1449,7 +1449,7 @@ on_update_rsc_attr(char* argv[], int argc)
 		if (colon != NULL) {
 			*colon = '\0';
 		}
-		strncpy(parent_tag, get_rsc_tag(parent), MAX_STRLEN);
+		STRNCPY(parent_tag, get_rsc_tag(parent), MAX_STRLEN);
 		
 		snprintf(xml, MAX_STRLEN,"<%s id=\"%s\">" \
 			"<%s id=\"%s\" %s=\"%s\"/></%s>" \

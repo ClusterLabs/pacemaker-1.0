@@ -36,7 +36,9 @@
         if ( debug_level > 0 ) { \
                 cl_log(priority, fmt); \
 	}
-
+#define STRNCPY(dest,src,n) \
+	strncpy(dest,src,n); dest[n-1]='\0';
+	
 #define ARGC_CHECK(n)		\
 if (argc != (n)) {					\
 	mgmt_log(LOG_DEBUG, "%s msg should have %d params, but %d given",argv[0],n,argc);	\
