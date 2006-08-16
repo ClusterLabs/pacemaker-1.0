@@ -1,4 +1,4 @@
-/* $Id: config.c,v 1.204 2006/07/27 09:17:56 andrew Exp $ */
+/* $Id: config.c,v 1.205 2006/08/16 03:30:33 zhenh Exp $ */
 /*
  * Parse various heartbeat configuration files...
  *
@@ -2523,7 +2523,7 @@ set_release2mode(const char* value)
 
 	,	{"respawn", " "HA_CCMUSER " " HALIB "/ccm"}
 	,	{"respawn", " "HA_CCMUSER " " HALIB "/cib"}
-	,	{"respawn", "root "           HALIB "/lrmd"}
+	,	{"respawn", "root "           HALIB "/lrmd -r"}
 	,	{"respawn", "root "	      HALIB "/stonithd"}
 	,	{"respawn", " "HA_CCMUSER " " HALIB "/attrd"}
 	,	{"respawn", " "HA_CCMUSER " " HALIB "/crmd"}
@@ -2664,6 +2664,9 @@ ha_config_check_boolean(const char *value)
 
 /*
  * $Log: config.c,v $
+ * Revision 1.205  2006/08/16 03:30:33  zhenh
+ * when heartbeat starts, restarts the lrmd in the case that there is an existing lrmd, fix #1333
+ *
  * Revision 1.204  2006/07/27 09:17:56  andrew
  * Change the default api-auth for pingd to uid=root
  *
