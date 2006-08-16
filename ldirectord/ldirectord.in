@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-my($VERSION)=(qw$Id: ldirectord.in,v 1.41 2006/08/16 09:01:57 horms Exp $)[2];
+my($VERSION)=(qw$Id: ldirectord.in,v 1.42 2006/08/16 09:07:59 horms Exp $)[2];
 
 ######################################################################
 # ldirectord                 http://www.vergenet.net/linux/ldirectord/
@@ -2411,7 +2411,7 @@ sub check_nntp
 
 sub check_radius
 {
-        use Authen::Radius;
+        require Authen::Radius;
 
         my ($v, $r) = @_;
 
