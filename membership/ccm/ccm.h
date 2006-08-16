@@ -1,4 +1,4 @@
-/* $Id: ccm.h,v 1.50 2006/06/07 08:29:52 zhenh Exp $ */
+/* $Id: ccm.h,v 1.51 2006/08/16 09:59:34 zhenh Exp $ */
 /*
  * ccm.h: definitions Consensus Cluster Manager internal header
  *				file
@@ -71,7 +71,8 @@
 #define CCM_COOKIE      "ccmcookie"       /* communication context */
 #define CCM_NEWCOOKIE   "ccmnewcookie"    /* new communication context */
 #define CCM_CLSIZE   	"ccmclsize"       /* new cluster size */
-#define CCM_UPTIMELIST "ccmuptimelist" /*uptime list*/
+#define CCM_UPTIMELIST	"ccmuptimelist" /*uptime list*/
+#define CCM_QUORUM	"ccmquorum"	/*do we have quorum?*/
 
 
 /* ccm_types for easier processing. */
@@ -463,7 +464,7 @@ typedef struct ccm_info_s {
 	enum change_event_type change_type;
 	char change_node_id[NODEIDSIZE];
 	char		cluster[PATH_MAX];
-
+	int		has_quorum;	/* -1, not set, 0, no quorum, 1, has quorum */
 } ccm_info_t;
 
 /*
@@ -484,6 +485,8 @@ int ccm_control_process(ccm_info_t *info, ll_cluster_t * hb);
 int	jump_to_joining_state(ll_cluster_t* hb, 
 			      ccm_info_t* info, 
 			      struct ha_msg* msg);
+gboolean ccm_calculate_quorum(ccm_info_t* info);
+			      
 typedef void (*state_msg_handler_t)(enum ccm_type ccm_msg_type, 
 				    struct ha_msg *reply, 
 				    ll_cluster_t *hb, 

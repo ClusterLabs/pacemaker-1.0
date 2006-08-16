@@ -19,6 +19,10 @@
 #include "ccmmisc.h"
 #include <config.h>
 #include <ha_config.h>
+#include <clplumbing/cl_plugin.h>
+#include <clplumbing/cl_quorum.h>
+#include <clplumbing/cl_tiebreaker.h>
+
 #include <clplumbing/cl_signal.h>
 #include <clplumbing/coredumps.h>
 int ccm_send_cluster_msg(ll_cluster_t* hb, struct ha_msg* msg);
@@ -314,13 +318,15 @@ ccm_send_memlist_res(ll_cluster_t *hb,
 	ha_msg_del(m);
 	return(rc);
 }
+
+
 int
 ccm_send_final_memlist(ll_cluster_t *hb, 
 			ccm_info_t *info, 
 			char *newcookie, 
 			char *finallist,
 			uint32_t max_tran)
-{  
+{
 	struct ha_msg *m = ccm_create_msg(info, CCM_TYPE_FINAL_MEMLIST);
 	char activeproto[3];
 	char maxtrans[15]; 
@@ -336,11 +342,12 @@ ccm_send_final_memlist(ll_cluster_t *hb,
 		 info->ccm_active_proto);
 	snprintf(maxtrans, sizeof(maxtrans), "%d", max_tran);
 	assert(finallist);
-
+	info->has_quorum = ccm_calculate_quorum(info);
 	if (ha_msg_add(m, CCM_MAXTRANS, maxtrans) == HA_FAIL
 	    || ha_msg_add(m, CCM_MEMLIST, finallist) == HA_FAIL
-	    ||(!newcookie? FALSE: (ha_msg_add(m, CCM_NEWCOOKIE, newcookie)
-				   ==HA_FAIL))) {
+	    || ha_msg_add_int(m, CCM_QUORUM, info->has_quorum) == HA_FAIL
+	    ||(!newcookie?FALSE:(ha_msg_add(m,CCM_NEWCOOKIE,newcookie)
+	    		==HA_FAIL))) {
 		ccm_log(LOG_ERR, "ccm_send_final_memlist: Cannot create "
 		       "FINAL_MEMLIST message");
 		rc = HA_FAIL;
@@ -539,8 +546,10 @@ ccm_send_to_all(ll_cluster_t *hb, ccm_info_t *info,
 	
 	snprintf(activeproto, sizeof(activeproto), "%d", info->ccm_active_proto);
 
+	info->has_quorum = ccm_calculate_quorum(info);
 	if ( ha_msg_add(m, CCM_MEMLIST, memlist) == HA_FAIL
-	     || cl_msg_add_list_int(m, CCM_UPTIMELIST, uptime_list, uptime_size)
+	    || ha_msg_add_int(m, CCM_QUORUM, info->has_quorum) == HA_FAIL
+	    || cl_msg_add_list_int(m, CCM_UPTIMELIST, uptime_list, uptime_size)
 	     == HA_FAIL
 	     || !newcookie? FALSE: (ha_msg_add(m, CCM_NEWCOOKIE, newcookie)
 				    ==HA_FAIL)) {

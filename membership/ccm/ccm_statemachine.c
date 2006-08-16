@@ -1,4 +1,4 @@
-/* $Id: ccm_statemachine.c,v 1.21 2006/07/18 12:25:05 zhenh Exp $ */
+/* $Id: ccm_statemachine.c,v 1.22 2006/08/16 09:59:34 zhenh Exp $ */
 /* 
  * ccm.c: Consensus Cluster Service Program 
  *
@@ -120,10 +120,12 @@ ccm_set_state(ccm_info_t* info, int istate,const struct ha_msg*  msg)
 	if (istate == CCM_STATE_JOINED){
 		gl_membership_converged =TRUE;
 	}
-	
+	if (llm_get_myindex(CCM_GET_LLM(info)) == info->ccm_cluster_leader
+		   && CCM_STATE_JOINED == istate) {
+		info->has_quorum = ccm_calculate_quorum(info);
+	}
 	ccm_debug(LOG_DEBUG,"node state %s -> %s"
 	,	state2string(oldstate),state2string(istate)); 
-	
 }
 
 
@@ -332,6 +334,7 @@ ccm_reset(ccm_info_t *info)
 	CCM_SET_CL(info,-1);
 	CCM_SET_JOINED_TRANSITION(info, 0);
 	ccm_set_state(info, CCM_STATE_NONE, NULL);
+	info->has_quorum = -1;
 	update_reset(CCM_GET_UPDATETABLE(info));
 	ccm_reset_all_join_request(info);
 	version_reset(CCM_GET_VERSION(info));
@@ -812,6 +815,9 @@ ccm_compute_and_send_final_memlist(ll_cluster_t *hb, ccm_info_t *info)
 	cookie = ccm_generate_random_cookie();
 
 	repeat = 0;
+	ccm_mem_bitmapfill(info, bitmap);
+	bitmap_delete(bitmap);
+	
 	while (ccm_send_final_memlist(hb, info, cookie, string, maxtrans+1) 
 					!= HA_OK) {
 		if(repeat < REPEAT_TIMES){
@@ -827,8 +833,6 @@ ccm_compute_and_send_final_memlist(ll_cluster_t *hb, ccm_info_t *info)
 	}
 
 	/* fill my new memlist and update the new cookie if any */
-	ccm_mem_bitmapfill(info, bitmap);
-	bitmap_delete(bitmap);
 
 	/* increment the major transition number and reset the
 	 * minor transition number
@@ -1663,6 +1667,7 @@ ccm_state_joined(enum ccm_type ccm_msg_type,
 			ccm_all_restart(hb, info, reply);
 			break;
 		case CCM_TYPE_MEM_LIST:{
+			int quorum;
 			const char* memlist;
 			if (strncmp(orig, llm_get_mynodename((&info->llm) ), NODEIDSIZE) == 0){
 				/*this message is from myself, ignore it*/
@@ -1672,6 +1677,13 @@ ccm_state_joined(enum ccm_type ccm_msg_type,
 			memlist = ha_msg_value(reply, CCM_MEMLIST);
 			if (memlist == NULL){
 				break;
+			}
+			
+			if (ha_msg_value_int (reply, CCM_QUORUM, &quorum)==HA_OK){ 
+				info->has_quorum = quorum;
+			}
+			else {
+				info->has_quorum = -1;
 			}
 			
 			if (node_is_leader(info, orig)
@@ -2245,6 +2257,7 @@ ccm_state_memlist_res(enum ccm_type ccm_msg_type,
 	uint  curr_major, curr_minor;
 	int   indx;
 	int repeat;
+	int quorum;
 
 
 	if ((orig = ha_msg_value(reply, F_ORIG)) == NULL) {
@@ -2534,6 +2547,13 @@ switchstatement:
 				return;
 			}
 			trans_maxval = atoi(trans);
+			
+			if (ha_msg_value_int (reply, CCM_QUORUM, &quorum)==HA_OK){ 
+				info->has_quorum = quorum;
+			}
+			else {
+				info->has_quorum = -1;
+			}
 
 			if (!am_i_member_in_memlist(info, memlist)) {
 				ccm_reset(info); 
@@ -3291,6 +3311,7 @@ static void ccm_state_wait_for_mem_list(enum ccm_type ccm_msg_type,
 	uint trans_majorval=0,trans_minorval=0, uptime_val;
 	uint curr_major, curr_minor;
 	int repeat;
+	int quorum;
 	
 	if ((orig = ha_msg_value(reply, F_ORIG)) == NULL) {
 		ccm_debug(LOG_WARNING, "ccm_state_wait_for_mem_list: received message "
@@ -3374,6 +3395,13 @@ static void ccm_state_wait_for_mem_list(enum ccm_type ccm_msg_type,
 				ccm_log(LOG_ERR," ccm_state_new_node_wait_for_mem_list:"
 				       "geting uptie_list failed");
 				return;
+			}
+			
+			if (ha_msg_value_int (reply, CCM_QUORUM, &quorum)==HA_OK){ 
+				info->has_quorum = quorum;
+			}
+			else {
+				info->has_quorum = -1;
 			}
 
 			ccm_mem_strfill(info, (const char *)memlist);
@@ -3566,6 +3594,7 @@ static void ccm_state_new_node_wait_for_mem_list(enum ccm_type ccm_msg_type,
 	uint  curr_major, curr_minor;
 	int repeat;
 	int ret;
+	int quorum;
 
 	if ((orig = ha_msg_value(reply, F_ORIG)) == NULL) {
 		ccm_debug(LOG_WARNING, "ccm_state_new_node_wait_for_mem_list: " 
@@ -3660,6 +3689,13 @@ static void ccm_state_new_node_wait_for_mem_list(enum ccm_type ccm_msg_type,
 				ccm_log(LOG_ERR, "%s: filling uptime failed",
 				       __FUNCTION__);
 				return;
+			}
+			
+			if (ha_msg_value_int (reply, CCM_QUORUM, &quorum)==HA_OK){ 
+				info->has_quorum = quorum;
+			}
+			else {
+				info->has_quorum = -1;
 			}
 			
 			if (i_am_member(info) == FALSE){
@@ -3864,12 +3900,14 @@ dump_mbrs(ccm_info_t *info)
 		if(bornon[i].bornon==0) 
 			bornon[i].bornon=CCM_GET_MAJORTRANS(info);
 	}
+	
 	ccm_debug(LOG_DEBUG,"dump current membership");
 	leader = info->ccm_cluster_leader;
 	ccm_debug(LOG_DEBUG,"\tleader=%s"
 	,	leader < 0 ?"none": info->llm.nodes[leader].nodename);
 	ccm_debug(LOG_DEBUG,"\ttransition=%d", CCM_GET_MAJORTRANS(info));
 	ccm_debug(LOG_DEBUG,"\tstatus=%s",state2string(info->state));
+	ccm_debug(LOG_DEBUG,"\thas_quorum=%d",info->has_quorum);
 	
 	for (i=0 ;  i < ccm_get_memcount(info); i++) {
 		nodename = llm_get_nodename(CCM_GET_LLM(info), 
@@ -3877,6 +3915,6 @@ dump_mbrs(ccm_info_t *info)
 		ccm_debug(LOG_DEBUG,"\tnodename=%s bornon=%d", nodename, 
 		       bornon[i].bornon);
 	}
-
+	
 	return;
 }

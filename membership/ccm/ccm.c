@@ -19,10 +19,16 @@
 #include "ccm.h"
 #include "ccmmsg.h"
 #include "ccmmisc.h"
+#include <clplumbing/cl_plugin.h>
+#include <clplumbing/cl_quorum.h>
+#include <clplumbing/cl_tiebreaker.h>
+#include <clplumbing/cl_misc.h>
+
 
 extern state_msg_handler_t	state_msg_handler[];
 
 struct ha_msg * ccm_readmsg(ccm_info_t *info, ll_cluster_t *hb);
+static GList* quorum_list = NULL;
 
 static struct ha_msg*
 ccm_handle_hbapiclstat(ccm_info_t *info,  
@@ -241,4 +247,79 @@ ccm_control_process(ccm_info_t *info, ll_cluster_t * hb)
 		goto repeat;
 	
 	return TRUE;
+}
+#define QUORUM_S "HA_quorum"
+#define TIEBREAKER_S "HA_tiebreaker"
+gboolean
+ccm_calculate_quorum(ccm_info_t* info)
+{
+	struct hb_quorum_fns* funcs = NULL;
+	const char* quorum_env = NULL;
+	char* quorum_str = NULL;
+	char* end = NULL;
+	char* begin = NULL;
+	GList* cur = NULL;
+	int rc;
+	
+	
+	if (quorum_list == NULL){
+		quorum_env = cl_get_env(QUORUM_S);
+		if (quorum_env == NULL){
+			ccm_debug(LOG_DEBUG, "No quorum selected,"
+			       "using default quorum plugin(majority:twonodes)");
+			quorum_str = cl_strdup("majority:twonodes");
+		}
+		else {
+			quorum_str = cl_strdup(quorum_env);
+		}
+		
+		begin = quorum_str;
+		while (begin != NULL) {
+			end = strchr(begin, ':');
+			if (end != NULL) {
+				*end = 0;
+			}
+			funcs = cl_load_plugin("quorum", begin);
+			if (funcs == NULL){
+				ccm_log(LOG_ERR, "%s: loading plugin %s failed",
+				       __FUNCTION__, begin);
+			}
+			else {
+				quorum_list = g_list_append(quorum_list, funcs);
+			}
+			begin = (end == NULL)? NULL:end+1;
+		}
+		cl_free(quorum_str);
+	}
+		
+	cur = g_list_first(quorum_list);
+	while (cur != NULL) {
+		int mem_weight = 0;
+		int total_weight = 0;
+		int i, node;
+		
+		for (i=0; i<info->memcount; i++) {
+			node = info->ccm_member[i];
+			mem_weight+=info->llm.nodes[node].weight;
+		}
+		for (i=0; i<info->llm.nodecount; i++) {
+			total_weight+=info->llm.nodes[i].weight;
+		}
+		funcs = (struct hb_quorum_fns*)cur->data;
+	        rc = funcs->getquorum(info->cluster, info->memcount, mem_weight
+	        ,		info->llm.nodecount, total_weight);
+	        
+		if (rc == QUORUM_YES){
+			return TRUE;
+		}
+		else if (rc == QUORUM_NO){
+			return FALSE;
+		}
+		cur = g_list_next(cur);
+	}
+	ccm_debug(LOG_ERR, "all quorum plugins can't make a decision! "
+			"assume lost quorum");
+	
+	return FALSE;
+	
 }

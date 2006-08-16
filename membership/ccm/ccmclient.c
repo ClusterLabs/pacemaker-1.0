@@ -1,4 +1,4 @@
-/* $Id: ccmclient.c,v 1.44 2006/07/26 07:55:49 zhenh Exp $ */
+/* $Id: ccmclient.c,v 1.45 2006/08/16 09:59:34 zhenh Exp $ */
 /* 
  * client.c: Consensus Cluster Client tracker
  *
@@ -23,10 +23,6 @@
  */
 #include <ccm.h>
 #include <ccmlib.h>
-#include <clplumbing/cl_plugin.h>
-#include <clplumbing/cl_quorum.h>
-#include <clplumbing/cl_tiebreaker.h>
-#include <clplumbing/cl_misc.h>
 
 typedef struct ccm_client_s {
 	int 	ccm_clid;
@@ -54,7 +50,6 @@ static ccm_ipc_t *ipc_misc_message = NULL; /* active misc information     */
 static gboolean membership_ready     = FALSE;
 static void refresh_llm_msg(llm_info_t *llm);
 
-static GList* quorum_list = NULL;
 
 /* 
  * the fully initialized clients.
@@ -294,80 +289,13 @@ client_delete_all(void)
 }
 
 
-#define QUORUM_S "HA_quorum"
-#define TIEBREAKER_S "HA_tiebreaker"
-
 static gboolean
 get_quorum(ccm_info_t* info)
 {
-	struct hb_quorum_fns* funcs = NULL;
-	const char* quorum_env = NULL;
-	char* quorum_str = NULL;
-	char* end = NULL;
-	char* begin = NULL;
-	GList* cur = NULL;
-	int rc;
-	
-	if (quorum_list == NULL){
-		quorum_env = cl_get_env(QUORUM_S);
-		if (quorum_env == NULL){
-			ccm_debug(LOG_DEBUG, "No quorum selected,"
-			       "using default quorum plugin(majority:twonodes)");
-			quorum_str = cl_strdup("majority:twonodes");
-		}
-		else {
-			quorum_str = cl_strdup(quorum_env);
-		}
-		
-		begin = quorum_str;
-		while (begin != NULL) {
-			end = strchr(begin, ':');
-			if (end != NULL) {
-				*end = 0;
-			}
-			funcs = cl_load_plugin("quorum", begin);
-			if (funcs == NULL){
-				ccm_log(LOG_ERR, "%s: loading plugin %s failed",
-				       __FUNCTION__, begin);
-			}
-			else {
-				quorum_list = g_list_append(quorum_list, funcs);
-			}
-			begin = (end == NULL)? NULL:end+1;
-		}
-		cl_free(quorum_str);
+	if (info->has_quorum != -1) {
+		return info->has_quorum;
 	}
-		
-	cur = g_list_first(quorum_list);
-	while (cur != NULL) {
-		int mem_weight = 0;
-		int total_weight = 0;
-		int i, node;
-		
-		for (i=0; i<info->memcount; i++) {
-			node = info->ccm_member[i];
-			mem_weight+=info->llm.nodes[node].weight;
-		}
-		for (i=0; i<info->llm.nodecount; i++) {
-			total_weight+=info->llm.nodes[i].weight;
-		}
-		funcs = (struct hb_quorum_fns*)cur->data;
-	        rc = funcs->getquorum(info->cluster, info->memcount, mem_weight
-	        ,		info->llm.nodecount, total_weight);
-	        
-		if (rc == QUORUM_YES){
-			return TRUE;
-		}
-		else if (rc == QUORUM_NO){
-			return FALSE;
-		}
-		cur = g_list_next(cur);
-	}
-	ccm_debug(LOG_ERR, "all quorum plugins can't make a decision! "
-			"assume lost quorum");
-	
-	return FALSE;
-	
+	return ccm_calculate_quorum(info);
 }
 
 static void
