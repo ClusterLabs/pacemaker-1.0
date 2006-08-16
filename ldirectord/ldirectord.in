@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-my($VERSION)=(qw$Id: ldirectord.in,v 1.40 2006/08/15 12:48:10 horms Exp $)[2];
+my($VERSION)=(qw$Id: ldirectord.in,v 1.41 2006/08/16 09:01:57 horms Exp $)[2];
 
 ######################################################################
 # ldirectord                 http://www.vergenet.net/linux/ldirectord/
@@ -2057,7 +2057,6 @@ sub ld_main
 						$$r{num_connects} = 0 if (check_sip($v, $r));
 					} elsif ($$v{service} eq "radius") {
 						$$r{num_connects} = 0 if (check_radius($v, $r));
-					}
 					} elsif ($$v{service} eq "mysql") {
 						$$r{num_connects} = 0 if (check_mysql($v, $r));
 					} elsif ($$v{service} eq "pgsql") {
