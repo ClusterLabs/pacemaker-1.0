@@ -72,6 +72,7 @@ static int init_status(const char *pid_file, const char *client_name);
 static void shutdown_mgmtd(void);
 static int on_event(const char* event);
 static int usr_belong_grp(const char* usr, const char* grp);
+static int _mgmt_session_sendmsg(void* session, const char* msg);
 
 /* management daemon internal data structure */
 typedef struct
@@ -442,7 +443,7 @@ on_listen(GIOChannel *source, GIOCondition condition, gpointer data)
 		if (msg == NULL || num != 3 || STRNCMP_CONST(args[0], MSG_LOGIN) != 0) {
 			mgmt_del_args(args);
 			mgmt_del_msg(msg);
-			mgmt_session_sendmsg(session, MSG_FAIL);
+			_mgmt_session_sendmsg(session, MSG_FAIL);
 			tls_detach(session);
 			close(csock);
 			mgmt_log(LOG_ERR, "%s receive login msg failed", __FUNCTION__);
@@ -453,7 +454,7 @@ on_listen(GIOChannel *source, GIOCondition condition, gpointer data)
 		if (pam_auth(args[1],args[2]) != 0 || !usr_belong_grp(args[1],ALLOW_GRP)) {
 			mgmt_del_args(args);
 			mgmt_del_msg(msg);
-			mgmt_session_sendmsg(session, MSG_FAIL);
+			_mgmt_session_sendmsg(session, MSG_FAIL);
 			tls_detach(session);
 			close(csock);
 			mgmt_log(LOG_ERR, "%s pam auth failed", __FUNCTION__);
@@ -462,7 +463,7 @@ on_listen(GIOChannel *source, GIOCondition condition, gpointer data)
 		mgmt_del_args(args);
 		mgmt_del_msg(msg);
 		mgmt_debug(LOG_DEBUG, "send msg: %s", MSG_OK);
-		mgmt_session_sendmsg(session, MSG_OK);
+		_mgmt_session_sendmsg(session, MSG_OK);
 		new_client(csock, session);
 		return TRUE;
 		
@@ -493,12 +494,12 @@ on_msg_arrived(GIOChannel *source, GIOCondition condition, gpointer data)
 		ret = dispatch_msg(msg, client->id);
 		if (ret != NULL) {
 			mgmt_debug(LOG_DEBUG, "send msg: %s", ret);
-			mgmt_session_sendmsg(client->session, ret);
+			_mgmt_session_sendmsg(client->session, ret);
 			mgmt_del_msg(ret);
 		}
 		else {
 			mgmt_debug(LOG_DEBUG, "send msg: %s", MSG_FAIL);
-			mgmt_session_sendmsg(client->session, MSG_FAIL);
+			_mgmt_session_sendmsg(client->session, MSG_FAIL);
 		}
 		mgmt_del_msg(msg);
 	}
@@ -624,7 +625,6 @@ on_event(const char* event)
 	node = id_list;
 	while (node != NULL) {
 		client_t* client;
-		
 		int id = GPOINTER_TO_INT(node->data);
 		
 		client = lookup_client(id);
@@ -637,7 +637,7 @@ on_event(const char* event)
 		}
 
 		mgmt_debug(LOG_DEBUG, "send evt: %s", event);
-		mgmt_session_sendmsg(client->session, event);
+		_mgmt_session_sendmsg(client->session, event);
 		mgmt_debug(LOG_DEBUG, "send evt: %s done", event);
 		
 		node = g_list_next(node);
@@ -712,4 +712,16 @@ usr_belong_grp(const char* usr, const char* grp)
 		grp_usr = gren->gr_mem[index];
 	}
 	return 0;
+}
+int 
+_mgmt_session_sendmsg(void* session, const char* msg)
+{
+	int ret = mgmt_session_sendmsg(session, msg);
+	if(ret == -1) {
+		mgmt_log(LOG_ERR,"send msg %s failed", msg);
+	}
+	else if (ret == -2) {
+		mgmt_log(LOG_ERR,"send msg %s failed(msg too long)", msg);
+	}
+	return ret;
 }

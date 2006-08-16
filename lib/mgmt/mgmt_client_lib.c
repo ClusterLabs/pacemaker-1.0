@@ -107,7 +107,7 @@ char*
 mgmt_sendmsg(const char* msg)
 {
 	/* send the msg */
-	if (-1 == mgmt_session_sendmsg(session, msg)) {
+	if (mgmt_session_sendmsg(session, msg) < 0) {
 		return NULL;
 	}
 	/* get the result msg */
@@ -159,6 +159,9 @@ mgmt_session_sendmsg(void* session, const char* msg)
 	}
 	/* send the msg, with the last zero */
 	len = strnlen(msg, MAX_MSGLEN)+1;
+	if (len == MAX_MSGLEN + 1) {
+		return -2;
+	}
 	if (len != tls_send(session, msg, len)) {
 		return -1;
 	}
