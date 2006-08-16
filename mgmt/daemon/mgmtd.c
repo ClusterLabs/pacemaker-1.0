@@ -322,6 +322,8 @@ init_start ()
 	struct sockaddr_in 	saddr;
 	GIOChannel* 		sch;
 	int 			ret;
+	int			optval;
+	
 	/* register pid */
 	if (cl_lock_pidfile(PID_FILE) < 0) {
 		mgmt_log(LOG_ERR, "already running: [pid %d]."
@@ -370,6 +372,11 @@ init_start ()
 				  "Shutting down.");
 		exit(100);
 	}
+	
+	/* reuse address */
+	optval = 1;
+	setsockopt(ssock, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval));	
+	
 	/* bind server socket*/
 	memset(&saddr, '\0', sizeof(saddr));
 	saddr.sin_family = AF_INET;
