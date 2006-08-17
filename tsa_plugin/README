@@ -30,8 +30,12 @@ the --with-tsa-dir option but you often need to present the
 	./ConfigureMe bootstrap --enable-tsa-plugin=yes \
 	--with-java-home=/opt/IBMJava2-141
 
+3. CONFIGURATION
+    First, you need to add the apiauth directives as follows to 
+the ha.cf to allow the plugin to sign on to heartbeat:
+	apiauth         tsa uid=root gid=root
+	apiauth         tsad uid=root gid=root
 
-3. RUNNING THE PLUGIN  
     You will need a startup script like /usr/bin/samadapter to 
 start the plugin. You don't need to write it from scratch. The 
 simple way is to modify the samadapter script for the linux-ha
@@ -46,4 +50,15 @@ and set the value of plugin-impl-class to
 org.linuxha.sam.plugin.LinuxHAPlugin. For example:
 	plugin-impl-class = org.linuxha.sam.plugin.LinuxHAPlugin
 This tells the adapater to use the linux-ha plugin.
+
+
+4. START AND STOP THE PLUGIN   
+   To start the plugin:
+	/usr/lib/heartbeat/tsa_eventd &
+        /usr/bin/linuxha-samadapter start
+
+   To stop the plugin:
+	/usr/bin/linuxha-samadapter stop
+        /usr/lib/heartbeat/tsa_eventd -k
+
 
