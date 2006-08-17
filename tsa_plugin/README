@@ -1,0 +1,49 @@
+linux-ha plugin for TSA README
+
+
+1. REQUIREMENTS
+    Compiling the TSA plugin requires various software packages. 
+First of all you need to install the Java SDK software. You also 
+need the TSA software including the rsct, sam and sam.adapter. 
+Although in theory the plugin only depends on the sam.adapter, 
+not installing the sam package will prevent you from installing 
+the sam.adapter package due to the dependency between the 
+sam.adater RPM and the sam RPM. Therefor you might have to 
+install all of them.
+   The SWIG is also used to generate the interface files at the
+compling time.
+   Running the TSA plugin requires the Java runtime environment 
+and the sam.adapater package.
+
+2. COMPILING THE PLUGIN
+    To build the TSA plugin, apply the --enable-tsa-plugin option:
+	./ConfigureMe bootstrap --enable-tsa-plugin=yes
+    Options --with-java-home and --with-tsa-dir and optional. The 
+--with-java-home option specifies the Java sdk directory and the 
+--with-tsa-dir option specifies the TSA directory. If they are not 
+presented, the configuration will try to find the Java sdk directory 
+and set the TSA directory to /opt/IBM/tsamp. By default, the TSA 
+software is installed to /opt/IBM/tsamp. So usually you don't need 
+the --with-tsa-dir option but you often need to present the 
+--with-java-home option. 
+    For example:
+	./ConfigureMe bootstrap --enable-tsa-plugin=yes \
+	--with-java-home=/opt/IBMJava2-141
+
+
+3. RUNNING THE PLUGIN  
+    You will need a startup script like /usr/bin/samadapter to 
+start the plugin. You don't need to write it from scratch. The 
+simple way is to modify the samadapter script for the linux-ha
+plugin:
+	cp /usr/bin/samadapter /usr/bin/linuxha-samadapter 
+    then edit /usr/bin/linuxha-samadapter and append 
+":$plib/linuxhafla.jar" to the end of line 365. This tells the 
+adapter to load the linux-ha plugin when it starts.
+    Besides, you need to edit the plugin config file:
+/etc/opt/IBM/tsamp/sam/cfg/sam.adapter.plugin.properties
+and set the value of plugin-impl-class to 
+org.linuxha.sam.plugin.LinuxHAPlugin. For example:
+	plugin-impl-class = org.linuxha.sam.plugin.LinuxHAPlugin
+This tells the adapater to use the linux-ha plugin.
+
