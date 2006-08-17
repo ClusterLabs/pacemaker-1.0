@@ -28,8 +28,8 @@ EXTRA_DIST		= apply changelog compat control copyright \
 			  heartbeat-2-dev.dirs heartbeat-2-dev.files \
 			  ldirectord-2.files ldirectord-2.postinst \
 			  ldirectord-2.postrm \
-			  patches/02-chown-check.patch \
-			  patches/series/2.0.3-1
+			  patches/chown-check-2.patch \
+			  patches/series/2.0.8-1
 
 
 clean-local:
