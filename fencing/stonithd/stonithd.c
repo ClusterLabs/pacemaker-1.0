@@ -1,4 +1,4 @@
-/* $Id: stonithd.c,v 1.100 2006/07/17 07:42:41 sunjd Exp $ */
+/* $Id: stonithd.c,v 1.101 2006/08/18 20:39:51 alan Exp $ */
 
 /* File: stonithd.c
  * Description: STONITH daemon for node fencing
@@ -1384,6 +1384,11 @@ accept_client_connect_callback(IPC_Channel * ch, gpointer user)
 		return TRUE;
 	}
 
+	/*
+	 * 	FIXME: ch->farside_pid cannot be relied on.
+	 *	It only works on Linux -- and then not too reliably - because
+	 *	of bugs in glibc related to threading.
+	 */
 	signed_client = find_client_by_farpid(client_list, ch->farside_pid);
 	if (signed_client != NULL) {
 		if (signed_client->cbch != NULL) {
@@ -1531,6 +1536,11 @@ stonithd_process_client_msg(struct ha_msg * msg, gpointer data)
 		return TRUE;
 	}
 
+	/*
+	 * 	FIXME: ch->farside_pid cannot be relied on.
+	 *	It only works on Linux -- and then not too reliably - because
+	 *	of bugs in glibc related to threading.
+	 */
 	stonithd_log2(LOG_DEBUG, "begin to dealing with a api msg %s from "
 			"a client PID:%d.", api_type, ch->farside_pid);
 	for (i=0; i<DIMOF(api_msg_to_handlers); i++) {
@@ -1767,10 +1777,15 @@ on_stonithd_node_fence(struct ha_msg * request, gpointer data)
 		return ST_FAIL;
 	}
 
-	/* Check if have signoned */
+	/* Check if have signed on */
 	if ((client = get_exist_client_by_chan(client_list, ch)) == NULL ) {
 		stonithd_log(LOG_ERR, "stonithd_node_fence: not signoned yet.");
 		if ( NULL != (st_op = new_stonith_ops_t(request) )) {
+			/*
+			 * FIXME: ch->farside_pid cannot be relied on.
+			 * It only works on Linux -- and then not too reliably
+			 * - because of bugs in glibc related to threading.
+			 */
 			stonithd_log2(LOG_DEBUG, "client [pid: %d] want a STONITH "
 				"operation %s to node %s."
 				, ch->farside_pid
@@ -2545,6 +2560,11 @@ on_stonithd_virtual_stonithRA_ops(struct ha_msg * request, gpointer data)
 		stonithd_log(LOG_ERR, "on_stonithd_virtual_stonithRA_ops: "
 			     "not signoned yet.");
 		if ( NULL!= (ra_op = new_stonithRA_ops_t(request)) ) {
+			/*
+			 * FIXME: ch->farside_pid cannot be relied on.
+			 * It only works on Linux -- and then not too reliably
+			 * - because of bugs in glibc related to threading.
+			 */
 			stonithd_log2(LOG_DEBUG, "client [pid: %d] want a "
 				"resource operation %s on stonith RA %s "
 				"[resource id: %s]"
@@ -3596,6 +3616,9 @@ trans_log(int priority, const char * fmt, ...)
 
 /* 
  * $Log: stonithd.c,v $
+ * Revision 1.101  2006/08/18 20:39:51  alan
+ * Bug 1412: Marked source FIXME where bug 1412 occurs
+ *
  * Revision 1.100  2006/07/17 07:42:41  sunjd
  * (bug1379) This doesnot always indicate a error scenario
  *
