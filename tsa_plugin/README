@@ -61,4 +61,4 @@ then edit /usr/bin/linuxha-samadapter and append
 ":$plib/linuxhafla.jar" to the end of line 365. This tells 
 the adapter to load the linux-ha plugin when it starts.
     You should start or stop the tsa_eventd manually if 
-you use the samadapter.
+you use the original samadapter.
