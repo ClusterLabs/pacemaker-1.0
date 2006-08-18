@@ -218,56 +218,58 @@ public class LinuxHAPlugin implements EEZAdapterInteraction {
 	public static void main(String args[]) throws Exception
 	{
 		LHAMgmtLib.clLog(LHAMgmtLib.LOG_INFO, "----------------------- testing begin -----------------------");
+		EEZResource node_rsc = null;
+
 		LinuxHAPlugin plugin = new LinuxHAPlugin();
-		
+			
 		EEZDomain domain = new EEZDomain();
 		plugin.invoke(INIT_DOMAIN, null, null, domain);
 		
-		// get cluster nodes
-		EEZFilterCriteriaList filter = new EEZFilterCriteriaList();
-		EEZFilterCriteria crit = new EEZFilterCriteria();
-		crit.setName(EEZFilterCriteria.RESOURCE_TYPE);
-		crit.setOperation(EEZFilterCriteria.EQUAL);
-		crit.setValues(new String[]{EEZResource.TYPE_NODE});
-		filter.add(crit);
-		EEZResourceList resList = new EEZResourceList();
-		plugin.invoke(EEZConst.ENUMERATE_RESOURCE_BYFILTER, null, filter, resList);
-		System.out.println(resList);
+		if ( true ) {
+			// get cluster nodes
+			EEZFilterCriteriaList filter = new EEZFilterCriteriaList();
+			EEZFilterCriteria crit = new EEZFilterCriteria();
+			EEZResourceList resList = new EEZResourceList();
+			crit.setName(EEZFilterCriteria.RESOURCE_TYPE);
+			crit.setOperation(EEZFilterCriteria.EQUAL);
+			crit.setValues(new String[]{EEZResource.TYPE_NODE});
+			filter.add(crit);
+			plugin.invoke(EEZConst.ENUMERATE_RESOURCE_BYFILTER, null, filter, resList);
+			System.out.println(resList);
+			node_rsc = (EEZResource)resList.get(0);
+		}
 
-
-		// request
-		EEZResource rsc = (EEZResource)resList.get(0);
-		EEZRequest request = new EEZRequest(EEZRequest.INCLUDE_NODE, 
-			EEZRequest.TYPE_E2E, null, rsc.resourceKey());
-		EEZRequestList reqList = new EEZRequestList();
-		reqList.add(request);
-		plugin.invoke(EEZConst.EXECUTE_UNSOLICITED_REQUEST, null, reqList, null);
+		if ( true ) {
+			//get other resources
+			EEZResourceList resList = new EEZResourceList();
+			EEZFilterCriteriaList filter = new EEZFilterCriteriaList();
+			EEZFilterCriteria crit = new EEZFilterCriteria();
+			crit.setName(EEZFilterCriteria.RESOURCE_TYPE);
+			crit.setOperation(EEZFilterCriteria.NOT_EQUAL);
+			crit.setValues(new String[]{EEZResource.TYPE_NODE});
+			filter.add(crit);
+			plugin.invoke(EEZConst.ENUMERATE_RESOURCE_BYFILTER, null, filter, resList);
+			System.out.println(resList);
+		}
 
 		
-		//get other resources
-		resList.clear();
-		filter.clear();
-		crit.setName(EEZFilterCriteria.RESOURCE_TYPE);
-		crit.setOperation(EEZFilterCriteria.NOT_EQUAL);
-		crit.setValues(new String[]{EEZResource.TYPE_NODE});
-		filter.add(crit);
-		plugin.invoke(EEZConst.ENUMERATE_RESOURCE_BYFILTER, null, filter, resList);
-		System.out.println(resList);
-			
-		Thread.sleep(10000);
-		//get all relations 
-		/*
-		filter.clear();
-		crit.setName(EEZFilterCriteria.RESOURCE_TYPE);
-		crit.setOperation(EEZFilterCriteria.NOT_EQUAL);
-		crit.setValues(new String[]{""});
-		filter.add(crit);
-			
-		resList = fla.enumerateResources(filter, null);
-		System.out.println(resList);
-		EEZRelationList relList = fla.enumerateRelations(filter, null);
-		System.out.println(relList);
-		*/
+		if ( true ) {
+			EEZFilterCriteriaList filter = new EEZFilterCriteriaList();
+			EEZFilterCriteria crit = new EEZFilterCriteria();
+			crit.setName(EEZFilterCriteria.RESOURCE_TYPE);
+			crit.setOperation(EEZFilterCriteria.NOT_EQUAL);
+			crit.setValues(new String[]{""});
+			filter.add(crit);
+		}
+		if ( false ) {
+			// request
+			EEZRequest request = new EEZRequest(EEZRequest.INCLUDE_NODE, 
+				EEZRequest.TYPE_E2E, null, node_rsc.resourceKey());
+			EEZRequestList reqList = new EEZRequestList();
+			reqList.add(request);
+			plugin.invoke(EEZConst.EXECUTE_UNSOLICITED_REQUEST, null, reqList, null);
+		}
+
 		LHAMgmtLib.clLog(LHAMgmtLib.LOG_INFO, "----------------------- testing end -----------------------");
 	}
 }
