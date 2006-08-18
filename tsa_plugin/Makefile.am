@@ -96,6 +96,9 @@ cli_PROGRAMS		= tsa_hacli
 tsa_hacli_SOURCES	= tsa_hacli.c ha_tsa_common.c
 tsa_hacli_LDADD		= $(COMMONLIBS) $(MGMTLIBS)
 
+adapterdir		= $(libdir)/@HB_PKG@
+adapter_SCRIPTS 	= linuxha-adapter
+
 noinst_PROGRAMS		= dummy
 dummy_SOURCES		= dummy.c
 dummy_LDADD		= liblhamgmt.la
