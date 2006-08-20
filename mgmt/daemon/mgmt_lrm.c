@@ -105,10 +105,11 @@ on_rsc_type(char* argv[], int argc)
 	
 	GList* types;
 	GList* cur;
-	char* ret = cl_strdup(MSG_OK);
+	char* ret;
 
 	ARGC_CHECK(2)
-
+	
+	ret = cl_strdup(MSG_OK);
 	types = lrm->lrm_ops->get_rsc_type_supported(lrm, argv[1]);
 	cur = types;
 	while (cur != NULL) {
