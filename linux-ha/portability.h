@@ -1,4 +1,4 @@
-/* $Id: portability.h,v 1.47 2005/07/29 23:59:05 alan Exp $ */
+/* $Id: portability.h,v 1.52 2006/04/07 15:49:03 davidlee Exp $ */
 #ifndef PORTABILITY_H
 #  define PORTABILITY_H
 
@@ -60,20 +60,25 @@
 #	define	NETSNMP_NO_INLINE 1
 #endif
 
+#ifndef HA_HAVE_DAEMON
+  /* We supply a replacement function, but need a prototype */
+int daemon(int nochdir, int noclose);
+#endif /* HA_HAVE_DAEMON */
+
 #ifndef HA_HAVE_SETENV
   /* We supply a replacement function, but need a prototype */
-
 int setenv(const char *name, const char * value, int why);
-
 #endif /* HA_HAVE_SETENV */
+
+#ifndef HA_HAVE_UNSETENV
+  /* We supply a replacement function, but need a prototype */
+void unsetenv(const char *name);
+#endif /* HA_HAVE_UNSETENV */
 
 #ifndef HA_HAVE_STRERROR
   /* We supply a replacement function, but need a prototype */
 char * strerror(int errnum);
 #endif /* HA_HAVE_STRERROR */
-
-int setenv(const char *name, const char * value, int why);
-
 
 #ifndef HA_HAVE_SCANDIR
   /* We supply a replacement function, but need a prototype */
@@ -128,7 +133,10 @@ inet_pton(int af, const char *src, void *dst);
 #	endif /* SYS_NMLN */
 #endif
 
-#define	POINTER_TO_SIZE_T(p)	((size_t)(p)) /*pointer cast as int*/
-#define	POINTER_TO_SSIZE_T(p)	((ssize_t)(p)) /*pointer cast as int*/
+#define	POINTER_TO_SIZE_T(p)	((size_t)(p)) /*pointer cast as size_t*/
+#define	POINTER_TO_SSIZE_T(p)	((ssize_t)(p)) /*pointer cast as ssize_t*/
+#define	POINTER_TO_ULONG(p)	((unsigned long)(p)) /*pointer cast as unsigned long*/
+
+#define	HAURL(url)	HA_URLBASE url
 
 #endif /* PORTABILITY_H */

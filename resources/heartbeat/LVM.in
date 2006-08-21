@@ -1,19 +1,14 @@
 #!/bin/sh
 #
-# $Id: LVM.in,v 1.4 2005/08/26 19:41:01 alan Exp $
+# $Id: LVM.in,v 1.8 2006/08/14 09:37:21 andrew Exp $
 # 
-# LVM
+# Description:	wrapper of OCF RA LVM, based on original heartbeat RA.
+#		See OCF RA LVM for more information.
 #
-# Description:	Manages an LVM volume as an HA resource
-#
-#
-# Author:	Alan Robertson
-# License:      GNU General Public License (GPL)
-# Support:      linux-ha@lists.linux-ha.org
-# Copyright:	(C) 2002 International Business Machines, Inc.
-#
-#	This code significantly inspired by the LVM resource
-#	in FailSafe by Lars Marowsky-Bree
+# Author:	Xun Sun <xunsun@cn.ibm.com>
+# Support:	linux-ha@lists.linux-ha.org
+# License:	GNU Lesser General Public License (LGPL)
+# Copyright:	(C) 2005 International Business Machines, Inc.
 #
 #
 # An example usage in /etc/ha.d/haresources: 
@@ -22,252 +17,20 @@
 # See usage() function below for more details...
 #
 
-prefix=@prefix@
-exec_prefix=@exec_prefix@
-. @sysconfdir@/ha.d/shellfuncs
-
-#
-#
-#
-unset LC_ALL; export LC_ALL
-unset LANGUAGE; export LANGUAGE
+. @HB_RA_DIR@/hto-mapfuncs
 
 usage() {
-  methods=`LVM_methods | grep -v methods`
-  methods=`echo $methods | tr ' ' '|'`
-  cat <<-! >&1
-	usage: $0 <LVM volume group> ($methods)
-	usage: $0 methods
-
-	$0 manages an  Linux Volume Manager volume (LVM) as an HA resource
-
-	The 'start' operation brings the given volume online
-	The 'stop' operation takes the given volume offline
-	The 'status' operation reports whether the volume is available
-	The 'monitor' operation reports whether the volume seems present
-	The 'methods' operation reports on the methods $0 supports
-
-	$Id: LVM.in,v 1.4 2005/08/26 19:41:01 alan Exp $
-	!
-  exit 1
-
+    echo "usage: $0 <LVM-configuration file> $LEGAL_ACTIONS"
+    exit 1
 }
 
-#
-#	run:  run a script, and log its output.
-#
-run() {
-  output=`"$@" 2>&1`
-  rc=$?
-  output=`echo $output`
-  if
-    [ $rc -eq 0 ]
-  then 
-    if
-      [ ! -z "$output" ]
-    then
-      ha_log "info: $output"
-    fi
-    return 0
-  else
-    if
-      [ ! -z "$output" ]
-    then
-      ha_log "ERROR: $output"
-    else
-      ha_log "ERROR: command failed: $*"
-    fi
-    return $rc
-  fi
-}
-
-
-
-#
-# methods: What methods/operations do we support?
-#
-LVM_methods() {
-  cat <<-!
-	start
-	stop
-	status
-	monitor
-	methods
-	!
-}
-
-#
-#	Return LVM status (silently)
-#
-LVM_status() {
-
-  if 
-    [ "$LVM_MAJOR" -eq "1" ]
-  then
-    vgdisplay $1 | grep -i 'Status.*available' >/dev/null
-    return $?
-  else
-    vgdisplay -v $1 | grep -i 'Status[ \t]*available' >/dev/null
-    return $?
-  fi
-  
-}
-
-#
-#	Report on LVM volume status to stdout...
-#
-LVM_report_status() {
-
-  if 
-    [ "$LVM_MAJOR" -eq "1" ]
-  then
-    VGOUT=`vgdisplay $1 2>&1`
-    echo "$VGOUT" | grep -i 'Status.*available' >/dev/null
-    rc=$?
-  else
-    VGOUT=`vgdisplay -v $1 2>&1`
-    echo "$VGOUT" | grep -i 'Status[ \t]*available' >/dev/null
-    rc=$?
-  fi
-  if
-    [ $rc -eq 0 ]
-  then
-    : Volume $1 is available
-  else
-    echo "LVM Volume $1 is not available (stopped)"
-    return 1
-  fi
-  if
-    echo "$VGOUT" | grep -i 'Access.*read/write' >/dev/null
-  then
-    echo "Volume $1 is available read/write (running)"
-  else
-    echo "Volume $1 is available read-only (running)"
-  fi
-  
-  
-}
-
-#
-#	Monitor the volume - does it really seem to be working?
-#
-#
-LVM_monitor() {
-
-  if
-    LVM_status $1
-  then
-    : OK
-  else
-    ha_log "ERROR: LVM Volume $1 is offline"
-    return 1
-  fi
-
-  run vgck $1
-}
-
-#
-#	Enable LVM volume
-#
-LVM_start() {
-
-  ha_log "Activating volume group $1"
-  if 
-    [ "$LVM_MAJOR" -eq "1" ]
-  then
-    run vgscan $1
-  else
-    run vgscan
-  fi
-  run vgchange -a y $1 || return 1
-
-  if
-    LVM_status $1
-  then
-    : OK Volume $1 activated just fine!
-    return 0
-  else
-    ha_log "ERROR: LVM: $1 did not activate correctly"
-    return 1
-  fi
-}
-
-#
-#	Disable the LVM volume
-#
-LVM_stop() {
-
-  ha_log "Deactivating volume group $1"
-  run vgchange -a n $1 || return 1
-
-  if
-    LVM_status $1
-  then
-    ha_log "ERROR: LVM: $1 did not stop correctly"
-    return 1
-  fi
-  return 0
-}
-
-
-#
-#	'main' starts here...
-#
-
-if
-  [ $# -eq 1 -a "methods" = "$1" ]
-then
-  LVM_methods
-  exit $?
+if [ $# != 2 ]; then
+    usage
 fi
 
-# Get the LVM version number, for this to work we assume(thanks to panjiam):
-# 
-# LVM1 outputs like this
-#
-#	# vgchange --version
-#	vgchange: Logical Volume Manager 1.0.3
-#	Heinz Mauelshagen, Sistina Software  19/02/2002 (IOP 10)
-#
-# LVM2 and higher versions output in this format
-#
-#	# vgchange --version
-#	LVM version:     2.00.15 (2004-04-19)
-#	Library version: 1.00.09-ioctl (2004-03-31)
-#	Driver version:  4.1.0
+OCF_TYPE=LVM
+OCF_RESOURCE_INSTANCE=${OCF_TYPE}
+export OCF_TYPE OCF_RESOURCE_INSTANCE
 
-LVM_VERSION=`vgchange --version 2>&1 | \
-	awk --source '/Logical Volume Manager/ {print $5"\n"; exit; } '\
-	    --source '/LVM version:/ {printf $3"\n"; exit;}'`
-rc=$?
-
-if
-  ( [ $rc -ne 0 ] || [ -z "$LVM_VERSION" ] )
-then
-  ha_log err "LVM: $1 could not determine LVM version. Try 'vgchange --version' manually and modify $0 ?"
-  exit 1
-fi
-LVM_MAJOR="${LVM_VERSION%%.*}"
-
-VOLUME=$1
-
-# What kind of method was invoked?
-case "$2" in
-
-  start)	LVM_start $1
-		exit $?;;
-
-  stop)		LVM_stop $1
-		exit $?;;
-
-  status)	LVM_report_status $1
-		exit $?;;
-
-  monitor)	LVM_monitor $1
-		exit $?;;
-
-  methods)	LVM_methods
-		exit $?;;
-esac
-
-usage
+OCF_RESKEY_volgrpname=$1; export OCF_RESKEY_volgrpname
+ra_execocf $2

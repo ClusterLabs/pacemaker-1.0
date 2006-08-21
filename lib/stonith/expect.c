@@ -1,4 +1,4 @@
-/* $Id: expect.c,v 1.21 2005/05/11 11:49:20 andrew Exp $ */
+/* $Id: expect.c,v 1.24 2006/08/17 08:26:29 zhenh Exp $ */
 /*
  * Simple expect module for the STONITH library
  *
@@ -44,6 +44,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <stonith/st_ttylock.h>
+#include <clplumbing/longclock.h>
 #define ENABLE_PIL_DEFS_PRIVATE
 #include <pils/plugin.h>
 
@@ -65,6 +66,39 @@ extern 	PILPluginUniv*	StonithPIsys;
 #define STRDUP         StonithPIsys->imports->mstrdup
 #define FREE(p)	       {StonithPIsys->imports->mfree(p); (p) = NULL;}
 
+#ifdef	TIMES_ALLOWS_NULL_PARAM
+#	define	TIMES_PARAM	NULL
+#else
+	static struct tms	dummy_longclock_tms_struct;
+#	define	TIMES_PARAM	&dummy_longclock_tms_struct
+#endif
+
+static unsigned long
+our_times(void)	/* Make times(2) behave rationally on Linux */
+{
+	clock_t		ret;
+#ifndef DISABLE_TIMES_KLUDGE
+	int		save_errno = errno;
+
+	/*
+	 * This code copied from clplumbing/longclock.c to avoid
+	 * making STONITH depend on clplumbing.  See it for an explanation
+	 */
+	
+	errno	= 0;
+#endif /* DISABLE_TIMES_KLUDGE */
+
+	ret	= times(TIMES_PARAM);
+
+#ifndef DISABLE_TIMES_KLUDGE
+	if (errno != 0) {
+		ret = (clock_t) (-errno);
+	}
+	errno = save_errno;
+#endif /* DISABLE_TIMES_KLUDGE */
+	return (unsigned long)ret;
+}
+
 /*
  *	Look for ('expect') any of a series of tokens in the input
  *	Return the token type for the given token or -1 on error.
@@ -74,11 +108,6 @@ static int
 ExpectToken(int	fd, struct Etoken * toklist, int to_secs, char * savebuf
 ,	int maxline, int Debug)
 {
-	/*
-	 * We use unsigned long instead of clock_t here because it's signed,
-	 * but the return value from times() is basically unsigned...
-	 * This is broken, but according to POSIX ;-)
-	 */
 	unsigned long	starttime;
 	unsigned long	endtime;
 	int		wraparound=0;
@@ -94,7 +123,7 @@ ExpectToken(int	fd, struct Etoken * toklist, int to_secs, char * savebuf
 
 	/* Figure out when to give up.  Handle lbolt wraparound */
 
-	starttime = times(NULL);
+	starttime = our_times();
 	ticks = (to_secs*hz);
 	endtime = starttime + ticks;
 
@@ -111,7 +140,7 @@ ExpectToken(int	fd, struct Etoken * toklist, int to_secs, char * savebuf
 	}
 
 
-	while (now = times(NULL),
+	while (now = our_times(),
 		(wraparound && (now > starttime || now <= endtime))
 		||	(!wraparound && now <= endtime)) {
 

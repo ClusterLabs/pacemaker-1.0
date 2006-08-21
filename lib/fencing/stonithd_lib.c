@@ -42,13 +42,12 @@
 #include <fencing/stonithd_api.h>
 #include <fencing/stonithd_msg.h>
 
-
 static const char * CLIENT_NAME = NULL;
 static pid_t CLIENT_PID = 0;
 static char CLIENT_PID_STR[16];
 static gboolean DEBUG_MODE	   = FALSE;
-static gboolean SIGNONED_TO_STONITHD = FALSE;
 static IPC_Channel * chan	   = NULL;
+static IPC_Channel * cbchan	   = NULL;
 
 static gboolean INT_BY_ALARM = FALSE;
 static unsigned int DEFAULT_TIMEOUT = 6;
@@ -62,7 +61,6 @@ static const char * stonith_op_strname[] =
 */
 
 static stonith_ops_callback_t stonith_ops_cb = NULL; 
-static void * stonith_ops_cb_private_data = NULL;
 static stonithRA_ops_callback_t stonithRA_ops_cb = NULL;
 static void * stonithRA_ops_cb_private_data = NULL;
 
@@ -71,51 +69,53 @@ static gboolean is_expected_msg(const struct ha_msg * msg,
 				const char * field_name1,
 				const char * field_content1,
 				const char * field_name2,
-				const char * field_content2 );
+				const char * field_content2,
+				gboolean must);
 static int chan_waitin_timeout(IPC_Channel * chan, unsigned int timeout);
 static int chan_waitout_timeout(IPC_Channel * chan, unsigned int timeout);
 static void sigalarm_handler(int signum);
-static void stdlib_log(int priority, const char * fmt, ...)G_GNUC_PRINTF(2,3);
 static void free_stonith_ops_t(stonith_ops_t * st_op);
 static void free_stonithRA_ops_t(stonithRA_ops_t * ra_op);
+
+#define stdlib_log(priority, fmt...); \
+        if ( ( priority != LOG_DEBUG ) || ( DEBUG_MODE != FALSE ) ) { \
+                cl_log(priority, fmt); \
+        }
 
 int
 stonithd_signon(const char * client_name)
 {
-	int rc = ST_FAIL;
+	int     rc = ST_FAIL;
 	char	path[] = IPC_PATH_ATTR;
 	char	sock[] = STONITHD_SOCK;
+	char	cbsock[] = STONITHD_CALLBACK_SOCK;
 	struct  ha_msg * request;
 	struct  ha_msg * reply;
 	GHashTable *	 wchanattrs;
 	uid_t	my_euid;
 	gid_t	my_egid;
 	const char * tmpstr;
+	int 	rc_tmp;
 
-	if ( SIGNONED_TO_STONITHD ) {
-		/* if server is broken, then signoff and signon? important */
-		stdlib_log(LOG_DEBUG, "stonithd_signon: has sigoned to "
-			   "stonithd.");
-		return ST_OK;
-	}
-
-	wchanattrs = g_hash_table_new(g_str_hash, g_str_equal);
-        g_hash_table_insert(wchanattrs, path, sock);
-	/* Connect to the stonith deamon */
-	chan = ipc_channel_constructor(IPC_ANYTYPE, wchanattrs);
-	g_hash_table_destroy(wchanattrs);
+	if (chan == NULL || chan->ch_status == IPC_DISCONNECT) {
+		wchanattrs = g_hash_table_new(g_str_hash, g_str_equal);
+        	g_hash_table_insert(wchanattrs, path, sock);
+		/* Connect to the stonith deamon */
+		chan = ipc_channel_constructor(IPC_ANYTYPE, wchanattrs);
+		g_hash_table_destroy(wchanattrs);
 	
-	if (chan == NULL) {
-		stdlib_log(LOG_ERR, "stonithd_signon: Can't connect to "
-			   "stonithd");
-		return ST_FAIL;
-	}
+		if (chan == NULL) {
+			stdlib_log(LOG_ERR, "stonithd_signon: Can't connect "
+				   " to stonithd");
+			return ST_FAIL;
+		}
 
-        if (chan->ops->initiate_connection(chan) != IPC_OK) {
-		stdlib_log(LOG_ERR, "stonithd_signon: Can't initiate "
-			   "connection to stonithd");
-                return ST_FAIL;
-        }
+	        if (chan->ops->initiate_connection(chan) != IPC_OK) {
+			stdlib_log(LOG_ERR, "stonithd_signon: Can't initiate "
+				   "connection to stonithd");
+	                return ST_FAIL;
+       		}
+	}
 
 	CLIENT_PID = getpid();
 	snprintf(CLIENT_PID_STR, sizeof(CLIENT_PID_STR), "%d", CLIENT_PID);
@@ -138,26 +138,35 @@ stonithd_signon(const char * client_name)
 		stdlib_log(LOG_ERR, "stonithd_signon: "
 			   "cannot add field to ha_msg.");
 		ZAPMSG(request);
-		ZAPCHAN(chan);
 		return ST_FAIL;
 	}
 
+	stdlib_log(LOG_DEBUG, "sending out the signon msg.");
 	/* Send the registration request message */
 	if (msg2ipcchan(request, chan) != HA_OK) {
 		ZAPMSG(request);
-		ZAPCHAN(chan);
 		stdlib_log(LOG_ERR, "can't send signon message to IPC");
 		return ST_FAIL;
 	}
 
 	/* waiting for the output to finish */
-	chan_waitout_timeout(chan, DEFAULT_TIMEOUT);
+	do { 
+		rc_tmp= chan_waitout_timeout(chan, DEFAULT_TIMEOUT);
+	} while (rc_tmp == IPC_INTR);
+
 	ZAPMSG(request);
+	if (IPC_OK != rc_tmp) {
+		stdlib_log(LOG_ERR, "%s:%d: waitout failed."
+			   , __FUNCTION__, __LINE__);
+		return ST_FAIL;
+	}
 
 	/* Read the reply... */
 	stdlib_log(LOG_DEBUG, "waiting for the signon reply msg.");
+
         if ( IPC_OK != chan_waitin_timeout(chan, DEFAULT_TIMEOUT) ) {
-		stdlib_log(LOG_ERR, "waitin failed."); /*  how to deal. important */
+		stdlib_log(LOG_ERR, "%s:%d: waitin failed."
+			   , __FUNCTION__, __LINE__);
 		return ST_FAIL;
 	}
 
@@ -167,10 +176,9 @@ stonithd_signon(const char * client_name)
 	}
 	
 	if ( TRUE == is_expected_msg(reply, F_STONITHD_TYPE, ST_APIRPL, 
-			     F_STONITHD_APIRPL, ST_RSIGNON) ) {
+			     F_STONITHD_APIRPL, ST_RSIGNON, TRUE) ) {
 		if ( ((tmpstr=cl_get_string(reply, F_STONITHD_APIRET)) != NULL)
 	   	    && (STRNCMP_CONST(tmpstr, ST_APIOK) == 0) ) {
-			SIGNONED_TO_STONITHD = TRUE;
 			rc = ST_OK;
 			stdlib_log(LOG_DEBUG, "signoned to the stonithd.");
 		} else {
@@ -178,12 +186,69 @@ stonithd_signon(const char * client_name)
 				   "stonithd.");
 		}
 	} else {
-		stdlib_log(LOG_DEBUG, "stonithd_signon: "
+		stdlib_log(LOG_ERR, "stonithd_signon: "
 			   "Got an unexpected message.");
-		/* Handle it furtherly ? */
+	}
+	ZAPMSG(reply);
+
+	if (ST_OK != rc) { /* Something wrong when try to sign on to stonithd */
+		goto end;
 	}
 
+	/* Connect to the stonith deamon via callback channel */
+	wchanattrs = g_hash_table_new(g_str_hash, g_str_equal);
+        g_hash_table_insert(wchanattrs, path, cbsock);
+	cbchan = ipc_channel_constructor(IPC_ANYTYPE, wchanattrs);
+	g_hash_table_destroy(wchanattrs);
+	
+	if (cbchan == NULL) {
+		stdlib_log(LOG_ERR, "stonithd_signon: Can't construct "
+			   "callback channel to stonithd.");
+		rc = ST_FAIL;
+		goto end;
+	}
+
+        if (cbchan->ops->initiate_connection(cbchan) != IPC_OK) {
+		stdlib_log(LOG_ERR, "stonithd_signon: Can't initiate "
+			   "connection with the callback channel");
+		rc = ST_FAIL;
+		goto end;
+ 	}
+
+	if ( (reply = msgfromIPC_noauth(cbchan)) == NULL ) {
+		stdlib_log(LOG_ERR, "%s:%d: failed to fetch reply via the "
+			   " callback channel"
+			   , __FUNCTION__, __LINE__);
+		rc = ST_FAIL;
+		goto end;
+	}
+	
+	if ( TRUE == is_expected_msg(reply, F_STONITHD_TYPE, ST_APIRPL, 
+			     F_STONITHD_APIRPL, ST_RSIGNON, TRUE) ) {
+		if ( ((tmpstr=cl_get_string(reply, F_STONITHD_APIRET)) != NULL)
+	   	    && (STRNCMP_CONST(tmpstr, ST_APIOK) == 0) ) {
+			stdlib_log(LOG_DEBUG, "%s:%d: Got a good signon reply "
+				  "via the callback channel."
+				   , __FUNCTION__, __LINE__);
+		} else {
+			rc = ST_FAIL;
+			stdlib_log(LOG_ERR, "%s:%d: Got a bad signon reply "
+				  "via the callback channel."
+				   , __FUNCTION__, __LINE__);
+		}
+	} else {
+		rc = ST_FAIL;
+		stdlib_log(LOG_ERR, "stonithd_signon: "
+			   "Got an unexpected message via the callback chan.");
+	}
 	ZAPMSG(reply);
+
+end:
+	if (ST_OK != rc) {
+		/* Something wrong when confirm via callback channel */
+		stonithd_signoff();
+	}
+
 	return rc;
 }
 
@@ -194,7 +259,7 @@ stonithd_signoff(void)
 	struct ha_msg * request, * reply;
 	const char * tmpstr;
 	
-	if (SIGNONED_TO_STONITHD == FALSE) {
+	if (chan == NULL || chan->ch_status == IPC_DISCONNECT) {
 		stdlib_log(LOG_NOTICE, "Has been in signoff status.");
 		return ST_OK;
 	}
@@ -217,7 +282,8 @@ stonithd_signoff(void)
 	/* Read the reply... */
 	stdlib_log(LOG_DEBUG, "waiting for the signoff reply msg.");
         if ( IPC_OK != chan_waitin_timeout(chan, DEFAULT_TIMEOUT) ) {
-		stdlib_log(LOG_ERR, "waitin failed.");
+		stdlib_log(LOG_ERR, "%s:%d: waitin failed."
+			   , __FUNCTION__, __LINE__);
 		return ST_FAIL;
 	}
 
@@ -228,10 +294,11 @@ stonithd_signoff(void)
 	}
 	
 	if ( TRUE == is_expected_msg(reply, F_STONITHD_TYPE, ST_APIRPL, 
-			     F_STONITHD_APIRPL, ST_RSIGNOFF) ) {
+			     F_STONITHD_APIRPL, ST_RSIGNOFF, TRUE) ) {
 		if ( ((tmpstr=cl_get_string(reply, F_STONITHD_APIRET)) != NULL)
 	   	    && (STRNCMP_CONST(tmpstr, ST_APIOK) == 0) ) {
-			SIGNONED_TO_STONITHD = FALSE;
+			chan->ops->destroy(chan);
+			chan = NULL;
 			CLIENT_NAME = NULL;
 			rc = ST_OK;
 			stdlib_log(LOG_DEBUG, "succeeded to sign off the "
@@ -240,10 +307,19 @@ stonithd_signoff(void)
 			stdlib_log(LOG_NOTICE, "fail to sign off the stonithd.");
 		}
 	} else {
-		stdlib_log(LOG_DEBUG, "stonithd_signoff: "
+		stdlib_log(LOG_ERR, "stonithd_signoff: "
 			   "Got an unexpected message.");
 	}
 	ZAPMSG(reply);
+	
+	if (NULL != chan) {
+		chan->ops->destroy(chan);
+		chan = NULL;
+	}
+	if (NULL != cbchan) {
+		cbchan->ops->destroy(cbchan);
+		cbchan = NULL;
+	}
 	
 	return rc;
 }
@@ -251,11 +327,11 @@ stonithd_signoff(void)
 IPC_Channel *
 stonithd_input_IPC_channel(void)
 {
-	if ( SIGNONED_TO_STONITHD == TRUE ) {
-		return chan;
-	} else {
+	if ( cbchan == NULL || cbchan->ch_status == IPC_DISCONNECT ) {
 		stdlib_log(LOG_ERR, "stonithd_input_IPC_channel: not signon.");
 		return NULL;
+	} else {
+		return cbchan;
 	}
 }
 
@@ -271,7 +347,7 @@ stonithd_node_fence(stonith_ops_t * op)
 		return ST_FAIL;
 	}
 	
-	if (SIGNONED_TO_STONITHD == FALSE) {
+	if (chan == NULL || chan->ch_status == IPC_DISCONNECT) {
 		stdlib_log(LOG_NOTICE, "Has been in signoff status.");
 		return ST_FAIL;
 	}
@@ -291,11 +367,20 @@ stonithd_node_fence(stonith_ops_t * op)
 		ZAPMSG(request);
 		return ST_FAIL;
 	}
+	if  (op->private_data != NULL) {
+	       if ( ha_msg_add(request, F_STONITHD_PDATA, op->private_data) != HA_OK) {
+			stdlib_log(LOG_ERR, "stonithd_node_fence: "
+			   "Failed to add F_STONITHD_PDATA field to ha_msg.");
+			ZAPMSG(request);
+			return ST_FAIL;
+		}
+	}
 
 	/* Send the stonith request message */
 	if (msg2ipcchan(request, chan) != HA_OK) {
 		ZAPMSG(request);
-		stdlib_log(LOG_ERR, "can't send signoff message to IPC");
+		stdlib_log(LOG_ERR
+			   , "failed to send stonith request to the stonithd");
 		return ST_FAIL;
 	}
 
@@ -306,8 +391,8 @@ stonithd_node_fence(stonith_ops_t * op)
 	/* Read the reply... */
 	stdlib_log(LOG_DEBUG, "waiting for the stonith reply msg.");
         if ( IPC_OK != chan_waitin_timeout(chan, DEFAULT_TIMEOUT) ) {
-		stdlib_log(LOG_ERR, "stonithd_node_fence: waitin failed.");
-		/* how to deal. important */
+		stdlib_log(LOG_ERR, "%s:%d: waitin failed."
+			   , __FUNCTION__, __LINE__);
 		return ST_FAIL;
 	}
 
@@ -317,17 +402,20 @@ stonithd_node_fence(stonith_ops_t * op)
 	}
 	
 	if ( TRUE == is_expected_msg(reply, F_STONITHD_TYPE, ST_APIRPL, 
-			     F_STONITHD_APIRPL, ST_RSTONITH) ) {
-		if ( ((tmpstr = cl_get_string(reply, F_STONITHD_APIRET)) != NULL) 
+			     F_STONITHD_APIRPL, ST_RSTONITH, TRUE) ) {
+		if (((tmpstr = cl_get_string(reply, F_STONITHD_APIRET)) != NULL)
 	   	    && (STRNCMP_CONST(tmpstr, ST_APIOK) == 0) ) {
 			rc = ST_OK;
-			stdlib_log(LOG_DEBUG, "stonith msg is sent to stonithd.");
+			stdlib_log(LOG_DEBUG, "%s:%d: %s"
+				 , __FUNCTION__, __LINE__
+				 , "Stonithd's synchronous answer is ST_APIOK");
 		} else {
-			stdlib_log(LOG_DEBUG, "failed to send stonith request to "
-				   "the stonithd.");
+			stdlib_log(LOG_ERR, "%s:%d: %s"
+			       , __FUNCTION__, __LINE__
+			       , "Stonithd's synchronous answer is ST_APIFAIL");
 		}
 	} else {
-		stdlib_log(LOG_DEBUG, "stonithd_node_fence: "
+		stdlib_log(LOG_ERR, "stonithd_node_fence: "
 			   "Got an unexpected message.");
 		/* Need to handle in other way? */
 	}
@@ -339,15 +427,9 @@ stonithd_node_fence(stonith_ops_t * op)
 gboolean 
 stonithd_op_result_ready(void)
 {
-	if ( SIGNONED_TO_STONITHD == FALSE ) {
+	if ( cbchan == NULL || cbchan->ch_status == IPC_DISCONNECT ) {
 		stdlib_log(LOG_ERR, "stonithd_op_result_ready: "
 			   "failed due to not on signon status.");
-		return FALSE;
-	}
-	
-	if ( chan == NULL ) {
-		stdlib_log(LOG_ERR, "stonithd_op_result_ready: "
-			   "failed due to IPC channel chan == NULL.");
 		return FALSE;
 	}
 	
@@ -356,8 +438,8 @@ stonithd_op_result_ready(void)
 	 * from the possible endless waiting. That can be caused by the way
 	 * in which the caller uses it.
 	 */
-	return (chan->ops->is_message_pending(chan)
-		|| chan->ch_status == IPC_DISCONNECT);
+	return (cbchan->ops->is_message_pending(cbchan)
+		|| cbchan->ch_status == IPC_DISCONNECT);
 }
 
 int
@@ -379,20 +461,22 @@ stonithd_receive_ops_result(gboolean blocking)
 
 	if (stonithd_op_result_ready() == FALSE) {
 	/* at that time, blocking must be TRUE */
-		if (IPC_OK != chan->ops->waitin(chan)) {
+		if (IPC_OK != cbchan->ops->waitin(cbchan)) {
 			return ST_FAIL;
 		}
 	}
 
-	reply = msgfromIPC_noauth(chan);
+	reply = msgfromIPC_noauth(cbchan);
 	if ( TRUE == is_expected_msg(reply, F_STONITHD_TYPE, ST_APIRPL, 
-			     F_STONITHD_APIRPL, ST_STRET)  ) {
+			     F_STONITHD_APIRPL, ST_STRET, FALSE)  ) {
 		stonith_ops_t * st_op = NULL;
 
-		stdlib_log(LOG_DEBUG, "received stonith final ret.");
+		stdlib_log(LOG_DEBUG, "received final return value of "
+			   "a stonith operation.");
 		/* handle the stonith op result message */
 		st_op = g_new(stonith_ops_t, 1);	
 		st_op->node_uuid = NULL;
+		st_op->private_data = NULL;
 		
 		if ( ha_msg_value_int(reply, F_STONITHD_OPTYPE, &tmpint)
 			== HA_OK) {
@@ -445,17 +529,24 @@ stonithd_receive_ops_result(gboolean blocking)
 			rc = ST_FAIL;
 		}
 
-		if ((tmpstr=cl_get_string(reply, F_STONITHD_APPEND)) != NULL) {
+		if ((tmpstr=cl_get_string(reply, F_STONITHD_NLIST)) != NULL) {
 			st_op->node_list = g_strdup(tmpstr);
 		} else {
 			st_op->node_list = NULL;
 			stdlib_log(LOG_DEBUG, "stonithd_receive_ops_result: the "
-				   "reply message contains no appendix field.");
+				   "reply message contains no NLIST field.");
 		}
-		
+	
+		if ((tmpstr=cl_get_string(reply, F_STONITHD_PDATA)) != NULL) {
+			st_op->private_data = g_strdup(tmpstr);
+		} else {
+			stdlib_log(LOG_DEBUG, "stonithd_receive_ops_result: "
+				"the reply message contains no PDATA field.");
+		}
+			
 		if (stonith_ops_cb != NULL) {
 			stdlib_log(LOG_DEBUG, "trigger stonith op callback.");
-			stonith_ops_cb(st_op, stonith_ops_cb_private_data);
+			stonith_ops_cb(st_op);
 		} else { 
 			stdlib_log(LOG_DEBUG, "No stonith op callback.");
 		}
@@ -466,10 +557,11 @@ stonithd_receive_ops_result(gboolean blocking)
 	}
 
 	if (  TRUE == is_expected_msg(reply, F_STONITHD_TYPE, ST_APIRPL,
-			     F_STONITHD_APIRPL, ST_RAOPRET ) ) {
+			     F_STONITHD_APIRPL, ST_RAOPRET, FALSE ) ) {
 		stonithRA_ops_t * ra_op = NULL;
 
-		stdlib_log(LOG_DEBUG, "received stonithRA op final ret.");
+		stdlib_log(LOG_DEBUG, "received the final return value of a "
+			   "stonithRA operation.");
 		/* handle the stonithRA op result message */
 		ra_op = g_new(stonithRA_ops_t, 1);
 
@@ -558,17 +650,15 @@ stonithd_receive_ops_result(gboolean blocking)
 }
 
 int
-stonithd_set_stonith_ops_callback(stonith_ops_callback_t callback, 
-				  void * private_data)
+stonithd_set_stonith_ops_callback(stonith_ops_callback_t callback)
 {
-	if ( SIGNONED_TO_STONITHD == TRUE ) {
-		stonith_ops_cb = callback;
-		stonith_ops_cb_private_data = private_data;
-		stdlib_log(LOG_DEBUG, "setted stonith ops callback.");
-	} else {
+	if ( cbchan == NULL || cbchan->ch_status == IPC_DISCONNECT ) {
 		stdlib_log(LOG_ERR, "stonithd_set_stonith_ops_callback: "\
 		 "failed due to not on signon status.");
 		return ST_FAIL;
+	} else {
+		stonith_ops_cb = callback;
+		stdlib_log(LOG_DEBUG, "setted stonith ops callback.");
 	}
 	
 	return ST_OK;
@@ -594,7 +684,7 @@ stonithd_virtual_stonithRA_ops( stonithRA_ops_t * op, int * call_id)
 		return ST_FAIL;
 	}
 	
-	if (SIGNONED_TO_STONITHD == FALSE) {
+	if (chan == NULL || chan->ch_status == IPC_DISCONNECT) {
 		stdlib_log(LOG_ERR, "Not in signon status.");
 		return ST_FAIL;
 	}
@@ -628,8 +718,8 @@ stonithd_virtual_stonithRA_ops( stonithRA_ops_t * op, int * call_id)
 	/* Read the reply... */
 	stdlib_log(LOG_DEBUG, "waiting for the stonithRA reply msg.");
         if ( IPC_OK != chan_waitin_timeout(chan, DEFAULT_TIMEOUT) ) {
-		stdlib_log(LOG_ERR, "stonith:waitin failed.");
-		/* how to deal. important */
+		stdlib_log(LOG_ERR, "%s:%d: waitin failed."
+			   , __FUNCTION__, __LINE__);
 		return ST_FAIL;
 	}
 
@@ -640,7 +730,7 @@ stonithd_virtual_stonithRA_ops( stonithRA_ops_t * op, int * call_id)
 	}
 	
 	if ( FALSE == is_expected_msg(reply, F_STONITHD_TYPE, ST_APIRPL, 
-			     F_STONITHD_APIRPL, ST_RRAOP) ) {
+			     F_STONITHD_APIRPL, ST_RRAOP, TRUE) ) {
 		ZAPMSG(reply); /* avoid to zap the msg ? */
 		stdlib_log(LOG_DEBUG, "stonithd_virtual_stonithRA_ops: "
 			   "Got an unexpected message.");
@@ -675,14 +765,14 @@ int
 stonithd_set_stonithRA_ops_callback(stonithRA_ops_callback_t callback,
 				    void * private_data)
 {
-	if ( SIGNONED_TO_STONITHD == TRUE ) {
-		stonithRA_ops_cb = callback;
-		stonithRA_ops_cb_private_data = private_data;
-		stdlib_log(LOG_DEBUG, "setted stonith ops callback.");
-	} else {
+	if ( cbchan == NULL || cbchan->ch_status == IPC_DISCONNECT ) {
 		stdlib_log(LOG_ERR, "stonithd_set_stonithRA_ops_callback: "
 		 "failed due to not on signon status.");
 		return ST_FAIL;
+	} else {
+		stonithRA_ops_cb = callback;
+		stonithRA_ops_cb_private_data = private_data;
+		stdlib_log(LOG_DEBUG, "setted stonith ops callback.");
 	}
 	
 	return ST_OK;
@@ -694,14 +784,14 @@ int stonithd_list_stonith_types(GList ** types)
 	struct ha_msg * request, * reply;
 	const char * tmpstr;
 
-	if (SIGNONED_TO_STONITHD == FALSE) {
+	if (chan == NULL || chan->ch_status == IPC_DISCONNECT) {
 		stdlib_log(LOG_ERR, "Not in signon status.");
 		return ST_FAIL;
 	}
 
 	if (*types != NULL) {
-		stdlib_log(LOG_ERR, "stonithd_list_stonith_types: *types!=NULL,"
-			   " Will casue memory leak.");
+		stdlib_log(LOG_ERR, "stonithd_list_stonith_types: "
+			"*types!=NULL, will casue memory leak.");
 		*types = NULL;
 	}
 	
@@ -723,9 +813,8 @@ int stonithd_list_stonith_types(GList ** types)
 	/* Read the reply... */
 	stdlib_log(LOG_DEBUG, "waiting for the reply to list stonith types.");
         if ( IPC_OK != chan_waitin_timeout(chan, DEFAULT_TIMEOUT) ) {
-		stdlib_log(LOG_ERR, "stonithd_list_stonith_types: "
-			   "chan_waitin failed.");
-		/* how to deal. important */
+		stdlib_log(LOG_ERR, "%s:%d: chan_waitin failed."
+			   , __FUNCTION__, __LINE__);
 		return ST_FAIL;
 	}
 
@@ -736,7 +825,7 @@ int stonithd_list_stonith_types(GList ** types)
 	}
 	
 	if ( TRUE == is_expected_msg(reply, F_STONITHD_TYPE, ST_APIRPL, 
-			     F_STONITHD_APIRPL, ST_RLTYPES) ) {
+			     F_STONITHD_APIRPL, ST_RLTYPES, TRUE) ) {
 		if ( ((tmpstr = cl_get_string(reply, F_STONITHD_APIRET)) != NULL) 
 	   	    && (STRNCMP_CONST(tmpstr, ST_APIOK) == 0) ) {
 			int i, len;
@@ -794,13 +883,15 @@ create_basic_reqmsg_fields(const char * apitype)
 static gboolean 
 is_expected_msg(const struct ha_msg * msg,  
 		const char * field_name1, const char * field_content1,
-		const char * field_name2, const char * field_content2 )
+		const char * field_name2, const char * field_content2,
+		gboolean must)
 {
 	const char * tmpstr;
 	gboolean rc = FALSE;
 
 	if ( msg == NULL ) {
 		stdlib_log(LOG_ERR, "is_expected _msg: msg==NULL");
+		return rc;
 	}
 
 	if (   ( (tmpstr = cl_get_string(msg, field_name1)) != NULL )
@@ -812,10 +903,22 @@ is_expected_msg(const struct ha_msg * msg,
 			stdlib_log(LOG_DEBUG, "%s = %s.", field_name2, tmpstr);
 			rc= TRUE;
 		} else {
-			stdlib_log(LOG_DEBUG, "no field %s.", field_name2);
+			if (TRUE == must) {
+				stdlib_log(LOG_ERR, "field <%s> content is "
+				   	" <%s>, expected content is: <%s>"
+				   	, field_name2
+				   	, (NULL == tmpstr) ? "NULL" : tmpstr
+			   	   	, field_content2);
+			}
 		}
 	} else {
-		stdlib_log(LOG_DEBUG, "No field %s", field_name1);
+		if (TRUE == must) {
+			stdlib_log(LOG_ERR, "field <%s> content is <%s>, "
+				   "expected content is: <%s>"
+				  , field_name1
+				  , (NULL == tmpstr) ? "NULL" : tmpstr
+				  , field_content1);
+		}
 	}
 
 	return rc;
@@ -840,8 +943,8 @@ chan_waitin_timeout(IPC_Channel * chan, unsigned int timeout)
 	if ( other_remaining > 0 ) {
 		alarm(other_remaining);
 		stdlib_log(LOG_NOTICE, "chan_waitin_timeout: There are others "
-			"using timer:%d. I donnot use alarm.", other_remaining);
-		alarm(other_remaining);
+			   "using timer: %d. I donnot use alarm."
+			   , other_remaining);
 		ret = chan->ops->waitin(chan);
 	} else {
 		memset(&old_action, 0, sizeof(old_action));
@@ -852,11 +955,16 @@ chan_waitin_timeout(IPC_Channel * chan, unsigned int timeout)
 		alarm(timeout);
 	
 		ret = chan->ops->waitin(chan);
-
-		if ( ret == IPC_INTR && INT_BY_ALARM ) {
-			stdlib_log(LOG_ERR, "chan_waitin_timeout: waitin was "
-				   "interrupted by alarm signal.");
+		if ( ret == IPC_INTR && TRUE == INT_BY_ALARM ) {
+			stdlib_log(LOG_ERR, "%s:%d: waitin was interrupted "
+				   "by the alarm set by myself."
+				   , __FUNCTION__, __LINE__);
+			ret = IPC_FAIL;
 		} else {
+			if (ret == IPC_INTR) {
+				stdlib_log(LOG_NOTICE
+					, "waitin was interrupted by others");
+			}
 			alarm(0);
 		}
 
@@ -890,10 +998,16 @@ chan_waitout_timeout(IPC_Channel * chan, unsigned int timeout)
 
 		ret = chan->ops->waitout(chan);
 
-		if ( ret == IPC_INTR && INT_BY_ALARM ) {
-			stdlib_log(LOG_ERR, "chan_waitout_timeout: waitout was "
-				   "interrupted by alarm setted by myself.");
+		if ( ret == IPC_INTR && TRUE == INT_BY_ALARM ) {
+			stdlib_log(LOG_ERR, "%s:%d: waitout was interrupted"
+				   " by the alarm set by myself."
+				   , __FUNCTION__, __LINE__);
+			ret = IPC_FAIL;
 		} else {
+			if (ret == IPC_INTR) {
+				stdlib_log(LOG_ERR
+					   , "waitin was interrupted by others");
+			}
 			alarm(0);
 		}
 
@@ -908,26 +1022,6 @@ chan_waitout_timeout(IPC_Channel * chan, unsigned int timeout)
 void stdlib_enable_debug_mode(void)
 {
 	DEBUG_MODE = TRUE;
-}
-
-/* copied from cl_log.c, need to be the same */
-#ifndef MAXLINE
-#	define MAXLINE	512
-#endif
-static void
-stdlib_log(int priority, const char * fmt, ...)
-{
-	va_list		ap;
-	char		buf[MAXLINE];
-
-	if ( DEBUG_MODE == FALSE && priority == LOG_DEBUG ) {
-		return;
-	}
-	
-	va_start(ap, fmt);
-	vsnprintf(buf, sizeof(buf)-1, fmt, ap);
-	va_end(ap);
-	cl_log(priority, "%s", buf);
 }
 
 static void
@@ -956,5 +1050,7 @@ free_stonith_ops_t(stonith_ops_t * st_op)
 
 	ZAPGDOBJ(st_op->node_name);
 	ZAPGDOBJ(st_op->node_list);
+	ZAPGDOBJ(st_op->node_uuid);	
+	ZAPGDOBJ(st_op->private_data);
 	ZAPGDOBJ(st_op);
 }

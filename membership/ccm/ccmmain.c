@@ -1,4 +1,4 @@
-/* $Id: ccmmain.c,v 1.27 2005/07/29 10:32:30 sunjd Exp $ */
+/* $Id: ccmmain.c,v 1.34 2006/03/09 09:59:44 zhenh Exp $ */
 /* 
  * ccm.c: Consensus Cluster Service Program 
  *
@@ -20,15 +20,15 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  *
  */
-#include <ccm.h>
+#include "ccm.h"
+#include "ccmmisc.h"
 #include <clplumbing/cl_malloc.h>
 #include <clplumbing/cl_signal.h>
 
 #define SECOND   1000
 #define OPTARGS  "dv"
 
-int global_debug=0;
-int global_verbose=0;
+GMainLoop*	mainloop = NULL;
 
 /*
  * hearbeat event source.
@@ -37,21 +37,15 @@ int global_verbose=0;
 static gboolean hb_input_dispatch(IPC_Channel *, gpointer);
 static void hb_input_destroy(gpointer);
 static gboolean hb_timeout_dispatch(gpointer);
-
-typedef struct hb_usrdata_s {
-	void		*ccmdata;
-	GMainLoop	*mainloop;
-} hb_usrdata_t;
-
 static gboolean
 hb_input_dispatch(IPC_Channel * channel, gpointer user_data)
 {
 	if (channel && (channel->ch_status == IPC_DISCONNECT)) {
-		cl_log(LOG_ERR, "Lost connection to heartbeat service. Need to bail out.");
+		ccm_log(LOG_ERR, "Lost connection to heartbeat service. Need to bail out.");
 		return FALSE;
 	}
 	
-	return ccm_take_control(((hb_usrdata_t *)user_data)->ccmdata);
+	return ccm_take_control(user_data);
 }
 
 static void
@@ -59,14 +53,14 @@ hb_input_destroy(gpointer user_data)
 {
 	/* close connections to all the clients */
 	client_delete_all();
-	g_main_quit(((hb_usrdata_t *)user_data)->mainloop);
+	g_main_quit(mainloop);
 	return;
 }
 
 static gboolean
 hb_timeout_dispatch(gpointer user_data)
 {	
-	if(global_debug) {
+	if(debug_level > 0) {
 		ccm_check_memoryleak();
 	}
 	return hb_input_dispatch(0, user_data);
@@ -86,7 +80,7 @@ clntCh_input_dispatch(IPC_Channel *client,
 	      gpointer        user_data)
 {
 	if(client->ch_status == IPC_DISCONNECT){
-		cl_log(LOG_INFO, "client (pid=%d) removed from ccm", 
+		ccm_log(LOG_INFO, "client (pid=%d) removed from ccm", 
 		       client->farside_pid);
 		
 		client_delete(client);
@@ -160,7 +154,7 @@ wait_channel_init(void)
 static void
 usage(const char *cmd)
 {
-	fprintf(stderr, "\nUsage: %s [-dv]\n", cmd);
+	fprintf(stderr, "\nUsage: %s [-v]\n", cmd);
 }
 
 
@@ -168,36 +162,39 @@ usage(const char *cmd)
 /* debug facilitator. */
 /* */
 static void
-ccm_debug(int signum) 
+usr_signal_handler(int signum) 
 {
 	switch(signum) {
 	case SIGUSR1:
-		global_debug = !global_debug;
+		debug_level++;
 		break;
+
 	case SIGUSR2:
-		global_verbose = !global_verbose;
+		debug_level--;
+		if (debug_level < 0) {
+			debug_level = 0;
+		}
 		break;
 	}
-
-	if(global_debug || global_verbose){
+	
+	if(debug_level > 0){
 		cl_log_enable_stderr(TRUE);
 	} else {
 		cl_log_enable_stderr(FALSE);
 	}
+	ccm_log(LOG_INFO, "set debug_level to %d", debug_level);
 
 }
 
 static gboolean
 ccm_shutdone(int sig, gpointer userdata)
 {	
-	hb_usrdata_t*	hb = (hb_usrdata_t*)userdata;
-	ccm_t*		ccm = (ccm_t*)hb->ccmdata;
+	ccm_t*		ccm = (ccm_t*)userdata;
 	ccm_info_t *	info = (ccm_info_t*)ccm->info;
-	GMainLoop *	mainloop = hb->mainloop;
-	
-	cl_log(LOG_INFO, "received SIGTERM in node");
-	if (info == NULL || mainloop == NULL){
-		cl_log(LOG_ERR, "ccm_shutdone: invalid arguments");
+
+	ccm_log(LOG_INFO, "received SIGTERM, going to shut down");
+	if (info == NULL){
+		ccm_log(LOG_ERR, "ccm_shutdone: invalid arguments");
 		return FALSE;
 	}
 	
@@ -218,8 +215,8 @@ main(int argc, char **argv)
 	char *cmdname;
 	char *tmp_cmdname;
 	int  flag;
-	hb_usrdata_t	usrdata;
-
+	ccm_t*	ccm;
+	
 #if 1
 	cl_malloc_forced_for_glib();
 #endif
@@ -233,52 +230,49 @@ main(int argc, char **argv)
 	cl_log_set_facility(LOG_DAEMON);
 	while ((flag = getopt(argc, argv, OPTARGS)) != EOF) {
 		switch(flag) {
-			case 'v':
-				global_verbose = 1;
-				break;
-			case 'd': 
-				global_debug = 1;
+		case 'v':		/* Debug mode, more logs*/
+				++debug_level;
 				break;
 		default:
 				usage(cmdname);
 				return 1;
 		}
 	}
-	if(global_verbose || global_debug)
+	if(debug_level > 0)
 		cl_log_enable_stderr(TRUE);
 
 
-	CL_SIGNAL(SIGUSR1, ccm_debug);
-	CL_SIGNAL(SIGUSR2, ccm_debug);
+	CL_SIGNAL(SIGUSR1, usr_signal_handler);
+	CL_SIGNAL(SIGUSR2, usr_signal_handler);
 	CL_IGNORE_SIG(SIGPIPE);
 	
-	cl_inherit_use_logd(ENV_PREFIX ""KEY_LOGDAEMON, 0);
+	cl_inherit_use_logd(ENV_PREFIX ""KEY_LOGDAEMON, 256);
 	
+	inherit_logconfig_from_environment();
+
 	/* initialize the client tracking system */
 	client_init();
-
-	usrdata.mainloop = g_main_new(TRUE);
 
 	/* 
 	 * heartbeat is the main source of events. 
 	 * This source must be listened 
 	 * at high priority 
 	 */
-	usrdata.ccmdata = ccm_initialize();
-	if(!usrdata.ccmdata) {
+	ccm = ccm_initialize();
+	if(ccm == NULL){
+		ccm_log(LOG_ERR, "Initialization failed. Exit");
 		exit(1);
 	}
 	
 	G_main_add_SignalHandler(G_PRIORITY_HIGH, SIGTERM, 
-				 ccm_shutdone, &usrdata, NULL);
-	
+				 ccm_shutdone, ccm, NULL);
 	/* we want hb_input_dispatch to be called when some input is
 	 * pending on the heartbeat fd, and every 1 second 
 	 */
-	G_main_add_IPC_Channel(G_PRIORITY_HIGH, ccm_get_ipcchan(usrdata.ccmdata), 
-			FALSE, hb_input_dispatch, &usrdata, hb_input_destroy);
+	G_main_add_IPC_Channel(G_PRIORITY_HIGH, ccm_get_ipcchan(ccm), 
+			FALSE, hb_input_dispatch, ccm, hb_input_destroy);
 	Gmain_timeout_add_full(G_PRIORITY_HIGH, SECOND, hb_timeout_dispatch,
-				&usrdata, hb_input_destroy);
+				ccm, hb_input_destroy);
 
 	/* the clients wait channel is the other source of events.
 	 * This source delivers the clients connection events.
@@ -289,10 +283,10 @@ main(int argc, char **argv)
 		FALSE, waitCh_input_dispatch, wait_ch,
 		waitCh_input_destroy);
 
-
-	g_main_run(usrdata.mainloop);
-	g_main_destroy(usrdata.mainloop);
-
+	mainloop = g_main_loop_new(NULL, FALSE);
+	g_main_run(mainloop);
+	g_main_destroy(mainloop);
+	
 	g_free(tmp_cmdname);
 	/*this program should never terminate,unless killed*/
 	return(1);

@@ -16,11 +16,10 @@
 # Initialization:
 
 . @hb_libdir@/ocf-shellfuncs
+. @sysconfdir@/ha.d/shellfuncs
 
 #######################################################################
 HA_VARRUNDIR=@localstatedir@/run/@HB_PKG@
-prefix=@prefix@
-exec_prefix=@exec_prefix@
 CMD=`basename $0`
 
 iptables=`which iptables`
@@ -74,7 +73,7 @@ using iptables.
 <shortdesc lang="en">portblock resource agent</shortdesc>
 
 <parameters>
-<parameter name="protocol" unique="0">
+<parameter name="protocol" unique="0" required="1">
 <longdesc lang="en">
 The protocol used to be blocked/unblocked.
 </longdesc>
@@ -82,7 +81,7 @@ The protocol used to be blocked/unblocked.
 <content type="string" default="" />
 </parameter>
 
-<parameter name="portno" unique="0">
+<parameter name="portno" unique="0" required="1">
 <longdesc lang="en">
 The port number used to be blocked/unblocked.
 </longdesc>
@@ -90,7 +89,7 @@ The port number used to be blocked/unblocked.
 <content type="integer" default="" />
 </parameter>
 
-<parameter name="action" unique="0">
+<parameter name="action" unique="0" required="1">
 <longdesc lang="en">
 The action (block/unblock) to be done on the protocol::portno.
 </longdesc>
@@ -129,13 +128,7 @@ END
 # pseudo_resource filename operation
 pseudo_resource()
 {
-  file="$HA_VARRUNDIR/$1"
-  case $2 in
-    start|restart|reload)  touch "$file";;
-    stop) rm -f $file;;
-    status) test -f "$file";;
-    *)	exit 3;;
-  esac
+  ha_pseudo_resource $*
 }
 
 #iptables_spec {udp|tcp} portno,portno
@@ -185,8 +178,8 @@ IptablesStatus()
     chain_isactive "$1" "$2"
   then
     case $3 in
-	  block)	SayActive $*; return $?;;
-	  *) 		SayInactive $*; return $?;;
+	  block)	SayActive $*;;
+	  *) 		SayInactive $*;;
     esac
   else
     case $3 in
@@ -194,14 +187,16 @@ IptablesStatus()
 	        if
 		  pseudo_resource "$RSCNAME" status
 		then
-		  SayConsideredActive $*; return $?
+		  SayConsideredActive $*
 		else
-		  SayInactive $*; return $?
+		  SayInactive $*
 		fi;;
 
-	  *)	SayActive $*; return $?;;
+	  *)	SayActive $*;;
     esac
   fi      
+
+  return $?
 }
 
 #IptablesBLOCK  {udp|tcp} portno,portno

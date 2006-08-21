@@ -1,4 +1,4 @@
-/* $Id: message.c,v 1.15 2005/03/16 17:11:15 lars Exp $ */
+/* $Id: message.c,v 1.16 2006/01/15 16:27:46 xunsun Exp $ */
 /* 
  * message.c
  *
@@ -1439,7 +1439,7 @@ here:			SACKPTMESSAGEVALIDATEREQ(ckptMsg);
 		 * sync message 
 		 * on receive this message, if the replica is not lock and no 
 		 * other pending operations, the active replica reply it with
-		 * OK. Else, the active replica add it to the the pending list
+		 * OK. Else, the active replica add it to the pending list
 		 */
 		case M_CKPT_SYNC:
 			if (replica == NULL) {

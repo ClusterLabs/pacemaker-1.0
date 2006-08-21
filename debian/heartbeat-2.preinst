@@ -6,18 +6,12 @@
 #
 # see: dh_installdeb(1)
 
-set -e
-
-if ! getent group haclient > /dev/null ; then
-	addgroup --system --group haclient > /dev/null
-fi
-if ! getent passwd hacluster > /dev/null ; then
-	adduser --no-create-home \
-		--ingroup haclient \
-		--gecos "Heartbeat System Account" \
-		--no-create-home --disabled-login \
-		--home /usr/lib/heartbeat --shell /bin/false  \
-		--disabled-password hacluster > /dev/null
+if [ -x /etc/init.d/heartbeat ]; then
+	if which invoke-rc.d >/dev/null 2>&1; then
+		invoke-rc.d heartbeat stop
+	else
+		/etc/init.d/heartbeat stop
+	fi
 fi
 
 # dh_installdeb will replace this with shell code automatically

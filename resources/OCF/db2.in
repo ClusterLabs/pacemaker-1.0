@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $Id: db2.in,v 1.4 2005/08/31 17:42:49 alan Exp $
+# $Id: db2.in,v 1.10 2006/03/10 04:14:20 xunsun Exp $
 # 
 # db2
 #
@@ -31,12 +31,12 @@
 
 #######################################################################
 
-SH=/bin/bash
+SH=/bin/sh
 
 usage() {
   methods=`db2_methods`
   methods=`echo $methods | tr ' ' '|'`
-  cat <<-! >&1
+  cat <<-!
 	usage: $0 ($methods)
 
 	$0 manages a DB2 Universal Database instance as an HA resource.
@@ -48,7 +48,7 @@ usage() {
 	The 'validate-all' operation reports whether the parameters are valid
 	The 'methods' operation reports on the methods $0 supports
 
-	$Id: db2.in,v 1.4 2005/08/31 17:42:49 alan Exp $
+	$Id: db2.in,v 1.10 2006/03/10 04:14:20 xunsun Exp $
 	!
 }
 
@@ -65,7 +65,7 @@ Resource script for db2. It manages a DB2 Universal Database instance as an HA r
 <shortdesc lang="en">db2 resource agent</shortdesc>
 
 <parameters>
-<parameter name="instance" unique="0">
+<parameter name="instance" unique="0" required="1">
 <longdesc lang="en">
 The instance of database.
 </longdesc>
@@ -110,7 +110,7 @@ db2_methods() {
 db2info() {
 	instance=$1
 	db2admin=$instance
-	db2home=`bash -c "echo ~$db2admin"`
+	db2home=`sh -c "echo ~$db2admin"`
 	db2sql=$db2home/sqllib
 	db2profile=$db2sql/db2profile
 	db2adm=$db2sql/adm
@@ -359,6 +359,7 @@ case "$1" in
 		  echo DB2 UDB instance $instance is stopped
 		  exit $OCF_NOT_RUNNING
 		fi
+		;;
 
   monitor)	db2_monitor $instance
 		exit $?;;

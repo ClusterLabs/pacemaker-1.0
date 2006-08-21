@@ -1,4 +1,4 @@
-/* $Id: apcsmart.c,v 1.29 2005/04/22 14:22:16 blaschke Exp $ */
+/* $Id: apcsmart.c,v 1.31 2006/05/19 06:23:16 sunjd Exp $ */
 /*
  * Stonith module for APCSmart Stonith device
  * Copyright (c) 2000 Andreas Piesk <a.piesk@gmx.net>
@@ -245,7 +245,7 @@ APC_open_serialport(const char *port, speed_t speed)
 		return -1;
 	}
 
-	if ((fflags = fcntl(fd, F_GETFL, 0)) < 0
+	if ((fflags = fcntl(fd, F_GETFL)) < 0
 	||	fcntl(fd, F_SETFL, (fflags & ~O_NONBLOCK)) < 0) {
 		LOG(PIL_CRIT, "%s: Setting flags on %s failed [%s]."
 		,	__FUNCTION__
@@ -931,12 +931,12 @@ apcsmart_get_info(StonithPlugin * s, int reqtype)
 		break;
 
 		case ST_DEVICEDESCR:
-		ret = "APC Smart UPS"
-			" (via serial port - NOT USB!). "
-			" Works with higher-end APC UPSes, like"
-			" Back-UPS Pro, Smart-UPS, Matrix-UPS, etc. "
-			" (Smart-UPS may have to be >= Smart-UPS 700?). "
-		" See http://us1.networkupstools.org/protocols/apcsmart.html"
+		ret = "APC Smart UPS\n"
+			" (via serial port - NOT USB!). \n"
+			" Works with higher-end APC UPSes, like\n"
+			" Back-UPS Pro, Smart-UPS, Matrix-UPS, etc.\n"
+			" (Smart-UPS may have to be >= Smart-UPS 700?).\n"
+		" See http://us1.networkupstools.org/protocols/apcsmart.html\n"
 			" for protocol compatibility details.";
 			break;
 

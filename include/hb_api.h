@@ -1,4 +1,4 @@
-/* $Id: hb_api.h,v 1.35 2005/08/05 19:40:13 gshi Exp $ */
+/* $Id: hb_api.h,v 1.47 2006/05/28 00:56:57 zhenh Exp $ */
 /*
  * Client-side Low-level clustering API for heartbeat.
  *
@@ -56,7 +56,7 @@
 
 #include <clplumbing/cl_uuid.h>
 
-typedef void (*llc_msg_callback_t) (const struct ha_msg* msg
+typedef void (*llc_msg_callback_t) (struct ha_msg* msg
 ,	void* private_data);
 
 typedef void (*llc_nstatus_callback_t) (const char *node, const char * status
@@ -157,10 +157,26 @@ struct llc_ops {
  *	node_status:	Return most recent heartbeat status of the given node
  */
 	const char *	(*node_status)(ll_cluster_t*, const char * nodename);
+
+/*
+ *	node_status:	Return the weight of the given node
+ */
+	int		(*node_weight)(ll_cluster_t*, const char * nodename);
+
+/*
+ *	node_status:	Return the site of the given node
+ */
+	const char *	(*node_site)(ll_cluster_t*, const char * nodename);
+
 /*
  *	node_type:	Return type of the given node
  */
 	const char *	(*node_type)(ll_cluster_t*, const char * nodename);
+/*
+ *	num_nodes:	Return the number of nodes(excluding ping nodes)
+ */
+	int		(*num_nodes)(ll_cluster_t*);
+
 /*
  *	init_ifwalk:	Initialize walk through list of list of known interfaces
  */
@@ -386,6 +402,7 @@ struct llc_ops {
 
 /* Parameters we can ask for via get_parameter */
 #define	KEY_HBVERSION	"hbversion"	/* Not a configuration parameter */
+#define	KEY_CLUSTER	"cluster"
 #define	KEY_HOST	"node"
 #define KEY_HOPS	"hopfudge"
 #define KEY_KEEPALIVE	"keepalive"
@@ -406,6 +423,7 @@ struct llc_ops {
 #define KEY_CLIENT_CHILD "respawn"
 #define KEY_COMPRESSION "compression"
 #define KEY_COMPRESSION_THRESHOLD "compression_threshold"
+#define KEY_TRADITIONAL_COMPRESSION "traditional_compression"
 #define KEY_RT_PRIO	"rtprio"
 #define KEY_GEN_METH	"hbgenmethod"
 #define KEY_REALTIME	"realtime"
@@ -420,6 +438,21 @@ struct llc_ops {
 #define KEY_COREDUMP	"coredumps"
 #define KEY_COREROOTDIR	"coreroot"
 #define KEY_REL2	"crm"
+#define KEY_AUTOJOIN	"autojoin"
+#define KEY_UUIDFROM	"uuidfrom"
+#define KEY_ENV		"env"
+#define KEY_MEMRESERVE	"memreserve"
+#define KEY_MAX_REXMIT_DELAY "max_rexmit_delay"
+#define KEY_LOG_CONFIG_CHANGES "record_config_changes"
+#define KEY_LOG_PENGINE_INPUTS "record_pengine_inputs"
+#define KEY_CONFIG_WRITES_ENABLED "enable_config_writes"
 
 ll_cluster_t*	ll_cluster_new(const char * llctype);
+
+typedef struct GLLclusterSource_s	GLLclusterSource;
+GLLclusterSource* G_main_add_ll_cluster(int priority, ll_cluster_t* api
+,	gboolean can_recurse
+,	gboolean (*dispatch)(ll_cluster_t* source_data,gpointer user_data)
+,	gpointer userdata, GDestroyNotify notify);
+
 #endif /* __HB_API_H */

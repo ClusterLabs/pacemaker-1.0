@@ -1,4 +1,4 @@
-/* $Id: longclock.c,v 1.15 2005/06/01 03:34:32 alan Exp $ */
+/* $Id: longclock.c,v 1.22 2006/08/16 21:55:04 alan Exp $ */
 /*
  * Longclock operations
  *
@@ -24,19 +24,14 @@
 #include <portability.h>
 #include <unistd.h>
 #include <sys/times.h>
+#include <errno.h>
 #include <clplumbing/longclock.h>
-
-#ifndef CLOCK_T_IS_LONG_ENOUGH
-static	unsigned long	lasttimes = 0L;
-static	unsigned long	wrapcount = 0;
-static	longclock_t	lc_wrapcount;
-#endif
+#include <clplumbing/cl_log.h>
 
 static	unsigned 	Hz = 0;
 static	longclock_t 	Lc_Hz;
 static	double		d_Hz;
 
-#define	WRAPSHIFT	(8*sizeof(clock_t))
 
 const longclock_t	zero_longclock = 0UL;
 
@@ -61,54 +56,120 @@ hz_longclock(void)
 		/* Compute various hz-related constants */
 
 		Hz = sysconf(_SC_CLK_TCK);
-		Lc_Hz = Hz;
+		Lc_Hz = (longclock_t)Hz;
 		d_Hz = (double) Hz;
 	}
 	return Hz;
 }
 
-static struct tms	longclock_dummy_tms_struct;
+#ifdef	TIMES_ALLOWS_NULL_PARAM
+#	define	TIMES_PARAM	NULL
+#else
+	static struct tms	dummy_longclock_tms_struct;
+#	define	TIMES_PARAM	&dummy_longclock_tms_struct
+#endif
+
+unsigned long
+cl_times(void)	/* Make times(2) behave rationally on Linux */
+{
+	clock_t		ret;
+#ifndef DISABLE_TIMES_KLUDGE
+	int		save_errno = errno;
+
+	/*
+	 * times(2) really returns an unsigned value ...
+	 *
+	 * We don't check to see if we got back the error value (-1), because
+	 * the only possibility for an error would be if the address of 
+	 * longclock_dummy_tms_struct was invalid.  Since it's a
+	 * compiler-generated address, we assume that errors are impossible.
+	 * And, unfortunately, it is quite possible for the correct return
+	 * from times(2) to be exactly (clock_t)-1.  Sigh...
+	 *
+	 */
+	errno	= 0;
+#endif /* DISABLE_TIMES_KLUDGE */
+	ret	= times(TIMES_PARAM);
+
+#ifndef DISABLE_TIMES_KLUDGE
+/*
+ *	This is to work around a bug in the system call interface
+ *	for times(2) found in glibc on Linux (and maybe elsewhere)
+ *	It changes the return values from -1 to -4096 all into
+ *	-1 and then dumps the -(return value) into errno.
+ *
+ *	This totally bizarre behavior seems to be widespread in
+ *	versions of Linux and glibc.
+ *
+ *	Many thanks to Wolfgang Dumhs <wolfgang.dumhs (at) gmx.at>
+ *	for finding and documenting this bizarre behavior.
+ */
+	if (errno != 0) {
+		ret = (clock_t) (-errno);
+	}
+	errno = save_errno;
+#endif /* DISABLE_TIMES_KLUDGE */
+	return (unsigned long)ret;
+}
+
 #ifdef CLOCK_T_IS_LONG_ENOUGH
 longclock_t
 time_longclock(void)
 {
 
 	/* See note below about deliberately ignoring errors... */
-	return (longclock_t)times(&longclock_dummy_tms_struct);
+	return (longclock_t)cl_times();
 }
 
 #else	/* clock_t is shorter than 64 bits */
 
+#define	BITSPERBYTE	8
+#define	WRAPSHIFT	(BITSPERBYTE*sizeof(clock_t))
+#define MAXIMUMULONG	((unsigned long)~(0UL))
+#define MINJUMP		((MAXIMUMULONG/100UL)*99UL)
+
 longclock_t
 time_longclock(void)
 {
+	static	gboolean	calledbefore	= FALSE;
+	static	unsigned long	lasttimes	= 0L;
+	static	unsigned long	wrapcount	= 0L;
+	static	longclock_t	lc_wrapcount	= 0L;
+	static	unsigned long	callcount	= 0L;
 	unsigned long		timesval;
-	
-	
-	/*
-	 * times(2) really returns an unsigned value ...
-	 *
-	 * We don't check to see if we got back the error value (-1), because
-	 * the only possibility for an error would be if the address of 
-	 * longclock_dummy_tms_struct was invalid.  Since it's a compiler-generated
-	 * address, we assume that errors are impossible.  And, unfortunately, it is
-	 * theoretically possible for the correct return from times(2) to be exactly
-	 * (clock_t)-1.  Sigh...
-	 *
-	 */
-	timesval = (unsigned long) times(&longclock_dummy_tms_struct);
 
-	if (!lasttimes) {
-		lasttimes = timesval;
+	++callcount;
+
+	timesval = (unsigned long) cl_times();
+
+	if (calledbefore && timesval < lasttimes)  {
+		clock_t		jumpbackby = lasttimes - timesval;
+
+		if (jumpbackby < MINJUMP) {
+			/* Kernel weirdness */
+			cl_log(LOG_CRIT
+			,	"%s: clock_t from times(2) appears to"
+			" have jumped backwards (in error)!"
+			,	__FUNCTION__);
+			cl_log(LOG_CRIT
+			,	"%s: old value was %lu"
+			", new value is %lu, diff is %lu, callcount %lu"
+			,	__FUNCTION__, lasttimes, timesval
+			,	jumpbackby, callcount);
+			/* Assume jump back was the error and ignore it */
+			/* (i.e., hope it goes away) */
+			timesval = lasttimes;
+		}else{
+			/* Normal looking wraparound */
+			cl_log(LOG_INFO
+			,	"%s: clock_t wrapped around (uptime)."
+			,	__FUNCTION__);
+			++wrapcount;
+			lc_wrapcount = ((longclock_t)wrapcount) << WRAPSHIFT;
+		}
 	}
-
-
-	if (timesval < lasttimes)  {
-		++wrapcount;
-		lc_wrapcount = ((longclock_t)wrapcount) << WRAPSHIFT;
-	}
-	
 	lasttimes = timesval;
+	calledbefore = TRUE;
 	return (lc_wrapcount | (longclock_t)timesval);
 }
 #endif	/* ! CLOCK_T_IS_LONG_ENOUGH */

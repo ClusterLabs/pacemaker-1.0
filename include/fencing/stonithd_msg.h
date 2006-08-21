@@ -24,12 +24,13 @@
 #define _STONITHD_MSG_H_
 
 #define STONITHD_SOCK HA_VARRUNDIR"/heartbeat/stonithd"
+#define STONITHD_CALLBACK_SOCK HA_VARRUNDIR"/heartbeat/stonithd_callback"
 /* define the field name for messages stonithd used */
 #define F_STONITHD_TYPE   "stonithd"
 
-#define F_STONITHD_APIREQ "apireq"	/* api request */
-#define F_STONITHD_APIRPL "apirpl"	/* api reply */
-#define F_STONITHD_APIRET "apiret"	/* api reply */
+#define F_STONITHD_APIREQ "reqest"	/* api request */
+#define F_STONITHD_APIRPL "reply"	/* api reply */
+#define F_STONITHD_APIRET "apiret"	/* api return code */
 #define F_STONITHD_CNAME  "cname"	/* client name */
 #define F_STONITHD_CPID   "cpid"     	/* client pid */
 #define F_STONITHD_CEUID  "ceuid"     	/* client executing uid */
@@ -47,7 +48,8 @@
 #define F_STONITHD_CALLID   "callid" 	/* RA executing call_id==pid */
 #define F_STONITHD_STTYPES  "sttypes" 	/* stonith device types */
 #define F_STONITHD_FRC	    "frc" 	/* final return code */
-#define F_STONITHD_APPEND   "append" 	/* append data for final return */
+#define F_STONITHD_PDATA    "pdata" 	/* private data for callback */
+#define F_STONITHD_NLIST    "nlist" 	/* node name list for final return */
 
 /* Maximum length for stonithd message type */
 #define MAXLEN_SMTYPE  18
@@ -77,12 +79,6 @@
 #define	ST_BADREQ	"badreq"
 
 #define ZAPMSG(m)       { ha_msg_del(m); (m) = NULL; }
-#define ZAPCHAN(ch)     { 					\
-				if ( (ch) != NULL ) { 		\
-					(ch)->ops->destroy(ch);	\
-	 			} 				\
-				(ch) = NULL;			\
-			}				
 
 /* free the object allocated by g_new, g_strdup and etc. */
 #define ZAPGDOBJ(m)					\
@@ -95,7 +91,7 @@
 int ha_msg_addhash(struct ha_msg * msg, const char * name, GHashTable * htable);
 struct ha_msg * hashtable_to_hamsg(GHashTable * htable);
 void insert_data_pairs(gpointer key, gpointer value, gpointer user_data);
-GHashTable * cl_get_hashtable(const struct ha_msg *request, const char * name);
+GHashTable * cl_get_hashtable(struct ha_msg *request, const char * name);
 void print_str_hashtable(GHashTable * htable);
 void print_str_item(gpointer key, gpointer value, gpointer user_data);
 

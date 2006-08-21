@@ -1,4 +1,4 @@
-/* $Id: cl_log.h,v 1.20 2005/07/28 08:20:05 sunjd Exp $ */
+/* $Id: cl_log.h,v 1.27 2006/03/08 22:22:51 andrew Exp $ */
 /*
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -23,9 +23,17 @@
 #define TIME_T  unsigned long
 #define	HA_FAIL		0
 #define	HA_OK		1
-#define MAXMSG		MAXDATASIZE
+#define	MAXLINE		(512*10)
 
 struct IPC_CHANNEL;
+
+extern int		debug_level;
+#define	ANYDEBUG	(debug_level)
+#define	DEBUGDETAILS	(debug_level >= 2)
+#define	DEBUGAUTH	(debug_level >=3)
+#define	DEBUGMODULE	(debug_level >=3)
+#define	DEBUGPKT	(debug_level >= 4)
+#define	DEBUGPKTCONT	(debug_level >= 5)
 
 void		cl_direct_log(int priority, const char* buf, gboolean, const char*, int, TIME_T);
 void            cl_log(int priority, const char * fmt, ...) G_GNUC_PRINTF(2,3);
@@ -40,6 +48,8 @@ void		cl_log_set_entity(const char *	entity);
 void		cl_log_set_logfile(const char *	path);
 void		cl_log_set_debugfile(const char * path);
 gboolean	cl_inherit_use_logd(const char*, int);
+void		inherit_compress(void);
+void		inherit_logconfig_from_environment(void);
 int		cl_log_set_logd_channel_source( void (*create_callback)(struct IPC_CHANNEL* chan),
 						GDestroyNotify destroy_callback);
 int		cl_log_get_logdtime(void);
@@ -49,6 +59,8 @@ char *		ha_timestamp(TIME_T t);
 void		cl_glib_msg_handler(const gchar *log_domain
 ,		GLogLevelFlags log_level, const gchar *message
 ,		gpointer user_data);
+
+void		cl_flush_logs(void);
 
 
 typedef struct CircularBuffer_s 

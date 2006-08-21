@@ -37,13 +37,14 @@ struct hb_compress_fns {
 struct ha_msg;
 
 /* set the compression method*/
-int	cl_compress_remove_plugin(const char* pluginname);
-int	cl_compress_load_plugin(const char* pluginname);
+int		cl_compress_remove_plugin(const char* pluginname);
+int		cl_compress_load_plugin(const char* pluginname);
 struct hb_compress_fns* cl_get_compress_fns(void);
-int 	cl_set_compress_fns(const char*);
-char*	cl_compressmsg(const struct ha_msg*m, size_t* len);
-struct ha_msg* cl_decompressmsg(const struct ha_msg* m);
-gboolean is_compressed_msg(const struct ha_msg* m);
-
+int		cl_set_compress_fns(const char*);
+char*		cl_compressmsg(struct ha_msg*m, size_t* len);
+struct ha_msg*	cl_decompressmsg(struct ha_msg* m);
+gboolean	is_compressed_msg(struct ha_msg* m);
+int		cl_compress_field(struct ha_msg* msg, int index, char* buf, size_t* buflen);
+int		cl_decompress_field(struct ha_msg* msg, int index, char* buf, size_t* buflen);
 
 #endif

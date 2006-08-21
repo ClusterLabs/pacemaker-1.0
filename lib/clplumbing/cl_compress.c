@@ -18,6 +18,39 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  */
+
+/*
+ * Compression is designed to handle big messages, right now with 4 nodes
+ * cib message can go up to 64 KB or more. I expect much larger messages
+ * when the number of node increase. This makes message compression necessary.
+ *
+ *
+ * Compression is handled in field level. One can add a struct field using
+ * ha_msg_addstruct() -- the field will not get compressed, or using 
+ * ha_msg_addstruct_compress(), and the field will get compressed when
+ * the message is converted to wire format, i.e. when msg2wirefmt() is called.
+ * The compressed field will stay compressed until it reached the desination.
+ * It will finally decompressed when the user start to get the field value.
+ * It is designed this way so that the compression/decompression only happens
+ * in end users so that heartbeat itself can save cpu cycle and memory.
+ * (more info about compression can be found in cl_msg_types.c about FT_COMPRESS
+ * FT_UNCOMPRESS types)
+ *
+ * compression has another legacy mode, which is there so it can be compatible 
+ * to old ways of compression. In the old way, no field is compressed individually
+ * and the messages is compressed before it is sent out, and it will be decompressed
+ * in the receiver side immediately. So in each IPC channel, the message is compressed
+ * and decompressed once. This way will cost a lot of cpu time and memory and it is 
+ * discouraged.
+ *
+ * If use_traditional_compression is true, then it is using the legacy mode, otherwise
+ * it is using the new compression. For back compatibility, the default is legacy mode.
+ *
+ * The real compression work is done by compression plugins. There are two plugins right
+ * now: zlib and bz2, they are in lib/plugins/HBcompress
+ *
+ */
+
 #include <portability.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -37,13 +70,14 @@
 #include <stonith/stonith.h>
 #include <stonith/stonith_plugin.h>
 
-#define COMPRESS_MAXBUF (64*1024)
 #define COMPRESSED_FIELD "_compressed_payload"
 #define COMPRESS_NAME "_compression_algorithm"
 
 #define HA_PLUGIN_D HALIB "/plugins"
 
+#define HACOMPRESSNAME "HA_COMPRESSION"
 static struct hb_compress_fns* msg_compress_fns = NULL;
+static char*  compress_name = NULL;
 GHashTable*		CompressFuncs = NULL;
 
 static PILGenericIfMgmtRqst	Reqs[] =
@@ -173,10 +207,10 @@ get_compress_fns(const char* pluginname)
 void cl_realtime_malloc_check(void);
 
 char* 
-cl_compressmsg(const struct ha_msg*m, size_t* len)
+cl_compressmsg(struct ha_msg*m, size_t* len)
 {
 	char*	src;
-	char	dest[COMPRESS_MAXBUF];
+	char	dest[MAXMSG];
 	size_t	destlen;
 	int rc;
 	char* ret;
@@ -188,8 +222,8 @@ cl_compressmsg(const struct ha_msg*m, size_t* len)
 		       __FUNCTION__);
 		return NULL;
 	}
-	if ( get_netstringlen(m) > COMPRESS_MAXBUF
-	     || get_stringlen(m) > COMPRESS_MAXBUF){
+	if ( get_netstringlen(m) > MAXMSG
+	     || get_stringlen(m) > MAXMSG){
 		cl_log(LOG_ERR, "%s: msg too big(stringlen=%d,"
 		       "netstringlen=%d)", 
 		       __FUNCTION__, 
@@ -198,13 +232,14 @@ cl_compressmsg(const struct ha_msg*m, size_t* len)
 		return NULL;
 	}
 	
+	
 	if ((src = msg2wirefmt_noac(m, &datalen)) == NULL){
 		cl_log(LOG_ERR,"%s: converting msg"
 		       " to wirefmt failed", __FUNCTION__);
 		return NULL;
 	}
 	
-	destlen = COMPRESS_MAXBUF;
+	destlen = MAXMSG;
 
 	rc = msg_compress_fns->compress(dest, &destlen, 
 					src, datalen);
@@ -241,7 +276,7 @@ cl_compressmsg(const struct ha_msg*m, size_t* len)
 #if 0
 	cl_log(LOG_INFO, "------original stringlen=%d, netstringlen=%d,"
 	       "compressed_datalen=%d,current len=%d",
-	       get_stringlen(m), get_netstringlen(m),destlen,  *len);
+	       get_stringlen(m), get_netstringlen(m),(int)destlen,  (int)*len);
 	
 #endif
 
@@ -250,7 +285,7 @@ cl_compressmsg(const struct ha_msg*m, size_t* len)
 
 
 gboolean 
-is_compressed_msg(const struct ha_msg* m)
+is_compressed_msg(struct ha_msg* m)
 {
 	if( cl_get_binary(m, COMPRESSED_FIELD, NULL) /*discouraged function*/
 	    != NULL){
@@ -267,15 +302,15 @@ is_compressed_msg(const struct ha_msg* m)
  */
 
 struct ha_msg*
-cl_decompressmsg(const struct ha_msg* m)
+cl_decompressmsg(struct ha_msg* m)
 {
 	const char* src;
 	size_t srclen;
-	char dest[COMPRESS_MAXBUF];
-	size_t destlen = COMPRESS_MAXBUF;
+	char dest[MAXMSG];
+	size_t destlen = MAXMSG;
 	int rc;
 	struct ha_msg* ret;
-	const char* compress_name;
+	const char* decompress_name;
 	struct hb_compress_fns* funcs = NULL;
 
 	if (m == NULL){
@@ -289,25 +324,25 @@ cl_decompressmsg(const struct ha_msg* m)
 		return NULL;
 	}
 
-	if (srclen > COMPRESS_MAXBUF){
+	if (srclen > MAXMSG){
 		cl_log(LOG_ERR, "%s: field too long(%d)", 
 		       __FUNCTION__, (int)srclen);
 		return NULL;
 	}
 	
-	compress_name = ha_msg_value(m, COMPRESS_NAME);
-	if (compress_name == NULL){
+	decompress_name = ha_msg_value(m, COMPRESS_NAME);
+	if (decompress_name == NULL){
 		cl_log(LOG_ERR, "compress name not found");
 		return NULL;
 	}
 
 	
-	funcs = get_compress_fns(compress_name);
+	funcs = get_compress_fns(decompress_name);
 	
 	if (funcs == NULL){
 		cl_log(LOG_ERR, "%s: compress method(%s) is not"
 		       " supported in this machine",		       
-		       __FUNCTION__, compress_name);
+		       __FUNCTION__, decompress_name);
 		return NULL;
 	}
 	
@@ -328,4 +363,121 @@ cl_decompressmsg(const struct ha_msg* m)
 #endif
 
 	return ret;
+}
+
+
+int
+cl_decompress_field(struct ha_msg* msg, int index, char* buf, size_t* buflen)
+{
+	char*		value;
+	int		vallen;
+	int		rc;
+	const char*	decompress_name;
+	struct hb_compress_fns* funcs;
+	
+	if ( msg == NULL|| index >= msg->nfields){
+		cl_log(LOG_ERR, "%s: wrong argument",
+		       __FUNCTION__);
+		return HA_FAIL;
+	}
+	
+	
+	value = msg->values[index];
+	vallen = msg->vlens[index];	
+	
+	decompress_name = ha_msg_value(msg, COMPRESS_NAME);
+	if (decompress_name == NULL){
+		cl_log(LOG_ERR, "compress name not found");
+		return HA_FAIL;
+	}
+	
+	
+	funcs = get_compress_fns(decompress_name);
+	
+	if (funcs == NULL){
+		cl_log(LOG_ERR, "%s: compress method(%s) is not"
+		       " supported in this machine",		       
+		       __FUNCTION__, decompress_name);
+		return HA_FAIL;
+	}
+	
+	rc = funcs->decompress(buf, buflen, value, vallen);		
+	if (rc != HA_OK){
+		cl_log(LOG_ERR, "%s: decompression failed",
+		       __FUNCTION__);
+		return HA_FAIL;
+	}
+	
+	return HA_OK;
+}
+
+
+int 
+cl_compress_field(struct ha_msg* msg, int index, char* buf, size_t* buflen)
+{
+	char*   src;
+	size_t	srclen;
+	int	rc;
+
+	if ( msg == NULL|| index >= msg->nfields 
+	     || msg->types[index] != FT_UNCOMPRESS){
+		cl_log(LOG_ERR, "%s: wrong argument",
+		       __FUNCTION__);
+		return HA_FAIL;
+	}
+	
+	if (msg_compress_fns == NULL){
+		if (compress_name == NULL){
+			compress_name = getenv(HACOMPRESSNAME);
+		}
+		
+		if (compress_name == NULL){
+			cl_log(LOG_ERR, "%s: no compression module name found",
+			       __FUNCTION__);
+			return HA_FAIL;			
+		}
+
+		if(cl_set_compress_fns(compress_name) != HA_OK){
+			cl_log(LOG_ERR, "%s: loading compression module failed",
+			       __FUNCTION__);
+			return HA_FAIL;
+		}
+	}
+	
+	if (msg_compress_fns == NULL){
+		cl_log(LOG_ERR, "%s: msg_compress_fns is NULL!",
+		       __FUNCTION__);
+		return HA_FAIL;
+	}
+	
+	src = msg2wirefmt_noac(msg->values[index], &srclen);
+	if (src == NULL){
+		 cl_log(LOG_ERR,"%s: converting msg"
+			" to wirefmt failed", __FUNCTION__);
+		 return HA_FAIL;
+	}
+	
+	rc = msg_compress_fns->compress(buf, buflen, 
+					src, srclen);
+	if (rc != HA_OK){
+		cl_log(LOG_ERR, "%s: compression failed",
+		       __FUNCTION__);
+		return HA_FAIL;
+	}
+	
+	
+	rc = ha_msg_mod(msg, COMPRESS_NAME, 
+			msg_compress_fns->getname());
+	
+	if (rc != HA_OK){
+		cl_log(LOG_ERR, "%s: adding compress name to msg failed",
+		       __FUNCTION__);
+		return HA_FAIL;;
+	}
+	
+	ha_free(src);
+	src = NULL;
+	
+	return HA_OK;
+	
 }

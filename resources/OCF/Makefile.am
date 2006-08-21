@@ -19,7 +19,7 @@
 #
 MAINTAINERCLEANFILES = Makefile.in
 
-INCLUDES		= -I$(top_srcdir)/include
+INCLUDES		= -I$(top_srcdir)/include -I$(top_srcdir)/linux-ha
 
 ocfdir		     = @OCF_RA_DIR@/heartbeat
 
@@ -39,8 +39,7 @@ IPv6addr_LDADD          = $(top_builddir)/lib/clplumbing/libplumb.la    \
 
 
 
-ocf_SCRIPTS	     =  ocf-shellfuncs 	\
-			ClusterMon 	\
+ocf_SCRIPTS	     =  ClusterMon 	\
 			Dummy		\
 		        IPaddr		\
 		        IPaddr2		\
@@ -56,11 +55,19 @@ ocf_SCRIPTS	     =  ocf-shellfuncs 	\
 			LinuxSCSI	\
 			LVM		\
 			MailTo		\
+			oracle		\
+			oralsnr		\
+			pingd		\
 			portblock	\
+			pgsql		\
 			Raid1		\
 			ServeRAID	\
+			Stateful	\
+			SysInfo		\
+			VIPArip		\
 			WAS		\
 			WinPopup	\
+			Xen		\
 			Xinetd
 
 commondir	     = @hb_libdir@

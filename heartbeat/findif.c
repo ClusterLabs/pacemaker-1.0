@@ -1,4 +1,4 @@
-/* $Id: findif.c,v 1.49 2005/07/29 06:55:37 sunjd Exp $ */
+/* $Id: findif.c,v 1.60 2006/04/20 09:02:13 davidlee Exp $ */
 /*
  * findif.c:	Finds an interface which can route a given address
  *
@@ -51,7 +51,7 @@
  *	If the broadcast address was omitted, we assume the highest address
  *	in the subnet.
  *
- *	If the interfaceis omitted, we choose the interface associated with
+ *	If the interface is omitted, we choose the interface associated with
  *	the route we selected.
  *
  *
@@ -96,11 +96,26 @@
 
 #define DEBUG 0
 
+/*
+ * "route -n get iii.jjj.kkk.lll" can, on Solaris at least,
+ * return the word "default" as the value from "mask" and "dest",
+ * typically if the host is remote, reached over a default route. 
+ * We should probably treat such a mask as "0.0.0.0".
+ *
+ * Define "MASK_DEFAULT_TO_ZERO" to enable this interpretation.
+ *
+ * This is better for Solaris and is probably suitable (or irrelevant)
+ * for others OSes also.  But if it breaks another OS, then reduce the
+ * "hash-if 1" below to exclude that OS. 
+ * (David Lee, Jan 2006)
+ */
+#if 1
+# define MASK_DEFAULT_TO_ZERO
+#endif
+
 int	OutputInCIDR=0;
 
 void ConvertQuadToInt (char *dest, int destlen);
-
-void ConvertBitsToMask (char *mask, int masklen);
 
 /*
  * Different OSes offer different mechnisms to obtain this information.
@@ -133,9 +148,11 @@ void GetAddress (char *inputaddress, char **address, char **netmaskbits
 
 void ValidateNetmaskBits (char *netmaskbits, unsigned long *netmask);
 
+int ValidateIFName (const char *ifname, struct ifreq *ifr);
+
 int netmask_bits (unsigned long netmask);
 
-char * get_first_looback_netdev(char * ifname);
+char * get_first_loopback_netdev(char * ifname);
 int is_loopback_interface(char * ifname);
 char * get_ifname(char * buf, char * ifname);
 
@@ -186,57 +203,6 @@ ConvertQuadToInt (char *dest, int destlen)
 	snprintf (dest, destlen, "%ld", intdest);
 }
 
-void
-ConvertBitsToMask (char *mask, int masklen)
-{
-	int maskbits;
-	unsigned long int maskflag = 0x1;
-	unsigned long int longmask = 0;
-	int i;
-	int count;
-	char *p;
-	char *lastp=mask+masklen;
-	char maskwithoutdots[12];
-
-	/*
-	 * Are there '.'s inside ?
-	 * (like from the output of the "route get" command)
-	 */
-	if ((p = strtok(mask, ".")) != NULL) {
-		i = strnlen(p, masklen);
-
-		strncpy(maskwithoutdots, p, (i <= 3 ? i : 3));
-
-		for (count=0; count < 3; count++) {
-			p=strtok(NULL, ".");
-			if (p != NULL) {
-				i = strnlen(p, lastp-p);
-				strncat(maskwithoutdots, p
-				,	(i <= 3 && p != NULL ? i : 3));
-			}
-			else {
-				count = 3;
-			}
-		}
-
-		maskbits = atoi(maskwithoutdots);
-
-	}else{
-		maskbits = atoi(mask);
-	}
-
-	for (i = 0; i < 32; i++) {
-		if (i <  maskbits) {
-			longmask |= maskflag;
-		}
-		/* printf ("%d:%x:%x\n", i, longmask, maskflag); */
-		maskflag = maskflag << 1;
-	}
-
-	/* printf ("longmask: %u (%X)\n", longmask, longmask); */
-	snprintf (mask, masklen, "%ld", longmask);
-}
-
 static int
 SearchUsingProcRoute (char *address, struct in_addr *in
 , 	struct in_addr *addr_out, char *best_if, size_t best_iflen
@@ -247,6 +213,7 @@ SearchUsingProcRoute (char *address, struct in_addr *in
 	unsigned long   dest;
 	long		metric = LONG_MAX;
 	long		best_metric = LONG_MAX;
+	int		rc = 0;
 	
 	char	buf[2048];
 	char	interface[MAXSTR];
@@ -256,7 +223,7 @@ SearchUsingProcRoute (char *address, struct in_addr *in
 		snprintf(errmsg, errmsglen
 		,	"Cannot open %s for reading"
 		,	PROCROUTE);
-		return(-1);
+		rc = -1; goto out;
 	}
 
 	/* Skip first (header) line */
@@ -264,7 +231,7 @@ SearchUsingProcRoute (char *address, struct in_addr *in
 		snprintf(errmsg, errmsglen
 		,	"Cannot skip first line from %s"
 		,	PROCROUTE);
-		return(-1);
+		rc = -1; goto out;
 	}
 	while (fgets(buf, sizeof(buf), routefd) != NULL) {
 		if (sscanf(buf, "%[^\t]\t%lx%lx%lx%lx%lx%lx%lx"
@@ -273,7 +240,7 @@ SearchUsingProcRoute (char *address, struct in_addr *in
 		!= 8) {
 			snprintf(errmsg, errmsglen, "Bad line in %s: %s"
 			,	PROCROUTE, buf);
-			return(1);
+			rc = -1; goto out;
 		}
 		if ( (in->s_addr&mask) == (in_addr_t)(dest&mask)
 		&&	metric < best_metric) {
@@ -282,14 +249,18 @@ SearchUsingProcRoute (char *address, struct in_addr *in
 			strncpy(best_if, interface, best_iflen);
 		}
 	}
-	fclose(routefd);
 
 	if (best_metric == LONG_MAX) {
 		snprintf(errmsg, errmsglen, "No route to %s\n", address);
-		return(1); 
+		rc = 1; 
 	}
 
-	return(0);
+  out:
+	if (routefd) {
+		fclose(routefd);
+	}
+
+	return(rc);
 }
 
 static int
@@ -306,6 +277,7 @@ SearchUsingRouteCmd (char *address, struct in_addr *in
 	char  *cp, *sp;
 	int done = 0;
 	FILE *routefd = NULL;
+	uint32_t maskbits;
 
 	
 	/* Open route and get the information */
@@ -351,6 +323,7 @@ SearchUsingRouteCmd (char *address, struct in_addr *in
                   	done++;
 		}
 	}
+	fclose(routefd);
 
 	/*
 	 * Check to see if mask isn't available.  It may not be
@@ -367,11 +340,34 @@ SearchUsingRouteCmd (char *address, struct in_addr *in
 	if (strnlen(mask, sizeof(mask)) == 0) {
 		strncpy (mask, "255.255.255.255", sizeof(mask));
 	}
+
+	/*
+	 * Solaris (at least) can return the word "default" for mask and dest.
+	 * For the moment, let's interpret this pair as:
+	 *	mask: 0.0.0.0
+	 *	destination: <original IP>
+	 * (Does "dest" ever get used?)
+	 * This was manifesting itself under "BasicSanityCheck", which tries
+	 * to use a remote IP number; these typically use the "default" route.
+	 * Better schemes are warmly invited...
+	 */
+#ifdef MASK_DEFAULT_TO_ZERO
+	if (strncmp(mask, "default", sizeof("default")) == 0) {
+		strncpy (mask, "0.0.0.0", sizeof(mask));
+	}
+	if (strncmp(dest, "default", sizeof("default")) == 0) {
+		strncpy (dest, address, sizeof(dest));
+	}
+#endif
+
+	/* FIXME ... is this used at all?  Delete? */
 	ConvertQuadToInt  (dest, sizeof(dest));
-	ConvertBitsToMask (mask, sizeof(mask));
-/*
-	ConvertMaskToInt (mask);
-*/
+
+	if (inet_pton(AF_INET, mask, &maskbits) <= 0) {
+		snprintf(errmsg, errmsglen,
+		  "mask [%s] not valid.", mask);
+		return(1);
+	}
 
 	if (inet_pton(AF_INET, address, addr_out) <= 0) {
 		snprintf(errmsg, errmsglen
@@ -380,13 +376,12 @@ SearchUsingRouteCmd (char *address, struct in_addr *in
 		return(1);
 	}
 
-	if ((in->s_addr & atoi(mask)) == (addr_out->s_addr & atoi(mask))) {
+	if ((in->s_addr & maskbits) == (addr_out->s_addr & maskbits)) {
 		best_metric = 0;
-		*best_netmask = atoi(mask);
+		*best_netmask = maskbits;
 		strncpy(best_if, interface, best_iflen);
 	}
 
-	fclose(routefd);
 	if (best_metric == INT_MAX) {
 		snprintf(errmsg, errmsglen, "No route to %s\n", address);
 		return(1);
@@ -463,6 +458,9 @@ GetAddress (char *inputaddress, char **address, char **netmaskbits
 					/*      filter redundancy '/'
 					 *	E.g.  'inputaddress=135.9.216.100/24/eth0/'
 					 */
+					while (**bcast_arg == DELIM) {
+						++*bcast_arg;
+					}
 					if ( **bcast_arg == EOS) {
 						*bcast_arg = NULL;
 						return;
@@ -510,6 +508,36 @@ ValidateNetmaskBits (char *netmaskbits, unsigned long *netmask)
 }
 
 int
+ValidateIFName(const char *ifname, struct ifreq *ifr) 
+{
+ 	int skfd = -1;
+	char *colonptr;
+
+ 	if ( (skfd = socket(PF_INET, SOCK_DGRAM, 0)) == -1 ) {
+ 		fprintf(stderr, "%s\n", strerror(errno));
+ 		return 0;
+ 	}
+ 
+	strncpy(ifr->ifr_name, ifname, IFNAMSIZ);
+
+	/* Contain a ":"?  Probably an error, but treat as warning at present */
+	if ((colonptr = strchr(ifname, ':')) != NULL) {
+		fprintf(stderr, "%s: warning: name may be invalid\n",
+		  ifr->ifr_name);
+	}
+ 
+ 	if (ioctl(skfd, SIOCGIFFLAGS, ifr) < 0) {
+ 		fprintf(stderr, "%s: unknown interface: %s\n"
+ 			, ifr->ifr_name, strerror(errno));
+ 		close(skfd);
+		/* return -1 only if ifname is known to be invalid */
+		return -1;
+ 	}
+ 	close(skfd);
+ 	return 0;
+} 
+
+int
 netmask_bits(unsigned long netmask) {
 	int	j;
 
@@ -525,28 +553,29 @@ netmask_bits(unsigned long netmask) {
 }
 
 char * 
-get_first_looback_netdev(char * output)
+get_first_loopback_netdev(char * output)
 {
 	char buf[512];
-	FILE * fd;
-
+	FILE * fd = NULL;
+	char *rc = NULL;
+	
 	if (!output) {
 		fprintf(stderr, "output buf is a null pointer.\n");
-		return NULL;
+		goto out;
 	}
 
 	fd = fopen(PATH_PROC_NET_DEV, "r");
 	if (!fd) {
 		fprintf(stderr, "Warning: cannot open %s (%s).\n",
 			PATH_PROC_NET_DEV, strerror(errno)); 
-		return NULL;
+		goto out;
 	}
 
 	/* Skip the first two lines */
 	if (!fgets(buf, sizeof(buf), fd) || !fgets(buf, sizeof(buf), fd)) {
 		fprintf(stderr, "Warning: cannot read header from %s.\n",
 			PATH_PROC_NET_DEV);
-		return NULL;
+		goto out;
 	}
 
 	while (fgets(buf, sizeof(buf), fd)) {
@@ -557,38 +586,28 @@ get_first_looback_netdev(char * output)
 		}
 		if (is_loopback_interface(name)) {
 			strncpy(output, name, IFNAMSIZ);
-			fclose(fd);
-			return output;
+			rc = output;
+			goto out;
 		}
 	}
 
-	fclose(fd);
-	return NULL;
+out:
+	if (fd) {
+		fclose(fd);
+	}
+	return rc;
 }
 
 int
 is_loopback_interface(char * ifname)
 {
 	struct ifreq ifr;
-	int skfd = -1;
-
-	if ( (skfd = socket(PF_INET, SOCK_DGRAM, 0)) == -1 ) {
-		fprintf(stderr, "%s\n", strerror(errno));
+	memset(&ifr, 0, sizeof(ifr));
+	if (ValidateIFName(ifname, &ifr) < 0)
 		return 0;
-	}
-
-	strncpy(ifr.ifr_name, ifname, IFNAMSIZ);
-	if (ioctl(skfd, SIOCGIFFLAGS, &ifr) < 0) {
-		fprintf(stderr, "%s: unknown interface: %s\n"
-			, ifname, strerror(errno));
-		close(skfd);
-		return 0;
-	}
-	close(skfd);
 
 	if (ifr.ifr_flags & IFF_LOOPBACK) {
 		/* this is a loopback device. */
-		close(skfd);
 		return 1;
 	} else {
 		return 0;
@@ -603,7 +622,7 @@ get_ifname(char * buf, char * ifname)
 	buf_border = buf + strnlen(buf, 512);
 
 	start = buf; 
-	while (isspace(*start) && (start != buf_border)) {
+	while (isspace((int) *start) && (start != buf_border)) {
 		start++;
 	}
 	end = start;
@@ -634,6 +653,7 @@ main(int argc, char ** argv) {
 	unsigned long	netmask;
 	char	best_if[MAXSTR];
 	char *	if_specified = NULL;
+	struct ifreq	ifr;
 	unsigned long	best_netmask = INT_MAX;
 	int		argerrs	= 0;
 
@@ -642,6 +662,7 @@ main(int argc, char ** argv) {
 
 	memset(&addr_out, 0, sizeof(addr_out));
 	memset(&in, 0, sizeof(in));
+	memset(&ifr, 0, sizeof(ifr));
 
 	switch (argc) {
 	case 2:	/* No -C argument */
@@ -681,6 +702,9 @@ main(int argc, char ** argv) {
 	ValidateNetmaskBits (netmaskbits, &netmask);
 
 	if (if_specified != NULL) {
+		if(ValidateIFName(if_specified, &ifr) < 0) {
+			usage();
+		}
 		strncpy(best_if, if_specified, sizeof(best_if));
 		*(best_if + sizeof(best_if) - 1) = '\0';
 	}else{
@@ -717,7 +741,7 @@ main(int argc, char ** argv) {
 		   My fix may be not good enough, please FIXME
 		 */
 		if (0 == strncmp(address, "127", 3)) {
-			if (NULL != get_first_looback_netdev(best_if)) {
+			if (NULL != get_first_loopback_netdev(best_if)) {
 				best_netmask = 0x000000ff;
 			} else {
 				fprintf(stderr, "No loopback interface found.\n");
@@ -734,10 +758,18 @@ main(int argc, char ** argv) {
 	/* Did they tell us the broadcast address? */
 
 	if (bcast_arg) {
+		/* Yes, they gave us a broadcast address.
+		 * It at least should be a valid IP address
+		 */
+ 		struct in_addr bcast_addr;
+ 		if (inet_pton(AF_INET, bcast_arg, (void *)&bcast_addr) <= 0) {
+ 			fprintf(stderr, "Invalid broadcast address [%s].", bcast_arg);
+ 			usage();
+ 		}
+
 		best_netmask = htonl(best_netmask);
-		/* Yes, they gave us a broadcast address */
 		if (!OutputInCIDR) {
-			printf("%s\t netmask %d.%d.%d.%d\tbroadcast %s\n"
+			printf("%s\tnetmask %d.%d.%d.%d\tbroadcast %s\n"
 			,	best_if
                 	,       (int)((best_netmask>>24) & 0xff)
                 	,       (int)((best_netmask>>16) & 0xff)
@@ -745,7 +777,7 @@ main(int argc, char ** argv) {
                 	,       (int)(best_netmask & 0xff)
 			,	bcast_arg);
 		}else{
-			printf("%s\t netmask %d\tbroadcast %s\n"
+			printf("%s\tnetmask %d\tbroadcast %s\n"
 			,	best_if
 			,	netmask_bits(best_netmask)
 			,	bcast_arg);
@@ -879,6 +911,42 @@ ff02::%lo0/32                     fe80::1%lo0                   UC          lo0
 
 /* 
  * $Log: findif.c,v $
+ * Revision 1.60  2006/04/20 09:02:13  davidlee
+ * A ':' in an interface name is probably an error (but for now treat as a mere warning).
+ *
+ * Revision 1.59  2006/04/10 09:55:02  andrew
+ * Fix findif for any OS that doesnt use /proc/route
+ *
+ * Revision 1.58  2006/04/10 07:25:03  andrew
+ * Compile warning: used unitialized
+ *
+ * Revision 1.57  2006/04/08 11:07:26  lars
+ * CID 37: Forgot to initialize the variable.
+ *
+ * Revision 1.56  2006/04/07 13:03:47  lars
+ * CID 19: RESOURCE_LEAK in error leg.
+ *
+ * Revision 1.55  2006/04/07 13:00:15  lars
+ * CID: 18. RESOURCE_LEAK in error legs.
+ *
+ * Additionally, we ought to treat the mechanism as failed if we couldn't
+ * parse the data we read.
+ *
+ * Revision 1.54  2006/03/09 04:52:29  xunsun
+ * removed the extra blanks which would cause problems when parsed by OCF IPaddr RA
+ *
+ * Revision 1.53  2006/02/16 13:14:49  xunsun
+ * check both interface name and broadcast address specified by user
+ *
+ * Revision 1.52  2006/01/26 16:46:59  davidlee
+ * 'ConvertBitsToMask()' was buggy.  Remove, replacing with call to OS-native 'inet_pton()'.
+ *
+ * Revision 1.51  2006/01/26 12:59:14  davidlee
+ * Handle: 'mask: default' from 'route get ...'
+ *
+ * Revision 1.50  2005/11/09 16:03:22  davidlee
+ * For 'ctype' macros/functions, some platforms warn if argument is not of type (int)
+ *
  * Revision 1.49  2005/07/29 06:55:37  sunjd
  * bug668: license update
  *

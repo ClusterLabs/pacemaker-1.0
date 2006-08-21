@@ -54,9 +54,8 @@
 . @hb_libdir@/ocf-shellfuncs
 
 #######################################################################
-prefix=@prefix@
-exec_prefix=@exec_prefix@
 
+AWK=@AWK@
 IPROUTE=@IP2UTIL@
 IFCONFIG=@IFCONFIG@
 IFCONFIG_A_OPT=@IFCONFIG_A_OPT@
@@ -64,6 +63,8 @@ USAGE="usage: $0 {start|stop|status|monitor|validate-all|meta-data}";
 
   CMDSHOW="$IPROUTE route show   to exact 0/0"
 CMDCHANGE="$IPROUTE route change to "
+
+SYSTYPE="`uname -s`"
 
 usage() {
 	echo $USAGE >&2
@@ -83,7 +84,7 @@ modification.
 <shortdesc lang="en">IPsrcaddr resource agent</shortdesc>
 
 <parameters>
-<parameter name="ipaddress" unique="0">
+<parameter name="ipaddress" unique="0" required="1">
 <longdesc lang="en">
 The IP address. 
 </longdesc>
@@ -252,7 +253,7 @@ CheckIP() {
 find_interface_solaris() {
 
 
-  $IFCONFIG $IFCONFIG_A_OPT | nawk '{if ($0 ~ /.*: / && NR > 1) {print "\n"$0} else {print}}' |
+  $IFCONFIG $IFCONFIG_A_OPT | $AWK '{if ($0 ~ /.*: / && NR > 1) {print "\n"$0} else {print}}' |
   while read ifname linkstuff
   do
     : ifname = $ifname
@@ -299,7 +300,7 @@ find_interface_generic() {
       : Nothing
     done
 
-    case $SYSTYPE in
+    case "$SYSTYPE" in
       *BSD)
 		$IFCONFIG | grep "$BASEIP" -B4 | grep "UP," | cut -d ":" -f 1
 		return 0;;
@@ -323,7 +324,7 @@ find_interface_generic() {
 #       is an (aliased) interface name (e.g., "eth0" and "eth0:0").
 #
 find_interface() {
-    case $SYSTYPE in
+    case "$SYSTYPE" in
 	SunOS)
 	 	IF=`find_interface_solaris $BASEIP`
         ;;
@@ -340,7 +341,6 @@ find_interface() {
 ip_status() {
 
   BASEIP="$1"
-  SYSTYPE="`uname -s`"
   case "$SYSTYPE" in
     Darwin)
 	# Treat Darwin the same as the other BSD variants (matched as *BSD)
@@ -351,7 +351,7 @@ ip_status() {
   esac
 
 
-  case $SYSTYPE in
+  case "$SYSTYPE" in
       *BSD)
 	  $IFCONFIG $IFCONFIG_A_OPT | grep "inet.*[: ]$BASEIP " >/dev/null 2>&1
 	  if [ $? = 0 ]; then

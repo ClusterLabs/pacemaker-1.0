@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $Id: WAS.in,v 1.4 2005/08/12 05:52:57 sunjd Exp $
+# $Id: WAS.in,v 1.11 2006/03/10 04:14:20 xunsun Exp $
 # 
 # WAS
 #
@@ -31,10 +31,6 @@
 
 #######################################################################
 
-prefix=@prefix@
-exec_prefix=@exec_prefix@
-
-#
 WASDIR=/opt/WebSphere/AppServer
 if
   [ ! -d $WASDIR ]
@@ -55,7 +51,7 @@ DEFAULT=$WASDIR/config/server-cfg.xml
 usage() {
   methods=`WAS_methods | grep -v methods`
   methods=`echo $methods | tr ' ' '|'`
-  cat <<-! >&1
+  cat <<-!
 	usage: $0 ($methods)
 
 	For the single server edition of WAS, you have to set the following
@@ -103,7 +99,7 @@ usage() {
 	We run servlet/snoop on the first transport port listed in
 	the config file for the "monitor" operation.
 
-	$Id: WAS.in,v 1.4 2005/08/12 05:52:57 sunjd Exp $
+	$Id: WAS.in,v 1.11 2006/03/10 04:14:20 xunsun Exp $
 	!
 }
 
@@ -121,7 +117,7 @@ an HA resource.
 <shortdesc lang="en">WAS resource agent</shortdesc>
 
 <parameters>
-<parameter name="config" unique="0">
+<parameter name="config" unique="0" required="1">
 <longdesc lang="en">
 The WAS-configuration file.
 </longdesc>
@@ -152,45 +148,17 @@ END
 }
 
 #
-#	Run:  Run a script, and log its output.
-#
-run() {
-  output=`"$@" 2>&1`
-  rc=$?
-  output=`echo $output`
-  if
-    [ $rc -eq 0 ]
-  then 
-    if
-      [ ! -z "$output" ]
-    then
-      ocf_log info "$output"
-    fi
-    return 0
-  else
-    if
-      [ ! -z "$output" ]
-    then
-      ocf_log "err" "$output"
-    else
-      ocf_log "err" "command failed: $*"
-    fi
-    return $rc
-  fi
-}
-
-#
 #	Reformat the XML document in a sort of canonical form
 #	if we can.  If we don't have xmllint, we just cat it out
 #	and hope for the best ;-)
 #
 xmlcat() {
   if
-    [ "X$XMLcat" == X ]
+    [ "X$XMLcat" = X ]
   then
     XMLcat=`which xmllint 2>/dev/null`
     if
-      [ "X${XMLcat}" == X  -o ! -x "${XMLcat}" ]
+      [ "X${XMLcat}" = X  -o ! -x "${XMLcat}" ]
     then
       XMLcat=cat
     else
@@ -338,7 +306,7 @@ WAS_report_status() {
   PortCount=`echo $PortCount`
   PortsInUse=`CheckWASPortsInUse $WASPorts`
   case $PortsInUse in
-    0)	ocf_log debug "WAS: server $1 is stopped."; false;;
+    0)	ocf_log debug "WAS: server $1 is stopped."; return $OCF_NOT_RUNNING;;
     *)
 	pids=`WASPIDs $WASPorts`
 	if
@@ -348,7 +316,7 @@ WAS_report_status() {
 	else
     	  ocf_log debug "WAS: server $1 is running (pid $pids et al) but not listening on all ports."
         fi
-	true;;
+	return $OCF_SUCCESS;;
   esac
 }
 
@@ -360,7 +328,7 @@ WAS_report_status() {
 #	This is actually faster than WAS_status above...
 #
 WAS_monitor() {
-  tmpfile=`tempfile`
+  tmpfile=`maketempfile`
   SnoopPort=`GetWASSnoopPort $1`
   output=`$WGET -nv -O$tmpfile  http://localhost:$SnoopPort/servlet/snoop 2>&1`
   rc=$?
@@ -413,7 +381,7 @@ WAS_start() {
   fi
     
   if
-    run $cmd
+    ocf_run $cmd
   then
     if
       WAS_wait_4_start $STARTTIME "$@"
@@ -465,7 +433,7 @@ WAS_stop() {
   if
     [ -x $WASBIN/stopServer.sh ]
   then
-    run $WASBIN/stopServer.sh -configFile $1
+    ocf_run $WASBIN/stopServer.sh -configFile $1
   else
     WASPorts=`GetWASPorts $1`
     kill `WASPIDs $WASPorts`
@@ -483,19 +451,10 @@ WAS_stop() {
 }
 
 #
-#	Check if the port is valid, this function code is not decent, but works
+#	Check if the port is valid
 #
 CheckPort() {
-#	Examples of valid port: "1080", "1", "0080"
-#	Examples of invalid port: "1080bad", "0", "0000", ""
-  case "$1" in
-    *[^0-9]*) #got invalid char
-	false;;
-    *[1-9]*) #no invalid char, and has non-zero digit, so is a good port
-	true;;
-    *) #empty string, or string of 0's 
-	false;;
-  esac
+  ocf_is_decimal "$1" && [ $1 -gt 0 ]
 }
 
 WAS_validate_all() {

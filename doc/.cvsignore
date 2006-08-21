@@ -9,6 +9,7 @@ faqntips.txt
 heartbeat_api.txt
 rsync.txt
 startstop
+cibadmin.8
 *.beam
 parser-messages
 MISC_ERRORS

@@ -1,4 +1,4 @@
-/* $Id: ipfail.c,v 1.43 2005/08/16 15:09:45 gshi Exp $ */
+/* $Id: ipfail.c,v 1.44 2005/10/17 19:13:47 gshi Exp $ */
 /* ipfail: IP Failover plugin for Linux-HA
  *
  * Copyright (C) 2002-2004 Kevin Dwyer <kevin@pheared.net>
@@ -530,14 +530,14 @@ send_abort_giveup(ll_cluster_t *hb)
 }
 
 void
-msg_abort_giveup(const struct ha_msg *msg, void *private)
+msg_abort_giveup(struct ha_msg *msg, void *private)
 {
         abort_giveup();
 }
 
 
 void
-msg_ipfail_join(const struct ha_msg *msg, void *private)
+msg_ipfail_join(struct ha_msg *msg, void *private)
 {
 	/* msg_ipfail_join: When another ipfail client sends a join 
 	 * message, call ask_ping_nodes() to compare ping node counts.
@@ -556,7 +556,7 @@ msg_ipfail_join(const struct ha_msg *msg, void *private)
 }
 
 void
-msg_resources(const struct ha_msg *msg, void *private)
+msg_resources(struct ha_msg *msg, void *private)
 {
 	const char * orig = ha_msg_value(msg, F_ORIG);
 	const char * isstable = ha_msg_value(msg, F_ISSTABLE);
@@ -646,7 +646,7 @@ ask_ping_nodes(ll_cluster_t *hb, int num_ping)
 }
 
 void
-msg_ping_nodes(const struct ha_msg *msg, void *private)
+msg_ping_nodes(struct ha_msg *msg, void *private)
 {
 	/* msg_ping_nodes: Takes the message and heartbeat cluster as input;
 	 * returns nothing.  Callback for the num_ping_nodes message.
@@ -712,7 +712,7 @@ you_are_dead(ll_cluster_t *hb)
 }
 
 void
-i_am_dead(const struct ha_msg *msg, void *private)
+i_am_dead(struct ha_msg *msg, void *private)
 {
 	/* i_am_dead: Takes the you_are_dead message and the heartbeat cluster
 	 * as input; returns nothing.

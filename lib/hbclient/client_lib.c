@@ -1,4 +1,4 @@
-/* $Id: client_lib.c,v 1.32 2005/05/17 18:51:22 gshi Exp $ */
+/* $Id: client_lib.c,v 1.42 2006/05/31 17:31:57 gshi Exp $ */
 /* 
  * client_lib: heartbeat API client side code
  *
@@ -49,7 +49,9 @@
 #include <hb_api_core.h>
 #include <hb_api.h>
 #include <glib.h>
+#include <clplumbing/cl_random.h>
 
+#define CLIENTID_MAXLEN		36
 struct sys_config *		config  = NULL;
 
 int			netstring_format = TRUE;
@@ -188,6 +190,8 @@ static int init_nodewalk (ll_cluster_t*);
 static const char * nextnode (ll_cluster_t* ci);
 static int init_ifwalk (ll_cluster_t* ci, const char * host);
 static const char *	get_nodestatus(ll_cluster_t*, const char *host);
+static int 		get_nodeweight(ll_cluster_t*, const char *host);
+static const char *	get_nodesite(ll_cluster_t*, const char *host);
 static const char *
 get_clientstatus(ll_cluster_t*, const char *host, const char *clientid
 ,	int timeout);
@@ -215,12 +219,13 @@ static int		rcvmsg(ll_cluster_t* llc, int blocking);
 
 volatile struct process_info *	curproc = NULL;
 static char		OurPid[16];
-static const char *	OurClientID = NULL;
+static char		OurClientID[CLIENTID_MAXLEN];
 static char 		OurNode[SYS_NMLN];
 static ll_cluster_t*	hb_cluster_new(void);
 
 static void ha_api_perror(const char * fmt, ...) G_GNUC_PRINTF(1,2);
 static void ha_api_log(int priority, const char * fmt, ...) G_GNUC_PRINTF(2,3);
+static int	get_num_nodes(ll_cluster_t* lcl);
 
 
 #define	ZAPMSG(m)	{ha_msg_del(m); (m) = NULL;}
@@ -308,10 +313,10 @@ hb_api_signon(struct ll_cluster* cinfo, const char * clientid)
 
 	/* Create our client id */
 	if (clientid != NULL) {
-		OurClientID = clientid;
+		strncpy(OurClientID, clientid, CLIENTID_MAXLEN);
 		iscasual = 0;
 	}else{
-		OurClientID = OurPid;
+		strncpy(OurClientID, OurPid, CLIENTID_MAXLEN);
 		iscasual = 1;
 	}
 
@@ -470,7 +475,7 @@ hb_api_signoff(struct ll_cluster* cinfo,gboolean need_destroy_chan)
 	}
 	pi->chan->ops->waitout(pi->chan);
 	ZAPMSG(request);
-	OurClientID = NULL;
+	OurClientID[0] = EOS;
 	if(need_destroy_chan){
 		pi->chan->ops->destroy(pi->chan);
 	}
@@ -681,10 +686,7 @@ get_nodelist(llc_private_t* pi)
 
 		ZAPMSG(reply);
 	}
-	if (reply != NULL) {
-		zap_nodelist(pi);
-		ZAPMSG(reply);
-	}
+
 	if (reply == NULL) {
 		ha_api_log(LOG_ERR, "General read_api_msg() failure");
 	}else if (result == NULL) {
@@ -697,6 +699,10 @@ get_nodelist(llc_private_t* pi)
 		ha_api_log(LOG_ERR, "new_stringlist() failure.");
 	}
 
+	if (reply != NULL) {
+		zap_nodelist(pi);
+		ZAPMSG(reply);
+	}
 	return HA_FAIL;
 }
 /*
@@ -820,6 +826,128 @@ get_nodestatus(ll_cluster_t* lcl, const char *host)
 
 	return ret;
 }
+
+/*
+ * Return the weight of the given node.
+ */
+
+static int
+get_nodeweight(ll_cluster_t* lcl, const char *host)
+{
+	struct ha_msg*		request;
+	struct ha_msg*		reply;
+	const char *		result;
+	const char *		weight_s;
+	int			ret;
+	llc_private_t*		pi;
+
+	ClearLog();
+	if (!ISOURS(lcl)) {
+		ha_api_log(LOG_ERR, "get_nodeweight: bad cinfo");
+		return -1;
+	}
+	pi = (llc_private_t*)lcl->ll_cluster_private;
+
+	if (!pi->SignedOn) {
+		ha_api_log(LOG_ERR, "not signed on");
+		return -1;
+	}
+
+	if ((request = hb_api_boilerplate(API_NODEWEIGHT)) == NULL) {
+		return -1;
+	}
+	if (ha_msg_add(request, F_NODENAME, host) != HA_OK) {
+		ha_api_log(LOG_ERR, "get_nodeweight: cannot add field");
+		ZAPMSG(request);
+		return -1;
+	}
+
+	/* Send message */
+	if (msg2ipcchan(request, pi->chan) != HA_OK) {
+		ZAPMSG(request);
+		ha_api_perror("Can't send message to IPC Channel");
+		return -1;
+	}
+	ZAPMSG(request);
+
+	/* Read reply... */
+	if ((reply=read_api_msg(pi)) == NULL) {
+		return -1;
+	}
+	if ((result = ha_msg_value(reply, F_APIRESULT)) != NULL
+	&&	strcmp(result, API_OK) == 0
+	&&	(weight_s = ha_msg_value(reply, F_WEIGHT)) != NULL) {
+		ret = atoi(weight_s);
+	}else{
+		ret = -1;
+	}
+	ZAPMSG(reply);
+
+	return ret;
+}
+
+/*
+ * Return the site of the given node.
+ */
+
+static const char *
+get_nodesite(ll_cluster_t* lcl, const char *host)
+{
+	struct ha_msg*		request;
+	struct ha_msg*		reply;
+	const char *		result;
+	const char *		site;
+	static char		sitebuf[HOSTLENG];
+	const char *		ret;
+	llc_private_t*		pi;
+
+	ClearLog();
+	if (!ISOURS(lcl)) {
+		ha_api_log(LOG_ERR, "get_nodesite: bad cinfo");
+		return NULL;
+	}
+	pi = (llc_private_t*)lcl->ll_cluster_private;
+
+	if (!pi->SignedOn) {
+		ha_api_log(LOG_ERR, "not signed on");
+		return NULL;
+	}
+
+	if ((request = hb_api_boilerplate(API_NODESITE)) == NULL) {
+		return NULL;
+	}
+	if (ha_msg_add(request, F_NODENAME, host) != HA_OK) {
+		ha_api_log(LOG_ERR, "get_nodesite: cannot add field");
+		ZAPMSG(request);
+		return NULL;
+	}
+
+	/* Send message */
+	if (msg2ipcchan(request, pi->chan) != HA_OK) {
+		ZAPMSG(request);
+		ha_api_perror("Can't send message to IPC Channel");
+		return NULL;
+	}
+	ZAPMSG(request);
+
+	/* Read reply... */
+	if ((reply=read_api_msg(pi)) == NULL) {
+		return NULL;
+	}
+	if ((result = ha_msg_value(reply, F_APIRESULT)) != NULL
+	&&	strcmp(result, API_OK) == 0
+	&&	(site = ha_msg_value(reply, F_SITE)) != NULL) {
+                memset(sitebuf, 0, sizeof(sitebuf));
+		strncpy(sitebuf, site, sizeof(sitebuf) - 1);
+		ret = sitebuf;
+	}else{
+		ret = NULL;
+	}
+	ZAPMSG(reply);
+
+	return ret;
+}
+
 /*
 * Return the status of the given client.
 */
@@ -852,7 +980,10 @@ get_clientstatus(ll_cluster_t* lcl, const char *host
 	/* If host is NULL, user choose the callback method to
 	 * get the result. This also implies timeout is useless */
 	if (host == NULL) {
+		int max_delay;
 		struct ha_msg * m = NULL;
+		int delay;
+		int num_nodes;
 
 		if ((m = ha_msg_new(0)) == NULL
 		||	ha_msg_add(m, F_TYPE, T_QCSTATUS) != HA_OK
@@ -866,6 +997,21 @@ get_clientstatus(ll_cluster_t* lcl, const char *host
 			ha_log(LOG_ERR, "%s: cannot add field", __FUNCTION__);
 			return NULL;
 		}
+		
+		/* We delay random time here to distribute requests from different nodes 
+		 * across time in a big cluster
+		 * in a 100-node cluster, the max deley is 10 seconds
+		 */
+		num_nodes = get_num_nodes(lcl);
+		max_delay =  (1.0*num_nodes /10) *1000000; /* in microsecond*/
+		srand(cl_randseed());
+		delay = (1.0* rand()/RAND_MAX)*max_delay;
+		if (ANYDEBUG){
+			cl_log(LOG_DEBUG, "Delaying cstatus request for %d ms", delay/1000);
+		}
+		
+		usleep(delay);
+		
 		if (sendclustermsg(lcl, m) != HA_OK) {
 			ha_log(LOG_ERR, "%s: sendclustermsg fail",__FUNCTION__);
 		}
@@ -977,6 +1123,63 @@ get_nodetype(ll_cluster_t* lcl, const char *host)
 
 	return ret;
 }
+
+
+
+static int
+get_num_nodes(ll_cluster_t* lcl)
+{
+	struct ha_msg*		request;
+	struct ha_msg*		reply;
+	const char *		result;
+	llc_private_t*		pi;
+	const char*		num_s;
+	int			num;
+	
+
+	ClearLog();
+	if (!ISOURS(lcl)) {
+		ha_api_log(LOG_ERR, "%s: bad cinfo", __FUNCTION__);
+		return -1;
+	}
+	pi = (llc_private_t*)lcl->ll_cluster_private;
+
+	if (!pi->SignedOn) {
+		ha_api_log(LOG_ERR, "not signed on");
+		return -1;
+	}
+	
+	if ((request = hb_api_boilerplate(API_NUMNODES)) == NULL) {
+		return -1;
+	}
+	/* Send message */
+	if (msg2ipcchan(request, pi->chan) != HA_OK) {
+		ZAPMSG(request);
+		ha_api_perror("Can't send message to IPC Channel");
+		return -1;
+	}
+	ZAPMSG(request);
+	
+	/* Read reply... */
+	if ((reply=read_api_msg(pi)) == NULL) {
+		return -1;
+	}
+	if ((result = ha_msg_value(reply, F_APIRESULT)) != NULL
+	    &&	strcmp(result, API_OK) == 0
+	    &&	(num_s = ha_msg_value(reply, F_NUMNODES)) != NULL
+	    && (num = atoi(num_s)) > 0){
+		/*everything is good, do nothing*/		
+	}else{
+		cl_log(LOG_ERR, "Wrong reply message");
+		cl_log_message(LOG_ERR, reply);
+		num = -1;
+	}
+	ZAPMSG(reply);
+
+	return num;
+}
+
+
 static char *	
 get_parameter(ll_cluster_t* lcl, const char* pname)
 {
@@ -1078,6 +1281,10 @@ get_resources(ll_cluster_t* lcl)
 		retvalue[DIMOF(retvalue)-1] = EOS;
 		ret = retvalue;
 	}else{
+		const char* failreason = ha_msg_value(reply, F_COMMENT);
+		if (failreason){
+			ha_api_log(LOG_ERR,  "%s", failreason);
+		}
 		ret = NULL;
 	}
 	ZAPMSG(reply);
@@ -2103,30 +2310,36 @@ CallbackCall(llc_private_t* p, struct ha_msg * msg)
 	if ((strcasecmp(mtype, T_STATUS) == 0
 	||	strcasecmp(mtype, T_NS_STATUS) == 0)) {
 		/* If DEADSTATUS, cleanup order queue for the node */
-		if (strcmp(ha_msg_value(msg, F_STATUS), DEADSTATUS) == 0) {
+		const char *mstatus = ha_msg_value(msg, F_STATUS);
+		if (mstatus && (strcmp(mstatus, DEADSTATUS) == 0)) {
 			order_queue_t *	oq = p->order_queue_head;
 			order_queue_t *	prev;
 			order_queue_t *	next;
 			int		i;
 
 			for (prev = NULL; oq != NULL; prev = oq, oq = oq->next){
-				if (strcmp(oq->from_node
-				,	ha_msg_value(msg, F_ORIG)) == 0)
+				const char *morig = ha_msg_value(msg, F_ORIG);
+				if (morig && (strcmp(oq->from_node,  morig) 
+							== 0)) {
 					break;
+				}
 			}
 			if (oq){
 				next = oq->next;
 				for (i = 0; i < MAXMSGHIST; i++){
-					if (oq->node.orderQ[i])
+					if (oq->node.orderQ[i]) {
 						ZAPMSG(oq->node.orderQ[i]);
-					if (oq->cluster.orderQ[i])
+					}
+					if (oq->cluster.orderQ[i]) {
 						ZAPMSG(oq->cluster.orderQ[i]);
+					}
 				}
 				ha_free(oq);
-				if (prev)
+				if (prev) {
 					prev->next = next;
-				else
+				} else {
 					p->order_queue_head = next;
+				}
 			}
 		}
 		if (p->node_callback) {
@@ -2183,7 +2396,7 @@ read_msg_w_callbacks(ll_cluster_t* llc, int blocking)
 
 	if (!ISOURS(llc)) {
 		ha_api_log(LOG_ERR, "read_msg_w_callbacks: bad cinfo");
-		return HA_FAIL;
+		return NULL;
 	}
 	pi = (llc_private_t*) llc->ll_cluster_private;
 
@@ -3000,7 +3213,10 @@ static struct llc_ops heartbeat_ops = {
 	nextnode:		nextnode,		
 	end_nodewalk:		end_nodewalk,		
 	node_status:		get_nodestatus,		
-	node_type:		get_nodetype,		
+	node_weight:		get_nodeweight,		
+	node_site:		get_nodesite,		
+	node_type:		get_nodetype,	
+	num_nodes:		get_num_nodes,
 	init_ifwalk:		init_ifwalk,		
 	nextif:			nextif,			
 	end_ifwalk:		end_ifwalk,		
@@ -3072,4 +3288,132 @@ ll_cluster_new(const char * llctype)
 		return hb_cluster_new();
 	}
 	return NULL;
+}
+
+#include <clplumbing/GSource_internal.h>
+
+#define	OURMAGIC	0xbeef1234
+
+struct GLLclusterSource_s {
+	GCHSource	chsrc;
+	unsigned long	magic2;
+	ll_cluster_t*	hbchan;
+	gboolean(*dispatch)(ll_cluster_t* llc, gpointer udata);
+};
+
+
+
+static gboolean G_llc_prepare_int(GSource* source, gint* timeout);
+static gboolean G_llc_check_int(GSource* source);
+static gboolean G_llc_dispatch_int(GSource* source, GSourceFunc callback
+,	gpointer user_data);
+static void G_llc_destroy_int(GSource* source);
+
+static GSourceFuncs G_llc_SourceFuncs = {
+	G_llc_prepare_int,
+	G_llc_check_int,
+	G_llc_dispatch_int,
+	G_llc_destroy_int,
+};
+
+#define	CHECKMAGIC(s,value)	{if ((s)->magic2 != OURMAGIC) {		\
+					cl_log(LOG_ERR			\
+					,	"%s: invalid magic number"\
+					,	__FUNCTION__);		\
+					return value;			\
+				}}
+
+static gboolean
+G_llc_prepare_int(GSource* source, gint* timeout)
+{
+	GLLclusterSource*	s = (GLLclusterSource*)source;
+
+	CHECKMAGIC(s, FALSE);
+	(void)G_CH_prepare_int(source, timeout);
+	
+	return s->hbchan->llc_ops->msgready(s->hbchan);
+}
+
+static gboolean
+G_llc_check_int(GSource* source)
+{
+	GLLclusterSource*	s = (GLLclusterSource*)source;
+
+	CHECKMAGIC(s, FALSE);
+	(void)G_CH_check_int(source);
+	
+	return s->hbchan->llc_ops->msgready(s->hbchan);
+}
+
+static gboolean
+G_llc_dispatch_int(GSource* source, GSourceFunc callback
+,	gpointer user_data)
+{
+	gboolean	ret1 = TRUE;
+	gboolean	ret2 = TRUE;
+	GLLclusterSource*	s = (GLLclusterSource*)source;
+
+	CHECKMAGIC(s, FALSE);
+	ret1 = G_CH_dispatch_int(source, callback, user_data);
+	
+	if (s->hbchan->llc_ops->msgready(s->hbchan) && s->dispatch) {
+		ret2 = s->dispatch(s->hbchan, s->chsrc.udata);
+	}
+	return ret1 && ret2;
+}
+
+static void
+G_llc_destroy_int(GSource* source)
+{
+	GLLclusterSource*	s = (GLLclusterSource*)source;
+	llc_private_t*		pi;
+	pi = (llc_private_t*)s->hbchan->ll_cluster_private;
+
+	CHECKMAGIC(s, );
+	s->magic2 = 0;
+	G_CH_destroy_int(source);
+	pi->chan = NULL;
+	s->hbchan->llc_ops->delete(s->hbchan);
+}
+
+
+GLLclusterSource*
+G_main_add_ll_cluster(int priority, ll_cluster_t* api
+,	gboolean can_recurse
+,	gboolean (*dispatch)(ll_cluster_t* source_data,gpointer user_data)
+,	gpointer userdata, GDestroyNotify notify)
+{
+	GSource * 		source;
+	IPC_Channel*		ch;
+	GLLclusterSource*	s;
+
+	source =  g_source_new(&G_llc_SourceFuncs , sizeof(GLLclusterSource));
+	if (source == NULL || api == NULL || api->llc_ops == NULL
+	||	(ch = api->llc_ops->ipcchan(api)) == NULL) {
+		return NULL;
+	}
+
+	s = (GLLclusterSource*)source;
+	s->magic2 = OURMAGIC;
+	s->hbchan = api;
+	s->dispatch = dispatch;
+	(void)G_main_IPC_Channel_constructor(source, ch, userdata, notify);
+
+	
+	g_source_set_priority(source, priority);
+	g_source_set_can_recurse(source, can_recurse);
+	
+	s->chsrc.description = "Heartbeat API channel";
+	s->chsrc.gsourceid = g_source_attach(source, NULL);
+
+	if (s->chsrc.gsourceid == 0) {
+		g_source_remove_poll(source, &s->chsrc.infd);
+		if (!s->chsrc.fd_fdx) {
+			g_source_remove_poll(source, &s->chsrc.outfd);
+		}
+		g_source_unref(source);
+		source = NULL;
+		s = NULL;
+	}
+	return s;
 }

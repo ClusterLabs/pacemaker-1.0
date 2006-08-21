@@ -28,6 +28,9 @@ export HA_DIR HA_RCDIR HA_FIFO HA_BIN
 export HA_DEBUGLOG HA_LOGFILE HA_LOGFACILITY
 export HA_DATEFMT HA_RESOURCEDIR HA_DOCDIR
 
+MKTEMP=@MKTEMP@
+TESTPROG=@TEST@
+
 #	A suitable echo command
 Echo() {
   @ECHO_CMD@ "$@"
@@ -43,13 +46,37 @@ EchoEsc() {
     Echo @ECHO_E@ "$@"
 }
 
+echo_failure() {
+    EchoEsc " Heartbeat failure [rc=$1]. $rc_failed"
+    return $1
+}
+
+echo_success() {
+    : Cool!  It started!
+    EchoEsc "$rc_done"
+}
+
+action() {
+  echo -n "$1... "
+  shift
+  $@
+  stat=$?
+  if [ $stat = 0 ]; then
+    echo success
+  else
+    echo failure
+  fi
+  return  $stat
+}
+
+
 hadate() {
   date "+${HA_DATEFMT}"
 }
 
 ha_log() {
 	if [ "x${HA_LOGD}" = "xyes" ] ; then 
-		${HA_BIN}/ha_logger -E "${HA_LOGTAG}" ha-log "$@"
+		${HA_BIN}/ha_logger -t "${HA_LOGTAG}" "$@"
 		if [ "$?" -eq "0" ] ; then
 			return 0
 		fi
@@ -87,7 +114,7 @@ ha_log() {
 ha_debug() {
 
         if [ "x${HA_LOGD}" = "xyes" ] ; then  
-		${HA_BIN}/ha_logger -E "${HA_LOGTAG}" ha-debug "$@"
+		${HA_BIN}/ha_logger -t "${HA_LOGTAG}" -D "ha-debug" "$@"
                 if [ "$?" -eq "0" ] ; then
                         return 0
                 fi
@@ -109,12 +136,14 @@ ha_debug() {
 	fi
 }
 
+# copy stdin (text) to FIFO, with surrounding ">>>" and "<<<" marker lines.
+# no args.; no result
+# Notes:
+#	o Using "cat -" rather than "cat" simply for clarity.
+#	o The trailing "| cat -" tries to hold things together as a single
+#	  write (which is probably preferable behaviour in this context).
 ha_clustermsg() {
-	cat $* <<-!MSG >> $HA_FIFO
->>>
-`cat`
-<<<
-!MSG
+	(echo ">>>"; cat -; echo "<<<")	| cat - >> $HA_FIFO
 }
 
 ha_parameter() {
@@ -206,7 +235,46 @@ ha_pseudo_resource()
   case $2 in
     start|restart|reload)  touch "$ha_resource_tracking_file";;
     stop) rm -f "$ha_resource_tracking_file";;
-    status) test -f "$ha_resource_tracking_file";;
+    status|monitor)
+           if
+             [ -f "$ha_resource_tracking_file" ]
+           then
+             return 0
+           else
+             case $2 in
+               status)	return 3;;
+               *)	return 7;;
+             esac
+           fi;;
     *)	return 3;;
   esac
+}
+
+# Make temp files the paranoid way...
+maketempfile() {
+#
+#	Use mktemp if we have it, otherwise...
+#
+#	Construct a difficult-to-guess filename if we don't
+#	Make sure non-mktemp files can't be subverted
+#	$RANDOM is not strictly necessary, but nice to have...
+#
+  if
+    test "x$MKTEMP" != "x" \
+      && F=`$MKTEMP /tmp/lha-XXXXXX` && [ ! -z "$F" -a -f "$F" ]
+  then
+    echo $F
+  else
+    while
+      echo >/dev/null &
+      F=/tmp/lha-${RANDOM}-$$-$!
+      rm -f "$F"; touch "$F"
+      # Try again if we don't own it, or it's a symlink
+      # Or somehow not a regular file...
+      $TESTPROG ! -O "$F" -o -L "$F" -o ! -f "$F"
+    do
+     : Try again...
+    done
+    echo $F
+  fi
 }

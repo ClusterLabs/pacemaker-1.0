@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $Id: LVM.in,v 1.6 2005/08/01 10:12:20 sunjd Exp $
+# $Id: LVM.in,v 1.13 2006/06/02 06:33:16 andrew Exp $
 # 
 # LVM
 #
@@ -31,13 +31,12 @@
 
 #######################################################################
 
-prefix=@prefix@
-exec_prefix=@exec_prefix@
+AWK=@AWK@
 
 usage() {
   methods=`LVM_methods`
   methods=`echo $methods | tr ' ' '|'`
-  cat <<-! >&1
+  cat <<-!
 	usage: $0 $methods
 
 	$0 manages an  Linux Volume Manager volume (LVM) as an HA resource
@@ -49,7 +48,7 @@ usage() {
 	The 'validate-all' operation checks whether the OCF parameters are valid
 	The 'methods' operation reports on the methods $0 supports
 
-	$Id: LVM.in,v 1.6 2005/08/01 10:12:20 sunjd Exp $
+	$Id: LVM.in,v 1.13 2006/06/02 06:33:16 andrew Exp $
 	!
   exit $OCF_ERR_GENERIC 
 
@@ -69,7 +68,7 @@ as an HA resource.
 <shortdesc lang="en">LVM resource agent</shortdesc>
 
 <parameters>
-<parameter name="volgrpname" unique="0">
+<parameter name="volgrpname" unique="0" required="1">
 <longdesc lang="en">
 The name of volume group.
 </longdesc>
@@ -90,36 +89,6 @@ The name of volume group.
 </resource-agent>
 END
 }
-
-#
-#	run:  run a script, and log its output.
-#
-run() {
-  output=`"$@" 2>&1`
-  rc=$?
-  output=`echo $output`
-  if
-    [ $rc -eq 0 ]
-  then 
-    if
-      [ ! -z "$output" ]
-    then
-      ocf_log info "$output"
-    fi
-    return $OCF_SUCCESS 
-  else
-    if
-      [ ! -z "$output" ]
-    then
-      ocf_log err "$output"
-    else
-      ocf_log err "command failed: $*"
-    fi
-    return $rc
-  fi
-}
-
-
 
 #
 # methods: What methods/operations do we support?
@@ -201,11 +170,11 @@ LVM_monitor() {
   then
     : OK
   else
-    ocf_log err "LVM Volume $1 is offline"
+    ocf_log info "LVM Volume $1 is offline"
     return $OCF_NOT_RUNNING
   fi
 
-  run vgck $1
+  ocf_run vgck $1
 
   return $?
 }
@@ -220,12 +189,12 @@ LVM_start() {
   if 
     [ "$LVM_MAJOR" -eq "1" ]
   then
-	run vgscan $1
+	ocf_run vgscan $1
   else
-	run vgscan
+	ocf_run vgscan
   fi
 
-  run vgchange -a y $1 || return $OCF_ERR_GENERIC
+  ocf_run vgchange -a y $1 || return $OCF_ERR_GENERIC
 
   if
     LVM_status $1
@@ -244,7 +213,7 @@ LVM_start() {
 LVM_stop() {
 
   ocf_log info "Deactivating volume group $1"
-  run vgchange -a n $1 || return 1
+  ocf_run vgchange -a n $1 || return 1
 
   if
     LVM_status $1
@@ -331,8 +300,8 @@ fi
 #	Driver version:  4.1.0
 
 LVM_VERSION=`vgchange --version 2>&1 | \
-	awk --source '/Logical Volume Manager/ {print $5"\n"; exit; } '\
-	    --source '/LVM version:/ {printf $3"\n"; exit;}'`
+	$AWK '/Logical Volume Manager/ {print $5"\n"; exit; }
+	     /LVM version:/ {printf $3"\n"; exit;}'`
 rc=$?
 
 if

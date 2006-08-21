@@ -1,4 +1,4 @@
-/* $Id: ipc.h,v 1.52 2005/07/25 20:43:12 gshi Exp $ */
+/* $Id: ipc.h,v 1.56 2006/06/23 21:39:09 alan Exp $ */
 /*
  * ipc.h IPC abstraction data structures.
  *
@@ -586,7 +586,9 @@ struct IPC_OPS{
 	 */
 	
 	int (*get_conntype)(struct IPC_CHANNEL* ch);
-	
+
+	int (*disconnect)(struct IPC_CHANNEL* ch);
+		
 };
 
 
@@ -706,7 +708,8 @@ struct SOCKET_MSG_HEAD{
 };
 
 
-#define	MAXDATASIZE	65536
+#define	MAXMSG		(512*1024)
+#define	MAXDATASIZE	(512*1024)
 #define HEADMAGIC	0xabcd
 #define POOL_SIZE (4*1024)
 struct ipc_bufpool{

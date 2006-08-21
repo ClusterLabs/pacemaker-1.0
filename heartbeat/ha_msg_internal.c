@@ -1,4 +1,4 @@
-/* $Id: ha_msg_internal.c,v 1.57 2005/08/03 22:44:13 gshi Exp $ */
+/* $Id: ha_msg_internal.c,v 1.58 2005/10/15 02:52:34 gshi Exp $ */
 /*
  * ha_msg_internal: heartbeat internal messaging functions
  *
@@ -163,7 +163,13 @@ add_control_msg_fields(struct ha_msg* ret)
 		}
 
 	} 
-	if (!netstring_format && !add_msg_auth(ret)) {
+
+
+	if (netstring_format || must_use_netstring(ret)){
+		goto out;
+	}
+	
+	if ( add_msg_auth(ret) != HA_OK) {
 		ha_msg_del(ret);
 		ret = NULL;
 	}
@@ -172,6 +178,7 @@ add_control_msg_fields(struct ha_msg* ret)
 		cl_log_message(LOG_DEBUG, ret);
 	}
 
+ out:
 	return ret;
 }
 
@@ -180,82 +187,120 @@ add_control_msg_fields(struct ha_msg* ret)
 int
 add_msg_auth(struct ha_msg * m)
 {
-	char	msgbody[MAXMSG];
+	char	msgbody[MAXLINE];
 	char	authstring[MAXLINE];
-	char	authtoken[MAXLINE];
+	char	authtoken[MAXLINE];	
+	char*	msgbuf;
+	int	buf_malloced = 0;
+	int	buflen;
+	const char *	from;
+	const char *	ts;
+	const char *	type;
+	int		ret =  HA_FAIL;
+       
+
+	/* Extract message type, originator, timestamp, auth */
+	type = ha_msg_value(m, F_TYPE);
+	from = ha_msg_value(m, F_ORIG);
+	ts = ha_msg_value(m, F_TIME);
 	
-	{
-		const char *	from;
-		const char *	ts;
-		const char *	type;
-
-		/* Extract message type, originator, timestamp, auth */
-		type = ha_msg_value(m, F_TYPE);
-		from = ha_msg_value(m, F_ORIG);
-		ts = ha_msg_value(m, F_TIME);
-
-		if (from == NULL || ts == NULL || type == NULL) {
-			ha_log(LOG_ERR
-			,	"add_msg_auth: %s:  from %s"
-			,	"missing from/ts/type"
-			,	(from? from : "<?>"));
-			cl_log_message(LOG_ERR, m);
-		}
+	if (from == NULL || ts == NULL || type == NULL) {
+		ha_log(LOG_ERR
+		       ,	"add_msg_auth: %s:  from %s"
+		       ,	"missing from/ts/type"
+		       ,	(from? from : "<?>"));
+		cl_log_message(LOG_ERR, m);
 	}
-
-	check_auth_change(config);
-	msgbody[0] = EOS;
 	
-	if (msg2string_buf(m, msgbody, MAXMSG, 0, NOHEAD) != HA_OK){
+	
+	buflen =  get_stringlen(m);
+	if (buflen < MAXLINE){
+		msgbuf = &msgbody[0];
+	}else{
+		msgbuf =  cl_malloc(get_stringlen(m));
+		if (msgbuf == NULL){
+			cl_log(LOG_ERR, "%s: malloc failed",
+			       __FUNCTION__);
+			goto out;
+		}
+		buf_malloced = 1;
+	}
+	
+	
+	check_auth_change(config);
+	msgbuf[0] = EOS;
+	
+	if (msg2string_buf(m, msgbuf, buflen, 0, NOHEAD) != HA_OK){
 		ha_log(LOG_ERR
 		       ,	"add_msg_auth: compute string failed");
-		return(HA_FAIL);
+		cl_log_message(LOG_ERR,m); 
+		goto out;
 	}
 	
 
 	
-	if (!config->authmethod->auth->auth(config->authmethod, msgbody
-	,	strnlen(msgbody, MAXMSG)
+	if (!config->authmethod->auth->auth(config->authmethod, msgbuf
+	,	strnlen(msgbuf, buflen)
 	,	authtoken, DIMOF(authtoken))) {
 		ha_log(LOG_ERR 
 		,	"Cannot compute message authentication [%s/%s/%s]"
 		,	config->authmethod->authname
 		,	config->authmethod->key
-		,	msgbody);
-		return(HA_FAIL);
+		,	msgbuf);
+		goto out;
 	}
 
 	sprintf(authstring, "%d %s", config->authnum, authtoken);
 
 	/* It will add it if it's not there yet, or modify it if it is */
+	ret= ha_msg_mod(m, F_AUTH, authstring);
 
-	return(ha_msg_mod(m, F_AUTH, authstring));
+
+ out:
+	if (msgbuf && buf_malloced){
+		cl_free(msgbuf);
+	}       
+	
+	return ret;
+
 }
 
 gboolean
 isauthentic(const struct ha_msg * m)
 {
-	char	msgbody[MAXMSG];
+	char	msgbody[MAXLINE];
 	char	authstring[MAXLINE];
 	char	authbuf[MAXLINE];
-	const char *	authtoken = NULL;
-	int	j;
-	int	authwhich = 0;
+	char*	msgbuf;
+	int	buflen;
+	int	buf_malloced = 0;
+	const char *		authtoken = NULL;
+	int			j;
+	int			authwhich = 0;
 	struct HBauth_info*	which;
+	gboolean		ret =FALSE;
+
 	
-	
-	if (get_stringlen(m) >= (ssize_t)sizeof(msgbody)) {
-		return(0);
+	buflen = get_stringlen(m);
+	if (buflen < MAXLINE){
+		msgbuf = &msgbody[0];
+	}else{
+		msgbuf =  cl_malloc(get_stringlen(m));
+		if (msgbuf == NULL){
+			cl_log(LOG_ERR, "%s: malloc failed",
+			       __FUNCTION__);
+			goto  out;
+		}
+		buf_malloced = 1;
 	}
-	
+
 	/* Reread authentication? */
 	check_auth_change(config);
 
-
-	if (msg2string_buf(m, msgbody, MAXMSG,0, NOHEAD) != HA_OK){
+	if (msg2string_buf(m, msgbuf, buflen,0, NOHEAD) != HA_OK){
 		ha_log(LOG_ERR
 		       ,	"add_msg_auth: compute string failed");
-		return(HA_FAIL);
+		goto out;
 	}
 	
 	for (j=0; j < m->nfields; ++j) {
@@ -275,7 +320,7 @@ isauthentic(const struct ha_msg * m)
 				cl_log_message(LOG_INFO, m);
 			}
 		}
-		return(0);
+		goto out;
 	}
 	which = config->auth_config + authwhich;
 
@@ -283,27 +328,34 @@ isauthentic(const struct ha_msg * m)
 		ha_log(LOG_WARNING
 		,	"Invalid authentication type [%d] in message!"
 		,	authwhich);
-		return(0);
+		goto out;
 	}
 		
 	
 	if (!which->auth->auth(which
-        ,	msgbody, strnlen(msgbody, MAXMSG)
+        ,	msgbuf, strnlen(msgbuf, buflen)
 	,	authbuf, DIMOF(authbuf))) {
 		ha_log(LOG_ERR, "Failed to compute message authentication");
-		return(0);
+		goto out;
 	}
 	if (strcmp(authstring, authbuf) == 0) {
 		if (DEBUGAUTH) {
 			ha_log(LOG_DEBUG, "Packet authenticated");
 		}
-		return(1);
+		ret = TRUE;
+		goto out;
 	}
 	if (DEBUGAUTH) {
 		ha_log(LOG_INFO, "Packet failed authentication check, "
 		       "authstring =%s,authbuf=%s ", authstring, authbuf);
 	}
-	return(0);
+	
+ out:	
+	if (buf_malloced && msgbuf){
+		cl_free(msgbuf);
+	}
+	return ret;
+
 }
 
 
@@ -416,6 +468,20 @@ main(int argc, char ** argv)
 #endif
 /*
  * $Log: ha_msg_internal.c,v $
+ * Revision 1.58  2005/10/15 02:52:34  gshi
+ * added two APIs
+ *
+ * ha_msg_addstruct_compress()
+ * cl_get_struct_compress()
+ *
+ * these two APIs must be used in pair to put/get fields in a message
+ *
+ * Internally two message types are added in order to make the compression
+ * only happens in child process instead of the master control process.
+ *
+ * If transparently comperssing messages is desired, it can be done in interface without
+ * internal structure change.
+ *
  * Revision 1.57  2005/08/03 22:44:13  gshi
  * only print out the message if debug is on
  *

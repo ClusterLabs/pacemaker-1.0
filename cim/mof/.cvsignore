@@ -1,0 +1,10 @@
+Makefile.in
+Makefile
+.deps
+.libs
+*.la
+*.lo
+.*.swp
+*.beam
+register_providers.sh
+unregister_providers.sh

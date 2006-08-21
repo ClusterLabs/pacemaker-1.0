@@ -34,16 +34,20 @@ HADIR=@sysconfdir@/ha.d
 HBSCRIPT=@INITDIR@/heartbeat@INIT_EXT@
 STONITH=@sbindir@/stonith
 LIBDIR=@libdir@/
-HBLIB=$LIBDIR/heartbeat
+HBLIB=@libdir@/heartbeat
 APPHBD=$HBLIB/apphbd
 CLSTATUS=@bindir@/cl_status
 APPHBTEST=$HBLIB/apphbtest
 IPCTEST=$HBLIB/ipctest
+MGMTDTEST=$HBLIB/mgmtdtest
 LRMTEST=$HBLIB/lrmtest/LRMBasicSanityCheck
 STONITHDTEST=$HBLIB/stonithdtest/STONITHDBasicSanityCheck
-CRMTEST=$HBLIB/crmtest/1node.sh
+CRMTEST="@PYTHON@ $HBLIB/cts/CTSlab.py --bsc"
 SNMPAGENTTEST=$HBLIB/SNMPAgentSanityCheck
+BASE64_MD5_TEST=$HBLIB/base64_md5_test
 MALLOC_CHECK_=2; export MALLOC_CHECK_
+MKTEMP=@MKTEMP@
+TESTPROG=@TEST@
 #
 DEFAULTINTERFACE=eth0	# But we really guess it...
 #
@@ -65,7 +69,8 @@ maketempfile() {
 #	$RANDOM is not strictly necessary, but nice to have...
 #
   if
-    F=`mktemp /tmp/lha-XXXXXX` && [ ! -z "$F" -a -f "$F" ]
+    test "x$MKTEMP" != "x" \
+      && F=`$MKTEMP /tmp/lha-XXXXXX` && [ ! -z "$F" -a -f "$F" ]
   then
     echo $F
   else
@@ -75,7 +80,7 @@ maketempfile() {
       rm -f "$F"; touch "$F"
       # Try again if we don't own it, or it's a symlink
       # Or somehow not a regular file...
-      test ! -O "$F" -o -L "$F" -o ! -f "$F"
+      $TESTPROG ! -O "$F" -o -L "$F" -o ! -f "$F"
     do
      : Try again...
     done
@@ -99,7 +104,18 @@ GetAllIFNames() {
 }
 
 GuessIFname() {
-  GetAllIFNames | grep -v '^lo' | head -n 1
+  # Machines with multiple nics rarely got this right
+  #  using ip and route should prove much more reliable
+  #  for those that have it
+
+  external_host=123.0.0.1
+  if [ -x /sbin/ip ]; then
+      /sbin/ip r g $external_host | head -n 1 | awk '{print $5}'
+  elif [ `uname -s` = "Darwin" ]; then
+      route get $external_host | grep interface | awk '{print $2}'
+  else
+      GetAllIFNames | grep -v '^lo' | head -n 1
+  fi
 }
 
 INTERFACE=`GuessIFname`
@@ -107,7 +123,7 @@ INTERFACE=`GuessIFname`
 case $INTERFACE in
   "")	INTERFACE=$DEFAULTINTERFACE;;
 esac
-
+echo "Using interface: $INTERFACE"
 #
 #	Is it safe to overwrite this config file?
 #
@@ -118,7 +134,6 @@ CheckConfigFile() {
     return 0
   fi
   if
-    sync
     grep "$IDENTSTRING" $1 >/dev/null 2>&1
   then
     return 0
@@ -129,7 +144,7 @@ CheckConfigFile() {
 
 GenerateAuthKeys() {
   if
-    [ "$AuthTry" == "" ]
+    [ "$AuthTry" = "" ]
   then
     AuthTry=1
   else
@@ -191,6 +206,7 @@ GenerateCrmdHaCf() {
 	crm yes
 	apiauth cibmon   uid=hacluster
 	respawn hacluster $HBLIB/cibmon -d
+	respawn root $HBLIB/pingd
 	!
   chmod 644 $1
 #	conn_logd_time 60
@@ -205,6 +221,27 @@ GenerateCrmdHaCf() {
 #	#useapphbd no
 #	!
 }
+GenerateMgmtdCrmdHaCf() {
+  cat <<-! >$1
+	#	$IDENTSTRING
+	logfile   /dev/null
+	debugfile $LOGFILE
+	keepalive 10ms
+	debug    1
+	deadtime 5
+	initdead 5
+	mcast $INTERFACE $MCASTIP 694 0 0
+	#bcast $INTERFACE
+        ping 127.0.0.1
+        ping_group pingus_please 127.0.0.1
+	node $LOCALNODE $DUMMYNODE
+	use_logd off
+	crm yes
+	apiauth mgmtd   uid=root
+	respawn root $HBLIB/mgmtd -t
+	!
+  chmod 644 $1
+}
 
 GenerateHaResources() {
   cat <<-! >$1
@@ -213,7 +250,12 @@ GenerateHaResources() {
 	!
   chmod 644 $1
 }
-CONFIGFILES="$HADIR/ha.cf $HADIR/authkeys $HADIR/haresources @HA_VARLIBDIR@/heartbeat/crm/cib.xml @HA_VARLIBDIR@/heartbeat/crm/cib_backup.xml @HA_VARLIBDIR@/heartbeat/hostcache"
+CONFIGFILES="$HADIR/ha.cf $HADIR/authkeys $HADIR/haresources"
+CONFIGFILES="$CONFIGFILES @HA_VARLIBDIR@/heartbeat/crm/cib.xml"
+CONFIGFILES="$CONFIGFILES @HA_VARLIBDIR@/heartbeat/crm/cib.xml.last"
+CACHEFILES="@HA_VARLIBDIR@/heartbeat/hostcache  @HA_VARLIBDIR@/heartbeat/delhostcache"
+CACHEFILES="$CACHEFILES @HA_VARLIBDIR@/heartbeat/crm/cib.xml.sig"
+CACHEFILES="$CACHEFILES @HA_VARLIBDIR@/heartbeat/crm/cib.xml.sig.last"
 
 SetUpConfigFiles() {
   if
@@ -222,7 +264,7 @@ SetUpConfigFiles() {
     echo "Should not run tests with heartbeat already running."
   fi
   SaveConfigFiles
-  for j in $CONFIGFILES
+  for j in $CONFIGFILES 
   do
     if
       CheckConfigFile $j
@@ -253,6 +295,11 @@ RemoveConfigFiles() {
       echo "OOPS! Cannot remove real config file $j!"
     fi
   done
+
+  for j in $CACHEFILES
+  do 
+	rm -f $j
+  done
   RestoreConfigFiles
 }
 
@@ -264,11 +311,13 @@ SaveConfigFiles() {
     mkdir .cfsave
   fi
   mv $CONFIGFILES .cfsave >/dev/null 2>&1
+  mv $CACHEFILES .cfsave >/dev/null 2>&1
 }
 
 RestoreConfigFiles() {
-  mv $HADIR/.cfsave/cib*.xml  @HA_VARLIBDIR@/heartbeat/crm/ >/dev/null 2>&1
-  mv $HADIR/.cfsave/hostcache @HA_VARLIBDIR@/heartbeat/ >/dev/null 2>&1
+ mv $HADIR/.cfsave/cib.xml*  @HA_VARLIBDIR@/heartbeat/crm/ >/dev/null 2>&1
+  mv $HADIR/.cfsave/hostcache @HA_VARLIBDIR@/heartbeat/  >/dev/null 2>&1
+  mv $HADIR/.cfsave/delhostcache @HA_VARLIBDIR@/heartbeat/ >/dev/null 2>&1
   mv $HADIR/.cfsave/* $HADIR >/dev/null 2>&1
 }
 
@@ -697,8 +746,10 @@ StonithDaemonTest() {
 		return 1
 	fi
 	if 
-		! HBStart
+		HBStart
 	then
+		:
+	else
 		echo "cannot start heartbeat, so donnot start stonith daemon test." | tee -a $LOGFILE
 		return 1
 	fi
@@ -718,8 +769,10 @@ StonithDaemonTest() {
 	done
 
 	if
-		! $CLSTATUS hbstatus >/dev/null 2>&1
+		$CLSTATUS hbstatus >/dev/null 2>&1
 	then
+		:
+	else
 		echo "There are internal errors in heartbeat, so donnot start stonith daemon test." | tee -a $LOGFILE
 		return 1
 	fi
@@ -739,30 +792,72 @@ StonithDaemonTest() {
 }
 
 TestCRM() {
-  	if [ ! -f $CRMTEST ]; then
-	    return 0
-	fi
-	CRM_LOG=`maketempfile`
 	GenerateCrmdHaCf $HADIR/ha.cf $HADIR/ha_logd.cf
-#	echo "crm yes" >> $HADIR/ha.cf
 	echo "Starting CRM tests" | tee -a $LOGFILE
 
-
-	$CRMTEST -B -d /tmp -l $LOGFILE --ip1 127.0.0.10 --ip2 127.0.0.11 > $CRM_LOG 2>&1
+	$CRMTEST -L $LOGFILE >/dev/null 2>&1
 	ret=$?
 	if [ $ret != 0 ]; then
 	    errcount=`expr $errcount + 1`
-	    echo "CRM tests failed."
-	    echo "Summary of CRM test" >> $LOGFILE
-	    cat $CRM_LOG >> $LOGFILE
-	else 
-	    echo "CRM tests passed."
-	fi
-	
-	# stat likes dumping core when MALLOC_CHECK_=2 is specified
-	file $HADIR/core* | grep -e "from 'stat'" | rm -f `awk '{ print $1 }' | tr ':' ' '`
+	    echo "CRM tests failed (rc=$ret)." | tee -a $LOGFILE
+	    return 1
+	fi	
+	echo "CRM tests passed."  | tee -a $LOGFILE
+	return 0
+}
 
-	rm $CRM_LOG
+TestMgmtd() {
+  	if [ ! -f $MGMTDTEST ]; then
+	    return 0
+	fi
+	GenerateMgmtdCrmdHaCf $HADIR/ha.cf $HADIR/ha_logd.cf
+	echo "Starting Mgmtd tests" | tee -a $LOGFILE
+
+	if 
+		HBStart
+	then
+		:
+	else
+		echo "cannot start heartbeat, so donnot start mgmt daemon test." | tee -a $LOGFILE
+		return 1
+	fi
+
+ 	i=0
+	while
+		[ "$i" -lt 10 ]
+	do
+		if
+			$CLSTATUS hbstatus >/dev/null 2>&1
+		then
+			break
+		else
+			sleep 1
+		fi
+		i=`expr "$i" + 1`
+	done
+
+	if
+		$CLSTATUS hbstatus >/dev/null 2>&1
+	then
+		:
+	else
+		echo "There are internal errors in heartbeat, so donnot start mgmt daemon test." | tee -a $LOGFILE
+		return 1
+	fi
+
+	sleep 10
+	$MGMTDTEST > $LOGFILE 2>&1
+	ret=$?
+	if [ $ret != 0 ]; then
+	    errcount=`expr $errcount + 1`
+	    echo "Mgmtd test failed." | tee -a  $LOGFILE
+	else 
+	    echo "Mgmtd test passed."
+	fi
+
+	HBStop
+
+	
 }
 
 SNMPAgentTest() {
@@ -787,6 +882,25 @@ SNMPAgentTest() {
 	    	echo "SNMP Agent tests pass."
 	    fi
 	    HBStop
+	fi
+}
+
+Base64MD5Test() {
+  	if
+	  [ ! -x $BASE64_MD5_TEST ] 
+	then
+	  return 0
+	fi
+	echo "Starting base64 and md5 algorithm tests" | tee -a $LOGFILE
+	$BASE64_MD5_TEST >> $LOGFILE 2>&1
+	ret=$?
+	errcount=`expr $errcount + $ret`
+	if
+	  [ $ret != 0 ] 
+	then
+	  echo "base64 and md5 algorithm tests failed."
+        else
+          echo "base64 and md5 algorithm tests succeeded."
 	fi
 }
 
@@ -818,6 +932,7 @@ then
   echo 1 > $COREPID
 fi
 
+Base64MD5Test
 TestHeartbeat
 StonithCheck
 AppHBCheck
@@ -826,6 +941,7 @@ LRMTest
 StonithDaemonTest
 TestCRM
 SNMPAgentTest
+#TestMgmtd
 
 ls -l $HADIR/core* 2>/dev/null
 if
@@ -837,7 +953,6 @@ then
 fi
 
 if
-  sync
   egrep  'CRIT|ERROR' $LOGFILE
 then
   echo "OOPS! Looks like we had some errors come up."

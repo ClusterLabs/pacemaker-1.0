@@ -23,6 +23,14 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <stdlib.h>
+#include <stdio.h>
+
+#ifdef HAVE_TIME_H
+#include <time.h>
+#endif
+
+#include <sys/time.h>
 
 int
 cl_str_to_boolean(const char * s, int * ret)
@@ -66,4 +74,33 @@ cl_file_exists(const char* filename)
 	}
 	
 	return FALSE;
+}
+
+char*
+cl_get_env(const char* env_name)
+{	
+	if (env_name == NULL){
+		cl_log(LOG_ERR, "%s: null name",
+		       __FUNCTION__);
+		return NULL;
+	}
+	
+	return getenv(env_name);
+}
+
+
+int
+cl_binary_to_int(const char* data, int len)
+{
+	const char *p = data;
+	const char *pmax = p + len;
+	guint h = *p;
+	
+	if (h){
+		for (p += 1; p < pmax; p++){
+			h = (h << 5) - h + *p;
+		}
+	}
+	
+	return h;
 }

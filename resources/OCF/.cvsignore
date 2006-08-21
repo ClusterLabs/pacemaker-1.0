@@ -15,6 +15,7 @@ MailTo
 Raid1
 SendArp
 ServeRAID
+Stateful
 WAS
 WinPopup
 IPsrcaddr
@@ -31,3 +32,10 @@ drbd
 Dummy
 ocf-shellfuncs
 ClusterMon
+Xen
+pingd
+SysInfo
+VIPArip
+oracle
+oralsnr
+pgsql

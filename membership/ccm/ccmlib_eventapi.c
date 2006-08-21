@@ -1,4 +1,4 @@
-/* $Id: ccmlib_eventapi.c,v 1.10 2005/07/29 23:02:03 alan Exp $ */
+/* $Id: ccmlib_eventapi.c,v 1.11 2005/11/30 02:02:59 panjiam Exp $ */
 /* 
  * ccmlib_eventapi.c: OCF event API.
  *
@@ -212,9 +212,13 @@ handle_func(gpointer key,
 	class_t  *class = (class_t *)value;
 
 	/* if handle event fails, remove this class */
-	if(!class->handle_event((void *)class))
-		return TRUE;
-
+	if(!class->handle_event((void *)class)){
+		/* before we remove this class, 
+                   we should unregister and free it first */
+                class->unregister(class);
+                g_free(class);
+                return TRUE;
+        }
 	/*do not remove this class*/
 	return FALSE;
 }

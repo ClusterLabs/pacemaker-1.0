@@ -83,7 +83,7 @@ ConfigureLinux() {
   then
     distro="Debian GNU/Linux"
     PACKAGECMD="$MAKE_CMD deb"
-    DFLAGS="--mandir=/usr/share/man --disable-snmp-subagent --disable-swig"
+    DFLAGS="--mandir=/usr/share/man"
   elif
     [ -f /etc/gentoo-release -a -s /etc/gentoo-release ]
   then
@@ -95,60 +95,76 @@ ConfigureLinux() {
   fi
   CFENV="$distro"
   FLAGS="--prefix=/usr --sysconfdir=/etc --localstatedir=/var $DFLAGS"
-  case `uname -m` in
-    x86_64)
-		# Hmmm... Let's check for building from chrooted 32-bit environment...
-		case `file /bin/uname` in
-		  *Intel*80?86*)	;;
-		  *)	FLAGS="$FLAGS --libexecdir=/usr/lib64 --libdir=/usr/lib64";;
-		esac
-		;;
-   *)		;;
-  esac
+  case `uname -m` in 	 
+    x86_64) 	 
+	# Hmmm... Let's check for building from chrooted 32-bit environment... 	 
+	case `file /bin/uname` in 	 
+	  *Intel*80?86*)        ;; 	 
+	  *)    FLAGS="$FLAGS --libexecdir=/usr/lib64 --libdir=/usr/lib64";; 	 
+	esac 	 
+       ;; 	 
+ # FIXME. I don't think it's a general fixing. 	 
+    s390*) 	 
+	FLAGS="$FLAGS --libexecdir=/usr/lib64 --libdir=/usr/lib64";; 	 
+    *)  ;; 	 
+  esac 	 
 }
 
 ConfigureAIX() {
   CFENV="AIX (freeware toolbox)"
-  FLAGS="--prefix /opt/freeware"
+  FLAGS="--disable-ldirectord --prefix /opt/freeware"
 }
 
 ConfigureFreeBSD() {
-  FLAGS="--prefix=/usr/local --sysconfdir=/usr/local/etc --localstatedir=/usr/local/var"
+  FLAGS="--prefix=/usr/local --sysconfdir=/usr/local/etc --localstatedir=/var --enable-all  --with-group-id=90 --with-ccmuser-id=90 "
   CFENV="FreeBSD"
 }
 
 ConfigureOpenBSD() {
-  FLAGS="--prefix=/usr/local --sysconfdir=/usr/local/etc --localstatedir=/usr/local/var"
+  FLAGS="--disable-ldirectord --prefix=/usr/local --sysconfdir=/usr/local/etc --localstatedir=/var  --with-group-id=90 --with-ccmuser-id=90"
   CFENV="OpenBSD"
 }
 
 ConfigureNetBSD() {
-  FLAGS="--prefix=/usr/local --sysconfdir=/usr/local/etc --localstatedir=/usr/local/var"
+  FLAGS="--disable-ldirectord --prefix=/usr/local --sysconfdir=/usr/local/etc --localstatedir=/var  --with-group-id=90 --with-ccmuser-id=90"
   CFENV="NetBSD"
 }
 
 ConfigureGenericBSD() {
-  FLAGS="--prefix=/usr/local --sysconfdir=/usr/local/etc --localstatedir=/usr/local/var"
+  FLAGS="--disable-ldirectord --prefix=/usr/local --sysconfdir=/usr/local/etc --localstatedir=/var  --with-group-id=90 --with-ccmuser-id=90"
   CFENV="Generic BSD"
 }
 
 ConfigureSolaris() {
-  FLAGS="--prefix=/opt --sysconfdir=/opt/etc --localstatedir=/opt/var"
+  # PKGNAME: see comment in "configure.in"
+  PKGNAME="LXHAhb"
+  FLAGS="--disable-ldirectord --prefix=/opt/$PKGNAME --sysconfdir=/etc/opt/$PKGNAME --localstatedir=/var/opt/$PKGNAME --with-pkgname=$PKGNAME"
   CFENV="Solaris"
   PACKAGECMD="$MAKE_CMD pkg"
 }
 
 ConfigureDarwin() {
-  FLAGS="--prefix=/sw --sysconfdir=/sw/etc --localstatedir=/sw/var --with-initdir=/private/etc/mach_init.d --enable-fatal-warnings=yes --with-group-id=65 --with-ccmuser-id=65"
+
+  for dir in /sw /opt/local; do
+     if [ -d $dir ]; then
+        install_prefix=$dir
+     fi
+  done
+
+  FLAGS="--prefix=${install_prefix}"
+  FLAGS="$FLAGS --with-initdir=/private/etc/mach_init.d"
+  FLAGS="$FLAGS --with-group-id=65 --with-ccmuser-id=65"
+  FLAGS="$FLAGS --enable-fatal-warnings=yes"
   export CFENV="Darwin"
-#  export LDFLAGS="${LDFLAGS} -bind_at_load -fno-common"
-  export LIBS="$LIBS -L/usr/lib -L/sw/lib"
-  export CPPFLAGS="$CPPFLAGS -I/usr/include -I/sw/usr/include -I/sw/include"
+
+  export LIBS="$LIBS -L${install_prefix}/lib"
+  CPPFLAGS="$CPPFLAGS -g -I${install_prefix}/include"
+  export CPPFLAGS
 }
 
 ConfigureGenericUNIX() {
   echo "Configuring for generic UNIX system"
-  FLAGS="--prefix=/usr --sysconfdir=/etc --localstatedir=/var"
+  FLAGS="--disable-ldirectord --prefix=/usr --sysconfdir=/etc --localstatedir=/var"
   CFENV="Generic UNIX"
 }
 
@@ -260,7 +276,7 @@ case $cmd in
   cf|conf|configure)		
   	do_configure $FLAGS $@
 	;;
-  bootstrap)		
+  boot|bootstrap)		
   	rm -f ${pathtotop}/configure
   	do_configure $FLAGS $@
 	;;

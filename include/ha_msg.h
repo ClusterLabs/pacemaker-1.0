@@ -1,4 +1,4 @@
-/* $Id: ha_msg.h,v 1.63 2005/08/05 19:40:13 gshi Exp $ */
+/* $Id: ha_msg.h,v 1.83 2006/06/09 05:30:37 sunjd Exp $ */
 /*
  * Intracluster message object (struct ha_msg)
  *
@@ -29,12 +29,18 @@
 #include <clplumbing/longclock.h>
 #include <clplumbing/cl_uuid.h>
 #include <compress.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+
 
 enum cl_netstring_type{
-	FT_STRING,
+	FT_STRING = 0,
 	FT_BINARY,
 	FT_STRUCT,
-	FT_LIST
+	FT_LIST,
+	FT_COMPRESS,
+	FT_UNCOMPRESS
 };
 
 enum cl_msgfmt{
@@ -62,8 +68,6 @@ typedef struct hb_msg_stats_s {
 struct ha_msg {
 	int	nfields;
 	int	nalloc;
-	size_t	stringlen;	/* #bytes needed to convert this to a string
-				 * including the '\0' character at the end. */
 	char **	names;
 	size_t* nlens;
 	void **	values;
@@ -82,7 +86,7 @@ struct fieldtypefuncs_s{
 	void* (*dup)(const void*, size_t);
 
 	/* display printout the field*/
-	void (*display)(int, int, char* , void*);
+	void (*display)(int, int, char* , void*, int);
 
 	/* add the field into a message*/
 	int (*addfield) (struct ha_msg* msg, char* name, size_t namelen,
@@ -113,9 +117,17 @@ struct fieldtypefuncs_s{
 	   for the field
 	*/
 	int (*netstringtofield)(const void*, size_t, void**, size_t*);
+	
+	/* action before packing*/
+	int (*prepackaction)(struct ha_msg* m, int index);
+
+	/* action before a user get the value of a field*/
+	int (*pregetaction)(struct ha_msg* m, int index);
+	
 };
 
-extern struct fieldtypefuncs_s fieldtypefuncs[4];
+#define NUM_MSG_TYPES  6
+extern struct fieldtypefuncs_s fieldtypefuncs[NUM_MSG_TYPES];
 
 #define MSG_NEEDAUTH		0x01
 #define MSG_ALLOWINTR		0X02
@@ -128,7 +140,7 @@ extern struct fieldtypefuncs_s fieldtypefuncs[4];
 #define	MSG_END_NETSTRING	"%%%\n"
 #define	EQUAL		"="
 
-#define MAXDEPTH 10     /* Maximum recursive message depth */
+#define MAXDEPTH 16     /* Maximum recursive message depth */
 #define MAXLENGTH	1024
 
 	/* Common field names for our messages */
@@ -137,9 +149,13 @@ extern struct fieldtypefuncs_s fieldtypefuncs[4];
 #define	F_ORIG		"src"		/* Real Originator */
 #define	F_ORIGUUID	"srcuuid"	/* Real Originator uuid*/
 #define	F_NODE		"node"		/* Node being described */
+#define	F_NODELIST	"nodelist"	/* Node list being described */
+#define	F_DELNODELIST	"delnodelist"	/* Del node list being described */
 #define	F_TO		"dest"		/* Destination (optional) */
 #define F_TOUUID	"destuuid"	/* Destination uuid(optional) */
 #define	F_STATUS	"st"		/* New status (type = status) */
+#define	F_WEIGHT	"weight"	/* weight of node */
+#define	F_SITE		"site"		/* site of node */
 #define F_PROTOCOL	"protocol"	/* Protocol number for communication*/
 #define	F_CLIENTNAME	"cn"		/* Client name */
 #define	F_CLIENTSTATUS	"cs"		/* Client status */
@@ -169,6 +185,7 @@ extern struct fieldtypefuncs_s fieldtypefuncs[4];
 #define F_KEEPALIVE	"keepalive"	/* Keep alive time interval in ms. */
 #define F_LOGFACILITY	"logfacility"	/* Suggested cluster syslog facility */
 #define F_NODETYPE	"nodetype"	/* Type of node */
+#define F_NUMNODES	"numnodes"	/* num of total nodes(excluding ping nodes*/
 #define F_RTYPE		"rtype"		/* Resource type */
 #define F_ORDERSEQ	"oseq"		/* Order Sequence number */
 #define F_DT		"dt"		/* Dead time field for heartbeat*/
@@ -190,6 +207,13 @@ extern struct fieldtypefuncs_s fieldtypefuncs[4];
 #define	T_STONITH	"stonith"	/* Stonith return code */
 #define T_SHUTDONE	"shutdone"	/* External Shutdown complete */
 #define T_CRM		"crmd"		/* Cluster resource manager message */
+#define T_ATTRD		"attrd"		/* Cluster resource manager message */
+#define T_ADDNODE	"addnode"	/* Add node message*/
+#define T_DELNODE	"delnode"	/* Delete node message*/
+#define T_SETWEIGHT	"setweight"	/* Set node weight*/
+#define T_SETSITE	"setsite"	/* Set node site*/
+#define T_REQNODES      "reqnodes"	/* Request node list */
+#define T_REPNODES	"repnodes"	/* reply node list rquest*/
 
 #define T_APIREQ	"hbapi-req"	/* Heartbeat API request */
 #define T_APIRESP	"hbapi-resp"	/* Heartbeat API response */
@@ -216,9 +240,15 @@ extern struct fieldtypefuncs_s fieldtypefuncs[4];
 #define T_STONITH_UNNEEDED	"unneeded" /* STONITH not required */
 
 /* Set up message statistics area */
-void cl_msg_setstats(volatile hb_msg_stats_t* stats);
-void cl_dump_msgstats(void);
-void cl_set_compression_threshold(size_t threadhold);
+
+int	netstring_extra(int);
+int	cl_msg_stats_add(longclock_t time, int size);
+
+void	cl_msg_setstats(volatile hb_msg_stats_t* stats);
+void	cl_dump_msgstats(void);
+void	cl_set_compression_threshold(size_t threadhold);
+void	cl_set_traditional_compression(gboolean value);
+
 /* Allocate new (empty) message */
 struct ha_msg *	ha_msg_new(int nfields);
 
@@ -259,7 +289,10 @@ int		cl_msg_modstruct(struct ha_msg * msg,
 				 const char* name, 
 				 const struct ha_msg* value);
 #define ha_msg_mod(msg, name, value) cl_msg_modstring(msg, name, value)
-
+int	cl_msg_replace(struct ha_msg* msg, int index,
+			const void* value, size_t vlen, int type);
+int     cl_msg_replace_value(struct ha_msg* msg, const void *old_value,
+			     const void* value, size_t vlen, int type);
 
 /* Add name, value (with known lengths) to the message */
 int		ha_msg_nadd(struct ha_msg * msg, const char * name, int namelen
@@ -311,8 +344,8 @@ int		msg2string_buf(const struct ha_msg *m, char* buf,
 			       size_t len, int depth, int needhead);
 
 /* Converts a message into wire format */
-char*		msg2wirefmt(const struct ha_msg *m, size_t* );
-char*		msg2wirefmt_noac(const struct ha_msg*m, size_t* len);
+char*		msg2wirefmt(struct ha_msg *m, size_t* );
+char*		msg2wirefmt_noac(struct ha_msg*m, size_t* len);
 
 /* Converts wire format data into a message */
 struct ha_msg*	wirefmt2msg(const char* s, size_t length, int flag);
@@ -349,6 +382,8 @@ int get_netstringlen(const struct ha_msg *m);
 /* Add a child message to a message as a field */
 int ha_msg_addstruct(struct ha_msg * msg, const char * name, const void* ptr);
 
+int ha_msg_addstruct_compress(struct ha_msg*, const char*, const void*);
+
 /* Get binary data from a message */
 const void * cl_get_binary(const struct ha_msg *msg, const char * name, size_t * vallen);
 
@@ -362,7 +397,7 @@ const char * cl_get_string(const struct ha_msg *msg, const char *name);
 int cl_get_type(const struct ha_msg *msg, const char *name);
 
 /* Get a child message from a message*/
-struct ha_msg *cl_get_struct(const struct ha_msg *msg, const char* name);
+struct ha_msg *cl_get_struct(struct ha_msg *msg, const char* name);
 
 /* Log the contents of a  message */
 void cl_log_message (int log_level, const struct ha_msg *m);
@@ -387,10 +422,6 @@ int	ha_msg_add_int(struct ha_msg * msg, const char * name, int value);
 int	ha_msg_mod_int(struct ha_msg * msg, const char * name, int value);
 int	ha_msg_value_int(const struct ha_msg * msg, const char * name, int* value);
 
-/* Functions to add/get a uuid*/
-int	ha_msg_add_uuid(struct ha_msg * msg, const char * name, cl_uuid_t* id);
-int	ha_msg_value_uuid(struct ha_msg * msg, const char * name, cl_uuid_t* id);
-
 /* Functions to add/get a string list*/
 GList*	ha_msg_value_str_list(struct ha_msg * msg, const char * name);
 
@@ -400,10 +431,14 @@ int		cl_msg_get_list_int(struct ha_msg* msg, const char* name,
 				    int* buf, size_t* n);
 GList*		cl_msg_get_list(struct ha_msg* msg, const char* name);
 int		cl_msg_add_list(struct ha_msg* msg, const char* name, GList* list);
+int		cl_msg_add_list_str(struct ha_msg* msg, const char* name,
+				    char** buf, size_t n);
 
 /* Function to add/get a string hash table*/
 GHashTable*	ha_msg_value_str_table(struct ha_msg * msg, const char * name);
 int		ha_msg_add_str_table(struct ha_msg * msg, const char * name,
+				     GHashTable* hash_table);
+int		ha_msg_mod_str_table(struct ha_msg * msg, const char * name,
 				     GHashTable* hash_table);
 
 /*internal use for list type*/
@@ -411,5 +446,8 @@ size_t string_list_pack_length(const GList* list);
 int string_list_pack(GList* list, char* buf, char* maxp);
 GList* string_list_unpack(const char* packed_str_list, size_t length);
 void list_cleanup(GList* list);
+
+gboolean must_use_netstring(const struct ha_msg*);
+
 
 #endif /* __HA_MSG_H */

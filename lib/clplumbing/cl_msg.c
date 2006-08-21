@@ -1,4 +1,4 @@
-/* $Id: cl_msg.c,v 1.77 2005/09/09 17:15:44 gshi Exp $ */
+/* $Id: cl_msg.c,v 1.106 2006/06/09 05:29:53 sunjd Exp $ */
 /*
  * Heartbeat messaging object.
  *
@@ -40,7 +40,7 @@
 #include <clplumbing/cl_uuid.h>
 #include <compress.h>
 
-#define		MAXMSGLINE	MAXMSG
+#define		MAXMSGLINE	512
 #define		MINFIELDS	30
 #define		NEWLINE		"\n"
 
@@ -50,11 +50,13 @@
 #define		MAX_INT_LEN 	64
 #define		MAX_NAME_LEN 	255
 #define		UUID_SLEN	64
+#define		MAXCHILDMSGLEN  512
+
 static int	compression_threshold = (2*1024);
 
 static enum cl_msgfmt msgfmt = MSGFMT_NVPAIR;
-
-
+int	cl_max_msg_size = (512*1024);
+static	gboolean use_traditional_compression = TRUE;
 
 const char*
 FT_strings[]={
@@ -98,7 +100,23 @@ struct ha_msg* string2msg_ll(const char * s, size_t length, int need_auth, int d
 extern int struct_stringlen(size_t namlen, size_t vallen, const void* value);
 extern int struct_netstringlen(size_t namlen, size_t vallen, const void* value);
 extern int process_netstring_nvpair(struct ha_msg* m, const char* nvpair, int nvlen);
-static char*	msg2wirefmt_ll(const struct ha_msg*m, size_t* len, gboolean need_compress);
+static char*	msg2wirefmt_ll(struct ha_msg*m, size_t* len, gboolean need_compress);
+extern GHashTable*		CompressFuncs;
+
+
+void
+cl_set_traditional_compression(gboolean value)
+{
+	use_traditional_compression = value;
+	if (use_traditional_compression && CompressFuncs) {
+		cl_log(LOG_WARNING
+		,	"Traditional compression selected"
+		". Realtime behavior will likely be impacted(!)");
+		cl_log(LOG_INFO
+		,	"See %s for more information."
+		,	HAURL("ha.cf/TraditionalCompressionDirective"));
+	}
+}
 
 void
 cl_set_compression_threshold(size_t threadhold)
@@ -106,11 +124,69 @@ cl_set_compression_threshold(size_t threadhold)
 	compression_threshold = threadhold;
 
 }
+
 void
 cl_msg_setstats(volatile hb_msg_stats_t* stats)
 {
 	msgstats = stats;
 }
+
+static int msg_stats_fd = -1;
+
+static int
+cl_msg_stats_open(const char* filename)
+{
+	if (filename == NULL){
+		cl_log(LOG_ERR, "%s: filename is NULL", __FUNCTION__);
+		return -1;
+	}
+	
+	return open(filename, O_WRONLY|O_CREAT|O_APPEND);
+
+}
+
+static int
+cl_msg_stats_close(void)
+{
+	if (msg_stats_fd > 0){
+		close(msg_stats_fd);
+	}
+	
+	msg_stats_fd = -1;
+	
+	return HA_OK;
+}
+
+#define STATSFILE "/var/log/ha_msg_stats"
+int
+cl_msg_stats_add(longclock_t time, int size)
+{
+	char	buf[MAXLINE];
+	int	len;
+
+	if (msg_stats_fd < 0){
+		msg_stats_fd = cl_msg_stats_open(STATSFILE);
+		if (msg_stats_fd < 0){
+			cl_log(LOG_ERR, "%s:opening file failed",
+			       __FUNCTION__);
+			return HA_FAIL;
+		}
+	}
+
+	
+	sprintf(buf, "%lld %d\n", (long long)time, size);
+	len = strnlen(buf, MAXLINE);
+	if (write(msg_stats_fd, buf, len) ==  len){
+		cl_msg_stats_close();
+		return HA_OK;
+	}
+
+	cl_msg_stats_close();
+	
+	return HA_FAIL;;
+	
+}
+
 
 /* Set default messaging format */
 void
@@ -169,7 +245,6 @@ ha_msg_new(nfields)
 		ret->nlens     = (size_t *)ha_calloc(sizeof(size_t), nalloc);
 		ret->values    = (void **)ha_calloc(sizeof(void *), nalloc);
 		ret->vlens     = (size_t *)ha_calloc(sizeof(size_t), nalloc);
-		ret->stringlen = sizeof(MSG_START)+sizeof(MSG_END)-1;
 		ret->types	= (int*)ha_calloc(sizeof(int), nalloc);
 
 		if (ret->names == NULL || ret->values == NULL
@@ -239,7 +314,6 @@ ha_msg_del(struct ha_msg *msg)
 		}
 		msg->nfields = -1;
 		msg->nalloc = -1;
-		msg->stringlen = -1;
 		ha_free(msg);
 	}
 }
@@ -256,7 +330,6 @@ ha_msg_copy(const struct ha_msg *msg)
 	} 
 
 	ret->nfields	= msg->nfields;
-	ret->stringlen	= msg->stringlen;
 
 	memcpy(ret->nlens, msg->nlens, sizeof(msg->nlens[0])*msg->nfields);
 	memcpy(ret->vlens, msg->vlens, sizeof(msg->vlens[0])*msg->nfields);
@@ -316,13 +389,6 @@ ha_msg_audit(const struct ha_msg* msg)
 		,	msg, msg->nalloc);
 		doabort = TRUE;
 	}
-	if (msg->stringlen <=0 ){
-		cl_log(LOG_CRIT,
-		       "Message @ %p has non-positive net/stringlen field"
-		       "stringlen=(%ld)",
-		       msg,(long)msg->stringlen);
-		doabort = TRUE;
-	}
 
 	if (!ha_is_allocated(msg->names)) {
 		cl_log(LOG_CRIT
@@ -354,6 +420,10 @@ ha_msg_audit(const struct ha_msg* msg)
 	}
 	for (j=0; j < msg->nfields; ++j) {
 		
+		if (msg->nlens[j] == 0){
+			cl_log(LOG_ERR, "zero namelen found in msg");
+			abort();
+		}
 		
 		if (msg->types[j] == FT_STRING){
 			if (msg->vlens[j] != strlen(msg->values[j])){
@@ -420,7 +490,7 @@ ha_msg_expand(struct ha_msg* msg )
 	}
 	
 	memcpy(msg->names, names, msg->nalloc*sizeof(char *));
-	memcpy(msg->nlens, nlens, msg->nalloc*sizeof(int));
+	memcpy(msg->nlens, nlens, msg->nalloc*sizeof(size_t));
 	memcpy(msg->values, values, msg->nalloc*sizeof(void *));
 	memcpy(msg->vlens, vlens, msg->nalloc*sizeof(size_t));
 	memcpy(msg->types, types, msg->nalloc*sizeof(int));
@@ -488,30 +558,12 @@ cl_msg_remove_offset(struct ha_msg* msg, int offset)
 {
 	int j = offset;
 	int i;
-	int tmplen;
 	
 	if (j == msg->nfields){		
 		cl_log(LOG_ERR, "cl_msg_remove: field %d not found", j);
 		return HA_FAIL;
 	}
-	
-
-	
-	if (msg->types[j] != FT_STRUCT){
-		tmplen = msg->stringlen;
-		msg->stringlen -=  fieldtypefuncs[msg->types[j]].stringlen(msg->nlens[j],
-									   msg->vlens[j],
-									   msg->values[j]);
-		if (msg->stringlen <=0){
-			cl_log(LOG_ERR, "cl_msg_remove: stringlen <= 0 after removing"
-			       "field %s. Return failure", msg->names[j]);
-			msg->stringlen =tmplen;
-			return HA_FAIL;
-		}
 		
-	}
-
-	
 	ha_free(msg->names[j]);
 	fieldtypefuncs[msg->types[j]].memfree(msg->values[j]);
 	
@@ -602,6 +654,12 @@ ha_msg_addraw(struct ha_msg * msg, const char * name, size_t namelen,
 	char	*cpname = NULL;
 	int	ret;
 
+
+	if (namelen == 0){
+		cl_log(LOG_ERR, "%s: Adding a field with 0 name length", __FUNCTION__);
+		return HA_FAIL;
+	}
+	
 	if ((cpname = ha_malloc(namelen+1)) == NULL) {
 		cl_log(LOG_ERR, "ha_msg_addraw: no memory for string (name)");
 		return(HA_FAIL);
@@ -655,11 +713,34 @@ ha_msg_adduuid(struct ha_msg* msg, const char *name, const cl_uuid_t* u)
 int
 ha_msg_addstruct(struct ha_msg * msg, const char * name, const void * value)
 {
+	const struct ha_msg* childmsg = (const struct ha_msg*) value;
+	
+	if (get_netstringlen(childmsg) > MAXCHILDMSGLEN
+	    || get_stringlen(childmsg) > MAXCHILDMSGLEN) {
+		/*cl_log(LOG_WARNING,
+		       "%s: childmsg too big (name=%s, nslen=%d, len=%d)."
+		       "   Use ha_msg_addstruct_compress() instead.",
+		       __FUNCTION__, name, get_netstringlen(childmsg), 
+		       get_stringlen(childmsg));
+		*/
+	}
 	
 	return ha_msg_addraw(msg, name, strlen(name), value, 
 			     sizeof(struct ha_msg), FT_STRUCT, 0);
 }
 
+int
+ha_msg_addstruct_compress(struct ha_msg * msg, const char * name, const void * value)
+{
+	
+	if (use_traditional_compression){
+		return ha_msg_addraw(msg, name, strlen(name), value, 
+				     sizeof(struct ha_msg), FT_STRUCT, 0);
+	}else{
+		return ha_msg_addraw(msg, name, strlen(name), value, 
+				     sizeof(struct ha_msg), FT_UNCOMPRESS, 0);
+	}
+}
 
 int
 ha_msg_add_int(struct ha_msg * msg, const char * name, int value)
@@ -687,33 +768,6 @@ ha_msg_value_int(const struct ha_msg * msg, const char * name, int* value)
 	*value = atoi(svalue);
 	return HA_OK;
 }
-
-int
-ha_msg_add_uuid(struct ha_msg * msg, const char * name, cl_uuid_t* id)
-{
-	char buf[UUID_SLEN];
-	cl_uuid_unparse(id, buf);
-	return (ha_msg_nadd(msg, name, strlen(name), buf, strlen(buf)));
-}
-
-int
-ha_msg_value_uuid(struct ha_msg * msg, const char * name, cl_uuid_t* id)
-{
-	const char* value = ha_msg_value(msg, name);
-	char buf[UUID_SLEN];
-	
-	if (NULL == value) {
-		return HA_FAIL;
-	}
-	strncpy(buf,value,UUID_SLEN);
-	if( 0 != cl_uuid_parse(buf, id)) {
-		return HA_FAIL;
-	}
-
-	return HA_OK;
-}
-
-
 
 /*
  * ha_msg_value_str_list()/ha_msg_add_str_list():
@@ -831,17 +885,33 @@ ha_msg_add_str_table(struct ha_msg * msg, const char * name,
 	hash_msg = str_table_to_msg(hash_table);
 	if( HA_OK != ha_msg_addstruct(msg, name, hash_msg)) {
 		ha_msg_del(hash_msg);
-		cl_log(LOG_ERR, "ha_msg_add in ha_msg_add_str_table failed");
+		cl_log(LOG_ERR
+		       , "ha_msg_addstruct in ha_msg_add_str_table failed");
 		return HA_FAIL;
 	}
 	ha_msg_del(hash_msg);
 	return HA_OK;
 }
 
+int
+ha_msg_mod_str_table(struct ha_msg * msg, const char * name,
+			GHashTable* hash_table)
+{
+	struct ha_msg* hash_msg;
+	if (NULL == msg || NULL == name || NULL == hash_table) {
+		return HA_FAIL;
+	}
 
-
-
-
+	hash_msg = str_table_to_msg(hash_table);
+	if( HA_OK != cl_msg_modstruct(msg, name, hash_msg)) {
+		ha_msg_del(hash_msg);
+		cl_log(LOG_ERR
+		       , "ha_msg_modstruct in ha_msg_mod_str_table failed");
+		return HA_FAIL;
+	}
+	ha_msg_del(hash_msg);
+	return HA_OK;
+}
 
 int
 cl_msg_list_add_string(struct ha_msg* msg, const char* name, const char* value)
@@ -959,10 +1029,11 @@ static void *
 cl_get_value(const struct ha_msg * msg, const char * name,
 	     size_t * vallen, int *type)
 {
-
+	
 	int	j;
 	if (!msg || !msg->names || !msg->values) {
-		cl_log(LOG_ERR, "ha_msg_value: NULL msg");
+		cl_log(LOG_ERR, "%s: wrong arugment (%s)",
+		       __FUNCTION__, name);
 		return(NULL);
 	}
 
@@ -974,7 +1045,39 @@ cl_get_value(const struct ha_msg * msg, const char * name,
 			}
 			if (type){
 				*type = msg->types[j];
+			}			
+			return(msg->values[j]);
+		}
+	}
+	return(NULL);
+}
+
+static void *
+cl_get_value_mutate(struct ha_msg * msg, const char * name,
+	     size_t * vallen, int *type)
+{
+	
+	int	j;
+	if (!msg || !msg->names || !msg->values) {
+		cl_log(LOG_ERR, "%s: wrong arugment",
+		       __FUNCTION__);
+		return(NULL);
+	}
+	
+	AUDITMSG(msg);
+	for (j=0; j < msg->nfields; ++j) {
+		if (strcmp(name, msg->names[j]) == 0) {
+			int tp = msg->types[j];
+			if (fieldtypefuncs[tp].pregetaction){
+				fieldtypefuncs[tp].pregetaction(msg, j);
 			}
+			
+			if (vallen){
+				*vallen = msg->vlens[j];
+			}
+			if (type){
+				*type = msg->types[j];
+			}			
 			return(msg->values[j]);
 		}
 	}
@@ -1070,20 +1173,64 @@ cl_get_type(const struct ha_msg *msg, const char *name)
 
 }
 
+/*
 struct ha_msg *
 cl_get_struct(const struct ha_msg *msg, const char* name)
 {
-	struct ha_msg	*ret;
+	struct ha_msg*	ret;
 	int		type;
 	size_t		vallen;
 
-	ret = (struct ha_msg *)cl_get_value(msg, name, &vallen, &type);
+	ret = cl_get_value(msg, name, &vallen, &type);
 	
-	if (ret == NULL || type != FT_STRUCT){
+	if (ret == NULL ){
 		return(NULL);
 	}
-	return(ret);
+	
+	switch(type){
+		
+	case FT_STRUCT:
+		break;
+		
+	default:
+		cl_log(LOG_ERR, "%s: field %s is not a struct (%d)",
+		       __FUNCTION__, name, type);
+		return NULL;
+	}
+	
+	return ret;
 }
+*/
+
+
+struct ha_msg *
+cl_get_struct(struct ha_msg *msg, const char* name)
+{
+	struct ha_msg*	ret;
+	int		type = -1;
+	size_t		vallen;
+	
+	ret = cl_get_value_mutate(msg, name, &vallen, &type);
+	
+	if (ret == NULL ){
+		return(NULL);
+	}
+	
+	switch(type){
+		
+	case FT_UNCOMPRESS:
+	case FT_STRUCT:
+		break;
+		
+	default:
+		cl_log(LOG_ERR, "%s: field %s is not a struct (%d)",
+		       __FUNCTION__, name, type);
+		return NULL;
+	}
+	
+	return ret;
+}
+
 
 int
 cl_msg_list_length(struct ha_msg* msg, const char* name)
@@ -1157,40 +1304,97 @@ cl_msg_get_list(struct ha_msg* msg, const char* name)
 
 
 int
-cl_msg_add_list_int(struct ha_msg* msg, const char* name,
-		    int* buf, size_t n)
-{
-	
+cl_msg_add_list_str(struct ha_msg* msg, const char* name,
+		    char** buf, size_t n)
+{		
 	GList*		list = NULL;
-	size_t		i;
-	int		ret;
+	int		i;
+	int		ret = HA_FAIL;
 	
 	if (n <= 0  || buf == NULL|| name ==NULL ||msg == NULL){
-		cl_log(LOG_ERR, "cl_msg_get_list_int:"
+		cl_log(LOG_ERR, "%s:"
 		       "invalid parameter(%s)", 
 		       !n <= 0?"n is negative or zero": 
 		       !buf?"buf is NULL":
 		       !name?"name is NULL":
-		       "msg is NULL");
+		       "msg is NULL",__FUNCTION__);
 		return HA_FAIL;
 	}
 	
 	for ( i = 0; i < n; i++){
-		char intstr[MAX_INT_LEN];		
-		sprintf(intstr,"%d", buf[i]);
-		list = g_list_append(list, cl_strdup(intstr));
+		if (buf[i] == NULL){
+			cl_log(LOG_ERR, "%s: %dth element in buf is null",
+			       __FUNCTION__, i);
+			goto free_and_out;
+		}
+		list = g_list_append(list, buf[i]);
 		if (list == NULL){
-			cl_log(LOG_ERR, "cl_msg_add_list_int:"
-			       "adding integer to list failed");
-			return HA_FAIL;
+			cl_log(LOG_ERR, "%s:adding integer to list failed",
+			       __FUNCTION__);
+			goto free_and_out;
 		}
 	}
 	
 	ret = ha_msg_addraw(msg, name, strlen(name), list, 
 			    string_list_pack_length(list),
 			    FT_LIST, 0);
-	g_list_free(list);
 	
+ free_and_out:
+	if (list){
+		g_list_free(list);
+		list = NULL;
+	}
+	return ret;
+}
+
+static void
+list_element_free(gpointer data, gpointer userdata)
+{
+	if (data){
+		g_free(data);
+	}	
+}
+
+int
+cl_msg_add_list_int(struct ha_msg* msg, const char* name,
+		    int* buf, size_t n)
+{
+	
+	GList*		list = NULL;
+	size_t		i;
+	int		ret = HA_FAIL;
+	
+	if (n <= 0  || buf == NULL|| name ==NULL ||msg == NULL){
+		cl_log(LOG_ERR, "cl_msg_add_list_int:"
+		       "invalid parameter(%s)", 
+		       !n <= 0?"n is negative or zero": 
+		       !buf?"buf is NULL":
+		       !name?"name is NULL":
+		       "msg is NULL");
+		goto free_and_out;
+	}
+	
+	for ( i = 0; i < n; i++){
+		char intstr[MAX_INT_LEN];		
+		sprintf(intstr,"%d", buf[i]);
+		list = g_list_append(list, g_strdup(intstr));
+		if (list == NULL){
+			cl_log(LOG_ERR, "cl_msg_add_list_int:"
+			       "adding integer to list failed");
+			goto free_and_out;
+		}
+	}
+	
+	ret = ha_msg_addraw(msg, name, strlen(name), list, 
+			    string_list_pack_length(list),
+			    FT_LIST, 0);
+ free_and_out:
+	if (list){
+		g_list_foreach(list,list_element_free , NULL);
+		g_list_free(list);
+		list = NULL;
+	}
+
 	return ret;
 }
 int
@@ -1253,6 +1457,75 @@ cl_msg_get_list_int(struct ha_msg* msg, const char* name,
 	return HA_OK;
 }
 
+int 
+cl_msg_replace_value(struct ha_msg* msg, const void *old_value,
+		     const void* value, size_t vlen, int type)
+{
+	int j;
+	
+	if (msg == NULL || old_value == NULL) {
+		cl_log(LOG_ERR, "cl_msg_replace: invalid argument");
+		return HA_FAIL;
+	}
+	
+	for (j = 0; j < msg->nfields; ++j){
+		if (old_value == msg->values[j]){
+			break;			
+		}
+	}
+	if (j == msg->nfields){		
+		cl_log(LOG_ERR, "cl_msg_replace: field %p not found", old_value);
+		return HA_FAIL;
+	}
+	return cl_msg_replace(msg, j, value, vlen, type);
+}
+
+/*this function is for internal use only*/
+int 
+cl_msg_replace(struct ha_msg* msg, int index,
+	       const void* value, size_t vlen, int type)
+{
+	void *	newv ;
+	int	newlen = vlen;
+	int	oldtype;
+	
+	AUDITMSG(msg);
+	if (msg == NULL || value == NULL) {
+		cl_log(LOG_ERR, "%s: NULL input.", __FUNCTION__);
+		return HA_FAIL;
+	}
+	
+	if(type >= DIMOF(fieldtypefuncs)){
+		cl_log(LOG_ERR, "%s:"
+		       "invalid type(%d)",__FUNCTION__, type);
+		return HA_FAIL;
+	}
+	
+	if (index >= msg->nfields){
+		cl_log(LOG_ERR, "%s: index(%d) out of range(%d)",
+		       __FUNCTION__,index, msg->nfields);
+		return HA_FAIL;
+	}
+	
+	oldtype = msg->types[index];
+	
+	newv = fieldtypefuncs[type].dup(value,vlen);
+	if (!newv){
+		cl_log(LOG_ERR, "%s: duplicating message fields failed"
+		       "value=%p, vlen=%d, msg->names[i]=%s", 
+		       __FUNCTION__,value, (int)vlen, msg->names[index]);
+		return HA_FAIL;
+	}
+	
+	fieldtypefuncs[oldtype].memfree(msg->values[index]);
+	
+	msg->values[index] = newv;
+	msg->vlens[index] = newlen;
+	msg->types[index] = type;
+	AUDITMSG(msg);
+	return(HA_OK);
+	
+}
 
 
 static int
@@ -1279,7 +1552,12 @@ cl_msg_mod(struct ha_msg * msg, const char * name,
 			
 			char *	newv ;
 			int	newlen = vlen;
-			int	string_sizediff = 0;
+			
+			if (type != msg->types[j]){
+				cl_log(LOG_ERR, "%s: type mismatch(%d %d)",
+				       __FUNCTION__, type, msg->types[j]);
+				return HA_FAIL;
+			}
 			
 			newv = fieldtypefuncs[type].dup(value,vlen);
 			if (!newv){
@@ -1288,15 +1566,7 @@ cl_msg_mod(struct ha_msg * msg, const char * name,
 				       value, (int)vlen, msg->names[j]);
 				return HA_FAIL;
 			}
-			
-			if (type != FT_STRUCT){
-				string_sizediff = fieldtypefuncs[type].stringlen(strlen(name), vlen, value)
-					- fieldtypefuncs[type].stringlen(strlen(name), 
-									 msg->vlens[j], msg->values[j]);
-				msg->stringlen += string_sizediff;
-			}
-			
-			
+						
 			fieldtypefuncs[type].memfree(msg->values[j]);
 			msg->values[j] = newv;
 			msg->vlens[j] = newlen;
@@ -1305,7 +1575,7 @@ cl_msg_mod(struct ha_msg * msg, const char * name,
 		}
 	}
 	
-     rc = ha_msg_nadd_type(msg, name,strlen(name), value, vlen, type);
+	rc = ha_msg_nadd_type(msg, name,strlen(name), value, vlen, type);
   
 	AUDITMSG(msg);
 	return rc;
@@ -1691,7 +1961,6 @@ hamsg2ipcmsg(struct ha_msg* m, IPC_Channel* ch)
 	char *		s  = msg2wirefmt_ll(m, &len, FALSE);
 	IPC_Message*	ret = NULL;
 
-
 	if (s == NULL) {
 		return ret;
 	}
@@ -1784,15 +2053,18 @@ string2msg_ll(const char * s, size_t length, int depth, int need_auth)
 
 
 	if ((ret = ha_msg_new(0)) == NULL) {
+		cl_log(LOG_ERR, "%s: creating new msg failed", __FUNCTION__);
 		return(NULL);
 	}
-
+	
 	startlen = sizeof(MSG_START)-1;
 	if (strncmp(sp, MSG_START, startlen) != 0) {
 		/* This can happen if the sender gets killed */
 		/* at just the wrong time... */
 		if (!cl_msg_quiet_fmterr) {
 			cl_log(LOG_WARNING, "string2msg_ll: no MSG_START");
+			cl_log(LOG_WARNING, "%s: s=%s", __FUNCTION__, s);
+			cl_log(LOG_WARNING,  "depth=%d", depth);
 		}
 		ha_msg_del(ret);
 		return(NULL);
@@ -1807,11 +2079,15 @@ string2msg_ll(const char * s, size_t length, int depth, int need_auth)
 	while (*sp != EOS && strncmp(sp, MSG_END, endlen) != 0) {
 
 		if (sp >= smax)	{
+			cl_log(LOG_ERR, "%s: buffer overflow(sp=%p, smax=%p)",
+			       __FUNCTION__, sp, smax);
 			return(NULL);
 		}
 		/* Skip over initial CR/NL things */
 		sp += strspn(sp, NEWLINE);
 		if (sp >= smax)	{
+			cl_log(LOG_ERR, "%s: buffer overflow after NEWLINE(sp=%p, smax=%p)",
+			       __FUNCTION__, sp, smax);
 			return(NULL);
 		}
 		/* End of message marker? */
@@ -1824,22 +2100,26 @@ string2msg_ll(const char * s, size_t length, int depth, int need_auth)
 				cl_log(LOG_ERR, "NV failure (string2msg_ll):");
 				cl_log(LOG_ERR, "Input string: [%s]", s);
 				cl_log(LOG_ERR, "sp=%s", sp);
-			}
+				cl_log(LOG_ERR, "depth=%d", depth);				
+				cl_log_message(LOG_ERR,ret);
+			}			
 			ha_msg_del(ret);
 			return(NULL);
 		}
 		if (sp >= smax) {
+			cl_log(LOG_ERR, "%s: buffer overflow after adding field(sp=%p, smax=%p)",
+			       __FUNCTION__, sp, smax);
 			return(NULL);
 		}
 		sp += strcspn(sp, NEWLINE);
 	}
-
+	
 	if (need_auth && msg_authentication_method
-	&&		!msg_authentication_method(ret)) {
+	    &&		!msg_authentication_method(ret)) {
 		const char* from = ha_msg_value(ret, F_ORIG);
 		if (!cl_msg_quiet_fmterr) {
-			cl_log(LOG_WARNING
-		       ,       "string2msg_ll: node [%s]"
+			cl_log(LOG_WARNING,
+			       "string2msg_ll: node [%s]"
 		       " failed authentication", from ? from : "?");
 		}
 		ha_msg_del(ret);
@@ -1873,6 +2153,24 @@ string2msg(const char * s, size_t length)
 
 */
 
+#define	NOROOM						{	\
+		cl_log(LOG_ERR, "%s:%d: out of memory bound"	\
+		", bp=%p, buf + len=%p, len=%ld"		\
+		,	__FUNCTION__, __LINE__		\
+		,	bp, buf + len, (long)len);		\
+		cl_log_message(LOG_ERR, m);			\
+		return(HA_FAIL);				\
+	}
+
+#define	CHECKROOM_CONST(c)		CHECKROOM_INT(STRLEN_CONST(c))
+#define	CHECKROOM_STRING(s)		CHECKROOM_INT(strnlen(s, len))
+#define	CHECKROOM_STRING_INT(s,i)	CHECKROOM_INT(strnlen(s, len)+(i))
+#define	CHECKROOM_INT(i)	{		\
+		if ((bp + (i)) > maxp) {	\
+			NOROOM;			\
+		}				\
+	}
+
 
 int
 msg2string_buf(const struct ha_msg *m, char* buf, size_t len
@@ -1887,8 +2185,9 @@ msg2string_buf(const struct ha_msg *m, char* buf, size_t len
 	bp = buf;
 
 	if (needhead){
+		CHECKROOM_CONST(MSG_START);
 		strcpy(bp, MSG_START);
-		bp += strlen(MSG_START);
+		bp += STRLEN_CONST(MSG_START);
 	}
 
 	for (j=0; j < m->nfields; ++j) {
@@ -1901,14 +2200,16 @@ msg2string_buf(const struct ha_msg *m, char* buf, size_t len
 		}
 
 		if (m->types[j] != FT_STRING){
+			CHECKROOM_STRING_INT(FT_strings[m->types[j]],2);
 			strcat(bp, "(");
 			bp++;
-			strcat(bp,FT_strings[m->types[j]]);
+			strcat(bp, FT_strings[m->types[j]]);
 			bp++;
 			strcat(bp,")");
 			bp++;
 		}
 
+		CHECKROOM_STRING_INT(m->names[j],1);
 		strcat(bp, m->names[j]);
 		bp += m->nlens[j];
 		strcat(bp, "=");
@@ -1923,10 +2224,11 @@ msg2string_buf(const struct ha_msg *m, char* buf, size_t len
 		if (!tostring ||
 		    (truelen = tostring(bp, maxp, m->values[j], m->vlens[j], depth))
 		    < 0){
-			cl_log(LOG_ERR, "tostring failed");
+			cl_log(LOG_ERR, "tostring failed for field %d", j);
 			return HA_FAIL;			
 		}
 		
+		CHECKROOM_INT(truelen+1);
 		bp +=truelen;
 		
 		strcat(bp,"\n");
@@ -1935,23 +2237,13 @@ msg2string_buf(const struct ha_msg *m, char* buf, size_t len
 
 	}
 	if (needhead){
+		CHECKROOM_CONST(MSG_END);
 		strcat(bp, MSG_END);
 		bp += strlen(MSG_END);
 	}
 
-	bp[0] = 0;
-
-	if (bp > buf + len){
-
-		cl_log(LOG_ERR, "msg2string_buf: out of memory bound"
-		", bp=%p, buf + len=%p, len=%ld"
-		,	bp, buf + len, (long)len);
-
-		cl_log_message(LOG_ERR, m);
-
-		return(HA_FAIL);
-
-	}
+	CHECKROOM_INT(1);
+	bp[0] = EOS;
 
 	return(HA_OK);
 }
@@ -1994,34 +2286,84 @@ msg2string(const struct ha_msg *m)
 	return(buf);
 }
 
+gboolean
+must_use_netstring(const struct ha_msg* msg)
+{
+	int	i; 
+	
+	for ( i = 0; i < msg->nfields; i++){
+		if (msg->types[i] == FT_COMPRESS
+		    || msg->types[i] == FT_UNCOMPRESS
+		    || msg->types[i] ==  FT_STRUCT){
+			return TRUE;
+		}
+	}
+	
+	return FALSE;
+
+}
+
 
 static char*
-msg2wirefmt_ll(const struct ha_msg*m, size_t* len, int flag)
+msg2wirefmt_ll(struct ha_msg*m, size_t* len, int flag)
 {
 	
-	int wirefmtlen;
+	int	wirefmtlen;
+	int	i;
+	char*	ret;
 	
-	if (msgfmt  ==  MSGFMT_NETSTRING){
-		wirefmtlen = get_netstringlen(m);
-	}else{
-		wirefmtlen =  get_stringlen(m);
-	}
 
-	if ((flag & MSG_NEEDCOMPRESS)
-	    && (wirefmtlen> compression_threshold)
-	    && cl_get_compress_fns() != NULL){
-		return cl_compressmsg(m, len);		
+	if (msgfmt == MSGFMT_NETSTRING){
+		wirefmtlen = get_netstringlen(m);		
+	}else{
+		wirefmtlen =  get_stringlen(m);	
 	}
 	
-	if (msgfmt == MSGFMT_NETSTRING) {
+	if (use_traditional_compression
+	    &&(flag & MSG_NEEDCOMPRESS) 
+ 	    && (wirefmtlen> compression_threshold) 
+ 	    && cl_get_compress_fns() != NULL){ 
+ 		return cl_compressmsg(m, len);		 
+ 	} 
+	
+	
+	if (flag & MSG_NEEDCOMPRESS){
+		for (i=0 ;i < m->nfields; i++){
+			int type = m->types[i];
+			if (fieldtypefuncs[type].prepackaction){
+				fieldtypefuncs[type].prepackaction(m,i);
+			}
+		}
+	}
+	
+	
+	if (msgfmt == MSGFMT_NETSTRING || must_use_netstring(m)){
+		wirefmtlen = get_netstringlen(m);		
+		if (wirefmtlen >= MAXMSG){
+			cl_log(LOG_ERR, "%s: msg too big(%d)"
+			       "for netstring fmt",
+			       __FUNCTION__, wirefmtlen);
+			return NULL;
+		}
 		if (flag& MSG_NEEDAUTH){
 			return msg2netstring(m, len);
 		}else{
-			return msg2netstring_noauth(m, len);
+			ret =  msg2netstring_noauth(m, len);
+			return ret;
+
 		}
-	}
-	else{
+		
+		
+	}else{
 		char	*tmp;
+		
+		wirefmtlen =  get_stringlen(m);
+		if (wirefmtlen >= MAXMSG){
+			cl_log(LOG_ERR, "%s: msg too big(%d)"
+			       " for string fmt",
+			       __FUNCTION__, wirefmtlen);
+			return NULL;
+		}
 		
 		tmp = msg2string(m);
 		
@@ -2033,17 +2375,20 @@ msg2wirefmt_ll(const struct ha_msg*m, size_t* len, int flag)
 		*len = strlen(tmp) + 1;
 		return(tmp);
 	}
+	
+
 }
 
 
 char*
-msg2wirefmt(const struct ha_msg*m, size_t* len){
+msg2wirefmt(struct ha_msg*m, size_t* len){
 	return msg2wirefmt_ll(m, len, MSG_NEEDAUTH|MSG_NEEDCOMPRESS);
 }
 
 
 char*
-msg2wirefmt_noac(const struct ha_msg*m, size_t* len){
+msg2wirefmt_noac(struct ha_msg*m, size_t* len){
+	
 	return msg2wirefmt_ll(m, len, 0);
 }
 
@@ -2103,6 +2448,7 @@ wirefmt2msg(const char* s, size_t length, int flag)
 
 }
 
+
 void
 cl_log_message (int log_level, const struct ha_msg *m)
 {
@@ -2120,7 +2466,8 @@ cl_log_message (int log_level, const struct ha_msg *m)
 		if(m->types[j] < DIMOF(fieldtypefuncs)){					
 			fieldtypefuncs[m->types[j]].display(log_level, j, 
 							    m->names[j],
-							    m->values[j]);
+							    m->values[j],
+							    m->vlens[j]);
 		}
 	}
 }
@@ -2148,6 +2495,119 @@ main(int argc, char ** argv)
 #endif
 /*
  * $Log: cl_msg.c,v $
+ * Revision 1.106  2006/06/09 05:29:53  sunjd
+ * add a msg updating function for string hashtable
+ *
+ * Revision 1.105  2006/05/17 23:22:33  gshi
+ * a compressed field can still be coded as a string, e.g in serial
+ *
+ * Revision 1.104  2006/05/09 06:34:05  andrew
+ * Support a generic replace operation on HA_Message objects
+ * Use it to preserve the internal XML ordering (which makes DTD validation
+ *   more liekly to be possible)
+ *
+ * Revision 1.103  2006/04/21 07:11:42  andrew
+ * Give some indication of what we were looking for at the time
+ *
+ * Revision 1.102  2006/02/06 16:42:14  alan
+ * Put in a warning about selecting traditional_compression...
+ *
+ * Revision 1.101  2005/11/03 22:28:32  gshi
+ * nlens are size_t*.We should use size_t to do malloc.
+ * It could cause ia64 to mess up memory otherwise
+ *
+ * Revision 1.100  2005/11/03 21:21:32  gshi
+ * audit for namelen == 0 error
+ *
+ * Revision 1.99  2005/11/03 21:11:43  gshi
+ * adding a field with 0 namlen is not allowed
+ *
+ * Revision 1.98  2005/11/02 22:22:51  gshi
+ * log the message if failure happens
+ *
+ * Revision 1.97  2005/11/02 21:34:44  gshi
+ * Add debug messages
+ * increase cl_log buf to 5k
+ *
+ * Revision 1.96  2005/11/02 19:12:40  gshi
+ * prepackaction only happen when compression is needed,
+ * this will make sure compression only happen in top level field
+ *
+ * Revision 1.95  2005/11/01 21:50:23  gshi
+ * print out len info in cl_log_message() for non-string non-list field
+ *
+ * Revision 1.94  2005/11/01 15:07:14  andrew
+ * small log message tweak
+ *
+ * Revision 1.93  2005/11/01 06:18:23  gshi
+ * bp == maxp is fine :)
+ *
+ * Revision 1.92  2005/11/01 03:50:58  alan
+ * Changed some of gshi's string code to be a little more cautious about buffer
+ * overruns.
+ *
+ * Revision 1.91  2005/11/01 03:05:20  alan
+ * Fixed what looks like a bug in cl_msg.c
+ * The code sets an end of string marker, and then after it does it looks
+ * to see if it was out of bounds.
+ * I reversed the order.
+ *
+ * Revision 1.90  2005/10/31 22:12:29  gshi
+ * include name in the warning
+ *
+ * Revision 1.89  2005/10/31 17:36:30  gshi
+ * print out a warning if a big child msg is added
+ * without using the compression method
+ *
+ * Revision 1.88  2005/10/20 17:40:24  gshi
+ * fix a 64bit compiling problem
+ *
+ * Revision 1.87  2005/10/20 00:47:52  gshi
+ * add the function to dump msg stats into a file
+ *
+ * Revision 1.86  2005/10/18 17:35:11  gshi
+ * make the default compression traditional
+ *
+ * Revision 1.85  2005/10/17 19:47:44  gshi
+ * add an option to use "traditional" compression method
+ * traditional_compression yes/no
+ * in ha.cf
+ *
+ * Revision 1.84  2005/10/17 19:13:48  gshi
+ *  change cl_get_struct(const char* msg, ...) to cl_get_struct(char* msg, ...)
+ *
+ *  make cl_get_struct() handles three types(FT_STRUCT, FT_COMPRESS, FT_UMCOMPRESS)
+ *
+ * Revision 1.83  2005/10/15 02:52:34  gshi
+ * added two APIs
+ *
+ * ha_msg_addstruct_compress()
+ * cl_get_struct_compress()
+ *
+ * these two APIs must be used in pair to put/get fields in a message
+ *
+ * Internally two message types are added in order to make the compression
+ * only happens in child process instead of the master control process.
+ *
+ * If transparently comperssing messages is desired, it can be done in interface without
+ * internal structure change.
+ *
+ * Revision 1.82  2005/10/14 18:51:06  gshi
+ * remove stringlen in struct ha_msg
+ * every time string length for an ha_msg is computed on the fly
+ *
+ * Revision 1.81  2005/10/13 22:57:13  gshi
+ * fix a compiling error in ia64
+ *
+ * Revision 1.80  2005/10/05 17:12:34  gshi
+ * We need to dup the string and free it later
+ *
+ * Revision 1.79  2005/10/04 22:06:58  gshi
+ * *** empty log message ***
+ *
+ * Revision 1.78  2005/09/20 23:45:03  gshi
+ * bug 267: remove ont set of uuid add/remove functions
+ *
  * Revision 1.77  2005/09/09 17:15:44  gshi
  * rename CRNL to NEWLINE since it only contains newline now
  *

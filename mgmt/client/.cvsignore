@@ -1,0 +1,10 @@
+Makefile.in
+Makefile
+.deps
+.libs
+*.la
+*.lo
+*.mo
+*.py
+*.beam
+mgmtdtest

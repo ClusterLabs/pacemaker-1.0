@@ -1,29 +1,33 @@
-#	$Id: heartbeat.spec.in,v 1.148 2005/09/22 20:17:35 alan Exp $
+#	$Id: heartbeat.spec.in,v 1.201 2006/08/15 08:29:44 andrew Exp $
 
-# Workaround for a change in RPM 4.1.x; needs proper fixing soon!
-##%define _unpackaged_files_terminate_build 0
+%define _unpackaged_files_terminate_build 1
+%define _missing_doc_files_terminate_build 1
+%define ENABLE_MGMT @MGMT_ENABLED@
+%define ENABLE_SNMP_SUBAGENT @RPM_ENABLE_SNMP_SUBAGENT@
 
 Summary: @HB_PKG@ - The Heartbeat Subsystem for High-Availability Linux
 Name:	@HB_PKG@
 Version:	@VERSION@
-Release:	1
+Release:	@RPMREL@
 License: GPL/LGPL
 URL: http://linux-ha.org/
 Group: Utilities
 Packager: Alan Robertson <alanr@unix.sh>
 Source: http://linux-ha.org/download/@HB_PKG@-@VERSION@.tar.gz
-BuildRoot: %{_tmppath}/%{name}-%{version}-build
-BuildPrereq: glib-devel, @UCDSNMPDEVEL@, perl, iputils, /usr/bin/ssh, openssl-devel, libnet
+BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-build
+BuildPrereq: glib-devel, @UCDSNMPDEVEL@, perl, iputils, /usr/bin/ssh, openssl-devel, libnet, glib2-devel, python-devel, gnutls-devel
 # libnet available from www.ultramonkey.org and others
-Requires: sysklogd, heartbeat-stonith = %{version}-%{release}, heartbeat-pils = %{version}-%{release}
+Requires: sysklogd, heartbeat-stonith = %{version}-%{release}, heartbeat-pils = %{version}-%{release}, @RPM_MGMT_RUNTIME_REQUIRES@
+BuildRequires: libgcrypt-devel
 
 %package ldirectord
 Summary: Monitor daemon for maintaining high availability resources
 Group: Utilities
-Requires: perl, perl-libwww-perl perl-Crypt-SSLeay, ipvsadm, perl-HTML-Parser, perl-ldap, perl-Mail-IMAPClient, perl-libnet, perl-Net-DNS 
-# perl-libwww-perl, perl-HTML-Parser, perl-ldap,
-# perl-Mail-IMAPClient, perl-libnet, perl-Net-DNS and ipvsadm 
-# available from www.ultramonkey.org and # others
+Requires: perl, perl-libwww-perl, perl-Authen-Radius, perl-Crypt-SSLeay, ipvsadm, perl-HTML-Parser, perl-ldap, perl-MailTools, perl-Net-IMAP-Simple, perl-Net-IMAP-Simple-SSL, perl-POP3Client, perl-libnet, perl-Net-DNS
+# perl-libwww-perl, perl-Authen-Radius, perl-HTML-Parser, perl-ldap,
+# perl-MailTools, perl-Net-IMAP-Simple, perl-Net-IMAP-Simple-SSL,
+# perl-POP3Client, perl-libnet, perl-Net-DNS and ipvsadm
+# available from www.ultramonkey.org and others
 
 %package stonith
 Requires: telnet, heartbeat-pils = %{version}-%{release}
@@ -77,6 +81,360 @@ PILS is designed to support any number of plugins
 implementing any number of interfaces.
 
 %changelog
+* Thu Aug 03 2006  Alan Robertson <alanr@unix.sh> (see doc/AUTHORS file)
++ Version 2.0.7 - bug fix and a few enhancements release
+  + Important steps:
+    - Prior to the update, make sure all elements (instance_attributes
+      etc) in the CRM configuration have valid id attributes, or set the
+      ignore_dtd option to true. Otherwise, the new version will refuse
+      to start.
+  + SECURITY FIX:
+    - Remote Denial of Service attack (#195068, CVE-2006-3121).
+    - Local Denial of Service attack (#194444, CVE-2006-3815).
+      (actually fixed in 2.0.6)
+  + Enhancements:
+    - Improved log messages.
+    - ptest can now read compressed XML directly. Do not include
+      optional actions and dependancies in ptest output by default.
+    - crm_resource will now warn and demand exact specification when
+      trying to modify an attribute while several sets are present.
+  + Bugfixes:
+    - Small fix from Serge Dubrouski <sergefd@gmail.com> for one
+      annoying problem when PostgreSQL isn't installed on a box and one
+      tries to run the script.
+    - stonithd log message did not always indicate an error (OSDL 1379)
+    - lrmd now limits itself to a maximum of 4 child processes, to avoid
+      overloading the node and causing too long delays.
+    - Improvements and fixes for Solaris 10.
+    - pengine: Processing of pending probes; should not be treated as if
+      the resource is running or in a known state.
+    - target_role now is only taken into account for managed resources.
+    - cib: Detect more cases where the nodes section needs to be
+      refreshed.
+    - More accurately determine node status. (OSDL 1369)
+    - Filter out stop requests that would require a resource to be
+      added. (OSDL 1369)
+    - Send filtered resource "stops" as successes as to not block
+      waiting for filtered actions.
+    - By default pass the TE graph via IPC until its too large for IPC
+      to deal with, only then fall back to passing via the disk.
+    - Stopping of stonith resources can never require stonith, even if
+      the node its running on failed; prevent graph loop. (OSDL 1376)
+    - STONITH events need to inputs to start events (not stops), to
+      avoid graph loop in combination with "stop before" dependencies
+      (ie, groups).
+    - crmd: Dont stall the FSA if we try to invoke the TE after we've
+      stopped it.
+    - Always unpack the correct part of a diff operation; diffs should
+      now apply in more cases, reducing the need for full refreshs.
+    - Correctly observe --disable-snmp-subagent during build.
+    - In some states the membership is invalid and shouldn't be
+      referenced. (OSDL 1377)
+    - Fix a use-before-null-check issue in lrmd. (Coverity #48)
+    - OCF Resource Agents outside the default path were incorrectly
+      found to be not executable.
+    - ccm: hostcache and delnodecache files should not be authoritative
+      if autojoin is disabled. (OSDL 1226)
+    - With autojoin, llm_get_nodecount() can't return the real max nodes
+      anymore, this may cause memory corruption. (OSDL 1382)
+    - Fix a memory corruption in membership layer, more frequently
+      observed with larger (>5) clusters.
+    - Change the default api-auth for pingd to uid=root
+    - Dummy RA now OCF compliant.
+    - Fix pingd RA metadata to be XML compliant.
+    - Actually use RPMREL in the spec file.
+  + KNOWN BUGS:
+    - When running a cluster of nodes of very different speeds temporary
+      membership anomalies may occasionally be seen.  These correct
+      themselves and don't appear to be harmful.  They typically
+      include a message something like this:
+      WARN: Ignoring HA message (op=vote) from XXX: not in our membership list
+    
+* Thu Jul 13 2006  Alan Robertson <alanr@unix.sh> (see doc/AUTHORS file)
++ Version 2.0.6 - bug fix and a few enhancements release
+  + Added the ability to start/stop groups from the GUI
+  + Fixed a few monitoring bugs in the Apache resource agent
+  + Changed the name of the netmask parameter to the IPaddr and IPaddr2
+	resource agents.  This is because the netmask must be specified
+	in CIDR format.  The new name is cidr_netmask.  It will continue
+	to work the old way.
+  + Changed target_role so that when you stop a resource, all the resources
+	which depend on it also stop - all in the proper order.
+  + Many enhancements
+    default_resource_failure_stickiness
+    OCFS2 cluster filesystem support
+    new VIPArip resource agent
+    new SysInfo resource agent
+    new Oracle resource agents
+    Add cluster naming directive
+    Added node quorum voting weights
+    Added site declaration
+    ha_propagate command
+    allow NFS to run as a cloneable filesystem
+    haresources2cib extensions
+    added cibadmin man page
+    Make startup fencing optional (for the brave)
+    Many CIM improvements
+  + Many GUI improvements
+    added hb_gui symlink in /usr/bin
+    significant speedup
+    added support for types of groups:
+    move resources up/down in groups
+    resources default to being stopped
+    stonith RA metadata
+    basic heartbeat class RA metadata
+    reworked resource addition dialog
+    right-click menu
+    support for clones
+  + Bug fixes:
+    Fixed a long-standing problem where the .src.rpms weren't usable across
+	32/64-bit boundaries
+    Many clone resource fixes
+    autojoin works now
+    target_role is now handled completely differently
+    pingd and attrd now work
+    OSDL 1221 GUI doesn't always keep the top window on top
+    OSDL 1248 Add target_role to group causes pengine fatal assert.
+    OSDL 1252  probe for newly added resouces
+    Novell 12532 - parent options do NOT take precedence of child
+               values Use #default as a special parameter value
+    Novell #176014: wait longer before declaring attrd/pingd
+           unable to connect
+    Novell #178488: Notifications not generated for failed nodes
+    Novell #178764 - TE doesn't abort transition
+    Novell #179233 - Propagate the status of the heartbeat
+                     service toojj
+    OSDL 1276 - Broken clones cause segfaults
+    OSDL 1275: add signing off
+    Novell #180303: Filesystem returned 7 instead of 0 for
+           an already unmounted filesystem.
+    Novell #180303:  Notification ordering
+    Novell #180799: Multiple probes scheduled for non-unique clone
+    Novell #180699: Probe anonymous clones correctly
+    Novell #183221 - Resource migration
+    Deb 372850 migrate IPv6addr binary out of /etc
+    OSDL 1280: deal with the situation that the time restart
+               is shorter than deadtime
+    OSDL 1272: add a new channel for callback APIs
+    OSDL 1281: Handle anonymous clone renaming correctly when
+               we have too many instances in the status
+               section
+    OSDL 1183: use the new API of heartbeat to avoid message
+               delay; remove redundant code
+    OSDL 1318: Add to send back a confirmation of setting up the
+               callback channel
+    OSDL 1329: Fix for memory leak in CIB_OP_MODIFY
+    OSDL 1239: RPM unconditionally included files which were
+               only present when mgmtd was build.
+    OSDL 1334: When using anonymous clones, send the resource action
+               with the name that the clone uses locally, not the
+               name we use for it internally.
+    OSDL 1301: add the capacity of get_cur_state; polish on
+               memory free
+    OSDL 1340: Failure to stop a clone
+    OSDL 1300: stonithd / lrmd lose their connection
+    OSDL 1055: Add missing RPM package dependencies
+    OSDL 1349: Fix file descriptor leak on failed fork
+    Deb 375941 Don't run deluser and delgrp in postrm
+    OSDL 1356: Group colocation fixes when one group cant
+               run anywhere
+    OSDL 1350: Case sensitive searching for resources
+    OSDL 1344: when an admin replaces the nodes section we should
+               make sure that all the nodes heartbeat knows about
+               are in there.
+    OSDL 1356: reordered the "are any resources active" check to
+               happen after we've confirmed all resource actions
+               are complete
+    OSDL 1354: CRM silently ignores trailing characters in XML input
+    OSDL 1162: fix memory leak in cl_msg compression code
+    Deb 376722 Add missing debian dependencies
+    Deb 376786 Add missing debian dependencies
+    OSDL 1360: Clones enforce resource_stickiness == INFINITY
+               Move clone instances to higher preferred nodes
+    OSDL 1364: should restrict rpm-based commands to rpm-based
+               systems
+    OSDL 1269: STONITH clone stops running after some time ...
+  + KNOWN LIMITATIONS and BUGS
+    + the GUI core dumps when run using AIX-based X servers
+
+* Sun Apr 23 2006  Alan Robertson <alanr@unix.sh> (see doc/AUTHORS file)
++ Version 2.0.5 - significant bug fixes and a few feature deficits fixed
+  + various portability fixes
+  + enable GUI to run with pygtk 2.4
+  + significant GUI improvements and speedups
+  + numerous logging improvements (generally much quieter)
+  + speed up CIB processing by writing it to disk asynchronously
+  + add CIB on-disk checksums
+  + removed dependency on openssl
+  + added "failure stickiness" to the CIB/CRM
+  + Several fixes to the membership code
+  + We now log all output from resource agents
+  + fixed STONITHd memory leaks.
+  + Added an OCF RA for Xen guests
+  + Added email alerts to ldirectord
+  + Improvements to the haresources2cib upgrade tool
+  + Several fixes to cibadmin
+  + Fix some autoadd-related bugs
+  + Added Chinese support to the GUI
+  + Added a daemon to replace and generalize ipfail
+    + Limited testing only
+  + Significant improvements to CIM model, including modifying things
+  + Extensive Master/slave testing and fixes
+  + Use a digest of the parameters used in an action (smaller CIB)
+  + Improved detection of "old" events that should be ignored by the PE
+    (ensures resource monitoring is active when required)
+  + Better detection of required and/or optimal behaviour in mixed
+    (and formerly mixed) clusters
+  + LRM now supports multiple concurrent monitor operations
+  + Optional startup & runtime enforcement of DTD validation
+    (Invalid changes are rejected)
+  + cibadmin tool overhauled and verified to function correctly
+  + Some depreciated CIB features now unsupported
+    + Placing nvpair objects in crm_config (must now use cluster_property_set)
+    + on_stopfail removed in favor of setting on_fail in the resource's stop operation
+    + start_prereq removed in favor of setting prereq in the resource's start operation
+  + Minimum required version for performing a rolling upgrade of a
+    crm yes" cluster to 2.0.5 is 2.0.4
+  + Changed traditional_compression to default to NO.  This new default
+	is not compatible in mixed clusters running version 2.0.0-2.0.2.
+	If you are upgrading a CRM-based cluster to >= 2.0.5, you
+	have to go through 2.0.4 anyway (for other reasons), so this
+	shouldn't cause any additional difficulties.
+	Non-CRM clusters shouldn't be affected by this because only
+	CRM packets are large enough to be compressed.
+
+* Mon Feb 27 2006  Alan Robertson <alanr@unix.sh> (see doc/AUTHORS file)
++ Version 2.0.4 - Bug fix release - worth getting these updates
+  + Fixed cpu loop for LRM
+  + Fixed minor bugs in Filesystem resource agent (submounts, some
+	options)
+  + make the Raid1 resource agent more mdadm friendly (Ranjan Gupta), and
+	other fix
+  + Various small resource agent cleanups
+  + Keep CCM from core dumping when certain conditions occur which
+	cannot be recovered from.
+  + make the Raid1 resource agent more mdadm friendly (Ranjan Gupta), and
+	other fix
+  + CRM General
+    + Fix for a crash where the CRM referenced a NULL pointer.
+    + Refine shutdown detection
+    + Review and fix the contents and timing of CIB updates that are required
+      when nodes appear, leave, and join the CRM.
+    + Ask Heartbeat for a list of known nodes and use it to populate the <nodes>
+      section in the CIB
+    + Stop the CRM shutting down all active resources at exit 
+      - it doesn't know if they're managed or not
+    + Completely overhaul the CRM shutdown sequence
+      - it now shuts down much more reliably
+  + TEngine
+    + Abstract out the core components into a library
+    + Avoid recursion by using Gmainloop
+    + Detect un-runnable sections of the graph without the need for timeouts
+  + PEngine
+    + Add code to support notification data for start/stop actions
+	associated with clone resources
+    + Link the new TEngine library with the PE testing code and simulate
+      the transitions it generates
+    + Bug 1084: Nodes that are offline but have active resources listed need
+      to be marked as unclean for possible fencing
+  + CIB
+    + Change the shutdown sequence to prevent updates being lost
+    + Handle un-wrapped CIB updates
+    + Write out the CIB asynchronously
+* Fri Feb 10 2006  Alan Robertson <alanr@unix.sh> (see doc/AUTHORS file)
++ Version 2.0.3 - Bug fixes and significant new features.
+  + Management Daemon/Library and GUI client
+    + provide a management library for manamgement daemon and CIM provider
+    + provide a management daemon and a basic GUI management tool
+  + CIM enablement
+    + CIM (Common Information Model) enablement - works with
+      sblim-sfcb, OpenWBEM, and Pegasus CIMOMs
+    - not yet compiled into our binary RPMs because of dependencies
+  + CRM (Cluster Resource Manager) General
+    + All shutdowns go via the PE/TE - preserves inter-resource ordering
+    + Support for future changes to the CIB (depreciation of cib_fragment)
+    + Overhaul of IPC and HA channel callback logic
+    + Many improvments to the quality and quantity (reduced) of logging
+  + CRMd
+    + Timerless elections - when everyone has voted we're done
+    + Use the replace notification from the CIB to re-update our copy with 
+      our view of our peers.
+    + Reliably detect if the LRM connection is still active.
+    + Elections
+      + newer versions defer to older ones in DC elections 
+        (opposite of current behavior)
+      + this means that only once the complete cluster has been upgraded will
+        we start acting like the new version and accept new config options
+      + it also means newer PE's and TE's (the most complex pieces) don't need
+        "act like the old version" options and can rely on all slaves being at
+        least as up-to-date as they are
+      + people can run mixed clusters as long as they want
+        (until they want the new PE features)
+      + new DCs only update the version number in the CIB if they have a 
+        higher value
+      + nodes that start and have a lower version than that stored in the CIB
+        shut themselves down (the CRM part anyway)
+      + this prevents an admin from introducing old nodes back into an upgraded
+        cluster. It probably doesn't fully understand the config and may not
+        support the actions the PE/TE requires.
+  + CIB (Common Information Base daemon)
+    + Make sure "query only" connections cant modify the CIB
+    + Periodically dump some stats about what the CIB has been doing.
+    + Verify there are no memory leaks
+    + Performance enhancements
+    + Prevent a single CIB client from blocking everyone else
+    + Clients Can be notified of full CIB replacements
+    + record_config_changes option in ha.cf for those worried about 
+      the amount of logging.  Defaults to "on".
+    + suppress_cib_writes CIB option replaced with in enable_config_writes ha.cf 
+      (enable_config_writes to be removed in 2.0.4)
+    + Never write the status section to disk
+    + Check permissions for the on-disk CIB at startup
+    + Dont trash unreadable on-disk CIBs
+    + Fix for updates made against the whole CIB (not just one section) 
+  + PEngine (Policy Engine)
+    + Many improvements to the handling of resource groups
+    + Support "anonymous" clones
+    + Fix stonith ordering
+    + Order DC shutdowns after everyone else's
+    + Support short resource names (for group and clone resources)
+    + The ordering and colocation of grouped resources is now optional
+    + Support probing new nodes for active resources.
+    + All "probe" actions are controlled by the PE.
+      + No resource may be started until the probing is complete.
+      + Do not probe for resources we know to be active on unprobed nodes
+    + When looking for monitor ops, only mark it optional if it was already
+      active on the node we're interested in.
+    + Detect changes to class/type/provider/parameters and force a restart
+      of the resource
+    + New record_pengine_inputs option in ha.cf for those worried about 
+      the amount of logging.  Defaults to "on".
+    + Differentiate between config and processing errors
+      + reduces the frequency that we need to log the complete CIB
+    + Make notify for master/slave work
+    + New CIB option: stop_orphan_actions (boolean)
+      If a resource is no longer defined, we can optionally stop it
+    + New CIB option: stop_orphan_actions (boolean)
+      If a monitor op for a given interval is no longer defined, we can
+      optionally stop it
+    + Add support for time and phase-of-the-moon based constraints
+    + Improved failure handling: avoiding false positives
+    + Always create orphaned resources - so they show up in crm_mon
+    + Do not require sequential clone numbers starting at 0
+  + TEngine (transition engine)
+    + Detect old stonith ops
+  + CLIs (Command Line interfaces)
+    + Create a --one-shot option for crm_mon
+    + Switch a number of CLI tools to use the new syncronous connections
+    + Log errors to stderr where they will be seen and therefore useful
+    + Support migration and un-migration of resources and resource groups
+    + Create crm_verify for checking configuration validity
+    + Simplify the passing of XML to cibadmin
+  + Known open bugs worth mentioning:
+    + 1075, 1080, 1081, 1084, 1085, 1064, 1069, 756, 984
+    + 1050, 1082, 1037, 1079
+    
+
 * Thu Sep 22 2005  Alan Robertson <alanr@unix.sh> (see doc/AUTHORS file)
 + Version 2.0.2 - small bug fix only release
   + Fixed a bug in ping directive - it works again
@@ -981,6 +1339,9 @@ make DESTDIR=$RPM_BUILD_ROOT install
   ln -s @sbindir@/ldirectord ldirectord
 )
 
+%if %{ENABLE_MGMT}
+ln -s @libdir@/heartbeat/haclient.py $RPM_BUILD_ROOT@bindir@/hb_gui
+%endif
 
 ###########################################################
 %files
@@ -997,6 +1358,7 @@ make DESTDIR=$RPM_BUILD_ROOT install
 @libdir@/libcib.*
 @libdir@/libclm.*
 @libdir@/libcrmcommon.*
+@libdir@/libtransitioner.*
 @libdir@/libhbclient.*
 @libdir@/liblrm.*
 @libdir@/libpengine.*
@@ -1004,6 +1366,8 @@ make DESTDIR=$RPM_BUILD_ROOT install
 @libdir@/libplumbgpl.*
 @libdir@/librecoverymgr.*
 @libdir@/libstonithd.*
+@libdir@/libpe_rules.*
+@libdir@/libpe_status.*
 /usr/lib/ocf
 @base_includedir@/heartbeat
 @base_includedir@/clplumbing
@@ -1021,20 +1385,51 @@ make DESTDIR=$RPM_BUILD_ROOT install
 %dir @localstatedir@/run/@HB_PKG@
 %attr (2555, @HA_CCMUSER@, @HA_APIGROUP@) @bindir@/cl_status
 @bindir@/cl_respawn
+@sbindir@/crmadmin 
+@sbindir@/cibadmin 
+@sbindir@/ccm_tool 
+@sbindir@/crm_diff 
+@sbindir@/crm_uuid
+@sbindir@/crm_mon 
+@sbindir@/ocf-tester
+@sbindir@/iso8601			
+@sbindir@/crm_master 
+@sbindir@/crm_standby
+@sbindir@/crm_attribute 
+@sbindir@/crm_resource
+@sbindir@/crm_verify
+@sbindir@/attrd_updater
+@sbindir@/crm_failcount
+@sbindir@/crm_primitive.py
+@sbindir@/cluster.py
+@sbindir@/crm_utils.py
+@sbindir@/crm_commands.py
 %dir %attr (755, @HA_CCMUSER@, @HA_APIGROUP@) @HA_VARRUNDIR@/@HB_PKG@/ccm
 %dir %attr (750, @HA_CCMUSER@, @HA_APIGROUP@) @HA_VARRUNDIR@/@HB_PKG@/crm
 %dir %attr (750, @HA_CCMUSER@, @HA_APIGROUP@) @localstatedir@/lib/@HB_PKG@/crm
+%dir %attr (750, @HA_CCMUSER@, @HA_APIGROUP@) @localstatedir@/lib/@HB_PKG@/pengine
 %doc @mandir@/man1/cl_status.1*
 %doc @mandir@/man1/ha_logger.1*
 %doc @mandir@/man1/hb_standby.1*
 %doc @mandir@/man1/hb_takeover.1*
+%doc @mandir@/man1/hb_addnode.1*
+%doc @mandir@/man1/hb_delnode.1*
 %doc @mandir@/man8/heartbeat.8*
 %doc @mandir@/man8/apphbd.8*
 %doc @mandir@/man8/ha_logd.8*
+%doc @mandir@/man8/cibadmin.8*
 %doc @docdir@
-%define ENABLE_SNMP_SUBAGENT @RPM_ENABLE_SNMP_SUBAGENT@
 %if %{ENABLE_SNMP_SUBAGENT}
 	@MIBS_DIR@/LINUX-HA-MIB.mib
+%endif
+%if %{ENABLE_MGMT}
+	@libdir@/libhbmgmt.*
+	@libdir@/libhbmgmtclient.*
+	@libdir@/libhbmgmtcommon.*
+	@libdir@/libhbmgmttls.*
+	/etc/pam.d/hbmgmtd
+	@bindir@/hb_gui
+	@prefix@/share/locale/zh_CN/LC_MESSAGES/haclient.mo
 %endif
 
 ###########################################################
@@ -1126,8 +1521,10 @@ fi
 %post
 ###########################################################
 
-# Enable heartbeat on startup
-/sbin/chkconfig --add heartbeat
+# Don't enable heartbeat on startup
+#/sbin/chkconfig --add heartbeat
+# this was wrong, but it was convenient.  The time has
+# come to fix it.
 true
 
 ###########################################################

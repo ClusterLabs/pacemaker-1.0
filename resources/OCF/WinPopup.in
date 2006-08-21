@@ -16,6 +16,8 @@
 #
 # License:  GNU General Public License (GPL)
 
+VARRUN=@localstatedir@/run
+WINPOPUPFILE=$VARRUN/WinPopup
 #######################################################################
 # Initialization:
 
@@ -28,7 +30,7 @@ us=`uname -n`
 
 usage() {
   echo "Usage: $0 {start|stop|status|monitor|validate-all|meta-data}"
-  echo "$Id: WinPopup.in,v 1.3 2005/08/18 04:40:57 sunjd Exp $"
+  echo "$Id: WinPopup.in,v 1.8 2006/03/29 15:48:55 xunsun Exp $"
 }
 
 meta_data() {
@@ -45,7 +47,7 @@ sysadmin's workstation whenever a takeover occurs.
 <shortdesc lang="en">WinPopup resource agent</shortdesc>
 
 <parameters>
-<parameter name="hostfile" unique="0">
+<parameter name="hostfile" unique="0" required="1">
 <longdesc lang="en">
 The file containing the hosts to send WinPopup messages to.
 </longdesc>
@@ -95,23 +97,36 @@ WinPopupStart() {
 
 	Subject="`SubjectLine $2` Takeover in progress on $us"
  
-	sendWinPopup "$Subject" $1
+	if sendWinPopup "$Subject" $1; then
+		touch $WINPOPUPFILE
+		return $?
+	else
+		return $?
+	fi
 
-	return $?
 }
 
 WinPopupStop () {
 	Subject="`SubjectLine $2` Reestablishing original master connection in progress on $us"
 
-	sendWinPopup "$Subject" $1
+	if sendWinPopup "$Subject" $1; then
+		rm -f $WINPOPUPFILE
+		return $?
+	else
+		return $?
+	fi
 
-	return $?
 }
 
 WinPopupStatus () {
-	echo "Do nothing ... "
-
-	return $OCF_SUCCESS
+	ocf_log warn "Don't stat/monitor me! WinPopup is a pseudo resource agent, so the status reported may be incorrect"
+	if [ -f $WINPOPUPFILE ]; then
+		echo "running"
+		return $OCF_SUCCESS
+	else
+		echo "stopped"
+		return $OCF_NOT_RUNNING
+	fi
 }
 
 # A not reliable IP address checking function, which only picks up those _obvious_ violations...

@@ -1,4 +1,4 @@
-/* $Id: hb_config.h,v 1.4 2005/07/29 06:55:37 sunjd Exp $ */
+/* $Id: hb_config.h,v 1.5 2005/12/09 16:07:38 blaschke Exp $ */
 /*
  * Parse various heartbeat configuration files...
  *
@@ -25,6 +25,7 @@
 
 int		parse_ha_resources(const char * cfgfile);
 void		dump_config(void);
+void		dump_default_config(int wikiout);
 int		add_node(const char * value, int nodetype);
 int   		parse_authfile(void);
 int		init_config(const char * cfgfile);

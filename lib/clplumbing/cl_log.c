@@ -1,4 +1,4 @@
-/* $Id: cl_log.c,v 1.64 2005/08/16 15:08:20 gshi Exp $ */
+/* $Id: cl_log.c,v 1.72 2006/03/09 10:05:19 andrew Exp $ */
 /*
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -36,6 +36,8 @@
 #include <sys/stat.h>
 #include <clplumbing/GSource.h>
 #include <clplumbing/cl_misc.h>
+#include <clplumbing/cl_syslog.h>
+#include <ha_msg.h>
 
 #ifndef MAXLINE
 #	define MAXLINE	512
@@ -54,8 +56,6 @@
 #  endif 
 #endif
 
-#define	cl_malloc	malloc
-#define	cl_free		free
 #define	DFLT_ENTITY	"cluster"
 #define NULLTIME 	0
 #define QUEUE_SATURATION_FUZZ 10
@@ -85,6 +85,7 @@ static int cl_process_pid = -1;
 static GDestroyNotify destroy_logging_channel_callback;
 static void (*create_logging_channel_callback)(IPC_Channel* chan);
 static gboolean		logging_chan_in_main_loop = FALSE;
+int			debug_level = 0;
 
 /***********************
  *debug use only, do not use this function in your program
@@ -130,6 +131,7 @@ cl_log_set_logdtime(int logdtime)
 	return;
 }
 
+
 gboolean
 cl_inherit_use_logd(const char* param_name, int sendq_length) 
 {
@@ -147,14 +149,77 @@ cl_inherit_use_logd(const char* param_name, int sendq_length)
 		if (sendq_length > 0){
 			cl_set_logging_wqueue_maxlen(sendq_length);
 		}
-		cl_log(LOG_INFO, "Enable using logging daemon");
-	}else {
-		cl_log(LOG_INFO, "Disable using logging daemon");
 	}
 	
 	return truefalse;
 	
 }     
+
+#define HADEBUGVAL	"HA_debug"
+#define LOGFENV		"HA_logfile"	/* well-formed log file :-) */
+#define DEBUGFENV	"HA_debugfile"	/* Debug log file */
+#define LOGFACILITY	"HA_logfacility"/* Facility to use for logger */
+#define TRADITIONAL_COMPRESSION "HA_traditional_compression"
+#define COMPRESSION "HA_compression"
+
+void
+inherit_compress(void)
+{
+	char* inherit_env = NULL;
+	
+	inherit_env = getenv(TRADITIONAL_COMPRESSION);
+	if (inherit_env != NULL) {
+		gboolean value;
+		
+		if (cl_str_to_boolean(inherit_env, &value)!= HA_OK){
+			cl_log(LOG_ERR, "inherit traditional_compression failed");
+		}else{
+			cl_set_traditional_compression(value);
+		}
+	}
+	
+}
+
+void
+inherit_logconfig_from_environment(void)
+{
+	char * inherit_env = NULL;
+
+	/* Donnot need to free the return pointer from getenv */
+	inherit_env = getenv(HADEBUGVAL);
+	if (inherit_env != NULL && atoi(inherit_env) != 0 ) {
+		debug_level = atoi(inherit_env);
+		inherit_env = NULL;
+	}
+
+	inherit_env = getenv(LOGFENV);
+	if (inherit_env != NULL) {
+		cl_log_set_logfile(inherit_env);
+		inherit_env = NULL;
+	}
+
+	inherit_env = getenv(DEBUGFENV);
+	if (inherit_env != NULL) {
+		cl_log_set_debugfile(inherit_env);
+		inherit_env = NULL;
+	}
+
+	inherit_env = getenv(LOGFACILITY);
+	if (inherit_env != NULL) {
+		int facility = -1;
+		facility = cl_syslogfac_str2int(inherit_env);
+		if ( facility != -1 ) {
+			cl_log_set_facility(facility);
+		}
+		inherit_env = NULL;
+	}
+
+
+	inherit_compress();
+	
+	return;
+}
+
 
 static void
 add_logging_channel_mainloop(IPC_Channel* chan)
@@ -657,6 +722,15 @@ LogToDaemon(int priority, const char * buf,
 }
 
 static int		drop_msg_num = 0;
+
+void
+cl_flush_logs(void) 
+{
+	if(logging_daemon_chan == NULL) {
+		return;
+	}
+	logging_daemon_chan->ops->waitout(logging_daemon_chan);
+}
 
 int
 LogToLoggingDaemon(int priority, const char * buf, 

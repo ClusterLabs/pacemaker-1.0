@@ -1,4 +1,4 @@
-/* $Id: ccm.h,v 1.38 2005/08/18 16:33:14 andrew Exp $ */
+/* $Id: ccm.h,v 1.51 2006/08/16 09:59:34 zhenh Exp $ */
 /*
  * ccm.h: definitions Consensus Cluster Manager internal header
  *				file
@@ -56,6 +56,47 @@
 
 #include <ocf/oc_event.h>
 
+
+
+/* */
+/* ccm defined new type tokens used by the CCM protocol. */
+/* */
+#define CCM_VERSIONVAL  "ccmpverval" 	  /* version value token */
+#define CCM_UPTIME      "ccmuptime"       /* Uptime for Consensus  */
+#define CCM_MEMLIST     "ccmmemlist"      /* bitmap for membership */
+#define CCM_PROTOCOL    "ccmproto"        /* protocol version */
+#define CCM_MAJORTRANS  "ccmmajor"        /* major transition version*/
+#define CCM_MINORTRANS  "ccmminor"        /* minor transition version */
+#define CCM_MAXTRANS    "ccmmaxt"        /* minor transition version */
+#define CCM_COOKIE      "ccmcookie"       /* communication context */
+#define CCM_NEWCOOKIE   "ccmnewcookie"    /* new communication context */
+#define CCM_CLSIZE   	"ccmclsize"       /* new cluster size */
+#define CCM_UPTIMELIST	"ccmuptimelist" /*uptime list*/
+#define CCM_QUORUM	"ccmquorum"	/*do we have quorum?*/
+
+
+/* ccm_types for easier processing. */
+enum ccm_type {
+	CCM_TYPE_PROTOVERSION,
+	CCM_TYPE_PROTOVERSION_RESP,
+	CCM_TYPE_JOIN,
+	CCM_TYPE_REQ_MEMLIST,
+	CCM_TYPE_RES_MEMLIST,
+	CCM_TYPE_FINAL_MEMLIST,
+	CCM_TYPE_ABORT,
+	CCM_TYPE_LEAVE,
+	CCM_TYPE_TIMEOUT,
+	CCM_TYPE_NODE_LEAVE_NOTICE,
+	CCM_TYPE_NODE_LEAVE,
+	CCM_TYPE_MEM_LIST,
+	CCM_TYPE_ALIVE,
+	CCM_TYPE_NEW_NODE,
+	CCM_TYPE_STATE_INFO, 
+	CCM_TYPE_RESTART,
+	CCM_TYPE_LAST
+};
+
+
 #define BitsInByte CHAR_BIT
 
 /* BEGINNING OF version request tracking interfaces */
@@ -88,65 +129,45 @@ unsigned int version_get_nresp(ccm_version_t *);
 			changed change it also in ccmlib.h */
 
 typedef struct llm_node_s {
-	uint  uuid;  /* a cluster unique id for the node */
+	char	nodename[NODEIDSIZE];
+	char	status[STATUSSIZE];
+	int	uptime;
 	gboolean join_request;
-	char nodename[NODEIDSIZE];
-	char status[STATUSSIZE];
-	uint received_change_msg;
+	gboolean receive_change_msg;
+	char	site[PATH_MAX];
+	int	weight;
 }llm_node_t;
 
-typedef struct llm_info_s { /* information about low level membership info */
-	uint	   nodecount; /*total number of nodes in the cluster  */
-	int	   myindex;	 /*index of mynode */
-	llm_node_t nodes[MAXNODE];  /*information of each node */
+typedef struct llm_info_s { 
+	int	   nodecount;
+	int	   myindex;	
+	llm_node_t nodes[MAXNODE];
 } llm_info_t;
 
-#define CLUST_INACTIVE  "inctv"
-#define LLM_GET_MYNODE(llm) llm->myindex
-#define LLM_GET_NODECOUNT(llm) llm->nodecount
-#define LLM_GET_UUID(llm,i) llm->nodes[i].uuid
-#define LLM_GET_MYUUID(llm) LLM_GET_UUID(llm, LLM_GET_MYNODE(llm))
-#define LLM_GET_NODEID(llm,i) llm->nodes[i].nodename
-#define LLM_GET_MYNODEID(llm) LLM_GET_NODEID(llm, LLM_GET_MYNODE(llm))
-#define LLM_GET_STATUS(llm,i) llm->nodes[i].status
-#define LLM_SET_MYNODE(llm,indx) llm->myindex = indx
-#define LLM_SET_NODECOUNT(llm, count) llm->nodecount = count
-#define LLM_INC_NODECOUNT(llm) (llm->nodecount)++
-#define LLM_SET_UUID(llm,i, _uuid) llm->nodes[i].uuid = _uuid
-#define LLM_SET_MYUUID(llm, _uuid) LLM_SET_UUID(llm, LLM_GET_MYNODE(llm), _uuid)
-#define LLM_SET_NODEID(llm, i, name)  \
-			(strncpy(llm->nodes[i].nodename,name,NODEIDSIZE))
-#define LLM_SET_MYNODEID(llm, name) \
-			LLM_SET_NODEID(llm, LLM_GET_MYNODE(llm), name)
-#define LLM_SET_STATUS(llm,i,status) \
-			(strncpy(llm->nodes[i].status,status,STATUSSIZE))
-#define LLM_COPY(llm,dst,src) (llm->nodes[dst] = llm->nodes[src])
-#define LLM_GET_NODEIDSIZE(llm) NODEIDSIZE
-int llm_get_live_nodecount(llm_info_t *);
-gboolean llm_only_active_node(llm_info_t *);
-int llm_get_uuid(llm_info_t *, const char *);
-char *llm_get_nodeid_from_uuid(llm_info_t *, const int );
-int llm_nodeid_cmp(llm_info_t *, int , int );
-int llm_status_update(llm_info_t *, const char *, const char *, char*);
-
-/*	Get the number of nodes that are inactive 
- *	inactive means this node is STONITHed
- *	therefore we don't count that in quorum computation
- */
-int	llm_get_inactive_node_count(llm_info_t *llm);
-
-void	display_llm(llm_info_t *llm);
-void llm_init(llm_info_t *);
-void llm_end(llm_info_t *);
-int llm_is_valid_node(llm_info_t *, const char *);
-void llm_add(llm_info_t *, const char *, const char *, const char *);
-int llm_get_index(llm_info_t *, const char *);
-/* END OF Low Level Membership interfaces */
-
+int		llm_get_live_nodecount(llm_info_t *);
+int		llm_node_cmp(llm_info_t *llm, int indx1, int indx2);
+char*		llm_get_nodename(llm_info_t *, const int );
+int		llm_status_update(llm_info_t *, const char *, 
+				  const char *, char*);
+void		llm_display(llm_info_t *llm);
+int		llm_init(llm_info_t *);
+int		llm_is_valid_node(llm_info_t *, const char *);
+int		llm_add(llm_info_t *, const char *, const char *, const char *
+,			const char *,int);
+int		llm_del(llm_info_t* llm,const char* node);
+int		llm_get_index(llm_info_t *, const char *);
+int		llm_get_myindex(llm_info_t *);
+int		llm_get_nodecount(llm_info_t* llm);
+const char*	llm_get_mynodename(llm_info_t* llm);
+char*		llm_get_nodestatus(llm_info_t* llm, const int index);
+int		llm_set_joinrequest(llm_info_t* llm, int index, gboolean value);
+gboolean	llm_get_joinrequest(llm_info_t* llm, int index);
+int		llm_set_change(llm_info_t* llm, int index, gboolean value);
+gboolean	llm_get_change(llm_info_t* llm, int index);
+int		llm_set_uptime(llm_info_t* llm, int index, int uptime);
+int		llm_get_uptime(llm_info_t* llm, int index);
 
 /* ccm prototypes */
-int ccm_str2bitmap(const char *, unsigned char **);
-int ccm_bitmap2str(const unsigned char *, int , char **);
 longclock_t ccm_get_time(void);
 int ccm_timeout(longclock_t, longclock_t, unsigned long);
 int ccm_need_control(void *);
@@ -192,7 +213,6 @@ void update_free_memlist_request(ccm_update_t *);
 void update_reset(ccm_update_t *);
 void update_init(ccm_update_t *);
 int update_timeout_expired(ccm_update_t *, unsigned long);
-int update_any(ccm_update_t *);
 void update_add(ccm_update_t *, llm_info_t *, const char *, int, gboolean);
 void update_remove(ccm_update_t *, llm_info_t *, const char *);
 int update_am_i_leader(ccm_update_t *, llm_info_t *);
@@ -201,10 +221,9 @@ char * update_get_cl_name(ccm_update_t *, llm_info_t *);
 void * update_initlink(ccm_update_t *);
 char * update_next_link(ccm_update_t *, llm_info_t *, void *, uint *);
 void update_freelink(ccm_update_t *, void *);
-int update_get_next_uuid(ccm_update_t *, llm_info_t *, int *);
-int update_strcreate(ccm_update_t *, char **, llm_info_t *);
-void update_strdelete(char *memlist);
-int update_is_member(ccm_update_t *, llm_info_t *, const char *);
+int update_get_next_index(ccm_update_t *, llm_info_t *, int *);
+int update_strcreate(ccm_update_t *tab, char *memlist,llm_info_t *llm);
+int update_is_node_updated(ccm_update_t *, llm_info_t *, const char *);
 int update_get_uptime(ccm_update_t *, llm_info_t *, int );
 void	update_display(int pri,llm_info_t* llm, ccm_update_t* tab);
 /* END OF update interfaces */
@@ -214,9 +233,9 @@ void	update_display(int pri,llm_info_t* llm, ccm_update_t* tab);
 /* BEGINNING OF graph interfaces */
 
 typedef struct vertex_s {
-                unsigned char  *bitmap; /* bitmap sent by each node */
-                int    count;   /* connectivity number for each node */
-                int    uuid;   /* the uuid of the node */
+	char  *bitmap; /* bitmap sent by each node */
+	int    count;   /* connectivity number for each node */
+	int    uuid;   /* the uuid of the node */
 } vertex_t;
 
 typedef struct graph_s {
@@ -228,24 +247,24 @@ typedef struct graph_s {
 graph_t * graph_init(void);
 void graph_free(graph_t *);
 void graph_add_uuid(graph_t *, int );
-void graph_update_membership(graph_t *, int , unsigned char *);
+void graph_update_membership(graph_t *, int , char *);
 int  graph_filled_all(graph_t *);
-int graph_get_maxclique(graph_t *, unsigned char **);
+int graph_get_maxclique(graph_t *, char **);
 void graph_add_to_membership(graph_t *, int, int);
 /* END OF graph interfaces */
 
 
 /* BEGINNING OF bitmap interfaces */
-int bitmap_create(unsigned char **, int);
-void bitmap_delete(unsigned char *);
-void bitmap_mark(int, unsigned char *, int);
-void bitmap_clear(int, unsigned char *, int);
-int bitmap_test(int, const unsigned char *, int);
-int bitmap_count(const unsigned char *, int);
-void bitmap_print(unsigned char *, int, char *);
-void bitmap_reset(unsigned char *, int);
+int bitmap_create(char **, int);
+void bitmap_delete(char *);
+void bitmap_mark(int, char *, int);
+void bitmap_clear(int, char *, int);
+int bitmap_test(int, const char *, int);
+int bitmap_count(const char *, int);
+void bitmap_print(char *, int, char *);
+void bitmap_reset(char *, int);
 int  bitmap_size(int);
-int  bitmap_copy(unsigned char *, unsigned char *);
+int  bitmap_copy(char *, char *);
 /* END OF bitmap interfaces */
 
 
@@ -273,11 +292,8 @@ enum ccm_state  {
 	CCM_STATE_NONE=0,		/* is in NULL state  */
 	CCM_STATE_VERSION_REQUEST,	/* sent a request for protocol version */
 	CCM_STATE_JOINING,  		/* has initiated a join protocol  */
-	CCM_STATE_RCVD_UPDATE,	/* has recevied the updates from other nodes */
 	CCM_STATE_SENT_MEMLISTREQ,	/* CL has sent a request for member list  */
 					/* this state is applicable only on CL */
-	CCM_STATE_REQ_MEMLIST,	/* CL has requested member list */
-				  	/* this state is applicable only on non-CL */
 	CCM_STATE_MEMLIST_RES,	/* Responded member list to the Cluster  */
 				 	/* Leader */
 	CCM_STATE_JOINED,    /* PART of the CCM cluster membership! */
@@ -323,6 +339,73 @@ typedef struct memcomp_s {
 #define 	MEMCOMP_SET_MAXT(memc, list)  	memc->mem_maxt=list
 #define 	MEMCOMP_SET_INITTIME(memc,time)	memc->mem_inittime=time
 
+#define		CCM_SET_ACTIVEPROTO(info, val) \
+					info->ccm_active_proto = val
+#define		CCM_SET_MAJORTRANS(info, val) 	\
+		{	\
+			info->ccm_transition_major = val; \
+			info->ccm_max_transition = \
+				(info->ccm_max_transition < val ? \
+				val: info->ccm_max_transition); \
+		}
+#define		CCM_SET_MINORTRANS(info, val) 	\
+					info->ccm_transition_minor = val
+#define		CCM_INIT_MAXTRANS(info) 	\
+					info->ccm_max_transition = 0
+
+/* 	NOTE the reason the increment for majortrans is done */
+/* 	as below is to force recomputation of  ccm_max_transition  */
+#define		CCM_INCREMENT_MAJORTRANS(info) 	\
+				CCM_SET_MAJORTRANS(info, \
+					CCM_GET_MAJORTRANS(info)+1)
+
+#define		CCM_INCREMENT_MINORTRANS(info) 	\
+					info->ccm_transition_minor++
+#define		CCM_RESET_MAJORTRANS(info) 	\
+					info->ccm_transition_major = 0
+#define		CCM_RESET_MINORTRANS(info) 	\
+					info->ccm_transition_minor = 0
+
+#define 	CCM_SET_JOINED_TRANSITION(info, trans) \
+					info->ccm_joined_transition = trans
+#define 	CCM_SET_COOKIE(info, val) \
+				strncpy(info->ccm_cookie, val, COOKIESIZE)
+#define 	CCM_SET_CL(info, index)	info->ccm_cluster_leader = index
+
+
+#define		CCM_GET_ACTIVEPROTO(info) info->ccm_active_proto
+#define		CCM_GET_MAJORTRANS(info) info->ccm_transition_major
+#define		CCM_GET_MINORTRANS(info) info->ccm_transition_minor
+#define 	CCM_GET_MAXTRANS(info)   info->ccm_max_transition
+#define		CCM_GET_STATE(info) 	info->state 
+#define		CCM_GET_HIPROTO(info) 	info->ccm_hiproto 
+#define 	CCM_GET_LLM(info) 	(&(info->llm))
+#define 	CCM_GET_UPDATETABLE(info) (&(info->ccm_update))
+#define 	CCM_GET_MEMCOMP(info) (&(info->ccm_memcomp))
+#define 	CCM_GET_JOINED_TRANSITION(info) info->ccm_joined_transition
+#define  	CCM_GET_LLM_NODECOUNT(info) llm_get_nodecount(&info->llm)
+#define  	CCM_GET_MY_HOSTNAME(info)  ccm_get_my_hostname(info)
+#define 	CCM_GET_COOKIE(info) info->ccm_cookie
+
+#define 	CCM_GET_MEMINDEX(info, i)	info->ccm_member[i]
+#define 	CCM_GET_MEMTABLE(info)		info->ccm_member
+#define 	CCM_GET_CL(info)  		info->ccm_cluster_leader
+#define		CCM_TRANS_EARLIER(trans1, trans2) (trans1 < trans2) /*TOBEDONE*/
+#define 	CCM_GET_VERSION(info)	&(info->ccm_version)
+
+
+#define 	CCM_TMOUT_SET_U(info,t) info->tmout.u=t
+#define 	CCM_TMOUT_SET_LU(info,t) info->tmout.lu=t
+#define 	CCM_TMOUT_SET_VRS(info,t) info->tmout.vrs=t
+#define 	CCM_TMOUT_SET_ITF(info,t) info->tmout.itf=t
+#define 	CCM_TMOUT_SET_IFF(info,t) info->tmout.iff=t
+#define 	CCM_TMOUT_SET_FL(info,t) info->tmout.fl=t
+#define 	CCM_TMOUT_GET_U(info) info->tmout.u
+#define 	CCM_TMOUT_GET_LU(info) info->tmout.lu
+#define 	CCM_TMOUT_GET_VRS(info) info->tmout.vrs
+#define 	CCM_TMOUT_GET_ITF(info) info->tmout.itf
+#define 	CCM_TMOUT_GET_IFF(info) info->tmout.iff
+#define 	CCM_TMOUT_GET_FL(info) info->tmout.fl
 
 typedef struct ccm_tmout_s {
 	long	iff;  /* membership_Info_From_Followers_timeout */
@@ -343,7 +426,7 @@ enum change_event_type{
 typedef struct ccm_info_s {
 	llm_info_t 	llm;	/*  low level membership info */
 	
-	int		ccm_nodeCount;	/*  number of nodes in the ccm cluster */
+	int		memcount;	/*  number of nodes in the ccm cluster */
 	int		ccm_member[MAXNODE];/* members of the ccm cluster */
 	memcomp_t	ccm_memcomp;	/* the datastructure to compute the  */
 					/* final membership for each membership */
@@ -368,7 +451,7 @@ typedef struct ccm_info_s {
 					/* Should be intially set to 0 */
 	uint32_t	ccm_max_transition;	/* the maximum transition number seen */
 					/* by this node ever since it was born. */
-	enum ccm_state 	ccm_node_state;	/* cluster state of this node  */
+	enum ccm_state 	state;	/* cluster state of this node  */
 	uint32_t	ccm_transition_minor;/* minor transition number of the  */
 					/* cluster */
 
@@ -380,7 +463,8 @@ typedef struct ccm_info_s {
 	uint32_t change_event_remaining_count; 		
 	enum change_event_type change_type;
 	char change_node_id[NODEIDSIZE];
-
+	char		cluster[PATH_MAX];
+	int		has_quorum;	/* -1, not set, 0, no quorum, 1, has quorum */
 } ccm_info_t;
 
 /*
@@ -396,4 +480,34 @@ typedef struct  ccm_s {
 
 void client_new_mbrship(ccm_info_t*, void*);
 void ccm_reset(ccm_info_t *info);
-#endif /*  _CLUSTER_MANAGER_H_ */
+const char*	state2string(int state);
+int ccm_control_process(ccm_info_t *info, ll_cluster_t * hb);
+int	jump_to_joining_state(ll_cluster_t* hb, 
+			      ccm_info_t* info, 
+			      struct ha_msg* msg);
+gboolean ccm_calculate_quorum(ccm_info_t* info);
+			      
+typedef void (*state_msg_handler_t)(enum ccm_type ccm_msg_type, 
+				    struct ha_msg *reply, 
+				    ll_cluster_t *hb, 
+				    ccm_info_t *info);
+
+#define ccm_log(priority, fmt...); \
+		cl_log(priority, fmt); \
+
+#define ccm_debug(priority, fmt...); \
+        if ( debug_level >= 1 ) { \
+                cl_log(priority, fmt); \
+        }
+
+#define ccm_debug2(priority, fmt...); \
+        if ( debug_level >= 2 ) { \
+                cl_log(priority, fmt); \
+        }
+	
+#define ccm_message_debug2(priority,msg); \
+	if ( debug_level >= 2) { \
+		cl_log_message(priority, msg); \
+	}
+	
+#endif 

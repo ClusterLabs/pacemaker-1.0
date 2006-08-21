@@ -20,18 +20,35 @@ set -e
 
 case "$1" in
     configure)
+	if ! getent group haclient > /dev/null ; then
+		addgroup --system --group haclient > /dev/null
+	fi
+	if ! getent passwd hacluster > /dev/null ; then
+		adduser --system --no-create-home \
+			--ingroup haclient \
+			--gecos "Heartbeat System Account" \
+			--no-create-home --disabled-login \
+			--home /usr/lib/heartbeat --shell /bin/false  \
+			--disabled-password hacluster > /dev/null
+	fi
+
 	#
 	#fifo (0600, root, root)
 	#
         rm -f /var/lib/heartbeat/fifo
         mknod -m 0600 /var/lib/heartbeat/fifo p
 
-	chmod 750 /var/lib/heartbeat/ccm
-        chown hacluster /var/lib/heartbeat/ccm
-        chgrp haclient /var/lib/heartbeat/ccm
+	for i in /var/lib/heartbeat/ccm /var/lib/heartbeat/crm \
+			/var/run/heartbeat/ccm /var/run/heartbeat/crm \
+			/var/lib/heartbeat/pengine; do
+		chmod 750 $i
+		chown hacluster $i
+		chgrp haclient $i
+	done
 
-	chmod 2555 /usr/bin/cl_status
+
 	chgrp haclient /usr/bin/cl_status
+	chmod 2555 /usr/bin/cl_status
 
 	for i in root nobody hacluster; do
 		chmod 700 /var/lib/heartbeat/cores/$i
@@ -55,12 +72,20 @@ case "$1" in
 
 	ldconfig
 
-	/etc/init.d/heartbeat start || true
+	if which invoke-rc.d >/dev/null 2>&1; then
+		invoke-rc.d heartbeat start || true
+	else
+		/etc/init.d/heartbeat start || true
+	fi
     ;;
 
     abort-upgrade|abort-remove|abort-deconfigure)
 	# restart heartbeat
-	/etc/init.d/heartbeat start || true
+	if which invoke-rc.d >/dev/null 2>&1; then
+		invoke-rc.d heartbeat start || true
+	else
+		/etc/init.d/heartbeat start || true
+	fi
     ;;
 
     *)

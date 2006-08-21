@@ -1,4 +1,4 @@
-/* $Id: hb_api_core.h,v 1.14 2005/09/09 17:21:18 gshi Exp $ */
+/* $Id: hb_api_core.h,v 1.19 2006/05/28 00:56:57 zhenh Exp $ */
 /*
  * hb_api_core_h: Internal definitions and functions for the heartbeat API
  *
@@ -37,14 +37,20 @@
 #include <ha_msg.h>
 
 /* Dispatch priorities for various kinds of events */
-#define	PRI_SENDSTATUS		G_PRIORITY_HIGH
-#define	PRI_DUMPSTATS		G_PRIORITY_LOW
-#define	PRI_AUDITCLIENT		G_PRIORITY_LOW
-#define	PRI_APIREGISTER		(G_PRIORITY_LOW-1)
-#define	PRI_CLUSTERMSG		G_PRIORITY_DEFAULT
-#define	PRI_FIFOMSG		PRI_CLUSTERMSG-1
-#define PRI_FREEMSG		G_PRIORITY_DEFAULT
-#define	PRI_CLIENTMSG		PRI_FIFOMSG
+#define	PRI_SENDSTATUS		(G_PRIORITY_HIGH-5)
+#define	PRI_SENDPKT		(PRI_SENDSTATUS+1)
+#define	PRI_READPKT		(PRI_SENDPKT+1)
+#define	PRI_FIFOMSG		(PRI_READPKT+1)
+
+#define PRI_CHECKSIGS		(G_PRIORITY_DEFAULT)
+#define PRI_FREEMSG		(PRI_CHECKSIGS+1)
+#define	PRI_CLIENTMSG		(PRI_FREEMSG+1)
+
+#define	PRI_APIREGISTER		(G_PRIORITY_LOW)
+#define	PRI_RANDOM		(PRI_APIREGISTER+1)
+#define	PRI_AUDITCLIENT		(PRI_RANDOM+1)
+#define	PRI_WRITECACHE		(PRI_AUDITCLIENT+1)
+#define	PRI_DUMPSTATS		(PRI_WRITECACHE+20)
 
 void process_registerevent(IPC_Channel* chan,  gpointer user_data);
 
@@ -107,7 +113,10 @@ typedef struct client_process {
 #	define	F_NODENAME	"node"
 #define	API_NODELIST_END	"nodelist-end"
 #define	API_NODESTATUS		"nodestatus"
+#define	API_NODEWEIGHT		"nodeweight"
+#define	API_NODESITE		"nodesite"
 #define	API_NODETYPE		"nodetype"
+#define	API_NUMNODES		"numnodes"
 
 #define	API_IFLIST		"iflist"
 #	define	F_IFNAME	"ifname"

@@ -23,17 +23,6 @@ if [ "$1" = "remove" ]; then
         ldconfig
 	update-rc.d -f heartbeat remove >/dev/null
 	rm -f /var/lib/heartbeat/fifo
-elif [ "$1" = "purge" ]; then
-	if getent passwd hacluster > /dev/null ; then
-		deluser hacluster
-	fi
-	if getent group haclient > /dev/null ; then
-		# delgroup will fail if any users have haclient
-		# as their primary group. As these may have
-		# been added outside of the control of this package,
-		# just continue of this fails.
-		delgroup haclient || true
-	fi
 fi
 
 # dh_installdeb will replace this with shell code automatically

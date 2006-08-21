@@ -1,4 +1,4 @@
-/* $Id: realtime.c,v 1.29 2005/08/09 20:42:13 gshi Exp $ */
+/* $Id: realtime.c,v 1.36 2006/02/06 06:08:48 alan Exp $ */
 /*
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -40,6 +40,7 @@
 #include <clplumbing/realtime.h>
 #include <clplumbing/uids.h>
 #include <time.h>
+#include <errno.h>
 
 static gboolean	cl_realtimepermitted = TRUE;
 static void cl_rtmalloc_setup(void);
@@ -87,9 +88,20 @@ cl_malloc_hogger(int kbytes)
 	int	chunksize	= 1024;
 	long	nchunks		= (int)(size / chunksize);
 	int	chunkbytes 	= nchunks * sizeof(void *);
-	void**	chunks		= malloc(chunkbytes);
+	void**	chunks;
 	int	j;
 
+#ifdef HAVE_MALLOPT
+#	ifdef M_MMAP_MAX
+	/* Keep malloc from using mmap */
+	mallopt(M_MMAP_MAX, 0);
+#endif
+#	ifdef M_TRIM_THRESHOLD
+	/* Keep malloc from giving memory back to the system */
+	mallopt(M_TRIM_THRESHOLD, 4*size);
+#	endif
+#endif
+	chunks=malloc(chunkbytes);
 	if (chunks == NULL) {
 		cl_log(LOG_INFO, "Could not preallocate (%d) bytes" 
 		,	chunkbytes);
@@ -153,8 +165,7 @@ cl_make_realtime(int spolicy, int priority,  int stackgrowK, int heapgrowK)
 	}
 
 #ifdef DEFAULT_REALTIME
-
-	if (spolicy <= 0) {
+	if (spolicy < 0) {
 		spolicy = DEFAULT_REALTIME;
 	}
 
@@ -179,7 +190,7 @@ cl_make_realtime(int spolicy, int priority,  int stackgrowK, int heapgrowK)
 	}
 #endif
 
-#if defined _POSIX_MEMLOCK /* && !defined(ON_DARWIN) Wrong way to do this -- add an autoconf test ...*/
+#if defined _POSIX_MEMLOCK
 #	ifdef RLIMIT_MEMLOCK
 #	define	THRESHOLD(lim)	(((lim))/2)
 	{
@@ -209,10 +220,18 @@ cl_make_realtime(int spolicy, int priority,  int stackgrowK, int heapgrowK)
 		}
 	}
 #	endif	/*RLIMIT_MEMLOCK*/
-	if (mlockall(MCL_CURRENT|MCL_FUTURE) < 0) {
+	if (mlockall(MCL_CURRENT|MCL_FUTURE) >= 0) {
+		if (ANYDEBUG) {
+			cl_log(LOG_DEBUG, "pid %d locked in memory.", (int) getpid());
+		}
+
+	} else if(errno == ENOSYS) {
+		const char *err = strerror(errno);
+		cl_log(LOG_WARNING, "Unable to lock pid %d in memory: %s",
+		       (int) getpid(), err);
+
+	} else {
 		cl_perror("Unable to lock pid %d in memory", (int) getpid());
-	}else{
-		cl_log(LOG_INFO, "pid %d locked in memory.", (int) getpid());
 	}
 #endif
 }

@@ -1,4 +1,4 @@
-/* $Id: ocf_ipc.c,v 1.37 2005/08/06 04:25:42 alan Exp $ */
+/* $Id: ocf_ipc.c,v 1.39 2005/11/09 16:09:39 davidlee Exp $ */
 /*
  *
  * ocf_ipc.c: IPC abstraction implementation.
@@ -88,7 +88,7 @@ gnametonum(const char * gname, int gnlen)
 	char	grpname[64];
 	struct group*	grp;
 
-	if (isdigit(gname[0])) {
+	if (isdigit((int) gname[0])) {
 		return atoi(gname);
 	}
 	if (gnlen >= (int)sizeof(grpname)) {
@@ -118,7 +118,7 @@ unametonum(const char * lname, int llen)
 	strncpy(loginname, lname, llen);
 	loginname[llen] = EOS;
 
-	if (isdigit(loginname[0])) {
+	if (isdigit((int) loginname[0])) {
 		return atoi(loginname);
 	}
 	if ((pwd = getpwnam(loginname)) == NULL) {
@@ -319,7 +319,7 @@ ipc_bufpool_new(int size)
 		totalsize = POOL_SIZE;
 	}
 	
-	if (totalsize > MAXDATASIZE){
+	if (totalsize > MAXMSG){
 		cl_log(LOG_INFO, "ipc_bufpool_new: "
 		       "asking for buffer with size %d"
 		       "corrupted data len???", totalsize);
@@ -491,7 +491,7 @@ ipc_bufpool_update(struct ipc_bufpool* pool,
 			abort();
 		}
 
-		if ( head->msg_len > MAXDATASIZE){
+		if ( head->msg_len > MAXMSG){
 			cl_log(LOG_ERR, "ipc_update_bufpool:"
 			       "msg length is corruptted(%d)",
 			       head->msg_len);

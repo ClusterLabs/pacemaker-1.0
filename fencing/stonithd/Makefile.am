@@ -36,14 +36,14 @@ COMMONLIBS	 =  $(top_builddir)/lib/clplumbing/libplumb.la   \
 
 halib_PROGRAMS   =  stonithd
 stonithd_SOURCES =  stonithd.c
-stonithd_LDFLAGS = $(COMMONLIBS) @LIBLTDL@ -luuid  \
+stonithd_LDFLAGS = $(COMMONLIBS) @LIBLTDL@  \
 		   $(top_builddir)/lib/fencing/libstonithd.la
 
 AM_CFLAGS = $(INCLUDES) -DVAR_LIB_D='"$(havarlibdir)"'
 
 # need to make stonithd's owner as hacluster:haclient?
 install-exec-local:
-	$(mkinstalldirs) $(DESTDIR)$/$(havarlibdir)/fencing
+	$(mkinstalldirs) $(DESTDIR)/$(havarlibdir)/fencing
 	-chgrp $(apigid) $(DESTDIR)/$(havarlibdir)/fencing
 	chmod 750 $(DESTDIR)/$(havarlibdir)/fencing
 

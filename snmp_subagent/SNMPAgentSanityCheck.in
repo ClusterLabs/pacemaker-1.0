@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 #
 # Copyright (C) 2002 Yixiong Zou (yixiong.zou@intel.com)
 # Support:      linux-ha-dev@lists.tummy.com
@@ -38,9 +38,10 @@ fi
 
 # start the snmpd manually with our own config file
 SNMPDCONF=/var/run/testsnmpd.conf
+SNMPPIDFILE=/var/run/testsnmpd.pid
 SNMPD=`which snmpd`
 GenerateSNMPDConf $SNMPDCONF
-$SNMPD -C -c $SNMPDCONF 
+$SNMPD -C -c $SNMPDCONF -p $SNMPPIDFILE
 
 #@INITDIR@/snmpd status 
 #ret=$?
@@ -99,4 +100,10 @@ if test $ret2 = 0; then
 else 
 	echo "BasicSanityCheck for SNMP Subagent failed."
 	exit 1
+fi
+if
+  [ -f $SNMPPIDFILE -a ! -z $SNMPPIDFILE ]
+then
+  kill `cat $SNMPPIDFILE`
+  rm $SNMPPIDFILE
 fi

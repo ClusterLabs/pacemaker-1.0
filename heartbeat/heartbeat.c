@@ -1,8 +1,4 @@
-/*
- * TODO:
- * 1) Man page update
- */
-/* $Id: heartbeat.c,v 1.445 2005/09/08 23:46:17 gshi Exp $ */
+/* $Id: heartbeat.c,v 1.514 2006/07/13 02:39:41 alan Exp $ */
 /*
  * heartbeat: Linux-HA heartbeat code
  *
@@ -250,6 +246,7 @@
 #include <clplumbing/cpulimits.h>
 #include <clplumbing/netstring.h>
 #include <clplumbing/coredumps.h>
+#include <clplumbing/cl_random.h>
 #include <heartbeat.h>
 #include <ha_msg.h>
 #include <hb_api.h>
@@ -268,7 +265,7 @@
 #include "clplumbing/setproctitle.h"
 #include <clplumbing/cl_pidfile.h>
 
-#define OPTARGS			"dkMrRsvlC:V"
+#define OPTARGS			"dDkMrRsvWlC:V"
 #define	ONEDAY			(24*60*60)	/* Seconds in a day */
 #define REAPER_SIG		0x0001UL
 #define TERM_SIG		0x0002UL
@@ -280,8 +277,9 @@
 #define FALSE_ALARM_SIG		0x0080UL
 #define MAX_MISSING_PKTS	20
 
-
 #define	ALWAYSRESTART_ON_SPLITBRAIN	1
+
+#define	FLOWCONTROL_LIMIT	 ((seqno_t)(MAXMSGHIST/2))
 
 
 static char 			hbname []= "heartbeat";
@@ -304,7 +302,7 @@ volatile struct pstat_shm *	procinfo = NULL;
 volatile struct process_info *	curproc = NULL;
 struct TestParms *		TestOpts;
 
-int				debug = 0;
+extern int			debug_level;
 gboolean			verbose = FALSE;
 int				timebasedgenno = FALSE;
 int				parse_only = FALSE;
@@ -324,6 +322,7 @@ int				shutdown_in_progress = FALSE;
 int				startup_complete = FALSE;
 int				WeAreRestarting = FALSE;
 enum comm_state			heartbeat_comm_state = COMM_STARTING;
+static gboolean			get_reqnodes_reply = FALSE;
 static int			CoreProcessCount = 0;
 static int			managed_child_count= 0;
 int				UseOurOwnPoll = FALSE;
@@ -333,8 +332,16 @@ longclock_t			local_takeover_time = 0L;
 static int 			deadtime_tmpadd_count = 0;
 gboolean			enable_flow_control = TRUE;
 static	int			send_cluster_msg_level = 0;
+static int			live_node_count = 1; /* namely us... */
 static void print_a_child_client(gpointer childentry, gpointer unused);
-static seqno_t timer_lowseq = 0;
+static seqno_t			timer_lowseq = 0;
+static	gboolean		init_deadtime_passed = FALSE;		
+static int			PrintDefaults = FALSE;
+static int			WikiOutput = FALSE;
+GTRIGSource*			write_hostcachefile = NULL;
+GTRIGSource*			write_delcachefile = NULL;
+extern GSList*			del_node_list;
+
 
 #undef DO_AUDITXMITHIST
 #ifdef DO_AUDITXMITHIST
@@ -371,8 +378,6 @@ static void	check_for_timeouts(void);
 static void	check_comm_isup(void);
 static int	send_local_status(void);
 static int	set_local_status(const char * status);
-static void	request_msg_rexmit(struct node_info *, seqno_t lowseq
-,			seqno_t hiseq);
 static void	check_rexmit_reqs(void);
 static void	mark_node_dead(struct node_info* hip);
 static void	change_link_status(struct node_info* hip, struct link *lnk
@@ -394,6 +399,7 @@ static void	add2_xmit_hist (struct msg_xmit_hist * hist
 static void	init_xmit_hist (struct msg_xmit_hist * hist);
 static void	process_rexmit(struct msg_xmit_hist * hist
 ,			struct ha_msg* msg);
+static void	update_ackseq(seqno_t new_ackseq) ;
 static void	process_clustermsg(struct ha_msg* msg, struct link* lnk);
 extern void	process_registerevent(IPC_Channel* chan,  gpointer user_data);
 static void	nak_rexmit(struct msg_xmit_hist * hist, 
@@ -413,6 +419,8 @@ static gboolean hb_reregister_with_apphbd(gpointer dummy);
 static void	hb_add_deadtime(int increment);
 static gboolean	hb_pop_deadtime(gpointer p);
 static void	dump_missing_pkts_info(void);
+static int	write_hostcachedata(gpointer ginfo);
+static int	write_delcachedata(gpointer ginfo);
 
 static GHashTable*	message_callbacks = NULL;
 static gboolean	HBDoMsgCallback(const char * type, struct node_info* fromnode
@@ -425,7 +433,7 @@ static void HBDoMsg_T_QCSTATUS(const char * type, struct node_info * fromnode
 ,	TIME_T msgtime, seqno_t seqno, const char * iface, struct ha_msg * msg);
 
 static void (*comm_up_callback)(void) = NULL;
-
+static gboolean set_init_deadtime_passed_flag(gpointer p);
 /*
  * Glib Mainloop Source functions...
  */
@@ -452,6 +460,10 @@ static void	fifo_child(IPC_Channel* chan);		/* Reads from FIFO */
 		/* The REAL biggie ;-) */
 static void	master_control_process(void);
 
+extern void	dellist_destroy(void);
+extern int	dellist_add(const char* nodename);
+
+
 #define	CHECK_HA_RESOURCES()	(DoManageResources 		\
 		 ?	(parse_ha_resources(RESOURCE_CFG) == HA_OK) : TRUE)
 
@@ -471,7 +483,6 @@ static ProcTrack_ops		CoreProcessTrackOps = {
 	CoreProcessName
 };
 
-
 static GSourceFuncs		polled_input_SourceFuncs = {
 	polled_input_prepare,
 	polled_input_check,
@@ -485,7 +496,7 @@ init_procinfo()
 	int	ipcid;
 	struct pstat_shm *	shm;
 
-	if ((ipcid = shmget(IPC_PRIVATE, sizeof(*procinfo), 0666)) < 0) {
+	if ((ipcid = shmget(IPC_PRIVATE, sizeof(*procinfo), 0600)) < 0) {
 		cl_perror("Cannot shmget for process status");
 		return;
 	}
@@ -620,6 +631,20 @@ lookup_node(const char * h)
 	}
 }
 
+static int
+write_hostcachedata(gpointer notused)
+{
+	hb_setup_child();
+	return write_cache_file(config);
+}
+
+static int
+write_delcachedata(gpointer notused)
+{
+	hb_setup_child();
+	return write_delnode_file(config);
+}
+
 void
 hb_setup_child(void)
 {
@@ -685,6 +710,8 @@ SetupFifoChild(void) {
 		cl_perror("cannot create FIFO ipc channel");
 		return HA_FAIL;
 	}
+	/* Encourage better real-time behavior */
+	fifochildipc[P_READFD]->ops->set_recv_qlen(fifochildipc[P_READFD], 0); 
 	/* Fork FIFO process... */
 	if (fifoproc < 0) {
 		fifoproc = procinfo->nprocs;
@@ -720,6 +747,10 @@ SetupFifoChild(void) {
 	FifoChildSource = G_main_add_IPC_Channel(PRI_FIFOMSG
 	,	fifochildipc[P_READFD]
 	,	FALSE, FIFO_child_msg_dispatch, NULL, NULL);
+	G_main_setmaxdispatchdelay((GSource*)FifoChildSource, config->heartbeat_ms);
+	G_main_setmaxdispatchtime((GSource*)FifoChildSource, 50);
+	G_main_setdescription((GSource*)FifoChildSource, "FIFO");
+	
 	return HA_OK;
 }
 
@@ -761,13 +792,33 @@ initialize_heartbeat()
 	}
 	cl_log(LOG_INFO, "Heartbeat generation: %lu", config->generation);
 	
-	if(GetUUID(&config->uuid) != HA_OK){
+	if(GetUUID(config, curnode->nodename, &config->uuid) != HA_OK){
 		cl_log(LOG_ERR, "getting uuid for the local node failed");
 		return HA_FAIL;
 	}
 	
+	if (ANYDEBUG){
+		char uuid_str[UU_UNPARSE_SIZEOF];
+		cl_uuid_unparse(&config->uuid, uuid_str);
+		cl_log(LOG_DEBUG, "uuid is:%s", uuid_str);
+	}
+	
+	write_hostcachefile = G_main_add_tempproc_trigger(PRI_WRITECACHE
+	,	write_hostcachedata, "write_hostcachedata"
+	,	NULL, NULL, NULL, NULL);
+
+	write_delcachefile = G_main_add_tempproc_trigger(PRI_WRITECACHE
+	,	write_delcachedata, "write_delcachedata"
+	,	NULL, NULL, NULL, NULL);
+
 	add_uuidtable(&config->uuid, curnode);
 	cl_uuid_copy(&curnode->uuid, &config->uuid);
+
+	/*
+	 * We _really_ only need to write out the uuid file if we're not yet
+	 * in the host cache file on disk.
+	 */
+	G_main_set_trigger(write_hostcachefile);
 
 	if (stat(FIFONAME, &buf) < 0 ||	!S_ISFIFO(buf.st_mode)) {
 		cl_log(LOG_INFO, "Creating FIFO %s.", FIFONAME);
@@ -819,19 +870,10 @@ initialize_heartbeat()
 			cl_log(LOG_DEBUG, "opening %s %s (%s)", smj->type
 			,	smj->name, smj->description);
 		}
-		if (smj->vf->open(smj) != HA_OK) {
-			cl_log(LOG_ERR, "cannot open %s %s"
-			,	smj->type
-			,	smj->name);
-			return HA_FAIL;
-		}
-		if (ANYDEBUG) {
-			cl_log(LOG_DEBUG, "%s channel %s now open..."
-			,	smj->type, smj->name);
-		}
+		
 	}
 
- 	PILSetDebugLevel(PluginLoadingSystem, NULL, NULL, debug);
+ 	PILSetDebugLevel(PluginLoadingSystem, NULL, NULL, debug_level);
 	CoreProcessCount = 0;
 	procinfo->nprocs = 0;
 	ourproc = procinfo->nprocs;
@@ -864,8 +906,15 @@ initialize_heartbeat()
 
 	for (j=0; j < nummedia; ++j) {
 		struct hb_media* mp = sysmedia[j];
-
+		
 		ourproc = procinfo->nprocs;
+		
+		if (mp->vf->open(mp) != HA_OK){
+			cl_log(LOG_ERR, "cannot open %s %s",
+			       mp->type,
+			       mp->name);
+			return HA_FAIL;
+		}
 
 		switch ((pid=fork())) {
 			case -1:	cl_perror("Can't fork write proc.");
@@ -924,6 +973,14 @@ initialize_heartbeat()
 		}
 		NewTrackedProc(pid, 0, PT_LOGVERBOSE, GINT_TO_POINTER(ourproc)
 		,	&CoreProcessTrackOps);
+
+		
+		if (mp->vf->close(mp) != HA_OK){
+			cl_log(LOG_ERR, "cannot close %s %s",
+			       mp->type,
+			       mp->name);
+			return HA_FAIL;
+		}
 	}
 
 
@@ -952,7 +1009,9 @@ read_child(struct hb_media* mp)
 		"Soldiering on...");
 	}
 
-	cl_make_realtime(-1, hb_realtime_prio, 16, 8);
+	cl_make_realtime(-1
+	,	(hb_realtime_prio > 1 ? hb_realtime_prio-1 : hb_realtime_prio)
+	,	16, 64);
 	set_proc_title("%s: read: %s %s", cmdname, mp->type, mp->name);
 	cl_cdtocoredir();
 	cl_set_all_coredump_signal_handlers();
@@ -1027,7 +1086,9 @@ write_child(struct hb_media* mp)
 	}
 
 	set_proc_title("%s: write: %s %s", cmdname, mp->type, mp->name);
-	cl_make_realtime(-1, hb_realtime_prio, 16, 8);
+	cl_make_realtime(-1
+	,	hb_realtime_prio > 1 ? hb_realtime_prio-1 : hb_realtime_prio
+	,	16, 64);
 	cl_cdtocoredir();
 	cl_set_all_coredump_signal_handlers();
 	drop_privs(0, 0);	/* Become nobody */
@@ -1099,7 +1160,9 @@ fifo_child(IPC_Channel* chan)
 		exit(1);
 	}
 
-	cl_make_realtime(-1, hb_realtime_prio, 16, 32);
+	cl_make_realtime(-1
+	,	(hb_realtime_prio > 1 ? hb_realtime_prio-1 : hb_realtime_prio)
+	,	16, 8);
 	cl_cdtocoredir();
 	cl_set_all_coredump_signal_handlers();
 	drop_privs(0, 0);	/* Become nobody */
@@ -1169,11 +1232,15 @@ Gmain_hb_signal_process_pending(void *unused)
 static gboolean
 FIFO_child_msg_dispatch(IPC_Channel* source, gpointer user_data)
 {
-	struct ha_msg*	msg = msgfromIPC(source, 0);
+	struct ha_msg*	msg;
 
 	if (DEBUGDETAILS) {
 		cl_log(LOG_DEBUG, "FIFO_child_msg_dispatch() {");
 	}
+	if (!source->ops->is_message_pending(source)) {
+		return TRUE;
+	}
+	msg = msgfromIPC(source, 0);
 	if (msg != NULL) {
 		/* send_cluster_msg disposes of "msg" */
 		send_cluster_msg(msg);
@@ -1190,7 +1257,7 @@ FIFO_child_msg_dispatch(IPC_Channel* source, gpointer user_data)
 static gboolean
 read_child_dispatch(IPC_Channel* source, gpointer user_data)
 {
-	struct ha_msg*	msg = msgfromIPC(source, MSG_NEEDAUTH);
+	struct ha_msg*	msg = NULL;
 	struct hb_media** mp = user_data;
 	int	media_idx = mp - &sysmedia[0];
 
@@ -1204,6 +1271,14 @@ read_child_dispatch(IPC_Channel* source, gpointer user_data)
 		cl_log(LOG_DEBUG
 		,	"read_child_dispatch() {");
 	}
+	if (!source->ops->is_message_pending(source)) {
+		if (DEBUGDETAILS) {
+			cl_log(LOG_DEBUG
+			,	"}/*read_child_dispatch(0)*/;");
+		}
+		return TRUE;
+	}
+	msg = msgfromIPC(source, MSG_NEEDAUTH);
 	if (msg != NULL) {
 		const char * from = ha_msg_value(msg, F_ORIG);
 		struct link* lnk = NULL;
@@ -1296,7 +1371,7 @@ master_control_process(void)
 	int			j;
 	GMainLoop*		mainloop;
 	long			memstatsinterval;
-
+	guint			id;
 
 	init_xmit_hist (&msghist);
 
@@ -1312,14 +1387,15 @@ master_control_process(void)
 	}
 
 	if (ANYDEBUG) {
-		/* Limit ourselves to 50% of the CPU */
-		cl_cpu_limit_setpercent(50);
+		/* Limit ourselves to 70% of the CPU */
+		cl_cpu_limit_setpercent(70);
 		/* Update our CPU limit periodically */
-		Gmain_timeout_add_full(G_PRIORITY_HIGH-1
+		id=Gmain_timeout_add_full(G_PRIORITY_HIGH-5
 		,	cl_cpu_limit_ms_interval()
 		,	hb_update_cpu_limit, NULL, NULL);
+		G_main_setall_id(id, "cpu limit", 50, 20);
 	}
-	cl_make_realtime(-1, hb_realtime_prio, 32, 150);
+	cl_make_realtime(-1, hb_realtime_prio, 32, config->memreserve);
 
 	set_proc_title("%s: master control process", cmdname);
 
@@ -1346,7 +1422,8 @@ master_control_process(void)
 	}while (!allstarted);
 	
 	hb_add_deadtime(2000);
-	Gmain_timeout_add(5000, hb_pop_deadtime, NULL);
+	id = Gmain_timeout_add(5000, hb_pop_deadtime, NULL);
+	G_main_setall_id(id, "hb_pop_deadtime", 500, 100);
 
 	set_local_status(UPSTATUS);	/* We're pretty sure we're up ;-) */
 	if (ANYDEBUG) {
@@ -1371,21 +1448,31 @@ master_control_process(void)
 
 	/* Child I/O processes */
 	for(j = 0; j < nummedia; j++) {
+		GCHSource*	s;
 		/*
-		 * We cannot share a socket between the the write and read
+		 * We cannot share a socket between the write and read
 		 * children, though it might sound like it would work ;-)
 		 */
 
 		/* Connect up the write child IPC channel... */
-		G_main_add_IPC_Channel(PRI_CLUSTERMSG
+		s = G_main_add_IPC_Channel(PRI_SENDPKT
 		,	sysmedia[j]->wchan[P_WRITEFD], FALSE
 		,	NULL, sysmedia+j, NULL);
+		G_main_setmaxdispatchdelay((GSource*)s, config->heartbeat_ms/4);
+		G_main_setmaxdispatchtime((GSource*)s, 50);
+		G_main_setdescription((GSource*)s, "write child");
 
 		
 		/* Connect up the read child IPC channel... */
-		G_main_add_IPC_Channel(PRI_CLUSTERMSG
+		s = G_main_add_IPC_Channel(PRI_READPKT
 		,	sysmedia[j]->rchan[P_WRITEFD], FALSE
 		,	read_child_dispatch, sysmedia+j, NULL);
+		/* Encourage better real-time behavior */
+		sysmedia[j]->rchan[P_WRITEFD]->ops->set_recv_qlen
+		(	sysmedia[j]->rchan[P_WRITEFD], 0); 
+		G_main_setmaxdispatchdelay((GSource*)s, config->heartbeat_ms/4);
+		G_main_setmaxdispatchtime((GSource*)s, 50);
+		G_main_setdescription((GSource*)s, "read child");
 
 }	
 	
@@ -1395,17 +1482,27 @@ master_control_process(void)
 	 */
 	
 	/* Send local status at the "right time" */
-	Gmain_timeout_add_full(PRI_SENDSTATUS, config->heartbeat_ms
+	id=Gmain_timeout_add_full(PRI_SENDSTATUS, config->heartbeat_ms
 	,	hb_send_local_status, NULL, NULL);
+	G_main_setall_id(id, "send local status", 10+config->heartbeat_ms/2, 50);
+
+	id=Gmain_timeout_add_full(PRI_AUDITCLIENT
+	,	config->initial_deadtime_ms
+	,	set_init_deadtime_passed_flag
+	,	NULL
+	,	NULL);
+	G_main_setall_id(id, "init deadtime passed", config->warntime_ms, 50);
 
 	/* Dump out memory stats periodically... */
-	memstatsinterval = (debug ? 10*60*1000 : ONEDAY*1000);
-	Gmain_timeout_add_full(PRI_DUMPSTATS, memstatsinterval
+	memstatsinterval = (debug_level ? 10*60*1000 : ONEDAY*1000);
+	id=Gmain_timeout_add_full(PRI_DUMPSTATS, memstatsinterval
 	,	hb_dump_all_proc_stats, NULL, NULL);
+	G_main_setall_id(id, "memory stats", 5000, 100);
 
 	/* Audit clients for liveness periodically */
-	Gmain_timeout_add_full(PRI_AUDITCLIENT, 9*1000
+	id=Gmain_timeout_add_full(PRI_AUDITCLIENT, 9*1000
 	,	api_audit_clients, NULL, NULL);
+	G_main_setall_id(id, "client audit", 5000, 100);
 
 	/* Reset timeout times to "now" */
 	for (j=0; j < config->nodecount; ++j) {
@@ -1415,11 +1512,13 @@ master_control_process(void)
 	}
 
 	/* Check for pending signals */
-	Gmain_timeout_add_full(PRI_SENDSTATUS, config->heartbeat_ms
+	id=Gmain_timeout_add_full(PRI_CHECKSIGS, config->heartbeat_ms
 	,       Gmain_hb_signal_process_pending, NULL, NULL);
+	G_main_setall_id(id, "check for signals", 10+config->heartbeat_ms/2, 50);
 	
-	Gmain_timeout_add_full(PRI_FREEMSG, 500,
-			       Gmain_update_msgfree_count, NULL, NULL);
+	id=Gmain_timeout_add_full(PRI_FREEMSG, 500
+	,	Gmain_update_msgfree_count, NULL, NULL);
+	G_main_setall_id(id, "update msgfree count", config->deadtime_ms, 50);
 	
 	if (UseApphbd) {
 		Gmain_timeout_add_full(PRI_DUMPSTATS
@@ -1588,7 +1687,7 @@ polled_input_prepare(GSource* source,
 		     gint* timeout)
 {
 
-	if (DEBUGDETAILS){
+	if (DEBUGPKT){
 		cl_log(LOG_DEBUG,"polled_input_prepare(): timeout=%d"
 		,	*timeout);
 	}
@@ -1606,7 +1705,7 @@ polled_input_check(GSource* source)
 	
 	LookForClockJumps();
 	
-	if (DEBUGDETAILS) {
+	if (DEBUGPKT) {
 		cl_log(LOG_DEBUG,"polled_input_check(): result = %d"
 		,	cmp_longclock(now, NextPoll) >= 0);
 	}
@@ -1622,7 +1721,7 @@ polled_input_dispatch(GSource* source,
 {
 	longclock_t	now = time_longclock();
 
-	if (DEBUGDETAILS){
+	if (DEBUGPKT){
 		cl_log(LOG_DEBUG,"polled_input_dispatch() {");
 	}
 	NextPoll = add_longclock(now, msto_longclock(POLL_INTERVAL));
@@ -1645,8 +1744,8 @@ polled_input_dispatch(GSource* source,
 	}
 
 	/* Check to see we need to resend any rexmit requests... */
-	check_rexmit_reqs();
-
+	(void)check_rexmit_reqs;
+ 
 	/* See if our comm channels are working yet... */
 	if (heartbeat_comm_state != COMM_LINKSUP) {
 		check_comm_isup();
@@ -1662,7 +1761,7 @@ polled_input_dispatch(GSource* source,
 		hb_send_resources_held(TRUE, NULL);
 		AuditResources();
 	}
-	if (DEBUGDETAILS){
+	if (DEBUGPKT){
 		cl_log(LOG_DEBUG,"}/*polled_input_dispatch*/;");
 	}
 
@@ -1689,10 +1788,9 @@ comm_now_up()
 	}
 	linksupbefore = 1;
 
-	if (ANYDEBUG){
-		cl_log(LOG_DEBUG
-		,	"Comm_now_up(): updating status to " ACTIVESTATUS);
-	}
+	cl_log(LOG_INFO
+	       ,	"Comm_now_up(): updating status to " ACTIVESTATUS);
+	
 	/* Update our local status... */
 	set_local_status(ACTIVESTATUS);
 
@@ -1716,6 +1814,9 @@ comm_now_up()
 
 	regsource = G_main_add_IPC_WaitConnection(PRI_APIREGISTER, regwchan
 	,	NULL, FALSE, APIregistration_dispatch, NULL, NULL);
+	G_main_setmaxdispatchdelay((GSource*)regsource, config->deadtime_ms);
+	G_main_setmaxdispatchtime((GSource*)regsource, 20);
+	G_main_setdescription((GSource*)regsource, "client registration");
 	
 
 	if (regsource == NULL) {
@@ -1869,7 +1970,8 @@ hb_initiate_shutdown(int quickshutdown)
 gboolean
 hb_mcp_final_shutdown(gpointer p)
 {
-	static int shutdown_phase = 0;
+	static int	shutdown_phase = 0;
+	guint		id;
 
 	if (ANYDEBUG) {
 		cl_log(LOG_DEBUG, "hb_mcp_final_shutdown() phase %d"
@@ -1910,8 +2012,9 @@ hb_mcp_final_shutdown(gpointer p)
 			/* Shouldn't *really* need this */
 			hb_kill_rsc_mgmt_children(SIGTERM);
 		}
-		Gmain_timeout_add(1000, hb_mcp_final_shutdown /* phase 2 */
+		id=Gmain_timeout_add(1000, hb_mcp_final_shutdown /* phase 2 */
 		,	NULL);
+		G_main_setall_id(id, "shutdown phase 2", 500, 100);
 		return FALSE;
 
 	case 2: /* From 1-second delay above */
@@ -1937,7 +2040,7 @@ hb_mcp_final_shutdown(gpointer p)
 
 	/* Whack 'em */
 	hb_kill_core_children(SIGKILL);
-	cl_log(LOG_INFO,"Heartbeat shutdown complete.");
+	cl_log(LOG_INFO,"%s Heartbeat shutdown complete.", localnodename);
 
 	if (procinfo->restart_after_shutdown) {
 		cl_log(LOG_INFO, "Heartbeat restart triggered.");
@@ -2019,25 +2122,51 @@ free_one_hist_slot(struct msg_xmit_hist* hist, int slot )
 }
 
 
+
+static void 
+hist_display(struct msg_xmit_hist * hist)
+{
+	cl_log(LOG_DEBUG, "hist->ackseq =%ld",     hist->ackseq);
+	cl_log(LOG_DEBUG, "hist->lowseq =%ld, hist->hiseq=%ld", 
+	       hist->lowseq, hist->hiseq);
+	dump_missing_pkts_info();
+	
+	if (hist->lowest_acknode){
+		cl_log(LOG_DEBUG,"expecting from %s",hist->lowest_acknode->nodename);
+		cl_log(LOG_DEBUG,"it's ackseq=%ld", hist->lowest_acknode->track.ackseq);
+	}
+	cl_log(LOG_DEBUG, " ");	
+	
+}
+
+static void
+reset_lowest_acknode(void)
+{
+	struct msg_xmit_hist* hist = &msghist;	
+
+	hist->lowest_acknode = NULL;	
+
+	return;
+}
+
 static void
 HBDoMsg_T_ACKMSG(const char * type, struct node_info * fromnode,
 	      TIME_T msgtime, seqno_t seqno, const char * iface, struct ha_msg * msg)
 {
-	const char*	ackseq_str = ha_msg_value(msg, F_ACKSEQ);
-	seqno_t		ackseq;
-	struct msg_xmit_hist* hist = &msghist;	
-	const char*	to =  
-		(const char*)ha_msg_value(msg, F_TO);
-	struct node_info* tonode;
-	seqno_t		old_hist_ackseq;
+	const char*		ackseq_str = ha_msg_value(msg, F_ACKSEQ);
+	seqno_t			ackseq;
+	struct msg_xmit_hist*	hist = &msghist;	
+	const char*		to =  (const char*)ha_msg_value(msg, F_TO);
+	struct node_info*	tonode;
+	seqno_t			new_ackseq = hist->ackseq;
 	
 	if (!to || (tonode = lookup_tables(to, NULL)) == NULL
-	    || tonode != curnode){
+	||	tonode != curnode){
 		return;
 	}
 
-	if (ackseq_str == NULL||
-	    sscanf(ackseq_str, "%lx", &ackseq) != 1){
+	if (ackseq_str == NULL
+	||	sscanf(ackseq_str, "%lx", &ackseq) != 1){
 		goto out;
 	}
 
@@ -2047,11 +2176,10 @@ HBDoMsg_T_ACKMSG(const char * type, struct node_info * fromnode,
 		goto out;
 	}
 	
-	if (ackseq <= hist->ackseq){
+	if (ackseq <= new_ackseq){
 		/* late or dup ack
 		 * ignored
 		 */
-		
 		goto out;
 	}else if (ackseq > hist->hiseq){
 		cl_log(LOG_ERR, "HBDoMsg_T_ACK"
@@ -2062,7 +2190,7 @@ HBDoMsg_T_ACKMSG(const char * type, struct node_info * fromnode,
 		goto out;
 	}
 	
-	if ( ackseq < fromnode->track.ackseq){
+	if (ackseq < fromnode->track.ackseq) {
 		/* late or dup ack
 		 * ignored
 		 */
@@ -2071,20 +2199,18 @@ HBDoMsg_T_ACKMSG(const char * type, struct node_info * fromnode,
 	
 	fromnode->track.ackseq = ackseq;
 	
-	if (hist->lowest_acknode != NULL &&
-	    STRNCMP_CONST(hist->lowest_acknode->status, 
-		    DEADSTATUS) == 0){
+	if (hist->lowest_acknode != NULL
+	&&	STRNCMP_CONST(hist->lowest_acknode->status,DEADSTATUS)==0){
 		/* the lowest acked node is dead
-		 * we cannnot count on that node 
+		 * we cannot count on that node 
 		 * to update our ackseq
 		 */
 		hist->lowest_acknode = NULL;
 	}
 
-	old_hist_ackseq = hist->ackseq;
 	
-	if (hist->lowest_acknode == NULL ||
-	    hist->lowest_acknode == fromnode){
+	if (hist->lowest_acknode == NULL
+	||	hist->lowest_acknode == fromnode){
 		/*find the new lowest and update hist->ackseq*/
 		seqno_t	minseq;
 		int	minidx;
@@ -2096,79 +2222,107 @@ HBDoMsg_T_ACKMSG(const char * type, struct node_info * fromnode,
 		for (i = 0; i < config->nodecount; i++){
 			struct node_info* hip = &config->nodes[i];
 			
-			if (STRNCMP_CONST(hip->status,DEADSTATUS) == 0
-			    || hip->nodetype == PINGNODE_I 
-			    || hip->track.ackseq == 0){
+			if (hip->nodetype == PINGNODE_I
+			||	STRNCMP_CONST(hip->status, DEADSTATUS) == 0) {
 				continue;
 			}
 			
-			if (minidx == -1 || 
-			    hip->track.ackseq < minseq){
+			if (minidx == -1
+			||	hip->track.ackseq < minseq){
 				minseq = hip->track.ackseq;
 				minidx = i;
 			}
 		}
 		
-		if (minidx == -1){
-			/*each node is in either DEASTATUS or INITSTATUS*/
+		if (minidx == -1) {
+			/* Every node is DEADSTATUS */
 			goto out;
 		}
-		if (minidx == config->nodecount){
+		if (live_node_count < 2) {
+			/*
+			 * Update hist->ackseq so we don't hang onto
+			 * messages indefinitely and flow control clients
+			 */
+			if ((hist->hiseq - new_ackseq) >= FLOWCONTROL_LIMIT) {
+				new_ackseq = hist->hiseq - (FLOWCONTROL_LIMIT-1);
+			}
+			hist->lowest_acknode = NULL;
+			goto cleanupandout;
+		}
+		if (minidx >= config->nodecount) {
 			cl_log(LOG_ERR, "minidx out of bound"
 			       "minidx=%d",minidx );
 			goto out;
 		}
-		hist->ackseq = minseq;
-		hist->lowest_acknode = &config->nodes[minidx];
-		
-		if (hist->hiseq - hist->ackseq < MAXMSGHIST/2){
-			all_clients_resume();
+
+
+		if (minseq > 0){
+			new_ackseq = minseq;
 		}
+		hist->lowest_acknode = &config->nodes[minidx];
 	}
 	
-#if 0	
-	cl_log(LOG_INFO, "hist->ackseq =%ld, old_hist_ackseq=%ld",
- 	       hist->ackseq, old_hist_ackseq);
-#endif
-	if (hist->ackseq > old_hist_ackseq){
-		long count;
-		seqno_t start;
-		count = hist->ackseq - hist->lowseq - send_cluster_msg_level;
-		if (old_hist_ackseq == 0){
-			start = 0;
-			count = count - 1;
-		}else{
-			start = hist->lowseq;
-		}
-		
-		while(count -- > 0){
-			
-			/*if the seq number is greater than the lowseq number
-			  the timer set, we should not free any more messages*/
-			if (start > timer_lowseq){
-				break;
-			}
-			
-			free_one_hist_slot(hist, start%MAXMSGHIST);
-			start++;
-			
-			if (hist->lowseq > hist->ackseq){
-				cl_log(LOG_ERR, "lowseq cannnot be greater than ackseq");
-				cl_log(LOG_INFO, "hist->ackseq =%ld, old_hist_ackseq=%ld",
-				       hist->ackseq, old_hist_ackseq);
-				cl_log(LOG_INFO, "hist->lowseq =%ld, hist->hiseq=%ld,"
-				       "send_cluster_msg_level=%d",
-				       hist->lowseq, hist->hiseq, send_cluster_msg_level);
-				abort();
-			}
+cleanupandout:
+	update_ackseq(new_ackseq);
+out:
+	return;
+}
 
-		}
+static void
+update_ackseq(seqno_t new_ackseq) 
+{
+	struct msg_xmit_hist*	hist = &msghist;	
+	long			count;
+	seqno_t			start;
+	seqno_t			old_ackseq = hist->ackseq;
+
+#if 0	
+	cl_log(LOG_INFO, "new_ackseq = %ld, old_ackseq=%ld"
+	,	new_ackseq, old_ackseq);
+#endif
+	if (new_ackseq <= old_ackseq){
+		return;
+	}
+	hist->ackseq = new_ackseq;
+
+	if ((hist->hiseq - hist->ackseq) < FLOWCONTROL_LIMIT){
+		all_clients_resume();
 	}
 
+	count = hist->ackseq - hist->lowseq - send_cluster_msg_level;
+	if (old_ackseq == 0){
+		start = 0;
+		count = count - 1;
+	}else{
+		start = hist->lowseq;
+	}
+	
+	while(count -- > 0){
+		/*
+		 * If the seq number is greater than the lowseq number
+		 * the timer set, we should not free any more messages
+		 */
+		if (start > timer_lowseq){
+			break;
+		}
+	
+		free_one_hist_slot(hist, start%MAXMSGHIST);
+		start++;
+
+		if (hist->lowseq > hist->ackseq){
+			cl_log(LOG_ERR, "lowseq cannnot be greater than ackseq");
+			cl_log(LOG_INFO, "hist->ackseq =%ld, old_ackseq=%ld"
+			,	hist->ackseq, old_ackseq);
+			cl_log(LOG_INFO, "hist->lowseq =%ld, hist->hiseq=%ld"
+			", send_cluster_msg_level=%d"
+			,	hist->lowseq, hist->hiseq, send_cluster_msg_level);
+			abort();
+		}
+	}
 	(void)dump_missing_pkts_info;
-#define DEBUG_FOR_GSHI	1
+
 #ifdef DEBUG_FOR_GSHI
-	if (DEBUGDETAILS){
+	if (ANYDEBUG){
 		cl_log(LOG_DEBUG, "hist->ackseq =%ld, node %s's ackseq=%ld",
 		       hist->ackseq, fromnode->nodename,
 		       fromnode->track.ackseq);
@@ -2183,9 +2337,533 @@ HBDoMsg_T_ACKMSG(const char * type, struct node_info * fromnode,
 	}
 
 #endif 
- out:
+}
 
+static int
+getnodes(const char* nodelist, char** nodes, int* num){
+	
+	const char* p;
+	int i;
+	int j;
+	
+
+	memset(nodes, 0, *num);
+	i = 0;
+	p =  nodelist ; 
+	while(*p != 0){
+		
+		int nodelen;
+		
+		while(*p == ' ') {
+			p++;
+		}
+		if (*p == 0){
+			break;
+		}
+		nodelen = strcspn(p, " \0") ;
+		
+		if (i >= *num){
+			cl_log(LOG_ERR, "%s: more memory needed(%d given but require %d)",
+			       __FUNCTION__, *num, i+1);
+			goto errexit;
+		}
+		
+		nodes[i] = ha_malloc(nodelen + 1);
+		if (nodes[i] == NULL){
+			cl_log(LOG_ERR, "%s: malloc failed", __FUNCTION__);
+			goto errexit;
+		}
+
+		memcpy(nodes[i], p, nodelen);
+		nodes[i][nodelen] = 0;
+		p += nodelen;
+		i++;
+	}	
+	
+	*num = i;
+	return HA_OK;
+	
+	
+ errexit:
+	for (j = 0; j < i ; j++){
+		if (nodes[j]){
+			ha_free(nodes[j]);
+			nodes[j] =NULL;
+		}
+	}
+	return HA_FAIL;
+}
+
+static int
+hb_add_one_node(const char* node)
+{
+	struct node_info*	thisnode = NULL;	
+
+	cl_log(LOG_INFO,
+	       "Adding new node(%s) to configuration.",
+	       node);
+	
+	thisnode = lookup_node(node);
+	if (thisnode){
+		cl_log(LOG_ERR, "%s: node(%s) already exists",
+		       __FUNCTION__, node);
+		return HA_FAIL;
+	}
+       
+	add_node(node, NORMALNODE_I);
+	thisnode = lookup_node(node);
+	if (thisnode == NULL) {
+		cl_log(LOG_ERR, "%s: adding node(%s) failed",
+		       __FUNCTION__, node);
+		return HA_FAIL;
+	}
+	
+	return HA_OK;
+	
+}
+
+
+static void
+HBDoMsg_T_ADDNODE(const char * type, struct node_info * fromnode,
+		  TIME_T msgtime, seqno_t seqno, const char * iface, struct ha_msg * msg)
+{
+	const char*	nodelist;
+	char*		nodes[MAXNODE];
+	int		num = MAXNODE;
+	int		i;
+
+	nodelist =  ha_msg_value(msg, F_NODELIST);
+	if (nodelist == NULL){
+		cl_log(LOG_ERR, "%s: nodelist not found in msg",		       
+		       __FUNCTION__);
+		cl_log_message(LOG_INFO, msg);
+		return ;
+	}
+	
+	if (getnodes(nodelist, nodes, &num) != HA_OK){
+		cl_log(LOG_ERR, "%s: parsing failed",
+		       __FUNCTION__);
+		return;
+	}
+	
+	
+	for (i = 0; i < num; i++){
+		if (hb_add_one_node(nodes[i])!= HA_OK){
+			cl_log(LOG_ERR, "Add node %s failed", nodes[i]);
+		}
+		ha_free(nodes[i]);
+		nodes[i]=NULL;
+	}
+	G_main_set_trigger(write_hostcachefile);
 	return;
+}
+
+static void
+HBDoMsg_T_SETWEIGHT(const char * type, struct node_info * fromnode,
+		  TIME_T msgtime, seqno_t seqno, const char * iface, struct ha_msg * msg)
+{
+	const char*	node;
+	int		weight;
+
+	node =  ha_msg_value(msg, F_NODE);
+	if (node == NULL){
+		cl_log(LOG_ERR, "%s: node not found in msg",		       
+		       __FUNCTION__);
+		cl_log_message(LOG_INFO, msg);
+		return ;
+	}
+	if (ha_msg_value_int(msg, F_WEIGHT, &weight) != HA_OK){			
+		cl_log(LOG_ERR, "%s: weight not found in msg",		       
+		       __FUNCTION__);
+		cl_log_message(LOG_INFO, msg);
+		return ;
+	}
+	if (set_node_weight(node, weight) == HA_OK) {
+		G_main_set_trigger(write_hostcachefile);
+	}
+	return;
+}
+
+static void
+HBDoMsg_T_SETSITE(const char * type, struct node_info * fromnode,
+		  TIME_T msgtime, seqno_t seqno, const char * iface, struct ha_msg * msg)
+{
+	const char*	node;
+	const char*	site;
+
+	node =  ha_msg_value(msg, F_NODE);
+	if (node == NULL){
+		cl_log(LOG_ERR, "%s: node not found in msg",		       
+		       __FUNCTION__);
+		cl_log_message(LOG_INFO, msg);
+		return ;
+	}
+	site =  ha_msg_value(msg, F_SITE);
+	if (node == NULL){
+		cl_log(LOG_ERR, "%s: site not found in msg",		       
+		       __FUNCTION__);
+		cl_log_message(LOG_INFO, msg);
+		return ;
+	}
+	if (set_node_site(node, site) == HA_OK) {
+		G_main_set_trigger(write_hostcachefile);
+	}
+	return;
+}
+
+static int
+hb_remove_one_node(const char* node, int deletion)
+{
+	struct node_info* thisnode = NULL;
+	struct ha_msg* removemsg;
+	
+	cl_log(LOG_INFO,
+	       "Removing node [%s] from configuration.",
+	       node);
+	
+	thisnode = lookup_node(node);
+	if (thisnode == NULL){
+		cl_log(LOG_ERR, "%s: node %s not found in config",
+		       __FUNCTION__, node);
+		return HA_FAIL;
+	}
+	
+	if (remove_node(node, deletion) != HA_OK){
+		cl_log(LOG_ERR, "%s: Deleting node(%s) failed",
+		       __FUNCTION__, node);
+		return HA_FAIL;
+	}
+	
+	removemsg = ha_msg_new(0);
+	if (removemsg == NULL){
+		cl_log(LOG_ERR, "%s: creating new message failed",__FUNCTION__);
+		return HA_FAIL;
+	}
+	
+	if ( ha_msg_add(removemsg, F_TYPE, T_DELNODE)!= HA_OK
+	     || ha_msg_add(removemsg, F_NODE, node) != HA_OK){
+		cl_log(LOG_ERR, "%s: adding fields to msg failed", __FUNCTION__);
+		return HA_FAIL;
+	}
+
+	heartbeat_monitor(removemsg, KEEPIT, NULL);
+	reset_lowest_acknode();
+	return HA_OK;
+	
+}
+
+
+
+static void
+HBDoMsg_T_DELNODE(const char * type, struct node_info * fromnode,
+		  TIME_T msgtime, seqno_t seqno, const char * iface, struct ha_msg * msg)
+{
+	const char*    nodelist;
+	char*		nodes[MAXNODE];
+	int		num = MAXNODE;
+	int		i;
+	int		j;		
+	
+	nodelist =  ha_msg_value(msg, F_NODELIST);
+	if (nodelist == NULL){
+		cl_log(LOG_ERR, "%s: node not found in msg",
+		       __FUNCTION__);
+		cl_log_message(LOG_INFO, msg);
+		return ;
+	}
+	
+	if (getnodes(nodelist, nodes, &num) != HA_OK){
+		cl_log(LOG_ERR, "%s: parsing failed",
+		       __FUNCTION__);
+		return ;
+	}
+	
+	for (i = 0; i < config->nodecount ;i++){
+		gboolean isdelnode =FALSE;
+		for (j = 0 ; j < num; j++){
+			if (strncmp(config->nodes[i].nodename, 
+				    nodes[j],HOSTLENG)==0){
+				isdelnode = TRUE;
+				break;
+			}
+		}
+		
+		if (isdelnode){
+			if (STRNCMP_CONST(config->nodes[i].status, DEADSTATUS) != 0){
+				cl_log(LOG_WARNING, "deletion failed: node %s is not dead", 
+					config->nodes[i].nodename);
+				goto out;
+			}
+	
+		}	
+	
+		if (!isdelnode){
+			if ( STRNCMP_CONST(config->nodes[i].status,UPSTATUS) != 0
+			     && STRNCMP_CONST(config->nodes[i].status, ACTIVESTATUS) !=0
+			     && config->nodes[i].nodetype == NORMALNODE_I){
+				cl_log(LOG_ERR, "%s: deletion failed. We don't have"
+				       " all required nodes alive (%s is dead)",
+				       __FUNCTION__, config->nodes[i].nodename);
+				goto out;
+			}
+		}		
+	}
+	
+	for (i = 0; i < num; i++){
+		if (strncmp(nodes[i], curnode->nodename, HOSTLENG) == 0){
+			cl_log(LOG_ERR, "I am being deleted from the cluster."
+			       " This should not happen");
+			hb_initiate_shutdown(FALSE);
+			return;
+		}
+
+		if (hb_remove_one_node(nodes[i], TRUE)!= HA_OK){
+			cl_log(LOG_ERR, "Deleting node %s failed", nodes[i]);
+		}
+	}
+	
+ out:
+	for (i = 0; i < num; i++){
+		ha_free(nodes[i]);
+		nodes[i]= NULL;	
+	}
+	
+	write_delnode_file(config);
+	write_cache_file(config);
+	G_main_set_trigger(write_delcachefile);
+	
+	return ;
+	
+}
+
+static int
+get_nodelist( char* nodelist, int len)
+{
+	int i;
+	char* p;
+	int numleft = len;
+	
+	p = nodelist;
+	for (i = 0; i< config->nodecount; i++){
+		int tmplen;
+		tmplen= snprintf(p, numleft, "%s ", config->nodes[i].nodename);
+		p += tmplen;
+		numleft -= tmplen;
+		if (tmplen <= 0){
+			cl_log(LOG_ERR, "%s: not enough buffer", 
+			       __FUNCTION__);
+			return HA_FAIL;
+		}
+	}
+	
+	return HA_OK;
+
+}
+
+static int
+get_delnodelist(char* delnodelist, int len)
+{
+	char* p = delnodelist;
+	int numleft = len;
+	GSList* list = NULL;
+
+	if (del_node_list == NULL){
+		delnodelist[0]= ' ';
+		delnodelist[1]=0;
+		goto out;
+	}
+	
+	list = del_node_list;
+
+	while( list){
+		struct node_info* hip;
+		int tmplen; 
+		
+		hip = (struct node_info*)list->data;
+		if (hip == NULL){
+			cl_log(LOG_ERR, "%s: null data in del node list",
+			       __FUNCTION__);
+			return HA_FAIL;
+		}
+		
+		tmplen = snprintf(p, numleft,  "%s ", hip->nodename);
+		if (tmplen <= 0){
+			cl_log(LOG_ERR, "%s: not enough buffer", 
+			       __FUNCTION__);
+			return HA_FAIL;
+		}
+		
+		p += tmplen;
+		numleft -=tmplen;
+
+		list = list->next;
+	}
+	
+ out: 
+	cl_log(LOG_DEBUG, "%s: delnodelist=%s", __FUNCTION__,  delnodelist);
+	
+	return HA_OK;
+}
+
+
+static void
+HBDoMsg_T_REQNODES(const char * type, struct node_info * fromnode,
+                  TIME_T msgtime, seqno_t seqno, const char * iface, struct ha_msg * msg)
+{
+	char nodelist[MAXLINE];
+	char delnodelist[MAXLINE];
+	struct ha_msg* repmsg;
+	
+	if (fromnode == curnode){
+		cl_log(LOG_ERR,  "%s: get reqnodes msg from myself!", 
+		       __FUNCTION__);
+		return;
+	}
+
+	if (ANYDEBUG){
+		cl_log(LOG_DEBUG, "Get a reqnodes message from %s", fromnode->nodename);
+	}
+	
+	if (get_nodelist(nodelist, MAXLINE) != HA_OK
+	    || get_delnodelist(delnodelist, MAXLINE) != HA_OK){
+		cl_log(LOG_ERR, "%s: get node list or del node list from config failed",
+		       __FUNCTION__);
+		return;
+	}
+
+	
+	repmsg = ha_msg_new(0);
+	if ( repmsg == NULL
+	|| ha_msg_add(repmsg, F_TO, fromnode->nodename) != HA_OK
+	|| ha_msg_add(repmsg, F_TYPE, T_REPNODES) != HA_OK
+	|| ha_msg_add(repmsg, F_NODELIST, nodelist) != HA_OK
+	|| ha_msg_add(repmsg, F_DELNODELIST, delnodelist) != HA_OK){
+		cl_log(LOG_ERR, "%s: constructing REPNODES msg failed",
+		       __FUNCTION__);
+		ha_msg_del(repmsg);
+		return;	
+	} 
+
+	send_cluster_msg(repmsg);
+	return;
+} 
+
+static void
+HBDoMsg_T_REPNODES(const char * type, struct node_info * fromnode,
+                  TIME_T msgtime, seqno_t seqno, const char * iface, struct ha_msg * msg)
+{
+	const char* nodelist = ha_msg_value(msg, F_NODELIST);
+	const char* delnodelist = ha_msg_value(msg, F_DELNODELIST);
+	char*	nodes[MAXNODE];
+	char*   delnodes[MAXNODE];
+	int	num =  MAXNODE;
+	int	delnum = MAXNODE;
+	int	i;
+	int 	j;
+
+	if (ANYDEBUG){
+		cl_log(LOG_DEBUG,"Get a repnodes msg from %s", fromnode->nodename);
+	}
+	
+	if (fromnode == curnode){
+		/*our own REPNODES msg*/
+		return;
+	}
+	
+	/* process nodelist*/
+	/* our local node list is outdated
+	 * any node that is in nodelist but not in local node list should be added
+	 * any node that is in local node list but not in nodelist should be removed
+	 * (but not deleted)
+	 */
+	
+	/* term definition*/
+	/* added: a node in config->nodes[] 
+	   deleted: a node in del_node_list
+	   removed: remove a node either from config->nodes[] or del_node_list
+	*/
+
+	if (nodelist != NULL){
+		memset(nodes, 0, MAXNODE);
+		if (ANYDEBUG){
+			cl_log(LOG_DEBUG, "nodelist received:%s", nodelist);
+		}
+		if (getnodes(nodelist, nodes, &num) != HA_OK){
+			cl_log(LOG_ERR, "%s: get nodes from nodelist failed",
+				__FUNCTION__);
+			return;
+		}
+		for (i =0; i < num; i++){
+			for (j = 0; j < config->nodecount; j++){
+				if (strncmp(nodes[i], config->nodes[j].nodename,
+					HOSTLENG) == 0){
+					break;
+				}
+			}
+			if ( j == config->nodecount){
+				/*this node is not found in config
+				* we need to add it 
+				*/
+				hb_add_one_node(nodes[i]);		
+			}
+		}
+		
+		for (i =0; i < config->nodecount; i++){
+			for (j=0;j < num; j++){
+				if ( strncmp(config->nodes[i].nodename,
+					nodes[j], HOSTLENG) == 0){
+					break;
+				}	
+			}
+			if (j == num){
+				/* This node is not found in incoming nodelist,
+				* therefore, we need to remove it from config->nodes[]
+				*
+				* Of course, this assumes everyone has correct node
+				* lists - which may not be the case :-(  FIXME???
+				* And it assumes autojoin is on - which it may
+				* not be...
+				*/
+				hb_remove_one_node(config->nodes[i].nodename, FALSE);
+				
+			}
+		}
+		for (i = 0; i< num; i++){
+			if (nodes[i]){
+				ha_free(nodes[i]);
+				nodes[i] = NULL;
+			}
+		}
+		get_reqnodes_reply = TRUE;
+		write_cache_file(config);
+	}
+
+	if (delnodelist != NULL) {	
+		memset(delnodes, 0, MAXNODE);
+		if (getnodes(delnodelist, delnodes, &delnum) != HA_OK){	       
+			cl_log(LOG_ERR, "%s: get del nodes from nodelist failed",
+				__FUNCTION__);
+			return;
+		}
+		/* process delnodelist*/
+		/* update our del node list to be the exact same list as the received one
+		*/
+		dellist_destroy();
+		for (i = 0; i < delnum; i++){
+			dellist_add(delnodes[i]);
+		}	
+	
+		for (i = 0; i < delnum; i++){
+			if (delnodes[i]){
+				ha_free(delnodes[i]);
+				delnodes[i] = NULL;
+			}
+		}
+		get_reqnodes_reply = TRUE;
+		write_delnode_file(config);
+	}
+	comm_now_up();
+        return;
 }
 
 
@@ -2219,8 +2897,7 @@ HBDoMsg_T_STATUS(const char * type, struct node_info * fromnode
 		return;
 	}
 	
-	/* Dooes it contain F_PROTOCOL field?*/
-	
+	/* Does it contain F_PROTOCOL field?*/
 	
 
 	/* Do we already have a newer status? */
@@ -2253,6 +2930,15 @@ HBDoMsg_T_STATUS(const char * type, struct node_info * fromnode
 	}
 
 
+	/* Is this a second status msg from a new node? */
+	if (fromnode->status_suppressed && fromnode->saved_status_msg) {
+		fromnode->status_suppressed = FALSE;
+		QueueRemoteRscReq(PerformQueuedNotifyWorld
+		,	fromnode->saved_status_msg);
+		heartbeat_monitor(fromnode->saved_status_msg, KEEPIT, iface);
+		ha_msg_del(fromnode->saved_status_msg);
+		fromnode->saved_status_msg = NULL;
+	}
 	/* Is the node status the same? */
 	if (strcasecmp(fromnode->status, status) != 0
 	&&	fromnode != curnode) {
@@ -2265,11 +2951,55 @@ HBDoMsg_T_STATUS(const char * type, struct node_info * fromnode
 			,	"Status seqno: %ld msgtime: %ld"
 			,	seqno, msgtime);
 		}
+		/*
+		 * If the restart of a node is faster than deadtime,
+		 * the previous status of node would be still ACTIVE 
+		 * while current status is INITSTATUS.
+		 * So we reduce the live_node_count here.
+		 */
+		if (fromnode->nodetype == NORMALNODE_I
+		&&	fromnode != curnode
+		&&	( STRNCMP_CONST(fromnode->status, ACTIVESTATUS) == 0
+		||	  STRNCMP_CONST(fromnode->status, UPSTATUS) == 0)
+		&&	( STRNCMP_CONST(status, INITSTATUS) == 0)) {
+			--live_node_count;
+			if (live_node_count < 1) {
+				cl_log(LOG_ERR
+				,	"live_node_count too small (%d)"
+				,	live_node_count);
+			}
+		}
+		/*
+		 *   IF
+		 *	It's from a normal node
+		 *	It isn't from us
+		 *	The node's old status was dead or init
+		 *	The node's new status is up or active
+		 *   THEN
+		 *	increment the count of live nodes.
+		 */
+		if (fromnode->nodetype == NORMALNODE_I
+		&&	fromnode != curnode
+		&&	( STRNCMP_CONST(fromnode->status, DEADSTATUS) == 0
+		||	  STRNCMP_CONST(fromnode->status, INITSTATUS) == 0)
+		&&	( STRNCMP_CONST(status, UPSTATUS) == 0
+		||	  STRNCMP_CONST(status, ACTIVESTATUS) == 0)) {
+			++live_node_count;
+			if (live_node_count > config->nodecount) {
+				cl_log(LOG_ERR
+				,	"live_node_count too big (%d)"
+				,	live_node_count);
+			}
+		}
 		
-		QueueRemoteRscReq(PerformQueuedNotifyWorld, msg);
-		strncpy(fromnode->status, status
-		, 	sizeof(fromnode->status));
-		heartbeat_monitor(msg, KEEPIT, iface);
+		strncpy(fromnode->status, status, sizeof(fromnode->status));
+		if (!fromnode->status_suppressed) {
+			QueueRemoteRscReq(PerformQueuedNotifyWorld, msg);
+			heartbeat_monitor(msg, KEEPIT, iface);
+		}else{
+			/* We know we don't already have a saved msg */
+			fromnode->saved_status_msg = ha_msg_copy(msg);
+		}
 	}else{
 		heartbeat_monitor(msg, NOCHANGE, iface);
 	}
@@ -2288,8 +3018,6 @@ HBDoMsg_T_STATUS(const char * type, struct node_info * fromnode
 	fromnode->status_seqno = seqno;
 
 }
-
-
 
 static void /* This is a client status query from remote client */
 HBDoMsg_T_QCSTATUS(const char * type, struct node_info * fromnode
@@ -2396,23 +3124,11 @@ update_client_status_msg_list(struct node_info* thisnode)
 	return;
 }
 static void
-send_ack_if_needed(struct node_info* thisnode, seqno_t seq)
+send_ack(struct node_info* thisnode, seqno_t seq)
 {
 	struct ha_msg*	hmsg;
 	char		seq_str[32];
-	struct seqtrack* t = &thisnode->track;
-        seqno_t		fm_seq = t->first_missing_seq;
 	
-	if (!enable_flow_control){
-		return;
-	}
-	
-	if ( (fm_seq != 0 && seq > fm_seq) ||
-	     seq % ACK_MSG_DIV != thisnode->track.ack_trigger){
-		/*no need to send ACK */
-		return;
-	}	
-
 	if ((hmsg = ha_msg_new(0)) == NULL) {
 		cl_log(LOG_ERR, "no memory for " T_ACKMSG);
 		return;
@@ -2436,6 +3152,30 @@ send_ack_if_needed(struct node_info* thisnode, seqno_t seq)
 	
 	return;
 }
+
+
+
+static void
+send_ack_if_needed(struct node_info* thisnode, seqno_t seq)
+{
+	struct seqtrack* t = &thisnode->track;
+        seqno_t		fm_seq = t->first_missing_seq;
+	
+	if (!enable_flow_control){
+		return;
+	}
+	
+	if ( (fm_seq != 0 && seq > fm_seq) ||
+	     seq % ACK_MSG_DIV != thisnode->track.ack_trigger){
+		/*no need to send ACK */
+		return;
+	}	
+	
+	send_ack(thisnode, seq);
+	return;
+}
+
+
 
 
 static void
@@ -2522,6 +3262,7 @@ process_clustermsg(struct ha_msg* msg, struct link* lnk)
 			going_standby = NOT;
 			cl_log(LOG_WARNING, "No reply to standby request"
 			".  Standby request cancelled.");
+			hb_shutdown_if_needed();
 		}
 	}
 
@@ -2538,7 +3279,7 @@ process_clustermsg(struct ha_msg* msg, struct link* lnk)
 	if (DEBUGDETAILS) {
 		cl_log(LOG_DEBUG
 		       ,       "process_clustermsg: node [%s]"
-		,	from ? from :"?");
+		       ,	from ? from :"?");
 	}
 
 	if (from == NULL || ts == NULL || type == NULL) {
@@ -2583,24 +3324,38 @@ process_clustermsg(struct ha_msg* msg, struct link* lnk)
 	thisnode = lookup_tables(from, &fromuuid);
 	
 	if (thisnode == NULL) {
-#if defined(MITJA)
-		/* If a node isn't in the configfile, add it... */
-		cl_log(LOG_WARNING
-		,   "process_status_message: new node [%s] in message"
-		,	from);
-		add_node(from, NORMALNODE_I);
-		thisnode = lookup_node(from);
-		if (thisnode == NULL) {
+		if (config->rtjoinconfig == HB_JOIN_NONE) {
+			/* If a node isn't in our config - whine */
+			cl_log(LOG_ERR
+			,   "process_status_message: bad node [%s] in message"
+			,	from);
+			cl_log_message(LOG_ERR, msg);
+			return;
+		}else{
+			/* If a node isn't in our config, then add it... */
+			cl_log(LOG_INFO
+			,   "%s: Adding new node [%s] to configuration."
+			,	__FUNCTION__, from);
+			add_node(from, NORMALNODE_I);
+			thisnode = lookup_node(from);
+			if (thisnode == NULL) {
+				return;
+			}
+			/*
+			 * Suppress status updates to our clients until we
+			 * hear the second heartbeat from the new node.
+			 *
+			 * We've already updated the node table and we will
+			 * report its status if asked...
+			 *
+			 * This may eliminate an extra round of the membership
+			 * protocol.
+			 */
+			thisnode->status_suppressed = TRUE;
+			update_tables(from, &fromuuid);
+			G_main_set_trigger(write_hostcachefile);
 			return;
 		}
-#else
-		/* If a node isn't in the configfile - whine */
-		cl_log(LOG_ERR
-		,   "process_status_message: bad node [%s] in message"
-		,	from);
-		cl_log_message(LOG_ERR, msg);
-		return;
-#endif
 	}
 
 	/* Throw away some incoming packets if testing is enabled */
@@ -2619,7 +3374,6 @@ process_clustermsg(struct ha_msg* msg, struct link* lnk)
 	/* Is this message a duplicate, or destined for someone else? */
 
 	action=should_drop_message(thisnode, msg, iface, &missing_packet);
-
 	switch (action) {
 		case DROPIT:
 		/* Ignore it */
@@ -2759,7 +3513,8 @@ CoreProcessDied(ProcTrack* p, int status, int signo
 		,	(int) p->pid, CoreProcessCount);
 
 		if (CoreProcessCount <= 1) {
-			cl_log(LOG_INFO,"Heartbeat shutdown complete.");
+			cl_log(LOG_INFO,"%s Heartbeat shutdown complete.",
+			       localnodename);
 			if (procinfo->restart_after_shutdown) {
 				cl_log(LOG_INFO
 				,	"Heartbeat restart triggered.");
@@ -2827,8 +3582,9 @@ ManagedChildDied(ProcTrack* p, int status, int signo, int exitcode
 		}
 		if (0 != signo) {
 			cl_log(shutdown_in_progress ? LOG_DEBUG : LOG_ERR
-			,	"Client %s killed by signal %d."
+			,	"Client %s(pid=%d) killed by signal %d."
 			,	managedchild->command
+		       ,	(int)p->pid
 			,	signo);
 		}
 	}
@@ -3258,11 +4014,74 @@ check_for_timeouts(void)
 	}
 }
 
+
+
+
 /*
  * The anypktsyet field in the node structure gets set to TRUE whenever we
  * either hear from a node, or we declare it dead, and issue a fake "dead"
  * status packet.
  */
+static gboolean
+send_reqnodes_msg(gpointer data){
+	struct ha_msg* msg;
+	const char* destnode = NULL;
+	long i;
+	int startindex = (long) data;
+	guint		id;
+	
+	
+	if (get_reqnodes_reply){
+		return FALSE;
+	}
+	
+	if (startindex >= config->nodecount){
+		startindex = 0;
+	}
+	
+
+	for (i = startindex; i< config->nodecount; i++){
+		if (STRNCMP_CONST(config->nodes[i].status, DEADSTATUS) != 0
+		    && (&config->nodes[i]) != curnode
+		    && config->nodes[i].nodetype == NORMALNODE_I){
+			destnode = config->nodes[i].nodename;
+			break;
+		}
+		
+	}
+	
+	if (destnode ==NULL){
+		get_reqnodes_reply = TRUE;
+		comm_now_up();
+		return FALSE;
+	}
+	
+
+	msg = ha_msg_new(0);
+	if (msg == NULL){
+		cl_log(LOG_ERR, "%s: creating msg failed",
+		       __FUNCTION__);		
+		return FALSE;
+	}
+	
+	if (ANYDEBUG){
+		cl_log(LOG_DEBUG, "sending reqnodes msg to node %s", destnode);
+	}
+	
+	if (ha_msg_add(msg, F_TYPE, T_REQNODES) != HA_OK
+	    || ha_msg_add(msg, F_TO, destnode)!= HA_OK){
+		cl_log(LOG_ERR, "%s: Adding filed failed",
+		       __FUNCTION__);
+		ha_msg_del(msg);
+		return FALSE;		
+	}
+	
+	send_cluster_msg(msg);
+	
+	id = Gmain_timeout_add(1000, send_reqnodes_msg, (gpointer)i);
+	G_main_setall_id(id, "send_reqnodes_msg", config->heartbeat_ms, 100);
+	return FALSE;
+}
 
 static void
 check_comm_isup(void)
@@ -3271,9 +4090,16 @@ check_comm_isup(void)
 	int	j;
 	int	heardfromcount = 0;
 
+
 	if (heartbeat_comm_state == COMM_LINKSUP) {
 		return;
 	}
+	
+	if (config->rtjoinconfig != HB_JOIN_NONE 
+	    && !init_deadtime_passed){
+		return;
+	}
+	
 	for (j=0; j < config->nodecount; ++j) {
 		hip= &config->nodes[j];
 
@@ -3284,7 +4110,8 @@ check_comm_isup(void)
 
 	if (heardfromcount >= config->nodecount) {
 		heartbeat_comm_state = COMM_LINKSUP;
-		comm_now_up();
+		send_reqnodes_msg(0);
+		/*comm_now_up();*/
 	}
 }
 
@@ -3372,7 +4199,7 @@ send_cluster_msg(struct ha_msg* msg)
 		 * It will then get written to the cluster properly.
 		 */
 
-		if ((smsg = msg2wirefmt(msg, &len)) == NULL) {
+		if ((smsg = msg2wirefmt_noac(msg, &len)) == NULL) {
 			cl_log(LOG_ERR
 			,	"send_cluster_msg: cannot convert"
 			" message to wire format (pid %d)", (int)getpid());
@@ -3470,6 +4297,12 @@ hb_send_local_status(gpointer p)
 }
 
 static gboolean
+set_init_deadtime_passed_flag(gpointer p)
+{
+	init_deadtime_passed =TRUE;
+	return FALSE;
+}
+static gboolean
 hb_update_cpu_limit(gpointer p)
 {
 	cl_cpu_limit_update();
@@ -3540,6 +4373,8 @@ mark_node_dead(struct node_info *hip)
 	if (hip == curnode) {
 		/* Uh, oh... we're dead! */
 		cl_log(LOG_ERR, "No local heartbeat. Forcing restart.");
+		cl_log(LOG_INFO, "See URL: %s"
+		,	HAURL("FAQ#no_local_heartbeat"));
 
 		if (!shutdown_in_progress) {
 			cause_shutdown_restart();
@@ -3547,6 +4382,11 @@ mark_node_dead(struct node_info *hip)
 		return;
 	}
 
+	if (hip->nodetype == NORMALNODE_I
+	&&	STRNCMP_CONST(hip->status, DEADSTATUS) != 0
+	&&	STRNCMP_CONST(hip->status, INITSTATUS) != 0) {
+		--live_node_count;
+	}
 	strncpy(hip->status, DEADSTATUS, sizeof(hip->status));
 	
 
@@ -3710,7 +4550,10 @@ main(int argc, char * argv[], char **envp)
 				}
 				break;
 			case 'd':
-				++debug;
+				++debug_level;
+				break;
+			case 'D':
+				++PrintDefaults;
 				break;
 			case 'k':
 				++killrunninghb;
@@ -3739,6 +4582,9 @@ main(int argc, char * argv[], char **envp)
 			case 'V':
 				printversion();
 				cleanexit(LSB_EXIT_OK);
+			case 'W':
+				++WikiOutput;
+				break;
 				
 			default:
 				++argerrs;
@@ -3752,6 +4598,10 @@ main(int argc, char * argv[], char **envp)
 	if (argerrs || (CurrentStatus && !WeAreRestarting)) {
 		usage();
 	}
+	if (PrintDefaults) {
+		dump_default_config(WikiOutput);
+		cleanexit(LSB_EXIT_OK);
+	}
 
 	get_localnodeinfo();
 	SetParameterValue(KEY_HBVERSION, VERSION);
@@ -3762,6 +4612,12 @@ main(int argc, char * argv[], char **envp)
 	hb_register_msg_callback(T_NS_STATUS,	HBDoMsg_T_STATUS);
 	hb_register_msg_callback(T_QCSTATUS,	HBDoMsg_T_QCSTATUS);
 	hb_register_msg_callback(T_ACKMSG,	HBDoMsg_T_ACKMSG);
+	hb_register_msg_callback(T_ADDNODE,	HBDoMsg_T_ADDNODE);
+	hb_register_msg_callback(T_SETWEIGHT,	HBDoMsg_T_SETWEIGHT);
+	hb_register_msg_callback(T_SETSITE,	HBDoMsg_T_SETSITE);
+	hb_register_msg_callback(T_DELNODE,	HBDoMsg_T_DELNODE);
+	hb_register_msg_callback(T_REQNODES,    HBDoMsg_T_REQNODES);
+	hb_register_msg_callback(T_REPNODES, 	HBDoMsg_T_REPNODES);
 
 	if (init_set_proc_title(argc, argv, envp) < 0) {
 		cl_log(LOG_ERR, "Allocation of proc title failed.");
@@ -3778,9 +4634,9 @@ main(int argc, char * argv[], char **envp)
 
 
 
-	if (debug > 0) {
+	if (debug_level > 0) {
 		static char cdebug[8];
-		snprintf(cdebug, sizeof(debug), "%d", debug);
+		snprintf(cdebug, sizeof(debug_level), "%d", debug_level);
 		setenv(HADEBUGVAL, cdebug, TRUE);
 	}
 
@@ -4405,7 +5261,10 @@ should_drop_message(struct node_info * thisnode, const struct ha_msg *msg,
 	}
 	
 	if (from && !cl_uuid_is_null(&fromuuid)){
-		update_tables(from, &fromuuid);
+		/* We didn't know their uuid before, but now we do... */
+		if (update_tables(from, &fromuuid)){
+			G_main_set_trigger(write_hostcachefile);
+		}
 	}
 	
 	if (is_missing_packet == NULL){
@@ -4501,24 +5360,32 @@ should_drop_message(struct node_info * thisnode, const struct ha_msg *msg,
 				/* They're now alive, but were dead. */
 				/* No restart occured. UhOh. */
 
-				cl_log(LOG_ERR
+				cl_log(LOG_CRIT
 				,	"Cluster node %s"
 				" returning after partition."
 				,	thisnode->nodename);
+				cl_log(LOG_INFO
+				,	"For information on cluster"
+				" partitions, See URL: %s"
+				,	HAURL("SplitBrain"));
 				cl_log(LOG_WARNING
 				,	"Deadtime value may be too small.");
 				cl_log(LOG_INFO
-				,	"See documentation for information"
+				,	"See FAQ for information"
 				" on tuning deadtime.");
+				cl_log(LOG_INFO
+				,	"URL: %s"
+				,	HAURL("FAQ#heavy_load"));
 
 				/* THIS IS RESOURCE WORK!  FIXME */
 				/* IS THIS RIGHT??? FIXME ?? */
 				if (DoManageResources) {
+					guint id;
 					send_local_status();
-					
 					(void)CauseShutdownRestart;
-					Gmain_timeout_add(2000 ,	CauseShutdownRestart, NULL);
-
+					id = Gmain_timeout_add(2000
+					,	CauseShutdownRestart,NULL);
+					G_main_setall_id(id, "shutdown restart", 1000, 50);
 				}
 				ishealedpartition=1;
 			}
@@ -4539,6 +5406,7 @@ should_drop_message(struct node_info * thisnode, const struct ha_msg *msg,
 
 	/* Is this packet in sequence? */
 	if (t->last_seq == NOSEQUENCE || seq == (t->last_seq+1)) {
+		
 		t->last_seq = seq;
 		t->last_iface = iface;
 		send_ack_if_necessary(msg);
@@ -4579,10 +5447,6 @@ should_drop_message(struct node_info * thisnode, const struct ha_msg *msg,
 			cl_log(LOG_ERR, "lost a lot of packets!");
 			return (IsToUs ? KEEPIT : DROPIT);
 		}else{
-			if (ANYDEBUG){
-				cl_log(LOG_INFO, "calling request_msg_rexmit()"
-				       "from %s", __FUNCTION__);
-			}
 			request_msg_rexmit(thisnode, t->last_seq+1L, seq-1L);
 		}
 
@@ -4727,7 +5591,11 @@ process_outbound_packet(struct msg_xmit_hist*	hist
 	if (cseq != NULL) {
 		add2_xmit_hist (hist, msg, seqno);
 	}
-
+	/*
+	if (DEBUGPKT){
+		cl_msg_stats_add(time_longclock(), len);		
+	}
+	*/
 
 	/* Direct message to "loopback" processing */
 	process_clustermsg(msg, NULL);
@@ -4758,6 +5626,9 @@ is_lost_packet(struct node_info * thisnode, seqno_t seq)
 	for (j=0; j < t->nmissing; ++j) {
 		/* Is this one of our missing packets? */
 		if (seq == t->seqmissing[j]) {
+			
+			remove_msg_rexmit(thisnode, seq);
+
 			/* Yes.  Delete it from the list */
 			t->seqmissing[j] = NOSEQUENCE;
 			/* Did we delete the last one on the list */
@@ -4820,60 +5691,12 @@ is_lost_packet(struct node_info * thisnode, seqno_t seq)
 			send_ack_if_needed(thisnode, ack_seq);
 		}
 		
-	}else if (t->first_missing_seq != 0){
-#if 0
-		if (ANYDEBUG){
-			cl_log(LOG_INFO, "calling request_msg_rexmit()"
-			       "from %s", __FUNCTION__);
-		}
-		request_msg_rexmit(thisnode, t->first_missing_seq, t->first_missing_seq);
-#endif
-
 	}
+
 	return ret;
 	
 }
 
-
-static void
-request_msg_rexmit(struct node_info *node, seqno_t lowseq
-,	seqno_t hiseq)
-{
-	struct ha_msg*	hmsg;
-	char		low[16];
-	char		high[16];
-
-	if(ANYDEBUG){
-		cl_log(LOG_INFO, "requesting for retransmission from node %s"
-		"[%ld-%ld]",
-		node->nodename,lowseq, hiseq);
-	}
-
-	if ((hmsg = ha_msg_new(6)) == NULL) {
-		cl_log(LOG_ERR, "no memory for " T_REXMIT);
-		return;
-	}
-
-	snprintf(low, sizeof(low), "%lu", lowseq);
-	snprintf(high, sizeof(high), "%lu", hiseq);
-
-
-	if (	ha_msg_add(hmsg, F_TYPE, T_REXMIT) == HA_OK
-	&&	ha_msg_add(hmsg, F_TO, node->nodename)==HA_OK
-	&&	ha_msg_add(hmsg, F_FIRSTSEQ, low) == HA_OK
-	&&	ha_msg_add(hmsg, F_LASTSEQ, high) == HA_OK) {
-		/* Send a re-transmit request */
-		if (send_cluster_msg(hmsg) != HA_OK) {
-			cl_log(LOG_ERR, "cannot send " T_REXMIT
-			" request to %s", node->nodename);
-		}
-		node->track.last_rexmit_req = time_longclock();
-		
-	}else{
-		ha_msg_del(hmsg);
-		cl_log(LOG_ERR, "Cannot create " T_REXMIT " message.");
-	}
-}
 
 #define REXMIT_MS		1000
 #define ACCEPT_REXMIT_REQ_MS	(REXMIT_MS-10)
@@ -5063,7 +5886,7 @@ heartbeat_on_congestion(void)
 	
 	struct msg_xmit_hist* hist = &msghist;
 	
-	return hist->hiseq - hist->ackseq > MAXMSGHIST/2;
+	return hist->hiseq - hist->ackseq > FLOWCONTROL_LIMIT;
 	
 }
 
@@ -5105,19 +5928,32 @@ add2_xmit_hist (struct msg_xmit_hist * hist, struct ha_msg* msg
 	hist->lastrexmit[slot] = 0L;
 	hist->lastmsg = slot;
 	
-	if (enable_flow_control && hist->hiseq - hist->lowseq > MAXMSGHIST*3 / 4){
-		cl_log(LOG_WARNING, "Message hist queue is filling up (%d messages in queue)",
-		       (int)(hist->hiseq - hist->lowseq));
+	if (enable_flow_control
+	&&	live_node_count > 1
+	&&	(hist->hiseq - hist->lowseq) > ((MAXMSGHIST*3)/4)) {
+		cl_log(LOG_ERR
+		,	"Message hist queue is filling up"
+		" (%d messages in queue)"
+		,       (int)(hist->hiseq - hist->lowseq));
+		hist_display(hist);
 	}
-	
 
 	AUDITXMITHIST;
 	
 	if (enable_flow_control
-	    && hist->hiseq - hist->ackseq > MAXMSGHIST/2){
-		all_clients_pause();
+	&&	hist->hiseq - hist->ackseq > FLOWCONTROL_LIMIT){
+		if (live_node_count < 2) {
+			update_ackseq(hist->hiseq - (FLOWCONTROL_LIMIT-1));
+			all_clients_resume();
+		}else{
+#if 0
+			cl_log(LOG_INFO, "Flow control engaged with %d live nodes"
+			,	live_node_count);
+#endif
+			all_clients_pause();
+			hist_display(hist);
+		}
 	}
-
 }
 
 
@@ -5136,9 +5972,15 @@ process_rexmit(struct msg_xmit_hist * hist, struct ha_msg* msg)
 	struct node_info* fromnode = NULL;
 
 	if (fromnodename == NULL){
-		cl_log(LOG_ERR, "process_rexmit: "
-		       "from node not found in the message");
+		cl_log(LOG_ERR, "process_rexmit"
+		": from node not found in the message");
 		return;		
+	}
+	if (firstslot >= MAXMSGHIST) {
+		cl_log(LOG_ERR, "process_rexmit"
+		": firstslot out of range [%d]"
+		,	firstslot);
+		hist->lastmsg = firstslot = MAXMSGHIST-1;
 	}
 	
 	fromnode = lookup_tables(fromnodename, NULL);
@@ -5155,6 +5997,11 @@ process_rexmit(struct msg_xmit_hist * hist, struct ha_msg* msg)
 		cl_log_message(LOG_ERR, msg);
 	}
 
+	
+	if (ANYDEBUG){
+		cl_log(LOG_DEBUG, "rexmit request from node %s for msg(%ld-%ld)",
+		       fromnodename, fseq, lseq);
+	}
 	/*
 	 * Retransmit missing packets in proper sequence.
 	 */
@@ -5196,7 +6043,12 @@ process_rexmit(struct msg_xmit_hist * hist, struct ha_msg* msg)
 			size_t		len;
 
 			if (msgslot < 0) {
-				msgslot = MAXMSGHIST;
+				/* Time to wrap around */
+				if (firstslot == MAXMSGHIST-1) { 
+				  /* We're back where we started */
+					break;
+				}
+				msgslot = MAXMSGHIST-1;
 			}
 			if (hist->msgq[msgslot] == NULL) {
 				continue;
@@ -5359,6 +6211,9 @@ ParseTestOpts()
 		}
 	}
 	cl_log(LOG_INFO, "WARNING: Above Options Now Enabled.");
+	
+	fclose(fp);
+	
 	return something_changed;
 }
 
@@ -5499,6 +6354,299 @@ hb_pop_deadtime(gpointer p)
 
 /*
  * $Log: heartbeat.c,v $
+ * Revision 1.514  2006/07/13 02:39:41  alan
+ * Put in a fix for a local DOS attack on heartbeat.
+ *
+ * Revision 1.513  2006/06/22 01:00:51  alan
+ * Raised the heartbeat (debug) CPU limit to 70%.
+ *
+ * Revision 1.512  2006/06/13 07:57:11  zhenh
+ * deal with the situation that the time restart is shorter than deadtime, fix 1280
+ *
+ * Revision 1.511  2006/05/31 06:32:27  zhenh
+ * To work with nodes in 2.0.5, we have to deal with the T_REPNODES message without F_DELNODELIST field.
+ *
+ * Revision 1.510  2006/05/28 00:54:19  zhenh
+ * add message handlers for setting the weight and site of node
+ *
+ * Revision 1.509  2006/05/11 17:45:35  alan
+ * Modified a recent patch to a Coverity problem, to eliminate a possible infinite loop
+ *
+ * Revision 1.508  2006/05/11 07:52:41  lars
+ * Reverting hunk which was NOT supposed to go into CVS.
+ *
+ * Revision 1.507  2006/05/11 07:41:01  lars
+ * Coverity #42: Static buffer overrun in our re-transit code!
+ *
+ * Revision 1.506  2006/04/26 03:42:07  alan
+ * Committed a patch from gshi which should GREATLY improve the
+ * behavior of autojoin code.
+ * The basic idea is that anyone newly joining the cluster should listen to anyone already in the cluster for the cache file contents, etc.
+ *
+ * Revision 1.505  2006/04/23 20:02:10  alan
+ * Disabled a message put in to give me confidence a recent change.
+ *
+ * Revision 1.504  2006/04/21 17:47:46  alan
+ * Put in a bug fix which only occurs if we send lots of packets
+ * before initdead expires, and we're the only node up.
+ * It caused problems in BSC with a 10ms heartbeat time.
+ * What triggered the need for this patch was decreasing the window
+ * size of the protocol to "only" 200 packets (instead of 1000).
+ *
+ * Revision 1.503  2006/04/20 17:14:56  alan
+ * Changed some timing code to not be quite a particular as it had been...
+ *
+ * Revision 1.502  2006/04/20 15:00:16  alan
+ * Put in code to use the library temporary process creation/run code
+ * instead of the inline heartbeat code
+ *
+ * Also turned off a feature where nodes could be "automatically" deleted.
+ * This was definitely a mistake.  This isn't a permanent fix.
+ * Gshi's going to look at that.
+ *
+ * Revision 1.501  2006/04/19 12:15:59  andrew
+ * Tweak some log patterns to work regardless of how they're logged (syslog vs. file)
+ *
+ * Revision 1.500  2006/04/07 12:51:25  lars
+ * CID #25: RESOURCE_LEAK, fp was not being freed.
+ *
+ * Revision 1.499  2006/03/03 05:36:31  zhenh
+ * The should_drop_message() may call itself in some special conditions.
+ * So the t->last_seq should be set before any chance to call itself
+ * This patch fixes bug 1103.
+ *
+ * Revision 1.498  2006/02/24 16:52:26  gshi
+ * This message indicates ACK is broken or there is uni-directional communication
+ * Mark it as error so that a user can report it.
+ *
+ * Revision 1.497  2006/02/09 19:04:04  alan
+ * Changed default timeouts for heartbeat events to be based largely on heartbeat
+ * configuration parameters.
+ * Also print out a message if a client disconnects with unread msgs in their queue
+ *
+ * Revision 1.496  2006/02/07 17:33:30  alan
+ * Cleaned up (set to NULL) the private data for our hostcache write processes
+ * when they exit so the bad message will go away...
+ *
+ * Revision 1.495  2006/02/07 17:18:24  alan
+ * Added a brand new mechanism for creating child processes to do things for us
+ * to keep us from taking a realtime hit for certain operations.
+ * Initially, this mechanism is being used to write out the host cache data
+ * and also the deleted node cache data - which causes us a realtime hit
+ * when we need to write it out.
+ * This happens on startup and when nodes join or are deleted at runtime.
+ *
+ * Revision 1.494  2006/02/07 10:06:22  sunjd
+ * make some versions of gcc not complain: used uninitialized
+ *
+ * Revision 1.493  2006/02/06 14:00:43  alan
+ * Changed heartbeat's child processes to run one notch lower than it in realtime
+ * priority.
+ *
+ * Revision 1.492  2006/02/06 04:34:36  alan
+ * Removed two cases where we could possibly block (but we didn't realize it)
+ * They've been in the code since a very long time ago.
+ * One was for reading FIFO messages (unusual) and one for reading messages
+ * from the network - very common.
+ * This latter case has been implicated in several of our extra long delays
+ * in heartbeat.
+ *
+ * Revision 1.491  2006/02/02 20:58:56  alan
+ * Changed the priorities of a few of the realtime events in heartbeat.
+ *
+ * Revision 1.490  2006/02/02 20:00:21  alan
+ * Made a small correction to the last realtime behavior change.
+ *
+ * Revision 1.489  2006/02/02 19:46:48  alan
+ * Changed heartbeat's inbound IPC channels so that they're all unbuffered.
+ * Although this decreases efficiency, it does improve realtime behavior.
+ *
+ * Revision 1.488  2006/02/02 18:27:49  alan
+ * Fixed up a mistake in adding code to check timeouts.
+ * An IPC channel in heartbeat wound up not getting a description,
+ * and another one got the wrong description.  Both from a single bug -
+ * two missing characters.
+ *
+ * Revision 1.487  2006/02/02 14:58:23  alan
+ * Moved our timeout functions to GSource.c.
+ * Fixed a bug in the timing code in GSource.c (it almost never worked)
+ * Added code to time the prepare check functions.
+ * Added simpler ways to check for timeouts
+ * Changed heartbeat to use these simpler ways, and checked more timeouts.
+ *
+ * Revision 1.486  2006/02/01 14:59:10  alan
+ * Added some code to allow memory pre-reserve for heartbeat a configuration problem.
+ *
+ * Revision 1.485  2006/02/01 06:27:28  alan
+ * Grabbed an even bigger chunk of memory when starting up heartbeat.
+ *
+ * Revision 1.484  2006/02/01 05:34:12  alan
+ * Increased the amount of memory the main heartbeat process asks for when it preallocates memory.
+ *
+ * Revision 1.483  2006/01/31 19:59:50  alan
+ * Added code to be able to tell what source it is that is misbehaving and/or getting the shaft.
+ *
+ * Revision 1.482  2006/01/31 16:20:30  alan
+ * Fixed some wrong calls for measuring dispatch time / latency
+ *
+ * Revision 1.481  2006/01/31 04:30:37  alan
+ * Put in code to detect and log whenever heartbeat functions take too long or are delayed too long...
+ *
+ * Revision 1.480  2006/01/25 16:41:36  alan
+ * Put in a little clarification on a disagreeing membership message.
+ *
+ * Revision 1.479  2006/01/15 16:20:54  xunsun
+ * popular "the the" typo
+ *
+ * Revision 1.478  2005/12/25 22:39:50  alan
+ * Increased the debug level of a few messages...
+ *
+ * Revision 1.477  2005/12/19 18:41:43  gshi
+ * add debug msg for rexmit
+ *
+ * Revision 1.476  2005/12/09 19:51:33  blaschke
+ *
+ * Port fixes for bugs 559, 835 and 927 from 1.2.x
+ *
+ * Revision 1.475  2005/12/09 16:07:38  blaschke
+ *
+ * Bug 990 - Added -D option to tell heartbeat to display default directive
+ * values and -W option to do so in wiki format
+ *
+ * Revision 1.474  2005/12/01 23:22:28  gshi
+ * print out the pid of the process being killed
+ *
+ * Revision 1.473  2005/11/12 18:32:22  lars
+ * Fix a log message.
+ *
+ * Revision 1.472  2005/11/11 23:33:27  gshi
+ * bug 929: Read / Write child processes should not have access to unneeded file descriptors
+ *
+ * Revision 1.471  2005/11/10 22:44:29  gshi
+ * remove one debug message
+ *
+ * Revision 1.470  2005/11/10 01:16:42  gshi
+ * bug 693: Spread out load for packet retransmission requests
+ *
+ * Each time a missing packet is detected, a timeout event is scheduled
+ * with a random delay between 0~MAX_REXMIT_DELAY(250ms). If the missing message
+ * is received before the timeout event happens, the timeout event is cancelled.
+ * Otherwise, in the timeout event function call, a rexmit request is sent to
+ * the source node and a new timeout event is scheduled (with delay MAX_REXMIT_DELAY).
+ * The current timeout will be removed from mainloop by returning FALSE.
+ *
+ * The previous periodic check for missing packets is disabled.
+ *
+ * Revision 1.469  2005/11/07 22:52:57  gshi
+ * fixed a few bugs related to deletion:
+ *
+ * 1. we need to update the variable curnode since it might point to a different node or invalid node now
+ * 2. we need to update the tables stores uuid->node_info pointer and nodename->node_info pointer
+ * because the pointer no longer points to the right node
+ *
+ * Revision 1.468  2005/11/07 15:49:27  gshi
+ * fix warnings in IA64 machines
+ *
+ * Revision 1.467  2005/11/07 07:36:44  gshi
+ * fix a deletion bug: deleting an active node should not be allowed
+ *
+ * Revision 1.466  2005/11/07 07:12:51  gshi
+ * bug 944: we shall not send reqnodes msg to ping node
+ *
+ * Revision 1.465  2005/11/04 22:32:08  gshi
+ * make nodes sync happen at the heartbeat start phase
+ *
+ * Revision 1.464  2005/11/01 00:27:01  gshi
+ * add restriction on node deletion:
+ * only when all nodes (excluding nodes to be deleted) are active/up
+ * that a node deletion is allowed
+ *
+ * Revision 1.463  2005/10/31 22:37:06  gshi
+ * lowest_acknode must be reset after node deletion because the pointer
+ * saved there are not necessarily the same node as before
+ *
+ * Revision 1.462  2005/10/31 20:40:51  gshi
+ * make hb_addnode/hb_delnode handle multiple nodes in one message
+ *
+ * Revision 1.461  2005/10/29 21:35:06  gshi
+ * The message from a child process to fifo should not be coded with authentication part
+ *
+ * Revision 1.460  2005/10/27 01:03:21  gshi
+ * make node deletion work
+ *
+ * 1. maintain a delhostcache file for deleted files
+ * 2. hb_delnode <node> to delete a node
+ *    hb_addnode <node> to add a node
+ *
+ * TODO:
+ * 1) make hb_delnode/hb_addnode accept multiple nodes
+ * 2) make deletion only works when all other nodes are active
+ * 3) make CCM work with node deletion
+ *
+ * Revision 1.459  2005/10/26 00:16:27  gshi
+ * fix bug 924
+ * a new node comes could set hist->ackseq to 0 (which is wrong)
+ * Now, if the lowest ackseq is 0, we don't reset hist->ackseq
+ * but only hist->lowest_acknode.
+ *
+ * Revision 1.458  2005/10/20 01:16:11  gshi
+ * Disable msg_stats dumping to a file in CVS
+ * (I accidently enable it in previous commit)
+ *
+ * Revision 1.457  2005/10/20 00:01:15  gshi
+ *  hip->track.ackseq == 0 is not a condition that we can skip that node for
+ * lowack computation because that node might be up and ask some low seq
+ * message retransmission later
+ *
+ * some ack code cleanup
+ *
+ * Revision 1.456  2005/10/04 19:37:06  gshi
+ * bug 144: UUIDs need to be generatable from nodenames for some cases
+ * new directive
+ * uuidfrom <file/nodename>
+ * default to file
+ *
+ * Revision 1.455  2005/09/28 20:29:55  gshi
+ * change the variable debug to debug_level
+ * define it in cl_log
+ * move a common function definition from lrmd/mgmtd/stonithd to cl_log
+ *
+ * Revision 1.454  2005/09/26 18:50:31  gshi
+ * if autojoin is set to other/any, heartbeat will wait for init_dead_time
+ * before it claims communication is up
+ *
+ * Revision 1.453  2005/09/26 18:15:53  gshi
+ * updated table should be written out to file
+ *
+ * Revision 1.452  2005/09/26 04:38:31  gshi
+ * bug 901: we should not access hostcache file if autojoin is not set in ha.cf
+ *
+ * Revision 1.450  2005/09/18 02:55:46  alan
+ * Added URLs pointing to the documentation which the user should have already
+ * read - for a few common cases.
+ *
+ * Revision 1.449  2005/09/15 06:13:13  alan
+ * more auto-add bugfixes...
+ *
+ * Revision 1.448  2005/09/15 03:59:09  alan
+ * Now all the basic pieces to bug 132 are in place - except for a config option
+ * to test it with.
+ * This means there are three auto-join modes one can configure:
+ * 	none	- no nodes may autojoin
+ * 	other	- nodes other than ourselves can autojoin
+ * 	any	- any node, including ourself can autojoin
+ *
+ * None is the default.
+ *
+ * Revision 1.447  2005/09/15 03:31:13  alan
+ * More pieces to bug 132.
+ * I think most things are ready for testing except for an option in config.c
+ * to activate this feature.
+ *
+ * Revision 1.446  2005/09/14 20:20:21  alan
+ * Partial fix for bug 132 - allowing nodes to join hearbeat-layer cluster
+ * without formality.
+ *
  * Revision 1.445  2005/09/08 23:46:17  gshi
  * It's enable_flow_control is false, then this message should not be printed out
  *

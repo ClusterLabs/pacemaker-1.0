@@ -1,4 +1,4 @@
-/* $Id: heartbeat.h,v 1.70 2005/09/07 15:38:38 msoffen Exp $ */
+/* $Id: heartbeat.h,v 1.86 2006/05/28 00:50:45 zhenh Exp $ */
 /*
  * heartbeat.h: core definitions for the Linux-HA heartbeat program
  *
@@ -78,7 +78,6 @@
 #  endif 
 #endif
 
-#define	MAXLINE		MAXMSG
 #define	MAXFIELDS	30		/* Max # of fields in a msg */
 #define HOSTLENG	100		/* Maximum size of "uname -a" return */
 #define STATUSLENG	32		/* Maximum size of status field */
@@ -176,6 +175,14 @@
 #ifndef FIFONAME
 #	define	FIFONAME	VAR_LIB_D "/fifo"
 #endif
+#ifndef	HOSTUUIDCACHEFILE
+#	define	HOSTUUIDCACHEFILE	VAR_LIB_D "/hostcache"
+#endif
+#ifndef DELHOSTCACHEFILE
+#	define  DELHOSTCACHEFILE	VAR_LIB_D "/delhostcache"
+#endif
+#define		HOSTUUIDCACHEFILETMP	HOSTUUIDCACHEFILE ".tmp"
+#define		DELHOSTCACHEFILETMP	DELHOSTCACHEFILE ".tmp"
 
 #define	RCSCRIPT		HA_D "/harc"
 #define CONFIG_NAME		HA_D "/ha.cf"
@@ -216,7 +223,7 @@
 
 typedef unsigned long seqno_t;
 
-#define	MAXMSGHIST	1000
+#define	MAXMSGHIST	200
 #define	MAXMISSING	MAXMSGHIST
 
 #define	NOSEQUENCE	0xffffffffUL
@@ -246,15 +253,20 @@ struct link {
 
 #define	NORMALNODE_I	0
 #define	PINGNODE_I	1
-#define	NORMALNODE      "normal"
-#define	PINGNODE        "ping"
-#define	UNKNOWNNODE     "unknown"
+#define	NORMALNODE	"normal"
+#define	PINGNODE	"ping"
+#define	UNKNOWNNODE	"unknown"
 
 struct node_info {
 	int		nodetype;
 	char		nodename[HOSTLENG];	/* Host name from config file */
 	cl_uuid_t	uuid;
+	char		site[HOSTLENG];
+	int		weight;
 	char		status[STATUSLENG];	/* Status from heartbeat */
+	gboolean	status_suppressed;	/* Status reports suppressed
+						   for now */
+	struct ha_msg*	saved_status_msg;	/* Last status (ignored) */
 	struct link	links[MAXMEDIA];
 	int		nlinks;
 	TIME_T		rmt_lastupdate;	/* node's idea of last update time */
@@ -266,6 +278,11 @@ struct node_info {
 	int		has_resources;	/* TRUE if node may have resources */
 };
 
+typedef enum {
+	HB_JOIN_NONE	= 0,	/* Don't allow runtime joins of unknown nodes */
+	HB_JOIN_OTHER	= 1,	/* Allow runtime joins of other nodes */
+	HB_JOIN_ANY	= 2,	/* Don't even require _us_ to be in ha.cf */
+}hbjointype_t;
 
 #define MAXAUTH	16
 
@@ -285,17 +302,21 @@ struct sys_config {
 	long		initial_deadtime_ms;	/* Ticks before saying dead 1st time*/
 	long		warntime_ms;		/* Ticks before issuing warning */
 	int		hopfudge;		/* hops beyond nodecount allowed */
-	int    		log_facility;		/* syslog facility, if any */
+	int		log_facility;		/* syslog facility, if any */
 	char		facilityname[PATH_MAX];	/* syslog facility name (if any) */
 	char   		logfile[PATH_MAX];	/* path to log file, if any */
         int    		use_logfile;            /* Flag to use the log file*/
 	char		dbgfile[PATH_MAX];	/* path to debug file, if any */
-        int    		use_dbgfile;            /* Flag to use the debug file*/
+	int    		use_dbgfile;            /* Flag to use the debug file*/
+	int		memreserve;		/* number of kbytes to preallocate in heartbeat */
 	int		rereadauth;		/* 1 if we need to reread auth file */
-	seqno_t		generation;	/* Heartbeat generation # */
-	cl_uuid_t	uuid;		/* uuid for this node*/
+	seqno_t		generation;		/* Heartbeat generation # */
+	cl_uuid_t	uuid;			/* uuid for this node*/
+	int		uuidfromname;		/* do we get uuid from nodename?*/
+	char		cluster[PATH_MAX];	/* the name of cluster*/
+	hbjointype_t	rtjoinconfig;		/* Runtime join behavior */
 	int		authnum;
-	Stonith*	stonith;	/* Stonith method: WE NEED A LIST TO SUPPORT MULTIPLE STONITH DEVICES PER NODE -EZA */
+	Stonith*	stonith;	/* Stonith method - r1-style cluster only */
 	struct HBauth_info* authmethod;	/* auth_config[authnum] */
 	struct node_info  nodes[MAXNODE];
 	struct HBauth_info  auth_config[MAXAUTH];
@@ -352,17 +373,11 @@ int api_remove_client_pid(pid_t c_pid, const char * reason);
 
 
 extern struct sys_config *	config;
-extern int			debug;
+extern int			debug_level;
 extern int			udpport;
 extern int			RestartRequested;
 extern char *			localnodename;
 
-#define	ANYDEBUG	(debug)
-#define	DEBUGDETAILS	(debug >= 2)
-#define	DEBUGAUTH	(debug >=3)
-#define	DEBUGMODULE	(debug >=3)
-#define	DEBUGPKT	(debug >= 4)
-#define	DEBUGPKTCONT	(debug >= 5)
 
 #define ha_log		cl_log
 #define ha_perror	cl_perror
@@ -383,38 +398,31 @@ struct node_info *	lookup_node(const char *);
 struct link * lookup_iface(struct node_info * hip, const char *iface);
 struct link *  iface_lookup_node(const char *);
 int	add_node(const char * value, int nodetype);
+int	set_node_weight(const char * value, int weight);
+int	set_node_site(const char * value, const char * site);
+int	remove_node(const char * value, int);
 void	SetParameterValue(const char * name, const char * value);
 
 gint		uuid_equal(gconstpointer v, gconstpointer v2);
 guint		uuid_hash(gconstpointer key);
+int		write_cache_file(struct sys_config * cfg);
+int		read_cache_file(struct sys_config * cfg);
+int		write_delnode_file(struct sys_config * cfg);
 void		add_nametable(const char* nodename, struct node_info* value);
 void		add_uuidtable(cl_uuid_t*, struct node_info* value);
 const char *	uuid2nodename(cl_uuid_t* uuid);
 int		nodename2uuid(const char* nodename, cl_uuid_t*);
 int		inittable(void);
-void		update_tables(const char* nodename, cl_uuid_t* uuid);
+gboolean	update_tables(const char* nodename, cl_uuid_t* uuid);
 struct node_info* lookup_tables(const char* nodename, cl_uuid_t* uuid);
 void		cleanuptable(void);
-int		GetUUID(cl_uuid_t* uuid);
+int		tables_remove(const char* nodename, cl_uuid_t* uuid);
+int		GetUUID(struct sys_config*, const char*, cl_uuid_t* uuid);
+void		remove_from_dellist( const char* nodename);
+void		append_to_dellist(struct node_info* hip);
+void		request_msg_rexmit(struct node_info *node, seqno_t lowseq, seqno_t hiseq);
+int		remove_msg_rexmit(struct node_info *node, seqno_t seq);
+int		init_rexmit_hash_table(void);
+int		destroy_rexmit_hash_table(void);
 
-#ifndef HA_HAVE_SETENV
-int setenv(const char *name, const char * value, int why);
-#endif
-
-#ifndef HA_HAVE_SCANDIR
-#include <dirent.h>
-int
-scandir (const char *directory_name,
-	struct dirent ***array_pointer,
-	int (*select_function) (const struct dirent *),
-
-#ifdef USE_SCANDIR_COMPARE_STRUCT_DIRENT
-	/* This is what the Linux man page says */
-	int (*compare_function) (const struct dirent**, const struct dirent**)
-#else
-	/* This is what the Linux header file says ... */
-	int (*compare_function) (const void *, const void *)
-#endif
-	);
-#endif /* HAVE_SCANDIR */
 #endif /* _HEARTBEAT_H */

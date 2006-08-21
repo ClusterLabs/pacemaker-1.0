@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-#	$Id: ClusterMon.in,v 1.5 2005/07/22 07:40:52 sunjd Exp $
+#	$Id: ClusterMon.in,v 1.11 2006/06/27 17:03:07 lars Exp $
 #
 #	ClusterMon OCF RA. Does nothing but wait a few seconds, can be
 #	configured to fail occassionally.
@@ -50,6 +50,7 @@ meta_data() {
 
 <longdesc lang="en">
 This is a ClusterMon Resource Agent.
+It outputs current cluster status to the html.
 </longdesc>
 <shortdesc lang="en">ClusterMon resource agent</shortdesc>
 
@@ -60,7 +61,7 @@ This is a ClusterMon Resource Agent.
 The user we want to run crm_mon as
 </longdesc>
 <shortdesc lang="en">The user we want to run crm_mon as</shortdesc>
-<content type="string" default="15" />
+<content type="string" default="root" />
 </parameter>
 
 <parameter name="update" unique="0">
@@ -87,7 +88,7 @@ PID file location to ensure only one instance is running
 <content type="string" default="/tmp/ClusterMon_${OCF_RESOURCE_INSTANCE}.pid" />
 </parameter>
 
-<parameter name="htmlfile" unique="1">
+<parameter name="htmlfile" unique="1" required="1">
 <longdesc lang="en">
 Location to write HTML output to.
 </longdesc>
@@ -129,9 +130,9 @@ ClusterMon_start() {
     cmd_prefix=""
     cmd_suffix=""
     if [ ! -z $OCF_RESKEY_user ]; then
-	su - $OCF_RESKEY_user -c "@hb_libdir@/crm_mon -p $OCF_RESKEY_pidfile -d -i $OCF_RESKEY_update $OCF_RESKEY_extra_options -h $OCF_RESKEY_htmlfile"
+	su - $OCF_RESKEY_user -c "@sbindir@/crm_mon -p $OCF_RESKEY_pidfile -d -i $OCF_RESKEY_update $OCF_RESKEY_extra_options -h $OCF_RESKEY_htmlfile"
     else
-	@hb_libdir@/crm_mon -p $OCF_RESKEY_pidfile -d -i $OCF_RESKEY_update $OCF_RESKEY_extra_options -h $OCF_RESKEY_htmlfile
+	@sbindir@/crm_mon -p $OCF_RESKEY_pidfile -d -i $OCF_RESKEY_update $OCF_RESKEY_extra_options -h $OCF_RESKEY_htmlfile
     fi
     ClusterMon_exit $?
 }
@@ -157,24 +158,11 @@ ClusterMon_monitor() {
     fi
     if [ ! -z $pid ]; then
 	kill -0 $pid
-	ClusterMon_exit $?
+	if [ $? = 0 ]; then
+	    exit $OCF_SUCCESS
+	fi
     fi
-    ClusterMon_exit 1
-}
-
-CheckInterval() {
-# We know $1 is non-empty beforehand
-
-# This test is basically same as 
-#
-# if [ "$1" -gt 0 ]
-#
-# However this is safer if user accidently set OCF_RESKEY_update="1 2"...
-    case $1 in
-	*[^0-9]*) false;; #got invalid char
-	*[1-9]*) true;; #no invalid char, at most one decimal point, contains non-zero digit <=> valid
-	*) false;; #"0" string
-    esac
+    exit $OCF_NOT_RUNNING
 }
 
 CheckOptions() {
@@ -221,7 +209,7 @@ ClusterMon_validate() {
     esac
 
 # Check the update interval
-    if CheckInterval "$OCF_RESKEY_update"; then
+    if ocf_is_decimal "$OCF_RESKEY_update" && [ $OCF_RESKEY_update -gt 0 ]; then
 	:
     else
 	ocf_log err "Invalid update interval $OCF_RESKEY_update. It should be positive integer!"
@@ -275,4 +263,4 @@ usage|help)	ClusterMon_usage
 		;;
 esac
 
-exit $OCF_SUCCESS
+exit $?

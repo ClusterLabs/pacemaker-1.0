@@ -1,192 +1,34 @@
 #!/bin/sh
 #
-# License:      GNU General Public License (GPL)
+# $Id: portblock.in,v 1.5 2006/08/14 09:37:21 andrew Exp $
+#
+# Description:	wrapper of OCF RA portblock, based on original heartbeat RA.
+#		See OCF RA portblock for more information.
+#
+# Author:	Xun Sun <xunsun@cn.ibm.com> 
 # Support:      linux-ha@lists.linux-ha.org
+# License:      GNU General Public License (GPL)
+# Copyright:	(C) 2005 International Business Machines
 #
-# portblock: iptables temporary portblocking control 
-#
-CMD=`basename $0`
+
+. @HB_RA_DIR@/hto-mapfuncs
 usage()
 {
-	cat <<-!USAGE >&2
-	usage: $CMD {udp|tcp} portno,portno {block|unblock} {start|stop|status}
-
-	$CMD is used to temporarily block ports using iptables.
-
-	It can be used to turn off a port before bringing
-	up an IP address, and enable it after a service is started.
-	To do that for samba, the following resource line can be used:
-
-	$CMD::tcp::137,138::block		\\
-	    10.10.10.20				\\
-	    nmbd smbd 				\\
-	    $CMD::tcp::137,138::unblock
-
-	This will do the follwing things:
-
-	  - DROP all incoming packets for TCP ports 137 and 138
-	  - Bring up the IP alias 10.10.10.20
-	  - start the nmbd and smbd services
-	  - Re-enable TCP ports 137 and 138
-	        (enable normal firewall rules on those ports)
-
-	This prevents clients from getting ICMP port unreachable
-	if they try to reconnect to the service after the alias is
-	enabled but before nmbd and smbd are running.  These packets
-	will cause some clients to give up attempting to reconnect to
-	the server.
-
-	NOTE:  iptables is linux-specific...
-
-	!USAGE
-	exit 1
-}
-#
-#	Because this is the normal usage, we consider "block"
-#	resources to be pseudo-resources -- that is, their status can't
-#	be reliably determined through external means.
-#	This is because we expect an "unblock" resource to come along
-#	and disable us -- but we're still in some sense active...
-#
-#	So, we track the state here using the pseudo_resource() function.
-#
-#	The psuedo_resource function should be moved into the functions
-#	available to resources so other resource scripts could use it...
-#
-#
-HA_VARRUNDIR=@localstatedir@/run/@HB_PKG@
-prefix=@prefix@
-exec_prefix=@exec_prefix@
-. @sysconfdir@/ha.d/shellfuncs
-
-RSCNAME=${CMD}_${1}_${2}_${3}
-# pseudo_resource filename operation
-pseudo_resource()
-{
-  file="$HA_VARRUNDIR/$1"
-  case $2 in
-    start|restart|reload)  touch "$file";;
-    stop) rm -f $file;;
-    status) test -f "$file";;
-    *)	exit 3;;
-  esac
-}
-iptables=/usr/sbin/iptables
-
-BlockOrUnblock=block
-
-#iptables_spec {udp|tcp} portno,portno
-iptables_spec()
-{
-  echo -D INPUT -p $1 -m multiport --dports $2 -j DROP
+    echo "usage: $0 {udp|tcp} portno,portno {block|unblock} $LEGAL_ACTIONS"
+    exit 1
 }
 
-#active_grep_pat {udp|tcp} portno,portno
-active_grep_pat()
-{
-  w="[ 	][ 	]*"
-  any="0\\.0\\.0\\.0/0"
-  echo "^DROP${w}${1}${w}--${w}${any}${w}${any}${w}multiport${w}dports${w}${2} "
-}
+if [ $# != 3 ]; then
+    usage
+fi
 
-#chain_isactive  {udp|tcp} portno,portno
-chain_isactive()
-{
-  PAT=`active_grep_pat "$1" "$2"`
-  $iptables -n -L INPUT | grep "$PAT" >/dev/null
-}
+OCF_RESKEY_protocol=$1
+OCF_RESKEY_portno=$2
+OCF_RESKEY_action=$3
+export OCF_RESKEY_action OCF_RESKEY_portno OCF_RESKEY_action
 
-SayActive()
-{
-  echo "$CMD DROP rule for INPUT chain [$*]  is running (OK)"
-  return 0
-}
-SayConsideredActive()
-{
-  echo "$CMD DROP rule for INPUT chain [$*] considered to be running (OK)"
-  return 0
-}
-SayInactive()
-{
-  echo "$CMD DROP rule for INPUT chain [$*] is inactive"
-  return 1
-}
-#IptablesStatus  {udp|tcp} portno,portno {block|unblock}
-IptablesStatus()
-{
-  activewords="$CMD $1 $2 is running (OK)"
-  if
-    chain_isactive "$1" "$2"
-  then
-    case $3 in
-	  block)	SayActive $*; return $?;;
-	  *) 		SayInactive $*; return $?;;
-    esac
-  else
-    case $3 in
-	  block)
-	        if
-		  pseudo_resource "$RSCNAME" status
-		then
-		  SayConsideredActive $*; return $?
-		else
-		  SayInactive $*; return $?
-		fi;;
+OCF_TYPE=portblock
+OCF_RESOURCE_INSTANCE=${OCF_TYPE}_$1_$2
+export OCF_TYPE OCF_RESOURCE_INSTANCE
 
-	  *)	SayActive $*; return $?;;
-    esac
-  fi      
-}
-
-#IptablesBLOCK  {udp|tcp} portno,portno
-IptablesBLOCK()
-{
-  if
-    chain_isactive "$1" "$2"
-  then
-    : OK -- chain already active
-  else
-    $iptables -I INPUT -p "$1" -m multiport --dports "$2" -j DROP
-  fi
-}
-
-#IptablesUNBLOCK  {udp|tcp} portno,portno
-IptablesUNBLOCK()
-{
-  if
-    chain_isactive "$1" "$2"
-  then
-    $iptables -D INPUT -p "$1" -m multiport --dports "$2" -j DROP
-  else
-    : Chain Not active
-  fi
-}
-
-#IptablesStart  {udp|tcp} portno,portno {block|unblock}
-IptablesStart()
-{
-  pseudo_resource "$RSCNAME" start
-  case $3 in
-    block)	IptablesBLOCK "$@";;
-    unblock)	IptablesUNBLOCK "$@";;
-    *)		usage;
-  esac
-}
-
-#IptablesStop  {udp|tcp} portno,portno {block|unblock}
-IptablesStop()
-{
-  pseudo_resource "$RSCNAME" stop
-  case $3 in
-    block)	IptablesUNBLOCK "$@";;
-    unblock)	IptablesBLOCK "$@";;
-    *)		usage;;
-  esac
-}
-
-case $4 in
-  start)	IptablesStart "$@";;
-  stop)		IptablesStop "$@";;
-  status)	IptablesStatus "$1" "$2" "$3";;
-  *)		usage;;
-esac
+ra_execocf $4 

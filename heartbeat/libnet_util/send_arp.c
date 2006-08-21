@@ -1,4 +1,4 @@
-/* $Id: send_arp.c,v 1.22 2005/09/21 10:30:16 andrew Exp $ */
+/* $Id: send_arp.c,v 1.26 2006/05/23 07:50:07 andrew Exp $ */
 /* 
  * send_arp
  * 
@@ -54,10 +54,35 @@ static int send_arp(LTYPE* l, u_long ip, u_char *device, u_char mac[6]
 ,	u_char *broadcast, u_char *netmask, u_short arptype);
 
 static char print_usage[]={
-	"send_arp: sends out custom ARP packet. packetfactory.net\n"
-	"\tusage: send_arp [-i repeatinterval-ms] [-r repeatcount]"
-	" [-p pidfile] device src_ip_addr src_hw_addr broadcast_ip_addr netmask\n"
-	"\tIf src_hw_addr is \"auto\" then the address of device will be used"
+"send_arp: sends out custom ARP packet.\n"
+"  usage: send_arp [-i repeatinterval-ms] [-r repeatcount] [-p pidfile] \\\n"
+"              device src_ip_addr src_hw_addr broadcast_ip_addr netmask\n"
+"\n"
+"  where:\n"
+"    repeatinterval-ms: timing, in milliseconds of sending arp packets\n"
+"      For each ARP announcement requested, a pair of ARP packets is sent,\n"
+"      an ARP request, and an ARP reply. This is becuse some systems\n"
+"      ignore one or the other, and this combination gives the greatest\n"
+"      chance of success.\n"
+"\n"
+"      Each time an ARP is sent, if another ARP will be sent then\n"
+"      the code sleeps for half of repeatinterval-ms.\n"
+"\n"
+"    repeatcount: how many pairs of ARP packets to send.\n"
+"                 See above for why pairs are sent\n"
+"\n"
+"    pidfile: pid file to use\n"
+"\n"
+"    device: netowrk interace to use\n"
+"\n"
+"    src_ip_addr: source ip address\n"
+"\n"
+"    src_hw_addr: source hardware address.\n"
+"                 If \"auto\" then the address of device\n"
+"\n"
+"    broadcast_ip_addr: ignored\n"
+"\n"
+"    netmask: ignored\n"
 };
 
 static const char * SENDARPNAME = "send_arp";
@@ -132,13 +157,13 @@ main(int argc, char *argv[])
 		case 'p':	pidfilename= optarg;
 				break;
 
-		default:	fprintf(stderr, "usage: %s\n\n", print_usage);
+		default:	fprintf(stderr, "%s\n\n", print_usage);
 				return 1;
 				break;
 		}
 	}
 	if (argc-optind != 5) {
-		fprintf(stderr, "usage: %s\n\n", print_usage);
+		fprintf(stderr, "%s\n\n", print_usage);
 		return 1;
 	}
 
@@ -171,7 +196,11 @@ main(int argc, char *argv[])
 	}
 
 #if defined(HAVE_LIBNET_1_0_API)
+#ifdef ON_DARWIN
+	if ((ip = libnet_name_resolve((unsigned char*)ipaddr, 1)) == -1UL) {
+#else
 	if ((ip = libnet_name_resolve(ipaddr, 1)) == -1UL) {
+#endif
 		cl_log(LOG_ERR, "Cannot resolve IP address [%s]", ipaddr);
 		unlink(pidfilename);
 		return EXIT_FAILURE;
@@ -186,7 +215,7 @@ main(int argc, char *argv[])
 	}
 #elif defined(HAVE_LIBNET_1_1_API)
 	if ((l=libnet_init(LIBNET_LINK, device, errbuf)) == NULL) {
-		cl_log(LOG_ERR, "libnet_init failure on %s", device);
+		cl_log(LOG_ERR, "libnet_init failure on %s: %s", device, errbuf);
 		unlink(pidfilename);
 		return EXIT_FAILURE;
 	}
@@ -273,20 +302,15 @@ get_hw_addr(char *device, u_char mac[6])
 	struct libnet_link_int  *network;
 	char                    err_buf[LIBNET_ERRBUF_SIZE];
 
-	/* Get around bad prototype for libnet_error() */
-	char errmess1 [] = "libnet_open_link_interface: %s\n";
-	char errmess2 [] = "libnet_get_hwaddr: %s\n";
-
-
 	network = libnet_open_link_interface(device, err_buf);
 	if (!network) {
-		libnet_error(LIBNET_ERR_FATAL, errmess1, err_buf);
+		fprintf(stderr, "libnet_open_link_interface: %s\n", err_buf);
 		return -1;
 	}
 
 	mac_address = libnet_get_hwaddr(network, device, err_buf);
 	if (!mac_address) {
-		libnet_error(LIBNET_ERR_FATAL, errmess2, err_buf);
+		fprintf(stderr, "libnet_get_hwaddr: %s\n", err_buf);
 		return -1;
 	}
 
@@ -380,7 +404,7 @@ send_arp(struct libnet_link_int *l, u_long ip, u_char *device, u_char *macaddr, 
 	/* Convert ASCII Mac Address to 6 Hex Digits. */
 
 	/* Ethernet header */
-	if (get_hw_addr(device, device_mac) < 0) {
+	if (get_hw_addr((char*)device, device_mac) < 0) {
 		cl_log(LOG_ERR, "Cannot find mac address for %s",
 				device);
 		return -1;
@@ -424,7 +448,7 @@ send_arp(struct libnet_link_int *l, u_long ip, u_char *device, u_char *macaddr, 
 		return -1;
 	}
 
-	n = libnet_write_link_layer(l, device, buf, LIBNET_ARP_H + LIBNET_ETH_H);
+	n = libnet_write_link_layer(l, (char*)device, buf, LIBNET_ARP_H + LIBNET_ETH_H);
 	if (n == -1) {
 		cl_log(LOG_ERR, "libnet_build_ethernet failed:");
 	}
@@ -676,6 +700,19 @@ write_pid_file(const char *pidfilename)
 
 /*
  * $Log: send_arp.c,v $
+ * Revision 1.26  2006/05/23 07:50:07  andrew
+ * Compilation on Darwin when using DarwinPorts instead of Fink
+ *   (apparently they have different versions of libnet)
+ *
+ * Revision 1.25  2006/05/01 22:57:21  msoffen
+ * Fixed to compile with older libnet.
+ *
+ * Revision 1.24  2005/12/19 16:57:34  andrew
+ * Make use of the errbuf when there was an error.
+ *
+ * Revision 1.23  2005/10/03 03:29:40  horms
+ * Improve send_arp help message
+ *
  * Revision 1.22  2005/09/21 10:30:16  andrew
  * Darwin wants an unsigned char* for ipaddr
  *

@@ -19,33 +19,11 @@
 #
 AM_CFLAGS                       = @CFLAGS@  @LIBNETDEFINES@
 
-
 MAINTAINERCLEANFILES    = Makefile.in
-
-INCLUDES		= -I$(top_srcdir)/include -I$(top_srcdir)/linux-ha
-
-gliblib			= @GLIBLIB@
-
-havarlibdir             = $(localstatedir)/lib/@HB_PKG@
 
 harddir			= $(sysconfdir)/ha.d/resource.d
 
-
-if USE_IPV6ADDR
-hard_PROGRAMS		= IPv6addr
-else
-hard_PROGRAMS		= 
-endif
-
-IPv6addr_SOURCES	= IPv6addr.c
-
-IPv6addr_LDADD		= $(top_builddir)/lib/clplumbing/libplumb.la	\
-			$(gliblib) @LIBNETLIBS@  			\
-			$(top_builddir)/lib/pils/libpils.la
-
-
-
-hard_SCRIPTS	=			\
+hard_SCRIPTS	=	IPv6addr	\
 			apache		\
 			AudibleAlarm	\
 			db2		\

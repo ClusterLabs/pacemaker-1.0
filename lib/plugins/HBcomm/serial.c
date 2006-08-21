@@ -1,4 +1,4 @@
-/* $Id: serial.c,v 1.41 2005/08/30 20:29:46 gshi Exp $ */
+/* $Id: serial.c,v 1.46 2006/01/10 15:36:26 alan Exp $ */
 /*
  * Linux-HA serial heartbeat code
  *
@@ -104,6 +104,8 @@ static PILPlugin*               OurPlugin;
 static PILInterface*		OurInterface;
 static struct hb_media_imports*	OurImports;
 static void*			interfprivate;
+static int			fragment_write_delay = 0;
+#define FRAGSIZE 512
 
 #define LOG	PluginImports->log
 #define MALLOC	PluginImports->alloc
@@ -170,6 +172,20 @@ serial_isping (void) {
 	return 0;
 }
 
+static int
+compute_fragment_write_delay(void)
+{
+	int rate_bps = atoi(baudstring);
+	if (rate_bps < 300 ){
+		cl_log(LOG_ERR, "%s: invalid baud rate(%s)",
+		       __FUNCTION__, baudstring);
+		return HA_FAIL;
+	}
+	
+	fragment_write_delay = (1.0*FRAGSIZE)/(rate_bps/8)*1000000;
+	return HA_OK;
+}
+
 /* Initialize global serial data structures */
 static int
 serial_init (void)
@@ -186,11 +202,17 @@ serial_init (void)
 		serial_baud = DEFAULTBAUD;
 		baudstring  = DEFAULTBAUDSTR;
 	}
+
 	if (ANYDEBUG) {
 		PILCallLog(LOG, PIL_DEBUG, "serial_init: serial_baud = 0x%x"
 		,	serial_baud);
 	}
-	return(HA_OK);
+	
+	if(compute_fragment_write_delay() != HA_OK){
+		return HA_FAIL;
+	}
+
+	return HA_OK;
 }
 
 /* Process a serial port declaration */
@@ -406,13 +428,13 @@ serial_localdie(void)
 }
 
 
-/* This function does all the reading from our tty ports */
-char			serial_pkt[MAXLINE];
+static char		serial_pkt[MAXMSG];
 
+/* This function does all the reading from our tty ports */
 static void *
 serial_read(struct hb_media* mp, int *lenp)
 {
-	char			buf[MAXLINE];
+	char			buf[MAXMSG];
 	struct serial_private*	thissp;
 	int			startlen;
 	const char *		start = MSG_START;
@@ -437,60 +459,59 @@ serial_read(struct hb_media* mp, int *lenp)
 		--endlen;
 	}
 	
-	memset(serial_pkt, 0, MAXLINE);
+	memset(serial_pkt, 0, MAXMSG);
 	serial_pkt[0] = 0;
 	p = serial_pkt;
 	
 	/* Skip until we find a MSG_START (hopefully we skip nothing) */
-	while (ttygets(buf, MAXLINE, thissp) != NULL
+	while (ttygets(buf, MAXMSG, thissp) != NULL
 	       &&	strncmp(buf, start, startlen) != 0) {
 		
 		
 		/*nothing*/
 	}
 	
-	len = strnlen(buf, MAXLINE) + 1;
+	len = strnlen(buf, MAXMSG) + 1;
 	if(len >=  MAXMSG){
 		PILCallLog(LOG, PIL_CRIT,  "serial_read:MSG_START exceeds MAXMSG");
 		return(NULL);
 	}
 
-	tmplen = strnlen(buf, MAXLINE);
+	tmplen = strnlen(buf, MAXMSG);
 	
 	strcat(p, buf);
 	p += tmplen;
 	strcat(p, "\n");
 	p++;
 
-	while (ttygets(buf, MAXLINE, thissp) != NULL
+	while (ttygets(buf, MAXMSG, thissp) != NULL
 	       &&	strncmp(buf, MSG_END, endlen) != 0) {
 		
 		
-		len += strnlen(buf, MAXLINE) + 1;
+		len += strnlen(buf, MAXMSG) + 1;
 		if(len >= MAXMSG){
 			PILCallLog(LOG, PIL_CRIT, "serial_read:serial_pkt exceeds MAXMSG");
 			return(NULL);
 		}
 		
 		
-		tmplen = strnlen(buf, MAXLINE);
+		tmplen = strnlen(buf, MAXMSG);
 		memcpy(p, buf, tmplen);		
 		p += tmplen;
 		strcat(p, "\n");
 		p++;
-		/*PILCallLog(LOG, PIL_CRIT, "serialpkt=%s", serial_pkt);*/
 	}
 
 	
 	if(strncmp(buf, MSG_END, endlen) == 0){
 		
-		len += strnlen(buf, MAXLINE) + 2;
+		len += strnlen(buf, MAXMSG) + 2;
 		if(len >= MAXMSG){
 			PILCallLog(LOG, PIL_CRIT, "serial_read:serial_pkt exceeds MAXMSG after adding MSG_END");
 			return(NULL);
 		}
 
-		tmplen = strnlen(buf, MAXLINE);
+		tmplen = strnlen(buf, MAXMSG);
 		
 		memcpy(p, buf, tmplen);
 		p += tmplen;
@@ -507,13 +528,10 @@ serial_read(struct hb_media* mp, int *lenp)
 	
 	*lenp = len;
 	
-	/*PILCallLog(LOG, PIL_INFO, "final serial_pkt=%s", serial_pkt);*/
-	
 	return(serial_pkt);	
 }
 
 /* This function does all the writing to our tty ports */
-
 static int
 serial_write(struct hb_media* mp, void *p, int len)
 {
@@ -529,8 +547,10 @@ serial_write(struct hb_media* mp, void *p, int len)
 	static gboolean		warnyet=FALSE;
 	static longclock_t	warninterval;
 	static longclock_t	lastwarn;
+	int			i;
+	int			loop;
+	char*			datastr;
 	
-
 	if (strncmp(p, MSG_START, string_startlen) == 0) {
 		str = p;
 		size = strlen(str);
@@ -575,37 +595,58 @@ serial_write(struct hb_media* mp, void *p, int len)
 	if (DEBUGPKTCONT) {
 		PILCallLog(LOG, PIL_DEBUG, "%s", str);
 	}
-	setmsalarm(500);
-	wrc = write(ourtty, str, size);
-	cancelmstimer();
-	if (DEBUGPKTCONT) {
-		PILCallLog(LOG, PIL_DEBUG, "serial write returned %d", wrc);
-	}
-	
-	if (wrc < 0 || wrc != size) {
-		if (DEBUGPKTCONT && wrc < 0) {
-			PILCallLog(LOG, PIL_DEBUG, "serial write errno was %d", errno);
+
+	loop = size / FRAGSIZE + ((size%FRAGSIZE == 0)?0:1);       
+	datastr =str;
+	for (i = 0; i < loop; i++){
+		int datalen ;
+		
+		datalen = FRAGSIZE;
+		if ( (i == loop -1 )
+		     && (size% FRAGSIZE != 0)){
+			datalen =  size %FRAGSIZE;
 		}
-		if (wrc > 0 || (wrc < 0 && errno == EINTR)) {
-			longclock_t	now = time_longclock();
-			tcflush(ourtty, TCIOFLUSH);
-
-			if (!warnyet
-			||	cmp_longclock(sub_longclock(now, lastwarn)
-			,		warninterval) >= 0) {
-
-				lastwarn = now;
-				warnyet = TRUE;
-				PILCallLog(LOG, PIL_WARN
-				,	"TTY write timeout on [%s]"
-				" (no connection or bad cable"
-				"? [see documentation])"
-				,	mp->name);
+		
+		setmsalarm(500);
+		wrc = write(ourtty, datastr, datalen);
+		cancelmstimer();
+		if (i != (loop -1)) {
+			usleep(fragment_write_delay);
+		}
+		if (DEBUGPKTCONT) {
+			PILCallLog(LOG, PIL_DEBUG, "serial write returned %d", wrc);
+		}
+		
+		if (wrc < 0 || wrc != datalen) {
+			if (DEBUGPKTCONT && wrc < 0) {
+				PILCallLog(LOG, PIL_DEBUG, "serial write errno was %d", errno);
 			}
-		}else{
-			PILCallLog(LOG, PIL_CRIT, "TTY write failure on [%s]: %s"
-			    ,	mp->name, strerror(errno));
+			if (wrc > 0 || (wrc < 0 && errno == EINTR)) {
+				longclock_t	now = time_longclock();
+				tcflush(ourtty, TCIOFLUSH);
+				
+				if (!warnyet
+				    ||	cmp_longclock(sub_longclock(now, lastwarn)
+						      ,		warninterval) >= 0) {
+					
+					lastwarn = now;
+					warnyet = TRUE;
+					PILCallLog(LOG, PIL_WARN
+					,	"TTY write timeout on [%s]"
+					" (no connection or bad cable"
+					"? [see documentation])"
+					,	mp->name);
+					PILCallLog(LOG, PIL_INFO
+					,	"See %s for details"
+					,	HAURL("FAQ#TTYtimeout"));
+				}
+			}else{
+				PILCallLog(LOG, PIL_CRIT, "TTY write failure on [%s]: %s"
+					   ,	mp->name, strerror(errno));
+			}
 		}
+		
+		datastr +=datalen;
 	}
 	
 	if(str_new){
@@ -657,7 +698,7 @@ ttygets(char * inbuf, int length, struct serial_private *tty)
 			tty->consecutive_errors = 0;
 		}
 			
-		if (*cp == '\r' || *cp == '\n') {
+		if (*cp == '\n') {
 			break;
 		}
 	}
@@ -666,6 +707,30 @@ ttygets(char * inbuf, int length, struct serial_private *tty)
 }
 /*
  * $Log: serial.c,v $
+ * Revision 1.46  2006/01/10 15:36:26  alan
+ * Added a URL in the FAQ to the tty timeout message.
+ *
+ * Revision 1.45  2005/11/18 23:02:15  alan
+ * Fixed two BEAM bugs:
+ * 	Check for baud rates < 300 instead of <=0
+ * 	Fixed an if-statement which had an extra ; changing it's meaning.
+ *
+ * Revision 1.44  2005/10/20 17:37:06  gshi
+ * make the code easy to read
+ *
+ * Revision 1.43  2005/10/20 00:50:55  gshi
+ * fixed the serial port problem for V2
+ *
+ * Small messages are sent without delay as before.
+ *
+ * The serial will send a big message in fragment.
+ * Each fragment send is followed by a delay
+ * The delayed time is computed according to
+ * baudrate and FRAGMENT size
+ *
+ * Revision 1.42  2005/10/15 02:37:52  gshi
+ * change MAXLINE to MAXMSG
+ *
  * Revision 1.41  2005/08/30 20:29:46  gshi
  * reset serial_pkt to 0 everytime we start to receive a message
  *

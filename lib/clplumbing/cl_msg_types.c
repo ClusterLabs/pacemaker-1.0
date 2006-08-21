@@ -42,7 +42,6 @@
 #	define MAX(a,b)	(((a) > (b)) ? (a) : (b))
 #endif
 
-#define NETSTRING_EXTRA(x) (intlen(x) + x + 2)
 
 extern const char* FT_strings[];
 
@@ -51,7 +50,7 @@ extern const char* FT_strings[];
 #define		NL_TO_SYM	0
 #define		SYM_TO_NL	1
 
-int		SPECIAL_SYMS[]={
+int		SPECIAL_SYMS[MAXDEPTH]={
 	20,
 	21,
 	22,
@@ -61,7 +60,13 @@ int		SPECIAL_SYMS[]={
 	26,
 	27,
 	28,
-	29
+	29,
+	30,
+	31,
+	15,
+	16,
+	17,
+	18,
 };
 
 #define	       SPECIAL_SYM	19
@@ -75,15 +80,20 @@ int struct_display_as_xml(int log_level, int depth, struct ha_msg *data,
 int struct_stringlen(size_t namlen, size_t vallen, const void* value);
 int struct_netstringlen(size_t namlen, size_t vallen, const void* value);
 int	convert_nl_sym(char* s, int len, char sym, int direction);
- 
+int	intlen(int x);
 
-static int
+int
 intlen(int x)
 {
 	char	buf[20];
 	return snprintf(buf, sizeof(buf), "%d", x);
 }
 
+int
+netstring_extra(int x)
+{
+	return (intlen(x) + x + 2);
+}
 
 int
 get_netstringlen(const struct ha_msg *m)
@@ -106,7 +116,7 @@ get_netstringlen(const struct ha_msg *m)
 		len = fieldtypefuncs[m->types[i]].netstringlen(m->nlens[i], 
 							       m->vlens[i],
 							       m->values[i]);
-		total_len += NETSTRING_EXTRA(len);
+		total_len += netstring_extra(len);
 	}
 	
 	
@@ -129,15 +139,13 @@ get_stringlen(const struct ha_msg *m)
 		return 0;
 	}
 	
-	for (i = 0; i < m->nfields; i++){		
-		if (m->types[i] == FT_STRUCT){			
-			total_len += struct_stringlen(m->nlens[i], 
-						      m->vlens[i],
-						      m->values[i]);
-		}
-	}
+	total_len = sizeof(MSG_START)+sizeof(MSG_END)-1;	
 	
-	total_len += m->stringlen;
+	for (i = 0; i < m->nfields; i++){				
+		total_len += fieldtypefuncs[m->types[i]].stringlen(m->nlens[i], 
+								   m->vlens[i],
+								   m->values[i]);	
+	}
 	
 	return total_len;
 }
@@ -203,18 +211,24 @@ string_list_pack(GList* list, char* buf, char* maxp)
 	char* p =  buf;
 
 	for (i = 0; i < g_list_length(list) ; i++){
-		
 		char * element = g_list_nth_data(list, i);
-		int element_len = strlen(element);
+		int element_len;
+
 		if (element == NULL){
 			cl_log(LOG_ERR, "string_list_pack: "
 			       "%luth element of the string list is NULL"
 				, (unsigned long)i);
 			return 0;
 		}
+		element_len = strlen(element);
+		if (p + 2 + element_len + intlen(element_len)> maxp){
+			cl_log(LOG_ERR, "%s: memory out of boundary",
+			       __FUNCTION__);
+			return 0;
+		}
 		p += sprintf(p, "%d:%s,", element_len,element);
 		
-		if (p >= maxp){
+		if (p > maxp){
 			cl_log(LOG_ERR, "string_list_pack: "
 			       "buffer overflowed ");
 			return 0;
@@ -467,8 +481,24 @@ list_dup( const void* value, size_t len)
 	return dupvalue;
 }
 
+
+static void 
+general_display(int log_level, int seq, char* name, void* value, int vlen, int type)
+{
+	int netslen;
+	int slen;
+	HA_MSG_ASSERT(value);	
+	HA_MSG_ASSERT(name);
+	
+	slen = fieldtypefuncs[type].stringlen(strlen(name), vlen, value);
+	netslen = fieldtypefuncs[type].netstringlen(strlen(name), vlen, value);
+	cl_log(log_level, "MSG[%d] : [(%s)%s=%p(%d %d)]",
+	       seq,	FT_strings[type],
+	       name,	value, slen, netslen);	
+	
+}
 static void
-string_display(int log_level, int seq, char* name, void* value)
+string_display(int log_level, int seq, char* name, void* value, int vlen)
 {
 	HA_MSG_ASSERT(name);
 	HA_MSG_ASSERT(value);
@@ -478,29 +508,49 @@ string_display(int log_level, int seq, char* name, void* value)
 }
 
 static void
-binary_display(int log_level, int seq, char* name, void* value)
+binary_display(int log_level, int seq, char* name, void* value, int vlen)
 {
-	HA_MSG_ASSERT(value);	
-	HA_MSG_ASSERT(name);
-	cl_log(log_level, "MSG[%d] : [(%s)%s=%p]",
-	       seq,	FT_strings[FT_BINARY],
-	       name,	value);
+	return general_display(log_level, seq, name, value, vlen, FT_BINARY);
 }
 
 static void
-struct_display(int log_level, int seq, char* name, void* value)
+compress_display(int log_level, int seq, char* name, void* value, int vlen){
+	return general_display(log_level, seq, name, value, vlen, FT_COMPRESS);
+}
+
+
+static void
+general_struct_display(int log_level, int seq, char* name, void* value, int vlen, int type)
 {
+	int slen;
+	int netslen;
+
 	HA_MSG_ASSERT(name);
 	HA_MSG_ASSERT(value);	
-	cl_log(log_level, "MSG[%d] : [(%s)%s=%p]",
-	       seq,	FT_strings[FT_STRUCT],
-	       name,	value);
+	
+	slen = fieldtypefuncs[type].stringlen(strlen(name), vlen, value);
+	netslen = fieldtypefuncs[type].netstringlen(strlen(name), vlen, value);
+	
+	cl_log(log_level, "MSG[%d] : [(%s)%s=%p(%d %d)]",
+	       seq,	FT_strings[type],
+	       name,	value, slen, netslen);
 	if(cl_get_string((struct ha_msg*) value, F_XML_TAGNAME) == NULL) {
 		cl_log_message(log_level, (struct ha_msg*) value);
 	} else {
 		/* use a more friendly output format for nested messages */
 		struct_display_as_xml(log_level, 0, value, NULL, TRUE);
 	}
+}
+static void
+struct_display(int log_level, int seq, char* name, void* value, int vlen)
+{
+	return general_struct_display(log_level, seq, name, value, vlen,  FT_STRUCT);
+
+}
+static void
+uncompress_display(int log_level, int seq, char* name, void* value, int vlen)
+{
+	return general_struct_display(log_level, seq, name, value, vlen, FT_UNCOMPRESS);
 }
 
 #define update_buffer_head(buffer, len) if(len < 0) {	\
@@ -630,7 +680,7 @@ liststring(GList* list, char* buf, int maxlen)
 			}
 			
 		}
-		if ( p >= maxp){
+		if ( p > maxp){
 			cl_log(LOG_ERR, "buffer overflow");
 			return HA_FAIL;
 		}
@@ -641,7 +691,7 @@ liststring(GList* list, char* buf, int maxlen)
 }
 
 static void
-list_display(int log_level, int seq, char* name, void* value)
+list_display(int log_level, int seq, char* name, void* value, int vlen)
 {
 	GList* list;
 	char buf[MAXLENGTH];
@@ -691,8 +741,13 @@ convert_nl_sym(char* s, int len, char sym, int direction)
 
 			if (s[i] == sym){
 				cl_log(LOG_ERR
-				, "convert_nl_sym(): special symbol \'0x%x\' found"
-				" in string at %d (len=%d)", s[i], i, len);
+				, "convert_nl_sym(): special symbol \'0x%x\' (%c) found"
+				" in string at %d (len=%d)", s[i], s[i], i, len);
+				i -= 10;
+				if(i < 0) {
+					i = 0;
+				}
+				cl_log(LOG_ERR, "convert_nl_sym(): %s", s + i);
 				return(HA_FAIL);
 			}
 
@@ -731,7 +786,7 @@ convert(char* s, int len, int depth, int direction)
 	
 	
 	if (depth >= MAXDEPTH ){
-		cl_log(LOG_ERR, "convert(): MAXDEPTH exceeded");
+		cl_log(LOG_ERR, "convert(): MAXDEPTH exceeded: %d", depth);
 		return(HA_FAIL);
 	}
 	
@@ -863,10 +918,7 @@ add_binary_field(struct ha_msg* msg, char* name, size_t namelen,
 	msg->names[next] = name;
 	msg->nlens[next] = namelen;
 	msg->values[next] = value;
-	msg->vlens[next] = vallen;
-	
-	msg->stringlen += binary_stringlen(namelen, vallen, value);
-	
+	msg->vlens[next] = vallen;       	
 	msg->types[next] = FT_BINARY;
 	msg->nfields++;	
 	
@@ -944,7 +996,6 @@ add_list_field(struct ha_msg* msg, char* name, size_t namelen,
 		msg->values[next] = value;
 		msg->vlens[next] =  vallen;
 		msg->types[next] = FT_LIST;
-		msg->stringlen += stringlen_add;
 		msg->nfields++;
 		
 	}  else if(  msg->types[j] == FT_LIST ){
@@ -969,7 +1020,6 @@ add_list_field(struct ha_msg* msg, char* name, size_t namelen,
 
 		msg->values[j] = list;
 		msg->vlens[j] =  string_list_pack_length(list);
-		msg->stringlen +=  stringlen_add;
 		g_list_free((GList*)value); /*we don't free each element
 					      because they are used in new list*/
 		
@@ -979,6 +1029,64 @@ add_list_field(struct ha_msg* msg, char* name, size_t namelen,
 		return (HA_FAIL);
 	}
 		
+	return HA_OK;
+}
+
+
+static int 
+add_compress_field(struct ha_msg* msg, char* name, size_t namelen,
+		 void* value, size_t vallen, int depth)
+{
+
+	int next;
+
+	if ( !msg || !name || !value
+	     || depth < 0){
+		cl_log(LOG_ERR, "add_binary_field:"
+		       " invalid input argument");
+		return HA_FAIL;
+	}
+		
+
+	next = msg->nfields;
+	msg->names[next] = name;
+	msg->nlens[next] = namelen;
+	msg->values[next] = value;
+	msg->vlens[next] = vallen;
+	msg->types[next] = FT_COMPRESS;
+	msg->nfields++;	
+	
+	return HA_OK;
+}
+
+
+
+
+static int 
+add_uncompress_field(struct ha_msg* msg, char* name, size_t namelen,
+		 void* value, size_t vallen, int depth)
+{	
+	int next;
+	struct ha_msg* childmsg;
+
+	if ( !msg || !name || !value
+	     || depth < 0){
+		cl_log(LOG_ERR, "add_struct_field:"
+		       " invalid input argument");
+		return HA_FAIL;
+	}
+	
+	childmsg = (struct ha_msg*)value; 
+	
+	next = msg->nfields;
+	msg->names[next] = name;
+	msg->nlens[next] = namelen;
+	msg->values[next] = value;
+	msg->vlens[next] = vallen;			
+	msg->types[next] = FT_UNCOMPRESS;
+	
+	msg->nfields++;	
+	
 	return HA_OK;
 }
 
@@ -994,6 +1102,13 @@ str2string(char* buf, char* maxp, void* value, size_t len, int depth)
 	char* p = buf;
 	(void)maxp;
 	(void)depth;
+	
+	if (buf + len > maxp){
+		cl_log(LOG_ERR, "%s: out of boundary",
+		       __FUNCTION__);
+		return -1;
+	}
+
 	if ( strlen(s) != len){
 		cl_log(LOG_ERR, "str2string:"
 		       "the input len != string length");
@@ -1025,7 +1140,7 @@ binary2string(char* buf, char* maxp, void* value, size_t len, int depth)
 	(void)depth;
 	baselen = B64_stringlen(len) + 1;
 	
-	if ( buf + baselen >= maxp){
+	if ( buf + baselen > maxp){
 		cl_log(LOG_ERR, "binary2string: out of bounary");
 		return -1;
 	}
@@ -1120,25 +1235,45 @@ string2str(void* value, size_t len, int depth, void** nv, size_t* nlen )
 static int
 string2binary(void* value, size_t len, int depth, void** nv, size_t* nlen)
 {
-	char	tmpbuf[MAXMSG];
-
+	char	tmpbuf[MAXLINE];
+	char*	buf = NULL;
+	int	buf_malloced = 0;
+	int	ret = HA_FAIL;
+	if (len > MAXLINE){
+		buf = cl_malloc(len);
+		if (buf == NULL){
+			cl_log(LOG_ERR, "%s: malloc failed",
+			       __FUNCTION__);
+			goto out;
+		}
+		buf_malloced = 1;
+	}else {
+		buf = &tmpbuf[0];		
+	}
+	
 	if (value == NULL && len == 0){
 		*nv = NULL;
 		*nlen = 0;
-		return HA_OK;
+		ret = HA_OK;
+		goto out;
 	}
 
 	if ( !value || !nv || depth < 0){
 		cl_log(LOG_ERR, "string2binary:invalid input");
-		return HA_FAIL;
+		ret = HA_FAIL;
+		goto out;
 	}
 	
-	memcpy(tmpbuf, value, len);
-	*nlen = base64_to_binary(tmpbuf, len, value, len);				
+	memcpy(buf, value, len);
+	*nlen = base64_to_binary(buf, len, value, len);				
 	
 	*nv = value;
-	
-	return HA_OK;
+	ret = HA_OK;
+ out:
+	if (buf_malloced && buf){
+		cl_free(buf);
+	}
+	return ret;
 }
 
 static int
@@ -1207,10 +1342,17 @@ fields2netstring(char* sp, char* smax, char* name, size_t nlen,
 	size_t slen;
 	int ret = HA_OK;
 	char* sp_save = sp;
+	char* tmpsp;
 
 	fieldlen = fieldtypefuncs[type].netstringlen(nlen, vallen, value);
 	if (fieldlen > MAXMSG){
 		cl_log(LOG_INFO, "field too big(%d)", (int)fieldlen);
+		return HA_FAIL;
+	}
+	tmpsp = sp + netstring_extra(fieldlen);
+	if (tmpsp > smax){
+		cl_log(LOG_ERR, "%s: memory out of boundary, tmpsp=%p, smax=%p", 
+		       __FUNCTION__, tmpsp, smax);
 		return HA_FAIL;
 	}
 	sp += sprintf(sp , "%d:(%d)%s=", (int)fieldlen, type, name);
@@ -1218,10 +1360,12 @@ fields2netstring(char* sp, char* smax, char* name, size_t nlen,
 
 	case FT_STRING:
 	case FT_BINARY:
+	case FT_COMPRESS:
 		memcpy(sp, value, vallen);
 		slen = vallen;
 		break;
 
+	case FT_UNCOMPRESS:
 	case FT_STRUCT:
 		{
 			struct ha_msg* msg = (struct ha_msg*) value;
@@ -1295,7 +1439,7 @@ netstring2string(const void* value, size_t vlen, void** retvalue, size_t* ret_vl
 		return HA_FAIL;
 	}
 	
-	dupvalue = string_dup(value, vlen);
+	dupvalue = binary_dup(value, vlen);
 	if (!dupvalue){
 		cl_log(LOG_ERR, "netstring2string:"
 		       "duplicating value failed");
@@ -1460,11 +1604,6 @@ add_string_field(struct ha_msg* msg, char* name, size_t namelen,
 	msg->vlens[next] = cp_vallen;
 	msg->names[next] = cp_name;
 	msg->nlens[next] = cp_namelen;
-	
-	if (internal_type != FT_STRUCT){
-		msg->stringlen += stringlen_add;	
-	}
-	
 	msg->types[next] = internal_type;
 	msg->nfields++;
 	
@@ -1472,20 +1611,107 @@ add_string_field(struct ha_msg* msg, char* name, size_t namelen,
 	
 }
 
+static int
+uncompress2compress(struct ha_msg* msg, int index)
+{
+	char	buf[MAXMSG];
+	size_t	buflen = MAXMSG;
+	
+	if (msg->types[index] != FT_UNCOMPRESS){
+		cl_log(LOG_ERR, "%s: the %dth field is not FT_UNCOMPRESS type",
+		       __FUNCTION__, index);
+		return HA_FAIL;
+	}
+	
 
+	if (cl_compress_field(msg, index, buf, &buflen) != HA_OK){
+		cl_log(LOG_ERR, "%s: compressing %dth field failed", __FUNCTION__, index);
+		return HA_FAIL;
+	}
+	
+	return cl_msg_replace(msg, index, buf, buflen, FT_COMPRESS);
 
-struct fieldtypefuncs_s fieldtypefuncs[4]=
+}
+
+static int
+compress2uncompress(struct ha_msg* msg, int index)
+{
+	char		buf[MAXMSG];
+	size_t		buflen = MAXMSG;	
+	struct ha_msg*  msgfield;
+	int err;
+	
+	if (cl_decompress_field(msg, index, buf, &buflen) != HA_OK){
+		cl_log(LOG_ERR, "%s: compress field failed",
+		       __FUNCTION__);
+		return HA_FAIL;
+	}
+	
+	msgfield = wirefmt2msg(buf, buflen, 0);
+	if (msgfield == NULL){
+		cl_log(LOG_ERR, "%s: wirefmt to msg failed",
+		       __FUNCTION__);
+		return HA_FAIL;
+	}
+	
+	err = cl_msg_replace(msg, index, (char*)msgfield, 0, FT_UNCOMPRESS);
+
+	ha_msg_del(msgfield);
+	
+	return err;
+}
+
+/*
+ * string	FT_STRING
+ *		string is the basic type used in heartbeat, it is used for printable ascii value
+ *
+ * binary	FT_BINARY
+ *		binary means the value can be any binary value, including non-printable ascii value
+ *
+ * struct	FT_STRUCT
+ *		struct means the value is also an ha_msg (actually it is a pointer to an ha message)
+ *
+ * list		FT_LIST
+ *		LIST means the value is a GList. Right now we only suppport a Glist of strings
+ *
+ * compress	FT_COMPRESS
+ *		This field and the next one(FT_UNCOMPRESS) is designed to optimize compression in message
+ *		(see cl_compression.c for more about compression). This field is similar to the binary field.
+ *		It stores a compressed field, which will be an ha_msg if uncompressed. Most of time this field
+ *		act like a binary field until compress2uncompress() is called. That function will be called 
+ *		when someone calls cl_get_struct() to get this field value. After that this field is converted
+ *		to a new type FT_UNCOMPRESS
+ *
+ * uncompress	FT_UNCOMPRESS
+ *		As said above, this field is used to optimize compression. This field is similar to the struct 
+ *		field. It's value is a pointer to an ha_msg. This field will be converted to a new type FT_COMPRESS
+ *		when msg2wirefmt() is called, where uncompress2compress is called to do the field compression
+ */
+
+struct fieldtypefuncs_s fieldtypefuncs[NUM_MSG_TYPES]=
 	{ {string_memfree, string_dup, string_display, add_string_field, 
-	   string_stringlen,string_netstringlen, str2string,fields2netstring, string2str, netstring2string},
+	   string_stringlen,string_netstringlen, str2string,fields2netstring, 
+	   string2str, netstring2string, NULL, NULL},
 	  
 	  {binary_memfree, binary_dup, binary_display, add_binary_field,
-	   binary_stringlen,binary_netstringlen, binary2string,fields2netstring, string2binary, netstring2binary},
+	   binary_stringlen,binary_netstringlen, binary2string,fields2netstring, 
+	   string2binary, netstring2binary, NULL, NULL},
 	  
 	  {struct_memfree, struct_dup, struct_display, add_struct_field, 
-	   struct_stringlen, struct_netstringlen, struct2string, fields2netstring, string2struct, netstring2struct},
+	   struct_stringlen, struct_netstringlen, struct2string, fields2netstring, \
+	   string2struct, netstring2struct, NULL, NULL},
 	  
 	  {list_memfree, list_dup, list_display, add_list_field, 
-	   list_stringlen, list_netstringlen, list2string, fields2netstring, string2list, netstring2list},
+	   list_stringlen, list_netstringlen, list2string, fields2netstring, 
+	   string2list, netstring2list, NULL, NULL},
+	  
+	  {binary_memfree, binary_dup, compress_display, add_compress_field,
+	   binary_stringlen,binary_netstringlen, binary2string ,fields2netstring, 
+	   string2binary , netstring2binary, NULL, compress2uncompress}, /*FT_COMPRESS*/
+	  
+	  {struct_memfree, struct_dup, uncompress_display, add_uncompress_field, 
+	   struct_stringlen, struct_netstringlen, NULL , fields2netstring, 
+	   NULL , netstring2struct, uncompress2compress, NULL}, /*FT_UNCOMPRSS*/
 	};
 
 

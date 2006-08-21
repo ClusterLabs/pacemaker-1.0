@@ -15,7 +15,14 @@ set beam::MISTAKE21::enabling_policy "unsafe"
 set beam::MISTAKE21::enabling_policy "nonportable"
 set beam::WARNING6::enabling_policy "always"
 set beam::WARNING10::enabling_policy "always"
-set beam::WARNING14::enabling_policy "always"
+# set beam::WARNING14::enabling_policy "always"
+# We've disabled WARNING14 due to a 3.0 BEAM bug.
+#- WARNING14     /*incompatible types*/     >>>WARNING14_cib_client_connect_d323470040e402e4
+#"callbacks.c", line 216: Comparing `client_callback' of type `gboolean (*)(IPC_Channel *, gpointer)' with `cib_null_callback' of type `gboolean (*)(IPC_Channel *, gpointer)'
+# The following two are BEAM bugs...  Hope they get fixed soon...
+set beam::WARNING14::enabling_policy ""
+set beam::MISTAKE4::enabling_policy ""
+
 set beam::WARNING15::enabling_policy "same_line"
 set beam::PORTABILITY1::enabling_policy "always"
 set beam::PORTABILITY3::enabling_policy "always"
@@ -109,6 +116,9 @@ set  beam::MISTAKE1::disabled_functions  "yydestruct"
 set  beam::ERROR33::disabled_functions  "g_bit_nth_msf"
 lappend beam::WARNING15::disabled_files "conf_yacc.c"
 lappend beam::WARNING15::disabled_files "conf_lex.c"
+lappend beam::WARNING15::disabled_files "pymgmt_wrap.c"
+lappend beam::ERROR2::disabled_files "pymgmt_wrap.c"
+lappend beam::ERROR9::disabled_files "pymgmt_wrap.c"
 
 
 

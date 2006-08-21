@@ -10,13 +10,17 @@ hb_takeover \-  hb_takeover is a simple linux-ha shell script. It issues a comma
 The full path is usually /usr/lib/heartbeat/hb_takeover.
 Performing an hb_takeover on the current node is equivalent to performing an hb_standby on the other node.  
 
+.SH CAVEATS
+\fBhb_takeover\fP is only usable in R1-style configurations
+(i.e., those configured using the \fIharesources\fP file).
+
 .SH SEE ALSO
 hb_standby(1), heartbeat(8), cl_status(1)
 
 .SH DOCUMENTATION
 More information may be found at
-.UR http://www.linux-ha.org/hb_5ftakeover
-http://www.linux-ha.org/hb_5ftakeover
+.UR http://linux-ha.org/hb_takeover
+http://linux-ha.org/hb_takeover
 .UE
 
 .SH AUTHORS

@@ -24,15 +24,18 @@ INCLUDES                = -I$(top_builddir)/include -I$(top_srcdir)/include \
 			-I$(top_builddir)/libltdl -I$(top_srcdir)/libltdl
 
 
-AM_CFLAGS			= @CFLAGS@
+AM_CFLAGS		= @CFLAGS@
 
 ## libraries
 
 lib_LTLIBRARIES		= libapphb.la
 
-libapphb_la_SOURCES	= 		\
-			apphb.c	
+libapphb_la_SOURCES	= apphb.c	
 
-libapphb_la_CFLAGS	= -DHA_VARLIBDIR='"@HA_VARLIBDIR@"'
+if ENABLE_THREAD_SAFE
+libapphb_la_CFLAGS	= -DTHREAD_SAFE -D_REENTRANT -DHA_VARLIBDIR='"@HA_VARLIBDIR@"'
+else
+libapphb_la_CFLAGS	= -lpthread -DHA_VARLIBDIR='"@HA_VARLIBDIR@"'
+endif
+
 libapphb_la_LDFLAGS	= -version-info 0:0:0 
-

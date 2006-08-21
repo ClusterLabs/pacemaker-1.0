@@ -1,4 +1,4 @@
-/* $Id: config.c,v 1.169 2005/09/10 21:51:14 gshi Exp $ */
+/* $Id: config.c,v 1.205 2006/08/16 03:30:33 zhenh Exp $ */
 /*
  * Parse various heartbeat configuration files...
  *
@@ -67,7 +67,10 @@
 
 #define	DIRTYALIASKLUDGE
 
+void dellist_destroy(void);
+int dellist_add(const char* nodename);
 
+static int set_cluster_name(const char * value);
 static int add_normal_node(const char *);
 static int set_hopfudge(const char *);
 static int set_keepalive_ms(const char *);
@@ -89,10 +92,12 @@ static int set_realtime_prio(const char *);
 static int add_client_child(const char *);
 static int set_compression(const char *);
 static int set_compression_threshold(const char *);
+static int set_traditional_compression(const char *);
+static int set_env(const char *);
+static int set_max_rexmit_delay(const char *);
 static int set_generation_method(const char *);
 static int set_realtime(const char *);
 static int set_debuglevel(const char *);
-static int set_normalpoll(const char *);
 static int set_api_authorization(const char *);
 static int set_msgfmt(const char*);
 static int set_logdaemon(const char*);
@@ -102,7 +107,16 @@ static int set_badpack_warn(const char*);
 static int set_coredump(const char*);
 static int set_corerootdir(const char*);
 static int set_release2mode(const char*);
+static int set_autojoin(const char*);
+static int set_uuidfrom(const char*);
+static int ha_config_check_boolean(const char *);
+static int set_memreserve(const char *);
+#ifdef ALLOWPOLLCHOICE
+  static int set_normalpoll(const char *);
+#endif
 
+
+void hb_set_max_rexmit_delay(int);
 /*
  * Each of these parameters is is automatically recorded by
  * SetParameterValue().  They are then passed to the plugins
@@ -116,7 +130,8 @@ struct directive {
 	const char *	defaultvalue;
 	const char *	explanation;
 }Directives[] =
-{ {KEY_HOST,	add_normal_node, FALSE, NULL, NULL}
+{ {KEY_CLUSTER,	set_cluster_name, TRUE, "linux-ha", "the name of cluster"}
+, {KEY_HOST,	add_normal_node, FALSE, NULL, NULL}
 , {KEY_HOPS,	set_hopfudge, TRUE, "1", "# of hops above cluster size"}
 , {KEY_KEEPALIVE, set_keepalive_ms, TRUE, "1000ms", "keepalive time"}
 , {KEY_DEADTIME,  set_deadtime_ms,  TRUE, "30000ms", "node deadtime"}
@@ -135,7 +150,9 @@ struct directive {
 , {KEY_GEN_METH,  set_generation_method, TRUE, "file", "protocol generation computation method"}
 , {KEY_REALTIME,  set_realtime, TRUE, "true", "enable realtime behavior?"}
 , {KEY_DEBUGLEVEL,set_debuglevel, TRUE, NULL, "debug level"}
+#ifdef ALLOWPOLLCHOICE
 , {KEY_NORMALPOLL,set_normalpoll, TRUE, "true", "Use system poll(2) function?"}
+#endif
 , {KEY_MSGFMT,    set_msgfmt, TRUE, "classic", "message format in the wire"}
 , {KEY_LOGDAEMON, set_logdaemon, TRUE, NULL, "use logging daemon"}  
 , {KEY_CONNINTVAL,set_logdconntime, TRUE, "60", "the interval to reconnect to logd"}  
@@ -145,7 +162,19 @@ struct directive {
 , {KEY_COREROOTDIR,set_corerootdir, TRUE, NULL, "set root directory of core dump area"}
 , {KEY_REL2,      set_release2mode, TRUE, "false"
 ,				"enable release 2 style resource management"}
+, {KEY_AUTOJOIN,  set_autojoin, TRUE, "none" ,	"set automatic join mode/style"}
+, {KEY_UUIDFROM,  set_uuidfrom, TRUE, "file" ,	"set the source for uuid"}
+,{KEY_COMPRESSION,   set_compression, TRUE ,"zlib", "set compression module"}
+,{KEY_COMPRESSION_THRESHOLD, set_compression_threshold, TRUE, "2", "set compression threshold"}
+,{KEY_TRADITIONAL_COMPRESSION, set_traditional_compression, TRUE, "no", "set traditional_compression"}
+,{KEY_ENV, set_env, FALSE, NULL, "set environment variable for respawn clients"}
+,{KEY_MAX_REXMIT_DELAY, set_max_rexmit_delay, TRUE,"250", "set the maximum rexmit delay time"}
+,{KEY_LOG_CONFIG_CHANGES, ha_config_check_boolean, TRUE,"on", "record changes to the cib (valid only with: "KEY_REL2" on)"}
+,{KEY_LOG_PENGINE_INPUTS, ha_config_check_boolean, TRUE,"on", "record the input used by the policy engine (valid only with: "KEY_REL2" on)"}
+,{KEY_CONFIG_WRITES_ENABLED, ha_config_check_boolean, TRUE,"on", "write configuration changes to disk (valid only with: "KEY_REL2" on)"}
+,{KEY_MEMRESERVE, set_memreserve, TRUE, "6500", "number of kbytes to preallocate in heartbeat"}
 };
+
 
 static const struct WholeLineDirective {
 	const char * type;
@@ -155,8 +184,6 @@ static const struct WholeLineDirective {
 ,	{KEY_STONITHHOST,  set_stonith_host_info}
 ,	{KEY_APIPERM,	   set_api_authorization}
 ,	{KEY_CLIENT_CHILD,  add_client_child}
-,	{KEY_COMPRESSION,   set_compression}
-,	{KEY_COMPRESSION_THRESHOLD, set_compression_threshold}
 };
 
 extern const char *			cmdname;
@@ -179,9 +206,11 @@ GHashTable*				APIAuthorization = NULL;
 extern struct node_info *   			curnode;
 extern int    				timebasedgenno;
 int    					enable_realtime = TRUE;
-extern int    				debug;
+extern int    				debug_level;
 int					netstring_format = FALSE;
 extern int				UseApphbd;
+GSList*					del_node_list;
+
 
 static int	islegaldirective(const char *directive);
 static int	parse_config(const char * cfgfile, char *nodename);
@@ -204,6 +233,7 @@ check_logd_usage(int* errcount)
 {
 	const char* value;
 	int	truefalse = FALSE;
+
 	/*we set uselogd to TRUE here so the next message can be logged*/
 	value = GetParameterValue(KEY_LOGDAEMON);
 	if (value != NULL){
@@ -234,7 +264,35 @@ check_logd_usage(int* errcount)
 	}else if (value == NULL || truefalse == FALSE){
 		cl_log(LOG_WARNING, "Logging daemon is disabled --"
 		       "enabling logging daemon is recommended");
+	}else{
+		cl_log(LOG_WARNING, "logd is enabled but %s%s%s is still"
+		       " configured in ha.cf",
+		       config->logfile?"logfile":"",
+		       config->dbgfile?"/debugfile":"",
+		       config->log_facility > 0?"/logfacility":""
+		       );
 	}
+}
+
+static gboolean
+r1_style_valid(void)
+{
+	/* we cannot set autojoin to HB_JOIN_ANY or HB_JOIN_OTHER
+	 * in R1 style
+	 */
+	
+	if (!DoManageResources){
+		return TRUE;
+	}
+	
+	if (config->rtjoinconfig == HB_JOIN_NONE){
+		return TRUE;
+	}
+
+	cl_log(LOG_ERR, "R1 style resource management conflicts with "
+	       " autojoin set");
+	cl_log(LOG_ERR, "You need either unset autojoin or enable crm");
+	return FALSE;
 }
 
 /*
@@ -271,7 +329,8 @@ init_config(const char * cfgfile)
 	config->log_facility = -1;
 	config->client_list = NULL;
 	config->last_client = NULL;
-
+	config->uuidfromname = FALSE;
+	
 	curnode = NULL;
 
 	if (!parse_config(cfgfile, localnodename)) {
@@ -304,7 +363,7 @@ init_config(const char * cfgfile)
 
 	if (GetParameterValue(KEY_DEBUGLEVEL) == NULL) {
 		char	debugstr[10];
-		snprintf(debugstr, sizeof(debugstr), "%d", debug);
+		snprintf(debugstr, sizeof(debugstr), "%d", debug_level);
 		add_option(KEY_DEBUGLEVEL, debugstr);
 	}
 
@@ -320,9 +379,8 @@ init_config(const char * cfgfile)
 		SetParameterValue(KEY_WARNTIME, tmp);
 	}
 	
-#if !defined(MITJA)
 	/* We should probably complain if there aren't at least two... */
-	if (config->nodecount < 1) {
+	if (config->nodecount < 1 && config->rtjoinconfig != HB_JOIN_ANY) {
 		ha_log(LOG_ERR, "no nodes defined");
 		++errcount;
 	}
@@ -330,22 +388,35 @@ init_config(const char * cfgfile)
 		ha_log(LOG_ERR, "No authentication specified.");
 		++errcount;
 	}
-#endif
+	if (access(HOSTUUIDCACHEFILE, R_OK) >= 0) {
+		if (read_cache_file(config) != HA_OK) {
+			cl_log(LOG_ERR
+			,	"Invalid host/uuid map file [%s] - removed."
+			,	HOSTUUIDCACHEFILE);
+			if (unlink(HOSTUUIDCACHEFILE) < 0) {
+				cl_perror("unlink(%s) failed"
+				,	HOSTUUIDCACHEFILE);
+			}
+		}
+		write_cache_file(config);
+		unlink(HOSTUUIDCACHEFILETMP); /* Can't hurt. */
+	}
 	if ((curnode = lookup_node(localnodename)) == NULL) {
-#if defined(MITJA)
-		ha_log(LOG_NOTICE, "%s", msg);
-		add_normal_node(localnodename);
-		curnode = lookup_node(localnodename);
-		ha_log(LOG_NOTICE, "Current node [%s] added to configuration"
-		,	u.nodename);
-#else
-		ha_log(LOG_ERR, "Current node [%s] not in configuration!"
-		,	localnodename);
-		ha_log(LOG_INFO, "By default, cluster nodes are named"
-		" by `uname -n` and must be declared with a 'node'"
-		" directive in the ha.cf file.");
-		++errcount;
-#endif
+		if (config->rtjoinconfig == HB_JOIN_ANY) {
+			add_normal_node(localnodename);
+			curnode = lookup_node(localnodename);
+			ha_log(LOG_NOTICE, "Current node [%s] added to configuration."
+			,	localnodename);
+			write_cache_file(config);
+		}else{
+			ha_log(LOG_ERR, "Current node [%s] not in configuration!"
+			,	localnodename);
+			ha_log(LOG_INFO, "By default, cluster nodes are named"
+			" by `uname -n` and must be declared with a 'node'"
+			" directive in the ha.cf file.");
+			ha_log(LOG_INFO, "See also: " HAURL("ha.cf/NodeDirective"));
+			++errcount;
+		}
 	}
 	setenv(CURHOSTENV, localnodename, 1);
 	if (config->deadtime_ms <= 2 * config->heartbeat_ms) {
@@ -443,7 +514,10 @@ init_config(const char * cfgfile)
         }
 	
 	check_logd_usage(&errcount);
-
+	if ( !r1_style_valid()){
+		errcount++;
+	}
+	
 	if (!RestartRequested && errcount == 0 && !parse_only) {
 		ha_log(LOG_INFO, "**************************");
 		ha_log(LOG_INFO, "Configuration validated."
@@ -467,6 +541,44 @@ init_config(const char * cfgfile)
 	return(errcount ? HA_FAIL : HA_OK);
 }
 
+static void
+init_node_link_info(struct node_info *   node)
+{
+	longclock_t	cticks = time_longclock();
+	int		j;
+
+	if (node->nodetype == PINGNODE_I) {
+		node->nlinks = 1;
+		for (j=0; j < nummedia; j++) {
+			struct link *lnk = &node->links[0];
+			if (!sysmedia[j]->vf->isping()
+			||	strcmp(node->nodename
+			,	sysmedia[j]->name) != 0) {
+				continue;
+			}
+			lnk->name = node->nodename;
+			lnk->lastupdate = cticks;
+			strncpy(lnk->status, DEADSTATUS
+			,	sizeof(lnk->status));
+			lnk[1].name = NULL;
+			break;
+		}
+		return;
+	}
+	node->nlinks = 0;
+	for (j=0; j < nummedia; j++) {
+		int nc = node->nlinks;
+		struct link *lnk = &node->links[nc];
+		if (sysmedia[j]->vf->isping()) {
+			continue;
+		}
+		lnk->name = sysmedia[j]->name;
+		lnk->lastupdate = cticks;
+		strncpy(lnk->status, DEADSTATUS, sizeof(lnk->status));
+		lnk[1].name = NULL;
+		++node->nlinks;
+	}
+}
 
 /*
  *	Parse the configuration file and stash away the data
@@ -484,7 +596,6 @@ parse_config(const char * cfgfile, char *nodename)
 	int		errcount = 0;
 	int		j;
 	int		i;
-	longclock_t	cticks;
 	struct stat	sbuf;
 	struct DefServices {
 		const char *	name;
@@ -524,7 +635,7 @@ parse_config(const char * cfgfile, char *nodename)
 
 		/* Skip over white space */
 		bp += strspn(bp, WHITESPACE);
-
+		
 		/* Zap comments on the line */
 		if ((cp = strchr(bp, COMMENTCHAR)) != NULL)  {
 			*cp = EOS;
@@ -654,43 +765,15 @@ parse_config(const char * cfgfile, char *nodename)
 		}
 	}
 
-	cticks = time_longclock();
 
 	for (i=0; i < config->nodecount; ++i) {
-		if (config->nodes[i].nodetype == PINGNODE_I) {
-			config->nodes[i].nlinks = 1;
-			for (j=0; j < nummedia; j++) {
-				struct link *lnk = &config->nodes[i].links[0];
-				if (!sysmedia[j]->vf->isping()
-				||	strcmp(config->nodes[i].nodename
-				,	sysmedia[j]->name) != 0) {
-					continue;
-				}
-				lnk->name = config->nodes[i].nodename;
-				lnk->lastupdate = cticks;
-				strncpy(lnk->status, DEADSTATUS
-				,	sizeof(lnk->status));
-				lnk[1].name = NULL;
-				break;
-			}
-			continue;
-		}
-		config->nodes[i].nlinks = 0;
-		for (j=0; j < nummedia; j++) {
-			int nc = config->nodes[i].nlinks;
-			struct link *lnk = &config->nodes[i].links[nc];
-			if (sysmedia[j]->vf->isping()) {
-				continue;
-			}
-			lnk->name = sysmedia[j]->name;
-			lnk->lastupdate = cticks;
-			strncpy(lnk->status, DEADSTATUS, sizeof(lnk->status));
-			lnk[1].name = NULL;
-			++config->nodes[i].nlinks;
-		}
+		/*
+		 * We need to re-do this now, after all the
+		 * media directives were parsed.
+		 */
+		init_node_link_info(&config->nodes[i]);
 	}
 
-	j++;
 
 	fclose(f);
 	return(errcount ? HA_FAIL : HA_OK);
@@ -753,6 +836,116 @@ dump_config(void)
 		,	sysmedia[j]->name);
 	}
 	printf("#---------------------------------------------------\n");
+}
+
+
+/*
+ *	Dump the default configuration file values for those directives that
+ *	have them
+ *
+ *	This does not include every directive at this point.
+ */
+void
+dump_default_config(int wikiout)
+{
+	int		j, k, lmaxlen = 0, cmaxlen = 0, rmaxlen = 0;
+	const char *	dashes = "----------------------------------------"
+				 "----------------------------------------";
+	const char *	lcolhdr = "Directive";
+	const char *	ccolhdr = "Default";
+	const char *	rcolhdr = "Description";
+
+	/* First determine max name lens to help make things look nice */
+	for (j=0; j < DIMOF(Directives); ++j) {
+		struct directive * pdir = &Directives[j];
+		if (pdir->defaultvalue != NULL) {
+			if ((k = strlen(pdir->name)) > lmaxlen) {
+				lmaxlen = k;
+			}
+			if ((k = strlen(pdir->defaultvalue)) > cmaxlen) {
+				cmaxlen = k;
+			}
+			if ((pdir->explanation != NULL)
+			&& ((k = strlen(pdir->explanation)) > rmaxlen)) {
+				rmaxlen = k;
+			}
+		}
+	}
+
+	/* Don't do anything if there are no default values */
+	if (!lmaxlen) {
+		printf("There are no default values for ha.cf directives\n");
+		return;
+	}
+
+	if (wikiout) {
+		printf("##Put this output in the ha.cf/DefaultValues"
+		" page\n");
+		printf("The [wiki:ha.cf ha.cf] directives with default"
+		" values are shown below - along with a brief description.\n");
+		printf("This was produced by {{{heartbeat -DW}}}"
+		" ''# (version %s)''\n\n"
+		,	VERSION);
+
+		printf("||\'\'%s\'\'||\'\'%s\'\'||\'\'%s\'\'||\n"
+		,	lcolhdr, ccolhdr, rcolhdr);
+
+		for (j=0; j < DIMOF(Directives); ++j) {
+			char	WikiName[lmaxlen+1];
+			char *	pch;
+
+			if (Directives[j].defaultvalue) {
+				strcpy(WikiName, Directives[j].name);
+				WikiName[0] = toupper(WikiName[0]);
+
+				/* wiki convention is to remove underscores,
+				   slide chars to left, and capitalize */
+				while ((pch = strchr(WikiName, '_')) != NULL) {
+					char *pchplus1 = pch + 1;
+					*pch = toupper(*pchplus1);
+					while (*pchplus1) {
+						*++pch = *++pchplus1;
+					}
+				}
+
+				printf("||[wiki:ha.cf/%sDirective"
+				" %s]||%s||%s||\n"
+				,	WikiName
+				,	Directives[j].name
+				,	Directives[j].defaultvalue
+				,	Directives[j].explanation
+				?	Directives[j].explanation : "");
+			}
+		}
+	} else {
+		if ((k = strlen(lcolhdr)) > lmaxlen) {
+			lmaxlen = k;
+		}
+		if ((k = strlen(ccolhdr)) > cmaxlen) {
+			cmaxlen = k;
+		}
+		if ((k = strlen(rcolhdr)) > rmaxlen) {
+			rmaxlen = k;
+		}
+
+		printf("%-*.*s  %-*.*s  %s\n", lmaxlen, lmaxlen, lcolhdr
+		,	cmaxlen, cmaxlen, ccolhdr, rcolhdr);
+		/* this 4 comes from the pair of 2 blanks between columns */
+		printf("%-*.*s\n", (int)sizeof(dashes)
+		,	lmaxlen + cmaxlen + rmaxlen + 4, dashes);
+
+		for (j=0; j < DIMOF(Directives); ++j) {
+			if (Directives[j].defaultvalue) {
+				printf("%-*.*s  %-*.*s  %s\n"
+				,	lmaxlen, lmaxlen
+				,	Directives[j].name
+				,	cmaxlen, cmaxlen
+				,	Directives[j].defaultvalue
+				,	Directives[j].explanation
+				?	Directives[j].explanation : "");
+			}
+		}
+	}
 }
 
 
@@ -951,6 +1144,92 @@ add_option(const char *	option, const char * value)
 	return(HA_FAIL);
 }
 
+
+void 
+dellist_destroy(void){
+	
+	GSList* list = del_node_list;
+
+	while (list != NULL){
+		ha_free(list->data);
+		list->data=NULL;
+		list= list->next;
+	}
+
+	g_slist_free(del_node_list);
+	del_node_list = NULL;
+	return;
+}
+
+static void
+dellist_append(struct node_info* hip)
+{
+	struct node_info* dup_hip;
+	
+	dup_hip = ha_malloc(sizeof(struct node_info));
+	if (dup_hip == NULL){
+		cl_log(LOG_ERR, "%s: malloc failed",
+		       __FUNCTION__);
+		return;
+	}
+
+	memcpy(dup_hip, hip, sizeof(struct node_info));
+	
+	del_node_list = g_slist_append(del_node_list, dup_hip);
+	
+	
+}
+int 
+dellist_add(const char* nodename){
+	struct node_info node;
+	int i;
+
+	for (i=0; i < config->nodecount; i++){
+		if (strncmp(nodename, config->nodes[i].nodename,HOSTLENG) == 0){
+			dellist_append(&config->nodes[i]);
+			return HA_OK;
+		}
+	}
+	
+	memset(&node, 0, sizeof(struct node_info));
+	strncpy(node.nodename, nodename, HOSTLENG);
+	
+	dellist_append(&node);
+	return HA_OK;
+}
+
+static gint
+dellist_match(gconstpointer data, gconstpointer nodename)
+{
+	const struct node_info* node = (const struct node_info*) data;
+	
+	if (data == NULL){
+		/* the list is empty,i.e. not found*/
+		return 1;
+	}
+	return strncasecmp(node->nodename,nodename, HOSTLENG);
+}
+
+void
+remove_from_dellist( const char* nodename)
+{
+	GSList* listitem;
+	
+	listitem = g_slist_find_custom(del_node_list, nodename, dellist_match);
+	
+	if (listitem!= NULL){
+		if (listitem->data){
+			ha_free(listitem->data);
+		}
+		del_node_list = g_slist_delete_link(del_node_list, listitem);
+	}
+	
+	return;
+	
+}
+
+
+
 /*
  * For reliability reasons, we should probably require nodename
  * to be in /etc/hosts, so we don't lose our mind if (when) DNS goes out...
@@ -965,9 +1244,13 @@ int
 add_node(const char * value, int nodetype)
 {
 	struct node_info *	hip;
+	
 	if (config->nodecount >= MAXNODE) {
 		return(HA_FAIL);
 	}
+	
+	remove_from_dellist(value);
+	
 	hip = &config->nodes[config->nodecount];
 	memset(hip, 0, sizeof(*hip));
 	++config->nodecount;
@@ -982,10 +1265,142 @@ add_node(const char * value, int nodetype)
 	hip->track.nmissing = 0;
 	hip->track.last_seq = NOSEQUENCE;
 	hip->track.ackseq = 0;
+	hip->weight = 100;
 	srand(time(NULL));
 	hip->track.ack_trigger = rand()%ACK_MSG_DIV;
 	hip->nodetype = nodetype;
 	add_nametable(hip->nodename, hip);
+	init_node_link_info(hip);
+	if (nodetype == PINGNODE_I) {
+		hip->dead_ticks
+			=	msto_longclock(config->deadping_ms);
+	}else{
+		hip->dead_ticks
+			=	msto_longclock(config->deadtime_ms);
+	}
+	return(HA_OK);
+}
+
+int 
+set_node_weight(const char* value, int weight)
+{
+	int i;
+	struct node_info * hip = NULL;
+
+	if (value == NULL){
+		cl_log(LOG_ERR, "%s: invalid nodename",
+		       __FUNCTION__);
+		return HA_FAIL;
+	}
+	
+	for (i = 0; i < config->nodecount; i++){
+		hip = &config->nodes[i];
+		if (strncasecmp(hip->nodename, value, sizeof(hip->nodename)) ==0){
+			break;
+		}
+	}
+
+	if (i == config->nodecount){
+		cl_log(LOG_DEBUG,"set weight to non-existing node %s", value);
+		return HA_FAIL;
+	}
+	
+	hip->weight = weight;
+	return HA_OK;	
+}
+
+int 
+set_node_site(const char* value, const char* site)
+{
+	int i;
+	struct node_info * hip = NULL;
+	
+	if (value == NULL){
+		cl_log(LOG_ERR, "%s: invalid nodename",
+		       __FUNCTION__);
+		return HA_FAIL;
+	}
+	
+	for (i = 0; i < config->nodecount; i++){
+		hip = &config->nodes[i];
+		if (strncasecmp(hip->nodename, value, sizeof(hip->nodename)) ==0){
+			break;
+		}
+	}
+
+	if (i == config->nodecount){
+		cl_log(LOG_DEBUG,"set site to non-existing node %s", value);
+		return HA_FAIL;
+	}
+	strncpy(hip->site, site, sizeof(hip->site));
+	return HA_OK;	
+}
+
+int 
+remove_node(const char* value, int deletion)
+{
+	int i;
+	struct node_info *	hip = NULL;
+	int j;
+
+	if (value == NULL){
+		cl_log(LOG_ERR, "%s: invalid nodename",
+		       __FUNCTION__);
+		return HA_FAIL;
+	}
+	
+	for (i = 0; i < config->nodecount; i++){
+		hip = &config->nodes[i];
+		if (strncasecmp(hip->nodename, value, sizeof(hip->nodename)) ==0){
+			break;
+		}
+	}
+	
+
+	if (i == config->nodecount){
+		if (deletion){
+			cl_log(LOG_DEBUG,"Adding node(%s) to deletion list", value);
+			dellist_add(value);
+		}	
+		
+		return HA_OK;
+	}
+
+	
+	if (STRNCMP_CONST(hip->status, DEADSTATUS) != 0
+	    && STRNCMP_CONST(hip->status, INITSTATUS) != 0){
+		cl_log(LOG_ERR, "%s: node %s is %s. Cannot remove alive node",
+		       __FUNCTION__, value, hip->status);
+		return HA_FAIL;
+	}
+	
+	if (deletion){
+		cl_log(LOG_DEBUG,"Adding this node to deletion list");
+		dellist_append(hip);
+	}
+
+	for (j = i; j < config->nodecount; j++){
+		memcpy(&config->nodes[j], &config->nodes[j + 1], 
+		       sizeof(config->nodes[0]));
+	}
+	
+	config->nodecount -- ;
+
+	tables_remove(hip->nodename, &hip->uuid);		
+	
+	curnode = lookup_node(localnodename);
+	if (!curnode){
+		cl_log(LOG_ERR, "localnode not found");
+	}
+
+	return(HA_OK);	
+	
+}
+/* Set the name of cluster */
+static int 
+set_cluster_name(const char * value)
+{
+	strncpy(config->cluster, value, PATH_MAX);
 	return(HA_OK);
 }
 
@@ -1555,11 +1970,11 @@ set_realtime(const char * value)
 static int
 set_debuglevel(const char * value)
 {
-	debug = atoi(value);
-	if (debug >= 0 && debug < 256) {
-		if (debug > 0) {
+	debug_level = atoi(value);
+	if (debug_level >= 0 && debug_level < 256) {
+		if (debug_level > 0) {
 			static char cdebug[8];
-			snprintf(cdebug, sizeof(debug), "%d", debug);
+			snprintf(cdebug, sizeof(debug_level), "%d", debug_level);
 			setenv(HADEBUGVAL, cdebug, TRUE);
 		}
 		return(HA_OK);
@@ -1567,6 +1982,7 @@ set_debuglevel(const char * value)
 	return(HA_FAIL);
 }
 
+#ifdef ALLOWPOLLCHOICE
 static int
 set_normalpoll(const char * value)
 {
@@ -1578,6 +1994,7 @@ set_normalpoll(const char * value)
 	}
 	return ret;
 }
+#endif
 static int
 set_msgfmt(const char* value)
 {
@@ -1609,7 +2026,7 @@ set_logdaemon(const char * value)
 		       "enabling logging daemon is recommended");
 	}else{
 		cl_log(LOG_INFO, "Enabling logging daemon ");
-		cl_log(LOG_INFO, "logfile and debug file are those specified"
+		cl_log(LOG_INFO, "logfile and debug file are those specified "
 		       "in logd config file (default /etc/logd.cf)");
 	}
 	
@@ -1767,6 +2184,100 @@ set_compression_threshold(const char * value)
 }
 
 
+static int
+set_traditional_compression(const char * value)
+{		
+	int result;
+
+	if (value == NULL){
+		cl_log(LOG_ERR, "%s: NULL pointer",
+		       __FUNCTION__);
+		return HA_FAIL;
+	}
+	if (cl_str_to_boolean(value, &result)!= HA_OK){
+		cl_log(LOG_ERR, "%s:Invalid directive value %s", 
+		       __FUNCTION__,value);
+		return HA_FAIL;
+	}
+	
+	cl_set_traditional_compression(result);
+	
+	return HA_OK;
+}
+
+static int
+set_env(const char * nvpair)
+{		
+
+	int nlen;
+	int vlen;
+	char* env_name;
+	char*	value;
+
+	nlen = strcspn(nvpair, "=");
+	if (nlen >= MAXLINE || nlen <=0){
+		cl_log(LOG_ERR, "%s: invalid nvpair(%s)",
+		       __FUNCTION__, nvpair);
+		return HA_FAIL;
+	}
+	
+	env_name = cl_malloc(nlen + 4);
+	if (env_name == NULL){
+		cl_log(LOG_ERR, "%s: malloc failed",
+		       __FUNCTION__);
+		return HA_FAIL;
+	}
+	
+	memcpy(env_name, "HA_", 3);
+	memcpy(env_name + 3, nvpair, nlen);
+	env_name[nlen + 3] = 0;
+	
+	vlen = strlen(nvpair + nlen + 1);
+	if (vlen >= MAXLINE || nlen <=0){
+		cl_log(LOG_ERR, "%s: invalid value(%s)",
+		       __FUNCTION__, nvpair);
+		return HA_FAIL;
+	}
+	
+	value = cl_malloc(vlen + 1);
+	if (value == NULL){
+		cl_log(LOG_ERR, "%s: malloc failed for value",
+		       __FUNCTION__);
+		return HA_FAIL;
+	}	
+	memcpy(value, nvpair+nlen +1  , vlen);
+	value[vlen] = 0;
+	/*
+	 * It is unclear whether any given version of setenv
+	 * makes a copy of the name or value, or both.
+	 * Therefore it is UNSAFE to free either one.
+	 * Fortunately the size of the resulting potential memory leak
+	 * is small for this particular situation.
+	 */
+	setenv(env_name, value, 1);
+	if (ANYDEBUG){
+		cl_log(LOG_DEBUG, "setting env(%s=%s), nvpair(%s)", env_name, value,nvpair);
+	}
+	
+	return HA_OK;
+}
+static int
+set_max_rexmit_delay(const char * value)
+{
+	int foo;
+
+	foo =  atoi(value);
+	if (foo <= 0){
+		cl_log(LOG_ERR, "Invalid max_rexmit_delay time(%s)",
+		       value);
+		return HA_FAIL;
+	}
+	
+	hb_set_max_rexmit_delay(foo);
+
+	return HA_OK;
+}
+
 #if 0
 static void
 id_table_dump(gpointer key, gpointer value, gpointer user_data)
@@ -1903,7 +2414,7 @@ set_api_authorization(const char * directive)
 		cl_log(LOG_ERR
 		,	"Duplicate %s directive for API client %s: [%s]"
 		,	KEY_APIPERM, clname, directive);
-		return HA_FAIL;
+		goto baddirective;
 	}
 	g_hash_table_insert(APIAuthorization, clname, auth);
 	if (DEBUGDETAILS) {
@@ -1984,33 +2495,74 @@ set_corerootdir(const char* value)
 static int
 set_release2mode(const char* value)
 {
-	const struct do_directive {
+	struct do_directive {
 		const char * dname;
 		const char * dval;
-	} r2dirs[] =
-		/* CCM already implicit */
-	{	{"apiauth", "cib 	uid=" HA_CCMUSER}
-	,	{"apiauth", "stonithd   uid=root"}
-		/* LRM is not a heartbeat API client */
+	}; 
+    
+    struct do_directive *r2dirs;
+    
+    struct do_directive r2auto_dirs[] =
+	/*
+	 *	To whom it may concern:  Please keep the apiauth and respawn
+	 *	lines in the same order to make auditing the two against each
+	 *	other easier.
+	 *	Thank you.
+	 */
+	
+	{	/* CCM apiauth already implicit elsewhere */
+		{"apiauth", "cib 	uid=" HA_CCMUSER}
+		/* LRMd is not a heartbeat API client */
+	,	{"apiauth", "stonithd  	uid=root" }
+	,	{"apiauth", "attrd   	uid=" HA_CCMUSER}
+	,	{"apiauth", "crmd   	uid=" HA_CCMUSER}
+#ifdef MGMT_ENABLED
+	,	{"apiauth", "mgmtd   	uid=root" }
+#endif
+	,	{"apiauth", "pingd   	uid=root"}
+
+	,	{"respawn", " "HA_CCMUSER " " HALIB "/ccm"}
+	,	{"respawn", " "HA_CCMUSER " " HALIB "/cib"}
+	,	{"respawn", "root "           HALIB "/lrmd -r"}
+	,	{"respawn", "root "	      HALIB "/stonithd"}
+	,	{"respawn", " "HA_CCMUSER " " HALIB "/attrd"}
+	,	{"respawn", " "HA_CCMUSER " " HALIB "/crmd"}
+#ifdef MGMT_ENABLED
+	,	{"respawn", "root "  	      HALIB "/mgmtd -v"}
+#endif
+		/* Don't 'respawn' pingd - it's a resource agent */
+	};
+
+    struct do_directive r2manual_dirs[] =	
+	{	/* CCM apiauth already implicit elsewhere */
+		{"apiauth", "cib 	uid=" HA_CCMUSER}
 	,	{"apiauth", "crmd   	uid=" HA_CCMUSER}
 
 	,	{"respawn", " "HA_CCMUSER " " HALIB "/ccm"}
 	,	{"respawn", " "HA_CCMUSER " " HALIB "/cib"}
-	,	{"respawn", "root "	      HALIB "/stonithd"}
 	,	{"respawn", "root "           HALIB "/lrmd"}
 	,	{"respawn", " "HA_CCMUSER " " HALIB "/crmd"}
+		/* Don't 'respawn' pingd - it's a resource agent */
 	};
+    
 	gboolean	dorel2;
 	int		rc;
-	int		j;
+	int		j, r2size;
 	int		rc2 = HA_OK;
 
+    r2dirs = &r2auto_dirs[0]; r2size = DIMOF(r2auto_dirs);
+    
 	if ((rc = cl_str_to_boolean(value, &dorel2)) == HA_OK) {
 		if (!dorel2) {
 			return HA_OK;
 		}
 	}else{
-		return rc;
+        if (0 == strcasecmp("manual", value)) {
+            r2dirs = &r2manual_dirs[0];
+            r2size = DIMOF(r2manual_dirs);
+        } else {
+    		return rc;
+        }
 	}
 
 	DoManageResources = FALSE;
@@ -2021,30 +2573,270 @@ set_release2mode(const char* value)
 	
 
 	/* Enable release 2 style cluster management */
-	for (j=0; j < DIMOF(r2dirs); ++j) {
+	for (j=0; j < r2size ; ++j) {
 		int	k;
 		for (k=0; k < DIMOF(WLdirectives); ++k) {
-			if (0 != strcmp(r2dirs[j].dname, WLdirectives[k].type)) {
+			if (0 != strcmp(r2dirs->dname, WLdirectives[k].type)) {
 				continue;
 			}
 			if (ANYDEBUG) {
 				cl_log(LOG_DEBUG, "Implicit directive: %s %s"
-				,	 r2dirs[j].dname
-				,	 r2dirs[j].dval);
+				,	 r2dirs->dname
+				,	 r2dirs->dval);
 			}
 			if (HA_OK
-			!= (rc2 = WLdirectives[k].parse(r2dirs[j].dval))) {
+			!= (rc2 = WLdirectives[k].parse(r2dirs->dval))) {
 				cl_log(LOG_ERR, "Directive %s %s failed"
-				,	r2dirs[j].dname, r2dirs[j].dval);
-			}
+				,	r2dirs->dname, r2dirs->dval);
+			}            
 		}
+        r2dirs++;
 	}
+    
 	return rc2;
 }
 
+static int
+set_autojoin(const char* value)
+{
+	if (strcasecmp(value, "none") == 0) {
+		config->rtjoinconfig = HB_JOIN_NONE;
+		return HA_OK;
+	}
+	if (strcasecmp(value, "other") == 0) {
+		config->rtjoinconfig = HB_JOIN_OTHER;
+		return HA_OK;
+	}
+	if (strcasecmp(value, "any") == 0) {
+		config->rtjoinconfig = HB_JOIN_ANY;
+		return HA_OK;
+	}
+	cl_log(LOG_ERR, "Invalid %s directive [%s]", KEY_AUTOJOIN, value);
+	return HA_FAIL;
+}
+
+
+static int
+set_uuidfrom(const char* value)
+{
+	if (strcmp(value, "file") == 0) {
+		config->uuidfromname = FALSE;
+		return HA_OK;
+	}
+	if (strcmp(value, "nodename") == 0) {
+		config->uuidfromname =  TRUE;
+		return HA_OK;
+	}
+	cl_log(LOG_ERR, "Invalid %s directive [%s]", KEY_UUIDFROM, value);
+	return HA_FAIL;
+}
+/* Set the memory reserve amount for heartbeat (in kbytes) */
+static int
+set_memreserve(const char * value)
+{
+	config->memreserve = atoi(value);
+
+	if (config->memreserve > 0) {
+		return(HA_OK);
+	}
+	return(HA_FAIL);
+}
+
+static int
+ha_config_check_boolean(const char *value)
+{
+	int result;
+
+	if (value == NULL){
+		cl_log(LOG_ERR, "%s: NULL pointer",
+		       __FUNCTION__);
+		return HA_FAIL;
+	}
+
+	if (cl_str_to_boolean(value, &result)!= HA_OK){
+		cl_log(LOG_ERR, "%s:Invalid directive value %s", 
+		       __FUNCTION__,value);
+		return HA_FAIL;
+	}
+	
+	return HA_OK;
+}
 
 /*
  * $Log: config.c,v $
+ * Revision 1.205  2006/08/16 03:30:33  zhenh
+ * when heartbeat starts, restarts the lrmd in the case that there is an existing lrmd, fix #1333
+ *
+ * Revision 1.204  2006/07/27 09:17:56  andrew
+ * Change the default api-auth for pingd to uid=root
+ *
+ * Revision 1.203  2006/07/13 16:23:55  alan
+ * Patch from Serge Dubrouski for not starting any optional components.
+ *
+ * Revision 1.202  2006/05/28 00:53:19  zhenh
+ * add functions for setting the weight and site of node
+ *
+ * Revision 1.201  2006/05/26 02:55:28  zhenh
+ * add "cluster" directive as the name of cluster to ha.cf and parameter of cluster
+ *
+ * Revision 1.200  2006/04/29 13:12:20  alan
+ *
+ * Patch to allow the management daemon to not be started
+ * automatically if it's not been compiled in.
+ * This patch due to Keisuke MORI <kskmori@intellilink.co.jp>
+ *
+ * Revision 1.199  2006/04/26 03:42:07  alan
+ * Committed a patch from gshi which should GREATLY improve the
+ * behavior of autojoin code.
+ * The basic idea is that anyone newly joining the cluster should listen to anyone already in the cluster for the cache file contents, etc.
+ *
+ * Revision 1.198  2006/04/24 04:52:24  alan
+ * Disabled traditional compression because of realtime concerns.
+ *
+ * Revision 1.197  2006/04/24 03:23:49  alan
+ * Made loaded by default with 'crm on'.
+ *
+ * Revision 1.196  2006/04/11 22:11:17  lars
+ * CID 5: If we return here, the deallocation codepath at the end of the
+ * function doesn't make sense, and we would leak memory.
+ *
+ * Revision 1.195  2006/04/10 12:50:08  andrew
+ * Untested pingd - replacement for ipfail
+ *
+ * Revision 1.194  2006/04/09 12:50:04  andrew
+ * Daemon for organising attribute updates to the CIB accross all nodes
+ *   (part of the ipfail replacement code)
+ *
+ * Revision 1.193  2006/02/23 20:12:12  alan
+ * Unimportant correction to config.c
+ *
+ * Revision 1.192  2006/02/01 14:59:10  alan
+ * Added some code to allow memory pre-reserve for heartbeat a configuration problem.
+ *
+ * Revision 1.191  2006/01/16 09:16:32  andrew
+ * Three new ha.cf options:
+ *  - record_config_changes (on/off)
+ *  on: the current implementation logs config changes at the value of "debug"
+ *  off: the current implementation logs config changes at the value of "debug" + 1
+ *  - record_pengine_inputs (on/off)
+ *  on: the current implementation logs config changes at the value of "debug"
+ *  off: the current implementation logs config changes at the value of "debug" + 1
+ *  - enable_config_writes (on/off)
+ *  on: write (CIB) config changes to disk
+ *  off: do NOT write (CIB) config changes to disk
+ *
+ * Remove the old enable_config_writes option from the CIB, it was broken and
+ *   required linking against the pengine library to fix as correct interpretation
+ *   required understanding the CIB's contents.
+ *
+ * Revision 1.190  2005/12/21 00:01:51  gshi
+ * make max rexmit delay tunable in ha.cf
+ *
+ * Revision 1.189  2005/12/18 21:59:12  alan
+ * Changed some comments generated when printing default values.
+ *
+ * Revision 1.188  2005/12/16 02:11:59  gshi
+ * add an entry "env" to tell heartbeat to set environment variable
+ * change classic.c quorum module to majority.c
+ * change grant.c tiebreaker module to twonodes.c
+ *
+ * Revision 1.187  2005/12/12 14:27:45  blaschke
+ *
+ * Fix BEAM "errors" from bug 990
+ *
+ * Revision 1.186  2005/12/09 22:33:11  alan
+ * Disallowed the nomalpoll option.
+ * Fixed some text that I broke :-(
+ *
+ * Revision 1.185  2005/12/09 21:41:24  alan
+ * Fixed a minor complaint from amd64, plus added version information, minor URL correction, etc.
+ *
+ * Revision 1.184  2005/12/09 16:07:38  blaschke
+ *
+ * Bug 990 - Added -D option to tell heartbeat to display default directive
+ * values and -W option to do so in wiki format
+ *
+ * Revision 1.183  2005/11/08 06:27:38  gshi
+ * bug 949: this bcast message is caused by not compressing the message
+ * It was so because crmd/cib does not inherit the variable traditional_compression
+ * from heartbeat (clplumbing does not provide any function for that)
+ *
+ * I added inherit_compress() function and called that in crm/cib
+ *
+ * several modification are made in crm/cib since FT_UNCOMPRESS is essentially  same FT_STRUCT
+ * except it will be transmitted after compression
+ *
+ * Revision 1.182  2005/11/07 22:52:57  gshi
+ * fixed a few bugs related to deletion:
+ *
+ * 1. we need to update the variable curnode since it might point to a different node or invalid node now
+ * 2. we need to update the tables stores uuid->node_info pointer and nodename->node_info pointer
+ * because the pointer no longer points to the right node
+ *
+ * Revision 1.181  2005/11/04 23:20:58  gshi
+ * always read hostcache file when heartbeat starts no matter what autojoin option is.
+ * This is necessary because there could be nodes added using hb_addnode command
+ *
+ * Revision 1.180  2005/10/27 01:03:21  gshi
+ * make node deletion work
+ *
+ * 1. maintain a delhostcache file for deleted files
+ * 2. hb_delnode <node> to delete a node
+ *    hb_addnode <node> to add a node
+ *
+ * TODO:
+ * 1) make hb_delnode/hb_addnode accept multiple nodes
+ * 2) make deletion only works when all other nodes are active
+ * 3) make CCM work with node deletion
+ *
+ * Revision 1.179  2005/10/17 19:47:44  gshi
+ * add an option to use "traditional" compression method
+ * traditional_compression yes/no
+ * in ha.cf
+ *
+ * Revision 1.178  2005/10/04 19:37:06  gshi
+ * bug 144: UUIDs need to be generatable from nodenames for some cases
+ * new directive
+ * uuidfrom <file/nodename>
+ * default to file
+ *
+ * Revision 1.177  2005/09/28 20:29:55  gshi
+ * change the variable debug to debug_level
+ * define it in cl_log
+ * move a common function definition from lrmd/mgmtd/stonithd to cl_log
+ *
+ * Revision 1.176  2005/09/26 18:14:54  gshi
+ * R1 style resource management and autojoin other/any should not co-exist
+ *
+ * Revision 1.175  2005/09/26 04:38:31  gshi
+ * bug 901: we should not access hostcache file if autojoin is not set in ha.cf
+ *
+ * Revision 1.174  2005/09/23 22:35:26  gshi
+ * It's necessary to set dead_ticks for nodes that added dynamically.
+ * It is ok in initialization when config->deadping_ms/deadtime_ms is not set
+ * because they will be set to the correct value at the end of init_config()
+ *
+ * Revision 1.173  2005/09/19 19:52:05  gshi
+ * print out a warning if logfile/debugfile/logfacility is still configured
+ * if use_logd is set to "yes" in ha.cf
+ *
+ * Revision 1.172  2005/09/15 06:13:13  alan
+ * more auto-add bugfixes...
+ *
+ * Revision 1.171  2005/09/15 04:14:33  alan
+ * Added the code to configure in the autojoin feature.
+ * Of course, if you use it, it will probably break membership at the moment :-)
+ *
+ * Revision 1.170  2005/09/15 03:59:09  alan
+ * Now all the basic pieces to bug 132 are in place - except for a config option
+ * to test it with.
+ * This means there are three auto-join modes one can configure:
+ * 	none	- no nodes may autojoin
+ * 	other	- nodes other than ourselves can autojoin
+ * 	any	- any node, including ourself can autojoin
+ *
+ * None is the default.
+ *
  * Revision 1.169  2005/09/10 21:51:14  gshi
  * If crm is enabled and haresources file exists, print out a warning
  *

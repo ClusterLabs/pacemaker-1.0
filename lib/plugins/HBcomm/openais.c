@@ -113,7 +113,7 @@ openais_isping(void) {
 }
 
 static gboolean openais_msg_ready = FALSE;
-static char openais_pkt[MAXLINE];
+static char openais_pkt[MAXMSG];
 static int openais_pktlen =0;
 static void
 evs_deliver_fn(struct in_addr source_addr, void* msg, 
@@ -270,7 +270,6 @@ openais_read(struct hb_media* mp, int * lenp)
 	struct ais_private *  ais;
 	struct pollfd pfd;
 	
-
 	ais= (struct ais_private *) mp->pd;
 
 	while (!openais_msg_ready){
@@ -279,8 +278,6 @@ openais_read(struct hb_media* mp, int * lenp)
 		pfd.revents = 0;
 
 		OPENAISASSERT(mp);
-		ais = (struct ip_private *) mp->pd;
-		
 		if (poll(&pfd, 1, -1) < 0){
 			if (errno == EINTR){
 				break;
@@ -337,7 +334,7 @@ openais_write(struct hb_media* mp, void *pkt, int len)
 	};
 	
 	OPENAISASSERT(mp);
-	ais = (struct ip_private *) mp->pd;
+	ais = (struct ais_private *) mp->pd;
 
 	if (evs_mcast_joined(ais->handle, EVS_TYPE_AGREED, &iov, 1)
 	    != EVS_OK){

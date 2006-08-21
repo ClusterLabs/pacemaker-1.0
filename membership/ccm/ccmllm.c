@@ -1,4 +1,4 @@
-/* $Id: ccmllm.c,v 1.20 2005/07/29 10:32:30 sunjd Exp $ */
+/* $Id: ccmllm.c,v 1.31 2006/06/07 08:29:52 zhenh Exp $ */
 /* 
  * ccmllm.c: Low Level membership routines.
  *
@@ -20,80 +20,146 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  *
  */
-#include <ccm.h>
+
+#include "ccm.h"
 
 
-/* */
-/* return the number of nodes in the cluster that are in a active state. */
-/* */
+int
+llm_get_nodecount(llm_info_t* llm){
+	
+	if (llm == NULL){
+		ccm_log(LOG_ERR, "%s: NULL pointer",
+		       __FUNCTION__);
+		return -1;
+	}
+	
+	return llm->nodecount;
+}
+
 int
 llm_get_live_nodecount(llm_info_t *llm)
 {
-	uint count=0, i;
-	for ( i = 0 ; i < LLM_GET_NODECOUNT(llm) ; i++ ) {
-		const char* status = LLM_GET_STATUS(llm,i);
-		if (STRNCMP_CONST(status, DEADSTATUS) != 0
-		    && STRNCMP_CONST(status, CLUST_INACTIVE) != 0) {
-			    count++;
+	int	count = 0;
+	int	i;
+	
+	if (llm == NULL){
+		ccm_log(LOG_ERR, "%s: NULL pointer",
+		       __FUNCTION__);
+		return -1;
+	}
+	
+	for ( i = 0 ; i < llm->nodecount; i++ ) {
+		const char* status = llm->nodes[i].status;
+		
+		if (STRNCMP_CONST(status, DEADSTATUS) != 0){
+			count++;
 		}
 	}
+	
 	return count;
 }
 
 
-/* */
-/* return the nodename of the node with the specified uuid. */
-/* */
 char *
-llm_get_nodeid_from_uuid(llm_info_t *llm, const int uuid)
+llm_get_nodename(llm_info_t *llm, const int index)
 {
-	return LLM_GET_NODEID(llm, uuid);
+	if (llm == NULL){
+		ccm_log(LOG_ERR, "%s: NULL pointer",
+		       __FUNCTION__);
+		return  NULL;
+	}
+	
+	if (index < 0 || index > MAXNODE){
+		ccm_log(LOG_ERR, "%s: index(%d) out of range",
+		       __FUNCTION__, index);
+		return NULL;
+	}
+	
+	return llm->nodes[index].nodename;
+	
 }
 
-/* */
-/* return >0 if name of the node with indx1 is lexically */
-/* higher than the name of the node with indx2. */
-/* return 0 if the node names of both the nodes are the */
-/* same */
-/* return <0 if name of the node with indx1 is lexically */
-/* lower than the name of the node with indx2. */
-/* */
-int
-llm_nodeid_cmp(llm_info_t *llm, int indx1, int indx2)
+char *
+llm_get_nodestatus(llm_info_t* llm, const int index)
 {
-	return strncmp(LLM_GET_NODEID(llm, indx1),
-			LLM_GET_NODEID(llm, indx2), NODEIDSIZE);
+	if (llm == NULL){
+		ccm_log(LOG_ERR, "%s: NULL pointer",
+		       __FUNCTION__);
+		return  NULL;
+	}
+	
+	if (index < 0 || index > MAXNODE){
+		ccm_log(LOG_ERR, "%s: index(%d) out of range",
+		       __FUNCTION__, index);
+		return NULL;
+	}
+	
+	return llm->nodes[index].status;	
+	
+}
+
+int
+llm_node_cmp(llm_info_t *llm, int indx1, int indx2)
+{
+	return strncmp(llm_get_nodename(llm, indx1),
+			llm_get_nodename(llm, indx2), NODEIDSIZE);
 }
 
 
 
 void
-display_llm(llm_info_t *llm)
+llm_display(llm_info_t *llm)
 {
 	unsigned int	i;
-	cl_log(LOG_INFO, "total node number is %d", LLM_GET_NODECOUNT(llm));
-	for (i = 0 ;i < LLM_GET_NODECOUNT(llm) ; i++){
-		cl_log(LOG_INFO, "node %d =%s, status=%s", 
+	ccm_debug2(LOG_DEBUG, "total node number is %d", llm->nodecount);
+	for (i = 0 ;i < llm->nodecount; i++){
+		ccm_debug2(LOG_DEBUG, "node %d =%s, status=%s", 
 		       i,    llm->nodes[i].nodename, llm->nodes[i].status);		
 	}
 	
 }
 
-/* */
-/* Get the index of the node with the given nodename  */
-/* */
+int 
+llm_get_myindex(llm_info_t* llm)
+{
+	if (llm == NULL){
+		ccm_log(LOG_ERR, "NULL pointer");
+		return -1;
+	}
+	return llm->myindex;
+}
+
+const char*
+llm_get_mynodename(llm_info_t* llm)
+{
+	if (llm == NULL){
+		ccm_log(LOG_ERR, "%s: NULL pointer",
+		       __FUNCTION__);
+		return NULL;
+	}
+	
+	if (llm->myindex < 0){
+		ccm_log(LOG_ERR, "%s: mynode is not set",
+		       __FUNCTION__);
+		return NULL;
+	}
+	
+	return llm->nodes[llm->myindex].nodename;
+	
+}
+
 int
 llm_get_index(llm_info_t *llm, const char *node)
 {
 	int low,high,mid;
 	int value;
 
-	/* lets do a binary search */
+	/*binary search */
 	low = 0;
-	high = LLM_GET_NODECOUNT(llm)-1;
+	high = llm->nodecount - 1;
 	do {
 		mid = (low+high+1)/2;
-		value = strncmp(LLM_GET_NODEID(llm, mid), node, NODEIDSIZE);
+		value = strncmp(llm_get_nodename(llm, mid), node, NODEIDSIZE);
 		if(value==0) {
 			return mid;
 		}
@@ -110,93 +176,33 @@ llm_get_index(llm_info_t *llm, const char *node)
 		}
 	} while(high>=low);
 
-	display_llm(llm);
 	return -1;
 }
 
-/* */
-/* Update the status of node 'nodename'. */
-/* return TRUE if the node transitioned to DEADSTATUS or CLUST_INACTIVE */
-/* */
-/* NOTE: CLUST_INACTIVE carries more information then DEADSTATUS */
-/* DEADSTATUS just means the node is assumed to be dead, probably because */
-/* of loss of connectivity or because of real death. */
-/* BUT CLUST_INACTIVE confirms that the node is really cluster inactive. */
-/* */
 int
-llm_status_update(llm_info_t *llm, const char *node, const char *status, char* oldstatus)
+llm_status_update(llm_info_t *llm, const char *node, 
+		  const char *status, char* oldstatus)
 {
 	int i;
-
+	
 	i = llm_get_index(llm, node);
 	if(i == -1){
-		return FALSE;
+		return HA_FAIL;
 	}
-
+	
 	if (oldstatus){
-		strncpy(oldstatus, status, STATUSSIZE);
+		strncpy(oldstatus, llm->nodes[i].status, STATUSSIZE);
 	}
 	
-	/* if there is no status change for this node just return */
-	/*  FALSE 						  */
-	if(strncmp(LLM_GET_STATUS(llm,i), status, 
-			STATUSSIZE) == 0) {
-		return FALSE;
-	}
+	strncpy(llm->nodes[i].status, status, STATUSSIZE);
 
-	LLM_SET_STATUS(llm,i,status);
-	if ((STRNCMP_CONST(status, DEADSTATUS) == 0) || 
-		STRNCMP_CONST(status, CLUST_INACTIVE) == 0) {
-		return TRUE;
-	}
-	return FALSE;
+	return HA_OK;
 }
 
 
-int
-llm_get_inactive_node_count(llm_info_t *llm)
-{
-	int		count = 0 ;
-	unsigned	i;
-	
-	cl_log(LOG_INFO, "Counting nodes(dead nodes are not shown):");
-	for (i = 0; i< llm->nodecount; i++){
-		if (STRNCMP_CONST(llm->nodes[i].status, DEADSTATUS) != 0){
-			cl_log(LOG_INFO, "node=%s  status=%s",
-			       llm->nodes[i].nodename, 
-			       llm->nodes[i].status);
-		}
-		if (STRNCMP_CONST(llm->nodes[i].status, 
-			    CLUST_INACTIVE) == 0){
-			count ++;
-		}
-	}
-	
-	return count;
-}
-
-/* */
-/* Get uuid of the node with given nodename. */
-/* */
-int 
-llm_get_uuid(llm_info_t *llm, const char *orig)
-{
-	int i;
-	i = llm_get_index(llm, orig);
-	if( i == -1 ) {
-		return i;
-	}
-
-	return LLM_GET_UUID(llm,i);
-}
-
-/* */
-/* return true if the node 'node' is a member of the */
-/* low level membership. */
-/* */
 int
 llm_is_valid_node(llm_info_t *llm, 
-	const char *node)
+		  const char *node)
 {
 	if(llm_get_index(llm, node) == -1 ) {
 		return FALSE;
@@ -204,77 +210,250 @@ llm_is_valid_node(llm_info_t *llm,
 	return TRUE;
 }
 
-/* */
-/* set the context to fill in the low membership information. */
-/* */
-void 
+int
 llm_init(llm_info_t *llm)
 {
-	LLM_SET_NODECOUNT(llm,0);
-	LLM_SET_MYNODE(llm,-1);
-	return;
-}
-
-/* */
-/* done filling in the low level membership.  */
-/* */
-void 
-llm_end(llm_info_t *llm)
-{
-	assert(LLM_GET_NODECOUNT(llm) > 0);
-	assert(LLM_GET_MYNODE(llm) != -1);
-	return;
-}
-
-/* */
-/* add a node to the low level membership with its */
-/* coresspoding attributes. */
-/* */
-void
-llm_add(llm_info_t *llm, 
-	const char *node, 
-	const char *status, 
-	const char *mynode)
-{
-	int nodecount, mynode_idx, i, j;
-	int value;
-
-
-	/* Since this function is called only once, don't bother to
-	 * program a great insert algorithm. Something that works
-	 * correctly is good enough 
-	 */
-	nodecount = LLM_GET_NODECOUNT(llm);
-	assert(nodecount < MAXNODE && nodecount >= 0);
-
-	if (nodecount == 0) {
-		mynode_idx = -1;
-	} else {
-		mynode_idx = LLM_GET_MYNODE(llm);
+	if (llm == NULL){
+		ccm_log(LOG_ERR, "%s: NULL pointer",
+		       __FUNCTION__);
+		
+		return HA_FAIL;
 	}
-	/* locate the position of the node */
-	for ( i = 0 ; i < nodecount ; i++ ) {
-		value = strncmp(LLM_GET_NODEID(llm, i), node, NODEIDSIZE);
-		assert(value!=0);
-		if(value > 0) {
+	
+	llm->nodecount = 0;
+	llm->myindex = -1;
+	
+	return HA_OK;
+}
+
+
+int 
+llm_del(llm_info_t* llm,
+	const char* node)
+{
+	int i;
+	int j;
+
+	for ( i = 0 ;i < llm->nodecount; i++){
+		if (strncmp(llm->nodes[i].nodename, node, NODEIDSIZE)==0){
 			break;
 		}
 	}
+	
+	if (i == llm->nodecount){
+		ccm_log(LOG_ERR, "%s: Node %s not found in llm",
+		       __FUNCTION__,
+		       node);
+		return HA_FAIL;
+	}
+	
+	if (llm->myindex > i){
+		llm->myindex --;
+	}else if (llm->myindex ==i){
+		ccm_log(LOG_ERR, "%s: deleing myself in ccm is not allowed",
+		       __FUNCTION__);
+		return HA_FAIL;
+	}
 
-	for ( j = nodecount; j>i; j-- ) {
-		LLM_COPY(llm, j, j-1);
-		LLM_SET_UUID(llm, j, j);
+
+	for ( j = i; j< llm->nodecount - 1; j++){
+		strncpy(llm->nodes[j].nodename, llm->nodes[j+1].nodename, NODEIDSIZE);
+		strncpy(llm->nodes[j].status, llm->nodes[j+1].status, STATUSSIZE);
+		
+	}
+		
+	llm->nodecount --;
+
+	return HA_OK;
+}
+
+
+
+int
+llm_add(llm_info_t *llm, 
+	const char *node,
+	const char *status, 
+	const char *mynode,
+	const char *site,
+	int weight)
+{
+	int	nodecount;
+	int	i, j;
+
+	nodecount = llm->nodecount;
+	if (nodecount < 0 || nodecount > MAXNODE ){
+		ccm_log(LOG_ERR, "nodecount out of range(%d)",
+		       nodecount);
+		return HA_FAIL;
+	}
+	
+
+
+	for ( i = 0 ; i < nodecount ; i++ ) {
+		int value = strncmp(llm_get_nodename(llm, i), 
+				    node, NODEIDSIZE);
+		if (value == 0){
+			ccm_log(LOG_ERR, "%s: adding same node(%s) twice(?)",
+			       __FUNCTION__, node);
+			return HA_FAIL;
+		}
+		if (value > 0) {
+			break;
+		}
+	}
+	
+	for ( j = nodecount; j > i; j-- ) {
+		llm->nodes[j] = llm->nodes[j - 1];
 	}
 		
 	llm->nodes[i].join_request = FALSE;
-	LLM_SET_NODEID(llm, i, node);
-	LLM_SET_STATUS(llm, i, status);
-	LLM_SET_UUID(llm, i, i);
-	LLM_INC_NODECOUNT(llm);
-	if (strncmp(mynode, node, NODEIDSIZE) == 0) {
-		LLM_SET_MYNODE(llm, i);
-	} else if (mynode_idx != -1 && i <= mynode_idx) {
-		LLM_SET_MYNODE(llm, mynode_idx+1);
+	strncpy(llm->nodes[i].nodename, node,NODEIDSIZE);
+	strncpy(llm->nodes[i].status, status, STATUSSIZE);
+	strncpy(llm->nodes[i].site, site, PATH_MAX);
+	llm->nodes[i].weight = weight;
+	llm->nodecount++;
+	
+	if (llm->myindex >= i) {		
+		llm->myindex++;		
 	}
-	return;
+		
+	if (llm->myindex < 0 
+	    && strncmp(mynode, node, NODEIDSIZE) == 0) {
+		llm->myindex = i;
+	} 
+
+	if (llm->myindex >= llm->nodecount){
+		ccm_log(LOG_ERR, "%s: myindex(%d) out of range,"
+		       "llm->nodecount =%d",
+		       __FUNCTION__, llm->myindex, llm->nodecount);
+		return HA_FAIL;
+	}
+
+	return HA_OK;
+}
+
+int
+llm_set_joinrequest(llm_info_t* llm, int index, gboolean value)
+{
+	if (llm == NULL){
+		ccm_log(LOG_ERR, "%s: NULL pointer",
+		       __FUNCTION__);
+		return  HA_FAIL;
+	}
+	
+	if (index < 0 || index > MAXNODE){
+		ccm_log(LOG_ERR, "%s: index(%d) out of range",
+		       __FUNCTION__, index);
+		return HA_FAIL;
+	}	
+	
+	llm->nodes[index].join_request = value;
+	
+	return HA_OK;
+}
+
+gboolean
+llm_get_joinrequest(llm_info_t* llm, int index)
+{
+	if (llm == NULL){
+		ccm_log(LOG_ERR, "%s: NULL pointer",
+		       __FUNCTION__);
+		return  FALSE;
+	}
+	
+	if (index < 0 || index > MAXNODE){
+		ccm_log(LOG_ERR, "%s: index(%d) out of range",
+		       __FUNCTION__, index);
+		return FALSE;
+	}	
+	
+	return llm->nodes[index].join_request;
+	
+}
+
+
+int
+llm_set_change(llm_info_t* llm, int index, gboolean value)
+{
+	if (llm == NULL){
+		ccm_log(LOG_ERR, "%s: NULL pointer",
+		       __FUNCTION__);
+		return  HA_FAIL;
+	}
+	
+	if (index < 0 || index > MAXNODE){
+		ccm_log(LOG_ERR, "%s: index(%d) out of range",
+		       __FUNCTION__, index);
+		return HA_FAIL;
+	}	
+	
+	llm->nodes[index].receive_change_msg = value;
+	
+	return HA_OK;
+}
+
+gboolean
+llm_get_change(llm_info_t* llm, int index)
+{
+	if (llm == NULL){
+		ccm_log(LOG_ERR, "%s: NULL pointer",
+		       __FUNCTION__);
+		return  FALSE;
+	}
+	
+	if (index < 0 || index > MAXNODE){
+		ccm_log(LOG_ERR, "%s: index(%d) out of range",
+		       __FUNCTION__, index);
+		return FALSE;
+	}	
+	
+	return llm->nodes[index].receive_change_msg;	
+}
+
+int
+llm_set_uptime(llm_info_t* llm, int index, int uptime)
+{
+	if (llm == NULL){
+		ccm_log(LOG_ERR, "%s: NULL pointer",
+		       __FUNCTION__);
+		return  FALSE;
+	}
+	
+	if (index < 0 || index > MAXNODE){
+		ccm_log(LOG_ERR, "%s: index(%d) out of range",
+		       __FUNCTION__, index);
+		return FALSE;
+	}
+	
+	if (uptime < 0){
+		ccm_log(LOG_ERR, "%s: Negative uptime %d",
+		       __FUNCTION__, uptime);
+		return FALSE;
+		       
+	}
+
+	llm->nodes[index].uptime = uptime;
+	
+	return HA_OK;
+}
+
+int
+llm_get_uptime(llm_info_t* llm, int index)
+{
+	
+	if (llm == NULL){
+		ccm_log(LOG_ERR, "%s: NULL pointer",
+		       __FUNCTION__);
+		return  -1;
+	}
+	
+	if (index < 0 || index > MAXNODE){
+		ccm_log(LOG_ERR, "%s: index(%d) out of range",
+		       __FUNCTION__, index);
+		return -1;
+	}
+	
+	return llm->nodes[index].uptime;
+
+	
 }

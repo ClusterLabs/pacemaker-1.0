@@ -1,0 +1,44 @@
+#!@PYTHON@
+#
+#   Support:      linux-ha-dev@lists.tummy.com
+#   License:      GNU General Public License (GPL)
+#
+#       This script read the list of nodes from the ha.cf file
+#       and then uses 'scp' to copy the ha.cf file to each node.
+#
+
+import os, sys
+from stat import *
+
+cfgdir = "@sysconfdir@/ha.d/"
+cfgfile = cfgdir + "ha.cf"
+authfile = cfgdir + "authkeys"
+
+try:
+	os.stat(cfgfile)
+	os.stat(authfile)
+except:
+	print "HA Linux not configured on this node.  Can not propagate."
+	sys.exit()
+
+nodes = []
+
+f=open(cfgfile)
+for line in f:
+    if line.startswith("node"):
+       toks = line.split()
+       if (len(toks) == 2):
+	  nodeName = toks[1]
+	  nodes.append(nodeName)
+f.close()
+
+thisnode = os.uname()[1]
+if nodes.count(thisnode) > 0:
+   nodes.remove(thisnode)
+
+for i, v in enumerate(nodes):
+    print "Propagating HA configuration files to node " + v + "."
+    res = os.system("scp " + cfgfile + " " + authfile + " root@" + v + ":" + cfgdir)
+    print "Setting HA startup configuration on node " + v + "."
+    res = os.system("ssh " + " root@" + v + " chkconfig `chkconfig heartbeat`")
+

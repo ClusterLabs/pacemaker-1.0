@@ -1,4 +1,4 @@
-/* $Id: ccmgraph.c,v 1.13 2005/07/29 10:32:30 sunjd Exp $ */
+/* $Id: ccmgraph.c,v 1.16 2006/02/17 05:48:24 zhenh Exp $ */
 /* 
  * ccmgraph.c: Keeps track of the connectivity within the cluster members
  *		to derive the largest totally connected subgraph.
@@ -35,6 +35,38 @@ static char 	vyesorno='n';
 #define GRAPH_TIMEOUT  15
 #define GRAPH_TIMEOUT_TOO_LONG  25
 
+
+
+
+static void
+bitmap_display(char* bitmap)
+{
+	ccm_debug2(LOG_DEBUG, "bitmap_display:%x", (unsigned int) bitmap[0]);	
+}
+
+static void 
+graph_display(graph_t* gr)
+{
+	int i;
+
+	if (gr == NULL){
+		ccm_log(LOG_ERR, "graph_display:graph is NULL");
+		return;
+	}
+	
+	for ( i = 0 ; i < gr->graph_nodes; i++ ) {
+		char* bitmap = gr->graph_node[i]->bitmap;
+		int	index = gr->graph_node[i]->uuid;
+		
+		ccm_debug2(LOG_DEBUG, "graph_display:node[%d]'s bitmap is:", index);
+		if(bitmap != NULL) {
+			bitmap_display(bitmap);
+		}
+	}
+}
+
+
+
 /* */
 /* clean up the unneccessary bits in the graph and check for */
 /* inconsistency. */
@@ -42,9 +74,11 @@ static char 	vyesorno='n';
 static void
 graph_sanitize(graph_t *gr)
 {
-	unsigned char *bitmap;
+	char *bitmap;
 	int i,j, uuid_i, uuid_j;
 	vertex_t **graph_node;
+
+	(void)graph_display;
 
 	graph_node = gr->graph_node;
 
@@ -209,8 +243,8 @@ find_best_candidate(vertex_t **vertex, int startindx,
 		}
 		if(count == min_count) {
 			if (vyesorno == 'y') {
-				cl_log(LOG_DEBUG
-				,	"probably 1 more group exists");
+				ccm_debug2(LOG_DEBUG
+				,	"find_best_candidate:probably 1 more group exists");
 			}
 		}
 		if(count < min_count) {
@@ -249,7 +283,7 @@ delete_entry(vertex_t **vertex, int indx, int size,
 	 * entries up
 	 */
 	if (vyesorno == 'y') {
-		cl_log(LOG_DEBUG, "k=%d is being removed",indx);
+		ccm_debug2(LOG_DEBUG, "delete_entry:k=%d is being removed",indx);
 	}
 	tmp_vertex = vertex[indx];
 	tmp_vertex->count--;
@@ -348,8 +382,8 @@ get_max_clique(vertex_t **vertex,  int maxnode, int *loc)
 		k = find_best_candidate(vertex, j-num+1, j+1, indxtab, 
 					maxnode); 
 		if (vyesorno == 'y') {
-			cl_log(LOG_DEBUG
-			,	"k=%d is the best candidate for removal",k);
+			ccm_debug2(LOG_DEBUG
+			,	"get_max_clique:k=%d is the best candidate for removal",k);
 		}
 
 		/* delete the candidate */
@@ -426,6 +460,13 @@ graph_free(graph_t *gr)
 void
 graph_add_uuid(graph_t *gr, int uuid)
 {
+	int i;
+	for ( i = 0 ; i < gr->graph_nodes; i++ ) {
+		if(gr->graph_node[i]->uuid == uuid) {
+			return;
+		}
+	}
+
 	gr->graph_node[gr->graph_nodes++]->uuid = uuid;
 }
 
@@ -456,10 +497,9 @@ graph_add_to_membership(graph_t *gr, int src_uuid, int dst_uuid)
 void
 graph_update_membership(graph_t *gr, 
 			int uuid, 
-			unsigned char *bitlist)
+			char *bitlist)
 {
 	int i;
-
 	for ( i = 0 ; i < gr->graph_nodes; i++ ) {
 		if(gr->graph_node[i]->uuid == uuid) {
 			/* assert that this is not a duplicate message */
@@ -479,6 +519,7 @@ graph_update_membership(graph_t *gr,
 
 	/* make sure we have not received message from unknown node */
 	assert(i < gr->graph_nodes);
+
 	return;
 }
 
@@ -492,16 +533,15 @@ graph_filled_all(graph_t *gr)
 	return (gr->graph_rcvd == gr->graph_nodes);
 }
 
-
 /* */
 /* return the largest fully connected subgraph. */
 /* */
 int
-graph_get_maxclique(graph_t *gr, unsigned char **bitmap)
+graph_get_maxclique(graph_t *gr, char **bitmap)
 {
 	int loc = 0;
 	int i, size, numBytes;
-
+	
 	graph_sanitize(gr);
 	size = get_max_clique(gr->graph_node, gr->graph_nodes, 
 				&loc);

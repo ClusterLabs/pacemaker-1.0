@@ -1,4 +1,4 @@
-/* $Id: mcast.c,v 1.24 2005/08/15 21:12:16 gshi Exp $ */
+/* $Id: mcast.c,v 1.29 2006/02/24 16:46:39 alan Exp $ */
 /*
  * mcast.c: implements hearbeat API for UDP multicast communication
  *
@@ -211,7 +211,7 @@ mcast_parse(const char *line)
 
 	if (*dev != EOS)  {
 		if (!is_valid_dev(dev)) {
-			PILCallLog(LOG, PIL_CRIT, "mcast bad device [%s]", dev);
+			PILCallLog(LOG, PIL_CRIT, "mcast device [%s] is invalid or not set up properly", dev);
 			return HA_FAIL;
 		}
 		/* Skip over white space, then grab the multicast group */
@@ -385,7 +385,7 @@ mcast_close(struct hb_media* hbm)
  * Receive a heartbeat multicast packet from UDP interface
  */
 
-char			mcast_pkt[MAXLINE];
+char			mcast_pkt[MAXMSG];
 static void *
 mcast_read(struct hb_media* hbm, int *lenp)
 {
@@ -397,8 +397,8 @@ mcast_read(struct hb_media* hbm, int *lenp)
 	MCASTASSERT(hbm);
 	mcp = (struct mcast_private *) hbm->pd;
 	
-	if ((numbytes=recvfrom(mcp->rsocket, mcast_pkt, MAXLINE-1, 0
-			       ,(struct sockaddr *)&their_addr, &addr_len)) < 0) {
+	if ((numbytes=recvfrom(mcp->rsocket, mcast_pkt, MAXMSG-1, 0
+	,	(struct sockaddr *)&their_addr, &addr_len)) < 0) {
 		if (errno != EINTR) {
 			PILCallLog(LOG, PIL_CRIT, "Error receiving from socket: %s"
 			    ,	strerror(errno));
@@ -419,8 +419,6 @@ mcast_read(struct hb_media* hbm, int *lenp)
 	*lenp = numbytes + 1 ;
 
 	return mcast_pkt;;
-	
-	
 }
 
 /*
@@ -497,7 +495,7 @@ mcast_make_send_sock(struct hb_media * hbm)
  * Set up socket for listening to heartbeats (UDP multicasts)
  */
 
-#define	MAXBINDTRIES	10
+#define	MAXBINDTRIES	50
 static int
 mcast_make_receive_sock(struct hb_media * hbm)
 {
@@ -698,33 +696,56 @@ join_mcast_group(int sockfd, struct in_addr *addr, char *ifname)
 static int
 if_getaddr(const char *ifname, struct in_addr *addr)
 {
-	int	fd;
 	struct ifreq	if_info;
+	int		j;
+	int		maxtry = 120;
+	gboolean	gotaddr = FALSE;
+	int		err = 0;
 	
-	if (!addr)
+	if (!addr) {
 		return -1;
+	}
 
 	addr->s_addr = INADDR_ANY;
 
 	memset(&if_info, 0, sizeof(if_info));
 	if (ifname) {
 		strncpy(if_info.ifr_name, ifname, IFNAMSIZ-1);
-	} else {	/* ifname is NULL, so use any address */
+	}else{	/* ifname is NULL, so use any address */
 		return 0;
 	}
 
-	if ((fd=socket(AF_INET, SOCK_DGRAM, 0)) == -1)	{
-		PILCallLog(LOG, PIL_CRIT, "Error getting socket");
-		return -1;
-	}
 	if (Debug > 0) {
 		PILCallLog(LOG, PIL_DEBUG, "looking up address for %s"
 		,	if_info.ifr_name);
 	}
-	if (ioctl(fd, SIOCGIFADDR, &if_info) < 0) {
-		PILCallLog(LOG, PIL_CRIT, "Error ioctl(SIOCGIFADDR): %s"
-		,	strerror(errno));
+	for (j=0; j < maxtry && !gotaddr; ++j) {
+		int		fd;
+		if ((fd=socket(AF_INET, SOCK_DGRAM, 0)) == -1)	{
+			PILCallLog(LOG, PIL_CRIT, "Error getting socket");
+			return -1;
+		}
+		if (ioctl(fd, SIOCGIFADDR, &if_info) >= 0) {
+			gotaddr = TRUE;
+		}else{
+			err = errno;
+			switch(err) {
+				case EADDRNOTAVAIL:
+					sleep(1);
+					break;	
+				default:
+					close(fd);
+					goto getout;
+			}
+		}
 		close(fd);
+	}
+getout:
+	if (!gotaddr) {
+		PILCallLog(LOG, PIL_CRIT
+		,	"Unable to retrieve local interface address"
+		" for interface [%s] using ioctl(SIOCGIFADDR): %s"
+		,	ifname, strerror(err));
 		return -1;
 	}
 
@@ -737,7 +758,6 @@ if_getaddr(const char *ifname, struct in_addr *addr)
 	memcpy(addr, &(SOCKADDR_IN(&if_info.ifr_addr)->sin_addr)
 	,	sizeof(struct in_addr));
 
-	close(fd);
 	return 0;
 }
 
@@ -800,6 +820,22 @@ get_loop(const char *loop, u_char *l)
 
 /*
  * $Log: mcast.c,v $
+ * Revision 1.29  2006/02/24 16:46:39  alan
+ * Initialized a variable to make a semi-broken version of gcc happy.
+ *
+ * Revision 1.28  2006/02/24 02:20:24  alan
+ * Increased how long we'll wait for the network interface to get an address...
+ *
+ * Revision 1.27  2006/02/24 00:14:59  alan
+ * Put code into mcast.c to make it retry retrieving the address from
+ * the interface if it fails...
+ *
+ * Revision 1.26  2006/02/07 21:55:35  alan
+ * Clarified a few error messages.
+ *
+ * Revision 1.25  2005/10/15 02:37:52  gshi
+ * change MAXLINE to MAXMSG
+ *
  * Revision 1.24  2005/08/15 21:12:16  gshi
  * make the media read() function returns a pointer that is a global varial
  * This should save a malloc, free, and a memcpy for each message

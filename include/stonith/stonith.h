@@ -1,4 +1,4 @@
-/* $Id: stonith.h,v 1.14 2005/04/06 18:58:42 blaschke Exp $ */
+/* $Id: stonith.h,v 1.17 2006/04/10 09:03:52 sunjd Exp $ */
 /*
  *	S hoot
  *	T he
@@ -45,6 +45,7 @@
 #	define __STONITH_H
 #include <glib.h>
 
+#include <pils/plugin.h>
 #define	STONITH_VERS	2
 
 /*
@@ -101,6 +102,8 @@ const char*			/* static/global return - lots of things! */
 	stonith_get_info	(Stonith* s, int infotype);
 
 void	stonith_set_debug	(Stonith* s, int debuglevel);
+void	stonith_set_log		(Stonith* s
+				, PILLogFun);
 			
 int	stonith_set_config	(Stonith* s, StonithNVpair* list);
 int	stonith_set_config_file(Stonith* s, const char * configname);

@@ -1,4 +1,4 @@
-/* $Id: Gmain_timeout.c,v 1.13 2005/08/12 05:09:09 zhenh Exp $ */
+/* $Id: Gmain_timeout.c,v 1.16 2006/02/02 14:58:23 alan Exp $ */
 /*
  * Glib mainloop timeout handling code.
  *
@@ -28,8 +28,10 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
  */
+#if 0
 #include <glib.h>
 #include <clplumbing/longclock.h>
+#include <clplumbing/cl_log.h>
 #include <clplumbing/Gmain_timeout.h>
 #include <string.h>
 
@@ -54,6 +56,8 @@ struct GTimeoutAppend {
 	GSource		Source;
 	longclock_t	nexttime;
 	guint		interval;
+	unsigned long	maxdispatchdelayms;
+	unsigned long	maxdispatchms;
 };
 
 #define        GTIMEOUT(GS)    ((struct GTimeoutAppend*)((void*)(GS)))
@@ -85,6 +89,8 @@ Gmain_timeout_add_full(gint priority
 	append->nexttime = add_longclock(time_longclock()
 					 ,msto_longclock(interval));
   	append->interval = interval; 
+	append->maxdispatchms = 0;
+	append->maxdispatchdelayms = 10000;
 	
 	g_source_set_priority(source, priority);
 	
@@ -101,12 +107,13 @@ Gmain_timeout_remove(guint tag)
 {
 	GSource* source = g_main_context_find_source_by_id(NULL,tag);
 	
+	g_source_remove(tag);
+	
 	if (source != NULL){
 		g_source_unref(source);
-		g_source_destroy(source);		
 	}
-							   
 	
+	return;
 }
 
 /* g_main_loop-style prepare function */
@@ -147,11 +154,46 @@ static gboolean
 Gmain_timeout_dispatch(GSource* src, GSourceFunc func, gpointer user_data)
 {
 	struct GTimeoutAppend* append = GTIMEOUT(src);
+	longclock_t	lstart = time_longclock();
+	long		ms = longclockto_ms(sub_longclock(lstart, append->nexttime));
+	gboolean	ret;
+
+	if (append->maxdispatchdelayms > 0 && ms > append->maxdispatchdelayms) {
+		cl_log(LOG_WARNING, "Timeout dispatch function [%lx] called %ld ms late."
+		,	(unsigned long)func, ms);
+	}
+	
 
 	/* Schedule our next dispatch */
 	append->nexttime = add_longclock(time_longclock()
 					  , msto_longclock(append->interval));
 
 	/* Then call the user function */
-	return func(user_data);
+	ret = func(user_data);
+
+	/* Time it if requested */
+	if (append->maxdispatchms > 0) {
+		longclock_t	lend = time_longclock();
+		ms = longclockto_ms(sub_longclock(lend, lstart));
+		if (ms > append->maxdispatchms) {
+			cl_log(LOG_WARNING, "Timeout dispatch function [%lx] took %ld ms."
+			,	(unsigned long)func, ms);
+		}
+	}
+	return ret;
 }
+
+void
+Gmain_timeout_setmaxdispatchtime(GSource* src, long dispatchms)
+{
+	struct GTimeoutAppend* append = GTIMEOUT(src);
+	append->maxdispatchms = dispatchms;
+}
+
+void
+Gmain_timeout_setmaxdispatchdelay(GSource* src, long delayms)
+{
+	struct GTimeoutAppend* append = GTIMEOUT(src);
+	append->maxdispatchdelayms = delayms;
+}
+#endif

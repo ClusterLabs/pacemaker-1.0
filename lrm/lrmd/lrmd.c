@@ -1,4 +1,4 @@
-/* $Id: lrmd.c,v 1.180 2005/08/12 05:05:55 zhenh Exp $ */
+/* $Id: lrmd.c,v 1.242 2006/08/16 07:13:37 zhenh Exp $ */
 /*
  * Local Resource Manager Daemon
  *
@@ -58,6 +58,7 @@
 #include <lrm/lrm_msg.h>
 #include <lrm/raexec.h>
 
+/* TODO: move to internal header */
 #define	MAX_PID_LEN 256
 #define	MAX_PROC_NAME 256
 #define	MAX_MSGTYPELEN 32
@@ -71,19 +72,27 @@
 
 /* Donnot directly use the definition in heartbeat.h/hb_api.h for fewer
  * dependency, but need to keep identical with them.
+ *
+ * TODO: If it is common, it should come from a common header.
  */
 #define ENV_PREFIX "HA_"
 #define KEY_LOGDAEMON   "use_logd"
 #define HADEBUGVAL	"HA_DEBUG"
 #define lrmd_log(priority, fmt...); \
-        if ( debug_level == 0 && priority == LOG_DEBUG ) { \
-                ; \
-        } else { \
+		cl_log(priority, fmt); \
+
+#define lrmd_debug(priority, fmt...); \
+        if ( debug_level >= 1 ) { \
                 cl_log(priority, fmt); \
         }
 
-#define lrmd_log2(priority, fmt...); \
-        if ( debug_level == 2 && priority == LOG_DEBUG ) { \
+#define lrmd_debug2(priority, fmt...); \
+        if ( debug_level >= 2 ) { \
+                cl_log(priority, fmt); \
+        }
+
+#define lrmd_debug3(priority, fmt...); \
+        if ( debug_level >= 3 ) { \
                 cl_log(priority, fmt); \
         }
 
@@ -108,14 +117,14 @@ static	gboolean	in_alloc_dump = FALSE;
 #define CHECK_RETURN_OF_CREATE_LRM_RET					\
 	if (NULL == msg) {						\
 		lrmd_log(LOG_ERR					\
-		, 	"%s: can not create a ret message with create_lrm_ret."	\
+		, 	"%s: cannot create a ret message with create_lrm_ret."	\
 		, 	__FUNCTION__);					\
 		return HA_FAIL;						\
 	}
 
 #define LOG_FAILED_TO_ADD_FIELD(field)					\
 			lrmd_log(LOG_ERR				\
-			,	"%s:%d: can not add the field %s to a message." \
+			,	"%s:%d: cannot add the field %s to a message." \
 			,	__FUNCTION__				\
 			,	__LINE__				\
 			,	field);
@@ -140,7 +149,7 @@ static	gboolean	in_alloc_dump = FALSE;
  *			op_list - operations to be run as soon as they're ready
  *			repeat_op_list - operations to be run later
  *		It maintains the following tracking structures:
- *			last_op        Last operation performed on this resource
+ *			last_op_done   Last operation performed on this resource
  *			last_op_table  Last operations of each type done per client
  *
  *	lrmd_op_t:
@@ -183,6 +192,7 @@ typedef struct
 
 typedef struct lrmd_rsc lrmd_rsc_t;
 typedef struct lrmd_op	lrmd_op_t;
+typedef struct ra_pipe_op  ra_pipe_op_t;
 
 
 struct lrmd_rsc
@@ -197,27 +207,51 @@ struct lrmd_rsc
 	GList*		repeat_op_list;	/* Unordered list of repeating	*/
 					/* ops They will run later	*/
 	GHashTable*	last_op_table;	/* Last operation of each type	*/
+	lrmd_op_t*	last_op_done;	/* The last finished op of the resource */
+	guint		delay_timeout;  /* The delay value of op_list execution */
 };
 
 struct lrmd_op
 {
-	char*		rsc_id;	
+	char*		rsc_id;
 	gboolean	is_copy;
 	pid_t		client_id;
 	int		call_id;
 	int		exec_pid;
-	int		output_fd;
 	guint		timeout_tag;
 	guint		repeat_timeout_tag;
 	int		interval;
 	int		delay;
 	struct ha_msg*	msg;
+	ra_pipe_op_t *	rapop;
+	char		first_line_ra_stdout[80]; /* only for heartbeat RAs */
 	/*time stamp*/
 	longclock_t	t_recv;
 	longclock_t	t_addtolist;
 	longclock_t	t_perform;
 	longclock_t	t_done;
 };
+
+
+/* For reading the output from executing the RA */
+struct ra_pipe_op
+{
+	/* The same value of the one in corresponding lrmd_op */
+	lrmd_op_t *	lrmd_op;
+	int		ra_stdout_fd;
+	int		ra_stderr_fd;
+	GFDSource *	ra_stdout_gsource;
+	GFDSource *	ra_stderr_gsource;
+	gboolean	first_line_read;
+
+	/* For providing more detailed information in log */
+	char *		rsc_id;
+	char *		op_type;
+	char *		rsc_class;
+};
+
+/* TODO: This ought to be broken up into several source files for easier
+ * reading and debugging. */
 
 /* Debug oriented funtions */
 static gboolean debug_level_adjust(int nsig, gpointer user_data);
@@ -230,6 +264,8 @@ static gboolean on_receive_cmd(IPC_Channel* ch_cmd, gpointer user_data);
 static gboolean on_op_timeout_expired(gpointer data);
 static gboolean on_repeat_op_readytorun(gpointer data);
 static void on_remove_client(gpointer user_data);
+static void destroy_pipe_ra_stderr(gpointer user_data);
+static void destroy_pipe_ra_stdout(gpointer user_data);
 
 /* message handlers */
 static int on_msg_register(lrmd_client_t* client, struct ha_msg* msg);
@@ -255,6 +291,7 @@ static gboolean emit_apphb(gpointer data);
 
 /* Utility functions */
 static int flush_op(lrmd_op_t* op);
+static gboolean rsc_execution_freeze_timeout(gpointer data);
 static int perform_op(lrmd_rsc_t* rsc);
 static int unregister_client(lrmd_client_t* client);
 static int on_op_done(lrmd_op_t* op);
@@ -263,11 +300,12 @@ static int send_ret_msg ( IPC_Channel* ch, int rc);
 static lrmd_client_t* lookup_client (pid_t pid);
 static lrmd_rsc_t* lookup_rsc (const char* rid);
 static lrmd_rsc_t* lookup_rsc_by_msg (struct ha_msg* msg);
-static int read_pipe(int fd, char ** data, void * user_data);
+static int read_pipe(int fd, char ** data, gpointer user_data);
+static gboolean handle_pipe_ra_stdout(int fd, gpointer user_data);
+static gboolean handle_pipe_ra_stderr(int fd, gpointer user_data);
 static struct ha_msg* op_to_msg(lrmd_op_t* op);
 static gboolean lrm_shutdown(void);
 static gboolean can_shutdown(void);
-static void inherit_config_from_environment(void);
 static gboolean free_str_hash_pair(gpointer key
 ,	 gpointer value, gpointer user_data);
 static gboolean free_str_op_pair(gpointer key
@@ -277,6 +315,8 @@ static void send_last_op(gpointer key, gpointer value, gpointer user_data);
 static void record_op_completion(lrmd_client_t* client, lrmd_op_t* op);
 static void hash_to_str(GHashTable * , GString *);
 static void hash_to_str_foreach(gpointer key, gpointer value, gpointer userdata);
+static void warning_on_active_rsc(gpointer key, gpointer value, gpointer user_data);
+static void check_queue_duration(lrmd_op_t* op);
 
 /*
  * following functions are used to monitor the exit of ra proc
@@ -285,7 +325,6 @@ static void on_ra_proc_registered(ProcTrack* p);
 static void on_ra_proc_finished(ProcTrack* p, int status
 ,			int signo, int exitcode, int waslogged);
 static const char* on_ra_proc_query_name(ProcTrack* p);
-static int debug_level = 0;
 
 ProcTrack_ops ManagedChildTrackOps = {
 	on_ra_proc_finished,
@@ -329,6 +368,9 @@ static GList* ra_class_list		= NULL;
 static gboolean shutdown_in_progress	= FALSE;
 static unsigned long apphb_interval 	= 2000; /* Millisecond */
 static gboolean reg_to_apphbd		= FALSE;
+static int max_child_count		= 4;
+static int retry_interval		= 1000; /* Millisecond */
+static int child_count			= 0;
 
 /*
  * Daemon functions
@@ -339,7 +381,6 @@ static void usage(const char* cmd, int exit_status);
 static int init_start(void);
 static int init_stop(const char *pid_file);
 static int init_status(const char *pid_file, const char *client_name);
-static lrmd_op_t* lrmd_op_copy(const lrmd_op_t* op);
 static void lrmd_rsc_dump(char* rsc_id, const char * text);
 
 static struct {
@@ -352,16 +393,142 @@ static void
 dump_mem_stats(void)
 {
 	volatile cl_mem_stats_t * ms = cl_malloc_getstats();
-	lrmd_log(LOG_INFO
+	lrmd_debug(LOG_DEBUG
 	,	"MEM STATS: pending alloc %ld, pending size %ld"
 	,	ms->numalloc - ms->numfree
 	,	ms->nbytes_alloc);
-	
-	lrmd_log(LOG_INFO
+
+	lrmd_debug(LOG_DEBUG
 	,	"STATS: OP Count: %d, Client Count: %d, Resource Count: %d"
 	,	lrm_objectstats.opcount
 	,	lrm_objectstats.clientcount
 	,	lrm_objectstats.rsccount);
+}
+
+static ra_pipe_op_t *
+ra_pipe_op_new(int child_stdout, int child_stderr, lrmd_op_t * lrmd_op)
+{
+	int flag;
+	ra_pipe_op_t * rapop;
+	lrmd_rsc_t* rsc = NULL;
+
+	if ( NULL == lrmd_op ) {
+		lrmd_log(LOG_WARNING
+			, "%s:%d: lrmd_op==NULL, no need to malloc ra_pipe_op"
+			, __FUNCTION__, __LINE__);
+		return NULL;
+	}
+	rapop = cl_calloc(sizeof(ra_pipe_op_t), 1);
+	if ( rapop == NULL) {
+		lrmd_log(LOG_ERR, "%s:%d out of memory." 
+			, __FUNCTION__, __LINE__);
+		return NULL;
+	}
+	rapop->first_line_read = FALSE;
+
+	/*
+	 * No any obviouse proof of lrmd hang in pipe read yet.
+	 * Bug 475 may be a duplicate of bug 499.
+	 * Anyway, via test, it's proved that NOBLOCK read will
+	 * obviously reduce the RA execution time (bug 553).
+	 */
+	/* Let the read operation be NONBLOCK */ 
+	if ((flag = fcntl(child_stdout, F_GETFL)) >= 0) {
+		if (fcntl(child_stdout, F_SETFL, flag|O_NONBLOCK) < 0) {
+			cl_perror("%s::%d: fcntl", __FUNCTION__
+				, __LINE__);
+		}
+	} else {
+		cl_perror("%s::%d: fcntl", __FUNCTION__, __LINE__);
+	}
+
+	if ((flag = fcntl(child_stderr, F_GETFL)) >= 0) {
+		if (fcntl(child_stderr, F_SETFL, flag|O_NONBLOCK) < 0) {
+			cl_perror("%s::%d: fcntl", __FUNCTION__, __LINE__);
+		}
+	} else {
+		cl_perror("%s::%d: fcntl", __FUNCTION__, __LINE__);
+	}
+
+	rapop->ra_stdout_fd = child_stdout;
+	rapop->ra_stderr_fd = child_stderr;
+	if (rapop->ra_stdout_fd <= STDERR_FILENO) {
+		lrmd_log(LOG_ERR, "%s: invalid stdout fd [%d]"
+			, __FUNCTION__, rapop->ra_stdout_fd);
+	}
+	if (rapop->ra_stderr_fd <= STDERR_FILENO) {
+		lrmd_log(LOG_ERR, "%s: invalid stderr fd [%d]"
+			, __FUNCTION__, rapop->ra_stderr_fd);
+	}
+				
+	rapop->ra_stdout_gsource = G_main_add_fd(G_PRIORITY_HIGH
+				, child_stdout, FALSE, handle_pipe_ra_stdout
+				, rapop, destroy_pipe_ra_stdout);
+	rapop->ra_stderr_gsource = G_main_add_fd(G_PRIORITY_HIGH
+				, child_stderr, FALSE, handle_pipe_ra_stderr
+				, rapop, destroy_pipe_ra_stderr);
+			
+	rapop->lrmd_op = lrmd_op;
+
+	rapop->op_type = cl_strdup(ha_msg_value(lrmd_op->msg, F_LRM_OP));
+	rapop->rsc_id = cl_strdup(lrmd_op->rsc_id);
+	rsc = lookup_rsc(lrmd_op->rsc_id);
+	if (rsc == NULL) {
+		lrmd_debug(LOG_WARNING
+			, "%s::%d: the rsc (id=%s) does not exist"
+			, __FUNCTION__, __LINE__, lrmd_op->rsc_id);
+		rapop->rsc_class = NULL;
+	} else {
+		rapop->rsc_class = cl_strdup(rsc->class);
+	} 
+
+	return rapop;
+}
+
+static void
+ra_pipe_op_destroy(ra_pipe_op_t * op)
+{
+	CHECK_ALLOCATED(op, "ra_pipe_op", );
+
+	if ( NULL != op->ra_stdout_gsource) {
+		G_main_del_fd(op->ra_stdout_gsource);
+		op->ra_stdout_gsource = NULL;
+	}
+
+	if ( NULL != op->ra_stderr_gsource) {
+		G_main_del_fd(op->ra_stderr_gsource);
+		op->ra_stderr_gsource = NULL;
+	}
+
+	if (op->ra_stdout_fd >= STDERR_FILENO) {
+		close(op->ra_stdout_fd);
+		op->ra_stdout_fd = -1;
+	}else if (op->ra_stdout_fd >= 0) {
+		lrmd_log(LOG_ERR, "%s: invalid stdout fd %d"
+		,	__FUNCTION__, op->ra_stdout_fd);
+	}
+	if (op->ra_stderr_fd >= STDERR_FILENO) {
+		close(op->ra_stderr_fd);
+		op->ra_stderr_fd = -1;
+	}else if (op->ra_stderr_fd >= 0) {
+		lrmd_log(LOG_ERR, "%s: invalid stderr fd %d"
+		,	__FUNCTION__, op->ra_stderr_fd);
+	}
+	op->first_line_read = FALSE;
+
+	cl_free(op->rsc_id);
+	op->rsc_id = NULL;
+	cl_free(op->op_type);
+	op->op_type = NULL;
+	cl_free(op->rsc_class);
+	op->rsc_class = NULL;
+
+	if (op->lrmd_op != NULL) {
+		op->lrmd_op->rapop = NULL;
+		op->lrmd_op = NULL;
+	}
+
+	cl_free(op);
 }
 
 static void
@@ -371,35 +538,8 @@ lrmd_op_destroy(lrmd_op_t* op)
 	CHECK_ALLOCATED(op, "op", );
 	--lrm_objectstats.opcount;
 
-	/*
-	 * FIXME!
-	 * This seems WAY dangerous as a way to process this.
-	 * If we expect this to really be freed, then we should
-	 * wipe out ALL references to this data - and then
-	 * we will have a memory leak.
-	 * If we expect this *might* be freed, then we need
-	 * to leave it around for someone else to free
-	 * and hopefully they'll really free it.
-	 * But if these events happen in the other order
-	 * and the process dies before we remove it from our tables
-	 * then we are leaving it in our tables after it really exists.
-	 *
-	 * Some kind of a reference count strategy seems like a better
-	 * deal - and then I think we *probably* wouldn't have to copy it
-	 * for our various purposes, and it wouldn't matter what order
-	 * the various events happened in.
-	 *
-	 * Although reference counts would work fine for this code,
-	 * where it would really work well would be for the resources
-	 * since we copy the operations whenever we need to.
-	 *
-	 * On the other hand if we switched from a pointer to an rsc_id
-	 * then we would eliminate all possibilities of dangling pointers
-	 * This idea has some merit.  If we do that, then switch
-	 * the resource table to be hashed on rsc_id.
-	 */
 	if (op->exec_pid > 1) {
-		return_to_orig_privs();	
+		return_to_orig_privs();
 		if (kill(-op->exec_pid, SIGKILL) < 0 && errno != ESRCH) {
 			cl_perror("Cannot kill pid %d", op->exec_pid);
 		}
@@ -407,14 +547,14 @@ lrmd_op_destroy(lrmd_op_t* op)
 		return;
 	}
 
-	if ((int)op->repeat_timeout_tag > 0) {
+	if (op->repeat_timeout_tag > 0) {
 		Gmain_timeout_remove(op->repeat_timeout_tag);
-		op->repeat_timeout_tag = -1;
+		op->repeat_timeout_tag =(guint)0;
 	}
 
-	if ((int)op->timeout_tag > 0) {
+	if (op->timeout_tag > 0) {
 		Gmain_timeout_remove(op->timeout_tag);
-		op->timeout_tag = -1;
+		op->timeout_tag = (guint)0;
 	}
 
 	ha_msg_del(op->msg);
@@ -422,7 +562,13 @@ lrmd_op_destroy(lrmd_op_t* op)
 	cl_free(op->rsc_id);
 	op->rsc_id = NULL;
 	op->exec_pid = 0;
-	lrmd_log2(LOG_DEBUG, "lrmd_op_destroy: free the op whose address is %p"
+	if ( op->rapop != NULL ) {
+		op->rapop->lrmd_op = NULL;
+		op->rapop = NULL;
+	}
+	op->first_line_ra_stdout[0] = EOS;
+
+	lrmd_debug3(LOG_DEBUG, "lrmd_op_destroy: free the op whose address is %p"
 		  , op);
 	cl_free(op);
 }
@@ -441,8 +587,10 @@ lrmd_op_new(void)
 	op->rsc_id = NULL;
 	op->msg = NULL;
 	op->exec_pid = -1;
-	op->timeout_tag = -1;
-	op->repeat_timeout_tag = -1;
+	op->timeout_tag = 0;
+	op->repeat_timeout_tag = 0;
+	op->rapop = NULL;
+	op->first_line_ra_stdout[0] = EOS;
 	op->t_recv = time_longclock();
 	++lrm_objectstats.opcount;
 	return op;
@@ -458,9 +606,23 @@ lrmd_op_copy(const lrmd_op_t* op)
 	}
 	/* Do a "shallow" copy */
 	*ret = *op;
+	/*
+	 * Some things, like timer ids and child pids are duplicated here
+	 * but can be destroyed in one copy, but kept intact
+	 * in the other, to later be destroyed.
+	 * This isn't a complete disaster, since the timer ids aren't
+	 * pointers, but it's still untidy at the least.
+	 * Be sure and care of this situation when using this function.
+	 */
 	/* Do a "deep" copy of the message structure */
+	ret->rapop = NULL;
 	ret->msg = ha_msg_copy(op->msg);
 	ret->rsc_id = cl_strdup(op->rsc_id);
+	ret->timeout_tag = 0;
+	ret->rapop = NULL;
+	ret->first_line_ra_stdout[0] = EOS;
+	ret->repeat_timeout_tag = 0;
+	ret->exec_pid = -1;
 	ret->is_copy = TRUE;
 	return ret;
 }
@@ -528,10 +690,6 @@ lrmd_op_dump(const lrmd_op_t* op, const char * text)
 	long		t_perform;
 	long		t_done;
 
-#if 0
-	lrmd_rsc_t*	rsc;		/* should this be rsc_id?	*/
-#endif
-
 	CHECK_ALLOCATED(op, "op", );
 	if (op->exec_pid < 1
 	||	((kill(op->exec_pid, 0) < 0) && ESRCH == errno)) {
@@ -541,14 +699,14 @@ lrmd_op_dump(const lrmd_op_t* op, const char * text)
 	}
 	ha_msg_value_int(op->msg, F_LRM_OPSTATUS, &op_status);
 	ha_msg_value_int(op->msg, F_LRM_TARGETRC, &target_rc);
-	lrmd_log(LOG_DEBUG
+	lrmd_debug(LOG_DEBUG
 	,	"%s: lrmd_op: %s status: %s, target_rc=%s, client pid %d call_id"
 	": %d, child pid: %d (%s) %s"
 	,	text,	op_info(op), op_status_to_str(op_status)
 	,	op_target_rc_to_str(target_rc)
 	,	op->client_id, op->call_id, op->exec_pid, pidstat
 	,	(op->is_copy ? "copy" : "original"));
-	lrmd_log(LOG_DEBUG
+	lrmd_debug(LOG_DEBUG
 	,	"%s: lrmd_op2: to_tag: %u rt_tag: %d, interval: %d, delay: %d"
 	,	text, op->timeout_tag, op->repeat_timeout_tag
 	,	op->interval, op->delay);
@@ -572,7 +730,7 @@ lrmd_op_dump(const lrmd_op_t* op, const char * text)
 	}else{
 		t_done = longclockto_ms(sub_longclock(now, op->t_recv));
 	}
-	lrmd_log(LOG_DEBUG
+	lrmd_debug(LOG_DEBUG
 	,	"%s: lrmd_op3: t_recv: %ldms, t_add: %ldms"
 	", t_perform: %ldms, t_done: %ldms"
 	,	text, t_recv, t_addtolist, t_perform, t_done);
@@ -584,17 +742,13 @@ static void
 lrmd_client_destroy(lrmd_client_t* client)
 {
 	CHECK_ALLOCATED(client, "client", );
-		
+
 	--lrm_objectstats.clientcount;
 	/*
 	 * Delete direct references to this client
 	 * and repeating operations it might have scheduled
 	 */
 	unregister_client(client);
-	if (client->ch_cbk) {
-		client->ch_cbk->ops->destroy(client->ch_cbk);
-		client->ch_cbk = NULL;
-	}
 	if (client->app_name) {
 		cl_free(client->app_name);
 		client->app_name = NULL;
@@ -623,8 +777,8 @@ lrmd_client_dump(gpointer key, gpointer value, gpointer user_data)
 {
 	lrmd_client_t * client = (lrmd_client_t*)value;
 	CHECK_ALLOCATED(client, "client", );
-	
-	lrmd_log(LOG_DEBUG, "client name: %s, client pid: %d"
+
+	lrmd_debug(LOG_DEBUG, "client name: %s, client pid: %d"
 		", client uid: %d, gid: %d, last request: %s"
 		", last op in: %s, lastop out: %s"
 		", last op rc: %s"
@@ -637,24 +791,24 @@ lrmd_client_dump(gpointer key, gpointer value, gpointer user_data)
 		,	ctime(&client->lastrcsent)
 		);
 	if (!client->ch_cmd) {
-		lrmd_log(LOG_DEBUG, "NULL client ch_cmd in dump_data_for_debug()");
+		lrmd_debug(LOG_DEBUG, "NULL client ch_cmd in dump_data_for_debug()");
 	}else{
-		lrmd_log(LOG_DEBUG
+		lrmd_debug(LOG_DEBUG
 		,	"Command channel status: %d, read queue addr: %p, write queue addr: %p"
 		,	client->ch_cmd->ch_status
 		,	client->ch_cmd->recv_queue
 		,	client->ch_cmd->send_queue );
 
 		if (client->ch_cmd->recv_queue && client->ch_cmd->send_queue) {
-			lrmd_log(LOG_DEBUG, "read Qlen: %ld, write Qlen: %ld"
+			lrmd_debug(LOG_DEBUG, "read Qlen: %ld, write Qlen: %ld"
 			,	(long)client->ch_cmd->recv_queue->current_qlen
 			,	(long)client->ch_cmd->send_queue->current_qlen);
 		}
 	}
 	if (!client->ch_cbk) {
-		lrmd_log(LOG_DEBUG, "NULL client ch_cbk in %s()", __FUNCTION__);
+		lrmd_debug(LOG_DEBUG, "NULL client ch_cbk in %s()", __FUNCTION__);
 	}else{
-		lrmd_log(LOG_DEBUG
+		lrmd_debug(LOG_DEBUG
 		,	"Callback channel status: %d, read Qlen: %ld, write Qlen: %ld"
 		,	client->ch_cbk->ch_status
 		,	(long)client->ch_cbk->recv_queue->current_qlen
@@ -672,9 +826,9 @@ lrmd_dump_all_clients(void)
 
 	incall = TRUE;
 
-	lrmd_log(LOG_DEBUG, "%d clients are connecting to lrmd."
+	lrmd_debug(LOG_DEBUG, "%d clients are connecting to lrmd."
 	 ,	g_hash_table_size(clients)); 
-	
+
 	g_hash_table_foreach(clients, lrmd_client_dump, NULL);
 	incall = FALSE;
 }
@@ -711,6 +865,16 @@ lrmd_rsc_destroy(lrmd_rsc_t* rsc)
 		g_hash_table_destroy(rsc->last_op_table);
 		rsc->last_op_table = NULL;
 	}
+	if (rsc->last_op_done) {
+		lrmd_op_destroy(rsc->last_op_done);
+		rsc->last_op_done = NULL;
+	}
+
+	if (rsc->delay_timeout > 0) {
+		Gmain_timeout_remove(rsc->delay_timeout);
+		rsc->delay_timeout = (guint)0;
+	}
+
 	cl_free(rsc);
 }
 
@@ -725,6 +889,7 @@ lrmd_rsc_new(const char * id, struct ha_msg* msg)
 		dump_mem_stats();
 		return NULL;
 	}
+	rsc->delay_timeout = (guint)0;
 	if (id) {
 		rsc->id = cl_strdup(id);
 	}
@@ -760,12 +925,12 @@ lrmd_rsc_dump(char* rsc_id, const char * text)
 	static gboolean	incall = FALSE;
 	GList*		oplist;
 	lrmd_rsc_t*	rsc;
-	
+
 	rsc = (lrmd_rsc_t*) g_hash_table_lookup(resources, rsc_id);
 	CHECK_ALLOCATED(rsc, "rsc", );
 	/* TODO: Dump params and last_op_table FIXME */
 
-	lrmd_log(LOG_DEBUG, "%s: resource %s/%s/%s/%s"
+	lrmd_debug(LOG_DEBUG, "%s: resource %s/%s/%s/%s"
 	,	text
 	,	lrm_str(rsc->id)
 	,	lrm_str(rsc->type)
@@ -778,18 +943,26 @@ lrmd_rsc_dump(char* rsc_id, const char * text)
 	}
 	incall = TRUE;
 
-	lrmd_log(LOG_DEBUG, "%s: rsc->op_list...", text);
+	lrmd_debug(LOG_DEBUG, "%s: rsc->op_list...", text);
 	oplist = g_list_first(rsc->op_list);
 	for(;NULL!=oplist; oplist=g_list_next(oplist)) {
 		lrmd_op_dump(oplist->data, "rsc->op_list");
 	}
 
-	lrmd_log(LOG_DEBUG, "%s: rsc->repeat_op_list...", text);
+	lrmd_debug(LOG_DEBUG, "%s: rsc->repeat_op_list...", text);
 	oplist = g_list_first(rsc->repeat_op_list);
 	for(; NULL!=oplist; oplist=g_list_next(oplist)) {
 		lrmd_op_dump(oplist->data, "rsc->repeat_op_list");
 	}
-	lrmd_log(LOG_DEBUG, "%s: END resource dump", text);
+	
+	if (rsc->last_op_done != NULL) {
+		lrmd_debug(LOG_DEBUG, "%s: rsc->last_op_done...", text);
+		lrmd_op_dump(rsc->last_op_done, "rsc->last_op_done");
+	}
+	else {
+		lrmd_debug(LOG_DEBUG, "%s: rsc->last_op_done==NULL", text);
+	}
+	lrmd_debug(LOG_DEBUG, "%s: END resource dump", text);
 	incall = FALSE;
 };
 static void
@@ -809,7 +982,7 @@ lrmd_dump_all_resources(void)
 	}
 	incall = TRUE;
 
-	lrmd_log(LOG_DEBUG, "%d resources are managed by lrmd."
+	lrmd_debug(LOG_DEBUG, "%d resources are managed by lrmd."
 	,	g_hash_table_size(resources)); 
 	g_hash_table_foreach(resources, dump_id_rsc_pair, text);
 	incall = FALSE;
@@ -830,13 +1003,13 @@ lrm_debug_running_op(lrmd_op_t* op, const char * text)
 		snprintf(cmd, sizeof(cmd)
 		,	"ps -l -f -s %d | logger -p daemon.info -t 'T/O PS:'"
 		,	op->exec_pid);
-		lrmd_log(LOG_DEBUG, "Running [%s]", cmd);
+		lrmd_debug(LOG_DEBUG, "Running [%s]", cmd);
 		if (system(cmd) < 0) {
 			lrmd_log(LOG_ERR, "Running [%s] failed", cmd);
 		}
 		snprintf(cmd, sizeof(cmd)
 		,	"ps axww | logger -p daemon.info -t 't/o ps:'");
-		lrmd_log(LOG_DEBUG, "Running [%s]", cmd);
+		lrmd_debug(LOG_DEBUG, "Running [%s]", cmd);
 		if (system(cmd) < 0) {
 			lrmd_log(LOG_ERR, "Running [%s] failed", cmd);
 		}
@@ -848,10 +1021,9 @@ main(int argc, char ** argv)
 	int req_restart = FALSE;
 	int req_status  = FALSE;
 	int req_stop    = FALSE;
-	
+
 	int argerr = 0;
 	int flag;
-	char * inherit_debuglevel;
 
 	cl_malloc_forced_for_glib();
 	while ((flag = getopt(argc, argv, OPTARGS)) != EOF) {
@@ -894,14 +1066,6 @@ main(int argc, char ** argv)
 		usage(lrm_system_name, LSB_EXIT_GENERIC);
 	}
 
-	inherit_debuglevel = getenv(HADEBUGVAL);
-	if (inherit_debuglevel != NULL) {
-		debug_level = atoi(inherit_debuglevel);
-		if (debug_level > 2) {
-			debug_level = 2;
-		}
-	}
-
 	cl_log_set_entity(lrm_system_name);
 	cl_log_enable_stderr(debug_level?TRUE:FALSE);
 	cl_log_set_facility(LOG_DAEMON);
@@ -909,7 +1073,7 @@ main(int argc, char ** argv)
 	/* Use logd if it's enabled by heartbeat */
 	cl_inherit_use_logd(ENV_PREFIX""KEY_LOGDAEMON, 0);
 
-	inherit_config_from_environment();
+	inherit_logconfig_from_environment();
 
 	if (req_status){
 		return init_status(PID_FILE, lrm_system_name);
@@ -930,7 +1094,7 @@ int
 init_status(const char *pid_file, const char *client_name)
 {
 	long	pid =	cl_read_pidfile(pid_file);
-	
+
 	if (pid > 0) {
 		fprintf(stderr, "%s is running [pid: %ld]\n"
 			,	client_name, pid);
@@ -989,12 +1153,70 @@ usage(const char* cmd, int exit_status)
 
 	exit(exit_status);
 }
+/*
+ * In design, the lrmd should not know the meaning of operation type
+ * and the meaning of rc. This function is just for logging.
+ */
+static void
+warning_on_active_rsc(gpointer key, gpointer value, gpointer user_data)
+{
+	int op_status, rc;
+	const char* op_type;
+	
+	lrmd_rsc_t* rsc = (lrmd_rsc_t*)value;
+	if (rsc->last_op_done != NULL) {
+		if (HA_OK != ha_msg_value_int(rsc->last_op_done->msg
+				,	F_LRM_OPSTATUS, &op_status)) {
+			lrmd_debug(LOG_WARNING
+			,"resource %s is left in UNKNOWN status." \
+			 "(last op done is damaged..)"
+			,rsc->id);
+			return;
+		}		
+		op_type = ha_msg_value(rsc->last_op_done->msg, F_LRM_OP);
+		if (op_status != LRM_OP_DONE) {
+			lrmd_debug(LOG_WARNING
+			,"resource %s is left in UNKNOWN status." \
+			 "(last op %s finished without LRM_OP_DONE status.)"
+			,rsc->id, op_type);
+			return;
+		}
+		if (HA_OK != ha_msg_value_int(rsc->last_op_done->msg
+				,	F_LRM_RC, &rc)) {
+			lrmd_debug(LOG_WARNING
+			,"resource %s is left in UNKNOWN status." \
+			 "(last op done is damaged..)"
+			,rsc->id);
+			return;
+		}		
+		if((rc == 0) &&
+		   (STRNCMP_CONST(op_type,"start") ==0
+		    ||STRNCMP_CONST(op_type,"monitor") ==0
+		    ||STRNCMP_CONST(op_type,"status") ==0)) {
+			lrmd_debug(LOG_WARNING
+			,"resource %s is left in RUNNING status." \
+			 "(last op %s finished with rc 0.)"
+			,rsc->id, op_type);
+			return;
+		}
+		if ((rc !=0 ) &&
+		    (STRNCMP_CONST(op_type,"start") ==0
+		     ||STRNCMP_CONST(op_type,"stop") ==0)) {
+			lrmd_debug(LOG_WARNING
+			,"resource %s is left in UNKNOWN status." \
+			 "(last op %s finished with rc %d.)"
+			,rsc->id, op_type, rc);
+			return;
+		}
+	}
+}
 
 static gboolean
 lrm_shutdown(void)
 {
 	lrmd_log(LOG_INFO,"lrmd is shutting down");
 	if (mainloop != NULL && g_main_is_running(mainloop)) {
+		g_hash_table_foreach(resources, warning_on_active_rsc, NULL);
 		g_main_quit(mainloop);
 	}else {
 		exit(LSB_EXIT_OK);
@@ -1012,21 +1234,21 @@ has_pending_op(gpointer key, gpointer value, gpointer user_data)
 }
 static gboolean
 can_shutdown() 
-{	
+{
 	int has_ops = FALSE;
 	g_hash_table_foreach(resources, has_pending_op, &has_ops);
-	
+
 	return !has_ops;
 }
 gboolean
 sigterm_action(int nsig, gpointer user_data)
 {
-	shutdown_in_progress = TRUE;		
+	shutdown_in_progress = TRUE;
 
 	if (can_shutdown()) {
 		lrm_shutdown();
 	} else {
-		lrmd_log(LOG_DEBUG, "sigterm_action: can't shutdown now.");
+		lrmd_debug(LOG_DEBUG, "sigterm_action: can't shutdown now.");
 	}
 	return TRUE;
 }
@@ -1041,10 +1263,11 @@ register_pid(gboolean do_fork,
 
 	for (j=0; j < 3; ++j) {
 		close(j);
-		(void)open("/dev/null", j == 0 ? O_RDONLY : O_RDONLY);
+		(void)open("/dev/null", j == 0 ? O_RDONLY : O_WRONLY);
 	}
 	CL_IGNORE_SIG(SIGINT);
 	CL_IGNORE_SIG(SIGHUP);
+	CL_DEFAULT_SIG(SIGPIPE);
 	G_main_add_SignalHandler(G_PRIORITY_HIGH, SIGTERM
 	,	 	shutdown, NULL, NULL);
 	cl_signal_set_interrupt(SIGTERM, 1);
@@ -1099,7 +1322,6 @@ emit_apphb(gpointer data)
 int
 init_start ()
 {
-	long pid;
 	DIR* dir = NULL;
 	PILPluginUniv * PluginLoadingSystem = NULL;
 	struct dirent* subdir;
@@ -1123,13 +1345,13 @@ init_start ()
 	PILGenericIfMgmtRqst RegisterRqsts[]= {
 		{"RAExec", &RAExecFuncs, NULL, NULL, NULL},
 		{ NULL, NULL, NULL, NULL, NULL} };
-	
-	if ((pid = cl_lock_pidfile(PID_FILE)) < 0) {
+
+	if (cl_lock_pidfile(PID_FILE) < 0) {
 		lrmd_log(LOG_ERR, "already running: [pid %d].", cl_read_pidfile(PID_FILE));
 		lrmd_log(LOG_ERR, "Startup aborted (already running).  Shutting down."); 
 		exit(100);
 	}
-	
+
 	register_pid(FALSE, sigterm_action);
 
 	/* load RA plugins   */
@@ -1234,15 +1456,15 @@ init_start ()
 	/*Create a source to handle new connect rquests for callback*/
 	G_main_add_IPC_WaitConnection( G_PRIORITY_HIGH, conn_cbk, auth, FALSE,
 	                               on_connect_cbk, conn_cbk, NULL);
-	
+
 	set_sigchld_proctrack(G_PRIORITY_HIGH);
 
-	lrmd_log(LOG_DEBUG, "Enabling coredumps");
+	lrmd_debug(LOG_DEBUG, "Enabling coredumps");
 	/* Although lrmd can count on the parent to enable coredump, still
 	 * set it here for test, when start manually.
 	 */
  	cl_cdtocoredir();
-	cl_enable_coredumps(TRUE);	
+	cl_enable_coredumps(TRUE);
 
 	/* Allow us to always take a "secure" core dump
 	 * We might have STONITH logins and passwords, etc. in our address
@@ -1251,7 +1473,7 @@ init_start ()
 	 */
 	cl_set_all_coredump_signal_handlers();
 	drop_privs(0, 0); /* become "nobody" */
-	
+
 	/*
 	 * Add the signal handler for SIGUSR1, SIGUSR2. 
 	 * They are used to change the debug level.
@@ -1275,10 +1497,10 @@ init_start ()
 		cl_log(LOG_ERR, "can not new hash table resources");
 		exit(100);
 	}
-	
+
 	/*Create the mainloop and run it*/
 	mainloop = g_main_new(FALSE);
-	lrmd_log(LOG_DEBUG, "main: run the loop...");
+	lrmd_debug(LOG_DEBUG, "main: run the loop...");
 	lrmd_log(LOG_INFO, "Started.");
 
 	/* apphb initializing */
@@ -1305,7 +1527,7 @@ init_start ()
 		cl_free(auth);
 	}
 	if (cl_unlock_pidfile(PID_FILE) == 0) {
-		lrmd_log(LOG_DEBUG, "[%s] stopped", lrm_system_name);
+		lrmd_debug(LOG_DEBUG, "[%s] stopped", lrm_system_name);
 	}
 
 	return 0;
@@ -1420,14 +1642,14 @@ on_receive_cmd (IPC_Channel* ch, gpointer user_data)
 	client = (lrmd_client_t*)user_data;
 
 	if (IPC_DISCONNECT == ch->ch_status) {
-		lrmd_log(LOG_DEBUG, 
+		lrmd_debug(LOG_DEBUG,
 			"on_receive_cmd: the IPC to client [pid:%d] disconnected."
 		,	client->pid);
 		return FALSE;
 	}
 
 	if (!ch->ops->is_message_pending(ch)) {
-		lrmd_log(LOG_DEBUG, "on_receive_cmd: no pending message in IPC "
+		lrmd_debug(LOG_DEBUG, "on_receive_cmd: no pending message in IPC "
 			 "channel.");
 		return TRUE;
 	}
@@ -1439,15 +1661,15 @@ on_receive_cmd (IPC_Channel* ch, gpointer user_data)
 		lrmd_log(LOG_ERR, "on_receive_cmd: can not receive messages.");
 		return TRUE;
 	}
-	
+
 	if (TRUE == shutdown_in_progress ) {
 		send_ret_msg(ch,HA_FAIL);
 		ha_msg_del(msg);
-		lrmd_log(LOG_DEBUG, "on_receive_cmd: return HA_FAIL because"\
+		lrmd_debug(LOG_DEBUG, "on_receive_cmd: return HA_FAIL because"\
 			 " lrmd is in shutdown.");
 		return TRUE;
-	}	
-	
+	}
+
 	/*dispatch the message*/
 	type = ha_msg_value(msg, F_LRM_TYPE);
 
@@ -1456,6 +1678,7 @@ on_receive_cmd (IPC_Channel* ch, gpointer user_data)
 			int ret;
 
 			strncpy(client->lastrequest, type, sizeof(client->lastrequest));
+			client->lastrequest[sizeof(client->lastrequest)-1]='\0';
 			client->lastreqstart = time(NULL);
 			/*call the handler of the message*/
 			ret = msg_maps[i].handler(client, msg);
@@ -1485,7 +1708,7 @@ remove_repeat_op_from_client(gpointer key, gpointer value, gpointer user_data)
 	pid_t pid = GPOINTER_TO_UINT(user_data); /* pointer cast as int */
 	GList* op_node = NULL;
 	lrmd_op_t* op = NULL;
-		
+
 	op_node = g_list_first(rsc->repeat_op_list);
 	while (NULL != op_node) {
 		op = (lrmd_op_t*)op_node->data;
@@ -1496,15 +1719,16 @@ remove_repeat_op_from_client(gpointer key, gpointer value, gpointer user_data)
 		}
 		else if (op->client_id == pid) {
 			op_node = g_list_next(op_node);
-			rsc->repeat_op_list = g_list_remove(rsc->repeat_op_list, op);
+			rsc->repeat_op_list = g_list_remove(rsc->repeat_op_list
+			,	op);
 			lrmd_op_destroy(op);
 		}
 		else {
 			op_node = g_list_next(op_node);
 		}
 	}
-	
-		
+
+
 }
 /* Remove all direct pointer references to 'client' before destroying it */
 static int
@@ -1521,12 +1745,12 @@ unregister_client(lrmd_client_t* client)
 	}
 	/* Remove from clients */
 	g_hash_table_remove(clients, (gpointer)&client->pid);
-	
+
 	/* Search all resources for repeating ops this client owns */
 	g_hash_table_foreach(resources
 	,	remove_repeat_op_from_client, GUINT_TO_POINTER(client->pid));
-	
-	lrmd_log(LOG_DEBUG, "%s: client %s [pid:%d] is unregistered"
+
+	lrmd_debug(LOG_DEBUG, "%s: client %s [pid:%d] is unregistered"
 	, 	__FUNCTION__
 	,	client->app_name
 	,	client->pid);
@@ -1546,7 +1770,7 @@ on_remove_client (gpointer user_data)
 		G_main_del_IPC_Channel(client->g_src_cbk);
 	}
 	lrmd_client_destroy(client);
-	
+
 }
 
 /*
@@ -1558,7 +1782,7 @@ on_op_timeout_expired(gpointer data)
 {
 	lrmd_op_t* op = NULL;
 	lrmd_rsc_t* rsc = NULL;
-	
+
 	op = (lrmd_op_t*)data;
 	CHECK_ALLOCATED(op, "op", FALSE);
 
@@ -1577,9 +1801,11 @@ on_op_timeout_expired(gpointer data)
 	if (debug_level) {
 		lrm_debug_running_op(op, __FUNCTION__);
 	}
-	
+
 	rsc = lookup_rsc(op->rsc_id);
 	on_op_done(op);
+	/* TODO: This seems to always execute the next operation queued
+	 * for the resource when the previous one expired - why? */
 	if (rsc != NULL) {
 		perform_op(rsc);
 	}
@@ -1593,7 +1819,7 @@ on_repeat_op_readytorun(gpointer data)
 {
 	lrmd_op_t* op = NULL;
 	lrmd_rsc_t* rsc = NULL;
-	
+
 	op = (lrmd_op_t*)data;
 	CHECK_ALLOCATED(op, "op", FALSE );
 
@@ -1603,7 +1829,7 @@ on_repeat_op_readytorun(gpointer data)
 		return FALSE;
 	}
 
-	lrmd_log2(LOG_DEBUG
+	lrmd_debug2(LOG_DEBUG
 	, 	"%s: remove an operation %s from the repeat operation list and "
 		"add it to the operation list."
 	, 	__FUNCTION__, op_info(op));
@@ -1613,12 +1839,19 @@ on_repeat_op_readytorun(gpointer data)
 		return FALSE;
 	}
 	rsc->repeat_op_list = g_list_remove(rsc->repeat_op_list, op);
-	Gmain_timeout_remove(op->repeat_timeout_tag);
+	if (op->repeat_timeout_tag > 0) {
+		Gmain_timeout_remove(op->repeat_timeout_tag);
+		op->repeat_timeout_tag = (guint)0;
+	}
 
-	op->repeat_timeout_tag = -1;
+	/* FIXME: Is there a special reason for setting
+	 * op->repeat_timeout_tag twice, and if so, why does the cast to
+	 * (guint) matter once but not twice? */
+
+	op->repeat_timeout_tag = 0;
 	op->exec_pid = -1;
-	op->timeout_tag = -1;
-	
+	op->timeout_tag = 0;
+
 	if (!shutdown_in_progress) {
 		op->t_addtolist = time_longclock();
 		rsc->op_list = g_list_append(rsc->op_list, op);
@@ -1682,10 +1915,10 @@ on_msg_register(lrmd_client_t* client, struct ha_msg* msg)
 	}
 
 	g_hash_table_insert(clients, (gpointer)&client->pid, client);
-	lrmd_log(LOG_DEBUG, "on_msg_register:client %s [%d] registered"
+	lrmd_debug(LOG_DEBUG, "on_msg_register:client %s [%d] registered"
 	,	client->app_name
 	,	client->pid);
-	
+
 	return HA_OK;
 }
 
@@ -1697,10 +1930,10 @@ on_msg_get_rsc_classes(lrmd_client_t* client, struct ha_msg* msg)
 	CHECK_ALLOCATED(client, "client", HA_FAIL);
 	CHECK_ALLOCATED(msg, "message", HA_FAIL);
 
-	lrmd_log(LOG_DEBUG
+	lrmd_debug2(LOG_DEBUG
 	, 	"on_msg_get_rsc_classes:client [%d] wants to get rsc classes"
 	,	client->pid);
-	
+
 	ret = create_lrm_ret(HA_OK, 4);
 	CHECK_RETURN_OF_CREATE_LRM_RET
 
@@ -1735,11 +1968,11 @@ on_msg_get_rsc_types(lrmd_client_t* client, struct ha_msg* msg)
 			"resource class field from the message.");
 		return HA_FAIL;
 	}
-	
-	lrmd_log(LOG_DEBUG, "on_msg_get_rsc_types: the client [pid:%d] "
+
+	lrmd_debug2(LOG_DEBUG, "on_msg_get_rsc_types: the client [pid:%d] "
 		 "wants to get resource types of resource class %s"
 		, client->pid, rclass);
-	
+
 	RAExec = g_hash_table_lookup(RAExecFuncs,rclass);
 
 	if (NULL == RAExec) {
@@ -1784,8 +2017,8 @@ on_msg_get_rsc_providers(lrmd_client_t* client, struct ha_msg* msg)
 
 	rclass = ha_msg_value(msg, F_LRM_RCLASS);
 	rtype = ha_msg_value(msg, F_LRM_RTYPE);
-	
-	lrmd_log(LOG_DEBUG
+
+	lrmd_debug2(LOG_DEBUG
 	,	"%s: the client [%d] wants to get rsc privider of %s::%s"
 	,	__FUNCTION__
 	,	client->pid
@@ -1802,7 +2035,9 @@ on_msg_get_rsc_providers(lrmd_client_t* client, struct ha_msg* msg)
 	}
 	else {
 		if (0 <= RAExec->get_provider_list(rtype, &providers)) {
-			cl_msg_add_list(ret, F_LRM_RPROVIDERS, providers);
+			if (providers != NULL) {
+				cl_msg_add_list(ret, F_LRM_RPROVIDERS, providers);
+			}
 			while (NULL != (provider = g_list_first(providers))) {
 				providers = g_list_remove_link(providers, provider);
 				g_free(provider->data);
@@ -1836,8 +2071,8 @@ on_msg_get_metadata(lrmd_client_t* client, struct ha_msg* msg)
 	rtype = ha_msg_value(msg, F_LRM_RTYPE);
 	rclass = ha_msg_value(msg, F_LRM_RCLASS);
 	provider = ha_msg_value(msg, F_LRM_RPROVIDER);
-	
-	lrmd_log(LOG_DEBUG
+
+	lrmd_debug2(LOG_DEBUG
 	,	"%s: the client [pid:%d] want to get rsc metadata of %s::%s."
 	,	__FUNCTION__
 	,	client->pid
@@ -1846,7 +2081,7 @@ on_msg_get_metadata(lrmd_client_t* client, struct ha_msg* msg)
 
 	ret = create_lrm_ret(HA_OK, 5);
 	CHECK_RETURN_OF_CREATE_LRM_RET
-	
+
 	RAExec = g_hash_table_lookup(RAExecFuncs,rclass);
 	if (NULL == RAExec) {
 		lrmd_log(LOG_NOTICE
@@ -1861,6 +2096,9 @@ on_msg_get_metadata(lrmd_client_t* client, struct ha_msg* msg)
 				LOG_FAILED_TO_ADD_FIELD("metadata")
 			}
 			g_free(meta);
+		}
+		else {
+			ha_msg_mod_int(ret, F_LRM_RET, HA_FAIL);
 		}
 	}
 
@@ -1879,7 +2117,7 @@ add_rid_to_msg(gpointer key, gpointer value, gpointer user_data)
 	struct ha_msg* msg = (struct ha_msg*)user_data;
 	if (HA_OK != cl_msg_list_add_string(msg,F_LRM_RID,rid)) {
 		LOG_FAILED_TO_ADD_FIELD("resource id")
-	}	
+	}
 }
 int
 on_msg_get_all(lrmd_client_t* client, struct ha_msg* msg)
@@ -1888,8 +2126,8 @@ on_msg_get_all(lrmd_client_t* client, struct ha_msg* msg)
 
 	CHECK_ALLOCATED(client, "client", HA_FAIL);
 	CHECK_ALLOCATED(msg, "message", HA_FAIL);
-	
-	lrmd_log(LOG_DEBUG
+
+	lrmd_debug2(LOG_DEBUG
 	,	"on_msg_get_all:client [%d] want to get all rsc information."
 	,	client->pid);
 
@@ -1917,14 +2155,14 @@ on_msg_get_rsc(lrmd_client_t* client, struct ha_msg* msg)
 
 	id = ha_msg_value(msg, F_LRM_RID);
 
-	lrmd_log(LOG_DEBUG
+	lrmd_debug2(LOG_DEBUG
 	,	"on_msg_get_rsc: the client [pid:%d] wants to get "
 		"the information of the resource [rsc_id: %s]"
 	,	client->pid, lrmd_nullcheck(id));
-	
+
 	rsc = lookup_rsc_by_msg(msg);
 	if (NULL == rsc) {
-		lrmd_log(LOG_DEBUG
+		lrmd_debug2(LOG_DEBUG
 		,	"on_msg_get_rsc: no rsc with id %s."
 		,	lrmd_nullcheck(id));
 		ret = create_lrm_ret(HA_FAIL, 1);
@@ -1950,7 +2188,7 @@ on_msg_get_rsc(lrmd_client_t* client, struct ha_msg* msg)
 				return HA_FAIL;
 			}
 		}
-		
+
 		if ( rsc->params && 
 		     HA_OK!=ha_msg_add_str_table(ret,F_LRM_PARAM,rsc->params)) {
 			ha_msg_del(ret);
@@ -1981,7 +2219,7 @@ on_msg_get_last_op(lrmd_client_t* client, struct ha_msg* msg)
 	rid = ha_msg_value(msg, F_LRM_RID);
 	op_type = ha_msg_value(msg, F_LRM_OP);
 
-	lrmd_log(LOG_DEBUG
+	lrmd_debug2(LOG_DEBUG
 	,	"on_msg_get_last_op:client %s[%d] want to get the information "
 		"regarding last %s op on %s"
 	,	client->app_name, client->pid
@@ -1994,7 +2232,7 @@ on_msg_get_last_op(lrmd_client_t* client, struct ha_msg* msg)
 		if (NULL != table ) {
 			lrmd_op_t* op = g_hash_table_lookup(table, op_type);
 			if (NULL != op) {
-				lrmd_log(LOG_DEBUG
+				lrmd_debug(LOG_DEBUG
 				, 	"%s: will return op %s"
 				,	__FUNCTION__
 				,	op_type);
@@ -2048,14 +2286,14 @@ on_msg_del_rsc(lrmd_client_t* client, struct ha_msg* msg)
 
 	id = ha_msg_value(msg, F_LRM_RID);
 
-	lrmd_log(LOG_DEBUG
+	lrmd_debug2(LOG_DEBUG
 	,	"on_msg_del_rsc: client [%d] want to delete rsc %s"
 	,	client->pid, lrmd_nullcheck(id));
 
 	rsc = lookup_rsc_by_msg(msg);
 
 	if (NULL == rsc) {
-		lrmd_log(LOG_DEBUG, "on_msg_del_rsc: no rsc with such id.");
+		lrmd_debug(LOG_DEBUG, "on_msg_del_rsc: no rsc with such id.");
 		return HA_FAIL;
 	}
 	/* remove pending ops */
@@ -2121,7 +2359,7 @@ on_msg_add_rsc(lrmd_client_t* client, struct ha_msg* msg)
 	CHECK_ALLOCATED(msg, "message", HA_FAIL);
 
 	id = ha_msg_value(msg, F_LRM_RID);
-	lrmd_log(LOG_DEBUG
+	lrmd_debug(LOG_DEBUG
 	,	"on_msg_add_rsc:client [%d] adds resource %s"
 	,	client->pid, lrmd_nullcheck(id));
 	
@@ -2156,7 +2394,8 @@ on_msg_add_rsc(lrmd_client_t* client, struct ha_msg* msg)
 		rsc = NULL;
 		return HA_FAIL;
 	}
-
+	
+	rsc->last_op_done = NULL;
 	rsc->params = ha_msg_value_str_table(msg,F_LRM_PARAM);
 	rsc->last_op_table = g_hash_table_new(g_str_hash, g_str_equal);
 	g_hash_table_insert(resources, cl_strdup(rsc->id), rsc);
@@ -2187,9 +2426,9 @@ on_msg_perform_op(lrmd_client_t* client, struct ha_msg* msg)
 	type = ha_msg_value(msg, F_LRM_TYPE);
 	/* when a flush request arrived, flush all pending ops */
 	if (0 == STRNCMP_CONST(type, FLUSHOPS)) {
-		lrmd_log(LOG_DEBUG
-		,	"on_msg_perform_op:client [%d] flush operations"
-		,	client->pid);
+		lrmd_debug2(LOG_DEBUG
+			,	"on_msg_perform_op:client [%d] flush operations"
+			,	client->pid);
 		
 		node = g_list_first(rsc->op_list);
 		while (NULL != node ) {
@@ -2212,7 +2451,7 @@ on_msg_perform_op(lrmd_client_t* client, struct ha_msg* msg)
 		int cancel_op_id;
 		ha_msg_value_int(msg, F_LRM_CALLID, &cancel_op_id);
 		
-		lrmd_log(LOG_DEBUG
+		lrmd_debug2(LOG_DEBUG
 		,	"%s:client [pid:%d] cancel the operation [callid:%d]"
 		,	__FUNCTION__
 		,	client->pid
@@ -2223,7 +2462,7 @@ on_msg_perform_op(lrmd_client_t* client, struct ha_msg* msg)
 			op = (lrmd_op_t*)node->data;
 			node = g_list_next(node);
 			if ( op->call_id == cancel_op_id) {
-				lrmd_log(LOG_DEBUG
+				lrmd_debug(LOG_DEBUG
 				,"%s: cancel the operation %s from the internal"
 					" operation list)"
 				, __FUNCTION__
@@ -2238,7 +2477,7 @@ on_msg_perform_op(lrmd_client_t* client, struct ha_msg* msg)
 			op = (lrmd_op_t*)node->data;
 			node = g_list_next(node);
 			if ( op->call_id == cancel_op_id) {
-				lrmd_log(LOG_DEBUG
+				lrmd_debug(LOG_DEBUG
 				, "%s: cancel the operation %s from the "
 					"internal repeat operation list)"
 				, __FUNCTION__
@@ -2268,12 +2507,12 @@ on_msg_perform_op(lrmd_client_t* client, struct ha_msg* msg)
 		op->call_id = call_id;
 		op->exec_pid = -1;
 		op->client_id = client->pid;
-		op->timeout_tag = -1;
+		op->timeout_tag = 0;
 		op->rsc_id = cl_strdup(rsc->id);
 		op->msg = ha_msg_copy(msg);
 		op->t_recv = time_longclock();
 		
-		lrmd_log(LOG_DEBUG
+		lrmd_debug2(LOG_DEBUG
 		, "%s: client [%d] want to add an operation %s on resource %s."
 		,	__FUNCTION__
 		,	client->pid
@@ -2299,13 +2538,13 @@ on_msg_perform_op(lrmd_client_t* client, struct ha_msg* msg)
 					        ,on_repeat_op_readytorun, op);
 			rsc->repeat_op_list = 
 				g_list_append (rsc->repeat_op_list, op);
-			lrmd_log2(LOG_DEBUG
+			lrmd_debug(LOG_DEBUG
 			, "%s: an operation %s is added to the repeat "
 			  "operation list for delay execution" 
 			, __FUNCTION__
 			, op_info(op));
 		} else {
-			lrmd_log2(LOG_DEBUG
+			lrmd_debug(LOG_DEBUG
 			, "%s: add an operation %s to the operation list."
 			, __FUNCTION__
 			, op_info(op));
@@ -2313,7 +2552,7 @@ on_msg_perform_op(lrmd_client_t* client, struct ha_msg* msg)
 			rsc->op_list = g_list_append(rsc->op_list, op);
 
 			if (g_list_length(rsc->op_list) >= 4) {
-				lrmd_log(LOG_ERR
+				lrmd_log(LOG_WARNING
 				,	"%s: Operations list for %s is suspicously"
 				" long [%d]"
 				,	__FUNCTION__, rsc->id
@@ -2333,7 +2572,7 @@ getout:
 	*/
 	ha_msg_del(op->msg);
 	op->msg = NULL;
-	if (op->rsc_id !=NULL ) {
+	if (op->rsc_id != NULL ) {
 		cl_free(op->rsc_id);
 		op->rsc_id = NULL;
 	}
@@ -2379,7 +2618,7 @@ on_msg_get_state(lrmd_client_t* client, struct ha_msg* msg)
 	CHECK_ALLOCATED(msg, "message", HA_FAIL);
 
 	id = ha_msg_value(msg,F_LRM_RID);
-	lrmd_log(LOG_DEBUG
+	lrmd_debug2(LOG_DEBUG
 	,	"%s: client [%d] want to get the state of resource %s"
 	,	__FUNCTION__, client->pid, lrmd_nullcheck(id));
 
@@ -2404,7 +2643,7 @@ on_msg_get_state(lrmd_client_t* client, struct ha_msg* msg)
 			ha_msg_del(ret);
 			return HA_FAIL;
 		}
-		lrmd_log(LOG_DEBUG
+		lrmd_debug(LOG_DEBUG
 		,	"on_msg_get_state:state of rsc %s is LRM_RSC_IDLE"
 		,	lrmd_nullcheck(id));
 		
@@ -2415,7 +2654,7 @@ on_msg_get_state(lrmd_client_t* client, struct ha_msg* msg)
 			ha_msg_del(ret);
 			return HA_FAIL;
 		}
-		lrmd_log(LOG_DEBUG
+		lrmd_debug(LOG_DEBUG
 		,	"on_msg_get_state:state of rsc %s is LRM_RSC_BUSY"
 		,	lrmd_nullcheck(id));
 	}	
@@ -2486,15 +2725,44 @@ on_msg_get_state(lrmd_client_t* client, struct ha_msg* msg)
 	}
 	return HA_OK;
 }
+
+static char *
+lrm_concat(const char *prefix, const char *suffix, char join) 
+{
+	int len = 2;
+	char *new_str = NULL;
+	if(prefix != NULL) {
+		len += strlen(prefix);
+	}
+		
+	if(suffix != NULL) {
+		len += strlen(suffix);
+	}
+
+	new_str = cl_malloc(sizeof(char)*len);
+	if (NULL == new_str) {
+		lrmd_log(LOG_ERR,"%s:%d: cl_malloc failed"
+			 , __FUNCTION__, __LINE__);
+		return NULL;
+	}
+
+	memset(new_str, 0, len);
+	sprintf(new_str, "%s%c%s", prefix?prefix:"", join, suffix?suffix:"");
+	new_str[len-1] = 0;
+	return new_str;
+}
+
 /* /////////////////////op functions//////////////////////////////////////////// */
 static void 
 record_op_completion(lrmd_client_t* client, lrmd_op_t* op)
 {
+	char *op_hash_key = NULL;
 	lrmd_rsc_t* rsc = NULL;
 	lrmd_op_t* old_op = NULL;
 	lrmd_op_t* new_op = NULL;
 	GHashTable* client_last_op = NULL;
 	const char* op_type = NULL;
+	const char* op_interval = NULL;
 	
 	rsc = lookup_rsc(op->rsc_id);
 	if (rsc == NULL) {
@@ -2516,17 +2784,23 @@ record_op_completion(lrmd_client_t* client, lrmd_op_t* op)
 		
 	/* Insert the op into the hash table for the client*/
 	op_type = ha_msg_value(op->msg, F_LRM_OP);
-	old_op = g_hash_table_lookup(client_last_op, op_type);
+	op_interval = ha_msg_value(op->msg, F_LRM_INTERVAL);
+	op_hash_key = lrm_concat(op_type, op_interval, '_');
+	
+	old_op = g_hash_table_lookup(client_last_op, op_hash_key);
 	new_op = lrmd_op_copy(op);
 	if (NULL != old_op) {
 		g_hash_table_replace(client_last_op
-		, 	cl_strdup(op_type)
+		, 	op_hash_key
 		,	(gpointer)new_op);
+		/* Don't let the timers go away */
 		lrmd_op_destroy(old_op);
-	}
-	else {
+	}else{
+		new_op->timeout_tag = (guint)0;
+		new_op->repeat_timeout_tag = (guint)0;
+		new_op->exec_pid = -1;
 		g_hash_table_insert(client_last_op
-		, 	cl_strdup(op_type)
+		, 	op_hash_key
 		,	(gpointer)new_op);
 	}
 
@@ -2555,8 +2829,8 @@ on_op_done(lrmd_op_t* op)
 	}
 	op->t_done = time_longclock();
 	
-	lrmd_log(LOG_DEBUG, "on_op_done: %s", op_info(op));
-	lrmd_log2(LOG_DEBUG
+	lrmd_debug2(LOG_DEBUG, "on_op_done: %s", op_info(op));
+	lrmd_debug2(LOG_DEBUG
 		 ,"TimeStamp:  Recv:%ld,Add to List:%ld,Perform:%ld, Done %ld"
 		 ,longclockto_ms(op->t_recv)
 		 ,longclockto_ms(op->t_addtolist)
@@ -2566,8 +2840,9 @@ on_op_done(lrmd_op_t* op)
 	/*  we should check if the resource exists. */
 	rsc = lookup_rsc(op->rsc_id);
 	if (rsc == NULL) {
-		if( op->timeout_tag > 0 ) {
+		if(op->timeout_tag > 0 ) {
 			Gmain_timeout_remove(op->timeout_tag);
+			op->timeout_tag = (guint)0;
 		}
 		lrmd_log(LOG_ERR
 		,	"%s: the resource for the operation %s does not exist."
@@ -2602,22 +2877,22 @@ on_op_done(lrmd_op_t* op)
 	if (LRM_OP_DONE != op_status) {
 		need_notify = 1;
 	} else if (HA_OK != ha_msg_value_int(op->msg,F_LRM_RC,&op_rc)){
-		lrmd_log(LOG_DEBUG, "on_op_done: will callback due to not "
+		lrmd_debug2(LOG_DEBUG, "on_op_done: will callback due to not "
 			"finding F_LRM_RC field in the message op->msg.");
 		need_notify = 1;
 	} else if (EVERYTIME == target_rc) {
-		lrmd_log(LOG_DEBUG, "on_op_done: will callback for being "
+		lrmd_debug2(LOG_DEBUG, "on_op_done: will callback for being "
 			"asked to callback everytime.");
 		need_notify = 1;
 	} else if (CHANGED == target_rc) {
 		if (HA_OK != ha_msg_value_int(op->msg,F_LRM_LASTRC,
 						&last_rc)){
-			lrmd_log(LOG_DEBUG ,"on_op_done: will callback because "
+			lrmd_debug2(LOG_DEBUG ,"on_op_done: will callback because "
 				"this is first execution [rc: %d].", op_rc);
 			need_notify = 1;
 		} else {
 			if (last_rc != op_rc) {
-				lrmd_log(LOG_DEBUG, "on_op_done: will callback "
+				lrmd_debug2(LOG_DEBUG, "on_op_done: will callback "
 					" for this rc %d != last rc %d"
 				, 	op_rc, last_rc);
 				need_notify = 1;
@@ -2632,7 +2907,7 @@ on_op_done(lrmd_op_t* op)
 	}
 	else {
 		if ( op_rc==target_rc ) {
-			lrmd_log(LOG_DEBUG
+			lrmd_debug(LOG_DEBUG
 			,"on_op_done: will callback for target rc %d reached"
 			,op_rc);
 			
@@ -2710,44 +2985,43 @@ on_op_done(lrmd_op_t* op)
 	
 	/* remove the op from op_list and copy to last_op */
 	rsc->op_list = g_list_remove(rsc->op_list,op);
-	lrmd_log2(LOG_DEBUG
+	lrmd_debug2(LOG_DEBUG
 	, 	"on_op_done:%s is removed from op list" 
 	,	op_info(op));
 
 	if( op->timeout_tag > 0 ) {
 		Gmain_timeout_remove(op->timeout_tag);
-		op->timeout_tag = -1;
+		op->timeout_tag = (guint)0;
 	}
 	
 	
-	/*
-	 * I SUGGEST MOVING THIS CODE TO A SEPARATE FUNCTION FIXME
-	 * perhaps name it record_op_completion() or something
-	 *
-	 * if (null != client) {
-	 *	record_op_completion(client, op);
-	 * }
-	 */
 	/*save the op in the last op hash table*/
 	client = lookup_client(op->client_id);
 	if (NULL != client) {
 		record_op_completion(client, op);
 	}
 	
+	/*save the op in the last op finished*/
+	if (rsc->last_op_done != NULL) {
+		lrmd_op_destroy(rsc->last_op_done);
+	}
+	rsc->last_op_done = lrmd_op_copy(op);
+	rsc->last_op_done->timeout_tag = (guint)0;
+	rsc->last_op_done->repeat_timeout_tag = (guint)0;
+	
 	/*copy the repeat op to repeat list to wait next perform */
 	if ( 0 != op->interval && NULL != lookup_client(op->client_id)
 	&&   LRM_OP_CANCELLED != op_status) {
 		lrmd_op_t* repeat_op = lrmd_op_copy(op);
 		repeat_op->exec_pid = -1;
-		repeat_op->output_fd = -1;
-		repeat_op->timeout_tag = -1;
+		repeat_op->timeout_tag = 0;
 		repeat_op->is_copy = FALSE;
 		repeat_op->repeat_timeout_tag = 
 			Gmain_timeout_add(op->interval,	
 					on_repeat_op_readytorun, repeat_op);
 		rsc->repeat_op_list = 
 			g_list_append (rsc->repeat_op_list, repeat_op);
-		lrmd_log2(LOG_DEBUG
+		lrmd_debug2(LOG_DEBUG
 		, "on_op_done:repeat %s is added to repeat op list to wait" 
 		, op_info(op));
 		
@@ -2760,10 +3034,10 @@ on_op_done(lrmd_op_t* op)
 int
 flush_op(lrmd_op_t* op)
 {
-	lrmd_log2(LOG_DEBUG, "flush_op: start.");
+	lrmd_debug(LOG_DEBUG, "flush_op: start.");
 	CHECK_ALLOCATED(op, "op", HA_FAIL );
 	if (op->exec_pid == 0) {
-		lrmd_log2(LOG_ERR, "flush_op: op->exec_pid == 0.");
+		lrmd_debug(LOG_ERR, "flush_op: op->exec_pid == 0.");
 		return HA_FAIL;
 	}
 
@@ -2778,8 +3052,28 @@ flush_op(lrmd_op_t* op)
 	}
 
 	on_op_done(op);
-	lrmd_log2(LOG_DEBUG, "flush_op: end.");
+	lrmd_debug(LOG_DEBUG, "flush_op: end.");
 	return HA_OK;
+}
+
+/* Resume the execution of ops of the resource */
+static gboolean
+rsc_execution_freeze_timeout(gpointer data)
+{
+	lrmd_rsc_t* rsc = (lrmd_rsc_t*)data;
+
+	if (rsc == NULL) {
+		return FALSE;
+	}
+
+	if (rsc->delay_timeout > 0) {
+		Gmain_timeout_remove(rsc->delay_timeout);
+		rsc->delay_timeout = (guint)0;
+	}
+
+	perform_op(rsc);
+
+	return FALSE;
 }
 
 /* this function gets the first op in the rsc op list and execute it*/
@@ -2789,26 +3083,44 @@ perform_op(lrmd_rsc_t* rsc)
 	GList* node = NULL;
 	lrmd_op_t* op = NULL;
 
-	CHECK_ALLOCATED(rsc, "resource", HA_FAIL );
+	CHECK_ALLOCATED(rsc, "resource", HA_FAIL);
 	if (TRUE == shutdown_in_progress && can_shutdown()) {
 		lrm_shutdown();
 	}
 	
 	if (NULL == rsc->op_list) {
-		lrmd_log2(LOG_DEBUG,"perform_op: no op to perform");
+		lrmd_debug2(LOG_DEBUG,"perform_op: no op to perform?");
 		return HA_OK;
 	}
 
 	node = g_list_first(rsc->op_list);
-	while ( NULL != node ) {
+	while (NULL != node) {
 		op = node->data;
-		if (-1 != op->exec_pid )	{
-			lrmd_log(LOG_DEBUG, "perform_op: current op is performing.");
-			lrmd_log2(LOG_DEBUG, "perform_op: its information: %s."
+		if (-1 != op->exec_pid)	{
+			lrmd_debug(LOG_DEBUG, "perform_op: current op for rsc is already running.");
+			lrmd_debug(LOG_DEBUG, "perform_op: its information: %s"
 			,	  op_info(op));
 			break;
 		}
-		if ( HA_OK != perform_ra_op(op)) {
+
+		if ((int)rsc->delay_timeout > 0) {
+			lrmd_log(LOG_INFO
+			,	"Operation is already delayed: %s"
+			,	op_info(op));
+			break;
+		}
+
+		if (child_count >= max_child_count) {
+			lrmd_debug2(LOG_NOTICE
+			, 	"max_child_count (%d) reached, postponing "
+				"execution of %s by %d ms"
+			, 	max_child_count, op_info(op), retry_interval);
+			rsc->delay_timeout = Gmain_timeout_add(retry_interval
+					, rsc_execution_freeze_timeout, rsc);
+			break;
+		}
+
+		if (HA_OK != perform_ra_op(op)) {
 			lrmd_log(LOG_ERR
 			,	"unable to perform_ra_op on %s"
 			,	op_info(op));
@@ -2856,23 +3168,27 @@ op_to_msg(lrmd_op_t* op)
 int
 perform_ra_op(lrmd_op_t* op)
 {
-	int fd[2];
+	int stdout_fd[2];
+	int stderr_fd[2];
 	pid_t pid;
 	int timeout;
 	struct RAExecOps * RAExec = NULL;
 	const char* op_type = NULL;
         GHashTable* params = NULL;
         GHashTable* op_params = NULL;
-	unsigned long t_stay_in_list = 0;
 	lrmd_rsc_t* rsc = NULL;
-	int flag;
+	ra_pipe_op_t * rapop;
 	
 	CHECK_ALLOCATED(op, "op", HA_FAIL);
 	rsc = (lrmd_rsc_t*)lookup_rsc(op->rsc_id);
 	CHECK_ALLOCATED(rsc, "rsc", HA_FAIL);
 	
-	if ( pipe(fd) < 0 ) {
-		lrmd_log(LOG_ERR,"perform_ra_op:pipe create error.");
+	if ( pipe(stdout_fd) < 0 ) {
+		cl_perror("%s::%d: pipe", __FUNCTION__, __LINE__);
+	}
+
+	if ( pipe(stderr_fd) < 0 ) {
+		cl_perror("%s::%d: pipe", __FUNCTION__, __LINE__);
 	}
 
 	if (op->exec_pid == 0) {
@@ -2882,21 +3198,13 @@ perform_ra_op(lrmd_op_t* op)
 
 	op_params = ha_msg_value_str_table(op->msg, F_LRM_PARAM);
 	params = merge_str_tables(rsc->params,op_params);
+	ha_msg_mod_str_table(op->msg, F_LRM_PARAM, params);
 	free_str_table(op_params);
-	free_str_table(rsc->params);
-	rsc->params = params;
-	op->t_perform = time_longclock();
-	t_stay_in_list = longclockto_ms(op->t_perform - op->t_addtolist);
-	if ( t_stay_in_list > WARNINGTIME_IN_LIST) 
-	{
-		lrmd_log(LOG_ERR
-		,	"perform_ra_op: the operation %s stayed in operation "
-			"list for %lu ms (longer than %d ms)"
-		,	op_info(op), t_stay_in_list
-		,	WARNINGTIME_IN_LIST
-		);
-		dump_data_for_debug();
-	}
+	op_params = NULL;
+	free_str_table(params);
+	params = NULL;
+	check_queue_duration(op);
+
 	if(HA_OK != ha_msg_value_int(op->msg, F_LRM_TIMEOUT, &timeout)){
 		timeout = 0;
 		lrmd_log(LOG_ERR,"perform_ra_op: failed to get timeout from "
@@ -2910,32 +3218,29 @@ perform_ra_op(lrmd_op_t* op)
 	return_to_orig_privs();
 	switch(pid=fork()) {
 		case -1:
-			lrmd_log(LOG_ERR
-			,	"perform_ra_op:start_a_child_client: Cannot fork.");
+			cl_perror("perform_ra_op:fork failure");
+			close(stdout_fd[0]);
+			close(stdout_fd[1]);
+			close(stderr_fd[0]);
+			close(stderr_fd[1]);
 			return_to_dropped_privs();
 			return HA_FAIL;
 
 		default:	/* Parent */
+			child_count++;
 			NewTrackedProc(pid, 1, PT_LOGNONE, op, &ManagedChildTrackOps);
-			close(fd[1]);
-			/*
-			 * No any obviouse proof of lrmd hang in pipe read yet.
-			 * Bug 475 may be a duplicate of bug 499.
-			 * Anyway, via test, it's proved that NOBLOCK read will
-			 * obviously reduce the RA execution time (bug 553).
-			 */
-			/* Let the read operation be NONBLOCK */ 
-			if ((flag = fcntl(fd[0], F_GETFL)) >= 0) {
-				if (fcntl(fd[0], F_SETFL, flag|O_NONBLOCK) < 0) {
-					cl_perror("perform_ra_op: fcntl");
-				}
-			} else {
-				cl_perror("perform_ra_op: fcntl");
-			}
-			op->output_fd = fd[0];
+
+			close(stdout_fd[1]);
+			close(stderr_fd[1]);
+			rapop = ra_pipe_op_new(stdout_fd[0], stderr_fd[0], op);
+			op->rapop = rapop;
 			op->exec_pid = pid;
-			
+
 			return_to_dropped_privs();
+
+			if ( rapop == NULL) {
+				return HA_FAIL;
+			}
 			return HA_OK;
 
 		case 0:		/* Child */
@@ -2944,17 +3249,28 @@ perform_ra_op(lrmd_op_t* op)
 			 * need to investigate if it works the same too.
 			 */
 			setpgid(0,0);
-			close(fd[0]);
-			if (STDOUT_FILENO != fd[1]) {
-				if (dup2(fd[1], STDOUT_FILENO)!=STDOUT_FILENO) {
-					lrmd_log(LOG_ERR,"perform_ra_op: dup2 error.");
+			close(stdout_fd[0]);
+			close(stderr_fd[0]);
+			if (STDOUT_FILENO != stdout_fd[1]) {
+				if (dup2(stdout_fd[1], STDOUT_FILENO)!=STDOUT_FILENO) {
+					cl_perror("%s::%d: dup2"
+						, __FUNCTION__, __LINE__);
 				}
+				close(stdout_fd[1]);
 			}
-			close(fd[1]);
+			if (STDERR_FILENO != stderr_fd[1]) {
+				if (dup2(stderr_fd[1], STDERR_FILENO)!=STDERR_FILENO) {
+					cl_perror("%s::%d: dup2"
+						, __FUNCTION__, __LINE__);
+				}
+				close(stderr_fd[1]);
+			}
 			RAExec = g_hash_table_lookup(RAExecFuncs,rsc->class);
 			if (NULL == RAExec) {
+				close(stdout_fd[1]);
+				close(stderr_fd[1]);
 				lrmd_log(LOG_ERR,"perform_ra_op: can not find RAExec");
-				return HA_FAIL;
+				exit(EXECRA_EXEC_UNKNOWN_ERROR);
 			}
 			op_type = ha_msg_value(op->msg, F_LRM_OP);
 			/*should we use logging daemon or not in script*/
@@ -2963,9 +3279,10 @@ perform_ra_op(lrmd_op_t* op)
 			/* Name of the resource and some others also
 			 * need to be passed in. Maybe pass through the
 			 * entire lrm_op_t too? */
-			lrmd_log2(LOG_DEBUG
-			,	"perform_ra_op:call RA plugin to perform %s, pid: [%d]"
+			lrmd_debug2(LOG_DEBUG
+			,	"perform_ra_op:calling RA plugin to perform %s, pid: [%d]"
 			,	op_info(op), getpid());		
+			params = ha_msg_value_str_table(op->msg, F_LRM_PARAM);
 			RAExec->execra (rsc->id,
 					rsc->type,
 					rsc->provider,
@@ -2995,14 +3312,18 @@ on_ra_proc_finished(ProcTrack* p, int status, int signo, int exitcode
         lrmd_rsc_t* rsc = NULL;
 	struct RAExecOps * RAExec = NULL;
 	const char* op_type;
-	char* data = NULL;
         int rc;
         int ret;
 	int op_status;
 
+	if (--child_count < 0) {
+		lrmd_log(LOG_ERR, "%s:%d: child number is less than zero: %d"
+			, __FUNCTION__, __LINE__, child_count);
+	}
+
 	CHECK_ALLOCATED(p, "ProcTrack p", );
 	op = p->privatedata;
-	lrmd_log2(LOG_DEBUG, "on_ra_proc_finished: accessing the op whose "
+	lrmd_debug2(LOG_DEBUG, "on_ra_proc_finished: accessing the op whose "
 		  "address is %p", op);
 	CHECK_ALLOCATED(op, "op", );
 	if (op->exec_pid == 0) {
@@ -3013,19 +3334,20 @@ on_ra_proc_finished(ProcTrack* p, int status, int signo, int exitcode
 
 	op->exec_pid = -1;
 	if (SIGKILL == signo) {
+		lrmd_debug(LOG_DEBUG, "on_ra_proc_finished: this op %s is killed."
+			, op_info(op));
 		lrmd_op_destroy(op);
 		p->privatedata = NULL;
-		lrmd_log(LOG_DEBUG, "on_ra_proc_finished: this op is killed.");
 		dump_data_for_debug();
 		return;
 	}
 
 	if (HA_OK == ha_msg_value_int(op->msg, F_LRM_OPSTATUS, &op_status)) {
 		if ( LRM_OP_CANCELLED == (op_status_t)op_status ) {
+			lrmd_debug(LOG_DEBUG, "on_ra_proc_finished: "
+				"this op %s is cancelled.", op_info(op));
 			lrmd_op_destroy(op);
 			p->privatedata = NULL;
-			lrmd_log(LOG_DEBUG, "on_ra_proc_finished: "
-				"this op is cancelled.");
 			dump_data_for_debug();
 			return;
 		}
@@ -3033,63 +3355,88 @@ on_ra_proc_finished(ProcTrack* p, int status, int signo, int exitcode
 
 	rsc = lookup_rsc(op->rsc_id);
 	if (rsc == NULL) {
-		lrmd_log(LOG_DEBUG,"on_ra_proc_finished: the rsc does not exist");
+		lrmd_debug(LOG_DEBUG, "on_ra_proc_finished: the rsc (id=%s) does"
+		" not exist", op->rsc_id);
 		on_op_done(op);
 		p->privatedata = NULL;
 		return;
 	}	
 	RAExec = g_hash_table_lookup(RAExecFuncs,rsc->class);
 	if (NULL == RAExec) {
-		lrmd_log(LOG_ERR,"on_ra_proc_finished: can not find RAExec");
+		lrmd_log(LOG_ERR,"on_ra_proc_finished: can not find RAExec for"
+			"resource class <%s>", rsc->class);
 		dump_data_for_debug();
 		return;
 	}
 
 	op_type = ha_msg_value(op->msg, F_LRM_OP);
-	data = NULL;
-	/* We hope we never have to read too much data from a child process */
-	/* Or they will hang waiting for us to read and never die :-) */
-	ret = read_pipe(op->output_fd, &data, &(p->pid));
-	rc = RAExec->map_ra_retvalue(exitcode, op_type, data);
-	if (rc != EXECRA_OK || ret != 0) {
-		lrmd_log(LOG_DEBUG, "A RA execution: process [%d], "
-			"exitcode %d, with signo %d, %s, the RA output: %s"
-			, p->pid, exitcode, signo, op_info(op)
-			, (data!=NULL)?data:"NULL");
+
+	if ( (NULL == strchr(op->first_line_ra_stdout, '\n')) 
+	    && (0==STRNCMP_CONST(rsc->class, "heartbeat"))
+	    && (   (0==STRNCMP_CONST(op_type, "monitor")) 
+		 ||(0==STRNCMP_CONST(op_type, "status")))  ) {
+		if ( ( op->rapop != NULL ) 
+		    && (op->rapop->ra_stdout_fd >= 0) ) {
+			handle_pipe_ra_stdout(op->rapop->ra_stdout_fd
+						, op->rapop);
+		} else {
+			lrmd_log(LOG_WARNING, "There is something wrong: the "
+				"first line isn't read in. Maybe the heartbeat "
+				"does not ouput string correctly for status "
+				"operation. Or the code (myself) is wrong.");
+		}
+	}
+
+	rc = RAExec->map_ra_retvalue(exitcode, op_type
+				     , op->first_line_ra_stdout);
+	if (rc != EXECRA_OK || debug_level > 0) {
+		if (signo != 0) {
+			lrmd_debug(rc == EXECRA_OK ? LOG_DEBUG : LOG_WARNING
+			,	"Resource Agent (%s): pid [%d] killed by"
+			" signal %d",	op_info(op), p->pid, signo);
+		}else if (rc == exitcode) {
+			lrmd_debug2(rc == EXECRA_OK ? LOG_DEBUG : LOG_INFO
+			,	"Resource Agent (%s): pid [%d] exited with"
+			" return code %d", op_info(op), p->pid, rc);
+		}else{
+			lrmd_debug2(rc == EXECRA_OK ? LOG_DEBUG : LOG_INFO
+			,	"Resource Agent (%s): pid [%d] exited with"
+			" return code %d (mapped from %d)"
+			,	op_info(op), p->pid, rc, exitcode);
+		}
+		if (rc != EXECRA_OK || debug_level > 1) {
+			lrmd_debug2(LOG_INFO, "Resource Agent output: [%s]"
+			,	op->first_line_ra_stdout);
+		}
 	}
 	if (EXECRA_EXEC_UNKNOWN_ERROR == rc || EXECRA_NO_RA == rc) {
 		if (HA_OK != ha_msg_mod_int(op->msg, F_LRM_OPSTATUS,
 							LRM_OP_ERROR)) {
 			LOG_FAILED_TO_ADD_FIELD("opstatus")
-			g_free(data);
 			return ;
 		}
-		lrmd_log(LOG_ERR
-		, "on_ra_proc_finished: the exit code shows something wrong");
-		
+		lrmd_log(LOG_CRIT
+		,	"on_ra_proc_finished: the exit code indicates a problem.");
 	} else {
 		if (HA_OK != ha_msg_mod_int(op->msg, F_LRM_OPSTATUS,
 								LRM_OP_DONE)) {
 			LOG_FAILED_TO_ADD_FIELD("opstatus")
-			g_free(data);
 			return ;
 		}
 		if (HA_OK != ha_msg_mod_int(op->msg, F_LRM_RC, rc)) {
 			LOG_FAILED_TO_ADD_FIELD("F_LRM_RC")
-			g_free(data);
 			return ;
 		}
 	}
 
-	if (NULL != data) {
+	if ( 0 < strlen(op->first_line_ra_stdout) ) {
 		if (NULL != cl_get_string(op->msg, F_LRM_DATA)) {
 			cl_msg_remove(op->msg, F_LRM_DATA);
 		}
-		ret = ha_msg_add(op->msg, F_LRM_DATA, data);
+		ret = ha_msg_add(op->msg, F_LRM_DATA, op->first_line_ra_stdout);
 		if (HA_OK != ret) {
 			LOG_FAILED_TO_ADD_FIELD("data")
 		}
-		g_free(data);
 	}
 
 	on_op_done(op);
@@ -3118,7 +3465,7 @@ on_ra_proc_query_name(ProcTrack* p)
 		, MAX_PROC_NAME
 		, "unknown rsc(may deleted):%s"
 		, op_type);
-	}else {	
+	}else {
 		snprintf(proc_name, MAX_PROC_NAME, "%s:%s", rsc->id, op_type);
 	}
 	return proc_name;
@@ -3173,85 +3520,273 @@ lookup_rsc_by_msg (struct ha_msg* msg)
 	return rsc;
 }
 
+static void
+destroy_pipe_ra_stdout(gpointer user_data)
+{
+	ra_pipe_op_t * rapop = (ra_pipe_op_t *)user_data;
+
+	CHECK_ALLOCATED(rapop, "ra_pipe_op",);
+	if (rapop->ra_stderr_fd < 0) {
+		ra_pipe_op_destroy(rapop);
+	}
+}
+
+static void
+destroy_pipe_ra_stderr(gpointer user_data)
+{
+	ra_pipe_op_t * rapop = (ra_pipe_op_t *)user_data;
+
+	CHECK_ALLOCATED(rapop, "ra_pipe_op",);
+	if (rapop->ra_stdout_fd < 0) {
+		ra_pipe_op_destroy(rapop);
+	}
+}
+
+static gboolean
+handle_pipe_ra_stdout(int fd, gpointer user_data)
+{
+	gboolean rc = TRUE;
+	ra_pipe_op_t * rapop = (ra_pipe_op_t *)user_data;
+	char * data = NULL;
+	lrmd_op_t* lrmd_op = NULL;
+
+	CHECK_ALLOCATED(rapop, "ra_pipe_op", FALSE);
+
+	if (rapop->lrmd_op == NULL) {
+		lrmd_debug2(LOG_DEBUG, "%s:%d: Unallocated lrmd_op 0x%lx!!"
+		,	__FUNCTION__, __LINE__
+		,	(unsigned long)rapop->lrmd_op);
+	} else {
+		lrmd_op = rapop->lrmd_op;
+	}
+
+	if (fd <= STDERR_FILENO) {
+		lrmd_log(LOG_CRIT, "%s:%d: Attempt to read from "
+			"closed/invalid file descriptor %d."
+		,	__FUNCTION__, __LINE__, fd);
+		return FALSE;
+	}
+
+	if (0 != read_pipe(fd, &data, rapop)) {
+		/* error or reach the EOF */
+		if (fd > STDERR_FILENO) {
+			close(fd);
+			if (fd == rapop->ra_stdout_fd) {
+				rapop->ra_stdout_fd = -1;
+			}
+		}
+		if ( NULL != rapop->ra_stdout_gsource) {
+			/*
+			 * Returning FALSE will trigger ipc code to release
+			 * the GFDSource, so donn't release it here.
+			 */
+			rapop->ra_stdout_gsource = NULL;
+		}
+		rc = FALSE;
+	}
+
+	if ( data!=NULL ) {
+		if (  (0==STRNCMP_CONST(rapop->op_type, "meta-data"))
+		    ||(0==STRNCMP_CONST(rapop->op_type, "monitor")) 
+		    ||(0==STRNCMP_CONST(rapop->op_type, "status")) ) {
+			lrmd_debug2(LOG_DEBUG, "RA output: (%s:%s:stdout) %s"
+				, rapop->rsc_id, rapop->op_type, data);
+		} else {
+			lrmd_log(LOG_INFO, "RA output: (%s:%s:stdout) %s"
+				, rapop->rsc_id, rapop->op_type, data);
+		}
+
+		/*
+		 * This code isn't good enough, it produces erratic and hard-to
+		 * read messages in the logs. But this does not affect the 
+		 * function correctness, since the first line output is ensured
+		 * to be collected into the buffer completely.
+		 * Anyway, the meta-data (which is _many_  lines long) can be 
+		 * handled by another function, see raexec.h
+		 */
+		if ( (rapop->first_line_read == FALSE)
+                    && (0==STRNCMP_CONST(rapop->rsc_class, "heartbeat"))
+		    && ( lrmd_op != NULL )
+	    	    && ( (0==STRNCMP_CONST(rapop->op_type, "monitor")) 
+			  ||(0==STRNCMP_CONST(rapop->op_type, "status")) )) {
+			if (lrmd_op != NULL) {
+				strncat(lrmd_op->first_line_ra_stdout, data
+				  , sizeof(lrmd_op->first_line_ra_stdout) -
+				    strlen(lrmd_op->first_line_ra_stdout)-1);
+				if (strchr(lrmd_op->first_line_ra_stdout, '\n')
+					!= NULL) {
+					rapop->first_line_read = TRUE;
+				}
+			} else {
+				lrmd_log(LOG_CRIT
+				   , "Before read the first line, the RA "
+				   "execution child quitted and waited.");
+			}
+		}
+		
+		g_free(data);
+	}
+
+	return rc;
+}
+
+static gboolean 
+handle_pipe_ra_stderr(int fd, gpointer user_data)
+{
+	gboolean rc = TRUE;
+	char * data = NULL;
+	ra_pipe_op_t * rapop = (ra_pipe_op_t *)user_data;
+
+	CHECK_ALLOCATED(rapop, "ra_pipe_op", FALSE);
+
+	if (fd <= STDERR_FILENO) {
+		lrmd_log(LOG_CRIT, "%s:%d: Attempt to read from "
+			" closed/invalid file descriptor %d."
+		,	__FUNCTION__, __LINE__, fd);
+		return FALSE;
+	}
+
+	if (0 != read_pipe(fd, &data, rapop)) {
+		/* error or reach the EOF */
+		if (fd > STDERR_FILENO) {
+			close(fd);
+			if (fd == rapop->ra_stderr_fd) {
+				rapop->ra_stderr_fd = -1;
+			}
+		}
+		if ( NULL != rapop->ra_stderr_gsource) {
+			/*
+			 * G_main_del_fd will trigger
+			 *	destroy_pipe_ra_stderr
+			 *	ra_pipe_op_destroy
+			 *
+			 * Returning FALSE will trigger ipc code to release
+			 * the GFDSource, so donn't release it here.
+			 */
+			rapop->ra_stderr_gsource = NULL;
+		}
+		rc = FALSE;
+	}
+
+	if (data!=NULL) { 
+		lrmd_log(LOG_INFO, "RA output: (%s:%s:stderr) %s"
+			, rapop->rsc_id, rapop->op_type, data);
+		g_free(data);
+	}
+
+	return rc;
+}
+
 int
 read_pipe(int fd, char ** data, void * user_data)
 {
 	const int BUFFLEN = 81;
-	int rc = 0;
-	int pid = *(int *) user_data;
 	char buffer[BUFFLEN];
 	int readlen;
 	GString * gstr_tmp;
+	int rc = 0;
+	lrmd_op_t * op = NULL;
+	ra_pipe_op_t * rapop = (ra_pipe_op_t *)user_data;
+
+	lrmd_debug3(LOG_DEBUG, "%s begin.", __FUNCTION__);
+
+	CHECK_ALLOCATED(rapop, "ra_pipe_op", FALSE);
+
+	op = (lrmd_op_t *)rapop->lrmd_op;
+	if (NULL == op) {
+		lrmd_debug2(LOG_DEBUG, "%s:%d: Unallocated lrmd_op 0x%lx!!"
+		,	__FUNCTION__, __LINE__
+		,	(unsigned long)op);
+	}
 
 	*data = NULL;
 	gstr_tmp = g_string_new("");
-	
-	/* the log is only for analysing bug 475, or should remove it. */
-	lrmd_log(LOG_DEBUG, "read_pipe: begin to read.");
+
 	do {
 		errno = 0;
 		readlen = read(fd, buffer, BUFFLEN - 1);
+		if (NULL == op) {
+			lrmd_debug2(LOG_NOTICE
+				, "read's ret: %d when lrmd_op finished"
+				, readlen);
+		}
 		if ( readlen > 0 ) {
 			buffer[readlen] = EOS;
 			g_string_append(gstr_tmp, buffer);
 		}
 	} while (readlen == BUFFLEN - 1 || errno == EINTR);
-	close(fd);
 
-	if ((readlen < 0) ) {
-		if (errno == EAGAIN) {
-			lrmd_log(LOG_ERR, "Process %d failed to redirect stdout "
-				"for its background child (daemon) processes. "
-				"This will likely cause those processes to die "
-				"mysteriously at some later time (terminated by "
-				"signal SIGPIPE)."
-				, pid);
-		} else {
-			cl_perror("read_pipe: read error");
-		}
+	if (errno == EINTR) {
+		errno = 0;
+	}
+	
+	/* Reach the EOF */
+	if (readlen == 0) { 
 		rc = -1;
 	}
-	/* the log is only for analysing bug 475, or should remove it. */
-	lrmd_log(LOG_DEBUG, "read_pipe: finished the pipe read.");
+
+	if ((readlen < 0) && (errno !=0)) {
+		rc = -1;
+		switch (errno) {
+		default:
+			cl_perror("%s:%d read error: fd %d errno=%d"
+			,	__FUNCTION__, __LINE__
+			,	fd, errno);
+			if (NULL != op) {
+				lrmd_op_dump(op, "op w/bad errno");
+			} else {
+				lrmd_log(LOG_NOTICE
+					, "%s::%d: lrmd_op has been freed"
+					, __FUNCTION__, __LINE__);
+			}
+			break;
+
+		case EBADF:
+			lrmd_log(LOG_CRIT
+			,	"%s:%d"
+			" Attempt to read from closed file descriptor %d."
+			,	__FUNCTION__, __LINE__,	fd);
+			if (NULL != op) {
+				lrmd_op_dump(op, "op w/bad errno");
+			} else {
+				lrmd_log(LOG_NOTICE
+					, "%s::%d: lrmd_op has been freed"
+					, __FUNCTION__, __LINE__);
+			}
+			break;
+			
+		case EAGAIN:
+			if (NULL==op) {
+				lrmd_log(LOG_WARNING
+					, "%s::%d: Shouldn't come here: "
+					  "lrmd_op = NULL"
+					, __FUNCTION__, __LINE__);
+				break;
+			}
+			lrmd_log(LOG_ERR, "RA %s:%s:%s (process %d) failed to "
+				"redirect %s for its background child (daemon) "
+				"processes. This will likely cause those "
+				"processes to die mysteriously at some later "
+				"time (terminated by signal SIGPIPE)."
+				, rapop->rsc_class
+				, rapop->rsc_id
+				, rapop->op_type
+				, op->exec_pid
+				, (rapop->ra_stdout_fd==fd)?"stdout":"stderr");
+		}
+	}
 
 	if ( gstr_tmp->len == 0 ) {
-		lrmd_log(LOG_DEBUG, "read_pipe: read 0 byte from this pipe.");
-		g_string_free(gstr_tmp, TRUE);	
+		g_string_free(gstr_tmp, TRUE);
 	} else {
 		*data = gstr_tmp->str;
 		g_string_free(gstr_tmp, FALSE);
 	}
+
+	lrmd_debug3(LOG_DEBUG, "%s end.", __FUNCTION__);
 	return rc;
 }
 
-static void
-inherit_config_from_environment(void)
-{
-	char * inherit_env = NULL;
-
-	/* Donnot need to free the return pointer from getenv */
-	inherit_env = getenv(LOGFENV);
-	if (inherit_env != NULL) {
-		cl_log_set_logfile(inherit_env);
-		inherit_env = NULL;
-	}
-
-	inherit_env = getenv(DEBUGFENV);
-	if (inherit_env != NULL) {
-		cl_log_set_debugfile(inherit_env);
-		inherit_env = NULL;
-	}
-
-	inherit_env = getenv(LOGFACILITY);
-	if (inherit_env != NULL) {
-		int facility = -1;
-		facility = cl_syslogfac_str2int(inherit_env);
-		if ( facility != -1 ) {
-			cl_log_set_facility(facility);
-		}
-		inherit_env = NULL;
-	}
-}
 
 static gboolean 
 debug_level_adjust(int nsig, gpointer user_data)
@@ -3259,9 +3794,6 @@ debug_level_adjust(int nsig, gpointer user_data)
 	switch (nsig) {
 		case SIGUSR1:
 			debug_level++;
-			if (debug_level > 2) {
-				debug_level = 2;
-			}
 			dump_data_for_debug();
 			break;
 
@@ -3271,7 +3803,7 @@ debug_level_adjust(int nsig, gpointer user_data)
 				debug_level = 0;
 			}
 			break;
-		
+
 		default:
 			lrmd_log(LOG_WARNING, "debug_level_adjust: Received an "
 				"unexpected signal(%d). Something wrong?.",nsig);
@@ -3283,10 +3815,10 @@ debug_level_adjust(int nsig, gpointer user_data)
 static void
 dump_data_for_debug(void)
 {
-	lrmd_log(LOG_DEBUG, "begin to dump internal data for debugging."); 
+	lrmd_debug(LOG_DEBUG, "begin to dump internal data for debugging.");
 	lrmd_dump_all_clients();
 	lrmd_dump_all_resources();
-	lrmd_log(LOG_DEBUG, "end to dump internal data for debugging."); 
+	lrmd_debug(LOG_DEBUG, "end to dump internal data for debugging.");
 }
 
 static const char* 
@@ -3296,20 +3828,29 @@ op_info(const lrmd_op_t* op)
 	lrmd_rsc_t* rsc = NULL;
 	const char * op_type;
 	GString * param_gstr;
-	
+	GHashTable* op_params = NULL;
+
+	if (NULL == op) {
+		lrmd_log(LOG_ERR, "%s:%d: op==NULL"
+			 , __FUNCTION__, __LINE__);
+		return NULL;
+	}
 	rsc = lookup_rsc(op->rsc_id);
 	op_type = ha_msg_value(op->msg, F_LRM_OP);
-	
+
 	if (rsc == NULL) {
 		snprintf(info,sizeof(info)
 		,"operation %s[%d] on unknown rsc(may deleted) for client %d"
 		,lrmd_nullcheck(op_type)
 		,op->call_id
 		,op->client_id);
-		
+
 	}else{
-		param_gstr = g_string_new("");	
-		hash_to_str(rsc->params, param_gstr);
+		param_gstr = g_string_new("");
+		op_params = ha_msg_value_str_table(op->msg, F_LRM_PARAM);
+		hash_to_str(op_params, param_gstr);
+		free_str_table(op_params);
+		op_params = NULL;
 
 		snprintf(info, sizeof(info)
 		,"operation %s[%d] on %s::%s::%s for client %d, its parameters: %s"
@@ -3340,12 +3881,234 @@ hash_to_str_foreach(gpointer key, gpointer value, gpointer user_data)
 	char buffer_tmp[80];
 	GString * str = (GString *)user_data;
 
-	g_snprintf(buffer_tmp, sizeof(buffer_tmp), "%s=%s "
+	g_snprintf(buffer_tmp, sizeof(buffer_tmp), "%s=[%s] "
 		, (char *)key, (char *)value);
 	str = g_string_append(str, buffer_tmp);
 }
+
+static void 
+check_queue_duration(lrmd_op_t* op)
+{
+	unsigned long t_stay_in_list = 0;
+	CHECK_ALLOCATED(op, "op", );
+	op->t_perform = time_longclock();
+	t_stay_in_list = longclockto_ms(op->t_perform - op->t_addtolist);
+	if ( t_stay_in_list > WARNINGTIME_IN_LIST) 
+	{
+		lrmd_log(LOG_WARNING
+		,	"perform_ra_op: the operation %s stayed in operation "
+			"list for %lu ms (longer than %d ms)"
+		,	op_info(op), t_stay_in_list
+		,	WARNINGTIME_IN_LIST
+		);
+		dump_data_for_debug();
+	}
+}
 /*
  * $Log: lrmd.c,v $
+ * Revision 1.242  2006/08/16 07:13:37  zhenh
+ * strncpy doesn't add the tail zero if the src is longer than the dest buf. This patch fixes this issue. found by dvlt(Yan Rong Ge)
+ *
+ * Revision 1.241  2006/08/15 10:06:19  zhenh
+ * return fail when we can't get the metadata
+ *
+ * Revision 1.240  2006/08/15 08:51:59  lars
+ * Conflict resolution artifact.
+ *
+ * Revision 1.239  2006/08/15 08:51:31  lars
+ * If the resource has already been postponed once, don't overwrite the
+ * existing timer.
+ *
+ * Revision 1.238  2006/08/15 06:56:02  zhenh
+ * use zero as unset tag of gloop instead of -1. avoid beam complain
+ *
+ * Revision 1.237  2006/08/15 01:48:55  zhenh
+ * remove the more comma
+ *
+ * Revision 1.236  2006/08/14 20:19:20  lars
+ * Minor code cleanups.
+ *
+ * Revision 1.235  2006/08/11 00:11:59  zhenh
+ * downgrade some general log
+ *
+ * Revision 1.234  2006/08/07 15:07:29  alan
+ * Lowered limit on maximum number of simultaneous child processes in the lrmd.
+ *
+ * Revision 1.233  2006/07/19 21:44:17  lars
+ * Coverity #48: rsc was dereferenced before NULL check.
+ *
+ * Revision 1.232  2006/07/13 02:21:42  sunjd
+ * bug1346: resolve the hangup issue
+ *
+ * Revision 1.231  2006/07/12 16:19:00  alan
+ * Disabled the process throttling code in the LRM - to let us get the release out.
+ *
+ * Revision 1.230  2006/06/27 05:33:50  sunjd
+ * close pipe FDs when error happens
+ *
+ * Revision 1.229  2006/06/27 03:27:57  sunjd
+ * bug1349: close pipe FDs when fork failed
+ *
+ * Revision 1.228  2006/06/20 10:40:03  sunjd
+ * Make debug log output the real operation parameters
+ *
+ * Revision 1.227  2006/06/20 09:11:34  sunjd
+ * BEAM: add a check for memory allocation
+ *
+ * Revision 1.226  2006/06/20 08:49:42  sunjd
+ * fix the 'MEMORY NOT PRISTINE' issue; fix a memory leak
+ *
+ * Revision 1.225  2006/06/19 05:49:42  sunjd
+ * (bug1204)set child number limit as 16; degrade some related logs
+ *
+ * Revision 1.224  2006/06/09 06:28:19  sunjd
+ * bug1301
+ *
+ * Revision 1.223  2006/06/09 05:36:55  sunjd
+ * bug1301: donn't update rsc->params while update op->params
+ *
+ * Revision 1.222  2006/05/15 09:06:21  sunjd
+ * prevent null object to be added
+ *
+ * Revision 1.221  2006/04/22 10:31:51  andrew
+ * There can (and will) be multiple monitor operations, the LRM needs to track
+ *   the last occurance of *all* of them
+ *
+ * Revision 1.220  2006/04/03 15:49:27  sunjd
+ * sorry for typo
+ *
+ * Revision 1.219  2006/04/03 15:44:42  sunjd
+ * should fix bug 1163
+ *
+ * Revision 1.218  2006/03/15 02:54:28  sunjd
+ * log output level tweak
+ *
+ * Revision 1.217  2006/03/13 08:35:13  sunjd
+ * Reworkcl with new implementation for
+ * bug756: All output from resource agents should be logged
+ *
+ * Revision 1.216  2006/02/10 06:50:23  alan
+ * Removed destroy_pipe_ra_* functions.
+ *
+ * Revision 1.215  2006/02/10 06:31:46  alan
+ * Put in an is_allocated() check in the code for the destructor...
+ *
+ * Revision 1.214  2006/02/10 05:55:14  alan
+ * Put more code in to catch the invalid file descriptor earlier on.
+ *
+ * Revision 1.213  2006/02/10 05:00:35  alan
+ * Fixed two very small lrmd errors.
+ * Improved checking for bad lrmd file descriptors - hopefully catching things sooner.
+ *
+ * Revision 1.212  2006/02/10 04:06:34  alan
+ * Put in a fix suggested by Sun Jiang Dong for an lrm problem where
+ * we try and read from a closed file descriptor.
+ *
+ * Revision 1.211  2006/02/10 03:20:01  alan
+ * Put in checks for unallocated (freed) operation structures.
+ * Also print out more information in the cases where I/O fails
+ * or file descriptors are invalid.
+ *
+ * Revision 1.210  2006/02/09 23:24:13  alan
+ * Put in some more error messages and more comments better explaining the bugs
+ * in the code.
+ *
+ * Revision 1.209  2006/02/09 08:46:57  sunjd
+ * Fix bug 1008 ( LRMd consumes too much CPU )
+ * But, donnot know the root casue yet. :-(
+ *
+ * Revision 1.208  2006/02/08 10:22:32  sunjd
+ * remove the redundant code
+ *
+ * Revision 1.207  2006/02/07 17:48:39  alan
+ * Changed lrmd_op_copy to not copy the timeout tags and the pid.
+ *
+ * Revision 1.206  2006/02/06 10:01:27  zhenh
+ * initial the timeout tag with -1 in the copy
+ *
+ * Revision 1.205  2006/02/06 07:14:45  zhenh
+ * log the active resoruces when lrmd exit
+ *
+ * Revision 1.204  2006/02/03 16:38:07  alan
+ * Made a minor fix to make sure we don't try and destroy a timer multiple times.
+ *
+ * Revision 1.203  2006/02/02 17:47:07  alan
+ * Fixed some cast errors in reference timer tags.
+ *
+ * Revision 1.202  2006/02/02 17:28:38  alan
+ * Put in a check for a timeout actually being set before removing it...
+ *
+ * Revision 1.201  2006/01/16 10:05:56  sunjd
+ * reset SIGPIPE to SIG_DFL. I think it should be. One related issue is found by Peter Kruse <pk@q-leap.com>, while the solution is proposed by Francis.Montagnac@sophia.inria.fr.
+ *
+ * Revision 1.200  2005/12/27 22:35:07  alan
+ * Changed one message to not come out except at higher debug levels or in case of error.
+ *
+ * Revision 1.199  2005/12/27 21:02:44  alan
+ * Got rid of the static "first_line" variable - it was shared by all operations
+ * which clearly won't work.
+ *
+ * Revision 1.198  2005/12/27 16:59:15  alan
+ * Put in a note about a bug in the form of a FIXME
+ * I can't fix it right this minute.  Sorry...
+ *
+ * Revision 1.197  2005/12/27 16:12:11  alan
+ * Put in a minor fix to only reread (overwrite) the output from stdout if
+ * we haven't already captured it.
+ *
+ * Revision 1.196  2005/12/27 11:06:02  sunjd
+ * Force to read the stdout of the excution of a RA
+ *
+ * Revision 1.195  2005/12/27 10:21:45  sunjd
+ * should be GT
+ *
+ * Revision 1.194  2005/12/26 22:58:29  alan
+ * Made minor reformatting changes and removed extra blanks at end of lines.
+ *
+ * Revision 1.193  2005/12/26 17:35:44  alan
+ * Put in a little more detail in the temporary debugging output.
+ *
+ * Revision 1.192  2005/12/25 23:23:41  alan
+ * Put in some temporary debugging code to just help me figure out
+ * why the permanent debugging code I put in isn't working...
+ *
+ * Revision 1.191  2005/12/25 14:40:35  alan
+ * More debugging output.
+ *
+ * Revision 1.190  2005/12/25 04:33:51  alan
+ * Made some error-only output come out when debug level is high enough
+ *
+ * Revision 1.189  2005/12/25 03:45:00  alan
+ * Dropped two log messages to debug level 3 because they just produce
+ * WAY too much output.
+ *
+ * Revision 1.188  2005/11/24 10:27:01  sunjd
+ * add a log output function for level2 debug
+ *
+ * Revision 1.187  2005/11/17 10:32:56  sunjd
+ * Polish the log message to be more detailed
+ *
+ * Revision 1.186  2005/11/17 07:00:27  sunjd
+ * The fix for bug756
+ *
+ * Revision 1.185  2005/11/15 01:46:06  zhenh
+ * change the way of logger to make BEAM happy
+ *
+ * Revision 1.184  2005/09/29 02:30:41  zhenh
+ * remove local debug_level in lrmd
+ *
+ * Revision 1.183  2005/09/28 20:29:56  gshi
+ * change the variable debug to debug_level
+ * define it in cl_log
+ * move a common function definition from lrmd/mgmtd/stonithd to cl_log
+ *
+ * Revision 1.182  2005/09/26 02:06:49  sunjd
+ * Bug 894:decrease the debug log in debug 1 mode; polish some logs
+ *
+ * Revision 1.181  2005/09/15 00:04:42  gshi
+ * the ipc channel will be destroyed by main loop
+ * we should not destroy it here
+ *
  * Revision 1.180  2005/08/12 05:05:55  zhenh
  * 1,fix a memory leak, the key of hash table is not released. 2, improve the memdump
  *
@@ -3861,3 +4624,4 @@ hash_to_str_foreach(gpointer key, gpointer value, gpointer user_data)
  * Added missing Id and Log
  *
  */
+

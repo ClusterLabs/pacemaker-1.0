@@ -1,4 +1,4 @@
-/* $Id: ccmbitmap.c,v 1.6 2005/07/29 10:32:30 sunjd Exp $ */
+/* $Id: ccmbitmap.c,v 1.7 2005/10/04 15:45:49 gshi Exp $ */
 /* 
  * ccmbitmap.c: functions that manipulate bitmaps
  *
@@ -35,7 +35,7 @@
 /* 	Initialize a bitmap with "nitems" bits, so that every bit is clear. */
 /*	it can be added somewhere on a list. */
 int
-bitmap_create(unsigned char **map, int numBits)
+bitmap_create(char **map, int numBits)
 { 
 	int i, numBytes;
 
@@ -44,7 +44,7 @@ bitmap_create(unsigned char **map, int numBits)
 	} else {
 	  numBytes =  numBits/BitsInByte+1;
 	}
-  *map = g_malloc(sizeof(unsigned char)*numBytes);
+  *map = g_malloc(sizeof(char)*numBytes);
   assert(*map);
   for ( i = 0 ; i < numBytes; i++ )
     (*map)[i] = 0;
@@ -67,13 +67,13 @@ bitmap_size(int numBits)
 
 /*	delete bitmap */
 void
-bitmap_delete(unsigned char *map) {
+bitmap_delete(char *map) {
   g_free(map);
 }
 
 /*	mark the which bit as set */
 void 
-bitmap_mark(int which, unsigned char *map, int numBits) {
+bitmap_mark(int which, char *map, int numBits) {
   assert(which >= 0 && which < numBits);
   map[which / BitsInByte] |= 1 << (which % BitsInByte);
 }
@@ -81,7 +81,7 @@ bitmap_mark(int which, unsigned char *map, int numBits) {
 
 /* 	Clear the "which" bit in a bitmap. */
 void 
-bitmap_clear(int which, unsigned char *map, int numBits) {
+bitmap_clear(int which, char *map, int numBits) {
   assert(which >= 0 && which < numBits);
   map[which / BitsInByte] &= ~(1 << (which % BitsInByte));
 }
@@ -89,7 +89,7 @@ bitmap_clear(int which, unsigned char *map, int numBits) {
 
 /* 	Return TRUE if the "which" bit is set. */
 int 
-bitmap_test(int which, const unsigned char *map, int numBits)
+bitmap_test(int which, const char *map, int numBits)
 {
   assert(which >= 0 && which < numBits);
   if (map[which / BitsInByte] & (1 << (which % BitsInByte)))
@@ -100,7 +100,7 @@ bitmap_test(int which, const unsigned char *map, int numBits)
 
 /* 	Return total number of bits already set  */
 int 
-bitmap_count(const unsigned char *map, int numBits) 
+bitmap_count(const char *map, int numBits) 
 {
   int count, i;
 
@@ -114,7 +114,7 @@ bitmap_count(const unsigned char *map, int numBits)
 
 /* 	Print the contents of the bitmap, for debugging. */
 void
-bitmap_print(unsigned char *map, int numBits, char * comments)
+bitmap_print(char *map, int numBits, char * comments)
 {
   int i;
 
@@ -127,7 +127,7 @@ bitmap_print(unsigned char *map, int numBits, char * comments)
 
 /*	Reset the bitmap. */
 void
-bitmap_reset(unsigned char *map, int numBits)
+bitmap_reset(char *map, int numBits)
 {
   int i;
 

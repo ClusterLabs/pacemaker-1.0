@@ -24,6 +24,8 @@
 #
 # Copyright:	(C) 2005 International Business Machines
 
+VARRUN=@localstatedir@/run
+MAILTOFILE=$VARRUN/MailTo
 #######################################################################
 # Initialization:
 
@@ -33,15 +35,11 @@
 
 ARGS="$0 $*"
 
-# Source function library.
-prefix=@prefix@
-exec_prefix=@exec_prefix@
-
 us=`uname -n`
 
 usage() {
   echo "Usage: $0 {start|stop|status|monitor|meta-data|validate-all}"
-  echo "$Id: MailTo.in,v 1.3 2005/07/27 08:26:57 sunjd Exp $"
+  echo "$Id: MailTo.in,v 1.8 2006/03/10 04:14:20 xunsun Exp $"
 }
 
 meta_data() {
@@ -58,7 +56,7 @@ a takeover occurs.
 <shortdesc lang="en">MailTo resource agent</shortdesc>
 
 <parameters>
-<parameter name="email" unique="0">
+<parameter name="email" unique="0" required="1">
 <longdesc lang="en">
 The email address of sysadmin.
 </longdesc>
@@ -107,23 +105,31 @@ SubjectLine() {
 
 MailToStart() {
 
-	Subject="`SubjectLine $subject` Takeover in progress on $us"
+	Subject="`SubjectLine $subject` Takeover in progress at `date` on $us"
 
 	MailProgram "$Subject" $1
+	touch $MAILTOFILE
 	return $?
 }
 
 MailToStop () {
-	Subject="`SubjectLine $subject` Migrating resource away from $us"
+	Subject="`SubjectLine $subject` Migrating resource away at `date` from $us"
 
 	MailProgram "$Subject" $1
+	rm -f $MAILTOFILE
 	return $?
 }
 
 MailToStatus () {
-	echo "stopped"
+	ocf_log warn "Don't stat/monitor me! MailTo is a pseudo resource agent, so the status reported may be incorrect"
 
-	return $OCF_NOT_RUNNING
+	if [ -f $MAILTOFILE ]; then
+		echo "running"
+		return $OCF_SUCCESS
+	else
+		echo "stopped"
+		return $OCF_NOT_RUNNING
+	fi
 }
 
 MailToValidateAll () {
@@ -173,6 +179,12 @@ case $1 in
   meta-data)		meta_data
 			exit $OCF_SUCCESS
 			;;
+	#	Not quite sure what to do with this one...
+	#	We aren't a continuously running service - so it's not clear
+	#
+  status|monitor)	MailToStatus
+			exit $?
+			;;
   usage)		usage
 			exit $OCF_SUCCESS
 			;;
@@ -194,11 +206,6 @@ case $1 in
   start)		MailToStart
 			;;
   stop)			MailToStop
-			;;
-	#	Not quite sure what to do with this one...
-	#	We aren't a continuously running service - so it's not clear
-	#
-  status|monitor)	MailToStatus
 			;;
   validate-all)		MailToValidateAll
 			;;

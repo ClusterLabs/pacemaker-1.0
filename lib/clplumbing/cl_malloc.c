@@ -1,4 +1,4 @@
-/* $Id: cl_malloc.c,v 1.19 2005/07/29 10:19:02 sunjd Exp $ */
+/* $Id: cl_malloc.c,v 1.28 2006/07/12 09:32:28 andrew Exp $ */
 /*
  * Copyright (C) 2000 Alan Robertson <alanr@unix.sh>
  *
@@ -18,6 +18,7 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
+#define HA_MALLOC_ORIGINAL
 #include <portability.h>
 #include <unistd.h>
 #include <stdlib.h>
@@ -31,6 +32,7 @@
 #endif
 #include <clplumbing/cl_malloc.h>
 #include <clplumbing/cl_log.h>
+#include <clplumbing/longclock.h>
 
 #include <ltdl.h>
 
@@ -51,6 +53,7 @@ static volatile cl_mem_stats_t *	memstats = &default_memstats;
  */
 
 #define	MARK_PRISTINE	1	/* Expensive in CPU time */
+#undef	MARK_PRISTINE
 #define	MAKE_GUARD	1	/* Adds 'n' bytes memory - cheap in CPU*/
 #define	USE_ASSERTS	1
 #define	DUMPONERR	1
@@ -117,9 +120,21 @@ static volatile cl_mem_stats_t *	memstats = &default_memstats;
 
 */
 
+#ifdef HA_MALLOC_TRACK
+#	define HA_MALLOC_OWNER 64
+struct cl_bucket;
+#endif
+
 struct cl_mhdr {
 #	ifdef HA_MALLOC_MAGIC
 	unsigned long	magic;	/* Must match HA_*_MAGIC */
+#endif
+#	ifdef HA_MALLOC_TRACK
+	char			owner[HA_MALLOC_OWNER];
+	struct cl_bucket *	left;
+	struct cl_bucket *	right;
+	int			dumped;
+	longclock_t		mtime;
 #endif
 	size_t		reqsize;
 	int		bucket;
@@ -130,8 +145,7 @@ struct cl_bucket {
 	struct cl_bucket *	next;
 };
 
-
-#define	NUMBUCKS	8
+#define	NUMBUCKS	12
 #define	NOBUCKET	(NUMBUCKS)
 
 static struct cl_bucket*	cl_malloc_buckets[NUMBUCKS];
@@ -140,10 +154,7 @@ static size_t	cl_bucket_sizes[NUMBUCKS];
 static int cl_malloc_inityet = 0;
 static size_t cl_malloc_hdr_offset = sizeof(struct cl_mhdr);
 
-void*		cl_malloc(size_t size);
 static void*	cl_new_mem(size_t size, int numbuck);
-void*		cl_calloc(size_t nmemb, size_t size);
-void		cl_free(void *ptr);
 static void	cl_malloc_init(void);
 static void	cl_dump_item(const struct cl_bucket*b);
 
@@ -191,7 +202,112 @@ static void	cl_dump_item(const struct cl_bucket*b);
 #	define CHECK_GUARD_BYTES(cp, msg)	/* */
 #endif
 
+#define	MALLOCROUND	4096	/* Round big mallocs up to a multiple of this size */
 
+
+#ifdef HA_MALLOC_TRACK
+
+static struct cl_bucket *	cl_malloc_track_root = NULL;
+
+static void
+cl_ptr_tag(void *ptr, const char *file, const char *function, const int line)
+{
+	struct cl_bucket*	bhdr = BHDR(ptr);
+	snprintf(bhdr->hdr.owner, HA_MALLOC_OWNER, "%s:%s:%d",
+			file, function, line);
+}
+
+static void
+cl_ptr_track(void *ptr)
+{
+	struct cl_bucket*	bhdr = BHDR(ptr);
+
+#if defined(USE_ASSERTS)
+	g_assert(bhdr->hdr.left == NULL);
+	g_assert(bhdr->hdr.right == NULL);
+	g_assert((cl_malloc_track_root == NULL) || (cl_malloc_track_root->hdr.left == NULL));
+#endif
+
+	bhdr->hdr.dumped = 0;
+	bhdr->hdr.mtime = time_longclock();
+
+	if (cl_malloc_track_root == NULL) {
+		cl_malloc_track_root = bhdr;
+	} else {
+		bhdr->hdr.right = cl_malloc_track_root;
+		cl_malloc_track_root->hdr.left = bhdr;
+		cl_malloc_track_root = bhdr;
+	}
+}
+
+static void
+cl_ptr_release(void *ptr)
+{
+	struct cl_bucket*	bhdr = BHDR(ptr);
+
+/*	cl_log(LOG_DEBUG, "cl_free: Freeing memory belonging to %s"
+	,		bhdr->hdr.owner); */
+	
+#if defined(USE_ASSERTS)
+	g_assert(cl_malloc_track_root != NULL);
+	g_assert(cl_malloc_track_root->hdr.left == NULL);
+#endif
+
+	if (bhdr->hdr.left != NULL) {
+		bhdr->hdr.left->hdr.right=bhdr->hdr.right;
+	}
+	
+	if (bhdr->hdr.right != NULL) {
+		bhdr->hdr.right->hdr.left=bhdr->hdr.left;
+	}
+	
+	if (cl_malloc_track_root == bhdr) {
+		cl_malloc_track_root=bhdr->hdr.right;
+	}
+
+	bhdr->hdr.left = NULL;
+	bhdr->hdr.right = NULL;
+}
+
+static void
+cl_ptr_init(void)
+{
+	cl_malloc_track_root = NULL;
+}
+
+void
+cl_malloc_dump_allocated(int log_level, gboolean filter)
+{
+	struct cl_bucket*	cursor = cl_malloc_track_root;
+	longclock_t		time_diff;
+
+	cl_log(LOG_INFO, "Dumping allocated memory buffers:");
+	
+	while (cursor != NULL) {
+		if(filter && cursor->hdr.dumped) {
+
+		} else if(log_level > LOG_DEBUG) {
+		} else if(filter) {
+			cl_log(log_level, "cl_malloc_dump: %p owner %s, size %d"
+			,	cursor+cl_malloc_hdr_offset
+			,	cursor->hdr.owner
+			,	cursor->hdr.reqsize);
+		} else {
+			time_diff = sub_longclock(time_longclock(), cursor->hdr.mtime);
+			cl_log(log_level, "cl_malloc_dump: %p owner %s, size %d, dumped %d, age %lu ms"
+			,	cursor+cl_malloc_hdr_offset
+			,	cursor->hdr.owner
+			,	cursor->hdr.reqsize
+			,	cursor->hdr.dumped
+			,	longclockto_long(time_diff));
+		}
+		cursor->hdr.dumped = 1;
+		cursor = cursor->hdr.right;
+	}
+	
+	cl_log(LOG_INFO, "End dump.");
+}
+#endif
 
 /*
  * cl_malloc: malloc clone
@@ -280,13 +396,21 @@ cl_malloc(size_t size)
 	}
 
 	if (ret && memstats) {
-#ifdef HAVE_MALLINFO
+#if 0 && defined(HAVE_MALLINFO)
+		/* mallinfo is too expensive to use :-( */
 		struct mallinfo	i = mallinfo();
 		memstats->arena = i.arena;
 #endif
 		memstats->numalloc++;
 	}
 	if (ret) {
+#ifdef HA_MALLOC_TRACK
+		/* If we were _always_ called via the wrapper functions,
+		 * this wouldn't be necessary, but we aren't, some use
+		 * function pointers directly to cl_malloc() */
+		cl_ptr_track(ret);
+		cl_ptr_tag(ret, "cl_malloc.c", "cl_malloc", 0);
+#endif
 		ADD_GUARD(ret);
 	}
 	return(ret);
@@ -295,7 +419,6 @@ cl_malloc(size_t size)
 int
 cl_is_allocated(const void *ptr)
 {
-
 #ifdef HA_MALLOC_MAGIC
 	if (NULL == ptr || CBHDR(ptr)->hdr.magic != HA_MALLOC_MAGIC) {
 		return FALSE;
@@ -369,6 +492,9 @@ cl_free(void *ptr)
 		DUMPIFASKED();
 		return;
 	}
+#ifdef HA_MALLOC_TRACK
+	cl_ptr_release(ptr);
+#endif
 	bucket = bhdr->hdr.bucket;
 #ifdef HA_MALLOC_MAGIC
 	bhdr->hdr.magic = HA_FREE_MAGIC;
@@ -432,6 +558,11 @@ cl_realloc(void *ptr, size_t newsize)
 		/* NULL is a legal 'ptr' value for realloc... */
 		return cl_malloc(newsize);
 	}
+	if (newsize == 0) {
+		/* realloc() is the most redundant interface ever */
+		cl_free(ptr);
+		return NULL;
+	}
 
 	/* Find the beginning of our "hidden" structure */
 
@@ -462,6 +593,7 @@ cl_realloc(void *ptr, size_t newsize)
 	}
 #endif
 	CHECK_GUARD_BYTES(ptr, "cl_realloc");
+	
 	bucket = bhdr->hdr.bucket;
 
 	/*
@@ -478,10 +610,17 @@ cl_realloc(void *ptr, size_t newsize)
 			memstats->nbytes_alloc += MALLOCSIZE(newsize);
 			memstats->mallocbytes  += MALLOCSIZE(newsize);
 		}
+#ifdef HA_MALLOC_TRACK
+		cl_ptr_release(ptr);
+#endif
 		bhdr = realloc(bhdr, newsize + cl_malloc_hdr_offset + GUARDSIZE);
 		if (!bhdr) {
 			return NULL;
 		}
+#ifdef HA_MALLOC_TRACK
+		cl_ptr_track(ptr);
+		cl_ptr_tag(ptr, "cl_malloc.c", "realloc", 0);
+#endif
 		bhdr->hdr.reqsize = newsize;
 		ptr = (((char*)bhdr)+cl_malloc_hdr_offset);
 		ADD_GUARD(ptr);
@@ -533,6 +672,9 @@ cl_new_mem(size_t size, int numbuck)
 	}
 
 	mallocsize = MALLOCSIZE(allocsize);
+	if (numbuck == NOBUCKET) {
+		mallocsize = (((mallocsize + (MALLOCROUND-1))/MALLOCROUND)*MALLOCROUND);
+	}
 
 	if ((hdrret = malloc(mallocsize)) == NULL) {
 		return NULL;
@@ -542,6 +684,12 @@ cl_new_mem(size_t size, int numbuck)
 	hdrret->hdr.bucket = numbuck;
 #ifdef HA_MALLOC_MAGIC
 	hdrret->hdr.magic = HA_MALLOC_MAGIC;
+#endif
+#ifdef HA_MALLOC_TRACK
+	hdrret->hdr.left = NULL;
+	hdrret->hdr.right = NULL;
+	hdrret->hdr.owner[0] = '\0';
+	hdrret->hdr.dumped = 0;
 #endif
 
 	if (memstats) {
@@ -562,14 +710,64 @@ void *
 cl_calloc(size_t nmemb, size_t size)
 {
 	void *	ret = cl_malloc(nmemb*size);
-
+	
 	if (ret != NULL) {
 		memset(ret, 0, nmemb*size);
+#ifdef HA_MALLOC_TRACK
+		cl_ptr_tag(ret, "cl_malloc.c", "cl_calloc", 0);
+#endif
 	}
 		
 	return(ret);
 }
 
+#ifdef HA_MALLOC_TRACK
+void *
+cl_calloc_track(size_t nmemb, size_t size,
+		const char *file, const char *function, const int line)
+{
+	void*			ret;
+
+	ret = cl_calloc(nmemb, size);
+
+	if (ret) {
+		cl_ptr_tag(ret, file, function, line);
+	}
+
+	return ret;
+}
+
+void*
+cl_realloc_track(void *ptr, size_t newsize,
+		const char *file, const char *function, const int line)
+{
+	void*			ret;
+
+	ret = cl_realloc(ptr, newsize);
+
+	if (ret) {
+		cl_ptr_tag(ret, file, function, line);
+	}
+
+	return ret;
+}
+
+void *
+cl_malloc_track(size_t size, 
+		const char *file, const char *function, const int line)
+{
+	void*	ret;
+	
+	ret = cl_malloc(size);
+	if (ret) {
+		/* Retag with the proper owner. */
+		cl_ptr_tag(ret, file, function, line);
+	}
+
+	return ret;
+}
+
+#endif
 
 /*
  * cl_strdup: strdup clone
@@ -603,7 +801,7 @@ cl_malloc_init()
 {
 	int	j;
 	size_t	cursize = 32;
-	int llcount = 1;
+	int	llcount = 1;
 
 	cl_malloc_inityet = 1;
 
@@ -626,6 +824,9 @@ cl_malloc_init()
 		pristoff = (unsigned char*)&(b.next)-(unsigned char*)&b;
 		pristoff += sizeof(b.next);
 	}
+#endif
+#ifdef HA_MALLOC_TRACK
+	cl_ptr_init();
 #endif
 }
 
@@ -652,6 +853,10 @@ cl_dump_item(const struct cl_bucket*b)
 	const unsigned char *	cp;
 	cl_log(LOG_INFO, "Dumping cl_malloc item @ 0x%lx, bucket address: 0x%lx"
 	,	((unsigned long)b)+cl_malloc_hdr_offset, (unsigned long)b);
+#ifdef HA_MALLOC_TRACK
+	cl_log(LOG_INFO, "Owner: %s"
+	,	b->hdr.owner);
+#endif
 #ifdef HA_MALLOC_MAGIC
 	cl_log(LOG_INFO, "Magic number: 0x%lx reqsize=%ld"
 	", bucket=%d, bucksize=%ld"

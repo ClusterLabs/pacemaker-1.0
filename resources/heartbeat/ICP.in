@@ -1,18 +1,14 @@
 #!/bin/sh
 #
-# $Id: ICP.in,v 1.3 2005/08/26 19:41:01 alan Exp $
+# $Id: ICP.in,v 1.5 2006/08/14 09:37:21 andrew Exp $
 # 
-# ICP
+# Description:	wrapper of OCF RA ICP, based on original heartbeat RA.
+#		See OCF RA ICP for more information.
 #
-# Description:	Manages an ICP Vortex clustered host drive as an HA resource
-#
-#
-# Author:	Lars Marowsky-Bree <lmb@suse.de>
+# Author:	Xun Sun <xunsun@cn.ibm.com>
 # Support:      linux-ha@lists.linux-ha.org
 # License:	GNU General Public License (GPL)
-# Copyright:	(C) 2002 SuSE Linux AG
-#
-
+# Copyright:	(C) 2005 International Business Machines
 #
 # An example usage in /etc/ha.d/haresources: 
 #       node1  10.0.0.170 LinuxSCSI::0:0 ICP::c0h1::/dev/sdb1 LVM::myvolname
@@ -23,210 +19,24 @@
 # See usage() function below for more details...
 #
 
-prefix=@prefix@
-exec_prefix=@exec_prefix@
-. @sysconfdir@/ha.d/shellfuncs
-
-#
-ICPCLUCON=/usr/sbin/icpclucon
-#
-BLOCKDEV=@BLOCKDEV@
-#
-unset LC_ALL; export LC_ALL
-unset LANGUAGE; export LANGUAGE
+. @HB_RA_DIR@/hto-mapfuncs
 
 usage() {
-  methods=`ICP_methods | grep -v methods`
-  methods=`echo $methods | tr ' ' '|'`
-  cat <<-! >&1
-	usage: $0 <ICP cluster drive ID> <Device> ($methods)
-	usage: $0 methods
-
-	$0 manages an ICP Vortex clustered host drive.
-
-	The 'start' operation reserves the given host drive.
-	The 'stop' operation releses the given host drive.
-	The 'status' operation reports whether the host drive is reserved.
-	The 'monitor' operation reports whether the host drive is reserved.
-	The 'methods' operation reports on the methods $0 supports
-
-	$Id: ICP.in,v 1.3 2005/08/26 19:41:01 alan Exp $
-	!
-  exit 1
-
+    echo "usage: $0 <ICP cluster drive ID> <device> $LEGAL_ACTIONS"
+    exit 1
 }
 
-#
-#	run:  run a script, and log its output.
-#
-run() {
-  output=`"$@" 2>&1`
-  rc=$?
-  output=`echo $output`
-  if
-    [ $rc -eq 0 ]
-  then 
-    if
-      [ ! -z "$output" ]
-    then
-      ha_log "info: $output"
-    fi
-    return 0
-  else
-    if
-      [ ! -z "$output" ]
-    then
-      ha_log "ERROR: $output"
-    else
-      ha_log "ERROR: command failed: $*"
-    fi
-    return $rc
-  fi
-}
-
-
-
-#
-# methods: What methods/operations do we support?
-#
-ICP_methods() {
-  cat <<-!
-	start
-	stop
-	status
-	monitor
-	methods
-	!
-}
-
-ICP_status() {
-        local icp_out
-        
-        icp_out=$($ICPCLUCON -v -status $1)
-        if [ $? -ne 0 ]; then
-                ha_log "Hostdrive not reserved by us."
-                return 1
-        fi
-
-        if expr match "$icp_out" \
-                '.*Drive is reserved by this host.*' >/dev/null 2>&1 ; then
-                ha_log "Volume $1 is reserved by us."
-                return 0
-        elif expr match "$icp_out" \
-                '.*Drive is not reserved by any host.*' >/dev/null 2>&1 ; then
-                ha_log "Volume $1 not reserved by any host."
-                return 1
-        else
-                ha_log "Unknown output from icpclucon. Assuming we do not have a reservation:"
-		ha_log "$icp_out"
-                return 1
-        fi
-}
-
-ICP_report_status() {
-  if ICP_status $1 ; then
-	echo "$1: running"
-	return 0
-  else
-	echo "$1: not running"
-	return 1
-  fi
-}
-
-
-#
-#	Monitor the host drive - does it really seem to be working?
-#
-#
-ICP_monitor() {
-
-  if
-    ICP_status $1
-  then
-    : OK
-  else
-    ha_log "ERROR: ICP host drive $1 is offline"
-    return 1
-  fi
-
-}
-
-Clear_bufs() {
-    $BLOCKDEV --flushbufs $2
-}
-
-#
-#	Enable ICP host drive
-#
-ICP_start() {
-
-  ha_log "Activating host drive $1"
-  run $ICPCLUCON -v -reserve $1
-  if [ $? -ne 0 ]; then
-  	ha_log "Forcing reservation of $1"
-	run $ICPCLUCON -v -force $1 || return 1
-  fi
-
-  if
-    ICP_status $1
-  then
-    : OK
-    # A reservation isn't as prompt as it should be
-    sleep 3
-    return 0
-  else
-    ha_log "ERROR: ICP: $1 was not reserved correctly"
-    return 1
-  fi
-}
-
-#
-#	Release the ICP host drive
-#
-ICP_stop() {
-
-  ha_log "Releasing ICP host drive $1"
-  run $ICPCLUCON -v -release $1 || return 1
-
-  ha_log "Verifying reservation"
-  if ICP_status $1 ; then
-    ha_log "ERROR: ICP: $1 was not released correctly"
-    return 1
-  fi
-  return 0
-}
-
-
-#
-#	'main' starts here...
-#
-
-if
-  [ $# -eq 1 -a "methods" = "$1" ]
-then
-  ICP_methods
-  exit $?
+if [ $# != 3 ]; then
+    usage
+    exit 1
 fi
 
-# What kind of method was invoked?
-case "$3" in
+OCF_TYPE=ICP
+OCF_RESOURCE_INSTANCE=${OCF_TYPE}_$1
+export OCF_TYPE OCF_RESOURCE_INSTANCE
 
-  start)	ICP_start $1
-		Clear_bufs $2
-		exit $?;;
+OCF_RESKEY_driveid=$1 
+OCF_RESKEY_device=$2
+export OCF_RESKEY_device OCF_RESKEY_driveid
 
-  stop)		ICP_stop $1
-		Clear_bufs $2
-		exit $?;;
-
-  status)	ICP_report_status $1
-		exit $?;;
-
-  monitor)	ICP_monitor $1
-		exit $?;;
-
-  methods)	ICP_methods
-		exit $?;;
-esac
-
-usage
+ra_execocf $3

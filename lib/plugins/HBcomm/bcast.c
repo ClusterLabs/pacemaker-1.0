@@ -1,4 +1,4 @@
-/* $Id: bcast.c,v 1.43 2005/08/15 21:12:16 gshi Exp $ */
+/* $Id: bcast.c,v 1.47 2006/01/09 21:30:38 alan Exp $ */
 /*
  * bcast.c: UDP/IP broadcast-based communication code for heartbeat.
  *
@@ -310,7 +310,7 @@ bcast_close(struct hb_media* mp)
  * Receive a heartbeat broadcast packet from BCAST interface
  */
 
-char			bcast_pkt[MAXLINE];
+char			bcast_pkt[MAXMSG];
 void *
 bcast_read(struct hb_media* mp, int * lenp)
 {
@@ -328,7 +328,7 @@ bcast_read(struct hb_media* mp, int * lenp)
 			   ,	ei->rsocket, ei->wsocket);
 	}
 
-	if ((numbytes=recvfrom(ei->rsocket, bcast_pkt, MAXLINE-1, MSG_WAITALL
+	if ((numbytes=recvfrom(ei->rsocket, bcast_pkt, MAXMSG-1, MSG_WAITALL
 	,	(struct sockaddr *)&their_addr, &addr_len)) == -1) {
 		if (errno != EINTR) {
 			PILCallLog(LOG, PIL_CRIT
@@ -371,8 +371,19 @@ bcast_write(struct hb_media* mp, void *pkt, int len)
 	if ((rc=sendto(ei->wsocket, pkt, len, 0
 	,	(struct sockaddr *)&ei->addr
 	,	sizeof(struct sockaddr))) != len) {
-		PILCallLog(LOG, PIL_CRIT, "Unable to send bcast [%d] packet: %s"
-		,	rc, strerror(errno));
+
+		struct ha_msg* m;
+
+		int		err = errno;
+		PILCallLog(LOG, PIL_CRIT, "Unable to send bcast [%d] packet(len=%d): %s",
+			   rc,len,  strerror(err));
+		
+		m =  wirefmt2msg(pkt, len,MSG_NEEDAUTH);
+		if (m){
+			cl_log_message(LOG_ERR, m);
+			ha_msg_del(m);
+		}
+		errno = err;
 		return(HA_FAIL);
 	}
 
@@ -750,6 +761,18 @@ if_get_broadaddr(const char *ifn, struct in_addr *broadaddr)
 
 /*
  * $Log: bcast.c,v $
+ * Revision 1.47  2006/01/09 21:30:38  alan
+ * Made sure errno gets preserved in bcast writes with errors...
+ *
+ * Revision 1.46  2005/11/01 21:51:11  gshi
+ * log the message if bcast_write fails
+ *
+ * Revision 1.45  2005/10/26 21:36:22  gshi
+ * print out message len if write fails
+ *
+ * Revision 1.44  2005/10/15 02:37:52  gshi
+ * change MAXLINE to MAXMSG
+ *
  * Revision 1.43  2005/08/15 21:12:16  gshi
  * make the media read() function returns a pointer that is a global varial
  * This should save a malloc, free, and a memcpy for each message

@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-#	$Id: Delay.in,v 1.4 2005/08/29 02:08:28 sunjd Exp $
+#	$Id: Delay.in,v 1.6 2006/08/14 09:37:21 andrew Exp $
 #
 # License:      GNU General Public License (GPL)
 # Support:      linux-ha@lists.linux-ha.org
@@ -15,77 +15,28 @@
 #
 
 usage() {
-  cat <<-!
-	usage: $0 [delay [stopdelay]] {start|stop|status|monitor}";
-  	$Id: Delay.in,v 1.4 2005/08/29 02:08:28 sunjd Exp $
-	!
+  echo "usage: $0 [delay [stopdelay]] $LEGAL_ACTIONS"
   exit 1
 }
 
-. @sysconfdir@/ha.d/shellfuncs
-
-HA_VARRUNDIR=@localstatedir@/run/@HB_PKG@
-VLFILE=$HA_VARRUNDIR/rsctmp/Delay
-
-Delay_stat() {
-    test -f $VLFILE
-
-}
-
-Delay_Status() {
-  if
-    Delay_stat
-  then
-    echo "Delay is running OK"
-    exit 0
-  else
-    echo "Delay is not operational"
-    exit 1
-  fi
-}
-
-Delay_Start() {
-  if
-    Delay_stat
-  then
-    echo "Delay already running"
-    return 0
-  else
-    touch $VLFILE
-    rc=$?
-    sleep $StartDelay
-    return $rc
-  fi
-}
-
-Delay_Stop() {
-  if
-    Delay_stat
-  then
-    unlink $VLFILE
-    rc=$?
-    sleep $StopDelay
-    return $rc
-  else
-    echo "Delay already stopped"
-    return 0
-  fi
-}
-
+. @HB_RA_DIR@/hto-mapfuncs
 
 case $# in
-  1)	StartDelay=30; StopDelay=30; op=$1;;
-  2)	StartDelay=$1; StopDelay=$1; op=$2;;
-  3)	StartDelay=$1; StopDelay=$2; op=$3;;
-  *)	usage; exit 1;;
+  1)	op=$1;;
+  2)	OCF_RESKEY_startdelay=$1; export OCF_RESKEY_startdelay; op=$2;;
+  3)	OCF_RESKEY_startdelay=$1; 
+	OCF_RESKEY_stopdelay=$2; 
+	export OCF_RESKEY_startdelay OCF_RESKEY_stopdelay; 
+	op=$3;;
+  *)	usage;;
 esac
 
-case $op in
-  start)		Delay_Start;;
-  stop)			Delay_Stop;;
-  status|monitor)	Delay_Status;;
+if [ -z $OCF_RESKEY_startdelay ]; then
+    OCF_RESKEY_startdelay=10
+fi
 
-  *)			usage
- 			exit 1;;
-esac
-exit $?
+OCF_TYPE=Delay
+OCF_RESOURCE_INSTANCE=${OCF_TYPE}_${OCF_RESKEY_startdelay}
+export OCF_TYPE OCF_RESOURCE_INSTANCE
+
+ra_execocf $op;;

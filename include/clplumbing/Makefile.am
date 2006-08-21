@@ -26,6 +26,7 @@ includedir=$(base_includedir)/clplumbing
 include_HEADERS	=	\
 	Gmain_timeout.h	\
 	GSource.h	\
+	GSource_internal.h	\
 	apphb_cs.h	\
 	base64.h	\
 	cl_log.h	\
@@ -33,6 +34,7 @@ include_HEADERS	=	\
 	cl_poll.h	\
 	cl_signal.h	\
 	cl_pidfile.h	\
+	cl_random.h	\
 	cl_syslog.h	\
 	cl_uuid.h	\
 	coredumps.h	\
@@ -49,4 +51,9 @@ include_HEADERS	=	\
 	recoverymgr_cs.h\
 	timers.h	\
 	uids.h		\
-	cl_misc.h
+	cl_misc.h	\
+	md5.h		\
+	cl_plugin.h	\
+	cl_tiebreaker.h	\
+	cl_quorum.h	
+	

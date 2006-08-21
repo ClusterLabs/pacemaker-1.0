@@ -1,4 +1,4 @@
-/* $Id: apcmastersnmp.c,v 1.24 2005/05/20 17:50:32 msoffen Exp $ */
+/* $Id: apcmastersnmp.c,v 1.26 2006/05/16 09:01:51 sunjd Exp $ */
 /*
  * Stonith module for APC Masterswitch (SNMP)
  * Copyright (c) 2001 Andreas Piesk <a.piesk@gmx.net>
@@ -161,7 +161,7 @@ struct pluginDevice {
 };
 
 /* for checking hardware (issue a warning if mismatch) */
-static const char* APC_tested_ident[] = {"AP9606","AP7920","AP_other_well_tested"};
+static const char* APC_tested_ident[] = {"AP9606","AP7920","AP7921","AP_other_well_tested"};
 
 /* constant strings */
 static const char *pluginid = "APCMS-SNMP-Stonith";
@@ -180,7 +180,7 @@ static const char *NOTpluginID = "APCMS SNMP device has been destroyed";
 	XML_PARM_LONGDESC_END
 
 #define XML_PORT_PARM \
-	XML_PARAMETER_BEGIN(ST_PORT, "string") \
+	XML_PARAMETER_BEGIN(ST_PORT, "string", "1") \
 	  XML_PORT_SHORTDESC \
 	  XML_PORT_LONGDESC \
 	XML_PARAMETER_END

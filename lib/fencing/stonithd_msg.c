@@ -54,6 +54,7 @@ ha_msg_addhash(struct ha_msg * msg, const char * name, GHashTable * htable)
 		return HA_FAIL;
 	}
 	
+	ZAPMSG(msg_tmp);
 	return HA_OK;
 }
 
@@ -84,7 +85,7 @@ insert_data_pairs(gpointer key, gpointer value, gpointer user_data)
 }
 /* Now just handle string hash table correctly */
 GHashTable *
-cl_get_hashtable(const struct ha_msg * msg, const char * name)
+cl_get_hashtable(struct ha_msg * msg, const char * name)
 {
 	struct ha_msg * tmp_msg = NULL;
 	GHashTable * htable = NULL;

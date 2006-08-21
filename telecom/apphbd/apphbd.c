@@ -1,4 +1,4 @@
-/* $Id: apphbd.c,v 1.63 2005/09/05 03:02:51 msoffen Exp $ */
+/* $Id: apphbd.c,v 1.64 2005/10/15 02:46:24 gshi Exp $ */
 /*
  * apphbd:	application heartbeat daemon
  *
@@ -120,7 +120,6 @@ static int	usenormalpoll = TRUE;
 static int	watchdogfd = -1;
 
 #define CONFIG_FILE "./apphbd.cf"
-#define MAXLINE 128
 #define EOS '\0'
 
 #define DEFAULT_DEBUG_LEVEL	"3"

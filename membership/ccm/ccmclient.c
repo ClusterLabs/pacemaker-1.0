@@ -1,4 +1,4 @@
-/* $Id: ccmclient.c,v 1.27 2005/07/29 10:32:30 sunjd Exp $ */
+/* $Id: ccmclient.c,v 1.45 2006/08/16 09:59:34 zhenh Exp $ */
 /* 
  * client.c: Consensus Cluster Client tracker
  *
@@ -35,30 +35,20 @@ typedef struct ccm_client_s {
 #define CL_MEM    	0x2
 #define CL_ERROR    	0x4
 
-extern int global_verbose;
-extern int global_debug;
 
 typedef struct ccm_ipc_s {
 	int		   count;
-	GMemChunk	   *chkptr;
 	struct IPC_MESSAGE ipcmsg;/*this should be the last field*/
 } ccm_ipc_t;
 
 static ccm_ipc_t *ipc_llm_message  = NULL; /* active low level membership */
 static ccm_ipc_t *ipc_mem_message  = NULL; /* active membership           */
-static ccm_ipc_t *ipc_born_message = NULL; /* active bornon information   */
 static ccm_ipc_t *ipc_misc_message = NULL; /* active misc information     */
 
 #define MAXIPC 100
 
-static GMemChunk *ipc_mem_chk  = NULL;
-static GMemChunk *ipc_born_chk = NULL;
-static GMemChunk *ipc_misc_chk = NULL;
-
-static gboolean llm_flag      = FALSE;
-static gboolean evicted_flag  = FALSE;
-static gboolean prim_flag     = FALSE;
-static gboolean restored_flag = FALSE;
+static gboolean membership_ready     = FALSE;
+static void refresh_llm_msg(llm_info_t *llm);
 
 
 /* 
@@ -82,7 +72,7 @@ send_message(ccm_client_t *ccm_client, ccm_ipc_t *msg)
 		}
 		if(send_rc != IPC_OK){
 			if (chan->ops->get_chan_status(chan) != IPC_CONNECT){
-				cl_log(LOG_WARNING, "Channel is dead.  Cannot send message.");
+				ccm_debug(LOG_WARNING, "Channel is dead.  Cannot send message.");
 				break;
 			}else {
 				cl_shortsleep();				
@@ -99,9 +89,9 @@ static void
 send_func(gpointer key, gpointer value, gpointer user_data)
 {
 	ccm_client_t  	   *ccm_client = (ccm_client_t *)value;
-
-	if(evicted_flag) {
-		/*send evicted message*/
+	int msg_type = GPOINTER_TO_INT(user_data);
+	switch (msg_type) {
+	case CCM_EVICTED:
 		if(ccm_client->ccm_flags == CL_MEM) {
 			struct IPC_CHANNEL* chan = ccm_client->ccm_ipc_client;
 			
@@ -114,62 +104,30 @@ send_func(gpointer key, gpointer value, gpointer user_data)
 			}
 			ccm_client->ccm_flags = CL_INIT;
 		}
-		return;
-	}
-
-	switch(ccm_client->ccm_flags) {
-	case CL_INIT:
-		if(!llm_flag) {
-			break;
-		}
-		/* send llm message */
-		send_message(ccm_client, ipc_llm_message);
-		ccm_client->ccm_flags = CL_LLM;
-		/* 
-		 * FALL THROUGH
-		 */
-	case CL_LLM:
-		if(prim_flag) {
-			/* send born message */
-			send_message(ccm_client, ipc_born_message);
-			/* send mem message */
+		break;
+	case CCM_INFLUX:
+		send_message(ccm_client, ipc_misc_message);
+		break;
+	case CCM_NEW_MEMBERSHIP:
+		if(membership_ready) {
+			send_message(ccm_client, ipc_llm_message);
 			send_message(ccm_client, ipc_mem_message);
-			ccm_client->ccm_flags = CL_MEM;
-		} 
-		break;
-
-	case CL_MEM:
-		if(restored_flag){
-			/* send restored message */
-			send_message(ccm_client, 
-					ipc_misc_message);
-		}else if(prim_flag) {
-			/* send mem message */
-			send_message(ccm_client, 
-					ipc_mem_message);
-		}else {
-			/* send nonprimary message */
-			send_message(ccm_client, 
-					ipc_misc_message);
 		}
 		break;
-	default :
-		break;
+	default:
+		ccm_log(LOG_ERR, "send_func:unknown message");
 	}
 }
 
 static void
 delete_message(ccm_ipc_t *ccmipc)
 {
-	GMemChunk  *chkptr = ccmipc->chkptr;
-	if(chkptr){
-		g_mem_chunk_free(chkptr, ccmipc);
-		ccmipc->chkptr = NULL;
-	}
+	g_free(ccmipc);
 }
 
 static 
-void  send_func_done(struct IPC_MESSAGE *ipcmsg)
+void  
+send_func_done(struct IPC_MESSAGE *ipcmsg)
 {
 	ccm_ipc_t *ccmipc = (ccm_ipc_t *)ipcmsg->msg_private;
 	int count = --(ccmipc->count);
@@ -182,17 +140,12 @@ void  send_func_done(struct IPC_MESSAGE *ipcmsg)
 
 
 static ccm_ipc_t *
-create_message(GMemChunk *chk, void *data, int size)
+create_message(void *data, int size)
 {
 	ccm_ipc_t *ipcmsg;
 
-	if(chk){
-		ipcmsg = g_chunk_new(ccm_ipc_t, chk);
-	} else {
-		ipcmsg = g_malloc(sizeof(ccm_ipc_t)+size);
-	}
+	ipcmsg = g_malloc(sizeof(ccm_ipc_t)+size);
 
-	ipcmsg->chkptr = chk;
 	ipcmsg->count = 0;
 	
 	memset(&ipcmsg->ipcmsg, 0, sizeof(IPC_Message));
@@ -210,10 +163,10 @@ create_message(GMemChunk *chk, void *data, int size)
 
 
 static void 
-send_all(void)
+send_all(int msg_type)
 {
 	if(g_hash_table_size(ccm_hashclient)) {
-		g_hash_table_foreach(ccm_hashclient, send_func, NULL);
+		g_hash_table_foreach(ccm_hashclient, send_func, GINT_TO_POINTER(msg_type));
 	}
 	return;
 }
@@ -223,7 +176,7 @@ flush_func(gpointer key, gpointer value, gpointer user_data)
 {
 	struct IPC_CHANNEL *ipc_client = (struct IPC_CHANNEL *)key;
 	while(ipc_client->ops->is_sending_blocked(ipc_client)) {
-		cl_log(LOG_WARNING, "ipc channel blocked");
+		ccm_debug(LOG_WARNING, "ipc channel blocked");
 		cl_shortsleep();
 		if(ipc_client->ops->resume_io(ipc_client) == IPC_BROKEN) {
 			break;
@@ -243,15 +196,15 @@ flush_all(void)
 static void
 cleanup(void)
 {
-	evicted_flag=FALSE;
-	prim_flag=FALSE;
-	restored_flag=FALSE;
+	membership_ready=FALSE;
 	flush_all(); /* flush out all the messages to all the clients*/
-	g_mem_chunk_reset(ipc_mem_chk);
-	g_mem_chunk_reset(ipc_born_chk);
-	g_mem_chunk_reset(ipc_misc_chk);
+	if (ipc_mem_message) {
+		delete_message(ipc_mem_message);
+	}
+	if (ipc_misc_message) {
+		delete_message(ipc_misc_message);
+	}
 	ipc_mem_message = NULL;
-	ipc_born_message = NULL;
 	ipc_misc_message = NULL;
 
 	/* NOTE: ipc_llm_message is never destroyed. */
@@ -265,7 +218,7 @@ void
 client_init(void)
 {
 	if(ccm_hashclient) {
-		cl_log(LOG_INFO, "ccm: client already initialized");
+		ccm_log(LOG_INFO, "client already initialized");
 		return;
 	}
 	ccm_hashclient =  g_hash_table_new(g_direct_hash, 
@@ -280,7 +233,7 @@ client_add(struct IPC_CHANNEL *ipc_client)
 	ccm_client_t  *ccm_client;
 
 	if(!ccm_hashclient) {
-		cl_log(LOG_ERR, "ccm: client subsystem not initialized");
+		ccm_log(LOG_ERR, "client subsystem not initialized");
 		return -1;
 	}
 
@@ -291,7 +244,7 @@ client_add(struct IPC_CHANNEL *ipc_client)
 	ccm_client->ccm_ipc_client = ipc_client;
 	ccm_client->ccm_flags = CL_INIT;
 
-	send_func(ipc_client, ccm_client, NULL);
+	send_func(ipc_client, ccm_client, (gpointer)CCM_NEW_MEMBERSHIP);
 
 	g_hash_table_insert(ccm_hashclient, ipc_client, ccm_client);
 	return 0;
@@ -336,36 +289,20 @@ client_delete_all(void)
 }
 
 
-/* a sophisticated quorum algorithm has to be introduced here
- *  currently we are just using the simplest algorithm
- */
 static gboolean
-mem_quorum(llm_info_t* llm, int member_count)
+get_quorum(ccm_info_t* info)
 {
-	int	inactive_count = llm_get_inactive_node_count(llm);
-	int	total_count = llm->nodecount;
-	
-	cl_log(LOG_INFO, "n_member=%d, nodecount=%d, inactive_count=%d",
-	       member_count, total_count, inactive_count); 
-	
-	/* XXX REVISIT TODO: This is a temporary WORK-AROUND for the two
-	 * node clusters. With one node missing, always assume quorum.
-	 * This will be farmed out to plugins later! */
-	if (total_count == 2) {
-		cl_log(LOG_INFO, "Asserting quorum for two node cluster!");
-		return TRUE;
+	if (info->has_quorum != -1) {
+		return info->has_quorum;
 	}
-	
-	if(member_count <((total_count - inactive_count)/2 + 1)){
-		return FALSE;
-	}
-	return TRUE;
+	return ccm_calculate_quorum(info);
 }
+
 static void
 display_func(gpointer key, gpointer value, gpointer user_data)
 {
 	ccm_client_t * ccm_client = (ccm_client_t*) value;
-	cl_log(LOG_INFO, "client: pid =%d", ccm_client->ccm_ipc_client->farside_pid);	
+	ccm_debug(LOG_DEBUG, "client: pid =%d", ccm_client->ccm_ipc_client->farside_pid);	
 	
 	return;
 }
@@ -376,43 +313,44 @@ client_new_mbrship(ccm_info_t* info, void* borndata)
 	/* creating enough heap memory in order to avoid allocation */
 	static struct born_s	bornbuffer[MAXNODE+10];
 	ccm_meminfo_t *ccm=(ccm_meminfo_t *)bornbuffer;
-	ccm_born_t    *born=(ccm_born_t *)bornbuffer;
 	struct born_s *born_arry = (struct born_s *)borndata;
-	int		n = info->ccm_nodeCount;
+	int		n = info->memcount;
 	int		trans = info->ccm_transition_major;
 	int*		member = info->ccm_member;
+	int i, j;
 	
 	assert( n<= MAXNODE);
 
-	prim_flag=TRUE;
-	restored_flag=FALSE;
+	membership_ready=TRUE;
 
 
 	ccm->ev = CCM_NEW_MEMBERSHIP;
 	ccm->n = n;
 	ccm->trans = trans;
-	ccm->quorum = mem_quorum(&info->llm, n);
-	memcpy(ccm->member, member, n*sizeof(int));
+	ccm->quorum = get_quorum(info);
+	(void)get_quorum;
+	ccm_debug(LOG_DEBUG, "quorum is %d", ccm->quorum);
+
+
+	for (i = 0; i < n; i++) {
+		ccm->member[i].index = member[i];
+		ccm->member[i].bornon = -1;
+		for (j = 0; j < n; j ++) {
+			if (born_arry[j].index == ccm->member[i].index) {
+				ccm->member[i].bornon = born_arry[j].bornon;
+			}
+		}
+	}	
 
 	if(ipc_mem_message && --(ipc_mem_message->count)==0){
 		delete_message(ipc_mem_message);
 	}
-	ipc_mem_message = create_message(ipc_mem_chk, ccm, 
- 			(sizeof(ccm_meminfo_t) + n*sizeof(int)));
+	ipc_mem_message = create_message(ccm, 
+ 			(sizeof(ccm_meminfo_t) + n*sizeof(born_t)));
 	ipc_mem_message->count++;
-
-	/* bornon array is sent in a seperate message */
-	born->n = n;
-	memcpy(born->born, born_arry, n*sizeof(struct born_s));
-	if(ipc_born_message && --(ipc_born_message->count)==0){
-		delete_message(ipc_born_message);
-	}
-	ipc_born_message = create_message(ipc_born_chk, born, 
-					  sizeof(ccm_born_t )+n*sizeof(struct born_s));
-	ipc_born_message->count++;
-	
+	refresh_llm_msg(&info->llm);
 #if 1
-	cl_log(LOG_INFO, "delivering new membership to %d clients: ",
+	ccm_debug(LOG_DEBUG, "delivering new membership to %d clients: ",
 	       g_hash_table_size(ccm_hashclient));
 	if(g_hash_table_size(ccm_hashclient)){
 		g_hash_table_foreach(ccm_hashclient, display_func, NULL);	
@@ -421,10 +359,8 @@ client_new_mbrship(ccm_info_t* info, void* borndata)
 	(void)display_func;
 #endif 
 	
-	send_all();
-	if(global_verbose) {
-		cl_log(LOG_DEBUG, "membership state: new membership");
-	}
+	send_all(CCM_NEW_MEMBERSHIP);
+	ccm_debug2(LOG_DEBUG, "membership state: new membership");
 }
 
 
@@ -433,20 +369,17 @@ client_influx(void)
 {
 	int type = CCM_INFLUX;
 
-	if(prim_flag){
-		prim_flag = FALSE;
-		restored_flag = FALSE;
+	if(membership_ready){
+		membership_ready = FALSE;
 		if(ipc_misc_message && --(ipc_misc_message->count)==0){
 			delete_message(ipc_misc_message);
 		}
-		ipc_misc_message = create_message(ipc_misc_chk, 
-				&type, sizeof(int));
+		ipc_misc_message = create_message(&type, sizeof(int));
 		ipc_misc_message->count++;
-		send_all();
+		send_all(CCM_INFLUX);
 	}
 
-	if(global_verbose)
-		cl_log(LOG_DEBUG, "membership state: not primary");
+	ccm_debug2(LOG_DEBUG, "membership state: not primary");
 }
 
 
@@ -454,63 +387,49 @@ void
 client_evicted(void)
 {
 	int type = CCM_EVICTED;
-	evicted_flag=TRUE;
-	if(llm_flag) {
-		if(ipc_misc_message && --(ipc_misc_message->count)==0){
-			delete_message(ipc_misc_message);
-		}
-		ipc_misc_message = create_message(ipc_misc_chk, 
-				&type, sizeof(int));
-		ipc_misc_message->count++;
-		send_all();
+	if(ipc_misc_message && --(ipc_misc_message->count)==0){
+		delete_message(ipc_misc_message);
 	}
-	cleanup();
-	if(global_verbose)
-		cl_log(LOG_DEBUG, "membership state: evicted");
-}
+	ipc_misc_message = create_message(&type, sizeof(int));
+	ipc_misc_message->count++;
+	send_all(CCM_EVICTED);
 
+	cleanup();
+	ccm_debug2(LOG_DEBUG, "membership state: evicted");
+}
 
 void 
 client_llm_init(llm_info_t *llm)
 {
-	char memstr[] = "membership chunk";
-	char bornstr[] = "born chunk";
-	char miscstr[] = "misc chunk";
-	int  maxnode = LLM_GET_NODECOUNT(llm);
+	refresh_llm_msg(llm);
+	return;
+}
+
+void 
+refresh_llm_msg(llm_info_t *llm)
+{
+	int  maxnode = llm_get_nodecount(llm);
        	int size = sizeof(ccm_llm_t)+ maxnode*sizeof(struct node_s);
 	ccm_llm_t *data = (ccm_llm_t *)g_malloc(size);
 	int  i;
 
+	data->ev = CCM_LLM;
 	/* copy the relevent content of llm into data */
 	CLLM_SET_NODECOUNT(data,maxnode);
-	CLLM_SET_MYNODE(data, LLM_GET_MYNODE(llm));
+	CLLM_SET_MYNODE(data, llm_get_myindex(llm));
 	for ( i = 0; i < maxnode; i ++ ) {
-		CLLM_SET_NODEID(data,i,LLM_GET_NODEID(llm,i));
-		CLLM_SET_UUID(data,i,LLM_GET_UUID(llm,i));
+		CLLM_SET_NODEID(data,i,llm_get_nodename(llm,i));
+		CLLM_SET_UUID(data,i,i);
+
 	}
 
-	ipc_llm_message = create_message(NULL, data, size);
+	if(ipc_llm_message && --(ipc_llm_message->count)==0){
+		delete_message(ipc_llm_message);
+	}
+	ipc_llm_message = create_message(data, size);
+	ipc_llm_message->count++;
 	g_free(data);
-	ipc_llm_message->count++; /* make sure it never gets
-				     	dellocated */
-	llm_flag = TRUE;
-
-	ipc_mem_chk = g_mem_chunk_new(memstr,
-				sizeof(ccm_ipc_t)+
-				sizeof(ccm_meminfo_t)+
-				maxnode*sizeof(int), 
-				MAXIPC, G_ALLOC_AND_FREE);
-	ipc_born_chk = g_mem_chunk_new(bornstr,
-				sizeof(ccm_ipc_t)+
-				sizeof(ccm_born_t)+
-				maxnode*sizeof(struct born_s), 
-				MAXIPC, G_ALLOC_AND_FREE);
-	ipc_misc_chk = g_mem_chunk_new(miscstr,
-				sizeof(ccm_ipc_t)+
-				sizeof(int), 
-				MAXIPC, G_ALLOC_AND_FREE);
-
-	/* check if anybody is waiting */
-	send_all();
+	
 	return;
 }
+
