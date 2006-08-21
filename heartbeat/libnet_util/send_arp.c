@@ -1,4 +1,4 @@
-/* $Id: send_arp.c,v 1.21 2005/08/29 01:44:57 sunjd Exp $ */
+/* $Id: send_arp.c,v 1.22 2005/09/21 10:30:16 andrew Exp $ */
 /* 
  * send_arp
  * 
@@ -190,7 +190,11 @@ main(int argc, char *argv[])
 		unlink(pidfilename);
 		return EXIT_FAILURE;
 	}
+#ifdef ON_DARWIN
+ 	if ((signed)(ip = libnet_name2addr4(l, (unsigned char *)ipaddr, 1)) == -1) {
+#else
 	if ((signed)(ip = libnet_name2addr4(l, ipaddr, 1)) == -1) {
+#endif
 		cl_log(LOG_ERR, "Cannot resolve IP address [%s]", ipaddr);
 		unlink(pidfilename);
 		return EXIT_FAILURE;
@@ -672,6 +676,9 @@ write_pid_file(const char *pidfilename)
 
 /*
  * $Log: send_arp.c,v $
+ * Revision 1.22  2005/09/21 10:30:16  andrew
+ * Darwin wants an unsigned char* for ipaddr
+ *
  * Revision 1.21  2005/08/29 01:44:57  sunjd
  * bug799: move rsctmp to /var/run/heartbeat
  *

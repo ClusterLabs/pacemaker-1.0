@@ -113,7 +113,7 @@ esac
 #
 CheckConfigFile() {
   if
-    [ ! -f $1 ]
+    [ ! -f $1 ] 
   then
     return 0
   fi
@@ -159,6 +159,8 @@ GenerateHaCf() {
 	stonith_host * null $LOCALNODE $DUMMYNODE
 	mcast $INTERFACE $MCASTIP 694 0 0
 	#bcast $INTERFACE
+        ping 127.0.0.1
+        ping_group pingus_please 127.0.0.1
 	node $LOCALNODE $DUMMYNODE
 	use_logd off
 	respawn @HA_CCMUSER@ $HBLIB/ccm
@@ -182,6 +184,8 @@ GenerateCrmdHaCf() {
 	initdead 5
 	mcast $INTERFACE $MCASTIP 694 0 0
 	#bcast $INTERFACE
+        ping 127.0.0.1
+        ping_group pingus_please 127.0.0.1
 	node $LOCALNODE $DUMMYNODE
 	use_logd off
 	crm yes
@@ -209,7 +213,7 @@ GenerateHaResources() {
 	!
   chmod 644 $1
 }
-CONFIGFILES="$HADIR/ha.cf $HADIR/authkeys $HADIR/haresources @HA_VARLIBDIR@/heartbeat/crm/cib.xml @HA_VARLIBDIR@/heartbeat/crm/cib_backup.xml"
+CONFIGFILES="$HADIR/ha.cf $HADIR/authkeys $HADIR/haresources @HA_VARLIBDIR@/heartbeat/crm/cib.xml @HA_VARLIBDIR@/heartbeat/crm/cib_backup.xml @HA_VARLIBDIR@/heartbeat/hostcache"
 
 SetUpConfigFiles() {
   if
@@ -263,7 +267,8 @@ SaveConfigFiles() {
 }
 
 RestoreConfigFiles() {
-  mv $HADIR/.cfsave/cib*.xml @HA_VARLIBDIR@/heartbeat/crm/ >/dev/null 2>&1
+  mv $HADIR/.cfsave/cib*.xml  @HA_VARLIBDIR@/heartbeat/crm/ >/dev/null 2>&1
+  mv $HADIR/.cfsave/hostcache @HA_VARLIBDIR@/heartbeat/ >/dev/null 2>&1
   mv $HADIR/.cfsave/* $HADIR >/dev/null 2>&1
 }
 
@@ -384,14 +389,17 @@ TestHeartbeat() {
     echo "$CLSTATUS shows heartbeat not running ($?)" | tee -a $LOGFILE
     errcount=`expr $errcount + 1`
   fi
-  if
-    $CLSTATUS nodestatus $LOCALNODE >/dev/null 2>&1
-  then
-   : OK
-  else
-    echo "$CLSTATUS shows local status as dead ($?)" | tee -a $LOGFILE
-    errcount=`expr $errcount + 1`
-  fi
+  for node in $LOCALNODE 127.0.0.1 pingus_please
+  do
+    if
+      $CLSTATUS nodestatus $node >/dev/null 2>&1
+    then
+     : $node status is OK
+    else
+      echo "$CLSTATUS shows status of [$node] as dead ($?)" | tee -a $LOGFILE
+      errcount=`expr $errcount + 1`
+    fi
+  done
 
   #
   # Heartbeat seems to be running...
@@ -837,6 +845,7 @@ then
 fi
 
 SAVELOG=/tmp/linux-ha.testlog
+chmod a+r $LOGFILE
 mv $LOGFILE $SAVELOG
 echo "$errcount errors. Log file is stored in $SAVELOG"
 exit $errcount

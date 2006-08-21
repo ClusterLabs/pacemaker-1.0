@@ -1,4 +1,4 @@
-#	$Id: heartbeat.spec.in,v 1.146 2005/09/14 16:54:31 gshi Exp $
+#	$Id: heartbeat.spec.in,v 1.148 2005/09/22 20:17:35 alan Exp $
 
 # Workaround for a change in RPM 4.1.x; needs proper fixing soon!
 ##%define _unpackaged_files_terminate_build 0
@@ -77,6 +77,16 @@ PILS is designed to support any number of plugins
 implementing any number of interfaces.
 
 %changelog
+* Thu Sep 22 2005  Alan Robertson <alanr@unix.sh> (see doc/AUTHORS file)
++ Version 2.0.2 - small bug fix only release
+  + Fixed a bug in ping directive - it works again
+  + Added a check to BasicSanityCheck to check ping and ping_group directives
+  + fixed cl_status nodestatus to return 0 if a node has status "ping"
+  + fixed a memory leak in the CRM's LRM interface code
+  + fixed code which deterimines which version of the CRM becomes
+    the DC when basic CIB schema versions differ.  It now prefers
+    the older version to be DC instead of the newer version.
+
 * Wed Sep 14 2005  Alan Robertson <alanr@unix.sh> (see doc/AUTHORS file)
 + Version 2.0.1 - 
   + Communication Layer
