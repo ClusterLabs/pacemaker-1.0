@@ -5,8 +5,10 @@ heartbeat-2 (2.0.8-1) unstable; urgency=low
     the changelog for 2.0.6-2 and 2.0.7-1
   * Dropped the following patches as they are now upstream
     - ldirectord-1.141-emailalert-2-global.patch (introduced in 2.0.6-2)
+  * Remove alternate dependancy on netkit-ping as it is being removed
+    from Debian (closes: #383987)
 
- -- Simon Horman <horms@debian.org>  Mon, 14 Aug 2006 19:09:23 +0900
+ -- Simon Horman <horms@debian.org>  Mon, 21 Aug 2006 18:59:15 +0900
 
 heartbeat-2 (2.0.7-1) unstable; urgency=low
 

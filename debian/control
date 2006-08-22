@@ -2,7 +2,7 @@ Source: heartbeat-2
 Section: admin
 Priority: optional
 Maintainer: Simon Horman <horms@debian.org>
-Build-Depends: debhelper (>= 5.0.37.2), libsnmp9-dev, libglib2.0-dev, perl, net-tools, netkit-ping | iputils-ping, python, psmisc, modutils, libnet1-dev, iproute, libtool, libcurl3-openssl-dev, libxml2-dev, bison, flex, uuid-dev, libopenipmi-dev (>= 2.0.1), lynx, libbz2-dev, zlib1g-dev, uuid-dev, libsensors-dev, libltdl3-dev, swig, openssh-client, libgnutls-dev, python-central (>= 0.5), python-dev, libpam0g-dev, libncurses5-dev
+Build-Depends: debhelper (>= 5.0.37.2), libsnmp9-dev, libglib2.0-dev, perl, net-tools, iputils-ping, python, psmisc, modutils, libnet1-dev, iproute, libtool, libcurl3-openssl-dev, libxml2-dev, bison, flex, uuid-dev, libopenipmi-dev (>= 2.0.1), lynx, libbz2-dev, zlib1g-dev, uuid-dev, libsensors-dev, libltdl3-dev, swig, openssh-client, libgnutls-dev, python-central (>= 0.5), python-dev, libpam0g-dev, libncurses5-dev
 Standards-Version: 3.7.2
 XS-Python-Version: current
 
@@ -25,7 +25,7 @@ Package: heartbeat-2
 Section: admin
 Priority: optional
 Architecture: any
-Depends: ${shlibs:Depends}, ${python:Depends}, iproute, adduser, netkit-ping | iputils-ping
+Depends: ${shlibs:Depends}, ${python:Depends}, iproute, adduser, iputils-ping
 Recommends: sysklogd | syslog-ng | system-log-daemon, logrotate, iptables
 Provides: heartbeat, libpils0, libstonith0, stonith
 Conflicts: heartbeat, libpils0, libstonith0, stonith
