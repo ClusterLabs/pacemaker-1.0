@@ -102,6 +102,7 @@ resources/OCF/IPsrcaddr
 resources/OCF/LVM
 resources/OCF/LinuxSCSI
 resources/OCF/MailTo
+resources/OCF/Pure-FTPd
 resources/OCF/Raid1
 resources/OCF/ServeRAID
 resources/OCF/Stateful
