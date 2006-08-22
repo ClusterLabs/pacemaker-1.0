@@ -68,6 +68,11 @@
 #include <clplumbing/cl_pidfile.h>
 #include <clplumbing/Gmain_timeout.h>
 
+#include <assert.h>
+#define ST_ASSERT(cond) assert(cond)
+
+#define ENABLE_PID_AUTH 0
+
 /* For integration with heartbeat */
 #define MAXCMP 80
 #define MAGIC_EC 100
@@ -97,6 +102,7 @@ typedef struct {
 	IPC_Channel * ch;
 	IPC_Channel * cbch;
 	char * removereason;
+	char cookie[16];
 } stonithd_client_t;
 
 typedef enum {
@@ -132,7 +138,8 @@ static const char * stonith_op_strname[] =
 	"QUERY", "RESET", "POWERON", "POWEROFF"
 };
 
-static GHashTable * chan_gsource_pairs = NULL;
+static GHashTable * chan_gsource_pairs = NULL;	/* msg channel => GCHSource */
+static GHashTable * cbch_gsource_pairs = NULL;	/* callback channel => GCHSource */
 static GList * client_list = NULL;
 static GHashTable * executing_queue = NULL;
 static GList * local_started_stonith_rsc = NULL;
@@ -217,11 +224,15 @@ static gboolean stonithd_process_client_msg(struct ha_msg * msg,
 					    gpointer data);
 static int init_client_API_handler(void);
 static void free_client(gpointer data, gpointer user_data);
+#if ENABLE_PID_AUTH
 static stonithd_client_t * find_client_by_farpid(GList * client_list
 						 , pid_t farpid);
+#endif
 static stonithd_client_t * get_exist_client_by_chan(GList * client_list, 
 						    IPC_Channel * ch);
 static int delete_client_by_chan(GList ** client_list, IPC_Channel * ch);
+
+static stonithd_client_t* get_client_by_cookie(GList *client_list, const char *cookie);
 
 /* Client API functions */
 static int on_stonithd_signon(struct ha_msg * msg, gpointer data);
@@ -231,6 +242,8 @@ static int on_stonithd_virtual_stonithRA_ops(struct ha_msg * request,
 					  gpointer data);
 static int on_stonithd_list_stonith_types(struct ha_msg * request,
 					  gpointer data);
+static int on_stonithd_cookie(struct ha_msg * request, gpointer data);
+
 static int stonithRA_operate( stonithRA_ops_t * op, gpointer data );
 static int stonithRA_start( stonithRA_ops_t * op, gpointer data );
 static int stonithRA_stop( stonithRA_ops_t * op, gpointer data );
@@ -352,6 +365,18 @@ static gboolean 	TEST 			= FALSE;
 static IPC_Auth* 	ipc_auth 		= NULL;
 extern int	 	debug_level	       ;
 static int 		stonithd_child_count	= 0;
+
+/* Returns the GCHSource object associated with the given callback channel, 
+ * or NULL if no such association is found. NOTE: _ch_ is evaluated twice.
+ */
+#define CALLBACK_CHANNEL_GCHSOURCE(ch) ( \
+		((cbch_gsource_pairs != NULL) && ((ch) != NULL)) ? \
+		g_hash_table_lookup(cbch_gsource_pairs, (ch)) : NULL )
+
+/* Returns a truth value if the given channel is a callback channel AND 
+ * is being polled in g_main_loop. NOTE: _ch_ is evaluated twice.
+ */
+#define IS_POLLED_CALLBACK_CHANNEL(ch) (CALLBACK_CHANNEL_GCHSOURCE(ch) != NULL)
 
 int
 main(int argc, char ** argv)
@@ -488,8 +513,11 @@ main(int argc, char ** argv)
 		}
 	}
 
-	/* For tracking and remove the g_sources of IPC channels */
+	/* For tracking and remove the g_sources of messaging IPC channels */
 	chan_gsource_pairs = g_hash_table_new(g_direct_hash, g_direct_equal);
+
+	/* For tracking and remove the g_sources of callback IPC channels */
+	cbch_gsource_pairs = g_hash_table_new(g_direct_hash, g_direct_equal);
 
 	/* Initialize some global variables */
 	executing_queue = g_hash_table_new_full(g_int_hash, g_int_equal,
@@ -1367,7 +1395,9 @@ static gboolean
 accept_client_connect_callback(IPC_Channel * ch, gpointer user)
 {
 	struct ha_msg * reply = NULL;
+#if ENABLE_PID_AUTH
 	stonithd_client_t * signed_client = NULL;
+#endif
 	const char * api_reply = ST_APIOK;
 
 	stonithd_log2(LOG_DEBUG, "IPC accepted a callback connection.");
@@ -1389,6 +1419,7 @@ accept_client_connect_callback(IPC_Channel * ch, gpointer user)
 	 *	It only works on Linux -- and then not too reliably - because
 	 *	of bugs in glibc related to threading.
 	 */
+#if ENABLE_PID_AUTH
 	signed_client = find_client_by_farpid(client_list, ch->farside_pid);
 	if (signed_client != NULL) {
 		if (signed_client->cbch != NULL) {
@@ -1402,11 +1433,35 @@ accept_client_connect_callback(IPC_Channel * ch, gpointer user)
 			signed_client->cbch->ops->destroy(signed_client->cbch);
 		}
 		signed_client->cbch = ch;
-	} else {
+	} 
+	else 	/* pid-auth failed, default to cookie-auth */
+#endif
+	{
+		/* Tell the client that we want its cookie to authenticate
+		 * itself, and then poll this channel for the cookie. 
+		 */
+		GCHSource *gsrc;
+		api_reply = ST_COOKIE;
+
+		/* Poll this channel for incoming requests from the client.
+		 * The only request expected on the callback channel is
+		 * ST_SIGNON with cookie provided.  
+		 */
+		gsrc = G_main_add_IPC_Channel(G_PRIORITY_HIGH, ch, FALSE, 
+				stonithd_client_dispatch, (gpointer)ch,
+				stonithd_IPC_destroy_notify);
+
+		/* Insert the polled callback channel into the mapping table 
+		 * so that we can track it. Be sure to remove the mapping 
+		 * when the channel is destroyed.  
+		 */
+		g_hash_table_insert(cbch_gsource_pairs, ch, gsrc);
+#if 0
 		stonithd_log(LOG_ERR
 			     , "%s:%d: Cannot find a signed client pid=%d"
 			     , __FUNCTION__, __LINE__, ch->farside_pid);
 		api_reply = ST_BADREQ;
+#endif
 	}
 
 	if ((reply = ha_msg_new(1)) == NULL) {
@@ -1478,6 +1533,12 @@ stonithd_client_dispatch(IPC_Channel * ch, gpointer user_data)
 	return TRUE;
 }
 
+/**
+ * This handler is invoked by g_main_loop when a polled channel (pointed 
+ * to by _data_) is closed. It removes the client connected on the channel,
+ * and then removes the channel's gsource object from the main loop. The 
+ * channel object itself is not destroyed here.
+ */
 static void
 stonithd_IPC_destroy_notify(gpointer data)
 {
@@ -1504,6 +1565,9 @@ stonithd_IPC_destroy_notify(gpointer data)
 	if ( NULL != (tmp_gsrc = g_hash_table_lookup(chan_gsource_pairs, ch))) {
 		G_main_del_IPC_Channel(tmp_gsrc);
 		g_hash_table_remove(chan_gsource_pairs, ch);
+	} else if ((tmp_gsrc = g_hash_table_lookup(cbch_gsource_pairs, ch))) {
+		G_main_del_IPC_Channel(tmp_gsrc);
+		g_hash_table_remove(cbch_gsource_pairs, ch);
 	} else {
 		stonithd_log(LOG_NOTICE
 			, "%s::%d: Don't find channel's chan_gsource_pairs."
@@ -1532,6 +1596,25 @@ stonithd_process_client_msg(struct ha_msg * msg, gpointer data)
 
 	if ( (api_type = cl_get_string(msg, F_STONITHD_APIREQ)) == NULL) {
 		stonithd_log(LOG_ERR, "got an incorrect api request msg.");
+		ZAPMSG(msg);
+		return TRUE;
+	}
+
+	/* If this is an incoming message from a callback channel, it MUST
+	 * be a SIGNON request with cookie provided. Handle it here so that
+	 * the message handlers can safely assume that they are processing
+	 * requests from the messaging channel.
+	 */
+	if (IS_POLLED_CALLBACK_CHANNEL(ch)) {
+		if (strcmp(api_type, ST_SIGNON) != 0) {
+			stonithd_log(LOG_ERR, "received a non-signon request via "
+					"the callback channel");
+			ZAPMSG(msg);
+			return TRUE;
+		}
+		stonithd_log2(LOG_DEBUG, "stonithd_process_client_msg: received "
+				"signon request from callback channel.");
+		on_stonithd_cookie(msg, ch);
 		ZAPMSG(msg);
 		return TRUE;
 	}
@@ -1565,6 +1648,30 @@ stonithd_process_client_msg(struct ha_msg * msg, gpointer data)
         stonithd_log2(LOG_DEBUG, "stonithd_process_client_msg: end.");
 
         return TRUE;
+}
+
+static int
+generate_cookie(char *buf, size_t size)
+{
+	static int seeded = 0;
+	static const char charset[] = "0123456789"
+		"abcdefghijklmnopqrstuvwxyz"
+		"ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+
+	if (!seeded) {
+		srand(time(NULL));
+		seeded = 1;
+	}
+
+	if (size > 0) {
+		int i;
+		for (i = 0; i < size - 1; i++) {
+			buf[i] = charset[rand() % (sizeof(charset) - 1)];
+		}
+		buf[i] = '\0';
+		return 0;
+	}
+	return -1;
 }
 
 static int
@@ -1647,6 +1754,12 @@ on_stonithd_signon(struct ha_msg * request, gpointer data)
 		goto send_back_reply; 
 	}
 	
+	/* Generate a session cookie for the client so that it can authenticate
+	 * itself when establishing the callback channel. Older stonithd clients
+	 * safely ignores this field.
+	 */
+	(void)generate_cookie(client->cookie, sizeof(client->cookie));
+
 	/* lack the authority check from uid&gid */
 	/* add the client to client list */
  	if ( STRNCMP_CONST(api_reply, ST_APIOK) == 0 ) {
@@ -1667,7 +1780,8 @@ send_back_reply:
 	}
 	if ( (ha_msg_add(reply, F_STONITHD_TYPE, ST_APIRPL) != HA_OK ) 
 	    ||(ha_msg_add(reply, F_STONITHD_APIRPL, ST_RSIGNON) != HA_OK ) 
-	    ||(ha_msg_add(reply, F_STONITHD_APIRET, api_reply) != HA_OK ) ) {
+	    ||(ha_msg_add(reply, F_STONITHD_APIRET, api_reply) != HA_OK ) 
+	    ||(ha_msg_add(reply, F_STONITHD_COOKIE, client->cookie) != HA_OK)) {
 		ZAPMSG(reply);
 		stonithd_log(LOG_ERR, "on_stonithd_signon: cannot add field.");
 		return ST_FAIL;
@@ -1681,6 +1795,127 @@ send_back_reply:
 
 	ZAPMSG(reply);
 	return ST_OK;
+}
+
+/**
+ * Construct a message with the given fields and send it through the given 
+ * ipc channel _ch_ (do not wait for the message to be fully transmitted).
+ *
+ * The fields of the message are passed as name, value pairs, terminated 
+ * by a NULL name. A field with a NULL value is NOT added to the message.
+ *
+ * Returns ST_OK if successful, or ST_FAIL on any error (the error message
+ * is logged through a call to stonithd_log(LOG_ERR)).
+ */
+static int
+stonithd_reply(IPC_Channel *ch, ...)
+{
+	va_list 	ap;
+	struct ha_msg *	reply;
+	const char *	name;
+	const char *	value;
+
+	/* create an empty ha_msg */
+	if (!(reply = ha_msg_new(1))) {
+		stonithd_log(LOG_ERR, "cannot allocate ha_msg");
+		return ST_FAIL;
+	}
+
+	/* add fields */
+	va_start(ap, ch);
+	while ((name = va_arg(ap, const char *))) {
+		if ((value = va_arg(ap, const char *))) {
+			if (ha_msg_add(reply, name, value) != HA_OK) {
+				break;
+			}
+		}
+	}
+	va_end(ap);
+
+	if (name != NULL) {
+		ZAPMSG(reply);
+		stonithd_log(LOG_ERR, "cannot add field %s to reply message", name);
+		return ST_FAIL;
+	}
+
+	/* send the message */
+	if (msg2ipcchan(reply, ch) != HA_OK) { 
+		ZAPMSG(reply);
+		stonithd_log(LOG_ERR, "cannot send reply to ipc channel");
+		return ST_FAIL;
+	}
+
+	/* success */
+	ZAPMSG(reply);
+	return ST_OK;
+}
+
+/* 
+ * Process a "cookie" request received from a callback channel.
+ * 
+ * This request is only sent via the callback channel to authenticate the client
+ * connected to this channel. A string token (aka cookie) is supplied in the 
+ * request. The server looks up the list of registered clients to find the one
+ * with the given cookie, and associates the callback channel with the client.
+ *
+ * If authentication is successful, an RSIGNON/ok reply is sent to the client.
+ * Otherwise, an RSIGNON/fail or RSIGNON/badreq reply is sent, and an error 
+ * message is returned in the ERROR field.
+ *
+ * The request can fail due to any of the following reasons:
+ * - the supplied cookie token is unknown
+ * - there is already a callback channel associated with the client
+ */
+static int
+on_stonithd_cookie(struct ha_msg * request, gpointer data)
+{
+	IPC_Channel * 		ch = (IPC_Channel *)data;
+	const char *		cookie;
+	stonithd_client_t * 	client;
+	const char *		errmsg = NULL;
+	const char * 		ret = ST_APIOK;
+
+	assert(ch != NULL);
+	assert(request != NULL);
+	assert(IS_POLLED_CALLBACK_CHANNEL(ch));
+
+	stonithd_log2(LOG_DEBUG, "on_stonithd_cookie: begin.");
+
+	/* Extract the supplied cookie from the request. */
+	if (!(cookie = ha_msg_value(request, F_STONITHD_COOKIE))) {
+		errmsg = "missing 'cookie' field";
+		ret = ST_BADREQ;
+		goto send_reply;
+	}
+	
+	/* Is this cookie valid? */
+	if (!(client = get_client_by_cookie(client_list, cookie))) {
+		errmsg = "invalid cookie";
+		ret = ST_APIFAIL;
+		goto send_reply;
+	}
+
+	/* Is this client already associated with a callback channel? */
+	if (client->cbch != NULL) {
+		errmsg = "callback channel already registered";
+		ret = ST_APIFAIL;
+		goto send_reply;
+	}
+
+	/* Associate the callback channel with the identified client. */
+	client->cbch = ch;
+	ret = ST_APIOK;
+
+send_reply:
+	if (errmsg) {
+		stonithd_log(LOG_ERR, "on_stonithd_cookie: %s", errmsg);
+	}
+	return stonithd_reply(ch, 
+			F_STONITHD_TYPE,   ST_APIRPL,
+			F_STONITHD_APIRPL, ST_RSIGNON,
+			F_STONITHD_APIRET, ret,
+			F_STONITHD_ERROR,  errmsg,
+			NULL);
 }
 
 static int
@@ -3093,6 +3328,11 @@ get_started_stonith_resource(char * rsc_id )
 	return NULL;
 }
 
+/**
+ * (Deep-) frees the given client object (pointed to by _data_). In addition,
+ * if the client's callback channel is not polled in g_main_loop, destroy the
+ * channel (since it will not be auto-destroyed by clplumbing).
+ */
 static void 
 free_client(gpointer data, gpointer user_data)
 {
@@ -3116,8 +3356,20 @@ free_client(gpointer data, gpointer user_data)
 	client->ch = NULL;
 
 	if (client->cbch != NULL) {
-		client->cbch->ops->destroy(client->cbch);
-		client->cbch = NULL;
+		if (IS_POLLED_CALLBACK_CHANNEL(client->cbch)) {
+			/* The callback channel is polled in g_main_loop, so
+			 * it will be automatically destroyed when the client
+			 * closes the connection.
+			 */
+			client->cbch = NULL;
+		} else {
+			/* We must manually destroy the callback channel since
+			 * it is not maintained by g_main_loop. This can only
+			 * happen with pid-auth.
+			 */
+			client->cbch->ops->destroy(client->cbch);
+			client->cbch = NULL;
+		}
 	} else {
 		stonithd_log(LOG_DEBUG, "%s:%d: client->cbch = NULL "
 				"before freeing"
@@ -3345,6 +3597,11 @@ free_stonith_rsc(stonith_rsc_t * srsc)
 	stonithd_log2(LOG_DEBUG, "free_stonith_rsc: finished.");
 }
 
+/**
+ * Find in _client_list_ the client connected on the given ipc channel _ch_.
+ * Either a messaging channel or a callback channel will do. If no client is
+ * found to be connected on that channel, NULL is returned.
+ */
 static stonithd_client_t *
 get_exist_client_by_chan(GList * client_list, IPC_Channel * ch)
 {
@@ -3380,6 +3637,36 @@ get_exist_client_by_chan(GList * client_list, IPC_Channel * ch)
 	return NULL;
 }
 
+typedef GList * LIST_ITER;
+#define LIST_FOREACH(obj, iter, list) \
+	for (iter = g_list_first(list); \
+	     iter && ((obj = iter->data) || 1); \
+	     iter = g_list_next(iter))
+
+/**
+ * Find the client object with the given cookie and returns a pointer to it.
+ * If the cookie is an empty string, or no client can be found, returns NULL. 
+ */
+static stonithd_client_t *
+get_client_by_cookie(GList *client_list, const char *cookie)
+{
+	LIST_ITER		iter;
+	stonithd_client_t * 	client;
+	
+	ST_ASSERT(client_list != NULL);
+	ST_ASSERT(cookie != NULL);
+
+	/* MUST NOT match an empty cookie with a client without a cookie */
+	if (strcmp(cookie, "") == 0)
+		return NULL;
+
+	LIST_FOREACH(client, iter, client_list) {
+		if (strcmp(client->cookie, cookie) == 0)
+			return client;
+	}
+	return NULL;
+}
+
 #if 0
 /* Remain it for future use */
 static stonithd_client_t *
@@ -3407,6 +3694,7 @@ get_exist_client_by_pid(GList * client_list, pid_t pid)
 }
 #endif
 
+#if ENABLE_PID_AUTH
 static stonithd_client_t *
 find_client_by_farpid(GList * client_list, pid_t farpid)
 {
@@ -3436,7 +3724,13 @@ find_client_by_farpid(GList * client_list, pid_t farpid)
 	stonithd_log2(LOG_DEBUG, "%s:%d: end." , __FUNCTION__, __LINE__);
 	return NULL;
 }
+#endif
 
+/**
+ * Delete the registered client connected on the given ipc channel. The 
+ * channel can be either a messaging channel (client->ch) or a callback 
+ * channel (client->cbch). 
+ */
 static int
 delete_client_by_chan(GList ** client_list, IPC_Channel * ch)
 {

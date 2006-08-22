@@ -50,6 +50,8 @@
 #define F_STONITHD_FRC	    "frc" 	/* final return code */
 #define F_STONITHD_PDATA    "pdata" 	/* private data for callback */
 #define F_STONITHD_NLIST    "nlist" 	/* node name list for final return */
+#define F_STONITHD_COOKIE   "cookie"    /* cookie to identify a client */
+#define F_STONITHD_ERROR    "error"     /* error message of operation */
 
 /* Maximum length for stonithd message type */
 #define MAXLEN_SMTYPE  18
@@ -77,6 +79,7 @@
 #define ST_APIOK	"apiok"
 #define ST_APIFAIL	"apifail"	/* Generic error */
 #define	ST_BADREQ	"badreq"
+#define ST_COOKIE	"cookieauth"	/* cookie authentication required */
 
 #define ZAPMSG(m)       { ha_msg_del(m); (m) = NULL; }
 
