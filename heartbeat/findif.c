@@ -701,7 +701,7 @@ main(int argc, char ** argv) {
 		return(1);
 	}
 
-	if(strchr(netmaskbits, '.') != NULL) {
+	if(netmaskbits != NULL && strchr(netmaskbits, '.') != NULL) {
 		int len = strlen(netmaskbits);
 		ConvertQuadToInt(netmaskbits, len);
 		snprintf(netmaskbits, len, "%d",
