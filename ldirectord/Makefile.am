@@ -34,5 +34,3 @@ man_MANS	        = ldirectord.8 supervise-ldirectord-config.8
 
 ## additional Makefile targets
 # additional installations not covered normally
-install-exec-local:
-	$(mkinstalldirs) $(DESTDIR)$(harcconfdir)
