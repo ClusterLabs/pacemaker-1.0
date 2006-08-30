@@ -30,14 +30,14 @@ from xml.dom.minidom import parseString
 import locale, gettext
 app_name = "haclient"
 
-sys.path.append("@libdir@/heartbeat")
+sys.path.append("@libdir@/heartbeat-gui")
 from pymgmt import *
 
 import pygtk
 pygtk.require('2.0')
 import gtk, gtk.glade, gobject
 
-UI_FILE = "@libdir@/heartbeat/haclient.glade"
+UI_FILE = "@libdir@/heartbeat-gui/haclient.glade"
 
 window = None
 manager = None
@@ -1609,24 +1609,24 @@ class MainWindow :
 		win_widget.connect("delete_event", self.on_delete_event)
 		win_widget.set_title(_("Linux HA Management Client"))
 		win_widget.set_size_request(750, 600)
-		win_widget.set_icon_from_file("@libdir@/heartbeat/ha.png")
+		win_widget.set_icon_from_file("@libdir@/heartbeat-gui/ha.png")
 
 		# add the icons to gtk stock
-		self.load_icon("ha-login","@libdir@/heartbeat/login.png")
-		self.load_icon("ha-logout","@libdir@/heartbeat/logout.png")
-		self.load_icon("ha-exit","@libdir@/heartbeat/exit.png")
-		self.load_icon("ha-standby-node","@libdir@/heartbeat/standby-node.png")
-		self.load_icon("ha-active-node","@libdir@/heartbeat/active-node.png")
-		self.load_icon("ha-add-resource","@libdir@/heartbeat/add-resource.png")
-		self.load_icon("ha-remove-resource","@libdir@/heartbeat/remove-resource.png")
-		self.load_icon("ha-start-resource","@libdir@/heartbeat/start-resource.png")
-		self.load_icon("ha-stop-resource","@libdir@/heartbeat/stop-resource.png")
-		self.load_icon("ha-cleanup-resource","@libdir@/heartbeat/cleanup-resource.png")
-		self.load_icon("ha-default-resource","@libdir@/heartbeat/default-resource.png")
-		self.load_icon("ha-up-resource","@libdir@/heartbeat/up-resource.png")
-		self.load_icon("ha-down-resource","@libdir@/heartbeat/down-resource.png")
-		self.load_icon("ha-master-resource","@libdir@/heartbeat/master-resource.png")
-		self.load_icon("ha-slave-resource","@libdir@/heartbeat/slave-resource.png")
+		self.load_icon("ha-login","@libdir@/heartbeat-gui/login.png")
+		self.load_icon("ha-logout","@libdir@/heartbeat-gui/logout.png")
+		self.load_icon("ha-exit","@libdir@/heartbeat-gui/exit.png")
+		self.load_icon("ha-standby-node","@libdir@/heartbeat-gui/standby-node.png")
+		self.load_icon("ha-active-node","@libdir@/heartbeat-gui/active-node.png")
+		self.load_icon("ha-add-resource","@libdir@/heartbeat-gui/add-resource.png")
+		self.load_icon("ha-remove-resource","@libdir@/heartbeat-gui/remove-resource.png")
+		self.load_icon("ha-start-resource","@libdir@/heartbeat-gui/start-resource.png")
+		self.load_icon("ha-stop-resource","@libdir@/heartbeat-gui/stop-resource.png")
+		self.load_icon("ha-cleanup-resource","@libdir@/heartbeat-gui/cleanup-resource.png")
+		self.load_icon("ha-default-resource","@libdir@/heartbeat-gui/default-resource.png")
+		self.load_icon("ha-up-resource","@libdir@/heartbeat-gui/up-resource.png")
+		self.load_icon("ha-down-resource","@libdir@/heartbeat-gui/down-resource.png")
+		self.load_icon("ha-master-resource","@libdir@/heartbeat-gui/master-resource.png")
+		self.load_icon("ha-slave-resource","@libdir@/heartbeat-gui/slave-resource.png")
 
 		# create ui-manager
 		ui_xml = '''
