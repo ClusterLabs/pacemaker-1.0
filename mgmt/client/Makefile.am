@@ -21,8 +21,9 @@ MAINTAINERCLEANFILES    = Makefile.in
 
 
 halibdir		= $(libdir)/@HB_PKG@
-halib_SCRIPTS		= haclient.py mgmtcmd.py
-halib_DATA		= haclient.glade ha.png login.png logout.png exit.png \
+guilibdir              = $(libdir)/heartbeat-gui
+guilib_SCRIPTS         = haclient.py mgmtcmd.py
+guilib_DATA            = haclient.glade ha.png login.png logout.png exit.png \
 			  standby-node.png active-node.png add-resource.png remove-resource.png \
 			  start-resource.png stop-resource.png master-resource.png slave-resource.png \
 			  default-resource.png up-resource.png down-resource.png cleanup-resource.png
@@ -46,7 +47,7 @@ mozhCN_DATA		= haclient.zh_CN.mo
 install-data-hook:
 	mv $(DESTDIR)/$(datadir)/locale/zh_CN/LC_MESSAGES/haclient.zh_CN.mo $(DESTDIR)/$(datadir)/locale/zh_CN/LC_MESSAGES/haclient.mo
 
-EXTRA_DIST		= $(halib_DATA) $(mozhCN_DATA)
+EXTRA_DIST		= $(guilib_DATA) $(mozhCN_DATA)
 
 .po.mo:
 	$(MSGFMT) -o $@ $<

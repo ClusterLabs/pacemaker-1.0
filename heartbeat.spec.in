@@ -17,7 +17,7 @@ Source: http://linux-ha.org/download/@HB_PKG@-@VERSION@.tar.gz
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-build
 BuildPrereq: glib-devel, @UCDSNMPDEVEL@, perl, iputils, /usr/bin/ssh, openssl-devel, libnet, glib2-devel, python-devel, gnutls-devel
 # libnet available from www.ultramonkey.org and others
-Requires: sysklogd, heartbeat-stonith = %{version}-%{release}, heartbeat-pils = %{version}-%{release}, @RPM_MGMT_RUNTIME_REQUIRES@
+Requires: sysklogd, heartbeat-stonith = %{version}-%{release}, heartbeat-pils = %{version}-%{release}
 BuildRequires: libgcrypt-devel
 
 %package ldirectord
@@ -36,6 +36,11 @@ Group: Utilities
 
 %package pils
 Summary: Provides a general plugin and interface loading library
+Group: Utilities
+
+%package gui
+Requires: @RPM_MGMT_RUNTIME_REQUIRES@
+Summary: Provides a gui interface to manage the heartbeat cluster
 Group: Utilities
 
 %description
@@ -79,6 +84,9 @@ PILS manages both plugins (loadable objects),
 and the interfaces these plugins implement.
 PILS is designed to support any number of plugins
 implementing any number of interfaces.
+
+%description gui
+gui client for heartbeat cluster
 
 %changelog
 * Thu Aug 03 2006  Alan Robertson <alanr@unix.sh> (see doc/AUTHORS file)
@@ -1340,7 +1348,7 @@ make DESTDIR=$RPM_BUILD_ROOT install
 )
 
 %if %{ENABLE_MGMT}
-ln -s @libdir@/heartbeat/haclient.py $RPM_BUILD_ROOT@bindir@/hb_gui
+ln -s @libdir@/heartbeat-gui/haclient.py $RPM_BUILD_ROOT@bindir@/hb_gui
 %endif
 
 ###########################################################
@@ -1428,8 +1436,6 @@ ln -s @libdir@/heartbeat/haclient.py $RPM_BUILD_ROOT@bindir@/hb_gui
 	@libdir@/libhbmgmtcommon.*
 	@libdir@/libhbmgmttls.*
 	/etc/pam.d/hbmgmtd
-	@bindir@/hb_gui
-	@prefix@/share/locale/zh_CN/LC_MESSAGES/haclient.mo
 %endif
 
 ###########################################################
@@ -1437,7 +1443,6 @@ ln -s @libdir@/heartbeat/haclient.py $RPM_BUILD_ROOT@bindir@/hb_gui
 %files ldirectord
 ###########################################################
 %defattr(-,root,root)
-@sysconfdir@/ha.d/conf
 @sbindir@/ldirectord
 @sbindir@/supervise-ldirectord-config
 @sysconfdir@/logrotate.d/ldirectord
@@ -1469,6 +1474,15 @@ ln -s @libdir@/heartbeat/haclient.py $RPM_BUILD_ROOT@bindir@/hb_gui
 @libdir@/libpils.*
 @pils_plugindir@
 #@libdir@/@PILSPKG@
+
+###########################################################
+# Files for the gui
+%files gui
+###########################################################
+%defattr(-,root,root)
+@libdir@/heartbeat-gui
+@bindir@/hb_gui
+@prefix@/share/locale/zh_CN/LC_MESSAGES/haclient.mo
 
 ###########################################################
 %clean
