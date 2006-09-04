@@ -269,7 +269,7 @@ SearchUsingRouteCmd (char *address, struct in_addr *in
 ,	unsigned long *best_netmask
 ,	char *errmsg, int errmsglen)
 {
-	char	dest[20], mask[20];
+	char	mask[20];
 	char	routecmd[MAXSTR];
 	int	best_metric = INT_MAX;	
 	char	buf[2048];
@@ -314,14 +314,6 @@ SearchUsingRouteCmd (char *address, struct in_addr *in
 			strncpy(interface, cp, sizeof(interface));
                   	done++;
 		}
-
-		if (strstr (buf, "destination:")) {
-			/*strsep(&cp, ":");cp++;*/
-			cp = strtok(buf, ":");
-			cp = strtok(NULL, ":");cp++;
-			strncpy(dest, cp, sizeof(dest));
-                  	done++;
-		}
 	}
 	fclose(routefd);
 
@@ -343,10 +335,8 @@ SearchUsingRouteCmd (char *address, struct in_addr *in
 
 	/*
 	 * Solaris (at least) can return the word "default" for mask and dest.
-	 * For the moment, let's interpret this pair as:
+	 * For the moment, let's interpret this as:
 	 *	mask: 0.0.0.0
-	 *	destination: <original IP>
-	 * (Does "dest" ever get used?)
 	 * This was manifesting itself under "BasicSanityCheck", which tries
 	 * to use a remote IP number; these typically use the "default" route.
 	 * Better schemes are warmly invited...
@@ -355,13 +345,7 @@ SearchUsingRouteCmd (char *address, struct in_addr *in
 	if (strncmp(mask, "default", sizeof("default")) == 0) {
 		strncpy (mask, "0.0.0.0", sizeof(mask));
 	}
-	if (strncmp(dest, "default", sizeof("default")) == 0) {
-		strncpy (dest, address, sizeof(dest));
-	}
 #endif
-
-	/* FIXME ... is this used at all?  Delete? */
-	ConvertQuadToInt  (dest, sizeof(dest));
 
 	if (inet_pton(AF_INET, mask, &maskbits) <= 0) {
 		snprintf(errmsg, errmsglen,
@@ -642,6 +626,25 @@ get_ifname(char * buf, char * ifname)
 }
 
 int
+octals_to_bits(const char *octal);
+
+int
+octals_to_bits(const char *octals)
+{
+	int bits = 0;
+	int octal_num = 0;
+	if(octals != NULL) {
+		octal_num = (int)strtol(octals, NULL, 10);
+	}
+	while(octal_num >= 1) {
+		bits++;
+		octal_num = octal_num / 2;
+	}
+	return bits;
+}
+
+
+int
 main(int argc, char ** argv) {
 
 	char *	iparg = NULL;
@@ -698,6 +701,14 @@ main(int argc, char ** argv) {
 		return(1);
 	}
 
+	if(netmaskbits != NULL && strchr(netmaskbits, '.') != NULL) {
+		int len = strlen(netmaskbits);
+		ConvertQuadToInt(netmaskbits, len);
+		snprintf(netmaskbits, len, "%d",
+			 octals_to_bits(netmaskbits));
+		fprintf(stderr, "Rewrote octal netmask as: %s\n", netmaskbits);
+	}
+	
 	/* Validate the netmaskbits field */
 	ValidateNetmaskBits (netmaskbits, &netmask);
 
