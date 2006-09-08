@@ -42,6 +42,8 @@
 #include <fencing/stonithd_api.h>
 #include <fencing/stonithd_msg.h>
 
+#include <assert.h>
+
 static const char * CLIENT_NAME = NULL;
 static pid_t CLIENT_PID = 0;
 static char CLIENT_PID_STR[16];
@@ -82,6 +84,92 @@ static void free_stonithRA_ops_t(stonithRA_ops_t * ra_op);
                 cl_log(priority, fmt); \
         }
 
+static int
+send_request(IPC_Channel *chan, struct ha_msg *request, int timeout)
+{
+	int rc;
+
+	assert(chan != NULL);
+	assert(request != NULL);
+
+	/* Send the request message */
+	if (msg2ipcchan(request, chan) != HA_OK) {
+		stdlib_log(LOG_ERR, "can't send signon message to IPC");
+		return ST_FAIL;
+	}
+
+	/* wait for the output to finish */
+	/* XXX: the time ellapsed should be substracted from timeout 
+	 * each time the call is resumed.
+	 */
+	do { 
+		rc = chan_waitout_timeout(chan, timeout);
+	} while (rc == IPC_INTR);
+
+	if (rc != IPC_OK) {
+		stdlib_log(LOG_ERR, "waitout failed.");
+		return ST_FAIL;
+	}
+	return ST_OK;
+}
+
+static struct ha_msg *
+recv_response(IPC_Channel *chan, int timeout)
+{
+	struct ha_msg *reply;
+        if (IPC_OK != chan_waitin_timeout(chan, timeout)) {
+		stdlib_log(LOG_ERR, "waitin failed."); 
+		return NULL;
+	}
+	if (!(reply = msgfromIPC_noauth(chan))) {
+		stdlib_log(LOG_ERR, "failed to recv response");
+		return NULL;
+	}
+	return reply;
+}
+
+static int
+authenticate_with_cookie(IPC_Channel *chan, const char *cookie) 
+{
+	struct ha_msg *	request;
+	struct ha_msg * reply;
+	const char * 	tmpstr;
+
+	assert(chan != NULL);
+	assert(cookie != NULL);
+
+	if (!(request = create_basic_reqmsg_fields(ST_SIGNON))) {
+		return ST_FAIL;
+	}
+	if (ha_msg_add(request, F_STONITHD_COOKIE, cookie) != HA_OK) {
+		stdlib_log(LOG_ERR, "cannot add field to ha_msg.");
+		ZAPMSG(request);
+		return ST_FAIL;
+	}
+
+	/* Send request/read response */
+	if (send_request(chan, request, DEFAULT_TIMEOUT) != ST_OK) {
+		ZAPMSG(request);
+		return ST_FAIL;
+	}
+	if (!(reply = recv_response(chan, DEFAULT_TIMEOUT))) {
+		return ST_FAIL;
+	}
+	
+	/* Are we signed on this time? */
+	if ( TRUE == is_expected_msg(reply, F_STONITHD_TYPE, ST_APIRPL, 
+			     F_STONITHD_APIRPL, ST_RSIGNON, TRUE) ) {
+		if ( ((tmpstr=cl_get_string(reply, F_STONITHD_APIRET)) != NULL)
+	   	    && (STRNCMP_CONST(tmpstr, ST_APIOK) == 0) ) {
+			ZAPMSG(reply);
+			return ST_OK;
+		}
+	}
+
+	ZAPMSG(reply);
+	return ST_FAIL;
+}
+
 int
 stonithd_signon(const char * client_name)
 {
@@ -96,6 +184,7 @@ stonithd_signon(const char * client_name)
 	gid_t	my_egid;
 	const char * tmpstr;
 	int 	rc_tmp;
+	char * cookie = NULL;
 
 	if (chan == NULL || chan->ch_status == IPC_DISCONNECT) {
 		wchanattrs = g_hash_table_new(g_str_hash, g_str_equal);
@@ -134,6 +223,7 @@ stonithd_signon(const char * client_name)
 	my_egid = getegid();
 	if (  (	ha_msg_add_int(request, F_STONITHD_CEUID, my_euid) != HA_OK )
 	    ||(	ha_msg_add_int(request, F_STONITHD_CEGID, my_egid) != HA_OK )
+	    ||( ha_msg_add(request, F_STONITHD_COOKIE, "") != HA_OK )
 	   ) {
 		stdlib_log(LOG_ERR, "stonithd_signon: "
 			   "cannot add field to ha_msg.");
@@ -181,6 +271,8 @@ stonithd_signon(const char * client_name)
 	   	    && (STRNCMP_CONST(tmpstr, ST_APIOK) == 0) ) {
 			rc = ST_OK;
 			stdlib_log(LOG_DEBUG, "signoned to the stonithd.");
+			/* get cookie if any */
+			cookie = g_strdup(ha_msg_value(reply, F_STONITHD_COOKIE));
 		} else {
 			stdlib_log(LOG_DEBUG, "failed to signon to the "
 				   "stonithd.");
@@ -227,10 +319,29 @@ stonithd_signon(const char * client_name)
 			     F_STONITHD_APIRPL, ST_RSIGNON, TRUE) ) {
 		if ( ((tmpstr=cl_get_string(reply, F_STONITHD_APIRET)) != NULL)
 	   	    && (STRNCMP_CONST(tmpstr, ST_APIOK) == 0) ) {
+			/* 
+			 * If the server directly authenticates us (probably 
+			 * via pid-auth), go ahead.
+			 */
 			stdlib_log(LOG_DEBUG, "%s:%d: Got a good signon reply "
 				  "via the callback channel."
 				   , __FUNCTION__, __LINE__);
+		} else if ( ((tmpstr=cl_get_string(reply, F_STONITHD_APIRET)) != NULL)
+	   	    && (STRNCMP_CONST(tmpstr, ST_COOKIE) == 0) ) {
+			/*
+			 * If the server asks for a cookie to identify myself,
+			 * initiate cookie authentication.
+			 */
+			if (cookie == NULL) {
+				stdlib_log(LOG_ERR, "server requested cookie auth on "
+					"the callback channel, but it didn't "
+					"provide the cookie on the main channel.");
+				rc = ST_FAIL;
+			} else {
+				rc = authenticate_with_cookie(cbchan, cookie);
+			}
 		} else {
+			/* Unknown response. */
 			rc = ST_FAIL;
 			stdlib_log(LOG_ERR, "%s:%d: Got a bad signon reply "
 				  "via the callback channel."
@@ -247,6 +358,10 @@ end:
 	if (ST_OK != rc) {
 		/* Something wrong when confirm via callback channel */
 		stonithd_signoff();
+	}
+	if (cookie) {
+		g_free(cookie);
+		cookie = NULL;
 	}
 
 	return rc;

@@ -5,6 +5,7 @@ syntax: glob
 *.o
 *.la
 *.lo
+*.pyc
 .libs
 .deps
 *.cache
@@ -42,6 +43,7 @@ logs
 cim/mof/register_providers.sh
 cim/mof/unregister_providers.sh
 crm/admin/crm_primitive.py
+crm/admin/cluster
 cts/LSBDummy
 cts/*.py
 doc/cibadmin.8
@@ -100,6 +102,7 @@ resources/OCF/IPsrcaddr
 resources/OCF/LVM
 resources/OCF/LinuxSCSI
 resources/OCF/MailTo
+resources/OCF/Pure-FTPd
 resources/OCF/Raid1
 resources/OCF/ServeRAID
 resources/OCF/Stateful
