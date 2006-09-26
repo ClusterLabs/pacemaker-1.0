@@ -285,6 +285,8 @@ ccm_calculate_quorum(ccm_info_t* info)
 				       __FUNCTION__, begin);
 			}
 			else {
+				funcs->init(ccm_on_quorum_changed
+				,	info->cluster, info->quorum_server);
 				quorum_list = g_list_append(quorum_list, funcs);
 			}
 			begin = (end == NULL)? NULL:end+1;
@@ -322,4 +324,21 @@ ccm_calculate_quorum(ccm_info_t* info)
 	
 	return FALSE;
 	
+}
+gboolean
+ccm_stop_query_quorum(void)
+{
+	struct hb_quorum_fns* funcs = NULL;
+	GList* cur = NULL;
+	if (quorum_list == NULL){
+		return TRUE;
+	}
+	
+	cur = g_list_first(quorum_list);
+	while (cur != NULL) {
+		funcs = (struct hb_quorum_fns*)cur->data;
+		funcs->stop();
+		cur = g_list_next(cur);
+	}
+	return FALSE;
 }
