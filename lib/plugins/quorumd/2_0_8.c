@@ -1,9 +1,8 @@
-/* majority.c: quorum module
- * policy ---  if it has more than half of total number of nodes, you have the quorum
- *		if you have exactly half othe total number of nodes, you don't have the quorum
- *		otherwise you have a tie
+/* quorumd.c: quorum module
+ * policy --- connect the the quorum server configured in ha.cf to query quorum
  *
- * Copyright (C) 2005 Guochun Shi <gshi@ncsa.uiuc.edu>
+ * Author: Huang Zhen <zhenhltc@cn.ibm.com>
+ * Copyright (c) 2006 International Business Machines
  *
  * SECURITY NOTE:  It would be very easy for someone to masquerade as the
  * device that you're pinging.  If they don't know the password, all they can
@@ -310,7 +309,6 @@ load_config_file(void)
 		}
 	}
 	
-	dump_data(LOG_INFO);
 	return 0;
 }
 gboolean
