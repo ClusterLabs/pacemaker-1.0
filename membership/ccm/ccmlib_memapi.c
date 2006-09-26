@@ -524,9 +524,11 @@ mem_handle_event(class_t *class)
 				if (mbr_track->quorum == old_mbr_track->quorum){
 					oc_type = OC_EV_MS_PRIMARY_RESTORED;
 				}else {
-					cl_log(LOG_ERR, "membership unchanged but quorum changed"
+					cl_log(LOG_DEBUG, "membership unchanged but quorum changed"
 					       "something is wrong!!!");
-					return FALSE;
+					oc_type = quorum?
+						OC_EV_MS_NEW_MEMBERSHIP:
+						OC_EV_MS_INVALID; 
 				}
 
 			} else {
