@@ -102,7 +102,17 @@ majority_getquorum(const char* cluster
 	
  	return QUORUM_NO; 
 }
-
+static int
+majority_init(callback_t notify, const char* cl_name, const char* qs_name)
+{
+	return 0;
+}
+static void
+majority_stop(void)
+{
+}
 static struct hb_quorum_fns majorityOps ={
-	majority_getquorum
+	majority_getquorum,
+	majority_init,
+	majority_stop
 };
