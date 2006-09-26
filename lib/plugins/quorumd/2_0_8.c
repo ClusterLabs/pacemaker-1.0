@@ -449,8 +449,7 @@ on_msg_arrived(GIOChannel *ch, GIOCondition condition, gpointer data)
 			struct ha_msg* ret = NULL;
 			char* str;
 			const char* type;
-			quorum_log(LOG_DEBUG, "receive from client %d:", client->id);
-			cl_log_message(LOG_DEBUG,msg);
+			quorum_debug(LOG_DEBUG, "receive from client %d:", client->id);
 			type = ha_msg_value(msg, F_TYPE);
 			if (STRNCMP_CONST(type,T_INIT)==0) {
 				ret = on_init_msg(msg, client);
@@ -468,10 +467,8 @@ on_msg_arrived(GIOChannel *ch, GIOCondition condition, gpointer data)
 			if (ret != NULL) {			
 				str  = msg2wirefmt(ret, &len);
 				gnutls_record_send(client->session, str, len);
-				quorum_log(LOG_DEBUG, "send to client %d:", client->id);
+				quorum_debug(LOG_DEBUG, "send to client %d:", client->id);
 				cl_free(str);
-				cl_log_message(LOG_DEBUG,ret);
-				
 				ha_msg_del(ret);
 			}
 			ha_msg_del(msg);
