@@ -25,31 +25,17 @@ SUBDIRS                 =
 INCLUDES                = -I$(top_builddir)/include -I$(top_srcdir)/include \
 			-I$(top_builddir)/linux-ha -I$(top_srcdir)/linux-ha  \
 			-I$(top_builddir)/libltdl -I$(top_srcdir)/libltdl  \
-			-I$(top_builddir)/lib/upmls -I$(top_srcdir)/lib/upmls 
-COMMONLIBS		= $(top_builddir)/lib/clplumbing/libplumb.la   \
-			$(GLIBLIB)
+			-I$(top_builddir)/lib/upmls -I$(top_srcdir)/lib/upmls
 
 AM_CFLAGS		= @CFLAGS@
 
 ## libraries
 
 halibdir		= $(libdir)/@HB_PKG@
-plugindir		= $(halibdir)/plugins/quorum
-plugin_LTLIBRARIES	= majority.la twonodes.la weight.la quorumd.la
+plugindir		= $(halibdir)/plugins/quorumd
+plugin_LTLIBRARIES	= 2_0_8.la
 
-majority_la_SOURCES		= majority.c
-majority_la_LDFLAGS		= -export-dynamic -module -avoid-version -lz
-majority_la_LIBADD		= $(top_builddir)/replace/libreplace.la 
-
-twonodes_la_SOURCES		= twonodes.c
-twonodes_la_LDFLAGS		= -export-dynamic -module -avoid-version -lz
-twonodes_la_LIBADD		= $(top_builddir)/replace/libreplace.la 
-
-weight_la_SOURCES		= weight.c
-weight_la_LDFLAGS		= -export-dynamic -module -avoid-version -lz
-weight_la_LIBADD		= $(top_builddir)/replace/libreplace.la 
-
-quorumd_la_SOURCES		= quorumd.c
-quorumd_la_LDFLAGS		= -export-dynamic -module -avoid-version -lz `libgnutls-config --libs`
-quorumd_la_LIBADD		= $(top_builddir)/replace/libreplace.la $(COMMONLIBS)
-quorumd_la_CFLAGS		= $(INCLUDES) `libgnutls-config --cflags`
+2_0_8_la_SOURCES	= 2_0_8.c
+2_0_8_la_LDFLAGS	= -export-dynamic -module -avoid-version -lz `libgnutls-config --libs`
+2_0_8_la_LIBADD		= $(top_builddir)/replace/libreplace.la 
+2_0_8_la_CFLAGS 	= $(INCLUDES) `libgnutls-config --cflags`

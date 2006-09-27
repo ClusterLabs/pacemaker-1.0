@@ -1,7 +1,8 @@
 /*
  * quorum.h: head file for quorum module
  *
- * Copyright (C) 2005 Guochun Shi <gshi@ncsa.uiuc.edu>
+ * Author: Huang Zhen <zhenhltc@cn.ibm.com>
+ * Copyright (C) 2006 International Business Machines
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -18,26 +19,29 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#ifndef _QUORUM_H_
-#define _QUORUM_H_ 
+#ifndef _QUORUMD_H_
+#define _QUORUMD_H_ 
 
-#define HB_QUORUM_TYPE	quorum
-#define HB_QUORUM_TYPE_S	MKSTRING(quorum)
+#define HB_QUORUMD_TYPE		quorumd
+#define HB_QUORUMD_TYPE_S	MKSTRING(quorumd)
 
-#define QUORUM_YES		0
-#define QUORUM_NO		1
-#define QUORUM_TIE		2
-typedef void(*callback_t)(void);
-/*
- *	List of functions provided by implementations of the quorum interface.
- */
-struct hb_quorum_fns {
-	
-	int (*getquorum) (const char* cluster
-	,		int member_count, int member_quorum_votes
-	,		int total_node_count, int total_quorum_votes);
-	int (*init) (callback_t notify, const char* cluster, const char* quorum_server);
-	void (*stop) (void);
+#define CONFIGFILE	HA_LIBHBDIR"/quorumd.conf"
+#define MAX_DN_LEN 256
+#define quorum_log(priority, fmt...); \
+                cl_log(priority, fmt); \
+
+#define quorum_debug(priority, fmt...); \
+        if ( debug_level > 0 ) { \
+                cl_log(priority, fmt); \
+	}
+
+/* List of functions provided by implementations of the quorumd interface. */
+struct hb_quorumd_fns {
+	int (*test) (void);
+	int (*init) (void);
+	int (*load_config_file) (void);
+	int (*dump_data) (int priority);
+	int (*on_connect) (int sock, gnutls_session session, const char* CN);
 };
 
 

@@ -403,6 +403,7 @@ struct llc_ops {
 /* Parameters we can ask for via get_parameter */
 #define	KEY_HBVERSION	"hbversion"	/* Not a configuration parameter */
 #define	KEY_CLUSTER	"cluster"
+#define	KEY_QSERVER	"quorum_server"
 #define	KEY_HOST	"node"
 #define KEY_HOPS	"hopfudge"
 #define KEY_KEEPALIVE	"keepalive"

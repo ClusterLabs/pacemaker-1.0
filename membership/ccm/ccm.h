@@ -173,6 +173,7 @@ int ccm_timeout(longclock_t, longclock_t, unsigned long);
 int ccm_need_control(void *);
 int ccm_take_control(void *);
 void* ccm_initialize(void);
+void ccm_on_quorum_changed(void);
 IPC_Channel * ccm_get_ipcchan(void *);
 void ccm_send_init_state(void *);
 void ccm_check_memoryleak(void);
@@ -464,6 +465,7 @@ typedef struct ccm_info_s {
 	enum change_event_type change_type;
 	char change_node_id[NODEIDSIZE];
 	char		cluster[PATH_MAX];
+	char		quorum_server[PATH_MAX];
 	int		has_quorum;	/* -1, not set, 0, no quorum, 1, has quorum */
 } ccm_info_t;
 
@@ -486,6 +488,7 @@ int	jump_to_joining_state(ll_cluster_t* hb,
 			      ccm_info_t* info, 
 			      struct ha_msg* msg);
 gboolean ccm_calculate_quorum(ccm_info_t* info);
+gboolean ccm_stop_query_quorum(void);
 			      
 typedef void (*state_msg_handler_t)(enum ccm_type ccm_msg_type, 
 				    struct ha_msg *reply, 

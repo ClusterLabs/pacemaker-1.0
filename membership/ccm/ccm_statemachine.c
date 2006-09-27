@@ -108,7 +108,6 @@ string2state(const char* state_str)
 	
 }
 
-
 static void
 ccm_set_state(ccm_info_t* info, int istate,const struct ha_msg*  msg)	
 {	
@@ -123,6 +122,9 @@ ccm_set_state(ccm_info_t* info, int istate,const struct ha_msg*  msg)
 	if (llm_get_myindex(CCM_GET_LLM(info)) == info->ccm_cluster_leader
 		   && CCM_STATE_JOINED == istate) {
 		info->has_quorum = ccm_calculate_quorum(info);
+	}
+	else {
+		ccm_stop_query_quorum ();
 	}
 	ccm_debug(LOG_DEBUG,"node state %s -> %s"
 	,	state2string(oldstate),state2string(istate)); 
@@ -856,7 +858,7 @@ ccm_compute_and_send_final_memlist(ll_cluster_t *hb, ccm_info_t *info)
 
 	CCM_SET_CL(info, llm_get_myindex(CCM_GET_LLM(info)));
 	report_mbrs(info);/* call this before update_reset() */
-	update_reset(CCM_GET_UPDATETABLE(info));
+/*	update_reset(CCM_GET_UPDATETABLE(info));*/
 	ccm_memcomp_reset(info);
 	ccm_set_state(info, CCM_STATE_JOINED, NULL);
 	if(!ccm_already_joined(info)) {
@@ -1369,10 +1371,8 @@ ccm_state_joined(enum ccm_type ccm_msg_type,
 							"from unknown");
 		return;
 	}
-
-
-
-	if(!llm_is_valid_node(CCM_GET_LLM(info), orig)) { 
+	
+	if(!llm_is_valid_node(CCM_GET_LLM(info), orig)) {
 		ccm_debug(LOG_WARNING, "ccm_state_joined: received message "
 				"from unknown host %s", orig);
 		return;
@@ -1389,6 +1389,7 @@ ccm_state_joined(enum ccm_type ccm_msg_type,
 			ha_msg_value(reply, CCM_COOKIE), COOKIESIZE) != 0){
 			ccm_debug(LOG_WARNING, "ccm_state_joined: received message "
 			       "with unknown cookie, just dropping");
+			dump_mbrs(info);
 			return;
 		}
 
@@ -1691,6 +1692,7 @@ ccm_state_joined(enum ccm_type ccm_msg_type,
 				ccm_set_state(info, CCM_STATE_NONE, reply);
 				break;
 			}
+			report_mbrs(info);
 
 			break;
 		}
@@ -1841,7 +1843,7 @@ static void ccm_state_wait_for_change(enum ccm_type ccm_msg_type,
 					CCM_SET_COOKIE(info, newcookie); 
 					report_mbrs(info);
 					reset_change_info(info); 
-					update_reset(CCM_GET_UPDATETABLE(info));
+/*					update_reset(CCM_GET_UPDATETABLE(info));*/
 					ccm_free_random_cookie(newcookie);
 					ccm_send_join_reply(hb, info);
 					CCM_SET_CL(info, llm_get_myindex(CCM_GET_LLM(info)));
@@ -1909,7 +1911,7 @@ static void ccm_state_wait_for_change(enum ccm_type ccm_msg_type,
 					CCM_SET_COOKIE(info, newcookie); 
 					report_mbrs(info);
 					reset_change_info(info); 
-					update_reset(CCM_GET_UPDATETABLE(info));
+/*					update_reset(CCM_GET_UPDATETABLE(info));*/
 					ccm_free_random_cookie(newcookie);
 					ccm_send_join_reply(hb, info);
 					ccm_set_state(info, CCM_STATE_JOINED, reply);
@@ -2581,7 +2583,7 @@ switchstatement:
 			assert(indx != -1);
 			CCM_SET_CL(info, indx); 
 			report_mbrs(info); /* call before update_reset */
-			update_reset(CCM_GET_UPDATETABLE(info));
+/*			update_reset(CCM_GET_UPDATETABLE(info));*/
 			finallist_reset();
 			ccm_set_state(info, CCM_STATE_JOINED, reply);
 			ccm_reset_all_join_request(info);
@@ -3098,6 +3100,7 @@ set_llm_from_heartbeat(ll_cluster_t* llc, ccm_info_t* info){
 	const char*	node;
 	const char*	mynode = ops->get_mynodeid(llc);
 	const char*	cluster;
+	const char*	quorum_server;
 	const char*	site;
 	int		weight;
 	
@@ -3120,6 +3123,11 @@ set_llm_from_heartbeat(ll_cluster_t* llc, ccm_info_t* info){
 	cluster = llc->llc_ops->get_parameter(llc, KEY_CLUSTER);
 	if (cluster != NULL) {
 		strncpy(info->cluster, cluster, PATH_MAX);
+	}
+	memset(info->quorum_server, 0, sizeof(info->quorum_server));
+	quorum_server = llc->llc_ops->get_parameter(llc, KEY_QSERVER);
+	if (quorum_server != NULL) {
+		strncpy(info->quorum_server, quorum_server, PATH_MAX);
 	}
 	
 
@@ -3158,6 +3166,8 @@ set_llm_from_heartbeat(ll_cluster_t* llc, ccm_info_t* info){
 	return HA_OK;
 }
 
+ccm_info_t* ccm_info_saved = NULL;
+ll_cluster_t* hb_fd_saved = NULL;
 
 void *
 ccm_initialize()
@@ -3241,7 +3251,8 @@ ccm_initialize()
 	ccmret->info = global_info;
 	ccmret->hbfd = hb_fd;
 	client_llm_init(&global_info->llm);
-
+	ccm_info_saved = global_info;
+	hb_fd_saved = hb_fd;
 	return  (void*)ccmret;
 
  errout:
@@ -3901,7 +3912,7 @@ dump_mbrs(ccm_info_t *info)
 			bornon[i].bornon=CCM_GET_MAJORTRANS(info);
 	}
 	
-	ccm_debug(LOG_DEBUG,"dump current membership");
+	ccm_debug(LOG_DEBUG,"dump current membership %p", info);
 	leader = info->ccm_cluster_leader;
 	ccm_debug(LOG_DEBUG,"\tleader=%s"
 	,	leader < 0 ?"none": info->llm.nodes[leader].nodename);
@@ -3917,4 +3928,15 @@ dump_mbrs(ccm_info_t *info)
 	}
 	
 	return;
+}
+void
+ccm_on_quorum_changed(void)
+{
+	ccm_debug(LOG_DEBUG,"quorum changed");
+	if (ccm_info_saved->state != CCM_STATE_JOINED) {
+		ccm_debug(LOG_DEBUG,"we are not in CCM_STATE_JOINED, ignore");
+		return;
+	}
+	send_mem_list_to_all(hb_fd_saved, ccm_info_saved, ccm_info_saved->ccm_cookie);
+	report_mbrs(ccm_info_saved);
 }
