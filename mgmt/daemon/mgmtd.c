@@ -519,6 +519,7 @@ new_client(int sock, void* session)
 	}
 	client->id = id;
 	client->ch = g_io_channel_unix_new(sock);
+	g_io_channel_set_close_on_unref(client->ch,TRUE);
 	g_io_add_watch(client->ch, G_IO_IN|G_IO_ERR|G_IO_HUP
 	, 		on_msg_arrived, GINT_TO_POINTER(client->id));
 	client->session = session;
