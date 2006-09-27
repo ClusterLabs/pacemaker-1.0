@@ -446,8 +446,12 @@ get_protocol(const char* version)
 	if (protocol == NULL) {
 		protocol = cl_load_plugin("quorumd", version);
 		if (protocol != NULL) {
-			g_hash_table_insert(protocols, cl_strdup(version), protocol);
-			protocol->init();
+			if (protocol->init() != -1) {
+				g_hash_table_insert(protocols, cl_strdup(version), protocol);
+			}
+			else {
+				protocol = NULL;
+			}
 		}
 			
 	}

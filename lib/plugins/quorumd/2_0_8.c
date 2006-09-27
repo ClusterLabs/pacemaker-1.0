@@ -165,9 +165,10 @@ init(void)
 {
 	cl_log(LOG_DEBUG, "quorumd plugin 2.0.8, init()");
 	clusters = g_hash_table_new_full(g_str_hash, g_str_equal, cl_free, del_cluster);
-	load_config_file();
-	
- 	return 0; 
+	if(load_config_file() == -1) {
+		return -1;
+	}
+ 	return 0;
 }
 #define	WHITESPACE	" \t\n\r\f"
 #define	COMMENTCHAR	'#'
@@ -216,10 +217,10 @@ load_config_file(void)
 			cluster = (qs_cluster_t*)cl_malloc(sizeof(qs_cluster_t));
 			memset(cluster->name, 0, MAXLINE);
 			sscanf(p, "%s %s", key, cluster->name);
-			cluster->t_timeout = 0;
-			cluster->t_interval = 0;
-			cluster->t_giveup = 0;
-			cluster->t_takeover = 0;
+			cluster->t_timeout = 5000;
+			cluster->t_interval = 1000;
+			cluster->t_giveup = 3000;
+			cluster->t_takeover = 5000;
 			cluster->clients = NULL;
 			cluster->cur_quorum = -1;
 			cluster->waiting = FALSE;
