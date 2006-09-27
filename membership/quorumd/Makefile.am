@@ -28,7 +28,6 @@ COMMONLIBS	=  $(top_builddir)/lib/clplumbing/libplumb.la   \
 		   $(GLIBLIB)
 
 halibdir	=  $(libdir)/@HB_PKG@
-halib_DATA	=  quorumd.conf
 
 halib_PROGRAMS 	=  quorumd quorumdtest
 quorumd_SOURCES =  quorumd.c
