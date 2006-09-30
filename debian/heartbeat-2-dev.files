@@ -14,6 +14,7 @@ usr/include/clplumbing/cl_signal.h
 usr/include/clplumbing/cl_syslog.h
 usr/include/clplumbing/cl_tiebreaker.h
 usr/include/clplumbing/cl_quorum.h
+usr/include/clplumbing/cl_quorumd.h
 usr/include/clplumbing/cl_uuid.h
 usr/include/clplumbing/coredumps.h
 usr/include/clplumbing/coredumps.h
