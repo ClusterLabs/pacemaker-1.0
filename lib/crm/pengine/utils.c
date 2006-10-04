@@ -932,6 +932,8 @@ find_recurring_actions(GListPtr input, node_t *not_on_node)
 		value = g_hash_table_lookup(action->meta, XML_LRM_ATTR_INTERVAL);
 		if(value == NULL) {
 			/* skip */
+		} else if(safe_str_eq(value, "0")) {
+			/* skip */
 		} else if(safe_str_eq(CRMD_ACTION_CANCEL, action->task)) {
 			/* skip */
 		} else if(not_on_node == NULL) {
@@ -1092,6 +1094,12 @@ resource_location(resource_t *rsc, node_t *node, int score, const char *tag,
 			node, node_t, rsc->allowed_nodes, lpc,
 			resource_node_score(rsc, node, score, tag);
 			);
+	}
+
+	if(node == NULL && score == -INFINITY) {
+		rsc->provisional = FALSE;
+		crm_free(rsc->allocated_to);
+		rsc->allocated_to = NULL;
 	}
 }
 
