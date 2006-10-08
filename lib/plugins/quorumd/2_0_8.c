@@ -179,7 +179,7 @@ load_config_file(void)
 	FILE* f;
 	qs_cluster_t* cluster = NULL;
 	GList* list = NULL;
-	int skip;
+	int skip = 0;
 	char buf[MAXLINE];
 	char key[MAXLINE];
 	char* p;
