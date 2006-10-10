@@ -422,7 +422,7 @@ on_listen(GIOChannel *ch, GIOCondition condition, gpointer data)
 			close(csock);
 			return TRUE;
 		}
-		quorum_debug(LOG_DEBUG, "version:%s(%d)",buf,len);
+		quorum_debug(LOG_DEBUG, "version:%s(%d)",buf,(int)len);
 		fns = get_protocol(buf);
 		if(fns != NULL) {
 			fns->on_connect(csock,session,CN);
