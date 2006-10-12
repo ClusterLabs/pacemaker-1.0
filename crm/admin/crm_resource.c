@@ -209,7 +209,7 @@ set_resource_attr(const char *rsc_id, const char *attr_set, const char *attr_id,
 	int rc = cib_ok;
 	int matches = 0;
 	int cib_options = cib_sync_call;
-
+	
 	char *local_attr_id = NULL;
 	char *local_attr_set = NULL;
 	
@@ -233,7 +233,7 @@ set_resource_attr(const char *rsc_id, const char *attr_set, const char *attr_id,
 	if(attr_set != NULL) {
 		matches = find_xml_children(
 			&set_children, rsc->xml, 
-			XML_TAG_ATTR_SETS, XML_ATTR_ID, attr_set);
+			XML_TAG_ATTR_SETS, XML_ATTR_ID, attr_set, TRUE);
 		crm_log_xml_debug(set_children, "search by set:");
 	}
 
@@ -241,13 +241,13 @@ set_resource_attr(const char *rsc_id, const char *attr_set, const char *attr_id,
 	if(attr_id == NULL) {
 		matches = find_xml_children(
 			&nv_children, set_children?set_children:rsc->xml,
-			XML_CIB_TAG_NVPAIR, XML_NVPAIR_ATTR_NAME, attr_name);
+			XML_CIB_TAG_NVPAIR, XML_NVPAIR_ATTR_NAME, attr_name, FALSE);
 		crm_log_xml_debug(nv_children, "search by name:");
 
 	} else if(attr_id != NULL) {
 		matches = find_xml_children(
 			&nv_children, set_children?set_children:rsc->xml,
-			XML_CIB_TAG_NVPAIR, XML_ATTR_ID, attr_id);
+			XML_CIB_TAG_NVPAIR, XML_ATTR_ID, attr_id, FALSE);
 		crm_log_xml_debug(nv_children, "search by id:");
 	}
 	
@@ -261,14 +261,14 @@ set_resource_attr(const char *rsc_id, const char *attr_set, const char *attr_id,
 			set_children = NULL;
 			find_xml_children(
 				&set_children, rsc->xml, 
-				XML_TAG_ATTR_SETS, NULL, NULL);
+				XML_TAG_ATTR_SETS, NULL, NULL, FALSE);
 			xml_child_iter(
 				set_children, set,
 				free_xml(nv_children);
 				nv_children = NULL;
 				find_xml_children(
 					&nv_children, set,
-					XML_CIB_TAG_NVPAIR, XML_NVPAIR_ATTR_NAME, attr_name);
+					XML_CIB_TAG_NVPAIR, XML_NVPAIR_ATTR_NAME, attr_name, FALSE);
 				xml_child_iter(
 					nv_children, child,
 					fprintf(stderr,"  Set: %s,\tValue: %s,\tID: %s\n",
@@ -348,12 +348,13 @@ delete_resource_attr(
 	const char *rsc_id, const char *attr_set, const char *attr_id,
 	const char *attr_name, cib_t *cib, pe_working_set_t *data_set)
 {
-	int rc = cib_ok;
-	int cib_options = cib_sync_call;
 	crm_data_t *xml_obj = NULL;
-	resource_t *rsc = pe_find_resource(data_set->resources, rsc_id);
+	crm_data_t *xml_match = NULL;
+
+	int rc = cib_ok;
 	char *local_attr_id = NULL;
-	char *local_attr_set = NULL;
+	int cib_options = cib_sync_call;
+	resource_t *rsc = pe_find_resource(data_set->resources, rsc_id);
 
 	if(do_force) {
 		crm_debug("Forcing...");
@@ -364,13 +365,15 @@ delete_resource_attr(
 		return cib_NOTEXISTS;
 	}
 
-	if(attr_set == NULL) {
-		local_attr_set = crm_strdup(rsc->id);
-		attr_set = local_attr_set;
-	}
+ 	xml_match = find_attr_details(
+		rsc->xml, NULL, attr_set, attr_id, attr_name);
 
+	if(xml_match == NULL) {
+		return cib_missing_data;
+	}
+	
 	if(attr_id == NULL) {
-		local_attr_id = crm_concat(attr_set, attr_name, '-');
+		local_attr_id = crm_element_value_copy(xml_match, XML_ATTR_ID);
 		attr_id = local_attr_id;
 	}
 
@@ -383,9 +386,9 @@ delete_resource_attr(
 	rc = cib->cmds->delete(cib, XML_CIB_TAG_RESOURCES, xml_obj, NULL,
 			       cib_options);
 
-	crm_free(local_attr_id);
-	crm_free(local_attr_set);
 	free_xml(xml_obj);
+	free_xml(xml_match);
+	crm_free(local_attr_id);
 	return rc;
 }
 
@@ -916,7 +919,7 @@ main(int argc, char **argv)
 			sleep(5); /* wait for the refresh */
 			now_s = crm_itoa(now);
 			update_attr(cib_conn, cib_sync_call,
-				    NULL, NULL, NULL, NULL, "last-lrm-refresh", now_s);
+				    XML_CIB_TAG_CRMCONFIG, NULL, NULL, NULL, "last-lrm-refresh", now_s);
 			crm_free(now_s);
 		}
 		

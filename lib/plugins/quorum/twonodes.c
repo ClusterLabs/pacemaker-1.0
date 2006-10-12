@@ -93,7 +93,17 @@ twonodes_break_tie(const char* cluster
 	
 	return QUORUM_NO;
 }
-
+static int
+twonodes_init(callback_t notify, const char* cl_name, const char* qs_name)
+{
+	return 0;
+}
+static void
+twonodes_stop(void)
+{
+}
 static struct hb_quorum_fns twonodesOps ={
-	twonodes_break_tie
+	twonodes_break_tie,
+	twonodes_init,
+	twonodes_stop
 };

@@ -111,6 +111,7 @@ static int set_autojoin(const char*);
 static int set_uuidfrom(const char*);
 static int ha_config_check_boolean(const char *);
 static int set_memreserve(const char *);
+static int set_quorum_server(const char * value);
 #ifdef ALLOWPOLLCHOICE
   static int set_normalpoll(const char *);
 #endif
@@ -173,6 +174,7 @@ struct directive {
 ,{KEY_LOG_PENGINE_INPUTS, ha_config_check_boolean, TRUE,"on", "record the input used by the policy engine (valid only with: "KEY_REL2" on)"}
 ,{KEY_CONFIG_WRITES_ENABLED, ha_config_check_boolean, TRUE,"on", "write configuration changes to disk (valid only with: "KEY_REL2" on)"}
 ,{KEY_MEMRESERVE, set_memreserve, TRUE, "6500", "number of kbytes to preallocate in heartbeat"}
+,{KEY_QSERVER,set_quorum_server, TRUE, NULL, "the name or ip of quorum server"}
 };
 
 
@@ -1401,6 +1403,14 @@ static int
 set_cluster_name(const char * value)
 {
 	strncpy(config->cluster, value, PATH_MAX);
+	return(HA_OK);
+}
+/* Set the quorum server */
+static int 
+set_quorum_server(const char * value)
+{
+	strncpy(config->cluster, value, PATH_MAX);
+	strncpy(config->quorum_server, value, PATH_MAX);
 	return(HA_OK);
 }
 

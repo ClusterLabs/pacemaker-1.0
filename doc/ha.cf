@@ -86,6 +86,7 @@ logfacility	local0
 #	serial	serialportname ...
 #serial	/dev/ttyS0	# Linux
 #serial	/dev/cuaa0	# FreeBSD
+#serial /dev/cuad0      # FreeBSD 6.x
 #serial	/dev/cua/a	# Solaris
 #
 #

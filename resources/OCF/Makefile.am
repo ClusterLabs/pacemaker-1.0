@@ -18,6 +18,7 @@
 # Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #
 MAINTAINERCLEANFILES = Makefile.in
+EXTRA_DIST		= ocf-returncodes
 
 INCLUDES		= -I$(top_srcdir)/include -I$(top_srcdir)/linux-ha
 
@@ -55,11 +56,15 @@ ocf_SCRIPTS	     =  ClusterMon 	\
 			LinuxSCSI	\
 			LVM		\
 			MailTo		\
+			ManageRAID	\
+			ManageVE	\
+			mysql		\
 			oracle		\
 			oralsnr		\
 			pingd		\
 			portblock	\
 			pgsql		\
+			Pure-FTPd	\
 			Raid1		\
 			ServeRAID	\
 			Stateful	\

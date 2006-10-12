@@ -903,7 +903,7 @@ on_cleanup_rsc(char* argv[], int argc)
 	sleep(5); /* wait for the refresh */
 	now_s = crm_itoa(now);
 	update_attr(cib_conn, cib_sync_call,
-		    NULL, NULL, NULL, NULL, "last-lrm-refresh", now_s);
+		    XML_CIB_TAG_CRMCONFIG, NULL, NULL, NULL, "last-lrm-refresh", now_s);
 	crm_free(now_s);
 
 	

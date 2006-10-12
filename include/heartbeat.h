@@ -314,6 +314,7 @@ struct sys_config {
 	cl_uuid_t	uuid;			/* uuid for this node*/
 	int		uuidfromname;		/* do we get uuid from nodename?*/
 	char		cluster[PATH_MAX];	/* the name of cluster*/
+	char		quorum_server[PATH_MAX];/* the quorum_server*/
 	hbjointype_t	rtjoinconfig;		/* Runtime join behavior */
 	int		authnum;
 	Stonith*	stonith;	/* Stonith method - r1-style cluster only */

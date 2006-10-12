@@ -30,7 +30,7 @@
 #include <string.h>
 
 #include <stdlib.h>
-
+#include <ctype.h>
 
 #include <heartbeat.h>
 #include <ha_msg.h>
@@ -96,11 +96,64 @@ gboolean
 check_number(const char *value) 
 {
 	errno = 0;
-	crm_int_helper(value, NULL);
+	if(value == NULL) {
+		return FALSE;
+		
+	} else if(safe_str_eq(value, MINUS_INFINITY_S)) {
+		
+	} else if(safe_str_eq(value, INFINITY_S)) {
+
+	} else {
+		crm_int_helper(value, NULL);
+	}
+
 	if(errno != 0) {
 		return FALSE;
 	}
 	return TRUE;
+}
+
+int
+char2score(const char *score) 
+{
+	int score_f = 0;
+	
+	if(score == NULL) {
+		
+	} else if(safe_str_eq(score, MINUS_INFINITY_S)) {
+		score_f = -INFINITY;
+		
+	} else if(safe_str_eq(score, INFINITY_S)) {
+		score_f = INFINITY;
+		
+	} else if(safe_str_eq(score, "+"INFINITY_S)) {
+		score_f = INFINITY;
+		
+	} else {
+		score_f = crm_parse_int(score, NULL);
+		if(score_f > 0 && score_f > INFINITY) {
+			score_f = INFINITY;
+			
+		} else if(score_f < 0 && score_f < -INFINITY) {
+			score_f = -INFINITY;
+		}
+	}
+	
+	return score_f;
+}
+
+
+char *
+score2char(int score) 
+{
+
+	if(score >= INFINITY) {
+		return crm_strdup("+"INFINITY_S);
+
+	} else if(score <= -INFINITY) {
+		return crm_strdup("-"INFINITY_S);
+	} 
+	return crm_itoa(score);
 }
 
 
@@ -465,6 +518,8 @@ do_crm_log(int log_level, const char *file, const char *function,
 	int log_as = log_level;
 	gboolean do_log = FALSE;
 
+	file = NULL; /* ignore filename */
+	
 	if(log_level <= (int)crm_log_level) {
 		do_log = TRUE;
 		if(log_level > LOG_INFO) {
@@ -1081,20 +1136,59 @@ generate_op_key(const char *rsc_id, const char *op_type, int interval)
 gboolean
 parse_op_key(const char *key, char **rsc_id, char **op_type, int *interval)
 {
-	char *interval_s = NULL;
-	char *key2 = NULL;
+	char *mutable_key = NULL;
+	char *mutable_key_ptr = NULL;
+	int len = 0, offset = 0, ch = 0;
 
-	if(decodeNVpair(key, '_', rsc_id, &key2) == FALSE) {
-		crm_err("Couldn't find '_' in: %s", key);
-		return FALSE;
+	CRM_CHECK(key != NULL, return FALSE);
+	
+	*interval = 0;
+	len = strlen(key);
+	offset = len-1;
+	
+	while(offset > 0 && isdigit(key[offset])) {
+		int digits = len-offset;
+		ch = key[offset] - '0';
+		CRM_CHECK(ch < 10, return FALSE);
+		CRM_CHECK(ch >= 0, return FALSE);
+		while(digits > 1) {
+			digits--;
+			ch = ch * 10;
+		}
+		*interval +=  ch;
+		offset--;
 	}
 
-	if(decodeNVpair(key2, '_', op_type, &interval_s) == FALSE) {
-		crm_err("Couldn't find '_' in: %s", key2);
-		return FALSE;
+	crm_info("Interval: %d", *interval);
+	CRM_CHECK(key[offset] == '_', return FALSE);
+
+	mutable_key = crm_strdup(key);
+	mutable_key_ptr = mutable_key_ptr;
+	mutable_key[offset] = 0;
+	offset--;
+
+	while(offset > 0 && key[offset] != '_') {
+		offset--;
 	}
 
-	*interval = crm_parse_int(interval_s, NULL);
+	CRM_CHECK(key[offset] == '_',
+		  crm_free(mutable_key); return FALSE);
+
+	mutable_key_ptr = mutable_key+offset+1;
+
+	crm_debug_3("Action: %s", mutable_key_ptr);
+	*op_type = crm_strdup(mutable_key_ptr);
+
+	mutable_key[offset] = 0;
+	offset--;
+
+	CRM_CHECK(mutable_key != mutable_key_ptr,
+		  crm_free(mutable_key); return FALSE);
+	
+	crm_debug_3("Resource: %s", mutable_key);
+	*rsc_id = crm_strdup(mutable_key);
+
+	crm_free(mutable_key);
 	return TRUE;
 }
 

@@ -20,4 +20,8 @@
 MAINTAINERCLEANFILES    = Makefile.in
 
 ## Subdirectories...
-SUBDIRS			=  ccm
+if QUORUMD_BUILD
+QUORUMD_DIR = quorumd
+endif
+
+SUBDIRS			=  ccm $(QUORUMD_DIR)
