@@ -5,6 +5,8 @@ syntax: glob
 *.o
 *.la
 *.lo
+*.diff
+*.patch
 *.pyc
 .libs
 .deps
@@ -217,7 +219,9 @@ tools/attrd_updater
 tools/cl_respawn
 tools/cl_status
 tools/pingd
-
+lib/mgmt/pymgmt.py
+lib/mgmt/pymgmt_wrap.c
+tsa_plugin/ha_mgmt_client_wrap.c
 
 # Entries better done as regexp's to avoid matching too broadly
 syntax: regexp
