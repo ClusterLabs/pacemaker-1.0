@@ -49,7 +49,7 @@ swig_gen_files		= ${JAVA_PACKAGE_DIR}/LHAMgmtLibJNI.java 	\
 			  ${JAVA_PACKAGE_DIR}/LHAMgmtLib.java 		\
 			  ha_mgmt_client_wrap.c
 
-JAVA_PACKAGE_DIR	= org/linuxha/sam/plugin
+JAVA_PACKAGE_DIR	= $(top_srcdir)/tsa_plugin/org/linuxha/sam/plugin
 java_sources		= ${JAVA_PACKAGE_DIR}/LHAMgmtLibJNI.java	\
 			  ${JAVA_PACKAGE_DIR}/LHANativeResource.java	\
 			  ${JAVA_PACKAGE_DIR}/LHANodeResource.java	\
