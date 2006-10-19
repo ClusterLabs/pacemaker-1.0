@@ -32,7 +32,7 @@ export LC_ALL
 # for portability.
 
 usage() {
-  echo "usage: $0 <ip-address> $LEGAL_ACTIONS"
+  echo "usage: $0 ip-address[/netmaskbits[/interface[:label][/broadcast]]] $LEGAL_ACTIONS"
 }
 
 if [ $# != 2 ]; then
