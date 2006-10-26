@@ -204,8 +204,8 @@ GenerateCrmdHaCf() {
 	node $LOCALNODE $DUMMYNODE
 	use_logd off
 	crm yes
-	apiauth cibmon   uid=hacluster
-	respawn hacluster $HBLIB/cibmon -d
+	apiauth cibmon   uid=@HA_CCMUSER@
+	respawn @HA_CCMUSER@ $HBLIB/cibmon -d
 	respawn root $HBLIB/pingd
 	!
   chmod 644 $1
