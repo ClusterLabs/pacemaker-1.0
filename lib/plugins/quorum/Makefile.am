@@ -32,10 +32,13 @@ COMMONLIBS		= $(top_builddir)/lib/clplumbing/libplumb.la   \
 AM_CFLAGS		= @CFLAGS@
 
 ## libraries
+if QUORUMD_BUILD
+QUORUMD_PLUGIN = quorumd.la
+endif
 
 halibdir		= $(libdir)/@HB_PKG@
 plugindir		= $(halibdir)/plugins/quorum
-plugin_LTLIBRARIES	= majority.la twonodes.la weight.la quorumd.la
+plugin_LTLIBRARIES	= majority.la twonodes.la weight.la $(QUORUMD_PLUGIN)
 
 majority_la_SOURCES		= majority.c
 majority_la_LDFLAGS		= -export-dynamic -module -avoid-version -lz
@@ -49,7 +52,10 @@ weight_la_SOURCES		= weight.c
 weight_la_LDFLAGS		= -export-dynamic -module -avoid-version -lz
 weight_la_LIBADD		= $(top_builddir)/replace/libreplace.la 
 
+if QUORUMD_BUILD
 quorumd_la_SOURCES		= quorumd.c
 quorumd_la_LDFLAGS		= -export-dynamic -module -avoid-version -lz `libgnutls-config --libs`
 quorumd_la_LIBADD		= $(top_builddir)/replace/libreplace.la $(COMMONLIBS)
 quorumd_la_CFLAGS		= $(INCLUDES) `libgnutls-config --cflags`
+endif
+
