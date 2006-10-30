@@ -950,7 +950,7 @@ on_add_rsc(char* argv[], int argc)
 	has_param = (argc > 11);
 	if (in_group) {
 		snprintf(buf, MAX_STRLEN, "<group id=\"%s\">", argv[5]);
-		strncat(xml, buf, MAX_STRLEN);
+		strncat(xml, buf, sizeof(xml)-strlen(xml)-1);
 	}
 	if (clone) {
 		get_instance_attributes_id(argv[7], inst_attrs_id);
@@ -960,7 +960,7 @@ on_add_rsc(char* argv[], int argc)
 			 "<nvpair id=\"%s_clone_node_max\" name=\"clone_node_max\" value=\"%s\"/>" \
 			 "</attributes>	</instance_attributes> ",
 			 argv[7], inst_attrs_id, argv[7], argv[8],argv[7], argv[9]);
-		strncat(xml, buf, MAX_STRLEN);
+		strncat(xml, buf, sizeof(xml)-strlen(xml)-1);
 	}
 	if (master) {
 		get_instance_attributes_id(argv[7], inst_attrs_id);
@@ -973,39 +973,40 @@ on_add_rsc(char* argv[], int argc)
 			 "</attributes>	</instance_attributes>",
 			 argv[7], inst_attrs_id, argv[7], argv[8], argv[7], argv[9],
 			 argv[7], argv[10], argv[7], argv[11]);
-		strncat(xml, buf, MAX_STRLEN);
+		strncat(xml, buf, sizeof(xml)-strlen(xml)-1);
 	}
 	
 	if (!has_param) {
 		snprintf(buf, MAX_STRLEN,
 			 "<primitive id=\"%s\" class=\"%s\" type=\"%s\" provider=\"%s\"/>"
 					 , argv[1],argv[2], argv[3],argv[4]);
-		strncat(xml, buf, MAX_STRLEN);
+		strncat(xml, buf, sizeof(xml)-strlen(xml)-1);
 	}
 	else {
 		snprintf(buf, MAX_STRLEN,
 			 "<primitive id=\"%s\" class=\"%s\" type=\"%s\" provider=\"%s\">" \
 			 "<instance_attributes id=\"%s_instance_attrs\"> <attributes>"
 			 , argv[1],argv[2], argv[3],argv[4], argv[1]);
-		strncat(xml, buf, MAX_STRLEN);
+		strncat(xml, buf, sizeof(xml)-strlen(xml)-1);
 	
 		for (i = 12; i < argc; i += 3) {
 			snprintf(buf, MAX_STRLEN,
 				 "<nvpair id=\"%s\" name=\"%s\" value=\"%s\"/>",
 				 argv[i], argv[i+1],argv[i+2]);
-			strncat(xml, buf, MAX_STRLEN);
+			strncat(xml, buf, sizeof(xml)-strlen(xml)-1);
 		}
-		strncat(xml, "</attributes></instance_attributes></primitive>", MAX_STRLEN);
+		strncat(xml, "</attributes></instance_attributes></primitive>",
+				sizeof(xml)-strlen(xml)-1);
 	}
 	if (master) {
-		strncat(xml, "</master_slave>", MAX_STRLEN);
+		strncat(xml, "</master_slave>", sizeof(xml)-strlen(xml)-1);
 	}
 	if (clone) {
-		strncat(xml, "</clone>", MAX_STRLEN);
+		strncat(xml, "</clone>", sizeof(xml)-strlen(xml)-1);
 	}
 	
 	if (in_group) {
-		strncat(xml, "</group>", MAX_STRLEN);
+		strncat(xml, "</group>", sizeof(xml)-strlen(xml)-1);
 	}
 	
 	cib_object = string2xml(xml);
@@ -1149,10 +1150,11 @@ on_add_grp(char* argv[], int argc)
 		snprintf(buf, MAX_STRLEN,
 			 "<nvpair id=\"%s\" name=\"%s\" value=\"%s\"/>",
 			 argv[i], argv[i+1],argv[i+2]);
-		strncat(xml, buf, MAX_STRLEN);
+		strncat(xml, buf, sizeof(xml)-strlen(xml)-1);
 	}
-	strncat(xml,"</attributes></instance_attributes> ", MAX_STRLEN);
-	strncat(xml,"</group>",MAX_STRLEN);
+	strncat(xml,"</attributes></instance_attributes> ", 
+			sizeof(xml)-strlen(xml)-1);
+	strncat(xml,"</group>", sizeof(xml)-strlen(xml)-1);
 	cib_object = string2xml(xml);
 	if(cib_object == NULL) {
 		return cl_strdup(MSG_FAIL);
@@ -1501,10 +1503,11 @@ on_update_rsc_params(char* argv[], int argc)
 		snprintf(buf, MAX_STRLEN,
 			"<nvpair id=\"%s\" name=\"%s\" value=\"%s\"/>",
 			argv[i], argv[i+1], argv[i+2]);
-		strncat(xml, buf, MAX_STRLEN);
+		strncat(xml, buf, sizeof(xml)-strlen(xml)-1);
 	}
-	strncat(xml, "</attributes></instance_attributes>", MAX_STRLEN);
-	strncat(xml, suffix, MAX_STRLEN);
+	strncat(xml, "</attributes></instance_attributes>",
+			sizeof(xml)-strlen(xml)-1);
+	strncat(xml, suffix, sizeof(xml)-strlen(xml)-1);
 
 	cib_object = string2xml(xml);
 	if(cib_object == NULL) {
@@ -1575,10 +1578,11 @@ on_set_target_role(char* argv[], int argc)
 		"<nvpair id=\"%s\" " \
 		"name=\"target_role\" value=\"%s\"/>",
 		target_role_id, argv[2]);
-	strncat(xml, buf, MAX_STRLEN);
+	strncat(xml, buf, sizeof(xml)-strlen(xml)-1);
 	
-	strncat(xml, "</attributes></instance_attributes>", MAX_STRLEN);
-	strncat(xml, suffix, MAX_STRLEN);
+	strncat(xml, "</attributes></instance_attributes>",
+			sizeof(xml)-strlen(xml)-1);
+	strncat(xml, suffix, sizeof(xml)-strlen(xml)-1);
 
 	cib_object = string2xml(xml);
 	if(cib_object == NULL) {
@@ -1657,10 +1661,10 @@ on_update_rsc_ops(char* argv[], int argc)
 		snprintf(buf, MAX_STRLEN,
 			"<op id=\"%s\" name=\"%s\" interval=\"%s\" timeout=\"%s\"/>",
 			argv[i], argv[i+1], argv[i+2], argv[i+3]);
-		strncat(xml, buf, MAX_STRLEN);
+		strncat(xml, buf, sizeof(xml)-strlen(xml)-1);
 	}
-	strncat(xml, "</operations>", MAX_STRLEN);
-	strncat(xml, suffix, MAX_STRLEN);
+	strncat(xml, "</operations>", sizeof(xml)-strlen(xml)-1);
+	strncat(xml, suffix, sizeof(xml)-strlen(xml)-1);
 
 	cib_object = string2xml(xml);
 	if(cib_object == NULL) {
@@ -1973,9 +1977,10 @@ on_update_constraint(char* argv[], int argc)
 			snprintf(expr, MAX_STRLEN,
 				 "<expression attribute=\"%s\" id=\"%s\" operation=\"%s\" value=\"%s\"/>",
 			 	 argv[5+i*4+1],argv[5+i*4],argv[5+i*4+2],argv[5+i*4+3]);
-			strncat(xml, expr, MAX_STRLEN);
+			strncat(xml, expr, sizeof(xml)-strlen(xml)-1);
 		}
-		strncat(xml, "</rule></rsc_location>", MAX_STRLEN);
+		strncat(xml, "</rule></rsc_location>",
+				sizeof(xml)-strlen(xml)-1);
 	}
 	else if (STRNCMP_CONST(argv[1],"rsc_order")==0) {
 		snprintf(xml, MAX_STRLEN,
