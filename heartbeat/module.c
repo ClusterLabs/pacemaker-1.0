@@ -102,8 +102,10 @@ module_init(void)
 	if (initialised) {
 		return HA_FAIL;
 	}
+#ifdef DLPREOPEN
 	/* Initialize libltdl's list of preloaded modules */
 	LTDL_SET_PRELOADED_SYMBOLS();
+#endif
 
 #if 0
 	/* Initialize ltdl */
