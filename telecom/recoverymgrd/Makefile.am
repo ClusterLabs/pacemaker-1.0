@@ -70,9 +70,7 @@ recoverymgrd_LDADD	= $(COMMONLIBS) 				\
 			$(top_builddir)/lib/apphb/libapphb.la		\
 			$(LIBRT)
 
-recoverymgrd_LDFLAGS	= @LIBADD_DL@ @LIBLTDL@ -export-dynamic		\
-			-dlpreopen-force 				\
-			-dlopen-self
+recoverymgrd_LDFLAGS	= @LIBADD_DL@ @LIBLTDL@ -export-dynamic
 
 conf_lex.c: conf_yacc.h
 
