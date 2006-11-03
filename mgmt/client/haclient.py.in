@@ -1808,9 +1808,13 @@ class Manager :
 		
 	def login(self, server, username, password) :
 		# connect to one of the cluster
+		
 		self.failed_reason = ""
+		port = None
+		if string.find(server, ":") != -1 :
+			server,port = string.split(server,":")
 		ip = socket.gethostbyname(server)
-		ret = mgmt_connect(ip, username, password)
+		ret = mgmt_connect(ip, username, password, port)
 		if ret != 0 :
 			if ret == -1 :
 				self.failed_reason = _("Can't connect to server")
