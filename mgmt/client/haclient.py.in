@@ -2084,7 +2084,37 @@ class Manager :
 			if attrs[n] == "#default" or attrs[n] == "" :
 				del attrs[n]
 		return attrs
+
+	def get_locale_desc(self, node, tag) :
+		desc_en = ""
+		desc_match = ""
 		
+		(lang, encode) = locale.getlocale()
+		lang = string.lower(lang)
+		encode = string.lower(encode)
+		
+		for child in node.childNodes :
+			if child.nodeType != node.ELEMENT_NODE :
+				continue
+			if child.tagName != tag :
+				continue
+			langtag = string.lower(child.getAttribute("lang"))
+			if langtag == "" :
+				desc_en = child.childNodes[0].data
+			else :
+				langtag = string.split(langtag, ".")
+				if string.find(langtag[0], "en") != -1 :
+					desc_en = child.childNodes[0].data
+				if len(langtag) == 1 and lang == langtag[0] :
+					desc_match = child.childNodes[0].data
+				if len(langtag) == 2 :	
+					if lang == langtag[0] and encode == langtag[1] :
+						desc_match = child.childNodes[0].data	
+		if desc_match != "" :
+			return desc_match
+		return desc_en				
+		
+			
 	def get_rsc_meta(self, rsc_class, rsc_type, rsc_provider) :
 		if rsc_class == None or rsc_type == None :
 			return None
@@ -2104,21 +2134,14 @@ class Manager :
 			
 		meta = RAMeta()
 		meta.name = doc_xml.getAttribute("name")
-
+		print "name",meta.name
 		meta.version = ""
 		version_xml = doc_xml.getElementsByTagName("version")
 		if version_xml != [] and version_xml[0] in doc_xml.childNodes :
 			meta.version = version_xml[0].childNodes[0].data
 
-		meta.longdesc = ""
-		desc_xml = doc_xml.getElementsByTagName("longdesc")
-		if desc_xml != [] and desc_xml[0] in doc_xml.childNodes :
-			meta.longdesc = desc_xml[0].childNodes[0].data
-
-		meta.shortdesc = ""
-		desc_xml = doc_xml.getElementsByTagName("shortdesc")
-		if desc_xml != [] and desc_xml[0] in doc_xml.childNodes :
-			meta.shortdesc = desc_xml[0].childNodes[0].data
+		meta.longdesc = self.get_locale_desc(doc_xml, "longdesc");
+		meta.shortdesc = self.get_locale_desc(doc_xml, "shortdesc");
 		
 		meta.parameters = []
 		for param_xml in doc_xml.getElementsByTagName("parameter") :
@@ -2126,14 +2149,8 @@ class Manager :
 			param["name"] = param_xml.getAttribute("name")
 			param["required"] = param_xml.getAttribute("required")
 			param["unique"] = param_xml.getAttribute("unique")
-			param["longdesc"] = ""
-			for desc_xml in param_xml.getElementsByTagName("longdesc") :
-				if desc_xml.getAttribute("lang") == "en" :
-					param["longdesc"] = desc_xml.childNodes[0].data
-			param["shortdesc"] = ""
-			for desc_xml in param_xml.getElementsByTagName("shortdesc") :
-				if desc_xml.getAttribute("lang") == "en" :
-					param["shortdesc"] = desc_xml.childNodes[0].data
+			param["longdesc"] = self.get_locale_desc(param_xml, "longdesc");
+			param["shortdesc"] = self.get_locale_desc(param_xml, "shortdesc");
 			content_xml = param_xml.getElementsByTagName("content")[0]
 			content = {}
 			content["type"] = content_xml.getAttribute("type")
