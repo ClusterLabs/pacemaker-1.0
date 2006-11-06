@@ -2138,7 +2138,6 @@ class Manager :
 			
 		meta = RAMeta()
 		meta.name = doc_xml.getAttribute("name")
-		print "name",meta.name
 		meta.version = ""
 		version_xml = doc_xml.getElementsByTagName("version")
 		if version_xml != [] and version_xml[0] in doc_xml.childNodes :
