@@ -1419,6 +1419,7 @@ ln -s @libdir@/heartbeat-gui/haclient.py $RPM_BUILD_ROOT@bindir@/hb_gui
 %doc @mandir@/man1/hb_takeover.1*
 %doc @mandir@/man1/hb_addnode.1*
 %doc @mandir@/man1/hb_delnode.1*
+%doc @mandir@/man8/crm_resource.8*
 %doc @mandir@/man8/heartbeat.8*
 %doc @mandir@/man8/apphbd.8*
 %doc @mandir@/man8/ha_logd.8*
