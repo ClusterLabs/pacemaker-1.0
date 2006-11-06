@@ -2,7 +2,7 @@
 
 %define _unpackaged_files_terminate_build 1
 %define _missing_doc_files_terminate_build 1
-%define ENABLE_MGMT @MGMT_ENABLED@
+%define ENABLE_MGMT @RPM_ENABLE_MGMT_CONFIG@
 %define ENABLE_SNMP_SUBAGENT @RPM_ENABLE_SNMP_SUBAGENT@
 
 Summary: @HB_PKG@ - The Heartbeat Subsystem for High-Availability Linux
@@ -38,10 +38,12 @@ Group: Utilities
 Summary: Provides a general plugin and interface loading library
 Group: Utilities
 
+%if %{ENABLE_MGMT}
 %package gui
 Requires: @RPM_MGMT_RUNTIME_REQUIRES@
 Summary: Provides a gui interface to manage the heartbeat cluster
 Group: Utilities
+%endif
 
 %description
 @HB_PKG@ is a basic high-availability subsystem for Linux-HA.
@@ -85,8 +87,10 @@ and the interfaces these plugins implement.
 PILS is designed to support any number of plugins
 implementing any number of interfaces.
 
+%if %{ENABLE_MGMT}
 %description gui
 gui client for heartbeat cluster
+%endif
 
 %changelog
 * Thu Aug 03 2006  Alan Robertson <alanr@unix.sh> (see doc/AUTHORS file)
@@ -1473,6 +1477,7 @@ ln -s @libdir@/heartbeat-gui/haclient.py $RPM_BUILD_ROOT@bindir@/hb_gui
 @pils_plugindir@
 #@libdir@/@PILSPKG@
 
+%if
 ###########################################################
 # Files for the gui
 %files gui
@@ -1554,4 +1559,3 @@ true
 ###########################################################
 %postun
 ###########################################################
-
