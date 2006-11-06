@@ -71,9 +71,7 @@ heartbeat_LDADD		= $(top_builddir)/lib/stonith/libstonith.la	\
 			$(top_builddir)/replace/libreplace.la		\
 			$(gliblib) $(LIBRT)
 
-heartbeat_LDFLAGS	= @LIBADD_DL@ @LIBLTDL@ -export-dynamic	\
-			-dlpreopen force \
-			-dlopen self
+heartbeat_LDFLAGS	= @LIBADD_DL@ @LIBLTDL@ -export-dynamic	@DLOPEN_FORCE_FLAGS@
 
 heartbeat_CFLAGS       = $(AM_CFLAGS)
 

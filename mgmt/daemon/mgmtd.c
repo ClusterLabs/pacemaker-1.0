@@ -58,7 +58,7 @@
 #include <mgmt/mgmt_client.h>
 #include "mgmt_internal.h"
 
-#define OPTARGS		"skrhvt"
+#define OPTARGS		"skrhvtp:"
 #define PID_FILE 	HA_VARRUNDIR"/mgmtd.pid"
 #define ALLOW_GRP	"haclient"
 
@@ -107,6 +107,7 @@ const char* mgmtd_pam 	= "hbmgmtd";
 
 extern int debug_level;
 int test_mode = FALSE;
+int port = -1;
 static GMainLoop* mainloop 	= NULL;
 static GHashTable* clients	= NULL;
 static GHashTable* evt_map	= NULL;		
@@ -143,6 +144,12 @@ main(int argc, char ** argv)
 			case 't':		/* in test mode, any password is acceptable */
 				test_mode = TRUE;
 				break;
+			case 'p':		/* Get apphb interval */
+				if (optarg) {
+					port = atoi(optarg);
+				}
+				break;
+				
 			default:
 				++argerr;
 				break;
@@ -382,7 +389,7 @@ init_start ()
 	memset(&saddr, '\0', sizeof(saddr));
 	saddr.sin_family = AF_INET;
 	saddr.sin_addr.s_addr = INADDR_ANY;
-	saddr.sin_port = htons(PORT);
+	saddr.sin_port = htons(port==-1?PORT:port);
 	if (bind(ssock, (struct sockaddr*)&saddr, sizeof(saddr)) == -1) {
 		mgmt_log(LOG_ERR, "Can not bind server socket."
 				  "Shutting down.");
