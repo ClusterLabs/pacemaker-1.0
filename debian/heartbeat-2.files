@@ -21,6 +21,7 @@
 /etc/ha.d/resource.d/SendArp
 /etc/ha.d/resource.d/ServeRAID
 /etc/ha.d/resource.d/WAS
+/etc/ha.d/resource.d/WAS6
 /etc/ha.d/resource.d/WinPopup
 /etc/ha.d/resource.d/Xinetd
 /etc/ha.d/resource.d/db2
