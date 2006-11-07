@@ -1837,7 +1837,7 @@ class Manager :
 		self.do_cmd("regevt\nevt:disconnected")
 		
 		fd = mgmt_inputfd()
-		self.io_tag = gobject.io_add_watch(fd, gobject.IO_IN, self.on_event)
+		self.io_tag = gobject.io_add_watch(fd, gobject.IO_IN, self.on_event, None)
 		return True
 	
 	def query(self, query, keep_in_catch = False) :
@@ -1856,6 +1856,7 @@ class Manager :
 			self.failed_reason = "return None"
 			return None
  		while len(ret_str)>=4 and ret_str[:4] == "evt:" :
+			gobject.idle_add(self.on_event, None, None, ret_str)
  			ret_str = mgmt_recvmsg()
 			if ret_str == None :
 				debug(str(string.split(command, "\n"))+":None")
@@ -1888,18 +1889,15 @@ class Manager :
 			if self.login(server, self.username, self.password) :
 				return False
 		return True
-		
-		
-	def on_event(self, source, condition) :
-		event =  mgmt_recvmsg()
-		log("on_event:"+str(event))
+
+	def process_event(self, event) :
 		if event == "evt:cib_changed" :
 			if self.update_timer != -1 :
 				gobject.source_remove(self.update_timer)
 			else :
 				window.statusbar.push(2,_("Updating data from server..."))
 			self.update_timer = gobject.timeout_add(200, self.update)
-			return True
+
 		elif event == None or event == "evt:disconnected" :
 			self.logout()
 			for server in self.active_nodes :
@@ -1908,8 +1906,18 @@ class Manager :
 			else :
 				window.statusbar.push(1,_("Reconnecting..."))
 				gobject.timeout_add(1000, self.on_reconnect)
-
-		return True
+	
+	def on_event(self, source, condition, event_str) :
+		if event_str == None : 	# called by gtk
+			event = mgmt_recvmsg()
+			log("on_event:"+str(event))
+			self.process_event(event)
+			return True
+		else :					# called by do_cmd
+			event = event_str 
+			log("on_event: from message queue: "+str(event))
+			self.process_event(event)
+			return False
 
 	def update(self) :
 		self.cache_clear()
