@@ -760,13 +760,13 @@ class ClusterView(View) :
 	def on_apply(self, widget):
 		glade = self.glade
 		new_crm_config = {}
-		new_crm_config["transition_idle_timeout"] = glade.get_widget("transition_timeout").get_text()
-		new_crm_config["symmetric_cluster"] = str(glade.get_widget("symmetric_cluster").get_active())
-		new_crm_config["stonith_enabled"] = str(glade.get_widget("stonith_enabled").get_active())
-		new_crm_config["no_quorum_policy"] = glade.get_widget("no_quorum_policy").child.get_text()
-		new_crm_config["default_resource_stickiness"] = \
+		new_crm_config["default-action-timeout"] = glade.get_widget("transition_timeout").get_text()
+		new_crm_config["symmetric-cluster"] = str(glade.get_widget("symmetric_cluster").get_active())
+		new_crm_config["stonith-enabled"] = str(glade.get_widget("stonith_enabled").get_active())
+		new_crm_config["no-quorum-policy"] = glade.get_widget("no_quorum_policy").child.get_text()
+		new_crm_config["default-resource-stickiness"] = \
 				glade.get_widget("default_resource_stickiness").child.get_text()
-		new_crm_config["default_resource_failure_stickiness"] = \
+		new_crm_config["default-resource-failure-stickiness"] = \
 				glade.get_widget("default_resource_failure_stickiness").child.get_text()
 		manager.update_crm_config(new_crm_config)
 		
@@ -784,14 +784,14 @@ class ClusterView(View) :
 			glade.get_widget("deadtime").set_text(config["deadtime"])
 			glade.get_widget("initdead").set_text(config["initdead"])
 
-			glade.get_widget("transition_timeout").set_text(config["transition_idle_timeout"])
-			glade.get_widget("symmetric_cluster").set_active("True" == config["symmetric_cluster"])
-			glade.get_widget("stonith_enabled").set_active("True" == config["stonith_enabled"])
-			glade.get_widget("no_quorum_policy").child.set_text(config["no_quorum_policy"])
+			glade.get_widget("transition_timeout").set_text(config["default-action-timeout"])
+			glade.get_widget("symmetric_cluster").set_active("True" == config["symmetric-cluster"])
+			glade.get_widget("stonith_enabled").set_active("True" == config["stonith-enabled"])
+			glade.get_widget("no_quorum_policy").child.set_text(config["no-quorum-policy"])
 			glade.get_widget("no_quorum_policy").child.set_editable(False)
-			glade.get_widget("default_resource_stickiness").child.set_text(config["default_resource_stickiness"])
+			glade.get_widget("default_resource_stickiness").child.set_text(config["default-resource-stickiness"])
 			glade.get_widget("default_resource_failure_stickiness").child.set_text \
-							 (config["default_resource_failure_stickiness"])
+							 (config["default-resource-failure-stickiness"])
 
 		View.update(self)
 	
@@ -1925,9 +1925,9 @@ class Manager :
 				 "initdead","keepalive","logfacility","logfile",
 				 "msgfmt","nice_failback","node","normalpoll",
 			 	"stonith","udpport","warntime","watchdog", "cluster"]
-		crm_attr_names = ["transition_idle_timeout","symmetric_cluster","stonith_enabled",
-				  "no_quorum_policy","default_resource_stickiness", "have_quorum",
-				  "default_resource_failure_stickiness"]
+		crm_attr_names = ["default-action-timeout","symmetric-cluster","stonith-enabled",
+				  "no-quorum-policy","default-resource-stickiness", "have_quorum",
+				  "default-resource-failure-stickiness"]
 				  
 		values = manager.query("hb_config")
 		if values == None :
