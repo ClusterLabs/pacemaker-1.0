@@ -1477,7 +1477,7 @@ ln -s @libdir@/heartbeat-gui/haclient.py $RPM_BUILD_ROOT@bindir@/hb_gui
 @pils_plugindir@
 #@libdir@/@PILSPKG@
 
-%if
+%if %{ENABLE_MGMT}
 ###########################################################
 # Files for the gui
 %files gui
