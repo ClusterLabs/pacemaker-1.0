@@ -610,10 +610,43 @@ on_update_crm_config(char* argv[], int argc)
 			}
 			cur = g_list_next(cur);
 		}
+		rc = update_attr(cib_conn, cib_sync_call, XML_CIB_TAG_CRMCONFIG, NULL
+				, 		CIB_OPTIONS_FIRST, id, argv[1], argv[2]);
 	}
+	else {
+		crm_data_t* fragment = NULL;
+		crm_data_t* cib_object = NULL;
+		crm_data_t* output;
+		char xml[MAX_STRLEN];
+		
+		snprintf(xml, MAX_STRLEN, 
+			"<cluster_property_set id=\"cib-bootstrap-options\">"
+			"<attributes> <nvpair id=\"id-%s\"name=\"%s\" value=\"%s\"/>"
+			"</attributes> </cluster_property_set>", 
+			argv[1], argv[1], argv[2]);
 
-	rc = update_attr(cib_conn, cib_sync_call, XML_CIB_TAG_CRMCONFIG, NULL
-	, 		CIB_OPTIONS_FIRST, id, argv[1], argv[2]);
+		cib_object = string2xml(xml);
+		if(cib_object == NULL) {
+			return cl_strdup(MSG_FAIL);
+		}
+
+		fragment = create_cib_fragment(cib_object, "crm_config");
+
+		mgmt_log(LOG_INFO, "(update)xml:%s",xml);
+
+		rc = cib_conn->cmds->update(
+				cib_conn, "crm_config", fragment, &output, cib_sync_call);
+
+		free_xml(fragment);
+		free_xml(cib_object);
+		if (rc < 0) {
+			free_data_set(data_set);
+			return crm_failed_msg(output, rc);
+		}
+		free_xml(output);
+
+	}
+		
 	
 	free_data_set(data_set);
 	if (rc == cib_ok) {
