@@ -509,7 +509,7 @@ class Tree :
 		return
 	
 	def iter_status(self, model, iter) :
-		# 0: ok, 1: stopped, 2: umanaged, 3:failed, 4:stop failed
+		# -1:config 0: ok, 1: stopped, 2: umanaged, 3:failed, 4:stop failed
 		type = model.get_value(iter, 2)
 		status = model.get_value(iter, 1)
 		iter_status = 0
@@ -524,7 +524,9 @@ class Tree :
 				iter_status = 2
 		
 		elif type == "node" :
-			if string.find(status, _("running")) != -1 :
+			if status == _("ping node") :
+				iter_status = -1				
+			elif string.find(status, _("running")) != -1 :
 				iter_status = 0
 			else :
 				iter_status = 1
@@ -666,7 +668,13 @@ class Tree :
 	def add_node(self, nodes_root, node, active, started):
 		status = _("unknown")
 		if not started :
-			status = _("never started")
+			node_type = manager.get_nodetype(node)[0];
+			if  node_type == "normal" :
+				status = _("never started")
+			elif node_type == "ping" :
+				status = _("ping node")
+			else :
+				status = _("unknown type")
 		else :
 			if not active :
 				status = _("stopped")
@@ -1452,7 +1460,7 @@ class MainWindow :
 		self.update_ui()
 		if type == "cluster" :
 			self.cur_view = ClusterView()
-		elif type == "node" and status != _("never started"):
+		elif type == "node" and status not in [_("never started"),_("ping node"),_("unknown type")]:
 			self.cur_view = NodeView(name)
 		elif type in [_("native")] :
 			self.cur_view = RscView(name)
@@ -1966,6 +1974,9 @@ class Manager :
 		self.all_nodes = self.query("all_nodes")
 		return self.all_nodes
 
+	def get_nodetype(self, node):
+		return self.query("node_type\n%s"%node)
+	
 	def get_active_nodes(self):
 		self.active_nodes = self.query("active_nodes")
 		return self.active_nodes

@@ -178,6 +178,18 @@ or
 
 /*
 description:
+	return node's type
+format:
+	MSG_NODE_TYPE NODENAME
+return:
+	MSG_OK node_type("normal|ping|unknown")
+or
+	MSG_FAIL
+*/
+#define MSG_NODE_TYPE		"node_type"
+
+/*
+description:
 	return active nodes configured in cluster
 format:
 	MSG_ACTIVENODES
@@ -187,6 +199,7 @@ or
 	MSG_FAIL
 */
 #define MSG_ACTIVENODES 	"active_nodes"
+
 
 /*
 description:
