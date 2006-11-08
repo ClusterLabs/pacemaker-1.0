@@ -1253,6 +1253,7 @@ class AddNativeDlg :
 			self.type_list.get_column(i).set_sort_column_id(i)
 		store = gtk.ListStore(str,str,str)
 		store.set_sort_column_id(0, gtk.SORT_ASCENDING)		
+		items = {}
 		types = []		
 		class_list = manager.get_rsc_classes()
 		for c in class_list:
@@ -1272,7 +1273,15 @@ class AddNativeDlg :
 						p = "lsb"
 					else :
 						p = "ocf/"+p
-					store.append([t,p,desc])
+					if c in ["stonith","lsb"] :
+						store.append([t,p,desc])
+					elif t in items :
+						if p[:3] == "ocf" :
+							items[t] = [t,p,desc]
+					else :
+						items[t] = [t,p,desc]
+		for t in items :
+			store.append(items[t])
 		self.type_list.set_model(store)
 		self.type_list.get_selection().select_path((0))
 		
