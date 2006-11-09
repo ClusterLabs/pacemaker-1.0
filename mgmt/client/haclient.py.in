@@ -1315,6 +1315,8 @@ class AddNativeDlg :
 				store.append([rsc])
 		glade.get_widget("group").set_model(store)
 		glade.get_widget("group").set_text_column(0)
+		if window.cur_type == _("group") :
+			glade.get_widget("group").child.set_text(window.cur_name)
 		self.update_param_list()
 		save_top_window = top_window
 		top_window = dialog
