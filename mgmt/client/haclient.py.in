@@ -396,6 +396,8 @@ class ListWithAddDel :
 			return gtk.ListStore(str, str, str)
 		if n == 4 :
 			return gtk.ListStore(str, str, str, str)
+		if n == 10 :
+			return gtk.ListStore(str, str, str, str, str,str, str, str, str, str)
 		return None
 		
 	def __init__(self, widget, add_btn, del_btn, title, fields, call_back=None) :
@@ -409,7 +411,6 @@ class ListWithAddDel :
 		self.del_btn_handler = del_btn.connect("clicked", self.on_del)
 		self.store = self.create_store(len(fields))
 		widget.set_model(self.store)
-		
 		for i in range(len(fields)) :
 			add_column(widget, fields[i].label, i, None, fields[i].editable,
 				fields[i].options, call_back, not fields[i].auto_gen)
@@ -969,8 +970,10 @@ class RscView(View) :
 				   self.params_save, new_params, ["id","name","value"]);
 		
 		new_ops = self.op_list.get_data()
-		manager.update_attrs("up_rsc_ops\n"+self.param,"del_rsc_op",
-				   self.ops_save, new_ops, ["id","name","interval","timeout"]);
+		manager.update_attrs("up_rsc_full_ops\n10\n"+self.param,"del_rsc_op",
+					self.ops_save, new_ops,
+					["id", "name","description","interval","timeout",
+				 	"start_delay","disabled","role","prereq","on_fail"]);
 		
 		nv = self.attr_list.get_data()
 		for n in self.attrs_save.keys():
@@ -1045,9 +1048,16 @@ class RscView(View) :
 					 _("Add Operation"),
 					    [Field("id", _("ID"), "", None, False, auto_gen=True),
 			  		     Field("name", _("Name"), "", op_options, False),
-					     Field("interval", _("Interval"), "0s", None, True),
-					     Field("timeout", _("Timeout"), "60s", None, True)],
+					     Field("description", _("Description"), "", None, True),
+					     Field("interval", _("Interval"), "", None, True),
+					     Field("timeout", _("Timeout"), "", None, True),
+					     Field("start_delay", _("Start Delay"), "0", None, True),
+					     Field("disabled", _("Disabled"), "false", ["true","false"], True),
+					     Field("role", _("Role"),"Started",["Master","Slave","Started","Stopped"],True),
+					     Field("prereq", _("Prereq"), "", ["nothing","quorum","fencing"], True),
+					     Field("on_fail", _("On Fail"), "",["ignore","block","stop","restart","fence"], True)],
 					 self.on_changed)
+		
 		options_dict = {"is_managed":["default","true","false"],
 			"restart_type":["ignore","restart"],
 			"multiple_active":["stop_start","stop_only","block"],
@@ -2072,7 +2082,8 @@ class Manager :
 				"type", "is_managed","restart_type",
 				"multiple_active","resource_stickiness"]
 				
-		op_attr_names = ["id", "name", "interval","timeout"]
+		op_attr_names = ["id", "name","description","interval","timeout",
+				 "start_delay","disabled","role","prereq","on_fail"]
 		param_attr_names = ["id", "name", "value"]
 		
 		attr_list = self.query("rsc_attrs\n%s"%rsc)
@@ -2082,9 +2093,11 @@ class Manager :
 		running_on = self.query("rsc_running_on\n%s"%rsc)
 
 		raw_params = self.query("rsc_params\n%s"%rsc)
+
 		params = self.split_attr_list(raw_params, param_attr_names)
 		
-		raw_ops = self.query("rsc_ops\n%s"%rsc)
+		raw_ops = self.query("rsc_full_ops\n%s"%rsc)
+		raw_ops = raw_ops[1:]
 		ops = self.split_attr_list(raw_ops, op_attr_names)
 
 		return (attrs, running_on, params, ops)
