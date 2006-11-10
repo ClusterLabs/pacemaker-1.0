@@ -1,0 +1,221 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+<svg
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://web.resource.org/cc/"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:xlink="http://www.w3.org/1999/xlink"
+   xmlns:sodipodi="http://inkscape.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   width="279.39999mm"
+   height="500pt"
+   id="svg2"
+   sodipodi:version="0.32"
+   inkscape:version="0.43"
+   version="1.0"
+   sodipodi:docbase="/home/alanr/talks/ha"
+   sodipodi:docname="quorum server - split-brain.svg"
+   inkscape:export-filename="/home/alanr/talks/ha/quorum server - split-brain.png"
+   inkscape:export-xdpi="150"
+   inkscape:export-ydpi="150">
+  <defs
+     id="defs4" />
+  <sodipodi:namedview
+     id="base"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:pageopacity="0.0"
+     inkscape:pageshadow="2"
+     inkscape:zoom="0.75069212"
+     inkscape:cx="639.4326"
+     inkscape:cy="169.26449"
+     inkscape:document-units="mm"
+     inkscape:current-layer="g11985"
+     inkscape:window-width="1280"
+     inkscape:window-height="975"
+     inkscape:window-x="0"
+     inkscape:window-y="0" />
+  <metadata
+     id="metadata7">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+        <cc:license
+           rdf:resource="http://creativecommons.org/licenses/by-sa/2.0/" />
+        <dc:subject>
+          <rdf:Bag>
+            <rdf:li>quorum</rdf:li>
+            <rdf:li>cluster</rdf:li>
+            <rdf:li>disaster recovery</rdf:li>
+            <rdf:li>high-availability</rdf:li>
+            <rdf:li>business continuity</rdf:li>
+          </rdf:Bag>
+        </dc:subject>
+        <dc:title>Quorum server: split-brain configuration</dc:title>
+        <dc:creator>
+          <cc:Agent>
+            <dc:title>Alan Robertson &lt;alanr@unix.sh&gt;</dc:title>
+          </cc:Agent>
+        </dc:creator>
+        <dc:language>en-US</dc:language>
+        <dc:description>Inter-site communication failed
+Quorum server prevents split-brain condition by granting quorum ONLY to New York site</dc:description>
+      </cc:Work>
+      <cc:License
+         rdf:about="http://creativecommons.org/licenses/by-sa/2.0/">
+        <cc:permits
+           rdf:resource="http://web.resource.org/cc/Reproduction" />
+        <cc:permits
+           rdf:resource="http://web.resource.org/cc/Distribution" />
+        <cc:requires
+           rdf:resource="http://web.resource.org/cc/Notice" />
+        <cc:requires
+           rdf:resource="http://web.resource.org/cc/Attribution" />
+        <cc:permits
+           rdf:resource="http://web.resource.org/cc/DerivativeWorks" />
+        <cc:requires
+           rdf:resource="http://web.resource.org/cc/ShareAlike" />
+      </cc:License>
+    </rdf:RDF>
+  </metadata>
+  <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1">
+    <path
+       style="opacity:1;fill:none;fill-opacity:1;fill-rule:nonzero;stroke:#000000;stroke-width:1.23899996;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:4.956, 4.956;stroke-dashoffset:0;stroke-opacity:1"
+       id="path4079"
+       d="M 351.53403,398.72179 C 400.57508,404.90993 450.71559,405.83129 500.32311,408.75255 C 520.8303,413.8395 544.16692,413.92408 524.34054,430.42409 C 518.61401,438.02154 459.38363,464.2664 488.57084,465.87149 C 517.18202,466.47519 544.08107,458.04921 570.7708,452.26113 C 589.25136,447.9627 608.92792,447.29413 627.97605,445.05388 C 625.34893,447.08328 642.73763,440.57265 639.20515,441.89771 C 573.70997,466.46533 640.4724,441.53736 661.76483,434.284 C 664.78723,433.27366 668.20817,433.14589 671.48153,432.71826 L 642.56224,446.96897 C 639.49771,447.60432 636.20013,447.83339 633.5123,449.13062 C 585.23562,464.45348 708.565,421.89492 599.25201,459.19391 C 580.1628,460.68609 561.13439,462.46629 542.76408,466.39184 C 515.62452,472.10736 488.40086,480.76835 459.31156,479.4719 C 421.62369,475.75956 484.2113,447.41897 492.4383,439.3083 C 509.9549,425.09147 490.33724,427.25434 471.2907,422.06111 C 421.54958,418.28855 371.3603,417.07944 321.84617,411.95575 L 351.53403,398.72179 z " />
+    <g
+       id="g11985"
+       transform="translate(-10.65684,-147.8635)">
+      <rect
+         style="fill:#ddddff;fill-opacity:1;fill-rule:evenodd;stroke:#6e6e6e;stroke-width:2.86008048;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:2.86008048,22.88064384;stroke-opacity:1;stroke-dashoffset:0"
+         id="rect3174"
+         width="352.89575"
+         height="330.12827"
+         x="612.35724"
+         y="421.96143" />
+      <image
+         style="fill:#0000ff;fill-opacity:0.16149071"
+         id="image3176"
+         height="62.91119"
+         width="324.71048"
+         sodipodi:absref="/home/robertsons/D/ALANR/PIXS/openpower_710-front.jpg"
+         xlink:href="/home/robertsons/D/ALANR/PIXS/openpower_710-front.jpg"
+         x="626.44989"
+         y="555.56995" />
+      <text
+         xml:space="preserve"
+         style="font-size:31.85797882px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:center;line-height:125%;writing-mode:lr-tb;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-family:Bitstream Vera Sans"
+         x="778.71375"
+         y="493.99649"
+         id="text4073"
+         transform="scale(1.029886,0.970981)"
+         sodipodi:linespacing="125%"><tspan
+           sodipodi:role="line"
+           id="tspan42196"
+           x="778.71374"
+           y="493.99649"
+           style="font-weight:bold">New Jersey</tspan><tspan
+           sodipodi:role="line"
+           id="tspan42198"
+           x="778.71374"
+           y="533.81896">(up, no quorum)</tspan></text>
+    </g>
+    <rect
+       y="21.788157"
+       x="308.30554"
+       height="171.68115"
+       width="266.1423"
+       id="rect9324"
+       style="fill:#6e6eff;fill-opacity:1;fill-rule:evenodd;stroke:#000000;stroke-width:1.79114997;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1" />
+    <image
+       y="122.38211"
+       x="351.31281"
+       xlink:href="/home/robertsons/D/ALANR/PIXS/openpower_710-front.jpg"
+       sodipodi:absref="/home/robertsons/D/ALANR/PIXS/openpower_710-front.jpg"
+       width="157.27463"
+       height="30.471251"
+       id="image9322" />
+    <text
+       xml:space="preserve"
+       style="font-size:28.76550102px;font-style:normal;font-weight:normal;line-height:125%;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-family:Bitstream Vera Sans"
+       x="330.83569"
+       y="86.419807"
+       id="text11076"
+       transform="scale(1.029886,0.970981)"
+       sodipodi:linespacing="125%"><tspan
+         sodipodi:role="line"
+         id="tspan11078"
+         x="330.83569"
+         y="86.419807"
+         style="font-size:21.6702919px;font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;text-align:start;line-height:125%;writing-mode:lr-tb;text-anchor:start;font-family:Bitstream Vera Sans">Quorum Server</tspan></text>
+    <g
+       id="g11997"
+       transform="translate(15.98525,-146.5314)">
+      <rect
+         y="420.62936"
+         x="22.235062"
+         height="330.12827"
+         width="352.89575"
+         id="rect1398"
+         style="fill:#6e6eff;fill-opacity:1;fill-rule:evenodd;stroke:#bb0000;stroke-width:2.86008048;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1" />
+      <image
+         y="583.54419"
+         x="36.327698"
+         xlink:href="/home/robertsons/D/ALANR/PIXS/openpower_710-front.jpg"
+         sodipodi:absref="/home/robertsons/D/ALANR/PIXS/openpower_710-front.jpg"
+         width="324.71048"
+         height="62.91119"
+         id="image1393" />
+      <text
+         sodipodi:linespacing="125%"
+         transform="scale(1.029886,0.970981)"
+         id="text4061"
+         y="529.66644"
+         x="94.506317"
+         style="font-size:31.85799026px;font-style:normal;font-weight:normal;line-height:125%;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-family:Bitstream Vera Sans"
+         xml:space="preserve"><tspan
+           style="font-size:35.99997711px;font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;text-align:start;line-height:125%;writing-mode:lr-tb;text-anchor:start;font-family:Bitstream Vera Sans"
+           y="529.66644"
+           x="94.506317"
+           id="tspan4063"
+           sodipodi:role="line">New York</tspan></text>
+      <text
+         xml:space="preserve"
+         style="font-size:31.85799026px;font-style:normal;font-weight:normal;line-height:125%;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-family:Bitstream Vera Sans"
+         x="94.506317"
+         y="529.66644"
+         id="text11072"
+         transform="scale(1.029886,0.970981)"
+         sodipodi:linespacing="125%"><tspan
+           sodipodi:role="line"
+           id="tspan11074"
+           x="94.506317"
+           y="529.66644"
+           style="font-size:35.99997711px;font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;text-align:start;line-height:125%;writing-mode:lr-tb;text-anchor:start;font-family:Bitstream Vera Sans">New York</tspan></text>
+      <path
+         inkscape:connector-type="polyline"
+         id="path11977"
+         d="M 198.68294,429.30978 L 198.68294,429.30978"
+         style="fill:none;fill-opacity:0.75;fill-rule:evenodd;stroke:#000000;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;display:inline" />
+    </g>
+    <path
+       style="fill:none;fill-opacity:0.75;fill-rule:evenodd;stroke:#ff0000;stroke-width:3.54330707;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1"
+       d="M 328.51993,272.66787 L 382.06494,194.36489"
+       id="path19047"
+       inkscape:connector-type="polyline" />
+    <path
+       style="fill:none;fill-opacity:0.75;fill-rule:evenodd;stroke:#fc0000;stroke-width:3.54330707;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1"
+       d="M 609.02348,272.66788 L 529.4833,194.36489"
+       id="path19049"
+       inkscape:connector-type="polyline" />
+  </g>
+</svg>
