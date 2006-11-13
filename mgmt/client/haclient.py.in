@@ -1558,8 +1558,11 @@ class MainWindow :
 		elif new_type["type"] == _("group") : 	 
 			group = kvbox(_("Add Resource Group"),[Field("id",_("ID"),"group_")]) 	 
 			if group != None :
-				group["params"] = [] 	 
-				manager.add_group(group)
+				self.cur_name = group["id"]
+				self.cur_type = _("group")
+				dlg = AddNativeDlg()
+				dlg.run()
+				
 		elif new_type["type"] == _("place") :
 			place = kvbox(_("Add Place Constraint"),
 				[Field("id",_("ID"),"place_",None, False),
@@ -1587,8 +1590,16 @@ class MainWindow :
 			
 	def on_del_item(self, action) :
 		if confirmbox(_("Delete") + " "+self.cur_type + " " + self.cur_name + "?") == gtk.RESPONSE_YES:
-			if self.cur_type in [_("native"),_("group"),_("clone"),_("master")] :
+			if self.cur_type in [_("group"),_("clone"),_("master")] :
 				manager.do_cmd("del_rsc\n"+self.cur_name)
+			elif self.cur_type == _("native") :
+				if self.cur_name not in manager.parent :
+					manager.do_cmd("del_rsc\n"+self.cur_name)
+				parent = manager.parent[self.cur_name] 
+				if len(manager.get_rsc_sub_rsc(parent)) == 1 :
+					manager.do_cmd("del_rsc\n"+parent)
+				else :
+					manager.do_cmd("del_rsc\n"+self.cur_name)
 			elif self.cur_type == _("place") :
 				manager.do_cmd("del_co\nrsc_location\n"+self.cur_name)
 			elif self.cur_type == _("order") :
@@ -1783,6 +1794,7 @@ class Manager :
 	password = None
 	cache = {}
 	no_update_cache = {}
+	parent = {}
 	io_tag = None
 	update_timer = -1
 	active_nodes = []
@@ -1950,6 +1962,7 @@ class Manager :
 
 	def update(self) :
 		self.cache_clear()
+		self.parent = {}
 		window.update()	
 		gc.collect()
 		self.update_timer = -1
@@ -2075,7 +2088,11 @@ class Manager :
 		return self.query("rsc_running_on\n"+rsc_id)
 
 	def get_rsc_sub_rsc(self, rsc_id) :
-		return self.query("sub_rsc\n"+rsc_id)
+		sub_rscs = self.query("sub_rsc\n"+rsc_id)
+		if sub_rscs != None :
+			for sub_rsc in sub_rscs :
+				self.parent[sub_rsc] = rsc_id
+		return sub_rscs
 
 	def get_rsc_info(self, rsc) :
 		rsc_attr_names = ["id", "description", "class", "provider", 
