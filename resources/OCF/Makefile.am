@@ -66,11 +66,13 @@ ocf_SCRIPTS	     =  ClusterMon 	\
 			pgsql		\
 			Pure-FTPd	\
 			Raid1		\
+			SendArp		\
 			ServeRAID	\
 			Stateful	\
 			SysInfo		\
 			VIPArip		\
 			WAS		\
+			WAS6		\
 			WinPopup	\
 			Xen		\
 			Xinetd

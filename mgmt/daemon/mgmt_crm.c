@@ -85,7 +85,9 @@ static char* on_delete_rsc_param(char* argv[], int argc);
 static char* on_set_target_role(char* argv[], int argc);
 
 static char* on_get_rsc_ops(char* argv[], int argc);
+static char* on_get_rsc_full_ops(char* argv[], int argc);
 static char* on_update_rsc_ops(char* argv[], int argc);
+static char* on_update_rsc_full_ops(char* argv[], int argc);
 static char* on_delete_rsc_op(char* argv[], int argc);
 
 static char* on_get_constraints(char* argv[], int argc);
@@ -478,6 +480,8 @@ init_crm(int cache_cib)
 	
 	reg_msg(MSG_RSC_OPS, on_get_rsc_ops);
 	reg_msg(MSG_UP_RSC_OPS, on_update_rsc_ops);
+	reg_msg(MSG_RSC_FULL_OPS, on_get_rsc_full_ops);
+	reg_msg(MSG_UP_RSC_FULL_OPS, on_update_rsc_full_ops);
 	reg_msg(MSG_DEL_RSC_OP, on_delete_rsc_op);
 
 	reg_msg(MSG_UPDATE_CLONE, on_update_clone);
@@ -610,10 +614,43 @@ on_update_crm_config(char* argv[], int argc)
 			}
 			cur = g_list_next(cur);
 		}
+		rc = update_attr(cib_conn, cib_sync_call, XML_CIB_TAG_CRMCONFIG, NULL
+				, 		CIB_OPTIONS_FIRST, id, argv[1], argv[2]);
 	}
+	else {
+		crm_data_t* fragment = NULL;
+		crm_data_t* cib_object = NULL;
+		crm_data_t* output;
+		char xml[MAX_STRLEN];
+		
+		snprintf(xml, MAX_STRLEN, 
+			"<cluster_property_set id=\"cib-bootstrap-options\">"
+			"<attributes> <nvpair id=\"id-%s\"name=\"%s\" value=\"%s\"/>"
+			"</attributes> </cluster_property_set>", 
+			argv[1], argv[1], argv[2]);
 
-	rc = update_attr(cib_conn, cib_sync_call, XML_CIB_TAG_CRMCONFIG, NULL
-	, 		CIB_OPTIONS_FIRST, id, argv[1], argv[2]);
+		cib_object = string2xml(xml);
+		if(cib_object == NULL) {
+			return cl_strdup(MSG_FAIL);
+		}
+
+		fragment = create_cib_fragment(cib_object, "crm_config");
+
+		mgmt_log(LOG_INFO, "(update)xml:%s",xml);
+
+		rc = cib_conn->cmds->update(
+				cib_conn, "crm_config", fragment, &output, cib_sync_call);
+
+		free_xml(fragment);
+		free_xml(cib_object);
+		if (rc < 0) {
+			free_data_set(data_set);
+			return crm_failed_msg(output, rc);
+		}
+		free_xml(output);
+
+	}
+		
 	
 	free_data_set(data_set);
 	if (rc == cib_ok) {
@@ -1637,6 +1674,124 @@ on_get_rsc_ops(char* argv[], int argc)
 	}
 	free_data_set(data_set);
 	return ret;
+}
+/*
+<!ATTLIST op
+          id            CDATA         #REQUIRED
+          name          CDATA         #REQUIRED
+          description   CDATA         #IMPLIED
+          interval      CDATA         #IMPLIED
+          timeout       CDATA         #IMPLIED
+          start_delay   CDATA         '0'
+          disabled      (true|1|false|0)               'false'
+          role          (Master|Slave|Started|Stopped) 'Started'
+          prereq        (nothing|quorum|fencing)       #IMPLIED
+          on_fail       (ignore|block|stop|restart|fence)     #IMPLIED>
+*/
+char*
+on_get_rsc_full_ops(char* argv[], int argc)
+{
+	int i;
+	resource_t* rsc;
+	char* ret;
+	struct ha_msg* ops;
+	struct ha_msg* op;
+	pe_working_set_t* data_set;
+	
+	data_set = get_data_set();
+	GET_RESOURCE()
+
+	ret = cl_strdup(MSG_OK);
+	ret = mgmt_msg_append(ret, "10");
+	ops = cl_get_struct((struct ha_msg*)rsc->xml, "operations");
+	if (ops == NULL) {
+		free_data_set(data_set);
+		return ret;
+	}
+	for (i = 0; i < ops->nfields; i++) {
+		if (STRNCMP_CONST(ops->names[i], "op") == 0) {
+			const char* value = NULL;
+			if (ops->types[i] != FT_STRUCT) {
+				continue;
+			}
+			op = (struct ha_msg*)ops->values[i];
+			ret = mgmt_msg_append(ret, ha_msg_value(op, "id"));
+			ret = mgmt_msg_append(ret, ha_msg_value(op, "name"));
+			ret = mgmt_msg_append(ret, ha_msg_value(op, "description"));
+			ret = mgmt_msg_append(ret, ha_msg_value(op, "interval"));
+			ret = mgmt_msg_append(ret, ha_msg_value(op, "timeout"));
+			value = ha_msg_value(op, "start_delay");
+			ret = mgmt_msg_append(ret, value==NULL?"0":value);
+			value = ha_msg_value(op, "disabled");
+			ret = mgmt_msg_append(ret, value==NULL?"false":value);
+			value = ha_msg_value(op, "role");
+			ret = mgmt_msg_append(ret, value==NULL?"Started":value);
+			ret = mgmt_msg_append(ret, ha_msg_value(op, "prereq"));
+			ret = mgmt_msg_append(ret, ha_msg_value(op, "on_fail"));
+		}
+	}
+	free_data_set(data_set);
+	return ret;
+}
+#define CAT_ATTR(pos, name) if(strnlen(argv[i+pos],MAX_STRLEN) != 0) { \
+			snprintf(buf, MAX_STRLEN, name"=\"%s\" ",argv[i+pos]); \
+			strncat(xml, buf, sizeof(xml)-strlen(xml)-1); \
+		}
+
+char*
+on_update_rsc_full_ops(char* argv[], int argc)
+{
+	int rc, i, attr_num;
+	crm_data_t* fragment = NULL;
+	crm_data_t* cib_object = NULL;
+	crm_data_t* output;
+	char xml[MAX_STRLEN];
+	char buf[MAX_STRLEN];
+	char prefix[MAX_STRLEN];
+	char suffix[MAX_STRLEN];
+	char real_id[MAX_STRLEN];
+		
+ 	attr_num = atoi(argv[1]);	 
+	if(get_fix(argv[2], prefix, suffix,real_id) == -1) {
+		return cl_strdup(MSG_FAIL);
+	}
+	
+	snprintf(xml, MAX_STRLEN, "%s<operations>", prefix);
+	for (i = 3; i < argc; i += attr_num) {
+		snprintf(buf, MAX_STRLEN,
+			"<op id=\"%s\" name=\"%s\"",
+			argv[i], argv[i+1]);
+		strncat(xml, buf, sizeof(xml)-strlen(xml)-1);
+		CAT_ATTR(2, "description")
+		CAT_ATTR(3, "interval")
+		CAT_ATTR(4, "timeout")
+		CAT_ATTR(5, "start_delay")
+		CAT_ATTR(6, "disabled")
+		CAT_ATTR(7, "role")
+		CAT_ATTR(8, "prereq")
+		CAT_ATTR(9, "on_fail")
+		strncat(xml, "/>", sizeof(xml)-strlen(xml)-1);
+	}
+	strncat(xml, "</operations>", sizeof(xml)-strlen(xml)-1);
+	strncat(xml, suffix, sizeof(xml)-strlen(xml)-1);
+	mgmt_log(LOG_INFO, "on_update_rsc_ops:xml:%s",xml);	
+	cib_object = string2xml(xml);
+	if(cib_object == NULL) {
+		return cl_strdup(MSG_FAIL);
+	}
+	mgmt_log(LOG_INFO, "on_update_rsc_ops:%s",xml);
+	fragment = create_cib_fragment(cib_object, "resources");
+
+	rc = cib_conn->cmds->update(
+			cib_conn, "resources", fragment, &output, cib_sync_call);
+
+	free_xml(fragment);
+	free_xml(cib_object);
+	if (rc < 0) {
+		return crm_failed_msg(output, rc);
+	}
+	free_xml(output);
+	return cl_strdup(MSG_OK);
 }
 char*
 on_update_rsc_ops(char* argv[], int argc)

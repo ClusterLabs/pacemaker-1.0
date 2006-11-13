@@ -60,7 +60,7 @@ return:
 	-1: fail
 */
 extern int 	mgmt_connect(const char* server, const char* user
-		, const char*  passwd);
+		, const char*  passwd, const char* port);
 
 /*
 mgmt_sendmsg:

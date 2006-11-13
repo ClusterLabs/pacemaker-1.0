@@ -54,9 +54,7 @@ apphbd_LDADD		= $(COMMONLIBS) 				\
 			@LIBLTDL@ $(LIBRT)				
 
 
-apphbd_LDFLAGS	= @LIBADD_DL@ @LIBLTDL@ -export-dynamic	\
-			-dlpreopen force \
-			-dlopen self
+apphbd_LDFLAGS	= @LIBADD_DL@ @LIBLTDL@ -export-dynamic	@DLOPEN_FORCE_FLAGS@
 
 ## SOURCES
 apphbtest_SOURCES	= apphbtest.c

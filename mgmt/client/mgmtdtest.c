@@ -29,7 +29,7 @@ int main (int argc, char* argv[])
 	char* ret;
 	int num;
 	char** args;
-	if(mgmt_connect("127.0.0.1", "hacluster","hacluster") != 0) {
+	if(mgmt_connect("127.0.0.1", "hacluster","hacluster",NULL) != 0) {
 		printf("can't conenct to mgmtd\n");
 		return 1;
 	}

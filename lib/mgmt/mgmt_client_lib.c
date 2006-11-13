@@ -47,7 +47,8 @@ void*		session = NULL;
  *	0 :success
  */
 int
-mgmt_connect(const char* server, const char* user, const char*  passwd)
+mgmt_connect(const char* server, const char* user
+,		const char*  passwd, const char* port)
 {
 	struct sockaddr_in addr;
 	char* msg;
@@ -68,7 +69,12 @@ mgmt_connect(const char* server, const char* user, const char*  passwd)
 	memset(&addr, 0, sizeof(addr));
 	addr.sin_family = AF_INET;
 	addr.sin_addr.s_addr = inet_addr(server);
-	addr.sin_port = htons(PORT);
+	if (port == NULL) {
+		addr.sin_port = htons(PORT);
+	}
+	else {
+		addr.sin_port = htons(atoi(port));
+	}
 	if (connect(sock, (struct sockaddr *) &addr, sizeof(addr)) == -1) {
 		close(sock);
 		return -1;

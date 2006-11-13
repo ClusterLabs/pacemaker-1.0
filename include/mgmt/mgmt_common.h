@@ -178,6 +178,18 @@ or
 
 /*
 description:
+	return node's type
+format:
+	MSG_NODE_TYPE NODENAME
+return:
+	MSG_OK node_type("normal|ping|unknown")
+or
+	MSG_FAIL
+*/
+#define MSG_NODE_TYPE		"node_type"
+
+/*
+description:
 	return active nodes configured in cluster
 format:
 	MSG_ACTIVENODES
@@ -187,6 +199,7 @@ or
 	MSG_FAIL
 */
 #define MSG_ACTIVENODES 	"active_nodes"
+
 
 /*
 description:
@@ -494,6 +507,22 @@ or
 
 /*
 description:
+	return the operations with all attributs of a given resource
+format:
+	MSG_RSC_FULL_OPS resource
+return:
+	if we have m ops and each op has n attribute:
+	MSG_OK n attr1_1 attr2_1 ... attr_n_1
+		 attr1_2 attr2_2 ... attr_n_2
+		 ... 
+		 attr1_m attr2_m ... attr_n_m
+or
+	MSG_FAIL
+*/
+#define MSG_RSC_FULL_OPS	"rsc_full_ops"
+
+/*
+description:
 	update operations of a given resource
 format:
 	MSG_UP_RSC_OPS resource id1 name1 interval1 timeout1
@@ -505,6 +534,23 @@ or
 	MSG_FAIL
 */
 #define MSG_UP_RSC_OPS		"up_rsc_ops"
+
+/*
+description:
+	update all attributs of operations of a given resource
+format:
+	if we have m ops and each op has n attribute:
+	MSG_UP_RSC_FULL_OPS resource n
+			attr1_1 attr2_1 ... attr_n_1
+		 	attr1_2 attr2_2 ... attr_n_2
+		 	... 
+		 	attr1_m attr2_m ... attr_n_m
+return:
+	MSG_OK
+or
+	MSG_FAIL
+*/
+#define MSG_UP_RSC_FULL_OPS	"up_rsc_full_ops"
 
 /*
 description:

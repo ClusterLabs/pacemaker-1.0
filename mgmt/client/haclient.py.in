@@ -396,6 +396,8 @@ class ListWithAddDel :
 			return gtk.ListStore(str, str, str)
 		if n == 4 :
 			return gtk.ListStore(str, str, str, str)
+		if n == 10 :
+			return gtk.ListStore(str, str, str, str, str,str, str, str, str, str)
 		return None
 		
 	def __init__(self, widget, add_btn, del_btn, title, fields, call_back=None) :
@@ -409,7 +411,6 @@ class ListWithAddDel :
 		self.del_btn_handler = del_btn.connect("clicked", self.on_del)
 		self.store = self.create_store(len(fields))
 		widget.set_model(self.store)
-		
 		for i in range(len(fields)) :
 			add_column(widget, fields[i].label, i, None, fields[i].editable,
 				fields[i].options, call_back, not fields[i].auto_gen)
@@ -509,7 +510,7 @@ class Tree :
 		return
 	
 	def iter_status(self, model, iter) :
-		# 0: ok, 1: stopped, 2: umanaged, 3:failed, 4:stop failed
+		# -1:config 0: ok, 1: stopped, 2: umanaged, 3:failed, 4:stop failed
 		type = model.get_value(iter, 2)
 		status = model.get_value(iter, 1)
 		iter_status = 0
@@ -524,7 +525,9 @@ class Tree :
 				iter_status = 2
 		
 		elif type == "node" :
-			if string.find(status, _("running")) != -1 :
+			if status == _("ping node") :
+				iter_status = -1				
+			elif string.find(status, _("running")) != -1 :
 				iter_status = 0
 			else :
 				iter_status = 1
@@ -666,7 +669,13 @@ class Tree :
 	def add_node(self, nodes_root, node, active, started):
 		status = _("unknown")
 		if not started :
-			status = _("never started")
+			node_type = manager.get_nodetype(node)[0];
+			if  node_type == "normal" :
+				status = _("never started")
+			elif node_type == "ping" :
+				status = _("ping node")
+			else :
+				status = _("unknown type")
 		else :
 			if not active :
 				status = _("stopped")
@@ -760,13 +769,13 @@ class ClusterView(View) :
 	def on_apply(self, widget):
 		glade = self.glade
 		new_crm_config = {}
-		new_crm_config["transition_idle_timeout"] = glade.get_widget("transition_timeout").get_text()
-		new_crm_config["symmetric_cluster"] = str(glade.get_widget("symmetric_cluster").get_active())
-		new_crm_config["stonith_enabled"] = str(glade.get_widget("stonith_enabled").get_active())
-		new_crm_config["no_quorum_policy"] = glade.get_widget("no_quorum_policy").child.get_text()
-		new_crm_config["default_resource_stickiness"] = \
+		new_crm_config["default-action-timeout"] = glade.get_widget("transition_timeout").get_text()
+		new_crm_config["symmetric-cluster"] = str(glade.get_widget("symmetric_cluster").get_active())
+		new_crm_config["stonith-enabled"] = str(glade.get_widget("stonith_enabled").get_active())
+		new_crm_config["no-quorum-policy"] = glade.get_widget("no_quorum_policy").child.get_text()
+		new_crm_config["default-resource-stickiness"] = \
 				glade.get_widget("default_resource_stickiness").child.get_text()
-		new_crm_config["default_resource_failure_stickiness"] = \
+		new_crm_config["default-resource-failure-stickiness"] = \
 				glade.get_widget("default_resource_failure_stickiness").child.get_text()
 		manager.update_crm_config(new_crm_config)
 		
@@ -784,14 +793,14 @@ class ClusterView(View) :
 			glade.get_widget("deadtime").set_text(config["deadtime"])
 			glade.get_widget("initdead").set_text(config["initdead"])
 
-			glade.get_widget("transition_timeout").set_text(config["transition_idle_timeout"])
-			glade.get_widget("symmetric_cluster").set_active("True" == config["symmetric_cluster"])
-			glade.get_widget("stonith_enabled").set_active("True" == config["stonith_enabled"])
-			glade.get_widget("no_quorum_policy").child.set_text(config["no_quorum_policy"])
+			glade.get_widget("transition_timeout").set_text(config["default-action-timeout"])
+			glade.get_widget("symmetric_cluster").set_active("True" == config["symmetric-cluster"])
+			glade.get_widget("stonith_enabled").set_active("True" == config["stonith-enabled"])
+			glade.get_widget("no_quorum_policy").child.set_text(config["no-quorum-policy"])
 			glade.get_widget("no_quorum_policy").child.set_editable(False)
-			glade.get_widget("default_resource_stickiness").child.set_text(config["default_resource_stickiness"])
+			glade.get_widget("default_resource_stickiness").child.set_text(config["default-resource-stickiness"])
 			glade.get_widget("default_resource_failure_stickiness").child.set_text \
-							 (config["default_resource_failure_stickiness"])
+							 (config["default-resource-failure-stickiness"])
 
 		View.update(self)
 	
@@ -961,8 +970,10 @@ class RscView(View) :
 				   self.params_save, new_params, ["id","name","value"]);
 		
 		new_ops = self.op_list.get_data()
-		manager.update_attrs("up_rsc_ops\n"+self.param,"del_rsc_op",
-				   self.ops_save, new_ops, ["id","name","interval","timeout"]);
+		manager.update_attrs("up_rsc_full_ops\n10\n"+self.param,"del_rsc_op",
+					self.ops_save, new_ops,
+					["id", "name","description","interval","timeout",
+				 	"start_delay","disabled","role","prereq","on_fail"]);
 		
 		nv = self.attr_list.get_data()
 		for n in self.attrs_save.keys():
@@ -1037,9 +1048,16 @@ class RscView(View) :
 					 _("Add Operation"),
 					    [Field("id", _("ID"), "", None, False, auto_gen=True),
 			  		     Field("name", _("Name"), "", op_options, False),
-					     Field("interval", _("Interval"), "0s", None, True),
-					     Field("timeout", _("Timeout"), "60s", None, True)],
+					     Field("description", _("Description"), "", None, True),
+					     Field("interval", _("Interval"), "", None, True),
+					     Field("timeout", _("Timeout"), "", None, True),
+					     Field("start_delay", _("Start Delay"), "0", None, True),
+					     Field("disabled", _("Disabled"), "false", ["true","false"], True),
+					     Field("role", _("Role"),"Started",["Master","Slave","Started","Stopped"],True),
+					     Field("prereq", _("Prereq"), "", ["nothing","quorum","fencing"], True),
+					     Field("on_fail", _("On Fail"), "",["ignore","block","stop","restart","fence"], True)],
 					 self.on_changed)
+		
 		options_dict = {"is_managed":["default","true","false"],
 			"restart_type":["ignore","restart"],
 			"multiple_active":["stop_start","stop_only","block"],
@@ -1245,6 +1263,7 @@ class AddNativeDlg :
 			self.type_list.get_column(i).set_sort_column_id(i)
 		store = gtk.ListStore(str,str,str)
 		store.set_sort_column_id(0, gtk.SORT_ASCENDING)		
+		items = {}
 		types = []		
 		class_list = manager.get_rsc_classes()
 		for c in class_list:
@@ -1264,7 +1283,15 @@ class AddNativeDlg :
 						p = "lsb"
 					else :
 						p = "ocf/"+p
-					store.append([t,p,desc])
+					if c in ["stonith","lsb"] :
+						store.append([t,p,desc])
+					elif t in items :
+						if p[:3] == "ocf" :
+							items[t] = [t,p,desc]
+					else :
+						items[t] = [t,p,desc]
+		for t in items :
+			store.append(items[t])
 		self.type_list.set_model(store)
 		self.type_list.get_selection().select_path((0))
 		
@@ -1298,6 +1325,8 @@ class AddNativeDlg :
 				store.append([rsc])
 		glade.get_widget("group").set_model(store)
 		glade.get_widget("group").set_text_column(0)
+		if window.cur_type == _("group") :
+			glade.get_widget("group").child.set_text(window.cur_name)
 		self.update_param_list()
 		save_top_window = top_window
 		top_window = dialog
@@ -1452,7 +1481,7 @@ class MainWindow :
 		self.update_ui()
 		if type == "cluster" :
 			self.cur_view = ClusterView()
-		elif type == "node" and status != _("never started"):
+		elif type == "node" and status not in [_("never started"),_("ping node"),_("unknown type")]:
 			self.cur_view = NodeView(name)
 		elif type in [_("native")] :
 			self.cur_view = RscView(name)
@@ -1529,8 +1558,11 @@ class MainWindow :
 		elif new_type["type"] == _("group") : 	 
 			group = kvbox(_("Add Resource Group"),[Field("id",_("ID"),"group_")]) 	 
 			if group != None :
-				group["params"] = [] 	 
-				manager.add_group(group)
+				self.cur_name = group["id"]
+				self.cur_type = _("group")
+				dlg = AddNativeDlg()
+				dlg.run()
+				
 		elif new_type["type"] == _("place") :
 			place = kvbox(_("Add Place Constraint"),
 				[Field("id",_("ID"),"place_",None, False),
@@ -1558,8 +1590,16 @@ class MainWindow :
 			
 	def on_del_item(self, action) :
 		if confirmbox(_("Delete") + " "+self.cur_type + " " + self.cur_name + "?") == gtk.RESPONSE_YES:
-			if self.cur_type in [_("native"),_("group"),_("clone"),_("master")] :
+			if self.cur_type in [_("group"),_("clone"),_("master")] :
 				manager.do_cmd("del_rsc\n"+self.cur_name)
+			elif self.cur_type == _("native") :
+				if self.cur_name not in manager.parent :
+					manager.do_cmd("del_rsc\n"+self.cur_name)
+				parent = manager.parent[self.cur_name] 
+				if len(manager.get_rsc_sub_rsc(parent)) == 1 :
+					manager.do_cmd("del_rsc\n"+parent)
+				else :
+					manager.do_cmd("del_rsc\n"+self.cur_name)
 			elif self.cur_type == _("place") :
 				manager.do_cmd("del_co\nrsc_location\n"+self.cur_name)
 			elif self.cur_type == _("order") :
@@ -1754,6 +1794,7 @@ class Manager :
 	password = None
 	cache = {}
 	no_update_cache = {}
+	parent = {}
 	io_tag = None
 	update_timer = -1
 	active_nodes = []
@@ -1808,9 +1849,13 @@ class Manager :
 		
 	def login(self, server, username, password) :
 		# connect to one of the cluster
+		
 		self.failed_reason = ""
+		port = None
+		if string.find(server, ":") != -1 :
+			server,port = string.split(server,":")
 		ip = socket.gethostbyname(server)
-		ret = mgmt_connect(ip, username, password)
+		ret = mgmt_connect(ip, username, password, port)
 		if ret != 0 :
 			if ret == -1 :
 				self.failed_reason = _("Can't connect to server")
@@ -1833,7 +1878,7 @@ class Manager :
 		self.do_cmd("regevt\nevt:disconnected")
 		
 		fd = mgmt_inputfd()
-		self.io_tag = gobject.io_add_watch(fd, gobject.IO_IN, self.on_event)
+		self.io_tag = gobject.io_add_watch(fd, gobject.IO_IN, self.on_event, None)
 		return True
 	
 	def query(self, query, keep_in_catch = False) :
@@ -1852,6 +1897,7 @@ class Manager :
 			self.failed_reason = "return None"
 			return None
  		while len(ret_str)>=4 and ret_str[:4] == "evt:" :
+			gobject.idle_add(self.on_event, None, None, ret_str)
  			ret_str = mgmt_recvmsg()
 			if ret_str == None :
 				debug(str(string.split(command, "\n"))+":None")
@@ -1884,18 +1930,15 @@ class Manager :
 			if self.login(server, self.username, self.password) :
 				return False
 		return True
-		
-		
-	def on_event(self, source, condition) :
-		event =  mgmt_recvmsg()
-		log("on_event:"+str(event))
+
+	def process_event(self, event) :
 		if event == "evt:cib_changed" :
 			if self.update_timer != -1 :
 				gobject.source_remove(self.update_timer)
 			else :
 				window.statusbar.push(2,_("Updating data from server..."))
 			self.update_timer = gobject.timeout_add(200, self.update)
-			return True
+
 		elif event == None or event == "evt:disconnected" :
 			self.logout()
 			for server in self.active_nodes :
@@ -1904,11 +1947,22 @@ class Manager :
 			else :
 				window.statusbar.push(1,_("Reconnecting..."))
 				gobject.timeout_add(1000, self.on_reconnect)
-
-		return True
+	
+	def on_event(self, source, condition, event_str) :
+		if event_str == None : 	# called by gtk
+			event = mgmt_recvmsg()
+			log("on_event:"+str(event))
+			self.process_event(event)
+			return True
+		else :					# called by do_cmd
+			event = event_str 
+			log("on_event: from message queue: "+str(event))
+			self.process_event(event)
+			return False
 
 	def update(self) :
 		self.cache_clear()
+		self.parent = {}
 		window.update()	
 		gc.collect()
 		self.update_timer = -1
@@ -1921,9 +1975,9 @@ class Manager :
 				 "initdead","keepalive","logfacility","logfile",
 				 "msgfmt","nice_failback","node","normalpoll",
 			 	"stonith","udpport","warntime","watchdog", "cluster"]
-		crm_attr_names = ["transition_idle_timeout","symmetric_cluster","stonith_enabled",
-				  "no_quorum_policy","default_resource_stickiness", "have_quorum",
-				  "default_resource_failure_stickiness"]
+		crm_attr_names = ["default-action-timeout","symmetric-cluster","stonith-enabled",
+				  "no-quorum-policy","default-resource-stickiness", "have_quorum",
+				  "default-resource-failure-stickiness"]
 				  
 		values = manager.query("hb_config")
 		if values == None :
@@ -1954,6 +2008,9 @@ class Manager :
 		self.all_nodes = self.query("all_nodes")
 		return self.all_nodes
 
+	def get_nodetype(self, node):
+		return self.query("node_type\n%s"%node)
+	
 	def get_active_nodes(self):
 		self.active_nodes = self.query("active_nodes")
 		return self.active_nodes
@@ -2031,14 +2088,19 @@ class Manager :
 		return self.query("rsc_running_on\n"+rsc_id)
 
 	def get_rsc_sub_rsc(self, rsc_id) :
-		return self.query("sub_rsc\n"+rsc_id)
+		sub_rscs = self.query("sub_rsc\n"+rsc_id)
+		if sub_rscs != None :
+			for sub_rsc in sub_rscs :
+				self.parent[sub_rsc] = rsc_id
+		return sub_rscs
 
 	def get_rsc_info(self, rsc) :
 		rsc_attr_names = ["id", "description", "class", "provider", 
 				"type", "is_managed","restart_type",
 				"multiple_active","resource_stickiness"]
 				
-		op_attr_names = ["id", "name", "interval","timeout"]
+		op_attr_names = ["id", "name","description","interval","timeout",
+				 "start_delay","disabled","role","prereq","on_fail"]
 		param_attr_names = ["id", "name", "value"]
 		
 		attr_list = self.query("rsc_attrs\n%s"%rsc)
@@ -2048,9 +2110,11 @@ class Manager :
 		running_on = self.query("rsc_running_on\n%s"%rsc)
 
 		raw_params = self.query("rsc_params\n%s"%rsc)
+
 		params = self.split_attr_list(raw_params, param_attr_names)
 		
-		raw_ops = self.query("rsc_ops\n%s"%rsc)
+		raw_ops = self.query("rsc_full_ops\n%s"%rsc)
+		raw_ops = raw_ops[1:]
 		ops = self.split_attr_list(raw_ops, op_attr_names)
 
 		return (attrs, running_on, params, ops)
@@ -2084,7 +2148,37 @@ class Manager :
 			if attrs[n] == "#default" or attrs[n] == "" :
 				del attrs[n]
 		return attrs
+
+	def get_locale_desc(self, node, tag) :
+		desc_en = ""
+		desc_match = ""
 		
+		(lang, encode) = locale.getlocale()
+		lang = string.lower(lang)
+		encode = string.lower(encode)
+		
+		for child in node.childNodes :
+			if child.nodeType != node.ELEMENT_NODE :
+				continue
+			if child.tagName != tag :
+				continue
+			langtag = string.lower(child.getAttribute("lang"))
+			if langtag == "" :
+				desc_en = child.childNodes[0].data
+			else :
+				langtag = string.split(langtag, ".")
+				if string.find(langtag[0], "en") != -1 :
+					desc_en = child.childNodes[0].data
+				if len(langtag) == 1 and lang == langtag[0] :
+					desc_match = child.childNodes[0].data
+				if len(langtag) == 2 :	
+					if lang == langtag[0] and encode == langtag[1] :
+						desc_match = child.childNodes[0].data	
+		if desc_match != "" :
+			return desc_match
+		return desc_en				
+		
+			
 	def get_rsc_meta(self, rsc_class, rsc_type, rsc_provider) :
 		if rsc_class == None or rsc_type == None :
 			return None
@@ -2104,21 +2198,13 @@ class Manager :
 			
 		meta = RAMeta()
 		meta.name = doc_xml.getAttribute("name")
-
 		meta.version = ""
 		version_xml = doc_xml.getElementsByTagName("version")
 		if version_xml != [] and version_xml[0] in doc_xml.childNodes :
 			meta.version = version_xml[0].childNodes[0].data
 
-		meta.longdesc = ""
-		desc_xml = doc_xml.getElementsByTagName("longdesc")
-		if desc_xml != [] and desc_xml[0] in doc_xml.childNodes :
-			meta.longdesc = desc_xml[0].childNodes[0].data
-
-		meta.shortdesc = ""
-		desc_xml = doc_xml.getElementsByTagName("shortdesc")
-		if desc_xml != [] and desc_xml[0] in doc_xml.childNodes :
-			meta.shortdesc = desc_xml[0].childNodes[0].data
+		meta.longdesc = self.get_locale_desc(doc_xml, "longdesc");
+		meta.shortdesc = self.get_locale_desc(doc_xml, "shortdesc");
 		
 		meta.parameters = []
 		for param_xml in doc_xml.getElementsByTagName("parameter") :
@@ -2126,14 +2212,8 @@ class Manager :
 			param["name"] = param_xml.getAttribute("name")
 			param["required"] = param_xml.getAttribute("required")
 			param["unique"] = param_xml.getAttribute("unique")
-			param["longdesc"] = ""
-			for desc_xml in param_xml.getElementsByTagName("longdesc") :
-				if desc_xml.getAttribute("lang") == "en" :
-					param["longdesc"] = desc_xml.childNodes[0].data
-			param["shortdesc"] = ""
-			for desc_xml in param_xml.getElementsByTagName("shortdesc") :
-				if desc_xml.getAttribute("lang") == "en" :
-					param["shortdesc"] = desc_xml.childNodes[0].data
+			param["longdesc"] = self.get_locale_desc(param_xml, "longdesc");
+			param["shortdesc"] = self.get_locale_desc(param_xml, "shortdesc");
 			content_xml = param_xml.getElementsByTagName("content")[0]
 			content = {}
 			content["type"] = content_xml.getAttribute("type")

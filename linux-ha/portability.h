@@ -72,7 +72,7 @@ int setenv(const char *name, const char * value, int why);
 
 #ifndef HA_HAVE_UNSETENV
   /* We supply a replacement function, but need a prototype */
-void unsetenv(const char *name);
+int unsetenv(const char *name);
 #endif /* HA_HAVE_UNSETENV */
 
 #ifndef HA_HAVE_STRERROR
