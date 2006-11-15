@@ -1353,7 +1353,12 @@ class AddNativeDlg :
 				if manager.rsc_exists(glade.get_widget("id").get_text()) :
 					msgbox(_("the ID already exists"))
 					passed = False
-				
+
+				group_ = glade.get_widget("group").child.get_text()
+				if group_ != "" and manager.rsc_exists(group_) and manager.get_rsc_type(group_) != "group":
+					msgbox(_("the Group Name is exists"))
+					passed = False
+
 				if passed :
 					rsc = {}
 					rsc["id"] = glade.get_widget("id").get_text()
@@ -1595,7 +1600,10 @@ class MainWindow :
 			elif self.cur_type == _("native") :
 				if self.cur_name not in manager.parent :
 					manager.do_cmd("del_rsc\n"+self.cur_name)
-				parent = manager.parent[self.cur_name] 
+				try :	
+					parent = manager.parent[self.cur_name] 
+				except KeyError : # the self.cur_name does not exist in manager.parent
+					parent = self.cur_name
 				if len(manager.get_rsc_sub_rsc(parent)) == 1 :
 					manager.do_cmd("del_rsc\n"+parent)
 				else :
@@ -2154,8 +2162,14 @@ class Manager :
 		desc_match = ""
 		
 		(lang, encode) = locale.getlocale()
-		lang = string.lower(lang)
-		encode = string.lower(encode)
+		if lang == None:
+			lang = "en"
+		else:
+			lang = string.lower(lang)
+		if encode == None:	
+			encode = ""
+		else:	
+			encode = string.lower(encode)
 		
 		for child in node.childNodes :
 			if child.nodeType != node.ELEMENT_NODE :
