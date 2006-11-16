@@ -1176,6 +1176,9 @@ class AddNativeDlg :
 			  Field("value", _("Value"), "", None, True),
 			  Field("shortdesc", _("Description"), "", param_descs, False,False)]
 		glade = self.glade	  
+		glade.get_widget("is_master").set_active(False)
+		glade.get_widget("is_clone").set_active(False)
+
 		param_list = ListWithAddDel(glade.get_widget("parameters"),
 				       glade.get_widget("addparam"),
 				       glade.get_widget("delparam"),
@@ -1186,6 +1189,17 @@ class AddNativeDlg :
 		self.param_list = param_list
 		if meta != None :
 			for param in meta.parameters :
+				if param["name"] in [ "master_node_max", "master_max" ] and param["required"] == "1" :
+					if not glade.get_widget("is_master").get_active() :
+						glade.get_widget("is_master").set_active(True)
+					glade.get_widget(param["name"]).set_text(param["value"])
+					continue
+				if param["name"] in [ "clone_max", "clone_node_max" ] and param["required"] == "1":
+					if not glade.get_widget("is_master").get_active() and not glade.get_widget("is_clone").get_active():
+						glade.get_widget("is_clone").set_active(True)
+					glade.get_widget(param["name"]).set_text(param["value"])
+					continue
+
 				if param["required"] == "1" :
 					param["id"] = uuid()
 					self.param_list.insert(param)
@@ -1341,15 +1355,15 @@ class AddNativeDlg :
 				passed = check_entry_value(glade, "id",_("ID"))
 
 				if glade.get_widget("is_clone").get_active() :
-					passed = check_entry_value(glade, "advance_id",_("ID"))
-					passed = check_entry_value(glade, "clone_max")
-					passed = check_entry_value(glade, "clone_node_max")
+					if not check_entry_value(glade, "advance_id",_("ID")): passed = False
+					if not check_entry_value(glade, "clone_max"): passed = False
+					if not check_entry_value(glade, "clone_node_max"): passed = False
 				if glade.get_widget("is_master").get_active() :
-					passed = check_entry_value(glade, "advance_id",_("ID"))
-					passed = check_entry_value(glade, "clone_max")
-					passed = check_entry_value(glade, "clone_node_max")
-					passed = check_entry_value(glade, "master_max")
-					passed = check_entry_value(glade, "master_node_max")
+					if not check_entry_value(glade, "advance_id",_("ID")): passed = False
+					if not check_entry_value(glade, "clone_max"): passed = False
+					if not check_entry_value(glade, "clone_node_max"): passed = False
+					if not check_entry_value(glade, "master_max"): passed = False
+					if not check_entry_value(glade, "master_node_max"): passed = False
 				if manager.rsc_exists(glade.get_widget("id").get_text()) :
 					msgbox(_("the ID already exists"))
 					passed = False
