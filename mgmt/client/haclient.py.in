@@ -1176,6 +1176,9 @@ class AddNativeDlg :
 			  Field("value", _("Value"), "", None, True),
 			  Field("shortdesc", _("Description"), "", param_descs, False,False)]
 		glade = self.glade	  
+		glade.get_widget("is_master").set_active(False)
+		glade.get_widget("is_clone").set_active(False)
+
 		param_list = ListWithAddDel(glade.get_widget("parameters"),
 				       glade.get_widget("addparam"),
 				       glade.get_widget("delparam"),
@@ -1186,6 +1189,17 @@ class AddNativeDlg :
 		self.param_list = param_list
 		if meta != None :
 			for param in meta.parameters :
+				if param["name"] in [ "master_node_max", "master_max" ] and param["required"] == "1" :
+					if not glade.get_widget("is_master").get_active() :
+						glade.get_widget("is_master").set_active(True)
+					glade.get_widget(param["name"]).set_text(param["value"])
+					continue
+				if param["name"] in [ "clone_max", "clone_node_max" ] and param["required"] == "1":
+					if not glade.get_widget("is_master").get_active() and not glade.get_widget("is_clone").get_active():
+						glade.get_widget("is_clone").set_active(True)
+					glade.get_widget(param["name"]).set_text(param["value"])
+					continue
+
 				if param["required"] == "1" :
 					param["id"] = uuid()
 					self.param_list.insert(param)
@@ -1341,19 +1355,24 @@ class AddNativeDlg :
 				passed = check_entry_value(glade, "id",_("ID"))
 
 				if glade.get_widget("is_clone").get_active() :
-					passed = check_entry_value(glade, "advance_id",_("ID"))
-					passed = check_entry_value(glade, "clone_max")
-					passed = check_entry_value(glade, "clone_node_max")
+					if not check_entry_value(glade, "advance_id",_("ID")): passed = False
+					if not check_entry_value(glade, "clone_max"): passed = False
+					if not check_entry_value(glade, "clone_node_max"): passed = False
 				if glade.get_widget("is_master").get_active() :
-					passed = check_entry_value(glade, "advance_id",_("ID"))
-					passed = check_entry_value(glade, "clone_max")
-					passed = check_entry_value(glade, "clone_node_max")
-					passed = check_entry_value(glade, "master_max")
-					passed = check_entry_value(glade, "master_node_max")
+					if not check_entry_value(glade, "advance_id",_("ID")): passed = False
+					if not check_entry_value(glade, "clone_max"): passed = False
+					if not check_entry_value(glade, "clone_node_max"): passed = False
+					if not check_entry_value(glade, "master_max"): passed = False
+					if not check_entry_value(glade, "master_node_max"): passed = False
 				if manager.rsc_exists(glade.get_widget("id").get_text()) :
 					msgbox(_("the ID already exists"))
 					passed = False
-				
+
+				group_ = glade.get_widget("group").child.get_text()
+				if group_ != "" and manager.rsc_exists(group_) and manager.get_rsc_type(group_) != "group":
+					msgbox(_("the Group Name is exists"))
+					passed = False
+
 				if passed :
 					rsc = {}
 					rsc["id"] = glade.get_widget("id").get_text()
@@ -1558,8 +1577,11 @@ class MainWindow :
 		elif new_type["type"] == _("group") : 	 
 			group = kvbox(_("Add Resource Group"),[Field("id",_("ID"),"group_")]) 	 
 			if group != None :
-				group["params"] = [] 	 
-				manager.add_group(group)
+				self.cur_name = group["id"]
+				self.cur_type = _("group")
+				dlg = AddNativeDlg()
+				dlg.run()
+				
 		elif new_type["type"] == _("place") :
 			place = kvbox(_("Add Place Constraint"),
 				[Field("id",_("ID"),"place_",None, False),
@@ -1587,8 +1609,19 @@ class MainWindow :
 			
 	def on_del_item(self, action) :
 		if confirmbox(_("Delete") + " "+self.cur_type + " " + self.cur_name + "?") == gtk.RESPONSE_YES:
-			if self.cur_type in [_("native"),_("group"),_("clone"),_("master")] :
+			if self.cur_type in [_("group"),_("clone"),_("master")] :
 				manager.do_cmd("del_rsc\n"+self.cur_name)
+			elif self.cur_type == _("native") :
+				if self.cur_name not in manager.parent :
+					manager.do_cmd("del_rsc\n"+self.cur_name)
+				try :	
+					parent = manager.parent[self.cur_name] 
+				except KeyError : # the self.cur_name does not exist in manager.parent
+					parent = self.cur_name
+				if len(manager.get_rsc_sub_rsc(parent)) == 1 :
+					manager.do_cmd("del_rsc\n"+parent)
+				else :
+					manager.do_cmd("del_rsc\n"+self.cur_name)
 			elif self.cur_type == _("place") :
 				manager.do_cmd("del_co\nrsc_location\n"+self.cur_name)
 			elif self.cur_type == _("order") :
@@ -1779,10 +1812,12 @@ class Manager :
 	connected = False
 	window = None
 	selected_type = None
+	server = None
 	username = None
 	password = None
 	cache = {}
 	no_update_cache = {}
+	parent = {}
 	io_tag = None
 	update_timer = -1
 	active_nodes = []
@@ -1837,8 +1872,8 @@ class Manager :
 		
 	def login(self, server, username, password) :
 		# connect to one of the cluster
-		
 		self.failed_reason = ""
+		self.server = server
 		port = None
 		if string.find(server, ":") != -1 :
 			server,port = string.split(server,":")
@@ -1915,7 +1950,7 @@ class Manager :
 			window.statusbar.pop(1)
 			return False
 		for server in self.all_nodes :
-			if self.login(server, self.username, self.password) :
+			if self.login(self.server, self.username, self.password) :
 				return False
 		return True
 
@@ -1930,7 +1965,7 @@ class Manager :
 		elif event == None or event == "evt:disconnected" :
 			self.logout()
 			for server in self.active_nodes :
-				if self.login(server, self.username, self.password) :
+				if self.login(self.server, self.username, self.password) :
 					break
 			else :
 				window.statusbar.push(1,_("Reconnecting..."))
@@ -1950,6 +1985,7 @@ class Manager :
 
 	def update(self) :
 		self.cache_clear()
+		self.parent = {}
 		window.update()	
 		gc.collect()
 		self.update_timer = -1
@@ -2075,7 +2111,11 @@ class Manager :
 		return self.query("rsc_running_on\n"+rsc_id)
 
 	def get_rsc_sub_rsc(self, rsc_id) :
-		return self.query("sub_rsc\n"+rsc_id)
+		sub_rscs = self.query("sub_rsc\n"+rsc_id)
+		if sub_rscs != None :
+			for sub_rsc in sub_rscs :
+				self.parent[sub_rsc] = rsc_id
+		return sub_rscs
 
 	def get_rsc_info(self, rsc) :
 		rsc_attr_names = ["id", "description", "class", "provider", 
@@ -2137,8 +2177,14 @@ class Manager :
 		desc_match = ""
 		
 		(lang, encode) = locale.getlocale()
-		lang = string.lower(lang)
-		encode = string.lower(encode)
+		if lang == None:
+			lang = "en"
+		else:
+			lang = string.lower(lang)
+		if encode == None:	
+			encode = ""
+		else:	
+			encode = string.lower(encode)
 		
 		for child in node.childNodes :
 			if child.nodeType != node.ELEMENT_NODE :

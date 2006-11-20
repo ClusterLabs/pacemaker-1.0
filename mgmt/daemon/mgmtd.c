@@ -368,7 +368,7 @@ init_start ()
 				  "Shutting down.(%d)",ret);
 		exit(1);
 	}
-	
+	reg_event(EVT_DISCONNECTED, on_event);
 	/* init ham & gnutls lib */
 	tls_init_server();
 	mgmt_set_mem_funcs(cl_malloc, cl_realloc, cl_free);
@@ -654,6 +654,12 @@ on_event(const char* event)
 	if (list_changed == 1) {
 		g_hash_table_replace(evt_map, cl_strdup(args[0]), (gpointer)id_list);
 	}	
+	if (STRNCMP_CONST(args[0],EVT_DISCONNECTED) == 0) {
+		mgmt_log(LOG_ERR,"Connection to the CIB terminated... exiting");
+		/*cib exits abnormally, mgmtd exits too and
+		wait heartbeat	restart us in order*/
+		exit(LSB_EXIT_OK);
+	}
 	mgmt_del_args(args);
 	return 0;
 }
