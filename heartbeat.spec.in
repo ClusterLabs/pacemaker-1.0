@@ -93,6 +93,9 @@ gui client for heartbeat cluster
 %endif
 
 %changelog
+* Mon Dec 04 2006  Alan Robertson <alanr@unix.sh> (see doc/AUTHORS file)
++ Version 2.0.8 - bug fixes and enhancements
+
 * Thu Aug 03 2006  Alan Robertson <alanr@unix.sh> (see doc/AUTHORS file)
 + Version 2.0.7 - bug fix and a few enhancements release
   + Important steps:
