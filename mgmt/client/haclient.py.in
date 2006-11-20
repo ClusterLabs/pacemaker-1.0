@@ -1812,6 +1812,7 @@ class Manager :
 	connected = False
 	window = None
 	selected_type = None
+	server = None
 	username = None
 	password = None
 	cache = {}
@@ -1871,8 +1872,8 @@ class Manager :
 		
 	def login(self, server, username, password) :
 		# connect to one of the cluster
-		
 		self.failed_reason = ""
+		self.server = server
 		port = None
 		if string.find(server, ":") != -1 :
 			server,port = string.split(server,":")
@@ -1949,7 +1950,7 @@ class Manager :
 			window.statusbar.pop(1)
 			return False
 		for server in self.all_nodes :
-			if self.login(server, self.username, self.password) :
+			if self.login(self.server, self.username, self.password) :
 				return False
 		return True
 
@@ -1964,7 +1965,7 @@ class Manager :
 		elif event == None or event == "evt:disconnected" :
 			self.logout()
 			for server in self.active_nodes :
-				if self.login(server, self.username, self.password) :
+				if self.login(self.server, self.username, self.password) :
 					break
 			else :
 				window.statusbar.push(1,_("Reconnecting..."))
