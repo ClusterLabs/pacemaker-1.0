@@ -1693,6 +1693,9 @@ class MainWindow :
 			if param["name"] == "target_role" and param["value"] == target_role :
 				return
 		manager.do_cmd("set_target_role\n%s\n%s"%(self.cur_name,target_role))
+		if target_role in ["started", "#default"] :
+			for subrsc in manager.get_rsc_sub_rsc(self.cur_name) :
+				manager.do_cmd("set_target_role\n%s\n%s"%(subrsc,target_role))
 	
 	def on_item_move(self, action) :
 		if action.get_name() == "uprsc" :
