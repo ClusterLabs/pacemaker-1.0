@@ -1255,6 +1255,8 @@ on_get_rsc_attrs(char* argv[], int argc)
 	ret = mgmt_msg_append(ret, value?value:"#default");
 	value = ha_msg_value(attrs, "resource_stickiness");
 	ret = mgmt_msg_append(ret, value?value:"#default");
+	value = ha_msg_value(attrs, "resource_failure_stickiness");
+	ret = mgmt_msg_append(ret, value?value:"#default");
 	
 	switch (rsc->variant) {
 		case pe_group:
