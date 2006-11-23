@@ -28,6 +28,11 @@
 
 #define DELETE_THEN_REFRESH 1
 
+#define VARIANT_NATIVE 1
+#include <lib/crm/pengine/variant.h>
+
+resource_t *ultimate_parent(resource_t *rsc);
+
 void node_list_update(GListPtr list1, GListPtr list2, int factor);
 
 void native_rsc_colocation_rh_must(resource_t *rsc_lh, gboolean update_lh,
@@ -35,8 +40,6 @@ void native_rsc_colocation_rh_must(resource_t *rsc_lh, gboolean update_lh,
 
 void native_rsc_colocation_rh_mustnot(resource_t *rsc_lh, gboolean update_lh,
 				      resource_t *rsc_rh, gboolean update_rh);
-
-void filter_nodes(resource_t *rsc);
 
 void create_notifications(resource_t *rsc, pe_working_set_t *data_set);
 void Recurring(resource_t *rsc, action_t *start, node_t *node,
@@ -76,19 +79,6 @@ gboolean (*rsc_action_matrix[RSC_ROLE_MAX][RSC_ROLE_MAX])(resource_t*,node_t*,pe
 /* Slave */	{ RoleError,	StopRsc,	RoleError,	NullOp,		PromoteRsc, },
 /* Master */	{ RoleError,	RoleError,	RoleError,	DemoteRsc,	NullOp,     },
 };
-
-
-typedef struct native_variant_data_s
-{
-/* 		GListPtr allowed_nodes;    /\* node_t*   *\/ */
-
-} native_variant_data_t;
-
-#define get_native_variant_data(data, rsc)				\
-	CRM_ASSERT(rsc->variant == pe_native);				\
-	CRM_ASSERT(rsc->variant_opaque != NULL);			\
-	data = (native_variant_data_t *)rsc->variant_opaque;
-
 
 
 static gboolean
@@ -155,21 +145,36 @@ int native_num_allowed_nodes(resource_t *rsc)
 	return num_nodes;
 }
 
+resource_t *
+ultimate_parent(resource_t *rsc)
+{
+	resource_t *parent = rsc;
+	while(parent->parent) {
+		parent = parent->parent;
+	}
+	return parent;
+}
 
 node_t *
 native_color(resource_t *rsc, pe_working_set_t *data_set)
 {
+	if(rsc->parent && rsc->parent->is_allocating == FALSE) {
+		/* never allocate children on their own */
+		crm_debug("Escalating allocation of %s to its parent: %s",
+			  rsc->id, rsc->parent->id);
+		rsc->parent->cmds->color(rsc->parent, data_set);
+	}
 	
+	print_resource(LOG_DEBUG_2, "Allocating: ", rsc, FALSE);
 	if(rsc->provisional == FALSE) {
 		return rsc->allocated_to;
 	}
 
-	print_resource(LOG_DEBUG_2, "Allocating: ", rsc, FALSE);
 	if(rsc->is_allocating) {
 		crm_err("Dependancy loop detected involving %s", rsc->id);
 		return NULL;
 	}
-	
+
 	rsc->is_allocating = TRUE;
 	rsc->rsc_cons = g_list_sort(rsc->rsc_cons, sort_cons_strength);
 
@@ -214,8 +219,6 @@ native_color(resource_t *rsc, pe_working_set_t *data_set)
 	rsc->is_allocating = FALSE;
 	print_resource(LOG_DEBUG_3, "Allocated ", rsc, TRUE);
 
-	rsc->cmds->create_actions(rsc, data_set);
-	
 	return rsc->allocated_to;
 }
 
@@ -300,7 +303,7 @@ Recurring(resource_t *rsc, action_t *start, node_t *node,
 				mon = NULL;
 			}
 			
-			crm_log_maybe(log_level, "%s action %s (%s vs. %s)",
+			do_crm_log(log_level, "%s action %s (%s vs. %s)",
 				      foo , key, value?value:role2text(RSC_ROLE_SLAVE),
 				      role2text(rsc->next_role));
 			crm_free(key);
@@ -416,9 +419,11 @@ void native_create_actions(resource_t *rsc, pe_working_set_t *data_set)
 void native_internal_constraints(resource_t *rsc, pe_working_set_t *data_set)
 {
 	order_restart(rsc);
+
 	custom_action_order(rsc, demote_key(rsc), NULL,
 			    rsc, stop_key(rsc), NULL,
 			    pe_ordering_manditory, data_set);
+
 	custom_action_order(rsc, start_key(rsc), NULL,
 			    rsc, promote_key(rsc), NULL,
 			    pe_ordering_optional, data_set);
@@ -430,6 +435,23 @@ void native_internal_constraints(resource_t *rsc, pe_working_set_t *data_set)
 	custom_action_order(
 		rsc, delete_key(rsc), NULL, rsc, start_key(rsc), NULL, 
 		pe_ordering_manditory, data_set);	
+
+	if(rsc->notify) {
+		char *key1 = NULL;
+		char *key2 = NULL;
+
+		key1 = generate_op_key(rsc->id, "confirmed-post_notify_start", 0);
+		key2 = generate_op_key(rsc->id, "pre_notify_promote", 0);
+		custom_action_order(
+			rsc, key1, NULL, rsc, key2, NULL, 
+			pe_ordering_optional, data_set);	
+
+		key1 = generate_op_key(rsc->id, "confirmed-post_notify_demote", 0);
+		key2 = generate_op_key(rsc->id, "pre_notify_stop", 0);
+		custom_action_order(
+			rsc, key1, NULL, rsc, key2, NULL, 
+			pe_ordering_optional, data_set);	
+	}
 }
 
 void native_rsc_colocation_lh(
@@ -770,35 +792,6 @@ void native_expand(resource_t *rsc, pe_working_set_t *data_set)
 void
 native_agent_constraints(resource_t *rsc)
 {
-}
-
-
-
-
-
-/*
- * Remove any nodes with a -ve weight
- */
-void
-filter_nodes(resource_t *rsc)
-{
-	print_resource(LOG_DEBUG_3, "Filtering nodes for: ", rsc, FALSE);
-	slist_iter(
-		node, node_t, rsc->allowed_nodes, lpc,
-		if(node == NULL) {
-			pe_err("Invalid NULL node");
-			
-		} else if(node->weight < 0.0
-			  || node->details->shutdown
-			  || node->details->online == FALSE
-			  || node->details->type == node_ping) {
-			crm_action_debug_3(print_node("Removing", node, FALSE));
-			rsc->allowed_nodes =
-				g_list_remove(rsc->allowed_nodes, node);
-			crm_free(node);
-			lpc = -1; /* restart the loop */
-		}
-		);
 }
 
 void
