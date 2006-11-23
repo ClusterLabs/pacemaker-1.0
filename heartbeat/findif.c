@@ -183,10 +183,7 @@ ConvertQuadToInt (char *dest, int destlen)
  	 *
 	 */
 
-	while (strstr (dest, ".")) {
-		*strstr(dest, ".") = ' ';
-	}
-	if (sscanf(dest, "%u%u%u%u", &ipquad[3], &ipquad[2], &ipquad[1],
+	if (sscanf(dest, "%u.%u.%u.%u", &ipquad[3], &ipquad[2], &ipquad[1],
 				&ipquad[0]) <= 0) {
 		fprintf(stderr, "Invalid dest specification [%s]", dest);
 	}

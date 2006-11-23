@@ -23,30 +23,12 @@
 #include <utils.h>
 #include <crm/msg_xml.h>
 
+#define VARIANT_CLONE 1
+#include <lib/crm/pengine/variant.h>
+
 void clone_create_notifications(
 	resource_t *rsc, action_t *action, action_t *action_complete,
 	pe_working_set_t *data_set);
-
-typedef struct clone_variant_data_s
-{
-		resource_t *self;
-
-		int clone_max;
-		int clone_node_max;
-
-		int active_clones;
-		int max_nodes;
-		
-		gboolean interleave;
-		gboolean ordered;
-
-		crm_data_t *xml_obj_child;
-		
-		gboolean notify_confirm;
-		
-		GListPtr child_list; /* resource_t* */
-		
-} clone_variant_data_t;
 
 void child_stopping_constraints(
 	clone_variant_data_t *clone_data, enum pe_ordering type,
@@ -105,9 +87,21 @@ create_child_clone(resource_t *rsc, int sub_id, pe_working_set_t *data_set)
 
 gboolean master_unpack(resource_t *rsc, pe_working_set_t *data_set)
 {
+	const char *master_max = g_hash_table_lookup(
+		rsc->meta, XML_RSC_ATTR_MASTER_MAX);
+	const char *master_node_max = g_hash_table_lookup(
+		rsc->meta, XML_RSC_ATTR_MASTER_NODEMAX);
+
   	add_hash_param(rsc->parameters, crm_meta_name("stateful"),
 		       XML_BOOLEAN_TRUE);
-	return clone_unpack(rsc, data_set);
+	if(clone_unpack(rsc, data_set)) {
+		clone_variant_data_t *clone_data = NULL;
+		get_clone_variant_data(clone_data, rsc);
+		clone_data->master_max = crm_parse_int(master_max, "1");
+		clone_data->master_node_max = crm_parse_int(master_node_max, "1");
+		return TRUE;
+	}
+	return FALSE;
 }
 
 gboolean clone_unpack(resource_t *rsc, pe_working_set_t *data_set)
