@@ -1490,6 +1490,7 @@ ln -s @libdir@/heartbeat-gui/haclient.py $RPM_BUILD_ROOT@bindir@/hb_gui
 @libdir@/heartbeat-gui
 @bindir@/hb_gui
 @prefix@/share/locale/zh_CN/LC_MESSAGES/haclient.mo
+%endif
 
 ###########################################################
 %clean
