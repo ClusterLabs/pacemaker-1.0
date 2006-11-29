@@ -5698,7 +5698,8 @@ is_lost_packet(struct node_info * thisnode, seqno_t seq)
 }
 
 
-#define REXMIT_MS		1000
+extern int			max_rexmit_delay;
+#define REXMIT_MS		max_rexmit_delay
 #define ACCEPT_REXMIT_REQ_MS	(REXMIT_MS-10)
 
 
