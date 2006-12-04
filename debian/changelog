@@ -8,7 +8,16 @@ heartbeat-2 (2.0.8-1) unstable; urgency=low
   * Remove alternate dependancy on netkit-ping as it is being removed
     from Debian (closes: #383987)
 
- -- Simon Horman <horms@debian.org>  Mon, 21 Aug 2006 18:59:15 +0900
+ -- Simon Horman <horms@debian.org>  Thu, 30 Nov 2006 11:59:00 +0900
+
+heartbeat-2 (2.0.7-2) unstable; urgency=low
+
+  * Add dependancy and build dependancy on psmisc for fuser
+    Thanks to Hans-Joachim Baader
+    (Closes: #400958)
+  * Acknowldge NMU by Roger Leigh (Closes: #383987)  
+
+ -- Simon Horman <horms@debian.org>  Thu, 30 Nov 2006 02:26:24 +0000
 
 heartbeat-2 (2.0.7-1) unstable; urgency=low
 
