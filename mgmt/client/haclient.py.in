@@ -148,6 +148,8 @@ def confirmbox(msg, button=(gtk.STOCK_YES, gtk.RESPONSE_YES, gtk.STOCK_NO, gtk.R
 	return ret 
 	
 def on_label_active(event, widget, url) :
+	if not url[0] == '/' and not url.startswith("http") :
+		url = "http://"+url
 	webbrowser.open(url)
 
 def make_label_active(label, text, url) :
