@@ -38,7 +38,7 @@
 
 static void	schedule_rexmit_request(struct node_info* node, seqno_t seq, int delay);
 
-static int		max_rexmit_delay = 250;
+int			max_rexmit_delay = 250;
 static GHashTable*	rexmit_hash_table = NULL;
 void hb_set_max_rexmit_delay(int);
 
