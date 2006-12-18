@@ -683,3 +683,12 @@ msgstr "添加名称/值对"
 
 msgid "Reconnecting..."
 msgstr "重新连接中..."
+
+msgid "Ordered"
+msgstr "顺序启动子资源"
+
+msgid "Collocated"
+msgstr "同节点启动子资源"
+
+msgid "Server(:port):"
+msgstr "服务器(:端口号):"
