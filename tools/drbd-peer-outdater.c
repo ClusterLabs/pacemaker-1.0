@@ -37,7 +37,7 @@
 #include <dopd.h>
 
 #define OPTARGS      "hVt:p:r:"
-#define DEFAULT_TIMEOUT 60 // timeout in seconds
+#define DEFAULT_TIMEOUT 60 /* timeout in seconds */
 
 typedef struct dop_client_s
 {
@@ -202,7 +202,7 @@ main(int argc, char ** argv)
 
 	if (ipc_server == NULL) {
 		fprintf(stderr, "Could not connect to "T_OUTDATER" channel\n");
-		dop_exit(new_client); // unreachable
+		dop_exit(new_client); /* unreachable */
 	}
 
 	/* send message with drbd resource to dopd */
