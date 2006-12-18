@@ -50,6 +50,7 @@ ocf_SCRIPTS	     =  ClusterMon 	\
 			db2		\
 			Delay		\
 			drbd		\
+			EvmsSCC		\
 			Filesystem	\
 			ICP		\
 			IPsrcaddr	\
@@ -66,6 +67,9 @@ ocf_SCRIPTS	     =  ClusterMon 	\
 			pgsql		\
 			Pure-FTPd	\
 			Raid1		\
+			rsyncd		\
+			SAPDatabase	\
+			SAPInstance	\
 			SendArp		\
 			ServeRAID	\
 			Stateful	\

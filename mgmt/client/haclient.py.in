@@ -148,6 +148,8 @@ def confirmbox(msg, button=(gtk.STOCK_YES, gtk.RESPONSE_YES, gtk.STOCK_NO, gtk.R
 	return ret 
 	
 def on_label_active(event, widget, url) :
+	if not url[0] == '/' and not url.startswith("http") :
+		url = "http://"+url
 	webbrowser.open(url)
 
 def make_label_active(label, text, url) :
@@ -1623,10 +1625,15 @@ class MainWindow :
 			dlg = AddNativeDlg()
 			dlg.run()
 		elif new_type["type"] == _("group") : 	 
-			group = kvbox(_("Add Resource Group"),[Field("id",_("ID"),"group_")]) 	 
+			group = kvbox(_("Add Resource Group"),
+				[Field("id",_("ID"),"group_"),
+				Field("ordered",_("Ordered"),"true", ["true","false"],False),
+				Field("collocated",_("Collocated"),"true", ["true","false"],False)])
 			if group != None :
 				self.cur_name = group["id"]
 				self.cur_type = _("group")
+				manager.cache_update(group["id"]+"\nordered",group["ordered"])
+				manager.cache_update(group["id"]+"\ncollocated",group["collocated"])
 				dlg = AddNativeDlg()
 				dlg.run()
 				
@@ -1889,7 +1896,11 @@ class Manager :
 			self.cache[key] = data
 		else :
 			self.no_update_cache[key] = data
-					
+			
+	def cache_delkey(self, key) :
+		if self.cache.has_key(key) : 
+			del self.cache[key]
+			
 	def cache_clear(self) :
 		self.cache.clear()
 		
@@ -2148,7 +2159,17 @@ class Manager :
 		self.do_cmd(cmd)
 		if self.failed_reason != "" :
 			msgbox (self.failed_reason)
-
+		group_id = rsc["group"]
+		if group_id != None and group_id != "" :
+			ordered = self.cache_lookup(group_id+"\nordered")
+			if ordered != None :
+				self.update_rsc_attr(group_id, "ordered", ordered)
+				self.cache_delkey(group_id+"\nordered")
+			collocated = self.cache_lookup(group_id+"\ncollocated")
+			if collocated != None :
+				self.update_rsc_attr(group_id, "collocated", collocated)
+				self.cache_delkey(group_id+"\ncollocated")
+				
 	def get_all_rsc_id(self) :
 		return self.query("all_rsc")
 
