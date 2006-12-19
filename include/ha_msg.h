@@ -192,7 +192,6 @@ extern struct fieldtypefuncs_s fieldtypefuncs[NUM_MSG_TYPES];
 #define F_ACKSEQ	"ackseq"	/* The seq number this msg is acking*/
 #define F_CRM_DATA	"crm_xml"
 #define F_XML_TAGNAME	"__name__"
-#define F_XML_PARENT	"__parent__"
 #define F_STATE		"state"		/*used in ccm for state info*/
 
 
