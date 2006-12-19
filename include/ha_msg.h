@@ -258,6 +258,8 @@ void		ha_msg_del(struct ha_msg *msg);
 /* Copy message */
 struct ha_msg*	ha_msg_copy(const struct ha_msg *msg);
 
+int ha_msg_expand(struct ha_msg* msg );
+
 /*Add a null-terminated name and binary value to a message*/
 int		ha_msg_addbin(struct ha_msg * msg, const char * name, 
 				  const void * value, size_t vallen);
