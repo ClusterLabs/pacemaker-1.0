@@ -55,12 +55,12 @@ fi
 
 if [ "x$2" != "x" ]; then
     OCF_RESKEY_fstype=$1; shift
-    export OCF_RESKEY_fstype;;
+    export OCF_RESKEY_fstype
 fi
 
 if [ "x$2" != "x" ]; then
     OCF_RESKEY_options="$1";  shift
-    export OCF_RESKEY_options;;
+    export OCF_RESKEY_options
 fi
 
 OCF_TYPE=IPaddr
