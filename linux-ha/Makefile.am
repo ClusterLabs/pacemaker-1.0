@@ -20,4 +20,6 @@
 #
 MAINTAINERCLEANFILES    = Makefile.in config.h.in 
 
-noinst_HEADERS	        = portability.h
+includedir=$(base_includedir)/heartbeat
+
+include_HEADERS		= config.h portability.h
