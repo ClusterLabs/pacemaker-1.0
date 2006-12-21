@@ -1418,6 +1418,7 @@ ln -s @libdir@/heartbeat-gui/haclient.py $RPM_BUILD_ROOT@bindir@/hb_gui
 @sbindir@/attrd_updater
 @sbindir@/crm_failcount
 @sbindir@/crm_sh
+@sbindir@/drbd-peer-outdater
 %dir %attr (755, @HA_CCMUSER@, @HA_APIGROUP@) @HA_VARRUNDIR@/@HB_PKG@/ccm
 %dir %attr (750, @HA_CCMUSER@, @HA_APIGROUP@) @HA_VARRUNDIR@/@HB_PKG@/crm
 %dir %attr (750, @HA_CCMUSER@, @HA_APIGROUP@) @localstatedir@/lib/@HB_PKG@/crm
