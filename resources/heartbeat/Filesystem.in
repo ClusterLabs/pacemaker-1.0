@@ -63,7 +63,7 @@ if [ "x$2" != "x" ]; then
     export OCF_RESKEY_options
 fi
 
-OCF_TYPE=IPaddr
+OCF_TYPE=Filesystem
 OCF_RESOURCE_INSTANCE=${OCF_TYPE}_$OCF_RESKEY_device
 export OCF_TYPE OCF_RESOURCE_INSTANCE
 
