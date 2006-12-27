@@ -224,7 +224,7 @@ saname2str(SaNameT name)
 	if (name.length > SA_MAX_NAME_LENGTH - 1)
 		name.length = SA_MAX_NAME_LENGTH - 1;
 
-	if ((str = (char *)ha_malloc(name.length + 1)) == NULL)
+	if ((str = (char *)cl_malloc(name.length + 1)) == NULL)
 		return NULL;
 
 	strncpy(str, name.value, name.length);

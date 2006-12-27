@@ -2600,7 +2600,7 @@ getNodeCkptStatus(gpointer key,gpointer value,
 	const char *	nodeName = key;
 	SaCkptReqOpenParamT * openParam = user_data;
 	saOpenNodeStatusT  	*status 	= NULL;
-	status = (saOpenNodeStatusT *)ha_malloc(
+	status = (saOpenNodeStatusT *)cl_malloc(
 		sizeof(saOpenNodeStatusT));
 	if(status == NULL){
 		/*FIXME how to report error on hash fucntions*/
@@ -2964,15 +2964,15 @@ dupCkptMessage(const SaCkptMessageT *ckptMsg){
 		cl_log(LOG_INFO,"NULL ckptMsg in dupCkptMessage");
 		return NULL;
 	}
-	ret = (SaCkptMessageT *)ha_malloc(sizeof(SaCkptMessageT));
-	param = ha_malloc(ckptMsg->paramLength);
-	data = ha_malloc(ckptMsg->dataLength);
+	ret = (SaCkptMessageT *)cl_malloc(sizeof(SaCkptMessageT));
+	param = cl_malloc(ckptMsg->paramLength);
+	data = cl_malloc(ckptMsg->dataLength);
 	
 	if(ret == NULL ||param== NULL ||  data== NULL){
 		cl_log(LOG_INFO,"malloc error in dupCkptMessage");
-		if(ret!= NULL) ha_free(ret);
-		if(param!= NULL) ha_free(param);
-		if(data!= NULL) ha_free(data);
+		if(ret!= NULL) cl_free(ret);
+		if(param!= NULL) cl_free(param);
+		if(data!= NULL) cl_free(data);
 		return NULL;
 	} 
 	memset(ret,0,sizeof(SaCkptMessageT));
