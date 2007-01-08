@@ -27,6 +27,9 @@ autom4te*
 libtool.m4
 ltdl.m4
 libltdl.tar
+autoconf
+autoheader
+automake
 
 # BEAM Entries
 *.beam
@@ -126,6 +129,15 @@ resources/OCF/oralsnr
 resources/OCF/pgsql
 resources/OCF/pingd
 resources/OCF/portblock
+resources/OCF/EvmsSCC
+resources/OCF/ManageRAID
+resources/OCF/ManageVE
+resources/OCF/SAPDatabase
+resources/OCF/SAPInstance
+resources/OCF/SendArp
+resources/OCF/WAS6
+resources/OCF/mysql
+resources/OCF/rsyncd
 resources/heartbeat/AudibleAlarm
 resources/heartbeat/Delay
 resources/heartbeat/Filesystem
@@ -170,12 +182,16 @@ crm/admin/crm_standby
 crm/admin/crm_uuid
 crm/admin/crm_verify
 crm/admin/crmadmin
+crm/admin/crm_commands.py
+crm/admin/crm_sh
+crm/admin/crm_utils.py
 crm/admin/iso8601
 crm/cib/cib
 crm/cib/cibmon
 crm/crm.dtd
 crm/crmd/atest
 crm/crmd/crmd
+crm/crmd/version.h
 crm/pengine/pengine
 crm/pengine/ptest
 crm/tengine/tengine
@@ -184,6 +200,7 @@ doc/ChangeLog
 doc/GettingStarted.txt
 doc/HardwareGuide.txt
 doc/Requirements.txt
+doc/crm_resource.8
 doc/faqntips.txt
 doc/heartbeat_api.txt
 doc/rsync.txt
@@ -222,9 +239,17 @@ tools/attrd_updater
 tools/cl_respawn
 tools/cl_status
 tools/pingd
+tools/dopd
+tools/drbd-peer-outdater
 lib/mgmt/pymgmt.py
 lib/mgmt/pymgmt_wrap.c
 tsa_plugin/ha_mgmt_client_wrap.c
+
+# Misc
+TAGS
+.gres.*
+*.orig
+.gdb_history
 
 # Entries better done as regexp's to avoid matching too broadly
 syntax: regexp
