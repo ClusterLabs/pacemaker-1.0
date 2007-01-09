@@ -416,7 +416,7 @@ checkpointNodeStatusInit(void){
 	if( hb->llc_ops->init_nodewalk(hb) == HA_OK){
 		nodeName = (hb->llc_ops->nextnode(hb));
 		while(nodeName != NULL){
-			nodeInfo = (saCkptNodeInfo *)ha_malloc(
+			nodeInfo = (saCkptNodeInfo *)cl_malloc(
 					sizeof(saCkptNodeInfo));
 			
 			status = hb->llc_ops->node_status(hb,nodeName);

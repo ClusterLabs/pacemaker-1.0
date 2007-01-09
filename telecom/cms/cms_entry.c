@@ -301,8 +301,8 @@ client_input_dispatch(IPC_Channel * client, gpointer user_data)
 				g_hash_table_remove(cmsdata->client_table
 				,	&client->farside_pid);
 
-				ha_free(orig_key);
-				ha_free(cms_client);
+				cl_free(orig_key);
+				cl_free(cms_client);
 			}
 
 			return FALSE;

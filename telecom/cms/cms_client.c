@@ -108,14 +108,14 @@ cms_client_add(GHashTable ** cms_client_table, struct IPC_CHANNEL * newclient)
 		return HA_OK;
 	}
 
-	cms_client = (cms_client_t *) ha_malloc(sizeof(cms_client_t));
+	cms_client = (cms_client_t *) cl_malloc(sizeof(cms_client_t));
 
 	dprintf("Add farside_pid [%d] to daemon <%p>\n"
 	,	newclient->farside_pid, *cms_client_table);
 	cms_client->channel_count = 1;
 	cms_client->opened_mqueue_list = NULL;
 
-	key = (pid_t *)ha_malloc(sizeof(pid_t));
+	key = (pid_t *)cl_malloc(sizeof(pid_t));
 	*key = newclient->farside_pid;
 	g_hash_table_insert(*cms_client_table, key, cms_client);
 
@@ -219,7 +219,7 @@ client_process_mqopen(IPC_Channel * client, client_header_t * msg,
 
 		client_send_client_qopen(client, &request, -1, SA_ERR_EXIST);
 
-		ha_free(mqname);
+		cl_free(mqname);
 		return TRUE;
 	}
 
@@ -263,23 +263,23 @@ client_process_mqopen(IPC_Channel * client, client_header_t * msg,
 
 	client_send_client_qopen(client, &request, -1, error);
 
-	ha_free(mqname);
+	cl_free(mqname);
 	return TRUE;
 
 proceed:
-	if ((cli = (IPC_Channel *) ha_malloc(sizeof(IPC_Channel))) == NULL) {
-		cl_log(LOG_ERR, "%s: ha_malloc failed", __FUNCTION__);
-		ha_free(mqname);
+	if ((cli = (IPC_Channel *) cl_malloc(sizeof(IPC_Channel))) == NULL) {
+		cl_log(LOG_ERR, "%s: cl_malloc failed", __FUNCTION__);
+		cl_free(mqname);
 		return FALSE;
 	}
 	*cli = *client;
 
-	mq = (mqueue_t *) ha_malloc(sizeof(mqueue_t));
+	mq = (mqueue_t *) cl_malloc(sizeof(mqueue_t));
 	if (!mq) {
-		cl_log(LOG_ERR, "%s: ha_malloc for mqueue_t failed."
+		cl_log(LOG_ERR, "%s: cl_malloc for mqueue_t failed."
 		,	__FUNCTION__);
-		ha_free(cli);
-		ha_free(mqname);
+		cl_free(cli);
+		cl_free(mqname);
 		return FALSE;
 	}
 	memset(mq, 0, sizeof(mqueue_t));
@@ -312,9 +312,9 @@ proceed:
 		,	__FUNCTION__);
 
 		g_hash_table_remove(mq_open_pending_hash, mqname);
-		ha_free(cli);
-		ha_free(mq);
-		ha_free(mqname);
+		cl_free(cli);
+		cl_free(mq);
+		cl_free(mqname);
 
 		return FALSE;
 	}
@@ -416,7 +416,7 @@ client_process_mqunlink(IPC_Channel * client, client_header_t * msg,
 
 	if (request_mqname_unlink(mqname, cmsdata) == FALSE) {
 		cl_log(LOG_ERR, "%s: mqname_unlink failed", __FUNCTION__);
-		ha_free(mqname);
+		cl_free(mqname);
 		return FALSE;
 	}
 	mqueue_handle_remove(&(m->handle));
@@ -433,7 +433,7 @@ client_process_mqunlink(IPC_Channel * client, client_header_t * msg,
 		g_list_remove(cms_client->opened_mqueue_list, mq);
 
 
-	ha_free(mqname);
+	cl_free(mqname);
 	return TRUE;
 }
 
@@ -513,13 +513,13 @@ client_process_mqsend(IPC_Channel * client, client_header_t * msg,
 
 		dprintf("%s: insert ack packet ", __FUNCTION__);
 
-		if ((cli = (IPC_Channel *) ha_malloc(sizeof(IPC_Channel))) 
+		if ((cli = (IPC_Channel *) cl_malloc(sizeof(IPC_Channel))) 
 				== NULL 
-		||  (seq = (unsigned long *) ha_malloc(sizeof(unsigned long))) 
+		||  (seq = (unsigned long *) cl_malloc(sizeof(unsigned long))) 
 				== NULL ) {
-			cl_log(LOG_ERR, "%s: ha_malloc failed", __FUNCTION__);
+			cl_log(LOG_ERR, "%s: cl_malloc failed", __FUNCTION__);
 			if (cli)
-				ha_free(cli);
+				cl_free(cli);
 
 			error = SA_ERR_NO_MEMORY;
 			goto error;
@@ -540,7 +540,7 @@ client_process_mqsend(IPC_Channel * client, client_header_t * msg,
 		goto error;
 	}
 
-	ha_free(mqname);
+	cl_free(mqname);
 	return TRUE;
 
 error:
@@ -556,7 +556,7 @@ error:
 
 	client_send_msg(client, reply.header.len, &reply);
 
-	ha_free(mqname);
+	cl_free(mqname);
 	return TRUE;
 }
 
@@ -573,14 +573,14 @@ client_process_message_request(IPC_Channel * client, client_header_t * msg)
 
 	if ((mq = mqueue_table_lookup(mqname, NULL)) == NULL) {
 		cl_log(LOG_ERR, "%s: cannot find mq [%s]", __FUNCTION__,mqname);
-		ha_free(mqname);
+		cl_free(mqname);
 		return FALSE;
 	}
 
 	if ((message = dequeue_message(mq)) == NULL) {
 		cl_log(LOG_ERR, "%s: No message found for mq [%s], block"
 		,	__FUNCTION__, mqname);
-		ha_free(mqname);
+		cl_free(mqname);
 		return TRUE;
 	}
 
@@ -588,7 +588,7 @@ client_process_message_request(IPC_Channel * client, client_header_t * msg)
 	,	(char *)message->msg.data);
 
 	m = (client_message_t *)
-			ha_malloc(sizeof(client_message_t) + message->msg.size);
+			cl_malloc(sizeof(client_message_t) + message->msg.size);
 
 	m->header.type = CMS_MSG_GET;
         m->header.len = sizeof(client_message_t) + message->msg.size;
@@ -606,9 +606,9 @@ client_process_message_request(IPC_Channel * client, client_header_t * msg)
 	/* TODO: needs fix.  
 	   Can only be called after the msg_done */
 
-	ha_free(message);
-	ha_free(mqname);
-	ha_free(m);
+	cl_free(message);
+	cl_free(mqname);
+	cl_free(m);
 	return TRUE;
 }
 
@@ -668,8 +668,8 @@ bad_queue:
 	client_send_msg(client, reply.len, &reply);
 
 exit:
-	ha_free(mqname);
-	ha_free(mqgname);
+	cl_free(mqname);
+	cl_free(mqgname);
 	return TRUE;
 }
 
@@ -725,8 +725,8 @@ error:
 	client_send_msg(client, reply.len, &reply);
 
 exit:
-	ha_free(mqname);
-	ha_free(mqgname);
+	cl_free(mqname);
+	cl_free(mqgname);
 	return TRUE;
 }
 
@@ -740,7 +740,7 @@ client_process_mqgroup_track(IPC_Channel * client, client_header_t * msg)
 	client_mqgroup_notify_t * rmsg;
 
 	rmsg = (client_mqgroup_notify_t *)
-			ha_malloc(sizeof(client_mqgroup_notify_t));
+			cl_malloc(sizeof(client_mqgroup_notify_t));
 
 	rmsg->header.type = msg->type;
 	rmsg->header.len = sizeof(client_mqgroup_notify_t);
@@ -759,16 +759,16 @@ client_process_mqgroup_track(IPC_Channel * client, client_header_t * msg)
 		client_mqgroup_track_t * track;
 
 		track = (client_mqgroup_track_t *)
-				ha_malloc(sizeof(client_mqgroup_track_t));
+				cl_malloc(sizeof(client_mqgroup_track_t));
 
 		if (track == NULL) {
-			cl_log(LOG_ERR, "%s: ha_malloc failed", __FUNCTION__);
+			cl_log(LOG_ERR, "%s: cl_malloc failed", __FUNCTION__);
 			rmsg->header.flag = SA_ERR_NO_MEMORY;
 
 			client_send_msg(client, rmsg->header.len
 			,	(client_header_t *)rmsg);
 		
-			ha_free(rmsg);
+			cl_free(rmsg);
 			return TRUE;
 		}
 		track->ch = client;
@@ -791,7 +791,7 @@ client_process_mqgroup_track(IPC_Channel * client, client_header_t * msg)
 		rmsg->data = (char *)rmsg + sizeof(client_mqgroup_notify_t);
 
 		memcpy(rmsg->data, buf.change_buff, length);
-		ha_free(buf.change_buff);
+		cl_free(buf.change_buff);
 		rmsg->number = buf.number;
 		rmsg->policy = buf.policy;
 		rmsg->group_name = buf.name;
@@ -808,8 +808,8 @@ noexist:
 	client_send_msg(client, rmsg->header.len, (client_header_t *)rmsg);
 
 exit:
-	ha_free(gname);
-	ha_free(rmsg);
+	cl_free(gname);
+	cl_free(rmsg);
 	return TRUE;
 }
 
@@ -853,7 +853,7 @@ client_process_mqgroup_track_stop(IPC_Channel * client, client_header_t * msg)
 
 	if (track != NULL) {
 		mqg->notify_list = g_list_remove(mqg->notify_list, track);
-		ha_free(track);
+		cl_free(track);
 	}
 
 	client_send_msg(client, reply.len, &reply);
@@ -864,7 +864,7 @@ noexist:
 	client_send_msg(client, reply.len, &reply);
 
 exit:
-	ha_free(gname);
+	cl_free(gname);
 	return TRUE;
 }
 
@@ -888,7 +888,7 @@ cms_client_msg_done(IPC_Message * msg)
 			mqueue_update_usage(mq, m->msg.priority, -m->msg.size);
 #endif
 
-	ha_free(msg->msg_private);
+	cl_free(msg->msg_private);
 	return;
 }
 
@@ -903,8 +903,8 @@ cms_client_msg_done_freeclient(IPC_Message * msg)
 
 	dprintf("cms_client_msg_done, type = %d\n", (int)msg_type);
 
-	ha_free(msg->msg_private);
-	ha_free(msg->msg_ch);
+	cl_free(msg->msg_private);
+	cl_free(msg->msg_ch);
 	return;
 }
 
@@ -916,13 +916,13 @@ client_send_msg(IPC_Channel * client, size_t len, gpointer data)
 
 	CMS_TRACE();
 
-	if ((msg = ha_malloc(sizeof(IPC_Message) + len)) == NULL) {
-		cl_log(LOG_ERR, "%s: ha_malloc failed", __FUNCTION__);
+	if ((msg = cl_malloc(sizeof(IPC_Message) + len)) == NULL) {
+		cl_log(LOG_ERR, "%s: cl_malloc failed", __FUNCTION__);
 		return FALSE;
 	}
 
 #if DEBUG_MEMORY
-	dprintf("%s (%p) ha_malloc %p, size 0x%x\n", __FUNCTION__
+	dprintf("%s (%p) cl_malloc %p, size 0x%x\n", __FUNCTION__
 	,	&client_send_msg, msg, sizeof(IPC_Message) + len);
 #endif
 	msg->msg_body = msg + 1;
@@ -952,13 +952,13 @@ client_send_msg_freeclient(IPC_Channel * client, size_t len, gpointer data)
 
 	CMS_TRACE();
 
-	if ((msg = ha_malloc(sizeof(IPC_Message) + len)) == NULL) {
-		cl_log(LOG_ERR, "%s: ha_malloc failed", __FUNCTION__);
+	if ((msg = cl_malloc(sizeof(IPC_Message) + len)) == NULL) {
+		cl_log(LOG_ERR, "%s: cl_malloc failed", __FUNCTION__);
 		return FALSE;
 	}
 
 #if DEBUG_MEMORY
-	dprintf("%s (%p) ha_malloc %p, size 0x%x\n", __FUNCTION__
+	dprintf("%s (%p) cl_malloc %p, size 0x%x\n", __FUNCTION__
 	,	&client_send_msg, msg, sizeof(IPC_Message) + len);
 #endif
 	msg->msg_body = msg + 1;
@@ -1098,13 +1098,13 @@ int client_process_mqsend_reply(IPC_Channel * client, client_header_t * msg, cms
 
 		dprintf("%s: insert ack packet: ", __FUNCTION__);
 
-		if ((cli = (IPC_Channel *) ha_malloc(sizeof(IPC_Channel))) 
+		if ((cli = (IPC_Channel *) cl_malloc(sizeof(IPC_Channel))) 
 				== NULL 
-		||  (seq = (unsigned long *) ha_malloc(sizeof(unsigned long))) 
+		||  (seq = (unsigned long *) cl_malloc(sizeof(unsigned long))) 
 				== NULL ) {
-			cl_log(LOG_ERR, "%s: ha_malloc failed", __FUNCTION__);
+			cl_log(LOG_ERR, "%s: cl_malloc failed", __FUNCTION__);
 			if (cli)
-				ha_free(cli);
+				cl_free(cli);
 
 			error = SA_ERR_NO_MEMORY;
 			goto error;

@@ -111,7 +111,7 @@ int
 set_cms_status(const char * node, const char * status, void * private)
 {
 	GList * element;
-	char * host = ha_strdup(node);
+	char * host = cl_strdup(node);
 
 	dprintf("set_cms_status: node = %s, status = %s\n", node, status);
 
@@ -137,7 +137,7 @@ set_cms_status(const char * node, const char * status, void * private)
 			 */
 			mqueue_close_node(element->data);
 
-			ha_free(element->data);
+			cl_free(element->data);
 			g_list_free_1(element);
 
 			/*
@@ -168,7 +168,7 @@ free_mqmember(gpointer data, gpointer user_data)
 {
 	char * node = data;
 
-	ha_free(node);
+	cl_free(node);
 }
 
 static void
@@ -176,7 +176,7 @@ free_clm_member(gpointer data, gpointer user_data)
 {
 	SaClmClusterNotificationT * nbuf = data;
 
-	ha_free(nbuf);
+	cl_free(nbuf);
 }
 
 static int
@@ -248,7 +248,7 @@ mqclm_track(SaClmClusterNotificationT *nbuf, SaUint32T nitem
 		}
 
 		buffer = (SaClmClusterNotificationT *)
-				ha_malloc(sizeof(SaClmClusterNotificationT));
+				cl_malloc(sizeof(SaClmClusterNotificationT));
 
 		*buffer = nbuf[i];
 		clm_member_list = g_list_append(clm_member_list, buffer);
@@ -257,7 +257,7 @@ mqclm_track(SaClmClusterNotificationT *nbuf, SaUint32T nitem
 			continue;
 		}
 
-		node = ha_strdup(nbuf[i].clusterNode.nodeName.value);
+		node = cl_strdup(nbuf[i].clusterNode.nodeName.value);
 		dprintf("insert node [%s]\n", node);
 		mqmember_list = g_list_insert_sorted(mqmember_list, node,
 					comp_mqmember);
@@ -297,7 +297,7 @@ cms_membership_init(cms_data_t * cmsdata)
 		return HA_FAIL;
 	}
 
-	nbuf = (SaClmClusterNotificationT *) ha_malloc(cmsdata->node_count * 
+	nbuf = (SaClmClusterNotificationT *) cl_malloc(cmsdata->node_count * 
 				sizeof (SaClmClusterNotificationT));
 
 #if 0
@@ -305,7 +305,7 @@ cms_membership_init(cms_data_t * cmsdata)
 	if ((ret = saClmClusterTrackStart(&handle, SA_TRACK_CURRENT, nbuf, 
 	    cmsdata->node_count) != SA_OK)) {
 		cl_log(LOG_ERR, "SA_TRACK_CURRENT error, errno [%d]", ret);
-		ha_free(nbuf);
+		cl_free(nbuf);
 		return HA_FAIL; 
 	}
 #endif
@@ -316,13 +316,13 @@ cms_membership_init(cms_data_t * cmsdata)
 
 	if (ret != SA_OK) {
 		cl_log(LOG_ERR, "SA_TRACK_CURRENT error, errno [%d]", ret);
-		ha_free(nbuf);
+		cl_free(nbuf);
 		return HA_FAIL; 
 	}
 
 	if ((ret = saClmSelectionObjectGet(&handle, &st)) != SA_OK) {
 		cl_log(LOG_ERR, "saClmSelectionObjectGet error, errno [%d]", ret);
-		ha_free(nbuf);
+		cl_free(nbuf);
 		return HA_FAIL;
 	}
 
@@ -330,7 +330,7 @@ cms_membership_init(cms_data_t * cmsdata)
 	if ((ret = saClmClusterTrackStart(&handle, SA_TRACK_CHANGES, nbuf, 
 		cmsdata->node_count)) != SA_OK) {
 		cl_log(LOG_ERR, "SA_TRACK_CURRENT error, errno [%d]", ret);
-		ha_free(nbuf);
+		cl_free(nbuf);
 		return HA_FAIL; 
 	}
 
