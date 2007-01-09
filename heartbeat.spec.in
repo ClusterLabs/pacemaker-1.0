@@ -89,14 +89,108 @@ implementing any number of interfaces.
 
 %if %{ENABLE_MGMT}
 %description gui
-gui client for heartbeat cluster
+GUI client for heartbeat cluster
 %endif
 
 %changelog
-* Mon Dec 04 2006  Alan Robertson <alanr@unix.sh> (see doc/AUTHORS file)
+* Tue Dec 09 2007  Alan Robertson <alanr@unix.sh> (see doc/AUTHORS file)
 + Version 2.0.8 - bug fixes and enhancements
   + Allow colocation based on node attributes other than #id 
   + SAPDatabase and SAPInstance resource agents added.
+  + Core/CRM: Improvements to the memory allocation, message, and string
+    handling libraries result in an overall speed-up of 65%.
+  + CRM: Fix ISO date handling for Jan 01 of any year.
+  + CRM: Only update the voted hashtable with no-votes for the current
+    election.
+  + RA: IPaddr: Support netmask both in CIDR and in dotted-quad notation.
+  + logd: Fix trailing random byte in log messages (OSDL 1268).
+  + heartbeat:  Work around a glibc/times() bug to prevent failures every
+    497 days on 32-bit Linux (OSDL 1407).
+  + heartbeat: Retransmits were requested more often than they'd be
+    honored (OSDL 1455).
+  + CTS/PE: Introduce CRM option "startup_fencing" to disable fencing of
+    unseen nodes, because CTS can't handle this.
+  + PE: Split-off "network-delay" option from global_timeout to separate
+    network delays from action timeouts.
+  + PE/CRM: Binaries now support being called with "metadata" command to
+    document the complete list of options in the CIB.
+  + PE: DTD: Include start_delay as a property of operation objects.
+  + PE: Fix implementation of date_spec when no range is specified.
+  + PE: Enforce clone_node_max for already running resources.
+  + PE: Clones were not being stopped on node shutdown.
+  + PE: Allow resource colocation based on node attributes other than #id
+    (node_attribute option added to rsc_colocation constraint).
+  + PE: Improved handling when timeout < start_delay (OSDL 1421).
+  + PE: Pre-notifications for promote occured before start was completed
+    (OSDL 1447).
+  + PE: Allow any two pairs of actions to be specified for rsc_order (OSDL
+    1452).
+  + PE: Handle asymmetric clusters where RAs are not installed on all
+    nodes.
+  + PE: Allow resource stickiness and failure stickiness to change based
+    on node attributes.
+  + CIB: Fix update_attr() causes attrd to hang at shutdown when there is
+    no DC (OSDL 1432).
+  + CIB: Corrupted config file prevents heartbeat restart (OSDL 1385).
+  + CIB: Startup processing improvements; DTD validation will be
+    automatically activated if the CIB on-disk validates.
+  + TE: Fix memory leak.
+  + TE: Failcount wasn't being updated in all cases.
+  + TE: never update the CIB with unconfirmed stop actions (OSDL 1435).
+  + CTS/RA: Replace OCFMSDummy with Stateful RA.
+  + CCM: Centralize quorum calculation on the transition leader.
+  + CCM: Support split-site and external quorum servers.
+  + CRM: Ignore status update for non-members (ie, ping nodes).
+  + LRM: Don't postpone postponed resources.
+  + LRM: Fix restart in case an lrmd is already running (OSDL 1333).
+  + LRM: Fix overflow in RA output handling (OSDL 1433).
+  + mgmtd: Robustness and memory leak fixes.
+  + mgmtd: make the port used configurable (OSDL 1390).
+  + haresources2cib.py: Improve v1 to v2 conversion tool (OSDL 1415).
+  + GUI: ping nodes appear as failed in gui (OSDL 1394).
+  + GUI: Reduce duplicates in RA list by only showing the OCF one if both
+    ocf and hb RA exist) (OSDL 1338).
+  + GUI: Add new resource to currently selected group (OSDL 1414).
+  + GUI: support all attributes of operations (OSDL 1372).
+  + GUI: Create first resource along with a new group; delete group when
+    last resource is removed (OSDL 1287).
+  + GUI: Set defaults for clones and m/s RAs (OSDL 1352).
+  + GUI: Use meta-data defaults when creating actions (OSDL 1351).
+  + GUI: GUI: start all sub resources when we start a group or a clone
+    (OSDL 1449).
+  + GUI: support ordered==false or non-collocated==false groups (OSDL
+    1257).
+  + stonithd: Fix memory leak.
+  + stonithd: Remove reliance on farside_pid (OSDL 1412).
+  + stonith external/riloe: Make the login name and iLo device address
+    configurable.
+  + crm_resource: Add manpage.
+  + RA: PureFTPd, mysql, ManageVE (to manage an OpenVZ container),
+    ManageRAID, WAS6 (Websphere 6) added.
+  + RA: Include SAPInstance and SAPDatabase (FATE 2172).
+  + RA: IPaddr cleanup to avoid race conditions in the script. Report
+    status failure when an IPaddr is active on a different interface but
+    allow it to be stopped.
+  + RA: IPaddr2 fixes for loopback bound addresses.
+  + RA: Filesystem reported wrong status/monitor results for OCFS2 in some
+    circumstances (Novell 187080).
+  + RA: Improve heartbeat v1 wrappers.
+  + RA: Fix db2 monitor operation.
+  + RA: ldirectord: Make the emailalert and emailalertfreq options global
+    as well as non-global, make checkcount global as well as per-virtual,
+    add radius check, improvements to documentation.
+  + RA: pgsql: Make server logfile configurable and implement
+    validate-all. New parameter ctl_opt added to pgsql to support
+    additional options for pg_ctl.
+  + CRM: First beginnings of a cluster-wide shell (FATE ...)
+  + BEAM / Coverity induced fixes.
+  + Minor compatibility fixes (OSDL 1405).
+  + Logging improvements all over the place.
+  + Extended support for master-slave resources (FATE 300723).
+  + OCF RA API compliance checker (FATE 300737).
+  + Support weak and uni-directional collocation constraints (FATE
+    300792).
+  + Many bugfixes.
 
 * Thu Aug 03 2006  Alan Robertson <alanr@unix.sh> (see doc/AUTHORS file)
 + Version 2.0.7 - bug fix and a few enhancements release
@@ -1418,7 +1512,6 @@ ln -s @libdir@/heartbeat-gui/haclient.py $RPM_BUILD_ROOT@bindir@/hb_gui
 @sbindir@/attrd_updater
 @sbindir@/crm_failcount
 @sbindir@/crm_sh
-@sbindir@/drbd-peer-outdater
 %dir %attr (755, @HA_CCMUSER@, @HA_APIGROUP@) @HA_VARRUNDIR@/@HB_PKG@/ccm
 %dir %attr (750, @HA_CCMUSER@, @HA_APIGROUP@) @HA_VARRUNDIR@/@HB_PKG@/crm
 %dir %attr (750, @HA_CCMUSER@, @HA_APIGROUP@) @localstatedir@/lib/@HB_PKG@/crm
