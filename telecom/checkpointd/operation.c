@@ -707,7 +707,7 @@ updateReplicaPendingOption(SaCkptReplicaT *replica, const char *hostName){
 		
 		if(!nodeExisted){
 			opStateList = ckptOp->stateList;
-			state = (SaCkptStateT*)ha_malloc(sizeof(SaCkptStateT));
+			state = (SaCkptStateT*)cl_malloc(sizeof(SaCkptStateT));
 			strncpy(state->nodeName,hostName,SA_MAX_NAME_LENGTH);
 			state->nodeName[SA_MAX_NAME_LENGTH-1]='\0';
 			state->state = OP_STATE_STARTED;

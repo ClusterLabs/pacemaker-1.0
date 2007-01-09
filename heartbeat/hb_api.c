@@ -1703,7 +1703,7 @@ api_remove_client_int(client_proc_t* req, const char * reason)
 		api_send_client_status(req, LEAVESTATUS, reason);
 		/* Zap! */
 		memset(client, 0, sizeof(*client));
-		ha_free(client); client = NULL;
+		cl_free(client); client = NULL;
 
 	}else{
 		cl_log(LOG_ERR,	"api_remove_client_int: could not find pid [%ld]"

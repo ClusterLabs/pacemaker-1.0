@@ -175,7 +175,7 @@ extern int	udpport;	/* Shared with udp.c */
 #define PPPUDPASSERT(mp) 
 static int hb_dev_mtype (char **buffer)
 {
-	*buffer = ha_strdup("ppp-udp");
+	*buffer = cl_strdup("ppp-udp");
 	if (!*buffer) {
 		return 0;
 	}
@@ -185,7 +185,7 @@ static int hb_dev_mtype (char **buffer)
 
 static int hb_dev_descr (char **buffer)
 {
-	*buffer = ha_strdup("Serial ring running PPP/UDP");
+	*buffer = cl_strdup("Serial ring running PPP/UDP");
 	if (!*buffer) {
 		return 0;
 	}
@@ -224,10 +224,10 @@ hb_dev_new(const char* tty, const char* ipaddr)
 	memset(ipi, 0, sizeof(*ipi));
 
 
-	ipi->ipaddr = ha_strdup(ipaddr);
+	ipi->ipaddr = cl_strdup(ipaddr);
 	if (!ipi->ipaddr) {
 		ha_log(LOG_ERR, "Out of memory");
-		ha_free(ipi);
+		cl_free(ipi);
 		return NULL;
 	}
 
@@ -237,11 +237,11 @@ hb_dev_new(const char* tty, const char* ipaddr)
 	if (ret != NULL) {
 		char *	name;
 		ret->pd = (void*)ipi;
-		name = ha_strdup(tty);
+		name = cl_strdup(tty);
 		if (name == NULL)  {
-			ha_free(ipi);
-			ha_free(ipi->addr);
-			ha_free(ret);
+			cl_free(ipi);
+			cl_free(ipi->addr);
+			cl_free(ret);
 			ret=NULL;
 			return(ret);
 		}
@@ -251,8 +251,8 @@ hb_dev_new(const char* tty, const char* ipaddr)
 		ipi->rsocket = ipi->wsocket = -1;
 	}else{
 		ha_log(LOG_ERR, "Out of memory");
-		ha_free(ipi);
-		ha_free(ipi->addr);
+		cl_free(ipi);
+		cl_free(ipi->addr);
 	}
 	return(ret);
 }
@@ -372,11 +372,11 @@ ppp_udp_ppp_proc_info(struct hb_media * mp)
 		}
 		if (fgets(line, MAXLINE-1, fp) != NULL) {
 			if (ei->far_addr != NULL)  {
-				ha_free(ei->far_addr);
+				cl_free(ei->far_addr);
 				ei->far_addr = NULL;
 			}
 			line[strlen(line)-1] = EOS;
-			ei->far_addr = ha_strdup(line);
+			ei->far_addr = cl_strdup(line);
 			if (!ei->far_addr) {
 				return NULL;
 			}
@@ -386,14 +386,14 @@ ppp_udp_ppp_proc_info(struct hb_media * mp)
 		}
 		if (fgets(line, MAXLINE-1, fp) != NULL) {
 			if (ei->interface != NULL)  {
-				ha_free(ei->interface);
+				cl_free(ei->interface);
 				ei->interface = NULL;
 			}
 			line[strlen(line)-1] = EOS;
-			ei->interface = ha_strdup(line);
+			ei->interface = cl_strdup(line);
 			if (!ei->interface) {
 				if (ei->far_addr) {
-					ha_free(ei->far_addr);
+					cl_free(ei->far_addr);
 				}
 				return NULL;
 			}
@@ -800,7 +800,7 @@ hb_dev_write(struct hb_media* mp, struct ha_msg* hmsg)
 	/* Can't write to socket yet... */
 	if (ei->wsocket < 0) {
 		/* Pretend we wrote the packet without error */
-		ha_free(pkt);
+		cl_free(pkt);
 		return(HA_OK);
 	}
 
@@ -841,7 +841,7 @@ hb_dev_write(struct hb_media* mp, struct ha_msg* hmsg)
 			/* Hopefully far end heartbeats will start up soon... */
 			/* If not, we'll keep getting connection refused and */
 			/* eventually restart PPPd (in case it's us) */
-			ha_free(pkt);
+			cl_free(pkt);
 			return(HA_OK);
 		}
 		ha_log(LOG_WARNING
@@ -849,7 +849,7 @@ hb_dev_write(struct hb_media* mp, struct ha_msg* hmsg)
 		,	inet_ntoa(ei->addr.sin_addr));
 		/* This will cause PPPd to restart */
 		hb_dev_close(mp);
-		ha_free(pkt);
+		cl_free(pkt);
 		return(HA_FAIL);
 	}else{
 		/* Account for pppd weirdness */
@@ -863,7 +863,7 @@ hb_dev_write(struct hb_media* mp, struct ha_msg* hmsg)
 	if (DEBUGPKTCONT) {
 		ha_log(LOG_DEBUG, "%s", pkt);
    	}
-	ha_free(pkt);
+	cl_free(pkt);
 	return(HA_OK);
 }
 

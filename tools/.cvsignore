@@ -15,4 +15,5 @@ haresources2cib.py
 attrd
 attrd_updater
 pingd
-
+dopd
+drbd-peer-outdater

@@ -10,3 +10,4 @@ atest
 *.beam
 parser-messages
 MISC_ERRORS
+version.h

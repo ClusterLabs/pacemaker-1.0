@@ -50,7 +50,7 @@ mqueue_handle_insert(mqueue_t *mq)
 {
 	guint * handle;
 
-	handle = (guint *) ha_malloc(sizeof(guint));
+	handle = (guint *) cl_malloc(sizeof(guint));
 	*handle = __msghandle_counter++;
 	g_hash_table_insert(mqtable_handle_hash, handle, mq);
 	mq->handle = *handle;
@@ -158,12 +158,12 @@ mqueue_table_remove(const char * qname)
 		g_list_free(mq->notify_list);
 
 	if (mq->client)
-		ha_free(mq->client);
+		cl_free(mq->client);
 
-	ha_free(mq->name);
-	ha_free(mq->host);
+	cl_free(mq->name);
+	cl_free(mq->host);
 
-	ha_free(mq);
+	cl_free(mq);
 
 	return HA_OK;
 }
@@ -182,7 +182,7 @@ mqueue_handle_remove(guint *hd)
 
 	g_hash_table_remove(mqtable_handle_hash, hd);
 
-	ha_free((guint *)orig_hd);
+	cl_free((guint *)orig_hd);
 
 	/*
 	 * mq is not freed here. in case the queue might be reopened later
@@ -343,7 +343,7 @@ mqueue_table_pack(struct mq_info * * mqinfo_buf, size_t * mqinfo_len)
 	buflen = sizeof(struct mq_info) * count + 
 		sizeof(struct mq_groupinfo) * gcount;
 
-	buf = (struct mq_info *) ha_malloc(buflen);
+	buf = (struct mq_info *) cl_malloc(buflen);
 	pbuf = buf;
 
 	g_hash_table_foreach(mqtable_name_hash, pack_mqinfo, &pbuf);
@@ -371,18 +371,18 @@ mqueue_table_unpack(const struct mq_info * buf, size_t buflen)
 	{
 		j++;
 		dprintf(" mq_info No. %d: \n", j);
-		if ((mq = (mqueue_t *) ha_malloc(sizeof(mqueue_t))) == NULL) {
-			cl_log(LOG_ERR, "%s: ha_malloc failed for mqueue ",
+		if ((mq = (mqueue_t *) cl_malloc(sizeof(mqueue_t))) == NULL) {
+			cl_log(LOG_ERR, "%s: cl_malloc failed for mqueue ",
 					__FUNCTION__);
 			return HA_FAIL;
 		}
 		memset(mq, 0, sizeof(mqueue_t));
 
 		dprintf("    qname = %s\n", pbuf->qname.value);
-		mq->name = ha_strdup(pbuf->qname.value);
+		mq->name = cl_strdup(pbuf->qname.value);
 
 		dprintf("    host = %s\n", pbuf->host.value);
-		mq->host = ha_strdup(pbuf->host.value);
+		mq->host = cl_strdup(pbuf->host.value);
 
 		dprintf("    mqstat = %d\n", pbuf->mqstat);
 		mq->mqstat = pbuf->mqstat;

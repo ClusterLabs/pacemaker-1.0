@@ -313,7 +313,7 @@ init_config(const char * cfgfile)
  *	'Twould be good to move this to a shared memory segment
  *	Then we could share this information with others
  */
-	/* config = (struct sys_config *)ha_calloc(1
+	/* config = (struct sys_config *)cl_calloc(1
 	,	sizeof(struct sys_config)); */
 	memset(&config_init_value, 0, sizeof(config_init_value));
 	config = &config_init_value;
@@ -714,7 +714,7 @@ parse_config(const char * cfgfile, char *nodename)
 			}
 			sysmedia[num_save]->vf = funs;
 			if(!sysmedia[num_save]->name) {
-				char *		pname = ha_strdup(bp);
+				char *		pname = cl_strdup(bp);
 				sysmedia[num_save]->name = pname;
 			}
 			funs->mtype(&sysmedia[num_save]->type);
@@ -1120,7 +1120,7 @@ add_option(const char *	option, const char * value)
 			,	type, descr, value);
 			PILIncrIFRefCount(PluginLoadingSystem
 			,	HB_COMM_TYPE_S, option, -1);
-			/* Does this come from ha_malloc? FIXME!! */
+			/* Does this come from cl_malloc? FIXME!! */
 			g_free(descr); descr = NULL;
 			g_free(type);  type = NULL;
 			return(HA_FAIL);
@@ -1133,7 +1133,7 @@ add_option(const char *	option, const char * value)
 			g_assert(mp->description[0] != '(');
 			mp->vf = funs;
 			if (!mp->name)
-				mp->name = ha_strdup(value);
+				mp->name = cl_strdup(value);
 			++nummedia;
 			PILIncrIFRefCount(PluginLoadingSystem
 			,	HB_COMM_TYPE_S, option, +1);
@@ -1153,7 +1153,7 @@ dellist_destroy(void){
 	GSList* list = del_node_list;
 
 	while (list != NULL){
-		ha_free(list->data);
+		cl_free(list->data);
 		list->data=NULL;
 		list= list->next;
 	}
@@ -1168,7 +1168,7 @@ dellist_append(struct node_info* hip)
 {
 	struct node_info* dup_hip;
 	
-	dup_hip = ha_malloc(sizeof(struct node_info));
+	dup_hip = cl_malloc(sizeof(struct node_info));
 	if (dup_hip == NULL){
 		cl_log(LOG_ERR, "%s: malloc failed",
 		       __FUNCTION__);
@@ -1221,7 +1221,7 @@ remove_from_dellist( const char* nodename)
 	
 	if (listitem!= NULL){
 		if (listitem->data){
-			ha_free(listitem->data);
+			cl_free(listitem->data);
 		}
 		del_node_list = g_slist_delete_link(del_node_list, listitem);
 	}
@@ -1491,7 +1491,7 @@ set_watchdogdev(const char * value)
 		,	cmdname);
 		return(HA_FAIL);
 	}
-	if ((watchdogdev = ha_strdup(value)) == NULL) {
+	if ((watchdogdev = cl_strdup(value)) == NULL) {
 		fprintf(stderr, "%s: Out of memory for watchdog device\n"
 		,	cmdname);
 		return(HA_FAIL);
@@ -2123,7 +2123,7 @@ add_client_child(const char * directive)
 		return HA_FAIL;
 	}
 
-	command = ha_malloc(cmdlen+1);
+	command = cl_malloc(cmdlen+1);
 	if (command == NULL) {
 		ha_log(LOG_ERR, "Out of memory in add_client_child (command)");
 		return HA_FAIL;
@@ -2131,11 +2131,11 @@ add_client_child(const char * directive)
 	memcpy(command, cmdp, cmdlen);
 	command[cmdlen] = EOS;
 
-	path = ha_malloc(pathlen+1);
+	path = cl_malloc(pathlen+1);
 	if (path == NULL) {
 		ha_log(LOG_ERR, "Out of memory in add_client_child "
 				"(path)");
-		ha_free(command); command=NULL;
+		cl_free(command); command=NULL;
 		return HA_FAIL;
 	}
 	memcpy(path, cmdp, pathlen);
@@ -2145,16 +2145,16 @@ add_client_child(const char * directive)
 		ha_log(LOG_ERR
 		,	"Client child command [%s] is not executable"
 		,	path);
-		ha_free(command); command=NULL;
-		ha_free(path); path=NULL;
+		cl_free(command); command=NULL;
+		cl_free(path); path=NULL;
 		return HA_FAIL;
 	}
 
  	child = MALLOCT(struct client_child);
 	if (child == NULL) {
 		ha_log(LOG_ERR, "Out of memory in add_client_child (child)");
-		ha_free(command); command=NULL;
-		ha_free(path); path=NULL;
+		cl_free(command); command=NULL;
+		cl_free(path); path=NULL;
 		return HA_FAIL;
 	}
 	memset(child, 0, sizeof(*child));
@@ -2363,7 +2363,7 @@ set_api_authorization(const char * directive)
 		,	clientlen, client);
 		goto baddirective;
 	}
-	clname = ha_malloc(clientlen+1);
+	clname = cl_malloc(clientlen+1);
 	if (clname == NULL) {
 		cl_log(LOG_ERR, "out of memory for client name");
 		goto baddirective;
@@ -2454,11 +2454,11 @@ set_api_authorization(const char * directive)
 			auth->gid = NULL;
 		}
 		memset(auth, 0, sizeof(*auth));
-		ha_free(auth);
+		cl_free(auth);
 		auth = NULL;
 	}
 	if (clname) {
-		ha_free(clname);
+		cl_free(clname);
 		clname = NULL;
 	}
 	return HA_FAIL;
@@ -3093,7 +3093,7 @@ ha_config_check_boolean(const char *value)
  * - Make sure the return value of strdup is honoured in error conditions
  *
  * Revision 1.108  2004/01/21 00:54:29  horms
- * Added ha_strdup, so strdup allocations are audited
+ * Added cl_strdup, so strdup allocations are audited
  *
  * Revision 1.107  2004/01/20 08:58:29  horms
  * Removed unused variables

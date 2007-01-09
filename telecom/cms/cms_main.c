@@ -141,7 +141,7 @@ cms_heartbeat_init(cms_data_t * cmsdata)
 	cmsdata->hb_handle = heartbeat;
 	cmsdata->hb_channel = hb_channel;
 	cmsdata->node_count = ncount;
-	cmsdata->my_nodeid = ha_strdup(myhost);
+	cmsdata->my_nodeid = cl_strdup(myhost);
 
 	if (heartbeat->llc_ops->set_cstatus_callback(heartbeat
 	,	ClientStatus, NULL) != HA_OK) {
@@ -314,10 +314,10 @@ main(int argc, char ** argv)
 	g_main_destroy(mainloop);
 
 	if (cms_data.my_nodeid)
-		ha_free(cms_data.my_nodeid);
+		cl_free(cms_data.my_nodeid);
 
 	if (cms_data.clm_nbuf);
-		ha_free(cms_data.clm_nbuf);
+		cl_free(cms_data.clm_nbuf);
 
 	return 1;
 }

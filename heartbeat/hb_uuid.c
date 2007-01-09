@@ -258,7 +258,7 @@ tables_remove(const char* nodename, cl_uuid_t* uuid)
 void
 add_nametable(const char* nodename, struct node_info* value)
 {
-	char * ds = ha_strdup(nodename);
+	char * ds = cl_strdup(nodename);
 	g_hash_table_insert(name_table, ds, value);
 }
 
@@ -271,7 +271,7 @@ add_uuidtable(cl_uuid_t* uuid, struct node_info* value)
 		return;
 	}
 
-	du = (cl_uuid_t*)ha_malloc(sizeof(cl_uuid_t));
+	du = (cl_uuid_t*)cl_malloc(sizeof(cl_uuid_t));
 	cl_uuid_copy(du, uuid);
 	
 	g_hash_table_insert(uuid_table, du, value);
