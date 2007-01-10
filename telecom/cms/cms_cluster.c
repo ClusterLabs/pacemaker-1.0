@@ -58,11 +58,11 @@ get_senderId_by_name(const char * node, int seq)
 	struct reply_info * info;
 	int * senderId;
 
-	info = (struct reply_info *) ha_malloc(sizeof(struct reply_info));
+	info = (struct reply_info *) cl_malloc(sizeof(struct reply_info));
 	info->seq = seq;
-	info->node = ha_strdup(node);
+	info->node = cl_strdup(node);
 
-	senderId = (int *) ha_malloc(sizeof(int));
+	senderId = (int *) cl_malloc(sizeof(int));
 
 	*senderId = ++gReplyCount;
 
@@ -91,8 +91,8 @@ get_name_by_senderId(int senderId, unsigned long * seq)
 
 		dprintf("%s: found the reply_info: node = %s, seq = %ld\n", __FUNCTION__, node, *seq);
 
-		ha_free(info);
-		ha_free(orig_id);
+		cl_free(info);
+		cl_free(orig_id);
 		return node;
 	}
 
@@ -617,15 +617,15 @@ reply_mqname_open(ll_cluster_t *hb, struct ha_msg *msg)
 		type = mqname_type2string(MQNAME_TYPE_GRANTED);
 		sending_state = SA_MSG_QUEUE_AVAILABLE;
 
-		mq = (mqueue_t *) ha_malloc(sizeof(mqueue_t));
+		mq = (mqueue_t *) cl_malloc(sizeof(mqueue_t));
 		if (!mq) {
-			cl_log(LOG_ERR, "%s: ha_malloc failed", __FUNCTION__);
+			cl_log(LOG_ERR, "%s: cl_malloc failed", __FUNCTION__);
 			return FALSE;
 		}
 
 		memset(mq, 0, sizeof(mqueue_t));
-		mq->name = ha_strdup(name);
-		mq->host = ha_strdup(ha_msg_value(msg, F_ORIG));
+		mq->name = cl_strdup(name);
+		mq->host = cl_strdup(ha_msg_value(msg, F_ORIG));
 		mq->mqstat = MQ_STATUS_OPEN;
 		mq->policy = *policy; 
 		
@@ -720,7 +720,7 @@ process_mqname_unlink(struct ha_msg *msg)
 
 		/* this is the node where the queue is opened */
 		if (mq->client) {
-			client = (IPC_Channel *)ha_malloc(sizeof(IPC_Channel));
+			client = (IPC_Channel *)cl_malloc(sizeof(IPC_Channel));
 			*client = *mq->client;
 		}
 
@@ -742,7 +742,7 @@ process_mqname_unlink(struct ha_msg *msg)
 		reply.name.value[reply.name.length] = '\0';
 
 		client_send_msg(client, reply.len, &reply);
-		ha_free(client);
+		cl_free(client);
 	}
 
 #if DEBUG_CLUSTER
@@ -823,7 +823,7 @@ process_mqname_send(struct ha_msg *msg, cms_data_t * cmsdata)
 			 * save message to mq->message_buffer
 			 */
 			message = (message_t *)
-				ha_malloc(sizeof(message_t) + data_len);
+				cl_malloc(sizeof(message_t) + data_len);
 
 			memset(message, 0, sizeof(message_t) + data_len);
 
@@ -867,9 +867,9 @@ process_mqname_send(struct ha_msg *msg, cms_data_t * cmsdata)
 		if (req_type != CMS_MSG_SEND_RECEIVE 
 			&& ret == SA_OK && ack) {
 			if (gname) {
-				request.qname = ha_strdup(gname);
+				request.qname = cl_strdup(gname);
 			} else {
-				request.qname = ha_strdup(name);
+				request.qname = cl_strdup(name);
 			}
 			request.gname = NULL;
 			request.request_type =
@@ -879,7 +879,7 @@ process_mqname_send(struct ha_msg *msg, cms_data_t * cmsdata)
 			request.seq = *(const unsigned long *) seq;
 
 			mqname_send_ack(&request, node, NULL, ret, cmsdata);
-			ha_free(request.qname);
+			cl_free(request.qname);
 
 			dprintf("send the ack, ret = %d\n", ret);
 		}
@@ -972,15 +972,15 @@ process_mqname_granted(struct ha_msg *msg, cms_data_t * cmsdata)
 		/*
 		 * this is not the master node
 		 */
-		mq = (mqueue_t *) ha_malloc(sizeof(mqueue_t));
+		mq = (mqueue_t *) cl_malloc(sizeof(mqueue_t));
 		if (!mq) {
-			cl_log(LOG_ERR, "%s: ha_malloc failed", __FUNCTION__);
+			cl_log(LOG_ERR, "%s: cl_malloc failed", __FUNCTION__);
 			return FALSE;
 		}
 		memset(mq, 0, sizeof(mqueue_t));
 
-		mq->name = ha_strdup(name);
-		mq->host = ha_strdup(host);
+		mq->name = cl_strdup(name);
+		mq->host = cl_strdup(host);
 		mq->mqstat = MQ_STATUS_OPEN;
 		mq->client = NULL;
 		mq->policy = *policy;
@@ -1025,9 +1025,9 @@ process_mqname_granted(struct ha_msg *msg, cms_data_t * cmsdata)
 			cl_log(LOG_WARNING, "the client who requested queue [%s] to be opened does not exist any more.", name);
 
 			g_hash_table_remove(mq_open_pending_hash, name);
-			ha_free(mq_pending->name);
-			ha_free(mq_pending->client);
-			ha_free(mq_pending);
+			cl_free(mq_pending->name);
+			cl_free(mq_pending->client);
+			cl_free(mq_pending);
 
 			request_mqname_close(name, cmsdata);
 			/* todo: need better error handling here. 
@@ -1041,29 +1041,29 @@ process_mqname_granted(struct ha_msg *msg, cms_data_t * cmsdata)
 		cms_client->opened_mqueue_list =
 			g_list_append(cms_client->opened_mqueue_list, mq);
 
-		mq->client = (IPC_Channel *)ha_malloc(sizeof(IPC_Channel));
+		mq->client = (IPC_Channel *)cl_malloc(sizeof(IPC_Channel));
 
 		if (mq->client == NULL) {
-			cl_log(LOG_ERR, "%s: ha_malloc failed", __FUNCTION__);
+			cl_log(LOG_ERR, "%s: cl_malloc failed", __FUNCTION__);
 			return FALSE;
 		}
 
 		*mq->client = *mq_pending->client;
 
-		mq_request.qname = ha_strdup(name);
+		mq_request.qname = cl_strdup(name);
 		mq_request.invocation = *invocation;
 		mq_request.request_type = cmsrequest_string2type(request);
 
 		client_send_client_qopen(client, &mq_request, handle, flag);
-		ha_free(mq_request.qname);
+		cl_free(mq_request.qname);
 
 		g_hash_table_remove(mq_open_pending_hash, name);
 
 		dprintf("%p %p %p\n", mq_pending->name, mq_pending->client
 		,	mq_pending);
-		ha_free(mq_pending->name);
-		ha_free(mq_pending->client);
-		ha_free(mq_pending);
+		cl_free(mq_pending->name);
+		cl_free(mq_pending->client);
+		cl_free(mq_pending);
 
 		/*
 		 * send out notify msg for migratable mq if any
@@ -1247,10 +1247,10 @@ process_mqname_reopen(struct ha_msg *msg, enum mqname_type type,
 		}
 
 		message = (message_t *)
-			ha_malloc(sizeof(SaMsgMessageT) + data_len);
+			cl_malloc(sizeof(SaMsgMessageT) + data_len);
 
 		if (!message) {
-			cl_log(LOG_ERR, "%s: ha_malloc failed", __FUNCTION__);
+			cl_log(LOG_ERR, "%s: cl_malloc failed", __FUNCTION__);
 			return FALSE;
 		}
 
@@ -1287,10 +1287,10 @@ process_mqname_reopen(struct ha_msg *msg, enum mqname_type type,
 			   out of order */
 			return FALSE;
 		}
-		if ((s_request = ha_strdup(ha_msg_value(saved_msg, F_MQREQUEST))) == NULL
+		if ((s_request = cl_strdup(ha_msg_value(saved_msg, F_MQREQUEST))) == NULL
 		||	(s_invocation = cl_get_binary(saved_msg, F_MQINVOCATION,
 				&s_invocation_size)) == NULL
-		||	(s_error = ha_strdup(ha_msg_value(saved_msg,F_MQERROR)))
+		||	(s_error = cl_strdup(ha_msg_value(saved_msg,F_MQERROR)))
 				== NULL) {
 			cl_log(LOG_ERR, "%s: ha_msg_value error", __FUNCTION__);
 			return FALSE;
@@ -1380,7 +1380,7 @@ invalid:
 			cl_log(LOG_INFO, "retention timer expired and "
 				"SA_MSG_QUEUE_CREATE is not set, reject!");
 
-			reply.qname = ha_strdup(name);
+			reply.qname = cl_strdup(name);
 			reply.gname = NULL;
 			reply.request_type = cmsrequest_string2type(s_request);
 			reply.invocation = *s_invocation;
@@ -1393,8 +1393,8 @@ invalid:
 			 */
 			request_mqname_unlink(name, cmsdata);
 
-			ha_free(mq);
-			ha_free(reply.qname);
+			cl_free(mq);
+			cl_free(reply.qname);
 			return TRUE;
 		}
 
@@ -1454,17 +1454,17 @@ process_mqname_denied(struct ha_msg *msg)
 		client = mq_pending->client;
 		cl_log(LOG_INFO, "%s: found client <%p>", __FUNCTION__, client);
 
-		reply.qname = ha_strdup(name);
+		reply.qname = cl_strdup(name);
 		reply.gname = NULL;
 		reply.request_type = cmsrequest_string2type(request);
 		reply.invocation = *invocation;
 
 		client_send_client_qopen(client, &reply, -1, flag);
-		ha_free(reply.qname);
+		cl_free(reply.qname);
 
 		g_hash_table_remove(mq_open_pending_hash, name);
-		ha_free(mq_pending->name);
-		ha_free(mq_pending);
+		cl_free(mq_pending->name);
+		cl_free(mq_pending);
 	}
 
 	return TRUE;
@@ -1484,7 +1484,7 @@ group_mem_dispatch(gpointer data, gpointer user_data)
 			malloc(sizeof(client_mqgroup_notify_t));
 
 	if (cmg == NULL) {
-		cl_log(LOG_ERR, "%s: ha_malloc failed", __FUNCTION__);
+		cl_log(LOG_ERR, "%s: cl_malloc failed", __FUNCTION__);
 		return;
 	}
 
@@ -1724,7 +1724,7 @@ process_mqname_ack(struct ha_msg *msg)
 		 */
 		dprintf("%s: found client <%p>\n", __FUNCTION__, client);
 		if (qname) {
-			ack.qname = ha_strdup(qname);
+			ack.qname = cl_strdup(qname);
 		}
 		ack.request_type = cmsrequest_string2type(request);
 		ack.invocation = *invocation;
@@ -1736,10 +1736,10 @@ process_mqname_ack(struct ha_msg *msg)
 				&ack, -1, saerror_string2type(error));
 		}
 
-		ha_free(ack.qname);
+		cl_free(ack.qname);
 
 		g_hash_table_remove(mq_open_pending_hash, seq); 
-		ha_free((unsigned long *) orig_seq);
+		cl_free((unsigned long *) orig_seq);
 	} else {
 		cl_log(LOG_ERR, "client is not found. "
 			"nobody to send the ack to. mqname = %s, seq = %ld", qname, *seq);
@@ -1921,7 +1921,7 @@ process_mqueue_status(struct ha_msg *msg)
 	else
 		ret = client_send_qstatus(client, mq, SA_OK);
 
-	ha_free(orig_key);
+	cl_free(orig_key);
 	return ret;
 }
 
@@ -2027,7 +2027,7 @@ reply_mqinfo_update(const char * node, cms_data_t * cmsdata)
 	cl_log_message(msg);
 #endif
 	hb->llc_ops->sendnodemsg(hb, msg, node);
-	ha_free(mqinfo);
+	cl_free(mqinfo);
 
 	ha_msg_del(msg);
 	return HA_OK;
@@ -2084,7 +2084,7 @@ process_mqsend_reply(struct ha_msg * msg, cms_data_t * cmsdata)
 		 * we have clients waiting for reply, send it out 
 		 */
 		dprintf("%s: found client <%p>\n", __FUNCTION__, client);
-		m = (client_message_t *) ha_malloc(sizeof(client_message_t) + data_len);
+		m = (client_message_t *) cl_malloc(sizeof(client_message_t) + data_len);
 
 		m->header.type = CMS_MSG_RECEIVE;
 		m->header.len = sizeof(client_message_t) + data_len;
@@ -2105,7 +2105,7 @@ process_mqsend_reply(struct ha_msg * msg, cms_data_t * cmsdata)
 		ret = client_send_msg((IPC_Channel *) client, sizeof(client_message_t) + data_len, m);
 
 		g_hash_table_remove(mq_open_pending_hash, seq); 
-		ha_free((unsigned long *) orig_seq);
+		cl_free((unsigned long *) orig_seq);
 	} else {
 		cl_log(LOG_ERR, "client is not found. "
 			"nobody to send the reply msg to. ");

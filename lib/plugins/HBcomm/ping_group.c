@@ -588,7 +588,7 @@ ping_group_write(struct hb_media* mp, void *p, int len)
 
 	if ((icmp_pkt = MALLOC(pktsize)) == NULL) {
 		PILCallLog(LOG, PIL_CRIT, "out of memory");
-		ha_free(pkt);
+		cl_free(pkt);
 		ha_msg_del(msg);
 		return HA_FAIL;
 	}
@@ -602,7 +602,7 @@ ping_group_write(struct hb_media* mp, void *p, int len)
 	++ei->iseq;
 
 	memcpy(icp->icmp_data, pkt, size);
-	ha_free(pkt); pkt = NULL;
+	cl_free(pkt); pkt = NULL;
 
 	/* Compute the ICMP checksum */
 	icp->icmp_cksum = in_cksum((u_short *)icp, pktsize);

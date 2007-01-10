@@ -615,7 +615,7 @@ lookup_node(const char * h)
 	int			j;
 	char	*shost;
 
-	if ( (shost = ha_strdup(h)) == NULL) {
+	if ( (shost = cl_strdup(h)) == NULL) {
 		return NULL;
 	}
 	g_strdown(shost);
@@ -623,7 +623,7 @@ lookup_node(const char * h)
 		if (strcmp(shost, config->nodes[j].nodename) == 0)
 			break;
 	}
-	ha_free(shost);
+	cl_free(shost);
 	if (j == config->nodecount) {
 		return NULL;
 	} else {
@@ -1554,9 +1554,9 @@ hb_del_ipcmsg(IPC_Message* m)
 			,	(unsigned long)m);
 		}
 		memset(m->msg_body, 0, m->msg_len);
-		ha_free(m->msg_buf);
+		cl_free(m->msg_buf);
 		memset(m, 0, sizeof(*m));
-		ha_free(m);
+		cl_free(m);
 	}else{
 		refcnt--;
 		m->msg_private = GINT_TO_POINTER(refcnt);
@@ -1582,15 +1582,15 @@ hb_new_ipcmsg(const void* data, int len, IPC_Channel* ch, int refcnt)
 	}
 
 
-	if ((hdr = (IPC_Message*)ha_malloc(sizeof(*hdr)))  == NULL) {
+	if ((hdr = (IPC_Message*)cl_malloc(sizeof(*hdr)))  == NULL) {
 		return NULL;
 	}
 	
 	memset(hdr, 0, sizeof(*hdr));
 
-	if ((copy = (char*)ha_malloc(ch->msgpad + len))
+	if ((copy = (char*)cl_malloc(ch->msgpad + len))
 	    == NULL) {
-		ha_free(hdr);
+		cl_free(hdr);
 		return NULL;
 	}
 	memcpy(copy + ch->msgpad, data, len);
@@ -2108,7 +2108,7 @@ free_one_hist_slot(struct msg_xmit_hist* hist, int slot )
 	if (msg){
 		hist->lowseq = hist->seqnos[slot];
 		hist->msgq[slot] = NULL;
-		if (!ha_is_allocated(msg)) {
+		if (!cl_is_allocated(msg)) {
 			cl_log(LOG_CRIT,
 			       "Unallocated slotmsg in %s",
 			       __FUNCTION__);
@@ -2368,7 +2368,7 @@ getnodes(const char* nodelist, char** nodes, int* num){
 			goto errexit;
 		}
 		
-		nodes[i] = ha_malloc(nodelen + 1);
+		nodes[i] = cl_malloc(nodelen + 1);
 		if (nodes[i] == NULL){
 			cl_log(LOG_ERR, "%s: malloc failed", __FUNCTION__);
 			goto errexit;
@@ -2387,7 +2387,7 @@ getnodes(const char* nodelist, char** nodes, int* num){
  errexit:
 	for (j = 0; j < i ; j++){
 		if (nodes[j]){
-			ha_free(nodes[j]);
+			cl_free(nodes[j]);
 			nodes[j] =NULL;
 		}
 	}
@@ -2451,7 +2451,7 @@ HBDoMsg_T_ADDNODE(const char * type, struct node_info * fromnode,
 		if (hb_add_one_node(nodes[i])!= HA_OK){
 			cl_log(LOG_ERR, "Add node %s failed", nodes[i]);
 		}
-		ha_free(nodes[i]);
+		cl_free(nodes[i]);
 		nodes[i]=NULL;
 	}
 	G_main_set_trigger(write_hostcachefile);
@@ -2624,7 +2624,7 @@ HBDoMsg_T_DELNODE(const char * type, struct node_info * fromnode,
 	
  out:
 	for (i = 0; i < num; i++){
-		ha_free(nodes[i]);
+		cl_free(nodes[i]);
 		nodes[i]= NULL;	
 	}
 	
@@ -2830,7 +2830,7 @@ HBDoMsg_T_REPNODES(const char * type, struct node_info * fromnode,
 		}
 		for (i = 0; i< num; i++){
 			if (nodes[i]){
-				ha_free(nodes[i]);
+				cl_free(nodes[i]);
 				nodes[i] = NULL;
 			}
 		}
@@ -2855,7 +2855,7 @@ HBDoMsg_T_REPNODES(const char * type, struct node_info * fromnode,
 	
 		for (i = 0; i < delnum; i++){
 			if (delnodes[i]){
-				ha_free(delnodes[i]);
+				cl_free(delnodes[i]);
 				delnodes[i] = NULL;
 			}
 		}
@@ -3879,7 +3879,7 @@ hb_dump_proc_stats(volatile struct process_info * proc)
 		curralloc = 0;
 	}
 
-	cl_log(LOG_INFO, "ha_malloc stats: %lu/%lu  %lu/%lu [pid%d/%s]"
+	cl_log(LOG_INFO, "cl_malloc stats: %lu/%lu  %lu/%lu [pid%d/%s]"
 	,	curralloc, ms->numalloc
 	,	ms->nbytes_alloc, ms->nbytes_req, (int) proc->pid, ct);
 
@@ -4220,7 +4220,7 @@ send_cluster_msg(struct ha_msg* msg)
 				,	"FIFO message [type %s] written rc=%ld"
 				, type, (long) writerc);
 			}
-			ha_free(smsg);
+			cl_free(smsg);
 		}
 		if (ffd > 0) {
 			if (close(ffd) < 0) {
@@ -4514,7 +4514,7 @@ main(int argc, char * argv[], char **envp)
 	/* Weird enum (bitfield) */
 	g_log_set_always_fatal((GLogLevelFlags)0); /*value out of range*/  
 
-	if ((tmp_cmdname = ha_strdup(argv[0])) == NULL) {
+	if ((tmp_cmdname = cl_strdup(argv[0])) == NULL) {
 		cl_perror("Out of memory in main.");
 		exit(1);
 	}
@@ -4625,7 +4625,7 @@ main(int argc, char * argv[], char **envp)
 	}
 	set_proc_title("%s", cmdname);
 
-	hbmedia_types = ha_malloc(sizeof(struct hbmedia_types **));
+	hbmedia_types = cl_malloc(sizeof(struct hbmedia_types **));
 
 	if (hbmedia_types == NULL) {
 		cl_log(LOG_ERR, "Allocation of hbmedia_types failed.");
@@ -5601,7 +5601,7 @@ process_outbound_packet(struct msg_xmit_hist*	hist
 	process_clustermsg(msg, NULL);
 
 	send_to_all_media(smsg, len);
-	ha_free(smsg);
+	cl_free(smsg);
 
 	/*  Throw away "msg" here if it's not saved above */
 	if (cseq == NULL) {
@@ -5816,7 +5816,7 @@ audit_xmit_hist(void)
 		if (msg == NULL) {
 			continue;
 		}
-		if (!ha_is_allocated(msg)) {
+		if (!cl_is_allocated(msg)) {
 			cl_log(LOG_CRIT
 			,	"Unallocated message in audit_xmit_hist");
 			doabort=TRUE;
@@ -5851,22 +5851,22 @@ audit_xmit_hist(void)
 			,	"Too small stringlen in audit_xmit_hist");
 			doabort=TRUE;
 		}
-		if (!ha_is_allocated(msg->names)) {
+		if (!cl_is_allocated(msg->names)) {
 			cl_log(LOG_CRIT
 			,	"Unallocated msg->names in audit_xmit_hist");
 			doabort=TRUE;
 		}
-		if (!ha_is_allocated(msg->nlens)) {
+		if (!cl_is_allocated(msg->nlens)) {
 			cl_log(LOG_CRIT
 			,	"Unallocated msg->nlens in audit_xmit_hist");
 			doabort=TRUE;
 		}
-		if (!ha_is_allocated(msg->values)) {
+		if (!cl_is_allocated(msg->values)) {
 			cl_log(LOG_CRIT
 			,	"Unallocated msg->values in audit_xmit_hist");
 			doabort=TRUE;
 		}
-		if (!ha_is_allocated(msg->vlens)) {
+		if (!cl_is_allocated(msg->vlens)) {
 			cl_log(LOG_CRIT
 			,	"Unallocated msg->vallens in audit_xmit_hist");
 			doabort=TRUE;
@@ -5900,7 +5900,7 @@ add2_xmit_hist (struct msg_xmit_hist * hist, struct ha_msg* msg
 	int	slot;
 	struct ha_msg* slotmsg;
 
-	if (!ha_is_allocated(msg)) {
+	if (!cl_is_allocated(msg)) {
 		cl_log(LOG_CRIT, "Unallocated message in add2_xmit_hist");
 		abort();
 	}
@@ -5917,7 +5917,7 @@ add2_xmit_hist (struct msg_xmit_hist * hist, struct ha_msg* msg
 		/* Lowseq is less than the lowest recorded seqno */
 		hist->lowseq = hist->seqnos[slot];
 		hist->msgq[slot] = NULL;
-		if (!ha_is_allocated(slotmsg)) {
+		if (!cl_is_allocated(slotmsg)) {
 			cl_log(LOG_CRIT
 			,	"Unallocated slotmsg in add2_xmit_hist");
 		}else{
@@ -6102,7 +6102,7 @@ process_rexmit(struct msg_xmit_hist * hist, struct ha_msg* msg)
 				hist->lastrexmit[msgslot] = now;
 				send_to_all_media(smsg
 				  ,	len);
-				ha_free(smsg);
+				cl_free(smsg);
 			}
 
 		}
@@ -7367,7 +7367,7 @@ hb_pop_deadtime(gpointer p)
  * - Make sure the return value of strdup is honoured in error conditions
  *
  * Revision 1.283  2004/01/21 00:54:30  horms
- * Added ha_strdup, so strdup allocations are audited
+ * Added cl_strdup, so strdup allocations are audited
  *
  * Revision 1.282  2004/01/08 08:38:01  horms
  * Post API clean up of API Register fifo which it is a unix socket now - Alan, hb_api.py still needs to be updated
