@@ -512,7 +512,7 @@ TestHeartbeat() {
     fi
   done
   if
-    LookForString "[Aa][Rr][Pp]" >/dev/null
+    LookForString ARP >/dev/null
   then
     :  Looks good
   else
