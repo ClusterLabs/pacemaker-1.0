@@ -26,6 +26,7 @@
 #
 # Note: you might have to change TESTIP and MCASTIP
 #
+DEFAULTINTERFACE="" #  Used when all guesses fail (which they shouldnt)
 TESTIP=10.253.252.251
 MCASTIP=225.224.223.222
 #
@@ -48,8 +49,6 @@ BASE64_MD5_TEST=$HBLIB/base64_md5_test
 MALLOC_CHECK_=2; export MALLOC_CHECK_
 MKTEMP=@MKTEMP@
 TESTPROG=@TEST@
-#
-DEFAULTINTERFACE=eth0	# But we really guess it...
 #
 IDENTSTRING="Linux-HA TEST configuration file - REMOVEME!!"
 DUMMYNODE=ImAlwaysDead.com
@@ -113,16 +112,23 @@ GuessIFname() {
       /sbin/ip r g $external_host | head -n 1 | awk '{print $5}'
   elif [ `uname -s` = "Darwin" ]; then
       route get $external_host | grep interface | awk '{print $2}'
-  else
-      GetAllIFNames | grep -v '^lo' | head -n 1
   fi
 }
 
 INTERFACE=`GuessIFname`
+if [ "x" = "x$INTERFACE" ]; then
+    INTERFACE=`GetAllIFNames | grep -v '^lo' | head -n 1`
+fi
 
-case $INTERFACE in
-  "")	INTERFACE=$DEFAULTINTERFACE;;
-esac
+if [ "x" = "x$INTERFACE" ]; then
+    INTERFACE=$DEFAULTINTERFACE
+fi
+
+if [ "x" = "x$INTERFACE" ]; then
+    echo "No valid interface found.  Please modify DEFAULTINTERFACE in this script and re-execute"
+    exit 1
+fi
+
 echo "Using interface: $INTERFACE"
 #
 #	Is it safe to overwrite this config file?
