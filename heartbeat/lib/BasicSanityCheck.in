@@ -801,7 +801,7 @@ TestCRM() {
 	GenerateCrmdHaCf $HADIR/ha.cf $HADIR/ha_logd.cf
 	echo "Starting CRM tests" | tee -a $LOGFILE
 
-	$CRMTEST -L $LOGFILE >/dev/null 2>&1
+	$CRMTEST -L $LOGFILE 2> /dev/null
 	ret=$?
 	if [ $ret != 0 ]; then
 	    errcount=`expr $errcount + 1`
