@@ -80,19 +80,27 @@ int struct_display_as_xml(int log_level, int depth, struct ha_msg *data,
 int struct_stringlen(size_t namlen, size_t vallen, const void* value);
 int struct_netstringlen(size_t namlen, size_t vallen, const void* value);
 int	convert_nl_sym(char* s, int len, char sym, int direction);
-int	intlen(int x);
+int	bytes_for_int(int x);
 
 int
-intlen(int x)
+bytes_for_int(int x)
 {
-	char	buf[20];
-	return snprintf(buf, sizeof(buf), "%d", x);
+	int len = 0;
+	if(x < 0) {
+		x = 0-x;
+		len=1;
+	}
+	while(x > 9) {
+		x /= 10;
+		len++;
+	}
+ 	return len+1;
 }
 
 int
 netstring_extra(int x)
 {
-	return (intlen(x) + x + 2);
+	return (bytes_for_int(x) + x + 2);
 }
 
 int
@@ -175,6 +183,7 @@ string_list_pack_length(const GList* _list)
 	}
 	for (i = 0; i < g_list_length(list) ; i++){
 		
+		int len = 0;
 		char * element = g_list_nth_data(list, i);
 		if (element == NULL){
 			cl_log(LOG_ERR, "string_list_pack_length: "
@@ -182,7 +191,8 @@ string_list_pack_length(const GList* _list)
 				, (unsigned long)i);
 			return 0;
 		}
-		total_length += intlen(strlen(element)) + strlen(element) + 2;
+		len = strlen(element);
+		total_length += bytes_for_int(len) + len + 2;
 		/* 2 is for ":" and "," */
 		}
 	return total_length ;
@@ -221,7 +231,7 @@ string_list_pack(GList* list, char* buf, char* maxp)
 			return 0;
 		}
 		element_len = strlen(element);
-		if (p + 2 + element_len + intlen(element_len)> maxp){
+		if (p + 2 + element_len + bytes_for_int(element_len)> maxp){
 			cl_log(LOG_ERR, "%s: memory out of boundary",
 			       __FUNCTION__);
 			return 0;
@@ -283,7 +293,7 @@ string_list_unpack(const char* packed_str_list, size_t length)
 		
 		psl++;
 		
-		buf = ha_malloc(len + 1);
+		buf = cl_malloc(len + 1);
 		if (buf == NULL){
 			cl_log(LOG_ERR, "unpack_string_list:"
 			       "unable to allocate buf");
@@ -314,7 +324,7 @@ static void
 string_memfree(void* value)
 {
 	if (value){
-		ha_free(value);
+		cl_free(value);
 	}else {
 		cl_log(LOG_ERR, "string_memfree: "
 		       "value is NULL");
@@ -377,10 +387,10 @@ binary_dup(const void* value, size_t len)
 		return NULL;
 	}
 	
-	dupvalue = ha_malloc(len + 1);
+	dupvalue = cl_malloc(len + 1);
 	if (dupvalue == NULL){
 		cl_log(LOG_ERR, "binary_dup:"
-		       "ha_malloc failed");
+		       "cl_malloc failed");
 		return NULL;
 	}
 	
@@ -444,7 +454,7 @@ list_copy(const GList* _list)
 		}
 
 		len = strlen(element);
-		dup_element= ha_malloc(len + 1);
+		dup_element= cl_malloc(len + 1);
 		if ( dup_element == NULL){
 			cl_log(LOG_ERR, "duplicate element failed");
 			continue;
@@ -610,11 +620,7 @@ struct_display_as_xml(
 			continue;
 		} else if(prop_name == NULL) {
 			continue;
-			
-		/* hide the next two */
-		} else if(strcmp(F_XML_TAGNAME, prop_name) == 0) {
-			continue;
-		} else if(strcmp(F_XML_PARENT, prop_name) == 0) {
+		} else if(prop_name[0] == '_' && prop_name[1] == '_') {
 			continue;
 		}
 		printed = sprintf(buffer, " %s=\"%s\"", prop_name, prop_value);
@@ -801,8 +807,8 @@ string_stringlen(size_t namlen, size_t vallen, const void* value)
 {
 	
 	HA_MSG_ASSERT(value);
-	HA_MSG_ASSERT( vallen == strlen(value));
-	return namlen + vallen+ 2;
+/* 	HA_MSG_ASSERT( vallen == strlen(value)); */
+	return namlen + vallen + 2;
 }
 
 static int
@@ -1301,7 +1307,7 @@ string2struct(void* value, size_t vallen, int depth, void** nv, size_t* nlen)
 		       ": string2msg_ll failed");
 		return(HA_FAIL);
 	}
-	ha_free(value);
+	cl_free(value);
 	*nv = tmpmsg;
 	*nlen = 0;
 	
@@ -1325,7 +1331,7 @@ string2list(void* value, size_t vallen, int depth, void** nv, size_t* nlen)
 		       "unpack_string_list failed: %s", (char*)value);
 		return(HA_FAIL);
 	}
-	ha_free(value);
+	cl_free(value);
 	
 	*nv = (void*)list;
 	*nlen = string_list_pack_length(list);
@@ -1549,7 +1555,8 @@ add_string_field(struct ha_msg* msg, char* name, size_t namelen,
 			}
 			return(HA_FAIL);
 		}
-		if (sscanf(name + 1, "%lu", &tmptype) <= 0) {
+		tmptype = name[1] - '0';
+		if (tmptype < 0 || tmptype > 9) {
 			cl_log(LOG_ERR
 			       ,	"ha_msg_addraw_ll(): not a number.");
 			return(HA_FAIL);

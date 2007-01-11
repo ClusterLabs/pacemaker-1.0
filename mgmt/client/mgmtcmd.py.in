@@ -32,6 +32,7 @@ import sys
 
 if __name__=="__main__" :
 	server = "127.0.0.1"
+	port = "5560"
 	username = "hacluster"
 	password = "hacluster"
 	messages = []
@@ -51,14 +52,17 @@ if __name__=="__main__" :
 		elif args[i] == "-p" :
 			skipthis=True
 			password = args[i+1]
+		elif args[i] == "-P" :
+			skipthis=True
+			port = args[i+1]
 		elif args[i] == "-h" :
-			print "usage : %s [-s server] [-u username] [-p password] msg_type field1 ..."
+			print "usage : %s [-s server] [-u username] [-p password] [-P port] msg_type field1 ..."
 			sys.exit()
 		else :
 			messages = args[i:]
 			break
 				
-	if mgmt_connect(server,username,password) == -1:
+	if mgmt_connect(server,username,password,port) == -1:
 		print "login failed"
 		sys.exit()
  	

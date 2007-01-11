@@ -37,7 +37,6 @@
 /*---- Common tags/attrs */
 #define XML_DIFF_MARKER			"__crm_diff_marker__"
 #define XML_ATTR_TAGNAME		F_XML_TAGNAME
-#define XML_ATTR_PARENT			F_XML_PARENT
 #define XML_TAG_CIB			"cib"
 #define XML_TAG_FAILED			"failed"
 
@@ -191,6 +190,8 @@
 #define XML_LRM_ATTR_RC			"rc_code"
 #define XML_LRM_ATTR_CALLID		"call_id"
 #define XML_LRM_ATTR_OP_DIGEST		"op_digest"
+#define XML_LRM_ATTR_OP_RESTART		"op_force_restart"
+#define XML_LRM_ATTR_RESTART_DIGEST	"op_restart_digest"
 
 #define XML_TAG_GRAPH			"transition_graph"
 #define XML_GRAPH_TAG_RSC_OP		"rsc_op"
@@ -204,8 +205,8 @@
 #define XML_RULE_ATTR_ROLE		"role"
 #define XML_RULE_ATTR_RESULT		"result"
 #define XML_RULE_ATTR_BOOLEAN_OP	"boolean_op"
-#define XML_RULE_ATTR_FROMSTATE		"from_state"
-#define XML_RULE_ATTR_TOSTATE		"to_state"
+#define XML_RULE_ATTR_FROMSTATE		"from_role"
+#define XML_RULE_ATTR_TOSTATE		"to_role"
 
 #define XML_TAG_EXPRESSION		"expression"
 #define XML_EXPR_ATTR_ATTRIBUTE		"attribute"

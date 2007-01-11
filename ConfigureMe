@@ -145,7 +145,7 @@ ConfigureSolaris() {
 
 ConfigureDarwin() {
 
-  for dir in /sw /opt/local; do
+  for dir in / /sw /opt/local; do
      if [ -d $dir ]; then
         install_prefix=$dir
      fi
@@ -153,6 +153,7 @@ ConfigureDarwin() {
 
   FLAGS="--prefix=${install_prefix}"
   FLAGS="$FLAGS --with-initdir=/private/etc/mach_init.d"
+  FLAGS="$FLAGS  --localstatedir=${install_prefix}/var"
   FLAGS="$FLAGS --with-group-id=65 --with-ccmuser-id=65"
   FLAGS="$FLAGS --enable-fatal-warnings=yes"
   export CFENV="Darwin"

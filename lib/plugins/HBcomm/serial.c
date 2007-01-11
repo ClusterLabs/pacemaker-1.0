@@ -650,7 +650,7 @@ serial_write(struct hb_media* mp, void *p, int len)
 	}
 	
 	if(str_new){
-		ha_free(str);
+		cl_free(str);
 		str = NULL;
 	}
 	return(HA_OK);

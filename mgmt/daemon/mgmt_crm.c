@@ -85,7 +85,9 @@ static char* on_delete_rsc_param(char* argv[], int argc);
 static char* on_set_target_role(char* argv[], int argc);
 
 static char* on_get_rsc_ops(char* argv[], int argc);
+static char* on_get_rsc_full_ops(char* argv[], int argc);
 static char* on_update_rsc_ops(char* argv[], int argc);
+static char* on_update_rsc_full_ops(char* argv[], int argc);
 static char* on_delete_rsc_op(char* argv[], int argc);
 
 static char* on_get_constraints(char* argv[], int argc);
@@ -478,6 +480,8 @@ init_crm(int cache_cib)
 	
 	reg_msg(MSG_RSC_OPS, on_get_rsc_ops);
 	reg_msg(MSG_UP_RSC_OPS, on_update_rsc_ops);
+	reg_msg(MSG_RSC_FULL_OPS, on_get_rsc_full_ops);
+	reg_msg(MSG_UP_RSC_FULL_OPS, on_update_rsc_full_ops);
 	reg_msg(MSG_DEL_RSC_OP, on_delete_rsc_op);
 
 	reg_msg(MSG_UPDATE_CLONE, on_update_clone);
@@ -522,13 +526,9 @@ on_cib_diff(const char *event, HA_Message *msg)
 void
 on_cib_connection_destroy(gpointer user_data)
 {
-	fire_event(EVT_DISCONNECTED);
-	cib_conn = NULL;
 	if (!in_shutdown) {
-		mgmt_log(LOG_ERR,"Connection to the CIB terminated... exiting");
-		/*cib exits abnormally, mgmtd exits too and
-		wait heartbeat	restart us in order*/
-		exit(LSB_EXIT_OK);
+		fire_event(EVT_DISCONNECTED);
+		cib_conn = NULL;
 	}
 	return;
 }
@@ -610,10 +610,43 @@ on_update_crm_config(char* argv[], int argc)
 			}
 			cur = g_list_next(cur);
 		}
+		rc = update_attr(cib_conn, cib_sync_call, XML_CIB_TAG_CRMCONFIG, NULL
+				, 		CIB_OPTIONS_FIRST, id, argv[1], argv[2]);
 	}
+	else {
+		crm_data_t* fragment = NULL;
+		crm_data_t* cib_object = NULL;
+		crm_data_t* output;
+		char xml[MAX_STRLEN];
+		
+		snprintf(xml, MAX_STRLEN, 
+			"<cluster_property_set id=\"cib-bootstrap-options\">"
+			"<attributes> <nvpair id=\"id-%s\"name=\"%s\" value=\"%s\"/>"
+			"</attributes> </cluster_property_set>", 
+			argv[1], argv[1], argv[2]);
 
-	rc = update_attr(cib_conn, cib_sync_call, XML_CIB_TAG_CRMCONFIG, NULL
-	, 		CIB_OPTIONS_FIRST, id, argv[1], argv[2]);
+		cib_object = string2xml(xml);
+		if(cib_object == NULL) {
+			return cl_strdup(MSG_FAIL);
+		}
+
+		fragment = create_cib_fragment(cib_object, "crm_config");
+
+		mgmt_log(LOG_INFO, "(update)xml:%s",xml);
+
+		rc = cib_conn->cmds->update(
+				cib_conn, "crm_config", fragment, &output, cib_sync_call);
+
+		free_xml(fragment);
+		free_xml(cib_object);
+		if (rc < 0) {
+			free_data_set(data_set);
+			return crm_failed_msg(output, rc);
+		}
+		free_xml(output);
+
+	}
+		
 	
 	free_data_set(data_set);
 	if (rc == cib_ok) {
@@ -950,7 +983,7 @@ on_add_rsc(char* argv[], int argc)
 	has_param = (argc > 11);
 	if (in_group) {
 		snprintf(buf, MAX_STRLEN, "<group id=\"%s\">", argv[5]);
-		strncat(xml, buf, MAX_STRLEN);
+		strncat(xml, buf, sizeof(xml)-strlen(xml)-1);
 	}
 	if (clone) {
 		get_instance_attributes_id(argv[7], inst_attrs_id);
@@ -960,7 +993,7 @@ on_add_rsc(char* argv[], int argc)
 			 "<nvpair id=\"%s_clone_node_max\" name=\"clone_node_max\" value=\"%s\"/>" \
 			 "</attributes>	</instance_attributes> ",
 			 argv[7], inst_attrs_id, argv[7], argv[8],argv[7], argv[9]);
-		strncat(xml, buf, MAX_STRLEN);
+		strncat(xml, buf, sizeof(xml)-strlen(xml)-1);
 	}
 	if (master) {
 		get_instance_attributes_id(argv[7], inst_attrs_id);
@@ -973,39 +1006,40 @@ on_add_rsc(char* argv[], int argc)
 			 "</attributes>	</instance_attributes>",
 			 argv[7], inst_attrs_id, argv[7], argv[8], argv[7], argv[9],
 			 argv[7], argv[10], argv[7], argv[11]);
-		strncat(xml, buf, MAX_STRLEN);
+		strncat(xml, buf, sizeof(xml)-strlen(xml)-1);
 	}
 	
 	if (!has_param) {
 		snprintf(buf, MAX_STRLEN,
 			 "<primitive id=\"%s\" class=\"%s\" type=\"%s\" provider=\"%s\"/>"
 					 , argv[1],argv[2], argv[3],argv[4]);
-		strncat(xml, buf, MAX_STRLEN);
+		strncat(xml, buf, sizeof(xml)-strlen(xml)-1);
 	}
 	else {
 		snprintf(buf, MAX_STRLEN,
 			 "<primitive id=\"%s\" class=\"%s\" type=\"%s\" provider=\"%s\">" \
 			 "<instance_attributes id=\"%s_instance_attrs\"> <attributes>"
 			 , argv[1],argv[2], argv[3],argv[4], argv[1]);
-		strncat(xml, buf, MAX_STRLEN);
+		strncat(xml, buf, sizeof(xml)-strlen(xml)-1);
 	
 		for (i = 12; i < argc; i += 3) {
 			snprintf(buf, MAX_STRLEN,
 				 "<nvpair id=\"%s\" name=\"%s\" value=\"%s\"/>",
 				 argv[i], argv[i+1],argv[i+2]);
-			strncat(xml, buf, MAX_STRLEN);
+			strncat(xml, buf, sizeof(xml)-strlen(xml)-1);
 		}
-		strncat(xml, "</attributes></instance_attributes></primitive>", MAX_STRLEN);
+		strncat(xml, "</attributes></instance_attributes></primitive>",
+				sizeof(xml)-strlen(xml)-1);
 	}
 	if (master) {
-		strncat(xml, "</master_slave>", MAX_STRLEN);
+		strncat(xml, "</master_slave>", sizeof(xml)-strlen(xml)-1);
 	}
 	if (clone) {
-		strncat(xml, "</clone>", MAX_STRLEN);
+		strncat(xml, "</clone>", sizeof(xml)-strlen(xml)-1);
 	}
 	
 	if (in_group) {
-		strncat(xml, "</group>", MAX_STRLEN);
+		strncat(xml, "</group>", sizeof(xml)-strlen(xml)-1);
 	}
 	
 	cib_object = string2xml(xml);
@@ -1149,10 +1183,11 @@ on_add_grp(char* argv[], int argc)
 		snprintf(buf, MAX_STRLEN,
 			 "<nvpair id=\"%s\" name=\"%s\" value=\"%s\"/>",
 			 argv[i], argv[i+1],argv[i+2]);
-		strncat(xml, buf, MAX_STRLEN);
+		strncat(xml, buf, sizeof(xml)-strlen(xml)-1);
 	}
-	strncat(xml,"</attributes></instance_attributes> ", MAX_STRLEN);
-	strncat(xml,"</group>",MAX_STRLEN);
+	strncat(xml,"</attributes></instance_attributes> ", 
+			sizeof(xml)-strlen(xml)-1);
+	strncat(xml,"</group>", sizeof(xml)-strlen(xml)-1);
 	cib_object = string2xml(xml);
 	if(cib_object == NULL) {
 		return cl_strdup(MSG_FAIL);
@@ -1219,6 +1254,8 @@ on_get_rsc_attrs(char* argv[], int argc)
 	value = ha_msg_value(attrs, "multiple_active");
 	ret = mgmt_msg_append(ret, value?value:"#default");
 	value = ha_msg_value(attrs, "resource_stickiness");
+	ret = mgmt_msg_append(ret, value?value:"#default");
+	value = ha_msg_value(attrs, "resource_failure_stickiness");
 	ret = mgmt_msg_append(ret, value?value:"#default");
 	
 	switch (rsc->variant) {
@@ -1501,10 +1538,11 @@ on_update_rsc_params(char* argv[], int argc)
 		snprintf(buf, MAX_STRLEN,
 			"<nvpair id=\"%s\" name=\"%s\" value=\"%s\"/>",
 			argv[i], argv[i+1], argv[i+2]);
-		strncat(xml, buf, MAX_STRLEN);
+		strncat(xml, buf, sizeof(xml)-strlen(xml)-1);
 	}
-	strncat(xml, "</attributes></instance_attributes>", MAX_STRLEN);
-	strncat(xml, suffix, MAX_STRLEN);
+	strncat(xml, "</attributes></instance_attributes>",
+			sizeof(xml)-strlen(xml)-1);
+	strncat(xml, suffix, sizeof(xml)-strlen(xml)-1);
 
 	cib_object = string2xml(xml);
 	if(cib_object == NULL) {
@@ -1575,10 +1613,11 @@ on_set_target_role(char* argv[], int argc)
 		"<nvpair id=\"%s\" " \
 		"name=\"target_role\" value=\"%s\"/>",
 		target_role_id, argv[2]);
-	strncat(xml, buf, MAX_STRLEN);
+	strncat(xml, buf, sizeof(xml)-strlen(xml)-1);
 	
-	strncat(xml, "</attributes></instance_attributes>", MAX_STRLEN);
-	strncat(xml, suffix, MAX_STRLEN);
+	strncat(xml, "</attributes></instance_attributes>",
+			sizeof(xml)-strlen(xml)-1);
+	strncat(xml, suffix, sizeof(xml)-strlen(xml)-1);
 
 	cib_object = string2xml(xml);
 	if(cib_object == NULL) {
@@ -1634,6 +1673,124 @@ on_get_rsc_ops(char* argv[], int argc)
 	free_data_set(data_set);
 	return ret;
 }
+/*
+<!ATTLIST op
+          id            CDATA         #REQUIRED
+          name          CDATA         #REQUIRED
+          description   CDATA         #IMPLIED
+          interval      CDATA         #IMPLIED
+          timeout       CDATA         #IMPLIED
+          start_delay   CDATA         '0'
+          disabled      (true|1|false|0)               'false'
+          role          (Master|Slave|Started|Stopped) 'Started'
+          prereq        (nothing|quorum|fencing)       #IMPLIED
+          on_fail       (ignore|block|stop|restart|fence)     #IMPLIED>
+*/
+char*
+on_get_rsc_full_ops(char* argv[], int argc)
+{
+	int i;
+	resource_t* rsc;
+	char* ret;
+	struct ha_msg* ops;
+	struct ha_msg* op;
+	pe_working_set_t* data_set;
+	
+	data_set = get_data_set();
+	GET_RESOURCE()
+
+	ret = cl_strdup(MSG_OK);
+	ret = mgmt_msg_append(ret, "10");
+	ops = cl_get_struct((struct ha_msg*)rsc->xml, "operations");
+	if (ops == NULL) {
+		free_data_set(data_set);
+		return ret;
+	}
+	for (i = 0; i < ops->nfields; i++) {
+		if (STRNCMP_CONST(ops->names[i], "op") == 0) {
+			const char* value = NULL;
+			if (ops->types[i] != FT_STRUCT) {
+				continue;
+			}
+			op = (struct ha_msg*)ops->values[i];
+			ret = mgmt_msg_append(ret, ha_msg_value(op, "id"));
+			ret = mgmt_msg_append(ret, ha_msg_value(op, "name"));
+			ret = mgmt_msg_append(ret, ha_msg_value(op, "description"));
+			ret = mgmt_msg_append(ret, ha_msg_value(op, "interval"));
+			ret = mgmt_msg_append(ret, ha_msg_value(op, "timeout"));
+			value = ha_msg_value(op, "start_delay");
+			ret = mgmt_msg_append(ret, value==NULL?"0":value);
+			value = ha_msg_value(op, "disabled");
+			ret = mgmt_msg_append(ret, value==NULL?"false":value);
+			value = ha_msg_value(op, "role");
+			ret = mgmt_msg_append(ret, value==NULL?"Started":value);
+			ret = mgmt_msg_append(ret, ha_msg_value(op, "prereq"));
+			ret = mgmt_msg_append(ret, ha_msg_value(op, "on_fail"));
+		}
+	}
+	free_data_set(data_set);
+	return ret;
+}
+#define CAT_ATTR(pos, name) if(strnlen(argv[i+pos],MAX_STRLEN) != 0) { \
+			snprintf(buf, MAX_STRLEN, name"=\"%s\" ",argv[i+pos]); \
+			strncat(xml, buf, sizeof(xml)-strlen(xml)-1); \
+		}
+
+char*
+on_update_rsc_full_ops(char* argv[], int argc)
+{
+	int rc, i, attr_num;
+	crm_data_t* fragment = NULL;
+	crm_data_t* cib_object = NULL;
+	crm_data_t* output;
+	char xml[MAX_STRLEN];
+	char buf[MAX_STRLEN];
+	char prefix[MAX_STRLEN];
+	char suffix[MAX_STRLEN];
+	char real_id[MAX_STRLEN];
+		
+ 	attr_num = atoi(argv[1]);	 
+	if(get_fix(argv[2], prefix, suffix,real_id) == -1) {
+		return cl_strdup(MSG_FAIL);
+	}
+	
+	snprintf(xml, MAX_STRLEN, "%s<operations>", prefix);
+	for (i = 3; i < argc; i += attr_num) {
+		snprintf(buf, MAX_STRLEN,
+			"<op id=\"%s\" name=\"%s\"",
+			argv[i], argv[i+1]);
+		strncat(xml, buf, sizeof(xml)-strlen(xml)-1);
+		CAT_ATTR(2, "description")
+		CAT_ATTR(3, "interval")
+		CAT_ATTR(4, "timeout")
+		CAT_ATTR(5, "start_delay")
+		CAT_ATTR(6, "disabled")
+		CAT_ATTR(7, "role")
+		CAT_ATTR(8, "prereq")
+		CAT_ATTR(9, "on_fail")
+		strncat(xml, "/>", sizeof(xml)-strlen(xml)-1);
+	}
+	strncat(xml, "</operations>", sizeof(xml)-strlen(xml)-1);
+	strncat(xml, suffix, sizeof(xml)-strlen(xml)-1);
+	mgmt_log(LOG_INFO, "on_update_rsc_ops:xml:%s",xml);	
+	cib_object = string2xml(xml);
+	if(cib_object == NULL) {
+		return cl_strdup(MSG_FAIL);
+	}
+	mgmt_log(LOG_INFO, "on_update_rsc_ops:%s",xml);
+	fragment = create_cib_fragment(cib_object, "resources");
+
+	rc = cib_conn->cmds->update(
+			cib_conn, "resources", fragment, &output, cib_sync_call);
+
+	free_xml(fragment);
+	free_xml(cib_object);
+	if (rc < 0) {
+		return crm_failed_msg(output, rc);
+	}
+	free_xml(output);
+	return cl_strdup(MSG_OK);
+}
 char*
 on_update_rsc_ops(char* argv[], int argc)
 {
@@ -1657,10 +1814,10 @@ on_update_rsc_ops(char* argv[], int argc)
 		snprintf(buf, MAX_STRLEN,
 			"<op id=\"%s\" name=\"%s\" interval=\"%s\" timeout=\"%s\"/>",
 			argv[i], argv[i+1], argv[i+2], argv[i+3]);
-		strncat(xml, buf, MAX_STRLEN);
+		strncat(xml, buf, sizeof(xml)-strlen(xml)-1);
 	}
-	strncat(xml, "</operations>", MAX_STRLEN);
-	strncat(xml, suffix, MAX_STRLEN);
+	strncat(xml, "</operations>", sizeof(xml)-strlen(xml)-1);
+	strncat(xml, suffix, sizeof(xml)-strlen(xml)-1);
 
 	cib_object = string2xml(xml);
 	if(cib_object == NULL) {
@@ -1973,9 +2130,10 @@ on_update_constraint(char* argv[], int argc)
 			snprintf(expr, MAX_STRLEN,
 				 "<expression attribute=\"%s\" id=\"%s\" operation=\"%s\" value=\"%s\"/>",
 			 	 argv[5+i*4+1],argv[5+i*4],argv[5+i*4+2],argv[5+i*4+3]);
-			strncat(xml, expr, MAX_STRLEN);
+			strncat(xml, expr, sizeof(xml)-strlen(xml)-1);
 		}
-		strncat(xml, "</rule></rsc_location>", MAX_STRLEN);
+		strncat(xml, "</rule></rsc_location>",
+				sizeof(xml)-strlen(xml)-1);
 	}
 	else if (STRNCMP_CONST(argv[1],"rsc_order")==0) {
 		snprintf(xml, MAX_STRLEN,

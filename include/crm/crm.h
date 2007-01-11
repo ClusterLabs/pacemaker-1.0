@@ -50,11 +50,7 @@
 #define CRM_DEPRECATED_SINCE_2_1_0 1
 
 #define CRM_META			"CRM_meta"
-#if 1
-#  define crm_meta_name(field) CRM_META"_"field
-#else
-#  define crm_meta_name(field) field
-#endif
+#define crm_meta_name(field) CRM_META"_"field
 
 #define ipc_call_diff_max_ms 5000
 #define action_diff_warn_ms  5000
@@ -92,7 +88,7 @@ extern gboolean crm_assert_failed;
 #define CIB_FILENAME	WORKING_DIR"/cib.xml"
 #define CIB_BACKUP	WORKING_DIR"/cib_backup.xml"
 
-#define CRM_FEATURE_SET	"1.0.6"
+#define CRM_FEATURE_SET	"1.0.8"
 
 #define MSG_LOG			1
 #define DOT_FSA_ACTIONS		1
@@ -163,15 +159,14 @@ extern gboolean crm_assert_failed;
 #define CRMD_ACTION_DELETE		"delete"
 #define CRMD_ACTION_CANCEL		"cancel"
 
+#define CRMD_ACTION_MIGRATE		"migrate_to"
+#define CRMD_ACTION_MIGRATED		"migrate_from"
+
 #define CRMD_ACTION_START		"start"
 #define CRMD_ACTION_STARTED		"running"
-#define CRMD_ACTION_START_FAIL		"start_failed"
-#define CRMD_ACTION_START_PENDING	"starting"
 
 #define CRMD_ACTION_STOP		"stop"
 #define CRMD_ACTION_STOPPED		"stopped"
-#define CRMD_ACTION_STOP_FAIL		"stop_failed"
-#define CRMD_ACTION_STOP_PENDING	"stopping"
 
 #define CRMD_ACTION_PROMOTE		"promote"
 #define CRMD_ACTION_PROMOTED		"promoted"
@@ -182,14 +177,6 @@ extern gboolean crm_assert_failed;
 #define CRMD_ACTION_NOTIFIED		"notified"
 
 #define CRMD_ACTION_STATUS		"monitor"
-#define CRMD_ACTION_MON			"monitor"
-#define CRMD_ACTION_MON_PENDING		CRMD_ACTION_STARTED
-#define CRMD_ACTION_MON_OK		CRMD_ACTION_STARTED
-#define CRMD_ACTION_MON_FAIL		"monitor_failed"
-/* #define CRMD_ACTION_GENERIC		"pending" */
-#define CRMD_ACTION_GENERIC_PENDING	"pending"
-#define CRMD_ACTION_GENERIC_OK		"complete"
-#define CRMD_ACTION_GENERIC_FAIL	"pending_failed"
 
 typedef GList* GListPtr;
 
@@ -213,49 +200,38 @@ typedef GList* GListPtr;
 
 #define LOG_MSG  LOG_DEBUG_3
 
-#define crm_crit(w...)    do_crm_log(LOG_CRIT,    __FILE__, __PRETTY_FUNCTION__, w)
-#define crm_err(w...)     do_crm_log(LOG_ERR,     __FILE__, __PRETTY_FUNCTION__, w)
-#define crm_warn(w...)    do_crm_log(LOG_WARNING, __FILE__, __PRETTY_FUNCTION__, w)
-#define crm_notice(w...)  do_crm_log(LOG_NOTICE,  __FILE__, __PRETTY_FUNCTION__, w)
-#define crm_info(w...)    do_crm_log(LOG_INFO,    __FILE__, __PRETTY_FUNCTION__, w)
-#define crm_log_maybe(level, fmt...) if(crm_log_level >= (level)) {	\
-		do_crm_log((level), __FILE__, __PRETTY_FUNCTION__, fmt); \
-	}
+#define do_crm_log(level, fmt, args...) do {				\
+		if(crm_log_level < (level)) {				\
+			continue;					\
+		} else if((level) > LOG_DEBUG) {			\
+			cl_log(LOG_DEBUG, "debug%d: %s: " fmt,		\
+			       level-LOG_INFO, __PRETTY_FUNCTION__, ##args); \
+		} else {						\
+			cl_log(level, "%s: " fmt,			\
+			       __PRETTY_FUNCTION__, ##args);		\
+		}							\
+	} while(0)
 
-#define crm_debug(fmt...)   crm_log_maybe(LOG_DEBUG, fmt)
-#define crm_debug_2(fmt...) crm_log_maybe(LOG_DEBUG_2, fmt)
-#define crm_debug_3(fmt...) crm_log_maybe(LOG_DEBUG_3, fmt)
-
-/* If this is not a developmental build, give the compiler every chance to
- * optimize these away
- */
-#if CRM_DEV_BUILD
-#  define crm_debug_4(fmt...) crm_log_maybe(LOG_DEBUG_4, fmt)
-#  define crm_debug_5(fmt...) crm_log_maybe(LOG_DEBUG_5, fmt)
-#  define crm_debug_6(fmt...) crm_log_maybe(LOG_DEBUG_6, fmt)
-#else
-#  define crm_debug_4(w...) if(0) { do_crm_log(LOG_DEBUG, NULL, NULL, w); }
-#  define crm_debug_5(w...) if(0) { do_crm_log(LOG_DEBUG, NULL, NULL, w); }
-#  define crm_debug_6(w...) if(0) { do_crm_log(LOG_DEBUG, NULL, NULL, w); }
-#endif
+#define crm_crit(fmt, args...)    do_crm_log(LOG_CRIT,    fmt, ##args)
+#define crm_err(fmt, args...)     do_crm_log(LOG_ERR,     fmt, ##args)
+#define crm_warn(fmt, args...)    do_crm_log(LOG_WARNING, fmt, ##args)
+#define crm_notice(fmt, args...)  do_crm_log(LOG_NOTICE,  fmt, ##args)
+#define crm_info(fmt, args...)    do_crm_log(LOG_INFO,    fmt, ##args)
+#define crm_debug(fmt, args...)   do_crm_log(LOG_DEBUG,   fmt, ##args)
+#define crm_debug_2(fmt, args...) do_crm_log(LOG_DEBUG_2, fmt, ##args)
+#define crm_debug_3(fmt, args...) do_crm_log(LOG_DEBUG_3, fmt, ##args)
+#define crm_debug_4(fmt, args...) do_crm_log(LOG_DEBUG_4, fmt, ##args)
+#define crm_debug_5(fmt, args...) do_crm_log(LOG_DEBUG_5, fmt, ##args)
+#define crm_debug_6(fmt, args...) do_crm_log(LOG_DEBUG_6, fmt, ##args)
 
 extern void crm_log_message_adv(
 	int level, const char *alt_debugfile, const HA_Message *msg);
 
-#define crm_log_message(level, msg) if(crm_log_level >= level) {	\
+#define crm_log_message(level, msg) if(crm_log_level >= (level)) {	\
 		crm_log_message_adv(level, NULL, msg);			\
 	}
 
-#define crm_do_action(level, actions) if(crm_log_level >= level) {	\
-		actions;						\
-	}
-#define crm_action_info(x)    crm_do_action(LOG_INFO,    x)
-#define crm_action_debug(x)   crm_do_action(LOG_DEBUG,   x)
-#define crm_action_debug_2(x) crm_do_action(LOG_DEBUG_2, x)
-#define crm_action_debug_3(x) crm_do_action(LOG_DEBUG_3, x)
-#define crm_action_debug_4(x) crm_do_action(LOG_DEBUG_4, x)
-
-#define crm_log_xml(level, text, xml)   if(crm_log_level >= level) {  \
+#define crm_log_xml(level, text, xml)   if(crm_log_level >= (level)) {	\
 		print_xml_formatted(level,  __PRETTY_FUNCTION__, xml, text); \
 	}
 #define crm_log_xml_crit(xml, text)    crm_log_xml(LOG_CRIT,    text, xml)
@@ -272,89 +248,57 @@ extern void crm_log_message_adv(
 #define crm_str(x)    (const char*)(x?x:"<null>")
 
 #if CRM_USE_MALLOC
-#  define crm_malloc0(new_obj,length)					\
+#  define crm_malloc0(malloc_obj, length) do {				\
+		malloc_obj = malloc(length);				\
+		CRM_ASSERT(malloc_obj != NULL);				\
+		memset(malloc_obj, 0, length);				\
+	} while(0)
+#  define crm_realloc(realloc_obj, length)				\
 	{								\
-		new_obj = malloc(length);				\
-		if(new_obj == NULL) {					\
-			crm_crit("Out of memory... exiting");		\
-			cl_flush_logs();				\
-			exit(1);					\
-		}							\
-		memset(new_obj, 0, length);				\
-	}
-#  define crm_realloc(new_obj,length)					\
-	{								\
-		new_obj = realloc(new_obj, length);			\
-		if(new_obj == NULL) {					\
-			crm_crit("Out of memory... exiting");		\
-			cl_flush_logs();				\
-			exit(1);					\
-		}							\
-	}
-#  define crm_free(x) if(x) { free(x); x=NULL; }
+		realloc_obj = realloc(realloc_obj, length);			\
+		CRM_ASSERT(realloc_obj != NULL);			\
+	} while(0)
+#  define crm_free(free_obj) if(free_obj) { free(free_obj); free_obj=NULL; }
 #else
 #  if CRM_DEV_BUILD
-#    define crm_malloc0(new_obj,length)					\
-	{								\
-		if(new_obj) {						\
+#    define crm_malloc0(malloc_obj, length) do {			\
+		if(malloc_obj) {					\
 			crm_err("Potential memory leak:"		\
 				" %s at %s:%d not NULL before alloc.",	\
-				#new_obj, __FILE__, __LINE__);		\
-			cl_flush_logs();				\
-			abort();					\
+				#malloc_obj, __FILE__, __LINE__);	\
 		}							\
-		new_obj = cl_malloc(length);				\
-		if(new_obj == NULL) {					\
-			crm_crit("Out of memory... exiting");		\
-			cl_flush_logs();				\
-			abort();					\
-		}							\
-		memset(new_obj, 0, length);				\
-	}
+		malloc_obj = cl_malloc(length);				\
+		CRM_ASSERT(malloc_obj != NULL);				\
+		memset(malloc_obj, 0, length);				\
+	} while(0)
 /* it's not a memory leak to already have an object to realloc, that's
  * the usual case, however if it does have a value, it must have been
- * allocated by the same allocator! */ 
-#    define crm_realloc(new_obj,length)					\
-	{								\
-		if (new_obj != NULL) {					\
-			CRM_ASSERT(cl_is_allocated(new_obj) == 1);	\
+ * allocated by the same allocator!
+ */ 
+#    define crm_realloc(realloc_obj, length) do {			\
+		if (realloc_obj != NULL) {				\
+			CRM_ASSERT(cl_is_allocated(realloc_obj) == 1);	\
 		}							\
-		new_obj = cl_realloc(new_obj, length);			\
-		if(new_obj == NULL) {					\
-			crm_crit("Out of memory... exiting");		\
-			cl_flush_logs();				\
-			abort();					\
-		}							\
-	}
-#    define crm_free(x) if(x) {				\
-		CRM_ASSERT(cl_is_allocated(x) == 1);	\
-		cl_free(x);				\
-		x=NULL;				\
+		realloc_obj = cl_realloc(realloc_obj, length);		\
+		CRM_ASSERT(realloc_obj != NULL);			\
+	} while(0)
+#    define crm_free(free_obj) if(free_obj) {			\
+		CRM_ASSERT(cl_is_allocated(free_obj) == 1);	\
+		cl_free(free_obj);				\
+		free_obj=NULL;					\
 	}
 #  else
-#    define crm_malloc0(new_obj,length)					\
-	{								\
-		new_obj = cl_malloc(length);				\
-		if(new_obj == NULL) {					\
-			crm_crit("Out of memory... exiting");		\
-			cl_flush_logs();				\
-			abort();					\
-		}							\
-		memset(new_obj, 0, length);				\
-	}
-#    define crm_realloc(new_obj,length)					\
-	{								\
-		new_obj = cl_realloc(new_obj, length);			\
-		if(new_obj == NULL) {					\
-			crm_crit("Out of memory... exiting");		\
-			cl_flush_logs();				\
-			abort();					\
-		}							\
-	}
-#    define crm_free(x) if(x) {				\
-		cl_free(x);				\
-		x=NULL;				\
-	}
+#    define crm_malloc0(malloc_obj, length) do {			\
+		malloc_obj = cl_malloc(length);				\
+		CRM_ASSERT(malloc_obj != NULL);				\
+		memset(malloc_obj, 0, length);				\
+	} while(0)
+#    define crm_realloc(realloc_obj, length) do {			\
+		realloc_obj = cl_realloc(realloc_obj, length);		\
+		CRM_ASSERT(realloc_obj != NULL);			\
+	} while(0)
+	
+#    define crm_free(free_obj) if(free_obj) { cl_free(free_obj); free_obj=NULL; }
 #  endif
 #endif
 

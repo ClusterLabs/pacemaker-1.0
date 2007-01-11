@@ -37,6 +37,7 @@
 #include <lib/crm/pengine/utils.h>
 
 void set_alloc_actions(pe_working_set_t *data_set);
+void migrate_reload_madness(pe_working_set_t *data_set);
 
 resource_alloc_functions_t resource_class_alloc_functions[] = {
 	{
@@ -53,6 +54,7 @@ resource_alloc_functions_t resource_class_alloc_functions[] = {
 		native_rsc_order_rh,
 		native_rsc_location,
 		native_expand,
+		native_migrate_reload,
 		native_stonith_ordering,
 		native_create_notify_element,
 	},
@@ -70,6 +72,7 @@ resource_alloc_functions_t resource_class_alloc_functions[] = {
 		group_rsc_order_rh,
 		group_rsc_location,
 		group_expand,
+		group_migrate_reload,
 		group_stonith_ordering,
 		group_create_notify_element,
 	},
@@ -87,23 +90,25 @@ resource_alloc_functions_t resource_class_alloc_functions[] = {
 		clone_rsc_order_rh,
 		clone_rsc_location,
 		clone_expand,
+		clone_migrate_reload,
 		clone_stonith_ordering,
 		clone_create_notify_element,
 	},
 	{
  		clone_set_cmds,
 		clone_num_allowed_nodes,
-		clone_color,
+		master_color,
 		master_create_actions,
 		clone_create_probe,
 		master_internal_constraints,
 		clone_agent_constraints,
 		clone_rsc_colocation_lh,
-		clone_rsc_colocation_rh,
+		master_rsc_colocation_rh,
 		clone_rsc_order_lh,
 		clone_rsc_order_rh,
 		clone_rsc_location,
 		clone_expand,
+		clone_migrate_reload,
 		clone_stonith_ordering,
 		clone_create_notify_element,
 	}
@@ -128,7 +133,8 @@ check_rsc_parameters(resource_t *rsc, node_t *node, crm_data_t *rsc_entry,
 	for(; attr_lpc < DIMOF(attr_list); attr_lpc++) {
 		value = crm_element_value(rsc->xml, attr_list[attr_lpc]);
 		old_value = crm_element_value(rsc_entry, attr_list[attr_lpc]);
-		if(safe_str_eq(value, old_value)) {
+		if(value == old_value /* ie. NULL */
+		   || crm_str_eq(value, old_value, TRUE)) {
 			continue;
 		}
 		
@@ -155,17 +161,18 @@ check_action_definition(resource_t *rsc, node_t *active_node, crm_data_t *xml_op
 	const char *interval_s = NULL;
 	
 	gboolean did_change = FALSE;
+	gboolean start_op = FALSE;
 
-	crm_data_t *pnow = NULL;
+	crm_data_t *params_all = NULL;
+	crm_data_t *params_restart = NULL;
 	GHashTable *local_rsc_params = NULL;
 	
-	char *pnow_digest = NULL;
-	const char *param_digest = NULL;
-	char *local_param_digest = NULL;
+	char *digest_all_calc = NULL;
+	const char *digest_all = NULL;
 
-#if CRM_DEPRECATED_SINCE_2_0_4
-	crm_data_t *params = NULL;
-#endif
+	const char *restart_list = NULL;
+	const char *digest_restart = NULL;
+	char *digest_restart_calc = NULL;
 
 	action_t *action = NULL;
 	const char *task = crm_element_value(xml_op, XML_LRM_ATTR_TASK);
@@ -173,14 +180,15 @@ check_action_definition(resource_t *rsc, node_t *active_node, crm_data_t *xml_op
 
 	CRM_CHECK(active_node != NULL, return FALSE);
 
-	interval_s = get_interval(xml_op);
+	interval_s = crm_element_value(xml_op, XML_LRM_ATTR_INTERVAL);
 	interval = crm_parse_int(interval_s, "0");
+	/* we need to reconstruct the key because of the way we used to construct resource IDs */
 	key = generate_op_key(rsc->id, task, interval);
 
 	if(interval > 0) {
 		crm_data_t *op_match = NULL;
 
-		crm_debug_2("Checking parameters for %s %s", key, task);
+		crm_debug_2("Checking parameters for %s", key);
 		op_match = find_rsc_op_entry(rsc, key);
 
 		if(op_match == NULL && data_set->stop_action_orphans) {
@@ -191,7 +199,8 @@ check_action_definition(resource_t *rsc, node_t *active_node, crm_data_t *xml_op
 			crm_info("Orphan action will be stopped: %s on %s",
 				 key, active_node->details->uname);
 
-			cancel_key = generate_op_key(rsc->id, CRMD_ACTION_CANCEL, interval);
+			cancel_key = generate_op_key(
+				rsc->id, CRMD_ACTION_CANCEL, interval);
 
 			cancel = custom_action(
 				rsc, cancel_key, CRMD_ACTION_CANCEL,
@@ -224,49 +233,61 @@ check_action_definition(resource_t *rsc, node_t *active_node, crm_data_t *xml_op
 		rsc->xml, XML_TAG_ATTR_SETS, active_node->details->attrs,
 		local_rsc_params, NULL, data_set->now);
 	
-	pnow = create_xml_node(NULL, XML_TAG_PARAMS);
-	g_hash_table_foreach(action->extra, hash2field, pnow);
-	g_hash_table_foreach(rsc->parameters, hash2field, pnow);
-	g_hash_table_foreach(local_rsc_params, hash2field, pnow);
+	params_all = create_xml_node(NULL, XML_TAG_PARAMS);
+	g_hash_table_foreach(action->extra, hash2field, params_all);
+	g_hash_table_foreach(rsc->parameters, hash2field, params_all);
+	g_hash_table_foreach(local_rsc_params, hash2field, params_all);
 
-	filter_action_parameters(pnow, op_version);
-	pnow_digest = calculate_xml_digest(pnow, TRUE);
-	param_digest = crm_element_value(xml_op, XML_LRM_ATTR_OP_DIGEST);
+	filter_action_parameters(params_all, op_version);
+	digest_all_calc = calculate_xml_digest(params_all, TRUE);
+	digest_all = crm_element_value(xml_op, XML_LRM_ATTR_OP_DIGEST);
+	digest_restart = crm_element_value(xml_op, XML_LRM_ATTR_RESTART_DIGEST);
+	restart_list = crm_element_value(xml_op, XML_LRM_ATTR_OP_RESTART);
 
-#if CRM_DEPRECATED_SINCE_2_0_4
-	if(param_digest == NULL) {
-		params = find_xml_node(xml_op, XML_TAG_PARAMS, TRUE);
+	if(crm_str_eq(task, CRMD_ACTION_START, TRUE)) {
+		start_op = TRUE;
 	}
-	if(params != NULL) {
-		crm_data_t *local_params = copy_xml(params);
+	
+	if(start_op && digest_restart) {
+		params_restart = copy_xml(params_all);
+		if(restart_list) {
+			filter_reload_parameters(params_restart, restart_list);
+		}
 
-		crm_warn("Faking parameter digest creation for %s", ID(xml_op));		
-		filter_action_parameters(local_params, op_version);
-		xml_remove_prop(local_params, "interval");
-		xml_remove_prop(local_params, "timeout");
-		crm_log_xml_warn(local_params, "params:used");
-
-		local_param_digest = calculate_xml_digest(local_params, TRUE);
-		param_digest = local_param_digest;
-		
-		free_xml(local_params);
+		digest_restart_calc = calculate_xml_digest(params_restart, TRUE);
+		if(safe_str_neq(digest_restart_calc, digest_restart)) {
+			did_change = TRUE;
+			crm_log_xml_info(params_restart, "params:restart");
+			crm_warn("Parameters to %s on %s changed: recorded %s vs. calculated (restart) %s",
+				 key, active_node->details->uname,
+				 crm_str(digest_restart), digest_restart_calc);
+			
+			key = generate_op_key(rsc->id, task, interval);
+			custom_action(rsc, key, task, NULL, FALSE, TRUE, data_set);
+			goto cleanup;
+		}
 	}
-#endif
 
-	if(safe_str_neq(pnow_digest, param_digest)) {
+	if(safe_str_neq(digest_all_calc, digest_all)) {
+		action_t *op = NULL;
 		did_change = TRUE;
-		crm_log_xml_info(pnow, "params:calc");
- 		crm_warn("Parameters to %s on %s changed: recorded %s vs. calculated %s",
-			 ID(xml_op), active_node->details->uname,
-			 crm_str(param_digest), pnow_digest);
-
+		crm_log_xml_info(params_all, "params:all");
+ 		crm_warn("Parameters to %s on %s changed: recorded %s vs. calculated (all) %s",
+			 key, active_node->details->uname,
+			 crm_str(digest_all), digest_all_calc);
+		
 		key = generate_op_key(rsc->id, task, interval);
-		custom_action(rsc, key, task, NULL, FALSE, TRUE, data_set);
+		op = custom_action(rsc, key, task, NULL, FALSE, TRUE, data_set);
+		if(start_op && digest_restart) {
+			op->allow_reload_conversion = TRUE;
+		}
 	}
 
-	free_xml(pnow);
-	crm_free(pnow_digest);
-	crm_free(local_param_digest);
+  cleanup:
+	free_xml(params_all);
+	free_xml(params_restart);
+	crm_free(digest_all_calc);
+	crm_free(digest_restart_calc);
 	g_hash_table_destroy(local_rsc_params);
 
 	pe_free_action(action);
@@ -300,7 +321,7 @@ check_actions_for(crm_data_t *rsc_entry, node_t *node, pe_working_set_t *data_se
 		return;
 	}
 
-	crm_debug_2("Processing %s on %s", rsc->id, node->details->uname);
+	crm_debug_3("Processing %s on %s", rsc->id, node->details->uname);
 	
 	if(check_rsc_parameters(rsc, node, rsc_entry, data_set)) {
 		DeleteRsc(rsc, node, data_set);
@@ -319,7 +340,7 @@ check_actions_for(crm_data_t *rsc_entry, node_t *node, pe_working_set_t *data_se
 		is_probe = FALSE;
 		task = crm_element_value(rsc_op, XML_LRM_ATTR_TASK);
 
-		interval_s = get_interval(rsc_op);
+		interval_s = crm_element_value(rsc_op, XML_LRM_ATTR_INTERVAL);
 		interval = crm_parse_int(interval_s, "0");
 		
 		if(interval == 0 && safe_str_eq(task, CRMD_ACTION_STATUS)) {
@@ -327,10 +348,8 @@ check_actions_for(crm_data_t *rsc_entry, node_t *node, pe_working_set_t *data_se
 		}
 		
 		if(is_probe || safe_str_eq(task, CRMD_ACTION_START) || interval > 0) {
-			crm_debug_2("Checking resource definition: %s", rsc->id);
 			check_action_definition(rsc, node, rsc_op, data_set);
 		}
-		crm_debug_3("Ignoring %s params: %s", task, id);
 		);
 
 	g_list_free(sorted_op_list);
@@ -357,7 +376,7 @@ check_actions(pe_working_set_t *data_set)
 		if(node == NULL) {
 			continue;
 		}
-		crm_debug("Processing node %s", node->details->uname);
+		crm_debug_2("Processing node %s", node->details->uname);
 		if(node->details->online || data_set->stonith_enabled) {
 			xml_child_iter_filter(
 				lrm_rscs, rsc_entry, XML_LRM_TAG_RESOURCE,
@@ -508,56 +527,41 @@ stage2(pe_working_set_t *data_set)
 
 
 /*
- * Choose a color for all resources from highest priority and XML_STRENGTH_VAL_MUST
- *  dependencies to lowest, creating new colors as necessary (returned
- *  as "colors").
- *
- * Some nodes may be colored as a "no_color" meaning that it was unresolvable
- *  given the current node stati and constraints.
+ * Create internal resource constraints before allocation
  */
 gboolean
 stage3(pe_working_set_t *data_set)
 {
-	
-	/* Take (next) highest resource */
 	slist_iter(
 		rsc, resource_t, data_set->resources, lpc,
 		rsc->cmds->internal_constraints(rsc, data_set);
-		rsc->cmds->color(rsc, data_set);
 		);
 	
 	return TRUE;
 }
 
 /*
- * Choose a node for each (if possible) color
+ * Check for orphaned or redefined actions
  */
 gboolean
 stage4(pe_working_set_t *data_set)
 {
+	check_actions(data_set);
 	return TRUE;
 }
 
 
 
-/*
- * Attach nodes to the actions that need to be taken
- *
- * Mark actions XML_LRM_ATTR_OPTIONAL if possible (Ie. if the start and stop are
- *  for the same node)
- *
- * Mark unrunnable actions
- */
 gboolean
 stage5(pe_working_set_t *data_set)
 {
-	crm_debug_3("Creating actions and internal ording constraints");
-	
-	check_actions(data_set);
+	/* Take (next) highest resource, assign it and create its actions */
 	slist_iter(
 		rsc, resource_t, data_set->resources, lpc,
-		rsc->cmds->create_actions(rsc, data_set);
+		rsc->cmds->color(rsc, data_set);
+		rsc->cmds->create_actions(rsc, data_set);	
 		);
+	
 	return TRUE;
 }
 
@@ -685,41 +689,39 @@ stage6(pe_working_set_t *data_set)
 gboolean
 stage7(pe_working_set_t *data_set)
 {
-	crm_debug_3("Applying ordering constraints");
+	crm_debug_4("Applying ordering constraints");
 
 	slist_iter(
 		order, order_constraint_t, data_set->ordering_constraints, lpc,
 
-		/* try rsc_action-to-rsc_action */
 		resource_t *rsc = order->lh_rsc;
-		if(rsc == NULL && order->lh_action) {
-			rsc = order->lh_action->rsc;
-		}
+		crm_debug_3("Applying ordering constraint: %d", order->id);
 		
 		if(rsc != NULL) {
+			crm_debug_4("rsc_action-to-*");
 			rsc->cmds->rsc_order_lh(rsc, order);
 			continue;
 		}
 
-		/* try action-to-rsc_action */
-		
-		/* que off the rh resource */
 		rsc = order->rh_rsc;
-		if(rsc == NULL && order->rh_action) {
-			rsc = order->rh_action->rsc;
-		}
-		
 		if(rsc != NULL) {
+			crm_debug_4("action-to-rsc_action");
 			rsc->cmds->rsc_order_rh(order->lh_action, rsc, order);
+
 		} else {
-			/* fall back to action-to-action */
+			crm_debug_4("action-to-action");
 			order_actions(
 				order->lh_action, order->rh_action, order->type);
 		}
-		
 		);
 
 	update_action_states(data_set->actions);
+
+	slist_iter(
+		rsc, resource_t, data_set->resources, lpc,
+
+		rsc->cmds->migrate_reload(rsc, data_set);
+		);
 
 	return TRUE;
 }
@@ -736,11 +738,11 @@ stage8(pe_working_set_t *data_set)
 
 	transition_id++;
 	transition_id_s = crm_itoa(transition_id);
-	value = pe_pref(data_set->config_hash, "network-delay");
-	crm_debug("Creating transition graph %d.", transition_id);
+	value = pe_pref(data_set->config_hash, "cluster-delay");
+	crm_debug_2("Creating transition graph %d.", transition_id);
 	
 	data_set->graph = create_xml_node(NULL, XML_TAG_GRAPH);
-	crm_xml_add(data_set->graph, "network-delay", value);
+	crm_xml_add(data_set->graph, "cluster-delay", value);
 	crm_xml_add(data_set->graph, "transition_id", transition_id_s);
 	crm_free(transition_id_s);
 	
@@ -769,7 +771,7 @@ stage8(pe_working_set_t *data_set)
 		);
 
 	crm_log_xml_debug_3(data_set->graph, "created generic action list");
-	crm_notice("Created transition graph %d.", transition_id);
+	crm_debug_2("Created transition graph %d.", transition_id);
 	
 	return TRUE;
 }
@@ -796,8 +798,6 @@ gboolean
 unpack_constraints(crm_data_t * xml_constraints, pe_working_set_t *data_set)
 {
 	crm_data_t *lifetime = NULL;
-	crm_debug_2("Begining unpack... %s",
-		    xml_constraints?crm_element_name(xml_constraints):"<none>");
 	xml_child_iter(
 		xml_constraints, xml_obj, 
 
@@ -850,40 +850,46 @@ invert_action(const char *action)
 	} else if(safe_str_eq(action, CRMD_ACTION_PROMOTE)) {
 		return CRMD_ACTION_DEMOTE;
 		
-	} else if(safe_str_eq(action, CRMD_ACTION_DEMOTE)) {
+ 	} else if(safe_str_eq(action, CRMD_ACTION_DEMOTE)) {
 		return CRMD_ACTION_PROMOTE;
+
+	} else if(safe_str_eq(action, CRMD_ACTION_PROMOTED)) {
+		return CRMD_ACTION_DEMOTED;
+		
+	} else if(safe_str_eq(action, CRMD_ACTION_DEMOTED)) {
+		return CRMD_ACTION_PROMOTED;
 
 	} else if(safe_str_eq(action, CRMD_ACTION_STARTED)) {
 		return CRMD_ACTION_STOPPED;
 		
 	} else if(safe_str_eq(action, CRMD_ACTION_STOPPED)) {
 		return CRMD_ACTION_STARTED;
-		
 	}
-	pe_err("Unknown action: %s", action);
+	crm_config_warn("Unknown action: %s", action);
 	return NULL;
 }
 
 gboolean
 unpack_rsc_order(crm_data_t * xml_obj, pe_working_set_t *data_set)
 {
+	resource_t *rsc_lh = NULL;
+	resource_t *rsc_rh = NULL;
 	gboolean symmetrical_bool = TRUE;
 	enum pe_ordering cons_weight = pe_ordering_optional;
+
+	const char *id_rh  = NULL;
+	const char *id_lh  = NULL;
+	const char *action = NULL;
+	const char *action_rh = NULL;
 	
 	const char *id     = crm_element_value(xml_obj, XML_ATTR_ID);
 	const char *type   = crm_element_value(xml_obj, XML_ATTR_TYPE);
-	const char *id_rh  = crm_element_value(xml_obj, XML_CONS_ATTR_TO);
-	const char *id_lh  = crm_element_value(xml_obj, XML_CONS_ATTR_FROM);
 	const char *score  = crm_element_value(xml_obj, XML_RULE_ATTR_SCORE);
-	const char *action = crm_element_value(xml_obj, XML_CONS_ATTR_ACTION);
-	const char *action_rh = crm_element_value(xml_obj, XML_CONS_ATTR_TOACTION);
-
 	const char *symmetrical = crm_element_value(
 		xml_obj, XML_CONS_ATTR_SYMMETRICAL);
 
-	resource_t *rsc_lh   = NULL;
-	resource_t *rsc_rh   = NULL;
-
+	cl_str_to_boolean(symmetrical, &symmetrical_bool);
+	
 	if(xml_obj == NULL) {
 		crm_config_err("No constraint object to process.");
 		return FALSE;
@@ -893,40 +899,45 @@ unpack_rsc_order(crm_data_t * xml_obj, pe_working_set_t *data_set)
 			crm_element_name(xml_obj));
 		return FALSE;
 		
-	} else if(id_lh == NULL || id_rh == NULL) {
+	}
+
+	if(safe_str_eq(type, "before")) {
+		id_lh  = crm_element_value(xml_obj, XML_CONS_ATTR_TO);
+		id_rh  = crm_element_value(xml_obj, XML_CONS_ATTR_FROM);
+		action = crm_element_value(xml_obj, XML_CONS_ATTR_ACTION);
+		action_rh = crm_element_value(xml_obj, XML_CONS_ATTR_TOACTION);
+		
+	} else {
+		type="after";
+		id_rh  = crm_element_value(xml_obj, XML_CONS_ATTR_TO);
+		id_lh  = crm_element_value(xml_obj, XML_CONS_ATTR_FROM);
+		action = crm_element_value(xml_obj, XML_CONS_ATTR_TOACTION);
+		action_rh = crm_element_value(xml_obj, XML_CONS_ATTR_ACTION);
+		if(action == NULL) {
+			action = action_rh;
+		}
+	}
+
+	if(id_lh == NULL || id_rh == NULL) {
 		crm_config_err("Constraint %s needs two sides lh: %s rh: %s",
 			      id, crm_str(id_lh), crm_str(id_rh));
 		return FALSE;
 	}
-
+	
 	if(action == NULL) {
 		action = CRMD_ACTION_START;
 	}
 	if(action_rh == NULL) {
 		action_rh = action;
 	}
-	CRM_CHECK(action != NULL, return FALSE);
-	CRM_CHECK(action_rh != NULL, return FALSE);
 	
-	if(safe_str_eq(type, "before")) {
-		id_lh  = crm_element_value(xml_obj, XML_CONS_ATTR_TO);
-		id_rh  = crm_element_value(xml_obj, XML_CONS_ATTR_FROM);
-		action = crm_element_value(xml_obj, XML_CONS_ATTR_TOACTION);
-		action_rh = crm_element_value(xml_obj, XML_CONS_ATTR_ACTION);
-		if(action_rh == NULL) {
-			action_rh = CRMD_ACTION_START;
-		}
-		if(action == NULL) {
-			action = action_rh;
-		}
-	}
+	rsc_lh = pe_find_resource(data_set->resources, id_rh);
+	rsc_rh = pe_find_resource(data_set->resources, id_lh);
 
-	CRM_CHECK(action != NULL, return FALSE);
-	CRM_CHECK(action_rh != NULL, return FALSE);
+	crm_debug("%s: %s.%s %s %s.%s%s",
+		  id, rsc_lh->id, action, type, rsc_rh->id, action_rh,
+		  symmetrical_bool?" (symmetrical)":"");
 	
-	rsc_lh   = pe_find_resource(data_set->resources, id_rh);
-	rsc_rh   = pe_find_resource(data_set->resources, id_lh);
-
 	if(rsc_lh == NULL) {
 		crm_config_err("Constraint %s: no resource found for LHS of %s", id, id_lh);
 		return FALSE;
@@ -936,7 +947,7 @@ unpack_rsc_order(crm_data_t * xml_obj, pe_working_set_t *data_set)
 		return FALSE;
 	}
 
-	if(crm_atoi(score, "0") > 0) {
+	if(char2score(score) > 0) {
 		/* the name seems weird but the effect is correct */
 		cons_weight = pe_ordering_restart;
 	}
@@ -949,23 +960,37 @@ unpack_rsc_order(crm_data_t * xml_obj, pe_working_set_t *data_set)
 	if(rsc_rh->restart_type == pe_restart_restart
 	   && safe_str_eq(action, action_rh)) {
 		if(safe_str_eq(action, CRMD_ACTION_START)) {
-			crm_debug_2("Recover start-start: %s-%s",
-				rsc_lh->id, rsc_rh->id);
-  			order_start_start(rsc_lh, rsc_rh, pe_ordering_recover);
+			crm_debug_2("Recover %s.%s-%s.%s",
+				    rsc_lh->id, action, rsc_rh->id, action_rh);
+/* 			order_start_start(rsc_lh, rsc_rh, pe_ordering_recover); */
+			custom_action_order(
+				rsc_lh, generate_op_key(rsc_lh->id, action, 0), NULL,
+				rsc_rh, generate_op_key(rsc_rh->id, action_rh, 0), NULL,
+				pe_ordering_recover, data_set);
+
  		} else if(safe_str_eq(action, CRMD_ACTION_STOP)) {
-			crm_debug_2("Recover stop-stop: %s-%s",
-				rsc_rh->id, rsc_lh->id);
-  			order_stop_stop(rsc_rh, rsc_lh, pe_ordering_recover); 
+			crm_debug_2("Recover %s.%s-%s.%s",
+				    rsc_rh->id, action_rh, rsc_lh->id, action);
+/*   			order_stop_stop(rsc_rh, rsc_lh, pe_ordering_recover);   */
+			custom_action_order(
+				rsc_rh, generate_op_key(rsc_rh->id, action_rh, 0), NULL,
+				rsc_lh, generate_op_key(rsc_lh->id, action, 0), NULL,
+				pe_ordering_recover, data_set);
 		}
 	}
 
-	cl_str_to_boolean(symmetrical, &symmetrical_bool);
 	if(symmetrical_bool == FALSE) {
 		return TRUE;
 	}
 	
 	action = invert_action(action);
 	action_rh = invert_action(action_rh);
+
+	if(action == NULL || action_rh == NULL) {
+		crm_config_err("Cannot invert rsc_order constraint %s."
+			       " Please specify the inverse manually.", id);
+		return TRUE;
+	}
 	
 	custom_action_order(
 		rsc_rh, generate_op_key(rsc_rh->id, action_rh, 0), NULL,
@@ -977,11 +1002,19 @@ unpack_rsc_order(crm_data_t * xml_obj, pe_working_set_t *data_set)
 		if(safe_str_eq(action, CRMD_ACTION_START)) {
 			crm_debug_2("Recover start-start (2): %s-%s",
 				rsc_lh->id, rsc_rh->id);
-  			order_start_start(rsc_lh, rsc_rh, pe_ordering_recover);
+/*   			order_start_start(rsc_lh, rsc_rh, pe_ordering_recover); */
+			custom_action_order(
+				rsc_lh, generate_op_key(rsc_lh->id, action, 0), NULL,
+				rsc_rh, generate_op_key(rsc_rh->id, action_rh, 0), NULL,
+				pe_ordering_recover, data_set);
 		} else if(safe_str_eq(action, CRMD_ACTION_STOP)) { 
 			crm_debug_2("Recover stop-stop (2): %s-%s",
 				rsc_rh->id, rsc_lh->id);
-  			order_stop_stop(rsc_rh, rsc_lh, pe_ordering_recover); 
+/*   			order_stop_stop(rsc_rh, rsc_lh, pe_ordering_recover);  */
+			custom_action_order(
+				rsc_rh, generate_op_key(rsc_rh->id, action_rh, 0), NULL,
+				rsc_lh, generate_op_key(rsc_lh->id, action, 0), NULL,
+				pe_ordering_recover, data_set);
 		}
 	}
 	
@@ -1185,12 +1218,11 @@ generate_location_rule(
 
 	crm_debug_3("%s: %d nodes matched",
 		    rule_id, g_list_length(location_rule->node_list_rh));
-	crm_action_debug_3(print_rsc_to_node("Added", location_rule, FALSE));
 	return location_rule;
 }
 
 gboolean
-rsc_colocation_new(const char *id, int score,
+rsc_colocation_new(const char *id, const char *node_attr, int score,
 		   resource_t *rsc_lh, resource_t *rsc_rh,
 		   const char *state_lh, const char *state_rh)
 {
@@ -1209,20 +1241,24 @@ rsc_colocation_new(const char *id, int score,
 	if(new_con == NULL) {
 		return FALSE;
 	}
-	if(safe_str_eq(state_lh, CRMD_ACTION_STARTED)) {
-		state_lh = NULL;
+
+	if(state_lh == NULL
+	   || safe_str_eq(state_lh, RSC_ROLE_STARTED_S)) {
+		state_lh = RSC_ROLE_UNKNOWN_S;
 	}
-	if(safe_str_eq(state_rh, CRMD_ACTION_STARTED)) {
-		state_rh = NULL;
-	}
+
+	if(state_rh == NULL
+	   || safe_str_eq(state_rh, RSC_ROLE_STARTED_S)) {
+		state_rh = RSC_ROLE_UNKNOWN_S;
+	} 
 
 	new_con->id       = id;
 	new_con->rsc_lh   = rsc_lh;
 	new_con->rsc_rh   = rsc_rh;
 	new_con->score = score;
-	new_con->state_lh = state_lh;
-	new_con->state_rh = state_rh;
-
+	new_con->role_lh = text2role(state_lh);
+	new_con->role_rh = text2role(state_rh);
+	new_con->node_attribute = node_attr;
 	
 	crm_debug_4("Adding constraint %s (%p) to %s",
 		  new_con->id, new_con, rsc_lh->id);
@@ -1241,19 +1277,27 @@ custom_action_order(
 	enum pe_ordering type, pe_working_set_t *data_set)
 {
 	order_constraint_t *order = NULL;
+	if(lh_rsc == NULL && lh_action) {
+		lh_rsc = lh_action->rsc;
+	}
+	if(rh_rsc == NULL && rh_action) {
+		rh_rsc = rh_action->rsc;
+	}
 
 	if((lh_action == NULL && lh_rsc == NULL)
 	   || (rh_action == NULL && rh_rsc == NULL)){
-		crm_config_err("Invalid inputs lh_rsc=%p, lh_a=%p,"
-			      " rh_rsc=%p, rh_a=%p",
+		crm_config_err("Invalid inputs %p.%p %p.%p",
 			      lh_rsc, lh_action, rh_rsc, rh_action);
 		crm_free(lh_action_task);
 		crm_free(rh_action_task);
 		return FALSE;
 	}
-
+	
 	crm_malloc0(order, sizeof(order_constraint_t));
 	if(order == NULL) { return FALSE; }
+
+	crm_debug_3("Creating ordering constraint %d",
+		    data_set->order_id);
 	
 	order->id             = data_set->order_id++;
 	order->type           = type;
@@ -1309,6 +1353,9 @@ unpack_rsc_colocation(crm_data_t * xml_obj, pe_working_set_t *data_set)
 	const char *score = crm_element_value(xml_obj, XML_RULE_ATTR_SCORE);
 	const char *state_lh = crm_element_value(xml_obj, XML_RULE_ATTR_FROMSTATE);
 	const char *state_rh = crm_element_value(xml_obj, XML_RULE_ATTR_TOSTATE);
+	const char *attr = crm_element_value(xml_obj, "node_attribute");
+	const char *symmetrical = crm_element_value(xml_obj, XML_CONS_ATTR_SYMMETRICAL);
+
 
 	resource_t *rsc_lh = pe_find_resource(data_set->resources, id_lh);
 	resource_t *rsc_rh = pe_find_resource(data_set->resources, id_rh);
@@ -1322,15 +1369,18 @@ unpack_rsc_colocation(crm_data_t * xml_obj, pe_working_set_t *data_set)
 		return FALSE;
 	}
 
-	/* the docs indicate that only +/- INFINITY are allowed,
-	 *   but no-one ever reads the docs so all positive values will
-	 *   count as "must" and negative values as "must not"
-	 */
 	if(score) {
 		score_i = char2score(score);
 	}
-	return rsc_colocation_new(
-		id, score_i, rsc_lh, rsc_rh, state_lh, state_rh);
+
+	rsc_colocation_new(
+		id, attr, score_i, rsc_lh, rsc_rh, state_lh, state_rh);
+	
+	if(crm_is_true(symmetrical)) {
+		rsc_colocation_new(
+			id, attr, score_i, rsc_rh, rsc_lh, state_rh, state_lh);
+	}
+	return TRUE;
 }
 
 gboolean is_active(rsc_to_node_t *cons)

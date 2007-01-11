@@ -422,7 +422,7 @@ on_listen(GIOChannel *ch, GIOCondition condition, gpointer data)
 			close(csock);
 			return TRUE;
 		}
-		quorum_debug(LOG_DEBUG, "version:%s(%d)",buf,len);
+		quorum_debug(LOG_DEBUG, "version:%s(%d)",buf,(int)len);
 		fns = get_protocol(buf);
 		if(fns != NULL) {
 			fns->on_connect(csock,session,CN);
@@ -541,7 +541,7 @@ initialize_tls_session (int sd, char* CN)
 	gnutls_credentials_set (session, GNUTLS_CRD_CERTIFICATE, x509_cred);
 	gnutls_certificate_server_set_request (session, GNUTLS_CERT_REQUIRE);
 	gnutls_dh_set_prime_bits (session, DH_BITS);
-	gnutls_transport_set_ptr (session, (gnutls_transport_ptr) sd);
+	gnutls_transport_set_ptr (session, (gnutls_transport_ptr) GINT_TO_POINTER(sd));
 	ret = gnutls_handshake (session);
 	if (ret < 0)
 	{

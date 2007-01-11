@@ -40,6 +40,7 @@ void final_heartbeat(void);
 static ll_cluster_t * hb = NULL;
 static char* on_get_allnodes(char* argv[], int argc);
 static char* on_get_hb_config(char* argv[], int argc);
+static char* on_get_nodetype(char* argv[], int argc);
 static gboolean on_hb_input(ll_cluster_t* hb, gpointer data);
 static char* on_echo(char* argv[], int argc);
 static void on_hb_quit(gpointer);
@@ -112,6 +113,22 @@ on_get_hb_config(char* argv[], int argc)
 	return cl_strdup(hb_config);
 }
 
+char*
+on_get_nodetype(char* argv[], int argc)
+{
+	const char* type;
+	char* ret;
+	type = hb->llc_ops->node_type(hb,argv[1]);
+	if (type != NULL) {
+		ret = cl_strdup(MSG_OK);
+		ret = mgmt_msg_append(ret, type);
+	}
+	else {
+		ret = cl_strdup(MSG_FAIL);
+	}
+	return ret;
+}
+
 int
 init_heartbeat(void)
 {
@@ -128,6 +145,7 @@ init_heartbeat(void)
 	
 	reg_msg(MSG_ALLNODES, on_get_allnodes);
 	reg_msg(MSG_HB_CONFIG, on_get_hb_config);
+	reg_msg(MSG_NODE_TYPE, on_get_nodetype);
 	reg_msg(MSG_ECHO, on_echo);	
 
 	return 0;

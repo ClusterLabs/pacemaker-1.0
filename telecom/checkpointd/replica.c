@@ -1724,7 +1724,7 @@ SaCkptSectionId2String(SaCkptFixLenSectionIdT sectionId)
 		sprintf(pSec, "%d",sectionId.id[i]);
 		pSec ++;
 	}
-	strncat(pSec, "\0", strlen("\0"));
+	strncat(pSec, "\0", strlen("\0")); /* FIXME, if you care */
 
 	return strSectionId;
 }

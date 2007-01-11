@@ -52,7 +52,7 @@ ra_execocf(){
 	start)		$__SCRIPT_NAME start;;
 	stop)		$__SCRIPT_NAME stop ;;
 	monitor)	$__SCRIPT_NAME monitor;;
-	status)		$__SCRIPT_NAME monitor;;
+	status)		$__SCRIPT_NAME monitor;;	# Mapping this to monitor is a bug
 	
 	usage|help)	usage;;
 	*)		log_and_print "ERROR: Unknown operation: $__ACTION"
@@ -72,7 +72,7 @@ ra_execocf(){
 		log_and_print "ERROR: $rsc_type Generic error";;
 
 	$OCF_ERR_ARGS)
-		log_and_print "ERROR: $rsc_type Incompliant argument";;
+		log_and_print "ERROR: $rsc_type Illegal argument";;
 
 	$OCF_ERR_UNIMPLEMENTED)
 		log_and_print "ERROR: $rsc_type Function unimplemented";;

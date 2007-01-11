@@ -1,6 +1,5 @@
 Makefile.in
 netstring_test
-test.h
 Makefile
 .deps
 .libs

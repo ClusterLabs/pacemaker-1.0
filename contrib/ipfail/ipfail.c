@@ -86,7 +86,7 @@ main(int argc, char **argv)
 	cl_log_enable_stderr(TRUE);
 	
 	/* Get the name of the binary for logging purposes */
-	bname = ha_strdup(argv[0]);
+	bname = cl_strdup(argv[0]);
 	cl_log_set_entity(basename(bname));
 
 	cl_log_set_facility(DEFAULT_FACILITY);

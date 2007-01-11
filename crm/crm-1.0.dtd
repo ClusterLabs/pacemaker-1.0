@@ -227,6 +227,9 @@ This allows us to specify how long an action can take
  * name : the name of the operation.
    Supported operations are start, stop, & monitor
 
+ * start_delay : delay the operation after starting the resource
+   By default this value is in milliseconds, however you can also specify a value in seconds like so timeout="5s". Used for the monitor operation.
+
  * timeout : the maximum period of time before considering the action failed.
    By default this value is in milliseconds, however you can also specify a value in seconds like so timeout="5s".
 
@@ -257,6 +260,7 @@ Parameters specific to each operation can be passed using the instance_attribute
           description   CDATA         #IMPLIED
           interval      CDATA         #IMPLIED
           timeout       CDATA         #IMPLIED
+          start_delay   CDATA         '0'
           disabled      (true|1|false|0)               'false'
           role          (Master|Slave|Started|Stopped) 'Started'
           prereq        (nothing|quorum|fencing)       #IMPLIED
@@ -280,7 +284,7 @@ NOTE: Do not create empty groups.
           is_managed            CDATA                         #IMPLIED
           restart_type          (ignore|restart)              'ignore'
           multiple_active       (stop_start|stop_only|block)  'stop_start'
-          resource_stickiness   (0|INFINITY|-INFINITY)        #IMPLIED
+          resource_stickiness   CDATA			      #IMPLIED
 
           ordered               (true|1|false|0)              'true'
           collocated            (true|1|false|0)              'true'>
@@ -433,10 +437,11 @@ rsc_ordering constraints express dependencies between the actions on two resourc
           id        CDATA #REQUIRED
           from      CDATA #REQUIRED
           to        CDATA #REQUIRED
-          action    (start|stop)         'start'
-          type      (before|after)       'after'
-          score     CDATA                '0'
-          symmetrical    (true|1|false|0) 'true'>
+          action    CDATA		'start'
+          to_action CDATA		'start'
+          type      (before|after)	'after'
+          score     CDATA		'0'
+          symmetrical (true|1|false|0)	'true'>
 
 <!--
 Specify where a resource should run relative to another resource
@@ -446,10 +451,14 @@ This may change in the future.
 -->
 <!ELEMENT rsc_colocation (lifetime?)>
 <!ATTLIST rsc_colocation
-          id        CDATA #REQUIRED
-          from      CDATA #REQUIRED
-          to        CDATA #REQUIRED
-          score     CDATA #REQUIRED>
+          id             CDATA #REQUIRED
+          from           CDATA #REQUIRED
+          from_role      CDATA #IMPLIED
+          to             CDATA #REQUIRED
+          to_role        CDATA #IMPLIED
+	  symmetrical    CDATA #IMPLIED
+          node_attribute CDATA #IMPLIED
+          score          CDATA #REQUIRED>
 
 <!--
 Specify which nodes are eligible for running a given resource.
@@ -607,6 +616,7 @@ This may change in a future release.
 <!ELEMENT date_spec EMPTY>
 <!ATTLIST date_spec
         id         CDATA  #REQUIRED
+        hours      CDATA  #IMPLIED
         monthdays  CDATA  #IMPLIED
         weekdays   CDATA  #IMPLIED
         yeardays   CDATA  #IMPLIED
@@ -625,6 +635,7 @@ Eg. months=11 should be equivalent to writing years=1, months=-1 but is not enco
 <!ELEMENT duration EMPTY>
 <!ATTLIST duration
         id         CDATA  #REQUIRED
+        hours      CDATA  #IMPLIED
         monthdays  CDATA  #IMPLIED
         weekdays   CDATA  #IMPLIED
         yeardays   CDATA  #IMPLIED
@@ -819,7 +830,10 @@ The parameters section allows us to detect when a resource's definition has chan
           call_id               CDATA #REQUIRED
           crm_feature_set       CDATA #REQUIRED
           crm-debug-origin      CDATA #IMPLIED
+          migrate_from          CDATA #IMPLIED
           transition_key        CDATA #IMPLIED
           op_digest             CDATA #IMPLIED
+          op_restart_digest     CDATA #IMPLIED
+          op_force_restart      CDATA #IMPLIED
           interval              CDATA #REQUIRED
           transition_magic      CDATA #REQUIRED>

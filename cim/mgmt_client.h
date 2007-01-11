@@ -48,9 +48,12 @@
 
 #define mclient_makeup_param(a,b)			\
 	({	char param[MAXLEN] = "";		\
-		strncat(param, a, MAXLEN);		\
-		strncat(param, "\n", MAXLEN);		\
-		strncat(param, b, MAXLEN);		\
+		strncat(param, a, 			\
+			sizeof(param)-strlen(param)-1);	\
+		strncat(param, "\n",			\
+			sizeof(param)-strlen(param)-1);	\
+		strncat(param, b, 			\
+			sizeof(param)-strlen(param)-1);	\
 		param;					\
 	})
 

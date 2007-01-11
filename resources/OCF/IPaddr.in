@@ -107,27 +107,15 @@ rather, specify the base interface only.
 <content type="string" default="eth0"/>
 </parameter>
 
-<parameter name="cidr_netmask">
-<longdesc lang="en">
-The netmask for the interface in CIDR format.
-(e.g., 24 and not 255.255.255.0)
-
-If unspecified, the script will also try to determine this from the
-routing table.
-</longdesc>
-<shortdesc lang="en">CIDR netmask</shortdesc>
-<content type="string" default=""/>
-</parameter>
-
 <parameter name="netmask">
 <longdesc lang="en">
-The netmask for the interface in CIDR format.
-(e.g., 255.255.255.0 and not 24)
+The netmask for the interface dot-quad notation or CIDR format. (ie,
+either 255.255.255.0 or 24)
 
 If unspecified, the script will also try to determine this from the
 routing table.
 </longdesc>
-<shortdesc lang="en">netmask</shortdesc>
+<shortdesc lang="en">Netmask</shortdesc>
 <content type="string" default=""/>
 </parameter>
 
@@ -450,19 +438,21 @@ delete_interface () {
   ipaddr="$2"
 
   case "$SYSTYPE" in
-	SunOS)
+      SunOS)
 		if [ "$SYSVERSION" -ge 8 ] ; then
 		    CMD="$IFCONFIG $ifname unplumb"
 		else
 		    CMD="$IFCONFIG $ifname 0 down"
 		fi;;
-	*BSD)
+      Darwin*)
+		CMD="$IFCONFIG $ifname $ipaddr delete";;
+      *BSD)
 		CMD="$IFCONFIG $ifname inet $ipaddr delete";;
-
-	*)
+      *)
 		CMD="$IFCONFIG $ifname down";;
   esac
 
+  ocf_log info "$CMD"
   $CMD
 
   return $?
@@ -493,10 +483,10 @@ add_interface () {
 	  fi
 	  # At Solaris 10, this single-command version sometimes broke.
 	  # Almost certainly an S10 bug.
-	  #	CMD="$IFCONFIG $iface inet $ipaddr $netmask_text up"
+	  #	CMD="$IFCONFIG $iface inet $ipaddr $text up"
 	  # So hack the following workaround:
 	  CMD="$IFCONFIG $iface inet $ipaddr"
-	  CMD="$CMD && $IFCONFIG $iface $netmask_text"
+	  CMD="$CMD && $IFCONFIG $iface $netmask"
 	  CMD="$CMD && $IFCONFIG $iface up"
 	  ;;
       
@@ -508,7 +498,7 @@ add_interface () {
   esac
 
   # Use "eval $CMD" (not "$CMD"): it might be a chain of two or more commands.
-  echo $CMD
+  ocf_log info "eval $CMD"
   eval $CMD
   rc=$?
   if [ $rc != 0 ]; then
@@ -525,12 +515,6 @@ ip_stop() {
 
   SENDARPPIDFILE="$SENDARPPIDDIR/send_arp-$OCF_RESKEY_ip"
   NIC=`find_interface $OCF_RESKEY_ip`
-  : ${OCF_RESKEY_nic=$NIC}
-
-  if [ x$NIC != x -a $OCF_RESKEY_nic != $NIC ]; then
-      ocf_log err "Attempt to remove $OCF_RESKEY_ip from an interface other than the one supplied"
-      return $OCF_ERR_ARGS
-  fi
 
   if [ -f "$SENDARPPIDFILE" ]; then
 	cat "$SENDARPPIDFILE" | xargs kill
@@ -652,6 +636,14 @@ ip_status_internal() {
 	    *)	 return $OCF_SUCCESS;;
 	esac
     else
+	if [ x$OCF_RESKEY_nic != x ]; then
+	    simple_OCF_NIC=`echo $OCF_RESKEY_nic | awk -F: '{print $1}'`
+	    simple_NIC=`echo $NIC | awk -F: '{print $1}'`
+	    if [ $simple_OCF_NIC != $simple_NIC ]; then
+		ocf_log err "$OCF_RESKEY_ip is running an interface ($simple_NIC) instead of the configured one ($simple_OCF_NIC)"
+		return $OCF_ERR_GENERIC
+	    fi
+	fi
 	return $OCF_SUCCESS
     fi
 }
@@ -769,6 +761,8 @@ ip_validate_all() {
     # $FINDIF can NOT deal with the condition of empty intermediate parameters. 
     #
     IFCMD="$FINDIF $OCF_RESKEY_ip"
+    # Note: We had a version out there for a while which renamed the
+    # parameter to cidr_netmask. So, don't remove this aliasing code!
     if [ -n "$OCF_RESKEY_cidr_netmask" -o -n "$OCF_RESKEY_netmask" ]; then
 	if [ -n "$OCF_RESKEY_netmask" ]; then
 	    IFCMD="$IFCMD/$OCF_RESKEY_netmask"
@@ -780,6 +774,18 @@ ip_validate_all() {
 	    if [ -n "$OCF_RESKEY_broadcast" ]; then
 		IFCMD="$IFCMD/$OCF_RESKEY_broadcast"
 	    fi
+	elif [ x$OCF_RESKEY_broadcast != x ]; then
+	    ocf_log err "Configured broadcast value is ignored when no value for nic is specified"
+	    OCF_RESKEY_broadcast=""
+	fi
+    else
+	if [ x$OCF_RESKEY_broadcast != x ]; then
+	    ocf_log err "Configured broadcast value is ignored when no value for netmask is specified"
+	    OCF_RESKEY_broadcast=""
+	fi
+	if [ x$OCF_RESKEY_nic != x ]; then
+	    ocf_log err "Configured nic value is ignored when no value for netmask is specified"
+	    OCF_RESKEY_nic=""
 	fi
     fi
 
@@ -802,18 +808,19 @@ ip_validate_all() {
     fi
 
     tmp=`echo "$NICINFO" | cut -f2 | cut -d ' ' -f2`
-    if [ "x$OCF_RESKEY_netmask" = "x" ]; then
+    if [ "x$OCF_RESKEY_netmask" = "x" -a "x$OCF_RESKEY_cidr_netmask" = "x" ]; then
+	ocf_log debug "Using calculated netmask for ${OCF_RESKEY_ip}: $tmp"
+
+    elif [ "x$OCF_RESKEY_netmask" != "x$tmp" ]; then
 	ocf_log info "Using calculated netmask for ${OCF_RESKEY_ip}: $tmp"
-	OCF_RESKEY_netmask=$tmp
-# We cant do this because netmask used to take the CIDR form...
-#    elif [ x$tmp != x${OCF_RESKEY_netmask} ]; then
-#	ocf_log err "Invalid parameter value: netmask [$OCF_RESKEY_netmask [Calculated netmask: $tmp]"
-#	return $OCF_ERR_ARGS
     fi
+    # Always use the calculated version becuase it might have been specified 
+    #  using CIDR notation which not every system accepts
+    OCF_RESKEY_netmask=$tmp
     
     tmp=`echo "$NICINFO" | cut -f3 | cut -d ' ' -f2`
     if [ "x$OCF_RESKEY_broadcast" = "x" ]; then
-	ocf_log info "Using calculated broadcast for ${OCF_RESKEY_ip}: $tmp"
+	ocf_log debug "Using calculated broadcast for ${OCF_RESKEY_ip}: $tmp"
 	OCF_RESKEY_broadcast=$tmp
 
     elif [ x$tmp != x${OCF_RESKEY_broadcast} ]; then
@@ -821,7 +828,7 @@ ip_validate_all() {
 	return $OCF_ERR_ARGS
     fi
     
-  return $OCF_SUCCESS
+    return $OCF_SUCCESS
 }
   
 usage() {

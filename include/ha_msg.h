@@ -192,7 +192,6 @@ extern struct fieldtypefuncs_s fieldtypefuncs[NUM_MSG_TYPES];
 #define F_ACKSEQ	"ackseq"	/* The seq number this msg is acking*/
 #define F_CRM_DATA	"crm_xml"
 #define F_XML_TAGNAME	"__name__"
-#define F_XML_PARENT	"__parent__"
 #define F_STATE		"state"		/*used in ccm for state info*/
 
 
@@ -257,6 +256,8 @@ void		ha_msg_del(struct ha_msg *msg);
 
 /* Copy message */
 struct ha_msg*	ha_msg_copy(const struct ha_msg *msg);
+
+int ha_msg_expand(struct ha_msg* msg );
 
 /*Add a null-terminated name and binary value to a message*/
 int		ha_msg_addbin(struct ha_msg * msg, const char * name, 

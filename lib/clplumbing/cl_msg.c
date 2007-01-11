@@ -72,18 +72,23 @@ FT_strings[]={
 	"9"
 };
 
-
-
-
 #undef DOAUDITS
 #define DOAUDITS
+
+#undef DOPARANOIDAUDITS
+/* #define DOPARANOIDAUDITS */
+
 #ifdef DOAUDITS
-
 void ha_msg_audit(const struct ha_msg* msg);
-
-#	define	AUDITMSG(msg)	ha_msg_audit(msg)
+#	define	AUDITMSG(msg)		ha_msg_audit(msg)
+#  ifdef DOPARANOIDAUDITS
+#	define	PARANOIDAUDITMSG(msg)	ha_msg_audit(msg)
+#  else
+#	define	PARANOIDAUDITMSG(msg)	/*nothing*/
+#  endif
 #else
-#	define	AUDITMSG(msg)	/*nothing*/
+#	define	AUDITMSG(msg)		/*nothing*/
+#	define	PARANOIDAUDITMSG(msg)	/*nothing*/
 #endif
 
 
@@ -216,7 +221,7 @@ list_cleanup(GList* list)
 			       "element is NULL");
 			continue;
 		}
-		ha_free(element);
+		cl_free(element);
 	}
 	g_list_free(list);
 }
@@ -225,7 +230,7 @@ list_cleanup(GList* list)
 
 /* Create a new (empty) message */
 struct ha_msg *
-ha_msg_new(nfields)
+ha_msg_new(int nfields)
 {
 	struct ha_msg *	ret;
 	int	nalloc;
@@ -241,11 +246,11 @@ ha_msg_new(nfields)
 		}
 
 		ret->nalloc    = nalloc;
-		ret->names     = (char **)ha_calloc(sizeof(char *), nalloc);
-		ret->nlens     = (size_t *)ha_calloc(sizeof(size_t), nalloc);
-		ret->values    = (void **)ha_calloc(sizeof(void *), nalloc);
-		ret->vlens     = (size_t *)ha_calloc(sizeof(size_t), nalloc);
-		ret->types	= (int*)ha_calloc(sizeof(int), nalloc);
+		ret->names     = (char **)cl_calloc(sizeof(char *), nalloc);
+		ret->nlens     = (size_t *)cl_calloc(sizeof(size_t), nalloc);
+		ret->values    = (void **)cl_calloc(sizeof(void *), nalloc);
+		ret->vlens     = (size_t *)cl_calloc(sizeof(size_t), nalloc);
+		ret->types	= (int*)cl_calloc(sizeof(int), nalloc);
 
 		if (ret->names == NULL || ret->values == NULL
 		||	ret->nlens == NULL || ret->vlens == NULL
@@ -272,18 +277,18 @@ ha_msg_del(struct ha_msg *msg)
 {
 	if (msg) {
 		int	j;
-		AUDITMSG(msg);
+		PARANOIDAUDITMSG(msg);
 		if (msgstats) {
 			msgstats->allocmsgs--;
 		}
 		if (msg->names) {
 			for (j=0; j < msg->nfields; ++j) {
 				if (msg->names[j]) {
-					ha_free(msg->names[j]);
+					cl_free(msg->names[j]);
 					msg->names[j] = NULL;
 				}
 			}
-			ha_free(msg->names);
+			cl_free(msg->names);
 			msg->names = NULL;
 		}
 		if (msg->values) {
@@ -297,24 +302,24 @@ ha_msg_del(struct ha_msg *msg)
 					fieldtypefuncs[msg->types[j]].memfree(msg->values[j]);
 				}
 			}
-			ha_free(msg->values);
+			cl_free(msg->values);
 			msg->values = NULL;
 		}
 		if (msg->nlens) {
-			ha_free(msg->nlens);
+			cl_free(msg->nlens);
 			msg->nlens = NULL;
 		}
 		if (msg->vlens) {
-			ha_free(msg->vlens);
+			cl_free(msg->vlens);
 			msg->vlens = NULL;
 		}
 		if (msg->types){
-			ha_free(msg->types);
+			cl_free(msg->types);
 			msg->types = NULL;
 		}
 		msg->nfields = -1;
 		msg->nalloc = -1;
-		ha_free(msg);
+		cl_free(msg);
 	}
 }
 struct ha_msg*
@@ -324,7 +329,7 @@ ha_msg_copy(const struct ha_msg *msg)
 	int			j;
 
 	
-	AUDITMSG(msg);
+	PARANOIDAUDITMSG(msg);
 	if (msg == NULL || (ret = ha_msg_new(msg->nalloc)) == NULL) {   
 		return NULL;   
 	} 
@@ -337,7 +342,7 @@ ha_msg_copy(const struct ha_msg *msg)
 
 	for (j=0; j < msg->nfields; ++j) {
 		
-		if ((ret->names[j] = ha_malloc(msg->nlens[j]+1)) == NULL) {
+		if ((ret->names[j] = cl_malloc(msg->nlens[j]+1)) == NULL) {
 			goto freeandleave;
 		}
 		memcpy(ret->names[j], msg->names[j], msg->nlens[j]+1);
@@ -374,7 +379,7 @@ ha_msg_audit(const struct ha_msg* msg)
 	if (!msg) {
 		return;
 	}
-	if (!ha_is_allocated(msg)) {
+	if (!cl_is_allocated(msg)) {
 		cl_log(LOG_CRIT, "Message @ %p is not allocated"
 		,	 msg);
 		abort();
@@ -390,25 +395,25 @@ ha_msg_audit(const struct ha_msg* msg)
 		doabort = TRUE;
 	}
 
-	if (!ha_is_allocated(msg->names)) {
+	if (!cl_is_allocated(msg->names)) {
 		cl_log(LOG_CRIT
 		,	"Message names @ %p is not allocated"
 		,	 msg->names);
 		doabort = TRUE;
 	}
-	if (!ha_is_allocated(msg->values)) {
+	if (!cl_is_allocated(msg->values)) {
 		cl_log(LOG_CRIT
 		,	"Message values @ %p is not allocated"
 		,	msg->values);
 		doabort = TRUE;
 	}
-	if (!ha_is_allocated(msg->nlens)) {
+	if (!cl_is_allocated(msg->nlens)) {
 		cl_log(LOG_CRIT
 		,	"Message nlens @ %p is not allocated"
 		,	msg->nlens);
 		doabort = TRUE;
 	}
-	if (!ha_is_allocated(msg->vlens)) {
+	if (!cl_is_allocated(msg->vlens)) {
 		cl_log(LOG_CRIT
 		,	"Message vlens @ %p is not allocated"
 		,	msg->vlens);
@@ -433,13 +438,13 @@ ha_msg_audit(const struct ha_msg* msg)
 			}
 		}
 		
-		if (!ha_is_allocated(msg->names[j])) {
+		if (!cl_is_allocated(msg->names[j])) {
 			cl_log(LOG_CRIT, "Message name[%d] @ 0x%p"
 			       " is not allocated." ,	
 			       j, msg->names[j]);
 			abort();
 		}
-		if (msg->types[j]  != FT_LIST && !ha_is_allocated(msg->values[j])) {
+		if (msg->types[j]  != FT_LIST && !cl_is_allocated(msg->values[j])) {
 			cl_log(LOG_CRIT, "Message value [%d] @ 0x%p"
 			       " is not allocated.",  j, msg->values[j]);
 			cl_log_message(LOG_INFO, msg);
@@ -451,7 +456,7 @@ ha_msg_audit(const struct ha_msg* msg)
 
 
 
-static int
+int
 ha_msg_expand(struct ha_msg* msg )
 {	
 	char **	names ;
@@ -474,11 +479,11 @@ ha_msg_expand(struct ha_msg* msg )
 	types = msg->types;
 	
 	nalloc = msg->nalloc + MINFIELDS;
-	msg->names = 	(char **)ha_calloc(sizeof(char *), nalloc);
-	msg->nlens = 	(size_t *)ha_calloc(sizeof(size_t), nalloc);
-	msg->values = 	(void **)ha_calloc(sizeof(void *), nalloc);
-	msg->vlens = 	(size_t *)ha_calloc(sizeof(size_t), nalloc);
-	msg->types= 	(int*)ha_calloc(sizeof(int), nalloc);
+	msg->names = 	(char **)cl_calloc(sizeof(char *), nalloc);
+	msg->nlens = 	(size_t *)cl_calloc(sizeof(size_t), nalloc);
+	msg->values = 	(void **)cl_calloc(sizeof(void *), nalloc);
+	msg->vlens = 	(size_t *)cl_calloc(sizeof(size_t), nalloc);
+	msg->types= 	(int*)cl_calloc(sizeof(int), nalloc);
 	
 	if (msg->names == NULL || msg->values == NULL
 	    ||	msg->nlens == NULL || msg->vlens == NULL
@@ -495,11 +500,11 @@ ha_msg_expand(struct ha_msg* msg )
 	memcpy(msg->vlens, vlens, msg->nalloc*sizeof(size_t));
 	memcpy(msg->types, types, msg->nalloc*sizeof(int));
 	
-	ha_free(names);
-	ha_free(nlens);
-	ha_free(values);
-	ha_free(vlens);
-	ha_free(types);
+	cl_free(names);
+	cl_free(nlens);
+	cl_free(values);
+	cl_free(vlens);
+	cl_free(types);
 	
 	msg->nalloc = nalloc;
 	
@@ -564,7 +569,7 @@ cl_msg_remove_offset(struct ha_msg* msg, int offset)
 		return HA_FAIL;
 	}
 		
-	ha_free(msg->names[j]);
+	cl_free(msg->names[j]);
 	fieldtypefuncs[msg->types[j]].memfree(msg->values[j]);
 	
 	for (i= j + 1; i < msg->nfields ; i++){
@@ -613,7 +618,9 @@ ha_msg_addraw_ll(struct ha_msg * msg, char * name, size_t namelen,
 		
 	}
 	
-	if (namelen >= startlen && strncmp(name, MSG_START, startlen) == 0) {
+	if (namelen >= startlen
+	    && name[0] == '>'
+	    && strncmp(name, MSG_START, startlen) == 0) {
 		if(!cl_msg_quiet_fmterr) {
 			cl_log(LOG_ERR, "ha_msg_addraw_ll: illegal field");
 		}
@@ -638,7 +645,7 @@ ha_msg_addraw_ll(struct ha_msg * msg, char * name, size_t namelen,
 		return(HA_FAIL);
 	}
 	
-	AUDITMSG(msg);
+	PARANOIDAUDITMSG(msg);
 
 	return(HA_OK);
 
@@ -660,7 +667,7 @@ ha_msg_addraw(struct ha_msg * msg, const char * name, size_t namelen,
 		return HA_FAIL;
 	}
 	
-	if ((cpname = ha_malloc(namelen+1)) == NULL) {
+	if ((cpname = cl_malloc(namelen+1)) == NULL) {
 		cl_log(LOG_ERR, "ha_msg_addraw: no memory for string (name)");
 		return(HA_FAIL);
 	}
@@ -674,7 +681,7 @@ ha_msg_addraw(struct ha_msg * msg, const char * name, size_t namelen,
 	}
 	if (cpvalue == NULL){
 		cl_log(LOG_ERR, "ha_msg_addraw: copying message failed");
-		ha_free(cpname);
+		cl_free(cpname);
 		return(HA_FAIL);
 	}
 	
@@ -683,7 +690,7 @@ ha_msg_addraw(struct ha_msg * msg, const char * name, size_t namelen,
 
 	if (ret != HA_OK){
 		cl_log(LOG_ERR, "ha_msg_addraw(): ha_msg_addraw_ll failed");
-		ha_free(cpname);
+		cl_free(cpname);
 		fieldtypefuncs[type].memfree(cpvalue);
 	}
 
@@ -1037,9 +1044,11 @@ cl_get_value(const struct ha_msg * msg, const char * name,
 		return(NULL);
 	}
 
-	AUDITMSG(msg);
+	PARANOIDAUDITMSG(msg);
 	for (j=0; j < msg->nfields; ++j) {
-		if (strcmp(name, msg->names[j]) == 0) {
+		const char *local_name = msg->names[j];
+		if (name[0] == local_name[0]
+		    && strcmp(name, local_name) == 0) {
 			if (vallen){
 				*vallen = msg->vlens[j];
 			}
@@ -1489,7 +1498,7 @@ cl_msg_replace(struct ha_msg* msg, int index,
 	int	newlen = vlen;
 	int	oldtype;
 	
-	AUDITMSG(msg);
+	PARANOIDAUDITMSG(msg);
 	if (msg == NULL || value == NULL) {
 		cl_log(LOG_ERR, "%s: NULL input.", __FUNCTION__);
 		return HA_FAIL;
@@ -1522,7 +1531,7 @@ cl_msg_replace(struct ha_msg* msg, int index,
 	msg->values[index] = newv;
 	msg->vlens[index] = newlen;
 	msg->types[index] = type;
-	AUDITMSG(msg);
+	PARANOIDAUDITMSG(msg);
 	return(HA_OK);
 	
 }
@@ -1535,7 +1544,7 @@ cl_msg_mod(struct ha_msg * msg, const char * name,
   	int j;
 	int rc;	
 
-	AUDITMSG(msg);
+	PARANOIDAUDITMSG(msg);
 	if (msg == NULL || name == NULL || value == NULL) {
 		cl_log(LOG_ERR, "cl_msg_mod: NULL input.");
 		return HA_FAIL;
@@ -1570,14 +1579,14 @@ cl_msg_mod(struct ha_msg * msg, const char * name,
 			fieldtypefuncs[type].memfree(msg->values[j]);
 			msg->values[j] = newv;
 			msg->vlens[j] = newlen;
-			AUDITMSG(msg);
+			PARANOIDAUDITMSG(msg);
 			return(HA_OK);
 		}
 	}
 	
 	rc = ha_msg_nadd_type(msg, name,strlen(name), value, vlen, type);
   
-	AUDITMSG(msg);
+	PARANOIDAUDITMSG(msg);
 	return rc;
 }
 
@@ -1716,7 +1725,7 @@ msgfromstream_netstring(FILE * f)
 			return(ret);
 		}
 
-		nvpair = ha_malloc(nvlen + 2);
+		nvpair = cl_malloc(nvlen + 2);
 		
 		if ((n =fread(nvpair, 1, nvlen + 1, f)) != nvlen + 1){
 			cl_log(LOG_WARNING, "msgfromstream_netstring()"
@@ -1877,7 +1886,7 @@ msg2stream(struct ha_msg* m, FILE * f)
 			cl_perror("msg2stream: fflush failure");
 			rc = HA_FAIL;
 		}
-		ha_free(s);
+		cl_free(s);
 		return(rc);
 	}else{
 		return(HA_FAIL);
@@ -1907,9 +1916,9 @@ ipcmsg_done(IPC_Message* m)
 		return;
 	}
 	if (m->msg_buf) {
-		ha_free(m->msg_buf);
+		cl_free(m->msg_buf);
 	}
-	ha_free(m);
+	cl_free(m);
 	m = NULL;
 	clmsg_ipcmsg_freed ++;
 }
@@ -1966,7 +1975,7 @@ hamsg2ipcmsg(struct ha_msg* m, IPC_Channel* ch)
 	}
 	ret = MALLOCT(IPC_Message);
 	if (!ret) {
-		ha_free(s);
+		cl_free(s);
 		return ret;
 	}
 	
@@ -2269,7 +2278,7 @@ msg2string(const struct ha_msg *m)
 		return NULL;
 	}
 	
-	buf = ha_malloc(len);
+	buf = cl_malloc(len);
 
 
 	if (buf == NULL) {
@@ -2279,7 +2288,7 @@ msg2string(const struct ha_msg *m)
 
 	if (msg2string_buf(m, buf, len ,0, NEEDHEAD) != HA_OK){
 		cl_log(LOG_ERR, "msg2string: msg2string_buf failed");
-		ha_free(buf);
+		cl_free(buf);
 		return(NULL);
 	}
 	

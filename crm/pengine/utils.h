@@ -40,7 +40,7 @@ extern void pe_free_ordering(GListPtr constraints);
 extern const char *ordering_type2text(enum pe_ordering type);
 
 extern gboolean rsc_colocation_new(
-	const char *id, int score,
+	const char *id, const char *node_attr, int score,
 	resource_t *rsc_lh, resource_t *rsc_rh,
 	const char *state_lh, const char *state_rh);
 
@@ -52,5 +52,7 @@ extern gint sort_node_weight(gconstpointer a, gconstpointer b);
 
 extern gboolean can_run_resources(const node_t *node);
 extern gboolean native_assign_node(resource_t *rsc, GListPtr candidates, node_t *chosen);
+
+extern void convert_non_atomic_task(resource_t *rsc, order_constraint_t *order);
 
 #endif

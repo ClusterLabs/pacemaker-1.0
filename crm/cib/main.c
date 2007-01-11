@@ -194,7 +194,7 @@ cib_stats(gpointer data)
 		double stat_1 = (1000*cib_calls_ms)/calls_diff;
 		
 		local_log_level = LOG_INFO;
-		crm_log_maybe(local_log_level,
+		do_crm_log(local_log_level,
 			      "Processed %lu operations"
 			      " (%.2fus average, %lu%% utilization) in the last %s",
 			      calls_diff, stat_1, 
@@ -202,7 +202,7 @@ cib_stats(gpointer data)
 			      cib_stat_interval);
 	}
 	
-	crm_log_maybe(local_log_level+1,
+	do_crm_log(local_log_level+1,
 		      "\tDetail: %lu operations (%ums total)"
 		      " (%lu local, %lu updates, %lu failures,"
 		      " %lu timeouts, %lu bad connects)",
@@ -230,7 +230,7 @@ init_start(void)
 	}
 	}
 
-	if(startCib(CIB_FILENAME) == FALSE){
+	if(startCib("cib.xml") == FALSE){
 		crm_crit("Cannot start CIB... terminating");
 		exit(1);
 	}
@@ -514,17 +514,9 @@ gboolean
 startCib(const char *filename)
 {
 	gboolean active = FALSE;
-	crm_data_t *cib = readCibXmlFile(filename, TRUE);
+	crm_data_t *cib = readCibXmlFile(WORKING_DIR, filename, TRUE);
 
-	if(cib == NULL) {
-		crm_warn("Cluster configuration not found: %s."
-			 "  Creating an empty one.", filename);
-
-		cib = createEmptyCib();
-		crm_xml_add(cib, XML_ATTR_GENERATION_ADMIN, "0");
-		crm_xml_add(cib, XML_ATTR_GENERATION, "0");
-		crm_xml_add(cib, XML_ATTR_NUMUPDATES, "0");
-	}
+	CRM_ASSERT(cib != NULL);
 	
 	if(activateCibXml(cib, filename) == 0) {
 		active = TRUE;

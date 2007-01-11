@@ -142,7 +142,7 @@ initialize_tls_session (int sd)
 	gnutls_set_default_priority (session);
 	gnutls_certificate_type_set_priority (session, cert_type_priority);
 	gnutls_credentials_set (session, GNUTLS_CRD_CERTIFICATE, xcred);
-	gnutls_transport_set_ptr (session, (gnutls_transport_ptr) sd);
+	gnutls_transport_set_ptr (session, (gnutls_transport_ptr) GINT_TO_POINTER(sd));
 	ret = gnutls_handshake (session);
 	if (ret < 0)
 	{

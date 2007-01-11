@@ -24,30 +24,12 @@
 #include <utils.h>
 #include <lib/crm/pengine/utils.h>
 
+#define VARIANT_CLONE 1
+#include <lib/crm/pengine/variant.h>
+
 void clone_create_notifications(
 	resource_t *rsc, action_t *action, action_t *action_complete,
 	pe_working_set_t *data_set);
-
-typedef struct clone_variant_data_s
-{
-		resource_t *self;
-
-		int clone_max;
-		int clone_node_max;
-
-		int active_clones;
-		int max_nodes;
-		
-		gboolean interleave;
-		gboolean ordered;
-
-		crm_data_t *xml_obj_child;
-		
-		gboolean notify_confirm;
-		
-		GListPtr child_list; /* resource_t* */
-		
-} clone_variant_data_t;
 
 void child_stopping_constraints(
 	clone_variant_data_t *clone_data, enum pe_ordering type,
@@ -56,13 +38,6 @@ void child_stopping_constraints(
 void child_starting_constraints(
 	clone_variant_data_t *clone_data, enum pe_ordering type,
 	resource_t *child, resource_t *last, pe_working_set_t *data_set);
-
-
-#define get_clone_variant_data(data, rsc)				\
-	CRM_ASSERT(rsc->variant == pe_clone || rsc->variant == pe_master); \
-	data = (clone_variant_data_t *)rsc->variant_opaque;
-
-
 
 void clone_set_cmds(resource_t *rsc)
 {
@@ -94,287 +69,249 @@ int clone_num_allowed_nodes(resource_t *rsc)
 	return num_nodes;
 }
 
-static gint sort_rsc_provisional(gconstpointer a, gconstpointer b)
+static node_t *
+parent_node_instance(const resource_t *rsc, node_t *node)
 {
+	clone_variant_data_t *clone_data = NULL;
+	if(node == NULL) {
+		return NULL;
+	}
+	get_clone_variant_data(clone_data, rsc->parent);
+	return pe_find_node_id(
+		clone_data->self->allowed_nodes, node->details->id);
+}
+
+static gint sort_clone_instance(gconstpointer a, gconstpointer b)
+{
+	int level = LOG_DEBUG_3;
+	node_t *node1 = NULL;
+	node_t *node2 = NULL;
+
+	gboolean can1 = TRUE;
+	gboolean can2 = TRUE;
+	
 	const resource_t *resource1 = (const resource_t*)a;
 	const resource_t *resource2 = (const resource_t*)b;
 
 	CRM_ASSERT(resource1 != NULL);
 	CRM_ASSERT(resource2 != NULL);
 
-	if(resource1->provisional == resource2->provisional) {
-		return 0;
+	/* allocation order:
+	 *  - active instances
+	 *  - instances running on nodes with the least copies
+	 *  - active instances on nodes that cant support them or are to be fenced
+	 *  - failed instances
+	 *  - inactive instances
+	 */	
 
-	} else if(resource1->provisional) {
-		return 1;
-
-	} else if(resource2->provisional) {
-		return -1;
+	do_crm_log(level, "%s ? %s", resource1->id, resource2->id);
+	if(resource1->running_on && resource2->running_on) {
+		if(g_list_length(resource1->running_on) < g_list_length(resource2->running_on)) {
+			do_crm_log(level, "%s < %s: running_on", resource1->id, resource2->id);
+			return -1;
+			
+		} else if(g_list_length(resource1->running_on) > g_list_length(resource2->running_on)) {
+			do_crm_log(level, "%s > %s: running_on", resource1->id, resource2->id);
+			return 1;
+		}
 	}
-	CRM_CHECK(FALSE, return 0);
+	
+	if(resource1->running_on) {
+		node1 = resource1->running_on->data;
+	}
+	if(resource2->running_on) {
+		node2 = resource2->running_on->data;
+	}
+	
+	if(node1 != node2) {
+		if(node1 == NULL) {
+			do_crm_log(level, "%s > %s: active", resource1->id, resource2->id);
+			return 1;
+		} else if(node2 == NULL) {
+			do_crm_log(level, "%s < %s: active", resource1->id, resource2->id);
+			return -1;
+		}
+	}
+	
+	can1 = can_run_resources(node1);
+	can2 = can_run_resources(node2);
+	if(can1 != can2) {
+		if(can1) {
+			do_crm_log(level, "%s < %s: can", resource1->id, resource2->id);
+			return -1;
+		}
+		do_crm_log(level, "%s > %s: can", resource1->id, resource2->id);
+		return 1;
+	}
+
+	node1 = parent_node_instance(resource1, node1);
+	node2 = parent_node_instance(resource2, node2);
+	if(node1 != NULL && node2 == NULL) {
+		do_crm_log(level, "%s < %s: not allowed", resource1->id, resource2->id);
+		return -1;
+	} else if(node1 == NULL && node2 != NULL) {
+		do_crm_log(level, "%s > %s: not allowed", resource1->id, resource2->id);
+		return 1;
+	}
+	
+	if(node1 == NULL) {
+		do_crm_log(level, "%s == %s: not allowed", resource1->id, resource2->id);
+		return 0;
+	}
+
+	if(node1->count < node2->count) {
+		do_crm_log(level, "%s < %s: count", resource1->id, resource2->id);
+		return -1;
+
+	} else if(node1->count > node2->count) {
+		do_crm_log(level, "%s > %s: count", resource1->id, resource2->id);
+		return 1;
+	}
+
+	do_crm_log(level, "%s == %s: default", resource1->id, resource2->id);
 	return 0;
 }
 
-static resource_t *
-find_clone_child(resource_t *rsc, GListPtr resource_list)
+static node_t *
+can_run_instance(resource_t *rsc, node_t *node)
 {
-	crm_debug("foo");
-	slist_iter(
-		child, resource_t, resource_list, lpc,
-		if(child->parent) {
-			crm_debug("%p / %p vs. %s / %s", rsc, child->parent, rsc->id, child->parent->id); 
-			if(child->parent == rsc) {
-				return child;
-			}
-		} else {
-			crm_debug("Child %s has no parent", child->id);
-		}
-		);
-	
+	node_t *local_node = NULL;
+	clone_variant_data_t *clone_data = NULL;
+	if(can_run_resources(node) == FALSE) {
+		goto bail;
+	}	
+
+	local_node = parent_node_instance(rsc, node);
+	get_clone_variant_data(clone_data, rsc->parent);
+
+	if(local_node == NULL) {
+		crm_warn("%s cannot run on %s: node not allowed",
+			rsc->id, node->details->uname);
+		goto bail;
+
+	} else if(local_node->count < clone_data->clone_node_max) {
+		return local_node;
+
+	} else {
+		crm_debug_2("%s cannot run on %s: node full",
+			    rsc->id, node->details->uname);
+	}
+
+  bail:
+	if(node) {
+		node->weight = -INFINITY;
+	}
 	return NULL;
 }
+
+
+static node_t *
+color_instance(resource_t *rsc, pe_working_set_t *data_set) 
+{
+	node_t *local_node = NULL;
+	node_t *chosen = NULL;
+
+	crm_debug("Processing %s", rsc->id);
+
+	if(rsc->provisional == FALSE) {
+		return rsc->allocated_to;
+
+	} else if(rsc->is_allocating) {
+		crm_debug("Dependancy loop detected involving %s", rsc->id);
+		return NULL;
+	}
+
+	if(rsc->allowed_nodes) {
+		slist_iter(try_node, node_t, rsc->allowed_nodes, lpc,
+			   if(can_run_instance(rsc, try_node) == NULL) {
+				   try_node->weight = -INFINITY;
+			   }
+			);
+	}
+
+	chosen = rsc->cmds->color(rsc, data_set);
+	if(chosen) {
+		clone_variant_data_t *clone_data = NULL;
+		get_clone_variant_data(clone_data, rsc->parent);
+
+		local_node = pe_find_node_id(
+			clone_data->self->allowed_nodes, chosen->details->id);
+
+		CRM_ASSERT(local_node);
+		local_node->count++;
+	}
+
+	return chosen;
+}
+
 
 node_t *
 clone_color(resource_t *rsc, pe_working_set_t *data_set)
 {
-	int local_node_max = 0;
-	GListPtr node_list = NULL;
-	int reverse_pointer = 0;
-	int allocated = 0, pre_allocated = 0;
-/* 	int level = LOG_ERR; */
-
+	int allocated = 0;
+	resource_t *first_child = NULL;
 	clone_variant_data_t *clone_data = NULL;
 	get_clone_variant_data(clone_data, rsc);
 
-	if(clone_data->self->provisional == FALSE) {
+	if(rsc->provisional == FALSE) {
+		return NULL;
+
+	} else if(rsc->is_allocating) {
+		crm_debug("Dependancy loop detected involving %s", rsc->id);
 		return NULL;
 	}
-	local_node_max = clone_data->clone_node_max; 
-	clone_data->max_nodes = rsc->cmds->num_allowed_nodes(rsc);
-	
-	/* give already allocated resources every chance to run on the node
-	 *   specified.  other resources can be moved/started where we want
-	 *   as required
-	 */
-	clone_data->child_list = g_list_sort(
- 		clone_data->child_list, sort_rsc_provisional);
 
-	crm_debug_2("Coloring children of: %s", rsc->id);
-/* 	rsc->fns->print(rsc, "alloc: ", */
-/* 			pe_print_details|pe_print_dev|pe_print_log, &level); */
+	rsc->is_allocating = TRUE;
+	crm_debug("Processing %s", rsc->id);
+	
+	if(rsc->stickiness) {
+		/* count now tracks the number of clones currently allocated */
+		slist_iter(node, node_t, clone_data->self->allowed_nodes, lpc,
+			   node->count = 0;
+			);
+		
+		slist_iter(child, resource_t, clone_data->child_list, lpc,
+			   if(child->running_on) {
+				   node_t *local_node = parent_node_instance(
+					   child, child->running_on->data);
+				   local_node->count++;
+			   }
+			);
+
+		clone_data->child_list = g_list_sort(
+			clone_data->child_list, sort_clone_instance);
+	}
+
+	/* count now tracks the number of clones we have allocated */
+	slist_iter(node, node_t, clone_data->self->allowed_nodes, lpc,
+		   node->count = 0;
+		);
+
+	
+	first_child = clone_data->child_list->data;
+	first_child->rsc_cons = g_list_concat(
+		first_child->rsc_cons, rsc->rsc_cons);
+	rsc->rsc_cons = NULL;
 
 	clone_data->self->allowed_nodes = g_list_sort(
 		clone_data->self->allowed_nodes, sort_node_weight);
-	
-	if(rsc->stickiness <= 0) {
-		while(local_node_max > 1
-		      && clone_data->max_nodes * (local_node_max -1)
-		      >= clone_data->clone_max) {			
-			local_node_max--;
-			crm_debug("Dropped the effective value of"
-				  " clone_node_max to: %d",
-				  local_node_max);
-		}
-	}
 
-	slist_iter(child, resource_t, clone_data->child_list, lpc2,
-		   node_t *current = NULL;
-		   node_t *chosen = NULL;
-		   
-		   if(child->running_on != NULL) {
-			   current = child->running_on->data;
+	slist_iter(child, resource_t, clone_data->child_list, lpc,
+		   if(allocated >= clone_data->clone_max) {
+			   crm_debug("Child %s not allocated - limit reached", child->id);
+			   resource_location(child, NULL, -INFINITY, "clone_color:limit_reached", data_set);
 		   }
-		   
-		   if(current == NULL) {
-			   crm_debug_2("Not active: %s", child->id);
-			   continue;
-			   
-		   } else if(can_run_resources(current) == FALSE) {
-			   crm_debug_2("Node cant run resources: %s",
-				       current->details->uname);
-			   continue;
-			   
-		   } else if(g_list_length(child->running_on) != 1) {
-			   crm_debug("active != 1: %s", child->id);
-			   
-			   continue;
-			   
-		   }
-
-		   chosen = pe_find_node_id(
-			   clone_data->self->allowed_nodes, current->details->id);
-
-		   if(chosen == NULL) {
-			   /* unmanaged mode */
-			   continue;
-			   
-		   } else if(chosen->count >= local_node_max) {
-			   crm_warn("Node %s too full for: %s",
-				    chosen->details->uname,
-				    child->id);
-			   continue;
-
-		   } else if(allocated >= clone_data->clone_max) {
-			   crm_debug_2("Reached maximum allocation: %s", child->id);
-			   break;
-		   }
-		   
-		   chosen->weight = merge_weights(chosen->weight, child->stickiness);
-		   if(native_assign_node(child, NULL, chosen)) {
+		   if(color_instance(child, data_set)) {
 			   allocated++;
 		   }
-		   
-/* 		   native_assign_node(clone_data->self, NULL, current); */
 		);
 
-	crm_debug("Running: Total=%d, New=%d, Max=%d",
-		  pre_allocated+allocated, allocated, clone_data->clone_max);
+	crm_debug("Allocated %d %s instances of a possible %d",
+		  allocated, rsc->id, clone_data->clone_max);
 
-	if(clone_data->max_nodes) {
-		local_node_max = (int) (clone_data->clone_max / clone_data->max_nodes);
-		if(local_node_max < 1) {
-			local_node_max = 1;
-		}
-	}
+	rsc->provisional = FALSE;
+	rsc->is_allocating = FALSE;
 	
-	if(local_node_max > clone_data->clone_node_max) {
-		local_node_max = clone_data->clone_node_max;
-	}
-	
-	pre_allocated = allocated;
-	allocated = 0;
-
-	if(rsc->stickiness != 0) {
-		clone_data->self->allowed_nodes = g_list_sort(
-			clone_data->self->allowed_nodes, sort_node_weight);
-	}
-	
-	/* distribute a constant spread */
-	node_list = clone_data->self->allowed_nodes;
-	slist_iter(child, resource_t, clone_data->child_list, lpc2,
-		   if(allocated+pre_allocated >= clone_data->clone_max) {
-			   break;
-		   }
-		   if(child->provisional == FALSE) {
-			   crm_debug_3("Spread: Skipping allocated resource: %s", child->id);
-			   continue;
-		   }
-
-		   while(node_list) {
-			   node_t *node = node_list->data;
-			   if(can_run_resources(node) == FALSE) {
-				   node_list = node_list->next;
-			   } else if(local_node_max <= node->count) {
-				   node_list = node_list->next;
-			   } else {
-				   break;
-			   }
-		   }
-
-		   if(node_list) {
-			   allocated++;
-			   native_assign_node(child, NULL, node_list->data);
-		   }
-		);
-
-	crm_debug("Spread: Total=%d, New=%d, Max=%d",
-		  pre_allocated+allocated, allocated, clone_data->clone_max);
-
-	CRM_ASSERT(pre_allocated+allocated <= clone_data->clone_max);
-	pre_allocated += allocated;
-	allocated = 0;
-
-	/* allocate the rest - if possible */
-	if(local_node_max < clone_data->clone_node_max) {
-		local_node_max++;
-	}
-	
-	node_list = clone_data->self->allowed_nodes;
-
-	slist_iter(child, resource_t, clone_data->child_list, lpc2,
-		   if(child->provisional == FALSE) {
-			   crm_debug("Remainder: Skipping allocated resource: %s", child->id);
-			   continue;
-		   }
-		   
-		   crm_debug("Remainder: Processing: %s", child->id);
-		   if(node_list && (pre_allocated+allocated) >= clone_data->clone_max) {
-			   crm_debug("Allocated maximum possible clone instances");
-			   node_list = NULL;
-		   }
-		   
-		   while(node_list) {
-			   node_t *node = node_list->data;
-			   if(can_run_resources(node) == FALSE) {
-				   node_list = node_list->next;
-			   } else if(local_node_max <= node->count) {
-				   node_list = node_list->next;
-			   } else {
-				   break;
-			   }
-		   }
-		   
-		   if(node_list) {
-			   allocated++;
-			   native_assign_node(child, NULL, node_list->data);
-			   
-		   } else {
-			   crm_debug("Child %s not allocated", child->id);
-			   native_assign_node(child, NULL, NULL);
-		   }
-		   
-		);
-
-	crm_debug("Remainder: Total=%d, New=%d, Max=%d", pre_allocated, allocated, clone_data->clone_max);
-	CRM_ASSERT(pre_allocated+allocated <= clone_data->clone_max);
-
-	clone_data->self->provisional = FALSE;
-	if(rsc->stickiness >= INFINITY) {
-		return NULL;
-	}
-	
-	/* observe node preferences */
-	reverse_pointer = g_list_length(clone_data->self->allowed_nodes) - 1;
-	slist_iter(a_node, node_t, clone_data->self->allowed_nodes, lpc,
-		   node_t *replace_node = NULL;
-		   resource_t *replace_rsc = NULL;
-		   
-		   CRM_ASSERT(a_node != NULL);
-		   if(a_node->count != 0) {
-			   crm_debug_4("Node %s has %d resources",
-				       a_node->details->uname, a_node->count);
-			   break;
-
-		   } else if(lpc >= reverse_pointer) {
-			   crm_debug_3("lpc %d, reverse lpc %d", lpc, reverse_pointer);
-			   break;
-		   }
-
-		   crm_debug_3("Node %s has %d resources, stealing one from...",
-			       a_node->details->uname, a_node->count);
-
-		   while(replace_rsc == NULL) {
-			   crm_debug_3("lpc %d, reverse lpc %d", lpc, reverse_pointer);
-			   if(lpc >= reverse_pointer) {
-				   return NULL;
-			   }
-			   replace_node = g_list_nth_data(clone_data->self->allowed_nodes, reverse_pointer);
-			   reverse_pointer--;
-
-			   crm_debug("Trying to reallocated an instance of %s to %s from %s",
-				     rsc->id, a_node->details->uname, replace_node->details->uname);
-			   replace_rsc = find_clone_child(rsc, replace_node->details->allocated_rsc);
-			   if(replace_rsc == NULL) {
-				   CRM_ASSERT(replace_node->count == 0);
-				   crm_debug("nothing on %s", replace_node->details->uname);
-			   }
-		   } 
-
-		   crm_debug("Reallocating %s to %s from %s",
-			     replace_rsc->id, a_node->details->uname, replace_node->details->uname);
-		   native_assign_node(replace_rsc, NULL, a_node);
-		);
-
 	return NULL;
 }
 
@@ -430,6 +367,8 @@ void clone_create_actions(resource_t *rsc, pe_working_set_t *data_set)
 	clone_variant_data_t *clone_data = NULL;
 
 	get_clone_variant_data(clone_data, rsc);
+
+	crm_debug_2("Creating actions for %s", rsc->id);
 	
 	slist_iter(
 		child_rsc, resource_t, clone_data->child_list, lpc,
@@ -828,26 +767,38 @@ void clone_rsc_colocation_lh(
 			clone_data_rh, constraint->rsc_rh);
 		if(clone_data->clone_node_max
 		   != clone_data_rh->clone_node_max) {
-			pe_err("Cannot interleave "XML_CIB_TAG_INCARNATION
-			       " %s and %s because"
-			       " they do not support the same number of"
-			       " resources per node",
-			       constraint->rsc_lh->id, constraint->rsc_rh->id);
+			crm_config_err("Cannot interleave "XML_CIB_TAG_INCARNATION
+				       " %s and %s because"
+				       " they do not support the same number of"
+					" resources per node",
+				       constraint->rsc_lh->id, constraint->rsc_rh->id);
 			
 		/* only the LHS side needs to be labeled as interleave */
 		} else if(clone_data->interleave) {
 			do_interleave = TRUE;
 
-		} else if(constraint->score != INFINITY) {
-			pe_warn("rsc_colocations other than \"-INFINITY\""
-				" are not supported for non-interleaved "
-				XML_CIB_TAG_INCARNATION" resources");
+		} else if(constraint->score >= INFINITY) {
+			GListPtr lhs = NULL, rhs = NULL;
+			lhs = rsc_lh->allowed_nodes;
+			
+			slist_iter(
+				child_rsc, resource_t, clone_data_rh->child_list, lpc,
+				if(child_rsc->allocated_to != NULL) {
+					rhs = g_list_append(rhs, child_rsc->allocated_to);
+				}
+				);
+			
+			rsc_lh->allowed_nodes = node_list_and(lhs, rhs, FALSE);
+			
+			pe_free_shallow_adv(rhs, FALSE);
+			pe_free_shallow(lhs);
 			return;
 		}
 
-	} else if(constraint->score != -INFINITY) {
-		pe_warn("Co-location scores other than \"-INFINITY\" are not "
-			" allowed for non-"XML_CIB_TAG_INCARNATION" resources");
+	} else if(constraint->score >= INFINITY) {
+		crm_config_err("Manditory co-location of clones (%s) with other"
+			       " non-clone (%s) resources is not supported",
+			       rsc_lh->id, rsc_rh->id);
 		return;
 	}
 	
@@ -883,27 +834,39 @@ void clone_rsc_colocation_rh(
 	CRM_CHECK(rsc_lh != NULL, return);
 	CRM_CHECK(rsc_lh->variant == pe_native, return);
 	
-	crm_debug_3("Processing RH of constraint %s", constraint->id);
+	get_clone_variant_data(clone_data, rsc_rh);
+	
+	crm_debug_3("Processing constraint %s: %d", constraint->id, constraint->score);
 
 	if(rsc_rh == NULL) {
 		pe_err("rsc_rh was NULL for %s", constraint->id);
 		return;
 		
-	} else if(constraint->score != -INFINITY) {
-		pe_warn("rsc_dependencies other than \"must_not\" "
-			"are not supported for clone resources");
+	} else if(rsc_rh->provisional) {
+		crm_debug_3("%s is still provisional", rsc_rh->id);
 		return;
 		
-	} else {
-		print_resource(LOG_DEBUG_3, "LHS", rsc_lh, FALSE);
+	} else if(constraint->score >= INFINITY) {
+		GListPtr lhs = NULL, rhs = NULL;
+		lhs = rsc_lh->allowed_nodes;
+		
+		slist_iter(
+			child_rsc, resource_t, clone_data->child_list, lpc,
+			if(child_rsc->allocated_to != NULL) {
+				rhs = g_list_append(rhs, child_rsc->allocated_to);
+			}
+			);
+
+		rsc_lh->allowed_nodes = node_list_and(lhs, rhs, FALSE);
+
+		pe_free_shallow_adv(rhs, FALSE);
+		pe_free_shallow(lhs);
+		return;
 	}
-	
-	get_clone_variant_data(clone_data, rsc_rh);
 
 	slist_iter(
 		child_rsc, resource_t, clone_data->child_list, lpc,
 		
-		print_resource(LOG_DEBUG_3, "RHS", child_rsc, FALSE);
 		child_rsc->cmds->rsc_colocation_rh(rsc_lh, child_rsc, constraint);
 		);
 }
@@ -911,28 +874,12 @@ void clone_rsc_colocation_rh(
 
 void clone_rsc_order_lh(resource_t *rsc, order_constraint_t *order)
 {
-	char *stop_id = NULL;
-	char *start_id = NULL;
 	clone_variant_data_t *clone_data = NULL;
 	get_clone_variant_data(clone_data, rsc);
 
-	crm_debug_3("Processing LH of ordering constraint %d", order->id);
+	crm_debug_2("%s->%s", order->lh_action_task, order->rh_action_task);
 
-	stop_id = stop_key(rsc);
-	start_id = start_key(rsc);
-	
-	if(safe_str_eq(order->lh_action_task, start_id)) {
-		crm_free(order->lh_action_task);
-		order->lh_action_task = started_key(rsc);
-
-	} else if(safe_str_eq(order->lh_action_task, stop_id)) {
-		crm_free(order->lh_action_task);
-		order->lh_action_task = stopped_key(rsc);
-	}
-
-	crm_free(start_id);
-	crm_free(stop_id);
-	
+	convert_non_atomic_task(rsc, order);
 	clone_data->self->cmds->rsc_order_lh(clone_data->self, order);
 }
 
@@ -942,7 +889,7 @@ void clone_rsc_order_rh(
 	clone_variant_data_t *clone_data = NULL;
 	get_clone_variant_data(clone_data, rsc);
 
-	crm_debug_3("Processing RH of ordering constraint %d", order->id);
+	crm_debug_2("%s->%s", lh_action->uuid, order->rh_action_task);
 
  	clone_data->self->cmds->rsc_order_rh(lh_action, clone_data->self, order);
 
@@ -953,7 +900,8 @@ void clone_rsc_location(resource_t *rsc, rsc_to_node_t *constraint)
 	clone_variant_data_t *clone_data = NULL;
 	get_clone_variant_data(clone_data, rsc);
 
-	crm_debug_3("Processing location constraint %s for %s", constraint->id, rsc->id);
+	crm_debug_3("Processing location constraint %s for %s",
+		    constraint->id, rsc->id);
 
 	clone_data->self->cmds->rsc_location(clone_data->self, constraint);
 	slist_iter(
@@ -1319,5 +1267,18 @@ clone_stonith_ordering(
 
 		child_rsc->cmds->stonith_ordering(
 			child_rsc, stonith_op, data_set);
+		);
+}
+
+void
+clone_migrate_reload(resource_t *rsc, pe_working_set_t *data_set)
+{
+	clone_variant_data_t *clone_data = NULL;
+	get_clone_variant_data(clone_data, rsc);
+
+	slist_iter(
+		child_rsc, resource_t, clone_data->child_list, lpc,
+		
+		child_rsc->cmds->migrate_reload(child_rsc, data_set);
 		);
 }

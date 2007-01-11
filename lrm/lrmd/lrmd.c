@@ -63,7 +63,7 @@
 #define	MAX_PROC_NAME 256
 #define	MAX_MSGTYPELEN 32
 #define	MAX_CLASSNAMELEN 32
-#define WARNINGTIME_IN_LIST 5000
+#define WARNINGTIME_IN_LIST 10000
 #define OPTARGS		"skrhvmi:"
 #define PID_FILE 	HA_VARRUNDIR"/lrmd.pid"
 #define LRMD_COREDUMP_ROOT_DIR HA_COREDIR
@@ -791,7 +791,7 @@ lrmd_client_dump(gpointer key, gpointer value, gpointer user_data)
 		,	ctime(&client->lastrcsent)
 		);
 	if (!client->ch_cmd) {
-		lrmd_debug(LOG_DEBUG, "NULL client ch_cmd in dump_data_for_debug()");
+		lrmd_debug(LOG_DEBUG, "NULL client ch_cmd in %s()", __FUNCTION__);
 	}else{
 		lrmd_debug(LOG_DEBUG
 		,	"Command channel status: %d, read queue addr: %p, write queue addr: %p"
@@ -3338,7 +3338,9 @@ on_ra_proc_finished(ProcTrack* p, int status, int signo, int exitcode
 			, op_info(op));
 		lrmd_op_destroy(op);
 		p->privatedata = NULL;
-		dump_data_for_debug();
+		if (debug_level >= 2) {	
+			dump_data_for_debug();
+		}
 		return;
 	}
 
@@ -3348,7 +3350,10 @@ on_ra_proc_finished(ProcTrack* p, int status, int signo, int exitcode
 				"this op %s is cancelled.", op_info(op));
 			lrmd_op_destroy(op);
 			p->privatedata = NULL;
-			dump_data_for_debug();
+			if (debug_level >= 2) {	
+				dump_data_for_debug();
+			}
+	
 			return;
 		}
 	}
@@ -3716,7 +3721,7 @@ read_pipe(int fd, char ** data, void * user_data)
 		}
 	} while (readlen == BUFFLEN - 1 || errno == EINTR);
 
-	if (errno == EINTR) {
+	if (errno == EINTR || errno == EAGAIN) {
 		errno = 0;
 	}
 	
@@ -3754,26 +3759,7 @@ read_pipe(int fd, char ** data, void * user_data)
 					, __FUNCTION__, __LINE__);
 			}
 			break;
-			
-		case EAGAIN:
-			if (NULL==op) {
-				lrmd_log(LOG_WARNING
-					, "%s::%d: Shouldn't come here: "
-					  "lrmd_op = NULL"
-					, __FUNCTION__, __LINE__);
-				break;
-			}
-			lrmd_log(LOG_ERR, "RA %s:%s:%s (process %d) failed to "
-				"redirect %s for its background child (daemon) "
-				"processes. This will likely cause those "
-				"processes to die mysteriously at some later "
-				"time (terminated by signal SIGPIPE)."
-				, rapop->rsc_class
-				, rapop->rsc_id
-				, rapop->op_type
-				, op->exec_pid
-				, (rapop->ra_stdout_fd==fd)?"stdout":"stderr");
-		}
+		}	
 	}
 
 	if ( gstr_tmp->len == 0 ) {
@@ -3798,6 +3784,7 @@ debug_level_adjust(int nsig, gpointer user_data)
 			break;
 
 		case SIGUSR2:
+			dump_data_for_debug();
 			debug_level--;
 			if (debug_level < 0) {
 				debug_level = 0;
@@ -3901,7 +3888,9 @@ check_queue_duration(lrmd_op_t* op)
 		,	op_info(op), t_stay_in_list
 		,	WARNINGTIME_IN_LIST
 		);
-		dump_data_for_debug();
+		if (debug_level >= 2) {
+			dump_data_for_debug();
+		}
 	}
 }
 /*

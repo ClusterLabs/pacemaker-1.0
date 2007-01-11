@@ -25,7 +25,7 @@ AC_ARG_WITH(hapkgversion,
 )
 
 if test x"$HAPKGVERSION" = x; then
-   HAPKGVERSION="2.0.7"
+   HAPKGVERSION="2.0.8"
 fi
 AM_INIT_AUTOMAKE(heartbeat, $HAPKGVERSION)
 
@@ -509,6 +509,15 @@ AC_CHECK_LIB(dl, dlopen)			dnl -ldl (for Linux)
 AC_CHECK_LIB(rt, sched_getscheduler)            dnl -lrt (for Tru64)
 AC_CHECK_LIB(gnugetopt, getopt_long)		dnl -lgnugetopt ( if available )
 
+#	Not sure what OSes need this... Linux and AIX don't...
+#	and AIX barfs on it...
+if test "$DLPREOPEN" = yes; then
+  DLOPEN_FORCE_FLAGS="-dlpreopen force -dlopen-self"
+  AC_DEFINE(DLPREOPEN, 1, [enable -dlpreopen flag])
+else
+  DLOPEN_FORCE_FLAGS=""
+fi
+AC_SUBST(DLOPEN_FORCE_FLAGS)
 
 dnl ************ uuid **********************
 AC_ARG_WITH(uuid,
@@ -892,6 +901,9 @@ AC_CHECK_HEADERS(uuid/uuid.h)
 AC_CHECK_HEADERS(sys/param.h)
 AC_CHECK_HEADERS(netinet/in.h)
 AC_CHECK_HEADERS([stdint.h unistd.h])
+AC_CHECK_HEADERS(sys/termios.h)
+AC_CHECK_HEADERS(termios.h)
+
 
 dnl ************************************************************************
 dnl  FreeBSD requires sys/param.h and in.h to compile test netinet headers.
@@ -1558,7 +1570,9 @@ dnl - If requested, enable ALL subsystems.
 	  enable_snmp_subagent=try;
 	  enable_swig=try;
 	  enable_mgmt=try;
+	  enable_quorumd=try;
 	  enable_cim_provider=try;
+	  
 	fi
 
 AC_ARG_ENABLE([bundled-ltdl],
@@ -2414,10 +2428,16 @@ if test "x${enable_mgmt}" != "xno"; then
 	fi
 fi
 
-AC_SUBST(MGMT_ENABLED)
+if test "x${enable_mgmt}" != "xno"; then
+  RPM_ENABLE_MGMT_CONFIG=1
+else
+  RPM_ENABLE_MGMT_CONFIG=0
+fi
+AC_SUBST(RPM_ENABLE_MGMT_CONFIG)
+
 AM_CONDITIONAL(MGMT_BUILD, test "x${enable_mgmt}" != "xno")
 if test "x${enable_mgmt}" != "xno"; then
-     AC_DEFINE_UNQUOTED(MGMT_ENABLED, 1, Define to 1 if the mgmt is enabled.)
+     AC_DEFINE_UNQUOTED(MGMT_ENABLED, 1, Define to 1 if the mgmt-daemon and friends are enabled.)
     dnl If this system might be RPM-based, then adjust some RPM-build details
     if test x"${RPM}" != x""; then
 dnl FIXME: a flawy solution but no better one now
@@ -2435,6 +2455,32 @@ fi
 AC_SUBST(RPM_MGMT_RUNTIME_REQUIRES)
    
 AC_MSG_NOTICE([whether to enable the management tool... ${enable_mgmt}])
+
+dnl quorum server configuration
+AC_ARG_ENABLE([quorumd],
+[  --enable-quorumd  Compile the quorum server.  [default=try]],
+                     [], [enable_quorumd=try])
+
+if test "x${enable_quorumd}" != "xno"; then
+	QUORUMD_ENABLED=1
+	if test "x${enable_quorumd}" = "xtry"; then
+		MISSING_FN="WarnMissingThing"
+	else
+		MISSING_FN="FatalMissingThing"
+	fi
+
+	AC_CHECK_HEADER(gnutls/gnutls.h)
+	if test "$ac_cv_header_gnutls_gnutls_h" = "no"; then
+  		$MISSING_FN "gnutls/gnutls.h" \
+		  "The quorum server module needs GNU/TLS"
+		enable_quorumd="no"
+		QUORUMD_ENABLED=0
+	fi
+fi
+
+AC_SUBST(QUORUMD_ENABLED)
+AM_CONDITIONAL(QUORUMD_BUILD, test "x${enable_quorumd}" != "xno")
+AC_MSG_NOTICE([whether to enable the quorum server... ${enable_quorumd}])
 
 dnl **********************************************
 dnl TSA plugin configuration
@@ -2616,7 +2662,7 @@ if test x"${enable_pretty}" = "xyes"; then
    PRETTY_CC="`pwd`/tools/ccdv"
    dnl It would be nice if this was rebuilt when needed too...
    mkdir `pwd`/tools/ 2>/dev/null
-   gcc -o `pwd`/tools/ccdv ${srcdir}/tools/ccdv.c
+   gcc $CFLAGS -o `pwd`/tools/ccdv ${srcdir}/tools/ccdv.c
    CC="\$(PRETTY_CC) ${CC}"
 fi
 if test "x${enable_quiet}" = "xyes"; then
@@ -2696,7 +2742,7 @@ crm/Makefile							\
 	crm/tengine/Makefile					\
 	crm/admin/Makefile					\
 	        crm/admin/crm_primitive.py			\
-	        crm/admin/cluster				\
+	        crm/admin/crm_sh				\
 		crm/admin/crm_utils.py                          \
 		crm/admin/crm_commands.py			\
 debian/Makefile							\
@@ -2838,6 +2884,7 @@ resources/Makefile						\
 	resources/OCF/Delay					\
 	resources/OCF/db2					\
 	resources/OCF/drbd					\
+	resources/OCF/EvmsSCC					\
 	resources/OCF/Filesystem				\
 	resources/OCF/ICP					\
 	resources/OCF/IPaddr					\
@@ -2853,13 +2900,18 @@ resources/Makefile						\
 	resources/OCF/oralsnr					\
 	resources/OCF/portblock					\
 	resources/OCF/Raid1					\
+	resources/OCF/rsyncd					\
 	resources/OCF/pgsql					\
 	resources/OCF/Pure-FTPd					\
+	resources/OCF/SAPDatabase				\
+	resources/OCF/SAPInstance				\
+	resources/OCF/SendArp					\
 	resources/OCF/ServeRAID					\
 	resources/OCF/Stateful					\
 	resources/OCF/SysInfo					\
 	resources/OCF/VIPArip					\
 	resources/OCF/WAS					\
+	resources/OCF/WAS6					\
 	resources/OCF/WinPopup					\
 	resources/OCF/Xen					\
 	resources/OCF/Xinetd					\

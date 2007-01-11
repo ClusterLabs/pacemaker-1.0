@@ -1,0 +1,102 @@
+
+DRBD Outdate Peer Daemon
+
+What is this about?
+
+   This heartbeat plugin (dopd), using the heartbeat
+   communication channels, is one implementaion of
+   the "alternative communication pathes" mentioned
+   below in an excerpt from the drbd.conf manpage.
+
+   Using this helps to reduce the
+   risk of going online with outdated data
+   in multiple failure scenarios, since an
+   "outdated" drbd refuses to become Primary.
+   Unless you force it to.
+
+From the drbd.conf (drbd8) manpage:
+
+   fencing <fencing_policy>
+  
+   Under fencing we understand preventive action
+   to avoid situations where both nodes are primary
+   and disconnected (AKA split brain).
+  
+   Valid fencing policies are:
+  
+      dont-care
+      
+	This is the default policy.
+	No fencing actions are untertaken.
+	Eventual situations are left for the
+	Cluster Manager or Operator to sort out.
+      
+      resource-only
+      
+	If a node becomes a disconnected primary, it tries
+	to outdate the peer's disk. This is done by
+	calling the outdate-peer handler.  The handler is
+	supposed to reach the other node over alternative
+	communication pathes, and call 'drbdadm outdate
+	res' there.
+      
+      resource-and-stonith 
+      
+	If a node becomes a disconnected primary it
+	freezes all its IO operations and calls its
+	outdate-peer handler. The outdate-peer hander is
+	supposed to reach the peer over alternative
+	communicaton pathes and call 'drbdadm outdate res'
+	there. In case it can not reach the peer it should
+	stonith the peer. IO is resumed as soon as the
+	situation is resolved. In case your handler fails
+	you can resume IO with the resume-io command.
+
+Additional preparation steps:
+
+ * prepare drbdmeta to be setuid root
+   (because it will be called as hacluster:haclient,
+    but needs to be root to manipulate drbd meta data)
+
+   cd /sbin
+   chgrp haclient drbdmeta
+   chmod o-x drbdmeta
+   chmod u+s drbdmeta
+
+   chgrp haclient drbdsetup
+   chmod o-x drbdsetup
+   chmod u+s drbdsetup
+
+ * Configure Heartbeat
+   to run the DRBD outdate peer daemon:
+
+   Add these lines to /etc/ha.d/ha.cf
+   ---
+   respawn hacluster /usr/lib/heartbeat/dopd
+   apiauth dopd gid=haclient uid=hacluster
+   ---
+
+ * Configure DRBD to use this facility
+   
+   resource rX {
+     ...
+     handlers {
+       ...
+       outdate-peer "/usr/lib/heartbeat/drbd-peer-outdater";
+     }
+     disk {
+       ...
+       fencing resource-only;
+       # or
+       # fencing resource-and-stonith;
+       # in case you configure heartbeat to use stonith
+     }
+     ...
+   }
+
+
+BUGS
+
+   Complaints about dopd go to
+   drbd-user@lists.linbit.com
+

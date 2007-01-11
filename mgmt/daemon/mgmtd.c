@@ -58,7 +58,7 @@
 #include <mgmt/mgmt_client.h>
 #include "mgmt_internal.h"
 
-#define OPTARGS		"skrhvt"
+#define OPTARGS		"skrhvtp:"
 #define PID_FILE 	HA_VARRUNDIR"/mgmtd.pid"
 #define ALLOW_GRP	"haclient"
 
@@ -107,6 +107,7 @@ const char* mgmtd_pam 	= "hbmgmtd";
 
 extern int debug_level;
 int test_mode = FALSE;
+int port = -1;
 static GMainLoop* mainloop 	= NULL;
 static GHashTable* clients	= NULL;
 static GHashTable* evt_map	= NULL;		
@@ -143,6 +144,12 @@ main(int argc, char ** argv)
 			case 't':		/* in test mode, any password is acceptable */
 				test_mode = TRUE;
 				break;
+			case 'p':		/* Get apphb interval */
+				if (optarg) {
+					port = atoi(optarg);
+				}
+				break;
+				
 			default:
 				++argerr;
 				break;
@@ -361,7 +368,7 @@ init_start ()
 				  "Shutting down.(%d)",ret);
 		exit(1);
 	}
-	
+	reg_event(EVT_DISCONNECTED, on_event);
 	/* init ham & gnutls lib */
 	tls_init_server();
 	mgmt_set_mem_funcs(cl_malloc, cl_realloc, cl_free);
@@ -382,7 +389,7 @@ init_start ()
 	memset(&saddr, '\0', sizeof(saddr));
 	saddr.sin_family = AF_INET;
 	saddr.sin_addr.s_addr = INADDR_ANY;
-	saddr.sin_port = htons(PORT);
+	saddr.sin_port = htons(port==-1?PORT:port);
 	if (bind(ssock, (struct sockaddr*)&saddr, sizeof(saddr)) == -1) {
 		mgmt_log(LOG_ERR, "Can not bind server socket."
 				  "Shutting down.");
@@ -647,6 +654,12 @@ on_event(const char* event)
 	if (list_changed == 1) {
 		g_hash_table_replace(evt_map, cl_strdup(args[0]), (gpointer)id_list);
 	}	
+	if (STRNCMP_CONST(args[0],EVT_DISCONNECTED) == 0) {
+		mgmt_log(LOG_ERR,"Connection to the CIB terminated... exiting");
+		/*cib exits abnormally, mgmtd exits too and
+		wait heartbeat	restart us in order*/
+		exit(LSB_EXIT_OK);
+	}
 	mgmt_del_args(args);
 	return 0;
 }

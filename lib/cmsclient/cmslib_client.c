@@ -115,7 +115,7 @@ saname2str(SaNameT name)
 	if (name.length > SA_MAX_NAME_LENGTH - 1)
 		name.length = SA_MAX_NAME_LENGTH - 1;
 	
-	if ((str = (char *)ha_malloc(name.length + 1)) == NULL)
+	if ((str = (char *)cl_malloc(name.length + 1)) == NULL)
 		return NULL;
 	
 	strncpy(str, name.value, name.length);
@@ -195,7 +195,7 @@ cmsclient_message_recv(__cms_handle_t * hd, client_header_t ** data)
 	if (ret != IPC_OK)
 		return ret;
 
-	*data = ha_malloc(ipc_msg->msg_len);
+	*data = cl_malloc(ipc_msg->msg_len);
 	memcpy(*data, ipc_msg->msg_body, ipc_msg->msg_len);
 
 	ipc_msg->msg_done(ipc_msg);
@@ -211,8 +211,8 @@ cmsclient_message_done(IPC_Message * msg)
 
 	message = msg->msg_body;
 	name = saname2str(message->name);
-	ha_free(msg->msg_private);
-	ha_free(name);
+	cl_free(msg->msg_private);
+	cl_free(name);
 }
 
 static int
@@ -220,8 +220,8 @@ cmsclient_message_send(__cms_handle_t * hd, size_t len, gpointer data)
 {
 	IPC_Message * msg;
 
-	if ((msg = ha_malloc(sizeof(IPC_Message) + len)) == NULL) {
-		cl_log(LOG_ERR, "%s: ha_malloc failed", __FUNCTION__);
+	if ((msg = cl_malloc(sizeof(IPC_Message) + len)) == NULL) {
+		cl_log(LOG_ERR, "%s: cl_malloc failed", __FUNCTION__);
 		return FALSE;
 	}
 
@@ -257,7 +257,7 @@ msgqueue_remove(gpointer key, gpointer value, gpointer user_data)
 	cmsclient_message_send(qhd->cms_handle, sizeof(cmg), &cmg);
 
 	g_hash_table_remove(__mqhandle_hash, key);
-	ha_free((__cms_queue_handle_t *) qhd);
+	cl_free((__cms_queue_handle_t *) qhd);
 
 	return TRUE;
 }
@@ -496,7 +496,7 @@ read_and_queue_ipc_msg(__cms_handle_t * handle)
 			track->buf.numberOfItems = m->number;
 			track->buf.notification =
 				(SaMsgQueueGroupNotificationT *)
-				ha_malloc(m->number
+				cl_malloc(m->number
 					* sizeof(SaMsgQueueGroupNotificationT));
 
 			memcpy(track->buf.notification, m->data, m->number *
@@ -507,11 +507,11 @@ read_and_queue_ipc_msg(__cms_handle_t * handle)
 			 */
 			dprintf("enqueue group notify msg head\n");
 			nsg = (client_mqgroup_notify_t *)
-				ha_malloc(sizeof(client_mqgroup_notify_t));
+				cl_malloc(sizeof(client_mqgroup_notify_t));
 			memcpy(nsg, m, sizeof(client_mqgroup_notify_t));
 			enqueue_dispatch_msg(handle, (client_header_t *)nsg);
 
-			ha_free(rcmg);
+			cl_free(rcmg);
 			break;
 
 		default:
@@ -559,7 +559,7 @@ dispatch_msg(__cms_handle_t * handle, client_header_t * msg)
 				omsg->header.flag);
 		}
 
-		ha_free(omsg);
+		cl_free(omsg);
 		break;
 
   	case CMS_MSG_NOTIFY:
@@ -571,7 +571,7 @@ dispatch_msg(__cms_handle_t * handle, client_header_t * msg)
 			handle->callbacks.saMsgMessageReceivedCallback(
 					&(qhd->queue_handle));
 			
-		ha_free(gmsg);
+		cl_free(gmsg);
  		break;
  
 	case CMS_MSG_ACK:
@@ -583,15 +583,15 @@ dispatch_msg(__cms_handle_t * handle, client_header_t * msg)
 					msg->flag);
 		}
 
-		ha_free(amsg);
+		cl_free(amsg);
 		break;
 
  	case CMS_QUEUEGROUP_NOTIFY:
  		nmsg = (client_mqgroup_notify_t *)msg;
  
- 		name = (char *) ha_malloc(nmsg->group_name.length + 1);
+ 		name = (char *) cl_malloc(nmsg->group_name.length + 1);
  		if (name == NULL) {
- 			cl_log(LOG_ERR, "%s: ha_malloc failed", __FUNCTION__);
+ 			cl_log(LOG_ERR, "%s: cl_malloc failed", __FUNCTION__);
  			return FALSE;
  		}
 
@@ -616,8 +616,8 @@ dispatch_msg(__cms_handle_t * handle, client_header_t * msg)
  			track->name, &(track->buf), track->policy,
  			track->buf.numberOfItems, SA_OK);
  			
-		ha_free(name);
-		ha_free(nmsg);
+		cl_free(name);
+		cl_free(nmsg);
  		break;
 
 	default:
@@ -678,7 +678,7 @@ saMsgInitialize(SaMsgHandleT *msgHandle, const SaMsgCallbacksT *msgCallbacks,
 	dprintf("ch_status = %d\n", ch->ch_status);
 	dprintf("farside_pid = %d\n", ch->farside_pid);
 
-	hd = (__cms_handle_t *)ha_malloc(sizeof(__cms_handle_t));
+	hd = (__cms_handle_t *)cl_malloc(sizeof(__cms_handle_t));
 
 	memset(hd, 0, sizeof(__cms_handle_t));
 	hd->queue_handle_hash = g_hash_table_new(g_int_hash, g_int_equal);
@@ -695,7 +695,7 @@ saMsgInitialize(SaMsgHandleT *msgHandle, const SaMsgCallbacksT *msgCallbacks,
 	hd->active_fd = pipefd[0];
 	hd->backup_fd = -1;
 
-	key = (SaMsgHandleT *) ha_malloc(sizeof(SaMsgHandleT));
+	key = (SaMsgHandleT *) cl_malloc(sizeof(SaMsgHandleT));
 	key = msgHandle;
 
 	g_hash_table_insert(__cmshandle_hash, key, hd);
@@ -724,7 +724,7 @@ saMsgFinalize(SaMsgHandleT *msgHandle)
 
 	close(hd->active_fd);
 	/* TODO: need to free the glist on the dispatch queue */
-	ha_free(hd);
+	cl_free(hd);
 	return SA_OK;
 }
 
@@ -805,9 +805,9 @@ saMsgQueueOpen(const SaMsgHandleT *msgHandle,
 		__cms_queue_handle_t *qhd;
 
 		key = (SaMsgQueueHandleT *)
-				ha_malloc(sizeof(SaMsgQueueHandleT));
+				cl_malloc(sizeof(SaMsgQueueHandleT));
 		qhd = (__cms_queue_handle_t *)
-				ha_malloc(sizeof(__cms_queue_handle_t));
+				cl_malloc(sizeof(__cms_queue_handle_t));
 		memset(qhd, 0, sizeof(__cms_queue_handle_t));
 
 		qhd->queue_handle = rcmg->handle;
@@ -822,7 +822,7 @@ saMsgQueueOpen(const SaMsgHandleT *msgHandle,
 		*queueHandle = *key;
 	}
 
-	ha_free(rcmg);
+	cl_free(rcmg);
 	return ret;
 }
 
@@ -874,13 +874,13 @@ saMsgQueueClose(SaMsgQueueHandleT *queueHandle)
 		g_hash_table_remove(hd->queue_handle_hash, queueHandle);
 		g_hash_table_remove(__mqhandle_hash, queueHandle);
 
-		ha_free(origkey);
-		ha_free(qhd);
+		cl_free(origkey);
+		cl_free(qhd);
 
 		/* TODO: free the queue msgs. */
 	}
 
-	ha_free((client_mqueue_close_t *) rcmg);
+	cl_free((client_mqueue_close_t *) rcmg);
 
 	return ret;
 }
@@ -938,8 +938,8 @@ saMsgQueueUnlink(SaMsgHandleT *msgHandle, const SaNameT *queueName)
 	g_hash_table_foreach(hd->queue_handle_hash, lookup_queuehandle, name);
 
 	ret = rcmg->flag;
-	ha_free((client_mqueue_unlink_t *) rcmg);
-	ha_free(name);
+	cl_free((client_mqueue_unlink_t *) rcmg);
+	cl_free(name);
 	return ret;
 }
 
@@ -980,7 +980,7 @@ saMsgQueueStatusGet(SaMsgHandleT *msgHandle, const SaNameT *queueName
 	if (ret == SA_OK) 
 		*queueStatus = rcmg->qstatus;
 
-	ha_free((client_mqueue_status_t *) reply);
+	cl_free((client_mqueue_status_t *) reply);
 	return ret;
 }
 
@@ -1006,7 +1006,7 @@ saMsgMessageSend(const SaMsgHandleT *msgHandle,
 		return SA_ERR_BAD_FLAGS;
 
 	cmg = (client_message_t *)
-		ha_malloc(sizeof(client_message_t) + message->size);
+		cl_malloc(sizeof(client_message_t) + message->size);
 
 	cmg->header.type = CMS_MSG_SEND;
 	cmg->header.name = *destination;
@@ -1029,7 +1029,7 @@ saMsgMessageSend(const SaMsgHandleT *msgHandle,
 	ret = cmsclient_message_send(hd,
 			sizeof(client_message_t) + message->size, cmg);
 
-	ha_free(cmg);
+	cl_free(cmg);
 
 	while (1) {
 
@@ -1050,7 +1050,7 @@ saMsgMessageSend(const SaMsgHandleT *msgHandle,
 		dprintf("type is %d\n", ack->send_type);
 
 		if (ack->send_type == CMS_MSG_SEND) {
-			ha_free((client_message_t *) rcmg);
+			cl_free((client_message_t *) rcmg);
 			return ret;
 
 		} else {
@@ -1072,7 +1072,7 @@ saMsgMessageSendAsync(const SaMsgHandleT *msgHandle,
 
 
 	cmg = (client_message_t *)
-			ha_malloc(sizeof(client_message_t) + message->size);
+			cl_malloc(sizeof(client_message_t) + message->size);
 
 	cmg->header.type = CMS_MSG_SEND_ASYNC;
 	cmg->header.name = *destination;
@@ -1091,7 +1091,7 @@ saMsgMessageSendAsync(const SaMsgHandleT *msgHandle,
 	ret = cmsclient_message_send(hd,
 			sizeof(client_message_t) + message->size, cmg);
 
-	ha_free(cmg);
+	cl_free(cmg);
 
 	return ret == IPC_OK ? SA_OK : SA_ERR_LIBRARY;
 }
@@ -1186,7 +1186,7 @@ saMsgMessageGet(const SaMsgQueueHandleT *queueHandle,
 	message->priority = cmg->msg.priority;
 
 	if (freecmg) 
-		ha_free(cmg);
+		cl_free(cmg);
 
 	/* TODO: message info */
 
@@ -1397,14 +1397,14 @@ saMsgQueueGroupCreate(SaMsgHandleT *msgHandle,
 	if ((rcmg->header).flag == SA_OK) {
 		SaMsgQueueHandleT *key;
 
-		key = (SaMsgQueueHandleT *)ha_malloc(sizeof(SaMsgQueueHandleT));
+		key = (SaMsgQueueHandleT *)cl_malloc(sizeof(SaMsgQueueHandleT));
 		*key = rcmg->handle;
 		g_hash_table_insert(__mqhandle_hash, key, hd);
 	}
 
 	ret = (rcmg->header).flag;
 
-	ha_free(rcmg);
+	cl_free(rcmg);
 	return ret;
 }
 
@@ -1458,7 +1458,7 @@ saMsgQueueGroupInsert(SaMsgHandleT *msgHandle,
 
 	ret = rcmg->flag;
 
-	ha_free(rcmg);
+	cl_free(rcmg);
 	return ret;
 }
 
@@ -1503,7 +1503,7 @@ saMsgQueueGroupRemove(SaMsgHandleT *msgHandle,
 	
 	ret = rcmg->flag;
 
-	ha_free((client_mqueue_unlink_t *) rcmg);
+	cl_free((client_mqueue_unlink_t *) rcmg);
 	return ret;
 }
 
@@ -1567,12 +1567,12 @@ saMsgQueueGroupTrack(const SaMsgHandleT *msgHandle,
 		__mqgroup_track_t * track;
 		char * name;
 
-		name = (char *) ha_malloc(queueGroupName->length + 1);
+		name = (char *) cl_malloc(queueGroupName->length + 1);
 		strncpy(name, queueGroupName->value, queueGroupName->length);
 		name[queueGroupName->length] = '\0';
 		
 		track = (__mqgroup_track_t *)
-				ha_malloc(sizeof(__mqgroup_track_t));
+				cl_malloc(sizeof(__mqgroup_track_t));
 
 		track->name = queueGroupName;
 		track->flag = trackFlags & ~SA_TRACK_CURRENT;
@@ -1595,7 +1595,7 @@ saMsgQueueGroupTrack(const SaMsgHandleT *msgHandle,
 		if (!notificationBuffer->notification) {
 			notificationBuffer->notification =
 				(SaMsgQueueGroupNotificationT *)
-				ha_malloc(rmsg->number *
+				cl_malloc(rmsg->number *
 					sizeof(SaMsgQueueGroupNotificationT));
 			if (!notificationBuffer->notification) {
 				ret = SA_ERR_NO_MEMORY;
@@ -1613,7 +1613,7 @@ saMsgQueueGroupTrack(const SaMsgHandleT *msgHandle,
 	}
 
 exit:
-	ha_free(rcmg);
+	cl_free(rcmg);
 	return ret;
 }
 
@@ -1635,18 +1635,18 @@ saMsgQueueGroupTrackStop(const SaMsgHandleT *msgHandle,
 	if (bad_saname(queueGroupName))
 		return SA_ERR_INVALID_PARAM;
 
-	name = (char *) ha_malloc(queueGroupName->length + 1);
+	name = (char *) cl_malloc(queueGroupName->length + 1);
 	strncpy(name, queueGroupName->value, queueGroupName->length);
 	name[queueGroupName->length] = '\0';
 
 	if (g_hash_table_lookup_extended(__group_tracking_hash, name, &key
 	,	&track) == TRUE) {
 		g_hash_table_remove(__group_tracking_hash, key);
-		ha_free(key);
+		cl_free(key);
 	} else
 		return SA_ERR_NOT_EXIST;
 
-	ha_free(name);
+	cl_free(name);
 
 	return SA_OK;
 }
@@ -1680,7 +1680,7 @@ saMsgMessageSendReceive(SaMsgHandleT msgHandle,
 	}
 
 	cmg = (client_message_t *)
-		ha_malloc(sizeof(client_message_t) + message->size);
+		cl_malloc(sizeof(client_message_t) + message->size);
 
 	cmg->header.type = CMS_MSG_SEND_RECEIVE;
 	cmg->header.name = *destination;
@@ -1695,7 +1695,7 @@ saMsgMessageSendReceive(SaMsgHandleT msgHandle,
 			sizeof(client_message_t) + message->size, cmg);
 
 	/* TODO: fix needed.  this can only be called after the msg_done */
-	ha_free(cmg);
+	cl_free(cmg);
 
 	while (1) {
 		ret = wait_for_msg(hd, CMS_MSG_RECEIVE, 
@@ -1728,7 +1728,7 @@ saMsgMessageSendReceive(SaMsgHandleT msgHandle,
 	receiveMessage->priority = 0;
 
 	if (freeack) 
-		ha_free(ack);
+		cl_free(ack);
 
 	dprintf("type is %d\n", ack->send_type);
 
@@ -1748,7 +1748,7 @@ saMsgMessageReply(SaMsgHandleT msgHandle,
 	__cms_handle_t *hd = GET_CMS_HANDLE(&msgHandle);
 
 	cmg = (client_message_t *)
-		ha_malloc(sizeof(client_message_t) + replyMessage->size);
+		cl_malloc(sizeof(client_message_t) + replyMessage->size);
 
 	cmg->header.type = CMS_MSG_REPLY;
 	cmg->header.name.length = 0;
@@ -1767,7 +1767,7 @@ saMsgMessageReply(SaMsgHandleT msgHandle,
 	ret = cmsclient_message_send(hd,
 		sizeof(client_message_t) + replyMessage->size, cmg);
 
-	ha_free(cmg);
+	cl_free(cmg);
 
 	while (1) {
 
@@ -1788,7 +1788,7 @@ saMsgMessageReply(SaMsgHandleT msgHandle,
 		dprintf("type is %d\n", ack->send_type);
 
 		if (ack->send_type == CMS_MSG_REPLY) {
-			ha_free((client_message_t *) rcmg);
+			cl_free((client_message_t *) rcmg);
 			return ret;
 
 		} else {
@@ -1812,7 +1812,7 @@ saMsgMessageReplyAsync(SaMsgHandleT msgHandle,
 
 
 	cmg = (client_message_t *)
-			ha_malloc(sizeof(client_message_t) + replyMessage->size);
+			cl_malloc(sizeof(client_message_t) + replyMessage->size);
 
 	cmg->header.type = CMS_MSG_REPLY_ASYNC;
 	cmg->header.name.length = 0;
@@ -1831,7 +1831,7 @@ saMsgMessageReplyAsync(SaMsgHandleT msgHandle,
 	ret = cmsclient_message_send(hd,
 		sizeof(client_message_t) + replyMessage->size, cmg);
 
-	ha_free(cmg);
+	cl_free(cmg);
 
 	return ret == IPC_OK ? SA_OK : SA_ERR_LIBRARY;
 }

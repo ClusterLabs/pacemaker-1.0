@@ -32,7 +32,7 @@ export LC_ALL
 # for portability.
 
 usage() {
-  echo "usage: $0 <ip-address> $LEGAL_ACTIONS"
+  echo "usage: $0 ip-address[/netmaskbits[/interface[:label][/broadcast]]] $LEGAL_ACTIONS"
 }
 
 if [ $# != 2 ]; then
@@ -64,7 +64,8 @@ if [ ! -z "$str" ]; then
 fi
 
 OCF_TYPE=IPaddr2
+OCF_RESKEY_lvs_support=1
 OCF_RESOURCE_INSTANCE=${OCF_TYPE}_$BASEIP
-export OCF_TYPE OCF_RESOURCE_INSTANCE
+export OCF_TYPE OCF_RESOURCE_INSTANCE OCF_RESKEY_lvs_support
 
 ra_execocf $2

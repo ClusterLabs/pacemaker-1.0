@@ -55,12 +55,14 @@ extern unsigned int pengine_input_loglevel;
 enum action_fail_response {
 	action_fail_ignore,
 	action_fail_recover,
-	action_fail_migrate,
+	action_migrate_failure, /* recovery from a failed atomic migration */
+	action_fail_migrate,    /* recover by moving it somewhere else */
 	action_fail_block,
 /* 	action_fail_stop, */
 	action_fail_fence
 };
 
+/* the "done" action must be the "pre" action +1 */  
 enum action_tasks {
 	no_action,
 	monitor_rsc,
@@ -135,14 +137,10 @@ extern const char *role2text(enum rsc_role_e role);
 
 extern const char *fail2text(enum action_fail_response fail);
 
-extern int char2score(const char *score);
-extern char *score2char(int score);
-
 extern void add_hash_param(GHashTable *hash, const char *name, const char *value);
 extern void pe_metadata(void);
 extern void verify_pe_options(GHashTable *options);
 extern const char *pe_pref(GHashTable *options, const char *name);
-
 
 /* Helper macros to avoid NULL pointers */
 #define safe_val3(def, t,u,v)       (t?t->u?t->u->v:def:def)

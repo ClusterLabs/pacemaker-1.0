@@ -99,7 +99,7 @@ find_attr_details(crm_data_t *xml_search, const char *node_uuid,
 		matches = find_xml_children(
 			&set_children, xml_search, 
 			NULL, XML_ATTR_ID, node_uuid, FALSE);
-		crm_log_xml_debug(set_children, "search by node:");
+		crm_log_xml_debug_2(set_children, "search by node:");
 		if(matches == 0) {
 			crm_info("No node matching id=%s in %s", node_uuid, TYPE(xml_search));
 			return NULL;
@@ -111,7 +111,7 @@ find_attr_details(crm_data_t *xml_search, const char *node_uuid,
 		matches = find_xml_children(
 			&set_children, set_children?set_children:xml_search, 
 			XML_TAG_ATTR_SETS, XML_ATTR_ID, set_name, FALSE);
-		crm_log_xml_debug(set_children, "search by set:");
+		crm_log_xml_debug_2(set_children, "search by set:");
 		if(matches == 0) {
 			crm_info("No set matching id=%s in %s", set_name, TYPE(xml_search));
 			return NULL;
@@ -123,7 +123,7 @@ find_attr_details(crm_data_t *xml_search, const char *node_uuid,
 		matches = find_xml_children(
 			&nv_children, set_children?set_children:xml_search,
 			XML_CIB_TAG_NVPAIR, XML_NVPAIR_ATTR_NAME, attr_name, FALSE);
-		crm_log_xml_debug(nv_children, "search by name:");
+		crm_log_xml_debug_2(nv_children, "search by name:");
 
 	} else if(attr_id != NULL) {
 		matches = find_xml_children(
@@ -204,8 +204,8 @@ update_attr(cib_t *the_cib, int call_options,
 		CRM_CHECK(node_uuid != NULL, return cib_NOTEXISTS);
 	}
 	
-	rc = the_cib->cmds->query(
-		the_cib, section, &xml_search, cib_sync_call);
+	rc = the_cib->cmds->query(the_cib, section, &xml_search,
+				  cib_sync_call|cib_scope_local);
 	
 	if(rc != cib_ok) {
 		crm_err("Query failed for attribute %s (section=%s, node=%s, set=%s): %s",
@@ -386,8 +386,8 @@ delete_attr(cib_t *the_cib, int options,
 	}
 	
 	if(attr_id == NULL || attr_value != NULL) {
-		rc = the_cib->cmds->query(
-			the_cib, section, &xml_search, cib_sync_call);
+		rc = the_cib->cmds->query(the_cib, section, &xml_search,
+					  cib_sync_call|cib_scope_local);
 
 		if(rc != cib_ok) {
 			crm_err("Query failed for section=%s of the CIB: %s",
@@ -441,8 +441,8 @@ query_node_uuid(cib_t *the_cib, const char *uname, char **uuid)
 	CRM_ASSERT(uname != NULL);
 	CRM_ASSERT(uuid != NULL);
 	
-	rc = the_cib->cmds->query(
-		the_cib, XML_CIB_TAG_NODES, &fragment, cib_sync_call);
+	rc = the_cib->cmds->query(the_cib, XML_CIB_TAG_NODES, &fragment,
+				  cib_sync_call|cib_scope_local);
 	if(rc != cib_ok) {
 		return rc;
 	}
@@ -493,8 +493,8 @@ query_node_uname(cib_t *the_cib, const char *uuid, char **uname)
 	CRM_ASSERT(uname != NULL);
 	CRM_ASSERT(uuid != NULL);
 	
-	rc = the_cib->cmds->query(
-		the_cib, XML_CIB_TAG_NODES, &fragment, cib_sync_call);
+	rc = the_cib->cmds->query(the_cib, XML_CIB_TAG_NODES, &fragment,
+				  cib_sync_call|cib_scope_local);
 	if(rc != cib_ok) {
 		return rc;
 	}
@@ -538,13 +538,12 @@ query_node_uname(cib_t *the_cib, const char *uuid, char **uname)
 	int str_length = 3;						\
 	char *set_name = NULL;						\
 	const char *attr_name  = "standby";				\
-	const char *type = XML_CIB_TAG_NODES;				\
 									\
 	CRM_CHECK(uuid != NULL, return cib_missing_data);		\
 	str_length += strlen(attr_name);				\
 	str_length += strlen(uuid);					\
-	if(safe_str_eq(scope, "reboot")					\
-	   || safe_str_eq(scope, XML_CIB_TAG_STATUS)) {			\
+	if(safe_str_eq(type, "reboot")					\
+	   || safe_str_eq(type, XML_CIB_TAG_STATUS)) {			\
 		const char *extra = "transient";			\
  		type = XML_CIB_TAG_STATUS;				\
 		str_length += strlen(extra);				\
@@ -557,13 +556,15 @@ query_node_uname(cib_t *the_cib, const char *uuid, char **uname)
 	}
 
 enum cib_errors 
-query_standby(cib_t *the_cib, const char *uuid, const char *scope,
-	      char **standby_value)
+query_standby(cib_t *the_cib, const char *uuid,
+	      char **scope, char **standby_value)
 {
 	enum cib_errors rc = cib_ok;
 	CRM_CHECK(standby_value != NULL, return cib_missing_data);
-
-	if(scope != NULL) {
+	CRM_CHECK(scope != NULL, return cib_missing_data);
+	
+	if(*scope != NULL) {
+		const char *type = *scope;
 		standby_common;
 		rc = read_attr(the_cib, type, uuid, set_name,
 			       attr_id, attr_name, standby_value);
@@ -571,14 +572,15 @@ query_standby(cib_t *the_cib, const char *uuid, const char *scope,
 		crm_free(set_name);
 
 	} else {
-		rc = query_standby(
-			the_cib, uuid, XML_CIB_TAG_NODES, standby_value);
+		*scope = crm_strdup(XML_CIB_TAG_NODES);
+		rc = query_standby(the_cib, uuid, scope, standby_value);
 
 		if(rc == cib_NOTEXISTS) {
+			crm_free(*scope);
+			*scope = crm_strdup(XML_CIB_TAG_STATUS);
 			crm_debug("No standby value found with "
 				  "lifetime=forever, checking lifetime=reboot");
-			rc = query_standby(the_cib, uuid,
-					   XML_CIB_TAG_STATUS, standby_value);
+			rc = query_standby(the_cib, uuid, scope, standby_value);
 		}
 	}
 	
@@ -592,6 +594,7 @@ set_standby(cib_t *the_cib, const char *uuid, const char *scope,
 	enum cib_errors rc = cib_ok;
 	CRM_CHECK(standby_value != NULL, return cib_missing_data);
 	if(scope != NULL) {
+		const char *type = scope;
 		standby_common;
 		rc = update_attr(the_cib, cib_sync_call, type, uuid, set_name,
 				 attr_id, attr_name, standby_value);
@@ -611,6 +614,7 @@ delete_standby(cib_t *the_cib, const char *uuid, const char *scope,
 {
 	enum cib_errors rc = cib_ok;
 	if(scope != NULL) {
+		const char *type = scope;
 		standby_common;
 		rc = delete_attr(the_cib, cib_sync_call, type, uuid, set_name,
 				 attr_id, attr_name, standby_value);

@@ -22,40 +22,6 @@
 #include <utils.h>
 #include <lib/crm/pengine/utils.h>
 
-/* only for rsc_colocation constraints */
-rsc_colocation_t *
-invert_constraint(rsc_colocation_t *constraint) 
-{
-	rsc_colocation_t *inverted_con = NULL;
-
-	crm_debug_3("Inverting constraint");
-	if(constraint == NULL) {
-		pe_err("Cannot invert NULL constraint");
-		return NULL;
-	}
-
-	crm_malloc0(inverted_con, sizeof(rsc_colocation_t));
-
-	if(inverted_con == NULL) {
-		return NULL;
-	}
-	
-	inverted_con->id = constraint->id;
-	inverted_con->score = constraint->score;
-
-	/* swap the direction */
-	inverted_con->rsc_lh = constraint->rsc_rh;
-	inverted_con->rsc_rh = constraint->rsc_lh;
-	inverted_con->state_lh = constraint->state_rh;
-	inverted_con->state_rh = constraint->state_lh;
-
-	crm_action_debug_3(
-		print_rsc_colocation("Inverted constraint", inverted_con, FALSE));
-	
-	return inverted_con;
-}
-
-
 gint sort_cons_strength(gconstpointer a, gconstpointer b)
 {
 	const rsc_colocation_t *rsc_constraint1 = (const rsc_colocation_t*)a;
@@ -224,7 +190,11 @@ ordering_type2text(enum pe_ordering type)
 gboolean
 can_run_resources(const node_t *node)
 {
-	if(node->details->online == FALSE
+	if(node == NULL) {
+		crm_err("No node supplied");
+		return FALSE;
+		
+	} else if(node->details->online == FALSE
 	   || node->details->shutdown
 	   || node->details->unclean
 	   || node->details->standby) {
@@ -304,16 +274,16 @@ native_assign_node(resource_t *rsc, GListPtr nodes, node_t *chosen)
 {
 	int multiple = 0;
 	CRM_ASSERT(rsc->variant == pe_native);
+
+	rsc->provisional = FALSE;
 	
 	if(chosen == NULL) {
 		crm_debug("Could not allocate a node for %s", rsc->id);
 		rsc->next_role = RSC_ROLE_STOPPED;
 		return FALSE;
 
-	} else if(chosen->details->unclean
-		  || chosen->details->standby
-		  || chosen->details->shutdown) {
-		crm_debug("All nodes for color %s are unavailable"
+	} else if(can_run_resources(chosen) == FALSE) {
+		crm_debug("All nodes for resource %s are unavailable"
 			  ", unclean or shutting down", rsc->id);
 		rsc->next_role = RSC_ROLE_STOPPED;
 		return FALSE;
@@ -331,13 +301,11 @@ native_assign_node(resource_t *rsc, GListPtr nodes, node_t *chosen)
 	
 	slist_iter(candidate, node_t, nodes, lpc, 
 		   crm_debug("Color %s, Node[%d] %s: %d", rsc->id, lpc,
-			       candidate->details->uname, candidate->weight);
+			     candidate->details->uname, candidate->weight);
 		   if(chosen->weight > 0
 		      && candidate->details->unclean == FALSE
 		      && candidate->weight == chosen->weight) {
 			   multiple++;
-		   } else {
-			   break;
 		   }
 		);
 
@@ -348,7 +316,7 @@ native_assign_node(resource_t *rsc, GListPtr nodes, node_t *chosen)
 			log_level = LOG_WARNING;
 		}
 		
-		crm_log_maybe(log_level, "%d nodes with equal score (%s) for"
+		do_crm_log(log_level, "%d nodes with equal score (%s) for"
 			      " running the listed resources (chose %s):",
 			      multiple, score, chosen->details->uname);
 		crm_free(score);
@@ -360,13 +328,13 @@ native_assign_node(resource_t *rsc, GListPtr nodes, node_t *chosen)
 
 	if(rsc->allocated_to) {
 		node_t *old = rsc->allocated_to;
-		old->details->allocated_rsc = g_list_remove(old->details->allocated_rsc, rsc);
+		old->details->allocated_rsc = g_list_remove(
+			old->details->allocated_rsc, rsc);
 		old->details->num_resources--;
 		old->count--;
 	}
 	
 	crm_debug("Assigning %s to %s", chosen->details->uname, rsc->id);
-	rsc->provisional = FALSE;
 	crm_free(rsc->allocated_to);
 	rsc->allocated_to = node_copy(chosen);
 
@@ -375,4 +343,67 @@ native_assign_node(resource_t *rsc, GListPtr nodes, node_t *chosen)
 	chosen->count++;
 
 	return TRUE;
+}
+
+void
+convert_non_atomic_task(resource_t *rsc, order_constraint_t *order)
+{
+	int interval = 0;
+	char *rid = NULL;
+	char *raw_task = NULL;
+	int task = no_action;
+	char *old_uuid = order->lh_action_task;
+
+	crm_debug("Processing %s", old_uuid);
+	
+	if(order->lh_action_task == NULL
+	   || strstr(order->lh_action_task, "notify") != NULL) {
+		/* no conversion */
+		return;
+	} 
+
+	CRM_ASSERT(parse_op_key(old_uuid, &rid, &raw_task, &interval));
+	
+	task = text2task(raw_task);
+	switch(task) {
+		case stop_rsc:
+		case start_rsc:
+		case action_notify:
+		case action_promote:
+		case action_demote:
+			break;
+		case stopped_rsc:
+		case started_rsc:
+		case action_notified:
+		case action_promoted:
+		case action_demoted:
+			task--;
+			break;
+		case monitor_rsc:
+		case shutdown_crm:
+		case stonith_node:
+			task = no_action;
+			break;
+		default:
+			crm_err("Unknown action: %s", raw_task);
+			task = no_action;
+			break;
+	}
+	
+	if(task != no_action) {
+		if(rsc->notify) {
+			order->lh_action_task = generate_notify_key(
+				rsc->id, "confirmed-post",
+				task2text(task));
+		} else {
+			order->lh_action_task = generate_op_key(
+				rsc->id, task2text(task+1), 0);
+		}
+		crm_debug("Converted %s -> %s",
+			  old_uuid, order->lh_action_task);
+		crm_free(old_uuid);
+	}
+	
+	crm_free(raw_task);
+	crm_free(rid);
 }

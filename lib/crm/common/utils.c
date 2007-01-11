@@ -24,13 +24,16 @@
 #endif
 
 #include <sys/param.h>
-#include <stdio.h>
 #include <sys/types.h>
+#include <sys/stat.h>
+#include <stdio.h>
 #include <unistd.h>
 #include <string.h>
 
 #include <stdlib.h>
 #include <ctype.h>
+#include <pwd.h>
+#include <grp.h>
 
 #include <heartbeat.h>
 #include <ha_msg.h>
@@ -96,11 +99,64 @@ gboolean
 check_number(const char *value) 
 {
 	errno = 0;
-	crm_int_helper(value, NULL);
+	if(value == NULL) {
+		return FALSE;
+		
+	} else if(safe_str_eq(value, MINUS_INFINITY_S)) {
+		
+	} else if(safe_str_eq(value, INFINITY_S)) {
+
+	} else {
+		crm_int_helper(value, NULL);
+	}
+
 	if(errno != 0) {
 		return FALSE;
 	}
 	return TRUE;
+}
+
+int
+char2score(const char *score) 
+{
+	int score_f = 0;
+	
+	if(score == NULL) {
+		
+	} else if(safe_str_eq(score, MINUS_INFINITY_S)) {
+		score_f = -INFINITY;
+		
+	} else if(safe_str_eq(score, INFINITY_S)) {
+		score_f = INFINITY;
+		
+	} else if(safe_str_eq(score, "+"INFINITY_S)) {
+		score_f = INFINITY;
+		
+	} else {
+		score_f = crm_parse_int(score, NULL);
+		if(score_f > 0 && score_f > INFINITY) {
+			score_f = INFINITY;
+			
+		} else if(score_f < 0 && score_f < -INFINITY) {
+			score_f = -INFINITY;
+		}
+	}
+	
+	return score_f;
+}
+
+
+char *
+score2char(int score) 
+{
+
+	if(score >= INFINITY) {
+		return crm_strdup("+"INFINITY_S);
+
+	} else if(score <= -INFINITY) {
+		return crm_strdup("-"INFINITY_S);
+	} 
+	return crm_itoa(score);
 }
 
 
@@ -118,6 +174,9 @@ cluster_option(GHashTable* options, gboolean(*validate)(const char*),
 		if(value != NULL) {
 			crm_config_warn("Using deprecated name '%s' for"
 				       " cluster option '%s'", old_name, name);
+			g_hash_table_insert(
+				options, crm_strdup(name), crm_strdup(value));
+			value = g_hash_table_lookup(options, old_name);
 		}
 	}
 
@@ -448,62 +507,11 @@ void
 crm_log_message_adv(int level, const char *prefix, const HA_Message *msg)
 {
 	if((int)crm_log_level >= level) {
-		do_crm_log(level, NULL, NULL, "#========= %s message start ==========#", prefix?prefix:"");
+		do_crm_log(level, "#========= %s message start ==========#", prefix?prefix:"");
 		if(level > LOG_DEBUG) {
 			cl_log_message(LOG_DEBUG, msg);
 		} else {
 			cl_log_message(level, msg);
-		}
-	}
-}
-
-
-void
-do_crm_log(int log_level, const char *file, const char *function,
-	   const char *fmt, ...)
-{
-	int log_as = log_level;
-	gboolean do_log = FALSE;
-
-	if(log_level <= (int)crm_log_level) {
-		do_log = TRUE;
-		if(log_level > LOG_INFO) {
-			log_as = LOG_DEBUG;
-		}
-	}
-
-	if(do_log) {
-		va_list ap;
-		int	nbytes;
-		char    buf[MAXLINE];
-		
-		va_start(ap, fmt);
-		nbytes=vsnprintf(buf, MAXLINE, fmt, ap);
-		va_end(ap);
-
-		log_level -= LOG_INFO;
-		if(log_level > 1) {
-			if(function == NULL) {
-				cl_log(log_as, "debug%d: %s", log_level, buf);
-				
-			} else {
-				cl_log(log_as, "debug%d: %s:%s %s",
-				       log_level, function, file?file:"", buf);
-			}
-
-		} else {
-			if(function == NULL) {
-				cl_log(log_as, "%s", buf);
-				
-			} else {
-				cl_log(log_as, "%s:%s %s",
-				       function, file?file:"", buf);
-			}
-		}
-
-		if(nbytes > MAXLINE) {
-			cl_log(LOG_WARNING, "Log from %s() was truncated",
-			       crm_str(function));
 		}
 	}
 }
@@ -672,12 +680,18 @@ crm_parse_int(const char *text, const char *default_text)
 }
 
 gboolean
-safe_str_eq(const char *a, const char *b) 
+crm_str_eq(const char *a, const char *b, gboolean use_case) 
 {
-	if(a == b) {
-		return TRUE;		
-	} else if(a == NULL || b == NULL) {
+	if(a == NULL || b == NULL) {
+		CRM_ASSERT(a != b);
 		return FALSE;
+
+	} else if(use_case && a[0] != b[0]) {
+		return FALSE;		
+
+	} else if(a == b) {
+		return TRUE;
+
 	} else if(strcasecmp(a, b) == 0) {
 		return TRUE;
 	}
@@ -700,17 +714,13 @@ safe_str_neq(const char *a, const char *b)
 }
 
 char *
-crm_strdup(const char *a)
+crm_strdup(const char *src)
 {
-	char *ret = NULL;
-	CRM_CHECK(a != NULL, return NULL);
-	if(a != NULL) {
-		ret = cl_strdup(a);
-	} else {
-		crm_warn("Cannot dup NULL string");
-	}
-	return ret;
-} 
+	char *dup = NULL;
+	CRM_CHECK(src != NULL, return NULL);
+	crm_malloc0(dup, strlen(src) + 1);
+	return strcpy(dup, src);
+}
 
 static GHashTable *crm_uuid_cache = NULL;
 static GHashTable *crm_uname_cache = NULL;
@@ -1090,6 +1100,8 @@ parse_op_key(const char *key, char **rsc_id, char **op_type, int *interval)
 	*interval = 0;
 	len = strlen(key);
 	offset = len-1;
+
+	crm_debug_3("Source: %s", key);
 	
 	while(offset > 0 && isdigit(key[offset])) {
 		int digits = len-offset;
@@ -1104,7 +1116,7 @@ parse_op_key(const char *key, char **rsc_id, char **op_type, int *interval)
 		offset--;
 	}
 
-	crm_info("Interval: %d", *interval);
+	crm_debug_3("  Interval: %d", *interval);
 	CRM_CHECK(key[offset] == '_', return FALSE);
 
 	mutable_key = crm_strdup(key);
@@ -1121,7 +1133,7 @@ parse_op_key(const char *key, char **rsc_id, char **op_type, int *interval)
 
 	mutable_key_ptr = mutable_key+offset+1;
 
-	crm_debug_3("Action: %s", mutable_key_ptr);
+	crm_debug_3("  Action: %s", mutable_key_ptr);
 	*op_type = crm_strdup(mutable_key_ptr);
 
 	mutable_key[offset] = 0;
@@ -1130,7 +1142,7 @@ parse_op_key(const char *key, char **rsc_id, char **op_type, int *interval)
 	CRM_CHECK(mutable_key != mutable_key_ptr,
 		  crm_free(mutable_key); return FALSE);
 	
-	crm_debug_3("Resource: %s", mutable_key);
+	crm_debug_3("  Resource: %s", mutable_key);
 	*rsc_id = crm_strdup(mutable_key);
 
 	crm_free(mutable_key);
@@ -1194,7 +1206,7 @@ generate_transition_magic(const char *transition_key, int op_status, int op_rc)
 
 gboolean
 decode_transition_magic(
-	const char *magic, char **uuid, int *transition_id,
+	const char *magic, char **uuid, int *transition_id, int *action_id,
 	int *op_status, int *op_rc)
 {
 	char *rc = NULL;
@@ -1213,7 +1225,8 @@ decode_transition_magic(
 	}
 
 	
-	CRM_CHECK(decode_transition_key(key, uuid, transition_id), return FALSE);
+	CRM_CHECK(decode_transition_key(key, uuid, transition_id, action_id),
+		  return FALSE);
 	
 	*op_rc = crm_parse_int(rc, NULL);
 	*op_status = crm_parse_int(status, NULL);
@@ -1227,7 +1240,7 @@ decode_transition_magic(
 }
 
 char *
-generate_transition_key(int transition_id, const char *node)
+generate_transition_key(int transition_id, int action_id, const char *node)
 {
 	int len = 40;
 	char *fail_state = NULL;
@@ -1238,26 +1251,46 @@ generate_transition_key(int transition_id, const char *node)
 	
 	crm_malloc0(fail_state, len);
 	if(fail_state != NULL) {
-		snprintf(fail_state, len, "%d:%s", transition_id, node);
+		snprintf(fail_state, len, "%d:%d:%s",
+			 action_id, transition_id, node);
 	}
 	return fail_state;
 }
 
 
 gboolean
-decode_transition_key(const char *key, char **uuid, int *transition_id)
+decode_transition_key(
+	const char *key, char **uuid, int *transition_id, int *action_id)
 {
+	char *tmp = NULL;
+	char *action = NULL;
 	char *transition = NULL;
+
+	*uuid = NULL;
+	*action_id = -1;
+	*transition_id = -1;
 	
-	if(decodeNVpair(key, ':', &transition, uuid) == FALSE) {
+	if(decodeNVpair(key, ':', &action, &tmp) == FALSE) {
 		crm_err("Couldn't find ':' in: %s", key);
 		return FALSE;
 	}
-	
-	*transition_id = crm_parse_int(transition, NULL);
 
-	crm_free(transition);
-	
+	*action_id = crm_parse_int(action, NULL);
+	crm_free(action);
+
+	if(decodeNVpair(tmp, ':', &transition, uuid) == FALSE) {
+		/* this would be an error but some versions dont
+		 * have the action
+		 */
+		*transition_id = *action_id;
+		*action_id = -1;
+		*uuid = tmp;
+
+	} else {
+		*transition_id = crm_parse_int(transition, NULL);
+		crm_free(transition);
+		crm_free(tmp);
+	}
 	return TRUE;
 }
 
@@ -1351,6 +1384,38 @@ filter_action_parameters(crm_data_t *param_set, const char *version)
 			      /* unwind the counetr */
 			      __counter--;
 		      }
+		);
+}
+
+void
+filter_reload_parameters(crm_data_t *param_set, const char *restart_string) 
+{
+	int len = 0;
+	char *name = NULL;
+	char *match = NULL;
+	
+	if(param_set == NULL) {
+		return;
+	}
+
+	xml_prop_iter(param_set, prop_name, prop_value,      
+		      name = NULL;
+		      len = strlen(prop_name) + 3;
+
+		      crm_malloc0(name, len);
+		      sprintf(name, " %s ", prop_name);
+		      name[len-1] = 0;
+		      
+		      match = strstr(restart_string, name);
+		      if(match == NULL) {
+			      /* remove it */
+			      crm_debug_3("%s not found in %s",
+					  prop_name, restart_string);
+			      xml_remove_prop(param_set, prop_name);
+			      /* unwind the counetr */
+			      __counter--;
+		      }
+		      crm_free(name);
 		);
 }
 
@@ -1501,7 +1566,7 @@ crm_diff_mem_stats(int log_level_up, int log_level_down, const char *location,
 		reset_on_change = (log_level_down == LOG_DEBUG);
 	}
 
- 	crm_log_maybe(increase?log_level_up:log_level_down,
+ 	do_crm_log(increase?log_level_up:log_level_down,
 		      "Memory usage %s detected at %s:\t"
 		      " %10ld alloc's vs. %10ld free's (%5ld change"
 		      " %10ld bytes leaked)",
@@ -1526,14 +1591,14 @@ crm_abort(const char *file, const char *function, int line,
 	int pid = 0;
 
 	if(do_fork == FALSE) {
-		do_crm_log(LOG_ERR, file, function,
-			   "Triggered fatal assert at %s:%d : %s",
-			   file, line, assert_condition);
+		do_crm_log(LOG_ERR, 
+			   "%s: Triggered fatal assert at %s:%d : %s",
+			   function, file, line, assert_condition);
 
 	} else if(crm_log_level < LOG_DEBUG) {
-		do_crm_log(LOG_ERR, file, function,
-			   "Triggered non-fatal assert at %s:%d : %s",
-			   file, line, assert_condition);
+		do_crm_log(LOG_ERR, 
+			   "%s: Triggered non-fatal assert at %s:%d : %s",
+			   function, file, line, assert_condition);
 		return;
 
 	} else {
@@ -1546,9 +1611,9 @@ crm_abort(const char *file, const char *function, int line,
 			return;
 
 		default:	/* Parent */
-			do_crm_log(LOG_ERR, file, function,
-				   "Forked child %d to record non-fatal assert at %s:%d : %s",
-				   pid, file, line, assert_condition);
+			do_crm_log(LOG_ERR, 
+				   "%s: Forked child %d to record non-fatal assert at %s:%d : %s",
+				   function, pid, file, line, assert_condition);
 			return;
 
 		case 0:	/* Child */
@@ -1719,4 +1784,80 @@ crm_make_daemon(const char *name, gboolean daemonize, const char *pidfile)
 	(void)open(devnull, O_WRONLY);		/* Stdout: fd 1 */
 	close(FD_STDERR);
 	(void)open(devnull, O_WRONLY);		/* Stderr: fd 2 */
+}
+
+gboolean
+crm_is_writable(const char *dir, const char *file,
+		const char *user, const char *group, gboolean need_both)
+{
+	int s_res = -1;
+	struct stat buf;
+	char *full_file = NULL;
+	const char *target = NULL;
+	
+	gboolean pass = TRUE;
+	gboolean readwritable = FALSE;
+
+	CRM_ASSERT(dir != NULL);
+	if(file != NULL) {
+		full_file = crm_concat(dir, file, '/');
+		target = full_file;
+		s_res = stat(full_file, &buf);
+		if( s_res == 0 && S_ISREG(buf.st_mode) == FALSE ) {
+			crm_err("%s must be a regular file", target);
+			pass = FALSE;
+			goto out;
+		}
+	}
+	
+	if (s_res != 0) {
+		target = dir;
+		s_res = stat(dir, &buf);
+		if(s_res != 0) {
+			crm_err("%s must exist and be a directory", dir);
+			pass = FALSE;
+			goto out;
+
+		} else if( S_ISDIR(buf.st_mode) == FALSE ) {
+			crm_err("%s must be a directory", dir);
+			pass = FALSE;
+		}
+	}
+
+	if(user) {
+		struct passwd *sys_user = NULL;
+		sys_user = getpwnam(user);
+		readwritable = (sys_user != NULL
+				&& buf.st_uid == sys_user->pw_uid
+				&& (buf.st_mode & (S_IRUSR|S_IWUSR)));
+		if(readwritable == FALSE) {
+			crm_err("%s must be owned and r/w by user %s",
+				target, user);
+			if(need_both) {
+				pass = FALSE;
+			}
+		}
+	}	
+
+	if(group) {
+		struct group *sys_grp = getgrnam(group);
+		readwritable = (
+			sys_grp != NULL
+			&& buf.st_gid == sys_grp->gr_gid
+			&& (buf.st_mode & (S_IRGRP|S_IWGRP)));		
+		if(readwritable == FALSE) {
+			if(need_both || user == NULL) {
+				pass = FALSE;
+				crm_err("%s must be owned and r/w by group %s",
+					target, group);
+			} else {
+				crm_warn("%s should be owned and r/w by group %s",
+					 target, group);
+			}
+		}
+	}
+
+  out:
+	crm_free(full_file);
+	return pass;
 }

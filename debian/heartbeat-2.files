@@ -21,6 +21,7 @@
 /etc/ha.d/resource.d/SendArp
 /etc/ha.d/resource.d/ServeRAID
 /etc/ha.d/resource.d/WAS
+/etc/ha.d/resource.d/WAS6
 /etc/ha.d/resource.d/WinPopup
 /etc/ha.d/resource.d/Xinetd
 /etc/ha.d/resource.d/db2
@@ -207,6 +208,7 @@ usr/lib/ocf/resource.d/heartbeat/MailTo
 usr/lib/ocf/resource.d/heartbeat/oracle
 usr/lib/ocf/resource.d/heartbeat/oralsnr
 usr/lib/ocf/resource.d/heartbeat/Raid1
+usr/lib/ocf/resource.d/heartbeat/SendArp
 usr/lib/ocf/resource.d/heartbeat/ServeRAID
 usr/lib/ocf/resource.d/heartbeat/VIPArip
 usr/lib/ocf/resource.d/heartbeat/WAS

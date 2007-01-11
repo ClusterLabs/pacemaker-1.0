@@ -67,15 +67,15 @@ pe_cluster_option pe_opts[] = {
 	{ "default-resource-stickiness", "default_resource_stickiness", "integer", NULL, "0", &check_number, "", NULL },
 	{ "default-resource-failure-stickiness", "default_resource_failure_stickiness", "integer", NULL, "0", &check_number, "", NULL },
 	{ "is-managed-default", "is_managed_default", "boolean", NULL, "true", &check_boolean, "Should the cluster start/stop resources as required", NULL },
-	{ "network-delay", "transition_idle_timeout", "time", NULL, "60s", &check_time, "Round trip delay over the network (excluding action execution)", "The \"correct\" value will depend on the speed and load of your network." },
+	{ "cluster-delay", "transition_idle_timeout", "time", NULL, "60s", &check_time, "Round trip delay over the network (excluding action execution)", "The \"correct\" value will depend on the speed and load of your network and cluster nodes." },
 	{ "default-action-timeout", "default_action_timeout", "time", NULL, "20s", &check_time, "How long to wait for actions to complete", NULL },
 	{ "stop-orphan-resources", "stop_orphan_resources", "boolean", NULL, "true", &check_boolean, "Should deleted resources be stopped", NULL },
 	{ "stop-orphan-actions", "stop_orphan_actions", "boolean", NULL, "true", &check_boolean, "Should deleted actions be cancelled", NULL },
  	{ "remove-after-stop", "remove_after_stop", "boolean", NULL, "false", &check_boolean, NULL, NULL },
 /* 	{ "", "", , "0", "", NULL }, */
-	{ "pe-error-series-max", NULL, "integer", NULL, "-1", &check_number, "", NULL },
-	{ "pe-warn-series-max",  NULL, "integer", NULL, "-1", &check_number, "", NULL },
-	{ "pe-input-series-max", NULL, "integer", NULL, "-1", &check_number, "", NULL },
+	{ "pe-error-series-max", NULL, "integer", NULL, "-1", &check_number, "The number of PE inputs resulting in ERRORs to save", "Zero to disable, -1 to store unlimited." },
+	{ "pe-warn-series-max",  NULL, "integer", NULL, "-1", &check_number, "The number of PE inputs resulting in WARNINGs to save", "Zero to disable, -1 to store unlimited." },
+	{ "pe-input-series-max", NULL, "integer", NULL, "-1", &check_number, "The number of other PE inputs to save", "Zero to disable, -1 to store unlimited." },
 	{ "startup-fencing", "startup_fencing", "boolean", NULL, "true", &check_boolean, "STONITH unseen nodes", "Advanced Use Only!  Not using the default is very unsafe!" }
 };
 
@@ -118,6 +118,9 @@ fail2text(enum action_fail_response fail)
 		case action_fail_migrate:
 			result = "migrate";
 			break;
+		case action_migrate_failure:
+			result = "atomic migration recovery";
+			break;
 		case action_fail_fence:
 			result = "fence";
 			break;
@@ -142,7 +145,7 @@ text2task(const char *task)
 		return shutdown_crm;
 	} else if(safe_str_eq(task, CRM_OP_FENCE)) {
 		return stonith_node;
-	} else if(safe_str_eq(task, CRMD_ACTION_MON)) {
+	} else if(safe_str_eq(task, CRMD_ACTION_STATUS)) {
 		return monitor_rsc;
 	} else if(safe_str_eq(task, CRMD_ACTION_NOTIFY)) {
 		return action_notify;
@@ -166,8 +169,10 @@ text2task(const char *task)
 		return no_action;
 	} else if(safe_str_eq(task, CRM_OP_LRM_REFRESH)) {
 		return no_action;	
+	} else if(safe_str_eq(task, CRMD_ACTION_MIGRATED)) {
+		return no_action;	
 	} 
-	pe_err("Unsupported action: %s", task);
+	crm_config_warn("Unsupported action: %s", task);
 	return no_action;
 }
 
@@ -200,7 +205,7 @@ task2text(enum action_tasks task)
 			result = CRM_OP_FENCE;
 			break;
 		case monitor_rsc:
-			result = CRMD_ACTION_MON;
+			result = CRMD_ACTION_STATUS;
 			break;
 		case action_notify:
 			result = CRMD_ACTION_NOTIFY;
@@ -299,51 +304,6 @@ merge_weights(int w1, int w2)
 	crm_debug_5("%d + %d = %d", w1, w2, result);
 	return result;
 }
-
-
-int
-char2score(const char *score) 
-{
-	int score_f = 0;
-	
-	if(score == NULL) {
-		
-	} else if(safe_str_eq(score, MINUS_INFINITY_S)) {
-		score_f = -INFINITY;
-		
-	} else if(safe_str_eq(score, INFINITY_S)) {
-		score_f = INFINITY;
-		
-	} else if(safe_str_eq(score, "+"INFINITY_S)) {
-		score_f = INFINITY;
-		
-	} else {
-		score_f = crm_parse_int(score, NULL);
-		if(score_f > 0 && score_f > INFINITY) {
-			score_f = INFINITY;
-			
-		} else if(score_f < 0 && score_f < -INFINITY) {
-			score_f = -INFINITY;
-		}
-	}
-	
-	return score_f;
-}
-
-
-char *
-score2char(int score) 
-{
-
-	if(score >= INFINITY) {
-		return crm_strdup("+"INFINITY_S);
-
-	} else if(score <= -INFINITY) {
-		return crm_strdup("-"INFINITY_S);
-	} 
-	return crm_itoa(score);
-}
-
 
 void
 add_hash_param(GHashTable *hash, const char *name, const char *value)

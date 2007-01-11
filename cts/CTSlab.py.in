@@ -344,8 +344,6 @@ class CtsLab(UserDict):
             self["reset"] = Stonith()
         if not self.has_key("CMclass"):
             self["CMclass"] = HeartbeatCM
-        if not self.has_key("HAdir"):
-            self["HAdir"] = "@sysconfdir@/ha.d"
         if not self.has_key("LogFileName"):
             self["LogFileName"] = "/var/log/ha-log"
         if not self.has_key("logfacility"):
@@ -475,6 +473,7 @@ def usage(arg):
     +  " --facility syslog-facility" \
     +  " --choose testcase-name" \
     +  " --test-ip-base ip" \
+    +  " --oprofile \"whitespace separated list of nodes to oprofile\"" \
     +  " (-2 |"\
     +  " -v2 |"\
     +  " --crm |"\
@@ -500,7 +499,7 @@ if __name__ == '__main__':
     from CTS import Scenario, InitClusterManager, PingFest, PacketLoss, BasicSanityCheck
     import CM_hb
 
-    HAdir = "/etc/ha.d"
+    HAdir = "@sysconfdir@/ha.d"
     LogFile = "/var/log/ha-log-local7"
     DoStonith = 1
     DoStandby = 1
@@ -523,6 +522,8 @@ if __name__ == '__main__':
     DoBSC = 0
     ListTests = 0
     HaveSeed = 0
+    oprofile = None
+
     #
     # The values of the rest of the parameters are now properly derived from
     # the configuration files.
@@ -561,6 +562,9 @@ if __name__ == '__main__':
        elif args[i] == "--test-ip-base":
            skipthis=1
            IPBase = args[i+1]
+       elif args[i] == "--oprofile":
+           skipthis=1
+           oprofile = args[i+1].split(' ')
        elif args[i] == "--trunc":
            TruncateLog=1
        elif args[i] == "-v2":
@@ -642,7 +646,10 @@ if __name__ == '__main__':
            HaveSeed = 1
        else:
            NumIter=int(args[i])
-          
+     
+    if not oprofile:
+	oprofile = []
+
     #
     # This reading of HBconfig here is ugly, and I suppose ought to
     # be done by the Cluster manager.  This would probably mean moving the
@@ -655,7 +662,8 @@ if __name__ == '__main__':
     if DoBSC:
         NumIter = 2
         Version = 2
-        LimitNodes = 1
+        while len(node_list) > 1:
+            node_list.pop(len(node_list)-1)
 
     if LogFacility == None:
         if config.Parameters.has_key("logfacility"): 
@@ -694,6 +702,7 @@ if __name__ == '__main__':
     Environment["DoBSC"]    = 0
     Environment["use_logd"] = 0
     Environment["logfacility"] = LogFacility
+    Environment["oprofile"] = oprofile
 
     if config.Parameters.has_key("use_logd"):
         Environment["use_logd"] = 1
@@ -737,9 +746,10 @@ if __name__ == '__main__':
     cm.log(">>>>>>>>>>>>>>>> BEGINNING " + repr(NumIter) + " TESTS ")
     cm.log("HA configuration directory: " + Environment["HAdir"])
     cm.log("System log files: " + Environment["LogFileName"])
-    cm.log("Enable Stonith: " + ("%d" % Environment["DoStonith"]))
-    cm.log("Enable Fencing: " + ("%d" % Environment["DoFencing"]))
-    cm.log("Enable Standby: " + ("%d" % Environment["DoStandby"]))
+    cm.log("Enable Stonith:   %d" % Environment["DoStonith"])
+    cm.log("Enable Fencing:   %d" % Environment["DoFencing"])
+    cm.log("Enable Standby:   %d" % Environment["DoStandby"])
+    cm.log("Enable Resources: %d" % Environment["CIBResource"])
     if Environment.has_key("SuppressMonitoring") \
     and Environment["SuppressMonitoring"]:
         cm.log("Resource Monitoring is disabled")

@@ -23,7 +23,6 @@
 #include <stdio.h>
 #include <sys/types.h>
 #include <unistd.h>
-#include <sys/stat.h>
 
 #include <string.h>
 #include <stdlib.h>
@@ -86,9 +85,6 @@ int set_connected_peers(crm_data_t *xml_obj);
 void GHFunc_count_peers(gpointer key, gpointer value, gpointer user_data);
 int write_cib_contents(gpointer p);
 
-#include <sys/types.h>
-#include <pwd.h>
-#include <grp.h>
 
 
 static gboolean
@@ -204,147 +200,123 @@ validate_on_disk_cib(const char *filename, crm_data_t **on_disk_cib)
  * It is the callers responsibility to free the output of this function
  */
 crm_data_t*
-readCibXmlFile(const char *filename, gboolean discard_status)
+readCibXmlFile(const char *dir, const char *file, gboolean discard_status)
 {
-	int s_res = -1;
 	struct stat buf;
-	gboolean valid = TRUE;
+	FILE *cib_file = NULL;
+	gboolean dtd_ok = TRUE;
 
+	char *filename = NULL;
 	const char *name = NULL;
 	const char *value = NULL;
+	const char *ignore_dtd = NULL;
 	
 	crm_data_t *root = NULL;
 	crm_data_t *status = NULL;
 
-	struct passwd *cib_user = NULL;
-	gboolean user_readwritable = FALSE;
-	
-	if(filename != NULL) {
-		s_res = stat(filename, &buf);
-	}
-	
-	if (s_res != 0) {
+	if(!crm_is_writable(dir, file, HA_CCMUSER, HA_APIGROUP, FALSE)) {
+		cib_status = cib_bad_permissions;
 		return NULL;
 	}
 	
-	cib_user = getpwnam(HA_CCMUSER);
-	user_readwritable = (cib_user != NULL
-			     && buf.st_uid == cib_user->pw_uid
-			     && (buf.st_mode & (S_IRUSR|S_IWUSR)));
-	
-	if( S_ISREG(buf.st_mode) == FALSE ) {
-		cib_status = cib_bad_permissions;
-		crm_err("%s must be a regular file", filename);
-		
-	} else if( user_readwritable == FALSE ) {
-		struct group *cib_grp = getgrnam(HA_APIGROUP);
-		gboolean group_readwritable = (
-			cib_grp != NULL
-			&& buf.st_gid == cib_grp->gr_gid
-			&& (buf.st_mode & (S_IRGRP|S_IWGRP)));
-		
-		if( group_readwritable == FALSE ) {
-			crm_err("%s must be owned and read/writeable by user %s,"
-				" or owned and read/writable by group %s",
-				filename, HA_CCMUSER, HA_APIGROUP);
-			cib_status = cib_bad_permissions;
-			return NULL;
-		} 
-		crm_warn("%s should be owned and read/writeable by user %s",
-			 filename, HA_CCMUSER);
-	}
-	
-	crm_info("Reading cluster configuration from: %s", filename);
-	if(validate_on_disk_cib(filename, &root) == FALSE) {
-		valid = FALSE;
-		crm_err("%s has been manually changed"
-			" - if this was intended, please remove the md5 digest in %s.sig",
-			filename, filename);
+	filename = crm_concat(dir, file, '/');
+	if(stat(filename, &buf) != 0) {
+		crm_warn("Cluster configuration not found: %s."
+			 "  Creating an empty one.", filename);
+
+	} else {
+		crm_info("Reading cluster configuration from: %s", filename);
+		cib_file = fopen(filename, "r");
+		root = file2xml(cib_file, FALSE);
+		fclose(cib_file);
+
+		if(root == NULL) {
+			crm_err("%s exists but does NOT contain valid XML. ",
+				filename);
+			crm_err("Continuing with an empty configuration."
+				"  %s will NOT be overwritten.", filename);
+			cib_writes_enabled = FALSE;
+
+		} else if(validate_cib_digest(root) == FALSE) {
+			crm_err("%s has been manually changed! If this was"
+				" intended, remove the digest in %s.sig",
+				filename, filename);
 			cib_status = cib_bad_digest;
-			return NULL;
+		}
+	}
+
+	if(root == NULL) {
+		root = createEmptyCib();	
+	} else {
+		crm_xml_add(root, "generated", XML_BOOLEAN_FALSE);	
 	}
 
 	status = find_xml_node(root, XML_CIB_TAG_STATUS, FALSE);
-	if(root != NULL && discard_status && status != NULL) {
+	if(discard_status && status != NULL) {
 		/* strip out the status section if there is one */
 		free_xml_from_parent(root, status);
 		status = NULL;
 	}
-	if(status == NULL) {
-		create_xml_node(root, XML_CIB_TAG_STATUS);		
-	}
+	create_xml_node(root, XML_CIB_TAG_STATUS);		
 	
 	/* Do this before DTD validation happens */
-	if(root != NULL) {
-		/* fill in some defaults */
-		name = XML_ATTR_GENERATION_ADMIN;
-		value = crm_element_value(root, name);
-		if(value == NULL) {
-			crm_xml_add_int(root, name, 0);
-		}
-		
-		name = XML_ATTR_GENERATION;
-		value = crm_element_value(root, name);
-		if(value == NULL) {
-			crm_xml_add_int(root, name, 0);
-		}
-		
-		name = XML_ATTR_NUMUPDATES;
-		value = crm_element_value(root, name);
-		if(value == NULL) {
-			crm_xml_add_int(root, name, 0);
-		}
 
-		/* unset these and require the DC/CCM to update as needed */
-		update_counters(__FILE__, __PRETTY_FUNCTION__, root);
-		xml_remove_prop(root, XML_ATTR_DC_UUID);
+	/* fill in some defaults */
+	name = XML_ATTR_GENERATION_ADMIN;
+	value = crm_element_value(root, name);
+	if(value == NULL) {
+		crm_xml_add_int(root, name, 0);
 	}
+	
+	name = XML_ATTR_GENERATION;
+	value = crm_element_value(root, name);
+	if(value == NULL) {
+		crm_xml_add_int(root, name, 0);
+	}
+	
+	name = XML_ATTR_NUMUPDATES;
+	value = crm_element_value(root, name);
+	if(value == NULL) {
+		crm_xml_add_int(root, name, 0);
+	}
+	
+	/* unset these and require the DC/CCM to update as needed */
+	update_counters(__FILE__, __PRETTY_FUNCTION__, root);
+	xml_remove_prop(root, XML_ATTR_DC_UUID);
 
 	if(discard_status) {
 		crm_log_xml_info(root, "[on-disk]");
 	}
 	
-	if(root != NULL) {
-		const char *ignore_dtd = crm_element_value(root, "ignore_dtd");
-		gboolean dtd_ok = validate_with_dtd(
-			root, TRUE, HA_LIBDIR"/heartbeat/crm.dtd");
-		
-		if(dtd_ok == FALSE
-#if CRM_DEPRECATED_SINCE_2_0_4
-		   && ignore_dtd != NULL
-#endif
+	ignore_dtd = crm_element_value(root, "ignore_dtd");
+	dtd_ok = validate_with_dtd(root, TRUE, HA_LIBDIR"/heartbeat/crm.dtd");
+	if(dtd_ok == FALSE) {
+		if(ignore_dtd == NULL
 		   && crm_is_true(ignore_dtd) == FALSE) {
-			crm_err("On disk CIB does not conform to the DTD");
-			valid = FALSE;
+			cib_status = cib_dtd_validation;
 		}
-	}
-
-	
-	if(root == NULL) {
-		crm_crit("Parse ERROR reading %s.", filename);
-		cib_status = cib_bad_config;		
-		return NULL;
 		
-	} else if(valid == FALSE) {
-		crm_err("%s does not contain a valid configuration", filename);
-		cib_status = cib_bad_config;
-	}
-
-	
-	crm_xml_add(root, "generated", XML_BOOLEAN_FALSE);	
+	} else if(ignore_dtd == NULL) {
+		crm_notice("Enabling DTD validation on"
+			   " the existing (sane) configuration");
+		crm_xml_add(root, "ignore_dtd", XML_BOOLEAN_FALSE);	
+	}	
 	
 	if(do_id_check(root, NULL, FALSE, FALSE)) {
-		crm_crit("%s does not contain a vaild configuration.",
+		crm_err("%s does not contain a vaild configuration:"
+			" ID check failed",
 			 filename);
-		cib_status = cib_bad_config;
+		cib_status = cib_id_check;
 	}
 
 	if (verifyCibXml(root) == FALSE) {
-		crm_crit("%s does not contain a vaild configuration.",
+		crm_err("%s does not contain a vaild configuration:"
+			" structure test failed",
 			 filename);
 		cib_status = cib_bad_config;
 	}
 
+	crm_free(filename);
 	return root;
 }
 
@@ -426,7 +398,7 @@ initializeCib(crm_data_t *new_cib)
 		return FALSE;
 	}
 
-	update_counters(__FILE__, __FUNCTION__, new_cib);
+	update_counters(__FILE__, __PRETTY_FUNCTION__, new_cib);
 	
 	the_cib = new_cib;
 	initialized = TRUE;
@@ -514,9 +486,6 @@ activateCibXml(crm_data_t *new_cib, const char *ignored)
 	crm_data_t *saved_cib = the_cib;
 	const char *ignore_dtd = NULL;
 
-	long new_bytes, new_allocs, new_frees;
-	long old_bytes, old_allocs, old_frees;
-
 	crm_log_xml_debug_4(new_cib, "Attempting to activate CIB");
 
 	CRM_ASSERT(new_cib != saved_cib);
@@ -557,12 +526,18 @@ activateCibXml(crm_data_t *new_cib, const char *ignored)
 		}
 		
 	} else if(per_action_cib && cib_writes_enabled && cib_status == cib_ok) {
+		crm_err("Per-action CIB");
 		write_cib_contents(the_cib);
 		
 	} else if(cib_writes_enabled && cib_status == cib_ok) {
 		crm_debug_2("Triggering CIB write");
 		G_main_set_trigger(cib_writer);
-
+	}
+#if CIB_MEM_STATS
+	/* this chews through a bunch of CPU */
+	if(the_cib == new_cib) {
+		long new_bytes, new_allocs, new_frees;
+		long old_bytes, old_allocs, old_frees;
 		crm_xml_nbytes(new_cib, &new_bytes, &new_allocs, &new_frees);
 		crm_xml_nbytes(saved_cib, &old_bytes, &old_allocs, &old_frees);
 
@@ -577,6 +552,7 @@ activateCibXml(crm_data_t *new_cib, const char *ignored)
 			}
 		}
 	}
+#endif
 	
 	if(the_cib != saved_cib && the_cib != new_cib) {
 		CRM_DEV_ASSERT(error_code != cib_ok);
@@ -753,7 +729,7 @@ update_counters(const char *file, const char *fn, crm_data_t *xml_obj)
 	did_update = did_update || set_connected_peers(xml_obj);
 	
 	if(did_update) {
-		do_crm_log(LOG_DEBUG, file, fn, "Counters updated");
+		do_crm_log(LOG_DEBUG, "Counters updated by %s", fn);
 	}
 	return did_update;
 }

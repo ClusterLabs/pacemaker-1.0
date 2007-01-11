@@ -63,7 +63,7 @@ mgmt_new_msg(const char* type, ...)
 	}
 
 	/* assign the first field */
-	snprintf(buf,len,"%s", type);
+	snprintf(buf, len, "%s", type);
 	
 	/* then the others */
 	va_start(ap, type);
@@ -72,8 +72,8 @@ mgmt_new_msg(const char* type, ...)
 		if (arg == NULL) {
 			break;
 		}
-		strncat(buf, "\n", len);
-		strncat(buf, arg, len);
+		strncat(buf, "\n", len-strlen(buf)-1);
+		strncat(buf, arg, len-strlen(buf)-1);
 	}
 	va_end(ap);
 	
@@ -92,14 +92,14 @@ mgmt_msg_append(char* msg, const char* append)
 		/* +2: one is the '\n', other is the end 0*/
 		len = msg_len+append_len+2;
 		msg = (char*)mgmt_realloc(msg, len);
-		strncat(msg, "\n", len);
-		strncat(msg, append, len);
+		strncat(msg, "\n", len-strlen(msg)-1);
+		strncat(msg, append, len-strlen(msg)-1);
 	}
 	else {
 		/* +2: one is the '\n', other is the end 0*/
 		len = msg_len+2;
 		msg = (char*)mgmt_realloc(msg, len);
-		strncat(msg, "\n", len);
+		strncat(msg, "\n", len-strlen(msg)-1);
 	}
 	return msg;
 }

@@ -2,6 +2,9 @@
 #
 #	$Id: SendArp.in,v 1.4 2005/08/29 03:36:57 sunjd Exp $
 #
+#	2006, Huang Zhen <zhen.huang@gmail.com>
+#	convert it to calling OCF counterpart.
+#
 #	Copyright (C) 2004 Horms <horms@verge.net.au>
 #
 #       Based on IPaddr2: Copyright (C) 2003 Tuomo Soini <tis@foobar.fi>
@@ -28,146 +31,33 @@
 
 set -e
 
-prefix=@prefix@
-exec_prefix=@exec_prefix@
-. @sysconfdir@/ha.d/shellfuncs
+unset LANG; export LANG
+LC_ALL=C
+export LC_ALL
 
-SENDARP=$HA_BIN/send_arp
-HA_VARRUNDIR=@localstatedir@/run/@HB_PKG@
-VLDIR=$HA_VARRUNDIR/rsctmp/IPaddr
-SENDARPPIDDIR=$HA_VARRUNDIR/rsctmp/send_arp
-USAGE="usage: $0 ip-address/interface {start|stop|status|monitor}";
+. @HB_RA_DIR@/hto-mapfuncs
 
-#
-#	Set BASEIP for use in other parts of script.
-#	Find out which interface to use with findif utility and
-#	parse findif output.
-#
-BASEIP=`echo $1 | sed "s%/.*%%"`
-INTERFACE=`echo $1 | sed "s%${BASEIP}/%%"`
-RESIDUAL=`echo $1 | sed "s%${BASEIP}/${INTERFACE}%%"`
-SENDARPPIDFILE="$SENDARPPIDDIR/send_arp-$BASEIP"
-
-#
-#	Check if ip-address is running.
-#	We return stopped or running.
-#
-status() {
-    if
-	[ -f "$SENDARPPIDFILE" ]
-    then
-	echo "running"
-    else
-	echo "stopped"
-    fi
-}
-
-#
-#	Send gratuitous arp
-#
-start() {
-
-    case `status $1` in
-	running)
-	    exit 0
-	    ;;
-    esac
-
-    [ -r ${HA_CONFDIR}/arp_config ] && . ${HA_CONFDIR}/arp_config
-    if [ -r "${HA_CONFDIR}/arp_config:${TARGET_INTERFACE}" ]
-    then
-	. "${HA_CONFDIR}/arp_config:${TARGET_INTERFACE}"
-    fi
-
-    # Set default values
-
-    : ${ARP_INTERVAL_MS=200}	# milliseconds between ARPs
-    : ${ARP_REPEAT=5}		# repeat count
-    : ${ARP_BACKGROUND=yes}	# no to run in foreground
-    : ${ARP_NETMASK=ffffffffffff}	# netmask for ARP
-
-
-    ARGS="-i $ARP_INTERVAL_MS -r $ARP_REPEAT -p $SENDARPPIDFILE $INTERFACE $BASEIP auto $BASEIP $ARP_NETMASK"
-    ha_log "$SENDARP $ARGS"
-    case $ARP_BACKGROUND in
-	yes) 
-	    ($SENDARP $ARGS || 
-	        ha_log "ERROR: Could not send gratuitous arps") &
-	    ;;
-	*)
-	    $SENDARP $ARGS || ha_log "ERROR: Could not send gratuitous arps"
-	    ;;
-    esac
-}
-
-#
-#	Stop sending gratuitous arp
-#
-stop() {
-    rc=0
-    if
-	[ -f "$SENDARPPIDFILE" ]
-    then
-	kill `cat "$SENDARPPIDFILE"`
-	rc=$?
-	case $rc in
-	    0)
-		ha_log "info: killed previously running send_arp for $BASEIP"
-		rm -f "$SENDARPPIDFILE"
-		;;
-	    *)
-		ha_log "WARN: Could not kill previously running send_arp for $BASEIP"
-		;;
-	esac
-    fi
-
-    case $rc in
-	0)
-	    ha_log "info: SendArp for $BASEIP/$INTERFACE released"
-	    ;;
-	*)
-	    ha_log "WARN: SendArp for $BASEIP/$INTERFACE NOT released"
-	    ;;
-    esac
-    return $rc
-}
-
-#
-#	This is always active, because it doesn't do much
-#
-monitor() {
-    echo "OK"
-    return 0
-}
+# We need to split the argument into pieces that IPaddr OCF RA can
+# recognize, sed is prefered over Bash specific builtin functions 
+# for portability.
 
 usage() {
-  echo -e $USAGE >&2
+  echo "usage: $0 ip-address/interface $LEGAL_ACTIONS"
 }
 
-if
-    [ $# -ne 2 -o -z "$INTERFACE" -o -z "$BASEIP" -o -n "$RESIDUAL" ]
-then
+if [ $# != 2 ]; then
     usage
     exit 1
 fi
+BASEIP=`echo $1 | sed "s%/.*%%"`
+INTERFACE=`echo $1 | sed "s%${BASEIP}/%%"`
 
-case $2 in
-    start)
-	start $1
-	;;
-    stop)
-	stop $1
-	;;
-    status)
-	status $1
-	;;
-    monitor)
-	monitor $1
-	;;
-    *)
-	usage
- 	exit 1
-	;;
-esac
+OCF_TYPE=SendArp
+OCF_RESKEY_ip=$BASEIP
+OCF_RESKEY_nic=$INTERFACE
+OCF_RESOURCE_INSTANCE=${OCF_TYPE}_$BASEIP
+export OCF_TYPE OCF_RESOURCE_INSTANCE OCF_RESKEY_ip OCF_RESKEY_nic
+
+ra_execocf $2
 
 # EOF - end of file

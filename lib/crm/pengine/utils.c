@@ -457,26 +457,26 @@ custom_action(resource_t *rsc, char *key, const char *task,
 			action->runnable = FALSE;
 
 		} else if(rsc->is_managed == FALSE) {
-			crm_log_maybe(warn_level, "Action %s %s is for %s (unmanaged)",
+			do_crm_log(warn_level, "Action %s %s is for %s (unmanaged)",
 				 action->uuid, task, rsc->id);
 			action->optional = TRUE;
 /*   			action->runnable = FALSE; */
 
 #if 0
 		} else if(action->node->details->unclean) {
-			crm_log_maybe(warn_level, "Action %s on %s is unrunnable (unclean)",
+			do_crm_log(warn_level, "Action %s on %s is unrunnable (unclean)",
 				 action->uuid, action->node?action->node->details->uname:"<none>");
 
 			action->runnable = FALSE;
 #endif	
 		} else if(action->node->details->online == FALSE) {
 			action->runnable = FALSE;
-			crm_log_maybe(warn_level, "Action %s on %s is unrunnable (offline)",
+			do_crm_log(warn_level, "Action %s on %s is unrunnable (offline)",
 				 action->uuid, action->node->details->uname);
 			if(action->rsc->is_managed
 			   && save_action
 			   && a_task == stop_rsc) {
-				crm_log_maybe(warn_level, "Marking node %s unclean",
+				do_crm_log(warn_level, "Marking node %s unclean",
 					 action->node->details->uname);
 				action->node->details->unclean = TRUE;
 			}
@@ -539,23 +539,20 @@ void
 unpack_operation(
 	action_t *action, crm_data_t *xml_obj, pe_working_set_t* data_set)
 {
-	int lpc = 0;
+	int value_i = 0;
+	int start_delay = 0;
+	char *value_ms = NULL;
 	const char *class = NULL;
 	const char *value = NULL;
-	const char *fields[] = {
-		XML_LRM_ATTR_INTERVAL,
-		"timeout",
-		"start_delay",
-	};
-
+	const char *field = NULL;
+	
 	CRM_CHECK(action->rsc != NULL, return);
 	
 	if(xml_obj != NULL) {
 		value = crm_element_value(xml_obj, "prereq");
 	}
 	if(value == NULL && safe_str_eq(action->task, CRMD_ACTION_START)) {
-		value = g_hash_table_lookup(
-			action->rsc->meta, "start_prereq");
+		value = g_hash_table_lookup(action->rsc->meta, "start_prereq");
 	}
 	
 	if(value == NULL && safe_str_neq(action->task, CRMD_ACTION_START)) {
@@ -663,6 +660,11 @@ unpack_operation(
 			value = "resource block (default)";
 		}
 		
+	} else if(value == NULL
+		  && safe_str_eq(action->task, CRMD_ACTION_MIGRATED)) {
+		action->on_fail = action_migrate_failure;		
+		value = "atomic migration recovery (default)";
+		
 	} else if(value == NULL) {
 		action->on_fail = action_fail_recover;		
 		value = "restart (and possibly migrate) (default)";
@@ -702,26 +704,43 @@ unpack_operation(
 		unpack_instance_attributes(xml_obj, XML_TAG_ATTR_SETS,
 					   NULL, action->meta, NULL, data_set->now);
 	}
-	
-       if(g_hash_table_lookup(action->meta, "timeout") == NULL) {
-               g_hash_table_insert(
-		       action->meta, crm_strdup("timeout"),
-		       crm_strdup(pe_pref(data_set->config_hash, "default-action-timeout")));
-       }
-	
-	for(;lpc < DIMOF(fields); lpc++) {
-		value = g_hash_table_lookup(action->meta, fields[lpc]);
-		if(value != NULL) {
-			char *tmp_ms = NULL;
-			int tmp_i = crm_get_msec(value);
-			if(tmp_i < 0) {
-				tmp_i = 0;
-			}
-			tmp_ms = crm_itoa(tmp_i);
-			g_hash_table_replace(
-				action->meta, crm_strdup(fields[lpc]), tmp_ms);
+
+	field = XML_LRM_ATTR_INTERVAL;
+	value = g_hash_table_lookup(action->meta, field);
+	if(value != NULL) {
+		value_i = crm_get_msec(value);
+		if(value_i < 0) {
+			value_i = 0;
 		}
+		value_ms = crm_itoa(value_i);
+		g_hash_table_replace(action->meta, crm_strdup(field), value_ms);
 	}
+
+	field = "start_delay";
+	value = g_hash_table_lookup(action->meta, field);
+	if(value != NULL) {
+		value_i = crm_get_msec(value);
+		if(value_i < 0) {
+			value_i = 0;
+		}
+		start_delay = value_i;
+		value_ms = crm_itoa(value_i);
+		g_hash_table_replace(action->meta, crm_strdup(field), value_ms);
+	}
+
+	field = "timeout";
+	value = g_hash_table_lookup(action->meta, field);
+	if(value == NULL) {
+		value = pe_pref(
+			data_set->config_hash, "default-action-timeout");
+	}
+	value_i = crm_get_msec(value);
+	if(value_i < 0) {
+		value_i = 0;
+	}
+	value_i += start_delay;
+	value_ms = crm_itoa(value_i);
+	g_hash_table_replace(action->meta, crm_strdup(field), value_ms);
 }
 
 crm_data_t *
@@ -812,7 +831,7 @@ print_resource(
 	long options = pe_print_log;
 	
 	if(rsc == NULL) {
-		crm_log_maybe(log_level-1, "%s%s: <NULL>",
+		do_crm_log(log_level-1, "%s%s: <NULL>",
 			      pre_text==NULL?"":pre_text,
 			      pre_text==NULL?"":": ");
 		return;
@@ -831,7 +850,7 @@ log_action(unsigned int log_level, const char *pre_text, action_t *action, gbool
 	
 	if(action == NULL) {
 
-		crm_log_maybe(log_level, "%s%s: <NULL>",
+		do_crm_log(log_level, "%s%s: <NULL>",
 			      pre_text==NULL?"":pre_text,
 			      pre_text==NULL?"":": ");
 		return;
@@ -853,7 +872,7 @@ log_action(unsigned int log_level, const char *pre_text, action_t *action, gbool
 	switch(text2task(action->task)) {
 		case stonith_node:
 		case shutdown_crm:
-			crm_log_maybe(log_level,
+			do_crm_log(log_level,
 				      "%s%s%sAction %d: %s%s%s%s%s%s",
 				      pre_text==NULL?"":pre_text,
 				      pre_text==NULL?"":": ",
@@ -866,7 +885,7 @@ log_action(unsigned int log_level, const char *pre_text, action_t *action, gbool
 				      node_uuid?")":"");
 			break;
 		default:
-			crm_log_maybe(log_level,
+			do_crm_log(log_level,
 				      "%s%s%sAction %d: %s %s%s%s%s%s%s",
 				      pre_text==NULL?"":pre_text,
 				      pre_text==NULL?"":": ",
@@ -883,22 +902,22 @@ log_action(unsigned int log_level, const char *pre_text, action_t *action, gbool
 	}
 
 	if(details) {
-		crm_log_maybe(log_level+1, "\t\t====== Preceeding Actions");
+		do_crm_log(log_level+1, "\t\t====== Preceeding Actions");
 		slist_iter(
 			other, action_wrapper_t, action->actions_before, lpc,
 			log_action(log_level+1, "\t\t", other->action, FALSE);
 			);
 #if 1
-		crm_log_maybe(log_level+1, "\t\t====== Subsequent Actions");
+		do_crm_log(log_level+1, "\t\t====== Subsequent Actions");
 		slist_iter(
 			other, action_wrapper_t, action->actions_after, lpc,
 			log_action(log_level+1, "\t\t", other->action, FALSE);
 			);		
 #endif
-		crm_log_maybe(log_level+1, "\t\t====== End");
+		do_crm_log(log_level+1, "\t\t====== End");
 
 	} else {
-		crm_log_maybe(log_level, "\t\t(seen=%d, before=%d, after=%d)",
+		do_crm_log(log_level, "\t\t(seen=%d, before=%d, after=%d)",
 			      action->seen_count,
 			      g_list_length(action->actions_before),
 			      g_list_length(action->actions_after));
@@ -1097,9 +1116,11 @@ resource_location(resource_t *rsc, node_t *node, int score, const char *tag,
 	}
 
 	if(node == NULL && score == -INFINITY) {
-		rsc->provisional = FALSE;
-		crm_free(rsc->allocated_to);
-		rsc->allocated_to = NULL;
+		if(rsc->allocated_to) {
+			crm_info("Deallocating %s from %s", rsc->id, rsc->allocated_to->details->uname);
+			crm_free(rsc->allocated_to);
+			rsc->allocated_to = NULL;
+		}
 	}
 }
 
@@ -1139,28 +1160,6 @@ order_actions(
 	}
 }
 
-const char *
-get_interval(crm_data_t *xml_op) 
-{
-	const char *interval_s = NULL;
-        interval_s  = crm_element_value(xml_op, XML_LRM_ATTR_INTERVAL);
-#if CRM_DEPRECATED_SINCE_2_0_4
-	if(interval_s == NULL) {
-		crm_data_t *params = NULL;
-		params = find_xml_node(xml_op, XML_TAG_PARAMS, FALSE);
-		if(params != NULL) {
-			interval_s = crm_element_value(
-				params, XML_LRM_ATTR_INTERVAL);
-		}
-	}
-#endif
-	
-	CRM_CHECK(interval_s != NULL,
-		  crm_err("Invalid rsc op: %s", ID(xml_op)); return "0");
-	
-	return interval_s;
-}
-
 #define sort_return(an_int) crm_free(a_uuid); crm_free(b_uuid); return an_int
 
 gint
@@ -1176,6 +1175,8 @@ sort_op_by_callid(gconstpointer a, gconstpointer b)
 
 	const char *a_xml_id = ID(a);
 	const char *b_xml_id = ID(b);
+
+	int dummy = -1;
 	
 	int a_id = -1;
 	int b_id = -1;
@@ -1226,9 +1227,11 @@ sort_op_by_callid(gconstpointer a, gconstpointer b)
 	/* now process pending ops */
 	CRM_CHECK(a_key != NULL && b_key != NULL, sort_return(0));
 	CRM_CHECK(decode_transition_magic(
-			       a_key,&a_uuid,&a_id,&a_status, &a_rc), sort_return(0));
+			  a_key, &a_uuid, &a_id, &dummy, &a_status, &a_rc),
+		  sort_return(0));
 	CRM_CHECK(decode_transition_magic(
-			       b_key,&b_uuid,&b_id,&b_status, &b_rc), sort_return(0));
+			  b_key, &b_uuid, &b_id, &dummy, &b_status, &b_rc),
+		  sort_return(0));
 
 	/* try and determin the relative age of the operation...
 	 * some pending operations (ie. a start) may have been supuerceeded

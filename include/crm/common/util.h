@@ -37,9 +37,6 @@ extern gboolean crm_config_warning;
 
 extern gboolean crm_log_init(const char *entity);
 
-extern void do_crm_log(int log_level, const char *file, const char *function,
-		       const char *format, ...) G_GNUC_PRINTF(4,5);
-
 /* returns the old value */
 extern unsigned int set_crm_log_level(unsigned int level);
 
@@ -118,12 +115,12 @@ extern char *generate_transition_magic(
 
 extern gboolean decode_transition_magic(
 	const char *magic, char **uuid,
-	int *transition_id, int *op_status, int *op_rc);
+	int *transition_id, int *action_id, int *op_status, int *op_rc);
 
-extern char *generate_transition_key(int transition_id, const char *node);
+extern char *generate_transition_key(int action, int transition_id, const char *node);
 
 extern gboolean decode_transition_key(
-	const char *key, char **uuid, int *transition_id);
+	const char *key, char **uuid, int *action, int *transition_id);
 
 extern char *crm_concat(const char *prefix, const char *suffix, char join);
 
@@ -131,8 +128,11 @@ extern gboolean decode_op_key(
 	const char *key, char **rsc_id, char **op_type, int *interval);
 
 extern void filter_action_parameters(crm_data_t *param_set, const char *version);
+extern void filter_reload_parameters(crm_data_t *param_set, const char *restart_string);
 
-extern gboolean safe_str_eq(const char *a, const char *b);
+#define safe_str_eq(a, b) crm_str_eq(a, b, FALSE)
+
+extern gboolean crm_str_eq(const char *a, const char *b, gboolean use_case);
 extern gboolean safe_str_neq(const char *a, const char *b);
 extern int crm_parse_int(const char *text, const char *default_text);
 extern int crm_int_helper(const char *text, char **end_text);
@@ -184,5 +184,12 @@ extern gboolean check_time(const char *value);
 extern gboolean check_timer(const char *value);
 extern gboolean check_boolean(const char *value);
 extern gboolean check_number(const char *value);
+
+extern int char2score(const char *score);
+extern char *score2char(int score);
+
+extern gboolean crm_is_writable(
+	const char *dir, const char *file,
+	const char *user, const char *group, gboolean need_both);
 
 #endif

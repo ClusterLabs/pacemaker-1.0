@@ -15,6 +15,7 @@
           <attributes>
             <nvpair name="clone_max" value="3"/>
             <nvpair name="clone_node_max" value="1"/>
+            <nvpair name="resource_stickiness" value="1"/>
           </attributes>
         </instance_attributes>
 	<primitive id="child_rsc1" class="heartbeat" type="apache"/>
@@ -24,6 +25,7 @@
           <attributes>
             <nvpair name="clone_max" value="3"/>
             <nvpair name="clone_node_max" value="1"/>
+            <nvpair name="resource_stickiness" value="1"/>
           </attributes>
         </instance_attributes>
 	<primitive id="child_rsc2" class="heartbeat" type="apache"/>
@@ -33,6 +35,7 @@
           <attributes>
             <nvpair name="clone_max" value="3"/>
             <nvpair name="clone_node_max" value="1"/>
+            <nvpair name="resource_stickiness" value="1"/>
           </attributes>
         </instance_attributes>
 	<primitive id="child_rsc3" class="heartbeat" type="apache"/>
@@ -42,6 +45,7 @@
           <attributes>
             <nvpair name="clone_max" value="3"/>
             <nvpair name="clone_node_max" value="1"/>
+            <nvpair name="resource_stickiness" value="1"/>
           </attributes>
         </instance_attributes>
 	<primitive id="child_rsc4" class="heartbeat" type="apache"/>
@@ -51,6 +55,7 @@
           <attributes>
             <nvpair name="clone_max" value="3"/>
             <nvpair name="clone_node_max" value="1"/>
+            <nvpair name="resource_stickiness" value="1"/>
           </attributes>
         </instance_attributes>
 	<primitive id="child_rsc5" class="heartbeat" type="apache"/>
@@ -60,6 +65,7 @@
           <attributes>
             <nvpair name="clone_max" value="3"/>
             <nvpair name="clone_node_max" value="1"/>
+            <nvpair name="resource_stickiness" value="1"/>
           </attributes>
         </instance_attributes>
 	<primitive id="child_rsc6" class="heartbeat" type="apache"/>
@@ -69,6 +75,7 @@
           <attributes>
             <nvpair name="clone_max" value="3"/>
             <nvpair name="clone_node_max" value="1"/>
+            <nvpair name="resource_stickiness" value="1"/>
           </attributes>
         </instance_attributes>
 	<primitive id="child_rsc7" class="heartbeat" type="apache"/>
@@ -78,6 +85,7 @@
           <attributes>
             <nvpair name="clone_max" value="3"/>
             <nvpair name="clone_node_max" value="1"/>
+            <nvpair name="resource_stickiness" value="1"/>
           </attributes>
         </instance_attributes>
 	<primitive id="child_rsc8" class="heartbeat" type="apache"/>
@@ -102,28 +110,28 @@
       <lrm>
         <lrm_resources>
           <lrm_resource id="rsc1:child_rsc1:0" class="heartbeat" type="apache">
-            <lrm_rsc_op id="rsc1:child_rsc1:0" operation="start" op_digest="f2317cad3d54cec5d7d7aa7d0bf35cf8" interval="0" op_status="0" rc_code="0" call_id="1" crm_feature_set="1.0.6" transition_magic=""/>
+            <lrm_rsc_op id="rsc1:child_rsc1:0_start_0" operation="start" op_digest="f2317cad3d54cec5d7d7aa7d0bf35cf8" interval="0" op_status="0" rc_code="0" call_id="1" crm_feature_set="1.0.6" transition_magic=""/>
 	  </lrm_resource>
           <lrm_resource id="rsc2:child_rsc2:0" class="heartbeat" type="apache">
-            <lrm_rsc_op id="rsc2:child_rsc2:0" operation="start" op_digest="f2317cad3d54cec5d7d7aa7d0bf35cf8" interval="0" op_status="0" rc_code="0" call_id="1" crm_feature_set="1.0.6" transition_magic=""/>
+            <lrm_rsc_op id="rsc2:child_rsc2:0_start_0" operation="start" op_digest="f2317cad3d54cec5d7d7aa7d0bf35cf8" interval="0" op_status="0" rc_code="0" call_id="1" crm_feature_set="1.0.6" transition_magic=""/>
 	  </lrm_resource>
           <lrm_resource id="rsc2:child_rsc2:1" class="heartbeat" type="apache">
-            <lrm_rsc_op id="rsc2:child_rsc2:1" operation="start" op_digest="f2317cad3d54cec5d7d7aa7d0bf35cf8" interval="0" op_status="0" rc_code="0" call_id="1" crm_feature_set="1.0.6" transition_magic=""/>
+            <lrm_rsc_op id="rsc2:child_rsc2:1_start_0" operation="start" op_digest="f2317cad3d54cec5d7d7aa7d0bf35cf8" interval="0" op_status="0" rc_code="0" call_id="1" crm_feature_set="1.0.6" transition_magic=""/>
 	  </lrm_resource>
           <lrm_resource id="rsc3:child_rsc3:0" class="heartbeat" type="apache">
-            <lrm_rsc_op id="rsc3:child_rsc3:0" operation="start" op_digest="f2317cad3d54cec5d7d7aa7d0bf35cf8" interval="0" op_status="0" rc_code="0" call_id="1" crm_feature_set="1.0.6" transition_magic=""/>
+            <lrm_rsc_op id="rsc3:child_rsc3:0_start_0" operation="start" op_digest="f2317cad3d54cec5d7d7aa7d0bf35cf8" interval="0" op_status="0" rc_code="0" call_id="1" crm_feature_set="1.0.6" transition_magic=""/>
 	  </lrm_resource>
           <lrm_resource id="rsc4:child_rsc4:0" class="heartbeat" type="apache">
-            <lrm_rsc_op id="rsc4:child_rsc4:0" operation="start" op_digest="f2317cad3d54cec5d7d7aa7d0bf35cf8" interval="0" op_status="0" rc_code="0" call_id="1" crm_feature_set="1.0.6" transition_magic=""/>
+            <lrm_rsc_op id="rsc4:child_rsc4:0_start_0" operation="start" op_digest="f2317cad3d54cec5d7d7aa7d0bf35cf8" interval="0" op_status="0" rc_code="0" call_id="1" crm_feature_set="1.0.6" transition_magic=""/>
 	  </lrm_resource>
           <lrm_resource id="rsc4:child_rsc4:1" class="heartbeat" type="apache">
-            <lrm_rsc_op id="rsc4:child_rsc4:1" operation="start" op_digest="f2317cad3d54cec5d7d7aa7d0bf35cf8" interval="0" op_status="0" rc_code="0" call_id="1" crm_feature_set="1.0.6" transition_magic=""/>
+            <lrm_rsc_op id="rsc4:child_rsc4:1_start_0" operation="start" op_digest="f2317cad3d54cec5d7d7aa7d0bf35cf8" interval="0" op_status="0" rc_code="0" call_id="1" crm_feature_set="1.0.6" transition_magic=""/>
 	  </lrm_resource>
           <lrm_resource id="rsc6:child_rsc6:0" class="heartbeat" type="apache">
-            <lrm_rsc_op id="rsc6:child_rsc6:0" operation="start" op_digest="f2317cad3d54cec5d7d7aa7d0bf35cf8" interval="0" op_status="0" rc_code="0" call_id="1" crm_feature_set="1.0.6" transition_magic=""/>
+            <lrm_rsc_op id="rsc6:child_rsc6:0_start_0" operation="start" op_digest="f2317cad3d54cec5d7d7aa7d0bf35cf8" interval="0" op_status="0" rc_code="0" call_id="1" crm_feature_set="1.0.6" transition_magic=""/>
 	  </lrm_resource>
           <lrm_resource id="rsc8:child_rsc8:0" class="heartbeat" type="apache">
-            <lrm_rsc_op id="rsc8:child_rsc8:0" operation="start" op_digest="f2317cad3d54cec5d7d7aa7d0bf35cf8" interval="0" op_status="0" rc_code="0" call_id="1" crm_feature_set="1.0.6" transition_magic=""/>
+            <lrm_rsc_op id="rsc8:child_rsc8:0_start_0" operation="start" op_digest="f2317cad3d54cec5d7d7aa7d0bf35cf8" interval="0" op_status="0" rc_code="0" call_id="1" crm_feature_set="1.0.6" transition_magic=""/>
 	  </lrm_resource>
         </lrm_resources>
       </lrm>
@@ -139,28 +147,28 @@
       <lrm>
         <lrm_resources>
           <lrm_resource id="rsc1:child_rsc1:1" class="heartbeat" type="apache">
-            <lrm_rsc_op id="rsc1:child_rsc1:1" operation="start" op_digest="f2317cad3d54cec5d7d7aa7d0bf35cf8" interval="0" op_status="0" rc_code="0" call_id="1" crm_feature_set="1.0.6" transition_magic=""/>
+            <lrm_rsc_op id="rsc1:child_rsc1:1_start_0" operation="start" op_digest="f2317cad3d54cec5d7d7aa7d0bf35cf8" interval="0" op_status="0" rc_code="0" call_id="1" crm_feature_set="1.0.6" transition_magic=""/>
 	  </lrm_resource>
           <lrm_resource id="rsc3:child_rsc3:1" class="heartbeat" type="apache">
-            <lrm_rsc_op id="rsc3:child_rsc3:1" operation="start" op_digest="f2317cad3d54cec5d7d7aa7d0bf35cf8" interval="0" op_status="0" rc_code="0" call_id="1" crm_feature_set="1.0.6" transition_magic=""/>
+            <lrm_rsc_op id="rsc3:child_rsc3:1_start_0" operation="start" op_digest="f2317cad3d54cec5d7d7aa7d0bf35cf8" interval="0" op_status="0" rc_code="0" call_id="1" crm_feature_set="1.0.6" transition_magic=""/>
 	  </lrm_resource>
           <lrm_resource id="rsc5:child_rsc5:0" class="heartbeat" type="apache">
-            <lrm_rsc_op id="rsc5:child_rsc5:0" operation="start" op_digest="f2317cad3d54cec5d7d7aa7d0bf35cf8" interval="0" op_status="0" rc_code="0" call_id="1" crm_feature_set="1.0.6" transition_magic=""/>
+            <lrm_rsc_op id="rsc5:child_rsc5:0_start_0" operation="start" op_digest="f2317cad3d54cec5d7d7aa7d0bf35cf8" interval="0" op_status="0" rc_code="0" call_id="1" crm_feature_set="1.0.6" transition_magic=""/>
 	  </lrm_resource>
           <lrm_resource id="rsc5:child_rsc5:1" class="heartbeat" type="apache">
-            <lrm_rsc_op id="rsc5:child_rsc5:1" operation="start" op_digest="f2317cad3d54cec5d7d7aa7d0bf35cf8" interval="0" op_status="0" rc_code="0" call_id="1" crm_feature_set="1.0.6" transition_magic=""/>
+            <lrm_rsc_op id="rsc5:child_rsc5:1_start_0" operation="start" op_digest="f2317cad3d54cec5d7d7aa7d0bf35cf8" interval="0" op_status="0" rc_code="0" call_id="1" crm_feature_set="1.0.6" transition_magic=""/>
 	  </lrm_resource>
           <lrm_resource id="rsc6:child_rsc6:1" class="heartbeat" type="apache">
-            <lrm_rsc_op id="rsc6:child_rsc6:1" operation="start" op_digest="f2317cad3d54cec5d7d7aa7d0bf35cf8" interval="0" op_status="0" rc_code="0" call_id="1" crm_feature_set="1.0.6" transition_magic=""/>
+            <lrm_rsc_op id="rsc6:child_rsc6:1_start_0" operation="start" op_digest="f2317cad3d54cec5d7d7aa7d0bf35cf8" interval="0" op_status="0" rc_code="0" call_id="1" crm_feature_set="1.0.6" transition_magic=""/>
 	  </lrm_resource>
           <lrm_resource id="rsc7:child_rsc7:0" class="heartbeat" type="apache">
-            <lrm_rsc_op id="rsc7:child_rsc7:0" operation="start" op_digest="f2317cad3d54cec5d7d7aa7d0bf35cf8" interval="0" op_status="0" rc_code="0" call_id="1" crm_feature_set="1.0.6" transition_magic=""/>
+            <lrm_rsc_op id="rsc7:child_rsc7:0_start_0" operation="start" op_digest="f2317cad3d54cec5d7d7aa7d0bf35cf8" interval="0" op_status="0" rc_code="0" call_id="1" crm_feature_set="1.0.6" transition_magic=""/>
 	  </lrm_resource>
           <lrm_resource id="rsc7:child_rsc7:1" class="heartbeat" type="apache">
-            <lrm_rsc_op id="rsc7:child_rsc7:1" operation="start" op_digest="f2317cad3d54cec5d7d7aa7d0bf35cf8" interval="0" op_status="0" rc_code="0" call_id="1" crm_feature_set="1.0.6" transition_magic=""/>
+            <lrm_rsc_op id="rsc7:child_rsc7:1_start_0" operation="start" op_digest="f2317cad3d54cec5d7d7aa7d0bf35cf8" interval="0" op_status="0" rc_code="0" call_id="1" crm_feature_set="1.0.6" transition_magic=""/>
 	  </lrm_resource>
           <lrm_resource id="rsc8:child_rsc8:1" class="heartbeat" type="apache">
-            <lrm_rsc_op id="rsc8:child_rsc8:1" operation="start" op_digest="f2317cad3d54cec5d7d7aa7d0bf35cf8" interval="0" op_status="0" rc_code="0" call_id="1" crm_feature_set="1.0.6" transition_magic=""/>
+            <lrm_rsc_op id="rsc8:child_rsc8:1_start_0" operation="start" op_digest="f2317cad3d54cec5d7d7aa7d0bf35cf8" interval="0" op_status="0" rc_code="0" call_id="1" crm_feature_set="1.0.6" transition_magic=""/>
 	  </lrm_resource>
         </lrm_resources>
       </lrm>
