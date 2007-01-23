@@ -10,6 +10,7 @@ heartbeat_api.txt
 rsync.txt
 startstop
 cibadmin.8
+crm_resource.8
 *.beam
 parser-messages
 MISC_ERRORS
