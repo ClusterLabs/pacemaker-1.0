@@ -92,14 +92,6 @@ enum rsc_start_requirement {
 	rsc_req_stonith
 };
 
-enum pe_ordering {
-	pe_ordering_manditory,
-	pe_ordering_restart,
-	pe_ordering_recover,
-	pe_ordering_postnotify,
-	pe_ordering_optional
-};
-
 enum rsc_role_e {
 	RSC_ROLE_UNKNOWN,
 	RSC_ROLE_STOPPED,

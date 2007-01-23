@@ -44,6 +44,13 @@ enum pe_stop_fail {
 	pesf_ignore
 };
 
+enum pe_ordering {
+	pe_order_implies_left		= 0x01, /* was: _mandatory */
+	pe_order_internal_restart	= 0x02, /* upgrades to: right_implies_left */
+	pe_order_implies_right		= 0x04, /* was: _recover  */
+	pe_order_postnotify		= 0x08,
+	pe_order_optional		= 0x10  /* pure ordering, nothing implied */
+};
 
 struct rsc_colocation_s { 
 		const char	*id;
@@ -84,6 +91,13 @@ struct order_constraint_s
 		/* (soon to be) variant specific */
 /* 		int   lh_rsc_incarnation; */
 /* 		int   rh_rsc_incarnation; */
+};
+
+typedef struct action_wrapper_s action_wrapper_t;
+struct action_wrapper_s 
+{
+		enum pe_ordering type;
+		action_t *action;
 };
 
 extern gboolean stage0(pe_working_set_t *data_set);
@@ -131,7 +145,7 @@ extern gboolean custom_action_order(
 #define order_restart(rsc1)						\
 	custom_action_order(rsc1, stop_key(rsc1), NULL,		\
 			    rsc1, start_key(rsc1), NULL,	\
-			    pe_ordering_restart, data_set)
+			    pe_order_internal_restart, data_set)
 
 #define order_stop_start(rsc1, rsc2, type)				\
 	custom_action_order(rsc1, stop_key(rsc1), NULL,		\

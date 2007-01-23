@@ -342,7 +342,7 @@ clone_update_pseudo_status(
 
 		} else if(safe_str_eq(CRMD_ACTION_START, action->task)) {
 			if(action->runnable == FALSE) {
-				crm_debug_3("Skipping pseduo-op: %s run=%d, pseudo=%d",
+				crm_debug_3("Skipping pseudo-op: %s run=%d, pseudo=%d",
 					    action->uuid, action->runnable, action->pseudo);
 			} else {
 				crm_debug_2("Starting due to: %s", action->uuid);
@@ -391,10 +391,12 @@ void clone_create_actions(resource_t *rsc, pe_working_set_t *data_set)
 		CRMD_ACTION_STARTED, NULL, !child_starting, TRUE, data_set);
 
 	start->pseudo = TRUE;
+	start->runnable = TRUE;
 	action_complete->pseudo = TRUE;
+	action_complete->runnable = TRUE;
 	action_complete->priority = INFINITY;
 	
-	child_starting_constraints(clone_data, pe_ordering_optional, 
+	child_starting_constraints(clone_data, pe_order_optional, 
 				   NULL, last_start_rsc, data_set);
 
 	clone_create_notifications(
@@ -408,10 +410,12 @@ void clone_create_actions(resource_t *rsc, pe_working_set_t *data_set)
 		CRMD_ACTION_STOPPED, NULL, !child_stopping, TRUE, data_set);
 
 	stop->pseudo = TRUE;
+	stop->runnable = TRUE;
 	action_complete->pseudo = TRUE;
+	action_complete->runnable = TRUE;
 	action_complete->priority = INFINITY;
 	
-	child_stopping_constraints(clone_data, pe_ordering_optional,
+	child_stopping_constraints(clone_data, pe_order_optional,
 				   NULL, last_stop_rsc, data_set);
 
 	
@@ -419,7 +423,7 @@ void clone_create_actions(resource_t *rsc, pe_working_set_t *data_set)
 	rsc->actions = clone_data->self->actions;	
 
 	if(stop->post_notified != NULL && start->pre_notify != NULL) {
-		order_actions(stop->post_notified, start->pre_notify, pe_ordering_optional);	
+		order_actions(stop->post_notified, start->pre_notify, pe_order_optional);	
 	}
 }
 
@@ -464,7 +468,6 @@ clone_create_notifications(
 	} else {
 		add_hash_param(notify->meta, "notify_confirm", "no");
 	}
-	notify->pseudo = TRUE;
 
 	/* create pre_notify_complete */
 	notify_key = generate_notify_key(
@@ -480,19 +483,21 @@ clone_create_notifications(
 		add_hash_param(notify->meta, "notify_confirm", "no");
 	}
 	notify->pseudo = TRUE;
+	notify->runnable = TRUE;
 	notify_complete->pseudo = TRUE;
+	notify_complete->runnable = TRUE;
 
 	/* pre_notify before pre_notify_complete */
 	custom_action_order(
 		clone_data->self, NULL, notify,
 		clone_data->self, NULL, notify_complete,
-		pe_ordering_manditory, data_set);
+		pe_order_implies_left, data_set);
 	
 	/* pre_notify_complete before action */
 	custom_action_order(
 		clone_data->self, NULL, notify_complete,
 		clone_data->self, NULL, action,
-		pe_ordering_manditory, data_set);
+		pe_order_implies_left, data_set);
 
 	action->pre_notify = notify;
 	action->pre_notified = notify_complete;
@@ -510,13 +515,12 @@ clone_create_notifications(
 	} else {
 		add_hash_param(notify->meta, "notify_confirm", "no");
 	}
-	notify->pseudo = TRUE;
 
 	/* action_complete before post_notify */
 	custom_action_order(
 		clone_data->self, NULL, action_complete,
 		clone_data->self, NULL, notify, 
-		pe_ordering_postnotify, data_set);
+		pe_order_postnotify, data_set);
 	
 	/* create post_notify_complete */
 	notify_key = generate_notify_key(
@@ -531,13 +535,17 @@ clone_create_notifications(
 	} else {
 		add_hash_param(notify->meta, "notify_confirm", "no");
 	}
+
+	notify->pseudo = TRUE;
+	notify->runnable = TRUE;
 	notify_complete->pseudo = TRUE;
+	notify_complete->runnable = TRUE;
 
 	/* post_notify before post_notify_complete */
 	custom_action_order(
 		clone_data->self, NULL, notify,
 		clone_data->self, NULL, notify_complete,
-		pe_ordering_manditory, data_set);
+		pe_order_implies_left, data_set);
 
 	action->post_notify = notify;
 	action->post_notified = notify_complete;
@@ -548,21 +556,21 @@ clone_create_notifications(
 		custom_action_order(
 			clone_data->self, NULL, notify_complete,
 			clone_data->self, start_key(clone_data->self), NULL,
-			pe_ordering_optional, data_set);
+			pe_order_optional, data_set);
 
 	} else if(safe_str_eq(action->task, CRMD_ACTION_START)) {
 		/* post_notify_complete before promote */
 		custom_action_order(
 			clone_data->self, NULL, notify_complete,
 			clone_data->self, promote_key(clone_data->self), NULL,
-			pe_ordering_optional, data_set);
+			pe_order_optional, data_set);
 
 	} else if(safe_str_eq(action->task, CRMD_ACTION_DEMOTE)) {
 		/* post_notify_complete before promote */
 		custom_action_order(
 			clone_data->self, NULL, notify_complete,
 			clone_data->self, stop_key(clone_data->self), NULL,
-			pe_ordering_optional, data_set);
+			pe_order_optional, data_set);
 	}
 }
 
@@ -573,7 +581,7 @@ child_starting_constraints(
 {
 	if(clone_data->ordered
 	   || clone_data->self->restart_type == pe_restart_restart) {
-		type = pe_ordering_manditory;
+		type = pe_order_implies_left;
 	}
 	if(child == NULL) {
 		if(clone_data->ordered && last != NULL) {
@@ -607,7 +615,7 @@ child_starting_constraints(
 		/* global start before child start */
 /* 		order_start_start(clone_data->self, child, type); */
 		order_start_start(
-			clone_data->self, child, pe_ordering_manditory);
+			clone_data->self, child, pe_order_implies_left);
 	}
 }
 
@@ -618,7 +626,7 @@ child_stopping_constraints(
 {
 	if(clone_data->ordered
 	   || clone_data->self->restart_type == pe_restart_restart) {
-		type = pe_ordering_manditory;
+		type = pe_order_implies_left;
 	}
 	
 	if(child == NULL) {
@@ -626,7 +634,7 @@ child_stopping_constraints(
 			crm_debug_4("Ordered version (last node)");
 			/* global stop before first child stop */
 			order_stop_stop(clone_data->self, last,
-					pe_ordering_manditory);
+					pe_order_implies_left);
 		}
 		
 	} else if(clone_data->ordered && last != NULL) {
@@ -671,19 +679,19 @@ clone_internal_constraints(resource_t *rsc, pe_working_set_t *data_set)
 	custom_action_order(
 		clone_data->self, stop_key(clone_data->self), NULL,
 		clone_data->self, stopped_key(clone_data->self), NULL,
-		pe_ordering_optional, data_set);
+		pe_order_optional, data_set);
 
 	/* global start before started */
 	custom_action_order(
 		clone_data->self, start_key(clone_data->self), NULL,
 		clone_data->self, started_key(clone_data->self), NULL,
-		pe_ordering_optional, data_set);
+		pe_order_optional, data_set);
 	
 	/* global stopped before start */
 	custom_action_order(
 		clone_data->self, stopped_key(clone_data->self), NULL,
 		clone_data->self, start_key(clone_data->self), NULL,
-		pe_ordering_optional, data_set);
+		pe_order_optional, data_set);
 	
 	slist_iter(
 		child_rsc, resource_t, clone_data->child_list, lpc,
@@ -691,11 +699,11 @@ clone_internal_constraints(resource_t *rsc, pe_working_set_t *data_set)
 		child_rsc->cmds->internal_constraints(child_rsc, data_set);
 
 		child_starting_constraints(
-			clone_data, pe_ordering_optional,
+			clone_data, pe_order_optional,
 			child_rsc, last_rsc, data_set);
 
 		child_stopping_constraints(
-			clone_data, pe_ordering_optional,
+			clone_data, pe_order_optional,
 			child_rsc, last_rsc, data_set);
 
 		last_rsc = child_rsc;
@@ -703,11 +711,11 @@ clone_internal_constraints(resource_t *rsc, pe_working_set_t *data_set)
 		);
 
 	child_starting_constraints(
-		clone_data, pe_ordering_optional,
+		clone_data, pe_order_optional,
 		NULL, last_rsc, data_set);
 	
 	child_stopping_constraints(
-		clone_data, pe_ordering_optional,
+		clone_data, pe_order_optional,
 		NULL, last_rsc, data_set);
 }
 
