@@ -6,6 +6,7 @@
 # Support:      linux-ha@lists.linux-ha.org
 #
 #set -x
+. @sysconfdir@/ha.d/shellfuncs
 
 OCF_ROOT_DIR=@OCF_ROOT_DIR@
 OCF_RA_DIR=@OCF_RA_DIR@
