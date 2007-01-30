@@ -59,3 +59,12 @@ Description: Subsystem for High-Availability Linux - development files
  time. 
  .
  This package contains development files
+
+Package: heartbeat-2-gui
+Section: admin
+Priority: optional
+Architecture: any
+Depends: heartbeat-2 (= ${Source-Version}), ${python:Depends},  python-gtk2, python-glade2
+XB-Python-Version: ${python:Versions}
+Description: Provides a gui interface to manage heartbeat clusters
+ GUI client for heartbeat clusters
