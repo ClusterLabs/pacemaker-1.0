@@ -41,7 +41,7 @@ Group: Utilities
 %if %{ENABLE_MGMT}
 %package gui
 Requires: @RPM_MGMT_RUNTIME_REQUIRES@
-Summary: Provides a gui interface to manage the heartbeat cluster
+Summary: Provides a gui interface to manage heartbeat clusters
 Group: Utilities
 %endif
 
@@ -89,7 +89,7 @@ implementing any number of interfaces.
 
 %if %{ENABLE_MGMT}
 %description gui
-GUI client for heartbeat cluster
+GUI client for heartbeat clusters
 %endif
 
 %changelog
