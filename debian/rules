@@ -102,6 +102,7 @@ install-stamp:
 	cd $(DTMP)/etc/ha.d/resource.d \
 	  && ln -s /usr/sbin/ldirectord ldirectord
 	cd $(DTMP)/etc/ && ln -s ha.d heartbeat
+	cd $(DTMP)/usr/bin/ && ln -s ../lib/heartbeat-gui/haclient.py hb_gui
 	dh_movefiles --source=debian/tmp
 
 binary-indep: build install

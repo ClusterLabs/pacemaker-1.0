@@ -51,5 +51,5 @@ OCF_TYPE=IPsrcaddr
 OCF_RESOURCE_INSTANCE=${OCF_TYPE}
 export OCF_TYPE OCF_RESOURCE_INSTANCE
 
-OCF_RESKEY_ipaddress=$1; export OCF_RESKEY_ipaddres
+OCF_RESKEY_ipaddress=$1; export OCF_RESKEY_ipaddress
 ra_execocf $2
