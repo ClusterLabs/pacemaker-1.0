@@ -26,6 +26,7 @@ EXTRA_DIST		= apply changelog compat control copyright \
 			  heartbeat-2.postinst heartbeat-2.postrm \
 			  heartbeat-2.preinst \
 			  heartbeat-2-dev.dirs heartbeat-2-dev.files \
+			  heartbeat-2-gui.dirs heartbeat-2-gui.files \
 			  ldirectord-2.files ldirectord-2.postinst \
 			  ldirectord-2.postrm \
 			  patches/chown-check-2.patch \
