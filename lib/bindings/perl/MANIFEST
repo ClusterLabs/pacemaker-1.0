@@ -1,7 +1,0 @@
-Makefile.PL
-MANIFEST
-lib/heartbeat/clplumbing/log.pm
-lib/heartbeat/clplumbing/ipc.pm
-cl_raw/raw.i
-cl_raw/raw.pm
-
