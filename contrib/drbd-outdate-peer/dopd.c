@@ -20,6 +20,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#include <config.h>
 #include <portability.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -94,17 +95,23 @@ send_message_to_the_peer(const char *drbd_peer, const char *drbd_resource)
  * outdate command, convert return code and send message to other node
  * with return code.
  *
- * Conversion of return codes:
- *     0 => 4
- *     5 => 3
- *    17 => 6
- * other => 5
+ * Conversion of return codes of "drbdadm outdate <resourcename>":
+ *     0 => 4 (was successfully outdated)
+ *     5 => 3 (is inconsistent, anyways)
+ *    17 => 6 (is primary, cannot be outdated)
+ * other => 20 (which is "officially undefined",
+ *              unspecified error, could not be outdated)
+ *
+ * since we do not stonith,
+ * we cannot return "7" peer got stonithed [ node fencing ].
+ * and since we have obviously been reached,
+ * we must not return "5" (down/unreachable).
  */
 void
 msg_start_outdate(struct ha_msg *msg, void *private)
 {
 	ll_cluster_t *hb = (ll_cluster_t *)private;
-	int rc = 5;
+	int rc = 20;
 	int command_ret;
 
 	char rc_string[4];
@@ -118,18 +125,33 @@ msg_start_outdate(struct ha_msg *msg, void *private)
 	strcat(command, " ");
 	strcat(command, drbd_resource);
 	crm_debug("command: %s", command);
-	command_ret = system(command) >> 8;
+	command_ret = system(command);
 
-	/* convert return code */
-	if (command_ret == 0)
-		rc = 4;
-	else if (command_ret == 5)
-		rc = 3;
-	else if (command_ret == 17)
-		rc = 6;
-	else
-		crm_info("unknown exit code from %s: %i",
-				command, command_ret);
+	if (WIFEXITED(command_ret)) {
+		/* normal exit */
+		command_ret = WEXITSTATUS(command_ret);
+
+		/* convert return code */
+		if (command_ret == 0)
+			rc = 4;
+		else if (command_ret == 5)
+			rc = 3;
+		else if (command_ret == 17)
+			rc = 6;
+		else
+			crm_info("unknown exit code from %s: %i",
+					command, command_ret);
+	} else {
+		/* something went wrong */
+                if (WIFSIGNALED(command_ret)) {
+			crm_info("killed by signal %i: %s",
+					WTERMSIG(command_ret), command);
+		} else {
+			crm_info("strange status code from %s: 0x%x",
+					command, command_ret);
+		}
+	}
+
 	crm_free(command);
 
 	crm_debug("msg_start_outdate: %s, command rc: %i, rc: %i",
@@ -264,11 +286,11 @@ outdater_callback(IPC_Channel *client, gpointer user_data)
 			send_message_to_the_peer(drbd_peer, drbd_resource);
 		else {
 			/* wrong peer was specified,
-			   send return code 5 to the client */
+			   send return code 20 to the client */
 			msg_client = ha_msg_new(3);
 			ha_msg_add(msg_client, F_TYPE, "outdate_rc");
 			ha_msg_add(msg_client, F_ORIG, node_name);
-			ha_msg_add(msg_client, F_DOPD_VALUE, "5");
+			ha_msg_add(msg_client, F_DOPD_VALUE, "20");
 			msg_outdate_rc(msg_client, NULL);
 		}
 
