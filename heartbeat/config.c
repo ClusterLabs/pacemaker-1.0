@@ -2502,6 +2502,12 @@ set_corerootdir(const char* value)
  */
 
 
+#if WITH_VALGRIND
+#  define CRM_PREFIX VALGRIND_BIN" --show-reachable=yes --leak-check=full --time-stamp=yes --gen-suppressions=all "VALGRIND_LOG" "VALGRIND_OPTS
+#else
+#  define CRM_PREFIX ""
+#endif
+
 static int
 set_release2mode(const char* value)
 {
@@ -2532,11 +2538,12 @@ set_release2mode(const char* value)
 	,	{"apiauth", "pingd   	uid=root"}
 
 	,	{"respawn", " "HA_CCMUSER " " HALIB "/ccm"}
-	,	{"respawn", " "HA_CCMUSER " " HALIB "/cib"}
+	,	{"respawn", " "HA_CCMUSER " "CRM_PREFIX" "HALIB"/cib" }
+		
 	,	{"respawn", "root "           HALIB "/lrmd -r"}
 	,	{"respawn", "root "	      HALIB "/stonithd"}
-	,	{"respawn", " "HA_CCMUSER " " HALIB "/attrd"}
-	,	{"respawn", " "HA_CCMUSER " " HALIB "/crmd"}
+	,	{"respawn", " "HA_CCMUSER " "CRM_PREFIX" "HALIB"/attrd" }
+	,	{"respawn", " "HA_CCMUSER " "CRM_PREFIX" "HALIB"/crmd" }
 #ifdef MGMT_ENABLED
 	,	{"respawn", "root "  	      HALIB "/mgmtd -v"}
 #endif
