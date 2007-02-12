@@ -44,7 +44,7 @@
 #include <clplumbing/GSource.h>
 #include <clplumbing/realtime.h>
 
-#include <ha_config.h>
+#include <portability.h>
 #include <heartbeat.h>
 #include <hb_api_core.h>
 #include <hb_api.h>

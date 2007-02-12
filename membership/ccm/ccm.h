@@ -50,7 +50,6 @@
 #include <clplumbing/realtime.h>
 #include <base64.h>
 
-#include <ha_config.h>
 #include <heartbeat.h>
 #include <hb_api.h>
 
