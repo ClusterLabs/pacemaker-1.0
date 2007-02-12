@@ -36,9 +36,7 @@
 #	define	FLUSH(fd)	tcflush(fd, TCIOFLUSH)
 #endif
 
-#ifdef HAVE_CONFIG_H
-#include <config.h>
-#endif
+#include <portability.h>
 
 #include <limits.h>
 #include <syslog.h>
