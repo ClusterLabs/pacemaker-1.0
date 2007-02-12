@@ -69,7 +69,7 @@ mgmt_connect(const char* server, const char* user
 	memset(&addr, 0, sizeof(addr));
 	addr.sin_family = AF_INET;
 	addr.sin_addr.s_addr = inet_addr(server);
-	if (port == NULL) {
+	if (port == NULL || STRNCMP_CONST(port,"None")) {
 		addr.sin_port = htons(PORT);
 	}
 	else {
