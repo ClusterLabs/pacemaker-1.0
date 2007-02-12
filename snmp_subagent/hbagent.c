@@ -23,10 +23,6 @@
 
 #include <portability.h>
 
-#ifdef HAVE_CONFIG_H
-#include <config.h>
-#endif
-
 #include "hbagent.h"
 
 #include "hb_api.h"

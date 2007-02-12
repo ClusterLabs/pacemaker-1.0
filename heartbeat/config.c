@@ -21,9 +21,6 @@
  */
 
 #include <portability.h>
-#ifdef HAVE_CONFIG_H
-#include <config.h>
-#endif
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -2503,7 +2500,7 @@ set_corerootdir(const char* value)
 
 
 #if WITH_VALGRIND
-#  define CRM_PREFIX VALGRIND_BIN" --show-reachable=yes --leak-check=full --time-stamp=yes --gen-suppressions=all "VALGRIND_LOG" "VALGRIND_OPTS
+#  define CRM_PREFIX VALGRIND_BIN" --show-reachable=yes --leak-check=full --time-stamp=yes --suppressions="VALGRIND_SUPP" "VALGRIND_LOG
 #else
 #  define CRM_PREFIX ""
 #endif

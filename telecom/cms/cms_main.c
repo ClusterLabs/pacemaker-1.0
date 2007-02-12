@@ -22,8 +22,6 @@
  *
  */
 
-#include <ha_config.h>
-#include <config.h>
 #include <portability.h>
 #include <stdio.h>
 #include <sys/types.h>

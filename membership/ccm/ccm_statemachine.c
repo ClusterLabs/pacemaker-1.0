@@ -22,7 +22,6 @@
  */
 #include <ccm.h>
 #include <config.h>
-#include <ha_config.h>
 #ifdef HAVE_STDINT_H
 #include <stdint.h>
 #endif

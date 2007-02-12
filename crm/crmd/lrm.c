@@ -42,7 +42,6 @@
 
 #include <lrm/raexec.h>
 
-#include <crm/dmalloc_wrapper.h>
 
 char *make_stop_id(const char *rsc, int call_id);
 gboolean verify_stopped(gboolean force, int log_level);
@@ -284,15 +283,20 @@ get_rsc_metadata(const char *type, const char *class, const char *provider)
 		fsa_lrm_conn, class, type, provider);
 
 	if(metadata) {
- 		g_hash_table_insert(meta_hash, key, metadata);
+		/* copy the metadata because the LRM likes using
+		 *   g_alloc instead of cl_malloc
+		 */
+		char *m_copy = crm_strdup(metadata);
+ 		g_hash_table_insert(meta_hash, key, m_copy);
 		key = NULL; /* prevent it from being free'd */
-
+		g_free(metadata);
+		metadata = m_copy;
+		
 	} else {
 		crm_warn("No metadata found for %s", key);
 	}		
 
   out:
-	
 	crm_free(key);
 	return metadata;
 }
@@ -328,7 +332,7 @@ get_rsc_restart_list(lrm_rsc_t *rsc, lrm_op_t *op)
 		);
 
 	if(supported == FALSE) {
-		return NULL;
+		goto cleanup;
 	}
 	
 	params = find_xml_node(metadata, "parameters", TRUE);
@@ -342,7 +346,7 @@ get_rsc_restart_list(lrm_rsc_t *rsc, lrm_op_t *op)
 				restart_list, crm_strdup(value));
 		}
 		);
-
+  cleanup:
 	free_xml(metadata);
 	return restart_list;
 }
@@ -379,7 +383,7 @@ append_restart_list(crm_data_t *update, lrm_op_t *op, const char *version)
 
 	restart_list = get_rsc_restart_list(rsc, op);
 	if(restart_list == NULL) {
-		crm_info("Resource %s does not support reloads", op->rsc_id);
+		crm_debug("Resource %s does not support reloads", op->rsc_id);
 		return;
 	}
 
@@ -399,6 +403,9 @@ append_restart_list(crm_data_t *update, lrm_op_t *op, const char *version)
 	crm_xml_add(update, XML_LRM_ATTR_RESTART_DIGEST, digest);
 
 	crm_debug("%s : %s", digest, list);
+	slist_destroy(char, child, restart_list,
+		      crm_free(child);
+		);
 	free_xml(restart);
 	crm_free(digest);
 	crm_free(list);

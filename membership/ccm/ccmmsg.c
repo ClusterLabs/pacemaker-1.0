@@ -18,7 +18,6 @@
 #include "ccmmsg.h"
 #include "ccmmisc.h"
 #include <config.h>
-#include <ha_config.h>
 #include <clplumbing/cl_plugin.h>
 #include <clplumbing/cl_quorum.h>
 #include <clplumbing/cl_tiebreaker.h>
