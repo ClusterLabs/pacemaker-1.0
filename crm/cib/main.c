@@ -51,6 +51,11 @@
 #include <cibio.h>
 #include <callbacks.h>
 
+#if HAVE_LIBXML2
+#  include <libxml/parser.h>
+#endif
+
+extern int init_remote_listener(int port);
 
 gboolean cib_shutdown_flag = FALSE;
 gboolean stand_alone = FALSE;
@@ -89,9 +94,6 @@ char *channel4 = NULL;
 char *channel5 = NULL;
 
 #define OPTARGS	"hVsf"
-#if HAVE_LIBXML2
-#  include <libxml/parser.h>
-#endif
 void cib_cleanup(void);
 
 static void
@@ -257,17 +259,19 @@ int
 cib_init(void)
 {
 	gboolean was_error = FALSE;
+	if(startCib("cib.xml") == FALSE){
+		crm_crit("Cannot start CIB... terminating");
+		exit(1);
+	}
+
 	if(stand_alone == FALSE) {
 		hb_conn = ll_cluster_new("heartbeat");
 		if(cib_register_ha(hb_conn, CRM_SYSTEM_CIB) == FALSE) {
 			crm_crit("Cannot sign in to heartbeat... terminating");
 			exit(1);
 		}
-	}
-
-	if(startCib("cib.xml") == FALSE){
-		crm_crit("Cannot start CIB... terminating");
-		exit(1);
+	} else {
+		cib_our_uname = crm_strdup("localhost");
 	}
 
 	channel1 = crm_strdup(cib_channel_callback);
@@ -294,7 +298,7 @@ cib_init(void)
 	was_error = was_error || init_server_ipc_comms(
 		channel5, cib_client_connect_ro_synch,
 		default_ipc_connection_destroy);
-	
+
 	if(stand_alone) {
 		if(was_error) {
 			crm_err("Couldnt start");
@@ -555,7 +559,11 @@ startCib(const char *filename)
 	CRM_ASSERT(cib != NULL);
 	
 	if(activateCibXml(cib, filename) == 0) {
+		int port = 0;
 		active = TRUE;
+		ha_msg_value_int(cib, "remote_access_port", &port);
+		init_remote_listener(port);
+
 		crm_info("CIB Initialization completed successfully");
 		if(per_action_cib) {
 			uninitializeCib();
