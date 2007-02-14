@@ -275,11 +275,13 @@ SearchUsingRouteCmd (char *address, struct in_addr *in
 
 	
 	/* Open route and get the information */
-	snprintf (routecmd, errmsglen, "%s %s %s", ROUTE, ROUTEPARM, address);
+	snprintf (routecmd, sizeof(routecmd), "%s %s %s"
+	,	ROUTE, ROUTEPARM, address);
 	routefd = popen (routecmd, "r");
 	if (routefd == NULL)
 		return (-1);
 	mask[0] = EOS;
+	interface[0] = EOS;
 
 
 	while ((done < 3) && fgets(buf, sizeof(buf), routefd)) {
@@ -355,6 +357,10 @@ SearchUsingRouteCmd (char *address, struct in_addr *in
 	}
 
 	if ((in->s_addr & maskbits) == (addr_out->s_addr & maskbits)) {
+		if (interface[0] == EOS) {
+			snprintf(errmsg, errmsglen, "No interface found.");
+			return(1);
+		}
 		best_metric = 0;
 		*best_netmask = maskbits;
 		strncpy(best_if, interface, best_iflen);
