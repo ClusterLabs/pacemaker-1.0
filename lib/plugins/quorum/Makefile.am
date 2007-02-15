@@ -54,8 +54,8 @@ weight_la_LIBADD		= $(top_builddir)/replace/libreplace.la
 
 if QUORUMD_BUILD
 quorumd_la_SOURCES		= quorumd.c
-quorumd_la_LDFLAGS		= -export-dynamic -module -avoid-version -lz `libgnutls-config --libs`
+quorumd_la_LDFLAGS		= -export-dynamic -module -avoid-version -lz $(GNUTLSLIBS)
 quorumd_la_LIBADD		= $(top_builddir)/replace/libreplace.la $(COMMONLIBS)
-quorumd_la_CFLAGS		= $(INCLUDES) `libgnutls-config --cflags`
+quorumd_la_CFLAGS		= $(INCLUDES) $(GNUTLSHEAD)
 endif
 

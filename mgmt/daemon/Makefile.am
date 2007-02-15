@@ -52,7 +52,7 @@ mgmtd_LDADD 	=  $(top_builddir)/lib/mgmt/libhbmgmtclient.la \
 lib_LTLIBRARIES = libhbmgmt.la
 libhbmgmt_la_SOURCES = mgmt_lib.c mgmt_crm.c mgmt_lrm.c mgmt_hb.c
 libhbmgmt_la_CFLAGS = $(INCLUDES)
-libhbmgmt_la_LDFLAGS = `libgnutls-config --libs`
+libhbmgmt_la_LDFLAGS = $(GNUTLSLIBS)
 libhbmgmt_la_LIBADD = $(top_builddir)/lib/mgmt/libhbmgmttls.la 		\
 		  	$(top_builddir)/lib/crm/cib/libcib.la		\
 		   	$(top_builddir)/lib/crm/common/libcrmcommon.la	\
