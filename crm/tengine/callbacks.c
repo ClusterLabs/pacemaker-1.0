@@ -306,6 +306,7 @@ tengine_stonith_callback(stonith_ops_t * op)
 	CRM_CHECK(decode_transition_key(
 			  op->private_data, &uuid, &transition_id, &stonith_id),
 		  crm_err("Invalid event detected");
+		  goto bail;
 		);
 	
 	if(transition_graph->complete
@@ -320,7 +321,7 @@ tengine_stonith_callback(stonith_ops_t * op)
 	
 	if(stonith_action == NULL) {
 		crm_err("Stonith action not matched");
-		return;
+		goto bail;
 	}
 
 	switch(op->op_result) {
@@ -351,6 +352,9 @@ tengine_stonith_callback(stonith_ops_t * op)
 	
 	update_graph(transition_graph, stonith_action);
 	trigger_graph();
+
+  bail:
+	crm_free(uuid);
 	return;
 }
 
