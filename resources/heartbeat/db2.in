@@ -1,6 +1,5 @@
 #!/bin/sh
 #
-# $Id: db2.in,v 1.6 2006/08/14 09:37:21 andrew Exp $
 # 
 # Description:	wrapper of OCF RA db2, based on original heartbeat RA.
 #		See OCF RA db2 for more information. 

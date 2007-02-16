@@ -1,4 +1,3 @@
-/* $Id: replica.c,v 1.18 2005/03/16 17:11:15 lars Exp $ */
 /* 
  * replica.c: 
  *

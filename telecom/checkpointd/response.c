@@ -1,4 +1,3 @@
-/* $Id: response.c,v 1.11 2005/03/16 17:11:15 lars Exp $ */
 /* 
  * response.c
  *

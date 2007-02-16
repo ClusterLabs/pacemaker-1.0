@@ -1,4 +1,3 @@
-/* $Id: heartbeat_private.h,v 1.17 2005/12/09 19:51:33 blaschke Exp $ */
 /*
  * heartbeat_private.h: definitions for the Linux-HA heartbeat program
  * that are defined in heartbeat.c and are used by other .c files

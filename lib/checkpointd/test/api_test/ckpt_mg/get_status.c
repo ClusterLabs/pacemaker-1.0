@@ -1,4 +1,3 @@
-/* $Id: get_status.c,v 1.2 2004/07/15 14:33:48 msoffen Exp $ */
 /* 
  * get_status.c: data checkpoint API test:saCkptCheckpointStatusGet
  *

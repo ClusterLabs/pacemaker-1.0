@@ -1,4 +1,3 @@
-#	$Id: heartbeat.spec.in,v 1.201 2006/08/15 08:29:44 andrew Exp $
 
 %define _unpackaged_files_terminate_build 1
 %define _missing_doc_files_terminate_build 1

@@ -1,4 +1,3 @@
-/* $Id: ccmversion.c,v 1.8 2006/02/17 05:48:24 zhenh Exp $ */
 /* 
  * ccmversion.c: routines that handle information while in the version 
  * request state

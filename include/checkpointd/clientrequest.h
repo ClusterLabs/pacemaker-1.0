@@ -1,4 +1,3 @@
-/* $Id: clientrequest.h,v 1.9 2004/11/18 01:56:59 yixiong Exp $ */
 /* checkpoint request.h */
 #ifndef _CKPT_CLIENT_REQUEST_H
 #define _CKPT_CLIENT_REQUEST_H

@@ -1,4 +1,3 @@
-/* $Id: sync2node1.c,v 1.3 2004/10/09 01:49:41 lge Exp $ */
 /* 
  * sync2node1.c: Test data checkpoint function : saCkptCheckpointSynchronize 
  *

@@ -1,4 +1,3 @@
-/* $Id: ha_msg.h,v 1.83 2006/06/09 05:30:37 sunjd Exp $ */
 /*
  * Intracluster message object (struct ha_msg)
  *

@@ -1,4 +1,3 @@
-/* $Id: fdget.c,v 1.1 2004/06/30 03:37:27 deng.pan Exp $ */
 /* 
  * fdget.c: data checkpoint API test: saCkptSelectionObjectGet
  *

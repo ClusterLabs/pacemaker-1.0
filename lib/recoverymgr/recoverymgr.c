@@ -1,4 +1,3 @@
-/* $Id: recoverymgr.c,v 1.4 2004/11/22 20:06:42 gshi Exp $ */
 /*
  * recoverymgr.c: recovery manager client library code.
  *

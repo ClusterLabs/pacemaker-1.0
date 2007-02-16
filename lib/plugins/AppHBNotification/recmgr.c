@@ -1,4 +1,3 @@
-/* $Id: recmgr.c,v 1.6 2004/11/08 09:07:51 sunjd Exp $ */
 /*
  * recmgr.c: Recovery manager client plug-in implementation
  * 

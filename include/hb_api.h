@@ -1,4 +1,3 @@
-/* $Id: hb_api.h,v 1.47 2006/05/28 00:56:57 zhenh Exp $ */
 /*
  * Client-side Low-level clustering API for heartbeat.
  *

@@ -1,4 +1,3 @@
-/* $Id: hb_signal.c,v 1.18 2005/09/28 20:29:55 gshi Exp $ */
 /*
  * hb_signal.c: signal handling routines to be used by Heartbeat
  *

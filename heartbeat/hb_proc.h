@@ -1,4 +1,3 @@
-/* $Id: hb_proc.h,v 1.19 2005/07/29 06:55:37 sunjd Exp $ */
 /*
  * hb_proc.h: definitions of heartbeat child process info
  *

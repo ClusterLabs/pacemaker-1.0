@@ -1,4 +1,3 @@
-/* $Id: hb_api_core.h,v 1.19 2006/05/28 00:56:57 zhenh Exp $ */
 /*
  * hb_api_core_h: Internal definitions and functions for the heartbeat API
  *

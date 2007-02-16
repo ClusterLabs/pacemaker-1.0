@@ -1,4 +1,3 @@
-/* $Id: apphbtest.c,v 1.25 2005/07/29 06:21:10 sunjd Exp $ */
 /*
  * apphbtest:	application heartbeat test program
  *

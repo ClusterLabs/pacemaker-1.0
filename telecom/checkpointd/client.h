@@ -1,4 +1,3 @@
-/* $Id: client.h,v 1.2 2004/02/17 22:12:02 lars Exp $ */
 #ifndef _CKPT_CLIENT_H
 #define _CKPT_CLIENT_H
 

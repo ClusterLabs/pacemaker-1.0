@@ -1,4 +1,3 @@
-/* $Id: iterator_finalize.c,v 1.2 2004/07/15 14:33:49 msoffen Exp $ */
 /* 
  * iterator_finalize.c: Test data checkpoint API : saCkptSectionIteratorNext
  *

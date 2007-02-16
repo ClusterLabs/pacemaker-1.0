@@ -1,4 +1,3 @@
-/* $Id: gXMLscan.c,v 1.4 2004/10/09 01:49:42 lge Exp $ */
 /*
  * gXMLscan.c - gXMLscan implementation file
  *

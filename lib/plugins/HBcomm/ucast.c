@@ -1,4 +1,3 @@
-/* $Id: ucast.c,v 1.27 2005/10/15 02:37:52 gshi Exp $ */
 /*
  * Adapted from alanr's UDP broadcast heartbeat bcast.c by Stéphane Billiart
  *	<stephane@reefedge.com>

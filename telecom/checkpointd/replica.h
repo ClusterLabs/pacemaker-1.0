@@ -1,4 +1,3 @@
-/* $Id: replica.h,v 1.11 2004/11/18 01:56:59 yixiong Exp $ */
 #ifndef _CKPT_REPLICA_H
 #define _CKPT_REPLICA_H
 

@@ -1,6 +1,5 @@
 #!/bin/sh
 #
-#	$Id: heartbeat.in,v 1.45 2006/08/08 16:03:49 davidlee Exp $
 #
 # heartbeat     Start high-availability services
 #

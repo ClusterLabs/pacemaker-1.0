@@ -1,4 +1,3 @@
-/* $Id: message.c,v 1.16 2006/01/15 16:27:46 xunsun Exp $ */
 /* 
  * message.c
  *

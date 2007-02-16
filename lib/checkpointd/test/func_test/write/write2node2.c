@@ -1,4 +1,3 @@
-/* $Id: write2node2.c,v 1.3 2004/10/09 01:49:41 lge Exp $ */
 /* 
  * write2node2.c: Test data checkpoint function : saCkptCheckpointWrite 
  *

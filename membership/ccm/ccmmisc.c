@@ -1,4 +1,3 @@
-/* $Id: ccmmisc.c,v 1.29 2006/02/17 05:48:24 zhenh Exp $ */
 /* 
  * ccmmisc.c: Miscellaneous Consensus Cluster Service functions
  *

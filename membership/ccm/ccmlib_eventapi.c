@@ -1,4 +1,3 @@
-/* $Id: ccmlib_eventapi.c,v 1.11 2005/11/30 02:02:59 panjiam Exp $ */
 /* 
  * ccmlib_eventapi.c: OCF event API.
  *

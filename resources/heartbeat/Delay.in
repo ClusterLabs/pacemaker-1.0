@@ -1,6 +1,5 @@
 #!/bin/sh
 #
-#	$Id: Delay.in,v 1.6 2006/08/14 09:37:21 andrew Exp $
 #
 # License:      GNU General Public License (GPL)
 # Support:      linux-ha@lists.linux-ha.org

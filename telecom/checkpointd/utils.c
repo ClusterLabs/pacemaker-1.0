@@ -1,4 +1,3 @@
-/* $Id: utils.c,v 1.8 2004/11/18 01:56:59 yixiong Exp $ */
 /* 
  * utils.c
  *

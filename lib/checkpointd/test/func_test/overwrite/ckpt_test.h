@@ -1,4 +1,3 @@
-/* $Id: ckpt_test.h,v 1.2 2004/11/08 08:09:10 andrew Exp $ */
 /* 
  * ckpt_test.h: Data checkpoint Test Head File 
  *

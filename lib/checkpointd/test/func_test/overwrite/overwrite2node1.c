@@ -1,4 +1,3 @@
-/* $Id: overwrite2node1.c,v 1.1 2004/06/30 03:44:20 deng.pan Exp $ */
 /* 
  * overwrite2node1.c: Test data checkpoint function : saCkptSectionOverwrite 
  *

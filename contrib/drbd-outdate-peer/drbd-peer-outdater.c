@@ -1,4 +1,3 @@
-/* $Id$ */
 /* drbd-peer-outdater
  * Copyright (C) 2006 LINBIT <http://www.linbit.com/>
  *

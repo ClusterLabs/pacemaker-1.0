@@ -1,4 +1,3 @@
-/* $Id: hb_config.h,v 1.5 2005/12/09 16:07:38 blaschke Exp $ */
 /*
  * Parse various heartbeat configuration files...
  *

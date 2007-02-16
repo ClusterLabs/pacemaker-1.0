@@ -1,4 +1,3 @@
-/* $Id: ccmbitmap.c,v 1.7 2005/10/04 15:45:49 gshi Exp $ */
 /* 
  * ccmbitmap.c: functions that manipulate bitmaps
  *

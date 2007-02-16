@@ -1,4 +1,3 @@
-/* $Id: client_lib.c,v 1.42 2006/05/31 17:31:57 gshi Exp $ */
 /* 
  * client_lib: heartbeat API client side code
  *

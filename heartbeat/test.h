@@ -1,4 +1,3 @@
-/* $Id: test.h,v 1.10 2005/07/29 07:03:47 sunjd Exp $ */
 /*
  * test.h: header for special test code inside of heartbeat
  *

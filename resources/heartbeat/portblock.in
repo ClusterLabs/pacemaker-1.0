@@ -1,6 +1,5 @@
 #!/bin/sh
 #
-# $Id: portblock.in,v 1.5 2006/08/14 09:37:21 andrew Exp $
 #
 # Description:	wrapper of OCF RA portblock, based on original heartbeat RA.
 #		See OCF RA portblock for more information.

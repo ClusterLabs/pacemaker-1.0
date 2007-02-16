@@ -1,4 +1,3 @@
-/* $Id: checkpointd.c,v 1.16 2005/03/16 17:11:15 lars Exp $ */
 /* 
  * checkpointd.c: data checkpoint service
  *

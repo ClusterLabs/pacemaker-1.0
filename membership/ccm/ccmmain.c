@@ -1,4 +1,3 @@
-/* $Id: ccmmain.c,v 1.34 2006/03/09 09:59:44 zhenh Exp $ */
 /* 
  * ccm.c: Consensus Cluster Service Program 
  *

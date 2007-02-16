@@ -1,4 +1,3 @@
-/* $Id: operation.c,v 1.12 2005/03/16 17:11:15 lars Exp $ */
 /* 
  * operation.c: 
  *

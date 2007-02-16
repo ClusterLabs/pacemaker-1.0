@@ -1,4 +1,3 @@
-/* $Id: eventd.c,v 1.8 2004/11/22 20:06:42 gshi Exp $ */
 /* 
  * eventd.c: source file for event daemon
  *

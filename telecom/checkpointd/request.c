@@ -1,4 +1,3 @@
-/* $Id: request.c,v 1.13 2005/03/16 17:11:15 lars Exp $ */
 /* 
  * request.c: 
  *

@@ -1,4 +1,3 @@
-/* $Id: response.h,v 1.4 2004/11/18 01:56:59 yixiong Exp $ */
 #ifndef _CKPT_RESPONSE_H
 #define _CKPT_RESPONSE_H
 

@@ -1,4 +1,3 @@
-/* $Id: heartbeat.h,v 1.86 2006/05/28 00:50:45 zhenh Exp $ */
 /*
  * heartbeat.h: core definitions for the Linux-HA heartbeat program
  *

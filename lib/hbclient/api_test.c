@@ -1,4 +1,3 @@
-/* $Id: api_test.c,v 1.8 2005/04/06 18:07:53 gshi Exp $ */
 /* 
  * api_test: Test program for testing the heartbeat API
  *

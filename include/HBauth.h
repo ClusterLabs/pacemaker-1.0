@@ -1,4 +1,3 @@
-/* $Id: HBauth.h,v 1.4 2005/07/28 08:26:00 sunjd Exp $ */
 /*
  * auth.h: Authentication functions for Linux-HA
  *

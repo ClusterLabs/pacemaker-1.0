@@ -1,6 +1,5 @@
 #!/bin/sh
 #
-#        $Id: LVSSyncDaemonSwap.in,v 1.7 2006/05/11 01:04:34 horms Exp $
 #
 #        Copyright (C) 2005 Horms <horms@verge.net.au>
 #

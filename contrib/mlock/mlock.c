@@ -1,4 +1,3 @@
-/* $Id: mlock.c,v 1.13 2005/07/29 03:15:42 sunjd Exp $ */
 /*
  *
  * multi-clients NFS lock test code

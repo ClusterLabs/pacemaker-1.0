@@ -1,6 +1,5 @@
 #!/bin/sh
 #
-# $Id: Xinetd.in,v 1.6 2006/08/14 09:37:21 andrew Exp $
 #
 # Description:	wrapper of OCF RA Xinetd, based on original heartbeat RA.
 #		See OCF RA Xinetd for more information.

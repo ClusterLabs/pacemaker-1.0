@@ -1,4 +1,3 @@
-/* $Id: XMLchars.h,v 1.2 2004/02/17 22:12:00 lars Exp $ */
 /*
  * XML special character map
  */

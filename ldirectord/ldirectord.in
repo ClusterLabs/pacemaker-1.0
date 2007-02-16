@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-my($VERSION)=(qw$Id: ldirectord.in,v 1.42 2006/08/16 09:07:59 horms Exp $)[2];
+my $VERSION="Heartbeat-Mercurial"
 
 ######################################################################
 # ldirectord                 http://www.vergenet.net/linux/ldirectord/
