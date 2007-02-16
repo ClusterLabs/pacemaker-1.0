@@ -39,7 +39,7 @@ mgmtdtest_SOURCES  	= mgmtdtest.c
 mgmtdtest_LDADD 	= $(top_builddir)/lib/$(MGMT_DIR)/libhbmgmtclient.la \
 			  $(top_builddir)/lib/$(MGMT_DIR)/libhbmgmttls.la \
 			  $(top_builddir)/lib/$(MGMT_DIR)/libhbmgmtcommon.la
-mgmtdtest_LDFLAGS 	= `libgnutls-config --libs`
+mgmtdtest_LDFLAGS 	= $(GNUTLSLIBS)
 
 mozhCNdir		= $(datadir)/locale/zh_CN/LC_MESSAGES
 mozhCN_DATA		= haclient.zh_CN.mo
