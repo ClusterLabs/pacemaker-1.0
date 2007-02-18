@@ -2498,11 +2498,7 @@ set_corerootdir(const char* value)
  */
 
 
-#if WITH_VALGRIND
-#  define CRM_PREFIX VALGRIND_BIN" --show-reachable=yes --leak-check=full --time-stamp=yes --suppressions="VALGRIND_SUPP" "VALGRIND_LOG
-#else
-#  define CRM_PREFIX ""
-#endif
+#define VALGRIND_PREFIX VALGRIND_BIN" --show-reachable=yes --leak-check=full --time-stamp=yes --suppressions="VALGRIND_SUPP" "VALGRIND_LOG
 
 static int
 set_release2mode(const char* value)
@@ -2534,12 +2530,12 @@ set_release2mode(const char* value)
 	,	{"apiauth", "pingd   	uid=root"}
 
 	,	{"respawn", " "HA_CCMUSER " " HALIB "/ccm"}
-	,	{"respawn", " "HA_CCMUSER " "CRM_PREFIX" "HALIB"/cib" }
+	,	{"respawn", " "HA_CCMUSER " " HALIB "/cib" }
 		
 	,	{"respawn", "root "           HALIB "/lrmd -r"}
 	,	{"respawn", "root "	      HALIB "/stonithd"}
-	,	{"respawn", " "HA_CCMUSER " "CRM_PREFIX" "HALIB"/attrd" }
-	,	{"respawn", " "HA_CCMUSER " "CRM_PREFIX" "HALIB"/crmd" }
+	,	{"respawn", " "HA_CCMUSER " " HALIB "/attrd" }
+	,	{"respawn", " "HA_CCMUSER " " HALIB "/crmd" }
 #ifdef MGMT_ENABLED
 	,	{"respawn", "root "  	      HALIB "/mgmtd -v"}
 #endif
@@ -2557,25 +2553,47 @@ set_release2mode(const char* value)
 	,	{"respawn", " "HA_CCMUSER " " HALIB "/crmd"}
 		/* Don't 'respawn' pingd - it's a resource agent */
 	};
+
+    struct do_directive r2valgrind_dirs[] =	
+	{	/* CCM apiauth already implicit elsewhere */
+		{"apiauth", "cib 	uid=" HA_CCMUSER}
+	,	{"apiauth", "stonithd  	uid=root" }
+	,	{"apiauth", "attrd   	uid=" HA_CCMUSER}
+	,	{"apiauth", "crmd   	uid=" HA_CCMUSER}
+
+	,	{"respawn", " "HA_CCMUSER                   " "HALIB"/ccm"}
+	,	{"respawn", " "HA_CCMUSER " "VALGRIND_PREFIX" "HALIB"/cib"}
+	,	{"respawn", "root "                            HALIB"/lrmd -r"}
+	,	{"respawn", "root "	                       HALIB"/stonithd"}
+	,	{"respawn", " "HA_CCMUSER " "VALGRIND_PREFIX" "HALIB"/attrd" }
+	,	{"respawn", " "HA_CCMUSER " "VALGRIND_PREFIX" "HALIB"/crmd"}
+		/* Don't 'respawn' pingd - it's a resource agent */
+	};
     
 	gboolean	dorel2;
 	int		rc;
 	int		j, r2size;
 	int		rc2 = HA_OK;
 
-    r2dirs = &r2auto_dirs[0]; r2size = DIMOF(r2auto_dirs);
+	r2dirs = &r2auto_dirs[0]; r2size = DIMOF(r2auto_dirs);
     
 	if ((rc = cl_str_to_boolean(value, &dorel2)) == HA_OK) {
 		if (!dorel2) {
 			return HA_OK;
 		}
-	}else{
-        if (0 == strcasecmp("manual", value)) {
-            r2dirs = &r2manual_dirs[0];
-            r2size = DIMOF(r2manual_dirs);
-        } else {
-    		return rc;
-        }
+	} else {
+		if (0 == strcasecmp("manual", value)) {
+			r2dirs = &r2manual_dirs[0];
+			r2size = DIMOF(r2manual_dirs);
+			
+		} else if (0 == strcasecmp("valgrind", value)) {
+			r2dirs = &r2valgrind_dirs[0];
+			r2size = DIMOF(r2valgrind_dirs);
+			setenv("HA_VALGRIND_ENABLED", "1", 1);
+			
+		} else {
+			return rc;
+		}
 	}
 
 	DoManageResources = FALSE;
