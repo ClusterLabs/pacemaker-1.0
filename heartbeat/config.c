@@ -2542,7 +2542,7 @@ set_release2mode(const char* value)
 		/* Don't 'respawn' pingd - it's a resource agent */
 	};
 
-    struct do_directive r2manual_dirs[] =	
+    struct do_directive r2minimal_dirs[] =	
 	{	/* CCM apiauth already implicit elsewhere */
 		{"apiauth", "cib 	uid=" HA_CCMUSER}
 	,	{"apiauth", "crmd   	uid=" HA_CCMUSER}
@@ -2575,25 +2575,35 @@ set_release2mode(const char* value)
 	int		j, r2size;
 	int		rc2 = HA_OK;
 
-	r2dirs = &r2auto_dirs[0]; r2size = DIMOF(r2auto_dirs);
-    
-	if ((rc = cl_str_to_boolean(value, &dorel2)) == HA_OK) {
+	r2dirs = &r2auto_dirs[0];
+	r2size = DIMOF(r2auto_dirs);
+	cl_log(LOG_ERR, "%s : %s", __PRETTY_FUNCTION__, value);
+	if (0 == strcasecmp("minimal", value)
+		|| 0 == strcasecmp("manual", value)) {
+		r2dirs = &r2minimal_dirs[0];
+		r2size = DIMOF(r2minimal_dirs);
+
+	} else if (0 == strcasecmp("valgrind", value)) {
+		cl_log(LOG_ERR, "%s : enabling valgrind", __PRETTY_FUNCTION__);
+#if ENABLE_LIBC_MALLOC	
+		r2dirs = &r2valgrind_dirs[0];
+		r2size = DIMOF(r2valgrind_dirs);
+		setenv("HA_VALGRIND_ENABLED", "1", 1);
+#else
+		r2dirs = &r2auto_dirs[0];
+		r2size = DIMOF(r2valgrind_dirs); /* prevent gcc complaints */
+		r2size = DIMOF(r2auto_dirs);
+		cl_log(LOG_ERR,
+		       "Heartbeat was not compiled with --enable-libc-malloc,"
+		       " \"crm valgrind\" is therefor not supported.");
+#endif
+	} else if ((rc = cl_str_to_boolean(value, &dorel2)) == HA_OK) {
 		if (!dorel2) {
 			return HA_OK;
 		}
+		
 	} else {
-		if (0 == strcasecmp("manual", value)) {
-			r2dirs = &r2manual_dirs[0];
-			r2size = DIMOF(r2manual_dirs);
-			
-		} else if (0 == strcasecmp("valgrind", value)) {
-			r2dirs = &r2valgrind_dirs[0];
-			r2size = DIMOF(r2valgrind_dirs);
-			setenv("HA_VALGRIND_ENABLED", "1", 1);
-			
-		} else {
-			return rc;
-		}
+		return rc;
 	}
 
 	DoManageResources = FALSE;
