@@ -34,7 +34,7 @@
  *
  */
 
-#include <portability.h>
+#include <lha_internal.h>
 #include <time.h>
 #include <stdio.h>
 #include <stdlib.h>

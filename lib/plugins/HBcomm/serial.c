@@ -22,7 +22,7 @@
  *
  */
 
-#include <portability.h>
+#include <lha_internal.h>
 #include <unistd.h>
 #include <errno.h>
 #include <stdio.h>

@@ -18,7 +18,7 @@ A million repetitions of "a"
 /* #define SHA1HANDSOFF * Copies data before messing with it. */
 #define SHA1HANDSOFF 1
 
-#include <portability.h>
+#include <lha_internal.h>
 #include <stdio.h>
 #ifdef HAVE_STDINT_H
 #include <stdint.h>

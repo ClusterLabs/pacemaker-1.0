@@ -48,7 +48,6 @@ apphbd_SOURCES	= apphbd.c
 #
 #	We don't really need libpils/libltdl (yet...)
 #
-apphbd_CFLAGS		= -DHA_VARLIBDIR='"@HA_VARLIBDIR@"'
 apphbd_LDADD		= $(COMMONLIBS) 				\
 			$(top_builddir)/lib/pils/libpils.la		\
 			@LIBLTDL@ $(LIBRT)				
@@ -58,7 +57,6 @@ apphbd_LDFLAGS	= @LIBADD_DL@ @LIBLTDL@ -export-dynamic	@DLOPEN_FORCE_FLAGS@
 
 ## SOURCES
 apphbtest_SOURCES	= apphbtest.c
-apphbtest_CFLAGS	= -DHA_VARLIBDIR='"@HA_VARLIBDIR@"'
 apphbtest_LDADD		= $(COMMONLIBS) 				\
 			$(top_builddir)/lib/apphb/libapphb.la		
 

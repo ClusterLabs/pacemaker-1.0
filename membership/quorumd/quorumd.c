@@ -19,7 +19,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#include <portability.h>
+#include <lha_internal.h>
 
 #include <sys/types.h>
 #ifdef HAVE_SYS_SOCKET_H
@@ -52,10 +52,10 @@
 #include <clplumbing/cl_quorumd.h>
 
 /* x.509 related */
-#define SERVERKEY 	HB_HA_DIR"/server-key.pem"
-#define SERVERCERT	HB_HA_DIR"/server-cert.pem"
-#define CACERT		HB_HA_DIR"/ca-cert.pem"
-#define CACRL		HB_HA_DIR"/ca-crl.pem"
+#define SERVERKEY 	HA_HBCONF_DIR"/server-key.pem"
+#define SERVERCERT	HA_HBCONF_DIR"/server-cert.pem"
+#define CACERT		HA_HBCONF_DIR"/ca-cert.pem"
+#define CACRL		HA_HBCONF_DIR"/ca-crl.pem"
 #define DH_BITS 1024
 
 

@@ -37,6 +37,6 @@ struct HBAuthOps {
 };
 
 #define HB_AUTH_TYPE	HBauth
-#define HB_AUTH_TYPE_S	MKSTRING(HBauth)
+#define HB_AUTH_TYPE_S	"HBauth"
 
 #endif /*HBAUTH_H*/

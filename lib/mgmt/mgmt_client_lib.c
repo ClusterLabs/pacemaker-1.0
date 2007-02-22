@@ -20,7 +20,7 @@
  *
  */
 
-#include <portability.h>
+#include <lha_internal.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <stdarg.h>

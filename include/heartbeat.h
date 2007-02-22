@@ -35,8 +35,7 @@
 #	define	FLUSH(fd)	tcflush(fd, TCIOFLUSH)
 #endif
 
-#include <portability.h>
-
+#include <hb_config.h>
 #include <limits.h>
 #include <syslog.h>
 #include <netdb.h>
@@ -87,35 +86,24 @@
 #define	FIFOMODE	0600
 #define	RQSTDELAY	10
 #define	ACK_MSG_DIV	10
-#ifndef HA_D
-#	define	HA_D		HA_RC_DIR
-#endif
-#ifndef VAR_RUN_D
-#	define	VAR_RUN_D	HA_VARRUNDIR
-#endif
-#ifndef VAR_LOG_D
-#	define	VAR_LOG_D	HA_VARLOGDIR
-#endif
-#ifndef HALIB
-#	define HALIB		HA_LIBDIR
-#endif
-#ifndef HA_MODULE_D
-#	define HA_MODULE_D	HALIB "/modules"
-#endif
-#ifndef HA_PLUGIN_D
-#	define HA_PLUGIN_D	HALIB "/plugins"
-#endif
-#ifndef TTY_LOCK_D
-#	define	TTY_LOCK_D	HA_LOCKDIR
-#endif
 
-#ifndef RSC_TMPDIR
-#	define	RSC_TMPDIR	HA_VARRUNDIR "/heartbeat/rsctmp"
-#endif
+#define	RSC_TMPDIR	HA_VARRUNDIR "/heartbeat/rsctmp"
+#define HA_MODULE_D	HA_LIBDIR "/modules"
+#define HA_PLUGIN_D	HA_LIBDIR "/plugins"
+
+/* For compatability with older external facing headers
+ * These variables are no longer used internally
+ */
+#define	HA_D		HA_RC_DIR
+#define	HB_RC_DIR	HA_RC_DIR
+#define	VAR_RUN_D	HA_VARRUNDIR
+#define	VAR_LOG_D	HA_VARLOGDIR
+#define	VAR_LIB_D	HA_VARLIBHBDIR
+#define HALIB		HA_LIBDIR
 
 /* #define HA_DEBUG */
-#define	DEFAULTLOG	VAR_LOG_D "/ha-log"
-#define	DEFAULTDEBUG	VAR_LOG_D "/ha-debug"
+#define	DEFAULTLOG	HA_VARLOGDIR "/ha-log"
+#define	DEFAULTDEBUG	HA_VARLOGDIR "/ha-debug"
 #define	DEVNULL 	"/dev/null"
 
 #define	HA_OKEXIT	0
@@ -136,8 +124,8 @@
 #define	OFFLINESTATUS	"offline"	/* Status of an offline client */
 #define	LINKUP		"up"		/* The status assigned to a working link */
 #define	LOADAVG		"/proc/loadavg"
-#define	PIDFILE		VAR_RUN_D "/heartbeat.pid"
-#define KEYFILE         HA_D "/authkeys"
+#define	PIDFILE		HA_VARRUNDIR "/heartbeat.pid"
+#define KEYFILE         HA_RC_DIR "/authkeys"
 #define HA_SERVICENAME	"ha-cluster" 	/* Our official reg'd service name */
 #define	UDPPORT		694		/* Our official reg'd port number */
 
@@ -166,24 +154,16 @@
 
 #define HB_STATIC_PRIO	1	/* Used with soft realtime scheduling */
 
-#ifndef PPP_D
-#	define	PPP_D		VAR_RUN_D "/ppp.d"
-#endif
-#ifndef FIFONAME
-#	define	FIFONAME	VAR_LIB_D "/fifo"
-#endif
-#ifndef	HOSTUUIDCACHEFILE
-#	define	HOSTUUIDCACHEFILE	VAR_LIB_D "/hostcache"
-#endif
-#ifndef DELHOSTCACHEFILE
-#	define  DELHOSTCACHEFILE	VAR_LIB_D "/delhostcache"
-#endif
-#define		HOSTUUIDCACHEFILETMP	HOSTUUIDCACHEFILE ".tmp"
-#define		DELHOSTCACHEFILETMP	DELHOSTCACHEFILE ".tmp"
+#define	PPP_D			HA_VARRUNDIR "/ppp.d"
+#define	FIFONAME		HA_VARLIBHBDIR "/fifo"
+#define	HOSTUUIDCACHEFILE	HA_VARLIBHBDIR "/hostcache"
+#define DELHOSTCACHEFILE	HA_VARLIBHBDIR "/delhostcache"
+#define	HOSTUUIDCACHEFILETMP	HOSTUUIDCACHEFILE ".tmp"
+#define	DELHOSTCACHEFILETMP	DELHOSTCACHEFILE ".tmp"
 
-#define	RCSCRIPT		HA_D "/harc"
-#define CONFIG_NAME		HA_D "/ha.cf"
-#define RESOURCE_CFG		HA_D "/haresources"
+#define	RCSCRIPT		HA_HBCONF_DIR "/harc"
+#define CONFIG_NAME		HA_HBCONF_DIR "/ha.cf"
+#define RESOURCE_CFG		HA_HBCONF_DIR "/haresources"
 
 /* dynamic module directories */
 #define COMM_MODULE_DIR	HA_MODULE_D "/comm"
@@ -191,17 +171,8 @@
 
 #define	STATIC		/* static */
 
-/* You may need to change this for your compiler */
-#ifdef HAVE_STRINGIZE
-#	define	ASSERT(X)	{if(!(X)) ha_assert(#X, __LINE__, __FILE__);}
-#else
-#	define	ASSERT(X)	{if(!(X)) ha_assert("X", __LINE__, __FILE__);}
-#endif
-
-
-
 #define HA_DATEFMT	"%Y/%m/%d_%T\t"
-#define HA_FUNCS	HA_D "/shellfuncs"
+#define HA_FUNCS	HA_HBCONF_DIR "/shellfuncs"
 
 #define	RC_ARG0		"harc"
 #define ENV_PREFIX	"HA_"
@@ -282,10 +253,6 @@ typedef enum {
 }hbjointype_t;
 
 #define MAXAUTH	16
-
-#ifndef PATH_MAX
-# define PATH_MAX MAXPATHLEN
-#endif
 
 struct sys_config {
 	TIME_T		cfg_time;		/* Timestamp of config file */

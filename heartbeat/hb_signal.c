@@ -22,7 +22,7 @@
  */
 
 #define _USE_BSD
-#include <portability.h>
+#include <lha_internal.h>
 #include <sys/types.h>
 #include <sys/time.h>
 #include <sys/resource.h>

@@ -19,7 +19,7 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
  */
 
-#include <portability.h>
+#include <lha_internal.h>
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -2529,15 +2529,15 @@ set_release2mode(const char* value)
 #endif
 	,	{"apiauth", "pingd   	uid=root"}
 
-	,	{"respawn", " "HA_CCMUSER " " HALIB "/ccm"}
-	,	{"respawn", " "HA_CCMUSER " " HALIB "/cib" }
+	,	{"respawn", " "HA_CCMUSER " " HA_LIBDIR "/ccm"}
+	,	{"respawn", " "HA_CCMUSER " " HA_LIBDIR "/cib" }
 		
-	,	{"respawn", "root "           HALIB "/lrmd -r"}
-	,	{"respawn", "root "	      HALIB "/stonithd"}
-	,	{"respawn", " "HA_CCMUSER " " HALIB "/attrd" }
-	,	{"respawn", " "HA_CCMUSER " " HALIB "/crmd" }
+	,	{"respawn", "root "           HA_LIBDIR "/lrmd -r"}
+	,	{"respawn", "root "	      HA_LIBDIR "/stonithd"}
+	,	{"respawn", " "HA_CCMUSER " " HA_LIBDIR "/attrd" }
+	,	{"respawn", " "HA_CCMUSER " " HA_LIBDIR "/crmd" }
 #ifdef MGMT_ENABLED
-	,	{"respawn", "root "  	      HALIB "/mgmtd -v"}
+	,	{"respawn", "root "  	      HA_LIBDIR "/mgmtd -v"}
 #endif
 		/* Don't 'respawn' pingd - it's a resource agent */
 	};
@@ -2547,10 +2547,10 @@ set_release2mode(const char* value)
 		{"apiauth", "cib 	uid=" HA_CCMUSER}
 	,	{"apiauth", "crmd   	uid=" HA_CCMUSER}
 
-	,	{"respawn", " "HA_CCMUSER " " HALIB "/ccm"}
-	,	{"respawn", " "HA_CCMUSER " " HALIB "/cib"}
-	,	{"respawn", "root "           HALIB "/lrmd"}
-	,	{"respawn", " "HA_CCMUSER " " HALIB "/crmd"}
+	,	{"respawn", " "HA_CCMUSER " " HA_LIBDIR "/ccm"}
+	,	{"respawn", " "HA_CCMUSER " " HA_LIBDIR "/cib"}
+	,	{"respawn", "root "           HA_LIBDIR "/lrmd"}
+	,	{"respawn", " "HA_CCMUSER " " HA_LIBDIR "/crmd"}
 		/* Don't 'respawn' pingd - it's a resource agent */
 	};
 
@@ -2561,12 +2561,12 @@ set_release2mode(const char* value)
 	,	{"apiauth", "attrd   	uid=" HA_CCMUSER}
 	,	{"apiauth", "crmd   	uid=" HA_CCMUSER}
 
-	,	{"respawn", " "HA_CCMUSER                   " "HALIB"/ccm"}
-	,	{"respawn", " "HA_CCMUSER " "VALGRIND_PREFIX" "HALIB"/cib"}
-	,	{"respawn", "root "                            HALIB"/lrmd -r"}
-	,	{"respawn", "root "	                       HALIB"/stonithd"}
-	,	{"respawn", " "HA_CCMUSER " "VALGRIND_PREFIX" "HALIB"/attrd" }
-	,	{"respawn", " "HA_CCMUSER " "VALGRIND_PREFIX" "HALIB"/crmd"}
+	,	{"respawn", " "HA_CCMUSER                   " "HA_LIBDIR"/ccm"}
+	,	{"respawn", " "HA_CCMUSER " "VALGRIND_PREFIX" "HA_LIBDIR"/cib"}
+	,	{"respawn", "root "                            HA_LIBDIR"/lrmd -r"}
+	,	{"respawn", "root "	                       HA_LIBDIR"/stonithd"}
+	,	{"respawn", " "HA_CCMUSER " "VALGRIND_PREFIX" "HA_LIBDIR"/attrd" }
+	,	{"respawn", " "HA_CCMUSER " "VALGRIND_PREFIX" "HA_LIBDIR"/crmd"}
 		/* Don't 'respawn' pingd - it's a resource agent */
 	};
     

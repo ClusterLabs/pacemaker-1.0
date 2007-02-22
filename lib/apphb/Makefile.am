@@ -33,9 +33,9 @@ lib_LTLIBRARIES		= libapphb.la
 libapphb_la_SOURCES	= apphb.c	
 
 if ENABLE_THREAD_SAFE
-libapphb_la_CFLAGS	= -DTHREAD_SAFE -D_REENTRANT -DHA_VARLIBDIR='"@HA_VARLIBDIR@"'
+libapphb_la_CFLAGS	= -DTHREAD_SAFE -D_REENTRANT
 else
-libapphb_la_CFLAGS	= -lpthread -DHA_VARLIBDIR='"@HA_VARLIBDIR@"'
+libapphb_la_CFLAGS	= -lpthread
 endif
 
 libapphb_la_LDFLAGS	= -version-info 0:0:0 

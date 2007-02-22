@@ -192,7 +192,7 @@
  *
  */
 
-#include <portability.h>
+#include <lha_internal.h>
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -3876,12 +3876,12 @@ restart_heartbeat(void)
 		if (nice_failback) {
 			cl_log(LOG_INFO, "Current resources: -R -C %s"
 			,	decode_resources(procinfo->i_hold_resources));
-			execl(HALIB "/heartbeat", "heartbeat", "-R"
+			execl(HA_LIBDIR "/heartbeat", "heartbeat", "-R"
 			,	"-C"
 			,	decode_resources(procinfo->i_hold_resources)
 			,	(const char *)NULL);
 		}else{
-			execl(HALIB "/heartbeat", "heartbeat", "-R"
+			execl(HA_LIBDIR "/heartbeat", "heartbeat", "-R"
 			,	(const char *)NULL);
 		}
 	}else{
@@ -3889,9 +3889,9 @@ restart_heartbeat(void)
 		sleep((config->deadtime_ms+999)/1000+1);
 		/* "Normal" restart (not quick) */
 		cl_unlock_pidfile(PIDFILE);
-		execl(HALIB "/heartbeat", "heartbeat", (const char *)NULL);
+		execl(HA_LIBDIR "/heartbeat", "heartbeat", (const char *)NULL);
 	}
-	cl_log(LOG_ERR, "Could not exec " HALIB "/heartbeat");
+	cl_log(LOG_ERR, "Could not exec " HA_LIBDIR "/heartbeat");
 	cl_log(LOG_ERR, "Shutting down...");
 	hb_emergency_shutdown();
 }
@@ -4922,7 +4922,7 @@ make_daemon(void)
 
 	cl_log_enable_stderr(FALSE);
 
-	setenv(HADIRENV, HA_D, TRUE);
+	setenv(HADIRENV, HB_RC_DIR, TRUE);
 	setenv(DATEFMT, HA_DATEFMT, TRUE);
 	setenv(HAFUNCENV, HA_FUNCS, TRUE);
 	umask(022);
@@ -6120,7 +6120,7 @@ nak_rexmit(struct msg_xmit_hist * hist,
 int
 ParseTestOpts()
 {
-	const char *	openpath = HA_D "/OnlyForTesting";
+	const char *	openpath = HB_RC_DIR "/OnlyForTesting";
 	FILE *	fp;
 	static struct TestParms p;
 	char	name[64];
@@ -6176,7 +6176,7 @@ ParseTestOpts()
  * This file needs to be persistent across reboots, but isn't
  * really a log
  */
-#	define HB_VERS_FILE VAR_LIB_D "/hb_generation"
+#	define HB_VERS_FILE HA_VARLIBHBDIR "/hb_generation"
 #endif
 
 #define	GENLEN	16	/* Number of chars on disk for gen # and '\n' */
@@ -6261,7 +6261,7 @@ GetTimeBasedGeneration(seqno_t * generation)
 static void
 get_localnodeinfo(void)
 {
-	const char *		openpath = HA_D "/nodeinfo";
+	const char *		openpath = HB_RC_DIR "/nodeinfo";
 	static struct utsname	u;
 	static char		localnode[256];
 	FILE *			fp;

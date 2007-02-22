@@ -20,7 +20,7 @@
  *
  */
 
-#include <portability.h>
+#include <lha_internal.h>
 #include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -1155,7 +1155,7 @@ cim_get_software_identity(void)
 	char ** out = NULL;
 	int     ret;
 	DEBUG_ENTER();
-	run_shell_cmnd(HALIB"/heartbeat/heartbeat -V", &ret, &out, NULL);
+	run_shell_cmnd(HA_LIBDIR"/heartbeat/heartbeat -V", &ret, &out, NULL);
 
 	if ( out ) {
 		struct ha_msg * msg;

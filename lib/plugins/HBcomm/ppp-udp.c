@@ -100,7 +100,7 @@
 				/* This tells us how many writes should fail */
 				/* with connection refused before we restart */
 				/* PPPd on our end */
-#include <portability.h>
+#include <lha_internal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>

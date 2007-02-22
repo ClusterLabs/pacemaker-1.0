@@ -22,6 +22,7 @@
 /* bitmap.c  */
 /*	Routines to manage a bitmap -- an array of bits each of which */
 /*	can be either on or off.  Represented as an array of integers. */
+#include <lha_internal.h>
 #include <ccm.h>
 
 #ifndef TRUE

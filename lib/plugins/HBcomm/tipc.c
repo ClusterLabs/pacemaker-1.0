@@ -21,7 +21,7 @@
  */
 
 
-#include <portability.h>
+#include <lha_internal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/socket.h>

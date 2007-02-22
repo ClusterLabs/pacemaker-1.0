@@ -37,11 +37,7 @@ apigid			= @HA_APIGID@
 gliblib			= @GLIBLIB@
 
 LIBRT 			= @LIBRT@
-AM_CFLAGS			= @CFLAGS@ \
--DVAR_RUN_D='"$(havarrundir)"'	\
--DVAR_LIB_D='"$(havarlibdir)"'		\
--DHA_D='"$(hadir)"'			\
--DHALIB='"$(halibdir)"'
+AM_CFLAGS		= @CFLAGS@
 
 ## libraries
 

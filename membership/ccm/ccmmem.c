@@ -21,6 +21,7 @@
  *
  */
 
+#include <lha_internal.h>
 #include "ccm.h"
 #include "ccmmisc.h"
 

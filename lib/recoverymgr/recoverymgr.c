@@ -24,7 +24,7 @@
  *
  *  
  */
-#include <portability.h>
+#include <lha_internal.h>
 #include <string.h>
 #include <unistd.h>
 #include <errno.h>

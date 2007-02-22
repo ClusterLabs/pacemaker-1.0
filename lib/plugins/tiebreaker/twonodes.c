@@ -21,7 +21,7 @@
  */
 
 
-#include <portability.h>
+#include <lha_internal.h>
 #include <pils/plugin.h>
 #include <clplumbing/cl_log.h>
 #include <string.h>

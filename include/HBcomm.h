@@ -22,7 +22,7 @@
 #	define HBCOMM_H 1
 
 #define HB_COMM_TYPE	HBcomm
-#define HB_COMM_TYPE_S	MKSTRING(HBcomm)
+#define HB_COMM_TYPE_S	"HBcomm"
 
 /*
  *	List of functions provided by implementations of the heartbeat media

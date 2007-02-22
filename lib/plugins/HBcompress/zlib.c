@@ -33,7 +33,7 @@
 #define PIL_PLUGIN_S            "zlib"
 #define PIL_PLUGINLICENSE	LICENSE_LGPL
 #define PIL_PLUGINLICENSEURL	URL_LGPL
-#include <portability.h>
+#include <lha_internal.h>
 #include <pils/plugin.h>
 #include <compress.h>
 #include <zlib.h>

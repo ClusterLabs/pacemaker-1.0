@@ -44,7 +44,6 @@
 #ifndef __HB_API_H
 #	define __HB_API_H 1
 
-#include <portability.h>
 #include <ha_msg.h>
 #include <clplumbing/ipc.h>
 

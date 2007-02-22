@@ -59,7 +59,7 @@
  *	and everything.
  */
 
-#include <portability.h>
+#include <lha_internal.h>
 
 #include <stdio.h>
 #include <limits.h>

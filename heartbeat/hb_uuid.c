@@ -18,8 +18,7 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#include <portability.h>
-#include <config.h>
+#include <lha_internal.h>
 #include <clplumbing/cl_uuid.h>
 #include <heartbeat.h>
 #include <string.h>
@@ -409,7 +408,7 @@ gen_uuid_from_name(const char* nodename, cl_uuid_t* uu)
 
 
 #ifndef HB_UUID_FILE
-#define HB_UUID_FILE VAR_LIB_D "/hb_uuid"
+#define HB_UUID_FILE HA_VARLIBHBDIR "/hb_uuid"
 #endif
 
 int

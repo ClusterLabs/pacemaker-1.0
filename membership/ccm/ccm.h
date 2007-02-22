@@ -23,9 +23,6 @@
 #ifndef _CLUSTER_MANAGER_H_
 #define _CLUSTER_MANAGER_H_
  
-/* MUST BE INCLUDED for configure time ifdef vars */
-#include <portability.h>
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

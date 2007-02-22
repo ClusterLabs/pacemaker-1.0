@@ -76,7 +76,7 @@
  *
  */
  
-#include "portability.h" 
+#include "lha_internal.h" 
 
 #include <libgen.h>
 #include <syslog.h>

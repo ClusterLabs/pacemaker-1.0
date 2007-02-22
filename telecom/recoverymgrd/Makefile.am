@@ -50,9 +50,6 @@ LIBRT 			= @LIBRT@
 #	above which used to be here for these two reasons.  Before you remove
 #	these comments or turn off warnings *again*, let's discuss this.
 #
-AM_CFLAGS		=  -DVAR_RUN_D='"$(havarrundir)"' \
--DHA_VARLIBDIR='"@HA_VARLIBDIR@"'
-
 AM_YFLAGS		= -d
 
 

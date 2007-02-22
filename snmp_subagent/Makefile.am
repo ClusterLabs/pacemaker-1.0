@@ -81,5 +81,4 @@ test_SCRIPTS		= $(test_scrs)
 
 hadir                   = $(sysconfdir)/ha.d
 
-AM_CFLAGS               = @CFLAGS@                                      \
-			-DHA_D='"$(hadir)"'
+AM_CFLAGS               = @CFLAGS@

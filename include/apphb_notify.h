@@ -58,6 +58,6 @@ struct AppHBNotifyImports_s {
 };
 
 #define APPHB_NOTIFY    AppHBNotification
-#define APPHB_NOTIFY_S  MKSTRING(AppHBNotification)
+#define APPHB_NOTIFY_S  "AppHBNotification"
 
 #endif

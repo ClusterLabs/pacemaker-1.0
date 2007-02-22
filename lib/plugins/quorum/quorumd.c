@@ -27,7 +27,7 @@
  */
 
 
-#include <portability.h>
+#include <lha_internal.h>
 
 #include <string.h>
 #include <unistd.h>
@@ -72,9 +72,9 @@ static void*			interfprivate = NULL;
 
 #define DH_BITS 1024
 #define MAX_BUF 1024
-#define CACERT HB_HA_DIR"/ca-cert.pem"
-#define CLIENTKEY HB_HA_DIR"/client-key.pem"
-#define CLIENTCERT HB_HA_DIR"/client-cert.pem"
+#define CACERT HA_HBCONF_DIR"/ca-cert.pem"
+#define CLIENTKEY HA_HBCONF_DIR"/client-key.pem"
+#define CLIENTCERT HA_HBCONF_DIR"/client-cert.pem"
 
 static int verify_certificate (gnutls_session session);
 static gnutls_session initialize_tls_session (int sd);

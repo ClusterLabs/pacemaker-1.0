@@ -37,7 +37,7 @@ usr/include/heartbeat/HBcomm.h
 usr/include/heartbeat/apphb.h
 usr/include/heartbeat/apphb_notify.h
 usr/include/heartbeat/compress.h
-usr/include/heartbeat/config.h
+usr/include/heartbeat/hb_config.h
 usr/include/heartbeat/crm/cib.h
 usr/include/heartbeat/crm/common/ctrl.h
 usr/include/heartbeat/crm/common/ipc.h
@@ -52,7 +52,6 @@ usr/include/heartbeat/crm/pengine/complex.h
 usr/include/heartbeat/crm/pengine/rules.h
 usr/include/heartbeat/crm/pengine/status.h
 usr/include/heartbeat/crm/transition.h
-usr/include/heartbeat/ha_config.h
 usr/include/heartbeat/ha_msg.h
 usr/include/heartbeat/hb_api.h
 usr/include/heartbeat/heartbeat.h
@@ -62,7 +61,6 @@ usr/include/heartbeat/mgmt.h
 usr/include/heartbeat/mgmt_client.h
 usr/include/heartbeat/mgmt_common.h
 usr/include/heartbeat/mgmt_tls.h
-usr/include/heartbeat/portability.h
 usr/include/heartbeat/racommon.h
 usr/include/heartbeat/raexec.h
 usr/include/heartbeat/recoverymgr.h

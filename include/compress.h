@@ -22,7 +22,7 @@
 #define _COMPRESS_H_ 
 
 #define HB_COMPRESS_TYPE	HBcompress
-#define HB_COMPRESS_TYPE_S	MKSTRING(HBcompress)
+#define HB_COMPRESS_TYPE_S	"HBcompress"
 
 /*
  *	List of functions provided by implementations of the heartbeat 

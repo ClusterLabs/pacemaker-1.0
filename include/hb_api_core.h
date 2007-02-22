@@ -29,7 +29,6 @@
 #ifndef _HB_API_CORE_H
 #	define _HB_API_CORE_H 1
 
-#include <config.h>
 #include <sys/types.h>
 #include <glib.h>
 #include <clplumbing/GSource.h>
@@ -138,11 +137,11 @@ typedef struct client_process {
 #define	API_BADREQ		"badreq"
 #define	API_MORE		"ok/more"
 
-#define	API_FIFO_DIR	VAR_LIB_D "/api"
+#define	API_FIFO_DIR	HA_VARLIBHBDIR "/api"
 #define	API_FIFO_LEN	(sizeof(API_FIFO_DIR)+32)
 
 #define	NAMEDCLIENTDIR	API_FIFO_DIR
-#define	CASUALCLIENTDIR	VAR_LIB_D "/casual"
+#define	CASUALCLIENTDIR	HA_VARLIBHBDIR "/casual"
 
 #define	REQ_SUFFIX	".req"
 #define	RSP_SUFFIX	".rsp"

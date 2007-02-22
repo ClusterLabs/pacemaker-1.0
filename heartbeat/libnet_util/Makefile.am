@@ -27,12 +27,7 @@ halibdir                = $(libdir)/@HB_PKG@
 gliblib			= @GLIBLIB@
 
 LIBRT 			= @LIBRT@
-AM_CFLAGS			= @CFLAGS@ \
--DVAR_RUN_D='"$(havarrundir)"'	\
--DVAR_LIB_D='"$(havarlibdir)"'		\
--DHA_D='"$(hadir)"'			\
--DHALIB='"$(halibdir)"' \
-@LIBNETDEFINES@
+AM_CFLAGS		= @CFLAGS@ @LIBNETDEFINES@
 
 halib_PROGRAMS		= send_arp
 
