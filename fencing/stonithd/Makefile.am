@@ -39,7 +39,7 @@ stonithd_SOURCES =  stonithd.c
 stonithd_LDFLAGS = $(COMMONLIBS) @LIBLTDL@  \
 		   $(top_builddir)/lib/fencing/libstonithd.la
 
-AM_CFLAGS = $(INCLUDES) -DVAR_LIB_D='"$(havarlibdir)"'
+AM_CFLAGS = $(INCLUDES)
 
 # need to make stonithd's owner as hacluster:haclient?
 install-exec-local:

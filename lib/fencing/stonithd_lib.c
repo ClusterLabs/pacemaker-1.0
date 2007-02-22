@@ -19,8 +19,7 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#include <config.h>
-#include <portability.h>
+#include <lha_internal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
@@ -41,6 +40,7 @@
 #include <clplumbing/proctrack.h>
 #include <fencing/stonithd_api.h>
 #include <fencing/stonithd_msg.h>
+#include <string.h>
 
 #include <assert.h>
 

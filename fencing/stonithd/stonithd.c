@@ -26,8 +26,7 @@
  *    stonith plugins?
  */
 
-#include <config.h>
-#include <portability.h>
+#include <lha_internal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
