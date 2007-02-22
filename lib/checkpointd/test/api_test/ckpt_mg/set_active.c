@@ -1,4 +1,3 @@
-/* $Id: set_active.c,v 1.2 2004/07/15 14:33:49 msoffen Exp $ */
 /* 
  * set_active.c: data checkpoint API test:saCkptActiveCheckpointSet
  *

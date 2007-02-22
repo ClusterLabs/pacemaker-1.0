@@ -1,4 +1,3 @@
-/* $Id: proc_ha.c,v 1.8 2004/02/17 22:12:01 lars Exp $ */
 /*
  * Linux-HA /proc interface
  *
@@ -942,80 +941,4 @@ void cleanup_module(void)
 	proc_unregister(&proc_root, proc_ha.low_ino);
 }
 
-
-/****************************************************
- * $Log: proc_ha.c,v $
- * Revision 1.8  2004/02/17 22:12:01  lars
- * Pet peeve removal: _Id et al now gone, replaced with consistent Id header.
- *
- * Revision 1.7  2003/02/07 08:37:18  horms
- * Removed inclusion of portability.h from .h files
- * so that it does not need to be installed.
- *
- * Revision 1.6  2003/02/05 09:06:35  horms
- * Lars put a lot of work into making sure that portability.h
- * is included first, everywhere. However this broke a few
- * things when building against heartbeat headers that
- * have been installed (usually somewhere under /usr/include or
- * /usr/local/include).
- *
- * This patch should resolve this problem without undoing all of
- * Lars's hard work.
- *
- * As an asside: I think that portability.h is a virus that has
- * infected all of heartbeat's code and now must also infect all
- * code that builds against heartbeat. I wish that it didn't need
- * to be included all over the place. Especially in headers to
- * be installed on the system. However, I respect Lars's opinion
- * that this is the best way to resolve some weird build problems
- * in the current tree.
- *
- * Revision 1.5  2003/02/03 11:30:42  lars
- * Changed all files including system headers to include portability.h first, so
- * that global defines affecting the exported interfaces from the system headers
- * are indeed global and apply consistently to all headers.
- *
- * Revision 1.4  2003/01/31 10:02:10  lars
- * Various small code cleanups:
- * - Lots of "signed vs unsigned" comparison fixes
- * - time_t globally replaced with TIME_T
- * - All seqnos moved to "seqno_t", which defaults to unsigned long
- * - DIMOF() definition centralized to portability.h and typecast to int
- * - EOS define moved to portability.h
- * - dropped inclusion of signal.h from stonith.h, so that sigignore is
- *   properly defined
- *
- * Revision 1.3  1999/10/05 06:01:00  alanr
- * Added RPM Cflags to Makefiles
- *
- * Revision 1.2  1999/10/02 05:08:03  alanr
- * Removed the #include that Mike had thought I'd needed.
- *
- * Revision 1.1.1.1  1999/09/23 15:31:24  alanr
- * High-Availability Linux
- *
- * Revision 1.8  1999/07/10 05:26:19  alanr
- * Changed it so that blanks don't delimit values...
- *
- * Revision 1.7  1999/07/09 16:33:38  alanr
- * I think I finally got debug turned off...
- *
- * Revision 1.6  1999/07/09 16:31:07  alanr
- * tried harder to turn debug off...
- *
- * Revision 1.5  1999/07/09 16:28:03  alanr
- * made some more things debug...
- *
- * Revision 1.3  1999/07/07 05:55:14  alanr
- * Fixed the unable to update heartbeat problem...
- *
- * Revision 1.2  1999/07/07 05:34:32  alanr
- * First round of small patches to Volker's code.
- * It includes a del_all_nodes function which should help in removing the
- * module.
- *
- * Revision 1.1  1999/07/06 12:17:07  alanr
- * Initial revision
- *
- ****************************************************/
 

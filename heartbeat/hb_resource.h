@@ -1,4 +1,3 @@
-/* $Id: hb_resource.h,v 1.8 2005/07/29 06:55:37 sunjd Exp $ */
 /*
  * Copyright (C) 2001-2002 Luis Claudio R. Goncalves
  *                              <lclaudio@conectiva.com.br>

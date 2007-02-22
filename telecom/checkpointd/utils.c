@@ -1,4 +1,3 @@
-/* $Id: utils.c,v 1.8 2004/11/18 01:56:59 yixiong Exp $ */
 /* 
  * utils.c
  *
@@ -19,9 +18,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
+#include "portability.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>

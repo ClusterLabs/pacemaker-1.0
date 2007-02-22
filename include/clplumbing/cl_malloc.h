@@ -1,4 +1,3 @@
-/* $Id: cl_malloc.h,v 1.6 2006/07/07 20:36:31 andrew Exp $ */
 /*
  * ha_malloc.h: malloc utilities for the Linux-HA heartbeat program
  *
@@ -19,6 +18,43 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
  */
+#ifdef USE_LIBC_MALLOC
+/* Use libc malloc and friends.  Useful when running valgrind etc. */
+#  ifndef _CLPLUMBING_CLMALLOC_NATIVE_H
+#  define _CLPLUMBING_CLMALLOC_NATIVE_H
+
+/* Prevent the regular cl_malloc header from being included */
+#  define _CLPLUMBING_CLMALLOC_H
+
+#  include <stdlib.h>
+#  include <string.h>
+
+#  define cl_free    free
+#  define cl_malloc  malloc
+#  define cl_calloc  calloc
+#  define cl_realloc realloc
+#  define cl_strdup  strdup
+#  define cl_is_allocated(mem) (mem!=NULL)
+
+#  define MALLOCT(t)	((t *) malloc(sizeof(t)))
+#  define cl_malloc_forced_for_glib() ;
+#  define cl_malloc_setstats(x) ;
+
+typedef struct cl_mem_stats_s {
+	unsigned long		numalloc;	/* # of cl_malloc calls */
+	unsigned long		numfree;	/* # of cl_free calls */
+	unsigned long		numrealloc;	/* # of cl_realloc calls */
+	unsigned long		nbytes_req;	/* # malloc bytes req'd */
+	unsigned long		nbytes_alloc;	/* # bytes currently allocated
+						 */
+	unsigned long		mallocbytes;	/* total # bytes malloc()ed */
+	unsigned long		arena;		/* Most recent mallinfo */
+						/* arena value */
+}cl_mem_stats_t;
+
+#  endif
+#endif
+
 #ifndef _CLPLUMBING_CLMALLOC_H
 #define	 _CLPLUMBING_CLMALLOC_H
 
@@ -68,7 +104,7 @@ void		cl_malloc_forced_for_glib(void);
 		/* Call before using any glib functions(!) */
 		/* See also: g_mem_set_vtable() */
 #ifdef HA_MALLOC_TRACK
-void		 cl_malloc_dump_allocated(int log_level, int filter_seen);
+int		 cl_malloc_dump_allocated(int log_level, int filter_seen);
 #endif
 
 #define	MALLOCT(t)	((t *) cl_malloc(sizeof(t)))

@@ -1,6 +1,5 @@
 #!/bin/sh
 #
-# $Id: LinuxSCSI.in,v 1.4 2006/08/14 09:37:21 andrew Exp $
 # 
 # Description:	wrapper of OCF RA LinuxSCSI, based on original heartbeat RA.
 #		See OCF RA LinuxSCSI for more information.

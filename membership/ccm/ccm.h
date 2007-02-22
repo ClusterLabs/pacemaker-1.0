@@ -1,4 +1,3 @@
-/* $Id: ccm.h,v 1.51 2006/08/16 09:59:34 zhenh Exp $ */
 /*
  * ccm.h: definitions Consensus Cluster Manager internal header
  *				file
@@ -50,7 +49,6 @@
 #include <clplumbing/realtime.h>
 #include <base64.h>
 
-#include <ha_config.h>
 #include <heartbeat.h>
 #include <hb_api.h>
 

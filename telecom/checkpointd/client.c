@@ -1,4 +1,3 @@
-/* $Id: client.c,v 1.6 2004/02/17 22:12:02 lars Exp $ */
 /* 
  * client.c: 
  *
@@ -19,9 +18,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
+#include <portability.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>

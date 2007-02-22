@@ -1,4 +1,3 @@
-/* $Id: utils.h,v 1.2 2004/02/17 22:12:02 lars Exp $ */
 #ifndef _SA_CKPT_UTILS_H
 #define _SA_CKPT_UTILS_H
 

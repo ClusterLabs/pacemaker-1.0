@@ -1,4 +1,3 @@
-/* $Id: write6node1.c,v 1.2 2004/10/09 01:49:42 lge Exp $ */
 /* 
  * write6node1.c: Test data checkpoint function : saCkptCheckpointWrite 
  *

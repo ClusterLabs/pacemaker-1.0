@@ -1,4 +1,3 @@
-/* $Id: apphbd.c,v 1.64 2005/10/15 02:46:24 gshi Exp $ */
 /*
  * apphbd:	application heartbeat daemon
  *

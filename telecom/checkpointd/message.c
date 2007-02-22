@@ -1,4 +1,3 @@
-/* $Id: message.c,v 1.16 2006/01/15 16:27:46 xunsun Exp $ */
 /* 
  * message.c
  *
@@ -19,9 +18,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
+#include <portability.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

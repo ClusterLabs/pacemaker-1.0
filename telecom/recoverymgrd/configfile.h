@@ -1,4 +1,3 @@
-/* $Id: configfile.h,v 1.4 2005/07/27 09:03:24 panjiam Exp $ */
 /*
  *
  *

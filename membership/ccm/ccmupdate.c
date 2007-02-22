@@ -1,4 +1,3 @@
-/* $Id: ccmupdate.c,v 1.22 2006/04/07 13:17:47 lars Exp $ */
 /* 
  * update.c: functions that track the votes during the voting protocol
  *

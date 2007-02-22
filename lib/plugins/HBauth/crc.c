@@ -1,4 +1,3 @@
-/* $Id: crc.c,v 1.9 2004/10/24 13:00:13 lge Exp $ */
 #include <portability.h> 
 #include <stdio.h> 
 #include <string.h> 

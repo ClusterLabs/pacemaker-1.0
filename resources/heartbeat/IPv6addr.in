@@ -1,6 +1,5 @@
 #!/bin/sh
 #
-# $Id: IPv6addr.in,v 1.2 2006/08/14 09:37:21 andrew Exp $
 #
 # Description:	wrapper of OCF RA IPv6addr. See OCF RA IPv6addr for more information.
 #

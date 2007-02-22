@@ -1,4 +1,3 @@
-/* $Id: apphb.c,v 1.23 2005/11/01 15:37:57 davidlee Exp $ */
 /*
  * apphb.c: application heartbeat library code.
  *

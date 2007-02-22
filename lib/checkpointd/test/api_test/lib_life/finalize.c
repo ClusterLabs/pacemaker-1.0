@@ -1,4 +1,3 @@
-/* $Id: finalize.c,v 1.3 2004/08/29 03:01:13 msoffen Exp $ */
 /* 
  * finalize.c: data checkpoint API test: saCkptFinalize
  *

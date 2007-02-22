@@ -1,6 +1,5 @@
 #!/bin/sh
 #
-#	$Id: SendArp.in,v 1.4 2005/08/29 03:36:57 sunjd Exp $
 #
 #	2006, Huang Zhen <zhen.huang@gmail.com>
 #	convert it to calling OCF counterpart.

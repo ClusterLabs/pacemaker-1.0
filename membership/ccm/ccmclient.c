@@ -1,4 +1,3 @@
-/* $Id: ccmclient.c,v 1.45 2006/08/16 09:59:34 zhenh Exp $ */
 /* 
  * client.c: Consensus Cluster Client tracker
  *

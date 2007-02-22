@@ -1,4 +1,3 @@
-/* $Id: gXML.h,v 1.3 2004/02/17 22:12:00 lars Exp $ */
 /*
  * gXML.h - Header file for gXML output files
  *

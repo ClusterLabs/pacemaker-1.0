@@ -1,4 +1,3 @@
-/* $Id: message.h,v 1.8 2004/11/18 01:56:59 yixiong Exp $ */
 #ifndef _CKPT_MESSAGE_H
 #define _CKPT_MESSAGE_H
 

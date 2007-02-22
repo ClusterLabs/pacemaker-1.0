@@ -21,3 +21,9 @@ MAINTAINERCLEANFILES    = Makefile.in
 
 ## Subdirectories...
 SUBDIRS			=  ipfail mlock
+
+if BUILD_DRBD_OUTDATE_PEER
+SUBDIRS 		+= drbd-outdate-peer
+endif
+
+

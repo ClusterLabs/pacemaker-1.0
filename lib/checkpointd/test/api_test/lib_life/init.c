@@ -1,4 +1,3 @@
-/* $Id: init.c,v 1.3 2004/08/26 03:47:13 deng.pan Exp $ */
 /* 
  * init.c: data checkpoint API test: saCkptInitialize
  *

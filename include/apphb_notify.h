@@ -1,4 +1,3 @@
-/* $Id: apphb_notify.h,v 1.6 2005/07/28 07:51:44 sunjd Exp $ */
 /*
  * Author: Alan Robertson <alanr@unix.sh>
  * 

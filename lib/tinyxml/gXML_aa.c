@@ -1,4 +1,3 @@
-/* $Id: gXML_aa.c,v 1.3 2004/02/17 22:12:00 lars Exp $ */
 /*
  * gXML_aarray.c - Associative array gXML output file
  *

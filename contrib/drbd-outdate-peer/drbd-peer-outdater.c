@@ -1,4 +1,3 @@
-/* $Id$ */
 /* drbd-peer-outdater
  * Copyright (C) 2006 LINBIT <http://www.linbit.com/>
  *
@@ -21,6 +20,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#include <config.h>
 #include <portability.h>
 
 #include <sys/param.h>
@@ -91,6 +91,7 @@ outdate_callback(IPC_Channel * server, gpointer user_data)
 	rc = strtol(rc_string, &ep, 10);
 	if (errno != 0 || *ep != EOS) {
 		fprintf(stderr, "unknown message: %s from server", rc_string);
+		client->rc = 20; /* "officially undefined", unspecified error */
 		ha_msg_del(msg);
 		if (client->mainloop != NULL &&
 		    g_main_is_running(client->mainloop))
@@ -100,8 +101,10 @@ outdate_callback(IPC_Channel * server, gpointer user_data)
 
 	ha_msg_del(msg);
 
+	/* ok, peer returned something useful */
+	client->rc = rc;
+
 	if (client->mainloop != NULL && g_main_is_running(client->mainloop)) {
-		client->rc = rc;
 		g_main_quit(client->mainloop);
 	} else
 		dop_exit(client);
@@ -194,7 +197,7 @@ main(int argc, char ** argv)
 	crm_malloc0(new_client, sizeof(dop_client_t));
 	new_client->timeout = timeout;
 	new_client->mainloop = g_main_new(FALSE);
-	new_client->rc = 5;
+	new_client->rc = 5; /* default: down/unreachable */
 
 	/* Connect to the IPC server */
 	src = init_client_ipc_comms(T_OUTDATER, outdate_callback,
@@ -223,7 +226,7 @@ main(int argc, char ** argv)
 
 	g_main_run(new_client->mainloop);
 	dop_exit(new_client);
-	return 5;
+	return 20; /* not reached */
 }
 
 static void

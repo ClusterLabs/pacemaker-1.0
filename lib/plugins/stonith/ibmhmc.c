@@ -838,6 +838,7 @@ get_hmc_hostlist(struct pluginDevice* dev)
 	gchar** name_mode = NULL;
 	char get_lpar[MAX_CMD_LEN];
 	gchar** lparlist = NULL;
+	char* pch;
 
 	if(Debug){
 		LOG(PIL_DEBUG, "%s: called, dev->hmc=%s\n", __FUNCTION__
@@ -937,6 +938,30 @@ get_hmc_hostlist(struct pluginDevice* dev)
 			&& !pattern_match(dev->mansyspats, syslist[i])) {
 				continue;
 			}
+
+			/* get its state */
+			snprintf(get_lpar, MAX_CMD_LEN
+			,	SSH_CMD " -l " HMCROOT
+				 " %s lssyscfg -m %s -r sys -F state"
+			,	dev->hmc, syslist[i]);
+			if(Debug){
+				LOG(PIL_DEBUG, "%s: get_lpar=%s\n"
+				,	__FUNCTION__, get_lpar);
+			}
+
+			output = do_shell_cmd(get_lpar, &status, dev->password);
+			if (output == NULL) {
+				g_strfreev(syslist);
+				return S_BADCONFIG;
+			}		
+			if ((pch = strchr(output, '\n')) != NULL) {
+				*pch = 0;
+			}
+			if (!strcmp(output, "No Connection")){
+				FREE(output);
+				continue;
+			}
+			FREE(output);
 
 			/* get its lpars */
 			snprintf(get_lpar, MAX_CMD_LEN
@@ -1081,13 +1106,13 @@ do_shell_cmd(const char* cmd, int* status, const char* password)
 		 "if [ ! -d  " HA_VARRUNDIR "/heartbeat/rsctmp/ibmhmc ];"
 		 "then mkdir " HA_VARRUNDIR "/heartbeat/rsctmp/ibmhmc 2>/dev/null;"
 		 "fi;"
-		 "export hmc_tmp=`mktemp -p " HA_VARRUNDIR "/heartbeat/rsctmp/ibmhmc/`;" 
-		 "echo \"echo '%s'\">$hmc_tmp;" 
-		 "chmod +x $hmc_tmp;"
+		 "export ibmhmc_tmp=`mktemp -p " HA_VARRUNDIR "/heartbeat/rsctmp/ibmhmc/`;" 
+		 "echo \"echo '%s'\">$ibmhmc_tmp;" 
+		 "chmod +x $ibmhmc_tmp;"
 		 "unset SSH_AGENT_SOCK SSH_AGENT_PID;"
-		 "SSH_ASKPASS=$hmc_tmp setsid %s;"
-		 "rm $hmc_tmp -f;"
-		 "unset hmc_tmp"
+		 "SSH_ASKPASS=$ibmhmc_tmp DISPLAY=ibmhmc_foo setsid %s;"
+		 "rm $ibmhmc_tmp -f;"
+		 "unset ibmhmc_tmp"
 		,password, cmd);
 		file = popen(cmd_password, "r"); 
 	}		

@@ -1,4 +1,3 @@
-/* $Id: cl_malloc.c,v 1.28 2006/07/12 09:32:28 andrew Exp $ */
 /*
  * Copyright (C) 2000 Alan Robertson <alanr@unix.sh>
  *
@@ -36,6 +35,7 @@
 
 #include <ltdl.h>
 
+#ifndef _CLPLUMBING_CLMALLOC_NATIVE_H 
 static cl_mem_stats_t			default_memstats;
 static volatile cl_mem_stats_t *	memstats = &default_memstats;
 
@@ -57,7 +57,7 @@ static volatile cl_mem_stats_t *	memstats = &default_memstats;
 #define	MAKE_GUARD	1	/* Adds 'n' bytes memory - cheap in CPU*/
 #define	USE_ASSERTS	1
 #define	DUMPONERR	1
-#undef	RETURN_TO_MALLOC
+#define	RETURN_TO_MALLOC 1
 
 #ifndef DUMPONERR
 #	define	DUMPIFASKED()	/* nothing */
@@ -276,9 +276,10 @@ cl_ptr_init(void)
 	cl_malloc_track_root = NULL;
 }
 
-void
+int
 cl_malloc_dump_allocated(int log_level, gboolean filter)
 {
+	int lpc = 0;
 	struct cl_bucket*	cursor = cl_malloc_track_root;
 	longclock_t		time_diff;
 
@@ -289,16 +290,18 @@ cl_malloc_dump_allocated(int log_level, gboolean filter)
 
 		} else if(log_level > LOG_DEBUG) {
 		} else if(filter) {
+			lpc++;
 			cl_log(log_level, "cl_malloc_dump: %p owner %s, size %d"
 			,	cursor+cl_malloc_hdr_offset
 			,	cursor->hdr.owner
-			,	cursor->hdr.reqsize);
+			,	(int)cursor->hdr.reqsize);
 		} else {
+			lpc++;
 			time_diff = sub_longclock(time_longclock(), cursor->hdr.mtime);
 			cl_log(log_level, "cl_malloc_dump: %p owner %s, size %d, dumped %d, age %lu ms"
 			,	cursor+cl_malloc_hdr_offset
 			,	cursor->hdr.owner
-			,	cursor->hdr.reqsize
+			,	(int)cursor->hdr.reqsize
 			,	cursor->hdr.dumped
 			,	longclockto_long(time_diff));
 		}
@@ -307,6 +310,7 @@ cl_malloc_dump_allocated(int log_level, gboolean filter)
 	}
 	
 	cl_log(LOG_INFO, "End dump.");
+	return lpc;
 }
 #endif
 static const int LogTable256[] = 
@@ -1021,3 +1025,5 @@ cl_mark_pristine(void* v, unsigned size)
 	memset(cp+pristoff, PRISTVALUE, size-pristoff);
 }
 #endif
+
+#endif /* _CLPLUMBING_CLMALLOC_NATIVE_H */

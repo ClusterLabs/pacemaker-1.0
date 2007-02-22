@@ -1,6 +1,5 @@
 #!/bin/sh
 #
-# $Id: IPaddr.in,v 1.20 2006/08/14 09:37:21 andrew Exp $
 #
 # Description:	wrapper of OCF RA IPaddr, based on original heartbeat RA.
 #		See OCF RA IPaddr for more information.

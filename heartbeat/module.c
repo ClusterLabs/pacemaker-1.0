@@ -1,4 +1,3 @@
-/* $Id: module.c,v 1.61 2005/09/28 20:29:55 gshi Exp $ */
 /*
  * module: Dynamic module support code
  *

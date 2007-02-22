@@ -1,4 +1,3 @@
-/* $Id: ping.c,v 1.45 2005/09/22 16:52:06 alan Exp $ */
 /*
  * ping.c: ICMP-echo-based heartbeat code for heartbeat.
  *

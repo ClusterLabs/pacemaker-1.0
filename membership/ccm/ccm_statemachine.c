@@ -1,4 +1,3 @@
-/* $Id: ccm_statemachine.c,v 1.22 2006/08/16 09:59:34 zhenh Exp $ */
 /* 
  * ccm.c: Consensus Cluster Service Program 
  *
@@ -22,7 +21,6 @@
  */
 #include <ccm.h>
 #include <config.h>
-#include <ha_config.h>
 #ifdef HAVE_STDINT_H
 #include <stdint.h>
 #endif

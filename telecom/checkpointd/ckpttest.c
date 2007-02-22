@@ -1,4 +1,3 @@
-/* $Id: ckpttest.c,v 1.11 2004/11/18 01:56:59 yixiong Exp $ */
 /* 
  * ckpttest.c: data checkpoint service test program
  *
@@ -19,9 +18,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
+#include <portability.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>

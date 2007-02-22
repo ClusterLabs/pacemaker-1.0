@@ -36,6 +36,6 @@ plugindir		= $(halibdir)/plugins/quorumd
 plugin_LTLIBRARIES	= 2_0_8.la
 
 2_0_8_la_SOURCES	= 2_0_8.c
-2_0_8_la_LDFLAGS	= -export-dynamic -module -avoid-version -lz `libgnutls-config --libs`
+2_0_8_la_LDFLAGS	= -export-dynamic -module -avoid-version -lz $(GNUTLSLIBS)
 2_0_8_la_LIBADD		= $(top_builddir)/replace/libreplace.la 
-2_0_8_la_CFLAGS 	= $(INCLUDES) `libgnutls-config --cflags`
+2_0_8_la_CFLAGS 	= $(INCLUDES) $(GNUTLSHEAD)

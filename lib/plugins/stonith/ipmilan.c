@@ -1,4 +1,3 @@
-/* $Id: ipmilan.c,v 1.17 2006/05/16 09:01:51 sunjd Exp $ */
 /*
  * Stonith module for ipmi lan Stonith device
  *
@@ -384,9 +383,6 @@ ipmilan_set_config(StonithPlugin* s, StonithNVpair * list)
 	int		rc;
 	struct ipmilanHostInfo *  tmp;
 
-	ERRIFWRONGDEV(s,S_OOPS);
-	nd = (struct pluginDevice *)s;
-
 	StonithNamesToGet	namestocopy [] =
 	{	{ST_HOSTNAME,	NULL}
 	,	{ST_IPADDR,	NULL}
@@ -397,6 +393,9 @@ ipmilan_set_config(StonithPlugin* s, StonithNVpair * list)
 	,	{ST_PASSWD,	NULL}
 	,	{NULL,		NULL}
 	};
+
+	ERRIFWRONGDEV(s,S_OOPS);
+	nd = (struct pluginDevice *)s;
 
 	ERRIFWRONGDEV(s, S_OOPS);
 	if (nd->sp.isconfigured) {

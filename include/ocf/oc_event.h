@@ -1,4 +1,3 @@
-/* $Id: oc_event.h,v 1.5 2005/11/09 22:22:56 gshi Exp $ */
 /*
  * oc_event.h
  *

@@ -1,4 +1,3 @@
-/* $Id: ping_group.c,v 1.20 2005/08/15 21:12:16 gshi Exp $ */
 /*
  * ping_group.c: ICMP-echo-based heartbeat code for heartbeat.
  *

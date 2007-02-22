@@ -1,4 +1,3 @@
-/* $Id: gXMLscan.h,v 1.3 2004/10/09 01:49:42 lge Exp $ */
 /*
  * gXMLscan.h - gXMLscan header file
  *

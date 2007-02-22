@@ -1,4 +1,3 @@
-/* $Id: longclock.h,v 1.10 2006/08/16 14:37:07 alan Exp $ */
 /*
  * Longclock operations
  *
@@ -23,7 +22,7 @@
 
 #ifndef _LONGCLOCK_H
 #	define _LONGCLOCK_H
-#	include <ha_config.h>
+#	include <portability.h>
 /*
  *	A longclock_t object is a lot like a clock_t object, except that it
  *	won't wrap in the lifetime of the earth.  It is guaranteed to be at

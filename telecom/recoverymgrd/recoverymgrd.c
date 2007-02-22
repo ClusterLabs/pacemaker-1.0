@@ -1,4 +1,3 @@
-/* $Id: recoverymgrd.c,v 1.15 2005/07/27 09:03:24 panjiam Exp $ */
 /*
  * Generic Recovery manager implementation
  * 

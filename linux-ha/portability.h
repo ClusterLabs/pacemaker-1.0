@@ -1,4 +1,3 @@
-/* $Id: portability.h,v 1.52 2006/04/07 15:49:03 davidlee Exp $ */
 #ifndef PORTABILITY_H
 #  define PORTABILITY_H
 
@@ -42,7 +41,6 @@
 
 
 /* Please leave this as the first #include - Solaris needs it there */
-
 #ifdef HAVE_CONFIG_H
 #include <config.h>
 #endif

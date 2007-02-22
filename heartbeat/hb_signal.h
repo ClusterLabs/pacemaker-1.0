@@ -1,4 +1,3 @@
-/* $Id: hb_signal.h,v 1.5 2005/07/29 07:03:47 sunjd Exp $ */
 /*
  * hb_signal.h: signal handling routines to be used by Heartbeat
  *

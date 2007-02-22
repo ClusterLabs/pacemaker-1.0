@@ -1,4 +1,3 @@
-/* $Id: recoverymgrd.h,v 1.5 2005/07/27 09:03:24 panjiam Exp $ */
 /*
  * Generic Recovery manager library header file
  * 

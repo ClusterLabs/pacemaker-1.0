@@ -1,4 +1,3 @@
-/* $Id: ais.h,v 1.7 2004/07/14 21:52:51 yixiong Exp $ */
 /* --- ais.h
   Header file of SA Forum AIS APIs Version 1.0
   In order to compile, all opaque types which appear as <...> in 

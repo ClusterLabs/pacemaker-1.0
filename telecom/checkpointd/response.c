@@ -1,4 +1,3 @@
-/* $Id: response.c,v 1.11 2005/03/16 17:11:15 lars Exp $ */
 /* 
  * response.c
  *
@@ -19,9 +18,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
+#include <portability.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>

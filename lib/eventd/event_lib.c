@@ -1,4 +1,3 @@
-/* $Id: event_lib.c,v 1.10 2004/11/22 20:06:42 gshi Exp $ */
 /* 
  * event_lib.c: source file for event library
  *

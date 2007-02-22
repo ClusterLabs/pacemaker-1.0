@@ -1,4 +1,3 @@
-/* $Id: ipfail.c,v 1.44 2005/10/17 19:13:47 gshi Exp $ */
 /* ipfail: IP Failover plugin for Linux-HA
  *
  * Copyright (C) 2002-2004 Kevin Dwyer <kevin@pheared.net>

@@ -1,4 +1,3 @@
-/* $Id: checkpointd.c,v 1.16 2005/03/16 17:11:15 lars Exp $ */
 /* 
  * checkpointd.c: data checkpoint service
  *
@@ -19,10 +18,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
+#include <portability.h>
 #ifdef HAVE_GETOPT_H
 #include <getopt.h>
 #endif

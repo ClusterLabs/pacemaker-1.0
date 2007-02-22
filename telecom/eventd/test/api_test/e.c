@@ -1,4 +1,3 @@
-/* $Id: e.c,v 1.2 2004/10/09 01:49:42 lge Exp $ */
 /* 
  * e.c: Event Service API test case for:saEvtEventPublish
  *

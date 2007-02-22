@@ -1,4 +1,3 @@
-/* $Id: ccmllm.c,v 1.31 2006/06/07 08:29:52 zhenh Exp $ */
 /* 
  * ccmllm.c: Low Level membership routines.
  *

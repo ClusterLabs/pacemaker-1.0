@@ -1,6 +1,5 @@
 #!/bin/sh
 #
-# $Id: Xen.in,v 1.1 2006/03/18 00:54:54 lars Exp $
 #
 # Support:      linux-ha@lists.linux-ha.org
 # License:      GNU General Public License (GPL)
@@ -45,7 +44,7 @@ Manages Xen virtual machine instances by
 mapping cluster resource start and stop,  
 to Xen create and shutdown, respectively.
 
-Para-virtualized guests can alsy be migrated by enabling the
+Para-virtualized guests can also be migrated by enabling the
 meta_attribute allow_migrate.
 
 </longdesc>
@@ -117,6 +116,10 @@ Xen_Stop() {
   if
     Xen_Status
   then
+    # TODO: If after 50% of our timeout this one doesn't return, we
+    # should instead switch to xm destroy
+    # TODO: Should we just always use xm destroy here in the meantime
+    # to make sure we indeed always stop?
     xm shutdown -w $DOMAIN_NAME
     rc=$?
     if

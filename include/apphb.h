@@ -1,4 +1,3 @@
-/* $Id: apphb.h,v 1.6 2004/02/17 22:11:58 lars Exp $ */
 #ifndef _APPHB_H
 #define _APPHB_H
 

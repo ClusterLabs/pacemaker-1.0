@@ -1,4 +1,3 @@
-/* $Id: unlink.c,v 1.2 2004/07/15 14:33:49 msoffen Exp $ */
 /* 
  * unlink.c: data checkpoint API test:saCkptCheckpointUnlink
  *

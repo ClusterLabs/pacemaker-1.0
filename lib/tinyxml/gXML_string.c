@@ -1,4 +1,3 @@
-/* $Id: gXML_string.c,v 1.7 2004/02/17 22:12:00 lars Exp $ */
 /*
  * gXML_string.c - GString gXML output file
  *

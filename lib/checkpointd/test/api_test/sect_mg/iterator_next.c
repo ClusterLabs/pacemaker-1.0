@@ -1,4 +1,3 @@
-/* $Id: iterator_next.c,v 1.2 2004/07/15 14:33:49 msoffen Exp $ */
 /* 
  * iterator_next.c: data checkpoint API test: saCkptSectionIteratorNext
  *

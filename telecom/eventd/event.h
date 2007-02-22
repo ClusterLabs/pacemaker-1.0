@@ -1,4 +1,3 @@
-/* $Id: event.h,v 1.3 2004/04/06 19:15:57 msoffen Exp $ */
 /* 
  * event.h: header file for event service
  *
@@ -44,7 +43,7 @@
 #include <clplumbing/GSource.h>
 #include <clplumbing/realtime.h>
 
-#include <ha_config.h>
+#include <portability.h>
 #include <heartbeat.h>
 #include <hb_api_core.h>
 #include <hb_api.h>

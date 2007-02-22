@@ -1,4 +1,3 @@
-/* $Id: close3node1.c,v 1.2 2004/10/09 01:49:41 lge Exp $ */
 /* 
  * close3node1.c: Test data checkpoint function : saCkptCheckpointClose 
  *

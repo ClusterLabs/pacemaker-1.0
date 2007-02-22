@@ -1,4 +1,3 @@
-/* $Id: checkpointd.h,v 1.5 2004/11/18 01:56:59 yixiong Exp $ */
 #ifndef _CHECKPOINTD_H
 #define _CHECKPOINTD_H
 

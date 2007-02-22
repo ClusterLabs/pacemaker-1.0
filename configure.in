@@ -15,7 +15,7 @@ AC_CANONICAL_HOST
 
 
 dnl Where #defines go (e.g. `AC_CHECK_HEADERS' below)
-AM_CONFIG_HEADER(linux-ha/config.h include/ha_config.h)
+AM_CONFIG_HEADER(linux-ha/config.h)
 ALL_LINGUAS="en fr"
 
 AC_ARG_WITH(hapkgversion,
@@ -435,12 +435,14 @@ AC_DEFINE_UNQUOTED(STRINGSCMD, "$STRINGSCMD", path to strings command)
 AC_SUBST(STRINGSCMD)
 AC_PATH_PROGS(PERL, perl)
 AC_SUBST(PERL)
-AC_PATH_PROGS(SWIG, swig, [swig not found],)
+AC_PATH_PROGS(SWIG, swig)
 AC_SUBST(SWIG)
 AC_PATH_PROGS(EGREP, egrep)
 AC_SUBST(EGREP)
 AC_PATH_PROGS(MSGFMT, msgfmt, [msgfmt not found],)
 AC_SUBST(MSGFMT)
+AC_PATH_PROGS(HG, hg, /usr/local/hg)
+AC_SUBST(HG)
 
 AC_PATH_PROGS(GZIP_PROG, gzip)
 AC_PATH_PROGS(TAR, tar)
@@ -508,6 +510,7 @@ AC_CHECK_LIB(c, dlopen)				dnl if dlopen is in libc...
 AC_CHECK_LIB(dl, dlopen)			dnl -ldl (for Linux)
 AC_CHECK_LIB(rt, sched_getscheduler)            dnl -lrt (for Tru64)
 AC_CHECK_LIB(gnugetopt, getopt_long)		dnl -lgnugetopt ( if available )
+AC_CHECK_LIB(pam, pam_start)			dnl -lpam (if available)
 
 #	Not sure what OSes need this... Linux and AIX don't...
 #	and AIX barfs on it...
@@ -1528,11 +1531,6 @@ AC_ARG_ENABLE([traditional-warnings],
                           enable traditional warnings gcc (-Wtraditional)
                           [default=no]])
 
-AC_ARG_ENABLE([dmalloc],
-[  --enable-dmalloc
-                          enable use of dmalloc instead of malloc in selected code
-                          [default=no]])
-
 AC_ARG_ENABLE([pretty],
 [  --enable-pretty 
 			  Pretty-print compiler output unless there is an error
@@ -1568,7 +1566,6 @@ dnl - If requested, enable ALL subsystems.
 	  enable_fatal_warnings=yes;
 	  enable_lrm=yes;
 	  enable_snmp_subagent=try;
-	  enable_swig=try;
 	  enable_mgmt=try;
 	  enable_quorumd=try;
 	  enable_cim_provider=try;
@@ -2072,13 +2069,7 @@ AC_CHECK_FUNCS(mallopt)
 AC_CHECK_FUNCS(__default_morecore)
 AC_CHECK_FUNCS(seteuid)
 AC_CHECK_FUNCS(setegid)
-AC_CHECK_FUNCS(dmalloc)
 AC_CHECK_FUNCS(getpeereid)
-AM_CONDITIONAL(USE_DMALLOC, test "$ac_cv_func_dmalloc" = "yes" -a "${enable_dmalloc}" = "yes")
-
-if  test "$ac_cv_func_dmalloc" = "yes" -a "${enable_dmalloc}" = "yes"; then
-	AC_DEFINE(USE_DMALLOC,   1, [enable use of dmalloc function])
-fi;
 
 dnl **********************************************************************
 dnl Check for various argv[] replacing functions on various OSs
@@ -2337,31 +2328,6 @@ AC_SUBST(CRM_ENABLED)
 CRM_DIR=crm
 AC_SUBST(CRM_DIR)
 
-AC_ARG_ENABLE([crm-force-malloc],
-[  --enable-crm-force-malloc  Force the CRM to use the regular malloc/free functions so we can check for leaks.  [default=no]],
-                     [], [enable_crm_force_malloc=no])
-
-if test "x${enable_crm_force_malloc}" = "xyes"; then
-   AC_DEFINE_UNQUOTED(CRM_USE_MALLOC, 1, Use regular malloc so we can check for leaks)
-fi
-
-dnl Removal Pending...
-AC_ARG_ENABLE([crm-dmalloc],
-[  --enable-crm-dmalloc  Use the dmalloc libraries for the CRM.  [default=no]],
-                     [], [enable_crm_dmalloc=no])
-
-CRM_DEBUG_LIBS=""
-CRM_DEBUG_OPTS=""
-if test "x${enable_crm_dmalloc}" = "xyes"; then
-   AC_DEFINE_UNQUOTED(CRM_DEBUG_DMALLOC, 1, Use the dmalloc libraries)
-   CRM_DEBUG_OPTS=-DDMALLOC_FUNC_CHECK
-   CRM_DEBUG_LIBS=-ldmalloc
-fi
-dnl CRM_DEBUG_LIBS=-lefence
-AC_SUBST(CRM_DEBUG_LIBS)
-AC_SUBST(CRM_DEBUG_FLAGS)
-
-
 dnl lrm configuration
 AC_ARG_ENABLE([lrm],
 [  --enable-lrm  Compile the new Local Resource Manager.  [default=yes]],
@@ -2388,6 +2354,29 @@ AM_CONDITIONAL(LRM_BUILD, test "x${enable_lrm}" = "xyes")
 
 AC_MSG_NOTICE([whether to enable the Local Resource Manager... ${enable_lrm}])
 
+dnl ************************************************************************
+dnl management and quorum daemons.
+
+AC_CHECK_HEADERS(gnutls/gnutls.h)
+AC_CHECK_HEADERS(security/pam_appl.h pam/pam_appl.h)
+
+dnl GNUTLS library: Attempt to determine by 'libgnutls-config' program.
+dnl If no 'libgnutls-config', try traditional autoconf means.
+AC_PATH_PROGS(LIBGNUTLS_CONFIG, libgnutls-config)
+
+if test -n "$LIBGNUTLS_CONFIG"; then
+	AC_MSG_CHECKING(for gnutls header flags)
+	GNUTLSHEAD="`$LIBGNUTLS_CONFIG --cflags`";
+	AC_MSG_RESULT($GNUTLSHEAD)
+	AC_MSG_CHECKING(for gnutls library flags)
+	GNUTLSLIBS="`$LIBGNUTLS_CONFIG --libs`";
+	AC_MSG_RESULT($GNUTLSLIBS)
+else
+	AC_CHECK_LIB(gnutls, gnutls_init)
+fi
+AC_SUBST(GNUTLSHEAD)
+AC_SUBST(GNUTLSLIBS)
+
 dnl management tool configuration
 AC_ARG_ENABLE([mgmt],
 [  --enable-mgmt  Compile the management tool.  [default=try]],
@@ -2411,7 +2400,6 @@ if test "x${enable_mgmt}" != "xno"; then
 		MGMT_ENABLED=0
 	fi
 
-	AC_CHECK_HEADERS(security/pam_appl.h pam/pam_appl.h)
 	if test "$ac_cv_header_security_pam_appl_h" = "no" -a "$ac_cv_header_pam_pam_appl_h" = "no"; then
   		$MISSING_FN "security/pam_appl.h" \
 		  "The GUI managment module needs the pam-devel package"
@@ -2419,10 +2407,24 @@ if test "x${enable_mgmt}" != "xno"; then
 		MGMT_ENABLED=0
 	fi
 
-	AC_CHECK_HEADER(gnutls/gnutls.h)
 	if test "$ac_cv_header_gnutls_gnutls_h" = "no"; then
   		$MISSING_FN "gnutls/gnutls.h" \
-		  "The GUI managment module needs GNU/TLS"
+		  "The GUI managment module needs GNU/TLS header files"
+		enable_mgmt="no"
+		MGMT_ENABLED=0
+	fi
+
+	if test -z "$LIBGNUTLS_CONFIG"; then
+		$MISSING_FN "libgnutls-config" \
+		  "The GUI managment module needs libgnutls-config"
+		enable_mgmt="no"
+		MGMT_ENABLED=0
+	fi
+
+	if test -z "$SWIG"; then
+		$MISSING_FN "swig" \
+		  "The GUI managment module needs swig" \
+		  "You can get it from http://swig.org/"
 		enable_mgmt="no"
 		MGMT_ENABLED=0
 	fi
@@ -2469,10 +2471,16 @@ if test "x${enable_quorumd}" != "xno"; then
 		MISSING_FN="FatalMissingThing"
 	fi
 
-	AC_CHECK_HEADER(gnutls/gnutls.h)
 	if test "$ac_cv_header_gnutls_gnutls_h" = "no"; then
   		$MISSING_FN "gnutls/gnutls.h" \
-		  "The quorum server module needs GNU/TLS"
+		  "The quorum server module needs GNU/TLS header files"
+		enable_quorumd="no"
+		QUORUMD_ENABLED=0
+	fi
+
+	if test -z "$LIBGNUTLS_CONFIG"; then
+		$MISSING_FN "libgnutls-config" \
+		  "The quorum server module needs libgnutls-config"
 		enable_quorumd="no"
 		QUORUMD_ENABLED=0
 	fi
@@ -2572,92 +2580,44 @@ STONITH_RA_DIR="${hb_libdir}/stonith.d/"
 AC_SUBST(STONITH_RA_DIR)
 AC_DEFINE_UNQUOTED(STONITH_RA_DIR,"$STONITH_RA_DIR", stonith ra dir)
 
-dnl **********************************************************************
-dnl Scripting language bindings
-dnl AC_ARG_ENABLE([swig],
-dnl [  --enable-swig  Provide language bindings via SWIG [default=yes]],
-dnl [], [enable_swig=try]) 
+valgrind_desc="Run selected heartbeat components using Valgrind."
+AC_ARG_ENABLE([valgrind],
+	[  --enable-valgrind  $valgrind_desc  [default=no]],
+			[], [enable_valgrind=no])
 
-dnl SWIG_OPTIONS="$GLIBHEAD"
-dnl SWIG_ENABLED=0
-dnl if test -z "${enable_swig}"; then
-dnl	enable_swig="no"
-dnl fi
+malloc_desc="Use libc malloc instead of Heartbeat's custom one."
+AC_ARG_ENABLE([libc-malloc],
+	[  --enable-libc-malloc  $malloc_desc  [default=no]],
+			[], [enable_libc_malloc=no])
 
-dnl AC_MSG_CHECKING(which swig/perl version)
-dnl if test "${enable_swig}" != "no"; then
-dnl	if test "${enable_swig}" = "try"; then
-dnl		MISSING_FN="WarnMissingThing"
-dnl	else
-dnl		MISSING_FN="FatalMissingThing"
-dnl	fi
-dnl	if test -z "$SWIG"; then
-dnl		enable_swig="no (swig not found)"
-dnl		AC_MSG_RESULT($enable_swig)
-dnl		$MISSING_FN "swig" "SWIG was requested, but not installed" \
-dnl		"You can get it from http://swig.org/"
-dnl	else
-dnl		SWIG_VERSION="`$SWIG -version 2>&1 | sed -ne 's/SWIG Version 1.3.//p'`"
-dnl		if test "0$SWIG_VERSION" -lt "19" 2>&1 ; then
-dnl			enable_swig="no (version 1.3.x, x>=19 required)"
-dnl			AC_MSG_RESULT($enable_swig)
-dnl			$MISSING_FN "swig" "SWIG version must be > 1.3.19" \
-dnl			"You can get it from http://swig.org/"
-dnl		elif $PERL -e "use 5.008001;" > /dev/null 2>&1; then
-dnl			SWIG_ENABLED=1
-dnl			AC_DEFINE_UNQUOTED(WITH_SWIG, 1, 
-dnl				SWIG bindings enabled)
-dnl			AC_MSG_RESULT(yes)
-dnl		else
-dnl			enable_swig="no (invalid perl version)"
-dnl			AC_MSG_RESULT($enable_swig)
-dnl			$MISSING_FN "swig-perl" "SWIG-enabled Perl" 
-dnl		fi
-dnl	fi
-dnl fi
+AC_ARG_WITH(valgrind-log,
+    [  --with-valgrind-log=options  Logging options to pass to valgrind],
+    [ VALGRIND_LOG="$withval" ], 
+    [])
 
-dnl If TCL.H isn't found, then we must search for it.
-dnl On FreeBSD they are in sub directories of /usr/local/include/
+AC_ARG_WITH(valgrind-suppress,
+    [  --with-valgrind-suppress=file  Name of a suppression file to pass to Valgrind [default=/dev/null]],
+    [ VALGRIND_SUPP="$withval" ], 
+    [ VALGRIND_SUPP="/dev/null" ])
 
-dnl AC_MSG_CHECKING(location of tcl.h)
-dnl for name in $([$LS /usr/local/include/ | $EGREP '^(i?tcl[0-9]+\.[0-9]+(\_r)?([a-z][a-z])?)'])
-dnl do
-dnl 	echo "Checking for $name/tcl.h"
-dnl 	AC_CHECK_HEADERS($name/tcl.h)
-dnl 	CPPFLAGS="$CPPFLAGS -I/usr/local/include/$name"
-dnl 	SWIG_OPTIONS="$SWIG_OPTIONS -I/usr/local/include/$name"
-dnl done
-	
-dnl if test "x$SWIG_ENABLED" = "x1" && test "x$ac_cv_header_tcl_h" = "xno"; then
-dnl 	AC_MSG_RESULT(no - tcl.h not found)
-dnl 	FatalMissingThing "tcl.h" "TCL Header File" "Install tcl"
-dnl fi
+if test "x" = "x$VALGRIND_LOG"; then 
+    VALGRIND_LOG="--log-socket=127.0.0.1:1234"
+    AC_MSG_NOTICE(Set default Valgrind options to: $VALGRIND_OPTS)
+    AC_MSG_NOTICE(Remember to start a receiver on localhost:1234)
+fi
 
-dnl AC_MSG_NOTICE([whether to enable SWIG language bindings... ${enable_swig}])
+AC_PATH_PROG(VALGRIND_BIN, valgrind)
+if test "xyes" = "x$enable_valgrind" -a "x$VALGRIND_BIN" != "x"; then
+   enable_libc_malloc=yes
+fi
 
- 
-dnl AC_SUBST(SWIG_ENABLED)
-dnl AC_SUBST(SWIG_OPTIONS)
-dnl AM_CONDITIONAL(SWIG_BUILD, test "x${enable_swig}" = "xyes")
+AC_DEFINE_UNQUOTED(VALGRIND_BIN, "$VALGRIND_BIN", Valgrind command)
+AC_DEFINE_UNQUOTED(VALGRIND_LOG, "$VALGRIND_LOG", Valgrind logging options)
+AC_DEFINE_UNQUOTED(VALGRIND_SUPP, "$VALGRIND_SUPP", Name of a suppression file to pass to Valgrind)
 
-dnl AC_ARG_ENABLE([perl-vendor],
-dnl [  --enable-perl-vendor  Install the Perl bindings as vendor extensions [default=no]]) 
-dnl PERL_INSTALL_TARGET="install"
-dnl AC_SUBST(PERL_INSTALL_TARGET)
-
-dnl if test "${enable_swig}" = "yes"; then
-dnl 	if test -z "${enable_perl_vendor}"; then
-dnl 		enable_perl_vendor="no"
-dnl 	fi
-dnl 
-dnl 	if test "${enable_perl_vendor}" = "yes"; then
-dnl 		PERL_INSTALL_TARGET="install_vendor"
-dnl 		AC_DEFINE_UNQUOTED(WITH_PERL_VENDOR, 1, Installing Perl modules as vendor)
-dnl 	fi
-dnl 
-dnl 	AC_MSG_NOTICE([whether to install Perl modules as vendor... ${enable_perl_vendor}])
-dnl fi
-
+if test "xyes" = "x$enable_libc_malloc" -o "x1" = "x$enable_libc_malloc"; then
+   AC_DEFINE_UNQUOTED(USE_LIBC_MALLOC, 1, $malloc_desc)
+fi
 
 dnl **********************************************************************
 dnl	Enable optional, experimental directories here...
@@ -2769,6 +2729,7 @@ doc/Makefile							\
 contrib/Makefile						\
 	contrib/ipfail/Makefile					\
         contrib/mlock/Makefile					\
+	contrib/drbd-outdate-peer/Makefile			\
 include/Makefile						\
         include/clplumbing/Makefile				\
 	include/crm/Makefile					\
@@ -2786,11 +2747,6 @@ replace/Makefile						\
 linux-ha/Makefile						\
 lib/Makefile							\
 	lib/apphb/Makefile					\
-dnl	lib/bindings/Makefile					\
-dnl		lib/bindings/perl/Makefile			\
-dnl		lib/bindings/perl/Makefile.PL			\
-dnl			lib/bindings/perl/cl_raw/Makefile	\
-dnl			lib/bindings/perl/cl_raw/Makefile.PL	\
 	lib/clplumbing/Makefile					\
 	lib/hbclient/Makefile					\
 	lib/crm/Makefile					\
@@ -3009,7 +2965,6 @@ AC_MSG_RESULT([  ucd_snmp_devel name  = "${UCDSNMPDEVEL}"])
 
 AC_MSG_RESULT([  Build New CRM        = "${enable_crm}"])
 AC_MSG_RESULT([  Build New LRM        = "${enable_lrm}"])
-dnl AC_MSG_RESULT([  Build SWIG bindings  = "${enable_swig}"])
 AC_MSG_RESULT([  Build Ldirectord     = "${enable_ldirectord}"])
 
 AC_MSG_RESULT([  Build CIM providers  = "${enable_cim_provider}"])

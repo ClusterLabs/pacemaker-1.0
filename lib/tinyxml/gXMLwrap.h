@@ -1,4 +1,3 @@
-/* $Id: gXMLwrap.h,v 1.3 2004/10/09 01:49:42 lge Exp $ */
 /* gXMLwrap.h */
 /* for the gXML library */
 /* library of functions to wrap and unwrap data using the gXML_wrapper */

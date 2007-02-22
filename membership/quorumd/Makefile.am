@@ -32,10 +32,10 @@ halibdir	=  $(libdir)/@HB_PKG@
 halib_PROGRAMS 	=  quorumd quorumdtest
 quorumd_SOURCES =  quorumd.c
 quorumd_LDADD 	=  $(COMMONLIBS)
-quorumd_LDFLAGS = `libgnutls-config --libs`
-quorumd_CFLAGS = $(INCLUDES) `libgnutls-config --cflags`
+quorumd_LDFLAGS = $(GNUTLSLIBS)
+quorumd_CFLAGS = $(INCLUDES) $(GNUTLSHEAD)
 
 quorumdtest_SOURCES =  quorumdtest.c
 quorumdtest_LDADD =  $(COMMONLIBS)
-quorumdtest_LDFLAGS = `libgnutls-config --libs`
-quorumdtest_CFLAGS = $(INCLUDES) `libgnutls-config --cflags`
+quorumdtest_LDFLAGS = $(GNUTLSLIBS)
+quorumdtest_CFLAGS = $(INCLUDES) $(GNUTLSHEAD)

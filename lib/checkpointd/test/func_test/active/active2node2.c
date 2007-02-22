@@ -1,4 +1,3 @@
-/* $Id: active2node2.c,v 1.1 2004/06/30 03:44:19 deng.pan Exp $ */
 /* 
  * active2node2.c: Test data checkpoint function : saCkptActiveCheckpointSet 
  *

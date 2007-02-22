@@ -1,4 +1,3 @@
-/* $Id: func.h,v 1.3 2004/10/09 01:49:41 lge Exp $ */
 /* 
  * func.h: Test Head file for data checkpoint : saCkptCheckpointClose 
  *

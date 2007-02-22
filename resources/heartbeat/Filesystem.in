@@ -1,6 +1,5 @@
 #!/bin/sh
 #
-# $Id: Filesystem.in,v 1.7 2006/08/14 09:37:21 andrew Exp $
 # 
 # Description:	wrapper of OCF RA Filesystem, based on original heartbeat RA.
 #		See OCF RA Filesystem for more information.

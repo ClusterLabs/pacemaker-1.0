@@ -1,4 +1,3 @@
-/* $Id: fun12node2.c,v 1.2 2004/10/09 01:49:42 lge Exp $ */
 /* 
  * fun12node2.c: Funtion Test Case 12 for Event Service Test
  * saEvtInitialize, saEvtFinalize, saEvtSelectionObjectGet

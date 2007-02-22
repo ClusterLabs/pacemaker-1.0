@@ -1,4 +1,3 @@
-/* $Id: hb_api.c,v 1.154 2006/05/28 00:56:57 zhenh Exp $ */
 /*
  * hb_api: Server-side heartbeat API code
  *

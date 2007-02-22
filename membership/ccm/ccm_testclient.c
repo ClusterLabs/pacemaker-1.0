@@ -1,4 +1,3 @@
-/* $Id: ccm_testclient.c,v 1.18 2005/07/29 07:27:37 panjiam Exp $ */
 /* 
  * ccm.c: A consensus cluster membership sample client
  *

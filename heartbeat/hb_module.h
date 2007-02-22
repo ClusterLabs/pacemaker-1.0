@@ -1,4 +1,3 @@
-/* $Id: hb_module.h,v 1.9 2005/07/29 06:55:37 sunjd Exp $ */
 /* Copyright (C) 2000 Alan Robertson <alanr@unix.sh>
  *
  * This program is free software; you can redistribute it and/or modify
