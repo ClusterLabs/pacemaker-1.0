@@ -52,7 +52,7 @@ static IPC_Channel * chan	   = NULL;
 static IPC_Channel * cbchan	   = NULL;
 
 static gboolean INT_BY_ALARM = FALSE;
-static unsigned int DEFAULT_TIMEOUT = 6;
+static unsigned int DEFAULT_TIMEOUT = 60;
 
 /* Must correspond to stonith_type_t */
 /* Not use it yet 
