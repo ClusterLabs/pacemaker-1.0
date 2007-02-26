@@ -31,7 +31,11 @@
 #include <pwd.h>
 #include <grp.h>
 #include <unistd.h>
+#include <stdlib.h>
 #include <stdarg.h>
+#ifdef HAVE_STRING_H
+#include <string.h>
+#endif
 #include <errno.h>
 #include <fcntl.h>
 #if HAVE_SECURITY_PAM_APPL_H
