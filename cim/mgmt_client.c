@@ -21,6 +21,7 @@
  */
 
 
+#include <lha_internal.h>
 #include <pthread.h>
 #include "mgmt_client.h"
 
