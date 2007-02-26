@@ -22,6 +22,7 @@
 #include <clplumbing/cl_uuid.h>
 #include <heartbeat.h>
 #include <string.h>
+#include <stdlib.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
