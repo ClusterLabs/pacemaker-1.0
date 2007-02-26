@@ -1255,7 +1255,7 @@ load_notification_plugin(const char * pluginname)
 	PIL_rc	rc;
 	void*	exports;
 	if (pisys == NULL) {
-		pisys = NewPILPluginUniv(HA_LIBDIR "/heartbeat/plugins");
+		pisys = NewPILPluginUniv(HA_LIBHBDIR "/heartbeat/plugins");
 		if (pisys == NULL) {
 			return FALSE;
 		}

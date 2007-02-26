@@ -3876,12 +3876,12 @@ restart_heartbeat(void)
 		if (nice_failback) {
 			cl_log(LOG_INFO, "Current resources: -R -C %s"
 			,	decode_resources(procinfo->i_hold_resources));
-			execl(HA_LIBDIR "/heartbeat", "heartbeat", "-R"
+			execl(HA_LIBHBDIR "/heartbeat", "heartbeat", "-R"
 			,	"-C"
 			,	decode_resources(procinfo->i_hold_resources)
 			,	(const char *)NULL);
 		}else{
-			execl(HA_LIBDIR "/heartbeat", "heartbeat", "-R"
+			execl(HA_LIBHBDIR "/heartbeat", "heartbeat", "-R"
 			,	(const char *)NULL);
 		}
 	}else{
@@ -3889,9 +3889,9 @@ restart_heartbeat(void)
 		sleep((config->deadtime_ms+999)/1000+1);
 		/* "Normal" restart (not quick) */
 		cl_unlock_pidfile(PIDFILE);
-		execl(HA_LIBDIR "/heartbeat", "heartbeat", (const char *)NULL);
+		execl(HA_LIBHBDIR "/heartbeat", "heartbeat", (const char *)NULL);
 	}
-	cl_log(LOG_ERR, "Could not exec " HA_LIBDIR "/heartbeat");
+	cl_log(LOG_ERR, "Could not exec " HA_LIBHBDIR "/heartbeat");
 	cl_log(LOG_ERR, "Shutting down...");
 	hb_emergency_shutdown();
 }

@@ -1442,7 +1442,7 @@ req_our_resources(int getthemanyway)
 	if (nice_failback) {
 		setenv(HANICEFAILBACK, "yes", 1);
 	}
-	sprintf(cmd, HA_LIBDIR "/ResourceManager listkeys %s", curnode->nodename);
+	sprintf(cmd, HA_LIBHBDIR "/ResourceManager listkeys %s", curnode->nodename);
 	if (ANYDEBUG) {
 		cl_log(LOG_DEBUG, "req_our_resources(%s)"
 		,	cmd);
@@ -1474,7 +1474,7 @@ req_our_resources(int getthemanyway)
 		if (buf[strlen(buf)-1] == '\n') {
 			buf[strlen(buf)-1] = EOS;
 		}
-		sprintf(getcmd, HA_LIBDIR "/req_resource %s", buf);
+		sprintf(getcmd, HA_LIBHBDIR "/req_resource %s", buf);
 		if (ANYDEBUG) {
 			cl_log(LOG_DEBUG, "req_our_resources()"
 			": running [%s]",	getcmd);
@@ -1940,7 +1940,7 @@ go_standby(enum standby who, int resourceset) /* Which resources to give up */
 	 *	We could do this ourselves fairly easily...
 	 */
 
-	sprintf(cmd, HA_LIBDIR "/ResourceManager %s", querycmd);
+	sprintf(cmd, HA_LIBHBDIR "/ResourceManager %s", querycmd);
 
 	if ((rkeys = popen(cmd, "r")) == NULL) {
 		cl_log(LOG_ERR, "Cannot run command %s", cmd);
@@ -1951,7 +1951,7 @@ go_standby(enum standby who, int resourceset) /* Which resources to give up */
 		if (buf[strlen(buf)-1] == '\n') {
 			buf[strlen(buf)-1] = EOS;
 		}
-		sprintf(cmd, HA_LIBDIR "/ResourceManager %s %s"
+		sprintf(cmd, HA_LIBHBDIR "/ResourceManager %s %s"
 		,	actioncmds[action], buf);
 
 		/*should we use logging daemon or not in script*/
@@ -2087,7 +2087,7 @@ hb_giveup_resources(void)
 	 *	We could do this ourselves fairly easily...
 	 */
 
-	sprintf(cmd, HA_LIBDIR "/ResourceManager listkeys '.*'");
+	sprintf(cmd, HA_LIBHBDIR "/ResourceManager listkeys '.*'");
 
 	if ((rkeys = popen(cmd, "r")) == NULL) {
 		cl_log(LOG_ERR, "Cannot run command %s", cmd);
@@ -2103,7 +2103,7 @@ hb_giveup_resources(void)
 		setenv(HALOGD, cl_log_get_uselogd()?
 		       "yes":"no", 1);
 		
-		sprintf(cmd, HA_LIBDIR "/ResourceManager givegroup %s", buf);
+		sprintf(cmd, HA_LIBHBDIR "/ResourceManager givegroup %s", buf);
 		if ((rc=system(cmd)) != 0) {
 			cl_log(LOG_ERR, "%s %s", cmd, rctomsg(rc));
 			finalrc=HA_FAIL;

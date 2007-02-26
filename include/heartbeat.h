@@ -88,8 +88,8 @@
 #define	ACK_MSG_DIV	10
 
 #define	RSC_TMPDIR	HA_VARRUNDIR "/heartbeat/rsctmp"
-#define HA_MODULE_D	HA_LIBDIR "/modules"
-#define HA_PLUGIN_D	HA_LIBDIR "/plugins"
+#define HA_MODULE_D	HA_LIBHBDIR "/modules"
+#define HA_PLUGIN_D	HA_LIBHBDIR "/plugins"
 
 /* For compatability with older external facing headers
  * These variables are no longer used internally
@@ -124,8 +124,8 @@
 #define	OFFLINESTATUS	"offline"	/* Status of an offline client */
 #define	LINKUP		"up"		/* The status assigned to a working link */
 #define	LOADAVG		"/proc/loadavg"
-#define	PIDFILE		HA_VARRUNDIR "/heartbeat.pid"
-#define KEYFILE         HA_RC_DIR "/authkeys"
+#define	PIDFILE		HA_VARRUNDIR  "/heartbeat.pid"
+#define KEYFILE         HA_HBCONF_DIR "/authkeys"
 #define HA_SERVICENAME	"ha-cluster" 	/* Our official reg'd service name */
 #define	UDPPORT		694		/* Our official reg'd port number */
 
