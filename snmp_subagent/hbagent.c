@@ -928,7 +928,7 @@ rsinfo_get_int_value(lha_attribute_t attr, size_t index, uint32_t * value)
     switch (attr) {
 	case RESOURCE_STATUS:
 	    resource = ((struct hb_rsinfo *) g_ptr_array_index(gResourceTable, index))->resource;
-	    sprintf(getcmd, HA_LIBDIR "/ResourceManager status %s", resource);
+	    sprintf(getcmd, HA_LIBHBDIR "/ResourceManager status %s", resource);
 	    rc = system(getcmd);
 	    /* cl_log(LOG_INFO, "resource [%s] status: [%d]", resource, WEXITSTATUS(rc)); */
 
