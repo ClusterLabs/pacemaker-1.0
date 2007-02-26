@@ -9,3 +9,5 @@ stamp-h2.in
 parser-messages
 MISC_ERRORS
 ha_version.h
+config.h
+hb_config.h
