@@ -4922,7 +4922,7 @@ make_daemon(void)
 
 	cl_log_enable_stderr(FALSE);
 
-	setenv(HADIRENV, HB_RC_DIR, TRUE);
+	setenv(HADIRENV, HA_HBCONF_DIR, TRUE);
 	setenv(DATEFMT, HA_DATEFMT, TRUE);
 	setenv(HAFUNCENV, HA_FUNCS, TRUE);
 	umask(022);
