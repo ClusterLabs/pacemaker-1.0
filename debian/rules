@@ -56,7 +56,10 @@ unpatch:
 build: checkbuild build-stamp
 build-stamp:
 	dh_testdir
-	./configure $(cfg)
+	# Allow debian packages to also be built directly from Hg archives
+	# Official debian packages are built from dist tarballs
+	test -e ./configure && ./configure $(cfg)
+	test ! -e ./configure && ./bootstrap $(cfg)
 	$(MAKE)
 	touch build-stamp
 

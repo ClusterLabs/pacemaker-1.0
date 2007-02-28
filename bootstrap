@@ -140,7 +140,7 @@ ln -s `which $autoconf` ./autoconf
 # Check for automake
 pkg="automake"
 URL=$gnu/$pkg/
-for command in automake automake14 automake15 automake19 
+for command in automake automake14 automake-1.4 automake15 automake-1.5 automake17 automake-1.7 automake19 automake-1.9 
 do
   if 
       testProgram $command
