@@ -65,8 +65,8 @@ usr/include/heartbeat/mgmt/mgmt_common.h
 usr/include/heartbeat/mgmt/mgmt_tls.h
 usr/include/heartbeat/recoverymgr.h
 usr/include/heartbeat/replace_uuid.h
-usr/include/heartbeat/stonith/stonithd_api.h
-usr/include/heartbeat/stonith/stonithd_msg.h
+usr/include/heartbeat/fencing/stonithd_api.h
+usr/include/heartbeat/fencing/stonithd_msg.h
 usr/include/ocf/oc_event.h
 usr/include/ocf/oc_membership.h
 usr/include/pils/generic.h
