@@ -157,10 +157,6 @@ ConfigureDarwin() {
   FLAGS="$FLAGS --with-group-name=admin --with-ccmuser-name=daemon"
   FLAGS="$FLAGS --enable-fatal-warnings=yes"
   export CFENV="Darwin"
-
-  export LIBS="$LIBS -L${install_prefix}/lib"
-  CPPFLAGS="$CPPFLAGS -g -I${install_prefix}/include"
-  export CPPFLAGS
 }
 
 ConfigureGenericUNIX() {
