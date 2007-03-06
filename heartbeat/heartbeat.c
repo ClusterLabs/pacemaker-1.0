@@ -2353,8 +2353,8 @@ hb_add_one_node(const char* node)
 	struct node_info*	thisnode = NULL;	
 
 	cl_log(LOG_INFO,
-	       "Adding new node(%s) to configuration.",
-	       node);
+	       "%s: Adding new node[%s] to configuration.",
+	       __FUNCTION__, node);
 	
 	thisnode = lookup_node(node);
 	if (thisnode){
@@ -2375,10 +2375,14 @@ hb_add_one_node(const char* node)
 	
 }
 
-
+/*
+ * Process a request to add a node to the cluster.
+ * This can _only_ come from a manual addnode request.
+ */
 static void
-HBDoMsg_T_ADDNODE(const char * type, struct node_info * fromnode,
-		  TIME_T msgtime, seqno_t seqno, const char * iface, struct ha_msg * msg)
+HBDoMsg_T_ADDNODE(const char * type, struct node_info * fromnode
+,	TIME_T msgtime, seqno_t seqno, const char * iface
+,	struct ha_msg * msg)
 {
 	const char*	nodelist;
 	char*		nodes[MAXNODE];
@@ -2401,6 +2405,10 @@ HBDoMsg_T_ADDNODE(const char * type, struct node_info * fromnode,
 	
 	
 	for (i = 0; i < num; i++){
+		if (ANYDEBUG) {
+			cl_log(LOG_DEBUG, "%s: adding node %s"
+			,	__FUNCTION__, nodes[i]);
+		}
 		if (hb_add_one_node(nodes[i])!= HA_OK){
 			cl_log(LOG_ERR, "Add node %s failed", nodes[i]);
 		}
@@ -2411,6 +2419,10 @@ HBDoMsg_T_ADDNODE(const char * type, struct node_info * fromnode,
 	return;
 }
 
+/*
+ * Process a request to set the quorum vote weight for a node.
+ * This can only come from a manual setweight command.
+ */
 static void
 HBDoMsg_T_SETWEIGHT(const char * type, struct node_info * fromnode,
 		  TIME_T msgtime, seqno_t seqno, const char * iface, struct ha_msg * msg)
@@ -2437,6 +2449,10 @@ HBDoMsg_T_SETWEIGHT(const char * type, struct node_info * fromnode,
 	return;
 }
 
+/*
+ * Process a request to set the site for a node.
+ * This can only come from a manual setsite command.
+ */
 static void
 HBDoMsg_T_SETSITE(const char * type, struct node_info * fromnode,
 		  TIME_T msgtime, seqno_t seqno, const char * iface, struct ha_msg * msg)
@@ -2464,6 +2480,11 @@ HBDoMsg_T_SETSITE(const char * type, struct node_info * fromnode,
 	return;
 }
 
+/*
+ * Remove a single node from the configuration - for whatever reason
+ * "deletion" is TRUE if it is to be permanently deleted from the
+ * configuration and not allowed to autojoin back again.
+ */
 static int
 hb_remove_one_node(const char* node, int deletion)
 {
@@ -2492,6 +2513,10 @@ hb_remove_one_node(const char* node, int deletion)
 		cl_log(LOG_ERR, "%s: creating new message failed",__FUNCTION__);
 		return HA_FAIL;
 	}
+
+	/*
+	 * This message only goes to the CCM, etc. NOT to the network.
+	 */
 	
 	if ( ha_msg_add(removemsg, F_TYPE, T_DELNODE)!= HA_OK
 	     || ha_msg_add(removemsg, F_NODE, node) != HA_OK){
@@ -2507,6 +2532,10 @@ hb_remove_one_node(const char* node, int deletion)
 
 
 
+/*
+ *	Process a message requesting a node deletion.
+ *	This can come ONLY from a manual node deletion.
+ */
 static void
 HBDoMsg_T_DELNODE(const char * type, struct node_info * fromnode,
 		  TIME_T msgtime, seqno_t seqno, const char * iface, struct ha_msg * msg)
@@ -2574,7 +2603,6 @@ HBDoMsg_T_DELNODE(const char * type, struct node_info * fromnode,
 			cl_log(LOG_ERR, "Deleting node %s failed", nodes[i]);
 		}
 	}
-	
  out:
 	for (i = 0; i < num; i++){
 		cl_free(nodes[i]);
@@ -2599,6 +2627,9 @@ get_nodelist( char* nodelist, int len)
 	p = nodelist;
 	for (i = 0; i< config->nodecount; i++){
 		int tmplen;
+		if (config->nodes[i].nodetype != NORMALNODE_I) {
+			continue;
+		}
 		tmplen= snprintf(p, numleft, "%s ", config->nodes[i].nodename);
 		p += tmplen;
 		numleft -= tmplen;
@@ -2657,11 +2688,21 @@ get_delnodelist(char* delnodelist, int len)
 	
 	return HA_OK;
 }
-
+/*
+ * Someone has joined the cluster and asked us for the current set of nodes
+ * as modified by addnode and delnode commands or the autojoin option
+ * (if enabled), and also the set of semi-permanently deleted nodes.
+ *
+ * We send them a T_REPNODES message in response - containing that information.
+ *
+ * We allow dynamic node configuration even if autojoin is disabled.  In that
+ * case you need to use the addnode and delnode commands.
+ */
 
 static void
-HBDoMsg_T_REQNODES(const char * type, struct node_info * fromnode,
-                  TIME_T msgtime, seqno_t seqno, const char * iface, struct ha_msg * msg)
+HBDoMsg_T_REQNODES(const char * type, struct node_info * fromnode
+,	TIME_T msgtime, seqno_t seqno, const char * iface
+,	struct ha_msg * msg)
 {
 	char nodelist[MAXLINE];
 	char delnodelist[MAXLINE];
@@ -2674,7 +2715,8 @@ HBDoMsg_T_REQNODES(const char * type, struct node_info * fromnode,
 	}
 
 	if (ANYDEBUG){
-		cl_log(LOG_DEBUG, "Get a reqnodes message from %s", fromnode->nodename);
+		cl_log(LOG_DEBUG, "Get a reqnodes message from %s"
+		,	fromnode->nodename);
 	}
 	
 	if (get_nodelist(nodelist, MAXLINE) != HA_OK
@@ -2701,9 +2743,17 @@ HBDoMsg_T_REQNODES(const char * type, struct node_info * fromnode,
 	return;
 } 
 
+/*
+ * Got our requested reply (T_REPNODES) to our T_REQNODES request.
+ * It has the current membership as modified by addnode/delnode commands and
+ * autojoin options
+ *
+ * We allow dynamic node configuration even if autojoin is disabled.  In that
+ * case you need to use the addnode and delnode commands.
+ */
 static void
-HBDoMsg_T_REPNODES(const char * type, struct node_info * fromnode,
-                  TIME_T msgtime, seqno_t seqno, const char * iface, struct ha_msg * msg)
+HBDoMsg_T_REPNODES(const char * type, struct node_info * fromnode
+,	TIME_T msgtime, seqno_t seqno, const char * iface, struct ha_msg * msg)
 {
 	const char* nodelist = ha_msg_value(msg, F_NODELIST);
 	const char* delnodelist = ha_msg_value(msg, F_DELNODELIST);
@@ -2724,10 +2774,11 @@ HBDoMsg_T_REPNODES(const char * type, struct node_info * fromnode,
 	}
 	
 	/* process nodelist*/
-	/* our local node list is outdated
-	 * any node that is in nodelist but not in local node list should be added
-	 * any node that is in local node list but not in nodelist should be removed
-	 * (but not deleted)
+	/* our local node list needs to be updated...
+	 * Any node that is in nodelist but not in local node list should be
+	 * added
+	 * Any node that is in local node list but not in nodelist should be
+	 * removed (but not deleted)
 	 */
 	
 	/* term definition*/
@@ -2746,43 +2797,70 @@ HBDoMsg_T_REPNODES(const char * type, struct node_info * fromnode,
 				__FUNCTION__);
 			return;
 		}
-		for (i =0; i < num; i++){
+		for (i=0; i < num; i++){
 			for (j = 0; j < config->nodecount; j++){
-				if (strncmp(nodes[i], config->nodes[j].nodename,
-					HOSTLENG) == 0){
+				if (strncmp(nodes[i], config->nodes[j].nodename
+				,	HOSTLENG) == 0){
 					break;
 				}
 			}
-			if ( j == config->nodecount){
-				/*this node is not found in config
-				* we need to add it 
-				*/
+			if (j == config->nodecount){
+				/*
+				 * This node is not found in config -
+				 * we need to add it...
+				 */
+				if (ANYDEBUG) {
+					cl_log(LOG_DEBUG
+					,	"%s: adding node %s"
+					,	__FUNCTION__, nodes[i]);
+				}
 				hb_add_one_node(nodes[i]);		
+			}else if (config->nodes[j].nodetype != NORMALNODE_I){
+				cl_log(LOG_ERR
+				,	"%s: Incoming %s node list contains %s"
+				,	__FUNCTION__
+				,	T_REPNODES
+				,	config->nodes[i].nodename);
 			}
 		}
 		
-		for (i =0; i < config->nodecount; i++){
-			for (j=0;j < num; j++){
-				if ( strncmp(config->nodes[i].nodename,
-					nodes[j], HOSTLENG) == 0){
+		for (i=0; i < config->nodecount; i++){
+			for (j=0; j < num; j++){
+				if (strncmp(config->nodes[i].nodename
+				,	nodes[j], HOSTLENG) == 0){
 					break;
 				}	
 			}
-			if (j == num){
-				/* This node is not found in incoming nodelist,
-				* therefore, we need to remove it from config->nodes[]
-				*
-				* Of course, this assumes everyone has correct node
-				* lists - which may not be the case :-(  FIXME???
-				* And it assumes autojoin is on - which it may
-				* not be...
-				*/
-				hb_remove_one_node(config->nodes[i].nodename, FALSE);
-				
+			if (j == num) {
+				if (config->nodes[i].nodetype != NORMALNODE_I){
+					cl_log(LOG_ERR
+					,	"%s: Attempt to delete node %s"
+					,	__FUNCTION__
+					,	config->nodes[i].nodename);
+					continue;
+				}
+				/*
+				 * This node is not found in incoming nodelist,
+				 * therefore, we need to remove it from
+				 * config->nodes[]
+				 *
+				 * This assumes everyone the partner node we
+				 * sent the reqnodes message to has the current
+				 * configuration.
+				 *
+				 * The moral of the story is that you need to
+				 * not add and delete nodes by ha.cf on live
+				 * systems.
+				 *
+				 * If you use addnode and delnode commands then
+				 * everything should be OK here.
+				 */
+				hb_remove_one_node(config->nodes[i].nodename
+				,	FALSE);
 			}
 		}
 		for (i = 0; i< num; i++){
-			if (nodes[i]){
+			if (nodes[i]) {
 				cl_free(nodes[i]);
 				nodes[i] = NULL;
 			}
@@ -3971,9 +4049,13 @@ check_for_timeouts(void)
 
 
 /*
- * The anypktsyet field in the node structure gets set to TRUE whenever we
- * either hear from a node, or we declare it dead, and issue a fake "dead"
- * status packet.
+ * Pick a machine, and ask it what the current ha.cf configuration is.
+ * This is needed because of autojoin and also because of addnode/delnode
+ * commands
+ *
+ * We allow dynamic node configuration even if autojoin is disabled.  In that
+ * case you need to use the addnode and delnode commands to update the
+ * configuration.
  */
 static gboolean
 send_reqnodes_msg(gpointer data){
@@ -4003,7 +4085,7 @@ send_reqnodes_msg(gpointer data){
 		
 	}
 	
-	if (destnode ==NULL){
+	if (destnode == NULL){
 		get_reqnodes_reply = TRUE;
 		comm_now_up();
 		return FALSE;
