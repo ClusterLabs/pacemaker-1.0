@@ -225,13 +225,18 @@ ccm_control_process(ccm_info_t *info, ll_cluster_t * hb)
 	if(numnodes != NULL){
 		numnodes_val = atoi(numnodes);
 		if (numnodes_val != info->llm.nodecount){
-			ccm_log(LOG_ERR, "Node count from node %s does not agree"
+			ccm_log(LOG_ERR
+			,	"%s: Node count from node %s does not agree"
 			": local count=%d, count in message=%d"
+			,	__FUNCTION__
 			,	orig, info->llm.nodecount, numnodes_val);
 			ccm_log(LOG_ERR, "Please make sure ha.cf files on all"
 			" nodes have same nodes list or add \"autojoin any\" "
 			"to ha.cf");
-			exit(100);
+			ccm_log(LOG_INFO, "%s",	"If this problem persists"
+			", check the heartbeat 'hostcache' files"
+			" in the cluster to look for problems.");
+			exit(1);
 		}
 	}
 	state_msg_handler[info->state](ccm_msg_type, msg, hb, info);
