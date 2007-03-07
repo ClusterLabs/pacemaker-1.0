@@ -34,6 +34,7 @@ IFCONFIG="@IFCONFIG@ @IFCONFIG_A_OPT@"
 HADIR=@sysconfdir@/ha.d
 HBSCRIPT=@INITDIR@/heartbeat@INIT_EXT@
 STONITH=@sbindir@/stonith
+OCF_TESTER=@sbindir@/ocf-tester
 LIBDIR=@libdir@/
 HBLIB=@libdir@/heartbeat
 APPHBD=$HBLIB/apphbd
@@ -910,6 +911,55 @@ Base64MD5Test() {
 	fi
 }
 
+TestRA() {
+	if [ ! -x $OCF_TESTER ]; then
+		return 0
+	fi
+	RADIR=@OCF_RA_DIR@/@HB_PKG@
+	echo "Starting Resource Agent tests" | tee -a $LOGFILE
+
+	echo "Testing RA: Dummy" | tee -a $LOGFILE
+	$OCF_TESTER -n DemoDummy $RADIR/Dummy >>$LOGFILE 2>&1
+	rc=$?
+	if [ $rc -ne 0 ]; then
+		echo "ERROR: Dummy RA failed" | tee -a $LOGFILE
+		return
+	fi
+
+	echo "Testing RA: IPaddr" | tee -a $LOGFILE
+	$OCF_TESTER -o ip=127.0.0.20 -o netmask=32 -n DemoIPaddr \
+		$RADIR/IPaddr >>$LOGFILE 2>&1
+	rc=$?
+	if [ $rc -ne 0 ]; then
+		echo "ERROR: IPaddr RA failed" | tee -a $LOGFILE
+		return
+	fi
+
+	echo "Testing RA: IPaddr2" | tee -a $LOGFILE
+	$OCF_TESTER -o ip=127.0.0.20 -o netmask=32 -n DemoIPaddr2 \
+		$RADIR/IPaddr2 >>$LOGFILE 2>&1
+	rc=$?
+	if [ $rc -ne 0 ]; then
+		echo "ERROR: IPaddr2 RA failed" | tee -a $LOGFILE
+		return
+	fi
+	
+	if [ `uname -s` = 'Linux' ]; then
+		MNT_DIR=`@MKTEMP@ -d /tmp/lha-dir-XXXXXXXXXXX`
+		echo "Testing RA: Filesystem" | tee -a $LOGFILE
+		$OCF_TESTER -o device=/dev/null -o fstype=proc -o directory=$MNT_DIR \
+			-n DemoFS $RADIR/Filesystem >>$LOGFILE 2>&1
+		rc=$?
+		rmdir $MNT_DIR
+		if [ $rc -ne 0 ]; then
+			echo "ERROR: Filesystem RA failed" | tee -a $LOGFILE
+			return
+		fi
+	fi
+	echo "RA tests PASSED" | tee -a $LOGFILE
+}
+
+
 #
 #	Check our identity.
 #	Set Up Config Files.
@@ -939,6 +989,7 @@ then
 fi
 
 Base64MD5Test
+TestRA
 TestHeartbeat
 StonithCheck
 AppHBCheck
