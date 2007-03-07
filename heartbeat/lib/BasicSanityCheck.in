@@ -934,16 +934,18 @@ TestRA() {
 		echo "ERROR: IPaddr RA failed" | tee -a $LOGFILE
 		return
 	fi
-
-	echo "Testing RA: IPaddr2" | tee -a $LOGFILE
-	$OCF_TESTER -o ip=127.0.0.20 -o netmask=32 -n DemoIPaddr2 \
-		$RADIR/IPaddr2 >>$LOGFILE 2>&1
-	rc=$?
-	if [ $rc -ne 0 ]; then
-		echo "ERROR: IPaddr2 RA failed" | tee -a $LOGFILE
-		return
-	fi
 	
+	if [ -x @IP2UTIL@ ]; then
+		echo "Testing RA: IPaddr2" | tee -a $LOGFILE
+		$OCF_TESTER -o ip=127.0.0.20 -o netmask=32 -n DemoIPaddr2 \
+			$RADIR/IPaddr2 >>$LOGFILE 2>&1
+		rc=$?
+		if [ $rc -ne 0 ]; then
+			echo "ERROR: IPaddr2 RA failed" | tee -a $LOGFILE
+			return
+		fi
+	fi
+
 	if [ `uname -s` = 'Linux' ]; then
 		MNT_DIR=`@MKTEMP@ -d /tmp/lha-dir-XXXXXXXXXXX`
 		echo "Testing RA: Filesystem" | tee -a $LOGFILE
