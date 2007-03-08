@@ -26,23 +26,13 @@
  *
  ***********************************************************
  *
- *	Our single argument is of the form:
- *		address[/netmask[/interface][/broadcast]]
+ *	All our arguments come through the environment as OCF
+ *	environment variables as below:
  *
- *	So, the following forms are legal:
- *	         address
- *	         address/netmask
- *	         address/netmask/broadcast
- *	         address/netmask/interface
- *	         address/netmask/interface/broadcast
- *
- *     E.g.
- *		135.9.216.100
- *		135.9.216.100/24		Implies a 255.255.255.0 netmask
- *		135.9.216.100/24/255.255.255.0/135.9.216.255
- *		135.9.216.100/24/255.255.255.0/eth0
- *		135.9.216.100/24/255.255.255.0/eth0/135.9.216.255
- *
+ *	OCF_RESKEY_ip
+ *	OCF_RESKEY_broadcast
+ *	OCF_RESKEY_nic
+ *	OCF_RESKEY_cidr_netmask
  *
  *	If the CIDR netmask is omitted, we choose the netmask associated with
  *	the route we selected.
@@ -57,6 +47,7 @@
  *	See http://www.doom.net/docs/netmask.html for a table explaining
  *	CIDR address format and their relationship to life, the universe
  *	and everything.
+ *
  */
 
 #include <lha_internal.h>
@@ -139,7 +130,7 @@ SearchRoute *search_mechs[] = {
 	NULL
 };
 
-void GetAddress (char *inputaddress, char **address, char **netmaskbits
+void GetAddress (char **address, char **netmaskbits
 ,	 char **bcast_arg, char **if_specified);
 
 void ValidateNetmaskBits (char *netmaskbits, unsigned long *netmask);
@@ -374,87 +365,29 @@ SearchUsingRouteCmd (char *address, struct in_addr *in
 }
 
 /*
- *	GetAddress can deal with the condition of inputaddress= "192.168.0.1///" , 
- *      which perhaps produced by empty parameters of OCF
- *      
- *      E.g. OCF parameter
- *
- *	    BASEIP=135.9.216.100
- *	    NETMASK=""
- *	    NIC=""
- *	    BRDCAST=""
- *      So , When we call findif function...
- *      findif -C "$BASEIP/$NETMASK/$NIC/$BRDCAST"
- *
- *      inputaddress=135.9.216.100///
- *
+ * Getaddress gets all its real parameters from the OCF environment
+ * variables that its callers already use.
  */
 void
-GetAddress (char *inputaddress, char **address, char **netmaskbits
+GetAddress (char **address, char **netmaskbits
 ,	 char **bcast_arg, char **if_specified)
 {
 	/*
-	 *	See comment at the top of this file for
-	 *	the format of the argument passed to this programme.
-	 *	The format is broken out into the strings
-	 *	passed to this function.
+	 *	Here are out input environment variables:
+	 *
+	 *	OCF_RESKEY_ip		ip address
+	 *	OCF_RESKEY_cidr_netmask netmask of interface
+	 *	OCF_RESKEY_broadcast	broadcast address for interface
+	 *	OCF_RESKEY_nic		interface to assign to
 	 *
 	 */
-	*address = inputaddress;
-
-	if ((*netmaskbits = strchr(*address, DELIM)) != NULL) {
-		**netmaskbits = EOS;
-		++(*netmaskbits);
-		
-		/*
-		 *	filter redundancy '/'  
-		 *      E.g.  'inputaddress=135.9.216.100///'
-		 */
-		while (**netmaskbits == DELIM) {
-			++(*netmaskbits);
-		}
-		if (**netmaskbits == EOS) {
-			*netmaskbits = NULL;
-			return ;
-		}
-		
-		if ((*bcast_arg=strchr(*netmaskbits, DELIM)) != NULL) {
-			**bcast_arg = EOS;
-			++*bcast_arg;
-			/*      filter redundancy '/'
-			 *      E.g.  'inputaddress=135.9.216.100/24//'
-			 */
-			while (**bcast_arg == DELIM) {
-				++*bcast_arg;
-			}
-			if ( **bcast_arg == EOS) {
-				*bcast_arg = NULL;
-				return ;
-			}
-			/* Did they specify the interface to use? */
-			if (!isdigit((int)**bcast_arg)) {
-				*if_specified = *bcast_arg;
-				if ((*bcast_arg=strchr(*bcast_arg,DELIM))
-				!=	NULL){
-					**bcast_arg = EOS;
-					++*bcast_arg;
-					/*      filter redundancy '/'
-					 *	E.g.  'inputaddress=135.9.216.100/24/eth0/'
-					 */
-					while (**bcast_arg == DELIM) {
-						++*bcast_arg;
-					}
-					if ( **bcast_arg == EOS) {
-						*bcast_arg = NULL;
-						return;
-					}
-				}else{
-					*bcast_arg = NULL;
-				}
-				/* OK... Now we know the interface */
-			}
-		}
+	*address = getenv("OCF_RESKEY_ip");
+	*netmaskbits = getenv("OCF_RESKEY_cidr_netmask");
+	if (*netmaskbits == NULL) {
+		*netmaskbits = getenv("OCF_RESKEY_netmask");
 	}
+	*bcast_arg = getenv("OCF_RESKEY_broadcast");
+	*if_specified = getenv("OCF_RESKEY_nic");
 }
 
 void
@@ -646,7 +579,6 @@ octals_to_bits(const char *octals)
 int
 main(int argc, char ** argv) {
 
-	char *	iparg = NULL;
 	char *	address = NULL;
 	char *	bcast_arg = NULL;
 	char *	netmaskbits = NULL;
@@ -667,18 +599,13 @@ main(int argc, char ** argv) {
 	memset(&ifr, 0, sizeof(ifr));
 
 	switch (argc) {
-	case 2:	/* No -C argument */
-		if (argv[1][0] == '-') {
-			argerrs=1;
-		}
-		iparg=argv[1];
+	case 1:	/* No -C argument */
 		break;
-	case 3: /* Hopefully a -C argument */
+	case 2: /* Hopefully a -C argument */
 		if (strncmp(argv[1], "-C", sizeof("-C")) != 0) {
 			argerrs=1;
 		}
 		OutputInCIDR=1;
-		iparg=argv[2];
 		break;
 	default:
 		argerrs=1;
@@ -689,7 +616,7 @@ main(int argc, char ** argv) {
 		return(1);
 	}
 
-	GetAddress (iparg, &address, &netmaskbits, &bcast_arg
+	GetAddress (&address, &netmaskbits, &bcast_arg
 	,	 &if_specified);
 
 	/* Is the IP address we're supposed to find valid? */
