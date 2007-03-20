@@ -2352,7 +2352,6 @@ sub check_ldap
 		
 	my $href = $result->as_struct;
 	my @arrayOfDNs  = keys %$href ;
-	my $recstr = $$r{receive} ;
 	if (!($recstr =~ /.+/) || @arrayOfDNs[0] =~ /$recstr/) {
 		service_set($v, $r, "up");
 		return 0;
