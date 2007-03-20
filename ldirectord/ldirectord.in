@@ -3511,11 +3511,7 @@ sub exec_wrapper
 	my $status;
 
 	&ld_log("Running exec(@args)") if $DEBUG>2;
-	$status = exec(@args);
-	if($status != 0) {
-		&ld_log("exec(@args) failed");
-	}
-
+	$status = exec(@args) or &ld_log("exec(@args) failed");
 	return($status)
 }
 
