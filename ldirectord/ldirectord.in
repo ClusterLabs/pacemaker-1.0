@@ -548,7 +548,6 @@ use vars qw(
 	    $DAEMON_HUP
 	    $opt_d
 	    $opt_h
-	    $pid
 	    $stattime
 	    %LD_INSTANCE
 	    @OLDVIRTUAL
@@ -1659,7 +1658,7 @@ sub __config_log
         chomp($msg);
         $msg .= "\n";
 
-	my $msg_prefix = "$prefix [$pid]";
+	my $msg_prefix = "$prefix [$$]";
 	if ($line > 0) {
 		$msg_prefix .= " reading file $CONFIG at line $line";
 	}
