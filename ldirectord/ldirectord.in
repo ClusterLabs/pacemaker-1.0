@@ -914,6 +914,8 @@ sub reread_config
 		&ld_cmd_children("stop", %STOP);
 		&ld_cmd_children("reload_or_start", %RELOAD);
 		&ld_cmd_children("start", %START);
+
+		&ld_setup();
 	};
 	if ($@) {
 		@VIRTUAL = @OLDVIRTUAL;
