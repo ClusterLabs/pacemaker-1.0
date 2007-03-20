@@ -3391,6 +3391,9 @@ sub ld_emailalert_send
 	my $id;
 	my $statusfilter;
 
+	$frequency = defined $v->{emailalertfreq} ? $v->{emailalert} :
+				$EMAILALERTFREQ;
+
 	$virtual_str = &get_virtual($v);
 	$id = "$rserver ($virtual_str)";
 
@@ -3413,9 +3416,6 @@ sub ld_emailalert_send
 		return 0;
 	}
 
-	$frequency = defined $v->{emailalertfreq} ? $v->{emailalert} :
-				$EMAILALERTFREQ;
-	
 	use Mail::Send;
 
 	&ld_log("emailalert: $subject");
