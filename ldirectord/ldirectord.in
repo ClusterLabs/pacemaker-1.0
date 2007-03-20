@@ -1,6 +1,4 @@
 #!/usr/bin/perl
-my $VERSION="Heartbeat-Mercurial"
-
 ######################################################################
 # ldirectord                 http://www.vergenet.net/linux/ldirectord/
 # Linux Director Daemon - run "perldoc ldirectord" for details
@@ -31,6 +29,13 @@ my $VERSION="Heartbeat-Mercurial"
 # 02111-1307  USA
 #
 ######################################################################
+
+# A Brief history of versions:
+#
+# From oldest to newest
+# 1.1-1.144: ldirecord maintained in CVS HEAD branch
+# 1.145-1.186: ldirectord.in maintained in CVS HEAD BRANCH
+# 1.186-ha-VERSION: ldirectord.in maintained in mercurial
 
 =head1 NAME
 
@@ -509,6 +514,7 @@ Jacob Rief <jacob.rief@tiscover.com>
 
 use strict;
 use vars qw(
+	    $VERSION_STR
 	    $AUTOCHECK
 	    $CHECKINTERVAL
 	    $CONNECTTIMEOUT
@@ -554,6 +560,8 @@ use vars qw(
 	    $CRLF
 );
 
+$VERSION_STR = "Linux Director v1.186-ha-@VERSION@";
+
 $DAEMON_STATUS_STARTING  = 0x1;
 $DAEMON_STATUS_RUNNING   = 0x2;
 $DAEMON_STATUS_STOPPING  = 0x4;
@@ -584,17 +592,6 @@ $EMAILALERT	  = "";
 $EMAILALERTFREQ	  = 0;
 $EMAILALERTSTATUS = $DAEMON_STATUS_ALL;
 
-
-# Doctor version, as 1.n -> 1.(n + 144) the code was maintained as
-# ldirectord in CVS up until version 1.144, then the file was renamed to
-# ldirectord, so the counter reset to 1.1.  Its probably better to manage
-# the version number a completely different way, however this has worked
-# well enough in the past, and the following munging should suffice for now
-if ($VERSION =~ m/1\.([0-9]+)/) {
-	$VERSION = $1 + 144;
-	$VERSION = "1.$VERSION";
-}
-
 $CRLF = "\x0d\x0a";
 
 use Getopt::Long;
@@ -622,7 +619,7 @@ if ($opt_h) {
 	&ld_exit(127, "Exec failed");
 }
 if ($opt_v) {
-	print("ldirectord  version $VERSION\n" .
+	print("$VERSION_STR\n" .
 	      "1999-2006 Jacob Rief, Horms and others\n" .
 	      "<http://www.vergenet.net/linux/ldirectord/>\n".
 	      "\n" .
@@ -811,9 +808,9 @@ sub ld_init
 
 	# Run as daemon
 	if ($SUPERVISED eq "yes" || $opt_d) {
-		&ld_log("Starting Linux Director v$VERSION with pid: $$");
+		&ld_log("Starting $VERSION_STR with pid: $$");
         } else {
-		&ld_log("Starting Linux Director v$VERSION as daemon");
+		&ld_log("Starting $VERSION_STR as daemon");
 		open(FILE, ">$RUNPID.$CFGNAME.pid") || 
 			init_error("Can not open $RUNPID.$CFGNAME.pid");
 		&ld_daemon();
