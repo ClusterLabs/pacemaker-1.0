@@ -2352,13 +2352,13 @@ sub check_ldap
 		
 	my $href = $result->as_struct;
 	my @arrayOfDNs  = keys %$href ;
-	if (!($recstr =~ /.+/) || @arrayOfDNs[0] =~ /$recstr/) {
+	if (!($recstr =~ /.+/) || $arrayOfDNs[0] =~ /$recstr/) {
 		service_set($v, $r, "up");
 		return 0;
 	} else {
 		service_set($v, $r, "down");
 		&ld_debug(4,"Message differs : " . ", " . $$r{receive} 
-				. ", " . @arrayOfDNs[0] . ".");
+				. ", " . $arrayOfDNs[0] . ".");
 		return 1;
 	}
 }
