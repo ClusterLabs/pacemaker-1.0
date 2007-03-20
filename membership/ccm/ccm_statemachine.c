@@ -2777,7 +2777,7 @@ switchstatement:
 				 */
 				if (UPDATE_GET_NODECOUNT(
 					CCM_GET_UPDATETABLE(info)) ==
-				    CCM_GET_LLM_NODECOUNT(info)) {
+				    llm_get_live_nodecount(&info->llm)) {
 
 					/* check if I am the leader */
 					if (update_am_i_leader(
@@ -2848,7 +2848,7 @@ switchstatement:
 					CCM_GET_LLM(info), orig, trans_majorval);
 
 
-			if (UPDATE_GET_NODECOUNT( CCM_GET_UPDATETABLE(info)) == CCM_GET_LLM_NODECOUNT(info)
+			if (UPDATE_GET_NODECOUNT( CCM_GET_UPDATETABLE(info)) == llm_get_live_nodecount(&info->llm)
 			    && !update_am_i_leader(CCM_GET_UPDATETABLE(info), CCM_GET_LLM(info))) {	
 				
 				if (ccm_send_cl_reply(hb,info) == TRUE) {

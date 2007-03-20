@@ -250,7 +250,7 @@ llm_del(llm_info_t* llm,
 	if (llm->myindex > i){
 		llm->myindex --;
 	}else if (llm->myindex ==i){
-		ccm_log(LOG_ERR, "%s: deleing myself in ccm is not allowed",
+		ccm_log(LOG_ERR, "%s: deleting myself in ccm is not allowed",
 		       __FUNCTION__);
 		return HA_FAIL;
 	}
