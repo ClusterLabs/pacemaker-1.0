@@ -273,12 +273,13 @@ ignored. Optionally a range of IP addresses (or two hostnames) may be
 given, in which case each IP address in the range will be treated as a real
 server using the given port. The second argument defines the forwarding
 method, must be B<gate>, B<ipip> or B<masq>.  The thrid argument is
-optional and defines the weight for that real server. The last two
-arguments are optional. They define a request-receive pair to be used to
-check if a server is alive. They override the request-receive pair in the
-virtual server section. These two strings must be quoted. If the request
-string starts with I<http://...> the IP-address and port of the real server is
-overridden, otherwise the IP-address and port of the real server is used.
+optional and defines the weight for that real server. If omitted then a
+weight of 1 will be used. The last two arguments are also optional. They
+define a request-receive pair to be used to check if a server is alive.
+They override the request-receive pair in the virtual server section. These
+two strings must be quoted. If the request string starts with I<http://...>
+the IP-address and port of the real server is overridden, otherwise the
+IP-address and port of the real server is used.
 
 =head2 More than one of these entries may be inside a virtual section.  The
 checktimeout, negotiatetimeout, checkcount, fallback, emailalert,
@@ -1582,6 +1583,9 @@ sub add_real_server
 		$new_rsrv->{"weight"} = $1;
 		$flags = $2;
 	}
+	else {
+		$new_rsrv->{"weight"} = 1;
+	}
 
 	if(defined($flags) and $flags =~ /\s+\"(.*)\"[, ]\s*\"(.*)\"(.*)/) {
 		$new_rsrv->{"request"} = $1;
@@ -1714,11 +1718,6 @@ sub ld_setup
 		my $real = $$v{real};
 		for my $r (@$real) {
                         $$r{forw} = get_forward_flag($$r{forward});
-			if (defined $$r{weight}) {
-				 $$r{wght} = "$$r{weight}";
-			} else {
-				 $$r{wght} = "1";
-			}
         		if (defined $$r{request} && defined $$r{receive}) {
 				my $uri = $$r{request};
 				$uri =~ s/^\///g;
@@ -3110,7 +3109,7 @@ sub _service_up
 	}
 
         &_restore_service($v, $r->{server} . ":" . $r->{port}, 
-                                  $r->{forw}, $r->{wght}, "real");
+                                  $r->{forw}, $r->{weight}, "real");
 	&fallback_off($v);
 }
 
