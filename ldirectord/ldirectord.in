@@ -684,7 +684,6 @@ sub ld_init
         $SIG{'XFSZ'} = \&ld_handler_term;
 
         $SIG{'IOT'} = \&ld_handler_term;
-        $SIG{'ENT'} = \&ld_handler_term;
 
 
 	# This used to call a signal handler, that logged a message
