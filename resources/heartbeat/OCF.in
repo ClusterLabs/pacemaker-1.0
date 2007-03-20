@@ -21,11 +21,10 @@
 #	${HA_DIR}/conf/OCF/OCF-resource-name/
 #
 
-VARRUN=@localstatedir@/run
-ETC=@sysconfdir@
+HA_HBCONF_DIR=@HA_HBCONF_DIR@
 
 # Source function library.
-. $ETC/ha.d/shellfuncs
+. $HA_HBCONF_DIR/shellfuncs
 
 # ${HA_DIR} is where things show up
 # ${HA_DIR}/conf/OCF is where we find our resource settings.
