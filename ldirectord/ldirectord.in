@@ -1865,7 +1865,11 @@ sub ld_read_ipvsadm
 	$line = ld_readline($fh, $buf); 
 	$line = ld_readline($fh, $buf);
 
-	while ($line = ld_readline($fh, $buf)) {
+	while (1) {
+		$line = ld_readline($fh, $buf);
+		if (not defined $line) {
+			last;
+		}
 		if ($line =~ /(\w+)\s+(\d+\.\d+\.\d+\.\d+\:\d+|\d+)\s+(\w+)\s+persistent\s+(\d+)\s+mask\s+(.*)/) {
 			$real_service = "$2 ".lc($1);
 			$oldsrv{"$real_service"} = {"real"=>{}, "scheduler"=>$3, "persistent"=>$4, "netmask"=>$5};
