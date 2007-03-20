@@ -631,7 +631,7 @@ if ($opt_v) {
 	&ld_exit(0, "");
 }
 
-$DEBUG = 3 if ($opt_d);
+$DEBUG = $opt_d ? 3 : 0;
 if ($DEBUG>0 and -f "./ipvsadm") {
 	$IPVSADM="./ipvsadm";
 } else {
