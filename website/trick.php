@@ -92,7 +92,14 @@ $pagetitle = str_replace(array("_20","_21","_2c", "_2d","_2f","_27", "_28", "_29
 # in case there are some special chars in the page name, that are not yet escaped ...
 # $MOINMOINpagename is used to request that page from the wiki, or to read in the cache file
 $MOINMOINpagename = str_replace(array(" ","!",",","-","'","(",")",":"), array("_20","_21","_2c", "_2d","_27", "_28", "_29", "_3a"), $MOINMOINpagename);
+
+if (preg_match('/^([[:alpha:]_]{2,6})\/.*_\1$/', $MOINMOINpagename, $match)) {
+	$MOINMOINlang=$match[1];
+}else{
+	$MOINMOINlang="en";
+}
+
 	
-$content = MoinMoin($MOINMOINpagename);
+$content =  MoinMoin($MOINMOINpagename);
 
 ?>
