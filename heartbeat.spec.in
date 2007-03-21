@@ -92,7 +92,7 @@ GUI client for heartbeat clusters
 %endif
 
 %changelog
-* Tue Dec 09 2007  Alan Robertson <alanr@unix.sh> (see doc/AUTHORS file)
+* Tue Jan 09 2007  Alan Robertson <alanr@unix.sh> (see doc/AUTHORS file)
 + Version 2.0.8 - bug fixes and enhancements
   + Allow colocation based on node attributes other than #id 
   + SAPDatabase and SAPInstance resource agents added.
