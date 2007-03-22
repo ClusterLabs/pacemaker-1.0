@@ -103,8 +103,21 @@ function MoinMoin($ptitle, $INCLUDEPHP = false, $CACHESUFFIX = "")
 	}
 	if (!file_exists($cachefile))
 	{
-
-		$content = implode("",file($filename));
+		$content = wget_text($filename);
+		if ($content == "")
+		{
+			/* OOPS! ptitle URL is 404! */
+			global $MOINMOIN404string, $MOINMOINlang;
+			/* Try the English version of the page (if any) */
+			if (preg_match("/^$MOINMOINlang\/(.*)_$MOINMOINlang/"
+			,	$ptitle, $match)) {
+				/* Better than nothing, eh? */
+				LogIt("SUBSTITUTED $match[1] for $ptitle");
+				return MoinMoin($match[1], $INCLUDEPHP, $CACHESUFFIX);
+			}
+			LogIt("GOT404 on $ptitle");
+			return $MOINMOIN404string;
+		}
 
 		if (!$GLOBALS["MOINMOINstandardregsloaded"])
 		{
@@ -114,10 +127,10 @@ function MoinMoin($ptitle, $INCLUDEPHP = false, $CACHESUFFIX = "")
 		if ($INCLUDEPHP)
 		{
 			include($INCLUDEPHP);
-			
+
 			$MOINMOINallsearch = array_merge($MOINMOINstandardsearch, $MOINMOINsearch);
 			$MOINMOINallreplace = array_merge($MOINMOINstandardreplace, $MOINMOINreplace);
-			
+
 			unset($MOINMOINsearch);
 			unset($MOINMOINreplace);
 		} else {
@@ -144,11 +157,13 @@ function MoinMoin($ptitle, $INCLUDEPHP = false, $CACHESUFFIX = "")
 	return $body;
 }
 
+$MOINMOIN404string = "<b>Not Found.</b> <!-- 404 -->";
 
 function MOINMOINloadstandardregs()
 {
 	global $MOINMOINstandardsearch, $MOINMOINstandardreplace, $MOINMOINalias
 	,	$local_cache_url_prefix, $MOINMOINExtraneousImages;
+	global $MOINMOIN404string;
 	
 	if (!isset($MOINMOINstandardsearch)) { $MOINMOINstandardsearch = array(); }
 	if (!isset($MOINMOINstandardreplace)) { $MOINMOINstandardreplace = array(); }
@@ -157,7 +172,7 @@ function MOINMOINloadstandardregs()
 	# Trap Pages Not In Wiki
 	# FIXME
 	$MOINMOINstandardsearch[] = "'^.*<a href=\"[^\">]*?\?action=edit\">Create this page</a>.*$'s";
-	$MOINMOINstandardreplace[] = "<b>Not Found.</b>";
+	$MOINMOINstandardreplace[] = $MOINMOIN404string;
 	
 	# Eliminate Goto Link from Include Macro
 	$MOINMOINstandardsearch[] = "'<div class=\"include-link\"><a [^>]*>.*?</a></div>'s";
@@ -383,6 +398,15 @@ function wget($url, $file) {
 		unlink($file);
 	}
 	return $rc;
+}
+function wget_text($url) {
+	$tmpname = tempnam("/var/tmp", "wget");
+	if (wget($url, $tmpname) == 0) {
+		$ret = implode("",file($tmpname));
+		unlink($tmpname);
+		return $ret;
+	}
+	return "";
 }
 
 #	Inputs are the results from microtime()
