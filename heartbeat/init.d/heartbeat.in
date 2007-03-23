@@ -35,7 +35,9 @@
 #		 and monitoring networking availability)
 #
 # Short-Description: High-availability services.
+# Provides: heartbeat HA
 # Required-Start: $network $time $syslog
+# Should-Start: ntp
 # Required-Stop: $network $time $syslog
 # Default-Start: 3 5
 # Default-Stop: 0 6
