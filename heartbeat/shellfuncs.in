@@ -226,12 +226,16 @@ BSD_Status() {
 # plus the resource instance arguments to make up the resource string
 # is probably sufficient...
 #
-# usage: ha_pseudo_resource resource-string {start|stop|status|restart|reload}
+# usage: ha_pseudo_resource resource-string op [tracking_file]
+# 	where op is {start|stop|monitor|status|restart|reload|print}
+#	print is a special op which just prints the tracking file location
+#	user can override our choice of the tracking file location by
+#		specifying it as the third arg
 #	Note that all operations are silent...
 #
 ha_pseudo_resource()
 {
-  ha_resource_tracking_file="${HA_RSCTMP}/$1"
+  ha_resource_tracking_file="${3:-${HA_RSCTMP}/$1}"
   case $2 in
     start|restart|reload)  touch "$ha_resource_tracking_file";;
     stop) rm -f "$ha_resource_tracking_file";;
@@ -246,6 +250,7 @@ ha_pseudo_resource()
                *)	return 7;;
              esac
            fi;;
+    print)  echo "$ha_resource_tracking_file";;
     *)	return 3;;
   esac
 }
