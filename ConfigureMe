@@ -8,10 +8,13 @@
 Usage() {
   cat <<-!
 
-	Usage: $0 [configure|make|install|dist|distcheck|package|flags|bootstrap]
+	Usage: $0 {configure|make|install|dist|distcheck|package|flags|bootstrap} [--xxx=yyy]
 
-	$0 configures the system with options that match common conventions
-	associated with this machine (i.e. $CFENV)
+	$0 is a wrapper to invoke GNU 'configure' with options that match
+	common conventions associated with this machine (i.e. $CFENV)
+
+	You may also, if you wish, supply additional 'configure' options in
+	their usual '--xxx=yyy' form.
 
 	It will also build, make, install or create packages for the
 	build environment.
@@ -19,6 +22,7 @@ Usage() {
 	$0 does not know how to create packages for every environment,
 	nor is the information on "common conventions" necessarily correct.
 	Patches to this process are solicited -- especially in these areas.
+
 	!
   exit 1
 }
