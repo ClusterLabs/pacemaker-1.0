@@ -221,6 +221,9 @@ function MOINMOINloadstandardregs()
 	# Cache MoinMoin Attachments Localy
 	$MOINMOINstandardsearch[] = "'(<a\s*[^>]*href=\")/$MOINMOINalias([^\">]*?action=AttachFile&[^\">]*target=([^\">]*))(\"[^>]*>)'iUe";
 	$MOINMOINstandardreplace[] = "stripslashes('\\1') . MOINMOINcacheattachments('\\2','\\3') . stripslashes('\\4')";
+	# Cache MoinMoin EMBED/OBJECT Attachments Localy
+	$MOINMOINstandardsearch[] = "'(<EMBED\s*[^>]*SRC=\")/$MOINMOINalias([^\">]*?action=AttachFile&[^\">]*target=([^\">]*))(\"[^>]*>)'iUe";
+	$MOINMOINstandardreplace[] = "stripslashes('\\1') . MOINMOINcacheattachments('\\2','\\3') . stripslashes('\\4')";
 
 	$GLOBALS["MOINMOINstandardregsloaded"] = true;
 }
