@@ -80,6 +80,8 @@ function MoinMoinLang ($ptitle, $INCLUDEPHP = false, $CACHESUFFIX = "")
         }
 }
 
+$MOINMOIN404string = "<b>Page not found.</b> <!-- 404 -->";
+
 function MoinMoin($ptitle, $INCLUDEPHP = false, $CACHESUFFIX = "")
 {
 	global $MOINMOINurl, $MOINMOINalias, $MOINMOINcachedir, $MOINMOINfilemod, $MOINMOINstandardsearch;
@@ -157,7 +159,6 @@ function MoinMoin($ptitle, $INCLUDEPHP = false, $CACHESUFFIX = "")
 	return $body;
 }
 
-$MOINMOIN404string = "<b>Not Found.</b> <!-- 404 -->";
 
 function MOINMOINloadstandardregs()
 {
@@ -179,9 +180,9 @@ function MOINMOINloadstandardregs()
 	$MOINMOINstandardreplace[] = "";
 
 	# Get Content Area
-	$MOINMOINstandardsearch[] = "'^.*?<a  *id=\"top\"[^>]*></a>'s";
+	$MOINMOINstandardsearch[] = "'.*<span class=\"anchor\" id=\"top\"></span>'s";
 	$MOINMOINstandardreplace[] = "";
-	$MOINMOINstandardsearch[] = "'<a *id=\"bottom\"[^>]*>.*?$'s";
+	$MOINMOINstandardsearch[] = "'<span class=\"anchor\" id=\"bottom\"></span></div>.*$'s";
 	$MOINMOINstandardreplace[] = "";
 	
 	# Strip Wiki Class Tags
@@ -394,8 +395,13 @@ function wget($url, $file) {
 	$url = preg_replace('/\'/', '\\\'', $url);
 	$CMD="$WGET -q -U 'Mozilla/5.0' -S -nd -O '$file' '" . $url . '\'';
 	system($CMD, $rc);
-	if ($rc != 0 && file_exists($file)) {
-		unlink($file);
+	if ($rc != 0) {
+		/* LogIt("WGETFAIL: [$CMD] failed with $rc"); */
+		if (file_exists($file)) {
+			unlink($file);
+		}
+	}else{
+		/*LogIt(sprintf("wget %s got %d bytes", $url, filesize($file)))*/;
 	}
 	return $rc;
 }
@@ -406,6 +412,7 @@ function wget_text($url) {
 		unlink($tmpname);
 		return $ret;
 	}
+	/* LogIt("wget_text failed: [$url] failed"); */
 	return "";
 }
 
