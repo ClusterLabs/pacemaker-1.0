@@ -86,10 +86,11 @@ function MoinMoin($ptitle, $INCLUDEPHP = false, $CACHESUFFIX = "")
 {
 	global $MOINMOINurl, $MOINMOINalias, $MOINMOINcachedir, $MOINMOINfilemod, $MOINMOINstandardsearch;
 	global $MOINMOINstandardreplace, $current_cache_prefix, $current_cache_relprefix, $PageTitle;
-	global $MOINMOINfetched;
+	global $MOINMOINfetched, $MOINMOINpagename;
 
 	#$PageTitle = str_replace("/","_", $ptitle);
 	$PageTitle = $ptitle;
+	$PageTitleID = str_replace(("/"), ("_2f"), $PageTitle);
 	$filename = "$MOINMOINurl/$PageTitle";
 #	$cachefile = "$MOINMOINcachedir/$MOINMOINalias$PageTitle$CACHESUFFIX.html";
 	$cachefile = sprintf("%s/%s%s%s.html", $MOINMOINcachedir, $MOINMOINalias, str_replace("/","_2f", $ptitle), $CACHESUFFIX);
@@ -140,6 +141,7 @@ function MoinMoin($ptitle, $INCLUDEPHP = false, $CACHESUFFIX = "")
 			$MOINMOINallreplace = $MOINMOINstandardreplace;
 		}
 		$body = preg_replace ($MOINMOINallsearch, $MOINMOINallreplace, $content);
+		$body  = preg_replace("'(<span id=\")(line-[0-9]+\">)'si", "\\1" . "${PageTitleID}_" . "\\2", $body);
 
 		$fd = fopen($cachefile, "w");
 		fwrite($fd, $body);
