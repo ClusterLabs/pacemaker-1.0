@@ -87,10 +87,9 @@ function MoinMoin($ptitle, $INCLUDEPHP = false, $CACHESUFFIX = "")
 	global $MOINMOINurl, $MOINMOINalias, $MOINMOINcachedir, $MOINMOINfilemod, $MOINMOINstandardsearch;
 	global $MOINMOINstandardreplace, $current_cache_prefix, $current_cache_relprefix, $PageTitle;
 	global $MOINMOINfetched, $MOINMOINpagename;
-
+ 
 	#$PageTitle = str_replace("/","_", $ptitle);
 	$PageTitle = $ptitle;
-	$PageTitleID = str_replace(("/"), ("_2f"), $PageTitle);
 	$filename = "$MOINMOINurl/$PageTitle";
 #	$cachefile = "$MOINMOINcachedir/$MOINMOINalias$PageTitle$CACHESUFFIX.html";
 	$cachefile = sprintf("%s/%s%s%s.html", $MOINMOINcachedir, $MOINMOINalias, str_replace("/","_2f", $ptitle), $CACHESUFFIX);
@@ -141,7 +140,8 @@ function MoinMoin($ptitle, $INCLUDEPHP = false, $CACHESUFFIX = "")
 			$MOINMOINallreplace = $MOINMOINstandardreplace;
 		}
 		$body = preg_replace ($MOINMOINallsearch, $MOINMOINallreplace, $content);
-		$body  = preg_replace("'(<span id=\")(line-[0-9]+\">)'si", "\\1" . "${PageTitleID}_" . "\\2", $body);
+		# Because we include things, these line numbers can easily wind up conflicting...
+		$body  = preg_replace("'<span id=\"line-[0-9]+\"></span>'si", "", $body);
 
 		$fd = fopen($cachefile, "w");
 		fwrite($fd, $body);
@@ -203,8 +203,8 @@ function MOINMOINloadstandardregs()
 	#   ID and NAME tokens must begin with a letter ([A-Za-z]) and may be
 	#   followed by any number of letters, digits ([0-9]), hyphens ("-"),
 	#   underscores ("_"), colons (":"), and periods (".").
-	#$MOINMOINstandardsearch[] = "'(<[^>]*? id=\"[^<>()"])\([^"\)]*?)\)'i"
-	#$MOINMOINstandardreplace[] = "\\1.\\2.";
+	$MOINMOINstandardsearch[] = "'id=\"([^\"]*)\"'ie";
+	$MOINMOINstandardreplace[] = "'id=\"' . str_replace('/','_2f','\\1') . '\"'";
 
 	# Strip out [WWW] [FTP] images, etc.
 	foreach ($MOINMOINExtraneousImages as $im) {
