@@ -88,13 +88,13 @@ function MoinMoin($ptitle, $INCLUDEPHP = false, $CACHESUFFIX = "")
 	global $MOINMOINstandardreplace, $current_cache_prefix, $current_cache_relprefix, $PageTitle;
 	global $MOINMOINfetched, $MOINMOINpagename;
  
-	#$PageTitle = str_replace("/","%2f", $ptitle);
+	#$PageTitle = str_replace("/","_", $ptitle);
 	$PageTitle = $ptitle;
 	$filename = "$MOINMOINurl/$PageTitle";
 #	$cachefile = "$MOINMOINcachedir/$MOINMOINalias$PageTitle$CACHESUFFIX.html";
-	$cachefile = sprintf("%s/%s%s%s.html", $MOINMOINcachedir, $MOINMOINalias, str_replace("/","%2f", $ptitle), $CACHESUFFIX);
+	$cachefile = sprintf("%s/%s%s%s.html", $MOINMOINcachedir, $MOINMOINalias, str_replace("/","_2f", $ptitle), $CACHESUFFIX);
 	# for attachments and the like
-	$PageTitleNoSlash = str_replace("/","%2f",$ptitle);
+	$PageTitleNoSlash = str_replace("/","_",$ptitle);
 	$current_cache_prefix = "$MOINMOINcachedir/${MOINMOINalias}${PageTitleNoSlash}__";
 	$current_cache_relprefix = "${MOINMOINalias}${PageTitle}__";
 	set_time_limit(30);
@@ -204,7 +204,7 @@ function MOINMOINloadstandardregs()
 	#   followed by any number of letters, digits ([0-9]), hyphens ("-"),
 	#   underscores ("_"), colons (":"), and periods (".").
 	$MOINMOINstandardsearch[] = "'id=\"([^\"]*)\"'ie";
-	$MOINMOINstandardreplace[] = "'id=\"' . str_replace('/','%2f','\\1') . '\"'";
+	$MOINMOINstandardreplace[] = "'id=\"' . str_replace('/','_2f','\\1') . '\"'";
 
 	# Strip out [WWW] [FTP] images, etc.
 	foreach ($MOINMOINExtraneousImages as $im) {
@@ -343,7 +343,7 @@ function URLtoCacheFile($urlsuffix, $cacheprefix)
 	# need to clean up sanitize $argTar, in a specially crafted wiki page
 	# may be a special file name
 	# hope this is enough, just in case:
-	$urlsuffix = str_replace("/","%2f", "${cacheprefix}${urlsuffix}");
+	$urlsuffix = str_replace("/","_", "${cacheprefix}${urlsuffix}");
 	return "${MOINMOINcachedir}/${urlsuffix}";
 }
 
@@ -401,7 +401,7 @@ function wget($url, $file) {
 	$CMD="$WGET -q -U 'Mozilla/5.0' -S -nd -O '$file' '" . $url . '\'';
 	system($CMD, $rc);
 	if ($rc != 0) {
-		LogIt("WGETFAIL: [$CMD] failed with $rc");
+		/* LogIt("WGETFAIL: [$CMD] failed with $rc"); */
 		if (file_exists($file)) {
 			unlink($file);
 		}
@@ -485,7 +485,7 @@ function MOINMOINcacheattachments($argSrc, $argTar)
 	# need to clean up sanitize $argTar, in a specially crafted wiki page
 	# may be a special file name
 	# hope this is enough, just in case:
-	$argTar = str_replace("/","%2f", $argTar);
+	$argTar = str_replace("/","_", $argTar);
 
 	$cachefile = "$current_cache_prefix$argTar";
 	if (MoinMoinNoCache($cachefile) || !file_exists($cachefile)) {
@@ -503,7 +503,7 @@ function MOINMOINcacheimages($argSrc, $argTar)
 	# may be a special file name
 	# hope this is enough, just in case:
 
-	$argTar = str_replace("/","%2f", $argTar);
+	$argTar = str_replace("/","_", $argTar);
 
 	$cachefile = URLtoCacheFile($argSrc, "");
 	if (MoinMoinNoCache($cachefile) || !file_exists($cachefile)) {

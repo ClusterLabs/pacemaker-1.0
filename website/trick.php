@@ -87,11 +87,11 @@ $MOINMOINpagename = substr($path_info,1);
 # in case there is some wiki style escaped special char in the pagename derived from the url
 # $pagetitle is only used in the "title" tag, and should be readable
 # (typically displayed as window/tab title by your browser)
-$pagetitle = str_replace(array("%20","%21","%2c", "%2d","%2f","%27", "%28", "%29", "%3a"), array(" ","!",",","-","/","'","(",")",":"), $MOINMOINpagename);
+$pagetitle = str_replace(array("_20","_21","_2c", "_2d","_2f","_27", "_28", "_29", "_3a"), array(" ","!",",","-","/","'","(",")",":"), $MOINMOINpagename);
 
 # in case there are some special chars in the page name, that are not yet escaped ...
 # $MOINMOINpagename is used to request that page from the wiki, or to read in the cache file
-$MOINMOINpagename = str_replace(array(" ","!",",","-","'","(",")",":"), array("%20","%21","%2c", "%2d","%27", "%28", "%29", "%3a"), $MOINMOINpagename);
+$MOINMOINpagename = str_replace(array(" ","!",",","-","'","(",")",":"), array("_20","_21","_2c", "_2d","_27", "_28", "_29", "_3a"), $MOINMOINpagename);
 
 if (preg_match('/^([[:alpha:]_]{2,6})\/.*_\1$/', $MOINMOINpagename, $match)) {
 	$MOINMOINlang=$match[1];
