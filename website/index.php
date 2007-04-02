@@ -11,17 +11,11 @@ Copyright:    (C) 2005 Dmytri Kleiner <dk@trick.ca>
  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
  <meta http-equiv="keywords"
        content="high-availability, open source software, free software, POSIX, UNIX, FreeBSD, Solaris, cluster, reliability, availability, serviceability">
-<script type="text/javascript">
-  if ((navigator.appName).indexOf("Microsoft") != -1) {
-    document.write('<link rel="stylesheet" href="/linuxhaIE6.css" type="text/css">');
-  }else{
-    document.write('<link rel="stylesheet" href="/linuxha.css" type="text/css">');
-  }
-</script>
-<noscript>
-  <link rel="stylesheet" href="/linuxha.css" type="text/css">
-</noscript>
- <meta name="author" content="wiki dot linux dash ha dot org">
+ <link rel="stylesheet" href="/linuxha.css" type="text/css">
+ <!--[if lt IE 7]>
+   <link rel="stylesheet" href="/linuxhaIE6.css" type="text/css">
+ <![endif]-->
+ <meta name="author" content="wiki.linux-ha.org">
  <?php robots_metadata(); ?>
  <title><?php echo "$pagetitle: $sitename"; ?></title>
 </head>
