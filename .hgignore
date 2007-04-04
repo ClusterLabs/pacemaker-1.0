@@ -30,6 +30,10 @@ libltdl.tar
 autoconf
 autoheader
 automake
+include/ha_version.h
+include/hb_config.h
+include/stamp-h1
+ylwrap
 
 # BEAM Entries
 *.beam
@@ -102,6 +106,7 @@ resources/OCF/AudibleAlarm
 resources/OCF/ClusterMon
 resources/OCF/Delay
 resources/OCF/Dummy
+resources/OCF/Evmsd
 resources/OCF/Filesystem
 resources/OCF/ICP
 resources/OCF/IPaddr
@@ -191,7 +196,9 @@ crm/cib/cibmon
 crm/crm.dtd
 crm/crmd/atest
 crm/crmd/crmd
-crm/crmd/version.h
+crm/crmd/fsa_actions_by_state.png
+crm/crmd/fsa_inputs.png
+crm/crmd/fsa_inputs_by_action.png
 crm/pengine/pengine
 crm/pengine/ptest
 crm/tengine/tengine
@@ -228,6 +235,8 @@ lrm/test/plugintest
 membership/ccm/ccm
 membership/ccm/ccm_testclient
 membership/ccm/clmtest
+membership/quorumd/quorumd
+membership/quorumd/quorumdtest
 telecom/apphbd/apphbd
 telecom/apphbd/apphbtest
 telecom/recoverymgrd/conf_lex.c
