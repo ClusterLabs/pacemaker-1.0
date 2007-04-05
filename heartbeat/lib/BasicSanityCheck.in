@@ -57,6 +57,10 @@ LOCALNODE=`uname -n`
 RSCDIR=$HADIR/resource.d
 PATH=$PATH:/sbin:/usr/sbin
 export PATH
+
+# Some signals to trap and act on
+SIGLIST="0 1 2 3 6 15"
+
 errcount=0
 
 # Make temp files the paranoid way...
@@ -308,6 +312,19 @@ RemoveConfigFiles() {
 	rm -f $j
   done
   RestoreConfigFiles
+}
+
+SaveLog() {
+  SAVELOG=/tmp/linux-ha.testlog
+  chmod a+r $LOGFILE
+  mv $LOGFILE $SAVELOG
+  echo "$errcount errors. Log file is stored in $SAVELOG"
+}
+
+RemoveConfigFilesAndSaveLog() {
+  trap $SIGLIST		# restore signal beahviour to entry state
+  RemoveConfigFiles
+  SaveLog
 }
 
 SaveConfigFiles() {
@@ -726,7 +743,14 @@ AppHBCheck() {
 IPCtest() {
 	echo "Starting IPC tests" | tee -a $LOGFILE
 	$IPCTEST >>$LOGFILE 2>&1
-	errcount=`expr $errcount + $?`
+	ret=$?
+	if [ $ret -ne 0 ]; then
+		errcount=`expr $errcount + $ret`
+		return $ret
+	fi
+	### Might here try "transient-test.sh" test.
+	errcount=`expr $errcount + $ret`
+	return $ret
 }
 
 LRMTest() {
@@ -976,10 +1000,11 @@ case $ID in
 	exit 1;;
 esac
 
-trap 'RemoveConfigFiles' 0
-
 touch $LOGFILE
 chown @HA_CCMUSER@ $LOGFILE
+
+trap 'RemoveConfigFilesAndSaveLog' $SIGLIST
+
 SetUpConfigFiles
 > $LOGFILE
 
@@ -992,10 +1017,19 @@ fi
 
 Base64MD5Test
 TestRA
+
+IPCtest
+ret=$?
+if [ $ret -ne 0 ]; then
+	# If IPC is faulty, then it is pointless to attempt dependent checks.
+	echo "ERROR: IPCtest failed; continuing is pointless" | tee -a $LOGFILE
+	exit $ret
+fi
+# Might want to add a longer, more substantial IPC test later.
+
 TestHeartbeat
 StonithCheck
 AppHBCheck
-IPCtest
 LRMTest
 StonithDaemonTest
 TestCRM
@@ -1018,8 +1052,4 @@ then
   errcount=`expr $errcount + 1`
 fi
 
-SAVELOG=/tmp/linux-ha.testlog
-chmod a+r $LOGFILE
-mv $LOGFILE $SAVELOG
-echo "$errcount errors. Log file is stored in $SAVELOG"
 exit $errcount
