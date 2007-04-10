@@ -33,7 +33,7 @@ LRMD_OUTF="$OUTDIR/lrmd.out"
 OUTF="$OUTDIR/regression.out"
 LRMADMIN="../admin/lrmadmin"
 LRMD_OPTS="-r -vvv"
-DIFF_OPTS="--ignore-all-space -U -1 -u"
+DIFF_OPTS="--ignore-all-space -U 1"
 export OUTDIR TESTDIR LRMADMIN DIFF_OPTS
 
 exec >$OUTF 2>&1
@@ -56,9 +56,21 @@ stop_lrmd() {
 	echo "stopping lrmd" >/dev/tty
 	$HA_BIN/lrmd -k
 }
+cp_Dummylsb() {
+	if [ ! -e /etc/init.d/Dummy-lsb ]; then
+		cp -p Dummy-lsb /etc/init.d
+		Dummylsb=1
+	fi
+}
+rm_Dummylsb() {
+	if [ "$Dummylsb" ]; then
+		rm -f /etc/init.d/Dummy-lsb
+	fi
+}
 
+cp_Dummylsb
 start_lrmd || exit $?
-trap "stop_lrmd" EXIT
+trap "stop_lrmd; rm_Dummylsb" EXIT
 
 [ "$1" = prepare ] && { export prepare=1; shift 1;}
 
@@ -74,8 +86,7 @@ fi
 
 if test -s $OUTF; then
 	echo "seems like some tests failed or else something not expected"
-	echo "check $OUTF:"
-	cat $OUTF
+	echo "check $OUTF and diff files in $OUTDIR"
 	exit 1
 else
 	rm -f $OUTF $LRMD_OUTF
