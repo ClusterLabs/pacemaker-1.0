@@ -779,8 +779,8 @@ general_simple_opt_deal(int argc, char ** argv, const char * optstr)
 
 			default:
 				cl_log(LOG_ERR, "Error: getopt returned"
-					"character code %c.", option_char);
-				return PARAMETER_ERROR;
+					"character %c.", option_char);
+				return -1;
 		}
 	} while (1);
 	return 0;
