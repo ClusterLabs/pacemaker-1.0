@@ -655,7 +655,8 @@ clientstatus(ll_cluster_t *hb, int argc, char ** argv, const char * optstr)
 	cstatus = hb->llc_ops->client_status(hb, argv[optind+1], 
 		argv[optind+2], timeout);
 	if (cstatus == NULL) { /* Error */
-		cl_log(LOG_ERR, "Cannot get client %s's status", argv[optind+2]);
+		cl_log(LOG_ERR, "Cannot get heartbeat client %s's status"
+		,	argv[optind+2]);
 		cl_log(LOG_ERR, "REASON: %s", hb->llc_ops->errmsg(hb));
 		return UNKNOWN_ERROR;
 	} else {
@@ -689,8 +690,7 @@ rscstatus(ll_cluster_t *hb, int argc, char ** argv, const char * optstr)
 	rstatus = hb->llc_ops->get_resources(hb);
 	if ( rstatus == NULL ) {
 		cl_log(LOG_ERR
-		,	"Cannot get client %s's resource status"
-		,	argv[optind+2]);
+		,	"Cannot get cluster resource status");
 		cl_log(LOG_ERR, "REASON: %s", hb->llc_ops->errmsg(hb));
 		return UNKNOWN_ERROR;
 	}
