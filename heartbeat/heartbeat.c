@@ -4145,8 +4145,14 @@ check_comm_isup(void)
 
 	if (heardfromcount >= config->nodecount) {
 		heartbeat_comm_state = COMM_LINKSUP;
-		send_reqnodes_msg(0);
-		/*comm_now_up();*/
+		if (enable_flow_control){
+			send_reqnodes_msg(0);
+		}else{
+		/*we have a mixed version of heartbeats
+		 *Disable request/reply node list feature and mark comm up now
+		 */  
+			comm_now_up();
+		}
 	}
 }
 
