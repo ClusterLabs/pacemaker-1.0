@@ -28,6 +28,7 @@
 #include <heartbeat.h>
 #include <HBcomm.h>
 #include <evs.h>
+#include <string.h>
 
 #define PIL_PLUGINTYPE          HB_COMM_TYPE
 #define PIL_PLUGINTYPE_S        HB_COMM_TYPE_S
