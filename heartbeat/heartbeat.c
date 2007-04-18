@@ -2825,6 +2825,9 @@ HBDoMsg_T_REPNODES(const char * type, struct node_info * fromnode
 		}
 		
 		for (i=0; i < config->nodecount; i++){
+			if (config->nodes[i].nodetype != NORMALNODE_I){
+				continue;
+			}
 			for (j=0; j < num; j++){
 				if (strncmp(config->nodes[i].nodename
 				,	nodes[j], HOSTLENG) == 0){
@@ -2832,13 +2835,6 @@ HBDoMsg_T_REPNODES(const char * type, struct node_info * fromnode
 				}	
 			}
 			if (j == num) {
-				if (config->nodes[i].nodetype != NORMALNODE_I){
-					cl_log(LOG_ERR
-					,	"%s: Attempt to delete node %s"
-					,	__FUNCTION__
-					,	config->nodes[i].nodename);
-					continue;
-				}
 				/*
 				 * This node is not found in incoming nodelist,
 				 * therefore, we need to remove it from
