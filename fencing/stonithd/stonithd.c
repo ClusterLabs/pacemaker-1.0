@@ -138,6 +138,11 @@ static const char * stonith_op_strname[] =
 {
 	"QUERY", "RESET", "POWERON", "POWEROFF"
 };
+/* Must correspond to stonith_ret_t */
+static const char * stonith_op_result_strname[] =
+{
+	"STONITH_SUCCEEDED", "STONITH_CANNOT", "STONITH_TIMEOUT", "STONITH_GENERIC"
+};
 
 static GHashTable * chan_gsource_pairs = NULL;	/* msg channel => GCHSource */
 static GHashTable * cbch_gsource_pairs = NULL;	/* callback channel => GCHSource */
@@ -1104,7 +1109,8 @@ require_local_stonithop(stonith_ops_t * st_op, stonith_rsc_t * srsc,
 					, st_op->timeout, stonithop_timeout
 					, tmp_callid, timeout_destroy_notify);
 		stonithd_log(LOG_DEBUG, "require_local_stonithop: inserted "
-			    "optype=%d, child_id=%d", st_op->optype, child_id);
+			    "optype=%s, child_id=%d",
+				stonith_op_strname[st_op->optype], child_id);
 		return ST_OK;
 	}
 }
@@ -1153,8 +1159,9 @@ handle_msg_trstit(struct ha_msg* msg, void* private_data)
 		op->op_union.st_op->node_list = 
 			g_string_append(op->op_union.st_op->node_list, from);
 		send_stonithop_final_result(op);
-		stonithd_log(LOG_INFO, "Node %s fenced node %s: result=%d."
-			, from, op->op_union.st_op->node_name, op_result);
+		stonithd_log(LOG_INFO, "Node %s fenced node %s: result=%s."
+			, from, op->op_union.st_op->node_name
+			, stonith_op_result_strname[op_result]);
 		stonithd_log2(LOG_DEBUG, "handle_msg_trstit: clean the "
 			     "executing queue.");
 		g_hash_table_remove(executing_queue, orig_key);
@@ -2161,7 +2168,8 @@ initiate_local_stonithop(stonith_ops_t * st_op, stonith_rsc_t * srsc,
 					, st_op->timeout, stonithop_timeout
 					, tmp_callid, timeout_destroy_notify);
 		stonithd_log2(LOG_DEBUG, "initiate_local_stonithop: inserted "
-			    "optype=%d, child_id=%d", st_op->optype, call_id);
+			    "optype=%s, child_id=%d",
+				stonith_op_strname[st_op->optype], call_id);
 		return call_id;
 	}
 }
@@ -2202,8 +2210,9 @@ continue_local_stonithop(int old_key)
 		if ((child_pid=stonith_operate_locally(op->op_union.st_op, srsc)) > 0) {
 			g_hash_table_steal(executing_queue, orignal_key);
 			stonithd_log(LOG_DEBUG, "continue_local_stonithop: "
-				     "removed optype=%d, key_id=%d", 
-				     op->op_union.st_op->optype, *orignal_key);
+				     "removed optype=%s, key_id=%d", 
+				     stonith_op_strname[op->op_union.st_op->optype],
+					 *orignal_key);
 			/* donnot need to free the old one.
 			 * orignal_key, op is a pair of key-value.
 			 */
@@ -2215,8 +2224,9 @@ continue_local_stonithop(int old_key)
 			op->rsc_id = g_strdup(srsc->rsc_id);
 			g_hash_table_insert(executing_queue, orignal_key, op);
 			stonithd_log(LOG_DEBUG, "continue_local_stonithop: "
-				     "inserted optype=%d, child_id=%d", 
-				     op->op_union.st_op->optype, child_pid);
+				     "inserted optype=%s, child_id=%d", 
+				     stonith_op_strname[op->op_union.st_op->optype],
+					 child_pid);
 			return ST_OK;
 		} else {
 			rsc_id = srsc->rsc_id;
@@ -2262,7 +2272,8 @@ initiate_remote_stonithop(stonith_ops_t * st_op, stonith_rsc_t * srsc,
 					, tmp_callid, timeout_destroy_notify);
 
 		stonithd_log(LOG_DEBUG, "initiate_remote_stonithop: inserted "
-			"optype=%d, key=%d", op->op_union.st_op->optype, *tmp_callid);
+			"optype=%s, key=%d",
+			stonith_op_strname[op->op_union.st_op->optype], *tmp_callid);
 		stonithd_log2(LOG_INFO, "Broadcasting the message succeeded: require "
 			"others to stonith node %s.", st_op->node_name);
 
@@ -2303,11 +2314,13 @@ changeto_remote_stonithop(int old_key)
 		/* donnt need to free op->rsc_id now. */
 		g_hash_table_steal(executing_queue, orignal_key);
 		stonithd_log(LOG_DEBUG, "changeto_remote_stonithop: removed "
-			  "optype=%d, key=%d", op->op_union.st_op->optype, *orignal_key);
+			  "optype=%s, key=%d",
+			  stonith_op_strname[op->op_union.st_op->optype], *orignal_key);
 		*orignal_key = op->op_union.st_op->call_id;
 		g_hash_table_insert(executing_queue, orignal_key, op);
 		stonithd_log(LOG_DEBUG, "changeto_remote_stonithop: inserted "
-			  "optype=%d, key=%d", op->op_union.st_op->optype, *orignal_key);
+			  "optype=%s, key=%d",
+			  stonith_op_strname[op->op_union.st_op->optype], *orignal_key);
 	}
 
 	return ST_OK;
@@ -2360,9 +2373,10 @@ stonithop_result_to_local_client( const stonith_ops_t * st_op, gpointer data)
 	}
 
 	if (st_op->op_result == STONITH_SUCCEEDED ) {
-		stonithd_log(LOG_INFO, "%s %s: optype=%d. whodoit: %s"
+		stonithd_log(LOG_INFO, "%s %s: optype=%s. whodoit: %s"
 			,	M_STONITH_SUCCEED
-			,	st_op->node_name, st_op->optype
+			,	st_op->node_name
+			,	stonith_op_strname[st_op->optype]
 			,	((GString *)(st_op->node_list))->str);
 		
 		if ( st_op->optype == 1 ) { /* RESET */
@@ -2371,15 +2385,18 @@ stonithop_result_to_local_client( const stonith_ops_t * st_op, gpointer data)
 			}
 		}
 	} else {
-		stonithd_log(LOG_INFO
-			,	"%s %s: optype=%d, op_result=%d" 
+		stonithd_log(LOG_ERR
+			,	"%s %s: optype=%s, op_result=%s" 
 			,	M_STONITH_FAIL, st_op->node_name
-			,	st_op->optype, st_op->op_result);
+			,	stonith_op_strname[st_op->optype]
+			,	stonith_op_result_strname[st_op->op_result]);
 	}
 
 	stonithd_log2(LOG_DEBUG
-		, "stonith finished: optype=%d, node_name=%s, op_result=%d"
-		, st_op->optype, st_op->node_name, st_op->op_result);
+		, "stonith finished: optype=%s, node_name=%s, op_result=%s"
+		, stonith_op_strname[st_op->optype]
+		, st_op->node_name
+		, stonith_op_result_strname[st_op->op_result]);
 
 	if ((reply = ha_msg_new(0)) == NULL) {
 		stonithd_log(LOG_ERR, "%s:%d:ha_msg_new:out of memory."
@@ -2534,9 +2551,9 @@ stonith_operate_locally( stonith_ops_t * st_op, stonith_rsc_t * srsc)
 		NewTrackedProc( pid, 1
 				, (debug_level>1)? PT_LOGVERBOSE : PT_LOGNORMAL
 				, g_strdup(buf_tmp), &StonithdProcessTrackOps);
-		stonithd_log(LOG_INFO, "%s::%d: sending fencing op (%d) for %s "
+		stonithd_log(LOG_INFO, "%s::%d: sending fencing op (%s) for %s "
 			"to device %s (rsc_id=%s, pid=%d)", __FUNCTION__
-			, __LINE__, st_op->optype , st_op->node_name
+			, __LINE__, stonith_op_strname[st_op->optype], st_op->node_name
 			, st_obj->stype, srsc->rsc_id, pid);
 		return_to_dropped_privs();
 		return pid;
@@ -2900,8 +2917,10 @@ send_stonithRAop_final_result( stonithRA_ops_t * ra_op, gpointer data)
 	}
 
 	stonithd_log(LOG_DEBUG
-		     , "RA %s's op %s finished. op_result=%d"
-		     , ra_op->ra_name, ra_op->op_type, ra_op->op_result);
+		     , "RA %s's op %s finished. op_result=%s"
+		     , ra_op->ra_name
+			 , ra_op->op_type
+			 , stonith_op_result_strname[ra_op->op_result]);
 
 	if ( NULL == get_exist_client_by_chan(client_list, ch) ) {
 		/* Here the ch are already destroyed */
