@@ -141,7 +141,7 @@ static const char * stonith_op_strname[] =
 /* Must correspond to stonith_ret_t */
 static const char * stonith_op_result_strname[] =
 {
-	"STONITH_SUCCEEDED", "STONITH_CANNOT", "STONITH_TIMEOUT", "STONITH_GENERIC"
+	"SUCCEEDED", "CANNOT", "TIMEOUT", "GENERIC",
 };
 
 static GHashTable * chan_gsource_pairs = NULL;	/* msg channel => GCHSource */
@@ -2917,10 +2917,10 @@ send_stonithRAop_final_result( stonithRA_ops_t * ra_op, gpointer data)
 	}
 
 	stonithd_log(LOG_DEBUG
-		     , "RA %s's op %s finished. op_result=%s"
+		     , "RA %s's op %s finished. op_result=%d"
 		     , ra_op->ra_name
 			 , ra_op->op_type
-			 , stonith_op_result_strname[ra_op->op_result]);
+			 , ra_op->op_result);
 
 	if ( NULL == get_exist_client_by_chan(client_list, ch) ) {
 		/* Here the ch are already destroyed */
