@@ -371,8 +371,7 @@ int
 stonithd_signoff(void)
 {
 	int rc = ST_FAIL;
-	struct ha_msg * request, * reply;
-	const char * tmpstr;
+	struct ha_msg * request;
 	
 	if (chan == NULL || chan->ch_status == IPC_DISCONNECT) {
 		stdlib_log(LOG_NOTICE, "Has been in signoff status.");
@@ -393,39 +392,6 @@ stonithd_signoff(void)
 	/*  waiting for the output to finish */
 	chan_waitout_timeout(chan, DEFAULT_TIMEOUT);
 	ZAPMSG(request);
-
-	/* Read the reply... */
-	stdlib_log(LOG_DEBUG, "waiting for the signoff reply msg.");
-        if ( IPC_OK != chan_waitin_timeout(chan, DEFAULT_TIMEOUT) ) {
-		stdlib_log(LOG_ERR, "%s:%d: waitin failed."
-			   , __FUNCTION__, __LINE__);
-		return ST_FAIL;
-	}
-
-	if ( (reply = msgfromIPC_noauth(chan)) == NULL ) {
-		stdlib_log(LOG_ERR, "stonithd_signoff: to fetch the reply msg "
-			   "failed.");
-		return ST_FAIL;
-	}
-	
-	if ( TRUE == is_expected_msg(reply, F_STONITHD_TYPE, ST_APIRPL, 
-			     F_STONITHD_APIRPL, ST_RSIGNOFF, TRUE) ) {
-		if ( ((tmpstr=cl_get_string(reply, F_STONITHD_APIRET)) != NULL)
-	   	    && (STRNCMP_CONST(tmpstr, ST_APIOK) == 0) ) {
-			chan->ops->destroy(chan);
-			chan = NULL;
-			CLIENT_NAME = NULL;
-			rc = ST_OK;
-			stdlib_log(LOG_DEBUG, "succeeded to sign off the "
-				   "stonithd.");
-		} else {
-			stdlib_log(LOG_NOTICE, "fail to sign off the stonithd.");
-		}
-	} else {
-		stdlib_log(LOG_ERR, "stonithd_signoff: "
-			   "Got an unexpected message.");
-	}
-	ZAPMSG(reply);
 	
 	if (NULL != chan) {
 		chan->ops->destroy(chan);
@@ -1051,15 +1017,15 @@ static int
 chan_waitin_timeout(IPC_Channel * chan, unsigned int timeout)
 {
 	int ret;
-	unsigned int other_remaining;
+	unsigned int remaining;
 	struct sigaction old_action;
 
-	other_remaining = alarm(0);
-	if ( other_remaining > 0 ) {
-		alarm(other_remaining);
+	remaining = alarm(0);
+	if ( remaining > 0 ) {
+		alarm(remaining);
 		stdlib_log(LOG_NOTICE, "chan_waitin_timeout: There are others "
 			   "using timer: %d. I donnot use alarm."
-			   , other_remaining);
+			   , remaining);
 		ret = chan->ops->waitin(chan);
 	} else {
 		memset(&old_action, 0, sizeof(old_action));
@@ -1067,20 +1033,29 @@ chan_waitin_timeout(IPC_Channel * chan, unsigned int timeout)
 				, 	&old_action);
 		
 		INT_BY_ALARM = FALSE;
-		alarm(timeout);
+		remaining = timeout;
 	
-		ret = chan->ops->waitin(chan);
-		if ( ret == IPC_INTR && TRUE == INT_BY_ALARM ) {
-			stdlib_log(LOG_ERR, "%s:%d: waitin was interrupted "
-				   "by the alarm set by myself."
-				   , __FUNCTION__, __LINE__);
-			ret = IPC_FAIL;
-		} else {
-			if (ret == IPC_INTR) {
-				stdlib_log(LOG_NOTICE
-					, "waitin was interrupted by others");
+		while ( remaining > 0 ) {
+			alarm(remaining);
+			ret = chan->ops->waitin(chan);
+			if ( ret == IPC_INTR ) {
+				if ( TRUE == INT_BY_ALARM ) {
+					stdlib_log(LOG_ERR, "%s:%d: "
+						   "waitin was interrupted by "
+						   "the alarm set by myself."
+						   , __FUNCTION__, __LINE__);
+					ret = IPC_FAIL;
+					break;
+				} else {
+					stdlib_log(LOG_NOTICE
+						   , "waitin was interrupted "
+						   "by others");
+					remaining = alarm(0);
+				}
+			} else {
+				alarm(0);
+				break;
 			}
-			alarm(0);
 		}
 
 		cl_signal_set_simple_handler(SIGALRM, old_action.sa_handler
@@ -1095,12 +1070,12 @@ static int
 chan_waitout_timeout(IPC_Channel * chan, unsigned int timeout)
 {
 	int ret;
-	unsigned int other_remaining = 0;
+	unsigned int remaining = 0;
 	struct sigaction old_action;
 
-	other_remaining = alarm(0);
-	if ( other_remaining > 0 ) {
-		alarm(other_remaining);
+	remaining = alarm(0);
+	if ( remaining > 0 ) {
+		alarm(remaining);
 		stdlib_log(LOG_NOTICE, "chan_waitout_timeout: There are others "
 			   "using timer, I donnot use alarm.");
 		ret = chan->ops->waitout(chan);
@@ -1109,21 +1084,29 @@ chan_waitout_timeout(IPC_Channel * chan, unsigned int timeout)
 		cl_signal_set_simple_handler(SIGALRM, sigalarm_handler
 				, 	&old_action);
 		INT_BY_ALARM = FALSE;
-		alarm(timeout);
+		remaining = timeout;
 
-		ret = chan->ops->waitout(chan);
-
-		if ( ret == IPC_INTR && TRUE == INT_BY_ALARM ) {
-			stdlib_log(LOG_ERR, "%s:%d: waitout was interrupted"
-				   " by the alarm set by myself."
-				   , __FUNCTION__, __LINE__);
-			ret = IPC_FAIL;
-		} else {
-			if (ret == IPC_INTR) {
-				stdlib_log(LOG_ERR
-					   , "waitin was interrupted by others");
+		while ( remaining > 0 ) {
+			alarm(remaining);
+			ret = chan->ops->waitout(chan);
+			if ( ret == IPC_INTR ) {
+				if ( TRUE == INT_BY_ALARM ) {
+					stdlib_log(LOG_ERR, "%s:%d: "
+						   "waitout was interrupted by "
+						   "the alarm set by myself."
+						   , __FUNCTION__, __LINE__);
+					ret = IPC_FAIL;
+					break;
+				} else {
+					stdlib_log(LOG_NOTICE
+						   , "waitout was interrupted "
+						   "by others");
+					remaining = alarm(0);
+				}
+			} else {
+				alarm(0);
+				break;
 			}
-			alarm(0);
 		}
 
 		cl_signal_set_simple_handler(SIGALRM, old_action.sa_handler

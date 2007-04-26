@@ -1929,8 +1929,6 @@ send_reply:
 static int
 on_stonithd_signoff(struct ha_msg * request, gpointer data)
 {
-	struct ha_msg * reply;
-	const char * api_reply = ST_APIOK;
 	stonithd_client_t * client = NULL;
 	IPC_Channel * ch = (IPC_Channel *) data;
 	int tmpint;
@@ -1946,8 +1944,7 @@ on_stonithd_signoff(struct ha_msg * request, gpointer data)
 	if ( HA_OK != ha_msg_value_int(request, F_STONITHD_CPID, &tmpint) ) {
 		stonithd_log(LOG_ERR, "signoff msg contains no or incorrect "
 				"PID field.");
-		api_reply = ST_BADREQ;
-		goto send_back_reply;
+		return ST_FAIL;
 	}
 
 	if ( (client = get_exist_client_by_chan(client_list, ch)) != NULL ) {
@@ -1967,36 +1964,14 @@ on_stonithd_signoff(struct ha_msg * request, gpointer data)
 			     "signed off ", tmpint);
 	}
 
- 	if ( STRNCMP_CONST(api_reply, ST_APIOK) == 0 ) {
+ 	if ( NULL == client ) {
 		stonithd_log(LOG_DEBUG,"client pid=%d has sign off stonithd "
-				"succeedly.", tmpint);
+				"successfully.", tmpint);
 	} else {
 		stonithd_log(LOG_INFO,"client pid=%d failed to sign off "
 				"stonithd ", tmpint);
 	}
 
-send_back_reply:
-
-	if ((reply = ha_msg_new(3)) == NULL) {
-		stonithd_log(LOG_ERR, "%s:%d:ha_msg_new:out of memory."
-				,__FUNCTION__, __LINE__);
-		return ST_FAIL;
-	}
-	if ( (ha_msg_add(reply, F_STONITHD_TYPE, ST_APIRPL) != HA_OK ) 
-	    ||(ha_msg_add(reply, F_STONITHD_APIRPL, ST_RSIGNOFF) != HA_OK ) 
-	    ||(ha_msg_add(reply, F_STONITHD_APIRET, api_reply) != HA_OK ) ) {
-		ZAPMSG(reply);
-		stonithd_log(LOG_ERR, "on_stonithd_signoff: cannot add field.");
-		return ST_FAIL;
-	}
-	
-	if (msg2ipcchan(reply, ch) != HA_OK) { /* How to deal the error*/
-		ZAPMSG(reply);
-		stonithd_log(LOG_WARNING, "can't send signoff reply message to IPC");
-		return ST_FAIL;
-        }
-
-	ZAPMSG(reply);
 	return ST_OK;
 }
 
