@@ -42,26 +42,19 @@ meta_data() {
 <version>1.0</version>
 
 <longdesc lang="en">
-This is a Dummy Resource Agent. It does absolutely nothing except wait
-for various amounts of time on execution.
+This is a Dummy Resource Agent. It does absolutely nothing except 
+keep track of whether its running or not.
+Its purpose in life is for testing and to serve as a template for RA writers.
 </longdesc>
 <shortdesc lang="en">Dummy resource agent</shortdesc>
 
 <parameters>
-<parameter name="delay" unique="0">
-<longdesc lang="en">
-How long to delay before each action.
-</longdesc>
-<shortdesc lang="en">Action delay</shortdesc>
-<content type="integer" default="5" />
-</parameter>
-
 <parameter name="state" unique="1">
 <longdesc lang="en">
 Location to store the resource state in.
 </longdesc>
 <shortdesc lang="en">State file</shortdesc>
-<content type="string" default="" />
+<content type="string" default="@HA_VARRUNHBRSCDIR@/Dummy-{OCF_RESOURCE_INSTANCE}.state" />
 </parameter>
 
 </parameters>
@@ -82,6 +75,13 @@ END
 
 #######################################################################
 
+# don't exit on TERM, to test that lrmd makes sure that we do exit
+trap sigterm_handler TERM
+sigterm_handler() {
+	ocf_log info "They use TERM to bring us down. No such luck."
+	return
+}
+
 dummy_usage() {
 	cat <<END
 usage: $0 {start|stop|monitor|migrate_to|migrate_from|validate-all|meta-data}
@@ -91,25 +91,42 @@ END
 }
 
 dummy_start() {
-	sleep $OCF_RESKEY_delay
-	ha_pseudo_resource Dummy_${OCF_RESOURCE_INSTANCE} start $OCF_RESKEY_state
+    dummy_monitor
+    if [ $? =  $OCF_SUCCESS ]; then
+	return $OCF_SUCCESS
+    fi
+    touch ${OCF_RESKEY_state}
 }
 
 dummy_stop() {
-	sleep $OCF_RESKEY_delay
-	ha_pseudo_resource Dummy_${OCF_RESOURCE_INSTANCE} stop $OCF_RESKEY_state
+    dummy_monitor
+    if [ $? =  $OCF_SUCCESS ]; then
+	rm ${OCF_RESKEY_state}
+    fi
+    return $OCF_SUCCESS
 }
 
 dummy_monitor() {
-	sleep $OCF_RESKEY_delay
-	ha_pseudo_resource Dummy_${OCF_RESOURCE_INSTANCE} monitor $OCF_RESKEY_state
+	if [ -f ${OCF_RESKEY_state} ]; then
+	    return $OCF_SUCCESS
+	fi
+	return $OCF_NOT_RUNNING
 }
 
 dummy_validate() {
-	exit $OC_ERR_UNIMPLEMENTED
+    
+    # Is the state directory writable? 
+    state_dir=`dirname "$OCF_RESKEY_state"`
+    touch "$state_dir/$$"
+    if [ $? != 0 ]; then
+	return $OCF_ERR_ARGS
+    fi
+    rm "$state_dir/$$"
+
+    return $OCF_SUCCESS
 }
 
-: ${OCF_RESKEY_delay=1}
+: ${OCF_RESKEY_state=@HA_VARRUNHBRSCDIR@/Dummy-${OCF_RESOURCE_INSTANCE}.state}
 
 case $__OCF_ACTION in
 meta-data)	meta_data
