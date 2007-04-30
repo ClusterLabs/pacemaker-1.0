@@ -1016,7 +1016,7 @@ sigalarm_handler(int signum)
 static int
 chan_waitin_timeout(IPC_Channel * chan, unsigned int timeout)
 {
-	int ret;
+	int ret = IPC_FAIL;
 	unsigned int remaining;
 	struct sigaction old_action;
 
@@ -1069,7 +1069,7 @@ chan_waitin_timeout(IPC_Channel * chan, unsigned int timeout)
 static int
 chan_waitout_timeout(IPC_Channel * chan, unsigned int timeout)
 {
-	int ret;
+	int ret = IPC_FAIL;
 	unsigned int remaining = 0;
 	struct sigaction old_action;
 
