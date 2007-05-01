@@ -2169,9 +2169,9 @@ sub check_smtp
 	require Net::SMTP;
 	my ($v, $r) = @_;
 	my $port=(defined $$v{checkport}?$$v{checkport}:$$r{port});
-	
-	&ld_debug(2, "Checking http: server=$$r{server} port=$port");
-	
+
+	&ld_debug(2, "Checking smtp: server=$$r{server} port=$port");
+
 	my $smtp = new Net::SMTP($$r{server}, Port => $port,
 			Timeout => $$v{negotiatetimeout});
 	if ($smtp) {
