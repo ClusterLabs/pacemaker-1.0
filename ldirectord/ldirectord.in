@@ -1539,7 +1539,7 @@ sub add_real_server_range
 	if ($first_i>$last_i) {
 		&config_error($line, 
 			"Invalid Range: $first-$last: First value must be " .
-			"less than or equal to the second value");
+			"greater than or equal to the second value");
 	}
 
 	# A for loop didn't seem to want to work
