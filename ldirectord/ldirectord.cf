@@ -204,7 +204,7 @@ virtual=192.168.6.240:80
 #	checktype=negotiate
 # 	checkport=53
 #	request="x.y.z"
-#	recieve="127.0.0.1"
+#	receive="127.0.0.1"
 
 #Sample configuration for a MySQL virtual service.
 #virtual = 192.168.10.74:3306
