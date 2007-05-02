@@ -2,8 +2,10 @@ heartbeat-2 (2.0.9-1) unstable; urgency=low
 
   * New Upstream
   * Remove bashism from IPAddr2 (closes: #420206)
+  * Depend on libsnmp10-dev rather than libsnmp9-dev as the former
+    appears to replace the latter
 
- -- Simon Horman <horms@debian.org>  Wed, 02 May 2007 13:18:08 +0900
+ -- Simon Horman <horms@debian.org>  Wed, 02 May 2007 13:18:55 +0900
 
 heartbeat-2 (2.0.8-1) unstable; urgency=low
 
