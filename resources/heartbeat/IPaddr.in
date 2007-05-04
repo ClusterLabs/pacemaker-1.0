@@ -64,20 +64,7 @@ fi
 # Note that we don't distinguish if *we're* serving it locally...
 #
 ip_monitor() {
-  	TIMEOUT=1 # seconds
-	SYSTYPE="`uname -s`"
-  	case $SYSTYPE in
- 	 	Linux)
-	  	# -c count -t timetolive -q(uiet) -n(umeric) -W timeout
-		PINGARGS="-c 1 -q -n $BASEIP"
-		;;
-		SunOS)
-		PINGARGS="$BASEIP $TIMEOUT"
-		;;
-		*)
-		PINGARGS="-c 1 -q $BASEIP"
-		;;
-	esac
+	PINGARGS="`pingargs $BASEIP`"
 	for j in 1 2 3
 	do
 	  # for R1 style clusters, CTS runs this on the test monitor node
