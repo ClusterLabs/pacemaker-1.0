@@ -1,11 +1,47 @@
-heartbeat-2 (2.0.9-1) unstable; urgency=low
+heartbeat-2 (2.0.8-3) unstable; urgency=low
 
   * New Upstream
-  * Remove bashism from IPAddr2 (closes: #420206)
-  * Depend on libsnmp10-dev rather than libsnmp9-dev as the former
-    appears to replace the latter
+  * Remove merged patches
+    - ipv6addr-21-char-devname.patch
+    - ipv6addr-find_if-overflow.patch
+    - ipv6addr-scanf-return.patch
+    - ipaddr2-bashism.patch
+    - README.config-heartbeat-2.patch
 
- -- Simon Horman <horms@debian.org>  Wed, 02 May 2007 13:18:55 +0900
+ -- Simon Horman <horms@debian.org>  Sat, 05 May 2007 14:27:17 +0900
+
+heartbeat-2 (2.0.8-2) unstable; urgency=low
+
+  * Update build debendancy and rebuild against libsnmp10.
+    Somehow libsnmp9 has been removed from the distribution,
+    rendering heartbeat uninstallable.
+    Thanks to Steinar H. Gunderson
+    (closes: #422320)
+  * IPaddr2: Remove bashisms
+    Patch: ipaddr2-bashism.patch
+    Upstream: http://hg.linux-ha.org/dev/rev/165a9a897e3b
+    Thanks to Erich Schuebert
+    (closes: #420206)
+  * Fix up documentation location in /etc/ha.d/README.config
+    Thanks to Russell Coker
+    (closes: #418206)
+  * IPv6addr: Fix potential stack overflow in use of devname in scan_if
+    Patch: ipv6addr-21-char-devname.patch
+    Upstream: http://hg.linux-ha.org/dev/rev/37271ae7f117
+  * IPv6addr: Fix potential buffer overflow when a 128bit prefix is used
+    Patch: ipv6addr-find_if-overflow.patch
+    Upstream: http://hg.linux-ha.org/dev/rev/b4bc188b4ebe
+  * IPv6addr: Handle scanf failures in scan_if()
+    Patch: ipv6addr-scanf-return.patch
+    Upstream: http://hg.linux-ha.org/dev/rev/31d19acfd1b9
+  * Run autoconf to incoporate the chown-check-2.patch workaround
+    to allow the configure script to work under fakeroot.
+    I have no idea how this was not applied for 2.0.8-1 and yet
+    the build still worked.
+  * Change priority of ldirecord from optional to extra to
+    match the priority of its dependancies ipvsadm and libauthen-radius-perl
+
+ -- Simon Horman <horms@debian.org>  Sat, 05 May 2007 13:36:36 +0900
 
 heartbeat-2 (2.0.8-1) unstable; urgency=low
 
