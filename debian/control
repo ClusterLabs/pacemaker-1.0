@@ -8,7 +8,7 @@ XS-Python-Version: current
 
 Package: ldirectord-2
 Section: admin
-Priority: optional
+Priority: extra
 Architecture: all
 Depends: ${perl:Depends}, ipvsadm, libauthen-radius-perl, libcrypt-ssleay-perl, libdbi-perl, libdigest-hmac-perl, libdigest-md5-perl, libmail-pop3client-perl, libmailtools-perl, libnet-dns-perl, libnet-imap-simple-perl, libnet-imap-simple-ssl-perl, libnet-ldap-perl, libnet-perl, libwww-perl
 Recommends: sysklogd|syslog-ng, logrotate
