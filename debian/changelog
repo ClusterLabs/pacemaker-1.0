@@ -1,4 +1,4 @@
-heartbeat-2 (2.0.8-3) unstable; urgency=low
+heartbeat (2.0.9-1) unstable; urgency=low
 
   * New Upstream
   * Remove merged patches
@@ -8,7 +8,28 @@ heartbeat-2 (2.0.8-3) unstable; urgency=low
     - ipaddr2-bashism.patch
     - README.config-heartbeat-2.patch
 
- -- Simon Horman <horms@debian.org>  Sat, 05 May 2007 14:27:17 +0900
+ -- Simon Horman <horms@debian.org>  Mon, 14 May 2007 13:18:53 +0900
+
+heartbeat (2.0.8-3) unstable; urgency=low
+
+  * Rename source package from heartbeat-2 to heartbeat.
+    Previously the heartbeat source package was used to package
+    up the 1.2.X series of releases, and heartebat-2 was used
+    for the newer 2.0.X series of releases. The idea being to offer
+    stable "heartbeat" packages when the 2.0.X stuff was all
+    new. It turns out that the 2.0.X tree has been at least as
+    stable as the 1.2.X tree for quite a while now, and the 1.2.X doesn't
+    get much attention any more, so  there seems little advantage in
+    having the separate source packages, except perhaps to create confusion
+    and extra work.
+  * Update curl build dependancy for libcurl4
+    Thanks to Christian Marillat
+    (closes: #423655)
+  * 2.0.8 (and probably earilier) includes the corrected scsi command syntax
+    Thanks to Christoph Martin
+    (closes: #350586)
+
+ -- Simon Horman <horms@debian.org>  Mon, 14 May 2007 12:13:03 +0900
 
 heartbeat-2 (2.0.8-2) unstable; urgency=low
 

@@ -22,13 +22,13 @@ MAINTAINERCLEANFILES    = Makefile.in
 
 EXTRA_DIST		= apply changelog compat control copyright \
 			  dpkg-checkbuild rules \
-			  heartbeat-2.dirs heartbeat-2.files \
-			  heartbeat-2.postinst heartbeat-2.postrm \
-			  heartbeat-2.preinst \
-			  heartbeat-2-dev.dirs heartbeat-2-dev.files \
-			  heartbeat-2-gui.dirs heartbeat-2-gui.files \
-			  ldirectord-2.files ldirectord-2.postinst \
-			  ldirectord-2.postrm \
+			  heartbeat.dirs heartbeat.files \
+			  heartbeat.postinst heartbeat.postrm \
+			  heartbeat.preinst \
+			  heartbeat-dev.dirs heartbeat-dev.files \
+			  heartbeat-gui.dirs heartbeat-gui.files \
+			  ldirectord.files ldirectord.postinst \
+			  ldirectord.postrm \
 			  patches/chown-check-2.patch \
 			  patches/series/2.0.8-1
 

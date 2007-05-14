@@ -89,10 +89,10 @@ install-stamp:
 	dh_installdirs
 	$(MAKE) install DESTDIR=$(DTMP) \
 	  MAKE=make \
-	  docdir=/usr/share/doc/heartbeat-2
+	  docdir=/usr/share/doc/heartbeat
 
 	mv $(DTMP)/usr/lib/heartbeat/cts/README \
-		$(DTMP)/usr/share/doc/heartbeat-2/README.cts
+		$(DTMP)/usr/share/doc/heartbeat/README.cts
 	find $(DTMP)/usr/share/man -type f | xargs gzip -v --best
 	install -c -m 755 heartbeat/init.d/heartbeat \
                 $(DTMP)/etc/init.d/heartbeat
@@ -152,7 +152,7 @@ binary-arch: build install
 	dh_installman -a
 #	dh_installinfo -a
 #	dh_undocumented -a
-	dh_installchangelogs -a `pwd`/debian/heartbeat-2/usr/share/doc/heartbeat-2/ChangeLog
+	dh_installchangelogs -a `pwd`/debian/heartbeat/usr/share/doc/heartbeat/ChangeLog
 	dh_link -a
 	dh_strip -a
 	dh_compress -a
