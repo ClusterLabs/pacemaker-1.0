@@ -19,6 +19,8 @@
 #
 MAINTAINERCLEANFILES    = Makefile.in
 
+EXTRA_DIST		= ldirectord.debian ldirectord.debian.default.in
+
 initddir		= @INITDIR@
 
 initd_SCRIPTS	        = ldirectord
