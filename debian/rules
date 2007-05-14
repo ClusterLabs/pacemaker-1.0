@@ -100,8 +100,11 @@ install-stamp:
 	install -c -m 644 ldirectord/ldirectord.cf \
 	  $(DTMP)/usr/share/doc/ldirectord/
 	-mkdir -p $(DTMP)/etc/init.d
-	install -c -m 755 ldirectord/init.d/ldirectord \
+	install -c -m 755 ldirectord/init.d/ldirectord.debian \
 		$(DTMP)/etc/init.d/ldirectord
+	-mkdir -p $(DTMP)/etcdefault/
+	install -c -m 755 ldirectord/init.d/ldirectord.debian.default \
+		$(DTMP)/etc/default/ldirectord
 	cd $(DTMP)/etc/ha.d/resource.d \
 	  && ln -s /usr/sbin/ldirectord ldirectord
 	cd $(DTMP)/etc/ && ln -s ha.d heartbeat
