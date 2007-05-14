@@ -7,8 +7,10 @@ heartbeat (2.0.9-1) unstable; urgency=low
     - ipv6addr-scanf-return.patch
     - ipaddr2-bashism.patch
     - README.config-heartbeat-2.patch
+  * Documentation path of ldirectord should be /usr/share/doc/ldirectord,
+    not /usr/share/doc/ldirectord-2
 
- -- Simon Horman <horms@debian.org>  Mon, 14 May 2007 13:18:53 +0900
+ -- Simon Horman <horms@debian.org>  Mon, 14 May 2007 15:10:28 +0900
 
 heartbeat (2.0.8-3) unstable; urgency=low
 
