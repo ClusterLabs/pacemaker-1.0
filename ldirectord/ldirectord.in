@@ -47,7 +47,7 @@ Daemon to monitor remote services and control Linux Virtual Server
 =head1 SYNOPSIS
 
 B<ldirectord> [B<-d|--debug>] [--] [I<configfile>] 
-B<start>|B<stop>|B<restart>|B<reload>|B<status>
+B<start>|B<stop>|B<restart>|B<try-restart>|B<reload>|B<force-reload>|B<status>
 
 B<ldirectord> [B<-h|-?|--help|-v|--version>]
 
