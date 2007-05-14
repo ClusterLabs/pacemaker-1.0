@@ -12,8 +12,8 @@ heartbeat (2.0.9-1) unstable; urgency=low
   * Create a Debian init script for ldirectord
     Thanks to Ratiu Petru Iulius
     (closes: #391974)
-
- -- Simon Horman <horms@debian.org>  Mon, 14 May 2007 15:16:20 +0900
+  * Change priority of ldirectord to extra to match the lowest priority
+    of any of its dependancies
 
 heartbeat (2.0.8-3) unstable; urgency=low
 
