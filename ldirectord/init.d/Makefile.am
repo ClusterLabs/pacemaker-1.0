@@ -19,8 +19,6 @@
 #
 MAINTAINERCLEANFILES    = Makefile.in
 
-EXTRA_DIST		= ldirectord.debian ldirectord.debian.default.in
-
 initddir		= @INITDIR@
 
 initd_SCRIPTS	        = ldirectord
@@ -47,5 +45,6 @@ uninstall-initdSCRIPTS:
 	  rm -f $(DESTDIR)$(initddir)/$$f@INIT_EXT@; \
 	done
 
-EXTRA_DIST              = $(initd_SCRIPTS)
+EXTRA_DIST              = $(initd_SCRIPTS) \
+			  ldirectord.debian ldirectord.debian.default.in
 
