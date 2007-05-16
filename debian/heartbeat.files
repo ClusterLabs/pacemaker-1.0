@@ -18,11 +18,13 @@
 /etc/ha.d/resource.d/LinuxSCSI
 /etc/ha.d/resource.d/MailTo
 /etc/ha.d/resource.d/OCF
+/etc/ha.d/resource.d/Raid1
 /etc/ha.d/resource.d/SendArp
 /etc/ha.d/resource.d/ServeRAID
 /etc/ha.d/resource.d/WAS
 /etc/ha.d/resource.d/WinPopup
 /etc/ha.d/resource.d/Xinetd
+/etc/ha.d/resource.d/apache
 /etc/ha.d/resource.d/db2
 /etc/ha.d/resource.d/hto-mapfuncs
 /etc/ha.d/resource.d/portblock
@@ -208,6 +210,7 @@ usr/lib/ocf/resource.d/heartbeat/ClusterMon
 usr/lib/ocf/resource.d/heartbeat/Delay
 usr/lib/ocf/resource.d/heartbeat/Dummy
 usr/lib/ocf/resource.d/heartbeat/EvmsSCC
+usr/lib/ocf/resource.d/heartbeat/Evmsd
 usr/lib/ocf/resource.d/heartbeat/Filesystem
 usr/lib/ocf/resource.d/heartbeat/ICP
 usr/lib/ocf/resource.d/heartbeat/IPaddr

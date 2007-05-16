@@ -29,6 +29,7 @@ usr/include/clplumbing/netstring.h
 usr/include/clplumbing/proctrack.h
 usr/include/clplumbing/realtime.h
 usr/include/clplumbing/recoverymgr_cs.h
+usr/include/clplumbing/replytrack.h
 usr/include/clplumbing/setproctitle.h
 usr/include/clplumbing/timers.h
 usr/include/clplumbing/uids.h
