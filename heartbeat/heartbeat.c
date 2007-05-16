@@ -4719,7 +4719,11 @@ main(int argc, char * argv[], char **envp)
 			cleanexit(-running_hb_pid);
 		}else{
 			struct utsname u;
-			uname(&u);
+
+			if (uname(&u) < 0) {
+				cl_perror("uname(2) call failed");
+				cleanexit(LSB_EXIT_EPERM);
+			}
 			g_strdown(u.nodename);
 			printf("%s OK [pid %ld et al] is running on %s [%s]...\n"
 			,	cmdname, running_hb_pid, u.nodename, localnodename);
@@ -6349,9 +6353,13 @@ get_localnodeinfo(void)
 	static struct utsname	u;
 	static char		localnode[256];
 	FILE *			fp;
-	uname(&u);
+
+	if (uname(&u) < 0) {
+		cl_perror("uname(2) call failed");
+		return;
+	}
+
 	localnodename = u.nodename;
-	
 
 	if ((fp = fopen(openpath, "r")) != NULL
 	&&	fgets(localnode, sizeof(localnode), fp) != NULL
