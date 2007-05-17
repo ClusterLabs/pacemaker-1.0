@@ -10,7 +10,16 @@ heartbeat (2.0.9-1) unstable; urgency=low
     - ipv6addr-scanf-return.patch
     - ldirectord-init.patch
 
- -- Simon Horman <horms@debian.org>  Wed, 16 May 2007 15:35:30 +0900
+ -- Simon Horman <horms@debian.org>  Thu, 17 May 2007 16:20:38 +0900
+
+heartbeat (2.0.8-5) unstable; urgency=low
+
+  * The heartbeat-2-dev.dirs and friends change in 2.0.8-4 closes
+    #424192, not #424053 (which is also fixed by a different change
+    in 2.0.8-4)
+  * Add missing dummy package for stonith
+
+ -- Simon Horman <horms@debian.org>  Thu, 17 May 2007 15:43:55 +0900
 
 heartbeat (2.0.8-4) unstable; urgency=low
 

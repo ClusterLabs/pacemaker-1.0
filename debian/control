@@ -98,6 +98,15 @@ Description: Provides a gui interface to manage heartbeat clusters
  This is a transitional dummy package.  If nothing depends on it, this
  package can be safely removed.
 
+Package: stonith
+Section: libs
+Priority: optional
+Architecture: any
+Depends: heartbeat (= ${Source-Version})
+Description: Interface for remotely powering down a node in the cluster
+ This is a transitional dummy package.  If nothing depends on it, this
+ package can be safely removed.
+
 Package: libstonith0
 Section: libs
 Priority: optional
