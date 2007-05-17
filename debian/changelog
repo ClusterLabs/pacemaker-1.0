@@ -2,20 +2,38 @@ heartbeat (2.0.9-1) unstable; urgency=low
 
   * New Upstream
   * Remove merged patches
+    - README.config-heartbeat-2.patch
+    - README.config-heartbeat.patch
+    - ipaddr2-bashism.patch
     - ipv6addr-21-char-devname.patch
     - ipv6addr-find_if-overflow.patch
     - ipv6addr-scanf-return.patch
-    - ipaddr2-bashism.patch
-    - README.config-heartbeat-2.patch
-  * Documentation path of ldirectord should be /usr/share/doc/ldirectord,
-    not /usr/share/doc/ldirectord-2
+    - ldirectord-init.patch
+
+ -- Simon Horman <horms@debian.org>  Wed, 16 May 2007 15:35:30 +0900
+
+heartbeat (2.0.8-4) unstable; urgency=low
+
   * Create a Debian init script for ldirectord
     Thanks to Ratiu Petru Iulius
+    Patch: ldirectord-init.patch
     (closes: #391974)
+  * Documentation path of ldirectord should be /usr/share/doc/ldirectord,
+    not /usr/share/doc/ldirectord-2
   * Change priority of ldirectord to extra to match the lowest priority
     of any of its dependancies
+  * Add versioned conflicts on old pils and stonith packages to heartbeat and
+    heartbeat-dev, which include those old package's files.
+    (closes: #424053)
+  * Have the clean target of debian rules remove the following files that
+    are priovided by the orig.tar.gz - Debian packages can't delete files
+    - heartbeat-2-dev.dirs heartbeat-2-dev.files heartbeat-2.dirs
+      heartbeat-2.files heartbeat-2.postinst heartbeat-2.postrm
+      heartbeat-2.preinst ldirectord-2.files ldirectord-2.postinst
+      ldirectord-2.postrm
+    (closes: #424053)
 
- -- Simon Horman <horms@debian.org>  Mon, 14 May 2007 21:16:24 +0900
+ -- Simon Horman <horms@debian.org>  Wed, 16 May 2007 13:58:24 +0900
 
 heartbeat (2.0.8-3) unstable; urgency=low
 
