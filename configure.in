@@ -2733,6 +2733,7 @@ cts/Makefile					        	\
 	cts/CIB.py						\
 	cts/LSBDummy						\
 crm/Makefile							\
+	crm/ais/Makefile					\
 	crm/cib/Makefile					\
 	crm/crmd/Makefile					\
 	crm/pengine/Makefile					\
