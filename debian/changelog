@@ -10,7 +10,15 @@ heartbeat (2.0.9-1) unstable; urgency=low
     - ipv6addr-scanf-return.patch
     - ldirectord-init.patch
 
- -- Simon Horman <horms@debian.org>  Thu, 17 May 2007 16:20:38 +0900
+ -- Simon Horman <horms@debian.org>  Fri, 25 May 2007 16:36:21 +0900
+
+heartbeat (2.0.8-7) unstable; urgency=low
+
+  * Add a (tempoary) build dependancy on linux-kernel-headers for ia64
+    to get around a curious autobuild problem.
+    See: http://lists.debian.org/debian-ia64/2007/05/msg00003.html
+
+ -- Simon Horman <horms@debian.org>  Fri, 25 May 2007 16:07:22 +0900
 
 heartbeat (2.0.8-5) unstable; urgency=low
 
