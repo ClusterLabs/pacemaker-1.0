@@ -41,7 +41,7 @@ dopd_LDADD		= \
 			$(top_builddir)/lib/pils/libpils.la
 
 drbd_peer_outdater_SOURCES		= drbd-peer-outdater.c
-drbd_peer_outdater_LDADD		= $(CRM_DEBUG_LIBS) \
+drbd_peer_outdater_LDADD		=  \
 			$(top_builddir)/lib/clplumbing/libplumb.la \
 			$(top_builddir)/lib/crm/common/libcrmcommon.la        \
 			$(top_builddir)/lib/hbclient/libhbclient.la $(GLIBLIB) \
