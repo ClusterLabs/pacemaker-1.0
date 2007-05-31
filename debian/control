@@ -12,7 +12,7 @@ Priority: extra
 Architecture: all
 Depends: ${perl:Depends}, ipvsadm, libauthen-radius-perl, libcrypt-ssleay-perl, libdbi-perl, libdigest-hmac-perl, libdigest-md5-perl, libmail-pop3client-perl, libmailtools-perl, libnet-dns-perl, libnet-imap-simple-perl, libnet-imap-simple-ssl-perl, libnet-ldap-perl, libnet-perl, libwww-perl
 Recommends: sysklogd|syslog-ng, logrotate
-Conflicts: libpils0 (< 2.0.8-3), libstonith0 (< 2.0.8-3), stonith (< 2.0.8-3)
+Conflicts: libpils0 (<< 2.0.8-3), libstonith0 (<< 2.0.8-3), stonith (<< 2.0.8-3)
 XB-Python-Version: ${python:Versions}
 Description: Monitors virtual services provided by LVS
  ldirectord is a stand-alone daemon to monitor services of real
@@ -40,7 +40,7 @@ Section: devel
 Priority: optional
 Architecture: any
 Depends: heartbeat (= ${Source-Version})
-Conflicts: libstonith-dev (< 2.0.8-3), libpils-dev (< 2.0.8-3)
+Conflicts: libstonith-dev (<< 2.0.8-3), libpils-dev (<< 2.0.8-3)
 XB-Python-Version: ${python:Versions}
 Description: Subsystem for High-Availability Linux - development files
  heartbeat is a basic heartbeat subsystem for Linux-HA which implements
