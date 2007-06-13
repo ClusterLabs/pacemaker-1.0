@@ -926,8 +926,7 @@ ccm_send_cl_reply(ll_cluster_t *hb, ccm_info_t *info)
 						!=HA_OK) {
 				if(repeat < REPEAT_TIMES){
 					ccm_log(LOG_ERR,
-						"ccm_state_version_request: "
-						"failure to send join");
+						"%s: failure to send join", __FUNCTION__);
 					cl_shortsleep();
 					repeat++;
 				}else{
@@ -942,8 +941,7 @@ ccm_send_cl_reply(ll_cluster_t *hb, ccm_info_t *info)
 					!= HA_OK) {
 				if(repeat < REPEAT_TIMES){
 					ccm_log(LOG_ERR, 
-					"ccm_state_version_request: failure "
-						"to send join");
+					"%s: failure to send join", __FUNCTION__);
 					cl_shortsleep();
 					repeat++;
 				}else{
@@ -1554,8 +1552,8 @@ ccm_state_joined(enum ccm_type ccm_msg_type,
 			
 			node = ha_msg_value(reply, F_NODE);
 			if(node == NULL){
-				ccm_log(LOG_ERR, "ccm_state_wait_for_memlist:"
-				       "node not found in the message");
+				ccm_log(LOG_ERR, "%s: node not found in the message"
+				, __FUNCTION__);
 				ccm_message_debug2(LOG_INFO, reply);
 				return;
 			}
@@ -2602,10 +2600,9 @@ switchstatement:
 		case CCM_TYPE_ABORT:
 		case CCM_TYPE_RES_MEMLIST:
 		default:
-			ccm_log(LOG_ERR, "ccm_state_sendmemlistreq: "
-					"dropping message of type %s. "
+			ccm_log(LOG_ERR, "%s: dropping message of type %s. "
 					"Is this a Byzantine failure?", 
-					ccm_type2string(ccm_msg_type));
+					__FUNCTION__, ccm_type2string(ccm_msg_type));
 			/* nothing to do. Just forget the message */
 			break;
 	}
@@ -3402,8 +3399,8 @@ static void ccm_state_wait_for_mem_list(enum ccm_type ccm_msg_type,
 			
 			if (cl_msg_get_list_int(reply,CCM_UPTIMELIST, 
 						uptime_list, &uptime_size) != HA_OK){
-				ccm_log(LOG_ERR," ccm_state_new_node_wait_for_mem_list:"
-				       "geting uptie_list failed");
+				ccm_log(LOG_ERR,"%s: geting uptie_list failed",
+					__FUNCTION__);
 				return;
 			}
 			
@@ -3830,9 +3827,9 @@ static void ccm_state_new_node_wait_for_mem_list(enum ccm_type ccm_msg_type,
 			ccm_all_restart(hb, info, reply);
 			break;
 		default:
-			ccm_log(LOG_ERR,"ccm_state_new_node_waitfor_memlst:dropping message"
+			ccm_log(LOG_ERR,"%s: dropping message"
 				" of type %s. Is this a Byzantine failure?", 
-				ccm_type2string(ccm_msg_type));
+				__FUNCTION__, ccm_type2string(ccm_msg_type));
 			/* nothing to do. Just forget the message */
 			break;	
 	}
