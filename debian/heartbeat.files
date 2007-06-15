@@ -93,6 +93,7 @@ usr/lib/heartbeat/cts/OCFIPraTest.pyo
 usr/lib/heartbeat/cts/extracttests.py
 usr/lib/heartbeat/cts/extracttests.pyc
 usr/lib/heartbeat/cts/extracttests.pyo
+usr/lib/heartbeat/cts/getpeinputs.sh
 usr/lib/heartbeat/dopd
 usr/lib/heartbeat/drbd-peer-outdater
 usr/lib/heartbeat/findif
