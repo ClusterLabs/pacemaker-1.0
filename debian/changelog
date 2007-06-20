@@ -11,7 +11,14 @@ heartbeat (2.0.9-1) unstable; urgency=low
     - ldirectord-init.patch
     - configure-sys-types.h.patch
 
- -- Simon Horman <horms@debian.org>  Thu, 31 May 2007 19:01:29 +0900
+ -- Simon Horman <horms@debian.org>  Thu, 31 May 2007 19:42:30 +0900
+
+heartbeat (2.0.8-9) unstable; urgency=low
+
+  * Run autoconf so that the FTBFS on ia64 fix included in
+    2.0.8-8 actually takes effect. Bahh!
+
+ -- Simon Horman <horms@debian.org>  Thu, 31 May 2007 19:37:43 +0900
 
 heartbeat (2.0.8-8) unstable; urgency=low
 
