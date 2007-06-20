@@ -9,11 +9,23 @@ heartbeat (2.0.9-1) unstable; urgency=low
     - ipv6addr-find_if-overflow.patch
     - ipv6addr-scanf-return.patch
     - ldirectord-init.patch
+    - configure-sys-types.h.patch
+
+ -- Simon Horman <horms@debian.org>  Thu, 31 May 2007 19:01:29 +0900
+
+heartbeat (2.0.8-8) unstable; urgency=low
+
+  * Use sys/types.h instead of asm/types.h when trying to detect
+    the preseance of linux/icmpv6.h. Resolves FTBFS on ia64
+    Patch: configure-sys-types.h.patch
+  * Remove linux-kernel-headers for ia64 added in 2.0.8-7 as
+    a) it didn't resolve the problem and b) the types.h change
+    above does.
+  * Use << instead of < for dependancy relations
   * Add --enable-glib-malloc to configure's arguments
     on advice from Andrew Beekhof
-  * Add --enable-glib-malloc to configure's arguments
 
- -- Simon Horman <horms@debian.org>  Thu, 31 May 2007 16:39:18 +0900
+ -- Simon Horman <horms@debian.org>  Thu, 31 May 2007 18:26:10 +0900
 
 heartbeat (2.0.8-7) unstable; urgency=low
 
