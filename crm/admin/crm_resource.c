@@ -70,7 +70,7 @@ IPC_Channel *crmd_channel = NULL;
 char *xml_file = NULL;
 int cib_options = cib_sync_call;
 
-#define OPTARGS	"V?LRQxDCPp:WMUr:H:v:t:p:g:d:i:s:G:S:fX:lmu:"
+#define OPTARGS	"V?LRQxDCPp:WMUr:H:v:t:p:g:d:i:s:G:S:fX:lmu:F"
 
 static int
 do_find_resource(const char *rsc, pe_working_set_t *data_set)
@@ -465,9 +465,9 @@ crmd_msg_callback(IPC_Channel * server, void *private_data)
 }
 
 static int
-delete_lrm_rsc(
-	IPC_Channel *crmd_channel, const char *host_uname,
-	const char *rsc_id, pe_working_set_t *data_set)
+send_lrm_rsc_op(IPC_Channel *crmd_channel, const char *op,
+		const char *host_uname, const char *rsc_id,
+		gboolean only_failed, pe_working_set_t *data_set)
 {
 	char *key = NULL;
 	int rc = cib_send_failed;
@@ -483,11 +483,20 @@ delete_lrm_rsc(
 		return cib_NOTEXISTS;
 
 	} else if(rsc->variant != pe_native) {
-		fprintf(stderr, "We can only clean up primitive resources, not %s\n", rsc_id);
-		return cib_NOTEXISTS;
+		fprintf(stderr, "We can only process primitive resources, not %s\n", rsc_id);
+		return cib_invalid_argument;
+
+	} else if(host_uname == NULL) {
+		fprintf(stderr, "Please supply a hostname with -H\n");
+		return cib_invalid_argument;
+
+	} else if(only_failed && rsc->failed == FALSE && do_force == FALSE) {
+		fprintf(stderr, "You should only clean up failed resources!\n"
+			"Use --force to ignore this message and continue\n");
+		return cib_invalid_argument;
 	}
 	
-	key = crm_concat("0:0:crm-resource-delete", our_pid, '-');
+	key = crm_concat("0:0:crm-resource", our_pid, '-');
 	
 	msg_data = create_xml_node(NULL, XML_GRAPH_TAG_RSC_OP);
 	crm_xml_add(msg_data, XML_ATTR_TRANSITION_KEY, key);
@@ -498,14 +507,14 @@ delete_lrm_rsc(
 
 	value = crm_element_value(rsc->xml, XML_ATTR_TYPE);
 	crm_xml_add(xml_rsc, XML_ATTR_TYPE, value);
-	if(value) {
+	if(value == NULL) {
 		fprintf(stderr, "%s has no type!  Aborting...\n", rsc_id);
 		return cib_NOTEXISTS;
 	}
 
 	value = crm_element_value(rsc->xml, XML_AGENT_ATTR_CLASS);
 	crm_xml_add(xml_rsc, XML_AGENT_ATTR_CLASS, value);
-	if(value) {
+	if(value == NULL) {
 		fprintf(stderr, "%s has no class!  Aborting...\n", rsc_id);
 		return cib_NOTEXISTS;
 	}
@@ -515,8 +524,9 @@ delete_lrm_rsc(
 
 	params = create_xml_node(msg_data, XML_TAG_ATTRS);
 	crm_xml_add(params, XML_ATTR_CRM_VERSION, CRM_FEATURE_SET);
+	crm_xml_add(params, CRM_META"_"XML_LRM_ATTR_INTERVAL, "60000"); /* 1 minute */
 	
-	cmd = create_request(CRM_OP_LRM_DELETE, msg_data, host_uname,
+	cmd = create_request(op, msg_data, host_uname,
 			     CRM_SYSTEM_CRMD, crm_system_name, our_pid);
 
 	free_xml(msg_data);
@@ -527,6 +537,21 @@ delete_lrm_rsc(
 	}
 	crm_msg_del(cmd);
 	return rc;
+}
+
+
+static int
+delete_lrm_rsc(IPC_Channel *crmd_channel, const char *host_uname,
+	       const char *rsc_id, pe_working_set_t *data_set)
+{
+	return send_lrm_rsc_op(crmd_channel, CRM_OP_LRM_DELETE, host_uname, rsc_id, TRUE, data_set); 
+}
+
+static int
+fail_lrm_rsc(IPC_Channel *crmd_channel, const char *host_uname,
+	     const char *rsc_id, pe_working_set_t *data_set)
+{
+	return send_lrm_rsc_op(crmd_channel, CRM_OP_LRM_FAIL, host_uname, rsc_id, FALSE, data_set); 
 }
 
 static int
@@ -742,6 +767,7 @@ migrate_resource(
 	return rc;
 }
 
+
 int
 main(int argc, char **argv)
 {
@@ -774,6 +800,7 @@ main(int argc, char **argv)
 		{"resource",   1, 0, 'r'},
 		{"host-uname", 1, 0, 'H'},
 		{"lifetime",   1, 0, 'u'},
+		{"fail",       0, 0, 'F'},
 		{"force",      0, 0, 'f'},
 		{"meta",       0, 0, 'm'},
 
@@ -793,7 +820,7 @@ main(int argc, char **argv)
 
 	crm_system_name = basename(argv[0]);
 	cl_log_set_entity(crm_system_name);
-	cl_log_set_facility(LOG_USER);
+	cl_log_set_facility(LOG_LOCAL7);
 	set_crm_log_level(LOG_ERR);
 	cl_log_enable_stderr(TRUE);
 	
@@ -834,6 +861,7 @@ main(int argc, char **argv)
 			case 'R':
 			case 'x':
 			case 'D':
+			case 'F':
 			case 'C':
 			case 'P':
 			case 'W':
@@ -930,6 +958,8 @@ main(int argc, char **argv)
 		usage(crm_system_name, LSB_EXIT_GENERIC);
 	}
 
+	cl_log_args(argc, argv);
+
 	crm_malloc0(our_pid, 11);
 	if(our_pid != NULL) {
 		snprintf(our_pid, 10, "%d", getpid());
@@ -941,11 +971,20 @@ main(int argc, char **argv)
 		cib_options |= cib_scope_local|cib_quorum_override;
 	}
 
-	if(rsc_cmd == 'L' || rsc_cmd == 'W' || rsc_cmd == 'D' || rsc_cmd == 'x'
-	   || rsc_cmd == 'M' || rsc_cmd == 'U' || rsc_cmd == 'C' 
-	   || rsc_cmd == 'p' || rsc_cmd == 'd' || rsc_cmd == 'g'
-	   || rsc_cmd == 'G' || rsc_cmd == 'S' || rsc_cmd == 'l') {
-		
+	if(rsc_cmd == 'L'
+	   || rsc_cmd == 'W'
+	   || rsc_cmd == 'D'
+	   || rsc_cmd == 'x'
+	   || rsc_cmd == 'M'
+	   || rsc_cmd == 'U'
+	   || rsc_cmd == 'C' 
+	   || rsc_cmd == 'F' 
+	   || rsc_cmd == 'p'
+	   || rsc_cmd == 'd'
+	   || rsc_cmd == 'g'
+	   || rsc_cmd == 'G'
+	   || rsc_cmd == 'S'
+	   || rsc_cmd == 'l') {
 		resource_t *rsc = NULL;
 		if(xml_file != NULL) {
 			FILE *xml_strm = fopen(xml_file, "r");
@@ -985,7 +1024,11 @@ main(int argc, char **argv)
 		}
 		
 	}
-	if(rsc_cmd == 'R' || rsc_cmd == 'C' || rsc_cmd == 'P') {
+
+	if(rsc_cmd == 'R'
+	   || rsc_cmd == 'C'
+	   || rsc_cmd == 'F'
+	   || rsc_cmd == 'P') {
 		GCHSource *src = NULL;
 		src = init_client_ipc_comms(CRM_SYSTEM_CRMD, crmd_msg_callback,
 				      NULL, &crmd_channel);
@@ -1011,7 +1054,7 @@ main(int argc, char **argv)
 		do_find_resource_list(&data_set, TRUE);
 		
 	} else if(rsc_cmd == 'C') {
-		int rc = delete_lrm_rsc(crmd_channel, host_uname, rsc_id, &data_set);
+		rc = delete_lrm_rsc(crmd_channel, host_uname, rsc_id, &data_set);
 		
 		sleep(5);
 		refresh_lrm(crmd_channel, host_uname);
@@ -1027,6 +1070,9 @@ main(int argc, char **argv)
 				    XML_CIB_TAG_CRMCONFIG, NULL, NULL, NULL, "last-lrm-refresh", now_s);
 			crm_free(now_s);
 		}
+		
+	} else if(rsc_cmd == 'F') {
+		rc = fail_lrm_rsc(crmd_channel, host_uname, rsc_id, &data_set);
 		
 	} else if(rc == cib_NOTEXISTS) {
 		fprintf(stderr, "Resource %s not found: %s\n",
@@ -1286,7 +1332,7 @@ usage(const char *cmd, int exit_status)
 		" constraint scores total more than INFINITY (Currently 100,000)\n"
 		"\t\tNOTE: This will prevent the resource from running on this"
 		" node until the constraint is removed with -U or the --lifetime duration expires\n",
-		"force-relocation", 'f');
+		"force", 'f');
 	fprintf(stream, "\t-%c <string>\t: (Advanced Use Only) ID of the instance_attributes object to change\n", 's');
 	fprintf(stream, "\t-%c <string>\t: (Advanced Use Only) ID of the nvpair object to change/delete\n", 'i');
 	fflush(stream);

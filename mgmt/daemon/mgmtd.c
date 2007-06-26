@@ -452,7 +452,7 @@ on_listen(GIOChannel *source, GIOCondition condition, gpointer data)
 		}
 		msg = mgmt_session_recvmsg(session);
 		args = mgmt_msg_args(msg, &num);
-		if (msg == NULL || num != 3 || STRNCMP_CONST(args[0], MSG_LOGIN) != 0) {
+		if (msg == NULL || num != 4 || STRNCMP_CONST(args[0], MSG_LOGIN) != 0) {
 			mgmt_del_args(args);
 			mgmt_del_msg(msg);
 			_mgmt_session_sendmsg(session, MSG_FAIL);
@@ -461,7 +461,18 @@ on_listen(GIOChannel *source, GIOCondition condition, gpointer data)
 			mgmt_log(LOG_ERR, "%s receive login msg failed", __FUNCTION__);
 			return TRUE;
 		}
-		mgmt_debug(LOG_DEBUG, "recv msg: %s %s ****", args[0], args[1]);
+		mgmt_debug(LOG_DEBUG, "recv msg: %s %s **** %s", args[0], args[1], args[3]);
+		/* protocol version check */
+		if (STRNCMP_CONST(args[3], MGMT_PROTOCOL_VERSION) != 0) {
+			mgmt_del_args(args);
+			mgmt_del_msg(msg);
+			mgmt_session_sendmsg(session, MGMT_PROTOCOL_VERSION);
+			tls_detach(session);
+			close(csock);
+			mgmt_log(LOG_ERR, "%s protocol mismatch. Want %s but got %s", 
+				__FUNCTION__, MGMT_PROTOCOL_VERSION, args[3]);
+			return TRUE;
+		}
 		/* authorization check with pam */	
 		if (pam_auth(args[1],args[2]) != 0 || !usr_belong_grp(args[1],ALLOW_GRP)) {
 			mgmt_del_args(args);
