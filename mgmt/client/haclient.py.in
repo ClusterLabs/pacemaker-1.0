@@ -1936,7 +1936,7 @@ class Manager :
 		# connect to one of the cluster
 		self.failed_reason = ""
 		self.server = server
-		port = None
+		port = ""
 		if string.find(server, ":") != -1 :
 			server,port = string.split(server,":")
 		ip = socket.gethostbyname(server)
