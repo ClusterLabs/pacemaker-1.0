@@ -4067,10 +4067,10 @@ check_for_timeouts(void)
  */
 static gboolean
 send_reqnodes_msg(gpointer data){
-	struct ha_msg* msg;
-	const char* destnode = NULL;
-	long i;
-	int startindex = (long) data;
+	struct ha_msg*	msg;
+	const char*	destnode = NULL;
+	ulong		i;
+	ulong		startindex = POINTER_TO_ULONG(data);
 	guint		id;
 	
 	
