@@ -276,6 +276,14 @@ StartHA() {
   fi
   rm -f $RUNDIR/ppp.d/*
   if
+    [ ! -d $RUNDIR/heartbeat ]
+  then
+    mkdir -p $RUNDIR/heartbeat/ccm
+    mkdir -p $RUNDIR/heartbeat/crm
+    chown -R hacluster:haclient $RUNDIR/heartbeat
+    chmod -R 750 $RUNDIR/heartbeat
+  fi
+  if
     [  -f $HA_DIR/ipresources -a ! -f $HA_DIR/haresources ]
   then
     mv $HA_DIR/ipresources $HA_DIR/haresources
