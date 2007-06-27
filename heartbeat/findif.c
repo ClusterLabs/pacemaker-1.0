@@ -383,7 +383,7 @@ GetAddress (char **address, char **netmaskbits
 	 */
 	*address = getenv("OCF_RESKEY_ip");
 	*netmaskbits = getenv("OCF_RESKEY_cidr_netmask");
-	if (*netmaskbits == NULL) {
+	if (*netmaskbits == NULL || **netmaskbits == EOS) {
 		*netmaskbits = getenv("OCF_RESKEY_netmask");
 	}
 	*bcast_arg = getenv("OCF_RESKEY_broadcast");
@@ -393,7 +393,7 @@ GetAddress (char **address, char **netmaskbits
 void
 ValidateNetmaskBits (char *netmaskbits, unsigned long *netmask)
 {
-	if (netmaskbits != NULL) {
+	if (netmaskbits != NULL && *netmaskbits != EOS) {
 		size_t	nmblen = strnlen(netmaskbits, 3);
 
 		/* Maximum netmask is 32 */
@@ -618,8 +618,8 @@ main(int argc, char ** argv) {
 
 	GetAddress (&address, &netmaskbits, &bcast_arg
 	,	 &if_specified);
-	if (address == NULL) {
-		fprintf(stderr, "ERROR: IP address parameter is mandatory");
+	if (address == NULL || *address == EOS) {
+		fprintf(stderr, "ERROR: IP address parameter is mandatory.");
 		usage();
 		return(1);
 	}
@@ -632,7 +632,8 @@ main(int argc, char ** argv) {
 		return(1);
 	}
 
-	if(netmaskbits != NULL && strchr(netmaskbits, '.') != NULL) {
+	if(netmaskbits != NULL && *netmaskbits != EOS
+	&&		strchr(netmaskbits, '.') != NULL) {
 		int len = strlen(netmaskbits);
 		ConvertQuadToInt(netmaskbits, len);
 		snprintf(netmaskbits, len, "%d",
@@ -643,7 +644,7 @@ main(int argc, char ** argv) {
 	/* Validate the netmaskbits field */
 	ValidateNetmaskBits (netmaskbits, &netmask);
 
-	if (if_specified != NULL) {
+	if (if_specified != NULL && *if_specified != EOS) {
 		if(ValidateIFName(if_specified, &ifr) < 0) {
 			usage();
 		}
@@ -699,7 +700,7 @@ main(int argc, char ** argv) {
 
 	/* Did they tell us the broadcast address? */
 
-	if (bcast_arg) {
+	if (bcast_arg && *bcast_arg != EOS) {
 		/* Yes, they gave us a broadcast address.
 		 * It at least should be a valid IP address
 		 */
