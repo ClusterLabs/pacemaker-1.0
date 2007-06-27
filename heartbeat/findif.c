@@ -618,6 +618,11 @@ main(int argc, char ** argv) {
 
 	GetAddress (&address, &netmaskbits, &bcast_arg
 	,	 &if_specified);
+	if (address == NULL) {
+		fprintf(stderr, "ERROR: IP address parameter is mandatory");
+		usage();
+		return(1);
+	}
 
 	/* Is the IP address we're supposed to find valid? */
 	 
@@ -763,23 +768,19 @@ usage()
 	fprintf(stderr, "\n"
 		"%s version " VERSION " Copyright Alan Robertson\n"
 		"\n"
-		"Usage: %s address[/netmask[/interface][/broadcast]]\n"
-		"\n"
-		"Where:\n"
-		"    address: IP address of the new virtual interface\n"
-		"    netmask: CIDR netmask of the network that "
-			"address belongs to\n"
-		"    interface: interface to add the virtual interface to\n"
-		"    broadcast: broadcast address of the network that "
-			"address belongs to\n"
-		"\n"
+		"Usage: %s [-C]\n"
 		"Options:\n"
 		"    -C: Output netmask as the number of bits rather "
 			"than as 4 octets.\n"
+		"Environment variables:\n"
+		"OCF_RESKEY_ip		 ip address (mandatory!)\n"
+		"OCF_RESKEY_cidr_netmask netmask of interface\n"
+		"OCF_RESKEY_broadcast	 broadcast address for interface\n"
+		"OCF_RESKEY_nic		 interface to assign to\n"
 	,	cmdname, cmdname);
 	exit(1);
 }
-		
+
 /*
 Iface	Destination	Gateway 	Flags	RefCnt	Use	Metric	Mask		MTU	Window	IRTT                                                       
 eth0	33D60987	00000000	0005	0	0	0	FFFFFFFF	0	0	0                                                                               
