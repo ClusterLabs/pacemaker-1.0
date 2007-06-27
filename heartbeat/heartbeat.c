@@ -4069,8 +4069,8 @@ static gboolean
 send_reqnodes_msg(gpointer data){
 	struct ha_msg*	msg;
 	const char*	destnode = NULL;
-	ulong		i;
-	ulong		startindex = POINTER_TO_ULONG(data);
+	unsigned long	i;
+	unsigned long	startindex = POINTER_TO_ULONG(data);
 	guint		id;
 	
 	
