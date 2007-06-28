@@ -304,8 +304,8 @@ CreateInitialFilter(void)
 	static char foo[] = "bar";
 	RCScriptNames = g_hash_table_new(g_str_hash, g_str_equal);
 
-	if ((dp = opendir(HB_RC_DIR)) == NULL) {
-		cl_perror("Cannot open directory " HB_RC_DIR);
+	if ((dp = opendir(HA_RC_DIR)) == NULL) {
+		cl_perror("Cannot open directory " HA_RC_DIR);
 		return;
 	}
 	while((dep = readdir(dp)) != NULL) {

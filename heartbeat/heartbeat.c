@@ -6220,7 +6220,7 @@ nak_rexmit(struct msg_xmit_hist * hist,
 int
 ParseTestOpts()
 {
-	const char *	openpath = HB_RC_DIR "/OnlyForTesting";
+	const char *	openpath = HA_HBCONF_DIR "/OnlyForTesting";
 	FILE *	fp;
 	static struct TestParms p;
 	char	name[64];
@@ -6361,7 +6361,7 @@ GetTimeBasedGeneration(seqno_t * generation)
 static void
 get_localnodeinfo(void)
 {
-	const char *		openpath = HB_RC_DIR "/nodeinfo";
+	const char *		openpath = HA_HBCONF_DIR "/nodeinfo";
 	static struct utsname	u;
 	static char		localnode[256];
 	FILE *			fp;
