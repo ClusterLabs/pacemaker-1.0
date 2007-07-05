@@ -1401,6 +1401,60 @@ sub _ld_read_config_virtual_resolve
 }
 
 
+# ld_service_to_port
+# Resolve the port number from an ldirectord service name
+# pre: service: name of the service
+# return: port number
+#         undef if the service is unknown
+
+sub ld_service_to_port
+{
+	my ($service) = (@_);
+
+	if ($service eq "ftp")		{ return 21; }
+	if ($service eq "smtp")		{ return 25; }
+	if ($service eq "dns")		{ return 53; }
+	if ($service eq "http")		{ return 80; }
+	if ($service eq "pop")		{ return 110; }
+	if ($service eq "nntp")		{ return 119; }
+	if ($service eq "imap")		{ return 143; }
+	if ($service eq "ldap")		{ return 389; }
+	if ($service eq "https")	{ return 443; }
+	if ($service eq "imaps")	{ return 993; }
+	if ($service eq "pops")		{ return 995; }
+	if ($service eq "radius")	{ return 1812; }
+	if ($service eq "mysql")	{ return 3306; }
+	if ($service eq "sip")		{ return 5060; }
+	if ($service eq "pgsql")	{ return 5432; }
+
+	return undef;
+}
+
+
+# ld_checkport
+# Resolve the port to connect to for service checks
+# Note: Should only be used inside service checks,
+#       as its not the same as the port of the real server
+# pre: v: virtual service
+#      r: real servier
+# return: port number
+#         undef if the service is unknown
+
+sub ld_checkport
+{
+	my ($v, $r) = (@_);
+
+	if (defined $v->{checkport}) {
+		return $v->{checkport};
+	}
+	if ($r->{port} > 0) {
+		return $r->{port};
+	}
+
+	return ld_service_to_port($v->{service});
+}
+
+
 # _ld_read_config_fallback_resolve
 # Note: Should not need to be called direclty, but won't do any damage if
 #       you do.
@@ -1725,19 +1779,18 @@ sub ld_setup
 		my $real = $$v{real};
 		for my $r (@$real) {
                         $$r{forw} = get_forward_flag($$r{forward});
+			my $port=ld_checkport($v, $r);
         		if (defined $$r{request} && defined $$r{receive}) {
 				my $uri = $$r{request};
 				$uri =~ s/^\///g;
 				if ($$r{request} =~ /$$v{service}:\/\//) {
 					$$r{url} = "$uri";
 				} else {
-					my $port=(defined $$v{checkport}?$$v{checkport}:$$r{port});
 					$$r{url} = "$$v{service}:\/\/$$r{server}:$port\/$uri";
 				}
 			} else {
 				my $uri = $$v{request};
 				$uri =~ s/^\///g;
-				my $port=(defined $$v{checkport}?$$v{checkport}:$$r{port});
 				$$r{url} = "$$v{service}:\/\/$$r{server}:$port\/$uri";
 
                 		$$r{request} = $$v{request} unless defined $$r{request};
@@ -2188,7 +2241,7 @@ sub check_smtp
 {
 	require Net::SMTP;
 	my ($v, $r) = @_;
-	my $port=(defined $$v{checkport}?$$v{checkport}:$$r{port});
+	my $port = ld_checkport($v, $r);
 
 	&ld_debug(2, "Checking smtp: server=$$r{server} port=$port");
 
@@ -2208,7 +2261,7 @@ sub check_pop
 {
         require Mail::POP3Client;
         my ($v, $r) = @_;
-        my $port=(defined $$v{checkport}?$$v{checkport}:$$r{port});
+	my $port = ld_checkport($v, $r);
 
         &ld_debug(2, "Checking pop server=$$r{server} port=$port");
 
@@ -2243,7 +2296,7 @@ sub check_pops
 {
         require Mail::POP3Client;
         my ($v, $r) = @_;
-        my $port=(defined $$v{checkport}?$$v{checkport}:$$r{port});
+	my $port = ld_checkport($v, $r);
 
         &ld_debug(2, "Checking pops server=$$r{server} port=$port");
 
@@ -2278,7 +2331,7 @@ sub check_imap
 {
         require Net::IMAP::Simple;
         my ($v, $r) = @_;
-        my $port=(defined $$v{checkport}?$$v{checkport}:$$r{port});
+	my $port = ld_checkport($v, $r);
         
         &ld_debug(2, "Checking imap server=$$r{server} port=$port");
         
@@ -2309,7 +2362,7 @@ sub check_imaps
 {
         require Net::IMAP::Simple::SSL;
         my ($v, $r) = @_;
-        my $port=(defined $$v{checkport}?$$v{checkport}:$$r{port});
+	my $port = ld_checkport($v, $r);
 
         &ld_debug(2, "Checking imaps server=$$r{server} port=$port");
 
@@ -2339,7 +2392,7 @@ sub check_ldap
 {
 	my ($v, $r) = @_;
 	require Net::LDAP;
-	my $port=(defined $$v{checkport}?$$v{checkport}:$$r{port});
+	my $port = ld_checkport($v, $r);
 
 	&ld_debug(2, "Checking ldap server=$$r{server} port=$port");
 	
@@ -2400,7 +2453,7 @@ sub check_nntp
         my $sock;
         my $s;
         my $buf;
-	my $port=(defined $$v{checkport}?$$v{checkport}:$$r{port});
+	my $port = ld_checkport($v, $r);
 	my $status = 1;
 
 	&ld_debug(2, "Checking nntp server=$$r{server} port=$port");
@@ -2439,7 +2492,7 @@ sub check_radius
 
         &ld_debug(2, "Checking radius");
 
-        my $port=(defined $$v{checkport}?$$v{checkport}:$$r{port});
+	my $port = ld_checkport($v, $r);
         my $radius;
         my $result = "";
 
@@ -2486,7 +2539,7 @@ sub check_sql
 {
 	require DBI;
 	my ($v, $r, $dbd, $dbname) = @_;
-	my $port=(defined $$v{checkport}?$$v{checkport}:$$r{port});
+	my $port = ld_checkport($v, $r);
 	my ($dbh, $sth, $query, $rows, $result);   # Local variables
 	$query = $$r{request};
 	$query =~ s#^/##;
@@ -2536,7 +2589,7 @@ sub check_sql
 sub check_connect
 {
 	my ($v, $r) = @_;
-	my $port=(defined $$v{checkport}?$$v{checkport}:$$r{port});
+	my $port = ld_checkport($v, $r);
 
 	eval {
 		local $SIG{'__DIE__'} = "DEFAULT";
@@ -2568,7 +2621,7 @@ sub check_connect
 sub check_sip
 {
 	my ($v, $r) = @_;
-	my $sip_d_port=(defined $$v{checkport}?$$v{checkport}:$$r{port});
+	my $sip_d_port = ld_checkport($v, $r);
 
 	&ld_debug(2, "Checking sip server=$$r{server} port=$sip_d_port");
 	
@@ -2667,7 +2720,7 @@ sub check_ftp
 	my ($v, $r) = @_;
 	my $ftp;
 	my $memory;
-	my $port=(defined $$v{checkport}?$$v{checkport}:$$r{port});
+	my $port = ld_checkport($v, $r);
 
 	&ld_debug(2, "Checking ftp server=$$r{server} port=$port");
 	
