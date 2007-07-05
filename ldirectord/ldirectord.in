@@ -281,7 +281,17 @@ two strings must be quoted. If the request string starts with I<http://...>
 the IP-address and port of the real server is overridden, otherwise the
 IP-address and port of the real server is used.
 
-=head2 More than one of these entries may be inside a virtual section.  The
+=head2
+For TCP and UDP (non fwmark) virtual services, unless the forwarding method
+is B<masq> and the IP address of a real server is non-local (not present on
+a interface on the host running ldirectord) then the port of the real
+server will be set to that of its virtual service. That is, port-mapping is
+only available to if the real server is another machine and the forwarding
+method is B<masq>.  This is due to the way that the underlying LVS code in
+the kernel functions.
+
+=head2
+More than one of these entries may be inside a virtual section.  The
 checktimeout, negotiatetimeout, checkcount, fallback, emailalert,
 emailalertfreq and quiescent options listed above may also appear inside a
 virtual section, in which case the global setting is overridden.
