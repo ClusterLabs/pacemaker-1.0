@@ -2732,7 +2732,7 @@ sub check_connect
 			alarm 0; # Cancel the alarm
 			die("Socket Connect Failed");
 		}
-		&ld_debug(3, "Connected to $1 (port $port)");
+		&ld_debug(3, "Connected to $$r{server} (port $port)");
 		alarm 0; # Cancel the alarm
 	};
 	if ($@) {
