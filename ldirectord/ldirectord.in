@@ -112,8 +112,8 @@ service must follow this line immediately and be indented.
 
 B<checktimeout = >I<n>
 
-Timeout in seconds for connect and ping checks. If the timeout is exceeded
-then the real server is declared dead.
+Timeout in seconds for connect, external and ping checks. If the timeout is
+exceeded then the real server is declared dead.
 
 If defined in a virtual server section then the global value is overridden.
 
@@ -312,7 +312,8 @@ checktimeout, negotiatetimeout, checkcount, fallback, emailalert,
 emailalertfreq and quiescent options listed above may also appear inside a
 virtual section, in which case the global setting is overridden.
 
-B<checktype = >B<connect>|B<negotiate>|B<off>|B<on>|B<ping>|I<N>
+B<checktype =
+>B<connect>|B<external>|B<negotiate>|B<off>|B<on>|B<ping>|B<checktimeout>I<N>
 
 Type of check to perform. Negotiate sends a request and matches a receive
 string. Connect only attemts to make a TCP/IP connection, thus the
@@ -372,6 +373,28 @@ Default:
 
 =back 4
 
+
+B<checkcommand = ">I<path to script>B<">
+
+This setting is used if checktype is external and is the command to be run
+to check the status of a real server. It should exit with status 0 if
+everything is ok, or non-zero otherwise.
+
+Four parameters are passed to the script:
+
+=over 4
+
+=item * virtual server ip/firewall mark
+
+=item * virtual server port
+
+=item * real server ip
+
+=item * real server port
+
+=back 4
+
+Default: /bin/true
 
 B<checkport = >I<n>
 
@@ -1057,6 +1080,7 @@ sub read_config
 			}
 			$vsrv{real} = \@rsrv;
 			$vsrv{scheduler} = "wrr";
+			$vsrv{checkcommand} = "/bin/true";
 			$vsrv{request} = "/";
 			$vsrv{receive} = "";
 			$vsrv{login} = "";
@@ -1097,11 +1121,14 @@ sub read_config
 					if ($1 =~ /(\d+)/ && $1>=0) {
 						$vsrv{num_connects} = $1;
 						$vsrv{checktype} = "combined";
-					} elsif ( $1 =~ /(\w+)/ && ($1 eq "connect" || $1 eq "negotiate" || $1 eq "ping" || $1 eq "off" || $1 eq "on") ) {
+					} elsif ( $1 =~ /(\w+)/ && ($1 eq "connect" || $1 eq "negotiate" || $1 eq "ping" || $1 eq "off" || $1 eq "on" || $1 eq "external") ) {
 						$vsrv{checktype} = $1;
 					} else {
-						&config_error($line, "checktype must be \"connect\", \"negotiate\", \"on\", \"off\", \"ping\" or a positive number");
+						&config_error($line, "checktype must be \"connect\", \"negotiate\", \"on\", \"off\", \"ping\", \"external\" or a positive number");
 					}
+				} elsif ($rcmd =~ /^checkcommand\s*=\s*(.*)/){
+                                        $1 =~ /(.+)/ or &config_error($line, "invalid external script");
+                                        $vsrv{checkcommand} = $1;
 				} elsif ($rcmd =~ /^checktimeout\s*=\s*(.*)/){
                                         $1 =~ /(\d+)/ && $1 or &config_error($line, "invalid check timeout");
                                         $vsrv{checktimeout} = $1;
@@ -2208,6 +2235,9 @@ sub ld_main
 				} elsif ($$v{checktype} eq "ping") {
 					&ld_debug(2, "Checking ping: real server=$real_id (virtual=$virtual_id)");
 					check_ping($v, $r);
+				} elsif ($$v{checktype} eq "external") {
+					&ld_debug(2, "Checking external: real server=$real_id (virtual=$virtual_id)");
+					check_external($v, $r);
 				} elsif ($$v{checktype} eq "off") {
 					&ld_debug(2, "Checking off: No real or fallback servers to be added\n");
 				} elsif ($$v{checktype} eq "on") {
@@ -2743,6 +2773,40 @@ sub check_connect
 		&service_set($v, $r, "up");
 		&ld_debug(3, "Activated service $$r{server}:$$r{port}");
 		return $SERVICE_UP;
+	}
+}
+
+sub check_external
+{
+	my ($v, $r) = @_;
+	my $result;
+	my $v_server;
+
+	eval {
+		local $SIG{'__DIE__'} = "DEFAULT";
+		local $SIG{'ALRM'} = sub { die "Timeout Alarm" };
+		&ld_debug(4, "Timeout is $$v{checktimeout}");
+		alarm $$v{checktimeout};
+		if (defined $$v{server}) {
+		    $v_server = $$v{server};
+		} else {
+		    $v_server = $$v{fwm};
+		}
+		$result = system("$$v{checkcommand} $v_server $$v{port} " .
+				 "$$r{server} $$r{port}");
+		alarm 0;
+		$result >>= 8;
+	};
+	if ($@ or $result != 0) {
+		&service_set($v, $r, "down");
+		&ld_debug(3, "Deactivated service $$r{server}:$$r{port}: " .
+			  "$@ after calling $$v{checkcommand} with result " .
+			  "$result");
+		return 0;
+	} else {
+		&service_set($v, $r, "up");
+		&ld_debug(3, "Activated service $$r{server}:$$r{port}");
+		return 1;
 	}
 }
 
@@ -3917,6 +3981,9 @@ sub get_real_id_str
 	if($v->{"checktype"} eq "negotiate" or
 			$v->{"checktype"} eq "combined") {
 		$check = $v->{"checktype"} . ":" . $v->{"service"};
+	}
+	elsif($v->{"checktype"} eq "external") {
+		$check = $v->{"checktype"} . ":" . $v->{"checkcommand"};
 	}
 	else {
 		$check = $v->{"checktype"};
