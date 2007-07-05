@@ -556,6 +556,8 @@ use vars qw(
 	    @VIRTUAL
 	    $HOSTNAME
 	    %EMAILSTATUS
+	    $SERVICE_UP
+	    $SERVICE_DOWN
 
 	    $CRLF
 );
@@ -570,6 +572,9 @@ $DAEMON_STATUS_ALL       = $DAEMON_STATUS_STARTING |
 			   $DAEMON_STATUS_RUNNING  |
 			   $DAEMON_STATUS_STOPPING |
 			   $DAEMON_STATUS_RELOADING;
+
+$SERVICE_UP	= 0;
+$SERVICE_DOWN	=1;
 
 # default values
 $DAEMON_TERM      = undef;
@@ -2094,37 +2099,37 @@ sub ld_main
 				if ($$v{checktype} eq "negotiate" || $$r{num_connects}>=$$v{num_connects}) {
 					&ld_debug(2, "Checking negotiate: real server=$real_id (virtual=$virtual_id)");
 					if ($$v{service} eq "http" || $$v{service} eq "https") {
-						$$r{num_connects} = 0 if (check_http($v, $r));
+						$$r{num_connects} = 0 if (check_http($v, $r) == $SERVICE_UP);
 						# my $req = new HTTP::Request(GET=>"$$r{url}");
 						# $ua->register($req, \&http_received);
 					} elsif ($$v{service} eq "pop") {
-						$$r{num_connects} = 0 if (check_pop($v, $r));
+						$$r{num_connects} = 0 if (check_pop($v, $r) == $SERVICE_UP);
 					} elsif ($$v{service} eq "pops") {
-						$$r{num_connects} = 0 if (check_pops($v, $r));
+						$$r{num_connects} = 0 if (check_pops($v, $r) == $SERVICE_UP);
 					} elsif ($$v{service} eq "imap") {
-						$$r{num_connects} = 0 if (check_imap($v, $r));
+						$$r{num_connects} = 0 if (check_imap($v, $r) == $SERVICE_UP);
 					} elsif ($$v{service} eq "imaps") {
-						$$r{num_connects} = 0 if (check_imaps($v, $r));
+						$$r{num_connects} = 0 if (check_imaps($v, $r) == $SERVICE_UP);
 					} elsif ($$v{service} eq "smtp") {
-						$$r{num_connects} = 0 if (check_smtp($v, $r));
+						$$r{num_connects} = 0 if (check_smtp($v, $r) == $SERVICE_UP);
 					} elsif ($$v{service} eq "ftp") {
-						$$r{num_connects} = 0 if (check_ftp($v, $r));
+						$$r{num_connects} = 0 if (check_ftp($v, $r) == $SERVICE_UP);
 					} elsif ($$v{service} eq "ldap") {
-						$$r{num_connects} = 0 if (check_ldap($v, $r));
+						$$r{num_connects} = 0 if (check_ldap($v, $r) == $SERVICE_UP);
 					} elsif ($$v{service} eq "nntp") {
-						$$r{num_connects} = 0 if (check_nntp($v, $r));
+						$$r{num_connects} = 0 if (check_nntp($v, $r) == $SERVICE_UP);
 					} elsif ($$v{service} eq "dns") {
-						$$r{num_connects} = 0 if (check_dns($v, $r));
+						$$r{num_connects} = 0 if (check_dns($v, $r) == $SERVICE_UP);
 					} elsif ($$v{service} eq "sip") {
-						$$r{num_connects} = 0 if (check_sip($v, $r));
+						$$r{num_connects} = 0 if (check_sip($v, $r) == $SERVICE_UP);
 					} elsif ($$v{service} eq "radius") {
-						$$r{num_connects} = 0 if (check_radius($v, $r));
+						$$r{num_connects} = 0 if (check_radius($v, $r) == $SERVICE_UP);
 					} elsif ($$v{service} eq "mysql") {
-						$$r{num_connects} = 0 if (check_mysql($v, $r));
+						$$r{num_connects} = 0 if (check_mysql($v, $r) == $SERVICE_UP);
 					} elsif ($$v{service} eq "pgsql") {
-						$$r{num_connects} = 0 if (check_pgsql($v, $r));
+						$$r{num_connects} = 0 if (check_pgsql($v, $r) == $SERVICE_UP);
 					} else {
-						$$r{num_connects} = 0 if (check_none($v, $r));
+						$$r{num_connects} = 0 if (check_none($v, $r) == $SERVICE_UP);
 					}
 				} elsif ($$v{checktype} eq "connect") {
 					if ($$v{protocol} ne "udp") {
@@ -2145,7 +2150,7 @@ sub ld_main
 					&service_set($v, $r, "up");
 				} elsif ($$v{checktype} eq "combined") {
 					&ld_debug(2, "Checking combined-connect: real server=$real_id (virtual=$virtual_id)");
-					if (check_connect($v, $r)) {
+					if (check_connect($v, $r) == $SERVICE_UP) {
 						$$r{num_connects}++;
 					} else {
 						$$r{num_connects} = 999999;
@@ -2227,13 +2232,13 @@ sub check_http
 				$res->content =~ /$recstr/)) {
 		service_set($v, $r, "up");
 		&ld_debug(2, "check_http: $$r{url} is up\n");
-		return 1;
+		return $SERVICE_UP;
 	}
 
 	service_set($v, $r, "down");
 	&ld_debug(3, "Headers " .  $res->headers->as_string);
 	&ld_debug(2, "check_http: $$r{url} is down\n");
-	return 0;
+	return $SERVICE_DOWN;
 }
 
 
@@ -2250,10 +2255,10 @@ sub check_smtp
 	if ($smtp) {
 		$smtp->quit;
 		service_set($v, $r, "up");
-		return 1;
+		return $SERVICE_UP;
 	} else {
 		service_set($v, $r, "down");
-		return 0;
+		return $SERVICE_DOWN;
 	}
 }
 
@@ -2275,7 +2280,7 @@ sub check_pop
 
         if (!$pop) {
                 service_set($v, $r, "down");
-                return 1;
+                return $SERVICE_UP;
         }
 
         if($$v{login} ne "") {
@@ -2283,13 +2288,13 @@ sub check_pop
                 $pop->close();
                 if (!$authres) {
                         service_set($v, $r, "down");
-                        return 0;
+                        return $SERVICE_DOWN;
                 }
         }
 
         $pop->close();
         service_set($v, $r, "up");
-        return 1;
+        return $SERVICE_UP;
 }
 
 sub check_pops
@@ -2309,7 +2314,7 @@ sub check_pops
                                         TIMEOUT => $$v{negotiatetimeout});
         if (!$pops) {
                 service_set($v, $r, "down");
-                return 1;
+                return $SERVICE_DOWN;
         }
 
         if($$v{login} ne "") {
@@ -2317,14 +2322,14 @@ sub check_pops
                 $pops->close();
                 if (!$authres) {
                         service_set($v, $r, "down");
-                        return 1;
+                        return $SERVICE_DOWN;
                 }
         }
 
 
         $pops->close();
         service_set($v, $r, "up");
-        return 0;
+        return $SERVICE_UP;
 }
 
 sub check_imap
@@ -2341,7 +2346,7 @@ sub check_imap
         
         if (!$imap) {
                 service_set($v, $r, "down");
-                return 1;
+                return $SERVICE_DOWN;
         }
         
         if($$v{login} ne "") {
@@ -2349,13 +2354,13 @@ sub check_imap
                 $imap->quit;
                 if (!$authres) {
                         service_set($v, $r, "down");
-                        return 1;
+                        return $SERVICE_DOWN;
                 }
         }
         
         $imap->quit();
         service_set($v, $r, "up");
-        return 0;
+        return $SERVICE_UP;
 }
 
 sub check_imaps
@@ -2371,7 +2376,7 @@ sub check_imaps
                                         timeout => $$v{negotiatetimeout});
         if (!$imaps) {
                 service_set($v, $r, "down");
-                return 1;
+                return $SERVICE_DOWN;
         }
 
         if($$v{login} ne "") {
@@ -2379,13 +2384,13 @@ sub check_imaps
                 $imaps->quit;
                 if (!$authres) {
                         service_set($v, $r, "down");
-                        return 1;
+                        return $SERVICE_DOWN;
                 }
         }
 
         $imaps->quit();
         service_set($v, $r, "up");
-        return 0;
+        return $SERVICE_UP;
 }
 
 sub check_ldap
@@ -2402,7 +2407,7 @@ sub check_ldap
 	if(!$ldap) {
 		service_set($v, $r, "down");
 		&ld_debug(4, "Connection failed");
-		return 1;
+		return $SERVICE_DOWN;
 	}
 		
 	my $mesg;
@@ -2415,7 +2420,7 @@ sub check_ldap
 	if ($mesg->is_error) {
 		service_set($v, $r, "down");
 		&ld_debug(4, "Bind failed");
-		return 1;
+		return $SERVICE_DOWN;
 	}
 
 	&ld_debug(4, "Base : " . substr($$r{request},1));
@@ -2428,19 +2433,19 @@ sub check_ldap
 	if($result->count != 1) {
 		service_set($v, $r, "down");
 		&ld_debug(2, "Count failed : " . $result->count);
-		return 1;
+		return $SERVICE_DOWN;
 	}
 		
 	my $href = $result->as_struct;
 	my @arrayOfDNs  = keys %$href ;
 	if (!($recstr =~ /.+/) || $arrayOfDNs[0] =~ /$recstr/) {
 		service_set($v, $r, "up");
-		return 0;
+		return $SERVICE_UP;
 	} else {
 		service_set($v, $r, "down");
 		&ld_debug(4,"Message differs : " . ", " . $$r{receive} 
 				. ", " . $arrayOfDNs[0] . ".");
-		return 1;
+		return $SERVICE_DOWN;
 	}
 }
 
@@ -2462,7 +2467,7 @@ sub check_nntp
                 PeerPort => $port, Proto => 'tcp',
                 TimeOut => $$v{negotiatetimeout})) {
                 service_set($v, $r, "down");
-                return 1;
+                return $SERVICE_DOWN;
         }
         $s = IO::Select->new();
         $s->add($sock);
@@ -2516,11 +2521,11 @@ sub check_radius
                 &service_set($v, $r, "down");
                 &ld_debug(3, "Deactivated service $$r{server}:$$r{port}: $@");
                 &ld_debug(3, "Radius Error: ".$radius->get_error);
-                return 0;
+                return $SERVICE_DOWN;
         } else {
                 &service_set($v, $r, "up");
                 &ld_debug(3, "Activated service $$r{server}:$$r{port}");
-                return 1;
+                return $SERVICE_UP;
         }
 }
 
@@ -2546,7 +2551,7 @@ sub check_sql
 	unless ($$v{login} && $query) {
 		service_set($v, $r, "down");
 		&ld_log("Error: Must specify a login and request string for mysql and postgresql checks. Not adding $$r{server}.\n");
-		return 1;
+		return $SERVICE_DOWN;
 	}
 	$result=2;   # Set result flag.  Only ok if ends up at zero.
 	&ld_debug(2, "Checking $$v{server} server=$$r{server} port=$port\n");
@@ -2554,7 +2559,7 @@ sub check_sql
 	unless ($dbh) {
 		&ld_debug(4, "Failed to bind to $$r{server} with $dbh->err");
 		service_set($v, $r, "down");
-		return 1;
+		return $SERVICE_DOWN;
 	}
 	$result--;
 	$sth = $dbh->prepare($query);
@@ -2577,12 +2582,12 @@ sub check_sql
 	if ($result == 1) {
 		# Should never get here
 		service_set($v, $r, "down");
-		return 1;
+		return $SERVICE_DOWN;
 	}
 	service_set($v, $r, "up");
 	$sth->finish;
 	$dbh->disconnect;
-	return 0;
+	return $SERVICE_UP;
 }
 
 
@@ -2609,11 +2614,11 @@ sub check_connect
 	if ($@) {
 		&service_set($v, $r, "down");
 		&ld_debug(3, "Deactivated service $$r{server}:$$r{port}: $@");
-		return 0;
+		return $SERVICE_DOWN;
 	} else {
 		&service_set($v, $r, "up");
 		&ld_debug(3, "Activated service $$r{server}:$$r{port}");
-		return 1;
+		return $SERVICE_UP;
 	}
 }
 
@@ -2705,11 +2710,11 @@ sub check_sip
 	if ($@) {
 		&service_set($v, $r, "down");
 		&ld_debug(3, "Deactivated service $$r{server}:$$r{port}: $@");
-		return 1;
+		return $SERVICE_DOWN;
 	} else {
 		&service_set($v, $r, "up");
 		&ld_debug(3, "Activated service $$r{server}:$$r{port}");
-		return 0;
+		return $SERVICE_UP;
 	}
 }
 
@@ -2750,11 +2755,11 @@ sub check_ftp
 
 	if ($memory =~ /$$r{receive}/) {
 		service_set($v, $r, "up");
-		return 0;
+		return $SERVICE_UP;
 	}
 
 	service_set($v, $r, "down");
-	return 1;
+	return $SERVICE_DOWN;
 }
 
 
@@ -2797,19 +2802,19 @@ sub check_dns
  
 	if (@$ eq "timeout\n" or ! $query) {
 		 service_set($v,$r,"down");
-		 return 1;
+		 return $SERVICE_DOWN;
 	}
  
 	foreach $rr ($query->answer) {
 	        if (($rr->type eq "A" and $rr->address eq $$r{"receive"}) or
 	            ($rr->type eq "PTR" and $rr->ptrdname eq $$r{"receive"})) {
 	         	service_set($v,$r,"up");
-	         	return 0;
+			return $SERVICE_UP;
 		}
 	}
  
 	service_set($v,$r,"down");
-	return 1;
+	return $SERVICE_DOWN;
 }
 
 
@@ -2828,7 +2833,7 @@ sub check_ping
 		if ($p->ping($$r{server}, $$v{"checktimeout"})) {
     			&ld_debug(2, "pong from $$r{server}\n");
 			service_set($v,$r,"up");
-			return 0;
+			return $SERVICE_UP;
 		}
   		&ld_debug(2, "ping to $$r{server} timed out " .
 					"(attempt " .  ($attempt + 1) . "/" . 
@@ -2836,7 +2841,7 @@ sub check_ping
 	}
 
 	service_set($v,$r,"down");
-	return 1;
+	return $SERVICE_DOWN;
 }
 
 
@@ -2851,7 +2856,7 @@ sub check_none
 	&ld_debug(2, "Checking none");
 	
 	service_set($v, $r, "up");
-	return 0;
+	return $SERVICE_UP;
 }
 
 
