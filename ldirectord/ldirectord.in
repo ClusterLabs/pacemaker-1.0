@@ -801,8 +801,7 @@ sub ld_init
 			} else {
 				$status = 3;
 			}
-			print STDERR "ldirectord is stopped for $CONFIG\n";
-			ld_log("ldirectord is stopped for $CONFIG");
+			print "ldirectord is stopped for $CONFIG\n";
 			ld_exit($status, "Exiting from ldirectord $CMD");
 		} else {
 			ld_log("ldirectord is stopped for $CONFIG");
