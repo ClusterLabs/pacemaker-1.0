@@ -2849,16 +2849,19 @@ sub check_ftp
 	my ($v, $r) = @_;
 	my $ftp;
 	my $memory;
+	my $debug = ($DEBUG > 2) ? 1 : 0;
 	my $port = ld_checkport($v, $r);
 
 	&ld_debug(2, "Checking ftp server=$$r{server} port=$port");
+	&ld_debug(4, "Timeout is $$v{negotiatetimeout}");
 	
 	open(TMP,'+>', undef);
 
 	# In some cases Net::FTP dies if there is a timeout
 	eval {
 		unless ($ftp = Net::FTP->new("$$r{server}:$port",
-				Timeout=>$$v{negotiatetimeout})) {
+				Timeout=>$$v{negotiatetimeout},
+				Debug=>$debug)) {
 			die "Could not connect\n";
 		}
 		$ftp->login($$v{login}, $$v{passwd});
