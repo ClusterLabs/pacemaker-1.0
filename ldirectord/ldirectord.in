@@ -2557,15 +2557,15 @@ sub check_sql
 	require DBI;
 	my ($v, $r, $dbd, $dbname) = @_;
 	my $port = ld_checkport($v, $r);
-	my ($dbh, $sth, $query, $rows, $result);   # Local variables
+	my ($dbh, $sth, $query, $rows, $result);
+	$result = $SERVICE_DOWN;
 	$query = $$r{request};
 	$query =~ s#^/##;
 	unless ($$v{login} && $query) {
-		service_set($v, $r, "down");
 		&ld_log("Error: Must specify a login and request string " .
 			"for MySQL and PostgreSQL checks. " .
 			"Not adding $$r{server}.\n");
-		return $SERVICE_DOWN;
+		goto err_down;
 	}
 	$result=2;   # Set result flag.  Only ok if ends up at zero.
 	&ld_debug(2, "Checking $$v{server} server=$$r{server} port=$port\n");
@@ -2575,8 +2575,7 @@ sub check_sql
 	unless ($dbh) {
 		check_sql_log_errstr("Failed to bind to $$r{server} with",
 				     $dbh->errstr);
-		service_set($v, $r, "down");
-		return $SERVICE_DOWN;
+		goto err_down;
 	}
 	$result--;
 	$sth = $dbh->prepare($query);
@@ -2598,13 +2597,17 @@ sub check_sql
 	#}
 	if ($result == 1) {
 		# Should never get here
-		service_set($v, $r, "down");
+		goto err_finish;
 		return $SERVICE_DOWN;
 	}
-	service_set($v, $r, "up");
-	$sth->finish;
-	$dbh->disconnect;
-	return $SERVICE_UP;
+
+	$result = $SERVICE_UP;
+err_finish:
+	$sth->finish();
+	$dbh->disconnect();
+err_down:
+	service_set($v, $r, $result == $SERVICE_UP ? "up" : "down");
+	return $result;
 }
 
 
