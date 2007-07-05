@@ -1341,10 +1341,8 @@ sub read_config
 #               ip_address|hostname:port|service
 # post: Take ip_port, resolve it as per ld_gethostservbyname
 #       and set $vsrv->{server} and $vsrv->{port} accordingly.
-#       If $vsrv->{service} is not set, then set it to "http",
-#       "https", "ftp", "smtp", "pop", "pops", "imap", "imaps", "ldap", "nntp" or "none" 
-#       if $vsrv->{port} is 80, 443, 21, 25, 110, 143, 389 or 
-#       any other value, respectivley
+#       If $vsrv->{service} is not set, then set according to the value of
+#       $vsrv->{port}
 # return: none
 #        Debugging message will be reported and programme will exit
 #        on error.
