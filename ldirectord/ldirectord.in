@@ -2579,6 +2579,11 @@ sub check_sql
 	}
 	$result--;
 	$sth = $dbh->prepare($query);
+	unless ($sth) {
+		check_sql_log_errstr("Error preparing statement:",
+				     $dbh->errstr);
+		goto err_disconect;
+	}
 	$rows = $sth->execute;
 	ld_debug(4, "Database search returned $rows rows");
 	if ($rows gt 0) {
@@ -2604,6 +2609,7 @@ sub check_sql
 	$result = $SERVICE_UP;
 err_finish:
 	$sth->finish();
+err_disconnect:
 	$dbh->disconnect();
 err_down:
 	service_set($v, $r, $result == $SERVICE_UP ? "up" : "down");
