@@ -2433,7 +2433,7 @@ sub check_radius
                 &ld_debug(2, "Starting Radius");
                 $radius = new Authen::Radius(Host => "$$r{server}:$port",
 					     Secret=>$$v{secret},
-					     TimeOut=>$$v{checktimeout},
+					     TimeOut=>$$v{negotiatetimeout},
 					     Errmode=>'die');
                 $result = $radius->check_pwd($$v{login}, $$v{passwd});
                 &ld_debug(2, "Finished Radius");
@@ -2559,7 +2559,7 @@ sub check_sip
 		local $SIG{'__DIE__'} = "DEFAULT";
 		local $SIG{'ALRM'} = sub { die "Timeout Alarm" };
 		&ld_debug(4, "Timeout is $$v{checktimeout}");
-		alarm $$v{checktimeout};
+		alarm $$v{negotiatetimeout};
 
 		my $sock = &ld_open_socket($$r{server}, $sip_d_port, 
 					$$v{protocol});
@@ -2708,7 +2708,7 @@ sub check_dns
 	eval {
 		 local $SIG{'__DIE__'} = "DEFAULT";
 		 local $SIG{'ALRM'} = sub { die "timeout\n"; };
-		 alarm($$v{checktimeout});
+		 alarm($$v{negotiatetimeout});
 		 $res->nameservers($$r{server});
 		 if ($$v{"protocol"} eq "tcp") {
 		 	$res->usevc(1);
