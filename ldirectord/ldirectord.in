@@ -915,6 +915,7 @@ sub reread_config
 		&ld_cmd_children("start", %START);
 
 		&ld_setup();
+		&ld_start();
 	};
 	if ($@) {
 		@VIRTUAL = @OLDVIRTUAL;
