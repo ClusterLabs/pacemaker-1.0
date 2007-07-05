@@ -3448,7 +3448,7 @@ sub purge_untracked_service
 	&system_wrapper("$IPVSADM -d $v->{proto} " . &get_virtual($v) . 
 			" -r $rservice");
 	&ld_log($log_arg);
-	&ld_emailalert_send($log_arg, $v, $rservice);
+	&ld_emailalert_send($log_arg, $v, $rservice, 0);
 }
 
 
