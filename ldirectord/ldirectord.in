@@ -2542,6 +2542,16 @@ sub check_pgsql
 	return check_sql(@_, "Pg", "dbname");
 }
 
+sub check_sql_log_errstr
+{
+	my ($prefix, $errstr) = (@_);
+
+	for $_ (split /\n/, $errstr) {
+		&ld_debug(4, "$prefix $_\n");
+	}
+
+}
+
 sub check_sql
 {
 	require DBI;
@@ -2563,7 +2573,8 @@ sub check_sql
 			    "host=$$r{server};port=$port", $$v{login},
 			    $$v{passwd});
 	unless ($dbh) {
-		&ld_debug(4, "Failed to bind to $$r{server} with $dbh->err");
+		check_sql_log_errstr("Failed to bind to $$r{server} with",
+				     $dbh->errstr);
 		service_set($v, $r, "down");
 		return $SERVICE_DOWN;
 	}
