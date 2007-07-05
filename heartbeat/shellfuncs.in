@@ -36,40 +36,6 @@ Echo() {
   @ECHO_CMD@ "$@"
 }
 
-#	Echo without putting a newline on the end
-EchoNoNl() {
-    Echo @ECHO_N@ "$@@ECHO_C@"
-}
-
-#	Echo with escapes enabled...
-EchoEsc() {
-    Echo @ECHO_E@ "$@"
-}
-
-echo_failure() {
-    EchoEsc " Heartbeat failure [rc=$1]. $rc_failed"
-    return $1
-}
-
-echo_success() {
-    : Cool!  It started!
-    EchoEsc "$rc_done"
-}
-
-action() {
-  echo -n "$1... "
-  shift
-  $@
-  stat=$?
-  if [ $stat = 0 ]; then
-    echo success
-  else
-    echo failure
-  fi
-  return  $stat
-}
-
-
 hadate() {
   date "+${HA_DATEFMT}"
 }
@@ -320,3 +286,4 @@ pingargs() {
 
 	echo "$_pingargs"
 }
+
