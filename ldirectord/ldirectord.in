@@ -306,7 +306,7 @@ checktimeout, negotiatetimeout, checkcount, fallback, emailalert,
 emailalertfreq and quiescent options listed above may also appear inside a
 virtual section, in which case the global setting is overridden.
 
-B<checktype = >B<negotiate>|B<connect>|I<N>|B<ping>|B<off>|B<on>
+B<checktype = >B<connect>|B<negotiate>|B<off>|B<on>|B<ping>|I<N>
 
 Type of check to perform. Negotiate sends a request and matches a receive
 string. Connect only attemts to make a TCP/IP connection, thus the
@@ -320,7 +320,7 @@ checking will take place and no real or fallback servers will be activated.
 On means no checking will take place and real servers will always be
 activated. Default is I<negotiate>.
 
-B<service = ftp>|B<smtp>|B<http>|B<pop>|B<pops>|B<nntp>|B<imap>|B<imaps>|B<ldap>|B<https>|B<dns>|B<radius>|B<mysql>|B<pgsql>|B<sip>|B<none>
+B<service = >B<dns>|B<ftp>|B<http>|B<https>|B<imap>|B<imaps>|B<ldap>|B<mysql>|B<nntp>|B<none>|B<pgsql>|B<pop>|B<pops>|B<radius>|B<sip>|B<smtp>
 
 The type of service to monitor when using checktype=negotiate. None denotes
 a service that will not be monitored. 
@@ -1090,7 +1090,7 @@ sub read_config
 					} elsif ( $1 =~ /(\w+)/ && ($1 eq "connect" || $1 eq "negotiate" || $1 eq "ping" || $1 eq "off" || $1 eq "on") ) {
 						$vsrv{checktype} = $1;
 					} else {
-						&config_error($line, "checktype must be connect, negotiate, ping, off, on or a positive number");
+						&config_error($line, "checktype must be \"connect\", \"negotiate\", \"on\", \"off\", \"ping\" or a positive number");
 					}
 				} elsif ($rcmd =~ /^checktimeout\s*=\s*(.*)/){
                                         $1 =~ /(\d+)/ && $1 or &config_error($line, "invalid check timeout");
