@@ -112,8 +112,8 @@ service must follow this line immediately and be indented.
 
 B<checktimeout = >I<n>
 
-Timeout in seconds for connect checks. If the timeout is exceeded then the
-real server is declared dead.  
+Timeout in seconds for connect and ping checks. If the timeout is exceeded
+then the real server is declared dead.
 
 If defined in a virtual server section then the global value is overridden.
 
