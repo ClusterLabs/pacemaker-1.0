@@ -2673,17 +2673,22 @@ sub check_ftp
 	
 	open(TMP,'+>', undef);
 
-	unless ($ftp = Net::FTP->new("$$r{server}:$port", 
-			Timeout=>$$v{negotiatetimeout})) {
-		service_set($v, $r, "down");
-		return 0;
+	# In some cases Net::FTP dies if there is a timeout
+	eval {
+		unless ($ftp = Net::FTP->new("$$r{server}:$port",
+				Timeout=>$$v{negotiatetimeout})) {
+			die "Could not connect\n";
+		}
+		$ftp->login($$v{login}, $$v{passwd});
+		$ftp->cwd("/");
+		$ftp->binary();
+		$ftp->pasv();
+		$ftp->get("$$r{request}", *TMP);
+		$ftp->quit();
+	};
+	if ($@) {
+		&ld_debug(2, "Warning: $@");
 	}
-	$ftp->login($$v{login}, $$v{passwd});
-	$ftp->cwd("/");
-	$ftp->binary();
-	$ftp->pasv();
-	$ftp->get("$$r{request}", *TMP);
-	$ftp->quit();
 
 	seek TMP, 0, 0;
 	local $/;
