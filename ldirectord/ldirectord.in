@@ -135,7 +135,7 @@ also a global value that may be overriden by a per-virtual setting.
 
 If both negotiatetimeout and connecttimeout are unset, the default is used.
 
-Default: defined by the operating system
+Default: 30 seconds
 
 B<checkinterval = >I<n>
 
@@ -620,7 +620,7 @@ if (! defined $LDIRECTORD) {
 }
 $LDIRLOG          = "/var/log/ldirectord.log";
 $NEGOTIATETIMEOUT = -1;
-$DEFAULT_NEGOTIATETIMEOUT = 0;
+$DEFAULT_NEGOTIATETIMEOUT = 30;
 $RUNPID           = "/var/run/ldirectord";
 $SUPERVISED       = "no";
 $QUIESCENT        = "yes";
