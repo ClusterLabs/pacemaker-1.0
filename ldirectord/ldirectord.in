@@ -3493,7 +3493,7 @@ sub check_cfgfile
 		} else {
 			&ld_log(" - ignore new configuration\n");
 		}
-		if (-x $CALLBACK) {
+		if (defined($CALLBACK) and -x $CALLBACK) {
 			&system_wrapper("$CALLBACK $CONFIG");
 		}
 		$status = 1;
