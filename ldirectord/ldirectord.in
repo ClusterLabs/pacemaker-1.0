@@ -245,11 +245,21 @@ B<quiescent = >B<yes>|B<no>
 If I<yes>, then when real or failback servers are determined
 to be down, they are not actually removed from the kernel's LVS
 table. Rather, their weight is set to zero which means that no
-new connections will be accepted. This has the side effect,
-that if the real server has persistent connections, new connections
-from any existing clients will continue to be routed to the real
-server, until the persistant timeout can expire. See
+new connections will be accepted. 
+
+This has the side effect, that if the real server has persistent
+connections, new connections from any existing clients will continue to be
+routed to the real server, until the persistant timeout can expire. See
 L<ipvsadm> for more information on persistant connections.
+
+This side-effect can be avoided by running the following:
+
+echo 1 > /proc/sys/net/ipv4/vs/expire_quiescent_template
+
+If the proc file isn't present this probably means that
+the kernel doesn't have lvs support, LVS support isn't loaded,
+or the kernel is too old to have the proc file. Running
+ipvsadm as root should load LVS into the kernel if it is possible.
 
 If I<no>, then the real or failback servers will be removed
 from the kernel's LVS table. The default is I<yes>.
