@@ -380,7 +380,7 @@ overridden by an optional per real-server based request-string.
 For a DNS check this should the name of an A record, or the address
 of a PTR record to look up.
 
-For a MySQL or PostgeSQL checks, this should be a SQL query.
+For a MySQL or PostgeSQL check, this should be an SQL query.
 The data returned is not checked, only that the
 answer is one or more rows.  This is a required setting.
 
@@ -389,7 +389,7 @@ B<receive = ">I<regexp to compare>B<">
 If the requested result contains this I<regexp to compare>, the real server
 is declared alive. The regexp must be inside quotes. Keep in mind that
 regexps are not plain strings and that you need to escape the special
-characters if they should as litterals. Note that this regexp may be
+characters if they should as literals. Note that this regexp may be
 overridden by an optional per real-server based receive regexp.
 
 For a DNS check this should be any one the A record's addresses or
