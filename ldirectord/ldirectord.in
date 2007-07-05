@@ -2133,17 +2133,31 @@ sub check_http
 		. "virtualhost=\"$virtualhost\"");
 	
 	my $ua = new LWP::UserAgent();
-	$ua->timeout($$v{negotiatetimeout});
 	my $h = new  HTTP::Headers("Host" => $virtualhost);
 	my $req = new HTTP::Request("$$v{httpmethod}", "$$r{url}", $h);
 	my $res;
-	{
+
+	# LWP does not seem to honour timeouts set using $ua->timeout()
+	# for HTTPS. So use an alarm instead. This also has the advantage
+	# of being cumulative timeout, rather than a per send/receive
+	# timeout.
+	eval {
 		# LWP makes ungaurded calls to eval
 		# which throw a fatal exception if they fail
 		# Needless to say, this is completely stupid.
+		# Resetting of $SIG{'__DIE__'} is also
+		# needed now that alarm() is used.
 		local $SIG{'__DIE__'} = "DEFAULT";
+		local $SIG{'ALRM'} = sub { die "Timeout Alarm" };
+		&ld_debug(4, "Timeout is $$v{negotiatetimeout}");
+		&ld_debug(2, "Starting Check");
+		alarm $$v{negotiatetimeout};
+
+		&ld_debug(2, "Starting HTTP/HTTPS");
 		$res = $ua->request($req);
-	}
+		&ld_debug(2, "Finished HTTP/HTTPS");
+		alarm 0; # Cancel the alarm
+	};
 
 	if ($$v{service} eq "https") {
 		&ld_debug(2, "SSL-Cipher: " . 
