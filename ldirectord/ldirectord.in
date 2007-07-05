@@ -3860,7 +3860,7 @@ sub get_real_id_str
         $real    = $check . ":" . $v->{"protocol"} . ":" 
 	         . $r->{"server"} . ":" . $r->{"port"} . ":" 
 		 . $virtualhost . ":" . $checkport . ":" 
-		 . $r->{"weight"} . ":"
+		 . $r->{"weight"} . ":" . $r->{"forward"} . ":"
 		 . quotemeta($request) . ":" . quotemeta($receive);
 }
 
