@@ -1870,20 +1870,22 @@ sub ld_read_ipvsadm
 		if (not defined $line) {
 			last;
 		}
-		if ($line =~ /(\w+)\s+(\d+\.\d+\.\d+\.\d+\:\d+|\d+)\s+(\w+)\s+persistent\s+(\d+)\s+mask\s+(.*)/) {
+		if ($line =~ /^(\w+)\s+(\d+\.\d+\.\d+\.\d+\:\d+|\d+)\s+(\w+)\s+persistent\s+(\d+)\s+mask\s+(.*)/) {
 			$real_service = "$2 ".lc($1);
 			$oldsrv{"$real_service"} = {"real"=>{}, "scheduler"=>$3, "persistent"=>$4, "netmask"=>$5};
-		} elsif ($line =~ /(\w+)\s+(\d+\.\d+\.\d+\.\d+\:\d+|\d+)\s+(\w+)\s+persistent\s+(\d+)/) {
+		} elsif ($line =~ /^(\w+)\s+(\d+\.\d+\.\d+\.\d+\:\d+|\d+)\s+(\w+)\s+persistent\s+(\d+)/) {
 			$real_service = "$2 ".lc($1);
 			$oldsrv{"$real_service"} = {"real"=>{}, "scheduler"=>$3, "persistent"=>$4};
-		} elsif ($line =~ /(\w+)\s+(\d+\.\d+\.\d+\.\d+\:\d+|\d+)\s+(\w+)/) {
+		} elsif ($line =~ /^(\w+)\s+(\d+\.\d+\.\d+\.\d+\:\d+|\d+)\s+(\w+)/) {
 			$real_service = "$2 ".lc($1);
 			$oldsrv{"$real_service"} = {"real"=>{}, "scheduler"=>$3};
-		} else {
-			next;
-		}
-		while ($line = ld_readline($fh, $buf)) {
-			last unless $line =~ / ->\s+(\d+\.\d+\.\d+\.\d+\:\d+)\s+(\w+)\s+(\d+)/;
+		} elsif ($line =~ /^  ->\s+(\d+\.\d+\.\d+\.\d+\:\d+)\s+(\w+)\s+(\d+)/) {
+			if (not defined( $real_service)) {
+				&ld_debug(2, "Real server read from ipvsadm " .
+					  "doesn't seem to be inside a " .
+					  "virtual service: \"$line\"\n");
+				next;
+			}
 			if ($2 eq "Route") {
 				$fwd = "gate";
 			} elsif ($2 eq "Tunnel") {
@@ -1892,8 +1894,11 @@ sub ld_read_ipvsadm
 				$fwd = "masq";
 			}
 			$oldsrv{"$real_service"}->{"real"}->{"$1"} = {"forward"=>$fwd, "weight"=>$3};
+		} else {
+			&ld_debug(2, "Unknown line read from ipvsadm: " .
+				  "\"$line\"\n");
+			next;
 		}
-		redo;
 	}
 	close($fh);
 
