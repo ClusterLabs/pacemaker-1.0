@@ -119,10 +119,6 @@ If defined in a virtual server section then the global value is overridden.
 
 Default: 5 seconds
 
-B<connecttimeout = >I<n>
-
-Not used.
-
 B<negotiatetimeout = >I<n>
 
 Timeout in seconds for negotiate checks. 
@@ -541,7 +537,6 @@ use vars qw(
 	    $VERSION_STR
 	    $AUTOCHECK
 	    $CHECKINTERVAL
-	    $CONNECTTIMEOUT
 	    $LDIRECTORD
 	    $LDIRLOG
 	    $NEGOTIATETIMEOUT
@@ -606,7 +601,6 @@ $AUTOCHECK        = "no";
 $CHECKINTERVAL    = 10;
 $CHECKTIMEOUT     = 5;
 $CHECKCOUNT       = 1;
-$CONNECTTIMEOUT   = 0;
 $LDIRECTORD       = ld_find_cmd("ldirectord", 1);
 if (! defined $LDIRECTORD) {
 	$LDIRECTORD = "@sbindir@/ldirectord";
@@ -1055,7 +1049,6 @@ sub read_config
 			$vsrv{passwd} = "";
 			$vsrv{database} = "";
 			$vsrv{checktimeout} = -1;
-			$vsrv{connecttimeout} = -1;
 			$vsrv{checkcount} = -1;
 			$vsrv{negotiatetimeout} = -1;
 			$vsrv{num_connects} = 0;
@@ -1099,8 +1092,10 @@ sub read_config
                                         $1 =~ /(\d+)/ && $1 or &config_error($line, "invalid check timeout");
                                         $vsrv{checktimeout} = $1;
 				} elsif ($rcmd =~ /^connecttimeout\s*=\s*(.*)/){
-                                        $1 =~ /(\d+)/ && $1 or &config_error($line, "invalid connect timeout");
-                                        $vsrv{connecttimeout} = $1;
+					&config_error($line,
+						"connecttimeout directive " .
+						"deprecated in favour of " .
+						"negotiatetimeout");
 				} elsif ($rcmd =~ /^negotiatetimeout\s*=\s*(.*)/){
                                         $1 =~ /(\d+)/ && $1 or &config_error($line, "invalid negotiate timeout");
                                         $vsrv{negotiatetimeout} = $1;
@@ -1275,9 +1270,10 @@ sub read_config
 					"invalid check timeout value");
 			$CHECKTIMEOUT = $1;
 		} elsif ($linedata  =~ /^connecttimeout\s*=\s*(.*)/) {
-			($1 =~ /(\d+)/ && $1 && $1>0) or &config_error($line, 
-					"invalid connect timeout value");
-			$CONNECTTIMEOUT = $1;
+			&config_error($line,
+					"connecttimeout directive " .
+					"deprecated in favour of " .
+					"negotiatetimeout");
 		} elsif ($linedata  =~ /^negotiatetimeout\s*=\s*(.*)/) {
 			($1 =~ /(\d+)/ && $1 && $1>0) or &config_error($line, 
 					"invalid negotiate timeout value");
@@ -1347,10 +1343,9 @@ sub read_config
 			if ($linedata  =~ /^timeout\s*=\s*(.*)/) {
 				&config_error($line, 
 						"timeout directive " .
-						"deprciated in favour of " .
-						"checktimeout, " .
-						"negotiatetimeout or " .
-						"connecttimeout");
+						"deprecated in favour of " .
+						"checktimeout and " .
+						"negotiatetimeout");
 			}
 			&config_error($line, "Unknown command $linedata ");
 		}
@@ -1843,12 +1838,6 @@ sub ld_setup
 		}
 		if ($$v{checktimeout} < 0) {
 			$$v{checktimeout} = $CHECKTIMEOUT;
-		}
-		if ($$v{connecttimeout} < 0) {
-			$$v{connecttimeout} = $CONNECTTIMEOUT;
-		}
-		if ($$v{connecttimeout} < 0) {
-			$$v{connecttimeout} = $$v{checktimeout};
 		}
 		if ($$v{negotiatetimeout} < 0) {
 			$$v{negotiatetimeout} = $NEGOTIATETIMEOUT;
