@@ -139,11 +139,11 @@ Default: 10 seconds
 
 B<checkcount = >I<n>
 
-The number of times a check will be attmpted before it is considered
-to have failed. Only works with ping checks. Note that the
-checktimeout is additive, so if checkcount is 3 and checktimeout is 2
-seconds, then a total of 6 seconds worth of timeout will occur becore
-the check fails. 
+The number of times a check will be attmpted before it is considered to
+have failed. Only works with ping checks. Note that the
+checktimeout/negotiatetimeout is additive, so if a connect check is used,
+checkcount is 3 and checktimeout is 2 seconds, then a total of 6 seconds
+worth of timeout will occur becore the check fails.
 
 If defined in a virtual server section then the global value is overridden.
 
