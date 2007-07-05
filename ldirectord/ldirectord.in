@@ -1173,7 +1173,9 @@ sub read_config
 					$vsrv{virtualhost} = $1;
 				} elsif ($rcmd =~ /^fallback\s*=\s*(.*)/) {    # Allow specification of a virtual-specific fallback host
 					$fallback_line=$line;
-					$vsrv{fallback}=parse_fallback($line, $1);
+					$vsrv{fallback} =
+						parse_fallback($line, $1,
+							       \%vsrv);
                                 } elsif ($rcmd =~ /^quiescent\s*=\s*(.*)/) {
                                         ($1 eq "yes" || $1 eq "no")
                                                 or &config_error($line, "quiescent must be 'yes' or 'no'");
@@ -1240,21 +1242,11 @@ sub read_config
 					"invalid check count value");
 			$CHECKCOUNT = $1;
 		} elsif ($linedata  =~ /^fallback\s*=\s*(.*)/) {
-                        my $tcp = &ld_gethostservbyname($1, "tcp");
-			my $udp = &ld_gethostservbyname($1, "udp");
-                        my $tcp_fb;
-                        my $udp_fb;
-			if(!defined($tcp) and !defined($udp)){
-			    &config_error($line, 
-			    	"invalid address for fallback server");
-			}
-                        if(defined($tcp)) {
-			        $tcp_fb=&parse_fallback($line, $tcp);
-                        }
-                        if(defined($udp)) {
-			        $udp_fb=&parse_fallback($line, $udp);
-                        }
-			$FALLBACK = { "tcp" => $tcp_fb, "udp" => $udp_fb };
+			my $tcp = parse_fallback($line, $1, undef);
+			my $udp = parse_fallback($line, $1, undef);
+                        &_ld_read_config_fallback_resolve($line, "tcp", $tcp);
+			&_ld_read_config_fallback_resolve($line, "udp", $udp);
+			$FALLBACK = { "tcp" => $tcp, "udp" => $udp };
 		} elsif ($linedata  =~ /^autoreload\s*=\s*(.*)/) {
 			($1 eq "yes" || $1 eq "no")
 			    or &config_error($line, 
@@ -1477,16 +1469,20 @@ sub _ld_read_config_fallback_resolve
 {
 	my($line, $protocol, $fallback)=(@_);
 
-        my $ip_port;
-
         unless($fallback) {
                 return;
         }
 
-	$fallback->{server}=&ld_gethostservbyname(
-                $fallback->{server}, $protocol) 
-	        or &config_error($line, 
-		        "invalid address for fallback server");
+	$fallback->{server} = &ld_gethostbyname($fallback->{server}) or
+	        &config_error($line, "invalid address for fallback server: " .
+			      $fallback->{server});
+
+        unless($fallback->{"port"}) {
+                return;
+        }
+
+	$fallback->{port} = &ld_getservbyname($fallback->{port}, $protocol) or
+	        &config_error($line, "invalid port for fallback server");
 }
 
 
@@ -1696,17 +1692,22 @@ sub add_real_server
 
 sub parse_fallback
 {
-	my ($line, $fallback) = (@_);
+	my ($line, $fallback, $vsrv) = (@_);
 
-	my $ip_port;
+	my $server;
+	my $port;
 	my $fwd;
 
-        $fallback =~ /^\s*(\S+)(\s+(\S+))?\s*/ or
+        $fallback =~ /^\s*([^: 	]+)(:(\S+))?(\s+(\S+))?\s*/ or
                   &config_error($line, "invalid fallback server: $fallback");
 
-        $ip_port=$1;
-        $fwd=$3;
+        $server=$1;
+        $port=$3;
+        $fwd=$5;
 
+	if (not defined($port) and defined($vsrv)) {
+		$port = $vsrv->{"port"};
+	}
 
         if($fwd) {
                 ($fwd eq "gate" || $fwd eq "masq" || $fwd eq "ipip")
@@ -1717,7 +1718,8 @@ sub parse_fallback
           $fwd="gate"
         }
 
-	return({"server"=>$ip_port, "forward"=>$fwd});
+	return({"server"=>$server, "port"=>$port, "forward"=>$fwd,
+		"weight"=>1});
 }
 
 
@@ -1999,7 +2001,7 @@ sub ld_start
 		my $fallback = fallback_find($nv);
 
 		if (defined($fallback)) {
-			delete($or->{$fallback->{server}});
+			delete($or->{"$fallback->{server}:$fallback->{port}"});
 		}
 
 		for $nr (@$nreal) {
@@ -3251,7 +3253,7 @@ sub fallback_on
 		return;
 	}
 
-	&_restore_service($v, $fallback->{server}, 
+	&_restore_service($v, $fallback->{server} . ":" . $fallback->{port},
 			get_forward_flag($fallback->{forward}), 
 				"1", "fallback");
 }
@@ -3274,7 +3276,7 @@ sub fallback_off
 		return;
 	}
 
-	&_remove_service($v, $fallback->{server},
+	&_remove_service($v, $fallback->{server} . ":" .  $fallback->{port},
 			get_forward_flag($fallback->{forward}),
 				"fallback");
 }
@@ -3294,11 +3296,20 @@ sub fallback_find
 
 	if( defined $virtual->{"fallback"} ) {
 		return($virtual->{"fallback"});
-	} elsif ( defined($FALLBACK) ) {
-		return($FALLBACK->{$virtual->{"protocol"}});
+	} elsif ( not defined($FALLBACK) ) {
+		return undef;
 	}
 
-	return undef;
+	# If the global fallback has a port, it can be used as is
+	if (defined($FALLBACK->{$virtual->{"protocol"}}->{"port"})) {
+		return $FALLBACK->{$virtual->{"protocol"}};
+	}
+
+	# Else create an anonymous fallback
+	my %anon_fallback = %{$FALLBACK->{$virtual->{"protocol"}}};
+	$anon_fallback{"port"} = $virtual->{"port"};
+
+	return \%anon_fallback;
 }
 
 
