@@ -2974,6 +2974,8 @@ sub service_set()
 	        my $found = 0;
 		my $tmp_id;
 		my $virtual_id = get_virtual_id_str($v);
+		my $log_str = "real server=" . get_real_id_str($r, $v) .
+			      " (virtual=$virtual_id)";
 		foreach $tmp_id (@$virtual) {
 			if($virtual_id eq $tmp_id) {
 				$found = 1;
@@ -2983,10 +2985,10 @@ sub service_set()
 		if ($found == 1) {
 			if ($state=~/up/i) {
 				_service_up($v, $r, $force);
-				&ld_debug(2, "Enabled server=$$r{server}");
+				&ld_debug(2, "Enabled  $log_str");
 			} elsif ($state=~/down/i) {
 				_service_down($v, $r, $force);
-				&ld_debug(2, "Disabled server=$$r{server}");
+				&ld_debug(2, "Disabled $log_str");
 			}
 		}
 	}
