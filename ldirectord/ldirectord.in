@@ -1392,59 +1392,40 @@ sub _ld_read_config_virtual_resolve
 		}
 
 		if(!defined($vsrv->{service})){
-			if ($vsrv->{port} eq "80") {
-				$vsrv->{service} = "http";
-			} 
-			elsif ($vsrv->{port} eq "443") {
-				$vsrv->{service} = "https";
-			} 
-			elsif ($vsrv->{port} eq "21") {
-				$vsrv->{service} = "ftp";
-			} 
-			elsif ($vsrv->{port} eq "25") {
-				$vsrv->{service} = "smtp";
-			} 
-			elsif ($vsrv->{port} eq "110") {
-				$vsrv->{service} = "pop";
-			} 
-			elsif ($vsrv->{port} eq "995") {
-                                $vsrv->{service} = "pops";
-                        }
-			elsif ($vsrv->{port} eq "119") {
-				$vsrv->{service} = "nntp";
-			} 
-			elsif ($vsrv->{port} eq "143") {
-				$vsrv->{service} = "imap";
-			} 
-			elsif ($vsrv->{port} eq "993") {
-				$vsrv->{service} = "imaps";
-			}
-			elsif ($vsrv->{port} eq "389") {
-				$vsrv->{service} = "ldap";
-			}
-			elsif ($vsrv->{port} eq "53") {
-				$vsrv->{service} = "dns";
-			} 
-			elsif ($vsrv->{port} eq "1812") {
-				$vsrv->{service} = "radius";
-			}
-			elsif ($vsrv->{port} eq "3306") {
-				$vsrv->{service} = "mysql";
-			} 
-			elsif ($vsrv->{port} eq "5432") {
-				$vsrv->{service} = "pgsql";
-			} 
-			elsif ($vsrv->{port} eq "1521") {
-				$vsrv->{service} = "oracle";
-			}
-			elsif ($vsrv->{port} eq "5060") {
-				$vsrv->{service} = "sip";
-			} 
-			else {
-				$vsrv->{service} = "none";
-			}
+			$vsrv->{service} = ld_port_to_service($vsrv->{port});
 		}
 	}
+}
+
+
+# ld_service_to_port
+# Resolve an ldirectord service name from its port number
+# pre: port: port number of the service
+# return: port name
+#         "none" if the service is unknown
+
+sub ld_port_to_service
+{
+	my ($port) = (@_);
+
+	if ($port eq 21)	{ return "ftp"; }
+	if ($port eq 25)	{ return "smtp"; }
+	if ($port eq 53)	{ return "dns"; }
+	if ($port eq 80)	{ return "http"; }
+	if ($port eq 110)	{ return "pop"; }
+	if ($port eq 119)	{ return "nntp"; }
+	if ($port eq 143)	{ return "imap"; }
+	if ($port eq 389)	{ return "ldap"; }
+	if ($port eq 443)	{ return "https"; }
+	if ($port eq 993)	{ return "pops"; }
+	if ($port eq 995)	{ return "imaps"; }
+	if ($port eq 1521)	{ return "oracle"; }
+	if ($port eq 1812)	{ return "radius"; }
+	if ($port eq 3306)	{ return "mysql"; }
+	if ($port eq 5060)	{ return "sip"; }
+	if ($port eq 5432)	{ return "pgsql"; }
+
+	return "none";
 }
 
 
