@@ -38,7 +38,6 @@ usr/include/heartbeat/HBcomm.h
 usr/include/heartbeat/apphb.h
 usr/include/heartbeat/apphb_notify.h
 usr/include/heartbeat/compress.h
-usr/include/heartbeat/hb_config.h
 usr/include/heartbeat/crm/cib.h
 usr/include/heartbeat/crm/common/ctrl.h
 usr/include/heartbeat/crm/common/ipc.h
@@ -53,8 +52,11 @@ usr/include/heartbeat/crm/pengine/complex.h
 usr/include/heartbeat/crm/pengine/rules.h
 usr/include/heartbeat/crm/pengine/status.h
 usr/include/heartbeat/crm/transition.h
+usr/include/heartbeat/fencing/stonithd_api.h
+usr/include/heartbeat/fencing/stonithd_msg.h
 usr/include/heartbeat/ha_msg.h
 usr/include/heartbeat/hb_api.h
+usr/include/heartbeat/hb_config.h
 usr/include/heartbeat/heartbeat.h
 usr/include/heartbeat/lrm/lrm_api.h
 usr/include/heartbeat/lrm/lrm_msg.h
@@ -66,8 +68,6 @@ usr/include/heartbeat/mgmt/mgmt_common.h
 usr/include/heartbeat/mgmt/mgmt_tls.h
 usr/include/heartbeat/recoverymgr.h
 usr/include/heartbeat/replace_uuid.h
-usr/include/heartbeat/fencing/stonithd_api.h
-usr/include/heartbeat/fencing/stonithd_msg.h
 usr/include/ocf/oc_event.h
 usr/include/ocf/oc_membership.h
 usr/include/pils/generic.h
@@ -106,12 +106,12 @@ usr/lib/libhbclient.so
 usr/lib/liblrm.a
 usr/lib/liblrm.la
 usr/lib/liblrm.so
-usr/lib/libpe_status.a
-usr/lib/libpe_status.la
-usr/lib/libpe_status.so
 usr/lib/libpe_rules.a
 usr/lib/libpe_rules.la
 usr/lib/libpe_rules.so
+usr/lib/libpe_status.a
+usr/lib/libpe_status.la
+usr/lib/libpe_status.so
 usr/lib/libpengine.a
 usr/lib/libpengine.la
 usr/lib/libpengine.so

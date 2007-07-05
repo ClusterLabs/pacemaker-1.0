@@ -2,7 +2,7 @@ Source: heartbeat
 Section: admin
 Priority: optional
 Maintainer: Simon Horman <horms@debian.org>
-Build-Depends: debhelper (>= 5.0.37.2), libsnmp10-dev | libsnmp-dev, libglib2.0-dev, perl, net-tools, iputils-ping, python, psmisc, modutils, libnet1-dev, iproute, libtool, libcurl4-openssl-dev | libcurl3-openssl-dev, libxml2-dev, bison, flex, uuid-dev, libopenipmi-dev (>= 2.0.1), lynx, libbz2-dev, zlib1g-dev, uuid-dev, libsensors-dev, libltdl3-dev, swig, openssh-client, libgnutls-dev, python-central (>= 0.5), python-dev, libpam0g-dev, libncurses5-dev, psmisc
+Build-Depends: debhelper (>= 5.0.37.2), libsnmp-dev, libglib2.0-dev, perl, net-tools, iputils-ping, python, psmisc, libnet1-dev, iproute, libtool, libcurl4-openssl-dev | libcurl3-openssl-dev, libxml2-dev, bison, flex, uuid-dev, libopenipmi-dev (>= 2.0.1), lynx, libbz2-dev, zlib1g-dev, uuid-dev, libsensors-dev, libltdl3-dev, swig, openssh-client, libgnutls-dev, python-central (>= 0.5), python-dev, libpam0g-dev, libncurses5-dev, psmisc
 Standards-Version: 3.7.2
 XS-Python-Version: current
 
@@ -57,7 +57,8 @@ Package: heartbeat-gui
 Section: admin
 Priority: optional
 Architecture: any
-Depends: heartbeat (= ${Source-Version}), ${python:Depends},  python-gtk2, python-glade2
+Depends: ${python:Depends},  python-gtk2, python-glade2
+Suggests: heartbeat (= ${Source-Version})
 XB-Python-Version: ${python:Versions}
 Description: Provides a gui interface to manage heartbeat clusters
  GUI client for heartbeat clusters

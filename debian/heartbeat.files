@@ -159,6 +159,7 @@ usr/lib/heartbeat/stonithd
 usr/lib/heartbeat/stonithdtest/STONITHDBasicSanityCheck
 usr/lib/heartbeat/stonithdtest/apitest
 usr/lib/heartbeat/tengine
+usr/lib/heartbeat/transient-test.sh
 usr/lib/heartbeat/ttest
 usr/lib/libapphb.so.0
 usr/lib/libapphb.so.0.0.0
@@ -240,7 +241,9 @@ usr/lib/ocf/resource.d/heartbeat/Xinetd
 usr/lib/ocf/resource.d/heartbeat/apache
 usr/lib/ocf/resource.d/heartbeat/db2
 usr/lib/ocf/resource.d/heartbeat/drbd
+usr/lib/ocf/resource.d/heartbeat/eDir88
 usr/lib/ocf/resource.d/heartbeat/mysql
+usr/lib/ocf/resource.d/heartbeat/o2cb
 usr/lib/ocf/resource.d/heartbeat/oracle
 usr/lib/ocf/resource.d/heartbeat/oralsnr
 usr/lib/ocf/resource.d/heartbeat/pgsql
@@ -251,6 +254,7 @@ usr/lib/pils/plugins/InterfaceMgr/generic.so
 usr/lib/stonith/plugins/external/ibmrsa
 usr/lib/stonith/plugins/external/riloe
 usr/lib/stonith/plugins/external/ssh
+usr/lib/stonith/plugins/external/vmware
 usr/lib/stonith/plugins/stonith2/apcmaster.so
 usr/lib/stonith/plugins/stonith2/apcmastersnmp.so
 usr/lib/stonith/plugins/stonith2/apcsmart.so

@@ -1,4 +1,4 @@
-heartbeat (2.0.9-1) unstable; urgency=low
+heartbeat (2.1.1-1) unstable; urgency=low
 
   * New Upstream
   * Remove merged patches
@@ -10,8 +10,18 @@ heartbeat (2.0.9-1) unstable; urgency=low
     - ipv6addr-scanf-return.patch
     - ldirectord-init.patch
     - configure-sys-types.h.patch
+  * Remove apparently bogus build-dependacy on modutils
+    Thanks to Russell Coker
+  * Build dependancy on libsnmp-dev rather than libsnmp10-dev | libsnmp-dev
+    as libsnmp10-dev does not seem to exist (any more?)
+  * Change heartbeat-gui's dependancy on heartbeat to a suggests,
+    as heartbat-gui can access heartbeat remotely
+    (closes: #430082)
+  * After unpacking apply patches and run autoconf to effect
+    changes to configure.in
+  * Update files included in heartbeat and heartbeat-dev packages
 
- -- Simon Horman <horms@debian.org>  Thu, 31 May 2007 19:42:30 +0900
+ -- Simon Horman <horms@debian.org>  Thu, 05 Jul 2007 17:17:35 +0900
 
 heartbeat (2.0.8-9) unstable; urgency=low
 
