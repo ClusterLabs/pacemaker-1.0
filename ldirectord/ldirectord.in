@@ -3712,8 +3712,8 @@ sub get_real_id_str
 		$receive = $v->{"receive"};
 	}
 
-	if($v->{"checktype"} eq "negotiate" || 
-			$v->{"combined"} eq "negotiate") {
+	if($v->{"checktype"} eq "negotiate" or
+			$v->{"checktype"} eq "combined") {
 		$check = $v->{"checktype"} . ":" . $v->{"service"};
 	}
 	else {
