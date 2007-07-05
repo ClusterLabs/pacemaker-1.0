@@ -2552,12 +2552,16 @@ sub check_sql
 	$query =~ s#^/##;
 	unless ($$v{login} && $query) {
 		service_set($v, $r, "down");
-		&ld_log("Error: Must specify a login and request string for mysql and postgresql checks. Not adding $$r{server}.\n");
+		&ld_log("Error: Must specify a login and request string " .
+			"for MySQL and PostgreSQL checks. " .
+			"Not adding $$r{server}.\n");
 		return $SERVICE_DOWN;
 	}
 	$result=2;   # Set result flag.  Only ok if ends up at zero.
 	&ld_debug(2, "Checking $$v{server} server=$$r{server} port=$port\n");
-	$dbh = DBI->connect("dbi:$dbd:$dbname=$$v{database};host=$$r{server};port=$port", $$v{login}, $$v{passwd});
+	$dbh = DBI->connect("dbi:$dbd:$dbname=$$v{database};" .
+			    "host=$$r{server};port=$port", $$v{login},
+			    $$v{passwd});
 	unless ($dbh) {
 		&ld_debug(4, "Failed to bind to $$r{server} with $dbh->err");
 		service_set($v, $r, "down");
