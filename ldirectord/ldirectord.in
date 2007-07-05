@@ -3080,9 +3080,9 @@ sub _status_down
 	my $real_id = get_real_id_str($r, $v);
 
 	if (defined($is_fallback)) {
-		if (! defined($v->{real_status}) or
-				! defined($v->{fallback_status}) or
-				! $v->{fallback_status}->{"$real_id"}) {
+		if (! defined($v->{real_status}) and
+				 (! defined($v->{fallback_status}) or
+				  !$v->{fallback_status}->{"$real_id"})) {
 			return undef;
 		}
 	}
