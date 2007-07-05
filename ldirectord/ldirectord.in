@@ -117,6 +117,11 @@ then the real server is declared dead.
 
 If defined in a virtual server section then the global value is overridden.
 
+If undefined then the value of negotiatetimeout is used.  negotiatetimeout
+is also a global value that may be overriden by a per-virtual setting.
+
+If both checktimeout and negotiatetimeout are unset, the default is used.
+
 Default: 5 seconds
 
 B<negotiatetimeout = >I<n>
@@ -124,6 +129,11 @@ B<negotiatetimeout = >I<n>
 Timeout in seconds for negotiate checks. 
 
 If defined in a virtual server section then the global value is overridden.
+
+If undefined then the value of connecttimeout is used.  connecttimeout is
+also a global value that may be overriden by a per-virtual setting.
+
+If both negotiatetimeout and connecttimeout are unset, the default is used.
 
 Default: defined by the operating system
 
@@ -540,8 +550,10 @@ use vars qw(
 	    $LDIRECTORD
 	    $LDIRLOG
 	    $NEGOTIATETIMEOUT
+	    $DEFAULT_NEGOTIATETIMEOUT
 	    $RUNPID
 	    $CHECKTIMEOUT
+	    $DEFAULT_CHECKTIMEOUT
 	    $CHECKCOUNT
 	    $QUIESCENT
 	    $EMAILALERT
@@ -599,14 +611,16 @@ $DAEMON_TERM      = undef;
 $DAEMON_HUP       = undef;
 $AUTOCHECK        = "no";
 $CHECKINTERVAL    = 10;
-$CHECKTIMEOUT     = 5;
+$DEFAULT_CHECKTIMEOUT     = 5;
+$CHECKTIMEOUT     = -1;
 $CHECKCOUNT       = 1;
 $LDIRECTORD       = ld_find_cmd("ldirectord", 1);
 if (! defined $LDIRECTORD) {
 	$LDIRECTORD = "@sbindir@/ldirectord";
 }
 $LDIRLOG          = "/var/log/ldirectord.log";
-$NEGOTIATETIMEOUT = 0;
+$NEGOTIATETIMEOUT = -1;
+$DEFAULT_NEGOTIATETIMEOUT = 0;
 $RUNPID           = "/var/run/ldirectord";
 $SUPERVISED       = "no";
 $QUIESCENT        = "yes";
@@ -1836,15 +1850,41 @@ sub ld_setup
 				$$r{num_connects} = -1;
 			}
 		}
-		if ($$v{checktimeout} < 0) {
-			$$v{checktimeout} = $CHECKTIMEOUT;
+
+		# checktimeout and negotiate timeout are 
+		# mutual defaults for each other, so calculate
+		# checktimeout in a tempoary variable so as not
+		# to affect the calculation of negotiatetimeout.
+
+		my $checktimeout = $$v{checktimeout};
+		if ($checktimeout < 0) {
+			$checktimeout = $$v{negotiatetimeout};
+		}
+		if ($checktimeout < 0) {
+			$checktimeout = $CHECKTIMEOUT;
+		}
+		if ($checktimeout < 0) {
+			$checktimeout = $NEGOTIATETIMEOUT;
+		}
+		if ($checktimeout < 0) {
+			$checktimeout = $DEFAULT_CHECKTIMEOUT;
+		}
+
+		if ($$v{negotiatetimeout} < 0) {
+			$$v{negotiatetimeout} = $$v{checktimeout};
 		}
 		if ($$v{negotiatetimeout} < 0) {
 			$$v{negotiatetimeout} = $NEGOTIATETIMEOUT;
 		}
 		if ($$v{negotiatetimeout} < 0) {
-			$$v{negotiatetimeout} = $$v{checktimeout};
+			$$v{negotiatetimeout} = $CHECKTIMEOUT;
 		}
+		if ($$v{negotiatetimeout} < 0) {
+			$$v{negotiatetimeout} = $DEFAULT_NEGOTIATETIMEOUT;
+		}
+
+		$$v{checktimeout} = $checktimeout;
+
 		if ($$v{checkcount} < 0) {
 			$$v{checkcount} = $CHECKCOUNT;
 		}
