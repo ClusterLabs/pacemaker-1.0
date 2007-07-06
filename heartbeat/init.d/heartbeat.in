@@ -51,6 +51,27 @@ CONFIG=$HA_DIR/ha.cf
 LOCKDIR=@localstatedir@/lock/subsys
 RUNDIR=@localstatedir@/run
 
+
+#	Echo without putting a newline on the end
+EchoNoNl() {
+    Echo @ECHO_N@ "$@@ECHO_C@"
+}
+
+#	Echo with escapes enabled...
+EchoEsc() {
+    Echo @ECHO_E@ "$@"
+}
+
+echo_failure() {
+    EchoEsc " Heartbeat failure [rc=$1]. $rc_failed"
+    return $1
+}
+
+echo_success() {
+    : Cool!  It started!
+    EchoEsc "$rc_done"
+}
+
 if
   [ -r /etc/SuSE-release ]
 then

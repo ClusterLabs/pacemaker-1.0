@@ -73,6 +73,7 @@ typedef struct pe_working_set_s
 		GListPtr ordering_constraints;
 		
 		GListPtr actions;
+		crm_data_t *failed;
 
 		/* stats */
 		int num_synapse;
@@ -170,7 +171,7 @@ struct action_s
 		resource_t *rsc;
 		void       *rsc_opaque;
 		node_t     *node;
-		const char *task;
+		char *task;
 
 		char *uuid;
 		crm_data_t *op_entry;

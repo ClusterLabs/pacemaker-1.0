@@ -101,7 +101,7 @@ main(int argc, char **argv)
 #endif
 
 	crm_system_name = basename(argv[0]);
-	crm_log_init(crm_system_name);
+	crm_log_init(crm_system_name, FALSE);
 	crm_log_level = LOG_ERR;
 	cl_log_enable_stderr(TRUE);
 	
@@ -468,6 +468,14 @@ usage(const char *cmd, int exit_status)
 		fprintf(stream, "\t    -t=%s options: -(U|u) -n [-s]\n", XML_CIB_TAG_STATUS);
 		fprintf(stream, "\t    -t=%s options: -n [-s]\n", XML_CIB_TAG_CRMCONFIG);
 	}
+
+	if(safe_str_neq(crm_system_name, "crm_standby")) {
+		fprintf(stream, "\t--%s (-%c)\t: "
+			"Make a change and prevent the TE/PE from seeing it straight away.\n"
+			"\t    You may think you want this option but you don't."
+			" Advanced use only - you have been warned!\n", "inhibit-policy-engine", '!');
+	}	
+	
 	fflush(stream);
 
 	exit(exit_status);

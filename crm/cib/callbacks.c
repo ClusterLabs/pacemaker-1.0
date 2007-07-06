@@ -1259,6 +1259,9 @@ cib_process_command(HA_Message *request, HA_Message **reply,
 		crm_debug_2("Call setup failed: %s", cib_error2string(rc));
 		
 	} else if(cib_server_ops[call_type].modifies_cib) {
+		int log_level = LOG_DEBUG_3;
+		crm_data_t *filtered = NULL;
+		
 		if((call_options & cib_inhibit_notify) == 0) {
 			cib_pre_notify(
 				call_options, op,
@@ -1274,10 +1277,13 @@ cib_process_command(HA_Message *request, HA_Message **reply,
 		}
 		
 		if(rc == cib_ok) {
+			
 			CRM_DEV_ASSERT(result_cib != NULL);
 			CRM_DEV_ASSERT(current_cib != result_cib);
 
 			update_counters(__FILE__, __FUNCTION__, result_cib);
+			config_changed = cib_config_changed(
+				current_cib, result_cib, &filtered);
 
 			if(global_update) {
 				/* skip */
@@ -1285,20 +1291,23 @@ cib_process_command(HA_Message *request, HA_Message **reply,
 					  crm_err("Call type: %d", call_type);
 					  crm_log_message(LOG_ERR, request));
 				crm_debug_2("Skipping update: global replace");
-
+				
 			} else if(cib_server_ops[call_type].fn == cib_process_change
 				  && (call_options & cib_inhibit_bcast)) {
 				/* skip */
 				crm_debug_2("Skipping update: inhibit broadcast");
 
 			} else {
-				config_changed = cib_config_changed(
-					current_cib, result_cib, NULL);
+				cib_update_counter(
+					result_cib, XML_ATTR_NUMUPDATES, FALSE);
 
 				if(config_changed) {
 					cib_update_counter(
-						result_cib, XML_ATTR_NUMUPDATES, FALSE);
+						result_cib, XML_ATTR_NUMUPDATES, TRUE);
+					cib_update_counter(
+						result_cib, XML_ATTR_GENERATION, FALSE);
 				}
+				
 			}
 			
 			if(do_id_check(result_cib, NULL, TRUE, FALSE)) {
@@ -1311,8 +1320,8 @@ cib_process_command(HA_Message *request, HA_Message **reply,
 				*cib_diff = diff_cib_object(
 					current_cib, result_cib, FALSE);
 			}
-		}
-
+		}		
+		
 		if(rc != cib_ok) {
 			free_xml(result_cib);
 			
@@ -1330,11 +1339,23 @@ cib_process_command(HA_Message *request, HA_Message **reply,
 			cib_diff_notify(call_options, client, call_id, op,
 					input, rc, *cib_diff);
 		}
-		if(rc == cib_ok) {
-			log_xml_diff(cib_diff_loglevel, *cib_diff, "cib:diff");
+
+		if(rc != cib_ok) {
+			log_level = LOG_DEBUG_4;
+		} else if(cib_is_master && config_changed) {
+			log_level = LOG_INFO;
+		} else if(cib_is_master) {
+			log_level = LOG_DEBUG;
+			log_xml_diff(LOG_DEBUG_2, filtered, "cib:diff:filtered");
+			
+		} else if(config_changed) {
+			log_level = LOG_DEBUG_2;
 		} else {
-			log_xml_diff(cib_diff_loglevel+1, *cib_diff, "cib:diff");
+			log_level = LOG_DEBUG_3;
 		}
+		
+		log_xml_diff(log_level, *cib_diff, "cib:diff");
+		free_xml(filtered);
 		
 	} else {
 		rc = cib_server_ops[call_type].fn(

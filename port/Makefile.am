@@ -47,18 +47,18 @@ TMPINSTDIR	= tmpinst
 
 # Main target
 portfile:
-	$(RM) -f $(TARFILE) heartbeat.tar heartbeat.tar.gz
-	$(LN) -s ../$(TARFILE) $(TARFILE)
+	rm -f $(TARFILE) heartbeat.tar heartbeat.tar.gz
+	ln -s ../$(TARFILE) $(TARFILE)
 	$(MD5) $(TARFILE) > heartbeat/distinfo
 #	 Create the DistInfo file for the port file.
-	$(LS) -l ../$(TARFILE) | $(AWK) '{print "SIZE \($(TARFILE)\) = "$$5}' >> heartbeat/distinfo
-	$(CP) portMakefile heartbeat/Makefile
+	ls -l ../$(TARFILE) | $(AWK) '{print "SIZE \($(TARFILE)\) = "$$5}' >> heartbeat/distinfo
+	cp portMakefile heartbeat/Makefile
 	$(TAR) -cvf heartbeat.tar heartbeat/Makefile heartbeat/distinfo heartbeat/pkg-deinstall heartbeat/pkg-descr heartbeat/pkg-install heartbeat/pkg-plist
 	$(GZIP_PROG) heartbeat.tar
 
 
 clean:
-	$(RM) $(TARFILE) heartbeat.tar port/distinfo port/Makefile
+	rm $(TARFILE) heartbeat.tar port/distinfo port/Makefile
 	
 clean-local:
-	$(RM) -rf $(TMPINSTDIR) $(PKGDIR)
+	rm -rf $(TMPINSTDIR) $(PKGDIR)
