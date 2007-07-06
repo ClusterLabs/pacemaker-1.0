@@ -90,7 +90,7 @@ case $2 in
 esac
 
 OCF_TYPE=IPaddr
-OCF_RESKEY_lvs_support=1
+OCF_RESKEY_lvs_support=0
 OCF_RESOURCE_INSTANCE=${OCF_TYPE}_$BASEIP
 export OCF_TYPE OCF_RESOURCE_INSTANCE OCF_RESKEY_lvs_support
 
