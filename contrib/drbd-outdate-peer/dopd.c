@@ -509,7 +509,7 @@ main(int argc, char **argv)
 
 	/* Get the name of the binary for logging purposes */
 	bname = cl_strdup(argv[0]);
-	crm_log_init(bname);
+	crm_log_init(bname, TRUE);
 
 	dopd_cluster_conn = ll_cluster_new("heartbeat");
 
