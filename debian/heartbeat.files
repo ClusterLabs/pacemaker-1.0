@@ -149,7 +149,6 @@ usr/lib/heartbeat/plugins/quorum/weight.so
 usr/lib/heartbeat/plugins/quorumd/2_0_8.so
 usr/lib/heartbeat/plugins/test/test.so
 usr/lib/heartbeat/plugins/tiebreaker/twonodes.so
-usr/lib/heartbeat/ptest
 usr/lib/heartbeat/quorumd
 usr/lib/heartbeat/quorumdtest
 usr/lib/heartbeat/recoverymgrd
@@ -207,6 +206,10 @@ usr/lib/libstonithd.so.0
 usr/lib/libstonithd.so.0.0.0
 usr/lib/libtransitioner.so.1
 usr/lib/libtransitioner.so.1.0.0
+usr/lib/ocf/resource.d/heartbeat/.ocf-binaries
+usr/lib/ocf/resource.d/heartbeat/.ocf-directories
+usr/lib/ocf/resource.d/heartbeat/.ocf-returncodes
+usr/lib/ocf/resource.d/heartbeat/.ocf-shellfuncs
 usr/lib/ocf/resource.d/heartbeat/AudibleAlarm
 usr/lib/ocf/resource.d/heartbeat/ClusterMon
 usr/lib/ocf/resource.d/heartbeat/Delay
@@ -290,6 +293,7 @@ usr/sbin/crmadmin
 usr/sbin/iso8601
 usr/sbin/meatclient
 usr/sbin/ocf-tester
+usr/sbin/ptest
 usr/sbin/stonith
 usr/share/doc/heartbeat/AUTHORS
 usr/share/doc/heartbeat/ChangeLog
