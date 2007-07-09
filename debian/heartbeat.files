@@ -149,7 +149,6 @@ usr/lib/heartbeat/plugins/quorum/weight.so
 usr/lib/heartbeat/plugins/quorumd/2_0_8.so
 usr/lib/heartbeat/plugins/test/test.so
 usr/lib/heartbeat/plugins/tiebreaker/twonodes.so
-usr/lib/heartbeat/ptest
 usr/lib/heartbeat/quorumd
 usr/lib/heartbeat/quorumdtest
 usr/lib/heartbeat/recoverymgrd
@@ -290,6 +289,7 @@ usr/sbin/crmadmin
 usr/sbin/iso8601
 usr/sbin/meatclient
 usr/sbin/ocf-tester
+usr/sbin/ptest
 usr/sbin/stonith
 usr/share/doc/heartbeat/AUTHORS
 usr/share/doc/heartbeat/ChangeLog
