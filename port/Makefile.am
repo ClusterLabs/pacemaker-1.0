@@ -58,7 +58,7 @@ portfile:
 
 
 clean:
-	rm $(TARFILE) heartbeat.tar port/distinfo port/Makefile
+	rm -f $(TARFILE) heartbeat.tar port/distinfo port/Makefile
 	
 clean-local:
 	rm -rf $(TMPINSTDIR) $(PKGDIR)
