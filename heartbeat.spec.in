@@ -45,23 +45,12 @@ Group: Utilities
 %endif
 
 %description
-@HB_PKG@ is a basic high-availability subsystem for Linux-HA.
-It will run scripts at initialization, and when machines go up or down.
-This version will also perform IP address takeover using gratuitous ARPs.
-It supports "n-node" clusters with significant capabilities for managing
-resources and dependencies.
+@HB_PKG@ is an advanced  high-availability subsystem for Linux-HA.
+It supports "n-node" clusters with significant capabilities for 
+creating sophisticated policies for managing resources and dependencies.
 
 In addition it continues to support the older release 1 style of
 2-node clustering.
-
-It implements the following kinds of heartbeats:
-	- Serial ports
-	- UDP/IP multicast (ethernet, etc)
-	- UDP/IP broadcast (ethernet, etc)
-	- UDP/IP heartbeats
-	- "ping" heartbeats (for routers, switches, etc.)
-	   (to be used for breaking ties in 2-node systems)
-
 %description ldirectord
 ldirectord is a stand-alone daemon to monitor services of real 
 for virtual services provided by The Linux Virtual Server
@@ -1339,7 +1328,7 @@ GUI client for heartbeat clusters
   +  Made SIGUSR1 increment debug level, and SIGUSR2 decrement it.
   +  Incorporated Rudy's latest "Getting Started" document
   +  Made it largely Debian-compliant.  Thanks to Guenther Thomsen, Thomas
-	Hepper, IÒaki Fern·ndez Villanueva and others.
+	Hepper, I√±aki Fern√°ndez Villanueva and others.
   +  Made changes to work better with Red Hat 6.1, and SMP code.
   +  Sometimes it seems that the Master Control Process dies :-(
 
@@ -1478,7 +1467,8 @@ ln -s @libdir@/heartbeat-gui/haclient.py $RPM_BUILD_ROOT@bindir@/hb_gui
 @libdir@/libstonithd.*
 @libdir@/libpe_rules.*
 @libdir@/libpe_status.*
-/usr/lib/ocf
+@HA_NOARCHLIBHBDIR@
+@OCF_ROOT_DIR@
 @base_includedir@/heartbeat
 @base_includedir@/clplumbing
 @base_includedir@/saf
@@ -1495,6 +1485,7 @@ ln -s @libdir@/heartbeat-gui/haclient.py $RPM_BUILD_ROOT@bindir@/hb_gui
 %dir @localstatedir@/run/@HB_PKG@
 %attr (2555, @HA_CCMUSER@, @HA_APIGROUP@) @bindir@/cl_status
 @bindir@/cl_respawn
+@sbindir@/ptest 
 @sbindir@/crmadmin 
 @sbindir@/cibadmin 
 @sbindir@/ccm_tool 
@@ -1511,6 +1502,7 @@ ln -s @libdir@/heartbeat-gui/haclient.py $RPM_BUILD_ROOT@bindir@/hb_gui
 @sbindir@/attrd_updater
 @sbindir@/crm_failcount
 @sbindir@/crm_sh
+@sbindir@/ha_logger
 %dir %attr (755, @HA_CCMUSER@, @HA_APIGROUP@) @HA_VARRUNDIR@/@HB_PKG@/ccm
 %dir %attr (750, @HA_CCMUSER@, @HA_APIGROUP@) @HA_VARRUNDIR@/@HB_PKG@/crm
 %dir %attr (750, @HA_CCMUSER@, @HA_APIGROUP@) @localstatedir@/lib/@HB_PKG@/crm

@@ -32,7 +32,7 @@ ra_execocf(){
 	exit 1
     fi
 
-    . @hb_libdir@/ocf-shellfuncs
+    . @HA_NOARCHLIBHBDIR@/ocf-shellfuncs
     
     __ACTION=$1
     __SCRIPT_NAME="${OCF_RA_DIR}/heartbeat/${OCF_TYPE}"

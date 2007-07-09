@@ -14,7 +14,7 @@ exec_prefix=@exec_prefix@
 : ${HA_VARLIB:=@localstatedir@/lib/heartbeat}
 : ${HA_RSCTMP:=@HA_VARRUNDIR@/heartbeat/rsctmp}
 : ${HA_FIFO:=@localstatedir@/lib/heartbeat/fifo}
-: ${HA_BIN:=@libdir@/heartbeat}
+: ${HA_BIN:=@HA_LIBHBDIR@}
 : ${HA_DATEFMT:="%Y/%m/%d_%T "}
 : ${HA_DEBUGLOG:=/dev/null}
 : ${HA_RESOURCEDIR:=$HA_DIR/resource.d}
@@ -30,6 +30,9 @@ export HA_DATEFMT HA_RESOURCEDIR HA_DOCDIR
 
 MKTEMP=@MKTEMP@
 TESTPROG=@TEST@
+PATH=$HA_BIN:@HA_NOARCHLIBHBDIR@:$PATH
+PATH=`echo $PATH | sed -e 's%::%%' -e 's%:.:%%' -e 's%^:%%' -e 's%^.:%%'`
+export PATH
 
 #	A suitable echo command
 Echo() {
@@ -42,7 +45,7 @@ hadate() {
 
 ha_log() {
 	if [ "x${HA_LOGD}" = "xyes" ] ; then 
-		${HA_BIN}/ha_logger -t "${HA_LOGTAG}" "$@"
+		ha_logger -t "${HA_LOGTAG}" "$@"
 		if [ "$?" -eq "0" ] ; then
 			return 0
 		fi
@@ -80,7 +83,7 @@ ha_log() {
 ha_debug() {
 
         if [ "x${HA_LOGD}" = "xyes" ] ; then  
-		${HA_BIN}/ha_logger -t "${HA_LOGTAG}" -D "ha-debug" "$@"
+		ha_logger -t "${HA_LOGTAG}" -D "ha-debug" "$@"
                 if [ "$?" -eq "0" ] ; then
                         return 0
                 fi

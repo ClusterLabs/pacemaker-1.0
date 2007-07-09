@@ -24,6 +24,12 @@ Usage() {
 	Patches to this process are solicited -- especially in these areas.
 
 	!
+  if
+    [ -x ./configure ]
+  then
+    echo "Legal configure arguments are:"
+    ./configure --help
+  fi
   exit 1
 }
 #
@@ -98,7 +104,7 @@ ConfigureLinux() {
     distro="Generic Linux"
   fi
   CFENV="$distro"
-  FLAGS="--prefix=/usr --sysconfdir=/etc --localstatedir=/var $DFLAGS"
+  FLAGS="--prefix=/usr --sysconfdir=/etc --localstatedir=/var $DFLAGS --disable-rpath"
   case `uname -m` in 	 
     x86_64) 	 
 	# Hmmm... Let's check for building from chrooted 32-bit environment... 	 
@@ -120,29 +126,29 @@ ConfigureAIX() {
 }
 
 ConfigureFreeBSD() {
-  FLAGS="--prefix=/usr/local --sysconfdir=/usr/local/etc --localstatedir=/var --enable-all  --with-group-id=90 --with-ccmuser-id=90 "
+  FLAGS="--prefix=/usr/local --sysconfdir=/usr/local/etc --localstatedir=/var --enable-all  --with-group-id=90 --with-ccmuser-id=90 --disable-rpath"
   CFENV="FreeBSD"
 }
 
 ConfigureOpenBSD() {
-  FLAGS="--disable-ldirectord --prefix=/usr/local --sysconfdir=/usr/local/etc --localstatedir=/var  --with-group-id=90 --with-ccmuser-id=90"
+  FLAGS="--disable-ldirectord --prefix=/usr/local --sysconfdir=/usr/local/etc --localstatedir=/var  --with-group-id=90 --with-ccmuser-id=90 --disable-rpath"
   CFENV="OpenBSD"
 }
 
 ConfigureNetBSD() {
-  FLAGS="--disable-ldirectord --prefix=/usr/local --sysconfdir=/usr/local/etc --localstatedir=/var  --with-group-id=90 --with-ccmuser-id=90"
+  FLAGS="--disable-ldirectord --prefix=/usr/local --sysconfdir=/usr/local/etc --localstatedir=/var  --with-group-id=90 --with-ccmuser-id=90 --disable-rpath"
   CFENV="NetBSD"
 }
 
 ConfigureGenericBSD() {
-  FLAGS="--disable-ldirectord --prefix=/usr/local --sysconfdir=/usr/local/etc --localstatedir=/var  --with-group-id=90 --with-ccmuser-id=90"
+  FLAGS="--disable-ldirectord --prefix=/usr/local --sysconfdir=/usr/local/etc --localstatedir=/var  --with-group-id=90 --with-ccmuser-id=90 --disable-rpath"
   CFENV="Generic BSD"
 }
 
 ConfigureSolaris() {
   # PKGNAME: see comment in "configure.in"
   PKGNAME="LXHAhb"
-  FLAGS="--disable-ldirectord --prefix=/opt/$PKGNAME --sysconfdir=/etc/opt/$PKGNAME --localstatedir=/var/opt/$PKGNAME --with-pkgname=$PKGNAME"
+  FLAGS="--disable-ldirectord --prefix=/opt/$PKGNAME --sysconfdir=/etc/opt/$PKGNAME --localstatedir=/var/opt/$PKGNAME --with-pkgname=$PKGNAME --disable-rpath"
   CFENV="Solaris"
   PACKAGECMD="$MAKE_CMD pkg"
 }
@@ -160,6 +166,7 @@ ConfigureDarwin() {
   FLAGS="$FLAGS  --localstatedir=${install_prefix}/var"
   FLAGS="$FLAGS --with-group-name=admin --with-ccmuser-name=daemon"
   FLAGS="$FLAGS --enable-fatal-warnings=yes"
+  FLAGS="$FLAGS --disable-rpath"
   export CFENV="Darwin"
 }
 
