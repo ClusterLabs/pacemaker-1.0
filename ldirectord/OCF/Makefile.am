@@ -1,36 +1,26 @@
 #
 # ldirectord: Linux-HA heartbeat code
 #
-# Copyright (C) 2001 Michael Moerz
+# Copyright (C) 2007 Horms
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
 # as published by the Free Software Foundation; either version 2
 # of the License, or (at your option) any later version.
-# 
+#
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #
 MAINTAINERCLEANFILES    = Makefile.in
-CLEANFILES	       	= ldirectord.8
 
-EXTRA_DIST              = ldirectord ldirectord.cf README	\
-				supervise-ldirectord-config \
-				supervise-ldirectord-config.8
+EXTRA_DIST              = $(ocf_SCRIPTS)
 
-SUBDIRS			= logrotate.d init.d OCF
+ocfdir			= @OCF_RA_DIR@/heartbeat
 
-ldirectord.8: ldirectord
-	$(POD2MAN) --section=8 $< > $@
-
-sbin_SCRIPTS		= ldirectord supervise-ldirectord-config
-man_MANS	        = ldirectord.8 supervise-ldirectord-config.8
-
-## additional Makefile targets
-# additional installations not covered normally
+ocf_SCRIPTS		= ldirectord
