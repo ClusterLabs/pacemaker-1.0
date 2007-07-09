@@ -206,6 +206,10 @@ usr/lib/libstonithd.so.0
 usr/lib/libstonithd.so.0.0.0
 usr/lib/libtransitioner.so.1
 usr/lib/libtransitioner.so.1.0.0
+usr/lib/ocf/resource.d/heartbeat/.ocf-binaries
+usr/lib/ocf/resource.d/heartbeat/.ocf-directories
+usr/lib/ocf/resource.d/heartbeat/.ocf-returncodes
+usr/lib/ocf/resource.d/heartbeat/.ocf-shellfuncs
 usr/lib/ocf/resource.d/heartbeat/AudibleAlarm
 usr/lib/ocf/resource.d/heartbeat/ClusterMon
 usr/lib/ocf/resource.d/heartbeat/Delay
