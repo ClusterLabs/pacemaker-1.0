@@ -5025,6 +5025,7 @@ make_daemon(void)
 	setenv(HADIRENV, HA_HBCONF_DIR, TRUE);
 	setenv(DATEFMT, HA_DATEFMT, TRUE);
 	setenv(HAFUNCENV, HA_FUNCS, TRUE);
+	setenv("OCF_ROOT", OCF_ROOT_DIR, TRUE);
 	umask(022);
 	close(FD_STDIN);
 	(void)open(devnull, O_RDONLY);		/* Stdin:  fd 0 */
