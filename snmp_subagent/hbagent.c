@@ -1339,7 +1339,7 @@ main(int argc, char ** argv)
 
 		if (ret < 0) {
 			/* error */
-			cl_log(LOG_ERR, "select() returned with an error. shutting down...");
+			cl_perror("select() returned an error. shutting down");
 			break;
 		} else if (ret == 0) {
 			/* timeout */
