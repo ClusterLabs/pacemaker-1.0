@@ -99,7 +99,6 @@ usr/lib/heartbeat/drbd-peer-outdater
 usr/lib/heartbeat/findif
 usr/lib/heartbeat/ha_config
 usr/lib/heartbeat/ha_logd
-usr/lib/heartbeat/ha_logger
 usr/lib/heartbeat/ha_propagate
 usr/lib/heartbeat/haresources2cib.py
 usr/lib/heartbeat/hb_addnode
@@ -295,6 +294,7 @@ usr/sbin/meatclient
 usr/sbin/ocf-tester
 usr/sbin/ptest
 usr/sbin/stonith
+usr/sbin/ha_logger
 usr/share/doc/heartbeat/AUTHORS
 usr/share/doc/heartbeat/ChangeLog
 usr/share/doc/heartbeat/DirectoryMap.txt
