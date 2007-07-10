@@ -939,7 +939,8 @@ TestRA() {
 	if [ ! -x $OCF_TESTER ]; then
 		return 0
 	fi
-        export OCF_ROOT=@OCF_ROOT_DIR@
+        OCF_ROOT=@OCF_ROOT_DIR@
+        export OCF_ROOT
 	RADIR=@OCF_RA_DIR@/@HB_PKG@
 	echo "Starting Resource Agent tests" | tee -a $LOGFILE
 

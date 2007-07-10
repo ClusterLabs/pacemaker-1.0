@@ -616,21 +616,21 @@ change_logfile_ownership(void)
 
 	entry = getpwnam(apiuser);
 	if (entry == NULL){
-		cl_log(LOG_ERR, "change_logfile_ownship:"
-		       " entry for user %s not found", apiuser);
+		cl_log(LOG_ERR, "%s: entry for user %s not found",
+		  __FUNCTION__,  apiuser);
 		return;
 	}
 	
 	if (config->use_logfile){
 		if (chown(config->logfile, entry->pw_uid, entry->pw_gid) < 0) {
-			cl_log(LOG_WARNING, "change_logfile_ownship:"
-			       " failed to chown logfile");
+			cl_log(LOG_WARNING, "%s: failed to chown logfile: %s",
+			  __FUNCTION__, strerror(errno));
 		}
 	}
 	if (config->use_dbgfile){
 		if (chown(config->dbgfile, entry->pw_uid, entry->pw_gid) < 0) {
-			cl_log(LOG_WARNING, "change_logfile_ownship:"
-			       " failed to chown dbgfile");
+			cl_log(LOG_WARNING, "%s: failed to chown dbgfile: %s",
+			  __FUNCTION__, strerror(errno));
 		}
 	}
 	
