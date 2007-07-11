@@ -20,6 +20,7 @@
  */
 
 
+#include <lha_internal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -1032,7 +1033,7 @@ main (int argc, char**  argv)
 	gi.testwarn = 0;
 	gi.testfail = 0;
 	
-	strcpy(gi.filename, filename);
+	strlcpy(gi.filename, filename, sizeof(gi.filename));
 	
 	init_comm(servername);
 	

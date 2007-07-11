@@ -229,7 +229,7 @@ node_walk(ll_cluster_t *hb)
 		/* Look for our partner */
 		if (!strcmp("normal", hb->llc_ops->node_type(hb, node))
 		    && strcmp(node, node_name)) {
-			strcpy(other_node, node);
+			strlcpy(other_node, node, sizeof(other_node));
 			cl_log(LOG_DEBUG, "[They are %s]", other_node);
 		}
 

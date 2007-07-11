@@ -32,7 +32,7 @@ halib_PROGRAMS          = mlock
 
 ## SOURCES
 mlock_SOURCES          = mlock.c
-mlock_LDADD            =$(GLIBLIB)
+mlock_LDADD            =$(GLIBLIB) $(top_builddir)/replace/libreplace.la
 
 
 ## additional Makefile targets

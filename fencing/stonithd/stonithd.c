@@ -3755,7 +3755,8 @@ init_using_apphb(void)
 {
 	char stonithd_instance[40];
 
-	sprintf(stonithd_instance, "%s_%ldd", stonithd_name, (long)getpid());
+	snprintf(stonithd_instance, sizeof(stonithd_instance), "%s_%ldd"
+	,	stonithd_name, (long)getpid());
         if (apphb_register(stonithd_name, stonithd_instance) != 0) {
                 stonithd_log(LOG_ERR, "Failed when trying to register to apphbd.");
                 stonithd_log(LOG_ERR, "Maybe apphd isnot running. Quit.");
