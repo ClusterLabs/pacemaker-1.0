@@ -1338,6 +1338,20 @@ main(int argc, char ** argv)
 		ret = select(numfds, &fdset, 0, 0, tvp);
 
 		if (ret < 0) {
+			if (errno == EBADF) {
+				struct stat	foo;
+				/* Probably the membership layer shut down for some reason. */
+				if (mem_fd >= 0 && fstat(mem_fd, &foo) < 0 && errno == EBADF) {
+					cl_log(LOG_WARNING, "membership layer shut down.");
+					FD_CLR(mem_fd, &fdset);
+					if (numfds == mem_fd + 1) {
+						numfds--;
+					}
+					mem_fd = -1;
+					break;
+				}
+			}
+				
 			/* error */
 			cl_perror("select() returned an error. shutting down");
 			break;
