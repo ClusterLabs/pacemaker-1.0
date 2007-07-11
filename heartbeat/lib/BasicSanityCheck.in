@@ -321,10 +321,11 @@ SaveLog() {
   echo "$errcount errors. Log file is stored in $SAVELOG"
 }
 
-RemoveConfigFilesAndSaveLog() {
-  trap $SIGLIST		# restore signal beahviour to entry state
+RemoveConfigFilesAndSaveLogAndExit() {
+  trap "" $SIGLIST		# tidying: ignore other signals
   RemoveConfigFiles
   SaveLog
+  exit
 }
 
 SaveConfigFiles() {
@@ -1005,7 +1006,7 @@ esac
 touch $LOGFILE
 chown @HA_CCMUSER@ $LOGFILE
 
-trap 'RemoveConfigFilesAndSaveLog' $SIGLIST
+trap 'RemoveConfigFilesAndSaveLogAndExit' $SIGLIST
 
 SetUpConfigFiles
 > $LOGFILE
