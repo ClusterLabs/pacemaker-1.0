@@ -3267,7 +3267,7 @@ ccm_initialize()
 
 static void add_change_msg(ccm_info_t *info, const char *node, const char *orig, enum change_event_type type)
 {
-	strcpy(info->change_node_id, node);
+	strlcpy(info->change_node_id, node, sizeof(info->change_node_id));
 	info->change_type = type;
 	if(type == NODE_LEAVE){
 		info->change_event_remaining_count = ccm_get_memcount(info)-1;

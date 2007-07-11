@@ -655,7 +655,7 @@ main(int argc, char ** argv) {
 		char errmsg[MAXSTR] = "No valid mecahnisms";
 		int rc = -1;
 
-		strcpy(best_if, "UNKNOWN"); /* just in case */
+		strlcpy(best_if, "UNKNOWN", sizeof(best_if)); /* just in case */
 
 		while (*sr) {
 			errmsg[0] = '\0';

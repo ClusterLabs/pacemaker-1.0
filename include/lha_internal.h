@@ -111,6 +111,9 @@ inet_pton(int af, const char *src, void *dst);
 #else
 #	define USE_GNU
 #endif
+#ifndef HAVE_STRLCPY
+	size_t strlcpy(char * dest, const char *source, size_t len);
+#endif
 
 #ifndef HAVE_NFDS_T 
 	typedef unsigned int nfds_t;
