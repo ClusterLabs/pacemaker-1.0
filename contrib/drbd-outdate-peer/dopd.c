@@ -47,7 +47,6 @@
 
 
 const char *node_name;	   /* The node we are connected to	      */
-int node_stable;	   /* Other node stable?		      */
 int quitnow = 0;	   /* Allows a signal to break us out of loop */
 GMainLoop *mainloop;	   /* Reference to the mainloop for events    */
 ll_cluster_t *dopd_cluster_conn;
@@ -371,20 +370,6 @@ outdater_client_destroy(gpointer user_data)
 	crm_info("ipc server destroy");
 }
 
-int
-is_stable(ll_cluster_t *hb)
-{
-	const char *resources = hb->llc_ops->get_resources(hb);
-	if (!resources)
-		/* Heartbeat is not providing resource management */
-		return -1;
-
-	if (!strcmp(resources, "transition"))
-		return 0;
-
-	return 1;
-}
-
 /* set_callbacks()
  * set callbacks for communication between two nodes
  */
@@ -518,12 +503,6 @@ main(int argc, char **argv)
 	crm_debug("PID=%s", pid);
 
 	open_api(dopd_cluster_conn);
-
-	node_stable = is_stable(dopd_cluster_conn);
-	if (node_stable == -1) {
-		crm_err("No managed resources");
-		exit(100);
-	}
 
 	/* Obtain our local node name */
 	node_name = dopd_cluster_conn->llc_ops->get_mynodeid(dopd_cluster_conn);

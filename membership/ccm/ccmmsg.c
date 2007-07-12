@@ -617,6 +617,6 @@ dump_sending_msg(struct ha_msg* msg, const char* node)
 	status = ha_msg_value(msg, F_STATUS);
 	
 	ccm_debug(LOG_DEBUG, "send msg %s to %s, status:%s"
-	,	type, node==NULL?"cluster":node, status);
+	,	type, node==NULL?"cluster":node, (status ? status : "[null]"));
 	ccm_message_debug2(LOG_DEBUG, msg);
 }

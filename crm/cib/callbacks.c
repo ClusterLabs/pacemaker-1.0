@@ -1307,7 +1307,6 @@ cib_process_command(HA_Message *request, HA_Message **reply,
 					cib_update_counter(
 						result_cib, XML_ATTR_GENERATION, FALSE);
 				}
-				
 			}
 			
 			if(do_id_check(result_cib, NULL, TRUE, FALSE)) {
@@ -1325,9 +1324,11 @@ cib_process_command(HA_Message *request, HA_Message **reply,
 		if(rc != cib_ok) {
 			free_xml(result_cib);
 			
-		} else if(activateCibXml(result_cib, config_changed) != 0){
+		} else {
+		    rc = activateCibXml(result_cib, config_changed);
+		    if(rc != cib_ok) {
 			crm_warn("Activation failed");
-			rc = cib_ACTIVATION;
+		    }
 		}
 
 		if((call_options & cib_inhibit_notify) == 0) {
