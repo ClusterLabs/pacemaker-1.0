@@ -38,6 +38,5 @@ void close_api(ll_cluster_t *);
 gboolean dopd_dispatch(IPC_Channel *, gpointer);
 void dopd_dispatch_destroy(gpointer);
 gboolean dopd_timeout_dispatch(gpointer);
-int is_stable(ll_cluster_t *);
 void msg_start_outdate(struct ha_msg *, void *);
 void msg_outdate_rc(struct ha_msg *, void *);
