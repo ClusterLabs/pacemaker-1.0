@@ -1633,8 +1633,23 @@ fi
 #/sbin/chkconfig --add heartbeat
 # this was wrong, but it was convenient.  The time has
 # come to fix it.
-true
-
+#
+#	Make backwards-compatible symlinks - if necessary
+#
+List="BasicSanityCheck ResourceManager TestHeartbeatComm
+crm.dtd ha_config ha_propagate hb_addnode hb_delnode
+hb_setsite hb_setweight hb_standby hb_takeover
+mach_down req_resource"
+if
+  [ "@hb_libdir@"/ != "@HA_NOARCHLIBHBDIR@" ]
+then
+  cd @hb_libdir@
+  for file in $List
+  do
+    rm -f $file
+    ln -s @HA_NOARCHLIBHBDIR@/$file .
+  done
+fi
 ###########################################################
 %preun
 ###########################################################
@@ -1645,8 +1660,21 @@ if
 then
   [ -x /sbin/chkconfig ] && /sbin/chkconfig --del heartbeat
 fi
-true
+#
+#	Remove backwards-compatible symlinks - if any
+#
+List="BasicSanityCheck ResourceManager TestHeartbeatComm
+crm.dtd ha_config ha_propagate hb_addnode hb_delnode
+hb_setsite hb_setweight hb_standby hb_takeover
+mach_down req_resource"
+if
+  [ "@hb_libdir@" != "@HA_NOARCHLIBHBDIR@" ]
+then
+  cd @hb_libdir@
+  rm -f $List
+fi
 
 ###########################################################
 %postun
+true
 ###########################################################
