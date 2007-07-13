@@ -71,6 +71,7 @@
 #include <arpa/inet.h>
 
 #include <netdb.h>
+#include <clplumbing/uids.h>
 #include <heartbeat.h>
 #include <HBcomm.h>
 
@@ -409,6 +410,7 @@ ping_write(struct hb_media* mp, void *p, int len)
 	const char *		ts;
 	struct ha_msg *		nmsg;
 	struct ha_msg *		msg;
+	static gboolean		needroot = FALSE;
 	
 	
 	msg = wirefmt2msg(p, len, MSG_NEEDAUTH);
@@ -492,13 +494,25 @@ ping_write(struct hb_media* mp, void *p, int len)
 	/* Compute the ICMP checksum */
 	icp->icmp_cksum = in_cksum((u_short *)icp, pktsize);
 
+retry:
+	if (needroot) {
+		return_to_orig_privs();
+	}
+
 	if ((rc=sendto(ei->sock, (void *) icmp_pkt, pktsize, 0
 	,	(struct sockaddr *)&ei->addr
 	,	sizeof(struct sockaddr))) != (ssize_t)pktsize) {
+		if (errno == EPERM && !needroot) {
+			needroot=TRUE;
+			goto retry;
+		}
 		PILCallLog(LOG, PIL_CRIT, "Error sending packet: %s", strerror(errno));
 		FREE(icmp_pkt);
 		ha_msg_del(msg);
 		return(HA_FAIL);
+	}
+	if (needroot) {
+		return_to_dropped_privs();
 	}
 
 	if (DEBUGPKT) {
