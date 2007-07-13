@@ -6301,15 +6301,19 @@ IncrGeneration(seqno_t * generation)
 
 	if ((fd = open(HB_VERS_FILE, O_RDONLY)) < 0
 	||	read(fd, buf, sizeof(buf)) < 1) {
-		cl_log(LOG_WARNING, "No Previous generation - starting at 1");
-		snprintf(buf, sizeof(buf), "%*d", GENLEN, 0);
+		GetTimeBasedGeneration(generation);
+		cl_log(LOG_WARNING, "No Previous generation - starting at %lu"
+		,		(unsigned long)(*generation)+1);
+		snprintf(buf, sizeof(buf), "%*lu", GENLEN, *generation);
 		flags = O_CREAT;
 	}
 	close(fd);
 
 	buf[GENLEN] = EOS;
 	if (sscanf(buf, "%lu", generation) <= 0) {
-		cl_log(LOG_WARNING, "BROKEN previous generation - starting at 1");
+		GetTimeBasedGeneration(generation);
+		cl_log(LOG_WARNING, "BROKEN previous generation - starting at %ld"
+		,	(*generation)+1);
 		flags = O_CREAT;
 		*generation = 0;
 	}
