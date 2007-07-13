@@ -1641,7 +1641,7 @@ crm.dtd ha_config ha_propagate hb_addnode hb_delnode
 hb_setsite hb_setweight hb_standby hb_takeover
 mach_down req_resource"
 if
-  [ "@hb_libdir@"/ != "@HA_NOARCHLIBHBDIR@" ]
+  [ "@hb_libdir@" != "@HA_NOARCHLIBHBDIR@" ]
 then
   cd @hb_libdir@
   for file in $List
