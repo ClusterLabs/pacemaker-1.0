@@ -79,6 +79,7 @@
 #include <heartbeat.h>
 #include <HBcomm.h>
 #include <clplumbing/realtime.h>
+#include <clplumbing/uids.h>
 
 #ifdef linux
 #	define	ICMP_HDR_SZ	sizeof(struct icmphdr)	/* 8 */
@@ -521,6 +522,7 @@ ping_group_write(struct hb_media* mp, void *p, int len)
 	struct ha_msg *		nmsg;
 	ping_group_node_t *	node;
 	struct ha_msg*		msg;
+	static gboolean		needroot=FALSE;			
 	
 	PINGGROUPASSERT(mp);
 	
@@ -606,10 +608,20 @@ ping_group_write(struct hb_media* mp, void *p, int len)
 	/* Compute the ICMP checksum */
 	icp->icmp_cksum = in_cksum((u_short *)icp, pktsize);
 
+retry:
+	if (needroot) {
+		return_to_orig_privs();
+	}
+
 	for(node = ei->node; node; node = node->next) {
 		if ((rc=sendto(ei->sock, (void *) icmp_pkt, pktsize, 0
 		,	(struct sockaddr *)&node->addr
 		,	sizeof(struct sockaddr))) != (ssize_t)pktsize) {
+			if (errno == EPERM && !needroot) {
+				needroot=TRUE;
+				goto retry;
+			}
+
 			PILCallLog(LOG, PIL_CRIT, "Error sending packet: %s"
 			,	strerror(errno));
 			FREE(icmp_pkt);
@@ -623,6 +635,9 @@ ping_group_write(struct hb_media* mp, void *p, int len)
    		}
 
 		cl_shortsleep();
+	}
+	if (needroot) {
+		return_to_dropped_privs();
 	}
 
 	if (DEBUGPKTCONT) {
