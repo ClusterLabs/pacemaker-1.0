@@ -100,7 +100,6 @@ fi
 #	and I suspect Conectiva and Mandrake also supply it.
 
 DISTFUNCS=/etc/rc.d/init.d/functions
-PROC_HA=$HA_BIN/ha.o
 SUBSYS=heartbeat
 MODPROBE=/sbin/modprobe
 US=`uname -n`
@@ -287,7 +286,7 @@ StartHA() {
   then
     : OK
   else
-    $HA_BIN/ResourceManager verifyallidle
+    $HA_NOARCHBIN/ResourceManager verifyallidle
   fi
   if
     [ $USE_MODULES = 1 ]
