@@ -80,7 +80,7 @@ static void free_stonith_ops_t(stonith_ops_t * st_op);
 static void free_stonithRA_ops_t(stonithRA_ops_t * ra_op);
 
 #define stdlib_log(priority, fmt...); \
-        if ( ( priority != LOG_DEBUG ) || ( DEBUG_MODE != FALSE ) ) { \
+        if ( ( priority != LOG_DEBUG ) || ( debug_level > 0 ) ) { \
                 cl_log(priority, fmt); \
         }
 
