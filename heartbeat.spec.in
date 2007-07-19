@@ -1465,6 +1465,7 @@ ln -s @libdir@/heartbeat-gui/haclient.py $RPM_BUILD_ROOT@bindir@/hb_gui
 @libdir@/libpe_status.*
 @HA_NOARCHLIBHBDIR@
 @OCF_ROOT_DIR@
+%exclude @OCF_RA_DIR@/heartbeat/ldirectord
 @base_includedir@/heartbeat
 @base_includedir@/clplumbing
 @base_includedir@/saf
@@ -1537,6 +1538,7 @@ ln -s @libdir@/heartbeat-gui/haclient.py $RPM_BUILD_ROOT@bindir@/hb_gui
 @sysconfdir@/logrotate.d/ldirectord
 @INITDIR@/ldirectord
 @sysconfdir@/ha.d/resource.d/ldirectord
+@OCF_RA_DIR@/heartbeat/ldirectord
 %doc @mandir@/man8/ldirectord.8*
 %doc @mandir@/man8/supervise-ldirectord-config.8*
 %doc ldirectord/ldirectord.cf
