@@ -99,6 +99,7 @@ usr/lib/heartbeat/drbd-peer-outdater
 usr/lib/heartbeat/findif
 usr/lib/heartbeat/ha_config
 usr/lib/heartbeat/ha_logd
+usr/lib/heartbeat/ha_logger
 usr/lib/heartbeat/ha_propagate
 usr/lib/heartbeat/haresources2cib.py
 usr/lib/heartbeat/hb_addnode
