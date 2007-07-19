@@ -10,6 +10,14 @@ heartbeat (2.1.1-1) unstable; urgency=low
     - ipv6addr-scanf-return.patch
     - ldirectord-init.patch
     - configure-sys-types.h.patch
+  * After unpacking apply patches and run autoconf to effect
+    changes to configure.in
+  * Update files included in heartbeat, heartbeat-dev and ldirectord packages
+
+ -- Simon Horman <horms@debian.org>  Thu, 19 Jul 2007 13:43:36 +0900
+
+heartbeat (2.0.8-10) unstable; urgency=low
+
   * Remove apparently bogus build-dependacy on modutils
     Thanks to Russell Coker for spotting this.
     A bug was subsequently filed as the result of some automated testing.
@@ -19,11 +27,8 @@ heartbeat (2.1.1-1) unstable; urgency=low
   * Change heartbeat-gui's dependancy on heartbeat to a suggests,
     as heartbat-gui can access heartbeat remotely
     (closes: #430082)
-  * After unpacking apply patches and run autoconf to effect
-    changes to configure.in
-  * Update files included in heartbeat, heartbeat-dev and ldirectord packages
 
- -- Simon Horman <horms@debian.org>  Wed, 11 Jul 2007 12:35:53 +0900
+ -- Simon Horman <horms@debian.org>  Thu, 19 Jul 2007 13:38:35 +0900
 
 heartbeat (2.0.8-9) unstable; urgency=low
 
