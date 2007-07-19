@@ -114,6 +114,9 @@ inet_pton(int af, const char *src, void *dst);
 #ifndef HAVE_STRLCPY
 	size_t strlcpy(char * dest, const char *source, size_t len);
 #endif
+#ifndef HAVE_STRLCAT
+	size_t strlcat(char * dest, const char *source, size_t len);
+#endif
 
 #ifndef HAVE_NFDS_T 
 	typedef unsigned int nfds_t;
