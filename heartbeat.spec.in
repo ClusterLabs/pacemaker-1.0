@@ -81,6 +81,923 @@ GUI client for heartbeat clusters
 %endif
 
 %changelog
+* Mon Jul 09 2007  Alan Robertson <alanr@unix.sh> (see doc/AUTHORS file)
++ Version 2.1.1 - bug fixes and enhancements - changelog includes everything after 2.0.8
+  +++++ OSDL / Linux Foundation bugzilla bugs +++++
+  + OSDL bug 393 - Enable build of plugin if OpenHPI present
+  + OSDL bug 393 - Update plugin from OpenHPI 2.2 to OpenHPI 2.6
+  + OSDL bug 393 - Rename ibmbc to bladehpi
+  + OSDL 761: Remove history from heartbeat init script.
+  + LF Bug # 960 - rpm: first-time install fails
+  + Tools: OSDL #1073 - Add clone support to crm_resource
+  + LinuxFoundation bug 1138 - Long delay before CCM propagates membership event (partial fix)
+  + Put debug in in support of bugzilla 1154: 2.0.4 BSC failure - select() returns with error
+  + OSDL 1268: Fix trailing random byte in log messages (by Keisuke MORI)
+  + OSDL 1292 - xSeries STONITH (IBM: 06-R212-175
+  + RA apache: a major update (closes Bug 1357)
+  + Tools: OSDL #1374 - Check for sane host names when migrating
+  + OSDL 1389: Make mgmtd check protocol version on connect (Joachim
+  + Stonith: OSDL #1428 - Mixing definitions and code
+  + CIB: OSDL #1430 - Allow automatic assignment of object IDs
+  + OSDL bug 1457 - Resolve unknown command ha_log
+  + Tools: OSDL #1451 - Allow resource meta attributes to be set with crm_admin
+  + clplumbing: Bug 1454 - Detect stale PID files where possible
+  + Tools: OSDL #1462 - crm_migrate should allow creating temporary rules
+  + crmd: Fix for OSDL #1465 - crmd gets stuck if shutdown while starting up
+  + CIB: Apply patch for OSDL #1472 - Use-after-free in find_attr_details()
+  + OSDL Bug 1482:  stonith command needs a repeat option to make it a better test tool
+  + PE: OSDL #1484 - Repair on_fail=stop.  Patch courtesy of YAMAMOTO Takashi.
+  + PE: Add a regression test for OSDL #1484 from Takashi YAMAMOTO
+  + RA: db2 got new parameter: admin. Fixes Bug 1485.
+  + PE: OSDL #1486 - Fix for potential NULL dereference
+  + OSDL bug 1488 - Fix passing password to HMC
+  + OSDL bug 1489 - Fix HMC errors in hostlist
+  + PE: OSDL #1492 - Set common resource attributes before calling the custom unpack function
+  + PE: OSDL #1494 - Add node->score to the clone stability function
+  + PE: OSDL #1499 - Perform #uname comparisions without case
+  + Attrd: OSDL #1500 - repeated call to attrd_updater with dampen absorbs attribute changes
+  + Linux Foundation bug 1505: Findif parsing is all screwed up unless all the parameters are passed, not defaulted.
+  + OSDL bug 1506 - Add optional plugin parameters to XML
+  + OSDL bug 1507 - Allow "stonith -h" to display help for specific device
+  + LF Bug 1511 LRM running two actions for the same resource parallel
+  + LF Bug 1513 - building RPM from the 2.0.8 tarball fails
+  + CCM (bug 1515): wrong function names in logging fixed
+  + LF Bugzilla bug 1522: Strt hb_counter on time_t
+  + OSDL bug 1523: Plugin performance enhancements
+  + LF Bug 1527 - inappropriate warnings about core files logged by heartbeat (SGI961667)
+  + Linux Foundation bug 1528: IPaddr2 gives a spurious warning on stop (SGI961736)
+  + crmd: OSDL #1532 - Single node cluster shutdown
+  + LF bug # 1534 - compiling/installation error on OpenBSD (partial fix?)
+  + Fixed LF bug 1539: On Ubuntu, /var/run/heartbeat is missing after reboot (tmpfs)
+  + Fixed LF bug 1540: MgmtGUI requires explicit port number when connectingi
+  + fix bug 1544: 
+  + OSDL bug 1545: stonithd signoff fixes
+  + logging: a temp fix for bug 1548.
+  + OSDL bug 1550: Suicide plugin returns hostlist containing itself
+  + OSDL bug 1553: suicide plugin lacking ST_DEVICENAME
+  + crmd: LF Bug #1554 - Wait for the membership to stabilize before starting transitions to prevent unconfirmed actions
+  + PE: LF Bug #1554 - Probes should not have priority INFINITY
+  + OSDL bug 1563: ssh STONITH plugin cleanup
+  + Fixed LF bug 1564: cl_malloc doesn't return NULL on error
+  + lrmadmin: skip non-numeric keys for lsb and heartbeat RAs (fixes bug 1571)
+  + PE: LF Bug #1572 - Resource ordering not observed under some conditions - final
+  + PE: LF Bug #1572 - Resource ordering not observed under some conditions - pt1
+  + LRM: fix corrupt global structures (fixes Bugzilla 1574)
+  + crmd: Bug #1575 - crmd cannot exit if lrmd is killed and there are pending ops
+  + LF Bug 1576: shutdown hangs under certain shells
+  + OSDL bug 1581 - no STONITH plugins found on Solaris10/i386
+  + OSDL bug 1582: suicide STONITH plugin ignores nodename
+  + PE: Bug 1580 - Remove logging inserted during developmental of fix for bug 1572
+  + crmd: Bug #1584 - Always restart the join process when membership changes
+  + LRM (bug 1585): check input from clients.
+  + LRM: reschedule delayed ops (bug 1586).
+  + LRM: handle lingering processes (fixes bug 1586)
+  + LRM (bug 1594): change handling of cancel, resource delete, and flush ops requests.
+  + LF Bug 1595: findif not being useful
+  + Fixed LF bug 1597 int and long sizes are different on 64bit linux systems
+  + Bug #1601 - PE: Favor correctness over niceties when STONITHing nodes
+  + Bug #1602 - CIB: Try and load backup configuration if loading the main one fails
+  + CIB: Bug 1602 - Archive invalid/unusable configurations so we can continue
+  + OSDL bug 1606: okay for stonith plugins to have no parameters
+  + Bugzilla Bug 1612 haresources2cib @substitution@ broken (probably by a global change)
+  + Bug 1613 - stonith: convert long/short descriptions to xml.
+  + LF Bug # 1617 - Miscellaneous RPM and source cleanups
+  + Admin: Bug #1621 - crm_mon should show failed starts of a resource
+  + Admin: bug #1622 - crm_attribute: Include --inhibit-policy-engine in the help message
+  + crmd: Bug 1624 - Fix the delete op for cancelled operations
+  + CRM: Bug 1625 - Cannot update an operation's timeout
+  + PE: Bug 1628 - Complain about invalid operation intervals
+  + RA: Bug #1630 IPaddr2 - Wrong arguments passed to send_arp (test was mistakenly written as an assignment)
+  + Admin: Bug 1632 - Make sure error messages regarding trailing XML input characters are seen
+  + CIB: Bug 1633 - Pass the actual error from activateCibXml back to the user
+  + Admin: Bug 1635 - crm_failcount should not complain if the attribute was already deleted
+  + LF Bug # 1644 - Pinging loopback in BasicSanityCheck fails with EPERM
+  + LF bugzilla # 1645: Minimize arch-dependent differences, maintain compatibility
+  + LF bug # 1650 - heartbeat should put scripts/non arch specific things in /usr/share
+  +++++ Novell bugzilla bugs +++++
+  + RA: EvmsSCC: More fixes from Jo (Novell 199730)
+  + PE: Novell #239079 - Ensure action priority is set correctly to ensure notifcations are not lost
+  + PE: Novell #239082 - Order promotions after _all_ demotions have completed
+  + PE: Novell #239086 - Stable Master placement
+  + Admin: Novell #239075 - crm_master uses the same IDs for permanent and transient attributes
+  + crmd: Novell #244444 - Free'ing g_alloc() data with cl_free()
+  + PE: Novell #246681 - Teach NoRoleChange() how to migrate resource's in the master role
+  + Novell bug 250207: SLES10 SP1 beta4 x86_64 problems with Heartbeat 2.0.8
+  + RA: Filesystem: Move ocfs2_init out of the generic stop path (Novell 250603).
+  + RA: Xen: Fix status function for newer Xen versions (Novell 250625)
+  + RA: Novell #250273 - Provide an RA for managing evmsd as a resource
+  + PE: Novell #251689 - Avoid needlessly restarting changed monitor operations for stopping resources
+  + PE: Novell #252693 - Enable migration in more scenarios
+  + PE: Novell #252693 - Teach the PE how to migrate resources in a starting stack
+  + Stonith: Novell #266551 - getconfignames returned hostname instead of hostlist
+  + doc: Novell #266551 - Bring the stonith man page up-to-date
+  + Admin: Novell Bug #270977 - crm_resource ignores --meta in some situations
+  + crmd: Novell Bug #286393 - Create resources, if necessary, in the lrmd so they can be stopped.
+  +++++ Debian bugzilla bugs +++++
+  + RA: Debian Bug #420206 - Bashisms in IPaddr2
+  + [DEBIAN] Debian bug #432441 will be closed on the next upload
+  +++++ Other changes +++++
+  + CRM: Fix ISO date handling for Jan 01 of any year
+  + CTS: Look for ha.d in the configured location
+  + crmd:  Some more speedups for string comparisions and reload support improvements
+  + Util: Fix a botched conversion from CRM_ASSERTs
+  + CTS: Cleanup ResourceRecover
+  + CTS: Logging change
+  + TE: Remove dead code
+  + crmd: Only update the voted hashtable with no-votes for the current election
+  + Typos in comments and debug logs. (Sorry, I saw these during review and
+  + crmd: crm_str_ -> safe_str_
+  + Backed out changeset c38fb26a9497ab221688bfbfe6639eebcf29b0dd
+  + crmd: add the required extra argument to crm_str_eq
+  + crmd: Fix generation of FSA graphs
+  + CTS: Explicitly test for the string "1" which means we have quorum
+  + crmd: s/crm_str_neq/safe_str_neq/
+  + build: Put header files into their correct subdirectories
+  + RA: Some improvements to the mysql RA suggested by Achim Stumpf
+  + clplumbing: fix compile error
+  + PE: First cut at migrate support in _very_ limited situations
+  + PE: More migrate code
+  + PE: Final pieces of migration support
+  + crmd: Make sure only current no-votes count towards election completion
+  + DTD: Support the migrate_from value in rsc_op objects
+  + crmd: Prepend CCM inputs to avoid a potential deadlock on startup
+  + Core: Stop using the old ha_malloc macros for cl_malloc and friends
+  + Hg: Update the list of ignored files/patterns
+  + PE: Update the regression test outputs with new the feature set version
+  + .cvsignore maintenance
+  + RA: Fix apache metadata for consistancy
+  + More .cvsignore updates
+  + crmd: remove dead code from the lrm wrapper
+  + PE: Tweak log message
+  + CRM: Finalize support for migrate
+  + RA: Support reload and migrate-(to|from) in the Dummy OCF agent
+  + CTS: option logging improvements
+  + CTS: Tweak v2 resource action interpretations
+  + CTS: Cleanup CIB generation and add a migratable resource
+  + Update comments related to the meaning of CCM callbacks
+  + crmd: Correctly handle out-of-order CCM updates
+  + Updated spec file in preparation for 2.0.8
+  + BSC: LookForString already does grep -i. No need to specify "[Aa][Rr][Pp]"
+  + PE: Add the PE part of reload support
+  + BSC: Modified strategy for determining which interface to use
+  + PE: Allow rsc_colocation constraints to be symmetrical
+  + PE: Bug fixes and regression test for reload support
+  + PE: No need to regenerate the param-4 outputs every time
+  + PE: Fix small memory leak in reload support
+  + PE: Make sure lrm_rsc_op IDs in regression tests are correct
+  + PE: Add explanitory comment
+  + CRM: Logging
+  + build: Explicitly set state directory for Darwin in ConfigureMe
+  + CTS: Remove unused import
+  + BSC: Gracefully fail when python-xml is not available
+  + PE: Allow migration and reload for children of complex resources
+  + RA: Patch to pgsql.in from Serge Subrouski
+  + RA: Patch to oracle agent from Dejan Muhamedagic
+  + RA: Patch to allow ServeRAID to function in the real-world. From Jon Fanti.
+  + Hg: Merge in RA patches from the community
+  + Add migration support to Xen RA.
+  + add configure option for the drbd outdate peer daemon
+  + Added tag STABLE-2.0.8 for changeset 2d298bca0d0af320752bfa293ac96ed08e2c6463
+  + Hg: Fix another botched update from Alan
+  + RA: LVS support should always be enabled for the heartbeat IPaddr wrapper
+  + Remove uninitialized variable warning on line 116.
+  + RA: Xen: Swap migrate_to and _from to match PE.
+  + CRM: Add a simple xsl stylesheet for rendering configurations
+  + PE: Rename migration variables for clarity
+  + RA: Modify the Xen RA to use the new variable names
+  + crmd: crm_atoi() needs two arguments :-/
+  + PE: Utility functions for finding node's by uuid/uname
+  + CRM: Allow retrieval of default config values without a hashtable
+  + CRM: Dont skip past the initial '<'
+  + CIB: The decision to log failed connection attempts should be left to the client
+  + CIB: New error code
+  + Tools: Print the duration we parsed
+  + CRM: Refactor date printing to allow date -> string conversion
+  + Tools: Set a slightly higher default action timeout
+  + Silly typo.
+  + Add support for overriding the hostname drbd uses based on the clone
+  + CRM: Ensure the normalized result of (add|subtract)_time is updated before returning
+  + Tools: Place the lifetime rule in the correct location
+  + crmd: If we allocated temporary user_data content, we must free it also
+  + CTS: Indicate debug log messages
+  + PE: Dont waste time checking action definitions on nodes that wont be running resources
+  + PE: Small logging change
+  + PE: Update the dot file after the previous action definition check change
+  + CRM: Changes to fake transition key generation
+  + TE: Minor cleanup
+  + CTS: Support the setting of a few more options for lrmadmin calls
+  + crmd: Remove dead code
+  + CTS: Rewrite the ResourceRecover to use asynchronous failures
+  + CTS: Move a comment to a more appropriate location
+  + CTS: Remove debug message
+  + CTS: Rewrite the LSBDummy RA
+  + Hg: Merge in some changes related to async failure notifications
+  + CTS: Ignore ResourceRecover testing artifacts
+  + Core: Allow writing to syslog to be turned off
+  + CRM: Correctly handle syslog facility == 0
+  + Core: Fix stupid cut/paste error
+  + Add some defaults to configure.in to reduce buildrequires.
+  + Fix a typo in the default path to scp. (Only mattered if scp wasn't
+  + clplumbing: use the result of strcmp correctly
+  + PE: Fix group recovery when a group it depends on is restarted
+  + PE: Stop regenerating expected test results
+  + PE: Have group-group recovery work for the right reasons
+  + PE: Rename elements of the pe_ordering enum for clarity
+  + PE: Move DeleteRsc to a more appropriate location
+  + PE: Shift code out of the PE library that is only used by the PE application
+  + PE: Change for code clarity
+  + PE: Fix group recovery
+  + PE: Allow order_constraint_t to represent multiple ordering conditions concurrently
+  + PE: Not all pseudo operations should be included in the graph
+  + PE: Correct arguments to CRM_CHECK()
+  + PE: Clean up generation of and contents of dot-files
+  + PE: Updated regression tests with the revised consistant format
+  + PE: Only show elements of the graph in the dot-file by default
+  + RA: -eq is for integer comparisions
+  + CTS: Remove resource tied to the DC - the #is_dc comparision is irrelevant
+  + Build: .cvsignore maintainence
+  + CRM: Fix replace_xml_child() when neither child nor update have an id
+  + Admin: Auto populate the provider for OCF resources if one is not provided
+  + Admin: Include rsc_location details in the resource listing
+  + Admin: Use the current node uname by default when invoked as crm_standby
+  + RA: Fix up the Dummy metadata
+  + Admin: crm_primitive.py: Include all node preferences in the one rsc_location constraint
+  + RA: drbd: Fix some issues and work-arounds for drbdadm bugs.
+  + RA: IPsrcaddr wrapper: Fix silly typo.
+  + RPM: Improved grammar in gui package description
+  + DEBIAN: Packaging updates for 2.0.8-1 release
+  + CIB: ODSL #1480 - Create synchronous r/w connections correctly
+  + DTD: The DTD used "integer" instead of "number" (which was used by the code)
+  + CRM: Repair the status_printw macro now that we do logging slightly differently
+  + Tools: Dont do ID checks on cibadmin diff's, duplicates are expected
+  + Build: Use existing accounts when building on OSX
+  + Tools: Help text and input sanity checks for ocf-tester
+  + Advertise migrate_from and _to actions. Mention migrate in meta-data.
+  + Add heartbeat-2-gui package control files to Makefile
+  + Relaxed a stonithd timeout so that start will succeed if it completes in a minute.
+  + Finally get a chance to correct lmb's spelling
+  + Build: Include the exact version being built even when building an archived tree
+  + configure: Check for more pre-requisites of the mgmt/quorum components.
+  + Remove a bunch of dead code (Perl/SWIG bindings).
+  + Remove a few work-arounds now that notifications work correctly.
+  + Core: Allow the malloc tracking code to compile on systems where size_t != int
+  + cib: Compile when malloc tracking is enabled
+  + CRM: When malloc tracking is enabled, pass through the person that called crm_strdup
+  + Tools: Fix a number of memory leaks in attrd
+  + Tools: Compile when malloc checking is off, fix last mem leak
+  + moved drbd peer outdater into contrib/
+  + We _never_ want to trim memory, use -1 instead of 4*size.
+  + CRM: Delete dead code, make empty_uuid_cache() safe with NULLs
+  + crmd: Resolve a number of memory leaks
+  + CRM: Fix memory leak in compare_version()
+  + cib: Clean up the list of clients wishing to be notified
+  + crmd: Clean up leak in crmd_ccm_msg_callback()
+  + crmd: dump newly allocated memory at each state change not only at idle
+  + crmd: clean up more data at exit
+  + CRM: Remove noisy and inaccurate memory logging
+  + cib: Remove more ill-advised memory checking code
+  + CRM: Remove the last references to cl_mem_stats from CRM code
+  + Core: Add a (disabled) block of code that allows heartbeat to easily run with standard libc malloc-and-friends
+  + crmd: Memory leak - Clean up the XML result of the LRM queries
+  + crmd: Free the LRM connection at shutdown
+  + cib: Memory leak - Free query matches in update_attr()
+  + cib: Memory leak - Free intermediate results of find_attr_details()
+  + cib: Memory leak - ensure the digest is always cleaned up
+  + cib: Free various bits of memory at shutdown
+  + PE: Logging
+  + TE: Clean up the current graph on exit
+  + CRM: Memory leak - Ensure libxml2 objects are always cleaned up in validate_with_dtd()
+  + cib: Clean up the libxml2 parser at exit
+  + TE: Always exit via mainloop
+  + TE: Delete more items at exit
+  + TE: Free the transition_timer at exit
+  + CIB: Free the channel names at exit
+  + CIB: Memory leak - free the digest file handle
+  + crmd: Free the metadata hashtable and lrm connection at exit
+  + cib: Clean up some hash tables at exit
+  + crmd: Memory leak - ensure 'key' is free'd in get_rsc_metadata(), create 'restart' only when required in append_restart_list()
+  + crmd: Memory leak - free the metadata list after use
+  + CRM: Use unique top-level function names
+  + Build: Configure switch to easily enable Valgrind'ing of the CRM
+  + cib: Allow forked writer processes to clean themselves up before exiting
+  + crmd: Enable Valrind'ing of the PE and TE
+  + crmd: Delete the HA connection only at exit
+  + Backed out changeset c65afe1e2d9006d0c6ec887359ba31d81bca5671
+  + Hg: Backout changeset c65afe1e2d9006d0c6ec887359ba31d81bca5671
+  + CRM: Convenience macro for list deletion
+  + PE: Valgrind was complaining about this for some reason
+  + crmd: Small documentation update
+  + crmd: Memory leak - free the ping reply fragment after use
+  + cib: Exit the writer process correctly so we'll continue to do write outs
+  + crmd: Sort out the whole client deletion business.  Also delete the resources hash at shutdown.
+  + cib: Dont examine the group ownership of cib.xml since we set perms to rw-------
+  + mgmtd: Certain versions of SWIG do not convert the Python "None" to a
+  + Build: Make supplying a Valgrind suppression file simpler
+  + Build: Remove redundant and useless items from the build
+  + Build: Remove more redundant and useless items from the build
+  + crmd: Memory leak - clean up the intermdiate reload data
+  + Added count of how many inet lines to use for the diff -B?
+  + Enhance Pgsql ocf resource to handle multiple instances
+  + Initial implementation of remote CIB connections using TLS and PAM
+  + Switch to G_main_add_fd() instead of using io channels directly
+  + cib: Support processing of commands sent via remote TLS connections
+  + cib: Allow the remote connection code to be used with or without PAM/TLS
+  + cib: Hook up the CIB remote connection listener
+  + PE: Fix gcc warning - dont ignore the result of mktemp()
+  + build: Always check for the presence of PAM an TLS headers
+  + cib: Start a remote access listener on a port specified by the user
+  + cib: Check for membership of the correct group
+  + cib: Attend to various autobuild warnings
+  + Coverity 53: Potential NULL pointer dereference.
+  + Uninitialized string in heartbeat/findif.c
+  + cib: Add but do not install a PAM file for the CIB
+  + Build: Not all platforms need -lpam
+  + cib: Older versions of gnutls used gnutls_session without the _t
+  + CRM: Fixes for Coverty issues: 52, 55-58, 61-66, 68-69, 71-73 in run 240
+  + Determine GNUTLS libs centrally in 'configure.in' rather than in individual Makefiles
+  + Pulled in current changes from the 'dev' branch
+  + Determine GNUTLS cflags centrally (follow-on from 7a742e29e3f8).
+  + Use centrally determined GNUTLS cflags and libs
+  + Bourne shell 'test' does not support '-e' flag.  Using '-r' instead.
+  + libgnutls: if no 'libgnutls-config', try 'AC_CHECK_LIB(...)'
+  + Remove CVS artifacts. ($Id$ and $Log$ have no meaning to mercurial.)
+  + crm_attribute/master/standby: Always default the uname to the current
+  + PE: Make sure things that shouldn't be true are never true (added asserts)
+  + Fixes for Coverity issues in Run 243
+  + cib: valgrind - Only close the File* if we were able to open the file
+  + CRM: Prevent a number of potential use-after-free's by zero'ing out free'd loop variables
+  + PE: Simplify the logic in native_rsc_order_rh
+  + Put the compression buffers on the heap instead of the stack.
+  + Improve portability across versions of 'gcc'.
+  + Fix blatant memory leak on non-failure leg ...
+  + RA: drbd: When using the nodename-override, drbdadm likes to print an
+  + Update ignore files
+  + CRM: Make the use of valgrind a run-time option
+  + tools: Terminate the attrd process if heartbeat exits from under it
+  + crmd: Clean up the voted hash at exit
+  + PE: Fix a use-after-free of {key} when the monitor op already existed
+  + Build: Always process the Valgrind logging option
+  + build: commas mean something in autofoo
+  + Core: Sanitize the "crm xyz" option processing.  Dont run valgrind if not using libc malloc
+  + Revert 45354b6012c8 a807c29d883a 3de0ed0510d7: For some entirely unclear
+  + RA: Filesystem: Increase default suggested timeouts.
+  + Core: Better information about valgrind enablement
+  + PE: Remove erroneous if-clause
+  + crmd: ALL completed actions should be removed from the shutdown_list
+  + PE: Prevent a potential NULL deference in clone allocation
+  + PE: Provide useful feedback when a cloned resource is found active somewhere it shouldn't be
+  + RA: drbd: Make parsing of drbdadm output more robust.
+  + PE: Log the transition at a lower level in ptest
+  + PE: Re-use StartRsc/StopRsc for consistancy
+  + RA: Xen: Add a little reminder to the code.
+  + crmd: Downgrade logging
+  + Hg: fun with multiple concurrent committers
+  + CRM: Fix a use-after-free in parse_time_duration()
+  + CIB: Downgrade one log message (Deallocating the CIB.)
+  + Part of the reversion of a previous changeset got stuck in here. Doh.
+  + TE: Detect changes to attributes of the cib object
+  + STONITH: external/riloe misspelled RI_LOGIN variable name.
+  + TE: Only a limited number of cib attributes warrent aborting the transition
+  + Stonith: Update the rilo RA with enhacements from Tijl Van den broeck and Guy Coates
+  + RA: The first argument to os.environ.get() was supposed to be a string
+  + Fixed a URL referencing where to find the APC UPS protocol description.
+  + CRM: Return defaults correctly when no hash is used
+  + Admin: map cib_NOTEXISTS to 0 for crm_failcount
+  + RA: Filesystem - When checking ocfs2 is cloned, look for variables that are always set
+  + RA: pgsql: Several enhancements to by Keisuke MORI
+  + Tools: Centrally define CIB call options so that -f always works in crm_resource
+  + RA: pgsql improvements
+  + Build: Header-file related cleanup
+  + Build: Add lha_internal to c-files that dont include it
+  + Build: typo
+  + follow-on from Andrew's recent changes
+  + Correct omission of <lha_internal.h>
+  + Another omission of <lha_internal.h>
+  + Build: cvsignore additions
+  + Build: include stdlib.h for exit()
+  + Build: Fix typo in configure.in
+  + Build: Fix recent cleanup.  Dispite the names, HALIB != HA_LIBDIR
+  + Build: Fix recent cleanup.  Dispite the names, HALIB != HA_LIBDIR
+  + TE: Minor log change
+  + TE: Remove dead code
+  + TE: Small logging improvement
+  + TE: Unpack graph actions correctly
+  + RA: Fix variable initialization in pgsql
+  + Minor declaration fixes following Andrew's code re-working.
+  + RA: Avoid concatination with None in riloe stonith agent
+  + RA: Use configured scratch locations in ibmrsa stonith agent
+  + Core: Set HA_DIR to the correct location after recent cleanup
+  + RA: pgsql fixes and enhacements
+  + crm: Gracefully fail when the target XML file is not writable
+  + PE: Move Ncurses related defines to a more optimal location and make sure its included by crm_mon
+  + RA: LVM: Add some hints for future todo items.
+  + Build: Allow debian packages to also be built directly from Hg archives
+  + Build: Misc changes to allow building with crm disabled
+  + debian: sort out a kink in the configure vs. bootstrap logic
+  + debian: reflect the new header locations in .files
+  + debian: correct the location of stonith headers in *.files
+  + PE: Fix anti-colocation when the RHS is not running
+  + tools: Teach crm_uuid to write ascii-form UUIDs to hb_uuid
+  + tools: show help text for crm_uuid
+  + tools: Better help when an invalid uuid is passed to crm_uuid
+  + crm: Check the return code from fflush() when writing xml files - AnÌbal Monsalve Salazar
+  + crmd: No need to create the resource if we're trying to delete it
+  + build: Add explanatory comment for configure kludge
+  + Tools: Include class/type/provider in resource delete commands
+  + tools: re-default to read if the are no arguments to crm_uuid
+  + CTS: Account for a small timing window in the ResourceRecover test
+  + Fix a Linux compiler warn/error
+  + PE: Make clones semi-sticky by default
+  + Fix typo.
+  + crmd: dont update the restart list with unset attributes
+  + Trivial documentation fix:  added the --enable-snmp-subagent to the configure help message.
+  + crmd: Create the restart digest from an object with the same name that the PE uses
+  + build: dopd doesnt build without the crm, disable it if the crm is disabled
+  + crmd: remove dead makefile entry
+  + Build: Dont install crm-related man pages when --disable-crm is used
+  + RA: Return after performing a stop action in the Filesystem agent
+  + Eligable is not a word ;-)
+  + ocf-tester: Continue if validate-all succeeds.
+  + build: Trial a slightly cleaner way of specifying required libraries
+  + crm: Fix memory leak in error path
+  + build: make life easier on OSX
+  + RA: Filesystem: Prune duplicates from active and starting list.
+  + Whitespace cleanup and minor fixes ("" for -z arguments, using -ne when
+  + Build: Restore build dependencies. (Reverts http://hg.linux-ha.org/dev/rev/27394b5c56e3)
+  + Correct a typo.
+  + BSC: Test Dummy, IPaddr, IPaddr2, Filesystem RAs.
+  + ocf-tester: Exit with appropriate exit code for success or failure.
+  + BSC: Skip IPaddr2 test if ip not installed.
+  + build: removed unused library dependancies
+  + CRM: Comprehensive review of error recovery logic for potentially failed calls to fopen()
+  + tools: return the rc we calculated in read_hb_uuid()
+  + PE: Make internal group ordering of bullet-proof
+  + PE: Code optimization.  No functional change
+  + PE: Always print the resource's node scores
+  + PE: Avoid a potential NULL dereference in an error path
+  + crmd: Indicate the LRM error code if an operation cannot be cancelled
+  + Ensure 'awk' is found in runtime environment
+  + PE: tweak the dot file handling in ptest
+  + Fixed a stupid error in some new (unused) code.
+  + Allow data size to be specified
+  + Updated version to 2.0.9
+  + ocf-tester: Various integers were compared as strings.
+  + CRM: LF #1514 - Empty values in cib.xml loses other RA parameters
+  + Replace multiple derivations (poor) of locations with direct derivation from configure
+  + ipctransient tests: Add some flexibility; rationalise some duplicate code
+  + CRM: Make sure buffer is set to NULL after we free it
+  + ipcsocket: remove some code duplication; other minor tidy-ups.
+  + Make ldirectord's version valid
+  + Broken ldirectord reload
+  + Use the -w flag to perl to find warnings/errors
+  + Remove useless calls to lc()
+  + Remove duplicate $recstr
+  + Use $arrayOfDNs[0] instead of @arrayOfDNs[0] to get rid of the following
+  + Make sure that DEBUG is initialised
+  + Change the code around a bit to avoid a warning about code following exec
+  + Use $$ instead of (the uninitialised) $pid
+  + If weight is not supplied, set it to 1
+  + Dont use SIGENT, as it doesn't seem to exist.
+  + Use implicit variables in read_config()
+  + Handle $line more carefully
+  + Make sure that frequency is intialised before it is used
+  + CIB: Allow cluster options to be created when the default set is not present
+  + Admin: Allow cluster config options to be queried/modified/deleted.  Broken in cs: 13c450735ba7
+  + CIB: Prevent node_uuid from having any effect for <crm_config> changes
+  + CRM: Dont call fflush() or flclose() if the output stream was NULL
+  + PE: Create an implicit "cant run here" constraint if an action returns "not installed"
+  + LRM: Inform clients when an RA is not installed on the machine
+  + Dev version didn't build RPMs.  Added in missing EXTRA_SOURCES macro for transient-test.sh
+  + Brought the web site up to date, and also fixed / finished (hopefully) the multi-language support.
+  + Fixed a bug in the changelog date which was pointed out by
+  + Cleaned up more of the mess left by a sloppy developer in this changeset:
+  + Changed the web site php scripts so that they will substitute the English page if
+  + RA: Filesystem: Harmless typo corrected.
+  + RA: drbd: If drbd is stopped, demote should fail with NOT_RUNNING.
+  + Fixed a bug pointed out by Pavol Gono <palo.gono@gmail.com> where heartbeat
+  + RA: Fixed the three pseudo RAs to use ha_pseudo_resource. Extended the Dummy RA to support checks for serialization and to survive the TERM signal.
+  + lrmadmin: fix the provider list function: first free data and then the list member.
+  + CRM: size_t is always positive... broke error handling in XML parser.
+  + bladehpi readme update
+  + ConfigureMe: make usage info a little clearer
+  + Fixed a bug reported by Max Hofer <max.hofer@apus.co.at> - crm_uuid didn't return proper exit codes.
+  + configure: Add closing information to user about '/etc/passwd' and 'make install'
+  + Upgraded the web site to accommodate the new version of MoinMoin
+  + Fixed a small complaint about unnecessary warnings from Paulo F. Andrade
+  + Put in a small fix for to relax some warnings which Paulo F. Andrade complained about.
+  + Got embedded (FLASH) objects to work.  Cool!
+  + Fixed a couple of minor spelling errors.
+  + Fixed our id tags to be unique -- MoinMoin creates each page with a line-1 tag, and when we combine severa
+  + Changed the php so that id tags with slashes in them get the slashes removed...
+  + Put in changes from _29 to %29 in file names since Moin seems to have changed that...
+  + Reverted a misguided change to the web site...  We should NOT replace / with %2f in URLs...
+  + Output to stderr works again. Cleanup. A few more fixes.
+  + RA: Filesystem: Fix metadata require/unique settings.
+  + Reconciling heads within dev.
+  + CRM: Use-of-NULL in validate_with_dtd() error path... Only clean up what we created
+  + Admin: Allow crm_verify to be used with a named DTD file
+  + Fix xml parser bug.
+  + crmd: logging
+  + crmd: Correctly parse the shutdown timer option
+  + RA: Convert SAP* from dos :) Allow ManageRAID to show meta-data at all times.
+  + lrmadmin: fixed wording; output to stderr.
+  + RA: fix meta-data to conform to XML.
+  + RA: fix meta-data to conform to XML.
+  + LRM: new regression test (initial)
+  + LRM: convert the LSB meta-data to XML.
+  + LRM: fix my own fix, it broke lrmd.
+  + CIB: Some extra options for developer testing
+  + Tools: Add two new views to crm_mon.  Patch by Christofer Edvardsen.
+  + Remove an unnecessary 'include' that broke building on some OSes.  It continues to build OK on various OSes.
+  + BSC: (1) test IPC before its dependencies; (2) signal-handling: improve and catch some more.
+  + PE: Don't start resources until we can verify they're not still running
+  + Hg: Update ignore file
+  + LRM: regression testing update; a new set of test cases added
+  + LRM: regression testing, here the promissed new set of tests
+  + LRM: regression testing: documentation update.
+  + Switched the to using an IE-specific comment hack instead of javascript.
+  + Fixed a stupid option processing error - where some option errors would be ignored.
+  + Fixed an error message which used a parameter that hadn't been supplied,
+  + LRM: regression testing; warning about security implications.
+  + LRM: regression testing: tests could run in background; a new test case to check if ops are serialized.
+  + LRM: regression testing: small fixes and update of the serialize test.
+  + LRM: regression testing: update comments for the serialize test.
+  + Tools: crm_verify - dont complain about missing status section
+  + CRM: handle NULL inputs to xml_has_children() gracefully
+  + cib: Don't increase the version number if nothing changed
+  + cib: Fix stupid compile error
+  + cib: Warn at startup if important version information is missing
+  + cib: Fix memory leak in cib_config_changed()
+  + Correct a comment.
+  + Added tag SLE10-SP1 for changeset 906283515e3b
+  + Added tag SLE10-SP1 for changeset a5f71c2dea64
+  + Added tag SLES10-GA-2.0.7-1.5 for changeset 91de0c9c401c
+  + cib: remove dead code
+  + PE: Memory leak fixes
+  + Added a little code to find out increase process tracking
+  + fix compiling warnings
+  + Tools: LF #1500 - Calls to attrd_updater with dampen=0 not processed correctly
+  + RA: ocf-shellfuncs.in invokes ha_debug instead of ha_log when appropriate.
+  + RA: Dummy and Delay fixed to use OCF_RESOURCE_INSTANCE. Dummy got a couple of extra variables to control TERM signal handling and verbosity.
+  + LRM regression testing: new features; a new testcase: flood; some fixes; more testcases needed.
+  + LRM regression testing: better separation of the driver and the engine---evaltest.sh can be used on console now.
+  + LRM regression testing: updated readme.
+  + Removed a message about attempt to remove ping node, since this is a "normal" condition.
+  + RA: eDirectory: Some cleanups.
+  + Add eDirectory RA to configure.in.
+  + Wrong closing parenthesis.
+  + Renamed eDirectory RA to eDir88.
+  + RA: eDir88: Updates from Yan Fitterer.
+  + [IPv6addr] send_ua() is leaking l
+  + [IPv6addr] create_pid_directory() leaks dir
+  + [IPv6addr] overrun in find_if() for 128bit prefixes
+  + [IPv6addr] Use memset to set mask in find_if()
+  + [IPv6addr] Merge duplicated code from find_if() and get_if() into scan_if()
+  + [IPv6addr] devname in scan_if() is too short
+  + [IPv6addr] Handle scanf failures in scan_if()
+  + [IPv6addr] scan address directly into integers in scan_if()
+  + [IPv6addr] Use the 32bit wide field of in6_addr in scan_if()
+  + [IPv6addr] Remove resources/heartbeat/IPv6addr.c
+  + stonithd: fixed logging to print symbolic names for operation types and results.
+  + stonith external: more debugging to show various lists retrieved from a stonith plugin.
+  + Dummy: Reverting the poor ole RA to it's previous Dummy state. Perhaps it should loose the delay param too.
+  + LRM regression tests: lrmregtest takes place of the ocf RA Dummy.
+  + stonithd: mixed up op_result from st_op and ra_op. fixing it back.
+  + RA: Return to a simple but correct Dummy RA
+  + PE: Logging tweaks
+  + PE: Logging
+  + crmd: logging
+  + PE: Logging
+  + PE: Make clones ever so slightly sticky by default
+  + CTS: Explain why we're aborting when nodes aren't found in DNS
+  + crmd: Logging
+  + TE: Tweak logging of unconfirmed actions
+  + Fixed a format so that it works without warnings on 32-bit machines also.
+  + ec9b93d18e47 had allowed a variable to be possibly uninitialised
+  + [IPv6ADDR] Fill in address bytes and use correct endienness
+  + [LDIRECTORD] recieved -> received in ldirectord.cf
+  + [LDIRECTORD] Fix thinko in range error message
+  + [LDIRECTORD] fix copy-paste error in smtp_check's log
+  + Merging from upstream (dev)
+  + Remove bashim from IPaddr
+  + [IPaddr] Switch back to sh now bashims are gone
+  + [DEBIAN] Close #420206
+  + [DEBIAN] Depend on libsnmp10-dev rather than libsnmp9-dev
+  + RA: Make sure eDir88 is installed
+  + RA: eDir88 - monitor() returning incorrect exit code when monitoring fails.
+  + crmd: Logging
+  + CTS: Logging
+  + PE: Memory leak fixes
+  + Added tag SLE10-SP1 for changeset 558427e03930
+  + Hg: Tag maintenance
+  + IPaddr/Solaris: code re-factoring (e.g. 026bab6b8384) had lost 'netmask' keyword to 'ifconfig' command
+  + IPaddr/monitor: rationalise some duplicated 'ping' code
+  + [DEBIAN] Update documentation location
+  + Add alternate build dependancy on libsnmp-dev
+  + update priority of ldirectord to extra to match dependancies
+  + [DEBIAN] Update changelog for 2.0.8-2 release
+  + cib: Potential logging of NULL
+  + cib: Potential printing of NULL
+  + cib: Remove redundant cleanup calls
+  + crmd: Logging for improved debuging of parameter changes
+  + cib: reduce info-level logging
+  + stonith/ibmrsa: improved Bourne shell syntax
+  + RA eDir88: meta-data fixed.
+  + LRM: regression.sh update for portability.
+  + plugins/stonith/{ssh,suicide}.c: Better OS portability
+  + Pulled from upstream (dev)
+  + Fixed a typo that I made that I have no idea how it went undetected.
+  + [DEBIAN] Rename the heartbeat-2 source package heartbeat
+  + [DEBIAN] Documentation path of ldirectord should be /usr/share/doc/ldirectord
+  + [LDIRECTORD] Make the help text reflect the supported actions
+  + [DEBIAN] Make a debian init script for ldirectord
+  + [DEBIAN] update priority of ldirectord to extra to match dependancies
+  + [DEBIAN] fix rules, fix changelog
+  + PE: Remove duplicate function declarations
+  + PE: Code formatting and logging
+  + Admin: Dont output the transition graph by default when calling ptest
+  + Remove Duplicate EXTRA_DIST from ldirectord/init.d/Makefile.am
+  + Admin: crm_master: adjust expected return code from uname() to accomodate Solaris
+  + uname() return code: add (heartbeat/heartbeat.c) and improve error message (crm/admin/crm_attribute.c)
+  + debian: Add missing files to the package list
+  + PE: Stop of a partially stopped group failed when there was only two child resources
+  + TE: Fix potential printing of NULL
+  + [DEBIAN] 2.0.8-4 release
+  + [DEBIAN] 2.0.8-5 release
+  + Found one of the reasons why cl_malloc was slower than malloc.
+  + Fixed a tengine compile error.
+  + cib: More accurate logging
+  + LRM: replace "agency" with "agent."
+  + logd: remove spurious occurence of "ha_logd."
+  + LRM: on_op_done simplified. Also fixes 1583.
+  + cib: improved logging for the remote listener
+  + build: portability and cleanliness updates to configure.in
+  + LRM audit: false positives.
+  + CTS: Advertise the option to add resources to the CIB.
+  + [DEBIAN] 2.0.8-7 release
+  + Updated version to 2.1.1
+  + configure: Make test for /proc/<pid>/exe functionality more explicit.
+  + LF #1588 - Bad string comparision in IsRunning() prevents BSC from passing
+  + [PATCH] Use elapsed in G_main_setall_id()
+  + [DEBIAN] Add --enable-glib-malloc to configure's arguments
+  + [DEBIAN] Use << instead of < for dependancy relations
+  + core: handle zero length cl_malloc requests.
+  + LRM audit: update and more false positives.
+  + LRM: a semantic typo :-|
+  + configure: Fix test -L -> -h portability issue.
+  + Build: Remove legacy crud
+  + build: remove unused Make variable CRM_DEBUG_LIBS
+  + crmd: Potentially correct a potential logging of NULL
+  + PE: Downgrade logging
+  + PE: Add a dummy variable to struct native_variant_data_s so that it has a non-zero size
+  + RA: edir88 - Improved monitor action by Yan Fitterer
+  + Build: Remove all CRM references to HA_MALLOC_TRACK
+  + Complete Andrew's removal of autoconf-2.53.diff
+  + PE: Indicate orphan status when displayuing resources
+  + Admin: crm_mon - Indicate the correct number of configured resources (excluding orphans)
+  + LRM: notify clients on ops with lingering processes.
+  + CTS: Update log pattern to match new log message output
+  + crmd: make sure fsa_cluster_conn is not NULL before we try to delete it
+  + RA eDir88: meta-data fixed again.
+  + imported patch wordexp.patch
+  + RA: eDir88 - Repair a patch mangled by email
+  + RA: ocf-shellfuncs - Add some lockfile-related functions
+  + Hg: ignore maintenance
+  + CRM: Logging enhancements
+  + CRM: Logging enhancements
+  + crmd: note-to-self for future handling of cancelled ops
+  + LRM audit: resource parameters are not allocated by the clplumbing library.
+  + LRM: rename op to rapop in ra_pipe_op_destroy to avoid confusion.
+  + configure: lack of 'libgnutls-config' need not stop 'mgmt' and 'quorumd' from building
+  + CTS: a new script to collect pe input files for one CTS test.
+  + crmd: remove dead cib-related code
+  + CRM: Remove unnecessary logging
+  + Tools: haresources2cib - Use the correct name for no-quorum-policy
+  + RA: IPaddr2 - Refine and fix Cluster IP functionality by Michael Schwartzkopff.
+  + TE: Reduce logging
+  + CIB: Fix cib_config_changed() for when it becomes enabled
+  + CIB: Only write the CIB to disk when the configuration changed (not just the status section)
+  + CIB: #undef shouldnt supply a value
+  + cl_longclock: Update wrapcount and static data in proper order (by Simon Graham).
+  + Add comment explaining why times_longclock() calls cl_log() where it
+  + Initial implementation of a STONITH module for VMWare Server guests
+  + cib: Remove logging we dont care about
+  + STONITH: Improvements to external/vmware
+  + cib: More effective mehtod of turning off cib_config_changed() for now
+  + [PATCH] Use sys/types.h instead of asm/types.h in configure(.in)
+  + [DEBIAN] 2.0.8-8 release
+  + [DEBIAN] 2.0.8-9 release
+  + Hg: Make it official that SLE10-SP1 == STABLE-2.1.0 since we're working on 2.1.1
+  + LRM: fixed timeouts and operations killed by signals.
+  + LRM: fix cancel operations.
+  + PE: Do not test for changes to dead actions
+  + crmd: Delete cancelled operations from the CIB
+  + build: Remove dead code as sanctioned by Alan on the Linux-HA Users list Feb 20, 2007
+  + Build: Remove one more dead file
+  + tools: crm_resource - prevent attempts to clean up non-primitive resources
+  + clplumbing: convenience function for logging command invokations
+  + LRM: cancel, delete, and flush requests revisited.
+  + crmd: crmd changes required by lrmd changeset 58b250732bf1
+  + cib: Use a BadNews pattern to catch diff failures instead of ERROR
+  + lrmadmin: fix output of op status on monitor.
+  + LRM: remove op's history on cancel.
+  + Admin: crm_resource - Prevent user's from cleaning up non-failed resources (unless --force is supplied).
+  + Admin: Log how various CRM-related CLIs are invoked
+  + Logging
+  + PE: Provide the call id for ops to be cancelled
+  + PE: Ensure stop ops happen before cancelations
+  + crmd: Revise operation tracking
+  + CRM: Re-impliment asynchronous failures without need of trickery from the lrmd
+  + CRM: Additional files part of the async failure reimplimentation
+  + Admin: abort only when a host is _not_ set
+  + RA: eDir - failed stop doesn't exit with error (Yan Fitterer)
+  + lrm: stonith: fix spelling in a log message and lower log level.
+  + RA: Filesystem: Improve OCFS2 UUID retrival and error handling
+  + Stonith: vmware - fix metadata and optimize
+  + Stonith: vmware - Now that it seems to work, allow it to be installed
+  + CTS: Consistant and configurable STONITH usage
+  + PE: Prevent a potential use of NULL
+  + PE: Pre-emptive change anticipating a change in the LRM
+  + Stonith: external - Dont make all possible parameters manditory
+  + [DEBIAN] Close #420206
+  + [DEBIAN] Depend on libsnmp10-dev rather than libsnmp9-dev
+  + [DEBIAN] Update documentation location
+  + Add alternate build dependancy on libsnmp-dev
+  + update priority of ldirectord to extra to match dependancies
+  + [DEBIAN] Update changelog for 2.0.8-2 release
+  + [DEBIAN] Rename the heartbeat-2 source package heartbeat
+  + [DEBIAN] Documentation path of ldirectord should be /usr/share/doc/ldirectord
+  + [DEBIAN] Make a debian init script for ldirectord
+  + [DEBIAN] update priority of ldirectord to extra to match dependancies
+  + [DEBIAN] fix rules, fix changelog
+  + debian: Add missing files to the package list
+  + [DEBIAN] 2.0.8-4 release
+  + [DEBIAN] 2.0.8-5 release
+  + Added tag STABLE-2.1.0 for changeset 70067cb78a6e
+  + [DEBIAN] 2.0.8-7 release
+  + [DEBIAN] Add --enable-glib-malloc to configure's arguments
+  + Another patch for LF 1595: findif not being useful
+  + cl_malloc: a typo renders cl_malloc unusable.
+  + LRM: remove some obsolete audit calls.
+  + RA: Filesystem: search the path as well, if needed.
+  + cl_malloc: do not allocate zero size blocks.
+  + Portability: some OSes lack 'stdint.h'
+  + Portability: ulong is the deprecated name for unsigned long
+  + CIB: read_attr() can safely always talk to the local CIB
+  + Admin: crm_mon: -X has an argument
+  + PE: Dont invoke check_action_definitions() if there are no actions to check
+  + Build: Change occurances of HB_RC_DIR, missed in a recent cleanup, to HA_RC_DIR
+  + Build: CIM - Remove defines that are always included by lha_internal.h
+  + Build: Use the correct (and non-deprecated) #define names
+  + crmd: Provide useful feedback when the metadata is unreadable
+  + CRM: Delete resources from the status section when they're deleted from the LRM
+  + CRM: Further optimize removal of resources from the LRM
+  + RA: o2cb: Initial version.
+  + Admin: crm_attribute - Support --inhibit-policy-engine for delete operations
+  + RA: o2cb: Revamp distribution of cluster.conf
+  + TE: Log the node's uname instead of UUID for completed actions
+  + Admin: crmadmin - include Hg version in --version output
+  + PE: Dont log stopped orphaned resources
+  + RA: o2cb: Optimize redistribution of cluster.cnf.
+  + RA: o2cb: Improve configuration stability.
+  + [LDIRECTORD] Use negotiatetimeout for SIP, DNS and Radius checks
+  + [LDIRECTORD] Make parsing of the output of ipvsadm more robust
+  + [LDIRECTORD] Use an alarm for HTTPS timeouts
+  + [LDIRECTORD] Fix bogus detection of combined check
+  + [LDIRECTORD] Fix logic bug in _status_down
+  + [LDIRECTORD] Remove stale entries on reload
+  + [LDIRECTORD] Don't die if Net::FTP times out
+  + [LDIRECTORD] Port of last resort for real server checks
+  + [LDIRECOTRD] Use globals for service check return values
+  + [LDIRECTORD] Tidy up fallback
+  + [LDIRECTORD] Make check_sql < 80col wide
+  + [LDIRECTORD] Use $dbh->errstr instead of $dbh->err when logging
+  + [LDIRECTORD] Use goto for error handling in check_sql
+  + [LDIRECTORD] Handle $dbh->prepare() failure in check_sql()
+  + [LDIRECTORD] Clean up execute logic in check_sql
+  + [LDIRECTORD] Add forwarding mechanism to real server ID
+  + [LDIRECTORD] Document that checktimeout is for ping checks too
+  + [LDIRECTORD] Status to stdout
+  + [LDIRECTORD] Note negotiatetimeout in documentation of checkcount
+  + [LDIRECTORD] document port behaviour of real servers
+  + [LDIRECTORD] Document expire_quiescent_template
+  + [LDIRECTORD] Cosmetic spelling and grammar fixes
+  + [LDIRECTORD] Remove trim down very wordy decripton of read_config
+  + [LDIRECTORD] Enhance logging in service_set
+  + [LDIRECTORD] List checktype and service in alpabetical order in the documentation
+  + [LDIRECTORD] rearange parsing of service to make it <= 80col (more often)
+  + [LDIRECTORD] Add Oracle check
+  + [LDIRECTORD] Add ld_service_to_port()
+  + [LDIRECTORD] Remove connecttimeout
+  + [LDIRECTORD] Use negotiatetimeout and connecttimeout as mutual defaults
+  + [LDIRECTORD] Set default negotiatetimeout to 30s
+  + [LDIRECTORD] Use valid string in log message in check_connect()
+  + [LDIRECTORD] Don't access CALLBACK unless it is defined
+  + [LDIRECTORD] Call ld_emailalert_send() with correct arguments
+  + [LDIRECTORD] Enhance ftp check debugging
+  + [LDIRECTORD] Add external check
+  + [DEBIAN] Update packaging in preparation for 2.1.1-1
+  + [BUILD] make sure vmware stonith plugin is distrubuted
+  + RA: IPaddr: Fix a few trivial bugs in lvs_support pointed out by Michael Stiller.
+  + CRM: Allow cd-ing to the the core directory to be optional
+  + CRM: Allow cd-ing to the the core directory to be optional
+  + Admin: ptest is useful enough to warrent installation to sbindir
+  + CIB: Revise version changes
+  + PE: Fix two small memory leaks detected by Valgrind
+  + CIB: config_changed always needs to be calculated when processing write commands
+  + cib: Add some comments to the code
+  + PE: Make sure ptest always does a POSIX sort
+  + cib: Clean up diff logging
+  + cib: Fix detection of non-status changes
+  + CTS: Stonith monitoring is not interesting to us - make sure it doesn't fail
+  + RA: Revised handling of directory locations
+  + RA: Move all remaining autoconf variables into common files that are automatically included
+  + Misc: Move a few shell functions to the only script that uses them
+  + RA: Add some extra variables dug out from configure
+  + Build: No longer generate RAs now that there is a sane way to set directory locations and find binaries
+  + RA: Move some helper files to their new names (.files dont show up as RAs)
+  + OCF: Remove conversation from installed script
+  + Build: Remove over-use of autoconf variables
+  + RA: ServeRAID - remove commented out code
+  + RA: prefer the 'test' program rather than the builtin for some reason
+  + RA: Use consistent check for required binaries
+  + OCF: Remove unused variables
+  + configure: Remove unneeded AC_PATH_PROGS checks
+  + RA: Convert a number of checks for required binaries
+  + OCF: Fixed the check in have_binary. Handle checks for programs with --arguments
+  + RA: IPaddr2 - Remove bash-isms
+  + RA: IPaddr2 - handle IP_CIP not being defined
+  + Build: Fix installation of .ocf-returncodes to its legacy location
+  + Build: Remove generated file from EXTRA_DIST
+  + Admin: crm_resource - remove an overly simplistic check for when -C can safely be used
+  + Contrib: dopd - Fix usage of crm_log_init() by code that shouldn't be using it
+  + OCF: Minor builddir v. srcdir adjustment after recent tidy-up
+  + OCF build: 'export PATH=...' is Bash; convert to Bourne
+  + RA: v1: IPaddr: Unconditionally enabling LVS support is a mistake.
+  + OCF definitions: correct minor typo in recent re-ordering
+  + [LDIRECTORD] Add OCF wrapper
+  + [DEBIAN] Add the ldirectord OCF resource to the ldirectord package
+  + [BUILD] the clean target shouldn't die if files are missing
+  + [DEBIAN] Update heartbeat package to reflrect the new location of ptest
+  + [DEBIAN] Add new dot-ocf files to the heartbeat package
+  + CTS: (minor): autoconfiscate a pathname
+  + Admin: Allow crm_diff to operate on compressed inputs
+  + CRM: Only detect timeout changes for recurring ops
+  + pingd: Hard code the name used for logging
+  + CTS: Formatting - tabs->spaces
+  + CTS: Rewrite the LSB script as a proper wrapper for the OCF Dummy RA
+  + OCF: Detect and warn of use of deprecated 'ocf-shellfuncs' and 'ocf-returncodes'.
+  + Restored a missing file from configure.in.  Must have been deleted by accident.
+  + PE: NoRoleChange shouldn't always call PromoteRsc for master resources
+  + PE: Use master scores to determine which clones to start where
+  + configure: Generate heartbeat/shellfuncs again.
+  + Fix build - add ha_logger to Debian, fix ha_logger installation.
+  + configure.in: Further fix NOARCHLIBHBDIR setting.
+  + stonith riloe: fix the xml info.
+  + CRM: Clean up processes left over by crm_abort().  Initial patch by DAIKI MATSUDA
+  + Build: cvsignore maintenance
+  + Removed a line I had to add earlier.  Maybe we had a non-obvious merge conflict?
+  + Fixed a syntax error in Filesystem:  missing then symbol
+  + A little cleanup to make the RAs more uniformly not have $OCF_ROOT paths in them
+  + BSC: Bash/Bourne detail
+  + CTS: Improve a pathname construction.
+  + heartbeat: tidy some error messages
+  + OCF: The compatibility wrappers used to be located in libhbdir, not in
+  + stonith riloe: another fix for the xml info.
+  + stonith riloe: and yet another fix for the xml info (this one the last, promise).
+  + Hopefully fixed a long-time SNMP annoyance.  When the membership layer shuts down (as it does in BSC),
+  + RA: Filesystem: Unify coding style to match rest of script.
+  + LRM plugins: skip dot-files.
+  + ibmrsa: fix the xml info.
+  + BSC: 'trap' had been continuing instead of exiting
+  + Fix location of pingd binary
+  + ibmrsa: allow regular users to use it with 'stonith -n' and similar.
+  + shellfuncs: 's%:.:%%' should be 's%:.:%:%'; the '.' should be '\.'
+  + RA: LSBDummy - Make sure the action is passed to ra_execocf
+  + DTD: Add helpful comment regarding rsc_colocation objects
+  + CRM: Fix matching of objects with an ID when the match-spec has no ID
+  + crmd: No need to log this under normal circumstances
+  + Corrected a typo which only matters on 32-bit machines :-(	
+  + Corrected so that on *BSD it passes in 2 parameters, instead of 2.	
+  + log: avoid handing a null pointer as a '%s' variable	
+  + PE: Correct the CRM_CHECK comparision	
+  + stonith external/riloe: new comment in the xml on how acpid may affect the performance (thanks to Guy Coates).	
+  + RA: Dummy: Just add a comment to make sure people copying from this	
+  + OCF: minor Bash/Bourne issue	
+  + PE: Fix the handling of remove-after-stop=true - it was causing unnecessary restarts	
+  + remove is_stable() condition from drbd-outdate-peer daemon	
+  + import /bin/sh fix from David Lee	
+  + Pulled over a change from dev branch
+  + Corrected a typo which only matters on 32-bit machines :-(
+  + Corrected so that on *BSD it passes in 2 parameters, instead of 2.
+  + log: avoid handing a null pointer as a '%s' variable
+  + PE: Correct the CRM_CHECK comparision
+  + stonith external/riloe: new comment in the xml on how acpid may affect the performance (thanks to Guy Coates).
+  + RA: Dummy: Just add a comment to make sure people copying from this
+  + OCF: minor Bash/Bourne issue
+  + PE: Fix the handling of remove-after-stop=true - it was causing unnecessary restarts
+  + remove is_stable() condition from drbd-outdate-peer daemon
+
 * Tue Jan 09 2007  Alan Robertson <alanr@unix.sh> (see doc/AUTHORS file)
 + Version 2.0.8 - bug fixes and enhancements
   + Allow colocation based on node attributes other than #id 
