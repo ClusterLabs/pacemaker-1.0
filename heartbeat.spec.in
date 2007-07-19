@@ -1467,7 +1467,7 @@ ln -s @libdir@/heartbeat-gui/haclient.py $RPM_BUILD_ROOT@bindir@/hb_gui
 @libdir@/libstonithd.*
 @libdir@/libpe_rules.*
 @libdir@/libpe_status.*
-@HA_NOARCHLIBHBDIR@
+@HA_NOARCHDATAHBDIR@
 @OCF_ROOT_DIR@
 @base_includedir@/heartbeat
 @base_includedir@/clplumbing
@@ -1642,16 +1642,12 @@ List="BasicSanityCheck ResourceManager TestHeartbeatComm
 crm.dtd ha_config ha_propagate hb_addnode hb_delnode
 hb_setsite hb_setweight hb_standby hb_takeover
 mach_down req_resource"
-if
-  [ "@hb_libdir@" != "@HA_NOARCHLIBHBDIR@" ]
-then
-  cd @hb_libdir@
-  for file in $List
-  do
-    rm -f $file
-    ln -s @HA_NOARCHLIBHBDIR@/$file .
-  done
-fi
+cd @hb_libdir@
+for file in $List
+do
+  rm -f $file
+  ln -s @HA_NOARCHDATAHBDIR@/$file .
+done
 ###########################################################
 %preun
 ###########################################################
@@ -1669,12 +1665,8 @@ List="BasicSanityCheck ResourceManager TestHeartbeatComm
 crm.dtd ha_config ha_propagate hb_addnode hb_delnode
 hb_setsite hb_setweight hb_standby hb_takeover
 mach_down req_resource"
-if
-  [ "@hb_libdir@" != "@HA_NOARCHLIBHBDIR@" ]
-then
-  cd @hb_libdir@
-  rm -f $List
-fi
+cd @HA_NOARCHDATAHBDIR@
+rm -f $List
 
 ###########################################################
 %postun

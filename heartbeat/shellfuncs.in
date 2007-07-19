@@ -30,7 +30,7 @@ export HA_DATEFMT HA_RESOURCEDIR HA_DOCDIR
 
 MKTEMP=@MKTEMP@
 TESTPROG=@TEST@
-PATH=$HA_BIN:@HA_NOARCHLIBHBDIR@:$PATH
+PATH=$HA_BIN:@HA_NOARCHDATAHBDIR@:$PATH
 PATH=`echo $PATH | sed -e 's%::%%' -e 's%:\.:%:%' -e 's%^:%%' -e 's%^\.:%%'`
 export PATH
 

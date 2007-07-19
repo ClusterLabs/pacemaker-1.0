@@ -20,7 +20,7 @@
 MAINTAINERCLEANFILES    = Makefile.in
 
 # subpath for internal scripts
-halibdir		= "@HA_NOARCHLIBHBDIR@"
+halibdir		= "@HA_NOARCHDATAHBDIR@"
 halib_SCRIPTS		= mach_down req_resource ResourceManager hb_standby \
 			BasicSanityCheck TestHeartbeatComm ha_config hb_takeover hb_addnode \
 			hb_delnode ha_propagate hb_setweight hb_setsite
