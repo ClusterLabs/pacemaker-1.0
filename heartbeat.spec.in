@@ -1474,6 +1474,7 @@ ln -s @libdir@/heartbeat-gui/haclient.py $RPM_BUILD_ROOT@bindir@/hb_gui
 @base_includedir@/saf
 @base_includedir@/ocf
 @sysconfdir@/ha.d/resource.d/
+%exclude @sysconfdir@/ha.d/resource.d/ldirectord
 %config @INITDIR@/heartbeat
 %config @sysconfdir@/logrotate.d/heartbeat
 %dir @localstatedir@/lib/@HB_PKG@
