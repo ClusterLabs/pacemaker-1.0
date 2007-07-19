@@ -1695,6 +1695,40 @@ AC_SUBST(CURSESLIBS)
 
 dnl ************ curses **********************
 
+
+AC_MSG_CHECKING(for native AIS support)
+AC_ARG_ENABLE([native-ais],
+[  --enable-native-ais  Run the Cluster Resource Manager nativly over openAIS.  [default=no]],
+                          [], [enable_native_ais=no])
+
+if test "x${enable_native_ais}" = "xyes"; then
+   if test -d ${prefix}/lib/openais; then
+        AISPREFIX=${prefix}
+        LIBS="$LIBS -L${prefix}/lib/openais"
+   elif test -d /usr/local/lib/openais; then
+        AISPREFIX=/usr/local
+   	LIBS="$LIBS -L/usr/local/lib/openais"
+   else
+dnl	AC_MSG_NOTICE(Couldn't find openais installed under ${prefix} or its usual location of /usr/local... )
+	enable_native_ais="no... Couldn't find openais installed under ${prefix} or /usr/local"
+   fi
+fi
+AC_MSG_RESULT($enable_native_ais)
+
+AC_MSG_NOTICE(LIBS: $LIBS)
+
+if test "x${enable_native_ais}" = "xyes"; then
+   AC_CHECK_LIB(SaMsg, saRecvRetry,
+    	[AISLIBS='-lSaMsg'; 
+	AC_DEFINE(WITH_NATIVE_AIS,1, Run the Cluster Resource Manager nativly over openAIS)],
+	[AC_MSG_NOTICE("Native AIS Support disabled); enable_native_ais=no])
+fi
+
+AM_CONDITIONAL(BUILD_NATIVE_AIS, test "x${enable_native_ais}" = "xyes")
+AC_SUBST(AISPREFIX)
+AC_SUBST(AISLIBS)
+
+
 if test "$GCC" = yes; then
 dnl
 dnl We make sure warnings are carefully scrubbed out of the output if
