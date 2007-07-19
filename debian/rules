@@ -105,8 +105,6 @@ install-stamp:
 	-mkdir -p $(DTMP)/etc/default/
 	install -c -m 755 ldirectord/init.d/ldirectord.debian.default \
 		$(DTMP)/etc/default/ldirectord
-	cd $(DTMP)/etc/ha.d/resource.d \
-	  && ln -s /usr/sbin/ldirectord ldirectord
 	cd $(DTMP)/etc/ && ln -s ha.d heartbeat
 	cd $(DTMP)/usr/bin/ && ln -s ../lib/heartbeat-gui/haclient.py hb_gui
 	dh_movefiles --source=debian/tmp

@@ -1433,10 +1433,6 @@ make
 ###########################################################
 #make DESTDIR=$RPM_BUILD_ROOT install-strip
 make DESTDIR=$RPM_BUILD_ROOT install
-(
-  cd $RPM_BUILD_ROOT@sysconfdir@/ha.d/resource.d
-  ln -s @sbindir@/ldirectord ldirectord
-)
 
 %if %{ENABLE_MGMT}
 ln -s @libdir@/heartbeat-gui/haclient.py $RPM_BUILD_ROOT@bindir@/hb_gui
