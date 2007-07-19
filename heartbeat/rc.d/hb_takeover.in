@@ -18,4 +18,4 @@ case $HA_rsc_hold in
 	foreign)
 		standby_rsc=local;;
 esac
-@NOARCHLIBHBDIR@/hb_standby $standby_rsc
+@HA_NOARCHDATAHBDIR@/hb_standby $standby_rsc
