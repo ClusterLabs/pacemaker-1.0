@@ -131,7 +131,10 @@ ConfigureFreeBSD() {
 }
 
 ConfigureOpenBSD() {
-  FLAGS="--disable-ldirectord --prefix=/usr/local --sysconfdir=/usr/local/etc --localstatedir=/var  --with-group-id=90 --with-ccmuser-id=90 --disable-rpath"
+  FLAGS="--prefix=/usr/local --sysconfdir=/etc --localstatedir=/var  --with-group-id=584 --with-ccmuser-id=584 --disable-rpath --with-group-name=_heartbeat --with-ccmuser-name=_heartbeat --with-ocf-root=/usr/local/lib/ocf/ --enable-fatal-warnings=no" 
+  export LDFLAGS="-liconv -L/usr/local/lib/libnet-1.0"
+  export LIBNETCONFIG=/usr/local/bin/libnet-config-1.0
+  export AUTOCONF_VERSION=2.61
   CFENV="OpenBSD"
 }
 
