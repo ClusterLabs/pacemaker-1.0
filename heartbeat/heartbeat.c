@@ -214,7 +214,6 @@
 #include <sys/resource.h>
 #include <dirent.h>
 #include <netdb.h>
-#include <wordexp.h>
 #include <ltdl.h>
 #ifdef _POSIX_MEMLOCK
 #	include <sys/mman.h>
@@ -3808,8 +3807,9 @@ start_a_child_client(gpointer childentry, gpointer dummy)
 		const char *	devnull = "/dev/null";
 		unsigned int	j;
 		struct rlimit		oflimits;
-		wordexp_t we;
-		int rc;
+		char *cmdexec = NULL;
+		size_t		cmdsize;
+#define		PREFIX	"exec "
 
 		CL_SIGNAL(SIGCHLD, SIG_DFL);
 		alarm(0);
@@ -3823,19 +3823,18 @@ start_a_child_client(gpointer childentry, gpointer dummy)
 		(void)open(devnull, O_RDONLY);	/* Stdin:  fd 0 */
 		(void)open(devnull, O_WRONLY);	/* Stdout: fd 1 */
 		(void)open(devnull, O_WRONLY);	/* Stderr: fd 2 */
+		cmdsize = STRLEN_CONST(PREFIX)+strlen(centry->command)+1;
 
-		/* expand 'centry->command' string into 'exec()' arg list */
-		rc = wordexp(centry->command, &we, 0);
-		if (rc != 0) {
-			cl_perror("Bad command specification (error:%d): %s",
-			  rc, centry->command);
+		cmdexec = cl_malloc(cmdsize);
+		if (cmdexec != NULL) {
+			strlcpy(cmdexec, PREFIX, cmdsize);
+			strlcat(cmdexec, centry->command, cmdsize);
+			(void)execl("/bin/sh", "sh", "-c", cmdexec
+			, (const char *)NULL); 
 		}
-		else {
-			(void)execv(we.we_wordv[0], we.we_wordv);
 
-			/* Should not happen */
-			cl_perror("Cannot exec %s", centry->command);
-		}
+		/* Should not happen */
+		cl_perror("Cannot exec %s", centry->command);
 	}
 	/* Suppress respawning */
 	exit(100);

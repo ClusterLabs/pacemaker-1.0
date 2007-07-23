@@ -68,6 +68,7 @@ java_sources		= ${JAVA_PACKAGE_DIR}/LHAMgmtLibJNI.java	\
 			  ${JAVA_PACKAGE_DIR}/LHAMgmtLib.java		\
 			  ${JAVA_PACKAGE_DIR}/Utilities.java
 
+EXTRA_DIST =	ha_mgmt_client.i
 
 ${swig_gen_files}: ha_mgmt_client.i
 	$(SWIG) -java -package org.linuxha.sam.plugin -outdir org/linuxha/sam/plugin/ $^

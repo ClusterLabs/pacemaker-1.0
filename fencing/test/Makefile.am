@@ -32,7 +32,7 @@ COMMONLIBS	 =  $(top_builddir)/lib/clplumbing/libplumb.la   \
 		    $(GLIBLIB)
 
 
-testdir			= 	$(libdir)/heartbeat/stonithdtest
+testdir			= 	$(HA_NOARCHDATAHBDIR)/stonithdtest
 test_SCRIPTS		=	STONITHDBasicSanityCheck
 EXTRA_DIST		=	STONITHDBasicSanityCheck
 
