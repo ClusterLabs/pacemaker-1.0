@@ -2582,7 +2582,7 @@ List="BasicSanityCheck ResourceManager TestHeartbeatComm
 crm.dtd ha_config ha_propagate hb_addnode hb_delnode
 hb_setsite hb_setweight hb_standby hb_takeover
 mach_down req_resource"
-cd @HA_NOARCHDATAHBDIR@
+cd @hb_libdir@
 rm -f $List
 
 ###########################################################
