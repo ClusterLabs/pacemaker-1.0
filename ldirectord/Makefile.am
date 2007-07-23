@@ -32,5 +32,13 @@ ldirectord.8: ldirectord
 sbin_SCRIPTS		= ldirectord supervise-ldirectord-config
 man_MANS	        = ldirectord.8 supervise-ldirectord-config.8
 
-## additional Makefile targets
-# additional installations not covered normally
+harddir			= $(sysconfdir)/ha.d/resource.d
+
+.PHONY: install-exec-hook
+install-exec-hook:
+	$(mkinstalldirs) $(DESTDIR)$(harddir)
+	cd $(DESTDIR)$(harddir) && $(LN_S) -f $(sbindir)/ldirectord .
+
+.PHONY: uninstall-hook
+uninstall-hook:
+	rm -f $(DESTDIR)$(harddir)/ldirectord

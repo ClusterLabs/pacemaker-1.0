@@ -2350,10 +2350,6 @@ make
 ###########################################################
 #make DESTDIR=$RPM_BUILD_ROOT install-strip
 make DESTDIR=$RPM_BUILD_ROOT install
-(
-  cd $RPM_BUILD_ROOT@sysconfdir@/ha.d/resource.d
-  ln -s @sbindir@/ldirectord ldirectord
-)
 
 %if %{ENABLE_MGMT}
 ln -s @libdir@/heartbeat-gui/haclient.py $RPM_BUILD_ROOT@bindir@/hb_gui
@@ -2386,11 +2382,13 @@ ln -s @libdir@/heartbeat-gui/haclient.py $RPM_BUILD_ROOT@bindir@/hb_gui
 @libdir@/libpe_status.*
 @HA_NOARCHDATAHBDIR@
 @OCF_ROOT_DIR@
+%exclude @OCF_RA_DIR@/heartbeat/ldirectord
 @base_includedir@/heartbeat
 @base_includedir@/clplumbing
 @base_includedir@/saf
 @base_includedir@/ocf
 @sysconfdir@/ha.d/resource.d/
+%exclude @sysconfdir@/ha.d/resource.d/ldirectord
 %config @INITDIR@/heartbeat
 %config @sysconfdir@/logrotate.d/heartbeat
 %dir @localstatedir@/lib/@HB_PKG@
@@ -2457,6 +2455,7 @@ ln -s @libdir@/heartbeat-gui/haclient.py $RPM_BUILD_ROOT@bindir@/hb_gui
 @sysconfdir@/logrotate.d/ldirectord
 @INITDIR@/ldirectord
 @sysconfdir@/ha.d/resource.d/ldirectord
+@OCF_RA_DIR@/heartbeat/ldirectord
 %doc @mandir@/man8/ldirectord.8*
 %doc @mandir@/man8/supervise-ldirectord-config.8*
 %doc ldirectord/ldirectord.cf
@@ -2558,7 +2557,7 @@ fi
 List="BasicSanityCheck ResourceManager TestHeartbeatComm
 crm.dtd ha_config ha_propagate hb_addnode hb_delnode
 hb_setsite hb_setweight hb_standby hb_takeover
-mach_down req_resource"
+mach_down req_resource ResourceManager"
 cd @hb_libdir@
 for file in $List
 do
@@ -2568,8 +2567,6 @@ done
 ###########################################################
 %preun
 ###########################################################
-
-
 if
   [ $1 = 0 ]
 then
@@ -2581,10 +2578,10 @@ fi
 List="BasicSanityCheck ResourceManager TestHeartbeatComm
 crm.dtd ha_config ha_propagate hb_addnode hb_delnode
 hb_setsite hb_setweight hb_standby hb_takeover
-mach_down req_resource"
+mach_down req_resource ResourceManager"
 cd @hb_libdir@
 rm -f $List
-
+true
 ###########################################################
 %postun
 true
