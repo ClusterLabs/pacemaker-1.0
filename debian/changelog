@@ -13,8 +13,11 @@ heartbeat (2.1.1-1) unstable; urgency=low
   * After unpacking apply patches and run autoconf to effect
     changes to configure.in
   * Update files included in heartbeat, heartbeat-dev and ldirectord packages
+  * Update rules file to reflect that /usr/lib/heartbeat/cts/README
+    has been moved to usr/share/heartbeat/cts/README.
+    This README is installed as /usr/share/doc/heartbeat/README.cts
 
- -- Simon Horman <horms@debian.org>  Thu, 19 Jul 2007 13:43:36 +0900
+ -- Simon Horman <horms@debian.org>  Wed, 25 Jul 2007 14:15:38 +0900
 
 heartbeat (2.0.8-10) unstable; urgency=low
 

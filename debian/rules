@@ -91,7 +91,7 @@ install-stamp:
 	  MAKE=make \
 	  docdir=/usr/share/doc/heartbeat
 
-	mv $(DTMP)/usr/lib/heartbeat/cts/README \
+	mv $(DTMP)/usr/share/heartbeat/cts/README \
 		$(DTMP)/usr/share/doc/heartbeat/README.cts
 	find $(DTMP)/usr/share/man -type f | xargs gzip -v --best
 	install -c -m 755 heartbeat/init.d/heartbeat \
