@@ -115,6 +115,7 @@ struct hb_const_string {
 		,	&cstr, &hb_rsc_RscMgmtProcessTrackOps);	\
 	}
 
+#define	RSC_MGR	HA_NOARCHDATAHBDIR "/ResourceManager"
 
 /*
  * A helper function which points at a malloced string.
@@ -525,7 +526,7 @@ hb_rsc_recover_dead_resources(struct node_info* hip)
 		return;
 	}
 	
-	sprintf(timestamp, TIME_X, (TIME_T) time(NULL));
+	snprintf(timestamp, sizeof(timestamp), TIME_X, (TIME_T) time(NULL));
 
 	if (	ha_msg_add(hmsg, F_TYPE, T_STATUS) != HA_OK
 	||	ha_msg_add(hmsg, F_SEQ, "1") != HA_OK
@@ -1209,7 +1210,7 @@ hb_send_resources_held(int stable, const char * comment)
 		return HA_OK;
 	}
 	str = rsc_msg[procinfo->i_hold_resources];
-	sprintf(timestamp, TIME_X, (TIME_T) time(NULL));
+	snprintf(timestamp, sizeof(timestamp), TIME_X, (TIME_T) time(NULL));
 
 	if (ANYDEBUG) {
 		cl_log(LOG_DEBUG
@@ -1297,7 +1298,7 @@ takeover_from_node(const char * nodename)
 		return;
 	}
 
-	sprintf(timestamp, TIME_X, (TIME_T) time(NULL));
+	snprintf(timestamp, sizeof(timestamp), TIME_X, (TIME_T) time(NULL));
 
 	if (	ha_msg_add(hmsg, F_TYPE, T_STATUS) != HA_OK
 	||	ha_msg_add(hmsg, F_SEQ, "1") != HA_OK
@@ -1442,7 +1443,8 @@ req_our_resources(int getthemanyway)
 	if (nice_failback) {
 		setenv(HANICEFAILBACK, "yes", 1);
 	}
-	sprintf(cmd, HA_LIBHBDIR "/ResourceManager listkeys %s", curnode->nodename);
+	snprintf(cmd, sizeof(cmd), RSC_MGR " listkeys %s"
+	,	curnode->nodename);
 	if (ANYDEBUG) {
 		cl_log(LOG_DEBUG, "req_our_resources(%s)"
 		,	cmd);
@@ -1474,7 +1476,8 @@ req_our_resources(int getthemanyway)
 		if (buf[strlen(buf)-1] == '\n') {
 			buf[strlen(buf)-1] = EOS;
 		}
-		sprintf(getcmd, HA_LIBHBDIR "/req_resource %s", buf);
+		snprintf(getcmd, sizeof(getcmd)
+		,	HA_NOARCHDATAHBDIR "/req_resource %s", buf);
 		if (ANYDEBUG) {
 			cl_log(LOG_DEBUG, "req_our_resources()"
 			": running [%s]",	getcmd);
@@ -1520,7 +1523,7 @@ send_standby_msg(enum standby state)
 	int		rc;
 	char		timestamp[16];
 
-	sprintf(timestamp, TIME_X, (TIME_T) time(NULL));
+	snprintf(timestamp, sizeof(timestamp), TIME_X, (TIME_T) time(NULL));
 
 	if (ANYDEBUG) {
 		cl_log(LOG_DEBUG, "Sending standby [%s] msg"
@@ -1940,7 +1943,7 @@ go_standby(enum standby who, int resourceset) /* Which resources to give up */
 	 *	We could do this ourselves fairly easily...
 	 */
 
-	sprintf(cmd, HA_LIBHBDIR "/ResourceManager %s", querycmd);
+	snprintf(cmd, sizeof(cmd), RSC_MGR " %s", querycmd);
 
 	if ((rkeys = popen(cmd, "r")) == NULL) {
 		cl_log(LOG_ERR, "Cannot run command %s", cmd);
@@ -1951,7 +1954,7 @@ go_standby(enum standby who, int resourceset) /* Which resources to give up */
 		if (buf[strlen(buf)-1] == '\n') {
 			buf[strlen(buf)-1] = EOS;
 		}
-		sprintf(cmd, HA_LIBHBDIR "/ResourceManager %s %s"
+		snprintf(cmd, sizeof(cmd), RSC_MGR " %s %s"
 		,	actioncmds[action], buf);
 
 		/*should we use logging daemon or not in script*/
@@ -2087,7 +2090,8 @@ hb_giveup_resources(void)
 	 *	We could do this ourselves fairly easily...
 	 */
 
-	sprintf(cmd, HA_LIBHBDIR "/ResourceManager listkeys '.*'");
+	strlcpy(cmd, RSC_MGR " listkeys '.*'"
+	,	sizeof(cmd));
 
 	if ((rkeys = popen(cmd, "r")) == NULL) {
 		cl_log(LOG_ERR, "Cannot run command %s", cmd);
@@ -2103,7 +2107,9 @@ hb_giveup_resources(void)
 		setenv(HALOGD, cl_log_get_uselogd()?
 		       "yes":"no", 1);
 		
-		sprintf(cmd, HA_LIBHBDIR "/ResourceManager givegroup %s", buf);
+		snprintf(cmd, sizeof(buf)
+		,	RSC_MGR " givegroup %s"
+		,	buf);
 		if ((rc=system(cmd)) != 0) {
 			cl_log(LOG_ERR, "%s %s", cmd, rctomsg(rc));
 			finalrc=HA_FAIL;
