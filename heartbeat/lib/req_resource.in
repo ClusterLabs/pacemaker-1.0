@@ -42,7 +42,7 @@ RESOURCE=$1
 #	Do we already have this resource?
 #
 
-$HA_BIN/ResourceManager status $RESOURCE && exit 0
+$HA_NOARCHBIN/ResourceManager status $RESOURCE && exit 0
 
 #
 #	Now give our ip-request-message...
@@ -99,7 +99,7 @@ case $HA_DONTASK in
   # For that to work we can't go into the background...
 
 	sleep $TIMEOUT
-	$HA_BIN/ResourceManager status "$RESOURCE" ||
-	$HA_BIN/ResourceManager takegroup "$RESOURCE"
+	$HA_NOARCHBIN/ResourceManager status "$RESOURCE" ||
+	$HA_NOARCHBIN/ResourceManager takegroup "$RESOURCE"
 	;;
 esac

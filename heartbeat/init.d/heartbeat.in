@@ -370,7 +370,7 @@ StandbyHA() {
   then
     EchoNoNl "Attempting to enter standby mode"
     if
-      $HA_BIN/hb_standby
+      $HA_NOARCHBIN/hb_standby
     then
       # It's impossible to tell how long this will take.
       echo_success

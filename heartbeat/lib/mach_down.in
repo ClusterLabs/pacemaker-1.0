@@ -31,10 +31,10 @@ esac
 #	to us would require another environment variable or something
 #	like that which would be a pain.
 #
-for groupkey in `$HA_BIN/ResourceManager listkeys $mdown`
+for groupkey in `$HA_NOARCHBIN/ResourceManager listkeys $mdown`
 do
   ha_log "info: Taking over resource group $groupkey"
-  $HA_BIN/ResourceManager takegroup $groupkey
+  $HA_NOARCHBIN/ResourceManager takegroup $groupkey
 done
 
 # Be nice_failback compliant :)
