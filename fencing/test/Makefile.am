@@ -32,11 +32,12 @@ COMMONLIBS	 =  $(top_builddir)/lib/clplumbing/libplumb.la   \
 		    $(GLIBLIB)
 
 
+apitestdir		= 	$(HA_LIBHBDIR)/stonithdtest
 testdir			= 	$(HA_NOARCHDATAHBDIR)/stonithdtest
 test_SCRIPTS		=	STONITHDBasicSanityCheck
 EXTRA_DIST		=	STONITHDBasicSanityCheck
 
 
-test_PROGRAMS =  apitest
+apitest_PROGRAMS = apitest
 apitest_SOURCES =  apitest.c
 apitest_LDFLAGS = $(COMMONLIBS)
