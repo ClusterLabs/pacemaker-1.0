@@ -175,6 +175,8 @@ GUI client for heartbeat clusters
   + LF bugzilla # 1645: Minimize arch-dependent differences, maintain compatibility
   + LF bug # 1650 - heartbeat should put scripts/non arch specific things in /usr/share
   + LF bug # 1656 - apache RA (LF 1656): include ServerRoot in relative paths.
+  + LF bug # 1661 - crm_verify aborts checking and reoccurring crm_abort errors in logs
+  + LF bug # 1665 - v1 config totally broken
   +++++ Novell bugzilla bugs +++++
   + RA: EvmsSCC: More fixes from Jo (Novell 199730)
   + PE: Novell #239079 - Ensure action priority is set correctly to ensure notifcations are not lost
