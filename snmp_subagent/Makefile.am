@@ -76,7 +76,7 @@ hbagent_LDADD	 	= \
 hbagent_LDFLAGS		= @SNMPAGENTLIB@ 
 
 # test cases
-testdir			= $(libdir)/heartbeat
+testdir			= $(HA_NOARCHDATAHBDIR)
 test_SCRIPTS		= $(test_scrs)
 
 hadir                   = $(sysconfdir)/ha.d
