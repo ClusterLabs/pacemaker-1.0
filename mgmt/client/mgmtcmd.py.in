@@ -25,6 +25,7 @@ Copyright (C) 2005 International Business Machines
 
 import sys
 sys.path.append("@libdir@/heartbeat")
+sys.path.append("@HA_NOARCHDATAHBDIR@")
 
 from pymgmt import *
 from select import *
@@ -76,6 +77,4 @@ if __name__=="__main__" :
 	print "---------------------------"
  	
 	mgmt_disconnect()
-	
-		
 	

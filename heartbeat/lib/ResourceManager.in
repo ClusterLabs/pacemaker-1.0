@@ -46,7 +46,7 @@ HA_DIR=@sysconfdir@/ha.d
 HA_FUNCS=$HA_DIR/shellfuncs
 export HA_DIR HA_FUNCS
 INITDIR=@INITDIR@
-STANDBY=@libdir@/@PACKAGE@/hb_standby
+STANDBY=@HA_NOARCHDATAHBDIR@/hb_standby
 USAGE="usage: $0 listkeys machine | takegroup key | givegroup key|status resource";
 . $HA_FUNCS
 
