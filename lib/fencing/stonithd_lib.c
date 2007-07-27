@@ -370,7 +370,6 @@ end:
 int 
 stonithd_signoff(void)
 {
-	int rc = ST_FAIL;
 	struct ha_msg * request;
 	
 	if (chan == NULL || chan->ch_status == IPC_DISCONNECT) {
@@ -402,7 +401,7 @@ stonithd_signoff(void)
 		cbchan = NULL;
 	}
 	
-	return rc;
+	return ST_OK;
 }
 
 IPC_Channel *

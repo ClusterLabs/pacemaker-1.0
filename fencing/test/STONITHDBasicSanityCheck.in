@@ -127,7 +127,8 @@ clean_work
 if [ $ERR_COUNT -eq 0 ]; then
 	echo "All tests for stonithd are ok."
 else
-	echo "There are $ERR_COUNT errors when testing stonthd."
+	echo "There are $ERR_COUNT ERRORs when testing stonithd."
+	exit $ERR_COUNT
 fi
 
 exit 0
