@@ -1,3 +1,17 @@
+heartbeat (2.1.1.1-1) unstable; urgency=low
+
+  * New Upstream
+    - Fix file relocation problems
+    - Fix IPaddr's handling of CIDR netmasks
+    - Ran ./ConfigureMe bootstrap && make distclean &&
+          rm ltdl.m4 libtool.m4 autoconf automake autoheader
+      to effect changes made to the top-level Makefile.am
+  * Add openhpi stonith module
+    - Add build dependancy on libopenhpi-dev
+    - Add usr/lib/stonith/plugins/stonith2/bladehpi.so to heartbeat.files
+
+ -- Simon Horman <horms@debian.org>  Sat, 28 Jul 2007 13:18:20 +0900
+
 heartbeat (2.1.1-1) unstable; urgency=low
 
   * New Upstream
