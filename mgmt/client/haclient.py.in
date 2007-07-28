@@ -30,14 +30,15 @@ from xml.dom.minidom import parseString
 import locale, gettext
 app_name = "haclient"
 
-sys.path.append("@HA_NOARCHDATAHBDIR@/heartbeat-gui")
+sys.path.append("@HA_DATADIR@/heartbeat-gui")
+sys.path.append("@HA_LIBDIR@/heartbeat-gui")
 from pymgmt import *
 
 import pygtk
 pygtk.require('2.0')
 import gtk, gtk.glade, gobject
 
-UI_FILE = "@HA_NOARCHDATAHBDIR@/heartbeat-gui/haclient.glade"
+UI_FILE = "@HA_DATADIR@/heartbeat-gui/haclient.glade"
 
 window = None
 manager = None

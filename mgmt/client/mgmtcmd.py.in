@@ -24,8 +24,8 @@ Copyright (C) 2005 International Business Machines
 # Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 import sys
-sys.path.append("@libdir@/heartbeat")
-sys.path.append("@HA_NOARCHDATAHBDIR@")
+sys.path.append("@HA_LIBHBDIR@/heartbeat-gui")
+sys.path.append("@HA_DATADIR@/heartbeat-gui")
 
 from pymgmt import *
 from select import *

@@ -2354,9 +2354,6 @@ make
 #make DESTDIR=$RPM_BUILD_ROOT install-strip
 make DESTDIR=$RPM_BUILD_ROOT install
 
-%if %{ENABLE_MGMT}
-ln -s @libdir@/heartbeat-gui/haclient.py $RPM_BUILD_ROOT@bindir@/hb_gui
-%endif
 
 ###########################################################
 %files
@@ -2446,6 +2443,8 @@ ln -s @libdir@/heartbeat-gui/haclient.py $RPM_BUILD_ROOT@bindir@/hb_gui
 	@libdir@/libhbmgmtcommon.*
 	@libdir@/libhbmgmttls.*
 	/etc/pam.d/hbmgmtd
+	%exclude @HA_DATADIR@/heartbeat-gui
+	%exclude @libdir@/heartbeat-gui
 %endif
 
 ###########################################################
@@ -2493,6 +2492,7 @@ ln -s @libdir@/heartbeat-gui/haclient.py $RPM_BUILD_ROOT@bindir@/hb_gui
 ###########################################################
 %defattr(-,root,root)
 @libdir@/heartbeat-gui
+@HA_DATADIR@/heartbeat-gui
 @bindir@/hb_gui
 @prefix@/share/locale/zh_CN/LC_MESSAGES/haclient.mo
 %endif
