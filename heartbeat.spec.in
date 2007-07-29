@@ -84,11 +84,13 @@ GUI client for heartbeat clusters
 * Mon Jul 30 2007  Alan Robertson <alanr@unix.sh> and MANY others (see doc/AUTHORS file)
 + Version 2.1.2 - packaging changes and a small number of small bug fixes
   + fixed the packaging errors in 2.1.1
-  + fixed a bug which caused CIDR netmasks in IPaddr to be ignored - fatal for R1 configs
+  + fixed a bug which caused CIDR netmasks in IPaddr to be ignored - fatal for some R1 configs
   + fixed a bug which kept ipv6addr from being compiled in RHEL4
   + fixed a bug which kept configure from working in Debian
 * Mon Jul 23 2007  Alan Robertson <alanr@unix.sh> (see doc/AUTHORS file)
 + Version 2.1.1 - bug fixes and enhancements - changelog includes everything after 2.0.8
+  + Added vmware STONITH script
+  + Added Evmsd, eDir88, and o2cb resource agents
   +++++ OSDL / Linux Foundation bugzilla bugs +++++
   + OSDL bug 393 - Enable build of plugin if OpenHPI present
   + OSDL bug 393 - Update plugin from OpenHPI 2.2 to OpenHPI 2.6
