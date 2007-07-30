@@ -507,6 +507,9 @@ retry:
 			goto retry;
 		}
 		PILCallLog(LOG, PIL_CRIT, "Error sending packet: %s", strerror(errno));
+		PILCallLog(LOG, PIL_INFO, "euid=%lu egid=%lu"
+		,	(unsigned long) geteuid()
+		,	(unsigned long) getegid());
 		FREE(icmp_pkt);
 		ha_msg_del(msg);
 		return(HA_FAIL);
