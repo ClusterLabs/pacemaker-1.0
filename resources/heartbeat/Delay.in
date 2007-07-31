@@ -38,4 +38,4 @@ OCF_TYPE=Delay
 OCF_RESOURCE_INSTANCE=${OCF_TYPE}_${OCF_RESKEY_startdelay}
 export OCF_TYPE OCF_RESOURCE_INSTANCE
 
-ra_execocf $op;;
+ra_execocf $op
