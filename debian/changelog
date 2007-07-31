@@ -1,16 +1,27 @@
-heartbeat (2.1.1.1-1) unstable; urgency=low
+heartbeat (2.1.2-1) unstable; urgency=low
 
   * New Upstream
     - Fix file relocation problems
+      (closes: #434829)
     - Fix IPaddr's handling of CIDR netmasks
     - Ran ./ConfigureMe bootstrap && make distclean &&
           rm ltdl.m4 libtool.m4 autoconf automake autoheader
-      to effect changes made to the top-level Makefile.am
+      to effect changes made to configure.in
   * Add openhpi stonith module
     - Add build dependancy on libopenhpi-dev
     - Add usr/lib/stonith/plugins/stonith2/bladehpi.so to heartbeat.files
+  * IPv6 configure check
+    - For the ipv6 check to work Debian ia64 currently needs to check
+      "sys/types.h", a patch went into the tree a while ago to fix this.
+      However, at the 11th hour a patch went into 2.1.2 to reverse this
+      change as it breaks the build on RHEL4. So for now, until a proper
+      fix is made, just reverse that change in Debian packages.
+    - Ran ./ConfigureMe bootstrap && make distclean &&
+          rm ltdl.m4 libtool.m4 autoconf automake autoheader
+      to effect changes made to configure.in
+    - Patch: ipv6-check.patch
 
- -- Simon Horman <horms@debian.org>  Sat, 28 Jul 2007 13:18:20 +0900
+ -- Simon Horman <horms@debian.org>  Tue, 31 Jul 2007 11:01:16 +0900
 
 heartbeat (2.1.1-1) unstable; urgency=low
 
