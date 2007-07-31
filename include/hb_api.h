@@ -431,6 +431,7 @@ struct llc_ops {
 #define KEY_CONNINTVAL	"conn_logd_time"
 #define KEY_BADPACK	"log_badpack"
 #define KEY_REGAPPHBD	"use_apphbd"
+#define KEY_SYSLOGFMT	"syslogmsgfmt"
 #define KEY_COREDUMP	"coredumps"
 #define KEY_COREROOTDIR	"coreroot"
 #define KEY_REL2	"crm"

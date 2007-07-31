@@ -59,7 +59,7 @@
 #include <hb_config.h>
 #include <hb_api_core.h>
 #include <clplumbing/cl_syslog.h>
-#include  <clplumbing/cl_misc.h>
+#include <clplumbing/cl_misc.h>
 
 #define	DIRTYALIASKLUDGE
 
@@ -108,6 +108,7 @@ static int set_uuidfrom(const char*);
 static int ha_config_check_boolean(const char *);
 static int set_memreserve(const char *);
 static int set_quorum_server(const char * value);
+static int set_syslog_logfilefmt(const char * value);
 #ifdef ALLOWPOLLCHOICE
   static int set_normalpoll(const char *);
 #endif
@@ -155,6 +156,7 @@ struct directive {
 , {KEY_CONNINTVAL,set_logdconntime, TRUE, "60", "the interval to reconnect to logd"}  
 , {KEY_REGAPPHBD, set_register_to_apphbd, FALSE, NULL, "register with apphbd"}
 , {KEY_BADPACK,   set_badpack_warn, TRUE, "true", "warn about bad packets"}
+, {KEY_SYSLOGFMT, set_syslog_logfilefmt, TRUE, "false", "log to files in syslog format"}
 , {KEY_COREDUMP,  set_coredump, TRUE, "true", "enable Linux-HA core dumps"}
 , {KEY_COREROOTDIR,set_corerootdir, TRUE, NULL, "set root directory of core dump area"}
 , {KEY_REL2,      set_release2mode, TRUE, "false"
@@ -212,7 +214,6 @@ GSList*					del_node_list;
 
 static int	islegaldirective(const char *directive);
 static int	parse_config(const char * cfgfile, char *nodename);
-static long	get_msec(const char * input);
 static int	add_option(const char *	option, const char * value);
 
 
@@ -1435,7 +1436,7 @@ set_hopfudge(const char * value)
 static int
 set_keepalive_ms(const char * value)
 {
-	config->heartbeat_ms = get_msec(value);
+	config->heartbeat_ms = cl_get_msec(value);
 
 	if (config->heartbeat_ms > 0) {
 		return(HA_OK);
@@ -1448,7 +1449,7 @@ set_keepalive_ms(const char * value)
 static int
 set_deadtime_ms(const char * value)
 {
-	config->deadtime_ms = get_msec(value);
+	config->deadtime_ms = cl_get_msec(value);
 	if (config->deadtime_ms >= 0) {
 		return(HA_OK);
 	}
@@ -1459,7 +1460,7 @@ set_deadtime_ms(const char * value)
 static int
 set_deadping_ms(const char * value)
 {
-	config->deadping_ms = get_msec(value);
+	config->deadping_ms = cl_get_msec(value);
 	if (config->deadping_ms >= 0) {
 		return(HA_OK);
 	}
@@ -1470,7 +1471,7 @@ set_deadping_ms(const char * value)
 static int
 set_initial_deadtime_ms(const char * value)
 {
-	config->initial_deadtime_ms = get_msec(value);
+	config->initial_deadtime_ms = cl_get_msec(value);
 	if (config->initial_deadtime_ms >= 0) {
 		return(HA_OK);
 	}
@@ -1677,78 +1678,14 @@ set_register_to_apphbd(const char * value)
 	return cl_str_to_boolean(value, &UseApphbd);
 }
 
-/*
- *	Convert a string into a positive, rounded number of milliseconds.
- *
- *	Returns -1 on error.
- *
- *	Permissible forms:
- *		[0-9]+			units are seconds
- *		[0-9]*.[0-9]+		units are seconds
- *		[0-9]+ *[Mm][Ss]	units are milliseconds
- *		[0-9]*.[0-9]+ *[Mm][Ss]	units are milliseconds
- *		[0-9]+ *[Uu][Ss]	units are microseconds
- *		[0-9]*.[0-9]+ *[Uu][Ss]	units are microseconds
- *
- *	Examples:
- *
- *		1		= 1000 milliseconds
- *		1000ms		= 1000 milliseconds
- *		1000000us	= 1000 milliseconds
- *		0.1		= 100 milliseconds
- *		100ms		= 100 milliseconds
- *		100000us	= 100 milliseconds
- *		0.001		= 1 millisecond
- *		1ms		= 1 millisecond
- *		1000us		= 1 millisecond
- *		499us		= 0 milliseconds
- *		501us		= 1 millisecond
- */
-#define	NUMCHARS	"0123456789."
-static long
-get_msec(const char * input)
-{
-	const char *	cp = input;
-	const char *	units;
-	long		multiplier = 1000;
-	long		divisor = 1;
-	long		ret = -1;
-	double		dret;
 
-	cp += strspn(cp, WHITESPACE);
-	units = cp + strspn(cp, NUMCHARS);
-	units += strspn(units, WHITESPACE);
-
-	if (strchr(NUMCHARS, *cp) == NULL) {
-		return ret;
-	}
-
-	if (strncasecmp(units, "ms", 2) == 0
-	||	strncasecmp(units, "msec", 4) == 0) {
-		multiplier = 1;
-		divisor = 1;
-	}else if (strncasecmp(units, "us", 2) == 0
-	||	strncasecmp(units, "usec", 4) == 0) {
-		multiplier = 1;
-		divisor = 1000;
-	}else if (*units != EOS && *units != '\n'
-	&&	*units != '\r') {
-		return ret;
-	}
-	dret = atof(cp);
-	dret *= (double)multiplier;
-	dret /= (double)divisor;
-	dret += 0.5;
-	ret = (long)dret;
-	return(ret);
-}
 
 /* Set warntime interval */
 static int
 set_warntime_ms(const char * value)
 {
 	long	warntime;
-	warntime = get_msec(value);
+	warntime = cl_get_msec(value);
 
 	if (warntime <= 0) {
 		fprintf(stderr, "Warn time [%s] is invalid.\n", value);
@@ -2043,7 +1980,7 @@ static int
 set_logdconntime(const char * value)
 {
 	int logdtime;
-	logdtime = get_msec(value);
+	logdtime = cl_get_msec(value);
 	
 	cl_log_set_logdtime(logdtime);
 	
@@ -2470,6 +2407,16 @@ set_coredump(const char* value)
 		if (cl_enable_coredumps(docore) < 0 ) {
 			rc = HA_FAIL;
 		}
+	}
+	return rc;
+}
+static int
+set_syslog_logfilefmt(const char * value)
+{
+	gboolean	dosyslogfmt = HA_OK;
+	int		rc;
+	if ((rc = cl_str_to_boolean(value, &dosyslogfmt)) == HA_OK) {
+		cl_log_enable_syslog_filefmt(dosyslogfmt);
 	}
 	return rc;
 }
