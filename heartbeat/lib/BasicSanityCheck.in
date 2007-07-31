@@ -203,6 +203,7 @@ GenerateHaCf() {
 GenerateCrmdHaCf() {
   cat <<-! >$1
 	#	$IDENTSTRING
+	syslogmsgfmt true
 	logfile   /dev/null
 	debugfile $LOGFILE
 	keepalive 10ms

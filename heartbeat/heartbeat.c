@@ -3809,7 +3809,7 @@ start_a_child_client(gpointer childentry, gpointer dummy)
 		struct rlimit		oflimits;
 		char *cmdexec = NULL;
 		size_t		cmdsize;
-#define		PREFIX	"exec "
+#define		CMDPREFIX	"exec "
 
 		CL_SIGNAL(SIGCHLD, SIG_DFL);
 		alarm(0);
@@ -3823,11 +3823,11 @@ start_a_child_client(gpointer childentry, gpointer dummy)
 		(void)open(devnull, O_RDONLY);	/* Stdin:  fd 0 */
 		(void)open(devnull, O_WRONLY);	/* Stdout: fd 1 */
 		(void)open(devnull, O_WRONLY);	/* Stderr: fd 2 */
-		cmdsize = STRLEN_CONST(PREFIX)+strlen(centry->command)+1;
+		cmdsize = STRLEN_CONST(CMDPREFIX)+strlen(centry->command)+1;
 
 		cmdexec = cl_malloc(cmdsize);
 		if (cmdexec != NULL) {
-			strlcpy(cmdexec, PREFIX, cmdsize);
+			strlcpy(cmdexec, CMDPREFIX, cmdsize);
 			strlcat(cmdexec, centry->command, cmdsize);
 			(void)execl("/bin/sh", "sh", "-c", cmdexec
 			, (const char *)NULL); 
