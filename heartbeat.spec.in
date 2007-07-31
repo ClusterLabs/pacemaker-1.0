@@ -2717,6 +2717,9 @@ rm -rf $RPM_BUILD_DIR/%{HB_PKG}-%{HB_VERSION}
 ###########################################################
 %pre
 ###########################################################
+# We made some directories into symlinks
+# RPM won't update them correctly
+rm -fr %{libdir}/cts %{libdir}/lrmtest %{libdir}/stonithdtest
 #
 #	This isn't perfect.  But getting every distribution
 #	to agree on group id's seems hard to me :-(
@@ -2753,12 +2756,6 @@ else
   fi
 fi
 
-###########################################################
-%pre
-###########################################################
-# We made some directories into symlinks
-# RPM won't update them correctly
-rm -fr %{libdir}/cts %{libdir}/lrmtest %{libdir}/stonithdtest
 ###########################################################
 %post
 ###########################################################
