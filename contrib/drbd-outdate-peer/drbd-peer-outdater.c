@@ -142,7 +142,7 @@ main(int argc, char ** argv)
 	dop_client_t *new_client = NULL;
 	GCHSource *src = NULL;
 
-	crm_log_init(crm_system_name, FALSE);
+	crm_log_init("drbd-peer-outdater", LOG_INFO, TRUE, FALSE, argc, argv);
 
 	crm_debug_3("Begining option processing");
 	while ((flag = getopt(argc, argv, OPTARGS)) != EOF) {
