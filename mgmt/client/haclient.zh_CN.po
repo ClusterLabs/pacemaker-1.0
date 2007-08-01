@@ -266,7 +266,7 @@ msgid "Constraints"
 msgstr "限制条件"
 
 #: haclient.py.in:450
-msgid "Places"
+msgid "Locations"
 msgstr "位置"
 
 #: haclient.py.in:455
@@ -380,7 +380,7 @@ msgstr "标识符"
 #: haclient.py.in:1114 haclient.py.in:453 haclient.py.in:1115
 #: haclient.py.in:1134 haclient.py.in:1189 haclient.py.in:1199
 #: haclient.py.in:1228
-msgid "place"
+msgid "location"
 msgstr "位置"
 
 #: haclient.py.in:1114 haclient.py.in:458 haclient.py.in:1115
@@ -424,7 +424,7 @@ msgid "fail"
 msgstr "失败"
 
 #: haclient.py.in:1200
-msgid "Add Place Constraint"
+msgid "Add Location Constraint"
 msgstr "添加位置限制"
 
 #: haclient.py.in:1208
