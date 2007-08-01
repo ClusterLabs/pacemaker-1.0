@@ -1618,8 +1618,16 @@ class MainWindow :
 			manager.do_cmd("standby\n"+self.cur_name + "\n" + "off")
 
 	def on_add_item(self, action) :
+		if self.cur_type in [_("constraints"), _("places"), _("place")]:
+			add_type = _("place") 	
+		elif self.cur_type in [_("orders"), _("order")]:
+			add_type = _("order")
+		elif self.cur_type in [_("colocations"), _("colocation")]:
+			add_type = _("colocation")
+		else:
+			add_type = _("native")
 		new_type = kvbox(_("The type of new item"),
-				[Field("type",_("Item Type"),_("native"),
+				[Field("type",_("Item Type"),add_type,
 				[_("native"), _("group"), _("place"),_("order"), _("colocation")])])
 		if new_type == None :
 			return
