@@ -142,7 +142,7 @@ main(int argc, char ** argv)
 	dop_client_t *new_client = NULL;
 	GCHSource *src = NULL;
 
-	crm_log_init(bname, LOG_INFO, FALSE, FALSE, argc, argv);
+	crm_log_init(crm_system_name, LOG_INFO, FALSE, FALSE, argc, argv);
 
 	crm_debug_3("Begining option processing");
 	while ((flag = getopt(argc, argv, OPTARGS)) != EOF) {
