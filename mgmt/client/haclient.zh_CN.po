@@ -695,3 +695,9 @@ msgstr "服务器(:端口号):"
 
 msgid "Boolean OP:"
 msgstr "布尔运算："
+
+msgid "Clone can't belong to group"
+msgstr "克隆资源不能从属于资源组"
+
+msgid "Master/Slave can't belong to group"
+msgstr "主从资源不能从属于资源组"

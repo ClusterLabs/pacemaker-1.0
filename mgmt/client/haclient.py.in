@@ -1439,6 +1439,13 @@ class AddNativeDlg :
 					msgbox(_("the Group Name is exists"))
 					passed = False
 
+				if group_ != "" and glade.get_widget("is_clone").get_active():
+					msgbox(_("Clone can't belong to group"))
+					passed = False
+				if group_ != "" and glade.get_widget("is_master").get_active():
+					msgbox(_("Master/Slave can't belong to group"))
+					passed = False
+
 				if passed :
 					rsc = {}
 					rsc["id"] = glade.get_widget("id").get_text()
