@@ -1020,6 +1020,14 @@ then
   echo 1 > $COREPID
 fi
 
+# Create temp rsc dir if it doesn't yet exist, RAs depend on it
+HARSCTMP=@HA_VARRUNHBRSCDIR@
+if
+  [ ! -d "$HARSCTMP" ]
+then
+  mkdir $HARSCTMP
+fi
+
 Base64MD5Test
 TestRA
 
