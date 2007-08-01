@@ -930,30 +930,44 @@ class ColocationView(View) :
 class LocationView(View) :
 	name = "locationview"
 	expr_list = None
-	location_save = None
+	save_location = None
 	
 	def on_apply(self, widget):
-		location = self.location_save
+		glade = self.glade
+		location = self.save_location
+		location["rsc"] = glade.get_widget("resource").child.get_text()
+		location["score"] = glade.get_widget("score").child.get_text()
+		location["boolean_op"] = glade.get_widget("boolean_op").child.get_text()
 		location["exprs"] = self.expr_list.get_data()
 		manager.update_constraint("rsc_location",location)
 		View.on_apply(self, widget)
 							   
 	def update(self) :
+		glade = self.glade
 		self.expr_list.clear()
 		location = manager.get_constraint("rsc_location", self.param)
-		self.location_save = location
 		if location != None :
-			self.glade.get_widget("id").set_text(location["id"])
-			self.glade.get_widget("resource").set_text(location["rsc"])
-			self.glade.get_widget("score").set_text(location["score"])
-			self.glade.get_widget("boolean_op").set_text(location["boolean_op"])
+			glade.get_widget("id").set_text(location["id"])
+			glade.get_widget("resource").child.set_text(location["rsc"])
+			glade.get_widget("resource").child.set_editable(False)
+			glade.get_widget("score").child.set_text(location["score"])
+			glade.get_widget("boolean_op").child.set_text(location["boolean_op"])
+			glade.get_widget("boolean_op").child.set_editable(False)
 			for expr in location["exprs"] :
 				self.expr_list.insert(expr)
+			store = gtk.ListStore(str)
+			for rsc in manager.get_all_rsc_id():
+				store.append([rsc])
+			glade.get_widget("resource").set_model(store)
+			self.save_location = location
 		View.update(self)
 		
 	def __init__(self, rsc) :
 		View.__init__(self, rsc)
 		glade = self.glade
+		glade.get_widget("resource").connect("changed", self.on_changed)
+		glade.get_widget("score").connect("changed", self.on_changed)
+		glade.get_widget("boolean_op").connect("changed", self.on_changed)
 		self.expr_list = ListWithAddDel(glade.get_widget("expr_list"),
 			glade.get_widget("add_expr"),
 			glade.get_widget("del_expr"),
@@ -1650,9 +1664,9 @@ class MainWindow :
 		elif new_type["type"] == _("location") :
 			location = kvbox(_("Add Location Constraint"),
 				[Field("id",_("ID"),"location_",None, False),
-				 Field("rsc",_("Resource"),None, manager.get_all_rsc_id(),False),
-				 Field("score",_("Score"),"100"),
-				 Field("boolean_op", _("Boolean OP"), "", ["and","or"])])
+				 Field("rsc",_("Resource"),None, manager.get_all_rsc_id(),False)])
+			location["score"] = '0'
+			location["boolean_op"] = ''
 			if location != None :
 				location["exprs"] = []
 				manager.update_constraint("rsc_location", location)

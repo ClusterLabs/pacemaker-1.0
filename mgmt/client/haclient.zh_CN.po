@@ -695,6 +695,3 @@ msgstr "服务器(:端口号):"
 
 msgid "Boolean OP:"
 msgstr "布尔运算："
-
-msgid "Boolean OP"
-msgstr "布尔运算"
