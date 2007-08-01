@@ -946,6 +946,7 @@ class PlaceView(View) :
 			self.glade.get_widget("id").set_text(place["id"])
 			self.glade.get_widget("resource").set_text(place["rsc"])
 			self.glade.get_widget("score").set_text(place["score"])
+			self.glade.get_widget("boolean_op").set_text(place["boolean_op"])
 			for expr in place["exprs"] :
 				self.expr_list.insert(expr)
 		View.update(self)
@@ -1642,7 +1643,8 @@ class MainWindow :
 			place = kvbox(_("Add Place Constraint"),
 				[Field("id",_("ID"),"place_",None, False),
 				 Field("rsc",_("Resource"),None, manager.get_all_rsc_id(),False),
-				 Field("score",_("Score"),"100")])
+				 Field("score",_("Score"),"100"),
+				 Field("boolean_op", _("Boolean OP"), "", ["and","or"])])
 			if place != None :
 				place["exprs"] = []
 				manager.update_constraint("rsc_location", place)
@@ -2420,15 +2422,15 @@ class Manager :
 			
 	def get_constraint(self, type, id) :
 		if type == "rsc_location" :
-			place_attr_names = ["id","rsc","score"]
+			place_attr_names = ["id","rsc","score", "boolean_op"]
 			expr_attr_names = ["id","attribute","operation","value"]
 			attrs = manager.query("get_co\nrsc_location\n"+id)
 			if attrs == None :
 				return None
-			place = dict(zip(place_attr_names,attrs[:3]))
+			place = dict(zip(place_attr_names,attrs[:4]))
 			place["exprs"] = []
 			for i in range((len(attrs)-len(place_attr_names))/len(expr_attr_names)) :
-				expr = dict(zip(expr_attr_names,attrs[3+i*4:7+i*4]))
+				expr = dict(zip(expr_attr_names,attrs[4+i*4:8+i*4]))
 				place["exprs"].append(expr)
 			return place
 		elif type == "rsc_order" :
@@ -2454,8 +2456,8 @@ class Manager :
 			manager.do_cmd("del_co\nrsc_location\n"+constraint["id"])
 			if self.failed_reason != "" :
 				msgbox(self.failed_reason)
-			cmd = "up_co\nrsc_location\n%s\n%s\n%s"% \
-					(constraint["id"],constraint["rsc"],constraint["score"])
+			cmd = "up_co\nrsc_location\n%s\n%s\n%s\n%s"% \
+					(constraint["id"],constraint["rsc"],constraint["score"],constraint["boolean_op"])
 			for expr in constraint["exprs"] :
 				cmd = cmd + "\n" + expr["id"] + "\n" + expr["attribute"] + \
 					"\n" + expr["operation"] + "\n" + expr["value"]

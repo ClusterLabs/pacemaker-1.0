@@ -692,3 +692,9 @@ msgstr "同节点启动子资源"
 
 msgid "Server(:port):"
 msgstr "服务器(:端口号):"
+
+msgid "Boolean OP:"
+msgstr "布尔运算："
+
+msgid "Boolean OP"
+msgstr "布尔运算"
