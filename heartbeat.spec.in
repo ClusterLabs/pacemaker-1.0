@@ -29,6 +29,7 @@
 %define INITDIR @INITDIR@
 %define OCF_ROOT_DIR @OCF_ROOT_DIR@
 %define OCF_RA_DIR @OCF_RA_DIR@
+%define SNMP_RPM_BUILD_REQUIRES @SNMP_RPM_BUILD_REQUIRES@
 ##############################################################
 #
 #
@@ -57,32 +58,21 @@
 #	I'm sure this code isn't right yet...
 #
 %{!?is_suse: %define is_suse %(if test -f /etc/SuSE-release; then echo 1; else echo 0;fi)}
-%{!?is_rhel: %define is_rhel %(if test -f /etc/redhat-release; then echo 1; else echo 0;fi)}
-%define	is_centos	0
+
 %define	is_fedora	0
 
-%if %{is_centos}
-	%undefine	is_rhel
-	%undefine	is_fedora
-	%define		is_rhel	0
-	%define		is_fedora	0
-	#centos_ver is a number (2,3,4,5). It can be provided in the build system or
-	# via the command line with the following define for rpmbuild
-	# --define "centos_ver 5"
-	# If centos_ver is not provided the following will find it and should work on
-	# all current redhat based EL rebuilds, will not work properly on Fedora
-	%{!?centos_ver: %define centos_ver %(Z=`rpm -q --whatprovides /etc/redhat-release`;A=`rpm -q --qf '%{V}' $Z`; echo ${A:0:1})}
+%{!?is_rhel: %define is_rhel %(if test -f /etc/redhat-release; then echo 1; else echo 0;fi)}
+
+%if %{is_rhel}
+	%{!?rhel_ver: %define rhel_ver %(Z=`rpm -q --whatprovides /etc/redhat-release`;A=`rpm -q --qf '%{V}' $Z`; echo ${A:0:1})}
 %endif
 
-#%if %{is_rhel}
-#	%{!?rhel_ver: %define rhel_ver %(Z=`rpm -q --whatprovides /etc/redhat-release`;A=`rpm -q --qf '%{V}' $Z`; echo ${A:0:1})}
-#%endif
 %if %{is_suse}
 	%define suse_ver %(expr %{suse_version} / 100)
 	%define suse_minor %(expr %{suse_version} '%' 100)
 %endif
 
-%if !%{is_suse} && !%{is_rhel} && !%{is_centos} && !%{is_fedora} && !%{is_solaris} && !%{is_aix}
+%if !%{is_suse} && !%{is_rhel} && !%{is_fedora} && !%{is_solaris} && !%{is_aix}
 	%define	is_other	1
 %else
 	%define	is_other	0
@@ -181,10 +171,13 @@ Group: Utilities
 Packager: Alan Robertson <alanr@unix.sh>
 Source: http://linux-ha.org/download/%{HB_PKG}-%{HB_VERSION}.tar.gz
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-build
-BuildRequires:	autoconf, automake libtool
+BuildRequires:	autoconf, automake libtool, libxml2-devel
 BuildRequires:	glib2-devel, python, python-devel, perl, %{SSH}, libnet
 BuildRequires:	openhpi-devel
-%if %{is_centos} && "%{centos_ver}" >= "5"
+%if %{ENABLE_SNMP_SUBAGENT}
+%{SNMP_RPM_BUILD_REQUIRES}
+%endif
+%if %{is_rhel} && "%{rhel_ver}" >= "5"
 BuildRequires: libtool-ltdl-devel
 %endif
 %if ENABLE_MGMT
@@ -193,7 +186,6 @@ BuildRequires:	libgcrypt-devel, gnutls-devel
 Requires: %{STONITH_NAME} = %{version}-%{release}, %{PILS_NAME} = %{version}-%{release}
 Requires: sysklogd, perl, iputils, %{SSH}
 %if %{is_suse}
-%elseif %{is_centos}
 %elseif %{is_fedora}
 %elseif %{is_rhel}
 %elseif %{is_aix}
@@ -209,7 +201,6 @@ Requires: perl-libnet, perl-Net-DNS
 # Perl modules available from www.ultramonkey.org and others
 
 %if %{is_suse}
-%elseif %{is_centos}
 %elseif %{is_fedora}
 %elseif %{is_rhel}
 %elseif %{is_aix}
@@ -222,7 +213,6 @@ Summary: Provides an interface to Shoot The Other Node In The Head
 Group: Utilities
 
 %if %{is_suse}
-%elseif %{is_centos}
 %elseif %{is_fedora}
 %elseif %{is_rhel}
 %elseif %{is_aix}
@@ -240,7 +230,6 @@ Summary: Provides a gui interface to manage heartbeat clusters
 Group: Utilities
 
 %if %{is_suse}
-%elseif %{is_centos}
 %elseif %{is_fedora}
 %elseif %{is_rhel}
 %elseif %{is_aix}
