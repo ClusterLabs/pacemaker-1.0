@@ -1,5 +1,5 @@
-%define _unpackaged_files_terminate_build 1
-%define _missing_doc_files_terminate_build 1
+%define _unpackaged_files_terminate_build	1
+%define _missing_doc_files_terminate_build	1
 %define distro_style_rpms	@DISTRO_STYLE_RPMS@
 #
 %define HB_PKG @HB_PKG@
@@ -30,6 +30,19 @@
 %define OCF_ROOT_DIR @OCF_ROOT_DIR@
 %define OCF_RA_DIR @OCF_RA_DIR@
 %define SNMP_RPM_BUILD_REQUIRES @SNMP_RPM_BUILD_REQUIRES@
+%define PING @PING@
+%if	"@CIMOM@" != ""
+	%define build_cmpi	1
+	%define CIMOM	@CIMOM@
+	%define CMPI_PROVIDER_DIR	@CMPI_PROVIDER_DIR@
+%else
+	%define build_cmpi	0
+%endif
+%define IPTABLES iptables
+%define NOGROUP nobody
+%define NOUSER nobody
+%define LIBNET_DEVEL libnet
+%define LIBNET	libnet
 ##############################################################
 #
 #
@@ -61,6 +74,12 @@
 
 %define	is_fedora	0
 
+%if 0%{?mandriva_version} > 0
+	%define	is_mandriva	1
+%else
+	%define	is_mandriva	0
+%endif
+
 %{!?is_rhel: %define is_rhel %(if test -f /etc/redhat-release; then echo 1; else echo 0;fi)}
 
 %if %{is_rhel}
@@ -72,7 +91,7 @@
 	%define suse_minor %(expr %{suse_version} '%' 100)
 %endif
 
-%if !%{is_suse} && !%{is_rhel} && !%{is_fedora} && !%{is_solaris} && !%{is_aix}
+%if !%{is_suse} && !%{is_rhel} && !%{is_fedora} && !%{is_solaris} && !%{is_mandriva} && !%{is_aix} 
 	%define	is_other	1
 %else
 	%define	is_other	0
@@ -129,12 +148,26 @@
 %define STONITH_NAME	%{HB_PKG}-stonith
 %define GUI_NAME	%{HB_PKG}-gui
 %define LDIR_NAME	%{HB_PKG}-ldirectord
+%define DEVEL_NAME	%{HB_PKG}-devel
+%define CMPI_NAME	%{HB_PKG}-cmpi
 
+%define pkg_group	Utilities
+%define	SSLeay	perl-Net-SSLeay
 %if %{is_fedora} || %{is_rhel}
 	%undefine	PILS_NAME
 	%undefine	STONITH_NAME
+	%undefine	LIBNET_DEVEL
+	%undefine	SSLeay
+	%undefine pkg_group
 	%define PILS_NAME	pils
 	%define STONITH_NAME	stonith
+	%define LIBNET_DEVEL	libnet-devel
+	%define	SSLeay	perl-Net_SSLeay
+	%define pkg_group	Productivity/Clustering/HA
+%endif
+%if is_suse
+	%undefine pkg_group
+	%define pkg_group	Productivity/Clustering/HA
 %endif
 
 %define	BASE_PROVIDES	ha
@@ -167,34 +200,74 @@ Version:	%{HB_VERSION}
 Release:	%{RPMREL}
 License: GPL/LGPL
 URL: http://linux-ha.org/
-Group: Utilities
+Group: %{pkg_group}
 Packager: Alan Robertson <alanr@unix.sh>
 Source: http://linux-ha.org/download/%{HB_PKG}-%{HB_VERSION}.tar.gz
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-build
 BuildRequires:	autoconf, automake libtool, libxml2-devel
-BuildRequires:	glib2-devel, python, python-devel, perl, %{SSH}, libnet
+BuildRequires:	glib2-devel, python, python-xml, python-devel, perl, %{SSH}, %{LIBNET_DEVEL}, gdbm-devel, bison, flex
 BuildRequires:	openhpi-devel
 %if %{ENABLE_SNMP_SUBAGENT}
 %{SNMP_RPM_BUILD_REQUIRES}
 %endif
 %if %{is_rhel} && "%{rhel_ver}" >= "5"
 BuildRequires: libtool-ltdl-devel
+BuildRequires: OpenIPMI-devel
 %endif
 %if ENABLE_MGMT
 BuildRequires:	libgcrypt-devel, gnutls-devel
 %endif
+%if %{build_cmpi}
+BuildRequires: %{CIMOM}
+%endif
 Requires: %{STONITH_NAME} = %{version}-%{release}, %{PILS_NAME} = %{version}-%{release}
-Requires: sysklogd, perl, iputils, %{SSH}
+Requires: sysklogd, perl, iputils, %{SSH} %{PING} %{IPTABLES}
+Requires: python-xml, python-gtk
+Requires(pre): /usr/sbin/groupadd /usr/bin/getent /usr/sbin/useradd
 %if %{is_suse}
+%if 0%{?sles_version} == 9
+BuildRequires: pkgconfig
+%endif
+%if 0%{?suse_version} == 1000
+BuildRequires: lzo
+%endif
+
+%if 0%{?sles_version} != 10
+%endif
 %elseif %{is_fedora}
+%if 0%{?fedora_version}
+BuildRequires: 		which OpenIPMI-devel
+Requires:               pygtk2 >= 2.4
+Requires(pre):          fedora-usermgmt
+Requires(postun):       fedora-usermgmt
+%endif
 %elseif %{is_rhel}
+%elseif %{is_mandriva}
 %elseif %{is_aix}
 %elseif %{is_solaris}
 %endif
 
+%if %build_cmpi
+%package -n %{CMPI_NAME}
+Summary:        Heartbeat CIM Provider
+Group:          %{pkg_group}
+%description cmpi
+This package provides the CIM provider for managing heartbeat via
+%{CIMOM}.
+%endif
+
+%package -n %{DEVEL_NAME}
+Summary:        %{HB_PKG} development package 
+Group:          %{pkg_group}
+Requires:       %{HB_PKG} = %{version}-%{release}
+
+%description devel
+%{HB_PKG} development package
+
+
 %package -n %{LDIR_NAME}
 Summary: Monitor daemon for maintaining high availability resources with ipvs (Linux Virtual Server}
-Group: Utilities
+Group: %{pkg_group}
 Requires: ipvsadm, perl, perl-libwww-perl, perl-Authen-Radius, perl-Crypt-SSLeay, perl-HTML-Parser
 Requires: perl-ldap, perl-MailTools, perl-Net-IMAP-Simple, perl-Net-IMAP-Simple-SSL, perl-POP3Client
 Requires: perl-libnet, perl-Net-DNS
@@ -203,6 +276,7 @@ Requires: perl-libnet, perl-Net-DNS
 %if %{is_suse}
 %elseif %{is_fedora}
 %elseif %{is_rhel}
+%elseif %{is_mandriva}
 %elseif %{is_aix}
 %elseif %{is_solaris}
 %endif
@@ -210,28 +284,30 @@ Requires: perl-libnet, perl-Net-DNS
 %package -n %{STONITH_NAME}
 Requires: telnet, %{SSH} %{PILS_NAME} = %{version}-%{release}
 Summary: Provides an interface to Shoot The Other Node In The Head 
-Group: Utilities
+Group: %{pkg_group}
 
 %if %{is_suse}
 %elseif %{is_fedora}
 %elseif %{is_rhel}
+%elseif %{is_mandriva}
 %elseif %{is_aix}
 %elseif %{is_solaris}
 %endif
 
 %package -n %{PILS_NAME}
 Summary: Provides a general plugin and interface loading library
-Group: Utilities
+Group: %{pkg_group}
 
 %if %{ENABLE_MGMT} && %{GUI_PACKAGE}
 %package -n %{GUI_NAME}
 Requires: %{RPM_MGMT_RUNTIME_REQUIRES}
 Summary: Provides a gui interface to manage heartbeat clusters
-Group: Utilities
+Group: %{pkg_group}
 
 %if %{is_suse}
 %elseif %{is_fedora}
 %elseif %{is_rhel}
+%elseif %{is_mandriva}
 %elseif %{is_aix}
 %elseif %{is_solaris}
 %endif
@@ -2560,28 +2636,24 @@ make DESTDIR=$RPM_BUILD_ROOT install
 %{HA_D_DIR}/rc.d
 %{HA_D_DIR}/README.config
 %{libdir}/heartbeat
-%{libdir}/libapphb.*
-%{libdir}/libccmclient.*
-%{libdir}/libcib.*
-%{libdir}/libclm.*
-%{libdir}/libcrmcommon.*
-%{libdir}/libtransitioner.*
-%{libdir}/libhbclient.*
-%{libdir}/liblrm.*
-%{libdir}/libpengine.*
-%{libdir}/libplumb.*
-%{libdir}/libplumbgpl.*
-%{libdir}/librecoverymgr.*
-%{libdir}/libstonithd.*
-%{libdir}/libpe_rules.*
-%{libdir}/libpe_status.*
+%{libdir}/libapphb.so.*
+%{libdir}/libccmclient.so.*
+%{libdir}/libcib.so.*
+%{libdir}/libclm.so.*
+%{libdir}/libcrmcommon.so.*
+%{libdir}/libtransitioner.so.*
+%{libdir}/libhbclient.so.*
+%{libdir}/liblrm.so.*
+%{libdir}/libpengine.so.*
+%{libdir}/libplumb.so.*
+%{libdir}/libplumbgpl.so.*
+%{libdir}/librecoverymgr.so.*
+%{libdir}/libstonithd.so.*
+%{libdir}/libpe_rules.so.*
+%{libdir}/libpe_status.so.*
 %{HA_NOARCHDATAHBDIR}
 %{OCF_ROOT_DIR}
 %exclude %{OCF_RA_DIR}/heartbeat/ldirectord
-%{base_includedir}/heartbeat
-%{base_includedir}/clplumbing
-%{base_includedir}/saf
-%{base_includedir}/ocf
 %{HA_D_DIR}/resource.d/
 %exclude %{HA_D_DIR}/resource.d/ldirectord
 %config %{INITDIR}/heartbeat
@@ -2589,7 +2661,7 @@ make DESTDIR=$RPM_BUILD_ROOT install
 %dir %{localstatedir}/lib/%{HB_PKG}
 %dir %{HA_COREDIR}
 %dir %attr (0700, root, -) %{HA_COREDIR}/root
-%dir %attr (0700, nobody, -) %{HA_COREDIR}/nobody
+%dir %attr (0700, %{NOUSER}, -) %{HA_COREDIR}/%{NOUSER}
 %dir %attr (0700, %{HA_CCMUSER}, -) %{HA_COREDIR}/%{HA_CCMUSER}
 %dir %{localstatedir}/run
 %dir %{localstatedir}/run/%{HB_PKG}
@@ -2670,6 +2742,64 @@ make DESTDIR=$RPM_BUILD_ROOT install
 %doc %{mandir}/man8/ldirectord.8*
 %doc %{mandir}/man8/supervise-ldirectord-config.8*
 %doc ldirectord/ldirectord.cf
+
+###########################################################
+# Files for devel package
+%files -n %{DEVEL_NAME}
+###########################################################
+%defattr(-,root,root)
+%{base_includedir}/heartbeat/
+%{base_includedir}/clplumbing/
+%{base_includedir}/saf/
+%{base_includedir}/ocf/
+%{base_includedir}/stonith/
+%{base_includedir}/pils/
+%{libdir}/libapphb.so
+%{libdir}/libccmclient.so
+%{libdir}/libcib.so
+%{libdir}/libclm.so
+%{libdir}/libcrmcommon.so
+%{libdir}/libtransitioner.so
+%{libdir}/libhbclient.so
+%{libdir}/liblrm.so
+%{libdir}/libpengine.so
+%{libdir}/libplumb.so
+%{libdir}/libplumbgpl.so
+%{libdir}/librecoverymgr.so
+%{libdir}/libstonithd.so
+%{libdir}/libpe_rules.so
+%{libdir}/libpe_status.so
+%{libdir}/libapphb.la
+%{libdir}/libccmclient.la
+%{libdir}/libcib.la
+%{libdir}/libclm.la
+%{libdir}/libcrmcommon.la
+%{libdir}/libtransitioner.la
+%{libdir}/libhbclient.la
+%{libdir}/liblrm.la
+%{libdir}/libpengine.la
+%{libdir}/libplumb.la
+%{libdir}/libplumbgpl.la
+%{libdir}/librecoverymgr.la
+%{libdir}/libstonithd.la
+%{libdir}/libpe_rules.la
+%{libdir}/libpe_status.la
+%{libdir}/libapphb.a
+%{libdir}/libccmclient.a
+%{libdir}/libcib.a
+%{libdir}/libclm.a
+%{libdir}/libcrmcommon.a
+%{libdir}/libtransitioner.a
+%{libdir}/libhbclient.a
+%{libdir}/liblrm.a
+%{libdir}/libpengine.a
+%{libdir}/libplumb.a
+%{libdir}/libplumbgpl.a
+%{libdir}/librecoverymgr.a
+%{libdir}/libstonithd.a
+%{libdir}/libpe_rules.a
+%{libdir}/libpe_status.a
+
 
 ###########################################################
 # Files for the stonith library
