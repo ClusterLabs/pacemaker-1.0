@@ -39,7 +39,7 @@ Package: heartbeat-dev
 Section: devel
 Priority: optional
 Architecture: any
-Depends: heartbeat (= ${Source-Version})
+Depends: heartbeat (= ${binary:Version})
 Conflicts: libstonith-dev (<< 2.0.8-3), libpils-dev (<< 2.0.8-3)
 XB-Python-Version: ${python:Versions}
 Description: Subsystem for High-Availability Linux - development files
@@ -58,7 +58,7 @@ Section: admin
 Priority: optional
 Architecture: any
 Depends: ${python:Depends},  python-gtk2, python-glade2
-Suggests: heartbeat (= ${Source-Version})
+Suggests: heartbeat (= ${binary:Version})
 XB-Python-Version: ${python:Versions}
 Description: Provides a gui interface to manage heartbeat clusters
  GUI client for heartbeat clusters
@@ -67,7 +67,7 @@ Package: ldirectord-2
 Section: admin
 Priority: optional
 Architecture: all
-Depends: ldirectord (= ${Source-Version})
+Depends: ldirectord (= ${source:Version})
 Description: Monitors virtual services provided by LVS
  This is a transitional dummy package.  If nothing depends on it, this
  package can be safely removed.
@@ -76,7 +76,7 @@ Package: heartbeat-2
 Section: admin
 Priority: optional
 Architecture: all
-Depends: heartbeat (= ${Source-Version})
+Depends: heartbeat (>= ${source:Version})
 Description: Subsystem for High-Availability Linux
  This is a transitional dummy package.  If nothing depends on it, this
  package can be safely removed.
@@ -85,7 +85,7 @@ Package: heartbeat-2-dev
 Section: admin
 Priority: optional
 Architecture: all
-Depends: heartbeat-dev (= ${Source-Version})
+Depends: heartbeat-dev (>= ${source:Version})
 Description: Subsystem for High-Availability Linux - development files
  This is a transitional dummy package.  If nothing depends on it, this
  package can be safely removed.
@@ -94,7 +94,7 @@ Package: heartbeat-2-gui
 Section: admin
 Priority: optional
 Architecture: any
-Depends: heartbeat-gui (= ${Source-Version})
+Depends: heartbeat-gui (= ${binary:Version})
 Description: Provides a gui interface to manage heartbeat clusters
  This is a transitional dummy package.  If nothing depends on it, this
  package can be safely removed.
@@ -103,7 +103,7 @@ Package: stonith
 Section: libs
 Priority: optional
 Architecture: any
-Depends: heartbeat (= ${Source-Version})
+Depends: heartbeat (= ${binary:Version})
 Description: Interface for remotely powering down a node in the cluster
  This is a transitional dummy package.  If nothing depends on it, this
  package can be safely removed.
@@ -112,7 +112,7 @@ Package: libstonith0
 Section: libs
 Priority: optional
 Architecture: any
-Depends: heartbeat (= ${Source-Version})
+Depends: heartbeat (= ${binary:Version})
 Description: Interface for remotely powering down a node in the cluster
  This is a transitional dummy package.  If nothing depends on it, this
  package can be safely removed.
@@ -121,7 +121,7 @@ Package: libstonith-dev
 Section: admin
 Priority: optional
 Architecture: all
-Depends: heartbeat-dev (= ${Source-Version})
+Depends: heartbeat-dev (>= ${source:Version})
 Description: Interface for remotely powering down a node in the cluster
  This is a transitional dummy package.  If nothing depends on it, this
  package can be safely removed.
@@ -130,7 +130,7 @@ Package: libpils0
 Section: libs
 Priority: optional
 Architecture: any
-Depends: heartbeat (= ${Source-Version})
+Depends: heartbeat (= ${binary:Version})
 Description: Plugin and Interface Loading System
  This is a transitional dummy package.  If nothing depends on it, this
  package can be safely removed.
@@ -139,7 +139,7 @@ Package: libpils-dev
 Section: admin
 Priority: optional
 Architecture: all
-Depends: heartbeat-dev (= ${Source-Version})
+Depends: heartbeat-dev (>= ${source:Version})
 Description: Plugin and Interface Loading System - development files
  This is a transitional dummy package.  If nothing depends on it, this
  package can be safely removed.
