@@ -65,7 +65,25 @@ int clusterinfo_get_int_value(lha_attribute_t attr, size_t index, uint32_t * val
 
 int rsinfo_get_int_value(lha_attribute_t attr, size_t index, uint32_t * value);
 
-int hbconfig_get_str_value(const char * attr, char * * value);
+
+/* LHAHeartbeatConfigInfo partial-mode */
+typedef enum lha_hbconfig {
+	LHA_CONF_HBVERSION,
+	LHA_CONF_KEEPALIVE,
+	LHA_CONF_DEADTIME,
+	LHA_CONF_DEADPING,
+	LHA_CONF_WARNTIME,
+	LHA_CONF_INITDEAD,
+	LHA_CONF_BAUDRATE,
+	LHA_CONF_AUTOFAIL,
+	LHA_CONF_STONITH,
+	LHA_CONF_STONITHHOST,
+	LHA_CONF_RESPAWN,
+	LHA_CONF_END
+} lha_hbconfig_t;
+
+int hbconfig_get_str(lha_hbconfig_t attr_no, char * * value);
+
 
 GPtrArray * get_hb_info(lha_group_t group);
 
