@@ -422,6 +422,11 @@ int	ha_msg_add_int(struct ha_msg * msg, const char * name, int value);
 int	ha_msg_mod_int(struct ha_msg * msg, const char * name, int value);
 int	ha_msg_value_int(const struct ha_msg * msg, const char * name, int* value);
 
+/* Functions to add/mod/get an unsigned long */
+int	ha_msg_add_ul(struct ha_msg * msg, const char * name, unsigned long value);
+int	ha_msg_mod_ul(struct ha_msg * msg, const char * name, unsigned long value);
+int	ha_msg_value_ul(const struct ha_msg * msg, const char * name, unsigned long* value);
+
 /* Functions to add/get a string list*/
 GList*	ha_msg_value_str_list(struct ha_msg * msg, const char * name);
 

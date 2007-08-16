@@ -237,7 +237,6 @@ usr/lib/stonith/plugins/stonith2/cyclades.so
 usr/lib/stonith/plugins/stonith2/drac3.so
 usr/lib/stonith/plugins/stonith2/external.so
 usr/lib/stonith/plugins/stonith2/ibmhmc.so
-usr/lib/stonith/plugins/stonith2/ipmilan.so
 usr/lib/stonith/plugins/stonith2/meatware.so
 usr/lib/stonith/plugins/stonith2/null.so
 usr/lib/stonith/plugins/stonith2/nw_rpc100s.so
