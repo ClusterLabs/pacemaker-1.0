@@ -96,18 +96,18 @@ deb:		dist
 		rm -rf $(distdir)
 
 install-exec-local:
-	-test -p $(DESTDIR)$(coredir) || mkdir -p $(DESTDIR)$(coredir)
+	test -p $(DESTDIR)$(coredir) || mkdir -p $(DESTDIR)$(coredir)
 	-chown root $(DESTDIR)$(coredir)
-	-chmod 755 $(DESTDIR)$(coredir)
-	-test -p $(DESTDIR)$(coredir)/root || mkdir -p $(DESTDIR)$(coredir)/root
+	chmod 755 $(DESTDIR)$(coredir)
+	mkdir -p $(DESTDIR)$(coredir)/root
 	-chown root $(DESTDIR)$(coredir)/root
-	-chmod 700 $(DESTDIR)$(coredir)/root
-	-test -p $(DESTDIR)$(coredir)/nobody || mkdir -p $(DESTDIR)$(coredir)/nobody
+	chmod 700 $(DESTDIR)$(coredir)/root
+	mkdir -p $(DESTDIR)$(coredir)/nobody
 	-chown nobody $(DESTDIR)$(coredir)/nobody
-	-chmod 700 $(DESTDIR)$(coredir)/nobody
-	-test -p $(DESTDIR)$(coredir)/$(hauser) || mkdir -p $(DESTDIR)$(coredir)/$(hauser)
+	chmod 700 $(DESTDIR)$(coredir)/nobody
+	mkdir -p $(DESTDIR)$(coredir)/$(hauser)
 	-chown $(hauser) $(DESTDIR)$(coredir)/$(hauser)
-	-chmod 700 $(DESTDIR)$(coredir)/$(hauser)
+	chmod 700 $(DESTDIR)$(coredir)/$(hauser)
 	cd $(DESTDIR)@HA_LIBHBDIR@;				\
 	for file in `ls $(DESTDIR)$(HBSHAREDIR)`;			\
 	do if [  -d $$file ]; then continue; fi;	\
@@ -118,8 +118,11 @@ if MGMT_BUILD
 	rm -f $(DESTDIR)@bindir@/hb_gui && ln -s $(SHAREDIR)/heartbeat-gui/haclient.py $(DESTDIR)@bindir@/hb_gui 
 endif
 
-distclean-local:
-	rm -f autoconf automake autoheader
+dist-clean-local:
+	rm -f autoconf automake autoheader $(PACKAGE)-*.tar.gz
+
+maintainer-clean-local:
+	rm -f libltdl.tar
 
 # "pkg" format for Solaris etc.
 pkg:
@@ -128,11 +131,6 @@ pkg:
 # "port" format for BSD
 portfile:	dist
 		( cd port && $(MAKE) PWD=`pwd` portfile)
-
-clean-generic: am_config_clean
-
-am_config_clean:
-		rm -fr $(PACKAGE)-*.tar.gz libltdl.tar
 
 drpm:		dist
 		$(RPM) --nodeps $(RPMFLAGS) $(TARFILE) </dev/null;

@@ -46,8 +46,6 @@
 GMainLoop*  mainloop = NULL;
 const char* crm_system_name = SYS_NAME;
 cib_t *te_cib_conn = NULL;
-extern GTRIGSource *transition_trigger;
-extern crm_action_timer_t *transition_timer;
 
 void usage(const char* cmd, int exit_status);
 int te_init(void);
@@ -61,6 +59,7 @@ main(int argc, char ** argv)
 {
 	int flag;
 	int rc = 0;
+	int dummy = 0;
 	int argerr = 0;
 	gboolean allow_cores = TRUE;
 	
@@ -71,6 +70,9 @@ main(int argc, char ** argv)
 	transition_trigger = G_main_add_TriggerHandler(
 		G_PRIORITY_LOW, te_graph_trigger, NULL, NULL);
 
+	stonith_reconnect = G_main_add_TriggerHandler(
+		G_PRIORITY_LOW, te_connect_stonith, &dummy, NULL);
+	
 	crm_debug_3("Begining option processing");
 
 	while ((flag = getopt(argc, argv, OPTARGS)) != EOF) {
@@ -106,7 +108,6 @@ main(int argc, char ** argv)
 	rc = te_init();
 	return rc;
 }
-
 
 int
 te_init(void)
@@ -150,29 +151,8 @@ te_init(void)
 		}
 	}
 
-	if(init_ok && ST_OK != stonithd_signon(crm_system_name)) {
-		crm_err("Could not sign up to stonithd");
-/*  		init_ok = FALSE;  */
-	}
-
-	if(init_ok && ST_OK != stonithd_set_stonith_ops_callback(
-		   tengine_stonith_callback)) {
-		crm_err("Could not set stonith callback");
-		stonithd_signoff();
-/*  		init_ok = FALSE; */
-	}
-
 	if(init_ok) {
-		IPC_Channel *fence_ch = stonithd_input_IPC_channel();
-
-		if(fence_ch == NULL) {
-		} else if(NULL == G_main_add_IPC_Channel(
-			G_PRIORITY_LOW, fence_ch, FALSE,
-			tengine_stonith_dispatch, NULL,
-			tengine_stonith_connection_destroy)) {
-			crm_err("Failed to add Fencing channel to our mainloop");
-			init_ok = FALSE;
-		}
+	    G_main_set_trigger(stonith_reconnect);
 	}
 
 	if(init_ok) {

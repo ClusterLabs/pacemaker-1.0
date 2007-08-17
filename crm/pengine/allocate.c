@@ -214,6 +214,7 @@ check_action_definition(resource_t *rsc, node_t *active_node, crm_data_t *xml_op
 				rsc, stop_key(rsc), NULL,
 				rsc, NULL, cancel,
 				pe_order_optional, data_set);
+			return TRUE;
 
 		} else if(op_match == NULL) {
 			crm_debug("Orphan action detected: %s on %s",
@@ -236,6 +237,7 @@ check_action_definition(resource_t *rsc, node_t *active_node, crm_data_t *xml_op
 	params_all = create_xml_node(NULL, XML_TAG_PARAMS);
 	g_hash_table_foreach(action->extra, hash2field, params_all);
 	g_hash_table_foreach(rsc->parameters, hash2field, params_all);
+	g_hash_table_foreach(action->meta, hash2metafield, params_all);
 	g_hash_table_foreach(local_rsc_params, hash2field, params_all);
 
 	filter_action_parameters(params_all, op_version);
@@ -258,9 +260,10 @@ check_action_definition(resource_t *rsc, node_t *active_node, crm_data_t *xml_op
 		if(safe_str_neq(digest_restart_calc, digest_restart)) {
 			did_change = TRUE;
 			crm_log_xml_info(params_restart, "params:restart");
-			crm_warn("Parameters to %s on %s changed: recorded %s vs. calculated (restart) %s",
+			crm_warn("Parameters to %s on %s changed: recorded %s vs. %s (restart:%s)",
 				 key, active_node->details->uname,
-				 crm_str(digest_restart), digest_restart_calc);
+				 crm_str(digest_restart), digest_restart_calc,
+				 op_version);
 			
 			key = generate_op_key(rsc->id, task, interval);
 			custom_action(rsc, key, task, NULL, FALSE, TRUE, data_set);
@@ -272,9 +275,9 @@ check_action_definition(resource_t *rsc, node_t *active_node, crm_data_t *xml_op
 		action_t *op = NULL;
 		did_change = TRUE;
 		crm_log_xml_info(params_all, "params:all");
- 		crm_warn("Parameters to %s on %s changed: recorded %s vs. calculated (all) %s",
+ 		crm_warn("Parameters to %s on %s changed: recorded %s vs. %s (all:%s)",
 			 key, active_node->details->uname,
-			 crm_str(digest_all), digest_all_calc);
+			 crm_str(digest_all), digest_all_calc, op_version);
 		
 		key = generate_op_key(rsc->id, task, interval);
 		op = custom_action(rsc, key, task, NULL, FALSE, TRUE, data_set);
@@ -934,35 +937,30 @@ unpack_rsc_order(crm_data_t * xml_obj, pe_working_set_t *data_set)
 		
 	}
 
-	if(safe_str_eq(type, "before")) {
-		id_lh  = crm_element_value(xml_obj, XML_CONS_ATTR_TO);
-		id_rh  = crm_element_value(xml_obj, XML_CONS_ATTR_FROM);
-		action = crm_element_value(xml_obj, XML_CONS_ATTR_ACTION);
-		action_rh = crm_element_value(xml_obj, XML_CONS_ATTR_TOACTION);
-		
-	} else {
-		type="before";
-		id_rh  = crm_element_value(xml_obj, XML_CONS_ATTR_TO);
-		id_lh  = crm_element_value(xml_obj, XML_CONS_ATTR_FROM);
-		action = crm_element_value(xml_obj, XML_CONS_ATTR_TOACTION);
-		action_rh = crm_element_value(xml_obj, XML_CONS_ATTR_ACTION);
-		if(action == NULL) {
-			action = action_rh;
-		}
+	id_lh  = crm_element_value(xml_obj, XML_CONS_ATTR_TO);
+	id_rh  = crm_element_value(xml_obj, XML_CONS_ATTR_FROM);
+	action = crm_element_value(xml_obj, XML_CONS_ATTR_ACTION);
+	action_rh = crm_element_value(xml_obj, XML_CONS_ATTR_TOACTION);
+	if(action == NULL) {
+	    action = CRMD_ACTION_START;
+	}
+	if(action_rh == NULL) {
+	    action_rh = action;
+	}
+
+	if(safe_str_neq(type, "before")) {
+	    /* normalize the input - swap everything over */
+	    const char *tmp = NULL;
+	    type = "before";
+	    tmp = id_rh; id_rh = id_lh; id_lh = tmp;
+	    tmp = action_rh; action_rh = action; action = tmp;
 	}
 
 	if(id_lh == NULL || id_rh == NULL) {
 		crm_config_err("Constraint %s needs two sides lh: %s rh: %s",
 			      id, crm_str(id_lh), crm_str(id_rh));
 		return FALSE;
-	}
-	
-	if(action == NULL) {
-		action = CRMD_ACTION_START;
-	}
-	if(action_rh == NULL) {
-		action_rh = action;
-	}
+	}	
 	
 	rsc_lh = pe_find_resource(data_set->resources, id_rh);
 	rsc_rh = pe_find_resource(data_set->resources, id_lh);

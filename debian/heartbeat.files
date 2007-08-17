@@ -27,6 +27,7 @@
 /etc/ha.d/resource.d/apache
 /etc/ha.d/resource.d/db2
 /etc/ha.d/resource.d/hto-mapfuncs
+/etc/ha.d/resource.d/ids
 /etc/ha.d/resource.d/portblock
 /etc/ha.d/shellfuncs
 /etc/heartbeat
@@ -213,6 +214,7 @@ usr/lib/ocf/resource.d/heartbeat/db2
 usr/lib/ocf/resource.d/heartbeat/drbd
 usr/lib/ocf/resource.d/heartbeat/eDir88
 usr/lib/ocf/resource.d/heartbeat/mysql
+usr/lib/ocf/resource.d/heartbeat/ids
 usr/lib/ocf/resource.d/heartbeat/o2cb
 usr/lib/ocf/resource.d/heartbeat/oracle
 usr/lib/ocf/resource.d/heartbeat/oralsnr
@@ -222,6 +224,7 @@ usr/lib/ocf/resource.d/heartbeat/portblock
 usr/lib/ocf/resource.d/heartbeat/rsyncd
 usr/lib/pils/plugins/InterfaceMgr/generic.so
 usr/lib/stonith/plugins/external/ibmrsa
+usr/lib/stonith/plugins/external/rackpdu
 usr/lib/stonith/plugins/external/riloe
 usr/lib/stonith/plugins/external/ssh
 usr/lib/stonith/plugins/external/vmware
@@ -234,7 +237,6 @@ usr/lib/stonith/plugins/stonith2/cyclades.so
 usr/lib/stonith/plugins/stonith2/drac3.so
 usr/lib/stonith/plugins/stonith2/external.so
 usr/lib/stonith/plugins/stonith2/ibmhmc.so
-usr/lib/stonith/plugins/stonith2/ipmilan.so
 usr/lib/stonith/plugins/stonith2/meatware.so
 usr/lib/stonith/plugins/stonith2/null.so
 usr/lib/stonith/plugins/stonith2/nw_rpc100s.so

@@ -184,6 +184,7 @@ process_te_message(HA_Message *msg, crm_data_t *xml_data, IPC_Channel *sender)
 
 	crm_debug_2("Processing %s (%s) message", op, ref);
 	crm_log_message(LOG_DEBUG_3, msg);
+/* 	G_main_set_trigger(stonith_reconnect); */
 	
 	if(op == NULL){
 		/* error */
@@ -362,16 +363,18 @@ tengine_stonith_callback(stonith_ops_t * op)
 	return;
 }
 
+
 void
 tengine_stonith_connection_destroy(gpointer user_data)
 {
-#if 0
-	crm_err("Fencing daemon has left us: Shutting down...NOW");
-	/* shutdown properly later */
-	CRM_CHECK(FALSE/* fencing daemon died */);
-#else
 	crm_err("Fencing daemon has left us");
-#endif
+	stonith_src = NULL;
+	if(stonith_src == NULL) {
+	    G_main_set_trigger(stonith_reconnect);
+	}
+
+	/* cbchan will be garbage at this point, arrange for it to be reset */
+	set_stonithd_input_IPC_channel_NULL(); 
 	return;
 }
 
@@ -466,6 +469,8 @@ unconfirmed_actions(gboolean send_updates)
 	int unconfirmed = 0;
 	const char *key = NULL;
 	const char *task = NULL;
+	const char *node = NULL;
+	
 	crm_debug_2("Unconfirmed actions...");
 	slist_iter(
 		synapse, synapse_t, transition_graph->synapses, lpc,
@@ -481,11 +486,12 @@ unconfirmed_actions(gboolean send_updates)
 			}
 			
 			unconfirmed++;
-			task = crm_element_value(action->xml,XML_LRM_ATTR_TASK);
-			key = crm_element_value(
-				action->xml,XML_LRM_ATTR_TASK_KEY);
-			crm_info("Action %s %d unconfirmed from peer",
-				 key, action->id);
+			task = crm_element_value(action->xml, XML_LRM_ATTR_TASK);
+			node = crm_element_value(action->xml, XML_LRM_ATTR_TARGET);
+			key  = crm_element_value(action->xml, XML_LRM_ATTR_TASK_KEY);
+			
+			crm_info("Action %s %d unconfirmed from %s",
+				 key, action->id, node);
 			if(action->type != action_type_rsc) {
 				continue;
 			} else if(send_updates == FALSE) {

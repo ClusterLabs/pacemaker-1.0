@@ -185,8 +185,17 @@ stonithd_signon(const char * client_name)
 	const char * tmpstr;
 	int 	rc_tmp;
 	char * cookie = NULL;
+	gboolean connected = TRUE;
 
-	if (chan == NULL || chan->ch_status == IPC_DISCONNECT) {
+	if (chan == NULL || chan->ch_status != IPC_CONNECT) {
+	    connected = FALSE;
+	} else if (cbchan == NULL || cbchan->ch_status != IPC_CONNECT) {
+	    connected = FALSE;
+	}
+
+	if(!connected) {
+		stonithd_signoff(); /* cleanup */
+		stdlib_log(LOG_DEBUG, "stonithd_signon: creating connection");
 		wchanattrs = g_hash_table_new(g_str_hash, g_str_equal);
         	g_hash_table_insert(wchanattrs, path, sock);
 		/* Connect to the stonith deamon */
@@ -196,13 +205,15 @@ stonithd_signon(const char * client_name)
 		if (chan == NULL) {
 			stdlib_log(LOG_ERR, "stonithd_signon: Can't connect "
 				   " to stonithd");
-			return ST_FAIL;
+			rc = ST_FAIL;
+			goto end;
 		}
 
 	        if (chan->ops->initiate_connection(chan) != IPC_OK) {
 			stdlib_log(LOG_ERR, "stonithd_signon: Can't initiate "
 				   "connection to stonithd");
-	                return ST_FAIL;
+			rc = ST_FAIL;
+			goto end;
        		}
 	}
 
@@ -215,7 +226,8 @@ stonithd_signon(const char * client_name)
 	}
 
 	if ( (request = create_basic_reqmsg_fields(ST_SIGNON)) == NULL) {
-		return ST_FAIL;
+		rc = ST_FAIL;
+		goto end;
 	}
 
 	/* important error check client name length */
@@ -228,7 +240,8 @@ stonithd_signon(const char * client_name)
 		stdlib_log(LOG_ERR, "stonithd_signon: "
 			   "cannot add field to ha_msg.");
 		ZAPMSG(request);
-		return ST_FAIL;
+		rc = ST_FAIL;
+		goto end;
 	}
 
 	stdlib_log(LOG_DEBUG, "sending out the signon msg.");
@@ -236,7 +249,8 @@ stonithd_signon(const char * client_name)
 	if (msg2ipcchan(request, chan) != HA_OK) {
 		ZAPMSG(request);
 		stdlib_log(LOG_ERR, "can't send signon message to IPC");
-		return ST_FAIL;
+		rc = ST_FAIL;
+		goto end;
 	}
 
 	/* waiting for the output to finish */
@@ -248,7 +262,8 @@ stonithd_signon(const char * client_name)
 	if (IPC_OK != rc_tmp) {
 		stdlib_log(LOG_ERR, "%s:%d: waitout failed."
 			   , __FUNCTION__, __LINE__);
-		return ST_FAIL;
+		rc = ST_FAIL;
+		goto end;
 	}
 
 	/* Read the reply... */
@@ -257,12 +272,14 @@ stonithd_signon(const char * client_name)
         if ( IPC_OK != chan_waitin_timeout(chan, DEFAULT_TIMEOUT) ) {
 		stdlib_log(LOG_ERR, "%s:%d: waitin failed."
 			   , __FUNCTION__, __LINE__);
-		return ST_FAIL;
+		rc = ST_FAIL;
+		goto end;
 	}
 
 	if ( (reply = msgfromIPC_noauth(chan)) == NULL ) {
 		stdlib_log(LOG_ERR, "stonithd_signon: to fetch reply failed.");
-		return ST_FAIL;
+		rc = ST_FAIL;
+		goto end;
 	}
 	
 	if ( TRUE == is_expected_msg(reply, F_STONITHD_TYPE, ST_APIRPL, 
@@ -371,27 +388,36 @@ int
 stonithd_signoff(void)
 {
 	struct ha_msg * request;
+	gboolean connected = TRUE;
+
+	if (chan == NULL || chan->ch_status != IPC_CONNECT) {
+	    connected = FALSE;
+	} else if (cbchan == NULL || cbchan->ch_status != IPC_CONNECT) {
+	    connected = FALSE;
+	}
 	
-	if (chan == NULL || chan->ch_status == IPC_DISCONNECT) {
-		stdlib_log(LOG_NOTICE, "Has been in signoff status.");
-		return ST_OK;
+	if (!connected) {
+		stdlib_log(LOG_NOTICE, "Not currently connected.");
+		goto bail;
 	}
 
 	if ( (request = create_basic_reqmsg_fields(ST_SIGNOFF)) == NULL) {
-		return ST_FAIL;
+		stdlib_log(LOG_ERR, "Couldn't create signoff message!");
+		goto bail;
 	}
 
 	/* Send the signoff request message */
 	if (msg2ipcchan(request, chan) != HA_OK) {
 		ZAPMSG(request);
-		stdlib_log(LOG_ERR, "can't send signoff message to IPC");
-		return ST_FAIL;
+		stdlib_log(LOG_ERR, "Control channel dead - can't send signoff message");
+		goto bail;
 	}
 
 	/*  waiting for the output to finish */
 	chan_waitout_timeout(chan, DEFAULT_TIMEOUT);
 	ZAPMSG(request);
-	
+
+  bail:
 	if (NULL != chan) {
 		chan->ops->destroy(chan);
 		chan = NULL;
@@ -413,6 +439,12 @@ stonithd_input_IPC_channel(void)
 	} else {
 		return cbchan;
 	}
+}
+
+void
+set_stonithd_input_IPC_channel_NULL(void)
+{
+    cbchan = NULL;
 }
 
 int 

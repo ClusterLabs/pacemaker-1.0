@@ -456,8 +456,7 @@ do_work(ll_cluster_t * hb_cluster)
 void
 crmd_ipc_connection_destroy(gpointer user_data)
 {
-	crm_info("Connection to CRMd was terminated");
-	exit(1);
+	crm_debug("Connection to CRMd was terminated");
 }
 
 
@@ -632,6 +631,7 @@ admin_message_timeout(gpointer data)
 		(int)message_timeout_ms/1000);
 	crm_err("No messages received in %d seconds",
 		(int)message_timeout_ms/1000);
+	operation_status = -3;
 	g_main_quit(mainloop);
 	return FALSE;
 }

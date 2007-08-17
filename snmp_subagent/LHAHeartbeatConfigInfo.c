@@ -140,7 +140,7 @@ handle_LHAHBVersion(netsnmp_mib_handler *handler,
     
     char * value;
 
-    if (hbconfig_get_str_value(KEY_HBVERSION, &value) != HA_OK) 
+    if (hbconfig_get_str(LHA_CONF_HBVERSION, &value) != HA_OK) 
 	return SNMP_ERR_GENERR;
 
     switch(reqinfo->mode) {
@@ -169,7 +169,7 @@ handle_LHAKeepAlive(netsnmp_mib_handler *handler,
 {
     char * value;
 
-    if (hbconfig_get_str_value(KEY_KEEPALIVE, &value) != HA_OK) 
+    if (hbconfig_get_str(LHA_CONF_KEEPALIVE, &value) != HA_OK)
 	return SNMP_ERR_GENERR;
 
     switch(reqinfo->mode) {
@@ -197,7 +197,7 @@ handle_LHADeadTime(netsnmp_mib_handler *handler,
 {
     char * value;
 
-    if (hbconfig_get_str_value(KEY_DEADTIME, &value) != HA_OK) 
+    if (hbconfig_get_str(LHA_CONF_DEADTIME, &value) != HA_OK) 
 	return SNMP_ERR_GENERR;
 
     switch(reqinfo->mode) {
@@ -225,7 +225,7 @@ handle_LHADeadPing(netsnmp_mib_handler *handler,
 {
     char * value;
 
-    if (hbconfig_get_str_value(KEY_DEADPING, &value) != HA_OK) 
+    if (hbconfig_get_str(LHA_CONF_DEADPING, &value) != HA_OK) 
 	return SNMP_ERR_GENERR;
 
     switch(reqinfo->mode) {
@@ -253,7 +253,7 @@ handle_LHAWarnTime(netsnmp_mib_handler *handler,
 {
     char * value;
 
-    if (hbconfig_get_str_value(KEY_WARNTIME, &value) != HA_OK) 
+    if (hbconfig_get_str(LHA_CONF_WARNTIME, &value) != HA_OK) 
 	return SNMP_ERR_GENERR;
 
     switch(reqinfo->mode) {
@@ -281,7 +281,7 @@ handle_LHAInitDead(netsnmp_mib_handler *handler,
 {
     char * value;
 
-    if (hbconfig_get_str_value(KEY_INITDEAD, &value) != HA_OK) 
+    if (hbconfig_get_str(LHA_CONF_INITDEAD, &value) != HA_OK) 
 	return SNMP_ERR_GENERR;
 
     switch(reqinfo->mode) {
@@ -309,7 +309,7 @@ handle_LHABaudRate(netsnmp_mib_handler *handler,
 {
     char * value;
 
-    if (hbconfig_get_str_value(KEY_BAUDRATE, &value) != HA_OK) 
+    if (hbconfig_get_str(LHA_CONF_BAUDRATE, &value) != HA_OK) 
 	return SNMP_ERR_GENERR;
 
     switch(reqinfo->mode) {
@@ -338,7 +338,7 @@ handle_LHAutoFailBack(netsnmp_mib_handler *handler,
     char * ret;
     uint32_t value;
 
-    if (hbconfig_get_str_value(KEY_AUTOFAIL, &ret) != HA_OK) 
+    if (hbconfig_get_str(LHA_CONF_AUTOFAIL, &ret) != HA_OK) 
 	return SNMP_ERR_GENERR;
 
     if (strcmp(ret, "on") == 0) {value = 1;}
@@ -371,7 +371,7 @@ handle_LHAStonith(netsnmp_mib_handler *handler,
 {
     char * value;
 
-    if (hbconfig_get_str_value(KEY_STONITH, &value) != HA_OK) 
+    if (hbconfig_get_str(LHA_CONF_STONITH, &value) != HA_OK) 
 	return SNMP_ERR_GENERR;
 
     switch(reqinfo->mode) {
@@ -399,7 +399,7 @@ handle_LHAStonithHost(netsnmp_mib_handler *handler,
 {
     char * value;
 
-    if (hbconfig_get_str_value(KEY_STONITHHOST, &value) != HA_OK) 
+    if (hbconfig_get_str(LHA_CONF_STONITHHOST, &value) != HA_OK) 
 	return SNMP_ERR_GENERR;
 
     switch(reqinfo->mode) {
@@ -427,7 +427,7 @@ handle_LHARespawn(netsnmp_mib_handler *handler,
 {
     char * value;
 
-    if (hbconfig_get_str_value(KEY_CLIENT_CHILD, &value) != HA_OK) 
+    if (hbconfig_get_str(LHA_CONF_RESPAWN, &value) != HA_OK) 
 	return SNMP_ERR_GENERR;
 
     switch(reqinfo->mode) {

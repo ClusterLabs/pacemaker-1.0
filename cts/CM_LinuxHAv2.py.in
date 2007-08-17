@@ -125,7 +125,6 @@ class LinuxHAv2(HeartbeatCM):
                 r"Search terminated:",
                 r"No need to invoke the TE",
                 r":global_timer_callback",
-                r"Updating failcount for ",
                 r"Faking parameter digest creation",
                 r"Parameters to .* action changed:",
                 r"apply_xml_diff: Diff application failed!",
@@ -275,10 +274,16 @@ class LinuxHAv2(HeartbeatCM):
                 self.rsh.readaline(node, (self["StatusCmd"] %node) )
                 any_up = 1
 
-        if any_up == 0 or idle_watch.look():
+        if any_up == 0:
+            self.debug("Cluster is inactive") 
             return 1
 
-        self.log("Warn: Cluster Master not IDLE") 
+        ret = idle_watch.look()
+        if ret:
+            self.debug(ret) 
+            return 1
+
+        self.log("Warn: Cluster Master not IDLE after %ds" % timeout) 
         return None
 
     def is_node_dc(self, node, status_line=None):
@@ -489,10 +494,107 @@ class LinuxHAv2(HeartbeatCM):
 
         return 0
     def Components(self):    
-        complist = [Process("lrmd",self),Process("crmd",self)]
+        complist = []
+        common_ignore = [
+                    "Pending action:",
+                    "ERROR: crm_log_message_adv:",
+                    "ERROR: MSG: No message to dump",
+                    "pending LRM operations at shutdown",
+                    "Lost connection to the CIB service",
+                    "Connection to the CIB terminated...",
+                    "Sending message to CIB service FAILED",
+                    "apply_xml_diff: Diff application failed!",
+                    "crmd: .*Action A_RECOVER .* not supported",
+                    "send_ipc_message: IPC Channel to .* is not connected",
+                    "unconfirmed_actions: Waiting on .* unconfirmed actions",
+                    "cib_native_msgready: Message pending on command channel",
+                    "verify_stopped: Resource .* was active at shutdown.  You may ignore this error if it is unmanaged.",
+            ]
+
+        stonith_ignore = [
+            "ERROR: stonithd_signon: ",
+            "update_failcount: Updating failcount for child_DoFencing",
+            "ERROR: te_connect_stonith: Sign-in failed: triggered a retry",
+            ]
+
+        stonith_ignore.extend(common_ignore)
+
+        complist.append(Process("ccm", 0, [
+                    "State transition S_IDLE",
+                    "Respawning client .*cib",
+                    "Respawning client .*crmd",
+                    "CCM connection appears to have failed",
+                    "Client .*cib exited with return code 2.",
+                    "Client .*crmd exited with return code 2.",
+                    "crmd: .*Action A_RECOVER .* not supported",
+                    "crmd: .*Input I_TERMINATE from do_recover",
+                    "Exiting to recover from CCM connection failure",
+                    "crmd:.*do_exit: Could not recover from internal error",
+                    "crmd: .*I_ERROR.*(ccm_dispatch|crmd_cib_connection_destroy)",
+#                    "WARN: determine_online_status: Node .* is unclean",
+#                    "Scheduling Node .* for STONITH",
+#                    "Executing .* fencing operation",
+#                    "tengine_stonith_callback: .*result=0",
+                    "State transition S_STARTING -> S_PENDING",
+                    ], [], common_ignore, self))
+
+        complist.append(Process("cib", 0, [
+                    "State transition S_IDLE",
+                    "Respawning client .*crmd",
+                    "Lost connection to the CIB service",
+                    "Connection to the CIB terminated...",
+                    "Client .*crmd exited with return code 2.",
+                    "State transition S_STARTING -> S_PENDING",
+                    "crmd: .*Input I_TERMINATE from do_recover",
+                    "crmd: .*I_ERROR.*crmd_cib_connection_destroy",
+                    "crmd:.*do_exit: Could not recover from internal error",
+                    ], [], common_ignore, self))
+
+        complist.append(Process("lrmd", 0, [
+                    "State transition S_IDLE",
+                    "LRM Connection failed",
+                    "Respawning client .*crmd",
+                    "crmd: .*I_ERROR.*lrm_dispatch",
+                    "State transition S_STARTING -> S_PENDING",
+                    "Client .*crmd exited with return code 2.",
+                    "crmd: .*Input I_TERMINATE from do_recover",
+                    "crmd:.*do_exit: Could not recover from internal error",
+                    ], [], common_ignore, self))
+        complist.append(Process("crmd", 0, [
+#                    "WARN: determine_online_status: Node .* is unclean",
+#                    "Scheduling Node .* for STONITH",
+#                    "Executing .* fencing operation",
+#                    "tengine_stonith_callback: .*result=0",
+                    "State transition S_IDLE",
+                    "State transition S_STARTING -> S_PENDING",
+                    ], [
+                    "tengine: .*ERROR: subsystem_msg_dispatch: The server .* has left us: Shutting down...NOW",
+                    "pengine: .*ERROR: subsystem_msg_dispatch: The server .* has left us: Shutting down...NOW",
+                    ], common_ignore, self))
+
+        complist.append(Process("pengine", 1, [
+                    "State transition S_IDLE",
+                    "Respawning client .*crmd",
+                    "Client .*crmd exited with return code 2.",
+                    "crmd: .*Input I_TERMINATE from do_recover",
+                    "crmd:.*do_exit: Could not recover from internal error",
+                    ], [], common_ignore, self))
+
+        complist.append(Process("tengine", 1, [
+                    "State transition S_IDLE",
+                    "Respawning client .*crmd",
+                    "Client .*crmd exited with return code 2.",
+                    "crmd: .*Input I_TERMINATE from do_recover",
+                    "crmd:.*do_exit: Could not recover from internal error",
+                    ], [], common_ignore, self))
+
         if self.Env["DoFencing"] == 1 :
-            complist.append(Process("stonithd",self))
-            complist.append(Process("heartbeat",self))
+            complist.append(Process("stonithd", 0, [], [
+                        "tengine_stonith_connection_destroy: Fencing daemon has left us",
+                        "Attempting connection to fencing daemon",
+                        "te_connect_stonith: Connected",
+                        ], stonith_ignore, self))
+#            complist.append(Process("heartbeat", 0, [], [], [], self))
         return complist
     
     def NodeUUID(self, node):

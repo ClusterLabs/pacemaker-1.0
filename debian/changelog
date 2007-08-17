@@ -1,3 +1,12 @@
+heartbeat (2.1.2-2) unstable; urgency=low
+
+  * Make package binMMU safe. Thanks to Lior Kaplan.
+    (closes: #435974)
+  * Remove ipmilan stonith module as it seems to be cronically broken
+    - Remove the build dependancy on libopenipmi-dev (>= 2.0.1) accordingly
+
+ -- Simon Horman <horms@debian.org>  Thu, 09 Aug 2007 18:24:00 +0900
+
 heartbeat (2.1.2-1) unstable; urgency=low
 
   * New Upstream
