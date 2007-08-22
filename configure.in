@@ -3025,6 +3025,7 @@ AC_MSG_RESULT([  ucd_snmp_devel name  = "${UCDSNMPDEVEL}"])
 AC_MSG_RESULT([  Build New CRM        = "${enable_crm}"])
 AC_MSG_RESULT([  Build New LRM        = "${enable_lrm}"])
 AC_MSG_RESULT([  Build Ldirectord     = "${enable_ldirectord}"])
+AC_MSG_RESULT([  Use native AIS       = "${enable_native_ais}"])
 
 AC_MSG_RESULT([  Build CIM providers  = "${enable_cim_provider}"])
 if test "x${enable_cim_provider}" = "xyes"; then
