@@ -205,7 +205,7 @@ Packager: Alan Robertson <alanr@unix.sh>
 Source: http://linux-ha.org/download/%{HB_PKG}-%{HB_VERSION}.tar.gz
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-build
 BuildRequires:	autoconf, automake libtool, libxml2-devel
-BuildRequires:	glib2-devel, python, python-xml, python-devel, perl, %{SSH}, %{LIBNET_DEVEL}, gdbm-devel, bison, flex
+BuildRequires:	glib2-devel, python, python-devel, perl, %{SSH}, %{LIBNET_DEVEL}, gdbm-devel, bison, flex
 BuildRequires:	openhpi-devel
 %if %{ENABLE_SNMP_SUBAGENT}
 %{SNMP_RPM_BUILD_REQUIRES}
@@ -222,9 +222,10 @@ BuildRequires: %{CIMOM}
 %endif
 Requires: %{STONITH_NAME} = %{version}-%{release}, %{PILS_NAME} = %{version}-%{release}
 Requires: sysklogd, perl, iputils, %{SSH} %{PING} %{IPTABLES}
-Requires: python-xml, python-gtk
+Requires: python-gtk
 Requires(pre): /usr/sbin/groupadd /usr/bin/getent /usr/sbin/useradd
 %if %{is_suse}
+Requires: python-xml
 %if 0%{?sles_version} == 9
 BuildRequires: pkgconfig
 %endif
@@ -234,14 +235,17 @@ BuildRequires: lzo
 
 %if 0%{?sles_version} != 10
 %endif
+
 %elseif %{is_fedora}
 %if 0%{?fedora_version}
+Requires:	PyXML
 BuildRequires: 		which OpenIPMI-devel
 Requires:               pygtk2 >= 2.4
 Requires(pre):          fedora-usermgmt
 Requires(postun):       fedora-usermgmt
 %endif
 %elseif %{is_rhel}
+Requires:	PyXML
 %elseif %{is_mandriva}
 %elseif %{is_aix}
 %elseif %{is_solaris}
