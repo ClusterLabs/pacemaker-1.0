@@ -70,9 +70,9 @@
 #
 #	I'm sure this code isn't right yet...
 #
-%{!?is_suse: %define is_suse %(if test -f /etc/SuSE-release; then echo 1; else echo 0;fi)}
-
-%define	is_fedora	0
+%define is_suse %(if test -f /etc/SuSE-release; then echo 1; else echo 0;fi)
+%define is_fedora %(if test -f /etc/fedora-release; then echo 1; else echo 0;fi)
+%define is_rhel %(if test -f /etc/redhat-release; then echo 1; else echo 0;fi)
 
 %if 0%{?mandriva_version} > 0
 	%define	is_mandriva	1
@@ -80,14 +80,13 @@
 	%define	is_mandriva	0
 %endif
 
-%{!?is_rhel: %define is_rhel %(if test -f /etc/redhat-release; then echo 1; else echo 0;fi)}
 
 %if %{is_rhel}
 	%{!?rhel_ver: %define rhel_ver %(Z=`rpm -q --whatprovides /etc/redhat-release`;A=`rpm -q --qf '%{V}' $Z`; echo ${A:0:1})}
 %endif
 
 %if %{is_suse}
-	%define suse_ver %(expr %{suse_version} / 100)
+	%define suse_major %(expr %{suse_version} / 100)
 	%define suse_minor %(expr %{suse_version} '%' 100)
 %endif
 
@@ -237,13 +236,11 @@ BuildRequires: lzo
 %endif
 
 %elseif %{is_fedora}
-%if 0%{?fedora_version}
 Requires:	PyXML
 BuildRequires: 		which OpenIPMI-devel
 Requires:               pygtk2 >= 2.4
 Requires(pre):          fedora-usermgmt
 Requires(postun):       fedora-usermgmt
-%endif
 %elseif %{is_rhel}
 Requires:	PyXML
 %elseif %{is_mandriva}
