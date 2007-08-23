@@ -1718,8 +1718,8 @@ AC_MSG_NOTICE(LIBS: $LIBS)
 
 if test "x${enable_native_ais}" = "xyes"; then
    AC_MSG_NOTICE(Testing AIS installation in $AISPREFIX)
-   AC_CHECK_LIB(SaMsg, saRecvRetry,
-    	[AISLIBS='-lSaMsg'; 
+   AC_CHECK_LIB(aisutil, saRecvRetry,
+    	[AISLIBS='-laisutil'; 
 	AC_DEFINE(WITH_NATIVE_AIS,1, Run the Cluster Resource Manager nativly over openAIS)],
 	[AC_MSG_NOTICE("Native AIS Support disabled); enable_native_ais=no])
 fi
