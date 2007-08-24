@@ -2757,13 +2757,11 @@ make DESTDIR=$RPM_BUILD_ROOT install
 ###########################################################
 %defattr(-,root,root)
 %{sbindir}/ldirectord
-%{sbindir}/supervise-ldirectord-config
 %{sysconfdir}/logrotate.d/ldirectord
 %{INITDIR}/ldirectord
 %{HA_D_DIR}/resource.d/ldirectord
 %{OCF_RA_DIR}/heartbeat/ldirectord
 %doc %{mandir}/man8/ldirectord.8*
-%doc %{mandir}/man8/supervise-ldirectord-config.8*
 %doc ldirectord/ldirectord.cf
 
 ###########################################################
