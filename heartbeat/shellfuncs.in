@@ -14,7 +14,8 @@ exec_prefix=@exec_prefix@
 : ${HA_VARLIB:=@localstatedir@/lib/heartbeat}
 : ${HA_RSCTMP:=@HA_VARRUNDIR@/heartbeat/rsctmp}
 : ${HA_FIFO:=@localstatedir@/lib/heartbeat/fifo}
-: ${HA_BIN:=@libdir@/heartbeat}
+: ${HA_BIN:=@HA_LIBHBDIR@}
+: ${HA_NOARCHBIN:=@HA_NOARCHDATAHBDIR@}
 : ${HA_DATEFMT:="%Y/%m/%d_%T "}
 : ${HA_DEBUGLOG:=/dev/null}
 : ${HA_RESOURCEDIR:=$HA_DIR/resource.d}
@@ -23,6 +24,7 @@ exec_prefix=@exec_prefix@
 : ${HA_LOGTAG:=$__SCRIPT_NAME[$$]}
 : ${HA_VARRUN:=@localstatedir@/run/}
 : ${HA_VARLOCK:=@localstatedir@/lock/subsys/}
+: ${HA_SBIN_DIR:=@sbindir@}
 
 export HA_DIR HA_RCDIR HA_FIFO HA_BIN 
 export HA_DEBUGLOG HA_LOGFILE HA_LOGFACILITY
@@ -30,45 +32,14 @@ export HA_DATEFMT HA_RESOURCEDIR HA_DOCDIR
 
 MKTEMP=@MKTEMP@
 TESTPROG=@TEST@
+PATH=$HA_BIN:${HA_SBIN_DIR}:@HA_NOARCHDATAHBDIR@:$PATH
+PATH=`echo $PATH | sed -e 's%::%%' -e 's%:\.:%:%' -e 's%^:%%' -e 's%^\.:%%'`
+export PATH
 
 #	A suitable echo command
 Echo() {
   @ECHO_CMD@ "$@"
 }
-
-#	Echo without putting a newline on the end
-EchoNoNl() {
-    Echo @ECHO_N@ "$@@ECHO_C@"
-}
-
-#	Echo with escapes enabled...
-EchoEsc() {
-    Echo @ECHO_E@ "$@"
-}
-
-echo_failure() {
-    EchoEsc " Heartbeat failure [rc=$1]. $rc_failed"
-    return $1
-}
-
-echo_success() {
-    : Cool!  It started!
-    EchoEsc "$rc_done"
-}
-
-action() {
-  echo -n "$1... "
-  shift
-  $@
-  stat=$?
-  if [ $stat = 0 ]; then
-    echo success
-  else
-    echo failure
-  fi
-  return  $stat
-}
-
 
 hadate() {
   date "+${HA_DATEFMT}"
@@ -76,7 +47,7 @@ hadate() {
 
 ha_log() {
 	if [ "x${HA_LOGD}" = "xyes" ] ; then 
-		${HA_BIN}/ha_logger -t "${HA_LOGTAG}" "$@"
+		ha_logger -t "${HA_LOGTAG}" "$@"
 		if [ "$?" -eq "0" ] ; then
 			return 0
 		fi
@@ -114,7 +85,7 @@ ha_log() {
 ha_debug() {
 
         if [ "x${HA_LOGD}" = "xyes" ] ; then  
-		${HA_BIN}/ha_logger -t "${HA_LOGTAG}" -D "ha-debug" "$@"
+		ha_logger -t "${HA_LOGTAG}" -D "ha-debug" "$@"
                 if [ "$?" -eq "0" ] ; then
                         return 0
                 fi
@@ -320,3 +291,4 @@ pingargs() {
 
 	echo "$_pingargs"
 }
+

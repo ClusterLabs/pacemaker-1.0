@@ -15,7 +15,7 @@
 
 IFCONFIG=/sbin/ifconfig
 ROUTE=/sbin/route
-RSCMGR=$HA_BIN/ResourceManager
+RSCMGR=$HA_NOARCHBIN/ResourceManager
 
 #
 #

@@ -8,7 +8,7 @@
 #
 #
 
-sh @libdir@/heartbeat/cim/do_register.sh -t @CIMOM@ \
--r @libdir@/heartbeat/cim/LinuxHA.reg \
--m @libdir@/heartbeat/cim/LinuxHA.mof
+sh @HA_NOARCHDATAHBDIR@/heartbeat/cim/do_register.sh -t @CIMOM@ \
+-r @HA_NOARCHDATAHBDIR@/heartbeat/cim/LinuxHA.reg \
+-m @HA_NOARCHDATAHBDIR@/heartbeat/cim/LinuxHA.mof
 

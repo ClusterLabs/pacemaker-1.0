@@ -11,8 +11,8 @@
 #
 #
 #	Facility to use for syslog()/logger 
-#	Default: local7
-#logfacility	local7
+#	Default: daemon
+#logfacility	daemon
 
 
 #	Entity to be shown at beginning of a message

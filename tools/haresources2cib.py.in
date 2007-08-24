@@ -56,7 +56,7 @@ ocf_ra_setting = {
 
 config_defaults = [
 	"symmetric-cluster=true",
-	"no_quorum-policy=stop",
+	"no-quorum-policy=stop",
 	"default-resource-stickiness=0",
 	"default-resource-failure-stickiness=0",
 	"stonith-enabled=false",
@@ -386,8 +386,8 @@ def get_directive_list(config, directive) :
 	return directive_list
 		
 if __name__=="__main__" :
-	resource_file = "@HB_HBCONF_DIR@/haresources"
-	config_file = "@HB_HBCONF_DIR@/ha.cf"
+	resource_file = "@HA_HBCONF_DIR@/haresources"
+	config_file = "@HA_HBCONF_DIR@/ha.cf"
 	target_file = "@HA_VARLIBHBDIR@/crm/cib.xml"
 	to_stdout = False
 	

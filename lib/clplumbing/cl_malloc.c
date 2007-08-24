@@ -22,6 +22,9 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>
+#ifdef HAVE_STDINT_H
+#include <stdint.h>
+#endif /* HAVE_STDINT_H */
 #include <string.h>
 #include <errno.h>
 #ifndef BSD
@@ -172,6 +175,7 @@ static void	cl_dump_item(const struct cl_bucket*b);
 #define	MEMORYSIZE(p)(CBHDR(p)->hdr.reqsize)
 
 #define MALLOCSIZE(allocsize) ((allocsize) + cl_malloc_hdr_offset + GUARDSIZE)
+#define MAXMALLOC	(SIZE_MAX-(MALLOCSIZE(0)+1))
 
 #ifdef MAKE_GUARD
 #	define GUARDLEN 4
@@ -374,6 +378,16 @@ cl_malloc(size_t size)
 	struct cl_bucket*	buckptr = NULL;
 	void*			ret;
 
+	if(!size) {
+		cl_log(LOG_ERR
+		,	"%s: refusing to allocate zero sized block"
+		,	__FUNCTION__
+		);
+		return NULL;
+	}
+	if (size > MAXMALLOC) {
+		return NULL;
+	}
 	if (!cl_malloc_inityet) {
 		cl_malloc_init();
 	}

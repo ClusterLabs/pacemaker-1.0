@@ -51,7 +51,7 @@ const char *crm_system_name = NULL;
 void usage(const char *cmd, int exit_status);
 extern gboolean stage0(pe_working_set_t *data_set);
 void cleanup_alloc_calculations(pe_working_set_t *data_set);
-const char *dtd_file = HA_LIBDIR"/heartbeat/crm.dtd";
+const char *dtd_file = HA_NOARCHDATAHBDIR"/crm.dtd";
 
 int
 main(int argc, char **argv)
@@ -180,10 +180,6 @@ main(int argc, char **argv)
   
 	crm_info("=#=#=#=#= Getting XML =#=#=#=#=");
 
-#ifdef HA_MALLOC_TRACK
-	cl_malloc_dump_allocated(LOG_DEBUG_2, TRUE);
-#endif
-	
 	if(USE_LIVE_CIB) {
 		cib_conn = cib_new();
 		rc = cib_conn->cmds->signon(
@@ -290,10 +286,6 @@ main(int argc, char **argv)
 		cib_delete(cib_conn);
 	}	
 
-#ifdef HA_MALLOC_TRACK
-	cl_malloc_dump_allocated(LOG_ERR, TRUE);
-#endif
-	
 	return rc;
 }
 

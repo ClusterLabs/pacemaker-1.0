@@ -383,7 +383,7 @@ GetAddress (char **address, char **netmaskbits
 	 */
 	*address = getenv("OCF_RESKEY_ip");
 	*netmaskbits = getenv("OCF_RESKEY_cidr_netmask");
-	if (*netmaskbits == NULL) {
+	if (*netmaskbits == NULL || **netmaskbits == EOS) {
 		*netmaskbits = getenv("OCF_RESKEY_netmask");
 	}
 	*bcast_arg = getenv("OCF_RESKEY_broadcast");
@@ -393,7 +393,7 @@ GetAddress (char **address, char **netmaskbits
 void
 ValidateNetmaskBits (char *netmaskbits, unsigned long *netmask)
 {
-	if (netmaskbits != NULL) {
+	if (netmaskbits != NULL && *netmaskbits != EOS) {
 		size_t	nmblen = strnlen(netmaskbits, 3);
 
 		/* Maximum netmask is 32 */
@@ -618,6 +618,11 @@ main(int argc, char ** argv) {
 
 	GetAddress (&address, &netmaskbits, &bcast_arg
 	,	 &if_specified);
+	if (address == NULL || *address == EOS) {
+		fprintf(stderr, "ERROR: IP address parameter is mandatory.");
+		usage();
+		return(1);
+	}
 
 	/* Is the IP address we're supposed to find valid? */
 	 
@@ -627,7 +632,8 @@ main(int argc, char ** argv) {
 		return(1);
 	}
 
-	if(netmaskbits != NULL && strchr(netmaskbits, '.') != NULL) {
+	if(netmaskbits != NULL && *netmaskbits != EOS
+	&&		strchr(netmaskbits, '.') != NULL) {
 		int len = strlen(netmaskbits);
 		ConvertQuadToInt(netmaskbits, len);
 		snprintf(netmaskbits, len, "%d",
@@ -638,7 +644,7 @@ main(int argc, char ** argv) {
 	/* Validate the netmaskbits field */
 	ValidateNetmaskBits (netmaskbits, &netmask);
 
-	if (if_specified != NULL) {
+	if (if_specified != NULL && *if_specified != EOS) {
 		if(ValidateIFName(if_specified, &ifr) < 0) {
 			usage();
 		}
@@ -649,7 +655,7 @@ main(int argc, char ** argv) {
 		char errmsg[MAXSTR] = "No valid mecahnisms";
 		int rc = -1;
 
-		strcpy(best_if, "UNKNOWN"); /* just in case */
+		strlcpy(best_if, "UNKNOWN", sizeof(best_if)); /* just in case */
 
 		while (*sr) {
 			errmsg[0] = '\0';
@@ -694,7 +700,7 @@ main(int argc, char ** argv) {
 
 	/* Did they tell us the broadcast address? */
 
-	if (bcast_arg) {
+	if (bcast_arg && *bcast_arg != EOS) {
 		/* Yes, they gave us a broadcast address.
 		 * It at least should be a valid IP address
 		 */
@@ -763,23 +769,19 @@ usage()
 	fprintf(stderr, "\n"
 		"%s version " VERSION " Copyright Alan Robertson\n"
 		"\n"
-		"Usage: %s address[/netmask[/interface][/broadcast]]\n"
-		"\n"
-		"Where:\n"
-		"    address: IP address of the new virtual interface\n"
-		"    netmask: CIDR netmask of the network that "
-			"address belongs to\n"
-		"    interface: interface to add the virtual interface to\n"
-		"    broadcast: broadcast address of the network that "
-			"address belongs to\n"
-		"\n"
+		"Usage: %s [-C]\n"
 		"Options:\n"
 		"    -C: Output netmask as the number of bits rather "
 			"than as 4 octets.\n"
+		"Environment variables:\n"
+		"OCF_RESKEY_ip		 ip address (mandatory!)\n"
+		"OCF_RESKEY_cidr_netmask netmask of interface\n"
+		"OCF_RESKEY_broadcast	 broadcast address for interface\n"
+		"OCF_RESKEY_nic		 interface to assign to\n"
 	,	cmdname, cmdname);
 	exit(1);
 }
-		
+
 /*
 Iface	Destination	Gateway 	Flags	RefCnt	Use	Metric	Mask		MTU	Window	IRTT                                                       
 eth0	33D60987	00000000	0005	0	0	0	FFFFFFFF	0	0	0                                                                               

@@ -25,7 +25,7 @@ cfg:=--prefix=/usr --sysconfdir=/etc --localstatedir=/var \
   --mandir=/usr/share/man \
   --with-group-name=haclient --with-ccmuser-name=hacluster \
   --enable-snmp-subagent --with-mibsdir=/usr/share/snmp/mibs \
-  --disable-fatal-warnings --enable-mgmt
+  --disable-fatal-warnings --enable-mgmt --enable-glib-malloc
 
 # These are used for cross-compiling and for saving the configure script
 # from having to guess our platform (since we know it already)
@@ -91,7 +91,7 @@ install-stamp:
 	  MAKE=make \
 	  docdir=/usr/share/doc/heartbeat
 
-	mv $(DTMP)/usr/lib/heartbeat/cts/README \
+	mv $(DTMP)/usr/share/heartbeat/cts/README \
 		$(DTMP)/usr/share/doc/heartbeat/README.cts
 	find $(DTMP)/usr/share/man -type f | xargs gzip -v --best
 	install -c -m 755 heartbeat/init.d/heartbeat \
@@ -105,10 +105,7 @@ install-stamp:
 	-mkdir -p $(DTMP)/etc/default/
 	install -c -m 755 ldirectord/init.d/ldirectord.debian.default \
 		$(DTMP)/etc/default/ldirectord
-	cd $(DTMP)/etc/ha.d/resource.d \
-	  && ln -s /usr/sbin/ldirectord ldirectord
 	cd $(DTMP)/etc/ && ln -s ha.d heartbeat
-	cd $(DTMP)/usr/bin/ && ln -s ../lib/heartbeat-gui/haclient.py hb_gui
 	dh_movefiles --source=debian/tmp
 
 binary-indep: build install

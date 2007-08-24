@@ -1,0 +1,118 @@
+#!/bin/sh
+#
+#
+# ids
+#
+# Description:  
+#
+# Wrapper script for the ids OCF resource agent that
+# manages an IBM Informix Dynamic Server (IDS) instance 
+# as an High-Availability resource.
+####
+#
+# Author:			Lars D. Forseth, <lars.forseth@de.ibm.com> or <lars@forseth.de>
+# Created:			May 25th 2007
+# Last Modified:	July 30th 2007
+# Support:			linux-ha@lists.linux-ha.org
+# License:			GNU General Public License (GPL), Version 2 or later
+# Copyright:		(c) 2002 - 2007 International Business Machines, Inc.
+#
+# This code is inspired by the db2 and Filesystem wrapper 
+# resource scripts both written by Xun Sun, <xunsun@cn.ibm.com>
+####
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it would be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+#
+# Further, this software is distributed without any warranty that it is
+# free of the rightful claim of any third person regarding infringement
+# or the like.  Any license provided herein, whether implied or
+# otherwise, applies only to this software file.  Patent licenses, if
+# any, provided herein do not apply to combinations of this program with
+# other software, or any other product whatsoever.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write the Free Software Foundation,
+# Inc., 59 Temple Place - Suite 330, Boston MA 02111-1307, USA.
+####
+#
+# Example usage as it would appear in /etc/ha.d/haresources:
+#		node1 192.168.0.1 ids::/informix::ids1::onconfig.ids1
+#
+#
+# --> Note that passing dbname and sqltestquery in heartbeat version 1 style is not supported!
+#
+# See usage() function below for more details...
+####
+
+
+#
+# Include variables and functions needed to wrap 
+# from heartbeat V1 resource agent style (haresources, no crm) 
+# to heartbeat V2 resource agent style (crm, OCF)
+#
+. @HB_RA_DIR@/hto-mapfuncs
+
+
+#
+# Function that displays the usage of this script.
+#
+usage() {
+	echo "usage: $0 [<INFORMIXDIR> <INFORMIXSERVER> <ONCONFIG>] $LEGAL_ACTIONS"
+	exit 1
+}
+
+
+#
+# Check if number of parameters is valid.
+# Valid hereby are: 
+# 	- 1 parameter (only the action to perform)
+# 	- or 4 parameters (variables needed plus the action to perform)
+#
+if [ $# -ne 1 -a $# -ne 4 ]; then
+	usage
+fi
+
+
+#
+# Set OCF parameter variables, if supplied
+#
+
+# Set informixdir only if there follows at least one more unempty parameter
+if [ -n "$2" ]; then
+    OCF_RESKEY_informixdir="$1"; shift
+    export OCF_RESKEY_informixdir
+fi
+
+# Set informixserver only if there follows at least one more unempty parameter
+if [ -n "$2" ]; then
+    OCF_RESKEY_informixserver="$1"; shift
+    export OCF_RESKEY_informixserver
+fi
+
+# Set onconfig only if there follows at least one more unempty parameter
+if [ -n "$2" ]; then
+    OCF_RESKEY_onconfig="$1"; shift
+    export OCF_RESKEY_onconfig
+fi
+
+
+#
+# Set general OCF variables
+#
+OCF_TYPE=ids
+OCF_RESOURCE_INSTANCE=${OCF_TYPE}_$OCF_RESKEY_informixserver
+export OCF_TYPE OCF_RESOURCE_INSTANCE
+
+
+#
+# Finally call OCF resource agent we are wrapping here...
+#
+ra_execocf $1
+###############################################################################

@@ -4,3 +4,5 @@ Makefile
 parser-messages
 MISC_ERRORS
 ldirectord
+ldirectord.debian
+ldirectord.debian.default

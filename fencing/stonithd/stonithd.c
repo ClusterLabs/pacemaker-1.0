@@ -395,7 +395,7 @@ main(int argc, char ** argv)
 	cl_log_enable_stderr(TRUE);
 	cl_log_set_facility(LOG_DAEMON);
         /* Use logd if it's enabled by heartbeat */
-        cl_inherit_use_logd(ENV_PREFIX ""KEY_LOGDAEMON, 0);
+        cl_inherit_logging_environment(0);
 
 	do {
 		option_char = getopt(argc, argv, optstr);
@@ -457,8 +457,7 @@ main(int argc, char ** argv)
 		}
 	} while (1);
 
-	inherit_logconfig_from_environment();
-	
+	cl_inherit_logging_environment(0);
 
 	if (cl_read_pidfile(STD_PIDFILE) > 0 ) {
 		stonithd_log(LOG_NOTICE, "%s %s", argv[0], M_RUNNING);
@@ -3755,7 +3754,8 @@ init_using_apphb(void)
 {
 	char stonithd_instance[40];
 
-	sprintf(stonithd_instance, "%s_%ldd", stonithd_name, (long)getpid());
+	snprintf(stonithd_instance, sizeof(stonithd_instance), "%s_%ldd"
+	,	stonithd_name, (long)getpid());
         if (apphb_register(stonithd_name, stonithd_instance) != 0) {
                 stonithd_log(LOG_ERR, "Failed when trying to register to apphbd.");
                 stonithd_log(LOG_ERR, "Maybe apphd isnot running. Quit.");

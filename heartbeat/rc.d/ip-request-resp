@@ -17,7 +17,7 @@
 #
 #
 US="ip-request-resp"
-TAKE=$HA_BIN/ResourceManager
+TAKE=$HA_NOARCHBIN/ResourceManager
 
 CMD=$1
 #

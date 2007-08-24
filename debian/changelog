@@ -1,4 +1,38 @@
-heartbeat (2.0.9-1) unstable; urgency=low
+heartbeat (2.1.2-2) unstable; urgency=low
+
+  * Make package binMMU safe. Thanks to Lior Kaplan.
+    (closes: #435974)
+  * Remove ipmilan stonith module as it seems to be cronically broken
+    - Remove the build dependancy on libopenipmi-dev (>= 2.0.1) accordingly
+
+ -- Simon Horman <horms@debian.org>  Thu, 09 Aug 2007 18:24:00 +0900
+
+heartbeat (2.1.2-1) unstable; urgency=low
+
+  * New Upstream
+    - Fix file relocation problems
+      (closes: #434829)
+    - Fix IPaddr's handling of CIDR netmasks
+    - Ran ./ConfigureMe bootstrap && make distclean &&
+          rm ltdl.m4 libtool.m4 autoconf automake autoheader
+      to effect changes made to configure.in
+  * Add openhpi stonith module
+    - Add build dependancy on libopenhpi-dev
+    - Add usr/lib/stonith/plugins/stonith2/bladehpi.so to heartbeat.files
+  * IPv6 configure check
+    - For the ipv6 check to work Debian ia64 currently needs to check
+      "sys/types.h", a patch went into the tree a while ago to fix this.
+      However, at the 11th hour a patch went into 2.1.2 to reverse this
+      change as it breaks the build on RHEL4. So for now, until a proper
+      fix is made, just reverse that change in Debian packages.
+    - Ran ./ConfigureMe bootstrap && make distclean &&
+          rm ltdl.m4 libtool.m4 autoconf automake autoheader
+      to effect changes made to configure.in
+    - Patch: ipv6-check.patch
+
+ -- Simon Horman <horms@debian.org>  Tue, 31 Jul 2007 11:01:16 +0900
+
+heartbeat (2.1.1-1) unstable; urgency=low
 
   * New Upstream
   * Remove merged patches
@@ -9,8 +43,58 @@ heartbeat (2.0.9-1) unstable; urgency=low
     - ipv6addr-find_if-overflow.patch
     - ipv6addr-scanf-return.patch
     - ldirectord-init.patch
+    - configure-sys-types.h.patch
+  * After unpacking apply patches and run autoconf to effect
+    changes to configure.in
+  * Update files included in heartbeat, heartbeat-dev and ldirectord packages
+  * Update rules file to reflect that /usr/lib/heartbeat/cts/README
+    has been moved to usr/share/heartbeat/cts/README.
+    This README is installed as /usr/share/doc/heartbeat/README.cts
 
- -- Simon Horman <horms@debian.org>  Thu, 17 May 2007 16:20:38 +0900
+ -- Simon Horman <horms@debian.org>  Wed, 25 Jul 2007 14:15:38 +0900
+
+heartbeat (2.0.8-10) unstable; urgency=low
+
+  * Remove apparently bogus build-dependacy on modutils
+    Thanks to Russell Coker for spotting this.
+    A bug was subsequently filed as the result of some automated testing.
+    (closes: #432441)
+  * Build dependancy on libsnmp-dev rather than libsnmp10-dev | libsnmp-dev
+    as libsnmp10-dev does not seem to exist (any more?)
+  * Change heartbeat-gui's dependancy on heartbeat to a suggests,
+    as heartbat-gui can access heartbeat remotely
+    (closes: #430082)
+
+ -- Simon Horman <horms@debian.org>  Thu, 19 Jul 2007 13:38:35 +0900
+
+heartbeat (2.0.8-9) unstable; urgency=low
+
+  * Run autoconf so that the FTBFS on ia64 fix included in
+    2.0.8-8 actually takes effect. Bahh!
+
+ -- Simon Horman <horms@debian.org>  Thu, 31 May 2007 19:37:43 +0900
+
+heartbeat (2.0.8-8) unstable; urgency=low
+
+  * Use sys/types.h instead of asm/types.h when trying to detect
+    the preseance of linux/icmpv6.h. Resolves FTBFS on ia64
+    Patch: configure-sys-types.h.patch
+  * Remove linux-kernel-headers for ia64 added in 2.0.8-7 as
+    a) it didn't resolve the problem and b) the types.h change
+    above does.
+  * Use << instead of < for dependancy relations
+  * Add --enable-glib-malloc to configure's arguments
+    on advice from Andrew Beekhof
+
+ -- Simon Horman <horms@debian.org>  Thu, 31 May 2007 18:26:10 +0900
+
+heartbeat (2.0.8-7) unstable; urgency=low
+
+  * Add a (tempoary) build dependancy on linux-kernel-headers for ia64
+    to get around a curious autobuild problem.
+    See: http://lists.debian.org/debian-ia64/2007/05/msg00003.html
+
+ -- Simon Horman <horms@debian.org>  Fri, 25 May 2007 16:07:22 +0900
 
 heartbeat (2.0.8-5) unstable; urgency=low
 

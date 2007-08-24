@@ -24,6 +24,15 @@
 #define __MGMT_COMMON_H 1
 
 
+/*************************PROTOCOL*******************************************/
+
+/*
+description
+   increased, if daemon-client communication changes in an incompatible way
+*/	
+#define MGMT_PROTOCOL_VERSION "1.0"
+
+
 /*************************MESSAGES*******************************************/
 
 #define MSG_OK  		"ok"
@@ -35,7 +44,7 @@ description:
 	the username/password must be one of the authorized account on the 
 	server running the daemon
 format:
-	MSG_LOGIN username password
+	MSG_LOGIN username password protocolversion
 return:
 	MSG_OK 
 or

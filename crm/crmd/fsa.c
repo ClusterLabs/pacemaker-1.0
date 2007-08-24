@@ -525,16 +525,16 @@ s_crmd_fsa_actions(fsa_data_t *fsa_data)
 			do_fsa_action(fsa_data, A_TE_STOP,		do_te_control);
 		} else if(is_set(fsa_actions, A_SHUTDOWN)) {
 			do_fsa_action(fsa_data, A_SHUTDOWN,		do_shutdown);
-		} else if(is_set(fsa_actions, A_STOP)) {
-			do_fsa_action(fsa_data, A_STOP,			do_stop);
-		} else if(is_set(fsa_actions, A_CCM_DISCONNECT)) {
-			do_fsa_action(fsa_data, A_CCM_DISCONNECT,	do_ccm_control);
 		} else if(is_set(fsa_actions, A_LRM_DISCONNECT)) {
 			do_fsa_action(fsa_data, A_LRM_DISCONNECT,	do_lrm_control);
+		} else if(is_set(fsa_actions, A_CCM_DISCONNECT)) {
+			do_fsa_action(fsa_data, A_CCM_DISCONNECT,	do_ccm_control);
 		} else if(is_set(fsa_actions, A_HA_DISCONNECT)) {
 			do_fsa_action(fsa_data, A_HA_DISCONNECT,	do_ha_control);
 		} else if(is_set(fsa_actions, A_CIB_STOP)) {
 			do_fsa_action(fsa_data, A_CIB_STOP,		do_cib_control);
+		} else if(is_set(fsa_actions, A_STOP)) {
+			do_fsa_action(fsa_data, A_STOP,			do_stop);
 
 			/* exit gracefully */
 		} else if(is_set(fsa_actions, A_EXIT_0)) {
@@ -599,9 +599,9 @@ do_state_transition(long long actions,
 		  state_from, state_to, input, fsa_cause2string(cause),
 		  msg_data->origin);
 	
-	crm_info("%s: State transition %s -> %s [ input=%s cause=%s origin=%s ]",
-		 fsa_our_uname, state_from, state_to, input,
-		 fsa_cause2string(cause), msg_data->origin);
+	crm_info("State transition %s -> %s [ input=%s cause=%s origin=%s ]",
+		 state_from, state_to, input, fsa_cause2string(cause),
+		 msg_data->origin);
 
 	/* the last two clauses might cause trouble later */
 	if(election_timeout != NULL
@@ -638,10 +638,6 @@ do_state_transition(long long actions,
 		crm_timer_stop(recheck_timer);
 	}
 
-#ifdef HA_MALLOC_TRACK
-	cl_malloc_dump_allocated(LOG_DEBUG, TRUE);
-#endif
-	
 	switch(next_state) {
 		case S_PENDING:			
 			fsa_cib_conn->cmds->set_slave(fsa_cib_conn, cib_scope_local);

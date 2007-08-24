@@ -53,7 +53,6 @@ void usage(const char *cmd, int exit_status);
 gboolean BE_QUIET = FALSE;
 gboolean DO_WRITE = TRUE;
 gboolean DO_DELETE = FALSE;
-gboolean inhibit_pe = FALSE;
 
 char *dest_node = NULL;
 char *set_name  = NULL;
@@ -74,6 +73,7 @@ main(int argc, char **argv)
 	cib_t *	the_cib = NULL;
 	enum cib_errors rc = cib_ok;
 	
+	int cib_opts = cib_sync_call;
 	int argerr = 0;
 	int flag;
 
@@ -101,9 +101,7 @@ main(int argc, char **argv)
 #endif
 
 	crm_system_name = basename(argv[0]);
-	crm_log_init(crm_system_name);
-	crm_log_level = LOG_ERR;
-	cl_log_enable_stderr(TRUE);
+	crm_log_init(crm_system_name, LOG_ERR, FALSE, FALSE, argc, argv);
 	
 	if(argc < 2) {
 		usage(crm_system_name, LSB_EXIT_EINVAL);
@@ -173,7 +171,8 @@ main(int argc, char **argv)
 				rsc_id = optarg;
 				break;
 			case '!':
-				inhibit_pe = TRUE;
+				crm_warn("Inhibiting notifications for this update");
+				cib_opts |= cib_inhibit_notify;
 				break;
 			default:
 				printf("Argument code 0%o (%c) is not (?yet?) supported\n", flag, flag);
@@ -205,8 +204,7 @@ main(int argc, char **argv)
 		fprintf(stderr, "Error signing on to the CIB service: %s\n",
 			cib_error2string(rc));
 		return rc;
-	}
-	
+	}	
 
 	if(safe_str_eq(crm_system_name, "crm_attribute")
 	   && type == NULL && dest_uname == NULL) {
@@ -261,15 +259,15 @@ main(int argc, char **argv)
 		
 		len = 8 + strlen(rsc_id);
 		crm_malloc0(attr_name, len);
-		sprintf(attr_name, "master-%s", rsc_id);
+		snprintf(attr_name, len, "master-%s", rsc_id);
 
 		len = 3 + strlen(type) + strlen(attr_name) + strlen(dest_node);
 		crm_malloc0(attr_id, len);
-		sprintf(attr_id, "%s-%s-%s", type, attr_name, dest_node);
+		snprintf(attr_id, len, "%s-%s-%s", type, attr_name, dest_node);
 
 		len = 8 + strlen(dest_node);
 		crm_malloc0(set_name, len);
-		sprintf(set_name, "master-%s", dest_node);
+		snprintf(set_name, len, "master-%s", dest_node);
 		
 	} else if(safe_str_eq(crm_system_name, "crm_failcount")) {
 		type = XML_CIB_TAG_STATUS;
@@ -334,15 +332,22 @@ main(int argc, char **argv)
 
 	if(safe_str_eq(type, XML_CIB_TAG_CRMCONFIG)) {
 		dest_node = NULL;
-	}
-	
+	}	
+
 	if(is_done) {
 			
 	} else if(DO_DELETE) {
-		rc = delete_attr(the_cib, cib_sync_call, type, dest_node, set_name,
+		rc = delete_attr(the_cib, cib_opts, type, dest_node, set_name,
 				 attr_id, attr_name, attr_value);
-		
-		if(safe_str_eq(crm_system_name, "crm_failcount")) {
+
+		if(rc == cib_NOTEXISTS) {
+		    /* Nothing to delete...
+		     * which means its not there...
+		     * which is what the admin wanted
+		     */
+		    rc = cib_ok;
+		    
+		} else if(safe_str_eq(crm_system_name, "crm_failcount")) {
 			char *now_s = NULL;
 			time_t now = time(NULL);
 			now_s = crm_itoa(now);
@@ -352,15 +357,10 @@ main(int argc, char **argv)
 		}
 			
 	} else if(DO_WRITE) {
-		int cib_opts = cib_sync_call;
 		CRM_DEV_ASSERT(type != NULL);
 		CRM_DEV_ASSERT(attr_name != NULL);
 		CRM_DEV_ASSERT(attr_value != NULL);
 
-		if(inhibit_pe) {
-			crm_warn("Inhibiting notifications for this update");
-			cib_opts |= cib_inhibit_notify;
-		}
 		rc = update_attr(the_cib, cib_opts, type, dest_node, set_name,
 				 attr_id, attr_name, attr_value);
 
@@ -471,6 +471,14 @@ usage(const char *cmd, int exit_status)
 		fprintf(stream, "\t    -t=%s options: -(U|u) -n [-s]\n", XML_CIB_TAG_STATUS);
 		fprintf(stream, "\t    -t=%s options: -n [-s]\n", XML_CIB_TAG_CRMCONFIG);
 	}
+
+	if(safe_str_neq(crm_system_name, "crm_standby")) {
+		fprintf(stream, "\t--%s (-%c)\t: "
+			"Make a change and prevent the TE/PE from seeing it straight away.\n"
+			"\t    You may think you want this option but you don't."
+			" Advanced use only - you have been warned!\n", "inhibit-policy-engine", '!');
+	}	
+	
 	fflush(stream);
 
 	exit(exit_status);

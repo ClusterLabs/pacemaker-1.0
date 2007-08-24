@@ -37,7 +37,9 @@ HB_INITSTARTPRI="@HB_INITSTARTPRI@"
 HB_INITSTOPPRI="@HB_INITSTOPPRI@" 
 
 # heartbeat rc script directory
-HB_RC_DIR="@HB_RC_DIR@" 
+# HB_RC_DIR is the old name
+HB_RC_DIR="@HA_RC_DIR@" 
+HA_RC_DIR="@HA_RC_DIR@" 
 
 # Version number of package
 VERSION="@VERSION@"

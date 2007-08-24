@@ -49,17 +49,18 @@ class ResetMechanism:
         raise ValueError("Abstract class member (reset)")
 
 class Stonith(ResetMechanism):
-    def __init__(self, sttype="external/ssh", parm=None
+    def __init__(self, sttype="external/ssh", pName=None, pValue=None
         ,        path="@sbindir@/stonith"):
         self.pathname=path
-        self.configstring=parm
+        self.configName=pName
+        self.configValue=pValue
         self.stonithtype=sttype
 
     def reset(self, node):
-        if self.configstring == None :
+        if self.configValue == None :
             config=node
         else:
-            config=self.configstring
+            config=self.configValue
         cmdstring = "%s -t '%s' -p '%s' '%s' 2>/dev/null" % (self.pathname
         ,        self.stonithtype, config, node)
         return (os.system(cmdstring) == 0)
@@ -193,23 +194,23 @@ class SysLog(Logger):
     defaultsource="CTS"
     defaultfacility= syslog.LOG_LOCAL7
     map = {
-            "kernel":	syslog.LOG_KERN,
-            "user":	syslog.LOG_USER,
-            "mail":	syslog.LOG_MAIL,
-            "daemon":	syslog.LOG_MAIL,
-            "auth":	syslog.LOG_AUTH,
-            "lpr":	syslog.LOG_LPR,
-            "news":	syslog.LOG_NEWS,
-            "uucp":	syslog.LOG_UUCP,
-            "cron":	syslog.LOG_CRON,
-            "local0":	syslog.LOG_LOCAL0,
-            "local1":	syslog.LOG_LOCAL1,
-            "local2":	syslog.LOG_LOCAL2,
-            "local3":	syslog.LOG_LOCAL3,
-            "local4":	syslog.LOG_LOCAL4,
-            "local5":	syslog.LOG_LOCAL5,
-            "local6":	syslog.LOG_LOCAL6,
-            "local7":	syslog.LOG_LOCAL7,
+            "kernel":   syslog.LOG_KERN,
+            "user":     syslog.LOG_USER,
+            "mail":     syslog.LOG_MAIL,
+            "daemon":   syslog.LOG_MAIL,
+            "auth":     syslog.LOG_AUTH,
+            "lpr":      syslog.LOG_LPR,
+            "news":     syslog.LOG_NEWS,
+            "uucp":     syslog.LOG_UUCP,
+            "cron":     syslog.LOG_CRON,
+            "local0":   syslog.LOG_LOCAL0,
+            "local1":   syslog.LOG_LOCAL1,
+            "local2":   syslog.LOG_LOCAL2,
+            "local3":   syslog.LOG_LOCAL3,
+            "local4":   syslog.LOG_LOCAL4,
+            "local5":   syslog.LOG_LOCAL5,
+            "local6":   syslog.LOG_LOCAL6,
+            "local7":   syslog.LOG_LOCAL7,
     }
     def __init__(self, labinfo):
 
@@ -345,7 +346,9 @@ class CtsLab(UserDict):
         if not self.has_key("CMclass"):
             self["CMclass"] = HeartbeatCM
         if not self.has_key("LogFileName"):
-            self["LogFileName"] = "/var/log/ha-log"
+            self["LogFileName"] = "@HA_VARLOGDIR@/ha-log"
+        if not self.has_key("logrestartcmd"):
+            self["logrestartcmd"] = "@INITDIR@/syslog restart"
         if not self.has_key("logfacility"):
             LogFacility = "local7"
 
@@ -481,8 +484,11 @@ def usage(arg):
     +  " -v2 |"\
     +  " --crm |"\
     +  " --classic)"\
+    +  " (--populate-resources | -r)" \
     +  " --resource-can-stop" \
     +  " --stonith (1 | 0 | yes | no)" \
+    +  " --stonith-type type" \
+    +  " --stonith-args name=value" \
     +  " --standby (1 | 0 | yes | no)" \
     +  " --fencing (1 | 0 | yes | no)" \
     +  " --suppress_cib_writes (1 | 0 | yes | no)" \
@@ -503,7 +509,7 @@ if __name__ == '__main__':
     import CM_hb
 
     HAdir = "@sysconfdir@/ha.d"
-    LogFile = "/var/log/ha-log-local7"
+    LogFile = "@HA_VARLOGDIR@/ha-log-local7"
     DoStonith = 1
     DoStandby = 1
     DoFencing = 1
@@ -526,6 +532,9 @@ if __name__ == '__main__':
     ListTests = 0
     HaveSeed = 0
     oprofile = None
+    StonithType = "ssh"
+    StonithParams = None
+    StonithParams = "hostlist=dynamic".split('=')
 
     #
     # The values of the rest of the parameters are now properly derived from
@@ -557,7 +566,7 @@ if __name__ == '__main__':
        elif args[i] == "-l" or args[i] == "--limit-nodes":
            skipthis=1
            LimitNodes = int(args[i+1])
-       elif args[i] == "-r":
+       elif args[i] == "-r" or args[i] == "--populate-resources":
            CIBResource = 1
        elif args[i] == "-L" or args[i] == "--logfile":
            skipthis=1
@@ -582,6 +591,12 @@ if __name__ == '__main__':
                DoStonith=0
            else:
                usage(args[i+1])
+       elif args[i] == "--stonith-type":
+           StonithType = args[i+1]
+           skipthis=1
+       elif args[i] == "--stonith-args":
+           StonithParams = args[i+1].split('=')
+           skipthis=1
        elif args[i] == "--suppress-cib-writes":
            skipthis=1
            if args[i+1] == "1" or args[i+1] == "yes":
@@ -591,7 +606,7 @@ if __name__ == '__main__':
            else:
                usage(args[i+1])
        elif args[i] == "--bsc":
-	   DoBSC=1
+           DoBSC=1
        elif args[i] == "--standby":
            skipthis=1
            if args[i+1] == "1" or args[i+1] == "yes":
@@ -651,7 +666,7 @@ if __name__ == '__main__':
            NumIter=int(args[i])
      
     if not oprofile:
-	oprofile = []
+        oprofile = []
 
     #
     # This reading of HBconfig here is ugly, and I suppose ought to
@@ -680,6 +695,9 @@ if __name__ == '__main__':
                   %(len(node_list), LimitNodes))
             while len(node_list) > LimitNodes:
                 node_list.pop(len(node_list)-1)
+
+    if StonithParams[0] == "hostlist":
+        StonithParams[1] = string.join(node_list, " ")
 
 #    alt_list = []
 #    for node in node_list:
@@ -717,7 +735,7 @@ if __name__ == '__main__':
     if HaveSeed:
         Environment["RandSeed"] = Seed 
 
-    Environment["reset"] = Stonith(sttype="external/ssh", parm=string.join(node_list, " "))
+    Environment["reset"] = Stonith(sttype=StonithType, pName=StonithParams[0], pValue=StonithParams[1])
 
     if DoBSC:
         Environment["DoBSC"]       = 1
@@ -758,12 +776,12 @@ if __name__ == '__main__':
         cm.log("Resource Monitoring is disabled")
     cm.log("Cluster nodes: ")
     for node in config.Parameters["node"]:
-	(rc, lines) = cm.rsh.remote_py(node, "os", "system", 
-				     "@sbindir@/crm_uuid")
+        (rc, lines) = cm.rsh.remote_py(node, "os", "system", 
+                                     "@sbindir@/crm_uuid")
         if not lines:
             cm.log("    * %s: __undefined_uuid__" % node)
         else:
-	    out=lines[0]
+            out=lines[0]
             out = out[:-1]
             cm.log("    * %s: %s" % (node, out))
         

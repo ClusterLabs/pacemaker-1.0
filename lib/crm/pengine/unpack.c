@@ -184,6 +184,11 @@ unpack_nodes(crm_data_t * xml_nodes, pe_working_set_t *data_set)
 			crm_config_err("Must specify type tag in <node>");
 			continue;
 		}
+		if(pe_find_node(data_set->nodes, uname) != NULL) {
+		    crm_config_warn("Detected multiple node entries with uname=%s"
+				    " - this is rarely intended", uname);
+		}
+
 		crm_malloc0(new_node, sizeof(node_t));
 		if(new_node == NULL) {
 			return FALSE;
@@ -754,9 +759,9 @@ process_rsc_state(resource_t *rsc, node_t *node,
 		if(rsc->is_managed && rsc->stickiness != 0) {
 			resource_location(rsc, node, rsc->stickiness,
 					  "stickiness", data_set);
-			crm_debug("Resource %s: preferring current location"
-				  " (node=%s, weight=%d)", rsc->id,
-				  node->details->uname, rsc->stickiness);
+			crm_debug_2("Resource %s: preferring current location"
+				    " (node=%s, weight=%d)", rsc->id,
+				    node->details->uname, rsc->stickiness);
 		}
 	
 		if(on_fail == action_fail_ignore) {
@@ -861,6 +866,38 @@ process_recurring(node_t *node, resource_t *rsc,
 		);
 }
 
+void
+calculate_active_ops(GListPtr sorted_op_list, int *start_index, int *stop_index) 
+{
+	const char *task = NULL;
+	const char *status = NULL;
+
+	*stop_index = -1;
+	*start_index = -1;
+	
+	slist_iter(
+		rsc_op, crm_data_t, sorted_op_list, lpc,
+
+		task = crm_element_value(rsc_op, XML_LRM_ATTR_TASK);
+		status = crm_element_value(rsc_op, XML_LRM_ATTR_OPSTATUS);
+
+		if(safe_str_eq(task, CRMD_ACTION_STOP)
+		   && safe_str_eq(status, "0")) {
+			*stop_index = lpc;
+			
+		} else if(safe_str_eq(task, CRMD_ACTION_START)) {
+			*start_index = lpc;
+			
+		} else if(*start_index <= *stop_index
+			  && safe_str_eq(task, CRMD_ACTION_STATUS)) {
+			const char *rc = crm_element_value(rsc_op, XML_LRM_ATTR_RC);
+			if(safe_str_eq(rc, "0") || safe_str_eq(rc, "8")) {
+				*start_index = lpc;
+			}
+		}
+		);
+}
+
 static void
 unpack_lrm_rsc_state(
 	node_t *node, crm_data_t * rsc_entry, pe_working_set_t *data_set)
@@ -870,7 +907,6 @@ unpack_lrm_rsc_state(
 	int max_call_id = -1;
 
 	const char *task = NULL;
-	const char *status = NULL;
 	const char *value = NULL;
 	const char *rsc_id  = crm_element_value(rsc_entry, XML_ATTR_ID);
 
@@ -917,23 +953,9 @@ unpack_lrm_rsc_state(
 	
 	slist_iter(
 		rsc_op, crm_data_t, sorted_op_list, lpc,
+
 		task = crm_element_value(rsc_op, XML_LRM_ATTR_TASK);
-		status = crm_element_value(rsc_op, XML_LRM_ATTR_OPSTATUS);
-		if(safe_str_eq(task, CRMD_ACTION_STOP)
-		   && safe_str_eq(status, "0")) {
-			stop_index = lpc;
-			
-		} else if(safe_str_eq(task, CRMD_ACTION_START)) {
-			start_index = lpc;
-			
-		} else if(start_index <= stop_index
-			  && safe_str_eq(task, CRMD_ACTION_STATUS)) {
-			const char *rc = crm_element_value(rsc_op, XML_LRM_ATTR_RC);
-			if(safe_str_eq(rc, "0")
-			   || safe_str_eq(rc, "8")) {
-				start_index = lpc;
-			}
-		} else if(safe_str_eq(task, CRMD_ACTION_MIGRATED)) {
+		if(safe_str_eq(task, CRMD_ACTION_MIGRATED)) {
 			migrate_op = rsc_op;
 		}
 		
@@ -942,6 +964,7 @@ unpack_lrm_rsc_state(
 		);
 
 	/* create active recurring operations as optional */ 
+	calculate_active_ops(sorted_op_list, &start_index, &stop_index);
 	process_recurring(node, rsc, start_index, stop_index,
 			  sorted_op_list, data_set);
 	
@@ -999,6 +1022,7 @@ unpack_rsc_op(resource_t *rsc, node_t *node, crm_data_t *xml_op,
 	const char *task_status = NULL;
 	const char *interval_s  = NULL;
 	const char *op_digest   = NULL;
+	const char *op_version  = NULL;
 
 	int interval = 0;
 	int task_id_i = -1;
@@ -1018,6 +1042,7 @@ unpack_rsc_op(resource_t *rsc, node_t *node, crm_data_t *xml_op,
  	task_id     = crm_element_value(xml_op, XML_LRM_ATTR_CALLID);
 	task_status = crm_element_value(xml_op, XML_LRM_ATTR_OPSTATUS);
 	op_digest   = crm_element_value(xml_op, XML_LRM_ATTR_OP_DIGEST);
+	op_version  = crm_element_value(xml_op, XML_ATTR_CRM_VERSION);
 
 	CRM_CHECK(id != NULL, return FALSE);
 	CRM_CHECK(task != NULL, return FALSE);
@@ -1120,6 +1145,11 @@ unpack_rsc_op(resource_t *rsc, node_t *node, crm_data_t *xml_op,
 		 *   are supposed to be in master mode
 		 */
 		task_status_i = LRM_OP_ERROR;
+
+	} else if(task_status_i == LRM_OP_DONE && EXECRA_OK != actual_rc_i) {
+		crm_err("Remapping %s (rc=%d) on %s to an ERROR",
+			id, actual_rc_i, node->details->uname);
+		task_status_i = LRM_OP_ERROR;
 	}
 
 	if(task_status_i == LRM_OP_ERROR
@@ -1170,23 +1200,29 @@ unpack_rsc_op(resource_t *rsc, node_t *node, crm_data_t *xml_op,
 		case LRM_OP_ERROR:
 		case LRM_OP_TIMEOUT:
 		case LRM_OP_NOTSUPPORTED:
-			crm_warn("Processing failed op (%s) on %s",
-				 id, node->details->uname);
+			crm_warn("Processing failed op %s on %s: %s",
+				 id, node->details->uname,
+				 op_status2text(task_status_i));
+			crm_xml_add(xml_op, XML_ATTR_UNAME, node->details->uname);
+			add_node_copy(data_set->failed, xml_op);
 
 			if(*on_fail < action->on_fail) {
 				*on_fail = action->on_fail;
 			}
-			
-			if(task_status_i == LRM_OP_NOTSUPPORTED
-			   || is_stop_action
-			   || safe_str_eq(task, CRMD_ACTION_START) ) {
-				crm_warn("Handling failed %s for %s on %s",
-					 task, rsc->id, node->details->uname);
-				resource_location(rsc, node, -INFINITY,
-					  "__dont_run__failed_stopstart__",
-					  data_set);
+
+			if(task_status_i == LRM_OP_NOTSUPPORTED) {
+			    resource_location(
+				rsc, node, -INFINITY, "__not_supported__", data_set);
+
+			} else if(compare_version("2.0", op_version)) {			    
+			    if(is_stop_action || safe_str_eq(task, CRMD_ACTION_START)) {
+				crm_warn("Compatability handling for failed op %s on %s",
+					 id, node->details->uname);
+				resource_location(
+				    rsc, node, -INFINITY, "__legacy_stopstart__", data_set);
+			    }
 			}
-			
+
 			if(safe_str_eq(task, CRMD_ACTION_PROMOTE)) {
 				rsc->role = RSC_ROLE_MASTER;
 

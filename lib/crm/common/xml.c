@@ -606,7 +606,7 @@ write_xml_file(crm_data_t *xml_node, const char *filename, gboolean compress)
 	time_t now;
 	char *buffer = NULL;
 	char *now_str = NULL;
-	gboolean is_done = FALSE;
+	unsigned int in = 0, out = 0;
 	FILE *file_output_strm = NULL;
 	static mode_t cib_mode = S_IRUSR|S_IWUSR;
 	
@@ -619,6 +619,15 @@ write_xml_file(crm_data_t *xml_node, const char *filename, gboolean compress)
 		return -1;
 	}
 
+	file_output_strm = fopen(filename, "w");
+	if(file_output_strm == NULL) {
+		cl_perror("Cannot open %s for writing", filename);
+		return -1;
+	} 
+
+	/* establish the correct permissions */
+	fchmod(fileno(file_output_strm), cib_mode);
+	
 	crm_validate_data(xml_node);
 	crm_log_xml_debug_4(xml_node, "Writing out");
 	crm_validate_data(xml_node);
@@ -630,78 +639,62 @@ write_xml_file(crm_data_t *xml_node, const char *filename, gboolean compress)
 	crm_validate_data(xml_node);
 	
 	buffer = dump_xml_formatted(xml_node);
-	CRM_CHECK(buffer != NULL && strlen(buffer) > 0, return -1);
-
-	/* establish the file with correct permissions */
-	file_output_strm = fopen(filename, "w");
-	if(file_output_strm == NULL) {
-		cl_perror("Cannot open %s for writing", filename);
-		crm_free(buffer);
-		return -1;
-	}
-	
-	fclose(file_output_strm);
-	chmod(filename, cib_mode);
-
-	/* now write it */
-	file_output_strm = fopen(filename, "w");
-	if(file_output_strm == NULL) {
-		cl_perror("Cannot open %s for writing", filename);
-		crm_free(buffer);
-		return -1;		
-	} 
+	CRM_CHECK(buffer != NULL && strlen(buffer) > 0, goto bail);	
 
 	if(compress) {
 #if HAVE_BZLIB_H
-		int rc = BZ_OK;
-		BZFILE *bz_file = NULL;
-		unsigned int in = 0, out = 0;
-		is_done = TRUE;
-		bz_file = BZ2_bzWriteOpen(&rc, file_output_strm, 5,0,0);
+	    int rc = BZ_OK;
+	    BZFILE *bz_file = NULL;
+	    bz_file = BZ2_bzWriteOpen(&rc, file_output_strm, 5,0,0);
+	    if(rc != BZ_OK) {
+		crm_err("bzWriteOpen failed: %d", rc);
+	    } else {
+		BZ2_bzWrite(&rc,bz_file,buffer,strlen(buffer));
 		if(rc != BZ_OK) {
-			is_done = FALSE;
-			crm_err("bzWriteOpen failed: %d", rc);
+		    crm_err("bzWrite() failed: %d", rc);
 		}
-		if(is_done) {
-			BZ2_bzWrite(&rc,bz_file,buffer,strlen(buffer));
-			if(rc != BZ_OK) {
-				crm_err("bzWrite() failed: %d", rc);
-				is_done = FALSE;
-			}
+	    }
+	    
+	    if(rc == BZ_OK) {
+		BZ2_bzWriteClose(&rc, bz_file, 0, &in, &out);
+		if(rc != BZ_OK) {
+		    crm_err("bzWriteClose() failed: %d",rc);
+		    out = -1;
+		} else {
+		    crm_debug_2("%s: In: %d, out: %d", filename, in, out);
 		}
-		if(is_done) {
-			BZ2_bzWriteClose(&rc, bz_file, 0, &in, &out);
-			if(rc != BZ_OK) {
-				crm_err("bzWriteClose() failed: %d",rc);
-				is_done = FALSE;
-			} else {
-				crm_debug_2("%s: In: %d, out: %d",
-					    filename, in, out);
-			}
-		}
+	    }
 #else
-		crm_err("Cannot write compressed files:"
-			" bzlib was not available at compile time");		
+	    crm_err("Cannot write compressed files:"
+		    " bzlib was not available at compile time");		
 #endif
 	}
 	
-	if(is_done == FALSE) {
-		res = fprintf(file_output_strm, "%s", buffer);
-		if(res < 0) {
-			cl_perror("Cannot write output to %s", filename);
-		}
-		
-		if(fflush(file_output_strm) == EOF || fsync(fileno(file_output_strm)) < 0) {
-			cl_perror("fflush or fsync error on %s", filename);
-			fclose(file_output_strm);
-			crm_free(buffer);
-			return -1;
-		}
+	if(out <= 0) {
+	    res = fprintf(file_output_strm, "%s", buffer);
+	    if(res < 0) {
+		cl_perror("Cannot write output to %s", filename);
+		goto bail;
+	    }		
 	}
+	
+  bail:
+	
+	CRM_ASSERT(file_output_strm != NULL);
+	if(fflush(file_output_strm) != 0) {
+	    cl_perror("fflush for %s failed:", filename);
+	    res = -1;
+	}
+	
+	if(fsync(fileno(file_output_strm)) < 0) {
+	    cl_perror("fsync for %s failed:", filename);
+	    res = -1;
+	}
+	    
 	fclose(file_output_strm);
-	crm_free(buffer);
-
+	
 	crm_debug_3("Saved %d bytes to the Cib as XML", res);
+	crm_free(buffer);
 
 	return res;
 }
@@ -1431,7 +1424,8 @@ parse_xml(const char *input, size_t *offset)
 					if(len < 0) {
 						error = "couldnt find tag";
 						
-					} else if(strncmp(our_input+lpc, tag_name, len) == 0) {
+					} else if(strlen(tag_name) == len
+						  && strncmp(our_input+lpc, tag_name, len) == 0) {
 						more = FALSE;
 						lpc += len;
 						if(our_input[lpc] != '>') {
@@ -1504,9 +1498,13 @@ parse_xml(const char *input, size_t *offset)
 		drop_comments(our_input, &lpc, max);
 		drop_whitespace(our_input, &lpc, max);
 		if(lpc < max) {
-			crm_err("Ignoring trailing characters in XML input.");
-			crm_err("Parsed %d characters of a possible %d.  Trailing text was: ...\'%20s\'",
-				(int)lpc, (int)max, our_input+lpc);
+		    if(crm_log_level < LOG_ERR) {
+			fprintf(stderr, "%s: Ignoring trailing characters in XML input.  Supply -V for more details.\n", __PRETTY_FUNCTION__);
+		    } else {
+			cl_log(LOG_ERR, "%s: Ignoring trailing characters in XML input.", __PRETTY_FUNCTION__);
+		    }
+		    cl_log(LOG_ERR, "%s: Parsed %d characters of a possible %d.  Trailing text was: \'%.20s\'...",
+			   __PRETTY_FUNCTION__, (int)lpc, (int)max, our_input+lpc);
 		}
 	}
 	
@@ -1635,18 +1633,16 @@ apply_xml_diff(crm_data_t *old, crm_data_t *diff, crm_data_t **new)
 
 			value = crm_element_value(added, name);
 			crm_xml_add(calc_added, name, value);
-
+			
 			value = crm_element_value(removed, name);
 			crm_xml_add(calc_removed, name, value);	
 		}
 		
 		diff_of_diff = diff_xml_object(intermediate, diff, TRUE);
 		if(diff_of_diff != NULL) {
-			crm_notice("Diff application failed!");
-			crm_log_xml_debug(old, "diff:old");
-			crm_log_xml_debug(*new, "diff:new");
- 			log_xml_diff(LOG_DEBUG, diff_of_diff, "diff:diff_of_diff");
-			log_xml_diff(LOG_INFO, intermediate, "diff:actual_diff");
+			crm_info("Diff application failed!");
+			crm_log_xml_debug(old, "diff:original");
+			crm_log_xml_debug(diff, "diff:input");
 			result = FALSE;
 		}
 		
@@ -1656,13 +1652,7 @@ apply_xml_diff(crm_data_t *old, crm_data_t *diff, crm_data_t **new)
 		intermediate = NULL;
 	}
 	
-	if(result == FALSE) {
-		log_xml_diff(LOG_INFO, diff, "diff:input_diff");
-
-		log_data_element("diff:input", NULL, LOG_DEBUG_2, 0, old, TRUE);
-/* 		CRM_CHECK(diff_of_diff != NULL); */
-		result = FALSE;
-	} else {
+	if(result) {
 		purge_diff_markers(*new);
 	}
 
@@ -1914,8 +1904,8 @@ subtract_xml_object(crm_data_t *left, crm_data_t *right, const char *marker)
 			right, right_child,  
 			value = crm_element_value(right_child, XML_DIFF_MARKER);
 			if(value != NULL && safe_str_eq(value, "removed:top")) {
-				crm_debug("Found the root of the deletion: %s", name);
-				crm_log_xml_debug(right_child, "deletion");
+				crm_debug_3("Found the root of the deletion: %s", name);
+				crm_log_xml_debug_3(right_child, "deletion");
 				differences = TRUE;
 				break;
 			}
@@ -2063,9 +2053,9 @@ replace_xml_child(crm_data_t *parent, crm_data_t *child, crm_data_t *update, gbo
 	up_id = ID(update);
 	child_id = ID(child);
 	
-	if(child_id == up_id || safe_str_eq(child_id, up_id)) {
+	if(up_id == NULL || safe_str_eq(child_id, up_id)) {
 		can_delete = TRUE;
-	}
+	} 
 	if(safe_str_neq(crm_element_name(update), crm_element_name(child))) {
 		can_delete = FALSE;
 	}
@@ -2537,8 +2527,6 @@ validate_with_dtd(
 	}
 	
 	if (!xmlValidateDtd(cvp, doc, dtd)) {
-		crm_err("CIB does not validate against %s", dtd_file);
-		crm_log_xml_debug(xml_blob, "invalid");
 		valid = FALSE;
 	}
 	

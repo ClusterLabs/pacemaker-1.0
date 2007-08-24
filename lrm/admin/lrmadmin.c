@@ -596,12 +596,13 @@ lrm_op_done_callback(lrm_op_t* op)
 	printf("type:%s\n", op->op_type);
 	if ( (0 == STRNCMP_CONST(op->op_type, "status") 
 		|| 0 == STRNCMP_CONST(op->op_type, "monitor")) && (op->rc == 7) ) {
-		printf("operation status:%s\n", status_msg[LRM_OP_DONE]);
+		printf("operation status:%s\n", status_msg[LRM_OP_DONE-LRM_OP_PENDING]);
+		printf("op_status: %d\n", LRM_OP_DONE);
 	} else {
 		printf("operation status:%s\n", status_msg[(op->op_status 
 			- LRM_OP_PENDING) % DIMOF(status_msg)]);
+		printf("op_status: %d\n", op->op_status);
 	}
-	printf("op_status: %d\n", op->op_status);
 	printf("return code: %d\n", op->rc);
 	printf("output data: \n%s\n", (op->output ? op->output : "[null]"));
 	printf("---------------------------------------\n\n");
@@ -808,7 +809,7 @@ GHashTable ** params_ht)
 			/* printf("index: %d  value: %s \n", i-start+1, argv[i]); */
 		}
 	} else {
-		fprintf(stderr, "Not supported resource agency class.\n");
+		fprintf(stderr, "Not supported resource agent class.\n");
 		return -1;
 	}
 
@@ -862,7 +863,7 @@ params_hashtable_to_str(const char * class, GHashTable * ht)
 		strncpy(params_str, gstr_tmp->str, gstr_tmp->len+1);
 		g_string_free(gstr_tmp, TRUE);
 	} else {
-		fprintf(stderr, "Not supported resource agency class.\n");
+		fprintf(stderr, "Not supported resource agent class.\n");
 	}
 
 	return params_str;
@@ -955,15 +956,15 @@ print_rsc_inf(lrm_rsc_t * lrm_rsc)
 	rscid_str_tmp[RID_LEN-1] = '\0';
 	strncpy(rscid_str_tmp, lrm_rsc->id, RID_LEN-1);
 	printf("\nResource ID:%s\n", rscid_str_tmp);
-	printf("Resource agency class:%s\n", lrm_rsc->class);
-	printf("Resource agency type:%s\n", lrm_rsc->type);
-	printf("Resource agency provider:%s\n"
+	printf("Resource agent class:%s\n", lrm_rsc->class);
+	printf("Resource agent type:%s\n", lrm_rsc->type);
+	printf("Resource agent provider:%s\n"
 		, lrm_rsc->provider?lrm_rsc->provider:"default");
 
 	if (lrm_rsc->params) {
 		tmp = params_hashtable_to_str(lrm_rsc->class, 
 				lrm_rsc->params);
-		printf("Resource agency parameters:%s\n"
+		printf("Resource agent parameters:%s\n"
 			, (tmp == NULL) ? "No parameter" : tmp);
 		if (tmp != NULL) {
 			 g_free(tmp);
@@ -1000,6 +1001,9 @@ normal_params_hash_to_str(gpointer key, gpointer value, gpointer user_data)
 	}
 
 	key_int = atoi((char *)key) - 1;
+	if( key_int < 0 ) {
+		return;
+	}
 	strncpy(str_tmp + key_int * ARGVI_MAX_LEN, (char*)value,
 		ARGVI_MAX_LEN - 1);
 }

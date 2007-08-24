@@ -84,6 +84,7 @@ include/pils/plugin.h
 include/stamp-h2
 ldirectord/init.d/ldirectord
 ldirectord/ldirectord
+lib/plugins/stonith/external/ibmrsa
 lib/plugins/stonith/external/riloe
 lib/plugins/stonith/external/ssh
 lib/plugins/stonith/ribcl.py
@@ -106,6 +107,7 @@ resources/OCF/AudibleAlarm
 resources/OCF/ClusterMon
 resources/OCF/Delay
 resources/OCF/Dummy
+resources/OCF/eDir88
 resources/OCF/Evmsd
 resources/OCF/Filesystem
 resources/OCF/ICP

@@ -51,6 +51,27 @@ CONFIG=$HA_DIR/ha.cf
 LOCKDIR=@localstatedir@/lock/subsys
 RUNDIR=@localstatedir@/run
 
+
+#	Echo without putting a newline on the end
+EchoNoNl() {
+    Echo @ECHO_N@ "$@@ECHO_C@"
+}
+
+#	Echo with escapes enabled...
+EchoEsc() {
+    Echo @ECHO_E@ "$@"
+}
+
+echo_failure() {
+    EchoEsc " Heartbeat failure [rc=$1]. $rc_failed"
+    return $1
+}
+
+echo_success() {
+    : Cool!  It started!
+    EchoEsc "$rc_done"
+}
+
 if
   [ -r /etc/SuSE-release ]
 then
@@ -79,7 +100,6 @@ fi
 #	and I suspect Conectiva and Mandrake also supply it.
 
 DISTFUNCS=/etc/rc.d/init.d/functions
-PROC_HA=$HA_BIN/ha.o
 SUBSYS=heartbeat
 MODPROBE=/sbin/modprobe
 US=`uname -n`
@@ -266,7 +286,7 @@ StartHA() {
   then
     : OK
   else
-    $HA_BIN/ResourceManager verifyallidle
+    $HA_NOARCHBIN/ResourceManager verifyallidle
   fi
   if
     [ $USE_MODULES = 1 ]
@@ -275,6 +295,14 @@ StartHA() {
     init_watchdog
   fi
   rm -f $RUNDIR/ppp.d/*
+  if
+    [ ! -d $RUNDIR/heartbeat ]
+  then
+    mkdir -p $RUNDIR/heartbeat/ccm
+    mkdir -p $RUNDIR/heartbeat/crm
+    chown -R hacluster:haclient $RUNDIR/heartbeat
+    chmod -R 750 $RUNDIR/heartbeat
+  fi
   if
     [  -f $HA_DIR/ipresources -a ! -f $HA_DIR/haresources ]
   then
@@ -342,7 +370,7 @@ StandbyHA() {
   then
     EchoNoNl "Attempting to enter standby mode"
     if
-      $HA_BIN/hb_standby
+      $HA_NOARCHBIN/hb_standby
     then
       # It's impossible to tell how long this will take.
       echo_success

@@ -615,21 +615,21 @@ change_logfile_ownership(void)
 
 	entry = getpwnam(apiuser);
 	if (entry == NULL){
-		cl_log(LOG_ERR, "change_logfile_ownship:"
-		       " entry for user %s not found", apiuser);
+		cl_log(LOG_ERR, "%s: entry for user %s not found",
+		  __FUNCTION__,  apiuser);
 		return;
 	}
 	
 	if (config->use_logfile){
 		if (chown(config->logfile, entry->pw_uid, entry->pw_gid) < 0) {
-			cl_log(LOG_WARNING, "change_logfile_ownship:"
-			       " failed to chown logfile");
+			cl_log(LOG_WARNING, "%s: failed to chown logfile: %s",
+			  __FUNCTION__, strerror(errno));
 		}
 	}
 	if (config->use_dbgfile){
 		if (chown(config->dbgfile, entry->pw_uid, entry->pw_gid) < 0) {
-			cl_log(LOG_WARNING, "change_logfile_ownship:"
-			       " failed to chown dbgfile");
+			cl_log(LOG_WARNING, "%s: failed to chown dbgfile: %s",
+			  __FUNCTION__, strerror(errno));
 		}
 	}
 	
@@ -3807,6 +3807,10 @@ start_a_child_client(gpointer childentry, gpointer dummy)
 		const char *	devnull = "/dev/null";
 		unsigned int	j;
 		struct rlimit		oflimits;
+		char *cmdexec = NULL;
+		size_t		cmdsize;
+#define		CMDPREFIX	"exec "
+
 		CL_SIGNAL(SIGCHLD, SIG_DFL);
 		alarm(0);
 		CL_IGNORE_SIG(SIGALRM);
@@ -3819,8 +3823,15 @@ start_a_child_client(gpointer childentry, gpointer dummy)
 		(void)open(devnull, O_RDONLY);	/* Stdin:  fd 0 */
 		(void)open(devnull, O_WRONLY);	/* Stdout: fd 1 */
 		(void)open(devnull, O_WRONLY);	/* Stderr: fd 2 */
-		(void)execl("/bin/sh", "sh", "-c", centry->command
-		,	(const char *)NULL);
+		cmdsize = STRLEN_CONST(CMDPREFIX)+strlen(centry->command)+1;
+
+		cmdexec = cl_malloc(cmdsize);
+		if (cmdexec != NULL) {
+			strlcpy(cmdexec, CMDPREFIX, cmdsize);
+			strlcat(cmdexec, centry->command, cmdsize);
+			(void)execl("/bin/sh", "sh", "-c", cmdexec
+			, (const char *)NULL); 
+		}
 
 		/* Should not happen */
 		cl_perror("Cannot exec %s", centry->command);
@@ -4055,10 +4066,10 @@ check_for_timeouts(void)
  */
 static gboolean
 send_reqnodes_msg(gpointer data){
-	struct ha_msg* msg;
-	const char* destnode = NULL;
-	long i;
-	int startindex = (long) data;
+	struct ha_msg*	msg;
+	const char*	destnode = NULL;
+	unsigned long	i;
+	unsigned long	startindex = POINTER_TO_ULONG(data);
 	guint		id;
 	
 	
@@ -5013,6 +5024,7 @@ make_daemon(void)
 	setenv(HADIRENV, HA_HBCONF_DIR, TRUE);
 	setenv(DATEFMT, HA_DATEFMT, TRUE);
 	setenv(HAFUNCENV, HA_FUNCS, TRUE);
+	setenv("OCF_ROOT", OCF_ROOT_DIR, TRUE);
 	umask(022);
 	close(FD_STDIN);
 	(void)open(devnull, O_RDONLY);		/* Stdin:  fd 0 */
@@ -6208,7 +6220,7 @@ nak_rexmit(struct msg_xmit_hist * hist,
 int
 ParseTestOpts()
 {
-	const char *	openpath = HB_RC_DIR "/OnlyForTesting";
+	const char *	openpath = HA_HBCONF_DIR "/OnlyForTesting";
 	FILE *	fp;
 	static struct TestParms p;
 	char	name[64];
@@ -6288,15 +6300,19 @@ IncrGeneration(seqno_t * generation)
 
 	if ((fd = open(HB_VERS_FILE, O_RDONLY)) < 0
 	||	read(fd, buf, sizeof(buf)) < 1) {
-		cl_log(LOG_WARNING, "No Previous generation - starting at 1");
-		snprintf(buf, sizeof(buf), "%*d", GENLEN, 0);
+		GetTimeBasedGeneration(generation);
+		cl_log(LOG_WARNING, "No Previous generation - starting at %lu"
+		,		(unsigned long)(*generation)+1);
+		snprintf(buf, sizeof(buf), "%*lu", GENLEN, *generation);
 		flags = O_CREAT;
 	}
 	close(fd);
 
 	buf[GENLEN] = EOS;
 	if (sscanf(buf, "%lu", generation) <= 0) {
-		cl_log(LOG_WARNING, "BROKEN previous generation - starting at 1");
+		GetTimeBasedGeneration(generation);
+		cl_log(LOG_WARNING, "BROKEN previous generation - starting at %ld"
+		,	(*generation)+1);
 		flags = O_CREAT;
 		*generation = 0;
 	}
@@ -6349,7 +6365,7 @@ GetTimeBasedGeneration(seqno_t * generation)
 static void
 get_localnodeinfo(void)
 {
-	const char *		openpath = HB_RC_DIR "/nodeinfo";
+	const char *		openpath = HA_HBCONF_DIR "/nodeinfo";
 	static struct utsname	u;
 	static char		localnode[256];
 	FILE *			fp;

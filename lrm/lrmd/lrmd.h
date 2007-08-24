@@ -44,20 +44,41 @@
 		}							\
 	}
 
-#define CHECK_RETURN_OF_CREATE_LRM_RET					\
+#define CHECK_RETURN_OF_CREATE_LRM_RET	do {		\
 	if (NULL == msg) {						\
 		lrmd_log(LOG_ERR					\
 		, 	"%s: cannot create a ret message with create_lrm_ret."	\
 		, 	__FUNCTION__);					\
 		return HA_FAIL;						\
-	}
+	} \
+} while(0)
+
+#define LOG_FAILED_TO_GET_FIELD(field)					\
+			lrmd_log(LOG_ERR				\
+			,	"%s:%d: cannot get field %s from message." \
+			,__FUNCTION__,__LINE__,field)
 
 #define LOG_FAILED_TO_ADD_FIELD(field)					\
 			lrmd_log(LOG_ERR				\
 			,	"%s:%d: cannot add the field %s to a message." \
 			,	__FUNCTION__				\
 			,	__LINE__				\
-			,	field);
+			,	field)
+
+/* NB: There's a return in these macros, hence the names */
+#define return_on_no_int_value(msg,fld,i) do { \
+	if (HA_OK != ha_msg_value_int(msg,fld,i)) { \
+		LOG_FAILED_TO_GET_FIELD(fld); \
+		return HA_FAIL; \
+	} \
+} while(0)
+#define return_on_no_value(msg,fld,v) do { \
+	v = ha_msg_value(msg,fld); \
+	if (!v) { \
+		LOG_FAILED_TO_GET_FIELD(fld); \
+		return HA_FAIL; \
+	} \
+} while(0)
 
 #define LRMD_APPHB_HB				\
         if (reg_to_apphb == TRUE) {		\
@@ -65,6 +86,10 @@
                         reg_to_apphb = FALSE;	\
                 }				\
         }
+
+#define tm2age(tm) \
+	(cmp_longclock(tm, zero_longclock) <= 0) ? \
+		0 : longclockto_ms(sub_longclock(now, tm))
 
 /*
  * The basic objects in our world:
@@ -124,6 +149,17 @@ typedef struct lrmd_rsc lrmd_rsc_t;
 typedef struct lrmd_op	lrmd_op_t;
 typedef struct ra_pipe_op  ra_pipe_op_t;
 
+#define RSC_REMOVAL_PENDING 1
+#define RSC_FLUSHING_OPS 2
+#define rsc_frozen(r) \
+	((r)->state==RSC_REMOVAL_PENDING || (r)->state==RSC_FLUSHING_OPS)
+#define rsc_removal_pending(r) \
+	((r)->state==RSC_REMOVAL_PENDING)
+#define set_rsc_removal_pending(r) \
+	(r)->state = RSC_REMOVAL_PENDING
+#define set_rsc_flushing_ops(r) \
+	(r)->state = RSC_FLUSHING_OPS
+#define rsc_reset_state(r) (r)->state = 0
 
 struct lrmd_rsc
 {
@@ -139,6 +175,8 @@ struct lrmd_rsc
 	GHashTable*	last_op_table;	/* Last operation of each type	*/
 	lrmd_op_t*	last_op_done;	/* The last finished op of the resource */
 	guint		delay_timeout;  /* The delay value of op_list execution */
+	GList*		requestors;	/* a list of client pids to send replies to */
+	int			state;  /* status of the resource */
 };
 
 struct lrmd_op
@@ -159,6 +197,7 @@ struct lrmd_op
 	longclock_t		t_addtolist;
 	longclock_t		t_perform;
 	longclock_t		t_done;
+	longclock_t		t_rcchange; /* when rc changed */
 	ProcTrackKillInfo	killseq[3];
 };
 
@@ -180,15 +219,6 @@ struct ra_pipe_op
 	char *		rsc_class;
 };
 
-
-/* msg dispatch table */
-typedef int (*msg_handler)(lrmd_client_t* client, struct ha_msg* msg);
-struct msg_map
-{
-	const char* 	msg_type;
-	gboolean	need_return_ret;
-	msg_handler	handler;
-};
 
 const char *gen_op_info(const lrmd_op_t* op, gboolean add_params);
 #define op_info(op) gen_op_info(op,TRUE)

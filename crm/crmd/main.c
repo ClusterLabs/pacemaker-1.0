@@ -69,7 +69,7 @@ main(int argc, char ** argv)
     int flag;
     int	argerr = 0;
 
-    crm_log_init(crm_system_name);
+    crm_log_init(crm_system_name, LOG_INFO, TRUE, FALSE, 0, NULL);
 
     crm_info("CRM Hg Version: %s\n", HA_HG_VERSION);
     
@@ -166,9 +166,6 @@ crmd_init(void)
     }
     
     crm_info("[%s] stopped (%d)", crm_system_name, exit_code);
-#ifdef HA_MALLOC_TRACK
-	cl_malloc_dump_allocated(LOG_ERR, FALSE);
-#endif
     return exit_code;
 }
 
@@ -197,7 +194,8 @@ crmd_tickle_apphb(gpointer data)
 {
     char	app_instance[APPNAME_LEN];
     int     rc = 0;
-    sprintf(app_instance, "%s_%ld", crm_system_name, (long)getpid());
+    snprintf(app_instance, sizeof(app_instance), "%s_%ld", crm_system_name
+    ,	(long)getpid());
 
     rc = apphb_hb();
     if (rc < 0) {

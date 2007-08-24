@@ -29,15 +29,15 @@ Add RecourceRecover testcase Zhao Kai <zhaokai@cn.ibm.com>
 # Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #
-#	SPECIAL NOTE:
+#        SPECIAL NOTE:
 #
-#	Tests may NOT implement any cluster-manager-specific code in them.
-#	EXTEND the ClusterManager object to provide the base capabilities
-#	the test needs if you need to do something that the current CM classes
-#	do not.  Otherwise you screw up the whole point of the object structure
-#	in CTS.
+#        Tests may NOT implement any cluster-manager-specific code in them.
+#        EXTEND the ClusterManager object to provide the base capabilities
+#        the test needs if you need to do something that the current CM classes
+#        do not.  Otherwise you screw up the whole point of the object structure
+#        in CTS.
 #
-#		Thank you.
+#                Thank you.
 #
 
 import CTS
@@ -93,27 +93,24 @@ class RandomTests:
             errcount=0
             BadNewsDebug=0
             #BadNews.debug=1
+            ignorelist = []                
+            ignorelist.append(" CTS: ")
+            ignorelist.append("BadNews:")
+            ignorelist.extend(self.CM.errorstoignore())
+
+            if test:
+                ignorelist.extend(test.errorstoignore())
+
             while errcount < 1000:
                 if BadNewsDebug: print "Looking for BadNews"
                 match=BadNews.look(0)
                 if match:
                    if BadNewsDebug: print "BadNews found: "+match
                    add_err = 1
-                   ignorelist = []
-                   if test:
-                       ignorelist=test.errorstoignore()
-                   ignorelist.append(" CTS: ")
-                   ignorelist.append("BadNews:")
                    for ignore in ignorelist:
-                       if re.search(ignore, match):
-                           if BadNewsDebug: print "Ignoring:"+match+" (pattern: "+ignore+")"
+                       if add_err == 1 and re.search(ignore, match):
+                           if BadNewsDebug: print "Ignoring based on pattern: ("+ignore+")"
                            add_err = 0
-                   if add_err == 1:
-                       ignorelist=self.CM.errorstoignore()
-                       for ignore in ignorelist:
-                           if re.search(ignore, match):
-                               if BadNewsDebug: print "Ignoring:"+match+" (pattern: "+ignore+")"
-                               add_err = 0
                    if add_err == 1:
                        self.CM.log("BadNews: " + match)
                        self.incr("BadNews")
@@ -154,8 +151,8 @@ random for the selected number of iterations.
 
         self.CM.ns.WaitForAllNodesToComeUp(self.CM.Env["nodes"])
 
-	for node in self.CM.Env["nodes"]:
-	    if node in self.CM.Env["oprofile"]:
+        for node in self.CM.Env["nodes"]:
+            if node in self.CM.Env["oprofile"]:
                 self.CM.log("Enabling oprofile on %s" % node) 
                 self.CM.rsh.remote_py(node, "os", "system", "opcontrol --init")
                 self.CM.rsh.remote_py(node, "os", "system", "opcontrol --start")
@@ -164,7 +161,7 @@ random for the selected number of iterations.
             return None
 
         for node in self.CM.Env["nodes"]:
-	    if node in self.CM.Env["oprofile"]:
+            if node in self.CM.Env["oprofile"]:
                 self.CM.rsh.remote_py(
                     node, "os", "system", "opcontrol --save=cts.setup")
 
@@ -191,8 +188,8 @@ random for the selected number of iterations.
             test.starttime=starttime
             ret=test(nodechoice)
 
-	    for node in self.CM.Env["nodes"]:
-		if node in self.CM.Env["oprofile"]:
+            for node in self.CM.Env["nodes"]:
+                if node in self.CM.Env["oprofile"]:
                     self.CM.rsh.remote_py(
                         node, "os", "system", 
                         "opcontrol --save=cts.%d" % (testcount-1))
@@ -228,8 +225,8 @@ random for the selected number of iterations.
 
         self.Scenario.TearDown(self.CM)
         
-	for node in self.CM.Env["nodes"]:
-	    if node in self.CM.Env["oprofile"]:
+        for node in self.CM.Env["nodes"]:
+            if node in self.CM.Env["oprofile"]:
                 self.CM.log("Disabling oprofile on %s" % node) 
                 self.CM.rsh.remote_py(node, "os", "system", "opcontrol --shutdown")
 
@@ -362,22 +359,25 @@ class StopTest(CTSTest):
         self.CM.StopaCM(node)
         watch_result = watch.lookforall()
 
+        failreason=None
         UnmatchedList = "||"
         if watch.unmatched:
             for regex in watch.unmatched:
-                self.CM.log ("Warn: Shutdown pattern not found: %s" % (regex))
+                self.CM.log ("ERROR: Shutdown pattern not found: %s" % (regex))
                 UnmatchedList +=  regex + "||";
+                failreason="Missing shutdown pattern"
 
         self.CM.cluster_stable(self.CM["DeadTime"])
 
-        # because syslog looses so many messages we can only really fail 
-        #  the stop if _none_ of the CCM peers notice the node leave
         if not watch.unmatched or self.CM.upcount() == 0:
             return self.success()
         elif len(watch.unmatched) >= self.CM.upcount():
             return self.failure("no match against (%s)" % UnmatchedList)
 
-        return self.success()
+        if failreason == None:
+            return self.success()
+        else:
+            return self.failure(failreason)
 #
 # We don't register StopTest because it's better when called by
 # another test...
@@ -508,6 +508,7 @@ class StonithTest(CTSTest):
         self.usstart      = self.CM["Pat:We_started"]
         self.themstart    = self.CM["Pat:They_started"]
         self.timeout      = timeout
+        self.ssherror     = False
     
     def _reset(self, node):
         StonithWorked=False
@@ -566,6 +567,9 @@ class StonithTest(CTSTest):
 
         if not StonithWorked:
             return self.failure("Stonith didn't work")
+        if self.ssherror == True:
+            self.CM.log("NOTE: Stonith command reported success but node %s did not restart (atd, reboot or ssh error)" % node)
+            return self.success()
 
         upwatch.setwatch()
 
@@ -605,10 +609,10 @@ class StonithTest(CTSTest):
         # wait for the cluster to stabilize
         self.CM.cluster_stable()
 
-	if node in self.CM.Env["oprofile"]:
-	    self.CM.log("Enabling oprofile on %s" % node) 
-	    self.CM.rsh.remote_py(node, "os", "system", "opcontrol --init")
-	    self.CM.rsh.remote_py(node, "os", "system", "opcontrol --start")
+        if node in self.CM.Env["oprofile"]:
+            self.CM.log("Enabling oprofile on %s" % node) 
+            self.CM.rsh.remote_py(node, "os", "system", "opcontrol --init")
+            self.CM.rsh.remote_py(node, "os", "system", "opcontrol --start")
 
         # return case processing
         if rc == 0:
@@ -647,13 +651,34 @@ class StonithdTest(StonithTest):
             return self.skipped()
 
         StonithWorked = False
+        SshNotWork = 0
         for tries in range(1,5):
+            # For some unknown reason, every now and then the ssh plugin just
+            # can't kill the target_node - everything works fine with stonithd
+            # and the plugin, but atd, reboot or ssh (or maybe something else)
+            # doesn't do its job and target_node remains alive.  So look for
+            # the indicative messages and bubble-up the error via ssherror
+            watchpats = []
+            watchpats.append("Initiating ssh-reset")
+            watchpats.append("CRIT: still able to ping")
+                
+            watch = CTS.LogWatcher(self.CM["LogFileName"], watchpats
+            ,     timeout=self.CM["DeadTime"]+30)
+            watch.setwatch()
+        
             fail_reasons = []
             if self.CM.Env.ResetNode2(self.init_node, target_node, fail_reasons):
                 StonithWorked = True
                 break
+            if watch.lookforall():
+                SshNotWork = SshNotWork + 1
+                continue
             for reason in fail_reasons:
                 self.CM.log(reason)
+
+        if StonithWorked == False and SshNotWork == tries:
+            StonithWorked = True
+            self.ssherror = True
 
         return StonithWorked
 
@@ -811,6 +836,7 @@ class SimulStart(CTSTest):
 #        Register SimulStart as a good test to run
 AllTestClasses.append(SimulStart)
 
+###################################################################
 class SimulStop(CTSTest):
 ###################################################################
     '''Stop all the nodes ~ simultaneously'''
@@ -847,6 +873,7 @@ class SimulStop(CTSTest):
 #     Register SimulStop as a good test to run
 AllTestClasses.append(SimulStop)
 
+###################################################################
 class StopOnebyOne(CTSTest):
 ###################################################################
     '''Stop all the nodes in order'''
@@ -886,6 +913,7 @@ class StopOnebyOne(CTSTest):
 #     Register StopOnebyOne as a good test to run
 AllTestClasses.append(StopOnebyOne)
 
+###################################################################
 class RestartOnebyOne(CTSTest):
 ###################################################################
     '''Restart all the nodes in order'''
@@ -924,6 +952,7 @@ class RestartOnebyOne(CTSTest):
 #     Register StopOnebyOne as a good test to run
 AllTestClasses.append(RestartOnebyOne)
 
+###################################################################
 class PartialStart(CTSTest):
 ###################################################################
     '''Start a node - but tell it to stop before it finishes starting up'''
@@ -941,6 +970,8 @@ class PartialStart(CTSTest):
         if not ret:
             return self.failure("Setup failed")
 
+#	FIXME!  This should use the CM class to get the pattern
+#		then it would be applicable in general
         watchpats = []
         watchpats.append("Starting crmd")
         watch = CTS.LogWatcher(self.CM["LogFileName"], watchpats,
@@ -961,7 +992,10 @@ class PartialStart(CTSTest):
 
     def is_applicable(self):
         '''Partial is always applicable'''
-        return 1
+        if self.CM["Name"] == "linux-ha-v2":
+          return 1
+        else:
+          return 0
 
 #     Register StopOnebyOne as a good test to run
 AllTestClasses.append(PartialStart)
@@ -1625,7 +1659,7 @@ class ResourceRecover(CTSTest):
         self.action = "fail"
 
         # make sure the interval is greater than 0 so failcount is updated
-        self.interval = 1
+        self.interval = 60000
 
     def __call__(self, node):
         '''Perform the 'ResourceRecover' test. '''
@@ -1655,13 +1689,8 @@ class ResourceRecover(CTSTest):
         watch.setwatch()
         
         # fail a resource by calling an action it doesn't support
-        self.CM.ResourceOp(self.rid, self.action, node, self.interval, "crmd")
-
-
-        # Temporary hacks until the lrmd does the right thing
-        time.sleep(5)
         self.CM.rsh.remote_py(node, "os", "system",
-                              "@sbindir@/crm_resource -R -H %s" % node)
+                              "@sbindir@/crm_resource -F -r %s -H %s &>/dev/null" % (self.rid, node))
 
         watch.lookforall()
 
@@ -1701,7 +1730,8 @@ class ResourceRecover(CTSTest):
         return [ """Updating failcount for %s""" % self.rid,
                  """Unknown operation: fail""",
                  """ERROR: sending stonithRA op to stonithd failed.""",
-                 """ERROR: process_graph_event: Action %s_%s_%d initiated outside of a transition""" % (self.rid, self.action, self.interval)
+                 """ERROR: process_lrm_event: LRM operation %s_%s_%d""" % (self.rid, self.action, self.interval),
+                 """ERROR: process_graph_event: Action %s_%s_%d initiated outside of a transition""" % (self.rid, self.action, self.interval),
                  ]
 
 AllTestClasses.append(ResourceRecover)
@@ -1712,51 +1742,77 @@ class ComponentFail(CTSTest):
     def __init__(self, cm):
         CTSTest.__init__(self,cm)
         self.name="ComponentFail"
-        self.start = StartTest(cm)
         self.startall = SimulStartLite(cm)
-        self.stopall = SimulStopLite(cm)
         self.complist = cm.Components()
         self.theystart = cm["Pat:They_started"]
-        
+        self.patterns = []
+
     def __call__(self, node):
         '''Perform the 'ComponentFail' test. '''
         self.incr("calls")
-        
+        self.patterns = []
+
         # start all nodes
-        if not self.CM.cluster_stable():
-            self.stopall(None)        
-            
         ret = self.startall(None)
         if not ret:
             return self.failure("Setup failed")
 
+        if not self.CM.cluster_stable(self.CM["StableTime"]):
+            return self.failure("Setup failed - unstable")
+
+        node_is_dc = self.CM.is_node_dc(node, None)
+
         # select a component to kill
-        component = self.CM.Env.RandomGen.choice(self.complist)
-        self.CM.log("choose %s to kill"%component.name)
-        patterns = []
-        patterns.append("%s heartbeat.*Respawning.*%s" %(node, component.name))
-        patterns.append(self.theystart%node)
+        chosen = self.CM.Env.RandomGen.choice(self.complist)
+        while chosen.dc_only == 1 and node_is_dc == 0:
+            chosen = self.CM.Env.RandomGen.choice(self.complist)
+
+        self.CM.debug("Killing %s (dc=%d)" % (chosen.name, node_is_dc))
+        self.incr(chosen.name)
         
+        self.patterns.extend(chosen.pats)
+
+        if chosen.dc_only:
+            self.patterns.append("%s crmd:.*Process %s:.* exited" %(node, chosen.name))
+            self.patterns.append("%s crmd:.*I_ERROR.*crmdManagedChildDied" %node)
+            self.patterns.append("%s crmd:.*The %s subsystem terminated unexpectedly" %(node, chosen.name))
+        else:
+            self.patterns.append("%s heartbeat.*Respawning client.*%s" %(node, chosen.name))
+            self.patterns.append("%s heartbeat.*Client.*%s.*killed by signal 9" %(node, chosen.name))
+
+        if node_is_dc:
+            self.patterns.extend(chosen.dc_pats)
+
+        # supply a copy so self.patterns doesnt end up empty
+        tmpPats = []
+        tmpPats.extend(self.patterns)
+        self.patterns.extend(chosen.badnews_ignore)
+
         # set the watch for stable
         watch = CTS.LogWatcher(
-            self.CM["LogFileName"], patterns, self.CM["DeadTime"]+10)
+            self.CM["LogFileName"], tmpPats, 
+            self.CM["DeadTime"] + self.CM["StableTime"] + self.CM["StartTime"])
         watch.setwatch()
         
         # kill the component
-        component.kill(node)
-        
-        # check to see Heartbeat noticed
-        match = watch.look()
-        if match:
-            self.CM.log("Found match: %s"%(match))
+        chosen.kill(node)
 
-            # now watch it recover...
-            if self.CM.cluster_stable():
+        # check to see Heartbeat noticed
+        matched = watch.lookforall()
+        if not matched:
+            self.CM.log("Patterns not found: " + repr(watch.unmatched))
+            self.CM.cluster_stable(self.CM["StartTime"])
+            return self.failure("Didn't find all expected patterns")
+        
+        self.CM.debug("Found: "+ repr(matched))
+
+        # now watch it recover...
+        for attempt in (1, 2, 3, 4, 5):
+            self.CM.debug("Waiting for the cluster to recover...")
+            if self.CM.cluster_stable(self.CM["StartTime"]):
                 return self.success()
-            else:
-                self.failure("Cluster not stable")
-        else:
-            return self.failure("Heartbeat didnt notice %s die" %component)
+
+        return self.failure("Cluster did not become stable")
 
     def is_applicable(self):
         if self.CM["Name"] == "linux-ha-v2":
@@ -1765,9 +1821,9 @@ class ComponentFail(CTSTest):
     
     def errorstoignore(self):
         '''Return list of errors which should be ignored'''
-        return ["""heartbeat.*killed by signal 9""", """heartbeat.*Respawning"""]
+        return self.patterns
     
-#AllTestClasses.append(ComponentFail)
+AllTestClasses.append(ComponentFail)
 
 ####################################################################
 class Split_brainTest2(CTSTest):
@@ -2125,6 +2181,8 @@ class NearQuorumPointTest(CTSTest):
         if len(watchpats) == 0:
             return self.skipped()
 
+        watchpats.append(self.CM["Pat:DC_IDLE"])
+        
         watch = CTS.LogWatcher(self.CM["LogFileName"], watchpats
         ,     timeout=self.CM["DeadTime"]+10)
         
@@ -2324,7 +2382,7 @@ class SimulStopLite(CTSTest):
                     + repr(watch.unmatched))
 
         self.CM.clear_all_caches()
-        return self.success()
+        return self.failure("Missing log message: "+repr(watch.unmatched))
 
     def is_applicable(self):
         '''SimulStopLite is a setup test and never applicable'''
@@ -2390,10 +2448,9 @@ class SimulStartLite(CTSTest):
             return self.failure("Unstable cluster nodes exist: " 
                                 + repr(unstable))
 
-        self.CM.log("Warn: All nodes started but CTS didnt detect: " 
+        self.CM.log("ERROR: All nodes started but CTS didnt detect: " 
                     + repr(watch.unmatched))
-
-        return self.success() 
+        return self.failure() 
 
 
     def is_applicable(self):

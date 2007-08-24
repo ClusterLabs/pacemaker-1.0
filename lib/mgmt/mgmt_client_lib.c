@@ -44,6 +44,7 @@ void*		session = NULL;
  *	return value
  *	-1:can't connect to server
  *	-2:auth failed
+ *	-3:protocol version mismatch
  *	0 :success
  */
 int
@@ -94,13 +95,16 @@ mgmt_connect(const char* server, const char* user
 	}
 
 	/* login to server */
-	msg = mgmt_new_msg(MSG_LOGIN, user, passwd, NULL);
+	msg = mgmt_new_msg(MSG_LOGIN, user, passwd, MGMT_PROTOCOL_VERSION, NULL);
 	ret = mgmt_sendmsg(msg);
 	if (ret == NULL || STRNCMP_CONST(ret,MSG_OK) != 0) {
 		mgmt_del_msg(msg);
 		mgmt_del_msg(ret);
 		close(sock);
 		tls_close_client();
+		if (ret != NULL && STRNCMP_CONST(ret,MSG_FAIL) != 0) {
+			return -3;
+		}
 		return -2;
 	}
 	

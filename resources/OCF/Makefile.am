@@ -18,7 +18,7 @@
 # Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #
 MAINTAINERCLEANFILES = Makefile.in
-EXTRA_DIST		= ocf-returncodes
+EXTRA_DIST		= $(ocf_SCRIPTS)
 
 INCLUDES		= -I$(top_srcdir)/include -I$(top_srcdir)/linux-ha
 
@@ -35,7 +35,7 @@ endif
 IPv6addr_SOURCES        = IPv6addr.c
 
 IPv6addr_LDADD          = $(top_builddir)/lib/clplumbing/libplumb.la    \
-                        $(gliblib) @LIBNETLIBS@ \
+                        $(gliblib) @LIBNETLIBS@ 			\
 			$(top_builddir)/lib/pils/libpils.la
 
 
@@ -54,6 +54,7 @@ ocf_SCRIPTS	     =  ClusterMon 	\
 			EvmsSCC		\
 			Evmsd		\
 			Filesystem	\
+			ids		\
 			ICP		\
 			IPsrcaddr	\
 			LinuxSCSI	\
@@ -62,6 +63,7 @@ ocf_SCRIPTS	     =  ClusterMon 	\
 			ManageRAID	\
 			ManageVE	\
 			mysql		\
+			o2cb		\
 			oracle		\
 			oralsnr		\
 			pingd		\
@@ -81,7 +83,13 @@ ocf_SCRIPTS	     =  ClusterMon 	\
 			WAS6		\
 			WinPopup	\
 			Xen		\
-			Xinetd
+			Xinetd		\
+			.ocf-shellfuncs	 \
+			.ocf-binaries	 \
+			.ocf-directories \
+			.ocf-returncodes
 
-commondir	     = @hb_libdir@
+commondir	     = @HA_LIBHBDIR@
+# Legacy locations
 common_SCRIPTS	     = ocf-shellfuncs ocf-returncodes
+

@@ -90,6 +90,7 @@ register_fsa_input_adv(
 	fsa_data_t *fsa_data = NULL;
 
 	last_data_id++;
+	CRM_CHECK(raised_from != NULL, raised_from = "<unknown>");
 	
 	crm_debug("%s %s FSA input %d (%s) (cause=%s) %s data",
 		  raised_from, prepend?"prepended":"appended",last_data_id, fsa_input2string(input),
@@ -858,6 +859,7 @@ handle_request(ha_msg_input_t *stored_msg)
 			  cl_get_string(stored_msg->msg, F_CRM_JOIN_ID));
 
 	} else if(strcasecmp(op, CRM_OP_LRM_DELETE) == 0
+		|| strcasecmp(op, CRM_OP_LRM_FAIL) == 0
 		|| strcasecmp(op, CRM_OP_LRM_REFRESH) == 0
 		|| strcasecmp(op, CRM_OP_REPROBE) == 0) {
 		

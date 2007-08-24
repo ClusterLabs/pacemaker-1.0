@@ -222,6 +222,7 @@ update_failcount(crm_data_t *event, const char *event_node, int rc)
 	char *attr_name = NULL;
 	const char *id  = ID(event);
 	const char *on_uuid  = event_node;
+	const char *value = XML_NVPAIR_ATTR_VALUE"++";
 
 	if(rc == 99) {
 		/* this is an internal code for "we're busy, try again" */
@@ -235,6 +236,12 @@ update_failcount(crm_data_t *event, const char *event_node, int rc)
 		  goto bail);
 	CRM_CHECK(task != NULL, goto bail);
 	CRM_CHECK(rsc_id != NULL, goto bail);
+
+	if(safe_str_eq(task, CRMD_ACTION_START)
+	   || safe_str_eq(task, CRMD_ACTION_STOP)) {
+	    interval = 1;
+	    value = "INFINITY";
+	}
 	
 	if(interval > 0) {
 		attr_name = crm_concat("fail-count", rsc_id, '-');
@@ -255,29 +262,31 @@ update_failcount(crm_data_t *event, const char *event_node, int rc)
 static int
 status_from_rc(crm_action_t *action, int orig_status, int rc)
 {
+	int target_rc = 0;
 	int status = orig_status;
 	const char *target_rc_s = g_hash_table_lookup(
 		action->params, crm_meta_name(XML_ATTR_TE_TARGET_RC));
 
 	if(target_rc_s != NULL) {
-		int target_rc = 0;
 		crm_debug_2("Target rc: %s vs. %d", target_rc_s, rc);
 		target_rc = crm_parse_int(target_rc_s, NULL);
-		if(target_rc == rc) {
-			crm_debug_2("Target rc: == %d", rc);
-			if(status != LRM_OP_DONE) {
-				crm_debug_2("Re-mapping op status to"
-					    " LRM_OP_DONE for rc=%d", rc);
-				status = LRM_OP_DONE;
-			}
-		} else {
-			crm_debug_2("Target rc: != %d", rc);
-			if(status != LRM_OP_ERROR) {
-				crm_info("Re-mapping op status to"
-					 " LRM_OP_ERROR for rc=%d", rc);
-				status = LRM_OP_ERROR;
-			}
-		}
+	}
+
+	if(target_rc == rc) {
+	    crm_debug_2("Target rc: == %d", rc);
+	    if(status != LRM_OP_DONE) {
+		crm_debug_2("Re-mapping op status to"
+			    " LRM_OP_DONE for rc=%d", rc);
+		status = LRM_OP_DONE;
+	    }
+
+	} else {
+	    crm_debug_2("Target rc: != %d", rc);
+	    if(status != LRM_OP_ERROR) {
+		crm_info("Re-mapping op status to"
+			 " LRM_OP_ERROR for rc=%d", rc);
+		status = LRM_OP_ERROR;
+	    }
 	}
 	
 	/* 99 is the code we use for direct nack's */
@@ -302,6 +311,7 @@ int
 match_graph_event(int action_id, crm_data_t *event, const char *event_node,
 		  int op_status, int op_rc)
 {
+	const char *target = NULL;
 	const char *allow_fail = NULL;
 	const char *this_event = ID(event);
 	crm_action_t *action = NULL;
@@ -358,8 +368,10 @@ match_graph_event(int action_id, crm_data_t *event, const char *event_node,
 				 tg_restart, "Event failed", event);
 	}
 
-	te_log_action(LOG_INFO, "Action %s (%d) confirmed on %s",
-		      crm_str(this_event), action->id, crm_str(event_node));
+	target = crm_element_value(action->xml, XML_LRM_ATTR_TARGET);
+	te_log_action(LOG_INFO, "Action %s (%d) confirmed on %s (rc=%d)",
+		      crm_str(this_event), action->id, crm_str(target),
+		      op_status);
 
 	return action->id;
 }
@@ -513,10 +525,10 @@ process_graph_event(crm_data_t *event, const char *event_node)
 
 	} else {
 		passed = TRUE;
-		crm_debug("Processed update to %s: %s", id, magic);
+		crm_debug_2("Processed update to %s: %s", id, magic);
 	}
 
-	if(passed == FALSE && rc != EXECRA_OK) {
+	if(passed == FALSE && rc > EXECRA_OK) {
 		update_failcount(event, event_node, rc);
 	}
 

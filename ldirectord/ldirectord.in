@@ -112,16 +112,17 @@ service must follow this line immediately and be indented.
 
 B<checktimeout = >I<n>
 
-Timeout in seconds for connect checks. If the timeout is exceeded then the
-real server is declared dead.  
+Timeout in seconds for connect, external and ping checks. If the timeout is
+exceeded then the real server is declared dead.
 
 If defined in a virtual server section then the global value is overridden.
 
+If undefined then the value of negotiatetimeout is used.  negotiatetimeout
+is also a global value that may be overriden by a per-virtual setting.
+
+If both checktimeout and negotiatetimeout are unset, the default is used.
+
 Default: 5 seconds
-
-B<connecttimeout = >I<n>
-
-Not used.
 
 B<negotiatetimeout = >I<n>
 
@@ -129,7 +130,12 @@ Timeout in seconds for negotiate checks.
 
 If defined in a virtual server section then the global value is overridden.
 
-Default: defined by the operating system
+If undefined then the value of connecttimeout is used.  connecttimeout is
+also a global value that may be overriden by a per-virtual setting.
+
+If both negotiatetimeout and connecttimeout are unset, the default is used.
+
+Default: 30 seconds
 
 B<checkinterval = >I<n>
 
@@ -139,11 +145,11 @@ Default: 10 seconds
 
 B<checkcount = >I<n>
 
-The number of times a check will be attmpted before it is considered
-to have failed. Only works with ping checks. Note that the
-checktimeout is additive, so if checkcount is 3 and checktimeout is 2
-seconds, then a total of 6 seconds worth of timeout will occur becore
-the check fails. 
+The number of times a check will be attmpted before it is considered to
+have failed. Only works with ping checks. Note that the
+checktimeout/negotiatetimeout is additive, so if a connect check is used,
+checkcount is 3 and checktimeout is 2 seconds, then a total of 6 seconds
+worth of timeout will occur becore the check fails.
 
 If defined in a virtual server section then the global value is overridden.
 
@@ -245,11 +251,21 @@ B<quiescent = >B<yes>|B<no>
 If I<yes>, then when real or failback servers are determined
 to be down, they are not actually removed from the kernel's LVS
 table. Rather, their weight is set to zero which means that no
-new connections will be accepted. This has the side effect,
-that if the real server has persistent connections, new connections
-from any existing clients will continue to be routed to the real
-server, until the persistant timeout can expire. See
+new connections will be accepted. 
+
+This has the side effect, that if the real server has persistent
+connections, new connections from any existing clients will continue to be
+routed to the real server, until the persistant timeout can expire. See
 L<ipvsadm> for more information on persistant connections.
+
+This side-effect can be avoided by running the following:
+
+echo 1 > /proc/sys/net/ipv4/vs/expire_quiescent_template
+
+If the proc file isn't present this probably means that
+the kernel doesn't have lvs support, LVS support isn't loaded,
+or the kernel is too old to have the proc file. Running
+ipvsadm as root should load LVS into the kernel if it is possible.
 
 If I<no>, then the real or failback servers will be removed
 from the kernel's LVS table. The default is I<yes>.
@@ -281,12 +297,23 @@ two strings must be quoted. If the request string starts with I<http://...>
 the IP-address and port of the real server is overridden, otherwise the
 IP-address and port of the real server is used.
 
-=head2 More than one of these entries may be inside a virtual section.  The
+=head2
+For TCP and UDP (non fwmark) virtual services, unless the forwarding method
+is B<masq> and the IP address of a real server is non-local (not present on
+a interface on the host running ldirectord) then the port of the real
+server will be set to that of its virtual service. That is, port-mapping is
+only available to if the real server is another machine and the forwarding
+method is B<masq>.  This is due to the way that the underlying LVS code in
+the kernel functions.
+
+=head2
+More than one of these entries may be inside a virtual section.  The
 checktimeout, negotiatetimeout, checkcount, fallback, emailalert,
 emailalertfreq and quiescent options listed above may also appear inside a
 virtual section, in which case the global setting is overridden.
 
-B<checktype = >B<negotiate>|B<connect>|I<N>|B<ping>|B<off>|B<on>
+B<checktype =
+>B<connect>|B<external>|B<negotiate>|B<off>|B<on>|B<ping>|B<checktimeout>I<N>
 
 Type of check to perform. Negotiate sends a request and matches a receive
 string. Connect only attemts to make a TCP/IP connection, thus the
@@ -300,7 +327,7 @@ checking will take place and no real or fallback servers will be activated.
 On means no checking will take place and real servers will always be
 activated. Default is I<negotiate>.
 
-B<service = ftp>|B<smtp>|B<http>|B<pop>|B<pops>|B<nntp>|B<imap>|B<imaps>|B<ldap>|B<https>|B<dns>|B<radius>|B<mysql>|B<pgsql>|B<sip>|B<none>
+B<service = >B<dns>|B<ftp>|B<http>|B<https>|B<imap>|B<imaps>|B<ldap>|B<mysql>|B<nntp>|B<none>|B<oracle>|B<pgsql>|B<pop>|B<pops>|B<radius>|B<sip>|B<smtp>
 
 The type of service to monitor when using checktype=negotiate. None denotes
 a service that will not be monitored. 
@@ -332,6 +359,8 @@ Default:
 
 =item * Virtual server port is 995: pops
 
+=item * Virtual server port is 1521: oracle
+
 =item * Virtual server port is 1812: radius
 
 =item * Virtual server port is 3306: mysql
@@ -344,6 +373,28 @@ Default:
 
 =back 4
 
+
+B<checkcommand = ">I<path to script>B<">
+
+This setting is used if checktype is external and is the command to be run
+to check the status of a real server. It should exit with status 0 if
+everything is ok, or non-zero otherwise.
+
+Four parameters are passed to the script:
+
+=over 4
+
+=item * virtual server ip/firewall mark
+
+=item * virtual server port
+
+=item * real server ip
+
+=item * real server port
+
+=back 4
+
+Default: /bin/true
 
 B<checkport = >I<n>
 
@@ -360,7 +411,7 @@ overridden by an optional per real-server based request-string.
 For a DNS check this should the name of an A record, or the address
 of a PTR record to look up.
 
-For a MySQL or PostgeSQL checks, this should be a SQL query.
+For a MySQL, Oracle or PostgeSQL check, this should be an SQL query.
 The data returned is not checked, only that the
 answer is one or more rows.  This is a required setting.
 
@@ -369,7 +420,7 @@ B<receive = ">I<regexp to compare>B<">
 If the requested result contains this I<regexp to compare>, the real server
 is declared alive. The regexp must be inside quotes. Keep in mind that
 regexps are not plain strings and that you need to escape the special
-characters if they should as litterals. Note that this regexp may be
+characters if they should as literals. Note that this regexp may be
 overridden by an optional per real-server based receive regexp.
 
 For a DNS check this should be any one the A record's addresses or
@@ -395,7 +446,8 @@ As a last resort the IP address of the real server will be used.
 
 B<login = ">I<username>B<">
 
-Username to use to login to FTP, IMAP, LDAP, MySQL, POP, PostgreSQL.
+For FTP, IMAP, LDAP, MySQL, Oracle, POP and PostgreSQL, the username
+used to log in.
 
 For Radius the passwd is used for the attribute User-Name.
 
@@ -408,7 +460,7 @@ Default:
 
 =item * FTP: Anonymous
 
-=item * MySQL and PostgreSQL: Must be specified in the configuration
+=item * MySQL Oracle, and PostgreSQL: Must be specified in the configuration
 
 =item * SIP: ldirectord\@<hostname>, hostname is derived as per the passwd
         option below.
@@ -420,7 +472,7 @@ Default:
 
 B<passwd = ">I<password>B<">
 
-Password to use to login to FTP, IMAP, LDAP, MySQL, POP, PostgreSQL
+Password to use to login to FTP, IMAP, LDAP, MySQL, Oracle, POP, PostgreSQL
 and SIP servers.
 
 For Radius the passwd is used for the attribute User-Password.
@@ -434,16 +486,16 @@ Default:
 	run time, or sourced from uname if unset.
 
 =item * Otherwise: empty string.
-	In the case of LDAP, MySQL and PostgreSQL this means
+	In the case of LDAP, MySQL, Oracle, and PostgreSQL this means
 	that authentication will not be performed.
 
 =back 4
 
 B<database = ">I<databasename>B<">
 
-Database to use for MySQL and PostgreSQL servers, this is the database that
-the query (set by B<receive> above) will be performed against.  This is a
-required setting.
+Database to use for MySQL, Oracle and PostgreSQL servers, this is the
+database that the query (set by B<receive> above) will be performed
+against.  This is a required setting.
 
 B<secret = ">I<radiussecret>B<">
 
@@ -518,12 +570,13 @@ use vars qw(
 	    $VERSION_STR
 	    $AUTOCHECK
 	    $CHECKINTERVAL
-	    $CONNECTTIMEOUT
 	    $LDIRECTORD
 	    $LDIRLOG
 	    $NEGOTIATETIMEOUT
+	    $DEFAULT_NEGOTIATETIMEOUT
 	    $RUNPID
 	    $CHECKTIMEOUT
+	    $DEFAULT_CHECKTIMEOUT
 	    $CHECKCOUNT
 	    $QUIESCENT
 	    $EMAILALERT
@@ -556,6 +609,8 @@ use vars qw(
 	    @VIRTUAL
 	    $HOSTNAME
 	    %EMAILSTATUS
+	    $SERVICE_UP
+	    $SERVICE_DOWN
 
 	    $CRLF
 );
@@ -571,20 +626,24 @@ $DAEMON_STATUS_ALL       = $DAEMON_STATUS_STARTING |
 			   $DAEMON_STATUS_STOPPING |
 			   $DAEMON_STATUS_RELOADING;
 
+$SERVICE_UP	= 0;
+$SERVICE_DOWN	=1;
+
 # default values
 $DAEMON_TERM      = undef;
 $DAEMON_HUP       = undef;
 $AUTOCHECK        = "no";
 $CHECKINTERVAL    = 10;
-$CHECKTIMEOUT     = 5;
+$DEFAULT_CHECKTIMEOUT     = 5;
+$CHECKTIMEOUT     = -1;
 $CHECKCOUNT       = 1;
-$CONNECTTIMEOUT   = 0;
 $LDIRECTORD       = ld_find_cmd("ldirectord", 1);
 if (! defined $LDIRECTORD) {
 	$LDIRECTORD = "@sbindir@/ldirectord";
 }
 $LDIRLOG          = "/var/log/ldirectord.log";
-$NEGOTIATETIMEOUT = 0;
+$NEGOTIATETIMEOUT = -1;
+$DEFAULT_NEGOTIATETIMEOUT = 30;
 $RUNPID           = "/var/run/ldirectord";
 $SUPERVISED       = "no";
 $QUIESCENT        = "yes";
@@ -796,8 +855,7 @@ sub ld_init
 			} else {
 				$status = 3;
 			}
-			print STDERR "ldirectord is stopped for $CONFIG\n";
-			ld_log("ldirectord is stopped for $CONFIG");
+			print "ldirectord is stopped for $CONFIG\n";
 			ld_exit($status, "Exiting from ldirectord $CMD");
 		} else {
 			ld_log("ldirectord is stopped for $CONFIG");
@@ -915,6 +973,7 @@ sub reread_config
 		&ld_cmd_children("start", %START);
 
 		&ld_setup();
+		&ld_start();
 	};
 	if ($@) {
 		@VIRTUAL = @OLDVIRTUAL;
@@ -1021,13 +1080,13 @@ sub read_config
 			}
 			$vsrv{real} = \@rsrv;
 			$vsrv{scheduler} = "wrr";
+			$vsrv{checkcommand} = "/bin/true";
 			$vsrv{request} = "/";
 			$vsrv{receive} = "";
 			$vsrv{login} = "";
 			$vsrv{passwd} = "";
 			$vsrv{database} = "";
 			$vsrv{checktimeout} = -1;
-			$vsrv{connecttimeout} = -1;
 			$vsrv{checkcount} = -1;
 			$vsrv{negotiatetimeout} = -1;
 			$vsrv{num_connects} = 0;
@@ -1062,17 +1121,22 @@ sub read_config
 					if ($1 =~ /(\d+)/ && $1>=0) {
 						$vsrv{num_connects} = $1;
 						$vsrv{checktype} = "combined";
-					} elsif ( $1 =~ /(\w+)/ && ($1 eq "connect" || $1 eq "negotiate" || $1 eq "ping" || $1 eq "off" || $1 eq "on") ) {
+					} elsif ( $1 =~ /(\w+)/ && ($1 eq "connect" || $1 eq "negotiate" || $1 eq "ping" || $1 eq "off" || $1 eq "on" || $1 eq "external") ) {
 						$vsrv{checktype} = $1;
 					} else {
-						&config_error($line, "checktype must be connect, negotiate, ping, off, on or a positive number");
+						&config_error($line, "checktype must be \"connect\", \"negotiate\", \"on\", \"off\", \"ping\", \"external\" or a positive number");
 					}
+				} elsif ($rcmd =~ /^checkcommand\s*=\s*(.*)/){
+                                        $1 =~ /(.+)/ or &config_error($line, "invalid external script");
+                                        $vsrv{checkcommand} = $1;
 				} elsif ($rcmd =~ /^checktimeout\s*=\s*(.*)/){
                                         $1 =~ /(\d+)/ && $1 or &config_error($line, "invalid check timeout");
                                         $vsrv{checktimeout} = $1;
 				} elsif ($rcmd =~ /^connecttimeout\s*=\s*(.*)/){
-                                        $1 =~ /(\d+)/ && $1 or &config_error($line, "invalid connect timeout");
-                                        $vsrv{connecttimeout} = $1;
+					&config_error($line,
+						"connecttimeout directive " .
+						"deprecated in favour of " .
+						"negotiatetimeout");
 				} elsif ($rcmd =~ /^negotiatetimeout\s*=\s*(.*)/){
                                         $1 =~ /(\d+)/ && $1 or &config_error($line, "invalid negotiate timeout");
                                         $vsrv{negotiatetimeout} = $1;
@@ -1142,8 +1206,35 @@ sub read_config
 						&config_error($line, "invalid protocol");
 					}
 				} elsif ($rcmd =~ /^service\s*=\s*(.*)/) {
-					$1 =~ /(\w+)/ && ($1 eq "http" || $1 eq "https" || $1 eq "ldap" || $1 eq "ftp" || $1 eq "none" || $1 eq "smtp" || $1 eq "pop" || $1 eq "pops" || $1 eq "imap" || $1 eq "imaps" || $1 eq "nntp" || $1 eq "dns" || $1 eq "mysql" || $1 eq "pgsql" || $1 eq "radius" || $1 eq "sip")
-					    or &config_error($line, "service must be http, https, ftp, smtp, pop, pops, imap, imaps, ldap, nntp, dns, mysql, pgsql, radius, sip, or none");
+					$1 =~ /(\w+)/ && ($1 eq "dns"	||
+							  $1 eq "ftp"	||
+							  $1 eq "http"	||
+							  $1 eq "https"	||
+							  $1 eq "imap"	||
+							  $1 eq "imaps"	||
+							  $1 eq "ldap"	||
+							  $1 eq "nntp"	||
+							  $1 eq "mysql"	||
+							  $1 eq "none"	||
+							  $1 eq "oracle"||
+							  $1 eq "pop"	||
+							  $1 eq "pops"	||
+							  $1 eq "radius"||
+							  $1 eq "pgsql"	||
+							  $1 eq "sip"	||
+							  $1 eq "smtp")
+					    or &config_error($line,
+							     "service must " .
+							     "be dns, ftp, " .
+							     "http, https, " .
+							     "imap, imaps, " .
+							     "ldap, nntp, "  .
+							     "mysql, none, " .
+							     "oracle, "      .
+							     "pop, pops, "   .
+							     "radius, "      .
+							     "pgsql, sip "   .
+							     "or smtp");
 					$vsrv{service} = $1;
 					if($vsrv{service} eq "ftp" and 
 							$vsrv{login} eq "") {
@@ -1167,7 +1258,9 @@ sub read_config
 					$vsrv{virtualhost} = $1;
 				} elsif ($rcmd =~ /^fallback\s*=\s*(.*)/) {    # Allow specification of a virtual-specific fallback host
 					$fallback_line=$line;
-					$vsrv{fallback}=parse_fallback($line, $1);
+					$vsrv{fallback} =
+						parse_fallback($line, $1,
+							       \%vsrv);
                                 } elsif ($rcmd =~ /^quiescent\s*=\s*(.*)/) {
                                         ($1 eq "yes" || $1 eq "no")
                                                 or &config_error($line, "quiescent must be 'yes' or 'no'");
@@ -1218,9 +1311,10 @@ sub read_config
 					"invalid check timeout value");
 			$CHECKTIMEOUT = $1;
 		} elsif ($linedata  =~ /^connecttimeout\s*=\s*(.*)/) {
-			($1 =~ /(\d+)/ && $1 && $1>0) or &config_error($line, 
-					"invalid connect timeout value");
-			$CONNECTTIMEOUT = $1;
+			&config_error($line,
+					"connecttimeout directive " .
+					"deprecated in favour of " .
+					"negotiatetimeout");
 		} elsif ($linedata  =~ /^negotiatetimeout\s*=\s*(.*)/) {
 			($1 =~ /(\d+)/ && $1 && $1>0) or &config_error($line, 
 					"invalid negotiate timeout value");
@@ -1234,21 +1328,11 @@ sub read_config
 					"invalid check count value");
 			$CHECKCOUNT = $1;
 		} elsif ($linedata  =~ /^fallback\s*=\s*(.*)/) {
-                        my $tcp = &ld_gethostservbyname($1, "tcp");
-			my $udp = &ld_gethostservbyname($1, "udp");
-                        my $tcp_fb;
-                        my $udp_fb;
-			if(!defined($tcp) and !defined($udp)){
-			    &config_error($line, 
-			    	"invalid address for fallback server");
-			}
-                        if(defined($tcp)) {
-			        $tcp_fb=&parse_fallback($line, $tcp);
-                        }
-                        if(defined($udp)) {
-			        $udp_fb=&parse_fallback($line, $udp);
-                        }
-			$FALLBACK = { "tcp" => $tcp_fb, "udp" => $udp_fb };
+			my $tcp = parse_fallback($line, $1, undef);
+			my $udp = parse_fallback($line, $1, undef);
+                        &_ld_read_config_fallback_resolve($line, "tcp", $tcp);
+			&_ld_read_config_fallback_resolve($line, "udp", $udp);
+			$FALLBACK = { "tcp" => $tcp, "udp" => $udp };
 		} elsif ($linedata  =~ /^autoreload\s*=\s*(.*)/) {
 			($1 eq "yes" || $1 eq "no")
 			    or &config_error($line, 
@@ -1300,10 +1384,9 @@ sub read_config
 			if ($linedata  =~ /^timeout\s*=\s*(.*)/) {
 				&config_error($line, 
 						"timeout directive " .
-						"deprciated in favour of " .
-						"checktimeout, " .
-						"negotiatetimeout or " .
-						"connecttimeout");
+						"deprecated in favour of " .
+						"checktimeout and " .
+						"negotiatetimeout");
 			}
 			&config_error($line, "Unknown command $linedata ");
 		}
@@ -1324,10 +1407,8 @@ sub read_config
 #               ip_address|hostname:port|service
 # post: Take ip_port, resolve it as per ld_gethostservbyname
 #       and set $vsrv->{server} and $vsrv->{port} accordingly.
-#       If $vsrv->{service} is not set, then set it to "http",
-#       "https", "ftp", "smtp", "pop", "pops", "imap", "imaps", "ldap", "nntp" or "none" 
-#       if $vsrv->{port} is 80, 443, 21, 25, 110, 143, 389 or 
-#       any other value, respectivley
+#       If $vsrv->{service} is not set, then set according to the value of
+#       $vsrv->{port}
 # return: none
 #        Debugging message will be reported and programme will exit
 #        on error.
@@ -1347,56 +1428,95 @@ sub _ld_read_config_virtual_resolve
 		}
 
 		if(!defined($vsrv->{service})){
-			if ($vsrv->{port} eq "80") {
-				$vsrv->{service} = "http";
-			} 
-			elsif ($vsrv->{port} eq "443") {
-				$vsrv->{service} = "https";
-			} 
-			elsif ($vsrv->{port} eq "21") {
-				$vsrv->{service} = "ftp";
-			} 
-			elsif ($vsrv->{port} eq "25") {
-				$vsrv->{service} = "smtp";
-			} 
-			elsif ($vsrv->{port} eq "110") {
-				$vsrv->{service} = "pop";
-			} 
-			elsif ($vsrv->{port} eq "995") {
-                                $vsrv->{service} = "pops";
-                        }
-			elsif ($vsrv->{port} eq "119") {
-				$vsrv->{service} = "nntp";
-			} 
-			elsif ($vsrv->{port} eq "143") {
-				$vsrv->{service} = "imap";
-			} 
-			elsif ($vsrv->{port} eq "993") {
-				$vsrv->{service} = "imaps";
-			}
-			elsif ($vsrv->{port} eq "389") {
-				$vsrv->{service} = "ldap";
-			}
-			elsif ($vsrv->{port} eq "53") {
-				$vsrv->{service} = "dns";
-			} 
-			elsif ($vsrv->{port} eq "1812") {
-				$vsrv->{service} = "radius";
-			}
-			elsif ($vsrv->{port} eq "3306") {
-				$vsrv->{service} = "mysql";
-			} 
-			elsif ($vsrv->{port} eq "5432") {
-				$vsrv->{service} = "pgsql";
-			} 
-			elsif ($vsrv->{port} eq "5060") {
-				$vsrv->{service} = "sip";
-			} 
-			else {
-				$vsrv->{service} = "none";
-			}
+			$vsrv->{service} = ld_port_to_service($vsrv->{port});
 		}
 	}
+}
+
+
+# ld_service_to_port
+# Resolve an ldirectord service name from its port number
+# pre: port: port number of the service
+# return: port name
+#         "none" if the service is unknown
+
+sub ld_port_to_service
+{
+	my ($port) = (@_);
+
+	if ($port eq 21)	{ return "ftp"; }
+	if ($port eq 25)	{ return "smtp"; }
+	if ($port eq 53)	{ return "dns"; }
+	if ($port eq 80)	{ return "http"; }
+	if ($port eq 110)	{ return "pop"; }
+	if ($port eq 119)	{ return "nntp"; }
+	if ($port eq 143)	{ return "imap"; }
+	if ($port eq 389)	{ return "ldap"; }
+	if ($port eq 443)	{ return "https"; }
+	if ($port eq 993)	{ return "pops"; }
+	if ($port eq 995)	{ return "imaps"; }
+	if ($port eq 1521)	{ return "oracle"; }
+	if ($port eq 1812)	{ return "radius"; }
+	if ($port eq 3306)	{ return "mysql"; }
+	if ($port eq 5060)	{ return "sip"; }
+	if ($port eq 5432)	{ return "pgsql"; }
+
+	return "none";
+}
+
+
+# ld_service_to_port
+# Resolve the port number from an ldirectord service name
+# pre: service: name of the service
+# return: port number
+#         undef if the service is unknown
+
+sub ld_service_to_port
+{
+	my ($service) = (@_);
+
+	if ($service eq "ftp")		{ return 21; }
+	if ($service eq "smtp")		{ return 25; }
+	if ($service eq "dns")		{ return 53; }
+	if ($service eq "http")		{ return 80; }
+	if ($service eq "pop")		{ return 110; }
+	if ($service eq "nntp")		{ return 119; }
+	if ($service eq "imap")		{ return 143; }
+	if ($service eq "ldap")		{ return 389; }
+	if ($service eq "https")	{ return 443; }
+	if ($service eq "imaps")	{ return 993; }
+	if ($service eq "pops")		{ return 995; }
+	if ($service eq "oracle")	{ return 1521; }
+	if ($service eq "radius")	{ return 1812; }
+	if ($service eq "mysql")	{ return 3306; }
+	if ($service eq "sip")		{ return 5060; }
+	if ($service eq "pgsql")	{ return 5432; }
+
+	return undef;
+}
+
+
+# ld_checkport
+# Resolve the port to connect to for service checks
+# Note: Should only be used inside service checks,
+#       as its not the same as the port of the real server
+# pre: v: virtual service
+#      r: real servier
+# return: port number
+#         undef if the service is unknown
+
+sub ld_checkport
+{
+	my ($v, $r) = (@_);
+
+	if (defined $v->{checkport}) {
+		return $v->{checkport};
+	}
+	if ($r->{port} > 0) {
+		return $r->{port};
+	}
+
+	return ld_service_to_port($v->{service});
 }
 
 
@@ -1417,16 +1537,20 @@ sub _ld_read_config_fallback_resolve
 {
 	my($line, $protocol, $fallback)=(@_);
 
-        my $ip_port;
-
         unless($fallback) {
                 return;
         }
 
-	$fallback->{server}=&ld_gethostservbyname(
-                $fallback->{server}, $protocol) 
-	        or &config_error($line, 
-		        "invalid address for fallback server");
+	$fallback->{server} = &ld_gethostbyname($fallback->{server}) or
+	        &config_error($line, "invalid address for fallback server: " .
+			      $fallback->{server});
+
+        unless($fallback->{"port"}) {
+                return;
+        }
+
+	$fallback->{port} = &ld_getservbyname($fallback->{port}, $protocol) or
+	        &config_error($line, "invalid port for fallback server");
 }
 
 
@@ -1636,17 +1760,22 @@ sub add_real_server
 
 sub parse_fallback
 {
-	my ($line, $fallback) = (@_);
+	my ($line, $fallback, $vsrv) = (@_);
 
-	my $ip_port;
+	my $server;
+	my $port;
 	my $fwd;
 
-        $fallback =~ /^\s*(\S+)(\s+(\S+))?\s*/ or
+        $fallback =~ /^\s*([^: 	]+)(:(\S+))?(\s+(\S+))?\s*/ or
                   &config_error($line, "invalid fallback server: $fallback");
 
-        $ip_port=$1;
-        $fwd=$3;
+        $server=$1;
+        $port=$3;
+        $fwd=$5;
 
+	if (not defined($port) and defined($vsrv)) {
+		$port = $vsrv->{"port"};
+	}
 
         if($fwd) {
                 ($fwd eq "gate" || $fwd eq "masq" || $fwd eq "ipip")
@@ -1657,7 +1786,8 @@ sub parse_fallback
           $fwd="gate"
         }
 
-	return({"server"=>$ip_port, "forward"=>$fwd});
+	return({"server"=>$server, "port"=>$port, "forward"=>$fwd,
+		"weight"=>1});
 }
 
 
@@ -1724,19 +1854,18 @@ sub ld_setup
 		my $real = $$v{real};
 		for my $r (@$real) {
                         $$r{forw} = get_forward_flag($$r{forward});
+			my $port=ld_checkport($v, $r);
         		if (defined $$r{request} && defined $$r{receive}) {
 				my $uri = $$r{request};
 				$uri =~ s/^\///g;
 				if ($$r{request} =~ /$$v{service}:\/\//) {
 					$$r{url} = "$uri";
 				} else {
-					my $port=(defined $$v{checkport}?$$v{checkport}:$$r{port});
 					$$r{url} = "$$v{service}:\/\/$$r{server}:$port\/$uri";
 				}
 			} else {
 				my $uri = $$v{request};
 				$uri =~ s/^\///g;
-				my $port=(defined $$v{checkport}?$$v{checkport}:$$r{port});
 				$$r{url} = "$$v{service}:\/\/$$r{server}:$port\/$uri";
 
                 		$$r{request} = $$v{request} unless defined $$r{request};
@@ -1748,21 +1877,41 @@ sub ld_setup
 				$$r{num_connects} = -1;
 			}
 		}
-		if ($$v{checktimeout} < 0) {
-			$$v{checktimeout} = $CHECKTIMEOUT;
+
+		# checktimeout and negotiate timeout are 
+		# mutual defaults for each other, so calculate
+		# checktimeout in a tempoary variable so as not
+		# to affect the calculation of negotiatetimeout.
+
+		my $checktimeout = $$v{checktimeout};
+		if ($checktimeout < 0) {
+			$checktimeout = $$v{negotiatetimeout};
 		}
-		if ($$v{connecttimeout} < 0) {
-			$$v{connecttimeout} = $CONNECTTIMEOUT;
+		if ($checktimeout < 0) {
+			$checktimeout = $CHECKTIMEOUT;
 		}
-		if ($$v{connecttimeout} < 0) {
-			$$v{connecttimeout} = $$v{checktimeout};
+		if ($checktimeout < 0) {
+			$checktimeout = $NEGOTIATETIMEOUT;
+		}
+		if ($checktimeout < 0) {
+			$checktimeout = $DEFAULT_CHECKTIMEOUT;
+		}
+
+		if ($$v{negotiatetimeout} < 0) {
+			$$v{negotiatetimeout} = $$v{checktimeout};
 		}
 		if ($$v{negotiatetimeout} < 0) {
 			$$v{negotiatetimeout} = $NEGOTIATETIMEOUT;
 		}
 		if ($$v{negotiatetimeout} < 0) {
-			$$v{negotiatetimeout} = $$v{checktimeout};
+			$$v{negotiatetimeout} = $CHECKTIMEOUT;
 		}
+		if ($$v{negotiatetimeout} < 0) {
+			$$v{negotiatetimeout} = $DEFAULT_NEGOTIATETIMEOUT;
+		}
+
+		$$v{checktimeout} = $checktimeout;
+
 		if ($$v{checkcount} < 0) {
 			$$v{checkcount} = $CHECKCOUNT;
 		}
@@ -1870,20 +2019,22 @@ sub ld_read_ipvsadm
 		if (not defined $line) {
 			last;
 		}
-		if ($line =~ /(\w+)\s+(\d+\.\d+\.\d+\.\d+\:\d+|\d+)\s+(\w+)\s+persistent\s+(\d+)\s+mask\s+(.*)/) {
+		if ($line =~ /^(\w+)\s+(\d+\.\d+\.\d+\.\d+\:\d+|\d+)\s+(\w+)\s+persistent\s+(\d+)\s+mask\s+(.*)/) {
 			$real_service = "$2 ".lc($1);
 			$oldsrv{"$real_service"} = {"real"=>{}, "scheduler"=>$3, "persistent"=>$4, "netmask"=>$5};
-		} elsif ($line =~ /(\w+)\s+(\d+\.\d+\.\d+\.\d+\:\d+|\d+)\s+(\w+)\s+persistent\s+(\d+)/) {
+		} elsif ($line =~ /^(\w+)\s+(\d+\.\d+\.\d+\.\d+\:\d+|\d+)\s+(\w+)\s+persistent\s+(\d+)/) {
 			$real_service = "$2 ".lc($1);
 			$oldsrv{"$real_service"} = {"real"=>{}, "scheduler"=>$3, "persistent"=>$4};
-		} elsif ($line =~ /(\w+)\s+(\d+\.\d+\.\d+\.\d+\:\d+|\d+)\s+(\w+)/) {
+		} elsif ($line =~ /^(\w+)\s+(\d+\.\d+\.\d+\.\d+\:\d+|\d+)\s+(\w+)/) {
 			$real_service = "$2 ".lc($1);
 			$oldsrv{"$real_service"} = {"real"=>{}, "scheduler"=>$3};
-		} else {
-			next;
-		}
-		while ($line = ld_readline($fh, $buf)) {
-			last unless $line =~ / ->\s+(\d+\.\d+\.\d+\.\d+\:\d+)\s+(\w+)\s+(\d+)/;
+		} elsif ($line =~ /^  ->\s+(\d+\.\d+\.\d+\.\d+\:\d+)\s+(\w+)\s+(\d+)/) {
+			if (not defined( $real_service)) {
+				&ld_debug(2, "Real server read from ipvsadm " .
+					  "doesn't seem to be inside a " .
+					  "virtual service: \"$line\"\n");
+				next;
+			}
 			if ($2 eq "Route") {
 				$fwd = "gate";
 			} elsif ($2 eq "Tunnel") {
@@ -1892,8 +2043,11 @@ sub ld_read_ipvsadm
 				$fwd = "masq";
 			}
 			$oldsrv{"$real_service"}->{"real"}->{"$1"} = {"forward"=>$fwd, "weight"=>$3};
+		} else {
+			&ld_debug(2, "Unknown line read from ipvsadm: " .
+				  "\"$line\"\n");
+			next;
 		}
-		redo;
 	}
 	close($fh);
 
@@ -1935,7 +2089,7 @@ sub ld_start
 		my $fallback = fallback_find($nv);
 
 		if (defined($fallback)) {
-			delete($or->{$fallback->{server}});
+			delete($or->{"$fallback->{server}:$fallback->{port}"});
 		}
 
 		for $nr (@$nreal) {
@@ -2035,37 +2189,39 @@ sub ld_main
 				if ($$v{checktype} eq "negotiate" || $$r{num_connects}>=$$v{num_connects}) {
 					&ld_debug(2, "Checking negotiate: real server=$real_id (virtual=$virtual_id)");
 					if ($$v{service} eq "http" || $$v{service} eq "https") {
-						$$r{num_connects} = 0 if (check_http($v, $r));
+						$$r{num_connects} = 0 if (check_http($v, $r) == $SERVICE_UP);
 						# my $req = new HTTP::Request(GET=>"$$r{url}");
 						# $ua->register($req, \&http_received);
 					} elsif ($$v{service} eq "pop") {
-						$$r{num_connects} = 0 if (check_pop($v, $r));
+						$$r{num_connects} = 0 if (check_pop($v, $r) == $SERVICE_UP);
 					} elsif ($$v{service} eq "pops") {
-						$$r{num_connects} = 0 if (check_pops($v, $r));
+						$$r{num_connects} = 0 if (check_pops($v, $r) == $SERVICE_UP);
 					} elsif ($$v{service} eq "imap") {
-						$$r{num_connects} = 0 if (check_imap($v, $r));
+						$$r{num_connects} = 0 if (check_imap($v, $r) == $SERVICE_UP);
 					} elsif ($$v{service} eq "imaps") {
-						$$r{num_connects} = 0 if (check_imaps($v, $r));
+						$$r{num_connects} = 0 if (check_imaps($v, $r) == $SERVICE_UP);
 					} elsif ($$v{service} eq "smtp") {
-						$$r{num_connects} = 0 if (check_smtp($v, $r));
+						$$r{num_connects} = 0 if (check_smtp($v, $r) == $SERVICE_UP);
 					} elsif ($$v{service} eq "ftp") {
-						$$r{num_connects} = 0 if (check_ftp($v, $r));
+						$$r{num_connects} = 0 if (check_ftp($v, $r) == $SERVICE_UP);
 					} elsif ($$v{service} eq "ldap") {
-						$$r{num_connects} = 0 if (check_ldap($v, $r));
+						$$r{num_connects} = 0 if (check_ldap($v, $r) == $SERVICE_UP);
 					} elsif ($$v{service} eq "nntp") {
-						$$r{num_connects} = 0 if (check_nntp($v, $r));
+						$$r{num_connects} = 0 if (check_nntp($v, $r) == $SERVICE_UP);
 					} elsif ($$v{service} eq "dns") {
-						$$r{num_connects} = 0 if (check_dns($v, $r));
+						$$r{num_connects} = 0 if (check_dns($v, $r) == $SERVICE_UP);
 					} elsif ($$v{service} eq "sip") {
-						$$r{num_connects} = 0 if (check_sip($v, $r));
+						$$r{num_connects} = 0 if (check_sip($v, $r) == $SERVICE_UP);
 					} elsif ($$v{service} eq "radius") {
-						$$r{num_connects} = 0 if (check_radius($v, $r));
+						$$r{num_connects} = 0 if (check_radius($v, $r) == $SERVICE_UP);
 					} elsif ($$v{service} eq "mysql") {
-						$$r{num_connects} = 0 if (check_mysql($v, $r));
+						$$r{num_connects} = 0 if (check_mysql($v, $r) == $SERVICE_UP);
 					} elsif ($$v{service} eq "pgsql") {
-						$$r{num_connects} = 0 if (check_pgsql($v, $r));
+						$$r{num_connects} = 0 if (check_pgsql($v, $r) == $SERVICE_UP);
+					} elsif ($$v{service} eq "oracle") {
+						$$r{num_connects} = 0 if (check_oracle($v, $r) == $SERVICE_UP);
 					} else {
-						$$r{num_connects} = 0 if (check_none($v, $r));
+						$$r{num_connects} = 0 if (check_none($v, $r) == $SERVICE_UP);
 					}
 				} elsif ($$v{checktype} eq "connect") {
 					if ($$v{protocol} ne "udp") {
@@ -2079,6 +2235,9 @@ sub ld_main
 				} elsif ($$v{checktype} eq "ping") {
 					&ld_debug(2, "Checking ping: real server=$real_id (virtual=$virtual_id)");
 					check_ping($v, $r);
+				} elsif ($$v{checktype} eq "external") {
+					&ld_debug(2, "Checking external: real server=$real_id (virtual=$virtual_id)");
+					check_external($v, $r);
 				} elsif ($$v{checktype} eq "off") {
 					&ld_debug(2, "Checking off: No real or fallback servers to be added\n");
 				} elsif ($$v{checktype} eq "on") {
@@ -2086,7 +2245,7 @@ sub ld_main
 					&service_set($v, $r, "up");
 				} elsif ($$v{checktype} eq "combined") {
 					&ld_debug(2, "Checking combined-connect: real server=$real_id (virtual=$virtual_id)");
-					if (check_connect($v, $r)) {
+					if (check_connect($v, $r) == $SERVICE_UP) {
 						$$r{num_connects}++;
 					} else {
 						$$r{num_connects} = 999999;
@@ -2128,17 +2287,31 @@ sub check_http
 		. "virtualhost=\"$virtualhost\"");
 	
 	my $ua = new LWP::UserAgent();
-	$ua->timeout($$v{negotiatetimeout});
 	my $h = new  HTTP::Headers("Host" => $virtualhost);
 	my $req = new HTTP::Request("$$v{httpmethod}", "$$r{url}", $h);
 	my $res;
-	{
+
+	# LWP does not seem to honour timeouts set using $ua->timeout()
+	# for HTTPS. So use an alarm instead. This also has the advantage
+	# of being cumulative timeout, rather than a per send/receive
+	# timeout.
+	eval {
 		# LWP makes ungaurded calls to eval
 		# which throw a fatal exception if they fail
 		# Needless to say, this is completely stupid.
+		# Resetting of $SIG{'__DIE__'} is also
+		# needed now that alarm() is used.
 		local $SIG{'__DIE__'} = "DEFAULT";
+		local $SIG{'ALRM'} = sub { die "Timeout Alarm" };
+		&ld_debug(4, "Timeout is $$v{negotiatetimeout}");
+		&ld_debug(2, "Starting Check");
+		alarm $$v{negotiatetimeout};
+
+		&ld_debug(2, "Starting HTTP/HTTPS");
 		$res = $ua->request($req);
-	}
+		&ld_debug(2, "Finished HTTP/HTTPS");
+		alarm 0; # Cancel the alarm
+	};
 
 	if ($$v{service} eq "https") {
 		&ld_debug(2, "SSL-Cipher: " . 
@@ -2154,13 +2327,13 @@ sub check_http
 				$res->content =~ /$recstr/)) {
 		service_set($v, $r, "up");
 		&ld_debug(2, "check_http: $$r{url} is up\n");
-		return 1;
+		return $SERVICE_UP;
 	}
 
 	service_set($v, $r, "down");
 	&ld_debug(3, "Headers " .  $res->headers->as_string);
 	&ld_debug(2, "check_http: $$r{url} is down\n");
-	return 0;
+	return $SERVICE_DOWN;
 }
 
 
@@ -2168,7 +2341,7 @@ sub check_smtp
 {
 	require Net::SMTP;
 	my ($v, $r) = @_;
-	my $port=(defined $$v{checkport}?$$v{checkport}:$$r{port});
+	my $port = ld_checkport($v, $r);
 
 	&ld_debug(2, "Checking smtp: server=$$r{server} port=$port");
 
@@ -2177,10 +2350,10 @@ sub check_smtp
 	if ($smtp) {
 		$smtp->quit;
 		service_set($v, $r, "up");
-		return 1;
+		return $SERVICE_UP;
 	} else {
 		service_set($v, $r, "down");
-		return 0;
+		return $SERVICE_DOWN;
 	}
 }
 
@@ -2188,7 +2361,7 @@ sub check_pop
 {
         require Mail::POP3Client;
         my ($v, $r) = @_;
-        my $port=(defined $$v{checkport}?$$v{checkport}:$$r{port});
+	my $port = ld_checkport($v, $r);
 
         &ld_debug(2, "Checking pop server=$$r{server} port=$port");
 
@@ -2202,7 +2375,7 @@ sub check_pop
 
         if (!$pop) {
                 service_set($v, $r, "down");
-                return 1;
+                return $SERVICE_UP;
         }
 
         if($$v{login} ne "") {
@@ -2210,20 +2383,20 @@ sub check_pop
                 $pop->close();
                 if (!$authres) {
                         service_set($v, $r, "down");
-                        return 0;
+                        return $SERVICE_DOWN;
                 }
         }
 
         $pop->close();
         service_set($v, $r, "up");
-        return 1;
+        return $SERVICE_UP;
 }
 
 sub check_pops
 {
         require Mail::POP3Client;
         my ($v, $r) = @_;
-        my $port=(defined $$v{checkport}?$$v{checkport}:$$r{port});
+	my $port = ld_checkport($v, $r);
 
         &ld_debug(2, "Checking pops server=$$r{server} port=$port");
 
@@ -2236,7 +2409,7 @@ sub check_pops
                                         TIMEOUT => $$v{negotiatetimeout});
         if (!$pops) {
                 service_set($v, $r, "down");
-                return 1;
+                return $SERVICE_DOWN;
         }
 
         if($$v{login} ne "") {
@@ -2244,21 +2417,21 @@ sub check_pops
                 $pops->close();
                 if (!$authres) {
                         service_set($v, $r, "down");
-                        return 1;
+                        return $SERVICE_DOWN;
                 }
         }
 
 
         $pops->close();
         service_set($v, $r, "up");
-        return 0;
+        return $SERVICE_UP;
 }
 
 sub check_imap
 {
         require Net::IMAP::Simple;
         my ($v, $r) = @_;
-        my $port=(defined $$v{checkport}?$$v{checkport}:$$r{port});
+	my $port = ld_checkport($v, $r);
         
         &ld_debug(2, "Checking imap server=$$r{server} port=$port");
         
@@ -2268,7 +2441,7 @@ sub check_imap
         
         if (!$imap) {
                 service_set($v, $r, "down");
-                return 1;
+                return $SERVICE_DOWN;
         }
         
         if($$v{login} ne "") {
@@ -2276,20 +2449,20 @@ sub check_imap
                 $imap->quit;
                 if (!$authres) {
                         service_set($v, $r, "down");
-                        return 1;
+                        return $SERVICE_DOWN;
                 }
         }
         
         $imap->quit();
         service_set($v, $r, "up");
-        return 0;
+        return $SERVICE_UP;
 }
 
 sub check_imaps
 {
         require Net::IMAP::Simple::SSL;
         my ($v, $r) = @_;
-        my $port=(defined $$v{checkport}?$$v{checkport}:$$r{port});
+	my $port = ld_checkport($v, $r);
 
         &ld_debug(2, "Checking imaps server=$$r{server} port=$port");
 
@@ -2298,7 +2471,7 @@ sub check_imaps
                                         timeout => $$v{negotiatetimeout});
         if (!$imaps) {
                 service_set($v, $r, "down");
-                return 1;
+                return $SERVICE_DOWN;
         }
 
         if($$v{login} ne "") {
@@ -2306,20 +2479,20 @@ sub check_imaps
                 $imaps->quit;
                 if (!$authres) {
                         service_set($v, $r, "down");
-                        return 1;
+                        return $SERVICE_DOWN;
                 }
         }
 
         $imaps->quit();
         service_set($v, $r, "up");
-        return 0;
+        return $SERVICE_UP;
 }
 
 sub check_ldap
 {
 	my ($v, $r) = @_;
 	require Net::LDAP;
-	my $port=(defined $$v{checkport}?$$v{checkport}:$$r{port});
+	my $port = ld_checkport($v, $r);
 
 	&ld_debug(2, "Checking ldap server=$$r{server} port=$port");
 	
@@ -2329,7 +2502,7 @@ sub check_ldap
 	if(!$ldap) {
 		service_set($v, $r, "down");
 		&ld_debug(4, "Connection failed");
-		return 1;
+		return $SERVICE_DOWN;
 	}
 		
 	my $mesg;
@@ -2342,7 +2515,7 @@ sub check_ldap
 	if ($mesg->is_error) {
 		service_set($v, $r, "down");
 		&ld_debug(4, "Bind failed");
-		return 1;
+		return $SERVICE_DOWN;
 	}
 
 	&ld_debug(4, "Base : " . substr($$r{request},1));
@@ -2355,19 +2528,19 @@ sub check_ldap
 	if($result->count != 1) {
 		service_set($v, $r, "down");
 		&ld_debug(2, "Count failed : " . $result->count);
-		return 1;
+		return $SERVICE_DOWN;
 	}
 		
 	my $href = $result->as_struct;
 	my @arrayOfDNs  = keys %$href ;
 	if (!($recstr =~ /.+/) || $arrayOfDNs[0] =~ /$recstr/) {
 		service_set($v, $r, "up");
-		return 0;
+		return $SERVICE_UP;
 	} else {
 		service_set($v, $r, "down");
 		&ld_debug(4,"Message differs : " . ", " . $$r{receive} 
 				. ", " . $arrayOfDNs[0] . ".");
-		return 1;
+		return $SERVICE_DOWN;
 	}
 }
 
@@ -2380,7 +2553,7 @@ sub check_nntp
         my $sock;
         my $s;
         my $buf;
-	my $port=(defined $$v{checkport}?$$v{checkport}:$$r{port});
+	my $port = ld_checkport($v, $r);
 	my $status = 1;
 
 	&ld_debug(2, "Checking nntp server=$$r{server} port=$port");
@@ -2389,7 +2562,7 @@ sub check_nntp
                 PeerPort => $port, Proto => 'tcp',
                 TimeOut => $$v{negotiatetimeout})) {
                 service_set($v, $r, "down");
-                return 1;
+                return $SERVICE_DOWN;
         }
         $s = IO::Select->new();
         $s->add($sock);
@@ -2419,7 +2592,7 @@ sub check_radius
 
         &ld_debug(2, "Checking radius");
 
-        my $port=(defined $$v{checkport}?$$v{checkport}:$$r{port});
+	my $port = ld_checkport($v, $r);
         my $radius;
         my $result = "";
 
@@ -2433,7 +2606,7 @@ sub check_radius
                 &ld_debug(2, "Starting Radius");
                 $radius = new Authen::Radius(Host => "$$r{server}:$port",
 					     Secret=>$$v{secret},
-					     TimeOut=>$$v{checktimeout},
+					     TimeOut=>$$v{negotiatetimeout},
 					     Errmode=>'die');
                 $result = $radius->check_pwd($$v{login}, $$v{passwd});
                 &ld_debug(2, "Finished Radius");
@@ -2443,11 +2616,11 @@ sub check_radius
                 &service_set($v, $r, "down");
                 &ld_debug(3, "Deactivated service $$r{server}:$$r{port}: $@");
                 &ld_debug(3, "Radius Error: ".$radius->get_error);
-                return 0;
+                return $SERVICE_DOWN;
         } else {
                 &service_set($v, $r, "up");
                 &ld_debug(3, "Activated service $$r{server}:$$r{port}");
-                return 1;
+                return $SERVICE_UP;
         }
 }
 
@@ -2462,61 +2635,120 @@ sub check_pgsql
 	return check_sql(@_, "Pg", "dbname");
 }
 
+sub check_sql_log_errstr
+{
+	my ($prefix, $errstr) = (@_);
+
+	for $_ (split /\n/, $errstr) {
+		&ld_debug(4, "$prefix $_\n");
+	}
+
+}
+
+sub check_oracle
+{
+	return check_sql(@_, "Oracle", "");
+}
+
 sub check_sql
 {
 	require DBI;
 	my ($v, $r, $dbd, $dbname) = @_;
-	my $port=(defined $$v{checkport}?$$v{checkport}:$$r{port});
-	my ($dbh, $sth, $query, $rows, $result);   # Local variables
+	my $port = ld_checkport($v, $r);
+	my ($dbh, $sth, $query, $row, $result);
+	$result = $SERVICE_DOWN;
 	$query = $$r{request};
 	$query =~ s#^/##;
 	unless ($$v{login} && $query) {
-		service_set($v, $r, "down");
-		&ld_log("Error: Must specify a login and request string for mysql and postgresql checks. Not adding $$r{server}.\n");
-		return 1;
+		&ld_log("Error: Must specify a login and request string " .
+			"for MySQL, Oracle and PostgreSQL checks. " .
+			"Not adding $$r{server}.\n");
+		goto err_down;
 	}
 	$result=2;   # Set result flag.  Only ok if ends up at zero.
 	&ld_debug(2, "Checking $$v{server} server=$$r{server} port=$port\n");
-	$dbh = DBI->connect("dbi:$dbd:$dbname=$$v{database};host=$$r{server};port=$port", $$v{login}, $$v{passwd});
+	$dbh = DBI->connect("dbi:$dbd:$dbname=$$v{database};" .
+			    "host=$$r{server};port=$port", $$v{login},
+			    $$v{passwd});
 	unless ($dbh) {
-		&ld_debug(4, "Failed to bind to $$r{server} with $dbh->err");
-		service_set($v, $r, "down");
-		return 1;
+		check_sql_log_errstr("Failed to bind to $$r{server} with",
+				     $dbh->errstr);
+		goto err_down;
 	}
 	$result--;
 	$sth = $dbh->prepare($query);
-	$rows = $sth->execute;
-	ld_debug(4, "Database search returned $rows rows");
-	if ($rows gt 0) {
-		# If it returns with a number, it is ok.
-		# Disallows query of an empty table.
-		$result--;
+	unless ($sth) {
+		check_sql_log_errstr("Error preparing statement:",
+				     $dbh->errstr);
+		goto err_disconect;
 	}
-	# If user defined a receive string (number of rows returned), only do
-	# the check if the previous fetchall_arrayref succeeded.
-	#if (defined $$r{receive} && $result eq 0) {
-	#	# Receive string specifies an exact number of rows
-	#	if ($rows ne $$r{receive}) {
-	#	ld_debug(2,"Service down, receive=$$r{receive}");
-	#		$result=1;
-	#	}
-	#}
-	if ($result == 1) {
-		# Should never get here
-		service_set($v, $r, "down");
-		return 1;
+
+	# On error "execute" will return undef.
+	# Otherwise it will return either "0E0"
+	# (Some garbage to make 0 true) or > 1.
+	unless ($sth->execute) {
+		check_sql_log_errstr("Error executing statement:",
+				     $dbh->errstr, $dbh->err);
+		goto err_finish;
 	}
-	service_set($v, $r, "up");
-	$sth->finish;
-	$dbh->disconnect;
-	return 0;
+
+	# After calling "execute" $sth->{NUM_OF_FIELDS} will be greater
+	# than zero for SELECT statements, and 0 for all other statements.
+	#
+	# For non-SELECT statements a non-undef value returned by
+	# "execcute" inticates the number of rows returned.  "0E0" (Some
+	# garbage to make 0 true) or > 1.  But testing for this isn't
+	# particularly interesting as its quite valid for operations to
+	# affect 0 rows. So for non-SELECT statements, if "execute"
+	# doesn't return undef, consider the test a success.
+	unless ($sth->{NUM_OF_FIELDS}) {
+		goto out;
+	}
+
+	# For SELECT staements "execute" will always return a true
+	# value unless an error occurs. A "fetch" operation is performed
+	# to obtain the row returned by the SELECT statement. Again 0
+	# rows is valid.
+	#
+	# I suspect that for at leaast some DB engines "execute" will
+	# always succeed unless there is some bizzare internal error.
+	# So it seems that in order to have a reasonable test "fetch"
+	# needs to be called.
+	#
+	# I also wonder if having a table missing
+	# will result in an error or just 0 rows returned. If the
+	# latter is true then I guess we need to consider 0 rows an
+	# error state. But I'll have the code consider 0 rows a success
+	# for now leave this to be changed if testing proves it neccessary.
+
+	# As it is important that the SELECT succeeded, rather than
+	# how may rows it returns, just call "fetchrow_arrayref" once.
+	#
+	# I guess that in a pathalogical case the query may fail
+	# at a particular row. But I'm not going to worry about that for
+	# now.
+	$row = $sth->fetchrow_arrayref;
+	unless ($row && $sth->err) {
+		check_sql_log_errstr("Error fetching row:", $dbh->errstr);
+		goto err_finish;
+	}
+
+out:
+	$result = $SERVICE_UP;
+err_finish:
+	$sth->finish();
+err_disconnect:
+	$dbh->disconnect();
+err_down:
+	service_set($v, $r, $result == $SERVICE_UP ? "up" : "down");
+	return $result;
 }
 
 
 sub check_connect
 {
 	my ($v, $r) = @_;
-	my $port=(defined $$v{checkport}?$$v{checkport}:$$r{port});
+	my $port = ld_checkport($v, $r);
 
 	eval {
 		local $SIG{'__DIE__'} = "DEFAULT";
@@ -2530,12 +2762,46 @@ sub check_connect
 			alarm 0; # Cancel the alarm
 			die("Socket Connect Failed");
 		}
-		&ld_debug(3, "Connected to $1 (port $port)");
+		&ld_debug(3, "Connected to $$r{server} (port $port)");
 		alarm 0; # Cancel the alarm
 	};
 	if ($@) {
 		&service_set($v, $r, "down");
 		&ld_debug(3, "Deactivated service $$r{server}:$$r{port}: $@");
+		return $SERVICE_DOWN;
+	} else {
+		&service_set($v, $r, "up");
+		&ld_debug(3, "Activated service $$r{server}:$$r{port}");
+		return $SERVICE_UP;
+	}
+}
+
+sub check_external
+{
+	my ($v, $r) = @_;
+	my $result;
+	my $v_server;
+
+	eval {
+		local $SIG{'__DIE__'} = "DEFAULT";
+		local $SIG{'ALRM'} = sub { die "Timeout Alarm" };
+		&ld_debug(4, "Timeout is $$v{checktimeout}");
+		alarm $$v{checktimeout};
+		if (defined $$v{server}) {
+		    $v_server = $$v{server};
+		} else {
+		    $v_server = $$v{fwm};
+		}
+		$result = system("$$v{checkcommand} $v_server $$v{port} " .
+				 "$$r{server} $$r{port}");
+		alarm 0;
+		$result >>= 8;
+	};
+	if ($@ or $result != 0) {
+		&service_set($v, $r, "down");
+		&ld_debug(3, "Deactivated service $$r{server}:$$r{port}: " .
+			  "$@ after calling $$v{checkcommand} with result " .
+			  "$result");
 		return 0;
 	} else {
 		&service_set($v, $r, "up");
@@ -2548,7 +2814,7 @@ sub check_connect
 sub check_sip
 {
 	my ($v, $r) = @_;
-	my $sip_d_port=(defined $$v{checkport}?$$v{checkport}:$$r{port});
+	my $sip_d_port = ld_checkport($v, $r);
 
 	&ld_debug(2, "Checking sip server=$$r{server} port=$sip_d_port");
 	
@@ -2559,7 +2825,7 @@ sub check_sip
 		local $SIG{'__DIE__'} = "DEFAULT";
 		local $SIG{'ALRM'} = sub { die "Timeout Alarm" };
 		&ld_debug(4, "Timeout is $$v{checktimeout}");
-		alarm $$v{checktimeout};
+		alarm $$v{negotiatetimeout};
 
 		my $sock = &ld_open_socket($$r{server}, $sip_d_port, 
 					$$v{protocol});
@@ -2632,11 +2898,11 @@ sub check_sip
 	if ($@) {
 		&service_set($v, $r, "down");
 		&ld_debug(3, "Deactivated service $$r{server}:$$r{port}: $@");
-		return 1;
+		return $SERVICE_DOWN;
 	} else {
 		&service_set($v, $r, "up");
 		&ld_debug(3, "Activated service $$r{server}:$$r{port}");
-		return 0;
+		return $SERVICE_UP;
 	}
 }
 
@@ -2647,23 +2913,31 @@ sub check_ftp
 	my ($v, $r) = @_;
 	my $ftp;
 	my $memory;
-	my $port=(defined $$v{checkport}?$$v{checkport}:$$r{port});
+	my $debug = ($DEBUG > 2) ? 1 : 0;
+	my $port = ld_checkport($v, $r);
 
 	&ld_debug(2, "Checking ftp server=$$r{server} port=$port");
+	&ld_debug(4, "Timeout is $$v{negotiatetimeout}");
 	
 	open(TMP,'+>', undef);
 
-	unless ($ftp = Net::FTP->new("$$r{server}:$port", 
-			Timeout=>$$v{negotiatetimeout})) {
-		service_set($v, $r, "down");
-		return 0;
+	# In some cases Net::FTP dies if there is a timeout
+	eval {
+		unless ($ftp = Net::FTP->new("$$r{server}:$port",
+				Timeout=>$$v{negotiatetimeout},
+				Debug=>$debug)) {
+			die "Could not connect\n";
+		}
+		$ftp->login($$v{login}, $$v{passwd});
+		$ftp->cwd("/");
+		$ftp->binary();
+		$ftp->pasv();
+		$ftp->get("$$r{request}", *TMP);
+		$ftp->quit();
+	};
+	if ($@) {
+		&ld_debug(2, "Warning: $@");
 	}
-	$ftp->login($$v{login}, $$v{passwd});
-	$ftp->cwd("/");
-	$ftp->binary();
-	$ftp->pasv();
-	$ftp->get("$$r{request}", *TMP);
-	$ftp->quit();
 
 	seek TMP, 0, 0;
 	local $/;
@@ -2672,11 +2946,11 @@ sub check_ftp
 
 	if ($memory =~ /$$r{receive}/) {
 		service_set($v, $r, "up");
-		return 0;
+		return $SERVICE_UP;
 	}
 
 	service_set($v, $r, "down");
-	return 1;
+	return $SERVICE_DOWN;
 }
 
 
@@ -2708,7 +2982,7 @@ sub check_dns
 	eval {
 		 local $SIG{'__DIE__'} = "DEFAULT";
 		 local $SIG{'ALRM'} = sub { die "timeout\n"; };
-		 alarm($$v{checktimeout});
+		 alarm($$v{negotiatetimeout});
 		 $res->nameservers($$r{server});
 		 if ($$v{"protocol"} eq "tcp") {
 		 	$res->usevc(1);
@@ -2719,19 +2993,19 @@ sub check_dns
  
 	if (@$ eq "timeout\n" or ! $query) {
 		 service_set($v,$r,"down");
-		 return 1;
+		 return $SERVICE_DOWN;
 	}
  
 	foreach $rr ($query->answer) {
 	        if (($rr->type eq "A" and $rr->address eq $$r{"receive"}) or
 	            ($rr->type eq "PTR" and $rr->ptrdname eq $$r{"receive"})) {
 	         	service_set($v,$r,"up");
-	         	return 0;
+			return $SERVICE_UP;
 		}
 	}
  
 	service_set($v,$r,"down");
-	return 1;
+	return $SERVICE_DOWN;
 }
 
 
@@ -2750,7 +3024,7 @@ sub check_ping
 		if ($p->ping($$r{server}, $$v{"checktimeout"})) {
     			&ld_debug(2, "pong from $$r{server}\n");
 			service_set($v,$r,"up");
-			return 0;
+			return $SERVICE_UP;
 		}
   		&ld_debug(2, "ping to $$r{server} timed out " .
 					"(attempt " .  ($attempt + 1) . "/" . 
@@ -2758,7 +3032,7 @@ sub check_ping
 	}
 
 	service_set($v,$r,"down");
-	return 1;
+	return $SERVICE_DOWN;
 }
 
 
@@ -2773,7 +3047,7 @@ sub check_none
 	&ld_debug(2, "Checking none");
 	
 	service_set($v, $r, "up");
-	return 0;
+	return $SERVICE_UP;
 }
 
 
@@ -2818,6 +3092,8 @@ sub service_set()
 	        my $found = 0;
 		my $tmp_id;
 		my $virtual_id = get_virtual_id_str($v);
+		my $log_str = "real server=" . get_real_id_str($r, $v) .
+			      " (virtual=$virtual_id)";
 		foreach $tmp_id (@$virtual) {
 			if($virtual_id eq $tmp_id) {
 				$found = 1;
@@ -2827,10 +3103,10 @@ sub service_set()
 		if ($found == 1) {
 			if ($state=~/up/i) {
 				_service_up($v, $r, $force);
-				&ld_debug(2, "Enabled server=$$r{server}");
+				&ld_debug(2, "Enabled  $log_str");
 			} elsif ($state=~/down/i) {
 				_service_down($v, $r, $force);
-				&ld_debug(2, "Disabled server=$$r{server}");
+				&ld_debug(2, "Disabled $log_str");
 			}
 		}
 	}
@@ -3061,9 +3337,9 @@ sub _status_down
 	my $real_id = get_real_id_str($r, $v);
 
 	if (defined($is_fallback)) {
-		if (! defined($v->{real_status}) or
-				! defined($v->{fallback_status}) or
-				! $v->{fallback_status}->{"$real_id"}) {
+		if (! defined($v->{real_status}) and
+				 (! defined($v->{fallback_status}) or
+				  !$v->{fallback_status}->{"$real_id"})) {
 			return undef;
 		}
 	}
@@ -3168,7 +3444,7 @@ sub fallback_on
 		return;
 	}
 
-	&_restore_service($v, $fallback->{server}, 
+	&_restore_service($v, $fallback->{server} . ":" . $fallback->{port},
 			get_forward_flag($fallback->{forward}), 
 				"1", "fallback");
 }
@@ -3191,7 +3467,7 @@ sub fallback_off
 		return;
 	}
 
-	&_remove_service($v, $fallback->{server},
+	&_remove_service($v, $fallback->{server} . ":" .  $fallback->{port},
 			get_forward_flag($fallback->{forward}),
 				"fallback");
 }
@@ -3211,11 +3487,20 @@ sub fallback_find
 
 	if( defined $virtual->{"fallback"} ) {
 		return($virtual->{"fallback"});
-	} elsif ( defined($FALLBACK) ) {
-		return($FALLBACK->{$virtual->{"protocol"}});
+	} elsif ( not defined($FALLBACK) ) {
+		return undef;
 	}
 
-	return undef;
+	# If the global fallback has a port, it can be used as is
+	if (defined($FALLBACK->{$virtual->{"protocol"}}->{"port"})) {
+		return $FALLBACK->{$virtual->{"protocol"}};
+	}
+
+	# Else create an anonymous fallback
+	my %anon_fallback = %{$FALLBACK->{$virtual->{"protocol"}}};
+	$anon_fallback{"port"} = $virtual->{"port"};
+
+	return \%anon_fallback;
 }
 
 
@@ -3230,7 +3515,7 @@ sub purge_untracked_service
 	&system_wrapper("$IPVSADM -d $v->{proto} " . &get_virtual($v) . 
 			" -r $rservice");
 	&ld_log($log_arg);
-	&ld_emailalert_send($log_arg, $v, $rservice);
+	&ld_emailalert_send($log_arg, $v, $rservice, 0);
 }
 
 
@@ -3275,7 +3560,7 @@ sub check_cfgfile
 		} else {
 			&ld_log(" - ignore new configuration\n");
 		}
-		if (-x $CALLBACK) {
+		if (defined($CALLBACK) and -x $CALLBACK) {
 			&system_wrapper("$CALLBACK $CONFIG");
 		}
 		$status = 1;
@@ -3693,9 +3978,12 @@ sub get_real_id_str
 		$receive = $v->{"receive"};
 	}
 
-	if($v->{"checktype"} eq "negotiate" || 
-			$v->{"combined"} eq "negotiate") {
+	if($v->{"checktype"} eq "negotiate" or
+			$v->{"checktype"} eq "combined") {
 		$check = $v->{"checktype"} . ":" . $v->{"service"};
+	}
+	elsif($v->{"checktype"} eq "external") {
+		$check = $v->{"checktype"} . ":" . $v->{"checkcommand"};
 	}
 	else {
 		$check = $v->{"checktype"};
@@ -3712,7 +4000,7 @@ sub get_real_id_str
         $real    = $check . ":" . $v->{"protocol"} . ":" 
 	         . $r->{"server"} . ":" . $r->{"port"} . ":" 
 		 . $virtualhost . ":" . $checkport . ":" 
-		 . $r->{"weight"} . ":"
+		 . $r->{"weight"} . ":" . $r->{"forward"} . ":"
 		 . quotemeta($request) . ":" . quotemeta($receive);
 }
 

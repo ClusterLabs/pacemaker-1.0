@@ -40,6 +40,18 @@ fi
 
 [ -x $DAEMON ] || exit 0
 
+action() {
+  echo -n "$1... "
+  shift
+  $@
+  stat=$?
+  if [ $stat = 0 ]; then
+    echo success
+  else
+    echo failure
+  fi
+  return  $stat
+}
 
 ######################################################################
 # Read arument and take action as appropriate

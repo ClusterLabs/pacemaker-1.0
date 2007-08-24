@@ -34,6 +34,7 @@ typedef struct clone_variant_data_s {
 		
 		gboolean interleave;
 		gboolean ordered;
+		gboolean applied_master_prefs;
 
 		crm_data_t *xml_obj_child;
 		
@@ -74,6 +75,7 @@ typedef struct group_variant_data_s {
 #elif VARIANT_NATIVE
 
 typedef struct native_variant_data_s {
+		int dummy;
 } native_variant_data_t;
 
 #  define get_native_variant_data(data, rsc)				\

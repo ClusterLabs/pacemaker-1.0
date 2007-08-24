@@ -110,6 +110,9 @@ int stonithd_set_stonith_ops_callback(stonith_ops_callback_t callback);
  */
 IPC_Channel * stonithd_input_IPC_channel(void);
 
+/* Should be called from the destroy notification if the channel is added to mainloop */
+void set_stonithd_input_IPC_channel_NULL(void);
+
 /*
  *	stonithd_op_result_ready:
  *			Returns TRUE when a operaton result is ready to be read.

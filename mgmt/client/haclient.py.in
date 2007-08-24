@@ -30,14 +30,15 @@ from xml.dom.minidom import parseString
 import locale, gettext
 app_name = "haclient"
 
-sys.path.append("@libdir@/heartbeat-gui")
+sys.path.append("@HA_DATADIR@/heartbeat-gui")
+sys.path.append("@HA_LIBDIR@/heartbeat-gui")
 from pymgmt import *
 
 import pygtk
 pygtk.require('2.0')
 import gtk, gtk.glade, gobject
 
-UI_FILE = "@libdir@/heartbeat-gui/haclient.glade"
+UI_FILE = "@HA_DATADIR@/heartbeat-gui/haclient.glade"
 
 window = None
 manager = None
@@ -1700,9 +1701,6 @@ class MainWindow :
 			if param["name"] == "target_role" and param["value"] == target_role :
 				return
 		manager.do_cmd("set_target_role\n%s\n%s"%(self.cur_name,target_role))
-		if target_role in ["started", "#default"] :
-			for subrsc in manager.get_rsc_sub_rsc(self.cur_name) :
-				manager.do_cmd("set_target_role\n%s\n%s"%(subrsc,target_role))
 	
 	def on_item_move(self, action) :
 		if action.get_name() == "uprsc" :
@@ -1729,24 +1727,24 @@ class MainWindow :
 		win_widget.connect("delete_event", self.on_delete_event)
 		win_widget.set_title(_("Linux HA Management Client"))
 		win_widget.set_size_request(750, 600)
-		win_widget.set_icon_from_file("@libdir@/heartbeat-gui/ha.png")
+		win_widget.set_icon_from_file("@HA_DATADIR@/heartbeat-gui/ha.png")
 
 		# add the icons to gtk stock
-		self.load_icon("ha-login","@libdir@/heartbeat-gui/login.png")
-		self.load_icon("ha-logout","@libdir@/heartbeat-gui/logout.png")
-		self.load_icon("ha-exit","@libdir@/heartbeat-gui/exit.png")
-		self.load_icon("ha-standby-node","@libdir@/heartbeat-gui/standby-node.png")
-		self.load_icon("ha-active-node","@libdir@/heartbeat-gui/active-node.png")
-		self.load_icon("ha-add-resource","@libdir@/heartbeat-gui/add-resource.png")
-		self.load_icon("ha-remove-resource","@libdir@/heartbeat-gui/remove-resource.png")
-		self.load_icon("ha-start-resource","@libdir@/heartbeat-gui/start-resource.png")
-		self.load_icon("ha-stop-resource","@libdir@/heartbeat-gui/stop-resource.png")
-		self.load_icon("ha-cleanup-resource","@libdir@/heartbeat-gui/cleanup-resource.png")
-		self.load_icon("ha-default-resource","@libdir@/heartbeat-gui/default-resource.png")
-		self.load_icon("ha-up-resource","@libdir@/heartbeat-gui/up-resource.png")
-		self.load_icon("ha-down-resource","@libdir@/heartbeat-gui/down-resource.png")
-		self.load_icon("ha-master-resource","@libdir@/heartbeat-gui/master-resource.png")
-		self.load_icon("ha-slave-resource","@libdir@/heartbeat-gui/slave-resource.png")
+		self.load_icon("ha-login","@HA_DATADIR@/heartbeat-gui/login.png")
+		self.load_icon("ha-logout","@HA_DATADIR@/heartbeat-gui/logout.png")
+		self.load_icon("ha-exit","@HA_DATADIR@/heartbeat-gui/exit.png")
+		self.load_icon("ha-standby-node","@HA_DATADIR@/heartbeat-gui/standby-node.png")
+		self.load_icon("ha-active-node","@HA_DATADIR@/heartbeat-gui/active-node.png")
+		self.load_icon("ha-add-resource","@HA_DATADIR@/heartbeat-gui/add-resource.png")
+		self.load_icon("ha-remove-resource","@HA_DATADIR@/heartbeat-gui/remove-resource.png")
+		self.load_icon("ha-start-resource","@HA_DATADIR@/heartbeat-gui/start-resource.png")
+		self.load_icon("ha-stop-resource","@HA_DATADIR@/heartbeat-gui/stop-resource.png")
+		self.load_icon("ha-cleanup-resource","@HA_DATADIR@/heartbeat-gui/cleanup-resource.png")
+		self.load_icon("ha-default-resource","@HA_DATADIR@/heartbeat-gui/default-resource.png")
+		self.load_icon("ha-up-resource","@HA_DATADIR@/heartbeat-gui/up-resource.png")
+		self.load_icon("ha-down-resource","@HA_DATADIR@/heartbeat-gui/down-resource.png")
+		self.load_icon("ha-master-resource","@HA_DATADIR@/heartbeat-gui/master-resource.png")
+		self.load_icon("ha-slave-resource","@HA_DATADIR@/heartbeat-gui/slave-resource.png")
 
 		# create ui-manager
 		ui_xml = '''
@@ -1936,7 +1934,7 @@ class Manager :
 		# connect to one of the cluster
 		self.failed_reason = ""
 		self.server = server
-		port = None
+		port = ""
 		if string.find(server, ":") != -1 :
 			server,port = string.split(server,":")
 		ip = socket.gethostbyname(server)

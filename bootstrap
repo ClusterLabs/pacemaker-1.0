@@ -227,40 +227,6 @@ oneline() {
   read x; echo "$x"
 }
 
-AC_version=`$autoconf --version | oneline | sed -e 's%^[^0-9]*%%'`
-AC_majvers=`echo "$AC_version" | sed 's%\..*%%'`
-AC_minvers=`echo "$AC_version" | sed 's%^.*\.%%'`
-AC_minnum=`echo  "$AC_minvers" | sed 's%[^0-9].*%%'`
-
-
-if
-  [ $AC_majvers -gt 2 -o $AC_majvers -eq 2 -a $AC_minnum -ge 53 ]
-then
-  needspatch=yes
-else
-  needspatch=no
-fi
-if
-  grep 'AC_PREREQ.*2.53' configure.in >/dev/null 2>&1
-then
-  haspatch=yes
-else
-  haspatch=no
-fi
-
-if
-  [ $haspatch = no -a $needspatch = yes ]
-then
-  echo "Applying 2.53 patch for autoconf version $AC_version"
-  patch < autoconf-2.53.diff
-elif
-  [ $haspatch = yes -a $needspatch = no ]
-then
-  echo "Applying pre-2.53 patch for autoconf version $AC_version"
-  patch --reverse < autoconf-2.53.diff
-fi
-
-
 LT_version=`$libtool --version | oneline | sed -e 's%^[^0-9]*%%' -e s'% .*%%'`
 LT_majvers=`echo "$LT_version" | sed -e 's%\..*%%'`
 LT_minvers=`echo "$LT_version" | sed -e 's%^[^.]*\.%%' `

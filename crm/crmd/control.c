@@ -32,6 +32,7 @@
 #include <fsa_proto.h>
 #include <crmd_messages.h>
 #include <crmd_callbacks.h>
+#include <crmd_lrm.h>
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -40,7 +41,6 @@
 char *ipc_server = NULL;
 
 extern void crmd_ha_connection_destroy(gpointer user_data);
-extern gboolean verify_stopped(gboolean force, int log_level);
 
 gboolean crm_shutdown(int nsig, gpointer unused);
 gboolean register_with_ha(ll_cluster_t *hb_cluster, const char *client_name);
@@ -128,13 +128,10 @@ do_shutdown(long long action,
 			continue_shutdown = FALSE;
 		}
 	}
-
+    
 	if(continue_shutdown == FALSE) {
 		crm_info("Waiting for subsystems to exit");
 		crmd_fsa_stall(NULL);
-
-	} else {
-		register_fsa_input(C_FSA_INTERNAL, I_TERMINATE, NULL);
 	}
 	
 	return I_NULL;
@@ -185,8 +182,10 @@ log_connected_client(gpointer key, gpointer value, gpointer user_data)
 
 static void free_mem(fsa_data_t *msg_data) 
 {
-	fsa_cluster_conn->llc_ops->delete(fsa_cluster_conn);
-	fsa_cluster_conn = NULL;
+	if(fsa_cluster_conn) {
+		fsa_cluster_conn->llc_ops->delete(fsa_cluster_conn);
+		fsa_cluster_conn = NULL;
+	}
 	
 	slist_destroy(fsa_data_t, fsa_data, fsa_message_queue, 
 		      crm_info("Dropping %s: [ state=%s cause=%s origin=%s ]",
@@ -273,9 +272,6 @@ static void free_mem(fsa_data_t *msg_data)
 
  	crm_free(max_generation_from);
  	free_xml(max_generation_xml);
-#ifdef HA_MALLOC_TRACK
-	cl_malloc_dump_allocated(LOG_ERR, FALSE);
-#endif
 }
 
 /*	 A_EXIT_0, A_EXIT_1	*/
@@ -294,9 +290,9 @@ do_exit(long long action,
 		exit_code = 1;
 		log_level = LOG_ERR;
 		exit_type = "forcefully";
-		verify_stopped(TRUE, LOG_ERR);
 	}
 	
+	verify_stopped(cur_state, LOG_ERR);
 	do_crm_log(log_level, "Performing %s - %s exiting the CRMd",
 		      fsa_action2string(action), exit_type);
 	
@@ -522,11 +518,8 @@ do_stop(long long action,
 	enum crmd_fsa_input current_input,
 	fsa_data_t *msg_data)
 {
-	if(verify_stopped(FALSE, LOG_DEBUG) == FALSE) {
-		crmd_fsa_stall(NULL);
-	}
-
-	return I_NULL;
+    register_fsa_input(C_FSA_INTERNAL, I_TERMINATE, NULL);
+    return I_NULL;
 }
 
 /*	 A_STARTED	*/
@@ -603,7 +596,7 @@ do_recover(long long action,
 	crm_err("Action %s (%.16llx) not supported",
 	       fsa_action2string(action), action);
 
-	register_fsa_input(C_FSA_INTERNAL, I_STOP, NULL);
+	register_fsa_input(C_FSA_INTERNAL, I_TERMINATE, NULL);
 
 	return I_NULL;
 }
@@ -615,7 +608,7 @@ pe_cluster_option crmd_opts[] = {
 	{ XML_CONFIG_ATTR_ELECTION_FAIL, NULL, "time", NULL, "2min", &check_timer, "*** Advanced Use Only ***.", "If need to adjust this value, it probably indicates the presence of a bug." },
 	{ XML_CONFIG_ATTR_FORCE_QUIT, NULL, "time", NULL, "20min", &check_timer, "*** Advanced Use Only ***.", "If need to adjust this value, it probably indicates the presence of a bug." },
 	{ "crmd-integration-timeout", NULL, "time", NULL, "3min", &check_timer, "*** Advanced Use Only ***.", "If need to adjust this value, it probably indicates the presence of a bug." },
-	{ "crmd-finalization-timeout", NULL, "time", NULL, "10min", &check_timer, "*** Advanced Use Only ***.", "If need to adjust this value, it probably indicates the presence of a bug." },
+	{ "crmd-finalization-timeout", NULL, "time", NULL, "30min", &check_timer, "*** Advanced Use Only ***.", "If you need to adjust this value, it probably indicates the presence of a bug." },
 };
 
 void

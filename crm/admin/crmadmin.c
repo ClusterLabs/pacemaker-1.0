@@ -18,6 +18,7 @@
  */
 
 #include <lha_internal.h>
+#include <ha_version.h>
 
 #include <sys/param.h>
 
@@ -143,11 +144,12 @@ main(int argc, char **argv)
 #endif
 
 	crm_system_name = basename(argv[0]);
-	crm_log_init(crm_system_name);
 
 	if(argc < 2) {
 		usage(crm_system_name, LSB_EXIT_EINVAL);
 	}
+
+	crm_log_init(crm_system_name, LOG_ERR, FALSE, TRUE, argc, argv);
 	
 	while (1) {
 #ifdef HAVE_GETOPT_H
@@ -193,8 +195,8 @@ main(int argc, char **argv)
 */
 
 			case 'v':
-				fprintf(stdout, "HA Version %s, CRM Version %s (CIB feature set %s)\n",
-					VERSION, CRM_FEATURE_SET, CIB_FEATURE_SET);
+				fprintf(stdout, "HA Version %s, CRM Version %s (CIB feature set %s) %s\n",
+					VERSION, CRM_FEATURE_SET, CIB_FEATURE_SET, HA_HG_VERSION);
 				exit(0);
 				break;
 			case 'V':
@@ -276,9 +278,9 @@ main(int argc, char **argv)
 
 	hb_cluster = do_init();
 	if (hb_cluster != NULL) {
-		int res = do_work(hb_cluster);
-		if(res == 0) {
-		} else if (res > 0) {
+		int res = 0;
+		res = do_work(hb_cluster);
+		if (res > 0) {
 			/* wait for the reply by creating a mainloop and running it until
 			 * the callbacks are invoked...
 			 */
@@ -292,7 +294,7 @@ main(int argc, char **argv)
 			g_main_run(mainloop);
 			return_to_orig_privs();
 			
-		} else {
+		} else if(res < 0) {
 			crm_err("No message to send");
 			operation_status = -1;
 		}
@@ -454,8 +456,7 @@ do_work(ll_cluster_t * hb_cluster)
 void
 crmd_ipc_connection_destroy(gpointer user_data)
 {
-	crm_info("Connection to CRMd was terminated");
-	exit(1);
+	crm_debug("Connection to CRMd was terminated");
 }
 
 
@@ -585,7 +586,8 @@ admin_msg_callback(IPC_Channel * server, void *private_data)
 
 			crm_malloc0(filename, filename_len);
 			if(filename != NULL) {
-				sprintf(filename, "%s-%s_%d.xml",
+				snprintf(filename, filename_len,
+					"%s-%s_%d.xml",
 					result, this_msg_reference,
 					received_responses);
 				
@@ -629,6 +631,7 @@ admin_message_timeout(gpointer data)
 		(int)message_timeout_ms/1000);
 	crm_err("No messages received in %d seconds",
 		(int)message_timeout_ms/1000);
+	operation_status = -3;
 	g_main_quit(mainloop);
 	return FALSE;
 }

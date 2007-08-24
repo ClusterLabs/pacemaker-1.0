@@ -40,14 +40,8 @@
 
 /*FIXME: remove hardcode path */
 #define         CLIHB 			"/etc/init.d/heartbeat"
-#ifndef         HA_RC_DIR
-#define     	HA_RC_DIR 		"/etc/ha.d/"
-#endif
-#ifndef 	HA_LIBDIR
-#define 	HA_LIBDIR 		"/usr/lib"
-#endif
 
-#define 	CONFIG_FILENAME 	HA_RC_DIR"/ha.cf"
+#define 	CONFIG_FILENAME 	HA_HBCONF_DIR"/ha.cf"
 #define         BACKUP_CONFIG_NAME 	CONFIG_NAME".bak"
 #define 	BACKUP_KEYFILE 		KEYFILE".bak"
 

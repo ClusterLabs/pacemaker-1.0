@@ -138,8 +138,7 @@ main(int argc, char *argv[])
         cl_log_set_entity(SENDARPNAME);
         cl_log_enable_stderr(TRUE);
         cl_log_set_facility(LOG_USER);
-        /* Use logd if it's enabled by heartbeat */
-        cl_inherit_use_logd(ENV_PREFIX ""KEY_LOGDAEMON, 0);
+	cl_inherit_logging_environment(0);
 
 	while ((flag = getopt(argc, argv, "i:r:p:")) != EOF) {
 		switch(flag) {

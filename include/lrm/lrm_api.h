@@ -143,6 +143,10 @@ typedef struct{
 	char*			output;
 	char*			rsc_id;
 	char*			app_name;
+	unsigned long		t_run; /* when did the op run (as age) */
+	unsigned long		t_rcchange; /* last rc change (as age) */
+	unsigned long		exec_time; /* time it took the op to run */
+	unsigned long		queue_time; /* time spent in queue */
 }lrm_op_t;
 
 extern const lrm_op_t lrm_zero_op;	/* an all-zeroes lrm_op_t value */
@@ -183,8 +187,11 @@ struct rsc_ops
  *
  *callid:	the call id returned by perform_op()
  *
- *return:	if the operation has been stopped then return HA_OK
- *		else return HA_FAIL
+ *return:	HA_OK for success, HA_FAIL for failure op not found
+ *				or other failure
+ *			NB: the client always gets a notification over callback
+ *				even for operations which were idle (of course, if
+ *				the request has been accepted for processing)
  */
 	int (*cancel_op) (lrm_rsc_t*, int call_id);
 
@@ -193,6 +200,8 @@ struct rsc_ops
  *		and return them as cancelled.
  *
  *return:	HA_OK for success, HA_FAIL for failure
+ *		NB: op is not flushed unless it is idle;
+ *       	in that case this call will block
  */
 	int (*flush_ops) (lrm_rsc_t*);
 
@@ -361,6 +370,8 @@ struct lrm_ops
  *delete_rsc:	delete the resource by the rsc_id
  *
  *return:	HA_OK for success, HA_FAIL for failure
+ *		NB: resource removal is delayed until all operations are
+ *		removed; the client, however, gets the reply immediately
  */
 	int	(*delete_rsc)(ll_lrm_t*, const char* rsc_id);
 

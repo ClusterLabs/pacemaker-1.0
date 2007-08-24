@@ -83,7 +83,7 @@ extern gboolean crm_assert_failed;
 #define CIB_FILENAME	WORKING_DIR"/cib.xml"
 #define CIB_BACKUP	WORKING_DIR"/cib_backup.xml"
 
-#define CRM_FEATURE_SET	"1.0.8"
+#define CRM_FEATURE_SET	"2.0"
 
 #define MSG_LOG			1
 #define DOT_FSA_ACTIONS		1
@@ -141,6 +141,7 @@ extern gboolean crm_assert_failed;
 #define CRM_OP_LRM_REFRESH	"lrm_refresh"
 #define CRM_OP_LRM_QUERY	"lrm_query"
 #define CRM_OP_LRM_DELETE	"lrm_delete"
+#define CRM_OP_LRM_FAIL		"lrm_fail"
 #define CRM_OP_PROBED		"probe_complete"
 #define CRM_OP_REPROBE		"probe_again"
 

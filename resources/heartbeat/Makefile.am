@@ -31,6 +31,7 @@ hard_SCRIPTS	=	IPv6addr	\
 			Filesystem	\
 			hto-mapfuncs	\
 			ICP		\
+			ids		\
 			IPaddr		\
 			IPaddr2		\
 			IPsrcaddr	\

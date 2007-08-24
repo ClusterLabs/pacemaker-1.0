@@ -458,11 +458,8 @@ finalize_join(const char *caller)
 	
 	fsa_cib_anon_update(NULL, cib, cib_quorum_override);
 	free_xml(cib);
-	
-	crm_debug_3("Bumping the epoch and syncing to %d clients",
-		  g_hash_table_size(finalized_nodes));
-	fsa_cib_conn->cmds->bump_epoch(
-		fsa_cib_conn, cib_scope_local|cib_quorum_override);
+	crm_debug_3("Syncing to %d clients",
+		    g_hash_table_size(finalized_nodes));
 	
 	/* make sure dc_uuid is re-set to us */
 	if(check_join_state(fsa_state, caller) == FALSE) {
@@ -549,7 +546,7 @@ do_dc_join_ack(long long action,
 	g_hash_table_insert(
 		confirmed_nodes, crm_strdup(join_from), crm_strdup(join_id_s));
 
- 	crm_info("join-%d: Updating node state to %s for %s)",
+ 	crm_info("join-%d: Updating node state to %s for %s",
  		 join_id, CRMD_JOINSTATE_MEMBER, join_from);
 
 	/* update CIB with the current LRM status from the node
@@ -618,6 +615,7 @@ check_join_state(enum crmd_fsa_state cur_state, const char *source)
 		crm_info("%s: Membership changed since join started: %u -> %u",
 			 source, saved_ccm_membership_id,
 			 current_ccm_membership_id);
+		register_fsa_input_before(C_FSA_INTERNAL, I_NODE_JOIN, NULL);
 		
 	} else if(cur_state == S_INTEGRATION) {
 		if(g_hash_table_size(welcomed_nodes) == 0) {

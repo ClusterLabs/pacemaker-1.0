@@ -120,15 +120,14 @@ main(int argc, char **argv)
 		{"one-shot", 0, 0, '1'},		
 		{"daemonize", 0, 0, 'd'},		
 		{"pid-file", 0, 0, 'p'},		
-		{"xml-file", 0, 0, 'X'},		
+		{"xml-file", 1, 0, 'X'},		
 
 		{0, 0, 0, 0}
 	};
 #endif
 	pid_file = crm_strdup("/tmp/ClusterMon.pid");
 	crm_system_name = basename(argv[0]);
-	crm_log_init(crm_system_name);
-	crm_log_level = LOG_ERR -1;
+	crm_log_init(crm_system_name, LOG_ERR-1, FALSE, FALSE, 0, NULL);
 
 	if (strcmp(crm_system_name, "crm_mon.cgi")==0) {
 		web_cgi = TRUE;
@@ -484,6 +483,7 @@ print_status(crm_data_t *cib)
 	pe_working_set_t data_set;
 	char *since_epoch = NULL;
 	time_t a_time = time(NULL);
+	int configured_resources = 0;
 	int print_opts = pe_print_ncurses;
 	if(as_console) {
 		blank_screen();
@@ -516,10 +516,15 @@ print_status(crm_data_t *cib)
 		print_as("Current DC: %s (%s)\n",
 			  dc->details->uname, dc->details->id);
 	}
-	print_as("%d Nodes configured.\n",
-		  g_list_length(data_set.nodes));
-	print_as("%d Resources configured.\n",
-		  g_list_length(data_set.resources));
+
+	slist_iter(rsc, resource_t, data_set.resources, lpc,
+		   if(rsc->orphan == FALSE) {
+			   configured_resources++;
+		   }
+		);
+	
+	print_as("%d Nodes configured.\n", g_list_length(data_set.nodes));
+	print_as("%d Resources configured.\n", configured_resources);
 	print_as("============\n\n");
 
 	slist_iter(node, node_t, data_set.nodes, lpc2,
@@ -568,6 +573,21 @@ print_status(crm_data_t *cib)
 			);
 	}
 
+	if(xml_has_children(data_set.failed)) {
+		print_as("\nFailed actions:\n");
+		xml_child_iter(data_set.failed, xml_op, 
+			       const char *id = ID(xml_op);
+			       const char *rc = crm_element_value(xml_op, XML_LRM_ATTR_RC);
+			       const char *node = crm_element_value(xml_op, XML_ATTR_UNAME);
+			       const char *call = crm_element_value(xml_op, XML_LRM_ATTR_CALLID);
+			       const char *status_s = crm_element_value(xml_op, XML_LRM_ATTR_OPSTATUS);
+			       int status = crm_parse_int(status_s, "0");
+			       
+			       print_as("    %s (node=%s, call=%s, rc=%s): %s\n",
+					id, node, call, rc, op_status2text(status));
+			);
+	}
+	
 #if CURSES_ENABLED
 	if(as_console) {
 		refresh();

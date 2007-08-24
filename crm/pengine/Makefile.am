@@ -25,6 +25,7 @@ INCLUDES        = -I$(top_builddir)/include -I$(top_srcdir)/include	\
 		-I$(top_builddir)           -I$(top_srcdir)
 
 hadir		= $(sysconfdir)/ha.d
+hasbindir	= $(sbindir)
 halibdir	= $(libdir)/@HB_PKG@
 commmoddir	= $(halibdir)/modules/comm
 havarlibdir	= $(localstatedir)/lib/@HB_PKG@
@@ -36,7 +37,7 @@ apigid		= @HA_APIGID@
 crmuid		= @HA_CCMUID@
 
 
-COMMONLIBS	= $(CRM_DEBUG_LIBS)					\
+COMMONLIBS	= 					\
 		$(top_builddir)/lib/clplumbing/libplumb.la		\
 		$(top_builddir)/lib/pils/libpils.la			\
 		$(top_builddir)/lib/crm/common/libcrmcommon.la		\
@@ -54,7 +55,8 @@ AM_CFLAGS	= @CFLAGS@ $(CRM_DEBUG_FLAGS)
 lib_LTLIBRARIES	= libpengine.la
 
 ## binary progs
-halib_PROGRAMS	= ptest pengine
+halib_PROGRAMS	= pengine
+hasbin_PROGRAMS	= ptest
 
 ## SOURCES
 noinst_HEADERS	= allocate.h utils.h pengine.h
