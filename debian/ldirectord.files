@@ -4,7 +4,5 @@
 /etc/logrotate.d/ldirectord
 usr/lib/ocf/resource.d/heartbeat/ldirectord
 usr/sbin/ldirectord
-usr/sbin/supervise-ldirectord-config
 usr/share/doc/ldirectord/ldirectord.cf
 usr/share/man/man8/ldirectord.8.gz
-usr/share/man/man8/supervise-ldirectord-config.8.gz
