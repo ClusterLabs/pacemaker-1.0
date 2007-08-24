@@ -221,10 +221,9 @@ BuildRequires: %{CIMOM}
 %endif
 Requires: %{STONITH_NAME} = %{version}-%{release}, %{PILS_NAME} = %{version}-%{release}
 Requires: sysklogd, perl, iputils, %{SSH} %{PING} %{IPTABLES}
-Requires: python-gtk
 Requires(pre): /usr/sbin/groupadd /usr/bin/getent /usr/sbin/useradd
 %if %{is_suse}
-Requires: python-xml
+Requires: python-xml python-gtk
 %if 0%{?sles_version} == 9
 BuildRequires: pkgconfig
 %endif
