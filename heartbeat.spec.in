@@ -209,20 +209,25 @@ BuildRequires:	openhpi-devel
 %if %{ENABLE_SNMP_SUBAGENT}
 %{SNMP_RPM_BUILD_REQUIRES}
 %endif
+
 %if %{is_rhel} && "%{rhel_ver}" >= "5"
 BuildRequires: libtool-ltdl-devel
 BuildRequires: OpenIPMI-devel
 %endif
+
 %if ENABLE_MGMT
 BuildRequires:	libgcrypt-devel, gnutls-devel
 %endif
+
 %if %{build_cmpi}
 BuildRequires: %{CIMOM}
 %endif
+
 Requires: %{STONITH_NAME} = %{version}-%{release}, %{PILS_NAME} = %{version}-%{release}
 Requires: sysklogd, perl, iputils, %{SSH} %{PING} %{IPTABLES}
 Requires: python-gtk
 Requires(pre): /usr/sbin/groupadd /usr/bin/getent /usr/sbin/useradd
+
 %if %{is_suse}
 Requires: python-xml
 %if 0%{?sles_version} == 9
@@ -231,21 +236,25 @@ BuildRequires: pkgconfig
 %if 0%{?suse_version} == 1000
 BuildRequires: lzo
 %endif
-
-%if 0%{?sles_version} != 10
 %endif
 
-%elseif %{is_fedora}
+%if %{is_fedora}
 Requires:	PyXML
 BuildRequires: 		which OpenIPMI-devel
 Requires:               pygtk2 >= 2.4
 Requires(pre):          fedora-usermgmt
 Requires(postun):       fedora-usermgmt
-%elseif %{is_rhel}
+%endif
+
+%if %{is_rhel}
 Requires:	PyXML
-%elseif %{is_mandriva}
-%elseif %{is_aix}
-%elseif %{is_solaris}
+%endif
+
+%if %{is_mandriva}
+%endif
+%if %{is_aix}
+%endif
+%if %{is_solaris}
 %endif
 
 %if %build_cmpi
@@ -275,11 +284,16 @@ Requires: perl-libnet, perl-Net-DNS
 # Perl modules available from www.ultramonkey.org and others
 
 %if %{is_suse}
-%elseif %{is_fedora}
-%elseif %{is_rhel}
-%elseif %{is_mandriva}
-%elseif %{is_aix}
-%elseif %{is_solaris}
+%endif
+%if %{is_fedora}
+%endif
+%if %{is_rhel}
+%endif
+%if %{is_mandriva}
+%endif
+%if %{is_aix}
+%endif
+%if %{is_solaris}
 %endif
 
 %package -n %{STONITH_NAME}
@@ -288,11 +302,16 @@ Summary: Provides an interface to Shoot The Other Node In The Head
 Group: %{pkg_group}
 
 %if %{is_suse}
-%elseif %{is_fedora}
-%elseif %{is_rhel}
-%elseif %{is_mandriva}
-%elseif %{is_aix}
-%elseif %{is_solaris}
+%endif
+%if %{is_fedora}
+%endif
+%if %{is_rhel}
+%endif
+%if %{is_mandriva}
+%endif
+%if %{is_aix}
+%endif
+%if %{is_solaris}
 %endif
 
 %package -n %{PILS_NAME}
@@ -306,12 +325,16 @@ Summary: Provides a gui interface to manage heartbeat clusters
 Group: %{pkg_group}
 
 %if %{is_suse}
-%elseif %{is_fedora}
-%elseif %{is_rhel}
-%elseif %{is_mandriva}
-%elseif %{is_aix}
-%elseif %{is_solaris}
 %endif
+%if %{is_fedora}
+%endif
+%if %{is_rhel}
+%endif
+%if %{is_mandriva}
+%endif
+%if %{is_aix}
+%endif
+%if %{is_solaris}
 %endif
 
 %description
