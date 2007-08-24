@@ -187,7 +187,6 @@
 %define pils_plugindir	%{libdir}/pils/plugins
 %define HA_VARRUNDIR	%{localstatedir}/run/%{HB_PKG}
 %define HA_COREDIR	%{localstatedir}/lib/%{HB_PKG}/cores
-%define HA_LIBHBDIR	%{libdir}/%{HB_PKG}
 %define HA_D_DIR	%{sysconfdir}/ha.d
 #
 #
@@ -2658,7 +2657,7 @@ make DESTDIR=$RPM_BUILD_ROOT install
 %{HA_D_DIR}/shellfuncs
 %{HA_D_DIR}/rc.d
 %{HA_D_DIR}/README.config
-%{libdir}/heartbeat
+%{HA_LIBHBDIR}
 %{libdir}/libapphb.so.*
 %{libdir}/libccmclient.so.*
 %{libdir}/libcib.so.*
@@ -2859,7 +2858,7 @@ rm -rf $RPM_BUILD_DIR/%{HB_PKG}-%{HB_VERSION}
 ###########################################################
 # We made some directories into symlinks
 # RPM won't update them correctly
-for j in %{libdir}/cts %{libdir}/lrmtest %{libdir}/stonithdtest
+for j in %{HA_LIBHBDIR}/cts %{HA_LIBHBDIR}/lrmtest %{HA_LIBHBDIR}/stonithdtest
 do test -d $j &&  rm -fr $j; done
 #
 #	This isn't perfect.  But getting every distribution
