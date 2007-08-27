@@ -20,17 +20,15 @@
 MAINTAINERCLEANFILES    = Makefile.in
 CLEANFILES	       	= ldirectord.8
 
-EXTRA_DIST              = ldirectord ldirectord.cf README	\
-				supervise-ldirectord-config \
-				supervise-ldirectord-config.8
+EXTRA_DIST              = ldirectord ldirectord.cf README
 
 SUBDIRS			= logrotate.d init.d OCF
 
 ldirectord.8: ldirectord
 	$(POD2MAN) --section=8 $< > $@
 
-sbin_SCRIPTS		= ldirectord supervise-ldirectord-config
-man_MANS	        = ldirectord.8 supervise-ldirectord-config.8
+sbin_SCRIPTS		= ldirectord
+man_MANS	        = ldirectord.8
 
 harddir			= $(sysconfdir)/ha.d/resource.d
 
