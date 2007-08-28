@@ -194,7 +194,15 @@ stonithd_signon(const char * client_name)
 	}
 
 	if(!connected) {
-		stonithd_signoff(); /* cleanup */
+		/* cleanup */
+		if (NULL != chan) {
+		    chan->ops->destroy(chan);
+		    chan = NULL;
+		}
+		if (NULL != cbchan) {
+		    cbchan->ops->destroy(cbchan);
+		    cbchan = NULL;
+		}
 		stdlib_log(LOG_DEBUG, "stonithd_signon: creating connection");
 		wchanattrs = g_hash_table_new(g_str_hash, g_str_equal);
         	g_hash_table_insert(wchanattrs, path, sock);
