@@ -45,8 +45,6 @@ typedef struct dop_client_s
 	int rc;
 } dop_client_t;
 
-const char *crm_system_name = "drbd-peer-outdater";
-
 static void usage(const char* cmd, int exit_status);
 
 static void
@@ -142,7 +140,7 @@ main(int argc, char ** argv)
 	dop_client_t *new_client = NULL;
 	GCHSource *src = NULL;
 
-	crm_log_init(crm_system_name, LOG_INFO, FALSE, FALSE, argc, argv);
+	crm_log_init("drbd-peer-outdater", LOG_INFO, FALSE, FALSE, argc, argv);
 
 	crm_debug_3("Begining option processing");
 	while ((flag = getopt(argc, argv, OPTARGS)) != EOF) {
