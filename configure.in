@@ -1708,10 +1708,10 @@ AC_ARG_ENABLE([native-ais],
 if test "x${enable_native_ais}" = "xyes"; then
    if test -d ${libdir}/openais; then
         AISPREFIX=${prefix}
-        LIBS="$LIBS -L${libdir}/openais"
+        LIBS="$LIBS -L${libdir}/openais -R${libdir}/openais"
    elif test -d /usr/local/lib/openais; then
         AISPREFIX=/usr/local
-   	LIBS="$LIBS -L/usr/local/lib/openais"
+   	LIBS="$LIBS -L/usr/local/lib/openais -R/usr/local/lib/openais"
    else
 dnl	AC_MSG_NOTICE(Couldn't find openais installed under ${prefix} or its usual location of /usr/local... )
 	enable_native_ais="no... Couldn't find openais installed under ${libdir} or /usr/local"
