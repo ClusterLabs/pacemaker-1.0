@@ -149,12 +149,18 @@ static GHashTable * cbch_gsource_pairs = NULL;	/* callback channel => GCHSource 
 static GList * client_list = NULL;
 static GHashTable * executing_queue = NULL;
 static GList * local_started_stonith_rsc = NULL;
+static GList * mem_hostlist = NULL;
 /* The next line is only for CTS test with APITEST */
 static GHashTable * reboot_blocked_table = NULL;
 static int negative_callid_counter = -2;
 
 typedef int (*stonithd_api_msg_handler)(struct ha_msg * msg,
 					gpointer data);
+
+struct hostlist_shmseg {
+	int shmid;
+	pid_t pid;
+};
 
 struct api_msg_to_handler
 {
@@ -168,7 +174,6 @@ struct RA_operation_to_handler
 {
 	const char *			op_type;
 	RA_subop_handler		handler;
-	RA_subop_handler		post_handler;
 };
 
 /* Miscellaneous functions such as daemon routines and others. */
@@ -254,7 +259,6 @@ static int stonithRA_operate( stonithRA_ops_t * op, gpointer data );
 static int stonithRA_start( stonithRA_ops_t * op, gpointer data );
 static int stonithRA_stop( stonithRA_ops_t * op, gpointer data );
 static int stonithRA_monitor( stonithRA_ops_t * op, gpointer data );
-static int stonithRA_start_post( stonithRA_ops_t * op, gpointer data );
 static int stonithop_result_to_local_client(const stonith_ops_t * st_op
 					    , gpointer data);
 static int send_stonithop_final_result( const common_op_t * op );
@@ -262,7 +266,6 @@ static int stonithop_result_to_other_node( stonith_ops_t * st_op,
 					   gpointer data);
 static int send_stonithRAop_final_result(stonithRA_ops_t * ra_op, 
 					 gpointer data);
-static int post_handle_raop(stonithRA_ops_t * ra_op);
 static void destroy_key_of_op_htable(gpointer data);
 
 static stonith_ops_t * dup_stonith_ops_t(stonith_ops_t * st_op);
@@ -293,6 +296,12 @@ static int require_local_stonithop(stonith_ops_t * st_op, stonith_rsc_t * srsc,
 				   const char * asker_node);
 static int broadcast_reset_success(const char * target);
 static void trans_log(int priority, const char * fmt, ...)G_GNUC_PRINTF(2,3);
+static struct hostlist_shmseg *lookup_shm_hostlist(pid_t pid);
+static void add_shm_hostlist(int shmid, pid_t pid);
+static void remove_shm_hostlist(pid_t pid);
+static gboolean hostlist2shmem(int shmid,char **hostlist);
+static char ** shmem2hostlist(pid_t pid);
+static void record_new_srsc(stonithRA_ops_t *ra_op);
 
 static struct api_msg_to_handler api_msg_to_handlers[] = {
 	{ ST_SIGNON,	on_stonithd_signon },
@@ -303,10 +312,10 @@ static struct api_msg_to_handler api_msg_to_handlers[] = {
 };
 
 static struct RA_operation_to_handler raop_handler[] = {
-	{ "start",	stonithRA_start, 	stonithRA_start_post },
-	{ "stop",	stonithRA_stop,		NULL },
-	{ "monitor",	stonithRA_monitor,	NULL },
-	{ "status",	stonithRA_monitor,	NULL },
+	{ "start",	stonithRA_start },
+	{ "stop",	stonithRA_stop },
+	{ "monitor",	stonithRA_monitor },
+	{ "status",	stonithRA_monitor },
 };
 
 #define PID_FILE        HA_VARRUNDIR "/stonithd.pid"
@@ -695,10 +704,10 @@ stonithdProcessDied(ProcTrack* p, int status, int signo
 
 	if (rc == FALSE) {
 		if (SIGKILL != signo) {
-			stonithd_log(LOG_NOTICE, "received child quit signal,"
-				"but no this child pid in excuting list.");
+			stonithd_log(LOG_WARNING, "child exits, "
+				"but not tracked.");
 		} else {
-			stonithd_log2(LOG_DEBUG
+			stonithd_log(LOG_WARNING
 				, "A STONITH operation timeout."); 
 		}
 		goto end;
@@ -726,7 +735,9 @@ stonithdProcessDied(ProcTrack* p, int status, int signo
 		op->op_union.ra_op->op_result = exitcode;
 		send_stonithRAop_final_result(op->op_union.ra_op, 
 				      op->result_receiver);
-		post_handle_raop(op->op_union.ra_op);
+		if( !strcmp(op->op_union.ra_op->op_type, "start") ) {
+			record_new_srsc(op->op_union.ra_op);
+		}
 		g_hash_table_remove(executing_queue, &(p->pid));
 		goto end;
 	}
@@ -2944,31 +2955,6 @@ send_stonithRAop_final_result( stonithRA_ops_t * ra_op, gpointer data)
 }
 
 static int
-post_handle_raop(stonithRA_ops_t * ra_op)
-{
-	int i;
-
-	for (i = 0; i < DIMOF(raop_handler); i++) {
-		if ( strncmp(ra_op->op_type, raop_handler[i].op_type, MAXCMP)
-			== 0 ) {
-			/* call the handler of the operation */
-			if (raop_handler[i].post_handler != NULL) {
-				return raop_handler[i].post_handler(ra_op, NULL);
-			} else 
-				break;
-		}
-	}
-
-        if (i == DIMOF(raop_handler)) {
-                stonithd_log(LOG_NOTICE, "received an unknown RA op,"
-					"and now just ignore it.");
-		return ST_FAIL;
-        }
-
-	return ST_OK;
-}
-
-static int
 on_stonithd_list_stonith_types(struct ha_msg * request, gpointer data)
 {
 	const char * api_reply = ST_APIOK;
@@ -3056,6 +3042,7 @@ stonithRA_start( stonithRA_ops_t * op, gpointer data)
 	StonithNVpair*	snv;
 	Stonith *	stonith_obj = NULL;
 	char 		buf_tmp[40];
+	int		shmid, shmsize;
 
 	/* Check the parameter */
 	if ( op == NULL || op->rsc_id <= 0 || op->op_type == NULL
@@ -3064,8 +3051,20 @@ stonithRA_start( stonithRA_ops_t * op, gpointer data)
 		return ST_FAIL;
 	}
 
+	shmsize = hb->llc_ops->num_nodes(hb)*(HOSTLENG+1)+1;
+	shmid = shmget(IPC_PRIVATE, shmsize, (SHM_R | SHM_W));
+	if( shmid < 0 ) {
+		cl_perror("shmget");
+		return ST_FAIL;
+	}
+	stonithd_log(LOG_DEBUG, "%s: got a shmem seg of size %d"
+		     , __FUNCTION__, shmsize);
+
 	srsc = get_started_stonith_resource(op->rsc_id);
 	if (srsc != NULL) {
+		stonithd_log(LOG_DEBUG, "%s: stonith agent %s "
+			"already started, monitor only"
+			, __FUNCTION__, srsc->rsc_id);
 		/* seems started, just to confirm it */
 		stonith_obj = srsc->stonith_obj;
 		goto probe_status;
@@ -3121,6 +3120,7 @@ probe_status:
 		return_to_dropped_privs();
                 return -1;
         } else if (pid > 0) { /* in the parent process */
+		add_shm_hostlist(shmid,pid);
 		memset(buf_tmp, 0, sizeof(buf_tmp));
 		snprintf(buf_tmp, sizeof(buf_tmp)-1, "%s_%s_%s", stonith_obj->stype
 			, op->rsc_id , "start"); 
@@ -3133,26 +3133,135 @@ probe_status:
 
 	/* Now in the child process */
 	/* Need to distiguish the exit code more carefully */
-	if ( S_OK == stonith_get_status(stonith_obj) ) {
-		exit(EXECRA_OK);
-	} else {
+	if ( S_OK != stonith_get_status(stonith_obj) ) {
 		exit(EXECRA_UNKNOWN_ERROR);
+	}
+	if (srsc != NULL) { /* Already started before this operation */
+		exit(EXECRA_OK);
+	}
+	return_to_orig_privs();
+	if( !hostlist2shmem(shmid,stonith_get_hostlist(stonith_obj))) {
+		stonithd_log(LOG_ERR, "Could not list nodes for stonith RA %s."
+		,	op->ra_name);
+	}
+	return_to_dropped_privs();
+	exit(EXECRA_OK);
+}
+
+static struct hostlist_shmseg *
+lookup_shm_hostlist(pid_t pid)
+{
+	GList *l;
+	struct hostlist_shmseg *p;
+
+	for( l = g_list_first(mem_hostlist); l; l = g_list_next(l) ) {
+		p = (struct hostlist_shmseg *)(l->data);
+		if( p->pid == pid )
+			return p;
+	}
+	return NULL;
+}
+
+static void
+add_shm_hostlist(int shmid, pid_t pid)
+{
+	struct hostlist_shmseg *p;
+
+	if( !(p = cl_calloc(sizeof(struct hostlist_shmseg),1)) ) {
+		stonithd_log(LOG_ERR, "out of memory");
+		return;
+	}
+	p->shmid=shmid;
+	p->pid=pid;
+	if( !(mem_hostlist = g_list_append(mem_hostlist,p)) ) {
+		stonithd_log(LOG_ERR, "out of memory");
 	}
 }
 
-static int
-stonithRA_start_post( stonithRA_ops_t * ra_op, gpointer data )
+static void
+remove_shm_hostlist(pid_t pid)
+{
+	struct hostlist_shmseg *p;
+
+	if( !(p = lookup_shm_hostlist(pid)) ) {
+		stonithd_log(LOG_ERR, "%s: no hostlist found for pid %d"
+		, __FUNCTION__, pid);
+		return;
+	}
+	if( shmctl(p->shmid, IPC_RMID, NULL) < 0 ) {
+		cl_perror("shmctl");
+		return;
+	}
+	mem_hostlist = g_list_remove(mem_hostlist, p);
+	cl_free(p);
+}
+
+/* store the hostlist to a shared memory segment */
+static gboolean
+hostlist2shmem(int shmid,char **hostlist)
+{
+	char *s, *q, **h;
+
+	if( !hostlist ) {
+		return FALSE;
+	}
+	if( (s = shmat(shmid,0,0)) == (void *)-1 ) {
+		cl_perror("shmat");
+		return FALSE;
+	}
+	for( q = s, h = hostlist; *h; q += strlen(q)+1, h++ ) {
+		strcpy(q,*h);
+	}
+	*q = '\0'; /* additional '\0' to end the list */
+	stonith_free_hostlist(hostlist);
+	if( shmdt(s) == -1 ) {
+		cl_perror("shmdt");
+		return FALSE;
+	}
+	return TRUE;
+}
+
+/* build the hostlist from the shmem segment */
+static char **
+shmem2hostlist(pid_t pid)
+{
+	struct hostlist_shmseg *p;
+	int n;
+	char *s, *q, **h, **hostlist;
+
+	if( !(p = lookup_shm_hostlist(pid)) ) {
+		stonithd_log(LOG_ERR, "%s: no hostlist found for pid %d"
+		, __FUNCTION__, pid);
+		return NULL;
+	}
+	if( (s = shmat(p->shmid,0,0)) == (void *)-1 ) {
+		cl_perror("shmat");
+		return NULL;
+	}
+	for( q = s, n = 0; *q; q += strlen(q)+1, n++ )
+		;
+	if( !(hostlist = (char **)cl_calloc(sizeof(char *),(n+1))) ) {
+		stonithd_log(LOG_ERR, "out of memory");
+		return NULL;
+	}
+	for( q = s, h = hostlist; *q; q += strlen(q)+1, h++ ) {
+		if( !(*h = (char *)cl_malloc(strlen(q)+1)) ) {
+			stonithd_log(LOG_ERR, "out of memory");
+			return NULL;
+		}
+		strcpy(*h,q);
+	}
+	if( shmdt(s) == -1 ) {
+		cl_perror("shmdt");
+		return NULL;
+	}
+	return hostlist;
+}
+
+static void
+record_new_srsc(stonithRA_ops_t *ra_op)
 {
 	stonith_rsc_t * srsc;
-
-	if (ra_op->op_result != EXECRA_OK ) {
-		return ST_FAIL;	
-	}
-
-	srsc = get_started_stonith_resource(ra_op->rsc_id);
-	if (srsc != NULL) { /* Already started before this operation */
-		return ST_OK;
-	}
 
 	/* ra_op will be free at once, so it's safe to set some of its
 	 * fields as NULL.
@@ -3164,9 +3273,8 @@ stonithRA_start_post( stonithRA_ops_t * ra_op, gpointer data )
 	ra_op->params = NULL;
 	srsc->stonith_obj = ra_op->stonith_obj;
 	ra_op->stonith_obj = NULL;
-	return_to_orig_privs();
-	srsc->node_list = stonith_get_hostlist(srsc->stonith_obj);
-	return_to_dropped_privs();
+	srsc->node_list = shmem2hostlist(ra_op->call_id);
+	remove_shm_hostlist(ra_op->call_id);
 	if ( debug_level >= 2 ) {
 		char **	this;
 		stonithd_log2(LOG_DEBUG, "Got HOSTLIST");
@@ -3175,16 +3283,8 @@ stonithRA_start_post( stonithRA_ops_t * ra_op, gpointer data )
 		}
 	}
 
-	if (srsc->node_list == NULL) {
-		stonithd_log(LOG_ERR, "Could not list nodes for stonith RA %s."
-		,	srsc->ra_name);
-		/* Need more error handlings? */
-	}
-
 	local_started_stonith_rsc = 
 			g_list_append(local_started_stonith_rsc, srsc);
-
-	return ST_OK;
 }
 
 static int
