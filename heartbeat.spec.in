@@ -1,70 +1,361 @@
+%define _unpackaged_files_terminate_build	1
+%define _missing_doc_files_terminate_build	1
+%define distro_style_rpms	@DISTRO_STYLE_RPMS@
+#
+%define HB_PKG @HB_PKG@
+#
+#	Arguments given to configure -- cleaned up by removing
+#	libdir definitions, etc.
+#
+%define cleaned_configure_args @cleaned_configure_args@
+#
+#	Heartbeat features turned on/off
+#
+%define ENABLE_MGMT	@RPM_ENABLE_MGMT_CONFIG@
+%define ENABLE_SNMP_SUBAGENT	@RPM_ENABLE_SNMP_SUBAGENT@
+#
+#	Heartbeat-specific defines
+#
+%if %{ENABLE_SNMP_SUBAGENT}
+	%define MIBS_DIR	@MIBS_DIR@
+%endif
+%define HA_CCMUSER @HA_CCMUSER@
+%define HA_APIGROUP @HA_APIGROUP@
+%define HA_CCMUID @HA_CCMUID@
+%define HA_APIGID @HA_APIGID@
+%define HB_VERSION @VERSION@
+%define SSH @SSH@
+%define	RPM_MGMT_RUNTIME_REQUIRES @RPM_MGMT_RUNTIME_REQUIRES@
+%define INITDIR @INITDIR@
+%define OCF_ROOT_DIR @OCF_ROOT_DIR@
+%define OCF_RA_DIR @OCF_RA_DIR@
+%define SNMP_RPM_BUILD_REQUIRES @SNMP_RPM_BUILD_REQUIRES@
+%define PING @PING@
+%if	"@CIMOM@" != ""
+	%define build_cmpi	1
+	%define CIMOM	@CIMOM@
+	%define CMPI_PROVIDER_DIR	@CMPI_PROVIDER_DIR@
+%else
+	%define build_cmpi	0
+%endif
+%define IPTABLES iptables
+%define NOGROUP nobody
+%define NOUSER nobody
+%define LIBNET_DEVEL libnet
+%define LIBNET	libnet
+##############################################################
+#
+#
+#
+##############################################################
+#
+#	Detect OS
+%ifos linux
+	%define	is_linux	1
+%else
+	%define	is_linux	0
+%endif
+%ifos aix
+	%define	is_aix	1
+%else
+	%define	is_aix	0
+%endif
+%ifos solaris
+	%define	is_solaris	1
+%else
+	%define	is_solaris	0
+%endif
 
-%define _unpackaged_files_terminate_build 1
-%define _missing_doc_files_terminate_build 1
-%define ENABLE_MGMT @RPM_ENABLE_MGMT_CONFIG@
-%define ENABLE_SNMP_SUBAGENT @RPM_ENABLE_SNMP_SUBAGENT@
+#	Detect distro
+#
+#	I'm sure this code isn't right yet...
+#
+%define is_suse %(if test -f /etc/SuSE-release; then echo 1; else echo 0;fi)
+%define is_fedora %(if test -f /etc/fedora-release; then echo 1; else echo 0;fi)
+%define is_rhel %(if test -f /etc/redhat-release; then echo 1; else echo 0;fi)
 
-Summary: @HB_PKG@ - The Heartbeat Subsystem for High-Availability Linux
-Name:	@HB_PKG@
-Version:	@VERSION@
-Release:	@RPMREL@
+%if 0%{?mandriva_version} > 0
+	%define	is_mandriva	1
+%else
+	%define	is_mandriva	0
+%endif
+
+
+%if %{is_rhel}
+	%{!?rhel_ver: %define rhel_ver %(Z=`rpm -q --whatprovides /etc/redhat-release`;A=`rpm -q --qf '%{V}' $Z`; echo ${A:0:1})}
+%endif
+
+%if %{is_suse}
+	%define suse_major %(expr %{suse_version} / 100)
+	%define suse_minor %(expr %{suse_version} '%' 100)
+%endif
+
+%if !%{is_suse} && !%{is_rhel} && !%{is_fedora} && !%{is_solaris} && !%{is_mandriva} && !%{is_aix} 
+	%define	is_other	1
+%else
+	%define	is_other	0
+%endif
+#
+%define	GUI_PACKAGE 1
+
+%define libdir	%{_libdir}
+%define libexecdir	%{_libexecdir}
+
+%if %{distro_style_rpms}
+	#	Make it the way the distro wants it
+	%define prefix	%{_prefix}
+	%define bindir	%{_bindir}
+	%define sbindir %{_sbindir}
+	%define mandir	%{_mandir}
+	%define docdir	%{_docdir}
+	%define share	%{_datadir}
+	%define sysconfdir	%{_sysconfdir}
+	%define localstatedir	%{_localstatedir}
+	%define base_includedir	%{_includedir}
+	%define RPMREL	@RPMREL@
+	%if %{is_suse}
+		%undef GUI_PACKAGE
+		%define	GUI_PACKAGE 0
+	%endif
+%else
+	#	Make it the way configure wants it
+	#	(more or less...)
+	%define prefix	@prefix@
+	%define exec_prefix	@exec_prefix@
+	%define bindir	@bindir@
+	%define sbindir @sbindir@
+	%define mandir	@mandir@
+	%define docdir	@docdir@
+	%define share	@datadir@
+	%define sysconfdir	@sysconfdir@
+	%define localstatedir	@localstatedir@
+	%define base_includedir	%{prefix}/include
+	%define RPMREL	@RPMREL@
+	%if "%{prefix}/lib" != "%{_libdir}"
+		%define libsuffix %(basename %{_libdir})
+		%undefine libdir
+		%define libdir %{prefix}/%{libsuffix}
+	%endif
+	%if "%{prefix}/lib" != "%{_libexecdir}"
+		%define libexecsuffix %(basename %{_libexecdir})
+		%undefine libexecdir
+		%define libexecdir %{prefix}/%{libexecsuffix}
+	%endif
+%endif
+
+%define PILS_NAME	%{HB_PKG}-pils
+%define STONITH_NAME	%{HB_PKG}-stonith
+%define GUI_NAME	%{HB_PKG}-gui
+%define LDIR_NAME	%{HB_PKG}-ldirectord
+%define DEVEL_NAME	%{HB_PKG}-devel
+%define CMPI_NAME	%{HB_PKG}-cmpi
+
+%define pkg_group	Utilities
+%define	SSLeay	perl-Net-SSLeay
+%if %{is_fedora} || %{is_rhel}
+	%undefine	PILS_NAME
+	%undefine	STONITH_NAME
+	%undefine	LIBNET_DEVEL
+	%undefine	SSLeay
+	%undefine pkg_group
+	%define PILS_NAME	pils
+	%define STONITH_NAME	stonith
+	%define LIBNET_DEVEL	libnet-devel
+	%define	SSLeay	perl-Net_SSLeay
+	%define pkg_group	Productivity/Clustering/HA
+%endif
+%if is_suse
+	%undefine pkg_group
+	%define pkg_group	Productivity/Clustering/HA
+%endif
+
+%define	BASE_PROVIDES	ha
+%define	PILS_PROVIDES	pils
+%define	GUI_PROVIDES	ha-gui
+%define	STONITH_PROVIDES	stonith
+
+#
+#
+# Derived definitions
+#
+%define locale	%{share}/locale
+%define PAMDIR		%{sysconfdir}/pam.d
+%define stonith_includedir %{base_includedir}/stonith
+%define pils_includedir %{base_includedir}/pils
+%define HA_LIBHBDIR	%{libdir}/%{HB_PKG}
+%define HA_NOARCHDATAHBDIR	%{share}/%{HB_PKG}
+%define pils_plugindir	%{libdir}/pils/plugins
+%define HA_VARRUNDIR	%{localstatedir}/run/%{HB_PKG}
+%define HA_COREDIR	%{localstatedir}/lib/%{HB_PKG}/cores
+%define HA_D_DIR	%{sysconfdir}/ha.d
+#
+#
+#
+#
+Summary: %{HB_PKG} - The Heartbeat Subsystem for High-Availability Linux
+Name:	%{HB_PKG}
+Version:	%{HB_VERSION}
+Release:	%{RPMREL}
 License: GPL/LGPL
 URL: http://linux-ha.org/
-Group: Utilities
+Group: %{pkg_group}
 Packager: Alan Robertson <alanr@unix.sh>
-Source: http://linux-ha.org/download/@HB_PKG@-@VERSION@.tar.gz
+Source: http://linux-ha.org/download/%{HB_PKG}-%{HB_VERSION}.tar.gz
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-build
-BuildPrereq: glib-devel, @UCDSNMPDEVEL@, perl, iputils, @SSH@, openssl-devel, libnet, glib2-devel, python-devel, gnutls-devel
-# libnet available from www.ultramonkey.org and others
-Requires: sysklogd, heartbeat-stonith = %{version}-%{release}, heartbeat-pils = %{version}-%{release}
-BuildRequires: libgcrypt-devel
+BuildRequires:	autoconf, automake libtool, libxml2-devel
+BuildRequires:	glib2-devel, python, python-devel, perl, %{SSH}, %{LIBNET_DEVEL}, gdbm-devel, bison, flex
+BuildRequires:	openhpi-devel
+%if %{ENABLE_SNMP_SUBAGENT}
+%{SNMP_RPM_BUILD_REQUIRES}
+%endif
 
-%package ldirectord
-Summary: Monitor daemon for maintaining high availability resources
-Group: Utilities
-Requires: perl, perl-libwww-perl, perl-Authen-Radius, perl-Crypt-SSLeay, ipvsadm, perl-HTML-Parser, perl-ldap, perl-MailTools, perl-Net-IMAP-Simple, perl-Net-IMAP-Simple-SSL, perl-POP3Client, perl-libnet, perl-Net-DNS
-# perl-libwww-perl, perl-Authen-Radius, perl-HTML-Parser, perl-ldap,
-# perl-MailTools, perl-Net-IMAP-Simple, perl-Net-IMAP-Simple-SSL,
-# perl-POP3Client, perl-libnet, perl-Net-DNS and ipvsadm
-# available from www.ultramonkey.org and others
+%if %{is_rhel} && "%{rhel_ver}" >= "5"
+BuildRequires: libtool-ltdl-devel
+BuildRequires: OpenIPMI-devel
+%endif
 
-%package stonith
-Requires: telnet, heartbeat-pils = %{version}-%{release}
+%if ENABLE_MGMT
+BuildRequires:	libgcrypt-devel, gnutls-devel
+%endif
+
+%if %{build_cmpi}
+BuildRequires: %{CIMOM}
+%endif
+
+Requires: %{STONITH_NAME} = %{version}-%{release}, %{PILS_NAME} = %{version}-%{release}
+Requires: sysklogd, perl, iputils, %{SSH} %{PING} %{IPTABLES}
+Requires(pre): /usr/sbin/groupadd /usr/bin/getent /usr/sbin/useradd
+
+%if %{is_suse}
+Requires: python-xml python-gtk
+%if 0%{?sles_version} == 9
+BuildRequires: pkgconfig
+%endif
+%if 0%{?suse_version} == 1000
+BuildRequires: lzo
+%endif
+%endif
+
+%if %{is_fedora}
+Requires:	PyXML
+BuildRequires: 		which OpenIPMI-devel
+Requires:               pygtk2 >= 2.4
+Requires(pre):          fedora-usermgmt
+Requires(postun):       fedora-usermgmt
+%endif
+
+%if %{is_rhel}
+Requires:	PyXML
+%endif
+
+%if %{is_mandriva}
+%endif
+%if %{is_aix}
+%endif
+%if %{is_solaris}
+%endif
+
+%if %build_cmpi
+%package -n %{CMPI_NAME}
+Summary:        Heartbeat CIM Provider
+Group:          %{pkg_group}
+%description cmpi
+This package provides the CIM provider for managing heartbeat via
+%{CIMOM}.
+%endif
+
+%package -n %{DEVEL_NAME}
+Summary:        %{HB_PKG} development package 
+Group:          %{pkg_group}
+Requires:       %{HB_PKG} = %{version}-%{release}
+
+%description devel
+%{HB_PKG} development package
+
+
+%package -n %{LDIR_NAME}
+Summary: Monitor daemon for maintaining high availability resources with ipvs (Linux Virtual Server}
+Group: %{pkg_group}
+Requires: ipvsadm, perl, perl-libwww-perl, perl-Authen-Radius, perl-Crypt-SSLeay, perl-HTML-Parser
+Requires: perl-ldap, perl-MailTools, perl-Net-IMAP-Simple, perl-Net-IMAP-Simple-SSL, perl-POP3Client
+Requires: perl-libnet, perl-Net-DNS
+# Perl modules available from www.ultramonkey.org and others
+
+%if %{is_suse}
+%endif
+%if %{is_fedora}
+%endif
+%if %{is_rhel}
+%endif
+%if %{is_mandriva}
+%endif
+%if %{is_aix}
+%endif
+%if %{is_solaris}
+%endif
+
+%package -n %{STONITH_NAME}
+Requires: telnet, %{SSH} %{PILS_NAME} = %{version}-%{release}
 Summary: Provides an interface to Shoot The Other Node In The Head 
-Group: Utilities
+Group: %{pkg_group}
 
-%package pils
+%if %{is_suse}
+%endif
+%if %{is_fedora}
+%endif
+%if %{is_rhel}
+%endif
+%if %{is_mandriva}
+%endif
+%if %{is_aix}
+%endif
+%if %{is_solaris}
+%endif
+
+%package -n %{PILS_NAME}
 Summary: Provides a general plugin and interface loading library
-Group: Utilities
+Group: %{pkg_group}
 
-%if %{ENABLE_MGMT}
-%package gui
-Requires: @RPM_MGMT_RUNTIME_REQUIRES@
+%if %{ENABLE_MGMT} && %{GUI_PACKAGE}
+%package -n %{GUI_NAME}
+Requires: %{RPM_MGMT_RUNTIME_REQUIRES}
 Summary: Provides a gui interface to manage heartbeat clusters
-Group: Utilities
+Group: %{pkg_group}
+
+%if %{is_suse}
+%endif
+%if %{is_fedora}
+%endif
+%if %{is_rhel}
+%endif
+%if %{is_mandriva}
+%endif
+%if %{is_aix}
+%endif
+%if %{is_solaris}
 %endif
 
 %description
-@HB_PKG@ is an advanced  high-availability subsystem for Linux-HA.
+%{HB_PKG} is an advanced  high-availability subsystem for Linux-HA.
 It supports "n-node" clusters with significant capabilities for 
 creating sophisticated policies for managing resources and dependencies.
 
 In addition it continues to support the older release 1 style of
 2-node clustering.
-%description ldirectord
+%description -n %{LDIR_NAME}
 ldirectord is a stand-alone daemon to monitor services of real 
 for virtual services provided by The Linux Virtual Server
 (http://www.linuxvirtualserver.org/). It is simple to install 
 and works with the heartbeat code (http://www.linux-ha.org/).
 
-%description stonith
+%description -n %{STONITH_NAME}
 The STONITH module (a.k.a. STOMITH) provides an extensible interface
 for remotely powering down a node in the cluster.  The idea is quite simple:
 When the software running on one machine wants to make sure another
 machine in the cluster is not using a resource, pull the plug on the other 
 machine. It's simple and reliable, albeit admittedly brutal.
 
-%description pils
+%description -n %{PILS_NAME}
 PILS is an generalized and portable open source
 Plugin and Interface Loading System.
 PILS was developed as part of the Open Cluster Framework
@@ -75,9 +366,9 @@ and the interfaces these plugins implement.
 PILS is designed to support any number of plugins
 implementing any number of interfaces.
 
-%if %{ENABLE_MGMT}
+%if %{ENABLE_MGMT} && %{GUI_PACKAGE}
 %description gui
-GUI client for heartbeat clusters
+GUI client for Heartbeat clusters
 %endif
 
 %changelog
@@ -2346,14 +2637,9 @@ GUI client for heartbeat clusters
 ###########################################################
 #
 #	I think we should make the RPM configured the same way as things
-#	were configured in the first place.  So, I think it should propagate
-#	whatever flags were on the command line down to here...
+#	were configured by the user.
 #
-#	(on the other hand, I could be wrong ;-))
-#
-#CFLAGS="${RPM_OPT_FLAGS}" \
-#  ./configure --prefix=@prefix@ --sysconfdir=@sysconfdir@ --localstatedir=@localstatedir@
-./configure @ac_configure_args@
+./configure %{cleaned_configure_args} '--libdir=%{libdir}' '--libexecdir=%{libexecdir}'
 make
 
 ###########################################################
@@ -2362,148 +2648,200 @@ make
 #make DESTDIR=$RPM_BUILD_ROOT install-strip
 make DESTDIR=$RPM_BUILD_ROOT install
 
-
 ###########################################################
 %files
 ###########################################################
 %defattr(-,root,root)
-%dir @sysconfdir@/ha.d
-@sysconfdir@/ha.d/harc
-@sysconfdir@/ha.d/shellfuncs
-@sysconfdir@/ha.d/rc.d
-@sysconfdir@/ha.d/README.config
-@libdir@/heartbeat
-@libdir@/libapphb.*
-@libdir@/libccmclient.*
-@libdir@/libcib.*
-@libdir@/libclm.*
-@libdir@/libcrmcommon.*
-@libdir@/libtransitioner.*
-@libdir@/libhbclient.*
-@libdir@/liblrm.*
-@libdir@/libpengine.*
-@libdir@/libplumb.*
-@libdir@/libplumbgpl.*
-@libdir@/librecoverymgr.*
-@libdir@/libstonithd.*
-@libdir@/libpe_rules.*
-@libdir@/libpe_status.*
-@HA_NOARCHDATAHBDIR@
-@OCF_ROOT_DIR@
-%exclude @OCF_RA_DIR@/heartbeat/ldirectord
-@base_includedir@/heartbeat
-@base_includedir@/clplumbing
-@base_includedir@/saf
-@base_includedir@/ocf
-@sysconfdir@/ha.d/resource.d/
-%exclude @sysconfdir@/ha.d/resource.d/ldirectord
-%config @INITDIR@/heartbeat
-%config @sysconfdir@/logrotate.d/heartbeat
-%dir @localstatedir@/lib/@HB_PKG@
-%dir @localstatedir@/lib/@HB_PKG@/cores
-%dir %attr (0700, root, -) @localstatedir@/lib/@HB_PKG@/cores/root
-%dir %attr (0700, nobody, -) @localstatedir@/lib/@HB_PKG@/cores/nobody
-%dir %attr (0700, @HA_CCMUSER@, -) @localstatedir@/lib/@HB_PKG@/cores/@HA_CCMUSER@
-%dir @localstatedir@/run
-%dir @localstatedir@/run/@HB_PKG@
-%attr (2555, @HA_CCMUSER@, @HA_APIGROUP@) @bindir@/cl_status
-@bindir@/cl_respawn
-@sbindir@/ptest 
-@sbindir@/crmadmin 
-@sbindir@/cibadmin 
-@sbindir@/ccm_tool 
-@sbindir@/crm_diff 
-@sbindir@/crm_uuid
-@sbindir@/crm_mon 
-@sbindir@/ocf-tester
-@sbindir@/iso8601			
-@sbindir@/crm_master 
-@sbindir@/crm_standby
-@sbindir@/crm_attribute 
-@sbindir@/crm_resource
-@sbindir@/crm_verify
-@sbindir@/attrd_updater
-@sbindir@/crm_failcount
-@sbindir@/crm_sh
-@sbindir@/ha_logger
-%dir %attr (755, @HA_CCMUSER@, @HA_APIGROUP@) @HA_VARRUNDIR@/@HB_PKG@/ccm
-%dir %attr (750, @HA_CCMUSER@, @HA_APIGROUP@) @HA_VARRUNDIR@/@HB_PKG@/crm
-%dir %attr (750, @HA_CCMUSER@, @HA_APIGROUP@) @localstatedir@/lib/@HB_PKG@/crm
-%dir %attr (750, @HA_CCMUSER@, @HA_APIGROUP@) @localstatedir@/lib/@HB_PKG@/pengine
-%doc @mandir@/man1/cl_status.1*
-%doc @mandir@/man1/ha_logger.1*
-%doc @mandir@/man1/hb_standby.1*
-%doc @mandir@/man1/hb_takeover.1*
-%doc @mandir@/man1/hb_addnode.1*
-%doc @mandir@/man1/hb_delnode.1*
-%doc @mandir@/man8/crm_resource.8*
-%doc @mandir@/man8/heartbeat.8*
-%doc @mandir@/man8/apphbd.8*
-%doc @mandir@/man8/ha_logd.8*
-%doc @mandir@/man8/cibadmin.8*
-%doc @docdir@
+%dir %{HA_D_DIR}
+%{HA_D_DIR}/harc
+%{HA_D_DIR}/shellfuncs
+%{HA_D_DIR}/rc.d
+%{HA_D_DIR}/README.config
+%{HA_LIBHBDIR}
+%{libdir}/libapphb.so.*
+%{libdir}/libccmclient.so.*
+%{libdir}/libcib.so.*
+%{libdir}/libclm.so.*
+%{libdir}/libcrmcommon.so.*
+%{libdir}/libtransitioner.so.*
+%{libdir}/libhbclient.so.*
+%{libdir}/liblrm.so.*
+%{libdir}/libpengine.so.*
+%{libdir}/libplumb.so.*
+%{libdir}/libplumbgpl.so.*
+%{libdir}/librecoverymgr.so.*
+%{libdir}/libstonithd.so.*
+%{libdir}/libpe_rules.so.*
+%{libdir}/libpe_status.so.*
+%{HA_NOARCHDATAHBDIR}
+%{OCF_ROOT_DIR}
+%exclude %{OCF_RA_DIR}/heartbeat/ldirectord
+%{HA_D_DIR}/resource.d/
+%exclude %{HA_D_DIR}/resource.d/ldirectord
+%config %{INITDIR}/heartbeat
+%config %{sysconfdir}/logrotate.d/heartbeat
+%dir %{localstatedir}/lib/%{HB_PKG}
+%dir %{HA_COREDIR}
+%dir %attr (0700, root, -) %{HA_COREDIR}/root
+%dir %attr (0700, %{NOUSER}, -) %{HA_COREDIR}/%{NOUSER}
+%dir %attr (0700, %{HA_CCMUSER}, -) %{HA_COREDIR}/%{HA_CCMUSER}
+%dir %{localstatedir}/run
+%dir %{localstatedir}/run/%{HB_PKG}
+%attr (2555, %{HA_CCMUSER}, %{HA_APIGROUP}) %{bindir}/cl_status
+%{bindir}/cl_respawn
+%{sbindir}/ptest 
+%{sbindir}/crmadmin 
+%{sbindir}/cibadmin 
+%{sbindir}/ccm_tool 
+%{sbindir}/crm_diff 
+%{sbindir}/crm_uuid
+%{sbindir}/crm_mon 
+%{sbindir}/ocf-tester
+%{sbindir}/iso8601			
+%{sbindir}/crm_master 
+%{sbindir}/crm_standby
+%{sbindir}/crm_attribute 
+%{sbindir}/crm_resource
+%{sbindir}/crm_verify
+%{sbindir}/attrd_updater
+%{sbindir}/crm_failcount
+%{sbindir}/crm_sh
+%{sbindir}/ha_logger
+%dir %attr (755, %{HA_CCMUSER}, %{HA_APIGROUP}) %{HA_VARRUNDIR}/ccm
+%dir %attr (750, %{HA_CCMUSER}, %{HA_APIGROUP}) %{HA_VARRUNDIR}/crm
+%dir %attr (750, %{HA_CCMUSER}, %{HA_APIGROUP}) %{localstatedir}/lib/%{HB_PKG}/crm
+%dir %attr (750, %{HA_CCMUSER}, %{HA_APIGROUP}) %{localstatedir}/lib/%{HB_PKG}/pengine
+%doc %{mandir}/man1/cl_status.1*
+%doc %{mandir}/man1/ha_logger.1*
+%doc %{mandir}/man1/hb_standby.1*
+%doc %{mandir}/man1/hb_takeover.1*
+%doc %{mandir}/man1/hb_addnode.1*
+%doc %{mandir}/man1/hb_delnode.1*
+%doc %{mandir}/man8/crm_resource.8*
+%doc %{mandir}/man8/heartbeat.8*
+%doc %{mandir}/man8/apphbd.8*
+%doc %{mandir}/man8/ha_logd.8*
+%doc %{mandir}/man8/cibadmin.8*
+%doc %{docdir}
 %if %{ENABLE_SNMP_SUBAGENT}
-	@MIBS_DIR@/LINUX-HA-MIB.mib
+	%{MIBS_DIR}/LINUX-HA-MIB.mib
 %endif
 %if %{ENABLE_MGMT}
-	@libdir@/libhbmgmt.*
-	@libdir@/libhbmgmtclient.*
-	@libdir@/libhbmgmtcommon.*
-	@libdir@/libhbmgmttls.*
-	/etc/pam.d/hbmgmtd
-	%exclude @HA_DATADIR@/heartbeat-gui
-	%exclude @libdir@/heartbeat-gui
+	%{libdir}/libhbmgmt.*
+	%{libdir}/libhbmgmtclient.*
+	%{libdir}/libhbmgmtcommon.*
+	%{libdir}/libhbmgmttls.*
+	%{PAMDIR}/hbmgmtd
+	%exclude %{share}/heartbeat-gui
+	%exclude %{libdir}/heartbeat-gui
 %endif
-
-###########################################################
-# Files for ldirectord
-%files ldirectord
-###########################################################
-%defattr(-,root,root)
-@sbindir@/ldirectord
-@sbindir@/supervise-ldirectord-config
-@sysconfdir@/logrotate.d/ldirectord
-@INITDIR@/ldirectord
-@sysconfdir@/ha.d/resource.d/ldirectord
-@OCF_RA_DIR@/heartbeat/ldirectord
-%doc @mandir@/man8/ldirectord.8*
-%doc @mandir@/man8/supervise-ldirectord-config.8*
-%doc ldirectord/ldirectord.cf
-
-###########################################################
-# Files for the stonith library
-%files stonith
-###########################################################
-%defattr(-,root,root)
-@stonith_includedir@
-@libdir@/libstonith.*
-@libdir@/stonith
-@sbindir@/stonith
-@sbindir@/meatclient
-%doc @mandir@/man8/stonith.8*
-%doc @mandir@/man8/meatclient.8*
-
-###########################################################
-# Files for the PILS library
-%files pils
-###########################################################
-%defattr(-,root,root)
-@pils_includedir@
-@libdir@/libpils.*
-@pils_plugindir@
-#@libdir@/@PILSPKG@
 
 %if %{ENABLE_MGMT}
 ###########################################################
 # Files for the gui
-%files gui
+%if %{GUI_PACKAGE}
+%files -n %{GUI_NAME}
+%endif
 ###########################################################
 %defattr(-,root,root)
-@libdir@/heartbeat-gui
-@HA_DATADIR@/heartbeat-gui
-@bindir@/hb_gui
-@prefix@/share/locale/zh_CN/LC_MESSAGES/haclient.mo
+%{libdir}/heartbeat-gui
+%{share}/heartbeat-gui
+%{locale}/zh_CN/LC_MESSAGES/haclient.mo
+%{bindir}/hb_gui
 %endif
+
+###########################################################
+# Files for ldirectord
+%files -n %{LDIR_NAME}
+###########################################################
+%defattr(-,root,root)
+%{sbindir}/ldirectord
+%{sysconfdir}/logrotate.d/ldirectord
+%{INITDIR}/ldirectord
+%{HA_D_DIR}/resource.d/ldirectord
+%{OCF_RA_DIR}/heartbeat/ldirectord
+%doc %{mandir}/man8/ldirectord.8*
+%doc ldirectord/ldirectord.cf
+
+###########################################################
+# Files for devel package
+%files -n %{DEVEL_NAME}
+###########################################################
+%defattr(-,root,root)
+%{base_includedir}/heartbeat/
+%{base_includedir}/clplumbing/
+%{base_includedir}/saf/
+%{base_includedir}/ocf/
+%{base_includedir}/stonith/
+%{base_includedir}/pils/
+%{libdir}/libapphb.so
+%{libdir}/libccmclient.so
+%{libdir}/libcib.so
+%{libdir}/libclm.so
+%{libdir}/libcrmcommon.so
+%{libdir}/libtransitioner.so
+%{libdir}/libhbclient.so
+%{libdir}/liblrm.so
+%{libdir}/libpengine.so
+%{libdir}/libplumb.so
+%{libdir}/libplumbgpl.so
+%{libdir}/librecoverymgr.so
+%{libdir}/libstonithd.so
+%{libdir}/libpe_rules.so
+%{libdir}/libpe_status.so
+%{libdir}/libapphb.la
+%{libdir}/libccmclient.la
+%{libdir}/libcib.la
+%{libdir}/libclm.la
+%{libdir}/libcrmcommon.la
+%{libdir}/libtransitioner.la
+%{libdir}/libhbclient.la
+%{libdir}/liblrm.la
+%{libdir}/libpengine.la
+%{libdir}/libplumb.la
+%{libdir}/libplumbgpl.la
+%{libdir}/librecoverymgr.la
+%{libdir}/libstonithd.la
+%{libdir}/libpe_rules.la
+%{libdir}/libpe_status.la
+%{libdir}/libapphb.a
+%{libdir}/libccmclient.a
+%{libdir}/libcib.a
+%{libdir}/libclm.a
+%{libdir}/libcrmcommon.a
+%{libdir}/libtransitioner.a
+%{libdir}/libhbclient.a
+%{libdir}/liblrm.a
+%{libdir}/libpengine.a
+%{libdir}/libplumb.a
+%{libdir}/libplumbgpl.a
+%{libdir}/librecoverymgr.a
+%{libdir}/libstonithd.a
+%{libdir}/libpe_rules.a
+%{libdir}/libpe_status.a
+
+
+###########################################################
+# Files for the stonith library
+%files -n %{STONITH_NAME}
+###########################################################
+%defattr(-,root,root)
+%{stonith_includedir}
+%{libdir}/libstonith.*
+%{libdir}/stonith
+%{sbindir}/stonith
+%{sbindir}/meatclient
+%doc %{mandir}/man8/stonith.8*
+%doc %{mandir}/man8/meatclient.8*
+
+###########################################################
+# Files for the PILS library
+%files -n %{PILS_NAME}
+###########################################################
+%defattr(-,root,root)
+%{pils_includedir}
+%{libdir}/libpils.*
+%{pils_plugindir}
 
 ###########################################################
 %clean
@@ -2513,44 +2851,48 @@ if
 then
   rm -rf $RPM_BUILD_ROOT
 fi
-rm -rf $RPM_BUILD_DIR/@HB_PKG@-@VERSION@
+rm -rf $RPM_BUILD_DIR/%{HB_PKG}-%{HB_VERSION}
 
 ###########################################################
 %pre
 ###########################################################
+# We made some directories into symlinks
+# RPM won't update them correctly
+for j in %{HA_LIBHBDIR}/cts %{HA_LIBHBDIR}/lrmtest %{HA_LIBHBDIR}/stonithdtest
+do test -d $j &&  rm -fr $j; done
 #
 #	This isn't perfect.  But getting every distribution
 #	to agree on group id's seems hard to me :-(
 #
 if
-  getent group @HA_APIGROUP@ >/dev/null
+  getent group %{HA_APIGROUP} >/dev/null
 then
-  : OK group @HA_APIGROUP@ already present
+  : OK group %{HA_APIGROUP} already present
 else
-  GROUPOPT="-g @HA_APIGID@"
+  GROUPOPT="-g %{HA_APIGID}"
   if
-    /usr/sbin/groupadd $GROUPOPT @HA_APIGROUP@ 2>/dev/null
+    /usr/sbin/groupadd $GROUPOPT %{HA_APIGROUP} 2>/dev/null
   then
-    : OK we were able to add group @HA_APIGROUP@
+    : OK we were able to add group %{HA_APIGROUP}
   else
-    /usr/sbin/groupadd @HA_APIGROUP@
+    /usr/sbin/groupadd %{HA_APIGROUP}
   fi
 fi
 
 if
-  getent passwd @HA_CCMUSER@ >/dev/null
+  getent passwd %{HA_CCMUSER} >/dev/null
 then
-  : OK user @HA_CCMUSER@ already present
+  : OK user %{HA_CCMUSER} already present
 else
-  USEROPT="-g @HA_APIGROUP@ -u @HA_CCMUID@ -d @HA_COREDIR@/@HA_CCMUSER@"
+  USEROPT="-g %{HA_APIGROUP} -u %{HA_CCMUID} -d %{HA_COREDIR}/%{HA_CCMUSER}"
   if
-    /usr/sbin/useradd $USEROPT @HA_CCMUSER@ 2>/dev/null \
-    || /usr/sbin/useradd -M $USEROPT @HA_CCMUSER@ 2>/dev/null
+    /usr/sbin/useradd $USEROPT %{HA_CCMUSER} 2>/dev/null \
+    || /usr/sbin/useradd -M $USEROPT %{HA_CCMUSER} 2>/dev/null
     # -M to suppress creation of home directory on Red Hat
   then
-    : OK we were able to add user @HA_CCMUSER@
+    : OK we were able to add user %{HA_CCMUSER}
   else
-    /usr/sbin/useradd @HA_CCMUSER@
+    /usr/sbin/useradd %{HA_CCMUSER}
   fi
 fi
 
