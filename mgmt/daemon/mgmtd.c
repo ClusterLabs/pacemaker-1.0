@@ -430,6 +430,7 @@ on_listen(GIOChannel *source, GIOCondition condition, gpointer data)
 	struct sockaddr_in addr;
 	int num = 0;
 	char** args = NULL;
+	const char *client_proto = "1.0"; /* allow old clients to connect */
 
 	if (condition & G_IO_IN) {
 		/* accept the connection */
@@ -449,7 +450,8 @@ on_listen(GIOChannel *source, GIOCondition condition, gpointer data)
 		}
 		msg = mgmt_session_recvmsg(session);
 		args = mgmt_msg_args(msg, &num);
-		if (msg == NULL || num != 4 || STRNCMP_CONST(args[0], MSG_LOGIN) != 0) {
+		if (msg == NULL || num<3 || num>4 ||
+				STRNCMP_CONST(args[0], MSG_LOGIN) != 0) {
 			mgmt_del_args(args);
 			mgmt_del_msg(msg);
 			_mgmt_session_sendmsg(session, MSG_FAIL);
@@ -458,16 +460,20 @@ on_listen(GIOChannel *source, GIOCondition condition, gpointer data)
 			mgmt_log(LOG_ERR, "%s receive login msg failed", __FUNCTION__);
 			return TRUE;
 		}
-		mgmt_debug(LOG_DEBUG, "recv msg: %s %s **** %s", args[0], args[1], args[3]);
+		mgmt_debug(LOG_DEBUG, "recv msg: %s %s **** %s",
+			args[0], args[1], num==4 ? args[3] : "");
+		if ( num == 4 ) {
+			client_proto = args[3];
+		}
 		/* protocol version check */
-		if (STRNCMP_CONST(args[3], MGMT_PROTOCOL_VERSION) != 0) {
+		if (STRNCMP_CONST(client_proto, MGMT_PROTOCOL_VERSION) != 0) {
 			mgmt_del_args(args);
 			mgmt_del_msg(msg);
 			mgmt_session_sendmsg(session, MGMT_PROTOCOL_VERSION);
 			tls_detach(session);
 			close(csock);
 			mgmt_log(LOG_ERR, "%s protocol mismatch. Want %s but got %s", 
-				__FUNCTION__, MGMT_PROTOCOL_VERSION, args[3]);
+				__FUNCTION__, MGMT_PROTOCOL_VERSION, client_proto);
 			return TRUE;
 		}
 		/* authorization check with pam */	
