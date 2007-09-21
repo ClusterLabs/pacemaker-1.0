@@ -784,7 +784,7 @@ StonithDaemonTest() {
 	then
 		:
 	else
-		echo "cannot start heartbeat, so donnot start stonith daemon test." | tee -a $LOGFILE
+		echo "Cannot start heartbeat, so do not start stonith daemon test." | tee -a $LOGFILE
 		return 1
 	fi
 
@@ -807,7 +807,7 @@ StonithDaemonTest() {
 	then
 		:
 	else
-		echo "There are internal errors in heartbeat, so donnot start stonith daemon test." | tee -a $LOGFILE
+		echo "There are internal errors in heartbeat, so do not start stonith daemon test." | tee -a $LOGFILE
 		return 1
 	fi
 
@@ -852,7 +852,7 @@ TestMgmtd() {
 	then
 		:
 	else
-		echo "cannot start heartbeat, so donnot start mgmt daemon test." | tee -a $LOGFILE
+		echo "cannot start heartbeat, so do not start mgmt daemon test." | tee -a $LOGFILE
 		return 1
 	fi
 
@@ -875,7 +875,8 @@ TestMgmtd() {
 	then
 		:
 	else
-		echo "There are internal errors in heartbeat, so donnot start mgmt daemon test." | tee -a $LOGFILE
+		echo "There are internal errors in heartbeat, so do not start mgmt daemon test." | tee -a $LOGFILE
+		$CLSTATUS hbstatus
 		return 1
 	fi
 
