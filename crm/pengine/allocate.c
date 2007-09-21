@@ -41,6 +41,7 @@ void migrate_reload_madness(pe_working_set_t *data_set);
 resource_alloc_functions_t resource_class_alloc_functions[] = {
 	{
 		native_merge_weights,
+		native_update_score,
 		native_color,
 		native_create_actions,
 		native_create_probe,
@@ -57,6 +58,7 @@ resource_alloc_functions_t resource_class_alloc_functions[] = {
 	},
 	{
 		group_merge_weights,
+		native_update_score,
 		group_color,
 		group_create_actions,
 		native_create_probe,
@@ -73,6 +75,7 @@ resource_alloc_functions_t resource_class_alloc_functions[] = {
 	},
 	{
 		native_merge_weights,
+		native_update_score,
 		clone_color,
 		clone_create_actions,
 		clone_create_probe,
@@ -89,6 +92,7 @@ resource_alloc_functions_t resource_class_alloc_functions[] = {
 	},
 	{
 		native_merge_weights,
+		native_update_score,
 		master_color,
 		master_create_actions,
 		clone_create_probe,
@@ -974,13 +978,19 @@ unpack_rsc_order(crm_data_t * xml_obj, pe_working_set_t *data_set)
 		return FALSE;
 	}
 
+#if 0
+	if(score == NULL) {
+	    score = "INFINITY";
+	}
+#endif
+	
 	score_i = char2score(score);
 	cons_weight = pe_order_optional;
-	if(score == 0 && rsc_rh->restart_type == pe_restart_restart) {
+	if(score_i == 0 && rsc_rh->restart_type == pe_restart_restart) {
 		crm_debug_2("Upgrade : recovery - implies right");
  		cons_weight |= pe_order_implies_right;
 	}
-
+	
 	if(score_i < 0) {
 		crm_debug_2("Upgrade : implies left");
  		cons_weight |= pe_order_implies_left;
@@ -1013,7 +1023,7 @@ unpack_rsc_order(crm_data_t * xml_obj, pe_working_set_t *data_set)
 	action_rh = invert_action(action_rh);
 
 	cons_weight = pe_order_optional;
-	if(score == 0 && rsc_rh->restart_type == pe_restart_restart) {
+	if(score_i == 0 && rsc_rh->restart_type == pe_restart_restart) {
 		crm_debug_2("Upgrade : recovery - implies left");
  		cons_weight |= pe_order_implies_left;
 	}

@@ -17,3 +17,5 @@ attrd_updater
 pingd
 dopd
 drbd-peer-outdater
+ocf-tester
+
