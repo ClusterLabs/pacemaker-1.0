@@ -334,6 +334,7 @@ Group: %{pkg_group}
 %endif
 %if %{is_solaris}
 %endif
+%endif
 
 %description
 %{HB_PKG} is an advanced  high-availability subsystem for Linux-HA.
