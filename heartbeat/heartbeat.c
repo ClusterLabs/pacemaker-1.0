@@ -1994,6 +1994,7 @@ hb_mcp_final_shutdown(gpointer p)
 	/* Whack 'em */
 	hb_kill_core_children(SIGKILL);
 	cl_log(LOG_INFO,"%s Heartbeat shutdown complete.", localnodename);
+	cl_flush_logs();
 
 	if (procinfo->restart_after_shutdown) {
 		cl_log(LOG_INFO, "Heartbeat restart triggered.");
@@ -3547,6 +3548,7 @@ CoreProcessDied(ProcTrack* p, int status, int signo
 				,	"Heartbeat restart triggered.");
 				restart_heartbeat();
 			}
+			cl_flush_logs();
 			cleanexit(0);
 		}
 		return;
