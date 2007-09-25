@@ -402,7 +402,7 @@ main(int argc, char ** argv)
 	cl_malloc_forced_for_glib(); /* Force more memory checks */
         cl_log_set_entity(stonithd_name);
 	cl_log_enable_stderr(TRUE);
-	cl_log_set_facility(LOG_DAEMON);
+	cl_log_set_facility(HA_LOG_FACILITY);
         /* Use logd if it's enabled by heartbeat */
         cl_inherit_logging_environment(0);
 
