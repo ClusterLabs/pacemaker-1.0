@@ -55,7 +55,7 @@ cim_init_logger(const char * entity)
 
 	cl_log_set_entity(entity);
 	cl_log_enable_stderr(debug_level?TRUE:FALSE);
-	cl_log_set_facility(LOG_DAEMON);
+	cl_log_set_facility(HA_LOG_FACILITY);
         return HA_OK;
 }
 

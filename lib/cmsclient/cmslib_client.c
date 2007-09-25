@@ -637,7 +637,7 @@ saMsgInitialize(SaMsgHandleT *msgHandle, const SaMsgCallbacksT *msgCallbacks,
 	int pipefd[2];
 
 	cl_log_set_entity("libcms");
-	cl_log_set_facility(LOG_USER);
+	cl_log_set_facility(HA_LOG_FACILITY);
 #ifdef DEBUG_LIBRARY
 	cl_log_enable_stderr(TRUE);
 #endif

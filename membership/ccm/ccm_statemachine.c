@@ -3173,14 +3173,14 @@ ccm_initialize()
 	ccm_info_t 	*global_info = NULL;
 	ll_cluster_t*	hb_fd;
 	ccm_t		*ccmret = NULL;
-	int		facility;
 	const char *	parameter;
 
 	ccm_debug2(LOG_DEBUG, "========================== Starting CCM ===="
 			"======================");
 
 	CL_SIGINTERRUPT(SIGTERM, 1);
-
+	cl_inherit_logging_environment(0);
+	
 	hb_fd = ll_cluster_new("heartbeat");
 
 	ccm_debug(LOG_DEBUG, "Signing in with Heartbeat");
@@ -3197,14 +3197,6 @@ ccm_initialize()
 	}
 	cl_cdtocoredir();
 
-	/* change the logging facility to the one used by heartbeat daemon
-	 * the signon MUST BE FIRST! */
-	if ((facility = hb_fd->llc_ops->get_logfacility(hb_fd))>0) {
-		/* If someone cares, map it to its name ... */
-		ccm_debug(LOG_DEBUG, "Switched to heartbeat syslog facility: %d", facility);
-		cl_log_set_facility(facility);
-	}
-	
 	if((global_info = (ccm_info_t *)g_malloc(sizeof(ccm_info_t))) == NULL){
 		ccm_log(LOG_ERR, "Cannot allocate memory ");
 		goto errout;

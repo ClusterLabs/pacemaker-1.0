@@ -136,7 +136,7 @@ int main(int argc, char * argv[])
 
 	cl_log_set_entity(app_name);
 	cl_log_enable_stderr(TRUE);
-	cl_log_set_facility(LOG_DAEMON);
+	cl_log_set_facility(HA_LOG_FACILITY);
 
 	if (argc == 1) { /* no arguments */
 		printf("%s\n",Simple_helpscreen);

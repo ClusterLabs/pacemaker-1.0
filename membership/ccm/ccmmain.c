@@ -227,7 +227,7 @@ main(int argc, char **argv)
 		cmdname = tmp_cmdname;
 	}
 	cl_log_set_entity(cmdname);
-	cl_log_set_facility(LOG_DAEMON);
+	cl_log_set_facility(HA_LOG_FACILITY);
 	while ((flag = getopt(argc, argv, OPTARGS)) != EOF) {
 		switch(flag) {
 		case 'v':		/* Debug mode, more logs*/

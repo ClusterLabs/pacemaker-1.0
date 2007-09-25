@@ -87,8 +87,8 @@ main(int argc, char **argv)
 	/* Get the name of the binary for logging purposes */
 	bname = cl_strdup(argv[0]);
 	cl_log_set_entity(basename(bname));
-
-	cl_log_set_facility(DEFAULT_FACILITY);
+	cl_log_set_facility(HA_LOG_FACILITY);
+	cl_inherit_logging_environment(0);
 
 	hb = ll_cluster_new("heartbeat");
 
@@ -783,19 +783,13 @@ ipfail_timeout_dispatch(gpointer user_data)
 void
 open_api(ll_cluster_t *hb)
 {
-	/* Sign in to the API and setup the log facility */
-	int facility;
-
+	/* Sign in to the API */
 	cl_log(LOG_DEBUG, "Signing in with heartbeat");
 	if (hb->llc_ops->signon(hb, "ipfail")!= HA_OK) {
 		cl_log(LOG_ERR, "Cannot sign on with heartbeat");
 		cl_log(LOG_ERR, "REASON: %s", hb->llc_ops->errmsg(hb));
 		exit(1);
 	}
-	if ((facility = hb->llc_ops->get_logfacility(hb)) <= 0) {
-		facility = DEFAULT_FACILITY;
-	}
-	cl_log_set_facility(facility);
 }
 
 void
