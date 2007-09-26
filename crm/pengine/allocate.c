@@ -41,7 +41,6 @@ void migrate_reload_madness(pe_working_set_t *data_set);
 resource_alloc_functions_t resource_class_alloc_functions[] = {
 	{
 		native_merge_weights,
-		native_update_score,
 		native_color,
 		native_create_actions,
 		native_create_probe,
@@ -58,7 +57,6 @@ resource_alloc_functions_t resource_class_alloc_functions[] = {
 	},
 	{
 		group_merge_weights,
-		native_update_score,
 		group_color,
 		group_create_actions,
 		native_create_probe,
@@ -75,7 +73,6 @@ resource_alloc_functions_t resource_class_alloc_functions[] = {
 	},
 	{
 		native_merge_weights,
-		native_update_score,
 		clone_color,
 		clone_create_actions,
 		clone_create_probe,
@@ -92,7 +89,6 @@ resource_alloc_functions_t resource_class_alloc_functions[] = {
 	},
 	{
 		native_merge_weights,
-		native_update_score,
 		master_color,
 		master_create_actions,
 		clone_create_probe,
@@ -256,10 +252,10 @@ check_action_definition(resource_t *rsc, node_t *active_node, crm_data_t *xml_op
 		if(safe_str_neq(digest_restart_calc, digest_restart)) {
 			did_change = TRUE;
 			crm_log_xml_info(params_restart, "params:restart");
-			crm_warn("Parameters to %s on %s changed: recorded %s vs. %s (restart:%s)",
+			crm_warn("Parameters to %s on %s changed: recorded %s vs. %s (restart:%s) %s",
 				 key, active_node->details->uname,
 				 crm_str(digest_restart), digest_restart_calc,
-				 op_version);
+				 op_version, crm_element_value(xml_op, XML_ATTR_TRANSITION_MAGIC));
 			
 			key = generate_op_key(rsc->id, task, interval);
 			custom_action(rsc, key, task, NULL, FALSE, TRUE, data_set);
@@ -271,9 +267,10 @@ check_action_definition(resource_t *rsc, node_t *active_node, crm_data_t *xml_op
 		action_t *op = NULL;
 		did_change = TRUE;
 		crm_log_xml_info(params_all, "params:all");
- 		crm_warn("Parameters to %s on %s changed: recorded %s vs. %s (all:%s)",
+ 		crm_warn("Parameters to %s on %s changed: recorded %s vs. %s (all:%s) %s",
 			 key, active_node->details->uname,
-			 crm_str(digest_all), digest_all_calc, op_version);
+			 crm_str(digest_all), digest_all_calc, op_version,
+			 crm_element_value(xml_op, XML_ATTR_TRANSITION_MAGIC));
 		
 		key = generate_op_key(rsc->id, task, interval);
 		op = custom_action(rsc, key, task, NULL, FALSE, TRUE, data_set);
@@ -978,11 +975,9 @@ unpack_rsc_order(crm_data_t * xml_obj, pe_working_set_t *data_set)
 		return FALSE;
 	}
 
-#if 0
 	if(score == NULL) {
 	    score = "INFINITY";
 	}
-#endif
 	
 	score_i = char2score(score);
 	cons_weight = pe_order_optional;

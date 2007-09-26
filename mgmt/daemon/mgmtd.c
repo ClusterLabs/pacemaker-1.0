@@ -182,7 +182,7 @@ main(int argc, char ** argv)
 	
 	cl_log_set_entity(mgmtd_name);
 	cl_log_enable_stderr(FALSE);
-	cl_log_set_facility(LOG_DAEMON);
+	cl_log_set_facility(HA_LOG_FACILITY);
 	
 
 	cl_inherit_logging_environment(0);

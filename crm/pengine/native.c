@@ -128,7 +128,7 @@ native_merge_weights(
 {
     GListPtr archive = NULL;
 
-    if(safe_str_eq(rsc->id, rhs)) {
+    if(rsc->is_merging) {
 	crm_debug("%s: Breaking dependancy loop", rhs);
 	return nodes;
 
@@ -136,6 +136,7 @@ native_merge_weights(
 	return nodes;
     }
 
+    rsc->is_merging = TRUE;
     crm_debug_2("%s: Combining scores from %s", rhs, rsc->id);
 
     if(allow_rollback) {
@@ -146,7 +147,8 @@ native_merge_weights(
     if(archive && can_run_any(nodes) == FALSE) {
 	crm_debug("%s: Rolling back scores from %s", rhs, rsc->id);
   	pe_free_shallow_adv(nodes, TRUE);
-	return archive;
+	nodes = archive;
+	goto bail;
     }
 
     pe_free_shallow_adv(archive, TRUE);
@@ -159,6 +161,8 @@ native_merge_weights(
 	    constraint->score/INFINITY, allow_rollback);
 	);
 
+  bail:
+    rsc->is_merging = FALSE;
     return nodes;
 }
 
@@ -1794,22 +1798,4 @@ complex_migrate_reload(resource_t *rsc, pe_working_set_t *data_set)
 	} else {
 		do_crm_log(level, "%s nothing to do", rsc->id);
 	}
-}
-
-void native_update_score(resource_t *rsc, const char *id, int score) 
-{
-    node_t *node = NULL;
-    node = pe_find_node_id(rsc->allowed_nodes, id);
-    if(node != NULL) {
-	crm_debug_2("Updating score for %s on %s: %d + %d",
-		    rsc->id, id, node->weight, score);
-	node->weight = merge_weights(node->weight, score);
-    }
-
-    if(rsc->children) {
-	slist_iter(
-	    child_rsc, resource_t, rsc->children, lpc,
-	    child_rsc->cmds->update_score(child_rsc, id, score);
-	    );
-    }
 }

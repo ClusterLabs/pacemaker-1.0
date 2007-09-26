@@ -19,7 +19,6 @@
 
 
 /* Various defualts */
-#define	DEFAULT_FACILITY	LOG_DAEMON
 #define F_NUMPING               "num_ping"
 
 #define HB_LOCAL_RESOURCES      "local"
