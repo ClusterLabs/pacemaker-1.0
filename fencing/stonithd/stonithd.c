@@ -549,7 +549,7 @@ main(int argc, char ** argv)
 	stonithd_log(LOG_NOTICE, "%s %s", argv[0], M_STARTUP );
 
 	cl_set_all_coredump_signal_handlers(); 
-	set_sigchld_proctrack(G_PRIORITY_HIGH);
+	set_sigchld_proctrack(G_PRIORITY_HIGH,DEFAULT_MAXDISPATCHTIME);
 	drop_privs(0, 0); /* become "nobody" */
 	g_main_run(mainloop);
 	return_to_orig_privs();
