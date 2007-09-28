@@ -274,7 +274,7 @@ int main(int argc, char * argv[])
 	} while (execv_argv[++k] != NULL); 
 	*/
 
-	set_sigchld_proctrack(G_PRIORITY_HIGH);
+	set_sigchld_proctrack(G_PRIORITY_HIGH,DEFAULT_MAXDISPATCHTIME);
 
 	if (( IS_RECOVERY == FALSE )) {
 		child_tmp = run_client_as_child(client_argv);

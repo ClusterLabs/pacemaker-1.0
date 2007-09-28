@@ -662,7 +662,7 @@ hb_signal_set_master_control_process(sigset_t *set)
 		return(-1);
 	}
 	
-	set_sigchld_proctrack(G_PRIORITY_HIGH);
+	set_sigchld_proctrack(G_PRIORITY_HIGH,DEFAULT_MAXDISPATCHTIME);
 	hb_signal_process_pending_set_mask_set(use_set);
 
 	return(0);
