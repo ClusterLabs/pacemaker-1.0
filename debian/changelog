@@ -1,3 +1,9 @@
+heartbeat (2.1.2+hg.11310.702e4f418ca8-2) unstable; urgency=low
+
+  * Add patches in debian/patches/ which went missing in action somewhere
+
+ -- Simon Horman <horms@debian.org>  Sat, 29 Sep 2007 11:16:33 +0900
+
 heartbeat (2.1.2+hg.11310.702e4f418ca8-1) unstable; urgency=low
 
   * New Upstream:
