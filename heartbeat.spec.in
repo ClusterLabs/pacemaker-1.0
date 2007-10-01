@@ -2698,7 +2698,8 @@ make DESTDIR=$RPM_BUILD_ROOT install
 %{sbindir}/crm_uuid
 %{sbindir}/crm_mon 
 %{sbindir}/ocf-tester
-%{sbindir}/iso8601			
+%{sbindir}/hb_report
+%{sbindir}/iso8601
 %{sbindir}/crm_master 
 %{sbindir}/crm_standby
 %{sbindir}/crm_attribute 
