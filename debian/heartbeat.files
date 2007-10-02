@@ -128,6 +128,7 @@ usr/lib/heartbeat/stonithdtest/apitest
 usr/lib/heartbeat/tengine
 usr/lib/heartbeat/transient-test.sh
 usr/lib/heartbeat/ttest
+usr/lib/heartbeat/utillib.sh
 usr/lib/libapphb.so.0
 usr/lib/libapphb.so.0.0.0
 usr/lib/libccmclient.so.1
@@ -213,8 +214,8 @@ usr/lib/ocf/resource.d/heartbeat/apache
 usr/lib/ocf/resource.d/heartbeat/db2
 usr/lib/ocf/resource.d/heartbeat/drbd
 usr/lib/ocf/resource.d/heartbeat/eDir88
-usr/lib/ocf/resource.d/heartbeat/mysql
 usr/lib/ocf/resource.d/heartbeat/ids
+usr/lib/ocf/resource.d/heartbeat/mysql
 usr/lib/ocf/resource.d/heartbeat/o2cb
 usr/lib/ocf/resource.d/heartbeat/oracle
 usr/lib/ocf/resource.d/heartbeat/oralsnr
@@ -222,6 +223,7 @@ usr/lib/ocf/resource.d/heartbeat/pgsql
 usr/lib/ocf/resource.d/heartbeat/pingd
 usr/lib/ocf/resource.d/heartbeat/portblock
 usr/lib/ocf/resource.d/heartbeat/rsyncd
+usr/lib/ocf/resource.d/heartbeat/tomcat
 usr/lib/pils/plugins/InterfaceMgr/generic.so
 usr/lib/stonith/plugins/external/ibmrsa
 usr/lib/stonith/plugins/external/rackpdu
@@ -261,6 +263,7 @@ usr/sbin/crm_uuid
 usr/sbin/crm_verify
 usr/sbin/crmadmin
 usr/sbin/ha_logger
+usr/sbin/hb_report
 usr/sbin/iso8601
 usr/sbin/meatclient
 usr/sbin/ocf-tester
@@ -274,6 +277,8 @@ usr/share/doc/heartbeat/HardwareGuide.html
 usr/share/doc/heartbeat/HardwareGuide.txt
 usr/share/doc/heartbeat/README
 usr/share/doc/heartbeat/README.cts
+usr/share/doc/heartbeat/README.hb_report
+usr/share/doc/heartbeat/README.lrm_regression_tests
 usr/share/doc/heartbeat/Requirements.html
 usr/share/doc/heartbeat/Requirements.txt
 usr/share/doc/heartbeat/apphbd.cf
@@ -334,16 +339,15 @@ usr/share/heartbeat/hb_setsite
 usr/share/heartbeat/hb_setweight
 usr/share/heartbeat/hb_standby
 usr/share/heartbeat/hb_takeover
+usr/share/heartbeat/lrmtest/LRMBasicSanityCheck
 usr/share/heartbeat/lrmtest/defaults
 usr/share/heartbeat/lrmtest/descriptions
 usr/share/heartbeat/lrmtest/evaltest.sh
 usr/share/heartbeat/lrmtest/language
 usr/share/heartbeat/lrmtest/lrmadmin-interface
-usr/share/heartbeat/lrmtest/LRMBasicSanityCheck
 usr/share/heartbeat/lrmtest/lrmregtest
 usr/share/heartbeat/lrmtest/lrmregtest-heartbeat
 usr/share/heartbeat/lrmtest/lrmregtest-lsb
-usr/share/heartbeat/lrmtest/README.regression
 usr/share/heartbeat/lrmtest/regression.sh
 usr/share/heartbeat/lrmtest/testcases/BSC
 usr/share/heartbeat/lrmtest/testcases/common.filter
@@ -359,6 +363,7 @@ usr/share/heartbeat/lrmtest/testcases/xmllint.sh
 usr/share/heartbeat/mach_down
 usr/share/heartbeat/req_resource
 usr/share/heartbeat/stonithdtest/STONITHDBasicSanityCheck
+usr/share/heartbeat/utillib.sh
 usr/share/man/man1/cl_status.1.gz
 usr/share/man/man1/ha_logger.1.gz
 usr/share/man/man1/hb_addnode.1.gz

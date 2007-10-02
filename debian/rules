@@ -93,6 +93,11 @@ install-stamp:
 
 	mv $(DTMP)/usr/share/heartbeat/cts/README \
 		$(DTMP)/usr/share/doc/heartbeat/README.cts
+	mv $(DTMP)/usr/share/heartbeat/README.hb_report \
+		$(DTMP)/usr/share/doc/heartbeat
+	rm $(DTMP)/usr/lib/heartbeat/README.hb_report
+	mv $(DTMP)/usr/share/heartbeat/lrmtest/README.regression \
+		$(DTMP)/usr/share/doc/heartbeat/README.lrm_regression_tests
 	find $(DTMP)/usr/share/man -type f | xargs gzip -v --best
 	install -c -m 755 heartbeat/init.d/heartbeat \
                 $(DTMP)/etc/init.d/heartbeat
