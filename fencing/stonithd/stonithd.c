@@ -3704,14 +3704,7 @@ get_exist_client_by_chan(GList * client_list, IPC_Channel * ch)
 	GList * tmplist = NULL;
 	
 	stonithd_log2(LOG_DEBUG, "get_exist_client_by_chan: begin.");
-	if (client_list == NULL) {
-		stonithd_log(LOG_DEBUG, "get_exist_client_by_chan: "
-			     "client_list == NULL");
-		return NULL;
-	} 
-
-	if (ch == NULL) {
-		stonithd_log(LOG_DEBUG, "get_exist_client_by_chan:ch=NULL");
+	if ( !client_list || !ch ) {
 		return NULL;
 	} 
 
