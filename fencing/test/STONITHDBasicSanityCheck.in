@@ -88,7 +88,7 @@ start_stonithd()
 	$STONITHD -k
 	sleep 1
 	#start the new stonithd instance 
-	$STONITHD -at
+	$STONITHD -t &
 	sleep 1
 	$STONITHD -s
 	if [ $? -ne 0 ]; then
