@@ -185,6 +185,9 @@ static gboolean adjust_debug_level(int nsig, gpointer user_data);
 
 /* Dealing with the child quit/abort event when executing STONTIH RA plugins. 
  */
+static gboolean valid_op(common_op_t *op);
+static void handleRA_finished_op(common_op_t *op, pid_t pid, int exitcode);
+static void handle_finished_op(common_op_t *op, pid_t pid, int exitcode);
 static void stonithdProcessDied(ProcTrack* p, int status, int signo
 				, int exitcode, int waslogged);
 static void stonithdProcessRegistered(ProcTrack* p);
@@ -688,6 +691,92 @@ stonithd_quit(int signo)
 	}
 }
 
+static gboolean
+valid_op(common_op_t *op)
+{
+	gboolean rc = TRUE;
+
+	if (op == NULL) {
+		stonithd_log(LOG_ERR, "received child quit signal: "
+			"but op==NULL");
+		rc = FALSE;
+	}
+	switch( op->scenario ) {
+	case STONITH_RA_OP:
+		if (op->op_union.ra_op == NULL) {
+			stonithd_log(LOG_ERR, "op->op_union.ra_op == NULL");
+			rc = FALSE;
+		}
+		if (op->result_receiver == NULL) {
+			stonithd_log(LOG_ERR, "op->result_receiver == NULL");
+			rc = FALSE;
+		}
+		break;
+	case STONITH_INIT:
+	case STONITH_REQ:
+		if (op->op_union.st_op == NULL) {
+			stonithd_log(LOG_ERR, "op->op_union.st_op == NULL");
+			rc = FALSE;
+		}
+		if (op->result_receiver == NULL ) {
+			stonithd_log(LOG_ERR, "op->result_receiver == NULL");
+			rc = FALSE;
+		}
+		break;
+	default:
+		stonithd_log(LOG_ERR, "unsupported operation scenario");
+		rc = FALSE;
+	}
+	return rc;
+}
+
+static void
+handleRA_finished_op(common_op_t *op, pid_t pid, int exitcode)
+{
+	op->op_union.ra_op->call_id = pid;
+	op->op_union.ra_op->op_result = exitcode;
+	send_stonithRAop_final_result(op->op_union.ra_op, 
+			      op->result_receiver);
+	if( !strcmp(op->op_union.ra_op->op_type, "start") ) {
+		record_new_srsc(op->op_union.ra_op);
+	}
+	g_hash_table_remove(executing_queue, &pid);
+}
+static void
+handle_finished_op(common_op_t *op, pid_t pid, int exitcode)
+{
+	if (exitcode == S_OK) {
+		op->op_union.st_op->op_result = STONITH_SUCCEEDED;
+		op->op_union.st_op->node_list = 
+			g_string_append(op->op_union.st_op->node_list
+					, local_nodename);
+		send_stonithop_final_result(op); 
+		g_hash_table_remove(executing_queue, &pid);
+		return;
+	}
+	/* Go ahead when exitcode != S_OK */
+	stonithd_log(LOG_INFO, "Failed to STONITH node %s with one " 
+		"local device, exitcode = %d. Will try to use the "
+		"next local device."
+		,	op->op_union.st_op->node_name, exitcode); 
+	if (ST_OK == continue_local_stonithop(pid)) {
+		return;
+	}
+	stonithd_log(LOG_DEBUG, "Failed to STONITH node %s "
+		"locally.", op->op_union.st_op->node_name);
+	/* The next statement is just for debugging */
+	if (op->scenario == STONITH_INIT) {
+		stonithd_log(LOG_DEBUG, "Will ask other nodes "
+			"to help STONITH node %s."
+			,	op->op_union.st_op->node_name); 
+	}
+	if (changeto_remote_stonithop(pid) != ST_OK) {
+		op->op_union.st_op->op_result = STONITH_GENERIC;
+		send_stonithop_final_result(op);
+		g_hash_table_remove(executing_queue, &pid);
+	}
+}
+
 static void
 stonithdProcessDied(ProcTrack* p, int status, int signo
 		    , int exitcode, int waslogged)
@@ -702,95 +791,29 @@ stonithdProcessDied(ProcTrack* p, int status, int signo
 	stonithd_log2(LOG_DEBUG, "there still are %d child process running"
 			, stonithd_child_count);
 	stonithd_log(LOG_DEBUG, "Child process %s [%d] exited, its exit code:"
-		     " %d when signo=%d.", pname, p->pid, exitcode, signo);
+		     " %d when signo=%d.", pname,
+		     proctrack_pid(p), exitcode, signo);
 
 	rc = g_hash_table_lookup_extended(executing_queue, &(p->pid) 
 			, (gpointer *)&orignal_key, (gpointer *)&op);
-
 	if (rc == FALSE) {
-		if (SIGKILL != signo) {
-			stonithd_log(LOG_WARNING, "child exits, "
-				"but not tracked.");
+		stonithd_log(LOG_WARNING, "child exits, but not tracked.");
+	}
+	else if( signo ) {
+		if( proctrack_timedout(p) ) {
+			stonithd_log(LOG_WARNING,
+				"A STONITH operation timed out."); 
+		}
+	}
+	else if( valid_op(op) ) {
+		if( op->scenario == STONITH_RA_OP ) {
+			handleRA_finished_op(op, proctrack_pid(p), exitcode);
 		} else {
-			stonithd_log(LOG_WARNING
-				, "A STONITH operation timeout."); 
+			handle_finished_op(op, proctrack_pid(p), exitcode);
 		}
-		goto end;
 	}
-
-	if (op == NULL) {
-		stonithd_log(LOG_ERR, "received child quit signal: "
-			"but op==NULL");
-		goto end;
-	}
-
-	if ( op->scenario == STONITH_RA_OP ) {
-		if (op->op_union.ra_op == NULL) {
-			stonithd_log(LOG_ERR, "stonithdProcessDied: "
-					"op->op_union.ra_op == NULL");
-			goto end;
-		}
-		if (op->result_receiver == NULL) {
-			stonithd_log(LOG_ERR, "stonithdProcessDied: "
-					"op->result_receiver == NULL");
-			goto end;
-		}	
-
-		op->op_union.ra_op->call_id = p->pid;
-		op->op_union.ra_op->op_result = exitcode;
-		send_stonithRAop_final_result(op->op_union.ra_op, 
-				      op->result_receiver);
-		if( !strcmp(op->op_union.ra_op->op_type, "start") ) {
-			record_new_srsc(op->op_union.ra_op);
-		}
-		g_hash_table_remove(executing_queue, &(p->pid));
-		goto end;
-	}
-
-	/* next is stonith operation related */
-	if ( op->scenario == STONITH_INIT || op->scenario == STONITH_REQ ) {
-		if (op->op_union.st_op == NULL || op->result_receiver == NULL ) {
-			stonithd_log(LOG_ERR, "stonithdProcessDied: "
-					      "op->op_union.st_op == NULL or "
-					      "op->result_receiver == NULL");
-			goto end;
-		}
-			
-		if (exitcode == S_OK) {
-			op->op_union.st_op->op_result = STONITH_SUCCEEDED;
-			op->op_union.st_op->node_list = 
-				g_string_append(op->op_union.st_op->node_list
-						, local_nodename);
-			send_stonithop_final_result(op); 
-			g_hash_table_remove(executing_queue, &(p->pid));
-			goto end;
-		}
-		/* Go ahead when exitcode != S_OK */
-		stonithd_log(LOG_INFO, "Failed to STONITH node %s with one " 
-			"local device, exitcode = %d. Will try to use the "
-			"next local device."
-			,	op->op_union.st_op->node_name, exitcode); 
-		if (ST_OK == continue_local_stonithop(p->pid)) {
-			goto end;
-		} else {
-			stonithd_log(LOG_DEBUG, "Failed to STONITH node %s "
-				"locally.", op->op_union.st_op->node_name);
-			/* The next statement is just for debugging */
-			if (op->scenario == STONITH_INIT) {
-				stonithd_log(LOG_DEBUG, "Will ask other nodes "
-					"to help STONITH node %s."
-					,	op->op_union.st_op->node_name); 
-			}
-			if (changeto_remote_stonithop(p->pid) != ST_OK) {
-				op->op_union.st_op->op_result = STONITH_GENERIC;
-				send_stonithop_final_result(op);
-				g_hash_table_remove(executing_queue, &(p->pid));
-			}
-		}		
-	}
-end:
 	g_free(p->privatedata);
-	p->privatedata = NULL;
+	reset_proctrack_data(p);
 }
 
 static void
@@ -798,7 +821,7 @@ stonithdProcessRegistered(ProcTrack* p)
 {
 	stonithd_child_count++;
 	stonithd_log2(LOG_DEBUG, "Child process [%s] started [ pid: %d ]."
-		     , p->ops->proctype(p), p->pid);
+		     , p->ops->proctype(p), proctrack_pid(p));
 	stonithd_log2(LOG_DEBUG, "there are %d child process running"
 			, stonithd_child_count);
 }
@@ -806,7 +829,7 @@ stonithdProcessRegistered(ProcTrack* p)
 static const char * 
 stonithdProcessName(ProcTrack* p)
 {
-	gchar * process_name = p->privatedata;
+	gchar * process_name = proctrack_data(p);
 	stonithd_log2(LOG_DEBUG, "process name: %s", process_name);
 	return  process_name;
 }
