@@ -177,7 +177,7 @@ struct RA_operation_to_handler
 };
 
 /* Miscellaneous functions such as daemon routines and others. */
-static void become_daemon(gboolean);
+static void become_daemon(void);
 static int show_daemon_status(const char * pidfile);
 static int kill_running_daemon(const char * pidfile);
 static void stonithd_quit(int signo);
@@ -474,8 +474,9 @@ main(int argc, char ** argv)
 	}
 
 	/* Not use daemon() API, since it's not POSIX compliant */
-	become_daemon(STARTUP_ALONE);
+	become_daemon();
 
+	if( !STARTUP_ALONE ) {
 	hb = ll_cluster_new("heartbeat");
 	if ( hb == NULL ) {
 		stonithd_log(LOG_ERR, "ll_cluster_new failed.");
@@ -498,6 +499,7 @@ main(int argc, char ** argv)
 			goto signoff_quit;
 		}
 	}
+	}
 
 	mainloop = g_main_new(FALSE);
 
@@ -505,9 +507,11 @@ main(int argc, char ** argv)
 	 * Initialize the handler of IPC messages from heartbeat, including
 	 * the messages produced by myself as a client of heartbeat.
 	 */
+	if( !STARTUP_ALONE ) {
 	if ( (main_rc = init_hb_msg_handler()) != 0) {
 		stonithd_log(LOG_ERR, "An error in init_hb_msg_handler.");
 		goto signoff_quit;
+	}
 	}
 	
 	/*
@@ -613,12 +617,12 @@ check_memory(gpointer unused)
  * 1) Not use daemon() API for its portibility, any comment?
 */
 static void
-become_daemon(gboolean startup_alone)
+become_daemon()
 {
 	pid_t pid;
 	int j;
 
-	if (startup_alone == TRUE) {
+	if (STARTUP_ALONE == TRUE) {
 		pid = fork();
 
 		if (pid < 0) { /* in parent process and fork failed. */
