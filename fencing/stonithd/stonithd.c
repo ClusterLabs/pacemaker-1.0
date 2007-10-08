@@ -74,6 +74,8 @@
 
 #define ENABLE_PID_AUTH 0
 
+#define REBOOT_BLOCK_TIMEOUT 90*1000
+
 /* For integration with heartbeat */
 #define MAXCMP 80
 #define MAGIC_EC 100
@@ -395,6 +397,57 @@ static int 		stonithd_child_count	= 0;
  * is being polled in g_main_loop. NOTE: _ch_ is evaluated twice.
  */
 #define IS_POLLED_CALLBACK_CHANNEL(ch) (CALLBACK_CHANNEL_GCHSOURCE(ch) != NULL)
+
+#define LOG_FAILED_TO_GET_FIELD(field)					\
+			stonithd_log(LOG_ERR				\
+			,	"%s:%d: cannot get field %s from message." \
+			,__FUNCTION__,__LINE__,field)
+
+#define st_get_int_value(msg,fld,i) do { \
+	if (HA_OK != ha_msg_value_int(msg,fld,i)) { \
+		LOG_FAILED_TO_GET_FIELD(fld); \
+		rc = ST_FAIL; \
+	} \
+} while(0)
+#define st_save_string(msg,fld,v) do { \
+	const char *tmp; \
+	tmp = cl_get_string(msg,fld); \
+	if (!tmp) { \
+		LOG_FAILED_TO_GET_FIELD(fld); \
+		rc = ST_FAIL; \
+	} else { \
+		v = g_strdup(tmp); \
+	} \
+} while(0)
+#define st_get_string(msg,fld,v) do { \
+	v = cl_get_string(msg,fld); \
+	if (!v) { \
+		LOG_FAILED_TO_GET_FIELD(fld); \
+		rc = ST_FAIL; \
+	} \
+} while(0)
+#define st_get_hashtable(msg,fld,v) do { \
+	v = cl_get_hashtable(msg,fld); \
+	if (!v) { \
+		LOG_FAILED_TO_GET_FIELD(fld); \
+		rc = ST_FAIL; \
+	} \
+} while(0)
+
+#define return_on_msg_from_us(type) do { \
+	if ( !strncmp(from, local_nodename, MAXCMP) && !TEST ) { \
+		stonithd_log(LOG_DEBUG, "received a " #type \
+			"msg from myself, ignoring"); \
+		return; \
+	} \
+} while(0)
+#define return_on_msg_shoot_us(type) do { \
+	if ( !strncmp(target, local_nodename, MAXCMP) && !TEST ) { \
+		stonithd_log(LOG_DEBUG, "in normal mode, won't " \
+				     "stonith myself"); \
+		return; \
+	} \
+} while(0)
 
 int
 main(int argc, char ** argv)
@@ -784,7 +837,7 @@ stonithdProcessDied(ProcTrack* p, int status, int signo
 	const char * pname = p->ops->proctype(p);
 	gboolean rc;
 	common_op_t * op = NULL;
-	int * orignal_key = NULL;
+	int * original_key = NULL;
 
 	stonithd_log2(LOG_DEBUG, "stonithdProcessDied: begin"); 
 	stonithd_child_count--;
@@ -795,7 +848,7 @@ stonithdProcessDied(ProcTrack* p, int status, int signo
 		     proctrack_pid(p), exitcode, signo);
 
 	rc = g_hash_table_lookup_extended(executing_queue, &(p->pid) 
-			, (gpointer *)&orignal_key, (gpointer *)&op);
+			, (gpointer *)&original_key, (gpointer *)&op);
 	if (rc == FALSE) {
 		stonithd_log(LOG_WARNING, "child exits, but not tracked.");
 	}
@@ -834,53 +887,31 @@ stonithdProcessName(ProcTrack* p)
 	return  process_name;
 }
 
+#define set_msg_handler(type, handler) do { \
+	if (hb->llc_ops->set_msg_callback(hb, type, \
+				  handler, hb) != HA_OK) { \
+		stonithd_log(LOG_ERR, "Cannot set msg " #type " callback"); \
+		stonithd_log(LOG_ERR, "REASON: %s", hb->llc_ops->errmsg(hb)); \
+		return LSB_EXIT_GENERIC; \
+	} \
+	} while(0)
+
 static int
 init_hb_msg_handler(void)
 {
 	unsigned int msg_mask;
 	
 	if (hb == NULL) {
-		stonithd_log(LOG_ERR, "Don't connect to heartbeat: hb==NULL");
+		stonithd_log(LOG_ERR, "%s:%d: not connected to heartbeat"
+			, __FUNCTION__, __LINE__);
 		return LSB_EXIT_GENERIC;	
 	}
 
-	stonithd_log2(LOG_DEBUG, "init_hb_msg_handler: begin");
-
-	/* Set message callback */
-	if (hb->llc_ops->set_msg_callback(hb, T_WHOCANST, 
-				  handle_msg_twhocan, hb) != HA_OK) {
-		stonithd_log(LOG_ERR, "Cannot set msg T_WHOCANST callback");
-		stonithd_log(LOG_ERR, "REASON: %s", hb->llc_ops->errmsg(hb));
-		return LSB_EXIT_GENERIC;
-	}
-
-	if (hb->llc_ops->set_msg_callback(hb, T_ICANST, 
-				  handle_msg_ticanst, hb) != HA_OK) {
-		stonithd_log(LOG_ERR, "Cannot set msg T_ICANST callback");
-		stonithd_log(LOG_ERR, "REASON: %s", hb->llc_ops->errmsg(hb));
-		return LSB_EXIT_GENERIC;
-	}
-
-	if (hb->llc_ops->set_msg_callback(hb, T_STIT, 
-				  handle_msg_tstit, hb) != HA_OK) {
-		stonithd_log(LOG_ERR, "Cannot set msg T_STIT callback");
-		stonithd_log(LOG_ERR, "REASON: %s", hb->llc_ops->errmsg(hb));
-		return LSB_EXIT_GENERIC;
-	}
-
-	if (hb->llc_ops->set_msg_callback(hb, T_RSTIT, 
-				  handle_msg_trstit, hb) != HA_OK) {
-		stonithd_log(LOG_ERR, "Cannot set msg T_WHOCANST callback");
-		stonithd_log(LOG_ERR, "REASON: %s", hb->llc_ops->errmsg(hb));
-		return LSB_EXIT_GENERIC;
-	}
-
-	if (hb->llc_ops->set_msg_callback(hb, T_RESETTED, 
-				  handle_msg_resetted, hb) != HA_OK) {
-		stonithd_log(LOG_ERR, "Cannot set msg T_RESETTED callback");
-		stonithd_log(LOG_ERR, "REASON: %s", hb->llc_ops->errmsg(hb));
-		return LSB_EXIT_GENERIC;
-	}
+	set_msg_handler(T_WHOCANST, handle_msg_twhocan);
+	set_msg_handler(T_ICANST, handle_msg_ticanst);
+	set_msg_handler(T_STIT, handle_msg_tstit);
+	set_msg_handler(T_RSTIT, handle_msg_trstit);
+	set_msg_handler(T_RESETTED, handle_msg_resetted);
 
 	msg_mask = LLC_FILTER_DEFAULT;
 	stonithd_log(LOG_DEBUG, "Setting message filter mode");
@@ -929,79 +960,50 @@ stonithd_hb_msg_dispatch_destroy(gpointer user_data)
 static void
 handle_msg_twhocan(struct ha_msg* msg, void* private_data)
 {
+	struct ha_msg * reply;
 	const char * target = NULL;
 	const char * from = NULL;
 	int call_id;
+	int rc = ST_OK;
 
 	stonithd_log(LOG_DEBUG, "I got T_WHOCANST msg.");	
-	if ( (from = cl_get_string(msg, F_ORIG)) == NULL) {
-		stonithd_log(LOG_ERR, "handle_msg_twhocan: no F_ORIG field.");
+	st_get_string(msg, F_ORIG, from);
+	st_get_string(msg, F_STONITHD_NODE, target);
+	st_get_int_value(msg, F_STONITHD_CALLID, &call_id);
+	if( rc != ST_OK ) { /* didn't get all fields */
 		return;
 	}
-
-	/* Don't handle the message sent by myself when not in TEST mode */
-	if ( strncmp(from, local_nodename, MAXCMP) 
-		== 0) {
-		stonithd_log(LOG_DEBUG, "received a T_WHOCANST msg from myself.");
-		if (TEST == FALSE) {
-			return;
-		} else {
-			stonithd_log(LOG_DEBUG, "In TEST mode, so continue.");
-		}
-	}
-
-	if ( (target = cl_get_string(msg, F_STONITHD_NODE)) == NULL) {
-		stonithd_log(LOG_ERR, "handle_msg_twhocan: no F_STONITHD_NODE "
-			     "field.");
-		return;
-	}
-
-	if (HA_OK != ha_msg_value_int(msg, F_STONITHD_CALLID, &call_id)) {
-		stonithd_log(LOG_ERR, "handle_msg_twhocan: no F_STONITHD_CALLID "
-			     "field.");
-		return;
-	}
-
-	if (get_local_stonithobj_can_stonith(target, NULL) != NULL ) {
-		struct ha_msg * reply;
-
-		if ((reply = ha_msg_new(1)) == NULL) {
-			stonithd_log(LOG_ERR, "handle_msg_twhocan: "
-					"out of memory");
-			return;
-		}
-
-		if ( (ha_msg_add(reply, F_TYPE, T_ICANST) != HA_OK)
-	    	    ||(ha_msg_add(reply, F_ORIG, local_nodename) != HA_OK)
-	    	    ||(ha_msg_add_int(reply, F_STONITHD_CALLID, call_id)
-			!= HA_OK)) {
-			stonithd_log(LOG_ERR, "handle_msg_twhocan: "
-					"cannot add field.");
-			ZAPMSG(reply);
-			return;
-		}
-
-		if (hb == NULL) {
-			stonithd_log(LOG_ERR, "handle_msg_twhocan: hb==NULL");
-			ZAPMSG(reply);
-			return;
-		}
-
-		if (HA_OK!=hb->llc_ops->sendnodemsg(hb, reply, from)) {
-			stonithd_log(LOG_ERR, "handle_msg_twhocan: "
-					"sendnodermsg failed.");
-			ZAPMSG(reply);
-			return;
-		}
-		stonithd_log(LOG_DEBUG, "handle_msg_twhocan: I can stonith "
-			     "node %s.", target);
-		stonithd_log2(LOG_DEBUG,"handle_msg_twhocan: "
-				"send reply successfully.");
-		ZAPMSG(reply);
-	} else {
+	return_on_msg_from_us(T_WHOCANST);
+	if( !get_local_stonithobj_can_stonith(target, NULL) ) {
 		stonithd_log(LOG_DEBUG, "handle_msg_twhocan: I cannot stonith "
 			     "node %s.", target);
+		return;
 	}
+	if (hb == NULL) {
+		stonithd_log(LOG_ERR, "%s:%d: not connected to heartbeat"
+			, __FUNCTION__, __LINE__);
+		return;
+	}
+	if ((reply = ha_msg_new(1)) == NULL) {
+		stonithd_log(LOG_ERR, "handle_msg_twhocan: "
+				"out of memory");
+		return;
+	}
+
+	if ( (ha_msg_add(reply, F_TYPE, T_ICANST) != HA_OK)
+	    ||(ha_msg_add(reply, F_ORIG, local_nodename) != HA_OK)
+	    ||(ha_msg_add_int(reply, F_STONITHD_CALLID, call_id) != HA_OK)) {
+		stonithd_log(LOG_ERR, "handle_msg_twhocan: cannot add field.");
+		ZAPMSG(reply);
+		return;
+	}
+	if (HA_OK!=hb->llc_ops->sendnodemsg(hb, reply, from)) {
+		stonithd_log(LOG_ERR, "handle_msg_twhocan: sendnodemsg failed");
+		ZAPMSG(reply);
+		return;
+	}
+	stonithd_log(LOG_DEBUG, "handle_msg_twhocan: replied that"
+		" we can stonith node %s", target);
 }
 
 static void
@@ -1011,26 +1013,15 @@ handle_msg_ticanst(struct ha_msg* msg, void* private_data)
 	int  call_id;
 	int * orig_key = NULL;
 	common_op_t * op = NULL;
+	int rc = ST_OK;
 
 	stonithd_log(LOG_DEBUG, "handle_msg_ticanst: got T_ICANST msg.");
-	if ( (from = cl_get_string(msg, F_ORIG)) == NULL) {
-		stonithd_log(LOG_ERR, "handle_msg_ticanst: no F_ORIG field.");
+	st_get_string(msg, F_ORIG, from);
+	st_get_int_value(msg, F_STONITHD_CALLID, &call_id);
+	if( rc != ST_OK ) { /* didn't get all fields */
 		return;
 	}
-
-	/* Don't handle the message sent by myself when not TEST mode */
-	if ( (strncmp(from, local_nodename, MAXCMP) 
-		== 0) && ( TEST == FALSE ) ){
-		stonithd_log(LOG_DEBUG, "received a T_ICANST msg from myself.");
-		return;
-	}
-
-	if ( HA_OK != ha_msg_value_int(msg, F_STONITHD_CALLID, &call_id) ) { 
-		stonithd_log(LOG_ERR, "handle_msg_ticanst: no F_STONITHD_CALLID"
-			     " field.");
-		return;
-	}
-
+	return_on_msg_from_us(T_ICANST);
 	my_hash_table_find(executing_queue, (gpointer *)&orig_key, 
 			   (gpointer *)&op, &call_id);
 	if ( op != NULL &&  /* QUERY only */
@@ -1056,66 +1047,42 @@ handle_msg_tstit(struct ha_msg* msg, void* private_data)
 	const char * from = NULL;
 	stonith_rsc_t * srsc = NULL;
 	stonith_ops_t * st_op = NULL;
+	int rc = ST_OK;
 
 	stonithd_log(LOG_DEBUG, "handle_msg_tstit: got T_STIT msg.");	
-	if ( (from = cl_get_string(msg, F_ORIG)) == NULL) {
-		stonithd_log(LOG_ERR, "handle_msg_tstit: no F_ORIG field.");
+	st_get_string(msg, F_ORIG, from);
+	st_get_string(msg, F_STONITHD_NODE, target);
+	if( rc != ST_OK ) { /* didn't get all fields */
 		return;
 	}
+	return_on_msg_from_us(T_STIT);
+	return_on_msg_shoot_us();
 
-	/* Don't handle the message sent by myself */
-	if ( strncmp(from, local_nodename, MAXCMP) 
-		== 0 && TEST == FALSE ) {
-		stonithd_log(LOG_DEBUG, "received a T_STIT msg from myself, "
-			     "will abandon it.");
+	srsc = get_local_stonithobj_can_stonith(target, NULL);
+	if( !srsc ) {
 		return;
 	}
-
-	if ( (target = cl_get_string(msg, F_STONITHD_NODE)) == NULL) {
-		stonithd_log(LOG_ERR, "handle_msg_tstit: no F_STONITHD_NODE "
-			     "field.");
+	if ( !(st_op = new_stonith_ops_t(msg)) ) {
+		stonithd_log(LOG_ERR, "%s:%d: %s"
+			, __FUNCTION__, __LINE__
+			, "failed to create a stonith_op.");
 		return;
 	}
-
-	/* Don't handle the message about stonithing myself */
-	if ( strncmp(target, local_nodename, MAXCMP) 
-		== 0) {
-		stonithd_log(LOG_DEBUG, "received a T_STIT message requiring "
-				"to stonith myself.");
-		if (TEST == FALSE) {
-			stonithd_log(LOG_DEBUG, "In normal mode, donnot "
-				     "stonith myself.");
-			return;
-		} else {
-			stonithd_log(LOG_DEBUG, "In TEST mode, continue even "
-				     "to stonith myself.");
-		}
-	}
-
-	if ((srsc = get_local_stonithobj_can_stonith(target, NULL)) != NULL) {
-		if (NULL == (st_op = new_stonith_ops_t(msg)) ) {
-			stonithd_log(LOG_ERR, "%s:%d: %s"
-				, __FUNCTION__, __LINE__
-				, "Failed to Create a stonith_op.");
-			return;
-		} else {
-			if ( 0 == st_op->call_id ) {
-				stonithd_log(LOG_ERR, "%s:%d: %s"
-					, __FUNCTION__, __LINE__
-					, "No F_STONITHD_CALLID field.");
-				return;
-			}
-		}
-
-		if (ST_OK != require_local_stonithop(st_op, srsc, from)) {
-		} else {
-			stonithd_log(LOG_INFO, "Node %s try to help node %s to "
-				"fence node %s.", local_nodename, from, target);
-		}
-
+	if ( !st_op->call_id ) {
+		stonithd_log(LOG_ERR, "%s:%d: %s"
+			, __FUNCTION__, __LINE__
+			, "No F_STONITHD_CALLID field.");
 		free_stonith_ops_t(st_op);
-		st_op = NULL;
+		return;
 	}
+
+	if (ST_OK == require_local_stonithop(st_op, srsc, from)) {
+		stonithd_log(LOG_INFO, "Node %s try to help node %s to "
+			"fence node %s.", local_nodename, from, target);
+	}
+
+	free_stonith_ops_t(st_op);
+	st_op = NULL;
 }
 
 static int
@@ -1123,34 +1090,33 @@ require_local_stonithop(stonith_ops_t * st_op, stonith_rsc_t * srsc,
 			const char * asker)
 {
 	int child_id;
+	common_op_t * op;
+	int * tmp_callid;
 
 	if ((child_id = stonith_operate_locally(st_op, srsc)) <= 0) {
 		stonithd_log(LOG_ERR, "require_local_stonithop: "
 			"stonith_operate_locally failed.");
 		return ST_FAIL;
-	} else {
-		common_op_t * op;
-		int * tmp_callid;
-
-		op = g_new0(common_op_t, 1);
-		op->scenario = STONITH_REQ;
-		op->result_receiver = g_strdup(asker); 
-		op->rsc_id = g_strdup(srsc->rsc_id);
-		op->op_union.st_op = dup_stonith_ops_t(st_op);
-
-		tmp_callid = g_new(int, 1);
-		*tmp_callid = child_id;
-		g_hash_table_insert(executing_queue, tmp_callid, op);
-		tmp_callid = g_new(int, 1);
-		*tmp_callid = child_id;
-		op->timer_id = Gmain_timeout_add_full(G_PRIORITY_HIGH_IDLE
-					, st_op->timeout, stonithop_timeout
-					, tmp_callid, timeout_destroy_notify);
-		stonithd_log(LOG_DEBUG, "require_local_stonithop: inserted "
-			    "optype=%s, child_id=%d",
-				stonith_op_strname[st_op->optype], child_id);
-		return ST_OK;
 	}
+
+	op = g_new0(common_op_t, 1);
+	op->scenario = STONITH_REQ;
+	op->result_receiver = g_strdup(asker);
+	op->rsc_id = g_strdup(srsc->rsc_id);
+	op->op_union.st_op = dup_stonith_ops_t(st_op);
+
+	tmp_callid = g_new(int, 1);
+	*tmp_callid = child_id;
+	g_hash_table_insert(executing_queue, tmp_callid, op);
+	tmp_callid = g_new(int, 1);
+	*tmp_callid = child_id;
+	op->timer_id = Gmain_timeout_add_full(G_PRIORITY_HIGH_IDLE
+				, st_op->timeout, stonithop_timeout
+				, tmp_callid, timeout_destroy_notify);
+	stonithd_log(LOG_DEBUG, "require_local_stonithop: inserted "
+		    "optype=%s, child_id=%d",
+			stonith_op_strname[st_op->optype], child_id);
+	return ST_OK;
 }
 
 static void
@@ -1161,55 +1127,35 @@ handle_msg_trstit(struct ha_msg* msg, void* private_data)
 	int op_result;
 	int * orig_key = NULL;
 	common_op_t * op = NULL;
+	int rc = ST_OK;
 
 	stonithd_log(LOG_DEBUG, "handle_msg_trstit: got T_RSTIT msg.");	
-	if ( (from = cl_get_string(msg, F_ORIG)) == NULL) {
-		stonithd_log(LOG_ERR, "handle_msg_trstit: no F_ORIG field.");
+	st_get_string(msg, F_ORIG, from);
+	st_get_int_value(msg, F_STONITHD_CALLID, &call_id);
+	st_get_int_value(msg, F_STONITHD_FRC, &op_result);
+	if( rc != ST_OK ) { /* didn't get all fields */
 		return;
 	}
+	return_on_msg_from_us(T_RSTIT);
+
 	stonithd_log(LOG_DEBUG, "This T_RSTIT message is from %s.", from);	
-
-	/* Don't handle the message sent by myself when not in TEST mode */
-	if ( TEST == FALSE &&
-	     strncmp(from, local_nodename, MAXCMP) == 0) {
-		stonithd_log(LOG_DEBUG, "received a T_RSTIT msg from myself.");
-		return;
-	}
-
-	if ( HA_OK != ha_msg_value_int(msg, F_STONITHD_CALLID, &call_id)) {
-		stonithd_log(LOG_ERR, "handle_msg_trstit: no F_STONITHD_CALLID "
-			     "field.");
-		return;
-	}
-
-	if ( HA_OK != ha_msg_value_int(msg, F_STONITHD_FRC, &op_result)) {
-		stonithd_log(LOG_ERR, "handle_msg_trstit: no F_STONITHD_FRC "
-			     "field.");
-		return;
-	}
-
-
 	my_hash_table_find(executing_queue, (gpointer *)&orig_key, 
 			   (gpointer *)&op, &call_id);
-	if ( op != NULL && 
-	    (op->scenario == STONITH_INIT || op->scenario == STONITH_REQ)) {
-		op->op_union.st_op->op_result = (stonith_ret_t)op_result;
-		op->op_union.st_op->node_list = 
-			g_string_append(op->op_union.st_op->node_list, from);
-		send_stonithop_final_result(op);
-		stonithd_log(LOG_INFO, "Node %s fenced node %s: result=%s."
-			, from, op->op_union.st_op->node_name
-			, stonith_op_result_strname[op_result]);
-		stonithd_log2(LOG_DEBUG, "handle_msg_trstit: clean the "
-			     "executing queue.");
-		g_hash_table_remove(executing_queue, orig_key);
-	} else {
+	if ( !op || 
+	    (op->scenario != STONITH_INIT && op->scenario != STONITH_REQ)) {
 		stonithd_log(LOG_DEBUG, "handle_msg_trstit: the stonith "
 			"operation (call_id==%d) has finished before "
 			"receiving this message", call_id);
+		return;
 	}
-
-	stonithd_log2(LOG_DEBUG, "handle_msg_trstit: end");	
+	op->op_union.st_op->op_result = (stonith_ret_t)op_result;
+	op->op_union.st_op->node_list = 
+		g_string_append(op->op_union.st_op->node_list, from);
+	send_stonithop_final_result(op);
+	stonithd_log(LOG_INFO, "Node %s fenced node %s: result=%s."
+		, from, op->op_union.st_op->node_name
+		, stonith_op_result_strname[op_result]);
+	g_hash_table_remove(executing_queue, orig_key);
 }
 
 static int
@@ -1218,16 +1164,17 @@ broadcast_reset_success(const char * target)
 	struct ha_msg * msg;
 
 	if (hb == NULL) {
-		stonithd_log(LOG_ERR, "%s:%d: hb==NULL", __FUNCTION__, __LINE__);
+		stonithd_log(LOG_ERR, "%s:%d: not connected to heartbeat"
+			, __FUNCTION__, __LINE__);
 		return ST_FAIL;
 	}
 
-	if ((msg = ha_msg_new(0)) == NULL) {
-		stonithd_log(LOG_ERR, "%s:%d:ha_msg_new: out of memory"
+	if ((msg = ha_msg_new(3)) == NULL) {
+		stonithd_log(LOG_ERR, "%s:%d: out of memory"
 				, __FUNCTION__, __LINE__ );
 		return ST_FAIL;
 	}
-	
+
 	stonithd_log(LOG_DEBUG, "%s: Broadcast the reset success message to "
 		"the whole cluster.", __FUNCTION__);
 	if ( (ha_msg_add(msg, F_TYPE, T_RESETTED) != HA_OK)
@@ -1258,31 +1205,27 @@ handle_msg_resetted(struct ha_msg* msg, void* private_data)
 	const char * from = NULL;
 	const char * target = NULL;
 	int timer_id = -1;
+	int rc = ST_OK;
 
 	stonithd_log(LOG_DEBUG, "%s: begin", __FUNCTION__)
 
-	if ( (from = cl_get_string(msg, F_ORIG)) == NULL) {
-		stonithd_log(LOG_ERR, "%s: no F_ORIG field.", __FUNCTION__);
-		return;
-	}
-
-	if ( (target = cl_get_string(msg, F_STONITHD_NODE)) == NULL) {
-		stonithd_log(LOG_ERR, "%s: no F_STONITHD_NODE "
-			     , __FUNCTION__ );
+	st_get_string(msg, F_ORIG, from);
+	st_get_string(msg, F_STONITHD_NODE, target);
+	if( rc != ST_OK ) { /* didn't get all fields */
 		return;
 	}
 
 	stonithd_log(LOG_DEBUG, "Got a notification of successfully resetting"
 		" node %s from node %s with APITET.", target, from);	
-
 	/* The timeout value equals 90 seconds now */
-	timer_id = Gmain_timeout_add_full(G_PRIORITY_HIGH_IDLE, 90*1000
+	timer_id = Gmain_timeout_add_full(G_PRIORITY_HIGH_IDLE
+			, REBOOT_BLOCK_TIMEOUT
 			, reboot_block_timeout, g_strdup(target)
 			, timerid_destroy_notify);
 
 	g_hash_table_replace(reboot_blocked_table, g_strdup(target)
 				, g_memdup(&timer_id, sizeof(timer_id)));
-		
+
 	stonithd_log2(LOG_DEBUG, "handle_msg_trstit: end");	
 }
 
@@ -1456,7 +1399,7 @@ accept_client_connect_callback(IPC_Channel * ch, gpointer user)
 
 	if (ch->ch_status == IPC_DISCONNECT) {
 		stonithd_log(LOG_WARNING
-			, "callback IPC disconneted with a client: ch=%p", ch);
+			, "callback IPC disconnected with a client: ch=%p", ch);
 		return TRUE;
 	}
 
@@ -1510,7 +1453,7 @@ accept_client_connect_callback(IPC_Channel * ch, gpointer user)
 #endif
 	}
 
-	if ((reply = ha_msg_new(1)) == NULL) {
+	if ((reply = ha_msg_new(3)) == NULL) {
 		stonithd_log(LOG_ERR, "%s:%d:ha_msg_new:out of memory."
 				,__FUNCTION__, __LINE__);
 		return TRUE;
@@ -1549,16 +1492,7 @@ stonithd_client_dispatch(IPC_Channel * ch, gpointer user_data)
 	while ( ch->ops->is_message_pending(ch))  {
 		if (ch->ch_status == IPC_DISCONNECT) {
 			stonithd_log2(LOG_DEBUG
-				, "IPC disconneted with a client: ch=%p", ch);
-#if 0
-			/* For verify the API use */
-			if  ((msg = msgfromIPC_noauth(ch)) == NULL ) {
-				/* Must be here */
-				stonithd_log(LOG_ERR
-				       , "Failed when receiving IPC messages.");
-				return FALSE;
-			}
-#endif 
+				, "IPC disconnected with a client: ch=%p", ch);
 			stonithd_log2(LOG_DEBUG, "stonithd_client_dispatch: "
 				"delete a client due to IPC_DISCONNECT.");
 			delete_client_by_chan(&client_list, ch);
@@ -1570,9 +1504,8 @@ stonithd_client_dispatch(IPC_Channel * ch, gpointer user_data)
 			stonithd_log(LOG_ERR
 				    , "Failed when receiving IPC messages.");
 			return FALSE;
-		} else {
-			stonithd_process_client_msg(msg, (gpointer)ch);
 		}
+		stonithd_process_client_msg(msg, (gpointer)ch);
 	}
 			
 	stonithd_log2(LOG_DEBUG, "stonithd_client_dispatch: end");
@@ -1608,7 +1541,7 @@ stonithd_IPC_destroy_notify(gpointer data)
 			"been deleted in signoff function.");
 	}
 
-	if ( NULL != (tmp_gsrc = g_hash_table_lookup(chan_gsource_pairs, ch))) {
+	if ((tmp_gsrc = g_hash_table_lookup(chan_gsource_pairs, ch))) {
 		G_main_del_IPC_Channel(tmp_gsrc);
 		g_hash_table_remove(chan_gsource_pairs, ch);
 	} else if ((tmp_gsrc = g_hash_table_lookup(cbch_gsource_pairs, ch))) {
@@ -1726,8 +1659,8 @@ on_stonithd_signon(struct ha_msg * request, gpointer data)
 	struct ha_msg * reply;
 	const char * api_reply = ST_APIOK;
 	stonithd_client_t * client = NULL;
-	const char * tmpstr = NULL;
 	int  tmpint;
+	int rc = ST_OK;
 
 	IPC_Channel * ch = (IPC_Channel *) data;
 
@@ -1767,39 +1700,16 @@ on_stonithd_signon(struct ha_msg * request, gpointer data)
 	client->cbch = NULL;
 	client->removereason = NULL;
 
-	if (HA_OK == ha_msg_value_int(request, F_STONITHD_CEUID, &tmpint)) {
-		client->uid = tmpint;
-	} else {
-		stonithd_log(LOG_ERR, "signon msg contains no or incorrect "
-				"UID field.");
+	st_get_int_value(request, F_STONITHD_CEUID, (int *)&client->uid);
+	st_get_int_value(request, F_STONITHD_CEGID, (int *)&client->gid);
+	st_save_string(request, F_STONITHD_CNAME, client->name);
+	if( rc != ST_OK ) {
 		api_reply = ST_BADREQ;
 		free_client(client, NULL);
 		client = NULL;
 		goto send_back_reply; 
 	}
 
-	if (HA_OK == ha_msg_value_int(request, F_STONITHD_CEGID, &tmpint)) {
-		client->gid = tmpint;
-	} else {
-		stonithd_log(LOG_ERR, "signon msg contains no or incorrect "
-					"GID field.");
-		api_reply = ST_BADREQ;
-		free_client(client, NULL);
-		client = NULL;
-		goto send_back_reply; 
-	}
-
-	if ((tmpstr = cl_get_string(request, F_STONITHD_CNAME)) != NULL) {
-		client->name = g_strdup(tmpstr);
-		stonithd_log2(LOG_DEBUG, "client->name=%s.", client->name);
-	} else {
-		stonithd_log(LOG_ERR, "signon msg contains no name field.");
-		api_reply = ST_BADREQ;
-		free_client(client, NULL);
-		client = NULL;
-		goto send_back_reply; 
-	}
-	
 	/* Generate a session cookie for the client so that it can authenticate
 	 * itself when establishing the callback channel. Older stonithd clients
 	 * safely ignores this field.
@@ -1819,7 +1729,7 @@ on_stonithd_signon(struct ha_msg * request, gpointer data)
 	}
 	
 send_back_reply:
-	if ((reply = ha_msg_new(1)) == NULL) {
+	if ((reply = ha_msg_new(4)) == NULL) {
 		stonithd_log(LOG_ERR, "%s:%d:ha_msg_new:out of memory."
 				,__FUNCTION__, __LINE__);
 		return ST_FAIL;
@@ -1827,7 +1737,7 @@ send_back_reply:
 	if ( (ha_msg_add(reply, F_STONITHD_TYPE, ST_APIRPL) != HA_OK ) 
 	    ||(ha_msg_add(reply, F_STONITHD_APIRPL, ST_RSIGNON) != HA_OK ) 
 	    ||(ha_msg_add(reply, F_STONITHD_APIRET, api_reply) != HA_OK ) 
-	    ||(ha_msg_add(reply, F_STONITHD_COOKIE, client->cookie) != HA_OK)) {
+	    ||(client && ha_msg_add(reply, F_STONITHD_COOKIE, client->cookie) != HA_OK)) {
 		ZAPMSG(reply);
 		stonithd_log(LOG_ERR, "on_stonithd_signon: cannot add field.");
 		return ST_FAIL;
@@ -1917,7 +1827,7 @@ on_stonithd_cookie(struct ha_msg * request, gpointer data)
 {
 	IPC_Channel * 		ch = (IPC_Channel *)data;
 	const char *		cookie;
-	stonithd_client_t * 	client;
+	stonithd_client_t * 	client = NULL;
 	const char *		errmsg = NULL;
 	const char * 		ret = ST_APIOK;
 
@@ -2034,26 +1944,14 @@ on_stonithd_node_fence(struct ha_msg * request, gpointer data)
 	}
 
 	/* Check if have signed on */
-	if ((client = get_exist_client_by_chan(client_list, ch)) == NULL ) {
-		stonithd_log(LOG_ERR, "stonithd_node_fence: not signoned yet.");
-		if ( NULL != (st_op = new_stonith_ops_t(request) )) {
-			/*
-			 * FIXME: ch->farside_pid cannot be relied on.
-			 * It only works on Linux -- and then not too reliably
-			 * - because of bugs in glibc related to threading.
-			 */
-			stonithd_log2(LOG_DEBUG, "client [pid: %d] want a STONITH "
-				"operation %s to node %s."
-				, ch->farside_pid
-				, stonith_op_strname[st_op->optype]
-				, st_op->node_name);
-			free_stonith_ops_t(st_op);
-			st_op = NULL;
-		}
+	client = get_exist_client_by_chan(client_list, ch);
+	if ( !client ) {
+		stonithd_log(LOG_ERR, "stonithd_node_fence: not signed on");
 		return ST_FAIL;
 	}
 
-	if ( NULL == (st_op = new_stonith_ops_t(request) )) {
+	st_op = new_stonith_ops_t(request);
+	if ( !st_op ) {
 		stonithd_log(LOG_ERR, "%s:%d: %s"
 			, __FUNCTION__, __LINE__
 			, "Failed to create a stonith_op_t.");
@@ -2067,8 +1965,8 @@ on_stonithd_node_fence(struct ha_msg * request, gpointer data)
 		,	stonith_op_strname[st_op->optype], st_op->node_name);
 
 
-	if ( (st_op->optype == 1) && (TEST == FALSE) && /* TEST means BSC */
-	   (NULL!=g_hash_table_lookup(reboot_blocked_table, st_op->node_name))) {
+	if ( (st_op->optype == RESET) && !TEST && /* TEST means BSC */
+	   g_hash_table_lookup(reboot_blocked_table, st_op->node_name) ) {
 		neednot_reboot_node = TRUE;
 		api_reply = ST_APIOK;
 		goto sendback_reply;
@@ -2078,8 +1976,8 @@ on_stonithd_node_fence(struct ha_msg * request, gpointer data)
 	 * from this API while the node name is myself.
 	 * So just broadcast the requirement to the whole of cluster to do it.
 	 */
-	if ( st_op->optype != QUERY && TEST == FALSE &&
-	    (srsc = get_local_stonithobj_can_stonith(st_op->node_name, NULL)) 
+	if ( st_op->optype != QUERY && !TEST &&
+	    (srsc = get_local_stonithobj_can_stonith(st_op->node_name, NULL))
 		!= NULL && 
 	    (call_id=initiate_local_stonithop(st_op, srsc, client->cbch)) > 0 ) {
 			api_reply = ST_APIOK;
@@ -2096,7 +1994,7 @@ on_stonithd_node_fence(struct ha_msg * request, gpointer data)
 
 sendback_reply:
 	/* send back the sync result */
-	if ((reply = ha_msg_new(3)) == NULL) {
+	if ((reply = ha_msg_new(4)) == NULL) {
 		stonithd_log(LOG_ERR, "%s:%d:ha_msg_new:out of memory."
 				,__FUNCTION__, __LINE__);
 		ret = ST_FAIL;
@@ -2121,11 +2019,11 @@ sendback_reply:
         }
 
 	if (ch->ops->waitout(ch) == IPC_OK) {
-		stonithd_log(LOG_DEBUG, "stonithd_node_fence: end and sent "
-			    "back a synchronal reply.");
+		stonithd_log(LOG_DEBUG, "stonithd_node_fence: sent "
+			    "back a synchronous reply.");
 	} else {
-		stonithd_log(LOG_DEBUG, "stonithd_node_fence: end and "
-			    "failed to sent back a synchronal reply.");
+		stonithd_log(LOG_DEBUG, "stonithd_node_fence: "
+			    "failed to sent back a synchronous reply.");
 		ret = ST_FAIL;
 		goto del_st_op_and_return;
 	}
@@ -2151,6 +2049,8 @@ initiate_local_stonithop(stonith_ops_t * st_op, stonith_rsc_t * srsc,
 			 IPC_Channel * ch)
 {
 	int call_id;
+	common_op_t * op;
+	int * tmp_callid;
 	
 	if (st_op == NULL || srsc == NULL) {
 		stonithd_log(LOG_ERR, "initiate_local_stonithop: "
@@ -2161,30 +2061,27 @@ initiate_local_stonithop(stonith_ops_t * st_op, stonith_rsc_t * srsc,
 	if ((call_id = stonith_operate_locally(st_op, srsc)) <= 0) {
 		stonithd_log(LOG_ERR, "stonith_operate_locally failed.");
 		return -1;
-	} else {
-		common_op_t * op;
-		int * tmp_callid;
-
-		op = g_new0(common_op_t, 1);
-		op->scenario = STONITH_INIT;
-		op->rsc_id = g_strdup(srsc->rsc_id);
-		op->result_receiver = ch;
-		st_op->call_id = call_id;
-		op->op_union.st_op = dup_stonith_ops_t(st_op);
-
-		tmp_callid = g_new(int, 1);
-		*tmp_callid = call_id;
-		g_hash_table_insert(executing_queue, tmp_callid, op);
-		tmp_callid = g_new(int, 1);
-		*tmp_callid = call_id;
-		op->timer_id = Gmain_timeout_add_full(G_PRIORITY_HIGH_IDLE
-					, st_op->timeout, stonithop_timeout
-					, tmp_callid, timeout_destroy_notify);
-		stonithd_log2(LOG_DEBUG, "initiate_local_stonithop: inserted "
-			    "optype=%s, child_id=%d",
-				stonith_op_strname[st_op->optype], call_id);
-		return call_id;
 	}
+
+	op = g_new0(common_op_t, 1);
+	op->scenario = STONITH_INIT;
+	op->rsc_id = g_strdup(srsc->rsc_id);
+	op->result_receiver = ch;
+	st_op->call_id = call_id;
+	op->op_union.st_op = dup_stonith_ops_t(st_op);
+
+	tmp_callid = g_new(int, 1);
+	*tmp_callid = call_id;
+	g_hash_table_insert(executing_queue, tmp_callid, op);
+	tmp_callid = g_new(int, 1);
+	*tmp_callid = call_id;
+	op->timer_id = Gmain_timeout_add_full(G_PRIORITY_HIGH_IDLE
+				, st_op->timeout, stonithop_timeout
+				, tmp_callid, timeout_destroy_notify);
+	stonithd_log2(LOG_DEBUG, "initiate_local_stonithop: inserted "
+		    "optype=%s, child_id=%d",
+			stonith_op_strname[st_op->optype], call_id);
+	return call_id;
 }
 
 static int
@@ -2194,11 +2091,11 @@ continue_local_stonithop(int old_key)
 	char * rsc_id = NULL;
 	int child_pid = -1;
 	common_op_t * op = NULL;
-	int * orignal_key = NULL;
+	int * original_key = NULL;
 
 	stonithd_log2(LOG_DEBUG, "continue_local_stonithop: begin.");
 	if (FALSE == g_hash_table_lookup_extended(executing_queue, &old_key, 
-			(gpointer *)&orignal_key, (gpointer *)&op)) {
+			(gpointer *)&original_key, (gpointer *)&op)) {
 		stonithd_log(LOG_ERR, "continue_local_stonithop: No old_key's "
 			     "item exist in executing_queue. Strange!"); 
 		return ST_FAIL;
@@ -2210,32 +2107,32 @@ continue_local_stonithop(int old_key)
 		return ST_FAIL;
 	}
 
-	rsc_id = op->rsc_id;
-	if ( rsc_id == NULL ) {
+	if ( op->rsc_id == NULL ) {
 		stonithd_log(LOG_ERR, "continue_local_stonithop: the old rsc_id"
 				" == NULL, not correct!.");
 		return ST_FAIL;
 	}
 
-	/* rsc_id is the begin place for searching valid STONITH resource  */
+	/* op->rsc_id is the begin place to lookup a valid STONITH resource */
+	rsc_id = op->rsc_id;
 	while ((srsc = get_local_stonithobj_can_stonith(op->op_union.st_op->node_name,
 		rsc_id)) != NULL ) { 
 		if ((child_pid=stonith_operate_locally(op->op_union.st_op, srsc)) > 0) {
-			g_hash_table_steal(executing_queue, orignal_key);
+			g_hash_table_steal(executing_queue, original_key);
 			stonithd_log(LOG_DEBUG, "continue_local_stonithop: "
 				     "removed optype=%s, key_id=%d", 
 				     stonith_op_strname[op->op_union.st_op->optype],
-					 *orignal_key);
+					 *original_key);
 			/* donnot need to free the old one.
-			 * orignal_key, op is a pair of key-value.
+			 * original_key, op is a pair of key-value.
 			 */
-			*orignal_key = child_pid;
+			*original_key = child_pid;
 
 			if (op->rsc_id != NULL) {
 				g_free(op->rsc_id);
 			}
 			op->rsc_id = g_strdup(srsc->rsc_id);
-			g_hash_table_insert(executing_queue, orignal_key, op);
+			g_hash_table_insert(executing_queue, original_key, op);
 			stonithd_log(LOG_DEBUG, "continue_local_stonithop: "
 				     "inserted optype=%s, child_id=%d", 
 				     stonith_op_strname[op->op_union.st_op->optype],
@@ -2253,9 +2150,11 @@ static int
 initiate_remote_stonithop(stonith_ops_t * st_op, stonith_rsc_t * srsc,
                           IPC_Channel * ch)
 {
+	common_op_t * op;
+	int * tmp_callid;
+
 	if (st_op->optype == QUERY) {
-		if ( NULL != get_local_stonithobj_can_stonith(
-				st_op->node_name, NULL)) {
+		if (get_local_stonithobj_can_stonith(st_op->node_name, NULL)) {
 			st_op->node_list = g_string_append(
 				st_op->node_list, local_nodename);
 		}
@@ -2266,43 +2165,40 @@ initiate_remote_stonithop(stonith_ops_t * st_op, stonith_rsc_t * srsc,
 		stonithd_log(LOG_ERR, "require_others_to_stonith failed.");
 		st_op->call_id = 0;
 		return 1;
-	} else {
-		common_op_t * op;
-		int * tmp_callid;
-
-		op = g_new0(common_op_t, 1);
-		op->scenario = STONITH_INIT;
-		op->result_receiver = ch;
-		op->op_union.st_op = dup_stonith_ops_t(st_op);
-
-		tmp_callid = g_new(int, 1);
-		*tmp_callid = st_op->call_id;
-		g_hash_table_insert(executing_queue, tmp_callid, op);
-		tmp_callid = g_new(int, 1);
-		*tmp_callid = st_op->call_id;
-		op->timer_id = Gmain_timeout_add_full(G_PRIORITY_HIGH_IDLE
-					, st_op->timeout, stonithop_timeout
-					, tmp_callid, timeout_destroy_notify);
-
-		stonithd_log(LOG_DEBUG, "initiate_remote_stonithop: inserted "
-			"optype=%s, key=%d",
-			stonith_op_strname[op->op_union.st_op->optype], *tmp_callid);
-		stonithd_log2(LOG_INFO, "Broadcasting the message succeeded: require "
-			"others to stonith node %s.", st_op->node_name);
-
-		return negative_callid_counter--;
 	}
+
+	op = g_new0(common_op_t, 1);
+	op->scenario = STONITH_INIT;
+	op->result_receiver = ch;
+	op->op_union.st_op = dup_stonith_ops_t(st_op);
+
+	tmp_callid = g_new(int, 1);
+	*tmp_callid = st_op->call_id;
+	g_hash_table_insert(executing_queue, tmp_callid, op);
+	tmp_callid = g_new(int, 1);
+	*tmp_callid = st_op->call_id;
+	op->timer_id = Gmain_timeout_add_full(G_PRIORITY_HIGH_IDLE
+				, st_op->timeout, stonithop_timeout
+				, tmp_callid, timeout_destroy_notify);
+
+	stonithd_log(LOG_DEBUG, "initiate_remote_stonithop: inserted "
+		"optype=%s, key=%d",
+		stonith_op_strname[op->op_union.st_op->optype], *tmp_callid);
+	stonithd_log2(LOG_INFO, "Broadcasting the message succeeded: require "
+		"others to stonith node %s.", st_op->node_name);
+
+	return negative_callid_counter--;
 }
 
 static int
 changeto_remote_stonithop(int old_key)
 {
 	common_op_t * op = NULL;
-	int * orignal_key = NULL;
+	int * original_key = NULL;
 
 	stonithd_log2(LOG_DEBUG, "changeto_remote_stonithop: begin.");
 	if (FALSE == g_hash_table_lookup_extended(executing_queue, &old_key, 
-			(gpointer *)&orignal_key, (gpointer *)&op)) {
+			(gpointer *)&original_key, (gpointer *)&op)) {
 		stonithd_log(LOG_ERR, "changeto_remote_stonithop: no old_key's "
 			     "item exist in executing_queue. Strange!"); 
 		return ST_FAIL;
@@ -2323,19 +2219,19 @@ changeto_remote_stonithop(int old_key)
 	if ( ST_OK != require_others_to_stonith(op->op_union.st_op) ) {
 		stonithd_log(LOG_ERR, "require_others_to_stonith failed.");
 		return ST_FAIL;
-	} else {
-		/* donnt need to free op->rsc_id now. */
-		g_hash_table_steal(executing_queue, orignal_key);
-		stonithd_log(LOG_DEBUG, "changeto_remote_stonithop: removed "
-			  "optype=%s, key=%d",
-			  stonith_op_strname[op->op_union.st_op->optype], *orignal_key);
-		*orignal_key = op->op_union.st_op->call_id;
-		g_hash_table_insert(executing_queue, orignal_key, op);
-		stonithd_log(LOG_DEBUG, "changeto_remote_stonithop: inserted "
-			  "optype=%s, key=%d",
-			  stonith_op_strname[op->op_union.st_op->optype], *orignal_key);
 	}
-
+	/* donnt need to free op->rsc_id now. */
+	g_hash_table_steal(executing_queue, original_key);
+	stonithd_log(LOG_DEBUG, "changeto_remote_stonithop: removed "
+		  "optype=%s, key=%d",
+		  stonith_op_strname[op->op_union.st_op->optype],
+		  *original_key);
+	*original_key = op->op_union.st_op->call_id;
+	g_hash_table_insert(executing_queue, original_key, op);
+	stonithd_log(LOG_DEBUG, "changeto_remote_stonithop: inserted "
+		  "optype=%s, key=%d",
+		  stonith_op_strname[op->op_union.st_op->optype],
+		  *original_key);
 	return ST_OK;
 }
 
@@ -2367,7 +2263,7 @@ static int
 stonithop_result_to_local_client( const stonith_ops_t * st_op, gpointer data)
 {
 	struct ha_msg * reply = NULL;
-	IPC_Channel * ch = (IPC_Channel *)data;
+	IPC_Channel * ch;
 	stonithd_client_t * client = NULL;
 	
 
@@ -2378,6 +2274,7 @@ stonithop_result_to_local_client( const stonith_ops_t * st_op, gpointer data)
 		return ST_FAIL;
 	}
 
+	ch = (IPC_Channel *)data;
 	if ( (client = get_exist_client_by_chan(client_list, ch)) == NULL ) {
 		/* Here the ch are already destroyed */
 		stonithd_log(LOG_NOTICE, "It seems the client signed off, who "
@@ -2392,7 +2289,7 @@ stonithop_result_to_local_client( const stonith_ops_t * st_op, gpointer data)
 			,	stonith_op_strname[st_op->optype]
 			,	((GString *)(st_op->node_list))->str);
 		
-		if ( st_op->optype == 1 ) { /* RESET */
+		if ( st_op->optype == RESET ) { /* RESET */
 			if (0 == STRNCMP_CONST(client->name, "apitest")) {
 				broadcast_reset_success(st_op->node_name);
 			}
@@ -2411,7 +2308,13 @@ stonithop_result_to_local_client( const stonith_ops_t * st_op, gpointer data)
 		, st_op->node_name
 		, stonith_op_result_strname[st_op->op_result]);
 
-	if ((reply = ha_msg_new(0)) == NULL) {
+	if ( !st_op->node_uuid || !st_op->node_list ) {
+		stonithd_log(LOG_ERR, "stonithop_result_to_local_client: "
+			     "null node_uuid or node_list");
+		return ST_FAIL;
+	}
+
+	if ((reply = ha_msg_new(10)) == NULL) {
 		stonithd_log(LOG_ERR, "%s:%d:ha_msg_new:out of memory."
 				,__FUNCTION__, __LINE__);
 		return ST_FAIL;
@@ -2421,40 +2324,19 @@ stonithop_result_to_local_client( const stonith_ops_t * st_op, gpointer data)
   	    ||(ha_msg_add(reply, F_STONITHD_APIRPL, ST_STRET) != HA_OK ) 
 	    ||(ha_msg_add_int(reply, F_STONITHD_OPTYPE, st_op->optype) != HA_OK)
 	    ||(ha_msg_add(reply, F_STONITHD_NODE, st_op->node_name) != HA_OK)
-	    ||(st_op->node_list == NULL
-		|| ha_msg_add(reply, F_STONITHD_NLIST,
-			((GString *)(st_op->node_list))->str) != HA_OK )
+	    ||(ha_msg_add(reply, F_STONITHD_NLIST,
+			((GString *)(st_op->node_list))->str) != HA_OK)
 	    ||(ha_msg_add_int(reply, F_STONITHD_TIMEOUT, st_op->timeout)!=HA_OK)
 	    ||(ha_msg_add_int(reply, F_STONITHD_CALLID, st_op->call_id) !=HA_OK)
-	    ||(ha_msg_add_int(reply, F_STONITHD_FRC, st_op->op_result) 
-		!= HA_OK )) {
+	    ||(ha_msg_add(reply, F_STONITHD_NODE_UUID, st_op->node_uuid) != HA_OK)
+	    ||(ha_msg_add_int(reply, F_STONITHD_FRC, st_op->op_result) != HA_OK)
+	    ||(st_op->private_data &&
+		ha_msg_add(reply, F_STONITHD_PDATA, st_op->private_data) != HA_OK)
+		) {
 		ZAPMSG(reply);
 		stonithd_log(LOG_ERR, "stonithop_result_to_local_client: "
 			     "cannot add fields.");
 		return ST_FAIL;
-	}
-
-	if (st_op->node_uuid == NULL) {
-		ZAPMSG(reply);
-		stonithd_log(LOG_ERR, "stonithop_result_to_local_client: "
-			     "st_op->node_uuid == NULL.");
-		return ST_FAIL;
-	} else {
-		if (ha_msg_add(reply, F_STONITHD_NODE_UUID, st_op->node_uuid) != HA_OK) {
-			ZAPMSG(reply);
-			stonithd_log(LOG_ERR, "stonithop_result_to_local_client: "
-			     "Failed to add F_STONITHD_NODE_UUID field.");
-			return ST_FAIL;
-		}
-	}
-
-	if (st_op->private_data != NULL) {
-		if (ha_msg_add(reply, F_STONITHD_PDATA, st_op->private_data) != HA_OK) {
-			ZAPMSG(reply);
-			stonithd_log(LOG_ERR, "stonithop_result_to_local_client: "
-			     "Failed to add F_STONITHD_PDATA field.");
-			return ST_FAIL;
-		}
 	}
 
 	if ( msg2ipcchan(reply, ch) != HA_OK) {
@@ -2468,7 +2350,6 @@ stonithop_result_to_local_client( const stonith_ops_t * st_op, gpointer data)
 	}
 
 	ZAPMSG(reply);
-	stonithd_log2(LOG_DEBUG, "stonithop_result_to_local_client: end.");
 	return ST_OK;
 }
 
@@ -2489,7 +2370,13 @@ stonithop_result_to_other_node( stonith_ops_t * st_op, gpointer data)
 		return ST_OK;
 	}
 
-	if ((reply = ha_msg_new(3)) == NULL) {
+	if (hb == NULL) {
+		stonithd_log(LOG_ERR, "%s:%d: not connected to heartbeat"
+			, __FUNCTION__, __LINE__);
+		return ST_FAIL;
+	}
+
+	if ((reply = ha_msg_new(4)) == NULL) {
 		stonithd_log(LOG_ERR, "stonithop_result_to_other_node: "
 			     "ha_msg_new: out of memory");
 		return ST_FAIL;
@@ -2502,13 +2389,6 @@ stonithop_result_to_other_node( stonith_ops_t * st_op, gpointer data)
 		!= HA_OK)) {
 		stonithd_log(LOG_ERR, "stonithop_result_to_other_node: "
 			     "ha_msg_add: cannot add field.");
-		ZAPMSG(reply);
-		return ST_FAIL;
-	}
-
-	if (hb == NULL) {
-		stonithd_log(LOG_ERR, "stonithop_result_to_other_node: "
-			     "hb == NULL");
 		ZAPMSG(reply);
 		return ST_FAIL;
 	}
@@ -2584,11 +2464,12 @@ require_others_to_stonith(const stonith_ops_t * st_op)
 	struct ha_msg * msg;
 
 	if (hb == NULL) {
-		stonithd_log(LOG_ERR, "require_others_to_stonith: hb==NULL");
+		stonithd_log(LOG_ERR, "%s:%d: not connected to heartbeat"
+			, __FUNCTION__, __LINE__);
 		return ST_FAIL;
 	}
 
-	if ((msg = ha_msg_new(1)) == NULL) {
+	if ((msg = ha_msg_new(6)) == NULL) {
 		stonithd_log(LOG_ERR, "require_others_to_stonith: "
 					"out of memory");
 		return ST_FAIL;
@@ -2618,7 +2499,7 @@ require_others_to_stonith(const stonith_ops_t * st_op)
 
 	ZAPMSG(msg);
 	stonithd_log2(LOG_DEBUG,"require_others_to_stonith: end.");
-	return ST_OK;	
+	return ST_OK;
 }
 
 static stonith_rsc_t *
@@ -2644,11 +2525,6 @@ get_local_stonithobj_can_stonith( const char * node_name,
 
 	if (begin_rsc_id == NULL) {
 		begin_search_list = g_list_first(local_started_stonith_rsc);
-		if (begin_search_list == NULL) {
-			stonithd_log(LOG_DEBUG, "get_local_stonithobj_can_"
-				"stonith: local_started_stonith_rsc is empty.");
-			return NULL;
-		}
 	} else {
 		for ( tmplist = g_list_first(local_started_stonith_rsc); 
 		      tmplist != NULL; 
@@ -2879,7 +2755,7 @@ on_stonithd_virtual_stonithRA_ops(struct ha_msg * request, gpointer data)
 
 send_back_reply:
 	/* send back the sync result at once */
-	if ((reply = ha_msg_new(3)) == NULL) {
+	if ((reply = ha_msg_new(4)) == NULL) {
 		stonithd_log(LOG_ERR, "%s:%d:ha_msg_new:out of memory."
 				,__FUNCTION__, __LINE__);
 		return ST_FAIL;
@@ -2942,7 +2818,7 @@ send_stonithRAop_final_result( stonithRA_ops_t * ra_op, gpointer data)
 		return ST_OK;
 	}
 
-	if ((reply = ha_msg_new(0)) == NULL) {
+	if ((reply = ha_msg_new(8)) == NULL) {
 		stonithd_log(LOG_ERR, "%s:%d:ha_msg_new:out of memory."
 				,__FUNCTION__, __LINE__);
 		return ST_FAIL;
@@ -2964,9 +2840,6 @@ send_stonithRAop_final_result( stonithRA_ops_t * ra_op, gpointer data)
 		ZAPMSG(reply);
 		return ST_FAIL;
 	}
-	/* Just for debugging bug 730 */
-	stonithd_log2(LOG_DEBUG, "send_stonithRAop_final_result: finished to prepare "
-		     "the result message.");	
 
 	if ( msg2ipcchan(reply, ch) != HA_OK) {
 		stonithd_log(LOG_ERR, "send_stonithRAop_final_result: cannot "
@@ -2991,7 +2864,7 @@ on_stonithd_list_stonith_types(struct ha_msg * request, gpointer data)
 	char **	typelist;
 
 	/* Need to check whether signon? */
-	if ((reply = ha_msg_new(0)) == NULL) {
+	if ((reply = ha_msg_new(4)) == NULL) {
 		stonithd_log(LOG_ERR, "%s:%d:ha_msg_new:out of memory."
 				,__FUNCTION__, __LINE__);
 		return ST_FAIL;
@@ -3201,9 +3074,7 @@ add_shm_hostlist(int shmid, pid_t pid)
 	}
 	p->shmid=shmid;
 	p->pid=pid;
-	if( !(mem_hostlist = g_list_append(mem_hostlist,p)) ) {
-		stonithd_log(LOG_ERR, "out of memory");
-	}
+	mem_hostlist = g_list_append(mem_hostlist,p);
 }
 
 static void
@@ -3504,57 +3375,18 @@ free_client(gpointer data, gpointer user_data)
 static stonithRA_ops_t * 
 new_stonithRA_ops_t(struct ha_msg * request)
 {
-	const char * tmpstr = NULL;
 	stonithRA_ops_t * ra_op = NULL;
+	int rc = ST_OK;
  
 	ra_op = g_new0(stonithRA_ops_t, 1);
-
-	if ((tmpstr = cl_get_string(request, F_STONITHD_RSCID)) != NULL) {
-		ra_op->rsc_id = g_strdup(tmpstr);
-		stonithd_log2(LOG_DEBUG, "ra_op->rsc_id=%s.", ra_op->rsc_id);
-	} else {
-		stonithd_log(LOG_ERR, "%s:%d: %s"
-			     , __FUNCTION__, __LINE__
-			     , "the request msg contains no rsc_id field.");
+	st_save_string(request, F_STONITHD_RSCID, ra_op->rsc_id);
+	st_save_string(request, F_STONITHD_RAOPTYPE, ra_op->op_type);
+	st_save_string(request, F_STONITHD_RANAME, ra_op->ra_name);
+	st_get_hashtable(request, F_STONITHD_PARAMS, ra_op->params);
+	if( rc != ST_OK ) {
 		free_stonithRA_ops_t(ra_op);
 		return NULL;
 	}
-
-	if ((tmpstr = cl_get_string(request, F_STONITHD_RAOPTYPE)) != NULL) {
-		ra_op->op_type = g_strdup(tmpstr);
-		stonithd_log2(LOG_DEBUG, "ra_op->op_type=%s.", ra_op->op_type);
-	} else {
-		stonithd_log(LOG_ERR, "%s:%d: %s"
-			     , __FUNCTION__, __LINE__
-			     , "the request msg contains no op_type field.");
-		free_stonithRA_ops_t(ra_op);
-		return NULL;
-	}
-
-	if ((tmpstr = cl_get_string(request, F_STONITHD_RANAME)) != NULL) {
-		ra_op->ra_name = g_strdup(tmpstr);
-		stonithd_log2(LOG_DEBUG, "ra_op->ra_name=%s.", ra_op->ra_name);
-	} else {
-		stonithd_log(LOG_ERR, "%s:%d: %s"
-			     , __FUNCTION__, __LINE__
-			     ,"the request msg contains no ra_name field.");
-		free_stonithRA_ops_t(ra_op);
-		return NULL;
-	}
-
-	ra_op->params = NULL;
-	if ((ra_op->params = cl_get_hashtable(request, F_STONITHD_PARAMS))
-	    != NULL) {
-		stonithd_log2(LOG_DEBUG
-			     , "ra_op->params address:=%p.", ra_op->params);
-	} else {
-		stonithd_log(LOG_ERR, "%s:%d: %s"
-			     , __FUNCTION__, __LINE__
-			     , "the request msg contains no parameter field.");
-		free_stonithRA_ops_t(ra_op);
-		return NULL;
-	}
-
 	return ra_op;
 }
 
@@ -3735,7 +3567,6 @@ get_exist_client_by_chan(GList * client_list, IPC_Channel * ch)
 		return NULL;
 	} 
 
-	tmplist = g_list_first(client_list);
 	for (tmplist = g_list_first(client_list); tmplist != NULL; 
 	     tmplist = g_list_next(tmplist)) {
 		stonithd_log2(LOG_DEBUG, "tmplist=%p", tmplist);
@@ -3851,22 +3682,21 @@ delete_client_by_chan(GList ** client_list, IPC_Channel * ch)
 {
 	stonithd_client_t * client;
 
-	if ( (client = get_exist_client_by_chan(*client_list, ch)) != NULL ) {
-		stonithd_log2(LOG_DEBUG, "delete_client_by_chan: delete client "
-			"%s (pid=%d)", client->name, client->pid);
-		*client_list = g_list_remove(*client_list, client);
-		free_client(client, NULL);
-		
-		client = NULL;
-		stonithd_log2(LOG_DEBUG, "delete_client_by_chan: return OK.");
-		stonithd_log2(LOG_DEBUG, "delete_client_by_chan: new "
-			     "client_list = %p", *client_list);
-		return ST_OK;
-	} else {
+	client = get_exist_client_by_chan(*client_list, ch);
+	if ( !client ) {
 		stonithd_log2(LOG_DEBUG, "delete_client_by_chan: no client "
 			"using this channel, so no client deleted.");
 		return ST_FAIL;
 	}
+	stonithd_log2(LOG_DEBUG, "delete_client_by_chan: delete client "
+		"%s (pid=%d)", client->name, client->pid);
+	*client_list = g_list_remove(*client_list, client);
+	free_client(client, NULL);
+	
+	client = NULL;
+	stonithd_log2(LOG_DEBUG, "delete_client_by_chan: new "
+		     "client_list = %p", *client_list);
+	return ST_OK;
 }
 
 /* make the apphb_interval, apphb_warntime adjustable important */
@@ -4022,5 +3852,3 @@ trans_log(int priority, const char * fmt, ...)
         cl_log(pil_loglevel_to_cl_loglevel[ priority % sizeof
 		(pil_loglevel_to_cl_loglevel) ], "%s", buf);
 }
-
-
