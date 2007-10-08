@@ -57,6 +57,7 @@
 #include <clplumbing/GSource.h>
 #include <clplumbing/cl_log.h>
 #include <clplumbing/cl_malloc.h>
+#include <clplumbing/cl_uuid.h>
 #include <clplumbing/coredumps.h>
 #include <clplumbing/realtime.h>
 #include <apphb.h>
@@ -103,7 +104,7 @@ typedef struct {
 	IPC_Channel * ch;
 	IPC_Channel * cbch;
 	char * removereason;
-	char cookie[16];
+	cl_uuid_t cookie;
 } stonithd_client_t;
 
 typedef enum {
@@ -242,7 +243,7 @@ static stonithd_client_t * get_exist_client_by_chan(GList * client_list,
 						    IPC_Channel * ch);
 static int delete_client_by_chan(GList ** client_list, IPC_Channel * ch);
 
-static stonithd_client_t* get_client_by_cookie(GList *client_list, const char *cookie);
+static stonithd_client_t* get_client_by_cookie(GList *client_list, cl_uuid_t *cookie);
 
 /* Client API functions */
 static int on_stonithd_signon(struct ha_msg * msg, gpointer data);
@@ -1578,30 +1579,6 @@ stonithd_process_client_msg(struct ha_msg * msg, gpointer data)
 }
 
 static int
-generate_cookie(char *buf, size_t size)
-{
-	static int seeded = 0;
-	static const char charset[] = "0123456789"
-		"abcdefghijklmnopqrstuvwxyz"
-		"ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-
-	if (!seeded) {
-		srand(time(NULL));
-		seeded = 1;
-	}
-
-	if (size > 0) {
-		int i;
-		for (i = 0; i < size - 1; i++) {
-			buf[i] = charset[rand() % (sizeof(charset) - 1)];
-		}
-		buf[i] = '\0';
-		return 0;
-	}
-	return -1;
-}
-
-static int
 on_stonithd_signon(struct ha_msg * request, gpointer data)
 {
 	struct ha_msg * reply;
@@ -1662,7 +1639,7 @@ on_stonithd_signon(struct ha_msg * request, gpointer data)
 	 * itself when establishing the callback channel. Older stonithd clients
 	 * safely ignores this field.
 	 */
-	(void)generate_cookie(client->cookie, sizeof(client->cookie));
+	cl_uuid_generate(&client->cookie);
 
 	/* lack the authority check from uid&gid */
 	/* add the client to client list */
@@ -1685,7 +1662,7 @@ send_back_reply:
 	if ( (ha_msg_add(reply, F_STONITHD_TYPE, ST_APIRPL) != HA_OK ) 
 	    ||(ha_msg_add(reply, F_STONITHD_APIRPL, ST_RSIGNON) != HA_OK ) 
 	    ||(ha_msg_add(reply, F_STONITHD_APIRET, api_reply) != HA_OK ) 
-	    ||(client && ha_msg_add(reply, F_STONITHD_COOKIE, client->cookie) != HA_OK)) {
+ 	    ||(client && ha_msg_adduuid(reply, F_STONITHD_COOKIE, &client->cookie) != HA_OK)) {
 		ZAPMSG(reply);
 		stonithd_log(LOG_ERR, "on_stonithd_signon: cannot add field.");
 		return ST_FAIL;
@@ -1774,7 +1751,7 @@ static int
 on_stonithd_cookie(struct ha_msg * request, gpointer data)
 {
 	IPC_Channel * 		ch = (IPC_Channel *)data;
-	const char *		cookie;
+ 	cl_uuid_t		cookie;
 	stonithd_client_t * 	client = NULL;
 	const char *		errmsg = NULL;
 	const char * 		ret = ST_APIOK;
@@ -1786,14 +1763,14 @@ on_stonithd_cookie(struct ha_msg * request, gpointer data)
 	stonithd_log2(LOG_DEBUG, "on_stonithd_cookie: begin.");
 
 	/* Extract the supplied cookie from the request. */
-	if (!(cookie = ha_msg_value(request, F_STONITHD_COOKIE))) {
-		errmsg = "missing 'cookie' field";
+	if ( cl_get_uuid(request, F_STONITHD_COOKIE, &cookie) != HA_OK ) {
+		errmsg = "missing F_STONITHD_COOKIE field";
 		ret = ST_BADREQ;
 		goto send_reply;
 	}
 	
 	/* Is this cookie valid? */
-	if (!(client = get_client_by_cookie(client_list, cookie))) {
+	if (!(client = get_client_by_cookie(client_list, &cookie))) {
 		errmsg = "invalid cookie";
 		ret = ST_APIFAIL;
 		goto send_reply;
@@ -3497,7 +3474,7 @@ typedef GList * LIST_ITER;
  * If the cookie is an empty string, or no client can be found, returns NULL. 
  */
 static stonithd_client_t *
-get_client_by_cookie(GList *client_list, const char *cookie)
+get_client_by_cookie(GList *client_list, cl_uuid_t *cookie)
 {
 	LIST_ITER		iter;
 	stonithd_client_t * 	client;
@@ -3505,12 +3482,8 @@ get_client_by_cookie(GList *client_list, const char *cookie)
 	ST_ASSERT(client_list != NULL);
 	ST_ASSERT(cookie != NULL);
 
-	/* MUST NOT match an empty cookie with a client without a cookie */
-	if (strcmp(cookie, "") == 0)
-		return NULL;
-
 	LIST_FOREACH(client, iter, client_list) {
-		if (strcmp(client->cookie, cookie) == 0)
+		if (cl_uuid_compare(&client->cookie, cookie) == 0)
 			return client;
 	}
 	return NULL;

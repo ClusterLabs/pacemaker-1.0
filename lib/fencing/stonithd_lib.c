@@ -168,7 +168,7 @@ recv_response(IPC_Channel *chan, int timeout)
 }
 
 static int
-authenticate_with_cookie(IPC_Channel *chan, const char *cookie) 
+authenticate_with_cookie(IPC_Channel *chan, cl_uuid_t *cookie) 
 {
 	struct ha_msg *	request;
 	struct ha_msg * reply;
@@ -179,7 +179,7 @@ authenticate_with_cookie(IPC_Channel *chan, const char *cookie)
 	if (!(request = create_basic_reqmsg_fields(ST_SIGNON))) {
 		return ST_FAIL;
 	}
-	if (ha_msg_add(request, F_STONITHD_COOKIE, cookie) != HA_OK) {
+	if (ha_msg_adduuid(request, F_STONITHD_COOKIE, cookie) != HA_OK) {
 		stdlib_log(LOG_ERR, "cannot add field to ha_msg.");
 		ZAPMSG(request);
 		return ST_FAIL;
@@ -222,10 +222,9 @@ stonithd_signon(const char * client_name)
 	gid_t	my_egid;
 	const char * tmpstr;
 	int 	rc_tmp;
-	char * cookie = NULL;
 	gboolean connected = TRUE;
+ 	cl_uuid_t cookie, *cptr = NULL;
 
-#define signed_on(ch) (ch && ch->ch_status != IPC_DISCONNECT)
 	if (chan == NULL || chan->ch_status != IPC_CONNECT) {
 	    connected = FALSE;
 	} else if (cbchan == NULL || cbchan->ch_status != IPC_CONNECT) {
@@ -334,7 +333,9 @@ stonithd_signon(const char * client_name)
 			rc = ST_OK;
 			stdlib_log(LOG_DEBUG, "signed on to stonithd.");
 			/* get cookie if any */
-			cookie = g_strdup(ha_msg_value(reply, F_STONITHD_COOKIE));
+			if( cl_get_uuid(reply, F_STONITHD_COOKIE, &cookie) == HA_OK ) {
+				cptr = &cookie;
+			}
 		} else {
 			stdlib_log(LOG_WARNING, "failed to signon to the "
 				   "stonithd.");
@@ -393,13 +394,13 @@ stonithd_signon(const char * client_name)
 			 * If the server asks for a cookie to identify myself,
 			 * initiate cookie authentication.
 			 */
-			if (cookie == NULL) {
+			if (cptr == NULL) {
 				stdlib_log(LOG_ERR, "server requested cookie auth on "
 					"the callback channel, but it didn't "
 					"provide the cookie on the main channel.");
 				rc = ST_FAIL;
 			} else {
-				rc = authenticate_with_cookie(cbchan, cookie);
+				rc = authenticate_with_cookie(cbchan, cptr);
 			}
 		} else {
 			/* Unknown response. */
@@ -419,10 +420,6 @@ end:
 	if (ST_OK != rc) {
 		/* Something wrong when confirm via callback channel */
 		stonithd_signoff();
-	}
-	if (cookie) {
-		g_free(cookie);
-		cookie = NULL;
 	}
 
 	return rc;
