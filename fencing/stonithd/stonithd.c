@@ -72,8 +72,6 @@
 #include <assert.h>
 #define ST_ASSERT(cond) assert(cond)
 
-#define ENABLE_PID_AUTH 0
-
 #define REBOOT_BLOCK_TIMEOUT 90*1000
 
 /* For integration with heartbeat */
@@ -240,10 +238,6 @@ static gboolean stonithd_process_client_msg(struct ha_msg * msg,
 					    gpointer data);
 static int init_client_API_handler(void);
 static void free_client(gpointer data, gpointer user_data);
-#if ENABLE_PID_AUTH
-static stonithd_client_t * find_client_by_farpid(GList * client_list
-						 , pid_t farpid);
-#endif
 static stonithd_client_t * get_exist_client_by_chan(GList * client_list, 
 						    IPC_Channel * ch);
 static int delete_client_by_chan(GList ** client_list, IPC_Channel * ch);
@@ -1384,10 +1378,8 @@ static gboolean
 accept_client_connect_callback(IPC_Channel * ch, gpointer user)
 {
 	struct ha_msg * reply = NULL;
-#if ENABLE_PID_AUTH
-	stonithd_client_t * signed_client = NULL;
-#endif
 	const char * api_reply = ST_APIOK;
+	GCHSource *gsrc;
 
 	stonithd_log2(LOG_DEBUG, "IPC accepted a callback connection.");
 
@@ -1403,55 +1395,24 @@ accept_client_connect_callback(IPC_Channel * ch, gpointer user)
 		return TRUE;
 	}
 
-	/*
-	 * 	FIXME: ch->farside_pid cannot be relied on.
-	 *	It only works on Linux -- and then not too reliably - because
-	 *	of bugs in glibc related to threading.
+	/* Tell the client that we want its cookie to authenticate
+	 * itself, and then poll this channel for the cookie. 
 	 */
-#if ENABLE_PID_AUTH
-	signed_client = find_client_by_farpid(client_list, ch->farside_pid);
-	if (signed_client != NULL) {
-		if (signed_client->cbch != NULL) {
-			stonithd_log(LOG_ERR
-				    , "%s:%d: signed_client->cbch is not null, "	
-				      "will cause memory leak."
-				      "resigned client: pid1=<%d>, pid2=<%d>"
-				    , __FUNCTION__, __LINE__
-				    , signed_client->cbch->farside_pid
-				    , ch->farside_pid);
-			signed_client->cbch->ops->destroy(signed_client->cbch);
-		}
-		signed_client->cbch = ch;
-	} 
-	else 	/* pid-auth failed, default to cookie-auth */
-#endif
-	{
-		/* Tell the client that we want its cookie to authenticate
-		 * itself, and then poll this channel for the cookie. 
-		 */
-		GCHSource *gsrc;
-		api_reply = ST_COOKIE;
+	api_reply = ST_COOKIE;
 
-		/* Poll this channel for incoming requests from the client.
-		 * The only request expected on the callback channel is
-		 * ST_SIGNON with cookie provided.  
-		 */
-		gsrc = G_main_add_IPC_Channel(G_PRIORITY_HIGH, ch, FALSE, 
-				stonithd_client_dispatch, (gpointer)ch,
-				stonithd_IPC_destroy_notify);
+	/* Poll this channel for incoming requests from the client.
+	 * The only request expected on the callback channel is
+	 * ST_SIGNON with cookie provided.  
+	 */
+	gsrc = G_main_add_IPC_Channel(G_PRIORITY_HIGH, ch, FALSE, 
+			stonithd_client_dispatch, (gpointer)ch,
+			stonithd_IPC_destroy_notify);
 
-		/* Insert the polled callback channel into the mapping table 
-		 * so that we can track it. Be sure to remove the mapping 
-		 * when the channel is destroyed.  
-		 */
-		g_hash_table_insert(cbch_gsource_pairs, ch, gsrc);
-#if 0
-		stonithd_log(LOG_ERR
-			     , "%s:%d: Cannot find a signed client pid=%d"
-			     , __FUNCTION__, __LINE__, ch->farside_pid);
-		api_reply = ST_BADREQ;
-#endif
-	}
+	/* Insert the polled callback channel into the mapping table 
+	 * so that we can track it. Be sure to remove the mapping 
+	 * when the channel is destroyed.  
+	 */
+	g_hash_table_insert(cbch_gsource_pairs, ch, gsrc);
 
 	if ((reply = ha_msg_new(3)) == NULL) {
 		stonithd_log(LOG_ERR, "%s:%d:ha_msg_new:out of memory."
@@ -1562,19 +1523,11 @@ stonithd_process_client_msg(struct ha_msg * msg, gpointer data)
 	const char * msg_type = NULL;
 	const char * api_type = NULL;
 	IPC_Channel * ch = (IPC_Channel *) data;
-	int i, rc;
+	int i, rc = ST_OK;
 	
-	if (  ((msg_type = cl_get_string(msg, F_STONITHD_TYPE)) != NULL)
-	    && (STRNCMP_CONST(msg_type, ST_APIREQ) == 0) ) {
-		stonithd_log2(LOG_DEBUG, "received an API request msg.");	
-	} else {
-		stonithd_log(LOG_ERR, "received a msg of none-API request.");
-        	ZAPMSG(msg);
-        	return TRUE;
-	}	
-
-	if ( (api_type = cl_get_string(msg, F_STONITHD_APIREQ)) == NULL) {
-		stonithd_log(LOG_ERR, "got an incorrect api request msg.");
+	st_get_string(msg, F_STONITHD_TYPE, msg_type);
+	st_get_string(msg, F_STONITHD_APIREQ, api_type);
+	if ( rc != ST_OK ) {
 		ZAPMSG(msg);
 		return TRUE;
 	}
@@ -1598,11 +1551,6 @@ stonithd_process_client_msg(struct ha_msg * msg, gpointer data)
 		return TRUE;
 	}
 
-	/*
-	 * 	FIXME: ch->farside_pid cannot be relied on.
-	 *	It only works on Linux -- and then not too reliably - because
-	 *	of bugs in glibc related to threading.
-	 */
 	stonithd_log2(LOG_DEBUG, "begin to dealing with a api msg %s from "
 			"a client PID:%d.", api_type, ch->farside_pid);
 	for (i=0; i<DIMOF(api_msg_to_handlers); i++) {
@@ -2702,11 +2650,6 @@ on_stonithd_virtual_stonithRA_ops(struct ha_msg * request, gpointer data)
 		stonithd_log(LOG_ERR, "on_stonithd_virtual_stonithRA_ops: "
 			     "not signoned yet.");
 		if ( NULL!= (ra_op = new_stonithRA_ops_t(request)) ) {
-			/*
-			 * FIXME: ch->farside_pid cannot be relied on.
-			 * It only works on Linux -- and then not too reliably
-			 * - because of bugs in glibc related to threading.
-			 */
 			stonithd_log2(LOG_DEBUG, "client [pid: %d] want a "
 				"resource operation %s on stonith RA %s "
 				"[resource id: %s]"
@@ -3345,29 +3288,9 @@ free_client(gpointer data, gpointer user_data)
 		client->removereason = NULL;
 	}
 
-	/* don not need to destroy them! */
+	/* do not need to destroy them! */
 	client->ch = NULL;
-
-	if (client->cbch != NULL) {
-		if (IS_POLLED_CALLBACK_CHANNEL(client->cbch)) {
-			/* The callback channel is polled in g_main_loop, so
-			 * it will be automatically destroyed when the client
-			 * closes the connection.
-			 */
-			client->cbch = NULL;
-		} else {
-			/* We must manually destroy the callback channel since
-			 * it is not maintained by g_main_loop. This can only
-			 * happen with pid-auth.
-			 */
-			client->cbch->ops->destroy(client->cbch);
-			client->cbch = NULL;
-		}
-	} else {
-		stonithd_log(LOG_DEBUG, "%s:%d: client->cbch = NULL "
-				"before freeing"
-                	     , __FUNCTION__, __LINE__);
-	}
+	client->cbch = NULL;
 
 	g_free(client);
 }
@@ -3440,37 +3363,22 @@ dup_stonith_ops_t(stonith_ops_t * st_op)
 static stonith_ops_t * 
 new_stonith_ops_t(struct ha_msg * msg)
 {
-	int call_id;
-	int timeout;
-	int optype;
 	stonith_ops_t * st_op = NULL;
-	const char * target = NULL;
 	const char * node_uuid = NULL;
 	const char * pdata = NULL;
-
-	if ( (target = cl_get_string(msg, F_STONITHD_NODE)) == NULL) {
-		stonithd_log(LOG_ERR, "%s:%d: %s"
-			, __FUNCTION__, __LINE__
-			, "No F_STONITHD_NODE field.");
-		return NULL;
-	}
-
-	if ( HA_OK != ha_msg_value_int(msg, F_STONITHD_OPTYPE, &optype)) {
-		stonithd_log(LOG_ERR, "%s:%d: %s"
-			, __FUNCTION__, __LINE__
-			, "No F_STONITHD_OPTYPE field.");
-		return NULL;
-	}
-
-	if ( HA_OK != ha_msg_value_int(msg, F_STONITHD_TIMEOUT, &timeout)) {
-		stonithd_log(LOG_ERR, "%s:%d: %s"
-			, __FUNCTION__, __LINE__
-			, "No F_STONITHD_TIMEOUT field.");
+	int rc = ST_OK;
+ 
+	st_op = g_new0(stonith_ops_t, 1);
+	st_save_string(msg, F_STONITHD_NODE, st_op->node_name);
+	st_get_int_value(msg, F_STONITHD_OPTYPE, (int *)&st_op->optype);
+	st_get_int_value(msg, F_STONITHD_TIMEOUT, &st_op->timeout);
+	if( rc != ST_OK ) {
+		free_stonith_ops_t(st_op);
 		return NULL;
 	}
 
 	/* The field sometimes is needed or not. Decided by its caller*/
-	if ( HA_OK != ha_msg_value_int(msg, F_STONITHD_CALLID, &call_id)) { 
+	if ( HA_OK != ha_msg_value_int(msg, F_STONITHD_CALLID, &st_op->call_id)) { 
 		stonithd_log2(LOG_DEBUG, "No F_STONITHD_CALLID field.");
 	}
 
@@ -3485,12 +3393,7 @@ new_stonith_ops_t(struct ha_msg * msg)
 			     " contains no F_STONITHD_PDATA field.");
 	}
 
-	st_op = g_new0(stonith_ops_t, 1);
 	st_op->node_list = g_string_new("");
-	st_op->node_name = g_strdup(target);
-	st_op->optype  = (stonith_type_t)optype;
-	st_op->call_id = call_id;
-	st_op->timeout = timeout;
 	st_op->node_uuid = g_strdup(node_uuid);
 	st_op->private_data = g_strdup(pdata);
 
@@ -3636,38 +3539,6 @@ get_exist_client_by_pid(GList * client_list, pid_t pid)
 		}
 	}
 
-	return NULL;
-}
-#endif
-
-#if ENABLE_PID_AUTH
-static stonithd_client_t *
-find_client_by_farpid(GList * client_list, pid_t farpid)
-{
-	stonithd_client_t * client;
-	GList * tmplist = NULL;
-	
-	stonithd_log2(LOG_DEBUG, "%s:%d: begin." , __FUNCTION__, __LINE__);
-
-	if (client_list == NULL) {
-		stonithd_log(LOG_DEBUG, "%s:%d: client_list == NULL"
-			     , __FUNCTION__, __LINE__);
-		return NULL;
-	} 
-
-	tmplist = g_list_first(client_list);
-	for (tmplist = g_list_first(client_list); tmplist != NULL; 
-	     tmplist = g_list_next(tmplist)) {
-		client = (stonithd_client_t *)tmplist->data;
-		if (client != NULL && client->pid == farpid) {
-			stonithd_log2(LOG_DEBUG, "%s:%d: client %s."
-				      , __FUNCTION__, __LINE__
-				      , client->name);
-			return client;
-		}
-	}
-
-	stonithd_log2(LOG_DEBUG, "%s:%d: end." , __FUNCTION__, __LINE__);
 	return NULL;
 }
 #endif
