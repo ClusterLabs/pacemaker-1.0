@@ -2892,6 +2892,7 @@ README							        \
 logd/Makefile							\
 config/Makefile							\
 cts/Makefile					        	\
+	cts/CM_ais.py						\
 	cts/CM_fs.py						\
 	cts/CM_hb.py						\
 	cts/CTS.py						\
