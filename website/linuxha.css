@@ -121,6 +121,13 @@ h5 {
 	color: black;
 }
 
+/* Language menu in the page header */
+#i_header table {
+	width:		100%;
+	background:	white;
+	border:		none;
+}
+
 /* Menu across the top of the page */
 #i_menu table {
 	width:		100%;
