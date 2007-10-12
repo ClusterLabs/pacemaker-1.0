@@ -36,8 +36,7 @@ halib_PROGRAMS		= ipfail
 ipfail_SOURCES		= ipfail.c ipfail.h
 ipfail_LDADD		= \
 			$(top_builddir)/lib/clplumbing/libplumb.la \
-			$(top_builddir)/lib/hbclient/libhbclient.la $(GLIBLIB) \
-			$(top_builddir)/lib/pils/libpils.la
+			$(top_builddir)/lib/hbclient/libhbclient.la $(GLIBLIB)
 
 
 
