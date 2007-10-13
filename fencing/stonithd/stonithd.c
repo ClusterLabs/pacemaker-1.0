@@ -2863,7 +2863,7 @@ stonithRA_start( stonithRA_ops_t * op, gpointer data)
 	StonithNVpair*	snv;
 	Stonith *	stonith_obj = NULL;
 	char 		buf_tmp[40];
-	int		shmid, shmsize;
+	int		shmid=0, shmsize;
 
 	/* Check the parameter */
 	if ( op == NULL || op->rsc_id <= 0 || op->op_type == NULL
@@ -2871,15 +2871,6 @@ stonithRA_start( stonithRA_ops_t * op, gpointer data)
 		stonithd_log(LOG_ERR, "stonithRA_start: parameter error.");
 		return ST_FAIL;
 	}
-
-	shmsize = hb->llc_ops->num_nodes(hb)*(HOSTLENG+1)+1;
-	shmid = shmget(IPC_PRIVATE, shmsize, (SHM_R | SHM_W));
-	if( shmid < 0 ) {
-		cl_perror("shmget");
-		return ST_FAIL;
-	}
-	stonithd_log(LOG_DEBUG, "%s: got a shmem seg of size %d"
-		     , __FUNCTION__, shmsize);
 
 	srsc = get_started_stonith_resource(op->rsc_id);
 	if (srsc != NULL) {
@@ -2890,6 +2881,15 @@ stonithRA_start( stonithRA_ops_t * op, gpointer data)
 		stonith_obj = srsc->stonith_obj;
 		goto probe_status;
 	}
+
+	shmsize = hb->llc_ops->num_nodes(hb)*(HOSTLENG+1)+1;
+	shmid = shmget(IPC_PRIVATE, shmsize, (SHM_R | SHM_W));
+	if( shmid < 0 ) {
+		cl_perror("shmget");
+		return ST_FAIL;
+	}
+	stonithd_log(LOG_DEBUG, "%s: got a shmem seg of size %d"
+		     , __FUNCTION__, shmsize);
 
 	/* Don't find in local_started_stonith_rsc, not on start status */
 	stonithd_log2(LOG_DEBUG, "stonithRA_start: op->params' address=%p"
@@ -2941,7 +2941,9 @@ probe_status:
 		return_to_dropped_privs();
                 return -1;
         } else if (pid > 0) { /* in the parent process */
-		add_shm_hostlist(shmid,pid);
+		if( shmid ) {
+			add_shm_hostlist(shmid,pid);
+		}
 		memset(buf_tmp, 0, sizeof(buf_tmp));
 		snprintf(buf_tmp, sizeof(buf_tmp)-1, "%s_%s_%s", stonith_obj->stype
 			, op->rsc_id , "start"); 
@@ -2957,13 +2959,14 @@ probe_status:
 	if ( S_OK != stonith_get_status(stonith_obj) ) {
 		exit(EXECRA_UNKNOWN_ERROR);
 	}
-	if (srsc != NULL) { /* Already started before this operation */
+	if( !shmid ) { /* Already started before this operation */
 		exit(EXECRA_OK);
 	}
 	return_to_orig_privs();
 	if( !hostlist2shmem(shmid,stonith_get_hostlist(stonith_obj))) {
 		stonithd_log(LOG_ERR, "Could not list nodes for stonith RA %s."
 		,	op->ra_name);
+		exit(EXECRA_NOT_CONFIGURED);
 	}
 	return_to_dropped_privs();
 	exit(EXECRA_OK);
@@ -3082,6 +3085,9 @@ record_new_srsc(stonithRA_ops_t *ra_op)
 {
 	stonith_rsc_t * srsc;
 
+	if( !lookup_shm_hostlist(ra_op->call_id) ) {
+		return; /* start of an already started stonith object */
+	}
 	/* ra_op will be free at once, so it's safe to set some of its
 	 * fields as NULL.
 	 */
