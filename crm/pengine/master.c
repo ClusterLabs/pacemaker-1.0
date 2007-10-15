@@ -283,7 +283,7 @@ static void master_promotion_order(resource_t *rsc)
 	child, resource_t, rsc->children, lpc,
 	crm_debug_2("%s: %d", child->id, child->sort_index);
 	);
-    dump_node_scores(LOG_DEBUG_3, "Before", rsc->allowed_nodes);
+    dump_node_scores(LOG_DEBUG_3, rsc, "Before", rsc->allowed_nodes);
 
 #if 1
     slist_iter(
@@ -301,7 +301,7 @@ static void master_promotion_order(resource_t *rsc)
 	node->weight = merge_weights(child->sort_index, node->weight);
 	);
     
-    dump_node_scores(LOG_DEBUG_3, "Middle", rsc->allowed_nodes);
+    dump_node_scores(LOG_DEBUG_3, rsc, "Middle", rsc->allowed_nodes);
 #endif
     
     slist_iter(
@@ -314,7 +314,7 @@ static void master_promotion_order(resource_t *rsc)
 	}
 	);
     
-    dump_node_scores(LOG_DEBUG_3, "After", rsc->allowed_nodes);
+    dump_node_scores(LOG_DEBUG_3, rsc, "After", rsc->allowed_nodes);
 
     /* write them back and sort */
     slist_iter(
@@ -449,12 +449,14 @@ master_color(resource_t *rsc, pe_working_set_t *data_set)
 		child_rsc, resource_t, rsc->children, lpc,
 
 		crm_debug_2("Assigning priority for %s", child_rsc->id);
+		if(child_rsc->role == RSC_ROLE_STARTED) {
+		    child_rsc->role = RSC_ROLE_SLAVE;
+		}
+
 		chosen = child_rsc->allocated_to;
+
 		if(chosen == NULL) {
 			continue;
-			
-		} else if(child_rsc->role == RSC_ROLE_STARTED) {
-			child_rsc->role = RSC_ROLE_SLAVE;
 		}
 		
 		switch(child_rsc->next_role) {
@@ -492,6 +494,7 @@ master_color(resource_t *rsc, pe_working_set_t *data_set)
 		apply_master_colocation(rsc->rsc_cons);
 		apply_master_colocation(child_rsc->rsc_cons);
 		child_rsc->sort_index = child_rsc->priority;
+		crm_debug_2("Assigning priority for %s: %d", child_rsc->id, child_rsc->priority);
 
 		if(child_rsc->next_role == RSC_ROLE_MASTER) {
 		    child_rsc->sort_index = INFINITY;
@@ -521,6 +524,7 @@ master_color(resource_t *rsc, pe_working_set_t *data_set)
 		chosen->count++;
 		crm_info("Promoting %s", child_rsc->id);
 		child_rsc->next_role = RSC_ROLE_MASTER;
+		clone_data->masters_allocated++;
 		promoted++;
 		
 		add_hash_param(child_rsc->parameters, crm_meta_name("role"),
@@ -570,10 +574,15 @@ void master_create_actions(resource_t *rsc, pe_working_set_t *data_set)
 		CRMD_ACTION_PROMOTED, NULL, !any_promoting, TRUE, data_set);
 
 	action->pseudo = TRUE;
-	action->runnable = TRUE;
+	action->runnable = FALSE;
 	action_complete->pseudo = TRUE;
-	action_complete->runnable = TRUE;
+	action_complete->runnable = FALSE;
 	action_complete->priority = INFINITY;
+
+	if(clone_data->masters_allocated > 0) {
+	    action->runnable = TRUE;
+	    action_complete->runnable = TRUE;
+	}
 	
 	child_promoting_constraints(clone_data, pe_order_optional, 
 				    rsc, NULL, last_promote_rsc, data_set);
@@ -614,6 +623,18 @@ master_internal_constraints(resource_t *rsc, pe_working_set_t *data_set)
 
 	clone_internal_constraints(rsc, data_set);
 	
+	/* global stopped before start */
+	custom_action_order(
+		rsc, stopped_key(rsc), NULL,
+		rsc, start_key(rsc), NULL,
+		pe_order_optional, data_set);
+
+	/* global stopped before promote */
+	custom_action_order(
+		rsc, stopped_key(rsc), NULL,
+		rsc, promote_key(rsc), NULL,
+		pe_order_optional, data_set);
+
 	/* global demoted before start */
 	custom_action_order(
 		rsc, demoted_key(rsc), NULL,
