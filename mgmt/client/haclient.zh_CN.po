@@ -785,3 +785,12 @@ msgstr "集群资源管理服务集成超时："
 
 msgid "CRMD Finalization Timeout:"
 msgstr "集群资源管理服务结束超时："
+
+msgid "There are unsaved changes in current page."
+msgstr "在当前页中有未保存的修改。"
+
+msgid "Apply the changes?"
+msgstr "您想应用修改吗？"
+
+msgid "The data of current view have been changed."
+msgstr "当前视图中的数据已修改。"

@@ -737,6 +737,8 @@ class View :
 			self.glade.get_widget("apply").connect("clicked", self.on_apply)
 		if self.glade.get_widget("reset") != None :
 			self.glade.get_widget("reset").connect("clicked", self.on_reset)
+		if self.glade.get_widget("default") != None :
+			self.glade.get_widget("default").connect("clicked", self.on_default)
 			
 	def update(self) :
 		if self.glade.get_widget("apply") != None :
@@ -757,6 +759,9 @@ class View :
 		self.glade.get_widget("apply").set_property("sensitive", False)
 		self.glade.get_widget("reset").set_property("sensitive", False)
 		self.changed = False
+
+	def on_default(self, widget):
+		self.on_changed(widget)
 		
 	def on_after_show(self) :
 		pass	
@@ -801,21 +806,47 @@ class ClusterView(View) :
 	def on_apply(self, widget):
 		glade = self.glade
 		
-		for (widgets, metadata) in ((self.pengine_widgets, self.pengine_metadata),
-						(self.crmd_widgets, self.crmd_metadata)):
-			new_crm_config ={}
-			for key in widgets["combos"].keys():
-				new_crm_config[key] = widgets["combos"][key].child.get_text()
-			for key in widgets["checkbuttons"].keys():
-				if widgets["checkbuttons"][key].get_active():
-					new_crm_config[key] = "true"
-				else:
-					new_crm_config[key] = "false"
-			for key in widgets["entries"].keys():
-				new_crm_config[key] = widgets["entries"][key].get_text()
-			manager.update_crm_config(metadata, new_crm_config)
+		current_page = glade.get_widget("notebook").get_current_page()
+		if current_page == 1:
+			(widgets, metadata) = (self.pengine_widgets, self.pengine_metadata)
+		elif current_page == 2:
+			(widgets, metadata) = (self.crmd_widgets, self.crmd_metadata)
+
+		new_crm_config = {}
+		for key in widgets["combos"].keys():
+			new_crm_config[key] = widgets["combos"][key].child.get_text()
+		for key in widgets["checkbuttons"].keys():
+			if widgets["checkbuttons"][key].get_active():
+				new_crm_config[key] = "true"
+			else:
+				new_crm_config[key] = "false"
+		for key in widgets["entries"].keys():
+			new_crm_config[key] = widgets["entries"][key].get_text()
+		manager.update_crm_config(metadata, new_crm_config)
 
 		View.on_apply(self, widget)
+
+	def on_default(self, widget):
+		current_page = self.glade.get_widget("notebook").get_current_page()
+		if current_page == 1:
+			(widgets, metadata) = (self.pengine_widgets, self.pengine_metadata)
+		elif current_page == 2:
+			(widgets, metadata) = (self.crmd_widgets, self.crmd_metadata)
+
+		default_crm_config = {}
+		for parameter in metadata.parameters:
+			default_crm_config[parameter["name"]] = str(parameter["content"]["default"])
+
+		if default_crm_config != {}:
+			for key in widgets["combos"].keys():
+				widgets["combos"][key].child.set_text(default_crm_config[key])
+				widgets["combos"][key].child.set_editable(False)
+			for key in widgets["checkbuttons"].keys():
+				widgets["checkbuttons"][key].set_active("true" == default_crm_config[key])
+			for key in widgets["entries"].keys():
+				widgets["entries"][key].set_text(default_crm_config[key])
+
+		View.on_default(self, widget)
 	
 	def update(self) :
 		glade = self.glade
@@ -866,6 +897,21 @@ class ClusterView(View) :
 							
 	def on_notebook_event(self, widget, page, page_num) :
 		global last_cluster_view_page_num
+
+		if self.changed == True:
+			ret = confirmbox(_("There are unsaved changes in current page.")+"\n"+_("Apply the changes?"),
+					(gtk.STOCK_YES, gtk.RESPONSE_YES, 
+					gtk.STOCK_NO, gtk.RESPONSE_NO))
+			if ret == gtk.RESPONSE_YES :
+				self.on_apply(widget)
+			if ret == gtk.RESPONSE_NO :
+				self.update()
+
+		if page_num == 0:
+			self.glade.get_widget("default").set_property("sensitive", False)
+		else:
+			self.glade.get_widget("default").set_property("sensitive", True)
+
 		last_cluster_view_page_num = page_num
 
 	def __init__(self) :
@@ -884,7 +930,12 @@ class ClusterView(View) :
 		notebook.connect("switch-page", self.on_notebook_event)
 		notebook.set_current_page(last_cluster_view_page_num)
 
+		if last_cluster_view_page_num == 0 :
+			glade.get_widget("default").set_property("sensitive", False)
+
 		self.update()
+
+
 
 	def render_cluster_conf(self, metadata):
 		if metadata.name == "Policy Engine":
@@ -903,8 +954,9 @@ class ClusterView(View) :
 		for row in range(len(parameters)):
 			label = gtk.Label(parameters[row]["name"]+":")
 			label.set_alignment(1, 0.5)
-			label.set_padding(10, 0)
-			table.attach(label, 0, 1, row, row+1)
+			eventbox = gtk.EventBox()
+			eventbox.add(label)
+			table.attach(eventbox, 0, 1, row, row+1, xpadding = 5)
 			labels[parameters[row]["name"]] = label
 
 			if parameters[row]["content"].has_key("values"):
@@ -912,17 +964,17 @@ class ClusterView(View) :
 				for option in parameters[row]["content"]["values"]:
 					combo.append_text(option)
 				combo.connect("changed", self.on_changed)
-				table.attach(combo, 1, 2, row, row+1)
+				table.attach(combo, 1, 2, row, row+1, xpadding = 5)
 				combos[parameters[row]["name"]] = combo
 			elif parameters[row]["content"]["type"] == "boolean":
 				checkbutton = gtk.CheckButton()
 				checkbutton.connect("toggled", self.on_changed)
-				table.attach(checkbutton, 1, 2, row, row+1)
+				table.attach(checkbutton, 1, 2, row, row+1, xpadding = 2)
 				checkbuttons[parameters[row]["name"]] = checkbutton
 			else:
 				entry = gtk.Entry()
 				entry.connect("changed", self.on_changed)
-				table.attach(entry, 1,2, row, row+1)
+				table.attach(entry, 1,2, row, row+1, xpadding = 5)
 				entries[parameters[row]["name"]] = entry 
 	
 		vbox.pack_start(table)
@@ -935,7 +987,6 @@ class ClusterView(View) :
 	
 		return widgets
 
-		
 class OrderView(View) :
 	name = "orderview"
 	save_order = None
@@ -1685,7 +1736,7 @@ class MainWindow :
 	def can_change_view(self) :
 		if not self.cur_view.changed :
 			return True
-		ret = confirmbox("The data of current view has been changed. \nApply the change?",
+		ret = confirmbox(_("The data of current view have been changed.")+"\n"+_("Apply the changes?"),
 			(gtk.STOCK_YES, gtk.RESPONSE_YES, 
 			gtk.STOCK_NO, gtk.RESPONSE_NO,
 			gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL))
