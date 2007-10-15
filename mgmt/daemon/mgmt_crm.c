@@ -79,6 +79,10 @@ static char* on_update_rsc_attr(char* argv[], int argc);
 static char* on_get_rsc_running_on(char* argv[], int argc);
 static char* on_get_rsc_status(char* argv[], int argc);
 
+static char* on_get_rsc_metaattrs(char* argv[], int argc);
+static char* on_update_rsc_metaattrs(char* argv[], int argc);
+static char* on_delete_rsc_metaattr(char* argv[], int argc);
+
 static char* on_get_rsc_params(char* argv[], int argc);
 static char* on_update_rsc_params(char* argv[], int argc);
 static char* on_delete_rsc_param(char* argv[], int argc);
@@ -95,8 +99,9 @@ static char* on_get_constraint(char* argv[], int argc);
 static char* on_update_constraint(char* argv[], int argc);
 static char* on_delete_constraint(char* argv[], int argc);
 
+static void get_meta_attributes_id(const char* rsc_id, char* id);
 static void get_instance_attributes_id(const char* rsc_id, char* id);
-static void get_attr_id(const char* rsc_id, const char* attr, char* id);
+static void get_attr_id(const char* rsc_id, const char* attr_type, const char* attr, char* id);
 static int delete_object(const char* type, const char* entry, const char* id, crm_data_t** output);
 static GList* find_xml_node_list(crm_data_t *root, const char *search_path);
 static int refresh_lrm(IPC_Channel *crmd_channel, const char *host_uname);
@@ -331,6 +336,39 @@ get_fix(const char* rsc_id, char* prefix, char* suffix, char* real_id)
 	free_data_set(data_set);
 	return 0;
 }
+
+static void
+get_meta_attributes_id(const char* rsc_id, char* id)
+{
+	resource_t* rsc;
+	const char* cur_id;
+	pe_working_set_t* data_set;
+	struct ha_msg* attrs;
+	
+	data_set = get_data_set();
+	rsc = pe_find_resource(data_set->resources, rsc_id);	
+	if (rsc == NULL) {
+		snprintf(id, MAX_STRLEN, "%s_meta_attrs", rsc_id);
+		free_data_set(data_set);
+		return;
+	}
+	attrs = cl_get_struct((struct ha_msg*)rsc->xml, "meta_attributes");
+	if (attrs == NULL) {
+		snprintf(id, MAX_STRLEN, "%s_meta_attrs", rsc_id);
+		free_data_set(data_set);
+		return;
+	}
+	cur_id = ha_msg_value(attrs, "id");
+	if (cur_id == NULL) {
+		snprintf(id, MAX_STRLEN, "%s_meta_attrs", rsc_id);
+		free_data_set(data_set);
+		return;
+	}
+	STRNCPY(id, cur_id, MAX_STRLEN);
+	free_data_set(data_set);
+	return;					
+
+}
 static void
 get_instance_attributes_id(const char* rsc_id, char* id)
 {
@@ -364,7 +402,7 @@ get_instance_attributes_id(const char* rsc_id, char* id)
 
 }
 static void
-get_attr_id(const char* rsc_id, const char* attr, char* id)
+get_attr_id(const char* rsc_id, const char* attr_type, const char* attr, char* id)
 {
 	int i;
 	resource_t* rsc;
@@ -373,24 +411,30 @@ get_attr_id(const char* rsc_id, const char* attr, char* id)
 	struct ha_msg* attrs;
 	struct ha_msg* nvpair;
 	pe_working_set_t* data_set;
+	const char* mid = "";
+
+	if (STRNCMP_CONST(attr_type, "meta_attributes") == 0)
+		mid = "metaattr_";
+	if (STRNCMP_CONST(attr_type, "instance_attributes") == 0)
+		mid = "instattr_";
 	
 	data_set = get_data_set();
 	rsc = pe_find_resource(data_set->resources, rsc_id);	
 	if (rsc == NULL) {
-		snprintf(id, MAX_STRLEN,  "%s_%s", rsc_id, attr);
+		snprintf(id, MAX_STRLEN,  "%s_%s%s", rsc_id, mid, attr);
 		free_data_set(data_set);
 		return;
 	}
 
-	attrs = cl_get_struct((struct ha_msg*)rsc->xml, "instance_attributes");
+	attrs = cl_get_struct((struct ha_msg*)rsc->xml, attr_type);
 	if(attrs == NULL) {
-		snprintf(id, MAX_STRLEN,  "%s_%s", rsc_id, attr);
+		snprintf(id, MAX_STRLEN,  "%s_%s%s", rsc_id, mid, attr);
 		free_data_set(data_set);
 		return;
 	}
 	attrs = cl_get_struct(attrs, "attributes");
 	if(attrs == NULL) {
-		snprintf(id, MAX_STRLEN,  "%s_%s", rsc_id, attr);
+		snprintf(id, MAX_STRLEN,  "%s_%s%s", rsc_id, mid, attr);
 		free_data_set(data_set);
 		return;
 	}
@@ -408,7 +452,7 @@ get_attr_id(const char* rsc_id, const char* attr, char* id)
 			}
 		}
 	}
-	snprintf(id, MAX_STRLEN,  "%s_%s", rsc_id, attr);
+	snprintf(id, MAX_STRLEN,  "%s_%s%s", rsc_id, mid, attr);
 	free_data_set(data_set);
 	return;
 }
@@ -472,6 +516,9 @@ init_crm(int cache_cib)
 	reg_msg(MSG_RSC_TYPE, on_get_rsc_type);
 	reg_msg(MSG_UP_RSC_ATTR, on_update_rsc_attr);
 		
+	reg_msg(MSG_RSC_METAATTRS, on_get_rsc_metaattrs);
+	reg_msg(MSG_UP_RSC_METAATTRS, on_update_rsc_metaattrs);
+	reg_msg(MSG_DEL_RSC_METAATTR, on_delete_rsc_metaattr);
 	
 	reg_msg(MSG_RSC_PARAMS, on_get_rsc_params);
 	reg_msg(MSG_UP_RSC_PARAMS, on_update_rsc_params);
@@ -971,10 +1018,10 @@ on_add_rsc(char* argv[], int argc)
 	crm_data_t* output = NULL;
 	char xml[MAX_STRLEN];
 	char buf[MAX_STRLEN];
-	char inst_attrs_id[MAX_STRLEN];
+	char meta_attrs_id[MAX_STRLEN];
 	int clone, master, has_param;
 		
-	if (argc < 12) {
+	if (argc < 13) {
 		return cl_strdup(MSG_FAIL);
 	}
 	xml[0]=0;
@@ -982,16 +1029,16 @@ on_add_rsc(char* argv[], int argc)
 	new_group = (STRNCMP_CONST(argv[12], "True") == 0);
 	clone = (STRNCMP_CONST(argv[6], "clone") == 0);
 	master = (STRNCMP_CONST(argv[6], "master") == 0);
-	has_param = (argc > 12);
+	has_param = (argc > 13);
 	if (in_group) {
 		snprintf(buf, MAX_STRLEN, "<group id=\"%s\">", argv[5]);
 		strncat(xml, buf, sizeof(xml)-strlen(xml)-1);
 
 		if (new_group){
 			snprintf(buf, MAX_STRLEN,
-				"<instance_attributes id=\"%s_instance_attrs\"><attributes>" \
-				"<nvpair id=\"%s_target_role\" name=\"target_role\" value=\"stopped\"/>" \
-				"</attributes> </instance_attributes>",
+				"<meta_attributes id=\"%s_meta_attrs\"><attributes>" \
+				"<nvpair id=\"%s_metaattr_target_role\" name=\"target_role\" value=\"stopped\"/>" \
+				"</attributes> </meta_attributes>",
 				argv[5], argv[5]);
 			strncat(xml, buf, sizeof(xml)-strlen(xml)-1);
 		}
@@ -999,43 +1046,60 @@ on_add_rsc(char* argv[], int argc)
 		
 	}
 	if (clone) {
-		get_instance_attributes_id(argv[7], inst_attrs_id);
+		get_meta_attributes_id(argv[7], meta_attrs_id);
 		snprintf(buf, MAX_STRLEN,
-			 "<clone id=\"%s\"><instance_attributes id=\"%s\"><attributes>" \
-			 "<nvpair id=\"%s_target_role\" name=\"target_role\" value=\"stopped\"/>" \
-			 "<nvpair id=\"%s_clone_max\" name=\"clone_max\" value=\"%s\"/>" \
-			 "<nvpair id=\"%s_clone_node_max\" name=\"clone_node_max\" value=\"%s\"/>" \
-			 "</attributes>	</instance_attributes> ",
-			 argv[7], inst_attrs_id, argv[7], argv[7], argv[8],argv[7], argv[9]);
+			 "<clone id=\"%s\"><meta_attributes id=\"%s\"><attributes>" \
+			 "<nvpair id=\"%s_metaattr_target_role\" name=\"target_role\" value=\"stopped\"/>" \
+			 "<nvpair id=\"%s_metaattr_clone_max\" name=\"clone_max\" value=\"%s\"/>" \
+			 "<nvpair id=\"%s_metaattr_clone_node_max\" name=\"clone_node_max\" value=\"%s\"/>" \
+			 "</attributes>	</meta_attributes> ",
+			 argv[7], meta_attrs_id, argv[7], argv[7], argv[8],argv[7], argv[9]);
 		strncat(xml, buf, sizeof(xml)-strlen(xml)-1);
 	}
 	if (master) {
-		get_instance_attributes_id(argv[7], inst_attrs_id);
+		get_meta_attributes_id(argv[7], meta_attrs_id);
 		snprintf(buf, MAX_STRLEN,
 			 "<master_slave id=\"%s\" notify=\"true\" globally_unique=\"false\">" \
-			 "<instance_attributes id=\"%s\"><attributes>" \
-			 "<nvpair id=\"%s_target_role\" name=\"target_role\" value=\"stopped\"/>" \
-			 "<nvpair id=\"%s_clone_max\" name=\"clone_max\" value=\"%s\"/>" \
-			 "<nvpair id=\"%s_clone_node_max\" name=\"clone_node_max\" value=\"%s\"/>" \
-			 "<nvpair id=\"%s_master_max\" name=\"master_max\" value=\"%s\"/>" \
-			 "<nvpair id=\"%s_master_node_max\" name=\"master_node_max\" value=\"%s\"/>" \
-			 "</attributes>	</instance_attributes>",
-			 argv[7], inst_attrs_id, argv[7], argv[7], argv[8], argv[7], argv[9],
-			 argv[7], argv[10], argv[7], argv[11]);
+			 "<meta_attributes id=\"%s\"><attributes>" \
+			 "<nvpair id=\"%s_metaattr_target_role\" name=\"target_role\" value=\"stopped\"/>" \
+			 "<nvpair id=\"%s_metaattr_clone_max\" name=\"clone_max\" value=\"%s\"/>" \
+			 "<nvpair id=\"%s_metaattr_clone_node_max\" name=\"clone_node_max\" value=\"%s\"/>" \
+			 "<nvpair id=\"%s_metaattr_master_max\" name=\"master_max\" value=\"%s\"/>" \
+			 "<nvpair id=\"%s_metaattr_master_node_max\" name=\"master_node_max\" value=\"%s\"/>" \
+			 "<nvpair id=\"%s_metaattr_notify\" name=\"notify\" value=\"true\"/>" \
+			 "<nvpair id=\"%s_metaattr_globally_unique\" name=\"globally_unique\" value=\"false\"/>" \
+			 "</attributes>	</meta_attributes>",
+			 argv[7], meta_attrs_id, argv[7], argv[7], argv[8], argv[7], argv[9],
+			 argv[7], argv[10], argv[7], argv[11], argv[7], argv[7]);
 		strncat(xml, buf, sizeof(xml)-strlen(xml)-1);
 	}
 	
-	if (!has_param) {
-		snprintf(buf, MAX_STRLEN,
-			 "<primitive id=\"%s\" class=\"%s\" type=\"%s\" provider=\"%s\"/>"
-					 , argv[1],argv[2], argv[3],argv[4]);
-		strncat(xml, buf, sizeof(xml)-strlen(xml)-1);
+	if ((in_group || clone || master) && !has_param){
+			snprintf(buf, MAX_STRLEN,
+				 "<primitive id=\"%s\" class=\"%s\" type=\"%s\" provider=\"%s\"/>"
+						 , argv[1],argv[2], argv[3],argv[4]);
+			strncat(xml, buf, sizeof(xml)-strlen(xml)-1);
 	}
 	else {
 		snprintf(buf, MAX_STRLEN,
-			 "<primitive id=\"%s\" class=\"%s\" type=\"%s\" provider=\"%s\">" \
+			 "<primitive id=\"%s\" class=\"%s\" type=\"%s\" provider=\"%s\">",
+			 argv[1],argv[2], argv[3],argv[4]);
+		strncat(xml, buf, sizeof(xml)-strlen(xml)-1);
+	}
+
+	if (!in_group && !clone && !master){
+		snprintf(buf, MAX_STRLEN,
+			"<meta_attributes id=\"%s_meta_attrs\"> <attributes>" \
+			"<nvpair id=\"%s_metaattr_target_role\" name=\"target_role\" value=\"stopped\"/>" \
+			"</attributes> </meta_attributes>",
+			argv[1], argv[1]);
+		strncat(xml, buf, sizeof(xml)-strlen(xml)-1);
+	}
+
+	if (has_param) {
+		snprintf(buf, MAX_STRLEN,
 			 "<instance_attributes id=\"%s_instance_attrs\"> <attributes>"
-			 , argv[1],argv[2], argv[3],argv[4], argv[1]);
+			 , argv[1]);
 		strncat(xml, buf, sizeof(xml)-strlen(xml)-1);
 	
 		for (i = 13; i < argc; i += 3) {
@@ -1044,9 +1108,14 @@ on_add_rsc(char* argv[], int argc)
 				 argv[i], argv[i+1],argv[i+2]);
 			strncat(xml, buf, sizeof(xml)-strlen(xml)-1);
 		}
-		strncat(xml, "</attributes></instance_attributes></primitive>",
+		strncat(xml, "</attributes></instance_attributes>",
 				sizeof(xml)-strlen(xml)-1);
 	}
+
+	if (has_param || (!in_group && !clone && !master)){
+		strncat(xml, "</primitive>", sizeof(xml)-strlen(xml)-1);
+	}
+
 	if (master) {
 		strncat(xml, "</master_slave>", sizeof(xml)-strlen(xml)-1);
 	}
@@ -1430,6 +1499,43 @@ on_get_sub_rsc(char* argv[], int argc)
 	return ret;
 }
 
+
+char*
+on_get_rsc_metaattrs(char* argv[], int argc)
+{
+	int i;
+	resource_t* rsc;
+	char* ret;
+	struct ha_msg* attrs;
+	struct ha_msg* nvpair;
+	pe_working_set_t* data_set;
+	
+	data_set = get_data_set();
+	GET_RESOURCE()
+
+	ret = cl_strdup(MSG_OK);
+	attrs = cl_get_struct((struct ha_msg*)rsc->xml, "meta_attributes");
+	if(attrs == NULL) {
+		free_data_set(data_set);
+		return ret;
+	}
+	attrs = cl_get_struct(attrs, "attributes");
+	if(attrs == NULL) {
+		free_data_set(data_set);
+		return ret;
+	}
+	for (i = 0; i < attrs->nfields; i++) {
+		if (STRNCMP_CONST(attrs->names[i], "nvpair") == 0) {
+			nvpair = (struct ha_msg*)attrs->values[i];
+			ret = mgmt_msg_append(ret, ha_msg_value(nvpair, "id"));
+			ret = mgmt_msg_append(ret, ha_msg_value(nvpair, "name"));
+			ret = mgmt_msg_append(ret, ha_msg_value(nvpair, "value"));
+		}
+	}
+	free_data_set(data_set);
+	return ret;
+}
+
 /* resource params */
 char*
 on_get_rsc_params(char* argv[], int argc)
@@ -1530,6 +1636,56 @@ on_update_rsc_attr(char* argv[], int argc)
 }
 
 char*
+on_update_rsc_metaattrs(char* argv[], int argc)
+{
+	int rc, i;
+	crm_data_t* fragment = NULL;
+	crm_data_t* cib_object = NULL;
+	crm_data_t* output;
+	char xml[MAX_STRLEN];
+	char buf[MAX_STRLEN];
+	char prefix[MAX_STRLEN];
+	char suffix[MAX_STRLEN];
+	char real_id[MAX_STRLEN];
+	char meta_attrs_id[MAX_STRLEN];	
+	
+	if(get_fix(argv[1], prefix, suffix, real_id) == -1) {
+		return cl_strdup(MSG_FAIL);
+	}
+	get_meta_attributes_id(argv[1],meta_attrs_id);
+	snprintf(xml, MAX_STRLEN,
+    		 "%s<meta_attributes id=\"%s\"><attributes>",
+    		 prefix , meta_attrs_id);
+	for (i = 2; i < argc; i += 3) {
+		snprintf(buf, MAX_STRLEN,
+			"<nvpair id=\"%s\" name=\"%s\" value=\"%s\"/>",
+			argv[i], argv[i+1], argv[i+2]);
+		strncat(xml, buf, sizeof(xml)-strlen(xml)-1);
+	}
+	strncat(xml, "</attributes></meta_attributes>",
+			sizeof(xml)-strlen(xml)-1);
+	strncat(xml, suffix, sizeof(xml)-strlen(xml)-1);
+
+	cib_object = string2xml(xml);
+	if(cib_object == NULL) {
+		return cl_strdup(MSG_FAIL);
+	}
+	mgmt_log(LOG_INFO, "on_update_rsc_metaattrs:%s",xml);
+	fragment = create_cib_fragment(cib_object, "resources");
+
+	rc = cib_conn->cmds->update(
+			cib_conn, "resources", fragment, &output, cib_sync_call);
+
+	free_xml(fragment);
+	free_xml(cib_object);
+	if (rc < 0) {
+		return crm_failed_msg(output, rc);
+	}
+	free_xml(output);
+	return cl_strdup(MSG_OK);
+}
+
+char*
 on_update_rsc_params(char* argv[], int argc)
 {
 	int rc, i;
@@ -1578,6 +1734,19 @@ on_update_rsc_params(char* argv[], int argc)
 	free_xml(output);
 	return cl_strdup(MSG_OK);
 }
+
+char*
+on_delete_rsc_metaattr(char* argv[], int argc)
+{
+	crm_data_t * output;
+	int rc;
+	ARGC_CHECK(2)
+
+	if ((rc=delete_object("resources", "nvpair", argv[1], &output)) < 0) {
+		return crm_failed_msg(output, rc);
+	}
+	return cl_strdup(MSG_OK);
+}
 char*
 on_delete_rsc_param(char* argv[], int argc)
 {
@@ -1603,14 +1772,22 @@ on_set_target_role(char* argv[], int argc)
 	char prefix[MAX_STRLEN];
 	char suffix[MAX_STRLEN];
 	char real_id[MAX_STRLEN];
-	char inst_attrs_id[MAX_STRLEN];	
+	char meta_attrs_id[MAX_STRLEN];	
 	char target_role_id[MAX_STRLEN];	
 	
 	if(get_fix(argv[1], prefix, suffix, real_id) == -1) {
 		return cl_strdup(MSG_FAIL);
 	}
-	get_instance_attributes_id(argv[1], inst_attrs_id);
-	get_attr_id(argv[1], "target_role", target_role_id);
+
+	get_attr_id(argv[1], "instance_attributes", "target_role", target_role_id);
+	snprintf(buf, MAX_STRLEN, "%s", target_role_id);
+	rc = delete_object("resources", "nvpair", buf, &output);
+	if (rc < 0) {
+		return crm_failed_msg(output, rc);
+	}
+	
+	get_meta_attributes_id(argv[1], meta_attrs_id);
+	get_attr_id(argv[1], "meta_attributes", "target_role", target_role_id);
 	
 	if (STRNCMP_CONST(argv[2],"#default") == 0) {
 		snprintf(buf, MAX_STRLEN, "%s", target_role_id);
@@ -1623,15 +1800,15 @@ on_set_target_role(char* argv[], int argc)
 		
 
 	snprintf(xml, MAX_STRLEN,
-    		 "%s<instance_attributes id=\"%s\"><attributes>",
-    		 prefix,inst_attrs_id);
+    		 "%s<meta_attributes id=\"%s\"><attributes>",
+    		 prefix,meta_attrs_id);
 	snprintf(buf, MAX_STRLEN,
 		"<nvpair id=\"%s\" " \
 		"name=\"target_role\" value=\"%s\"/>",
 		target_role_id, argv[2]);
 	strncat(xml, buf, sizeof(xml)-strlen(xml)-1);
 	
-	strncat(xml, "</attributes></instance_attributes>",
+	strncat(xml, "</attributes></meta_attributes>",
 			sizeof(xml)-strlen(xml)-1);
 	strncat(xml, suffix, sizeof(xml)-strlen(xml)-1);
 
@@ -1905,17 +2082,17 @@ on_update_clone(char* argv[], int argc)
 	crm_data_t* cib_object = NULL;
 	crm_data_t* output;
 	char xml[MAX_STRLEN];
-	char inst_attrs_id[MAX_STRLEN];	
+	char meta_attrs_id[MAX_STRLEN];	
 
 	ARGC_CHECK(4);
 	
-	get_instance_attributes_id(argv[1], inst_attrs_id);
+	get_meta_attributes_id(argv[1], meta_attrs_id);
 	snprintf(xml,MAX_STRLEN,
-		 "<clone id=\"%s\"><instance_attributes id=\"%s\"><attributes>" \
+		 "<clone id=\"%s\"><meta_attributes id=\"%s\"><attributes>" \
 		 "<nvpair id=\"%s_clone_max\" name=\"clone_max\" value=\"%s\"/>" \
 		 "<nvpair id=\"%s_clone_node_max\" name=\"clone_node_max\" value=\"%s\"/>" \
-		 "</attributes></instance_attributes></clone>",
-		 argv[1],inst_attrs_id,argv[1],argv[2],argv[1],argv[3]);
+		 "</attributes></meta_attributes></clone>",
+		 argv[1],meta_attrs_id,argv[1],argv[2],argv[1],argv[3]);
 
 	cib_object = string2xml(xml);
 	if(cib_object == NULL) {
@@ -1986,18 +2163,18 @@ on_update_master(char* argv[], int argc)
 	crm_data_t* cib_object = NULL;
 	crm_data_t* output;
 	char xml[MAX_STRLEN];
-	char inst_attrs_id[MAX_STRLEN];	
+	char meta_attrs_id[MAX_STRLEN];	
 
 	ARGC_CHECK(6);
-	get_instance_attributes_id(argv[1], inst_attrs_id);
+	get_meta_attributes_id(argv[1], meta_attrs_id);
 	snprintf(xml,MAX_STRLEN,
-		 "<master_slave id=\"%s\"><instance_attributes id=\"%s\"><attributes>" \
+		 "<master_slave id=\"%s\"><meta_attributes id=\"%s\"><attributes>" \
 		 "<nvpair id=\"%s_clone_max\" name=\"clone_max\" value=\"%s\"/>" \
 		 "<nvpair id=\"%s_clone_node_max\" name=\"clone_node_max\" value=\"%s\"/>" \
 		 "<nvpair id=\"%s_master_max\" name=\"master_max\" value=\"%s\"/>" \
 		 "<nvpair id=\"%s_master_node_max\" name=\"master_node_max\" value=\"%s\"/>" \
-		 "</attributes></instance_attributes></master_slave>",
-		 argv[1],inst_attrs_id,argv[1],argv[2],argv[1],
+		 "</attributes></meta_attributes></master_slave>",
+		 argv[1],meta_attrs_id,argv[1],argv[2],argv[1],
 		 argv[3],argv[1],argv[4],argv[1],argv[5]);
 
 	cib_object = string2xml(xml);
