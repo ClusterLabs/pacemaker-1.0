@@ -24,16 +24,18 @@ INCLUDES                = -I$(top_builddir)/include -I$(top_srcdir)/include   \
 			  -I$(top_builddir)/libltdl -I$(top_srcdir)/libltdl   \
 			  -I$(AISPREFIX)/include/openais
 
-EXTRA_DIST		= ccdv.c attrd.h ocf-tester
+EXTRA_DIST		= ccdv.c attrd.h $(hanoarch_DATA) $(sbin_SCRIPTS)
 
 apigid			= @HA_APIGID@
 habindir		= @bindir@
 halibdir		= $(libdir)/@HB_PKG@
+hanoarchdir		= @HA_NOARCHDATAHBDIR@
 gliblib			= @GLIBLIB@
 
 habin_PROGRAMS		= cl_status cl_respawn 
 halib_SCRIPTS		= haresources2cib.py
-sbin_SCRIPTS		= ocf-tester
+hanoarch_DATA		= utillib.sh README.hb_report
+sbin_SCRIPTS		= ocf-tester hb_report
 
 if CRM_BUILD
 halib_PROGRAMS		= attrd pingd
@@ -49,14 +51,12 @@ cl_status_SOURCES	= cl_status.c
 cl_status_DEPENDENCIES  = ccdv
 cl_status_LDADD		= $(top_builddir)/lib/hbclient/libhbclient.la	\
 			  $(top_builddir)/lib/clplumbing/libplumb.la	\
-	  		  $(top_builddir)/lib/pils/libpils.la	\
 			  $(gliblib)					\
 			  $(top_builddir)/replace/libreplace.la
 
 cl_respawn_SOURCES	= cl_respawn.c
 cl_respawn_LDADD	= $(top_builddir)/lib/clplumbing/libplumb.la	\
-			  $(top_builddir)/lib/apphb/libapphb.la		\
-	  		  $(top_builddir)/lib/pils/libpils.la	\
+			  $(top_builddir)/lib/apphb/libapphb.la 	\
 			  $(gliblib)					\
 			  $(top_builddir)/replace/libreplace.la
 

@@ -53,8 +53,11 @@ update_action(action_t *action)
 	int log_level = LOG_DEBUG_2;
 	gboolean changed = FALSE;
 	
-	do_crm_log(log_level, "Processing action %s: %s",
-		    action->uuid, action->optional?"optional":"required");
+	do_crm_log(log_level, "Processing action %s: %s %s %s",
+		   action->uuid,
+		   action->optional?"optional":"required",
+		   action->runnable?"runnable":"unrunnable",
+		   action->pseudo?"pseudo":action->task);
 
 	slist_iter(
 		other, action_wrapper_t, action->actions_before, lpc,
@@ -62,13 +65,24 @@ update_action(action_t *action)
 		gboolean other_changed = FALSE;
 		node_t *node = other->action->node;
 
-		do_crm_log(log_level, "   Checking action %s: %s 0x%.6x",
+		do_crm_log(log_level, "   Checking action %s: %s %s %s (flags=0x%.6x)",
 			   other->action->uuid,
 			   other->action->optional?"optional":"required",
+			   other->action->runnable?"runnable":"unrunnable",
+			   other->action->pseudo?"pseudo":other->action->task,
 			   other->type);
 
 		local_type = other->type;
 
+		if(local_type & pe_order_demote
+		   && other->action->pseudo == FALSE
+		   && other->action->rsc->role > RSC_ROLE_SLAVE
+		   && node != NULL
+		   && node->details->online) {
+		    local_type |= pe_order_runnable_left;
+		    do_crm_log(log_level,"Upgrading restart constraint to runnable_left");
+		}
+		
 		if(local_type & pe_order_restart
 		   && other->action->pseudo == FALSE
 		   && node != NULL
@@ -90,8 +104,8 @@ update_action(action_t *action)
 
 		if((local_type & pe_order_runnable_left)
 			&& other->action->runnable == FALSE) {
-			if(other->action->pseudo) {
-				do_crm_log(log_level, "Ignoring un-runnable - pseudo");
+			if(other->action->implied_by_stonith) {
+				do_crm_log(log_level, "Ignoring un-runnable - implied_by_stonith");
 
 			} else if(action->runnable == FALSE) {
 				do_crm_log(log_level+1, "Already un-runnable");
@@ -133,6 +147,11 @@ update_action(action_t *action)
 				do_crm_log(log_level-1, "      Ignoring implies left - %s already stopped",
 					other->action->rsc->id);
 
+			} else if((local_type & pe_order_demote)
+				  && other->action->rsc->role < RSC_ROLE_MASTER) {
+			    do_crm_log(log_level-1, "      Ignoring implies left - %s already demoted",
+				       other->action->rsc->id);
+			    
 			} else if(action->optional == FALSE) {
 				other->action->optional = FALSE;
 				do_crm_log(log_level-1,
@@ -519,6 +538,14 @@ should_dump_input(int last_action, action_t *action, action_wrapper_t *wrapper)
 		  wrapper->action->uuid);
 	return FALSE;
     }
+    crm_debug_3("Input (%d) %s n=%p p=%d r=%d f=0x%.6x dumped for %s",
+		wrapper->action->id,
+		wrapper->action->uuid,
+		wrapper->action->node,
+		wrapper->action->pseudo,
+		wrapper->action->runnable,      
+		wrapper->type,      
+		action->uuid);
     return TRUE;
 }
 		   
@@ -557,8 +584,7 @@ graph_element_from_action(action_t *action, pe_working_set_t *data_set)
 	}
 	
 	xml_action = action2xml(action, FALSE);
-	add_node_copy(set, xml_action);
-	free_xml(xml_action);
+	add_node_nocopy(set, crm_element_name(xml_action), xml_action);
 
 	action->actions_before = g_list_sort(
 		action->actions_before, sort_action_id);
@@ -575,9 +601,7 @@ graph_element_from_action(action_t *action, pe_working_set_t *data_set)
 		   input = create_xml_node(in, "trigger");
 		   
 		   xml_action = action2xml(wrapper->action, TRUE);
-		   add_node_copy(input, xml_action);
-		   free_xml(xml_action);
-		   
+		   add_node_nocopy(input, crm_element_name(xml_action), xml_action);
 		);
 }
 

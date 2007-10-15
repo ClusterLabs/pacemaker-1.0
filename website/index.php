@@ -40,5 +40,12 @@ Copyright:    (C) 2005 Dmytri Kleiner <dk@trick.ca>
   <div id="i_footer"><?php echo MoinMoinLang("PageFooter"); ?></div>
  </div>
 </div>
+
+<script src="http://www.google-analytics.com/urchin.js" type="text/javascript">
+</script>
+<script type="text/javascript">
+_uacct = "UA-2699356-1";
+urchinTracker();
+</script>
 </body>
 </html>

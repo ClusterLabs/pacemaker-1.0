@@ -1,11 +1,40 @@
-heartbeat (2.1.2-2) unstable; urgency=low
+heartbeat (2.1.2+hg.11310.702e4f418ca8-2) unstable; urgency=low
 
+  * Add patches in debian/patches/ which went missing in action somewhere
+
+ -- Simon Horman <horms@debian.org>  Sat, 29 Sep 2007 11:16:33 +0900
+
+heartbeat (2.1.2+hg.11310.702e4f418ca8-1) unstable; urgency=low
+
+  * New Upstream:
+    - Snapshot of: http://hg.linux-ha.org/dev/shortlog/702e4f418ca8
+    - See: http://www.gossamer-threads.com/lists/linuxha/users/42476
+    - Dowloaded: http://hg.linux-ha.org/dev/archive/obs-2.1.2-4.tar.bz2
+    - Ran ./ConfigureMe configure && make dist
+    - Used resulting tarball as orig.tar.gz for this release
+    - The downloaded STABLE-2.1.0.tar.bz2 could not be used as
+      bootstraping it to the point where the code could be built
+      resulted in changes that could not be represented in the diff.gz
+    - Added the contents of lrm/test/testcases/ from obs-2.1.2-4.tar.bz2.
+      These was not included in the tarball due to an error
+      in the Makefile.am in that directory which has subsequently
+      been fixed by http://hg.linux-ha.org/dev/shortlog/b0b696766097
+    - Added the files in lrm/test/ from obs-2.1.2-4.tar.bz2.
+      These was not included in the tarball due to an error
+      in the Makefile.am in that directory which has subsequently
+      been fixed by http://hg.linux-ha.org/dev/shortlog/7c31795636db and
+      http://hg.linux-ha.org/dev/shortlog/e7a4ddfa7cd6
+    (closes: #444278)
   * Make package binMMU safe. Thanks to Lior Kaplan.
     (closes: #435974)
   * Remove ipmilan stonith module as it seems to be cronically broken
     - Remove the build dependancy on libopenipmi-dev (>= 2.0.1) accordingly
+  * Add dependancy on libperl-dev as libperl is needed
+    (though I am not sure why)
+  * Remove duplicate changelog
+    (closes: #443163)
 
- -- Simon Horman <horms@debian.org>  Thu, 09 Aug 2007 18:24:00 +0900
+ -- Simon Horman <horms@debian.org>  Fri, 28 Sep 2007 12:27:58 +0900
 
 heartbeat (2.1.2-1) unstable; urgency=low
 

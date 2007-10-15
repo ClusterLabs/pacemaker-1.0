@@ -546,7 +546,7 @@ class Tree :
 				iter_status = 1
 		elif type in [_("group"),_("resources"),_("clone"),_("master")]:
 			iter_status = 0
-		elif type in [_("Orders"),_("Places"), _("Colocations")] :
+		elif type in [_("Orders"),_("Locations"), _("Colocations")] :
 			iter_status = -1
 		else :
 			iter_status = -2
@@ -636,10 +636,10 @@ class Tree :
 
 		constraints_root = self.store.append(root, [_("Constraints"),"", "constraints"])
 		
-		places_root = self.store.append(constraints_root, [_("Places"),"", "places"])
-		places = manager.get_constraints("rsc_location")
-		for place in places :
-			self.store.append(places_root,[place["id"], "", _("place")])
+		locations_root = self.store.append(constraints_root, [_("Locations"),"", "locations"])
+		locations = manager.get_constraints("rsc_location")
+		for location in locations :
+			self.store.append(locations_root,[location["id"], "", _("location")])
 		
 		orders_root = self.store.append(constraints_root, [_("Orders"),"", "orders"])
 		orders = manager.get_constraints("rsc_order")
@@ -927,32 +927,47 @@ class ColocationView(View) :
 		glade.get_widget("score").connect("changed", self.on_changed)
 		self.update()		
 				
-class PlaceView(View) :
-	name = "placeview"
+class LocationView(View) :
+	name = "locationview"
 	expr_list = None
-	place_save = None
+	save_location = None
 	
 	def on_apply(self, widget):
-		place = self.place_save
-		place["exprs"] = self.expr_list.get_data()
-		manager.update_constraint("rsc_location",place)
+		glade = self.glade
+		location = self.save_location
+		location["rsc"] = glade.get_widget("resource").child.get_text()
+		location["score"] = glade.get_widget("score").child.get_text()
+		location["boolean_op"] = glade.get_widget("boolean_op").child.get_text()
+		location["exprs"] = self.expr_list.get_data()
+		manager.update_constraint("rsc_location",location)
 		View.on_apply(self, widget)
 							   
 	def update(self) :
+		glade = self.glade
 		self.expr_list.clear()
-		place = manager.get_constraint("rsc_location", self.param)
-		self.place_save = place
-		if place != None :
-			self.glade.get_widget("id").set_text(place["id"])
-			self.glade.get_widget("resource").set_text(place["rsc"])
-			self.glade.get_widget("score").set_text(place["score"])
-			for expr in place["exprs"] :
+		location = manager.get_constraint("rsc_location", self.param)
+		if location != None :
+			glade.get_widget("id").set_text(location["id"])
+			glade.get_widget("resource").child.set_text(location["rsc"])
+			glade.get_widget("resource").child.set_editable(False)
+			glade.get_widget("score").child.set_text(location["score"])
+			glade.get_widget("boolean_op").child.set_text(location["boolean_op"])
+			glade.get_widget("boolean_op").child.set_editable(False)
+			for expr in location["exprs"] :
 				self.expr_list.insert(expr)
+			store = gtk.ListStore(str)
+			for rsc in manager.get_all_rsc_id():
+				store.append([rsc])
+			glade.get_widget("resource").set_model(store)
+			self.save_location = location
 		View.update(self)
 		
 	def __init__(self, rsc) :
 		View.__init__(self, rsc)
 		glade = self.glade
+		glade.get_widget("resource").connect("changed", self.on_changed)
+		glade.get_widget("score").connect("changed", self.on_changed)
+		glade.get_widget("boolean_op").connect("changed", self.on_changed)
 		self.expr_list = ListWithAddDel(glade.get_widget("expr_list"),
 			glade.get_widget("add_expr"),
 			glade.get_widget("del_expr"),
@@ -1424,6 +1439,13 @@ class AddNativeDlg :
 					msgbox(_("the Group Name is exists"))
 					passed = False
 
+				if group_ != "" and glade.get_widget("is_clone").get_active():
+					msgbox(_("Clone can't belong to group"))
+					passed = False
+				if group_ != "" and glade.get_widget("is_master").get_active():
+					msgbox(_("Master/Slave can't belong to group"))
+					passed = False
+
 				if passed :
 					rsc = {}
 					rsc["id"] = glade.get_widget("id").get_text()
@@ -1485,7 +1507,7 @@ class MainWindow :
 		self.set_action_sensitive('delrsc',
 			manager.connected
 			and self.cur_type in [_("native"),_("group"),_("clone"),
-				_("place"),_("order"),_("colocation"),_("master")])
+				_("location"),_("order"),_("colocation"),_("master")])
 
 		self.set_action_sensitive('standby',
 			manager.connected
@@ -1555,8 +1577,8 @@ class MainWindow :
 			self.cur_view = NodeView(name)
 		elif type in [_("native")] :
 			self.cur_view = RscView(name)
-		elif type == _("place") :
-			self.cur_view = PlaceView(name)
+		elif type == _("location") :
+			self.cur_view = LocationView(name)
 		elif type == _("order") :
 			self.cur_view = OrderView(name)
 		elif type == _("colocation") :
@@ -1617,9 +1639,17 @@ class MainWindow :
 			manager.do_cmd("standby\n"+self.cur_name + "\n" + "off")
 
 	def on_add_item(self, action) :
+		if self.cur_type in [_("constraints"), _("locations"), _("location")]:
+			add_type = _("location") 	
+		elif self.cur_type in [_("orders"), _("order")]:
+			add_type = _("order")
+		elif self.cur_type in [_("colocations"), _("colocation")]:
+			add_type = _("colocation")
+		else:
+			add_type = _("native")
 		new_type = kvbox(_("The type of new item"),
-				[Field("type",_("Item Type"),_("native"),
-				[_("native"), _("group"), _("place"),_("order"), _("colocation")])])
+				[Field("type",_("Item Type"),add_type,
+				[_("native"), _("group"), _("location"),_("order"), _("colocation")])])
 		if new_type == None :
 			return
 		if new_type["type"] == _("native"):
@@ -1638,14 +1668,15 @@ class MainWindow :
 				dlg = AddNativeDlg()
 				dlg.run()
 				
-		elif new_type["type"] == _("place") :
-			place = kvbox(_("Add Place Constraint"),
-				[Field("id",_("ID"),"place_",None, False),
-				 Field("rsc",_("Resource"),None, manager.get_all_rsc_id(),False),
-				 Field("score",_("Score"),"100")])
-			if place != None :
-				place["exprs"] = []
-				manager.update_constraint("rsc_location", place)
+		elif new_type["type"] == _("location") :
+			location = kvbox(_("Add Location Constraint"),
+				[Field("id",_("ID"),"location_",None, False),
+				 Field("rsc",_("Resource"),None, manager.get_all_rsc_id(),False)])
+			location["score"] = '0'
+			location["boolean_op"] = ''
+			if location != None :
+				location["exprs"] = []
+				manager.update_constraint("rsc_location", location)
 		elif new_type["type"] == _("order") :
 			order = kvbox(_("Add Order Constraint"),
 				[Field("id",_("ID"),"order_",None,False),
@@ -1678,7 +1709,7 @@ class MainWindow :
 					manager.do_cmd("del_rsc\n"+parent)
 				else :
 					manager.do_cmd("del_rsc\n"+self.cur_name)
-			elif self.cur_type == _("place") :
+			elif self.cur_type == _("location") :
 				manager.do_cmd("del_co\nrsc_location\n"+self.cur_name)
 			elif self.cur_type == _("order") :
 				manager.do_cmd("del_co\nrsc_order\n"+self.cur_name)
@@ -2420,17 +2451,17 @@ class Manager :
 			
 	def get_constraint(self, type, id) :
 		if type == "rsc_location" :
-			place_attr_names = ["id","rsc","score"]
+			location_attr_names = ["id","rsc","score", "boolean_op"]
 			expr_attr_names = ["id","attribute","operation","value"]
 			attrs = manager.query("get_co\nrsc_location\n"+id)
 			if attrs == None :
 				return None
-			place = dict(zip(place_attr_names,attrs[:3]))
-			place["exprs"] = []
-			for i in range((len(attrs)-len(place_attr_names))/len(expr_attr_names)) :
-				expr = dict(zip(expr_attr_names,attrs[3+i*4:7+i*4]))
-				place["exprs"].append(expr)
-			return place
+			location = dict(zip(location_attr_names,attrs[:4]))
+			location["exprs"] = []
+			for i in range((len(attrs)-len(location_attr_names))/len(expr_attr_names)) :
+				expr = dict(zip(expr_attr_names,attrs[4+i*4:8+i*4]))
+				location["exprs"].append(expr)
+			return location
 		elif type == "rsc_order" :
 			order_attr_names = ["id","from","type","to"]
 			attrs = manager.query("get_co\nrsc_order\n" + id)
@@ -2454,8 +2485,8 @@ class Manager :
 			manager.do_cmd("del_co\nrsc_location\n"+constraint["id"])
 			if self.failed_reason != "" :
 				msgbox(self.failed_reason)
-			cmd = "up_co\nrsc_location\n%s\n%s\n%s"% \
-					(constraint["id"],constraint["rsc"],constraint["score"])
+			cmd = "up_co\nrsc_location\n%s\n%s\n%s\n%s"% \
+					(constraint["id"],constraint["rsc"],constraint["score"],constraint["boolean_op"])
 			for expr in constraint["exprs"] :
 				cmd = cmd + "\n" + expr["id"] + "\n" + expr["attribute"] + \
 					"\n" + expr["operation"] + "\n" + expr["value"]

@@ -76,7 +76,7 @@ gboolean (*rsc_action_matrix[RSC_ROLE_MAX][RSC_ROLE_MAX])(resource_t*,node_t*,gb
 /*    Next State: Unknown	Stopped		Started		Slave		Master */
 /* Unknown */	{ RoleError,	StopRsc,	RoleError,	RoleError,	RoleError,  },
 /* Stopped */	{ RoleError,	NullOp,		StartRsc,	StartRsc,	RoleError,  },
-/* Started */	{ RoleError,	StopRsc,	NullOp,		NullOp,	        PromoteRsc,  },
+/* Started */	{ RoleError,	StopRsc,	NullOp,		NullOp,		PromoteRsc, },
 /* Slave */	{ RoleError,	StopRsc,	RoleError,	NullOp,		PromoteRsc, },
 /* Master */	{ RoleError,	RoleError,	RoleError,	DemoteRsc,	NullOp,     },
 };
@@ -120,7 +120,6 @@ ultimate_parent(resource_t *rsc)
 	}
 	return parent;
 }
-
 
 GListPtr
 native_merge_weights(
@@ -169,6 +168,7 @@ native_merge_weights(
 node_t *
 native_color(resource_t *rsc, pe_working_set_t *data_set)
 {
+        int alloc_details = LOG_DEBUG_2;
 	if(rsc->parent && rsc->parent->is_allocating == FALSE) {
 		/* never allocate children on their own */
 		crm_debug("Escalating allocation of %s to its parent: %s",
@@ -176,7 +176,6 @@ native_color(resource_t *rsc, pe_working_set_t *data_set)
 		rsc->parent->cmds->color(rsc->parent, data_set);
 	}
 	
-	print_resource(LOG_DEBUG_2, "Allocating: ", rsc, FALSE);
 	if(rsc->provisional == FALSE) {
 		return rsc->allocated_to;
 	}
@@ -187,6 +186,8 @@ native_color(resource_t *rsc, pe_working_set_t *data_set)
 	}
 
 	rsc->is_allocating = TRUE;
+	print_resource(alloc_details, "Allocating: ", rsc, FALSE);
+	dump_node_scores(alloc_details, rsc, "Pre-allloc", rsc->allowed_nodes);
 
 	slist_iter(
 		constraint, rsc_colocation_t, rsc->rsc_cons, lpc,
@@ -198,6 +199,8 @@ native_color(resource_t *rsc, pe_working_set_t *data_set)
 		rsc->cmds->rsc_colocation_lh(rsc, rsc_rh, constraint);	
 	    );	
 
+	dump_node_scores(alloc_details, rsc, "Post-coloc", rsc->allowed_nodes);
+
 	slist_iter(
 	    constraint, rsc_colocation_t, rsc->rsc_cons_lhs, lpc,
 	    
@@ -206,6 +209,7 @@ native_color(resource_t *rsc, pe_working_set_t *data_set)
 		constraint->score/INFINITY, TRUE);
 	    );
 	
+	dump_node_scores(alloc_details, rsc, "Post-merge", rsc->allowed_nodes);
 	
 	print_resource(LOG_DEBUG, "Allocating: ", rsc, FALSE);
 	if(rsc->next_role == RSC_ROLE_STOPPED) {
@@ -862,9 +866,16 @@ static void
 register_activity(resource_t *rsc, enum action_tasks task, node_t *node, notify_data_t *n_data)
 {
 	notify_entry_t *entry = NULL;
+
+	CRM_CHECK(node != NULL,
+		  crm_err("%s has no node for required action %s",
+			  rsc->id, task2text(task));
+		  return);
+
 	crm_malloc0(entry, sizeof(notify_entry_t));
 	entry->rsc = rsc;
 	entry->node = node;
+
 	switch(task) {
 		case start_rsc:
 			n_data->start = g_list_append(n_data->start, entry);
@@ -1020,14 +1031,17 @@ pe_notify(resource_t *rsc, node_t *node, action_t *op, action_t *confirm,
 	CRM_CHECK(node != NULL, return NULL);
 
 	if(node->details->online == FALSE) {
-		crm_info("Skipping notification for %s", rsc->id);
+		crm_info("Skipping notification for %s: node offline", rsc->id);
+		return NULL;
+	} else if(op->runnable == FALSE) {
+		crm_info("Skipping notification for %s: not runnable", op->uuid);
 		return NULL;
 	}
 	
 	value = g_hash_table_lookup(op->meta, "notify_type");
 	task = g_hash_table_lookup(op->meta, "notify_operation");
 
-	crm_debug_2("Creating actions for %s: %s (%s-%s)",
+	crm_info("Creating notify actions for %s: %s (%s-%s)",
 		    op->uuid, rsc->id, value, task);
 	
 	key = generate_notify_key(rsc->id, value, task);
@@ -1124,6 +1138,13 @@ NoRoleChange(resource_t *rsc, node_t *current, node_t *next,
 				   current->details->uname, next->details->uname);
 		}
 
+		if(rsc->next_role > RSC_ROLE_STARTED) {
+		    gboolean optional = TRUE;
+		    if(rsc->role == RSC_ROLE_MASTER) {
+			optional = FALSE;
+		    }
+		    DemoteRsc(rsc, current, optional, data_set);
+		}
 		if(rsc->role == RSC_ROLE_MASTER) {
 			DemoteRsc(rsc, current, FALSE, data_set);
 		}
@@ -1157,8 +1178,8 @@ NoRoleChange(resource_t *rsc, node_t *current, node_t *next,
 		stop = stop_action(rsc, current, TRUE);
 		start = start_action(rsc, next, TRUE);
 		stop->optional = start->optional;
-		if(rsc->role == RSC_ROLE_MASTER) {
-			DemoteRsc(rsc, current, start->optional, data_set);
+		if(rsc->next_role > RSC_ROLE_STARTED) {
+		    DemoteRsc(rsc, current, start->optional, data_set);
 		}
 		StopRsc(rsc, current, start->optional, data_set);
 		StartRsc(rsc, current, start->optional, data_set);
@@ -1379,11 +1400,17 @@ native_create_probe(resource_t *rsc, node_t *node, action_t *complete,
 	running = pe_find_node_id(rsc->running_on, node->details->id);
 	if(running == NULL) {
 		target_rc = crm_itoa(EXECRA_NOT_RUNNING);
+
+	} else if(rsc->role == RSC_ROLE_MASTER) {
+		target_rc = crm_itoa(EXECRA_RUNNING_MASTER);
+	}
+
+	if(target_rc != NULL) {
 		add_hash_param(probe->meta, XML_ATTR_TE_TARGET_RC, target_rc);
 		crm_free(target_rc);
 	}
 	
-	crm_debug_2("Probing %s on %s", rsc->id, node->details->uname);
+	crm_debug_2("Probing %s on %s (%s)", rsc->id, node->details->uname, role2text(rsc->role));
 	
 	custom_action_order(rsc, NULL, probe, rsc, NULL, complete,
 			    pe_order_implies_right, data_set);
@@ -1488,6 +1515,8 @@ native_stop_constraints(
 	     */
 	    action->pseudo = TRUE;
 	    action->runnable = TRUE;
+	    action->implied_by_stonith = TRUE;
+	    
 	    if(is_stonith == FALSE) {
 		order_actions(stonith_op, action, pe_order_optional);
 	    }

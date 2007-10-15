@@ -151,7 +151,7 @@ main(int argc, char ** argv)
 		NULL, NULL, NULL, cib_diskwrite_complete);
 
 	EnableProcLogging();
-	set_sigchld_proctrack(G_PRIORITY_HIGH);
+	set_sigchld_proctrack(G_PRIORITY_HIGH,DEFAULT_MAXDISPATCHTIME);
 
 	crm_peer_init();
 	client_list = g_hash_table_new(g_str_hash, g_str_equal);

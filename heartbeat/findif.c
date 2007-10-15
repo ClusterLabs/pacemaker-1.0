@@ -102,7 +102,6 @@
 
 int	OutputInCIDR=0;
 
-void ConvertQuadToInt (char *dest, int destlen);
 
 /*
  * Different OSes offer different mechnisms to obtain this information.
@@ -143,6 +142,8 @@ char * get_first_loopback_netdev(char * ifname);
 int is_loopback_interface(char * ifname);
 char * get_ifname(char * buf, char * ifname);
 
+int ConvertQuadToInt(char *dest);
+
 const char *	cmdname = "findif";
 void usage(void);
 
@@ -150,42 +151,6 @@ void usage(void);
 #define DELIM	'/'
 #define	BAD_BROADCAST	(0L)
 #define	MAXSTR	128
-
-void
-ConvertQuadToInt (char *dest, int destlen)
-{
-	unsigned ipquad[4] = { 0, 0, 0, 0 };
-	unsigned long int intdest = 0;
-
-	/*
-	 * Convert a dotted quad into a value in the local byte order
- 	 * 
- 	 * 	ex.  192.168.123.1 would be converted to
- 	 * 	1.123.168.192
- 	 * 	1.7B.A8.C0
- 	 * 	17BA8C0
- 	 * 	24881344
-	 *
-	 * This replaces our argument with a new string -- in decimal...
- 	 *
-	 */
-
-	if (sscanf(dest, "%u.%u.%u.%u", &ipquad[3], &ipquad[2], &ipquad[1],
-				&ipquad[0]) <= 0) {
-		fprintf(stderr, "Invalid dest specification [%s]", dest);
-	}
-	
-#if useMULT
-	intdest = (ipquad[0] * 0x1000000) + (ipquad[1] * 0x10000) 
-	+ 		(ipquad[2] * 0x100) + ipquad[3];
-#else
-	intdest = (	((ipquad[0]&0xff) <<24)
-	|		((ipquad[1]&0xff) <<16)
-	|		((ipquad[2]&0xff) <<8) 
-	|	 	 (ipquad[3]&0xff));
-#endif
-	snprintf (dest, destlen, "%ld", intdest);
-}
 
 static int
 SearchUsingProcRoute (char *address, struct in_addr *in
@@ -454,7 +419,8 @@ ValidateIFName(const char *ifname, struct ifreq *ifr)
 } 
 
 int
-netmask_bits(unsigned long netmask) {
+netmask_bits(unsigned long netmask)
+{
 	int	j;
 
 	netmask = netmask & 0xFFFFFFFFUL;
@@ -557,24 +523,22 @@ get_ifname(char * buf, char * ifname)
 	return ifname;
 }
 
-int
-octals_to_bits(const char *octal);
-
-int
-octals_to_bits(const char *octals)
+int ConvertQuadToInt(char *dest)
 {
-	int bits = 0;
-	int octal_num = 0;
-	if(octals != NULL) {
-		octal_num = (int)strtol(octals, NULL, 10);
-	}
-	while(octal_num >= 1) {
-		bits++;
-		octal_num = octal_num / 2;
-	}
-	return bits;
-}
+        struct in_addr ad;
+        int bits, j;
 
+        inet_pton(AF_INET, dest, &ad);
+
+        bits = 0;
+        j = ntohl(ad.s_addr);
+        while(j != 0){
+                bits++;
+                j <<= 1;
+        }
+
+        return (bits);
+}
 
 int
 main(int argc, char ** argv) {
@@ -635,10 +599,8 @@ main(int argc, char ** argv) {
 	if(netmaskbits != NULL && *netmaskbits != EOS
 	&&		strchr(netmaskbits, '.') != NULL) {
 		int len = strlen(netmaskbits);
-		ConvertQuadToInt(netmaskbits, len);
-		snprintf(netmaskbits, len, "%d",
-			 octals_to_bits(netmaskbits));
-		fprintf(stderr, "Rewrote octal netmask as: %s\n", netmaskbits);
+		snprintf(netmaskbits, len, "%d", ConvertQuadToInt(netmaskbits));
+		fprintf(stderr, "Converted dotted-quad netmask to CIDR as: %s\n", netmaskbits);
 	}
 	
 	/* Validate the netmaskbits field */

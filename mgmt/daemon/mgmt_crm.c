@@ -2065,6 +2065,7 @@ on_get_constraint(char* argv[], int argc)
 				ret = mgmt_msg_append(ret, ha_msg_value(constraint, "rsc"));
 				rule = find_xml_node(constraint,"rule",TRUE);
 				ret = mgmt_msg_append(ret, ha_msg_value(rule, "score"));
+				ret = mgmt_msg_append(ret, ha_msg_value(rule, "boolean_op"));
 				expr_list = find_xml_node_list(rule, "expression");
 				expr_cur = expr_list;
 				while(expr_cur) {
@@ -2123,13 +2124,13 @@ on_update_constraint(char* argv[], int argc)
 	if (STRNCMP_CONST(argv[1],"rsc_location")==0) {
 		snprintf(xml, MAX_STRLEN,
 			 "<rsc_location id=\"%s\" rsc=\"%s\">" \
-				"<rule id=\"prefered_%s\" score=\"%s\">",
-		 	 argv[2], argv[3], argv[2], argv[4]);
-		for (i = 0; i < (argc-5)/4; i++) {
+				"<rule id=\"prefered_%s\" score=\"%s\" boolean_op=\"%s\">",
+		 	 argv[2], argv[3], argv[2], argv[4], argv[5]);
+		for (i = 0; i < (argc-6)/4; i++) {
 			char expr[MAX_STRLEN];
 			snprintf(expr, MAX_STRLEN,
 				 "<expression attribute=\"%s\" id=\"%s\" operation=\"%s\" value=\"%s\"/>",
-			 	 argv[5+i*4+1],argv[5+i*4],argv[5+i*4+2],argv[5+i*4+3]);
+			 	 argv[6+i*4+1],argv[6+i*4],argv[6+i*4+2],argv[6+i*4+3]);
 			strncat(xml, expr, sizeof(xml)-strlen(xml)-1);
 		}
 		strncat(xml, "</rule></rsc_location>",

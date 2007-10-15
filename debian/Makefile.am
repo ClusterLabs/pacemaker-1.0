@@ -32,6 +32,7 @@ EXTRA_DIST		= apply changelog compat control copyright \
 DEBIAN_DIST		= \
 			  ldirectord.postrm \
 			  patches/chown-check-2.patch \
+			  patches/ipv6-check.patch \
 			  patches/series/2.1.2-1
 
 
