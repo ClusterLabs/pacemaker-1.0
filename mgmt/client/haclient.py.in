@@ -201,11 +201,13 @@ def kvbox(title, fields, auto_fill = None) :
 			table.attach(entry, 1,2, row, row+1)
 
 	if auto_fill != None :
-		if title == _("Add Parameter") :
+		if title == _("Add Parameter") and combos.has_key("name"):
 			combos["name"].connect("changed", auto_fill, widgets)
 		elif title == _("Add Operation") :
-			combos["name"].connect("changed", auto_fill, widgets, "name")
-			combos["role"].connect("changed", auto_fill, widgets, "role")
+			if combos.has_key("name"):
+				combos["name"].connect("changed", auto_fill, widgets, "name")
+			if combos.has_key("role"):
+				combos["role"].connect("changed", auto_fill, widgets, "role")
 	
 	dialog.vbox.pack_start(table)
 	dialog.vbox.show_all()
