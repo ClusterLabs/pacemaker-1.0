@@ -701,3 +701,30 @@ msgstr "克隆资源不能从属于资源组"
 
 msgid "Master/Slave can't belong to group"
 msgstr "主从资源不能从属于资源组"
+
+msgid "Recommended:"
+msgstr "建议："
+ 
+msgid "Select \"Clear\" to remove the set."
+msgstr "选择“清除”删除此设置。"
+
+msgid "It will inherit the attribute from its parent resource."
+msgstr "从父资源继承此属性。"
+
+msgid "Are you sure you want to set \"target_role\"?"
+msgstr "您确定要设置“target_role”？"
+
+msgid "Caused by your previous action, this attribute has been set to \""
+msgstr "您之前的操作将此属性设置为“"
+
+msgid "\"."
+msgstr "”。"
+
+msgid "The sub-resource will inherit this attribute from current resource."
+msgstr "子资源将从当前资源继承此属性。"
+
+msgid "Do you want to retain the \"target_role\" set for sub-resource \""
+msgstr "您想要保留对子资源“"
+
+msgid "\"?"
+msgstr "”的 “target_role” 设置？"

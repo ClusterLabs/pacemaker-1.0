@@ -956,15 +956,16 @@ on_cleanup_rsc(char* argv[], int argc)
 	9	cmd += "\n"+rsc["clone_node_max"]
 	10	cmd += "\n"+rsc["master_max"]
 	11	cmd += "\n"+rsc["master_node_max"]
+	12	cmd += "\n"+rsc["new_group"]
 		for param in rsc["params"] :
-	12,15,18...	cmd += "\n"+param["id"]
-	13,16,19...	cmd += "\n"+param["name"]
-	14,17,20...	cmd += "\n"+param["value"]
+	13,16,19...	cmd += "\n"+param["id"]
+	14,17,20...	cmd += "\n"+param["name"]
+	15,18,21...	cmd += "\n"+param["value"]
 */
 char*
 on_add_rsc(char* argv[], int argc)
 {
-	int rc, i, in_group;
+	int rc, i, in_group, new_group;
 	crm_data_t* fragment = NULL;
 	crm_data_t* cib_object = NULL;
 	crm_data_t* output = NULL;
@@ -973,38 +974,53 @@ on_add_rsc(char* argv[], int argc)
 	char inst_attrs_id[MAX_STRLEN];
 	int clone, master, has_param;
 		
-	if (argc < 11) {
+	if (argc < 12) {
 		return cl_strdup(MSG_FAIL);
 	}
 	xml[0]=0;
 	in_group = (strlen(argv[5]) != 0);
+	new_group = (STRNCMP_CONST(argv[12], "True") == 0);
 	clone = (STRNCMP_CONST(argv[6], "clone") == 0);
 	master = (STRNCMP_CONST(argv[6], "master") == 0);
-	has_param = (argc > 11);
+	has_param = (argc > 12);
 	if (in_group) {
 		snprintf(buf, MAX_STRLEN, "<group id=\"%s\">", argv[5]);
 		strncat(xml, buf, sizeof(xml)-strlen(xml)-1);
+
+		if (new_group){
+			snprintf(buf, MAX_STRLEN,
+				"<instance_attributes id=\"%s_instance_attrs\"><attributes>" \
+				"<nvpair id=\"%s_target_role\" name=\"target_role\" value=\"stopped\"/>" \
+				"</attributes> </instance_attributes>",
+				argv[5], argv[5]);
+			strncat(xml, buf, sizeof(xml)-strlen(xml)-1);
+		}
+
+		
 	}
 	if (clone) {
 		get_instance_attributes_id(argv[7], inst_attrs_id);
 		snprintf(buf, MAX_STRLEN,
 			 "<clone id=\"%s\"><instance_attributes id=\"%s\"><attributes>" \
+			 "<nvpair id=\"%s_target_role\" name=\"target_role\" value=\"stopped\"/>" \
 			 "<nvpair id=\"%s_clone_max\" name=\"clone_max\" value=\"%s\"/>" \
 			 "<nvpair id=\"%s_clone_node_max\" name=\"clone_node_max\" value=\"%s\"/>" \
 			 "</attributes>	</instance_attributes> ",
-			 argv[7], inst_attrs_id, argv[7], argv[8],argv[7], argv[9]);
+			 argv[7], inst_attrs_id, argv[7], argv[7], argv[8],argv[7], argv[9]);
 		strncat(xml, buf, sizeof(xml)-strlen(xml)-1);
 	}
 	if (master) {
 		get_instance_attributes_id(argv[7], inst_attrs_id);
 		snprintf(buf, MAX_STRLEN,
-			 "<master_slave id=\"%s\"><instance_attributes id=\"%s\"><attributes>" \
+			 "<master_slave id=\"%s\" notify=\"true\" globally_unique=\"false\">" \
+			 "<instance_attributes id=\"%s\"><attributes>" \
+			 "<nvpair id=\"%s_target_role\" name=\"target_role\" value=\"stopped\"/>" \
 			 "<nvpair id=\"%s_clone_max\" name=\"clone_max\" value=\"%s\"/>" \
 			 "<nvpair id=\"%s_clone_node_max\" name=\"clone_node_max\" value=\"%s\"/>" \
 			 "<nvpair id=\"%s_master_max\" name=\"master_max\" value=\"%s\"/>" \
 			 "<nvpair id=\"%s_master_node_max\" name=\"master_node_max\" value=\"%s\"/>" \
 			 "</attributes>	</instance_attributes>",
-			 argv[7], inst_attrs_id, argv[7], argv[8], argv[7], argv[9],
+			 argv[7], inst_attrs_id, argv[7], argv[7], argv[8], argv[7], argv[9],
 			 argv[7], argv[10], argv[7], argv[11]);
 		strncat(xml, buf, sizeof(xml)-strlen(xml)-1);
 	}
@@ -1022,7 +1038,7 @@ on_add_rsc(char* argv[], int argc)
 			 , argv[1],argv[2], argv[3],argv[4], argv[1]);
 		strncat(xml, buf, sizeof(xml)-strlen(xml)-1);
 	
-		for (i = 12; i < argc; i += 3) {
+		for (i = 13; i < argc; i += 3) {
 			snprintf(buf, MAX_STRLEN,
 				 "<nvpair id=\"%s\" name=\"%s\" value=\"%s\"/>",
 				 argv[i], argv[i+1],argv[i+2]);

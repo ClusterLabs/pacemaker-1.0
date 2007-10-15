@@ -134,13 +134,25 @@ def msgbox(msg) :
 	dialog.destroy()
 
 
-def confirmbox(msg, button=(gtk.STOCK_YES, gtk.RESPONSE_YES, gtk.STOCK_NO, gtk.RESPONSE_NO)) :
+def confirmbox(msg, button=(gtk.STOCK_YES, gtk.RESPONSE_YES, gtk.STOCK_NO, gtk.RESPONSE_NO), title ="") :
 	global top_window
 	dialog = gtk.Dialog(_("Confirm"),  top_window, gtk.DIALOG_MODAL,button)
-	label = gtk.Label(msg)
-	dialog.vbox.add(label)
+	im=gtk.Image()
+	im.set_from_stock(gtk.STOCK_DIALOG_QUESTION, gtk.ICON_SIZE_DIALOG)
+	frame = gtk.Frame()
+	confirm_title = gtk.Label()
+	confirm_title.set_markup('<b>'+title+'</b>')
+	frame.set_label_widget(confirm_title)
+	confirm_msg =  gtk.Label()
+	confirm_msg.set_text(msg)
+	dialog.vbox.pack_start(frame)
+	hb=gtk.HBox()
+	hb.pack_start(im)
+	hb.pack_start(confirm_msg)
+	frame.add(hb)
+	dialog.vbox.resize_children()
 	dialog.set_default_response(gtk.RESPONSE_YES)
-	label.show()
+	dialog.show_all()
 	save_top_window = top_window
 	top_window = dialog
 	ret = dialog.run()
@@ -1249,9 +1261,6 @@ class AddNativeDlg :
 				       glade.get_widget("addparam"),
 				       glade.get_widget("delparam"),
 				       _("Add Parameter"), fields)
-		param_list.insert({"id":uuid(),"name":"target_role",
-				"value":"stopped","shortdesc": \
-		_("press \"Default\" or \"Start\" button in toolbar/menu to start the resource")})
 		self.param_list = param_list
 		if meta != None :
 			for param in meta.parameters :
@@ -1451,16 +1460,51 @@ class AddNativeDlg :
 					rsc["id"] = glade.get_widget("id").get_text()
 					(rsc["class"],rsc["type"],rsc["provider"]) = self.get_cur_select()
 					rsc["group"] = glade.get_widget("group").child.get_text()
+					if rsc["group"] != "" and not manager.rsc_exists(rsc["group"]):
+						rsc["new_group"] = "True"
+					else:
+						rsc["new_group"] = ""
 					rsc["params"] = self.param_list.get_data()
+					target_role_set = {}
+					param_names = []
 					for param in rsc["params"] :
 						if param["name"] == "target_role" :
 							param["id"] = rsc["id"]+"_target_role"
+							target_role_set = param
+						param_names.append(param["name"])
+					repeated_param = False
+					for param_name in param_names:
+						if param_names.count(param_name) > 1:
+							repeated_param = True
+							break
+					if repeated_param:
+						msgbox(_("Parameter \""+param_name+"\" is defined repeatedly"))
+						continue
 					if glade.get_widget("is_clone").get_active() :
 						rsc["advance"] = "clone"
 					elif glade.get_widget("is_master").get_active() :
 						rsc["advance"] = "master"
 					else :
 						rsc["advance"] = ""
+
+					if rsc["group"] == "" and rsc["advance"] == "":
+						if target_role_set == {}:
+							rsc["params"].append({"name":"target_role",
+								"value": "stopped",
+								"id": rsc["id"]+"_target_role"})
+					elif target_role_set != {}:
+						retval = confirmbox(_("Recommended:")+"\n"
+							+_("Select \"Clear\" to remove the set.")+"\n"
+							+_("It will inherit the attribute from its parent resource."),
+							(gtk.STOCK_CLEAR, gtk.RESPONSE_NO,
+							gtk.STOCK_YES, gtk.RESPONSE_YES,
+							gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL),
+							_("Are you sure you want to set \"target_role\"?"))
+						if retval == gtk.RESPONSE_CANCEL:
+							continue
+						if retval == gtk.RESPONSE_NO:
+							rsc["params"].remove(target_role_set)
+
 					rsc["advance_id"] = glade.get_widget("advance_id").get_text()
 					rsc["clone_max"] = glade.get_widget("clone_max").get_text()
 					rsc["clone_node_max"] = glade.get_widget("clone_node_max").get_text()
@@ -1672,9 +1716,9 @@ class MainWindow :
 			location = kvbox(_("Add Location Constraint"),
 				[Field("id",_("ID"),"location_",None, False),
 				 Field("rsc",_("Resource"),None, manager.get_all_rsc_id(),False)])
-			location["score"] = '0'
-			location["boolean_op"] = ''
 			if location != None :
+				location["score"] = '0'
+				location["boolean_op"] = ''
 				location["exprs"] = []
 				manager.update_constraint("rsc_location", location)
 		elif new_type["type"] == _("order") :
@@ -1731,6 +1775,30 @@ class MainWindow :
 		for param in params :
 			if param["name"] == "target_role" and param["value"] == target_role :
 				return
+
+		for subrsc in manager.get_rsc_sub_rsc(self.cur_name) :
+			(attrs, running_on, params, ops) = \
+				manager.get_rsc_info(subrsc)
+			for param in params :
+				if param["name"] == "target_role":
+					retval = confirmbox(_("Caused by your previous action, this attribute has been set to \"")
+								+param["value"]
+								+_("\".")+"\n\n"
+								+_("Recommended:")+"\n"
+								+_("Select \"Clear\" to remove the set.")+"\n"
+								+_("The sub-resource will inherit this attribute from current resource."),
+								(gtk.STOCK_CLEAR, gtk.RESPONSE_NO,
+								gtk.STOCK_YES, gtk.RESPONSE_YES,
+								gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL),
+								_("Do you want to retain the \"target_role\" set for sub-resource \"")
+								+subrsc+_("\"?"))
+					if retval == gtk.RESPONSE_CANCEL:
+						return	
+					if retval == gtk.RESPONSE_NO:
+						new_params = params[:]
+						new_params.remove(param)
+						manager.update_attrs("up_rsc_params\n"+subrsc ,"del_rsc_param",
+							params, new_params, ["id","name","value"]);
 		manager.do_cmd("set_target_role\n%s\n%s"%(self.cur_name,target_role))
 	
 	def on_item_move(self, action) :
@@ -2181,6 +2249,7 @@ class Manager :
 		cmd += "\n"+rsc["clone_node_max"]
 		cmd += "\n"+rsc["master_max"]
 		cmd += "\n"+rsc["master_node_max"]
+		cmd += "\n"+rsc["new_group"]
 		for param in rsc["params"] :
 			cmd += "\n"+param["id"]
 			cmd += "\n"+param["name"]
