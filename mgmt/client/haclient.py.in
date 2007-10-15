@@ -46,6 +46,7 @@ debug_level = 0
 top_window = None
 last_rsc_view_page_num = 0	
 last_compound_view_page_num = 0
+last_cluster_view_page_num = 0
 
 def log(string) :
 	syslog.syslog(string)
@@ -633,7 +634,7 @@ class Tree :
 			return
 		
 		config = manager.get_cluster_config()
-		if config["have_quorum"] == "True" :
+		if config.has_key("have_quorum") and config["have_quorum"] == "true" :
 			status = _("with quorum")
 		else :
 			status = _("without quorum")
@@ -792,25 +793,34 @@ class NodeView(View) :
 		
 class ClusterView(View) :
 	name = "clusterview"
+	pengine_metadata = None
+	crmd_metadata = None
+	pengine_widgets = None
+	crmd_widgets = None
 	
 	def on_apply(self, widget):
 		glade = self.glade
-		new_crm_config = {}
-		new_crm_config["default-action-timeout"] = glade.get_widget("transition_timeout").get_text()
-		new_crm_config["symmetric-cluster"] = str(glade.get_widget("symmetric_cluster").get_active())
-		new_crm_config["stonith-enabled"] = str(glade.get_widget("stonith_enabled").get_active())
-		new_crm_config["no-quorum-policy"] = glade.get_widget("no_quorum_policy").child.get_text()
-		new_crm_config["default-resource-stickiness"] = \
-				glade.get_widget("default_resource_stickiness").child.get_text()
-		new_crm_config["default-resource-failure-stickiness"] = \
-				glade.get_widget("default_resource_failure_stickiness").child.get_text()
-		manager.update_crm_config(new_crm_config)
 		
+		for (widgets, metadata) in ((self.pengine_widgets, self.pengine_metadata),
+						(self.crmd_widgets, self.crmd_metadata)):
+			new_crm_config ={}
+			for key in widgets["combos"].keys():
+				new_crm_config[key] = widgets["combos"][key].child.get_text()
+			for key in widgets["checkbuttons"].keys():
+				if widgets["checkbuttons"][key].get_active():
+					new_crm_config[key] = "true"
+				else:
+					new_crm_config[key] = "false"
+			for key in widgets["entries"].keys():
+				new_crm_config[key] = widgets["entries"][key].get_text()
+			manager.update_crm_config(metadata, new_crm_config)
+
 		View.on_apply(self, widget)
 	
 	def update(self) :
 		glade = self.glade
 		config = manager.get_cluster_config()
+
 		if config != None :
 			glade.get_widget("hbversion").set_text(config["hbversion"])
 			glade.get_widget("debug").set_text(str(config["debug"]))
@@ -820,14 +830,18 @@ class ClusterView(View) :
 			glade.get_widget("deadtime").set_text(config["deadtime"])
 			glade.get_widget("initdead").set_text(config["initdead"])
 
-			glade.get_widget("transition_timeout").set_text(config["default-action-timeout"])
-			glade.get_widget("symmetric_cluster").set_active("True" == config["symmetric-cluster"])
-			glade.get_widget("stonith_enabled").set_active("True" == config["stonith-enabled"])
-			glade.get_widget("no_quorum_policy").child.set_text(config["no-quorum-policy"])
-			glade.get_widget("no_quorum_policy").child.set_editable(False)
-			glade.get_widget("default_resource_stickiness").child.set_text(config["default-resource-stickiness"])
-			glade.get_widget("default_resource_failure_stickiness").child.set_text \
-							 (config["default-resource-failure-stickiness"])
+		for (widgets, metadata) in ((self.pengine_widgets, self.pengine_metadata),
+						(self.crmd_widgets, self.crmd_metadata)):
+			if metadata != None and widgets != None:
+				crm_config = manager.get_crm_config(metadata)
+				if crm_config != {}:
+					for key in widgets["combos"].keys():
+						widgets["combos"][key].child.set_text(crm_config[key])
+						widgets["combos"][key].child.set_editable(False)
+					for key in widgets["checkbuttons"].keys():
+						widgets["checkbuttons"][key].set_active("true" == crm_config[key])
+					for key in widgets["entries"].keys():
+						widgets["entries"][key].set_text(crm_config[key])
 
 		View.update(self)
 	
@@ -839,25 +853,88 @@ class ClusterView(View) :
 		make_label_active(self.glade.get_widget("l_warntime"),_("Warning Alive:"),"www.linux-ha.org")
 		make_label_active(self.glade.get_widget("l_deadtime"),_("Dead Time:"),"www.linux-ha.org")
 		make_label_active(self.glade.get_widget("l_initdead"),_("Initial Dead Time:"),"www.linux-ha.org")
-		make_label_active(self.glade.get_widget("l_transtimeout"),_("Transition Timeout:"),"www.linux-ha.org")
-		make_label_active(self.glade.get_widget("l_rscstickiness"),_("Resource Stickiness:"),"www.linux-ha.org")
-		make_label_active(self.glade.get_widget("l_noquorum"),_("No Quorum Policy:"),"www.linux-ha.org")
-		make_label_active(self.glade.get_widget("l_symmetric"),_("Symmetric Cluster"),"www.linux-ha.org")
-		make_label_active(self.glade.get_widget("l_stonith_enabled"),_("Stonith Enabled"),"www.linux-ha.org")
-		make_label_active(self.glade.get_widget \
-			("l_rscfailstickiness"),_("Resource Failure Stickiness:"),"www.linux-ha.org")
+
+		name_cap = lambda name: name.replace("-"," ").replace("_"," ").title().replace("Crmd ","CRMD ").\
+						replace("Pe ", "PE ").replace("Dc ","DC ")
+
+		for widgets in (self.pengine_widgets, self.crmd_widgets):
+			if widgets != None:
+				for key in widgets["labels"].keys():
+					make_label_active(widgets["labels"][key], 
+								_(name_cap(key)+":"),
+								"www.linux-ha.org")
 							
+	def on_notebook_event(self, widget, page, page_num) :
+		global last_cluster_view_page_num
+		last_cluster_view_page_num = page_num
+
 	def __init__(self) :
 		View.__init__(self)
-		
 		glade = self.glade
-		glade.get_widget("transition_timeout").connect("changed", self.on_changed)
-		glade.get_widget("symmetric_cluster").connect("toggled", self.on_changed)
-		glade.get_widget("stonith_enabled").connect("toggled", self.on_changed)
-		glade.get_widget("no_quorum_policy").connect("changed", self.on_changed)
-		glade.get_widget("default_resource_stickiness").connect("changed", self.on_changed)
-		glade.get_widget("default_resource_failure_stickiness").connect("changed", self.on_changed)
+
+		self.pengine_metadata = manager.get_crm_metadata("pengine")
+		self.crmd_metadata = manager.get_crm_metadata("crmd")
+
+		if self.pengine_metadata != None:
+			self.pengine_widgets = self.render_cluster_conf(self.pengine_metadata)
+		if self.crmd_metadata != None:
+			self.crmd_widgets = self.render_cluster_conf(self.crmd_metadata)
+
+		notebook = glade.get_widget("notebook")
+		notebook.connect("switch-page", self.on_notebook_event)
+		notebook.set_current_page(last_cluster_view_page_num)
+
 		self.update()
+
+	def render_cluster_conf(self, metadata):
+		if metadata.name == "Policy Engine":
+			vbox = self.glade.get_widget("vbox_pengine")
+		elif metadata.name == "CRM Daemon":
+			vbox = self.glade.get_widget("vbox_crmd")
+
+		widgets = {}
+		labels = {}
+		combos = {}
+		checkbuttons = {}
+		entries = {}
+		table = gtk.Table(2, 1, False)
+		parameters = metadata.parameters
+
+		for row in range(len(parameters)):
+			label = gtk.Label(parameters[row]["name"]+":")
+			label.set_alignment(1, 0.5)
+			label.set_padding(10, 0)
+			table.attach(label, 0, 1, row, row+1)
+			labels[parameters[row]["name"]] = label
+
+			if parameters[row]["content"].has_key("values"):
+				combo = gtk.combo_box_entry_new_text()
+				for option in parameters[row]["content"]["values"]:
+					combo.append_text(option)
+				combo.connect("changed", self.on_changed)
+				table.attach(combo, 1, 2, row, row+1)
+				combos[parameters[row]["name"]] = combo
+			elif parameters[row]["content"]["type"] == "boolean":
+				checkbutton = gtk.CheckButton()
+				checkbutton.connect("toggled", self.on_changed)
+				table.attach(checkbutton, 1, 2, row, row+1)
+				checkbuttons[parameters[row]["name"]] = checkbutton
+			else:
+				entry = gtk.Entry()
+				entry.connect("changed", self.on_changed)
+				table.attach(entry, 1,2, row, row+1)
+				entries[parameters[row]["name"]] = entry 
+	
+		vbox.pack_start(table)
+		vbox.show_all()
+
+		widgets["labels"] = labels
+		widgets["combos"] = combos
+		widgets["checkbuttons"] = checkbuttons
+		widgets["entries"] = entries
+	
+		return widgets
+
 		
 class OrderView(View) :
 	name = "orderview"
@@ -2160,6 +2237,60 @@ class Manager :
 		self.update_timer = -1
 
 	# cluster functions		
+	def get_crm_metadata(self, crm_cmd) :
+		if crm_cmd == None :
+			return None
+		lines = self.query("crm_metadata\n%s"%(crm_cmd),True)
+
+		if lines == None :
+			return None
+		meta_data = ""
+		for line in lines :
+			if len(line)!= 0 :
+				meta_data = meta_data + line + "\n"
+
+		try :
+			doc_xml = parseString(meta_data).documentElement
+		except xml.parsers.expat.ExpatError:
+			debug("fail to parse the metadata of "+rsc_type)
+			return None
+			
+		meta = RAMeta()
+		meta.name = doc_xml.getAttribute("name")
+
+		meta.version = ""
+		version_xml = doc_xml.getElementsByTagName("version")
+		if version_xml != [] and version_xml[0] in doc_xml.childNodes :
+			meta.version = version_xml[0].childNodes[0].data
+
+		meta.longdesc = self.get_locale_desc(doc_xml, "longdesc");
+		meta.shortdesc = self.get_locale_desc(doc_xml, "shortdesc");
+		
+		meta.parameters = []
+		for param_xml in doc_xml.getElementsByTagName("parameter") :
+			param = {}
+			param["name"] = param_xml.getAttribute("name")
+			param["unique"] = param_xml.getAttribute("unique")
+			param["longdesc"] = self.get_locale_desc(param_xml, "longdesc");
+			param["shortdesc"] = self.get_locale_desc(param_xml, "shortdesc");
+			content_xml = param_xml.getElementsByTagName("content")[0]
+			content = {}
+			content["type"] = content_xml.getAttribute("type")
+			content["default"] = content_xml.getAttribute("default")
+			if content["type"] == "enum":
+				values_tag = "Allowed values:"
+				index = param["longdesc"].rfind(values_tag)
+				if index != -1:
+					strings = param["longdesc"][index+len(values_tag):].split(",")
+					content["values"] = []
+					for string in strings:
+						content["values"].append(string.strip())
+				
+			param["content"] = content
+			meta.parameters.append(param)
+		return meta
+
+
 	def get_cluster_config(self) :
 		
 		hb_attr_names = ["apiauth","auto_failback","baud","debug","debugfile",
@@ -2167,27 +2298,42 @@ class Manager :
 				 "initdead","keepalive","logfacility","logfile",
 				 "msgfmt","nice_failback","node","normalpoll",
 			 	"stonith","udpport","warntime","watchdog", "cluster"]
-		crm_attr_names = ["default-action-timeout","symmetric-cluster","stonith-enabled",
-				  "no-quorum-policy","default-resource-stickiness", "have_quorum",
-				  "default-resource-failure-stickiness"]
 				  
 		values = manager.query("hb_config")
 		if values == None :
 			return None
 		config = dict(zip(hb_attr_names,values))
 				
-		values = manager.query("crm_config")
-		if values == None :
-			return None
-		config.update(dict(zip(crm_attr_names,values)))
-		
+		value = manager.query("crm_config\nhave_quorum")
+		if value != None and value != []:
+			config["have_quorum"] = value[0]
+
+		return config
+
+	def get_crm_config(self, metadata):
+		config = {}
+		for parameter in metadata.parameters:
+			value = manager.query("crm_config\n%s"% \
+					str(parameter["name"]))
+			if value == None or value == []:
+				continue
+			if value == [""]:
+				config[parameter["name"]] = str(parameter["content"]["default"])
+			else:
+				config[parameter["name"]] = value[0]
 		return config
 		
-	def update_crm_config(self, new_crm_config) :
-		cur_crm_config = self.get_cluster_config()
+	def update_crm_config(self, metadata, new_crm_config) :
 		for k,v in new_crm_config.iteritems() :
-			if cur_crm_config[k] != v :
-				self.do_cmd("up_crm_config\n"+k+"\n"+v)
+			value = manager.query("crm_config\n"+str(k))
+			if value == [""]:
+				for parameter in metadata.parameters:
+					if parameter["name"] == k:
+						cur_value = str(parameter["content"]["default"])
+			else:
+				cur_value = value[0]
+			if cur_value != v :
+				self.do_cmd("up_crm_config\n"+str(k)+"\n"+v)
 				if self.failed_reason != "" :
 					msgbox(self.failed_reason)
 
@@ -2395,7 +2541,8 @@ class Manager :
 				desc_en = child.childNodes[0].data
 			else :
 				langtag = string.split(langtag, ".")
-				if string.find(langtag[0], "en") != -1 :
+				if string.find(langtag[0], "en") != -1 \
+						and len(child.childNodes) > 0 :
 					desc_en = child.childNodes[0].data
 				if len(langtag) == 1 and lang == langtag[0] :
 					desc_match = child.childNodes[0].data

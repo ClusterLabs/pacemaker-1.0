@@ -520,27 +520,27 @@ msgid "Initial Dead Time:"
 msgstr "启动时认定宕机时间："
 
 #: haclient.py.in:619
-msgid "Transition Timeout:"
-msgstr "事务超时时间："
+msgid "Default Action Timeout:"
+msgstr "缺省事务超时时间："
 
 #: haclient.py.in:620
-msgid "Resource Stickiness:"
-msgstr "资源粘黏性："
+msgid "Default Resource Stickiness:"
+msgstr "缺省资源粘黏性："
 
-msgid "Resource Failure Stickiness:"
-msgstr "资源失败粘黏性："
+msgid "Default Resource Failure Stickiness:"
+msgstr "缺省资源失败粘黏性："
 
 #: haclient.py.in:621
 msgid "No Quorum Policy:"
 msgstr "节点数无效策略："
 
 #: haclient.py.in:622
-msgid "Symmetric Cluster"
-msgstr "对称集群"
+msgid "Symmetric Cluster:"
+msgstr "对称集群："
 
 #: haclient.py.in:623
-msgid "Stonith Enabled"
-msgstr "允许重启机器"
+msgid "Stonith Enabled:"
+msgstr "启用 Stonith："
 
 #: haclient.py.in:1202
 msgid "Resource"
@@ -702,9 +702,45 @@ msgstr "克隆资源不能从属于资源组"
 msgid "Master/Slave can't belong to group"
 msgstr "主从资源不能从属于资源组"
 
+msgid "Informations"
+msgstr "信息"
+
+msgid "Configurations"
+msgstr "配置"
+
+msgid "Stonith Action:"
+msgstr "Stonith 操作："
+
+msgid "Is Managed Default:"
+msgstr "缺省启停资源："
+
+msgid "Stop Orphan Resources:"
+msgstr "停止已删除资源："
+
+msgid "Stop Orphan Actions:"
+msgstr "取消已删除操作："
+
+msgid "Remove After Stop:"
+msgstr "清空已停止资源状态信息："
+
+msgid "Cluster Delay:"
+msgstr "集群延时："
+
+msgid "PE Error Series Max:"
+msgstr "策略引擎最大错误数："
+
+msgid "PE Warn Series Max:"
+msgstr "策略引擎最大警告数："
+
+msgid "PE Input Series Max:"
+msgstr "策略引擎最大输入数："
+
+msgid "Startup Fencing:"
+msgstr "启动屏蔽："
+
 msgid "Recommended:"
 msgstr "建议："
- 
+
 msgid "Select \"Clear\" to remove the set."
 msgstr "选择“清除”删除此设置。"
 
@@ -728,3 +764,24 @@ msgstr "您想要保留对子资源“"
 
 msgid "\"?"
 msgstr "”的 “target_role” 设置？"
+
+msgid "Advanced"
+msgstr "高级"
+
+msgid "DC Deadtime:"
+msgstr "主控节点认定宕机时间："
+
+msgid "Cluster Recheck Interval:"
+msgstr "集群轮询间隔："
+
+msgid "Election Timeout:"
+msgstr "选择超时："
+
+msgid "Shutdown Escalation:"
+msgstr "强制关闭："
+
+msgid "CRMD Integration Timeout:"
+msgstr "集群资源管理服务集成超时："
+
+msgid "CRMD Finalization Timeout:"
+msgstr "集群资源管理服务结束超时："

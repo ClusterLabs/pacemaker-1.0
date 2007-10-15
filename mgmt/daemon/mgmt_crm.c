@@ -49,6 +49,7 @@ static void on_cib_diff(const char *event, HA_Message *msg);
 
 static char* on_get_cib_version(char* argv[], int argc);
 
+static char* on_get_crm_metadata(char* argv[], int argc);
 static char* on_get_crm_config(char* argv[], int argc);
 static char* on_update_crm_config(char* argv[], int argc);
 static char* on_get_activenodes(char* argv[], int argc);
@@ -411,7 +412,7 @@ get_attr_id(const char* rsc_id, const char* attr_type, const char* attr, char* i
 	struct ha_msg* attrs;
 	struct ha_msg* nvpair;
 	pe_working_set_t* data_set;
-	const char* mid = "";
+	const char * mid = "";
 
 	if (STRNCMP_CONST(attr_type, "meta_attributes") == 0)
 		mid = "metaattr_";
@@ -492,6 +493,7 @@ init_crm(int cache_cib)
 			, on_cib_connection_destroy);
 
 	reg_msg(MSG_CIB_VERSION, on_get_cib_version);
+	reg_msg(MSG_CRM_METADATA, on_get_crm_metadata);
 	reg_msg(MSG_CRM_CONFIG, on_get_crm_config);
 	reg_msg(MSG_UP_CRM_CONFIG, on_update_crm_config);
 	
@@ -600,38 +602,76 @@ on_get_cib_version(char* argv[], int argc)
 	free_data_set(data_set);
 	return ret;
 }
+
+static char*
+on_get_crm_metadata(char* argv[], int argc)
+{
+	char cmd[MAX_STRLEN];
+	char buf[MAX_STRLEN];	
+	char* ret = cl_strdup(MSG_OK);
+	FILE *fstream = NULL;
+
+	ARGC_CHECK(2);
+
+	snprintf(cmd, sizeof(cmd), BIN_DIR"/%s metadata", argv[1]);
+	if ((fstream = popen(cmd, "r")) == NULL){
+		mgmt_log(LOG_ERR, "error on popen %s: %s",
+			 cmd, strerror(errno));
+		return cl_strdup(MSG_FAIL);
+	}
+
+	while (!feof(fstream)){
+		memset(buf, 0, sizeof(buf));
+		if (fgets(buf, sizeof(buf), fstream) != NULL){
+			ret = mgmt_msg_append(ret, buf);
+		}
+		else{
+			sleep(1);
+		}
+	}
+
+	if (pclose(fstream) == -1)
+		mgmt_log(LOG_WARNING, "failed to close pipe");
+
+	return ret;
+}
 char* 
 on_get_crm_config(char* argv[], int argc)
 {
-	char buf [255];
+	const char* value = NULL;
 	pe_working_set_t* data_set;
 	char* ret = cl_strdup(MSG_OK);
 	data_set = get_data_set();
-	
-	ret = mgmt_msg_append(ret, data_set->transition_idle_timeout);
-	ret = mgmt_msg_append(ret, data_set->symmetric_cluster?"True":"False");
-	ret = mgmt_msg_append(ret, data_set->stonith_enabled?"True":"False");
-	
-	switch (data_set->no_quorum_policy) {
-		case no_quorum_freeze:
-			ret = mgmt_msg_append(ret, "freeze");
-			break;
-		case no_quorum_stop:
-			ret = mgmt_msg_append(ret, "stop");
-			break;
-		case no_quorum_ignore:
-			ret = mgmt_msg_append(ret, "ignore");
-			break;
+
+	ARGC_CHECK(2);
+
+	if (data_set == NULL){
+		return cl_strdup(MSG_FAIL);
 	}
-	snprintf(buf, 255, "%d", data_set->default_resource_stickiness);
-	ret = mgmt_msg_append(ret, buf);
-	ret = mgmt_msg_append(ret, data_set->have_quorum?"True":"False");
-	snprintf(buf, 255, "%d", data_set->default_resource_fail_stickiness);
+
+	if (STRNCMP_CONST(argv[1], "have_quorum") == 0){
+		ret = mgmt_msg_append(ret, data_set->have_quorum?"true":"false");
+		free_data_set(data_set);
+		return ret;
+	}
 	
-	ret = mgmt_msg_append(ret, buf);
+ 	if ( data_set->config_hash == NULL){
+		free_data_set(data_set);
+		return cl_strdup(MSG_FAIL);
+	}
+	value = g_hash_table_lookup(data_set->config_hash, argv[1]);
+
+	if (value == NULL){
+		ret = mgmt_msg_append(ret, "");
+	}
+	else{
+		ret = mgmt_msg_append(ret, value);
+	}	
+
 	free_data_set(data_set);
 	return ret;
 }
+
 char*
 on_update_crm_config(char* argv[], int argc)
 {
@@ -668,7 +708,7 @@ on_update_crm_config(char* argv[], int argc)
 		
 		snprintf(xml, MAX_STRLEN, 
 			"<cluster_property_set id=\"cib-bootstrap-options\">"
-			"<attributes> <nvpair id=\"id-%s\"name=\"%s\" value=\"%s\"/>"
+			"<attributes> <nvpair id=\"cib-bootstrap-options-%s\"name=\"%s\" value=\"%s\"/>"
 			"</attributes> </cluster_property_set>", 
 			argv[1], argv[1], argv[2]);
 
