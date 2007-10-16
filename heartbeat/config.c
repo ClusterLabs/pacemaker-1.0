@@ -398,7 +398,6 @@ init_config(const char * cfgfile)
 			}
 		}
 		write_cache_file(config);
-		unlink(HOSTUUIDCACHEFILETMP); /* Can't hurt. */
 	}
 	if ((curnode = lookup_node(localnodename)) == NULL) {
 		if (config->rtjoinconfig == HB_JOIN_ANY) {

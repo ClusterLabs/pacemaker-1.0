@@ -54,6 +54,7 @@ MYSQL_BINDIR=`dirname ${OCF_RESKEY_binary}`
 : ${OCF_RESKEY_test_passwd=""}
 
 : ${OCF_RESKEY_enable_creation=0}
+: ${OCF_RESKEY_additional_parameters=""}
 
 usage() {
   cat <<UEND
@@ -157,6 +158,15 @@ If the MySQL database does not exist, it will be created
 <content type="integer" default="0"/>
 </parameter>
 
+<parameter name="additional_parameters" unique="0" required="0">
+<longdesc lang="en">
+Additional parameters which are passed to the mysqld on startup. 
+(e.g. --skip-external-locking or --skip-grant-tables)
+</longdesc>
+<shortdesc lang="en">Additional paramters to pass to mysqld</shortdesc>
+<content type="integer" default="0"/>
+</parameter>
+
 </parameters>
 
 <actions>
@@ -183,19 +193,19 @@ mysql_validate() {
 	exit $OCF_ERR_ARGS;
     fi
     
-    grep $OCF_RESKEY_user /etc/passwd >/dev/null 2>&1
+    getent passwd $OCF_RESKEY_user >/dev/null 2>&1
     if [ ! $? -eq 0 ]; then
 	ocf_log err "User $OCF_RESKEY_user doesn't exit";
 	exit $OCF_ERR_ARGS;
     fi
     
-    grep $OCF_RESKEY_test_user /etc/passwd >/dev/null 2>&1
+    getent passwd $OCF_RESKEY_test_user >/dev/null 2>&1
     if [ ! $? -eq 0 ]; then
 	ocf_log err "Test user $OCF_RESKEY_test_user doesn't exit";
 	exit $OCF_ERR_ARGS;
     fi
     
-    grep $OCF_RESKEY_group /etc/group >/dev/null 2>&1
+    getent group $OCF_RESKEY_group >/dev/null 2>&1
     if [ ! $? -eq 0 ]; then
 	ocf_log err "Group $OCF_RESKEY_group doesn't exist";
 	exit $OCF_ERR_ARGS;
@@ -275,7 +285,7 @@ mysql_start() {
     #chown -R $OCF_RESKEY_user $OCF_RESKEY_datadir
     #chgrp -R $OCF_RESKEY_group $OCF_RESKEY_datadir
 
-    ${OCF_RESKEY_binary}  --defaults-file=$OCF_RESKEY_config --pid-file=$OCF_RESKEY_pid --socket=$OCF_RESKEY_socket --datadir=$OCF_RESKEY_datadir --user=$OCF_RESKEY_user >/dev/null 2>&1 &
+    ${OCF_RESKEY_binary}  --defaults-file=$OCF_RESKEY_config --pid-file=$OCF_RESKEY_pid --socket=$OCF_RESKEY_socket --datadir=$OCF_RESKEY_datadir --user=$OCF_RESKEY_user $OCF_RESKEY_additional_parameters >/dev/null 2>&1 &
     rc=$?
     
     if [ $rc != 0 ]; then

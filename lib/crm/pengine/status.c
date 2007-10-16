@@ -81,6 +81,10 @@ cluster_status(pe_working_set_t *data_set)
 		return FALSE;
 	}
 
+	if(data_set->now == NULL) {
+	    data_set->now = new_ha_date(TRUE);
+	}
+	
 	if(data_set->input != NULL
 	   && crm_element_value(data_set->input, XML_ATTR_DC_UUID) != NULL) {
 		/* this should always be present */
@@ -225,6 +229,7 @@ set_working_set_defaults(pe_working_set_t *data_set)
 	data_set->resources   = NULL;
 	data_set->ordering_constraints  = NULL;
 	data_set->placement_constraints = NULL;
+	data_set->colocation_constraints = NULL;
 
 	data_set->actions  = NULL;	
 

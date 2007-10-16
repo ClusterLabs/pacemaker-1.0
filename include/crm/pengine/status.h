@@ -57,6 +57,8 @@ typedef struct pe_working_set_s
 		gboolean symmetric_cluster;
 		gboolean is_managed_default;
 
+		gboolean start_failure_fatal;
+	
 		gboolean remove_after_stop;
 		gboolean stop_rsc_orphans;
 		gboolean stop_action_orphans;
@@ -71,6 +73,7 @@ typedef struct pe_working_set_s
 		GListPtr resources;
 		GListPtr placement_constraints;
 		GListPtr ordering_constraints;
+		GListPtr colocation_constraints;
 		
 		GListPtr actions;
 		crm_data_t *failed;
@@ -185,6 +188,7 @@ struct action_s
 		gboolean runnable;
 		gboolean optional;
 		gboolean failure_is_fatal;
+		gboolean implied_by_stonith;
 		gboolean allow_reload_conversion;
 
 		enum rsc_start_requirement needs;

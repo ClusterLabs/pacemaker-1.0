@@ -104,14 +104,23 @@ or
 
 /*
 description:
+	return the metadata of crm
+format:
+	MSG_CRM_METADATA CRM_CMD
+return:
+	MSG_OK LINE1 LINE2 ... LINEn
+or
+	MSG_FAIL
+*/
+#define MSG_CRM_METADATA	"crm_metadata"
+
+/*
+description:
 	return CRM configuration
 format:
-	MSG_CRM_CONFIG
+	MSG_CRM_CONFIG config_key
 return:
-	MSG_OK transition_idle_timeout symmetric_cluster(True|False)
- 	  stonith_enabled(True|False) no_quorum_policy(freeze|stop|ignore)
- 	  default_resource_stickiness have_quorum(True|False) 
- 	  default_resource_failure_stickiness
+	MSG_OK config_value
 or
 	MSG_FAIL
 */
@@ -450,6 +459,44 @@ or
 	MSG_FAIL
 */
 #define MSG_UP_RSC_ATTR		"up_rsc_attr"
+
+/*
+description:
+	return the meta_attributes of a given resource
+format:
+	MSG_RSC_METAATTRS resource
+return:
+	MSG_OK id1 name1 value1 id2 name2 value2 ... idn namen valuen
+or
+	MSG_FAIL
+*/
+
+#define MSG_RSC_METAATTRS	"rsc_metaattrs"
+
+/*
+description:
+	update meta_attributes of a given resource
+format:
+	MSG_UP_RSC_METAATTRS resource id1 name1 value1 id2 name2 value2 
+		... idn namen valuen
+return:
+	MSG_OK
+or
+	MSG_FAIL
+*/
+#define MSG_UP_RSC_METAATTRS	"up_rsc_metaattrs"
+
+/*
+description:
+	delete the given meta_attribute 
+format:
+	MSG_DEL_RSC_METAATTR meta_id
+return:
+	MSG_OK
+or
+	MSG_FAIL
+*/
+#define MSG_DEL_RSC_METAATTR	"del_rsc_metaattr"
 
 /*
 description:
