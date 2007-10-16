@@ -597,7 +597,6 @@ write_node_uuid_file(struct sys_config * cfg)
 		unlink(tmpname);
 		return HA_FAIL;
 	}
-	sync();
 	return HA_OK;
 }
 
@@ -717,7 +716,6 @@ write_delnode_file(struct sys_config* cfg)
 		unlink(tmpname);
 		return HA_FAIL;
 	}
-	sync();
 	return HA_OK;	
 	
 }
