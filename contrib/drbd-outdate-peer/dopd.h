@@ -26,6 +26,7 @@
 
 #define OUTDATE_COMMAND		"/sbin/drbdadm outdate"
 
+#include <hb_api.h>
 
 /* Prototypes */
 void node_walk(ll_cluster_t *);
