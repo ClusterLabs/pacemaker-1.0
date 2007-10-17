@@ -8,3 +8,4 @@ MISC_ERRORS
 .libs
 *.lo
 *.la
+atest
