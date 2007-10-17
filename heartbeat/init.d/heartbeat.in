@@ -300,7 +300,7 @@ StartHA() {
   then
     mkdir -p $RUNDIR/heartbeat/ccm
     mkdir -p $RUNDIR/heartbeat/crm
-    chown -R hacluster:haclient $RUNDIR/heartbeat
+    chown -R @HA_CCMUSER@:@HA_APIGROUP@ $RUNDIR/heartbeat
     chmod -R 750 $RUNDIR/heartbeat
   fi
   if
