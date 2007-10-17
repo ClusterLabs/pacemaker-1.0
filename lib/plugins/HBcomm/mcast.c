@@ -449,10 +449,6 @@ mcast_write(struct hb_media* hbm, void *pkt, int len)
 		PILCallLog(LOG, PIL_DEBUG, "%s", (const char *)pkt);
    	}
 	return(HA_OK);
-
-
-  return(HA_OK);
-  
 }
 
 /*
