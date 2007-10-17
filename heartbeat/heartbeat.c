@@ -3951,12 +3951,13 @@ restart_heartbeat(void)
 
 	cl_log(LOG_INFO, "Performing heartbeat restart exec.");
 
+	hb_close_watchdog();
+
 	getrlimit(RLIMIT_NOFILE, &oflimits);
 	for (j=3; j < oflimits.rlim_cur; ++j) {
 		close(j);
 	}
 
-	hb_close_watchdog();
 	
 	if (quickrestart) {
 		/* THIS IS RESOURCE WORK!  FIXME */
