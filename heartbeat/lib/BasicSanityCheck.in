@@ -114,25 +114,33 @@ GuessIFname() {
   #  for those that have it
 
   external_host=123.0.0.1
-  if [ -x /sbin/ip ]; then
-      /sbin/ip r g $external_host | head -n 1 | awk '{print $5}'
-  elif [ `uname -s` = "Darwin" ]; then
-      route get $external_host | grep interface | awk '{print $2}'
+  if
+    [ -x /sbin/ip ]
+  then
+    /sbin/ip r g $external_host | head -n 1 | awk '{print $5}'
+  else
+    route get $external_host | grep interface | awk '{print $2}'
   fi
 }
 
 INTERFACE=`GuessIFname`
-if [ "x" = "x$INTERFACE" ]; then
-    INTERFACE=`GetAllIFNames | grep -v '^lo' | head -n 1`
+if
+  [ "x" = "x$INTERFACE" ]
+then
+  INTERFACE=`GetAllIFNames | grep -v '^lo' | head -n 1`
 fi
 
-if [ "x" = "x$INTERFACE" ]; then
-    INTERFACE=$DEFAULTINTERFACE
+if
+  [ "x" = "x$INTERFACE" ]
+then
+  INTERFACE=$DEFAULTINTERFACE
 fi
 
-if [ "x" = "x$INTERFACE" ]; then
-    echo "No valid interface found.  Please modify DEFAULTINTERFACE in this script and re-execute"
-    exit 1
+if
+  [ "x" = "x$INTERFACE" ]
+then
+  echo "No valid interface found.  Please modify DEFAULTINTERFACE in this script and re-execute"
+  exit 1
 fi
 
 echo "Using interface: $INTERFACE"
