@@ -218,6 +218,7 @@ static int	add_option(const char *	option, const char * value);
 
 
 int	num_hb_media_types;
+static gboolean	any_media_statements_yet = FALSE;
 
 struct hb_media_fns**	hbmedia_types;
 
@@ -717,6 +718,7 @@ parse_config(const char * cfgfile, char *nodename)
 			funs->descr(&sysmedia[num_save]->description);
 			g_assert(sysmedia[num_save]->type);
 			g_assert(sysmedia[num_save]->description);
+			any_media_statements_yet = TRUE;
 
 			*bp = EOS;
 		}
@@ -733,6 +735,7 @@ parse_config(const char * cfgfile, char *nodename)
 					errcount++;
 				}
 				*bp = EOS;
+				any_media_statements_yet = TRUE;
 			}
 		}
 		/* Now Check for  the options-list stuff */
@@ -1545,6 +1548,12 @@ set_baudrate(const char * value)
 		,	cmdname, value);
 		return(HA_FAIL);
 	}
+	if (any_media_statements_yet) {
+		fprintf(stderr
+		,	"%s: baudrate setting must precede media statements"
+		,	cmdname);
+		
+	}
 	return(HA_OK);
 }
 
@@ -1574,6 +1583,9 @@ set_udpport(const char * value)
 		}
 	}
 	endservent();
+	fprintf(stderr
+	,	"%s: udpport setting must precede media statements"
+	,	cmdname);
 	return(HA_OK);
 }
 
