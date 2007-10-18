@@ -2686,7 +2686,8 @@ sub check_sql
 	# On error "execute" will return undef.
 	# Otherwise it will return either "0E0"
 	# (Some garbage to make 0 true) or > 1.
-	unless ($sth->execute) {
+	$sth->execute;
+	unless ($sth->rows) {
 		check_sql_log_errstr("Error executing statement:",
 				     $dbh->errstr, $dbh->err);
 		goto err_finish;
