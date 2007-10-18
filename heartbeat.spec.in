@@ -204,7 +204,7 @@ Source: http://linux-ha.org/download/%{HB_PKG}-%{HB_VERSION}.tar.gz
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-build
 BuildRequires:	autoconf, automake libtool, libxml2-devel
 BuildRequires:	glib2-devel, python, python-devel, perl, %{SSH}, %{LIBNET_DEVEL}, gdbm-devel, bison, flex
-BuildRequires:	openhpi-devel
+BuildRequires:	openhpi-devel >= 2.6
 %if %{ENABLE_SNMP_SUBAGENT}
 %{SNMP_RPM_BUILD_REQUIRES}
 %endif
