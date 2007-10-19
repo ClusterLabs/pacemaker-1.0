@@ -2885,7 +2885,8 @@ stonithRA_start( stonithRA_ops_t * op, gpointer data)
 	shmsize = hb->llc_ops->num_nodes(hb)*(HOSTLENG+1)+1;
 	shmid = shmget(IPC_PRIVATE, shmsize, (SHM_R | SHM_W));
 	if( shmid < 0 ) {
-		cl_perror("shmget");
+		stonithd_log(LOG_ERR,"%s:%d: shmget failed: %s",
+			__FUNCTION__, __LINE__, strerror(errno));
 		return ST_FAIL;
 	}
 	stonithd_log(LOG_DEBUG, "%s: got a shmem seg of size %d"
@@ -3011,7 +3012,8 @@ remove_shm_hostlist(pid_t pid)
 		return;
 	}
 	if( shmctl(p->shmid, IPC_RMID, NULL) < 0 ) {
-		cl_perror("shmctl");
+		stonithd_log(LOG_ERR,"%s:%d: shmctl failed: %s",
+			__FUNCTION__, __LINE__, strerror(errno));
 		return;
 	}
 	mem_hostlist = g_list_remove(mem_hostlist, p);
@@ -3028,7 +3030,8 @@ hostlist2shmem(int shmid,char **hostlist)
 		return FALSE;
 	}
 	if( (s = shmat(shmid,0,0)) == (void *)-1 ) {
-		cl_perror("shmat");
+		stonithd_log(LOG_ERR,"%s:%d: shmat failed: %s",
+			__FUNCTION__, __LINE__, strerror(errno));
 		return FALSE;
 	}
 	for( q = s, h = hostlist; *h; q += strlen(q)+1, h++ ) {
@@ -3037,13 +3040,16 @@ hostlist2shmem(int shmid,char **hostlist)
 	*q = '\0'; /* additional '\0' to end the list */
 	stonith_free_hostlist(hostlist);
 	if( shmdt(s) == -1 ) {
-		cl_perror("shmdt");
+		stonithd_log(LOG_ERR,"%s:%d: shmdt failed: %s",
+			__FUNCTION__, __LINE__, strerror(errno));
 		return FALSE;
 	}
 	return TRUE;
 }
 
-/* build the hostlist from the shmem segment */
+/* build the hostlist from the shmem segment
+ * drop the shmem segment afterwards
+ */
 static char **
 shmem2hostlist(pid_t pid)
 {
@@ -3057,7 +3063,8 @@ shmem2hostlist(pid_t pid)
 		return NULL;
 	}
 	if( (s = shmat(p->shmid,0,0)) == (void *)-1 ) {
-		cl_perror("shmat");
+		stonithd_log(LOG_ERR,"%s:%d: shmat failed: %s",
+			__FUNCTION__, __LINE__, strerror(errno));
 		return NULL;
 	}
 	for( q = s, n = 0; *q; q += strlen(q)+1, n++ )
@@ -3074,9 +3081,11 @@ shmem2hostlist(pid_t pid)
 		strcpy(*h,q);
 	}
 	if( shmdt(s) == -1 ) {
-		cl_perror("shmdt");
+		stonithd_log(LOG_ERR,"%s:%d: shmdt failed: %s",
+			__FUNCTION__, __LINE__, strerror(errno));
 		return NULL;
 	}
+	remove_shm_hostlist(pid);
 	return hostlist;
 }
 
@@ -3084,9 +3093,17 @@ static void
 record_new_srsc(stonithRA_ops_t *ra_op)
 {
 	stonith_rsc_t * srsc;
+	char **node_list;
 
-	if( !lookup_shm_hostlist(ra_op->call_id) ) {
+	if( get_started_stonith_resource(ra_op->rsc_id) ) {
 		return; /* start of an already started stonith object */
+	}
+	node_list = shmem2hostlist(ra_op->call_id);
+	if( !node_list ) {
+		stonithd_log(LOG_ERR, "%s:%d: empty host list for stonith RA %s"
+			, __FUNCTION__, __LINE__
+			, ra_op->ra_name);
+		return;
 	}
 	/* ra_op will be free at once, so it's safe to set some of its
 	 * fields as NULL.
@@ -3098,8 +3115,8 @@ record_new_srsc(stonithRA_ops_t *ra_op)
 	ra_op->params = NULL;
 	srsc->stonith_obj = ra_op->stonith_obj;
 	ra_op->stonith_obj = NULL;
-	srsc->node_list = shmem2hostlist(ra_op->call_id);
-	remove_shm_hostlist(ra_op->call_id);
+	srsc->node_list = node_list;
+
 	if ( debug_level >= 2 ) {
 		char **	this;
 		stonithd_log2(LOG_DEBUG, "Got HOSTLIST");
