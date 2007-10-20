@@ -24,15 +24,17 @@
 
 #include <sys/param.h>
 
-#include <crm/crm.h>
 #include <stdio.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <errno.h>
 
 #include <stdlib.h>
-#include <crm/common/ipc.h>
 #include <clplumbing/lsb_exitcodes.h>
 #include <clplumbing/Gmain_timeout.h>
+#include <clplumbing/GSource.h>
+#include <clplumbing/cl_malloc.h>
+#include <clplumbing/coredumps.h>
 #include <dopd.h>
 
 #define OPTARGS      "hVt:p:r:"
@@ -58,7 +60,7 @@ dop_exit(dop_client_t *client)
 		exit(5);
 	rc = client->rc;
 
-	crm_free(client);
+	cl_free(client);
 	exit(rc);
 }
 
@@ -80,7 +82,7 @@ outdate_callback(IPC_Channel * server, gpointer user_data)
 			g_main_quit(client->mainloop);
 		return FALSE;
 	}
-	crm_debug_2("message: %s, %s\n",
+	cl_log(LOG_DEBUG, "message: %s, %s\n",
 			ha_msg_value(msg, F_TYPE),
 			ha_msg_value(msg, F_ORIG)
 			);
@@ -128,6 +130,57 @@ outdater_timeout_dispatch(gpointer user_data)
 	return FALSE;
 }
 
+static void
+dopd_connection_destroy(gpointer user_data)
+{
+	return;
+}
+
+static GCHSource*
+init_dopd_client_ipc_comms(const char *channel_name,
+		      gboolean (*dispatch)(
+			      IPC_Channel* source_data, gpointer user_data),
+		      void *client_data, IPC_Channel **out_ch)
+{
+	IPC_Channel *ch;
+	GHashTable  *attrs;
+	GCHSource *the_source = NULL;
+	void *callback_data = client_data;
+	static char  path[] = IPC_PATH_ATTR;
+
+	char commpath[1024];
+
+	memset(commpath, 0, 1024);
+	sprintf(commpath, HA_VARRUNDIR"/heartbeat/crm/%s", channel_name);
+	
+	attrs = g_hash_table_new(g_str_hash,g_str_equal);
+	g_hash_table_insert(attrs, path, commpath);
+
+	ch = ipc_channel_constructor(IPC_ANYTYPE, attrs);
+	g_hash_table_destroy(attrs);
+	*out_ch = ch;
+
+	if (ch == NULL) {
+		cl_log(LOG_ERR, "Could not access channel on: %s", commpath);
+		cl_free(commpath);
+		return NULL;
+		
+	} else if (ch->ops->initiate_connection(ch) != IPC_OK) {
+		cl_log(LOG_DEBUG, "Could not init comms on: %s", commpath);
+		ch->ops->destroy(ch);
+		cl_free(commpath);
+		return NULL;
+	}
+
+	cl_free(commpath);
+
+	the_source = G_main_add_IPC_Channel(
+	    G_PRIORITY_HIGH, ch, FALSE, dispatch, callback_data, 
+	    dopd_connection_destroy);
+	
+	return the_source;
+}
+
 int
 main(int argc, char ** argv)
 {
@@ -142,22 +195,26 @@ main(int argc, char ** argv)
 	dop_client_t *new_client = NULL;
 	GCHSource *src = NULL;
 
-	crm_log_init(crm_system_name, LOG_INFO, TRUE, FALSE, 0, NULL);
+	cl_log_set_entity(crm_system_name);
+	cl_log_set_facility(HA_LOG_FACILITY);
+	cl_log_set_logd_channel_source(NULL, NULL);
+	cl_inherit_logging_environment(500);
+	cl_set_corerootdir(HA_COREDIR);
+	cl_cdtocoredir();
 
-	crm_debug_3("Begining option processing");
 	while ((flag = getopt(argc, argv, OPTARGS)) != EOF) {
 		switch(flag) {
 			case 'V':
-				alter_debug(DEBUG_INC);
+				debug_level++;
 				break;
 			case 'h':		/* Help message */
 				usage(crm_system_name, LSB_EXIT_OK);
 				break;
 			case 'p':
-				drbd_peer = crm_strdup(optarg);
+				drbd_peer = cl_strdup(optarg);
 				break;
 			case 'r':
-				drbd_resource = crm_strdup(optarg);
+				drbd_resource = cl_strdup(optarg);
 				break;
 			case 't':
 				timeout = atoi(optarg);
@@ -167,8 +224,6 @@ main(int argc, char ** argv)
 				break;
 		}
 	}
-
-	crm_debug_3("Option processing complete");
 
 	/* the caller drbdadm sets DRBD_PEER env variable, use it if
 	 * -p option was not specified */
@@ -190,17 +245,18 @@ main(int argc, char ** argv)
 		usage(crm_system_name, LSB_EXIT_GENERIC);
 	}
 
-	crm_debug_2("drbd peer: %s\n", drbd_peer);
-	crm_debug_2("drbd resource: %s\n", drbd_resource);
+	cl_log(LOG_DEBUG, "drbd peer: %s\n", drbd_peer);
+	cl_log(LOG_DEBUG, "drbd resource: %s\n", drbd_resource);
 
-	crm_malloc0(new_client, sizeof(dop_client_t));
+	new_client = cl_malloc(sizeof(dop_client_t));
+	memset(new_client, 0, sizeof(dop_client_t));
 	new_client->timeout = timeout;
 	new_client->mainloop = g_main_new(FALSE);
 	new_client->rc = 5; /* default: down/unreachable */
 
 	/* Connect to the IPC server */
-	src = init_client_ipc_comms(T_OUTDATER, outdate_callback,
-			      (gpointer)new_client, &ipc_server);
+	src = init_dopd_client_ipc_comms(T_OUTDATER, outdate_callback,
+					 (gpointer)new_client, &ipc_server);
 
 	if (ipc_server == NULL) {
 		fprintf(stderr, "Could not connect to "T_OUTDATER" channel\n");
@@ -214,7 +270,7 @@ main(int argc, char ** argv)
 	ha_msg_add(update, F_OUTDATER_PEER, drbd_peer);
 	ha_msg_add(update, F_OUTDATER_RES, drbd_resource);
 
-	if (send_ipc_message(ipc_server, update) == FALSE) {
+	if (msg2ipcchan(update, ipc_server) != HA_OK) {
 		fprintf(stderr, "Could not send message\n");
 		dop_exit(new_client);
 	}

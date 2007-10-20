@@ -1,0 +1,12 @@
+Makefile
+Makefile.in
+dopd
+drbd-peer-outdater
+*.diff
+*.beam
+parser-messages
+MISC_ERRORS
+.deps
+.libs
+*.lo
+*.la

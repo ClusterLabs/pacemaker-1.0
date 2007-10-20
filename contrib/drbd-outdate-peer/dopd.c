@@ -42,10 +42,6 @@
 #include <dopd.h>
 #include <clplumbing/cl_misc.h>
 
-#include <crm/crm.h>
-#include <crm/common/ipc.h>
-
-
 const char *node_name;	   /* The node we are connected to	      */
 int quitnow = 0;	   /* Allows a signal to break us out of loop */
 GMainLoop *mainloop;	   /* Reference to the mainloop for events    */
@@ -71,7 +67,7 @@ send_message_to_the_peer(const char *drbd_peer, const char *drbd_resource)
 {
 	HA_Message *msg = NULL;
 
-	crm_info("sending start_outdate message to the other node %s -> %s",
+	cl_log(LOG_INFO, "sending start_outdate message to the other node %s -> %s",
 		  node_name, drbd_peer);
 
 	msg = ha_msg_new(3);
@@ -79,7 +75,7 @@ send_message_to_the_peer(const char *drbd_peer, const char *drbd_resource)
 	ha_msg_add(msg, F_ORIG, node_name);
 	ha_msg_add(msg, F_DOPD_RES, drbd_resource);
 
-	crm_debug("sending [start_outdate res: %s] to node: %s", 
+	cl_log(LOG_DEBUG, "sending [start_outdate res: %s] to node: %s", 
 		  drbd_resource, drbd_peer);
 	dopd_cluster_conn->llc_ops->sendnodemsg(dopd_cluster_conn, msg, drbd_peer);
 	ha_msg_del(msg);
@@ -117,11 +113,11 @@ msg_start_outdate(struct ha_msg *msg, void *private)
 	char *command = NULL;
 
 	/* execute outdate command */
-	crm_malloc0(command, strlen(OUTDATE_COMMAND) + 1 + strlen(drbd_resource) + 1);
+	command = cl_malloc(strlen(OUTDATE_COMMAND) + 1 + strlen(drbd_resource) + 1);
 	strcpy(command, OUTDATE_COMMAND);
 	strcat(command, " ");
 	strcat(command, drbd_resource);
-	crm_debug("command: %s", command);
+	cl_log(LOG_DEBUG, "command: %s", command);
 	command_ret = system(command);
 
 	if (WIFEXITED(command_ret)) {
@@ -136,26 +132,26 @@ msg_start_outdate(struct ha_msg *msg, void *private)
 		else if (command_ret == 17)
 			rc = 6;
 		else
-			crm_info("unknown exit code from %s: %i",
+			cl_log(LOG_INFO, "unknown exit code from %s: %i",
 					command, command_ret);
 	} else {
 		/* something went wrong */
                 if (WIFSIGNALED(command_ret)) {
-			crm_info("killed by signal %i: %s",
+			cl_log(LOG_INFO, "killed by signal %i: %s",
 					WTERMSIG(command_ret), command);
 		} else {
-			crm_info("strange status code from %s: 0x%x",
+			cl_log(LOG_INFO, "strange status code from %s: 0x%x",
 					command, command_ret);
 		}
 	}
 
-	crm_free(command);
+	cl_free(command);
 
-	crm_debug("msg_start_outdate: %s, command rc: %i, rc: %i",
+	cl_log(LOG_DEBUG, "msg_start_outdate: %s, command rc: %i, rc: %i",
 			 ha_msg_value(msg, F_ORIG), command_ret, rc);
 	sprintf(rc_string, "%i", rc);
 
-	crm_info("sending return code: %s, %s -> %s\n",
+	cl_log(LOG_INFO, "sending return code: %s, %s -> %s\n",
 			rc_string, node_name, ha_msg_value(msg, F_ORIG));
 	/* send return code to oder node */
 	msg2 = ha_msg_new(3);
@@ -179,14 +175,14 @@ msg_outdate_rc(struct ha_msg *msg_in, void *private)
 
 	if (CURR_CLIENT_CHANNEL == NULL)
 		return;
-	crm_debug("msg_outdate_rc: %s", rc_string);
+	cl_log(LOG_DEBUG, "msg_outdate_rc: %s", rc_string);
 	msg_out = ha_msg_new(3);
 	ha_msg_add(msg_out, F_TYPE, "outdater_rc");
 	ha_msg_add(msg_out, F_ORIG, node_name);
 	ha_msg_add(msg_out, F_DOPD_VALUE, rc_string);
 
-	if (send_ipc_message(CURR_CLIENT_CHANNEL, msg_out) == FALSE) {
-		crm_err("Could not send message to the client");
+	if(msg2ipcchan(msg_out, CURR_CLIENT_CHANNEL) != HA_OK) {
+		cl_log(LOG_ERR, "Could not send message to the client");
 	}
 	CURR_CLIENT_CHANNEL = NULL;
 }
@@ -200,35 +196,35 @@ check_drbd_peer(const char *drbd_peer)
 	const char *node;
 	gboolean found = FALSE;
 	if (!strcmp(drbd_peer, node_name)) {
-		crm_warn("drbd peer node %s is me!\n", drbd_peer);
+		cl_log(LOG_WARNING, "drbd peer node %s is me!\n", drbd_peer);
 		return FALSE;
 	}
 
-	crm_debug("Starting node walk");
+	cl_log(LOG_DEBUG, "Starting node walk");
 	if (dopd_cluster_conn->llc_ops->init_nodewalk(dopd_cluster_conn) != HA_OK) {
-		crm_warn("Cannot start node walk");
-		crm_warn("REASON: %s", dopd_cluster_conn->llc_ops->errmsg(dopd_cluster_conn));
+		cl_log(LOG_WARNING, "Cannot start node walk");
+		cl_log(LOG_WARNING, "REASON: %s", dopd_cluster_conn->llc_ops->errmsg(dopd_cluster_conn));
 		return FALSE;
 	}
 	while((node = dopd_cluster_conn->llc_ops->nextnode(dopd_cluster_conn)) != NULL) {
-		crm_debug("Cluster node: %s: status: %s", node,
+		cl_log(LOG_DEBUG, "Cluster node: %s: status: %s", node,
 			    dopd_cluster_conn->llc_ops->node_status(dopd_cluster_conn, node));
 
 		/* Look for the peer */
 		if (!strcmp("normal", dopd_cluster_conn->llc_ops->node_type(dopd_cluster_conn, node))
 			&& !strcmp(node, drbd_peer)) {
-			crm_debug("node %s found\n", node);
+			cl_log(LOG_DEBUG, "node %s found\n", node);
 			found = TRUE;
 			break;
 		}
 	}
 	if (dopd_cluster_conn->llc_ops->end_nodewalk(dopd_cluster_conn) != HA_OK) {
-		crm_info("Cannot end node walk");
-		crm_info("REASON: %s", dopd_cluster_conn->llc_ops->errmsg(dopd_cluster_conn));
+		cl_log(LOG_INFO, "Cannot end node walk");
+		cl_log(LOG_INFO, "REASON: %s", dopd_cluster_conn->llc_ops->errmsg(dopd_cluster_conn));
 	}
 
 	if (found == FALSE)
-		crm_warn("drbd peer %s was not found\n", drbd_peer);
+		cl_log(LOG_WARNING, "drbd peer %s was not found\n", drbd_peer);
 	return found;
 }
 
@@ -247,12 +243,12 @@ outdater_callback(IPC_Channel *client, gpointer user_data)
 	dopd_client_t *curr_client = (dopd_client_t*)user_data;
 	gboolean stay_connected = TRUE;
 
-	crm_debug("invoked: %s", curr_client->id);
+	cl_log(LOG_DEBUG, "invoked: %s", curr_client->id);
 
 	/* allow one connection from outdater at a time */
 	if (CURR_CLIENT_CHANNEL != NULL &&
 	    CURR_CLIENT_CHANNEL != curr_client->channel) {
-		crm_debug("one client already connected");
+		cl_log(LOG_DEBUG, "one client already connected");
 		return FALSE;
 	}
 	CURR_CLIENT_CHANNEL = curr_client->channel;
@@ -264,15 +260,15 @@ outdater_callback(IPC_Channel *client, gpointer user_data)
 
 		msg = msgfromIPC_noauth(client);
 		if (msg == NULL) {
-			crm_debug("%s: no message this time",
+			cl_log(LOG_DEBUG, "%s: no message this time",
 				  curr_client->id);
 			continue;
 		}
 
 		lpc++;
 
-		crm_debug("Processing msg from %s", curr_client->id);
-		crm_debug("Got message from (%s). (peer: %s, res :%s)",
+		cl_log(LOG_DEBUG, "Processing msg from %s", curr_client->id);
+		cl_log(LOG_DEBUG, "Got message from (%s). (peer: %s, res :%s)",
 				ha_msg_value(msg, F_ORIG),
 				ha_msg_value(msg, F_OUTDATER_PEER),
 				ha_msg_value(msg, F_OUTDATER_RES));
@@ -291,14 +287,14 @@ outdater_callback(IPC_Channel *client, gpointer user_data)
 			msg_outdate_rc(msg_client, NULL);
 		}
 
-		crm_msg_del(msg);
+		ha_msg_del(msg);		
 		msg = NULL;
 
 		if(client->ch_status != IPC_CONNECT) {
 			break;
 		}
 	}
-	crm_debug("Processed %d messages", lpc);
+	cl_log(LOG_DEBUG, "Processed %d messages", lpc);
 	if (client->ch_status != IPC_CONNECT) {
 		stay_connected = FALSE;
 	}
@@ -317,17 +313,17 @@ outdater_ipc_connection_destroy(gpointer user_data)
 		return;
 
 	if (client->source != NULL) {
-		crm_debug("Deleting %s (%p) from mainloop",
+		cl_log(LOG_DEBUG, "Deleting %s (%p) from mainloop",
 				client->id, client->source);
 		G_main_del_IPC_Channel(client->source);
 		client->source = NULL;
 	}
-	crm_free(client->id);
+	cl_free(client->id);
 	if (client->channel == CURR_CLIENT_CHANNEL) {
-		crm_debug("connection from client closed");
+		cl_log(LOG_DEBUG, "connection from client closed");
 		CURR_CLIENT_CHANNEL = NULL;
 	}
-	crm_free(client);
+	cl_free(client);
 	return;
 }
 
@@ -338,26 +334,28 @@ static gboolean
 outdater_client_connect(IPC_Channel *channel, gpointer user_data)
 {
 	dopd_client_t *new_client = NULL;
-	crm_debug("Connecting channel");
+	cl_log(LOG_DEBUG, "Connecting channel");
 	if(channel == NULL) {
-		crm_err("Channel was NULL");
+		cl_log(LOG_ERR, "Channel was NULL");
 		return FALSE;
 
 	} else if(channel->ch_status != IPC_CONNECT) {
-		crm_err("Channel was disconnected");
+		cl_log(LOG_ERR, "Channel was disconnected");
 		return FALSE;
 	}
 
-	crm_malloc0(new_client, sizeof(dopd_client_t));
+	new_client = cl_malloc(sizeof(dopd_client_t));
+	memset(new_client, 0, sizeof(dopd_client_t));
+	
 	new_client->channel = channel;
-	crm_malloc0(new_client->id, 10);
+	new_client->id = cl_malloc(10);
 	strcpy(new_client->id, "outdater");
 
 	new_client->source = G_main_add_IPC_Channel(
 		G_PRIORITY_DEFAULT, channel, FALSE, outdater_callback,
 		new_client, outdater_ipc_connection_destroy);
 
-	crm_debug("Client %s (%p) connected",
+	cl_log(LOG_DEBUG, "Client %s (%p) connected",
 			  new_client->id,
 			  new_client->source);
 
@@ -367,7 +365,7 @@ outdater_client_connect(IPC_Channel *channel, gpointer user_data)
 static void
 outdater_client_destroy(gpointer user_data)
 {
-	crm_info("ipc server destroy");
+	cl_log(LOG_INFO, "ipc server destroy");
 }
 
 /* set_callbacks()
@@ -379,15 +377,15 @@ set_callbacks(ll_cluster_t *hb)
 	/* Add each of the callbacks we use with the API */
 	if (hb->llc_ops->set_msg_callback(hb, "start_outdate",
 					  msg_start_outdate, hb) != HA_OK) {
-		crm_err("Cannot set msg_start_outdate callback");
-		crm_err("REASON: %s", hb->llc_ops->errmsg(hb));
+		cl_log(LOG_ERR, "Cannot set msg_start_outdate callback");
+		cl_log(LOG_ERR, "REASON: %s", hb->llc_ops->errmsg(hb));
 		exit(2);
 	}
 
 	if (hb->llc_ops->set_msg_callback(hb, "outdate_rc",
 					  msg_outdate_rc, hb) != HA_OK) {
-		crm_err("Cannot set msg_outdate_rc callback");
-		crm_err("REASON: %s", hb->llc_ops->errmsg(hb));
+		cl_log(LOG_ERR, "Cannot set msg_outdate_rc callback");
+		cl_log(LOG_ERR, "REASON: %s", hb->llc_ops->errmsg(hb));
 		exit(2);
 	}
 }
@@ -402,10 +400,10 @@ set_signals(ll_cluster_t *hb)
 	CL_SIGINTERRUPT(SIGTERM, 1);
 	CL_SIGNAL(SIGTERM, gotsig);
 
-	crm_debug("Setting message signal");
+	cl_log(LOG_DEBUG, "Setting message signal");
 	if (hb->llc_ops->setmsgsignal(hb, 0) != HA_OK) {
-		crm_err("Cannot set message signal");
-		crm_err("REASON: %s", hb->llc_ops->errmsg(hb));
+		cl_log(LOG_ERR, "Cannot set message signal");
+		cl_log(LOG_ERR, "REASON: %s", hb->llc_ops->errmsg(hb));
 		exit(13);
 	}
 }
@@ -459,10 +457,10 @@ dopd_timeout_dispatch(gpointer user_data)
 void
 open_api(ll_cluster_t *hb)
 {
-	crm_debug("Signing in with heartbeat");
+	cl_log(LOG_DEBUG, "Signing in with heartbeat");
 	if (hb->llc_ops->signon(hb, "dopd")!= HA_OK) {
-		crm_err("Cannot sign on with heartbeat");
-		crm_err("REASON: %s", hb->llc_ops->errmsg(hb));
+		cl_log(LOG_ERR, "Cannot sign on with heartbeat");
+		cl_log(LOG_ERR, "REASON: %s", hb->llc_ops->errmsg(hb));
 		exit(1);
 	}
 }
@@ -472,15 +470,40 @@ void
 close_api(ll_cluster_t *hb)
 {
 	if (hb->llc_ops->signoff(hb, FALSE) != HA_OK) {
-		crm_err("Cannot sign off from heartbeat.");
-		crm_err("REASON: %s", hb->llc_ops->errmsg(hb));
+		cl_log(LOG_ERR, "Cannot sign off from heartbeat.");
+		cl_log(LOG_ERR, "REASON: %s", hb->llc_ops->errmsg(hb));
 		exit(14);
 	}
 	if (hb->llc_ops->delete(hb) != HA_OK) {
-		crm_err("REASON: %s", hb->llc_ops->errmsg(hb));
-		crm_err("Cannot delete API object.");
+		cl_log(LOG_ERR, "REASON: %s", hb->llc_ops->errmsg(hb));
+		cl_log(LOG_ERR, "Cannot delete API object.");
 		exit(15);
 	}
+}
+
+static IPC_WaitConnection *
+dopd_channel_init(char daemonsocket[])
+{
+	IPC_WaitConnection *wait_ch;
+	mode_t mask;
+	char path[] = IPC_PATH_ATTR;
+	GHashTable * attrs;
+
+	attrs = g_hash_table_new(g_str_hash,g_str_equal);
+	g_hash_table_insert(attrs, path, daemonsocket);
+    
+	mask = umask(0);
+	wait_ch = ipc_wait_conn_constructor(IPC_ANYTYPE, attrs);
+	if (wait_ch == NULL) {
+		cl_perror("Can't create wait channel of type %s",
+			  IPC_ANYTYPE);
+		exit(1);
+	}
+	mask = umask(mask);
+    
+	g_hash_table_destroy(attrs);
+    
+	return wait_ch;
 }
 
 int
@@ -490,28 +513,36 @@ main(int argc, char **argv)
 	char pid[10];
 	char *bname, *parameter;
 	IPC_Channel *apiIPC;
-	int rc;
 
+	char    commpath[1024];
+	IPC_WaitConnection *wait_ch;
+	
 	/* Get the name of the binary for logging purposes */
 	bname = cl_strdup(argv[0]);
-	crm_log_init(bname, LOG_INFO, TRUE, FALSE, 0, NULL);
+
+	cl_log_set_entity(bname);
+	cl_log_set_facility(HA_LOG_FACILITY);
+	cl_log_set_logd_channel_source(NULL, NULL);
+	cl_inherit_logging_environment(500);
+	cl_set_corerootdir(HA_COREDIR);
+	cl_cdtocoredir();
 
 	dopd_cluster_conn = ll_cluster_new("heartbeat");
 
 	memset(pid, 0, sizeof(pid));
 	snprintf(pid, sizeof(pid), "%ld", (long)getpid());
-	crm_debug("PID=%s", pid);
+	cl_log(LOG_DEBUG, "PID=%s", pid);
 
 	open_api(dopd_cluster_conn);
 
 	/* Obtain our local node name */
 	node_name = dopd_cluster_conn->llc_ops->get_mynodeid(dopd_cluster_conn);
 	if (node_name == NULL) {
-		crm_err("Cannot get my nodeid");
-		crm_err("REASON: %s", dopd_cluster_conn->llc_ops->errmsg(dopd_cluster_conn));
+		cl_log(LOG_ERR, "Cannot get my nodeid");
+		cl_log(LOG_ERR, "REASON: %s", dopd_cluster_conn->llc_ops->errmsg(dopd_cluster_conn));
 		exit(19);
 	}
-	crm_debug("[We are %s]", node_name);
+	cl_log(LOG_DEBUG, "[We are %s]", node_name);
 
 	/* See if we should drop cores somewhere odd... */
 	parameter = dopd_cluster_conn->llc_ops->get_parameter(dopd_cluster_conn, KEY_COREROOTDIR);
@@ -526,16 +557,16 @@ main(int argc, char **argv)
 
 	fmask = LLC_FILTER_DEFAULT;
 
-	crm_debug("Setting message filter mode");
+	cl_log(LOG_DEBUG, "Setting message filter mode");
 	if (dopd_cluster_conn->llc_ops->setfmode(dopd_cluster_conn, fmask) != HA_OK) {
-		crm_err("Cannot set filter mode");
-		crm_err("REASON: %s", dopd_cluster_conn->llc_ops->errmsg(dopd_cluster_conn));
+		cl_log(LOG_ERR, "Cannot set filter mode");
+		cl_log(LOG_ERR, "REASON: %s", dopd_cluster_conn->llc_ops->errmsg(dopd_cluster_conn));
 		exit(8);
 	}
 
 	set_signals(dopd_cluster_conn);
 
-	crm_debug("Waiting for messages...");
+	cl_log(LOG_DEBUG, "Waiting for messages...");
 	errno = 0;
 
 	mainloop = g_main_new(TRUE);
@@ -550,19 +581,26 @@ main(int argc, char **argv)
 	Gmain_timeout_add_full(G_PRIORITY_DEFAULT, 1000,
 				dopd_timeout_dispatch, (gpointer)dopd_cluster_conn,
 				dopd_dispatch_destroy);
-	rc = init_server_ipc_comms(
-			cl_strdup(T_OUTDATER),
-			outdater_client_connect,
-			outdater_client_destroy);
-	if (rc != 0)
-		crm_err("Could not start IPC server");
+
+	memset(commpath, 0, 1024);
+	sprintf(commpath, HA_VARRUNDIR"/heartbeat/crm/%s", T_OUTDATER);
+
+	wait_ch = dopd_channel_init(commpath);
+	if (wait_ch == NULL) {
+		cl_log(LOG_ERR, "Could not start IPC server");
+	} else {
+	    G_main_add_IPC_WaitConnection(
+		G_PRIORITY_LOW, wait_ch, NULL, FALSE,
+		outdater_client_connect, cl_strdup(T_OUTDATER),
+		outdater_client_destroy);
+	}
 
 	g_main_run(mainloop);
 	g_main_destroy(mainloop);
 
 	if (!quitnow && errno != EAGAIN && errno != EINTR) {
-		crm_err("read_hb_msg returned NULL");
-		crm_err("REASON: %s", dopd_cluster_conn->llc_ops->errmsg(dopd_cluster_conn));
+		cl_log(LOG_ERR, "read_hb_msg returned NULL");
+		cl_log(LOG_ERR, "REASON: %s", dopd_cluster_conn->llc_ops->errmsg(dopd_cluster_conn));
 	}
 
 	close_api(dopd_cluster_conn);

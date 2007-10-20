@@ -204,7 +204,7 @@ verify_stopped(enum crmd_fsa_state cur_state, int log_level)
 	gboolean rc = TRUE;
 	GListPtr lrm_list = NULL;
 
-	crm_info("Checking for active resources before exit");
+	crm_debug("Checking for active resources before exit");
 
 	if(cur_state == S_TERMINATE) {
 		log_level = LOG_ERR;
@@ -1144,7 +1144,7 @@ do_lrm_invoke(long long action,
 
 			op = construct_op(input->xml, ID(xml_rsc), operation);
 			op->op_status = LRM_OP_DONE;
-			op->rc = 0;
+			op->rc = EXECRA_OK;
 			CRM_ASSERT(op != NULL);
 			send_direct_ack(from_host, from_sys, op, ID(xml_rsc));
 			free_lrm_op(op);			
