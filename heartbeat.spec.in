@@ -13,6 +13,7 @@
 #
 %define ENABLE_MGMT	@RPM_ENABLE_MGMT_CONFIG@
 %define ENABLE_SNMP_SUBAGENT	@RPM_ENABLE_SNMP_SUBAGENT@
+%define REQUIRE_OPENHPI	@RPM_ENABLE_OPENHPI@
 #
 #	Heartbeat-specific defines
 #
@@ -88,6 +89,9 @@
 %if %{is_suse}
 	%define suse_major %(expr %{suse_version} / 100)
 	%define suse_minor %(expr %{suse_version} '%' 100)
+	%if %suse_version < 1020
+		%define REQUIRE_OPENHPI	0
+	%endif
 %endif
 
 %if !%{is_suse} && !%{is_rhel} && !%{is_fedora} && !%{is_solaris} && !%{is_mandriva} && !%{is_aix} 
@@ -204,7 +208,9 @@ Source: http://linux-ha.org/download/%{HB_PKG}-%{HB_VERSION}.tar.gz
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-build
 BuildRequires:	autoconf, automake libtool, libxml2-devel
 BuildRequires:	glib2-devel, python, python-devel, perl, %{SSH}, %{LIBNET_DEVEL}, gdbm-devel, bison, flex
+%if %{REQUIRE_OPENHPI}
 BuildRequires:	openhpi-devel >= 2.6
+%endif
 %if %{ENABLE_SNMP_SUBAGENT}
 %{SNMP_RPM_BUILD_REQUIRES}
 %endif
