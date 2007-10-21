@@ -1415,6 +1415,8 @@ api_process_registration_msg(client_proc_t* client, struct ha_msg * msg)
 	const char *	pid;
 	struct ha_msg *	resp = NULL;
 	client_proc_t*	fcli;
+	const char *	failreason = NULL;
+	const char *	api_retcode = API_OK;
 	
 	char		deadtime[64];
 	char		keepalive[64];
@@ -1472,36 +1474,41 @@ api_process_registration_msg(client_proc_t* client, struct ha_msg * msg)
 	 */
 	if (!api_add_client(client, msg)) {
 		cl_log(LOG_ERR
-		       ,	"api_process_registration_msg: cannot add client(%s)"
-		       ,	client->client_id);
+		,	"api_process_registration_msg: cannot add client(%s)"
+		,	client->client_id);
+		failreason = "cannot add client";
 	}
 
 	/* Make sure we can find them in the table... */
-	if ((fcli = find_client(fromid, pid)) == NULL) {
+	if (failreason == NULL
+	&&	(fcli = find_client(fromid, pid)) == NULL) {
 		cl_log(LOG_ERR
 		,	"api_process_registration_msg: cannot find client");
-		/* We can't properly reply to them. They'll hang. Sorry... */
-		goto del_rsp_and_msg;
+		failreason = "cannot locate client";
 	}
-	if (fcli != client) {
+	if (failreason == NULL && fcli != client) {
 		cl_log(LOG_ERR
 		,	"api_process_registration_msg: found wrong client");
-		goto del_rsp_and_msg;
-		return;
+		failreason = "found wrong client";
 	}
 
-	/*everything goes well, 
-	  now create a table to record sequence/generation number
-	  for each node if necessary*/
+	/* Hopefully, everything went well.
+	 * Now create a table to record sequence/generation number
+	 * for each node if necessary
+	 */
 	
 	client->seq_snapshot_table = NULL;
-	if (create_seq_snapshot_table(&client->seq_snapshot_table) != HA_OK){
-		cl_log(LOG_ERR, "api_process_registration_msg: "
-		       " creating seq snapshot table failed");
-		return;
+	if (failreason == NULL
+	&&	create_seq_snapshot_table(&client->seq_snapshot_table) != HA_OK){
+		cl_log(LOG_ERR, "api_process_registration_msg"
+		":  creating seq snapshot table failed");
+		failreason = "cannot create sequence snapshot table";
 	}
-
-	if (ha_msg_mod(resp, F_APIRESULT, API_OK) != HA_OK) {
+	if (failreason != NULL) {
+		ha_msg_add(msg, F_COMMENT, failreason);
+		api_retcode = API_BADREQ;
+	}
+	if (ha_msg_mod(resp, F_APIRESULT, api_retcode) != HA_OK) {
 		cl_log(LOG_ERR
 		,	"api_process_registration_msg: cannot add field/4");
 		goto del_rsp_and_msg;
