@@ -3062,7 +3062,7 @@ shmem2hostlist(pid_t pid)
 		, __FUNCTION__, pid);
 		return NULL;
 	}
-	if( (s = shmat(p->shmid,0,0)) == (void *)-1 ) {
+	if( (s = shmat(p->shmid,0,SHM_RDONLY)) == (void *)-1 ) {
 		stonithd_log(LOG_ERR,"%s:%d: shmat failed: %s",
 			__FUNCTION__, __LINE__, strerror(errno));
 		return NULL;
