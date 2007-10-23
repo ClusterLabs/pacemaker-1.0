@@ -1414,7 +1414,7 @@ api_process_registration_msg(client_proc_t* client, struct ha_msg * msg)
 	const char *	fromid;
 	const char *	pid;
 	struct ha_msg *	resp = NULL;
-	client_proc_t*	fcli;
+	client_proc_t*	fcli = NULL;
 	const char *	failreason = NULL;
 	const char *	api_retcode = API_OK;
 	
