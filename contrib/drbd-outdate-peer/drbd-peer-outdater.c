@@ -36,6 +36,7 @@
 #include <clplumbing/cl_malloc.h>
 #include <clplumbing/coredumps.h>
 #include <dopd.h>
+#include <memory.h>
 
 #define OPTARGS      "hVt:p:r:"
 #define DEFAULT_TIMEOUT 60 /* timeout in seconds */
