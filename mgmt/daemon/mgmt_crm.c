@@ -269,7 +269,7 @@ get_parent(resource_t* child)
 	cur = data_set->resources;
 	while (cur != NULL) {
 		resource_t* rsc = (resource_t*)cur->data;
-		if(rsc->orphan == FALSE || rsc->role != RSC_ROLE_STOPPED) {
+		if(is_not_set(rsc->flags, pe_rsc_orphan) || rsc->role != RSC_ROLE_STOPPED) {
 			GList* child_list = rsc->fns->children(rsc);
 			if (g_list_find(child_list, child) != NULL) {
 				free_data_set(data_set);
@@ -1342,7 +1342,7 @@ on_get_all_rsc(char* argv[], int argc)
 	cur = data_set->resources;
 	while (cur != NULL) {
 		resource_t* rsc = (resource_t*)cur->data;
-		if(rsc->orphan == FALSE || rsc->role != RSC_ROLE_STOPPED) {
+		if(is_not_set(rsc->flags, pe_rsc_orphan) || rsc->role != RSC_ROLE_STOPPED) {
 			ret = mgmt_msg_append(ret, rsc->id);
 		}
 		cur = g_list_next(cur);
@@ -1443,11 +1443,11 @@ on_get_rsc_status(char* argv[], int argc)
 			ret = mgmt_msg_append(ret, "unknown");
 			break;
 		case pe_native:
-			if(rsc->is_managed == FALSE) {
+			if(is_not_set(rsc->flags, is_managed)) {
 				ret = mgmt_msg_append(ret, "unmanaged");
 				break;
 			}
-			if( rsc->failed ) {
+			if(is_set(rsc->flags, pe_rsc_failed)) {
 				ret = mgmt_msg_append(ret, "failed");
 				break;
 			}
