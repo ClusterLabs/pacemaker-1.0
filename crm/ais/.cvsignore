@@ -1,0 +1,11 @@
+Makefile
+Makefile.in
+*.diff
+*.beam
+parser-messages
+MISC_ERRORS
+.deps
+.libs
+*.lo
+*.la
+atest
