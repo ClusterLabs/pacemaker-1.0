@@ -191,7 +191,7 @@
 
 typedef unsigned long seqno_t;
 
-#define	MAXMSGHIST	200
+#define	MAXMSGHIST	500
 #define	MAXMISSING	MAXMSGHIST
 
 #define	NOSEQUENCE	0xffffffffUL
