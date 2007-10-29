@@ -1,3 +1,10 @@
+heartbeat (2.1.2+hg.11310.702e4f418ca8-3) unstable; urgency=low
+
+  * Add dependacy on gawk as it is required by the OCF IPaddr resource
+    (closes: #447932)
+
+ -- Simon Horman <horms@debian.org>  Mon, 29 Oct 2007 15:37:49 +0900
+
 heartbeat (2.1.2+hg.11310.702e4f418ca8-2) unstable; urgency=low
 
   * Add patches in debian/patches/ which went missing in action somewhere

@@ -23,7 +23,7 @@ Package: heartbeat
 Section: admin
 Priority: optional
 Architecture: any
-Depends: ${shlibs:Depends}, ${python:Depends}, iproute, adduser, iputils-ping, psmisc
+Depends: ${shlibs:Depends}, ${python:Depends}, iproute, adduser, iputils-ping, psmisc, gawk
 Recommends: sysklogd | syslog-ng | system-log-daemon, logrotate, iptables
 XB-Python-Version: ${python:Versions}
 Description: Subsystem for High-Availability Linux
