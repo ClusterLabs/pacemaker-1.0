@@ -2864,6 +2864,7 @@ stonithRA_start( stonithRA_ops_t * op, gpointer data)
 	Stonith *	stonith_obj = NULL;
 	char 		buf_tmp[40];
 	int		shmid=0, shmsize;
+	char **		hostlist;
 
 	/* Check the parameter */
 	if ( op == NULL || op->rsc_id <= 0 || op->op_type == NULL
@@ -2964,12 +2965,16 @@ probe_status:
 		exit(EXECRA_OK);
 	}
 	return_to_orig_privs();
-	if( !hostlist2shmem(shmid,stonith_get_hostlist(stonith_obj))) {
+	hostlist = stonith_get_hostlist(stonith_obj);
+	return_to_dropped_privs();
+	if( !hostlist ) {
 		stonithd_log(LOG_ERR, "Could not list nodes for stonith RA %s."
 		,	op->ra_name);
 		exit(EXECRA_NOT_CONFIGURED);
 	}
-	return_to_dropped_privs();
+	if( !hostlist2shmem(shmid,hostlist) ) {
+		exit(EXECRA_NOT_CONFIGURED);
+	}
 	exit(EXECRA_OK);
 }
 
