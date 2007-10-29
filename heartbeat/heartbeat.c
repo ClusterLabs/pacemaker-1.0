@@ -2080,17 +2080,18 @@ free_one_hist_slot(struct msg_xmit_hist* hist, int slot )
 static void 
 hist_display(struct msg_xmit_hist * hist)
 {
-	cl_log(LOG_DEBUG, "hist->ackseq =%ld",     hist->ackseq);
-	cl_log(LOG_DEBUG, "hist->lowseq =%ld, hist->hiseq=%ld", 
-	       hist->lowseq, hist->hiseq);
-	dump_missing_pkts_info();
-	
-	if (hist->lowest_acknode){
-		cl_log(LOG_DEBUG,"expecting from %s",hist->lowest_acknode->nodename);
-		cl_log(LOG_DEBUG,"it's ackseq=%ld", hist->lowest_acknode->track.ackseq);
+	if (ANYDEBUG) {
+		cl_log(LOG_DEBUG, "hist->ackseq =%ld",     hist->ackseq);
+		cl_log(LOG_DEBUG, "hist->lowseq =%ld, hist->hiseq=%ld", 
+		       hist->lowseq, hist->hiseq);
+		dump_missing_pkts_info();
+		
+		if (hist->lowest_acknode){
+			cl_log(LOG_DEBUG,"expecting from %s",hist->lowest_acknode->nodename);
+			cl_log(LOG_DEBUG,"it's ackseq=%ld", hist->lowest_acknode->track.ackseq);
+		}
+		cl_log(LOG_DEBUG, " ");	
 	}
-	cl_log(LOG_DEBUG, " ");	
-	
 }
 
 static void
@@ -5986,13 +5987,21 @@ add2_xmit_hist (struct msg_xmit_hist * hist, struct ha_msg* msg
 	hist->lastmsg = slot;
 	
 	if (enable_flow_control
-	&&	live_node_count > 1
-	&&	(hist->hiseq - hist->lowseq) > ((MAXMSGHIST*3)/4)) {
-		cl_log(LOG_ERR
-		,	"Message hist queue is filling up"
-		" (%d messages in queue)"
-		,       (int)(hist->hiseq - hist->lowseq));
-		hist_display(hist);
+	&&	live_node_count > 1) {
+		int priority = 0;
+
+		if ((hist->hiseq - hist->lowseq) > ((MAXMSGHIST*9)/10)) {
+			priority = LOG_ERR;
+		} else if ((hist->hiseq - hist->lowseq) > ((MAXMSGHIST*3)/4)) {
+			priority = LOG_WARNING;
+		}
+		if (priority > 0) {
+			cl_log(priority
+			,	"Message hist queue is filling up"
+			" (%d messages in queue)"
+			,       (int)(hist->hiseq - hist->lowseq));
+			hist_display(hist);
+		}
 	}
 
 	AUDITXMITHIST;
