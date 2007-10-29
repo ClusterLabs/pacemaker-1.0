@@ -2542,7 +2542,7 @@ set_release2mode(const char* value)
 		r2size = DIMOF(r2minimal_dirs);
 
 	} else if (0 == strcasecmp("valgrind", value)) {
-#if ENABLE_LIBC_MALLOC	
+#if CL_USE_LIBC_MALLOC
 		r2dirs = &r2valgrind_dirs[0];
 		r2size = DIMOF(r2valgrind_dirs);
 		setenv("HA_VALGRIND_ENABLED", "1", 1);
