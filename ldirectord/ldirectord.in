@@ -2672,7 +2672,7 @@ sub check_sql
 			    $$v{passwd});
 	unless ($dbh) {
 		check_sql_log_errstr("Failed to bind to $$r{server} with",
-				     $dbh->errstr);
+				     DBI->errstr);
 		goto err_down;
 	}
 	$result--;
@@ -2729,7 +2729,7 @@ sub check_sql
 	# at a particular row. But I'm not going to worry about that for
 	# now.
 	$row = $sth->fetchrow_arrayref;
-	unless ($row && $sth->err) {
+	unless ($row && !$sth->err) {
 		check_sql_log_errstr("Error fetching row:", $dbh->errstr);
 		goto err_finish;
 	}
