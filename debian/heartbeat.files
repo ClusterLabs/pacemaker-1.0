@@ -286,7 +286,7 @@ usr/share/doc/heartbeat/authkeys
 usr/share/doc/heartbeat/faqntips.html
 usr/share/doc/heartbeat/faqntips.txt
 usr/share/doc/heartbeat/ha.cf
-usr/share/doc/heartbeat/ha_logd.cf
+usr/share/doc/heartbeat/logd.cf
 usr/share/doc/heartbeat/haresources
 usr/share/doc/heartbeat/heartbeat_api.html
 usr/share/doc/heartbeat/heartbeat_api.txt
