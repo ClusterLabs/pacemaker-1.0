@@ -565,6 +565,8 @@ main(int argc, char ** argv)
 	}
 	}
 	
+	drop_privs(0, 0); /* become "nobody" */
+
 	/*
 	 * Initialize the handler of IPC messages from my clients.
 	 */
@@ -606,7 +608,6 @@ main(int argc, char ** argv)
 	cl_set_all_coredump_signal_handlers(); 
 	/* set larger maxdispatchtime */
 	set_sigchld_proctrack(G_PRIORITY_HIGH,10*DEFAULT_MAXDISPATCHTIME);
-	drop_privs(0, 0); /* become "nobody" */
 	g_main_run(mainloop);
 	return_to_orig_privs();
 
