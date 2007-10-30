@@ -1143,6 +1143,9 @@ sub read_config
 				} elsif ($rcmd =~ /^checkcount\s*=\s*(.*)/){
                                         $1 =~ /(\d+)/ && $1 or &config_error($line, "invalid check count");
                                         $vsrv{checkcount} = $1;
+				} elsif ($rcmd =~ /^checkinterval\s*=\s*(.*)/){
+                                        $1 =~ /(\d+)/ && $1 or &config_error($line, "invalid checkinterval");
+                                        $vsrv{checkinterval} = $1
 				} elsif ($rcmd =~ /^checkport\s*=\s*(.*)/){
 					$1 =~ /(\d+)/ or &config_error($line, "invalid port");
 					( $1 > 0 && $1 < 65536 ) or &config_error($line, "checkport must be in range 1..65536");
