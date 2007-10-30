@@ -564,8 +564,6 @@ main(int argc, char ** argv)
 		goto signoff_quit;
 	}
 	}
-	
-	drop_privs(0, 0); /* become "nobody" */
 
 	/*
 	 * Initialize the handler of IPC messages from my clients.
@@ -608,6 +606,7 @@ main(int argc, char ** argv)
 	cl_set_all_coredump_signal_handlers(); 
 	/* set larger maxdispatchtime */
 	set_sigchld_proctrack(G_PRIORITY_HIGH,10*DEFAULT_MAXDISPATCHTIME);
+	drop_privs(0, 0); /* become "nobody" */
 	g_main_run(mainloop);
 	return_to_orig_privs();
 
@@ -2965,9 +2964,7 @@ probe_status:
 	if( !shmid ) { /* Already started before this operation */
 		exit(EXECRA_OK);
 	}
-	return_to_orig_privs();
 	hostlist = stonith_get_hostlist(stonith_obj);
-	return_to_dropped_privs();
 	if( !hostlist ) {
 		stonithd_log(LOG_ERR, "Could not list nodes for stonith RA %s."
 		,	op->ra_name);
@@ -3068,6 +3065,7 @@ shmem2hostlist(pid_t pid)
 		, __FUNCTION__, pid);
 		return NULL;
 	}
+	return_to_orig_privs();
 	if( (s = shmat(p->shmid,0,SHM_RDONLY)) == (void *)-1 ) {
 		stonithd_log(LOG_ERR,"%s:%d: shmat failed: %s",
 			__FUNCTION__, __LINE__, strerror(errno));
@@ -3092,6 +3090,7 @@ shmem2hostlist(pid_t pid)
 		return NULL;
 	}
 	remove_shm_hostlist(pid);
+	return_to_dropped_privs();
 	return hostlist;
 }
 
