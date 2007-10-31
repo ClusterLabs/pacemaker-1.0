@@ -333,7 +333,7 @@ llm_add(llm_info_t *llm,
 }
 
 int
-llm_set_joinrequest(llm_info_t* llm, int index, gboolean value)
+llm_set_joinrequest(llm_info_t* llm, int index, gboolean value, int major_trans)
 {
 	if (llm == NULL){
 		ccm_log(LOG_ERR, "%s: NULL pointer",
@@ -348,7 +348,7 @@ llm_set_joinrequest(llm_info_t* llm, int index, gboolean value)
 	}	
 	
 	llm->nodes[index].join_request = value;
-	
+ 	llm->nodes[index].join_request_major_trans = major_trans;
 	return HA_OK;
 }
 
@@ -371,6 +371,25 @@ llm_get_joinrequest(llm_info_t* llm, int index)
 	
 }
 
+
+gboolean
+llm_get_joinrequest_majortrans(llm_info_t* llm, int index)
+{
+	if (llm == NULL){
+		ccm_log(LOG_ERR, "%s: NULL pointer",
+		       __FUNCTION__);
+		return  FALSE;
+	}
+	
+	if (index < 0 || index > MAXNODE){
+		ccm_log(LOG_ERR, "%s: index(%d) out of range",
+		       __FUNCTION__, index);
+		return FALSE;
+	}	
+	
+	return llm->nodes[index].join_request_major_trans;
+	
+}
 
 int
 llm_set_change(llm_info_t* llm, int index, gboolean value)

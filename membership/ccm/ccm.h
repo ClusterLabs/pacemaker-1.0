@@ -128,6 +128,7 @@ typedef struct llm_node_s {
 	char	status[STATUSSIZE];
 	int	uptime;
 	gboolean join_request;
+  int join_request_major_trans;
 	gboolean receive_change_msg;
 	char	site[PATH_MAX];
 	int	weight;
@@ -155,8 +156,9 @@ int		llm_get_myindex(llm_info_t *);
 int		llm_get_nodecount(llm_info_t* llm);
 const char*	llm_get_mynodename(llm_info_t* llm);
 char*		llm_get_nodestatus(llm_info_t* llm, const int index);
-int		llm_set_joinrequest(llm_info_t* llm, int index, gboolean value);
+int		llm_set_joinrequest(llm_info_t* llm, int index, gboolean value, int );
 gboolean	llm_get_joinrequest(llm_info_t* llm, int index);
+gboolean	llm_get_joinrequest_majortrans(llm_info_t* llm, int index);
 int		llm_set_change(llm_info_t* llm, int index, gboolean value);
 gboolean	llm_get_change(llm_info_t* llm, int index);
 int		llm_set_uptime(llm_info_t* llm, int index, int uptime);

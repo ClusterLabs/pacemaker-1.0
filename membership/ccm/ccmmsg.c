@@ -71,6 +71,9 @@ static struct ha_msg*
 ccm_create_minimum_msg(ccm_info_t * info, int type)
 {	
 	struct ha_msg *m;
+	char majortrans[15];
+	snprintf(majortrans, sizeof(majortrans), "%d", 
+		 info->ccm_transition_major);
 
 	if ((m=ha_msg_new(0)) == NULL) {
 		ccm_log(LOG_ERR, "%s: creating a new message failed",
@@ -79,6 +82,7 @@ ccm_create_minimum_msg(ccm_info_t * info, int type)
 	}
 
 	if( ha_msg_add(m, F_TYPE, ccm_type2string(type)) == HA_FAIL
+	    ||(ha_msg_add(m, CCM_MAJORTRANS, majortrans) == HA_FAIL)
 	    ||ha_msg_add_int(m, F_NUMNODES, info->llm.nodecount) == HA_FAIL){
 		ccm_log(LOG_ERR, "%s: adding fields to an message failed",
 		       __FUNCTION__);

@@ -678,13 +678,25 @@ ccm_already_joined(ccm_info_t *info)
  * members showing interest in acquiring the initial context. 
  */
 static void 
-ccm_add_new_joiner(ccm_info_t *info, const char *orig)
+ccm_add_new_joiner(ccm_info_t *info, const char *orig, struct ha_msg* msg)
 {
 	llm_info_t* llm = &info->llm;
 	
 	int idx = llm_get_index(&info->llm, orig);
 	
-	llm_set_joinrequest(llm, idx, TRUE);
+	const char* major_trans = 0;
+	int trans_val;
+	
+	/* get the major transition version */
+	if ((major_trans = ha_msg_value(msg, CCM_MAJORTRANS)) == NULL) { 
+	  ccm_debug(LOG_WARNING, "ccm_state_version_request: "
+		    "no protocol information");
+	  return;
+	}
+	
+	trans_val = atoi(major_trans);
+	
+	llm_set_joinrequest(llm, idx, TRUE, trans_val);
 	
 	return;
 }
@@ -716,7 +728,7 @@ ccm_reset_all_join_request(ccm_info_t* info)
 	size_t i;
 	
 	for (i = 0 ; i < llm->nodecount; i++){
-		llm_set_joinrequest(llm, i, FALSE);
+	  llm_set_joinrequest(llm, i, FALSE, 0);
 	}	
 }
 
@@ -729,13 +741,23 @@ ccm_am_i_highest_joiner(ccm_info_t *info)
 	int		total_nodes =llm->nodecount;
 	int		my_indx = llm->myindex;
 	int		i;
-
-	for (i = my_indx + 1 ; i < total_nodes; i++){
-		if (llm_get_joinrequest(llm,i)){
-			return FALSE;
-		}
-	}
 	
+	for (i =0; i < total_nodes;i++){
+	  if (i == my_indx) continue;
+	  if ( llm_get_joinrequest(llm, i)){
+	    int major_trans =llm_get_joinrequest_majortrans(llm, i);
+	    int my_major_trans = CCM_GET_MAJORTRANS(info);
+	    if (major_trans > my_major_trans ){
+	      return FALSE;
+	    }else if (major_trans == my_major_trans){
+	      if (i > my_indx){
+		return FALSE;
+	      }
+	    }
+	  }
+
+	}
+
 	return TRUE;
 }
 
@@ -745,7 +767,7 @@ ccm_remove_new_joiner(ccm_info_t *info, const char *orig)
 	llm_info_t* llm = &info->llm;
 	int index = llm_get_index(llm, orig);
 	
-	llm_set_joinrequest(llm, index, FALSE);
+	llm_set_joinrequest(llm, index, FALSE, 0);
 	
 	return;
 }
@@ -767,7 +789,7 @@ ccm_send_join_reply(ll_cluster_t *hb, ccm_info_t *info)
 		}
 		if (llm_get_joinrequest(llm, i)){
 			ccm_send_one_join_reply(hb,info, llm->nodes[i].nodename);
-			llm_set_joinrequest(llm, i, FALSE);
+			llm_set_joinrequest(llm, i, FALSE, 0);
 		}
 	}
 }
@@ -1065,7 +1087,7 @@ ccm_init_to_joined(ccm_info_t *info)
 	
 	llm_set_uptime(llm, llm_get_myindex(llm), 1);
 
-	CCM_SET_MAJORTRANS(info, 1);
+	CCM_SET_MAJORTRANS(info, CCM_GET_MAJORTRANS(info)+1);
 	CCM_SET_MINORTRANS(info, 0);
 	cookie = ccm_generate_random_cookie();
 	CCM_SET_COOKIE(info, cookie);
@@ -1297,7 +1319,8 @@ ccm_state_version_request(enum ccm_type ccm_msg_type,
 		 * somebody else also wanted to join the group.
 		 * we will restart the join.
 		 */
-		ccm_add_new_joiner(info, orig);
+
+		ccm_add_new_joiner(info, orig, reply);
 		if (ccm_get_all_active_join_request(info)
 		    && ccm_am_i_highest_joiner(info)){
 			ccm_init_to_joined(info);
@@ -1767,7 +1790,7 @@ static void ccm_state_wait_for_change(enum ccm_type ccm_msg_type,
 			 * cache this request. We will respond to it,
 			 * after transition is complete.
 			 */
-			ccm_add_new_joiner(info, orig);
+		  ccm_add_new_joiner(info, orig, reply);
 			break;
 			
 		case CCM_TYPE_NODE_LEAVE_NOTICE:
@@ -2062,7 +2085,7 @@ switchstatement:
 			 * cache this request. We will respond to it, 
 			 * if we become the leader.
 			 */
-			ccm_add_new_joiner(info, orig);
+		  ccm_add_new_joiner(info, orig, reply);
 			
 			break;
 
@@ -2293,7 +2316,7 @@ switchstatement:
 			 * cache this request. We will respond to it, if we 
 			 * become the leader.
 			 */
-			ccm_add_new_joiner(info, orig);
+		  ccm_add_new_joiner(info, orig, reply);
 			
 			break;
 
@@ -2672,7 +2695,7 @@ switchstatement:
 			 * cache this request. We will respond to it, 
 			 * if we become the leader.
 			 */
-			ccm_add_new_joiner(info, orig);
+		  ccm_add_new_joiner(info, orig, reply);
 			
 			break;
 
@@ -3149,6 +3172,8 @@ ccm_initialize()
 		ccm_log(LOG_ERR, "Cannot allocate memory ");
 		goto errout;
 	}
+
+	memset(global_info, 0, sizeof(ccm_info_t));
 
 	if((ccmret = (ccm_t *)g_malloc(sizeof(ccm_t))) == NULL){
 		ccm_log(LOG_ERR, "Cannot allocate memory");
