@@ -436,7 +436,7 @@ static int 		stonithd_child_count	= 0;
 		return; \
 	} \
 } while(0)
-#define return_on_msg_shoot_us(type) do { \
+#define return_on_msg_shoot_us() do { \
 	if ( !strncmp(target, local_nodename, MAXCMP) && !TEST ) { \
 		stonithd_log(LOG_DEBUG, "in normal mode, won't " \
 				     "stonith myself"); \
