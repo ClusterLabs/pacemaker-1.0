@@ -233,7 +233,10 @@ Requires: sysklogd, perl, iputils, %{SSH} %{PING} %{IPTABLES}
 Requires(pre): /usr/sbin/groupadd /usr/bin/getent /usr/sbin/useradd
 
 %if %{is_suse}
-Requires: python-xml python-gtk
+%if %{ENABLE_MGMT} && !%{GUI_PACKAGE}
+Requires: python-xml
+Requires: python-gtk >= 2.4
+%endif
 %if 0%{?sles_version} == 9
 BuildRequires: pkgconfig
 %endif
@@ -245,7 +248,6 @@ BuildRequires: lzo
 %if %{is_fedora}
 Requires:	PyXML
 BuildRequires: 		which OpenIPMI-devel
-Requires:               pygtk2 >= 2.4
 Requires(pre):          fedora-usermgmt
 Requires(postun):       fedora-usermgmt
 %endif
@@ -329,10 +331,16 @@ Summary: Provides a gui interface to manage heartbeat clusters
 Group: %{pkg_group}
 
 %if %{is_suse}
+Requires: python-xml
+Requires: python-gtk >= 2.4
 %endif
 %if %{is_fedora}
+Requires:	PyXML
+Requires:	pygtk2 >= 2.4
 %endif
 %if %{is_rhel}
+Requires:	PyXML
+Requires:	pygtk2 >= 2.4
 %endif
 %if %{is_mandriva}
 %endif
