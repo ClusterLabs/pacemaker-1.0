@@ -26,7 +26,6 @@
 %define HA_APIGID @HA_APIGID@
 %define HB_VERSION @VERSION@
 %define SSH @SSH@
-%define	RPM_MGMT_RUNTIME_REQUIRES @RPM_MGMT_RUNTIME_REQUIRES@
 %define INITDIR @INITDIR@
 %define OCF_ROOT_DIR @OCF_ROOT_DIR@
 %define OCF_RA_DIR @OCF_RA_DIR@
@@ -221,7 +220,8 @@ BuildRequires: OpenIPMI-devel
 %endif
 
 %if ENABLE_MGMT
-BuildRequires:	libgcrypt-devel, gnutls-devel
+#BuildRequires:	libgcrypt-devel
+BuildRequires:	gnutls-devel
 %endif
 
 %if %{build_cmpi}
@@ -331,7 +331,6 @@ Group: %{pkg_group}
 
 %if %{ENABLE_MGMT} && %{GUI_PACKAGE}
 %package -n %{GUI_NAME}
-Requires: %{RPM_MGMT_RUNTIME_REQUIRES}
 Summary: Provides a gui interface to manage heartbeat clusters
 Group: %{pkg_group}
 
