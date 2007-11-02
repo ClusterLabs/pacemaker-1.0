@@ -229,8 +229,13 @@ BuildRequires: %{CIMOM}
 %endif
 
 Requires: %{STONITH_NAME} = %{version}-%{release}, %{PILS_NAME} = %{version}-%{release}
-Requires: sysklogd, perl, iputils, %{SSH} %{PING} %{IPTABLES}
+Requires: perl, iputils, %{SSH} %{PING} %{IPTABLES}
 Requires(pre): /usr/sbin/groupadd /usr/bin/getent /usr/sbin/useradd
+%if 0
+#	We can use either one.  Most people have one or the other installed
+Requires: sysklogd
+Requires: syslog-ng
+%endif
 
 %if %{is_suse}
 %if %{ENABLE_MGMT} && !%{GUI_PACKAGE}
