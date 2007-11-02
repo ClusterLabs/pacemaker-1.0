@@ -27,6 +27,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <errno.h>
 #include <clplumbing/cl_misc.h>
 
 extern int			DoManageResources;
@@ -593,7 +594,14 @@ write_node_uuid_file(struct sys_config * cfg)
 		return HA_FAIL;
 	}
 	if (rename(tmpname, finalname) < 0) {
-		cl_perror("Cannot rename %s to %s", tmpname, finalname);
+		cl_perror("Cannot rename %s to %s [errno %d]"
+		,	tmpname, finalname, errno);
+		if (ANYDEBUG) {
+			system("ha_logger -t info \"`ls -ld "
+			HOSTUUIDCACHEFILE " 2>&1`\"");
+			system("ha_logger info `ls -ld "
+			HOSTUUIDCACHEFILETMP " 2>&1`\"");
+		}
 		unlink(tmpname);
 		return HA_FAIL;
 	}

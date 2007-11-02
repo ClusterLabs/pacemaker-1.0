@@ -756,22 +756,9 @@ initialize_heartbeat()
 		cl_log(LOG_DEBUG, "uuid is:%s", uuid_str);
 	}
 	
-	write_hostcachefile = G_main_add_tempproc_trigger(PRI_WRITECACHE
-	,	write_hostcachedata, "write_hostcachedata"
-	,	NULL, NULL, NULL, NULL);
-
-	write_delcachefile = G_main_add_tempproc_trigger(PRI_WRITECACHE
-	,	write_delcachedata, "write_delcachedata"
-	,	NULL, NULL, NULL, NULL);
-
 	add_uuidtable(&config->uuid, curnode);
 	cl_uuid_copy(&curnode->uuid, &config->uuid);
 
-	/*
-	 * We _really_ only need to write out the uuid file if we're not yet
-	 * in the host cache file on disk.
-	 */
-	G_main_set_trigger(write_hostcachefile);
 
 	if (stat(FIFONAME, &buf) < 0 ||	!S_ISFIFO(buf.st_mode)) {
 		cl_log(LOG_INFO, "Creating FIFO %s.", FIFONAME);
@@ -940,6 +927,7 @@ initialize_heartbeat()
 
 
 	ourproc = procinfo->nprocs;
+
 	master_control_process();
 
 	/*NOTREACHED*/
@@ -1326,6 +1314,19 @@ master_control_process(void)
 	long			memstatsinterval;
 	guint			id;
 
+	write_hostcachefile = G_main_add_tempproc_trigger(PRI_WRITECACHE
+	,	write_hostcachedata, "write_hostcachedata"
+	,	NULL, NULL, NULL, NULL);
+
+	write_delcachefile = G_main_add_tempproc_trigger(PRI_WRITECACHE
+	,	write_delcachedata, "write_delcachedata"
+	,	NULL, NULL, NULL, NULL);
+	/*
+	 * We _really_ only need to write out the uuid file if we're not yet
+	 * in the host cache file on disk.
+	 */
+
+	G_main_set_trigger(write_hostcachefile);
 	init_xmit_hist (&msghist);
 
 	hb_init_watchdog();
