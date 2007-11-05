@@ -2127,12 +2127,17 @@ switchstatement:
 			break;
 
 		case CCM_TYPE_REQ_MEMLIST:
-
 			/* if this is my own message just forget it */
-			if(strncmp(orig, llm_get_mynodename(&info->llm),
-				   NODEIDSIZE) == 0) 
-				break;
-
+  			if(strncmp(orig, llm_get_mynodename(&info->llm),
+  				   NODEIDSIZE) == 0){
+				if(llm_get_live_nodecount(&info->llm) == 1){
+					ccm_log(LOG_INFO, "%s: directly call"
+						"ccm_compute_and_send_final_memlist()",
+						__FUNCTION__);
+					ccm_compute_and_send_final_memlist(hb, info);
+				}
+  				break;
+  			}
 
 			/* whoever is requesting memlist from me thinks it is 
 			 * the leader. Hmm....., we will send it a NULL memlist.
