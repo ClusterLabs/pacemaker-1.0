@@ -59,6 +59,7 @@
 #include <clplumbing/GSource.h>
 #include <clplumbing/proctrack.h>
 #include <clplumbing/Gmain_timeout.h>
+#include <clplumbing/cl_pidfile.h>
 #include <apphb.h>
 
 static const char * Simple_helpscreen =
@@ -71,6 +72,8 @@ static const char * Simple_helpscreen =
 "	Set the interval(ms) of application hearbeat or plumbing its client.\n" 
 "-w warntime\n"
 "	Set the warning time (ms) of application heartbeat.\n"
+"-p pidfile\n"
+"	Set the name of a pid file to use.\n"
 "-r	Recover itself from crash. Only called by other monitor programs like"
 "	recovery manager.\n"
 "-l	List the program monitored by cl_respawn.\n"
@@ -111,6 +114,7 @@ static int MAGIC_EXIT_CODE = 100;
 
 static const char * app_name = "cl_respawn";
 static gboolean	REGTO_APPHBD = FALSE;
+static char * pidfile = NULL;
 
 /* 
  * This pid will equal to the PID of the process who was ever the child of 
@@ -118,7 +122,7 @@ static gboolean	REGTO_APPHBD = FALSE;
  */
 static pid_t monitored_PID = 0;
 
-static const char * optstr = "rm:i:w:lh";
+static const char * optstr = "rm:i:w:p:lh";
 static GMainLoop * mainloop = NULL;
 static gboolean IS_RECOVERY = FALSE;
 
@@ -139,7 +143,7 @@ int main(int argc, char * argv[])
 
 	if (argc == 1) { /* no arguments */
 		printf("%s\n", Simple_helpscreen);
-		exit(1);
+		exit(LSB_EXIT_EINVAL);
 	}
 
 	/* 
@@ -193,6 +197,11 @@ int main(int argc, char * argv[])
 				}
 				break;
 
+			case 'p':
+				if (optarg) {
+					pidfile = optarg;
+				}
+				break;
 			case 'w':
 				if (optarg) {
 					apphb_warntime = atoi(optarg);
@@ -371,6 +380,20 @@ become_daemon(void)
 {
 
 	int j;
+
+	if (pidfile) {
+		int	runningpid;
+		if ((runningpid=cl_read_pidfile(pidfile)) > 0) {
+			cl_log(LOG_WARNING, "pidfile [%s] says we're already running as pid [%d]"
+			,	pidfile, runningpid);
+			exit(LSB_EXIT_OK);
+		}
+		if (cl_lock_pidfile(pidfile) != 0) {
+			cl_log(LOG_ERR, "Cannot create pidfile [%s]"
+			,	pidfile);
+			exit(LSB_EXIT_GENERIC);
+		}
+	}
 #if 0
 	pid_t pid;
 
@@ -444,7 +467,6 @@ cl_respawn_quit(int signo, gpointer user_data)
 	if (monitored_PID != 0) {
 		cl_log(LOG_INFO, "Killing pid [%d] with SIGTERM"
 		,	monitored_PID);
-		sleep(1);
 		/* DisableProcLogging(); */
 		if (kill(monitored_PID, SIGTERM) < 0) {
 			monitored_PID=0;
