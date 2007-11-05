@@ -392,12 +392,10 @@ become_daemon(void)
 	umask(022);
 	setsid();
 
-#if 0
 	for (j=0; j < 3; ++j) {
 		close(j);
 		(void)open("/dev/null", j == 0 ? O_RDONLY : O_RDWR);
 	}
-#endif
 
 	CL_IGNORE_SIG(SIGINT);
 	CL_IGNORE_SIG(SIGHUP);
