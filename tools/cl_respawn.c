@@ -370,8 +370,8 @@ static void
 become_daemon(void)
 {
 
-#if 0
 	int j;
+#if 0
 	pid_t pid;
 
 	pid = fork();
