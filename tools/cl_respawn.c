@@ -130,16 +130,14 @@ int main(int argc, char * argv[])
 	int apphb_warntime = DEFAULT_APPHB_WARNTIME;
 	char ** client_argv = NULL;
 	pid_t child_tmp = 0;
-/* #if 0 */
-	int j;
-/* #endif */
 
 	cl_log_set_entity(app_name);
 	cl_log_enable_stderr(TRUE);
 	cl_log_set_facility(HA_LOG_FACILITY);
 
 	if (argc == 1) { /* no arguments */
-		printf("%s\n",Simple_helpscreen);
+		printf("%s\n", Simple_helpscreen);
+		exit(1);
 	}
 
 	/* 
@@ -149,18 +147,23 @@ int main(int argc, char * argv[])
 	separate_argv(&argc, &argv, &client_argv);
 	
 	/* code for debug */
-/* #if 0 */
-	cl_log(LOG_INFO, "Called arg");
-	j = -1;
-	while (argv[++j] != NULL) {
-		cl_log(LOG_INFO, "argv[%d]: %s", j, argv[j]);
-	}
+#if 0
+	{
+		int j;
+		cl_log(LOG_INFO, "client_argv: 0x%08lx", (unsigned long) client_argv);
+		cl_log(LOG_INFO, "Called arg");
 
-	j = -1;
-	while (client_argv[++j] != NULL) {
-		cl_log(LOG_INFO, "client_argv[%d]: %s", j, client_argv[j]);
+		for (j=0; argv[j] != NULL; ++j) {
+			cl_log(LOG_INFO, "argv[%d]: %s", j, argv[j]);
+		}
+
+		for (j=0; client_argv && client_argv[j] != NULL; ++j) {
+			if (ANYDEBUG) {
+				cl_log(LOG_INFO, "client_argv[%d]: %s", j, client_argv[j]);
+			}
+		}
 	}
-/* #endif */
+#endif
 
 	do {
 		option_char = getopt(argc, argv, optstr);
@@ -204,12 +207,13 @@ int main(int argc, char * argv[])
 				return LSB_EXIT_OK;
 
 			default:
-				cl_log(LOG_ERR, "Error:getopt returned" 
+				cl_log(LOG_ERR, "getopt returned" 
 					"character code %c.", option_char);
 				printf("%s\n",Simple_helpscreen);
 				return LSB_EXIT_EINVAL;
 		}
 	} while (1);
+
 
 	/* 
 	 * Now I suppose recovery program only pass the client name via 
@@ -218,6 +222,7 @@ int main(int argc, char * argv[])
 	if ( (IS_RECOVERY == FALSE) && (client_argv == NULL) ) {
 		cl_log(LOG_ERR, "Please give the program name which will be " 
 			"run as a child process of cl_respawn.");
+		printf("%s\n", Simple_helpscreen);
 		exit(LSB_EXIT_EINVAL);
 	}
 
@@ -441,6 +446,7 @@ separate_argv(int * argc_p, char *** argv_p, char *** client_argv_p)
 	/* Search the first no-option parameter */
 	int i,j;
 	struct stat buf;
+	*client_argv_p = NULL;
 
 	for (i=1; i < *argc_p; i++) {
 		if (    ((*argv_p)[i][0] != '-') 
@@ -463,7 +469,7 @@ separate_argv(int * argc_p, char *** argv_p, char *** client_argv_p)
 	*client_argv_p = calloc(*argc_p - i + 1, sizeof(char*));
 	if (*client_argv_p == NULL) {
 		cl_perror("separate_argv:calloc: ");
-		exit(-1);
+		exit(1);
 	}
 
 	for (j=i; j < *argc_p; j++) {
