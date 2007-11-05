@@ -36,7 +36,10 @@ pamdir 		= /etc/pam.d
 pam_DATA	= mgmtd.pam
 
 install-data-hook:
-		mv $(DESTDIR)$(pamdir)/mgmtd.pam $(DESTDIR)$(pamdir)/hbmgmtd
+		mv $(DESTDIR)$(pamdir)/mgmtd.pam $(DESTDIR)$(pamdir)/hbmgmtd; \
+		if [ -f /etc/SuSE-release ]; then \
+		sed -i 's/pam_unix/&2/' $(DESTDIR)$(pamdir)/hbmgmtd; \
+		fi
 
 
 halib_PROGRAMS 	=  mgmtd
