@@ -597,10 +597,8 @@ write_node_uuid_file(struct sys_config * cfg)
 		cl_perror("Cannot rename %s to %s [errno %d]"
 		,	tmpname, finalname, errno);
 		if (ANYDEBUG) {
-			system("ha_logger -t info \"`ls -ld "
-			HOSTUUIDCACHEFILE " 2>&1`\"");
-			system("ha_logger info `ls -ld "
-			HOSTUUIDCACHEFILETMP " 2>&1`\"");
+			system("ls -ld " HOSTUUIDCACHEFILE " 2>&1 | logger -p daemon.err");
+			system("ls -ld " HOSTUUIDCACHEFILETMP " 2>&1 | logger -p daemon.err");
 		}
 		unlink(tmpname);
 		return HA_FAIL;
