@@ -67,6 +67,19 @@ ul ul {
 	margin-bottom: 1em;
 	}
 
+#i_content table {
+	border-collapse: collpase;
+	border: 1pt solid #cccccc;
+	margin: 2pt;
+	padding: 1pt;
+	}
+
+#i_content tr td {
+	margin: 0;
+	padding: 0;
+	border: 1pt solid #cccccc;
+	}
+
 span.i__linktext {
     text-color: #000000;
     font-weight : normal; 
