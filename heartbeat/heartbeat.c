@@ -2612,8 +2612,7 @@ HBDoMsg_T_DELNODE(const char * type, struct node_info * fromnode,
 		nodes[i]= NULL;	
 	}
 	
-	write_delnode_file(config);
-	write_cache_file(config);
+	G_main_set_trigger(write_hostcachefile);
 	G_main_set_trigger(write_delcachefile);
 	
 	return ;
@@ -2865,7 +2864,7 @@ HBDoMsg_T_REPNODES(const char * type, struct node_info * fromnode
 			}
 		}
 		get_reqnodes_reply = TRUE;
-		write_cache_file(config);
+		G_main_set_trigger(write_hostcachefile);
 	}
 
 	if (delnodelist != NULL) {	
@@ -2890,7 +2889,7 @@ HBDoMsg_T_REPNODES(const char * type, struct node_info * fromnode
 			}
 		}
 		get_reqnodes_reply = TRUE;
-		write_delnode_file(config);
+		G_main_set_trigger(write_delcachefile);
 	}
 	comm_now_up();
         return;
