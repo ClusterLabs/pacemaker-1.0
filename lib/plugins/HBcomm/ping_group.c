@@ -614,7 +614,8 @@ retry:
 	}
 
 	for(node = ei->node; node; node = node->next) {
-		if ((rc=sendto(ei->sock, (void *) icmp_pkt, pktsize, 0
+		if ((rc=sendto(ei->sock, (void *) icmp_pkt, pktsize
+		,	MSG_NONBLOCK
 		,	(struct sockaddr *)&node->addr
 		,	sizeof(struct sockaddr))) != (ssize_t)pktsize) {
 			if (errno == EPERM && !needroot) {

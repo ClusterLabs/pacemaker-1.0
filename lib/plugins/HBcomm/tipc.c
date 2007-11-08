@@ -332,7 +332,7 @@ tipc_write(struct hb_media * mp, void * msg, int len)
 
         tipc = (struct tipc_private *) mp->pd;        
 
-        if ( (numbytes = sendto(tipc->sendfd, msg, len, 0, 
+        if ( (numbytes = sendto(tipc->sendfd, msg, len, MSG_NONBLOCK, 
                                 (struct sockaddr *)&tipc->maddr, 
                                 sizeof(struct sockaddr_tipc))) < 0 ){
                 PILCallLog(LOG, PIL_CRIT, "%s: Unable to send message: %s", 

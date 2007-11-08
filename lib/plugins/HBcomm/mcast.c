@@ -433,7 +433,7 @@ mcast_write(struct hb_media* hbm, void *pkt, int len)
 	MCASTASSERT(hbm);
 	mcp = (struct mcast_private *) hbm->pd;
 
-	if ((rc=sendto(mcp->wsocket, pkt, len, 0
+	if ((rc=sendto(mcp->wsocket, pkt, len, MSG_NONBLOCK
 	,	(struct sockaddr *)&mcp->addr
 	,	sizeof(struct sockaddr))) != len) {
 		PILCallLog(LOG, PIL_CRIT, "Unable to send mcast packet [%d]: %s"

@@ -425,7 +425,7 @@ ucast_write(struct hb_media* mp, void *pkt, int len)
 	UCASTASSERT(mp);
 	ei = (struct ip_private*)mp->pd;
 	
-	if ((rc = sendto(ei->wsocket, pkt, len, 0
+	if ((rc = sendto(ei->wsocket, pkt, len, MSG_NONBLOCK
 	,		(struct sockaddr *)&ei->addr
 	,		 sizeof(struct sockaddr))) != len) {
 		PILCallLog(LOG, PIL_CRIT, "Unable to send [%d] ucast packet: %s"

@@ -499,7 +499,7 @@ retry:
 		return_to_orig_privs();
 	}
 
-	if ((rc=sendto(ei->sock, (void *) icmp_pkt, pktsize, 0
+	if ((rc=sendto(ei->sock, (void *) icmp_pkt, pktsize, MSG_NONBLOCK
 	,	(struct sockaddr *)&ei->addr
 	,	sizeof(struct sockaddr))) != (ssize_t)pktsize) {
 		if (errno == EPERM && !needroot) {

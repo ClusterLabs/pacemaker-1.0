@@ -367,7 +367,7 @@ bcast_write(struct hb_media* mp, void *pkt, int len)
 	BCASTASSERT(mp);
 	ei = (struct ip_private *) mp->pd;
 	
-	if ((rc=sendto(ei->wsocket, pkt, len, 0
+	if ((rc=sendto(ei->wsocket, pkt, len, MSG_NONBLOCK
 	,	(struct sockaddr *)&ei->addr
 	,	sizeof(struct sockaddr))) != len) {
 
@@ -377,11 +377,14 @@ bcast_write(struct hb_media* mp, void *pkt, int len)
 		PILCallLog(LOG, PIL_CRIT, "Unable to send bcast [%d] packet(len=%d): %s",
 			   rc,len,  strerror(err));
 		
-		m =  wirefmt2msg(pkt, len,MSG_NEEDAUTH);
-		if (m){
-			cl_log_message(LOG_ERR, m);
-			ha_msg_del(m);
+		if (ANYDEBUG) {
+			m =  wirefmt2msg(pkt, len,MSG_NEEDAUTH);
+			if (m){
+				cl_log_message(LOG_ERR, m);
+				ha_msg_del(m);
+			}
 		}
+
 		errno = err;
 		return(HA_FAIL);
 	}
