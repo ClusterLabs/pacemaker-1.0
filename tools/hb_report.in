@@ -56,10 +56,10 @@ fi
 
 usage() {
 	cat<<EOF
-usage: hb_report -f time [-t time] [-u user] [-l file] [-p patt] [-L patt]
-       [-e prog] [-SDC] dest
+usage: hb_report -f {time|"cts:"testnum} [-t time] [-u user] [-l file] [-p patt]
+       [-L patt] [-e prog] [-SDC] dest
 
-	-f time: time to start from
+	-f time: time to start from or a CTS test number
 	-t time: time to finish at (dflt: now)
 	-u user: ssh user to access other nodes (dflt: empty, hacluster, root)
 	-l file: log file
@@ -93,6 +93,7 @@ EOF
 	  hb_report -f 1:00 -t 3:00 -l /var/log/cluster/ha-debug /tmp/report_3
 	  hb_report -f "09sep07 2:00" -u hbadmin /tmp/report_4
 	  hb_report -f 18:00 -p "usern.*" -p "admin.*" /tmp/report_5
+	  hb_report -f cts:133 /tmp/ctstest_133
 
 	. WARNING . WARNING . WARNING . WARNING . WARNING . WARNING .
 	  We try to sanitize the CIB and the peinputs files. If you
@@ -577,7 +578,7 @@ if [ "$SLAVE" = "" ]; then
 		esac
 	done
 	[ $# -ne 1 ] && usage short
-	DESTDIR=$1
+	DESTDIR=`echo $1 | sed 's,/*$,,'`
 	chkdirname $DESTDIR
 	[ "$FROM_TIME" ] || usage short
 fi
@@ -628,7 +629,8 @@ if [ "$SLAVE" = "" ]; then
 	if [ "$HA_LOGFACILITY" ]; then
 		sev="info"
 		cfdebug=`getcfvar debug` # prefer debuglog if set
-		[ "$cfdebug" -a "$cfdebug" -gt 0 ] &&
+		isnumber $cfdebug || cfdebug=""
+		[ "$cfdebug" -a $cfdebug -gt 0 ] &&
 			sev="debug"
 		logmarks $sev $UNIQUE_MSG
 	fi
@@ -688,7 +690,7 @@ if [ ! "$SLAVE" ]; then
 		send_config
 		start_remote_collectors
 	else
-		[ `getnodes | wc -w` -gt 1 ] &&
+		[ -z "$NO_SSH" -a `getnodes | wc -w` -gt 1 ] &&
 			warning "ssh does not work to all nodes"
 	fi
 fi
