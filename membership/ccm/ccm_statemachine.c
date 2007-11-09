@@ -372,7 +372,7 @@ static void
 report_mbrs(ccm_info_t *info)
 {
 	int i;
-	char *nodename;
+	const char *nodename;
 
 	static struct born_s  {
 		int index;
@@ -903,7 +903,8 @@ ccm_send_cl_reply(ll_cluster_t *hb, ccm_info_t *info)
 {
 	int ret=FALSE, bitmap_strlen;
 	char memlist[MAX_MEMLIST_STRING];
-	char *cl, *cl_tmp;
+	const char* cl;
+	const char* cl_tmp;
 	void *cltrack;
 	uint  trans;
 	int repeat;
@@ -3833,7 +3834,7 @@ static void
 dump_mbrs(ccm_info_t *info)
 {
 	int i;
-	char *nodename;
+	const char *nodename;
 	int leader;
 	
 	static struct born_s  {

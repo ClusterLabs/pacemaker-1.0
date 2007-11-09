@@ -94,7 +94,7 @@ update_initlink(ccm_update_t *tab)
 /* 
  * return name of the cluster leader in the next element in the list. 
  */
-char *
+const char *
 update_next_link(ccm_update_t *tab, llm_info_t *llm, void *tr, uint *uptime)
 {
 	update_t *node;
@@ -462,7 +462,7 @@ update_am_i_leader(ccm_update_t *tab,
 /*
  * return the name of the cluster leader. 
  */
-char *
+const char *
 update_get_cl_name(ccm_update_t *tab,
 		   llm_info_t *llm)
 {

@@ -442,7 +442,7 @@ ccm_create_leave_msg(ccm_info_t *info, int uuid)
 {
 	struct ha_msg *m = ccm_create_msg(info, CCM_TYPE_LEAVE);
 	llm_info_t *llm;
-	char *nodename;
+	const char *nodename;
 	
 	if (m == NULL){
 		ccm_log(LOG_ERR, "message creating failed");

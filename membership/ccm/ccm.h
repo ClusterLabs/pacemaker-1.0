@@ -128,7 +128,7 @@ typedef struct llm_node_s {
 	char	status[STATUSSIZE];
 	int	uptime;
 	gboolean join_request;
-  int join_request_major_trans;
+	int join_request_major_trans;
 	gboolean receive_change_msg;
 	char	site[PATH_MAX];
 	int	weight;
@@ -142,7 +142,7 @@ typedef struct llm_info_s {
 
 int		llm_get_live_nodecount(llm_info_t *);
 int		llm_node_cmp(llm_info_t *llm, int indx1, int indx2);
-char*		llm_get_nodename(llm_info_t *, const int );
+const char*	llm_get_nodename(llm_info_t *, const int );
 int		llm_status_update(llm_info_t *, const char *, 
 				  const char *, char*);
 void		llm_display(llm_info_t *llm);
@@ -215,9 +215,9 @@ void update_add(ccm_update_t *, llm_info_t *, const char *, int, gboolean);
 void update_remove(ccm_update_t *, llm_info_t *, const char *);
 int update_am_i_leader(ccm_update_t *, llm_info_t *);
 int update_can_be_leader(ccm_update_t *,  llm_info_t *llm, const char *, int );
-char * update_get_cl_name(ccm_update_t *, llm_info_t *);
+const char * update_get_cl_name(ccm_update_t *, llm_info_t *);
 void * update_initlink(ccm_update_t *);
-char * update_next_link(ccm_update_t *, llm_info_t *, void *, uint *);
+const char * update_next_link(ccm_update_t *, llm_info_t *, void *, uint *);
 void update_freelink(ccm_update_t *, void *);
 int update_get_next_index(ccm_update_t *, llm_info_t *, int *);
 int update_strcreate(ccm_update_t *tab, char *memlist,llm_info_t *llm);
