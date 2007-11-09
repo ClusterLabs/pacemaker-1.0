@@ -417,6 +417,7 @@ struct llc_ops {
 #define KEY_STONITH	"stonith"
 #define KEY_STONITHHOST "stonith_host"
 #define KEY_CLIENT_CHILD "respawn"
+#define KEY_FAILFAST	"failfast"
 #define KEY_COMPRESSION "compression"
 #define KEY_COMPRESSION_THRESHOLD "compression_threshold"
 #define KEY_TRADITIONAL_COMPRESSION "traditional_compression"

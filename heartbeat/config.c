@@ -86,6 +86,7 @@ static int set_stonith_info(const char *);
 static int set_stonith_host_info(const char *);
 static int set_realtime_prio(const char *);
 static int add_client_child(const char *);
+static int add_failfast_child(const char *);
 static int set_compression(const char *);
 static int set_compression_threshold(const char *);
 static int set_traditional_compression(const char *);
@@ -183,7 +184,8 @@ static const struct WholeLineDirective {
 {	{KEY_STONITH,  	   set_stonith_info}
 ,	{KEY_STONITHHOST,  set_stonith_host_info}
 ,	{KEY_APIPERM,	   set_api_authorization}
-,	{KEY_CLIENT_CHILD,  add_client_child}
+,	{KEY_CLIENT_CHILD, add_client_child}
+,	{KEY_FAILFAST,	   add_failfast_child}
 };
 
 extern const char *			cmdname;
@@ -2016,7 +2018,7 @@ set_badpack_warn(const char* value)
 }
 
 static int
-add_client_child(const char * directive)
+add_client_child_base(const char * directive, gboolean failfast)
 {
 	struct client_child*	child;
 	const char *		uidp;
@@ -2103,6 +2105,7 @@ add_client_child(const char * directive)
 	}
 	memset(child, 0, sizeof(*child));
 	child->respawn = 1;
+	child->rebootifitdies = failfast;
 	child->u_runas = pw->pw_uid;
 	child->g_runas = pw->pw_gid;
 	child->command = command;
@@ -2111,6 +2114,16 @@ add_client_child(const char * directive)
 	config->last_client = g_list_last(config->client_list);
 
 	return HA_OK;
+}
+static int
+add_client_child(const char * directive)
+{
+	return add_client_child_base(directive, FALSE);
+}
+static int
+add_failfast_child(const char * directive)
+{
+	return add_client_child_base(directive, TRUE);
 }
 
 static int
@@ -2487,13 +2500,13 @@ set_release2mode(const char* value)
 #endif
 	,	{"apiauth", "pingd   	uid=root"}
 
-	,	{"respawn", " "HA_CCMUSER " " HA_LIBHBDIR "/ccm"}
-	,	{"respawn", " "HA_CCMUSER " " HA_LIBHBDIR "/cib" }
+	,	{"failfast"," "HA_CCMUSER " " HA_LIBHBDIR "/ccm"}
+	,	{"failfast"," "HA_CCMUSER " " HA_LIBHBDIR "/cib" }
 		
 	,	{"respawn", "root "           HA_LIBHBDIR "/lrmd -r"}
 	,	{"respawn", "root "	      HA_LIBHBDIR "/stonithd"}
 	,	{"respawn", " "HA_CCMUSER " " HA_LIBHBDIR "/attrd" }
-	,	{"respawn", " "HA_CCMUSER " " HA_LIBHBDIR "/crmd" }
+	,	{"failfast"," "HA_CCMUSER " " HA_LIBHBDIR "/crmd" }
 #ifdef MGMT_ENABLED
 	,	{"respawn", "root "  	      HA_LIBHBDIR "/mgmtd -v"}
 #endif
@@ -2505,10 +2518,10 @@ set_release2mode(const char* value)
 		{"apiauth", "cib 	uid=" HA_CCMUSER}
 	,	{"apiauth", "crmd   	uid=" HA_CCMUSER}
 
-	,	{"respawn", " "HA_CCMUSER " " HA_LIBHBDIR "/ccm"}
-	,	{"respawn", " "HA_CCMUSER " " HA_LIBHBDIR "/cib"}
+	,	{"failfast"," "HA_CCMUSER " " HA_LIBHBDIR "/ccm"}
+	,	{"failfast"," "HA_CCMUSER " " HA_LIBHBDIR "/cib"}
 	,	{"respawn", "root "           HA_LIBHBDIR "/lrmd"}
-	,	{"respawn", " "HA_CCMUSER " " HA_LIBHBDIR "/crmd"}
+	,	{"failfast"," "HA_CCMUSER " " HA_LIBHBDIR "/crmd"}
 		/* Don't 'respawn' pingd - it's a resource agent */
 	};
 
@@ -2519,12 +2532,12 @@ set_release2mode(const char* value)
 	,	{"apiauth", "attrd   	uid=" HA_CCMUSER}
 	,	{"apiauth", "crmd   	uid=" HA_CCMUSER}
 
-	,	{"respawn", " "HA_CCMUSER                   " "HA_LIBHBDIR"/ccm"}
-	,	{"respawn", " "HA_CCMUSER " "VALGRIND_PREFIX" "HA_LIBHBDIR"/cib"}
+	,	{"failfast"," "HA_CCMUSER                   " "HA_LIBHBDIR"/ccm"}
+	,	{"failfast"," "HA_CCMUSER " "VALGRIND_PREFIX" "HA_LIBHBDIR"/cib"}
 	,	{"respawn", "root "                            HA_LIBHBDIR"/lrmd -r"}
 	,	{"respawn", "root "	                       HA_LIBHBDIR"/stonithd"}
 	,	{"respawn", " "HA_CCMUSER " "VALGRIND_PREFIX" "HA_LIBHBDIR"/attrd" }
-	,	{"respawn", " "HA_CCMUSER " "VALGRIND_PREFIX" "HA_LIBHBDIR"/crmd"}
+	,	{"failfast"," "HA_CCMUSER " "VALGRIND_PREFIX" "HA_LIBHBDIR"/crmd"}
 		/* Don't 'respawn' pingd - it's a resource agent */
 	};
     

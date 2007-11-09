@@ -87,6 +87,7 @@
 #include <clplumbing/cl_poll.h>
 #include <clplumbing/cl_signal.h>
 #include <clplumbing/netstring.h>
+#include "hb_signal.h"
 
 /* Definitions of API query handlers */
 static int api_ping_iflist(const struct ha_msg* msg, struct node_info * node
@@ -1958,6 +1959,7 @@ APIclients_input_dispatch(IPC_Channel* chan, gpointer user_data)
 	gboolean	ret = TRUE;
 
 
+	hb_signal_process_pending();
 	if (DEBUGDETAILS) {
 		cl_log(LOG_DEBUG
 		,	"APIclients_input_dispatch() {");

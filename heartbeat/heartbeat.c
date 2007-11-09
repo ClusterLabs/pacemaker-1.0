@@ -243,6 +243,7 @@
 #include <clplumbing/netstring.h>
 #include <clplumbing/coredumps.h>
 #include <clplumbing/cl_random.h>
+#include <clplumbing/cl_reboot.h>
 #include <heartbeat.h>
 #include <ha_msg.h>
 #include <hb_api.h>
@@ -3612,10 +3613,21 @@ ManagedChildDied(ProcTrack* p, int status, int signo, int exitcode
 		}
 		if (0 != signo) {
 			cl_log(shutdown_in_progress ? LOG_DEBUG : LOG_ERR
-			,	"Client %s(pid=%d) killed by signal %d."
+			,	"Client %s (pid=%d) killed by signal %d."
 			,	managedchild->command
-		       ,	(int)p->pid
+			,	(int)p->pid
 			,	signo);
+		}
+	}
+	if (managedchild->rebootifitdies) {
+		if (signo != 0 || ((exitcode != 0 && !shutdown_in_progress))) {
+			/* Fail fast and safe - reboot this machine.
+			 * I'm not 100% sure whether we should do this for all
+			 * exits outside of shutdown intervals, but it's
+			 * clear that we should reboot in case of abnormal
+			 * exits...
+ 		 	 */
+			cl_reboot(config->heartbeat_ms, managedchild->command);
 		}
 	}
 

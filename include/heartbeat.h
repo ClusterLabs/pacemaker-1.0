@@ -325,7 +325,8 @@ struct msg_xmit_hist {
 struct client_child {
 	pid_t		pid;		/* Process id of child process */
 	ProcTrack*	proctrack;	/* Process tracking structure */
-	int		respawn;	/* Respawn it if it dies? */
+	gboolean	respawn;	/* Respawn it if it dies? */
+	gboolean	rebootifitdies;	/* Reboot system it if it dies? */
 	uid_t		u_runas;	/* Which user to run as? */
 	gid_t		g_runas;	/* Which group id to run as? */
 	int		respawncount;	/* Last time we respawned */
