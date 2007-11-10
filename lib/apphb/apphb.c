@@ -332,6 +332,47 @@ apphb_setwarn(unsigned long hbms)
 	}
 	return  0;
 }
+int
+apphb_setreboot(unsigned int truefalse)
+{
+	G_DECLARE_STATIC_MUTEX(lock)
+	struct apphb_msmsg	msg;
+	struct IPC_MESSAGE	Msg;
+	int			err;
+
+
+	G_THREAD_INIT(NULL);
+	G_STATIC_MUTEX_LOCK(&lock);
+	if (hbcomm == NULL || hbstatus != IPC_OK) {
+		errno = ESRCH;
+		G_STATIC_MUTEX_UNLOCK(&lock);
+		return -1;
+	}
+	strncpy(msg.msgtype, SETREBOOT, sizeof(msg.msgtype));
+	msg.ms = truefalse ? 1UL : 0UL;
+
+	memset(&Msg, 0, sizeof(Msg));
+	
+	Msg.msg_buf = NULL;
+	Msg.msg_body = &msg;
+	Msg.msg_len = sizeof(msg);
+	Msg.msg_done = NULL;
+	Msg.msg_private = NULL;
+	Msg.msg_ch = hbcomm;
+
+	if (hbcomm->ops->send(hbcomm, &Msg) != IPC_OK) {
+		G_STATIC_MUTEX_UNLOCK(&lock);
+		errno = EBADF;
+		return -1;
+	}
+	G_STATIC_MUTEX_UNLOCK(&lock);
+
+	if ((err = apphb_getrc()) != 0) {
+		errno = err;
+		return -1;
+	}
+	return  0;
+}
 /* Perform application heartbeat */
 int
 apphb_hb(void)

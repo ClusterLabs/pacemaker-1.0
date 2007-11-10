@@ -111,6 +111,23 @@ int apphb_setinterval(unsigned long hbms);
 int apphb_setwarn(unsigned long hbms);
 
 /*
+ * apphb_setreboot: set auto-reboot on failure
+ * 		When a process which has autoreboot enabled
+ * 		exits prematurely doesn't heartbeat, the OS
+ * 		is immediately rebooted.
+ * parameters:
+ *   truefalse: set to a non-zero value to enable auto-reboot,
+ *   		zero to disable auto-reboot for this process.
+ *
+ * errno values:
+ * EBADF:	application heartbeat service not available
+ * ESRCH:	current process not registered for monitoring.
+ * EPERM:	no permission to set this machine to auto-reboot
+ * 		on failure.
+ */
+int apphb_setreboot(unsigned int truefalse);
+
+/*
  * apphb_hb: application heartbeat call.
  * 
  * errno values:

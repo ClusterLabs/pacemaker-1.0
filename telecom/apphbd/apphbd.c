@@ -92,6 +92,7 @@
 #include <clplumbing/coredumps.h>
 #include <clplumbing/cl_malloc.h>
 #include <clplumbing/cl_pidfile.h>
+#include <clplumbing/cl_reboot.h>
 
 #ifndef PIDFILE
 #	define		PIDFILE HA_VARRUNDIR "/apphbd.pid"
@@ -144,6 +145,8 @@ struct apphb_client {
 	unsigned long		timerms;	/* heartbeat timeout in ms */
 	longclock_t		lasthb;		/* Last HB time */
 	unsigned long		warnms;		/* heartbeat warntime in ms */
+	gboolean		cause_reboot;	/* True if client probs should
+						 * cause a crash*/
 	gboolean		missinghb;	/* True if missing a hb */
 	GCHSource*		source;
 	IPC_Channel*		ch;
@@ -151,6 +154,9 @@ struct apphb_client {
 	struct apphb_rc		rc;		/* last return code */
 	gboolean		deleteme;	/* Delete after next call */
 };
+
+/* Probably ought to eventually make this configurable, but it's a start */
+uid_t	critical_uid_list [] = {0, HA_CCMUID};
 
 #define	MAXNOTIFYPLUGIN	100
 
@@ -288,6 +294,7 @@ apphb_client_new(struct IPC_CHANNEL* ch)
 	ret->pid = 0;
 	ret->deleteme = FALSE;
 	ret->missinghb = FALSE;
+	ret->cause_reboot = FALSE;
 
 	/* Create the standard result code (errno) message to send client
 	 * NOTE: this disallows multiple outstanding calls from a client
@@ -455,6 +462,28 @@ apphb_client_set_warntime(apphb_client_t* client, void * Msg, size_t msgsize)
 	return 0;
 }
 
+/* Client requested to set/reset 'reboot' attribute */
+static int
+apphb_client_set_reboot(apphb_client_t* client, void * Msg, size_t msgsize)
+{
+	struct apphb_msmsg*	msg = Msg;
+	gboolean		tf = (gboolean)msg->ms;
+
+	if (msgsize < sizeof(*msg)) {
+		return EINVAL;
+	}
+	/*
+ 	 * Only authorized clients can request system reboots if they fail,
+ 	 * since this is a perfect way to cause a denial of service.
+ 	 */
+	if (tf && !authenticate_client(client, critical_uid_list
+		,	NULL, DIMOF(critical_uid_list), 0)) {
+			return EPERM;
+	}
+	client->cause_reboot = tf;
+	client->lasthb = time_longclock();
+	return 0;
+}
 
 /* Client heartbeat received */
 static int
@@ -537,6 +566,7 @@ struct hbcmd	hbcmds[] =
 	{REGISTER,	TRUE, apphb_client_register},
 	{SETINTERVAL,	TRUE, apphb_client_set_timeout},
 	{SETWARNTIME,	TRUE, apphb_client_set_warntime},
+	{SETREBOOT,	TRUE, apphb_client_set_reboot},
 	{UNREGISTER,	TRUE, apphb_client_disconnect},
 };
 
@@ -627,17 +657,21 @@ apphb_notify(apphb_client_t* client, apphb_event_t event)
 	int	logtype = LOG_WARNING;
 	const char *	msg;
 	int		j;
+	gboolean	eventisbad = FALSE;
+	const char *	word = "";
 
 
 	switch(event) {
 	case	APPHB_HUP:
 		msg = "hangup";
 		logtype = LOG_WARNING;
+		eventisbad = TRUE;
 		break;
 
 	case	APPHB_NOHB:
 		msg = "failed to heartbeat";
 		logtype = LOG_WARNING;
+		eventisbad = TRUE;
 		break;
 
 	case	APPHB_HBAGAIN:
@@ -653,10 +687,20 @@ apphb_notify(apphb_client_t* client, apphb_event_t event)
 	default:
 		return;
 	}
+	if (eventisbad && client->cause_reboot) {
+		logtype = LOG_EMERG;
+		word="Critical ";
+	}
 	if (event != APPHB_HBUNREG) {
-		cl_log(logtype, "apphb client '%s' / '%s' (pid %ld) %s"
-		,	client->appname, client->appinst
+		cl_log(logtype, "%sapphb client '%s' / '%s' (pid %ld) %s"
+		,	word, client->appname, client->appinst
 		,	(long)client->pid, msg);
+	}
+
+	if (eventisbad && client->cause_reboot) {
+		/* Uh, Oh... Time to go! */
+		tickle_watchdog();
+		cl_reboot(apphbd_config.wdt_interval_ms, client->appname);
 	}
 
 	/* Tell the plugins something happened */
@@ -1059,7 +1103,6 @@ init_start()
 	drop_privs(0, 0); /* Become nobody */
 	g_main_run(mainloop);
 	return_to_orig_privs();
-	cl_log(LOG_DEBUG, "testing write to syslog when i am a nobody");
 	close_watchdog();
 	wconn->ops->destroy(wconn);
 	if (unlink(PIDFILE) == 0) {
