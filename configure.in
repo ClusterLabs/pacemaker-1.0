@@ -1868,37 +1868,50 @@ AC_SUBST(CURSESLIBS)
 
 dnl ************ curses **********************
 
+AC_ARG_WITH(ais-prefix,
+    [  --with-ais-prefix=DIR      Prefix where AIS is installed [none]],
+    [ AISPREFIX=$withval ])
 
-AC_MSG_CHECKING(for native AIS support)
-AC_ARG_ENABLE([native-ais],
-[  --enable-native-ais  Run the Cluster Resource Manager nativly over openAIS.  [default=no]],
-                          [], [enable_native_ais=no])
+if test X"$AISPREFIX" = X"prefix"; then
+ AISPREFIX=$prefix
+fi
 
-if test "x${enable_native_ais}" = "xyes"; then
-   if test -d ${libdir}/openais; then
-        AISPREFIX=${prefix}
-        LIBS="$LIBS -L${libdir}/openais -R${libdir}/openais"
-   elif test -d /usr/local/lib/openais; then
-        AISPREFIX=/usr/local
-   	LIBS="$LIBS -L/usr/local/lib/openais -R/usr/local/lib/openais"
+AC_MSG_CHECKING(for native AIS)
+AISLIB=""
+LCRSODIR=""
+
+if test X"$AISPREFIX" = X""; then
+   AC_MSG_RESULT(no... not requested.)
+
+else
+   AC_MSG_RESULT(yes... $AISPREFIX)
+
+   dnl Find it in lib, lib64, or wherever it wants to live...
+   alib=`ls ${AISPREFIX}/*/openais/libaisutil.so | head -n 1`
+   AISLIB=`dirname $alib`
+   alib=`ls ${AISPREFIX}/*/lcrso/objdb.lcrso | head -n 1`
+   LCRSODIR=`dirname $alib`
+
+   if test -d ${AISLIB} -a -d ${LCRSODIR}; then
+     LIBS="$LIBS -L${AISLIB} -R${AISLIB}"
+     AC_MSG_NOTICE(Testing AIS installation in $AISPREFIX)
+
+     AC_CHECK_LIB(aisutil, saRecvRetry,
+    	[AISLIBS='-laisutil'; 
+	AC_DEFINE(WITH_NATIVE_AIS, 1, Run the Cluster Resource Manager nativly over openAIS)],
+	[AC_MSG_NOTICE("unusable); AISPREFIX=""; LCRSODIR=""])
+
    else
-dnl	AC_MSG_NOTICE(Couldn't find openais installed under ${prefix} or its usual location of /usr/local... )
-	enable_native_ais="no... Couldn't find openais installed under ${libdir} or /usr/local"
+     AC_MSG_ERROR(Couldn't find openais installed under ${AISPREFIX}.)
+     AC_MSG_ERROR(Use --with-ais-prefix to specify a valid location)
+     AISPREFIX=""
+     LCRSODIR=""
    fi
 fi
-AC_MSG_RESULT($enable_native_ais)
-AC_MSG_NOTICE(LIBS: $LIBS)
 
-if test "x${enable_native_ais}" = "xyes"; then
-   AC_MSG_NOTICE(Testing AIS installation in $AISPREFIX)
-   AC_CHECK_LIB(aisutil, saRecvRetry,
-    	[AISLIBS='-laisutil'; 
-	AC_DEFINE(WITH_NATIVE_AIS,1, Run the Cluster Resource Manager nativly over openAIS)],
-	[AC_MSG_NOTICE("Native AIS Support disabled); enable_native_ais=no])
-fi
-
-AM_CONDITIONAL(BUILD_NATIVE_AIS, test "x${enable_native_ais}" = "xyes")
+AM_CONDITIONAL(BUILD_NATIVE_AIS, test "x${AISPREFIX}" != "x")
 AC_SUBST(AISPREFIX)
+AC_SUBST(LCRSODIR)
 AC_SUBST(AISLIBS)
 
 
@@ -3160,7 +3173,7 @@ AC_MSG_RESULT([  Build IPMILan Plugin     = "${enable_ipmilan}"])
 AC_MSG_RESULT([  Build New CRM            = "${enable_crm}"])
 AC_MSG_RESULT([  Build New LRM            = "${enable_lrm}"])
 AC_MSG_RESULT([  Build Ldirectord         = "${enable_ldirectord}"])
-AC_MSG_RESULT([  Use native AIS           = "${enable_native_ais}"])
+AC_MSG_RESULT([  With AIS prefix          = "${AISPREFIX}"])
 
 AC_MSG_RESULT([  Build CIM providers      = "${enable_cim_provider}"])
 if test "x${enable_cim_provider}" = "xyes"; then
