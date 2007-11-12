@@ -26,10 +26,11 @@ INCLUDES        = -I$(top_builddir)/include  -I$(top_srcdir)/include     \
 halibdir	=  $(libdir)/@HB_PKG@
 
 COMMONLIBS	=  $(top_builddir)/lib/clplumbing/libplumb.la   \
+		   $(AISLIBS)					\
 		   $(GLIBLIB)
 noinst_HEADERS	=  mgmt_internal.h
 EXTRA_DIST	=  mgmtd.pam
-		   
+
 LRM_DIR		= lrm
 
 pamdir 		= /etc/pam.d
