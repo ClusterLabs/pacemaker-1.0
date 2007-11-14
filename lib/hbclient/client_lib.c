@@ -161,6 +161,7 @@ static int		get_iflist(llc_private_t*, const char *host);
 static void		zap_iflist(llc_private_t*);
 static void		zap_order_seq(llc_private_t* pi);
 static void		zap_order_queue(llc_private_t* pi);
+static void		zap_msg_queue(llc_private_t* pi);
 static int		enqueue_msg(llc_private_t*,struct ha_msg*);
 static struct ha_msg*	dequeue_msg(llc_private_t*);
 static gen_callback_t*	search_gen_callback(const char * type, llc_private_t*);
@@ -361,8 +362,9 @@ hb_api_signon(struct ll_cluster* cinfo, const char * clientid)
 
 	/* Connect to the heartbeat API server */
 
-	if ((pi->chan = ipc_channel_constructor(IPC_ANYTYPE, wchanattrs))
-	==	NULL) {
+	pi->chan = ipc_channel_constructor(IPC_ANYTYPE, wchanattrs);
+	g_hash_table_destroy(wchanattrs);
+	if (pi->chan == NULL) {
 		ha_api_log(LOG_ERR, "hb_api_signon: Can't connect"
 		" to heartbeat");
 		ZAPMSG(request);
@@ -504,7 +506,8 @@ hb_api_delete(struct ll_cluster* ci)
 	zap_iflist(pi);
 	zap_nodelist(pi);
 
-	/* What about our message queue? */
+	/* Free up the message queue */
+	zap_msg_queue(pi);
 
 	/* Free up the private information */
 	memset(pi, 0, sizeof(*pi));
@@ -1479,6 +1482,23 @@ zap_order_queue(llc_private_t* pi)
 	}
 	pi->order_queue_head = NULL;
 }
+
+static void
+zap_msg_queue(llc_private_t* pi)
+{
+	struct MsgQueue* qelem = pi->firstQdmsg;
+	struct MsgQueue* next;
+
+	while (qelem != NULL){
+		next = qelem->next;
+		ZAPMSG(qelem->value);
+		cl_free(qelem);
+		qelem = next;	 
+	}
+	pi->firstQdmsg = NULL;
+	pi->lastQdmsg = NULL;
+}
+
 
 /*
  * Create a new stringlist.
