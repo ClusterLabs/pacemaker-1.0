@@ -551,7 +551,7 @@ free_storage(void)
 
 	free_membershiptable();
 	g_ptr_array_free(gMembershipTable, 1);
-	gResourceTable = NULL;
+	gMembershipTable = NULL;
 
 }
 
