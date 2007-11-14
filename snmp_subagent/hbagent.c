@@ -394,7 +394,7 @@ hbconfig_get_str_value(const char * attr, char * * value)
 	return HA_OK;
     };
 
-    *value = cl_strdup(ret);
+    *value = ret;
 
     return HA_OK;
 }
@@ -538,19 +538,19 @@ void
 free_storage(void)
 {
     	free_nodetable();
-	g_ptr_array_free(gNodeTable, 0);
+	g_ptr_array_free(gNodeTable, 1);
 	gNodeTable = NULL;
 
 	free_iftable();
-	g_ptr_array_free(gIFTable, 0);
+	g_ptr_array_free(gIFTable, 1);
 	gIFTable = NULL;
 
 	free_resourcetable();
-	g_ptr_array_free(gResourceTable, 0);
+	g_ptr_array_free(gResourceTable, 1);
 	gResourceTable = NULL;
 
 	free_membershiptable();
-	g_ptr_array_free(gMembershipTable, 0);
+	g_ptr_array_free(gMembershipTable, 1);
 	gResourceTable = NULL;
 
 }
@@ -579,6 +579,7 @@ init_heartbeat(void)
 	parameter = hb->llc_ops->get_parameter(hb, KEY_COREROOTDIR);
 	if (parameter) {
 		cl_set_corerootdir(parameter);
+		cl_free(parameter);
 	}
 	cl_cdtocoredir();
 
