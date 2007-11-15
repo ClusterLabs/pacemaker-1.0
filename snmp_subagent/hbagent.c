@@ -558,7 +558,7 @@ free_storage(void)
 int
 init_heartbeat(void)
 {
-	const char * parameter;
+	char * parameter;
 	hb = NULL;
 
 	cl_log_set_entity("lha-snmpagent");
