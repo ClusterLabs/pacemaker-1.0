@@ -25,7 +25,7 @@
 #include <allocate.h>
 #include <utils.h>
 
-#define DELETE_THEN_REFRESH 1
+#define DELETE_THEN_REFRESH 1 /* The crmd will remove the resource from the CIB itself, making this redundant */
 
 #define VARIANT_NATIVE 1
 #include <lib/crm/pengine/variant.h>
@@ -1024,17 +1024,17 @@ pe_notify(resource_t *rsc, node_t *node, action_t *op, action_t *confirm,
 	CRM_CHECK(node != NULL, return NULL);
 
 	if(node->details->online == FALSE) {
-		crm_info("Skipping notification for %s: node offline", rsc->id);
+		crm_debug_2("Skipping notification for %s: node offline", rsc->id);
 		return NULL;
 	} else if(op->runnable == FALSE) {
-		crm_info("Skipping notification for %s: not runnable", op->uuid);
+		crm_debug_2("Skipping notification for %s: not runnable", op->uuid);
 		return NULL;
 	}
 	
 	value = g_hash_table_lookup(op->meta, "notify_type");
 	task = g_hash_table_lookup(op->meta, "notify_operation");
 
-	crm_info("Creating notify actions for %s: %s (%s-%s)",
+	crm_debug("Creating notify actions for %s: %s (%s-%s)",
 		    op->uuid, rsc->id, value, task);
 	
 	key = generate_notify_key(rsc->id, value, task);
@@ -1311,8 +1311,9 @@ gboolean
 DeleteRsc(resource_t *rsc, node_t *node, gboolean optional, pe_working_set_t *data_set)
 {
 	action_t *delete = NULL;
+#if DELETE_THEN_REFRESH
  	action_t *refresh = NULL;
-
+#endif
 	if(is_set(rsc->flags, pe_rsc_failed)) {
 		crm_debug_2("Resource %s not deleted from %s: failed",
 			    rsc->id, node->details->uname);
