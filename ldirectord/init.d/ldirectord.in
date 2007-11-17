@@ -2,9 +2,10 @@
 #
 # ldirectord  Linux Director Daemon
 #
-# chkconfig: 2345 92 40
+# chkconfig: - 92 40
 # description: Start and stop ldirectord on non-heartbeat systems
 #              Using the config file /etc/ha.d/ldirectord.cf
+#	       Normally ldirectord is started and stopped by heartbeat
 #              
 # processname: ldirectord
 # config: /etc/ha.d/ldirectord.cf
@@ -60,9 +61,11 @@ action() {
 case "$1" in
   start)
         action "Starting ldirectord" $DAEMON start
+	touch /var/lock/subsys/ldirectord
 	;;
   stop)
         action "Stopping ldirectord" $DAEMON stop
+	rm -f /var/lock/subsys/ldirectord
 	;;
   restart)
         action "Restarting ldirectord" $DAEMON restart

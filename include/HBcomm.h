@@ -31,7 +31,7 @@
 struct hb_media_fns {
 	struct hb_media*(*new)		(const char * token);
 	int		(*parse)	(const char * options);
-	int		(*open)		(struct hb_media *mp);
+	int		(*mopen)	(struct hb_media *mp);
 	int		(*close)	(struct hb_media *mp);
 	void*		(*read)		(struct hb_media *mp, int *len );
 	int		(*write)	(struct hb_media *mp

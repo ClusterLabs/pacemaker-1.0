@@ -850,7 +850,7 @@ initialize_heartbeat()
 		
 		ourproc = procinfo->nprocs;
 		
-		if (mp->vf->open(mp) != HA_OK){
+		if ((mp->vf->mopen)(mp) != HA_OK){
 			cl_log(LOG_ERR, "cannot open %s %s",
 			       mp->type,
 			       mp->name);
