@@ -367,7 +367,7 @@ bcast_write(struct hb_media* mp, void *pkt, int len)
 	BCASTASSERT(mp);
 	ei = (struct ip_private *) mp->pd;
 	
-	if ((rc=sendto(ei->wsocket, pkt, len, MSG_DONTWAIT
+	if ((rc=sendto(ei->wsocket, pkt, len, 0
 	,	(struct sockaddr *)&ei->addr
 	,	sizeof(struct sockaddr))) != len) {
 
