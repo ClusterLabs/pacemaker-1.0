@@ -376,7 +376,7 @@ void native_free(resource_t *rsc)
 
 
 enum rsc_role_e
-native_resource_state(resource_t *rsc, gboolean current)
+native_resource_state(const resource_t *rsc, gboolean current)
 {
 	enum rsc_role_e role = rsc->next_role;
 	if(current) {
@@ -384,4 +384,37 @@ native_resource_state(resource_t *rsc, gboolean current)
 	}
 	crm_debug_2("%s state: %s", rsc->id, role2text(role));
 	return role;
+}
+
+node_t *native_location(resource_t *rsc, GListPtr *list, gboolean current) 
+{
+    node_t *one = NULL;
+    GListPtr result = NULL;
+
+    if(rsc->children) {
+	slist_iter(child, resource_t, rsc->children, lpc,
+		   child->fns->location(child, &result, current);
+	    );
+	
+    } else if(current && rsc->running_on) {
+	result = g_list_copy(rsc->running_on);
+	
+    } else if(current == FALSE && rsc->allocated_to) {
+	result = g_list_append(NULL, rsc->allocated_to);
+    }
+
+    if(result && g_list_length(result) == 1) {
+	one = g_list_nth_data(result, 0);
+    }
+    
+    if(list) {
+	slist_iter(node, node_t, result, lpc,
+		   if(*list == NULL || pe_find_node_id(*list, node->details->id) == NULL) {
+		       *list = g_list_append(*list, node);
+		   }
+	    );
+    }
+
+    g_list_free(result);	
+    return one;
 }
