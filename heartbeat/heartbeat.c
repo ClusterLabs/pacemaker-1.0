@@ -1417,8 +1417,9 @@ master_control_process(void)
 		G_main_setmaxdispatchtime((GSource*)s, 50);
 		G_main_setdescription((GSource*)s, "write child");
 		/* Ensure that a hanging write process does not livelock
-		 * the MCP */
+		 * the MCP yet doesn't get kicked out */
 		sysmedia[j]->wchan[P_WRITEFD]->should_send_block = FALSE;
+		sysmedia[j]->wchan[P_WRITEFD]->should_block_fail = FALSE;
 		
 		/* Connect up the read child IPC channel... */
 		s = G_main_add_IPC_Channel(PRI_READPKT
