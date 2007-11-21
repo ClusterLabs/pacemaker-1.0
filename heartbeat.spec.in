@@ -84,7 +84,7 @@
 %if %{is_rhel}
 #	I'm told that executing rpm from rpmbuild is a really bad idea.  Forbidden by Fedora...
 	%{!?rhel_ver: %define rhel_ver %(Z=`rpm -q --whatprovides /etc/redhat-release`;A=`rpm -q --qf '%{V}' $Z`; echo ${A:0:1})}
-	%if rhel_ver < 6
+	%if %{rhel_ver} < 6
 		%define REQUIRE_OPENHPI	0
 	%endif
 	
