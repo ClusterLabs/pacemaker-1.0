@@ -172,13 +172,13 @@
 %endif
 %if %{is_fedora}
 	%undefine	LIBNET_DEVEL
-	%define		LIBNET_DEVEL	libnet-devel,
+	%define		LIBNET_DEVEL	,libnet-devel,
 %endif
 %if %{is_rhel}
 	# Here is a place where CENTOS is different from RHEL.
 	# They provide a libnet package, and RHEL does not...
 	%undefine	LIBNET_DEVEL
-	%define		LIBNET_DEVEL ""
+	%define		LIBNET_DEVEL ,
 %endif
 %if is_suse
 	%undefine pkg_group
@@ -221,7 +221,7 @@ Packager: Alan Robertson <alanr@unix.sh>
 Source: http://linux-ha.org/download/%{HB_PKG}-%{HB_VERSION}.tar.gz
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 BuildRequires:	autoconf, automake libtool, libxml2-devel
-BuildRequires:	glib2-devel, python, python-devel, perl, %{SSH}, %{LIBNET_DEVEL} gdbm-devel, bison, flex
+BuildRequires:	glib2-devel, python, python-devel, perl, %{SSH} , gdbm-devel %{LIBNET_DEVEL} bison, flex
 %if %{REQUIRE_OPENHPI}
 BuildRequires:	openhpi-devel >= 2.6
 %endif
