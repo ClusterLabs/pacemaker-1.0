@@ -466,6 +466,7 @@ make DESTDIR=$RPM_BUILD_ROOT install
 %dir %{localstatedir}/run/%{HB_PKG}
 %attr (2555, %{HA_CCMUSER}, %{HA_APIGROUP}) %{bindir}/cl_status
 %{bindir}/cl_respawn
+%{sbindir}/ciblint
 %{sbindir}/ptest 
 %{sbindir}/crmadmin 
 %{sbindir}/cibadmin 
