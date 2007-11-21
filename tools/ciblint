@@ -1,0 +1,1320 @@
+#!/usr/bin/python
+__copyright__='''
+Author: Alan Robertson	<alanr@unix.sh>
+Copyright (C) 2007 International Business Machines
+Licensed under the GNU GPL version 2 or later
+'''
+
+# This program is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License
+# as published by the Free Software Foundation; either version 2
+# of the License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
+
+#
+#	ciblint: Program to audit Linux-HA CIB for potential problems.
+#	analogous to 'lint' for 'C' programs
+#
+#
+#	Not everything that 'ciblint' comments on is necessarily a problem
+#	but is probably worth spending some effort to understand.
+#
+#	This program is a work-in-progress, but for many CIBs it's probably
+#	useful now.
+#
+#	A few of the things we try and catch:
+#
+#	- Non-unique 'id' strings for the given <tag>
+#	- 'id' strings which are not globally unique
+#	- Incorrect <nvpair> 'name's or 'value's
+#	- Duplicate <nvpair> 'name's in a list
+#	- Incorrect XML attribute names or values
+#	- references to non-existent resources
+#	- references to non-existent nodes
+#	- invalid values for the type involved
+#	- resources you're not monitoring
+#
+#	Things to do:
+#	- validate the CIB against the DTD
+#	- validate the metadata against the metadata DTD
+#	- validate resource nvpairs against resource metadata (using lrmadmin)
+#	- process the 'status' section and flag potential problems
+#	- figure out why resource "x" isn't running
+#	- change our internal metadata to use "score" as a type??
+#
+#	To Do for the OCF standards crew:
+#	- Add support for enumerations to metadata
+#	- add content type alternatives, first recognized is best (?)
+#		Some thoughts:
+#			score/string
+#			positiveinteger/integer
+#			negativeinteger/integer
+#			ipv4addr/string
+#			pathname/string
+
+from UserDict import UserDict
+import os, sys, string, types
+from xml.dom.ext.reader.Sax2 import FromXmlStream
+#from xml.dom.ext import PrettyPrint
+
+global CIBADMIN, HA_LIBHBDIR
+HA_LIBHBDIR = "/usr/lib/heartbeat
+CIBADMIN="/usr/sbin/cibadmin"
+
+global note_non_default_values
+global note_missing_metadata
+note_non_default_values = 1
+note_missing_metadata = 1
+
+
+def typeToString(node):
+  if node.nodeType == node.ELEMENT_NODE:
+    return "ELEMENT"
+  if node.nodeType == node.TEXT_NODE:
+    return "TEXT"
+  if node.nodeType == node.CDATA_SECTION_NODE:
+    return "CDATA"
+  if node.nodeType == node.ENTITY_REFERENCE_NODE:
+    return "ENTITYREF"
+  if node.nodeType == node.ENTITY_NODE:
+    return "ENTITY"
+  if node.nodeType == node.PROCESSING_INSTRUCTION_NODE:
+    return "INSTRUCTION"
+  if node.nodeType == node.COMMENT_NODE:
+    return "COMMENT"
+  if node.nodeType == node.DOCUMENT_NODE:
+    return "DOCUMENT"
+  if node.nodeType == node.DOCUMENT_TYPE_NODE:
+    return "DOCTYPE"
+  if node.nodeType == node.NOTATION_NODE:
+    return "NOTATION"
+  return "HUH?"
+
+
+def node2str(node):
+  if hasattr(node, "tagName"):
+    return "<%s type=%s>" % (node.tagName, typeToString(node))
+  return "<NODE TYPE=%s>" % (typeToString(node))
+
+def prchildren(node):
+  for child in node.childNodes:
+    print "CHILD: " + node2str(child)
+
+
+#
+#	A class for a data type as defined by our metadata - with a few extensions...
+#
+class MetadataValueType:
+
+  # List of supported types
+  ValidTypes = {"integer":1, "boolean":1, "time":1, "string":1, "enum":1, "score":1}
+
+  # List of supported time units - probably not correct ;-)
+  TimeUnits = {"s":1, "sec":1, "seconds":1,
+  	"ms":1, "milliseconds":1, "usec":1, "us":1, "microseconds":1,
+  	"min":1, "m":1, "h":1, "hours":1};
+
+  # List of legal boolean strings
+  BooleanStrings = {"true":1, "enabled":1, "1":1, "on":1,
+  	"false":0, "disabled":0, "0":0, "off":0}
+
+  def __init__(self, typename, validtypevals=None):
+    self.typename = string.lower(typename)
+    self.validtypevals = validtypevals
+    if not MetadataValueType.ValidTypes.has_key(typename):
+      print "ERROR: Illegal type [%s]" % typename
+
+  def validate(self, value):
+    value = string.lower(value)
+
+    if self.validtypevals != None:
+      return self.validtypevals.has_key(value)
+
+    if self.typename == "boolean":
+      value=string.lower(value)
+      return MetadataValueType.BooleanStrings.has_key(value)
+
+    if self.typename == "score":
+      if value == "infinity" or value == "-infinity" or value == "+infinity":
+        return 1
+      i = MetadataValueType("integer")
+      return i.validate(value)
+      
+
+    if self.typename == "integer":
+      if len(value) == 0:
+        return None
+      trans=string.maketrans("","")
+      if value[0] == "+" or value[0] == "-":
+        if len(value) < 2:
+          return None
+        value=value[1:]
+      j=0
+      max=len(value)
+      while j < max:
+        # We don't allow negative times...
+        if string.find(string.digits, value[j]) < 0:
+          return None
+        j=j+1
+      return 1
+
+    # "time" objects are elapsed times, not time of day, etc
+    if self.typename == "time":
+       # Split into integer and units
+       lastnum=-1
+       j=0
+       max=len(value)
+       while j < max:
+         # We don't allow negative times...
+         if string.find(string.digits, value[j]) < 0:
+           break
+         lastnum=j
+         j=j+1
+       if j <= 0:
+         return None
+       units=value[j+1:len(value)-1]
+       if len(units) == 0:
+         return 1
+       return MetadataValueType.TimeUnits.has_key(units)
+
+    if self.typename == "string" or self.typename == "enum":
+      # Need to do something better for enum...
+      # but we need more info than currently exists...
+      # See 'validtypevals' for how to implement it in the future
+      return 1
+    print "ERROR: invalid data type [%s]" % self.typename
+    return None
+
+global StringMetadataType, BooleanMetadataType, IntegerMetadataType
+StringMetadataType = MetadataValueType("string")
+BooleanMetadataType = MetadataValueType("boolean")
+IntegerMetadataType = MetadataValueType("integer")
+TimeMetadataType = MetadataValueType("time")
+EnumMetadataType = MetadataValueType("enum")
+ScoreMetadataType = MetadataValueType("score")
+UuidMetadataType = MetadataValueType("string")
+
+#
+#	A score class - a lot like longs, except it reserves +infinity and -infinity
+#
+class Score:
+  infinity=long(10000000)
+  neginfinity=long(-infinity)
+
+  def __init__(self, weight=0):
+
+    stringweight=string.lower(str(weight))
+    if stringweight == "infinity" or weight == "+infinity":
+      self.value=Score.infinity
+    elif stringweight == "-infinity":
+      self.value=Score.neginfinity
+    else:
+      self.value=string.atol(weight)
+
+    if self.value > Score.infinity:
+      raise ValueError, "value > infinity"
+    elif self.value < Score.neginfinity:
+      raise ValueError, "value < -infinity"
+
+  def __str__(self):
+    if self.value == Score.infinity:
+      return "infinity"
+    if self.value == Score.neginfinity:
+      return "-infinity"
+    return str(self.value)
+
+  def __int__(self):
+    return int(self.value)
+
+  def __long__(self):
+    return long(self.value)
+
+  def __add__(self,rhs):
+     if (self.value ==    Score.infinity and rhs.value == Score.neginfinity) \
+     or (self.value == Score.neginfinity and rhs.value == Score.infinity):
+       raise ValueError, "+-infinity added"
+     if self.value == Score.infinity or rhs.value == Score.infinity:
+       return Score(Score.infinity)
+     if self.value == Score.neginfinity or rhs.value == Score.neginfinity:
+       return Score(Score.neginfinity)
+     return Score(self.weight + rhs.weight)
+
+  def __sub__(self,rhs):
+    if hasattr(rhs, "value"):
+      return __add__(self, Score(-rhs.value))
+    return __add__(self, Score(-rhs))
+
+  def __cmp__(self, rhs):
+    if hasattr(rhs, "value"):
+      diff=self.value-rhs.value
+    else:
+      diff=self.value-rhs
+    if diff < 0:
+      return -1
+    if diff > 0:
+      return 1
+    return 0
+   
+
+#
+# A class for dealing with OCF Parameter metadata
+#
+class OCFParameterMetadata:
+  def __init__(self, xmlnode):
+    self.shortdescs = {}
+    self.longdescs = {}
+    self.unique = 0
+    self.type = StringMetadataType
+    self.default = None
+    self.name = xmlnode.getAttribute("name")
+    self.unique = xmlnode.getAttribute("unique")
+    self.typename = "string"
+    self.type=MetadataValueType(self.typename)
+    if self.unique == "":
+      self.unique=0
+    else:
+      self.unique=string.atoi(self.unique)
+    self.required = xmlnode.getAttribute("required")
+    if self.required == "":
+      self.required=0
+    else:
+      self.required=string.atoi(self.required)
+    children=xmlnode.childNodes
+    for child in children:
+      if child.nodeType != child.ELEMENT_NODE:
+        continue
+      if child.tagName == "shortdesc":
+        lang = child.getAttribute("lang")
+        if lang == "":
+          lang="en"
+        if len(child.childNodes) >= 1:
+          self.shortdescs[lang]=child.childNodes[0].data
+        else:
+          if note_missing_metadata:
+            print "NOTE: metadata for %s is missing 'shortdesc' data" \
+		% self.name
+            print "         (this is not a problem in your CIB)"
+          self.shortdescs[lang]=self.name
+
+      if child.tagName == "longdesc":
+        lang = child.getAttribute("lang")
+        if lang == "":
+          lang="en"
+        if len(child.childNodes) >= 1:
+          self.longdescs[lang]=child.childNodes[0].data
+        else:
+          if note_missing_metadata:
+            print "NOTE: metadata for %s is missing 'longdesc' data" \
+		% self.name
+            print "         (this is not a problem in your CIB)"
+          self.longdescs[lang]=self.name
+
+      if child.tagName == "content":
+        type = child.getAttribute("type")
+        if type != "":
+          self.type=MetadataValueType(type)
+          self.typename = type
+        default = child.getAttribute("default")
+        if default != "":
+          self.default=default
+
+  def shortdesc(self, lang="en"):
+    if not self.shortdescs.has_key(lang) and lang != "en":
+      return self.shortdescs["en"]
+    return self.shortdescs[lang]
+
+  def longdesc(self, lang="en"):
+    if not self.longdescs.has_key(lang) and lang != "en":
+      return self.longdescs["en"]
+    return self.longdescs[lang]
+
+  def validate(self, value):
+    return self.type.validate(value)
+
+  def explainnondefault(self, value, lang="en"):
+    if not self.validate(value):
+      print "ERROR: Value [%s] is not a valid value of type [%s]"  \
+	% (value, self.type.typename)
+    if self.default != None and self.default != "" and value != self.default \
+    and note_non_default_values:
+      print "INFO: CIB has non-default value for %s [%s].  Default value is [%s]" \
+	%	(self.name, value, self.default)
+      print "INFO: Explanation of %s: %s" % (self.name, self.shortdesc(lang))
+      print "INFO: %s" % (self.longdesc(lang))
+
+#
+#	OCF metadata class - descriptions, parameters, types, operations, etc.
+#
+class OCFMetadata:
+  RequiredOps = {"start":1, "stop":1, "monitor":1, "meta-data":1, "validate-all":1}
+  def __init__(self, xmlnode):
+    self.langfilter = "en"
+    self.Operations={}
+    self.Parameters={}
+    self.name = "none"
+    self.longdescs = {}
+    self.shortdescs = {}
+    children=xmlnode.childNodes
+    for topchild in children:
+      #print "DEBUG: Metadata top child: " + node2str(topchild)
+      if topchild.nodeType != topchild.ELEMENT_NODE:
+        continue
+      if topchild.tagName != "resource-agent":
+         continue
+      self.name = topchild.getAttribute("name")
+
+      for child in topchild.childNodes:
+        if child.nodeType != child.ELEMENT_NODE:
+          continue
+
+	# Short Description
+        if child.tagName == "shortdesc":
+          if lang == "":
+            lang="en"
+          lang = child.getAttribute("lang")
+          self.shortdescs[lang]=child.childNodes[0].data
+
+	# Long Description
+        if child.tagName == "longdesc":
+          lang = child.getAttribute("lang")
+          if lang == "":
+            lang="en"
+          self.longdescs[lang]=child.childNodes[0].data
+
+	# Parameters
+        if child.tagName == "parameters":
+          for gchild in child.childNodes:
+            if gchild.nodeType != gchild.ELEMENT_NODE:
+              continue
+	    # Parameter (singular)
+            if gchild.tagName == "parameter":
+              p = OCFParameterMetadata(gchild)
+              self.Parameters[p.name] = p
+
+	# Actions
+        if child.tagName == "actions":
+          for gchild in child.childNodes:
+            if gchild.nodeType != gchild.ELEMENT_NODE:
+              continue
+	    # Action (singular)
+            if gchild.tagName == "action":
+              # Good enough to get us started...
+              self.Operations[gchild.getAttribute("name")] = 1
+
+  def shortdesc(self, lang="en"):
+    if not self.shortdescs.has_key(lang) and lang != "en":
+      return self.shortdescs["en"]
+    return self.shortdescs[lang]
+
+  def longdesc(self, lang="en"):
+    if not self.longdescs.has_key(lang) and lang != "en":
+      return self.longdescs["en"]
+    return self.longdescs[lang]
+
+  def has_parameter(self, p):
+    return self.Parameters.has_key(p)
+
+  def validate(self, p, value):
+    if not self.Parameters.has_key(p):
+      print "ERROR: [%s] is not a legal parameter to [%s]" \
+	% (p, self.name)
+      return None
+    return self.Parameters[p].validate(v)
+
+  def explainnondefault(self, p, value, lang="en"):
+    if not self.Parameters.has_key(p):
+      print "ERROR: [%s] is not a legal parameter to [%s]" \
+	% (p, self.name)
+      return
+    self.Parameters[p].explainnondefault(value, lang)
+
+  def explainall(self, lang="en"):
+    for key in self.Parameters.keys():
+      if self.Parameters[key].default == None:
+        deflt=""
+      else:
+        deflt=": default=%s" % self.Parameters[key].default
+      print "%s [%s%s]: %s" % (key, self.Parameters[key].typename, deflt,\
+      	self.Parameters[key].shortdesc(lang))
+      print "\t%s" % (self.Parameters[key].longdesc(lang))
+
+  def supports_action(self, op):
+    if OCFMetadata.RequiredOps.has_key(op):
+      return 1
+    return self.Operations.has_key(p)
+
+#
+# A class for collecting OCF-style metadata from the CRM and the pengine
+#
+class CRMMetadata:
+  def __init__(self, hblibdir=HA_LIBHBDIR):
+    self.metadatalist = []
+    for file in ["crmd", "pengine"]:
+      command="%s/%s metadata" % (hblibdir, file)
+      f = os.popen(command)
+      f.readline()  # work around bad first line in metadata
+      xml = FromXmlStream(f)
+      self.metadatalist.append(OCFMetadata(xml))
+      f.close()
+      xml = None
+
+  def validate(self, nvpairs):
+    for key in nvpairs.keys():
+      found=None
+      for mdlist in self.metadatalist:
+         if mdlist.has_parameter(key):
+           found=1
+           if not mdlist.validate(key, nvpairs[key]):
+             print "ERROR: in <nvpair name=\"%s\" value=\"%s\"...>: [%s]  not a legal 'value'" \
+	     %	(key, nvpairs[key], nvpairs[key])
+           break
+      if not found:
+        print "ERROR: <nvpair name=\"%s\"...>: [%s] is not a legal name for" \
+        +	" the <crm_config> section" % (key, key)
+
+  def explainnondefault(self, nvpairs):
+    for key in nvpairs.keys():
+      found=None
+      for mdlist in self.metadatalist:
+         if mdlist.has_parameter(key):
+           found=1
+           mdlist.explainnondefault(key, nvpairs[key])
+      if not found:
+        print ("ERROR: <nvpair name=\"%s\"...>: [%s] is not a legal name in" \
+        +	" the <crm_config> section") % (key, key)
+
+  def explainall(self):
+    for mdlist in self.metadatalist:
+      mdlist.explainall()
+
+
+global crmMetadata
+crmMetadata = None
+
+GlobalIDSet = {}
+GlobalTagIDSet = {}
+
+def CheckXMLNodeUniqueness(xmlnode):
+    CheckAttributes(xmlnode)
+    if hasattr(xmlnode, "tagName"):
+      id = xmlnode.getAttribute("id")
+      if id == "":
+        print "ERROR: Tag <%s/> requires an 'id' attribute" % xmlnode.tagName
+        return None
+      return CheckIdUniqueness(xmlnode.tagName, id)
+    return 1
+
+def CheckIdUniqueness(tag, id):
+    global GlobalIdSet
+    global GlobalTagIDSet
+    ret = 1
+    if not GlobalTagIDSet.has_key(tag):
+      GlobalTagIDSet[tag] = {}
+    if GlobalTagIDSet[tag].has_key(id):
+      print "ERROR: <%s> id '%s' not unique among all <%s> tags" \
+      % (tag, id, tag)
+      ret = None
+    else:
+      GlobalTagIDSet[tag][id] = id
+    if GlobalIDSet.has_key(id):
+      print "NOTE: '%s' not globally unique among all 'id's" % id
+    else:
+      GlobalIDSet[id] = id
+    return ret
+
+
+RoleMetadataType = MetadataValueType("enum", {"started":1, "stopped":1,"master":1,"slave":1})
+NodeMetadataType = MetadataValueType("enum", {"normal":1})
+OrderMetadataType = MetadataValueType("enum", {"before":1, "after":1})
+StopStartMetadataType = MetadataValueType("enum", {"stop_start":1, "stop_only":1, "block":1})
+RestartMetadataType = MetadataValueType("enum", {"ignore":1, "restart":1})
+OpMetadataType = MetadataValueType("enum", {"lt":1, "lte":1,"gt":1,"gte":1,
+				"eq":1, "neq":1, "defined":1, "not_defined":1})
+DateOpMetadataType = MetadataValueType("enum", {"in_range":1, "date_spec":1,"gt":1,"lt":1})
+DateSpecMetadataType = MetadataValueType("enum", {"in_range":1, "date_spec":1,"gt":1,"lt":1})
+BoolDefaultMetadatatype = MetadataValueType("enum", {"true":1, "false":0,"1":1,"0":0, "default":1,"on":1, "off":0})
+CrmStatusMetadataType = MetadataValueType("enum", {"online":1, "offline":0})
+MemberStatusMetadataType = MetadataValueType("enum", {"member":1, "nonmember":0})
+HaStatusMetadataType = MetadataValueType("enum", {"active":1, "init":1, "dead":0})
+LrmOpMetadataType = MetadataValueType("enum", {"start":1, "stop":1,"reload":1,"monitor":1, "migrate":1})
+LrmClassMetadataType = MetadataValueType("enum", {"stonith":1, "ocf":1,"heartbeat":1,"lsb":1})
+BooleanOpMetadataType = MetadataValueType("enum", {"and":1, "or":1})
+			
+# Could eventually do something fancier for these...
+ResourceMetadataType = StringMetadataType
+GroupMetadataType = StringMetadataType
+
+idonly = {"id": StringMetadataType}
+
+NVPairValidKeys = {
+	"node": {"standby": BooleanMetadataType},
+};
+AttributeKeys = {
+	"op": {		"timeout": TimeMetadataType, "start_delay": TimeMetadataType, 
+			"interval": TimeMetadataType,
+			"disabled": BooleanMetadataType, "role": RoleMetadataType,
+			"id": StringMetadataType, "name": StringMetadataType},
+	"primitive":{	"class": StringMetadataType, "provider": StringMetadataType,
+			"type": StringMetadataType, "id": StringMetadataType,
+			"resource_stickiness": IntegerMetadataType,
+			"is_managed": BoolDefaultMetadatatype,
+			"restart_type": RestartMetadataType,
+			"multiple_active": StopStartMetadataType},
+	"nvpair": {	"name": StringMetadataType, "id": StringMetadataType, "value": StringMetadataType},
+	"cluster_property_set": idonly,
+	"cib": {	"admin_epoch":IntegerMetadataType, "have_quorum":BooleanMetadataType,
+			"num_peers": IntegerMetadataType, 
+			"cib_feature_revision":StringMetadataType,
+			"crm_feature_set":StringMetadataType,
+			"generated":BooleanMetadataType, "ignore_dtd":BooleanMetadataType,
+			"epoch":IntegerMetadataType,
+			"ccm_transition":IntegerMetadataType,
+			"dc_uuid":UuidMetadataType,
+			"num_updates":IntegerMetadataType},
+	"node": {	"uname": StringMetadataType, "id": UuidMetadataType, "type": NodeMetadataType},
+	"group": {	"id": StringMetadataType, "ordered": BooleanMetadataType,
+			"colocated":BooleanMetadataType},
+	"instance_attributes": idonly,
+	"attributes": {},
+	"rsc_order": {	"id": StringMetadataType, "type": OrderMetadataType,
+			"from": ResourceMetadataType, "to": ResourceMetadataType},
+	"rule": {	"id": StringMetadataType, "score": ScoreMetadataType,
+			"score_attribute": StringMetadataType,
+			"boolean_op":BooleanOpMetadataType},
+	"date_spec": {	"id": StringMetadataType,
+			"hours": StringMetadataType,
+			"yeardays": StringMetadataType,
+			"monthdays": StringMetadataType,
+			"weekdays": StringMetadataType,
+			"weeks": StringMetadataType,
+			"weekyears": StringMetadataType,
+			"years": StringMetadataType,
+			"moon": StringMetadataType},
+	"duration": {	"id": StringMetadataType,
+			"hours": StringMetadataType,
+			"yeardays": StringMetadataType,
+			"monthdays": StringMetadataType,
+			"weekdays": StringMetadataType,
+			"weeks": StringMetadataType,
+			"weekyears": StringMetadataType,
+			"years": StringMetadataType},
+	"expression":	{	"id": StringMetadataType, "value": StringMetadataType,
+				"attribute": StringMetadataType,
+				"operation": OpMetadataType},
+	"operations":	{},
+	"crm_config":	{},
+	"configuration":	{},
+	"nodes":	{},
+	"resources":	{},
+	"constraints":	{},
+	"rsc_location":	{"id": StringMetadataType, "rsc": ResourceMetadataType, \
+			"description":StringMetadataType,
+			"score":ScoreMetadataType},
+	"rsc_colocation":{"id": StringMetadataType,
+			"from": ResourceMetadataType, "to": ResourceMetadataType,
+			"score": ScoreMetadataType},
+      			"symmetrical":BooleanMetadataType,
+			"from_role":RoleMetadataType,
+			"to_role":RoleMetadataType,
+      			"node_attribute":StringMetadataType,
+
+	"status":	{},
+	"node_state":	{"shutdown":BooleanMetadataType,
+			"in_ccm":BooleanMetadataType,
+			"uname":StringMetadataType,
+			"crmd":CrmStatusMetadataType,
+			"join":MemberStatusMetadataType,
+			"expected":MemberStatusMetadataType,
+			"ha":HaStatusMetadataType,
+			"id": UuidMetadataType,
+			"crm-debug-origin": StringMetadataType},
+	"transient_attributes":	idonly,
+	"lrm":	idonly,
+	"lrm_resources":{},
+	"lrm_resource":{"class":LrmClassMetadataType, "id": UuidMetadataType,
+			"provider": StringMetadataType, "type": StringMetadataType},
+	"lrm_rsc_op":{	"rc_code": IntegerMetadataType,
+			"transition_magic": StringMetadataType,
+			"transition_key": StringMetadataType,
+			"crm_feature_set": StringMetadataType,
+			"crm-debug-origin": StringMetadataType,
+			"operation": LrmOpMetadataType,
+			"call_id": IntegerMetadataType,
+			"op_digest": StringMetadataType,
+			"id": UuidMetadataType,
+			"op_status": IntegerMetadataType,
+			"interval": TimeMetadataType},
+};
+
+def CheckAttributes(xmlnode):
+   global AttributeKeys
+   result=1
+   if xmlnode.attributes == None or xmlnode.nodeType != xmlnode.ELEMENT_NODE:
+      return 1
+   tagname=xmlnode.tagName
+   if not AttributeKeys.has_key(tagname):
+     print "ERROR: Unrecognized tag <%s/>" % tagname
+     return 0
+   table=AttributeKeys[tagname]
+   for attribtup in xmlnode.attributes.keys():
+      attrib=attribtup[1]
+      if not table.has_key(attrib):
+         print "ERROR: attribute [%s] not legal with tag <%s/>" % (attrib, tagname)
+         continue
+      type=table[attrib]
+      value=xmlnode.getAttribute(attrib)
+      if not type.validate(value):
+         print "ERROR: <%s %s=\"%s\"...>: [%s] is not a legal value for attribute %s"\
+	 %	(tagname, attrib, value, value, attrib)
+   
+
+def validate_nvpairs(context, type, nvpairs):
+  if context != None:
+    for key in nvpairs.keys():
+      if NVPairValidKeys[context].has_key(key):
+        if not NVPairValidKeys[context][key].validate(nvpairs[key]):
+          print "ERROR: <nvpair name=\"%s\" value=\"%s\"...>: [%s] is not a legal %s value"\
+          % (key, nvpairs[key], nvpairs[key], NVPairValidKeys[context][key])
+      else:
+        print "ERROR: <nvpair name=\"%s\"...>: [%s] is not a legal name in <%s> tag" \
+        %	(key, key, context)
+  elif type != None:
+    for key in nvpairs.keys():
+      if not validate_value(nvpairs[key], type):
+        print "ERROR: nvpair name [%s] has value [%s] which is not legal for type %s"\
+        %	(key, nvpairs[key], type)
+  else:
+    print "ERROR: Weird invocation of validate_nvpairs()"
+
+#
+#	A class representing a collection of name/value pairs
+#
+class NVpairs(UserDict):
+  def __init__(self):
+    UserDict.__init__(self)
+    self.name2idmap = {}
+    self.id2namemap = {}
+
+  def addnvpair(self, node):
+    CheckXMLNodeUniqueness(node)
+    name=node.getAttribute("name")
+    id = node.getAttribute("id")
+    value=node.getAttribute("value")
+    if name == "":
+      print "ERROR: <nvpair> without 'name'"
+    if id == "":
+      print "ERROR: <nvpair> without 'id'"
+    if self.has_key(name):
+      print "ERROR: name '%s' multiply defined in <nvpair> list - values are [%s] and [%s]"\
+      %		(name, self[name], value)
+    if self.id2namemap.has_key(id):
+      print "ERROR: <nvpair> id '"+id+"' multiply defined in <nvpair> list "
+
+    self[name] = value
+    self.name2idmap[name] = id
+    self.id2namemap[id] = name
+
+  def name2id(self, name):
+    return self.name2idmap[name]
+
+  def id2name(self, id):
+    return self.id2namemap[id]
+
+#
+# A class for collecting information about cluster nodes
+#
+class ClusterNodes(UserDict):
+  def __init__(self):
+    UserDict.__init__(self)
+    self.uuid2unamemap = {}
+    self.instance_attribute_sets = {}
+
+  def addnode(self, xmlnode):
+    CheckXMLNodeUniqueness(xmlnode)
+    uname=xmlnode.getAttribute("uname")
+    id = xmlnode.getAttribute("id")
+    type = xmlnode.getAttribute("type")
+    if uname == "":
+      print "ERROR: <node> without 'uname'"
+    if id == "":
+      print "ERROR: <node> without 'id'"
+    if type != "normal":
+      print "ERROR: <node> %s type is [%s]" % (uname, type)
+    if self.has_key(uname):
+      print "ERROR: name '"+uname+"' multiply defined in current <node> list"
+    if self.uuid2unamemap.has_key(id):
+      print "ERROR: <node> id '"+id+"' multiply defined in current node list "
+    self[uname] = id
+    self.uuid2unamemap[id] = uname
+    for child in xmlnode.childNodes:
+      if child.nodeType != child.ELEMENT_NODE:
+        continue
+      if child.tagName == "instance_attributes":
+         inst_attrs=InstanceAttributesTag(child)
+         self.instance_attribute_sets[uname] = inst_attrs.attributes.nvpairs
+         validate_nvpairs("node", None, inst_attrs.attributes.nvpairs)
+      else:
+        print "ERROR: Don't know how to deal with funky child of <%s>" % child.tagName
+        print "Funky child: " + node2str(child)
+        self=None
+        return
+
+  def uuid2uname(self, uuid):
+    return self.uuid2unamemap[id]
+
+#
+# A class for processing the <attributes> tag
+#
+class AttributesTag:
+  def __init__(self, xmlnode):
+    CheckAttributes(xmlnode)
+    self.nvpairs = NVpairs()
+    for childnode in xmlnode.childNodes:
+      if childnode.nodeType == childnode.ELEMENT_NODE and \
+      childnode.tagName == "nvpair":
+        self.nvpairs.addnvpair(childnode)
+
+#
+# A class for processing the <instance_attributes> tag
+#
+class InstanceAttributesTag:
+  def __init__(self, instancenode):
+    CheckXMLNodeUniqueness(instancenode)
+    children = instancenode.childNodes
+    if len(children) == 1:
+      child = children[0]
+    elif len(children) == 3:
+      child = children[1]
+    else:
+       print "Don't yet know how to deal with %d children of instance attributes" % len(children)
+       prchildren(instancenode)
+       self=None
+       return
+    if child.nodeType != child.ELEMENT_NODE \
+    or child.tagName != "attributes":
+       print "ERROR: Don't know how to deal with funky child of instance attributes"
+       print "Funky child: " + node2str(child)
+       self=None
+       return
+    self.attributes = AttributesTag(child)
+
+#
+# A class for processing the <meta_attributes> tag
+#
+class MetaAttributesTag:
+  def __init__(self, xmlnode):
+    CheckXMLNodeUniqueness(xmlnode)
+    self.attributes = None
+    for child in xmlnode.childNodes:
+      if child.nodeType != child.ELEMENT_NODE:
+        continue
+      if child.tagName == "attributes":
+        self.attributes = AttributesTag(child)
+      else:
+        print "ERROR: Don't know how to deal with funky child of <%s>" % xmlnode.tagName
+        print "Funky child: " + node2str(child)
+        self=None
+        return
+
+#
+# A class for processing the <cluster_property_set> tag
+#
+class ClusterPropertySetTag:
+  def __init__(self, xmlnode):
+    self.rules = []
+    self.attributes = None
+    CheckXMLNodeUniqueness(xmlnode)
+    for child in xmlnode.childNodes:
+      if child.nodeType != child.ELEMENT_NODE:
+        continue
+      if child.tagName == "rule":
+        self.rules.append(RuleTag(child))
+      if child.tagName == "attributes":
+        self.attributes = AttributesTag(child)
+      else:
+        print "ERROR: Don't know how to deal with funky child of <%s>" % xmlnode.tagName
+        print "Funky child: " + node2str(child)
+        self=None
+        return
+    global crmMetadata
+    crmMetadata.explainnondefault(self.attributes.nvpairs)
+    fattr="default-resource-failure-stickiness"
+    if self.attributes.nvpairs.has_key(fattr):
+      if Score(self.attributes.nvpairs[fattr]) > 0:
+        print "ERROR: %s should normally negative: value is [%s]" \
+	%	(fattr, Score(self.attributes.nvpairs[fattr]))
+    
+
+#
+# A class for processing the <crm_config> tag
+#
+class CRMConfigTag:
+  def __init__(self, xmlnode):
+    self.propertysets = []
+    CheckAttributes(xmlnode)
+    for child in xmlnode.childNodes:
+      if child.nodeType != child.ELEMENT_NODE:
+        continue
+      if child.tagName == "cluster_property_set":
+        self.propertysets.append(ClusterPropertySetTag(child))
+      else:
+        print "ERROR: Don't know how to deal with funky child of <%s>" % xmlnode.tagName
+        print "Funky child: " + node2str(child)
+        self=None
+        return
+
+#
+# A class for processing the <nodes> tag
+#
+class NodesTag:
+  global clusterNodes
+  clusterNodes = ClusterNodes()
+
+  def __init__(self, xmlnode):
+    global clusterNodes
+    CheckAttributes(xmlnode)
+    children = xmlnode.childNodes
+    for child in children:
+      if child.nodeType != child.ELEMENT_NODE:
+        continue
+      if child.tagName != "node":
+        print "ERROR: Don't know how to deal with funky child of <nodes>"
+        print "Funky child: " + node2str(child)
+        self=None
+        return
+      uname=child.getAttribute("uname")
+      CheckAttributes(child)
+      clusterNodes.addnode(child)
+     
+    self = clusterNodes
+
+#
+# A class for processing the <operations> tag
+#
+class OperationsTag(UserDict):
+  def __init__(self, xmlnode):
+    UserDict.__init__(self)
+    self.operations = None
+    self.instance_attributes = None
+    CheckAttributes(xmlnode)
+    children = xmlnode.childNodes
+    for child in children:
+      if child.nodeType != child.ELEMENT_NODE:
+        continue
+      if child.tagName == "op":
+        CheckAttributes(child)
+        CheckXMLNodeUniqueness(child)
+        name = child.getAttribute("name")
+        if name == "":
+          print "ERROR: <op/> tag is missing name attribute"
+        self[name] = child.getAttribute("id")
+        if child.getAttribute("interval") != "" and name != "monitor":
+          print "ERROR: repeat interval [%s] specified for operation [%s]" \
+          %	(child.getAttribute("interval"), name)
+        if child.getAttribute("interval") == "" and name == "monitor":
+          print "WARNING: monitor operation specified without interval=\"...\""
+      else:
+        print "ERROR: Don't know how to deal with funky child of <%s>" % xmlnode.tagName
+        print "Funky child: " + node2str(child)
+        self=None
+        return
+
+global AllPrimitives
+AllPrimitives = {}
+global AllGroups
+AllGroups = {}
+global AllMasterSlave
+AllMasterSlave = {}
+global AllClones
+AllClones = {}
+global AllResources
+AllResources = {}
+AllResourceLocations = []
+AllResourceCoLocations = []
+
+#
+# A class for processing the <primitive> tag
+#
+class PrimitiveTag:
+  def __init__(self, xmlnode):
+    self.operations = None
+    self.instance_attributes = None
+    CheckXMLNodeUniqueness(xmlnode)
+    CheckAttributes(xmlnode)
+    self.name = xmlnode.getAttribute("id")
+    children = xmlnode.childNodes
+    for child in children:
+      if child.nodeType != child.ELEMENT_NODE:
+        continue
+      if child.tagName == "instance_attributes":
+        self.instance_attributes = InstanceAttributesTag(child)
+      elif child.tagName == "operations":
+        self.operations = OperationsTag(child)
+        if not self.operations.has_key("monitor"):
+          print "INFO: monitoring not requested for resource <primitive id=\"%s\"...>" \
+          %	self.name
+      else:
+        print "ERROR: Don't know how to deal with funky child of <%s>" % xmlnode.tagName
+        print "Funky child: " + node2str(child)
+        self=None
+        return
+    AllPrimitives[self.name]= self
+    AllResources[self.name]= self
+    if AllGroups.has_key(self.name):
+      print "WARNING: A <group> exists with the same id as this primitive [%s]" % self.name
+    if AllMasterSlave.has_key(self.name):
+      print "WARNING: A <master_slave> exists with the same id as this primitive [%s]" % self.name
+    if AllClones.has_key(self.name):
+      print "WARNING: A <clone> exists with the same id as this primitive [%s]" % self.name
+
+
+#
+# A class for processing the <group> tag
+#
+class GroupTag:
+  def __init__(self, xmlnode):
+    self.primitives = []
+    CheckXMLNodeUniqueness(xmlnode)
+    self.name = xmlnode.getAttribute("id")
+    children = xmlnode.childNodes
+    for child in children:
+      if child.nodeType != child.ELEMENT_NODE:
+        continue
+      if child.tagName == "primitive":
+        self.primitives.append(PrimitiveTag(child))
+      else:
+        print "ERROR: Don't know how to deal with funky child of <%s>" % xmlnode.tagName
+        print "Funky child: " + node2str(child)
+        self=None
+        return
+    AllGroups[self.name]= self
+    AllResources[self.name]= self
+    if AllPrimitives.has_key(self.name):
+      print "WARNING: A <primitive> exists with the same id as this group [%s]" % self.name
+    if AllMasterSlave.has_key(self.name):
+      print "WARNING: A <master_slave> exists with the same id as this group [%s]" % self.name
+    if AllClones.has_key(self.name):
+      print "WARNING: A <clone> exists with the same id as this group [%s]" % self.name
+
+#
+# A class for processing the <clone> tag
+#
+class CloneTag:
+  def __init__(self, xmlnode):
+    self.primitives = []
+    CheckXMLNodeUniqueness(xmlnode)
+    self.name = xmlnode.getAttribute("id")
+    children = xmlnode.childNodes
+    for child in children:
+      if child.nodeType != child.ELEMENT_NODE:
+        continue
+      if child.tagName == "primitive":
+        self.primitives.append(PrimitiveTag(child))
+      else:
+        print "ERROR: Don't know how to deal with funky child of <%s>" % xmlnode.tagName
+        print "Funky child: " + node2str(child)
+        self=None
+        return
+    AllClones[self.name]= self
+    AllResources[self.name]= self
+    if AllPrimitives.has_key(self.name):
+      print "WARNING: A <primitive> exists with the same id as this clone [%s]" % self.name
+    if AllMasterSlave.has_key(self.name):
+      print "WARNING: A <master_slave> exists with the same id as this clone [%s]" % self.name
+    if AllGroups.has_key(self.name):
+      print "WARNING: A <group> exists with the same id as this clone [%s]" % self.name
+
+#
+# A class for processing the <master_slave> tag
+#
+class MasterSlaveTag:
+  def __init__(self, xmlnode):
+    self.primitives = []
+    CheckXMLNodeUniqueness(xmlnode)
+    self.name = xmlnode.getAttribute("id")
+    children = xmlnode.childNodes
+    for child in children:
+      if child.nodeType != child.ELEMENT_NODE:
+        continue
+      if child.tagName == "primitive":
+        self.primitives.append(PrimitiveTag(child))
+      else:
+        print "ERROR: Don't know how to deal with funky child of <%s>" % xmlnode.tagName
+        print "Funky child: " + node2str(child)
+        self=None
+        return
+
+    AllMasterSlave[self.name]= self
+    AllResources[self.name]= self
+    if AllPrimitives.has_key(self.name):
+      print "WARNING: A <primitive> exists with the same id as this master_slave [%s]" % self.name
+    if AllClones.has_key(self.name):
+      print "WARNING: A <clone> exists with the same id as this master_slave [%s]" % self.name
+    if AllGroups.has_key(self.name):
+      print "WARNING: A <group> exists with the same id as this master_slave [%s]" % self.name
+
+
+#
+# A class for processing the <expression> tag
+#
+class ExpressionTag:
+  def __init__(self, xmlnode):
+    global clusterNodes
+    CheckXMLNodeUniqueness(xmlnode)
+    if xmlnode.getAttribute("attribute") == "#uname":
+      uname=xmlnode.getAttribute("value")
+      if not clusterNodes.has_key(uname):
+        print "ERROR: <expression attribute=\"#uname\" value=\"%s\"...> references unknown node [%s]" \
+	%	(uname,uname)
+    if xmlnode.getAttribute("attribute") == "#id":
+      id=xmlnode.getAttribute("value")
+      if not clusterNodes.uuid2unamemap.has_key(id):
+        print "ERROR: <expression attribute=\"#id\" value=\"%s\"...>: unknown uuid [%s]" \
+	%	(id,id)
+    for child in xmlnode.childNodes:
+      if child.nodeType == child.ELEMENT_NODE:
+        print "ERROR: Don't know how to deal with funky child of <%s>" % xmlnode.tagName
+        print "Funky child: " + node2str(child)
+        self=None
+        return
+
+#
+# A class for processing the <rsc_colocation> tag
+#
+class ResourceCoLocationTag:
+  def __init__(self, xmlnode):
+    CheckXMLNodeUniqueness(xmlnode)
+    self.name = xmlnode.getAttribute("id")
+    self.fromid = xmlnode.getAttribute("from")
+    self.to = xmlnode.getAttribute("to")
+    self.score = xmlnode.getAttribute("score")
+    if self.fromid == "":
+      print "ERROR: <rsc_colocation> tag requires 'from' attribute"
+      self=None
+      return
+    if self.to == "":
+      print "ERROR: <rsc_colocation> tag requires 'to' attribute"
+      self=None
+      return
+    if self.score == "":
+      print "ERROR: <rsc_colocation> tag requires 'score' attribute"
+      self=None
+      return
+    if not AllResources.has_key(self.fromid):
+      print "ERROR: <rsc_colocation from=\"%s\"...>: no such resource [%s]" \
+      %		(self.fromid, self.fromid)
+    if not AllResources.has_key(self.to):
+      print "ERROR: <rsc_colocation to=\"%s\"...>: no such resource [%s]" \
+      %		(self.to, self.to)
+
+    for child in xmlnode.childNodes:
+      if child.nodeType == child.ELEMENT_NODE:
+        print "ERROR: Don't know how to deal with funky child of <%s>" % xmlnode.tagName
+        print "Funky child: " + node2str(child)
+        self=None
+        return
+    AllResourceCoLocations.append(self)
+
+
+#
+# A class for processing the <rsc_location> tag
+#
+class ResourceLocationTag:
+  def __init__(self, xmlnode):
+    CheckXMLNodeUniqueness(xmlnode)
+    self.rules = []
+    self.name = xmlnode.getAttribute("id")
+    self.rsc = xmlnode.getAttribute("rsc")
+    if not AllResources.has_key(self.rsc):
+      print "ERROR: <rsc_location id=\"%s\"...>: no such resource [%s]" \
+      %		(self.rsc, self.rsc)
+
+    for child in xmlnode.childNodes:
+      if child.nodeType != child.ELEMENT_NODE:
+        continue
+      if child.tagName == "rule":
+        self.rules.append(RuleTag(child))
+      else:
+        print "ERROR: Don't know how to deal with funky child of <%s>" % xmlnode.tagName
+        print "Funky child: " + node2str(child)
+        self=None
+        return
+    AllResourceLocations.append(self)
+
+#
+# A class for processing the <rule> tag
+#
+class RuleTag:
+  def __init__(self, xmlnode):
+    self.expressions= []
+    CheckXMLNodeUniqueness(xmlnode)
+    self.score = xmlnode.getAttribute("score")
+    self.score_attribute = xmlnode.getAttribute("score_attribute")
+    self.boolean_op = xmlnode.getAttribute("boolean_op")
+    if self.score == "" and self.score_attribute == "":
+      print "ERROR: <rsc_location> tag requires either 'score' or 'score_attribute'"
+      self=None
+      return
+    if self.score != "" and self.score_attribute != "":
+      print "ERROR: <rsc_location> tag allows only one of 'score' or 'score_attribute'"
+   
+    for child in xmlnode.childNodes:
+      if child.nodeType != child.ELEMENT_NODE:
+        continue
+      if child.tagName == "expression":
+        self.expressions.append(ExpressionTag(child))
+      else:
+        print "ERROR: Don't know how to deal with funky child of <%s>" % xmlnode.tagName
+        print "Funky child: " + node2str(child)
+        self=None
+        return
+
+
+def descend(xmlnode):
+  if xmlnode.nodeType == xmlnode.ELEMENT_NODE:
+    CheckAttributes(xmlnode)
+    if xmlnode.tagName == "crm_config":
+      return CRMConfigTag(xmlnode)
+    if xmlnode.tagName == "cluster_property_set":
+      return ClusterPropertySetTag(xmlnode)
+    if xmlnode.tagName == "meta_attributes":
+      return MetaAttributesTag(xmlnode)
+    if xmlnode.tagName == "instance_attributes":
+      return InstanceAttributesTag(xmlnode)
+    if xmlnode.tagName == "attributes":
+      return AttributesTag(xmlnode)
+    if xmlnode.tagName == "nodes":
+      return NodesTag(xmlnode)
+    if xmlnode.tagName == "expression":
+      return ExpressionTag(xmlnode)
+    if xmlnode.tagName == "primitive":
+      return PrimitiveTag(xmlnode)
+    if xmlnode.tagName == "group":
+      return GroupTag(xmlnode)
+    if xmlnode.tagName == "master_slave":
+      return MasterSlaveTag(xmlnode)
+    if xmlnode.tagName == "clone":
+      return CloneTag(xmlnode)
+    if xmlnode.tagName == "rsc_location":
+      return ResourceLocationTag(xmlnode)
+    if xmlnode.tagName == "rsc_colocation":
+      return ResourceCoLocationTag(xmlnode)
+    #print "Element: " + xmlnode.tagName
+    #mymap = xmlnode.attributes
+    #if mymap != None:
+    #  for key in mymap.keys():
+    #    print "  xmlAttribute:", key[1]+ "="+ xmlnode.getAttribute(key)
+  for child in xmlnode.childNodes:
+    descend(child)
+
+#
+# "lint" out a CIB found in a file (pathname)
+#
+def examine_cib_path(cibfile):
+  global crmMetadata
+  crmMetadata = CRMMetadata()
+  file = open(cibfile, "r")
+  doc = FromXmlStream(file, validate=0)
+  descend(doc)
+  doc=None
+
+#
+# "lint" out the live CIB
+#
+def examine_cib_live():
+  global crmMetadata
+  crmMetadata = CRMMetadata()
+  file = os.popen(CIBADMIN + " -Q")
+  doc = FromXmlStream(file, validate=0)
+  file.close()
+  descend(doc)
+  doc=None
+
+#
+# Explain all the CIB options in the <crm_config> section
+#
+def explain_crm_config():
+  global crmMetadata
+  crmMetadata = CRMMetadata()
+  crmMetadata.explainall()
+
+usage_message=\
+"usage: " + sys.argv[0] + " [-C] -f cib-file\n" + \
+"       " + sys.argv[0] + " [-C] -L\n" +\
+"       " + sys.argv[0] + " (-l|--list-crm-config-options)\n" +\
+"       " + sys.argv[0] + " -h --help\n" +'''
+  -f				precedes pathname of CIB XML file
+  -L --live-cib			get live CIB from cibadmin -Q
+  -C --ignore-non-defaults	don't print messages for non-default crm_config values
+
+CIB file can either have a status section or not.  Either is acceptable.
+
+'''
+
+   
+def usage():
+  sys.stderr.write(usage_message)
+
+
+#
+#	Main program starts here -- process arguments, etc.
+#
+
+if len(sys.argv) < 2:
+  usage()
+  sys.exit(1)
+
+livecib=0
+cibfile=0
+listoptions=0
+skipnext=0
+usageerror=0
+askforusage=0
+count=0
+for arg in sys.argv[1:]:
+  count=count+1
+  if skipnext:
+    skipnext=0
+    continue
+  if arg == "-h" or arg == "--help":
+    askforusage = 1
+  elif arg == "-C" or arg == "--ignore-non-defaults":
+    note_non_default_values = 0
+  elif arg == "-L" or arg == "--live-cib":
+    livecib = 1
+  elif arg == '-l' or arg == "--list-crm-config-options":
+    listoptions = 1
+  elif arg == "-f":
+    if count >= (len(sys.argv)-1):
+      usageerror=1
+    else:
+      cibfile=1
+      cibfilename=sys.argv[count+1]
+      skipnext=1
+  else:
+    sys.stderr.write("invalid option: " + arg)
+    usageerror=1
+
+total=livecib+cibfile+listoptions+askforusage
+
+if usageerror or total != 1:
+  usage()
+  sys.exit(1)
+
+if listoptions:
+  explain_crm_config()
+if askforusage:
+  usage()
+if livecib:
+  examine_cib_live()
+if cibfile:
+  examine_cib_path(cibfilename)
+sys.exit(0)
