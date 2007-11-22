@@ -65,15 +65,27 @@ import os, sys, string, types
 from xml.dom.ext.reader.Sax2 import FromXmlStream
 #from xml.dom.ext import PrettyPrint
 
-global CIBADMIN, HA_LIBHBDIR
+global CIBADMIN, HA_LIBHBDIR, URLBASE
 HA_LIBHBDIR = "@HA_LIBHBDIR@"
 CIBADMIN="@sbindir@/cibadmin"
+URLBASE="@HA_URLBASE@" + "ciblint/"
 
 global note_non_default_values
 global note_missing_metadata
+global wikiformat
 note_non_default_values = 1
 note_missing_metadata = 1
+wikiformat=0
 
+
+def lintURL(suffix):
+  return URLBASE + suffix
+
+def URLinfo(suffix):
+  print "INFO: See %s for more information on this topic." % lintURL(suffix)
+
+def crm_config_url(option):
+  URLinfo("crm_config#"+option)
 
 def typeToString(node):
   if node.nodeType == node.ELEMENT_NODE:
@@ -347,7 +359,7 @@ class OCFParameterMetadata:
     and note_non_default_values:
       print "INFO: CIB has non-default value for %s [%s].  Default value is [%s]" \
 	%	(self.name, value, self.default)
-      print "INFO: Explanation of %s: %s" % (self.name, self.shortdesc(lang))
+      print "INFO: Explanation of %s option: %s" % (self.name, self.shortdesc(lang))
       print "INFO: %s" % (self.longdesc(lang))
 
 #
@@ -446,6 +458,18 @@ class OCFMetadata:
       	self.Parameters[key].shortdesc(lang))
       print "\t%s" % (self.Parameters[key].longdesc(lang))
 
+  def explainall_wiki(self, lang="en"):
+    for key in self.Parameters.keys():
+      print "== %s ==" % key
+      print "[[Anchor(%s)]]" % key
+      if self.Parameters[key].default == None:
+        deflt=""
+      else:
+        deflt=": default=%s" % self.Parameters[key].default
+      print "'''%s''' [%s%s]: ''%s''[[BR]]" % (key, self.Parameters[key].typename, deflt,\
+      	self.Parameters[key].shortdesc(lang))
+      print "%s" % (self.Parameters[key].longdesc(lang))
+
   def supports_action(self, op):
     if OCFMetadata.RequiredOps.has_key(op):
       return 1
@@ -492,15 +516,31 @@ class CRMMetadata:
         +	" the <crm_config> section") % (key, key)
 
   def explainall(self):
+    if wikiformat:
+      print "= crm_config options ="
     for mdlist in self.metadatalist:
-      mdlist.explainall()
+      if wikiformat:
+        mdlist.explainall_wiki()
+      else:
+        mdlist.explainall()
+    if wikiformat:
+      print "----"
+      print "''This page the output from ciblint -w -l''"
+
+  def __getitem__(self, key):
+    for mdlist in self.metadatalist:
+      if mdlist.Parameters.has_key(key):
+        return mdlist.Parameters[key]
+    raise KeyError, "Key %s not found" % key
 
 
 global crmMetadata
+global crm_config_section
 crmMetadata = None
 
 GlobalIDSet = {}
 GlobalTagIDSet = {}
+crm_config_section=None
 
 def CheckXMLNodeUniqueness(xmlnode):
     CheckAttributes(xmlnode)
@@ -849,7 +889,7 @@ class ClusterPropertySetTag:
     fattr="default-resource-failure-stickiness"
     if self.attributes.nvpairs.has_key(fattr):
       if Score(self.attributes.nvpairs[fattr]) > 0:
-        print "ERROR: %s should normally negative: value is [%s]" \
+        print "ERROR: %s should normally be negative: value is [%s]" \
 	%	(fattr, Score(self.attributes.nvpairs[fattr]))
     
 
@@ -858,6 +898,7 @@ class ClusterPropertySetTag:
 #
 class CRMConfigTag:
   def __init__(self, xmlnode):
+    global crm_config_section
     self.propertysets = []
     CheckAttributes(xmlnode)
     for child in xmlnode.childNodes:
@@ -870,6 +911,7 @@ class CRMConfigTag:
         print "Funky child: " + node2str(child)
         self=None
         return
+    crm_config_section=self
 
 #
 # A class for processing the <nodes> tag
@@ -927,18 +969,17 @@ class OperationsTag(UserDict):
         self=None
         return
 
-global AllPrimitives
+global AllPrimitives, AllGroups, AllMasterSlave, AllClones
+global AllResourceLocations, AllResourceCoLocations
+global stonith_resource_count
 AllPrimitives = {}
-global AllGroups
 AllGroups = {}
-global AllMasterSlave
 AllMasterSlave = {}
-global AllClones
 AllClones = {}
-global AllResources
 AllResources = {}
 AllResourceLocations = []
 AllResourceCoLocations = []
+stonith_resource_count = 0
 
 #
 # A class for processing the <primitive> tag
@@ -952,6 +993,13 @@ class PrimitiveTag:
     CheckXMLNodeUniqueness(xmlnode)
     CheckAttributes(xmlnode)
     self.name = xmlnode.getAttribute("id")
+    self.rscclass = xmlnode.getAttribute("class")
+    self.provider = xmlnode.getAttribute("provider")
+    self.type = xmlnode.getAttribute("type")
+    if self.rscclass == "stonith":
+      stonithresourcecount=stonithresourcecount+1
+      if self.type=="ssh" or self.type == "external/ssh":
+        print "WARNING: %s STONITH resource NOT approved for production" % (self.type)
     children = xmlnode.childNodes
     for child in children:
       if child.nodeType != child.ELEMENT_NODE:
@@ -1219,27 +1267,51 @@ def descend(xmlnode):
   for child in xmlnode.childNodes:
     descend(child)
 
+def analyze_CIB(doc):
+  global crmMetadata
+  crmMetadata = CRMMetadata()
+  global crm_config_section, stonithresourcecount
+  descend(doc)
+  stonithwarn=0
+
+  stonithtag="stonith-enabled"
+  enableval = crmMetadata[stonithtag].default
+  stonith_enabled = MetadataValueType.BooleanStrings[enableval]
+
+  for pset in crm_config_section.propertysets:
+    if pset.attributes.nvpairs.has_key(stonithtag):
+      enableval=pset.attributes.nvpairs[stonithtag]
+      stonith_enabled = MetadataValueType.BooleanStrings[enableval]
+  if stonith_enabled:
+    if stonith_resource_count == 0:
+      stonithwarn=1
+      print "ERROR:  STONITH enabled, but No STONITH resources configured.  STONITH is NOT available."
+  else:
+    stonithwarn=1
+    print "ERROR:  STONITH disabled (%s=%s).  STONITH is HIGHLY recommended."\
+    %	(stonithtag, enableval)
+    if stonith_resource_count == 0:
+      print "WARNING:  No STONITH resources configured.  STONITH is not available."
+  if stonithwarn:
+    URLinfo("stonith")
+    crm_config_url(stonithtag)
 #
 # "lint" out a CIB found in a file (pathname)
 #
 def examine_cib_path(cibfile):
-  global crmMetadata
-  crmMetadata = CRMMetadata()
   file = open(cibfile, "r")
   doc = FromXmlStream(file, validate=0)
-  descend(doc)
+  analyze_CIB(doc)
   doc=None
 
 #
 # "lint" out the live CIB
 #
 def examine_cib_live():
-  global crmMetadata
-  crmMetadata = CRMMetadata()
   file = os.popen(CIBADMIN + " -Q")
   doc = FromXmlStream(file, validate=0)
   file.close()
-  descend(doc)
+  analyze_CIB(doc)
   doc=None
 
 #
@@ -1253,20 +1325,41 @@ def explain_crm_config():
 usage_message=\
 "usage: " + sys.argv[0] + " [-C] -f cib-file\n" + \
 "       " + sys.argv[0] + " [-C] -L\n" +\
-"       " + sys.argv[0] + " (-l|--list-crm-config-options)\n" +\
-"       " + sys.argv[0] + " -h --help\n" +'''
+"       " + sys.argv[0] + " [-w] (-l|--list-crm-config-options)\n" +\
+"       " + sys.argv[0] + " [-w] -h --help\n" +'''
   -f				precedes pathname of CIB XML file
   -L --live-cib			get live CIB from cibadmin -Q
   -C --ignore-non-defaults	don't print messages for non-default crm_config values
+  -w --wiki-format		print usage or crm-config-options in wiki format
 
 CIB file can either have a status section or not.  Either is acceptable.
 This program is a work-in-progress, but for many CIBs it's probably useful now.
 
-'''
+It currently looks for a number of classes of errors, including these:
+  - Non-unique 'id' strings for the given <tag>
+  - 'id' strings which are not globally unique
+  - Incorrect <nvpair> 'name's or 'value's
+  - Duplicate <nvpair> 'name's in a list
+  - Incorrect XML attribute names or values
+  - references to non-existent resources
+  - references to non-existent nodes
+  - invalid values for the type involved
+  - resources you're not monitoring
+  - non-negative default-resource-failure-stickiness
+  - STONITH not enabled
+  - No STONITH resources configured
+  - Use of for-testing-only ssh or external/ssh STONITH resource agents
 
-   
+More documentation can be found online at http://linux-ha.org/ciblint
+'''
+wiki_usage_message = "{{{" + usage_message + "}}}\n"
+
+
 def usage():
-  sys.stderr.write(usage_message)
+  if wikiformat:
+  	sys.stderr.write(wiki_usage_message)
+  else:
+  	sys.stderr.write(usage_message)
 
 
 #
@@ -1291,6 +1384,8 @@ for arg in sys.argv[1:]:
     continue
   if arg == "-h" or arg == "--help":
     askforusage = 1
+  elif arg == "-w" or arg == "--wiki-format":
+    wikiformat = 1
   elif arg == "-C" or arg == "--ignore-non-defaults":
     note_non_default_values = 0
   elif arg == "-L" or arg == "--live-cib":
