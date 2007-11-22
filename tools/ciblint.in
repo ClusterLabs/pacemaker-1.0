@@ -66,7 +66,7 @@ from xml.dom.ext.reader.Sax2 import FromXmlStream
 #from xml.dom.ext import PrettyPrint
 
 global CIBADMIN, HA_LIBHBDIR
-HA_LIBHBDIR = "@HA_LIBHBDIR@
+HA_LIBHBDIR = "@HA_LIBHBDIR@"
 CIBADMIN="@sbindir@/cibadmin"
 
 global note_non_default_values
@@ -946,7 +946,9 @@ AllResourceCoLocations = []
 class PrimitiveTag:
   def __init__(self, xmlnode):
     self.operations = None
-    self.instance_attributes = None
+    self.instance_attributes = []
+    self.meta_attributes = []
+    self.operations = []
     CheckXMLNodeUniqueness(xmlnode)
     CheckAttributes(xmlnode)
     self.name = xmlnode.getAttribute("id")
@@ -955,10 +957,12 @@ class PrimitiveTag:
       if child.nodeType != child.ELEMENT_NODE:
         continue
       if child.tagName == "instance_attributes":
-        self.instance_attributes = InstanceAttributesTag(child)
+        self.instance_attributes.append(InstanceAttributesTag(child))
+      elif child.tagName == "meta_attributes":
+        self.meta_attributes.append(MetaAttributesTag(child))
       elif child.tagName == "operations":
-        self.operations = OperationsTag(child)
-        if not self.operations.has_key("monitor"):
+        self.operations.append(OperationsTag(child))
+        if not self.operations[len(self.operations)-1].has_key("monitor"):
           print "INFO: monitoring not requested for resource <primitive id=\"%s\"...>" \
           %	self.name
       else:

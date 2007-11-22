@@ -25,7 +25,7 @@ Licensed under the GNU GPL version 2 or later
 #
 #
 #	Not everything that 'ciblint' comments on is necessarily a problem
-#	but is probably worth spending some effort to understand.
+#	but its comments are probably worth spending some effort to understand.
 #
 #	This program is a work-in-progress, but for many CIBs it's probably
 #	useful now.
@@ -66,7 +66,7 @@ from xml.dom.ext.reader.Sax2 import FromXmlStream
 #from xml.dom.ext import PrettyPrint
 
 global CIBADMIN, HA_LIBHBDIR
-HA_LIBHBDIR = "/usr/lib/heartbeat
+HA_LIBHBDIR = "/usr/lib/heartbeat"
 CIBADMIN="/usr/sbin/cibadmin"
 
 global note_non_default_values
@@ -946,7 +946,9 @@ AllResourceCoLocations = []
 class PrimitiveTag:
   def __init__(self, xmlnode):
     self.operations = None
-    self.instance_attributes = None
+    self.instance_attributes = []
+    self.meta_attributes = []
+    self.operations = []
     CheckXMLNodeUniqueness(xmlnode)
     CheckAttributes(xmlnode)
     self.name = xmlnode.getAttribute("id")
@@ -955,10 +957,12 @@ class PrimitiveTag:
       if child.nodeType != child.ELEMENT_NODE:
         continue
       if child.tagName == "instance_attributes":
-        self.instance_attributes = InstanceAttributesTag(child)
+        self.instance_attributes.append(InstanceAttributesTag(child))
+      elif child.tagName == "meta_attributes":
+        self.meta_attributes.append(MetaAttributesTag(child))
       elif child.tagName == "operations":
-        self.operations = OperationsTag(child)
-        if not self.operations.has_key("monitor"):
+        self.operations.append(OperationsTag(child))
+        if not self.operations[len(self.operations)-1].has_key("monitor"):
           print "INFO: monitoring not requested for resource <primitive id=\"%s\"...>" \
           %	self.name
       else:
@@ -1256,6 +1260,7 @@ usage_message=\
   -C --ignore-non-defaults	don't print messages for non-default crm_config values
 
 CIB file can either have a status section or not.  Either is acceptable.
+This program is a work-in-progress, but for many CIBs it's probably useful now.
 
 '''
 
