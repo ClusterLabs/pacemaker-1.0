@@ -61,8 +61,8 @@ Licensed under the GNU GPL version 2 or later
 #			pathname/string
 
 from UserDict import UserDict
-import os, sys, string, types
-from xml.dom.ext.reader.Sax2 import FromXmlStream
+import os, sys, string, types, re
+from xml.dom.ext.reader.Sax2 import FromXmlStream, FromXml
 #from xml.dom.ext import PrettyPrint
 
 global CIBADMIN, HA_LIBHBDIR, URLBASE
@@ -70,11 +70,9 @@ HA_LIBHBDIR = "/usr/lib/heartbeat"
 CIBADMIN="/usr/sbin/cibadmin"
 URLBASE="http://linux-ha.org/" + "ciblint/"
 
-global note_non_default_values
-global note_missing_metadata
-global wikiformat
+global note_non_default_values, note_metadata_errors, wikiformat
 note_non_default_values = 1
-note_missing_metadata = 1
+note_metadata_errors = 0
 wikiformat=0
 
 
@@ -140,7 +138,10 @@ class MetadataValueType:
 
   def __init__(self, typename, validtypevals=None):
     self.typename = string.lower(typename)
-    self.validtypevals = validtypevals
+    if validtypevals != None and len(validtypevals) > 0:
+      self.validtypevals = validtypevals
+    else:
+      self.validtypevals = None
     if not MetadataValueType.ValidTypes.has_key(typename):
       print "ERROR: Illegal type [%s]" % typename
 
@@ -274,21 +275,89 @@ class Score:
     if diff > 0:
       return 1
     return 0
+
+class OCFLangString(UserDict):
+  def __init__(self, xmlnode, tagname, elemname):
+    UserDict.__init__(self)
+    self.context = xmlnode.tagName
+    self.name = tagname
+    for child in xmlnode.childNodes:
+      if child.nodeType != child.ELEMENT_NODE:
+        continue
+      if child.tagName != tagname:
+        continue
+      lang = child.getAttribute("lang")
+      if lang == "":
+        if note_metadata_errors:
+          print "Metadata ERROR: <%s> tag without lang attribute. Context: inside <%s> tag"\
+          %	(tagname, self.context)
+          print "         (this is not a problem in your CIB)"
+        continue
+      if self.has_key(lang):
+        if note_metadata_errors:
+          print "Metadata ERROR: duplicate <%s lang=\"%s\"> tag. Context: inside <%s> tag"\
+          %	(tagname, lang, self.context)
+          print "         (this is not a problem in your CIB)"
+        continue
+      if len(child.childNodes) >= 1:
+        self[lang]=child.childNodes[0].data
+        #print "Snagged %s: %s" % (tagname, child.childNodes[0].data)
+      else:
+        if note_metadata_errors:
+          print "Metadata ERROR: <%s lang=\"%s\"> has no data.  Context:  Inside <%s> tag" \
+          %  (tagname, lang, self.context)
+          print "         (this is not a problem in your CIB)"
+        self[lang]=elemname
+      
+    if len(self) < 1:
+      if note_metadata_errors:
+        print "Metadata ERROR: <%s> inside <%s> has no data in any language"\
+        %		(tagname, self.context)
+      self["en"]=elemname
+
+  def text(self, lang="en"):
+    if not self.has_key(lang) and lang != "en":
+      if self.has_key("en"):
+        return self["en"]
+      else:
+        for lang in self.keys():
+          return self[lang]
+        return None
+    else:
+      return self[lang]
+
+  
    
+class OCFParameterEnumValNodeExtension(UserDict):
+  def __init__(self, xmlnode):
+    UserDict.__init__(self)
+    # xmlnode should point to the <content> tag...
+    for child in xmlnode.childNodes:
+      if child.nodeType != child.ELEMENT_NODE:
+        continue
+      if child.tagName == "enumval":
+        value = child.getAttribute("value")
+	self[value] = (OCFLangString(child, "shortdesc", value), OCFLangString(child, "longdesc", value))
+      else:
+        print "Metadata ERROR: Don't know how to deal with funky child of <%s>" % xmlnode.tagName
+        print "Funky child: " + node2str(child)
+    if len(self) < 1:
+      self=None
+
 
 #
 # A class for dealing with OCF Parameter metadata
 #
 class OCFParameterMetadata:
   def __init__(self, xmlnode):
-    self.shortdescs = {}
-    self.longdescs = {}
     self.unique = 0
     self.type = StringMetadataType
     self.default = None
     self.name = xmlnode.getAttribute("name")
     self.unique = xmlnode.getAttribute("unique")
     self.typename = "string"
+    self.longdescs=OCFLangString(xmlnode,"longdesc", self.name)
+    self.shortdescs=OCFLangString(xmlnode,"shortdesc", self.name)
     self.type=MetadataValueType(self.typename)
     if self.unique == "":
       self.unique=0
@@ -303,58 +372,41 @@ class OCFParameterMetadata:
     for child in children:
       if child.nodeType != child.ELEMENT_NODE:
         continue
-      if child.tagName == "shortdesc":
-        lang = child.getAttribute("lang")
-        if lang == "":
-          lang="en"
-        if len(child.childNodes) >= 1:
-          self.shortdescs[lang]=child.childNodes[0].data
-        else:
-          if note_missing_metadata:
-            print "NOTE: metadata for %s is missing 'shortdesc' data" \
-		% self.name
-            print "         (this is not a problem in your CIB)"
-          self.shortdescs[lang]=self.name
-
-      if child.tagName == "longdesc":
-        lang = child.getAttribute("lang")
-        if lang == "":
-          lang="en"
-        if len(child.childNodes) >= 1:
-          self.longdescs[lang]=child.childNodes[0].data
-        else:
-          if note_missing_metadata:
-            print "NOTE: metadata for %s is missing 'longdesc' data" \
-		% self.name
-            print "         (this is not a problem in your CIB)"
-          self.longdescs[lang]=self.name
-
+      if child.tagName == "shortdesc" or child.tagName == "longdesc":
+        continue
       if child.tagName == "content":
         type = child.getAttribute("type")
+        # Sneak in and tweak some of our metadata...
+        if re.match('^default-resource-.*stickiness$', self.name) and type == "integer":
+          # These are really scores, but integer is all the CRM currently knows about
+          type="score"
         if type != "":
-          self.type=MetadataValueType(type)
           self.typename = type
+          if type == "enum":
+            enuminfo = OCFParameterEnumValNodeExtension(child)
+          else:
+            enuminfo = None
+          self.type=MetadataValueType(type, enuminfo)
         default = child.getAttribute("default")
         if default != "":
           self.default=default
+      else:
+        print "ERROR: Don't know how to deal with funky child of <%s>" % xmlnode.tagName
+        print "Funky child: " + node2str(child)
 
   def shortdesc(self, lang="en"):
-    if not self.shortdescs.has_key(lang) and lang != "en":
-      return self.shortdescs["en"]
-    return self.shortdescs[lang]
+    return self.shortdescs.text(lang)
 
   def longdesc(self, lang="en"):
-    if not self.longdescs.has_key(lang) and lang != "en":
-      return self.longdescs["en"]
-    return self.longdescs[lang]
+    return self.longdescs.text(lang)
 
   def validate(self, value):
     return self.type.validate(value)
 
   def explainnondefault(self, value, lang="en"):
     if not self.validate(value):
-      print "ERROR: Value [%s] is not a valid value of type [%s]"  \
-	% (value, self.type.typename)
+      print "ERROR: Value [%s] is not a valid value of type [%s] in <%s>"  \
+	% (value, self.type.typename, self.name)
     if self.default != None and self.default != "" and value != self.default \
     and note_non_default_values:
       print "INFO: CIB has non-default value for %s [%s].  Default value is [%s]" \
@@ -382,27 +434,20 @@ class OCFMetadata:
       if topchild.tagName != "resource-agent":
          continue
       self.name = topchild.getAttribute("name")
+      self.longdescs=OCFLangString(topchild,"longdesc", self.name)
+      self.shortdescs=OCFLangString(topchild,"shortdesc", self.name)
 
       for child in topchild.childNodes:
         if child.nodeType != child.ELEMENT_NODE:
           continue
 
 	# Short Description
-        if child.tagName == "shortdesc":
-          if lang == "":
-            lang="en"
-          lang = child.getAttribute("lang")
-          self.shortdescs[lang]=child.childNodes[0].data
-
-	# Long Description
-        if child.tagName == "longdesc":
-          lang = child.getAttribute("lang")
-          if lang == "":
-            lang="en"
-          self.longdescs[lang]=child.childNodes[0].data
+        elif child.tagName == "shortdesc" or child.tagName == "longdesc" \
+        or child.tagName == "version":
+          continue
 
 	# Parameters
-        if child.tagName == "parameters":
+        elif child.tagName == "parameters":
           for gchild in child.childNodes:
             if gchild.nodeType != gchild.ELEMENT_NODE:
               continue
@@ -412,7 +457,7 @@ class OCFMetadata:
               self.Parameters[p.name] = p
 
 	# Actions
-        if child.tagName == "actions":
+        elif child.tagName == "actions":
           for gchild in child.childNodes:
             if gchild.nodeType != gchild.ELEMENT_NODE:
               continue
@@ -420,26 +465,46 @@ class OCFMetadata:
             if gchild.tagName == "action":
               # Good enough to get us started...
               self.Operations[gchild.getAttribute("name")] = 1
+            else:
+              print "ERROR: Don't know how to deal with funky child of <%s>" % child.tagName
+              print "Funky child: " + node2str(gchild)
+        else:
+          print "ERROR: Don't know how to deal with funky child of <%s>" % topchild.tagName
+          print "Funky child: " + node2str(child)
+        self=None
+        return
 
   def shortdesc(self, lang="en"):
-    if not self.shortdescs.has_key(lang) and lang != "en":
-      return self.shortdescs["en"]
-    return self.shortdescs[lang]
+    return self.shortdescs.text(lang)
 
   def longdesc(self, lang="en"):
-    if not self.longdescs.has_key(lang) and lang != "en":
-      return self.longdescs["en"]
-    return self.longdescs[lang]
+    return self.longdescs.text(lang)
 
   def has_parameter(self, p):
     return self.Parameters.has_key(p)
 
   def validate(self, p, value):
     if not self.Parameters.has_key(p):
-      print "ERROR: [%s] is not a legal parameter to [%s]" \
+      print "ERROR: [%s] is not a legal name to [%s]" \
 	% (p, self.name)
       return None
     return self.Parameters[p].validate(v)
+
+  def validate_nvpairs(self,nvpairs):
+    ret=1
+    for p in nvpairs.keys():
+      if not self.Parameters.has_key(p):
+        print "ERROR: <nvpair name=\"%s\" ...> \"%s\" is not a legal nvpair name inside <%s> tag" \
+	%	(p, p, self.name)
+        ret=0
+        continue
+      if not self.Parameters[p].validate(nvpairs[p]):
+        print "ERROR: <nvpair name=\"%s\" value=\"%s\">: \"%s\" is not a legal value for name %s inside <%s> tag" \
+	%	(p, nvpairs[p], nvpairs[p], p, self.name)
+        ret=0
+    return ret
+ 
+
 
   def explainnondefault(self, p, value, lang="en"):
     if not self.Parameters.has_key(p):
@@ -533,10 +598,177 @@ class CRMMetadata:
         return mdlist.Parameters[key]
     raise KeyError, "Key %s not found" % key
 
+class MetaAttrMetadata:
+  def __init__(self, hblibdir=HA_LIBHBDIR):
+    self.metadatalist = []
+    for file in ["crmd", "pengine"]:
+      command="%s/%s metadata" % (hblibdir, file)
+      f = os.popen(command)
+      f.readline()  # work around bad first line in metadata
+      xml = FromXmlStream(f)
+      self.metadatalist.append(OCFMetadata(xml))
+      f.close()
+      xml = None
 
 global crmMetadata
 global crm_config_section
+global MetaAttributeMetadata
+global MetaAttributeMetadata_string
 crmMetadata = None
+MetaAttributeMetadata = None
+#'''<?xml version="1.0"?>
+MetaAttributeMetadata_string =\
+'''<resource-agent name="meta_attributes">
+  <version>1.0</version>
+  <longdesc lang="en">Options that can be configured for resource meta_attributes.</longdesc>
+  <shortdesc lang="en">Resource meta_attributes Options</shortdesc>
+  <parameters>
+    <parameter name="restart_type" unique="0">
+      <shortdesc lang="en">how to restart dependents</shortdesc>
+      <longdesc lang="en">how to restart dependents when this resource restarts</longdesc>
+      <content type="enum" default="restart">
+	<enumval value="ignore">
+          <shortdesc lang="en">Dependent resources ignore restarts of this resource</shortdesc>
+          <longdesc lang="en">Dependent resources take no action when this resource is restarted due to monitor failure</longdesc>
+	</enumval>
+	<enumval value="restart">
+          <shortdesc lang="en">Restart dependent resources when this one restarts</shortdesc>
+          <longdesc lang="en">Dependent resources restart when this resource is restarted due to monitor failure</longdesc>
+	</enumval>
+      </content>
+    </parameter>
+
+
+    <parameter name="ordered" unique="0">
+      <content type="boolean" default="0"/>
+      <shortdesc lang="en">Start (or stop) each clone only after the operation on the previous clone completed.</shortdesc>
+      <longdesc lang="en">This serializes operations on a set of clones ensuring that operations between individual clones never overlap.</longdesc>
+    </parameter>
+
+    <parameter name="interleave" unique="0">
+      <content type="boolean" default="0"/>
+      <shortdesc lang="en">affects clones with colocation constraints</shortdesc>
+      <longdesc lang="en">If a colocation constraint is created between two clone resources and interleaved is true, then clone N from one resource will be assigned the same location as clone N from the other resource.  If the number of runnable clones differs, then the leftovers can be located anywhere.  Using a cloned group is a much better way of achieving the same result.
+      </longdesc>
+    </parameter>
+
+    <parameter name="clone_max" unique="0">
+      <content type="integer" default="0"/>
+      <shortdesc lang="en">Max number of clones</shortdesc>
+      <longdesc lang="en">Total maximum number of clones of this resource permitted. Value defaults to the number of nodes in the system.</longdesc>
+    </parameter>
+
+    <parameter name="clone_node_max" unique="0">
+      <content type="integer" default="1"/>
+      <shortdesc lang="en">Max number of clones/node</shortdesc>
+      <longdesc lang="en">Total maximum number of clones allowed to run on one node at a time</longdesc>
+    </parameter>
+
+    <parameter name="master_max" unique="0">
+      <content type="integer" default="1"/>
+      <shortdesc lang="en">Max number of masters</shortdesc>
+      <longdesc lang="en">Maximum number of instances of this resource which are allowed to be master at one time. Must be less than or equal to "clone_max"</longdesc>
+    </parameter>
+
+    <parameter name="master_node_max" unique="0">
+      <content type="integer" default="1"/>
+      <shortdesc lang="en">Max number of masters/node</shortdesc>
+      <longdesc lang="en">Maximum number of instances of this resource which are allowed to be master on a node at one time. Must be less than or equal to "clone_node_max"</longdesc>
+    </parameter>
+
+    <parameter name="clone_state" unique="0">
+      <content type="enum" default="0"/>
+      <shortdesc lang="en">clone state FIXME</shortdesc>
+      <longdesc lang="en">clone state FIXME</longdesc>
+    </parameter>
+
+    <parameter name="is_managed" unique="0">
+      <content type="boolean"/>
+      <shortdesc lang="en">"true" if this resource is managed by Heartbeat</shortdesc>
+      <longdesc lang="en">If set to "false", Heartbeat will not monitor it, nor restart it on failure of resource or node.  Commonly set to "true" to allow for maintenance of the resource.  It defaults to the currently active value of "is-managed-default" from the crm_config section.</longdesc>
+    </parameter>
+
+
+    <parameter name="target_role" unique="0">
+      <shortdesc lang="en">Desired state of the resource</shortdesc>
+      <longdesc lang="en">Heartbeat will attempt keep it in the specfied state.  It defaults to "#default".  If set to some other value, it will ignore the value of is_managed or is_managed_default.</longdesc>
+      <content type="enum">
+	<enumval value="started">
+          <shortdesc lang="en">Keep resource started</shortdesc>
+          <longdesc lang="en">Keep resource started</longdesc>
+	</enumval>
+	<enumval value="stopped">
+          <shortdesc lang="en">Keep resource stopped</shortdesc>
+          <longdesc lang="en">Keep resource stopped.  Resources which depend on this resource will also be stopped</longdesc>
+	</enumval>
+	<enumval value="master">
+          <shortdesc lang="en">keep resource in master mode</shortdesc>
+          <longdesc lang="en">keep resource in master mode.  This doesn't seem like a sensible value to set this to for a clone resources with multiple instances and fewer slave instances.</longdesc>
+	</enumval>
+	<enumval value="slave">
+          <shortdesc lang="en">keep resource in slave mode</shortdesc>
+          <longdesc lang="en">keep resource in slave mode. This forces all the instances to stay in slave mode</longdesc>
+	</enumval>
+	<enumval value="#default">
+          <shortdesc lang="en">allow cluster to determine its</shortdesc>
+          <longdesc lang="en">explicitly inherit target_role from enclosing group or allow Heartbeat to control its state </longdesc>
+	</enumval>
+      </content>
+    </parameter>
+
+    <parameter name="globally_unique" unique="0">
+      <shortdesc lang="en">"true" means this clone is unique within the cluster</shortdesc>
+      <longdesc lang="en">A globally unique clone can distinguish which clone number it is within the cluster - typically implying a true cluster-aware application.  A non-unique clone is typically a non-cluster-aware application which can only tell if a copy of the application is running on this machine, but not which copy.</longdesc>
+      <content type="boolean" default="false"/>
+    </parameter>
+
+    <parameter name="notify" unique="0">
+      <content type="boolean" default="0"/>
+      <shortdesc lang="en">notify clone resource agent of changes in state</shortdesc>
+      <longdesc lang="en">Issue pre and post operation notifications to entire clone set for every operation.  This introduces shell-level barriers for the resource agent actions    If true, inform peers before and after any clone is stopped or started.  If an action failed, you will (currently) not recieve a post-notification.  Instead you can next expect to see a pre-notification for a stop.  If a stop fails, and you have fencing you will get a post-notification for the stop after the fencing operation has completed.  In order to use the notification service ALL decendants of the clone MUST support the notify action.  Currently this action is not permitted to fail, though depending on your configuration, can block almost indefinitely.  Behaviour in response to a failed action or notificaiton is likely to be improved in future releases.
+      </longdesc>
+    </parameter>
+
+    <parameter name="resource_failure_stickiness" unique="0">
+      <content type="integer" default="0"/>
+      <shortdesc lang="en">resource_failure_stickiness FIXME</shortdesc>
+      <longdesc lang="en">resource_failure_stickiness FIXME</longdesc>
+    </parameter>
+
+    <parameter name="multiple_active" unique="0">
+      <shortdesc lang="en">action to take when multiple instances are active</shortdesc>
+      <longdesc lang="en">When an instance of this resource is found to be active mutliple times, this parameter specifies what action to take.</longdesc>
+      <content type="enum" default="start_stop">
+	<enumval value="stop_start">
+          <shortdesc lang="en">stop all and restart one</shortdesc>
+          <longdesc lang="en">Stop all instances of this resource, and restart one.  This works fine if the resource won't be irreparably damaged by having multiple active instances.</longdesc>
+        </enumval>
+	<enumval value="stop_only">
+          <shortdesc lang="en">stop all instances</shortdesc>
+          <longdesc lang="en">Stop all instances of this resource and wait for the administrator to recover the resources manually.  This is a good choice if this resource (like most filesystems) will be damaged by multiple running copies, and get more damaged the longer they're multiply active.</longdesc>
+	</enumval>
+	<enumval value="block">
+          <shortdesc lang="en">do nothing</shortdesc>
+          <longdesc lang="en">Don't do anything - wait for the administrator to recover the resources.</longdesc>
+	</enumval>
+      </content>
+    </parameter>
+
+    <parameter name="start_prereq" unique="0">
+      <content type="enum" default="0"/>
+      <shortdesc lang="en">obsolete?</shortdesc>
+      <longdesc lang="en">Is this obsolete - replaced by the prereq attribute of the op tag?</longdesc>
+    </parameter>
+
+    <parameter name="priority" unique="0">
+      <content type="integer" default="0"/>
+      <shortdesc lang="en">is this obsolete?</shortdesc>
+      <longdesc lang="en">Should this be a parameter or an attribute of a resource? - or is it the other way around?</longdesc>
+    </parameter>
+
+  </parameters>
+</resource-agent>
+'''
 
 GlobalIDSet = {}
 GlobalTagIDSet = {}
@@ -580,7 +812,7 @@ OpMetadataType = MetadataValueType("enum", {"lt":1, "lte":1,"gt":1,"gte":1,
 				"eq":1, "neq":1, "defined":1, "not_defined":1})
 DateOpMetadataType = MetadataValueType("enum", {"in_range":1, "date_spec":1,"gt":1,"lt":1})
 DateSpecMetadataType = MetadataValueType("enum", {"in_range":1, "date_spec":1,"gt":1,"lt":1})
-BoolDefaultMetadatatype = MetadataValueType("enum", {"true":1, "false":0,"1":1,"0":0, "default":1,"on":1, "off":0})
+BoolDefaultMetadatatype = MetadataValueType("enum", {"true":1, "false":0,"1":1,"0":0, "#default":1,"on":1, "off":0})
 CrmStatusMetadataType = MetadataValueType("enum", {"online":1, "offline":0})
 MemberStatusMetadataType = MetadataValueType("enum", {"member":1, "nonmember":0})
 HaStatusMetadataType = MetadataValueType("enum", {"active":1, "init":1, "dead":0})
@@ -623,6 +855,7 @@ AttributeKeys = {
 	"group": {	"id": StringMetadataType, "ordered": BooleanMetadataType,
 			"colocated":BooleanMetadataType},
 	"instance_attributes": idonly,
+	"meta_attributes": idonly,
 	"attributes": {},
 	"rsc_order": {	"id": StringMetadataType, "type": OrderMetadataType,
 			"from": ResourceMetadataType, "to": ResourceMetadataType},
@@ -863,6 +1096,8 @@ class MetaAttributesTag:
         print "Funky child: " + node2str(child)
         self=None
         return
+    # Validate <meta_attributes> nvpairs against our metadata for meta_attributes
+    MetaAttributeMetadata.validate_nvpairs(self.attributes.nvpairs)
 
 #
 # A class for processing the <cluster_property_set> tag
@@ -1124,7 +1359,7 @@ class ExpressionTag:
     if xmlnode.getAttribute("attribute") == "#uname":
       uname=xmlnode.getAttribute("value")
       if not clusterNodes.has_key(uname):
-        print "ERROR: <expression attribute=\"#uname\" value=\"%s\"...> references unknown node [%s]" \
+        print "ERROR: <expression attribute=\"#uname\" value=\"%s\"...> references unknown cluster node [%s]" \
 	%	(uname,uname)
     if xmlnode.getAttribute("attribute") == "#id":
       id=xmlnode.getAttribute("value")
@@ -1267,9 +1502,16 @@ def descend(xmlnode):
   for child in xmlnode.childNodes:
     descend(child)
 
+   
+
 def analyze_CIB(doc):
   global crmMetadata
+  global MetaAttributeMetadata
+  global MetaAttributeMetadata_string
   crmMetadata = CRMMetadata()
+  
+  MetaAttributeMetadata = OCFMetadata(FromXml(MetaAttributeMetadata_string))
+
   global crm_config_section, stonithresourcecount
   descend(doc)
   stonithwarn=0
