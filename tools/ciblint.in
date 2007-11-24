@@ -30,25 +30,12 @@ Licensed under the GNU GPL version 2 or later
 #	This program is a work-in-progress, but for many CIBs it's probably
 #	useful now.
 #
-#	A few of the things we try and catch:
-#
-#	- Non-unique 'id' strings for the given <tag>
-#	- 'id' strings which are not globally unique
-#	- Incorrect <nvpair> 'name's or 'value's
-#	- Duplicate <nvpair> 'name's in a list
-#	- Incorrect XML attribute names or values
-#	- references to non-existent resources
-#	- references to non-existent nodes
-#	- invalid values for the type involved
-#	- resources you're not monitoring
+#	A few of the things we try and catch are listed in the usage text below...
 #
 #	Things to do:
 #	- validate the CIB against the DTD
-#	- validate the metadata against the metadata DTD
-#	- validate resource nvpairs against resource metadata (using lrmadmin)
 #	- process the 'status' section and flag potential problems
 #	- figure out why resource "x" isn't running
-#	- change our internal metadata to use "score" as a type??
 #
 #	To Do for the OCF standards crew:
 #	- Add support for enumerations to metadata
@@ -63,17 +50,57 @@ Licensed under the GNU GPL version 2 or later
 from UserDict import UserDict
 import os, sys, string, types, re
 from xml.dom.ext.reader.Sax2 import FromXmlStream, FromXml
-#from xml.dom.ext import PrettyPrint
 
-global CIBADMIN, HA_LIBHBDIR, URLBASE
+usage_message=\
+"usage: " + sys.argv[0] + " [-C] -f cib-file\n" + \
+"       " + sys.argv[0] + " [-C] -L\n" +\
+"       " + sys.argv[0] + " [-w] (-A|--list-meta_attributes-config-options\n" +\
+"       " + sys.argv[0] + " [-w] (-l|--list-crm-config-options)\n" +\
+"       " + sys.argv[0] + " [-w] -h --help\n" +'''
+  -f cib-filename		analyze CIB from this XML file
+  -L --live-cib			analyze live CIB gotten via cibadmin -Q
+  -C --ignore-non-defaults	don't print messages for non-default crm_config values
+  -w --wiki-format		print usage or crm-config-options in wiki format
+  -l --list-crm_config-options	print all valid names for use in <nvpair> sections
+                                inside the <crm_config> section
+  -A --list-meta_attributes-config-options
+                                print all valid names for use in <nvpair> sections
+                                inside <meta_attributes> sections
+                                 
+CIB file can either have a status section or not.  Either is acceptable.
+This program is a work-in-progress, but for many CIBs it's probably useful now.
+
+It currently looks for a number of classes of errors, including these:
+  - Non-unique 'id' strings for the given <tag>
+  - 'id' strings which are not globally unique
+  - Incorrect <nvpair> 'name's or 'value's
+  - Duplicate <nvpair> 'name's in a list
+  - Incorrect XML attribute names or values
+  - references to non-existent resources
+  - references to non-existent nodes
+  - invalid values for the data type (integer, boolean, etc.) involved
+  - resources you're not monitoring
+  - non-negative values for default-resource-failure-stickiness
+  - STONITH not enabled
+  - No STONITH resources configured
+  - Use of for-testing-only ssh or external/ssh STONITH resource agents
+  - validation of <meta_attributes> names and values in <nvpair>s
+  - validation of <attributes> names and values in <nvpair>s for <primitive> resourcs
+
+More documentation can be found online at http://linux-ha.org/ciblint
+'''
+
+global CIBADMIN, HA_LIBHBDIR, URLBASE, LRMADMIN
 HA_LIBHBDIR = "@HA_LIBHBDIR@"
 CIBADMIN="@sbindir@/cibadmin"
 URLBASE="@HA_URLBASE@" + "ciblint/"
+LRMADMIN="sudo @HA_LIBHBDIR@" + "/lrmadmin"
 
-global note_non_default_values, note_metadata_errors, wikiformat
+global note_non_default_values, note_metadata_errors, wikiformat, outlinelen
 note_non_default_values = 1
-note_metadata_errors = 0
+note_metadata_errors = 1
 wikiformat=0
+outlinelen=65
 
 
 def lintURL(suffix):
@@ -118,6 +145,25 @@ def prchildren(node):
   for child in node.childNodes:
     print "CHILD: " + node2str(child)
 
+def print_wrap(text, linelen, prefix, firstprefix):
+    words=text.split()
+    line=""
+    thisprefix=firstprefix
+#    print "prefix=[%s] firstprefix=[%s] thisprefix=[%s]" % (prefix, firstprefix, thisprefix)
+    for word in words:
+      realprefix=thisprefix.expandtabs()
+      llen = linelen - len(realprefix)
+      if len(line)+len(word) > llen-1:
+        if line != "":
+          print thisprefix + line
+          thisprefix=prefix
+          line=""
+      if line == "":
+        line=word
+      else:
+        line=line+ " " + word
+    if line != "":
+        print thisprefix + line
 
 #
 #	A class for a data type as defined by our metadata - with a few extensions...
@@ -411,8 +457,10 @@ class OCFParameterMetadata:
     and note_non_default_values:
       print "INFO: CIB has non-default value for %s [%s].  Default value is [%s]" \
 	%	(self.name, value, self.default)
-      print "INFO: Explanation of %s option: %s" % (self.name, self.shortdesc(lang))
-      print "INFO: %s" % (self.longdesc(lang))
+      print_wrap("Explanation of %s option: %s" % (self.name, self.shortdesc(lang)),\
+		outlinelen, "      ", "INFO: ")
+      if self.longdesc(lang) != self.shortdesc(lang):
+        print_wrap(self.longdesc(lang), outlinelen, "INFO: ", "INFO: ")
 
 #
 #	OCF metadata class - descriptions, parameters, types, operations, etc.
@@ -490,7 +538,7 @@ class OCFMetadata:
       return None
     return self.Parameters[p].validate(v)
 
-  def validate_nvpairs(self,nvpairs):
+  def validate_nvpairs(self, nvpairs):
     ret=1
     for p in nvpairs.keys():
       if not self.Parameters.has_key(p):
@@ -504,8 +552,6 @@ class OCFMetadata:
         ret=0
     return ret
  
-
-
   def explainnondefault(self, p, value, lang="en"):
     if not self.Parameters.has_key(p):
       print "ERROR: [%s] is not a legal parameter to [%s]" \
@@ -515,25 +561,40 @@ class OCFMetadata:
 
   def explainall(self, lang="en"):
     for key in self.Parameters.keys():
-      if self.Parameters[key].default == None:
+      item = self.Parameters[key]
+      if item.default == None:
         deflt=""
       else:
-        deflt=": default=%s" % self.Parameters[key].default
-      print "%s [%s%s]: %s" % (key, self.Parameters[key].typename, deflt,\
-      	self.Parameters[key].shortdesc(lang))
-      print "\t%s" % (self.Parameters[key].longdesc(lang))
+        deflt=": default=%s" % item.default
+      
+      print_wrap("%s [%s%s]: %s" % (key,item.typename,deflt,	\
+	item.shortdesc(lang)), outlinelen, "    ", "")
+      print_wrap(item.longdesc(lang), outlinelen, "    ", "    ")
+      if item.type.validtypevals != None:
+        for enumval in item.type.validtypevals.keys():
+          descs= item.type.validtypevals[enumval]
+          shortd=descs[0].text(lang)
+          longd=descs[1].text(lang)
+          print_wrap("%s: %s" % (enumval, shortd), outlinelen, "\t    ", "\t")
+          if (longd != None and long != "" and longd!= shortd):
+            print_wrap(longd, outlinelen, "\t    ", "\t    ")
 
   def explainall_wiki(self, lang="en"):
     for key in self.Parameters.keys():
+      item = self.Parameters[key]
       print "== %s ==" % key
       print "[[Anchor(%s)]]" % key
-      if self.Parameters[key].default == None:
+      if item.default == None:
         deflt=""
       else:
-        deflt=": default=%s" % self.Parameters[key].default
-      print "'''%s''' [%s%s]: ''%s''[[BR]]" % (key, self.Parameters[key].typename, deflt,\
+        deflt=": default=%s" % item.default
+      print "'''%s''' [%s%s]: ''%s''[[BR]]" % (key, item.typename, deflt,\
       	self.Parameters[key].shortdesc(lang))
       print "%s" % (self.Parameters[key].longdesc(lang))
+      if item.type.validtypevals != None:
+        for enumval in item.type.validtypevals.keys():
+          descs=item.type.validtypevals[enumval]
+          print " * '''%s:''' %s[[BR]]%s" % (enumval, descs[0].text(lang), descs[1].text(lang))
 
   def supports_action(self, op):
     if OCFMetadata.RequiredOps.has_key(op):
@@ -610,12 +671,69 @@ class MetaAttrMetadata:
       f.close()
       xml = None
 
-global crmMetadata
-global crm_config_section
-global MetaAttributeMetadata
-global MetaAttributeMetadata_string
+class MetadataCache(UserDict):
+ def __is_lrm_working__(self):
+   cmd=LRMADMIN + " -C >/dev/null 2>/dev/null"
+   rc=os.system(cmd)
+   #print "lrmadmin test command [%s] returned return code %d" % (cmd, rc)
+   return rc == 0
+
+ def __init__(self):
+    UserDict.__init__(self)
+    # Test if LRM connections work...
+    self.uselrm=MetadataCache.__is_lrm_working__(self)
+
+ def __resource_key__(self, rclass, type, provider):
+   if rclass == "ocf":
+     return "Resource/"+rclass+"/"+provider+"/"+type
+   return "Resource/"+rclass+"/"+type
+
+ def __stash_lrm__(self, key, command):
+   #print "COMMAND=%s" % command
+   f = os.popen(command)
+   #print "READ1:", f.readline()  # ignore line
+   #print "READ2:", f.readline()  # ignore line
+   #print "READ3:", f.readline()  # ignore line
+   #print "READ4:", f.readline()  # ignore line
+   try:
+     self[key]=OCFMetadata(FromXmlStream(f))
+   except:
+     if note_metadata_errors:
+       print "Metadata ERROR: Could not get resource metadata for %s" % key
+       print "INFO: Resource parameters for this resource type will not be checked"
+     self[key] = None
+   else:
+     #print "HOORAY!  PARSING WORKED for %s!" % key
+     #print self[key]
+     None
+   return f.close()
+
+ def __add_resource__(self, rclass, type, provider=None):
+   if not self.uselrm:
+      return 0
+   key=self.__resource_key__(rclass, type, provider)
+   if (provider == None or provider == ""):
+     provider="NULL"
+   lrmcommand="%s --metadata %s %s %s 2>/dev/null | grep -v '^<!DOCTYPE'|tee foo.bar" % (LRMADMIN, rclass, type, provider)
+   return self.__stash_lrm__(key, lrmcommand)
+
+ def RAmetadata(self, rclass, type, provider=None):
+   key=self.__resource_key__(rclass, type, provider)
+
+   if self.has_key(key):
+     return self[key]
+   else:
+     self.__add_resource__(rclass, type, provider)
+   if self.has_key(key):
+     return self[key]
+   return None
+
+global crmMetadata, crm_config_section, metaDataCache
+global MetaAttributeMetadata, MetaAttributeMetadata_string
 crmMetadata = None
 MetaAttributeMetadata = None
+metaDataCache = MetadataCache()
+
 #'''<?xml version="1.0"?>
 MetaAttributeMetadata_string =\
 '''<resource-agent name="meta_attributes">
@@ -730,7 +848,7 @@ MetaAttributeMetadata_string =\
     </parameter>
 
     <parameter name="resource_failure_stickiness" unique="0">
-      <content type="integer" default="0"/>
+      <content type="score" default="0"/>
       <shortdesc lang="en">resource_failure_stickiness FIXME</shortdesc>
       <longdesc lang="en">resource_failure_stickiness FIXME</longdesc>
     </parameter>
@@ -1240,7 +1358,12 @@ class PrimitiveTag:
       if child.nodeType != child.ELEMENT_NODE:
         continue
       if child.tagName == "instance_attributes":
-        self.instance_attributes.append(InstanceAttributesTag(child))
+        iattr = InstanceAttributesTag(child)
+        self.instance_attributes.append(iattr)
+        metadata = metaDataCache.RAmetadata(self.rscclass, self.type, self.provider)
+        if metadata != None:
+          #print "Validating nvpairs for resource %s" % (self.name)
+          metadata.validate_nvpairs(iattr.attributes.nvpairs)
       elif child.tagName == "meta_attributes":
         self.meta_attributes.append(MetaAttributesTag(child))
       elif child.tagName == "operations":
@@ -1564,36 +1687,14 @@ def explain_crm_config():
   crmMetadata = CRMMetadata()
   crmMetadata.explainall()
 
-usage_message=\
-"usage: " + sys.argv[0] + " [-C] -f cib-file\n" + \
-"       " + sys.argv[0] + " [-C] -L\n" +\
-"       " + sys.argv[0] + " [-w] (-l|--list-crm-config-options)\n" +\
-"       " + sys.argv[0] + " [-w] -h --help\n" +'''
-  -f				precedes pathname of CIB XML file
-  -L --live-cib			get live CIB from cibadmin -Q
-  -C --ignore-non-defaults	don't print messages for non-default crm_config values
-  -w --wiki-format		print usage or crm-config-options in wiki format
+def explain_meta_attributes_config():
+  global MetaAttributeMetadata, MetaAttributeMetadata_string
+  MetaAttributeMetadata = OCFMetadata(FromXml(MetaAttributeMetadata_string))
+  if wikiformat:
+    MetaAttributeMetadata.explainall_wiki()
+  else:
+    MetaAttributeMetadata.explainall()
 
-CIB file can either have a status section or not.  Either is acceptable.
-This program is a work-in-progress, but for many CIBs it's probably useful now.
-
-It currently looks for a number of classes of errors, including these:
-  - Non-unique 'id' strings for the given <tag>
-  - 'id' strings which are not globally unique
-  - Incorrect <nvpair> 'name's or 'value's
-  - Duplicate <nvpair> 'name's in a list
-  - Incorrect XML attribute names or values
-  - references to non-existent resources
-  - references to non-existent nodes
-  - invalid values for the type involved
-  - resources you're not monitoring
-  - non-negative default-resource-failure-stickiness
-  - STONITH not enabled
-  - No STONITH resources configured
-  - Use of for-testing-only ssh or external/ssh STONITH resource agents
-
-More documentation can be found online at http://linux-ha.org/ciblint
-'''
 wiki_usage_message = "{{{" + usage_message + "}}}\n"
 
 
@@ -1614,7 +1715,8 @@ if len(sys.argv) < 2:
 
 livecib=0
 cibfile=0
-listoptions=0
+listcrmoptions=0
+listmetaattrsoptions=0
 skipnext=0
 usageerror=0
 askforusage=0
@@ -1624,7 +1726,7 @@ for arg in sys.argv[1:]:
   if skipnext:
     skipnext=0
     continue
-  if arg == "-h" or arg == "--help":
+  if arg == "-h" or arg == "--help" or arg == "-?":
     askforusage = 1
   elif arg == "-w" or arg == "--wiki-format":
     wikiformat = 1
@@ -1633,7 +1735,9 @@ for arg in sys.argv[1:]:
   elif arg == "-L" or arg == "--live-cib":
     livecib = 1
   elif arg == '-l' or arg == "--list-crm-config-options":
-    listoptions = 1
+    listcrmoptions = 1
+  elif arg == '-A' or arg == "--list-meta_attributes-config-options":
+    listmetaattrsoptions=1
   elif arg == "-f":
     if count >= (len(sys.argv)-1):
       usageerror=1
@@ -1642,17 +1746,21 @@ for arg in sys.argv[1:]:
       cibfilename=sys.argv[count+1]
       skipnext=1
   else:
-    sys.stderr.write("invalid option: " + arg)
+    sys.stderr.write("invalid option: " + arg + "\n")
     usageerror=1
 
-total=livecib+cibfile+listoptions+askforusage
+total=livecib+cibfile+listcrmoptions+askforusage+listmetaattrsoptions
 
+if total > 1:
+  print "ERROR: Contradictory options specified."
 if usageerror or total != 1:
   usage()
   sys.exit(1)
 
-if listoptions:
+if listcrmoptions:
   explain_crm_config()
+if listmetaattrsoptions:
+  explain_meta_attributes_config()
 if askforusage:
   usage()
 if livecib:
