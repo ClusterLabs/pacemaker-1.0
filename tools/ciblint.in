@@ -1712,7 +1712,7 @@ def analyze_CIB(doc):
       print "ERROR:  STONITH enabled, but No STONITH resources configured.  STONITH is NOT available."
   else:
     stonithwarn=1
-    print "WARNING:  STONITH disabled (%s=%s).  STONITH is HIGHLY recommended."\
+    print "WARNING:  STONITH disabled (%s=%s).  STONITH is STRONGLY recommended."\
     %	(stonithtag, enableval)
     if stonith_resource_count == 0:
       print "WARNING:  No STONITH resources configured.  STONITH is not available."
