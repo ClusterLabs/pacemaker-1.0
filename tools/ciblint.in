@@ -70,7 +70,7 @@ usage_message=\
 CIB file can either have a status section or not.  Either is acceptable.
 This program is a work-in-progress, but for many CIBs it's probably useful now.
 
-It currently looks for a number of classes of errors, including these:
+It currently looks for a number of classes of possible errors, including these:
   - Non-unique 'id' strings for the given <tag>
   - 'id' strings which are not globally unique
   - Incorrect <nvpair> 'name's or 'value's
@@ -87,6 +87,9 @@ It currently looks for a number of classes of errors, including these:
   - validation of <nvpair> names and values in <meta_attributes> sections
   - validation of class and type for <primitive> resources
   - validation of <attributes> names and values in <nvpair>s for <primitive> resources
+  - check if clone form resource names are used for non-clone resources
+  - ensure that clone form resource names have integral clone numbers
+  - check for ids with ":" characters in them in <primitive>, <group>, <clone>, or <master_slave> tags
 
 More documentation can be found online at http://linux-ha.org/ciblint
 '''
@@ -101,7 +104,7 @@ global note_non_default_values, note_metadata_errors, wikiformat, outlinelen
 note_non_default_values = 1
 note_metadata_errors = 1
 wikiformat=0
-outlinelen=65
+outlinelen=70
 global LRMclasses, LRMresources
 LRMclasses = {}
 LRMresources = {}
@@ -739,7 +742,7 @@ class MetadataCache(UserDict):
      print "ERROR: %s is not a valid resource class" % rclass
      return 0
    if not LRMresources[rclass].has_key(type):
-     print "ERROR: [%s] is not a valid resource type for class [%s]" % (type, rclass)
+     print "ERROR: [%s] is not a valid type for resource class [%s]" % (type, rclass)
      return 0
    key=self.__resource_key__(rclass, type, provider)
    if (provider == None or provider == ""):
@@ -1364,12 +1367,32 @@ AllResourceLocations = []
 AllResourceCoLocations = []
 stonith_resource_count = 0
 
-class ResourceTag:
-  def __init__(self, xmlnode, inclone=0, ingroup=0):
+class ResourceType:
+  rtypelist={"group":AllGroups, "master_slave":AllMasterSlave, "clone":AllClones, "primitive":AllPrimitives}
+  def __init__(self, xmlnode, inclone=0, ingroup=0, parent=None):
+    global AllPrimitives, AllGroups, AllMasterSlave, AllClones
+    self.name = xmlnode.getAttribute("id")
     self.rsctype=xmlnode.tagName
     self.inclone = inclone
     self.ingroup = ingroup
+    self.parent = parent
     self.childrscs = None
+    self.xmlattributes = xmlnode.attributes
+    CheckXMLNodeUniqueness(xmlnode)
+    if self.name.find(":") >= 0:
+      print "ERROR: Cannot name a resource %s: <%s id=\"%s\">" \
+      %		(self.name, xmlnode.tagName, self.name)
+
+
+    id=xmlnode.getAttribute("id")
+
+    for rtype in ResourceType.rtypelist.keys():
+      if ResourceType.rtypelist[rtype].has_key(id):
+        print "ERROR: A <%s> exists with the same id as this <%s id=\"%s\">"\
+        %	(rtype, id, xmlnode.tagName)
+    ResourceType.rtypelist[xmlnode.tagName][id] = self
+    AllResources[id] = self
+
 
 def ValidateResource(rscname):
     result=1
@@ -1377,28 +1400,31 @@ def ValidateResource(rscname):
     rname=rsplit[0]
     if not AllResources.has_key(rname):
       return 0
-    if len(rsplit) > 1 and not AllResources[rname].inclone:
-      print "ERROR: Resource [%s] referenced as [%s] is not a clone resource" \
-      %		(rname, rscname)
-      return 0
+    if len(rsplit) > 1:
+      if not AllResources[rname].inclone:
+        print "ERROR: Resource [%s] referenced as [%s] is not a clone resource" \
+        %		(rname, rscname)
+        return 0
+      elif not IntegerMetadataType.validate(rsplit[1]):
+        print "ERROR: Clone number [%s] in resource name [%s] is not an integer." \
+        %		(rsplit[1], rscname)
+        return 0
+      else:
+         # FIXME - validate clone number against clone_max for clone resource
+         None
     return 1
     
   
-
 #
 # A class for processing the <primitive> tag
 #
-class PrimitiveTag(ResourceTag):
-  def __init__(self, xmlnode, inclone=0, ingroup=0):
-    ResourceTag.__init__(self,xmlnode, inclone, ingroup)
+class PrimitiveTag(ResourceType):
+  def __init__(self, xmlnode, inclone=0, ingroup=0, parent=None):
+    ResourceType.__init__(self,xmlnode, inclone=inclone, ingroup=ingroup,parent=parent)
     self.operations = None
     self.instance_attributes = []
     self.meta_attributes = []
     self.operations = []
-    self.inclone=inclone
-    CheckXMLNodeUniqueness(xmlnode)
-    CheckAttributes(xmlnode)
-    self.name = xmlnode.getAttribute("id")
     self.rscclass = xmlnode.getAttribute("class")
     self.provider = xmlnode.getAttribute("provider")
     self.type = xmlnode.getAttribute("type")
@@ -1442,38 +1468,28 @@ class PrimitiveTag(ResourceTag):
 #
 # A class for processing the <group> tag
 #
-class GroupTag(ResourceTag):
-  def __init__(self, xmlnode, inclone=0,ingroup=0):
-    ResourceTag.__init__(self,xmlnode, inclone=inclone, ingroup=ingroup)
+class GroupTag(ResourceType):
+  def __init__(self, xmlnode, inclone=0,ingroup=0, parent=None):
+    ResourceType.__init__(self,xmlnode, inclone=inclone, ingroup=ingroup, parent=parent)
     self.childrscs = []
-    CheckXMLNodeUniqueness(xmlnode)
-    self.name = xmlnode.getAttribute("id")
-    self.inclone=inclone
     children = xmlnode.childNodes
     for child in children:
       if child.nodeType != child.ELEMENT_NODE:
         continue
       if child.tagName == "primitive":
-        self.childrscs.append(PrimitiveTag(child, inclone))
+        self.childrscs.append(PrimitiveTag(child, inclone=inclone, parent=self, ingroup=1))
       else:
         print "ERROR: Don't know how to deal with funky child of <%s>" % xmlnode.tagName
         print "Funky child: " + node2str(child)
         self=None
         return
-    AllGroups[self.name]= self
-    AllResources[self.name]= self
-    if AllPrimitives.has_key(self.name):
-      print "WARNING: A <primitive> exists with the same id as this group [%s]" % self.name
-    if AllMasterSlave.has_key(self.name):
-      print "WARNING: A <master_slave> exists with the same id as this group [%s]" % self.name
-    if AllClones.has_key(self.name):
-      print "WARNING: A <clone> exists with the same id as this group [%s]" % self.name
 
 #
 # A class for processing the <clone> tag
 #
-class CloneTag:
+class CloneTag(ResourceType):
   def __init__(self, xmlnode):
+    ResourceType.__init__(self,xmlnode, inclone=inclone, ingroup=ingroup, parent=parent)
     self.childrscs = []
     CheckXMLNodeUniqueness(xmlnode)
     self.name = xmlnode.getAttribute("id")
@@ -1482,52 +1498,35 @@ class CloneTag:
       if child.nodeType != child.ELEMENT_NODE:
         continue
       if child.tagName == "primitive":
-        self.childrscs.append(PrimitiveTag(child,clone=1))
-      if child.tagName == "group":
-        self.childrscs.append(GroupTag(child,inclone=1))
+        self.childrscs.append(PrimitiveTag(child, inclone=1, ingroup=ingroup, parent=self))
+      elif child.tagName == "group":
+        self.childrscs.append(GroupTag(child, inclone=1, ingroup=ingroup, parent=self))
       else:
         print "ERROR: Don't know how to deal with funky child of <%s>" % xmlnode.tagName
         print "Funky child: " + node2str(child)
         self=None
         return
-    AllClones[self.name]= self
-    AllResources[self.name]= self
-    if AllPrimitives.has_key(self.name):
-      print "WARNING: A <primitive> exists with the same id as this clone [%s]" % self.name
-    if AllMasterSlave.has_key(self.name):
-      print "WARNING: A <master_slave> exists with the same id as this clone [%s]" % self.name
-    if AllGroups.has_key(self.name):
-      print "WARNING: A <group> exists with the same id as this clone [%s]" % self.name
 
 #
 # A class for processing the <master_slave> tag
 #
-class MasterSlaveTag:
+class MasterSlaveTag(ResourceType):
   def __init__(self, xmlnode):
-    self.rsctype="master_slave"
+    ResourceType.__init__(self,xmlnode, inclone=inclone, ingroup=ingroup, parent=parent)
     self.childrscs = []
-    CheckXMLNodeUniqueness(xmlnode)
-    self.name = xmlnode.getAttribute("id")
     children = xmlnode.childNodes
     for child in children:
       if child.nodeType != child.ELEMENT_NODE:
         continue
       if child.tagName == "primitive":
-        self.childrscs.append(PrimitiveTag(child),inclone=1)
+        self.childrscs.append(PrimitiveTag(child), inclone=1, ingroup=ingroup, parent=self)
+      elif child.tagName == "group":
+        self.childrscs.append(GroupTag(child), inclone=1, ingroup=ingroup, parent=self)
       else:
         print "ERROR: Don't know how to deal with funky child of <%s>" % xmlnode.tagName
         print "Funky child: " + node2str(child)
         self=None
         return
-
-    AllMasterSlave[self.name]= self
-    AllResources[self.name]= self
-    if AllPrimitives.has_key(self.name):
-      print "WARNING: A <primitive> exists with the same id as this master_slave [%s]" % self.name
-    if AllClones.has_key(self.name):
-      print "WARNING: A <clone> exists with the same id as this master_slave [%s]" % self.name
-    if AllGroups.has_key(self.name):
-      print "WARNING: A <group> exists with the same id as this master_slave [%s]" % self.name
 
 
 #
@@ -1713,7 +1712,7 @@ def analyze_CIB(doc):
       print "ERROR:  STONITH enabled, but No STONITH resources configured.  STONITH is NOT available."
   else:
     stonithwarn=1
-    print "ERROR:  STONITH disabled (%s=%s).  STONITH is HIGHLY recommended."\
+    print "WARNING:  STONITH disabled (%s=%s).  STONITH is HIGHLY recommended."\
     %	(stonithtag, enableval)
     if stonith_resource_count == 0:
       print "WARNING:  No STONITH resources configured.  STONITH is not available."
