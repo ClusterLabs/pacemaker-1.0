@@ -84,8 +84,9 @@ It currently looks for a number of classes of errors, including these:
   - STONITH not enabled
   - No STONITH resources configured
   - Use of for-testing-only ssh or external/ssh STONITH resource agents
-  - validation of <meta_attributes> names and values in <nvpair>s
-  - validation of <attributes> names and values in <nvpair>s for <primitive> resourcs
+  - validation of <nvpair> names and values in <meta_attributes> sections
+  - validation of class and type for <primitive> resources
+  - validation of <attributes> names and values in <nvpair>s for <primitive> resources
 
 More documentation can be found online at http://linux-ha.org/ciblint
 '''
@@ -101,6 +102,9 @@ note_non_default_values = 1
 note_metadata_errors = 1
 wikiformat=0
 outlinelen=65
+global LRMclasses, LRMresources
+LRMclasses = {}
+LRMresources = {}
 
 
 def lintURL(suffix):
@@ -673,10 +677,30 @@ class MetaAttrMetadata:
 
 class MetadataCache(UserDict):
  def __is_lrm_working__(self):
-   cmd=LRMADMIN + " -C >/dev/null 2>/dev/null"
-   rc=os.system(cmd)
-   #print "lrmadmin test command [%s] returned return code %d" % (cmd, rc)
-   return rc == 0
+   cmd=LRMADMIN + " -C 2>/dev/null"
+   f = os.popen(cmd)
+   global LRMclasses, LRMresources
+   localclasses = f.readlines()
+   localclasses = localclasses[1:]
+   j=0
+   while j < len(localclasses):
+     LRMclasses[localclasses[j].strip()] = 1
+     j=j+1
+   f.close()
+   for rclass in LRMclasses:
+     LRMresources[rclass] = {}
+     cmd=LRMADMIN + " -T %s 2>/dev/null" % rclass
+     f = os.popen(cmd)
+     types = f.readlines()
+     types = types[1:]
+     f.close()
+     for type in types:
+       type=type.strip()
+       # Not quite right, because it ignores provider...
+       LRMresources[rclass][type]=1
+
+
+   return len(LRMclasses) >= 1
 
  def __init__(self):
     UserDict.__init__(self)
@@ -711,6 +735,12 @@ class MetadataCache(UserDict):
  def __add_resource__(self, rclass, type, provider=None):
    if not self.uselrm:
       return 0
+   if not LRMclasses.has_key(rclass):
+     print "ERROR: %s is not a valid resource class" % rclass
+     return 0
+   if not LRMresources[rclass].has_key(type):
+     print "ERROR: [%s] is not a valid resource type for class [%s]" % (type, rclass)
+     return 0
    key=self.__resource_key__(rclass, type, provider)
    if (provider == None or provider == ""):
      provider="NULL"
@@ -1334,15 +1364,38 @@ AllResourceLocations = []
 AllResourceCoLocations = []
 stonith_resource_count = 0
 
+class ResourceTag:
+  def __init__(self, xmlnode, inclone=0, ingroup=0):
+    self.rsctype=xmlnode.tagName
+    self.inclone = inclone
+    self.ingroup = ingroup
+    self.childrscs = None
+
+def ValidateResource(rscname):
+    result=1
+    rsplit=rscname.split(":",1)
+    rname=rsplit[0]
+    if not AllResources.has_key(rname):
+      return 0
+    if len(rsplit) > 1 and not AllResources[rname].inclone:
+      print "ERROR: Resource [%s] referenced as [%s] is not a clone resource" \
+      %		(rname, rscname)
+      return 0
+    return 1
+    
+  
+
 #
 # A class for processing the <primitive> tag
 #
-class PrimitiveTag:
-  def __init__(self, xmlnode):
+class PrimitiveTag(ResourceTag):
+  def __init__(self, xmlnode, inclone=0, ingroup=0):
+    ResourceTag.__init__(self,xmlnode, inclone, ingroup)
     self.operations = None
     self.instance_attributes = []
     self.meta_attributes = []
     self.operations = []
+    self.inclone=inclone
     CheckXMLNodeUniqueness(xmlnode)
     CheckAttributes(xmlnode)
     self.name = xmlnode.getAttribute("id")
@@ -1389,17 +1442,19 @@ class PrimitiveTag:
 #
 # A class for processing the <group> tag
 #
-class GroupTag:
-  def __init__(self, xmlnode):
-    self.primitives = []
+class GroupTag(ResourceTag):
+  def __init__(self, xmlnode, inclone=0,ingroup=0):
+    ResourceTag.__init__(self,xmlnode, inclone=inclone, ingroup=ingroup)
+    self.childrscs = []
     CheckXMLNodeUniqueness(xmlnode)
     self.name = xmlnode.getAttribute("id")
+    self.inclone=inclone
     children = xmlnode.childNodes
     for child in children:
       if child.nodeType != child.ELEMENT_NODE:
         continue
       if child.tagName == "primitive":
-        self.primitives.append(PrimitiveTag(child))
+        self.childrscs.append(PrimitiveTag(child, inclone))
       else:
         print "ERROR: Don't know how to deal with funky child of <%s>" % xmlnode.tagName
         print "Funky child: " + node2str(child)
@@ -1419,7 +1474,7 @@ class GroupTag:
 #
 class CloneTag:
   def __init__(self, xmlnode):
-    self.primitives = []
+    self.childrscs = []
     CheckXMLNodeUniqueness(xmlnode)
     self.name = xmlnode.getAttribute("id")
     children = xmlnode.childNodes
@@ -1427,7 +1482,9 @@ class CloneTag:
       if child.nodeType != child.ELEMENT_NODE:
         continue
       if child.tagName == "primitive":
-        self.primitives.append(PrimitiveTag(child))
+        self.childrscs.append(PrimitiveTag(child,clone=1))
+      if child.tagName == "group":
+        self.childrscs.append(GroupTag(child,inclone=1))
       else:
         print "ERROR: Don't know how to deal with funky child of <%s>" % xmlnode.tagName
         print "Funky child: " + node2str(child)
@@ -1447,7 +1504,8 @@ class CloneTag:
 #
 class MasterSlaveTag:
   def __init__(self, xmlnode):
-    self.primitives = []
+    self.rsctype="master_slave"
+    self.childrscs = []
     CheckXMLNodeUniqueness(xmlnode)
     self.name = xmlnode.getAttribute("id")
     children = xmlnode.childNodes
@@ -1455,7 +1513,7 @@ class MasterSlaveTag:
       if child.nodeType != child.ELEMENT_NODE:
         continue
       if child.tagName == "primitive":
-        self.primitives.append(PrimitiveTag(child))
+        self.childrscs.append(PrimitiveTag(child),inclone=1)
       else:
         print "ERROR: Don't know how to deal with funky child of <%s>" % xmlnode.tagName
         print "Funky child: " + node2str(child)
@@ -1504,13 +1562,13 @@ class ResourceCoLocationTag:
     CheckXMLNodeUniqueness(xmlnode)
     self.name = xmlnode.getAttribute("id")
     self.fromid = xmlnode.getAttribute("from")
-    self.to = xmlnode.getAttribute("to")
+    self.toid = xmlnode.getAttribute("to")
     self.score = xmlnode.getAttribute("score")
     if self.fromid == "":
       print "ERROR: <rsc_colocation> tag requires 'from' attribute"
       self=None
       return
-    if self.to == "":
+    if self.toid == "":
       print "ERROR: <rsc_colocation> tag requires 'to' attribute"
       self=None
       return
@@ -1518,12 +1576,14 @@ class ResourceCoLocationTag:
       print "ERROR: <rsc_colocation> tag requires 'score' attribute"
       self=None
       return
-    if not AllResources.has_key(self.fromid):
+    # Deal with clone references...
+
+    if not ValidateResource(self.fromid):
       print "ERROR: <rsc_colocation from=\"%s\"...>: no such resource [%s]" \
-      %		(self.fromid, self.fromid)
-    if not AllResources.has_key(self.to):
+      %		(self.fromid, fromid)
+    if not ValidateResource(self.toid):
       print "ERROR: <rsc_colocation to=\"%s\"...>: no such resource [%s]" \
-      %		(self.to, self.to)
+      %		(self.toid, toid)
 
     for child in xmlnode.childNodes:
       if child.nodeType == child.ELEMENT_NODE:
