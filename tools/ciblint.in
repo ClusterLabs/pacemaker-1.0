@@ -174,6 +174,8 @@ def print_wrap(text, linelen, prefix, firstprefix):
 
 #
 #	A class for a data type as defined by our metadata - with a few extensions...
+#	This should probably be a class with a bunch of related classes for the
+#	various data types
 #
 class MetadataValueType:
 
@@ -252,9 +254,6 @@ class MetadataValueType:
        return MetadataValueType.TimeUnits.has_key(units)
 
     if self.typename == "string" or self.typename == "enum":
-      # Need to do something better for enum...
-      # but we need more info than currently exists...
-      # See 'validtypevals' for how to implement it in the future
       return 1
     print "ERROR: invalid data type [%s]" % self.typename
     return None
@@ -329,6 +328,10 @@ class Score:
       return 1
     return 0
 
+#
+#	A class for a multi-language string - based on the OCF resource agent metadata descriptions
+#
+
 class OCFLangString(UserDict):
   def __init__(self, xmlnode, tagname, elemname):
     UserDict.__init__(self)
@@ -337,6 +340,7 @@ class OCFLangString(UserDict):
     for child in xmlnode.childNodes:
       if child.nodeType != child.ELEMENT_NODE:
         continue
+      CheckAttributes(tagname)
       if child.tagName != tagname:
         continue
       lang = child.getAttribute("lang")
@@ -379,8 +383,20 @@ class OCFLangString(UserDict):
     else:
       return self[lang]
 
-  
-   
+#
+#	A class for tracking possible enumeration values based on the OCF RA metadata
+#	model.  This is an extension from the curent OCF model, but it should
+#	be completely upwards-compatible in the xml.  Here's how it looks:
+#
+#	<content type="enum" default="xxx">
+#	  <enumvals>
+#	    <enumval value="red">
+#	      <shortdesc lang="en">long description</shortdesc>
+#	      <longdesc lang="en">long description</longdesc>
+#	    </enumval>
+#	  </enumvals>
+#	</content>
+#	  
 class OCFParameterEnumValNodeExtension(UserDict):
   def __init__(self, xmlnode):
     UserDict.__init__(self)
@@ -388,9 +404,22 @@ class OCFParameterEnumValNodeExtension(UserDict):
     for child in xmlnode.childNodes:
       if child.nodeType != child.ELEMENT_NODE:
         continue
-      if child.tagName == "enumval":
-        value = child.getAttribute("value")
-	self[value] = (OCFLangString(child, "shortdesc", value), OCFLangString(child, "longdesc", value))
+      CheckAttributes(child)
+      if child.tagName == "enumvals":
+        for gchild in child.childNodes:
+          if gchild.nodeType != child.ELEMENT_NODE:
+            continue
+          CheckAttributes(gchild)
+          value = child.getAttribute("value")
+          if gchild.tagName == "enumval":
+            value = child.getAttribute("value")
+	    self[value] = (OCFLangString(gchild, "shortdesc", value), OCFLangString(gchild, "longdesc", value))
+          else:
+            print "Metadata ERROR: Don't know how to deal with funky child of <%s>" % child.tagName
+            print "Funky child: " + node2str(gchild)
+#      elif child.tagName == "enumval":
+#        value = child.getAttribute("value")
+#	self[value] = (OCFLangString(child, "shortdesc", value), OCFLangString(child, "longdesc", value))
       else:
         print "Metadata ERROR: Don't know how to deal with funky child of <%s>" % xmlnode.tagName
         print "Funky child: " + node2str(child)
@@ -666,6 +695,9 @@ class CRMMetadata:
         return mdlist.Parameters[key]
     raise KeyError, "Key %s not found" % key
 
+#
+#	Get <crm_config> metadata from pengine and crmd
+#
 class MetaAttrMetadata:
   def __init__(self, hblibdir=HA_LIBHBDIR):
     self.metadatalist = []
@@ -678,6 +710,11 @@ class MetaAttrMetadata:
       f.close()
       xml = None
 
+#
+#	Obtain and cache metadata from resource agents
+#	This involves talking to the LRM, which requires that we run
+#	as root.
+#
 class MetadataCache(UserDict):
  def __is_lrm_working__(self):
    cmd=LRMADMIN + " -C 2>/dev/null"
@@ -701,8 +738,6 @@ class MetadataCache(UserDict):
        type=type.strip()
        # Not quite right, because it ignores provider...
        LRMresources[rclass][type]=1
-
-
    return len(LRMclasses) >= 1
 
  def __init__(self):
@@ -767,6 +802,11 @@ crmMetadata = None
 MetaAttributeMetadata = None
 metaDataCache = MetadataCache()
 
+#
+#	Metadata describing the <meta_attribute> <nvpair> names and values
+#	This should probably eventually come from the CRM/pengine.
+#
+
 #'''<?xml version="1.0"?>
 MetaAttributeMetadata_string =\
 '''<resource-agent name="meta_attributes">
@@ -778,14 +818,16 @@ MetaAttributeMetadata_string =\
       <shortdesc lang="en">how to restart dependents</shortdesc>
       <longdesc lang="en">how to restart dependents when this resource restarts</longdesc>
       <content type="enum" default="restart">
-	<enumval value="ignore">
-          <shortdesc lang="en">Dependent resources ignore restarts of this resource</shortdesc>
-          <longdesc lang="en">Dependent resources take no action when this resource is restarted due to monitor failure</longdesc>
-	</enumval>
-	<enumval value="restart">
-          <shortdesc lang="en">Restart dependent resources when this one restarts</shortdesc>
-          <longdesc lang="en">Dependent resources restart when this resource is restarted due to monitor failure</longdesc>
-	</enumval>
+        <enumvals>
+	  <enumval value="ignore">
+            <shortdesc lang="en">Dependent resources ignore restarts of this resource</shortdesc>
+            <longdesc lang="en">Dependent resources take no action when this resource is restarted due to monitor failure</longdesc>
+	  </enumval>
+	  <enumval value="restart">
+            <shortdesc lang="en">Restart dependent resources when this one restarts</shortdesc>
+            <longdesc lang="en">Dependent resources restart when this resource is restarted due to monitor failure</longdesc>
+	  </enumval>
+        </enumvals>
       </content>
     </parameter>
 
@@ -844,26 +886,28 @@ MetaAttributeMetadata_string =\
       <shortdesc lang="en">Desired state of the resource</shortdesc>
       <longdesc lang="en">Heartbeat will attempt keep it in the specfied state.  It defaults to "#default".  If set to some other value, it will ignore the value of is_managed or is_managed_default.</longdesc>
       <content type="enum">
-	<enumval value="started">
-          <shortdesc lang="en">Keep resource started</shortdesc>
-          <longdesc lang="en">Keep resource started</longdesc>
-	</enumval>
-	<enumval value="stopped">
-          <shortdesc lang="en">Keep resource stopped</shortdesc>
-          <longdesc lang="en">Keep resource stopped.  Resources which depend on this resource will also be stopped</longdesc>
-	</enumval>
-	<enumval value="master">
-          <shortdesc lang="en">keep resource in master mode</shortdesc>
-          <longdesc lang="en">keep resource in master mode.  This doesn't seem like a sensible value to set this to for a clone resources with multiple instances and fewer slave instances.</longdesc>
-	</enumval>
-	<enumval value="slave">
-          <shortdesc lang="en">keep resource in slave mode</shortdesc>
-          <longdesc lang="en">keep resource in slave mode. This forces all the instances to stay in slave mode</longdesc>
-	</enumval>
-	<enumval value="#default">
-          <shortdesc lang="en">allow cluster to determine its</shortdesc>
-          <longdesc lang="en">explicitly inherit target_role from enclosing group or allow Heartbeat to control its state </longdesc>
-	</enumval>
+	<enumvals>
+	  <enumval value="started">
+            <shortdesc lang="en">Keep resource started</shortdesc>
+            <longdesc lang="en">Keep resource started</longdesc>
+	  </enumval>
+	  <enumval value="stopped">
+            <shortdesc lang="en">Keep resource stopped</shortdesc>
+            <longdesc lang="en">Keep resource stopped.  Resources which depend on this resource will also be stopped</longdesc>
+	  </enumval>
+	  <enumval value="master">
+            <shortdesc lang="en">keep resource in master mode</shortdesc>
+            <longdesc lang="en">keep resource in master mode.  This doesn't seem like a sensible value to set this to for a clone resources with multiple instances and fewer slave instances.</longdesc>
+	  </enumval>
+	  <enumval value="slave">
+            <shortdesc lang="en">keep resource in slave mode</shortdesc>
+            <longdesc lang="en">keep resource in slave mode. This forces all the instances to stay in slave mode</longdesc>
+	  </enumval>
+	  <enumval value="#default">
+            <shortdesc lang="en">allow cluster to determine its</shortdesc>
+            <longdesc lang="en">explicitly inherit target_role from enclosing group or allow Heartbeat to control its state </longdesc>
+	  </enumval>
+	</enumvals>
       </content>
     </parameter>
 
@@ -890,18 +934,20 @@ MetaAttributeMetadata_string =\
       <shortdesc lang="en">action to take when multiple instances are active</shortdesc>
       <longdesc lang="en">When an instance of this resource is found to be active mutliple times, this parameter specifies what action to take.</longdesc>
       <content type="enum" default="start_stop">
-	<enumval value="stop_start">
-          <shortdesc lang="en">stop all and restart one</shortdesc>
-          <longdesc lang="en">Stop all instances of this resource, and restart one.  This works fine if the resource won't be irreparably damaged by having multiple active instances.</longdesc>
-        </enumval>
-	<enumval value="stop_only">
-          <shortdesc lang="en">stop all instances</shortdesc>
-          <longdesc lang="en">Stop all instances of this resource and wait for the administrator to recover the resources manually.  This is a good choice if this resource (like most filesystems) will be damaged by multiple running copies, and get more damaged the longer they're multiply active.</longdesc>
-	</enumval>
-	<enumval value="block">
-          <shortdesc lang="en">do nothing</shortdesc>
-          <longdesc lang="en">Don't do anything - wait for the administrator to recover the resources.</longdesc>
-	</enumval>
+	<enumvals>
+	  <enumval value="stop_start">
+            <shortdesc lang="en">stop all and restart one</shortdesc>
+            <longdesc lang="en">Stop all instances of this resource, and restart one.  This works fine if the resource won't be irreparably damaged by having multiple active instances.</longdesc>
+          </enumval>
+	  <enumval value="stop_only">
+            <shortdesc lang="en">stop all instances</shortdesc>
+            <longdesc lang="en">Stop all instances of this resource and wait for the administrator to recover the resources manually.  This is a good choice if this resource (like most filesystems) will be damaged by multiple running copies, and get more damaged the longer they're multiply active.</longdesc>
+	  </enumval>
+	  <enumval value="block">
+            <shortdesc lang="en">do nothing</shortdesc>
+            <longdesc lang="en">Don't do anything - wait for the administrator to recover the resources.</longdesc>
+	  </enumval>
+	</enumvals>
       </content>
     </parameter>
 
@@ -924,6 +970,11 @@ MetaAttributeMetadata_string =\
 GlobalIDSet = {}
 GlobalTagIDSet = {}
 crm_config_section=None
+
+#
+# Check the 'id' attributes of the current node to make sure it has an id and that it's
+# unique for the tag and (preferably) also globally unique.
+#
 
 def CheckXMLNodeUniqueness(xmlnode):
     CheckAttributes(xmlnode)
@@ -953,6 +1004,10 @@ def CheckIdUniqueness(tag, id):
       GlobalIDSet[id] = id
     return ret
 
+#
+# A few types for us to use internally...
+# Some should probably be implemented more directly as noted below.
+#
 
 RoleMetadataType = MetadataValueType("enum", {"started":1, "stopped":1,"master":1,"slave":1})
 NodeMetadataType = MetadataValueType("enum", {"normal":1})
@@ -980,6 +1035,9 @@ idonly = {"id": StringMetadataType}
 NVPairValidKeys = {
 	"node": {"standby": BooleanMetadataType},
 };
+#
+# Set of valid attribute keys and value types for various tags
+#
 AttributeKeys = {
 	"op": {		"timeout": TimeMetadataType, "start_delay": TimeMetadataType, 
 			"interval": TimeMetadataType,
@@ -1008,6 +1066,10 @@ AttributeKeys = {
 	"instance_attributes": idonly,
 	"meta_attributes": idonly,
 	"attributes": {},
+	"enumvals": {},
+	"enumval":{	"value":StringMetadataType},
+	"shortdesc":{	"lang":StringMetadataType},
+	"longdesc": {	"lang":StringMetadataType},
 	"rsc_order": {	"id": StringMetadataType, "type": OrderMetadataType,
 			"from": ResourceMetadataType, "to": ResourceMetadataType},
 	"rule": {	"id": StringMetadataType, "score": ScoreMetadataType,
@@ -1078,10 +1140,13 @@ AttributeKeys = {
 			"interval": TimeMetadataType},
 };
 
+#
+# Validate the attributes of this tag...
+#
 def CheckAttributes(xmlnode):
    global AttributeKeys
    result=1
-   if xmlnode.attributes == None or xmlnode.nodeType != xmlnode.ELEMENT_NODE:
+   if not hasattr(xmlnode, "attributes") or xmlnode.attributes == None or xmlnode.nodeType != xmlnode.ELEMENT_NODE:
       return 1
    tagname=xmlnode.tagName
    if not AttributeKeys.has_key(tagname):
@@ -1100,6 +1165,9 @@ def CheckAttributes(xmlnode):
 	 %	(tagname, attrib, value, value, attrib)
    
 
+#
+# Validate a set of nvpairs against a given set of names and types
+#
 def validate_nvpairs(context, type, nvpairs):
   if context != None:
     for key in nvpairs.keys():
@@ -1367,6 +1435,10 @@ AllResourceLocations = []
 AllResourceCoLocations = []
 stonith_resource_count = 0
 
+#
+# Base class for all of our Resource Types (PrimitiveTag, GroupTag, etc.)
+#
+
 class ResourceType:
   rtypelist={"group":AllGroups, "master_slave":AllMasterSlave, "clone":AllClones, "primitive":AllPrimitives}
   def __init__(self, xmlnode, inclone=0, ingroup=0, parent=None):
@@ -1393,6 +1465,9 @@ class ResourceType:
     ResourceType.rtypelist[xmlnode.tagName][id] = self
     AllResources[id] = self
 
+#
+# Validate a reference to a resource
+#
 
 def ValidateResource(rscname):
     result=1
