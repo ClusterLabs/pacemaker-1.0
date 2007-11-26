@@ -2320,7 +2320,7 @@ getnodes(const char* nodelist, char** nodes, int* num){
 		if (*p == 0){
 			break;
 		}
-		nodelen = strcspn(p, " \0") ;
+		nodelen = strcspn(p, " \t\0") ;
 		
 		if (i >= *num){
 			cl_log(LOG_ERR, "%s: more memory needed(%d given but require %d)",
