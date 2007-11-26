@@ -131,6 +131,7 @@ extern struct fieldtypefuncs_s fieldtypefuncs[NUM_MSG_TYPES];
 #define MSG_NEEDAUTH		0x01
 #define MSG_ALLOWINTR		0X02
 #define MSG_NEEDCOMPRESS	0x04
+#define MSG_NOSIZECHECK		0x08
 
 #define	IFACE		"!^!\n"  
 #define	MSG_START	">>>\n"
