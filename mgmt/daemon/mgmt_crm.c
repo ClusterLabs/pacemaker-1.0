@@ -698,7 +698,7 @@ on_update_crm_config(char* argv[], int argc)
 			cur = g_list_next(cur);
 		}
 		rc = update_attr(cib_conn, cib_sync_call, XML_CIB_TAG_CRMCONFIG, NULL
-				, 		CIB_OPTIONS_FIRST, id, argv[1], argv[2]);
+				 , 		CIB_OPTIONS_FIRST, id, argv[1], argv[2], FALSE);
 	}
 	else {
 		crm_data_t* fragment = NULL;
@@ -1023,7 +1023,7 @@ on_cleanup_rsc(char* argv[], int argc)
 	sleep(5); /* wait for the refresh */
 	now_s = crm_itoa(now);
 	update_attr(cib_conn, cib_sync_call,
-		    XML_CIB_TAG_CRMCONFIG, NULL, NULL, NULL, "last-lrm-refresh", now_s);
+		    XML_CIB_TAG_CRMCONFIG, NULL, NULL, NULL, "last-lrm-refresh", now_s, FALSE);
 	crm_free(now_s);
 
 	
