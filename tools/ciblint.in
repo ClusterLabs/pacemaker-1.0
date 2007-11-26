@@ -407,12 +407,12 @@ class OCFParameterEnumValNodeExtension(UserDict):
       CheckAttributes(child)
       if child.tagName == "enumvals":
         for gchild in child.childNodes:
-          if gchild.nodeType != child.ELEMENT_NODE:
+          if gchild.nodeType != gchild.ELEMENT_NODE:
             continue
           CheckAttributes(gchild)
-          value = child.getAttribute("value")
+          value = gchild.getAttribute("value")
           if gchild.tagName == "enumval":
-            value = child.getAttribute("value")
+            value = gchild.getAttribute("value")
 	    self[value] = (OCFLangString(gchild, "shortdesc", value), OCFLangString(gchild, "longdesc", value))
           else:
             print "Metadata ERROR: Don't know how to deal with funky child of <%s>" % child.tagName
@@ -639,9 +639,24 @@ class OCFMetadata:
 
 #
 # A class for collecting OCF-style metadata from the CRM and the pengine
+# and a little extra hand-created metadata...
 #
 class CRMMetadata:
   def __init__(self, hblibdir=HA_LIBHBDIR):
+    ExtraMetadata =\
+'''<resource-agent name="crm_config">
+  <version>1.0</version>
+  <longdesc lang="en">Extra Options that can be configured for crm_config section.</longdesc>
+  <shortdesc lang="en">crm_config extra metadata</shortdesc>
+  <parameters>
+    <parameter name="last-lrm-refresh" unique="0">
+      <shortdesc lang="en">last LRM refresh</shortdesc>
+      <longdesc lang="en">you can't set this yourself</longdesc>
+      <content type="integer"/>
+    </parameter>
+  </parameters>
+</resource-agent>
+'''
     self.metadatalist = []
     for file in ["crmd", "pengine"]:
       command="%s/%s metadata" % (hblibdir, file)
@@ -651,6 +666,7 @@ class CRMMetadata:
       self.metadatalist.append(OCFMetadata(xml))
       f.close()
       xml = None
+    self.metadatalist.append(OCFMetadata(FromXml(ExtraMetadata)))
 
   def validate(self, nvpairs):
     for key in nvpairs.keys():
