@@ -36,7 +36,7 @@
  * Copyright (c) 2004 International Business Machines
  */ 
 
-#include <lha_internal.h>
+#include <hb_config.h>
 #include <stdio.h>
 #include <unistd.h>
 #include <stdlib.h>

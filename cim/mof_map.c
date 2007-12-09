@@ -20,7 +20,7 @@
  *
  */
 
-#include <lha_internal.h>
+#include <hb_config.h>
 #include <hb_api.h>
 #include <cmpidt.h>
 #include "mof_map.h"

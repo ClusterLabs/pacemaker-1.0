@@ -1,7 +1,0 @@
-Makefile.in
-Makefile
-.deps
-heartbeat
-*.beam
-parser-messages
-MISC_ERRORS

@@ -1,8 +1,0 @@
-Makefile.in
-Makefile
-*.beam
-parser-messages
-MISC_ERRORS
-ldirectord
-ldirectord.debian
-ldirectord.debian.default

@@ -24,7 +24,7 @@
  *        : mib2c.scalar.conf,v 1.7 2003/04/08 14:57:04 dts12 Exp $
  */
 
-#include <lha_internal.h>
+#include <hb_config.h>
 
 #ifdef PACKAGE_BUGREPORT
 #undef PACKAGE_BUGREPORT

@@ -7,7 +7,7 @@ dnl
 dnl License: GNU General Public License (GPL)
 
 dnl Initialiase, with sanity check of a unique file in the hierarchy
-AC_INIT(heartbeat.spec.in)
+AC_INIT(README.in)
 AC_PREREQ(2.53)
 
 AC_CONFIG_AUX_DIR(.)
@@ -625,6 +625,7 @@ AC_CHECK_LIB(rt, sched_getscheduler)            dnl -lrt (for Tru64)
 AC_CHECK_LIB(gnugetopt, getopt_long)		dnl -lgnugetopt ( if available )
 AC_CHECK_LIB(pam, pam_start)			dnl -lpam (if available)
 AC_CHECK_LIB(plumb, G_main_add_IPC_Channel)	dnl -lplubm
+AC_CHECK_HEADERS(hb_config.h)
 
 #	Not sure what OSes need this... Linux and AIX don't...
 #	and AIX barfs on it...
@@ -1350,18 +1351,6 @@ AC_CHECK_LIB(crypto, CRYPTO_free, CRYPTOLIB="-lcrypto",)
 AC_SUBST(CRYPTOLIB)
 
 dnl ***************************************************************************
-dnl Enable distro-style RPMs
-dnl ***************************************************************************
-AC_ARG_ENABLE([distro-rpm],
- [  --enable-distro-rpm 	Enable distro-style RPMs
-		[default=no]], [], [enable_distro_rpm=no])
-case $enable_distro_rpm in
-   yes)	DISTRO_STYLE_RPMS=1;;
-   *)	DISTRO_STYLE_RPMS=0;;
-esac
-AC_SUBST(DISTRO_STYLE_RPMS)
-
-dnl ***************************************************************************
 dnl TIPC communication module
 dnl ***************************************************************************
 AC_ARG_ENABLE([tipc],
@@ -1790,12 +1779,8 @@ dnl - If requested, enable ALL subsystems.
 	  enable_ansi=yes;
 	  enable_crm=yes;
 	  enable_fatal_warnings=yes;
-	  enable_lrm=yes;
 	  enable_snmp_subagent=try;
-	  enable_mgmt=try;
-	  enable_quorumd=try;
 	  enable_cim_provider=try;
-	  enable_ipmilan=try
 	fi
 
 AC_ARG_ENABLE([bundled-ltdl],
@@ -2510,41 +2495,8 @@ AM_CONDITIONAL(CRM_BUILD, test "x${enable_crm}" = "xyes")
 AC_SUBST(CRM_ENABLED)
 
 
-dnl lrm configuration
-AC_ARG_ENABLE([lrm],
-[  --enable-lrm  Compile the new Local Resource Manager.  [default=yes]],
-                     [], [enable_lrm=yes])
-
-LRM_ENABLED=0
-if test "x${enable_crm}" = "xyes"; then
-   if test "x${enable_lrm}" = "xno"; then
-      AC_MSG_WARN([crm enabled, overriding --enable-lrm=no with --enable-lrm=yes])
-   elif test -z "${enable_lrm}"; then
-	   AC_MSG_WARN([crm enabled, defaulting to --enable-lrm=yes])
-   fi
-   enable_lrm="yes"
-elif test -z "${enable_lrm}"; then
-   enable_lrm="no"
-fi
-
-if test "x${enable_lrm}" = "xyes"; then
-	LRM_ENABLED=1
-fi
-
-if
-	test -h /proc/$$/exe
-then
-	AC_MSG_NOTICE("/proc/{pid}/exe link is supported") 
-	AC_DEFINE_UNQUOTED(HAVE_PROC_PID, 1, Define to 1 if /proc/{pid} is supported.)
-fi
-
-AC_SUBST(LRM_ENABLED)
-AM_CONDITIONAL(LRM_BUILD, test "x${enable_lrm}" = "xyes")
-
-AC_MSG_NOTICE([whether to enable the Local Resource Manager... ${enable_lrm}])
 
 dnl ************************************************************************
-dnl management and quorum daemons.
 
 AC_CHECK_HEADERS(gnutls/gnutls.h)
 AC_CHECK_HEADERS(security/pam_appl.h pam/pam_appl.h)
@@ -2566,161 +2518,8 @@ fi
 AC_SUBST(GNUTLSHEAD)
 AC_SUBST(GNUTLSLIBS)
 
-dnl management tool configuration
-AC_ARG_ENABLE([mgmt],
-[  --enable-mgmt  Compile the management tool.  [default=try]],
-                     [], [enable_mgmt=try])
-
-if test "x${enable_mgmt}" != "xno"; then
-	if test "x${enable_mgmt}" = "xtry"; then
-		MISSING_FN="WarnMissingThing"
-	else
-		MISSING_FN="FatalMissingThing"
-	fi
-	enable_mgmt="yes"
-	MGMT_ENABLED=1
-
-	AM_CHECK_PYTHON_HEADERS(,PYTHON_INCLUDES='')
-	AC_SUBST(PYTHON_INCLUDES)
-
-	if test "x${PYTHON_INCLUDES}" = "x"; then
-  		$MISSING_FN "Python.h" \
-		  "The GUI managment module needs Python.h (Linux: python-devel package)"
-		enable_mgmt="no"
-		MGMT_ENABLED=0
-	fi
-
-	if test "$ac_cv_header_security_pam_appl_h" = "no" -a "$ac_cv_header_pam_pam_appl_h" = "no"; then
-  		$MISSING_FN "security/pam_appl.h" \
-		  "The GUI managment module needs the pam-devel package"
-		enable_mgmt="no"
-		MGMT_ENABLED=0
-	fi
-
-	if test "$ac_cv_header_gnutls_gnutls_h" = "no"; then
-  		$MISSING_FN "gnutls/gnutls.h" \
-		  "The GUI managment module needs GNU/TLS header files"
-		enable_mgmt="no"
-		MGMT_ENABLED=0
-	fi
-
-	if test -z "$SWIG"; then
-		$MISSING_FN "swig" \
-		  "The GUI managment module needs swig" \
-		  "You can get it from http://swig.org/"
-		enable_mgmt="no"
-		MGMT_ENABLED=0
-	fi
-fi
-
-if test "x${enable_mgmt}" != "xno"; then
-  RPM_ENABLE_MGMT_CONFIG=1
-else
-  RPM_ENABLE_MGMT_CONFIG=0
-fi
-AC_SUBST(RPM_ENABLE_MGMT_CONFIG)
-
-if test "x${enable_openhpi}" != "xno"; then
-  RPM_ENABLE_OPENHPI=1
-else
-  RPM_ENABLE_OPENHPI=0
-fi
-AC_SUBST(RPM_ENABLE_OPENHPI)
-
-AM_CONDITIONAL(MGMT_BUILD, test "x${enable_mgmt}" != "xno")
-if test "x${enable_mgmt}" != "xno"; then
-     AC_DEFINE_UNQUOTED(MGMT_ENABLED, 1, Define to 1 if the mgmt-daemon and friends are enabled.)
-fi
-   
-AC_MSG_NOTICE([whether to enable the management tool... ${enable_mgmt}])
-
-dnl quorum server configuration
-AC_ARG_ENABLE([quorumd],
-[  --enable-quorumd  Compile the quorum server.  [default=try]],
-                     [], [enable_quorumd=try])
-
-if test "x${enable_quorumd}" != "xno"; then
-	if test "x${enable_quorumd}" = "xtry"; then
-		MISSING_FN="WarnMissingThing"
-	else
-		MISSING_FN="FatalMissingThing"
-	fi
-	enable_quorumd="yes"
-	QUORUMD_ENABLED=1
-
-	if test "$ac_cv_header_gnutls_gnutls_h" = "no"; then
-  		$MISSING_FN "gnutls/gnutls.h" \
-		  "The quorum server module needs GNU/TLS header files"
-		enable_quorumd="no"
-		QUORUMD_ENABLED=0
-	fi
-fi
-
-AC_SUBST(QUORUMD_ENABLED)
-AM_CONDITIONAL(QUORUMD_BUILD, test "x${enable_quorumd}" != "xno")
-AC_MSG_NOTICE([whether to enable the quorum server... ${enable_quorumd}])
-
-dnl **********************************************
-dnl TSA plugin configuration
-dnl **********************************************
-AC_ARG_ENABLE([tsa-plugin],
-[  --enable-tsa-plugin Enable TSA plugin.  [default=no]],
-		[], [enable_tsa_plugin=no])
-AC_ARG_WITH([JAVA_HOME],
- [  --with-java-home        JAVA_HOME dir], [], [])
-
-AC_ARG_WITH([TSA_DIR],
- [  --with-tsa-dir          TSA diretory, default = /opt/IBM/tsamp/], [], [])
-
-JAVA_HOME=${with_java_home}
-TSA_DIR=${with_tsa_dir}
-
-if test "x${enable_tsa_plugin}" != "xno"; then
-	if test "x${JAVA_HOME}" = "x"; then
-		JAVA_BIN=`which java`
-		JAVA_BIN_DIR=`dirname ${JAVA_BIN}`
-		JAVA_HOME=`dirname ${JAVA_BIN_DIR}`	
-	fi
-
-	if test "x${TSA_DIR}" = "x"; then
-		TSA_DIR="/opt/IBM/tsamp/"
-	fi
-fi
-
-AC_SUBST(JAVA_HOME)
-AC_SUBST(TSA_DIR)
-AM_CONDITIONAL(TSA_PLUGIN_BUILD, test "x${enable_tsa_plugin}" != "xno")
-
-dnl **********************************************
-dnl drbd peer outdate plugin configuration
-dnl **********************************************
-case "$host_os" in
-*linux*)
-	AC_ARG_ENABLE([dopd],
-	[  --enable-dopd  Compile the Drbd Outdate Peer Daemon and tools.  [default=yes]],
-			[], [enable_dopd=yes])
- 	;;
-*)
-	enable_dopd=no
- 	;;
-esac
-
-AM_CONDITIONAL(BUILD_DRBD_OUTDATE_PEER, test "x${enable_dopd}" != "xno")
-
 hb_libdir="${libdir}/${HB_PKG}"
 AC_SUBST(hb_libdir)
-
-HA_PLUGIN_DIR="${hb_libdir}/plugins"
-AC_SUBST(HA_PLUGIN_DIR)
-AC_DEFINE_UNQUOTED(HA_PLUGIN_DIR,"$HA_PLUGIN_DIR", PILS plugin dir)
-
-LRM_PLUGIN_DIR="${hb_libdir}/plugins/RAExec"
-AC_SUBST(LRM_PLUGIN_DIR)
-AC_DEFINE_UNQUOTED(LRM_PLUGIN_DIR,"$LRM_PLUGIN_DIR", LRM plugin dir)
-
-HB_RA_DIR="${sysconfdir}/ha.d/resource.d/"
-AC_SUBST(HB_RA_DIR)
-AC_DEFINE_UNQUOTED(HB_RA_DIR,"$HB_RA_DIR", Location for v1 Heartbeat v1 RAs)
 
 dnl ************ OCF (Open Cluster Framework) **********************
 dnl Should be consistent with the OCF standard fixed pathname /usr/lib/ocf
@@ -2876,10 +2675,8 @@ AC_SUBST(ECHO_CMD)
 dnl *** "echo" adjustments (end) ***
 
 dnl The Makefiles and shell scripts we output
-AC_CONFIG_FILES(heartbeat.spec 					\
-Makefile						        \
+AC_CONFIG_FILES(Makefile				        \
 README							        \
-logd/Makefile							\
 config/Makefile							\
 cts/Makefile					        	\
 	cts/CM_fs.py						\
@@ -2910,105 +2707,17 @@ doc/Makefile							\
 	doc/startstop						\
 	doc/cibadmin.8						\
 	doc/crm_resource.8					\
-contrib/Makefile						\
-	contrib/ipfail/Makefile					\
-        contrib/mlock/Makefile					\
-	contrib/drbd-outdate-peer/Makefile			\
 include/Makefile						\
-        include/clplumbing/Makefile				\
 	include/crm/Makefile					\
 		include/crm/common/Makefile			\
 		include/crm/pengine/Makefile			\
-	include/lrm/Makefile					\
-	include/mgmt/Makefile					\
-        include/ocf/Makefile					\
-        include/pils/Makefile					\
-        include/pils/plugin.h					\
-        include/saf/Makefile					\
-        include/stonith/Makefile				\
-        include/fencing/Makefile				\
 replace/Makefile						\
 lib/Makefile							\
-	lib/apphb/Makefile					\
-	lib/clplumbing/Makefile					\
-	lib/hbclient/Makefile					\
 	lib/crm/Makefile					\
 	lib/crm/common/Makefile					\
 	lib/crm/cib/Makefile					\
 	lib/crm/pengine/Makefile				\
 	lib/crm/transition/Makefile				\
-	lib/lrm/Makefile					\
-	lib/mgmt/Makefile					\
-	lib/pils/Makefile					\
-	lib/plugins/Makefile					\
-		lib/plugins/InterfaceMgr/Makefile		\
-		lib/plugins/HBauth/Makefile			\
-		lib/plugins/HBcomm/Makefile			\
-		lib/plugins/lrm/Makefile			\
-		lib/plugins/stonith/Makefile			\
-		lib/plugins/stonith/ribcl.py			\
-		lib/plugins/stonith/external/Makefile		\
-		lib/plugins/stonith/external/ibmrsa		\
-		lib/plugins/stonith/external/riloe		\
-		lib/plugins/stonith/external/ssh		\
-		lib/plugins/AppHBNotification/Makefile		\
-		lib/plugins/HBcompress/Makefile			\
-		lib/plugins/quorum/Makefile			\
-		lib/plugins/quorumd/Makefile			\
-		lib/plugins/tiebreaker/Makefile			\
-	lib/recoverymgr/Makefile				\
-	lib/stonith/Makefile					\
-	lib/fencing/Makefile					\
-lrm/Makefile							\
-	lrm/lrmd/Makefile					\
-	lrm/admin/Makefile					\
-	lrm/test/regression.sh				\
-	lrm/test/LRMBasicSanityCheck				\
-	lrm/test/Makefile					\
-	lrm/test/lrmregtest					\
-	lrm/test/lrmregtest-lsb					\
-	lrm/test/lrmregtest-heartbeat					\
-	lrm/test/testcases/Makefile					\
-mgmt/Makefile							\
-	mgmt/daemon/Makefile					\
-	mgmt/client/Makefile					\
-		mgmt/client/haclient.py				\
-		mgmt/client/mgmtcmd.py				\
-heartbeat/Makefile						\
-	heartbeat/shellfuncs					\
-	heartbeat/rc.d/Makefile					\
-		heartbeat/rc.d/ask_resources			\
-		heartbeat/rc.d/hb_takeover			\
-	heartbeat/init.d/Makefile				\
-		heartbeat/init.d/heartbeat			\
-	heartbeat/lib/Makefile					\
-		heartbeat/lib/BasicSanityCheck			\
-		heartbeat/lib/ha_config				\
-		heartbeat/lib/ha_propagate			\
-		heartbeat/lib/hb_standby			\
-		heartbeat/lib/mach_down				\
-		heartbeat/lib/req_resource			\
-		heartbeat/lib/ResourceManager			\
-		heartbeat/lib/TestHeartbeatComm			\
-		heartbeat/lib/hb_takeover			\
-		heartbeat/lib/hb_addnode			\
-		heartbeat/lib/hb_delnode			\
-		heartbeat/lib/hb_setweight			\
-		heartbeat/lib/hb_setsite			\
-	heartbeat/libnet_util/Makefile				\
-	heartbeat/logrotate.d/Makefile				\
-ldirectord/Makefile						\
-ldirectord/ldirectord   					\
-	ldirectord/init.d/Makefile				\
-	ldirectord/init.d/ldirectord   				\
-	ldirectord/init.d/ldirectord.debian			\
-	ldirectord/init.d/ldirectord.debian.default		\
-	ldirectord/logrotate.d/Makefile				\
-	ldirectord/OCF/Makefile					\
-	ldirectord/OCF/ldirectord				\
-membership/Makefile						\
-	membership/ccm/Makefile					\
-	membership/quorumd/Makefile				\
 pkg/Makefile							\
 	pkg/InfoFiles/pkginfo					\
 	pkg/InfoFiles/preinstall 				\
@@ -3025,53 +2734,10 @@ cim/Makefile		        				\
         cim/mof/Makefile                                        \
         cim/mof/register_providers.sh                           \
         cim/mof/unregister_providers.sh                         \
-tsa_plugin/Makefile						\
-tsa_plugin/testrun.sh						\
-tsa_plugin/linuxha-adapter					\
-telecom/Makefile						\
-	telecom/apphbd/Makefile					\
-	telecom/recoverymgrd/Makefile				\
-fencing/Makefile						\
-	fencing/stonithd/Makefile				\
-	fencing/test/Makefile					\
-	fencing/test/STONITHDBasicSanityCheck			\
 tools/Makefile							\
-	tools/ciblint						\
 	tools/haresources2cib.py				\
 	tools/hb_report						\
 	tools/ocf-tester					\
-resources/Makefile						\
-	resources/OCF/Makefile					\
-	resources/OCF/.ocf-binaries				\
-	resources/OCF/.ocf-directories				\
-	resources/OCF/.ocf-shellfuncs				\
-	resources/OCF/ocf-returncodes				\
-	resources/OCF/ocf-shellfuncs				\
-	resources/heartbeat/Makefile				\
-	resources/heartbeat/apache				\
-	resources/heartbeat/AudibleAlarm			\
-	resources/heartbeat/Delay				\
-	resources/heartbeat/db2					\
-	resources/heartbeat/Filesystem				\
-	resources/heartbeat/hto-mapfuncs			\
-	resources/heartbeat/ICP					\
-	resources/heartbeat/ids					\
-	resources/heartbeat/IPaddr				\
-	resources/heartbeat/IPaddr2				\
-	resources/heartbeat/IPsrcaddr				\
-	resources/heartbeat/IPv6addr				\
-	resources/heartbeat/LinuxSCSI				\
-	resources/heartbeat/LVM					\
-	resources/heartbeat/LVSSyncDaemonSwap			\
-	resources/heartbeat/MailTo				\
-	resources/heartbeat/OCF					\
-	resources/heartbeat/portblock				\
-	resources/heartbeat/Raid1				\
-	resources/heartbeat/ServeRAID				\
-	resources/heartbeat/SendArp				\
-	resources/heartbeat/WAS					\
-	resources/heartbeat/WinPopup				\
-	resources/heartbeat/Xinetd				\
 		)
 
 dnl Now process the entire list of files added by previous 
@@ -3123,24 +2789,12 @@ fi
 AC_MSG_RESULT([  SNMP libraries           = "${SNMPLIB}"])
 AC_MSG_RESULT([  ucd_snmp_devel name      = "${UCDSNMPDEVEL}"])
 
-AC_MSG_RESULT([  Build New CRM            = "${enable_crm}"])
-AC_MSG_RESULT([  Build New LRM            = "${enable_lrm}"])
-AC_MSG_RESULT([  Build Ldirectord         = "${enable_ldirectord}"])
-AC_MSG_RESULT([  Build IPMILan Plugin     = "${enable_ipmilan}"])
-
 AC_MSG_RESULT([  Build CIM providers      = "${enable_cim_provider}"])
 if test "x${enable_cim_provider}" = "xyes"; then
     AC_MSG_RESULT([  CIM server               = "${CIMOM}"])
     AC_MSG_RESULT([  CIM providers dir        = "${CMPI_PROVIDER_DIR}"])
     AC_MSG_RESULT([  CMPI header files        = "${CMPI_HEADER_PATH}"])    
 fi
-
-AC_MSG_RESULT([  Build TSA plugin         = "${enable_tsa_plugin}"])
-if test "x${enable_tsa_plugin}" != "xno"; then
-AC_MSG_RESULT([      JAVA_HOME            = "${JAVA_HOME}"])
-AC_MSG_RESULT([      TSA_DIR              = "${TSA_DIR}"])
-fi
-AC_MSG_RESULT([  Build dopd plugin        = "${enable_dopd}"])
 
 AC_MSG_RESULT([  Enable times kludge      = "${enable_times_kludge}"])    
 AC_SUBST(DISABLE_TIMES_KLUDGE)
@@ -3149,7 +2803,6 @@ AC_MSG_RESULT([  CC_WARNINGS              = "${CC_WARNINGS}"])
 AC_MSG_RESULT([  Mangled CFLAGS           = "${CFLAGS}"])
 AC_MSG_RESULT([  Libraries                = "${LIBS}"])
 AC_MSG_RESULT([  RPATH enabled            = "${enable_rpath}"])
-AC_MSG_RESULT([  Distro-style RPMs        = "${enable_distro_rpm}"])
 
 AC_MSG_RESULT([  ])
 AC_MSG_RESULT([Note: If you use the 'make install' method for installation you])

@@ -1,8 +1,0 @@
-/var/log/ha-debug {
-    missingok
-}
-
-/var/log/ha-log {
-    missingok
-}
-
