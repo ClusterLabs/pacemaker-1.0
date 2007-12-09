@@ -29,7 +29,7 @@ dnl   - Manually edit include/hb_config.h.in to have configure include
 dnl     new defines
 dnl   - Should not include HAVE_* defines
 dnl   - Safe to include anywhere
-AM_CONFIG_HEADER(include/config.h include/hb_config.h)
+AM_CONFIG_HEADER(include/config.h include/crm_config.h)
 ALL_LINGUAS="en fr"
 
 AC_ARG_WITH(hapkgversion,
@@ -91,6 +91,8 @@ darwin*)
 		POWEROFF_OPTIONS="-f"
 		;;
 esac
+
+CFLAGS="$CFLAGS -I${prefix}/include/heartbeat"
 
 AC_SUBST(INIT_EXT)
 AC_SUBST(USE_MODULES)
@@ -622,6 +624,7 @@ AC_CHECK_LIB(dl, dlopen)			dnl -ldl (for Linux)
 AC_CHECK_LIB(rt, sched_getscheduler)            dnl -lrt (for Tru64)
 AC_CHECK_LIB(gnugetopt, getopt_long)		dnl -lgnugetopt ( if available )
 AC_CHECK_LIB(pam, pam_start)			dnl -lpam (if available)
+AC_CHECK_LIB(plumb, G_main_add_IPC_Channel)	dnl -lplubm
 
 #	Not sure what OSes need this... Linux and AIX don't...
 #	and AIX barfs on it...
@@ -1005,6 +1008,7 @@ AC_CHECK_HEADERS([stdint.h unistd.h])
 AC_CHECK_HEADERS(sys/termios.h)
 AC_CHECK_HEADERS(sys/reboot.h)
 AC_CHECK_HEADERS(termios.h)
+AC_CHECK_HEADERS(hb_config.h)
 
 
 dnl ************************************************************************
@@ -2484,6 +2488,7 @@ AC_ARG_ENABLE([crm],
                           [], [enable_crm=yes])
 
 CRM_DIR=""
+enable_crm="yes"
 if test "x${enable_crm}" = "xyes"; then
      CRM_ENABLED=1
      CRM_DIR=crm
