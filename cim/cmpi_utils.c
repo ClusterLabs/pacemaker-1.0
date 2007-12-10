@@ -20,7 +20,7 @@
  *
  */
 
-#include <lha_internal.h>
+#include <crm_internal.h>
 #include <stdio.h>
 #include <hb_api.h>
 #include <ha_msg.h>

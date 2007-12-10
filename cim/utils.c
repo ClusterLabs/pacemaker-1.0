@@ -20,7 +20,7 @@
  *
  */
 
-#include <lha_internal.h>
+#include <crm_internal.h>
 #include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>

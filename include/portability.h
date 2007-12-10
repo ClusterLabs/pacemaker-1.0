@@ -1,3 +1,6 @@
+#ifndef PORTABILITY_H
+#  define PORTABILITY_H
+
 /*
  * Copyright (C) 2001 Alan Robertson <alanr@unix.sh>
  * This software licensed under the GNU LGPL.
@@ -18,9 +21,6 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA *
  */
 
-#ifndef LHA_INTERNAL_H
-#  define LHA_INTERNAL_H
-
 #define	EOS			'\0'
 #define	DIMOF(a)		((int) (sizeof(a)/sizeof(a[0])) )
 #define	STRLEN_CONST(conststr)  ((size_t)((sizeof(conststr)/sizeof(char))-1))
@@ -34,7 +34,7 @@
 
 /* Please leave this as the first #include - Solaris needs it there */
 #ifdef HAVE_CONFIG_H
-#include "config.h"
+#include <config.h>
 #endif
 
 #include <sys/param.h>
@@ -50,75 +50,47 @@
 #	define	NETSNMP_NO_INLINE 1
 #endif
 
-#ifndef HAVE_DAEMON
+#ifndef HA_HAVE_DAEMON
   /* We supply a replacement function, but need a prototype */
 int daemon(int nochdir, int noclose);
-#endif /* HAVE_DAEMON */
+#endif /* HA_HAVE_DAEMON */
 
-#ifndef HAVE_SETENV
+#ifndef HA_HAVE_SETENV
   /* We supply a replacement function, but need a prototype */
 int setenv(const char *name, const char * value, int why);
-#endif /* HAVE_SETENV */
+#endif /* HA_HAVE_SETENV */
 
-#ifndef HAVE_UNSETENV
-  /* We supply a replacement function, but need a prototype */
-int unsetenv(const char *name);
-#endif /* HAVE_UNSETENV */
-
-#ifndef HAVE_STRERROR
+#ifndef HA_HAVE_STRERROR
   /* We supply a replacement function, but need a prototype */
 char * strerror(int errnum);
-#endif /* HAVE_STRERROR */
+#endif /* HA_HAVE_STRERROR */
 
-#ifndef HAVE_SCANDIR
-  /* We supply a replacement function, but need a prototype */
-#  include <dirent.h>
-int
-scandir (const char *directory_name,
-	struct dirent ***array_pointer,
-	int (*select_function) (const struct dirent *),
-#ifdef USE_SCANDIR_COMPARE_STRUCT_DIRENT
-	/* This is what the Linux man page says */
-	int (*compare_function) (const struct dirent**, const struct dirent**)
-#else
-	/* This is what the Linux header file says ... */
-	int (*compare_function) (const void *, const void *)
-#endif
-	);
-#endif /* HAVE_SCANDIR */
-
-#ifndef HAVE_ALPHASORT
+#ifndef HA_HAVE_ALPHASORT
 #  include <dirent.h>
 int
 alphasort(const void *dirent1, const void *dirent2);
-#endif /* HAVE_ALPHASORT */
+#endif /* HA_HAVE_ALPHASORT */
 
-#ifndef HAVE_INET_PTON
+#ifndef HA_HAVE_INET_PTON
   /* We supply a replacement function, but need a prototype */
 int
 inet_pton(int af, const char *src, void *dst);
 
-#endif /* HAVE_INET_PTON */
+#endif /* HA_HAVE_INET_PTON */
 
-#ifndef HAVE_STRNLEN
+#ifndef HA_HAVE_STRNLEN
 	size_t strnlen(const char *s, size_t maxlen);
 #else
 #	define USE_GNU
 #endif
 
-#ifndef HAVE_STRNDUP
+#ifndef HA_HAVE_STRNDUP
 	char *strndup(const char *str, size_t len);
 #else
 #	define USE_GNU
 #endif
-#ifndef HAVE_STRLCPY
-	size_t strlcpy(char * dest, const char *source, size_t len);
-#endif
-#ifndef HAVE_STRLCAT
-	size_t strlcat(char * dest, const char *source, size_t len);
-#endif
 
-#ifndef HAVE_NFDS_T 
+#ifndef HA_HAVE_NFDS_T 
 	typedef unsigned int nfds_t;
 #endif
 
@@ -135,11 +107,4 @@ inet_pton(int af, const char *src, void *dst);
 
 #define	HAURL(url)	HA_URLBASE url
 
-/* You may need to change this for your compiler */
-#ifdef HAVE_STRINGIZE
-#	define	ASSERT(X)	{if(!(X)) ha_assert(#X, __LINE__, __FILE__);}
-#else
-#	define	ASSERT(X)	{if(!(X)) ha_assert("X", __LINE__, __FILE__);}
-#endif
-
-#endif /* LHA_INTERNAL_H */
+#endif /* PORTABILITY_H */

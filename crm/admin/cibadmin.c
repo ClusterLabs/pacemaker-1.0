@@ -17,7 +17,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#include <lha_internal.h>
+#include <crm_internal.h>
 
 #include <sys/param.h>
 
@@ -87,6 +87,7 @@ int request_id = 0;
 int operation_status = 0;
 cib_t *the_cib = NULL;
 
+gboolean force_flag = FALSE;
 #define OPTARGS	"V?o:QDUCEX:t:Srwlsh:MmBfbdRx:pP5"
 
 int
@@ -96,6 +97,7 @@ main(int argc, char **argv)
 	int flag;
 	char *admin_input_xml = NULL;
 	char *admin_input_file = NULL;
+	gboolean dangerous_cmd = FALSE;
 	gboolean admin_input_stdin = FALSE;
 	crm_data_t *output = NULL;
 	crm_data_t *input = NULL;
@@ -121,6 +123,7 @@ main(int argc, char **argv)
 		{"md5-sum",	 0, 0, '5'},
 		
 		{"force-quorum",0, 0, 'f'},
+		{"force",	0, 0, 'f'},
 		{"local",	0, 0, 'l'},
 		{"sync-call",	0, 0, 's'},
 		{"no-bcast",	0, 0, 'b'},
@@ -183,6 +186,7 @@ main(int argc, char **argv)
 				
 			case 'E':
 				cib_action = CIB_OP_ERASE;
+				dangerous_cmd = TRUE;
 				break;
 			case 'Q':
 				cib_action = CIB_OP_QUERY;
@@ -220,9 +224,11 @@ main(int argc, char **argv)
 				cib_action = CIB_OP_BUMP;
 				break;
 			case 'r':
+				dangerous_cmd = TRUE;
 				cib_action = CIB_OP_SLAVE;
 				break;
 			case 'w':
+				dangerous_cmd = TRUE;
 				cib_action = CIB_OP_MASTER;
 				command_options |= cib_scope_local;
 				break;
@@ -256,6 +262,7 @@ main(int argc, char **argv)
 				command_options |= cib_scope_local;
 				break;
 			case 'b':
+				dangerous_cmd = TRUE;
 				command_options |= cib_inhibit_bcast;
 				command_options |= cib_scope_local;
 				break;
@@ -263,6 +270,7 @@ main(int argc, char **argv)
 				command_options |= cib_sync_call;
 				break;
 			case 'f':
+				force_flag = TRUE;
 				command_options |= cib_quorum_override;
 				break;
 			default:
@@ -279,18 +287,24 @@ main(int argc, char **argv)
 		while (optind < argc)
 			printf("%s ", argv[optind++]);
 		printf("\n");
+		usage(crm_system_name, LSB_EXIT_EINVAL);
 	}
 
-	if (optind > argc) {
-		++argerr;
-	}
-
-	if(cib_action == NULL) {
-		usage(crm_system_name, cib_operation);
+	if (optind > argc || cib_action == NULL) {
+	    ++argerr;
 	}
 	
 	if (argerr) {
 		usage(crm_system_name, LSB_EXIT_GENERIC);
+	}
+
+	if(dangerous_cmd && force_flag == FALSE) {
+	    fprintf(stderr, "The supplied command is considered dangerous."
+		    "  To prevent accidental destruction of the cluster,"
+		    " the --force flag is required in order to proceed.\n");
+	    fflush(stderr);
+	    usage(crm_system_name, LSB_EXIT_GENERIC);
+	    
 	}
 	
 	if(admin_input_file != NULL) {

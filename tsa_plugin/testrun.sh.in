@@ -1,9 +1,0 @@
-#!/bin/sh
-
-
-JAVA_HOME=@JAVA_HOME@
-TSA_LIBDIR=@TSA_DIR@/sam/lib
-CLASSPATH=.:${JAVA_HOME}/lib/dt.jar:${JAVA_HOME}/lib/tools.jar:${TSA_LIBDIR}/eezadapter.jar:${TSA_LIBDIR}/jlanclient.jar:${TSA_LIBDIR}/eezcfghelp.jar:${TSA_LIBDIR}/jlog.jar:${TSA_LIBDIR}/eezmsgs.jar:${TSA_LIBDIR}/log.jar:${TSA_LIBDIR}/eezmsgs_lang.jar:${TSA_LIBDIR}/remoteaccess.jar:${TSA_LIBDIR}/eezpolldr.jar:${TSA_LIBDIR}/samfla.jar:${TSA_LIBDIR}/eezsdk.jar:${TSA_LIBDIR}/sammsgs.jar:${TSA_LIBDIR}/eezutils.jar:${TSA_LIBDIR}/sampolicy.jar:${TSA_LIBDIR}/evd.jar:${TSA_LIBDIR}/samrmc.jar:${TSA_LIBDIR}/jffdc.jar:${TSA_LIBDIR}/ssh.jar:${TSA_LIBDIR}/jhall.jar:${TSA_LIBDIR}/tivolicommondir.jar
-
-
-CLASSPATH=$CLASSPATH ${JAVA_HOME}/bin/java org.linuxha.sam.plugin.LinuxHAPlugin

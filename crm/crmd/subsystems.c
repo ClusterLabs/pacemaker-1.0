@@ -16,7 +16,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#include <lha_internal.h>
+#include <crm_internal.h>
 
 #include <sys/param.h>
 #include <crm/crm.h>
@@ -145,9 +145,9 @@ start_subsystem(struct crm_subsystem_s*	the_subsystem)
 	pid_t       pid;
 	struct stat buf;
 	int         s_res;
-	unsigned int  j;
-	struct rlimit oflimits;
-	const char    *devnull = "/dev/null";
+	unsigned int	j;
+	struct rlimit	oflimits;
+	const char 	*devnull = "/dev/null";
 	const char    *use_valgrind = getenv("HA_VALGRIND_ENABLED");
 
 	crm_info("Starting sub-system \"%s\"", the_subsystem->name);

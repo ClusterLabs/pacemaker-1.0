@@ -1,4 +1,4 @@
-#include <lha_internal.h>
+#include <crm_internal.h>
 #include <crm/crm.h>
 
 #include <sys/param.h>

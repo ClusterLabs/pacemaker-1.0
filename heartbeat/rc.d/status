@@ -1,9 +1,0 @@
-#!/bin/sh
-# License:  GNU General Public License (GPL)
-#
-
-. $HA_FUNCS
-
-case $HA_st in
-  dead)	$HA_NOARCHBIN/mach_down $HA_src;;
-esac

@@ -29,21 +29,6 @@ MAINTAINERCLEANFILES    = Makefile.in
 #
 #
 
-if MGMT_BUILD
-MGMT_DIR = mgmt
-endif
-
 ## Subdirectories...
-SUBDIRS			=  	\
-	pils			\
-	stonith 		\
-	clplumbing		\
-	hbclient		\
-	apphb			\
-	recoverymgr		\
-	fencing			\
-	plugins 		\
-	$(CRM_DIR)		\
-	lrm			\
-	$(MGMT_DIR)
+SUBDIRS	= crm
 

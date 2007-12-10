@@ -24,7 +24,7 @@
  *        : mib2c.iterate.conf,v 5.9 2003/06/04 00:14:41 hardaker Exp $
  */
 
-#include <lha_internal.h>
+#include <crm_internal.h>
 
 #ifdef PACKAGE_BUGREPORT
 #undef PACKAGE_BUGREPORT
