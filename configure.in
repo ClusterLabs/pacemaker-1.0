@@ -2392,16 +2392,16 @@ cts/Makefile					        	\
 	cts/CM_LinuxHAv2.py					\
 	cts/CTSproxy.py	        				\
 	cts/extracttests.py					\
-	cts/getpeinputs.sh		\
+	cts/getpeinputs.sh					\
 	cts/OCFIPraTest.py              	                \
 	cts/CIB.py						\
 	cts/LSBDummy						\
 crm/Makefile							\
+cib/Makefile							\
+crmd/Makefile							\
+pengine/Makefile						\
+transitioner/Makefile						\
 	crm/ais/Makefile					\
-	cib/Makefile						\
-	crmd/Makefile						\
-	pengine/Makefile					\
-	transitioner/Makefile					\
 	crm/admin/Makefile					\
 	        crm/admin/crm_primitive.py			\
 	        crm/admin/crm_sh				\
@@ -2423,16 +2423,16 @@ lib/Makefile							\
 	lib/crm/cib/Makefile					\
 	lib/crm/pengine/Makefile				\
 	lib/crm/transition/Makefile				\
-pkg/Makefile							\
-	pkg/InfoFiles/pkginfo					\
-	pkg/InfoFiles/preinstall 				\
-	pkg/InfoFiles/postinstall				\
-port/Makefile							\
-	port/portMakefile					\
-		port/heartbeat/pkg-deinstall			\
-		port/heartbeat/pkg-descr			\
-		port/heartbeat/pkg-install			\
-		port/heartbeat/pkg-plist			\
+build/pkg/Makefile						\
+	build/pkg/InfoFiles/pkginfo				\
+	build/pkg/InfoFiles/preinstall 				\
+	build/pkg/InfoFiles/postinstall				\
+build/port/Makefile						\
+	build/port/portMakefile					\
+		build/port/heartbeat/pkg-deinstall		\
+		build/port/heartbeat/pkg-descr			\
+		build/port/heartbeat/pkg-install		\
+		build/port/heartbeat/pkg-plist			\
 snmp_subagent/Makefile						\
 	snmp_subagent/SNMPAgentSanityCheck			\
 cim/Makefile		        				\
