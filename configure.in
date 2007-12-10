@@ -1565,6 +1565,53 @@ AC_SUBST(CURSESLIBS)
 
 dnl ************ curses **********************
 
+AC_ARG_WITH(ais-prefix,
+    [  --with-ais-prefix=DIR      Prefix where AIS is installed [none]],
+    [ AISPREFIX=$withval ])
+
+if test X"$AISPREFIX" = X"prefix"; then
+ AISPREFIX=$prefix
+fi
+
+AC_MSG_CHECKING(for native AIS)
+AISLIB=""
+LCRSODIR=""
+
+if test X"$AISPREFIX" = X""; then
+   AC_MSG_RESULT(no... not requested.)
+
+else
+   AC_MSG_RESULT(yes... $AISPREFIX)
+
+   dnl Find it in lib, lib64, or wherever it wants to live...
+   alib=`ls ${AISPREFIX}/*/openais/libaisutil.so | head -n 1`
+   AISLIB=`dirname $alib`
+   alib=`ls ${AISPREFIX}/*/lcrso/objdb.lcrso | head -n 1`
+   LCRSODIR=`dirname $alib`
+
+   if test -d ${AISLIB} -a -d ${LCRSODIR}; then
+     LIBS="$LIBS -L${AISLIB} -R${AISLIB}"
+     AC_MSG_NOTICE(Testing AIS installation in $AISPREFIX)
+
+     AC_CHECK_LIB(aisutil, saRecvRetry,
+    	[AISLIBS='-laisutil'; 
+	AC_DEFINE(WITH_NATIVE_AIS, 1, Run the Cluster Resource Manager nativly over openAIS)],
+	[AC_MSG_NOTICE("unusable); AISPREFIX=""; LCRSODIR=""])
+
+   else
+     AC_MSG_ERROR(Couldn't find openais installed under ${AISPREFIX}.)
+     AC_MSG_ERROR(Use --with-ais-prefix to specify a valid location)
+     AISPREFIX=""
+     LCRSODIR=""
+   fi
+fi
+
+AM_CONDITIONAL(BUILD_NATIVE_AIS, test "x${AISPREFIX}" != "x")
+AC_SUBST(AISPREFIX)
+AC_SUBST(LCRSODIR)
+AC_SUBST(AISLIBS)
+
+
 if test "$GCC" = yes; then
 dnl
 dnl We make sure warnings are carefully scrubbed out of the output if
@@ -2314,6 +2361,7 @@ AC_CONFIG_FILES(Makefile				        \
 README							        \
 config/Makefile							\
 cts/Makefile					        	\
+	cts/CM_ais.py						\
 	cts/CM_fs.py						\
 	cts/CM_hb.py						\
 	cts/CTS.py						\
@@ -2328,6 +2376,7 @@ cts/Makefile					        	\
 	cts/CIB.py						\
 	cts/LSBDummy						\
 crm/Makefile							\
+	crm/ais/Makefile					\
 	crm/cib/Makefile					\
 	crm/crmd/Makefile					\
 	crm/pengine/Makefile					\
@@ -2423,6 +2472,12 @@ if test "x${enable_snmp_subagent}" = "xyes"; then
 fi
 AC_MSG_RESULT([  SNMP libraries           = "${SNMPLIB}"])
 AC_MSG_RESULT([  ucd_snmp_devel name      = "${UCDSNMPDEVEL}"])
+AC_MSG_RESULT([  Build IPMILan Plugin     = "${enable_ipmilan}"])
+
+AC_MSG_RESULT([  Build New CRM            = "${enable_crm}"])
+AC_MSG_RESULT([  Build New LRM            = "${enable_lrm}"])
+AC_MSG_RESULT([  Build Ldirectord         = "${enable_ldirectord}"])
+AC_MSG_RESULT([  With AIS prefix          = "${AISPREFIX}"])
 
 AC_MSG_RESULT([  Build CIM providers      = "${enable_cim_provider}"])
 if test "x${enable_cim_provider}" = "xyes"; then
