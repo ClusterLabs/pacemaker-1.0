@@ -2398,10 +2398,10 @@ cts/Makefile					        	\
 	cts/LSBDummy						\
 crm/Makefile							\
 	crm/ais/Makefile					\
-	crm/cib/Makefile					\
-	crm/crmd/Makefile					\
-	crm/pengine/Makefile					\
-	crm/tengine/Makefile					\
+	cib/Makefile						\
+	crmd/Makefile						\
+	pengine/Makefile					\
+	transitioner/Makefile					\
 	crm/admin/Makefile					\
 	        crm/admin/crm_primitive.py			\
 	        crm/admin/crm_sh				\
