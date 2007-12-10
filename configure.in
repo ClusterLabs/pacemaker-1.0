@@ -1565,6 +1565,18 @@ AC_SUBST(CURSESLIBS)
 
 dnl ************ curses **********************
 
+AC_ARG_WITH(ais-support,
+    [  --with-ais-support     Support the OpenAIS messaging and membership layer ],
+    [ SUPPORT_AIS=$withval ],
+    [ SUPPORT_AIS=0 ],
+)
+
+AC_ARG_WITH(heartbeat-support,
+    [  --with-heartbeat-support     Support the Heartbeat messaging and membership layer ],
+    [ SUPPORT_HEARTBEAT=$withval ],
+    [ SUPPORT_HEARTBEAT=1 ],
+)
+
 AC_ARG_WITH(ais-prefix,
     [  --with-ais-prefix=DIR      Prefix where AIS is installed [none]],
     [ AISPREFIX=$withval ])
@@ -1573,9 +1585,13 @@ if test X"$AISPREFIX" = X"prefix"; then
  AISPREFIX=$prefix
 fi
 
-AC_MSG_CHECKING(for native AIS)
+AC_MSG_CHECKING(for native AIS: $SUPPORT_AIS)
 AISLIB=""
 LCRSODIR=""
+if test $SUPPORT_AIS = 0; then
+   AISPREFIX=""
+fi
+
 
 if test X"$AISPREFIX" = X""; then
    AC_MSG_RESULT(no... not requested.)
@@ -1595,16 +1611,21 @@ else
 
      AC_CHECK_LIB(aisutil, saRecvRetry,
     	[AISLIBS='-laisutil'; 
-	AC_DEFINE(WITH_NATIVE_AIS, 1, Run the Cluster Resource Manager nativly over openAIS)],
+	AC_DEFINE(XWITH_NATIVE_AIS, 1, Run the Cluster Resource Manager nativly over openAIS)],
 	[AC_MSG_NOTICE("unusable); AISPREFIX=""; LCRSODIR=""])
 
    else
      AC_MSG_ERROR(Couldn't find openais installed under ${AISPREFIX}.)
      AC_MSG_ERROR(Use --with-ais-prefix to specify a valid location)
+     SUPPORT_AIS=0
      AISPREFIX=""
      LCRSODIR=""
    fi
 fi
+
+AC_DEFINE_UNQUOTED(SUPPORT_AIS, $SUPPORT_AIS, Support the OpenAIS messaging and membership layer)
+AC_DEFINE_UNQUOTED(SUPPORT_HEARTBEAT, $SUPPORT_HEARTBEAT, Support the Heartbeat messaging and membership layer)
+
 
 AM_CONDITIONAL(BUILD_NATIVE_AIS, test "x${AISPREFIX}" != "x")
 AC_SUBST(AISPREFIX)
