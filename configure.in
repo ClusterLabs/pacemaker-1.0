@@ -41,11 +41,11 @@ AC_ARG_WITH(hapkgversion,
 if test -z "$HAPKGVERSION" ; then
    HAPKGVERSION="2.1.3"
 fi
-AM_INIT_AUTOMAKE(heartbeat, $HAPKGVERSION)
+HB_PKG=crm
+AM_INIT_AUTOMAKE($HB_PKG, $HAPKGVERSION)
 
 RPMREL=1
 AC_SUBST(RPMREL)
-HB_PKG=heartbeat
 AC_SUBST(HB_PKG)
 DISTDIR=$HB_PKG-$VERSION
 TARFILE=$DISTDIR.tar.gz
@@ -369,101 +369,10 @@ fi
 
 AC_DEFINE_UNQUOTED(HA_SYSCONFDIR, "$sysconfdir", Location of system configuration files)
 
-HA_URLBASE="http://linux-ha.org/"
-AC_SUBST(HA_URLBASE)
-AC_DEFINE_UNQUOTED(HA_URLBASE, "$HA_URLBASE", Web site base URL)
-
-HA_LIBDIR="${libdir}"
-AC_SUBST(HA_LIBDIR)
-AC_DEFINE_UNQUOTED(HA_LIBDIR,"$HA_LIBDIR", lib directory)
-
-HA_DATADIR="${datadir}"
-AC_SUBST(HA_DATADIR)
-AC_DEFINE_UNQUOTED(HA_DATADIR,"$HA_DATADIR", data (arch-independent) directory)
-
-HA_NOARCHDATAHBDIR="$HA_DATADIR/${HB_PKG}"
+HA_NOARCHDATAHBDIR="${datadir}/heartbeat"
 AC_SUBST(HA_NOARCHDATAHBDIR)
-AC_DEFINE_UNQUOTED(HA_NOARCHDATAHBDIR,"$HA_NOARCHDATAHBDIR", $HB_PKG noarch data directory)
+AC_DEFINE_UNQUOTED(HA_NOARCHDATAHBDIR,"$HA_NOARCHDATAHBDIR", Heartbeat noarch data directory)
 
-HA_LIBHBDIR="$HA_LIBDIR/${HB_PKG}"
-AC_SUBST(HA_LIBHBDIR)
-AC_DEFINE_UNQUOTED(HA_LIBHBDIR,"$HA_LIBHBDIR", $HB_PKG lib directory)
-
-
-HA_VARRUNDIR="${localstatedir}/run"
-AC_SUBST(HA_VARRUNDIR)
-AC_DEFINE_UNQUOTED(HA_VARRUNDIR,"$HA_VARRUNDIR", var run directory)
-
-HA_VARRUNHBDIR="$HA_VARRUNDIR/${HB_PKG}"
-AC_SUBST(HA_VARRUNHBDIR)
-AC_DEFINE_UNQUOTED(HA_VARRUNHBDIR,"$HA_VARRUNHBDIR", var run heartbeat directory)
-
-HA_VARRUNHBRSCDIR="$HA_VARRUNHBDIR/rsctmp"
-AC_SUBST(HA_VARRUNHBRSCDIR)
-AC_DEFINE_UNQUOTED(HA_VARRUNHBRSCDIR,"$HA_VARRUNHBRSCDIR", var run heartbeat rsctmp directory)
-
-dnl Test the default first (priority) and last (to make sure some value is set)
-AC_MSG_CHECKING(for the location of the lock directory)
-for HA_VARLOCKDIR in ${localstatedir}/lock ${localstatedir}/spool/lock ${localstatedir}/spool/locks ${localstatedir}/lock
-do
-  if
-    test -d "$HA_VARLOCKDIR"
-  then
-    AC_MSG_RESULT($HA_VARLOCKDIR)
-    break
-  fi
-done
-
-AC_SUBST(HA_VARLOCKDIR)
-AC_DEFINE_UNQUOTED(HA_VARLOCKDIR,"$HA_VARLOCKDIR", System lock directory)
-
-HA_VARLIBDIR="${localstatedir}/lib"
-AC_SUBST(HA_VARLIBDIR)
-AC_DEFINE_UNQUOTED(HA_VARLIBDIR,"$HA_VARLIBDIR", var lib directory)
-
-HA_VARLIBHBDIR="${HA_VARLIBDIR}/${HB_PKG}"
-AC_SUBST(HA_VARLIBHBDIR)
-AC_DEFINE_UNQUOTED(HA_VARLIBHBDIR,"$HA_VARLIBHBDIR", var lib heartbeat directory)
-
-HA_COREDIR="${HA_VARLIBHBDIR}/cores"
-AC_SUBST(HA_COREDIR)
-AC_DEFINE_UNQUOTED(HA_COREDIR,"$HA_COREDIR", top directory of area to drop core files in)
-
-HA_LOGDAEMON_IPC="${HA_VARLIBDIR}/log_daemon"
-AC_SUBST(HA_LOGDAEMON_IPC)
-AC_DEFINE_UNQUOTED(HA_LOGDAEMON_IPC, "$HA_LOGDAEMON_IPC", Logging Daemon IPC socket name)
-
-dnl This IS a default but we should make sure we can override it for any 
-dnl odd OS requirements.
-HA_VARLOGDIR="${localstatedir}/log"
-AC_SUBST(HA_VARLOGDIR)
-AC_DEFINE_UNQUOTED(HA_VARLOGDIR,"$HA_VARLOGDIR", var log directory)
-
-
-
-STONITHPKG=stonith
-AC_SUBST(STONITHPKG)
-
-PILSPKG=pils
-AC_SUBST(PILSPKG)
-
-pils_includedir="${includedir}/${PILSPKG}"
-pils_plugindir="${libdir}/${PILSPKG}/plugins"
-stonith_includedir="${includedir}/${STONITHPKG}"
-stonith_plugindir="${libdir}/${STONITHPKG}/plugins"
-stonith_ext_plugindir="${stonith_plugindir}/external"
-base_includedir="${includedir}"
-saf_includedir="${includedir}/saf"
-AC_SUBST(pils_includedir)
-AC_SUBST(pils_plugindir)
-AC_SUBST(stonith_includedir)
-AC_SUBST(stonith_plugindir)
-AC_SUBST(stonith_ext_plugindir)
-AC_DEFINE_UNQUOTED(STONITH_EXT_PLUGINDIR, 
-	"$stonith_ext_plugindir", 
-	directory for the external stonith plugins)
-AC_SUBST(base_includedir)
-AC_SUBST(saf_includedir)
 AC_SUBST(docdir)
 
 #
@@ -502,7 +411,7 @@ dnl was NOT being expanded all the time thus causing things to fail.
 AC_CHECK_PROGS(LIBTOOL, glibtool libtool libtool15 libtool13)
 AC_MSG_CHECKING(for glibtool or libtool*)
 if test x"${LIBTOOL}" = x""; then
-      FatalMissingThing "libtool" "You need libtool to build heartbeat." \
+      FatalMissingThing "libtool" "You need libtool to build ${HB_PKG}." \
 		"You can get the source from ftp://www.gnu.org/pub/gnu/" \
       		"or you can locate it via http://www.gnu.org/software/libtool"
 else
@@ -512,7 +421,7 @@ fi
 AC_CHECK_PROGS(MAKE, gmake make)
 AC_MSG_CHECKING(for gmake or make)
 if test x"${MAKE}" = x""; then
-      FatalMissingThing "gmake" "You need gmake to build heartbeat." \
+      FatalMissingThing "gmake" "You need gmake to build ${HB_PKG}." \
 		"You can get the source from ftp://www.gnu.org/pub/gnu/" \
       		"or you can locate it via http://www.gnu.org/software/make/"
 else
@@ -637,67 +546,7 @@ else
 fi
 AC_SUBST(DLOPEN_FORCE_FLAGS)
 
-dnl ************ uuid **********************
-AC_ARG_WITH(uuid,
-    [  --with-uuid=UUID      mechanism for uuid {e2fsprogs|ossp|any|no}
-			"e2fsprogs": e2fsprogs, typically Linux
-			"ossp": not yet implemented
-			"any": (default) any of the above, fallback to inbuilt
-			"no": use inbuilt ],
-    [ uuidimpl="$withval" ],
-    [ uuidimpl="any" ],
-  )
-case $uuidimpl in
-e2fsprogs)
-  AC_CHECK_LIB(uuid, uuid_parse,,
-    AC_MSG_ERROR([e2fsprogs uuid library was explicitly requested but not found])
-  )
-  ;;
-ossp)
-  AC_CHECK_LIB(uuid, uuid_create,,
-    AC_MSG_ERROR([ossp uuid library was explicitly requested but not found])
-  )
-  ;;
-no)	# Do not define anything; so use inbuilt (replace) implementation.
-  ;;
-any)	# Default: try to discover an implementation that we can use.
-  AC_CHECK_LIB(uuid, uuid_parse)	dnl e2fsprogs
-dnl  AC_CHECK_LIB(uuid, uuid_create)	dnl ossp
-  ;;
-*)
-  AC_MSG_ERROR([An invalid uuid library was explicitly requested])
-  ;;
-esac
-
-case "$host_os" in
-darwin*)	
-    dnl Recent Darwin versions do not need to link against a uuid library
-    dnl Maybe this can be moved up into the previous block but it also might
-    dnl    break things (ie. the later check for uuid_parse)
-    AC_CHECK_FUNCS(uuid_parse)
-esac
-
-
-AC_MSG_CHECKING(uuid implementation:)
-if test "$ac_cv_lib_uuid_uuid_parse" = yes; then
-  AC_MSG_RESULT(e2fsprogs)
-elif test "$ac_cv_func_uuid_parse" = yes; then
-  AC_MSG_RESULT(native)
-elif test "$ac_cv_lib_uuid_uuid_create" = yes; then
-  AC_MSG_RESULT(ossp)
-  AC_MSG_ERROR([heartbeat does not yet support ossp implementation of uuid])
-else
-  AC_MSG_RESULT(inbuilt)
-  if test x"$uuidimpl" != x"no"; then
-    WarnMissingThing "uuid library"      \
-    "e2fsprogs uuid library is recommended"        \
-    "On Linux this is the e2fsprogs-devel package" \
-    "See also http://sourceforge.net/projects/e2fsprogs/"
-  fi
-fi
-dnl ************ uuid **********************
-
-EXTRAGLIBMSG="-"
+EXTRALIBMSG="-"
 
 if test "X${PKGCONFIG}" = "X"; then
 	AC_MSG_RESULT(not found)
@@ -730,16 +579,15 @@ else
 fi
 AC_MSG_RESULT(using $GLIBCONFIG)
 
+
 AC_MSG_CHECKING(which libnet version is installed)
 if test x"${LIBNETCONFIG}" = x""; then
       AC_MSG_RESULT(using old version of API)
       dnl The old version of the API REQUIRES $LIBNETCONFIG
       dnl so we can only deal with new API unless we have it.
-      AC_CHECK_LIB(net, libnet_get_hwaddr, [],
-      [FatalMissingThing "libnet" "You need libnet to continue."			\
-		"You can get libnet from http://www.packetfactory.net/libnet"		\
-		"Note that some RPMs split libnet up into libnet and libnet-devel."	\
-		"In this case you have to install libnet-devel"])
+
+      libnet=net
+      AC_CHECK_LIB(net, libnet_get_hwaddr, [], [libnet="broken"])
       LIBNETDEFINES=""
       LIBNETLIBS=" -lnet"
       if test "$ac_cv_lib_nsl_t_open" = yes; then
@@ -749,7 +597,6 @@ if test x"${LIBNETCONFIG}" = x""; then
          LIBNETLIBS="-lsocket $LIBNETLIBS"
       fi
 
-      libnet=net
 else
       LIBNETDEFINES="`$LIBNETCONFIG --defines` `$LIBNETCONFIG --cflags`";
       LIBNETLIBS="`$LIBNETCONFIG --libs`";
@@ -764,20 +611,24 @@ else
 
       AC_CHECK_HEADERS(libnet.h)
       if test "$ac_cv_header_libnet_h" = no; then
-        FatalMissingThing "libnet" "You need libnet (headers) to continue."			\
-		"You can get libnet from http://www.packetfactory.net/libnet"		\
-		"Note that some RPMs split libnet up into libnet and libnet-devel."	\
-		"In this case you have to install libnet-devel"
+	libnet="broken"
       fi
 fi
 
 AC_SUBST(LIBNETDEFINES)
 AC_SUBST(LIBNETLIBS)
 
+if test "$libnet" = "broken"; then
+    FatalMissingThing "libnet" "You need libnet (headers) to continue."	    \
+	"You can get libnet from http://www.packetfactory.net/libnet"	    \
+	"Note that some RPMs split libnet up into libnet and libnet-devel." \
+	"In this case you have to install libnet-devel"
+fi
+
 AC_CHECK_LIB($libnet,libnet_init,
 [new_libnet=yes; AC_DEFINE(HAVE_LIBNET_1_1_API, 1, Libnet 1.1 API)],
 [new_libnet=no; AC_DEFINE(HAVE_LIBNET_1_0_API, 1, Libnet 1.0 API)],$LIBNETLIBS)
-
+ 
 AC_MSG_CHECKING(where is python installed)
 if test "x${PYTHON}" = x; then
   PYTHON="/usr/bin/env python";
@@ -1084,14 +935,6 @@ dnl ************************************************************************
 dnl checks for headers needed by clplumbing On FreeBSD/Solaris
 AC_CHECK_HEADERS(sys/filio.h)
 
-dnl
-dnl	These next two are used to help us figure out whether to include
-dnl	some optional STONITH plugins...
-dnl
-AC_CHECK_HEADERS(vacmclient_api.h)
-AC_CHECK_HEADERS(curl/curl.h)
-AC_CHECK_HEADERS(openhpi/SaHpi.h)
-
 AC_MSG_CHECKING(for special libxml2 includes)
 if test "x$XML2CONFIG" = "x"; then
    AC_MSG_RESULT(libxml2 config not found)
@@ -1179,9 +1022,6 @@ if test "$ENABLE_SNMP" = "no" -a "x${enable_snmp_subagent}" = "xyes"; then
 fi
 if test "$ENABLE_SNMP" = "no" -o "x${enable_snmp_subagent}" != "xyes"; then
         enable_snmp_subagent="no"
-	RPM_ENABLE_SNMP_SUBAGENT="0"
-else
-	RPM_ENABLE_SNMP_SUBAGENT="1"
 fi
 
 check_snmp_libs ()
@@ -1206,95 +1046,6 @@ if test "$enable_snmp_subagent" = "yes"; then
 	SNMPLIBSET="$SNMPLIBSET $SNMPAGENTLIB"
 fi
 
-dnl
-dnl	There are more sophisticated and general ways of doing this, that
-dnl	are more general - but this is better than nothing.
-dnl
-dnl	The right procedure would be to locate the libraries that we've been
-dnl	told are needed, then do an RPM query on each of these libraries
-dnl	to find out what package owns the library (file)
-dnl	That'll be a good project for some long, cold winter evening.
-dnl
-dnl	Some food for thought from the 'ld' manual page:
-dnl
-dnl        The linker uses the following search paths to locate required
-dnl	   shared libraries.
-dnl
-dnl        Ignore steps 1-2, because they involve rpath options
-dnl	   (which we don't care about)
-dnl
-dnl        3.  On  an  ELF system, if the -rpath and "rpath-link" options
-dnl	       were not used, search the contents of the environment variable
-dnl            "LD_RUN_PATH". It is for the native linker only.
-dnl
-dnl        4.  On SunOS, if the -rpath option was not used, search any
-dnl	       directories specified using -L options.
-dnl
-dnl        5.  For a native linker, the contents of the environment variable
-dnl	       "LD_LIBRARY_PATH".
-dnl
-dnl        6.  For a native ELF linker, the directories in "DT_RUNPATH" or
-dnl	       "DT_RPATH" of  a  shared  library  are  searched  for  shared
-dnl            libraries needed by it. The "DT_RPATH" entries are ignored if
-dnl	       "DT_RUNPATH" entries exist.
-dnl
-dnl        7.  The default directories, normally /lib and /usr/lib.
-dnl
-dnl        8.  For a native linker on an ELF system, if the file
-dnl            /etc/ld.so.conf exists, the list of directories found in
-dnl	       that file.
-dnl
-dnl        If the required shared library is not found, the linker will
-dnl	   issue a warning and continue with the link.
-dnl
-dnl
-libs2packages() {
-  for arg
-  do 
-    case $arg in
-        -ldl|-lm|-L*|-lc|-lpthread|-lnsl)			;;
-        -lresolv|-lcrypt|-lutil|-Wl,-E|-wL,-rpath)		;;
-        -lcrypto)		echo openssl			;;
-        -lnetsnmp)		echo net-snmp			;;
-        -lsnmp)			echo net-snmp			;;
-        -lnetsnmpagent)		echo net-snmp			;;
-        -lnetsnmphelpers)	echo net-snmp			;;
-        -lnetsnmpmibs)		echo net-snmp			;;
-        -lrpm)			echo rpm			;;
-        -lrpmio)		echo rpm			;;
-        -lpopt)			echo popt			;;
-        -lsensors)		case $host_vendor in
-				  suse|SUSE|SuSE)
-        				echo sensors;;
-				  *) 	echo lm_sensors
-				esac				;;
-        -lwrap)			case $host_vendor in
-				  suse|SUSE|SuSE)
-        				echo tcpd;;
-				  *) 	echo tcp_wrappers;;
-				esac				;;
-        -lz)			echo zlib			;;
-        -lperl|-l/*perl*/auto/DynaLoader/DynaLoader*)
-				echo perl			;;
-         *)			AC_MSG_WARN([SNMP library $arg not included in RPM build dependencies])
-    esac
-  done
-}
-
-AC_MSG_CHECKING(What packages are needed for SNMP at compile time for RPMs);
-PKGSET=`libs2packages $SNMPLIBSET | tr ' ' '\012' | sort -u`
-PKGSET=`echo $PKGSET`
-AC_MSG_RESULT($PKGSET)
-
-if test  -z "$PKGSET"; then
-	SNMP_RPM_BUILD_REQUIRES="BuildRequires: ${CC}"
-else
-	SNMP_RPM_BUILD_REQUIRES="BuildRequires: $PKGSET"
-fi
-AC_MSG_RESULT($SNMP_RPM_BUILD_REQUIRES)
-
-AC_SUBST(SNMP_RPM_BUILD_REQUIRES)
-
 AC_ARG_WITH(mibsdir, 
 	[  --with-miBsdir=DIR      directory for mib files. ],
 	[ MIBS_DIR="$withval" ])
@@ -1318,30 +1069,8 @@ AC_SUBST(MIBS_DIR)
 AC_SUBST(SNMPCONFIG)
 AC_SUBST(SNMPLIB)
 AC_SUBST(SNMPAGENTLIB)
-AC_SUBST(RPM_ENABLE_SNMP_SUBAGENT)
 AM_CONDITIONAL(USE_APC_SNMP, test "$ENABLE_SNMP" = "yes")
 AM_CONDITIONAL(SNMP_SUBAGENT_BUILD, test "x${enable_snmp_subagent}" = "xyes")
-
-#
-#	We've had this new API for a very long time
-#
-AC_DEFINE(HAVE_NEW_HB_API, 1, [have new heartbeat api])
-dnl
-dnl OpenIMPI checks
-dnl
-
-if test "x${enable_ipmilan}" = "xyes" -o "x${enable_ipmilan}" = "xtry"; then
-	AC_MSG_CHECKING(For libOpenIPMI version 2 or greater)
-	AC_TRY_COMPILE([#include <OpenIPMI/ipmiif.h>],
-		       [ #if (OPENIPMI_VERSION_MAJOR < 2 )
-			 #error "Too Old"
-			 #endif ],
-		       AC_MSG_RESULT("yes"); enable_ipmilan="yes",
-		       AC_MSG_RESULT("no");  enable_ipmilan="no")
-else
-	enable_ipmilan="no"
-fi
-AM_CONDITIONAL(IPMILAN_BUILD, test "X$enable_ipmilan" = "Xyes")
 
 dnl
 dnl     On many systems libcrypto is needed when linking against libsnmp.
@@ -1349,34 +1078,6 @@ dnl     Check to see if it exists, and if so use it.
 dnl
 AC_CHECK_LIB(crypto, CRYPTO_free, CRYPTOLIB="-lcrypto",)
 AC_SUBST(CRYPTOLIB)
-
-dnl ***************************************************************************
-dnl TIPC communication module
-dnl ***************************************************************************
-AC_ARG_ENABLE([tipc],
- [  --enable-tipc 	Enable TIPC Communication module,
-		[default=try]], [], [enable_tipc=try])
-AC_ARG_WITH([tipc],
- [  --with-tipc-source      TIPC source code directory], [], [])
-
-
-TIPC_DEV_ROOT=${with_tipc_source}
-tipc_headers_found=yes
-
-if test "x${TIPC_DEV_ROOT}" != "x"; then
-        dnl checking tipc.h in specified directory
-        TIPC_HEADER_DIR=${TIPC_DEV_ROOT}/include
-        AC_CHECK_HEADER([${TIPC_HEADER_DIR}/net/tipc/tipc.h], [],    \
-                        [tipc_headers_found=no] )
-        TIPC_INCLUDE="-I${TIPC_HEADER_DIR}"
-else
-        dnl checking tipc.h in standard include directory
-        AC_CHECK_HEADERS(net/tipc/tipc.h, [], [tipc_headers_found=no])
-fi
-
-AC_SUBST(TIPC_INCLUDE)
-AM_CONDITIONAL(BUILD_TIPC_MODULE, 
-	test "x${tipc_headers_found}" = "xyes" && test "x${enable_tipc}" != "xno")
 
 dnl ***************************************************************************
 dnl  CIM provider configuration
@@ -1711,10 +1412,6 @@ AC_CHECK_SIZEOF(long long)
 AC_ARG_ENABLE([all],
 [  --enable-all Activate ALL features
                           [default=no]])
-AC_ARG_ENABLE([rpath],
-[  --enable-rpath Enable RPATH in libtool
-                          [default=yes]])
-
 AC_ARG_ENABLE([ansi],
 [  --enable-ansi force GCC to compile to ANSI/ANSI standard for older compilers.
                           [default=yes]])
@@ -1784,7 +1481,7 @@ dnl - If requested, enable ALL subsystems.
 	fi
 
 AC_ARG_ENABLE([bundled-ltdl],
-[  --enable-bundled-ltdl  Configure, build and install the standalone ltdl library bundled with Heartbeat [default=no]]) 
+[  --enable-bundled-ltdl  Configure, build and install the standalone ltdl library bundled with ${HB_PKG} [default=no]]) 
 LTDL_LIBS=""
 
 dnl Check before we enable -Wstrict-prototypes as it causes the test to fail
@@ -2243,10 +1940,8 @@ AC_CHECK_FUNCS(getopt,
 
 AC_SUBST(HA_HAVE_ALPHASORT)
 AC_SUBST(HA_HAVE_INET_PTON)
-AC_SUBST(HA_HAVE_SCANDIR)
 AC_SUBST(HA_HAVE_SETENV)
 AC_SUBST(HA_HAVE_STRERROR)
-AC_SUBST(HA_HAVE_UNSETENV)
 AC_SUBST(HA_HAVE_STRNLEN)
 AC_SUBST(HA_HAVE_STRNDUP)
 AC_SUBST(HA_HAVE_DAEMON)
@@ -2460,36 +2155,10 @@ AC_SUBST(LIBADD_INTL)	dnl extra flags for GNU gettext stuff...
 
 AC_SUBST(LOCALE)
 
-HA_HBCONF_DIR=$sysconfdir/ha.d
-AC_SUBST(HA_HBCONF_DIR)
-AC_DEFINE_UNQUOTED(HA_HBCONF_DIR,"$HA_HBCONF_DIR", Heartbeat configuration directory)
-
-HA_RC_DIR=$HA_HBCONF_DIR/rc.d
-AC_SUBST(HA_RC_DIR)
-AC_DEFINE_UNQUOTED(HA_RC_DIR,"$HA_RC_DIR", heartbeat v1 script directory)
-
-AC_ARG_ENABLE([crm],
-[  --enable-crm  Compile the Version 2 Cluster Resource Manager.  [default=yes]],
-                          [], [enable_crm=yes])
-
-CRM_DIR=""
-enable_crm="yes"
-if test "x${enable_crm}" = "xyes"; then
-     CRM_ENABLED=1
-     CRM_DIR=crm
-     AC_DEFINE_UNQUOTED(WITH_CRM, 1, Use the new Cluster Resource Manager)
-else 
-     if test -z "${enable_crm}"; then
-	enable_crm="no"
-     fi
-     dnl None of the following items build without the CRM available
-     enable_mgmt=no
-     enable_dopd=no
-     enable_cim_provider=no
-fi
+CRM_ENABLED=1
+CRM_DIR=crm
+AC_DEFINE_UNQUOTED(WITH_CRM, 1, Use the new Cluster Resource Manager)
 AC_SUBST(CRM_DIR)
-
-AC_MSG_NOTICE([whether to enable the Cluster Resource Manager... ${enable_crm}])
 
 AM_CONDITIONAL(CRM_BUILD, test "x${enable_crm}" = "xyes")
 AC_SUBST(CRM_ENABLED)
@@ -2542,42 +2211,8 @@ OCF_RA_DIR="${OCF_ROOT_DIR}/resource.d/"
 AC_SUBST(OCF_RA_DIR)
 AC_DEFINE_UNQUOTED(OCF_RA_DIR,"$OCF_RA_DIR", Location for OCF RAs)
 
-LSB_RA_DIR="${INITDIR}"
-AC_SUBST(LSB_RA_DIR)
-AC_DEFINE_UNQUOTED(LSB_RA_DIR,"$LSB_RA_DIR", Location for LSB RAs)
-
-STONITH_RA_DIR="${hb_libdir}/stonith.d/"
-AC_SUBST(STONITH_RA_DIR)
-AC_DEFINE_UNQUOTED(STONITH_RA_DIR,"$STONITH_RA_DIR", Location for STONITH RAs)
-
-AC_ARG_ENABLE([valgrind],
-	[  --enable-valgrind  "Run selected heartbeat components using Valgrind."  [default=no]],
-			[], [enable_valgrind=no])
-
-AC_ARG_WITH(valgrind-log,
-    [  --with-valgrind-log=options  Logging options to pass to valgrind],
-    [ VALGRIND_LOG="$withval" ], 
-    [])
-
-AC_ARG_WITH(valgrind-suppress,
-    [  --with-valgrind-suppress=file  Name of a suppression file to pass to Valgrind [default=/dev/null]],
-    [ VALGRIND_SUPP="$withval" ], 
-    [ VALGRIND_SUPP="/dev/null" ])
-
-if test "x" = "x$VALGRIND_LOG"; then 
-    VALGRIND_LOG="--log-socket=127.0.0.1:1234"
-    AC_MSG_NOTICE(Set default Valgrind options to: $VALGRIND_OPTS)
-    AC_MSG_NOTICE(Remember to start a receiver on localhost:1234)
-fi
-
 AC_PATH_PROG(VALGRIND_BIN, valgrind)
-if test "xyes" = "x$enable_valgrind" -a "x$VALGRIND_BIN" != "x"; then
-   enable_libc_malloc=yes
-fi
-
 AC_DEFINE_UNQUOTED(VALGRIND_BIN, "$VALGRIND_BIN", Valgrind command)
-AC_DEFINE_UNQUOTED(VALGRIND_LOG, "$VALGRIND_LOG", Valgrind logging options)
-AC_DEFINE_UNQUOTED(VALGRIND_SUPP, "$VALGRIND_SUPP", Name of a suppression file to pass to Valgrind)
 
 AC_ARG_ENABLE([libc-malloc],
 	[  --enable-libc-malloc  Use libc malloc instead of Heartbeat's custom one.  [default=no]],
@@ -2802,7 +2437,6 @@ AC_SUBST(DISABLE_TIMES_KLUDGE)
 AC_MSG_RESULT([  CC_WARNINGS              = "${CC_WARNINGS}"])
 AC_MSG_RESULT([  Mangled CFLAGS           = "${CFLAGS}"])
 AC_MSG_RESULT([  Libraries                = "${LIBS}"])
-AC_MSG_RESULT([  RPATH enabled            = "${enable_rpath}"])
 
 AC_MSG_RESULT([  ])
 AC_MSG_RESULT([Note: If you use the 'make install' method for installation you])

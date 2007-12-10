@@ -32,14 +32,6 @@
 #undef _GNU_SOURCE  /* in case it was defined on the command line */
 #define _GNU_SOURCE
 
-#ifdef __STDC__
-#       define  MKSTRING(s)     #s
-#else
-#       define  MKSTRING(s)     "s"
-#endif
-
-
-
 /* Please leave this as the first #include - Solaris needs it there */
 #ifdef HAVE_CONFIG_H
 #include <config.h>
@@ -68,32 +60,10 @@ int daemon(int nochdir, int noclose);
 int setenv(const char *name, const char * value, int why);
 #endif /* HA_HAVE_SETENV */
 
-#ifndef HA_HAVE_UNSETENV
-  /* We supply a replacement function, but need a prototype */
-int unsetenv(const char *name);
-#endif /* HA_HAVE_UNSETENV */
-
 #ifndef HA_HAVE_STRERROR
   /* We supply a replacement function, but need a prototype */
 char * strerror(int errnum);
 #endif /* HA_HAVE_STRERROR */
-
-#ifndef HA_HAVE_SCANDIR
-  /* We supply a replacement function, but need a prototype */
-#  include <dirent.h>
-int
-scandir (const char *directory_name,
-	struct dirent ***array_pointer,
-	int (*select_function) (const struct dirent *),
-#ifdef USE_SCANDIR_COMPARE_STRUCT_DIRENT
-	/* This is what the Linux man page says */
-	int (*compare_function) (const struct dirent**, const struct dirent**)
-#else
-	/* This is what the Linux header file says ... */
-	int (*compare_function) (const void *, const void *)
-#endif
-	);
-#endif /* HA_HAVE_SCANDIR */
 
 #ifndef HA_HAVE_ALPHASORT
 #  include <dirent.h>

@@ -83,7 +83,7 @@
  *	return 2(OCF_ERR_ARGS) for invalid or excess argument(s)
  */
 
-#include <hb_config.h>
+#include <crm_internal.h>
 
 #include <stdlib.h>
 #include <sys/types.h>
