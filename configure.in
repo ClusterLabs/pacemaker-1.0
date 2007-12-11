@@ -2423,12 +2423,12 @@ lib/Makefile							\
 	lib/crm/cib/Makefile					\
 	lib/crm/pengine/Makefile				\
 	lib/crm/transition/Makefile				\
-build/pkg/Makefile						\
-	build/pkg/InfoFiles/pkginfo				\
-	build/pkg/InfoFiles/preinstall 				\
-	build/pkg/InfoFiles/postinstall				\
-build/port/Makefile						\
-	build/port/portMakefile					\
+build/Makefile							\
+	build/pkg/Makefile					\
+		build/pkg/InfoFiles/pkginfo			\
+		build/pkg/InfoFiles/preinstall 			\
+		build/pkg/InfoFiles/postinstall			\
+	build/port/Makefile					\
 		build/port/heartbeat/pkg-deinstall		\
 		build/port/heartbeat/pkg-descr			\
 		build/port/heartbeat/pkg-install		\
