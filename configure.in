@@ -41,13 +41,15 @@ AC_ARG_WITH(hapkgversion,
 if test -z "$HAPKGVERSION" ; then
    HAPKGVERSION="2.1.3"
 fi
-HB_PKG=crm
-AM_INIT_AUTOMAKE($HB_PKG, $HAPKGVERSION)
+HB_PKG=heartbeat
+PKG_NAME=crm
+AM_INIT_AUTOMAKE($PKG_NAME, $HAPKGVERSION)
 
 RPMREL=1
 AC_SUBST(RPMREL)
 AC_SUBST(HB_PKG)
-DISTDIR=$HB_PKG-$VERSION
+AC_SUBST(PKG_NAME)
+DISTDIR=$PKG_NAME-$VERSION
 TARFILE=$DISTDIR.tar.gz
 AC_SUBST(DISTDIR)
 AC_SUBST(TARFILE)
@@ -226,7 +228,7 @@ includedir=`var "$includedir" "$exec_prefix/include"`
 oldincludedir=`var "$oldincludedir" "$exec_prefix/include"`
 infodir=`var "$infodir" "$prefix/info"`
 mandir=`var "$mandir" "$exec_prefix/man"`
-docdir=${datadir}/doc/${HB_PKG}-${VERSION}
+docdir=${datadir}/doc/${PKG_NAME}-${VERSION}
 libdir=`var "$libdir" "$exec_prefix/lib"`
 libexecdir=`var "$libexecdir" "$exec_prefix/libexec"`
 noarchlibdir=`var "$noarchlibdir" "$prefix/lib"`
@@ -411,7 +413,7 @@ dnl was NOT being expanded all the time thus causing things to fail.
 AC_CHECK_PROGS(LIBTOOL, glibtool libtool libtool15 libtool13)
 AC_MSG_CHECKING(for glibtool or libtool*)
 if test x"${LIBTOOL}" = x""; then
-      FatalMissingThing "libtool" "You need libtool to build ${HB_PKG}." \
+      FatalMissingThing "libtool" "You need libtool to build ${PKG_NAME}." \
 		"You can get the source from ftp://www.gnu.org/pub/gnu/" \
       		"or you can locate it via http://www.gnu.org/software/libtool"
 else
@@ -421,7 +423,7 @@ fi
 AC_CHECK_PROGS(MAKE, gmake make)
 AC_MSG_CHECKING(for gmake or make)
 if test x"${MAKE}" = x""; then
-      FatalMissingThing "gmake" "You need gmake to build ${HB_PKG}." \
+      FatalMissingThing "gmake" "You need gmake to build ${PKG_NAME}." \
 		"You can get the source from ftp://www.gnu.org/pub/gnu/" \
       		"or you can locate it via http://www.gnu.org/software/make/"
 else
@@ -1481,7 +1483,7 @@ dnl - If requested, enable ALL subsystems.
 	fi
 
 AC_ARG_ENABLE([bundled-ltdl],
-[  --enable-bundled-ltdl  Configure, build and install the standalone ltdl library bundled with ${HB_PKG} [default=no]]) 
+[  --enable-bundled-ltdl  Configure, build and install the standalone ltdl library bundled with ${PKG_NAME} [default=no]]) 
 LTDL_LIBS=""
 
 dnl Check before we enable -Wstrict-prototypes as it causes the test to fail
@@ -1891,7 +1893,6 @@ AC_ARG_WITH(
     [ HA_CCMUSER="hacluster" ],
   )
 AC_SUBST(HA_CCMUSER)
-AC_DEFINE_UNQUOTED(HA_CCMUSER, "$HA_CCMUSER", user to run privileged non-root things as)
 
 AC_ARG_WITH(
   ccmuser-id,
@@ -1906,7 +1907,6 @@ then
   HA_CCMUID=`getent passwd "$HA_CCMUSER" | cut -d: -f3`
 fi
 AC_SUBST(HA_CCMUID)
-AC_DEFINE_UNQUOTED(HA_CCMUID, $HA_CCMUID, id for ccm user)
 
 #
 #	Priority for starting via init startup scripts
@@ -2230,6 +2230,12 @@ AC_SUBST(CRM_DIR)
 AM_CONDITIONAL(CRM_BUILD, test "x${enable_crm}" = "xyes")
 AC_SUBST(CRM_ENABLED)
 
+dnl Variables needed for substitution
+HA_VARRUNDIR="${localstatedir}/run"
+AC_SUBST(HA_VARRUNDIR)
+
+HA_VARLIBDIR="${localstatedir}/lib"
+AC_SUBST(HA_VARLIBDIR)
 
 
 dnl ************************************************************************
