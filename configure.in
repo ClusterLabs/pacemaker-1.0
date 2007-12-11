@@ -2223,12 +2223,6 @@ AC_SUBST(LIBADD_INTL)	dnl extra flags for GNU gettext stuff...
 AC_SUBST(LOCALE)
 
 CRM_ENABLED=1
-CRM_DIR=crm
-AC_DEFINE_UNQUOTED(WITH_CRM, 1, Use the new Cluster Resource Manager)
-AC_SUBST(CRM_DIR)
-
-AM_CONDITIONAL(CRM_BUILD, test "x${enable_crm}" = "xyes")
-AC_SUBST(CRM_ENABLED)
 
 dnl Variables needed for substitution
 HA_VARRUNDIR="${localstatedir}/run"
@@ -2237,6 +2231,8 @@ AC_SUBST(HA_VARRUNDIR)
 HA_VARLIBDIR="${localstatedir}/lib"
 AC_SUBST(HA_VARLIBDIR)
 
+HB_RA_DIR="${sysconfdir}/ha.d/resource.d/"
+AC_SUBST(HB_RA_DIR)
 
 dnl ************************************************************************
 
