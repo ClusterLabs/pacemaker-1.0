@@ -1610,9 +1610,8 @@ else
      AC_MSG_NOTICE(Testing AIS installation in $AISPREFIX)
 
      AC_CHECK_LIB(aisutil, saRecvRetry,
-    	[AISLIBS='-laisutil'; 
-	AC_DEFINE(XWITH_NATIVE_AIS, 1, Run the Cluster Resource Manager nativly over openAIS)],
-	[AC_MSG_NOTICE("unusable); AISPREFIX=""; LCRSODIR=""])
+    	[AISLIBS='-laisutil'; SUPPORT_AIS=1],
+	[AC_MSG_NOTICE("unusable); SUPPORT_AIS=0; AISPREFIX=""; LCRSODIR=""])
 
    else
      AC_MSG_ERROR(Couldn't find openais installed under ${AISPREFIX}.)
