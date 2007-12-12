@@ -42,7 +42,7 @@ if test -z "$HAPKGVERSION" ; then
    HAPKGVERSION="2.1.3"
 fi
 HB_PKG=heartbeat
-PKG_NAME=crm
+PKG_NAME=pacemaker
 AM_INIT_AUTOMAKE($PKG_NAME, $HAPKGVERSION)
 
 RPMREL=1
