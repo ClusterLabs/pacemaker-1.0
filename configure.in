@@ -2370,9 +2370,7 @@ AC_MSG_RESULT([  Init (rc) scripts        = "$my_initdir"])
 AC_MSG_RESULT([  Use system LTDL          = "${ac_cv_lib_ltdl_lt_dlopen}"])
 
 AC_MSG_RESULT([  HA group name            = "${HA_APIGROUP}"])
-AC_MSG_RESULT([  HA group id              = "${HA_APIGID}"])
 AC_MSG_RESULT([  HA user name             = "${HA_CCMUSER}"])
-AC_MSG_RESULT([  HA user user id          = "${HA_CCMUID}"])
 
 AC_MSG_RESULT([  Build snmp subagent  = "${enable_snmp_subagent}"])
 if test "x${enable_snmp_subagent}" = "xyes"; then
@@ -2383,9 +2381,8 @@ AC_MSG_RESULT([  SNMP libraries           = "${SNMPLIB}"])
 AC_MSG_RESULT([  ucd_snmp_devel name      = "${UCDSNMPDEVEL}"])
 AC_MSG_RESULT([  Build IPMILan Plugin     = "${enable_ipmilan}"])
 
-AC_MSG_RESULT([  Build New CRM            = "${enable_crm}"])
-AC_MSG_RESULT([  Build New LRM            = "${enable_lrm}"])
-AC_MSG_RESULT([  Build Ldirectord         = "${enable_ldirectord}"])
+AC_MSG_RESULT([  With Heartbeat support   = "${SUPPORT_HEARTBEAT}"])
+AC_MSG_RESULT([  With AIS support         = "${SUPPORT_AIS}"])
 AC_MSG_RESULT([  With AIS prefix          = "${AISPREFIX}"])
 
 AC_MSG_RESULT([  Build CIM providers      = "${enable_cim_provider}"])
@@ -2404,6 +2401,6 @@ AC_MSG_RESULT([  Libraries                = "${LIBS}"])
 
 AC_MSG_RESULT([  ])
 AC_MSG_RESULT([Note: If you use the 'make install' method for installation you])
-AC_MSG_RESULT([also need to adjust '/etc/passwd' and '/etc/group' manually.])
+AC_MSG_RESULT([also need to install the AIS plugin manually.])
 AC_MSG_RESULT([  ])
 
