@@ -1635,37 +1635,7 @@ AC_SUBST(AISLIBS)
 
 
 if test "$GCC" = yes; then
-dnl
-dnl We make sure warnings are carefully scrubbed out of the output if
-dnl you're running on some platforms.  You can enable that behavior with
-dnl the option "fatal-warnings", by specifying --enable-fatal-warnings.
-dnl Or, you can disable it with --disable-fatal-warnings.
-dnl
 
-dnl Horms 10th August 2001
-        dnl Don't do this, it seems to cause configure in
-        dnl the libltdl/ directory to die under Debian Woody
-        dnl I'm suspecting it will be a problem on other systems too.
-        dnl For this reason it now defaults to off.
-
-dnl AlanR 11 August 2001
-dnl Show no mercy to broken OSes and other software.  If you have broken
-dnl software, turn this feature off.
-
-dnl NO warnings WHATSOVER will be tolerated without good reason.
-dnl A distribution being broken isn't a good reason.
-dnl The cure for that is fix the distribution, not destroy the integrity
-dnl of the entire project by defaulting it to "off".
-
-dnl In my experience, there are ways of making individual warnings go
-dnl away.
-
-dnl The only way I know to keep them out is to make them an absolute
-dnl pain to deal with.  Otherwise they're a pain to fix.
-
-dnl This policy is not an accident, nor was it chosen without significant
-dnl thought and experience.
-dnl
 	cc_supports_flag() {
 	  AC_MSG_CHECKING(whether $CC supports "$@")
 	  Cfile=/tmp/foo${$}
@@ -1803,11 +1773,6 @@ dnl Add any system specific options here.
 	NON_FATAL_CC_WARNINGS="$EXTRA_WARNINGS"
 
 fi
-if test "${enable_times_kludge}" = no; then
-  echo "Disabling times(2) kludge"
-  AC_DEFINE(DISABLE_TIMES_KLUDGE, 1, [disable times(2) kludge])
-fi
-AC_SUBST(DISABLE_TIMES_KLUDGE)
 
 AC_MSG_CHECKING(which init (rc) directory to use)
 INITDIR=""
@@ -1835,14 +1800,8 @@ AC_SUBST(INITDIR)
 
 
 dnl **********************************************************************
-dnl checks for group to install fifos as
+dnl TODO: Extract these values from the installed heartbeat program
 
-dnl
-dnl	These checks aren't right.  We need to locate the lowest
-dnl	unused group id if haclient isn't in the /etc/group file
-dnl	and no one has overridden group-id with a --with-group-id
-dnl	option.
-dnl
 
 AC_ARG_WITH(
   group-name,
@@ -1852,38 +1811,6 @@ AC_ARG_WITH(
     [ HA_APIGROUP="haclient" ],
   )
 AC_SUBST(HA_APIGROUP)
-AC_DEFINE_UNQUOTED(HA_APIGROUP, "$HA_APIGROUP", group for our programs)
-
-if
-  test  -z "${GETENT}" -o ! -x "${GETENT}"
-then
-  GETENT=getent
-  getent() {
-    grep "^${2}:" /etc/$1
-  }
-fi
-
-if
-  test  -z "${IP2UTIL}" -o ! -x "${IP2UTIL}"
-then
-  IP2UTIL=/sbin/ip
-fi
-
-
-AC_ARG_WITH(
-  group-id,
-    [  --with-group-id=GROUP_ID  
-                          GROUP_ID to run our programs as. [default=60]  ],
-    [ HA_APIGID="$withval" ],
-    [ HA_APIGID=65 ],
-  )
-if
-  getent group "$HA_APIGROUP" > /dev/null
-then
-  HA_APIGID=`getent group "$HA_APIGROUP" | cut -d: -f3`
-fi
-AC_SUBST(HA_APIGID)
-AC_DEFINE_UNQUOTED(HA_APIGID, $HA_APIGID, id for api group)
 
 AC_ARG_WITH(
   ccmuser-name,
@@ -1893,46 +1820,6 @@ AC_ARG_WITH(
     [ HA_CCMUSER="hacluster" ],
   )
 AC_SUBST(HA_CCMUSER)
-
-AC_ARG_WITH(
-  ccmuser-id,
-    [  --with-ccmuser-id=HA_HA_CCMUSER_ID  
-                          USER_ID to run privileged non-root things as. [default=17]  ],
-    [ HA_CCMUID="$withval" ],
-    [ HA_CCMUID=17 ],
-  )
-if
-  getent passwd "$HA_CCMUSER" >/dev/null
-then
-  HA_CCMUID=`getent passwd "$HA_CCMUSER" | cut -d: -f3`
-fi
-AC_SUBST(HA_CCMUID)
-
-#
-#	Priority for starting via init startup scripts
-#
-AC_ARG_WITH(
-  start-init-priority,
-    [  --with-start-init-priority=number  
-                          Init start priority. [default=75]  ],
-    [ HB_INITSTARTPRI="$withval" ],
-    [ HB_INITSTARTPRI=75 ],
-  )
-AC_SUBST(HB_INITSTARTPRI)
-AC_DEFINE_UNQUOTED(HB_INITSTARTPRI,"$HB_INITSTARTPRI", init start priority)
-
-#
-#	Priority for stopping via init shutdown scripts
-#
-AC_ARG_WITH(
-  stop-init-priority,
-    [  --with-stop-init-priority=number  
-                          Init stop priority. [default=5]  ],
-    [ HB_INITSTOPPRI="$withval" ],
-    [ HB_INITSTOPPRI=05 ],
-  )
-AC_SUBST(HB_INITSTOPPRI)
-AC_DEFINE_UNQUOTED(HB_INITSTOPPRI,"$HB_INITSTOPPRI", init stop priority)
 
 #
 #	Name of UCD-SNMP development package
