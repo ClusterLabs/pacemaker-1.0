@@ -455,7 +455,6 @@ dnl - Determine which mail program exists. Mailx is Solaris
 AC_PATH_PROGS(MAILCMD, mail, mailx)
 AC_SUBST(MAILCMD)
 AC_DEFINE_UNQUOTED(IFCONFIG, "$IFCONFIG", path to the ifconfig command)
-AC_PATH_PROGS(LIBNETCONFIG, libnet-config)
 AC_PATH_PROGS(GETENT, getent)
 AC_PATH_PROGS(IP2UTIL, ip, /sbin/ip)
 AC_PATH_PROGS(XML2CONFIG, xml2-config)
@@ -581,56 +580,6 @@ else
 fi
 AC_MSG_RESULT(using $GLIBCONFIG)
 
-
-AC_MSG_CHECKING(which libnet version is installed)
-if test x"${LIBNETCONFIG}" = x""; then
-      AC_MSG_RESULT(using old version of API)
-      dnl The old version of the API REQUIRES $LIBNETCONFIG
-      dnl so we can only deal with new API unless we have it.
-
-      libnet=net
-      AC_CHECK_LIB(net, libnet_get_hwaddr, [], [libnet="broken"])
-      LIBNETDEFINES=""
-      LIBNETLIBS=" -lnet"
-      if test "$ac_cv_lib_nsl_t_open" = yes; then
-         LIBNETLIBS="-lnsl $LIBNETLIBS"
-      fi
-      if test "$ac_cv_lib_socket_socket" = yes; then
-         LIBNETLIBS="-lsocket $LIBNETLIBS"
-      fi
-
-else
-      LIBNETDEFINES="`$LIBNETCONFIG --defines` `$LIBNETCONFIG --cflags`";
-      LIBNETLIBS="`$LIBNETCONFIG --libs`";
-      AC_MSG_RESULT(using $LIBNETCONFIG)
-      case $LIBNETLIBS in
-        *-l*)	libnet=`echo $LIBNETLIBS | sed 's%.*-l%%'`;;
-        *)	libnet=$LIBNETLIBS;;
-      esac
-
-      dnl Add any libnet definitions to the compiler flags.
-      CPPFLAGS="$CPPFLAGS $LIBNETDEFINES"
-
-      AC_CHECK_HEADERS(libnet.h)
-      if test "$ac_cv_header_libnet_h" = no; then
-	libnet="broken"
-      fi
-fi
-
-AC_SUBST(LIBNETDEFINES)
-AC_SUBST(LIBNETLIBS)
-
-if test "$libnet" = "broken"; then
-    FatalMissingThing "libnet" "You need libnet (headers) to continue."	    \
-	"You can get libnet from http://www.packetfactory.net/libnet"	    \
-	"Note that some RPMs split libnet up into libnet and libnet-devel." \
-	"In this case you have to install libnet-devel"
-fi
-
-AC_CHECK_LIB($libnet,libnet_init,
-[new_libnet=yes; AC_DEFINE(HAVE_LIBNET_1_1_API, 1, Libnet 1.1 API)],
-[new_libnet=no; AC_DEFINE(HAVE_LIBNET_1_0_API, 1, Libnet 1.0 API)],$LIBNETLIBS)
- 
 AC_MSG_CHECKING(where is python installed)
 if test "x${PYTHON}" = x; then
   PYTHON="/usr/bin/env python";
