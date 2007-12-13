@@ -802,9 +802,6 @@ AC_CHECK_HEADERS(time.h)
 AC_CHECK_HEADERS(stdarg.h)
 AC_CHECK_HEADERS(tcpd.h)
 
-AC_CHECK_HEADERS(uuid.h)
-AC_CHECK_HEADERS(uuid/uuid.h)
-
 AC_CHECK_HEADERS(sys/param.h)
 AC_CHECK_HEADERS(netinet/in.h)
 AC_CHECK_HEADERS([stdint.h unistd.h])
@@ -1536,15 +1533,26 @@ if test X"$AISPREFIX" = X"prefix"; then
  AISPREFIX=$prefix
 fi
 
-AC_MSG_CHECKING(for native AIS: $SUPPORT_AIS)
 AISLIB=""
 LCRSODIR=""
+
+case $SUPPORT_AIS in
+     1) SUPPORT_AIS=1;;
+     yes) SUPPORT_AIS=1;;
+     true) SUPPORT_AIS=1;;
+     *) SUPPORT_AIS=0;;
+esac
+
+case $SUPPORT_HEARTBEAT in
+     1) SUPPORT_HEARTBEAT=1;;
+     yes) SUPPORT_HEARTBEAT=1;;
+     true) SUPPORT_HEARTBEAT=1;;
+     *) SUPPORT_HEARTBEAT=0;;
+esac
+
+AC_MSG_CHECKING(for native AIS: $SUPPORT_AIS)
+
 if test $SUPPORT_AIS = 0; then
-   AISPREFIX=""
-fi
-
-
-if test X"$AISPREFIX" = X""; then
    AC_MSG_RESULT(no... not requested.)
 
 else
@@ -1558,26 +1566,35 @@ else
 
    if test -d ${AISLIB} -a -d ${LCRSODIR}; then
      LIBS="$LIBS -L${AISLIB} -R${AISLIB}"
-     AC_MSG_NOTICE(Testing AIS installation in $AISPREFIX)
-
-     AC_CHECK_LIB(aisutil, saRecvRetry,
-    	[AISLIBS='-laisutil'; SUPPORT_AIS=1],
-	[AC_MSG_NOTICE("unusable); SUPPORT_AIS=0; AISPREFIX=""; LCRSODIR=""])
+     AC_MSG_CHECKING(Testing AIS installation in $AISPREFIX)
+     AC_CHECK_LIB(aisutil, saRecvRetry, [SUPPORT_AIS=1], [SUPPORT_AIS=0])
 
    else
      AC_MSG_ERROR(Couldn't find openais installed under ${AISPREFIX}.)
      AC_MSG_ERROR(Use --with-ais-prefix to specify a valid location)
      SUPPORT_AIS=0
-     AISPREFIX=""
-     LCRSODIR=""
    fi
 fi
 
 AC_DEFINE_UNQUOTED(SUPPORT_AIS, $SUPPORT_AIS, Support the OpenAIS messaging and membership layer)
 AC_DEFINE_UNQUOTED(SUPPORT_HEARTBEAT, $SUPPORT_HEARTBEAT, Support the Heartbeat messaging and membership layer)
 
+AM_CONDITIONAL(BUILD_AIS_SUPPORT, test $SUPPORT_AIS = 1)
+AM_CONDITIONAL(BUILD_HEARTBEAT_SUPPORT, test $SUPPORT_HEARTBEAT = 1)
 
-AM_CONDITIONAL(BUILD_NATIVE_AIS, test "x${AISPREFIX}" != "x")
+CLUSTERLIBS=""
+if test $SUPPORT_HEARTBEAT = 1; then
+   CLUSTERLIBS="$CLUSTERLIBS -lhbclient -lccmclient"
+fi
+
+if test $SUPPORT_AIS = 1; then
+   CLUSTERLIBS="$CLUSTERLIBS -laisutl"
+else
+   AISPREFIX=""
+   LCRSODIR=""
+fi
+
+AC_SUBST(CLUSTERLIBS)
 AC_SUBST(AISPREFIX)
 AC_SUBST(LCRSODIR)
 AC_SUBST(AISLIBS)
@@ -1834,8 +1851,8 @@ dnl
 dnl	getopt: If this is valid, define HAVE_DECL_GETOPT to make the getopt.h header compile cleanly.
 dnl
 
-AC_REPLACE_FUNCS(alphasort inet_pton NoSuchFunctionName scandir setenv strerror unsetenv strnlen strndup daemon uuid_parse strlcpy strlcat)
-dnl AC_CHECK_FUNCS(alphasort inet_pton NoSuchFunctionName scandir setenv strerror unsetenv strnlen strndup daemon uuid_parse)
+AC_REPLACE_FUNCS(alphasort inet_pton NoSuchFunctionName scandir setenv strerror unsetenv strnlen strndup daemon strlcpy strlcat)
+dnl AC_CHECK_FUNCS(alphasort inet_pton NoSuchFunctionName scandir setenv strerror unsetenv strnlen strndup daemon)
 
 AC_CHECK_FUNCS(getopt, 
 	AC_DEFINE(HAVE_DECL_GETOPT,  1, [Have getopt function]))
@@ -1848,7 +1865,6 @@ AC_SUBST(HA_HAVE_STRERROR)
 AC_SUBST(HA_HAVE_STRNLEN)
 AC_SUBST(HA_HAVE_STRNDUP)
 AC_SUBST(HA_HAVE_DAEMON)
-AC_SUBST(HA_HAVE_UUID_PARSE)
 AC_SUBST(HAVE_STRLCPY)
 AC_SUBST(HAVE_DECL_GETOPT)
 
@@ -2330,8 +2346,8 @@ AC_MSG_RESULT([  SNMP libraries           = "${SNMPLIB}"])
 AC_MSG_RESULT([  ucd_snmp_devel name      = "${UCDSNMPDEVEL}"])
 AC_MSG_RESULT([  Build IPMILan Plugin     = "${enable_ipmilan}"])
 
-AC_MSG_RESULT([  With Heartbeat support   = "${SUPPORT_HEARTBEAT}"])
-AC_MSG_RESULT([  With AIS support         = "${SUPPORT_AIS}"])
+AC_MSG_RESULT([  With Heartbeat support   = ${SUPPORT_HEARTBEAT}])
+AC_MSG_RESULT([  With AIS support         = ${SUPPORT_AIS}])
 AC_MSG_RESULT([  With AIS prefix          = "${AISPREFIX}"])
 
 AC_MSG_RESULT([  Build CIM providers      = "${enable_cim_provider}"])
