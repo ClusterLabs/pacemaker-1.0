@@ -1594,6 +1594,11 @@ else
    LCRSODIR=""
 fi
 
+
+if test $SUPPORT_AIS = 0 -a $SUPPORT_HEARTBEAT = 0; then
+   AC_MSG_FAILURE(You must choose at least one cluster stack to support)
+fi
+
 AC_SUBST(CLUSTERLIBS)
 AC_SUBST(AISPREFIX)
 AC_SUBST(LCRSODIR)
