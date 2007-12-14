@@ -22,6 +22,8 @@ MAINTAINERCLEANFILES    = Makefile.in
 hbagent_srces  = snmp-config-resolve.h	\
 	hbagent.h			\
 	hbagent.c			\
+	hbagentv2.h			\
+	hbagentv2.c			\
 	LHANodeTable.h			\
 	LHANodeTable_columns.h		\
 	LHANodeTable_enums.h		\
@@ -41,7 +43,13 @@ hbagent_srces  = snmp-config-resolve.h	\
 	LHAResourceGroupTable_columns.h	\
 	LHAResourceGroupTable_enums.h	\
 	LHAResourceGroupTable.h		\
-	LHAResourceGroupTable.c	
+	LHAResourceGroupTable.c		\
+	LHAResourceTable_columns.h \
+	LHAResourceTable_enums.h \
+	LHAResourceTable.h		\
+	LHAResourceTable.c		\
+	LHAResourceStatusUpdate.h \
+	LHAResourceStatusUpdate.c 
 
 test_scrs	=	SNMPAgentSanityCheck
 
@@ -68,8 +76,12 @@ hbagent_SOURCES		= $(hbagent_srces)
 hbagent_LDADD	 	= \
                         $(top_builddir)/lib/clplumbing/libplumb.la \
 			$(top_builddir)/lib/hbclient/libhbclient.la \
+			$(top_builddir)/lib/crm/common/libcrmcommon.la \
+			$(top_builddir)/lib/crm/cib/libcib.la \
+			$(top_builddir)/lib//crm/pengine/libpe_status.la \
 			$(top_builddir)/membership/ccm/libccmclient.la \
 			$(top_builddir)/membership/ccm/libclm.la \
+			$(CURSESLIBS) \
 			$(GLIBLIB)
 
 hbagent_LDFLAGS		= @SNMPAGENTLIB@ 

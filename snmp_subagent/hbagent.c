@@ -24,6 +24,7 @@
 #include <crm_internal.h>
 
 #include "hbagent.h"
+#include "hbagentv2.h"
 
 #include "hb_api.h"
 #include "heartbeat.h"
@@ -66,13 +67,12 @@
 #include <errno.h>
 
 #include "saf/ais.h"
-
-#define DEFAULT_TIME_OUT 5 /* default timeout value for snmp in sec. */
-#define LHAAGENTID "lha-snmpagent"
+#include "clplumbing/cl_uuid.h" /* UU_UNPARSE_SIZEOF */
 
 static unsigned long hbInitialized = 0;
 static ll_cluster_t * hb = NULL; /* heartbeat handle */
-static char * myid = NULL; /* my node id */
+char * myid = NULL; /* my node id */
+char * myuuid = NULL; /* my node uuid */
 static SaClmHandleT clm = 0;
 static unsigned long clmInitialized = 0;
 
@@ -82,6 +82,7 @@ static GPtrArray * gMembershipTable = NULL;
 static GPtrArray * gResourceTable = NULL;
 
 static int keep_running;
+int snmp_cache_time_out = CACHE_TIME_OUT;
 
 int init_heartbeat(void);
 int get_heartbeat_fd(void);
@@ -559,6 +560,7 @@ int
 init_heartbeat(void)
 {
 	char * parameter;
+	cl_uuid_t uuid;
 	hb = NULL;
 
 	cl_log_set_entity("lha-snmpagent");
@@ -588,6 +590,18 @@ init_heartbeat(void)
 		cl_log(LOG_ERR, "REASON: %s", hb->llc_ops->errmsg(hb));
 		return HA_FAIL;
 	}
+
+	/*
+	 * get uuid for trap message.
+	 *   see: hbagentv2_update_diff() in hbagentv2.c
+	 */
+	if (hb->llc_ops->get_uuid_by_name(hb, myid, &uuid) == HA_FAIL) {
+		cl_log(LOG_ERR, "Cannot get mynodeid");
+		cl_log(LOG_ERR, "REASON: %s", hb->llc_ops->errmsg(hb));
+		return HA_FAIL;
+	}
+	myuuid = cl_malloc(UU_UNPARSE_SIZEOF);
+	cl_uuid_unparse(&uuid, myuuid);
 
 	if (hb->llc_ops->set_nstatus_callback(hb, NodeStatus, NULL) !=HA_OK){
 	        cl_log(LOG_ERR, "Cannot set node status callback");
@@ -1307,15 +1321,13 @@ main(int argc, char ** argv)
 	struct timeval tv, *tvp;
 	int flag, block = 0, numfds, hb_fd = 0, mem_fd = 0, debug = 0;
 	int hb_already_dead = 0;
+	int cib_fd = 0;
 
 	/* change this if you want to be a SNMP master agent */
 	int agentx_subagent=1; 
 
 	/* change this if you want to run in the background */
 	int background = 0; 
-
-	/* change this if you want to use syslog */
-	int syslog = 1; 
 
 	/* LHAHeartbeatConfigInfo partial-mode */
 	int hbconfig_refresh_timing = 0;
@@ -1335,6 +1347,7 @@ main(int argc, char ** argv)
 				hbconfig_refresh_timing = i / DEFAULT_TIME_OUT;
 			else
 				hbconfig_refresh_timing = DEFAULT_REFRESH_TIMING;
+			snmp_cache_time_out = i;
 			break;
 		    case 'h':
 			usage();
@@ -1345,16 +1358,13 @@ main(int argc, char ** argv)
 		}
 	}
 
-	if (debug) 
+	if (debug) {
 		cl_log_enable_stderr(TRUE);
-	else 
-		cl_log_enable_stderr(FALSE);
-
-	/* print log errors to syslog or stderr */
-	if (syslog)
-		snmp_enable_calllog();
-	else
 		snmp_enable_stderrlog();
+	} else {
+		cl_log_enable_stderr(FALSE);
+		snmp_enable_calllog();
+	}
 
 	/* we're an agentx subagent? */
 	if (agentx_subagent) {
@@ -1364,7 +1374,7 @@ main(int argc, char ** argv)
 	}
 
 	/* run in background, if requested */
-	if (background && netsnmp_daemonize(1, !syslog))
+	if (background && netsnmp_daemonize(1, debug))
 		exit(1);
 
 	/* initialize the agent library */
@@ -1415,6 +1425,13 @@ main(int argc, char ** argv)
 	init_LHAMembershipTable();
 	init_LHAHeartbeatConfigInfo();
 
+
+	/* now implementing: hbagentv2 */
+	if ((ret = init_hbagentv2()) != HA_OK ||
+	    (cib_fd = get_cib_fd()) <= 0) {
+		return -4;
+	}
+
 	/* LHA-agent will be used to read LHA-agent.conf files. */
 	init_snmp("LHA-agent");
 
@@ -1449,6 +1466,10 @@ main(int argc, char ** argv)
 
 			if (mem_fd > hb_fd)
 				numfds = mem_fd + 1;
+		}
+		FD_SET(cib_fd, &fdset);
+		if (numfds < (cib_fd + 1)) {
+			numfds = cib_fd + 1;
 		}
 
 		tv.tv_sec = DEFAULT_TIME_OUT;
@@ -1487,6 +1508,7 @@ main(int argc, char ** argv)
 		} else if (ret == 0) {
 			/* timeout */
 			ping_membership(&mem_fd);
+
 			/* LHAHeartbeatConfigInfo partial-mode */
 			if (hbconfig_refresh_timing
 			&& ++hbconfig_refresh_cnt >= hbconfig_refresh_timing) {
@@ -1513,6 +1535,12 @@ main(int argc, char ** argv)
 			    	cl_log(LOG_DEBUG, "unrecoverable membership error. quit now.");
 				break;
 			}
+		} else  if (FD_ISSET(cib_fd, &fdset)) {
+			/* change cib info events */
+			if ((ret = handle_cib_msg()) == HA_FAIL) {
+		  		cl_log(LOG_DEBUG, "unrecoverable CIB error. quit now.");
+				break;
+			}
 		} else {
 
 			/* snmp request */
@@ -1530,8 +1558,10 @@ process_pending:
 	hbagent_trap(0, myid);
 	snmp_shutdown("LHA-agent");
 
-	free_hbconfig();
+	free_hbagentv2();
+ 	free_hbconfig();
 	cl_free(myid);
+	cl_free(myuuid);
 	free_storage();
 
         if (!hb_already_dead && hb->llc_ops->signoff(hb, TRUE) != HA_OK) {
@@ -1547,5 +1577,4 @@ process_pending:
 
 	return 0;
 }
-
 

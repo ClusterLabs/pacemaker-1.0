@@ -50,6 +50,7 @@
 #include "hbagent.h"
 
 static GPtrArray * gMembershipInfo = NULL;
+extern const int snmp_cache_time_out;
 
 int LHAMembershipTable_load(netsnmp_cache *cache, void *vmagic);
 void LHAMembershipTable_free(netsnmp_cache *cache, void *vmagic);
@@ -112,7 +113,7 @@ initialize_table_LHAMembershipTable(void)
      * .... with a local cache
      */
     netsnmp_inject_handler(my_handler,
-	 netsnmp_get_cache_handler(CACHE_TIME_OUT, 
+	 netsnmp_get_cache_handler(snmp_cache_time_out, 
 				   LHAMembershipTable_load,
 				   LHAMembershipTable_free,
 				   LHAMembershipTable_oid,

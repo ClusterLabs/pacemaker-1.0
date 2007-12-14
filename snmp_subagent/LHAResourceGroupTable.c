@@ -50,6 +50,7 @@
 #include "hbagent.h"
 
 static GPtrArray * gResourceGroupInfo = NULL;
+extern const int snmp_cache_time_out;
 
 int LHAResourceGroupTable_load(netsnmp_cache *cache, void *vmagic); 
 void LHAResourceGroupTable_free(netsnmp_cache *cache, void *vmagic); 
@@ -122,7 +123,7 @@ initialize_table_LHAResourceGroupTable(void)
      * .... with a local cache
      */
     netsnmp_inject_handler(my_handler,
-	 netsnmp_get_cache_handler(CACHE_TIME_OUT, 
+	 netsnmp_get_cache_handler(snmp_cache_time_out, 
 				   LHAResourceGroupTable_load,
 				   LHAResourceGroupTable_free,
 				   LHAResourceGroupTable_oid,

@@ -59,7 +59,7 @@ sleep 3
 
 # start the linux-ha snmp subagent
 @libdir@/heartbeat/hbagent -d &
-sleep 1
+sleep 5
 
 # get the nodename for node0 and node1
 # node0 should be the value of the localhost
@@ -96,11 +96,81 @@ fi
 
 if test $ret2 = 0; then
 	echo "BasicSanityCheck for SNMP Subagent passed."
-	exit 0
+#	exit 0
 else 
 	echo "BasicSanityCheck for SNMP Subagent failed."
+#	exit 1
+fi
+
+#
+# BasicSanityCheck for SNMP Subagent about CRM resources.
+#
+# NOTE:    Heartbeat service for this test has to run without cib.xml.
+
+# add CRM resource.
+RSC0NAME="prmDummy"
+RSC0TYPE="primitive(1)"
+RSC0NODE="$NODE0"
+RSC0STATUS="started(2)"
+cibadmin --cib_create -o resources \
+  -X '<primitive id="prmDummy" class="ocf" type="Dummy" provider="heartbeat"/>'
+sleep 3
+
+# get resource's information with snmp subagent.
+rsc0name=`snmpget -v2c localhost -c public LHAResourceName.1 \
+  | sed -ne 's/LINUX-HA-MIB::LHAResourceName.1 = STRING: //p'`
+rsc0type=`snmpget -v2c localhost -c public LHAResourceType.1 \
+  | sed -ne 's/LINUX-HA-MIB::LHAResourceType.1 = INTEGER: //p'`
+rsc0node=`snmpget -v2c localhost -c public LHAResourceNode.1 \
+  | sed -ne 's/LINUX-HA-MIB::LHAResourceNode.1 = STRING: //p'`
+rsc0status=`snmpget -v2c localhost -c public LHAResourceStatus.1 \
+  | sed -ne 's/LINUX-HA-MIB::LHAResourceStatus.1 = INTEGER: //p'`
+
+# check for LHAResourceName
+ret=0
+echo "rsc0name = $rsc0name, RSC0NAME = $RSC0NAME" 
+if test "$rsc0name" != "$RSC0NAME"; then
+	echo "failed to get resource name." >&2
+	ret=1
+fi
+
+# check for LHAResourceType
+if test $ret = 0; then
+	echo "rsc0type = $rsc0type, RSC0TYPE = $RSC0TYPE" 
+	if test "$rsc0type" != "$RSC0TYPE"; then
+		echo "failed to get resource type." >&2
+		ret=1
+	fi
+fi
+
+# check for LHAResourceNode
+if test $ret = 0; then
+	echo "rsc0node = $rsc0node, RSC0NODE = $RSC0NODE" 
+	if test "$rsc0node" != "$RSC0NODE"; then
+		echo "failed to get resource node." >&2
+		ret=1
+	fi
+fi
+
+# check for LHAResourceStatus
+if test $ret = 0; then
+	echo "rsc0status = $rsc0status, RSC0STATUS = $RSC0STATUS" 
+	if test "$rsc0status" != "$RSC0STATUS"; then
+		echo "failed to get resource status." >&2
+		ret=1
+	fi
+fi
+
+# show the result.
+if test $ret = 0; then
+	echo "BasicSanityCheck for SNMP Subagent about CRM resources passed."
+	exit 0
+else 
+	echo "BasicSanityCheck for SNMP Subagent about CRM resources failed."
 	exit 1
 fi
+
+
 if
   [ -f $SNMPPIDFILE -a ! -z $SNMPPIDFILE ]
 then

@@ -32,7 +32,7 @@ IMPORTS
 	FROM SNMPv2-CONF;
 
 LinuxHA	MODULE-IDENTITY
-    LAST-UPDATED "200211040000Z"	-- Nov. 4, 2002
+    LAST-UPDATED "200711260000Z"	-- Nov. 26, 2007
     ORGANIZATION "High-Availability Linux Project"
     CONTACT-INFO
 	"Alan Robertson
@@ -64,7 +64,7 @@ LinuxHA	MODULE-IDENTITY
 	and memberships accessible through SNMP. Hopefully more
 	things can be added as Linux-HA matures."
 
-    REVISION "200211040000Z"	    -- Nov. 4, 2002
+    REVISION "200711260000Z"	-- Nov. 26, 2007
     DESCRIPTION
 	"The original version of this MIB."
     ::= { enterprises 4682 }
@@ -76,6 +76,7 @@ LinuxHA	MODULE-IDENTITY
 --  LHAResourceGroupTable     OBJECT IDENTIFIER ::= { LinuxHA 4 }
 --  LHAMembershipTable	      OBJECT IDENTIFIER ::= { LinuxHA 6 }
 --  LHAHeartbeatConfigInfo    OBJECT IDENTIFIER ::= { LinuxHA 7 }
+--  LHAResourceTable          OBJECT IDENTIFIER ::= { LinuxHA 8 }
 --  LHATrapTable	      OBJECT IDENTIFIER ::= { LinuxHA 900 }
 
 LHAUUIDString ::= TEXTUAL-CONVENTION
@@ -541,6 +542,128 @@ LHARespawn OBJECT-TYPE
 	"The other services that got respawned by heartbeat daemon."
     ::= { LHAHeartbeatConfigInfo 15 }
 
+LHAResourceTable OBJECT-TYPE
+    SYNTAX	SEQUENCE OF lhaResourceEntry
+    MAX-ACCESS	not-accessible
+    STATUS	current
+    DESCRIPTION
+	"A table containing information of all the resource for V2."
+    ::= { LinuxHA 8 }
+
+LHAResourceEntry OBJECT-TYPE
+    SYNTAX	lhaResourceEntry
+    MAX-ACCESS	not-accessible
+    STATUS	current
+    DESCRIPTION
+	"An entry that describes the resource and its status for V2."
+    INDEX	{ LHAResourceIndex }
+    ::= { LHAResourceTable 1 }
+
+lhaResourceEntry ::= SEQUENCE	{
+    LHAResourceIndex	Integer32,
+    LHAResourceName	DisplayString,
+    LHAResourceType     INTEGER,
+    LHAResourceNode	DisplayString,
+    LHAResourceStatus	INTEGER,
+    LHAResourceIsManaged	INTEGER,
+    LHAResourceFailCount	Integer32,
+    LHAResourceParent	DisplayString,
+}
+
+LHAResourceIndex OBJECT-TYPE
+    SYNTAX	Integer32 (0..65535)
+    MAX-ACCESS	not-accessible
+    STATUS	current
+    DESCRIPTION
+	"A unique integer that identifies this resource."
+    ::= { LHAResourceEntry 1 }
+
+LHAResourceName OBJECT-TYPE
+    SYNTAX	DisplayString
+    MAX-ACCESS	read-only
+    STATUS	current
+    DESCRIPTION
+	"The name of this resource."
+    ::= { LHAResourceEntry 2 }
+
+LHAResourceType OBJECT-TYPE
+    SYNTAX	INTEGER {
+	    	    unknown (0),
+		    primitive (1),
+		    group (2),
+		    clone (3),
+		    masterSlave (4)
+    		}
+    MAX-ACCESS	read-only
+    STATUS	current
+    DESCRIPTION
+	"The type of this resource.
+	 0       unknown type
+	 1       primitive resource.
+	 2       group resource.
+	 3       clone resource.
+	 4	     master/slave resource.
+	 "
+    ::= { LHAResourceEntry 3 }
+
+LHAResourceNode OBJECT-TYPE
+    SYNTAX	DisplayString
+    MAX-ACCESS	read-only
+    STATUS	current
+    DESCRIPTION
+	"The node name that this resource resides on."
+    ::= { LHAResourceEntry 4 }
+
+LHAResourceStatus OBJECT-TYPE
+    SYNTAX	INTEGER {
+	    	    unknown (0),
+		    stopped (1),
+		    started (2),
+		    slave (3),
+		    master (4)
+    		}
+    MAX-ACCESS	read-only
+    STATUS	current
+    DESCRIPTION
+	"The status of this resource.
+	 0       unknown status
+	 1       program is stopped.
+	 2       program is started.
+	 3       program is started in slave state.
+	 4	 program is started in master state.
+	 "
+    ::= { LHAResourceEntry 5 }
+
+LHAResourceIsManaged OBJECT-TYPE
+    SYNTAX	INTEGER {
+		    unmanaged (0),
+		    managed (1)
+    		}
+    MAX-ACCESS	read-only
+    STATUS	current
+    DESCRIPTION
+	"The status of this resource.
+	 0       resource is not managed.
+	 1       resource is managed.
+	 "
+    ::= { LHAResourceEntry 6 }
+
+LHAResourceFailCount OBJECT-TYPE
+    SYNTAX	Integer32 (0..65535)
+    MAX-ACCESS	read-only
+    STATUS	current
+    DESCRIPTION
+	"The value of this resource's fail-count."
+    ::= { LHAResourceEntry 7 }
+
+LHAResourceParent OBJECT-TYPE
+    SYNTAX	DisplayString
+    MAX-ACCESS	read-only
+    STATUS	current
+    DESCRIPTION
+	"The name of this resource's parent resource."
+    ::= { LHAResourceEntry 8 }
+
 LHATrapTable                    OBJECT IDENTIFIER ::= { LinuxHA 900 }
 
 LHANodeStatusUpdate NOTIFICATION-TYPE
@@ -577,5 +700,12 @@ LHAHBAgentOffline NOTIFICATION-TYPE
     DESCRIPTION
     	"The heartbeat agent for this node is offline. "
     ::= { LHATrapTable 9 }
+
+LHAResourceStatusUpdate NOTIFICATION-TYPE
+    OBJECTS { LHAResourceName LHAResourceNode LHAResourceStatus }
+    STATUS  current
+    DESCRIPTION
+    	"A resource status change event just happened."
+    ::= { LHATrapTable 11 }
 
 END

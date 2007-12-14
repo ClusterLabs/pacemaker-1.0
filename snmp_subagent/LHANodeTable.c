@@ -50,6 +50,7 @@
 #include "hbagent.h"
 
 static GPtrArray * gNodeInfo = NULL;
+extern const int snmp_cache_time_out;
 
 int LHANodeTable_load(netsnmp_cache *cache, void *vmagic);
 void LHANodeTable_free(netsnmp_cache *cache, void *vmagic);
@@ -113,7 +114,7 @@ initialize_table_LHANodeTable(void)
      * .... with a local cache
      */
     netsnmp_inject_handler(my_handler,
-	 netsnmp_get_cache_handler(CACHE_TIME_OUT, 
+	 netsnmp_get_cache_handler(snmp_cache_time_out, 
 				   LHANodeTable_load,
 				   LHANodeTable_free,
 				   LHANodeTable_oid,

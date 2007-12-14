@@ -35,6 +35,8 @@
 #include <clplumbing/cl_uuid.h>
 
 #define CACHE_TIME_OUT 5
+#define LHAAGENTID "lha-snmpagent"
+#define DEFAULT_TIME_OUT 5 /* default timeout value for snmp in sec. */
 
 typedef enum lha_group {
 	LHA_CLUSTERINFO,
