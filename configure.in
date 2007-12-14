@@ -1552,8 +1552,12 @@ esac
 
 AC_MSG_CHECKING(for native AIS: $SUPPORT_AIS)
 
-if test $SUPPORT_AIS = 0; then
+if  test $SUPPORT_AIS = 0; then
    AC_MSG_RESULT(no... not requested.)
+
+elif test x$SUPPORT_AIS = x; then
+   SUPPORT_AIS=0
+   AC_MSG_RESULT(no... not found.)
 
 else
    AC_MSG_RESULT(yes... $AISPREFIX)
@@ -1584,7 +1588,7 @@ AM_CONDITIONAL(BUILD_HEARTBEAT_SUPPORT, test $SUPPORT_HEARTBEAT = 1)
 
 CLUSTERLIBS=""
 if test $SUPPORT_HEARTBEAT = 1; then
-   CLUSTERLIBS="$CLUSTERLIBS -lhbclient -lccmclient"
+   CLUSTERLIBS="$CLUSTERLIBS -lhbclient -lccmclient -lstonithd"
 fi
 
 if test $SUPPORT_AIS = 1; then
