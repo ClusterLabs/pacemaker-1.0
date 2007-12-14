@@ -1592,7 +1592,7 @@ if test $SUPPORT_HEARTBEAT = 1; then
 fi
 
 if test $SUPPORT_AIS = 1; then
-   CLUSTERLIBS="$CLUSTERLIBS -laisutl"
+   CLUSTERLIBS="$CLUSTERLIBS -laisutil"
 else
    AISPREFIX=""
    LCRSODIR=""
