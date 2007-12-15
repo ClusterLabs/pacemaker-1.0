@@ -537,16 +537,6 @@ AC_CHECK_LIB(pam, pam_start)			dnl -lpam (if available)
 AC_CHECK_LIB(plumb, G_main_add_IPC_Channel)	dnl -lplubm
 AC_CHECK_HEADERS(hb_config.h)
 
-#	Not sure what OSes need this... Linux and AIX don't...
-#	and AIX barfs on it...
-if test "$DLPREOPEN" = yes; then
-  DLOPEN_FORCE_FLAGS="-dlpreopen force -dlopen-self"
-  AC_DEFINE(DLPREOPEN, 1, [enable -dlpreopen flag])
-else
-  DLOPEN_FORCE_FLAGS=""
-fi
-AC_SUBST(DLOPEN_FORCE_FLAGS)
-
 EXTRALIBMSG="-"
 
 if test "X${PKGCONFIG}" = "X"; then
@@ -1119,12 +1109,6 @@ AM_CONDITIONAL(CIM_PROVIDER_BUILD, test "x${enable_cim_provider}" = "xyes")
 AC_SUBST(CMPI_PROVIDER_DIR)
 AC_SUBST(CIMOM)
 AC_SUBST(CMPI_HEADER_PATH)
-
-
-dnl ***************************************************************************
-dnl  Thread safe configuration
-dnl ***************************************************************************
-AM_CONDITIONAL(ENABLE_THREAD_SAFE, test "x${enable_thread_safe}" = "xyes")
 
 
 dnl ************************************************************************
@@ -1947,62 +1931,10 @@ AC_DEFINE_UNQUOTED(PF_ARGV_TYPE, $pf_argv_set,
 
 dnl End of tests borrowed from Proftpd
 
-
-dnl check if header file and lib are there for hbaping
-hbaping_build="yes"
-AC_CHECK_HEADERS(time.h hbaapi.h, , [hbaping_build="no"],[[#if HAVE_TIME_H 
-#include <time.h>
-#endif]])
-AC_CHECK_LIB(HBAAPI, HBA_SendScsiInquiry, , [hbaping_build="no"])
-AM_CONDITIONAL(HBAAPI_BUILD, test "x${hbaping_build}" = "xyes")
-
-dnl check if header file and lib are there for zlib
-zlib_installed="yes"
-AC_CHECK_HEADERS(zlib.h, , [zlib_installed="no"],)
-AC_CHECK_LIB(z, compress , , [zlib_intalled="no"])
-AM_CONDITIONAL(BUILD_ZLIB_COMPRESS_MODULE, test "x${zlib_installed}" = "xyes")
-
-
 dnl check if header file and lib are there for zlib
 bz2_installed="yes"
 AC_CHECK_HEADERS(bzlib.h, , [bz2_installed="no"],)
 AC_CHECK_LIB(bz2, BZ2_bzBuffToBuffCompress , , [bz2_intalled="no"])
-AM_CONDITIONAL(BUILD_BZ2_COMPRESS_MODULE, test "x${bz2_installed}" = "xyes")
-
-dnl check if header file and lib are there for openais module
-openais_installed="yes"
-AC_CHECK_HEADERS(evs.h, , [openais_installed="no"],)
-AC_CHECK_LIB(evs, evs_initialize , , [openais_intalled="no"])
-AM_CONDITIONAL(BUILD_OPENAIS_MODULE, test "x${openais_installed}" = "xyes")
-
-
-AC_MSG_CHECKING(if clock_t is long enough)
-if test $ac_cv_sizeof_long -ge 8; then
-  AC_MSG_RESULT(yes)
-  AC_DEFINE(CLOCK_T_IS_LONG_ENOUGH, 1, [Set if CLOCK_T is adequate by itself for the "indefinite future" (>= 100 years)])
-else
-  AC_MSG_RESULT(no)
-fi
-
-
-dnl check if there are getpid() inconsistency
-dnl	Note: reduce LIBS; in particular, ltdl can cause confusion.
-dnl	Possibly better:  move 'LIBS="$LIBS -lltdl"' from above to beyond here.
-dnl
-AC_MSG_CHECKING(for getpid() consistency in multi-process/threads program)
-ac_save_LIBS=$LIBS
-LIBS="-lpthread"
-AC_TRY_RUN(`cat $srcdir/config/pidtest.c`, 
-AC_MSG_RESULT(ok), 
-[AC_MSG_RESULT(fail); AC_DEFINE(GETPID_INCONSISTENT, 1 , [pid inconsistent])],)
-LIBS=$ac_save_LIBS
-
-dnl check byte order
-AC_MSG_CHECKING(for byteorder)
-AC_TRY_RUN(`cat $srcdir/config/byteorder_test.c`,
-[AC_MSG_RESULT(little-endian); AC_DEFINE(CONFIG_LITTLE_ENDIAN, 1, [little-endian])],
-[AC_MSG_RESULT(big-endian); AC_DEFINE(CONFIG_BIG_ENDIAN, 1, [big-endian])],)
-
 
 dnl
 dnl Lex and yacc can't be trusted to produce code that won't produce
@@ -2133,15 +2065,6 @@ AC_DEFINE_UNQUOTED(OCF_RA_DIR,"$OCF_RA_DIR", Location for OCF RAs)
 AC_PATH_PROG(VALGRIND_BIN, valgrind)
 AC_DEFINE_UNQUOTED(VALGRIND_BIN, "$VALGRIND_BIN", Valgrind command)
 
-AC_ARG_ENABLE([libc-malloc],
-	[  --enable-libc-malloc  Use libc malloc instead of Heartbeat's custom one.  [default=no]],
-	[], [enable_libc_malloc=no])
-
-
-if test "xyes" = "x$enable_libc_malloc" -o "x1" = "x$enable_libc_malloc"; then
-   AC_DEFINE_UNQUOTED(CL_USE_LIBC_MALLOC, 1, Use libc malloc instead of Heartbeat's custom one.)
-fi
-
 dnl **********************************************************************
 dnl 'AWK' had been determined via 'aclocal.m4' as the simple name, using
 dnl the current PATH (i.e. in the context of 'configure').
@@ -2162,7 +2085,6 @@ XPERIMENTALDIRS=""
 AC_SUBST(XPERIMENTALDIRS)
 
 CheckMissingThings
-
 
 dnl Options for cleaning up the compiler output 
 PRETTY_CC=""
