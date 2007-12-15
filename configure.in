@@ -1572,7 +1572,8 @@ else
 fi
 
 if test $SUPPORT_HEARTBEAT = 1; then
-   AC_CHECK_LIB(hbclient, ll_cluster_new, [], [SUPPORT_HEARTBEAT=0])
+   AC_CHECK_LIB(hbclient, ll_cluster_new, 
+   		[SUPPORT_HEARTBEAT=1], [SUPPORT_HEARTBEAT=0])
 fi
 
 AC_DEFINE_UNQUOTED(SUPPORT_AIS, $SUPPORT_AIS, Support the OpenAIS messaging and membership layer)
