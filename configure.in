@@ -39,7 +39,7 @@ AC_ARG_WITH(hapkgversion,
 )
 
 if test -z "$HAPKGVERSION" ; then
-   HAPKGVERSION="2.1.3"
+   HAPKGVERSION="0.6.0"
 fi
 HB_PKG=heartbeat
 PKG_NAME=pacemaker
@@ -1501,8 +1501,10 @@ AC_ARG_WITH(heartbeat-support,
 )
 
 AC_ARG_WITH(ais-prefix,
-    [  --with-ais-prefix=DIR      Prefix where AIS is installed [none]],
-    [ AISPREFIX=$withval ])
+    [  --with-ais-prefix=DIR      Prefix where AIS is installed [$prefix]],
+    [ AISPREFIX=$withval ],
+    [ AISPREFIX=$prefix ],
+)
 
 if test X"$AISPREFIX" = X"prefix"; then
  AISPREFIX=$prefix
