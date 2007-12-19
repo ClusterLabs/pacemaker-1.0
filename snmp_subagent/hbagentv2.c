@@ -69,7 +69,7 @@ init_resource_table_v2(void)
  * Return the number of resources.
  */
 static int
-update_resources_recursively(GListPtr reslist, int index)
+update_resources_recursively(GListPtr reslist, GListPtr nodelist, int index)
 {
 
     if (reslist == NULL) {
@@ -82,7 +82,7 @@ update_resources_recursively(GListPtr reslist, int index)
     slist_iter(rsc, resource_t, reslist, lpc1,
     {
         cl_log(LOG_DEBUG, "resource %s processing.", rsc->id);
-        slist_iter(node, node_t, rsc->allowed_nodes, lpc2,
+        slist_iter(node, node_t, nodelist, lpc2,
         {
             struct hb_rsinfov2 *rsinfo;
             enum rsc_role_e rsstate;
@@ -98,12 +98,19 @@ update_resources_recursively(GListPtr reslist, int index)
 
             /* using a temp var to suppress casting warning of the compiler */
             rsstate = rsc->fns->state(rsc, TRUE);
-            if (pe_find_node_id(rsc->running_on, node->details->id) == NULL) {
-                /*
-                 * if the resource is not running on current node,
-                 * its status is "stopped(1)".
-                 */
-                rsstate = RSC_ROLE_STOPPED;
+            {
+                GListPtr running_on_nodes = NULL;
+
+                rsc->fns->location(rsc, &running_on_nodes, TRUE);
+                if (pe_find_node_id(
+                    running_on_nodes, node->details->id) == NULL) {
+                    /*
+                     * if the resource is not running on current node,
+                     * its status is "stopped(1)".
+                     */
+                    rsstate = RSC_ROLE_STOPPED;
+                }
+               g_list_free(running_on_nodes);
             }
             rsinfo->status = RSC_ROLE_E2AGENTSTATUS(rsstate);
             rsinfo->node = cl_strdup(node->details->uname);
@@ -152,7 +159,8 @@ update_resources_recursively(GListPtr reslist, int index)
         }); /* end slist_iter(node) */
 
         /* add resources recursively for group/clone/master */
-        index = update_resources_recursively(rsc->fns->children(rsc), index);
+        index = update_resources_recursively(rsc->fns->children(rsc),
+            nodelist, index);
 
     }); /* end slist_iter(rsc) */
 
@@ -194,7 +202,7 @@ update_resource_table_v2(void)
     /* parse cib xml info (cib_object). */
     cluster_status(&data_set);
 
-    index = update_resources_recursively(data_set.resources, 1);
+    index = update_resources_recursively(data_set.resources, data_set.nodes, 1);
     if (index == HA_FAIL) {
         cl_log(LOG_ERR, "Update resources failed.");
 

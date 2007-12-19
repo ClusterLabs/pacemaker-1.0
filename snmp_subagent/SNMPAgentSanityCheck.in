@@ -59,6 +59,7 @@ sleep 3
 
 # start the linux-ha snmp subagent
 @libdir@/heartbeat/hbagent -d &
+HBAGENTPID=$!
 sleep 5
 
 # get the nodename for node0 and node1
@@ -112,6 +113,9 @@ RSC0NAME="prmDummy"
 RSC0TYPE="primitive(1)"
 RSC0NODE="$NODE0"
 RSC0STATUS="started(2)"
+RSC0ISMANAGED="managed(1)"
+RSC0FAILCOUNT="0"
+RSC0PARENT=""
 cibadmin --cib_create -o resources \
   -X '<primitive id="prmDummy" class="ocf" type="Dummy" provider="heartbeat"/>'
 sleep 3
@@ -125,6 +129,12 @@ rsc0node=`snmpget -v2c localhost -c public LHAResourceNode.1 \
   | sed -ne 's/LINUX-HA-MIB::LHAResourceNode.1 = STRING: //p'`
 rsc0status=`snmpget -v2c localhost -c public LHAResourceStatus.1 \
   | sed -ne 's/LINUX-HA-MIB::LHAResourceStatus.1 = INTEGER: //p'`
+rsc0ismanaged=`snmpget -v2c localhost -c public LHAResourceIsManaged.1 \
+  | sed -ne 's/LINUX-HA-MIB::LHAResourceIsManaged.1 = INTEGER: //p'`
+rsc0failcount=`snmpget -v2c localhost -c public LHAResourceFailCount.1 \
+  | sed -ne 's/LINUX-HA-MIB::LHAResourceFailCount.1 = INTEGER: //p'`
+rsc0parent=`snmpget -v2c localhost -c public LHAResourceParent.1 \
+  | sed -ne 's/LINUX-HA-MIB::LHAResourceParent.1 = STRING: //p'`
 
 # check for LHAResourceName
 ret=0
@@ -161,19 +171,45 @@ if test $ret = 0; then
 	fi
 fi
 
+# check for LHAResourceIsManaged
+if test $ret = 0; then
+	echo "rsc0ismanaged = $rsc0ismanaged, RSC0ISMANAGED = $RSC0ISMANAGED" 
+	if test "$rsc0ismanaged" != "$RSC0ISMANAGED"; then
+		echo "failed to get resource ismanaged." >&2
+		ret=1
+	fi
+fi
+# check for LHAResourceFailCount
+if test $ret = 0; then
+    echo "rsc0failcount = $rsc0failcount, RSC0FAILCOUNT = $RSC0FAILCOUNT"
+    if test "$rsc0failcount" != "$RSC0FAILCOUNT"; then
+        echo "failed to get resource failcount." >&2
+        ret=1
+    fi
+fi
+
+# check for LHAResourceParent
+if test $ret = 0; then
+    echo "rsc0parent = $rsc0parent, RSC0PARENT = $RSC0PARENT"
+    if test "$rsc0parent" != "$RSC0PARENT"; then
+        echo "failed to get resource parent." >&2
+        ret=1
+    fi
+fi
+
 # show the result.
 if test $ret = 0; then
 	echo "BasicSanityCheck for SNMP Subagent about CRM resources passed."
-	exit 0
 else 
 	echo "BasicSanityCheck for SNMP Subagent about CRM resources failed."
-	exit 1
 fi
 
-
+kill $HBAGENTPID
 if
   [ -f $SNMPPIDFILE -a ! -z $SNMPPIDFILE ]
 then
   kill `cat $SNMPPIDFILE`
-  rm $SNMPPIDFILE
+  rm -f $SNMPPIDFILE
 fi
+
+exit $ret
