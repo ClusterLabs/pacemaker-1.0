@@ -564,7 +564,10 @@ init_heartbeat(void)
 	hb = NULL;
 
 	cl_log_set_entity("lha-snmpagent");
-	cl_log_set_facility(LOG_USER);
+	cl_log_set_facility(HA_LOG_FACILITY);
+
+	/* Use logd if it's enabled by heartbeat */
+	cl_inherit_logging_environment(0);
 
 	hb = ll_cluster_new("heartbeat");
 
