@@ -1507,7 +1507,7 @@ main(int argc, char ** argv)
 				}
 			}
 				
-			/* error */#
+			/* error */
 			if (keep_running) {
 				errno = save_errno;
 				cl_perror("%s: select() returned an error, shutting down."
