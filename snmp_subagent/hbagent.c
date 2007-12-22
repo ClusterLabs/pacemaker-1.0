@@ -1455,6 +1455,7 @@ main(int argc, char ** argv)
 
 	/* you're main loop here... */
 	while(keep_running) {
+		int	save_errno;
 	/* if you use select(), see snmp_select_info() in snmp_api(3) */
 	/*     --- OR ---  */
 		/* 0 == don't block */
@@ -1489,9 +1490,10 @@ main(int argc, char ** argv)
 		}
 
 		ret = select(numfds, &fdset, 0, 0, tvp);
+		save_errno=errno;
 
 		if (ret < 0) {
-			if (errno == EBADF) {
+			if (errno == EBADF && keep_running) {
 				struct stat	foo;
 				/* Probably the membership layer shut down for some reason. */
 				if (mem_fd >= 0 && fstat(mem_fd, &foo) < 0 && errno == EBADF) {
@@ -1505,8 +1507,12 @@ main(int argc, char ** argv)
 				}
 			}
 				
-			/* error */
-			cl_perror("select() returned an error. shutting down");
+			/* error */#
+			if (keep_running) {
+				errno = save_errno;
+				cl_perror("%s: select() returned an error, shutting down."
+				,       __FUNCTION__);
+			}
 			break;
 		} else if (ret == 0) {
 			/* timeout */
