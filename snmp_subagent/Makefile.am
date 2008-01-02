@@ -73,16 +73,11 @@ hbagent_SOURCES		= $(hbagent_srces)
 
 
 
-hbagent_LDADD	 	= \
-                        $(top_builddir)/lib/clplumbing/libplumb.la \
-			$(top_builddir)/lib/hbclient/libhbclient.la \
-			$(top_builddir)/lib/crm/common/libcrmcommon.la \
-			$(top_builddir)/lib/crm/cib/libcib.la \
-			$(top_builddir)/lib//crm/pengine/libpe_status.la \
-			$(top_builddir)/membership/ccm/libccmclient.la \
-			$(top_builddir)/membership/ccm/libclm.la \
-			$(CURSESLIBS) \
-			$(GLIBLIB)
+hbagent_LDADD	 	= -lplumb -lhbclient -lccmclient -lclm 		\
+			$(top_builddir)/lib/crm/common/libcrmcommon.la 	\
+			$(top_builddir)/lib/crm/cib/libcib.la 		\
+			$(top_builddir)/lib/crm/pengine/libpe_status.la \
+			$(CURSESLIBS) $(GLIBLIB)
 
 hbagent_LDFLAGS		= @SNMPAGENTLIB@ 
 
