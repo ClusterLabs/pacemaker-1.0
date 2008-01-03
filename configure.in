@@ -182,10 +182,10 @@ AC_ARG_WITH(ais-prefix,
     [ AISPREFIX=$prefix ],
 )
 
+INITDIR=""
 AC_ARG_WITH(initdir,
     [  --with-initdir=DIR      directory for init (rc) scripts [${INITDIR}]],
-    [ if test x"$withval" = xprefix; then INITDIR=${prefix}; else
-	 INITDIR="$withval"; fi ])
+    [ INITDIR="$withval" ])
 
 AC_ARG_WITH(
   ucd-snmp-devel,
@@ -262,22 +262,54 @@ case $exec_prefix in
   prefix) exec_prefix=$prefix;;
 esac
 
-eval val_prefix="`eval echo ${prefix}`"
-eval val_bindir="`eval echo ${bindir}`"
-eval val_sbindir="`eval echo ${sbindir}`"
-eval val_mandir="`eval echo ${mandir}`"
-eval val_libdir="`eval echo ${libdir}`"
-eval val_includedir="`eval echo ${includedir}`"
-eval val_datadir="`eval echo ${datadir}`"
-eval val_localstatedir="`eval echo ${localstatedir}`"
-eval val_sysconfdir="`eval echo ${sysconfdir}`"
-eval val_docdir="`eval echo ${docdir}`"
-eval val_initdir="${INITDIR}"
+AC_MSG_RESULT(Sanitizing INITDIR: ${INITDIR})
+case $INITDIR in
+  prefix) INITDIR=$prefix;;
+esac
 
-for j in prefix bindir sbindir datadir sysconfdir localstatedir \
-	includedir mandir docdir libdir beekhofdir
+AC_MSG_CHECKING(which init (rc) directory to use)
+for initdir in /etc/init.d /etc/rc.d/init.d /sbin/init.d	\
+	 /usr/local/etc/rc.d /etc/rc.d
+do
+  if
+    test -d $initdir
+  then
+    INITDIR=$initdir
+    AC_MSG_RESULT($INITDIR);
+    break
+  fi
+done
+
+dnl Expand autoconf variables so that we dont end up with '${prefix}' 
+dnl in #defines and python scripts
+dnl NOTE: This will prevent people from doing:
+dnl   make exec_prefix=/foo install
+dnl Which seems no great loss to me...
+
+eval prefix="`eval echo ${prefix}`"
+eval exec_prefix="`eval echo ${prefix}`"
+eval bindir="`eval echo ${bindir}`"
+eval sbindir="`eval echo ${sbindir}`"
+eval libexecdir="`eval echo ${libexecdir}`"
+eval datadir="`eval echo ${datadir}`"
+eval sysconfdir="`eval echo ${sysconfdir}`"
+eval sharedstatedir="`eval echo ${sharedstatedir}`"
+eval localstatedir="`eval echo ${localstatedir}`"
+eval libdir="`eval echo ${libdir}`"
+eval includedir="`eval echo ${includedir}`"
+eval oldincludedir="`eval echo ${oldincludedir}`"
+eval infodir="`eval echo ${infodir}`"
+eval mandir="`eval echo ${mandir}`"
+
+dnl Home-grown variables
+eval INITDIR="${INITDIR}"
+eval docdir="`eval echo ${docdir}`"
+
+for j in prefix exec_prefix bindir sbindir libexecdir datadir sysconfdir \
+    sharedstatedir localstatedir libdir includedir oldincludedir infodir \
+    mandir INITDIR docdir
 do 
-  dirname=`eval echo '${'val_${j}'}'`
+  dirname=`eval echo '${'${j}'}'`
   if
     test ! -d "$dirname"
   then
@@ -286,26 +318,26 @@ do
 done
 
 dnl Variables needed for substitution
-DTD_DIRECTORY="${val_datadir}/heartbeat"
+DTD_DIRECTORY="${datadir}/heartbeat"
 AC_DEFINE_UNQUOTED(DTD_DIRECTORY,"$DTD_DIRECTORY", Location for the Pacemaker DTD)
 
 dnl TODO: Make these go away, or at least use a program to include the
 dnl   heartbeat header and echo the #define value
 
-HA_NOARCHDATAHBDIR="${val_datadir}/heartbeat"
+HA_NOARCHDATAHBDIR="${datadir}/heartbeat"
 AC_SUBST(HA_NOARCHDATAHBDIR)
 AC_DEFINE_UNQUOTED(HA_NOARCHDATAHBDIR,"$HA_NOARCHDATAHBDIR", Heartbeat noarch data directory)
 
-HA_VARRUNDIR="${val_localstatedir}/run"
+HA_VARRUNDIR="${localstatedir}/run"
 AC_SUBST(HA_VARRUNDIR)
 
-HA_VARLIBDIR="${val_localstatedir}/lib"
+HA_VARLIBDIR="${localstatedir}/lib"
 AC_SUBST(HA_VARLIBDIR)
 
-HB_RA_DIR="${val_sysconfdir}/ha.d/resource.d/"
+HB_RA_DIR="${sysconfdir}/ha.d/resource.d/"
 AC_SUBST(HB_RA_DIR)
 
-hb_libdir="${val_libdir}/${HB_PKG}"
+hb_libdir="${libdir}/${HB_PKG}"
 AC_SUBST(hb_libdir)
 
 AC_SUBST(OCF_ROOT_DIR)
@@ -1448,20 +1480,6 @@ dnl Add any system specific options here.
 
 fi
 
-AC_MSG_CHECKING(which init (rc) directory to use)
-INITDIR=""
-for initdir in /etc/init.d /etc/rc.d/init.d /sbin/init.d	\
-	 /usr/local/etc/rc.d /etc/rc.d
-do
-  if
-    test -d $initdir
-  then
-    INITDIR=$initdir
-    AC_MSG_RESULT($INITDIR);
-    break
-  fi
-done
-
 dnl ************************************************************************
 dnl checks for library functions to replace them
 dnl
@@ -1864,15 +1882,15 @@ AC_MSG_RESULT([])
 AC_MSG_RESULT([$PACKAGE configuration:])
 AC_MSG_RESULT([  Version                  = ${VERSION}])
 
-AC_MSG_RESULT([  Prefix                   = ${val_prefix}])
-AC_MSG_RESULT([  Executables              = ${val_sbindir}])
-AC_MSG_RESULT([  Man pages                = ${val_mandir}])
-AC_MSG_RESULT([  Libraries                = ${val_libdir}])
-AC_MSG_RESULT([  Header files             = ${val_includedir}])
-AC_MSG_RESULT([  Arch-independent files   = ${val_datadir}])
-AC_MSG_RESULT([  State information        = ${val_localstatedir}])
-AC_MSG_RESULT([  System configuration     = ${val_sysconfdir}])
-AC_MSG_RESULT([  Init (rc) scripts        = ${val_initdir}])
+AC_MSG_RESULT([  Prefix                   = ${prefix}])
+AC_MSG_RESULT([  Executables              = ${sbindir}])
+AC_MSG_RESULT([  Man pages                = ${mandir}])
+AC_MSG_RESULT([  Libraries                = ${libdir}])
+AC_MSG_RESULT([  Header files             = ${includedir}])
+AC_MSG_RESULT([  Arch-independent files   = ${datadir}])
+AC_MSG_RESULT([  State information        = ${localstatedir}])
+AC_MSG_RESULT([  System configuration     = ${sysconfdir}])
+AC_MSG_RESULT([  Init (rc) scripts        = ${INITDIR}])
 
 AC_MSG_RESULT([  Use system LTDL          = ${ac_cv_lib_ltdl_lt_dlopen}])
 
@@ -1889,14 +1907,15 @@ AC_MSG_RESULT([  ucd_snmp_devel name      = ${UCDSNMPDEVEL}])
 
 AC_MSG_RESULT([  With Heartbeat support   = ${SUPPORT_HEARTBEAT}])
 AC_MSG_RESULT([  With AIS support         = ${SUPPORT_AIS}])
-AC_MSG_RESULT([  With AIS prefix          = "${AISPREFIX}])
+AC_MSG_RESULT([  With AIS prefix          = ${AISPREFIX}])
 
 AC_MSG_RESULT([  CC_WARNINGS              = ${CC_WARNINGS}])
 AC_MSG_RESULT([  Mangled CFLAGS           = ${CFLAGS}])
 AC_MSG_RESULT([  Libraries                = ${LIBS}])
 
-AC_MSG_RESULT([  ])
-AC_MSG_RESULT([Note: If you use the 'make install' method for installation you])
-AC_MSG_RESULT([also need to install the AIS plugin manually.])
-AC_MSG_RESULT([  ])
-
+if test $SUPPORT_AIS = 1; then 
+   AC_MSG_RESULT([  ])
+   AC_MSG_RESULT([Note: If you use the 'make install' method for installation])
+   AC_MSG_RESULT([ you also need to install the AIS plugin ($libdir/service_crm.so) as $LCRSODIR/service_crm.lcrso])
+   AC_MSG_RESULT([  ])
+fi
