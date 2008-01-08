@@ -1363,6 +1363,12 @@ if test "$GCC" = yes; then
           return $rc
 	}
 
+	if
+	    cc_supports_flag -fgnu89-inline
+	then
+	    CFLAGS="$CFLAGS -fgnu89-inline"
+	fi
+
 dnl ************ printw **********************
 
 	if test X"$CURSESLIBS" != X"" &&  cc_supports_flag -Wcast-qual \
