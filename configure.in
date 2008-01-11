@@ -105,6 +105,19 @@ CheckMissingThings() {
   fi
 }
 
+extract_heartbeat_define() {
+	  AC_MSG_CHECKING(for $2 in $1)
+	  Cfile=/tmp/extract_define.$2.${$}
+	  printf "#include <stdio.h>\n" > ${Cfile}.c
+	  printf "#include <%s>\n" $1 >> ${Cfile}.c
+	  printf "int main(int argc, char **argv) { printf(\"%%s\", %s); return 0; }\n" $2 >> ${Cfile}.c
+	  $CC $CFLAGS ${Cfile}.c -o ${Cfile}
+	  value=`${Cfile}`
+	  AC_MSG_RESULT($value)
+	  printf $value
+	  rm -f ${Cfile}.c ${Cfile}
+	}
+
 dnl ===============================================
 dnl Configure Options
 dnl ===============================================
@@ -199,43 +212,6 @@ AC_ARG_WITH(mibsdir,
     [  --with-miBsdir=DIR      directory for mib files. ],
     [ MIBS_DIR="$withval" ])
 
-dnl ************ OCF (Open Cluster Framework) **********************
-dnl Should be consistent with the OCF standard fixed pathname /usr/lib/ocf
-dnl Changing it from this value violates the OCF standard. 
-dnl This is why it is not affected by the PREFIX setting.
-dnl We do not recommend changing it.
-dnl
-OCF_ROOT_DIR="/usr/lib/ocf"
-AC_ARG_WITH(ocf-root,
-    [  --with-ocf-root=DIR      directory for OCF scripts [${OCF_ROOT_DIR}]],
-    [ if test x"$withval" = xprefix; then OCF_ROOT_DIR=${prefix}; else
-	 OCF_ROOT_DIR="$withval"; fi ])
-
-dnl TODO: Allow libdir and libexecdir to be overwitten?
-dnl	libdir=`dirname $libdir`/$LibDirSuffix
-dnl	libexecdir=`dirname $libexecdir`/$LibDirSuffix
-
-dnl **********************************************************************
-dnl TODO: Extract these values from the installed heartbeat program
-
-AC_ARG_WITH(
-  group-name,
-    [  --with-group-name=GROUP_NAME
-       GROUP_NAME to run our programs as. [default=haclient]  ],
-    [ HA_APIGROUP="$withval" ],
-    [ HA_APIGROUP="haclient" ],
-  )
-AC_SUBST(HA_APIGROUP)
-
-AC_ARG_WITH(
-  ccmuser-name,
-    [ --with-ccmuser-name=HA_CCMUSER_NAME
-      HA_CCMUSER_NAME to run privileged non-root things as. [default=hacluster] ],
-    [ HA_CCMUSER="$withval" ],
-    [ HA_CCMUSER="hacluster" ],
-  )
-AC_SUBST(HA_CCMUSER)
-
 dnl ===============================================
 dnl General Processing
 dnl ===============================================
@@ -317,36 +293,6 @@ do
   fi
 done
 
-dnl Variables needed for substitution
-DTD_DIRECTORY="${datadir}/heartbeat"
-AC_DEFINE_UNQUOTED(DTD_DIRECTORY,"$DTD_DIRECTORY", Location for the Pacemaker DTD)
-
-dnl TODO: Make these go away, or at least use a program to include the
-dnl   heartbeat header and echo the #define value
-
-HA_NOARCHDATAHBDIR="${datadir}/heartbeat"
-AC_SUBST(HA_NOARCHDATAHBDIR)
-AC_DEFINE_UNQUOTED(HA_NOARCHDATAHBDIR,"$HA_NOARCHDATAHBDIR", Heartbeat noarch data directory)
-
-HA_VARRUNDIR="${localstatedir}/run"
-AC_SUBST(HA_VARRUNDIR)
-
-HA_VARLIBDIR="${localstatedir}/lib"
-AC_SUBST(HA_VARLIBDIR)
-
-HB_RA_DIR="${sysconfdir}/ha.d/resource.d/"
-AC_SUBST(HB_RA_DIR)
-
-hb_libdir="${libdir}/${HB_PKG}"
-AC_SUBST(hb_libdir)
-
-AC_SUBST(OCF_ROOT_DIR)
-AC_DEFINE_UNQUOTED(OCF_ROOT_DIR,"$OCF_ROOT_DIR", OCF root directory - specified by the OCF standard)
-
-OCF_RA_DIR="${OCF_ROOT_DIR}/resource.d/"
-AC_SUBST(OCF_RA_DIR)
-AC_DEFINE_UNQUOTED(OCF_RA_DIR,"$OCF_RA_DIR", Location for OCF RAs)
-
 dnl This OS-based decision-making is poor autotools practice;
 dnl feature-based mechanisms are strongly preferred.
 dnl
@@ -392,6 +338,40 @@ case "$host_cpu" in
 	fi				;;
     esac
 esac
+
+dnl Variables needed for substitution
+DTD_DIRECTORY="${datadir}/heartbeat"
+AC_DEFINE_UNQUOTED(DTD_DIRECTORY,"$DTD_DIRECTORY", Location for the Pacemaker DTD)
+
+HB_RA_DIR=`extract_heartbeat_define hb_config.h HB_RA_DIR`
+AC_SUBST(HB_RA_DIR)
+
+hb_libdir=`extract_heartbeat_define hb_config.h HA_LIBHBDIR`
+AC_SUBST(hb_libdir)
+
+HA_VARRUNDIR=`extract_heartbeat_define hb_config.h HA_VARRUNDIR`
+AC_SUBST(HA_VARRUNDIR)
+
+HA_VARLIBDIR=`extract_heartbeat_define hb_config.h HA_VARLIBDIR`
+AC_SUBST(HA_VARLIBDIR)
+
+OCF_ROOT_DIR=`extract_heartbeat_define hb_config.h OCF_ROOT_DIR`
+AC_SUBST(OCF_ROOT_DIR)
+AC_DEFINE_UNQUOTED(OCF_ROOT_DIR,"$OCF_ROOT_DIR", OCF root directory - specified by the OCF standard)
+
+OCF_RA_DIR=`extract_heartbeat_define hb_config.h OCF_RA_DIR`
+AC_SUBST(OCF_RA_DIR)
+AC_DEFINE_UNQUOTED(OCF_RA_DIR,"$OCF_RA_DIR", Location for OCF RAs)
+
+HA_APIGROUP=`extract_heartbeat_define hb_config.h HA_APIGROUP`
+AC_SUBST(HA_APIGROUP)
+
+HA_CCMUSER=`extract_heartbeat_define hb_config.h HA_CCMUSER`
+AC_SUBST(HA_CCMUSER)
+
+HA_NOARCHDATAHBDIR="${datadir}/heartbeat"
+AC_SUBST(HA_NOARCHDATAHBDIR)
+AC_DEFINE_UNQUOTED(HA_NOARCHDATAHBDIR,"$HA_NOARCHDATAHBDIR", Heartbeat noarch data directory)
 
 #
 #	Other interesting variables: ${host_vendor} and ${host_os}
