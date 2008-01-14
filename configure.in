@@ -1171,7 +1171,6 @@ else
    LCRSODIR=`dirname $alib`
 
    if test -d ${AISLIB} -a -d ${LCRSODIR}; then
-     LIBS="$LIBS -L${AISLIB} -R${AISLIB}"
      AC_MSG_CHECKING(Testing AIS installation in $AISPREFIX)
      AC_CHECK_LIB(aisutil, saRecvRetry, [SUPPORT_AIS=1], [SUPPORT_AIS=0])
 
@@ -1203,6 +1202,7 @@ fi
 
 if test $SUPPORT_AIS = 1; then
    CLUSTERLIBS="$CLUSTERLIBS -laisutil"
+   LIBS="$LIBS -L${AISLIB} -R${AISLIB}"
 else
    AISPREFIX=""
    LCRSODIR=""
