@@ -24,7 +24,7 @@
 cfg:=--prefix=/usr --sysconfdir=/etc --localstatedir=/var \
   --mandir=/usr/share/man \
   --enable-snmp-subagent --with-mibsdir=/usr/share/snmp/mibs \
-  --disable-fatal-warnings --enable-mgmt --enable-glib-malloc
+  --disable-fatal-warnings --enable-glib-malloc
 
 # These are used for cross-compiling and for saving the configure script
 # from having to guess our platform (since we know it already)
@@ -71,10 +71,7 @@ clean:
 	rm -f tools/ccdv
 	dh_clean build-stamp install-stamp
 	rm -f debian/init debian/*.debhelper debian/*.substvars config.log
-	rm -r -f debian/heartbeat debian/heartbeat-dev debian/ldirectord \
-		debian/libpils0 debian/libpils-dev \
-		debian/libstonith0 debian/libstonith-dev debian/stonith \
-		debian/tmp
+	rm -r -f debian/pacemaker debian/pacemaker-dev debian/tmp
 
 	# Zero autoconf foo
 	rm -f config.status libltdl/config.log libltdl/config.status 
@@ -88,28 +85,14 @@ install-stamp:
 	dh_installdirs
 	$(MAKE) install DESTDIR=$(DTMP) \
 	  MAKE=make \
-	  docdir=/usr/share/doc/heartbeat
+	  docdir=/usr/share/doc/pacemaker
 
-	mv $(DTMP)/usr/share/heartbeat/cts/README \
-		$(DTMP)/usr/share/doc/heartbeat/README.cts
-	mv $(DTMP)/usr/share/heartbeat/README.hb_report \
-		$(DTMP)/usr/share/doc/heartbeat
-	rm $(DTMP)/usr/lib/heartbeat/README.hb_report
-	mv $(DTMP)/usr/share/heartbeat/lrmtest/README.regression \
-		$(DTMP)/usr/share/doc/heartbeat/README.lrm_regression_tests
+	mv $(DTMP)/usr/share/pacemaker/cts/README \
+		$(DTMP)/usr/share/doc/pacemaker/README.cts
 	find $(DTMP)/usr/share/man -type f | xargs gzip -v --best
-	install -c -m 755 heartbeat/init.d/heartbeat \
-                $(DTMP)/etc/init.d/heartbeat
-	-mkdir -p $(DTMP)/usr/share/doc/ldirectord/
-	install -c -m 644 ldirectord/ldirectord.cf \
-	  $(DTMP)/usr/share/doc/ldirectord/
-	-mkdir -p $(DTMP)/etc/init.d
-	install -c -m 755 ldirectord/init.d/ldirectord.debian \
-		$(DTMP)/etc/init.d/ldirectord
-	-mkdir -p $(DTMP)/etc/default/
-	install -c -m 755 ldirectord/init.d/ldirectord.debian.default \
-		$(DTMP)/etc/default/ldirectord
-	cd $(DTMP)/etc/ && ln -s ha.d heartbeat
+	install -c -m 755 pacemaker/init.d/pacemaker \
+                $(DTMP)/etc/init.d/pacemaker
+#	-mkdir -p $(DTMP)/etc/default/
 	dh_movefiles --source=debian/tmp
 
 binary-indep: build install
@@ -121,7 +104,7 @@ binary-indep: build install
 #	dh_installmenu -i
 #	dh_installemacsen -i
 #	dh_installpam -i
-	dh_installinit -i -n -u 'defaults 20 32'
+#	dh_installinit -i -n -u 'defaults 20 32'
 #	dh_installcron -i
 	dh_installman -i
 #	dh_installinfo -i
@@ -136,7 +119,7 @@ binary-indep: build install
 	dh_installdeb -i
 	dh_perl -i
 	dh_pycentral -i
-	dh_python -i `pwd`/usr/lib/heartbeat/cts `pwd`/usr/lib/heartbeat
+	dh_python -i `pwd`/usr/lib/pacemaker/cts `pwd`/usr/lib/pacemaker
 	dh_shlibdeps -i
 	dh_gencontrol -i
 	dh_md5sums -i
@@ -166,7 +149,7 @@ binary-arch: build install
 	dh_installdeb -a
 	dh_perl -a
 	dh_pycentral -a
-	dh_python -a `pwd`/usr/lib/heartbeat/cts `pwd`/usr/lib/heartbeat
+	dh_python -a `pwd`/usr/lib/pacemaker/cts `pwd`/usr/lib/pacemaker
 	dh_shlibdeps -a
 	dh_gencontrol -a
 	dh_md5sums -a
