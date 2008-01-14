@@ -1902,6 +1902,6 @@ AC_MSG_RESULT([  Libraries                = ${LIBS}])
 if test $SUPPORT_AIS = 1; then 
    AC_MSG_RESULT([  ])
    AC_MSG_RESULT([Note: If you use the 'make install' method for installation])
-   AC_MSG_RESULT([ you also need to install the AIS plugin ($libdir/service_crm.so) as $LCRSODIR/service_crm.lcrso])
+   AC_MSG_RESULT([ you also need to install the AIS plugin ($libdir/service_crm.so) as $LCRSODIR/pacemaker.lcrso])
    AC_MSG_RESULT([  ])
 fi
