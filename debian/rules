@@ -131,8 +131,9 @@ binary-arch: build install
 	dh_builddeb -a
 
 binary: binary-indep binary-arch
-	@echo "Any unpackaged files follow (.a and .la files omitted):"
-	@cd $(DTMP) && find ./ \! -type d | egrep -v \\\.l?a
+	@echo "All unpackaged files follow:"
+	-cd $(DTMP) && find . \! -type d 
+#| egrep -v \\\.l?a
 
 checkbuild:
 	chmod u+x ./debian/dpkg-checkbuild
