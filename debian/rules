@@ -92,7 +92,7 @@ install-stamp:
 	-mkdir -p $(DTMP)/usr/share/doc/pacemaker/
 	mv $(DTMP)/usr/share/pacemaker/cts/README \
 		$(DTMP)/usr/share/doc/pacemaker/README.cts
-#	rm -f $(DTMP)/usr/share/pacemaker/cts/*.py?
+	rm -f $(DTMP)/usr/share/pacemaker/cts/*.py?
 	find $(DTMP)/usr/share/man -type f | xargs gzip -v --best
 #	-mkdir -p $(DTMP)/etc/default/
 	dh_movefiles --source=debian/tmp
