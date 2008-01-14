@@ -138,7 +138,8 @@ binary-arch: build install
 	dh_installman -a
 #	dh_installinfo -a
 #	dh_undocumented -a
-	dh_installchangelogs -a `pwd`/doc/ChangeLog
+#	dh_installchangelogs -a `pwd`/doc/ChangeLog
+	dh_installchangelogs
 	dh_link -a
 	dh_strip -a
 	dh_compress -a
