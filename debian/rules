@@ -23,7 +23,6 @@
 
 cfg:=--prefix=/usr --sysconfdir=/etc --localstatedir=/var \
   --mandir=/usr/share/man \
-  --with-group-name=haclient --with-ccmuser-name=hacluster \
   --enable-snmp-subagent --with-mibsdir=/usr/share/snmp/mibs \
   --disable-fatal-warnings --enable-mgmt --enable-glib-malloc
 

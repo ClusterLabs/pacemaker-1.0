@@ -1,25 +1,12 @@
-Source: heartbeat
+Source: pacemaker
 Section: admin
 Priority: optional
 Maintainer: Simon Horman <horms@debian.org>
-Build-Depends: debhelper (>= 5.0.37.2), libsnmp-dev, libglib2.0-dev, perl, net-tools, iputils-ping, python, psmisc, libnet1-dev, iproute, libtool, libcurl4-openssl-dev | libcurl3-openssl-dev, libxml2-dev, bison, flex, uuid-dev, lynx, libbz2-dev, zlib1g-dev, uuid-dev, libsensors-dev, libltdl3-dev, swig, openssh-client, libgnutls-dev, python-central (>= 0.5), python-dev, libpam0g-dev, libncurses5-dev, psmisc, libopenhpi-dev
+Build-Depends: debhelper (>= 5.0.37.2), libsnmp-dev, libglib2.0-dev, perl, net-tools, iputils-ping, python, psmisc, libnet1-dev, iproute, libtool, libcurl4-openssl-dev | libcurl3-openssl-dev, libxml2-dev, bison, flex, uuid-dev, lynx, libbz2-dev, zlib1g-dev, uuid-dev, libsensors-dev, libltdl3-dev, swig, openssh-client, libgnutls-dev, python-central (>= 0.5), python-dev, libpam0g-dev, libncurses5-dev, psmisc
 Standards-Version: 3.7.2
 XS-Python-Version: current
 
-Package: ldirectord
-Section: admin
-Priority: extra
-Architecture: all
-Depends: ${perl:Depends}, ipvsadm, libauthen-radius-perl, libcrypt-ssleay-perl, libdbi-perl, libdigest-hmac-perl, libdigest-md5-perl, libmail-pop3client-perl, libmailtools-perl, libnet-dns-perl, libnet-imap-simple-perl, libnet-imap-simple-ssl-perl, libnet-ldap-perl, libnet-perl, libwww-perl
-Recommends: sysklogd|syslog-ng, logrotate
-Conflicts: libpils0 (<< 2.0.8-3), libstonith0 (<< 2.0.8-3), stonith (<< 2.0.8-3)
-XB-Python-Version: ${python:Versions}
-Description: Monitors virtual services provided by LVS
- ldirectord is a stand-alone daemon to monitor services of real
- for virtual services provided by The Linux Virtual Server (LVS).
- and works with Linux-HA's heartbeat package.
-
-Package: heartbeat
+Package: pacemaker
 Section: admin
 Priority: optional
 Architecture: any
@@ -35,7 +22,7 @@ Description: Subsystem for High-Availability Linux
  clusters. It is both extremely useful and quite stable at this point in
  time.
 
-Package: heartbeat-dev
+Package: pacemaker-dev
 Section: devel
 Priority: optional
 Architecture: any
@@ -52,95 +39,3 @@ Description: Subsystem for High-Availability Linux - development files
  time.
  .
  This package contains development files
-
-Package: heartbeat-gui
-Section: admin
-Priority: optional
-Architecture: any
-Depends: ${python:Depends},  python-gtk2, python-glade2
-Suggests: heartbeat (= ${binary:Version})
-XB-Python-Version: ${python:Versions}
-Description: Provides a gui interface to manage heartbeat clusters
- GUI client for heartbeat clusters
-
-Package: ldirectord-2
-Section: admin
-Priority: optional
-Architecture: all
-Depends: ldirectord (= ${source:Version})
-Description: Monitors virtual services provided by LVS
- This is a transitional dummy package.  If nothing depends on it, this
- package can be safely removed.
-
-Package: heartbeat-2
-Section: admin
-Priority: optional
-Architecture: all
-Depends: heartbeat (>= ${source:Version})
-Description: Subsystem for High-Availability Linux
- This is a transitional dummy package.  If nothing depends on it, this
- package can be safely removed.
-
-Package: heartbeat-2-dev
-Section: admin
-Priority: optional
-Architecture: all
-Depends: heartbeat-dev (>= ${source:Version})
-Description: Subsystem for High-Availability Linux - development files
- This is a transitional dummy package.  If nothing depends on it, this
- package can be safely removed.
-
-Package: heartbeat-2-gui
-Section: admin
-Priority: optional
-Architecture: any
-Depends: heartbeat-gui (= ${binary:Version})
-Description: Provides a gui interface to manage heartbeat clusters
- This is a transitional dummy package.  If nothing depends on it, this
- package can be safely removed.
-
-Package: stonith
-Section: libs
-Priority: optional
-Architecture: any
-Depends: heartbeat (= ${binary:Version})
-Description: Interface for remotely powering down a node in the cluster
- This is a transitional dummy package.  If nothing depends on it, this
- package can be safely removed.
-
-Package: libstonith0
-Section: libs
-Priority: optional
-Architecture: any
-Depends: heartbeat (= ${binary:Version})
-Description: Interface for remotely powering down a node in the cluster
- This is a transitional dummy package.  If nothing depends on it, this
- package can be safely removed.
-
-Package: libstonith-dev
-Section: admin
-Priority: optional
-Architecture: all
-Depends: heartbeat-dev (>= ${source:Version})
-Description: Interface for remotely powering down a node in the cluster
- This is a transitional dummy package.  If nothing depends on it, this
- package can be safely removed.
-
-Package: libpils0
-Section: libs
-Priority: optional
-Architecture: any
-Depends: heartbeat (= ${binary:Version})
-Description: Plugin and Interface Loading System
- This is a transitional dummy package.  If nothing depends on it, this
- package can be safely removed.
-
-Package: libpils-dev
-Section: admin
-Priority: optional
-Architecture: all
-Depends: heartbeat-dev (>= ${source:Version})
-Description: Plugin and Interface Loading System - development files
- This is a transitional dummy package.  If nothing depends on it, this
- package can be safely removed.
-
