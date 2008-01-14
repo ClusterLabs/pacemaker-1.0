@@ -21,7 +21,6 @@ usr/lib/libcib.so
 usr/lib/libpengine.so
 usr/lib/libcrmcommon.so
 usr/lib/libtransitioner.so
-usr/share/pacemaker/cts/CIB.pyo
 usr/share/pacemaker/cts/extracttests.py
 usr/share/pacemaker/cts/getpeinputs.sh
 usr/share/pacemaker/cts/CM_ais.py
