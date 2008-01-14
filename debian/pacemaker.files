@@ -47,6 +47,7 @@ usr/lib/libpe_status.so.2.0.0
 usr/lib/libcrmcluster.so.1
 usr/lib/libpe_rules.so.2
 usr/lib/libpengine.so.3
+usr/lib/openais/lcrso/pacemaker.lcrso
 usr/share/heartbeat/crm.dtd
 usr/share/man/man8/crm_resource.8.gz
 usr/share/man/man8/cibadmin.8.gz
