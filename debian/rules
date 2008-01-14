@@ -21,9 +21,9 @@
 # restored
 #
 
-cfg:=--prefix=/usr --sysconfdir=/etc --localstatedir=/var \
-  --mandir=/usr/share/man \
-  --enable-snmp-subagent --with-mibsdir=/usr/share/snmp/mibs \
+cfg:=--prefix=/usr --sysconfdir=/etc --localstatedir=/var 	  \
+  --mandir=/usr/share/man --with-lcrso-dir=/usr/lib/openais/lcrso \
+  --enable-snmp-subagent --with-mibsdir=/usr/share/snmp/mibs 	  \
   --disable-fatal-warnings --enable-glib-malloc
 
 # These are used for cross-compiling and for saving the configure script
@@ -87,6 +87,7 @@ install-stamp:
 	  MAKE=make \
 	  docdir=/usr/share/doc/pacemaker
 
+	cp $(DTMP)/usr/lib/crm_service.so $(DTMP)/usr/lib/openais/lcrso/pacemaker.lcrso 
 	-mkdir -p $(DTMP)/usr/share/doc/pacemaker/
 	mv $(DTMP)/usr/share/pacemaker/cts/README \
 		$(DTMP)/usr/share/doc/pacemaker/README.cts

@@ -189,11 +189,16 @@ AC_ARG_WITH(heartbeat-support,
     [ SUPPORT_HEARTBEAT=1 ],
 )
 
+AISPREFIX=""
 AC_ARG_WITH(ais-prefix,
-    [  --with-ais-prefix=DIR      Prefix where AIS is installed [$prefix]],
-    [ AISPREFIX=$withval ],
-    [ AISPREFIX=$prefix ],
-)
+    [  --with-ais-prefix=DIR  Prefix used when OpenAIS was installed [$prefix]],
+    [ AISPREFIX=$withval ], 
+    [ AISPREFIX=$prefix ])
+
+LCRSODIR=""
+AC_ARG_WITH(lcrso-dir, 
+    [  --with-lcrso-dir=DIR   OpenAIS lcrso files. ],
+    [ LCRSODIR="$withval" ])
 
 INITDIR=""
 AC_ARG_WITH(initdir,
@@ -1136,7 +1141,6 @@ if test X"$AISPREFIX" = X"prefix"; then
 fi
 
 AISLIB=""
-LCRSODIR=""
 
 case $SUPPORT_AIS in
      1) SUPPORT_AIS=1;;
@@ -1167,12 +1171,35 @@ else
    dnl Find it in lib, lib64, or wherever it wants to live...
    alib=`ls ${AISPREFIX}/*/openais/libaisutil.so | head -n 1`
    AISLIB=`dirname $alib`
-   alib=`ls ${AISPREFIX}/*/lcrso/objdb.lcrso | head -n 1`
-   LCRSODIR=`dirname $alib`
+   dnl alib=`ls ${AISPREFIX}/*/lcrso/objdb.lcrso | head -n 1`
+   dnl LCRSODIR=`dirname $alib`
+   if test -z "$LCRSODIR"; then
+      LCRSODIR="$libexecdir/lcrso"
+   fi
 
-   if test -d ${AISLIB} -a -d ${LCRSODIR}; then
-     AC_MSG_CHECKING(Testing AIS installation in $AISPREFIX)
-     AC_CHECK_LIB(aisutil, saRecvRetry, [SUPPORT_AIS=1], [SUPPORT_AIS=0])
+   AC_MSG_CHECKING(Testing AIS installation in $AISPREFIX)
+   if test -d ${AISLIB} -a ! -z ${AISLIB}; then
+     LIBS="$LIBS -L${AISLIB} -R${AISLIB}"
+     SUPPORT_AIS=1
+     saveLIBS="$LIBS"
+
+     dnl libs...
+     AC_CHECK_LIB(aisutil, saSendReceiveReply, [], [SUPPORT_AIS=0])
+
+     dnl headers...
+     AC_CHECK_HEADERS(openais/saAis.h)
+     if test "$ac_cv_header_openais_saAis_h" != "yes"; then
+        AC_MSG_ERROR(Headers not found: $ac_cv_header_openais_saAis_h) 
+     	SUPPORT_AIS=0
+     fi  
+
+     AC_MSG_CHECKING(Testing AIS lcrso directory $LCRSODIR)
+     if test ! -d ${LCRSODIR}; then
+     	AC_MSG_ERROR(Invalid.  Please specify the correct location with --with-lcrso-dir)
+     	SUPPORT_AIS=0
+     fi
+
+     LIBS="$saveLIBS"
 
    else
      AC_MSG_ERROR(Couldn't find openais installed under ${AISPREFIX}.)
