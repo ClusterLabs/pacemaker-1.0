@@ -87,8 +87,6 @@ install-stamp:
 	  MAKE=make \
 	  docdir=/usr/share/doc/pacemaker
 
-	-mkdir -p $(DTMP)/usr/lib/openais/lcrso/
-	cp $(DTMP)/usr/lib/service_crm.so $(DTMP)/usr/lib/openais/lcrso/pacemaker.lcrso 
 	-mkdir -p $(DTMP)/usr/share/doc/pacemaker/
 	mv $(DTMP)/usr/share/pacemaker/cts/README \
 		$(DTMP)/usr/share/doc/pacemaker/README.cts
