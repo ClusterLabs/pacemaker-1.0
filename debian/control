@@ -13,14 +13,11 @@ Architecture: any
 Depends: ${shlibs:Depends}, heartbeat
 Recommends: openais
 XB-Python-Version: ${python:Versions}
-Description: Subsystem for High-Availability Linux
- heartbeat is a basic heartbeat subsystem for Linux-HA which implements
- serial, UDP, and PPP/UDP heartbeats together with IP address takeover
- including a nice resource model including resource groups.
+Description: High-Availability cluster resource manager for Heartbeat and/or OpenAIS
+ Pacemaker supports a very sophisticated dependency model for n-node
+ clusters and can respond to node and resource-level failures.
  .
- It currently supports a very sophisticated dependency model for n-node
- clusters. It is both extremely useful and quite stable at this point in
- time.
+ It supports both the Heartbeat (Linux-HA) and OpenAIS cluster stacks.
 
 Package: pacemaker-dev
 Section: devel
@@ -28,13 +25,10 @@ Priority: optional
 Architecture: any
 Depends: pacemaker (= ${binary:Version}), ${python:Depends}
 XB-Python-Version: ${python:Versions}
-Description: Subsystem for High-Availability Linux - development files
- heartbeat is a basic heartbeat subsystem for Linux-HA which implements
- serial, UDP, and PPP/UDP heartbeats together with IP address takeover
- including a nice resource model including resource groups.
+Description: High-Availability cluster resource manager for Heartbeat and/or OpenAIS - development files
+ Pacemaker supports a very sophisticated dependency model for n-node
+ clusters and can respond to node and resource-level failures.
  .
- It currently supports a very sophisticated dependency model for n-node
- clusters. It is both extremely useful and quite stable at this point in
- time.
+ It supports both the Heartbeat (Linux-HA) and OpenAIS cluster stacks.
  .
  This package contains development files
