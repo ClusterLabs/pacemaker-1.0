@@ -22,21 +22,10 @@ MAINTAINERCLEANFILES    = Makefile.in
 
 EXTRA_DIST		= apply changelog compat control copyright \
 			  dpkg-checkbuild rules \
-			  heartbeat.dirs heartbeat.files \
-			  heartbeat.postinst heartbeat.postrm \
-			  heartbeat.preinst \
-			  heartbeat-dev.dirs heartbeat-dev.files \
-			  heartbeat-gui.dirs heartbeat-gui.files \
-			  ldirectord.files ldirectord.postinst
-
-DEBIAN_DIST		= \
-			  ldirectord.postrm \
-			  patches/chown-check-2.patch \
-			  patches/ipv6-check.patch \
-			  patches/series/2.1.2-1
+			  pacemaker.dirs pacemaker.files \
+			  pacemaker-dev.files
 
 
 clean-local:
 	rm -f *.substvars *.debhelper files
-	rm -r -f heartbeat heartbeat-dev ldirectord \
-		libpils0 libpils-dev libstonith0 libstonith-dev stonith tmp
+	rm -r -f pacemaker pacemaker-dev
