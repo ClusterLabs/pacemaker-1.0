@@ -1189,21 +1189,21 @@ else
      dnl headers...
      AC_CHECK_HEADERS(openais/saAis.h)
      if test "$ac_cv_header_openais_saAis_h" != "yes"; then
-        AC_MSG_ERROR(Headers not found: $ac_cv_header_openais_saAis_h) 
+        AC_MSG_WARN(Headers not found: $ac_cv_header_openais_saAis_h) 
      	SUPPORT_AIS=0
      fi  
 
      AC_MSG_CHECKING(Testing AIS lcrso directory $LCRSODIR)
      if test ! -d ${LCRSODIR}; then
-     	AC_MSG_ERROR(Invalid.  Please specify the correct location with --with-lcrso-dir)
+     	AC_MSG_WARN(Invalid.  Please specify the correct location with --with-lcrso-dir)
      	SUPPORT_AIS=0
      fi
 
      LIBS="$saveLIBS"
 
    else
-     AC_MSG_ERROR(Couldn't find openais installed under ${AISPREFIX}.)
-     AC_MSG_ERROR(Use --with-ais-prefix to specify a valid location)
+     AC_MSG_WARN(Couldn't find openais installed under ${AISPREFIX}.)
+     AC_MSG_WARN(Use --with-ais-prefix to specify a valid location)
      SUPPORT_AIS=0
    fi
 fi
