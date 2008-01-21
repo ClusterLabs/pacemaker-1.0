@@ -257,6 +257,7 @@ lib/mgmt/pymgmt_wrap.c
 tsa_plugin/ha_mgmt_client_wrap.c
 
 # Misc
+HTML
 TAGS
 .gres.*
 *.orig
