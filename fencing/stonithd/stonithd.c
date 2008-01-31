@@ -301,6 +301,7 @@ static void add_shm_hostlist(int shmid, pid_t pid);
 static void remove_shm_hostlist(pid_t pid);
 static gboolean hostlist2shmem(int shmid,char **hostlist,int maxlist);
 static char ** shmem2hostlist(pid_t pid);
+static char ** copyshmem(char *s);
 static void record_new_srsc(stonithRA_ops_t *ra_op);
 
 static struct api_msg_to_handler api_msg_to_handlers[] = {
@@ -3028,6 +3029,7 @@ static gboolean
 hostlist2shmem(int shmid,char **hostlist,int maxlist)
 {
 	char *s, *q, **h;
+	int rc = TRUE;
 
 	if( !hostlist ) {
 		return FALSE;
@@ -3037,15 +3039,20 @@ hostlist2shmem(int shmid,char **hostlist,int maxlist)
 			__FUNCTION__, __LINE__, strerror(errno));
 		return FALSE;
 	}
-	for( q = s, h = hostlist; *h; q += strlen(q)+1, h++ ) {
+	q = s;
+	for( h = hostlist; *h; h++ ) {
+		if( !TEST && !strcmp(*h, local_nodename) ) {
+			continue; /* we can't reset ourselves */
+		}
 		if( q-s+strlen(*h)+1 > maxlist-1 ) {
 			stonithd_log(LOG_ERR,"%s:%d: size of node "
 				"list exceeds storage: skipping %s",
 				__FUNCTION__, __LINE__, *h);
+			rc = FALSE;
+			break;
 		}
-		else {
-			strcpy(q,*h);
-		}
+		strcpy(q,*h);
+		q += strlen(q)+1;
 	}
 	*q = '\0'; /* additional '\0' to end the list */
 	stonith_free_hostlist(hostlist);
@@ -3054,7 +3061,10 @@ hostlist2shmem(int shmid,char **hostlist,int maxlist)
 			__FUNCTION__, __LINE__, strerror(errno));
 		return FALSE;
 	}
-	return TRUE;
+	if( q == s ) { /* oops, no hosts configured */
+		rc = FALSE;
+	}
+	return rc;
 }
 
 /* build the hostlist from the shmem segment
@@ -3064,8 +3074,7 @@ static char **
 shmem2hostlist(pid_t pid)
 {
 	struct hostlist_shmseg *p;
-	int n;
-	char *s, *q, **h, **hostlist;
+	char *s, **hostlist;
 
 	if( !(p = lookup_shm_hostlist(pid)) ) {
 		stonithd_log(LOG_ERR, "%s: no hostlist found for pid %d"
@@ -3078,8 +3087,29 @@ shmem2hostlist(pid_t pid)
 			__FUNCTION__, __LINE__, strerror(errno));
 		return NULL;
 	}
+	hostlist = copyshmem(s);
+	if( shmdt(s) == -1 ) {
+		stonithd_log(LOG_ERR,"%s:%d: shmdt failed: %s",
+			__FUNCTION__, __LINE__, strerror(errno));
+		stonith_free_hostlist(hostlist);
+		return NULL;
+	}
+	remove_shm_hostlist(pid);
+	return_to_dropped_privs();
+	return hostlist;
+}
+
+static char **
+copyshmem(char *s)
+{
+	int n;
+	char *q, **h, **hostlist;
+
 	for( q = s, n = 0; *q; q += strlen(q)+1, n++ )
 		;
+	if( n == 0 ) {
+		return NULL;
+	}
 	if( !(hostlist = (char **)cl_calloc(sizeof(char *),(n+1))) ) {
 		stonithd_log(LOG_ERR, "out of memory");
 		return NULL;
@@ -3087,17 +3117,11 @@ shmem2hostlist(pid_t pid)
 	for( q = s, h = hostlist; *q; q += strlen(q)+1, h++ ) {
 		if( !(*h = (char *)cl_malloc(strlen(q)+1)) ) {
 			stonithd_log(LOG_ERR, "out of memory");
+			stonith_free_hostlist(hostlist);
 			return NULL;
 		}
 		strcpy(*h,q);
 	}
-	if( shmdt(s) == -1 ) {
-		stonithd_log(LOG_ERR,"%s:%d: shmdt failed: %s",
-			__FUNCTION__, __LINE__, strerror(errno));
-		return NULL;
-	}
-	remove_shm_hostlist(pid);
-	return_to_dropped_privs();
 	return hostlist;
 }
 
