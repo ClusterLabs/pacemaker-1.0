@@ -837,38 +837,6 @@ AC_CHECK_HEADERS(getopt.h)
 AC_CHECK_HEADERS(sys/prctl.h)
 AC_CHECK_HEADERS(linux/watchdog.h,[],[],[#include <linux/types.h>])
 
-dnl Sockets are our preferred and supported comms mechanism.  But the
-dnl implementation needs to be able to convey credentials: some don't.
-dnl So on a few OSes, credentials-carrying streams might be a better choice.
-dnl
-dnl Solaris releases up to and including "9" fall into this category
-dnl (its sockets don't carry credentials; streams do).
-dnl
-dnl At Solaris 10, "getpeerucred()" is available, for both sockets and
-dnl streams, so it should probably use (preferred) socket mechanism.
-
-AC_CHECK_HEADERS(stropts.h)	dnl streams available (fallback option)
-
-AC_CHECK_HEADERS(ucred.h)	dnl e.g. Solaris 10 decl. of "getpeerucred()"
-AC_CHECK_FUNCS(getpeerucred)
-
-dnl ************************************************************************
-dnl checks for headers needed by clplumbing On BSD
-AC_CHECK_HEADERS(sys/syslimits.h)
-if test "$ac_cv_header_sys_param_h" = no; then
-	AC_CHECK_HEADERS(sys/ucred.h)
-else
-	AC_CHECK_HEADERS(sys/ucred.h,[],[],[#include <sys/param.h>])
-fi
-
-dnl ************************************************************************
-dnl checks for headers needed by clplumbing On Solaris
-AC_CHECK_HEADERS(sys/cred.h xti.h)
-
-dnl ************************************************************************
-dnl checks for headers needed by clplumbing On FreeBSD/Solaris
-AC_CHECK_HEADERS(sys/filio.h)
-
 AC_MSG_CHECKING(for special libxml2 includes)
 if test "x$XML2CONFIG" = "x"; then
    AC_MSG_RESULT(libxml2 config not found)
