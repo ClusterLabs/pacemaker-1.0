@@ -3,7 +3,7 @@
  *        : mib2c.iterate.conf,v 5.9 2003/06/04 00:14:41 hardaker Exp $
  */
 
-#include <lha_internal.h>
+#include <crm_internal.h>
 
 
 #include <net-snmp/net-snmp-config.h>
