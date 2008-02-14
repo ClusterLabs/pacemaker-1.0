@@ -348,6 +348,9 @@ dnl Variables needed for substitution
 DTD_DIRECTORY="${datadir}/heartbeat"
 AC_DEFINE_UNQUOTED(DTD_DIRECTORY,"$DTD_DIRECTORY", Location for the Pacemaker DTD)
 
+HA_HBCONF_DIR=`extract_heartbeat_define hb_config.h HA_HBCONF_DIR`
+AC_SUBST(HA_HBCONF_DIR)
+
 HB_RA_DIR=`extract_heartbeat_define hb_config.h HB_RA_DIR`
 AC_SUBST(HB_RA_DIR)
 
