@@ -15,6 +15,7 @@
 %define without_fatal_warnings 	1
 %define with_ais_support        1
 %define with_heartbeat_support  1
+%define with_snmp_support	1
 
 %define pkg_group Productivity/Clustering/HA
 
@@ -27,7 +28,7 @@
 
 Name:           pacemaker
 Summary:        The Pacemaker scalable High-Availability cluster resource manager
-Version:        0.6.0
+Version:        0.6.2
 Release:        1
 License:        GPL2/LGPL2
 URL:            http://www.clusterlabs.org
@@ -44,9 +45,33 @@ BuildRequires: openais-devel
 BuildRequires: heartbeat heartbeat-devel > 2.1.2
 %endif
 
+%if %{with_ais_support}
+ %if %{with_heartbeat_support}
+Conflicts: pacemaker-ais
+Conflicts: pacemaker-heartbeat
+ %else
+Conflicts: pacemaker
+Conflicts: pacemaker-heartbeat
+ %endif
+%else
+Conflicts: pacemaker
+Conflicts: pacemaker-ais
+%endif
+
 BuildRequires: heartbeat-common heartbeat-common-devel e2fsprogs-devel glib2-devel gnutls-devel libxml2-devel pam-devel python-devel swig 
 
 %if 0%{?suse_version}
+
+%if 0%{?suse_version} > 1000
+%if %with_ais_support
+Supplements:   openais
+%endif
+
+%if %with_heartbeat_support
+Supplements:   heartbeat
+%endif
+%endif
+
 %if 0%{?suse_version} == 930
 BuildRequires: rpm-devel
 %endif
@@ -65,14 +90,14 @@ BuildRequires: pkgconfig
 
 %endif
 
-%if 0%{?fedora_version}
+%if 0%{?fedora_version} || 0%{?centos_version} || 0%{?rhel_version}
 BuildRequires: 	which
+%endif
 
 %if 0%{?fedora_version} == 8
 BuildRequires: 	openssl-devel
 %endif
 
-%endif
 
 %if 0%{?mandriva_version}
 BuildRequires: libbzip2-devel
@@ -148,6 +173,11 @@ export CFLAGS
 	--with-group-name=%{gname} --with-ccmuser-name=%{uname} \
 	--with-hapkgversion=%{version} 				\
 	--enable-glib-malloc 					\
+%if %with_snmp_support == 1
+	--enable-snmp-subagent					\
+%else
+	--disable-snmp-subagent					\
+%endif
 	--with-ais-prefix=%{_prefix}      			\
 %if %with_ais_support == 0
 	--without-ais-support 					\
@@ -213,7 +243,7 @@ rm -rf $RPM_BUILD_DIR/pacemaker
 
 %{_prefix}/share/pacemaker
 %{_prefix}/share/heartbeat
-%{_libdir}/heartbeat
+%{_libdir}/heartbeat/*
 
 %dir %{_var}/lib/heartbeat
 
@@ -248,6 +278,9 @@ rm -rf $RPM_BUILD_DIR/pacemaker
 %dir %attr (750, %{uname}, %{gname}) %{_var}/run/heartbeat/crm
 %if %with_ais_support
 %{_libexecdir}/lcrso/pacemaker.lcrso
+%endif
+%if %with_snmp_support == 1
+/usr/share/snmp/mibs/LINUX-HA-MIB.mib
 %endif
 
 %files devel

@@ -1,4 +1,4 @@
-#include <lha_internal.h>
+#include <crm_internal.h>
 
 #include "hbagent.h"
 #include "hbagentv2.h"

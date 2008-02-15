@@ -41,7 +41,7 @@ AC_ARG_WITH(hapkgversion,
 )
 
 if test -z "$HAPKGVERSION" ; then
-   HAPKGVERSION="0.6.0"
+   HAPKGVERSION="0.6.2"
 fi
 
 HB_PKG=heartbeat
@@ -347,6 +347,9 @@ esac
 dnl Variables needed for substitution
 DTD_DIRECTORY="${datadir}/heartbeat"
 AC_DEFINE_UNQUOTED(DTD_DIRECTORY,"$DTD_DIRECTORY", Location for the Pacemaker DTD)
+
+HA_HBCONF_DIR=`extract_heartbeat_define hb_config.h HA_HBCONF_DIR`
+AC_SUBST(HA_HBCONF_DIR)
 
 HB_RA_DIR=`extract_heartbeat_define hb_config.h HB_RA_DIR`
 AC_SUBST(HB_RA_DIR)
@@ -837,38 +840,6 @@ AC_CHECK_HEADERS(getopt.h)
 AC_CHECK_HEADERS(sys/prctl.h)
 AC_CHECK_HEADERS(linux/watchdog.h,[],[],[#include <linux/types.h>])
 
-dnl Sockets are our preferred and supported comms mechanism.  But the
-dnl implementation needs to be able to convey credentials: some don't.
-dnl So on a few OSes, credentials-carrying streams might be a better choice.
-dnl
-dnl Solaris releases up to and including "9" fall into this category
-dnl (its sockets don't carry credentials; streams do).
-dnl
-dnl At Solaris 10, "getpeerucred()" is available, for both sockets and
-dnl streams, so it should probably use (preferred) socket mechanism.
-
-AC_CHECK_HEADERS(stropts.h)	dnl streams available (fallback option)
-
-AC_CHECK_HEADERS(ucred.h)	dnl e.g. Solaris 10 decl. of "getpeerucred()"
-AC_CHECK_FUNCS(getpeerucred)
-
-dnl ************************************************************************
-dnl checks for headers needed by clplumbing On BSD
-AC_CHECK_HEADERS(sys/syslimits.h)
-if test "$ac_cv_header_sys_param_h" = no; then
-	AC_CHECK_HEADERS(sys/ucred.h)
-else
-	AC_CHECK_HEADERS(sys/ucred.h,[],[],[#include <sys/param.h>])
-fi
-
-dnl ************************************************************************
-dnl checks for headers needed by clplumbing On Solaris
-AC_CHECK_HEADERS(sys/cred.h xti.h)
-
-dnl ************************************************************************
-dnl checks for headers needed by clplumbing On FreeBSD/Solaris
-AC_CHECK_HEADERS(sys/filio.h)
-
 AC_MSG_CHECKING(for special libxml2 includes)
 if test "x$XML2CONFIG" = "x"; then
    AC_MSG_RESULT(libxml2 config not found)
@@ -880,19 +851,7 @@ fi
 
 CPPFLAGS="$CPPFLAGS $XML2HEAD"
 
-dnl ************************************************************************
-dnl * Check for linux/icmpv6.h to make enable the IPv6addr resource agent
-AC_CHECK_HEADERS(linux/icmpv6.h,[],[],[#include <asm/types.h>])
-AM_CONDITIONAL(USE_IPV6ADDR, test "$ac_cv_header_linux_icmpv6_h" = yes -a $new_libnet = yes )
 AC_CHECK_HEADERS(libxml/xpath.h)
-
-dnl
-dnl	Could check for the libraries, but if you have the headers,
-dnl	you're a dolt for not having installed the libs ;-)
-dnl
-AM_CONDITIONAL(USE_VACM, test "$ac_cv_header_vacmclient_api_h" = yes)
-AM_CONDITIONAL(USE_DRAC3, test "$ac_cv_header_curl_curl_h" = yes -a "$ac_cv_header_libxml_xpath_h" = yes)
-AM_CONDITIONAL(USE_OPENHPI, test "$ac_cv_header_openhpi_SaHpi_h" = yes)
 
 dnl
 dnl     On many systems libcrypto is needed when linking against libsnmp.
@@ -1134,7 +1093,118 @@ fi
 
 AC_SUBST(CURSESLIBS)
 
-dnl ************ curses **********************
+dnl
+dnl    SNMP checks
+dnl
+
+SNMPLIB=""
+SNMPAGENTLIB=""
+SNMPCONFIG=""
+
+ENABLE_SNMP="yes"
+if test "x${enable_snmp}" = "xno"; then
+   ENABLE_SNMP="no"
+   enable_snmp_subagent="no"
+fi
+
+AC_CHECK_HEADERS(ucd-snmp/snmp.h,[],[],[#include <sys/types.h>
+#include <ucd-snmp/asn1.h>])
+AC_CHECK_HEADERS(net-snmp/net-snmp-config.h)
+
+if test "x${ENABLE_SNMP}" = "xno"; then
+   # nothing
+   :
+elif test "x${ac_cv_header_net_snmp_net_snmp_config_h}" = "xyes"; then
+	AC_PATH_PROGS(SNMPCONFIG, net-snmp-config)
+	if test "X${SNMPCONFIG}" = "X"; then
+		AC_MSG_RESULT(You need the net_snmp development package to continue.)
+		ENABLE_SNMP="no"
+	else
+		AC_MSG_CHECKING(for special snmp libraries)
+		SNMPLIB=`net-snmp-config --libs`
+		SNMPAGENTLIB=`net-snmp-config --agent-libs`
+		# KLUDGE!!
+		# Apparently some versions of SUSE Linux don't include -lwrap in $SNMPAGENTLIB
+                case $SNMPAGENTLIB in
+                  *wrap*)	;;
+                  *)		SNMPAGENTLIB="$SNMPAGENTLIB -lwrap";;
+		esac
+		AC_MSG_RESULT($SNMPLIB)
+	fi
+elif test "x${ac_cv_header_ucd_snmp_snmp_h}" = "xyes"; then
+	# UCD SNMP
+	# ucd-snmp-config does not seem to exist, so just 
+	# rely on people having their LDFLAGS set to the path where
+	AC_CHECK_LIB(snmp, init_snmp, SNMPLIB="-lsnmp")
+	if test "X${SNMPLIB}" = "X"; then
+		AC_CHECK_LIB(ucdsnmp, init_snmp, SNMPLIB="-lucdsnmp")
+	fi
+	SNMPAGENTLIB="$SNMPLIB"
+	if test "X${SNMPLIB}" = "X"; then
+		ENABLE_SNMP="no"
+		AC_MSG_RESULT("Could not find ucdsnmp libary."
+			"Please make sure that libsnmp or libucdsnmp"
+			"are in your library path. Or the path to LDFLAGS")
+	fi
+else
+	ENABLE_SNMP="no"
+fi
+
+if test "$ENABLE_SNMP" = "no" -a "x${enable_snmp_subagent}" = "xyes"; then
+  FatalMissingThing "SNMP Development package" "Missing SNMP development libraries and/or headers" "" "Install net-snmp-devel to enable SNMP features"
+fi
+if test "$ENABLE_SNMP" = "no" -o "x${enable_snmp_subagent}" != "xyes"; then
+        enable_snmp_subagent="no"
+fi
+
+check_snmp_libs ()
+{
+	OLDLIBS="$LIBS"
+	LIBS="$LIBS $@"
+	AC_MSG_CHECKING(snmp libraries: $LIBS)
+	AC_LINK_IFELSE([AC_LANG_PROGRAM([], [])], ,
+		AC_MSG_ERROR(cannot link with requested libraries ($LIBS). Reported errors follow:
+			$(cat conftest.err)))
+	AC_MSG_RESULT(ok)
+	LIBS="$OLDLIBS"
+}
+
+SNMPLIBSET=""
+if test "$ENABLE_SNMP" = "yes"; then
+	check_snmp_libs $SNMPLIB
+	SNMPLIBSET="$SNMPLIB"
+fi
+if test "$enable_snmp_subagent" = "yes"; then
+	check_snmp_libs $SNMPAGENTLIB
+	SNMPLIBSET="$SNMPLIBSET $SNMPAGENTLIB"
+fi
+
+if test "x${enable_snmp_subagent}"  = "xyes" -a "X${MIBS_DIR}" = "X"; then
+	AC_MSG_CHECKING(which MIB directory to use)
+	for mibs_dir in /usr/share/snmp/mibs \
+			/usr/local/share/snmp/mibs; do 
+		if test -d "$mibs_dir"; then
+			MIBS_DIR="$mibs_dir"
+		fi
+	done
+	if test "X${MIBS_DIR}" = "X"; then
+		AC_MSG_ERROR(Could not find mibs directory, 
+			please specify with --with-mibsdir);
+	fi
+	AC_MSG_RESULT($MIBS_DIR)
+fi
+AC_SUBST(MIBS_DIR)
+
+AC_SUBST(SNMPCONFIG)
+AC_SUBST(SNMPLIB)
+AC_SUBST(SNMPAGENTLIB)
+AM_CONDITIONAL(USE_APC_SNMP, test "$ENABLE_SNMP" = "yes")
+AM_CONDITIONAL(SNMP_SUBAGENT_BUILD, test "x${enable_snmp_subagent}" = "xyes")
+
+
+dnl
+dnl    Cluster stack
+dnl
 
 if test X"$AISPREFIX" = X"prefix"; then
  AISPREFIX=$prefix
@@ -1248,115 +1318,6 @@ AC_SUBST(CLUSTERLIBS)
 AC_SUBST(AISPREFIX)
 AC_SUBST(LCRSODIR)
 AC_SUBST(AISLIBS)
-
-
-dnl
-dnl    SNMP checks
-dnl
-
-SNMPLIB=""
-SNMPAGENTLIB=""
-SNMPCONFIG=""
-
-ENABLE_SNMP="yes"
-if test "x${enable_snmp}" = "xno"; then
-   ENABLE_SNMP="no"
-   enable_snmp_subagent="no"
-fi
-
-AC_CHECK_HEADERS(ucd-snmp/snmp.h,[],[],[#include <sys/types.h>
-#include <ucd-snmp/asn1.h>])
-AC_CHECK_HEADERS(net-snmp/net-snmp-config.h)
-
-if test "x${ENABLE_SNMP}" = "xno"; then
-   # nothing
-   :
-elif test "x${ac_cv_header_net_snmp_net_snmp_config_h}" = "xyes"; then
-	AC_PATH_PROGS(SNMPCONFIG, net-snmp-config)
-	if test "X${SNMPCONFIG}" = "X"; then
-		AC_MSG_RESULT(You need the net_snmp development package to continue.)
-		ENABLE_SNMP="no"
-	else
-		AC_MSG_CHECKING(for special snmp libraries)
-		SNMPLIB=`net-snmp-config --libs`
-		SNMPAGENTLIB=`net-snmp-config --agent-libs`
-		# KLUDGE!!
-		# Apparently some versions of SUSE Linux don't include -lwrap in $SNMPAGENTLIB
-                case $SNMPAGENTLIB in
-                  *wrap*)	;;
-                  *)		SNMPAGENTLIB="$SNMPAGENTLIB -lwrap";;
-		esac
-		AC_MSG_RESULT($SNMPLIB)
-	fi
-elif test "x${ac_cv_header_ucd_snmp_snmp_h}" = "xyes"; then
-	# UCD SNMP
-	# ucd-snmp-config does not seem to exist, so just 
-	# rely on people having their LDFLAGS set to the path where
-	AC_CHECK_LIB(snmp, init_snmp, SNMPLIB="-lsnmp")
-	if test "X${SNMPLIB}" = "X"; then
-		AC_CHECK_LIB(ucdsnmp, init_snmp, SNMPLIB="-lucdsnmp")
-	fi
-	SNMPAGENTLIB="$SNMPLIB"
-	if test "X${SNMPLIB}" = "X"; then
-		ENABLE_SNMP="no"
-		AC_MSG_RESULT("Could not find ucdsnmp libary."
-			"Please make sure that libsnmp or libucdsnmp"
-			"are in your library path. Or the path to LDFLAGS")
-	fi
-else
-	ENABLE_SNMP="no"
-fi
-
-if test "$ENABLE_SNMP" = "no" -a "x${enable_snmp_subagent}" = "xyes"; then
-  FatalMissingThing "SNMP Development package" "Missing SNMP development libraries and/or headers" "" "Install net-snmp-devel to enable SNMP features"
-fi
-if test "$ENABLE_SNMP" = "no" -o "x${enable_snmp_subagent}" != "xyes"; then
-        enable_snmp_subagent="no"
-fi
-
-check_snmp_libs ()
-{
-	OLDLIBS="$LIBS"
-	LIBS="$LIBS $@"
-	AC_MSG_CHECKING(snmp libraries: $LIBS)
-	AC_LINK_IFELSE([AC_LANG_PROGRAM([], [])], ,
-		AC_MSG_ERROR(cannot link with requested libraries ($LIBS). Reported errors follow:
-			$(cat conftest.err)))
-	AC_MSG_RESULT(ok)
-	LIBS="$OLDLIBS"
-}
-
-SNMPLIBSET=""
-if test "$ENABLE_SNMP" = "yes"; then
-	check_snmp_libs $SNMPLIB
-	SNMPLIBSET="$SNMPLIB"
-fi
-if test "$enable_snmp_subagent" = "yes"; then
-	check_snmp_libs $SNMPAGENTLIB
-	SNMPLIBSET="$SNMPLIBSET $SNMPAGENTLIB"
-fi
-
-if test "x${enable_snmp_subagent}"  = "xyes" -a "X${MIBS_DIR}" = "X"; then
-	AC_MSG_CHECKING(which MIB directory to use)
-	for mibs_dir in /usr/share/snmp/mibs \
-			/usr/local/share/snmp/mibs; do 
-		if test -d "$mibs_dir"; then
-			MIBS_DIR="$mibs_dir"
-		fi
-	done
-	if test "X${MIBS_DIR}" = "X"; then
-		AC_MSG_ERROR(Could not find mibs directory, 
-			please specify with --with-mibsdir);
-	fi
-	AC_MSG_RESULT($MIBS_DIR)
-fi
-AC_SUBST(MIBS_DIR)
-
-AC_SUBST(SNMPCONFIG)
-AC_SUBST(SNMPLIB)
-AC_SUBST(SNMPAGENTLIB)
-AM_CONDITIONAL(USE_APC_SNMP, test "$ENABLE_SNMP" = "yes")
-AM_CONDITIONAL(SNMP_SUBAGENT_BUILD, test "x${enable_snmp_subagent}" = "xyes")
 
 if test "$GCC" = yes; then
 
