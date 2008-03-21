@@ -263,7 +263,7 @@ static int stonithop_result_to_local_client(const stonith_ops_t * st_op
 					    , gpointer data);
 static int send_stonithop_final_result( const common_op_t * op );
 static int stonithop_result_to_other_node( stonith_ops_t * st_op,
-					   gpointer data);
+					   gconstpointer data);
 static int send_stonithRAop_final_result(stonithRA_ops_t * ra_op, 
 					 gpointer data);
 static void destroy_key_of_op_htable(gpointer data);
@@ -285,12 +285,12 @@ static void my_hash_table_find( GHashTable * htable, gpointer * orig_key,
 				gpointer * value, gpointer user_data);
 static void has_this_callid(gpointer key, gpointer value,
 				gpointer user_data);
+static void insert_into_executing_queue(common_op_t *op);
 static int require_others_to_stonith(const stonith_ops_t * st_op);
 static int initiate_local_stonithop(stonith_ops_t * st_op, stonith_rsc_t * srsc, 
 				    IPC_Channel * ch);
 static int continue_local_stonithop(int old_key);
-static int initiate_remote_stonithop(stonith_ops_t * st_op, stonith_rsc_t * srsc,
-				     IPC_Channel * ch);
+static int initiate_remote_stonithop(stonith_ops_t * st_op, IPC_Channel * ch);
 static int changeto_remote_stonithop(int old_key);
 static int require_local_stonithop(stonith_ops_t * st_op, stonith_rsc_t * srsc, 
 				   const char * asker_node);
@@ -299,7 +299,8 @@ static void trans_log(int priority, const char * fmt, ...)G_GNUC_PRINTF(2,3);
 static struct hostlist_shmseg *lookup_shm_hostlist(pid_t pid);
 static void add_shm_hostlist(int shmid, pid_t pid);
 static void remove_shm_hostlist(pid_t pid);
-static gboolean hostlist2shmem(int shmid,char **hostlist,int maxlist);
+static gboolean hostlist2shmem(int shmid,char **hostlist,int maxlist,
+					int is_lastgasp);
 static char ** shmem2hostlist(pid_t pid);
 static char ** copyshmem(char *s);
 static void record_new_srsc(stonithRA_ops_t *ra_op);
@@ -399,6 +400,11 @@ static int 		stonithd_child_count	= 0;
 			,	"%s:%d: cannot get field %s from message." \
 			,__FUNCTION__,__LINE__,field)
 
+/* Right now there's only one stonith type which is allowed as a
+ * last gasp measure
+ */
+#define lastgasp_stonith(s) !strcmp(s,"suicide")
+
 #define st_get_int_value(msg,fld,i) do { \
 	if (HA_OK != ha_msg_value_int(msg,fld,i)) { \
 		LOG_FAILED_TO_GET_FIELD(fld); \
@@ -434,13 +440,6 @@ static int 		stonithd_child_count	= 0;
 	if ( !strncmp(from, local_nodename, MAXCMP) && !TEST ) { \
 		stonithd_log(LOG_DEBUG, "received a " #type \
 			"msg from myself, ignoring"); \
-		return; \
-	} \
-} while(0)
-#define return_on_msg_shoot_us() do { \
-	if ( !strncmp(target, local_nodename, MAXCMP) && !TEST ) { \
-		stonithd_log(LOG_DEBUG, "in normal mode, won't " \
-				     "stonith myself"); \
 		return; \
 	} \
 } while(0)
@@ -791,15 +790,15 @@ handleRA_finished_op(common_op_t *op, pid_t pid, int exitcode)
 	}
 	g_hash_table_remove(executing_queue, &pid);
 }
+
 static void
 handle_finished_op(common_op_t *op, pid_t pid, int exitcode)
 {
 	if (exitcode == S_OK) {
 		op->op_union.st_op->op_result = STONITH_SUCCEEDED;
-		op->op_union.st_op->node_list = 
-			g_string_append(op->op_union.st_op->node_list
-					, local_nodename);
-		send_stonithop_final_result(op); 
+		op->op_union.st_op->node_list =
+			g_string_append(op->op_union.st_op->node_list,local_nodename);
+		send_stonithop_final_result(op);
 		g_hash_table_remove(executing_queue, &pid);
 		return;
 	}
@@ -1052,7 +1051,6 @@ handle_msg_tstit(struct ha_msg* msg, void* private_data)
 		return;
 	}
 	return_on_msg_from_us(T_STIT);
-	return_on_msg_shoot_us();
 
 	srsc = get_local_stonithobj_can_stonith(target, NULL);
 	if( !srsc ) {
@@ -1081,13 +1079,40 @@ handle_msg_tstit(struct ha_msg* msg, void* private_data)
 	st_op = NULL;
 }
 
+/* side effect: records a timer_id in the op */
+static void
+insert_into_executing_queue(common_op_t *op)
+{
+	int *tmp_callid;
+	int call_id = op->op_union.st_op->call_id;
+
+	tmp_callid = g_new(int, 1);
+	*tmp_callid = call_id;
+	g_hash_table_insert(executing_queue, tmp_callid, op);
+	tmp_callid = g_new(int, 1);
+	*tmp_callid = call_id;
+	op->timer_id = Gmain_timeout_add_full(G_PRIORITY_HIGH_IDLE
+				, op->op_union.st_op->timeout, stonithop_timeout
+				, tmp_callid, timeout_destroy_notify);
+	stonithd_log(LOG_DEBUG, "inserted optype=%s, key=%d",
+			stonith_op_strname[op->op_union.st_op->optype], call_id);
+}
+
 static int
 require_local_stonithop(stonith_ops_t * st_op, stonith_rsc_t * srsc,
 			const char * asker)
 {
 	int child_id;
 	common_op_t * op;
-	int * tmp_callid;
+
+	/* in case we are shooting ourselves, assume that we'll
+	 * succeed and send success result to the initiator
+	 */
+	if( st_op->optype != QUERY && !strcmp(st_op->node_name,local_nodename) ) {
+		st_op->op_result = STONITH_SUCCEEDED;
+		st_op->node_list = g_string_append(st_op->node_list,local_nodename);
+		stonithop_result_to_other_node(st_op, asker);
+	}
 
 	if ((child_id = stonith_operate_locally(st_op, srsc)) <= 0) {
 		stonithd_log(LOG_ERR, "require_local_stonithop: "
@@ -1099,19 +1124,10 @@ require_local_stonithop(stonith_ops_t * st_op, stonith_rsc_t * srsc,
 	op->scenario = STONITH_REQ;
 	op->result_receiver = g_strdup(asker);
 	op->rsc_id = g_strdup(srsc->rsc_id);
+	st_op->call_id = child_id;
 	op->op_union.st_op = dup_stonith_ops_t(st_op);
 
-	tmp_callid = g_new(int, 1);
-	*tmp_callid = child_id;
-	g_hash_table_insert(executing_queue, tmp_callid, op);
-	tmp_callid = g_new(int, 1);
-	*tmp_callid = child_id;
-	op->timer_id = Gmain_timeout_add_full(G_PRIORITY_HIGH_IDLE
-				, st_op->timeout, stonithop_timeout
-				, tmp_callid, timeout_destroy_notify);
-	stonithd_log(LOG_DEBUG, "require_local_stonithop: inserted "
-		    "optype=%s, child_id=%d",
-			stonith_op_strname[st_op->optype], child_id);
+	insert_into_executing_queue(op);
 	return ST_OK;
 }
 
@@ -1910,8 +1926,7 @@ on_stonithd_node_fence(struct ha_msg * request, gpointer data)
 	} else { 
 		/* including query operation */
 		/* call_id < 0 is the correct value when require others to do */
-		if ((call_id = initiate_remote_stonithop(st_op, srsc, 
-			client->cbch)) < 0 ) {
+		if ((call_id = initiate_remote_stonithop(st_op,client->cbch)) < 0 ) {
 			api_reply = ST_APIOK;
 		} else {
 			api_reply = ST_APIFAIL;
@@ -1976,13 +1991,6 @@ initiate_local_stonithop(stonith_ops_t * st_op, stonith_rsc_t * srsc,
 {
 	int call_id;
 	common_op_t * op;
-	int * tmp_callid;
-	
-	if (st_op == NULL || srsc == NULL) {
-		stonithd_log(LOG_ERR, "initiate_local_stonithop: "
-			"st_op == NULL or srsc == NULL.");
-		return -1;
-	}
 
 	if ((call_id = stonith_operate_locally(st_op, srsc)) <= 0) {
 		stonithd_log(LOG_ERR, "stonith_operate_locally failed.");
@@ -1996,17 +2004,7 @@ initiate_local_stonithop(stonith_ops_t * st_op, stonith_rsc_t * srsc,
 	st_op->call_id = call_id;
 	op->op_union.st_op = dup_stonith_ops_t(st_op);
 
-	tmp_callid = g_new(int, 1);
-	*tmp_callid = call_id;
-	g_hash_table_insert(executing_queue, tmp_callid, op);
-	tmp_callid = g_new(int, 1);
-	*tmp_callid = call_id;
-	op->timer_id = Gmain_timeout_add_full(G_PRIORITY_HIGH_IDLE
-				, st_op->timeout, stonithop_timeout
-				, tmp_callid, timeout_destroy_notify);
-	stonithd_log2(LOG_DEBUG, "initiate_local_stonithop: inserted "
-		    "optype=%s, child_id=%d",
-			stonith_op_strname[st_op->optype], call_id);
+	insert_into_executing_queue(op);
 	return call_id;
 }
 
@@ -2073,11 +2071,15 @@ continue_local_stonithop(int old_key)
 }
 
 static int
-initiate_remote_stonithop(stonith_ops_t * st_op, stonith_rsc_t * srsc,
-                          IPC_Channel * ch)
+initiate_remote_stonithop(stonith_ops_t * st_op, IPC_Channel * ch)
 {
 	common_op_t * op;
-	int * tmp_callid;
+
+	if (st_op == NULL) {
+		stonithd_log(LOG_ERR, "initiate_remote_stonithop: "
+			"st_op == NULL or srsc == NULL.");
+		return -1;
+	}
 
 	if (st_op->optype == QUERY) {
 		if (get_local_stonithobj_can_stonith(st_op->node_name, NULL)) {
@@ -2098,18 +2100,7 @@ initiate_remote_stonithop(stonith_ops_t * st_op, stonith_rsc_t * srsc,
 	op->result_receiver = ch;
 	op->op_union.st_op = dup_stonith_ops_t(st_op);
 
-	tmp_callid = g_new(int, 1);
-	*tmp_callid = st_op->call_id;
-	g_hash_table_insert(executing_queue, tmp_callid, op);
-	tmp_callid = g_new(int, 1);
-	*tmp_callid = st_op->call_id;
-	op->timer_id = Gmain_timeout_add_full(G_PRIORITY_HIGH_IDLE
-				, st_op->timeout, stonithop_timeout
-				, tmp_callid, timeout_destroy_notify);
-
-	stonithd_log(LOG_DEBUG, "initiate_remote_stonithop: inserted "
-		"optype=%s, key=%d",
-		stonith_op_strname[op->op_union.st_op->optype], *tmp_callid);
+	insert_into_executing_queue(op);
 	stonithd_log2(LOG_INFO, "Broadcasting the message succeeded: require "
 		"others to stonith node %s.", st_op->node_name);
 
@@ -2280,9 +2271,9 @@ stonithop_result_to_local_client( const stonith_ops_t * st_op, gpointer data)
 }
 
 static int
-stonithop_result_to_other_node( stonith_ops_t * st_op, gpointer data)
+stonithop_result_to_other_node( stonith_ops_t * st_op, gconstpointer data)
 {
-	char * node_name = (char *)data;
+	const char * node_name = (const char *)data;
 	struct ha_msg * reply;
 
 	if (data == NULL) {
@@ -2350,12 +2341,13 @@ stonith_operate_locally( stonith_ops_t * st_op, stonith_rsc_t * srsc)
 		return -1;
 	}
 
-	st_obj = srsc->stonith_obj;
-	if (st_obj == NULL ) {
-		stonithd_log(LOG_ERR, "stonith_operate: "
+	if (srsc->stonith_obj == NULL) {
+		stonithd_log(LOG_ERR, "stonith_operate_locally: "
 			"srsc->stonith_obj == NULL.");
 		return -1;
 	}
+
+	st_obj = srsc->stonith_obj;
 
 	/* stonith it by myself in child */
 	return_to_orig_privs();
@@ -2480,6 +2472,8 @@ get_local_stonithobj_can_stonith( const char * node_name,
 				stonithd_log2(LOG_DEBUG, "get_local_stonithobj_"
 					"can_stonith: host=%s.", *this);
 				if ( strncmp(node_name, *this, MAXCMP) == 0 ) {
+					stonithd_log2(LOG_DEBUG, "stonith type found:"
+						" %s", tmp_srsc->stonith_obj->stype);
 					return tmp_srsc;
 				}
 			}
@@ -2971,7 +2965,8 @@ probe_status:
 		,	op->ra_name);
 		exit(EXECRA_NOT_CONFIGURED);
 	}
-	if( !hostlist2shmem(shmid,hostlist,shmsize) ) {
+	if( !hostlist2shmem(shmid,hostlist,shmsize,
+			lastgasp_stonith(stonith_obj->stype)) ) {
 		exit(EXECRA_NOT_CONFIGURED);
 	}
 	exit(EXECRA_OK);
@@ -3026,7 +3021,7 @@ remove_shm_hostlist(pid_t pid)
 
 /* store the hostlist to a shared memory segment */
 static gboolean
-hostlist2shmem(int shmid,char **hostlist,int maxlist)
+hostlist2shmem(int shmid,char **hostlist,int maxlist,int is_lastgasp)
 {
 	char *s, *q, **h;
 	int rc = TRUE;
@@ -3041,7 +3036,7 @@ hostlist2shmem(int shmid,char **hostlist,int maxlist)
 	}
 	q = s;
 	for( h = hostlist; *h; h++ ) {
-		if( !TEST && !strcmp(*h, local_nodename) ) {
+		if( !TEST && !is_lastgasp && !strcmp(*h, local_nodename) ) {
 			continue; /* we can't reset ourselves */
 		}
 		if( q-s+strlen(*h)+1 > maxlist-1 ) {
