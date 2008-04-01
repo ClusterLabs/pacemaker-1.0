@@ -842,7 +842,7 @@ AC_CHECK_HEADERS(linux/watchdog.h,[],[],[#include <linux/types.h>])
 
 AC_MSG_CHECKING(for special libxml2 includes)
 if test "x$XML2CONFIG" = "x"; then
-   AC_MSG_RESULT(libxml2 config not found)
+   AC_MSG_ERROR(libxml2 config not found)
 else
    XML2HEAD=`$XML2CONFIG --cflags`
    AC_MSG_RESULT($XML2HEAD)
@@ -1597,10 +1597,14 @@ AC_DEFINE_UNQUOTED(PF_ARGV_TYPE, $pf_argv_set,
 
 dnl End of tests borrowed from Proftpd
 
-dnl check if header file and lib are there for zlib
+dnl check if header file and lib are there for bzip2
 bz2_installed="yes"
 AC_CHECK_HEADERS(bzlib.h, , [bz2_installed="no"],)
 AC_CHECK_LIB(bz2, BZ2_bzBuffToBuffCompress , , [bz2_intalled="no"])
+
+if test "$bz2_installed" = "no"; then
+   AC_MSG_ERROR(BZ2 Development libraries not found)
+fi
 
 dnl
 dnl Lex and yacc can't be trusted to produce code that won't produce
