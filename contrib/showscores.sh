@@ -15,6 +15,8 @@ fi
 sortby=1
 [ -n "$1" ] && [ "$1" = "node" ] && sortby=3
 
+export default_stickiness=`cibadmin -Q -o crm_config 2>/dev/null|grep "default[_-]resource[_-]stickiness"|grep -o -E 'value ?= ?"[^ ]*"'|cut -d '"' -f 2|grep -v "^$"`
+export default_failurestickiness=`cibadmin -Q -o crm_config 2>/dev/null|grep "resource[_-]failure[_-]stickiness"|grep -o -E 'value ?= ?"[^ ]*"'|cut -d '"' -f 2|grep -v "^$"`
 # Heading
 printf "%-20s%-10s%-16s%-11s%-9s%-16s\n" "Resource" "Score" "Node" "Stickiness" "#Fail" "Fail-Stickiness"
 
@@ -36,16 +38,16 @@ do
 		# if that doesnt exist, get syntax like <primitive resource-stickiness="100"
 		if ! stickiness=`crm_resource -x -r $res 2>/dev/null | grep -E "<master|<primitive|<clone" | grep -o "resource[_-]stickiness=\"[0-9]*\"" | cut -d '"' -f 2 | grep -v "^$"`
 		then 
-			# if no resource-specific stickiness is confiugured, grep the default value
-			stickiness=`cibadmin -Q -o crm_config 2>/dev/null|grep "default[_-]resource[_-]stickiness"|grep -o -E 'value ?= ?"[^ ]*"'|cut -d '"' -f 2|grep -v "^$"`
+			# if no resource-specific stickiness is confiugured, use the default value
+			stickiness="$default_stickiness"
 		fi	
 	fi
 
 	# get meta attribute resource_failure_stickiness
 	if ! failurestickiness=`crm_resource -g resource_failure_stickiness -r $res --meta 2>/dev/null`
 	then
-		# if that doesnt exist, get the default value
-		failurestickiness=`cibadmin -Q -o crm_config 2>/dev/null|grep "resource[_-]failure[_-]stickiness"|grep -o -E 'value ?= ?"[^ ]*"'|cut -d '"' -f 2|grep -v "^$"`
+		# if that doesnt exist, use the default value
+		failurestickiness="$default_failurestickiness"
 	fi	
 
 	#failcount=`crm_failcount -G -r $res -U $node 2>/dev/null|grep -o -E 'value ?= ?[0-9]*|[+-]INFINITY|[+-]infinity'|cut -d '=' -f 2|grep -v "^$"`
