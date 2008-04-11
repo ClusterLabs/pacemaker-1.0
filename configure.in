@@ -1101,6 +1101,7 @@ SNMPLIB=""
 SNMPAGENTLIB=""
 SNMPCONFIG=""
 
+enable_snmp="no"
 ENABLE_SNMP="yes"
 if test "x${enable_snmp}" = "xno"; then
    ENABLE_SNMP="no"
