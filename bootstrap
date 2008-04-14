@@ -233,9 +233,9 @@ LT_minvers=`echo "$LT_version" | sed -e 's%^[^.]*\.%%' `
 LT_minnum=`echo  "$LT_minvers" | sed -e 's%[^0-9].*%%'`
 
 if
-  [ $LT_majvers -lt 1 -o $LT_minnum -lt 4 ]
+  [ $LT_majvers -lt 1 ] || [ $LT_majvers = 1 -a $LT_minnum -lt 4 ]
 then
-  echo "Minimum version of ol is 1.4.  You have $LT_version installed."
+  echo "Minimum version of libtool is 1.4.  You have $LT_version installed."
   exit 1
 fi
 
