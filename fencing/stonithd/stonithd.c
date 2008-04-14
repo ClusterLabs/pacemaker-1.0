@@ -403,7 +403,8 @@ static int 		stonithd_child_count	= 0;
 /* Right now there's only one stonith type which is allowed as a
  * last gasp measure
  */
-#define lastgasp_stonith(s) !strcmp(s,"suicide")
+#define lastgasp_stonith(s) \
+	(!strcmp(s,"suicide") || !strcmp(s,"null"))
 
 #define st_get_int_value(msg,fld,i) do { \
 	if (HA_OK != ha_msg_value_int(msg,fld,i)) { \
