@@ -1242,10 +1242,11 @@ else
    dnl Find it in lib, lib64, or wherever it wants to live...
    alib=`ls ${AISPREFIX}/*/openais/libaisutil.so | head -n 1`
    AISLIB=`dirname $alib`
-   dnl alib=`ls ${AISPREFIX}/*/lcrso/objdb.lcrso | head -n 1`
-   dnl LCRSODIR=`dirname $alib`
+
    if test -z "$LCRSODIR"; then
       LCRSODIR="$libexecdir/lcrso"
+      alib=`ls ${AISPREFIX}/*/lcrso/objdb.lcrso | head -n 1`
+      LCRSODIR=`dirname $alib`
    fi
 
    AC_MSG_CHECKING(Testing AIS installation in $AISPREFIX)
