@@ -22,13 +22,13 @@ export default_stickiness=`cibadmin -Q -o crm_config 2>/dev/null|grep "default[_
 export default_failurestickiness=`cibadmin -Q -o crm_config 2>/dev/null|grep "resource[_-]failure[_-]stickiness"|grep -o -E 'value ?= ?"[^ ]*"'|cut -d '"' -f 2|grep -v "^$"`
 
 
-2>&1 ptest -LVs | grep -v group | sed 's/dump_node_scores\:\ //' > $tmpfile
+2>&1 ptest -LVs | grep -v group_color | sed 's/dump_node_scores\:\ //' > $tmpfile
 
 parseline() {
 	line="$1"
         node=`echo $line|cut -d " " -f 9|sed 's/://'`
         res=`echo $line|cut -d " " -f 5`
-        score=`echo $line|cut -d " " -f 10`
+        score=`echo $line|cut -d " " -f 10|sed 's/1000000/INFINITY/'`
 }
 
 get_stickiness() {
