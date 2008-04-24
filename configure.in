@@ -163,14 +163,6 @@ AC_ARG_ENABLE([thread-safe],
 [  --enable-thread-safe Enable some client libraries to be thread safe.
      [default=no]])
 
-AC_ARG_ENABLE([snmp],
-[  --enable-snmp Enable building of SNMP related functionality.
-     [default=yes]])
-
-AC_ARG_ENABLE([snmp-subagent],
-[  --enable-snmp-subagent Enable building of our SNMP subagent (lots of dependencies).
-     [default=try]])
-
 AC_ARG_ENABLE([bundled-ltdl],
 [  --enable-bundled-ltdl  Configure, build and install the standalone ltdl library bundled with ${PKG_NAME} [default=no]]) 
 LTDL_LIBS=""
@@ -204,18 +196,6 @@ INITDIR=""
 AC_ARG_WITH(initdir,
     [  --with-initdir=DIR      directory for init (rc) scripts [${INITDIR}]],
     [ INITDIR="$withval" ])
-
-AC_ARG_WITH(
-  ucd-snmp-devel,
-    [  --with-snmp-name=name   Name of ucd snmp developemnt RPM. 
-                          [default=ucd-snmp-devel]  ],
-    [ UCDSNMPDEVEL=$withval ],
-    [ UCDSNMPDEVEL=ucd-snmp-devel ],
-  )
-
-AC_ARG_WITH(mibsdir, 
-    [  --with-miBsdir=DIR      directory for mib files. ],
-    [ MIBS_DIR="$withval" ])
 
 dnl ===============================================
 dnl General Processing
@@ -994,13 +974,6 @@ then
 fi
 AC_SUBST(INITDIR)
 
-if test "$ac_cv_header_ucd_snmp_snmp_h" = no; then
-	UCDSNMPDEVEL=""
-fi
-AC_SUBST(UCDSNMPDEVEL)
-AC_DEFINE_UNQUOTED(UCDSNMPDEVEL, $UCDSNMPDEVEL, 
-	Name of UCD SNMP development package)
-
 
 CC_WARNINGS=""
 
@@ -1010,7 +983,6 @@ dnl - If requested, enable ALL subsystems.
 	  enable_ansi=yes;
 	  enable_crm=yes;
 	  enable_fatal_warnings=yes;
-	  enable_snmp_subagent=try;
 	fi
 
 
@@ -1092,116 +1064,6 @@ if test X"$CURSESLIBS" = X"" -a "$ac_cv_header_curses_curses_h" = "yes"; then
 fi
 
 AC_SUBST(CURSESLIBS)
-
-dnl
-dnl    SNMP checks
-dnl
-
-SNMPLIB=""
-SNMPAGENTLIB=""
-SNMPCONFIG=""
-
-enable_snmp="no"
-ENABLE_SNMP="yes"
-if test "x${enable_snmp}" = "xno"; then
-   ENABLE_SNMP="no"
-   enable_snmp_subagent="no"
-fi
-
-AC_CHECK_HEADERS(ucd-snmp/snmp.h,[],[],[#include <sys/types.h>
-#include <ucd-snmp/asn1.h>])
-AC_CHECK_HEADERS(net-snmp/net-snmp-config.h)
-
-if test "x${ENABLE_SNMP}" = "xno"; then
-   # nothing
-   :
-elif test "x${ac_cv_header_net_snmp_net_snmp_config_h}" = "xyes"; then
-	AC_PATH_PROGS(SNMPCONFIG, net-snmp-config)
-	if test "X${SNMPCONFIG}" = "X"; then
-		AC_MSG_RESULT(You need the net_snmp development package to continue.)
-		ENABLE_SNMP="no"
-	else
-		AC_MSG_CHECKING(for special snmp libraries)
-		SNMPLIB=`net-snmp-config --libs`
-		SNMPAGENTLIB=`net-snmp-config --agent-libs`
-		# KLUDGE!!
-		# Apparently some versions of SUSE Linux don't include -lwrap in $SNMPAGENTLIB
-                case $SNMPAGENTLIB in
-                  *wrap*)	;;
-                  *)		SNMPAGENTLIB="$SNMPAGENTLIB -lwrap";;
-		esac
-		AC_MSG_RESULT($SNMPLIB)
-	fi
-elif test "x${ac_cv_header_ucd_snmp_snmp_h}" = "xyes"; then
-	# UCD SNMP
-	# ucd-snmp-config does not seem to exist, so just 
-	# rely on people having their LDFLAGS set to the path where
-	AC_CHECK_LIB(snmp, init_snmp, SNMPLIB="-lsnmp")
-	if test "X${SNMPLIB}" = "X"; then
-		AC_CHECK_LIB(ucdsnmp, init_snmp, SNMPLIB="-lucdsnmp")
-	fi
-	SNMPAGENTLIB="$SNMPLIB"
-	if test "X${SNMPLIB}" = "X"; then
-		ENABLE_SNMP="no"
-		AC_MSG_RESULT("Could not find ucdsnmp libary."
-			"Please make sure that libsnmp or libucdsnmp"
-			"are in your library path. Or the path to LDFLAGS")
-	fi
-else
-	ENABLE_SNMP="no"
-fi
-
-if test "$ENABLE_SNMP" = "no" -a "x${enable_snmp_subagent}" = "xyes"; then
-  FatalMissingThing "SNMP Development package" "Missing SNMP development libraries and/or headers" "" "Install net-snmp-devel to enable SNMP features"
-fi
-if test "$ENABLE_SNMP" = "no" -o "x${enable_snmp_subagent}" != "xyes"; then
-        enable_snmp_subagent="no"
-fi
-
-check_snmp_libs ()
-{
-	OLDLIBS="$LIBS"
-	LIBS="$LIBS $@"
-	AC_MSG_CHECKING(snmp libraries: $LIBS)
-	AC_LINK_IFELSE([AC_LANG_PROGRAM([], [])], ,
-		AC_MSG_ERROR(cannot link with requested libraries ($LIBS). Reported errors follow:
-			$(cat conftest.err)))
-	AC_MSG_RESULT(ok)
-	LIBS="$OLDLIBS"
-}
-
-SNMPLIBSET=""
-if test "$ENABLE_SNMP" = "yes"; then
-	check_snmp_libs $SNMPLIB
-	SNMPLIBSET="$SNMPLIB"
-fi
-if test "$enable_snmp_subagent" = "yes"; then
-	check_snmp_libs $SNMPAGENTLIB
-	SNMPLIBSET="$SNMPLIBSET $SNMPAGENTLIB"
-fi
-
-if test "x${enable_snmp_subagent}"  = "xyes" -a "X${MIBS_DIR}" = "X"; then
-	AC_MSG_CHECKING(which MIB directory to use)
-	for mibs_dir in /usr/share/snmp/mibs \
-			/usr/local/share/snmp/mibs; do 
-		if test -d "$mibs_dir"; then
-			MIBS_DIR="$mibs_dir"
-		fi
-	done
-	if test "X${MIBS_DIR}" = "X"; then
-		AC_MSG_ERROR(Could not find mibs directory, 
-			please specify with --with-mibsdir);
-	fi
-	AC_MSG_RESULT($MIBS_DIR)
-fi
-AC_SUBST(MIBS_DIR)
-
-AC_SUBST(SNMPCONFIG)
-AC_SUBST(SNMPLIB)
-AC_SUBST(SNMPAGENTLIB)
-AM_CONDITIONAL(USE_APC_SNMP, test "$ENABLE_SNMP" = "yes")
-AM_CONDITIONAL(SNMP_SUBAGENT_BUILD, test "x${enable_snmp_subagent}" = "xyes")
-
 
 dnl
 dnl    Cluster stack
@@ -1294,9 +1156,6 @@ AM_CONDITIONAL(BUILD_HEARTBEAT_SUPPORT, test $SUPPORT_HEARTBEAT = 1)
 CLUSTERLIBS=""
 if test $SUPPORT_HEARTBEAT = 1; then
    CLUSTERLIBS="$CLUSTERLIBS -lhbclient -lccmclient -lstonithd"
-else
-   ENABLE_SNMP="no"
-   enable_snmp_subagent="no"
 fi
 
 if test $SUPPORT_AIS = 1; then
@@ -1842,8 +1701,6 @@ build/Makefile							\
 		build/port/heartbeat/pkg-descr			\
 		build/port/heartbeat/pkg-install		\
 		build/port/heartbeat/pkg-plist			\
-snmp_subagent/Makefile						\
-	snmp_subagent/SNMPAgentSanityCheck			\
 tools/Makefile							\
 	tools/haresources2cib.py				\
 	tools/hb_report						\
@@ -1876,14 +1733,6 @@ AC_MSG_RESULT([  Use system LTDL          = ${ac_cv_lib_ltdl_lt_dlopen}])
 
 AC_MSG_RESULT([  HA group name            = ${HA_APIGROUP}])
 AC_MSG_RESULT([  HA user name             = ${HA_CCMUSER}])
-
-AC_MSG_RESULT([  Build snmp subagent      = ${enable_snmp_subagent}])
-if test "x${enable_snmp_subagent}" = "xyes"; then
-    AC_MSG_RESULT([  SNMP MIB directory       = ${MIBS_DIR}])
-    AC_MSG_RESULT([  SNMP agent libraries     = ${SNMPAGENTLIB}])
-fi
-AC_MSG_RESULT([  SNMP libraries           = ${SNMPLIB}])
-AC_MSG_RESULT([  ucd_snmp_devel name      = ${UCDSNMPDEVEL}])
 
 AC_MSG_RESULT([  With Heartbeat support   = ${SUPPORT_HEARTBEAT}])
 AC_MSG_RESULT([  With AIS support         = ${SUPPORT_AIS}])
