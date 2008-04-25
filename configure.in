@@ -1153,6 +1153,10 @@ AC_DEFINE_UNQUOTED(SUPPORT_HEARTBEAT, $SUPPORT_HEARTBEAT, Support the Heartbeat 
 AM_CONDITIONAL(BUILD_AIS_SUPPORT, test $SUPPORT_AIS = 1)
 AM_CONDITIONAL(BUILD_HEARTBEAT_SUPPORT, test $SUPPORT_HEARTBEAT = 1)
 
+dnl Compatability checks
+AC_CHECK_FUNCS(msgfromIPC_timeout)
+
+
 CLUSTERLIBS=""
 if test $SUPPORT_HEARTBEAT = 1; then
    CLUSTERLIBS="$CLUSTERLIBS -lhbclient -lccmclient -lstonithd"
@@ -1366,16 +1370,6 @@ AC_REPLACE_FUNCS(alphasort inet_pton NoSuchFunctionName scandir setenv strerror 
 dnl AC_CHECK_FUNCS(alphasort inet_pton NoSuchFunctionName scandir setenv strerror unsetenv strnlen strndup daemon)
 
 AC_CHECK_FUNCS(getopt, AC_DEFINE(HAVE_DECL_GETOPT,  1, [Have getopt function]))
-
-AC_SUBST(HA_HAVE_ALPHASORT)
-AC_SUBST(HA_HAVE_INET_PTON)
-AC_SUBST(HA_HAVE_SETENV)
-AC_SUBST(HA_HAVE_STRERROR)
-AC_SUBST(HA_HAVE_STRNLEN)
-AC_SUBST(HA_HAVE_STRNDUP)
-AC_SUBST(HA_HAVE_DAEMON)
-AC_SUBST(HAVE_STRLCPY)
-AC_SUBST(HAVE_DECL_GETOPT)
 
 AC_CHECK_FUNCS(fcntl)
 AC_CHECK_FUNCS(flock)
