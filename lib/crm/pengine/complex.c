@@ -23,7 +23,7 @@
 #include <crm/msg_xml.h>
 #include <clplumbing/cl_misc.h>
 
-void populate_hash(crm_data_t *nvpair_list, GHashTable *hash,
+void populate_hash(xmlNode *nvpair_list, GHashTable *hash,
 		   const char **attrs, int attrs_length);
 
 resource_object_functions_t resource_class_functions[] = {
@@ -125,7 +125,7 @@ get_meta_attributes(GHashTable *meta_hash, resource_t *rsc,
 }
 
 gboolean	
-common_unpack(crm_data_t * xml_obj, resource_t **rsc,
+common_unpack(xmlNode * xml_obj, resource_t **rsc,
 	      resource_t *parent, pe_working_set_t *data_set)
 {
 	const char *value = NULL;
@@ -204,7 +204,7 @@ common_unpack(crm_data_t * xml_obj, resource_t **rsc,
 
 	(*rsc)->recovery_type      = recovery_stop_start;
 	(*rsc)->stickiness         = data_set->default_resource_stickiness;
-	(*rsc)->fail_stickiness    = data_set->default_resource_fail_stickiness;
+	(*rsc)->migration_threshold    = data_set->default_migration_threshold;
 
 	value = g_hash_table_lookup((*rsc)->meta, XML_CIB_ATTR_PRIORITY);
 	(*rsc)->priority	   = crm_parse_int(value, "0"); 
@@ -263,11 +263,14 @@ common_unpack(crm_data_t * xml_obj, resource_t **rsc,
 
 	value = g_hash_table_lookup((*rsc)->meta, XML_RSC_ATTR_FAIL_STICKINESS);
 	if(value != NULL) {
-		(*rsc)->fail_stickiness = char2score(value);
+		(*rsc)->migration_threshold = char2score(value);
 	}
 	
 	value = g_hash_table_lookup((*rsc)->meta, XML_RSC_ATTR_TARGET_ROLE);
-	if(value != NULL && safe_str_neq("default", value)) {
+	if(data_set->stop_everything) {
+	    (*rsc)->next_role = RSC_ROLE_STOPPED;
+
+	} else if(value != NULL && safe_str_neq("default", value)) {
 		(*rsc)->next_role = text2role(value);
 		if((*rsc)->next_role == RSC_ROLE_UNKNOWN) {
 			crm_config_err("%s: Unknown value for "
@@ -275,6 +278,7 @@ common_unpack(crm_data_t * xml_obj, resource_t **rsc,
 				       (*rsc)->id, value);
 		}
 	}
+	
 
 	crm_debug_2("\tDesired next state: %s",
 		    (*rsc)->next_role!=RSC_ROLE_UNKNOWN?role2text((*rsc)->next_role):"default");
@@ -356,36 +360,37 @@ common_apply_stickiness(resource_t *rsc, node_t *node, pe_working_set_t *data_se
 
 	value = g_hash_table_lookup(meta_hash, XML_RSC_ATTR_FAIL_STICKINESS);
 	if(value != NULL && safe_str_neq("default", value)) {
-		rsc->fail_stickiness = char2score(value);
+		rsc->migration_threshold = char2score(value);
 	} else {
-		rsc->fail_stickiness = data_set->default_resource_fail_stickiness;
+		rsc->migration_threshold = data_set->default_migration_threshold;
 	}
 
 	/* process failure stickiness */
 	fail_attr = crm_concat("fail-count", rsc->id, '-');
 	value = g_hash_table_lookup(node->details->attrs, fail_attr);
 	if(value != NULL) {
-		crm_debug("%s: %s", fail_attr, value);
-		fail_count = char2score(value);
+	    fail_count = char2score(value);
+	    crm_info("%s has failed %d on %s",
+		     rsc->id, fail_count, node->details->uname);
 	}
 	crm_free(fail_attr);
 	
-	if(fail_count > 0 && rsc->fail_stickiness != 0) {
-		resource_t *failed = rsc;
-		int score = fail_count * rsc->fail_stickiness;
-		if(is_not_set(rsc->flags, pe_rsc_unique)) {
-		    failed = uber_parent(rsc);
-		}
-
-		/* detect and prevent score underflows */
-		if(rsc->fail_stickiness < 0 && (score > 0 || score < -INFINITY)) {
-		    score = -INFINITY;
-		}
-
-		resource_location(failed, node, score, "fail_stickiness", data_set);
-		crm_info("Setting failure stickiness for %s on %s: %d",
-			  failed->id, node->details->uname, score);
+	if(fail_count > 0 && rsc->migration_threshold != 0) {
+	    resource_t *failed = rsc;
+	    if(is_not_set(rsc->flags, pe_rsc_unique)) {
+		failed = uber_parent(rsc);
+	    }
+	    
+	    if(rsc->migration_threshold <= fail_count) {
+		resource_location(failed, node, -INFINITY, "__fail_limit__", data_set);
+		crm_warn("Forcing %s away from %s after %d failures (max=%d)",
+			 failed->id, node->details->uname, fail_count, rsc->migration_threshold);
+	    } else {
+		crm_notice("%s can fail %d more times on %s before being forced off",
+			   failed->id, rsc->migration_threshold - fail_count, node->details->uname);
+	    }
 	}
+	
 	g_hash_table_destroy(meta_hash);
 }
 
