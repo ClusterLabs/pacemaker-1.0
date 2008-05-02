@@ -1129,8 +1129,10 @@ else
 
      AC_MSG_CHECKING(Testing AIS lcrso directory $LCRSODIR)
      if test ! -d ${LCRSODIR}; then
-     	AC_MSG_WARN(Invalid.  Please specify the correct location with --with-lcrso-dir)
+     	AC_MSG_RESULT(Invalid.  Please specify the correct location with --with-lcrso-dir)
      	SUPPORT_AIS=0
+     else
+	AC_MSG_RESULT(ok)
      fi
 
      LIBS="$saveLIBS"
