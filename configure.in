@@ -40,6 +40,8 @@ AC_ARG_WITH(hapkgversion,
     [ HAPKGVERSION="" ],
 )
 
+DTD_VERSION=0.7
+
 if test -z "$HAPKGVERSION" ; then
    HAPKGVERSION="0.7.0"
 fi
@@ -47,6 +49,8 @@ fi
 HB_PKG=heartbeat
 PKG_NAME=pacemaker
 AM_INIT_AUTOMAKE($PKG_NAME, $HAPKGVERSION)
+
+AC_DEFINE_UNQUOTED(PACEMAKER_VERSION, "$HAPKGVERSION", Current pacemaker version)
 
 dnl ===============================================
 dnl Helpers 
@@ -326,7 +330,11 @@ esac
 
 dnl Variables needed for substitution
 DTD_DIRECTORY="${datadir}/heartbeat"
-AC_DEFINE_UNQUOTED(DTD_DIRECTORY,"$DTD_DIRECTORY", Location for the Pacemaker DTD)
+AC_DEFINE_UNQUOTED(DTD_DIRECTORY,"$DTD_DIRECTORY", Location for the Pacemaker Relax-NG Schema)
+AC_SUBST(DTD_DIRECTORY)
+
+AC_DEFINE_UNQUOTED(DTD_VERSION,"$DTD_VERSION", Current version of the Pacemaker Relax-NG Schema)
+AC_SUBST(DTD_VERSION)
 
 HA_HBCONF_DIR=`extract_heartbeat_define hb_config.h HA_HBCONF_DIR`
 AC_SUBST(HA_HBCONF_DIR)
@@ -1701,6 +1709,12 @@ tools/Makefile							\
 	tools/haresources2cib.py				\
 	tools/hb_report						\
 	tools/ocf-tester					\
+xml/Makefile							\
+	xml/pacemaker.rng					\
+	xml/resources.rng					\
+	xml/constraints.rng					\
+	xml/rule.rng						\
+	xml/nvset.rng						\
 		)
 
 dnl Now process the entire list of files added by previous 
