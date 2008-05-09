@@ -832,9 +832,10 @@ AC_MSG_CHECKING(for special libxml2 includes)
 if test "x$XML2CONFIG" = "x"; then
    AC_MSG_ERROR(libxml2 config not found)
 else
-   XML2HEAD=`$XML2CONFIG --cflags`
+   XML2HEAD="`$XML2CONFIG --cflags`"
    AC_MSG_RESULT($XML2HEAD)
    AC_CHECK_LIB(xml2, xmlReadMemory)
+   AC_CHECK_LIB(xslt, xsltApplyStylesheet)
 fi
 
 CPPFLAGS="$CPPFLAGS $XML2HEAD"
