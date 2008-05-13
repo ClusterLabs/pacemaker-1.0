@@ -16,13 +16,20 @@ if [ `crmadmin -D | cut -d' ' -f4` != `uname -n|tr "[:upper:]" "[:lower:]"` ]
 fi
 
 sortby=1
-[ -n "$1" ] && [ "$1" = "node" ] && sortby=3
+if [ -n "$1" ] && [ "$1" = "node" ] 
+then
+	sortby=3
+fi
 
 export default_stickiness=`cibadmin -Q -o crm_config 2>/dev/null|grep "default[_-]resource[_-]stickiness"|grep -o -E 'value ?= ?"[^ ]*"'|cut -d '"' -f 2|grep -v "^$"`
 export default_failurestickiness=`cibadmin -Q -o crm_config 2>/dev/null|grep "resource[_-]failure[_-]stickiness"|grep -o -E 'value ?= ?"[^ ]*"'|cut -d '"' -f 2|grep -v "^$"`
 
+if [ -n "$1" -a "$1" != "node" ]
+then
+      resource=$1
+fi
 
-2>&1 ptest -LVs | grep -v group_color | sed 's/dump_node_scores\:\ //' > $tmpfile
+2>&1 ptest -LVs | grep -v group_color | grep -E "$resource" | sed 's/dump_node_scores\:\ //' > $tmpfile
 
 parseline() {
 	line="$1"
