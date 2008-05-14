@@ -13,6 +13,7 @@ usr/sbin/ccm_tool
 usr/sbin/crm_master
 usr/sbin/crm_uuid
 usr/sbin/crm_attribute
+usr/sbin/ptest
 usr/lib/heartbeat/cibmon
 usr/lib/heartbeat/ttest
 usr/lib/heartbeat/cib
