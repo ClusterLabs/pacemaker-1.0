@@ -22,7 +22,6 @@ usr/lib/heartbeat/atest
 usr/lib/heartbeat/tengine
 usr/lib/heartbeat/attrd
 usr/lib/heartbeat/pengine
-usr/lib/service_crm.so
 usr/lib/openais/lcrso
 usr/share/heartbeat/crm.dtd
 usr/lib/heartbeat/*.py*
