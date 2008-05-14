@@ -1,8 +1,0 @@
-/etc/ha.d/resource.d/ldirectord
-/etc/init.d/ldirectord
-/etc/default/ldirectord
-/etc/logrotate.d/ldirectord
-usr/lib/ocf/resource.d/heartbeat/ldirectord
-usr/sbin/ldirectord
-usr/share/doc/ldirectord/ldirectord.cf
-usr/share/man/man8/ldirectord.8.gz
