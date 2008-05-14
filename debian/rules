@@ -114,7 +114,8 @@ binary-arch: build install
 	dh_testdir -a
 	dh_testroot -a
 	dh_installinit -a -u 'defaults 20 32'
-	dh_installchangelogs -a `pwd`/doc/ChangeLog
+#	dh_installchangelogs -a `pwd`/doc/ChangeLog
+	dh_installchangelogs -i
 	dh_strip -a
 	dh_compress -a
 	dh_fixperms -a
