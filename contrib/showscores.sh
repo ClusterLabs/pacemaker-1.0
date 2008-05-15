@@ -1,12 +1,23 @@
 #!/bin/bash
 
-# Apr 2008, Dominik Klein
+# May 2008, Dominik Klein
 # Display scores of Linux-HA resources
 
 # Known issues:
 # * cannot get resource[_failure]_stickiness values for master/slave and clone resources
 #   if those values are configured as meta attributes of the master/slave or clone resource
 #   instead of as meta attributes of the encapsulated primitive
+
+if [ "$1" = "--help" -o "$1" = "-h" ]
+then
+	echo "Usage: "
+	echo "$0 (to display score information for all resources on all nodes sorted by resource name)"
+	echo "$0 node (to display score information for all resources on all nodes sorted by nodename)"
+	echo "$0 <resource-id> (to display score information for a specific resource on all nodes)"
+	echo "$0 <resource-id> <nodename> (to display score information for a specific resource on a specific node)"
+	echo "$0 <resource-id> <nodename> singlescore (to display just the score number (not additional info) for a specific resource on a specific node)"
+	exit 0
+fi
 
 tmpfile=/tmp/dkshowscorestmpfiledk
 tmpfile2=/tmp/dkshowscorestmpfile2dk
@@ -16,7 +27,7 @@ if [ `crmadmin -D | cut -d' ' -f4` != `uname -n|tr "[:upper:]" "[:lower:]"` ]
 fi
 
 sortby=1
-if [ -n "$1" ] && [ "$1" = "node" ] 
+if [ "$1" = "node" ] 
 then
 	sortby=3
 fi
@@ -28,8 +39,12 @@ if [ -n "$1" -a "$1" != "node" ]
 then
       resource=$1
 fi
+if [ -n "$2" ]
+then
+      nodename=$2
+fi
 
-2>&1 ptest -LVs | grep -v group_color | grep -E "$resource" | sed 's/dump_node_scores\:\ //' > $tmpfile
+2>&1 ptest -LVs | grep -v group_color | grep -E "$resource" | grep -E "$nodename" | sed 's/dump_node_scores\:\ //' > $tmpfile
 
 parseline() {
 	line="$1"
@@ -95,9 +110,14 @@ do
 	printf "%-20s%-10s%-16s%-11s%-9s%-16s\n" $res $score $node $stickiness $failcount $failurestickiness
 done | sort | uniq >> $tmpfile2
 
-# Heading
-printf "%-20s%-10s%-16s%-11s%-9s%-16s\n" "Resource" "Score" "Node" "Stickiness" "#Fail" "Fail-Stickiness"
 
-sort -k $sortby $tmpfile2
+if [ "$3" = "singlescore" ]
+then
+	sed 's/  */ /g' $tmpfile2 | cut -d ' ' -f 2 | tail -n 1
+else
+	# Heading
+	printf "%-20s%-10s%-16s%-11s%-9s%-16s\n" "Resource" "Score" "Node" "Stickiness" "#Fail" "Fail-Stickiness"
+	sort -k $sortby $tmpfile2
+fi
 
 rm $tmpfile $tmpfile2
