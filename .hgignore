@@ -134,6 +134,7 @@ GTAGS
 *~ 
 \#*
 .changes
+pacemaker.tar.gz
 
 # Entries better done as regexp's to avoid matching too broadly
 syntax: regexp

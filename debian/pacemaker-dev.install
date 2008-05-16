@@ -1,0 +1,5 @@
+usr/include/pacemaker
+usr/lib/lib*.so
+usr/lib/lib*.a
+usr/share/pacemaker/cts
+usr/share/doc/pacemaker/README.cts
