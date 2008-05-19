@@ -1673,7 +1673,6 @@ crm/Makefile							\
 cib/Makefile							\
 crmd/Makefile							\
 pengine/Makefile						\
-transitioner/Makefile						\
 	crm/ais/Makefile					\
 	crm/admin/Makefile					\
 	        crm/admin/crm_primitive.py			\
