@@ -2016,7 +2016,7 @@ on_stonithd_node_fence(struct ha_msg * request, gpointer data)
 	   g_hash_table_lookup(reboot_blocked_table, st_op->node_name) ) {
 		stonithd_log(LOG_INFO, "reset of node %s from client %s (pid %d) "
 			"effectively ignored: node has been reset recently and might be rebooting"
-			,	client->name, client->pid, st_op->node_name);
+			, st_op->node_name, client->name, client->pid);
 		neednot_reboot_node = TRUE;
 		api_reply = ST_APIOK;
 		goto sendback_reply;
@@ -2460,10 +2460,10 @@ stonith_operate_locally( stonith_ops_t * st_op, stonith_rsc_t * srsc)
 		NewTrackedProc( pid, 1
 				, (debug_level>1)? PT_LOGVERBOSE : PT_LOGNORMAL
 				, g_strdup(buf_tmp), &StonithdProcessTrackOps);
-		stonithd_log(LOG_INFO, "%s::%d: sending fencing op (%s) for %s "
-			"to device %s (rsc_id=%s, pid=%d)", __FUNCTION__
+		stonithd_log(LOG_INFO, "%s::%d: sending fencing op %s for %s "
+			"to %s (%s) (pid=%d)", __FUNCTION__
 			, __LINE__, stonith_op_strname[st_op->optype], st_op->node_name
-			, st_obj->stype, srsc->rsc_id, pid);
+			, srsc->rsc_id, srsc->ra_name, pid);
 		return_to_dropped_privs();
 		return pid;
 	}
@@ -3125,9 +3125,8 @@ hostlist2shmem(char *rsc_id, int shmid,char **hostlist,int maxlist,int is_lastga
 	q = s;
 	for( h = hostlist; *h; h++ ) {
 		if( !TEST && !is_lastgasp && !strcmp(*h, local_nodename) ) {
-			stonithd_log(LOG_NOTICE,"%s:%d: remove us "
-				"(%s) from the host list for %s",
-				__FUNCTION__, __LINE__, *h, rsc_id);
+			stonithd_log(LOG_DEBUG,"remove us (%s) from the host list for %s"
+				, *h, rsc_id);
 			continue; /* we can't reset ourselves */
 		}
 		if( q-s+strlen(*h)+1 > maxlist-1 ) {
@@ -3137,8 +3136,8 @@ hostlist2shmem(char *rsc_id, int shmid,char **hostlist,int maxlist,int is_lastga
 			rc = FALSE;
 			break;
 		}
-		stonithd_log(LOG_DEBUG,"%s:%d: %s claims it can manage node %s"
-			, __FUNCTION__, __LINE__, rsc_id, *h);
+		stonithd_log(LOG_DEBUG,"%s claims it can manage node %s"
+			, rsc_id, *h);
 		strcpy(q,*h);
 		q += strlen(q)+1;
 	}
@@ -3225,7 +3224,7 @@ record_new_srsc(stonithRA_ops_t *ra_op)
 	node_list = shmem2hostlist(ra_op->call_id);
 	if( !node_list ) {
 		stonithd_log(LOG_WARNING,"start %s failed, because its hostlist "
-			"is empty", rsc_id);
+			"is empty", ra_op->rsc_id);
 		return;
 	}
 	/* ra_op will be free at once, so it's safe to set some of its
@@ -3321,7 +3320,7 @@ stonithRA_monitor( stonithRA_ops_t * ra_op, gpointer data )
 
 	srsc = get_started_stonith_resource(ra_op->rsc_id);
 	if ( srsc == NULL ) {
-		stonithd_log(LOG_NOTICE, "stonithRA_monitor: %s is not "
+		stonithd_log(LOG_DEBUG, "stonithRA_monitor: %s is not "
 				"started.",ra_op->rsc_id);
 		/* This resource is not started */
 		child_exitcode = EXECRA_NOT_RUNNING;
