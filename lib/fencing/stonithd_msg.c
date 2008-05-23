@@ -19,7 +19,7 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#include <lha_internal.h>
+#include <crm_internal.h>
 #include <glib.h>
 #include <ha_msg.h>
 #include <clplumbing/cl_log.h>

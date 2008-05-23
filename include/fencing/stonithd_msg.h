@@ -52,6 +52,7 @@
 #define F_STONITHD_NLIST    "nlist" 	/* node name list for final return */
 #define F_STONITHD_COOKIE   "cookie"    /* cookie to identify a client */
 #define F_STONITHD_ERROR    "error"     /* error message of operation */
+#define F_STONITHD_OP       "stonithdop" /* stonithd operation */
 
 /* Maximum length for stonithd message type */
 #define MAXLEN_SMTYPE  18

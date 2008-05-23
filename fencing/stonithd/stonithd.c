@@ -26,7 +26,7 @@
  *    stonith plugins?
  */
 
-#include <lha_internal.h>
+#include <crm_internal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
@@ -60,7 +60,9 @@
 #include <clplumbing/cl_uuid.h>
 #include <clplumbing/coredumps.h>
 #include <clplumbing/realtime.h>
-#include <apphb.h>
+#if SUPPORT_HEARTBEAT
+	#include <apphb.h>
+#endif
 #include <heartbeat.h>
 #include <ha_msg.h>
 #include <hb_api.h>
@@ -69,10 +71,13 @@
 #include <fencing/stonithd_api.h>
 #include <clplumbing/cl_pidfile.h>
 #include <clplumbing/Gmain_timeout.h>
+#include <crm/crm.h>
+#include <crm/common/cluster.h>
 
 #include <assert.h>
 #define ST_ASSERT(cond) assert(cond)
 
+#define MAX_NODE_STORAGE 8192 /* space for all nodenames incl delimiters */
 #define REBOOT_BLOCK_TIMEOUT 90*1000
 
 /* For integration with heartbeat */
@@ -169,6 +174,13 @@ struct api_msg_to_handler
 	stonithd_api_msg_handler	handler;
 };
 
+typedef void (*stonithd_clu_msg_handler)(struct ha_msg * msg,
+					gpointer data);
+struct clu_msg_to_handler {
+	const char *			msg_type;
+	stonithd_clu_msg_handler	handler;
+};
+
 typedef int (*RA_subop_handler)(stonithRA_ops_t * ra_op, gpointer data);
 
 struct RA_operation_to_handler
@@ -194,24 +206,27 @@ static void stonithdProcessDied(ProcTrack* p, int status, int signo
 static void stonithdProcessRegistered(ProcTrack* p);
 static const char * stonithdProcessName(ProcTrack* p);
 
+#if SUPPORT_HEARTBEAT
 /* For application heartbeat related */
 static unsigned long
         APPHB_INTERVAL  = 2000, /* MS */
         APPHB_WARNTIME  = 6000, /* MS */
 	APPHB_INTVL_DETLA = 30; /* MS */
 
-#define MY_APPHB_HB \
+#define MY_APPHB_HB() do { \
 	if (SIGNONED_TO_APPHBD == TRUE) { \
 		if (apphb_hb() != 0) { \
 			SIGNONED_TO_APPHBD = FALSE; \
 		} \
-	}
+	} \
+} while(0)
 
 /* 
  * Functions related to application heartbeat ( apphbd )
  */
 static gboolean emit_apphb(gpointer data);
 static int init_using_apphb(void);
+#endif
 
 /* Communication between nodes related.
  * For stonithing one node in the cluster.
@@ -221,9 +236,17 @@ static void handle_msg_ticanst(struct ha_msg* msg, void* private_data);
 static void handle_msg_tstit(struct ha_msg* msg, void* private_data);
 static void handle_msg_trstit(struct ha_msg* msg, void* private_data);
 static void handle_msg_resetted(struct ha_msg* msg, void* private_data);
-static gboolean stonithd_hb_msg_dispatch(ll_cluster_t * hb, gpointer user_data);
-static void stonithd_hb_msg_dispatch_destroy(gpointer user_data);
+#if SUPPORT_HEARTBEAT
 static int init_hb_msg_handler(void);
+#endif
+#if SUPPORT_AIS
+static gboolean stonithd_ais_dispatch(AIS_Message *wrapper, char *data, int sender);
+static void stonithd_ais_destroy(gpointer user_data);
+#endif
+static void stonithd_hb_callback(struct ha_msg* msg, void* private_data);
+static void stonithd_hb_connection_destroy(void* private_data);
+static gboolean stonithd_sendmsg(const char *node_name,
+						struct ha_msg *msg, const char *st_op_type);
 static gboolean reboot_block_timeout(gpointer data);
 static void timerid_destroy_notify(gpointer user_data);
 static void free_timer(gpointer data);
@@ -332,6 +355,14 @@ static struct RA_operation_to_handler raop_handler[] = {
 #define T_QSTCAP	"qstcap"	/* query the stonith capacity -- 
 					   all the nodes who can stonith */
 
+static struct clu_msg_to_handler clu_msg_to_handlers[] = {
+	{ T_WHOCANST, handle_msg_twhocan },
+	{ T_ICANST, handle_msg_ticanst },
+	{ T_STIT, handle_msg_tstit },
+	{ T_RSTIT, handle_msg_trstit },
+	{ T_RESETTED, handle_msg_resetted },
+};
+
 /* 
  * Notice log messages for other programs, such as scripts to judge the 
  * status of this stonith daemon.
@@ -371,9 +402,10 @@ static ProcTrack_ops StonithdProcessTrackOps = {
 	stonithdProcessName
 };
 
-static const char * 	local_nodename		= NULL;
+static char * 	local_nodename		= NULL;
 static GMainLoop *	mainloop 		= NULL;
 static const char * 	stonithd_name		= "stonithd";
+extern const char * 	crm_system_name;
 static gboolean		STARTUP_ALONE 		= FALSE;
 static gboolean 	SIGNONED_TO_APPHBD	= FALSE;
 static gboolean 	NEED_SIGNON_TO_APPHBD	= FALSE;
@@ -451,6 +483,7 @@ main(int argc, char ** argv)
 	int main_rc = LSB_EXIT_OK;
 	int option_char;
 
+	crm_system_name = stonithd_name;
 	cl_malloc_forced_for_glib(); /* Force more memory checks */
         cl_log_set_entity(stonithd_name);
 	cl_log_enable_stderr(TRUE);
@@ -471,17 +504,31 @@ main(int argc, char ** argv)
 				break;
 
 			case 'r': /* Register to apphbd */
+#if SUPPORT_HEARTBEAT
 				NEED_SIGNON_TO_APPHBD = TRUE;
+#else
+				printf("Sorry, Heartbeat support"
+				" not included, can't use apphb.");
+				return (STARTUP_ALONE == TRUE) ? 
+					LSB_EXIT_EINVAL : MAGIC_EC;
+#endif
 				break;
 
 			 /* Get the interval to emitting the application 
 			    hearbteat to apphbd.
 			  */
 			case 'i':
+#if SUPPORT_HEARTBEAT
 				if (optarg) {
 					APPHB_INTERVAL = atoi(optarg);		
 					APPHB_WARNTIME = 3*APPHB_INTERVAL;
 				}
+#else
+				printf("Sorry, Heartbeat support"
+				" not included, can't use apphb.");
+				return (STARTUP_ALONE == TRUE) ? 
+					LSB_EXIT_EINVAL : MAGIC_EC;
+#endif
 				break;
 			
 			
@@ -529,51 +576,59 @@ main(int argc, char ** argv)
 	become_daemon();
 
 	if( !STARTUP_ALONE ) {
-	hb = ll_cluster_new("heartbeat");
-	if ( hb == NULL ) {
-		stonithd_log(LOG_ERR, "ll_cluster_new failed.");
-		stonithd_log(LOG_ERR, "%s %s", argv[0], M_ABORT);
-		return (STARTUP_ALONE == TRUE) ? LSB_EXIT_GENERIC : MAGIC_EC;
+		void *dispatch = NULL;
+		void *destroy = NULL;
+	    
+	if(is_openais_cluster()) {
+#if SUPPORT_AIS
+		dispatch = stonithd_ais_dispatch;
+		destroy = stonithd_ais_destroy;
+#endif
+	} else if(is_heartbeat_cluster()) {
+#if SUPPORT_HEARTBEAT
+		dispatch = stonithd_hb_callback;
+		destroy = stonithd_hb_connection_destroy;
+#endif
 	}
 
-	if (hb->llc_ops->signon(hb, stonithd_name)!= HA_OK) {
-		stonithd_log(LOG_ERR, "Cannot signon with heartbeat");
-		stonithd_log(LOG_ERR, "REASON: %s", hb->llc_ops->errmsg(hb));
-		goto delhb_quit;
-	} else {
-		stonithd_log(LOG_INFO, "Signing in with heartbeat.");
-		local_nodename = hb->llc_ops->get_mynodeid(hb);
-		if (local_nodename == NULL) {
-			stonithd_log(LOG_ERR, "Cannot get local node id");
-			stonithd_log(LOG_ERR, "REASON: %s", 
-				     hb->llc_ops->errmsg(hb));
-			main_rc = LSB_EXIT_GENERIC;
-			goto signoff_quit;
+	if (crm_cluster_connect(&local_nodename, NULL, dispatch, destroy,
+#if SUPPORT_HEARTBEAT
+				   &hb
+#else
+				   NULL
+#endif
+		) == FALSE) {
+			stonithd_log(LOG_ERR, "failed to connect to cluster");
+			stonithd_log(LOG_ERR, "%s %s", argv[0], M_ABORT);
+			return (STARTUP_ALONE == TRUE) ? LSB_EXIT_GENERIC : MAGIC_EC;
 		}
-	}
 	}
 
 	mainloop = g_main_new(FALSE);
 
+	if( is_heartbeat_cluster()) {
+#if SUPPORT_HEARTBEAT
 	/*
 	 * Initialize the handler of IPC messages from heartbeat, including
 	 * the messages produced by myself as a client of heartbeat.
 	 */
 	if( !STARTUP_ALONE ) {
 	if ( (main_rc = init_hb_msg_handler()) != 0) {
-		stonithd_log(LOG_ERR, "An error in init_hb_msg_handler.");
 		goto signoff_quit;
 	}
+	}
+#endif
 	}
 
 	/*
 	 * Initialize the handler of IPC messages from my clients.
 	 */
 	if ( (main_rc = init_client_API_handler()) != 0) {
-		stonithd_log(LOG_ERR, "An error in init_hb_msg_handler.");
 		goto delhb_quit;
 	}
 
+	if( is_heartbeat_cluster()) {
+#if SUPPORT_HEARTBEAT
 	if (NEED_SIGNON_TO_APPHBD == TRUE) {
 		if ( (main_rc=init_using_apphb()) != 0 ) {
 			stonithd_log(LOG_ERR, "An error in init_using_apphb");
@@ -581,6 +636,8 @@ main(int argc, char ** argv)
 		} else {
 			SIGNONED_TO_APPHBD = TRUE;
 		}
+	}
+#endif
 	}
 
 	/* For tracking and remove the g_sources of messaging IPC channels */
@@ -598,8 +655,13 @@ main(int argc, char ** argv)
 	reboot_blocked_table = g_hash_table_new_full(g_str_hash, g_str_equal
 						, g_free, free_timer);
 
+	if( is_heartbeat_cluster()) {
+#if SUPPORT_HEARTBEAT
 	/* To avoid the warning message when app_interval is very small. */
-	MY_APPHB_HB
+	MY_APPHB_HB();
+#endif
+	}
+
 	/* drop_privs(0, 0); */  /* very important. cpu limit */
 	stonithd_log2(LOG_DEBUG, "Enter g_mainloop\n");
 	stonithd_log(LOG_NOTICE, "%s %s", argv[0], M_STARTUP );
@@ -611,27 +673,37 @@ main(int argc, char ** argv)
 	g_main_run(mainloop);
 	return_to_orig_privs();
 
-	MY_APPHB_HB
+	if( is_heartbeat_cluster()) {
+#if SUPPORT_HEARTBEAT
+	MY_APPHB_HB();
 	if (SIGNONED_TO_APPHBD == TRUE) {
 		apphb_unregister();
 		SIGNONED_TO_APPHBD = FALSE;
 	}
-
-signoff_quit:
-	if (hb != NULL && hb->llc_ops->signoff(hb, FALSE) != HA_OK) {
-		stonithd_log(LOG_ERR, "Cannot sign off from heartbeat.");
-		stonithd_log(LOG_ERR, "REASON: %s", hb->llc_ops->errmsg(hb));
-		main_rc = LSB_EXIT_GENERIC;
+#endif
 	}
 
-delhb_quit:
-	if (hb != NULL) {
-		if (hb->llc_ops->delete(hb) != HA_OK) {
-			stonithd_log(LOG_ERR, "Cannot delete API object.");
+#if SUPPORT_HEARTBEAT
+signoff_quit:
+	if( is_heartbeat_cluster()) {
+		if (hb != NULL && hb->llc_ops->signoff(hb, FALSE) != HA_OK) {
+			stonithd_log(LOG_ERR, "Cannot sign off from heartbeat.");
 			stonithd_log(LOG_ERR, "REASON: %s", hb->llc_ops->errmsg(hb));
 			main_rc = LSB_EXIT_GENERIC;
 		}
 	}
+
+delhb_quit:
+	if( is_heartbeat_cluster()) {
+		if (hb != NULL) {
+			if (hb->llc_ops->delete(hb) != HA_OK) {
+				stonithd_log(LOG_ERR, "Cannot delete API object.");
+				stonithd_log(LOG_ERR, "REASON: %s", hb->llc_ops->errmsg(hb));
+				main_rc = LSB_EXIT_GENERIC;
+			}
+		}
+	}
+#endif
 
 	if (client_list != NULL) {
 		g_list_foreach(client_list, free_client, NULL);
@@ -883,6 +955,8 @@ stonithdProcessName(ProcTrack* p)
 	return  process_name;
 }
 
+#if SUPPORT_HEARTBEAT
+
 #define set_msg_handler(type, handler) do { \
 	if (hb->llc_ops->set_msg_callback(hb, type, \
 				  handler, hb) != HA_OK) { \
@@ -917,40 +991,101 @@ init_hb_msg_handler(void)
 		return LSB_EXIT_GENERIC;
 	}
 
-	/* Watch the hearbeat API's IPC channel for input */
-	G_main_add_ll_cluster(G_PRIORITY_HIGH, hb, FALSE, 
-				stonithd_hb_msg_dispatch, NULL, 
-				stonithd_hb_msg_dispatch_destroy);
-
 	return 0;
 }
+#endif
 
-
-static gboolean
-stonithd_hb_msg_dispatch(ll_cluster_t * hb, gpointer user_data)
+static void
+stonithd_hb_callback(struct ha_msg* msg, void* private_data)
 {
-	if (hb == NULL) {
-		stonithd_log(LOG_ERR, "parameter error: hb==NULL");
-		return FALSE;
-	} 
-	while (hb->llc_ops->msgready(hb)) {
-		if (hb->llc_ops->ipcchan(hb)->ch_status == IPC_DISCONNECT) {
-			stonithd_log(LOG_ERR
-				     , "Disconnected with heartbeat daemon");
-			stonithd_quit(0);
-		}
-		/* invoke the callbacks with none-block mode */
-		stonithd_log2(LOG_DEBUG, "there are hb msg received.");
-		hb->llc_ops->rcvmsg(hb, 0);
+	int i;
+	const char *st_op_type = cl_get_string(msg, F_STONITHD_OP);
+
+	if (!st_op_type) {
+		stonithd_log(LOG_ERR, "%s:%d: empty %s field, can't proceed"
+			, __FUNCTION__, __LINE__, F_STONITHD_OP);
+		return;
 	}
-	/* deal with some abnormal errors/bugs? */
+	for (i=0; i<DIMOF(clu_msg_to_handlers); i++) {
+		if (!strncmp(st_op_type, clu_msg_to_handlers[i].msg_type, MAXCMP)) {
+			/*call the handler of the message*/
+			clu_msg_to_handlers[i].handler(msg, private_data);
+			break;
+		}
+	}
+	if (i == DIMOF(clu_msg_to_handlers)) {
+		stonithd_log(LOG_ERR, "%s:%d: received an unknown "
+			"stonith operation: %s"
+			, __FUNCTION__, __LINE__, st_op_type);
+	}
+}
+static void
+stonithd_hb_connection_destroy(void* private_data)
+{
+	return;
+}
+
+#if SUPPORT_AIS	
+static gboolean
+stonithd_ais_dispatch(AIS_Message *wrapper, char *data, int sender) 
+{
+	struct ha_msg* msg;
+
+	stonithd_log2(LOG_DEBUG,"%s:%d: Message received: '%d:%.80s'", 
+		__FUNCTION__, __LINE__, wrapper->id, data);
+
+	msg = string2msg(data,strlen(data));
+	if(msg == NULL) {
+		goto bail;
+	}
+	ha_msg_add(msg, F_ORIG, wrapper->sender.uname);
+	stonithd_hb_callback(msg, NULL);
+
+	ZAPMSG(msg);
+	return TRUE;
+
+	bail:
+	stonithd_log(LOG_ERR, "%s:%d: bad msg: |%s|"
+		, __FUNCTION__, __LINE__, data);
 	return TRUE;
 }
 
 static void
-stonithd_hb_msg_dispatch_destroy(gpointer user_data)
+stonithd_ais_destroy(gpointer user_data)
 {
-	return;
+	stonithd_log(LOG_ERR, "AIS connection terminated");
+	ais_fd_sync = -1;
+	exit(1);
+}
+#endif
+
+static gboolean
+stonithd_sendmsg(const char *node_name, struct ha_msg *msg, const char *st_op_type)
+{
+	if(is_openais_cluster()) {
+		if ((ha_msg_add(msg, F_TYPE, crm_system_name) != HA_OK)
+		||(ha_msg_add(msg, F_STONITHD_OP, st_op_type) != HA_OK)) {
+			stonithd_log(LOG_ERR, "%s:%d: cannot add field."
+				, __FUNCTION__, __LINE__);
+			return FALSE;
+		}
+	} else if(is_heartbeat_cluster()) {
+		if ((ha_msg_add(msg, F_TYPE, st_op_type) != HA_OK)) {
+			stonithd_log(LOG_ERR, "%s:%d: cannot add field."
+				, __FUNCTION__, __LINE__);
+			return FALSE;
+		}
+	} else {
+		stonithd_log(LOG_ERR, "%s:%d: not connected to the cluster"
+			, __FUNCTION__, __LINE__);
+		return FALSE;
+	}
+	if ((ha_msg_add(msg, F_ORIG, local_nodename) != HA_OK)) {
+		stonithd_log(LOG_ERR, "%s:%d: cannot add field."
+			, __FUNCTION__, __LINE__);
+		return FALSE;
+	}
+	return send_cluster_message(node_name, crm_msg_stonithd, msg, FALSE);
 }
 
 static void
@@ -975,31 +1110,24 @@ handle_msg_twhocan(struct ha_msg* msg, void* private_data)
 			     "node %s.", target);
 		return;
 	}
-	if (hb == NULL) {
-		stonithd_log(LOG_ERR, "%s:%d: not connected to heartbeat"
+	if ((reply = ha_msg_new(1)) == NULL) {
+		stonithd_log(LOG_ERR, "%s:%d: out of memory"
 			, __FUNCTION__, __LINE__);
 		return;
 	}
-	if ((reply = ha_msg_new(1)) == NULL) {
-		stonithd_log(LOG_ERR, "handle_msg_twhocan: "
-				"out of memory");
-		return;
-	}
-
-	if ( (ha_msg_add(reply, F_TYPE, T_ICANST) != HA_OK)
-	    ||(ha_msg_add(reply, F_ORIG, local_nodename) != HA_OK)
-	    ||(ha_msg_add_int(reply, F_STONITHD_CALLID, call_id) != HA_OK)) {
-		stonithd_log(LOG_ERR, "handle_msg_twhocan: cannot add field.");
+	if ((ha_msg_add_int(reply, F_STONITHD_CALLID, call_id) != HA_OK)) {
+		stonithd_log(LOG_ERR, "%s:%d: cannot add field."
+			, __FUNCTION__, __LINE__);
 		ZAPMSG(reply);
 		return;
 	}
-	if (HA_OK!=hb->llc_ops->sendnodemsg(hb, reply, from)) {
-		stonithd_log(LOG_ERR, "handle_msg_twhocan: sendnodemsg failed");
+	if (!stonithd_sendmsg(from, reply, T_ICANST)) {
 		ZAPMSG(reply);
 		return;
 	}
 	stonithd_log(LOG_DEBUG, "handle_msg_twhocan: replied that"
 		" we can stonith node %s", target);
+	ZAPMSG(reply);
 }
 
 static void
@@ -1176,37 +1304,23 @@ broadcast_reset_success(const char * target)
 {
 	struct ha_msg * msg;
 
-	if (hb == NULL) {
-		stonithd_log(LOG_ERR, "%s:%d: not connected to heartbeat"
-			, __FUNCTION__, __LINE__);
-		return ST_FAIL;
-	}
-
 	if ((msg = ha_msg_new(3)) == NULL) {
 		stonithd_log(LOG_ERR, "%s:%d: out of memory"
 				, __FUNCTION__, __LINE__ );
 		return ST_FAIL;
 	}
-
 	stonithd_log(LOG_DEBUG, "%s: Broadcast the reset success message to "
 		"the whole cluster.", __FUNCTION__);
-	if ( (ha_msg_add(msg, F_TYPE, T_RESETTED) != HA_OK)
-	    ||(ha_msg_add(msg, F_ORIG, local_nodename) != HA_OK)
-	    ||(ha_msg_add(msg, F_STONITHD_NODE, target) != HA_OK)
-	   ) {
+	if ((ha_msg_add(msg, F_STONITHD_NODE, target) != HA_OK)) {
 		stonithd_log(LOG_ERR, "%s:%d:cannot add field."
 				, __FUNCTION__, __LINE__);
 		ZAPMSG(msg);
 		return ST_FAIL;
 	}
-
-	if (HA_OK != hb->llc_ops->sendclustermsg(hb, msg) ) {
-		stonithd_log(LOG_ERR,"%s:%d:sendclustermsg failed."
-				, __FUNCTION__, __LINE__);
+	if (!stonithd_sendmsg(NULL, msg, T_RESETTED)) {
 		ZAPMSG(msg);
 		return ST_FAIL;
 	}
-
 	ZAPMSG(msg);
 	stonithd_log2(LOG_DEBUG,"%s: end.", __FUNCTION__);
 	return ST_OK;	
@@ -2288,21 +2402,13 @@ stonithop_result_to_other_node( stonith_ops_t * st_op, gconstpointer data)
 		return ST_OK;
 	}
 
-	if (hb == NULL) {
-		stonithd_log(LOG_ERR, "%s:%d: not connected to heartbeat"
-			, __FUNCTION__, __LINE__);
-		return ST_FAIL;
-	}
-
 	if ((reply = ha_msg_new(4)) == NULL) {
-		stonithd_log(LOG_ERR, "stonithop_result_to_other_node: "
-			     "ha_msg_new: out of memory");
+		stonithd_log(LOG_ERR, "%s:%d: out of memory"
+				, __FUNCTION__, __LINE__ );
 		return ST_FAIL;
 	}
 
-	if ( (ha_msg_add(reply, F_TYPE, T_RSTIT) != HA_OK)
-    	    ||(ha_msg_add(reply, F_ORIG, local_nodename) != HA_OK)
-    	    ||(ha_msg_add_int(reply, F_STONITHD_FRC, st_op->op_result) != HA_OK)
+	if ((ha_msg_add_int(reply, F_STONITHD_FRC, st_op->op_result) != HA_OK)
     	    ||(ha_msg_add_int(reply, F_STONITHD_CALLID, st_op->call_id) 
 		!= HA_OK)) {
 		stonithd_log(LOG_ERR, "stonithop_result_to_other_node: "
@@ -2311,9 +2417,7 @@ stonithop_result_to_other_node( stonith_ops_t * st_op, gconstpointer data)
 		return ST_FAIL;
 	}
 
-	if (HA_OK!=hb->llc_ops->sendnodemsg(hb, reply, node_name)) {
-		stonithd_log(LOG_ERR, "stonithop_result_to_other_node: "
-			     "sendnodermsg failed.");
+	if (!stonithd_sendmsg(node_name, reply, T_RSTIT)) {
 		ZAPMSG(reply);
 		return ST_FAIL;
 	}
@@ -2382,36 +2486,25 @@ require_others_to_stonith(const stonith_ops_t * st_op)
 {
 	struct ha_msg * msg;
 
-	if (hb == NULL) {
-		stonithd_log(LOG_ERR, "%s:%d: not connected to heartbeat"
-			, __FUNCTION__, __LINE__);
-		return ST_FAIL;
-	}
-
 	if ((msg = ha_msg_new(6)) == NULL) {
-		stonithd_log(LOG_ERR, "require_others_to_stonith: "
-					"out of memory");
+		stonithd_log(LOG_ERR, "%s:%d: out of memory"
+				, __FUNCTION__, __LINE__ );
 		return ST_FAIL;
 	}
 
 	stonithd_log2(LOG_DEBUG, "require_others_to_stonith: begin.");
-	if ( (ha_msg_add(msg, F_TYPE, (st_op->optype == QUERY) ? 
-					T_WHOCANST : T_STIT) != HA_OK)
-	    ||(ha_msg_add(msg, F_ORIG, local_nodename) != HA_OK)
-	    ||(ha_msg_add(msg, F_STONITHD_NODE, st_op->node_name) != HA_OK)
+	if ((ha_msg_add(msg, F_STONITHD_NODE, st_op->node_name) != HA_OK)
 	    ||(ha_msg_add_int(msg, F_STONITHD_OPTYPE, st_op->optype) != HA_OK)
 	    ||(ha_msg_add_int(msg, F_STONITHD_TIMEOUT, st_op->timeout) != HA_OK)
-	    ||(ha_msg_add_int(msg, F_STONITHD_CALLID, st_op->call_id) 
-		!= HA_OK) ) {
+	    ||(ha_msg_add_int(msg, F_STONITHD_CALLID, st_op->call_id) != HA_OK)) {
 		stonithd_log(LOG_ERR, "require_others_to_stonith: "
 					"cannot add field.");
 		ZAPMSG(msg);
 		return ST_FAIL;
 	}
 
-	if (HA_OK != hb->llc_ops->sendclustermsg(hb, msg) ) {
-		stonithd_log(LOG_ERR,"require_others_to_stonith: "
-			     "sendclustermsg failed.");
+	if (!stonithd_sendmsg(NULL, msg,
+		(st_op->optype == QUERY) ? T_WHOCANST : T_STIT)) {
 		ZAPMSG(msg);
 		return ST_FAIL;
 	}
@@ -2879,7 +2972,7 @@ stonithRA_start( stonithRA_ops_t * op, gpointer data)
 		goto probe_status;
 	}
 
-	shmsize = hb->llc_ops->num_nodes(hb)*(HOSTLENG+1)+1;
+	shmsize = MAX_NODE_STORAGE;
 	shmid = shmget(IPC_PRIVATE, shmsize, (SHM_R | SHM_W));
 	if( shmid < 0 ) {
 		stonithd_log(LOG_ERR,"%s:%d: shmget failed: %s",
@@ -3598,6 +3691,7 @@ delete_client_by_chan(GList ** client_list, IPC_Channel * ch)
 	return ST_OK;
 }
 
+#if SUPPORT_HEARTBEAT
 /* make the apphb_interval, apphb_warntime adjustable important */
 static int
 init_using_apphb(void)
@@ -3635,6 +3729,7 @@ emit_apphb(gpointer data)
 
 	return TRUE;
 }
+#endif
 
 static int
 show_daemon_status(const char * pidfile)
@@ -3751,3 +3846,5 @@ trans_log(int priority, const char * fmt, ...)
         cl_log(pil_loglevel_to_cl_loglevel[ priority % sizeof
 		(pil_loglevel_to_cl_loglevel) ], "%s", buf);
 }
+
+/* vim: sw=8 ts=8 */
