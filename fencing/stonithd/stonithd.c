@@ -322,8 +322,8 @@ static void trans_log(int priority, const char * fmt, ...)G_GNUC_PRINTF(2,3);
 static struct hostlist_shmseg *lookup_shm_hostlist(pid_t pid);
 static void add_shm_hostlist(int shmid, pid_t pid);
 static void remove_shm_hostlist(pid_t pid);
-static gboolean hostlist2shmem(int shmid,char **hostlist,int maxlist,
-					int is_lastgasp);
+static gboolean hostlist2shmem(char *rsc_id,
+					int shmid,char **hostlist,int maxlist, int is_lastgasp);
 static char ** shmem2hostlist(pid_t pid);
 static char ** copyshmem(char *s);
 static void record_new_srsc(stonithRA_ops_t *ra_op);
@@ -557,8 +557,8 @@ main(int argc, char ** argv)
 				break;
 
 			default:
-				stonithd_log(LOG_ERR, "Error:getopt returned"
-					" character code %c.", option_char);
+				stonithd_log(LOG_ERR, "getopt returned"
+					" character code %c", option_char);
 				printf("%s\n", simple_help_screen);
 				return (STARTUP_ALONE == TRUE) ? 
 					LSB_EXIT_EINVAL : MAGIC_EC;
@@ -876,10 +876,10 @@ handle_finished_op(common_op_t *op, pid_t pid, int exitcode)
 		return;
 	}
 	/* Go ahead when exitcode != S_OK */
-	stonithd_log(LOG_INFO, "Failed to STONITH node %s with one " 
-		"local device, exitcode = %d. Will try to use the "
+	stonithd_log(LOG_INFO, "Failed to STONITH node %s with " 
+		"local device %s (rc %d), will try to the "
 		"next local device."
-		,	op->op_union.st_op->node_name, exitcode); 
+		,	op->op_union.st_op->node_name, op->rsc_id, exitcode); 
 	if (ST_OK == continue_local_stonithop(pid)) {
 		return;
 	}
@@ -1948,33 +1948,25 @@ on_stonithd_signoff(struct ha_msg * request, gpointer data)
 
 	if ( HA_OK != ha_msg_value_int(request, F_STONITHD_CPID, &tmpint) ) {
 		stonithd_log(LOG_ERR, "signoff msg contains no or incorrect "
-				"PID field.");
+				"PID field");
 		return ST_FAIL;
 	}
 
 	if ( (client = get_exist_client_by_chan(client_list, ch)) != NULL ) {
 		if (client->pid == tmpint) {
-			stonithd_log2(LOG_DEBUG, "Have the client %s (pid=%d) "
-				     "sign off.", client->name, client->pid);
+			stonithd_log(LOG_DEBUG, "client %s (pid=%d) "
+				     "signed off", client->name, client->pid);
 			delete_client_by_chan(&client_list, ch);
 			client = NULL;
 		} else {
-			stonithd_log(LOG_NOTICE, "The client's channel isnot "
-				     "correspond to the former pid(%d). It "
-				     "seems a child is using its parent's "
-				     "IPC channel.", client->pid);
+			stonithd_log(LOG_NOTICE, "the client's channel doesn't "
+				     "correspond to the former pid(%d), "
+				     "maybe a child is using its parent's "
+				     "IPC channel", client->pid);
 		}
 	} else {
-		stonithd_log(LOG_NOTICE, "The client pid=%d seems already "
+		stonithd_log(LOG_NOTICE, "client with pid %d probably "
 			     "signed off ", tmpint);
-	}
-
- 	if ( NULL == client ) {
-		stonithd_log(LOG_DEBUG,"client pid=%d has sign off stonithd "
-				"successfully.", tmpint);
-	} else {
-		stonithd_log(LOG_INFO,"client pid=%d failed to sign off "
-				"stonithd ", tmpint);
 	}
 
 	return ST_OK;
@@ -2003,32 +1995,33 @@ on_stonithd_node_fence(struct ha_msg * request, gpointer data)
 	/* Check if have signed on */
 	client = get_exist_client_by_chan(client_list, ch);
 	if ( !client ) {
-		stonithd_log(LOG_ERR, "stonithd_node_fence: not signed on");
+		stonithd_log(LOG_ERR, "stonithd_node_fence: client not signed on");
 		return ST_FAIL;
 	}
 
 	st_op = new_stonith_ops_t(request);
 	if ( !st_op ) {
-		stonithd_log(LOG_ERR, "%s:%d: %s"
-			, __FUNCTION__, __LINE__
-			, "Failed to create a stonith_op_t.");
+		stonithd_log(LOG_ERR, "%s:%d: failed to create a stonith_op_t"
+			, __FUNCTION__, __LINE__);
 		api_reply = ST_BADREQ;
 		goto sendback_reply;
 	}
 
-	stonithd_log(LOG_INFO, "client %s [pid: %d] want a STONITH "
-			"operation %s to node %s."
+	stonithd_log(LOG_INFO, "client %s [pid: %d] requests a STONITH "
+			"operation %s on node %s"
 		,	client->name, client->pid
 		,	stonith_op_strname[st_op->optype], st_op->node_name);
 
-
 	if ( (st_op->optype == RESET) && !TEST && /* TEST means BSC */
 	   g_hash_table_lookup(reboot_blocked_table, st_op->node_name) ) {
+		stonithd_log(LOG_INFO, "reset of node %s from client %s (pid %d) "
+			"effectively ignored: node has been reset recently and might be rebooting"
+			,	client->name, client->pid, st_op->node_name);
 		neednot_reboot_node = TRUE;
 		api_reply = ST_APIOK;
 		goto sendback_reply;
 	}
-	
+
 	/* If the node is me, should stonith myself. ;-) No, never come here
 	 * from this API while the node name is myself.
 	 * So just broadcast the requirement to the whole of cluster to do it.
@@ -2046,7 +2039,7 @@ on_stonithd_node_fence(struct ha_msg * request, gpointer data)
 		} else {
 			api_reply = ST_APIFAIL;
 		}
-	}	
+	}
 
 sendback_reply:
 	/* send back the sync result */
@@ -2492,6 +2485,9 @@ require_others_to_stonith(const stonith_ops_t * st_op)
 		return ST_FAIL;
 	}
 
+	stonithd_log(LOG_INFO, "we can't manage %s, broadcast request "
+		"to other nodes", st_op->node_name);
+
 	stonithd_log2(LOG_DEBUG, "require_others_to_stonith: begin.");
 	if ((ha_msg_add(msg, F_STONITHD_NODE, st_op->node_name) != HA_OK)
 	    ||(ha_msg_add_int(msg, F_STONITHD_OPTYPE, st_op->optype) != HA_OK)
@@ -2713,14 +2709,13 @@ on_stonithd_virtual_stonithRA_ops(struct ha_msg * request, gpointer data)
 
 	/* Check if have signoned */
 	if ((client = get_exist_client_by_chan(client_list, ch)) == NULL ) {
-		stonithd_log(LOG_ERR, "on_stonithd_virtual_stonithRA_ops: "
-			     "not signoned yet.");
+		stonithd_log(LOG_ERR, "client [pid: %d] "
+			     "not signed on", ch->farside_pid);
 		if ( NULL!= (ra_op = new_stonithRA_ops_t(request)) ) {
-			stonithd_log2(LOG_DEBUG, "client [pid: %d] want a "
-				"resource operation %s on stonith RA %s "
-				"[resource id: %s]"
+			stonithd_log(LOG_DEBUG, "client [pid: %d] requests a "
+				"resource operation %s on %s (%s)"
 				, ch->farside_pid, ra_op->op_type
-				, ra_op->ra_name, ra_op->rsc_id);
+				, ra_op->rsc_id, ra_op->ra_name);
 			free_stonithRA_ops_t(ra_op);
 			ra_op = NULL;
 		}
@@ -2733,10 +2728,10 @@ on_stonithd_virtual_stonithRA_ops(struct ha_msg * request, gpointer data)
 		goto send_back_reply;
 	}
 
-	stonithd_log(LOG_DEBUG, "client %s [pid: %d] want a resource "
-			"operation %s on stonith RA %s [resource id: %s]"
+	stonithd_log(LOG_DEBUG, "client %s [pid: %d] requests a resource "
+		"operation %s on %s (%s)"
 		,	client->name, client->pid
-		,	ra_op->op_type, ra_op->ra_name, ra_op->rsc_id);
+		,	ra_op->op_type, ra_op->rsc_id, ra_op->ra_name);
 
 	/* execute stonith plugin : begin */
 	/* When in parent process then be back here */
@@ -2815,7 +2810,8 @@ send_stonithRAop_final_result( stonithRA_ops_t * ra_op, gpointer data)
 	}
 
 	stonithd_log(LOG_DEBUG
-		     , "RA %s's op %s finished. op_result=%d"
+		     , "%s's (%s) op %s finished. op_result=%d"
+		     , ra_op->rsc_id
 		     , ra_op->ra_name
 			 , ra_op->op_type
 			 , ra_op->op_result);
@@ -2828,13 +2824,13 @@ send_stonithRAop_final_result( stonithRA_ops_t * ra_op, gpointer data)
 	}
 
 	if ((reply = ha_msg_new(8)) == NULL) {
-		stonithd_log(LOG_ERR, "%s:%d:ha_msg_new:out of memory."
+		stonithd_log(LOG_ERR, "%s:%d:ha_msg_new:out of memory"
 				,__FUNCTION__, __LINE__);
 		return ST_FAIL;
 	}
 
-	stonithd_log2(LOG_DEBUG, "ra_op->op_type=%s, ra_op->ra_name=%s",
-		     ra_op->op_type, ra_op->ra_name);
+	stonithd_log2(LOG_DEBUG, "ra_op->op_type=%s, ra_op->rsc_id=%s, ra_op->ra_name=%s",
+		     ra_op->op_type, ra_op->rsc_id, ra_op->ra_name);
 	if ( (ha_msg_add(reply, F_STONITHD_TYPE, ST_APIRPL) != HA_OK ) 
   	    ||(ha_msg_add(reply, F_STONITHD_APIRPL, ST_RAOPRET) != HA_OK ) 
 	    ||(ha_msg_add(reply, F_STONITHD_RAOPTYPE, ra_op->op_type) != HA_OK)
@@ -2938,7 +2934,7 @@ stonithRA_operate( stonithRA_ops_t * op, gpointer data )
 
         if (i == DIMOF(raop_handler)) {
                 stonithd_log(LOG_WARNING, "stonithRA_operate: received an unknown "
-			     "RA op, and now just ignore it.");
+			     "RA op %s, ignoring", op->op_type);
         }
 
 	return(-1);	
@@ -2956,16 +2952,16 @@ stonithRA_start( stonithRA_ops_t * op, gpointer data)
 	char **		hostlist;
 
 	/* Check the parameter */
-	if ( op == NULL || op->rsc_id <= 0 || op->op_type == NULL
+	if ( op == NULL || op->rsc_id == NULL || op->op_type == NULL
 	    || op->ra_name == NULL || op->params == NULL ) {
-		stonithd_log(LOG_ERR, "stonithRA_start: parameter error.");
+		stonithd_log(LOG_ERR, "stonithRA_start: parameter error");
 		return ST_FAIL;
 	}
 
 	srsc = get_started_stonith_resource(op->rsc_id);
 	if (srsc != NULL) {
-		stonithd_log(LOG_DEBUG, "%s: stonith agent %s "
-			"already started, monitor only"
+		stonithd_log(LOG_DEBUG, "%s: %s is "
+			"already started, we just probe the status"
 			, __FUNCTION__, srsc->rsc_id);
 		/* seems started, just to confirm it */
 		stonith_obj = srsc->stonith_obj;
@@ -2979,7 +2975,7 @@ stonithRA_start( stonithRA_ops_t * op, gpointer data)
 			__FUNCTION__, __LINE__, strerror(errno));
 		return ST_FAIL;
 	}
-	stonithd_log(LOG_DEBUG, "%s: got a shmem seg of size %d"
+	stonithd_log2(LOG_DEBUG, "%s: got a shmem seg of size %d"
 		     , __FUNCTION__, shmsize);
 
 	/* Don't find in local_started_stonith_rsc, not on start status */
@@ -2993,7 +2989,7 @@ stonithRA_start( stonithRA_ops_t * op, gpointer data)
 	stonith_obj = stonith_new(op->ra_name);
 	if (stonith_obj == NULL) {
 		return_to_dropped_privs();
-		stonithd_log(LOG_ERR, "Invalid RA/device type: '%s'", 
+		stonithd_log(LOG_ERR, "invalid RA/device type: '%s'", 
 		             op->ra_name);
 		return ST_FAIL;
 	}
@@ -3006,7 +3002,7 @@ stonithRA_start( stonithRA_ops_t * op, gpointer data)
 	if ( snv == NULL
 	||	stonith_set_config(stonith_obj, snv) != S_OK ) {
 		stonithd_log(LOG_ERR,
-			"Invalid config info for %s device.", op->ra_name);
+			"invalid config info for %s (device %s)", op->rsc_id, op->ra_name);
 		stonith_delete(stonith_obj); 
 		return_to_dropped_privs();
 		stonith_obj = NULL;
@@ -3055,11 +3051,11 @@ probe_status:
 	}
 	hostlist = stonith_get_hostlist(stonith_obj);
 	if( !hostlist ) {
-		stonithd_log(LOG_ERR, "Could not list nodes for stonith RA %s."
-		,	op->ra_name);
+		stonithd_log(LOG_ERR, "cannot list nodes for %s"
+		,	op->rsc_id);
 		exit(EXECRA_NOT_CONFIGURED);
 	}
-	if( !hostlist2shmem(shmid,hostlist,shmsize,
+	if( !hostlist2shmem(op->rsc_id,shmid,hostlist,shmsize,
 			lastgasp_stonith(stonith_obj->stype)) ) {
 		exit(EXECRA_NOT_CONFIGURED);
 	}
@@ -3100,8 +3096,6 @@ remove_shm_hostlist(pid_t pid)
 	struct hostlist_shmseg *p;
 
 	if( !(p = lookup_shm_hostlist(pid)) ) {
-		stonithd_log(LOG_ERR, "%s: no hostlist found for pid %d"
-		, __FUNCTION__, pid);
 		return;
 	}
 	if( shmctl(p->shmid, IPC_RMID, NULL) < 0 ) {
@@ -3115,7 +3109,7 @@ remove_shm_hostlist(pid_t pid)
 
 /* store the hostlist to a shared memory segment */
 static gboolean
-hostlist2shmem(int shmid,char **hostlist,int maxlist,int is_lastgasp)
+hostlist2shmem(char *rsc_id, int shmid,char **hostlist,int maxlist,int is_lastgasp)
 {
 	char *s, *q, **h;
 	int rc = TRUE;
@@ -3131,15 +3125,20 @@ hostlist2shmem(int shmid,char **hostlist,int maxlist,int is_lastgasp)
 	q = s;
 	for( h = hostlist; *h; h++ ) {
 		if( !TEST && !is_lastgasp && !strcmp(*h, local_nodename) ) {
+			stonithd_log(LOG_NOTICE,"%s:%d: remove us "
+				"(%s) from the host list for %s",
+				__FUNCTION__, __LINE__, *h, rsc_id);
 			continue; /* we can't reset ourselves */
 		}
 		if( q-s+strlen(*h)+1 > maxlist-1 ) {
 			stonithd_log(LOG_ERR,"%s:%d: size of node "
-				"list exceeds storage: skipping %s",
-				__FUNCTION__, __LINE__, *h);
+				"list for %s exceeds storage: skipping %s",
+				__FUNCTION__, __LINE__, rsc_id, *h);
 			rc = FALSE;
 			break;
 		}
+		stonithd_log(LOG_DEBUG,"%s:%d: %s claims it can manage node %s"
+			, __FUNCTION__, __LINE__, rsc_id, *h);
 		strcpy(q,*h);
 		q += strlen(q)+1;
 	}
@@ -3151,6 +3150,8 @@ hostlist2shmem(int shmid,char **hostlist,int maxlist,int is_lastgasp)
 		return FALSE;
 	}
 	if( q == s ) { /* oops, no hosts configured */
+		stonithd_log(LOG_WARNING,"host list for %s "
+			"is empty, please fix your constraints", rsc_id);
 		rc = FALSE;
 	}
 	return rc;
@@ -3166,9 +3167,7 @@ shmem2hostlist(pid_t pid)
 	char *s, **hostlist;
 
 	if( !(p = lookup_shm_hostlist(pid)) ) {
-		stonithd_log(LOG_ERR, "%s: no hostlist found for pid %d"
-		, __FUNCTION__, pid);
-		return NULL;
+		return NULL; /* no hostlist found */
 	}
 	return_to_orig_privs();
 	if( (s = shmat(p->shmid,0,SHM_RDONLY)) == (void *)-1 ) {
@@ -3225,9 +3224,8 @@ record_new_srsc(stonithRA_ops_t *ra_op)
 	}
 	node_list = shmem2hostlist(ra_op->call_id);
 	if( !node_list ) {
-		stonithd_log(LOG_ERR, "%s:%d: empty host list for stonith RA %s"
-			, __FUNCTION__, __LINE__
-			, ra_op->ra_name);
+		stonithd_log(LOG_WARNING,"start %s failed, because its hostlist "
+			"is empty", rsc_id);
 		return;
 	}
 	/* ra_op will be free at once, so it's safe to set some of its
@@ -3323,8 +3321,8 @@ stonithRA_monitor( stonithRA_ops_t * ra_op, gpointer data )
 
 	srsc = get_started_stonith_resource(ra_op->rsc_id);
 	if ( srsc == NULL ) {
-		stonithd_log(LOG_DEBUG, "stonithRA_monitor: the resource is not "
-				"started.");
+		stonithd_log(LOG_NOTICE, "stonithRA_monitor: %s is not "
+				"started.",ra_op->rsc_id);
 		/* This resource is not started */
 		child_exitcode = EXECRA_NOT_RUNNING;
 	}
@@ -3677,7 +3675,7 @@ delete_client_by_chan(GList ** client_list, IPC_Channel * ch)
 	client = get_exist_client_by_chan(*client_list, ch);
 	if ( !client ) {
 		stonithd_log2(LOG_DEBUG, "delete_client_by_chan: no client "
-			"using this channel, so no client deleted.");
+			"using this channel");
 		return ST_FAIL;
 	}
 	stonithd_log2(LOG_DEBUG, "delete_client_by_chan: delete client "
