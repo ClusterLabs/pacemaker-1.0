@@ -244,7 +244,7 @@ static int init_hb_msg_handler(void);
 static gboolean stonithd_ais_dispatch(AIS_Message *wrapper, char *data, int sender);
 static void stonithd_ais_destroy(gpointer user_data);
 static struct ha_msg* ais_msg2ha_msg(char *input);
-static int getattr(char *input, struct ha_msg *msg);
+static int attr2fld(char *input, struct ha_msg *msg);
 #endif
 static void stonithd_hb_callback(struct ha_msg* msg, void* private_data);
 static void stonithd_hb_connection_destroy(void* private_data);
@@ -1065,8 +1065,9 @@ stonithd_ais_dispatch(AIS_Message *wrapper, char *data, int sender)
 	} \
 } while(0)
 
+/* store next XML attribute as a field in msg */
 static int
-getattr(char *input, struct ha_msg *msg)
+attr2fld(char *input, struct ha_msg *msg)
 {
 	char *p = input, *q;
 	char *attr=NULL, *val=NULL;
@@ -1081,7 +1082,7 @@ getattr(char *input, struct ha_msg *msg)
 		if( *q == '\\' )
 			q++;
 	}
-	if( !*q ) /* premature end-of-string */
+	if( !*q ) /* premature end-of-string? */
 		goto err;
 	savestrn(val,p,q-p);
 	if( !attr || !val )
@@ -1112,7 +1113,7 @@ ais_msg2ha_msg(char *input)
 	int l;
 	struct ha_msg *msg = NULL;
 
-	if (strncmp(p, "<"AIS_TAG, strlen(AIS_TAG)+1)) {
+	if (strncmp(p, "<"AIS_TAG, strlen("<"AIS_TAG))) {
 		stonithd_log(LOG_ERR, "%s:%d: unexpected tag: |%s|"
 			, __FUNCTION__, __LINE__, p);
 		goto err;
@@ -1121,10 +1122,10 @@ ais_msg2ha_msg(char *input)
 	if ((msg = ha_msg_new(1)) == NULL) {
 		stonithd_log(LOG_ERR, "%s:%d: out of memory"
 			, __FUNCTION__, __LINE__);
-		return NULL;
+		goto err;
 	}
 	while( *p && *p != '/' ) {
-		if( !(l = getattr(p,msg)) ) {
+		if( !(l = attr2fld(p,msg)) ) {
 			stonithd_log(LOG_ERR, "%s:%d: bad format: |%s|"
 				, __FUNCTION__, __LINE__, p);
 			goto err;
