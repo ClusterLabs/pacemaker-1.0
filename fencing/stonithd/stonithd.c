@@ -410,9 +410,11 @@ static GMainLoop *	mainloop 		= NULL;
 static const char * 	stonithd_name		= "stonithd";
 extern const char * 	crm_system_name;
 static gboolean		STARTUP_ALONE 		= FALSE;
+#if SUPPORT_HEARTBEAT
 static gboolean 	SIGNONED_TO_APPHBD	= FALSE;
 static gboolean 	NEED_SIGNON_TO_APPHBD	= FALSE;
 static ll_cluster_t *	hb			= NULL;
+#endif
 static gboolean 	TEST 			= FALSE;
 static IPC_Auth* 	ipc_auth 		= NULL;
 extern int	 	debug_level	       ;
