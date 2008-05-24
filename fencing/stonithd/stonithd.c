@@ -26,6 +26,33 @@
  *    stonith plugins?
  */
 
+/***************************************************
+ * How does stonithd reset a node
+ *
+ * Every stonithd instance has zero or more stonith resources in
+ * the started (enabled) state. These resources represent stonith
+ * devices configured in such a way as to be able to manage one
+ * or more nodes.
+ *
+ * 1. One of the stonithd instances receives a request to manage
+ * (stonith) a node.
+ *
+ * 2. stonithd invokes each of the local stonith resources in
+ * turn to try to stonith the node. stonith resources don't have
+ * defined priority/preference.
+ *
+ * 3. If none of the local stonith resources succeeded, then
+ * stonithd broadcasts a message to other stonithd instances (on
+ * other nodes) with a request to stonith the node.
+ *
+ * 4. All other stonithd instances repeat step 2. However, they
+ * don't proceed with step 3. They report back to the originating
+ * stonithd about the outcome.
+ *
+ ***************************************************/
+
+
+
 #include <crm_internal.h>
 #include <stdio.h>
 #include <stdlib.h>
