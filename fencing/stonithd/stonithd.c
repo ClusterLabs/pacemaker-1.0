@@ -31,6 +31,7 @@
 #include <stdlib.h>
 #include <stdarg.h>
 #include <unistd.h>
+#include <ctype.h>
 #include <fcntl.h>
 #ifdef HAVE_STRING_H
 #include <string.h>
@@ -327,6 +328,8 @@ static gboolean hostlist2shmem(char *rsc_id,
 static char ** shmem2hostlist(pid_t pid);
 static char ** copyshmem(char *s);
 static void record_new_srsc(stonithRA_ops_t *ra_op);
+static struct ha_msg* ais_msg2ha_msg(char *input);
+static int getattr(char *input, struct ha_msg *msg);
 
 static struct api_msg_to_handler api_msg_to_handlers[] = {
 	{ ST_SIGNON,	on_stonithd_signon },
@@ -1034,11 +1037,10 @@ stonithd_ais_dispatch(AIS_Message *wrapper, char *data, int sender)
 	stonithd_log2(LOG_DEBUG,"%s:%d: Message received: '%d:%.80s'", 
 		__FUNCTION__, __LINE__, wrapper->id, data);
 
-	msg = string2msg(data,strlen(data));
+	msg = ais_msg2ha_msg(data);
 	if(msg == NULL) {
 		goto bail;
 	}
-	ha_msg_add(msg, F_ORIG, wrapper->sender.uname);
 	stonithd_hb_callback(msg, NULL);
 
 	ZAPMSG(msg);
@@ -1048,6 +1050,97 @@ stonithd_ais_dispatch(AIS_Message *wrapper, char *data, int sender)
 	stonithd_log(LOG_ERR, "%s:%d: bad msg: |%s|"
 		, __FUNCTION__, __LINE__, data);
 	return TRUE;
+}
+
+#define AIS_TAG "ais_msg"
+#define skipwhite(p) while(*p && isspace(*p)) p++
+#define savestrn(d,p,len) do { \
+	if( !(d = cl_malloc(len+1)) ) { \
+		stonithd_log(LOG_ERR, "out of memory"); \
+	} else { \
+		strncpy(d,p,len); \
+		*(d+(len)) = '\0'; \
+	} \
+} while(0)
+
+static int
+getattr(char *input, struct ha_msg *msg)
+{
+	char *p = input, *q;
+	char *attr=NULL, *val=NULL;
+
+	skipwhite(p);
+	if (!(q = strstr(p,"=\"")))
+		goto err;
+	savestrn(attr,p,q-p);
+
+	p = q+strlen("=\""); /* start of the value string */
+	for( q=p; *q && *q != '"'; q++ ) {
+		if( *q == '\\' )
+			q++;
+	}
+	if( !*q ) /* premature end-of-string */
+		goto err;
+	savestrn(val,p,q-p);
+	if( !attr || !val )
+		goto err;
+	q++; /* move beyond the quote */
+
+	if ((ha_msg_add(msg, attr, val) != HA_OK)) {
+		stonithd_log(LOG_ERR, "%s:%d: cannot add field."
+			, __FUNCTION__, __LINE__);
+		goto err;
+	}
+	cl_free(attr);
+	cl_free(val);
+	return q-input;
+
+err:
+	if( attr )
+		cl_free(attr);
+	if( val )
+		cl_free(val);
+	return 0;
+}
+
+static struct ha_msg*
+ais_msg2ha_msg(char *input)
+{
+	char *p = input;
+	int l;
+	struct ha_msg *msg = NULL;
+
+	if (strncmp(p, "<"AIS_TAG, strlen(AIS_TAG)+1)) {
+		stonithd_log(LOG_ERR, "%s:%d: unexpected tag: |%s|"
+			, __FUNCTION__, __LINE__, p);
+		goto err;
+	}
+	p += strlen("<"AIS_TAG); 
+	if ((msg = ha_msg_new(1)) == NULL) {
+		stonithd_log(LOG_ERR, "%s:%d: out of memory"
+			, __FUNCTION__, __LINE__);
+		return NULL;
+	}
+	while( *p && *p != '/' ) {
+		if( !(l = getattr(p,msg)) ) {
+			stonithd_log(LOG_ERR, "%s:%d: bad format: |%s|"
+				, __FUNCTION__, __LINE__, p);
+			goto err;
+		}
+		p += l;
+	}
+	if (strcmp(p,"/>")) {
+		stonithd_log(LOG_ERR, "%s:%d: bad format: |%s|"
+			, __FUNCTION__, __LINE__, p);
+		goto err;
+	}
+	return msg;
+	
+err:
+	if( msg ) {
+		ZAPMSG(msg);
+	}
+	return NULL;
 }
 
 static void
