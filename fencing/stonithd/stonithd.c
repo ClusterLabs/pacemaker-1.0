@@ -243,6 +243,8 @@ static int init_hb_msg_handler(void);
 #if SUPPORT_AIS
 static gboolean stonithd_ais_dispatch(AIS_Message *wrapper, char *data, int sender);
 static void stonithd_ais_destroy(gpointer user_data);
+static struct ha_msg* ais_msg2ha_msg(char *input);
+static int getattr(char *input, struct ha_msg *msg);
 #endif
 static void stonithd_hb_callback(struct ha_msg* msg, void* private_data);
 static void stonithd_hb_connection_destroy(void* private_data);
@@ -328,8 +330,6 @@ static gboolean hostlist2shmem(char *rsc_id,
 static char ** shmem2hostlist(pid_t pid);
 static char ** copyshmem(char *s);
 static void record_new_srsc(stonithRA_ops_t *ra_op);
-static struct ha_msg* ais_msg2ha_msg(char *input);
-static int getattr(char *input, struct ha_msg *msg);
 
 static struct api_msg_to_handler api_msg_to_handlers[] = {
 	{ ST_SIGNON,	on_stonithd_signon },
