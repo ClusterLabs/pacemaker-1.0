@@ -338,18 +338,19 @@ hb_libdir=`extract_heartbeat_define hb_config.h HA_LIBHBDIR`
 AC_SUBST(hb_libdir)
 
 HA_VARRUNDIR=`extract_heartbeat_define hb_config.h HA_VARRUNDIR`
+AC_DEFINE_UNQUOTED(HA_VARRUNDIR,"$HA_VARRUNDIR", Location for sockets)
 AC_SUBST(HA_VARRUNDIR)
 
 HA_VARLIBDIR=`extract_heartbeat_define hb_config.h HA_VARLIBDIR`
 AC_SUBST(HA_VARLIBDIR)
 
 OCF_ROOT_DIR=`extract_heartbeat_define hb_config.h OCF_ROOT_DIR`
-AC_SUBST(OCF_ROOT_DIR)
 AC_DEFINE_UNQUOTED(OCF_ROOT_DIR,"$OCF_ROOT_DIR", OCF root directory - specified by the OCF standard)
+AC_SUBST(OCF_ROOT_DIR)
 
 OCF_RA_DIR=`extract_heartbeat_define hb_config.h OCF_RA_DIR`
-AC_SUBST(OCF_RA_DIR)
 AC_DEFINE_UNQUOTED(OCF_RA_DIR,"$OCF_RA_DIR", Location for OCF RAs)
+AC_SUBST(OCF_RA_DIR)
 
 HA_APIGROUP=`extract_heartbeat_define hb_config.h HA_APIGROUP`
 AC_SUBST(HA_APIGROUP)
@@ -358,8 +359,8 @@ HA_CCMUSER=`extract_heartbeat_define hb_config.h HA_CCMUSER`
 AC_SUBST(HA_CCMUSER)
 
 HA_NOARCHDATAHBDIR="${datadir}/heartbeat"
-AC_SUBST(HA_NOARCHDATAHBDIR)
 AC_DEFINE_UNQUOTED(HA_NOARCHDATAHBDIR,"$HA_NOARCHDATAHBDIR", Heartbeat noarch data directory)
+AC_SUBST(HA_NOARCHDATAHBDIR)
 
 #
 #	Other interesting variables: ${host_vendor} and ${host_os}
