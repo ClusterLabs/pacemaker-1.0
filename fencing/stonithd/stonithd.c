@@ -908,15 +908,15 @@ handle_finished_op(common_op_t *op, pid_t pid, int exitcode)
 		return;
 	}
 	/* Go ahead when exitcode != S_OK */
-	stonithd_log(LOG_INFO, "Failed to STONITH node %s with " 
-		"local device %s (rc %d), will try to the "
-		"next local device."
+	stonithd_log(LOG_INFO, "failed to STONITH node %s with " 
+		"local device %s (exitcode %d), gonna try the "
+		"next local device"
 		,	op->op_union.st_op->node_name, op->rsc_id, exitcode); 
 	if (ST_OK == continue_local_stonithop(pid)) {
 		return;
 	}
-	stonithd_log(LOG_DEBUG, "Failed to STONITH node %s "
-		"locally.", op->op_union.st_op->node_name);
+	stonithd_log(LOG_DEBUG, "failed to STONITH node %s "
+		"locally", op->op_union.st_op->node_name);
 	/* The next statement is just for debugging */
 	if (op->scenario == STONITH_INIT) {
 		stonithd_log(LOG_DEBUG, "Will ask other nodes "
@@ -1393,7 +1393,7 @@ handle_msg_trstit(struct ha_msg* msg, void* private_data)
 	common_op_t * op = NULL;
 	int rc = ST_OK;
 
-	stonithd_log(LOG_DEBUG, "handle_msg_trstit: got T_RSTIT msg.");	
+	stonithd_log(LOG_DEBUG, "handle_msg_trstit: got T_RSTIT msg");	
 	st_get_string(msg, F_ORIG, from);
 	st_get_int_value(msg, F_STONITHD_CALLID, &call_id);
 	st_get_int_value(msg, F_STONITHD_FRC, &op_result);
@@ -1402,13 +1402,13 @@ handle_msg_trstit(struct ha_msg* msg, void* private_data)
 	}
 	return_on_msg_from_us(T_RSTIT);
 
-	stonithd_log(LOG_DEBUG, "This T_RSTIT message is from %s.", from);	
+	stonithd_log(LOG_DEBUG, "this T_RSTIT message is from %s", from);	
 	my_hash_table_find(executing_queue, (gpointer *)&orig_key, 
 			   (gpointer *)&op, &call_id);
 	if ( !op || 
 	    (op->scenario != STONITH_INIT && op->scenario != STONITH_REQ)) {
 		stonithd_log(LOG_DEBUG, "handle_msg_trstit: the stonith "
-			"operation (call_id==%d) has finished before "
+			"operation (call_id=%d) has finished before "
 			"receiving this message", call_id);
 		return;
 	}
