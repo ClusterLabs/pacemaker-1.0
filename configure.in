@@ -1158,7 +1158,7 @@ AM_CONDITIONAL(BUILD_HEARTBEAT_SUPPORT, test $SUPPORT_HEARTBEAT = 1)
 
 CLUSTERLIBS=""
 if test $SUPPORT_HEARTBEAT = 1; then
-   CLUSTERLIBS="$CLUSTERLIBS -lhbclient -lccmclient -lstonithd"
+   CLUSTERLIBS="$CLUSTERLIBS -lhbclient -lccmclient"
 fi
 
 if test $SUPPORT_AIS = 1; then

@@ -33,9 +33,10 @@ stonithd_SOURCES =  stonithd.c
 stonithd_LDFLAGS = @LIBLTDL@ -L$(prefix)/lib/pils \
            -L$(prefix)/lib/stonith -L$(prefix)/lib/apphb \
            -L$(prefix)/lib/crm/common \
-           $(top_builddir)/lib/fencing/libstonithd.la
-stonithd_LDADD = $(GLIBLIB) $(CLUSTERLIBS) -lplumb -lpils -lapphb -lstonith \
-           -lcrmcluster -lcrmcommon
+           $(top_builddir)/lib/fencing/libstonithd.la \
+           $(top_builddir)/lib/crm/common/libcrmcluster.la \
+           $(top_builddir)/lib/crm/common/libcrmcommon.la
+stonithd_LDADD = $(GLIBLIB) $(CLUSTERLIBS) -lplumb -lpils -lapphb -lstonith
 
 AM_CFLAGS = $(INCLUDES)
 
