@@ -1696,6 +1696,8 @@ lib/Makefile							\
 	lib/crm/pengine/Makefile				\
 	lib/crm/transition/Makefile				\
 	lib/fencing/Makefile					\
+	lib/plugins/Makefile					\
+		lib/plugins/lrm/Makefile			\
 fencing/Makefile                                                \
         fencing/stonithd/Makefile                               \
 		fencing/test/Makefile                                   \
