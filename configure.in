@@ -1687,6 +1687,7 @@ include/Makefile						\
 	include/crm/Makefile					\
 		include/crm/common/Makefile			\
 		include/crm/pengine/Makefile			\
+	include/fencing/Makefile					\
 replace/Makefile						\
 lib/Makefile							\
 	lib/crm/Makefile					\
@@ -1694,6 +1695,11 @@ lib/Makefile							\
 	lib/crm/cib/Makefile					\
 	lib/crm/pengine/Makefile				\
 	lib/crm/transition/Makefile				\
+	lib/fencing/Makefile					\
+fencing/Makefile                                                \
+        fencing/stonithd/Makefile                               \
+		fencing/test/Makefile                                   \
+		fencing/test/STONITHDBasicSanityCheck                   \
 build/Makefile							\
 	build/pkg/Makefile					\
 		build/pkg/InfoFiles/pkginfo			\

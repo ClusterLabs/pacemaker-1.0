@@ -1,4 +1,5 @@
 usr/include/pacemaker
+usr/include/heartbeat/fencing
 usr/lib/lib*.so
 usr/lib/lib*.a
 usr/share/pacemaker/cts
