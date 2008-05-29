@@ -18,6 +18,6 @@
 #
 MAINTAINERCLEANFILES = Makefile.in
                                                                                                                                                          
-includedir=$(base_includedir)/heartbeat/fencing
+headerdir=$(includedir)/heartbeat/fencing
 
-include_HEADERS = stonithd_api.h stonithd_msg.h
+header_HEADERS = stonithd_api.h stonithd_msg.h
