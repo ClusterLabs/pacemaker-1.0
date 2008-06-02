@@ -31,7 +31,7 @@ COMMONLIBS	 =  -lplumb -lhbclient \
 		    $(GLIBLIB)
 
 
-apitestdir		= 	$(HA_LIBHBDIR)/stonithdtest
+apitestdir		= 	$(halibdir)/stonithdtest
 testdir			= 	$(HA_NOARCHDATAHBDIR)/stonithdtest
 test_SCRIPTS		=	STONITHDBasicSanityCheck
 EXTRA_DIST		=	STONITHDBasicSanityCheck
