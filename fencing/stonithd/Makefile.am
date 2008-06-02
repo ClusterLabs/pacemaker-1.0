@@ -30,9 +30,7 @@ havarlibdir      =  $(localstatedir)/lib/@HB_PKG@
 
 halib_PROGRAMS   =  stonithd
 stonithd_SOURCES =  stonithd.c
-stonithd_LDFLAGS = @LIBLTDL@ -L$(prefix)/lib/pils \
-           -L$(prefix)/lib/stonith -L$(prefix)/lib/apphb \
-           -L$(prefix)/lib/crm/common \
+stonithd_LDFLAGS = @LIBLTDL@ -lpils \
            $(top_builddir)/lib/fencing/libstonithd.la \
            $(top_builddir)/lib/crm/common/libcrmcluster.la \
            $(top_builddir)/lib/crm/common/libcrmcommon.la
