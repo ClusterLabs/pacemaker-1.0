@@ -21,6 +21,7 @@ fi
 
 tmpfile=/tmp/dkshowscorestmpfiledk
 tmpfile2=/tmp/dkshowscorestmpfile2dk
+tmpfile3=/tmp/dkshowscorestmpfile3dk
 
 if [ `crmadmin -D | cut -d' ' -f4` != `uname -n|tr "[:upper:]" "[:lower:]"` ] 
   then echo "Warning: Script is not running on DC. This will be slow."
@@ -44,7 +45,7 @@ then
       nodename=$2
 fi
 
-2>&1 ptest -LVs | grep -v group_color | grep -E "$resource" | grep -E "$nodename" | sed 's/dump_node_scores\:\ //' > $tmpfile
+2>&1 ptest -LVs | grep -E "$resource" | grep -E "$nodename" | sed 's/dump_node_scores\:\ //' > $tmpfile
 
 parseline() {
 	line="$1"
@@ -80,11 +81,30 @@ get_failcount() {
         failcount=`crm_failcount -G -r $res -U $node 2>/dev/null|grep -o -E 'value ?= ?INFINITY|value ?= ?[0-9]*'|cut -d '=' -f 2|grep -v "^$"`
 }
 
+unset group_resources
+# display group scores
+grep group_color $tmpfile | while read line
+do
+        unset node res score stickiness failcount failurestickiness
+        parseline "$line"
+        get_stickiness $res
+        get_failcount $res $node
+        printf "%-20s%-10s%-16s%-11s%-9s%-16s\n" $res $score $node $stickiness $failcount $failurestickiness
+	export group_resources="$res $group_resources"
+	echo $group_resources > $tmpfile3
+done >> $tmpfile2
+
 # display allocation scores
-grep -v master_color $tmpfile | grep -v clone_color | while read line
+grep -v master_color $tmpfile | grep -v clone_color | grep -v group_color | while read line
 do
 	unset node res score stickiness failcount failurestickiness
 	parseline "$line"
+	#skip group resources
+	if grep -q -w $res $tmpfile3
+	then
+		#echo skipping $res as it is part of a group and their score is shown in the group_color lines
+		continue
+	fi
 	get_stickiness $res
 	get_failcount $res $node
 	printf "%-20s%-10s%-16s%-11s%-9s%-16s\n" $res $score $node $stickiness $failcount $failurestickiness
@@ -120,4 +140,4 @@ else
 	sort -k $sortby $tmpfile2
 fi
 
-rm $tmpfile $tmpfile2
+rm $tmpfile $tmpfile2 $tmpfile3
