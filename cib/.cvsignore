@@ -4,6 +4,7 @@ Makefile.in
 *.la
 *.lo
 cib
+cibpipe
 cibmon
 .deps
 *.beam
