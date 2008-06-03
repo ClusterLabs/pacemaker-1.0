@@ -101,6 +101,7 @@
 #include <clplumbing/Gmain_timeout.h>
 #include <crm/crm.h>
 #include <crm/common/cluster.h>
+#include <crm/common/xml.h>
 
 #include <assert.h>
 #define ST_ASSERT(cond) assert(cond)
@@ -1185,6 +1186,9 @@ stonithd_ais_destroy(gpointer user_data)
 static gboolean
 stonithd_sendmsg(const char *node_name, struct ha_msg *msg, const char *st_op_type)
 {
+	int rc;
+	xmlNode *xml;
+
 	if(is_openais_cluster()) {
 		if ((ha_msg_add(msg, F_TYPE, crm_system_name) != HA_OK)
 		||(ha_msg_add(msg, F_STONITHD_OP, st_op_type) != HA_OK)) {
@@ -1208,7 +1212,10 @@ stonithd_sendmsg(const char *node_name, struct ha_msg *msg, const char *st_op_ty
 			, __FUNCTION__, __LINE__);
 		return FALSE;
 	}
-	return send_cluster_message(node_name, crm_msg_stonithd, msg, FALSE);
+	xml = convert_ha_message(NULL, msg, __FUNCTION__);
+	rc = send_cluster_message(node_name, crm_msg_stonithd, xml, FALSE);
+	free_xml(xml);
+	return rc;
 }
 
 static void
