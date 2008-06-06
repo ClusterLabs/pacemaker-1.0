@@ -1083,6 +1083,7 @@ stonithd_ais_dispatch(AIS_Message *wrapper, char *data, int sender)
 
 #define AIS_TAG "ais_msg"
 #define skipwhite(p) while(*p && isspace(*p)) p++
+#define skipnonwhite(p) while(*p && !isspace(*p)) p++
 #define savestrn(d,p,len) do { \
 	if( !(d = cl_malloc(len+1)) ) { \
 		stonithd_log(LOG_ERR, "out of memory"); \
@@ -1140,12 +1141,12 @@ ais_msg2ha_msg(char *input)
 	int l;
 	struct ha_msg *msg = NULL;
 
-	if (strncmp(p, "<"AIS_TAG, strlen("<"AIS_TAG))) {
-		stonithd_log(LOG_ERR, "%s:%d: unexpected tag: |%s|"
+	if (*p != '<') {
+		stonithd_log(LOG_ERR, "%s:%d: unexpected start of message: |%s|"
 			, __FUNCTION__, __LINE__, p);
 		goto err;
 	}
-	p += strlen("<"AIS_TAG); 
+	skipnonwhite(p);
 	if ((msg = ha_msg_new(1)) == NULL) {
 		stonithd_log(LOG_ERR, "%s:%d: out of memory"
 			, __FUNCTION__, __LINE__);
