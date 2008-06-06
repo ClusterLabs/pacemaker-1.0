@@ -1091,6 +1091,8 @@ case $SUPPORT_HEARTBEAT in
 esac
 
 AC_MSG_CHECKING(for native AIS)
+AISMSGLIB=""
+AIS_VERSION=""
 
 if  test $SUPPORT_AIS = 0; then
    AC_MSG_RESULT(no... not requested.)
@@ -1103,7 +1105,7 @@ else
    AC_MSG_RESULT(yes... $AISPREFIX)
 
    dnl Find it in lib, lib64, or wherever it wants to live...
-   alib=`ls ${AISPREFIX}/*/openais/libaisutil.so | head -n 1`
+   alib=`ls ${AISPREFIX}/*/openais/libSaMsg.so | head -n 1`
    AISLIB=`dirname $alib`
 
    if test -z "$LCRSODIR"; then
@@ -1112,14 +1114,26 @@ else
       LCRSODIR=`dirname $alib`
    fi
 
-   AC_MSG_CHECKING(Testing AIS installation in $AISPREFIX)
+   AC_MSG_CHECKING(Testing AIS installation in)
+   AC_MSG_RESULT($AISPREFIX)
    if test -d ${AISLIB} -a ! -z ${AISLIB}; then
      LIBS="$LIBS -L${AISLIB} -R${AISLIB}"
      SUPPORT_AIS=1
      saveLIBS="$LIBS"
 
      dnl libs...
-     AC_CHECK_LIB(aisutil, saSendReceiveReply, [], [SUPPORT_AIS=0])
+     AIS_VERSION="trunk"
+     AC_CHECK_LIB(aisutil, saSendReceiveReply, [AISMSGLIB=-laisutil], [SUPPORT_AIS=0])
+     if test $SUPPORT_AIS = 0; then
+     	  SUPPORT_AIS=1
+	  AIS_VERSION="whitetank"
+          AC_CHECK_LIB(SaMsg, saSendReceiveReply, [AISMSGLIB=-lSaMsg], [SUPPORT_AIS=0])
+	  if test $SUPPORT_AIS = 1; then
+	     AC_DEFINE_UNQUOTED(AIS_WHITETANK, 1, "AIS target is the whitetank series")
+	  fi
+     else
+	  AC_DEFINE_UNQUOTED(AIS_TRUNK, 1, "AIS target is the trunk series")
+     fi
 
      dnl headers...
      AC_CHECK_HEADERS(openais/saAis.h)
@@ -1162,13 +1176,16 @@ if test $SUPPORT_HEARTBEAT = 1; then
 fi
 
 if test $SUPPORT_AIS = 1; then
-   CLUSTERLIBS="$CLUSTERLIBS -laisutil"
+   CLUSTERLIBS="$CLUSTERLIBS ${AISMSGLIB}"
    LIBS="$LIBS -L${AISLIB} -R${AISLIB}"
 else
    AISPREFIX=""
    LCRSODIR=""
 fi
 
+if test $SUPPORT_AIS = 0; then
+   AC_MSG_FAILURE(bang)
+fi
 
 if test $SUPPORT_AIS = 0 -a $SUPPORT_HEARTBEAT = 0; then
    AC_MSG_FAILURE(You must choose at least one cluster stack to support)
