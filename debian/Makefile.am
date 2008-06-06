@@ -22,8 +22,8 @@ MAINTAINERCLEANFILES    = Makefile.in
 
 EXTRA_DIST		= apply changelog compat control copyright \
 			  dpkg-checkbuild rules \
-			  pacemaker.dirs pacemaker.files \
-			  pacemaker-dev.files
+			  pacemaker.dirs pacemaker.install \
+			  pacemaker-dev.install
 
 
 clean-local:
