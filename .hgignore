@@ -78,6 +78,12 @@ tools/hb_report
 tools/ocf-tester
 cts/getpeinputs.sh
 ccdv.dSYM
+xml/pacemaker.rng
+xml/constraints.rng
+xml/nvset.rng
+xml/resources.rng
+xml/rule.rng 
+xml/crm.dtd
 
 # Project build targets
 crm/admin/ccm_tool

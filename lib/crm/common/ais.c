@@ -24,6 +24,7 @@
 #include <sys/utsname.h>
 #include "stack.h"
 #include <clplumbing/timers.h>
+#include <clplumbing/Gmain_timeout.h>
 
 enum crm_ais_msg_types text2msg_type(const char *text) 
 {
@@ -46,6 +47,10 @@ enum crm_ais_msg_types text2msg_type(const char *text)
 		type = crm_msg_pe;
 	} else if(safe_str_eq(text, CRM_SYSTEM_LRMD)) {
 		type = crm_msg_lrmd;
+	} else if(safe_str_eq(text, CRM_SYSTEM_STONITHD)) {
+		type = crm_msg_stonithd;
+	} else if(safe_str_eq(text, "attrd")) {
+		type = crm_msg_attrd;
 	} else {
 		crm_debug_2("Unknown message type: %s", text);
 	}
@@ -82,11 +87,6 @@ int ais_fd_sync = -1;
 static int ais_fd_async = -1; /* never send messages via this channel */
 GFDSource *ais_source = NULL;
 GFDSource *ais_source_sync = NULL;
-
-struct res_overlay {
-	mar_res_header_t header __attribute((aligned(8)));
-/* 	char buf[4096]; */
-};
 
 gboolean
 send_ais_text(int class, const char *data,
@@ -170,7 +170,7 @@ send_ais_text(int class, const char *data,
 
     ais_msg->header.size = sizeof(AIS_Message) + ais_data_len(ais_msg);
 
-    crm_debug("Sending%s message %d to %s.%s (data=%d, total=%d)",
+    crm_debug_3("Sending%s message %d to %s.%s (data=%d, total=%d)",
 		ais_msg->is_compressed?" compressed":"",
 		ais_msg->id, ais_dest(&(ais_msg->host)), msg_type2text(dest),
 		ais_data_len(ais_msg), ais_msg->header.size);
@@ -180,7 +180,10 @@ send_ais_text(int class, const char *data,
     rc = saSendReceiveReply(ais_fd_sync, ais_msg, ais_msg->header.size,
 			    &header, sizeof (mar_res_header_t));
     if(rc == SA_AIS_OK) {
-	CRM_CHECK(header.error == 0, rc = header.error);
+	CRM_CHECK(header.size == sizeof (mar_res_header_t),
+		  crm_err("Odd message: id=%d, size=%d, error=%d",
+			  header.id, header.size, header.error));
+	CRM_CHECK(header.error == SA_AIS_OK, rc = header.error);
     }
 
     if(rc == SA_AIS_ERR_TRY_AGAIN && retries < 20) {
@@ -203,7 +206,7 @@ send_ais_text(int class, const char *data,
 }
 
 gboolean
-send_ais_message(crm_data_t *msg, 
+send_ais_message(xmlNode *msg, 
 		 gboolean local, const char *node, enum crm_ais_msg_types dest)
 {
     gboolean rc = TRUE;
@@ -214,10 +217,6 @@ send_ais_message(crm_data_t *msg,
 	return FALSE;
     }
 
-    if(cl_get_string(msg, F_XML_TAGNAME) == NULL) {
-	ha_msg_add(msg, F_XML_TAGNAME, "ais_msg");
-    }
-    
     data = dump_xml_unformatted(msg);
     rc = send_ais_text(0, data, local, node, dest);
     crm_free(data);
@@ -232,6 +231,19 @@ void terminate_ais_connection(void)
 /*     G_main_del_fd(ais_source); */
 /*     G_main_del_fd(ais_source_sync);     */
 }
+
+int ais_membership_timer = 0;
+gboolean ais_membership_force = FALSE;
+
+static gboolean ais_membership_dampen(gpointer data)
+{
+    crm_debug("Requesting cluster membership after stabilization delay");
+    send_ais_text(crm_class_members, __FUNCTION__, TRUE, NULL, crm_msg_ais);
+    ais_membership_force = TRUE;
+    ais_membership_timer = 0;
+    return FALSE; /* never repeat automatically */
+}
+
 
 static gboolean ais_dispatch(int sender, gpointer user_data)
 {
@@ -253,7 +265,8 @@ static gboolean ais_dispatch(int sender, gpointer user_data)
 	goto bail;
 
     } else if(header->size == header_len) {
-	crm_err("Empty message: error=%d", header->error);
+	crm_err("Empty message: id=%d, size=%d, error=%d, header_len=%d",
+		header->id, header->size, header->error, header_len);
 	goto done;
 	
     } else if(header->size == 0 || header->size < header_len) {
@@ -322,15 +335,72 @@ static gboolean ais_dispatch(int sender, gpointer user_data)
     }
 
     if(msg->header.id == crm_class_members) {
-	crm_data_t *xml = string2xml(data);
+	xmlNode *xml = string2xml(data);
 
 	if(xml != NULL) {
-	    const char *seq_s = crm_element_value(xml, "id");
-	    unsigned long seq = crm_int_helper(seq_s, NULL);
-	    crm_info("Processing membership %ld/%s", seq, seq_s);
-/* 	    crm_log_xml_debug(xml, __PRETTY_FUNCTION__); */
-	    xml_child_iter(xml, node, crm_update_ais_node(node, seq));
-	    crm_calculate_quorum();
+	    gboolean do_ask = FALSE;
+	    gboolean do_process = TRUE;
+	    
+	    int seq = 0;
+	    int new_size = 0;
+	    int current_size = crm_active_members();
+
+	    const char *reason = "unknown";
+
+	    crm_element_value_int(xml, "id", &seq);
+	    crm_debug("Received membership %d", seq);
+
+	    xml_child_iter(xml, node,
+			   const char *state = crm_element_value(node, "state");
+			   if(safe_str_eq(state, CRM_NODE_MEMBER)) {
+			       new_size++;
+			   }
+		);
+
+	    if(ais_membership_force) {
+		/* always process */
+		crm_debug("Processing delayed membership change");
+		
+	    } else if(current_size == 0 && new_size == 1) {
+		do_ask = TRUE;
+		do_process = FALSE;
+		reason = "We've come up alone";
+
+	    } else if(new_size < (current_size/2)) {
+		do_process = FALSE;
+		reason = "We've lost more than half our peers";
+
+		if(ais_membership_timer == 0) {
+		    reason = "We've lost more than half our peers";
+		    do_ask = TRUE;
+		}		
+	    }
+	    
+	    if(do_process) {
+		crm_info("Processing membership %d", seq);
+
+/*		crm_log_xml_debug(xml, __PRETTY_FUNCTION__); */
+		if(ais_membership_force) {
+		    ais_membership_force = FALSE;
+		}
+
+		/* if there is a timer running - let it run
+		 * there is no harm in getting an extra membership message
+		 */
+		
+		xml_child_iter(xml, node, crm_update_ais_node(node, seq));
+		crm_calculate_quorum();
+
+	    } else if(do_ask) {
+		crm_warn("Pausing to allow membership stability (size %d -> %d): %s",
+			 current_size, new_size, reason);
+		ais_membership_timer = Gmain_timeout_add(2*1000, ais_membership_dampen, NULL);
+		crm_log_xml_warn(xml, __PRETTY_FUNCTION__);
+
+	    } else {
+		crm_err("Membership is still unstable (size %d -> %d): %s",
+			current_size, new_size, reason);
+	    }
 	    
 	} else {
 	    crm_warn("Invalid peer update: %s", data);
@@ -374,6 +444,7 @@ gboolean init_ais_connection(
     gboolean (*dispatch)(AIS_Message*,char*,int),
     void (*destroy)(gpointer), char **our_uuid, char **our_uname)
 {
+    int retries = 0;
     int rc = SA_AIS_OK;
     struct utsname name;
 
@@ -391,11 +462,26 @@ gboolean init_ais_connection(
     }
 
     /* 16 := CRM_SERVICE */
+  retry:
     crm_info("Creating connection to our AIS plugin");
     rc = saServiceConnect (&ais_fd_sync, &ais_fd_async, 16);
     if (rc != SA_AIS_OK) {
 	crm_info("Connection to our AIS plugin failed: %s (%d)", ais_error2text(rc), rc);
-	return FALSE;
+    }
+
+    switch(rc) {
+	case SA_AIS_OK:
+	    break;
+	case SA_AIS_ERR_TRY_AGAIN:
+	    if(retries < 30) {
+		sleep(1);
+		retries++;
+		goto retry;
+	    }
+	    crm_err("Retry count exceeded");
+	    return FALSE;
+	default:
+	    return FALSE;
     }
 
     if(destroy == NULL) {
@@ -409,7 +495,15 @@ gboolean init_ais_connection(
     ais_source_sync = G_main_add_fd(
 	G_PRIORITY_HIGH, ais_fd_sync, FALSE, ais_dispatch, dispatch, destroy);
 #endif
-
+#if AIS_WHITETANK
+    {
+	int pid = getpid();
+	char *pid_s = crm_itoa(pid);
+	send_ais_text(0, pid_s, TRUE, NULL, crm_msg_ais);
+	crm_free(pid_s);
+    }
+#endif
+    
     ais_source = G_main_add_fd(
  	G_PRIORITY_HIGH, ais_fd_async, FALSE, ais_dispatch, dispatch, destroy);
     return TRUE;
