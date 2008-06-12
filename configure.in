@@ -40,13 +40,17 @@ AC_ARG_WITH(hapkgversion,
     [ HAPKGVERSION="" ],
 )
 
+DTD_VERSION=0.7
+
 if test -z "$HAPKGVERSION" ; then
-   HAPKGVERSION="0.6.4"
+   HAPKGVERSION="0.7.0"
 fi
 
 HB_PKG=heartbeat
 PKG_NAME=pacemaker
 AM_INIT_AUTOMAKE($PKG_NAME, $HAPKGVERSION)
+
+AC_DEFINE_UNQUOTED(PACEMAKER_VERSION, "$HAPKGVERSION", Current pacemaker version)
 
 dnl ===============================================
 dnl Helpers 
@@ -326,7 +330,11 @@ esac
 
 dnl Variables needed for substitution
 DTD_DIRECTORY="${datadir}/heartbeat"
-AC_DEFINE_UNQUOTED(DTD_DIRECTORY,"$DTD_DIRECTORY", Location for the Pacemaker DTD)
+AC_DEFINE_UNQUOTED(DTD_DIRECTORY,"$DTD_DIRECTORY", Location for the Pacemaker Relax-NG Schema)
+AC_SUBST(DTD_DIRECTORY)
+
+AC_DEFINE_UNQUOTED(DTD_VERSION,"$DTD_VERSION", Current version of the Pacemaker Relax-NG Schema)
+AC_SUBST(DTD_VERSION)
 
 HA_HBCONF_DIR=`extract_heartbeat_define hb_config.h HA_HBCONF_DIR`
 AC_SUBST(HA_HBCONF_DIR)
@@ -825,9 +833,10 @@ AC_MSG_CHECKING(for special libxml2 includes)
 if test "x$XML2CONFIG" = "x"; then
    AC_MSG_ERROR(libxml2 config not found)
 else
-   XML2HEAD=`$XML2CONFIG --cflags`
+   XML2HEAD="`$XML2CONFIG --cflags`"
    AC_MSG_RESULT($XML2HEAD)
    AC_CHECK_LIB(xml2, xmlReadMemory)
+   AC_CHECK_LIB(xslt, xsltApplyStylesheet)
 fi
 
 CPPFLAGS="$CPPFLAGS $XML2HEAD"
@@ -1091,6 +1100,8 @@ case $SUPPORT_HEARTBEAT in
 esac
 
 AC_MSG_CHECKING(for native AIS)
+AISMSGLIB=""
+AIS_VERSION=""
 
 if  test $SUPPORT_AIS = 0; then
    AC_MSG_RESULT(no... not requested.)
@@ -1103,7 +1114,7 @@ else
    AC_MSG_RESULT(yes... $AISPREFIX)
 
    dnl Find it in lib, lib64, or wherever it wants to live...
-   alib=`ls ${AISPREFIX}/*/openais/libaisutil.so | head -n 1`
+   alib=`ls ${AISPREFIX}/*/openais/libSaMsg.so | head -n 1`
    AISLIB=`dirname $alib`
 
    if test -z "$LCRSODIR"; then
@@ -1112,14 +1123,26 @@ else
       LCRSODIR=`dirname $alib`
    fi
 
-   AC_MSG_CHECKING(Testing AIS installation in $AISPREFIX)
+   AC_MSG_CHECKING(Testing AIS installation in)
+   AC_MSG_RESULT($AISPREFIX)
    if test -d ${AISLIB} -a ! -z ${AISLIB}; then
      LIBS="$LIBS -L${AISLIB} -R${AISLIB}"
      SUPPORT_AIS=1
      saveLIBS="$LIBS"
 
      dnl libs...
-     AC_CHECK_LIB(aisutil, saSendReceiveReply, [], [SUPPORT_AIS=0])
+     AIS_VERSION="trunk"
+     AC_CHECK_LIB(aisutil, saSendReceiveReply, [AISMSGLIB=-laisutil], [SUPPORT_AIS=0])
+     if test $SUPPORT_AIS = 0; then
+     	  SUPPORT_AIS=1
+	  AIS_VERSION="whitetank"
+          AC_CHECK_LIB(SaMsg, saSendReceiveReply, [AISMSGLIB=-lSaMsg], [SUPPORT_AIS=0])
+	  if test $SUPPORT_AIS = 1; then
+	     AC_DEFINE_UNQUOTED(AIS_WHITETANK, 1, "AIS target is the whitetank series")
+	  fi
+     else
+	  AC_DEFINE_UNQUOTED(AIS_TRUNK, 1, "AIS target is the trunk series")
+     fi
 
      dnl headers...
      AC_CHECK_HEADERS(openais/saAis.h)
@@ -1156,19 +1179,26 @@ AC_DEFINE_UNQUOTED(SUPPORT_HEARTBEAT, $SUPPORT_HEARTBEAT, Support the Heartbeat 
 AM_CONDITIONAL(BUILD_AIS_SUPPORT, test $SUPPORT_AIS = 1)
 AM_CONDITIONAL(BUILD_HEARTBEAT_SUPPORT, test $SUPPORT_HEARTBEAT = 1)
 
+dnl Compatability checks
+AC_CHECK_FUNCS(msgfromIPC_timeout)
+
+
 CLUSTERLIBS=""
 if test $SUPPORT_HEARTBEAT = 1; then
-   CLUSTERLIBS="$CLUSTERLIBS -lhbclient -lccmclient -lstonithd"
+   CLUSTERLIBS="$CLUSTERLIBS -lhbclient -lccmclient"
 fi
 
 if test $SUPPORT_AIS = 1; then
-   CLUSTERLIBS="$CLUSTERLIBS -laisutil"
+   CLUSTERLIBS="$CLUSTERLIBS ${AISMSGLIB}"
    LIBS="$LIBS -L${AISLIB} -R${AISLIB}"
 else
    AISPREFIX=""
    LCRSODIR=""
 fi
 
+if test $SUPPORT_AIS = 0; then
+   AC_MSG_FAILURE(bang)
+fi
 
 if test $SUPPORT_AIS = 0 -a $SUPPORT_HEARTBEAT = 0; then
    AC_MSG_FAILURE(You must choose at least one cluster stack to support)
@@ -1369,16 +1399,6 @@ AC_REPLACE_FUNCS(alphasort inet_pton NoSuchFunctionName scandir setenv strerror 
 dnl AC_CHECK_FUNCS(alphasort inet_pton NoSuchFunctionName scandir setenv strerror unsetenv strnlen strndup daemon)
 
 AC_CHECK_FUNCS(getopt, AC_DEFINE(HAVE_DECL_GETOPT,  1, [Have getopt function]))
-
-AC_SUBST(HA_HAVE_ALPHASORT)
-AC_SUBST(HA_HAVE_INET_PTON)
-AC_SUBST(HA_HAVE_SETENV)
-AC_SUBST(HA_HAVE_STRERROR)
-AC_SUBST(HA_HAVE_STRNLEN)
-AC_SUBST(HA_HAVE_STRNDUP)
-AC_SUBST(HA_HAVE_DAEMON)
-AC_SUBST(HAVE_STRLCPY)
-AC_SUBST(HAVE_DECL_GETOPT)
 
 AC_CHECK_FUNCS(fcntl)
 AC_CHECK_FUNCS(flock)
@@ -1671,7 +1691,6 @@ crm/Makefile							\
 cib/Makefile							\
 crmd/Makefile							\
 pengine/Makefile						\
-transitioner/Makefile						\
 	crm/ais/Makefile					\
 	crm/admin/Makefile					\
 	        crm/admin/crm_primitive.py			\
@@ -1687,6 +1706,7 @@ include/Makefile						\
 	include/crm/Makefile					\
 		include/crm/common/Makefile			\
 		include/crm/pengine/Makefile			\
+	include/fencing/Makefile					\
 replace/Makefile						\
 lib/Makefile							\
 	lib/crm/Makefile					\
@@ -1694,6 +1714,13 @@ lib/Makefile							\
 	lib/crm/cib/Makefile					\
 	lib/crm/pengine/Makefile				\
 	lib/crm/transition/Makefile				\
+	lib/fencing/Makefile					\
+	lib/plugins/Makefile					\
+		lib/plugins/lrm/Makefile			\
+fencing/Makefile                                                \
+        fencing/stonithd/Makefile                               \
+		fencing/test/Makefile                                   \
+		fencing/test/STONITHDBasicSanityCheck                   \
 build/Makefile							\
 	build/pkg/Makefile					\
 		build/pkg/InfoFiles/pkginfo			\
@@ -1708,6 +1735,12 @@ tools/Makefile							\
 	tools/haresources2cib.py				\
 	tools/hb_report						\
 	tools/ocf-tester					\
+xml/Makefile							\
+	xml/pacemaker.rng					\
+	xml/resources.rng					\
+	xml/constraints.rng					\
+	xml/rule.rng						\
+	xml/nvset.rng						\
 		)
 
 dnl Now process the entire list of files added by previous 
