@@ -1236,8 +1236,13 @@ unpack_rsc_op(resource_t *rsc, node_t *node, xmlNode *xml_op,
 		break;
 
 	    case EXECRA_OK:
-		/* legacy code for pre-0.6.5 operations */
-		if(target_rc < 0
+		if(is_probe && target_rc == 7) {
+		    task_status_i = LRM_OP_DONE;
+		    crm_warn("%s found active %s on %s",
+			     id, rsc->id, node->details->uname);
+
+		    /* legacy code for pre-0.6.5 operations */
+		} else if(target_rc < 0
 		   && interval > 0
 		   && rsc->role == RSC_ROLE_MASTER) {
 		    /* catch status ops that return 0 instead of 8 while they
@@ -1245,6 +1250,7 @@ unpack_rsc_op(resource_t *rsc, node_t *node, xmlNode *xml_op,
 		     */
 		    task_status_i = LRM_OP_ERROR;
 		}
+		
 		break;
 		
 	    default:

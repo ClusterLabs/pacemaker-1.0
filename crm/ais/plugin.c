@@ -582,21 +582,11 @@ int ais_ipc_client_exit_callback (void *conn)
 
 int ais_ipc_client_connect_callback (void *conn)
 {
-    void *async_conn = openais_conn_partner_get(conn);
     ENTER("Client=%p", conn);
-    ais_debug("Client %p/%p joined", conn, async_conn);
-#ifndef AIS_WHITETANK
-    /* Whitetank hasn't finished setting up the connection at this point
+    /* OpenAIS hasn't finished setting up the connection at this point
      * Sending messages now messes up the protocol!
      */
-    if(async_conn) {
-	send_client_msg(async_conn, crm_class_cluster, crm_msg_none, "identify");
-    } else {
-	ais_err("No async connection");
-    }
-#endif
     LEAVE("");
-
     return (0);
 }
 
