@@ -1196,10 +1196,6 @@ else
    LCRSODIR=""
 fi
 
-if test $SUPPORT_AIS = 0; then
-   AC_MSG_FAILURE(bang)
-fi
-
 if test $SUPPORT_AIS = 0 -a $SUPPORT_HEARTBEAT = 0; then
    AC_MSG_FAILURE(You must choose at least one cluster stack to support)
 fi
