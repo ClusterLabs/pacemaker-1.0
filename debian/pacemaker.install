@@ -23,8 +23,10 @@ usr/lib/heartbeat/atest
 usr/lib/heartbeat/tengine
 usr/lib/heartbeat/attrd
 usr/lib/heartbeat/pengine
+usr/lib/heartbeat/stonithd
 usr/lib/openais/lcrso
 usr/share/heartbeat/crm.dtd
 usr/lib/heartbeat/*.py*
 usr/share/man/man8/*.gz
 usr/lib/*.so.*
+usr/lib/heartbeat/plugins/RAExec/stonith.so*
