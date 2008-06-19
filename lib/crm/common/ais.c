@@ -289,7 +289,7 @@ static gboolean ais_dispatch(int sender, gpointer user_data)
 		ais_data_len(msg), msg->size, msg->compressed_size);
     
     data = msg->data;
-    if(msg->is_compressed) {
+    if(msg->is_compressed && msg->size > 0) {
 	int rc = BZ_OK;
 	unsigned int new_size = msg->size;
 
@@ -412,15 +412,13 @@ gboolean init_ais_connection(
     ais_source_sync = G_main_add_fd(
 	G_PRIORITY_HIGH, ais_fd_sync, FALSE, ais_dispatch, dispatch, destroy);
 #endif
-#if AIS_WHITETANK
     {
 	int pid = getpid();
 	char *pid_s = crm_itoa(pid);
 	send_ais_text(0, pid_s, TRUE, NULL, crm_msg_ais);
 	crm_free(pid_s);
     }
-#endif
-    
+
     ais_source = G_main_add_fd(
  	G_PRIORITY_HIGH, ais_fd_async, FALSE, ais_dispatch, dispatch, destroy);
     return TRUE;
