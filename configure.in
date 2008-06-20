@@ -370,6 +370,13 @@ HA_NOARCHDATAHBDIR="${datadir}/heartbeat"
 AC_DEFINE_UNQUOTED(HA_NOARCHDATAHBDIR,"$HA_NOARCHDATAHBDIR", Heartbeat noarch data directory)
 AC_SUBST(HA_NOARCHDATAHBDIR)
 
+HAVE_ASYNC_FAIL=0
+ASYNC_OP_NAME=`extract_heartbeat_define lrm_api.h ASYNC_OP_NAME`
+if test "x$ASYNC_OP_NAME" != "x"; then
+   HAVE_ASYNC_FAIL=1
+fi
+AC_DEFINE_UNQUOTED(HAVE_LRM_ASYNC_FAIL, $HAVE_ASYNC_FAIL, LRM Supports asynchronous resource failures)
+
 #
 #	Other interesting variables: ${host_vendor} and ${host_os}
 #			sample values:	suse		linux
