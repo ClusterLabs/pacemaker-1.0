@@ -725,8 +725,10 @@ signoff_quit:
 			main_rc = LSB_EXIT_GENERIC;
 		}
 	}
+#endif
 
 delhb_quit:
+#if SUPPORT_HEARTBEAT
 	if( is_heartbeat_cluster()) {
 		if (hb != NULL) {
 			if (hb->llc_ops->delete(hb) != HA_OK) {
