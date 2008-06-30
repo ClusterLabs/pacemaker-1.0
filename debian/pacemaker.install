@@ -24,6 +24,8 @@ usr/lib/heartbeat/tengine
 usr/lib/heartbeat/attrd
 usr/lib/heartbeat/pengine
 usr/lib/heartbeat/stonithd
+usr/lib/heartbeat/stonithdtest/apitest
+usr/share/heartbeat/stonithdtest/STONITHDBasicSanityCheck
 usr/lib/openais/lcrso
 usr/share/heartbeat/crm.dtd
 usr/lib/heartbeat/*.py*

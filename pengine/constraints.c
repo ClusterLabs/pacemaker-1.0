@@ -247,7 +247,7 @@ unpack_simple_rsc_order(xmlNode * xml_obj, pe_working_set_t *data_set)
 	
 	order_id = new_rsc_order(
 	    rsc_then, action_then, rsc_first, action_first, cons_weight, data_set);
-	crm_err("order-%d (%s): %s_%s before %s_%s flags=0x%.6x",
+	crm_debug_2("order-%d (%s): %s_%s before %s_%s flags=0x%.6x",
 		    order_id, id, rsc_then->id, action_then, rsc_first->id, action_first,
 		    cons_weight);
 	
