@@ -1,0 +1,8 @@
+Makefile
+Makefile.in
+crm.dtd
+pacemaker.rng
+constraints.rng
+nvset.rng
+resources.rng
+rule.rng 
