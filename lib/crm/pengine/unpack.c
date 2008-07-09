@@ -1172,10 +1172,10 @@ unpack_rsc_op(resource_t *rsc, node_t *node, xmlNode *xml_op,
 		/* else: fall through */
 	    case EXECRA_INSUFFICIENT_PRIV:
 	    case EXECRA_NOT_INSTALLED:
+	    case EXECRA_INVALID_PARAM:
 		effective_node = node;
 		/* fall through */
 	    case EXECRA_NOT_CONFIGURED:
-	    case EXECRA_INVALID_PARAM:
 		crm_err("Hard error - %s failed with rc=%d: Preventing %s from re-starting %s %s",
 			id, actual_rc_i, rsc->id,
 			effective_node?"on":"anywhere",

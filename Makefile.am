@@ -24,8 +24,7 @@ RPM			= @RPM@
 RPMFLAGS		= -ba
 TARFILE			= pacemaker.tar.gz
 AM_TAR			= tar
-LAST_RELEASE		= Pacemaker-0.6.3
-STABLE_SERIES		= stable-0.6
+LAST_RELEASE		= Pacemaker-0.6.5
 
 AUTOMAKE_OPTIONS	= foreign
 ##ACLOCAL                 = aclocal -I $(auxdir)
