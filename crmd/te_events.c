@@ -1,0 +1,573 @@
+/* 
+ * Copyright (C) 2004 Andrew Beekhof <andrew@beekhof.net>
+ * 
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ * 
+ * This software is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public
+ * License along with this library; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ */
+
+#include <crm_internal.h>
+
+#include <sys/param.h>
+#include <crm/crm.h>
+#include <crm/cib.h>
+#include <crm/msg_xml.h>
+#include <crm/common/msg.h>
+#include <crm/common/xml.h>
+#include <tengine.h>
+#include <heartbeat.h>
+#include <clplumbing/Gmain_timeout.h>
+#include <lrm/lrm_api.h>
+#include <crmd_fsa.h>
+
+char *failed_stop_offset = NULL;
+char *failed_start_offset = NULL;
+
+gboolean need_abort(xmlNode *update);
+gboolean process_graph_event(xmlNode *event, const char *event_node);
+int match_graph_event(int action_id, xmlNode *event, const char *event_node,
+		      int op_status, int op_rc, int target_rc);
+
+gboolean
+need_abort(xmlNode *update)
+{
+    xmlNode *xml = NULL;
+    if(update == NULL) {
+	return FALSE;
+    }
+    
+    xml_prop_iter(update, name, value,
+		  if(safe_str_eq(name, XML_ATTR_HAVE_QUORUM)) {
+		      goto do_abort; /* possibly not required */
+		  } else if(safe_str_eq(name, XML_ATTR_GENERATION)) {
+		      goto do_abort;
+		  } else if(safe_str_eq(name, XML_ATTR_GENERATION_ADMIN)) {
+		      goto do_abort;
+		  }
+		  continue;
+      do_abort:
+		  abort_transition(INFINITY, tg_restart, "Non-status change", NULL);
+		  crm_info("Aborting on change to %s", name);
+		  return TRUE;
+	);
+    
+    xml = get_object_root(XML_CIB_TAG_CONFIGURATION, update);
+    if(xml != NULL) {
+	abort_transition(INFINITY, tg_restart, "Non-status change", xml);
+	return TRUE;
+    }
+    
+    return FALSE;
+}
+
+static gboolean
+fail_incompletable_actions(crm_graph_t *graph, const char *down_node) 
+{
+	const char *target = NULL;
+	xmlNode *last_action = NULL;
+
+	slist_iter(
+		synapse, synapse_t, graph->synapses, lpc,
+		if (synapse->confirmed) {
+			continue;
+		}
+
+		slist_iter(
+			action, crm_action_t, synapse->actions, lpc,
+
+			if(action->type == action_type_pseudo || action->confirmed) {
+				continue;
+			}
+			
+			target = crm_element_value(action->xml, XML_LRM_ATTR_TARGET_UUID);
+			if(safe_str_eq(target, down_node)) {
+				action->failed = TRUE;
+				last_action = action->xml;
+				update_graph(graph, action);
+				crm_notice("Action %d (%s) is scheduled for %s (offline)",
+					   action->id, ID(action->xml), down_node);
+			}
+			
+			);
+		);
+
+	if(last_action != NULL) {
+		crm_warn("Node %s shutdown resulted in un-runnable actions", down_node);
+		abort_transition(INFINITY, tg_restart, "Node failure", last_action);
+		return TRUE;
+	}
+	
+	return FALSE;
+}
+
+gboolean
+extract_event(xmlNode *msg)
+{
+    int shutdown = 0;
+    const char *shutdown_s = NULL;
+    const char *event_node = NULL;
+    int have_aborted = 0;
+    
+/*
+[cib fragment]
+...
+<status>
+   <node_state id="node1" state=CRMD_STATE_ACTIVE exp_state="active">
+     <lrm>
+       <lrm_resources>
+	 <rsc_state id="" rsc_id="rsc4" node_id="node1" rsc_state="stopped"/>
+*/
+     xml_child_iter_filter(
+	 msg, node_state, XML_CIB_TAG_STATE,
+	 
+	 xmlNode *attrs = NULL;
+	 xmlNode *resources = NULL;
+	 const char *ha_state = NULL;
+	 const char *ccm_state = NULL;
+	 const char *crmd_state = NULL;
+	 
+	 /* Transient node attribute changes... */
+	 event_node = crm_element_value(node_state, XML_ATTR_ID);
+	 crm_debug_2("Processing state update from %s", event_node);
+	 
+	 attrs = find_xml_node(node_state, XML_TAG_TRANSIENT_NODEATTRS, FALSE);
+	 if(attrs != NULL) {
+	     have_aborted++;
+	     crm_info("Aborting on "XML_TAG_TRANSIENT_NODEATTRS" changes for %s", event_node);
+	     abort_transition(INFINITY, tg_restart, XML_TAG_TRANSIENT_NODEATTRS, attrs);
+	 }
+	 
+	 resources = find_xml_node(node_state, XML_CIB_TAG_LRM, FALSE);
+	 resources = find_xml_node(resources, XML_LRM_TAG_RESOURCES, FALSE);
+	 
+	 /* LRM resource update... */
+	 xml_child_iter(
+	     resources, rsc,  
+	     xml_child_iter(
+		 rsc, rsc_op,  
+		 if(process_graph_event(rsc_op, event_node)) {
+		     /* This is an lrm status refresh...
+		      * The transition (if any) was already cancelled
+		      */
+		     if(transition_graph == NULL || transition_graph->complete) {
+			 crm_info("Detected LRM refresh update: Skipping any remaining resource events");
+			 return TRUE;
+
+		     } else {
+			 crm_err("Detected LRM refresh update: Still in a transition");
+		     }
+		 }
+		 );
+	     );
+#if 0
+	 if(have_aborted && (transition_graph == NULL || transition_graph->complete)) {
+	     /* Any shutdown event would never be expected */
+	     return TRUE;
+	 }
+#endif 
+	 ha_state = crm_element_value(node_state, XML_CIB_ATTR_HASTATE);
+	 ccm_state = crm_element_value(node_state, XML_CIB_ATTR_INCCM);
+	 crmd_state = crm_element_value(node_state, XML_CIB_ATTR_CRMDSTATE);
+	 
+	 /*
+	  * node state update... possibly from a shutdown we requested
+	  */
+	 if(safe_str_eq(ccm_state, XML_BOOLEAN_FALSE)
+	    || safe_str_eq(ha_state, DEADSTATUS)
+	    || safe_str_eq(crmd_state, CRMD_JOINSTATE_DOWN)) {
+	     crm_action_t *shutdown = NULL;
+	     shutdown = match_down_event(0, event_node, NULL);
+	     
+	     if(shutdown != NULL) {
+		 update_graph(transition_graph, shutdown);
+		 trigger_graph();
+		 
+	     } else {
+		 crm_info("Stonith/shutdown of %s not matched", event_node);
+		 abort_transition(INFINITY, tg_restart, "Node failure", node_state);
+	     }			
+	     fail_incompletable_actions(transition_graph, event_node);
+	 }
+	 
+	 shutdown_s = crm_element_value(node_state, XML_CIB_ATTR_SHUTDOWN);
+	 if(shutdown_s) {
+	     shutdown = crm_parse_int(shutdown_s, NULL);
+	 }
+	 if(shutdown_s && shutdown > 0) {
+	     crm_info("Aborting on "XML_CIB_ATTR_SHUTDOWN" attribute for %s", event_node);
+	     abort_transition(INFINITY, tg_restart, "Shutdown request", node_state);
+	 }
+	 );
+    
+    return TRUE;
+}
+
+static gboolean
+update_failcount(xmlNode *event, const char *event_node, int rc, int target_rc) 
+{
+	int interval = 0;
+	char *task = NULL;
+	char *rsc_id = NULL;
+	char *attr_name = NULL;
+	const char *id  = ID(event);
+	const char *on_uuid  = event_node;
+	const char *value = NULL;
+
+	if(rc == 99) {
+		/* this is an internal code for "we're busy, try again" */
+		return FALSE;
+
+	} else if(rc == target_rc) {
+	    return FALSE;
+	}
+
+	if(failed_stop_offset == NULL) {
+	    failed_stop_offset = crm_strdup(INFINITY_S);
+	}
+
+	if(failed_start_offset == NULL) {
+	    failed_start_offset = crm_strdup(INFINITY_S);
+	}
+	
+	CRM_CHECK(on_uuid != NULL, return TRUE);
+
+	CRM_CHECK(parse_op_key(id, &rsc_id, &task, &interval),
+		  crm_err("Couldn't parse: %s", ID(event));
+		  goto bail);
+	CRM_CHECK(task != NULL, goto bail);
+	CRM_CHECK(rsc_id != NULL, goto bail);
+
+	if(safe_str_eq(task, CRMD_ACTION_START)) {
+	    interval = 1;
+	    value = failed_start_offset;
+
+	} else if(safe_str_eq(task, CRMD_ACTION_STOP)) {
+	    interval = 1;
+	    value = failed_stop_offset;
+	}
+
+	if(value == NULL || safe_str_neq(value, INFINITY_S)) {
+	    value = XML_NVPAIR_ATTR_VALUE"++";
+	}
+
+	if(interval > 0) {
+		int call_id = 0;
+		char *now = crm_itoa(time(NULL));
+		
+		attr_name = crm_concat("fail-count", rsc_id, '-');
+		crm_warn("Updating failcount for %s on %s after failed %s:"
+			 " rc=%d (update=%s, time=%s)", rsc_id, on_uuid, task, rc, value, now);
+
+		/* don't let notificatios of these updates cause new transitions */
+		call_id = update_attr(fsa_cib_conn, cib_inhibit_notify, XML_CIB_TAG_STATUS,
+				      on_uuid, NULL,NULL, attr_name, value, FALSE);
+
+		add_cib_op_callback(fsa_cib_conn, call_id, FALSE, NULL, cib_failcount_updated);
+		crm_free(attr_name);
+
+		attr_name = crm_concat("last-failure", rsc_id, '-');
+
+		/* don't let notificatios of these updates cause new transitions */
+		call_id = update_attr(fsa_cib_conn, cib_inhibit_notify, XML_CIB_TAG_STATUS,
+				      on_uuid, NULL,NULL, attr_name, now, FALSE);
+
+		add_cib_op_callback(fsa_cib_conn, call_id, FALSE, NULL, cib_failcount_updated);
+		crm_free(attr_name);
+
+		crm_free(now);
+	}
+
+  bail:
+	crm_free(rsc_id);
+	crm_free(task);
+	return TRUE;
+}
+
+static int
+status_from_rc(crm_action_t *action, int orig_status, int rc, int target_rc)
+{
+	int status = orig_status;
+	if(target_rc == rc) {
+	    crm_debug_2("Target rc: == %d", rc);
+	    if(status != LRM_OP_DONE) {
+		crm_debug_2("Re-mapping op status to"
+			    " LRM_OP_DONE for rc=%d", rc);
+		status = LRM_OP_DONE;
+	    }
+
+	} else {
+	    status = LRM_OP_ERROR;
+	}
+	
+	/* 99 is the code we use for direct nack's */
+	if(rc != 99 && status != LRM_OP_DONE) {
+		const char *task, *uname;
+		task = crm_element_value(action->xml, XML_LRM_ATTR_TASK);
+		uname  = crm_element_value(action->xml, XML_LRM_ATTR_TARGET);
+		crm_warn("Action %d (%s) on %s failed (target: %d vs. rc: %d): %s",
+			 action->id, task, uname, target_rc, rc, op_status2text(status));
+	}
+
+	return status;
+}
+
+/*
+ * returns the ID of the action if a match is found
+ * returns -1 if a match was not found
+ * returns -2 if a match was found but the action failed (and was
+ *            not allowed to)
+ */
+int
+match_graph_event(int action_id, xmlNode *event, const char *event_node,
+		  int op_status, int op_rc, int target_rc)
+{
+	const char *target = NULL;
+	const char *allow_fail = NULL;
+	const char *this_event = NULL;
+	crm_action_t *action = NULL;
+
+	action = get_action(action_id, FALSE);
+	if(action == NULL) {
+		return -1;
+	}
+	
+	op_status = status_from_rc(action, op_status, op_rc, target_rc);
+	if(op_status != LRM_OP_DONE) {
+	    update_failcount(event, event_node, op_rc, target_rc);
+	}
+	
+	/* Process OP status */
+	switch(op_status) {
+		case LRM_OP_PENDING:
+			crm_debug("Ignoring pending operation");
+			return action->id;
+			break;
+		case LRM_OP_DONE:
+			break;
+		case LRM_OP_ERROR:
+		case LRM_OP_TIMEOUT:
+		case LRM_OP_NOTSUPPORTED:
+			action->failed = TRUE;
+			break;
+		case LRM_OP_CANCELLED:
+			/* do nothing?? */
+			crm_err("Dont know what to do for cancelled ops yet");
+			break;
+		default:
+			action->failed = TRUE;
+			crm_err("Unsupported action result: %d", op_status);
+	}
+
+	/* stop this event's timer if it had one */
+	stop_te_timer(action->timer);
+	action->confirmed = TRUE;
+	
+	update_graph(transition_graph, action);
+	trigger_graph();
+	
+	if(action->failed) {
+		allow_fail = g_hash_table_lookup(
+			action->params, crm_meta_name(XML_ATTR_TE_ALLOWFAIL));
+		if(crm_is_true(allow_fail)) {
+			action->failed = FALSE;
+		}
+	}
+
+	if(action->failed) {
+		abort_transition(action->synapse->priority+1,
+				 tg_restart, "Event failed", event);
+	}
+
+	this_event = ID(event);
+	target = crm_element_value(action->xml, XML_LRM_ATTR_TARGET);
+	te_log_action(LOG_INFO, "Action %s (%d) confirmed on %s (rc=%d)",
+		      crm_str(this_event), action->id, crm_str(target),
+		      op_status);
+
+	return action->id;
+}
+
+crm_action_t *
+get_action(int id, gboolean confirmed)
+{
+	slist_iter(
+		synapse, synapse_t, transition_graph->synapses, lpc,
+
+		slist_iter(
+			action, crm_action_t, synapse->actions, lpc2,
+
+			if(action->id == id) {
+				if(confirmed) {
+					stop_te_timer(action->timer);
+					action->confirmed = TRUE;
+				}
+				return action;
+			}
+			)
+		);
+	return NULL;
+}
+
+
+crm_action_t *
+match_down_event(int id, const char *target, const char *filter)
+{
+	const char *this_action = NULL;
+	const char *this_node   = NULL;
+	crm_action_t *match = NULL;
+	
+	slist_iter(
+		synapse, synapse_t, transition_graph->synapses, lpc,
+
+		/* lookup event */
+		slist_iter(
+			action, crm_action_t, synapse->actions, lpc2,
+
+			if(id > 0 && action->id == id) {
+				match = action;
+				break;
+			}
+			
+			this_action = crm_element_value(
+				action->xml, XML_LRM_ATTR_TASK);
+
+			if(action->type != action_type_crm) {
+				continue;
+
+			} else if(safe_str_eq(this_action, CRM_OP_LRM_REFRESH)){
+				continue;
+				
+			} else if(filter != NULL
+				  && safe_str_neq(this_action, filter)) {
+				continue;
+			}
+			
+			this_node = crm_element_value(
+				action->xml, XML_LRM_ATTR_TARGET_UUID);
+
+			if(this_node == NULL) {
+				crm_log_xml_err(action->xml, "No node uuid");
+			}
+			
+			if(safe_str_neq(this_node, target)) {
+				crm_debug("Action %d : Node mismatch: %s",
+					 action->id, this_node);
+				continue;
+			}
+
+			match = action;
+			break;
+			);
+		if(match != NULL) {
+			/* stop this event's timer if it had one */
+			break;
+		}
+		);
+	
+	if(match != NULL) {
+		/* stop this event's timer if it had one */
+		crm_debug("Match found for action %d: %s on %s", id,
+			  crm_element_value(match->xml, XML_LRM_ATTR_TASK_KEY),
+			  target);
+		stop_te_timer(match->timer);
+		match->confirmed = TRUE;
+
+	} else if(id > 0) {
+		crm_err("No match for action %d", id);
+	} else {
+		crm_warn("No match for shutdown action on %s", target);
+	}
+	return match;
+}
+
+
+gboolean
+process_graph_event(xmlNode *event, const char *event_node)
+{
+	int rc = -1;
+	int status = -1;
+
+	int action = -1;
+	int target_rc = -1;
+	int transition_num = -1;
+	char *update_te_uuid = NULL;
+
+	gboolean stop_early = FALSE;
+	gboolean passed = FALSE;
+	const char *id = NULL;
+	const char *magic = NULL;
+	
+	CRM_ASSERT(event != NULL);
+
+	id = ID(event);
+	magic = crm_element_value(event, XML_ATTR_TRANSITION_MAGIC);
+
+	if(magic == NULL) {
+		/* non-change */
+		return FALSE;
+	}
+	
+	CRM_CHECK(decode_transition_magic(
+			  magic, &update_te_uuid, &transition_num, &action,
+			  &status, &rc, &target_rc),
+		  crm_err("Invalid event %s detected", id);
+		  abort_transition(INFINITY, tg_restart,"Bad event", event);
+		);
+
+	if(status == LRM_OP_PENDING) {
+	    goto bail;
+	}
+	
+	if(transition_num == -1) {
+		crm_err("Action %s (%s) initiated outside of a transition",
+			id, magic);
+		abort_transition(INFINITY, tg_restart,"Unexpected event",event);
+
+	} else if(action < 0 || crm_str_eq(update_te_uuid, te_uuid, TRUE) == FALSE) {
+		crm_info("Action %s (%s) initiated by a different transitioner",
+			 id, magic);
+		abort_transition(INFINITY, tg_restart,"Foreign event", event);
+		stop_early = TRUE; /* This could be an lrm status refresh */
+		
+	} else if(transition_graph->id != transition_num) {
+		crm_info("Detected action %s from a different transition:"
+			" %d vs. %d", id, transition_num, transition_graph->id);
+		abort_transition(INFINITY, tg_restart,"Old event", event);
+		stop_early = TRUE; /* This could be an lrm status refresh */
+		
+	} else if(transition_graph->complete) {
+		crm_info("Action %s arrived after a completed transition", id);
+		abort_transition(INFINITY, tg_restart, "Inactive graph", event);
+
+	} else if(match_graph_event(
+		      action, event, event_node, status, rc, target_rc) < 0) {
+		crm_err("Unknown graph action %s", id);
+		abort_transition(INFINITY, tg_restart, "Unknown event", event);
+
+	} else {
+		passed = TRUE;
+		crm_debug_2("Processed update to %s: %s", id, magic);
+	}
+
+	if(passed == FALSE) {
+	    if(update_failcount(event, event_node, rc, target_rc)) {
+		/* Turns out this wasn't an lrm status refresh update aferall */
+		stop_early = FALSE;
+	    }
+	}
+
+  bail:
+	crm_free(update_te_uuid);
+	return stop_early;
+}
+

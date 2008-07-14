@@ -184,8 +184,8 @@ void destroy_ais_node(gpointer data)
     ais_free(node);
 }
 
-int update_member(unsigned int id, unsigned long long seq, int32_t votes,
-		  uint32_t procs, const char *uname, const char *state) 
+int update_member(unsigned int id, uint64_t born, uint64_t seq, int32_t votes,
+		  uint32_t procs, const char *uname, const char *state, const char *version) 
 {
     int changed = 0;
     crm_node_t *node = NULL;
@@ -205,6 +205,16 @@ int update_member(unsigned int id, unsigned long long seq, int32_t votes,
 
     if(seq != 0) {
 	node->last_seen = seq;
+    }
+
+    if(born != 0) {
+	changed = TRUE;
+	node->born = born;
+    }
+
+    if(version != NULL) {
+	ais_free(node->version);
+	node->version = ais_strdup(version);
     }
     
     if(uname != NULL) {
@@ -267,7 +277,7 @@ const char *member_uname(uint32_t id)
      return node->uname;
 }
 
-#define MEMBER_FORMAT "<node id=\"%u\" uname=\"%s\" state=\"%s\" seq=\"%llu\" votes=\"%d\" processes=\"%u\" addr=\"%s\"/>"
+#define MEMBER_FORMAT "<node id=\"%u\" uname=\"%s\" state=\"%s\" born=\"%llu\" seen=\"%llu\" votes=\"%d\" processes=\"%u\" addr=\"%s\" version=\"%s\"/>"
 
 char *append_member(char *data, crm_node_t *node)
 {
@@ -285,16 +295,20 @@ char *append_member(char *data, crm_node_t *node)
 
     size += strlen(MEMBER_FORMAT);
     size += 32; /* node->id */
+    size += 100; /* node->seq, node->born */
     size += strlen(node->uname);
     size += strlen(node->state);
     data = realloc(data, size);
     if(node->addr) {
 	size += strlen(node->addr);
     }
+    if(node->version) {
+	size += strlen(node->version);
+    }
 
     sprintf(data+offset, MEMBER_FORMAT,
-	    node->id, node->uname, node->state, membership_seq,
-	    node->votes, node->processes, node->addr?node->addr:"");
+	    node->id, node->uname, node->state, node->born, node->last_seen,
+	    node->votes, node->processes, node->addr?node->addr:"", node->version?node->version:"0");
 
     return data;
 }
@@ -450,10 +464,26 @@ int send_client_msg(
     return rc;    
 }
 
+static char *
+ais_concat(const char *prefix, const char *suffix, char join) 
+{
+	int len = 0;
+	char *new_str = NULL;
+	AIS_ASSERT(prefix != NULL);
+	AIS_ASSERT(suffix != NULL);
+	len = strlen(prefix) + strlen(suffix) + 2;
+
+	ais_malloc0(new_str, (len));
+	sprintf(new_str, "%s%c%s", prefix, join, suffix);
+	new_str[len-1] = 0;
+	return new_str;
+}
+
 int objdb_get_string(
     struct objdb_iface_ver0 *objdb, unsigned int object_service_handle,
     char *key, char **value, const char *fallback)
 {
+    char *env_key = NULL;
     *value = NULL;
     if(object_service_handle > 0) {
 	objdb->object_key_get(
@@ -465,6 +495,15 @@ int objdb_get_string(
 	return 0;
     }
 
+    env_key = ais_concat("HA", key, '_');
+    *value = getenv(env_key);
+    ais_free(env_key);
+
+    if (*value) {
+	ais_info("Found '%s' for option %s", *value, key);
+	return 0;
+    }
+    
     ais_info("Defaulting to '%s' for option %s", fallback, key);
     *value = ais_strdup(fallback);
     return -1;
