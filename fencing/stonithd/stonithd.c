@@ -106,7 +106,7 @@
 #define ST_ASSERT(cond) assert(cond)
 
 #define MAX_NODE_STORAGE 8192 /* space for all nodenames incl delimiters */
-#define REBOOT_BLOCK_TIMEOUT 90*1000
+#define REBOOT_BLOCK_TIMEOUT 10*1000
 
 /* For integration with heartbeat */
 #define MAXCMP 80
