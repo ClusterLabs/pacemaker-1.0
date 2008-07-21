@@ -370,12 +370,6 @@ HA_NOARCHDATAHBDIR="${datadir}/heartbeat"
 AC_DEFINE_UNQUOTED(HA_NOARCHDATAHBDIR,"$HA_NOARCHDATAHBDIR", Heartbeat noarch data directory)
 AC_SUBST(HA_NOARCHDATAHBDIR)
 
-HAVE_ASYNC_FAIL=0
-if check_for_type_member "struct lrm_ops" "fail_rsc" "#include <lrm/lrm_api.h>"; then
-   HAVE_ASYNC_FAIL=1
-fi
-AC_DEFINE_UNQUOTED(HAVE_LRM_ASYNC_FAIL, $HAVE_ASYNC_FAIL, LRM Supports asynchronous resource failures)
-
 #
 #	Other interesting variables: ${host_vendor} and ${host_os}
 #			sample values:	suse		linux
@@ -803,6 +797,7 @@ fi
 CPPFLAGS="$CPPFLAGS $XML2HEAD"
 
 AC_CHECK_HEADERS(libxml/xpath.h)
+AC_CHECK_HEADERS(libxslt/xslt.h)
 
 dnl
 dnl     On many systems libcrypto is needed when linking against libsnmp.
@@ -1142,6 +1137,12 @@ AM_CONDITIONAL(BUILD_HEARTBEAT_SUPPORT, test $SUPPORT_HEARTBEAT = 1)
 
 dnl Compatability checks
 AC_CHECK_FUNCS(msgfromIPC_timeout)
+
+HAVE_ASYNC_FAIL=0
+if check_for_type_member "struct lrm_ops" "fail_rsc" "#include <lrm/lrm_api.h>"; then
+   HAVE_ASYNC_FAIL=1
+fi
+AC_DEFINE_UNQUOTED(HAVE_LRM_ASYNC_FAIL, $HAVE_ASYNC_FAIL, LRM Supports asynchronous resource failures)
 
 
 CLUSTERLIBS=""
