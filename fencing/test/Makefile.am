@@ -26,7 +26,7 @@ INCLUDES         = -I$(top_builddir)/include  -I$(top_srcdir)/include     \
 halibdir	 =  $(libdir)/@HB_PKG@
 havarlibdir      =  $(localstatedir)/lib/@HB_PKG@
 
-COMMONLIBS	 =  -lplumb -lhbclient \
+COMMONLIBS	 =  -lplumb $(CLUSTERLIBS) \
                     $(top_builddir)/lib/fencing/libstonithd.la	 \
 		    $(GLIBLIB)
 

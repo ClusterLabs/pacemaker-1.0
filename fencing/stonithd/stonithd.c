@@ -90,10 +90,11 @@
 #include <clplumbing/realtime.h>
 #if SUPPORT_HEARTBEAT
 	#include <apphb.h>
+	#include <hb_api.h>
 #endif
 #include <heartbeat.h>
 #include <ha_msg.h>
-#include <hb_api.h>
+
 #include <lrm/raexec.h>
 #include <fencing/stonithd_msg.h>
 #include <fencing/stonithd_api.h>
@@ -275,7 +276,6 @@ static struct ha_msg* ais_msg2ha_msg(char *input);
 static int attr2fld(char *input, struct ha_msg *msg);
 #endif
 static void stonithd_hb_callback(struct ha_msg* msg, void* private_data);
-static void stonithd_hb_connection_destroy(void* private_data);
 static gboolean stonithd_sendmsg(const char *node_name,
 						struct ha_msg *msg, const char *st_op_type);
 static gboolean reboot_block_timeout(gpointer data);
@@ -1001,6 +1001,12 @@ stonithdProcessName(ProcTrack* p)
 	} \
 	} while(0)
 
+static void
+stonithd_hb_connection_destroy(void* private_data)
+{
+	return;
+}
+
 static int
 init_hb_msg_handler(void)
 {
@@ -1053,11 +1059,6 @@ stonithd_hb_callback(struct ha_msg* msg, void* private_data)
 			"stonith operation: %s"
 			, __FUNCTION__, __LINE__, st_op_type);
 	}
-}
-static void
-stonithd_hb_connection_destroy(void* private_data)
-{
-	return;
 }
 
 #if SUPPORT_AIS	
