@@ -266,9 +266,6 @@ static void handle_msg_ticanst(struct ha_msg* msg, void* private_data);
 static void handle_msg_tstit(struct ha_msg* msg, void* private_data);
 static void handle_msg_trstit(struct ha_msg* msg, void* private_data);
 static void handle_msg_resetted(struct ha_msg* msg, void* private_data);
-#if SUPPORT_HEARTBEAT
-static int init_hb_msg_handler(void);
-#endif
 #if SUPPORT_AIS
 static gboolean stonithd_ais_dispatch(AIS_Message *wrapper, char *data, int sender);
 static void stonithd_ais_destroy(gpointer user_data);
@@ -509,6 +506,52 @@ static int 		stonithd_child_count	= 0;
 		return; \
 	} \
 } while(0)
+
+#if SUPPORT_HEARTBEAT
+
+#define set_msg_handler(type, handler) do { \
+	if (hb->llc_ops->set_msg_callback(hb, type, \
+				  handler, hb) != HA_OK) { \
+		stonithd_log(LOG_ERR, "Cannot set msg " #type " callback"); \
+		stonithd_log(LOG_ERR, "REASON: %s", hb->llc_ops->errmsg(hb)); \
+		return LSB_EXIT_GENERIC; \
+	} \
+	} while(0)
+
+static void
+stonithd_hb_connection_destroy(void* private_data)
+{
+	return;
+}
+
+static int
+init_hb_msg_handler(void)
+{
+	unsigned int msg_mask;
+	
+	if (hb == NULL) {
+		stonithd_log(LOG_ERR, "%s:%d: not connected to heartbeat"
+			, __FUNCTION__, __LINE__);
+		return LSB_EXIT_GENERIC;	
+	}
+
+	set_msg_handler(T_WHOCANST, handle_msg_twhocan);
+	set_msg_handler(T_ICANST, handle_msg_ticanst);
+	set_msg_handler(T_STIT, handle_msg_tstit);
+	set_msg_handler(T_RSTIT, handle_msg_trstit);
+	set_msg_handler(T_RESETTED, handle_msg_resetted);
+
+	msg_mask = LLC_FILTER_DEFAULT;
+	stonithd_log(LOG_DEBUG, "Setting message filter mode");
+	if (hb->llc_ops->setfmode(hb, msg_mask) != HA_OK) {
+		stonithd_log(LOG_ERR, "Cannot set filter mode");
+		stonithd_log(LOG_ERR, "REASON: %s", hb->llc_ops->errmsg(hb));
+		return LSB_EXIT_GENERIC;
+	}
+
+	return 0;
+}
+#endif
 
 int
 main(int argc, char ** argv)
@@ -989,52 +1032,6 @@ stonithdProcessName(ProcTrack* p)
 	stonithd_log2(LOG_DEBUG, "process name: %s", process_name);
 	return  process_name;
 }
-
-#if SUPPORT_HEARTBEAT
-
-#define set_msg_handler(type, handler) do { \
-	if (hb->llc_ops->set_msg_callback(hb, type, \
-				  handler, hb) != HA_OK) { \
-		stonithd_log(LOG_ERR, "Cannot set msg " #type " callback"); \
-		stonithd_log(LOG_ERR, "REASON: %s", hb->llc_ops->errmsg(hb)); \
-		return LSB_EXIT_GENERIC; \
-	} \
-	} while(0)
-
-static void
-stonithd_hb_connection_destroy(void* private_data)
-{
-	return;
-}
-
-static int
-init_hb_msg_handler(void)
-{
-	unsigned int msg_mask;
-	
-	if (hb == NULL) {
-		stonithd_log(LOG_ERR, "%s:%d: not connected to heartbeat"
-			, __FUNCTION__, __LINE__);
-		return LSB_EXIT_GENERIC;	
-	}
-
-	set_msg_handler(T_WHOCANST, handle_msg_twhocan);
-	set_msg_handler(T_ICANST, handle_msg_ticanst);
-	set_msg_handler(T_STIT, handle_msg_tstit);
-	set_msg_handler(T_RSTIT, handle_msg_trstit);
-	set_msg_handler(T_RESETTED, handle_msg_resetted);
-
-	msg_mask = LLC_FILTER_DEFAULT;
-	stonithd_log(LOG_DEBUG, "Setting message filter mode");
-	if (hb->llc_ops->setfmode(hb, msg_mask) != HA_OK) {
-		stonithd_log(LOG_ERR, "Cannot set filter mode");
-		stonithd_log(LOG_ERR, "REASON: %s", hb->llc_ops->errmsg(hb));
-		return LSB_EXIT_GENERIC;
-	}
-
-	return 0;
-}
-#endif
 
 static void
 stonithd_hb_callback(struct ha_msg* msg, void* private_data)
