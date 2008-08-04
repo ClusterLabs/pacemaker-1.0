@@ -9,13 +9,14 @@ usr/sbin/crm_failcount
 usr/sbin/crm_mon
 usr/sbin/iso8601
 usr/sbin/cibadmin
+usr/sbin/cibpipe
+usr/sbin/cib_shadow
 usr/sbin/ccm_tool
 usr/sbin/crm_master
 usr/sbin/crm_uuid
 usr/sbin/crm_attribute
 usr/sbin/ptest
 usr/lib/heartbeat/cibmon
-usr/lib/heartbeat/ttest
 usr/lib/heartbeat/cib
 usr/lib/heartbeat/crmd
 usr/lib/heartbeat/pingd
