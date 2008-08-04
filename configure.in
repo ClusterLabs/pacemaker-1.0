@@ -329,7 +329,7 @@ case "$host_cpu" in
 esac
 
 dnl Variables needed for substitution
-DTD_DIRECTORY="${datadir}/heartbeat"
+DTD_DIRECTORY="${datadir}/pacemaker"
 AC_DEFINE_UNQUOTED(DTD_DIRECTORY,"$DTD_DIRECTORY", Location for the Pacemaker Relax-NG Schema)
 AC_SUBST(DTD_DIRECTORY)
 
