@@ -21,7 +21,6 @@ usr/lib/heartbeat/cib
 usr/lib/heartbeat/crmd
 usr/lib/heartbeat/pingd
 usr/lib/heartbeat/atest
-usr/lib/heartbeat/tengine
 usr/lib/heartbeat/attrd
 usr/lib/heartbeat/pengine
 usr/lib/heartbeat/stonithd
