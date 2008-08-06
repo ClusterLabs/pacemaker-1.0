@@ -1161,7 +1161,7 @@ ais_msg2ha_msg(char *input)
 		}
 		p += l;
 	}
-	if (strcmp(p,"/>")) {
+	if (strncmp(p,"/>",2)) {
 		stonithd_log(LOG_ERR, "%s:%d: bad format: |%s|"
 			, __FUNCTION__, __LINE__, p);
 		goto err;
