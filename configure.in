@@ -43,7 +43,7 @@ AC_ARG_WITH(hapkgversion,
 DTD_VERSION=0.7
 
 if test -z "$HAPKGVERSION" ; then
-   HAPKGVERSION="0.7.0"
+   HAPKGVERSION="0.7.1"
 fi
 
 HB_PKG=heartbeat
