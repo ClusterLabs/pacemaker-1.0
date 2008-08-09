@@ -87,20 +87,10 @@ static void add_ha_nocopy(HA_Message *parent, HA_Message *child, const char *fie
     parent->nfields++;	
 }
 
-int is_comment_start(const char *input, size_t offset, size_t max);
-int is_comment_end(const char *input, size_t offset, size_t max);
-gboolean drop_comments(const char *input, size_t *offset, size_t max);
-
-void dump_array(
-	int log_level, const char *message, const char **array, int depth);
-
 int print_spaces(char *buffer, int spaces, int max);
 
 int log_data_element(const char *function, const char *prefix, int log_level,
 		     int depth, xmlNode *data, gboolean formatted);
-
-int dump_data_element(
-    int depth, char **buffer, int *max, int *offset, const char *prefix, xmlNode *data, gboolean formatted);
 
 int get_tag_name(const char *input, size_t offset, size_t max);
 int get_attr_name(const char *input, size_t offset, size_t max);
@@ -145,107 +135,6 @@ find_xml_node(xmlNode *root, const char * search_path, gboolean must_find)
 	
 	return NULL;
 }
-
-xmlNode*
-find_xml_node_nested(xmlNode *root, const char **search_path, int len)
-{
-	int	j;
-	gboolean is_found = TRUE;
-	xmlNode *match =  NULL;
-	xmlNode *lastMatch = root;
-
-	crm_validate_data(root);
-	
-	if(search_path == NULL || search_path[0] == 0) {
-		crm_warn("Will never find NULL");
-		return NULL;
-	}
-	
-	dump_array(LOG_DEBUG_5, "Looking for.", search_path, len);
-
-	for (j=0; j < len; ++j) {
-		if (search_path[j] == NULL) {
-/* a NULL also means stop searching */
-			break;
-		}
-
-		match = find_xml_node(lastMatch, search_path[j], FALSE);
-		if(match == NULL) {
-			is_found = FALSE;
-			break;
-		} else {
-			lastMatch = match;
-		}
-	}
-
-	if (is_found) {
-		crm_debug_5("returning node (%s).",
-			   crm_element_name(lastMatch));
-
-		crm_log_xml_debug_5(lastMatch, "found\t%s");
-		crm_log_xml_debug_5(root, "in \t%s");
-		
-		crm_validate_data(lastMatch);
-		return lastMatch;
-	}
-
-	dump_array(LOG_DEBUG_2,
-		   "Could not find the full path to the node you specified.",
-		   search_path, len);
-
-	crm_debug_2("Closest point was node (%s) starting from %s.",
-		    crm_element_name(lastMatch), crm_element_name(root));
-
-	return NULL;
-    
-}
-
-
-
-const char *
-get_xml_attr_nested(xmlNode *parent,
-		    const char **node_path, int length,
-		    const char *attr_name, gboolean error)
-{
-	const char *attr_value = NULL;
-	xmlNode *attr_parent = NULL;
-
-	if(error || parent != NULL) {
-		crm_validate_data(parent);
-	}
-	
-	if(parent == NULL) {
-		crm_debug_3("Can not find attribute %s in NULL parent",attr_name);
-		return NULL;
-	} 
-
-	if(attr_name == NULL || attr_name[0] == 0) {
-		crm_err("Can not find attribute with no name in %s",
-		       crm_element_name(parent));
-		return NULL;
-	}
-	
-	if(length == 0) {
-		attr_parent = parent;
-		
-	} else {
-		attr_parent = find_xml_node_nested(parent, node_path, length);
-		if(attr_parent == NULL && error) {
-			crm_err("No node at the path you specified.");
-			return NULL;
-		}
-	}
-	
-	attr_value = crm_element_value(attr_parent, attr_name);
-	if((attr_value == NULL || attr_value[0] == 0) && error) {
-		crm_err("No value present for %s at %s",
-			attr_name, crm_element_name(attr_parent));
-		return NULL;
-	}
-	
-	return attr_value;
-}
-
 
 xmlNode*
 find_entity(xmlNode *parent, const char *node_name, const char *id)
@@ -728,27 +617,6 @@ filename2xml(const char *filename)
     return xml;
 }
 
-void
-dump_array(int log_level, const char *message, const char **array, int depth)
-{
-	int j;
-	
-	if(message != NULL) {
-		do_crm_log(log_level, "%s", message);
-	}
-
-	do_crm_log(log_level,  "Contents of the array:");
-	if(array == NULL || array[0] == NULL || depth == 0) {
-		do_crm_log(log_level, "\t<empty>");
-		return;
-	}
-	
-	for (j=0; j < depth && array[j] != NULL; j++) {
-		if (array[j] == NULL) { break; }
-		do_crm_log(log_level, "\t--> (%s).", array[j]);
-	}
-}
-
 int
 write_xml_file(xmlNode *xml_node, const char *filename, gboolean compress) 
 {
@@ -1138,46 +1006,25 @@ dump_xml(xmlNode *an_xml_node, gboolean formatted)
 {
     int len = 0;
     char *buffer = NULL;
-    xmlNode *top = NULL;
-    xmlChar *xml_buffer = NULL;
+    xmlBuffer *xml_buffer = NULL;
     xmlDoc *doc = getDocPtr(an_xml_node);
 
-    if(an_xml_node == NULL) {
-	return NULL;
-    }
+    /* doc will only be NULL if an_xml_node is */
+    CRM_CHECK(doc != NULL, return NULL);
 
-    top = xmlDocGetRootElement(doc);
-    if(top != an_xml_node) {
-	doc = xmlNewDoc((const xmlChar*)"1.0");
-	xmlDocSetRootElement(doc, an_xml_node);
-    }
+    xml_buffer = xmlBufferCreate();
+    CRM_ASSERT(xml_buffer != NULL);
     
-    xmlDocDumpFormatMemory(doc, &xml_buffer, &len, formatted);
+    len = xmlNodeDump(xml_buffer, doc, an_xml_node, 0, formatted);
 
     if(len > 0) {
-	buffer = crm_strdup((char *)xml_buffer);
-	xmlFree(xml_buffer);
-
-    } else {
-	/* fallback to our custom function */
-	int max = 1024;
-	crm_err("Failed to unparse (%s) child %s - falling back to custom implementation",
-		formatted?"formatted":"unformatted",
-		xmlGetNodePath(an_xml_node));
-	crm_malloc0(buffer, max);
+	buffer = crm_strdup((char *)xml_buffer->content);
 	
-	crm_validate_data(an_xml_node);
-	CRM_CHECK(dump_data_element(
-		      0, &buffer, &max, &len, NULL, an_xml_node, formatted) >= 0,
-		  crm_crit("Could not dump the whole message"));
+    } else {
+	crm_err("Conversion failed");
     }
 
-    if(top != an_xml_node) {
-	top = xmlNewDocRawNode(doc, NULL, (const xmlChar*)"dummy", NULL);
-	xmlDocSetRootElement(doc, top);
-	free_xml(top);
-    }
-    
+    xmlBufferFree(xml_buffer);
     return buffer;    
 }
 
@@ -1198,17 +1045,6 @@ dump_xml_unformatted(xmlNode *an_xml_node)
     } else {							\
 	buffer += len;						\
     }
-
-#define update_buffer_head(len) do {					\
-	int total = (*offset) + len + 1;				\
-	if(total >= (*max)) { /* too late */				\
-	    (*buffer) = EOS; return -1;					\
-	} else if(((*max) - total) < 256) {				\
-	    (*max) *= 10;						\
-	    crm_realloc(*buffer, (*max));				\
-	}								\
-	(*offset) += len;						\
-    } while(0)
 
 
 int
@@ -1328,77 +1164,6 @@ log_data_element(
 	return has_children;
 }
 
-#define bhead(buffer, offset) ((*buffer) + (*offset)) 
-#define bremain(max, offset) ((*max) - (*offset)) 
-int
-dump_data_element(
-    int depth, char **buffer, int *max, int *offset, const char *prefix, xmlNode *data, gboolean formatted) 
-{
-    int printed = 0;
-    int has_children = 0;
-    const char *name = NULL;
-    
-    CRM_CHECK(data != NULL, return 0);
-    
-    name = crm_element_name(data);
-    
-    CRM_CHECK(name != NULL, return 0);
-    CRM_CHECK(buffer != NULL && *buffer != NULL, return 0);
-    
-    crm_debug_5("Dumping %s...", name);
-
-    if(prefix) {
-	printed = snprintf(bhead(buffer, offset), bremain(max, offset), "%s", prefix);
-	update_buffer_head(printed);
-    }
-
-    if(formatted) {
-	printed = print_spaces(bhead(buffer, offset), depth, bremain(max, offset));
-	update_buffer_head(printed);
-    }
-    
-    printed = snprintf(bhead(buffer, offset), bremain(max, offset), "<%s", name);
-    update_buffer_head(printed);
-    
-    xml_prop_iter(data, prop_name, prop_value,
-		  crm_debug_5("Dumping <%s %s=\"%s\"...",
-			      name, prop_name, prop_value);
-		  printed = snprintf(bhead(buffer, offset), bremain(max, offset),  " %s=\"%s\"", prop_name, prop_value);
-		  update_buffer_head(printed);
-	);
-    
-    has_children = xml_has_children(data);
-    printed = snprintf(bhead(buffer, offset), bremain(max, offset),  "%s>%s",
-		       has_children==0?"/":"", formatted?"\n":"");
-    update_buffer_head(printed);
-    
-    if(has_children == 0) {
-	return 0;
-    }
-    
-    xml_child_iter(data, child, 
-		   if(dump_data_element(depth+1, buffer, max, offset, prefix, child, formatted) < 0) {
-		       return -1;
-		   }
-	);
-    
-    if(prefix) {
-	printed = snprintf(bhead(buffer, offset), bremain(max, offset), "%s", prefix);
-	update_buffer_head(printed);
-    }
-
-    if(formatted) {
-	printed = print_spaces(bhead(buffer, offset), depth, bremain(max, offset));
-	update_buffer_head(printed);
-    }
-    
-    printed = snprintf(bhead(buffer, offset), bremain(max, offset),  "</%s>%s", name, formatted?"\n":"");
-    update_buffer_head(printed);
-    crm_debug_5("Dumped %s...", name);
-    
-    return has_children;
-}
-
 gboolean
 xml_has_children(const xmlNode *xml_root)
 {
@@ -1447,58 +1212,6 @@ void
 xml_remove_prop(xmlNode *obj, const char *name)
 {
     xmlUnsetProp(obj, (const xmlChar*)name);
-}
-
-void
-print_xml_diff(FILE *where, xmlNode *diff)
-{
-	char *buffer = NULL;
-	int max = 1024, len = 0;
-	gboolean is_first = TRUE;
-	xmlNode *added = find_xml_node(diff, "diff-added", FALSE);
-	xmlNode *removed = find_xml_node(diff, "diff-removed", FALSE);
-
-	is_first = TRUE;
-	xml_child_iter(
-		removed, child, 
-
-		len = 0;
-		max = 1024;
-		crm_free(buffer);
-		crm_malloc0(buffer, max);
-
-		if(is_first) {
-		    is_first = FALSE;
-		} else {
-		    fprintf(where, " --- \n");
-		}
-
-		CRM_CHECK(dump_data_element(
-			      0, &buffer, &max, &len, "-", child, TRUE) >= 0,
-			  continue);
-		fprintf(where, "%s", buffer);
-		);
-
-	is_first = TRUE;
-	xml_child_iter(
-		added, child, 
-
-		len = 0;
-		max = 1024;
-		crm_free(buffer);
-		crm_malloc0(buffer, max);
-
-		if(is_first) {
-		    is_first = FALSE;
-		} else {
-		    fprintf(where, " +++ \n");
-		}
-
-		CRM_CHECK(dump_data_element(
-			      0, &buffer, &max, &len, "+", child, TRUE) >= 0,
-			  continue);
-		fprintf(where, "%s", buffer);
-		);
 }
 
 void
@@ -2306,6 +2019,7 @@ calculate_xml_digest(xmlNode *input, gboolean sort, gboolean do_filter)
 	unsigned char *raw_digest = NULL;
 	xmlNode *sorted = NULL;
 	char *buffer = NULL;
+	char *buffer_top = NULL;
 	size_t buffer_len = 0;
 
 	if(sort || do_filter) {
@@ -2317,9 +2031,20 @@ calculate_xml_digest(xmlNode *input, gboolean sort, gboolean do_filter)
 	if(do_filter) {
 	    filter_xml(sorted, filter, DIMOF(filter), TRUE);
 	}
-	
-	buffer = dump_xml_formatted(sorted);
-	buffer_len = strlen(buffer);
+
+	buffer_top = dump_xml_unformatted(sorted);
+	if(buffer_top) {
+
+	    /* strip off the xml header */
+	    buffer = strchr(buffer_top, '\n');
+
+	    if(buffer) {
+		*buffer = ' ';
+	    } else {
+		buffer = buffer_top;
+	    }
+	    buffer_len = strlen(buffer);
+	}
 	
 	CRM_CHECK(buffer != NULL && buffer_len > 0,
 		  free_xml(sorted); return NULL);
@@ -2333,7 +2058,7 @@ calculate_xml_digest(xmlNode *input, gboolean sort, gboolean do_filter)
 	digest[(2*digest_len)] = 0;
 	crm_debug_2("Digest %s: %s\n", digest, buffer);
 	crm_log_xml(LOG_DEBUG_3,  "digest:source", sorted);
-	crm_free(buffer);
+	crm_free(buffer_top);
 	crm_free(raw_digest);
 	free_xml(sorted);
 	return digest;
@@ -2778,6 +2503,31 @@ xmlNode *expand_idref(xmlNode *input)
     return result;
 }
 
+xmlNode*
+get_xpath_object_relative(const char *xpath, xmlNode *xml_obj, int error_level)
+{
+    int len = 0;
+    xmlNode *result = NULL;
+    char *xpath_full = NULL;
+    const char *xpath_prefix = NULL;
+    
+    if(xml_obj == NULL || xpath == NULL) {
+	return NULL;
+    }
+
+    xpath_prefix = (const char *)xmlGetNodePath(xml_obj);
+    len += strlen(xpath_prefix);
+    len += strlen(xpath);
+
+    xpath_full = crm_strdup(xpath_prefix);
+    crm_realloc(xpath_full, len+1);
+    strncat(xpath_full, xpath, len);
+
+    result = get_xpath_object(xpath, xml_obj, error_level);
+
+    crm_free(xpath_full);
+    return result;
+}
 
 xmlNode*
 get_xpath_object(const char *xpath, xmlNode *xml_obj, int error_level)
@@ -2791,7 +2541,7 @@ get_xpath_object(const char *xpath, xmlNode *xml_obj, int error_level)
     
     xpathObj = xpath_search(xml_obj, xpath);
     if(xpathObj == NULL || xpathObj->nodesetval == NULL || xpathObj->nodesetval->nodeNr < 1) {
-	crm_debug_2("Object %s not found", xpath);
+	do_crm_log(error_level, "No match for %s", xpath);
 	
     } else if(xpathObj->nodesetval->nodeNr > 1) {
 	int lpc = 0, max = xpathObj->nodesetval->nodeNr;
@@ -2807,6 +2557,7 @@ get_xpath_object(const char *xpath, xmlNode *xml_obj, int error_level)
 	    }
 	    do_crm_log(error_level, "%s[%d] = %s", xpath, lpc, xmlGetNodePath(match));
 	}
+	crm_log_xml(error_level, "Bad Input", xml_obj);
 
     } else {
 	xmlNode *match = xpathObj->nodesetval->nodeTab[0];

@@ -54,6 +54,7 @@ do_election_vote(long long action,
 	
 	/* don't vote if we're in one of these states or wanting to shut down */
 	switch(cur_state) {
+		case S_STARTING:
 		case S_RECOVERY:
 		case S_STOPPING:
 		case S_TERMINATE:
@@ -275,7 +276,7 @@ do_election_count_vote(long long action,
 	crm_info("Election check: %s from %s", op, vote_from);
 	your_version   = crm_element_value(vote->msg, F_CRM_VERSION);
 
-	if(cur_state != S_STARTING) {
+	if(cur_state == S_STARTING) {
 		reason = "still starting";
 		we_loose = TRUE;
 	

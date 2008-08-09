@@ -38,23 +38,23 @@ run_test()
 
 	# Add stonith resource.
 	$LRMADMIN -A s1 stonith null NULL hostlist=$MYSELF
-	[ $? -eq 0 ] || let ERR_COUNT++ 
+	[ $? -eq 0 ] || ERR_COUNT=$(($ERR_COUNT + 1))
 
 	# Start stonith resource, equal to initializing the stonith device.
 	$LRMADMIN -E s1 start 0 0 0
-	[ $? -eq 0 ] || let ERR_COUNT++ 
+	[ $? -eq 0 ] || ERR_COUNT=$(($ERR_COUNT + 1))
 
 	# Test stonith operation: query
 	$APITEST $QUERY $MYSELF $TIMEOUT 0
-	[ $? -eq 0 ] || let ERR_COUNT++ 
+	[ $? -eq 0 ] || ERR_COUNT=$(($ERR_COUNT + 1))
 
 	# Test stonith operation: reset
 	$APITEST $RESET $MYSELF $TIMEOUT 0
-	[ $? -eq 0 ] || let ERR_COUNT++ 
+	[ $? -eq 0 ] || ERR_COUNT=$(($ERR_COUNT + 1))
 
 	# Test stonithd's error handling - to stonith an unaccessible host
 	$APITEST $POWEROFF notexist $TIMEOUT 2
-	[ $? -eq 0 ] || let ERR_COUNT++ 
+	[ $? -eq 0 ] || ERR_COUNT=$(($ERR_COUNT + 1))
 }
 
 

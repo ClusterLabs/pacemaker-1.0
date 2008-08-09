@@ -1138,10 +1138,24 @@ err:
 static struct ha_msg*
 ais_msg2ha_msg(char *input)
 {
-	char *p = input;
 	int l;
+	char *p = input;
 	struct ha_msg *msg = NULL;
 
+	if(input == NULL) {
+	    return NULL;
+	}
+	
+	/* skip past the xml header */
+	p = strstr(input, "?>\n<");
+	if(p) {
+	    p[2] = ' ';
+	    p += 3;
+	    
+	} else {
+	    p = input;
+	}
+	
 	if (*p != '<') {
 		stonithd_log(LOG_ERR, "%s:%d: unexpected start of message: |%s|"
 			, __FUNCTION__, __LINE__, p);
@@ -1161,7 +1175,7 @@ ais_msg2ha_msg(char *input)
 		}
 		p += l;
 	}
-	if (strcmp(p,"/>")) {
+	if (strncmp(p,"/>",2)) {
 		stonithd_log(LOG_ERR, "%s:%d: bad format: |%s|"
 			, __FUNCTION__, __LINE__, p);
 		goto err;
@@ -1470,7 +1484,8 @@ handle_msg_resetted(struct ha_msg* msg, void* private_data)
 	st_get_string(msg, F_ORIG, from);
 	st_get_string(msg, F_STONITHD_NODE, target);
 	if( rc != ST_OK ) { /* didn't get all fields */
-		return;
+	    cl_log_message (LOG_ERR, msg);
+	    return;
 	}
 
 	stonithd_log(LOG_DEBUG, "Got a notification of successfully resetting"
