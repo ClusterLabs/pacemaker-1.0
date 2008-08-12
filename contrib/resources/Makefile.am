@@ -1,7 +1,7 @@
 # Makefile.am for OCF RAs
 #
-# Author: Sun Jing Dong
-# Copyright (C) 2004 IBM
+# Author: Andrew Beekhof
+# Copyright (C) 2008 Andrew Beekhof
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -25,5 +25,6 @@ ocfdir		    = @OCF_RA_DIR@/pacemaker
 ocf_SCRIPTS	     =  ClusterMon 	\
 			Dummy		\
 			Stateful	\
-			SysInfo
+			SysInfo		\
+			controld
 
