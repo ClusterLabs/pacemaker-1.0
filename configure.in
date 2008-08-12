@@ -1725,6 +1725,8 @@ build/Makefile							\
 		build/port/heartbeat/pkg-descr			\
 		build/port/heartbeat/pkg-install		\
 		build/port/heartbeat/pkg-plist			\
+contrib/Makefile						\
+	contrib/resources/Makefile				\
 tools/Makefile							\
 	tools/haresources2cib.py				\
 	tools/hb_report						\
