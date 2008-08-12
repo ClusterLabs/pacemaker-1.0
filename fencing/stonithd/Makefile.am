@@ -24,7 +24,6 @@ INCLUDES         = -I$(top_builddir)/include  -I$(top_srcdir)/include     \
 		   -I$(top_builddir)          -I$(top_srcdir) \
 		   -I$(AISPREFIX)/include/openais
 
-apigid		 = @HA_APIGID@
 halibdir	 =  $(libdir)/@HB_PKG@
 havarlibdir      =  $(localstatedir)/lib/@HB_PKG@
 
