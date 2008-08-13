@@ -245,10 +245,9 @@ do_configure () {
 	# "configure" etc. set up.
 	if [ ! -x ${pathtotop}/configure ]
 	then
-		Run ${pathtotop}/autogen.sh "$@"
-	else
-		Run ${pathtotop}/configure "$@"
+		Run ${pathtotop}/autogen.sh
 	fi
+	Run ${pathtotop}/configure "$@"
 }
 
 cmd=`echo $1 | lcase`
