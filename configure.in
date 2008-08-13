@@ -1642,12 +1642,6 @@ cts/Makefile					        	\
 cib/Makefile							\
 crmd/Makefile							\
 pengine/Makefile						\
-crm/Makefile							\
-	crm/admin/Makefile					\
-	        crm/admin/crm_primitive.py			\
-	        crm/admin/crm_sh				\
-		crm/admin/crm_utils.py                          \
-		crm/admin/crm_commands.py			\
 debian/Makefile							\
 doc/Makefile							\
 	doc/startstop						\
@@ -1688,6 +1682,10 @@ tools/Makefile							\
 	tools/haresources2cib.py				\
 	tools/hb_report						\
 	tools/ocf-tester					\
+	tools/crm_primitive.py					\
+	tools/crm_sh						\
+	tools/crm_utils.py                          		\
+	tools/crm_commands.py					\
 xml/Makefile							\
 	xml/pacemaker.rng					\
 	xml/resources.rng					\
