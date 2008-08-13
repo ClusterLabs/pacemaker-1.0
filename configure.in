@@ -1639,10 +1639,10 @@ cts/Makefile					        	\
 	cts/OCFIPraTest.py              	                \
 	cts/CIB.py						\
 	cts/LSBDummy						\
-crm/Makefile							\
 cib/Makefile							\
 crmd/Makefile							\
 pengine/Makefile						\
+crm/Makefile							\
 	crm/ais/Makefile					\
 	crm/admin/Makefile					\
 	        crm/admin/crm_primitive.py			\
@@ -1658,21 +1658,21 @@ include/Makefile						\
 	include/crm/Makefile					\
 		include/crm/common/Makefile			\
 		include/crm/pengine/Makefile			\
-	include/fencing/Makefile					\
+	include/fencing/Makefile				\
 replace/Makefile						\
 lib/Makefile							\
-	lib/crm/Makefile					\
-	lib/crm/common/Makefile					\
-	lib/crm/cib/Makefile					\
-	lib/crm/pengine/Makefile				\
-	lib/crm/transition/Makefile				\
+	lib/ais/Makefile					\
+	lib/common/Makefile					\
+	lib/cib/Makefile					\
+	lib/pengine/Makefile					\
+	lib/transition/Makefile					\
 	lib/fencing/Makefile					\
 	lib/plugins/Makefile					\
 		lib/plugins/lrm/Makefile			\
 fencing/Makefile                                                \
         fencing/stonithd/Makefile                               \
-		fencing/test/Makefile                                   \
-		fencing/test/STONITHDBasicSanityCheck                   \
+		fencing/test/Makefile                           \
+		fencing/test/STONITHDBasicSanityCheck           \
 build/Makefile							\
 	build/pkg/Makefile					\
 		build/pkg/InfoFiles/pkginfo			\
@@ -1683,8 +1683,8 @@ build/Makefile							\
 		build/port/heartbeat/pkg-descr			\
 		build/port/heartbeat/pkg-install		\
 		build/port/heartbeat/pkg-plist			\
-contrib/Makefile						\
-	contrib/resources/Makefile				\
+extra/Makefile							\
+	extra/resources/Makefile				\
 tools/Makefile							\
 	tools/haresources2cib.py				\
 	tools/hb_report						\
