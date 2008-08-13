@@ -1623,7 +1623,6 @@ dnl *** "echo" adjustments (end) ***
 dnl The Makefiles and shell scripts we output
 AC_CONFIG_FILES(Makefile				        \
 README							        \
-config/Makefile							\
 cts/Makefile					        	\
 	cts/CM_ais.py						\
 	cts/CM_fs.py						\
