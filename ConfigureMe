@@ -245,7 +245,7 @@ do_configure () {
 	# "configure" etc. set up.
 	if [ ! -x ${pathtotop}/configure ]
 	then
-		Run ${pathtotop}/bootstrap "$@"
+		Run ${pathtotop}/autogen.sh "$@"
 	else
 		Run ${pathtotop}/configure "$@"
 	fi

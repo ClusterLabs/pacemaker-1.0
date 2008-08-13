@@ -17,7 +17,7 @@ makes some educated guesses on how linux-ha ought to be installed by
 default on the current system type.
 
 If you have played with autoconf/automake packages before, then you can use
-the bootstrap script, or configure, etc. like normal.
+the autogen.sh bootstrap script, or configure, etc. like normal.
 
 Due to the way that init directories are handled by heartbeat,
 make distcheck can be problematic. The following should allow
