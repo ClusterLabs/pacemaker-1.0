@@ -34,5 +34,5 @@ crm_sh
 crm_primitive.py
 crm_commands.py
 crm_utils.py
-cib_shadow
+crm_shadow
 hb_report
