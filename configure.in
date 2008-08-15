@@ -25,9 +25,9 @@ dnl   - include/config.h.in is generated automatically by autoheader
 dnl   - NOT to be included in any header files except lha_internal.h
 dnl     (which is also not to be included in any other header files)
 dnl
-dnl External header: include/hb_config.h
+dnl External header: include/crm_config.h
 dnl   - Contains a subset of defines checked here
-dnl   - Manually edit include/hb_config.h.in to have configure include
+dnl   - Manually edit include/crm_config.h.in to have configure include
 dnl     new defines
 dnl   - Should not include HAVE_* defines
 dnl   - Safe to include anywhere
@@ -356,6 +356,11 @@ AC_SUBST(DTD_DIRECTORY)
 AC_DEFINE_UNQUOTED(DTD_VERSION,"$DTD_VERSION", Current version of the Pacemaker Relax-NG Schema)
 AC_SUBST(DTD_VERSION)
 
+AC_CHECK_HEADERS(hb_config.h)
+if test "$ac_cv_header_hb_config_h" != "yes"; then
+   AC_MSG_ERROR(The heartbeat-core development headers were not found)
+fi
+
 HA_HBCONF_DIR=`extract_heartbeat_define hb_config.h HA_HBCONF_DIR`
 AC_SUBST(HA_HBCONF_DIR)
 
@@ -537,7 +542,6 @@ AC_CHECK_LIB(rt, sched_getscheduler)            dnl -lrt (for Tru64)
 AC_CHECK_LIB(gnugetopt, getopt_long)		dnl -lgnugetopt ( if available )
 AC_CHECK_LIB(pam, pam_start)			dnl -lpam (if available)
 AC_CHECK_LIB(plumb, G_main_add_IPC_Channel)	dnl -lplubm
-AC_CHECK_HEADERS(hb_config.h)
 
 EXTRALIBMSG="-"
 
@@ -755,7 +759,6 @@ AC_CHECK_HEADERS([stdint.h unistd.h])
 AC_CHECK_HEADERS(sys/termios.h)
 AC_CHECK_HEADERS(sys/reboot.h)
 AC_CHECK_HEADERS(termios.h)
-AC_CHECK_HEADERS(hb_config.h)
 
 
 dnl ************************************************************************
@@ -812,6 +815,12 @@ CPPFLAGS="$CPPFLAGS $XML2HEAD"
 
 AC_CHECK_HEADERS(libxml/xpath.h)
 AC_CHECK_HEADERS(libxslt/xslt.h)
+if test "$ac_cv_header_libxml_xpath_h" != "yes"; then
+   AC_MSG_ERROR(The libxml developement headers were not found)
+fi
+if test "$ac_cv_header_libxslt_xslt_h" != "yes"; then
+   AC_MSG_ERROR(The libxslt developement headers were not found)
+fi
 
 dnl
 dnl     On many systems libcrypto is needed when linking against libsnmp.
