@@ -217,7 +217,7 @@ echo Our Host OS: $host_os/$host
 
 AC_MSG_RESULT(Sanitizing prefix: ${prefix})
 case $prefix in
-  NONE)	prefix=/usr/local;;
+  NONE)	prefix=/usr;;
 esac
 
 AC_MSG_RESULT(Sanitizing exec_prefix: ${exec_prefix})
