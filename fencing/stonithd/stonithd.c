@@ -338,7 +338,7 @@ static void my_hash_table_find( GHashTable * htable, gpointer * orig_key,
 				gpointer * value, gpointer user_data);
 static void has_this_callid(gpointer key, gpointer value,
 				gpointer user_data);
-static void insert_into_executing_queue(common_op_t *op);
+static void insert_into_executing_queue(common_op_t *op, int call_id);
 static int require_others_to_stonith(const stonith_ops_t * st_op);
 static int initiate_local_stonithop(stonith_ops_t * st_op, stonith_rsc_t * srsc, 
 				    IPC_Channel * ch);
@@ -1336,10 +1336,9 @@ handle_msg_tstit(struct ha_msg* msg, void* private_data)
 
 /* side effect: records a timer_id in the op */
 static void
-insert_into_executing_queue(common_op_t *op)
+insert_into_executing_queue(common_op_t *op, int call_id)
 {
 	int *tmp_callid;
-	int call_id = op->op_union.st_op->call_id;
 
 	tmp_callid = g_new(int, 1);
 	*tmp_callid = call_id;
@@ -1379,10 +1378,9 @@ require_local_stonithop(stonith_ops_t * st_op, stonith_rsc_t * srsc,
 	op->scenario = STONITH_REQ;
 	op->result_receiver = g_strdup(asker);
 	op->rsc_id = g_strdup(srsc->rsc_id);
-	st_op->call_id = child_id;
 	op->op_union.st_op = dup_stonith_ops_t(st_op);
 
-	insert_into_executing_queue(op);
+	insert_into_executing_queue(op,child_id);
 	return ST_OK;
 }
 
@@ -2238,7 +2236,7 @@ initiate_local_stonithop(stonith_ops_t * st_op, stonith_rsc_t * srsc,
 	st_op->call_id = call_id;
 	op->op_union.st_op = dup_stonith_ops_t(st_op);
 
-	insert_into_executing_queue(op);
+	insert_into_executing_queue(op,call_id);
 	return call_id;
 }
 
@@ -2334,7 +2332,7 @@ initiate_remote_stonithop(stonith_ops_t * st_op, IPC_Channel * ch)
 	op->result_receiver = ch;
 	op->op_union.st_op = dup_stonith_ops_t(st_op);
 
-	insert_into_executing_queue(op);
+	insert_into_executing_queue(op,st_op->call_id);
 	stonithd_log2(LOG_INFO, "Broadcasting the message succeeded: require "
 		"others to stonith node %s.", st_op->node_name);
 
@@ -3970,4 +3968,5 @@ trans_log(int priority, const char * fmt, ...)
 		(pil_loglevel_to_cl_loglevel) ], "%s", buf);
 }
 
-/* vim: sw=8 ts=8 */
+/* vim:sw=8:ts=8
+*/
