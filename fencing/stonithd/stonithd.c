@@ -3177,11 +3177,11 @@ probe_status:
 	if( !hostlist ) {
 		stonithd_log(LOG_ERR, "cannot list nodes for %s"
 		,	op->rsc_id);
-		exit(EXECRA_NOT_CONFIGURED);
+		exit(EXECRA_INVALID_PARAM);
 	}
 	if( !hostlist2shmem(op->rsc_id,shmid,hostlist,shmsize,
 			lastgasp_stonith(stonith_obj->stype)) ) {
-		exit(EXECRA_NOT_CONFIGURED);
+		exit(EXECRA_INVALID_PARAM);
 	}
 	exit(EXECRA_OK);
 }
