@@ -1,8 +1,5 @@
 dnl
-dnl autoconf for heartbeat
-dnl	Started by David Lee <T.D.Lee@durham.ac.uk> December 2000
-dnl automake stuff
-dnl     added by Michael Moerz <e9625136@stud3.tuwien.ac.at> February 2001
+dnl autoconf for Pacemaker
 dnl
 dnl License: GNU General Public License (GPL)
 
