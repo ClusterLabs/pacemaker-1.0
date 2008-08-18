@@ -335,6 +335,8 @@ dnl Can force other with environment variable "CC".
 AC_PROG_CC
 AC_PROG_CC_STDC
 
+AC_MSG_NOTICE(Host CPU: $host_cpu)
+
 case "$host_cpu" in
   ppc64|powerpc64)
     case $CFLAGS in
@@ -344,6 +346,14 @@ case "$host_cpu" in
 	fi				;;
     esac
 esac
+
+AC_MSG_CHECKING(which format is needed to print uint64_t)
+case "$host_cpu" in
+  *64*) U64T="%lu";;
+  *)    U64T="%llu";;
+esac
+AC_MSG_RESULT($U64T)
+AC_DEFINE_UNQUOTED(U64T, "$U64T", Correct printf format for logging uint64_t)
 
 dnl Variables needed for substitution
 DTD_DIRECTORY="${datadir}/pacemaker"
