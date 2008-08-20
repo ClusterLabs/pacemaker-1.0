@@ -212,26 +212,26 @@ INIT_EXT=""
 echo Our Host OS: $host_os/$host
 
 
-AC_MSG_RESULT(Sanitizing prefix: ${prefix})
+AC_MSG_NOTICE(Sanitizing prefix: ${prefix})
 case $prefix in
   NONE)	prefix=/usr;;
 esac
 
-AC_MSG_RESULT(Sanitizing exec_prefix: ${exec_prefix})
+AC_MSG_NOTICE(Sanitizing exec_prefix: ${exec_prefix})
 case $exec_prefix in
   dnl For consistency with Heartbeat, map NONE->$prefix
   NONE)	  exec_prefix=$prefix;;
   prefix) exec_prefix=$prefix;;
 esac
 
-AC_MSG_RESULT(Sanitizing ais_prefix: ${AISPREFIX})
+AC_MSG_NOTICE(Sanitizing ais_prefix: ${AISPREFIX})
 case $AISPREFIX in
   dnl For consistency with Heartbeat, map NONE->$prefix
   NONE)	  AISPREFIX=$prefix;;
   prefix) AISPREFIX=$prefix;;
 esac
 
-AC_MSG_RESULT(Sanitizing INITDIR: ${INITDIR})
+AC_MSG_NOTICE(Sanitizing INITDIR: ${INITDIR})
 case $INITDIR in
   prefix) INITDIR=$prefix;;
   "")
@@ -249,18 +249,25 @@ case $INITDIR in
       AC_MSG_RESULT($INITDIR);;
 esac
 
-AC_MSG_CHECKING(which lib directory to use)
-for suffix in lib64 lib
-do
-  trydir="${exec_prefix}/${suffix}"
-  if
-    test -d ${trydir}
-  then
-    libdir=${trydir}
-    break
-  fi
-done
-AC_MSG_RESULT($libdir);
+AC_MSG_NOTICE(Sanitizing libdir: ${libdir})
+case $AISPREFIX in
+  dnl For consistency with Heartbeat, map NONE->$prefix
+  prefix|NONE)
+    AC_MSG_CHECKING(which lib directory to use)
+    for suffix in lib64 lib
+    do
+      trydir="${exec_prefix}/${suffix}"
+      if
+        test -d ${trydir}
+      then
+        libdir=${trydir}
+        break
+      fi
+    done
+    AC_MSG_RESULT($libdir);
+    ;;
+esac
+
 
 dnl Expand autoconf variables so that we dont end up with '${prefix}' 
 dnl in #defines and python scripts
