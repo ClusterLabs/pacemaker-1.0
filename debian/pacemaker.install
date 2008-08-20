@@ -10,7 +10,7 @@ usr/sbin/crm_mon
 usr/sbin/iso8601
 usr/sbin/cibadmin
 usr/sbin/cibpipe
-usr/sbin/cib_shadow
+usr/sbin/crm_shadow
 usr/sbin/ccm_tool
 usr/sbin/crm_master
 usr/sbin/crm_uuid
