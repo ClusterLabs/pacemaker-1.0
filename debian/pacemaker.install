@@ -34,3 +34,4 @@ usr/share/pacemaker/*.dtd
 usr/share/pacemaker/*.xsl
 usr/share/pacemaker/*.rng
 usr/share/heartbeat/stonithdtest/STONITHDBasicSanityCheck
+usr/lib/ocf/resource.d/pacemaker
