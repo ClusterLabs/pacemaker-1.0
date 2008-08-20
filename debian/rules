@@ -8,7 +8,7 @@
 # Uncomment this to turn on verbose mode.
 #export DH_VERBOSE=1
 
-cfg:=--prefix=/usr --sysconfdir=/etc --localstatedir=/var 	  \
+cfg:=--prefix=/usr --libdir=/usr/lib --sysconfdir=/etc --localstatedir=/var 	  \
   --mandir=/usr/share/man --with-lcrso-dir=/usr/lib/openais/lcrso
 
 # These are used for cross-compiling and for saving the configure script
