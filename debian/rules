@@ -82,7 +82,7 @@ install-stamp:
 
 	# cleanup unrequired stuff
 	find $(DTMP)/usr/lib -name *.la -exec rm {} \;
-	-rm $(DTMP)/usr/lib/service_crm.so
+	-rm $(DTMP)/usr/lib/pacemaker.so
 
 
 #	# missing file...
