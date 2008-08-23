@@ -1513,10 +1513,9 @@ reboot_block_timeout(gpointer data)
 	if (NULL != 
 		g_hash_table_lookup(reboot_blocked_table, target) ) {
 		g_hash_table_remove(reboot_blocked_table, target);	
-		stonithd_log(LOG_INFO, "Unblock the reboot to node %s", target);
+		stonithd_log(LOG_INFO, "unblock the reboot to node %s", target);
 	} else {
-		stonithd_log(LOG_ERR, "An error happened When unblocking the "
-				" reboot to node %s" , target);
+		stonithd_log(LOG_WARNING, "node %s already unblocked" , target);
 	}
 
 	return FALSE;
