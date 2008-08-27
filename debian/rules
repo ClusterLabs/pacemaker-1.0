@@ -11,6 +11,7 @@
 cfg:=--prefix=/usr --sysconfdir=/etc --localstatedir=/var 	  \
   --mandir=/usr/share/man --with-lcrso-dir=/usr/lib/openais/lcrso \
   --enable-snmp-subagent --with-mibsdir=/usr/share/snmp/mibs 	  \
+  --with-lib-dir=/usr/lib
 
 # These are used for cross-compiling and for saving the configure script
 # from having to guess our platform (since we know it already)
@@ -81,7 +82,7 @@ install-stamp:
 
 	# cleanup unrequired stuff
 	find $(DTMP)/usr/lib -name *.la -exec rm {} \;
-	-rm $(DTMP)/usr/lib/service_crm.so
+	-rm $(DTMP)/usr/lib/pacemaker.so
 
 
 #	# missing file...

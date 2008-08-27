@@ -89,11 +89,11 @@
 #include <clplumbing/coredumps.h>
 #include <clplumbing/realtime.h>
 #if SUPPORT_HEARTBEAT
-	#include <apphb.h>
+#    include <apphb.h>
+#    include <hb_api.h>
 #endif
 #include <heartbeat.h>
 #include <ha_msg.h>
-#include <hb_api.h>
 #include <lrm/raexec.h>
 #include <fencing/stonithd_msg.h>
 #include <fencing/stonithd_api.h>
