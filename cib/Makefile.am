@@ -28,13 +28,13 @@ hadir		= $(sysconfdir)/ha.d
 halibdir	= $(libdir)/@HB_PKG@
 commmoddir	= $(halibdir)/modules/comm
 
-COMMONLIBS	= $(top_builddir)/lib/crm/common/libcrmcommon.la	\
-		  $(top_builddir)/lib/crm/cib/libcib.la			\
-		  $(GLIBLIB)						\
-		  $(LIBRT)
+COMMONLIBS	= $(top_builddir)/lib/common/libcrmcommon.la	\
+		  $(top_builddir)/lib/cib/libcib.la			\
+		  $(GLIBLIB) $(LIBRT)
 
 ## binary progs
 halib_PROGRAMS	= cib cibmon
+sbin_PROGRAMS   = cibpipe
 
 ## SOURCES
 #noinst_HEADERS		= config.h control.h crmd.h
@@ -42,14 +42,18 @@ noinst_HEADERS		= cibio.h cibmessages.h cibprimatives.h notify.h \
 			callbacks.h
 
 cib_SOURCES		= io.c primatives.c messages.c cib.c notify.c	\
-			callbacks.c main.c remote.c
-cib_LDADD		= $(COMMONLIBS) $(CRYPTOLIB) $(CLUSTERLIBS)	\
-			$(top_builddir)/lib/crm/common/libcrmcluster.la
+			callbacks.c main.c remote.c common.c
 
-cib_LDFLAGS		= $(GNUTLSLIBS)
+cib_LDADD		= $(COMMONLIBS) $(CRYPTOLIB) $(CLUSTERLIBS)	\
+			$(top_builddir)/lib/common/libcrmcluster.la
 
 cibmon_SOURCES		= cibmon.c
 cibmon_LDADD		= $(COMMONLIBS)
+
+cibpipe_SOURCES		= primatives.c cibpipe.c
+
+cibpipe_LDADD		= $(COMMONLIBS) $(CRYPTOLIB)
+cibpipe_CFLAGS		= -DCIBPIPE=1
 
 clean-generic:
 	rm -f *.log *.debug *.xml *~

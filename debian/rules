@@ -8,10 +8,8 @@
 # Uncomment this to turn on verbose mode.
 #export DH_VERBOSE=1
 
-cfg:=--prefix=/usr --sysconfdir=/etc --localstatedir=/var 	  \
-  --mandir=/usr/share/man --with-lcrso-dir=/usr/lib/openais/lcrso \
-  --enable-snmp-subagent --with-mibsdir=/usr/share/snmp/mibs 	  \
-  --with-lib-dir=/usr/lib
+cfg:=--prefix=/usr --libdir=/usr/lib --sysconfdir=/etc --localstatedir=/var 	  \
+  --mandir=/usr/share/man --with-lcrso-dir=/usr/lib/openais/lcrso
 
 # These are used for cross-compiling and for saving the configure script
 # from having to guess our platform (since we know it already)
@@ -44,8 +42,8 @@ build-stamp:
 	dh_testdir
 	# Allow debian packages to also be built directly from Hg archives
 	# Official debian packages are built from dist tarballs
+	test -e ./configure || ./autogen.sh $(cfg)
 	test ! -e ./configure || ./configure $(cfg)
-	test -e ./configure || ./bootstrap $(cfg)
 	$(MAKE)
 	touch build-stamp
 
@@ -82,7 +80,7 @@ install-stamp:
 
 	# cleanup unrequired stuff
 	find $(DTMP)/usr/lib -name *.la -exec rm {} \;
-	-rm $(DTMP)/usr/lib/pacemaker.so
+	-rm $(DTMP)/usr/lib/service_crm.so
 
 
 #	# missing file...

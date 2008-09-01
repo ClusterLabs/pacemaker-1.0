@@ -1,83 +1,17 @@
 NOTE:	The work of everyone on this project is dearly appreciated. If you
 	are not listed here but should be, please notify us!
 
-The following people have kindly helped with heartbeat development by
+The following people have kindly helped with pacemaker development by
 providing code, documentation or testing, or fixes:
 
-	Alan Robertson <alanr@unix.sh>
-		Main architect.
-		Things other people don't want to do.
+	Andrew Beekhof <abeekhof[at]suse[dot]de>
+		Main architect, Lead Developer.
+	Dejan Muhamedagic <dejan[at]suse[dot]de>
+		Stonith Subsystem.
 
 Contributors, ordered by last name:
 
-	Eric Ayers <eric@compgen.com>
-		Nightware RPC100S, and WTI RPS10 support
-	Andrew Beekhof <andrew@beekhof.net>
-	        Cluster Resource Manager
-		Darwin Cleanups
-	Stéphane Billiart <stephane@reefedge.com> - unicast support
-	Gregor Binder <gbinder@sysfive.com> - "meatware" STONITH support
-        Juan Pedro Paredes Caballero <juampe@retemail.es> - Debian support
-	Dusan Djordjevic <dj.dule@linux.org.yu> - documentation
-	Kevin Dwyer <kevin@pheared.net> - ipfail, bug fixes.
-	Joachim Gleissner <jg@suse.de> ssh STONITH support
-	Luis Claudio R. Gonçalves <lclaudio@conectiva.com.br>
-		nice_failback code, hb_standby code, fixes
-	Thomas Hepper <th@ant.han.de>
-		solaris and Debian support
-	Masaki Hasegawa <masaki-h@pp.iij4u.or.jp> - send_arp research, fix
-	Andrew Hildebrand <andrew@pdi.com> - IRIX port.
-	Horms <horms@vergenet.net> <horms@verge.net.au>
-		LVS support, ldirectord, many fixes
-	Gregor Howey <ghowey@bremer-nachrichten.de>
-	Holger Kiehl <Holger.Kiehl@dwd.de>
-	Kirk Lawson <lklawson@heapy.com> - Audible alarm support
-	Mike Ledoux <mwl@mclinux.com>
-		APC master switch and WTI [WT]PS-xxx support
-	David Lee <t.d.lee@durham.ac.uk> - autoconf and solaris support
-	Xiaoxiang Liu <xiliu@ncsa.uiuc.edu>
-		interprocess communication library
-	Friedrich Lobenstock <fl@fl.priv.at> - SuSE compatibility fixes
-	Lars Marowsky-Brée <lmb@suse.de>
-		LVM, ICP and ssh STONITH support, many fixes
-		SuSE package maintainer
-		STABLE_1_0 / 1.0.x release maintenance
-	Michael Moerz <mike@cubit.at> - automake support
-	Ram Pai <linuxram@us.ibm.com> - Consensus Membership module
-	Rudy Pawul <rpawul@iso-ne.com>
-		Documentation, first production customer
-	Andreas Piesk <a.piesk@gmx.net>
-		APC Masterswitch (snmp) and APCSmart support
-	Jacob Rief <jacob.rief@tis.at> - ldirectord
-	Stefan Salzer <salt@cin.de>
-	Mitja Sarp <mitja@lysator.liu.se>
-		Initial authentication support (first big contribution)
-	Guochun Shi<gshi@ncsa.uiuc.edu>
-		Communication/core/membership layer support
-	Matthew Soffen <sirgeek@mrsucko.org>
-		FreeBSD port, Solaris fixes, and release manager
-	Guenther Thomsen <thomsen@cs.tu-berlin.de>
-		Debian compliance
-	Mike Tilstra <conrad@sistina.com> - VACM support
-	Marcelo Tosatti <marcelo@conectiva.com.br>
-		API support, initial plugin support
-	Iñaki Fernández Villanueva - debian support
-	Todd Wheeling <wheeling@mclinux.com>
-		APC master switch and WTI [WT]PS-xxx support
-	Volker Wiegand <Volker.Wiegand@suse.de>
-		/proc file system, initial SuSE support, documentation
-	Chris Wright <chris@wirex.com>
-		Multicast support, inet_pton replacement, fixes
+	Lars Marowsky-Brée <lmb[at]suse[dot]de>
+	        Project catalyst and advocate
 
 
-Code for the following pieces borrowed from code by:
-	Tom Vogt <tom@lemuria.org>	(udp code)
-	yuri volobuev <volobuev@t1.chem.umn.edu> (send_arp.c)
-	'Network UPS Tools' by Russell Kroll <rkroll@exploits.org>
- 		homepage: http://www.exploits.org/nut/
-		(Andreas Piesk borrowed code for APCSmart support)
-	David C. Teigland <teigland@sistina.com>
-		wrote original meatware support for GFS stomith
-	salz@pebbles.bbn.com - replacement scandir function
-	Internet Software Consortium (bind) - replacement inet_pton()
-		function

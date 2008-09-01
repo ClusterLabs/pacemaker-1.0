@@ -30,5 +30,11 @@ MAINTAINERCLEANFILES    = Makefile.in
 #
 
 ## Subdirectories...
-SUBDIRS	= crm fencing plugins
+SUBDIRS	= common pengine transition cib fencing plugins ais
+DIST_SUBDIRS =  $(SUBDIRS) ais
+
+if BUILD_AIS_SUPPORT
+SUBDIRS			+= ais
+endif
+
 

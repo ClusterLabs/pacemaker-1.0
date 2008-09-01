@@ -3,6 +3,7 @@
      <crm_config>
        <cluster_property_set id="cib-bootstrap-options">
          <attributes>
+           <nvpair name="stonith-enabled" id="cib-bootstrap-options-stonith-enabled" value="false"/>
            <nvpair id="cib-bootstrap-options-dc-version" name="dc-version" value="0.6.4-node: 226d8e35692415c56dbd05258a85905414938ce9"/>
            <nvpair name="last-lrm-refresh" id="cib-bootstrap-options-last-lrm-refresh" value="1214292810"/>
          </attributes>
@@ -25,7 +26,7 @@
        </node>
      </nodes>
      <resources>
-       <master_slave id="drbd0">
+       <master_slave id="drbd">
          <meta_attributes id="ma-drbd0">
            <attributes>
              <nvpair id="drbd0-clone-max" name="clone_max" value="2"/>
@@ -138,14 +139,14 @@
        </primitive>
      </resources>
      <constraints>
-       <rsc_location id="drbd0_location" rsc="drbd0">
+       <rsc_location id="drbd0_location" rsc="drbd">
          <rule id="drbd0_prefered_location" score="1">
            <expression id="drbd0_prefered_location_expr" attribute="#uname" operation="eq" value="vbox3"/>
          </rule>
        </rsc_location>
-       <rsc_order id="drbd_before_clvmd" from="clvmd_clone" action="start" to="drbd0" to_action="promote"/>
+       <rsc_order id="drbd_before_clvmd" from="clvmd_clone" action="start" to="drbd" to_action="promote"/>
        <!--rsc_order id="drbd_before_vmnci36" from="vmnci36" action="start" to="drbd0" to_action="promote"/-->
-       <rsc_colocation id="clvmd_on_drbd0" to="drbd0" to_role="Master" from="clvmd_clone" score="INFINITY"/>
+       <rsc_colocation id="clvmd_on_drbd0" to="drbd" to_role="Master" from="clvmd_clone" score="INFINITY"/>
        <rsc_order id="cman_before_clvmd" from="clvmd_clone" action="start" to="cman_clone" to_action="start"/>
        <rsc_colocation id="clvmd_on_cman" to="cman_clone" to_role="Started" from="clvmd_clone" score="INFINITY"/>
        <rsc_location id="vmnci36_location" rsc="vmnci36">

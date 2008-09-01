@@ -19,8 +19,6 @@
 #ifndef CRM_AIS_COMMON__H
 #define CRM_AIS_COMMON__H
 
-#include <crm_internal.h>
-
 #include <glib.h>
 #include <string.h>
 #if SUPPORT_AIS
@@ -75,6 +73,10 @@ typedef struct {
 } mar_res_header_t __attribute__((aligned(8)));
 #endif
 
+#define CRM_SERVICE             9
+#define CRM_MESSAGE_IPC_ACK     1
+#define CRM_MESSAGE_NODEID_RESP 2
+
 #define MAX_NAME	256
 #define AIS_IPC_NAME  "ais-crm-ipc"
 
@@ -94,6 +96,7 @@ enum crm_ais_msg_class {
     crm_class_cluster = 0,
     crm_class_members = 1,
     crm_class_notify  = 2,
+    crm_class_nodeid  = 3,
 };
 
 /* order here matters - its used to index into the crm_children array */
@@ -123,9 +126,9 @@ enum crm_proc_flag {
 
 typedef struct crm_peer_node_s 
 {
-	unsigned int id;
-	unsigned long long born;
-	unsigned long long last_seen;
+	uint32_t id;
+	uint64_t born;
+	uint64_t last_seen;
 
 	int32_t votes;
 	uint32_t processes;
@@ -162,6 +165,12 @@ struct crm_ais_msg_s
 	/* 584 bytes */
 	char			data[0];
 	
+} __attribute__((packed));
+
+struct crm_ais_nodeid_resp_s
+{
+	mar_res_header_t	header __attribute__((aligned(8)));
+	uint32_t		id;	
 } __attribute__((packed));
 
 #if SUPPORT_AIS

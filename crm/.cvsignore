@@ -1,7 +1,0 @@
-Makefile
-Makefile.in
-*.diff
-*.beam
-parser-messages
-MISC_ERRORS
-crm.dtd
