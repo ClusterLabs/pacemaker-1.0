@@ -28,17 +28,16 @@
 #endif /* HAVE_STDINT_H */
 #include <glib.h>
 #include <hb_api.h>
-#include <clplumbing/cl_malloc.h>
 #include <clplumbing/cl_uuid.h>
 #include <clplumbing/cl_log.h>
 
 #define MAXLEN	1024
 
 /* memory routines */
-#define cim_malloc   cl_malloc
-#define cim_free     cl_free
-#define cim_strdup   cl_strdup
-#define cim_realloc  cl_realloc
+#define cim_malloc   malloc
+#define cim_free     free
+#define cim_strdup   strdup
+#define cim_realloc  realloc
 
 typedef     	void (* cim_free_t)(void *);
 

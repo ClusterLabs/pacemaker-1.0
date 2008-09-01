@@ -34,7 +34,6 @@ include/clplumbing/Gmain_timeout.h
 include/clplumbing/apphb_cs.h
 include/clplumbing/base64.h
 include/clplumbing/cl_log.h
-include/clplumbing/cl_malloc.h
 include/clplumbing/cl_poll.h
 include/clplumbing/cl_signal.h
 include/clplumbing/cpulimits.h

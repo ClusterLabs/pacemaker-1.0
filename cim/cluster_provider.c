@@ -31,7 +31,6 @@
 #include <cmpift.h>
 #include <cmpimacs.h>
 #include <hb_api.h>
-#include <clplumbing/cl_malloc.h>
 #include "cmpi_utils.h"
 #include "cluster_info.h"
 #include "utils.h"

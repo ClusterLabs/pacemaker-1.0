@@ -30,7 +30,6 @@
 #include <hb_api.h>
 #include <saf/ais.h>
 #include <clplumbing/cl_uuid.h>
-#include <clplumbing/cl_malloc.h>
 #include <clplumbing/cl_log.h>
 #include <mgmt/mgmt.h>
 #include "utils.h"

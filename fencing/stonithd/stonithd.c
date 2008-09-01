@@ -84,7 +84,6 @@
 #include <clplumbing/proctrack.h>
 #include <clplumbing/GSource.h>
 #include <clplumbing/cl_log.h>
-#include <clplumbing/cl_malloc.h>
 #include <clplumbing/cl_uuid.h>
 #include <clplumbing/coredumps.h>
 #include <clplumbing/realtime.h>
@@ -516,7 +515,6 @@ main(int argc, char ** argv)
 	int option_char;
 
 	crm_system_name = stonithd_name;
-	cl_malloc_forced_for_glib(); /* Force more memory checks */
         cl_log_set_entity(stonithd_name);
 	cl_log_enable_stderr(TRUE);
 	cl_log_set_facility(HA_LOG_FACILITY);
@@ -747,7 +745,7 @@ delhb_quit:
 	g_hash_table_destroy(executing_queue); 
 	if ( NULL != ipc_auth ) {
 		g_hash_table_destroy(ipc_auth->uid);
-		cl_free(ipc_auth); 
+		free(ipc_auth); 
 	}
 	
 	if (cl_unlock_pidfile(PID_FILE) != 0) {
@@ -1087,7 +1085,7 @@ stonithd_ais_dispatch(AIS_Message *wrapper, char *data, int sender)
 #define skipwhite(p) while(*p && isspace(*p)) p++
 #define skipnonwhite(p) while(*p && !isspace(*p)) p++
 #define savestrn(d,p,len) do { \
-	if( !(d = cl_malloc(len+1)) ) { \
+	if( !(d = malloc(len+1)) ) { \
 		stonithd_log(LOG_ERR, "out of memory"); \
 	} else { \
 		strncpy(d,p,len); \
@@ -1124,15 +1122,13 @@ attr2fld(char *input, struct ha_msg *msg)
 			, __FUNCTION__, __LINE__);
 		goto err;
 	}
-	cl_free(attr);
-	cl_free(val);
+	free(attr);
+	free(val);
 	return q-input;
 
 err:
-	if( attr )
-		cl_free(attr);
-	if( val )
-		cl_free(val);
+	free(attr);
+	free(val);
 	return 0;
 }
 
@@ -3204,7 +3200,7 @@ add_shm_hostlist(int shmid, pid_t pid)
 {
 	struct hostlist_shmseg *p;
 
-	if( !(p = cl_calloc(sizeof(struct hostlist_shmseg),1)) ) {
+	if( !(p = calloc(sizeof(struct hostlist_shmseg),1)) ) {
 		stonithd_log(LOG_ERR, "out of memory");
 		return;
 	}
@@ -3227,7 +3223,7 @@ remove_shm_hostlist(pid_t pid)
 		return;
 	}
 	mem_hostlist = g_list_remove(mem_hostlist, p);
-	cl_free(p);
+	free(p);
 }
 
 /* store the hostlist to a shared memory segment */
@@ -3320,12 +3316,12 @@ copyshmem(char *s)
 	if( n == 0 ) {
 		return NULL;
 	}
-	if( !(hostlist = (char **)cl_calloc(sizeof(char *),(n+1))) ) {
+	if( !(hostlist = (char **)calloc(sizeof(char *),(n+1))) ) {
 		stonithd_log(LOG_ERR, "out of memory");
 		return NULL;
 	}
 	for( q = s, h = hostlist; *q; q += strlen(q)+1, h++ ) {
-		if( !(*h = (char *)cl_malloc(strlen(q)+1)) ) {
+		if( !(*h = (char *)malloc(strlen(q)+1)) ) {
 			stonithd_log(LOG_ERR, "out of memory");
 			stonith_free_hostlist(hostlist);
 			return NULL;
