@@ -1562,8 +1562,8 @@ init_client_API_handler(void)
 				    (pw_entry->pw_uid), &tmp);
         }
 
-        if ( NULL == (ipc_auth = MALLOCT(struct IPC_AUTH)) ) {
-                stonithd_log(LOG_ERR, "init_client_API_handler: MALLOCT failed.");
+        if ( NULL == (ipc_auth = malloc(sizeof(struct IPC_AUTH))) ) {
+                stonithd_log(LOG_ERR, "init_client_API_handler: malloc failed.");
 		g_hash_table_destroy(uid_hashtable);
         } else {
                 ipc_auth->uid = uid_hashtable;
