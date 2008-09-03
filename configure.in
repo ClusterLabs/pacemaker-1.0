@@ -1107,7 +1107,6 @@ fi
 AC_DEFINE_UNQUOTED(SUPPORT_AIS, $SUPPORT_AIS, Support the OpenAIS messaging and membership layer)
 AM_CONDITIONAL(BUILD_AIS_SUPPORT, test $SUPPORT_AIS = 1)
 
-
 dnl
 dnl    Cluster stack - Sanity
 dnl
@@ -1696,7 +1695,7 @@ AC_MSG_RESULT([  HA group name            = ${HA_APIGROUP}])
 AC_MSG_RESULT([  HA user name             = ${HA_CCMUSER}])
 
 AC_MSG_RESULT([  With Heartbeat support   = ${SUPPORT_HEARTBEAT}])
-AC_MSG_RESULT([  With AIS support         = ${SUPPORT_AIS}])
+AC_MSG_RESULT([  With AIS support         = ${SUPPORT_AIS} ${AIS_VERSION}])
 AC_MSG_RESULT([  With AIS prefix          = ${AISPREFIX}])
 
 AC_MSG_RESULT([  CC_WARNINGS              = ${CC_WARNINGS}])
