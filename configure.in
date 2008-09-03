@@ -172,14 +172,14 @@ AC_ARG_WITH(ais-support,
     [  --with-ais-support     
        Support the OpenAIS messaging and membership layer ],
     [ SUPPORT_AIS=$withval ],
-    [ SUPPORT_AIS=1 ],
+    [ SUPPORT_AIS=try ],
 )
 
 AC_ARG_WITH(heartbeat-support,
     [  --with-heartbeat-support     
        Support the Heartbeat messaging and membership layer ],
     [ SUPPORT_HEARTBEAT=$withval ],
-    [ SUPPORT_HEARTBEAT=1 ],
+    [ SUPPORT_HEARTBEAT=try ],
 )
 
 AISPREFIX=""
@@ -372,7 +372,7 @@ AC_SUBST(DTD_VERSION)
 
 AC_CHECK_HEADERS(hb_config.h)
 if test "$ac_cv_header_hb_config_h" != "yes"; then
-   AC_MSG_ERROR(The heartbeat-core development headers were not found)
+   AC_MSG_FAILURE(The heartbeat-common development headers were not found)
 fi
 
 HA_HBCONF_DIR=`extract_heartbeat_define hb_config.h HA_HBCONF_DIR`
@@ -461,36 +461,16 @@ case $HTML2TXT in
   *)	HTML2TXT="";;
 esac
 AC_PATH_PROGS(POD2MAN, pod2man, pod2man)
-AC_PATH_PROGS(ROUTE, route)
 AC_PATH_PROGS(RPM, rpmbuild)
 if test x"${RPM}" = x""; then
     AC_PATH_PROGS(RPM, rpm)
 fi
-AC_DEFINE_UNQUOTED(ROUTE, "$ROUTE", path to route command)
-AC_PATH_PROGS(NETSTAT, netstat, /sbin/netstat)
-AC_DEFINE_UNQUOTED(NETSTAT, "$NETSTAT", path to the netstat command)
-AC_PATH_PROGS(PING, ping, /bin/ping)
-AC_PATH_PROGS(IFCONFIG, ifconfig, /sbin/ifconfig)
 AC_PATH_PROGS(SSH, ssh, /usr/bin/ssh)
 AC_PATH_PROGS(SCP, scp, /usr/bin/scp)
 AC_PATH_PROGS(PYTHON, python)
-dnl - Determine which mail program exists. Mailx is Solaris
-AC_PATH_PROGS(MAILCMD, mail, mailx)
-AC_SUBST(MAILCMD)
-AC_DEFINE_UNQUOTED(IFCONFIG, "$IFCONFIG", path to the ifconfig command)
-AC_PATH_PROGS(GETENT, getent)
 AC_PATH_PROGS(IP2UTIL, ip, /sbin/ip)
 AC_PATH_PROGS(XML2CONFIG, xml2-config)
 
-AC_PATH_PROGS(REBOOT, reboot, /sbin/reboot)
-AC_PATH_PROGS(POWEROFF_CMD, poweroff, /sbin/poweroff)
-AC_SUBST(REBOOT)
-AC_SUBST(POWEROFF_CMD)
-AC_DEFINE_UNQUOTED(REBOOT, "$REBOOT", path to the reboot command)
-AC_DEFINE_UNQUOTED(POWEROFF_CMD, "$POWEROFF_CMD", path to the poweroff command)
-
-dnl "whoami", if it exists, may be hidden away on some System-V (e.g. Solaris)
-AC_PATH_PROGS(WHOAMI, whoami, , ${PATH}:/usr/ucb)
 AC_PATH_PROGS(SWIG, swig)
 AC_SUBST(SWIG)
 AC_PATH_PROGS(EGREP, egrep)
@@ -506,38 +486,12 @@ AC_PATH_PROGS(MD5, md5)
 AC_SUBST(GZIP_PROG)
 AC_SUBST(TAR)
 AC_SUBST(MD5)
+AC_SUBST(POD2MAN)
+AC_SUBST(HTML2TXT)
 
 dnl The "test" program can be different from the "sh" builtin.
 AC_PATH_PROGS(TEST, test)
 AC_PATH_PROGS(PKGCONFIG, pkg-config)
-
-dnl ************************************************************************
-dnl Check whether non-root user can chown.
-dnl ************************************************************************
-
-if test -n "$WHOAMI"; then
-  IAM=`$WHOAMI`
-fi
-AC_MSG_CHECKING(if chown works for non-root)
-
-F="./.chown-test.$$"
-touch $F
-
-if
-  case "$IAM" in
-    root)	chown nobody $F;
-       		su nobody -c "chown root $F";;
-    *)	chown root $F
-  esac >/dev/null 2>&1
-then
-  nonroot_chown=yes
-  AC_MSG_RESULT(yes)
-else
-  nonroot_chown=no
-  AC_MSG_RESULT(no)
-fi
-rm -f $F
-AM_CONDITIONAL(NONROOT_CHOWN, test "$nonroot_chown" = yes )
 
 dnl ===============================================
 dnl Libraries
@@ -545,7 +499,6 @@ dnl ===============================================
 
 dnl ************************************************************************
 dnl checks for libraries
-dnl Needed for libnet test.
 dnl ************************************************************************
 AC_CHECK_LIB(nsl, t_open)			dnl -lnsl
 AC_CHECK_LIB(socket, socket)			dnl -lsocket
@@ -555,7 +508,6 @@ AC_CHECK_LIB(dl, dlopen)			dnl -ldl (for Linux)
 AC_CHECK_LIB(rt, sched_getscheduler)            dnl -lrt (for Tru64)
 AC_CHECK_LIB(gnugetopt, getopt_long)		dnl -lgnugetopt ( if available )
 AC_CHECK_LIB(pam, pam_start)			dnl -lpam (if available)
-AC_CHECK_LIB(plumb, G_main_add_IPC_Channel)	dnl -lplubm
 
 EXTRALIBMSG="-"
 
@@ -595,73 +547,6 @@ if test "x${PYTHON}" = x; then
   PYTHON="/usr/bin/env python";
 fi
 AC_MSG_RESULT(using $PYTHON);
-
-AC_MSG_CHECKING(if netstat supports -f inet flag)
-$NETSTAT -rn -f inet > /dev/null 2>&1
-if test x"$?" = x"0"; then
-	AC_DEFINE(NETSTATPARM, "-rn -f inet ", parameters to netstat to retrieve route information)
-	AC_MSG_RESULT(yes)
-else
-	AC_DEFINE(NETSTATPARM, "-rn ", parameters to netstat to retrieve route information)
-	AC_MSG_RESULT(no)
-fi
-
-if test X${PING} = X
-then
-  FatalMissingThing "ping" "ping command is mandantory"
-fi
-
-dnl Determine if we use -w1 or -t1 for ping (in PYTHON Scripts)
-
-
-AC_MSG_CHECKING(ping option for timeout - w or t)
-for PING_TIMEOUT_OPT in "-w1" "-t1"
-do
-  $PING -nq -c1 $PING_TIMEOUT_OPT localhost > /dev/null 2>&1
-  if
-    test "$?" = 0
-  then
-    AC_DEFINE_UNQUOTED(PING_TIMEOUT_OPT, "$PING_TIMEOUT_OPT", option for ping timeout)
-    AC_MSG_RESULT($PING_TIMEOUT_OPT)
-    break
-  fi
-done
-AC_SUBST(PING_TIMEOUT_OPT)
-
-
-dnl Determining a route (particularly for "findif").
-dnl There are various mechanisms on different systems.
-dnl Some mechanisms require root access to evaluate, but configure is often
-dnl (indeed, some say should be always) running non-root.
-dnl
-dnl Therefore much of the determination has to be run-time.
-dnl So the principle here, at configure time, is to explore what might be
-dnl available, and offer as much as possible to run-time.
-dnl
-AC_DEFINE(ROUTEPARM, "-n get", paramters for route to retrieve route information)
-AC_DEFINE(PROCROUTE, "/proc/net/route", path were to find route information in proc)
-
-
-AC_MSG_CHECKING(ifconfig option to list interfaces)
-for IFCONFIG_A_OPT in "" "-A" "-a"
-do
-  $IFCONFIG $IFCONFIG_A_OPT > /dev/null 2>&1
-  if
-    test "$?" = 0
-  then
-    AC_DEFINE_UNQUOTED(IFCONFIG_A_OPT, "$IFCONFIG_A_OPT", option for ifconfig command)
-    AC_MSG_RESULT($IFCONFIG_A_OPT)
-    break
-  fi
-done
-
-AC_SUBST(IFCONFIG_A_OPT)
-AC_SUBST(WHOAMI)
-
-AC_SUBST(HTML2TXT)
-AC_SUBST(POD2MAN)
-AC_SUBST(ROUTEPARM)
-AC_SUBST(PROCROUTE)
 
 if test x"${HAVE_LIBRT}" = x""; then
 	LIBRT=""
@@ -1069,108 +954,10 @@ fi
 AC_SUBST(CURSESLIBS)
 
 dnl
-dnl    Cluster stack
+dnl    Cluster infrastructure - Heartbeat
 dnl
 
-if test X"$AISPREFIX" = X"prefix"; then
- AISPREFIX=$prefix
-fi
-
-AISLIB=""
-
-case $SUPPORT_AIS in
-     1) SUPPORT_AIS=1;;
-     yes) SUPPORT_AIS=1;;
-     true) SUPPORT_AIS=1;;
-     *) SUPPORT_AIS=0;;
-esac
-
-case $SUPPORT_HEARTBEAT in
-     1) SUPPORT_HEARTBEAT=1;;
-     yes) SUPPORT_HEARTBEAT=1;;
-     true) SUPPORT_HEARTBEAT=1;;
-     *) SUPPORT_HEARTBEAT=0;;
-esac
-
-AC_MSG_CHECKING(for native AIS)
-AISMSGLIB=""
-AIS_VERSION=""
-
-if  test $SUPPORT_AIS = 0; then
-   AC_MSG_RESULT(no... not requested.)
-
-elif test x$SUPPORT_AIS = x; then
-   SUPPORT_AIS=0
-   AC_MSG_RESULT(no... not found.)
-
-else
-   AC_MSG_RESULT(yes... $AISPREFIX)
-
-   dnl Find it in lib, lib64, or wherever it wants to live...
-   alib=`ls ${AISPREFIX}/*/openais/libSaMsg.so | head -n 1`
-   AISLIB=`dirname $alib`
-
-   if test -z "$LCRSODIR"; then
-      LCRSODIR="$libexecdir/lcrso"
-      alib=`ls ${AISPREFIX}/*/lcrso/objdb.lcrso | head -n 1`
-      LCRSODIR=`dirname $alib`
-   fi
-
-   AC_MSG_CHECKING(Testing AIS installation in)
-   AC_MSG_RESULT($AISPREFIX)
-   if test -d ${AISLIB} -a ! -z ${AISLIB}; then
-     LIBS="$LIBS -L${AISLIB} -R${AISLIB}"
-     SUPPORT_AIS=1
-     saveLIBS="$LIBS"
-
-     dnl libs...
-     AIS_VERSION="trunk"
-     AC_CHECK_LIB(aisutil, saSendReceiveReply, [AISMSGLIB=-laisutil], [SUPPORT_AIS=0])
-     if test $SUPPORT_AIS = 0; then
-     	  SUPPORT_AIS=1
-	  AIS_VERSION="whitetank"
-          AC_CHECK_LIB(SaMsg, saSendReceiveReply, [AISMSGLIB=-lSaMsg], [SUPPORT_AIS=0])
-	  if test $SUPPORT_AIS = 1; then
-	     AC_DEFINE_UNQUOTED(AIS_WHITETANK, 1, "AIS target is the whitetank series")
-	  fi
-     else
-	  AC_DEFINE_UNQUOTED(AIS_TRUNK, 1, "AIS target is the trunk series")
-     fi
-
-     dnl headers...
-     AC_CHECK_HEADERS(openais/saAis.h)
-     if test "$ac_cv_header_openais_saAis_h" != "yes"; then
-        AC_MSG_WARN(Headers not found: $ac_cv_header_openais_saAis_h) 
-     	SUPPORT_AIS=0
-     fi  
-
-     AC_MSG_CHECKING(Testing AIS lcrso directory $LCRSODIR)
-     if test ! -d ${LCRSODIR}; then
-     	AC_MSG_RESULT(Invalid.  Please specify the correct location with --with-lcrso-dir)
-     	SUPPORT_AIS=0
-     else
-	AC_MSG_RESULT(ok)
-     fi
-
-     LIBS="$saveLIBS"
-
-   else
-     AC_MSG_WARN(Couldn't find openais installed under ${AISPREFIX}.)
-     AC_MSG_WARN(Use --with-ais-prefix to specify a valid location)
-     SUPPORT_AIS=0
-   fi
-fi
-
-if test $SUPPORT_HEARTBEAT = 1; then
-   AC_CHECK_LIB(hbclient, ll_cluster_new, 
-   		[SUPPORT_HEARTBEAT=1], [SUPPORT_HEARTBEAT=0])
-fi
-
-AC_DEFINE_UNQUOTED(SUPPORT_AIS, $SUPPORT_AIS, Support the OpenAIS messaging and membership layer)
-AC_DEFINE_UNQUOTED(SUPPORT_HEARTBEAT, $SUPPORT_HEARTBEAT, Support the Heartbeat messaging and membership layer)
-
-AM_CONDITIONAL(BUILD_AIS_SUPPORT, test $SUPPORT_AIS = 1)
-AM_CONDITIONAL(BUILD_HEARTBEAT_SUPPORT, test $SUPPORT_HEARTBEAT = 1)
+AC_CHECK_LIB(plumb, G_main_add_IPC_Channel)
 
 dnl Compatability checks
 AC_CHECK_FUNCS(msgfromIPC_timeout)
@@ -1182,21 +969,167 @@ fi
 AC_DEFINE_UNQUOTED(HAVE_LRM_ASYNC_FAIL, $HAVE_ASYNC_FAIL, LRM Supports asynchronous resource failures)
 
 
+dnl
+dnl    Cluster stack - Heartbeat
+dnl
+
+case $SUPPORT_HEARTBEAT in
+     1|yes|true) 
+        AC_CHECK_LIB(hbclient, ll_cluster_new, 
+   		[SUPPORT_HEARTBEAT=1], [AC_MSG_FAILURE(Unable to support Heartbeat: client libraries not found)]);;
+     try)
+        AC_CHECK_LIB(hbclient, ll_cluster_new, 
+   		[SUPPORT_HEARTBEAT=1], [SUPPORT_HEARTBEAT=0]);;
+     *) SUPPORT_HEARTBEAT=0;;
+esac
+
+AM_CONDITIONAL(BUILD_HEARTBEAT_SUPPORT, test $SUPPORT_HEARTBEAT = 1)
+AC_DEFINE_UNQUOTED(SUPPORT_HEARTBEAT, $SUPPORT_HEARTBEAT, Support the Heartbeat messaging and membership layer)
+
+
+dnl
+dnl    Cluster stack - OpenAIS
+dnl
+
+AISLIB=""
+
+dnl Normalize the values
+case $SUPPORT_AIS in
+     1|yes|true) missingisfatal=1; SUPPORT_AIS=yes;;
+     try)        missingisfatal=0; SUPPORT_AIS=try;;
+     *) SUPPORT_AIS=no;;
+esac
+
+AC_MSG_CHECKING(for native AIS)
+AISMSGLIB=""
+AIS_VERSION=""
+
+if test $SUPPORT_AIS = no; then
+   AC_MSG_RESULT(no... not requested.)
+   SUPPORT_AIS=0
+
+else
+   AC_MSG_RESULT($SUPPORT_AIS '$AISPREFIX')
+   SUPPORT_AIS=1
+
+   dnl headers...
+   AC_CHECK_HEADERS(openais/saAis.h)
+   if test "$ac_cv_header_openais_saAis_h" != "yes"; then
+       aisreason="Headers not found: $ac_cv_header_openais_saAis_h"
+       SUPPORT_AIS=0
+   fi  
+fi
+
+dnl continue?
+if test $SUPPORT_AIS = 1; then
+   dnl Find it in lib, lib64, or wherever it wants to live...
+   AC_MSG_CHECKING(location of OpenAIS libraries)
+   alib=`ls ${AISPREFIX}/*/openais/libSaMsg.so | head -n 1`
+   AISLIB=`dirname $alib`
+   AC_MSG_RESULT($AISLIB)
+   if test "x$AISLIB" = "x"; then
+     AC_MSG_WARN(Use --with-ais-prefix to specify the prefix OpenAIS was installed with)
+     aisreason="library directory not found"
+     SUPPORT_AIS=0
+
+   elif test ! -d "$AISLIB"; then
+     AC_MSG_WARN(Use --with-ais-prefix to specify the prefix OpenAIS was installed with)
+     aisreason="specified library directory does not exist"
+     SUPPORT_AIS=0
+   fi
+fi
+
+dnl continue?
+if test $SUPPORT_AIS = 1; then
+   AC_MSG_CHECKING(location of OpenAIS plugins)
+   if test -z "$LCRSODIR"; then
+      LCRSODIR="$libexecdir/lcrso"
+      alib=`ls ${AISPREFIX}/*/lcrso/objdb.lcrso | head -n 1`
+      LCRSODIR=`dirname $alib`
+   fi
+   AC_MSG_RESULT($LCRSODIR)
+
+   if test "x$LCRSODIR" = "x"; then
+     AC_MSG_RESULT(Invalid.  Please specify the correct location with --with-lcrso-dir)
+     aisreason="plugin directory not found"
+     SUPPORT_AIS=0
+
+   elif test ! -d "$LCRSODIR"; then
+     AC_MSG_RESULT(Invalid.  Please specify the correct location with --with-lcrso-dir)
+     aisreason="specified plugin directory does not exist"
+     SUPPORT_AIS=0
+   fi
+fi
+
+dnl continue?
+if test $SUPPORT_AIS = 1; then
+     saveLIBS="$LIBS"
+     LIBS="$LIBS -L${AISLIB} -R${AISLIB}"
+
+     dnl libs...
+     AIS_VERSION="none"
+     AC_CHECK_LIB(aisutil, saSendReceiveReply, [AIS_VERSION=trunk])
+     AC_CHECK_LIB(SaMsg, saSendReceiveReply, [AIS_VERSION=whitetank])
+
+     AC_MSG_CHECKING(for OpenAIS branch)
+     AC_MSG_RESULT($AIS_VERSION)
+
+     case $AIS_VERSION in
+     	  trunk)
+	  	AC_DEFINE_UNQUOTED(AIS_TRUNK, 1, "AIS target is the trunk series")
+		AISMSGLIB=-laisutil
+		;;
+	  whitetank) 
+	     	AC_DEFINE_UNQUOTED(AIS_WHITETANK, 1, "AIS target is the whitetank series")
+	  	AISMSGLIB=-lSaMsg
+		;;
+	  none)
+	        aisreason="requred libraries not found)"
+     	  	SUPPORT_AIS=0
+		;;
+	  *) AC_MSG_FAILURE(Unknown OpenAIS branch: $AIS_VERSION);;
+     esac
+
+     LIBS="$saveLIBS"
+fi
+
+if test $SUPPORT_AIS = 0; then
+  if test "x$aisreason" != x; then
+     if test $missingisfatal = 0; then
+	AC_MSG_WARN(Unable to support OpenAIS: $aisreason) 
+	SUPPORT_AIS=0
+     else
+	AC_MSG_FAILURE(Unable to support OpenAIS: $aisreason) 
+     fi
+  fi
+fi
+
+AC_DEFINE_UNQUOTED(SUPPORT_AIS, $SUPPORT_AIS, Support the OpenAIS messaging and membership layer)
+AM_CONDITIONAL(BUILD_AIS_SUPPORT, test $SUPPORT_AIS = 1)
+
+
+dnl
+dnl    Cluster stack - Sanity
+dnl
+
+AC_MSG_CHECKING(for supported stacks)
+if test $SUPPORT_AIS = 0 -a $SUPPORT_HEARTBEAT = 0; then
+   AC_MSG_FAILURE(You must choose at least one cluster stack to support)
+fi
+
 CLUSTERLIBS=""
 if test $SUPPORT_HEARTBEAT = 1; then
+   AC_MSG_RESULT(heartbeat)
    CLUSTERLIBS="$CLUSTERLIBS -lhbclient -lccmclient"
 fi
 
 if test $SUPPORT_AIS = 1; then
+   AC_MSG_RESULT(openais)
    CLUSTERLIBS="$CLUSTERLIBS ${AISMSGLIB}"
    LIBS="$LIBS -L${AISLIB} -R${AISLIB}"
 else
    AISPREFIX=""
    LCRSODIR=""
-fi
-
-if test $SUPPORT_AIS = 0 -a $SUPPORT_HEARTBEAT = 0; then
-   AC_MSG_FAILURE(You must choose at least one cluster stack to support)
 fi
 
 AC_SUBST(CLUSTERLIBS)
