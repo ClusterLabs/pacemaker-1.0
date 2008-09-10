@@ -4,7 +4,7 @@ usr/sbin/crmadmin
 usr/sbin/crm_standby
 usr/sbin/attrd_updater
 usr/sbin/crm_diff
-usr/sbin/crm_sh
+usr/sbin/crm
 usr/sbin/crm_failcount
 usr/sbin/crm_mon
 usr/sbin/iso8601
@@ -33,5 +33,5 @@ usr/share/man/man8/*.gz
 usr/share/pacemaker/*.dtd
 usr/share/pacemaker/*.xsl
 usr/share/pacemaker/*.rng
-usr/share/heartbeat/stonithdtest/STONITHDBasicSanityCheck
+usr/share/pacemaker/stonithdtest/STONITHDBasicSanityCheck
 usr/lib/ocf/resource.d/pacemaker
