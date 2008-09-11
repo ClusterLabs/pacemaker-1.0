@@ -19,6 +19,7 @@ usr/sbin/ptest
 usr/lib/heartbeat/cibmon
 usr/lib/heartbeat/cib
 usr/lib/heartbeat/crmd
+usr/lib/heartbeat/hb2openais.sh
 usr/lib/heartbeat/pingd
 usr/lib/heartbeat/atest
 usr/lib/heartbeat/attrd

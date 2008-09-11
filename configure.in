@@ -1653,6 +1653,7 @@ extra/Makefile							\
 	extra/resources/Makefile				\
 tools/Makefile							\
 	tools/haresources2cib.py				\
+	tools/hb2openais.sh				\
 	tools/hb_report						\
 	tools/ocf-tester					\
 	tools/crm_primitive.py					\
