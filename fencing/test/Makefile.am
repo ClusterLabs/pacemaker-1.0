@@ -23,20 +23,13 @@ INCLUDES         = -I$(top_builddir)/include  -I$(top_srcdir)/include     \
 		   -I$(top_builddir)/linux-ha -I$(top_srcdir)/linux-ha    \
 		   -I$(top_builddir)          -I$(top_srcdir)
 
-halibdir	 =  $(libdir)/@HB_PKG@
-havarlibdir      =  $(localstatedir)/lib/@HB_PKG@
-
-COMMONLIBS	 =  -lplumb $(CLUSTERLIBS) \
-                    $(top_builddir)/lib/fencing/libstonithd.la	 \
-		    $(GLIBLIB)
-
-
-apitestdir		= 	$(halibdir)/stonithdtest
-testdir			= 	$(HA_NOARCHDATAHBDIR)/stonithdtest
-test_SCRIPTS		=	STONITHDBasicSanityCheck
 EXTRA_DIST		=	STONITHDBasicSanityCheck
 
+testdir			= 	$(datadir)/@PKG_NAME@/stonithdtest
+test_SCRIPTS		=	STONITHDBasicSanityCheck
 
-apitest_PROGRAMS = apitest
-apitest_SOURCES =  apitest.c
-apitest_LDFLAGS = $(COMMONLIBS)
+apitestdir		= 	$(libdir)/@HB_PKG@/stonithdtest
+apitest_PROGRAMS	=	apitest
+apitest_SOURCES		=	apitest.c
+apitest_LDFLAGS		=	-lplumb $(CLUSTERLIBS) $(GLIBLIB) 	  \
+				$(top_builddir)/lib/fencing/libstonithd.la
