@@ -1653,13 +1653,11 @@ extra/Makefile							\
 	extra/resources/Makefile				\
 tools/Makefile							\
 	tools/haresources2cib.py				\
-	tools/hb2openais.sh				\
+	tools/hb2openais.sh					\
 	tools/hb_report						\
 	tools/ocf-tester					\
 	tools/crm_primitive.py					\
 	tools/crm						\
-	tools/crm_utils.py                          		\
-	tools/crm_commands.py					\
 xml/Makefile							\
 	xml/pacemaker.rng					\
 	xml/resources.rng					\
