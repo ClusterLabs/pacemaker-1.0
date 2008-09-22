@@ -23,6 +23,7 @@
 #define _STONITD_API_H_
 #include <clplumbing/cl_uuid.h>
 #include <clplumbing/ipc.h>
+#include <clplumbing/proctrack.h>
 
 #define ST_OK 	0
 #define ST_FAIL -1
@@ -56,6 +57,7 @@ typedef struct
 	char *		node_name;
 	char * 		node_uuid;
 	int 		timeout; /* its unit is millisecond */
+	ProcTrackKillInfo	killseq[3];
 
 /* Only output fields */
 	int		call_id;
@@ -140,6 +142,8 @@ typedef struct stonithRA_ops
 	char *	rsc_id;
 	char *	ra_name;
 	char * 	op_type;
+	int 	timeout;
+	ProcTrackKillInfo	killseq[3];
 	GHashTable *	params;
 
 /* Only output fields */

@@ -230,6 +230,7 @@ static gboolean adjust_debug_level(int nsig, gpointer user_data);
 static gboolean valid_op(common_op_t *op);
 static void handleRA_finished_op(common_op_t *op, pid_t pid, int exitcode);
 static void handle_finished_op(common_op_t *op, pid_t pid, int exitcode);
+static void setproctimeouts(int timeout, ProcTrackKillInfo *killseq, int pid);
 static void stonithdProcessDied(ProcTrack* p, int status, int signo
 				, int exitcode, int waslogged);
 static void stonithdProcessRegistered(ProcTrack* p);
@@ -975,6 +976,20 @@ handle_finished_op(common_op_t *op, pid_t pid, int exitcode)
 }
 
 static void
+setproctimeouts(int timeout, ProcTrackKillInfo *killseq, int pid)
+{
+	if( timeout <= 0 )
+		return;
+	killseq[0].mstimeout = timeout; /* after timeout send TERM */
+	killseq[0].signalno = SIGTERM;
+	killseq[1].mstimeout = 5000; /* after 5 secs remove it */
+	killseq[1].signalno = SIGKILL;
+	killseq[2].mstimeout = 5000; /* if it's still there after 5, complain */
+	killseq[2].signalno = 0;
+	SetTrackedProcTimeouts(pid,killseq);
+}
+
+static void
 stonithdProcessDied(ProcTrack* p, int status, int signo
 		    , int exitcode, int waslogged)
 {
@@ -995,20 +1010,24 @@ stonithdProcessDied(ProcTrack* p, int status, int signo
 			, (gpointer *)&original_key, (gpointer *)&op);
 	if (rc == FALSE) {
 		stonithd_log(LOG_WARNING, "child exits, but not tracked.");
+		goto done;
 	}
-	else if( signo ) {
+	if( signo ) {
 		if( proctrack_timedout(p) ) {
 			stonithd_log(LOG_WARNING,
 				"A STONITH operation timed out."); 
+			exitcode = STONITH_TIMEOUT;
 		}
+		else exitcode = STONITH_GENERIC;
 	}
-	else if( valid_op(op) ) {
+	if( valid_op(op) ) {
 		if( op->scenario == STONITH_RA_OP ) {
 			handleRA_finished_op(op, proctrack_pid(p), exitcode);
 		} else {
 			handle_finished_op(op, proctrack_pid(p), exitcode);
 		}
 	}
+done:
 	g_free(p->privatedata);
 	reset_proctrack_data(p);
 }
@@ -1335,7 +1354,6 @@ handle_msg_tstit(struct ha_msg* msg, void* private_data)
 	st_op = NULL;
 }
 
-/* side effect: records a timer_id in the op */
 static void
 insert_into_executing_queue(common_op_t *op, int call_id)
 {
@@ -1344,11 +1362,14 @@ insert_into_executing_queue(common_op_t *op, int call_id)
 	tmp_callid = g_new(int, 1);
 	*tmp_callid = call_id;
 	g_hash_table_insert(executing_queue, tmp_callid, op);
-	tmp_callid = g_new(int, 1);
-	*tmp_callid = call_id;
-	op->timer_id = Gmain_timeout_add_full(G_PRIORITY_HIGH_IDLE
+	if (call_id < 0) { /* timeouts for remote ops */
+		/* side effect: records a timer_id in the op */
+		tmp_callid = g_new(int, 1);
+		*tmp_callid = call_id;
+		op->timer_id = Gmain_timeout_add_full(G_PRIORITY_HIGH_IDLE
 				, op->op_union.st_op->timeout, stonithop_timeout
 				, tmp_callid, timeout_destroy_notify);
+	}
 	stonithd_log(LOG_DEBUG, "inserted optype=%s, key=%d",
 			stonith_op_strname[op->op_union.st_op->optype], call_id);
 }
@@ -1379,7 +1400,9 @@ require_local_stonithop(stonith_ops_t * st_op, stonith_rsc_t * srsc,
 	op->scenario = STONITH_REQ;
 	op->result_receiver = g_strdup(asker);
 	op->rsc_id = g_strdup(srsc->rsc_id);
+	st_op->call_id = child_id;
 	op->op_union.st_op = dup_stonith_ops_t(st_op);
+	setproctimeouts(st_op->timeout,op->op_union.st_op->killseq,child_id);
 
 	insert_into_executing_queue(op,child_id);
 	return ST_OK;
@@ -1470,7 +1493,7 @@ handle_msg_resetted(struct ha_msg* msg, void* private_data)
 
 	stonithd_log(LOG_DEBUG, "Got a notification of successfully resetting"
 		" node %s from node %s with APITET.", target, from);	
-	/* The timeout value equals 90 seconds now */
+	/* The timeout value equals 10 seconds now */
 	timer_id = Gmain_timeout_add_full(G_PRIORITY_HIGH_IDLE
 			, REBOOT_BLOCK_TIMEOUT
 			, reboot_block_timeout, g_strdup(target)
@@ -2236,6 +2259,7 @@ initiate_local_stonithop(stonith_ops_t * st_op, stonith_rsc_t * srsc,
 	op->result_receiver = ch;
 	st_op->call_id = call_id;
 	op->op_union.st_op = dup_stonith_ops_t(st_op);
+	setproctimeouts(st_op->timeout,op->op_union.st_op->killseq,call_id);
 
 	insert_into_executing_queue(op,call_id);
 	return call_id;
@@ -2290,6 +2314,7 @@ continue_local_stonithop(int old_key)
 			}
 			op->rsc_id = g_strdup(srsc->rsc_id);
 			g_hash_table_insert(executing_queue, original_key, op);
+			setproctimeouts(op->op_union.st_op->timeout,op->op_union.st_op->killseq,child_pid);
 			stonithd_log(LOG_DEBUG, "continue_local_stonithop: "
 				     "inserted optype=%s, child_id=%d", 
 				     stonith_op_strname[op->op_union.st_op->optype],
@@ -2595,6 +2620,7 @@ stonith_operate_locally( stonith_ops_t * st_op, stonith_rsc_t * srsc)
 
 	/* now in child process */
 	/* this operation may be on block status */
+	setpgid(0,0);
 	exit(stonith_req_reset(st_obj, st_op->optype, 
 				      g_strdup(st_op->node_name)));
 }
@@ -2739,7 +2765,7 @@ stonithop_timeout(gpointer data)
 	/* Kill the possible child process forked for this operation */
 	if (orig_key!=NULL && *orig_key > 0 && CL_PID_EXISTS(*orig_key)) {
 		return_to_orig_privs();
-		CL_KILL(*orig_key, SIGKILL);	
+		CL_KILL(-(*orig_key), SIGKILL);	
 		return_to_dropped_privs();
 	}
 
@@ -3162,12 +3188,14 @@ probe_status:
 		NewTrackedProc( pid, 1
 				, (debug_level>1)? PT_LOGVERBOSE : PT_LOGNORMAL
 				, g_strdup(buf_tmp), &StonithdProcessTrackOps);
+		setproctimeouts(op->timeout,op->killseq,pid);
 		return_to_dropped_privs();
                 return pid;
         }
 
 	/* Now in the child process */
 	/* Need to distiguish the exit code more carefully */
+	setpgid(0,0);
 	if ( S_OK != stonith_get_status(stonith_obj) ) {
 		exit(EXECRA_UNKNOWN_ERROR);
 	}
@@ -3420,10 +3448,12 @@ stonithRA_stop( stonithRA_ops_t * ra_op, gpointer data )
 		NewTrackedProc( pid, 1
 				, (debug_level>1)? PT_LOGVERBOSE : PT_LOGNORMAL
 				, g_strdup(buf_tmp), &StonithdProcessTrackOps);
+		setproctimeouts(ra_op->timeout,ra_op->killseq,pid);
 		return_to_dropped_privs();
                 return pid;
         }
 	
+	setpgid(0,0);
 	/* in child process */
 	exit(0);
 }
@@ -3464,6 +3494,7 @@ stonithRA_monitor( stonithRA_ops_t * ra_op, gpointer data )
 		NewTrackedProc( pid, 1
 				, (debug_level>1)? PT_LOGVERBOSE : PT_LOGNORMAL
 				, g_strdup(buf_tmp), &StonithdProcessTrackOps);
+		setproctimeouts(ra_op->timeout,ra_op->killseq,pid);
 		return_to_dropped_privs();
 		stonithd_log2(LOG_DEBUG, "stonithRA_monitor: end.");
                 return pid;
@@ -3471,6 +3502,7 @@ stonithRA_monitor( stonithRA_ops_t * ra_op, gpointer data )
 
 	/* Go here the child */
 	/* When the resource is not started... */
+	setpgid(0,0);
 	if (child_exitcode == EXECRA_NOT_RUNNING) {
 		stonithd_log2(LOG_DEBUG, "stonithRA_monitor: child exit, "
 				"exitcode: EXECRA_NOT_RUNNING.");
@@ -3552,6 +3584,7 @@ new_stonithRA_ops_t(struct ha_msg * request)
 	st_save_string(request, F_STONITHD_RSCID, ra_op->rsc_id);
 	st_save_string(request, F_STONITHD_RAOPTYPE, ra_op->op_type);
 	st_save_string(request, F_STONITHD_RANAME, ra_op->ra_name);
+	st_get_int_value(request, F_STONITHD_TIMEOUT, &ra_op->timeout);
 	st_get_hashtable(request, F_STONITHD_PARAMS, ra_op->params);
 	if( rc != ST_OK ) {
 		free_stonithRA_ops_t(ra_op);
@@ -3969,5 +4002,5 @@ trans_log(int priority, const char * fmt, ...)
 		(pil_loglevel_to_cl_loglevel) ], "%s", buf);
 }
 
-/* vim:sw=8:ts=8
+/* vim: sw=8 ts=8
 */
