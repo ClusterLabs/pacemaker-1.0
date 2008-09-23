@@ -166,6 +166,7 @@ typedef struct stonith_rsc
 	GHashTable *    params;
 	Stonith *	stonith_obj;
 	char **		node_list;
+	int		priority;
 } stonith_rsc_t;
 
 /* Must correspond to stonith_type_t */
@@ -326,15 +327,18 @@ static stonith_ops_t * new_stonith_ops_t(struct ha_msg * request);
 static void free_stonith_ops_t(stonith_ops_t * st_op);
 static void free_common_op_t(gpointer data);
 static void free_stonith_rsc(stonith_rsc_t * srsc);
-static stonith_rsc_t * get_started_stonith_resource(char * rsc_id);
+static stonith_rsc_t * get_started_stonith_resource(const char * rsc_id);
 static stonith_rsc_t * get_local_stonithobj_can_stonith(const char * node_name,
 						const char * begin_rsc_id );
 static int stonith_operate_locally(stonith_ops_t * st_op, stonith_rsc_t * srsc);
 static void timeout_destroy_notify(gpointer user_data);
 static gboolean stonithop_timeout(gpointer data);
-static void my_hash_table_find( GHashTable * htable, gpointer * orig_key,
+static void my_hash_table_find( GHashTable * htable, GHFunc func,
+				gpointer * orig_key,
 				gpointer * value, gpointer user_data);
 static void has_this_callid(gpointer key, gpointer value,
+				gpointer user_data);
+static void get_config_param(gpointer key, gpointer value,
 				gpointer user_data);
 static void insert_into_executing_queue(common_op_t *op, int call_id);
 static int require_others_to_stonith(const stonith_ops_t * st_op);
@@ -1292,8 +1296,8 @@ handle_msg_ticanst(struct ha_msg* msg, void* private_data)
 		return;
 	}
 	return_on_msg_from_us(T_ICANST);
-	my_hash_table_find(executing_queue, (gpointer *)&orig_key, 
-			   (gpointer *)&op, &call_id);
+	my_hash_table_find(executing_queue, has_this_callid,
+			(gpointer *)&orig_key, (gpointer *)&op, &call_id);
 	if ( op != NULL &&  /* QUERY only */
 	    (op->scenario == STONITH_INIT || op->scenario == STONITH_REQ)) {
 		/* add the separator blank space */
@@ -1428,8 +1432,8 @@ handle_msg_trstit(struct ha_msg* msg, void* private_data)
 	return_on_msg_from_us(T_RSTIT);
 
 	stonithd_log(LOG_DEBUG, "this T_RSTIT message is from %s", from);	
-	my_hash_table_find(executing_queue, (gpointer *)&orig_key, 
-			   (gpointer *)&op, &call_id);
+	my_hash_table_find(executing_queue, has_this_callid,
+			(gpointer *)&orig_key, (gpointer *)&op, &call_id);
 	if ( !op || 
 	    (op->scenario != STONITH_INIT && op->scenario != STONITH_REQ)) {
 		stonithd_log(LOG_DEBUG, "handle_msg_trstit: the stonith "
@@ -2661,76 +2665,88 @@ require_others_to_stonith(const stonith_ops_t * st_op)
 	return ST_OK;
 }
 
+static gboolean
+can_st_manage_node(stonith_rsc_t *srsc, const char *node_name)
+{
+	char **this;
+
+	for(this=srsc->node_list; *this; ++this) {
+		stonithd_log2(LOG_DEBUG, "get_local_stonithobj_"
+			"can_stonith: host=%s.", *this);
+		if ( strncmp(node_name, *this, MAXCMP) == 0 ) {
+			stonithd_log2(LOG_DEBUG, "stonith type found:"
+				" %s", srsc->stonith_obj->stype);
+			return TRUE;
+		}
+	}
+	return FALSE;
+}
+
 static stonith_rsc_t *
 get_local_stonithobj_can_stonith( const char * node_name,
 				  const char * begin_rsc_id )
 {
 	GList * tmplist = NULL;
-	GList * begin_search_list = NULL;
-	stonith_rsc_t * tmp_srsc = NULL;
+	stonith_rsc_t *tmp_srsc = NULL,
+		*next_srsc = NULL, *last_srsc = NULL;
+	int start_priority = 0;
 
-	stonithd_log2(LOG_DEBUG, "get_local_stonithobj_can_stonith: begin.");
+	stonithd_log2(LOG_DEBUG, "%s: begin.", __FUNCTION__);
 	if (local_started_stonith_rsc == NULL) {
-		stonithd_log(LOG_DEBUG, "get_local_stonithobj_can_stonith: "
-				"local_started_stonith_rsc == NULL");
+		stonithd_log(LOG_DEBUG, "%s:%d: no stonith resources"
+				,__FUNCTION__, __LINE__);
 		return NULL;
 	}
 
 	if ( node_name == NULL ) {
-		stonithd_log(LOG_ERR, "get_local_stonithobj_can_stonith: "
-				"node_name == NULL");
+		stonithd_log(LOG_ERR, "%s:%d: no node supplied"
+				,__FUNCTION__, __LINE__);
 		return NULL;
 	}
 
-	if (begin_rsc_id == NULL) {
-		begin_search_list = g_list_first(local_started_stonith_rsc);
-	} else {
-		for ( tmplist = g_list_first(local_started_stonith_rsc); 
-		      tmplist != NULL; 
-		      tmplist = g_list_next(tmplist)) {
-		      	tmp_srsc = (stonith_rsc_t *)tmplist->data;
-			if ( tmp_srsc != NULL && 
-			     strncmp(tmp_srsc->rsc_id, begin_rsc_id, MAXCMP)
-				 == 0) {
-				begin_search_list = g_list_next(tmplist);
-				break;
-			}
-		}
-		if (begin_search_list == NULL) {
-			stonithd_log(LOG_DEBUG, "get_local_stonithobj_can_"
-				"stonith: begin_rsc_id donnot exist.");
-			return NULL;
-		}
-	}
-
-	for ( tmplist = begin_search_list;
-	      tmplist != NULL; 
-	      tmplist = g_list_next(tmplist)) {
-		tmp_srsc = (stonith_rsc_t *)tmplist->data;
-		if ( tmp_srsc != NULL && tmp_srsc->node_list != NULL ) {
-			char **	this;
-			for(this=tmp_srsc->node_list; *this; ++this) {
-				stonithd_log2(LOG_DEBUG, "get_local_stonithobj_"
-					"can_stonith: host=%s.", *this);
-				if ( strncmp(node_name, *this, MAXCMP) == 0 ) {
-					stonithd_log2(LOG_DEBUG, "stonith type found:"
-						" %s", tmp_srsc->stonith_obj->stype);
-					return tmp_srsc;
-				}
-			}
+	if (begin_rsc_id) {
+		last_srsc = get_started_stonith_resource(begin_rsc_id);
+		if (last_srsc) {
+			start_priority = last_srsc->priority;
 		} else {
-			if (tmp_srsc == NULL) {
-				stonithd_log2(LOG_DEBUG, "get_local_stonithobj_"
-					"can_stonith: tmp_srsc=NULL.");
-				
-			} else {
-				stonithd_log2(LOG_DEBUG, "get_local_stonithobj_"
-				    "can_stonith: tmp_srsc->node_list = NULL.");
-			}
+			stonithd_log(LOG_NOTICE, "%s:%d: could not find the "
+			"last stonith resource used (%s); was it stopped?"
+				,__FUNCTION__, __LINE__, begin_rsc_id);
 		}
 	}
 
-	return NULL;
+	/* Find the next stonith resource which has the same
+	 * priority number like the previous one (preferred) or
+	 * a bigger priority number (which is actually a lower
+	 * priority)
+	 * The list is not sorted, so in case of the next
+	 * lower priority we have to walk all the list
+	 */
+	for (tmplist = g_list_first(local_started_stonith_rsc);
+		tmplist != NULL; tmplist = g_list_next(tmplist))
+	{
+		tmp_srsc = (stonith_rsc_t *)tmplist->data;
+		if (tmp_srsc == last_srsc)
+			continue; /* skip the one we already tried */
+		if (!can_st_manage_node(tmp_srsc,node_name))
+			continue; /* this one is of no use for this node */
+		if (tmp_srsc->priority >= start_priority ||
+			(next_srsc && next_srsc->priority > tmp_srsc->priority))
+		{
+			next_srsc = tmp_srsc;
+			/* make sure to get the very next
+			 * one for the same priority */
+			if (tmp_srsc->priority == start_priority)
+				break;
+		}
+	}
+	if (next_srsc) {
+		stonithd_log(LOG_DEBUG, "%s:%d: "
+		"next stonith resource %s, priority %d"
+		,__FUNCTION__, __LINE__, next_srsc->rsc_id,
+		next_srsc->priority);
+	}
+	return next_srsc;
 }
 
 static void
@@ -2745,7 +2761,7 @@ timeout_destroy_notify(gpointer user_data)
 static gboolean
 stonithop_timeout(gpointer data)
 {
-	int * call_id = (int *) data;
+	int * p_call_id = (int *) data;
 	int * orig_key = NULL;
 	common_op_t * op = NULL;
 	
@@ -2759,8 +2775,8 @@ stonithop_timeout(gpointer data)
 	/* since g_hash_table_find donnot exist in early version of glib-2.0,
 	 * So use the equality my_hash_table_find I wrote.
  	 */
-	my_hash_table_find(executing_queue, (gpointer *)&orig_key, 
-			   (gpointer *)&op, call_id);
+	my_hash_table_find(executing_queue, has_this_callid,
+			(gpointer *)&orig_key, (gpointer *)&op, p_call_id);
 
 	/* Kill the possible child process forked for this operation */
 	if (orig_key!=NULL && *orig_key > 0 && CL_PID_EXISTS(*orig_key)) {
@@ -2783,7 +2799,7 @@ stonithop_timeout(gpointer data)
 	} else {
 		stonithd_log(LOG_DEBUG, "stonithop_timeout: the stonith "
 			"operation (call_id==%d) has finished before timeout."
-			, *call_id);
+			, *p_call_id);
 	}
 
 	return FALSE;
@@ -2796,8 +2812,23 @@ typedef struct {
 } lookup_data_t;
 
 static void
-my_hash_table_find(GHashTable * htable, gpointer * orig_key,
-		   gpointer * value, gpointer user_data)
+get_stonithd_params(stonith_rsc_t *srsc)
+{
+	char *param = NULL, *value = NULL;
+
+	if (!srsc->params)
+		return;
+	my_hash_table_find(srsc->params, get_config_param,
+			(gpointer *)&param, (gpointer *)&value, "priority");
+	if (value) {
+		stonithd_log(LOG_DEBUG, "found prio: %s",value);
+		srsc->priority = atoi(value);
+	}
+}
+
+static void
+my_hash_table_find(GHashTable * htable, GHFunc func,
+		gpointer * orig_key, gpointer * value, gpointer user_data)
 {
 	lookup_data_t tmp_data;
 
@@ -2805,7 +2836,22 @@ my_hash_table_find(GHashTable * htable, gpointer * orig_key,
 	tmp_data.value     = value;
 	tmp_data.user_data = user_data; 
 
-	g_hash_table_foreach(htable, has_this_callid, (gpointer)&tmp_data);
+	g_hash_table_foreach(htable, func, (gpointer)&tmp_data);
+}
+
+static void
+get_config_param(gpointer key, gpointer value, gpointer user_data)
+{
+	lookup_data_t * tmp_data = user_data;
+	char *lookup_param;
+
+	if (!key || !value || !user_data)
+		return;
+	lookup_param = (char *)tmp_data->user_data;
+	if (!strcmp((const char *)key,lookup_param)) {
+		*(tmp_data->key) = key;
+		*(tmp_data->value) = value;
+	}
 }
 
 static void
@@ -3391,6 +3437,7 @@ record_new_srsc(stonithRA_ops_t *ra_op)
 	srsc->stonith_obj = ra_op->stonith_obj;
 	ra_op->stonith_obj = NULL;
 	srsc->node_list = node_list;
+	get_stonithd_params(srsc);
 
 	if ( debug_level >= 2 ) {
 		char **	this;
@@ -3525,7 +3572,7 @@ stonithRA_monitor( stonithRA_ops_t * ra_op, gpointer data )
 }
 
 static stonith_rsc_t *
-get_started_stonith_resource(char * rsc_id )
+get_started_stonith_resource(const char * rsc_id )
 {
 	GList * tmplist = NULL;
 	stonith_rsc_t * srsc = NULL;
