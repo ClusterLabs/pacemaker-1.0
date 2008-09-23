@@ -1421,6 +1421,7 @@ require_local_stonithop(stonith_ops_t * st_op, stonith_rsc_t * srsc,
 	op->rsc_id = g_strdup(srsc->rsc_id);
 	st_op->call_id = child_id;
 	op->op_union.st_op = dup_stonith_ops_t(st_op);
+	op->timer_id = -1;
 	timeout = get_fence_timeout(srsc,st_op);
 	setproctimeouts(timeout,op->op_union.st_op->killseq,child_id);
 
@@ -2280,6 +2281,7 @@ initiate_local_stonithop(stonith_ops_t * st_op, stonith_rsc_t * srsc,
 	op->result_receiver = ch;
 	st_op->call_id = call_id;
 	op->op_union.st_op = dup_stonith_ops_t(st_op);
+	op->timer_id = -1;
 	timeout = get_fence_timeout(srsc,op->op_union.st_op);
 	setproctimeouts(timeout,op->op_union.st_op->killseq,call_id);
 
