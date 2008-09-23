@@ -167,6 +167,7 @@ typedef struct stonith_rsc
 	Stonith *	stonith_obj;
 	char **		node_list;
 	int		priority;
+	int		fence_timeout;
 } stonith_rsc_t;
 
 /* Must correspond to stonith_type_t */
@@ -347,6 +348,7 @@ static int initiate_local_stonithop(stonith_ops_t * st_op, stonith_rsc_t * srsc,
 static int continue_local_stonithop(int old_key);
 static int initiate_remote_stonithop(stonith_ops_t * st_op, IPC_Channel * ch);
 static int changeto_remote_stonithop(int old_key);
+static int get_fence_timeout(stonith_rsc_t *srsc, stonith_ops_t *st_op);
 static int require_local_stonithop(stonith_ops_t * st_op, stonith_rsc_t * srsc, 
 				   const char * asker_node);
 static int broadcast_reset_success(const char * target);
@@ -1378,11 +1380,24 @@ insert_into_executing_queue(common_op_t *op, int call_id)
 			stonith_op_strname[op->op_union.st_op->optype], call_id);
 }
 
+/* choose one of the timeouts for the fencing operation; the
+ * fence_timeout in srsc takes precedence over the timeout
+ * which we got in the message from the requesting node (that's
+ * typically the total timeout)
+ */
+static int
+get_fence_timeout(stonith_rsc_t *srsc, stonith_ops_t *st_op)
+{
+	return srsc->fence_timeout > 0 ?
+		srsc->fence_timeout : st_op->timeout;
+}
+
 static int
 require_local_stonithop(stonith_ops_t * st_op, stonith_rsc_t * srsc,
 			const char * asker)
 {
 	int child_id;
+	int timeout;
 	common_op_t * op;
 
 	/* in case we are shooting ourselves, assume that we'll
@@ -1406,7 +1421,8 @@ require_local_stonithop(stonith_ops_t * st_op, stonith_rsc_t * srsc,
 	op->rsc_id = g_strdup(srsc->rsc_id);
 	st_op->call_id = child_id;
 	op->op_union.st_op = dup_stonith_ops_t(st_op);
-	setproctimeouts(st_op->timeout,op->op_union.st_op->killseq,child_id);
+	timeout = get_fence_timeout(srsc,st_op);
+	setproctimeouts(timeout,op->op_union.st_op->killseq,child_id);
 
 	insert_into_executing_queue(op,child_id);
 	return ST_OK;
@@ -2250,6 +2266,7 @@ initiate_local_stonithop(stonith_ops_t * st_op, stonith_rsc_t * srsc,
 			 IPC_Channel * ch)
 {
 	int call_id;
+	int timeout;
 	common_op_t * op;
 
 	if ((call_id = stonith_operate_locally(st_op, srsc)) <= 0) {
@@ -2263,7 +2280,8 @@ initiate_local_stonithop(stonith_ops_t * st_op, stonith_rsc_t * srsc,
 	op->result_receiver = ch;
 	st_op->call_id = call_id;
 	op->op_union.st_op = dup_stonith_ops_t(st_op);
-	setproctimeouts(st_op->timeout,op->op_union.st_op->killseq,call_id);
+	timeout = get_fence_timeout(srsc,op->op_union.st_op);
+	setproctimeouts(timeout,op->op_union.st_op->killseq,call_id);
 
 	insert_into_executing_queue(op,call_id);
 	return call_id;
@@ -2276,6 +2294,7 @@ continue_local_stonithop(int old_key)
 	char * rsc_id = NULL;
 	int child_pid = -1;
 	common_op_t * op = NULL;
+	int timeout;
 	int * original_key = NULL;
 
 	stonithd_log2(LOG_DEBUG, "continue_local_stonithop: begin.");
@@ -2318,7 +2337,8 @@ continue_local_stonithop(int old_key)
 			}
 			op->rsc_id = g_strdup(srsc->rsc_id);
 			g_hash_table_insert(executing_queue, original_key, op);
-			setproctimeouts(op->op_union.st_op->timeout,op->op_union.st_op->killseq,child_pid);
+			timeout = get_fence_timeout(srsc,op->op_union.st_op);
+			setproctimeouts(timeout,op->op_union.st_op->killseq,child_pid);
 			stonithd_log(LOG_DEBUG, "continue_local_stonithop: "
 				     "inserted optype=%s, child_id=%d", 
 				     stonith_op_strname[op->op_union.st_op->optype],
@@ -3437,6 +3457,12 @@ record_new_srsc(stonithRA_ops_t *ra_op)
 	srsc->stonith_obj = ra_op->stonith_obj;
 	ra_op->stonith_obj = NULL;
 	srsc->node_list = node_list;
+	if (ra_op->timeout > 0) {
+		srsc->fence_timeout = ra_op->timeout;
+		stonithd_log(LOG_INFO,"rsc:%s: saving the timeout (%dms) of "
+			"the start op for future fencing ops"
+			,ra_op->rsc_id, ra_op->timeout);
+	}
 	get_stonithd_params(srsc);
 
 	if ( debug_level >= 2 ) {
