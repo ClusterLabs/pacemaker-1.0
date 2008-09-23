@@ -1441,7 +1441,8 @@ def cli_parse_rsctype(s, pl):
 	else:
 		return None
 	pl.append(["class",ra_class])
-	pl.append(["provider",provider])
+	if ra_class != "stonith":
+		pl.append(["provider",provider])
 	pl.append(["type",rsc_type])
 def cli_parse_attr(s,pl):
 	if s and '=' in s[0]:
@@ -1726,8 +1727,8 @@ def parse_cli(s):
 # XML generate utilities
 #
 hints_list = {
-	"instance_attributes": "params",
-	"meta_attributes": "meta-options",
+	"instance_attributes": "instance_attribute",
+	"meta_attributes": "meta_attributes",
 	"operations": "ops",
 	"rule": "rule",
 	"expression": "expression",
@@ -3289,7 +3290,8 @@ def multi_input(prompt = ''):
 		if stripped.endswith('\\'):
 			stripped = stripped.rstrip('\\')
 			line.append(stripped)
-			prompt = '> '
+			if prompt:
+				prompt = '> '
 		else:
 			line.append(stripped)
 			break

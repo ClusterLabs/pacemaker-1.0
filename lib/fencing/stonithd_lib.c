@@ -612,7 +612,18 @@ stonithd_receive_ops_result(gboolean blocking)
 
 	if (stonithd_op_result_ready() == FALSE) {
 	/* at that time, blocking must be TRUE */
-		if (IPC_OK != cbchan->ops->waitin(cbchan)) {
+		rc = cbchan->ops->waitin(cbchan);
+		if (IPC_OK != rc) {
+			if (cbchan->ch_status == IPC_DISCONNECT) {
+				stdlib_log(LOG_INFO, "%s:%d: disconnected",
+				__FUNCTION__, __LINE__); 
+			} else if (IPC_INTR == rc) {
+				stdlib_log(LOG_INFO, "%s:%d: waitin interrupted",
+				__FUNCTION__, __LINE__); 
+			} else {
+				stdlib_log(LOG_WARNING, "%s:%d: waitin failed: %d",
+				__FUNCTION__, __LINE__,rc); 
+			}
 			return ST_FAIL;
 		}
 	}
@@ -724,6 +735,7 @@ stonithd_virtual_stonithRA_ops( stonithRA_ops_t * op, int * call_id)
 	if (  (ha_msg_add(request, F_STONITHD_RSCID, op->rsc_id) != HA_OK)
 	    ||(ha_msg_add(request, F_STONITHD_RAOPTYPE, op->op_type) != HA_OK)
 	    ||(ha_msg_add(request, F_STONITHD_RANAME, op->ra_name) != HA_OK)
+	    ||(ha_msg_add_int(request, F_STONITHD_TIMEOUT, op->timeout) != HA_OK)
 	    ||(ha_msg_addhash(request, F_STONITHD_PARAMS, op->params) != HA_OK)
 	   ) {
 		stdlib_log(LOG_ERR, "stonithd_virtual_stonithRA_ops: "
