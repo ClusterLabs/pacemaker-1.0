@@ -336,7 +336,7 @@ static void timeout_destroy_notify(gpointer user_data);
 static gboolean stonithop_timeout(gpointer data);
 static void my_hash_table_find( GHashTable * htable, GHFunc func,
 				gpointer * orig_key,
-				gpointer * value, gpointer user_data);
+				gpointer * value, gconstpointer user_data);
 static void has_this_callid(gpointer key, gpointer value,
 				gpointer user_data);
 static void get_config_param(gpointer key, gpointer value,
@@ -2830,7 +2830,7 @@ stonithop_timeout(gpointer data)
 typedef struct {
 	gpointer * key;
 	gpointer * value;
-	gpointer user_data;
+	gconstpointer user_data;
 } lookup_data_t;
 
 static void
@@ -2850,7 +2850,7 @@ get_stonithd_params(stonith_rsc_t *srsc)
 
 static void
 my_hash_table_find(GHashTable * htable, GHFunc func,
-		gpointer * orig_key, gpointer * value, gpointer user_data)
+		gpointer * orig_key, gpointer * value, gconstpointer user_data)
 {
 	lookup_data_t tmp_data;
 
@@ -2865,11 +2865,11 @@ static void
 get_config_param(gpointer key, gpointer value, gpointer user_data)
 {
 	lookup_data_t * tmp_data = user_data;
-	char *lookup_param;
+	const char *lookup_param;
 
 	if (!key || !value || !user_data)
 		return;
-	lookup_param = (char *)tmp_data->user_data;
+	lookup_param = (const char *)tmp_data->user_data;
 	if (!strcmp((const char *)key,lookup_param)) {
 		*(tmp_data->key) = key;
 		*(tmp_data->value) = value;
@@ -2887,7 +2887,7 @@ has_this_callid(gpointer key, gpointer value, gpointer user_data)
 		stonithd_log(LOG_ERR, "has_this_callid: user_data == NULL.");
 		return;
 	} else {
-		callid = *(int *)tmp_data->user_data;
+		callid = *(const int *)tmp_data->user_data;
 	}
 
 	if ( value == NULL ) {
