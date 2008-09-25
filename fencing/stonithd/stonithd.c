@@ -2843,8 +2843,14 @@ get_stonithd_params(stonith_rsc_t *srsc)
 	my_hash_table_find(srsc->params, get_config_param,
 			(gpointer *)&param, (gpointer *)&value, "priority");
 	if (value) {
-		stonithd_log(LOG_DEBUG, "found prio: %s",value);
+		stonithd_log(LOG_DEBUG, "found fence priority: %s",value);
 		srsc->priority = atoi(value);
+	}
+	my_hash_table_find(srsc->params, get_config_param,
+			(gpointer *)&param, (gpointer *)&value, "fence-timeout");
+	if (value) {
+		stonithd_log(LOG_DEBUG, "found fence timeout: %s",value);
+		srsc->fence_timeout = crm_get_msec(value);
 	}
 }
 
@@ -3459,12 +3465,6 @@ record_new_srsc(stonithRA_ops_t *ra_op)
 	srsc->stonith_obj = ra_op->stonith_obj;
 	ra_op->stonith_obj = NULL;
 	srsc->node_list = node_list;
-	if (ra_op->timeout > 0) {
-		srsc->fence_timeout = ra_op->timeout;
-		stonithd_log(LOG_INFO,"rsc:%s: saving the timeout (%dms) of "
-			"the start op for future fencing ops"
-			,ra_op->rsc_id, ra_op->timeout);
-	}
 	get_stonithd_params(srsc);
 
 	if ( debug_level >= 2 ) {
