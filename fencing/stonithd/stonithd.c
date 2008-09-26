@@ -167,6 +167,7 @@ typedef struct stonith_rsc
 	Stonith *	stonith_obj;
 	char **		node_list;
 	int		priority;
+	gboolean	tried; /* a temporary flag */
 	int		fence_timeout;
 } stonith_rsc_t;
 
@@ -2735,7 +2736,11 @@ get_local_stonithobj_can_stonith( const char * node_name,
 			"last stonith resource used (%s); was it stopped?"
 				,__FUNCTION__, __LINE__, begin_rsc_id);
 		}
-	}
+	} else for (tmplist = g_list_first(local_started_stonith_rsc);
+			tmplist != NULL; tmplist = g_list_next(tmplist)) {
+			tmp_srsc = (stonith_rsc_t *)tmplist->data;
+			tmp_srsc->tried = FALSE;
+		}
 
 	/* Find the next stonith resource which has the same
 	 * priority number like the previous one (preferred) or
@@ -2748,12 +2753,13 @@ get_local_stonithobj_can_stonith( const char * node_name,
 		tmplist != NULL; tmplist = g_list_next(tmplist))
 	{
 		tmp_srsc = (stonith_rsc_t *)tmplist->data;
-		if (tmp_srsc == last_srsc)
+		if (tmp_srsc->tried)
 			continue; /* skip the one we already tried */
 		if (!can_st_manage_node(tmp_srsc,node_name))
 			continue; /* this one is of no use for this node */
-		if (tmp_srsc->priority >= start_priority ||
-			(next_srsc && next_srsc->priority > tmp_srsc->priority))
+		if ((tmp_srsc->priority >= start_priority) &&
+			(next_srsc == NULL ||
+			 next_srsc->priority > tmp_srsc->priority))
 		{
 			next_srsc = tmp_srsc;
 			/* make sure to get the very next
@@ -2767,6 +2773,7 @@ get_local_stonithobj_can_stonith( const char * node_name,
 		"next stonith resource %s, priority %d"
 		,__FUNCTION__, __LINE__, next_srsc->rsc_id,
 		next_srsc->priority);
+		next_srsc->tried = TRUE;
 	}
 	return next_srsc;
 }
@@ -2846,6 +2853,7 @@ get_stonithd_params(stonith_rsc_t *srsc)
 		stonithd_log(LOG_DEBUG, "found fence priority: %s",value);
 		srsc->priority = atoi(value);
 	}
+	value = NULL;
 	my_hash_table_find(srsc->params, get_config_param,
 			(gpointer *)&param, (gpointer *)&value, "fence-timeout");
 	if (value) {
