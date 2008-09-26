@@ -59,10 +59,6 @@ unpack_config(xmlNode *config, pe_working_set_t *data_set)
 
 	verify_pe_options(data_set->config_hash);
 	
-	value = pe_pref(data_set->config_hash, "default-action-timeout");
-	data_set->transition_idle_timeout = crm_strdup(value);
-	crm_debug("Default action timeout: %s", data_set->transition_idle_timeout);
-
 	value = pe_pref(data_set->config_hash, "stonith-timeout");
 	data_set->stonith_timeout = crm_get_msec(value);
 	crm_debug("STONITH timeout: %d", data_set->stonith_timeout);
@@ -1375,7 +1371,7 @@ unpack_rsc_op(resource_t *rsc, node_t *node, xmlNode *xml_op,
 			} else if((is_set(data_set->flags, pe_flag_start_failure_fatal)
 				   || compare_version("2.0", op_version) > 0)
 				  && safe_str_eq(task, CRMD_ACTION_START)) {
-			    crm_warn("Compatability handling for failed op %s on %s",
+			    crm_warn("Compatibility handling for failed op %s on %s",
 				     id, node->details->uname);
 			    resource_location(
 				rsc, node, -INFINITY, "__legacy_start__", data_set);
