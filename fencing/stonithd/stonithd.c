@@ -2846,6 +2846,7 @@ get_stonithd_params(stonith_rsc_t *srsc)
 		stonithd_log(LOG_DEBUG, "found fence priority: %s",value);
 		srsc->priority = atoi(value);
 	}
+	value = NULL;
 	my_hash_table_find(srsc->params, get_config_param,
 			(gpointer *)&param, (gpointer *)&value, "fence-timeout");
 	if (value) {
