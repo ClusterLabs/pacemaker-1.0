@@ -2849,17 +2849,13 @@ get_stonithd_params(stonith_rsc_t *srsc)
 		return;
 	my_hash_table_find(srsc->params, get_config_param,
 			(gpointer *)&param, (gpointer *)&value, "priority");
-	if (value) {
-		stonithd_log(LOG_DEBUG, "found fence priority: %s",value);
+	if (value)
 		srsc->priority = atoi(value);
-	}
 	value = NULL;
 	my_hash_table_find(srsc->params, get_config_param,
-			(gpointer *)&param, (gpointer *)&value, "fence-timeout");
-	if (value) {
-		stonithd_log(LOG_DEBUG, "found fence timeout: %s",value);
+			(gpointer *)&param, (gpointer *)&value, "stonith-timeout");
+	if (value)
 		srsc->fence_timeout = crm_get_msec(value);
-	}
 }
 
 static void
