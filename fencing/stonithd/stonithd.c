@@ -1382,9 +1382,8 @@ insert_into_executing_queue(common_op_t *op, int call_id)
 }
 
 /* choose one of the timeouts for the fencing operation; the
- * fence_timeout in srsc takes precedence over the timeout
- * which we got in the message from the requesting node (that's
- * typically the total timeout)
+ * stonith-timeout in srsc takes precedence over the timeout
+ * which we got in the message from the requesting node
  */
 static int
 get_fence_timeout(stonith_rsc_t *srsc, stonith_ops_t *st_op)
