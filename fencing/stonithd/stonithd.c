@@ -1382,9 +1382,8 @@ insert_into_executing_queue(common_op_t *op, int call_id)
 }
 
 /* choose one of the timeouts for the fencing operation; the
- * fence_timeout in srsc takes precedence over the timeout
- * which we got in the message from the requesting node (that's
- * typically the total timeout)
+ * stonith-timeout in srsc takes precedence over the timeout
+ * which we got in the message from the requesting node
  */
 static int
 get_fence_timeout(stonith_rsc_t *srsc, stonith_ops_t *st_op)
@@ -2849,17 +2848,13 @@ get_stonithd_params(stonith_rsc_t *srsc)
 		return;
 	my_hash_table_find(srsc->params, get_config_param,
 			(gpointer *)&param, (gpointer *)&value, "priority");
-	if (value) {
-		stonithd_log(LOG_DEBUG, "found fence priority: %s",value);
+	if (value)
 		srsc->priority = atoi(value);
-	}
 	value = NULL;
 	my_hash_table_find(srsc->params, get_config_param,
-			(gpointer *)&param, (gpointer *)&value, "fence-timeout");
-	if (value) {
-		stonithd_log(LOG_DEBUG, "found fence timeout: %s",value);
+			(gpointer *)&param, (gpointer *)&value, "stonith-timeout");
+	if (value)
 		srsc->fence_timeout = crm_get_msec(value);
-	}
 }
 
 static void
