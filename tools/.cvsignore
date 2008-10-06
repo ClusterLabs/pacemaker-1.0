@@ -36,3 +36,5 @@ crm_commands.py
 crm_utils.py
 crm_shadow
 hb_report
+crm
+hb2openais.sh
