@@ -321,6 +321,7 @@ case "$host_os" in
 		pf_argv_set="PF_ARGV_NONE"
 		;;
 *linux*)	
+		AC_DEFINE_UNQUOTED(ON_LINUX, 1, Compiling for Linux platform)
  		;;
 darwin*)	
 		AC_DEFINE_UNQUOTED(ON_DARWIN, 1, Compiling for Darwin platform)
