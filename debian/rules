@@ -7,6 +7,7 @@
 
 # Uncomment this to turn on verbose mode.
 export DH_VERBOSE=1
+export LIBS="$LIBS -lpils"
 
 cfg:=--prefix=/usr --libdir=/usr/lib --sysconfdir=/etc --localstatedir=/var 	  \
   --mandir=/usr/share/man --with-lcrso-dir=/usr/lib/openais/lcrso
@@ -16,7 +17,6 @@ cfg:=--prefix=/usr --libdir=/usr/lib --sysconfdir=/etc --localstatedir=/var 	  \
 DEB_HOST_GNU_TYPE   ?= $(shell dpkg-architecture -qDEB_HOST_GNU_TYPE)
 DEB_BUILD_GNU_TYPE  ?= $(shell dpkg-architecture -qDEB_BUILD_GNU_TYPE)
 
-LIBS="-lpils"
 CFLAGS = -Wall -g
 ifneq (,$(findstring noopt,$(DEB_BUILD_OPTIONS)))
        CFLAGS += -O0
