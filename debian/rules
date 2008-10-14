@@ -44,7 +44,6 @@ build-stamp:
 	# Official debian packages are built from dist tarballs
 	test -e ./configure || ./autogen.sh $(cfg)
 	test ! -e ./configure || ./configure $(cfg)
-	export LIBS="$LIBS -lpils"
 	$(MAKE)
 	touch build-stamp
 

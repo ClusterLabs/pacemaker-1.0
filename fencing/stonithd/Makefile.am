@@ -33,7 +33,7 @@ stonithd_LDFLAGS = @LIBLTDL@ -lpils \
            $(top_builddir)/lib/fencing/libstonithd.la \
            $(top_builddir)/lib/common/libcrmcluster.la \
            $(top_builddir)/lib/common/libcrmcommon.la
-stonithd_LDADD = $(GLIBLIB) $(CLUSTERLIBS) -lplumb -lpils -lapphb -lstonith
+stonithd_LDADD =  $(CLUSTERLIBS) -lplumb -lpils -lapphb -lstonith
 
 AM_CFLAGS = $(INCLUDES)
 
