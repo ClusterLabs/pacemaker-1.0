@@ -952,6 +952,9 @@ dnl
 dnl    Cluster infrastructure - Heartbeat
 dnl
 
+dnl On Debian, AC_CHECK_LIBS fail if a library has any unresolved symbols
+dnl So check for all the depenancies (so they're added to LIBS) before checking for -lplumb
+
 AC_CHECK_LIB(uuid, uuid_parse)	dnl e2fsprogs
 AC_CHECK_LIB(uuid, uuid_create)	dnl ossp
 
