@@ -510,6 +510,13 @@ AC_CHECK_LIB(rt, sched_getscheduler)            dnl -lrt (for Tru64)
 AC_CHECK_LIB(gnugetopt, getopt_long)		dnl -lgnugetopt ( if available )
 AC_CHECK_LIB(pam, pam_start)			dnl -lpam (if available)
 
+if test x"${HAVE_LIBRT}" = x""; then
+	LIBRT=""
+else
+	LIBRT=-lrt
+fi
+AC_SUBST(LIBRT)
+
 EXTRALIBMSG="-"
 
 if test "X${PKGCONFIG}" = "X"; then
@@ -548,13 +555,6 @@ if test "x${PYTHON}" = x; then
   PYTHON="/usr/bin/env python";
 fi
 AC_MSG_RESULT(using $PYTHON);
-
-if test x"${HAVE_LIBRT}" = x""; then
-	LIBRT=""
-else
-	LIBRT=-lrt
-fi
-AC_SUBST(LIBRT)
 
 #
 #	Where is dlopen?
@@ -954,6 +954,10 @@ dnl
 
 AC_CHECK_LIB(pils, PILLoadPlugin)
 AC_CHECK_LIB(plumb, G_main_add_IPC_Channel)
+
+if test x"${HAVE_LIBPLUMB}" = x""; then
+   AC_MSG_FAILURE(Core Heartbeat utility libraries not found)
+fi
 
 dnl Compatability checks
 AC_CHECK_FUNCS(msgfromIPC_timeout)
