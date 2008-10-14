@@ -6,7 +6,7 @@
 #Thanks to Paolo Molaro <lupus@debian.org> and heartbeat_0.4.6-2.diff
 
 # Uncomment this to turn on verbose mode.
-#export DH_VERBOSE=1
+export DH_VERBOSE=1
 
 cfg:=--prefix=/usr --libdir=/usr/lib --sysconfdir=/etc --localstatedir=/var 	  \
   --mandir=/usr/share/man --with-lcrso-dir=/usr/lib/openais/lcrso
