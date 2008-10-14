@@ -955,7 +955,7 @@ dnl
 AC_CHECK_LIB(pils, PILLoadPlugin)
 AC_CHECK_LIB(plumb, G_main_add_IPC_Channel)
 
-if test x"$ac_cv_lib_plumb_G_main_add_IPC_Channel" = x""; then
+if test x"$ac_cv_lib_plumb_G_main_add_IPC_Channel" != x"yes"; then
    AC_MSG_FAILURE(Core Heartbeat utility libraries not found: $ac_cv_lib_plumb_G_main_add_IPC_Channel)
 fi
 
