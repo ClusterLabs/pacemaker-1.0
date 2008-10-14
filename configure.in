@@ -952,6 +952,9 @@ dnl
 dnl    Cluster infrastructure - Heartbeat
 dnl
 
+AC_CHECK_LIB(uuid, uuid_parse)	dnl e2fsprogs
+AC_CHECK_LIB(uuid, uuid_create)	dnl ossp
+
 AC_CHECK_LIB(pils, PILLoadPlugin)
 AC_CHECK_LIB(plumb, G_main_add_IPC_Channel)
 
