@@ -635,6 +635,8 @@ if test "X$GLIBCONFIG" != X; then
 	LIBS="$LIBS $GLIBLIB"
 fi
 
+AC_CHECK_FUNCS(g_log_set_default_handler)
+
 dnl ************************************************************************
 dnl checks for header files
 dnl
