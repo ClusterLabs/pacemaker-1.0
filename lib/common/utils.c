@@ -453,7 +453,9 @@ crm_glib_handler(const gchar *log_domain, GLogLevelFlags flags, const gchar *mes
 
 GLogFunc glib_log_default;
 void crm_log_deinit(void) {
+#ifdef HAVE_G_LOG_SET_DEFAULT_HANDLER
     g_log_set_default_handler(glib_log_default, NULL);
+#endif
 }
 
 gboolean
@@ -1600,19 +1602,25 @@ crm_set_bit(const char *function, long long word, long long bit)
 	return word;
 }
 
+static const char *cluster_type = NULL;
+
 gboolean is_openais_cluster(void)
 {
-    static const char *cluster_type = NULL;
-
     if(cluster_type == NULL) {
 	cluster_type = getenv("HA_cluster_type");
+	if(cluster_type == NULL) {
+	    cluster_type = "Heartbeat";
+	}
     }
     
     if(safe_str_eq("openais", cluster_type)) {
 #if SUPPORT_AIS
 	return TRUE;
 #else
-	CRM_ASSERT(safe_str_eq("openais", cluster_type) == FALSE);
+	crm_crit("The installation of Pacemaker only supports Heartbeat"
+		 " but you're trying to run it on %s.  Terminating.",
+		 cluster_type);
+	exit(100);
 #endif
     }
     return FALSE;
@@ -1623,7 +1631,12 @@ gboolean is_heartbeat_cluster(void)
 #if SUPPORT_HEARTBEAT
     return !is_openais_cluster();
 #else
-    CRM_ASSERT(is_openais_cluster());
+    if(is_openais_cluster() == FALSE) {
+	crm_crit("The installation of Pacemaker only supports OpenAIS"
+		 " but you're trying to run it on %s.  Terminating.",
+		 cluster_type);
+	exit(100);
+    }
     return FALSE;
 #endif
 }

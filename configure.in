@@ -635,6 +635,8 @@ if test "X$GLIBCONFIG" != X; then
 	LIBS="$LIBS $GLIBLIB"
 fi
 
+AC_CHECK_FUNCS(g_log_set_default_handler)
+
 dnl ************************************************************************
 dnl checks for header files
 dnl
@@ -1008,45 +1010,51 @@ esac
 
 AC_MSG_CHECKING(for native AIS)
 AISMSGLIB=""
-AIS_VERSION=""
+SUPPORT_AIS=1
+AIS_VERSION="none"
 
 if test $SUPPORT_AIS = no; then
    AC_MSG_RESULT(no... not requested.)
-   SUPPORT_AIS=0
 
 else
    AC_MSG_RESULT($SUPPORT_AIS '$AISPREFIX')
-   SUPPORT_AIS=1
 
    dnl headers...
+   AC_CHECK_HEADERS(corosync/saAis.h)
    AC_CHECK_HEADERS(openais/saAis.h)
-   if test "$ac_cv_header_openais_saAis_h" != "yes"; then
+   if test "$ac_cv_header_corosync_saAis_h" = "yes"; then
+       AIS_VERSION="corosync"
+   elif test "$ac_cv_header_openais_saAis_h" = "yes"; then
+       AIS_VERSION="whitetank"
+   else
        aisreason="Headers not found: $ac_cv_header_openais_saAis_h"
-       SUPPORT_AIS=0
    fi  
 fi
 
+AC_MSG_CHECKING(for OpenAIS branch)
+AC_MSG_RESULT($AIS_VERSION)
+
 dnl continue?
-if test $SUPPORT_AIS = 1; then
+if test $AIS_VERSION != "none"; then
    dnl Find it in lib, lib64, or wherever it wants to live...
    AC_MSG_CHECKING(location of OpenAIS libraries)
-   alib=`ls ${AISPREFIX}/*/openais/libSaMsg.so | head -n 1`
+   alib=`ls ${AISPREFIX}/*/*/libcpg.so | head -n 1`
    AISLIB=`dirname $alib`
    AC_MSG_RESULT($AISLIB)
    if test "x$AISLIB" = "x"; then
      AC_MSG_WARN(Use --with-ais-prefix to specify the prefix OpenAIS was installed with)
      aisreason="library directory not found"
-     SUPPORT_AIS=0
+     AIS_VERSION="none"
 
    elif test ! -d "$AISLIB"; then
      AC_MSG_WARN(Use --with-ais-prefix to specify the prefix OpenAIS was installed with)
      aisreason="specified library directory does not exist"
-     SUPPORT_AIS=0
+     AIS_VERSION="none"
    fi
 fi
 
 dnl continue?
-if test $SUPPORT_AIS = 1; then
+if test $AIS_VERSION != "none"; then
    AC_MSG_CHECKING(location of OpenAIS plugins)
    if test -z "$LCRSODIR"; then
       LCRSODIR="$libexecdir/lcrso"
@@ -1058,57 +1066,61 @@ if test $SUPPORT_AIS = 1; then
    if test "x$LCRSODIR" = "x"; then
      AC_MSG_RESULT(Invalid.  Please specify the correct location with --with-lcrso-dir)
      aisreason="plugin directory not found"
-     SUPPORT_AIS=0
+     AIS_VERSION="none"
 
    elif test ! -d "$LCRSODIR"; then
      AC_MSG_RESULT(Invalid.  Please specify the correct location with --with-lcrso-dir)
      aisreason="specified plugin directory does not exist"
-     SUPPORT_AIS=0
+     AIS_VERSION="none"
    fi
 fi
 
 dnl continue?
-if test $SUPPORT_AIS = 1; then
+if test $AIS_VERSION != "none"; then
+     dnl Don't add the messaging library to LIBS since most daemons don't need/use it
      saveLIBS="$LIBS"
      LIBS="$LIBS -L${AISLIB} -R${AISLIB}"
 
-     dnl libs...
-     AIS_VERSION="none"
-     AC_CHECK_LIB(aisutil, saSendReceiveReply, [AIS_VERSION=trunk])
-     AC_CHECK_LIB(SaMsg, saSendReceiveReply, [AIS_VERSION=whitetank])
+     AC_CHECK_LIB(coroutil, saSendReceiveReply, [])
+     AC_CHECK_LIB(SaMsg, saSendReceiveReply, [])
 
-     AC_MSG_CHECKING(for OpenAIS branch)
-     AC_MSG_RESULT($AIS_VERSION)
-
-     case $AIS_VERSION in
-     	  trunk)
-	  	AC_DEFINE_UNQUOTED(AIS_TRUNK, 1, "AIS target is the trunk series")
-		AISMSGLIB=-laisutil
-		;;
-	  whitetank) 
-	     	AC_DEFINE_UNQUOTED(AIS_WHITETANK, 1, "AIS target is the whitetank series")
-	  	AISMSGLIB=-lSaMsg
-		;;
-	  none)
-	        aisreason="requred libraries not found)"
-     	  	SUPPORT_AIS=0
-		;;
-	  *) AC_MSG_FAILURE(Unknown OpenAIS branch: $AIS_VERSION);;
-     esac
-
+     if test $ac_cv_lib_coroutil_saSendReceiveReply = yes; then
+       :  CoroSync
+     elif test $ac_cv_lib_SaMsg_saSendReceiveReply = yes; then
+       :  OpenAIS
+     else
+        AC_MSG_RESULT(Cannot locate AIS messaging library)
+	aisreason="requred libraries not found"
+        AIS_VERSION="none"
+     fi
      LIBS="$saveLIBS"
 fi
 
-if test $SUPPORT_AIS = 0; then
-  if test "x$aisreason" != x; then
-     if test $missingisfatal = 0; then
-	AC_MSG_WARN(Unable to support OpenAIS: $aisreason) 
-	SUPPORT_AIS=0
-     else
-	AC_MSG_FAILURE(Unable to support OpenAIS: $aisreason) 
-     fi
-  fi
-fi
+case $AIS_VERSION in
+    trunk)
+	AC_DEFINE_UNQUOTED(AIS_TRUNK, 1, "AIS target is the latest development series")
+	AISMSGLIB=-lcoroutil
+	;;
+    corosync)
+	AC_DEFINE_UNQUOTED(AIS_COROSYNC, 1, "AIS target is the corosync series")
+	AISMSGLIB=-lcoroutil
+	;;
+    whitetank) 
+	AC_DEFINE_UNQUOTED(AIS_WHITETANK, 1, "AIS target is the whitetank series")
+	AISMSGLIB=-lSaMsg
+	;;
+    none)
+     	SUPPORT_AIS=0
+	if test "x$aisreason" != x; then
+     	  if test $missingisfatal = 0; then
+	    AC_MSG_WARN(Unable to support OpenAIS: $aisreason) 
+          else
+	    AC_MSG_FAILURE(Unable to support OpenAIS: $aisreason) 
+          fi
+        fi
+	;;
+    *) AC_MSG_FAILURE(Unknown OpenAIS branch: $AIS_VERSION);;
+esac
 
 AC_DEFINE_UNQUOTED(SUPPORT_AIS, $SUPPORT_AIS, Support the OpenAIS messaging and membership layer)
 AM_CONDITIONAL(BUILD_AIS_SUPPORT, test $SUPPORT_AIS = 1)
@@ -1700,7 +1712,7 @@ AC_MSG_RESULT([  HA group name            = ${HA_APIGROUP}])
 AC_MSG_RESULT([  HA user name             = ${HA_CCMUSER}])
 
 AC_MSG_RESULT([  With Heartbeat support   = ${SUPPORT_HEARTBEAT}])
-AC_MSG_RESULT([  With AIS support         = ${SUPPORT_AIS} ${AIS_VERSION}])
+AC_MSG_RESULT([  With AIS support         = ${AIS_VERSION}])
 AC_MSG_RESULT([  With AIS prefix          = ${AISPREFIX}])
 
 AC_MSG_RESULT([  CC_WARNINGS              = ${CC_WARNINGS}])
