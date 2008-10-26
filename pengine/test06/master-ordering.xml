@@ -213,7 +213,7 @@
          <instance_attributes id="mysql-server_ia">
            <attributes>
              <nvpair id="mysql-server_role" name="target_role" value="started"/>
-             <nvpair id="mysql-server_priority" name="target_role" value="1000"/>
+             <nvpair id="mysql-server_priority" name="priority" value="1000"/>
              <nvpair id="mysql-server_config" name="config" value="/etc/mysql/my.cnf"/>
              <nvpair id="mysql-server_socket" name="socket" value="/var/run/mysqld/mysqld.sock"/>
              <nvpair id="mysql-server_pid" name="pid" value="/var/run/mysqld/mysqld.pid"/>
