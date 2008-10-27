@@ -16,30 +16,30 @@
        </node>
      </nodes>
      <resources>
-       <clone id="export_home_ocfs2_clone_set">
+       <clone id="export_home_ocfs2_clone_set"><meta_attributes id="clone-export_home_ocfs2_clone_set.meta"><nvpair id="notify.meta.auto-64" name="notify" value="true"/><nvpair id="globally_unique.meta.auto-64" name="globally-unique" value="true"/><nvpair id="nvpair" name="target-role" value="started"/><nvpair id="nvpair" name="clone-node-max" value="1"/></meta_attributes>
          <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="clone_node_max" value="1"/><nvpair id="nvpair" name="target_role" value="started"/></instance_attributes>
-         <primitive id="export_home_ocfs2" class="ocf" type="Filesystem" provider="heartbeat">
+         <primitive id="export_home_ocfs2" class="ocf" type="Filesystem" provider="heartbeat"><meta_attributes id="primitive-export_home_ocfs2.meta"/>
            <operations/>
            <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="device" value="/dev/sda"/><nvpair id="nvpair" name="directory" value="/mnt"/><nvpair id="nvpair" name="fstype" value="ocfs2"/><nvpair name="options" id="nvpair" value="rw,sync"/></instance_attributes>
-         <meta_attributes id="primitive-export_home_ocfs2.meta"/></primitive>
+         </primitive>
          <meta_attributes id="meta_attributes"><nvpair id="nvpair" name="globally-unique" value="true"/><nvpair id="nvpair" name="notify" value="true"/></meta_attributes>
-       <meta_attributes id="clone-export_home_ocfs2_clone_set.meta"><nvpair id="notify.meta.auto-64" name="notify" value="true"/><nvpair id="globally_unique.meta.auto-64" name="globally-unique" value="true"/><nvpair id="nvpair" name="target-role" value="started"/><nvpair id="nvpair" name="clone-node-max" value="1"/></meta_attributes></clone>
-       <group id="group_nfs">
+       </clone>
+       <group id="group_nfs"><meta_attributes id="group-group_nfs.meta"/>
          <instance_attributes id="instance_attributes"/>
-         <primitive id="resource_ipaddr1_single" class="ocf" type="IPaddr" provider="heartbeat">
+         <primitive id="resource_ipaddr1_single" class="ocf" type="IPaddr" provider="heartbeat"><meta_attributes id="primitive-resource_ipaddr1_single.meta"><nvpair id="nvpair" name="target-role" value="started"/></meta_attributes>
            <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="target_role" value="started"/><nvpair id="nvpair" name="ip" value="192.168.2.6"/><nvpair id="nvpair" name="nic" value="eth1"/><nvpair id="nvpair" name="cidr_netmask" value="24"/></instance_attributes>
            <operations>
              <op name="monitor" interval="5s" id="c4685e11-27e2-4ea7-8893-94c3fce7c1ac" timeout="20s" start-delay="1s" on-fail="restart"/>
            </operations>
-         <meta_attributes id="primitive-resource_ipaddr1_single.meta"><nvpair id="nvpair" name="target-role" value="started"/></meta_attributes></primitive>
-         <primitive id="resource_nfsserver_single" class="lsb" type="nfsserver">
+         </primitive>
+         <primitive id="resource_nfsserver_single" class="lsb" type="nfsserver"><meta_attributes id="primitive-resource_nfsserver_single.meta"/>
            <instance_attributes id="instance_attributes"/>
            <operations>
              <op name="monitor" interval="15" id="op.auto-2" timeout="15" start-delay="15" on-fail="stop" enabled="true" role="Started"/>
            </operations>
-         <meta_attributes id="primitive-resource_nfsserver_single.meta"/></primitive>
+         </primitive>
          <meta_attributes id="meta_attributes"/>
-       <meta_attributes id="group-group_nfs.meta"/></group>
+       </group>
      </resources>
      <constraints>
        <rsc_order id="order_ocfs_home_before_nfs" first="export_home_ocfs2_clone_set" then="group_nfs" then-action="start" first-action="start"/>

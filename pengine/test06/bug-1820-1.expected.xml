@@ -10,24 +10,24 @@
      </nodes>
      <resources>
        <primitive id="p1" class="ocf" type="Xen" provider="heartbeat"><meta_attributes id="primitive-p1.meta"/></primitive>
-       <group id="gr1">
-         <primitive id="test1" class="ocf" type="Xen" provider="heartbeat">
+       <group id="gr1"><meta_attributes id="group-gr1.meta"/>
+         <primitive id="test1" class="ocf" type="Xen" provider="heartbeat"><meta_attributes id="primitive-test1.meta"><nvpair id="nvpair" name="allow-migrate" value="true"/></meta_attributes>
            <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="xmfile" value="/etc/xen/test1"/><nvpair id="nvpair" name="allow_migrate" value="true"/></instance_attributes>
            <operations>
              <op name="stop" interval="0" id="test1-stop" timeout="120s"/>
              <op name="migrate_to" interval="0" id="test1-migrate_to" timeout="120s"/>
              <op name="monitor" interval="10s" id="test1-monitor" timeout="30s" start-delay="30s"/>
            </operations>
-         <meta_attributes id="primitive-test1.meta"><nvpair id="nvpair" name="allow-migrate" value="true"/></meta_attributes></primitive>
-         <primitive id="test2" class="ocf" type="Xen" provider="heartbeat">
+         </primitive>
+         <primitive id="test2" class="ocf" type="Xen" provider="heartbeat"><meta_attributes id="primitive-test2.meta"><nvpair id="nvpair" name="allow-migrate" value="true"/></meta_attributes>
            <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="xmfile" value="/etc/xen/test2"/><nvpair id="nvpair" name="allow_migrate" value="true"/></instance_attributes>
            <operations>
              <op name="stop" interval="0" id="test2-stop" timeout="120s"/>
              <op name="migrate_to" interval="0" id="test2-migrate_to" timeout="120s"/>
              <op name="monitor" interval="10s" id="test2-monitor" timeout="30s" start-delay="30s"/>
            </operations>
-         <meta_attributes id="primitive-test2.meta"><nvpair id="nvpair" name="allow-migrate" value="true"/></meta_attributes></primitive>
-       <meta_attributes id="group-gr1.meta"/></group>
+         </primitive>
+       </group>
      </resources>
      <constraints>
        <rsc_colocation id="foo" rsc="gr1" with-rsc="p1" score="INFINITY"/>

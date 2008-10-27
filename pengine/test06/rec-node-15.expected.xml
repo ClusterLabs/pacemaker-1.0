@@ -14,78 +14,78 @@
        <node id="85180fd0-70c9-4136-a5e0-90d89ea6079d" uname="sapcl01" type="normal"/>
      </nodes>
      <resources>
-       <group id="app01">
-         <primitive id="IPaddr_192_168_1_101" class="ocf" provider="heartbeat" type="IPaddr">
+       <group id="app01"><meta_attributes id="group-app01.meta"/>
+         <primitive id="IPaddr_192_168_1_101" class="ocf" provider="heartbeat" type="IPaddr"><meta_attributes id="primitive-IPaddr_192_168_1_101.meta"/>
            <operations>
              <op name="monitor" interval="5s" id="IPaddr_192_168_1_101_mon" timeout="5s"/>
            </operations>
            <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="ip" value="192.168.1.101"/></instance_attributes>
-         <meta_attributes id="primitive-IPaddr_192_168_1_101.meta"/></primitive>
-         <primitive id="LVM_2" class="ocf" provider="heartbeat" type="LVM">
+         </primitive>
+         <primitive id="LVM_2" class="ocf" provider="heartbeat" type="LVM"><meta_attributes id="primitive-LVM_2.meta"/>
            <operations>
              <op name="monitor" interval="120s" id="LVM_2_mon" timeout="60s"/>
            </operations>
            <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="volgrpname" value="data01vg"/></instance_attributes>
-         <meta_attributes id="primitive-LVM_2.meta"/></primitive>
-         <primitive id="Filesystem_3" class="ocf" provider="heartbeat" type="Filesystem">
+         </primitive>
+         <primitive id="Filesystem_3" class="ocf" provider="heartbeat" type="Filesystem"><meta_attributes id="primitive-Filesystem_3.meta"/>
            <operations>
              <op name="monitor" interval="120s" id="Filesystem_3_mon" timeout="60s"/>
            </operations>
            <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="device" value="/dev/data01vg/v0"/><nvpair id="nvpair" name="directory" value="/data/d1"/><nvpair id="nvpair" name="fstype" value="xfs"/></instance_attributes>
-         <meta_attributes id="primitive-Filesystem_3.meta"/></primitive>
-       <meta_attributes id="group-app01.meta"/></group>
-       <group id="app02">
-         <primitive id="IPaddr_192_168_1_102" class="ocf" provider="heartbeat" type="IPaddr">
+         </primitive>
+       </group>
+       <group id="app02"><meta_attributes id="group-app02.meta"/>
+         <primitive id="IPaddr_192_168_1_102" class="ocf" provider="heartbeat" type="IPaddr"><meta_attributes id="primitive-IPaddr_192_168_1_102.meta"/>
            <operations>
              <op name="monitor" interval="5s" id="IPaddr_192_168_1_102_mon" timeout="5s"/>
            </operations>
            <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="ip" value="192.168.1.102"/></instance_attributes>
-         <meta_attributes id="primitive-IPaddr_192_168_1_102.meta"/></primitive>
-         <primitive id="LVM_12" class="ocf" provider="heartbeat" type="LVM">
+         </primitive>
+         <primitive id="LVM_12" class="ocf" provider="heartbeat" type="LVM"><meta_attributes id="primitive-LVM_12.meta"/>
            <operations>
              <op name="monitor" interval="120s" id="LVM_12_mon" timeout="60s"/>
            </operations>
            <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="volgrpname" value="data02vg"/></instance_attributes>
-         <meta_attributes id="primitive-LVM_12.meta"/></primitive>
-         <primitive id="Filesystem_13" class="ocf" provider="heartbeat" type="Filesystem">
+         </primitive>
+         <primitive id="Filesystem_13" class="ocf" provider="heartbeat" type="Filesystem"><meta_attributes id="primitive-Filesystem_13.meta"/>
            <operations>
              <op name="monitor" interval="120s" id="Filesystem_13_mon" timeout="60s"/>
            </operations>
            <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="device" value="/dev/data02vg/v0"/><nvpair id="nvpair" name="directory" value="/data/d2"/><nvpair id="nvpair" name="fstype" value="ext3"/></instance_attributes>
-         <meta_attributes id="primitive-Filesystem_13.meta"/></primitive>
-       <meta_attributes id="group-app02.meta"/></group>
-       <group id="oracle">
-         <primitive id="IPaddr_192_168_1_104" class="ocf" provider="heartbeat" type="IPaddr">
+         </primitive>
+       </group>
+       <group id="oracle"><meta_attributes id="group-oracle.meta"/>
+         <primitive id="IPaddr_192_168_1_104" class="ocf" provider="heartbeat" type="IPaddr"><meta_attributes id="primitive-IPaddr_192_168_1_104.meta"/>
            <operations>
              <op name="monitor" interval="5s" id="IPaddr_192_168_1_104_mon" timeout="5s"/>
            </operations>
            <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="ip" value="192.168.1.104"/></instance_attributes>
-         <meta_attributes id="primitive-IPaddr_192_168_1_104.meta"/></primitive>
-         <primitive id="LVM_22" class="ocf" provider="heartbeat" type="LVM">
+         </primitive>
+         <primitive id="LVM_22" class="ocf" provider="heartbeat" type="LVM"><meta_attributes id="primitive-LVM_22.meta"/>
            <operations>
              <op name="monitor" interval="120s" id="LVM_22_mon" timeout="60s"/>
            </operations>
            <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="volgrpname" value="data03vg"/></instance_attributes>
-         <meta_attributes id="primitive-LVM_22.meta"/></primitive>
-         <primitive id="Filesystem_23" class="ocf" provider="heartbeat" type="Filesystem">
+         </primitive>
+         <primitive id="Filesystem_23" class="ocf" provider="heartbeat" type="Filesystem"><meta_attributes id="primitive-Filesystem_23.meta"/>
            <operations>
              <op name="monitor" interval="120s" id="Filesystem_23_mon" timeout="60s"/>
            </operations>
            <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="device" value="/dev/data03vg/v0"/><nvpair id="nvpair" name="directory" value="/data/d3"/><nvpair id="nvpair" name="fstype" value="xfs"/></instance_attributes>
-         <meta_attributes id="primitive-Filesystem_23.meta"/></primitive>
-         <primitive id="oracle_24" class="ocf" provider="heartbeat" type="oracle">
+         </primitive>
+         <primitive id="oracle_24" class="ocf" provider="heartbeat" type="oracle"><meta_attributes id="primitive-oracle_24.meta"/>
            <operations>
              <op name="monitor" interval="120s" id="oracle_24_mon" timeout="60s"/>
            </operations>
            <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="sid" value="testdb"/></instance_attributes>
-         <meta_attributes id="primitive-oracle_24.meta"/></primitive>
-         <primitive id="oralsnr_25" class="ocf" provider="heartbeat" type="oralsnr">
+         </primitive>
+         <primitive id="oralsnr_25" class="ocf" provider="heartbeat" type="oralsnr"><meta_attributes id="primitive-oralsnr_25.meta"/>
            <operations>
              <op name="monitor" interval="120s" id="oralsnr_25_mon" timeout="60s"/>
            </operations>
            <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="sid" value="testdb"/></instance_attributes>
-         <meta_attributes id="primitive-oralsnr_25.meta"/></primitive>
-       <meta_attributes id="group-oracle.meta"/></group>
+         </primitive>
+       </group>
      </resources>
      <constraints>
        <rsc_location id="rsc_location_app01" rsc="app01">

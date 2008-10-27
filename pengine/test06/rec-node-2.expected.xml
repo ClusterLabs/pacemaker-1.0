@@ -7,34 +7,34 @@
       <node id="uuid2" uname="node2" type="member"/>
     </nodes>
     <resources>
-      <primitive id="rsc1" class="heartbeat" type="apache">
+      <primitive id="rsc1" class="heartbeat" type="apache"><meta_attributes id="primitive-rsc1.meta"/>
 	<operations>
 	  <op name="stop" interval="0" id="stop-1" on-fail="block"/>
 	  <op name="start" interval="0" id="start-1" requires="quorum"/>
 	</operations>
-      <meta_attributes id="primitive-rsc1.meta"/></primitive>
-      <primitive id="rsc2" class="heartbeat" type="apache">
+      </primitive>
+      <primitive id="rsc2" class="heartbeat" type="apache"><meta_attributes id="primitive-rsc2.meta"/>
 	<operations>
 	  <op name="stop" interval="0" id="stop-2" on-fail="block"/>
 	  <op name="start" interval="0" id="start-2" requires="fencing"/>
 	</operations>
-      <meta_attributes id="primitive-rsc2.meta"/></primitive>
-      <group id="group1">
-	<primitive id="rsc3" class="heartbeat" type="apache">
+      </primitive>
+      <group id="group1"><meta_attributes id="group-group1.meta"/>
+	<primitive id="rsc3" class="heartbeat" type="apache"><meta_attributes id="primitive-rsc3.meta"/>
 	  <operations>
 	    <op name="start" interval="0" id="op.auto-5" requires="quorum"/>
 	  </operations>
-	<meta_attributes id="primitive-rsc3.meta"/></primitive>
+	</primitive>
 	<primitive id="rsc4" class="heartbeat" type="apache"><meta_attributes id="primitive-rsc4.meta"/></primitive>
-      <meta_attributes id="group-group1.meta"/></group>
-      <group id="group2">
-	<primitive id="rsc5" class="heartbeat" type="apache">
+      </group>
+      <group id="group2"><meta_attributes id="group-group2.meta"/>
+	<primitive id="rsc5" class="heartbeat" type="apache"><meta_attributes id="primitive-rsc5.meta"/>
 	  <operations>
 	    <op name="start" interval="0" id="op.auto-6" requires="fencing"/>
 	  </operations>
-	<meta_attributes id="primitive-rsc5.meta"/></primitive>
+	</primitive>
 	<primitive id="rsc6" class="heartbeat" type="apache"><meta_attributes id="primitive-rsc6.meta"/></primitive>
-      <meta_attributes id="group-group2.meta"/></group>
+      </group>
     </resources>
     <constraints/>
   </configuration>

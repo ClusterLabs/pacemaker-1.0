@@ -3,22 +3,22 @@
    <configuration>
      <crm_config>
        <cluster_property_set id="cib-bootstrap-options"><nvpair id="nvpair" name="dc-version" value="0.6.2-node: 000d7573fbf8ac5f0c2835c8739973e826d0671b"/></cluster_property_set>
-       <cluster_property_set id="set01"><nvpair id="nvpair" name="default-resource-stickiness" value="INFINITY"/><nvpair id="nvpair" name="default-migration-threshold" value="1"/></cluster_property_set>
+       <cluster_property_set id="set01"><nvpair id="nvpair" name="default-resource-stickiness" value="INFINITY"/><nvpair id="nvpair" name="default-resource-failure-stickiness" value="-INFINITY"/></cluster_property_set>
      </crm_config>
      <nodes>
        <node id="9b262633-815c-4e5e-8f63-76486cab9ad2" uname="node-b" type="normal"/>
        <node id="babfee4b-9c89-4df2-8ccb-3de2a3587d8d" uname="node-a" type="normal"/>
      </nodes>
      <resources>
-       <master id="ms-sf">
+       <master id="ms-sf"><meta_attributes id="master_slave-ms-sf.meta"><nvpair id="ordered.meta.auto-35" name="ordered" value="false"/><nvpair id="interleave.meta.auto-35" name="interleave" value="false"/><nvpair id="notify.meta.auto-35" name="notify" value="false"/><nvpair id="nvpair" name="clone-max" value="2"/><nvpair id="nvpair" name="clone-node-max" value="1"/><nvpair id="nvpair" name="master-max" value="1"/><nvpair id="nvpair" name="master-node-max" value="1"/></meta_attributes>
          <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="clone_max" value="2"/><nvpair id="nvpair" name="clone_node_max" value="1"/><nvpair id="nvpair" name="master_max" value="1"/><nvpair id="nvpair" name="master_node_max" value="1"/></instance_attributes>
-         <group id="group">
+         <group id="group"><meta_attributes id="group-group.meta"/>
            <primitive id="stateful-1" class="ocf" type="Stateful" provider="heartbeat"><meta_attributes id="primitive-stateful-1.meta"/></primitive>
-           <primitive id="stateful-2" class="ocf" type="Stateful" provider="heartbeat">
+           <primitive id="stateful-2" class="ocf" type="Stateful" provider="heartbeat"><meta_attributes id="primitive-stateful-2.meta"/>
              <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="test1" value="1"/><nvpair id="nvpair" name="test2" value="2"/></instance_attributes>
-           <meta_attributes id="primitive-stateful-2.meta"/></primitive>
-         <meta_attributes id="group-group.meta"/></group>
-       <meta_attributes id="master_slave-ms-sf.meta"><nvpair id="ordered.meta.auto-35" name="ordered" value="false"/><nvpair id="interleave.meta.auto-35" name="interleave" value="false"/><nvpair id="notify.meta.auto-35" name="notify" value="false"/><nvpair id="nvpair" name="clone-max" value="2"/><nvpair id="nvpair" name="clone-node-max" value="1"/><nvpair id="nvpair" name="master-max" value="1"/><nvpair id="nvpair" name="master-node-max" value="1"/></meta_attributes></master>
+           </primitive>
+         </group>
+       </master>
      </resources>
      <constraints>
        <rsc_location id="rsc_location" rsc="ms-sf">

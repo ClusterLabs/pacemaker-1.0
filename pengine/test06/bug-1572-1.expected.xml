@@ -15,34 +15,34 @@
        </node>
      </nodes>
      <resources>
-       <master id="ms_drbd_7788">
+       <master id="ms_drbd_7788"><meta_attributes id="master_slave-ms_drbd_7788.meta"><nvpair id="notify.meta.auto-83" name="notify" value="true"/><nvpair id="nvpair" name="clone-max" value="2"/><nvpair id="nvpair" name="clone-node-max" value="1"/><nvpair id="nvpair" name="master-max" value="1"/><nvpair id="nvpair" name="master-node-max" value="1"/></meta_attributes>
          <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="clone_max" value="2"/><nvpair id="nvpair" name="clone_node_max" value="1"/><nvpair id="nvpair" name="master_max" value="1"/><nvpair id="nvpair" name="master_node_max" value="1"/></instance_attributes>
-         <primitive id="rsc_drbd_7788" class="ocf" type="drbd" provider="heartbeat">
+         <primitive id="rsc_drbd_7788" class="ocf" type="drbd" provider="heartbeat"><meta_attributes id="primitive-rsc_drbd_7788.meta"/>
            <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="drbd_resource" value="pgsql"/><nvpair id="nvpair" name="dummy" value="cause_restart"/></instance_attributes>
            <operations>
              <op name="monitor" interval="5m" id="drbd_monitor" timeout="60" start-delay="0" enabled="true" role="Started"/>
            </operations>
-         <meta_attributes id="primitive-rsc_drbd_7788.meta"/></primitive>
-       <meta_attributes id="master_slave-ms_drbd_7788.meta"><nvpair id="notify.meta.auto-83" name="notify" value="true"/><nvpair id="nvpair" name="clone-max" value="2"/><nvpair id="nvpair" name="clone-node-max" value="1"/><nvpair id="nvpair" name="master-max" value="1"/><nvpair id="nvpair" name="master-node-max" value="1"/></meta_attributes></master>
-       <group id="grp_pgsql_mirror">
+         </primitive>
+       </master>
+       <group id="grp_pgsql_mirror"><meta_attributes id="group-grp_pgsql_mirror.meta"><nvpair id="ordered.meta.auto-118" name="ordered" value="true"/><nvpair id="collocated.meta.auto-118" name="collocated" value="true"/></meta_attributes>
            <meta_attributes id="meta_attributes"><nvpair id="nvpair" name="restart-type" value="restart"/></meta_attributes>
-         <primitive id="fs_mirror" class="ocf" type="Filesystem" provider="heartbeat">
+         <primitive id="fs_mirror" class="ocf" type="Filesystem" provider="heartbeat"><meta_attributes id="primitive-fs_mirror.meta"/>
            <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="device" value="/dev/drbd0"/><nvpair id="nvpair" name="directory" value="/mirror"/><nvpair id="nvpair" name="fstype" value="ext3"/><nvpair id="nvpair" name="notify" value="true"/></instance_attributes>
-         <meta_attributes id="primitive-fs_mirror.meta"/></primitive>
+         </primitive>
          <instance_attributes id="instance_attributes"/>
-         <primitive id="pgsql_5555" class="ocf" type="pgsql" provider="heartbeat">
+         <primitive id="pgsql_5555" class="ocf" type="pgsql" provider="heartbeat"><meta_attributes id="primitive-pgsql_5555.meta"/>
            <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="pgctl" value="/usr/local/pgsql/bin/pg_ctl"/><nvpair id="nvpair" name="start_opt" value="-p 5555"/><nvpair id="nvpair" name="psql" value="/usr/local/pgsql/bin/psql"/><nvpair name="pgdata" id="nvpair" value="/mirror/pgsql/data_hb"/><nvpair id="nvpair" name="pgdba" value="postgres"/><nvpair id="nvpair" name="logfile" value="/var/log/pg.log"/><nvpair id="nvpair" name="pgport" value="5555"/></instance_attributes>
            <operations>
              <op name="monitor" interval="30" id="pgsql_5555_monitor" timeout="30" start-delay="10"/>
            </operations>
-         <meta_attributes id="primitive-pgsql_5555.meta"/></primitive>
-         <primitive id="IPaddr_147_81_84_133" class="ocf" provider="heartbeat" type="IPaddr">
+         </primitive>
+         <primitive id="IPaddr_147_81_84_133" class="ocf" provider="heartbeat" type="IPaddr"><meta_attributes id="primitive-IPaddr_147_81_84_133.meta"/>
            <operations>
              <op name="monitor" interval="25s" id="IPaddr_147_81_84_133_mon" timeout="25s" start-delay="0" enabled="true" role="Started"/>
            </operations>
            <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="ip" value="147.81.84.133"/></instance_attributes>
-         <meta_attributes id="primitive-IPaddr_147_81_84_133.meta"/></primitive>
-       <meta_attributes id="group-grp_pgsql_mirror.meta"><nvpair id="ordered.meta.auto-118" name="ordered" value="true"/><nvpair id="collocated.meta.auto-118" name="collocated" value="true"/></meta_attributes></group>
+         </primitive>
+       </group>
      </resources>
      <constraints>
        <rsc_order id="drbd_before_fs-1" first="ms_drbd_7788" then="grp_pgsql_mirror" then-action="start" first-action="promote" score="0"/>

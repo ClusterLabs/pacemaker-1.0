@@ -16,12 +16,12 @@
        </node>
      </nodes>
      <resources>
-       <primitive id="the-future-of-vaj" class="ocf" type="Dummy" provider="heartbeat">
+       <primitive id="the-future-of-vaj" class="ocf" type="Dummy" provider="heartbeat"><meta_attributes id="primitive-the-future-of-vaj.meta"><nvpair id="nvpair" name="target-role" value="started"/></meta_attributes>
          <instance_attributes id="instance_attributes"><nvpair name="target_role" id="nvpair" value="started"/></instance_attributes>
          <operations>
            <op name="start" interval="0s" id="op.auto-1" timeout="60s" on-fail="stop"/>
          </operations>
-       <meta_attributes id="primitive-the-future-of-vaj.meta"><nvpair id="nvpair" name="target-role" value="started"/></meta_attributes></primitive>
+       </primitive>
      </resources>
      <constraints/>
    </configuration>

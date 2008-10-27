@@ -9,22 +9,22 @@
        <node id="989edcb8-aa41-4aab-9fca-65569015499d" uname="webcluster02" type="normal"/>
      </nodes>
      <resources>
-       <clone id="apache2_clone">
+       <clone id="apache2_clone"><meta_attributes id="clone-apache2_clone.meta"><nvpair id="nvpair" name="target-role" value="started"/><nvpair id="nvpair" name="clone-max" value="2"/><nvpair id="nvpair" name="clone-node-max" value="1"/></meta_attributes>
          <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="clone_max" value="2"/><nvpair id="nvpair" name="clone_node_max" value="1"/><nvpair id="nvpair" name="target_role" value="started"/></instance_attributes>
-         <group id="grrr">
-           <primitive id="apache2" class="ocf" type="apache" provider="heartbeat">
+         <group id="grrr"><meta_attributes id="group-grrr.meta"/>
+           <primitive id="apache2" class="ocf" type="apache" provider="heartbeat"><meta_attributes id="primitive-apache2.meta"><nvpair id="nvpair" name="target-role" value="started"/></meta_attributes>
              <operations>
                <op name="monitor" interval="10s" id="apache2_mon" timeout="20s"/>
              </operations>
              <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="httpd" value="/usr/sbin/apache2"/><nvpair id="nvpair" name="options" value="-k start"/><nvpair id="nvpair" name="configfile" value="/etc/apache2/apache2.conf"/><nvpair id="nvpair" name="target_role" value="started"/></instance_attributes>
-           <meta_attributes id="primitive-apache2.meta"><nvpair id="nvpair" name="target-role" value="started"/></meta_attributes></primitive>
-           <primitive id="mysql-proxy" class="lsb" type="mysql-proxy">
+           </primitive>
+           <primitive id="mysql-proxy" class="lsb" type="mysql-proxy"><meta_attributes id="primitive-mysql-proxy.meta"/>
              <operations>
                <op name="monitor" interval="10s" id="mysql-proxy_mon" timeout="20s"/>
              </operations>
-           <meta_attributes id="primitive-mysql-proxy.meta"/></primitive>
-         <meta_attributes id="group-grrr.meta"/></group>
-       <meta_attributes id="clone-apache2_clone.meta"><nvpair id="nvpair" name="target-role" value="started"/><nvpair id="nvpair" name="clone-max" value="2"/><nvpair id="nvpair" name="clone-node-max" value="1"/></meta_attributes></clone>
+           </primitive>
+         </group>
+       </clone>
      </resources>
      <constraints/>
    </configuration>

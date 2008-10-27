@@ -9,12 +9,12 @@
        <node id="c231fc78-1eba-4b49-a003-a1cfef80bfc6" uname="dktest1sles10" type="normal"/>
      </nodes>
      <resources>
-       <primitive id="mysql-bin" class="ocf" provider="heartbeat" type="mysql">
+       <primitive id="mysql-bin" class="ocf" provider="heartbeat" type="mysql"><meta_attributes id="primitive-mysql-bin.meta"/>
          <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="binary" value="/packages/10.0/mysql/bin/mysqld_safe"/><nvpair id="nvpair" name="config" value="/packages/10.0/mysql/my.cnf"/><nvpair id="nvpair" name="datadir" value="/packages/10.0/mysql/var"/><nvpair id="nvpair" name="datadir" value="/packages/10.0/mysql/var"/><nvpair id="nvpair" name="logfile" value="/packages/10.0/mysql/var/mysqld.log"/><nvpair id="nvpair" name="socket" value="/packages/10.0/mysql/var/mysql.sock"/></instance_attributes>
          <operations>
            <op name="monitor" interval="30s" id="op-mysql-1" timeout="20s"/>
          </operations>
-       <meta_attributes id="primitive-mysql-bin.meta"/></primitive>
+       </primitive>
      </resources>
      <constraints/>
    </configuration>

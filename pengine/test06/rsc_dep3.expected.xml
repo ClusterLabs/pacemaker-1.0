@@ -7,12 +7,12 @@
       <node id="node2" uname="node2" type="member"/>
     </nodes>
     <resources>
-      <primitive id="rsc1" class="heartbeat" type="apache">
+      <primitive id="rsc1" class="heartbeat" type="apache"><meta_attributes id="primitive-rsc1.meta"/>
         <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="priority" value="1.0"/></instance_attributes>
-      <meta_attributes id="primitive-rsc1.meta"/></primitive>
-      <primitive id="rsc2" class="heartbeat" type="apache">
+      </primitive>
+      <primitive id="rsc2" class="heartbeat" type="apache"><meta_attributes id="primitive-rsc2.meta"/>
         <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="priority" value="2.0"/></instance_attributes>
-      <meta_attributes id="primitive-rsc2.meta"/></primitive>
+      </primitive>
     </resources>
     <constraints>
       <rsc_colocation id="same_1" rsc="rsc1" with-rsc="rsc2" score="INFINITY"/>

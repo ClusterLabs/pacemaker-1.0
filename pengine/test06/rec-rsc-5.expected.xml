@@ -7,16 +7,16 @@
       <node id="uuid2" uname="node2" type="member"/>
     </nodes>
     <resources>
-      <primitive id="rsc1" class="heartbeat" type="apache">
+      <primitive id="rsc1" class="heartbeat" type="apache"><meta_attributes id="primitive-rsc1.meta"/>
 	<operations>
 	  <op name="stop" interval="0" id="stop-1" on-fail="fence"/>
 	</operations>
-      <meta_attributes id="primitive-rsc1.meta"/></primitive>
-      <primitive id="rsc2" class="heartbeat" type="apache">
+      </primitive>
+      <primitive id="rsc2" class="heartbeat" type="apache"><meta_attributes id="primitive-rsc2.meta"/>
 	<operations>
 	  <op name="stop" interval="0" id="stop-2" on-fail="fence"/>
 	</operations>
-      <meta_attributes id="primitive-rsc2.meta"/></primitive>
+      </primitive>
     </resources>
     <constraints/>
   </configuration>

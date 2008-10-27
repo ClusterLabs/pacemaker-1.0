@@ -6,16 +6,16 @@
        <node id="cd13842c-3f58-4e7d-8126-685259527532" uname="jamesltc" type="normal"/>
      </nodes>
      <resources>
-       <group id="nfs">
-         <primitive id="resource_nfs" class="lsb" type="nfs">
+       <group id="nfs"><meta_attributes id="group-nfs.meta"/>
+         <primitive id="resource_nfs" class="lsb" type="nfs"><meta_attributes id="primitive-resource_nfs.meta"/>
            <instance_attributes id="instance_attributes"/>
-         <meta_attributes id="primitive-resource_nfs.meta"/></primitive>
-       <meta_attributes id="group-nfs.meta"/></group>
-       <group id="fs">
-         <primitive id="resource_fs" class="ocf" type="Filesystem" provider="heartbeat">
+         </primitive>
+       </group>
+       <group id="fs"><meta_attributes id="group-fs.meta"/>
+         <primitive id="resource_fs" class="ocf" type="Filesystem" provider="heartbeat"><meta_attributes id="primitive-resource_fs.meta"/>
            <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="device" value="/dev/hdb"/><nvpair id="nvpair" name="directory" value="/data"/><nvpair id="nvpair" name="fstype" value="ext2"/></instance_attributes>
-         <meta_attributes id="primitive-resource_fs.meta"/></primitive>
-       <meta_attributes id="group-fs.meta"/></group>
+         </primitive>
+       </group>
      </resources>
      <constraints>
        <rsc_colocation id="colocation_beekhof" rsc="nfs" with-rsc="fs" score="INFINITY"/>

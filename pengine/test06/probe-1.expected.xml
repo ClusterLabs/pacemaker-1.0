@@ -10,13 +10,13 @@
        </node>
      </nodes>
      <resources>
-       <primitive id="DcIPaddr" class="ocf" type="IPaddr" provider="heartbeat">
+       <primitive id="DcIPaddr" class="ocf" type="IPaddr" provider="heartbeat"><meta_attributes id="primitive-DcIPaddr.meta"><nvpair id="is_managed.meta.auto-54" name="is-managed" value="1"/></meta_attributes>
          <operations>
            <op name="monitor" interval="5s" id="DcIPaddr-1" timeout="20s"/>
            <op name="start" interval="0" id="DcIPaddr-2" timeout="40s"/>
          </operations>
          <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="ip" value="192.168.100.180"/></instance_attributes>
-       <meta_attributes id="primitive-DcIPaddr.meta"><nvpair id="is_managed.meta.auto-54" name="is-managed" value="1"/></meta_attributes></primitive>
+       </primitive>
      </resources>
      <constraints>
        <rsc_location id="run_DcIPaddr" rsc="DcIPaddr">

@@ -14,26 +14,26 @@
        <node id="674234bf-84a9-4059-8d48-28e273cc280e" uname="warbird.ds9" type="normal"/>
      </nodes>
      <resources>
-       <group id="Web_Group">
-         <primitive id="Apache_IP" class="ocf" type="IPaddr" provider="heartbeat">
+       <group id="Web_Group"><meta_attributes id="group-Web_Group.meta"><nvpair id="ordered.meta.auto-42" name="ordered" value="true"/><nvpair id="collocated.meta.auto-42" name="collocated" value="true"/><nvpair id="nvpair" name="target-role" value="started"/></meta_attributes>
+         <primitive id="Apache_IP" class="ocf" type="IPaddr" provider="heartbeat"><meta_attributes id="primitive-Apache_IP.meta"><nvpair id="nvpair" name="target-role" value="started"/></meta_attributes>
            <instance_attributes id="instance_attributes"><nvpair name="target_role" id="nvpair" value="started"/><nvpair id="nvpair" name="ip" value="10.0.0.180"/><nvpair id="nvpair" name="cidr_netmask" value="255.255.255.0"/><nvpair id="nvpair" name="broadcast" value="10.0.0.255"/></instance_attributes>
-         <meta_attributes id="primitive-Apache_IP.meta"><nvpair id="nvpair" name="target-role" value="started"/></meta_attributes></primitive>
+         </primitive>
          <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="target_role" value="started"/></instance_attributes>
-         <primitive id="resource_IP2" class="ocf" type="IPaddr" provider="heartbeat">
+         <primitive id="resource_IP2" class="ocf" type="IPaddr" provider="heartbeat"><meta_attributes id="primitive-resource_IP2.meta"><nvpair id="nvpair" name="target-role" value="stopped"/></meta_attributes>
            <instance_attributes id="instance_attributes"><nvpair name="target_role" id="nvpair" value="stopped"/><nvpair id="nvpair" name="ip" value="10.0.0.67"/><nvpair id="nvpair" name="cidr_netmask" value="255.255.255.0"/><nvpair id="nvpair" name="broadcast" value="10.0.0.255"/></instance_attributes>
-         <meta_attributes id="primitive-resource_IP2.meta"><nvpair id="nvpair" name="target-role" value="stopped"/></meta_attributes></primitive>
-         <primitive id="resource_dummyweb" class="ocf" type="Dummy" provider="heartbeat">
+         </primitive>
+         <primitive id="resource_dummyweb" class="ocf" type="Dummy" provider="heartbeat"><meta_attributes id="primitive-resource_dummyweb.meta"><nvpair id="nvpair" name="target-role" value="started"/></meta_attributes>
            <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="target_role" value="started"/></instance_attributes>
-         <meta_attributes id="primitive-resource_dummyweb.meta"><nvpair id="nvpair" name="target-role" value="started"/></meta_attributes></primitive>
-       <meta_attributes id="group-Web_Group.meta"><nvpair id="ordered.meta.auto-42" name="ordered" value="true"/><nvpair id="collocated.meta.auto-42" name="collocated" value="true"/><nvpair id="nvpair" name="target-role" value="started"/></meta_attributes></group>
-       <group id="group_fUN">
-         <primitive id="resource_IP3" class="ocf" type="IPaddr" provider="heartbeat">
+         </primitive>
+       </group>
+       <group id="group_fUN"><meta_attributes id="group-group_fUN.meta"><nvpair id="ordered.meta.auto-98" name="ordered" value="true"/><nvpair id="collocated.meta.auto-98" name="collocated" value="true"/></meta_attributes>
+         <primitive id="resource_IP3" class="ocf" type="IPaddr" provider="heartbeat"><meta_attributes id="primitive-resource_IP3.meta"><nvpair id="nvpair" name="target-role" value="started"/></meta_attributes>
            <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="target_role" value="started"/><nvpair id="nvpair" name="ip" value="10.0.0.68"/><nvpair id="nvpair" name="cidr_netmask" value="255.255.255.0"/><nvpair id="nvpair" name="broadcast" value="10.0.0.255"/></instance_attributes>
-         <meta_attributes id="primitive-resource_IP3.meta"><nvpair id="nvpair" name="target-role" value="started"/></meta_attributes></primitive>
-         <primitive id="resource_dummy" class="ocf" type="Dummy" provider="heartbeat">
+         </primitive>
+         <primitive id="resource_dummy" class="ocf" type="Dummy" provider="heartbeat"><meta_attributes id="primitive-resource_dummy.meta"><nvpair id="nvpair" name="target-role" value="started"/></meta_attributes>
            <instance_attributes id="instance_attributes"><nvpair name="target_role" id="nvpair" value="started"/></instance_attributes>
-         <meta_attributes id="primitive-resource_dummy.meta"><nvpair id="nvpair" name="target-role" value="started"/></meta_attributes></primitive>
-       <meta_attributes id="group-group_fUN.meta"><nvpair id="ordered.meta.auto-98" name="ordered" value="true"/><nvpair id="collocated.meta.auto-98" name="collocated" value="true"/></meta_attributes></group>
+         </primitive>
+       </group>
      </resources>
      <constraints>
        <rsc_location id="Web_Place" rsc="Web_Group">

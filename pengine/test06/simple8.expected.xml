@@ -9,12 +9,12 @@
     <resources>
       <primitive id="rsc3" class="heartbeat" type="apache"><meta_attributes id="primitive-rsc3.meta"/></primitive>
       <primitive id="rsc4" class="heartbeat" type="apache"><meta_attributes id="primitive-rsc4.meta"/></primitive>
-      <group id="foo">
+      <group id="foo"><meta_attributes id="group-foo.meta"/>
 	<primitive id="rsc1" class="heartbeat" type="apache"><meta_attributes id="primitive-rsc1.meta"/></primitive>
-      <meta_attributes id="group-foo.meta"/></group>
-      <group id="bar">
+      </group>
+      <group id="bar"><meta_attributes id="group-bar.meta"/>
 	<primitive id="rsc2" class="heartbeat" type="apache"><meta_attributes id="primitive-rsc2.meta"/></primitive>
-      <meta_attributes id="group-bar.meta"/></group>
+      </group>
     </resources>
     <constraints>
     </constraints>

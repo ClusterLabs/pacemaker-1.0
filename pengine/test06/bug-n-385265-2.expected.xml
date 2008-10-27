@@ -9,20 +9,20 @@
        <node id="57226bfc-310f-409b-8b3d-49d93498e4b5" uname="ih02" type="normal"/>
      </nodes>
      <resources>
-       <group id="group_common">
-         <primitive id="resource_ip_common" class="ocf" type="IPaddr2" provider="heartbeat">
+       <group id="group_common"><meta_attributes id="group-group_common.meta"><nvpair id="ordered.meta.auto-27" name="ordered" value="true"/><nvpair id="collocated.meta.auto-27" name="collocated" value="true"/></meta_attributes>
+         <primitive id="resource_ip_common" class="ocf" type="IPaddr2" provider="heartbeat"><meta_attributes id="primitive-resource_ip_common.meta"><nvpair id="resource_stickiness.meta.auto-29" name="resource-stickiness" value="10"/></meta_attributes>
            <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="ip" value="10.116.38.10"/></instance_attributes>
            <operations>
              <op name="monitor" interval="30s" id="common-9af7-4031-8abc-426548ef52c7" timeout="25s" start-delay="30s"/>
            </operations>
-         <meta_attributes id="primitive-resource_ip_common.meta"><nvpair id="resource_stickiness.meta.auto-29" name="resource-stickiness" value="10"/></meta_attributes></primitive>
-         <primitive id="resource_idvscommon" class="ocf" type="idvs" provider="dfs">
+         </primitive>
+         <primitive id="resource_idvscommon" class="ocf" type="idvs" provider="dfs"><meta_attributes id="primitive-resource_idvscommon.meta"/>
            <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="site" value="common"/></instance_attributes>
            <operations>
              <op name="monitor" interval="30s" id="common-9af7-4031-8abc-426548ef52c8" timeout="25s" start-delay="120s"/>
            </operations>
-         <meta_attributes id="primitive-resource_idvscommon.meta"/></primitive>
-       <meta_attributes id="group-group_common.meta"><nvpair id="ordered.meta.auto-27" name="ordered" value="true"/><nvpair id="collocated.meta.auto-27" name="collocated" value="true"/></meta_attributes></group>
+         </primitive>
+       </group>
      </resources>
      <constraints>
      </constraints>

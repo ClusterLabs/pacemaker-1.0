@@ -19,12 +19,12 @@
        </node>
      </nodes>
      <resources>
-       <clone id="ima_cloneid">
+       <clone id="ima_cloneid"><meta_attributes id="clone-ima_cloneid.meta"><nvpair id="nvpair" name="clone-max" value="2"/><nvpair id="nvpair" name="clone-node-max" value="1"/></meta_attributes>
          <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="clone_max" value="2"/><nvpair id="nvpair" name="clone_node_max" value="1"/></instance_attributes>
-         <primitive id="ima_rscid" class="ocf" type="Dummy" provider="heartbeat">
+         <primitive id="ima_rscid" class="ocf" type="Dummy" provider="heartbeat"><meta_attributes id="primitive-ima_rscid.meta"><nvpair id="nvpair" name="target-role" value="started"/></meta_attributes>
            <instance_attributes id="instance_attributes"><nvpair name="target_role" id="nvpair" value="started"/></instance_attributes>
-         <meta_attributes id="primitive-ima_rscid.meta"><nvpair id="nvpair" name="target-role" value="started"/></meta_attributes></primitive>
-       <meta_attributes id="clone-ima_cloneid.meta"><nvpair id="nvpair" name="clone-max" value="2"/><nvpair id="nvpair" name="clone-node-max" value="1"/></meta_attributes></clone>
+         </primitive>
+       </clone>
      </resources>
      <constraints>
        <rsc_location id="place_ima_cloneid" rsc="ima_cloneid">

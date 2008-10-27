@@ -9,73 +9,73 @@
        <node id="97c99ee5-0f0e-4519-845c-14871d0ba045" uname="cxb1" type="normal"/>
      </nodes>
      <resources>
-       <primitive id="cyrus_address" class="ocf" type="IPaddr2" provider="heartbeat">
+       <primitive id="cyrus_address" class="ocf" type="IPaddr2" provider="heartbeat"><meta_attributes id="primitive-cyrus_address.meta"/>
          <instance_attributes id="instance_attributes"><nvpair name="ip" value="192.168.2.210" id="nvpair"/></instance_attributes>
-       <meta_attributes id="primitive-cyrus_address.meta"/></primitive>
-       <primitive id="cyrus_master" class="ocf" type="cyrus-imap" provider="heartbeat">
+       </primitive>
+       <primitive id="cyrus_master" class="ocf" type="cyrus-imap" provider="heartbeat"><meta_attributes id="primitive-cyrus_master.meta"/>
          <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="binpath" value="/usr/local/sbin/cyrus_master"/><nvpair id="nvpair" name="pidfile" value="/opt/cyrus/var/run/master.pid"/></instance_attributes>
-       <meta_attributes id="primitive-cyrus_master.meta"/></primitive>
-       <primitive id="cyrus_syslogd" class="ocf" type="syslogd" provider="heartbeat">
+       </primitive>
+       <primitive id="cyrus_syslogd" class="ocf" type="syslogd" provider="heartbeat"><meta_attributes id="primitive-cyrus_syslogd.meta"/>
          <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="binpath" value="/usr/local/sbin/cyrus_syslogd"/><nvpair id="nvpair" name="pidfile" value="/opt/cyrus/var/run/syslogd.pid"/></instance_attributes>
-       <meta_attributes id="primitive-cyrus_syslogd.meta"/></primitive>
-       <primitive id="cyrus_filesys" class="ocf" type="Filesystem" provider="heartbeat">
+       </primitive>
+       <primitive id="cyrus_filesys" class="ocf" type="Filesystem" provider="heartbeat"><meta_attributes id="primitive-cyrus_filesys.meta"/>
          <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="device" value="/dev/vg3/lv3"/><nvpair id="nvpair" name="directory" value="/opt/cyrus/var"/><nvpair id="nvpair" name="fstype" value="xfs"/><nvpair id="nvpair" name="options" value="nobarrier"/></instance_attributes>
-       <meta_attributes id="primitive-cyrus_filesys.meta"/></primitive>
-       <primitive id="cyrus_volgroup" class="ocf" type="VolGroup" provider="heartbeat">
+       </primitive>
+       <primitive id="cyrus_volgroup" class="ocf" type="VolGroup" provider="heartbeat"><meta_attributes id="primitive-cyrus_volgroup.meta"/>
          <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="volgrpname" value="vg3"/></instance_attributes>
-       <meta_attributes id="primitive-cyrus_volgroup.meta"/></primitive>
-       <master id="cyrus_drbd">
+       </primitive>
+       <master id="cyrus_drbd"><meta_attributes id="master_slave-cyrus_drbd.meta"/>
          <meta_attributes id="meta_attributes"><nvpair id="nvpair" name="clone-max" value="2"/><nvpair id="nvpair" name="clone-node-max" value="1"/><nvpair id="nvpair" name="master-max" value="1"/><nvpair id="nvpair" name="master-node-max" value="1"/><nvpair id="nvpair" name="notify" value="yes"/><nvpair id="nvpair" name="globally-unique" value="false"/></meta_attributes>
-         <primitive id="cyrus_drbd_node" class="ocf" provider="heartbeat" type="drbd">
+         <primitive id="cyrus_drbd_node" class="ocf" provider="heartbeat" type="drbd"><meta_attributes id="primitive-cyrus_drbd_node.meta"/>
            <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="drbd_resource" value="drbd3"/></instance_attributes>
            <operations>
              <op name="monitor" interval="10s" id="cyrus_drbd_mon_master" timeout="5s" role="Master"/>
            </operations>
-         <meta_attributes id="primitive-cyrus_drbd_node.meta"/></primitive>
-       <meta_attributes id="master_slave-cyrus_drbd.meta"/></master>
-       <primitive id="named_address" class="ocf" type="IPaddr2" provider="heartbeat">
+         </primitive>
+       </master>
+       <primitive id="named_address" class="ocf" type="IPaddr2" provider="heartbeat"><meta_attributes id="primitive-named_address.meta"/>
          <instance_attributes id="instance_attributes"><nvpair name="ip" value="192.168.1.188" id="nvpair"/></instance_attributes>
-       <meta_attributes id="primitive-named_address.meta"/></primitive>
-       <primitive id="named_filesys" class="ocf" type="Filesystem" provider="heartbeat">
+       </primitive>
+       <primitive id="named_filesys" class="ocf" type="Filesystem" provider="heartbeat"><meta_attributes id="primitive-named_filesys.meta"/>
          <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="device" value="/dev/vg4/lv4"/><nvpair id="nvpair" name="directory" value="/opt/recursor/var"/><nvpair id="nvpair" name="fstype" value="xfs"/><nvpair id="nvpair" name="options" value="nobarrier"/></instance_attributes>
-       <meta_attributes id="primitive-named_filesys.meta"/></primitive>
-       <primitive id="named_volgroup" class="ocf" type="VolGroup" provider="heartbeat">
+       </primitive>
+       <primitive id="named_volgroup" class="ocf" type="VolGroup" provider="heartbeat"><meta_attributes id="primitive-named_volgroup.meta"/>
          <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="volgrpname" value="vg4"/></instance_attributes>
-       <meta_attributes id="primitive-named_volgroup.meta"/></primitive>
-       <primitive id="named_daemon" class="ocf" type="recursor" provider="heartbeat">
+       </primitive>
+       <primitive id="named_daemon" class="ocf" type="recursor" provider="heartbeat"><meta_attributes id="primitive-named_daemon.meta"/>
          <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="binpath" value="/usr/local/sbin/recursor_daemon"/><nvpair id="nvpair" name="pidfile" value="/opt/recursor/var/run/pdns_recursor.pid"/></instance_attributes>
-       <meta_attributes id="primitive-named_daemon.meta"/></primitive>
-       <primitive id="named_syslogd" class="ocf" type="syslogd" provider="heartbeat">
+       </primitive>
+       <primitive id="named_syslogd" class="ocf" type="syslogd" provider="heartbeat"><meta_attributes id="primitive-named_syslogd.meta"/>
          <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="binpath" value="/usr/local/sbin/recursor_syslogd"/><nvpair id="nvpair" name="pidfile" value="/opt/recursor/var/run/syslogd.pid"/></instance_attributes>
-       <meta_attributes id="primitive-named_syslogd.meta"/></primitive>
-       <master id="named_drbd">
+       </primitive>
+       <master id="named_drbd"><meta_attributes id="master_slave-named_drbd.meta"/>
          <meta_attributes id="meta_attributes"><nvpair id="nvpair" name="clone-max" value="2"/><nvpair id="nvpair" name="clone-node-max" value="1"/><nvpair id="nvpair" name="master-max" value="1"/><nvpair id="nvpair" name="master-node-max" value="1"/><nvpair id="nvpair" name="notify" value="yes"/><nvpair id="nvpair" name="globally-unique" value="false"/></meta_attributes>
-         <primitive id="named_drbd_node" class="ocf" provider="heartbeat" type="drbd">
+         <primitive id="named_drbd_node" class="ocf" provider="heartbeat" type="drbd"><meta_attributes id="primitive-named_drbd_node.meta"/>
            <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="drbd_resource" value="drbd4"/></instance_attributes>
            <operations>
              <op name="monitor" interval="10s" id="named_drbd_mon_master" timeout="5s" role="Master"/>
            </operations>
-         <meta_attributes id="primitive-named_drbd_node.meta"/></primitive>
-       <meta_attributes id="master_slave-named_drbd.meta"/></master>
-       <clone id="pingd_clone">
+         </primitive>
+       </master>
+       <clone id="pingd_clone"><meta_attributes id="clone-pingd_clone.meta"><nvpair id="nvpair" name="globally-unique" value="false"/><nvpair id="nvpair" name="clone-node-max" value="1"/></meta_attributes>
          <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="clone_node_max" value="1"/><nvpair id="nvpair" name="globally_unique" value="false"/></instance_attributes>
-         <primitive id="pingd_node" provider="heartbeat" class="ocf" type="pingd">
+         <primitive id="pingd_node" provider="heartbeat" class="ocf" type="pingd"><meta_attributes id="primitive-pingd_node.meta"/>
            <operations>
              <op name="monitor" interval="20s" id="pingd_node_monitor" timeout="40s" requires="nothing"/>
            </operations>
            <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="pidfile" value="/var/run/pingd.pid"/><nvpair id="nvpair" name="dampen" value="5s"/><nvpair id="nvpair" name="multiplier" value="100"/></instance_attributes>
-         <meta_attributes id="primitive-pingd_node.meta"/></primitive>
-       <meta_attributes id="clone-pingd_clone.meta"><nvpair id="nvpair" name="globally-unique" value="false"/><nvpair id="nvpair" name="clone-node-max" value="1"/></meta_attributes></clone>
-       <clone id="fence_clone">
+         </primitive>
+       </clone>
+       <clone id="fence_clone"><meta_attributes id="clone-fence_clone.meta"/>
          <instance_attributes id="instance_attributes"><nvpair name="fence_attr_clone_node_max" value="1" id="nvpair"/></instance_attributes>
-         <primitive id="fence_node" class="stonith" type="baytech">
+         <primitive id="fence_node" class="stonith" type="baytech"><meta_attributes id="primitive-fence_node.meta"/>
            <operations>
              <op name="monitor" interval="300s" id="fence_node_monitor" timeout="20s"/>
              <op name="start" interval="0" id="fence_node_start" timeout="20s"/>
            </operations>
            <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="ipaddr" value="192.168.1.190"/><nvpair id="nvpair" name="login" value="admin"/><nvpair id="nvpair" name="password" value="xxxxxxxx"/></instance_attributes>
-         <meta_attributes id="primitive-fence_node.meta"/></primitive>
-       <meta_attributes id="clone-fence_clone.meta"/></clone>
+         </primitive>
+       </clone>
      </resources>
      <constraints>
        <rsc_location id="cyrus_address_location" rsc="cyrus_address">

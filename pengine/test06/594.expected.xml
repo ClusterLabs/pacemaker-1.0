@@ -8,39 +8,39 @@
         <node id="6125a0df-456a-4395-829a-418e9a380d36" uname="hadev1" type="member"/>
       </nodes>
       <resources>
-        <primitive id="DcIPaddr" class="ocf" type="IPaddr" provider="heartbeat">
+        <primitive id="DcIPaddr" class="ocf" type="IPaddr" provider="heartbeat"><meta_attributes id="primitive-DcIPaddr.meta"/>
           <operations>
             <op name="monitor" interval="5s" id="op.auto-1" timeout="20s"/>
           </operations>
           <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="ip" value="127.0.0.10"/></instance_attributes>
-        <meta_attributes id="primitive-DcIPaddr.meta"/></primitive>
-        <primitive id="rsc_hadev3" class="ocf" type="IPaddr" provider="heartbeat">
+        </primitive>
+        <primitive id="rsc_hadev3" class="ocf" type="IPaddr" provider="heartbeat"><meta_attributes id="primitive-rsc_hadev3.meta"/>
           <operations>
             <op name="monitor" interval="5s" id="op.auto-2" timeout="20s"/>
           </operations>
           <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="ip" value="127.0.0.21"/></instance_attributes>
-        <meta_attributes id="primitive-rsc_hadev3.meta"/></primitive>
-        <primitive id="rsc_hadev2" class="ocf" type="IPaddr" provider="heartbeat">
+        </primitive>
+        <primitive id="rsc_hadev2" class="ocf" type="IPaddr" provider="heartbeat"><meta_attributes id="primitive-rsc_hadev2.meta"/>
           <operations>
             <op name="monitor" interval="5s" id="op.auto-3" timeout="20s"/>
           </operations>
           <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="ip" value="127.0.0.22"/></instance_attributes>
-        <meta_attributes id="primitive-rsc_hadev2.meta"/></primitive>
-        <primitive id="rsc_hadev1" class="ocf" type="IPaddr" provider="heartbeat">
+        </primitive>
+        <primitive id="rsc_hadev1" class="ocf" type="IPaddr" provider="heartbeat"><meta_attributes id="primitive-rsc_hadev1.meta"/>
           <operations>
             <op name="monitor" interval="5s" id="op.auto-4" timeout="20s"/>
           </operations>
           <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="ip" value="127.0.0.23"/></instance_attributes>
-        <meta_attributes id="primitive-rsc_hadev1.meta"/></primitive>
-        <clone id="DoFencing">
+        </primitive>
+        <clone id="DoFencing"><meta_attributes id="clone-DoFencing.meta"><nvpair id="nvpair" name="resource-stickiness" value="1"/><nvpair id="nvpair" name="clone-max" value="3"/><nvpair id="nvpair" name="clone-node-max" value="1"/></meta_attributes>
           <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="clone_max" value="3"/><nvpair id="nvpair" name="clone_node_max" value="1"/><nvpair id="nvpair" name="resource_stickiness" value="1"/></instance_attributes>
-          <primitive id="child_DoFencing" class="stonith" type="ssh">
+          <primitive id="child_DoFencing" class="stonith" type="ssh"><meta_attributes id="primitive-child_DoFencing.meta"/>
             <operations>
               <op name="monitor" interval="5s" id="op.auto-5" timeout="20s"/>
             </operations>
             <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="hostlist" value="hadev3 hadev2 hadev1 "/></instance_attributes>
-          <meta_attributes id="primitive-child_DoFencing.meta"/></primitive>
-        <meta_attributes id="clone-DoFencing.meta"><nvpair id="nvpair" name="resource-stickiness" value="1"/><nvpair id="nvpair" name="clone-max" value="3"/><nvpair id="nvpair" name="clone-node-max" value="1"/></meta_attributes></clone>
+          </primitive>
+        </clone>
       </resources>
       <constraints>
         <rsc_location id="run_DcIPaddr" rsc="DcIPaddr">

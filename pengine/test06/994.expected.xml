@@ -6,31 +6,31 @@
        <node id="6d3906ef-d88f-4363-afac-609884ddbb90" uname="paul" type="member"/>
      </nodes>
      <resources>
-       <group id="group_1">
-         <primitive id="datadisk_1" class="heartbeat" type="datadisk">
+       <group id="group_1"><meta_attributes id="group-group_1.meta"/>
+         <primitive id="datadisk_1" class="heartbeat" type="datadisk"><meta_attributes id="primitive-datadisk_1.meta"/>
            <operations>
              <op name="monitor" interval="120s" id="datadisk_1_mon" timeout="60s"/>
            </operations>
            <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="1" value="r0"/></instance_attributes>
-         <meta_attributes id="primitive-datadisk_1.meta"/></primitive>
-         <primitive id="Filesystem_2" class="ocf" provider="heartbeat" type="Filesystem">
+         </primitive>
+         <primitive id="Filesystem_2" class="ocf" provider="heartbeat" type="Filesystem"><meta_attributes id="primitive-Filesystem_2.meta"/>
            <operations>
              <op name="monitor" interval="120s" id="Filesystem_2_mon" timeout="60s"/>
            </operations>
            <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="device" value="/dev/drbd0"/><nvpair id="nvpair" name="directory" value="/home"/><nvpair id="nvpair" name="fstype" value="reiserfs"/></instance_attributes>
-         <meta_attributes id="primitive-Filesystem_2.meta"/></primitive>
-         <primitive id="IPaddr_5" class="ocf" provider="heartbeat" type="IPaddr">
+         </primitive>
+         <primitive id="IPaddr_5" class="ocf" provider="heartbeat" type="IPaddr"><meta_attributes id="primitive-IPaddr_5.meta"/>
            <operations>
              <op name="monitor" interval="5s" id="IPaddr_5_mon" timeout="5s"/>
            </operations>
            <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="ip" value="10.10.10.222"/></instance_attributes>
-         <meta_attributes id="primitive-IPaddr_5.meta"/></primitive>
-         <primitive id="postfix_9" class="lsb" type="postfix">
+         </primitive>
+         <primitive id="postfix_9" class="lsb" type="postfix"><meta_attributes id="primitive-postfix_9.meta"/>
            <operations>
              <op name="monitor" interval="120s" id="postfix_9_mon" timeout="60s"/>
            </operations>
-         <meta_attributes id="primitive-postfix_9.meta"/></primitive>
-       <meta_attributes id="group-group_1.meta"/></group>
+         </primitive>
+       </group>
      </resources>
      <constraints/>
    </configuration>

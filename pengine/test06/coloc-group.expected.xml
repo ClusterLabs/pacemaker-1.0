@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <cib admin_epoch="0" epoch="1" num_updates="1" dc-uuid="0" have-quorum="false" remote-tls-port="0" validate-with="pacemaker-1.0">
   <configuration>
-    <crm_config><cluster_property_set id="cib-bootstrap-options"><nvpair id="nvpair" name="no-quorum-policy" value="ignore"/><nvpair id="nvpair" name="symmetric-cluster" value="true"/><nvpair id="nvpair" name="default-migration-threshold" value="1"/></cluster_property_set></crm_config>
+    <crm_config><cluster_property_set id="cib-bootstrap-options"><nvpair id="nvpair" name="no-quorum-policy" value="ignore"/><nvpair id="nvpair" name="symmetric-cluster" value="true"/><nvpair id="nvpair" name="default-resource-failure-stickiness" value="-INFINITY"/></cluster_property_set></crm_config>
     <nodes>
       <node id="node1" uname="node1" type="member"/>
       <node id="node2" uname="node2" type="member"/>
@@ -9,11 +9,11 @@
     </nodes>
     <resources>
       <primitive id="rsc1" class="heartbeat" type="apache"><meta_attributes id="primitive-rsc1.meta"/></primitive>
-      <group id="group1"> 
+      <group id="group1"><meta_attributes id="group-group1.meta"/> 
 	<primitive id="rsc2" class="heartbeat" type="apache"><meta_attributes id="primitive-rsc2.meta"/></primitive>
 	<primitive id="rsc3" class="heartbeat" type="apache"><meta_attributes id="primitive-rsc3.meta"/></primitive>
 	<primitive id="rsc4" class="heartbeat" type="apache"><meta_attributes id="primitive-rsc4.meta"/></primitive>
-      <meta_attributes id="group-group1.meta"/></group>
+      </group>
     </resources>
     <constraints>
       <rsc_colocation id="colo-g-1" rsc="group1" with-rsc="rsc1" score="INFINITY"/>

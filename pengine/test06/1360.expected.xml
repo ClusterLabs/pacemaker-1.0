@@ -7,17 +7,17 @@
        <node id="c728b2aa-1e73-491f-a03c-8f0598bab169" uname="ssgtest1b" type="normal"/>
      </nodes>
      <resources>
-       <group id="ClusterAlias">
-         <primitive id="VIP" class="ocf" type="VIP-RIP.sh" provider="testing">
+       <group id="ClusterAlias"><meta_attributes id="group-ClusterAlias.meta"/>
+         <primitive id="VIP" class="ocf" type="VIP-RIP.sh" provider="testing"><meta_attributes id="primitive-VIP.meta"/>
            <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="ip" value="172.18.67.3"/><nvpair id="nvpair" name="nic" value="eth0"/><nvpair id="nvpair" name="lvs_support" value="true"/></instance_attributes>
-         <meta_attributes id="primitive-VIP.meta"/></primitive>
-       <meta_attributes id="group-ClusterAlias.meta"/></group>
-       <clone id="dolly">
+         </primitive>
+       </group>
+       <clone id="dolly"><meta_attributes id="clone-dolly.meta"><nvpair id="nvpair" name="resource-stickiness" value="0"/><nvpair id="nvpair" name="clone-max" value="1"/><nvpair id="nvpair" name="clone-node-max" value="1"/></meta_attributes>
          <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="clone_max" value="1"/><nvpair id="nvpair" name="resource_stickiness" value="0"/><nvpair id="nvpair" name="clone_node_max" value="1"/></instance_attributes>
-         <primitive id="dollies" class="ocf" type="clone_server" provider="gn1">
+         <primitive id="dollies" class="ocf" type="clone_server" provider="gn1"><meta_attributes id="primitive-dollies.meta"/>
            <instance_attributes id="instance_attributes"/>
-         <meta_attributes id="primitive-dollies.meta"/></primitive>
-       <meta_attributes id="clone-dolly.meta"><nvpair id="nvpair" name="resource-stickiness" value="0"/><nvpair id="nvpair" name="clone-max" value="1"/><nvpair id="nvpair" name="clone-node-max" value="1"/></meta_attributes></clone>
+         </primitive>
+       </clone>
      </resources>
      <constraints>
        <rsc_location id="where_is_dolly" rsc="dolly">

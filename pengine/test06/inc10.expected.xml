@@ -15,25 +15,25 @@
        <node id="43746e52-5e02-49bb-a110-c420078855c5" uname="xen-1" type="normal"/>
      </nodes>
      <resources>
-       <clone id="DoFencing">
+       <clone id="DoFencing"><meta_attributes id="clone-DoFencing.meta"><nvpair id="globally_unique.meta.auto-67" name="globally-unique" value="false"/><nvpair id="ordered.meta.auto-67" name="ordered" value="false"/><nvpair id="nvpair" name="clone-node-max" value="1"/></meta_attributes>
          <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="clone_node_max" value="1"/></instance_attributes>
-         <primitive id="child_DoFencing" class="stonith" type="null">
+         <primitive id="child_DoFencing" class="stonith" type="null"><meta_attributes id="primitive-child_DoFencing.meta"/>
            <operations>
              <op name="monitor" interval="5s" id="op-01" timeout="20s" requires="nothing"/>
              <op name="start" interval="0" id="op-02" timeout="20s" requires="nothing"/>
            </operations>
            <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="hostlist" value="xen-1,xen-2,xen-3,xen-4"/></instance_attributes>
-         <meta_attributes id="primitive-child_DoFencing.meta"/></primitive>
-       <meta_attributes id="clone-DoFencing.meta"><nvpair id="globally_unique.meta.auto-67" name="globally-unique" value="false"/><nvpair id="ordered.meta.auto-67" name="ordered" value="false"/><nvpair id="nvpair" name="clone-node-max" value="1"/></meta_attributes></clone>
-       <clone id="ocfs2-clone">
+         </primitive>
+       </clone>
+       <clone id="ocfs2-clone"><meta_attributes id="clone-ocfs2-clone.meta"><nvpair id="notify.meta.auto-96" name="notify" value="true"/><nvpair id="globally_unique.meta.auto-96" name="globally-unique" value="false"/><nvpair id="ordered.meta.auto-96" name="ordered" value="false"/><nvpair id="nvpair" name="resource-stickiness" value="1"/><nvpair id="nvpair" name="target-role" value="started"/><nvpair id="nvpair" name="clone-node-max" value="1"/></meta_attributes>
          <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="clone_node_max" value="1"/><nvpair id="nvpair" name="target_role" value="started"/><nvpair id="nvpair" name="resource_stickiness" value="1"/></instance_attributes>
-         <primitive id="ocfs2" class="ocf" type="Filesystem" provider="heartbeat">
+         <primitive id="ocfs2" class="ocf" type="Filesystem" provider="heartbeat"><meta_attributes id="primitive-ocfs2.meta"/>
            <operations>
              <op name="monitor" interval="10s" id="op-11" timeout="30s"/>
            </operations>
            <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="device" value="/dev/hdb1"/><nvpair id="nvpair" name="directory" value="/mnt/share1"/><nvpair id="nvpair" name="fstype" value="ocfs2"/></instance_attributes>
-         <meta_attributes id="primitive-ocfs2.meta"/></primitive>
-       <meta_attributes id="clone-ocfs2-clone.meta"><nvpair id="notify.meta.auto-96" name="notify" value="true"/><nvpair id="globally_unique.meta.auto-96" name="globally-unique" value="false"/><nvpair id="ordered.meta.auto-96" name="ordered" value="false"/><nvpair id="nvpair" name="resource-stickiness" value="1"/><nvpair id="nvpair" name="target-role" value="started"/><nvpair id="nvpair" name="clone-node-max" value="1"/></meta_attributes></clone>
+         </primitive>
+       </clone>
      </resources>
      <constraints/>
    </configuration>

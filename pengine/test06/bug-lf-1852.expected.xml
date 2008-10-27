@@ -13,22 +13,22 @@
        </node>
      </nodes>
      <resources>
-       <master id="ms-drbd0">
+       <master id="ms-drbd0"><meta_attributes id="master_slave-ms-drbd0.meta"/>
          <meta_attributes id="meta_attributes"><nvpair id="nvpair" name="clone-max" value="2"/><nvpair id="nvpair" name="clone-node-max" value="1"/><nvpair id="nvpair" name="master-max" value="1"/><nvpair id="nvpair" name="master-node-max" value="1"/><nvpair id="nvpair" name="notify" value="yes"/><nvpair id="nvpair" name="globally-unique" value="false"/><nvpair id="nvpair" name="target-role" value="#default"/></meta_attributes>
-         <primitive id="drbd0" class="ocf" provider="heartbeat" type="drbd">
+         <primitive id="drbd0" class="ocf" provider="heartbeat" type="drbd"><meta_attributes id="primitive-drbd0.meta"/>
            <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="drbd_resource" value="r0"/></instance_attributes>
-         <meta_attributes id="primitive-drbd0.meta"/></primitive>
-       <meta_attributes id="master_slave-ms-drbd0.meta"/></master>
-       <group id="fs_mysql_ip">
-         <primitive id="fs0" class="ocf" provider="heartbeat" type="Filesystem">
+         </primitive>
+       </master>
+       <group id="fs_mysql_ip"><meta_attributes id="group-fs_mysql_ip.meta"/>
+         <primitive id="fs0" class="ocf" provider="heartbeat" type="Filesystem"><meta_attributes id="primitive-fs0.meta"/>
            <meta_attributes id="meta_attributes"><nvpair id="nvpair" name="target-role" value="#default"/></meta_attributes>
            <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="fstype" value="ext3"/><nvpair id="nvpair" name="directory" value="/drbd"/><nvpair id="nvpair" name="device" value="/dev/drbd0"/></instance_attributes>
-         <meta_attributes id="primitive-fs0.meta"/></primitive>
+         </primitive>
          <primitive id="mysqlid" class="lsb" type="mysql"><meta_attributes id="primitive-mysqlid.meta"/></primitive>
-         <primitive id="ip_resource" class="ocf" type="IPaddr2" provider="heartbeat">
+         <primitive id="ip_resource" class="ocf" type="IPaddr2" provider="heartbeat"><meta_attributes id="primitive-ip_resource.meta"/>
            <instance_attributes id="instance_attributes"><nvpair name="ip" value="192.168.0.215" id="nvpair"/><nvpair name="nic" value="eth0" id="nvpair"/></instance_attributes>
-         <meta_attributes id="primitive-ip_resource.meta"/></primitive>
-       <meta_attributes id="group-fs_mysql_ip.meta"/></group>
+         </primitive>
+       </group>
      </resources>
      <constraints>
        <rsc_order id="drbd0_before_group" first="ms-drbd0" then="fs_mysql_ip" then-action="start" first-action="promote"/>

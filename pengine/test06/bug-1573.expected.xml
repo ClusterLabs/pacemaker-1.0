@@ -9,35 +9,35 @@
        <node id="6a0b1629-ab27-47c7-a6a4-461c94e477f2" uname="xen-b" type="normal"/>
      </nodes>
      <resources>
-       <group id="group_1">
-         <primitive id="IPaddr_192_168_1_101" class="ocf" provider="heartbeat" type="IPaddr">
+       <group id="group_1"><meta_attributes id="group-group_1.meta"/>
+         <primitive id="IPaddr_192_168_1_101" class="ocf" provider="heartbeat" type="IPaddr"><meta_attributes id="primitive-IPaddr_192_168_1_101.meta"/>
            <operations>
              <op name="monitor" interval="5s" id="IPaddr_192_168_1_101_mon" timeout="5s"/>
            </operations>
            <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="ip" value="192.168.1.101"/></instance_attributes>
-         <meta_attributes id="primitive-IPaddr_192_168_1_101.meta"/></primitive>
-         <primitive id="apache_2" class="ocf" provider="heartbeat" type="apache">
+         </primitive>
+         <primitive id="apache_2" class="ocf" provider="heartbeat" type="apache"><meta_attributes id="primitive-apache_2.meta"/>
            <operations>
              <op name="monitor" interval="120s" id="apache_2_mon" timeout="60s"/>
            </operations>
            <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="configfile" value="/etc/apache2/apache2.conf"/></instance_attributes>
-         <meta_attributes id="primitive-apache_2.meta"/></primitive>
-       <meta_attributes id="group-group_1.meta"/></group>
-       <group id="group_11">
-         <primitive id="IPaddr_192_168_1_102" class="ocf" provider="heartbeat" type="IPaddr">
+         </primitive>
+       </group>
+       <group id="group_11"><meta_attributes id="group-group_11.meta"/>
+         <primitive id="IPaddr_192_168_1_102" class="ocf" provider="heartbeat" type="IPaddr"><meta_attributes id="primitive-IPaddr_192_168_1_102.meta"/>
            <operations>
              <op name="monitor" interval="5s" id="IPaddr_192_168_1_102_mon" timeout="5s"/>
            </operations>
            <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="ip" value="192.168.1.102"/></instance_attributes>
-         <meta_attributes id="primitive-IPaddr_192_168_1_102.meta"/></primitive>
-         <primitive id="apache_6" class="ocf" provider="heartbeat" type="apache">
+         </primitive>
+         <primitive id="apache_6" class="ocf" provider="heartbeat" type="apache"><meta_attributes id="primitive-apache_6.meta"><nvpair id="nvpair" name="target-role" value="started"/></meta_attributes>
            <operations>
              <op name="monitor" interval="120s" id="apache_6_mon" timeout="60s"/>
            </operations>
            <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="configfile" value="/etc/apache2/apache6.conf"/></instance_attributes>
            <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="target_role" value="started"/></instance_attributes>
-         <meta_attributes id="primitive-apache_6.meta"><nvpair id="nvpair" name="target-role" value="started"/></meta_attributes></primitive>
-       <meta_attributes id="group-group_11.meta"/></group>
+         </primitive>
+       </group>
      </resources>
      <constraints>
        <rsc_location id="rsc_location_group_1" rsc="group_1">

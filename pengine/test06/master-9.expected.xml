@@ -15,86 +15,86 @@
        <node id="619e8a37-147a-4782-ac11-46afad7c32b8" uname="sgi2" type="normal"/>
      </nodes>
      <resources>
-       <primitive id="DcIPaddr" class="ocf" type="IPaddr" provider="heartbeat">
+       <primitive id="DcIPaddr" class="ocf" type="IPaddr" provider="heartbeat"><meta_attributes id="primitive-DcIPaddr.meta"><nvpair id="is_managed.meta.auto-71" name="is-managed" value="1"/></meta_attributes>
          <operations>
            <op name="monitor" interval="5s" id="DcIPaddr-1" timeout="20s"/>
            <op name="start" interval="0" id="DcIPaddr-2" timeout="40s"/>
          </operations>
          <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="ip" value="127.0.0.10"/></instance_attributes>
-       <meta_attributes id="primitive-DcIPaddr.meta"><nvpair id="is_managed.meta.auto-71" name="is-managed" value="1"/></meta_attributes></primitive>
-       <group id="group-1">
-         <primitive id="ocf_127.0.0.11" class="ocf" type="IPaddr" provider="heartbeat">
+       </primitive>
+       <group id="group-1"><meta_attributes id="group-group-1.meta"/>
+         <primitive id="ocf_127.0.0.11" class="ocf" type="IPaddr" provider="heartbeat"><meta_attributes id="primitive-ocf_127.0.0.11.meta"/>
            <operations>
              <op name="monitor" interval="5s" id="ocf_chil127.0.0.11_monitor" timeout="20s"/>
            </operations>
            <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="ip" value="127.0.0.11"/></instance_attributes>
-         <meta_attributes id="primitive-ocf_127.0.0.11.meta"/></primitive>
-         <primitive id="heartbeat_127.0.0.12" class="heartbeat" type="IPaddr">
+         </primitive>
+         <primitive id="heartbeat_127.0.0.12" class="heartbeat" type="IPaddr"><meta_attributes id="primitive-heartbeat_127.0.0.12.meta"/>
            <operations>
              <op name="monitor" interval="5s" id="heartbeat_127.0.0.12_monitor" timeout="20s"/>
            </operations>
            <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="1" value="127.0.0.12"/></instance_attributes>
-         <meta_attributes id="primitive-heartbeat_127.0.0.12.meta"/></primitive>
-         <primitive id="ocf_127.0.0.13" class="ocf" type="IPaddr" provider="heartbeat">
+         </primitive>
+         <primitive id="ocf_127.0.0.13" class="ocf" type="IPaddr" provider="heartbeat"><meta_attributes id="primitive-ocf_127.0.0.13.meta"/>
            <operations>
              <op name="monitor" interval="5s" id="ocf_127.0.0.13_monitor" timeout="20s"/>
            </operations>
            <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="ip" value="127.0.0.13"/></instance_attributes>
-         <meta_attributes id="primitive-ocf_127.0.0.13.meta"/></primitive>
-       <meta_attributes id="group-group-1.meta"/></group>
-       <primitive id="lsb_dummy" class="lsb" type="/usr/lib64/heartbeat/cts/LSBDummy">
+         </primitive>
+       </group>
+       <primitive id="lsb_dummy" class="lsb" type="/usr/lib64/heartbeat/cts/LSBDummy"><meta_attributes id="primitive-lsb_dummy.meta"/>
          <operations>
            <op name="monitor" interval="5s" id="ocf_lsb_monitor" timeout="20s"/>
          </operations>
-       <meta_attributes id="primitive-lsb_dummy.meta"/></primitive>
-       <primitive id="rsc_sgi2" class="ocf" type="IPaddr" provider="heartbeat">
+       </primitive>
+       <primitive id="rsc_sgi2" class="ocf" type="IPaddr" provider="heartbeat"><meta_attributes id="primitive-rsc_sgi2.meta"><nvpair id="is_managed.meta.auto-148" name="is-managed" value="1"/></meta_attributes>
          <operations>
            <op name="monitor" interval="5s" id="rsc_sgi2-1" timeout="20s"/>
            <op name="start" interval="0" id="rsc_sgi2-2" timeout="40s"/>
          </operations>
          <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="ip" value="127.0.0.14"/></instance_attributes>
-       <meta_attributes id="primitive-rsc_sgi2.meta"><nvpair id="is_managed.meta.auto-148" name="is-managed" value="1"/></meta_attributes></primitive>
-       <primitive id="rsc_ibm1" class="ocf" type="IPaddr" provider="heartbeat">
+       </primitive>
+       <primitive id="rsc_ibm1" class="ocf" type="IPaddr" provider="heartbeat"><meta_attributes id="primitive-rsc_ibm1.meta"><nvpair id="is_managed.meta.auto-166" name="is-managed" value="1"/></meta_attributes>
          <operations>
            <op name="monitor" interval="5s" id="rsc_ibm1-1" timeout="20s"/>
            <op name="start" interval="0" id="rsc_ibm1-2" timeout="40s"/>
          </operations>
          <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="ip" value="127.0.0.15"/></instance_attributes>
-       <meta_attributes id="primitive-rsc_ibm1.meta"><nvpair id="is_managed.meta.auto-166" name="is-managed" value="1"/></meta_attributes></primitive>
-       <primitive id="rsc_va1" class="ocf" type="IPaddr" provider="heartbeat">
+       </primitive>
+       <primitive id="rsc_va1" class="ocf" type="IPaddr" provider="heartbeat"><meta_attributes id="primitive-rsc_va1.meta"><nvpair id="is_managed.meta.auto-184" name="is-managed" value="1"/></meta_attributes>
          <operations>
            <op name="monitor" interval="5s" id="rsc_va1-1" timeout="20s"/>
            <op name="start" interval="0" id="rsc_va1-2" timeout="40s"/>
          </operations>
          <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="ip" value="127.0.0.16"/></instance_attributes>
-       <meta_attributes id="primitive-rsc_va1.meta"><nvpair id="is_managed.meta.auto-184" name="is-managed" value="1"/></meta_attributes></primitive>
-       <primitive id="rsc_test02" class="ocf" type="IPaddr" provider="heartbeat">
+       </primitive>
+       <primitive id="rsc_test02" class="ocf" type="IPaddr" provider="heartbeat"><meta_attributes id="primitive-rsc_test02.meta"><nvpair id="is_managed.meta.auto-202" name="is-managed" value="1"/></meta_attributes>
          <operations>
            <op name="monitor" interval="5s" id="rsc_test02-1" timeout="20s"/>
            <op name="start" interval="0" id="rsc_test02-2" timeout="40s"/>
          </operations>
          <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="ip" value="127.0.0.17"/></instance_attributes>
-       <meta_attributes id="primitive-rsc_test02.meta"><nvpair id="is_managed.meta.auto-202" name="is-managed" value="1"/></meta_attributes></primitive>
-       <clone id="DoFencing">
+       </primitive>
+       <clone id="DoFencing"><meta_attributes id="clone-DoFencing.meta"><nvpair id="nvpair" name="resource-stickiness" value="1"/><nvpair id="nvpair" name="clone-max" value="4"/><nvpair id="nvpair" name="clone-node-max" value="1"/></meta_attributes>
          <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="clone_max" value="4"/><nvpair id="nvpair" name="clone_node_max" value="1"/><nvpair id="nvpair" name="resource_stickiness" value="1"/></instance_attributes>
-         <primitive id="child_DoFencing" class="stonith" type="ssh">
+         <primitive id="child_DoFencing" class="stonith" type="ssh"><meta_attributes id="primitive-child_DoFencing.meta"/>
            <operations>
              <op name="monitor" interval="20s" id="DoFencing-1" timeout="40s" requires="nothing"/>
              <op name="start" interval="0" id="DoFencing-2" timeout="20s" requires="nothing"/>
            </operations>
            <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="hostlist" value="sgi2 ibm1 va1 test02 "/></instance_attributes>
-         <meta_attributes id="primitive-child_DoFencing.meta"/></primitive>
-       <meta_attributes id="clone-DoFencing.meta"><nvpair id="nvpair" name="resource-stickiness" value="1"/><nvpair id="nvpair" name="clone-max" value="4"/><nvpair id="nvpair" name="clone-node-max" value="1"/></meta_attributes></clone>
-       <master id="master_rsc_1">
+         </primitive>
+       </clone>
+       <master id="master_rsc_1"><meta_attributes id="master_slave-master_rsc_1.meta"><nvpair id="nvpair" name="resource-stickiness" value="1"/><nvpair id="nvpair" name="clone-max" value="8"/><nvpair id="nvpair" name="clone-node-max" value="2"/><nvpair id="nvpair" name="master-max" value="4"/><nvpair id="nvpair" name="master-node-max" value="1"/></meta_attributes>
          <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="clone_max" value="8"/><nvpair id="nvpair" name="clone_node_max" value="2"/><nvpair id="nvpair" name="master_max" value="4"/><nvpair id="nvpair" name="master_node_max" value="1"/><nvpair id="nvpair" name="resource_stickiness" value="1"/></instance_attributes>
-         <primitive id="ocf_msdummy" class="ocf" type="/usr/lib64/heartbeat/cts/OCFMSDummy" provider="heartbeat">
+         <primitive id="ocf_msdummy" class="ocf" type="/usr/lib64/heartbeat/cts/OCFMSDummy" provider="heartbeat"><meta_attributes id="primitive-ocf_msdummy.meta"/>
            <operations>
              <op name="monitor" interval="5s" id="ocf_msdummy_monitor" timeout="10s"/>
              <op name="monitor" interval="6s" id="ocf_msdummy_monitor_master" timeout="10s" role="Master"/>
            </operations>
            <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="logfile" value="/var/log/cts_ocfdummy.log"/></instance_attributes>
-         <meta_attributes id="primitive-ocf_msdummy.meta"/></primitive>
-       <meta_attributes id="master_slave-master_rsc_1.meta"><nvpair id="nvpair" name="resource-stickiness" value="1"/><nvpair id="nvpair" name="clone-max" value="8"/><nvpair id="nvpair" name="clone-node-max" value="2"/><nvpair id="nvpair" name="master-max" value="4"/><nvpair id="nvpair" name="master-node-max" value="1"/></meta_attributes></master>
+         </primitive>
+       </master>
      </resources>
      <constraints>
        <rsc_location id="run_DcIPaddr" rsc="DcIPaddr">

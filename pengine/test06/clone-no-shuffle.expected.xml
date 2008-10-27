@@ -2,29 +2,29 @@
 <cib crm_feature_set="2.1" admin_epoch="0" epoch="5" num_updates="41" dc-uuid="6676c8d5-552e-4a86-a2ea-172e954f7342" have-quorum="1" remote-tls-port="0" validate-with="pacemaker-1.0">
    <configuration>
      <crm_config>
-       <cluster_property_set id="cib-bootstrap-options"><nvpair id="nvpair" name="dc-version" value="0.6.2-node: 7f22385d1b41c36c4cc54f292e55869caa94ab7e"/><nvpair name="no-quorum-policy" value="stop" id="nvpair"/><nvpair name="symmetric-cluster" value="true" id="nvpair"/><nvpair name="stonith-enabled" value="true" id="nvpair"/><nvpair name="stonith-action" value="reboot" id="nvpair"/><nvpair name="default-resource-stickiness" value="0" id="nvpair"/><nvpair name="default-migration-threshold" value="1" id="nvpair"/><nvpair name="is-managed-default" value="true" id="nvpair"/><nvpair name="default-action-timeout" value="20s" id="nvpair"/><nvpair name="stop-orphan-resources" value="true" id="nvpair"/><nvpair name="stop-orphan-actions" value="true" id="nvpair"/><nvpair name="remove-after-stop" value="false" id="nvpair"/><nvpair name="startup-fencing" value="true" id="nvpair"/><nvpair name="last-lrm-refresh" id="nvpair" value="1204805697"/></cluster_property_set>
+       <cluster_property_set id="cib-bootstrap-options"><nvpair id="nvpair" name="dc-version" value="0.6.2-node: 7f22385d1b41c36c4cc54f292e55869caa94ab7e"/><nvpair name="no-quorum-policy" value="stop" id="nvpair"/><nvpair name="symmetric-cluster" value="true" id="nvpair"/><nvpair name="stonith-enabled" value="true" id="nvpair"/><nvpair name="stonith-action" value="reboot" id="nvpair"/><nvpair name="default-resource-stickiness" value="0" id="nvpair"/><nvpair name="default-resource-failure-stickiness" value="-INFINITY" id="nvpair"/><nvpair name="is-managed-default" value="true" id="nvpair"/><nvpair name="default-action-timeout" value="20s" id="nvpair"/><nvpair name="stop-orphan-resources" value="true" id="nvpair"/><nvpair name="stop-orphan-actions" value="true" id="nvpair"/><nvpair name="remove-after-stop" value="false" id="nvpair"/><nvpair name="startup-fencing" value="true" id="nvpair"/><nvpair name="last-lrm-refresh" id="nvpair" value="1204805697"/></cluster_property_set>
      </crm_config>
      <nodes>
        <node id="6676c8d5-552e-4a86-a2ea-172e954f7342" uname="dktest2sles10" type="normal"/>
        <node id="c563f60c-45a8-439e-85dc-645f4ecc150d" uname="dktest1sles10" type="normal"/>
      </nodes>
      <resources>
-       <master id="ms-drbd1">
+       <master id="ms-drbd1"><meta_attributes id="master_slave-ms-drbd1.meta"/>
          <meta_attributes id="meta_attributes"><nvpair id="nvpair" name="clone-max" value="2"/><nvpair id="nvpair" name="clone-node-max" value="1"/><nvpair id="nvpair" name="master-max" value="1"/><nvpair id="nvpair" name="master-node-max" value="1"/><nvpair id="nvpair" name="notify" value="yes"/><nvpair id="nvpair" name="globally-unique" value="false"/><nvpair id="nvpair" name="target-role" value="started"/></meta_attributes>
-         <primitive id="drbd1" class="ocf" provider="heartbeat" type="drbd">
+         <primitive id="drbd1" class="ocf" provider="heartbeat" type="drbd"><meta_attributes id="primitive-drbd1.meta"/>
            <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="drbd_resource" value="drbd1"/></instance_attributes>
            <operations>
              <op name="monitor" interval="10s" id="op-ms-drbd1-1" timeout="15s" start-delay="30s" role="Master"/>
              <op name="monitor" interval="11s" id="op-ms-drbd1-2" timeout="15s" start-delay="30s" role="Slave"/>
            </operations>
-         <meta_attributes id="primitive-drbd1.meta"/></primitive>
-       <meta_attributes id="master_slave-ms-drbd1.meta"/></master>
-       <primitive id="testip" class="ocf" type="IPaddr2" provider="heartbeat">
+         </primitive>
+       </master>
+       <primitive id="testip" class="ocf" type="IPaddr2" provider="heartbeat"><meta_attributes id="primitive-testip.meta"/>
          <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="ip" value="10.200.200.222"/><nvpair id="nvpair" name="broadcast" value="10.200.200.255"/><nvpair id="nvpair" name="nic" value="eth1"/><nvpair id="nvpair" name="cidr_netmask" value="24"/></instance_attributes>
          <operations>
            <op name="monitor" interval="21s" id="op-proftpd-1" timeout="5s" start-delay="21s"/>
          </operations>
-       <meta_attributes id="primitive-testip.meta"/></primitive>
+       </primitive>
      </resources>
      <constraints>
        <rsc_order id="drbd1_before_testip" first="ms-drbd1" then="testip" then-action="start" first-action="promote"/>

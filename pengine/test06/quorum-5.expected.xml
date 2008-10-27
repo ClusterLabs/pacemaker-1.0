@@ -8,21 +8,21 @@
         <node id="879e65f8-4b38-4c56-9552-4752ad436669" uname="hadev3" type="member"/>
       </nodes>
       <resources>
-	<group id="group1">
-          <primitive id="child_DoFencing_1" class="stonith" type="ssh">
+	<group id="group1"><meta_attributes id="group-group1.meta"/>
+          <primitive id="child_DoFencing_1" class="stonith" type="ssh"><meta_attributes id="primitive-child_DoFencing_1.meta"/>
             <operations>
 	      <op name="start" interval="0" id="op.auto-1" requires="nothing"/>
               <op name="monitor" interval="5s" id="op.auto-2" timeout="20s"/>
             </operations>
             <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="hostlist" value="hadev1 hadev2 hadev3 "/></instance_attributes>
-          <meta_attributes id="primitive-child_DoFencing_1.meta"/></primitive>
-          <primitive id="child_DoFencing_2" class="stonith" type="ssh">
+          </primitive>
+          <primitive id="child_DoFencing_2" class="stonith" type="ssh"><meta_attributes id="primitive-child_DoFencing_2.meta"/>
             <operations>
               <op name="monitor" interval="5s" id="op.auto-3" timeout="20s"/>
             </operations>
             <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="hostlist" value="hadev1 hadev2 hadev3 "/></instance_attributes>
-          <meta_attributes id="primitive-child_DoFencing_2.meta"/></primitive>
-	<meta_attributes id="group-group1.meta"/></group>
+          </primitive>
+	</group>
       </resources>
       <constraints>
       </constraints>

@@ -14,14 +14,14 @@
        <node id="f83e8e33-3e0f-46d6-93d4-8dace5be52db" uname="router2" type="normal"/>
      </nodes>
      <resources>
-       <group id="test" description="test resource">
-         <primitive id="test_ip" class="heartbeat" type="IPaddr2_vlan">
+       <group id="test" description="test resource"><meta_attributes id="group-test.meta"/>
+         <primitive id="test_ip" class="heartbeat" type="IPaddr2_vlan"><meta_attributes id="primitive-test_ip.meta"/>
            <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="1" value="10.1.1.1/24/sit0"/></instance_attributes>
-         <meta_attributes id="primitive-test_ip.meta"/></primitive>
-         <primitive id="test_mailto" class="ocf" type="MailTo" provider="heartbeat">
+         </primitive>
+         <primitive id="test_mailto" class="ocf" type="MailTo" provider="heartbeat"><meta_attributes id="primitive-test_mailto.meta"/>
            <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="email" value="root"/><nvpair id="nvpair" name="subject" value="Test IP Failover"/></instance_attributes>
-         <meta_attributes id="primitive-test_mailto.meta"/></primitive>
-       <meta_attributes id="group-test.meta"/></group>
+         </primitive>
+       </group>
      </resources>
      <constraints>
        <rsc_location id="test_location" rsc="test">

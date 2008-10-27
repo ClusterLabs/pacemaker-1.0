@@ -7,16 +7,16 @@
       <node id="uuid2" uname="node2" type="member"/>
     </nodes>
     <resources>
-      <group id="rsc1">
+      <group id="rsc1"><meta_attributes id="group-rsc1.meta"/>
 	<primitive id="child_rsc1" class="heartbeat" type="apache"><meta_attributes id="primitive-child_rsc1.meta"/></primitive>
 	<primitive id="child_rsc2" class="heartbeat" type="apache"><meta_attributes id="primitive-child_rsc2.meta"/></primitive>
 	<primitive id="child_rsc3" class="heartbeat" type="apache"><meta_attributes id="primitive-child_rsc3.meta"/></primitive>
-      <meta_attributes id="group-rsc1.meta"/></group>
-      <group id="rsc2">
+      </group>
+      <group id="rsc2"><meta_attributes id="group-rsc2.meta"/>
 	<primitive id="child_rsc4" class="heartbeat" type="apache"><meta_attributes id="primitive-child_rsc4.meta"/></primitive>
 	<primitive id="child_rsc5" class="heartbeat" type="apache"><meta_attributes id="primitive-child_rsc5.meta"/></primitive>
 	<primitive id="child_rsc6" class="heartbeat" type="apache"><meta_attributes id="primitive-child_rsc6.meta"/></primitive>
-      <meta_attributes id="group-rsc2.meta"/></group>
+      </group>
     </resources>
     <constraints>
       <rsc_order id="order1" first="rsc1" then="rsc2" then-action="start" first-action="start" score="0"/>

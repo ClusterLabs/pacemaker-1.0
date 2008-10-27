@@ -15,81 +15,81 @@
        </node>
      </nodes>
      <resources>
-       <group id="group-1">
-         <primitive id="r192.168.100.181" class="ocf" type="IPaddr" provider="heartbeat">
+       <group id="group-1"><meta_attributes id="group-group-1.meta"/>
+         <primitive id="r192.168.100.181" class="ocf" type="IPaddr" provider="heartbeat"><meta_attributes id="primitive-r192.168.100.181.meta"/>
            <operations>
              <op name="monitor" interval="5s" id="r192.168.100.181-mon"/>
            </operations>
            <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="ip" value="192.168.100.181"/></instance_attributes>
-         <meta_attributes id="primitive-r192.168.100.181.meta"/></primitive>
-         <primitive id="r192.168.100.182" class="heartbeat" type="IPaddr">
+         </primitive>
+         <primitive id="r192.168.100.182" class="heartbeat" type="IPaddr"><meta_attributes id="primitive-r192.168.100.182.meta"/>
            <operations>
              <op name="monitor" interval="5s" id="r192.168.100.182-mon"/>
            </operations>
            <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="1" value="192.168.100.182"/></instance_attributes>
-         <meta_attributes id="primitive-r192.168.100.182.meta"/></primitive>
-         <primitive id="r192.168.100.183" class="ocf" type="IPaddr" provider="heartbeat">
+         </primitive>
+         <primitive id="r192.168.100.183" class="ocf" type="IPaddr" provider="heartbeat"><meta_attributes id="primitive-r192.168.100.183.meta"/>
            <operations>
              <op name="monitor" interval="5s" id="r192.168.100.183-mon"/>
            </operations>
            <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="ip" value="192.168.100.183"/></instance_attributes>
-         <meta_attributes id="primitive-r192.168.100.183.meta"/></primitive>
-       <meta_attributes id="group-group-1.meta"/></group>
-       <primitive id="lsb_dummy" class="lsb" type="/usr/lib64/heartbeat/cts/LSBDummy">
+         </primitive>
+       </group>
+       <primitive id="lsb_dummy" class="lsb" type="/usr/lib64/heartbeat/cts/LSBDummy"><meta_attributes id="primitive-lsb_dummy.meta"/>
          <operations>
            <op name="monitor" interval="5s" id="ocf_lsb_monitor"/>
          </operations>
-       <meta_attributes id="primitive-lsb_dummy.meta"/></primitive>
-       <primitive id="migrator" class="ocf" type="Dummy" provider="heartbeat">
+       </primitive>
+       <primitive id="migrator" class="ocf" type="Dummy" provider="heartbeat"><meta_attributes id="primitive-migrator.meta"><nvpair id="nvpair" name="allow-migrate" value="1"/></meta_attributes>
          <operations>
            <op name="monitor" interval="10s" id="migrator-mon"/>
          </operations>
          <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="allow_migrate" value="1"/></instance_attributes>
-       <meta_attributes id="primitive-migrator.meta"><nvpair id="nvpair" name="allow-migrate" value="1"/></meta_attributes></primitive>
-       <primitive id="rsc_sles-1" class="ocf" type="IPaddr" provider="heartbeat">
+       </primitive>
+       <primitive id="rsc_sles-1" class="ocf" type="IPaddr" provider="heartbeat"><meta_attributes id="primitive-rsc_sles-1.meta"/>
          <operations>
            <op name="monitor" interval="5s" id="rsc_sles-1-mon"/>
          </operations>
          <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="ip" value="192.168.100.184"/></instance_attributes>
-       <meta_attributes id="primitive-rsc_sles-1.meta"/></primitive>
-       <primitive id="rsc_sles-2" class="ocf" type="IPaddr" provider="heartbeat">
+       </primitive>
+       <primitive id="rsc_sles-2" class="ocf" type="IPaddr" provider="heartbeat"><meta_attributes id="primitive-rsc_sles-2.meta"/>
          <operations>
            <op name="monitor" interval="5s" id="rsc_sles-2-mon"/>
          </operations>
          <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="ip" value="192.168.100.185"/></instance_attributes>
-       <meta_attributes id="primitive-rsc_sles-2.meta"/></primitive>
-       <primitive id="rsc_sles-3" class="ocf" type="IPaddr" provider="heartbeat">
+       </primitive>
+       <primitive id="rsc_sles-3" class="ocf" type="IPaddr" provider="heartbeat"><meta_attributes id="primitive-rsc_sles-3.meta"/>
          <operations>
            <op name="monitor" interval="5s" id="rsc_sles-3-mon"/>
          </operations>
          <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="ip" value="192.168.100.186"/></instance_attributes>
-       <meta_attributes id="primitive-rsc_sles-3.meta"/></primitive>
-       <primitive id="rsc_sles-4" class="ocf" type="IPaddr" provider="heartbeat">
+       </primitive>
+       <primitive id="rsc_sles-4" class="ocf" type="IPaddr" provider="heartbeat"><meta_attributes id="primitive-rsc_sles-4.meta"/>
          <operations>
            <op name="monitor" interval="5s" id="rsc_sles-4-mon"/>
          </operations>
          <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="ip" value="192.168.100.187"/></instance_attributes>
-       <meta_attributes id="primitive-rsc_sles-4.meta"/></primitive>
-       <clone id="DoFencing">
+       </primitive>
+       <clone id="DoFencing"><meta_attributes id="clone-DoFencing.meta"><nvpair id="globally_unique.meta.auto-218" name="globally-unique" value="false"/><nvpair id="nvpair" name="clone-node-max" value="1"/></meta_attributes>
          <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="clone_node_max" value="1"/></instance_attributes>
-         <primitive id="child_DoFencing" class="stonith" type="external/vmware">
+         <primitive id="child_DoFencing" class="stonith" type="external/vmware"><meta_attributes id="primitive-child_DoFencing.meta"/>
            <operations>
              <op name="monitor" interval="60s" id="DoFencing-1" requires="nothing" timeout="300s"/>
              <op name="start" interval="0" id="DoFencing-2" requires="nothing" timeout="180s"/>
              <op name="stop" interval="0" id="DoFencing-3" timeout="180s"/>
            </operations>
            <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="device_host" value="vmhost"/></instance_attributes>
-         <meta_attributes id="primitive-child_DoFencing.meta"/></primitive>
-       <meta_attributes id="clone-DoFencing.meta"><nvpair id="globally_unique.meta.auto-218" name="globally-unique" value="false"/><nvpair id="nvpair" name="clone-node-max" value="1"/></meta_attributes></clone>
-       <master id="master_rsc_1">
+         </primitive>
+       </clone>
+       <master id="master_rsc_1"><meta_attributes id="master_slave-master_rsc_1.meta"><nvpair id="nvpair" name="clone-max" value="8"/><nvpair id="nvpair" name="clone-node-max" value="2"/><nvpair id="nvpair" name="master-max" value="4"/><nvpair id="nvpair" name="master-node-max" value="1"/></meta_attributes>
          <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="clone_max" value="8"/><nvpair id="nvpair" name="clone_node_max" value="2"/><nvpair id="nvpair" name="master_max" value="4"/><nvpair id="nvpair" name="master_node_max" value="1"/></instance_attributes>
-         <primitive id="ocf_msdummy" class="ocf" type="Stateful" provider="heartbeat">
+         <primitive id="ocf_msdummy" class="ocf" type="Stateful" provider="heartbeat"><meta_attributes id="primitive-ocf_msdummy.meta"/>
            <operations>
              <op name="monitor" interval="5s" id="ocf_msdummy_monitor"/>
              <op name="monitor" interval="6s" id="ocf_msdummy_monitor_master" role="Master"/>
            </operations>
-         <meta_attributes id="primitive-ocf_msdummy.meta"/></primitive>
-       <meta_attributes id="master_slave-master_rsc_1.meta"><nvpair id="nvpair" name="clone-max" value="8"/><nvpair id="nvpair" name="clone-node-max" value="2"/><nvpair id="nvpair" name="master-max" value="4"/><nvpair id="nvpair" name="master-node-max" value="1"/></meta_attributes></master>
+         </primitive>
+       </master>
      </resources>
      <constraints>
        <rsc_location id="run_rsc_sles-1" rsc="rsc_sles-1">

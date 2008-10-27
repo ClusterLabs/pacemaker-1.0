@@ -2,35 +2,35 @@
 <cib admin_epoch="0" epoch="80" num_updates="23" dc-uuid="782b1222-d1b9-4993-8f0d-b8b67801a2c8" have-quorum="true" remote-tls-port="0" validate-with="pacemaker-1.0">
    <configuration>
      <crm_config>
-       <cluster_property_set id="cib-bootstrap-options"><nvpair id="nvpair" name="symmetric-cluster" value="true"/><nvpair id="nvpair" name="no-quorum-policy" value="ignore"/><nvpair id="nvpair" name="stonith-enabled" value="false"/><nvpair id="nvpair" name="short-resource-names" value="true"/><nvpair id="nvpair" name="is-managed-default" value="true"/><nvpair id="nvpair" name="default-resource-stickiness" value="INFINITY"/><nvpair id="nvpair" name="stop-orphan-resources" value="true"/><nvpair id="nvpair" name="stop-orphan-actions" value="true"/><nvpair id="nvpair" name="remove-after-stop" value="false"/><nvpair id="nvpair" name="default-migration-threshold" value="1"/><nvpair id="nvpair" name="stonith-action" value="reboot"/><nvpair id="nvpair" name="default-action-timeout" value="120s"/><nvpair id="nvpair" name="dc-deadtime" value="10s"/><nvpair id="nvpair" name="cluster-recheck-interval" value="0"/><nvpair id="nvpair" name="election-timeout" value="2min"/><nvpair id="nvpair" name="shutdown-escalation" value="20min"/><nvpair id="nvpair" name="crmd-integration-timeout" value="3min"/><nvpair id="nvpair" name="crmd-finalization-timeout" value="10min"/><nvpair id="nvpair" name="cluster-delay" value="180s"/><nvpair id="nvpair" name="pe-error-series-max" value="-1"/><nvpair id="nvpair" name="pe-warn-series-max" value="-1"/><nvpair id="nvpair" name="pe-input-series-max" value="-1"/><nvpair id="nvpair" name="startup-fencing" value="true"/><nvpair id="nvpair" name="dc-version" value="2.1.3-node: 176f519910028b93e655fe4d2d376037bf8dd0d4"/></cluster_property_set>
+       <cluster_property_set id="cib-bootstrap-options"><nvpair id="nvpair" name="symmetric-cluster" value="true"/><nvpair id="nvpair" name="no-quorum-policy" value="ignore"/><nvpair id="nvpair" name="stonith-enabled" value="false"/><nvpair id="nvpair" name="short-resource-names" value="true"/><nvpair id="nvpair" name="is-managed-default" value="true"/><nvpair id="nvpair" name="default-resource-stickiness" value="INFINITY"/><nvpair id="nvpair" name="stop-orphan-resources" value="true"/><nvpair id="nvpair" name="stop-orphan-actions" value="true"/><nvpair id="nvpair" name="remove-after-stop" value="false"/><nvpair id="nvpair" name="default-resource-failure-stickiness" value="-INFINITY"/><nvpair id="nvpair" name="stonith-action" value="reboot"/><nvpair id="nvpair" name="default-action-timeout" value="120s"/><nvpair id="nvpair" name="dc-deadtime" value="10s"/><nvpair id="nvpair" name="cluster-recheck-interval" value="0"/><nvpair id="nvpair" name="election-timeout" value="2min"/><nvpair id="nvpair" name="shutdown-escalation" value="20min"/><nvpair id="nvpair" name="crmd-integration-timeout" value="3min"/><nvpair id="nvpair" name="crmd-finalization-timeout" value="10min"/><nvpair id="nvpair" name="cluster-delay" value="180s"/><nvpair id="nvpair" name="pe-error-series-max" value="-1"/><nvpair id="nvpair" name="pe-warn-series-max" value="-1"/><nvpair id="nvpair" name="pe-input-series-max" value="-1"/><nvpair id="nvpair" name="startup-fencing" value="true"/><nvpair id="nvpair" name="dc-version" value="2.1.3-node: 176f519910028b93e655fe4d2d376037bf8dd0d4"/></cluster_property_set>
      </crm_config>
      <nodes>
        <node id="782b1222-d1b9-4993-8f0d-b8b67801a2c8" uname="rh44-1" type="normal"/>
        <node id="86600d98-4564-433a-8ad7-aca0ca59382a" uname="rh44-2" type="normal"/>
      </nodes>
      <resources>
-       <group id="test">
-         <primitive id="resource_1" class="ocf" type="IPaddr" provider="heartbeat">
+       <group id="test"><meta_attributes id="group-test.meta"/>
+         <primitive id="resource_1" class="ocf" type="IPaddr" provider="heartbeat"><meta_attributes id="primitive-resource_1.meta"/>
            <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="ip" value="192.168.40.92"/><nvpair id="nvpair" name="nic" value="eth0"/><nvpair id="nvpair" name="cidr_netmask" value="24"/></instance_attributes>
            <operations>
              <op name="start" interval="0" id="ipPostgreSQLDB_start" timeout="60s" on-fail="fence" start-delay="0" enabled="true" role="Started"/>
              <op name="monitor" interval="10s" id="ipPostgreSQLDB_monitor" timeout="60s" on-fail="fence" start-delay="0" enabled="true" role="Started"/>
              <op name="stop" interval="0" id="ipPostgreSQLDB_stop" timeout="60s" on-fail="fence" start-delay="0" enabled="true" role="Started"/>
            </operations>
-         <meta_attributes id="primitive-resource_1.meta"/></primitive>
-       <meta_attributes id="group-test.meta"/></group>
-       <master id="ms-sf">
+         </primitive>
+       </group>
+       <master id="ms-sf"><meta_attributes id="master_slave-ms-sf.meta"><nvpair id="ordered.meta.auto-98" name="ordered" value="false"/><nvpair id="interleave.meta.auto-98" name="interleave" value="false"/><nvpair id="notify.meta.auto-98" name="notify" value="false"/></meta_attributes>
          <meta_attributes id="meta_attributes"><nvpair id="nvpair" name="clone-max" value="2"/><nvpair id="nvpair" name="clone-node-max" value="1"/><nvpair id="nvpair" name="master-max" value="1"/><nvpair id="nvpair" name="master-node-max" value="1"/></meta_attributes>
-         <group id="grp_ms_sf">
-           <primitive id="master_slave_Stateful" class="ocf" type="Stateful" provider="heartbeat">
+         <group id="grp_ms_sf"><meta_attributes id="group-grp_ms_sf.meta"/>
+           <primitive id="master_slave_Stateful" class="ocf" type="Stateful" provider="heartbeat"><meta_attributes id="primitive-master_slave_Stateful.meta"/>
              <operations>
                <op name="monitor" interval="5s" id="ms-sf_monitor" timeout="30s"/>
                <op name="monitor" interval="6s" id="ms-sf_monitor_master" timeout="30s" role="Master"/>
              </operations>
              <instance_attributes id="instance_attributes"/>
-           <meta_attributes id="primitive-master_slave_Stateful.meta"/></primitive>
-         <meta_attributes id="group-grp_ms_sf.meta"/></group>
-       <meta_attributes id="master_slave-ms-sf.meta"><nvpair id="ordered.meta.auto-98" name="ordered" value="false"/><nvpair id="interleave.meta.auto-98" name="interleave" value="false"/><nvpair id="notify.meta.auto-98" name="notify" value="false"/></meta_attributes></master>
+           </primitive>
+         </group>
+       </master>
      </resources>
      <constraints>
        <rsc_location id="rlcPostgreSQLDB" rsc="test">
