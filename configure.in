@@ -1003,21 +1003,20 @@ AISLIB=""
 
 dnl Normalize the values
 case $SUPPORT_AIS in
-     1|yes|true) missingisfatal=1; SUPPORT_AIS=yes;;
-     try)        missingisfatal=0; SUPPORT_AIS=try;;
+     1|yes|true) missingisfatal=1;;
+     try)        missingisfatal=0;;
      *) SUPPORT_AIS=no;;
 esac
 
 AC_MSG_CHECKING(for native AIS)
 AISMSGLIB=""
-SUPPORT_AIS=1
 AIS_VERSION="none"
 
 if test $SUPPORT_AIS = no; then
    AC_MSG_RESULT(no... not requested.)
 
 else
-   AC_MSG_RESULT($SUPPORT_AIS '$AISPREFIX')
+   AC_MSG_RESULT($SUPPORT_AIS, with '$AISPREFIX')
 
    dnl headers...
    AC_CHECK_HEADERS(corosync/saAis.h)
@@ -1096,6 +1095,7 @@ if test $AIS_VERSION != "none"; then
      LIBS="$saveLIBS"
 fi
 
+SUPPORT_AIS=1
 case $AIS_VERSION in
     trunk)
 	AC_DEFINE_UNQUOTED(AIS_TRUNK, 1, "AIS target is the latest development series")
@@ -1129,25 +1129,27 @@ dnl
 dnl    Cluster stack - Sanity
 dnl
 
-AC_MSG_CHECKING(for supported stacks)
-if test $SUPPORT_AIS = 0 -a $SUPPORT_HEARTBEAT = 0; then
-   AC_MSG_FAILURE(You must choose at least one cluster stack to support)
-fi
-
+STACKS=""
 CLUSTERLIBS=""
 if test $SUPPORT_HEARTBEAT = 1; then
-   AC_MSG_RESULT(heartbeat)
+   STACKS="$STACKS heartbeat"
    CLUSTERLIBS="$CLUSTERLIBS -lhbclient -lccmclient"
 fi
 
 if test $SUPPORT_AIS = 1; then
-   AC_MSG_RESULT(openais)
+   STACKS="$STACKS openais"
    CLUSTERLIBS="$CLUSTERLIBS ${AISMSGLIB}"
    LIBS="$LIBS -L${AISLIB} -R${AISLIB}"
 else
    AISPREFIX=""
    LCRSODIR=""
 fi
+
+AC_MSG_CHECKING(for supported stacks)
+if test x"$STACKS" = x; then
+   AC_MSG_FAILURE(You must choose at least one cluster stack to support)
+fi
+AC_MSG_RESULT($STACKS)
 
 AC_SUBST(CLUSTERLIBS)
 AC_SUBST(AISPREFIX)
