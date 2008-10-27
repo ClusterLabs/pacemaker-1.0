@@ -9,22 +9,14 @@
        <node id="2529f279-adaf-4ff5-9198-4646e845c5a5" uname="node2" type="normal"/>
      </nodes>
      <resources>
-       <clone id="stonithcloneset"><meta_attributes id="clone-stonithcloneset.meta"/>
-         <meta_attributes id="meta_attributes"><nvpair id="nvpair" name="target-role" value="started"/><nvpair id="nvpair" name="clone-max" value="2"/><nvpair id="nvpair" name="clone-node-max" value="1"/><nvpair id="nvpair" name="globally-unique" value="false"/></meta_attributes>
-         <primitive id="stonithclone" class="stonith" type="external/ssh"><meta_attributes id="primitive-stonithclone.meta"/>
+       <clone id="stonithcloneset"><meta_attributes id="clone-stonithcloneset.meta"/><meta_attributes id="meta_attributes"><nvpair id="nvpair" name="target-role" value="started"/><nvpair id="nvpair" name="clone-max" value="2"/><nvpair id="nvpair" name="clone-node-max" value="1"/><nvpair id="nvpair" name="globally-unique" value="false"/></meta_attributes><primitive id="stonithclone" class="stonith" type="external/ssh"><meta_attributes id="primitive-stonithclone.meta"/>
            <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="hostlist" value="node1,node2"/></instance_attributes>
            <operations>
              <op name="monitor" interval="5" id="op.auto-1"/>
            </operations>
-         </primitive>
-       </clone>
-       <clone id="evmscloneset"><meta_attributes id="clone-evmscloneset.meta"/>
-         <meta_attributes id="meta_attributes"><nvpair id="nvpair" name="target-role" value="started"/><nvpair id="nvpair" name="clone-max" value="2"/><nvpair id="nvpair" name="clone-node-max" value="1"/><nvpair id="nvpair" name="globally-unique" value="false"/><nvpair id="nvpair" name="notify" value="true"/></meta_attributes>
-         <primitive id="evmsclone" class="ocf" type="EvmsSCC" provider="heartbeat"><meta_attributes id="primitive-evmsclone.meta"/></primitive>
-       </clone>
-       <clone id="imagestorecloneset"><meta_attributes id="clone-imagestorecloneset.meta"/>
-         <meta_attributes id="meta_attributes"><nvpair id="nvpair" name="target-role" value="stopped"/><nvpair id="nvpair" name="clone-max" value="2"/><nvpair id="nvpair" name="clone-node-max" value="1"/><nvpair id="nvpair" name="globally-unique" value="false"/><nvpair id="nvpair" name="notify" value="true"/><nvpair id="nvpair" name="interleave" value="true"/></meta_attributes>
-         <primitive id="imagestoreclone" class="ocf" type="Filesystem" provider="heartbeat"><meta_attributes id="primitive-imagestoreclone.meta"/>
+         </primitive></clone>
+       <clone id="evmscloneset"><meta_attributes id="clone-evmscloneset.meta"/><meta_attributes id="meta_attributes"><nvpair id="nvpair" name="target-role" value="started"/><nvpair id="nvpair" name="clone-max" value="2"/><nvpair id="nvpair" name="clone-node-max" value="1"/><nvpair id="nvpair" name="globally-unique" value="false"/><nvpair id="nvpair" name="notify" value="true"/></meta_attributes><primitive id="evmsclone" class="ocf" type="EvmsSCC" provider="heartbeat"><meta_attributes id="primitive-evmsclone.meta"/></primitive></clone>
+       <clone id="imagestorecloneset"><meta_attributes id="clone-imagestorecloneset.meta"/><meta_attributes id="meta_attributes"><nvpair id="nvpair" name="target-role" value="stopped"/><nvpair id="nvpair" name="clone-max" value="2"/><nvpair id="nvpair" name="clone-node-max" value="1"/><nvpair id="nvpair" name="globally-unique" value="false"/><nvpair id="nvpair" name="notify" value="true"/><nvpair id="nvpair" name="interleave" value="true"/></meta_attributes><primitive id="imagestoreclone" class="ocf" type="Filesystem" provider="heartbeat"><meta_attributes id="primitive-imagestoreclone.meta"/>
            <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="device" value="/dev/evms/vmsharedclustercontainer/imagestore"/><nvpair id="nvpair" name="directory" value="/var/lib/xen/images"/><nvpair id="nvpair" name="fstype" value="ocfs2"/></instance_attributes>
            <operations>
              <op name="monitor" interval="20" id="op.auto-2" timeout="60"/>
@@ -32,19 +24,15 @@
              <op name="start" interval="0" id="op.auto-4" timeout="60"/>
            </operations>
            <meta_attributes id="meta_attributes"><nvpair id="nvpair" name="target-role" value="started"/></meta_attributes>
-         </primitive>
-       </clone>
-       <clone id="configstorecloneset"><meta_attributes id="clone-configstorecloneset.meta"/>
-         <meta_attributes id="meta_attributes"><nvpair id="nvpair" name="target-role" value="started"/><nvpair id="nvpair" name="clone-max" value="2"/><nvpair id="nvpair" name="clone-node-max" value="1"/><nvpair id="nvpair" name="globally-unique" value="false"/><nvpair id="nvpair" name="notify" value="true"/><nvpair id="nvpair" name="interleave" value="true"/></meta_attributes>
-         <primitive id="configstoreclone" class="ocf" type="Filesystem" provider="heartbeat"><meta_attributes id="primitive-configstoreclone.meta"/>
+         </primitive></clone>
+       <clone id="configstorecloneset"><meta_attributes id="clone-configstorecloneset.meta"/><meta_attributes id="meta_attributes"><nvpair id="nvpair" name="target-role" value="started"/><nvpair id="nvpair" name="clone-max" value="2"/><nvpair id="nvpair" name="clone-node-max" value="1"/><nvpair id="nvpair" name="globally-unique" value="false"/><nvpair id="nvpair" name="notify" value="true"/><nvpair id="nvpair" name="interleave" value="true"/></meta_attributes><primitive id="configstoreclone" class="ocf" type="Filesystem" provider="heartbeat"><meta_attributes id="primitive-configstoreclone.meta"/>
            <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="device" value="/dev/evms/vmsharedclustercontainer/configstore"/><nvpair id="nvpair" name="directory" value="/etc/xen/vm"/><nvpair id="nvpair" name="fstype" value="ocfs2"/></instance_attributes>
            <operations>
              <op name="monitor" interval="20" id="op.auto-5" timeout="60"/>
              <op name="stop" interval="0" id="c32d29d2-25a9-4c42-ba55-1d5e087162b1" timeout="60"/>
              <op name="start" interval="0" id="a2147200-7172-4d96-85ea-0ebec68f5fb7" timeout="60"/>
            </operations>
-         </primitive>
-       </clone>
+         </primitive></clone>
      </resources>
      <constraints>
        <rsc_order id="evmsorderconstraints-01" first="evmscloneset" then="imagestorecloneset" then-action="start" first-action="start"/>

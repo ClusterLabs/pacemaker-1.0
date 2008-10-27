@@ -7,10 +7,7 @@
       <node id="uuid2" uname="node2" type="member"/>
     </nodes>
     <resources>
-      <clone id="rsc1"><meta_attributes id="clone-rsc1.meta"><nvpair id="nvpair" name="resource-stickiness" value="1"/><nvpair id="nvpair" name="clone-max" value="5"/><nvpair id="nvpair" name="clone-node-max" value="2"/></meta_attributes>
-        <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="clone_max" value="5"/><nvpair id="nvpair" name="clone_node_max" value="2"/><nvpair id="nvpair" name="resource_stickiness" value="1"/></instance_attributes>
-	<primitive id="child_rsc1" class="heartbeat" type="apache"><meta_attributes id="primitive-child_rsc1.meta"/></primitive>
-      </clone>
+      <clone id="rsc1"><meta_attributes id="clone-rsc1.meta"><nvpair id="nvpair" name="resource-stickiness" value="1"/><nvpair id="nvpair" name="clone-max" value="5"/><nvpair id="nvpair" name="clone-node-max" value="2"/></meta_attributes><primitive id="child_rsc1" class="heartbeat" type="apache"><meta_attributes id="primitive-child_rsc1.meta"/></primitive></clone>
     </resources>
     <constraints/>
   </configuration>

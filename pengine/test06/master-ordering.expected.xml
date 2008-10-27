@@ -41,27 +41,19 @@
          </operations>
          <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="ip" value="192.168.100.202"/><nvpair id="nvpair" name="netmask" value="24"/><nvpair id="nvpair" name="nic" value="eth1"/><nvpair id="nvpair" name="target_role" value="started"/></instance_attributes>
        </primitive>
-       <master id="ms_drbd_www"><meta_attributes id="master_slave-ms_drbd_www.meta"/>
-         <meta_attributes id="meta_attributes"><nvpair id="nvpair" name="master-max" value="2"/><nvpair id="nvpair" name="master-node-max" value="1"/><nvpair id="nvpair" name="clone-max" value="2"/><nvpair id="nvpair" name="clone-node-max" value="1"/><nvpair id="nvpair" name="target-role" value="started"/><nvpair id="nvpair" name="globally-unique" value="false"/><nvpair id="nvpair" name="notify" value="yes"/></meta_attributes>
-         <primitive id="drbd_www" class="ocf" provider="heartbeat" type="drbd"><meta_attributes id="primitive-drbd_www.meta"><nvpair id="nvpair" name="target-role" value="started"/></meta_attributes>
+       <master id="ms_drbd_www"><meta_attributes id="master_slave-ms_drbd_www.meta"/><meta_attributes id="meta_attributes"><nvpair id="nvpair" name="master-max" value="2"/><nvpair id="nvpair" name="master-node-max" value="1"/><nvpair id="nvpair" name="clone-max" value="2"/><nvpair id="nvpair" name="clone-node-max" value="1"/><nvpair id="nvpair" name="target-role" value="started"/><nvpair id="nvpair" name="globally-unique" value="false"/><nvpair id="nvpair" name="notify" value="yes"/></meta_attributes><primitive id="drbd_www" class="ocf" provider="heartbeat" type="drbd"><meta_attributes id="primitive-drbd_www.meta"><nvpair id="nvpair" name="target-role" value="started"/></meta_attributes>
            <operations>
              <op name="monitor" interval="5s" id="drbd_www_mon_normal" timeout="10s" role="Started"/>
            </operations>
            <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="drbd_resource" value="www"/><nvpair id="nvpair" name="clone_overrides_hostname" value="yes"/><nvpair id="nvpair" name="target_role" value="started"/></instance_attributes>
-         </primitive>
-       </master>
-       <clone id="clone_ocfs2_www"><meta_attributes id="clone-clone_ocfs2_www.meta"><nvpair id="nvpair" name="target-role" value="started"/><nvpair id="nvpair" name="clone-max" value="2"/><nvpair id="nvpair" name="clone-node-max" value="1"/></meta_attributes>
-         <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="clone_max" value="2"/><nvpair id="nvpair" name="clone_node_max" value="1"/><nvpair id="nvpair" name="target_role" value="started"/></instance_attributes>
-         <primitive id="ocfs2_www" class="ocf" provider="heartbeat" type="Filesystem"><meta_attributes id="primitive-ocfs2_www.meta"/>
+         </primitive></master>
+       <clone id="clone_ocfs2_www"><meta_attributes id="clone-clone_ocfs2_www.meta"><nvpair id="nvpair" name="target-role" value="started"/><nvpair id="nvpair" name="clone-max" value="2"/><nvpair id="nvpair" name="clone-node-max" value="1"/></meta_attributes><primitive id="ocfs2_www" class="ocf" provider="heartbeat" type="Filesystem"><meta_attributes id="primitive-ocfs2_www.meta"/>
            <operations>
              <op name="monitor" interval="120s" id="ocfs2_www_mon" timeout="60s"/>
            </operations>
            <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="device" value="/dev/drbd0"/><nvpair id="nvpair" name="directory" value="/data/www"/><nvpair id="nvpair" name="fstype" value="ocfs2"/></instance_attributes>
-         </primitive>
-       </clone>
-       <clone id="clone_webservice"><meta_attributes id="clone-clone_webservice.meta"><nvpair id="nvpair" name="target-role" value="started"/><nvpair id="nvpair" name="clone-max" value="2"/><nvpair id="nvpair" name="clone-node-max" value="1"/></meta_attributes>
-         <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="clone_max" value="2"/><nvpair id="nvpair" name="clone_node_max" value="1"/><nvpair id="nvpair" name="target_role" value="started"/></instance_attributes>
-         <group id="group_webservice"><meta_attributes id="group-group_webservice.meta"/>
+         </primitive></clone>
+       <clone id="clone_webservice"><meta_attributes id="clone-clone_webservice.meta"><nvpair id="nvpair" name="target-role" value="started"/><nvpair id="nvpair" name="clone-max" value="2"/><nvpair id="nvpair" name="clone-node-max" value="1"/></meta_attributes><group id="group_webservice"><meta_attributes id="group-group_webservice.meta"/>
            <primitive id="apache2" class="ocf" type="apache" provider="heartbeat"><meta_attributes id="primitive-apache2.meta"><nvpair id="nvpair" name="target-role" value="started"/></meta_attributes>
              <operations>
                <op name="monitor" interval="60s" id="apache2_mon" timeout="300s"/>
@@ -74,17 +66,13 @@
              </operations>
              <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="target_role" value="started"/></instance_attributes>
            </primitive>
-         </group>
-       </clone>
-       <master id="ms_drbd_mysql"><meta_attributes id="master_slave-ms_drbd_mysql.meta"/>
-         <meta_attributes id="meta_attributes"><nvpair id="nvpair" name="master-max" value="1"/><nvpair id="nvpair" name="master-node-max" value="1"/><nvpair id="nvpair" name="clone-max" value="2"/><nvpair id="nvpair" name="clone-node-max" value="1"/><nvpair id="nvpair" name="target-role" value="started"/><nvpair id="nvpair" name="globally-unique" value="false"/><nvpair id="nvpair" name="notify" value="yes"/></meta_attributes>
-         <primitive id="drbd_mysql" class="ocf" provider="heartbeat" type="drbd"><meta_attributes id="primitive-drbd_mysql.meta"><nvpair id="nvpair" name="target-role" value="started"/></meta_attributes>
+         </group></clone>
+       <master id="ms_drbd_mysql"><meta_attributes id="master_slave-ms_drbd_mysql.meta"/><meta_attributes id="meta_attributes"><nvpair id="nvpair" name="master-max" value="1"/><nvpair id="nvpair" name="master-node-max" value="1"/><nvpair id="nvpair" name="clone-max" value="2"/><nvpair id="nvpair" name="clone-node-max" value="1"/><nvpair id="nvpair" name="target-role" value="started"/><nvpair id="nvpair" name="globally-unique" value="false"/><nvpair id="nvpair" name="notify" value="yes"/></meta_attributes><primitive id="drbd_mysql" class="ocf" provider="heartbeat" type="drbd"><meta_attributes id="primitive-drbd_mysql.meta"><nvpair id="nvpair" name="target-role" value="started"/></meta_attributes>
            <operations>
              <op name="monitor" interval="5s" id="drbd_mysql_mon_normal" timeout="10s" role="Started"/>
            </operations>
            <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="drbd_resource" value="mysql1"/><nvpair id="nvpair" name="clone_overrides_hostname" value="yes"/><nvpair id="nvpair" name="target_role" value="started"/></instance_attributes>
-         </primitive>
-       </master>
+         </primitive></master>
        <primitive id="fs_mysql" class="ocf" provider="heartbeat" type="Filesystem"><meta_attributes id="primitive-fs_mysql.meta"/>
          <operations>
            <op name="monitor" interval="30s" id="fs_mysql_mon" timeout="30s"/>
@@ -96,7 +84,7 @@
            <op name="monitor" interval="30s" id="mysql-server_mon" timeout="30s"/>
          </operations>
          <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="target_role" value="started"/><nvpair id="nvpair" name="priority" value="1000"/><nvpair id="nvpair" name="config" value="/etc/mysql/my.cnf"/><nvpair id="nvpair" name="socket" value="/var/run/mysqld/mysqld.sock"/><nvpair id="nvpair" name="pid" value="/var/run/mysqld/mysqld.pid"/><nvpair id="nvpair" name="datadir" value="/data/mysql/"/><nvpair id="nvpair" name="binary" value="/usr/sbin/mysqld"/><nvpair id="nvpair" name="additional_parameters" value="--basedir=/usr --skip-external-locking --port=42006"/></instance_attributes>
-       <meta_attributes id="primitive-mysql-server.meta"><nvpair id="nvpair" name="target-role" value="started"/><nvpair id="nvpair" name="priority" value="1000"/></meta_attributes></primitive>
+       </primitive>
      </resources>
      <constraints>
        <rsc_location id="run_extip_1" rsc="extip_1">

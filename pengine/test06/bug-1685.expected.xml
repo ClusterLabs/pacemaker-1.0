@@ -9,15 +9,12 @@
        <node id="cd34ed93-fa5d-4092-a618-ac6349351d13" uname="redun1" type="normal"/>
      </nodes>
      <resources>
-       <master id="shared_storage"><meta_attributes id="master_slave-shared_storage.meta"/>
-         <meta_attributes id="meta_attributes"><nvpair id="nvpair" name="master-node-max" value="1"/><nvpair id="nvpair" name="master-max" value="1"/><nvpair id="nvpair" name="notify" value="yes"/><nvpair id="nvpair" name="clone-max" value="2"/><nvpair id="nvpair" name="clone-node-max" value="1"/><nvpair id="nvpair" name="globally-unique" value="false"/></meta_attributes>
-         <primitive id="prim_shared_storage" class="ocf" provider="heartbeat" type="drbd"><meta_attributes id="primitive-prim_shared_storage.meta"/>
+       <master id="shared_storage"><meta_attributes id="master_slave-shared_storage.meta"/><meta_attributes id="meta_attributes"><nvpair id="nvpair" name="master-node-max" value="1"/><nvpair id="nvpair" name="master-max" value="1"/><nvpair id="nvpair" name="notify" value="yes"/><nvpair id="nvpair" name="clone-max" value="2"/><nvpair id="nvpair" name="clone-node-max" value="1"/><nvpair id="nvpair" name="globally-unique" value="false"/></meta_attributes><primitive id="prim_shared_storage" class="ocf" provider="heartbeat" type="drbd"><meta_attributes id="primitive-prim_shared_storage.meta"/>
            <operations>
              <op name="monitor" interval="120s" id="shared_storage_op_monitor" timeout="60s"/>
            </operations>
            <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="drbd_resource" value="sip-shared"/></instance_attributes>
-         </primitive>
-       </master>
+         </primitive></master>
        <primitive id="shared_filesystem" class="ocf" provider="heartbeat" type="Filesystem"><meta_attributes id="primitive-shared_filesystem.meta"/>
          <operations>
            <op name="monitor" interval="120s" id="shared_filesystem_op_monitor" timeout="60s"/>

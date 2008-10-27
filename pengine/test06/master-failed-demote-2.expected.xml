@@ -10,9 +10,7 @@
        <node id="3831f23f-da0a-470e-b8e7-16e61a18c3c3" uname="dl380g5a" type="normal"/>
      </nodes>
      <resources>
-       <master id="ms-sf"><meta_attributes id="master_slave-ms-sf.meta"><nvpair id="notify.meta.auto-77" name="notify" value="false"/><nvpair id="nvpair" name="clone-max" value="2"/><nvpair id="nvpair" name="clone-node-max" value="1"/><nvpair id="nvpair" name="master-max" value="1"/><nvpair id="nvpair" name="master-node-max" value="1"/></meta_attributes>
-         <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="clone_max" value="2"/><nvpair id="nvpair" name="clone_node_max" value="1"/><nvpair id="nvpair" name="master_max" value="1"/><nvpair id="nvpair" name="master_node_max" value="1"/></instance_attributes>
-         <group id="group"><meta_attributes id="group-group.meta"/>
+       <master id="ms-sf"><meta_attributes id="master_slave-ms-sf.meta"><nvpair id="notify.meta.auto-77" name="notify" value="false"/><nvpair id="nvpair" name="clone-max" value="2"/><nvpair id="nvpair" name="clone-node-max" value="1"/><nvpair id="nvpair" name="master-max" value="1"/><nvpair id="nvpair" name="master-node-max" value="1"/></meta_attributes><group id="group"><meta_attributes id="group-group.meta"/>
            <primitive id="stateful-1" class="ocf" type="Stateful" provider="heartbeat"><meta_attributes id="primitive-stateful-1.meta"/>
              <operations>
                <op name="start" interval="0" id="start-1" timeout="60s" on-fail="stop"/>
@@ -29,8 +27,7 @@
                <op name="stop" interval="0" id="stop-2" timeout="60s" on-fail="stop"/>
              </operations>
            </primitive>
-         </group>
-       </master>
+         </group></master>
      </resources>
      <constraints>
        <rsc_location id="rsc_location" rsc="ms-sf">

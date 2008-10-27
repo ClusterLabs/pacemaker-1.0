@@ -32,15 +32,12 @@
           </operations>
           <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="ip" value="127.0.0.23"/></instance_attributes>
         </primitive>
-        <clone id="DoFencing"><meta_attributes id="clone-DoFencing.meta"><nvpair id="nvpair" name="resource-stickiness" value="1"/><nvpair id="nvpair" name="clone-max" value="3"/><nvpair id="nvpair" name="clone-node-max" value="1"/></meta_attributes>
-          <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="clone_max" value="3"/><nvpair id="nvpair" name="clone_node_max" value="1"/><nvpair id="nvpair" name="resource_stickiness" value="1"/></instance_attributes>
-          <primitive id="child_DoFencing" class="stonith" type="ssh"><meta_attributes id="primitive-child_DoFencing.meta"/>
+        <clone id="DoFencing"><meta_attributes id="clone-DoFencing.meta"><nvpair id="nvpair" name="resource-stickiness" value="1"/><nvpair id="nvpair" name="clone-max" value="3"/><nvpair id="nvpair" name="clone-node-max" value="1"/></meta_attributes><primitive id="child_DoFencing" class="stonith" type="ssh"><meta_attributes id="primitive-child_DoFencing.meta"/>
             <operations>
               <op name="monitor" interval="5s" id="op.auto-5" timeout="20s"/>
             </operations>
             <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="hostlist" value="hadev3 hadev2 hadev1 "/></instance_attributes>
-          </primitive>
-        </clone>
+          </primitive></clone>
       </resources>
       <constraints>
         <rsc_location id="run_DcIPaddr" rsc="DcIPaddr">
