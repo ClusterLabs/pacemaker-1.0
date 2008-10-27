@@ -2,8 +2,8 @@
 <cib admin_epoch="0" epoch="1" num_updates="28" dc-uuid="888e539a-c6ef-496d-b79a-77cbf0f9e5e4" have-quorum="true" remote-tls-port="0" validate-with="pacemaker-1.0">
    <configuration>
      <crm_config>
-       <cluster_property_set id="cib-bootstrap-options"><nvpair id="nvpair.id21849" name="dc-version" value="2.1.3-node: 552305612591183b1628baa5bc6e903e0f1e26a3"/></cluster_property_set>
-       <cluster_property_set id="set01"><nvpair id="nvpair.id21868" name="default-resource-stickiness" value="INFINITY"/><nvpair id="nvpair.id21877" name="default-migration-threshold" value="1"/><nvpair id="nvpair.id21886" name="stonith-enabled" value="false"/><nvpair id="nvpair.id21894" name="stonith-action" value="reboot"/><nvpair id="nvpair.id21903" name="cluster-delay" value="180s"/><nvpair id="nvpair.id21911" name="default-action-timeout" value="120s"/><nvpair id="nvpair.id21920" name="no-quorum-policy" value="ignore"/><nvpair id="nvpair.id21929" name="symmetric-cluster" value="true"/><nvpair id="nvpair.id21938" name="short-resource-names" value="true"/><nvpair id="nvpair.id21948" name="is-managed-default" value="true"/><nvpair id="nvpair.id21957" name="stop-orphan-resources" value="true"/><nvpair id="nvpair.id21966" name="stop-orphan-actions" value="true"/><nvpair id="nvpair.id21975" name="remove-after-stop" value="false"/><nvpair id="nvpair.id21984" name="dc-deadtime" value="10s"/><nvpair id="nvpair.id21992" name="cluster-recheck-interval" value="0"/><nvpair id="nvpair.id22001" name="election-timeout" value="2min"/><nvpair id="nvpair.id22010" name="shutdown-escalation" value="20min"/><nvpair id="nvpair.id22019" name="crmd-integration-timeout" value="3min"/><nvpair id="nvpair.id22028" name="crmd-finalization-timeout" value="10min"/><nvpair id="nvpair.id22037" name="pe-error-series-max" value="-1"/><nvpair id="nvpair.id22046" name="pe-warn-series-max" value="-1"/><nvpair id="nvpair.id22055" name="pe-input-series-max" value="-1"/><nvpair id="nvpair.id22064" name="startup-fencing" value="true"/></cluster_property_set>
+       <cluster_property_set id="cib-bootstrap-options"><nvpair id="nvpair" name="dc-version" value="2.1.3-node: 552305612591183b1628baa5bc6e903e0f1e26a3"/></cluster_property_set>
+       <cluster_property_set id="set01"><nvpair id="nvpair" name="default-resource-stickiness" value="INFINITY"/><nvpair id="nvpair" name="default-migration-threshold" value="1"/><nvpair id="nvpair" name="stonith-enabled" value="false"/><nvpair id="nvpair" name="stonith-action" value="reboot"/><nvpair id="nvpair" name="cluster-delay" value="180s"/><nvpair id="nvpair" name="default-action-timeout" value="120s"/><nvpair id="nvpair" name="no-quorum-policy" value="ignore"/><nvpair id="nvpair" name="symmetric-cluster" value="true"/><nvpair id="nvpair" name="short-resource-names" value="true"/><nvpair id="nvpair" name="is-managed-default" value="true"/><nvpair id="nvpair" name="stop-orphan-resources" value="true"/><nvpair id="nvpair" name="stop-orphan-actions" value="true"/><nvpair id="nvpair" name="remove-after-stop" value="false"/><nvpair id="nvpair" name="dc-deadtime" value="10s"/><nvpair id="nvpair" name="cluster-recheck-interval" value="0"/><nvpair id="nvpair" name="election-timeout" value="2min"/><nvpair id="nvpair" name="shutdown-escalation" value="20min"/><nvpair id="nvpair" name="crmd-integration-timeout" value="3min"/><nvpair id="nvpair" name="crmd-finalization-timeout" value="10min"/><nvpair id="nvpair" name="pe-error-series-max" value="-1"/><nvpair id="nvpair" name="pe-warn-series-max" value="-1"/><nvpair id="nvpair" name="pe-input-series-max" value="-1"/><nvpair id="nvpair" name="startup-fencing" value="true"/></cluster_property_set>
      </crm_config>
      <nodes>
        <node id="888e539a-c6ef-496d-b79a-77cbf0f9e5e4" uname="dl380g5b" type="normal"/>
@@ -11,7 +11,7 @@
      </nodes>
      <resources>
        <master id="ms-sf">
-         <instance_attributes id="instance_attributes.id22106"><nvpair id="nvpair.id22113" name="clone_max" value="2"/><nvpair id="nvpair.id22121" name="clone_node_max" value="1"/><nvpair id="nvpair.id22129" name="master_max" value="1"/><nvpair id="nvpair.id22138" name="master_node_max" value="1"/></instance_attributes>
+         <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="clone_max" value="2"/><nvpair id="nvpair" name="clone_node_max" value="1"/><nvpair id="nvpair" name="master_max" value="1"/><nvpair id="nvpair" name="master_node_max" value="1"/></instance_attributes>
          <group id="group">
            <primitive id="stateful-1" class="ocf" type="Stateful" provider="heartbeat">
              <operations>
@@ -30,15 +30,15 @@
              </operations>
            <meta_attributes id="primitive-stateful-2.meta"/></primitive>
          <meta_attributes id="group-group.meta"/></group>
-       <meta_attributes id="master_slave-ms-sf.meta"><nvpair id="notify.meta.auto-77" name="notify" value="false"/><nvpair id="nvpair.meta.auto-83" name="clone-max" value="2"/><nvpair id="nvpair.meta.auto-85" name="clone-node-max" value="1"/><nvpair id="nvpair.meta.auto-87" name="master-max" value="1"/><nvpair id="nvpair.meta.auto-89" name="master-node-max" value="1"/></meta_attributes></master>
+       <meta_attributes id="master_slave-ms-sf.meta"><nvpair id="notify.meta.auto-77" name="notify" value="false"/><nvpair id="nvpair" name="clone-max" value="2"/><nvpair id="nvpair" name="clone-node-max" value="1"/><nvpair id="nvpair" name="master-max" value="1"/><nvpair id="nvpair" name="master-node-max" value="1"/></meta_attributes></master>
      </resources>
      <constraints>
        <rsc_location id="rsc_location" rsc="ms-sf">
          <rule id="location-0" role="Master" score="100">
-           <expression id="expression.id22304" attribute="#uname" operation="eq" value="dl380g5a"/>
+           <expression id="expression" attribute="#uname" operation="eq" value="dl380g5a"/>
          </rule>
          <rule id="location-1" role="Master" score="500">
-           <expression id="expression.id22324" attribute="#uname" operation="eq" value="dl380g5b"/>
+           <expression id="expression" attribute="#uname" operation="eq" value="dl380g5b"/>
          </rule>
        </rsc_location>
      </constraints>
@@ -46,7 +46,7 @@
    <status>
      <node_state id="888e539a-c6ef-496d-b79a-77cbf0f9e5e4" uname="dl380g5b" crmd="online" shutdown="0" in_ccm="true" ha="active" join="member" expected="member">
        <lrm id="lrm.auto-1">
-         <lrm_resources id="lrm_resources.id22364">
+         <lrm_resources id="lrm_resources">
            <lrm_resource id="stateful-1:0" type="Stateful" class="ocf" provider="heartbeat">
              <lrm_rsc_op id="stateful-1-0_monitor_0" operation="monitor" transition-key="3:3:0938a084-9056-4b8c-90f5-8a3005520b8e" transition-magic="0:7;3:3:0938a084-9056-4b8c-90f5-8a3005520b8e" call-id="2" crm_feature_set="2.0" rc-code="7" op-status="0" interval="0" op-digest="f2317cad3d54cec5d7d7aa7d0bf35cf8"/>
              <lrm_rsc_op id="stateful-1-0_start_0" operation="start" transition-key="13:3:0938a084-9056-4b8c-90f5-8a3005520b8e" transition-magic="0:0;13:3:0938a084-9056-4b8c-90f5-8a3005520b8e" call-id="6" crm_feature_set="2.0" rc-code="0" op-status="0" interval="0" op-digest="f2317cad3d54cec5d7d7aa7d0bf35cf8"/>
@@ -68,12 +68,12 @@
          </lrm_resources>
        </lrm>
        <transient_attributes id="transient_attributes.auto-1">
-         <instance_attributes id="instance_attributes.id22685"><nvpair id="nvpair.id22692" name="probe_complete" value="true"/><nvpair id="nvpair.id22701" name="fail-count-stateful-2:0" value="1"/><nvpair id="nvpair.id22711" name="fail-count-stateful-1:0" value="1"/></instance_attributes>
+         <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="probe_complete" value="true"/><nvpair id="nvpair" name="fail-count-stateful-2:0" value="1"/><nvpair id="nvpair" name="fail-count-stateful-1:0" value="1"/></instance_attributes>
        </transient_attributes>
      </node_state>
      <node_state id="3831f23f-da0a-470e-b8e7-16e61a18c3c3" uname="dl380g5a" crmd="online" shutdown="0" in_ccm="true" ha="active" join="member" expected="member">
        <lrm id="lrm.auto-2">
-         <lrm_resources id="lrm_resources.id22752">
+         <lrm_resources id="lrm_resources">
            <lrm_resource id="stateful-1:1" type="Stateful" class="ocf" provider="heartbeat">
              <lrm_rsc_op id="stateful-1-1_monitor_0" operation="monitor" transition-key="10:3:0938a084-9056-4b8c-90f5-8a3005520b8e" transition-magic="0:7;10:3:0938a084-9056-4b8c-90f5-8a3005520b8e" call-id="4" crm_feature_set="2.0" rc-code="7" op-status="0" interval="0" op-digest="f2317cad3d54cec5d7d7aa7d0bf35cf8"/>
              <lrm_rsc_op id="stateful-1-1_start_0" operation="start" transition-key="23:3:0938a084-9056-4b8c-90f5-8a3005520b8e" transition-magic="0:0;23:3:0938a084-9056-4b8c-90f5-8a3005520b8e" call-id="6" crm_feature_set="2.0" rc-code="0" op-status="0" interval="0" op-digest="f2317cad3d54cec5d7d7aa7d0bf35cf8"/>
@@ -93,7 +93,7 @@
          </lrm_resources>
        </lrm>
        <transient_attributes id="transient_attributes.auto-2">
-         <instance_attributes id="instance_attributes.id23018"><nvpair id="nvpair.id23025" name="probe_complete" value="true"/></instance_attributes>
+         <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="probe_complete" value="true"/></instance_attributes>
        </transient_attributes>
      </node_state>
    </status>

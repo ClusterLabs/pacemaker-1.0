@@ -2,7 +2,7 @@
 <cib admin_epoch="0" epoch="253" num_updates="247" dc-uuid="c906edaf-e5f3-4d72-96e5-03fa1ebf2ef2" have-quorum="true" remote-tls-port="0" validate-with="pacemaker-1.0">
    <configuration>
      <crm_config>
-       <cluster_property_set id="crm_config"><nvpair id="nvpair.id21850" name="stonith-enabled" value="false"/></cluster_property_set>
+       <cluster_property_set id="crm_config"><nvpair id="nvpair" name="stonith-enabled" value="false"/></cluster_property_set>
      </crm_config>
      <nodes>
        <node id="c906edaf-e5f3-4d72-96e5-03fa1ebf2ef2" uname="cxa1" type="normal"/>
@@ -10,88 +10,88 @@
      </nodes>
      <resources>
        <primitive id="cyrus_address" class="ocf" type="IPaddr2" provider="heartbeat">
-         <instance_attributes id="instance_attributes.id21896"><nvpair name="ip" value="192.168.2.210" id="nvpair.id21903"/></instance_attributes>
+         <instance_attributes id="instance_attributes"><nvpair name="ip" value="192.168.2.210" id="nvpair"/></instance_attributes>
        <meta_attributes id="primitive-cyrus_address.meta"/></primitive>
        <primitive id="cyrus_master" class="ocf" type="cyrus-imap" provider="heartbeat">
-         <instance_attributes id="instance_attributes.id21925"><nvpair id="nvpair.id21932" name="binpath" value="/usr/local/sbin/cyrus_master"/><nvpair id="nvpair.id21941" name="pidfile" value="/opt/cyrus/var/run/master.pid"/></instance_attributes>
+         <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="binpath" value="/usr/local/sbin/cyrus_master"/><nvpair id="nvpair" name="pidfile" value="/opt/cyrus/var/run/master.pid"/></instance_attributes>
        <meta_attributes id="primitive-cyrus_master.meta"/></primitive>
        <primitive id="cyrus_syslogd" class="ocf" type="syslogd" provider="heartbeat">
-         <instance_attributes id="instance_attributes.id21963"><nvpair id="nvpair.id21970" name="binpath" value="/usr/local/sbin/cyrus_syslogd"/><nvpair id="nvpair.id21979" name="pidfile" value="/opt/cyrus/var/run/syslogd.pid"/></instance_attributes>
+         <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="binpath" value="/usr/local/sbin/cyrus_syslogd"/><nvpair id="nvpair" name="pidfile" value="/opt/cyrus/var/run/syslogd.pid"/></instance_attributes>
        <meta_attributes id="primitive-cyrus_syslogd.meta"/></primitive>
        <primitive id="cyrus_filesys" class="ocf" type="Filesystem" provider="heartbeat">
-         <instance_attributes id="instance_attributes.id22002"><nvpair id="nvpair.id22008" name="device" value="/dev/vg3/lv3"/><nvpair id="nvpair.id22017" name="directory" value="/opt/cyrus/var"/><nvpair id="nvpair.id22026" name="fstype" value="xfs"/><nvpair id="nvpair.id22035" name="options" value="nobarrier"/></instance_attributes>
+         <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="device" value="/dev/vg3/lv3"/><nvpair id="nvpair" name="directory" value="/opt/cyrus/var"/><nvpair id="nvpair" name="fstype" value="xfs"/><nvpair id="nvpair" name="options" value="nobarrier"/></instance_attributes>
        <meta_attributes id="primitive-cyrus_filesys.meta"/></primitive>
        <primitive id="cyrus_volgroup" class="ocf" type="VolGroup" provider="heartbeat">
-         <instance_attributes id="instance_attributes.id22057"><nvpair id="nvpair.id22064" name="volgrpname" value="vg3"/></instance_attributes>
+         <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="volgrpname" value="vg3"/></instance_attributes>
        <meta_attributes id="primitive-cyrus_volgroup.meta"/></primitive>
        <master id="cyrus_drbd">
-         <meta_attributes id="meta_attributes.id22080"><nvpair id="nvpair.id22086" name="clone-max" value="2"/><nvpair id="nvpair.id22095" name="clone-node-max" value="1"/><nvpair id="nvpair.id22104" name="master-max" value="1"/><nvpair id="nvpair.id22112" name="master-node-max" value="1"/><nvpair id="nvpair.id22121" name="notify" value="yes"/><nvpair id="nvpair.id22129" name="globally-unique" value="false"/></meta_attributes>
+         <meta_attributes id="meta_attributes"><nvpair id="nvpair" name="clone-max" value="2"/><nvpair id="nvpair" name="clone-node-max" value="1"/><nvpair id="nvpair" name="master-max" value="1"/><nvpair id="nvpair" name="master-node-max" value="1"/><nvpair id="nvpair" name="notify" value="yes"/><nvpair id="nvpair" name="globally-unique" value="false"/></meta_attributes>
          <primitive id="cyrus_drbd_node" class="ocf" provider="heartbeat" type="drbd">
-           <instance_attributes id="instance_attributes.id22151"><nvpair id="nvpair.id22158" name="drbd_resource" value="drbd3"/></instance_attributes>
+           <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="drbd_resource" value="drbd3"/></instance_attributes>
            <operations>
              <op name="monitor" interval="10s" id="cyrus_drbd_mon_master" timeout="5s" role="Master"/>
            </operations>
          <meta_attributes id="primitive-cyrus_drbd_node.meta"/></primitive>
        <meta_attributes id="master_slave-cyrus_drbd.meta"/></master>
        <primitive id="named_address" class="ocf" type="IPaddr2" provider="heartbeat">
-         <instance_attributes id="instance_attributes.id22198"><nvpair name="ip" value="192.168.1.188" id="nvpair.id22205"/></instance_attributes>
+         <instance_attributes id="instance_attributes"><nvpair name="ip" value="192.168.1.188" id="nvpair"/></instance_attributes>
        <meta_attributes id="primitive-named_address.meta"/></primitive>
        <primitive id="named_filesys" class="ocf" type="Filesystem" provider="heartbeat">
-         <instance_attributes id="instance_attributes.id22227"><nvpair id="nvpair.id22234" name="device" value="/dev/vg4/lv4"/><nvpair id="nvpair.id22243" name="directory" value="/opt/recursor/var"/><nvpair id="nvpair.id22252" name="fstype" value="xfs"/><nvpair id="nvpair.id22260" name="options" value="nobarrier"/></instance_attributes>
+         <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="device" value="/dev/vg4/lv4"/><nvpair id="nvpair" name="directory" value="/opt/recursor/var"/><nvpair id="nvpair" name="fstype" value="xfs"/><nvpair id="nvpair" name="options" value="nobarrier"/></instance_attributes>
        <meta_attributes id="primitive-named_filesys.meta"/></primitive>
        <primitive id="named_volgroup" class="ocf" type="VolGroup" provider="heartbeat">
-         <instance_attributes id="instance_attributes.id22283"><nvpair id="nvpair.id22289" name="volgrpname" value="vg4"/></instance_attributes>
+         <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="volgrpname" value="vg4"/></instance_attributes>
        <meta_attributes id="primitive-named_volgroup.meta"/></primitive>
        <primitive id="named_daemon" class="ocf" type="recursor" provider="heartbeat">
-         <instance_attributes id="instance_attributes.id22312"><nvpair id="nvpair.id22318" name="binpath" value="/usr/local/sbin/recursor_daemon"/><nvpair id="nvpair.id22327" name="pidfile" value="/opt/recursor/var/run/pdns_recursor.pid"/></instance_attributes>
+         <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="binpath" value="/usr/local/sbin/recursor_daemon"/><nvpair id="nvpair" name="pidfile" value="/opt/recursor/var/run/pdns_recursor.pid"/></instance_attributes>
        <meta_attributes id="primitive-named_daemon.meta"/></primitive>
        <primitive id="named_syslogd" class="ocf" type="syslogd" provider="heartbeat">
-         <instance_attributes id="instance_attributes.id22350"><nvpair id="nvpair.id22357" name="binpath" value="/usr/local/sbin/recursor_syslogd"/><nvpair id="nvpair.id22366" name="pidfile" value="/opt/recursor/var/run/syslogd.pid"/></instance_attributes>
+         <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="binpath" value="/usr/local/sbin/recursor_syslogd"/><nvpair id="nvpair" name="pidfile" value="/opt/recursor/var/run/syslogd.pid"/></instance_attributes>
        <meta_attributes id="primitive-named_syslogd.meta"/></primitive>
        <master id="named_drbd">
-         <meta_attributes id="meta_attributes.id22383"><nvpair id="nvpair.id22389" name="clone-max" value="2"/><nvpair id="nvpair.id22398" name="clone-node-max" value="1"/><nvpair id="nvpair.id22406" name="master-max" value="1"/><nvpair id="nvpair.id22415" name="master-node-max" value="1"/><nvpair id="nvpair.id22424" name="notify" value="yes"/><nvpair id="nvpair.id22432" name="globally-unique" value="false"/></meta_attributes>
+         <meta_attributes id="meta_attributes"><nvpair id="nvpair" name="clone-max" value="2"/><nvpair id="nvpair" name="clone-node-max" value="1"/><nvpair id="nvpair" name="master-max" value="1"/><nvpair id="nvpair" name="master-node-max" value="1"/><nvpair id="nvpair" name="notify" value="yes"/><nvpair id="nvpair" name="globally-unique" value="false"/></meta_attributes>
          <primitive id="named_drbd_node" class="ocf" provider="heartbeat" type="drbd">
-           <instance_attributes id="instance_attributes.id22453"><nvpair id="nvpair.id22460" name="drbd_resource" value="drbd4"/></instance_attributes>
+           <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="drbd_resource" value="drbd4"/></instance_attributes>
            <operations>
              <op name="monitor" interval="10s" id="named_drbd_mon_master" timeout="5s" role="Master"/>
            </operations>
          <meta_attributes id="primitive-named_drbd_node.meta"/></primitive>
        <meta_attributes id="master_slave-named_drbd.meta"/></master>
        <clone id="pingd_clone">
-         <instance_attributes id="instance_attributes.id22494"><nvpair id="nvpair.id22500" name="clone_node_max" value="1"/><nvpair id="nvpair.id22509" name="globally_unique" value="false"/></instance_attributes>
+         <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="clone_node_max" value="1"/><nvpair id="nvpair" name="globally_unique" value="false"/></instance_attributes>
          <primitive id="pingd_node" provider="heartbeat" class="ocf" type="pingd">
            <operations>
              <op name="monitor" interval="20s" id="pingd_node_monitor" timeout="40s" requires="nothing"/>
            </operations>
-           <instance_attributes id="instance_attributes.id22546"><nvpair id="nvpair.id22552" name="pidfile" value="/var/run/pingd.pid"/><nvpair id="nvpair.id22561" name="dampen" value="5s"/><nvpair id="nvpair.id22570" name="multiplier" value="100"/></instance_attributes>
+           <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="pidfile" value="/var/run/pingd.pid"/><nvpair id="nvpair" name="dampen" value="5s"/><nvpair id="nvpair" name="multiplier" value="100"/></instance_attributes>
          <meta_attributes id="primitive-pingd_node.meta"/></primitive>
-       <meta_attributes id="clone-pingd_clone.meta"><nvpair id="nvpair.meta.auto-237" name="globally-unique" value="false"/><nvpair id="nvpair.meta.auto-235" name="clone-node-max" value="1"/></meta_attributes></clone>
+       <meta_attributes id="clone-pingd_clone.meta"><nvpair id="nvpair" name="globally-unique" value="false"/><nvpair id="nvpair" name="clone-node-max" value="1"/></meta_attributes></clone>
        <clone id="fence_clone">
-         <instance_attributes id="instance_attributes.id22586"><nvpair name="fence_attr_clone_node_max" value="1" id="nvpair.id22592"/></instance_attributes>
+         <instance_attributes id="instance_attributes"><nvpair name="fence_attr_clone_node_max" value="1" id="nvpair"/></instance_attributes>
          <primitive id="fence_node" class="stonith" type="baytech">
            <operations>
              <op name="monitor" interval="300s" id="fence_node_monitor" timeout="20s"/>
              <op name="start" interval="0" id="fence_node_start" timeout="20s"/>
            </operations>
-           <instance_attributes id="instance_attributes.id22635"><nvpair id="nvpair.id22641" name="ipaddr" value="192.168.1.190"/><nvpair id="nvpair.id22649" name="login" value="admin"/><nvpair id="nvpair.id22658" name="password" value="xxxxxxxx"/></instance_attributes>
+           <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="ipaddr" value="192.168.1.190"/><nvpair id="nvpair" name="login" value="admin"/><nvpair id="nvpair" name="password" value="xxxxxxxx"/></instance_attributes>
          <meta_attributes id="primitive-fence_node.meta"/></primitive>
        <meta_attributes id="clone-fence_clone.meta"/></clone>
      </resources>
      <constraints>
        <rsc_location id="cyrus_address_location" rsc="cyrus_address">
          <rule id="cyrus_address_ping_rule" score-attribute="pingd">
-           <expression id="expression.id22688" attribute="pingd" operation="defined"/>
+           <expression id="expression" attribute="pingd" operation="defined"/>
          </rule>
          <rule id="cyrus_address_node_rule" score="10">
-           <expression id="expression.id22704" attribute="#uname" operation="eq" value="cxa1"/>
+           <expression id="expression" attribute="#uname" operation="eq" value="cxa1"/>
          </rule>
        </rsc_location>
        <rsc_location id="named_address_location" rsc="named_address">
          <rule id="named_address_ping_rule" score-attribute="pingd">
-           <expression id="expression.id22730" attribute="pingd" operation="defined"/>
+           <expression id="expression" attribute="pingd" operation="defined"/>
          </rule>
          <rule id="named_address_node_rule" score="10">
-           <expression id="expression.id22747" attribute="#uname" operation="eq" value="cxb1"/>
+           <expression id="expression" attribute="#uname" operation="eq" value="cxb1"/>
          </rule>
        </rsc_location>
        <rsc_colocation id="cyrus_drbd_with_address" rsc="cyrus_address" with-rsc="cyrus_drbd" with-rsc-role="Started" score="INFINITY"/>
@@ -119,11 +119,11 @@
    <status>
      <node_state id="c906edaf-e5f3-4d72-96e5-03fa1ebf2ef2" uname="cxa1" crmd="online" shutdown="0" in_ccm="true" ha="active" join="member" expected="member">
        <transient_attributes id="c906edaf-e5f3-4d72-96e5-03fa1ebf2ef2">
-         <instance_attributes id="instance_attributes.id23074"><nvpair id="nvpair.id23081" name="probe_complete" value="true"/><nvpair id="nvpair.id23090" name="pingd" value="200"/><nvpair id="nvpair.id23099" name="fail-count-named_drbd_node:0" value="2"/><nvpair id="nvpair.id23109" name="fail-count-cyrus_drbd_node:0" value="2"/></instance_attributes>
-         <instance_attributes id="instance_attributes.id23120"><nvpair id="nvpair.id23127" name="master-named_drbd_node:0" value="75"/><nvpair id="nvpair.id23137" name="master-cyrus_drbd_node:0" value="75"/><nvpair id="nvpair.id23146" name="master-named_drbd_node:1" value="75"/></instance_attributes>
+         <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="probe_complete" value="true"/><nvpair id="nvpair" name="pingd" value="200"/><nvpair id="nvpair" name="fail-count-named_drbd_node:0" value="2"/><nvpair id="nvpair" name="fail-count-cyrus_drbd_node:0" value="2"/></instance_attributes>
+         <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="master-named_drbd_node:0" value="75"/><nvpair id="nvpair" name="master-cyrus_drbd_node:0" value="75"/><nvpair id="nvpair" name="master-named_drbd_node:1" value="75"/></instance_attributes>
        </transient_attributes>
        <lrm id="c906edaf-e5f3-4d72-96e5-03fa1ebf2ef2">
-         <lrm_resources id="lrm_resources.id23164">
+         <lrm_resources id="lrm_resources">
            <lrm_resource id="cyrus_drbd_node:1" type="drbd" class="ocf" provider="heartbeat">
              <lrm_rsc_op id="cyrus_drbd_node-1_monitor_0" operation="monitor" transition-key="3:1:a7083891-b6ee-4270-a350-c7b829b64b59" transition-magic="4:7;3:1:a7083891-b6ee-4270-a350-c7b829b64b59" call-id="16" crm_feature_set="2.0" rc-code="7" op-status="4" interval="0" op-digest="38c3c67ecf5a130029bf89c17c72bf14"/>
            </lrm_resource>
@@ -214,7 +214,7 @@
      </node_state>
      <node_state id="97c99ee5-0f0e-4519-845c-14871d0ba045" uname="cxb1" ha="active" crmd="online" shutdown="0" in_ccm="true" join="member" expected="member">
        <lrm id="lrm.auto-2">
-         <lrm_resources id="lrm_resources.id24749">
+         <lrm_resources id="lrm_resources">
            <lrm_resource id="cyrus_syslogd" type="syslogd" class="ocf" provider="heartbeat">
              <lrm_rsc_op id="cyrus_syslogd_monitor_0" operation="monitor" transition-key="10:16:a7083891-b6ee-4270-a350-c7b829b64b59" transition-magic="0:7;10:16:a7083891-b6ee-4270-a350-c7b829b64b59" call-id="4" crm_feature_set="2.0" rc-code="7" op-status="0" interval="0" op-digest="c6d6ef29c0b55c3542962c98a0d73db7"/>
            </lrm_resource>
@@ -291,8 +291,8 @@
          </lrm_resources>
        </lrm>
        <transient_attributes id="transient_attributes.auto-2">
-         <instance_attributes id="instance_attributes.id25946"><nvpair id="nvpair.id25953" name="probe_complete" value="true"/><nvpair id="nvpair.id25963" name="pingd" value="200"/></instance_attributes>
-         <instance_attributes id="instance_attributes.id25974"><nvpair id="nvpair.id25981" name="master-cyrus_drbd_node:1" value="75"/><nvpair id="nvpair.id25990" name="master-named_drbd_node:1" value="75"/><nvpair id="nvpair.id26000" name="master-named_drbd_node:0" value="75"/></instance_attributes>
+         <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="probe_complete" value="true"/><nvpair id="nvpair" name="pingd" value="200"/></instance_attributes>
+         <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="master-cyrus_drbd_node:1" value="75"/><nvpair id="nvpair" name="master-named_drbd_node:1" value="75"/><nvpair id="nvpair" name="master-named_drbd_node:0" value="75"/></instance_attributes>
        </transient_attributes>
      </node_state>
    </status>

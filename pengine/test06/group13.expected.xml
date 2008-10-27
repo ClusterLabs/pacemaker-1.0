@@ -8,12 +8,12 @@
      <resources>
        <group id="nfs">
          <primitive id="resource_nfs" class="lsb" type="nfs">
-           <instance_attributes id="instance_attributes.id21871"/>
+           <instance_attributes id="instance_attributes"/>
          <meta_attributes id="primitive-resource_nfs.meta"/></primitive>
        <meta_attributes id="group-nfs.meta"/></group>
        <group id="fs">
          <primitive id="resource_fs" class="ocf" type="Filesystem" provider="heartbeat">
-           <instance_attributes id="instance_attributes.id21896"><nvpair id="nvpair.id21903" name="device" value="/dev/hdb"/><nvpair id="nvpair.id21912" name="directory" value="/data"/><nvpair id="nvpair.id21921" name="fstype" value="ext2"/></instance_attributes>
+           <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="device" value="/dev/hdb"/><nvpair id="nvpair" name="directory" value="/data"/><nvpair id="nvpair" name="fstype" value="ext2"/></instance_attributes>
          <meta_attributes id="primitive-resource_fs.meta"/></primitive>
        <meta_attributes id="group-fs.meta"/></group>
      </resources>
@@ -24,7 +24,7 @@
    <status>
      <node_state id="cd13842c-3f58-4e7d-8126-685259527532" uname="jamesltc" crmd="online" shutdown="0" in_ccm="true" join="member" ha="active" expected="member">
        <lrm id="cd13842c-3f58-4e7d-8126-685259527532">
-         <lrm_resources id="lrm_resources.id21980">
+         <lrm_resources id="lrm_resources">
            <lrm_resource id="resource_nfs" type="nfs" class="lsb">
              <lrm_rsc_op id="resource_nfs_monitor_0" operation="monitor" transition-key="0:ccf2e30a-94d8-4f46-b338-9ca597fb8127" transition-magic="0:0;0:ccf2e30a-94d8-4f46-b338-9ca597fb8127" call-id="2" crm_feature_set="1.0.6" rc-code="0" op-status="0" interval="0" op-digest="f2317cad3d54cec5d7d7aa7d0bf35cf8"/>
            </lrm_resource>
@@ -36,7 +36,7 @@
          </lrm_resources>
        </lrm>
        <transient_attributes id="cd13842c-3f58-4e7d-8126-685259527532">
-         <instance_attributes id="instance_attributes.id22121"><nvpair id="nvpair.id22128" name="probe_complete" value="true"/></instance_attributes>
+         <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="probe_complete" value="true"/></instance_attributes>
        </transient_attributes>
      </node_state>
    </status>

@@ -2,16 +2,16 @@
 <cib admin_epoch="0" epoch="9" num_updates="208" dc-uuid="1186dc9a-324d-425a-966e-d757e693dc86" have-quorum="true" remote-tls-port="0" validate-with="pacemaker-1.0">
    <configuration>
      <crm_config>
-       <cluster_property_set id="cib-bootstrap-options"><nvpair id="nvpair.id21849" name="default-action-timeout" value="10s"/><nvpair id="nvpair.id21858" name="cluster-delay" value="60s"/><nvpair id="nvpair.id21867" name="symmetric-cluster" value="true"/><nvpair id="nvpair.id21877" name="stop-orphan-resources" value="true"/><nvpair id="nvpair.id21886" name="stop-orphan-actions" value="true"/><nvpair id="nvpair.id21895" name="remove-after-stop" value="false"/><nvpair id="nvpair.id21905" name="is-managed-default" value="true"/><nvpair id="nvpair.id21914" name="no-quorum-policy" value="stop"/><nvpair id="nvpair.id21923" name="stonith-action" value="reboot"/><nvpair id="nvpair.id21932" name="stonith-enabled" value="1"/><nvpair id="nvpair.id21941" name="pe-error-series-max" value="-1"/><nvpair id="nvpair.id21950" name="pe-warn-series-max" value="-1"/><nvpair id="nvpair.id21959" name="pe-input-series-max" value="30000"/><nvpair id="nvpair.id21969" name="default-resource-stickiness" value="0"/><nvpair id="nvpair.id21978" name="default-migration-threshold" value="0"/><nvpair id="nvpair.id21987" name="shutdown-escalation" value="5min"/><nvpair id="nvpair.id21997" name="startup-fencing" value="false"/></cluster_property_set>
+       <cluster_property_set id="cib-bootstrap-options"><nvpair id="nvpair" name="default-action-timeout" value="10s"/><nvpair id="nvpair" name="cluster-delay" value="60s"/><nvpair id="nvpair" name="symmetric-cluster" value="true"/><nvpair id="nvpair" name="stop-orphan-resources" value="true"/><nvpair id="nvpair" name="stop-orphan-actions" value="true"/><nvpair id="nvpair" name="remove-after-stop" value="false"/><nvpair id="nvpair" name="is-managed-default" value="true"/><nvpair id="nvpair" name="no-quorum-policy" value="stop"/><nvpair id="nvpair" name="stonith-action" value="reboot"/><nvpair id="nvpair" name="stonith-enabled" value="1"/><nvpair id="nvpair" name="pe-error-series-max" value="-1"/><nvpair id="nvpair" name="pe-warn-series-max" value="-1"/><nvpair id="nvpair" name="pe-input-series-max" value="30000"/><nvpair id="nvpair" name="default-resource-stickiness" value="0"/><nvpair id="nvpair" name="default-migration-threshold" value="0"/><nvpair id="nvpair" name="shutdown-escalation" value="5min"/><nvpair id="nvpair" name="startup-fencing" value="false"/></cluster_property_set>
      </crm_config>
      <nodes>
        <node id="1186dc9a-324d-425a-966e-d757e693dc86" uname="sles-1" type="normal">
-         <instance_attributes id="instance_attributes.id22020"><nvpair name="standby" id="nvpair.id22027" value="off"/></instance_attributes>
+         <instance_attributes id="instance_attributes"><nvpair name="standby" id="nvpair" value="off"/></instance_attributes>
        </node>
        <node id="02fb99a8-e30e-482f-b3ad-0fb3ce27d088" uname="sles-2" type="normal"/>
        <node id="2298606a-6a8c-499a-9d25-76242f7006ec" uname="sles-3" type="normal"/>
        <node id="ea7d39f4-3b94-4cfa-ba7a-952956daabee" uname="sles-4" type="normal">
-         <instance_attributes id="instance_attributes.id22066"><nvpair name="standby" id="nvpair.id22073" value="off"/></instance_attributes>
+         <instance_attributes id="instance_attributes"><nvpair name="standby" id="nvpair" value="off"/></instance_attributes>
        </node>
      </nodes>
      <resources>
@@ -20,19 +20,19 @@
            <operations>
              <op name="monitor" interval="5s" id="r192.168.100.181-mon"/>
            </operations>
-           <instance_attributes id="instance_attributes.id22116"><nvpair id="nvpair.id22123" name="ip" value="192.168.100.181"/></instance_attributes>
+           <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="ip" value="192.168.100.181"/></instance_attributes>
          <meta_attributes id="primitive-r192.168.100.181.meta"/></primitive>
          <primitive id="r192.168.100.182" class="heartbeat" type="IPaddr">
            <operations>
              <op name="monitor" interval="5s" id="r192.168.100.182-mon"/>
            </operations>
-           <instance_attributes id="instance_attributes.id22155"><nvpair id="nvpair.id22162" name="1" value="192.168.100.182"/></instance_attributes>
+           <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="1" value="192.168.100.182"/></instance_attributes>
          <meta_attributes id="primitive-r192.168.100.182.meta"/></primitive>
          <primitive id="r192.168.100.183" class="ocf" type="IPaddr" provider="heartbeat">
            <operations>
              <op name="monitor" interval="5s" id="r192.168.100.183-mon"/>
            </operations>
-           <instance_attributes id="instance_attributes.id22196"><nvpair id="nvpair.id22202" name="ip" value="192.168.100.183"/></instance_attributes>
+           <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="ip" value="192.168.100.183"/></instance_attributes>
          <meta_attributes id="primitive-r192.168.100.183.meta"/></primitive>
        <meta_attributes id="group-group-1.meta"/></group>
        <primitive id="lsb_dummy" class="lsb" type="/usr/lib64/heartbeat/cts/LSBDummy">
@@ -44,72 +44,72 @@
          <operations>
            <op name="monitor" interval="10s" id="migrator-mon"/>
          </operations>
-         <instance_attributes id="instance_attributes.id22261"><nvpair id="nvpair.id22267" name="allow_migrate" value="1"/></instance_attributes>
-       <meta_attributes id="primitive-migrator.meta"><nvpair id="nvpair.meta.auto-149" name="allow-migrate" value="1"/></meta_attributes></primitive>
+         <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="allow_migrate" value="1"/></instance_attributes>
+       <meta_attributes id="primitive-migrator.meta"><nvpair id="nvpair" name="allow-migrate" value="1"/></meta_attributes></primitive>
        <primitive id="rsc_sles-1" class="ocf" type="IPaddr" provider="heartbeat">
          <operations>
            <op name="monitor" interval="5s" id="rsc_sles-1-mon"/>
          </operations>
-         <instance_attributes id="instance_attributes.id22301"><nvpair id="nvpair.id22307" name="ip" value="192.168.100.184"/></instance_attributes>
+         <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="ip" value="192.168.100.184"/></instance_attributes>
        <meta_attributes id="primitive-rsc_sles-1.meta"/></primitive>
        <primitive id="rsc_sles-2" class="ocf" type="IPaddr" provider="heartbeat">
          <operations>
            <op name="monitor" interval="5s" id="rsc_sles-2-mon"/>
          </operations>
-         <instance_attributes id="instance_attributes.id22340"><nvpair id="nvpair.id22347" name="ip" value="192.168.100.185"/></instance_attributes>
+         <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="ip" value="192.168.100.185"/></instance_attributes>
        <meta_attributes id="primitive-rsc_sles-2.meta"/></primitive>
        <primitive id="rsc_sles-3" class="ocf" type="IPaddr" provider="heartbeat">
          <operations>
            <op name="monitor" interval="5s" id="rsc_sles-3-mon"/>
          </operations>
-         <instance_attributes id="instance_attributes.id22380"><nvpair id="nvpair.id22386" name="ip" value="192.168.100.186"/></instance_attributes>
+         <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="ip" value="192.168.100.186"/></instance_attributes>
        <meta_attributes id="primitive-rsc_sles-3.meta"/></primitive>
        <primitive id="rsc_sles-4" class="ocf" type="IPaddr" provider="heartbeat">
          <operations>
            <op name="monitor" interval="5s" id="rsc_sles-4-mon"/>
          </operations>
-         <instance_attributes id="instance_attributes.id22420"><nvpair id="nvpair.id22426" name="ip" value="192.168.100.187"/></instance_attributes>
+         <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="ip" value="192.168.100.187"/></instance_attributes>
        <meta_attributes id="primitive-rsc_sles-4.meta"/></primitive>
        <clone id="DoFencing">
-         <instance_attributes id="instance_attributes.id22444"><nvpair id="nvpair.id22451" name="clone_node_max" value="1"/></instance_attributes>
+         <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="clone_node_max" value="1"/></instance_attributes>
          <primitive id="child_DoFencing" class="stonith" type="external/vmware">
            <operations>
              <op name="monitor" interval="60s" id="DoFencing-1" requires="nothing" timeout="300s"/>
              <op name="start" interval="0" id="DoFencing-2" requires="nothing" timeout="180s"/>
              <op name="stop" interval="0" id="DoFencing-3" timeout="180s"/>
            </operations>
-           <instance_attributes id="instance_attributes.id22505"><nvpair id="nvpair.id22511" name="device_host" value="vmhost"/></instance_attributes>
+           <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="device_host" value="vmhost"/></instance_attributes>
          <meta_attributes id="primitive-child_DoFencing.meta"/></primitive>
-       <meta_attributes id="clone-DoFencing.meta"><nvpair id="globally_unique.meta.auto-218" name="globally-unique" value="false"/><nvpair id="nvpair.meta.auto-224" name="clone-node-max" value="1"/></meta_attributes></clone>
+       <meta_attributes id="clone-DoFencing.meta"><nvpair id="globally_unique.meta.auto-218" name="globally-unique" value="false"/><nvpair id="nvpair" name="clone-node-max" value="1"/></meta_attributes></clone>
        <master id="master_rsc_1">
-         <instance_attributes id="instance_attributes.id22529"><nvpair id="nvpair.id22535" name="clone_max" value="8"/><nvpair id="nvpair.id22544" name="clone_node_max" value="2"/><nvpair id="nvpair.id22553" name="master_max" value="4"/><nvpair id="nvpair.id22561" name="master_node_max" value="1"/></instance_attributes>
+         <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="clone_max" value="8"/><nvpair id="nvpair" name="clone_node_max" value="2"/><nvpair id="nvpair" name="master_max" value="4"/><nvpair id="nvpair" name="master_node_max" value="1"/></instance_attributes>
          <primitive id="ocf_msdummy" class="ocf" type="Stateful" provider="heartbeat">
            <operations>
              <op name="monitor" interval="5s" id="ocf_msdummy_monitor"/>
              <op name="monitor" interval="6s" id="ocf_msdummy_monitor_master" role="Master"/>
            </operations>
          <meta_attributes id="primitive-ocf_msdummy.meta"/></primitive>
-       <meta_attributes id="master_slave-master_rsc_1.meta"><nvpair id="nvpair.meta.auto-255" name="clone-max" value="8"/><nvpair id="nvpair.meta.auto-257" name="clone-node-max" value="2"/><nvpair id="nvpair.meta.auto-259" name="master-max" value="4"/><nvpair id="nvpair.meta.auto-261" name="master-node-max" value="1"/></meta_attributes></master>
+       <meta_attributes id="master_slave-master_rsc_1.meta"><nvpair id="nvpair" name="clone-max" value="8"/><nvpair id="nvpair" name="clone-node-max" value="2"/><nvpair id="nvpair" name="master-max" value="4"/><nvpair id="nvpair" name="master-node-max" value="1"/></meta_attributes></master>
      </resources>
      <constraints>
        <rsc_location id="run_rsc_sles-1" rsc="rsc_sles-1">
          <rule id="pref_run_rsc_sles-1" score="100" boolean-op="and">
-           <expression id="expression.id22624" attribute="#uname" operation="eq" value="sles-1"/>
+           <expression id="expression" attribute="#uname" operation="eq" value="sles-1"/>
          </rule>
        </rsc_location>
        <rsc_location id="run_rsc_sles-2" rsc="rsc_sles-2">
          <rule id="pref_run_rsc_sles-2" score="100" boolean-op="and">
-           <expression id="expression.id22650" attribute="#uname" operation="eq" value="sles-2"/>
+           <expression id="expression" attribute="#uname" operation="eq" value="sles-2"/>
          </rule>
        </rsc_location>
        <rsc_location id="run_rsc_sles-3" rsc="rsc_sles-3">
          <rule id="pref_run_rsc_sles-3" score="100" boolean-op="and">
-           <expression id="expression.id22676" attribute="#uname" operation="eq" value="sles-3"/>
+           <expression id="expression" attribute="#uname" operation="eq" value="sles-3"/>
          </rule>
        </rsc_location>
        <rsc_location id="run_rsc_sles-4" rsc="rsc_sles-4">
          <rule id="pref_run_rsc_sles-4" score="100" boolean-op="and">
-           <expression id="expression.id22704" attribute="#uname" operation="eq" value="sles-4"/>
+           <expression id="expression" attribute="#uname" operation="eq" value="sles-4"/>
          </rule>
        </rsc_location>
      </constraints>
@@ -117,7 +117,7 @@
    <status>
      <node_state id="ea7d39f4-3b94-4cfa-ba7a-952956daabee" uname="sles-4" crmd="online" shutdown="0" in_ccm="true" ha="active" join="member" expected="member">
        <lrm id="ea7d39f4-3b94-4cfa-ba7a-952956daabee">
-         <lrm_resources id="lrm_resources.id22748">
+         <lrm_resources id="lrm_resources">
            <lrm_resource id="lsb_dummy" type="/usr/lib64/heartbeat/cts/LSBDummy" class="lsb">
              <lrm_rsc_op id="lsb_dummy_monitor_0" operation="monitor" transition-key="10:2:a92a8570-d505-4703-a2fe-38ba4246cbb5" transition-magic="0:7;10:2:a92a8570-d505-4703-a2fe-38ba4246cbb5" call-id="5" crm_feature_set="2.0" rc-code="7" op-status="0" interval="0" op-digest="f2317cad3d54cec5d7d7aa7d0bf35cf8"/>
            </lrm_resource>
@@ -176,15 +176,15 @@
          </lrm_resources>
        </lrm>
        <transient_attributes id="ea7d39f4-3b94-4cfa-ba7a-952956daabee">
-         <instance_attributes id="instance_attributes.id23465"><nvpair id="nvpair.id23472" name="probe_complete" value="true"/></instance_attributes>
+         <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="probe_complete" value="true"/></instance_attributes>
        </transient_attributes>
      </node_state>
      <node_state id="1186dc9a-324d-425a-966e-d757e693dc86" uname="sles-1" crmd="online" in_ccm="true" ha="active" join="member" expected="member" shutdown="0">
        <transient_attributes id="transient_attributes.auto-2">
-         <instance_attributes id="instance_attributes.id23512"><nvpair id="nvpair.id23519" name="probe_complete" value="true"/></instance_attributes>
+         <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="probe_complete" value="true"/></instance_attributes>
        </transient_attributes>
        <lrm id="lrm.auto-2">
-         <lrm_resources id="lrm_resources.id23536">
+         <lrm_resources id="lrm_resources">
            <lrm_resource id="r192.168.100.181" type="IPaddr" class="ocf" provider="heartbeat">
              <lrm_rsc_op id="r192.168.100.181_monitor_0" operation="monitor" transition-key="3:0:8b471a36-40c9-47ef-b260-f684928d0276" transition-magic="4:7;3:0:8b471a36-40c9-47ef-b260-f684928d0276" call-id="2" crm_feature_set="2.0" rc-code="7" op-status="4" interval="0" op-digest="d284750e2bd4a30721ccaeb78f5582de"/>
              <lrm_rsc_op id="r192.168.100.181_start_0" operation="start" transition-key="26:2:a92a8570-d505-4703-a2fe-38ba4246cbb5" transition-magic="0:0;26:2:a92a8570-d505-4703-a2fe-38ba4246cbb5" call-id="43" crm_feature_set="2.0" rc-code="0" op-status="0" interval="0" op-digest="d284750e2bd4a30721ccaeb78f5582de"/>
@@ -268,10 +268,10 @@
      </node_state>
      <node_state id="02fb99a8-e30e-482f-b3ad-0fb3ce27d088" uname="sles-2" crmd="online" shutdown="0" in_ccm="true" ha="active" join="member" expected="member">
        <transient_attributes id="transient_attributes.auto-3">
-         <instance_attributes id="instance_attributes.id24754"><nvpair id="nvpair.id24761" name="probe_complete" value="true"/></instance_attributes>
+         <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="probe_complete" value="true"/></instance_attributes>
        </transient_attributes>
        <lrm id="lrm.auto-3">
-         <lrm_resources id="lrm_resources.id24778">
+         <lrm_resources id="lrm_resources">
            <lrm_resource id="r192.168.100.181" type="IPaddr" class="ocf" provider="heartbeat">
              <lrm_rsc_op id="r192.168.100.181_monitor_0" operation="monitor" transition-key="22:0:8b471a36-40c9-47ef-b260-f684928d0276" transition-magic="4:7;22:0:8b471a36-40c9-47ef-b260-f684928d0276" call-id="2" crm_feature_set="2.0" rc-code="7" op-status="4" interval="0" op-digest="d284750e2bd4a30721ccaeb78f5582de"/>
            </lrm_resource>
@@ -347,7 +347,7 @@
      </node_state>
      <node_state id="2298606a-6a8c-499a-9d25-76242f7006ec" uname="sles-3" crmd="online" ha="active" shutdown="0" in_ccm="false" join="member" expected="member">
        <lrm id="lrm.auto-4">
-         <lrm_resources id="lrm_resources.id25826">
+         <lrm_resources id="lrm_resources">
            <lrm_resource id="r192.168.100.183" type="IPaddr" class="ocf" provider="heartbeat">
              <lrm_rsc_op id="r192.168.100.183_monitor_0" operation="monitor" transition-key="43:0:8b471a36-40c9-47ef-b260-f684928d0276" transition-magic="0:7;43:0:8b471a36-40c9-47ef-b260-f684928d0276" call-id="4" crm_feature_set="2.0" rc-code="7" op-status="0" interval="0" op-digest="5e75cf1e843f889f89d5fcb2d7645ad6"/>
            </lrm_resource>
@@ -421,7 +421,7 @@
          </lrm_resources>
        </lrm>
        <transient_attributes id="transient_attributes.auto-4">
-         <instance_attributes id="instance_attributes.id26855"><nvpair id="nvpair.id26862" name="probe_complete" value="true"/></instance_attributes>
+         <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="probe_complete" value="true"/></instance_attributes>
        </transient_attributes>
      </node_state>
    </status>

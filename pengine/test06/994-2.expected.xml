@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <cib crm_feature_set="1.0.3" admin_epoch="0" epoch="5" num_updates="88" dc-uuid="6d3906ef-d88f-4363-afac-609884ddbb90" have-quorum="true" remote-tls-port="0" validate-with="pacemaker-1.0">
    <configuration>
-     <crm_config><cluster_property_set id="cib-bootstrap-options"><nvpair id="nvpair.id21846" name="cluster-delay" value="120s"/><nvpair id="nvpair.id21856" name="symmetric-cluster" value="true"/><nvpair id="nvpair.id21865" name="no-quorum-policy" value="stop"/></cluster_property_set></crm_config>
+     <crm_config><cluster_property_set id="cib-bootstrap-options"><nvpair id="nvpair" name="cluster-delay" value="120s"/><nvpair id="nvpair" name="symmetric-cluster" value="true"/><nvpair id="nvpair" name="no-quorum-policy" value="stop"/></cluster_property_set></crm_config>
      <nodes>
        <node id="6d3906ef-d88f-4363-afac-609884ddbb90" uname="paul" type="member"/>
      </nodes>
@@ -11,19 +11,19 @@
            <operations>
              <op name="monitor" interval="120s" id="datadisk_1_mon" timeout="60s"/>
            </operations>
-           <instance_attributes id="instance_attributes.id21919"><nvpair id="nvpair.id21925" name="1" value="r0"/></instance_attributes>
+           <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="1" value="r0"/></instance_attributes>
          <meta_attributes id="primitive-datadisk_1.meta"/></primitive>
          <primitive id="Filesystem_2" class="ocf" provider="heartbeat" type="Filesystem">
            <operations>
              <op name="monitor" interval="120s" id="Filesystem_2_mon" timeout="60s"/>
            </operations>
-           <instance_attributes id="instance_attributes.id21961"><nvpair id="nvpair.id21967" name="device" value="/dev/drbd0"/><nvpair id="nvpair.id21976" name="directory" value="/home"/><nvpair id="nvpair.id21985" name="fstype" value="reiserfs"/></instance_attributes>
+           <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="device" value="/dev/drbd0"/><nvpair id="nvpair" name="directory" value="/home"/><nvpair id="nvpair" name="fstype" value="reiserfs"/></instance_attributes>
          <meta_attributes id="primitive-Filesystem_2.meta"/></primitive>
          <primitive id="IPaddr_5" class="ocf" provider="heartbeat" type="IPaddr">
            <operations>
              <op name="monitor" interval="5s" id="IPaddr_5_mon" timeout="5s"/>
            </operations>
-           <instance_attributes id="instance_attributes.id22021"><nvpair id="nvpair.id22027" name="ip" value="10.10.10.222"/></instance_attributes>
+           <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="ip" value="10.10.10.222"/></instance_attributes>
          <meta_attributes id="primitive-IPaddr_5.meta"/></primitive>
          <primitive id="postfix_9" class="lsb" type="postfix">
            <operations>
@@ -40,7 +40,7 @@
  <status>
    <node_state id="6d3906ef-d88f-4363-afac-609884ddbb90" uname="paul" crmd="online" in_ccm="true" join="member" ha="active" expected="member">
      <lrm id="any">
-       <lrm_resources id="lrm_resources.id22116">
+       <lrm_resources id="lrm_resources">
          <lrm_resource id="group_1:Filesystem_2" type="Filesystem" class="ocf" provider="heartbeat">
            <lrm_rsc_op id="group_1-Filesystem_2_monitor_0" op-digest="9432f65d5b188b6b7dd1b626b2d1a541" interval="0" operation="monitor" transition-key="0:b12c0a28-1ba5-407b-945c-e4d5ea1602dc" crm_feature_set="2.0" transition-magic="0:7;0:b12c0a28-1ba5-407b-945c-e4d5ea1602dc" call-id="3" rc-code="7" op-status="0"/>
            <lrm_rsc_op id="group_1-Filesystem_2_start_0" op-digest="9432f65d5b188b6b7dd1b626b2d1a541" operation="start" interval="0" op-status="0" call-id="10" rc-code="0" transition-key="2:b12c0a28-1ba5-407b-945c-e4d5ea1602dc" crm_feature_set="2.0" transition-magic="0:0;2:b12c0a28-1ba5-407b-945c-e4d5ea1602dc"/>
@@ -69,7 +69,7 @@
        </lrm_resources>
      </lrm>
      <transient_attributes id="transient_attributes.auto-1">
-       <instance_attributes id="instance_attributes.id22540"><nvpair id="nvpair.id22548" name="probe_complete" value="true"/></instance_attributes>
+       <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="probe_complete" value="true"/></instance_attributes>
      </transient_attributes>
    </node_state>
  </status>

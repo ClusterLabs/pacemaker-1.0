@@ -2,7 +2,7 @@
 <cib crm_feature_set="2.1" admin_epoch="1" epoch="4" num_updates="53" dc-uuid="f10a448b-abcb-4743-a7b9-cbb966b46462" have-quorum="1" remote-tls-port="0" validate-with="pacemaker-1.0">
    <configuration>
      <crm_config>
-       <cluster_property_set id="cib-bootstrap-options"><nvpair id="nvpair.id21847" name="symmetric-cluster" value="true"/><nvpair id="nvpair.id21856" name="no-quorum-policy" value="stop"/><nvpair id="nvpair.id21865" name="default-resource-stickiness" value="200"/><nvpair id="nvpair.id21874" name="default-migration-threshold" value="-100"/><nvpair id="nvpair.id21883" name="stonith-enabled" value="true"/><nvpair id="nvpair.id21892" name="stonith-action" value="reboot"/><nvpair id="nvpair.id21900" name="startup-fencing" value="true"/><nvpair id="nvpair.id21909" name="stop-orphan-resources" value="true"/><nvpair id="nvpair.id21918" name="stop-orphan-actions" value="true"/><nvpair id="nvpair.id21927" name="remove-after-stop" value="false"/><nvpair id="nvpair.id21936" name="short-resource-names" value="true"/><nvpair id="nvpair.id21945" name="transition-idle-timeout" value="5min"/><nvpair id="nvpair.id21954" name="default-action-timeout" value="20s"/><nvpair id="nvpair.id21963" name="is-managed-default" value="true"/><nvpair id="nvpair.id21972" name="cluster-delay" value="60s"/><nvpair id="nvpair.id21980" name="pe-error-series-max" value="-1"/><nvpair id="nvpair.id21989" name="pe-warn-series-max" value="-1"/><nvpair id="nvpair.id21998" name="pe-input-series-max" value="-1"/><nvpair id="nvpair.id22007" name="dc-version" value="0.6.2-node: 7f22385d1b41c36c4cc54f292e55869caa94ab7e"/></cluster_property_set>
+       <cluster_property_set id="cib-bootstrap-options"><nvpair id="nvpair" name="symmetric-cluster" value="true"/><nvpair id="nvpair" name="no-quorum-policy" value="stop"/><nvpair id="nvpair" name="default-resource-stickiness" value="200"/><nvpair id="nvpair" name="default-migration-threshold" value="-100"/><nvpair id="nvpair" name="stonith-enabled" value="true"/><nvpair id="nvpair" name="stonith-action" value="reboot"/><nvpair id="nvpair" name="startup-fencing" value="true"/><nvpair id="nvpair" name="stop-orphan-resources" value="true"/><nvpair id="nvpair" name="stop-orphan-actions" value="true"/><nvpair id="nvpair" name="remove-after-stop" value="false"/><nvpair id="nvpair" name="short-resource-names" value="true"/><nvpair id="nvpair" name="transition-idle-timeout" value="5min"/><nvpair id="nvpair" name="default-action-timeout" value="20s"/><nvpair id="nvpair" name="is-managed-default" value="true"/><nvpair id="nvpair" name="cluster-delay" value="60s"/><nvpair id="nvpair" name="pe-error-series-max" value="-1"/><nvpair id="nvpair" name="pe-warn-series-max" value="-1"/><nvpair id="nvpair" name="pe-input-series-max" value="-1"/><nvpair id="nvpair" name="dc-version" value="0.6.2-node: 7f22385d1b41c36c4cc54f292e55869caa94ab7e"/></cluster_property_set>
      </crm_config>
      <nodes>
        <node id="f10a448b-abcb-4743-a7b9-cbb966b46462" uname="sirius" type="normal"/>
@@ -10,9 +10,9 @@
      </nodes>
      <resources>
        <clone id="pingd-clone">
-         <meta_attributes id="meta_attributes.id22048"><nvpair id="nvpair.id22054" name="globally-unique" value="false"/></meta_attributes>
+         <meta_attributes id="meta_attributes"><nvpair id="nvpair" name="globally-unique" value="false"/></meta_attributes>
          <primitive id="pingd-1" class="ocf" provider="heartbeat" type="pingd">
-           <instance_attributes id="instance_attributes.id22076"><nvpair id="nvpair.id22083" name="pidfile" value="/var/run/heartbeat/rsctmp/pingd-1.pid"/><nvpair id="nvpair.id22092" name="name" value="pingd-1-node-attribute"/><nvpair id="nvpair.id22101" name="dampen" value="5s"/><nvpair id="nvpair.id22109" name="multiplier" value="100"/></instance_attributes>
+           <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="pidfile" value="/var/run/heartbeat/rsctmp/pingd-1.pid"/><nvpair id="nvpair" name="name" value="pingd-1-node-attribute"/><nvpair id="nvpair" name="dampen" value="5s"/><nvpair id="nvpair" name="multiplier" value="100"/></instance_attributes>
            <operations>
              <op name="monitor" interval="10s" id="pingd-1-monitor" timeout="5s" requires="nothing"/>
              <op name="start" interval="0" id="pingd-1-start" timeout="10s" requires="nothing"/>
@@ -20,9 +20,9 @@
          <meta_attributes id="primitive-pingd-1.meta"/></primitive>
        <meta_attributes id="clone-pingd-clone.meta"/></clone>
        <master id="drbd-msr">
-         <meta_attributes id="meta_attributes.id22156"><nvpair id="nvpair.id22162" name="clone-max" value="2"/><nvpair id="nvpair.id22170" name="clone-node-max" value="1"/><nvpair id="nvpair.id22178" name="master-max" value="1"/><nvpair id="nvpair.id22187" name="master-node-max" value="1"/><nvpair id="nvpair.id22195" name="notify" value="yes"/><nvpair id="nvpair.id22204" name="globally-unique" value="false"/></meta_attributes>
+         <meta_attributes id="meta_attributes"><nvpair id="nvpair" name="clone-max" value="2"/><nvpair id="nvpair" name="clone-node-max" value="1"/><nvpair id="nvpair" name="master-max" value="1"/><nvpair id="nvpair" name="master-node-max" value="1"/><nvpair id="nvpair" name="notify" value="yes"/><nvpair id="nvpair" name="globally-unique" value="false"/></meta_attributes>
          <primitive id="drbd-r0" class="ocf" provider="heartbeat" type="drbd">
-           <instance_attributes id="instance_attributes.id22225"><nvpair id="nvpair.id22231" name="drbd_resource" value="r0"/></instance_attributes>
+           <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="drbd_resource" value="r0"/></instance_attributes>
            <operations>
              <op name="monitor" interval="20s" id="drbd-r0-monitor-1" timeout="10s" role="Master" start-delay="10s"/>
              <op name="monitor" interval="21s" id="drbd-r0-monitor-2" timeout="10s" role="Slave" start-delay="10s"/>
@@ -35,7 +35,7 @@
        <meta_attributes id="master_slave-drbd-msr.meta"><nvpair id="ordered.meta.auto-96" name="ordered" value="false"/></meta_attributes></master>
        <group id="group-1">
          <primitive id="fs-1" class="ocf" provider="heartbeat" type="Filesystem">
-           <instance_attributes id="instance_attributes.id22332"><nvpair id="nvpair.id22338" name="device" value="/dev/drbd0"/><nvpair id="nvpair.id22347" name="directory" value="/drbd"/><nvpair id="nvpair.id22356" name="fstype" value="xfs"/><nvpair id="nvpair.id22364" name="options" value="noatime,exec,nosuid,nodev"/></instance_attributes>
+           <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="device" value="/dev/drbd0"/><nvpair id="nvpair" name="directory" value="/drbd"/><nvpair id="nvpair" name="fstype" value="xfs"/><nvpair id="nvpair" name="options" value="noatime,exec,nosuid,nodev"/></instance_attributes>
            <operations>
              <op name="monitor" interval="20s" id="fs-1-monitor" timeout="10s" start-delay="10s"/>
              <op name="start" interval="0" id="fs-1-start" timeout="10s"/>
@@ -43,7 +43,7 @@
            </operations>
          <meta_attributes id="primitive-fs-1.meta"/></primitive>
          <primitive id="ip-198" class="ocf" provider="heartbeat" type="IPaddr2">
-           <instance_attributes id="instance_attributes.id22418"><nvpair id="nvpair.id22425" name="ip" value="80.237.189.198"/><nvpair id="nvpair.id22433" name="cidr_netmask" value="28"/><nvpair id="nvpair.id22441" name="nic" value="eth1"/><nvpair id="nvpair.id22450" name="iflabel" value="198"/></instance_attributes>
+           <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="ip" value="80.237.189.198"/><nvpair id="nvpair" name="cidr_netmask" value="28"/><nvpair id="nvpair" name="nic" value="eth1"/><nvpair id="nvpair" name="iflabel" value="198"/></instance_attributes>
            <operations>
              <op name="monitor" interval="30s" id="ip-198-monitor" timeout="15s" start-delay="10s"/>
              <op name="start" interval="0" id="ip-198-start" timeout="10s"/>
@@ -51,7 +51,7 @@
            </operations>
          <meta_attributes id="primitive-ip-198.meta"/></primitive>
          <primitive id="apache" class="ocf" provider="custom" type="apache2">
-           <instance_attributes id="instance_attributes.id22503"><nvpair id="nvpair.id22510" name="apache2_bin" value="/usr/sbin/apache2"/><nvpair id="nvpair.id22518" name="apache2_pidfile" value="/var/run/apache2.pid"/><nvpair id="nvpair.id22527" name="apache2_config" value="/etc/apache2/httpd.conf"/><nvpair id="nvpair.id22536" name="apache2_opts" value="-D STATUS -D INFO -D LANGUAGE -D SSL -D SUEXEC -D PHP5"/><nvpair id="nvpair.id22545" name="apache2_listening_check" value="80.237.189.198:80"/></instance_attributes>
+           <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="apache2_bin" value="/usr/sbin/apache2"/><nvpair id="nvpair" name="apache2_pidfile" value="/var/run/apache2.pid"/><nvpair id="nvpair" name="apache2_config" value="/etc/apache2/httpd.conf"/><nvpair id="nvpair" name="apache2_opts" value="-D STATUS -D INFO -D LANGUAGE -D SSL -D SUEXEC -D PHP5"/><nvpair id="nvpair" name="apache2_listening_check" value="80.237.189.198:80"/></instance_attributes>
            <operations>
              <op name="monitor" interval="60s" id="apache-monitor" timeout="30s" start-delay="10s"/>
              <op name="start" interval="0" id="apache-start" timeout="30s"/>
@@ -60,7 +60,7 @@
          <meta_attributes id="primitive-apache.meta"/></primitive>
        <meta_attributes id="group-group-1.meta"/></group>
        <primitive id="pollux-fencing" class="stonith" type="external/ipmi-soft">
-         <instance_attributes id="instance_attributes.id22604"><nvpair id="nvpair.id22610" name="hostname" value="pollux"/><nvpair id="nvpair.id22619" name="ipaddr" value="10.0.0.195"/><nvpair id="nvpair.id22628" name="userid" value="root"/><nvpair id="nvpair.id22637" name="passwd" value="qwe123"/></instance_attributes>
+         <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="hostname" value="pollux"/><nvpair id="nvpair" name="ipaddr" value="10.0.0.195"/><nvpair id="nvpair" name="userid" value="root"/><nvpair id="nvpair" name="passwd" value="qwe123"/></instance_attributes>
          <operations>
            <op name="monitor" interval="60s" id="pollux-fencing-monitor" timeout="10s" requires="nothing"/>
            <op name="start" interval="0" id="pollux-fencing-start" timeout="10s" requires="nothing"/>
@@ -68,7 +68,7 @@
          </operations>
        <meta_attributes id="primitive-pollux-fencing.meta"><nvpair id="resource_stickiness.meta.auto-226" name="resource-stickiness" value="INFINITY"/></meta_attributes></primitive>
        <primitive id="sirius-fencing" class="stonith" type="external/ipmi-soft">
-         <instance_attributes id="instance_attributes.id22699"><nvpair id="nvpair.id22706" name="hostname" value="sirius"/><nvpair id="nvpair.id22714" name="ipaddr" value="10.0.0.197"/><nvpair id="nvpair.id22723" name="userid" value="root"/><nvpair id="nvpair.id22732" name="passwd" value="qwe123"/></instance_attributes>
+         <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="hostname" value="sirius"/><nvpair id="nvpair" name="ipaddr" value="10.0.0.197"/><nvpair id="nvpair" name="userid" value="root"/><nvpair id="nvpair" name="passwd" value="qwe123"/></instance_attributes>
          <operations>
            <op name="monitor" interval="60s" id="sirius-fencing-monitor" timeout="10s" requires="nothing"/>
            <op name="start" interval="0" id="sirius-fencing-start" timeout="10s" requires="nothing"/>
@@ -79,10 +79,10 @@
      <constraints>
        <rsc_location id="rsc-location-drbd-msr" rsc="drbd-msr">
          <rule id="preferred-location-drbd-msr" role="Master" score="50">
-           <expression id="expression.id22801" attribute="#uname" operation="eq" value="pollux"/>
+           <expression id="expression" attribute="#uname" operation="eq" value="pollux"/>
          </rule>
          <rule id="pingd-score-group-1" role="Master" score-attribute="pingd-1-node-attribute">
-           <expression id="expression.id22822" attribute="pingd-1-node-attribute" operation="defined"/>
+           <expression id="expression" attribute="pingd-1-node-attribute" operation="defined"/>
          </rule>
        </rsc_location>
        <rsc_colocation id="group-1-prefer-on-drbd-msr-master" rsc="group-1" with-rsc="drbd-msr" with-rsc-role="Master" score="INFINITY"/>
@@ -90,18 +90,18 @@
        <rsc_order id="group-1-after-drbd-msr" first="drbd-msr" then="group-1" then-action="start" first-action="promote"/>
        <rsc_location id="pollux-fencing-placement" rsc="pollux-fencing">
          <rule id="pollux-fencing-placement-1" score="INFINITY">
-           <expression id="expression.id22883" attribute="#uname" operation="ne" value="pollux"/>
+           <expression id="expression" attribute="#uname" operation="ne" value="pollux"/>
          </rule>
          <rule id="pollux-fencing-placement-2" score="-INFINITY">
-           <expression id="expression.id22901" attribute="#uname" operation="eq" value="pollux"/>
+           <expression id="expression" attribute="#uname" operation="eq" value="pollux"/>
          </rule>
        </rsc_location>
        <rsc_location id="sirius-fencing-placement" rsc="sirius-fencing">
          <rule id="sirius-fencing-placement-1" score="INFINITY">
-           <expression id="expression.id22928" attribute="#uname" operation="ne" value="sirius"/>
+           <expression id="expression" attribute="#uname" operation="ne" value="sirius"/>
          </rule>
          <rule id="sirius-fencing-placement-2" score="-INFINITY">
-           <expression id="expression.id22946" attribute="#uname" operation="eq" value="sirius"/>
+           <expression id="expression" attribute="#uname" operation="eq" value="sirius"/>
          </rule>
        </rsc_location>
      </constraints>
@@ -109,7 +109,7 @@
    <status>
      <node_state id="26cfbecf-dc25-42e1-84de-325ca9e457b5" uname="pollux" crmd="online" shutdown="0" ha="active" in_ccm="true" join="member" expected="member">
        <lrm id="lrm.auto-1">
-         <lrm_resources id="lrm_resources.id22989">
+         <lrm_resources id="lrm_resources">
            <lrm_resource id="pingd-1:0" type="pingd" class="ocf" provider="heartbeat">
              <lrm_rsc_op id="pingd-1-0_monitor_0" operation="monitor" transition-key="11:0:fd7e78c1-31e3-4e00-a914-0844669c017e" transition-magic="0:7;11:0:fd7e78c1-31e3-4e00-a914-0844669c017e" call-id="2" crm_feature_set="2.1" rc-code="7" op-status="0" interval="0" op-digest="207654c1110a472b7bf22ee8215a90f5"/>
            </lrm_resource>
@@ -150,13 +150,13 @@
          </lrm_resources>
        </lrm>
        <transient_attributes id="transient_attributes.auto-1">
-         <instance_attributes id="instance_attributes.id23607"><nvpair id="nvpair.id23614" name="probe_complete" value="true"/><nvpair id="nvpair.id23623" name="pingd-1-node-attribute" value="300"/></instance_attributes>
-         <instance_attributes id="instance_attributes.id23635"><nvpair id="nvpair.id23642" name="master-drbd-r0:1" value="75"/></instance_attributes>
+         <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="probe_complete" value="true"/><nvpair id="nvpair" name="pingd-1-node-attribute" value="300"/></instance_attributes>
+         <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="master-drbd-r0:1" value="75"/></instance_attributes>
        </transient_attributes>
      </node_state>
      <node_state id="f10a448b-abcb-4743-a7b9-cbb966b46462" uname="sirius" crmd="online" ha="active" in_ccm="true" join="member" expected="member" shutdown="0">
        <lrm id="f10a448b-abcb-4743-a7b9-cbb966b46462">
-         <lrm_resources id="lrm_resources.id23682">
+         <lrm_resources id="lrm_resources">
            <lrm_resource id="pingd-1:0" type="pingd" class="ocf" provider="heartbeat">
              <lrm_rsc_op id="pingd-1-0_monitor_0" operation="monitor" transition-key="3:0:fd7e78c1-31e3-4e00-a914-0844669c017e" transition-magic="0:7;3:0:fd7e78c1-31e3-4e00-a914-0844669c017e" call-id="2" crm_feature_set="2.1" rc-code="7" op-status="0" interval="0" op-digest="207654c1110a472b7bf22ee8215a90f5"/>
              <lrm_rsc_op id="pingd-1-0_start_0" operation="start" transition-key="6:2:fd7e78c1-31e3-4e00-a914-0844669c017e" transition-magic="0:0;6:2:fd7e78c1-31e3-4e00-a914-0844669c017e" call-id="13" crm_feature_set="2.1" rc-code="0" op-status="0" interval="0" op-digest="207654c1110a472b7bf22ee8215a90f5"/>
@@ -196,8 +196,8 @@
          </lrm_resources>
        </lrm>
        <transient_attributes id="f10a448b-abcb-4743-a7b9-cbb966b46462">
-         <instance_attributes id="instance_attributes.id24271"><nvpair id="nvpair.id24278" name="probe_complete" value="true"/><nvpair id="nvpair.id24288" name="pingd-1-node-attribute" value="300"/></instance_attributes>
-         <instance_attributes id="instance_attributes.id24299"><nvpair id="nvpair.id24306" name="master-drbd-r0:0" value="75"/></instance_attributes>
+         <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="probe_complete" value="true"/><nvpair id="nvpair" name="pingd-1-node-attribute" value="300"/></instance_attributes>
+         <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="master-drbd-r0:0" value="75"/></instance_attributes>
        </transient_attributes>
      </node_state>
    </status>

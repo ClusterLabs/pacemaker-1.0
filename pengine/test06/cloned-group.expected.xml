@@ -2,7 +2,7 @@
 <cib admin_epoch="0" epoch="300" num_updates="42019" dc-uuid="49e81295-8e2f-4aeb-98f3-a14de6f62298" have-quorum="true" remote-tls-port="0" validate-with="pacemaker-1.0">
    <configuration>
      <crm_config>
-       <cluster_property_set id="default"><nvpair id="nvpair.id21849" name="symmetric-cluster" value="true"/><nvpair id="nvpair.id21858" name="transition-idle-timeout" value="60"/><nvpair id="nvpair.id21867" name="default-resource-stickiness" value="0"/><nvpair id="nvpair.id21876" name="short-resource-names" value="true"/><nvpair id="nvpair.id21885" name="no-quorum-policy" value="stop"/><nvpair id="nvpair.id21894" name="stop-orphan-resources" value="false"/><nvpair id="nvpair.id21903" name="stop-orphan-actions" value="true"/><nvpair id="nvpair.id21912" name="remove-after-stop" value="false"/><nvpair id="nvpair.id21921" name="is-managed-default" value="true"/><nvpair id="nvpair.id21930" name="stonith-enabled" value="false"/><nvpair id="nvpair.id21939" name="stonith-action" value="reboot"/></cluster_property_set>
+       <cluster_property_set id="default"><nvpair id="nvpair" name="symmetric-cluster" value="true"/><nvpair id="nvpair" name="transition-idle-timeout" value="60"/><nvpair id="nvpair" name="default-resource-stickiness" value="0"/><nvpair id="nvpair" name="short-resource-names" value="true"/><nvpair id="nvpair" name="no-quorum-policy" value="stop"/><nvpair id="nvpair" name="stop-orphan-resources" value="false"/><nvpair id="nvpair" name="stop-orphan-actions" value="true"/><nvpair id="nvpair" name="remove-after-stop" value="false"/><nvpair id="nvpair" name="is-managed-default" value="true"/><nvpair id="nvpair" name="stonith-enabled" value="false"/><nvpair id="nvpair" name="stonith-action" value="reboot"/></cluster_property_set>
      </crm_config>
      <nodes>
        <node id="49e81295-8e2f-4aeb-98f3-a14de6f62298" uname="webcluster01" type="normal"/>
@@ -10,28 +10,28 @@
      </nodes>
      <resources>
        <clone id="apache2_clone">
-         <instance_attributes id="instance_attributes.id21979"><nvpair id="nvpair.id21986" name="clone_max" value="2"/><nvpair id="nvpair.id21995" name="clone_node_max" value="1"/><nvpair id="nvpair.id22004" name="target_role" value="started"/></instance_attributes>
+         <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="clone_max" value="2"/><nvpair id="nvpair" name="clone_node_max" value="1"/><nvpair id="nvpair" name="target_role" value="started"/></instance_attributes>
          <group id="grrr">
            <primitive id="apache2" class="ocf" type="apache" provider="heartbeat">
              <operations>
                <op name="monitor" interval="10s" id="apache2_mon" timeout="20s"/>
              </operations>
-             <instance_attributes id="instance_attributes.id22044"><nvpair id="nvpair.id22051" name="httpd" value="/usr/sbin/apache2"/><nvpair id="nvpair.id22060" name="options" value="-k start"/><nvpair id="nvpair.id22069" name="configfile" value="/etc/apache2/apache2.conf"/><nvpair id="nvpair.id22078" name="target_role" value="started"/></instance_attributes>
-           <meta_attributes id="primitive-apache2.meta"><nvpair id="nvpair.meta.auto-78" name="target-role" value="started"/></meta_attributes></primitive>
+             <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="httpd" value="/usr/sbin/apache2"/><nvpair id="nvpair" name="options" value="-k start"/><nvpair id="nvpair" name="configfile" value="/etc/apache2/apache2.conf"/><nvpair id="nvpair" name="target_role" value="started"/></instance_attributes>
+           <meta_attributes id="primitive-apache2.meta"><nvpair id="nvpair" name="target-role" value="started"/></meta_attributes></primitive>
            <primitive id="mysql-proxy" class="lsb" type="mysql-proxy">
              <operations>
                <op name="monitor" interval="10s" id="mysql-proxy_mon" timeout="20s"/>
              </operations>
            <meta_attributes id="primitive-mysql-proxy.meta"/></primitive>
          <meta_attributes id="group-grrr.meta"/></group>
-       <meta_attributes id="clone-apache2_clone.meta"><nvpair id="nvpair.meta.auto-55" name="target-role" value="started"/><nvpair id="nvpair.meta.auto-51" name="clone-max" value="2"/><nvpair id="nvpair.meta.auto-53" name="clone-node-max" value="1"/></meta_attributes></clone>
+       <meta_attributes id="clone-apache2_clone.meta"><nvpair id="nvpair" name="target-role" value="started"/><nvpair id="nvpair" name="clone-max" value="2"/><nvpair id="nvpair" name="clone-node-max" value="1"/></meta_attributes></clone>
      </resources>
      <constraints/>
    </configuration>
    <status>
      <node_state id="49e81295-8e2f-4aeb-98f3-a14de6f62298" uname="webcluster01" crmd="online" shutdown="0" in_ccm="true" ha="active" join="member" expected="member">
        <lrm id="lrm.auto-1">
-         <lrm_resources id="lrm_resources.id22152">
+         <lrm_resources id="lrm_resources">
            <lrm_resource id="mysql-proxy:1" type="mysql-proxy" class="lsb">
              <lrm_rsc_op id="mysql-proxy-1_monitor_0" operation="monitor" transition-key="6:0:9b0d1af2-f932-497b-971f-70be4a277e3d" transition-magic="0:7;6:0:9b0d1af2-f932-497b-971f-70be4a277e3d" call-id="5" crm_feature_set="2.0" rc-code="7" op-status="0" interval="0" op-digest="f2317cad3d54cec5d7d7aa7d0bf35cf8"/>
              <lrm_rsc_op id="mysql-proxy-1_start_0" operation="start" transition-key="15:1:9b0d1af2-f932-497b-971f-70be4a277e3d" transition-magic="0:0;15:1:9b0d1af2-f932-497b-971f-70be4a277e3d" call-id="13" crm_feature_set="2.0" rc-code="0" op-status="0" interval="0" op-digest="f2317cad3d54cec5d7d7aa7d0bf35cf8"/>
@@ -55,7 +55,7 @@
          </lrm_resources>
        </lrm>
        <transient_attributes id="transient_attributes.auto-1">
-         <instance_attributes id="instance_attributes.id22525"><nvpair id="nvpair.id22532" name="probe_complete" value="true"/></instance_attributes>
+         <instance_attributes id="instance_attributes"><nvpair id="nvpair" name="probe_complete" value="true"/></instance_attributes>
        </transient_attributes>
      </node_state>
    </status>
