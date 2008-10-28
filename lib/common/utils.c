@@ -423,6 +423,9 @@ crm_itoa(int an_int)
 
 extern int LogToLoggingDaemon(int priority, const char * buf, int bstrlen, gboolean use_pri_str);
 
+#ifdef HAVE_G_LOG_SET_DEFAULT_HANDLER
+GLogFunc glib_log_default;
+
 static void
 crm_glib_handler(const gchar *log_domain, GLogLevelFlags flags, const gchar *message, gpointer user_data)
 {
@@ -450,8 +453,8 @@ crm_glib_handler(const gchar *log_domain, GLogLevelFlags flags, const gchar *mes
 
 	do_crm_log(log_level, "%s: %s", log_domain, message);
 }
+#endif
 
-GLogFunc glib_log_default;
 void crm_log_deinit(void) {
 #ifdef HAVE_G_LOG_SET_DEFAULT_HANDLER
     g_log_set_default_handler(glib_log_default, NULL);
@@ -463,11 +466,12 @@ crm_log_init(
     const char *entity, int level, gboolean coredir, gboolean to_stderr,
     int argc, char **argv)
 {
-/* 	const char *test = "Testing log daemon connection"; */
 	/* Redirect messages from glib functions to our handler */
 /*  	cl_malloc_forced_for_glib(); */
+#ifdef HAVE_G_LOG_SET_DEFAULT_HANDLER
 	glib_log_default = g_log_set_default_handler(crm_glib_handler, NULL);
-
+#endif
+	
 	/* and for good measure... - this enum is a bit field (!) */
 	g_log_set_always_fatal((GLogLevelFlags)0); /*value out of range*/
 	
