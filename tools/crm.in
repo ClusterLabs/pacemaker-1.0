@@ -411,7 +411,7 @@ provided is empty, then the live (cluster) CIB is used.
             return False
         return True
     def new(self,cmd,name):
-        "usage: create <shadow_cib>"
+        "usage: new <shadow_cib>"
         if ext_cmd("%s -c %s" % (self.extcmd,name)) == 0:
             common_info("%s shadow CIB created"%name)
         else:
@@ -459,9 +459,16 @@ provided is empty, then the live (cluster) CIB is used.
 def manage_attr(cmd,attr_ext_commands,*args):
     if len(args) < 3:
         bad_attr_usage(cmd,' '.join(args))
-    attr_cmd = attr_ext_commands[args[1]]
+        return
+    attr_cmd = None
+    try:
+        attr_cmd = attr_ext_commands[args[1]]
+    except KeyError:
+        bad_attr_usage(cmd,' '.join(args))
+        return
     if not attr_cmd:
         bad_attr_usage(cmd,' '.join(args))
+        return
     if args[1] == 'set':
         if len(args) == 4:
             ext_cmd(attr_cmd%(args[0],args[2],args[3]))
