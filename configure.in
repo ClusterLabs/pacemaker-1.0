@@ -357,6 +357,7 @@ esac
 
 AC_MSG_CHECKING(which format is needed to print uint64_t)
 case "$host_cpu" in
+  s390x)U64T="%lu";;
   *64*) U64T="%lu";;
   *)    U64T="%llu";;
 esac
