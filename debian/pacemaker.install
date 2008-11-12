@@ -26,7 +26,6 @@ usr/lib/heartbeat/attrd
 usr/lib/heartbeat/pengine
 usr/lib/heartbeat/stonithd
 usr/lib/heartbeat/stonithdtest/apitest
-usr/lib/openais/lcrso
 usr/lib/heartbeat/*.py*
 usr/lib/*.so.*
 usr/lib/heartbeat/plugins/RAExec/stonith.so*
