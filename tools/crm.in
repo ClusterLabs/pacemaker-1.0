@@ -21,7 +21,7 @@
 import shlex
 import os
 from tempfile import mkstemp
-from popen2 import Popen3
+import subprocess
 import sys
 import time
 import readline
@@ -203,19 +203,6 @@ def xml2doc(cmd):
 #   p.tochild.write(s)
 #   p.tochild.close()
 #   p.wait()
-
-# Stolen from crm_utils.py
-def os_system(cmd, print_raw=False):
-    'Run a program, collect and return stdout.'
-    p = Popen3(add_sudo(cmd), None)
-    p.tochild.close()
-    result = p.fromchild.readlines()
-    p.fromchild.close()
-    p.wait()
-    if print_raw:
-        for line in result:
-            print line.rstrip()
-    return result
 
 def str2tmp(s):
     '''
@@ -418,6 +405,9 @@ provided is empty, then the live (cluster) CIB is used.
             common_err("failed to create %s shadow CIB"%name)
     def delete(self,cmd,name):
         "usage: delete <shadow_cib>"
+        if cib_in_use == name:
+            common_err("%s shadow CIB is in use"%name)
+            return
         if ext_cmd("%s -D %s --force" % (self.extcmd,name)) == 0:
             common_info("%s shadow CIB deleted"%name)
         else:
@@ -2356,9 +2346,7 @@ class CibObjectSetRaw(CibObjectSet):
         pipe_string(ptest,doc.toprettyxml())
         doc.unlink()
         if tmpfile:
-            p = Popen3("%s %s" % (user_prefs.dotty,tmpfile), None)
-            p.fromchild.close()
-            p.tochild.close()
+            p = subprocess.Popen("%s %s" % (user_prefs.dotty,tmpfile), shell=True, bufsize=0, stdin=None, stdout=None, stderr=None, close_fds=True)
             tmpfiles.append(tmpfile)
 
 class CibObject(object):
