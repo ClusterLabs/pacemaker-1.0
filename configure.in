@@ -1621,8 +1621,6 @@ AC_CONFIG_FILES(Makefile				        \
 README							        \
 cts/Makefile					        	\
 	cts/CM_ais.py						\
-	cts/CM_fs.py						\
-	cts/CM_hb.py						\
 	cts/CTS.py						\
 	cts/CTSaudits.py					\
 	cts/CTSlab.py						\
