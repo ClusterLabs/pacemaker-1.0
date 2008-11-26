@@ -1031,7 +1031,7 @@ OrderMetadataType = MetadataValueType("enum", {"before":1, "after":1})
 StopStartMetadataType = MetadataValueType("enum", {"stop_start":1, "stop_only":1, "block":1})
 RestartMetadataType = MetadataValueType("enum", {"ignore":1, "restart":1})
 OpMetadataType = MetadataValueType("enum", {"lt":1, "lte":1,"gt":1,"gte":1,
-				"eq":1, "neq":1, "defined":1, "not_defined":1})
+				"eq":1, "ne":1, "defined":1, "not_defined":1})
 DateOpMetadataType = MetadataValueType("enum", {"in_range":1, "date_spec":1,"gt":1,"lt":1})
 DateSpecMetadataType = MetadataValueType("enum", {"in_range":1, "date_spec":1,"gt":1,"lt":1})
 BoolDefaultMetadatatype = MetadataValueType("enum", {"true":1, "false":0,"1":1,"0":0, "#default":1,"on":1, "off":0})
