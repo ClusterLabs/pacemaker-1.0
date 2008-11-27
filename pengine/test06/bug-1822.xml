@@ -93,6 +93,7 @@
        <transient_attributes id="4dbb8c56-330e-4835-a15e-c0aa632d4e89">
          <instance_attributes id="status-4dbb8c56-330e-4835-a15e-c0aa632d4e89">
            <attributes>
+	     <nvpair id="shutdown-1" name="shutdown" value="1234"/>
              <nvpair id="status-4dbb8c56-330e-4835-a15e-c0aa632d4e89-default_ping_set" name="default_ping_set" value="100"/>
              <nvpair id="status-4dbb8c56-330e-4835-a15e-c0aa632d4e89-probe_complete" name="probe_complete" value="true"/>
              <nvpair id="status-4dbb8c56-330e-4835-a15e-c0aa632d4e89-fail-count-master_slave_procdctl:0" name="fail-count-master_slave_procdctl:0" value="1"/>

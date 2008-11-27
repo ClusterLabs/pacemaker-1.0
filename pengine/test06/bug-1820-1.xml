@@ -102,6 +102,7 @@
        <transient_attributes id="3f368213-61d5-409a-a30e-1428efe70f63">
          <instance_attributes id="status-3f368213-61d5-409a-a30e-1428efe70f63">
            <attributes>
+	     <nvpair id="shutdown-1" name="shutdown" value="1234"/>
              <nvpair id="status-3f368213-61d5-409a-a30e-1428efe70f63-probe_complete" name="probe_complete" value="true"/>
            </attributes>
          </instance_attributes>
