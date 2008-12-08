@@ -3187,7 +3187,7 @@ stonithRA_start( stonithRA_ops_t * op, gpointer data)
 	StonithNVpair*	snv;
 	Stonith *	stonith_obj = NULL;
 	char 		buf_tmp[40];
-	int		shmid=0, shmsize=0;
+	int		shmid=-1, shmsize=0;
 	char **		hostlist;
 
 	/* Check the parameter */
@@ -3199,7 +3199,7 @@ stonithRA_start( stonithRA_ops_t * op, gpointer data)
 
 	srsc = get_started_stonith_resource(op->rsc_id);
 	if (srsc != NULL) {
-		stonithd_log(LOG_DEBUG, "%s: %s is "
+		stonithd_log(LOG_INFO, "%s: %s is "
 			"already started, we just probe the status"
 			, __FUNCTION__, srsc->rsc_id);
 		/* seems started, just to confirm it */
@@ -3214,8 +3214,8 @@ stonithRA_start( stonithRA_ops_t * op, gpointer data)
 			__FUNCTION__, __LINE__, strerror(errno));
 		return ST_FAIL;
 	}
-	stonithd_log2(LOG_DEBUG, "%s: got a shmem seg of size %d"
-		     , __FUNCTION__, shmsize);
+	stonithd_log(LOG_DEBUG, "%s: got a shmem seg of size %d, shmid: %d"
+		     , __FUNCTION__, shmsize, shmid);
 
 	/* Don't find in local_started_stonith_rsc, not on start status */
 	stonithd_log2(LOG_DEBUG, "stonithRA_start: op->params' address=%p"
@@ -3267,7 +3267,7 @@ probe_status:
 		return_to_dropped_privs();
                 return -1;
         } else if (pid > 0) { /* in the parent process */
-		if( shmid ) {
+		if( shmid >= 0 ) {
 			add_shm_hostlist(shmid,pid);
 		}
 		memset(buf_tmp, 0, sizeof(buf_tmp));
@@ -3287,7 +3287,10 @@ probe_status:
 	if ( S_OK != stonith_get_status(stonith_obj) ) {
 		exit(EXECRA_UNKNOWN_ERROR);
 	}
-	if( !shmid ) { /* Already started before this operation */
+	if( shmid < 0 ) { /* Already started before this operation */
+		ST_ASSERT(srsc != NULL);
+		stonithd_log(LOG_INFO, "%s:%s: %s status OK, exiting"
+			, __FUNCTION__, __LINE__, srsc->rsc_id);
 		exit(EXECRA_OK);
 	}
 	hostlist = stonith_get_hostlist(stonith_obj);
@@ -3337,6 +3340,8 @@ remove_shm_hostlist(pid_t pid)
 	struct hostlist_shmseg *p;
 
 	if( !(p = lookup_shm_hostlist(pid)) ) {
+		stonithd_log(LOG_DEBUG, "no hostlist for pid %d",
+			pid);
 		return;
 	}
 	if( shmctl(p->shmid, IPC_RMID, NULL) < 0 ) {
@@ -3407,6 +3412,8 @@ shmem2hostlist(pid_t pid)
 	char *s, **hostlist;
 
 	if( !(p = lookup_shm_hostlist(pid)) ) {
+		stonithd_log(LOG_WARNING,"%s:%d: no hostlist found for pid %d",
+			__FUNCTION__, __LINE__, pid);
 		return NULL; /* no hostlist found */
 	}
 	return_to_orig_privs();
@@ -3491,6 +3498,7 @@ record_new_srsc(stonithRA_ops_t *ra_op)
 
 	local_started_stonith_rsc = 
 			g_list_append(local_started_stonith_rsc, srsc);
+	stonithd_log(LOG_INFO,"%s stonith resource started", ra_op->rsc_id);
 }
 
 static int
