@@ -2571,6 +2571,17 @@ stonithop_result_to_other_node( stonith_ops_t * st_op, gconstpointer data)
 		return ST_OK;
 	}
 
+	/* no use sending result to the node which we just reset
+	 * though, we'll actually do that, just in case
+	 * somebody's testing (won't harm anybody)
+	 */
+	if (!strcmp(node_name,st_op->node_name)) {
+		stonithd_log(LOG_INFO
+			, "fenced node %s (the requester): result=%s."
+			, st_op->node_name
+			, stonith_op_result_strname[st_op->op_result]);
+	}
+
 	if ((reply = ha_msg_new(4)) == NULL) {
 		stonithd_log(LOG_ERR, "%s:%d: out of memory"
 				, __FUNCTION__, __LINE__ );
