@@ -3289,7 +3289,7 @@ probe_status:
 	}
 	if( shmid < 0 ) { /* Already started before this operation */
 		ST_ASSERT(srsc != NULL);
-		stonithd_log(LOG_INFO, "%s:%s: %s status OK, exiting"
+		stonithd_log(LOG_INFO, "%s:%d: %s status OK, exiting"
 			, __FUNCTION__, __LINE__, srsc->rsc_id);
 		exit(EXECRA_OK);
 	}
