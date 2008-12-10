@@ -250,13 +250,13 @@ case $INITDIR in
 esac
 
 AC_MSG_NOTICE(Sanitizing libdir: ${libdir})
-case $AISPREFIX in
+case $libdir in
   dnl For consistency with Heartbeat, map NONE->$prefix
-  prefix|NONE)
+  prefix|NONE|*exec_prefix*)
     AC_MSG_CHECKING(which lib directory to use)
-    for suffix in lib64 lib
+    for aDir in lib64 lib
     do
-      trydir="${exec_prefix}/${suffix}"
+      trydir="${exec_prefix}/${aDir}"
       if
         test -d ${trydir}
       then
