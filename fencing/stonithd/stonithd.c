@@ -1351,6 +1351,7 @@ handle_msg_tstit(struct ha_msg* msg, void* private_data)
 		free_stonith_ops_t(st_op);
 		return;
 	}
+	st_op->rs_callid = st_op->call_id;
 
 	if (ST_OK == require_local_stonithop(st_op, srsc, from)) {
 		stonithd_log(LOG_INFO, "Node %s try to help node %s to "
@@ -1434,6 +1435,7 @@ handle_msg_trstit(struct ha_msg* msg, void* private_data)
 {
 	const char * from = NULL;
 	int call_id;
+	int rs_callid;
 	int op_result;
 	int * orig_key = NULL;
 	common_op_t * op = NULL;
@@ -1443,6 +1445,7 @@ handle_msg_trstit(struct ha_msg* msg, void* private_data)
 	st_get_string(msg, F_ORIG, from);
 	st_get_int_value(msg, F_STONITHD_CALLID, &call_id);
 	st_get_int_value(msg, F_STONITHD_FRC, &op_result);
+	st_get_int_value(msg, F_STONITHD_RS_CALLID, &rs_callid);
 	if( rc != ST_OK ) { /* didn't get all fields */
 		return;
 	}
@@ -1453,10 +1456,15 @@ handle_msg_trstit(struct ha_msg* msg, void* private_data)
 			(gpointer *)&orig_key, (gpointer *)&op, &call_id);
 	if ( !op || 
 	    (op->scenario != STONITH_INIT && op->scenario != STONITH_REQ)) {
-		stonithd_log(LOG_DEBUG, "handle_msg_trstit: the stonith "
-			"operation (call_id=%d) has finished before "
-			"receiving this message", call_id);
-		return;
+		my_hash_table_find(executing_queue, has_this_callid,
+				(gpointer *)&orig_key, (gpointer *)&op, &rs_callid);
+		if ( !op || 
+		    (op->scenario != STONITH_INIT && op->scenario != STONITH_REQ)) {
+			stonithd_log(LOG_DEBUG, "handle_msg_trstit: the stonith "
+				"operation (call_id=%d) has finished before "
+				"receiving this message", call_id);
+			return;
+		}
 	}
 	op->op_union.st_op->op_result = (stonith_ret_t)op_result;
 	op->op_union.st_op->node_list = 
@@ -2416,6 +2424,7 @@ changeto_remote_stonithop(int old_key)
 				"op->op_union.st_op == NULL");
 		return ST_FAIL;
 	}
+	op->op_union.st_op->call_id = negative_callid_counter;
 
 	if ( ST_OK != require_others_to_stonith(op->op_union.st_op) ) {
 		stonithd_log(LOG_ERR, "require_others_to_stonith failed.");
@@ -2427,12 +2436,8 @@ changeto_remote_stonithop(int old_key)
 		  "optype=%s, key=%d",
 		  stonith_op_strname[op->op_union.st_op->optype],
 		  *original_key);
-	*original_key = op->op_union.st_op->call_id;
-	g_hash_table_insert(executing_queue, original_key, op);
-	stonithd_log(LOG_DEBUG, "changeto_remote_stonithop: inserted "
-		  "optype=%s, key=%d",
-		  stonith_op_strname[op->op_union.st_op->optype],
-		  *original_key);
+	insert_into_executing_queue(op, op->op_union.st_op->call_id);
+	negative_callid_counter--;
 	return ST_OK;
 }
 
@@ -2590,6 +2595,8 @@ stonithop_result_to_other_node( stonith_ops_t * st_op, gconstpointer data)
 
 	if ((ha_msg_add_int(reply, F_STONITHD_FRC, st_op->op_result) != HA_OK)
     	    ||(ha_msg_add_int(reply, F_STONITHD_CALLID, st_op->call_id) 
+		!= HA_OK)
+    	    ||(ha_msg_add_int(reply, F_STONITHD_RS_CALLID, st_op->rs_callid)
 		!= HA_OK)) {
 		stonithd_log(LOG_ERR, "stonithop_result_to_other_node: "
 			     "ha_msg_add: cannot add field.");
@@ -3729,6 +3736,7 @@ dup_stonith_ops_t(stonith_ops_t * st_op)
 	ret->node_uuid = g_strdup(st_op->node_uuid);
 	ret->timeout = st_op->timeout;
 	ret->call_id = st_op->call_id;
+	ret->rs_callid = st_op->rs_callid;
 	ret->op_result = st_op->op_result;
 	/* In stonith daemon ( this file ), node_list is only a GString */
 	ret->node_list = g_string_new( ((GString *)(st_op->node_list))->str );

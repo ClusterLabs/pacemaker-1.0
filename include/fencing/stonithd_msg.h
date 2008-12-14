@@ -46,6 +46,7 @@
 #define F_STONITHD_RAOPTYPE "raoptype" 	/* stonith RA op type */
 #define F_STONITHD_PARAMS   "params" 	/* parameters for stonith RA  */
 #define F_STONITHD_CALLID   "callid" 	/* RA executing call_id==pid */
+#define F_STONITHD_RS_CALLID "rscallid" /* call_id from DC at remote stonith */
 #define F_STONITHD_STTYPES  "sttypes" 	/* stonith device types */
 #define F_STONITHD_FRC	    "frc" 	/* final return code */
 #define F_STONITHD_PDATA    "pdata" 	/* private data for callback */
