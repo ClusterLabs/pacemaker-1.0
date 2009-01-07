@@ -904,7 +904,7 @@ valid_op(common_op_t *op)
 	if (op == NULL) {
 		stonithd_log(LOG_ERR, "received child quit signal: "
 			"but op==NULL");
-		rc = FALSE;
+		return FALSE;
 	}
 	switch( op->scenario ) {
 	case STONITH_RA_OP:
