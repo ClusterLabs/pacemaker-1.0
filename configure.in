@@ -1019,9 +1019,9 @@ else
    AC_MSG_RESULT($SUPPORT_AIS, with '$AISPREFIX')
 
    dnl headers...
-   AC_CHECK_HEADERS(corosync/saAis.h)
+   AC_CHECK_HEADERS(corosync/ais_util.h)
    AC_CHECK_HEADERS(openais/saAis.h)
-   if test "$ac_cv_header_corosync_saAis_h" = "yes"; then
+   if test "$ac_cv_header_corosync_ais_util_h" = "yes"; then
        AIS_VERSION="corosync"
    elif test "$ac_cv_header_openais_saAis_h" = "yes"; then
        AIS_VERSION="whitetank"
