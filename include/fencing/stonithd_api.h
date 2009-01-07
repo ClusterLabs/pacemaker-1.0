@@ -61,6 +61,7 @@ typedef struct
 
 /* Only output fields */
 	int		call_id;
+	int		rs_callid;
 	stonith_ret_t	op_result;	
 /*
  * By now node_list is only a char * type. 

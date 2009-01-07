@@ -40,7 +40,7 @@ AC_ARG_WITH(hapkgversion,
 DTD_VERSION=1.0
 
 if test -z "$HAPKGVERSION" ; then
-   HAPKGVERSION="1.0.0"
+   HAPKGVERSION="1.0.1"
 fi
 
 HB_PKG=heartbeat
@@ -250,13 +250,13 @@ case $INITDIR in
 esac
 
 AC_MSG_NOTICE(Sanitizing libdir: ${libdir})
-case $AISPREFIX in
+case $libdir in
   dnl For consistency with Heartbeat, map NONE->$prefix
-  prefix|NONE)
+  prefix|NONE|*exec_prefix*)
     AC_MSG_CHECKING(which lib directory to use)
-    for suffix in lib64 lib
+    for aDir in lib64 lib
     do
-      trydir="${exec_prefix}/${suffix}"
+      trydir="${exec_prefix}/${aDir}"
       if
         test -d ${trydir}
       then
@@ -357,6 +357,7 @@ esac
 
 AC_MSG_CHECKING(which format is needed to print uint64_t)
 case "$host_cpu" in
+  s390x)U64T="%lu";;
   *64*) U64T="%lu";;
   *)    U64T="%llu";;
 esac
@@ -1620,8 +1621,6 @@ AC_CONFIG_FILES(Makefile				        \
 README							        \
 cts/Makefile					        	\
 	cts/CM_ais.py						\
-	cts/CM_fs.py						\
-	cts/CM_hb.py						\
 	cts/CTS.py						\
 	cts/CTSaudits.py					\
 	cts/CTSlab.py						\

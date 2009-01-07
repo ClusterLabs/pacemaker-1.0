@@ -44,6 +44,13 @@
           </lrm_resource>
         </lrm_resources>
       </lrm>
+       <transient_attributes id="3d8227f0-31dd-4801-b0db-987909d4a321">
+         <instance_attributes id="status-3d8227f0-31dd-4801-b0db-987909d4a321">
+           <attributes>
+	     <nvpair id="shutdown-1" name="shutdown" value="1234"/>
+           </attributes>
+         </instance_attributes>
+       </transient_attributes>
     </node_state>
     <node_state id="node2" ha="active" uname="node2" crmd="online" join="member" expected="member" in_ccm="true">
       <lrm id="2" >

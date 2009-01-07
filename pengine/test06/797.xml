@@ -117,6 +117,7 @@
       <transient_attributes>
         <instance_attributes id="any">
 	  <attributes>
+	    <nvpair id="shutdown-1" name="shutdown" value="1234"/>
 	    <nvpair id="probed" name="probe_complete" value="true"/>
 	  </attributes>
         </instance_attributes>

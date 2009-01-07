@@ -226,6 +226,7 @@
        <transient_attributes id="f5e1d2de-73da-432a-9d5c-37472253c2ee">
          <instance_attributes id="status-f5e1d2de-73da-432a-9d5c-37472253c2ee">
            <attributes>
+	     <nvpair id="shutdown-1" name="shutdown" value="1234"/>
              <nvpair id="status-f5e1d2de-73da-432a-9d5c-37472253c2ee-probe_complete" name="probe_complete" value="true"/>
            </attributes>
          </instance_attributes>
@@ -344,6 +345,7 @@
        <transient_attributes id="e8973f32-1c97-40cb-a84a-c489f49664a5">
          <instance_attributes id="status-e8973f32-1c97-40cb-a84a-c489f49664a5">
            <attributes>
+	     <nvpair id="shutdown-2" name="shutdown" value="1234"/>
              <nvpair id="status-e8973f32-1c97-40cb-a84a-c489f49664a5-probe_complete" name="probe_complete" value="true"/>
            </attributes>
          </instance_attributes>
@@ -447,6 +449,7 @@
        <transient_attributes id="9e080e6d-7a25-4dac-be89-f6f4f128623d">
          <instance_attributes id="status-9e080e6d-7a25-4dac-be89-f6f4f128623d">
            <attributes>
+	     <nvpair id="shutdown-3" name="shutdown" value="1234"/>
              <nvpair id="status-9e080e6d-7a25-4dac-be89-f6f4f128623d-probe_complete" name="probe_complete" value="true"/>
            </attributes>
          </instance_attributes>
@@ -546,6 +549,7 @@
        <transient_attributes id="52a5ea5e-86ee-442c-b251-0bc9825c517e">
          <instance_attributes id="status-52a5ea5e-86ee-442c-b251-0bc9825c517e">
            <attributes>
+	     <nvpair id="shutdown-4" name="shutdown" value="1234"/>
              <nvpair id="status-52a5ea5e-86ee-442c-b251-0bc9825c517e-probe_complete" name="probe_complete" value="true"/>
            </attributes>
          </instance_attributes>
@@ -647,6 +651,7 @@
        <transient_attributes id="169e4673-93fb-4c0a-8082-d3408bae9431">
          <instance_attributes id="status-169e4673-93fb-4c0a-8082-d3408bae9431">
            <attributes>
+	     <nvpair id="shutdown-5" name="shutdown" value="1234"/>
              <nvpair id="status-169e4673-93fb-4c0a-8082-d3408bae9431-probe_complete" name="probe_complete" value="true"/>
            </attributes>
          </instance_attributes>
@@ -828,6 +833,7 @@
        <transient_attributes id="6637ebb5-ab11-4728-b69e-b61222af9a0c">
          <instance_attributes id="status-6637ebb5-ab11-4728-b69e-b61222af9a0c">
            <attributes>
+	     <nvpair id="shutdown-6" name="shutdown" value="1234"/>
              <nvpair id="status-6637ebb5-ab11-4728-b69e-b61222af9a0c-probe_complete" name="probe_complete" value="true"/>
            </attributes>
          </instance_attributes>

@@ -1351,6 +1351,7 @@ handle_msg_tstit(struct ha_msg* msg, void* private_data)
 		free_stonith_ops_t(st_op);
 		return;
 	}
+	st_op->rs_callid = st_op->call_id;
 
 	if (ST_OK == require_local_stonithop(st_op, srsc, from)) {
 		stonithd_log(LOG_INFO, "Node %s try to help node %s to "
@@ -1434,6 +1435,7 @@ handle_msg_trstit(struct ha_msg* msg, void* private_data)
 {
 	const char * from = NULL;
 	int call_id;
+	int rs_callid;
 	int op_result;
 	int * orig_key = NULL;
 	common_op_t * op = NULL;
@@ -1443,6 +1445,7 @@ handle_msg_trstit(struct ha_msg* msg, void* private_data)
 	st_get_string(msg, F_ORIG, from);
 	st_get_int_value(msg, F_STONITHD_CALLID, &call_id);
 	st_get_int_value(msg, F_STONITHD_FRC, &op_result);
+	st_get_int_value(msg, F_STONITHD_RS_CALLID, &rs_callid);
 	if( rc != ST_OK ) { /* didn't get all fields */
 		return;
 	}
@@ -1453,10 +1456,15 @@ handle_msg_trstit(struct ha_msg* msg, void* private_data)
 			(gpointer *)&orig_key, (gpointer *)&op, &call_id);
 	if ( !op || 
 	    (op->scenario != STONITH_INIT && op->scenario != STONITH_REQ)) {
-		stonithd_log(LOG_DEBUG, "handle_msg_trstit: the stonith "
-			"operation (call_id=%d) has finished before "
-			"receiving this message", call_id);
-		return;
+		my_hash_table_find(executing_queue, has_this_callid,
+				(gpointer *)&orig_key, (gpointer *)&op, &rs_callid);
+		if ( !op || 
+		    (op->scenario != STONITH_INIT && op->scenario != STONITH_REQ)) {
+			stonithd_log(LOG_DEBUG, "handle_msg_trstit: the stonith "
+				"operation (call_id=%d) has finished before "
+				"receiving this message", call_id);
+			return;
+		}
 	}
 	op->op_union.st_op->op_result = (stonith_ret_t)op_result;
 	op->op_union.st_op->node_list = 
@@ -2416,6 +2424,7 @@ changeto_remote_stonithop(int old_key)
 				"op->op_union.st_op == NULL");
 		return ST_FAIL;
 	}
+	op->op_union.st_op->call_id = negative_callid_counter;
 
 	if ( ST_OK != require_others_to_stonith(op->op_union.st_op) ) {
 		stonithd_log(LOG_ERR, "require_others_to_stonith failed.");
@@ -2427,12 +2436,8 @@ changeto_remote_stonithop(int old_key)
 		  "optype=%s, key=%d",
 		  stonith_op_strname[op->op_union.st_op->optype],
 		  *original_key);
-	*original_key = op->op_union.st_op->call_id;
-	g_hash_table_insert(executing_queue, original_key, op);
-	stonithd_log(LOG_DEBUG, "changeto_remote_stonithop: inserted "
-		  "optype=%s, key=%d",
-		  stonith_op_strname[op->op_union.st_op->optype],
-		  *original_key);
+	insert_into_executing_queue(op, op->op_union.st_op->call_id);
+	negative_callid_counter--;
 	return ST_OK;
 }
 
@@ -2571,6 +2576,17 @@ stonithop_result_to_other_node( stonith_ops_t * st_op, gconstpointer data)
 		return ST_OK;
 	}
 
+	/* no use sending result to the node which we just reset
+	 * though, we'll actually do that, just in case
+	 * somebody's testing (won't harm anybody)
+	 */
+	if (!strcmp(node_name,st_op->node_name)) {
+		stonithd_log(LOG_INFO
+			, "fenced node %s (the requester): result=%s."
+			, st_op->node_name
+			, stonith_op_result_strname[st_op->op_result]);
+	}
+
 	if ((reply = ha_msg_new(4)) == NULL) {
 		stonithd_log(LOG_ERR, "%s:%d: out of memory"
 				, __FUNCTION__, __LINE__ );
@@ -2579,6 +2595,8 @@ stonithop_result_to_other_node( stonith_ops_t * st_op, gconstpointer data)
 
 	if ((ha_msg_add_int(reply, F_STONITHD_FRC, st_op->op_result) != HA_OK)
     	    ||(ha_msg_add_int(reply, F_STONITHD_CALLID, st_op->call_id) 
+		!= HA_OK)
+    	    ||(ha_msg_add_int(reply, F_STONITHD_RS_CALLID, st_op->rs_callid)
 		!= HA_OK)) {
 		stonithd_log(LOG_ERR, "stonithop_result_to_other_node: "
 			     "ha_msg_add: cannot add field.");
@@ -3176,7 +3194,7 @@ stonithRA_start( stonithRA_ops_t * op, gpointer data)
 	StonithNVpair*	snv;
 	Stonith *	stonith_obj = NULL;
 	char 		buf_tmp[40];
-	int		shmid=0, shmsize=0;
+	int		shmid=-1, shmsize=0;
 	char **		hostlist;
 
 	/* Check the parameter */
@@ -3188,7 +3206,7 @@ stonithRA_start( stonithRA_ops_t * op, gpointer data)
 
 	srsc = get_started_stonith_resource(op->rsc_id);
 	if (srsc != NULL) {
-		stonithd_log(LOG_DEBUG, "%s: %s is "
+		stonithd_log(LOG_INFO, "%s: %s is "
 			"already started, we just probe the status"
 			, __FUNCTION__, srsc->rsc_id);
 		/* seems started, just to confirm it */
@@ -3203,8 +3221,8 @@ stonithRA_start( stonithRA_ops_t * op, gpointer data)
 			__FUNCTION__, __LINE__, strerror(errno));
 		return ST_FAIL;
 	}
-	stonithd_log2(LOG_DEBUG, "%s: got a shmem seg of size %d"
-		     , __FUNCTION__, shmsize);
+	stonithd_log(LOG_DEBUG, "%s: got a shmem seg of size %d, shmid: %d"
+		     , __FUNCTION__, shmsize, shmid);
 
 	/* Don't find in local_started_stonith_rsc, not on start status */
 	stonithd_log2(LOG_DEBUG, "stonithRA_start: op->params' address=%p"
@@ -3256,7 +3274,7 @@ probe_status:
 		return_to_dropped_privs();
                 return -1;
         } else if (pid > 0) { /* in the parent process */
-		if( shmid ) {
+		if( shmid >= 0 ) {
 			add_shm_hostlist(shmid,pid);
 		}
 		memset(buf_tmp, 0, sizeof(buf_tmp));
@@ -3276,7 +3294,10 @@ probe_status:
 	if ( S_OK != stonith_get_status(stonith_obj) ) {
 		exit(EXECRA_UNKNOWN_ERROR);
 	}
-	if( !shmid ) { /* Already started before this operation */
+	if( shmid < 0 ) { /* Already started before this operation */
+		ST_ASSERT(srsc != NULL);
+		stonithd_log(LOG_INFO, "%s:%d: %s status OK, exiting"
+			, __FUNCTION__, __LINE__, srsc->rsc_id);
 		exit(EXECRA_OK);
 	}
 	hostlist = stonith_get_hostlist(stonith_obj);
@@ -3326,6 +3347,8 @@ remove_shm_hostlist(pid_t pid)
 	struct hostlist_shmseg *p;
 
 	if( !(p = lookup_shm_hostlist(pid)) ) {
+		stonithd_log(LOG_DEBUG, "no hostlist for pid %d",
+			pid);
 		return;
 	}
 	if( shmctl(p->shmid, IPC_RMID, NULL) < 0 ) {
@@ -3396,6 +3419,8 @@ shmem2hostlist(pid_t pid)
 	char *s, **hostlist;
 
 	if( !(p = lookup_shm_hostlist(pid)) ) {
+		stonithd_log(LOG_WARNING,"%s:%d: no hostlist found for pid %d",
+			__FUNCTION__, __LINE__, pid);
 		return NULL; /* no hostlist found */
 	}
 	return_to_orig_privs();
@@ -3480,6 +3505,7 @@ record_new_srsc(stonithRA_ops_t *ra_op)
 
 	local_started_stonith_rsc = 
 			g_list_append(local_started_stonith_rsc, srsc);
+	stonithd_log(LOG_INFO,"%s stonith resource started", ra_op->rsc_id);
 }
 
 static int
@@ -3710,6 +3736,7 @@ dup_stonith_ops_t(stonith_ops_t * st_op)
 	ret->node_uuid = g_strdup(st_op->node_uuid);
 	ret->timeout = st_op->timeout;
 	ret->call_id = st_op->call_id;
+	ret->rs_callid = st_op->rs_callid;
 	ret->op_result = st_op->op_result;
 	/* In stonith daemon ( this file ), node_list is only a GString */
 	ret->node_list = g_string_new( ((GString *)(st_op->node_list))->str );
