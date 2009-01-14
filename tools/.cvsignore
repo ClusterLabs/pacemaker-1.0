@@ -18,7 +18,7 @@ pingd
 ocf-tester
 crmadmin
 cibadmin
-ccm_tool
+crm_node
 crm_diff
 crm_mon
 iso8601

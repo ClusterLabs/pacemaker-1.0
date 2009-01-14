@@ -11,7 +11,7 @@ usr/sbin/iso8601
 usr/sbin/cibadmin
 usr/sbin/cibpipe
 usr/sbin/crm_shadow
-usr/sbin/ccm_tool
+usr/sbin/crm_node
 usr/sbin/crm_master
 usr/sbin/crm_uuid
 usr/sbin/crm_attribute
