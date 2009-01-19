@@ -182,6 +182,13 @@ AC_ARG_WITH(heartbeat-support,
     [ SUPPORT_HEARTBEAT=try ],
 )
 
+AC_ARG_WITH(snmp-support,
+    [  --with-snmp-support     
+       Support the SNMP protocol ],
+    [ SUPPORT_SNMP=$withval ],
+    [ SUPPORT_SNMP=try ],
+)
+
 AISPREFIX=""
 AC_ARG_WITH(ais-prefix,
     [  --with-ais-prefix=DIR  Prefix used when OpenAIS was installed [$prefix]],
@@ -1156,6 +1163,58 @@ AC_SUBST(CLUSTERLIBS)
 AC_SUBST(AISPREFIX)
 AC_SUBST(LCRSODIR)
 AC_SUBST(AISLIBS)
+
+
+case $SUPPORT_SNMP in
+     1|yes|true) missingisfatal=1;;
+     try)        missingisfatal=0;;
+     *)		 SUPPORT_SNMP=no;;
+esac
+
+SNMPLIB=""
+
+AC_MSG_CHECKING(for snmp support)
+if test $SUPPORT_SNMP = no; then
+   AC_MSG_RESULT(no... not requested.)
+
+else
+   SNMPCONFIG=""
+   AC_MSG_RESULT($SUPPORT_SNMP)
+   AC_CHECK_HEADERS(net-snmp/net-snmp-config.h)
+
+   if test "x${ac_cv_header_net_snmp_net_snmp_config_h}" != "xyes"; then
+	ENABLE_SNMP="no"
+   fi
+
+   if test $SUPPORT_SNMP != no; then
+	AC_PATH_PROGS(SNMPCONFIG, net-snmp-config)
+	if test "X${SNMPCONFIG}" = "X"; then
+		AC_MSG_RESULT(You need the net_snmp development package to continue.)
+		SUPPORT_SNMP=no
+	fi
+   fi
+
+   if test $SUPPORT_SNMP != no; then
+	AC_MSG_CHECKING(for special snmp libraries)
+	SNMPLIBS=`$SNMPCONFIG --base-agent-libs --external-agent-libs | tr '\n' ' '`
+	AC_MSG_RESULT($SNMPLIBS)
+   fi
+
+   if test $SUPPORT_SNMP = no; then
+   	SUPPORT_SNMP=0
+     	if test $missingisfatal = 0; then
+	    AC_MSG_WARN(Unable to support SNMP) 
+        else
+	    AC_MSG_FAILURE(Unable to support SNMP) 
+        fi
+   else
+   	SUPPORT_SNMP=1
+   fi
+fi
+
+AC_SUBST(SNMPLIBS)
+AM_CONDITIONAL(ENABLE_SNMP, test "$SUPPORT_SNMP" = "1")
+AC_DEFINE_UNQUOTED(ENABLE_SNMP, $SUPPORT_SNMP, Build in support for sending SNMP traps)
 
 if test "$GCC" = yes; then
 
