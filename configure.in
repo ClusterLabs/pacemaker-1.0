@@ -189,6 +189,13 @@ AC_ARG_WITH(snmp-support,
     [ SUPPORT_SNMP=try ],
 )
 
+AC_ARG_WITH(esmtp-support,
+    [  --with-esmtp-support     
+       Support the sending mail notifications with the esmtp library ],
+    [ SUPPORT_ESMTP=$withval ],
+    [ SUPPORT_ESMTP=try ],
+)
+
 AISPREFIX=""
 AC_ARG_WITH(ais-prefix,
     [  --with-ais-prefix=DIR  Prefix used when OpenAIS was installed [$prefix]],
@@ -1215,6 +1222,57 @@ fi
 AC_SUBST(SNMPLIBS)
 AM_CONDITIONAL(ENABLE_SNMP, test "$SUPPORT_SNMP" = "1")
 AC_DEFINE_UNQUOTED(ENABLE_SNMP, $SUPPORT_SNMP, Build in support for sending SNMP traps)
+
+case $SUPPORT_ESMTP in
+     1|yes|true) missingisfatal=1;;
+     try)        missingisfatal=0;;
+     *)		 SUPPORT_ESMTP=no;;
+esac
+
+ESMTPLIB=""
+
+AC_MSG_CHECKING(for esmtp support)
+if test $SUPPORT_ESMTP = no; then
+   AC_MSG_RESULT(no... not requested.)
+
+else
+   ESMTPCONFIG=""
+   AC_MSG_RESULT($SUPPORT_ESMTP)
+   AC_CHECK_HEADERS(libesmtp.h)
+
+   if test "x${ac_cv_header_libesmtp_h}" != "xyes"; then
+	ENABLE_ESMTP="no"
+   fi
+
+   if test $SUPPORT_ESMTP != no; then
+	AC_PATH_PROGS(ESMTPCONFIG, libesmtp-config)
+	if test "X${ESMTPCONFIG}" = "X"; then
+		AC_MSG_RESULT(You need the libesmtp development package to continue.)
+		SUPPORT_ESMTP=no
+	fi
+   fi
+
+   if test $SUPPORT_ESMTP != no; then
+	AC_MSG_CHECKING(for special esmtp libraries)
+	ESMTPLIBS=`$ESMTPCONFIG --libs | tr '\n' ' '`
+	AC_MSG_RESULT($ESMTPLIBS)
+   fi
+
+   if test $SUPPORT_ESMTP = no; then
+   	SUPPORT_ESMTP=0
+     	if test $missingisfatal = 0; then
+	    AC_MSG_WARN(Unable to support ESMTP) 
+        else
+	    AC_MSG_FAILURE(Unable to support ESMTP) 
+        fi
+   else
+   	SUPPORT_ESMTP=1
+   fi
+fi
+
+AC_SUBST(ESMTPLIBS)
+AM_CONDITIONAL(ENABLE_ESMTP, test "$SUPPORT_ESMTP" = "1")
+AC_DEFINE_UNQUOTED(ENABLE_ESMTP, $SUPPORT_ESMTP, Build in support for sending mail notifications with ESMTP)
 
 if test "$GCC" = yes; then
 
