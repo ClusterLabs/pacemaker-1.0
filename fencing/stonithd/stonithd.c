@@ -875,8 +875,10 @@ become_daemon()
 	 * when started up by heartbeat.
 	 */
 	if (cl_lock_pidfile(STD_PIDFILE) < 0) {
-		stonithd_log(LOG_ERR, "%s did not %s, although failed to lock the"
-			     "pid file.", stonithd_name, M_ABORT);
+		pid = cl_read_pidfile_no_checking(pidfile);
+		stonithd_log(LOG_WARNING,"%s: already running [pid %ld] (%s).\n",
+			 stonithd_name, pid, pidfile);
+		exit(LSB_EXIT_OK);
 	}
 
 	cl_make_realtime(SCHED_OTHER, 0, 32, 128);
