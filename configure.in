@@ -33,77 +33,37 @@ ALL_LINGUAS="en fr"
 
 AC_ARG_WITH(hapkgversion,
     [  --with-hapkgversion=name     Override package version (if you're a packager needing to pretend) ],
-    [ HAPKGVERSION="$withval" ],
-    [ HAPKGVERSION="" ],
+    [ CRM_VERSION="$withval" ],
+    [ CRM_VERSION="" ],
 )
 
 DTD_VERSION=1.0
 
-if test -z "$HAPKGVERSION" ; then
-   HAPKGVERSION="1.0.1"
+if test -z "$CRM_VERSION" ; then
+   CRM_VERSION="1.0.1"
 fi
 
 HB_PKG=heartbeat
 PKG_NAME=pacemaker
-AM_INIT_AUTOMAKE($PKG_NAME, $HAPKGVERSION)
-
-AC_DEFINE_UNQUOTED(PACEMAKER_VERSION, "$HAPKGVERSION", Current pacemaker version)
+PKG_FEATURES=""
+AM_INIT_AUTOMAKE($PKG_NAME, $CRM_VERSION)
+AC_DEFINE_UNQUOTED(PACEMAKER_VERSION, "$CRM_VERSION", Current pacemaker version)
 
 dnl ===============================================
 dnl Helpers 
 dnl ===============================================
-MISSINGTHINGS=""
-MISSINGOPTIONALS=""
-
-FatalMissingThing() {
-  if test X"$MISSINGTHINGS" = X; then
-    MISSINGTHINGS="$MISSINGTHINGS $1"
-  else
-    MISSINGTHINGS="$MISSINGTHINGS, $1"
-  fi
-  shift
-  AC_MSG_RESULT(configure: ERROR: $1 ====================)
-  shift
-  for j in "$@"
-  do
-    if test "X$j" != X-; then
-       AC_MSG_RESULT(configure:        $j ==)
-    fi
-  done
-}
-
-WarnMissingThing() {
-  if test X"$MISSINGOPTIONALS" = X; then
-    MISSINGOPTIONALS="$MISSINGOPTIONALS $1"
-  else
-    MISSINGOPTIONALS="$MISSINGOPTIONALS, $1"
-  fi
-  shift
-  AC_MSG_RESULT(configure: WARNING: $1 ====================)
-  shift
-  for j in "$@"
-  do
-    if test "X$j" != X-; then
-       AC_MSG_RESULT(configure:        $j ==)
-    fi
-  done
-}
-
-CheckMissingThings() {
-  if
-    test "X$MISSINGOPTIONALS" != "X"
-  then
-    AC_MSG_WARN(The following recommended components noted earlier are missing:
-    $MISSINGOPTIONALS
-    We will continue but you may have lost some non-critical functionality.)
-  fi
-  if
-    test "X$MISSINGTHINGS" != "X"
-  then
-    AC_MSG_ERROR(The following required components noted earlier are missing:
-    $MISSINGTHINGS
-    Please supply them and try again.)
-  fi
+cc_supports_flag() {
+	  AC_MSG_CHECKING(whether $CC supports "$@")
+	  Cfile=/tmp/foo${$}
+	  touch ${Cfile}.c
+	  $CC -c "$@" ${Cfile}.c -o ${Cfile}.o >/dev/null 2>&1
+          rc=$?
+	  rm -f ${Cfile}.c ${Cfile}.o
+          case $rc in
+            0) AC_MSG_RESULT(yes);;
+            *) AC_MSG_RESULT(no);;
+          esac
+          return $rc
 }
 
 extract_heartbeat_define() {
@@ -139,7 +99,7 @@ AC_ARG_ENABLE([ansi],
 
 AC_ARG_ENABLE([fatal-warnings],
 [  --enable-fatal-warnings very pedantic and fatal warnings for gcc
-     [default=yes]], [], [enable_fatal_warnings=unknown])
+     [default=yes]])
 
 AC_ARG_ENABLE([no-long-long],
 [  --enable-no-long-long removes no long long warning for gcc
@@ -320,6 +280,13 @@ do
   fi
 done
 
+if
+  test "X$INITDIR" = X
+then
+  AC_MSG_WARN(Could not locate init directory)
+fi
+AC_SUBST(INITDIR)
+
 dnl This OS-based decision-making is poor autotools practice;
 dnl feature-based mechanisms are strongly preferred.
 dnl
@@ -450,23 +417,13 @@ dnl ===============================================
 dnl Replacing AC_PROG_LIBTOOL with AC_CHECK_PROG because LIBTOOL
 dnl was NOT being expanded all the time thus causing things to fail.
 AC_CHECK_PROGS(LIBTOOL, glibtool libtool libtool15 libtool13)
-AC_MSG_CHECKING(for glibtool or libtool*)
 if test x"${LIBTOOL}" = x""; then
-      FatalMissingThing "libtool" "You need libtool to build ${PKG_NAME}." \
-		"You can get the source from ftp://www.gnu.org/pub/gnu/" \
-      		"or you can locate it via http://www.gnu.org/software/libtool"
-else
-      AC_MSG_RESULT($LIBTOOL has been found.)
+   AC_MSG_ERROR(You need (g)libtool installed in order to build ${PKG_NAME})
 fi
 
 AC_CHECK_PROGS(MAKE, gmake make)
-AC_MSG_CHECKING(for gmake or make)
 if test x"${MAKE}" = x""; then
-      FatalMissingThing "gmake" "You need gmake to build ${PKG_NAME}." \
-		"You can get the source from ftp://www.gnu.org/pub/gnu/" \
-      		"or you can locate it via http://www.gnu.org/software/make/"
-else
-      AC_MSG_RESULT($MAKE has been found.)
+   AC_MSG_ERROR(You need (g)make installed in order to build ${PKG_NAME})
 fi
 
 AC_SYS_LARGEFILE
@@ -487,13 +444,11 @@ AC_PATH_PROGS(PYTHON, python)
 AC_PATH_PROGS(IP2UTIL, ip, /sbin/ip)
 AC_PATH_PROGS(XML2CONFIG, xml2-config)
 
-AC_PATH_PROGS(SWIG, swig)
-AC_SUBST(SWIG)
 AC_PATH_PROGS(EGREP, egrep)
 AC_SUBST(EGREP)
 AC_PATH_PROGS(MSGFMT, msgfmt, [msgfmt not found],)
 AC_SUBST(MSGFMT)
-AC_PATH_PROGS(HG, hg, /usr/local/hg)
+AC_PATH_PROGS(HG, hg, /usr/bin/hg)
 AC_SUBST(HG)
 
 AC_PATH_PROGS(GZIP_PROG, gzip)
@@ -534,11 +489,8 @@ AC_SUBST(LIBRT)
 
 EXTRALIBMSG="-"
 
-if test "X${PKGCONFIG}" = "X"; then
-	AC_MSG_RESULT(not found)
-	FatalMissingThing "pkgconfig" "Package pkgconfig is required" 	\
-	"See http://pkgconfig.sourceforge.net/"	
-	EXTRALIBMSG="(this message might be bogus because pkgconfig is missing)"
+if test x"${PKGCONFIG}" = x""; then
+   AC_MSG_ERROR(You need pkgconfig installed in order to build ${PKG_NAME})
 fi
 
 if test "x${enable_thread_safe}" = "xyes"; then
@@ -557,11 +509,7 @@ else
 	$PKGCONFIG $GPKGNAME; echo $?
 	set +x
         
-	FatalMissingThing "glib2-devel"              \
-        "Package glib2-devel is missing." \
-        "You can get the source from ftp://ftp.gtk.org/pub/gtk/" \
-        "or you can locate it via http://www.gtk.org/download/" "$EXTRALIBMSG"
-
+	AC_MSG_ERROR(You need glib2-devel installed in order to build ${PKG_NAME})
 fi
 AC_MSG_RESULT(using $GLIBCONFIG)
 
@@ -629,7 +577,7 @@ elif test -f /sw/lib/libintl.a -a -s /sw/lib/libintl.la -a -s /sw/lib/libintl.dy
 	# This was added for Darwin + Fink
 	LIBADD_INTL="-lintl"
 else
-	FatalMissingThing "gettext function" "no library providing gettext found"
+        AC_MSG_ERROR(You need gettext installed in order to build ${PKG_NAME})
 fi
 
 dnl
@@ -707,10 +655,7 @@ AC_CHECK_HEADERS(sys/socket.h)
 AC_CHECK_HEADERS(arpa/inet.h)
 AC_CHECK_HEADERS(net/ethernet.h)
 AC_CHECK_HEADERS(malloc.h)
-AC_CHECK_HEADERS(termio.h)
 AC_CHECK_HEADERS(getopt.h)
-AC_CHECK_HEADERS(sys/prctl.h)
-AC_CHECK_HEADERS(linux/watchdog.h,[],[],[#include <linux/types.h>])
 
 AC_MSG_CHECKING(for special libxml2 includes)
 if test "x$XML2CONFIG" = "x"; then
@@ -867,13 +812,10 @@ AC_CHECK_SIZEOF(int)
 AC_CHECK_SIZEOF(long)
 AC_CHECK_SIZEOF(long long)
 
-if
-  test "X$INITDIR" = X
-then
-  FatalMissingThing "init directory" "Could not locate init directory"
-fi
-AC_SUBST(INITDIR)
 
+if test x"${PKGCONFIG}" = x""; then
+   AC_MSG_ERROR(You need pkgconfig installed in order to build ${PKG_NAME})
+fi
 
 CC_WARNINGS=""
 
@@ -962,6 +904,11 @@ if test X"$CURSESLIBS" = X"" -a "$ac_cv_header_curses_curses_h" = "yes"; then
     [CURSESLIBS='-lcurses'; AC_DEFINE(HAVE_LIBCURSES,1, have curses library)]
   )
 fi
+
+if test "x$CURSESLIBS" != "x"; then
+   PKG_FEATURES="$PKG_FEATURES ncurses"
+fi
+
 
 AC_SUBST(CURSESLIBS)
 
@@ -1152,13 +1099,15 @@ if test $SUPPORT_HEARTBEAT = 1; then
 fi
 
 if test $SUPPORT_AIS = 1; then
-   STACKS="$STACKS openais"
+   STACKS="$STACKS $AIS_VERSION"
    CLUSTERLIBS="$CLUSTERLIBS ${AISMSGLIB}"
    LIBS="$LIBS -L${AISLIB} -R${AISLIB}"
 else
    AISPREFIX=""
    LCRSODIR=""
 fi
+
+PKG_FEATURES="$PKG_FEATURES$STACKS"
 
 AC_MSG_CHECKING(for supported stacks)
 if test x"$STACKS" = x; then
@@ -1219,6 +1168,10 @@ else
    fi
 fi
 
+if test $SUPPORT_SNMP = 1; then
+   PKG_FEATURES="$PKG_FEATURES snmp"
+fi
+
 AC_SUBST(SNMPLIBS)
 AM_CONDITIONAL(ENABLE_SNMP, test "$SUPPORT_SNMP" = "1")
 AC_DEFINE_UNQUOTED(ENABLE_SNMP, $SUPPORT_SNMP, Build in support for sending SNMP traps)
@@ -1270,148 +1223,42 @@ else
    fi
 fi
 
+if test $SUPPORT_ESMTP = 1; then
+   PKG_FEATURES="$PKG_FEATURES libesmtp"
+fi
+
 AC_SUBST(ESMTPLIBS)
 AM_CONDITIONAL(ENABLE_ESMTP, test "$SUPPORT_ESMTP" = "1")
 AC_DEFINE_UNQUOTED(ENABLE_ESMTP, $SUPPORT_ESMTP, Build in support for sending mail notifications with ESMTP)
 
-if test "$GCC" = yes; then
+dnl ************************************************************************
 
-	cc_supports_flag() {
-	  AC_MSG_CHECKING(whether $CC supports "$@")
-	  Cfile=/tmp/foo${$}
-	  touch ${Cfile}.c
-	  $CC -c "$@" ${Cfile}.c -o ${Cfile}.o >/dev/null 2>&1
-          rc=$?
-	  rm -f ${Cfile}.c ${Cfile}.o
-          case $rc in
-            0) AC_MSG_RESULT(yes);;
-            *) AC_MSG_RESULT(no);;
-          esac
-          return $rc
-	}
+AC_CHECK_HEADERS(gnutls/gnutls.h)
+AC_CHECK_HEADERS(security/pam_appl.h pam/pam_appl.h)
 
-	if
-	    cc_supports_flag -fgnu89-inline
-	then
-	    CFLAGS="$CFLAGS -fgnu89-inline"
-	fi
+dnl GNUTLS library: Attempt to determine by 'libgnutls-config' program.
+dnl If no 'libgnutls-config', try traditional autoconf means.
+AC_PATH_PROGS(LIBGNUTLS_CONFIG, libgnutls-config)
 
-dnl ************ printw **********************
-
-	if test X"$CURSESLIBS" != X"" &&  cc_supports_flag -Wcast-qual \
-	  && cc_supports_flag -Werror; then 
-	dnl Check for printw() prototype compatibility
-	dnl FIXME: We can check che prototype compatibility only if $CC supports
-	dnl -Wcast-qual and -Werror	
-	  AC_MSG_CHECKING(whether printw() requires argument of "const char *")
-	  ac_save_LIBS=$LIBS
-	  LIBS="$CURSESLIBS  $LIBS"
-	  ac_save_CFLAGS=$CFLAGS
-	  CFLAGS="-Wcast-qual -Werror"
-
-	  AC_LINK_IFELSE(
-	    [AC_LANG_PROGRAM(
-	      [
-#if defined(HAVE_CURSES_H)
-#  include <curses.h>
-#elif defined(HAVE_NCURSES_H)
-#  include <ncurses.h>
-#endif
-	      ],
-	      [printw((const char *)"Test");]
-	    )], 
-	    [ac_cv_compatible_printw=yes],
-	    [ac_cv_compatible_printw=no]
-	  )
-
-	  LIBS=$ac_save_LIBS
-	  CFLAGS=$ac_save_CFLAGS
-
-	  AC_MSG_RESULT([$ac_cv_compatible_printw])
-
-	  if test "$ac_cv_compatible_printw" = no; then
-		AC_MSG_WARN([The printw() function of your ncurses or curses library is old, we will disable usage of the library. If you want to use this library anyway, please update to newer version of the library, ncurses 5.4 or later is recommended. You can get the library from http://www.gnu.org/software/ncurses/.])
-		AC_MSG_NOTICE([Disabling curses])
-		AC_DEFINE(HAVE_INCOMPATIBLE_PRINTW, 1, [Do we have incompatible printw() in curses library?])
-		dnl	AC_DEFINE(HAVE_CURSES_H, 0)
-		dnl	AC_DEFINE(HAVE_NCURSES_H, 0)
-	  fi
-	fi
-
-dnl ************ printw **********************
-
-
-	EXTRA_WARNINGS=""
-	# We had to eliminate -Wnested-externs because of libtool changes
-        WARNLIST="all missing-prototypes 
-		missing-declarations 
-		strict-prototypes 
-		declaration-after-statement
-		pointer-arith 
-		write-strings
-		cast-qual cast-align 
-		bad-function-cast 
-		inline
-		missing-format-attribute
-		format=2
-		format-security
-		format-nonliteral
-		no-long-long
-		no-strict-aliasing"
-
-	for j in $WARNLIST
-	do
-	  if
-	    cc_supports_flag -W$j
-	  then
-            case $j in
-               "no-long-long")
-        		if test "${enable_no_long_long}" = "yes"; then
-			  EXTRA_WARNINGS="$EXTRA_WARNINGS -W$j"
-			fi;;
-
-               *)	EXTRA_WARNINGS="$EXTRA_WARNINGS -W$j";;
-            esac
-	  fi
-	done
-
-dnl Add any system specific options here.
-
-	if test "${enable_ansi}" = "unknown"; then
-        	enable_ansi=yes
-        fi
-
-	case "$host_os" in
-  	*linux*|*bsd*)
-		if test "${enable_fatal_warnings}" = "unknown"; then
-        		enable_fatal_warnings=yes
-        	fi
-          	;;
-  	*solaris*)
-          	;;
-	esac
-
-	if test "${enable_ansi}" = yes && cc_supports_flag -std=iso9899:199409 ; then
-	echo "Enabling ANSI Compatibility on this platform"
-	ANSI="-ansi -D_GNU_SOURCE -DANSI_ONLY"
-	fi
-
-	if test "${enable_fatal_warnings}" = yes && cc_supports_flag -Werror ; then
-          echo "Enabling Fatal Warnings (-Werror) on this platform"
-    	  FATAL_WARNINGS="-Werror"
-        fi
-        
-	if test "$enable_traditional_warning" = yes && \
-		 cc_supports_flag -Wtraditional; then
-	  echo "Enabling traditional warnings"
-    	  EXTRA_WARNINGS="$EXTRA_WARNINGS -Wtraditional"
-	fi
-
-
-	CC_WARNINGS="$EXTRA_WARNINGS $FATAL_WARNINGS $ANSI" 
-	NON_FATAL_CC_WARNINGS="$EXTRA_WARNINGS"
-
+if test -n "$LIBGNUTLS_CONFIG"; then
+	AC_MSG_CHECKING(for gnutls header flags)
+	GNUTLSHEAD="`$LIBGNUTLS_CONFIG --cflags`";
+	AC_MSG_RESULT($GNUTLSHEAD)
+	AC_MSG_CHECKING(for gnutls library flags)
+	GNUTLSLIBS="`$LIBGNUTLS_CONFIG --libs`";
+	AC_MSG_RESULT($GNUTLSLIBS)
+else
+	AC_CHECK_LIB(gnutls, gnutls_init)
 fi
+AC_SUBST(GNUTLSHEAD)
+AC_SUBST(GNUTLSLIBS)
+
+if test "X$OCF_ROOT_DIR" = X; then
+  AC_MSG_ERROR(Could not locate OCF directory)
+fi
+
+AC_PATH_PROG(VALGRIND_BIN, valgrind)
+AC_DEFINE_UNQUOTED(VALGRIND_BIN, "$VALGRIND_BIN", Valgrind command)
 
 dnl ************************************************************************
 dnl checks for library functions to replace them
@@ -1474,77 +1321,8 @@ AC_CHECK_FUNCS(__default_morecore)
 AC_CHECK_FUNCS(seteuid)
 AC_CHECK_FUNCS(setegid)
 AC_CHECK_FUNCS(getpeereid)
-
-dnl **********************************************************************
-dnl Check for various argv[] replacing functions on various OSs
-dnl
-dnl Borrowed from Proftpd
-dnl Proftpd is Licenced under the terms of the GNU General Public Licence
-dnl and is available from http://www.proftpd.org/
-dnl
-
-AC_CHECK_FUNCS(setproctitle)
-AC_CHECK_HEADERS(libutil.h)
-AC_CHECK_LIB(util, setproctitle,
-	[AC_DEFINE(HAVE_SETPROCTITLE,1,[ ])
-		ac_cv_func_setproctitle="yes" ; LIBS="$LIBS -lutil"])
-
-if test "$ac_cv_func_setproctitle" = "yes"; then
-  pf_argv_set="PF_ARGV_NONE"
-fi
-
-if test "$pf_argv_set" = ""; then
-  AC_CHECK_HEADERS(sys/pstat.h)
-  if test "$ac_cv_header_pstat_h" = "yes"; then
-    AC_CHECK_FUNCS(pstat)
-
-    if test "$ac_cv_func_pstat" = "yes"; then
-	pf_argv_set="PF_ARGV_PSTAT"
-    else
-	pf_argv_set="PF_ARGV_WRITEABLE"
-    fi
-  fi
-
-  if test "$pf_argv_set" = ""; then
-    AC_EGREP_HEADER([#define.*PS_STRINGS.*],sys/exec.h,
-			have_psstrings="yes",have_psstrings="no")
-    if test "$have_psstrings" = "yes"; then
-	pf_argv_set="PF_ARGV_PSSTRINGS"
-    fi
-  fi
-
-  if test "$pf_argv_set" = ""; then
-    AC_CACHE_CHECK(whether __progname and __progname_full are available,
-		    pf_cv_var_progname,
-		    AC_TRY_LINK([extern char *__progname, *__progname_full;],
-			[__progname = "foo"; __progname_full = "foo bar";],
-			pf_cv_var_progname="yes", pf_cv_var_progname="no"))
-
-    if test "$pf_cv_var_progname" = "yes"; then
-	AC_DEFINE(HAVE___PROGNAME,1,[ ])
-    fi
-
-    AC_CACHE_CHECK(which argv replacement method to use,
-		    pf_cv_argv_type,
-		    AC_EGREP_CPP(yes,[
-#if defined(__GNU_HURD__)
-  yes
-#endif
-  ],pf_cv_argv_type="new", pf_cv_argv_type="writeable"))
-
-    if test "$pf_cv_argv_type" = "new"; then
-	pf_argv_set="PF_ARGV_NEW"
-    fi
-
-    if test "$pf_argv_set" = ""; then
-	pf_argv_set="PF_ARGV_WRITEABLE"
-    fi
-  fi
-fi
-AC_DEFINE_UNQUOTED(PF_ARGV_TYPE, $pf_argv_set,
-	mechanism to pretty-print ps output: setproctitle-equivalent)
-
-dnl End of tests borrowed from Proftpd
+AC_CHECK_FUNCS(sigignore)
+dnl     sigignore: Only on Solaris -it is a solaris replacement for signal(s,SIG_IGN).
 
 dnl check if header file and lib are there for bzip2
 bz2_installed="yes"
@@ -1555,36 +1333,6 @@ if test "$bz2_installed" = "no"; then
    AC_MSG_ERROR(BZ2 Development libraries not found)
 fi
 
-dnl
-dnl Lex and yacc can't be trusted to produce code that won't produce
-dnl warnings
-dnl
-NON_FATAL_CFLAGS="$CFLAGS $NON_FATAL_CC_WARNINGS"
-AC_SUBST(NON_FATAL_CFLAGS)
-
-dnl
-dnl We reset CFLAGS to include our warnings *after* all function
-dnl checking goes on, so that our warning flags don't keep the
-dnl AC_*FUNCS() calls above from working.  In particular, -Werror will
-dnl *always* cause us troubles if we set it before here.
-dnl
-dnl
-CFLAGS="$CFLAGS $CC_WARNINGS"
-
-dnl NOTE:
-dnl This check should only be done after CFLAGS is set. Otherwise
-dnl linux box will complain because of a warning of the undefined 
-dnl function sigignore(). 
-dnl 
-dnl In theory, all function checks should be done after the CFLAGS is 
-dnl set since we are enforcing the -Werror. But this would have a big
-dnl impact on the whole source tree so I am only moving the
-dnl sigignore for now. A bit of a hack. 
-dnl
-dnl     sigignore: Only on Solaris.
-dnl             it is a solaris replacement for signal(s,SIG_IGN).
-dnl
-AC_CHECK_FUNCS(sigignore)
 
 dnl
 dnl Make sure that CFLAGS is not exported. If the user did
@@ -1599,17 +1347,138 @@ if export | fgrep " CFLAGS=" > /dev/null; then
 	export -n CFLAGS || true # We don't want to bomb out if this fails
 fi
 
-if test "$GCC" = yes; then
-  CFLAGS="$CFLAGS -ggdb3"
-  if
-    cc_supports_flag -funsigned-char
-  then
-    CFLAGS="$CFLAGS -funsigned-char"
-  fi
+if test "$GCC" != yes; then
+        CFLAGS="$CFLAGS -g"
 else
-  CFLAGS="$CFLAGS -g"
+        CFLAGS="$CFLAGS -ggdb3 -O0"
+
+dnl ************ printw **********************
+
+	if test X"$CURSESLIBS" != X"" &&  cc_supports_flag -Wcast-qual \
+	  && cc_supports_flag -Werror; then 
+	dnl Check for printw() prototype compatibility
+	dnl FIXME: We can check che prototype compatibility only if $CC supports
+	dnl -Wcast-qual and -Werror	
+	  AC_MSG_CHECKING(whether printw() requires argument of "const char *")
+	  ac_save_LIBS=$LIBS
+	  LIBS="$CURSESLIBS  $LIBS"
+	  ac_save_CFLAGS=$CFLAGS
+	  CFLAGS="-Wcast-qual -Werror"
+
+	  AC_LINK_IFELSE(
+	    [AC_LANG_PROGRAM(
+	      [
+#if defined(HAVE_CURSES_H)
+#  include <curses.h>
+#elif defined(HAVE_NCURSES_H)
+#  include <ncurses.h>
+#endif
+	      ],
+	      [printw((const char *)"Test");]
+	    )], 
+	    [ac_cv_compatible_printw=yes],
+	    [ac_cv_compatible_printw=no]
+	  )
+
+	  LIBS=$ac_save_LIBS
+	  CFLAGS=$ac_save_CFLAGS
+
+	  AC_MSG_RESULT([$ac_cv_compatible_printw])
+
+	  if test "$ac_cv_compatible_printw" = no; then
+		AC_MSG_WARN([The printw() function of your ncurses or curses library is old, we will disable usage of the library. If you want to use this library anyway, please update to newer version of the library, ncurses 5.4 or later is recommended. You can get the library from http://www.gnu.org/software/ncurses/.])
+		AC_MSG_NOTICE([Disabling curses])
+		AC_DEFINE(HAVE_INCOMPATIBLE_PRINTW, 1, [Do we have incompatible printw() in curses library?])
+		dnl	AC_DEFINE(HAVE_CURSES_H, 0)
+		dnl	AC_DEFINE(HAVE_NCURSES_H, 0)
+	  fi
+	fi
+
+dnl ************ printw **********************
+
+
+	EXTRA_WARNINGS=""
+	# We had to eliminate -Wnested-externs because of libtool changes
+        WARNLIST="all missing-prototypes 
+		missing-declarations 
+		strict-prototypes 
+		declaration-after-statement
+		pointer-arith 
+		write-strings
+		cast-qual cast-align 
+		bad-function-cast 
+		inline
+		missing-format-attribute
+		format=2
+		format-security
+		format-nonliteral
+		no-long-long
+    		unsigned-char
+		gnu89-inline
+		no-strict-aliasing"
+
+	for j in $WARNLIST
+	do
+	  if
+	    cc_supports_flag -W$j
+	  then
+            case $j in
+               "no-long-long")
+        		if test "${enable_no_long_long}" = "yes"; then
+			  EXTRA_WARNINGS="$EXTRA_WARNINGS -W$j"
+			fi;;
+
+               *)	EXTRA_WARNINGS="$EXTRA_WARNINGS -W$j";;
+            esac
+	  fi
+	done
+
+dnl Add any system specific options here.
+
+	case "$host_os" in
+  	*linux*|*bsd*)
+		if test "${enable_fatal_warnings}" = "unknown"; then
+        		enable_fatal_warnings=yes
+        	fi
+          	;;
+  	*solaris*)
+          	;;
+	esac
+
+	echo "ANSI: ${enable_ansi}, Fatal: ${enable_fatal_warnings}, trad: $enable_traditional_warning"
+
+	if test "x${enable_ansi}" != xno && cc_supports_flag -std=iso9899:199409 ; then
+	  echo "Enabling ANSI Compatibility on this platform"
+	  ANSI="-ansi -D_GNU_SOURCE -DANSI_ONLY"
+	fi
+
+	if test "x${enable_fatal_warnings}" != xno && cc_supports_flag -Werror ; then
+          echo "Enabling Fatal Warnings (-Werror) on this platform"
+    	  FATAL_WARNINGS="-Werror"
+        fi
+        
+	if test "$enable_traditional_warning" = yes && cc_supports_flag -Wtraditional; then
+	  echo "Enabling traditional warnings"
+    	  EXTRA_WARNINGS="$EXTRA_WARNINGS -Wtraditional"
+	fi
+
+	CC_WARNINGS="$EXTRA_WARNINGS $FATAL_WARNINGS $ANSI" 
+	NON_FATAL_CC_WARNINGS="$EXTRA_WARNINGS"
+
 fi
 dnl AC_SUBST(CC_WARNINGS)
+
+NON_FATAL_CFLAGS="$CFLAGS $NON_FATAL_CC_WARNINGS"
+AC_SUBST(NON_FATAL_CFLAGS)
+
+dnl
+dnl We reset CFLAGS to include our warnings *after* all function
+dnl checking goes on, so that our warning flags don't keep the
+dnl AC_*FUNCS() calls above from working.  In particular, -Werror will
+dnl *always* cause us troubles if we set it before here.
+dnl
+dnl
+CFLAGS="$CFLAGS $CC_WARNINGS"
 
 dnl ************************************************************************
 dnl pre AC_OUTPUT stuff
@@ -1622,52 +1491,6 @@ AC_SUBST(LIBADD_DL)	dnl extra flags for dynamic linking libraries
 AC_SUBST(LIBADD_INTL)	dnl extra flags for GNU gettext stuff...
 
 AC_SUBST(LOCALE)
-
-CRM_ENABLED=1
-
-dnl ************************************************************************
-
-AC_CHECK_HEADERS(gnutls/gnutls.h)
-AC_CHECK_HEADERS(security/pam_appl.h pam/pam_appl.h)
-
-dnl GNUTLS library: Attempt to determine by 'libgnutls-config' program.
-dnl If no 'libgnutls-config', try traditional autoconf means.
-AC_PATH_PROGS(LIBGNUTLS_CONFIG, libgnutls-config)
-
-if test -n "$LIBGNUTLS_CONFIG"; then
-	AC_MSG_CHECKING(for gnutls header flags)
-	GNUTLSHEAD="`$LIBGNUTLS_CONFIG --cflags`";
-	AC_MSG_RESULT($GNUTLSHEAD)
-	AC_MSG_CHECKING(for gnutls library flags)
-	GNUTLSLIBS="`$LIBGNUTLS_CONFIG --libs`";
-	AC_MSG_RESULT($GNUTLSLIBS)
-else
-	AC_CHECK_LIB(gnutls, gnutls_init)
-fi
-AC_SUBST(GNUTLSHEAD)
-AC_SUBST(GNUTLSLIBS)
-
-if test "X$OCF_ROOT_DIR" = X; then
-  FatalMissingThing "OCF directory" "Could not locate OCF directory"
-fi
-
-AC_PATH_PROG(VALGRIND_BIN, valgrind)
-AC_DEFINE_UNQUOTED(VALGRIND_BIN, "$VALGRIND_BIN", Valgrind command)
-
-dnl **********************************************************************
-dnl 'AWK' had been determined via 'aclocal.m4' as the simple name, using
-dnl the current PATH (i.e. in the context of 'configure').
-dnl
-dnl Things within heartbeat will use 'AWK', but from a different context,
-dnl so we should determine, and substitute, the full path.
-dnl
-dnl Note: Even that may have a flaw, e.g. if 'configure' finds (say) 'gawk',
-dnl which we here convert to '/path/to/gawk', but the run-time machine lacks it.
-dnl We won't worry about that for now.
-dnl (David Lee; March 2007)
-AC_PATH_PROGS([AWK], $AWK)
-
-CheckMissingThings
 
 dnl Options for cleaning up the compiler output 
 PRETTY_CC=""
@@ -1822,16 +1645,13 @@ AC_MSG_RESULT([  Header files             = ${includedir}])
 AC_MSG_RESULT([  Arch-independent files   = ${datadir}])
 AC_MSG_RESULT([  State information        = ${localstatedir}])
 AC_MSG_RESULT([  System configuration     = ${sysconfdir}])
-AC_MSG_RESULT([  Init (rc) scripts        = ${INITDIR}])
 
 AC_MSG_RESULT([  Use system LTDL          = ${ac_cv_lib_ltdl_lt_dlopen}])
 
 AC_MSG_RESULT([  HA group name            = ${HA_APIGROUP}])
 AC_MSG_RESULT([  HA user name             = ${HA_CCMUSER}])
 
-AC_MSG_RESULT([  With Heartbeat support   = ${SUPPORT_HEARTBEAT}])
-AC_MSG_RESULT([  With AIS support         = ${AIS_VERSION}])
-AC_MSG_RESULT([  With AIS prefix          = ${AISPREFIX}])
+AC_MSG_RESULT([  Features                 =${PKG_FEATURES}])
 
 AC_MSG_RESULT([  CC_WARNINGS              = ${CC_WARNINGS}])
 AC_MSG_RESULT([  Mangled CFLAGS           = ${CFLAGS}])
