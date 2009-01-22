@@ -811,7 +811,7 @@ delhb_quit:
 		stonithd_log(LOG_NOTICE, "%s %s", argv[0], M_ABORT );
 	}
 
-	return (STARTUP_ALONE == TRUE) ? main_rc : MAGIC_EC;
+	return main_rc;
 }
 
 static gboolean
