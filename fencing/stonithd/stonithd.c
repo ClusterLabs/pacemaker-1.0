@@ -875,9 +875,9 @@ become_daemon()
 	 * when started up by heartbeat.
 	 */
 	if (cl_lock_pidfile(STD_PIDFILE) < 0) {
-		pid = cl_read_pidfile_no_checking(pidfile);
-		stonithd_log(LOG_WARNING,"%s: already running [pid %ld] (%s).\n",
-			 stonithd_name, pid, pidfile);
+		pid = cl_read_pidfile_no_checking(STD_PIDFILE);
+		stonithd_log(LOG_WARNING,"%s: already running [pid %d] (%s).\n",
+			 stonithd_name, pid, STD_PIDFILE);
 		exit(LSB_EXIT_OK);
 	}
 
