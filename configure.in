@@ -91,8 +91,6 @@ AC_ARG_WITH(pkgname,
   )
 AC_SUBST(PKGNAME)
 
-AC_ARG_ENABLE([all],
-[  --enable-all Activate ALL features [default=no]])
 AC_ARG_ENABLE([ansi],
 [  --enable-ansi force GCC to compile to ANSI/ANSI standard for older compilers.
      [default=yes]])
@@ -104,11 +102,6 @@ AC_ARG_ENABLE([fatal-warnings],
 AC_ARG_ENABLE([no-long-long],
 [  --enable-no-long-long removes no long long warning for gcc
      [default=yes]], [], [enable_no_long_long=yes])
-
-AC_ARG_ENABLE([traditional-warnings],
-[  --enable-traditional-warnings 
-     enable traditional warnings gcc (-Wtraditional)
-     [default=no]])
 
 AC_ARG_ENABLE([pretty],
 [  --enable-pretty 
@@ -128,29 +121,29 @@ AC_ARG_ENABLE([bundled-ltdl],
 [  --enable-bundled-ltdl  Configure, build and install the standalone ltdl library bundled with ${PKG_NAME} [default=no]]) 
 LTDL_LIBS=""
 
-AC_ARG_WITH(ais-support,
-    [  --with-ais-support     
+AC_ARG_WITH(ais,
+    [  --with-ais     
        Support the OpenAIS messaging and membership layer ],
     [ SUPPORT_AIS=$withval ],
     [ SUPPORT_AIS=try ],
 )
 
-AC_ARG_WITH(heartbeat-support,
-    [  --with-heartbeat-support     
+AC_ARG_WITH(heartbeat,
+    [  --with-heartbeat     
        Support the Heartbeat messaging and membership layer ],
     [ SUPPORT_HEARTBEAT=$withval ],
     [ SUPPORT_HEARTBEAT=try ],
 )
 
-AC_ARG_WITH(snmp-support,
-    [  --with-snmp-support     
+AC_ARG_WITH(snmp,
+    [  --with-snmp     
        Support the SNMP protocol ],
     [ SUPPORT_SNMP=$withval ],
     [ SUPPORT_SNMP=try ],
 )
 
-AC_ARG_WITH(esmtp-support,
-    [  --with-esmtp-support     
+AC_ARG_WITH(esmtp,
+    [  --with-esmtp  
        Support the sending mail notifications with the esmtp library ],
     [ SUPPORT_ESMTP=$withval ],
     [ SUPPORT_ESMTP=try ],
@@ -819,15 +812,6 @@ fi
 
 CC_WARNINGS=""
 
-dnl - If requested, enable ALL subsystems.
-	if test "${enable_all}" = "yes" ; then
-	  echo "Enabling all optional features."
-	  enable_ansi=yes;
-	  enable_crm=yes;
-	  enable_fatal_warnings=yes;
-	fi
-
-
 dnl Check before we enable -Wstrict-prototypes as it causes the test to fail
 AC_CHECK_LIB(ltdl, lt_dlopen, [LTDL_foo=1])
 if test "x${enable_bundled_ltdl}" = "xyes"; then
@@ -1457,11 +1441,6 @@ dnl Add any system specific options here.
     	  FATAL_WARNINGS="-Werror"
         fi
         
-	if test "$enable_traditional_warning" = yes && cc_supports_flag -Wtraditional; then
-	  echo "Enabling traditional warnings"
-    	  EXTRA_WARNINGS="$EXTRA_WARNINGS -Wtraditional"
-	fi
-
 	CC_WARNINGS="$EXTRA_WARNINGS $FATAL_WARNINGS $ANSI" 
 	NON_FATAL_CC_WARNINGS="$EXTRA_WARNINGS"
 
@@ -1479,6 +1458,11 @@ dnl *always* cause us troubles if we set it before here.
 dnl
 dnl
 CFLAGS="$CFLAGS $CC_WARNINGS"
+AC_SUBST(CFLAGS)
+
+dnl This is useful for use in Makefiles that need to remove one specific flag
+CFLAGS_COPY="$CFLAGS"
+AC_SUBST(CFLAGS_COPY)
 
 dnl ************************************************************************
 dnl pre AC_OUTPUT stuff
