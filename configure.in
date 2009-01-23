@@ -99,10 +99,6 @@ AC_ARG_ENABLE([fatal-warnings],
 [  --enable-fatal-warnings very pedantic and fatal warnings for gcc
      [default=yes]])
 
-AC_ARG_ENABLE([no-long-long],
-[  --enable-no-long-long removes no long long warning for gcc
-     [default=yes]], [], [enable_no_long_long=yes])
-
 AC_ARG_ENABLE([pretty],
 [  --enable-pretty 
      Pretty-print compiler output unless there is an error
@@ -1406,14 +1402,7 @@ dnl ************ printw **********************
 	  if
 	    cc_supports_flag -W$j
 	  then
-            case $j in
-               "no-long-long")
-        		if test "${enable_no_long_long}" = "yes"; then
-			  EXTRA_WARNINGS="$EXTRA_WARNINGS -W$j"
-			fi;;
-
-               *)	EXTRA_WARNINGS="$EXTRA_WARNINGS -W$j";;
-            esac
+	    EXTRA_WARNINGS="$EXTRA_WARNINGS -W$j"
 	  fi
 	done
 
