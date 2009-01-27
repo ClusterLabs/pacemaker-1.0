@@ -492,65 +492,73 @@ int
 stonithd_node_fence(stonith_ops_t * op)
 {
 	int rc = ST_FAIL;
-	struct ha_msg * request, * reply;
+	struct ha_msg *request, *reply;
 
 	if (op == NULL) {
 		stdlib_log(LOG_ERR, "stonithd_node_fence: op==NULL");
-		return ST_FAIL;
+		goto out;
 	}
 	
-	if ( !signed_on(chan) ) {
+	if (!signed_on(chan)) {
 		stdlib_log(LOG_NOTICE, "not signed on");
-		return ST_FAIL;
+		goto out;
 	}
 
-	if ( (request = create_basic_reqmsg_fields(ST_STONITH)) == NULL) {
-		return ST_FAIL;
-	}
-
-	if (  (ha_msg_add_int(request, F_STONITHD_OPTYPE, op->optype) != HA_OK )
-		||(ha_msg_add(request, F_STONITHD_NODE, op->node_name ) != HA_OK)
-		||( op->node_uuid == NULL
-			|| ha_msg_add(request, F_STONITHD_NODE_UUID
-			, op->node_uuid) != HA_OK )
-		||(ha_msg_add_int(request, F_STONITHD_TIMEOUT, op->timeout) != HA_OK) ) {
+	if (!(request = create_basic_reqmsg_fields(ST_STONITH))) {
 		stdlib_log(LOG_ERR, "stonithd_node_fence: "
-			   "cannot add field to ha_msg.");
-		ZAPMSG(request);
-		return ST_FAIL;
+			   "message creation failed.");
+		goto out;
 	}
-	if  (op->private_data != NULL) {
-	       if ( ha_msg_add(request, F_STONITHD_PDATA, op->private_data) != HA_OK) {
-			stdlib_log(LOG_ERR, "stonithd_node_fence: "
-			   "Failed to add F_STONITHD_PDATA field to ha_msg.");
-			ZAPMSG(request);
-			return ST_FAIL;
-		}
+
+	if (ha_msg_add_int(request, F_STONITHD_OPTYPE, op->optype) != HA_OK) {
+		stdlib_log(LOG_ERR, "stonithd_node_fence: "
+			   "cannot add optype field to ha_msg.");
+		goto out;
+	}
+	if (ha_msg_add(request, F_STONITHD_NODE, op->node_name ) != HA_OK) {
+		stdlib_log(LOG_ERR, "stonithd_node_fence: "
+			   "cannot add node_name field to ha_msg.");
+		goto out;
+	}
+	if (op->node_uuid == NULL || (ha_msg_add(request, F_STONITHD_NODE_UUID, 
+					op->node_uuid) != HA_OK)) {
+		stdlib_log(LOG_ERR, "stonithd_node_fence: "
+			   "cannot add node_uuid field to ha_msg.");
+		goto out;
+	}
+	if (ha_msg_add_int(request, F_STONITHD_TIMEOUT, op->timeout) != HA_OK) {
+		stdlib_log(LOG_ERR, "stonithd_node_fence: "
+			   "cannot add timeout field to ha_msg.");
+		goto out;
+	}
+	if  (op->private_data == NULL || (ha_msg_add(request, F_STONITHD_PDATA, 
+					op->private_data) != HA_OK)) {
+		stdlib_log(LOG_ERR, "stonithd_node_fence: "
+		   "cannot add private_data field to ha_msg.");
+		goto out;
 	}
 
 	/* Send the stonith request message */
 	if (msg2ipcchan(request, chan) != HA_OK) {
-		ZAPMSG(request);
 		stdlib_log(LOG_ERR
-			   , "failed to send stonith request to the stonithd");
-		return ST_FAIL;
+			   , "failed to send stonith request to stonithd");
+		goto out;
 	}
 
 	/*  waiting for the output to finish */
 	chan_waitout_timeout(chan, DEFAULT_TIMEOUT);
-	ZAPMSG(request);
 	
 	/* Read the reply... */
 	stdlib_log(LOG_DEBUG, "waiting for the stonith reply msg.");
         if ( IPC_OK != chan_waitin_timeout(chan, DEFAULT_TIMEOUT) ) {
 		stdlib_log(LOG_ERR, "%s:%d: waitin failed."
 			   , __FUNCTION__, __LINE__);
-		return ST_FAIL;
+		goto out;
 	}
 
 	if ( (reply = msgfromIPC_noauth(chan)) == NULL ) {
 		stdlib_log(LOG_ERR, "stonithd_node_fence: fail to fetch reply");
-		return ST_FAIL;
+		goto out;
 	}
 	
 	if ( TRUE == is_expected_msg(reply, F_STONITHD_TYPE, ST_APIRPL, 
@@ -560,11 +568,11 @@ stonithd_node_fence(stonith_ops_t * op)
 			rc = ST_OK;
 			stdlib_log(LOG_DEBUG, "%s:%d: %s"
 				 , __FUNCTION__, __LINE__
-				 , "Stonithd's synchronous answer is ST_APIOK");
+				 , "stonithd's synchronous answer is ST_APIOK");
 		} else {
 			stdlib_log(LOG_ERR, "%s:%d: %s"
 			       , __FUNCTION__, __LINE__
-			       , "Stonithd's synchronous answer is ST_APIFAIL");
+			       , "stonithd's synchronous answer is ST_APIFAIL");
 		}
 	} else {
 		stdlib_log(LOG_ERR, "stonithd_node_fence: "
@@ -572,7 +580,9 @@ stonithd_node_fence(stonith_ops_t * op)
 		/* Need to handle in other way? */
 	}
 
+out:
 	ZAPMSG(reply);
+	ZAPMSG(request);
 	return rc;
 }
 

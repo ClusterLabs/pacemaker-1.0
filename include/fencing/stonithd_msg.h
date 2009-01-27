@@ -83,7 +83,7 @@
 #define	ST_BADREQ	"badreq"
 #define ST_COOKIE	"cookieauth"	/* cookie authentication required */
 
-#define ZAPMSG(m)       { ha_msg_del(m); (m) = NULL; }
+#define ZAPMSG(m)       { if (m) { ha_msg_del(m); (m) = NULL; } }
 
 /* free the object allocated by g_new, g_strdup and etc. */
 #define ZAPGDOBJ(m)					\
