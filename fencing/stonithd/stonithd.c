@@ -1238,7 +1238,10 @@ stonithd_sendmsg(const char *node_name, struct ha_msg *msg, const char *st_op_ty
 		return FALSE;
 	}
 	xml = convert_ha_message(NULL, msg, __FUNCTION__);
+
+	return_to_orig_privs();
 	rc = send_cluster_message(node_name, crm_msg_stonithd, xml, FALSE);
+	return_to_dropped_privs();
 	free_xml(xml);
 	return rc;
 }
