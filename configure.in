@@ -1237,7 +1237,7 @@ if test "X$OCF_ROOT_DIR" = X; then
   AC_MSG_ERROR(Could not locate OCF directory)
 fi
 
-AC_PATH_PROG(VALGRIND_BIN, valgrind)
+AC_PATH_PROG(VALGRIND_BIN, valgrind, /usr/bin/valgrind)
 AC_DEFINE_UNQUOTED(VALGRIND_BIN, "$VALGRIND_BIN", Valgrind command)
 
 dnl ************************************************************************
