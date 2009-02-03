@@ -78,7 +78,6 @@
 #include <pils/generic.h>
 #include <clplumbing/cl_signal.h>
 #include <clplumbing/cl_syslog.h>
-#include <clplumbing/uids.h>
 #include <clplumbing/cl_log.h>
 #include <clplumbing/lsb_exitcodes.h>
 #include <clplumbing/proctrack.h>
@@ -102,6 +101,20 @@
 #include <crm/crm.h>
 #include <crm/common/cluster.h>
 #include <crm/common/xml.h>
+
+#undef CL_DROP_PRIVS
+#ifndef CL_DROP_PRIVS
+	int drop_privs(uid_t uid, gid_t gid);
+	int return_to_orig_privs(void);
+	int return_to_dropped_privs(void);
+	int cl_have_full_privs(void);
+	int drop_privs(uid_t uid, gid_t gid)	{	return 0;	}
+	int return_to_orig_privs(void)		{	return 0;	}
+	int return_to_dropped_privs(void)	{	return 0;	}
+	int cl_have_full_privs(void)		{	return 0;	}
+#else
+#include <clplumbing/uids.h>
+#endif
 
 #include <assert.h>
 #define ST_ASSERT(cond) assert(cond)
