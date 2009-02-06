@@ -1024,11 +1024,15 @@ if test $AIS_VERSION != "none"; then
 
      AC_CHECK_LIB(coroutil, saSendReceiveReply, [])
      AC_CHECK_LIB(SaMsg, saSendReceiveReply, [])
+     AC_CHECK_LIB(SaMsg, openais_msg_send_reply_receive, [])
 
      if test $ac_cv_lib_coroutil_saSendReceiveReply = yes; then
        :  CoroSync
+     elif test $ac_cv_lib_SaMsg_openais_msg_send_reply_receive = yes; then
+       :  OpenAIS
      elif test $ac_cv_lib_SaMsg_saSendReceiveReply = yes; then
        :  OpenAIS
+	AC_DEFINE_UNQUOTED(TRADITIONAL_AIS_IPC, 1, "Use the 'old' AIS IPC interface")
      else
         AC_MSG_RESULT(Cannot locate AIS messaging library)
 	aisreason="requred libraries not found"
