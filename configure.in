@@ -1017,7 +1017,6 @@ if test $AIS_VERSION != "none"; then
 fi
 
 dnl continue?
-AC_MSG_CHECKING(OpenAIS libraries: $AIS_VERSION)
 if test $AIS_VERSION != "none"; then
      dnl Don't add the messaging library to LIBS since most daemons don't need/use it
      saveLIBS="$LIBS"
