@@ -1017,12 +1017,12 @@ if test $AIS_VERSION != "none"; then
 fi
 
 dnl continue?
+AC_MSG_CHECKING(OpenAIS libraries: $AIS_VERSION)
 if test $AIS_VERSION != "none"; then
      dnl Don't add the messaging library to LIBS since most daemons don't need/use it
      saveLIBS="$LIBS"
      LIBS="$LIBS -L${AISLIB} -R${AISLIB}"
 
-     AC_MSG_CHECKING(OpenAIS libraries: $AIS_VERSION)
      AC_CHECK_LIB(coroutil, saSendReceiveReply, [])
      AC_CHECK_LIB(SaMsg, saSendReceiveReply, [])
      AC_CHECK_LIB(SaMsg, openais_msg_send_reply_receive, [])
