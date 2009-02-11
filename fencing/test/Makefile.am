@@ -25,7 +25,7 @@ INCLUDES         = -I$(top_builddir)/include  -I$(top_srcdir)/include     \
 
 EXTRA_DIST		=	STONITHDBasicSanityCheck
 
-testdir			= 	$(datadir)/@PKG_NAME@/stonithdtest
+testdir			= 	$(datadir)/@PACKAGE@/stonithdtest
 test_SCRIPTS		=	STONITHDBasicSanityCheck
 
 apitestdir		= 	$(libdir)/@HB_PKG@/stonithdtest
