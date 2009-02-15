@@ -1322,7 +1322,7 @@ cts/Makefile					        	\
 	cts/CTSaudits.py					\
 	cts/CTSlab.py						\
 	cts/CTStests.py						\
-	cts/CM_LinuxHAv2.py					\
+	cts/CM_lha.py					\
 	cts/CTSproxy.py	        				\
 	cts/extracttests.py					\
 	cts/getpeinputs.sh					\
