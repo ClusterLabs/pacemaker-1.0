@@ -1065,6 +1065,16 @@ else
 	AC_MSG_RESULT($SNMPLIBS)
    fi
 
+   if test $SUPPORT_SNMP != no; then
+      savedLibs=$LIBS
+      LIBS="$LIBS $SNMPLIBS"
+      AC_CHECK_FUNCS(netsnmp_transport_open_client)
+      if test $ac_cv_func_netsnmp_transport_open_client != yes; then
+      	 SUPPORT_SNMP=no
+      fi
+      LIBS=$savedLibs
+   fi
+
    if test $SUPPORT_SNMP = no; then
    	SUPPORT_SNMP=0
      	if test $missingisfatal = 0; then
