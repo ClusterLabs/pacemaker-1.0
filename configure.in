@@ -19,7 +19,7 @@ dnl     checks for compiler characteristics
 dnl     checks for library functions
 dnl     checks for system services
 
-AC_INIT(pacemaker, 1.0.1, pacemaker@oss.clusterlabs.org)
+AC_INIT(pacemaker, 1.0.2, pacemaker@oss.clusterlabs.org)
 DTD_VERSION="1.0"
 
 PKG_FEATURES=""
@@ -46,8 +46,12 @@ AM_CONFIG_HEADER(include/config.h include/crm_config.h)
 ALL_LINGUAS="en fr"
 
 AC_ARG_WITH(version,
-    [  --with-version=name     Override package version (if you're a packager needing to pretend) ],
+    [  --with-version=version   Override package version (if you're a packager needing to pretend) ],
     [ PACKAGE_VERSION="$withval" ])
+
+AC_ARG_WITH(pkg-name,
+    [  --with-pkg-name=name     Override package name (if you're a packager needing to pretend) ],
+    [ PACKAGE_NAME="$withval" ])
 
 AM_INIT_AUTOMAKE($PACKAGE_NAME, $PACKAGE_VERSION)
 AC_DEFINE_UNQUOTED(PACEMAKER_VERSION, "$PACKAGE_VERSION", Current pacemaker version)
