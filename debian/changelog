@@ -1,3 +1,164 @@
+pacemaker (1.0.2-1) stable; urgency=medium
+  * Update source tarball to revision: d232d19daeb9 (stable-1.0) tip
+  * Statistics:
+      Changesets:      441
+      Diff:            639 files changed, 20871 insertions(+), 21594 deletions(-)
+
+  * Changes since Pacemaker-1.0.1
+  + High (bnc#450815): Tools: crm cli: don't generate id for the operations tag
+  + High: ais: Add support for the new AIS IPC layer
+  + High: ais: Always set header.error to the correct default: SA_AIS_OK
+  + High: ais: Bug BNC#456243 - Ensure the membership cache always contains an entry for the local node
+  + High: ais: Bug BNC:456208 - Prevent deadlocks by not logging in the child process before exec()
+  + High: ais: By default, disable supprt for the WIP openais IPC patch
+  + High: ais: Detect and handle situations where ais and the crm disagree on the node name
+  + High: ais: Ensure crm_peer_seq is updated after a membership update
+  + High: ais: Make sure all IPC header fields are set to sane defaults
+  + High: ais: Repair and streamline service load now that whitetank startup functions correctly
+  + High: build: create and install doc files
+  + High: cib: Allow clients without mainloop to connect to the cib
+  + High: cib: CID:18 - Fix use-of-NULL in cib_perform_op
+  + High: cib: CID:18 - Repair errors introduced in b5a18704477b - Fix use-of-NULL in cib_perform_op
+  + High: cib: Ensure diff's contain the correct values of admin_epoch
+  + High: cib: Fix four moderately sized memory leaks detected by Valgrind
+  + High: Core: CID:10 - Prevent indexing into an array of schemas with a negative value
+  + High: Core: CID:13 - Fix memory leak in log_data_element
+  + High: Core: CID:15 - Fix memory leak in crm_get_peer
+  + High: Core: CID:6 - Fix use-of-NULL in copy_ha_msg_input
+  + High: Core: Fix crash in the membership code preventing node shutdown
+  + High: Core: Fix more memory leaks foudn by valgrind
+  + High: Core: Prevent unterminated strings after decompression
+  + High: crmd: Bug BNC:467995 - Delay marking STONITH operations complete until STONITH tells us so
+  + High: crmd: Bug LF:1962 - Don't NACK peers because they're not (yet) in our membership.  Just ignore them.
+  + High: crmd: Bug LF:2010 - Ensure fencing cib updates create the node_state entry if needed to preent re-fencing during cluster startup
+  + High: crmd: Correctly handle reconnections to attrd
+  + High: crmd: Ensure updates for lost migrate operations indicate which node it tried to migrating to
+  + High: crmd: If there are no nodes to finalize, start an election.
+  + High: crmd: If there are no nodes to welcome, start an election.
+  + High: crmd: Prevent node attribute loss by detecting attrd disconnections immediately
+  + High: crmd: Prevent node re-probe loops by ensuring manditory actions always complete
+  + High: PE: Bug 2005 - Fix startup ordering of cloned stonith groups
+  + High: PE: Bug 2006 - Correctly reprobe cloned groups
+  + High: PE: Bug BNC:465484 - Fix the no-quorum-policy=suicide option
+  + High: PE: Bug LF:1996 - Correctly process disabled monitor operations
+  + High: PE: CID:19 - Fix use-of-NULL in determine_online_status
+  + High: PE: Clones now default to globally-unique=false
+  + High: PE: Correctly calculate the number of available nodes for the clone to use
+  + High: PE: Only shoot online nodes with no-quorum-policy=suicide
+  + High: PE: Prevent on-fail settings being ignored after a resource is successfully stopped
+  + High: PE: Prevent use-of-NULL for failed migrate actions in process_rsc_state()
+  + High: PE: Remove an optimization for the terminate node attribute that caused the cluster to block indefinitly
+  + High: PE: Repar the ability to colocate based on node attributes other than uname
+  + High: PE: Start the correct monitor operation for unmanaged masters
+  + High: stonith: CID:3 - Fix another case of exceptionally poor error handling by the original stonith developers
+  + High: stonith: CID:5 - Checking for NULL and then dereferencing it anyway is an interesting approach to error handling
+  + High: stonithd: Sending IPC to the cluster is a privileged operation
+  + High: stonithd: wrong checks for shmid (0 is a valid id)
+  + High: Tools: attrd - Correctly determine when an attribute has stopped changing and should be committed to the CIB
+  + High: Tools: Bug 2003 - pingd doesn't correctly detect failures when the interface is down
+  + High: Tools: Bug 2003 - pingd doesn't correctly handle node-down events on multi-NIC systems
+  + High: Tools: Bug 2021 - pingd does not detect sequence wrapping correctly, incorrectly reports nodes offline
+  + High: Tools: Bug BNC:468066 - Don't use the result of uname() when its no longer in scope
+  + High: Tools: Bug BNC:473265 - crm_resource -L dumps core
+  + High: Tools: Bug LF:2001 - Transient node attributes should be set via attrd
+  + High: Tools: Bug LF:2036 - crm_resource cannot set/get parameters for cloned resources
+  + High: Tools: Bug LF:2046 - Node attribute updates are lost because attrd can take too long to start
+  + High: Tools: Cause the correct clone instance to be failed with crm_resource -F
+  + High: Tools: cluster_test - Allow the user to select a stack and fix CTS invocation
+  + High: Tools: crm cli: allow rename only if the resource is stopped
+  + High: Tools: crm cli: catch system errors on file operations
+  + High: Tools: crm cli: completion for ids in configure
+  + High: Tools: crm cli: drop '-rsc' from attributes for order constraint
+  + High: Tools: crm cli: exit with an appropriate exit code
+  + High: Tools: crm cli: fix wrong order of action and resource in order constraint
+  + High: Tools: crm cli: fox wrong exit code
+  + High: Tools: crm cli: improve handling of cib attributes
+  + High: Tools: crm cli: new command: configure rename
+  + High: Tools: crm cli: new command: configure upgrade
+  + High: Tools: crm cli: new command: node delete
+  + High: Tools: crm cli: prevent key errors on missing cib attributes
+  + High: Tools: crm cli: print long help for help topics
+  + High: Tools: crm cli: return on syntax error when parsing score
+  + High: Tools: crm cli: rsc_location can be without nvpairs
+  + High: Tools: crm cli: short node preference location constraint
+  + High: Tools: crm cli: sometimes, on errors, level would change on single shot use
+  + High: Tools: crm cli: syntax: drop a bunch of commas (remains of help tables conversion)
+  + High: Tools: crm cli: verify user input for sanity
+  + High: Tools: crm: find expressions within rules (don't always skip xml nodes due to used id)
+  + High: Tools: crm_master shouldn't define a set id now that attrd is used.  Defining one can break lookups
+  + High: Tools: crm_mon Use the OID assigned to the project by IANA for SNMP traps
+  + High: Tools: hb2openais: add constraints for clvmd to controld
+  + High: Tools: hb2openais: adjust path to the supporting script and set CONF variable
+  + High: Tools: hb2openais: improve media processing and set rrp_mode for multiple rings configuration
+  + High: Tools: hb2openais: openais supports up to two rings
+  + High: Tools: hb2openais: set no-quorum-policy to ignore for 2-node clusters
+  + High: Tools: hb2openais: start mgmtd if appropriate
+  + Medium (bnc#445622): Tools: crm cli: improve the node show command and drop node status
+  + Medium (LF 2009): stonithd: improve timeouts for remote fencing
+  + Medium: ais: Allow dead peers to be removed from membership calculations
+  + Medium: ais: Pass node deletion events on to clients
+  + Medium: ais: Sanitize ipc usage
+  + Medium: ais: Supply the node's uname in addtion to the id
+  + Medium: Build: Clean up configure to ensure NON_FATAL_CFLAGS is consistent with CFLAGS (ie. includes -g)
+  + Medium: Build: Install cluster_test
+  + Medium: Build: Use more restrictive CFLAGS and fix the resulting errors
+  + Medium: cib: CID:20 - Fix potential use-after-free in cib_native_signon
+  + Medium: Core: Bug BNC:474727 - Set a maximum time to wait for IPC messages
+  + Medium: Core: CID:12 - Fix memory leak in decode_transition_magic error path
+  + Medium: Core: CID:14 - Fix memory leak in calculate_xml_digest error path
+  + Medium: Core: CID:16 - Fix memory leak in date_to_string error path
+  + Medium: Core: Try to track down the cause of XML parsing errors
+  + Medium: crmd: Bug BNC:472473 - Don't wait excessive amounts of time for lost actions
+  + Medium: crmd: Bug BNC:472473 - Reduce the transition timeout to action_timeout+network_delay
+  + Medium: crmd: Don't fast-track the processing of LRM refreshes when there are pending actions.
+  + Medium: crmd: do_dc_join_filter_offer - Check the 'join' message is for the current instance before deciding to NACK peers
+  + Medium: crmd: Find option values without having to do a config upgrade
+  + Medium: crmd: Implement shutdown using a transient node attribute
+  + Medium: crmd: Update the crmd options to use dashes instead of underscores
+  + Medium: cts: Add 'cluster reattach' to the suite of automated regression tests
+  + Medium: cts: cluster_test - Make some usability enhancements
+  + Medium: CTS: cluster_test - suggest a valid port number
+  + Medium: CTS: Fix python import order
+  + Medium: cts: Implement an automated SplitBrain test
+  + Medium: CTS: Remove references to deleted classes
+  + Medium: Extra: Resources - Use HA_VARRUN instead of HA_RSCTMP for state files as Heartbeat removes HA_RSCTMP at startup
+  + Medium: HB: Bug 1933 - Fake crmd_client_status_callback() calls because HB doesn't provide them for already running processes
+  + Medium: PE: CID:17 - Fix memory leak in find_actions_by_task error path
+  + Medium: PE: CID:7,8 - Prevent hypothetical use-of-NULL in LogActions
+  + Medium: PE: Defer logging the actions performed on a resource until we've processed ordering constraints
+  + Medium: PE: Remove the symmetrical attribute of colocation constraints
+  + Medium: Resources: pingd - fix the meta defaults
+  + Medium: Resources: Stateful - Add missing meta defaults
+  + Medium: stonithd: exit if we the pid file cannot be locked
+  + Medium: Tools: Allow attrd clients to specify the ID the attribute should be created with
+  + Medium: Tools: attrd - Allow attribute updates to be performed from a hosts' peer
+  + Medium: Tools: Bug LF:1994 - Clean up crm_verify return codes
+  + Medium: Tools: Change the pingd defaults to ping hosts once every second (instead of 5 times every 10 seconds)
+  + Medium: Tools: cibmin - Detect resource operations with a view to providing email/snmp/cim notification
+  + Medium: Tools: crm cli: add back symmetrical for order constraints
+  + Medium: Tools: crm cli: generate role in location when converting from xml
+  + Medium: Tools: crm cli: handle shlex exceptions
+  + Medium: Tools: crm cli: keep order of help topics
+  + Medium: Tools: crm cli: refine completion for ids in configure
+  + Medium: Tools: crm cli: replace inf with INFINITY
+  + Medium: Tools: crm cli: streamline cib load and parsing
+  + Medium: Tools: crm cli: supply provider only for ocf class primitives
+  + Medium: Tools: crm_mon - Add support for sending mail notifications of resource events
+  + Medium: Tools: crm_mon - Include the DC's version in status summary
+  + Medium: Tools: crm_mon - Sanitize startup and option processing
+  + Medium: Tools: crm_mon - switch to event-driven updates and add support for sending snmp traps
+  + Medium: Tools: crm_shadow - Replace the --locate option with the saner --edit
+  + Medium: Tools: hb2openais: do not remove Evmsd resources, but replace them with clvmd
+  + Medium: Tools: hb2openais: replace crmadmin with crm_mon
+  + Medium: Tools: hb2openais: replace the lsb class with ocf for o2cb
+  + Medium: Tools: hb2openais: reuse code
+  + Medium: Tools: LF:2029 - Display an error if crm_resource is used to reset the operation history of non-primitive resources
+  + Medium: Tools: Make pingd resilient to attrd failures
+  + Medium: Tools: pingd - fix the command line switches
+  + Medium: Tools: Rename ccm_tool to crm_node
+
+ -- Andrew Beekhof <abeekhof@suse.de>  Mon, 16 Feb 2009 13:32:07 +0100
+
 pacemaker (1.0.1-1) stable; urgency=high
   * Update source tarball to revision: 2883431a818b (stable-1.0) tip
   * Statistics:
