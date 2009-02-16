@@ -295,6 +295,7 @@ case $INITDIR in
       done
       AC_MSG_RESULT($INITDIR);;
 esac
+AC_SUBST(INITDIR)
 
 AC_MSG_NOTICE(Sanitizing libdir: ${libdir})
 case $libdir in
