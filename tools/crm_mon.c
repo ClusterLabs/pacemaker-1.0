@@ -35,7 +35,7 @@
 
 #include <clplumbing/uids.h>
 #include <clplumbing/cl_pidfile.h>
-#include <clplumbing/Gmain_timeout.h>
+#include <crm/common/mainloop.h>
 
 #include <crm/msg_xml.h>
 #include <crm/common/util.h>
@@ -94,7 +94,7 @@ gboolean log_diffs = FALSE;
 gboolean log_updates = FALSE;
 
 long last_refresh = 0;
-GTRIGSource *refresh_trigger = NULL;
+crm_trigger_t *refresh_trigger = NULL;
 
 /*
  * 1.3.6.1.4.1.32723 has been assigned to the project by IANA
@@ -155,14 +155,14 @@ mon_timer_popped(gpointer data)
 {
     int rc = cib_ok;
     if(timer_id > 0) {
-	Gmain_timeout_remove(timer_id);
+	g_source_remove(timer_id);
     }
 
     rc = cib_connect(TRUE);
     
     if(rc != cib_ok) {
 	print_dot();
-	timer_id = Gmain_timeout_add(reconnect_msec, mon_timer_popped, NULL);
+	timer_id = g_timeout_add(reconnect_msec, mon_timer_popped, NULL);
     }
     return FALSE;
 }
@@ -173,7 +173,7 @@ static void mon_cib_connection_destroy(gpointer user_data)
     if(cib) {
 	print_as("Reconnecting...");
 	cib->cmds->signoff(cib);
-	timer_id = Gmain_timeout_add(reconnect_msec, mon_timer_popped, NULL);
+	timer_id = g_timeout_add(reconnect_msec, mon_timer_popped, NULL);
     }
     return;
 }
@@ -181,17 +181,10 @@ static void mon_cib_connection_destroy(gpointer user_data)
 /*
  * Mainloop signal handler.
  */
-static gboolean
-mon_shutdown(int nsig, gpointer unused)
+static void
+mon_shutdown(int nsig)
 {
-    clean_up(-1);
-    if (mainloop && g_main_is_running(mainloop)) {
-	g_main_quit(mainloop);
-	
-    } else {
-	clean_up(LSB_EXIT_OK);
-    }
-    return FALSE;
+    clean_up(LSB_EXIT_OK);
 }
 
 int cib_connect(gboolean full) 
@@ -477,9 +470,9 @@ main(int argc, char **argv)
 
     mainloop = g_main_new(FALSE);
 
-    G_main_add_SignalHandler(G_PRIORITY_HIGH, SIGTERM, mon_shutdown, NULL, NULL);
-    G_main_add_SignalHandler(G_PRIORITY_HIGH, SIGINT, mon_shutdown, NULL, NULL);
-    refresh_trigger = G_main_add_TriggerHandler(G_PRIORITY_LOW, mon_refresh_display, NULL, NULL);
+    CL_SIGNAL(SIGTERM, mon_shutdown);
+    CL_SIGNAL(SIGINT, mon_shutdown);
+    refresh_trigger = mainloop_add_trigger(G_PRIORITY_LOW, mon_refresh_display, NULL);
 	
     g_main_run(mainloop);
     g_main_destroy(mainloop);
@@ -498,7 +491,7 @@ wait_for_refresh(int offset, const char *prefix, int msec)
     struct timespec sleept = {1 , 0};
 
     if(as_console == FALSE) {
-	timer_id = Gmain_timeout_add(msec, mon_timer_popped, NULL);
+	timer_id = g_timeout_add(msec, mon_timer_popped, NULL);
 	return;
     }
 	
@@ -513,7 +506,7 @@ wait_for_refresh(int offset, const char *prefix, int msec)
 #endif
 	lpc--;
 	if(lpc == 0) {
-	    timer_id = Gmain_timeout_add(
+	    timer_id = g_timeout_add(
 		1000, mon_timer_popped, NULL);
 	} else {
 	    if (nanosleep(&sleept, NULL) != 0) {
@@ -1549,7 +1542,7 @@ crm_diff_update(const char *event, xmlNode *msg)
 	mon_refresh_display(NULL);
 	
     } else {
-	G_main_set_trigger(refresh_trigger);
+	mainloop_set_trigger(refresh_trigger);
     }
     free_xml(cib_last);
 }

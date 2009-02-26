@@ -45,7 +45,7 @@ extern gboolean check_join_state(
 
 
 #define trigger_fsa(source) crm_debug_3("Triggering FSA: %s", __FUNCTION__); \
-	G_main_set_trigger(source);
+	mainloop_set_trigger(source);
 #if SUPPORT_HEARTBEAT
 gboolean
 crmd_ha_msg_dispatch(ll_cluster_t *cluster_conn, gpointer user_data)
@@ -107,17 +107,20 @@ crmd_ha_msg_filter(xmlNode *msg)
 	if(safe_str_eq(sys_from, CRM_SYSTEM_DC)) {
 	    const char *from = crm_element_value(msg, F_ORIG);
 	    if(safe_str_neq(from, fsa_our_uname)) {
+		int level = LOG_INFO;
 		const char *op = crm_element_value(msg, F_CRM_TASK);
-		crm_err("Another DC detected: %s (op=%s)", from, op);
 
 		/* make sure the election happens NOW */
 		if(fsa_state != S_ELECTION) {
 		    ha_msg_input_t new_input;
+		    level = LOG_ERR;
 		    new_input.msg = msg;
 		    register_fsa_error_adv(
 			C_FSA_INTERNAL, I_ELECTION, NULL, &new_input, __FUNCTION__);
-		    goto done;
 		}
+
+		do_crm_log(level, "Another DC detected: %s (op=%s)", from, op);
+		goto done;
 	    }
 	}
 

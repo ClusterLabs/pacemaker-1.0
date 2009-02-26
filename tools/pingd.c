@@ -35,6 +35,7 @@
 
 #include <clplumbing/Gmain_timeout.h>
 #include <clplumbing/lsb_exitcodes.h>
+#include <clplumbing/cl_signal.h>
 
 #include <crm/common/ipc.h>
 #include <attrd.h>
@@ -399,19 +400,21 @@ static gboolean ping_open(ping_node *node)
     ret_ga = getaddrinfo(node->host, NULL, &hints, &res);
     if (ret_ga) {
 	crm_warn("getaddrinfo: %s", gai_strerror(ret_ga));
-	return FALSE;
+	goto bail;
     }
 	
-    if (res->ai_canonname)
+    if (res->ai_canonname) {
 	hostname = res->ai_canonname;
-    else
+    } else {
 	hostname = node->host;
-
-    crm_debug("Got address %s for %s", hostname, node->host);
+    }
+    
+    crm_debug_2("Got address %s for %s", hostname, node->host);
     
     if(!res->ai_addr) {
 	crm_warn("getaddrinfo failed: no address");
-	return FALSE;
+	freeaddrinfo(res);
+	goto bail;
     }
 	
     memcpy(&(node->addr.raw), res->ai_addr, res->ai_addrlen);
@@ -420,7 +423,7 @@ static gboolean ping_open(ping_node *node)
 
     if(node->fd < 0) {
 	crm_perror(LOG_WARNING, "Can't open socket to %s", hostname);
-	return FALSE;
+	goto bail;
     }
 
     if(node->type == AF_INET6) {
@@ -464,9 +467,15 @@ static gboolean ping_open(ping_node *node)
     }
 #endif    
     
-    crm_debug("Opened connection to %s", node->dest);
-
+    crm_debug_2("Opened connection to %s", node->dest);
+    freeaddrinfo(res);
     return TRUE;
+
+  bail:
+    if(res) {
+	freeaddrinfo(res);
+    }
+    return FALSE;
 }
 
 static gboolean ping_close(ping_node *node)
@@ -479,7 +488,7 @@ static gboolean ping_close(ping_node *node)
 	    crm_perror(LOG_ERR,"Could not close ping socket");
 	} else {
 	    tmp_fd = -1;
-	    crm_debug("Closed connection to %s", node->dest);
+	    crm_debug_2("Closed connection to %s", node->dest);
 	}
     }
     return (tmp_fd == -1);
@@ -638,26 +647,27 @@ ping_read(ping_node *node, int *lenp)
 	    goto retry;
 	    
 	} else if(rc > 0) {
+	    crm_free(packet);
 	    return TRUE;
-	    
-	} else {
-	    return FALSE;
 	}	
 	
     } else {
 	crm_err("Unexpected reply");
     }
+
+    crm_free(packet);
     return FALSE;
 }
 
 static int
 ping_write(ping_node *node, const char *data, size_t size)
 {
-	struct iovec iov[2];
+	struct iovec iov;
 	int rc, bytes, namelen;
 	/* static int ntransmitted = 9; */
 	struct msghdr smsghdr;
 	u_char outpack[MAXPACKETLEN];
+	memset(outpack, 0, MAXPACKETLEN);
 
 	node->iseq++;
 
@@ -667,7 +677,6 @@ ping_write(ping_node *node, const char *data, size_t size)
 	    bytes = ICMP6ECHOLEN + DEFDATALEN;
 
 	    icp = (struct icmp6_hdr *)outpack;
-	    memset(icp, 0, sizeof(*icp));
 	    
 	    icp->icmp6_code = 0;
 	    icp->icmp6_cksum = 0;
@@ -689,7 +698,6 @@ ping_write(ping_node *node, const char *data, size_t size)
 	    bytes = sizeof(struct icmp) + 11;
 
 	    icp = (struct icmp *)outpack;
-	    memset(icp, 0, sizeof(*icp));
 
 	    icp->icmp_code = 0;
 	    icp->icmp_cksum = 0;
@@ -707,13 +715,14 @@ ping_write(ping_node *node, const char *data, size_t size)
 	    icp->icmp_cksum = in_cksum((u_short *)icp, bytes);
 	}
 	
-	memset(&smsghdr, 0, sizeof(smsghdr));
+	memset(&iov, 0, sizeof(struct iovec));
+	memset(&smsghdr, 0, sizeof(struct msghdr));
+
 	smsghdr.msg_name = (caddr_t)&(node->addr);
 	smsghdr.msg_namelen = namelen;
-	memset(&iov, 0, sizeof(iov));
-	iov[0].iov_base = (caddr_t)outpack;
-	iov[0].iov_len = bytes;
-	smsghdr.msg_iov = iov;
+	iov.iov_base = (caddr_t)outpack;
+	iov.iov_len = bytes;
+	smsghdr.msg_iov = &iov;
 	smsghdr.msg_iovlen = 1;
 
 	rc = sendmsg(node->fd, &smsghdr, 0);
@@ -727,19 +736,21 @@ ping_write(ping_node *node, const char *data, size_t size)
 	return TRUE;
 }
 
-static gboolean
-pingd_shutdown(int nsig, gpointer unused)
+static void
+pingd_shutdown(int nsig)
 {
 	need_shutdown = TRUE;
 	send_update(0);
-	crm_info("Exiting");
 	
-	if (mainloop != NULL && g_main_is_running(mainloop)) {
-		g_main_quit(mainloop);
-	} else {
-		exit(0);
-	}
-	return FALSE;
+	crm_info("Exiting...");
+
+	g_hash_table_destroy(ping_nodes);
+	slist_destroy(ping_node, p, ping_list,
+		      crm_free(p->host);
+		      crm_free(p);
+	    );
+
+	exit(0);
 }
 
 static void
@@ -920,17 +931,16 @@ do_node_walk(ll_cluster_t *hb_cluster)
 
 static gboolean stand_alone_ping(gpointer data)
 {
-    int len = 0;
     int num_active = 0;
     
-    crm_debug("Checking connectivity");
+    crm_debug_2("Checking connectivity");
     slist_iter(
 	ping, ping_node, ping_list, num, 
 	
 	if(ping_open(ping)) {
-
 	    int lpc = 0;
 	    for(;lpc < pings_per_host; lpc++) {
+		int len = 0;
 		if(ping_write(ping, "test", 4) == FALSE) {
 		    crm_info("Node %s is unreachable (write)", ping->host);
 
@@ -949,10 +959,8 @@ static gboolean stand_alone_ping(gpointer data)
 	);
 
     send_update(num_active);
-    
-    CRM_ASSERT(Gmain_timeout_add(re_ping_interval*1000, stand_alone_ping, NULL) > 0);
-    
-    return FALSE;
+
+    return TRUE;
 }
 
 int
@@ -960,7 +968,7 @@ main(int argc, char **argv)
 {
 	int argerr = 0;
 	int flag;
-	char *pid_file = NULL;
+	const char *pid_file = NULL;
 	gboolean daemonize = FALSE;
 	ping_node *p = NULL;
 	
@@ -991,17 +999,16 @@ main(int argc, char **argv)
 		{0, 0, 0, 0}
 	};
 #endif
-	pid_file = crm_strdup("/tmp/pingd.pid");
+	pid_file = "/tmp/pingd.pid";
 
-	G_main_add_SignalHandler(
-		G_PRIORITY_HIGH, SIGTERM, pingd_shutdown, NULL, NULL);
+	CL_SIGNAL(SIGTERM, pingd_shutdown);
 	
 	ping_nodes = g_hash_table_new_full(
-                     g_str_hash, g_str_equal,
-		     g_hash_destroy_str, g_hash_destroy_str);	
+	    g_str_hash, g_str_equal,
+	    g_hash_destroy_str, g_hash_destroy_str);
 
 	crm_log_init(basename(argv[0]), LOG_INFO, TRUE, FALSE, argc, argv);
-	
+
 	while (1) {
 #ifdef HAVE_GETOPT_H
 		flag = getopt_long(argc, argv, OPTARGS,
@@ -1018,16 +1025,16 @@ main(int argc, char **argv)
 				alter_debug(DEBUG_INC);
 				break;
 			case 'p':
-				pid_file = crm_strdup(optarg);
+				pid_file = optarg;
 				break;
 			case 'a':
-				pingd_attr = crm_strdup(optarg);
+				pingd_attr = optarg;
 				break;
 			case 'N':
 			case 'h':
 				stand_alone = TRUE;
 				crm_debug("Adding ping host %s", optarg);
-				p = ping_new(crm_strdup(optarg));
+				p = ping_new(optarg);
 				ping_list = g_list_append(ping_list, p);
 				break;
 			case 's':
@@ -1106,7 +1113,6 @@ main(int argc, char **argv)
 	if(stand_alone && ping_list == NULL) {
 	    crm_err("You must specify a list of hosts to monitor");
 	    exit(LSB_EXIT_GENERIC);
-
 	}
 	
 	crm_info("Starting %s", crm_system_name);
@@ -1114,10 +1120,11 @@ main(int argc, char **argv)
 
 	if(stand_alone) {
 	    stand_alone_ping(NULL);
+	    g_timeout_add_seconds(re_ping_interval, stand_alone_ping, NULL);
 	}
 
 	g_main_run(mainloop);
-	
+
 	crm_info("Exiting %s", crm_system_name);	
 	return 0;
 }

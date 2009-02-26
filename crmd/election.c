@@ -179,7 +179,7 @@ do_election_check(long long action,
 		voted = NULL;
 		
 	} else {
-		crm_info("Still waiting on %d non-votes (%d total)",
+		crm_debug("Still waiting on %d non-votes (%d total)",
 			 num_members - voted_size, num_members);
 	}
 
@@ -251,8 +251,8 @@ do_election_count_vote(long long action,
 			char *op_copy = crm_strdup(op);
 			uname_copy = crm_strdup(your_node->uname);
 			g_hash_table_replace(voted, uname_copy, op_copy);
-			crm_info("Updated voted hash for %s to %s",
-				 your_node->uname, op);
+			crm_debug("Updated voted hash for %s to %s",
+				  your_node->uname, op);
 		} else {
 			crm_debug("Ignore old '%s' from %s: %d vs. %d",
 				  op, your_node->uname,
@@ -446,7 +446,7 @@ do_dc_takeover(long long action,
 	update_attr(fsa_cib_conn, cib_none, XML_CIB_TAG_CRMCONFIG,
 		    NULL, NULL, NULL, "dc-version", VERSION"-"BUILD_VERSION, FALSE);
 
-	G_main_set_trigger(config_read);
+	mainloop_set_trigger(config_read);
 	free_xml(cib);
 }
 

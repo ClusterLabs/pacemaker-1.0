@@ -166,7 +166,7 @@ crm_timer_popped(gpointer data)
 	}
 	
 	crm_debug_3("Triggering FSA: %s", __FUNCTION__);
-	G_main_set_trigger(fsa_source);
+	mainloop_set_trigger(fsa_source);
 	
 	return TRUE;
 }
@@ -177,7 +177,7 @@ crm_timer_start(fsa_timer_t *timer)
 	const char *timer_desc = get_timer_desc(timer);
 
 	if(timer->source_id == 0 && timer->period_ms > 0) {
-		timer->source_id = Gmain_timeout_add(
+		timer->source_id = g_timeout_add(
 			timer->period_ms, timer->callback, (void*)timer);
 		CRM_ASSERT(timer->source_id != 0);
 		crm_debug("Started %s (%s:%dms), src=%d",
@@ -212,7 +212,7 @@ crm_timer_stop(fsa_timer_t *timer)
 		crm_debug_2("Stopping %s (%s:%dms), src=%d",
 			  timer_desc, fsa_input2string(timer->fsa_input),
 			  timer->period_ms, timer->source_id);
-		Gmain_timeout_remove(timer->source_id);
+		g_source_remove(timer->source_id);
 		timer->source_id = 0;
 		
 	} else {
@@ -1247,7 +1247,9 @@ update_attrd(const char *host, const char *name, const char *value)
 {	
     const char *type = "refresh";
     gboolean rc = FALSE;
-    
+    int retries = 5;
+
+  retry:
     if(attrd == NULL) {
 	crm_info("Connecting to attrd...");
 	attrd = init_client_ipc_comms_nodispatch(T_ATTRD);
@@ -1272,7 +1274,7 @@ update_attrd(const char *host, const char *name, const char *value)
 	    if(host != NULL) {
 		crm_xml_add(update, F_ATTRD_HOST, host);
 	    }
-	    crm_info("Updating %s=%s via %s", name, value?"<none>":value, T_ATTRD);
+	    crm_info("Updating %s=%s via %s for %s", name, value?value:"<none>", T_ATTRD, host?host:fsa_our_uname);
 	}
 	
 	crm_xml_add(update, F_ATTRD_TASK, type);
@@ -1287,6 +1289,12 @@ update_attrd(const char *host, const char *name, const char *value)
     if(rc == FALSE) {
 	crm_err("Could not send %s %s", T_ATTRD, type);
 	attrd = NULL;
+	
+	if(retries > 0) {
+	    retries--;
+	    sleep(1);
+	    goto retry;
+	}
     }
     
 }
