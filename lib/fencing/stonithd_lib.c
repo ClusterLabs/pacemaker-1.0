@@ -190,6 +190,8 @@ authenticate_with_cookie(IPC_Channel *chan, cl_uuid_t *cookie)
 		ZAPMSG(request);
 		return ST_FAIL;
 	}
+	ZAPMSG(request);
+
 	if (!(reply = recv_response(chan, DEFAULT_TIMEOUT))) {
 		return ST_FAIL;
 	}
