@@ -421,6 +421,7 @@ HB_RA_DIR=`extract_header_define hb_config.h HB_RA_DIR`
 AC_SUBST(HB_RA_DIR)
 
 hb_libdir=`extract_header_define hb_config.h HA_LIBHBDIR`
+AC_DEFINE_UNQUOTED(CRM_DAEMON_DIR,"$hb_libdir", Location for Pacemaker daemons)
 AC_SUBST(hb_libdir)
 
 HA_VARRUNDIR=`extract_header_define hb_config.h HA_VARRUNDIR`
@@ -433,8 +434,9 @@ AC_SUBST(HA_VARLIBDIR)
 HA_APIGROUP=`extract_header_define hb_config.h HA_APIGROUP`
 AC_SUBST(HA_APIGROUP)
 
-HA_CCMUSER=`extract_header_define hb_config.h HA_CCMUSER`
-AC_SUBST(HA_CCMUSER)
+CRM_DAEMON_USER=`extract_header_define hb_config.h HA_CCMUSER`
+AC_DEFINE_UNQUOTED(CRM_DAEMON_USER,"$CRM_DAEMON_USER", User to run Pacemaker daemons as)
+AC_SUBST(CRM_DAEMON_USER)
 
 HA_NOARCHDATAHBDIR="${datadir}/heartbeat"
 AC_DEFINE_UNQUOTED(HA_NOARCHDATAHBDIR,"$HA_NOARCHDATAHBDIR", Heartbeat noarch data directory)
