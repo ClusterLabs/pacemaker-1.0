@@ -36,7 +36,7 @@
 #include <clplumbing/GSource.h>
 #include <clplumbing/uids.h>
 #include <clplumbing/cl_log.h>
-#include <clplumbing/lsb_exitcodes.h>
+
 #include <clplumbing/proctrack.h>
 #include <fencing/stonithd_api.h>
 #include <fencing/stonithd_msg.h>

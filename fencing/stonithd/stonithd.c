@@ -79,7 +79,7 @@
 #include <clplumbing/cl_signal.h>
 #include <clplumbing/cl_syslog.h>
 #include <clplumbing/cl_log.h>
-#include <clplumbing/lsb_exitcodes.h>
+
 #include <clplumbing/proctrack.h>
 #include <clplumbing/GSource.h>
 #include <clplumbing/cl_log.h>
