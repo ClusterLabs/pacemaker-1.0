@@ -375,6 +375,7 @@ darwin*)
 		;;
 esac
 
+dnl Eventually remove this 
 CFLAGS="$CFLAGS -I${prefix}/include/heartbeat"
 
 AC_SUBST(INIT_EXT)
@@ -401,46 +402,57 @@ esac
 AC_MSG_RESULT($U64T)
 AC_DEFINE_UNQUOTED(U64T, "$U64T", Correct printf format for logging uint64_t)
 
-dnl Variables needed for substitution
-DTD_DIRECTORY="${datadir}/pacemaker"
-AC_DEFINE_UNQUOTED(DTD_DIRECTORY,"$DTD_DIRECTORY", Location for the Pacemaker Relax-NG Schema)
-AC_SUBST(DTD_DIRECTORY)
-
-AC_DEFINE_UNQUOTED(DTD_VERSION,"$DTD_VERSION", Current version of the Pacemaker Relax-NG Schema)
-AC_SUBST(DTD_VERSION)
-
 AC_CHECK_HEADERS(hb_config.h)
 if test "$ac_cv_header_hb_config_h" != "yes"; then
    AC_MSG_FAILURE(The heartbeat-common development headers were not found)
 fi
 
-HA_HBCONF_DIR=`extract_header_define hb_config.h HA_HBCONF_DIR`
-AC_SUBST(HA_HBCONF_DIR)
+dnl Variables needed for substitution
+CRM_DTD_DIRECTORY="${datadir}/pacemaker"
+AC_DEFINE_UNQUOTED(CRM_DTD_DIRECTORY,"$DTD_DIRECTORY", Location for the Pacemaker Relax-NG Schema)
+AC_SUBST(CRM_DTD_DIRECTORY)
 
-HB_RA_DIR=`extract_header_define hb_config.h HB_RA_DIR`
-AC_SUBST(HB_RA_DIR)
-
-hb_libdir=`extract_header_define hb_config.h HA_LIBHBDIR`
-AC_DEFINE_UNQUOTED(CRM_DAEMON_DIR,"$hb_libdir", Location for Pacemaker daemons)
-AC_SUBST(hb_libdir)
-
-HA_VARRUNDIR=`extract_header_define hb_config.h HA_VARRUNDIR`
-AC_DEFINE_UNQUOTED(HA_VARRUNDIR,"$HA_VARRUNDIR", Location for sockets)
-AC_SUBST(HA_VARRUNDIR)
-
-HA_VARLIBDIR=`extract_header_define hb_config.h HA_VARLIBDIR`
-AC_SUBST(HA_VARLIBDIR)
-
-HA_APIGROUP=`extract_header_define hb_config.h HA_APIGROUP`
-AC_SUBST(HA_APIGROUP)
+AC_DEFINE_UNQUOTED(CRM_DTD_VERSION,"$DTD_VERSION", Current version of the Pacemaker Relax-NG Schema)
+AC_SUBST(CRM_DTD_VERSION)
 
 CRM_DAEMON_USER=`extract_header_define hb_config.h HA_CCMUSER`
 AC_DEFINE_UNQUOTED(CRM_DAEMON_USER,"$CRM_DAEMON_USER", User to run Pacemaker daemons as)
 AC_SUBST(CRM_DAEMON_USER)
 
-HA_NOARCHDATAHBDIR="${datadir}/heartbeat"
-AC_DEFINE_UNQUOTED(HA_NOARCHDATAHBDIR,"$HA_NOARCHDATAHBDIR", Heartbeat noarch data directory)
-AC_SUBST(HA_NOARCHDATAHBDIR)
+CRM_DAEMON_GROUP=`extract_header_define hb_config.h HA_APIGROUP`
+AC_DEFINE_UNQUOTED(CRM_DAEMON_GROUP,"$CRM_DAEMON_GROUP", Group to run Pacemaker daemons as)
+AC_SUBST(CRM_DAEMON_GROUP)
+
+dnl Eventually move out of the heartbeat dir tree and create symlinks when needed
+CRM_DAEMON_DIR=`extract_header_define hb_config.h HA_LIBHBDIR`
+AC_DEFINE_UNQUOTED(CRM_DAEMON_DIR,"$CRM_DAEMON_DIR", Location for Pacemaker daemons)
+AC_SUBST(CRM_DAEMON_DIR)
+
+CRM_STATE_DIR=${localstatedir}/run/crm
+AC_DEFINE_UNQUOTED(CRM_STATE_DIR,"$CRM_STATE_DIR", Where to keep state files and sockets)
+AC_SUBST(CRM_STATE_DIR)
+
+PE_STATE_DIR="${localstatedir}/lib/pengine"
+AC_DEFINE_UNQUOTED(PE_STATE_DIR,"PE_STATE_DIR", Where to keep PEngine outputs)
+AC_SUBST(PE_STATE_DIR)
+
+dnl Eventually move out of the heartbeat dir tree and create compatability code
+dnl HA_VARLIBDIR="${localstatedir}/lib"
+HA_VARLIBDIR=`extract_header_define hb_config.h HA_VARLIBDIR`
+CRM_CONFIG_DIR="$HA_VARLIBDIR/heartbeat/crm"
+AC_DEFINE_UNQUOTED(CRM_CONFIG_DIR,"$CRM_CONFIG_DIR", Where to keep CIB configuration files)
+AC_SUBST(CRM_CONFIG_DIR)
+
+HA_STATE_DIR=`extract_header_define hb_config.h HA_VARRUNDIR`
+AC_SUBST(HA_STATE_DIR)
+AC_DEFINE_UNQUOTED(HA_STATE_DIR,"$HA_STATE_DIR", Where Heartbeat keeps state files and sockets)
+
+dnl Remove these next two ASAP
+HA_HBCONF_DIR=`extract_header_define hb_config.h HA_HBCONF_DIR`
+AC_SUBST(HA_HBCONF_DIR)
+
+HB_RA_DIR=`extract_header_define hb_config.h HB_RA_DIR`
+AC_SUBST(HB_RA_DIR)
 
 OCF_ROOT_DIR=`extract_header_define hb_config.h OCF_ROOT_DIR`
 if test "X$OCF_ROOT_DIR" = X; then
@@ -1388,16 +1400,6 @@ fencing/Makefile                                                \
         fencing/stonithd/Makefile                               \
 		fencing/test/Makefile                           \
 		fencing/test/STONITHDBasicSanityCheck           \
-build/Makefile							\
-	build/pkg/Makefile					\
-		build/pkg/InfoFiles/pkginfo			\
-		build/pkg/InfoFiles/preinstall 			\
-		build/pkg/InfoFiles/postinstall			\
-	build/port/Makefile					\
-		build/port/heartbeat/pkg-deinstall		\
-		build/port/heartbeat/pkg-descr			\
-		build/port/heartbeat/pkg-install		\
-		build/port/heartbeat/pkg-plist			\
 extra/Makefile							\
 	extra/resources/Makefile				\
 tools/Makefile							\

@@ -31,7 +31,8 @@
 #include <sys/wait.h>
 #include <errno.h>
 #include <glib.h>
-#include <ha_msg.h>
+#include <heartbeat/ha_msg.h>
+#include <heartbeat/hb_config.h>
 #include <clplumbing/cl_signal.h>
 #include <clplumbing/GSource.h>
 #include <clplumbing/uids.h>
