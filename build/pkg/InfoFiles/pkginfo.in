@@ -1,8 +1,0 @@
-PKG=@PKGNAME@
-ARCH=@host_cpu@
-VERSION=@VERSION@
-NAME=Open-HA software for multi-machine resilience
-CATEGORY=system
-CLASSES=none build
-BASEDIR=/
-EMAIL=linux-ha@lists.linux-ha.org
