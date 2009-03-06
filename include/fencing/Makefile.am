@@ -17,7 +17,7 @@
 # Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #
 MAINTAINERCLEANFILES = Makefile.in
-                                                                                                                                                         
-headerdir=$(includedir)/heartbeat/fencing
+
+headerdir=$(includedir)/$(HB_PKG)/fencing
 
 header_HEADERS = stonithd_api.h stonithd_msg.h
