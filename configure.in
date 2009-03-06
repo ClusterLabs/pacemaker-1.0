@@ -433,7 +433,7 @@ AC_DEFINE_UNQUOTED(CRM_STATE_DIR,"$CRM_STATE_DIR", Where to keep state files and
 AC_SUBST(CRM_STATE_DIR)
 
 PE_STATE_DIR="${localstatedir}/lib/pengine"
-AC_DEFINE_UNQUOTED(PE_STATE_DIR,"PE_STATE_DIR", Where to keep PEngine outputs)
+AC_DEFINE_UNQUOTED(PE_STATE_DIR,"$PE_STATE_DIR", Where to keep PEngine outputs)
 AC_SUBST(PE_STATE_DIR)
 
 dnl Eventually move out of the heartbeat dir tree and create compatability code
