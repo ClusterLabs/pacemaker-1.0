@@ -1367,10 +1367,9 @@ cts/Makefile					        	\
 	cts/CTSaudits.py					\
 	cts/CTSlab.py						\
 	cts/CTStests.py						\
-	cts/CM_lha.py					\
+	cts/CM_lha.py						\
 	cts/CTSproxy.py	        				\
 	cts/extracttests.py					\
-	cts/getpeinputs.sh					\
 	cts/OCFIPraTest.py              	                \
 	cts/CIB.py						\
 	cts/LSBDummy						\
@@ -1440,8 +1439,8 @@ AC_MSG_RESULT([  System configuration     = ${sysconfdir}])
 
 AC_MSG_RESULT([  Use system LTDL          = ${ac_cv_lib_ltdl_lt_dlopen}])
 
-AC_MSG_RESULT([  HA group name            = ${HA_APIGROUP}])
-AC_MSG_RESULT([  HA user name             = ${HA_CCMUSER}])
+AC_MSG_RESULT([  HA group name            = ${CRM_DAEMON_GROUP}])
+AC_MSG_RESULT([  HA user name             = ${CRM_DAEMON_USER}])
 
 AC_MSG_RESULT([  Features                 =${PKG_FEATURES}])
 
