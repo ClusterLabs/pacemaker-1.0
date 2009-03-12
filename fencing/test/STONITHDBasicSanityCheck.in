@@ -25,7 +25,7 @@ HBLIB=@libdir@/heartbeat
 STONITHD=$HBLIB/stonithd
 LRMD=$HBLIB/lrmd
 LRMADMIN=$HBLIB/lrmadmin
-APITEST=@HA_LIBHBDIR@/stonithdtest/apitest
+APITEST=@CRM_DAEMON_DIR@/stonithdtest/apitest
 ERR_COUNT=0
 MYSELF=`uname -n`
 

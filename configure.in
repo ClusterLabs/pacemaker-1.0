@@ -447,12 +447,16 @@ HA_STATE_DIR=`extract_header_define hb_config.h HA_VARRUNDIR`
 AC_SUBST(HA_STATE_DIR)
 AC_DEFINE_UNQUOTED(HA_STATE_DIR,"$HA_STATE_DIR", Where Heartbeat keeps state files and sockets)
 
-dnl Remove these next two ASAP
+dnl The next two are needed for haresources2cib.py
 HA_HBCONF_DIR=`extract_header_define hb_config.h HA_HBCONF_DIR`
 AC_SUBST(HA_HBCONF_DIR)
 
 HB_RA_DIR=`extract_header_define hb_config.h HB_RA_DIR`
 AC_SUBST(HB_RA_DIR)
+
+dnl Needed for the location of hostcache in CTS.py
+HA_VARLIBHBDIR=`extract_header_define hb_config.h HA_VARLIBHBDIR`
+AC_SUBST(HA_VARLIBHBDIR)
 
 OCF_ROOT_DIR=`extract_header_define hb_config.h OCF_ROOT_DIR`
 if test "X$OCF_ROOT_DIR" = X; then
