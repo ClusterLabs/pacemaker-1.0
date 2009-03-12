@@ -443,9 +443,10 @@ CRM_CONFIG_DIR="$HA_VARLIBDIR/heartbeat/crm"
 AC_DEFINE_UNQUOTED(CRM_CONFIG_DIR,"$CRM_CONFIG_DIR", Where to keep CIB configuration files)
 AC_SUBST(CRM_CONFIG_DIR)
 
+dnl Needed so that the AIS plugin can clear out the directory as Heartbeat does
 HA_STATE_DIR=`extract_header_define hb_config.h HA_VARRUNDIR`
-AC_SUBST(HA_STATE_DIR)
 AC_DEFINE_UNQUOTED(HA_STATE_DIR,"$HA_STATE_DIR", Where Heartbeat keeps state files and sockets)
+AC_SUBST(HA_STATE_DIR)
 
 dnl The next two are needed for haresources2cib.py
 HA_HBCONF_DIR=`extract_header_define hb_config.h HA_HBCONF_DIR`
@@ -462,7 +463,6 @@ OCF_ROOT_DIR=`extract_header_define hb_config.h OCF_ROOT_DIR`
 if test "X$OCF_ROOT_DIR" = X; then
   AC_MSG_ERROR(Could not locate OCF directory)
 fi
-AC_DEFINE_UNQUOTED(OCF_ROOT_DIR,"$OCF_ROOT_DIR", OCF root directory - specified by the OCF standard)
 AC_SUBST(OCF_ROOT_DIR)
 
 OCF_RA_DIR=`extract_header_define hb_config.h OCF_RA_DIR`
