@@ -2,7 +2,6 @@ usr/include/pacemaker
 usr/include/heartbeat/fencing
 usr/lib/lib*.so
 usr/lib/lib*.a
-usr/lib/service_crm.a
 usr/lib/heartbeat/plugins/RAExec/stonith.a
 usr/share/pacemaker/cts
 usr/share/doc/pacemaker/README.cts

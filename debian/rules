@@ -85,7 +85,7 @@ install-stamp:
 	# cleanup unrequired stuff
 	find $(DTMP)/usr/lib -name *.la -exec rm {} \;
 	-rm $(DTMP)/usr/lib/service_crm.so
-
+	-rm $(DTMP)/usr/lib/service_crm.a
 
 #	# missing file...
 #	-mkdir -p $(DTMP)/usr/share/doc/ldirectord/
@@ -98,8 +98,9 @@ install-stamp:
 #	hack around stupid LCRSO dirs
 
 	install -d $(PWD)/debian/pacemaker/$(LCRSO)
-	install -m0644 $(DTMP)/$(LCRSO)/pacemaker.lcrso \
-		$(PWD)/debian/pacemaker/$(LCRSO)/pacemaker.lcrso
+	test ! -e $(DTMP)/$(LCRSO)/pacemaker.lcrso ||  		\
+		install -m0644 $(DTMP)/$(LCRSO)/pacemaker.lcrso \
+			$(PWD)/debian/pacemaker/$(LCRSO)/pacemaker.lcrso
 
 binary-indep: build install
 	dh_testdir -i
