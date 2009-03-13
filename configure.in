@@ -112,61 +112,6 @@ extract_header_define() {
 	  rm -f ${Cfile}.c ${Cfile}
 	}
 
-check_for_type() {
-  type="$1"
-  headers=""
-  shift
-  for arg
-  do
-    headers="${headers}${arg}
-"
-  done
-  program="if ((${type} *) 0)  return 0;
-    if (sizeof(${type}))  return 0; 
-    return 0;"
-  have="HAVE_`echo "$type" | tr ' ' '_' | dd conv=ucase 2>/dev/null`"
-  varhave="heartbeat_cv_$have"
-
-  AC_CACHE_CHECK([for type $type ],$varhave,[
-    AC_TRY_COMPILE([$headers], [$program], eval $varhave=yes, eval $varhave=no
-    , eval $varhave=cross)
-  ])
-  if test x"`eval echo '${'$varhave'}'`" = xyes; then
-    return 0
-  fi
-  return 1
-}
-
-check_for_type_member() {
-  type="$1"
-  member="$2"
-  headers=""
-  shift
-  shift
-  for arg
-  do
-    headers="${headers}${arg}
-"
-  done
-  program="${type} foo;
-    if ((${type} *) 0)  return 0;
-    if (sizeof(${type}))  return 0;
-    if (sizeof(foo))  return 0;
-    (void*)foo.${member};
-    return 0;"
-  have="HAVE_`echo "$type" | tr ' ' '_' | dd conv=ucase 2>/dev/null`"
-  varhave="heartbeat_cv_$have"
-
-  AC_CACHE_CHECK([for type $type ],$varhave,[
-    AC_TRY_COMPILE([$headers], [$program], eval $varhave=yes, eval $varhave=no
-    , eval $varhave=cross)
-  ])
-  if test x"`eval echo '${'$varhave'}'`" = xyes; then
-    return 0
-  fi
-  return 1
-}
-
 dnl ===============================================
 dnl Configure Options
 dnl ===============================================
@@ -522,7 +467,6 @@ fi
 dnl ===============================================
 dnl Libraries
 dnl ===============================================
-
 AC_CHECK_LIB(socket, socket)			dnl -lsocket
 AC_CHECK_LIB(c, dlopen)				dnl if dlopen is in libc...
 AC_CHECK_LIB(dl, dlopen)			dnl -ldl (for Linux)
@@ -691,9 +635,7 @@ dnl ========================================================================
 dnl Structures
 dnl ========================================================================
 
-if check_for_type_member "struct tm" "tm_gmtoff" "#include <time.h>"; then
-	 AC_DEFINE(HAVE_TM_GMTOFF,1,[Do we have structure member tm_gmtoff?])
-fi
+AC_CHECK_MEMBERS([struct tm.tm_gmtoff],,,[[#include <time.h>]])
 
 dnl ========================================================================
 dnl Functions
@@ -851,13 +793,7 @@ fi
 
 dnl Compatability checks
 AC_CHECK_FUNCS(msgfromIPC_timeout)
-
-HAVE_ASYNC_FAIL=0
-if check_for_type_member "struct lrm_ops" "fail_rsc" "#include <lrm/lrm_api.h>"; then
-   HAVE_ASYNC_FAIL=1
-fi
-AC_DEFINE_UNQUOTED(HAVE_LRM_ASYNC_FAIL, $HAVE_ASYNC_FAIL, LRM Supports asynchronous resource failures)
-
+AC_CHECK_MEMBERS([struct lrm_ops.fail_rsc],,,[[#include <lrm/lrm_api.h>]])
 
 dnl ========================================================================
 dnl    Cluster stack - Heartbeat
