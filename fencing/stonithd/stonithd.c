@@ -674,17 +674,18 @@ main(int argc, char ** argv)
 		void *dispatch = NULL;
 		void *destroy = NULL;
 	    
-	if(is_openais_cluster()) {
 #if SUPPORT_AIS
+	if(is_openais_cluster()) {
 		dispatch = stonithd_ais_dispatch;
 		destroy = stonithd_ais_destroy;
+	}
 #endif
-	} else if(is_heartbeat_cluster()) {
 #if SUPPORT_HEARTBEAT
+	if(is_heartbeat_cluster()) {
 		dispatch = stonithd_hb_callback;
 		destroy = stonithd_hb_connection_destroy;
-#endif
 	}
+#endif
 
 	if (crm_cluster_connect(&local_nodename, NULL, dispatch, destroy,
 #if SUPPORT_HEARTBEAT
@@ -701,8 +702,8 @@ main(int argc, char ** argv)
 
 	mainloop = g_main_new(FALSE);
 
-	if( is_heartbeat_cluster()) {
 #if SUPPORT_HEARTBEAT
+	if( is_heartbeat_cluster()) {
 	/*
 	 * Initialize the handler of IPC messages from heartbeat, including
 	 * the messages produced by myself as a client of heartbeat.
@@ -712,8 +713,8 @@ main(int argc, char ** argv)
 		goto signoff_quit;
 	}
 	}
-#endif
 	}
+#endif
 
 	/*
 	 * Initialize the handler of IPC messages from my clients.
@@ -722,8 +723,8 @@ main(int argc, char ** argv)
 		goto delhb_quit;
 	}
 
-	if( is_heartbeat_cluster()) {
 #if SUPPORT_HEARTBEAT
+	if( is_heartbeat_cluster()) {
 	if (NEED_SIGNON_TO_APPHBD == TRUE) {
 		if ( (main_rc=init_using_apphb()) != 0 ) {
 			stonithd_log(LOG_ERR, "An error in init_using_apphb");
@@ -732,8 +733,8 @@ main(int argc, char ** argv)
 			SIGNONED_TO_APPHBD = TRUE;
 		}
 	}
-#endif
 	}
+#endif
 
 	/* For tracking and remove the g_sources of messaging IPC channels */
 	chan_gsource_pairs = g_hash_table_new(g_direct_hash, g_direct_equal);
@@ -750,12 +751,12 @@ main(int argc, char ** argv)
 	reboot_blocked_table = g_hash_table_new_full(g_str_hash, g_str_equal
 						, g_free, free_timer);
 
-	if( is_heartbeat_cluster()) {
 #if SUPPORT_HEARTBEAT
+	if( is_heartbeat_cluster()) {
 	/* To avoid the warning message when app_interval is very small. */
 	MY_APPHB_HB();
-#endif
 	}
+#endif
 
 	/* drop_privs(0, 0); */  /* very important. cpu limit */
 	stonithd_log2(LOG_DEBUG, "Enter g_mainloop\n");
@@ -768,15 +769,15 @@ main(int argc, char ** argv)
 	g_main_run(mainloop);
 	return_to_orig_privs();
 
-	if( is_heartbeat_cluster()) {
 #if SUPPORT_HEARTBEAT
+	if( is_heartbeat_cluster()) {
 	MY_APPHB_HB();
 	if (SIGNONED_TO_APPHBD == TRUE) {
 		apphb_unregister();
 		SIGNONED_TO_APPHBD = FALSE;
 	}
-#endif
 	}
+#endif
 
 #if SUPPORT_HEARTBEAT
 signoff_quit:
@@ -1234,13 +1235,17 @@ stonithd_sendmsg(const char *node_name, struct ha_msg *msg, const char *st_op_ty
 				, __FUNCTION__, __LINE__);
 			return FALSE;
 		}
-	} else if(is_heartbeat_cluster()) {
+	}
+#if SUPPORT_HEARTBEAT
+	else if(is_heartbeat_cluster()) {
 		if ((ha_msg_add(msg, F_TYPE, st_op_type) != HA_OK)) {
 			stonithd_log(LOG_ERR, "%s:%d: cannot add field."
 				, __FUNCTION__, __LINE__);
 			return FALSE;
 		}
-	} else {
+	}
+#endif
+	else {
 		stonithd_log(LOG_ERR, "%s:%d: not connected to the cluster"
 			, __FUNCTION__, __LINE__);
 		return FALSE;
