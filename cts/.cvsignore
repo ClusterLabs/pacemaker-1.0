@@ -2,7 +2,6 @@ Makefile.in
 Makefile
 .*.swp
 *.pyc
-*.py
 *.out
 local5
 local6

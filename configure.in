@@ -1295,16 +1295,7 @@ dnl The Makefiles and shell scripts we output
 AC_CONFIG_FILES(Makefile				        \
 README							        \
 cts/Makefile					        	\
-	cts/CM_ais.py						\
-	cts/CTS.py						\
-	cts/CTSaudits.py					\
-	cts/CTSlab.py						\
-	cts/CTStests.py						\
-	cts/CM_lha.py						\
-	cts/CTSproxy.py	        				\
-	cts/extracttests.py					\
-	cts/OCFIPraTest.py              	                \
-	cts/CIB.py						\
+	cts/CTSvars.py						\
 	cts/LSBDummy						\
 cib/Makefile							\
 crmd/Makefile							\
