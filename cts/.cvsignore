@@ -2,6 +2,7 @@ Makefile.in
 Makefile
 .*.swp
 *.pyc
+CTSvars.py
 *.out
 local5
 local6
