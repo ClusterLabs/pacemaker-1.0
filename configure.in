@@ -830,9 +830,9 @@ else
    AC_MSG_RESULT($SUPPORT_AIS, with '$AISPREFIX')
 
    dnl headers...
-   AC_CHECK_HEADERS(corosync/ais_util.h)
+   AC_CHECK_HEADERS(corosync/coroipc.h)
    AC_CHECK_HEADERS(openais/saAis.h)
-   if test "$ac_cv_header_corosync_ais_util_h" = "yes"; then
+   if test "$ac_cv_header_corosync_coroipc_h" = "yes"; then
        AIS_VERSION="corosync"
    elif test "$ac_cv_header_openais_saAis_h" = "yes"; then
        AIS_VERSION="whitetank"
@@ -891,11 +891,11 @@ if test $AIS_VERSION != "none"; then
      saveLIBS="$LIBS"
      LIBS="$LIBS -L${AISLIB} -R${AISLIB}"
 
-     AC_CHECK_LIB(coroutil, saSendReceiveReply, [])
+     AC_CHECK_LIB(coroipc, cslib_msg_send_reply_receive, [])
      AC_CHECK_LIB(SaMsg, saSendReceiveReply, [])
      AC_CHECK_LIB(SaMsg, openais_msg_send_reply_receive, [])
 
-     if test $ac_cv_lib_coroutil_saSendReceiveReply = yes; then
+     if test $ac_cv_lib_coroutil_cslib_msg_send_reply_receive = yes; then
        :  CoroSync
      elif test $ac_cv_lib_SaMsg_openais_msg_send_reply_receive = yes; then
        :  OpenAIS
@@ -914,11 +914,11 @@ SUPPORT_AIS=1
 case $AIS_VERSION in
     trunk)
 	AC_DEFINE_UNQUOTED(AIS_TRUNK, 1, "AIS target is the latest development series")
-	AISMSGLIB=-lcoroutil
+	AISMSGLIB=-lcoroipc
 	;;
     corosync)
 	AC_DEFINE_UNQUOTED(AIS_COROSYNC, 1, "AIS target is the corosync series")
-	AISMSGLIB=-lcoroutil
+	AISMSGLIB=-lcoroipc
 	;;
     whitetank) 
 	AC_DEFINE_UNQUOTED(AIS_WHITETANK, 1, "AIS target is the whitetank series")
