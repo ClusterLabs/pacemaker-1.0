@@ -3,3 +3,9 @@ usr/lib/heartbeat
 usr/lib
 usr/share/heartbeat
 usr/share/man/man8
+var/lib/pengine
+var/run/crm
+var/lib/heartbeat
+var/lib/heartbeat/crm
+var/lib/heartbeat/fencing
+var/lib/heartbeat/lrm
