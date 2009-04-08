@@ -1,3 +1,126 @@
+pacemaker (1.0.3-1) stable; urgency=medium
+  * Update source tarball to revision: b133b3f19797 (stable-1.0) tip
+  * Statistics:
+      Changesets:      383
+      Diff:            329 files changed, 15471 insertions(+), 15119 deletions(-)
+
+
+  * Changes since Pacemaker-1.0.2
+  + High: ais plugin: Fix quorum calculation (bnc#487003)
+  + High: ais: Another memory fix leak in error path
+  + High: ais: Bug bnc#482847, bnc#482905 - Force a clean exit of OpenAIS once Pacemaker has finished unloading
+  + High: ais: Bug bnc#486858 - Fix update_member() to prevent spamming clients with membership events containing no changes
+  + High: ais: Centralize all quorum calculations in the ais plugin and allow expected votes to be configured int he cib
+  + High: ais: Correctly handle a return value of zero from openais_dispatch_recv()
+  + High: ais: Disable logging to a file
+  + High: ais: Fix memory leak in error path
+  + High: ais: IPC messages are only in scope until a response is sent
+  + High: All signal handlers used with CL_SIGNAL() need to be as minimal as possible
+  + High: cib: Bug bnc#482885 - Simplify CIB disk-writes to prevent data loss.  Required a change to the backup filename format
+  + High: cib: crmd: Revert part of 9782ab035003.  Complex shutdown routines need G_main_add_SignalHandler to avoid race coditions
+  + High: crm: Avoid infinite loop during crm configure edit (bnc#480327)
+  + High: crmd: Avoid a race condition by waiting for the attrd update to trigger a transition automatically
+  + High: crmd: Bug bnc#480977 - Prevent extra, partial, shutdown when a node restarts too quickly
+  + High: crmd: Bug bnc#480977 - Prevent extra, partial, shutdown when a node restarts too quickly (verified)
+  + High: crmd: Bug bnc#489063 - Ensure the DC is always unset after we 'loose' an election
+  + High: crmd: Bug BSC#479543 - Correctly find the migration source for timed out migrate_from actions
+  + High: crmd: Call crm_peer_init() before we start the FSA - prevents a race condition when used with Heartbeat
+  + High: crmd: Erasing the status section shouldn't be forced to the local node
+  + High: crmd: Fix memory leak in cib notication processing code
+  + High: crmd: Fix memory leak in transition graph processing
+  + High: crmd: Fix memory leaks found by valgrind
+  + High: crmd: More memory leaks fixes found by valgrind
+  + High: fencing: stonithd: is_heartbeat_cluster is a no-no if there is no heartbeat support
+  + High: PE: Bug bnc#466788 - Exclude nodes that can't run resources
+  + High: PE: Bug bnc#466788 - Make colocation based on node attributes work
+  + High: PE: Bug BNC#478687 - Don't crash when clone-max is 0
+  + High: PE: Bug bnc#488721 - Fix id-ref expansion for clones, the doc-root for clone children is not the cib root
+  + High: PE: Bug bnc#490418 - Correctly determine node state for nodes wishing to be terminated
+  + High: PE: Bug LF#2087 - Correctly parse the state of anonymous clones that have multiple instances on a given node
+  + High: PE: Bug lf#2089 - Meta attributes are not inherited by clone children
+  + High: PE: Bug lf#2091 - Correctly restart modified resources that were found active by a probe
+  + High: PE: Bug lf#2094 - Fix probe ordering for cloned groups
+  + High: PE: Bug LF:2075 - Fix large pingd memory leaks
+  + High: PE: Correctly attach orphaned clone children to their parent
+  + High: PE: Correctly handle terminate node attributes that are set to the output from time()
+  + High: PE: Ensure orphaned clone members are hooked up to the parent when clone-max=0
+  + High: PE: Fix memory leak in LogActions
+  + High: PE: Fix the determination of whether a group is active
+  + High: PE: Look up the correct promotion preference for anonymous masters
+  + High: PE: Simplify handling of start failures by changing the default migration-threshold to INFINITY
+  + High: PE: The ordered option for clones no longer causes extra start/stop operations
+  + High: RA: Bug bnc#490641 - Shut down dlm_controld with -TERM instead of -KILL
+  + High: RA: pingd: Set default ping interval to 1 instead of 0 seconds
+  + High: Resources: pingd - Correctly tell the ping daemon to shut down
+  + High: Tools: Bug bnc#483365 - Ensure the command from cluster_test includes a value for --log-facility
+  + High: Tools: cli: fix and improve delete command
+  + High: Tools: crm: add and implement templates
+  + High: Tools: crm: add support for command aliases and some common commands (i.e. cd,exit)
+  + High: Tools: crm: create top configuration nodes if they are missing
+  + High: Tools: crm: fix parsing attributes for rules (broken by the previous changeset)
+  + High: Tools: crm: new ra set of commands
+  + High: Tools: crm: resource agents information management
+  + High: Tools: crm: rsc/op_defaults
+  + High: Tools: crm: support for no value attribute in nvpairs
+  + High: Tools: crm: the new configure monitor command
+  + High: Tools: crm: the new configure node command
+  + High: Tools: crm_mon - Prevent use-of-NULL when summarizing an orphan
+  + High: Tools: hb2openais: create clvmd clone for respawn evmsd in ha.cf
+  + High: Tools: hb2openais: fix a serious recursion bug in xml node processing
+  + High: Tools: hb2openais: fix ocfs2 processing
+  + High: Tools: pingd - prevent double free of getaddrinfo() output in error path
+  + High: Tools: The default re-ping interval for pingd should be 1s not 1ms
+  + Medium (bnc#479049): Tools: crm: add validation of resource type for the configure primitive command
+  + Medium (bnc#479050): Tools: crm: add help for RA parameters in tab completion
+  + Medium (bnc#479050): Tools: crm: add tab completion for primitive params/meta/op
+  + Medium (bnc#479050): Tools: crm: reimplement cluster properties completion
+  + Medium (bnc#486968): Tools: crm: listnodes function requires no parameters (don't mix completion with other stuff)
+  + Medium: ais: Remove the ugly hack for dampening AIS membership changes
+  + Medium: cib: Fix memory leaks by using mainloop_add_signal
+  + Medium: cib: Move more logging to the debug level (was info)
+  + Medium: cib: Overhaul the processing of synchronous replies
+  + Medium: Core: Add library functions for instructing the cluster to terminate nodes
+  + Medium: crmd: Add new expected-quorum-votes option
+  + Medium: crmd: Allow up to 5 retires when an attrd update fails
+  + Medium: crmd: Automatically detect and use new values for crm_config options
+  + Medium: crmd: Bug bnc#490426 - Escalated shutdowns stall when there are pending resource operations
+  + Medium: crmd: Clean up and optimize the DC election algorithm
+  + Medium: crmd: Fix memory leak in shutdown
+  + Medium: crmd: Fix memory leaks spotted by Valgrind
+  + Medium: crmd: Ingore join messages from hosts other than our DC
+  + Medium: crmd: Limit the scope of resource updates to the status section
+  + Medium: crmd: Prevent the crmd from being respawned if its told to shut down when it didn't ask to be
+  + Medium: crmd: Re-check the election status after membership events
+  + Medium: crmd: Send resource updates via the local CIB during elections
+  + Medium: PE: Bug bnc#491441 - crm_mon does not display operations returning 'uninstalled' correctly
+  + Medium: PE: Bug lf#2101 - For location constraints, role=Slave is equivalent to role=Started
+  + Medium: PE: Clean up the API - removed ->children() and renamed ->find_child() to fine_rsc()
+  + Medium: PE: Compress the display of healthy anonymous clones
+  + Medium: PE: Correctly log the actions for resources that are being recovered
+  + Medium: PE: Determin a promotion score for complex resources
+  + Medium: PE: Ensure clones always have a value for globally-unique
+  + Medium: PE: Prevent orphan clones from being allocated
+  + Medium: RA: controld: Return proper exit code for stop op.
+  + Medium: Tools: Bug bnc#482558 - Fix logging test in cluster_test
+  + Medium: Tools: Bug bnc#482828 - Fix quoting in cluster_test logging setup
+  + Medium: Tools: Bug bnc#482840 - Include directory path to CTSlab.py
+  + Medium: Tools: crm: add more user input checks
+  + Medium: Tools: crm: don't check resource status of we're working with a shadow
+  + Medium: Tools: crm: fix id-refs and allow reference to top objects (i.e. primitive)
+  + Medium: Tools: crm: ignore comments in the CIB
+  + Medium: Tools: crm: multiple column output wouldn't work with small lists
+  + Medium: Tools: crm: refuse to delete running resources
+  + Medium: Tools: crm: rudimentary if-else for templates
+  + Medium: Tools: crm: Start/stop clones via target-role.
+  + Medium: Tools: crm_mon - Compress the node status for healthy and offline nodes
+  + Medium: Tools: crm_shadow - Return 0/cib_ok when --create-empty succeeds
+  + Medium: Tools: crm_shadow - Support -e, the short form of --create-empty
+  + Medium: Tools: Make attrd quieter
+  + Medium: Tools: pingd - Avoid using various clplumbing functions as they seem to leak
+  + Medium: Tools: Reduce pingd logging
+
+ -- Andrew Beekhof <abeekhof@suse.de>  Wed, 08 Apr 2009 09:50:01 +0200
+
 pacemaker (1.0.2-1) stable; urgency=medium
   * Update source tarball to revision: d232d19daeb9 (stable-1.0) tip
   * Statistics:
