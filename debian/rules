@@ -82,6 +82,9 @@ install-stamp:
 	mv $(DTMP)/usr/share/pacemaker/cts/README \
 		$(DTMP)/usr/share/doc/pacemaker/README.cts
 
+	mv $(DTMP)/usr/share/doc/packages/pacemaker/templates \
+		$(DTMP)/usr/share/doc/pacemaker/
+
 	# cleanup unrequired stuff
 	find $(DTMP)/usr/lib -name *.la -exec rm {} \;
 	-rm $(DTMP)/usr/lib/service_crm.so
