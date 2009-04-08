@@ -1330,6 +1330,8 @@ tools/Makefile							\
 	tools/hb2openais.sh					\
 	tools/crm_primitive.py					\
 	tools/crm						\
+	tools/shell/Makefile						\
+	tools/shell/templates/Makefile						\
 xml/Makefile							\
 	xml/pacemaker.rng					\
 	xml/resources.rng					\
