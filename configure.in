@@ -963,7 +963,7 @@ if test $SUPPORT_AIS = 1; then
    LIBS="$LIBS -L${AISLIB} -R${AISLIB}"
 else
    AISPREFIX=""
-   LCRSODIR=""
+   LCRSODIR="$libdir"
 fi
 
 PKG_FEATURES="$PKG_FEATURES$STACKS"
