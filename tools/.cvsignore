@@ -25,11 +25,8 @@ iso8601
 crm_resource
 crm_verify
 crm_attribute
-crm_standby
-crm_master
 crm_uuid
 crm_primitive.py
-crm_failcount
 crm_sh
 crm_primitive.py
 crm_commands.py
