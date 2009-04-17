@@ -33,6 +33,8 @@ usr/share/man/man8/*.gz
 usr/share/pacemaker/*.dtd
 usr/share/pacemaker/*.xsl
 usr/share/pacemaker/*.rng
+usr/share/pacemaker/shelltest
+usr/share/pacemaker/shelltest/testcases
 usr/share/pacemaker/stonithdtest/STONITHDBasicSanityCheck
 usr/lib/ocf/resource.d/pacemaker
 usr/share/doc/pacemaker/templates
