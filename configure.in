@@ -1338,6 +1338,10 @@ tools/Makefile							\
 	tools/crm						\
 	tools/shell/Makefile						\
 	tools/shell/templates/Makefile						\
+	tools/shell/regression/Makefile						\
+	tools/shell/regression/regression.sh						\
+	tools/shell/regression/lrmregtest-lsb						\
+	tools/shell/regression/testcases/Makefile						\
 xml/Makefile							\
 	xml/pacemaker.rng					\
 	xml/resources.rng					\
