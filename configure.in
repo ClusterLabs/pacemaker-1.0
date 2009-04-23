@@ -1219,6 +1219,11 @@ else
 	  fi
 	done
 
+dnl In lib/ais/Makefile.am there's a gcc option available as of v4.x
+
+	GCC_MAJOR=`gcc -v 2>&1 | awk 'END{print $3}' | sed 's/[.].*//'`
+	AM_CONDITIONAL(GCC_4, test "${GCC_MAJOR}" = 4)
+
 dnl System specific options
 
 	case "$host_os" in
