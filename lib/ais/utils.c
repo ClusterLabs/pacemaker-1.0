@@ -37,9 +37,9 @@
 
 int in_shutdown = FALSE;
 extern GHashTable *membership_notify_list;
-extern int send_cluster_msg_raw(AIS_Message *ais_msg);
+extern int send_cluster_msg_raw(const AIS_Message *ais_msg);
 
-void log_ais_message(int level, AIS_Message *msg) 
+void log_ais_message(int level, const AIS_Message *msg) 
 {
     char *data = get_ais_data(msg);
     log_printf(level,
@@ -378,7 +378,7 @@ void swap_sender(AIS_Message *msg)
     memcpy(msg->sender.uname, tmp_s, 256);
 }
 
-char *get_ais_data(AIS_Message *msg)
+char *get_ais_data(const AIS_Message *msg)
 {
     int rc = BZ_OK;
     char *uncompressed = NULL;
@@ -391,7 +391,7 @@ char *get_ais_data(AIS_Message *msg)
 	ais_malloc0(uncompressed, new_size);
 	
 	rc = BZ2_bzBuffToBuffDecompress(
-	    uncompressed, &new_size, msg->data, msg->compressed_size, 1, 0);
+	    uncompressed, &new_size, (char*)msg->data, msg->compressed_size, 1, 0);
 	if(rc != BZ_OK) {
 	    ais_info("rc=%d, new=%u expected=%u", rc, new_size, msg->size);
 	}
@@ -448,7 +448,7 @@ int send_cluster_msg(
 
 extern struct corosync_api_v1 *pcmk_api;
 
-int send_client_ipc(void *conn, AIS_Message *ais_msg) 
+int send_client_ipc(void *conn, const AIS_Message *ais_msg) 
 {
     int rc = -1;
     if (conn == NULL) {
@@ -463,7 +463,7 @@ int send_client_ipc(void *conn, AIS_Message *ais_msg)
 
     } else {
 #ifdef AIS_WHITETANK
-	rc = openais_dispatch_send (conn, ais_msg, ais_msg->header.size);
+	rc = openais_dispatch_send (conn, (void*)ais_msg, ais_msg->header.size);
 #endif
 #ifdef AIS_COROSYNC
 	rc = pcmk_api->ipc_dispatch_send (conn, ais_msg, ais_msg->header.size);
@@ -539,11 +539,12 @@ ais_concat(const char *prefix, const char *suffix, char join)
 	return new_str;
 }
 
-object_handle config_find_init(plugin_init_type *config, char *name) 
+hdb_handle_t config_find_init(plugin_init_type *config, char *name) 
 {
-    object_handle local_handle = 0;
+    hdb_handle_t local_handle = 0;
 #ifdef AIS_COROSYNC
     config->object_find_create(OBJECT_PARENT_HANDLE, name, strlen(name), &local_handle);
+    ais_info("Local handle: %lld for %s", local_handle, name);
 #endif
     
 #ifdef AIS_WHITETANK 
@@ -552,10 +553,10 @@ object_handle config_find_init(plugin_init_type *config, char *name)
     return local_handle;
 }
 
-object_handle config_find_next(plugin_init_type *config, char *name, object_handle top_handle) 
+hdb_handle_t config_find_next(plugin_init_type *config, char *name, hdb_handle_t top_handle) 
 {
     int rc = 0;
-    object_handle local_handle = 0;
+    hdb_handle_t local_handle = 0;
 
 #ifdef AIS_COROSYNC
     rc = config->object_find_next (top_handle, &local_handle);
@@ -574,7 +575,7 @@ object_handle config_find_next(plugin_init_type *config, char *name, object_hand
     return local_handle;
 }
 
-void config_find_done(plugin_init_type *config, object_handle local_handle) 
+void config_find_done(plugin_init_type *config, hdb_handle_t local_handle) 
 {
 #ifdef AIS_COROSYNC
     config->object_find_destroy (local_handle);
@@ -583,7 +584,7 @@ void config_find_done(plugin_init_type *config, object_handle local_handle)
 
 int get_config_opt(
     plugin_init_type *config,
-    object_handle object_service_handle,
+    hdb_handle_t object_service_handle,
     char *key, char **value, const char *fallback)
 {
     char *env_key = NULL;

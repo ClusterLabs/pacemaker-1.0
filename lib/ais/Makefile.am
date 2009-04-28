@@ -17,8 +17,6 @@
 #
 MAINTAINERCLEANFILES    = Makefile.in
 
-INCLUDES        = -I$(AISPREFIX)/include/openais
-
 plugindir		= $(libdir)
 plugin_LTLIBRARIES	= service_crm.la
 
@@ -30,10 +28,12 @@ service_crm_la_LDFLAGS	= -export-dynamic -module -avoid-version
 service_crm_la_LIBADD	= 
 
 # OpenAIS's logging violates -Wwrite-strings all over the place
+TMP_ANSI	= $(CFLAGS_COPY:-ansi) 
+TMP_STR		= $(TMP_ANSI:-Wwrite-strings=)
+CFLAGS		= $(TMP_STR:-Wcast-qual=)
+
 if GCC_4
-CFLAGS			= $(CFLAGS_COPY:-Wwrite-strings=) -Wno-pointer-sign
-else
-CFLAGS			= $(CFLAGS_COPY:-Wwrite-strings=)
+CFLAGS		+= -Wno-pointer-sign
 endif
 
 #POST_INSTALL = ls -al $(plugindir)

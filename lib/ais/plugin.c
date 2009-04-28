@@ -32,13 +32,12 @@
 #include <string.h>
 
 #include <config.h>
-#include <crm/ais_common.h>
-#include "plugin.h"
-#include "utils.h"
-
 #ifdef AIS_COROSYNC
 #  include <corosync/totem/totempg.h>
 #endif
+#include <crm/ais_common.h>
+#include "plugin.h"
+#include "utils.h"
 
 #include <glib/ghash.h>
 
@@ -75,7 +74,7 @@ GHashTable *membership_notify_list = NULL;
 
 struct crm_identify_msg_s
 {
-	mar_req_header_t	header __attribute__((aligned(8)));
+	coroipc_request_header_t	header __attribute__((aligned(8)));
 	uint32_t		id;
 	uint32_t		pid;
 	 int32_t		votes;
@@ -98,18 +97,27 @@ static crm_child_t pcmk_children[] = {
 };
 
 void send_cluster_id(void);
-int send_cluster_msg_raw(AIS_Message *ais_msg);
+int send_cluster_msg_raw(const AIS_Message *ais_msg);
 char *pcmk_generate_membership_data(void);
-gboolean check_message_sanity(AIS_Message *msg, char *data);
+gboolean check_message_sanity(const AIS_Message *msg, const char *data);
 
 void pcmk_peer_update (
     enum totem_configuration_type configuration_type,
+#ifdef AIS_WHITETANK 
     unsigned int *member_list, int member_list_entries,
     unsigned int *left_list, int left_list_entries,
     unsigned int *joined_list, int joined_list_entries,
-    struct memb_ring_id *ring_id);
+    struct memb_ring_id *ring_id
+#else
+    const unsigned int *member_list, size_t member_list_entries,
+    const unsigned int *left_list, size_t left_list_entries,
+    const unsigned int *joined_list, size_t joined_list_entries,
+    const struct memb_ring_id *ring_id
+#endif
+    );
 
 #ifdef AIS_WHITETANK
+typedef void ais_void_ptr;
 extern totempg_groups_handle openais_group_handle;
 #define pcmk_group_handle openais_group_handle
 int pcmk_startup (struct objdb_iface_ver0 *objdb);
@@ -117,6 +125,7 @@ int pcmk_shutdown (struct objdb_iface_ver0 *objdb);
 int pcmk_config_init(struct objdb_iface_ver0 *objdb);
 #endif
 #ifdef AIS_COROSYNC
+typedef const void ais_void_ptr;
 extern hdb_handle_t corosync_group_handle;
 #define pcmk_group_handle corosync_group_handle
 int pcmk_startup (struct corosync_api_v1 *corosync_api);
@@ -130,56 +139,68 @@ int pcmk_ipc_connect (void *conn);
 int pcmk_ipc_exit (void *conn);
 
 void pcmk_cluster_swab(void *msg);
-void pcmk_cluster_callback(void *message, unsigned int nodeid);
+void pcmk_cluster_callback(ais_void_ptr *message, unsigned int nodeid);
 
-void pcmk_ipc(void *conn, void *msg);
+void pcmk_ipc(void *conn, ais_void_ptr *msg);
 
-void pcmk_nodeid(void *conn, void *msg);
-void pcmk_nodes(void *conn, void *msg);
-void pcmk_notify(void *conn, void *msg);
-void pcmk_remove_member(void *conn, void *msg);
-void pcmk_quorum(void *conn, void *msg);
+void pcmk_nodeid(void *conn, ais_void_ptr *msg);
+void pcmk_nodes(void *conn, ais_void_ptr *msg);
+void pcmk_notify(void *conn, ais_void_ptr *msg);
+void pcmk_remove_member(void *conn, ais_void_ptr *msg);
+void pcmk_quorum(void *conn, ais_void_ptr *msg);
 
 void pcmk_cluster_id_swab(void *msg);
-void pcmk_cluster_id_callback(void *message, unsigned int nodeid);
+void pcmk_cluster_id_callback(ais_void_ptr *message, unsigned int nodeid);
 
 static plugin_lib_handler pcmk_lib_service[] =
 {
     { /* 0 */
 	.lib_handler_fn		= pcmk_ipc,
-	.response_size		= sizeof (mar_res_header_t),
-	.response_id		= CRM_MESSAGE_IPC_ACK,
 	.flow_control		= COROSYNC_LIB_FLOW_CONTROL_NOT_REQUIRED
+#ifdef AIS_WHITETANK
+	.response_size		= sizeof (coroipc_response_header_t),
+	.response_id		= CRM_MESSAGE_IPC_ACK,
+#endif
     },
     { /* 1 */
 	.lib_handler_fn		= pcmk_nodes,
-	.response_size		= sizeof (mar_res_header_t),
-	.response_id		= CRM_MESSAGE_IPC_ACK,
 	.flow_control		= COROSYNC_LIB_FLOW_CONTROL_NOT_REQUIRED
+#ifdef AIS_WHITETANK
+	.response_size		= sizeof (coroipc_response_header_t),
+	.response_id		= CRM_MESSAGE_IPC_ACK,
+#endif
     },
     { /* 2 */
 	.lib_handler_fn		= pcmk_notify,
-	.response_size		= sizeof (mar_res_header_t),
-	.response_id		= CRM_MESSAGE_IPC_ACK,
 	.flow_control		= COROSYNC_LIB_FLOW_CONTROL_NOT_REQUIRED
+#ifdef AIS_WHITETANK
+	.response_size		= sizeof (coroipc_response_header_t),
+	.response_id		= CRM_MESSAGE_IPC_ACK,
+#endif
     },
     { /* 3 */
 	.lib_handler_fn		= pcmk_nodeid,
+	.flow_control		= COROSYNC_LIB_FLOW_CONTROL_NOT_REQUIRED
+#ifdef AIS_WHITETANK
 	.response_size		= sizeof (struct crm_ais_nodeid_resp_s),
 	.response_id		= crm_class_nodeid,
-	.flow_control		= COROSYNC_LIB_FLOW_CONTROL_NOT_REQUIRED
+#endif
     },
     { /* 4 */
 	.lib_handler_fn		= pcmk_remove_member,
-	.response_size		= sizeof (mar_res_header_t),
-	.response_id		= CRM_MESSAGE_IPC_ACK,
 	.flow_control		= COROSYNC_LIB_FLOW_CONTROL_NOT_REQUIRED
+#ifdef AIS_WHITETANK
+	.response_size		= sizeof (coroipc_response_header_t),
+	.response_id		= CRM_MESSAGE_IPC_ACK,
+#endif
     },
     { /* 5 */
 	.lib_handler_fn		= pcmk_quorum,
-	.response_size		= sizeof (mar_res_header_t),
-	.response_id		= CRM_MESSAGE_IPC_ACK,
 	.flow_control		= COROSYNC_LIB_FLOW_CONTROL_NOT_REQUIRED
+#ifdef AIS_WHITETANK
+	.response_size		= sizeof (coroipc_response_header_t),
+	.response_id		= CRM_MESSAGE_IPC_ACK,
+#endif
     },
 };
 
@@ -299,8 +320,8 @@ static void update_expected_votes(int value)
 static void process_ais_conf(void)
 {
     char *value = NULL;
-    unsigned int top_handle = 0;
-    unsigned int local_handle = 0;
+    hdb_handle_t top_handle = 0;
+    hdb_handle_t local_handle = 0;
     
     ais_info("Reading configure");
     top_handle = config_find_init(pcmk_api, "logging");
@@ -593,10 +614,18 @@ static void ais_mark_unseen_peer_dead(
 
 void pcmk_peer_update (
     enum totem_configuration_type configuration_type,
+#ifdef AIS_WHITETANK 
     unsigned int *member_list, int member_list_entries,
     unsigned int *left_list, int left_list_entries,
     unsigned int *joined_list, int joined_list_entries,
-    struct memb_ring_id *ring_id)
+    struct memb_ring_id *ring_id
+#else
+    const unsigned int *member_list, size_t member_list_entries,
+    const unsigned int *left_list, size_t left_list_entries,
+    const unsigned int *joined_list, size_t joined_list_entries,
+    const struct memb_ring_id *ring_id
+#endif
+    )
 {
     int lpc = 0;
     int changed = 0;
@@ -612,9 +641,9 @@ void pcmk_peer_update (
     }
 
     membership_seq = ring_id->seq;
-    ais_notice("%s membership event on ring %lld: memb=%d, new=%d, lost=%d",
-	       do_update?"Stable":"Transitional", ring_id->seq, member_list_entries,
-	       joined_list_entries, left_list_entries);
+    ais_notice("%s membership event on ring %lld: memb=%ld, new=%ld, lost=%ld",
+	       do_update?"Stable":"Transitional", ring_id->seq,
+	       (long)member_list_entries, (long)joined_list_entries, (long)left_list_entries);
 
     if(do_update == 0) {
 	for(lpc = 0; lpc < joined_list_entries; lpc++) {
@@ -762,9 +791,9 @@ void pcmk_cluster_swab(void *msg)
 }
 
 void pcmk_cluster_callback (
-    void *message, unsigned int nodeid)
+    ais_void_ptr *message, unsigned int nodeid)
 {
-    AIS_Message *ais_msg = message;
+    const AIS_Message *ais_msg = message;
 
     ais_debug_2("Message from node %u (%s)",
 		nodeid, nodeid==local_nodeid?"local":"remote");
@@ -797,10 +826,10 @@ void pcmk_cluster_id_swab(void *msg)
     ais_msg->processes = swab32 (ais_msg->processes);
 }
 
-void pcmk_cluster_id_callback (void *message, unsigned int nodeid)
+void pcmk_cluster_id_callback (ais_void_ptr *message, unsigned int nodeid)
 {
     int changed = 0;
-    struct crm_identify_msg_s *msg = message;
+    const struct crm_identify_msg_s *msg = message;
     if(nodeid != msg->id) {
 	ais_err("Invalid message: Node %u claimed to be node %d",
 		nodeid, msg->id);
@@ -816,20 +845,20 @@ void pcmk_cluster_id_callback (void *message, unsigned int nodeid)
 }
 
 struct res_overlay {
-	mar_res_header_t header __attribute((aligned(8)));
+	coroipc_response_header_t header __attribute((aligned(8)));
 	char buf[4096];
 };
 
 struct res_overlay *res_overlay = NULL;
 
-static void send_ipc_ack(void *conn, int class)
+static void send_ipc_ack(void *conn)
 {
     if(res_overlay == NULL) {
 	ais_malloc0(res_overlay, sizeof(struct res_overlay));
     }
     
-    res_overlay->header.size = pcmk_lib_service[class].response_size;
-    res_overlay->header.id = pcmk_lib_service[class].response_id;
+    res_overlay->header.id = CRM_MESSAGE_IPC_ACK;
+    res_overlay->header.size = sizeof (coroipc_response_header_t);
     res_overlay->header.error = SA_AIS_OK;
 #ifdef AIS_WHITETANK
     openais_response_send (conn, res_overlay, res_overlay->header.size);
@@ -841,17 +870,18 @@ static void send_ipc_ack(void *conn, int class)
 
 
 /* local callbacks */
-void pcmk_ipc(void *conn, void *msg)
+void pcmk_ipc(void *conn, ais_void_ptr *msg)
 {
+    AIS_Message *mutable;
     int type = 0, size = 0;
     gboolean transient = TRUE;
-    AIS_Message *ais_msg = (AIS_Message*)msg;
+    const AIS_Message *ais_msg = (const AIS_Message*)msg;
     void *async_conn = conn;
     ais_debug_2("Message from client %p", conn);
 
-    if(check_message_sanity(msg, ((AIS_Message*)msg)->data) == FALSE) {
+    if(check_message_sanity(msg, ((const AIS_Message*)msg)->data) == FALSE) {
 	/* The message is corrupted - ignore */
-	send_ipc_ack(conn, crm_class_cluster);  msg = NULL; 
+	send_ipc_ack(conn);  msg = NULL; 
 	return;
     }
 
@@ -860,14 +890,17 @@ void pcmk_ipc(void *conn, void *msg)
      * but the response must also be sent _before_ we send anything else
      */
 
-    size = ais_msg->header.size;
+    mutable = ais_msg_copy(ais_msg);
+    AIS_ASSERT(check_message_sanity(mutable, mutable->data));
+    
+    size = mutable->header.size;
     /* ais_malloc0(ais_msg, size); */
     /* memcpy(ais_msg, msg, size); */    
     
-    type = ais_msg->sender.type;
+    type = mutable->sender.type;
     ais_debug_3("type: %d local: %d conn: %p host type: %d ais: %d sender pid: %d child pid: %d size: %d",
-		type, ais_msg->host.local, pcmk_children[type].conn, ais_msg->host.type, crm_msg_ais,
-		ais_msg->sender.pid, pcmk_children[type].pid, ((int)SIZEOF(pcmk_children)));
+		type, mutable->host.local, pcmk_children[type].conn, mutable->host.type, crm_msg_ais,
+		mutable->sender.pid, pcmk_children[type].pid, ((int)SIZEOF(pcmk_children)));
     
     if(type > crm_msg_none && type < SIZEOF(pcmk_children)) {
 	/* known child process */
@@ -877,15 +910,15 @@ void pcmk_ipc(void *conn, void *msg)
     /* If this check fails, the order of pcmk_children probably 
      *   doesn't match that of the crm_ais_msg_types enum
      */
-    AIS_CHECK(transient || ais_msg->sender.pid == pcmk_children[type].pid,
-	      ais_err("Sender: %d, child[%d]: %d", ais_msg->sender.pid, type, pcmk_children[type].pid);
+    AIS_CHECK(transient || mutable->sender.pid == pcmk_children[type].pid,
+	      ais_err("Sender: %d, child[%d]: %d", mutable->sender.pid, type, pcmk_children[type].pid);
 	      return);
     
     if(transient == FALSE
        && type > crm_msg_none
-       && ais_msg->host.local
+       && mutable->host.local
        && pcmk_children[type].conn == NULL
-       && ais_msg->host.type == crm_msg_ais) {
+       && mutable->host.type == crm_msg_ais) {
 	
 	ais_info("Recorded connection %p for %s/%d",
 		 conn, pcmk_children[type].name, pcmk_children[type].pid);
@@ -902,14 +935,14 @@ void pcmk_ipc(void *conn, void *msg)
 	}	
     }
 
-    ais_msg->sender.id = local_nodeid;
-    ais_msg->sender.size = local_uname_len;
-    memset(ais_msg->sender.uname, 0, MAX_NAME);
-    memcpy(ais_msg->sender.uname, local_uname, ais_msg->sender.size);
+    mutable->sender.id = local_nodeid;
+    mutable->sender.size = local_uname_len;
+    memset(mutable->sender.uname, 0, MAX_NAME);
+    memcpy(mutable->sender.uname, local_uname, mutable->sender.size);
 
-    route_ais_message(ais_msg, TRUE);
-    send_ipc_ack(conn, crm_class_cluster);  msg = NULL;
-    /* ais_free(ais_msg); */
+    route_ais_message(mutable, TRUE);
+    send_ipc_ack(conn);  msg = NULL;
+    ais_free(mutable);
 }
 
 int pcmk_shutdown (
@@ -980,12 +1013,9 @@ int pcmk_shutdown (
     }
     
     send_cluster_id();
-
     ais_notice("Shutdown complete");
-#ifndef AIS_WHITETANK
-    logsys_flush ();
-#endif
-
+    /* TODO: Add back the logsys flush call once its written */
+    
 #ifdef AIS_WHITETANK
     /* Bug bnc#482847, bnc#482905
      *
@@ -1036,7 +1066,7 @@ char *pcmk_generate_membership_data(void)
     return data.string;
 }
 
-void pcmk_nodes(void *conn, void *msg)
+void pcmk_nodes(void *conn, ais_void_ptr *msg)
 {
     char *data = pcmk_generate_membership_data();
     void *async_conn = conn;
@@ -1044,7 +1074,7 @@ void pcmk_nodes(void *conn, void *msg)
     /* send the ACK before we send any other messages
      * - but after we no longer need to access the message
      */
-    send_ipc_ack(conn, crm_class_members);  msg = NULL;
+    send_ipc_ack(conn);  msg = NULL;
 
     if(async_conn) {
 	send_client_msg(async_conn, crm_class_members, crm_msg_none, data);
@@ -1052,11 +1082,11 @@ void pcmk_nodes(void *conn, void *msg)
     ais_free(data);
 }
 
-void pcmk_remove_member(void *conn, void *msg)
+void pcmk_remove_member(void *conn, ais_void_ptr *msg)
 {
-    AIS_Message *ais_msg = msg;
+    const AIS_Message *ais_msg = msg;
     char *data = get_ais_data(ais_msg);
-    send_ipc_ack(conn, crm_class_rmpeer);  msg = NULL;
+    send_ipc_ack(conn);  msg = NULL;
     
     if(data != NULL) {
 	char *bcast = ais_concat("remove-peer", data, ':');
@@ -1082,11 +1112,11 @@ static void send_quorum_details(void *conn)
     ais_free(data);
 }
 
-void pcmk_quorum(void *conn, void *msg)
+void pcmk_quorum(void *conn, ais_void_ptr *msg)
 {
-    AIS_Message *ais_msg = msg;
+    const AIS_Message *ais_msg = msg;
     char *data = get_ais_data(ais_msg);
-    send_ipc_ack(conn, crm_class_quorum);  msg = NULL;
+    send_ipc_ack(conn);  msg = NULL;
     
     if(data != NULL) {
 	int value = 0;
@@ -1099,16 +1129,16 @@ void pcmk_quorum(void *conn, void *msg)
     ais_free(data);
 }
 
-void pcmk_notify(void *conn, void *msg)
+void pcmk_notify(void *conn, ais_void_ptr *msg)
 {
-    AIS_Message *ais_msg = msg;
+    const AIS_Message *ais_msg = msg;
     char *data = get_ais_data(ais_msg);
     void *async_conn = conn;
 
     int enable = 0;
     int sender = ais_msg->sender.pid;
     
-    send_ipc_ack(conn, crm_class_notify);  msg = NULL;
+    send_ipc_ack(conn);  msg = NULL;
 
     if(ais_str_eq("true", data)) {
 	enable = 1;
@@ -1124,14 +1154,14 @@ void pcmk_notify(void *conn, void *msg)
     ais_free(data);
 }
 
-void pcmk_nodeid(void *conn, void *msg)
+void pcmk_nodeid(void *conn, ais_void_ptr *msg)
 {
     static int counter = 0;
     struct crm_ais_nodeid_resp_s resp;
     ais_debug_2("Sending local nodeid: %d to %p[%d]", local_nodeid, conn, counter);
     
-    resp.header.size = pcmk_lib_service[crm_class_nodeid].response_size;
-    resp.header.id = pcmk_lib_service[crm_class_nodeid].response_id;
+    resp.header.id = crm_class_nodeid;
+    resp.header.size = sizeof (struct crm_ais_nodeid_resp_s);
     resp.header.error = SA_AIS_OK;
     resp.id = local_nodeid;
     resp.counter = counter++;
@@ -1168,7 +1198,7 @@ void send_member_notification(void)
     ais_free(update);
 }
 
-gboolean check_message_sanity(AIS_Message *msg, char *data) 
+gboolean check_message_sanity(const AIS_Message *msg, const char *data) 
 {
     gboolean sane = TRUE;
     gboolean repaired = FALSE;
@@ -1186,22 +1216,13 @@ gboolean check_message_sanity(AIS_Message *msg, char *data)
     }
 
     AIS_CHECK(msg->header.size > sizeof(AIS_Message),
-	      ais_err("Message %d size too small: %d < %d",
+	      ais_err("Message %d size too small: %d < %zu",
 		      msg->header.id, msg->header.size, sizeof(AIS_Message));
 	      return FALSE);
 
     if(sane && ais_data_len(msg) != tmp_size) {
-	int cur_size = ais_data_len(msg);
-
-	repaired = TRUE;
-	if(msg->is_compressed) {
-	    msg->compressed_size = tmp_size;
-	    
-	} else {
-	    msg->size = tmp_size;
-	}
-	
-	ais_warn("Repaired message payload size %d -> %d", cur_size, tmp_size);
+	ais_warn("Message payload size is incorrect: expected %d, got %d", ais_data_len(msg), tmp_size);
+	sane = TRUE;
     }
 
     if(sane && ais_data_len(msg) == 0) {
@@ -1249,37 +1270,39 @@ gboolean check_message_sanity(AIS_Message *msg, char *data)
     return sane;
 }
 
-gboolean route_ais_message(AIS_Message *msg, gboolean local_origin) 
+gboolean route_ais_message(const AIS_Message *msg, gboolean local_origin) 
 {
     int rc = 0;
     int dest = msg->host.type;
     const char *reason = "unknown";
+    AIS_Message *mutable = ais_msg_copy(msg);
     static int service_id =  SERVICE_ID_MAKE(CRM_SERVICE, 0);
-    
+
     ais_debug_3("Msg[%d] (dest=%s:%s, from=%s:%s.%d, remote=%s, size=%d)",
-		msg->id, ais_dest(&(msg->host)), msg_type2text(dest),
-		ais_dest(&(msg->sender)), msg_type2text(msg->sender.type),
-		msg->sender.pid, local_origin?"false":"true", ais_data_len(msg));
-    
+		mutable->id, ais_dest(&(mutable->host)), msg_type2text(dest),
+		ais_dest(&(mutable->sender)), msg_type2text(mutable->sender.type),
+		mutable->sender.pid, local_origin?"false":"true", ais_data_len((mutable)));
+
     if(local_origin == FALSE) {
-       if(msg->host.size == 0
-	  || ais_str_eq(local_uname, msg->host.uname)) {
-	   msg->host.local = TRUE;
+       if(mutable->host.size == 0
+	  || ais_str_eq(local_uname, mutable->host.uname)) {
+	   mutable->host.local = TRUE;
        }
     }
 
-    if(check_message_sanity(msg, msg->data) == FALSE) {
+    if(check_message_sanity(mutable, mutable->data) == FALSE) {
 	/* Dont send this message to anyone */
-	return FALSE;
+	rc = 1;
+	goto bail;
     }
     
-    if(msg->host.local) {
+    if(mutable->host.local) {
 	void *conn = NULL;
 	const char *lookup = NULL;
 
 	if(dest == crm_msg_ais) {
-	    process_ais_message(msg);
-	    return TRUE;
+	    process_ais_message(mutable);
+	    goto bail;
 
 	} else if(dest == crm_msg_lrmd) {
 	    /* lrmd messages are routed via the crm */
@@ -1292,8 +1315,9 @@ gboolean route_ais_message(AIS_Message *msg, gboolean local_origin)
 
 	AIS_CHECK(dest > 0 && dest < SIZEOF(pcmk_children),
 		  ais_err("Invalid destination: %d", dest);
-		  log_ais_message(LOG_ERR, msg);
-		  return FALSE;
+		  log_ais_message(LOG_ERR, mutable);
+		  rc = 1;
+		  goto bail;
 	    );
 
 	lookup = msg_type2text(dest);
@@ -1302,77 +1326,72 @@ gboolean route_ais_message(AIS_Message *msg, gboolean local_origin)
 	/* the cluster fails in weird and wonderfully obscure ways when this is not true */
 	AIS_ASSERT(ais_str_eq(lookup, pcmk_children[dest].name));
 
-	if(msg->header.id == service_id) {
-	    msg->header.id = 0; /* reset this back to zero for IPC messages */
+	if(mutable->header.id == service_id) {
+	    mutable->header.id = 0; /* reset this back to zero for IPC messages */
 
-	} else if(msg->header.id != 0) {
-	    ais_err("reset header id back to zero from %d", msg->header.id);
-	    msg->header.id = 0; /* reset this back to zero for IPC messages */
+	} else if(mutable->header.id != 0) {
+	    ais_err("reset header id back to zero from %d", mutable->header.id);
+	    mutable->header.id = 0; /* reset this back to zero for IPC messages */
 	}
 	
-	rc = send_client_ipc(conn, msg);
+	rc = send_client_ipc(conn, mutable);
 
     } else if(local_origin) {
 	/* forward to other hosts */
 	ais_debug_3("Forwarding to cluster");
 	reason = "cluster delivery failed";
-	rc = send_cluster_msg_raw(msg);    
+	rc = send_cluster_msg_raw(mutable);    
     }
-
+    
     if(rc != 0) {
 	ais_warn("Sending message to %s.%s failed: %s (rc=%d)",
-		 ais_dest(&(msg->host)), msg_type2text(dest), reason, rc);
-	log_ais_message(LOG_DEBUG, msg);
-	return FALSE;
+		 ais_dest(&(mutable->host)), msg_type2text(dest), reason, rc);
+	log_ais_message(LOG_DEBUG, mutable);
     }
-    return TRUE;
+    
+  bail:
+    ais_free(mutable);
+    return rc==0?TRUE:FALSE;
 }
 
-int send_cluster_msg_raw(AIS_Message *ais_msg) 
+int send_cluster_msg_raw(const AIS_Message *ais_msg) 
 {
     int rc = 0;
     struct iovec iovec;
     static uint32_t msg_id = 0;
-    AIS_Message *bz2_msg = NULL;
+    AIS_Message *mutable = ais_msg_copy(ais_msg);
 
     AIS_ASSERT(local_nodeid != 0);
+    AIS_ASSERT(ais_msg->header.size == (sizeof(AIS_Message) + ais_data_len(ais_msg)));
 
-    if(ais_msg->header.size != (sizeof(AIS_Message) + ais_data_len(ais_msg))) {
-	ais_err("Repairing size mismatch: %u + %d = %d",
-		(unsigned int)sizeof(AIS_Message),
-		ais_data_len(ais_msg), ais_msg->header.size);
-	ais_msg->header.size = sizeof(AIS_Message) + ais_data_len(ais_msg);
-    }
-
-    if(ais_msg->id == 0) {
+    if(mutable->id == 0) {
 	msg_id++;
 	AIS_CHECK(msg_id != 0 /* detect wrap-around */,
 		  msg_id++; ais_err("Message ID wrapped around"));
-	ais_msg->id = msg_id;
+	mutable->id = msg_id;
     }
     
-    ais_msg->header.error = SA_AIS_OK;
-    ais_msg->header.id = SERVICE_ID_MAKE(CRM_SERVICE, 0);	
+    mutable->header.error = SA_AIS_OK;
+    mutable->header.id = SERVICE_ID_MAKE(CRM_SERVICE, 0);	
 
-    ais_msg->sender.id = local_nodeid;
-    ais_msg->sender.size = local_uname_len;
-    memset(ais_msg->sender.uname, 0, MAX_NAME);
-    memcpy(ais_msg->sender.uname, local_uname, ais_msg->sender.size);
+    mutable->sender.id = local_nodeid;
+    mutable->sender.size = local_uname_len;
+    memset(mutable->sender.uname, 0, MAX_NAME);
+    memcpy(mutable->sender.uname, local_uname, mutable->sender.size);
 
-    iovec.iov_base = (char *)ais_msg;
-    iovec.iov_len = ais_msg->header.size;
+    iovec.iov_base = (char *)mutable;
+    iovec.iov_len = mutable->header.size;
 
     ais_debug_3("Sending message (size=%u)", (unsigned int)iovec.iov_len);
-    rc = totempg_groups_mcast_joined (
-	pcmk_group_handle, &iovec, 1, TOTEMPG_SAFE);
+    rc = pcmk_api->totem_mcast(&iovec, 1, TOTEMPG_SAFE);
 
-    if(rc == 0 && ais_msg->is_compressed == FALSE) {
-	ais_debug_2("Message sent: %.80s", ais_msg->data);
+    if(rc == 0 && mutable->is_compressed == FALSE) {
+	ais_debug_2("Message sent: %.80s", mutable->data);
     }
     
-    AIS_CHECK(rc == 0, ais_err("Message not sent (%d): %.120s", rc, ais_msg->data));
+    AIS_CHECK(rc == 0, ais_err("Message not sent (%d): %.120s", rc, mutable->data));
 
-    ais_free(bz2_msg);
+    ais_free(mutable);
     return rc;	
 }
 
@@ -1426,8 +1445,7 @@ void send_cluster_id(void)
     iovec.iov_base = (char *)msg;
     iovec.iov_len = msg->header.size;
     
-    rc = totempg_groups_mcast_joined (
-	pcmk_group_handle, &iovec, 1, TOTEMPG_SAFE);
+    rc = pcmk_api->totem_mcast(&iovec, 1, TOTEMPG_SAFE);
 
     AIS_CHECK(rc == 0, ais_err("Message not sent (%d)", rc));
 
@@ -1469,7 +1487,7 @@ static void ais_remove_peer(char *node_id)
 
 }
 
-gboolean process_ais_message(AIS_Message *msg) 
+gboolean process_ais_message(const AIS_Message *msg) 
 {
     int len = ais_data_len(msg);
     char *data = get_ais_data(msg);
@@ -1502,6 +1520,7 @@ static void member_dump_fn(gpointer key, gpointer value, gpointer user_data)
 void pcmk_exec_dump(void) 
 {
     /* Called after SIG_USR2 */
+    process_ais_conf();
     ais_info("Local id: %u, uname: %s, born: "U64T, local_nodeid, local_uname, local_born_on);
     ais_info("Membership id: "U64T", quorate: %s, expected: %u, actual: %u",
 	     membership_seq, plugin_has_quorum()?"true":"false",
