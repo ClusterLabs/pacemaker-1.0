@@ -238,7 +238,7 @@ AC_SUBST(INITDIR)
 AC_MSG_NOTICE(Sanitizing libdir: ${libdir})
 case $libdir in
   dnl For consistency with Heartbeat, map NONE->$prefix
-  prefix|NONE|*exec_prefix*)
+  *prefix*|NONE)
     AC_MSG_CHECKING(which lib directory to use)
     for aDir in lib64 lib
     do
@@ -828,6 +828,7 @@ esac
 AC_MSG_CHECKING(for native AIS)
 AISMSGLIB=""
 AIS_VERSION="none"
+COROSYNC_PKG="$PKGCONFIG libcoroipcs"
 
 if test $SUPPORT_AIS = no; then
    AC_MSG_RESULT(no... not requested.)
@@ -835,26 +836,54 @@ if test $SUPPORT_AIS = no; then
 else
    AC_MSG_RESULT($SUPPORT_AIS, with '$AISPREFIX')
 
-   dnl headers...
-   AC_CHECK_HEADERS(corosync/coroipcc.h)
    AC_CHECK_HEADERS(openais/saAis.h)
-   if test "$ac_cv_header_corosync_coroipcc_h" = "yes"; then
+   AC_CHECK_HEADERS(corosync/coroipcc.h)
+
+   $COROSYNC_PKG --exists
+   if test $? = 0; then
        AIS_VERSION="corosync"
+
    elif test "$ac_cv_header_openais_saAis_h" = "yes"; then
        AIS_VERSION="whitetank"
    else
-       aisreason="Headers not found: $ac_cv_header_openais_saAis_h"
+       aisreason="Whitetank headers not found"
    fi  
 fi
 
-AC_MSG_CHECKING(for OpenAIS branch)
-AC_MSG_RESULT($AIS_VERSION)
+if test $AIS_VERSION != "none"; then
+   AC_MSG_CHECKING(for OpenAIS branch)
+   AC_MSG_RESULT($AIS_VERSION)
+fi
+
+if test $AIS_VERSION = "corosync"; then
+   if test "$ac_cv_header_corosync_coroipcc_h" != "yes"; then
+       AIS_VERSION="none"
+       aisreason="Corosync headers not found"
+   fi
+
+   saveLIBSLIBS="$"
+   LIBS="$LIBS `$COROSYNC_PKG --libs-only-L`"
+   AC_CHECK_LIB(coroipcc, coroipcc_msg_send_reply_receive, [])
+   LIBS="$saveLIBS"
+
+   if test $ac_cv_lib_coroipcc_coroipcc_msg_send_reply_receive != yes; then
+        AC_MSG_RESULT(Cannot locate AIS messaging library)
+	aisreason="requred Corosync libraries not found"
+        AIS_VERSION="none"
+   fi
+
+fi
 
 dnl continue?
-if test $AIS_VERSION != "none"; then
+if test $AIS_VERSION = "whitetank"; then
    dnl Find it in lib, lib64, or wherever it wants to live...
    AC_MSG_CHECKING(location of OpenAIS libraries)
-   alib=`ls ${AISPREFIX}/*/*/libcpg.so | head -n 1`
+   dnl CoroSync location
+   alib=`ls ${AISPREFIX}/*/libcpg.so | head -n 1`
+   if test -z "$alib"; then
+      dnl Whitetank location
+      alib=`ls ${AISPREFIX}/*/*/libcpg.so | head -n 1`
+   fi
    AISLIB=`dirname $alib`
    AC_MSG_RESULT($AISLIB)
    if test "x$AISLIB" = "x"; then
@@ -870,7 +899,7 @@ if test $AIS_VERSION != "none"; then
 fi
 
 dnl continue?
-if test $AIS_VERSION != "none"; then
+if test $AIS_VERSION = "whitetank"; then
    AC_MSG_CHECKING(location of OpenAIS plugins)
    if test -z "$LCRSODIR"; then
       LCRSODIR="$libexecdir/lcrso"
@@ -892,18 +921,15 @@ if test $AIS_VERSION != "none"; then
 fi
 
 dnl continue?
-if test $AIS_VERSION != "none"; then
+if test $AIS_VERSION = "whitetank"; then
      dnl Don't add the messaging library to LIBS since most daemons don't need/use it
      saveLIBS="$LIBS"
      LIBS="$LIBS -L${AISLIB} -R${AISLIB}"
 
-     AC_CHECK_LIB(coroipcc, coroipcc_msg_send_reply_receive, [])
      AC_CHECK_LIB(SaMsg, saSendReceiveReply, [])
      AC_CHECK_LIB(SaMsg, openais_msg_send_reply_receive, [])
 
-     if test $ac_cv_lib_coroipcc_coroipcc_msg_send_reply_receive = yes; then
-       :  CoroSync
-     elif test $ac_cv_lib_SaMsg_openais_msg_send_reply_receive = yes; then
+     if test $ac_cv_lib_SaMsg_openais_msg_send_reply_receive = yes; then
        :  OpenAIS
      elif test $ac_cv_lib_SaMsg_saSendReceiveReply = yes; then
        :  OpenAIS
@@ -918,17 +944,16 @@ fi
 
 SUPPORT_AIS=1
 case $AIS_VERSION in
-    trunk)
-	AC_DEFINE_UNQUOTED(AIS_TRUNK, 1, "AIS target is the latest development series")
-	AISMSGLIB=-lcoroipcc
-	;;
     corosync)
 	AC_DEFINE_UNQUOTED(AIS_COROSYNC, 1, "AIS target is the corosync series")
-	AISMSGLIB=-lcoroipcc
+   	LCRSODIR=`$COROSYNC_PKG --variable=lcrsodir`
+   	CFLAGS="$CFLAGS `$COROSYNC_PKG --cflags`"
+	AISMSGLIB=`$COROSYNC_PKG --libs`
 	;;
     whitetank) 
 	AC_DEFINE_UNQUOTED(AIS_WHITETANK, 1, "AIS target is the whitetank series")
-	AISMSGLIB=-lSaMsg
+	CFLAGS="$CFLAGS -I$AISPREFIX/include/openais"
+	AISMSGLIB="-L${AISLIB} -R${AISLIB} -lSaMsg"
 	;;
     none)
      	SUPPORT_AIS=0
@@ -960,7 +985,6 @@ fi
 if test $SUPPORT_AIS = 1; then
    STACKS="$STACKS $AIS_VERSION"
    CLUSTERLIBS="$CLUSTERLIBS ${AISMSGLIB}"
-   LIBS="$LIBS -L${AISLIB} -R${AISLIB}"
 else
    AISPREFIX=""
    LCRSODIR="$libdir"
@@ -975,9 +999,7 @@ fi
 AC_MSG_RESULT($STACKS)
 
 AC_SUBST(CLUSTERLIBS)
-AC_SUBST(AISPREFIX)
 AC_SUBST(LCRSODIR)
-AC_SUBST(AISLIBS)
 
 dnl ========================================================================
 dnl    SNMP
