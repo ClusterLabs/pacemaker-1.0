@@ -828,7 +828,7 @@ esac
 AC_MSG_CHECKING(for native AIS)
 AISMSGLIB=""
 AIS_VERSION="none"
-COROSYNC_PKG="$PKGCONFIG libcoroipcs"
+COROSYNC_PKG="$PKGCONFIG libcoroipcc"
 
 if test $SUPPORT_AIS = no; then
    AC_MSG_RESULT(no... not requested.)
@@ -861,7 +861,7 @@ if test $AIS_VERSION = "corosync"; then
        aisreason="Corosync headers not found"
    fi
 
-   saveLIBSLIBS="$"
+   saveLIBS="$LIBS"
    LIBS="$LIBS `$COROSYNC_PKG --libs-only-L`"
    AC_CHECK_LIB(coroipcc, coroipcc_msg_send_reply_receive, [])
    LIBS="$saveLIBS"
@@ -946,7 +946,7 @@ SUPPORT_AIS=1
 case $AIS_VERSION in
     corosync)
 	AC_DEFINE_UNQUOTED(AIS_COROSYNC, 1, "AIS target is the corosync series")
-   	LCRSODIR=`$COROSYNC_PKG --variable=lcrsodir`
+   	LCRSODIR=`$PKGCONFIG corosync --variable=lcrsodir`
    	CFLAGS="$CFLAGS `$COROSYNC_PKG --cflags`"
 	AISMSGLIB=`$COROSYNC_PKG --libs`
 	;;
@@ -1388,7 +1388,8 @@ dnl *****************
 AC_MSG_RESULT([])
 AC_MSG_RESULT([$PACKAGE configuration:])
 AC_MSG_RESULT([  Version                  = ${VERSION} (Build: $BUILD_VERSION)])
-
+AC_MSG_RESULT([  Features                 =${PKG_FEATURES}])
+AC_MSG_RESULT([])
 AC_MSG_RESULT([  Prefix                   = ${prefix}])
 AC_MSG_RESULT([  Executables              = ${sbindir}])
 AC_MSG_RESULT([  Man pages                = ${mandir}])
@@ -1397,13 +1398,14 @@ AC_MSG_RESULT([  Header files             = ${includedir}])
 AC_MSG_RESULT([  Arch-independent files   = ${datadir}])
 AC_MSG_RESULT([  State information        = ${localstatedir}])
 AC_MSG_RESULT([  System configuration     = ${sysconfdir}])
-
+AC_MSG_RESULT([  AIS Plugins              = ${LCRSODIR}])
+AC_MSG_RESULT([])
 AC_MSG_RESULT([  Use system LTDL          = ${ac_cv_lib_ltdl_lt_dlopen}])
-
+AC_MSG_RESULT([])
 AC_MSG_RESULT([  HA group name            = ${CRM_DAEMON_GROUP}])
 AC_MSG_RESULT([  HA user name             = ${CRM_DAEMON_USER}])
-
-AC_MSG_RESULT([  Features                 =${PKG_FEATURES}])
-
+AC_MSG_RESULT([])
 AC_MSG_RESULT([  CFLAGS                   = ${CFLAGS}])
 AC_MSG_RESULT([  Libraries                = ${LIBS}])
+AC_MSG_RESULT([  Stack Libraries          = ${CLUSTERLIBS}])
+
