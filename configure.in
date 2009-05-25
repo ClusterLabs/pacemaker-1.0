@@ -1201,7 +1201,8 @@ dnl no effect. However if CFLAGS was exported from the user's
 dnl environment, then the new CFLAGS will also be exported
 dnl to sub processes.
 
-CC_WARNINGS=""
+CC_ERRORS=""
+CC_EXTRAS=""
 
 if export | fgrep " CFLAGS=" > /dev/null; then
 	export -n CFLAGS || true # We don't want to bomb out if this fails
@@ -1209,35 +1210,45 @@ fi
 
 if test "$GCC" != yes; then
         CFLAGS="$CFLAGS -g"
+	enable_fatal_warnings=no
 else
         CFLAGS="$CFLAGS -ggdb3 -O0"
 
-	EXTRA_WARNINGS=""
 	# We had to eliminate -Wnested-externs because of libtool changes
-        WARNLIST="all missing-prototypes 
-		missing-declarations 
-		strict-prototypes 
-		declaration-after-statement
-		pointer-arith 
-		write-strings
-		cast-qual cast-align 
-		bad-function-cast 
-		inline
-		missing-format-attribute
-		format=2
-		format-security
-		format-nonliteral
-		no-long-long
-    		unsigned-char
-		gnu89-inline
-		no-strict-aliasing"
+        EXTRA_FLAGS="-fgnu89-inline
+		-fstack-protector-all
+		-Wall
+		-Waggregate-return
+		-Wbad-function-cast 
+		-Wcast-qual cast-align 
+		-Wdeclaration-after-statement
+		-Wendif-labels
+		-Wfloat-equal
+		-Wformat=2
+		-Wformat-security
+		-Wformat-nonliteral
+		-Winline
+		-Wmissing-prototypes 
+		-Wmissing-declarations 
+		-Wmissing-format-attribute
+		-Wnested-externs
+		-Wno-long-long
+		-Wno-strict-aliasing
+		-Wpointer-arith 
+		-Wstrict-prototypes
+    		-Wunsigned-char
+		-Wwrite-strings"
 
-	for j in $WARNLIST
+# Additional warnings it might be nice to enable one day
+#		-Wshadow
+#		-Wunreachable-code
+
+	for j in $EXTRA_FLAGS
 	do
 	  if
-	    cc_supports_flag -W$j
+	    cc_supports_flag $j
 	  then
-	    EXTRA_WARNINGS="$EXTRA_WARNINGS -W$j"
+	    CC_EXTRAS="$CC_EXTRAS $j"
 	  fi
 	done
 
@@ -1256,21 +1267,23 @@ dnl System specific options
           	;;
 	esac
 
+	if test "x${enable_fatal_warnings}" != xno && cc_supports_flag -Werror ; then
+	   enable_fatal_warnings=yes
+	else
+	   enable_fatal_warnings=no
+        fi
+
 	if test "x${enable_ansi}" != xno && cc_supports_flag -std=iso9899:199409 ; then
-	  echo "Enabling ANSI Compatibility"
-	  ANSI="-ansi -D_GNU_SOURCE -DANSI_ONLY"
+	  AC_MSG_NOTICE(Enabling ANSI Compatibility)
+	  CC_EXTRAS="$CC_EXTRAS -ansi -D_GNU_SOURCE -DANSI_ONLY"
 	fi
 
-	if test "x${enable_fatal_warnings}" != xno && cc_supports_flag -Werror ; then
-          echo "Enabling Fatal Warnings (-Werror)"
-    	  FATAL_WARNINGS="-Werror"
-        fi
-        
-	CC_WARNINGS="$EXTRA_WARNINGS $FATAL_WARNINGS $ANSI" 
-	NON_FATAL_CC_WARNINGS="$EXTRA_WARNINGS"
+  	AC_MSG_NOTICE(Activated additional gcc flags: ${CC_EXTRAS})
 fi
 
-NON_FATAL_CFLAGS="$CFLAGS $NON_FATAL_CC_WARNINGS"
+CFLAGS="$CFLAGS $CC_EXTRAS"
+
+NON_FATAL_CFLAGS="$CFLAGS"
 AC_SUBST(NON_FATAL_CFLAGS)
 
 dnl
@@ -1280,7 +1293,10 @@ dnl AC_*FUNCS() calls above from working.  In particular, -Werror will
 dnl *always* cause us troubles if we set it before here.
 dnl
 dnl
-CFLAGS="$CFLAGS $CC_WARNINGS"
+if test "x${enable_fatal_warnings}" = xyes ; then
+   AC_MSG_NOTICE(Enabling Fatal Warnings)
+   CFLAGS="$CFLAGS -Werror"
+fi
 AC_SUBST(CFLAGS)
 
 dnl This is useful for use in Makefiles that need to remove one specific flag
