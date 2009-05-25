@@ -1220,7 +1220,8 @@ else
 		-Wall
 		-Waggregate-return
 		-Wbad-function-cast 
-		-Wcast-qual cast-align 
+		-Wcast-qual 
+		-Wcast-align 
 		-Wdeclaration-after-statement
 		-Wendif-labels
 		-Wfloat-equal
