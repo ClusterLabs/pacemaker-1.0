@@ -410,8 +410,8 @@ AC_SUBST(OCF_RA_DIR)
 AC_PATH_PROGS(HG, hg false)
 AC_MSG_CHECKING(build version)
 BUILD_VERSION=unknown
-if test -f .hg_archival.txt; then
-   BUILD_VERSION=`cat .hg_archival.txt | awk '/node:/ { print $2 }'`
+if test -f $srcdir/.hg_archival.txt; then
+   BUILD_VERSION=`cat $srcdir/.hg_archival.txt | awk '/node:/ { print $2 }'`
 elif test -x $HG -a -d .hg; then
    BUILD_VERSION=`$HG id -itb`
    if test $? != 0; then
