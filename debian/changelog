@@ -1,3 +1,60 @@
+pacemaker (1.0.4-1) stable; urgency=medium
+  * Update source tarball to revision: 6d230b4bfc63 (stable-1.0)
+  * Statistics:
+      Changesets:      209
+      Diff:            266 files changed, 12010 insertions(+), 8276 deletions(-)
+
+  * Changes since Pacemaker-1.0.3
+  + High (bnc#488291): ais: don't rely on byte endianness on ptr cast
+  + High (bnc#507255): Tools: crm: delete rsc/op_defaults (these meta_attributes are killing me)
+  + High (bnc#507255): Tools: crm: import properly rsc/op_defaults
+  + High (LF 2114): Tools: crm: add support for operation instance attributes
+  + High: ais: Bug lf#2126 - Messages replies cannot be routed to transient clients
+  + High: ais: Fix compilation for the latest Corosync API (v1719)
+  + High: attrd: Don't perform all updates as complete refreshes
+  + High: cib: Fix huge memory leak affecting heartbeat-based clusters
+  + High: Core: Allow xpath queries to match attributes
+  + High: Core: Generate the help text directly from a tool options struct
+  + High: Core: Handle differences in 0.6 messaging format
+  + High: crmd: Bug lf#2120 - All transient node attribute updates need to go via attrd
+  + High: crmd: Correctly calculate how long an FSA action took to avoid spamming the logs with errors
+  + High: crmd: Fix another large memory leak affecting Heartbeat based clusters
+  + High: lha: Restore compatability with older versions
+  + High: PE: Bug bnc#495687 - Filesystem is not notified of successful STONITH under some conditions
+  + High: PE: Make running a cluster with STONITH enabled but no STONITH resources an error and provide details on resolutions
+  + High: PE: Prevent use-ofNULL when using resource ordering sets
+  + High: PE: Provide inter-notification ordering guarantees
+  + High: PE: Rewrite the notification code to be understanable and extendable
+  + High: Tools: attrd - Prevent race condition resulting in the cluster forgetting node's wish to shut down
+  + High: Tools: crm: regression tests
+  + High: Tools: crm_mon - Fix smtp notifications
+  + High: Tools: crm_resource - Repair the ability to query meta attributes
+  + Low Build: Bug lf#2105 - Debian package should contain pacemaker doc and crm templates
+  + Medium (bnc#507255): Tools: crm: handle empty rsc/op_defaults properly
+  + Medium (bnc#507255): Tools: crm: use the right obj_type when creating objects from xml nodes
+  + Medium (LF 2107): Tools: crm: revisit exit codes in configure
+  + Medium: cib: Don't bother validating updates that only affect the status section
+  + Medium: Core: Include supported stacks in version information
+  + Medium: crmd: Record in the CIB, the cluster infrastructure being used
+  + Medium: cts: Don't combine crm_standby arguments - the wrapper can't process them
+  + Medium: cts: Fix the CIBAusdit class
+  + Medium: Extra: Refresh showscores script from Dominik
+  + Medium: PE: Build a statically linked version of ptest
+  + Medium: PE: Correctly log the actions for resources that are being recovered
+  + Medium: PE: Correctly log the occurance of promotion events
+  + Medium: PE: Implememt node health based on Mark Hamzy's original patch
+  + Medium: Tools: Add examples to help text outputs
+  + Medium: Tools: crm: catch syntax errors for configure load
+  + Medium: Tools: crm: implement erasing nodes in configure erase
+  + Medium: Tools: crm: work with parents only when managing xml objects
+  + Medium: Tools: crm_mon - Add option to run custom notification program on resource operations (Patch by Dominik Klein)
+  + Medium: Tools: crm_resource - Allow --cleanup to function on complex resources and cluster-wide
+  + Medium: Tools: haresource2cib.py - Patch from horms to fix conversion error
+  + Medium: Tools: Include stack information in crm_mon output
+  + Medium: Tools: Two new options (--stack,--constraints) to crm_resource for querying how a resource is configured
+
+ -- Andrew Beekhof <abeekhof@suse.de>  Thu, 04 Jun 2009 08:46:20 +0200
+
 pacemaker (1.0.3-1) stable; urgency=medium
   * Update source tarball to revision: b133b3f19797 (stable-1.0) tip
   * Statistics:
