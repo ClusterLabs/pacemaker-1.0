@@ -31,8 +31,16 @@
 #include <sys/wait.h>
 #include <errno.h>
 #include <glib.h>
-#include <heartbeat/ha_msg.h>
+
+#if HAVE_HB_CONFIG_H
 #include <heartbeat/hb_config.h>
+#endif
+
+#if HAVE_GLUE_CONFIG_H
+#include <glue/glue_config.h>
+#endif
+
+#include <heartbeat/ha_msg.h>
 #include <clplumbing/cl_signal.h>
 #include <clplumbing/GSource.h>
 #include <clplumbing/uids.h>
