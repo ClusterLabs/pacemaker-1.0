@@ -67,6 +67,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
+#include <sys/shm.h>
 #ifdef HAVE_GETOPT_H
 #include <getopt.h>
 #endif /* HAVE_GETOPT_H */
@@ -89,8 +90,8 @@
 #if SUPPORT_HEARTBEAT
 #    include <apphb.h>
 #    include <hb_api.h>
+#    include <heartbeat.h>
 #endif
-#include <heartbeat.h>
 #include <ha_msg.h>
 
 #include <lrm/raexec.h>
@@ -391,7 +392,7 @@ static struct RA_operation_to_handler raop_handler[] = {
 	{ "status",	stonithRA_monitor },
 };
 
-#define PID_FILE        HA_VARRUNDIR "/stonithd.pid"
+#define PID_FILE        HA_STATE_DIR "/stonithd.pid"
 
 /* define the message type between stonith daemons on different nodes */
 #define T_WHOCANST  	"whocanst"	/* who can stonith a node */
@@ -437,7 +438,7 @@ static const char * simple_help_screen =
 
 static const char * optstr = "ahi:krsvt";
 /* Will replace it with dynamical a config variable */
-#define STD_PIDFILE         HA_VARRUNDIR "/stonithd.pid"
+#define STD_PIDFILE         HA_STATE_DIR "/stonithd.pid"
 
 /* Do not need itselv's log file for real wotk, only for debugging
 #define DAEMON_LOG      HA_VARLOGDIR "/stonithd.log"
@@ -1635,7 +1636,7 @@ init_client_API_handler(void)
         /* Add root's uid */
         g_hash_table_insert(uid_hashtable, GUINT_TO_POINTER(0), &tmp);
 
-        pw_entry = getpwnam(HA_CCMUSER);
+        pw_entry = getpwnam(CRM_DAEMON_USER);
         if (pw_entry == NULL) {
                 stonithd_log(LOG_ERR, "Cannot get the uid of HACCMUSER");
         } else {
