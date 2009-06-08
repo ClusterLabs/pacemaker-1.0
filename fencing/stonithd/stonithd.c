@@ -88,9 +88,11 @@
 #include <clplumbing/coredumps.h>
 #include <clplumbing/realtime.h>
 #if SUPPORT_HEARTBEAT
-#    include <apphb.h>
 #    include <hb_api.h>
 #    include <heartbeat.h>
+#endif
+#if SUPPORT_APPHB
+#    include <apphb.h>
 #endif
 #include <ha_msg.h>
 
@@ -253,7 +255,7 @@ static void stonithdProcessDied(ProcTrack* p, int status, int signo
 static void stonithdProcessRegistered(ProcTrack* p);
 static const char * stonithdProcessName(ProcTrack* p);
 
-#if SUPPORT_HEARTBEAT
+#if SUPPORT_APPHB
 /* For application heartbeat related */
 static unsigned long
         APPHB_INTERVAL  = 2000, /* MS */
@@ -456,9 +458,11 @@ static GMainLoop *	mainloop 		= NULL;
 static const char * 	stonithd_name		= "stonithd";
 extern const char * 	crm_system_name;
 static gboolean		STARTUP_ALONE 		= FALSE;
-#if SUPPORT_HEARTBEAT
+#if SUPPORT_APPHB
 static gboolean 	SIGNONED_TO_APPHBD	= FALSE;
 static gboolean 	NEED_SIGNON_TO_APPHBD	= FALSE;
+#endif
+#if SUPPORT_HEARTBEAT
 static ll_cluster_t *	hb			= NULL;
 #endif
 static gboolean 	TEST 			= FALSE;
@@ -600,7 +604,7 @@ main(int argc, char ** argv)
 				break;
 
 			case 'r': /* Register to apphbd */
-#if SUPPORT_HEARTBEAT
+#if SUPPORT_APPHB
 				NEED_SIGNON_TO_APPHBD = TRUE;
 #else
 				printf("Sorry, Heartbeat support"
@@ -614,7 +618,7 @@ main(int argc, char ** argv)
 			    hearbteat to apphbd.
 			  */
 			case 'i':
-#if SUPPORT_HEARTBEAT
+#if SUPPORT_APPHB
 				if (optarg) {
 					APPHB_INTERVAL = atoi(optarg);		
 					APPHB_WARNTIME = 3*APPHB_INTERVAL;
@@ -724,7 +728,7 @@ main(int argc, char ** argv)
 		goto delhb_quit;
 	}
 
-#if SUPPORT_HEARTBEAT
+#if SUPPORT_APPHB
 	if( is_heartbeat_cluster()) {
 	if (NEED_SIGNON_TO_APPHBD == TRUE) {
 		if ( (main_rc=init_using_apphb()) != 0 ) {
@@ -752,7 +756,7 @@ main(int argc, char ** argv)
 	reboot_blocked_table = g_hash_table_new_full(g_str_hash, g_str_equal
 						, g_free, free_timer);
 
-#if SUPPORT_HEARTBEAT
+#if SUPPORT_APPHB
 	if( is_heartbeat_cluster()) {
 	/* To avoid the warning message when app_interval is very small. */
 	MY_APPHB_HB();
@@ -770,7 +774,7 @@ main(int argc, char ** argv)
 	g_main_run(mainloop);
 	return_to_orig_privs();
 
-#if SUPPORT_HEARTBEAT
+#if SUPPORT_APPHB
 	if( is_heartbeat_cluster()) {
 	MY_APPHB_HB();
 	if (SIGNONED_TO_APPHBD == TRUE) {
@@ -3975,7 +3979,7 @@ delete_client_by_chan(GList ** client_list, IPC_Channel * ch)
 	return ST_OK;
 }
 
-#if SUPPORT_HEARTBEAT
+#if SUPPORT_APPHB
 /* make the apphb_interval, apphb_warntime adjustable important */
 static int
 init_using_apphb(void)
