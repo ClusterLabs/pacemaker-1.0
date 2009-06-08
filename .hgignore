@@ -1,9 +1,11 @@
 syntax: glob
 
+
 # Autofoo entries
 *.o
 *.la
 *.lo
+*.loT
 *.pyc
 .libs
 .deps
@@ -46,6 +48,10 @@ logs
 
 # OS and Editor Artifacts
 .DS_Store
+.bomb
+*.rej
+*.bz2
+*.sed
 *.diff
 *.patch
 *.gres
@@ -94,6 +100,9 @@ crmd/fsa_inputs.png
 crmd/fsa_inputs_by_action.png
 pengine/pengine
 pengine/ptest
+pengine/ptest.8
+pengine/testcases/*.pe.dot
+tools/*.8
 tools/attrd
 tools/attrd_updater
 tools/ccdv
@@ -118,6 +127,10 @@ tools/crmadmin
 tools/hb2openais.sh
 tools/iso8601
 tools/pingd
+tools/regression.out
+tools/shell/regression/lrmregtest-lsb
+tools/shell/regression/regression.sh
+tools/shell/regression/testcases/confbasic-xml.filter
 doc/ChangeLog
 doc/GettingStarted.txt
 doc/HardwareGuide.txt
@@ -126,7 +139,9 @@ doc/crm_resource.8
 doc/faqntips.txt
 doc/heartbeat_api.txt
 doc/rsync.txt
-pengine/testcases/*.pe.dot
+fencing/stonithd/stonithd
+fencing/test/apitest
+xml/*-1.0.rng
 
 # Misc
 HTML
