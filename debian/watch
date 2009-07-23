@@ -1,0 +1,2 @@
+version=3
+http://download.opensuse.org/repositories/server:/ha-clustering/SUSE_Factory/src/pacemaker-([\d]+[\d\.]*)-[\d\.]+src\.rpm

@@ -1,8 +1,12 @@
 This package was first debianized by Paolo Molaro <lupus@debian.org> on
 Wed, 17 Nov 1999 17:30:23 +0100.
 
-The original sources can be found at:
-	http://www.linux-ha.org/download/
+Upstream web links:
+	http://clusterlabs.org/
+	http://clusterlabs.org/mw/
+
+The original source can be found at:
+http://hg.clusterlabs.org/pacemaker/stable-0.6/archive/Pacemaker-0.6.5.tar.bz2
 
 Upstream Authors (from doc/AUTHORS):
 
@@ -23,13 +27,13 @@ Contributors, ordered by last name:
 	Andrew Beekhof <andrew@beekhof.net>
 	        Cluster Resource Manager
 		Darwin Cleanups
-	StÈphane Billiart <stephane@reefedge.com> - unicast support
+	St√©phane Billiart <stephane@reefedge.com> - unicast support
 	Gregor Binder <gbinder@sysfive.com> - "meatware" STONITH support
         Juan Pedro Paredes Caballero <juampe@retemail.es> - Debian support
 	Dusan Djordjevic <dj.dule@linux.org.yu> - documentation
 	Kevin Dwyer <kevin@pheared.net> - ipfail, bug fixes.
 	Joachim Gleissner <jg@suse.de> ssh STONITH support
-	Luis Claudio R. GonÁalves <lclaudio@conectiva.com.br>
+	Luis Claudio R. Gon√ßalves <lclaudio@conectiva.com.br>
 		nice_failback code, hb_standby code, fixes
 	Thomas Hepper <th@ant.han.de>
 		solaris and Debian support
@@ -46,7 +50,7 @@ Contributors, ordered by last name:
 	Xiaoxiang Liu <xiliu@ncsa.uiuc.edu>
 		interprocess communication library
 	Friedrich Lobenstock <fl@fl.priv.at> - SuSE compatibility fixes
-	Lars Marowsky-BrÈe <lmb@suse.de>
+	Lars Marowsky-Br√©e <lmb@suse.de>
 		LVM, ICP and ssh STONITH support, many fixes
 		SuSE package maintainer
 		STABLE_1_0 / 1.0.x release maintenance
@@ -69,7 +73,7 @@ Contributors, ordered by last name:
 	Mike Tilstra <conrad@sistina.com> - VACM support
 	Marcelo Tosatti <marcelo@conectiva.com.br>
 		API support, initial plugin support
-	IÒaki Fern·ndez Villanueva - debian support
+	I√±aki Fern√°ndez Villanueva - debian support
 	Todd Wheeling <wheeling@mclinux.com>
 		APC master switch and WTI [WT]PS-xxx support
 	Volker Wiegand <Volker.Wiegand@suse.de>
@@ -103,5 +107,3 @@ A copy of the GNU LGPL licence is available on Debian systems at
 
 A copy of the BSD licence is available on Debian systems at
 /usr/share/common-licenses/BSD
-
-

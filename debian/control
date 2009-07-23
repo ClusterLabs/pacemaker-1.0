@@ -1,34 +1,68 @@
 Source: pacemaker
 Section: admin
 Priority: optional
-Maintainer: Andrew Beekhof <abeekhof@suse.de>
-Build-Depends: debhelper (>= 5.0.37.2), libglib2.0-dev, python, libtool, libcurl4-openssl-dev | libcurl3-openssl-dev, libxml2-dev, uuid-dev, libbz2-dev, uuid-dev, libltdl3-dev, libgnutls-dev, python-central (>= 0.5), python-dev, libpam0g-dev, libncurses5-dev, libxslt-dev, heartbeat-dev (>= 2.99), libopenais-dev
-Standards-Version: 3.7.2
+Maintainer: Debian HA Maintainers <debian-ha-maintainers@lists.alioth.debian.org>
+Uploaders: Martin Loschwitz <madkiss@debian.org>, Anibal Monsalve Salazar <anibal@debian.org>, Simon Horman <horms@debian.org>
+Build-Depends: debhelper (>= 5), automake, autoconf, chrpath, libsnmp-dev, libglib2.0-dev, perl, net-tools, python, libnet1-dev, libtool, libcurl4-openssl-dev | libcurl3-openssl-dev, libxml2-dev, bison, flex, uuid-dev, libbz2-dev, zlib1g-dev, libltdl3-dev, openssh-client, libgnutls-dev, python-central (>= 0.5), python-dev, libpam0g-dev, libncurses5-dev, libopenais-legacy-dev (>= 0.80.5+svn20090522), openais-legacy (>= 0.80.5+svn20090522), heartbeat-common-dev, libheartbeat2-dev, libxslt1-dev, libesmtp-dev
+Standards-Version: 3.8.1
+Homepage: http://clusterlabs.org/
 XS-Python-Version: current
 
-Package: pacemaker
+Package: pacemaker-heartbeat
 Section: admin
 Priority: optional
 Architecture: any
-Depends: ${shlibs:Depends}, heartbeat (>= 2.99)
-Recommends: openais
+Depends: ${shlibs:Depends}, ${misc:Depends}, heartbeat (>= 2.99+sles11r7-1), python, adduser
+Conflicts: pacemaker-openais
 XB-Python-Version: ${python:Versions}
-Description: High-Availability cluster resource manager for Heartbeat and/or OpenAIS
+Description: HA cluster resource manager for Heartbeat
+ High-Availability cluster resource manager for Heartbeat.
+ .
  Pacemaker supports a very sophisticated dependency model for n-node
  clusters and can respond to node and resource-level failures.
  .
  It supports both the Heartbeat (Linux-HA) and OpenAIS cluster stacks.
 
-Package: pacemaker-dev
+Package: pacemaker-openais
 Section: devel
 Priority: optional
 Architecture: any
-Depends: pacemaker (= ${binary:Version}), ${python:Depends}
+Depends: ${shlibs:Depends}, ${misc:Depends}, openais-legacy, heartbeat-common, python, adduser
+Conflicts: pacemaker-heartbeat
 XB-Python-Version: ${python:Versions}
-Description: High-Availability cluster resource manager for Heartbeat and/or OpenAIS - development files
+Description: HA cluster resource manager for OpenAIS
+ High-Availability cluster resource manager for OpenAIS.
+ This package contains development files
+ .
  Pacemaker supports a very sophisticated dependency model for n-node
  clusters and can respond to node and resource-level failures.
+
+Package: pacemaker-heartbeat-dev
+Section: devel
+Priority: optional
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, pacemaker-heartbeat (>= ${source:Version}), python
+XB-Python-Version: ${python:Versions}
+Description: HA cluster resource manager for Heartbeat (development files)
+ High-Availability cluster resource manager for Heartbeat.
  .
- It supports both the Heartbeat (Linux-HA) and OpenAIS cluster stacks.
+ Pacemaker supports a very sophisticated dependency model for n-node
+ clusters and can respond to node and resource-level failures.
+ . 
+ This package contains the development files for pacemaker compiled with
+ support for Heartbeat.
+
+Package: pacemaker-openais-dev
+Section: devel
+Priority: optional
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, pacemaker-openais (>= ${source:Version}), python
+XB-Python-Version: ${python:Versions}
+Description: HA cluster resource manager for OpenAIS (development files) 
+ High-Availability cluster resource manager for OpenAIS.
  .
- This package contains development files
+ Pacemaker supports a very sophisticated dependency model for n-node
+ clusters and can respond to node and resource-level failures.
+ . 
+ This package contains the development files for pacemaker compiled with
+ support for OpenAIS.
