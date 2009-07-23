@@ -21,11 +21,11 @@ set -e
 case "$1" in
     configure)
 
-  	addgroup --system hacluster
-        adduser --system haclient --ingroup hacluster --home /var/lib/heartbeat
+       addgroup --system haclient
+        adduser --system hacluster --ingroup haclient --home /var/lib/heartbeat
 
-	for i in /var/run/heartbeat/crm /var/lib/heartbeat/crm \
-			/var/lib/heartbeat/pengine /var/lib/pengine; do
+       for i in /var/run/heartbeat/crm /var/lib/heartbeat/crm \
+                       /var/lib/heartbeat/pengine /var/lib/pengine; do
 		if [ ! -d $i ]; then
 		  mkdir $i
 		fi
