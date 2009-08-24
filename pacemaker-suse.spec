@@ -18,13 +18,13 @@
 # norootforbuild
 
 %define with_ais_support        1
-%define with_heartbeat_support  0
+%define with_heartbeat_support  1
 
 # 
 # Since this spec file supports multiple distributions, ensure we
 # use the correct group for each.
 #
-%if 0%{?fedora_version} || 0%{?centos_version} || 0%{?rhel_version}
+%if 0%{?fedora} || 0%{?centos_version} || 0%{?rhel}
 %define pkg_group System Environment/Daemons
 %define pkg_devel_group	Development/Libraries
 %else
@@ -34,8 +34,8 @@
 
 Name:           pacemaker
 Summary:        The Pacemaker scalable High-Availability cluster resource manager
-Version:        1.0.2
-Release:        16
+Version:        1.0.5
+Release:        1
 License:        GPL v2 or later; LGPL v2.1 or later
 Url:            http://www.clusterlabs.org
 Group:		%{pkg_group}
@@ -43,10 +43,10 @@ Source:         pacemaker.tar.gz
 BuildRoot:      %{_tmppath}/%{name}-%{version}-build
 AutoReqProv:    on
 Conflicts:      heartbeat < 2.99
-Requires(pre):	heartbeat-common
+Requires(pre):	cluster-glue
 Requires:       libpacemaker3 = %{version}-%{release}
-BuildRequires:  e2fsprogs-devel glib2-devel libheartbeat-devel libxml2-devel libxslt-devel pkgconfig python-devel
-BuildRequires:  gnutls-devel libesmtp-devel ncurses-devel net-snmp-devel pam-devel
+BuildRequires:  e2fsprogs-devel glib2-devel libglue-devel libxml2-devel libxslt-devel pkgconfig python-devel
+BuildRequires:  gnutls-devel ncurses-devel net-snmp-devel pam-devel openssl-devel
 
 %if %with_ais_support
 BuildRequires:  libopenais-devel
@@ -59,13 +59,28 @@ Requires:       heartbeat
 
 %if 0%{?suse_version}
 %define _libexecdir %{_libdir}
-BuildRequires:  libbz2-devel
+# SLES10 doesn't pull in tcpd-devel with net-snmp-devel
+BuildRequires:  libbz2-devel help2man tcpd-devel
+Recommends:     libdlm resource-agents
 Suggests:       graphviz
-Recommends:     libdlm heartbeat-resources
+%if 0%{?suse_version} > 1999
+BuildRequires:  libesmtp-devel
 %endif
-%if 0%{?fedora_version} || 0%{?centos_version} || 0%{?rhel_version}
-BuildRequires:  which bzip2-devel
+%else
+Requires:     resource-agents
 %endif
+
+%if 0%{?fedora}
+# These aren't part of RHEL/CentOS
+BuildRequires:  libesmtp-devel help2man
+%endif
+
+%if 0%{?fedora} || 0%{?centos_version} || 0%{?rhel}
+# AC_PROG_CC fails on RHEL-4 if gcc-c++ is not installed
+# RHEL4 doesn't pull in libselinux-devel with net-snmp-devel
+BuildRequires:  which bzip2-devel lm_sensors-devel gcc-c++ libselinux-devel
+%endif
+
 %if 0%{?mandriva_version}
 BuildRequires:  libbzip2-devel
 %endif
@@ -147,11 +162,9 @@ export CFLAGS
 %if 0%{?suse_version} < 1001
 export PKG_CONFIG_PATH="$PKG_CONFIG_PATH:/opt/gnome/%{_lib}/pkgconfig:/opt/gnome/share/pkgconfig"
 %endif
-./ConfigureMe configure --prefix=%{_prefix} --sysconfdir=%{_sysconfdir} \
-	--localstatedir=%{_var} --infodir=%{_infodir} 		\
-	--mandir=%{_mandir} --libdir=%{_libdir} 		\
-	--libexecdir=%{_libexecdir} 				\
-	--with-ais-prefix=%{_prefix}      			\
+./autogen.sh
+%{configure} --localstatedir=%{_var}			\
+	--with-ais-prefix=%{_prefix}   			\
 	--enable-fatal-warnings=no 
 export MAKE="make %{?jobs:-j%jobs}"
 make %{?jobs:-j%jobs}
