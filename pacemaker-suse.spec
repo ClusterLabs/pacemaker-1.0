@@ -163,6 +163,7 @@ rm -rf $RPM_BUILD_DIR/pacemaker
 %dir %{_datadir}/doc/packages/pacemaker
 %dir %{_datadir}/doc/packages/pacemaker/templates
 %{_datadir}/pacemaker
+%{_datadir}/snmp/mibs/PCMK-MIB.txt
 %{_libdir}/heartbeat/*
 %{_sbindir}/cibadmin
 %{_sbindir}/crm_attribute

@@ -151,6 +151,7 @@ rm -rf %{buildroot}
 # %dir %{_var}/lib/heartbeat
 
 %{_datadir}/pacemaker
+%{_datadir}/snmp/mibs/PCMK-MIB.txt
 %{_libdir}/heartbeat/*
 %{_sbindir}/cibadmin
 %{_sbindir}/crm_attribute
