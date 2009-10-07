@@ -16,21 +16,7 @@
 #
 
 # norootforbuild
-
-%define with_ais_support        1
-%define with_heartbeat_support  1
-
-# 
-# Since this spec file supports multiple distributions, ensure we
-# use the correct group for each.
-#
-%if 0%{?fedora} || 0%{?centos_version} || 0%{?rhel}
-%define pkg_group System Environment/Daemons
-%define pkg_devel_group	Development/Libraries
-%else
-%define pkg_group Productivity/Clustering/HA
-%define pkg_devel_group Development/Libraries/C and C++
-%endif
+#global _without_heartbeat 1
 
 Name:           pacemaker
 Summary:        The Pacemaker scalable High-Availability cluster resource manager
@@ -38,7 +24,7 @@ Version:        1.0.5
 Release:        1
 License:        GPL v2 or later; LGPL v2.1 or later
 Url:            http://www.clusterlabs.org
-Group:		%{pkg_group}
+Group:		Productivity/Clustering/HA
 Source:         pacemaker.tar.gz
 BuildRoot:      %{_tmppath}/%{name}-%{version}-build
 AutoReqProv:    on
@@ -48,16 +34,15 @@ Requires:       libpacemaker3 = %{version}-%{release}
 BuildRequires:  e2fsprogs-devel glib2-devel libglue-devel libxml2-devel libxslt-devel pkgconfig python-devel
 BuildRequires:  gnutls-devel ncurses-devel net-snmp-devel pam-devel openssl-devel
 
-%if %with_ais_support
+%if 0%{!?_without_ais}
 BuildRequires:  libopenais-devel
 Requires:       openais
 %endif
-%if %with_heartbeat_support
+%if 0%{!?_without_heartbeat}
 BuildRequires:  heartbeat-devel
 Requires:       heartbeat
 %endif
 
-%if 0%{?suse_version}
 %define _libexecdir %{_libdir}
 # SLES10 doesn't pull in tcpd-devel with net-snmp-devel
 BuildRequires:  libbz2-devel help2man tcpd-devel
@@ -68,22 +53,6 @@ BuildRequires:  libesmtp-devel
 %endif
 %else
 Requires:     resource-agents
-%endif
-
-%if 0%{?fedora}
-# These aren't part of RHEL/CentOS
-BuildRequires:  libesmtp-devel help2man
-%endif
-
-%if 0%{?fedora} || 0%{?centos_version} || 0%{?rhel}
-# AC_PROG_CC fails on RHEL-4 if gcc-c++ is not installed
-# RHEL4 doesn't pull in libselinux-devel with net-snmp-devel
-BuildRequires:  which bzip2-devel lm_sensors-devel gcc-c++ libselinux-devel
-%endif
-
-%if 0%{?mandriva_version}
-BuildRequires:  libbzip2-devel
-%endif
 
 %description
 Pacemaker is an advanced, scalable High-Availability cluster resource
@@ -96,16 +65,13 @@ It will run scripts at initialization, when machines go up or down,
 when related resources fail and can be configured to periodically check
 resource health.
 
-
-
-Authors:
---------
-Andrew Beekhof <abeekhof@suse.de>
+Available rpmbuild rebuild options:
+ --without : heartbeat ais
 
 %package -n libpacemaker3
 License:        GPL v2 or later; LGPL v2.1 or later
 Summary:        The Pacemaker scalable High-Availability cluster resource manager
-Group:		%{pkg_group}
+Group:		Productivity/Clustering/HA
 
 %description -n libpacemaker3
 Pacemaker is an advanced, scalable High-Availability cluster resource
@@ -118,21 +84,17 @@ It will run scripts at initialization, when machines go up or down,
 when related resources fail and can be configured to periodically check
 resource health.
 
-
-
-Authors:
---------
-Andrew Beekhof <abeekhof@suse.de>
-
 %package -n libpacemaker-devel 
 License:        GPL v2 only; GPL v2 or later; LGPL v2.1 or later
 Summary:        The Pacemaker scalable High-Availability cluster resource manager
-Group:		%{pkg_devel_group}
+Group:		Development/Libraries/C and C++
 Requires:       %{name} = %{version}-%{release}
 Requires:       libpacemaker3 = %{version}-%{release}
 Requires:       libheartbeat-devel
 
 %description -n libpacemaker-devel
+Headers and shared libraries for developing tools for Pacemaker.
+
 Pacemaker is an advanced, scalable High-Availability cluster resource
 manager for Linux-HA (Heartbeat) and/or OpenAIS.
 
@@ -142,12 +104,6 @@ managing resources and dependencies.
 It will run scripts at initialization, when machines go up or down,
 when related resources fail and can be configured to periodically check
 resource health.
-
-
-
-Authors:
---------
-Andrew Beekhof <abeekhof@suse.de>
 
 %prep
 ###########################################################
@@ -165,6 +121,8 @@ export PKG_CONFIG_PATH="$PKG_CONFIG_PATH:/opt/gnome/%{_lib}/pkgconfig:/opt/gnome
 ./autogen.sh
 %{configure} --localstatedir=%{_var}			\
 	--with-ais-prefix=%{_prefix}   			\
+	%{?_without_heartbeat:--without-heartbeat}      \
+	%{?_without_ais:--without-ais}                  \
 	--enable-fatal-warnings=no 
 export MAKE="make %{?jobs:-j%jobs}"
 make %{?jobs:-j%jobs}
@@ -224,7 +182,7 @@ rm -rf $RPM_BUILD_DIR/pacemaker
 %{_sbindir}/cibpipe
 %{_sbindir}/crm_node
 
-%if %with_heartbeat_support
+%if 0%{!?_without_heartbeat}
 %{_sbindir}/crm_uuid
 %else
 %exclude %{_sbindir}/crm_uuid
@@ -245,7 +203,7 @@ rm -rf $RPM_BUILD_DIR/pacemaker
 %dir /usr/lib/ocf
 %dir /usr/lib/ocf/resource.d
 /usr/lib/ocf/resource.d/pacemaker
-%if %with_ais_support
+%if 0%{!?_without_ais}
 %{_libexecdir}/lcrso/pacemaker.lcrso
 %endif
 

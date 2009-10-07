@@ -1,11 +1,11 @@
 %define gname haclient
 %define uname hacluster
-%define with_ais_support	1
-%define with_heartbeat_support	1
+
+#global _without_heartbeat 1
 
 # When downloading directly from Mercurial, it will automatically add this prefix
 # Invoking 'hg archive' wont but you can add one with:
-#   hg archive -t tgz -p "Pacemaker-1-0-" -r $upstreamversion $upstreamversion.tar.gz
+#   hg archive -t tgz -p "Pacemaker-1-0-$upstreamversion" -r $upstreamversion $upstreamversion.tar.gz
 %define upstreamprefix Pacemaker-1-0-
 %define upstreamversion c9120a53a6ae
 %global specversion 9
@@ -38,11 +38,11 @@ BuildRequires:	libesmtp-devel help2man
 %else
 BuildRequires:  libtool-ltdl-devel
 %endif
-%if %with_ais_support
+%if 0%{!?_without_ais}
 BuildRequires:	libopenais-devel
 Requires:	openais
 %endif
-%if %with_heartbeat_support
+%if 0%{!?_without_heartbeat}
 BuildRequires:	heartbeat-devel
 Requires:	heartbeat
 %endif
@@ -57,6 +57,9 @@ managing resources and dependencies.
 It will run scripts at initialization, when machines go up or down,
 when related resources fail and can be configured to periodically check
 resource health.
+
+Available rpmbuild rebuild options:
+ --without : heartbeat ais
 
 %package -n pacemaker-libs
 License:	GPLv2+ and LGPLv2+
@@ -103,6 +106,8 @@ resource health.
 ./configure --localstatedir=%{_var}   \
         --mandir=%{_mandir}           \
 	--with-ais-prefix=%{_prefix}  \
+	%{?_without_heartbeat:--without-heartbeat} \
+	%{?_without_ais:--without-ais} \
 	--enable-fatal-warnings=no 
 make %{_smp_mflags}
 
@@ -188,7 +193,7 @@ rm -rf %{buildroot}
 %dir /usr/lib/ocf
 %dir /usr/lib/ocf/resource.d
 /usr/lib/ocf/resource.d/pacemaker
-%if %with_ais_support
+%if 0%{!?_without_ais}
 %{_libexecdir}/lcrso/pacemaker.lcrso
 %endif
 
