@@ -183,6 +183,8 @@ rm -rf %{buildroot}
 %doc %{_datadir}/doc/packages/pacemaker/COPYING
 %doc %{_datadir}/doc/packages/pacemaker/COPYING.LGPL
 %doc %{_datadir}/doc/packages/pacemaker/crm_cli.txt
+%doc %{_datadir}/doc/packages/pacemaker/crm_fencing.txt
+%doc %{_datadir}/doc/packages/pacemaker/*.html
 %doc %{_datadir}/doc/packages/pacemaker/templates/*
 %doc %{_mandir}/man8/*.8*
 %doc COPYING

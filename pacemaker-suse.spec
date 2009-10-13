@@ -195,6 +195,8 @@ rm -rf $RPM_BUILD_DIR/pacemaker
 %doc %{_datadir}/doc/packages/pacemaker/COPYING
 %doc %{_datadir}/doc/packages/pacemaker/COPYING.LGPL
 %doc %{_datadir}/doc/packages/pacemaker/crm_cli.txt
+%doc %{_datadir}/doc/packages/pacemaker/crm_fencing.txt
+%doc %{_datadir}/doc/packages/pacemaker/*.html
 %doc %{_datadir}/doc/packages/pacemaker/templates/*
 %doc %{_mandir}/man8/*.8*
 
