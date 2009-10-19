@@ -112,16 +112,15 @@
       <figure>
 	<title>An empty configuration</title>
 	<programlisting>
- &lt;cib generated="true" admin_epoch="0" epoch="0" num_updates="0" have-quorum="false"&gt;
-    &lt;configuration&gt;
-       &lt;crm_config/&gt;
-       &lt;nodes/&gt;
-       &lt;resources/&gt;
-       &lt;constraints/&gt;
-    &lt;/configuration&gt;
-    &lt;status/&gt;
-&lt;/cib&gt;
-	</programlisting>
+  &lt;cib generated="true" admin_epoch="0" epoch="0" num_updates="0" have-quorum="false"&gt;
+     &lt;configuration&gt;
+        &lt;crm_config/&gt;
+        &lt;nodes/&gt;
+        &lt;resources/&gt;
+        &lt;constraints/&gt;
+     &lt;/configuration&gt;
+     &lt;status/&gt;
+  &lt;/cib&gt;</programlisting>
       </figure>
     </section>
     <section>
@@ -132,55 +131,52 @@
       <example>
 	<title>Sample output from crm_mon</title>
 	<screen>
- <command># crm_mon</command>
+  <command># crm_mon</command>
+  ============
+  Last updated: Fri Nov 23 15:26:13 2007
+  Current DC: sles-3 (2298606a-6a8c-499a-9d25-76242f7006ec)
+  3 Nodes configured.
+  5 Resources configured.
+  ============
 
- ============
- Last updated: Fri Nov 23 15:26:13 2007
- Current DC: sles-3 (2298606a-6a8c-499a-9d25-76242f7006ec)
- 3 Nodes configured.
- 5 Resources configured.
- ============
-
- Node: sles-1 (1186dc9a-324d-425a-966e-d757e693dc86): online
-         192.168.100.181        (heartbeat::ocf:IPaddr):        Started sles-1
-         192.168.100.182        (heartbeat:IPaddr):                Started sles-1
-         192.168.100.183        (heartbeat::ocf:IPaddr):        Started sles-1
-         rsc_sles-1        (heartbeat::ocf:IPaddr):        Started sles-1
-         child_DoFencing:2        (stonith:external/vmware):        Started sles-1
- Node: sles-2 (02fb99a8-e30e-482f-b3ad-0fb3ce27d088): standby
- Node: sles-3 (2298606a-6a8c-499a-9d25-76242f7006ec): online
-         rsc_sles-2        (heartbeat::ocf:IPaddr):        Started sles-3
-         rsc_sles-3        (heartbeat::ocf:IPaddr):        Started sles-3
-         child_DoFencing:0        (stonith:external/vmware):        Started sles-3   
-	  </screen>
+  Node: sles-1 (1186dc9a-324d-425a-966e-d757e693dc86): online
+          192.168.100.181        (heartbeat::ocf:IPaddr):        Started sles-1
+          192.168.100.182        (heartbeat:IPaddr):                Started sles-1
+          192.168.100.183        (heartbeat::ocf:IPaddr):        Started sles-1
+          rsc_sles-1        (heartbeat::ocf:IPaddr):        Started sles-1
+          child_DoFencing:2        (stonith:external/vmware):        Started sles-1
+  Node: sles-2 (02fb99a8-e30e-482f-b3ad-0fb3ce27d088): standby
+  Node: sles-3 (2298606a-6a8c-499a-9d25-76242f7006ec): online
+          rsc_sles-2        (heartbeat::ocf:IPaddr):        Started sles-3
+          rsc_sles-3        (heartbeat::ocf:IPaddr):        Started sles-3
+          child_DoFencing:0        (stonith:external/vmware):        Started sles-3</screen>
       </example>
       <example>
 	<title>Sample output from crm_mon -n</title>
 	<screen>
- <command># crm_mon -n</command>
- ============
- Last updated: Fri Nov 23 15:26:13 2007
- Current DC: sles-3 (2298606a-6a8c-499a-9d25-76242f7006ec)
- 3 Nodes configured.
- 5 Resources configured.
- ============
+  <command># crm_mon -n</command>
+  ============
+  Last updated: Fri Nov 23 15:26:13 2007
+  Current DC: sles-3 (2298606a-6a8c-499a-9d25-76242f7006ec)
+  3 Nodes configured.
+  5 Resources configured.
+  ============
 
- Node: sles-1 (1186dc9a-324d-425a-966e-d757e693dc86): online
- Node: sles-2 (02fb99a8-e30e-482f-b3ad-0fb3ce27d088): standby
- Node: sles-3 (2298606a-6a8c-499a-9d25-76242f7006ec): online
+  Node: sles-1 (1186dc9a-324d-425a-966e-d757e693dc86): online
+  Node: sles-2 (02fb99a8-e30e-482f-b3ad-0fb3ce27d088): standby
+  Node: sles-3 (2298606a-6a8c-499a-9d25-76242f7006ec): online
 
- Resource Group: group-1
-     192.168.100.181        (heartbeat::ocf:IPaddr):        Started sles-1
-     192.168.100.182        (heartbeat:IPaddr):                Started sles-1
-     192.168.100.183        (heartbeat::ocf:IPaddr):        Started sles-1
- rsc_sles-1        (heartbeat::ocf:IPaddr):        Started sles-1
- rsc_sles-2        (heartbeat::ocf:IPaddr):        Started sles-3
- rsc_sles-3        (heartbeat::ocf:IPaddr):        Started sles-3
- Clone Set: DoFencing
-     child_DoFencing:0        (stonith:external/vmware):        Started sles-3
-     child_DoFencing:1        (stonith:external/vmware):        Stopped
-     child_DoFencing:2        (stonith:external/vmware):        Started sles-1
-	</screen>
+  Resource Group: group-1
+      192.168.100.181        (heartbeat::ocf:IPaddr):        Started sles-1
+      192.168.100.182        (heartbeat:IPaddr):                Started sles-1
+      192.168.100.183        (heartbeat::ocf:IPaddr):        Started sles-1
+  rsc_sles-1        (heartbeat::ocf:IPaddr):        Started sles-1
+  rsc_sles-2        (heartbeat::ocf:IPaddr):        Started sles-3
+  rsc_sles-3        (heartbeat::ocf:IPaddr):        Started sles-3
+  Clone Set: DoFencing
+      child_DoFencing:0        (stonith:external/vmware):        Started sles-3
+      child_DoFencing:1        (stonith:external/vmware):        Stopped
+      child_DoFencing:2        (stonith:external/vmware):        Started sles-1</screen>
       </example>
       <para>The DC (Designated Controller) node is where all the decisions are made and if the current DC fails a new one is elected from the remaining cluster nodes.  The choice of DC is of no significance to an administrator beyond the fact that its logs will generally be more interesting.</para></section><section><title>How Should the Configuration be Updated?</title>
       <para>There are three basic rules for updating the cluster configuration:</para>
@@ -195,10 +191,9 @@
       <figure>
 	<title>Safely using an editor to modify the cluster configuration</title>
 	<programlisting>
-	  <command>cibadmin --query &gt; tmp.xml</command>
-	  <command>vi tmp.xml</command>
-	  <command>cibadmin --replace --xml-file tmp.xml</command>
-	</programlisting>
+  <command>cibadmin --query &gt; tmp.xml</command>
+  <command>vi tmp.xml</command>
+  <command>cibadmin --replace --xml-file tmp.xml</command></programlisting>
       </figure>
       <para>Some of the better XML editors can make use of a Relax NG schema to help make sure any changes you make are valid.
 The schema describing the configuration can normally be found in /usr/lib/heartbeat/pacemaker.rng on most systems.</para>
@@ -206,10 +201,9 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
       <figure>
 	<title>Safely using an editor to modify a subsection of the cluster configuration</title>
 	<programlisting>
-	  <command>cibadmin --query --obj_type resources &gt; tmp.xml</command>
-	  <command>vi tmp.xml</command>
-	  <command>cibadmin --replace --obj_type resources --xml-file tmp.xml</command>
-	</programlisting>
+  <command>cibadmin --query --obj_type resources &gt; tmp.xml</command>
+  <command>vi tmp.xml</command>
+  <command>cibadmin --replace --obj_type resources --xml-file tmp.xml</command></programlisting>
       </figure>
       <para>to avoid modifying any other part of the configuration.</para></section><section><title>Quickly Deleting Part of the Configuration</title>
       <para>Identify the object you wish to delete.  eg.</para>
@@ -228,25 +222,22 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
   <lrm_resource id="child_DoFencing:2" type="external/vmware" class="stonith">
   <lrm_resource id="child_DoFencing:0" type="external/vmware" class="stonith">
   <lrm_resource id="child_DoFencing:3" type="external/vmware" class="stonith">
-]]>
-	</screen>
+]]></screen>
       </example>
       <para>Next identify the resource’s tag name and id (in this case primitive and child_DoFencing).  Then simply execute: </para>
       <figure>
 	<title>Deleting a resource</title>
-	<programlisting>
-	  <command>cibadmin --delete --crm_xml ‘&lt;primitive id=”child_DoFencing”/&gt;’</command>
-	</programlisting>
+	<programlisting><command> cibadmin --delete --crm_xml ‘&lt;primitive id=”child_DoFencing”/&gt;’</command></programlisting>
       </figure>
     </section>
     <section><title>Updating the Configuration Without Using XML</title>
       <para>Some common tasks can also be performed with one of the higher level tools that avoid the need to read or edit XML.</para>
       <para>To enable stonith for example, one could run:</para>
-      <command>crm_attribute --attr-name stonith-enabled --attr-value true</command>
+      <screen>  <command>crm_attribute --attr-name stonith-enabled --attr-value true</command></screen>
       <para>Or to see if somenode is allowed to run resources, there is:</para>
-      <command>crm_standby --get-value --node-uname somenode</command>
+      <screen>  <command>crm_standby --get-value --node-uname somenode</command></screen>
       <para>Or to find the current location of my-test-rsc one can use:</para>
-      <command>crm_resource --locate --resource my-test-rsc</command>
+      <screen>  <command>crm_resource --locate --resource my-test-rsc</command></screen>
     </section>
     <section>
       <anchor id="MakingConfigurationChangesin"/>
@@ -263,8 +254,7 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
  Type Ctrl-D to exit the crm_shadow shell
  shadow[test]: 
  shadow[test] # <command>crm_shadow --which</command>
- test
-	</programlisting>
+ test</programlisting>
       </figure>
       <para>
 	From this point on, all cluster commands will automatically use the shadow copy instead of talking to the cluster’s active configuration.
@@ -307,8 +297,7 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
           <cluster_property_set id="cib-bootstrap-options">
              <nvpair id="cib-bootstrap-1" name="stonith-enabled" value="1"/>
              <nvpair id="cib-bootstrap-2" name="pe-input-series-max" value="30000"/>
-]]>
-	</programlisting>
+]]></programlisting>
       </example>
       <para>Discarding changes and verifying the real configuration is intact</para>
       <para>For a full list of crm_shadow options and command, invoke the command without any arguments.</para>
@@ -433,8 +422,7 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
 	  <title>An example of the fields set for a cib object</title>
 	  <programlisting>
  &lt;cib have-quorum="true" validate-with="pacemaker-1.0" admin_epoch="1" epoch="12" num_updates="65"
-    dc-uuid="ea7d39f4-3b94-4cfa-ba7a-952956daabee" &gt;
-	  </programlisting>
+    dc-uuid="ea7d39f4-3b94-4cfa-ba7a-952956daabee" &gt;</programlisting>
 	</figure>
       </section>
     </section>
@@ -525,32 +513,22 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
       <section>
 	<title>Querying and Setting Cluster Options</title>
 	<para>Cluster options can be queried and modified using the crm_attribute tool.  To get the current value of cluster-delay, simply use:</para>
-	<screen>
- <command>crm_attribute --attr-name cluster-delay --get-value</command>
-	</screen>
+	<screen><command>crm_attribute --attr-name cluster-delay --get-value</command></screen>
 	<para>which is more simply written as</para>
-	<screen>
- <command>crm_attribute --get-value -n cluster-delay</command>
-	</screen>
+	<screen><command>crm_attribute --get-value -n cluster-delay</command></screen>
 	<para>If a value is found, the you’ll see a result such as this</para>
 	<screen>
  <command> # crm_attribute --get-value -n cluster-delay</command>
- name=cluster-delay value=60s
-	</screen>
+ name=cluster-delay value=60s</screen>
 	<para>However if no value is found, the tool will display an error:</para>
 	<screen>
  <command># crm_attribute --get-value -n clusta-deway</command>
  name=clusta-deway value=(null)
- Error performing operation: The object/attribute does not exist
-	</screen>
+ Error performing operation: The object/attribute does not exist</screen>
 	<para>To use a different value, eg. 30s, simply run:</para>
-	<screen>
- <command>crm_attribute --attr-name cluster-delay --attr-value 30s</command>
-	</screen>
+	<screen><command>crm_attribute --attr-name cluster-delay --attr-value 30s</command></screen>
 	<para>To go back to the cluster’s default value, you can then delete the value with:</para>
-	<screen>
- <command>crm_attribute --attr-name cluster-delay --delete-attr</command>
-	</screen>
+	<screen><command>crm_attribute --attr-name cluster-delay --delete-attr</command></screen>
       </section>
       <section>
 	<title>When Options are Listed More Than Once</title>
@@ -560,10 +538,9 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
 	  <screen>
  <command># crm_attribute --attr-name batch-limit --delete-attr</command>
  Multiple attributes match name=batch-limit in crm_config:
- Value: 50                 (set=cib-bootstrap-options, id=cib-bootstrap-options-batch-limit)
- Value: 100         (set=custom, id=custom-batch-limit)
- Please choose from one of the matches above and suppy the 'id' with --attr-id
-	  </screen>
+ Value: 50          (set=cib-bootstrap-options, id=cib-bootstrap-options-batch-limit)
+ Value: 100         (set=custom, id=custom-batch-limit)
+ Please choose from one of the matches above and suppy the 'id' with --attr-id</screen>
 	</example>
 	<para>In such cases follow the on-screen instructions to perform the requested action.  To determine which value is currently being used by the cluster, please refer to the the section on <link linkend="">rules</link>.</para>
       </section>
@@ -576,7 +553,7 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
       <para>Each node in the cluster will have an entry in the nodes section containing its UUID, uname and type.</para>
       <figure>
 	<title>Example cluster node entry</title>
-	<screen>   &lt;node id="1186dc9a-324d-425a-966e-d757e693dc86" uname="sles-1" type="normal"/&gt;</screen>
+	<screen> <node id="1186dc9a-324d-425a-966e-d757e693dc86" uname="sles-1" type="normal"/></screen>
       </figure>
       <para>In normal circumstances, the admin should let the cluster populate this information automatically from the communications and membership data.  However one can use the crm_uuid tool to read an existing UUID or define a value before the cluster starts.</para></section><section><title>
 	<anchor id="DescribingaClusterNode"/>Describing a Cluster Node</title>
