@@ -1,38 +1,32 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE article
   PUBLIC "-//OASIS//DTD DocBook XML V4.1.2//EN" "http://www.oasis-open.org/docbook/xml/4.1.2/docbookx.dtd">
-<article lang="">
-   <para>Beekhof IT</para>
-   <para/>
-   <para/>
-   <para/>
-   <para/>
-   <para/>
-   <para/>
-   <para/>
-   <para/>
-   <para/>
-   <para/>
-   <para/>
-   <para/>
-   <para/>
-   <para/>
-   <para>Pacemaker Configuration</para>
-   <para>Explained</para>
-   <para>by Andrew Beekhof</para>
-   <para>
-      <ulink url="mailto:pacemaker@clusterlabs.org?subject=">pacemaker@clusterlabs.org</ulink>
-   </para>
-   <para>Last updated on Wednesday, October 14, 2009 for Pacemaker 1.0.5</para>
-   <para>Table of Contents</para>
-   <para/>
-   <para/>
-   <para>Read-Me-First</para><sect1><title>The Scope of this Document </title>
+<article lang="en">
+   <title>Pacemaker Configuration Explained</title>
+   <articleinfo>
+     <author>
+       <firstname>Andrew</firstname>
+       <surname>Beekhof</surname>
+       <email>andrew@beekhof.net</email>
+       <email>pacemaker@oss.clusterlabs.org</email>
+     </author>
+     <revhistory>
+       <revision>
+         <revnumber>1.0.1</revnumber>
+         <date>19 Oct 2009</date>
+         <revremark>Import from PDF.</revremark>
+       </revision>
+     </revhistory>
+   </articleinfo>
+   <section/>
+   <section id="about"><title>Read-Me-First</title>
+     <section><title>The Scope of this Document </title>
    <para>The purpose of this document is to definitively explain the concepts used to configure Pacemaker.   To achieve this best, it will focus exclusively on the XML syntax used to configure the CIB.  </para>
    <para>For those that are allergic to XML, Pacemaker comes with a cluster shell and a Python based GUI exists, however these tools will not be covered at all in this document<footnote>
          <para> It is hoped however, that having understood the concepts explained here, that the functionality of these tools will also be more readily understood.</para>
       </footnote>, precisely because they hide the XML.   </para>
-   <para>Additionally, this document is NOT a step-by-step how-to guide for configuring a specific clustering scenario.  Although such guides exist, the purpose of this document is to provide an understanding of the building blocks that can be used to construct any type of Pacemaker cluster. </para></sect1><sect1><title>What Is Pacemaker?</title>
+   <para>Additionally, this document is NOT a step-by-step how-to guide for configuring a specific clustering scenario.  Although such guides exist, the purpose of this document is to provide an understanding of the building blocks that can be used to construct any type of Pacemaker cluster. </para></section>
+   <section><title>What Is Pacemaker?</title>
    <para>Pacemaker is a cluster resource manager.  It achieves maximum availability for your cluster services (aka. resources) by detecting and recovering from node and resource-level failures by making use of the messaging and membership capabilities provided by your preferred cluster infrastructure (either OpenAIS or Heartbeat).</para>
    <orderedlist>
       <listitem>
@@ -69,18 +63,18 @@
          <para>Unified, scriptable, cluster shell</para>
       </listitem>
    </orderedlist>
-   <para/></sect1><sect1><title>Types of Pacemaker Clusters</title>
+   <para/></section><section><title>Types of Pacemaker Clusters</title>
    <para>Pacemaker makes no assumptions about your environment, this allows it to support practically any <ulink url="http://en.wikipedia.org/wiki/High-availability_cluster#Node_configurations">redundancy configuration</ulink> including Active/Active, Active/Passive, N+1, N+M, N-to-1 and N-to-N.</para>
    <para>Two-node Active/Passive clusters using Pacemaker and DRBD are a cost-effective solution for many High Availability situations.</para>
    <para>
-      <inlinegraphic fileref="embedded:graphics1" width="3.9366inch" depth="2.9528inch"/>By supporting many nodes, Pacemaker can dramatically reduce hardware costs by allowing several active/passive clusters to be combined and share a common backup node</para>
+      <inlinegraphic fileref="embedded:graphics1" width="10cm" depth="7.5cm"/>By supporting many nodes, Pacemaker can dramatically reduce hardware costs by allowing several active/passive clusters to be combined and share a common backup node</para>
    <para>
-      <inlinegraphic fileref="embedded:graphics2" width="3.9366inch" depth="2.9528inch"/> 
+      <inlinegraphic fileref="embedded:graphics2" width="10cm" depth="7.5cm"/> 
    </para>
    <para>When shared storage is available, every node can potentially be used for failover. Pacemaker can even run multiple copies of services to spread out the workload.</para>
    <para>
-      <inlinegraphic fileref="embedded:graphics3" width="3.9366inch" depth="2.9528inch"/>
-   </para></sect1><sect1><title>Pacemaker Architecture</title>
+      <inlinegraphic fileref="embedded:graphics3" width="10cm" depth="7.5cm"/>
+   </para></section><section><title>Pacemaker Architecture</title>
    <para>At the highest level, the cluster is made up of three pieces:</para>
    <orderedlist>
       <listitem>
@@ -94,12 +88,12 @@
       </listitem>
    </orderedlist>
    <para>
-      <inlinegraphic fileref="embedded:graphics4" width="3.9366inch" depth="2.9563inch"/>Conceptual overview of the cluster stack</para>
+      <inlinegraphic fileref="embedded:graphics4" width="10cm" depth="7.5cm"/>Conceptual overview of the cluster stack</para>
    <para>When combined with OpenAIS, Pacemaker also supports popular open source cluster filesystems<footnote>
          <para> Even though Pacemaker also supports Heartbeat, the filesystems need to use the stack for messaging and membership and OpenAIS seems to be what they’re standardizing on.  Technically it would be possible for them to support Heartbeat as well, however there seems little interest in this.</para>
       </footnote>. Due to recent standardization in the cluster filesystem community, they make use of a common distributed lock manager which makes use of OpenAIS for its messaging capabilities and Pacemaker for its membership (which nodes are up/down) and fencing services.</para>
    <para>
-      <inlinegraphic fileref="embedded:graphics5" width="3.9366inch" depth="2.9528inch"/>The Pacemaker stack when running on OpenAIS  </para><sect2><title>Internal Components</title>
+      <inlinegraphic fileref="embedded:graphics5" width="10cm" depth="7.5cm"/>The Pacemaker stack when running on OpenAIS  </para><section><title>Internal Components</title>
    <para>Pacemaker itself is composed of four key components (illustrated below in the same color scheme as the previous diagram):</para>
    <orderedlist>
       <listitem>
@@ -116,14 +110,18 @@
       </listitem>
    </orderedlist>
    <para/>
-   <para>Subsystems of a Pacemaker cluster running on OpenAIS   <inlinegraphic fileref="embedded:graphics6" width="3.9366inch" depth="2.9528inch"/>
+   <para>Subsystems of a Pacemaker cluster running on OpenAIS   <inlinegraphic fileref="embedded:graphics6" width="10cm" depth="7.5cm"/>
    </para>
    <para>The CIB uses XML to represent both the cluster’s configuration and current state of all resources in the cluster.  The contents of the CIB are automatically kept in sync across the entire cluster and are used by the PEngine to compute the ideal state of the cluster and how it should be achieved.</para>
    <para>This list of instructions is then fed to the DC (Designated Co-ordinator).  Pacemaker centralizes all cluster decision making by electing one of the CRMd instances to act as a master.  Should the elected CRMd process, or the node it is on, fail... a new one is quickly established.</para>
    <para>The DC carries out the PEngine’s instructions in the required order by passing them to either the LRMd (Local Resource Management daemon) or CRMd peers on other nodes via the cluster messaging infrastructure (which in turn passes them on to their LRMd process).</para>
    <para>The peer nodes all report the results of their operations back to the DC and based on the expected and actual results, will either execute any actions that needed to wait for the previous one to complete, or abort processing and ask the PEngine to recalculate the ideal cluster state based on the unexpected results.</para>
    <para>In some cases, it may be necessary to power off nodes in order to protect shared data or complete resource recovery.  For this Pacemaker comes with STONITHd.  STONITH is an acronym for Shoot-The-Other-Node-In-The-Head and is usually implemented with a remote power switch.  In Pacemaker, STONITH devices are modeled as resources (and configured in the CIB) to enable them to be easily monitored for failure, however STONITHd takes care of understanding the STONITH topology such that its clients simply request a node be fenced and it does the rest</para>
-   <para>Configuration Basics</para></sect2></sect1><sect1><title>Configuration Layout</title>
+   </section>
+   </section>
+   </section>
+   <section id="basics"><title>Configuration Basics</title>
+     <section><title>Configuration Layout</title>
    <para>The cluster is written using XML notation and divided into two main sections; configuration and status.</para>
    <para>The status section contains the history of each resource on each node and based on this data, the cluster can construct the complete current state of the cluster.   The authoritative source for the status section is the local resource manager (lrmd) process on each cluster node and the cluster will occasionally repopulate the entire section.  For this reason it is never written to disk and admin’s are advised against modifying it in any way.</para>
    <para>The configuration section contains the more traditional information like cluster options, lists of resources and indications of where they should be placed.  The configuration section is the primary focus of this document.</para>
@@ -152,53 +150,63 @@
    <para>  &lt;/configuration&gt;</para>
    <para>  &lt;status/&gt;</para>
    <para>&lt;/cib&gt;</para>
-   <para>An empty configuration </para></sect1><sect1><title>The Current State of the Cluster</title>
-   <para>Before one starts to configure a cluster, it is worth explaining how to view the finished product.  For this purpose we have created the crm_mon utility that will display the current state of an active cluster.  It can show the cluster status by node or by resource and can be used in either single-shot or dynamically-updating mode.  There are also modes for displaying a list of the operations performed (grouped by node and resource) as well as information about failures. </para>
+   <para>An empty configuration </para></section><section><title>The Current State of the Cluster</title>
+   <para>Before one starts to configure a cluster, it is worth explaining how to view the finished product.  For this purpose we have created the <command>crm_mon</command> utility that will display the current state of an active cluster.  It can show the cluster status by node or by resource and can be used in either single-shot or dynamically-updating mode.  There are also modes for displaying a list of the operations performed (grouped by node and resource) as well as information about failures. </para>
    <para>Using this tool, you can examine the state of the cluster for irregularities and see how it responds when you cause or simulate failures.</para>
-   <para>Details on all the available options can be obtained using the crm_mon --help command.</para>
-   <para>============</para>
-   <para>Last updated: Fri Nov 23 15:26:13 2007</para>
-   <para>Current DC: sles-3 (2298606a-6a8c-499a-9d25-76242f7006ec)</para>
-   <para>3 Nodes configured.</para>
-   <para>5 Resources configured.</para>
-   <para>============</para>
-   <para/>
-   <para>Node: sles-1 (1186dc9a-324d-425a-966e-d757e693dc86): online</para>
-   <para>Node: sles-2 (02fb99a8-e30e-482f-b3ad-0fb3ce27d088): standby</para>
-   <para>Node: sles-3 (2298606a-6a8c-499a-9d25-76242f7006ec): online</para>
-   <para/>
-   <para>Resource Group: group-1</para>
-   <para>    192.168.100.181        (heartbeat::ocf:IPaddr):        Started sles-1</para>
-   <para>    192.168.100.182        (heartbeat:IPaddr):                Started sles-1</para>
-   <para>    192.168.100.183        (heartbeat::ocf:IPaddr):        Started sles-1</para>
-   <para>rsc_sles-1        (heartbeat::ocf:IPaddr):        Started sles-1</para>
-   <para>rsc_sles-2        (heartbeat::ocf:IPaddr):        Started sles-3</para>
-   <para>rsc_sles-3        (heartbeat::ocf:IPaddr):        Started sles-3</para>
-   <para>Clone Set: DoFencing</para>
-   <para>    child_DoFencing:0        (stonith:external/vmware):        Started sles-3</para>
-   <para>    child_DoFencing:1        (stonith:external/vmware):        Stopped</para>
-   <para>    child_DoFencing:2        (stonith:external/vmware):        Started sles-1</para>
-   <para>Sample output from crm_mon</para>
-   <para>============</para>
-   <para>Last updated: Fri Nov 23 15:26:14 2007</para>
-   <para>Current DC: sles-3 (2298606a-6a8c-499a-9d25-76242f7006ec)</para>
-   <para>3 Nodes configured.</para>
-   <para>5 Resources configured.</para>
-   <para>============</para>
-   <para/>
-   <para>Node: sles-1 (1186dc9a-324d-425a-966e-d757e693dc86): online</para>
-   <para>        192.168.100.181        (heartbeat::ocf:IPaddr):        Started sles-1</para>
-   <para>        192.168.100.182        (heartbeat:IPaddr):                Started sles-1</para>
-   <para>        192.168.100.183        (heartbeat::ocf:IPaddr):        Started sles-1</para>
-   <para>        rsc_sles-1        (heartbeat::ocf:IPaddr):        Started sles-1</para>
-   <para>        child_DoFencing:2        (stonith:external/vmware):        Started sles-1 </para>
-   <para>Node: sles-2 (02fb99a8-e30e-482f-b3ad-0fb3ce27d088): standby</para>
-   <para>Node: sles-3 (2298606a-6a8c-499a-9d25-76242f7006ec): online</para>
-   <para>        rsc_sles-2        (heartbeat::ocf:IPaddr):        Started sles-3</para>
-   <para>        rsc_sles-3        (heartbeat::ocf:IPaddr):        Started sles-3</para>
-   <para>        child_DoFencing:0        (stonith:external/vmware):        Started sles-3   </para>
-   <para>Sample output from crm_mon -n</para>
-   <para>The DC (Designated Controller) node is where all the decisions are made and if the current DC fails a new one is elected from the remaining cluster nodes.  The choice of DC is of no significance to an administrator beyond the fact that its logs will generally be more interesting.</para></sect1><sect1><title>How Should the Configuration be Updated?</title>
+   <para>Details on all the available options can be obtained using the <command>crm_mon --help</command> command.</para>
+   <example>
+     <title>Sample output from crm_mon</title>
+     <programlisting>
+       <command># crm_mon</command>
+============
+Last updated: Fri Nov 23 15:26:13 2007
+Current DC: sles-3 (2298606a-6a8c-499a-9d25-76242f7006ec)
+3 Nodes configured.
+5 Resources configured.
+============
+
+Node: sles-1 (1186dc9a-324d-425a-966e-d757e693dc86): online
+        192.168.100.181        (heartbeat::ocf:IPaddr):        Started sles-1
+        192.168.100.182        (heartbeat:IPaddr):                Started sles-1
+        192.168.100.183        (heartbeat::ocf:IPaddr):        Started sles-1
+        rsc_sles-1        (heartbeat::ocf:IPaddr):        Started sles-1
+        child_DoFencing:2        (stonith:external/vmware):        Started sles-1
+Node: sles-2 (02fb99a8-e30e-482f-b3ad-0fb3ce27d088): standby
+Node: sles-3 (2298606a-6a8c-499a-9d25-76242f7006ec): online
+        rsc_sles-2        (heartbeat::ocf:IPaddr):        Started sles-3
+        rsc_sles-3        (heartbeat::ocf:IPaddr):        Started sles-3
+        child_DoFencing:0        (stonith:external/vmware):        Started sles-3   
+     </programlisting>
+   </example>
+   <example>
+     <title>Sample output from crm_mon -n</title>
+     <programlisting>
+       <command># crm_mon -n</command>
+============
+Last updated: Fri Nov 23 15:26:13 2007
+Current DC: sles-3 (2298606a-6a8c-499a-9d25-76242f7006ec)
+3 Nodes configured.
+5 Resources configured.
+============
+
+Node: sles-1 (1186dc9a-324d-425a-966e-d757e693dc86): online
+Node: sles-2 (02fb99a8-e30e-482f-b3ad-0fb3ce27d088): standby
+Node: sles-3 (2298606a-6a8c-499a-9d25-76242f7006ec): online
+
+Resource Group: group-1
+    192.168.100.181        (heartbeat::ocf:IPaddr):        Started sles-1
+    192.168.100.182        (heartbeat:IPaddr):                Started sles-1
+    192.168.100.183        (heartbeat::ocf:IPaddr):        Started sles-1
+rsc_sles-1        (heartbeat::ocf:IPaddr):        Started sles-1
+rsc_sles-2        (heartbeat::ocf:IPaddr):        Started sles-3
+rsc_sles-3        (heartbeat::ocf:IPaddr):        Started sles-3
+Clone Set: DoFencing
+    child_DoFencing:0        (stonith:external/vmware):        Started sles-3
+    child_DoFencing:1        (stonith:external/vmware):        Stopped
+    child_DoFencing:2        (stonith:external/vmware):        Started sles-1
+     </programlisting>
+   </example>
+   <para>The DC (Designated Controller) node is where all the decisions are made and if the current DC fails a new one is elected from the remaining cluster nodes.  The choice of DC is of no significance to an administrator beyond the fact that its logs will generally be more interesting.</para></section><section><title>How Should the Configuration be Updated?</title>
    <para>There are three basic rules for updating the cluster configuration:</para>
    <orderedlist>
       <listitem>
@@ -222,7 +230,7 @@
    <para>cibadmin --query --obj_type resources &gt; tmp.xml</para>
    <para>vi tmp.xml</para>
    <para>cibadmin --replace --obj_type resources --xml-file tmp.xml</para>
-   <para>to avoid modifying any other part of the configuration.</para></sect1><sect1><title>Quickly Deleting Part of the Configuration</title>
+   <para>to avoid modifying any other part of the configuration.</para></section><section><title>Quickly Deleting Part of the Configuration</title>
    <para>Identify the object you wish to delete.  eg.</para>
    <para>sles-1:~ # cibadmin -Q | grep stonith</para>
    <para>           &lt;nvpair id="cib-bootstrap-options-stonith-action" name="stonith-action" value="reboot"/&gt;</para>
@@ -237,14 +245,14 @@
    <para>           &lt;lrm_resource id="child_DoFencing:3" type="external/vmware" class="stonith"&gt;</para>
    <para/>
    <para>Next identify the resource’s tag name and id (in this case primitive and child_DoFencing).  Then simply execute: </para>
-   <para>cibadmin --delete --crm_xml ‘&lt;primitive id=”child_DoFencing”/&gt;’</para></sect1><sect1><title>Updating the Configuration Without Using XML</title>
+   <para>cibadmin --delete --crm_xml ‘&lt;primitive id=”child_DoFencing”/&gt;’</para></section><section><title>Updating the Configuration Without Using XML</title>
    <para>Some common tasks can also be performed with one of the higher level tools that avoid the need to read or edit XML.</para>
    <para>To enable stonith for example, one could run:</para>
    <para>crm_attribute --attr-name stonith-enabled --attr-value true</para>
    <para>Or to see if somenode is allowed to run resources, there is:</para>
    <para>crm_standby --get-value --node-uname somenode</para>
    <para>Or to find the current location of my-test-rsc one can use:</para>
-   <para>crm_resource --locate --resource my-test-rsc</para></sect1><sect1><title>
+   <para>crm_resource --locate --resource my-test-rsc</para></section><section><title>
       <anchor id="MakingConfigurationChangesin"/>Making Configuration Changes in a Sandbox</title>
    <para>Often it is desirable to preview the effects of a series of changes before updating the configuration atomically.  For this purpose we have created crm_shadow which creates a “shadow” copy of the configuration and arranges for all the command line tools to use it.</para>
    <para>To begin, simply invoke crm_shadow and give it the name of a configuration to create<footnote>
@@ -290,13 +298,13 @@
    <para>           &lt;nvpair id="cib-bootstrap-1" name="stonith-enabled" value="1"/&gt;</para>
    <para>           &lt;nvpair id="cib-bootstrap-2" name="pe-input-series-max" value="30000"/&gt;</para>
    <para>Discarding changes and verifying the real configuration is intact</para>
-   <para>For a full list of crm_shadow options and command, invoke the command without any arguments.</para></sect1><sect1><title>
+   <para>For a full list of crm_shadow options and command, invoke the command without any arguments.</para></section><section><title>
       <anchor id="TestingYourConfigurationChang"/>Testing Your Configuration Changes</title>
    <para>We saw previously how to make a series of changes to a “shadow” copy of the configuration.  Before loading the changes back into the cluster (eg. crm_shadow --commit mytest --force), it is often advisable to simulate the effect of the changes with ptest.  Eg.</para>
    <para>ptest --live-check -VVVVV --save-graph tmp.graph --save-dotfile tmp.dot</para>
    <para>The tool uses the same library as the live cluster to show what it would have done given the supplied input.  It’s output, in addition to a significant amount of logging, is stored in two files tmp.graph and tmp.dot, both are representations of the same thing -- the cluster’s response to your changes.  In the graph file is stored the complete transition, containing a list of all the actions, their parameters and their pre-requisites.  Because the transition graph is not terribly easy to read, the tool also generates a Graphviz dot-file representing the same information.</para>
    <para>
-      <inlinegraphic fileref="embedded:graphics7" width="6.5772inch" depth="2.4028inch"/>An example transition graph as represented by Graphviz</para>
+      <inlinegraphic fileref="embedded:graphics7" width="16cm" depth="6cm"/>An example transition graph as represented by Graphviz</para>
    <para>Interpreting the Graphviz output</para>
    <orderedlist>
       <listitem>
@@ -337,11 +345,14 @@
    <para>In the above example, it appears that a new node, node2, has come online and that the cluster is checking to make sure rsc1, rsc2 and rsc3 are not already running there (Indicated by the *_monitor_0 entries).  Once it did that, and assuming the resources were not active there, it would have liked to stop rsc1 and rsc2 on node1 and move them to node2.  However, there appears to be some problem and the cluster cannot or is not permitted to perform the stop actions which implies it also cannot perform the start actions. For some reason the cluster does not want to start rsc3 anywhere.</para>
    <para>For information on the options supported by ptest, use ptest --help </para>
    <para>
-      <inlinegraphic fileref="embedded:graphics8" width="6.689inch" depth="4.2189inch"/>Another, slightly more complex, transition graph that you’re not expected to be able to read </para></sect1><sect1><title>Do I Need to Update the Configuration on all Cluster Nodes?</title>
+      <inlinegraphic fileref="embedded:graphics8" width="16cm" depth="10.5cm"/>Another, slightly more complex, transition graph that you’re not expected to be able to read </para></section><section><title>Do I Need to Update the Configuration on all Cluster Nodes?</title>
    <para>No.  Any changes are immediately synchronized to the other active members of the cluster.</para>
    <para>To reduce bandwidth, the cluster only broadcasts the incremental updates that result from your changes and uses md5 sums to ensure that each copy is completely consistent.</para>
-   <para>Cluster Options</para></sect1><sect1><title>Special Options</title>
-   <para>The reason for these fields to be placed at the top level instead of with the rest of cluster options is simply a matter of parsing.  These options are used by the configuration database which is, by design, mostly ignorant of the content it holds.  So the decision was made to place them in an easy to find location. </para><sect2><title>Determining Which Configuration to Use</title>
+     </section>
+   </section>
+   <section id="options"><title>Cluster Options</title>
+     <section><title>Special Options</title>
+   <para>The reason for these fields to be placed at the top level instead of with the rest of cluster options is simply a matter of parsing.  These options are used by the configuration database which is, by design, mostly ignorant of the content it holds.  So the decision was made to place them in an easy to find location. </para><section><title>Determining Which Configuration to Use</title>
    <para>When a node joins the cluster, the cluster will perform a check to see who has the best configuration based on the fields below.  It then asks the node with the highest (admin_epoch, epoch, num_updates) tuple to replace the configuration on all the nodes - which makes setting them and setting them correctly very important.</para>
    <informaltable frame="all">
       <tgroup cols="2">
@@ -379,7 +390,7 @@
                <para>Incremented every time the configuration or status is updated (usually by the cluster)</para>
             </entry>
          </row></tbody></tgroup>
-   </informaltable></sect2><sect2><title>Other Fields</title>
+   </informaltable></section><section><title>Other Fields</title>
    <informaltable frame="all">
       <tgroup cols="2">
          <thead>
@@ -399,7 +410,7 @@
                <para>Determines the type of validation being done on the configuration.  If set to “none”, the cluster will not verify that updates conform the the DTD (nor reject ones that don’t).  This option can be useful when operating a mixed version cluster during an upgrade.</para>
             </entry>
          </row></tbody></tgroup>
-   </informaltable></sect2><sect2><title>Fields Maintained by the Cluster</title>
+   </informaltable></section><section><title>Fields Maintained by the Cluster</title>
    <informaltable frame="all">
       <tgroup cols="2">
          <thead>
@@ -449,11 +460,11 @@
    <para/>
    <para>A complete set of fields will look something like this:</para>
    <para>&lt;cib have-quorum="true" validate-with="pacemaker-1.0" admin_epoch="1" epoch="12" num_updates="65"        dc-uuid="ea7d39f4-3b94-4cfa-ba7a-952956daabee" &gt;</para>
-   <para>An example of the fields set for a cib object</para></sect2></sect1><sect1><title>Cluster Options</title>
+   <para>An example of the fields set for a cib object</para></section></section><section><title>Cluster Options</title>
    <para>Cluster options, as you’d expect, control how the cluster behaves when confronted with certain situations.</para>
    <para>They are grouped into sets and, in advanced configurations, there may be more than one.<footnote>
          <para> This will be described later in the section on <link linkend="">rules</link> where we will show how to have the cluster use different sets of options during working hours (when downtime is usually to be avoided at all costs) than it does during the weekends (when resources can be moved to the their preferred hosts without bothering end users)</para>
-      </footnote> For now we will describe the simple case where each option is present at most once.</para><sect2><title>Available Cluster Options</title>
+      </footnote> For now we will describe the simple case where each option is present at most once.</para><section><title>Available Cluster Options</title>
    <informaltable frame="all">
       <tgroup cols="3">
          <thead>
@@ -602,7 +613,7 @@
             </entry>
          </row></tbody></tgroup>
    </informaltable>
-   <para>You can always obtain an up-to-date list of cluster options, including their default values by running the pengine metadata command.</para></sect2><sect2><title>Querying and Setting Cluster Options</title>
+   <para>You can always obtain an up-to-date list of cluster options, including their default values by running the pengine metadata command.</para></section><section><title>Querying and Setting Cluster Options</title>
    <para>Cluster options can be queried and modified using the crm_attribute tool.  To get the current value of cluster-delay, simply use:</para>
    <para>crm_attribute --attr-name cluster-delay --get-value</para>
    <para>which is more simply written as</para>
@@ -621,7 +632,7 @@
    <para>crm_attribute --attr-name cluster-delay --attr-value 30s</para>
    <para>To go back to the cluster’s default value, you can then delete the value with:</para>
    <para>crm_attribute --attr-name cluster-delay --delete-attr</para>
-   <para/></sect2><sect2><title>When Options are Listed More Than Once</title>
+   <para/></section><section><title>When Options are Listed More Than Once</title>
    <para>If you ever see something like the following, it means that the option you’re modifying is present more than once.</para>
    <para># crm_attribute --attr-name batch-limit --delete-attr</para>
    <para>Multiple attributes match name=batch-limit in crm_config:</para>
@@ -631,11 +642,15 @@
    <para>#</para>
    <para>Example of deleting an option that is listed twice</para>
    <para>In such cases follow the on-screen instructions to perform the requested action.  To determine which value is currently being used by the cluster, please refer to the the section on <link linkend="">rules</link>.</para>
-   <para>Cluster Nodes</para></sect2></sect1><sect1><title>Defining a Cluster Node</title>
+   </section>
+   </section>
+   </section>
+   <section id="nodes"><title>Cluster Nodes</title>
+     <section><title>Defining a Cluster Node</title>
    <para>Each node in the cluster will have an entry in the nodes section containing its UUID, uname and type.</para>
    <para>   &lt;node id="1186dc9a-324d-425a-966e-d757e693dc86" uname="sles-1" type="normal"/&gt;</para>
    <para>An example of a cluster node</para>
-   <para>In normal circumstances, the admin should let the cluster populate this information automatically from the communications and membership data.  However one can use the crm_uuid tool to read an existing UUID or define a value before the cluster starts.</para></sect1><sect1><title>
+   <para>In normal circumstances, the admin should let the cluster populate this information automatically from the communications and membership data.  However one can use the crm_uuid tool to read an existing UUID or define a value before the cluster starts.</para></section><section><title>
       <anchor id="DescribingaClusterNode"/>Describing a Cluster Node</title>
    <para>Beyond the basic definition of a node, the administrator can also describe the node’s attributes, such as how much RAM, disk, what OS or kernel version it has, perhaps even its physical location.  This information can then be used by the cluster when deciding where to place resources.  For more information on the use of node attributes, see the section on <link linkend="">Rules</link>.  </para>
    <para>Node attributes can be specified ahead of time or populated later, when the cluster is running, using the crm_attribute command.</para>
@@ -650,17 +665,17 @@
    <para>A simpler way to determine the current value of an attribute is to use crm_attribute command again:</para>
    <para>crm_attribute --type nodes --node-uname sles-1 --attr-name kernel --get-value</para>
    <para/>
-   <para>By specifying --type nodes the admin tells the cluster that this attribute is persistent.  There are also transient attributes which are kept in the status section which are “forgotten” whenever the node rejoins the cluster.  The cluster uses this area to store a record of how many times a resource has failed on that node but administrators can also read and write to this section by specifying --type status.</para></sect1><sect1><title>Adding a New Cluster Node</title><sect2><title>OpenAIS</title>
+   <para>By specifying --type nodes the admin tells the cluster that this attribute is persistent.  There are also transient attributes which are kept in the status section which are “forgotten” whenever the node rejoins the cluster.  The cluster uses this area to store a record of how many times a resource has failed on that node but administrators can also read and write to this section by specifying --type status.</para></section><section><title>Adding a New Cluster Node</title><section><title>OpenAIS</title>
    <para>Adding a new is as simple as installing OpenAIS and Pacemaker, and copying /etc/ais/openais.conf and /etc/ais/authkey (if it exists) from an existing node.  You may need to modify the mcastaddr option to match the new node’s IP address.</para>
-   <para>If a log message containing "Invalid digest" appears from OpenAIS, the keys are not consistent between the machines.</para></sect2><sect2><title>Heartbeat</title>
+   <para>If a log message containing "Invalid digest" appears from OpenAIS, the keys are not consistent between the machines.</para></section><section><title>Heartbeat</title>
    <para>Provided you specified autojoin any in ha.cf, adding a new is as simple as installing heartbeat and copying ha.cf and authkeys from an existing node.</para>
-   <para>If not, then after setting up ha.cf and authkeys, you must use the hb_addnode command before starting the new node. </para></sect2></sect1><sect1><title>Removing a Cluster Node</title><sect2><title>OpenAIS</title>
-   <para>TBA</para></sect2><sect2><title>Heartbeat</title>
+   <para>If not, then after setting up ha.cf and authkeys, you must use the hb_addnode command before starting the new node. </para></section></section><section><title>Removing a Cluster Node</title><section><title>OpenAIS</title>
+   <para>TBA</para></section><section><title>Heartbeat</title>
    <para>Because the messaging and membership layers are the authoritative source for cluster nodes, deleting them from the CIB is not a reliable solution.  First one must arrange for heartbeat to forget about the node (sles-1 in the example below).  To do this, shut down heartbeat on the node and then, from one of the remaining active cluster nodes, run:</para>
    <para>hb_delnode sles-1</para>
    <para>Only then is it safe to delete the node from the CIB with:</para>
    <para>cibadmin --delete --obj_type nodes --crm_xml ‘&lt;node uname=”sles-1”/&gt;’</para>
-   <para>cibadmin --delete --obj_type status --crm_xml ‘&lt;node_status uname=”sles-1”/&gt;’</para></sect2></sect1><sect1><title>Replacing a Cluster Node</title><sect2><title>OpenAIS</title>
+   <para>cibadmin --delete --obj_type status --crm_xml ‘&lt;node_status uname=”sles-1”/&gt;’</para></section></section><section><title>Replacing a Cluster Node</title><section><title>OpenAIS</title>
    <para>The five-step guide to replacing an existing cluster node:</para>
    <orderedlist>
       <listitem>
@@ -682,7 +697,7 @@
          <para>Start the new cluster node</para>
       </listitem>
    </orderedlist>
-   <para>If a log message containing "Invalid digest" appears from OpenAIS, the keys are not consistent between the machines.</para></sect2><sect2><title>Heartbeat</title>
+   <para>If a log message containing "Invalid digest" appears from OpenAIS, the keys are not consistent between the machines.</para></section><section><title>Heartbeat</title>
    <para>The seven-step guide to replacing an existing cluster node:</para>
    <orderedlist>
       <listitem>
@@ -707,12 +722,17 @@
          <para>Start the new cluster node</para>
       </listitem>
    </orderedlist>
-   <para>
-      <anchor id="ClusterResources"/>Cluster Resources</para></sect2></sect1><sect1><title>What is a Cluster Resource</title>
+       </section>
+     </section>
+   </section>
+   <section id="resources">
+     <anchor id="ClusterResources"/>
+     <title>Cluster Resources</title>
+     <section><title>What is a Cluster Resource</title>
    <para>The role of a resource agent is to abstract the service it provides and present a consistent view to the cluster, which allows the cluster to be agnostic about the resources it manages.  The cluster doesn’t need to understand how the resource works because it relies on the resource agent to do the right thing when given a start, stop or monitor command.</para>
    <para>For this reason it is crucial that resource agents are well tested. </para>
-   <para>Typically resource agents come in the form of shell scripts, however they can be written using any technology (such as C, Python or Perl) that the author is comfortable with.</para></sect1><sect1><title>Supported Resource Classes</title>
-   <para>There are three basic classes of agents supported by Pacemaker. In order of encouraged usage they are:</para><sect2><title>Open Cluster Framework</title>
+   <para>Typically resource agents come in the form of shell scripts, however they can be written using any technology (such as C, Python or Perl) that the author is comfortable with.</para></section><section><title>Supported Resource Classes</title>
+   <para>There are three basic classes of agents supported by Pacemaker. In order of encouraged usage they are:</para><section><title>Open Cluster Framework</title>
    <para>The OCF Spec (as it relates to resource agents can be found at: <ulink url="http://www.opencf.org/cgi-bin/viewcvs.cgi/specs/ra/resource-agent-api.txt?rev=HEAD">http://www.opencf.org/cgi-bin/viewcvs.cgi/specs/ra/resource-agent-api.txt?rev=HEAD</ulink> 
       <footnote>
          <para> Note: The Pacemaker implementation has been somewhat extended from the OCF Specs, but none of those changes are incompatible with the original OCF specification</para>
@@ -733,7 +753,7 @@
          <para> Included with the cluster is the ocf-tester script which can be useful in this regard.</para>
       </footnote>. The cluster follows these specifications exactly, and exiting with the wrong exit code will cause the cluster to behave in ways you will likely find puzzling and annoying. In particular, the cluster needs to distinguish a completely stopped resource from one which is in some erroneous and indeterminate state.</para>
    <para>Parameters are passed to the script as environment variables, with the special prefix OCF_RESKEY_. So, if you need to be given a parameter which the user thinks of as ip it will be passed to the script as OCF_RESKEY_ip.  The number and purpose of the parameters is completely arbitrary, however your script should advertise any that it supports using the meta-data command.</para>
-   <para>For more information, see <ulink url="http://wiki.linux-ha.org/OCFResourceAgent">http://wiki.linux-ha.org/OCFResourceAgent</ulink> and <link linkend="">What Do I need to Know When Writing an OCF Resource Agent</link> in the FAQ section.</para></sect2><sect2><title>Linux Standard Base</title>
+   <para>For more information, see <ulink url="http://wiki.linux-ha.org/OCFResourceAgent">http://wiki.linux-ha.org/OCFResourceAgent</ulink> and <link linkend="">What Do I need to Know When Writing an OCF Resource Agent</link> in the FAQ section.</para></section><section><title>Linux Standard Base</title>
    <para>LSB resource agents are those found in /etc/init.d. Generally they are provided by the OS/distribution and in order to be used with the cluster, must conform to the LSB Spec.</para>
    <para>The LSB Spec (as it relates to init scripts) can be found at: <ulink url="http://refspecs.linux-foundation.org/LSB_3.0.0/LSB-Core-generic/LSB-Core-generic/iniscrptact.html">http://refspecs.linux-foundation.org/LSB_3.0.0/LSB-Core-generic/LSB-Core-generic/iniscrptact.html</ulink>
    </para>
@@ -752,13 +772,13 @@
          <para>Stopping a stopped resource returns an error (this violates the LSB spec)</para>
       </listitem>
    </orderedlist>
-   <para/></sect2><sect2><title>Legacy Heartbeat</title>
+   <para/></section><section><title>Legacy Heartbeat</title>
    <para>Version 1 of Heartbeat came with its own style of resource agents and it is highly likely that many people have written their own agents based on its conventions.  To enable administrators to continue to use these agents, they are supported by the new cluster manager.</para>
    <para>For more information, see: <ulink url="http://wiki.linux-ha.org/HeartbeatResourceAgent">http://wiki.linux-ha.org/HeartbeatResourceAgent</ulink>
    </para>
    <para/>
    <para>The OCF class is the most preferred one as it is an industry standard, highly flexible (allowing parameters to be passed to agents in a non-positional manner) and self-describing.</para>
-   <para>There is also an additional class, STONITH, which is used exclusively for fencing related resources.  This is discussed later in the section on <link linkend="">fencing</link>.</para></sect2></sect1><sect1><title>Properties</title>
+   <para>There is also an additional class, STONITH, which is used exclusively for fencing related resources.  This is discussed later in the section on <link linkend="">fencing</link>.</para></section></section><section><title>Properties</title>
    <para>These values tell the cluster which script to use for the resource, where to find that script and what standards it conforms to.</para>
    <informaltable frame="all">
       <tgroup cols="2">
@@ -830,7 +850,7 @@
          <para> Heartbeat resources take only ordered and unnamed parameters.  The supplied name therefor indicates the order in which they are passed to the script.  Only single digit values are allowed.</para>
       </footnote>
    </para>
-   <para/></sect1><sect1><title>
+   <para/></section><section><title>
       <anchor id="Options"/>Options</title>
    <para>Options are used by the cluster to decide how your resource should behave and can be easily set using the --meta option of the crm_resource command.</para>
    <informaltable frame="all">
@@ -959,12 +979,12 @@
    <para>         &lt;nvpair id="email-active" name="multiple-active" value="block"/&gt;</para>
    <para>   &lt;/meta_attributes&gt;</para>
    <para>&lt;/primitive&gt;</para>
-   <para>An example LSB resource with cluster options</para></sect1><sect1><title>
+   <para>An example LSB resource with cluster options</para></section><section><title>
       <anchor id="SettingGlobalDefaultsforReso"/>Setting Global Defaults for Resource Options</title>
    <para>To set a default value for a resource option, simply add it to the rsc_defaults section with crm_attribute.</para>
    <para>Thus, </para>
    <para>crm_attribute --type rsc_defaults --attr-name is-managed --attr-value false</para>
-   <para>would prevent the cluster from starting or stopping any of the resources in the configuration (unless of course the individual resources were specifically enabled and had is-managed set to true).</para></sect1><sect1><title>Instance Attributes</title>
+   <para>would prevent the cluster from starting or stopping any of the resources in the configuration (unless of course the individual resources were specifically enabled and had is-managed set to true).</para></section><section><title>Instance Attributes</title>
    <para>The scripts of some resource classes (LSB not being one of them) can be given parameters which determine how they behave and which instance of a service they control.</para>
    <para>If your resource agent supports parameters, you can add them with the crm_resource command.  For instance</para>
    <para>crm_resource --resource Public-IP --set-parameter ip --property-value 1.2.3.4</para>
@@ -978,7 +998,7 @@
    <para>For an OCF resource, the result would be an environment variable called OCF_RESKEY_ip with a value of 1.2.3.4</para>
    <para>The list of instance attributes supported by an OCF script can be found by calling the resource script with the meta-data command.  The output contains an XML description of all the supported attributes, their purpose and default values. </para>
    <para>export OCF_ROOT=/usr/lib/ocf; $OCF_ROOT/resource.d/heartbeat/IPaddr2 meta-data </para>
-   <para>Displaying the metadata for the IPaddr resource agent </para></sect1><sect1><title>Resource Operations</title><sect2><title>Monitoring Resources for Failure </title>
+   <para>Displaying the metadata for the IPaddr resource agent </para></section><section><title>Resource Operations</title><section><title>Monitoring Resources for Failure </title>
    <para>By default, the cluster will not ensure your resources are still healthy.  To instruct the cluster to do this, you need to add a monitor operation to the resource’s definition.</para>
    <para>&lt;primitive id="Public-IP" class="ocf" type="IPaddr" provider=”heartbeat”&gt;</para>
    <para>    &lt;operations&gt;</para>
@@ -1090,12 +1110,12 @@
             </entry>
          </row></tbody></tgroup>
    </informaltable>
-   <para>Valid fields for an operation</para></sect2></sect1><sect1><title>
+   <para>Valid fields for an operation</para></section></section><section><title>
       <anchor id="SettingGlobalDefaultsforOper"/>Setting Global Defaults for Operations</title>
    <para>To set a default value for a operation option, simply add it to the op_defaults section with crm_attribute.</para>
    <para>Thus, </para>
    <para>crm_attribute --type op_defaults --attr-name timeout --attr-value 20s</para>
-   <para>would default each operation’s timeout to 20 seconds.  If an operation’s definition also includes a value for timeout, then that value would be used instead (for that operation only).</para><sect2><title>When Resources Take a Long Time to Start/Stop</title>
+   <para>would default each operation’s timeout to 20 seconds.  If an operation’s definition also includes a value for timeout, then that value would be used instead (for that operation only).</para><section><title>When Resources Take a Long Time to Start/Stop</title>
    <para>There are a number of implicit operations that the cluster will always perform - start, stop and a non-recurring monitor operation (used at startup to check the resource isn’t already active).  If one of these is taking too long, then you can create an entry for them and simply specify a new value.</para>
    <para>&lt;primitive id="Public-IP" class="ocf" type="IPaddr" provider=”heartbeat”&gt;</para>
    <para>    &lt;operations&gt;</para>
@@ -1107,7 +1127,7 @@
    <para>          &lt;nvpair id="public-ip-addr" name="ip" value="1.2.3.4"/&gt;</para>
    <para>    &lt;/instance_attributes&gt;</para>
    <para>&lt;/primitive&gt;</para>
-   <para>An OCF resource with custom timeouts for its implicit actions</para></sect2><sect2><title>Multiple Monitor Operations</title>
+   <para>An OCF resource with custom timeouts for its implicit actions</para></section><section><title>Multiple Monitor Operations</title>
    <para>Provided no two operations (for a single resource) have the same name and interval you can have as many monitor operations as you like.  In this way you can do a superficial health check every minute and progressively more intense ones at higher intervals.</para>
    <para>To tell the resource agent what kind of check to perform, you need to provide each monitor with a different value for a common parameter.  The OCF standard creates a special parameter called OCF_CHECK_LEVEL for this purpose and dictates that it is <emphasis>made available to the resource agent without the normal OCF_RESKEY_ prefix</emphasis>.  </para>
    <para>Whatever name you choose, you can specify it by adding an instance_attributes block to the op tag.  Note that it is up to each resource agent to look for the parameter and decide how to use it.</para>
@@ -1128,7 +1148,7 @@
    <para>          &lt;nvpair id="public-ip-level" name="ip" value="1.2.3.4"/&gt;</para>
    <para>    &lt;/instance_attributes&gt;</para>
    <para>&lt;/primitive&gt;</para>
-   <para>An OCF resource with two recurring health checks performing different levels of checks</para></sect2><sect2><title>Disabling a Monitor Operation</title>
+   <para>An OCF resource with two recurring health checks performing different levels of checks</para></section><section><title>Disabling a Monitor Operation</title>
    <para>The easiest way to stop a recurring monitor is to just delete it.  However there can be times when you only want to disable it temporarily.  In such cases, simply add disabled=”true” to the operation’s definition.</para>
    <para>&lt;primitive id="Public-IP" class="ocf" type="IPaddr" provider=”heartbeat”&gt;</para>
    <para>    &lt;operations&gt;</para>
@@ -1143,9 +1163,13 @@
    <para>cibadmin -M -X ‘&lt;op id="public-ip-check" disabled=”true”/&gt;’</para>
    <para>Once you’ve done whatever you needed to do, you can then re-enable it with</para>
    <para>cibadmin -M -X ‘&lt;op id="public-ip-check" disabled=”false”/&gt;’</para>
-   <para>Resource Constraints</para></sect2></sect1><sect1><title>Scores</title>
+   </section>
+     </section>
+   </section>
+   <section id="constraints"><title>Resource Constraints</title>
+     <section><title>Scores</title>
    <para>Scores of all kinds are integral to how the cluster works.  Practically everything from moving a resource to deciding which resource to stop in a degraded cluster is achieved by manipulating scores in some way. </para>
-   <para>Scores are calculated on a per-resource basis and any node with a negative score for a resource can’t run that resource.  After calculating the scores for a resource, the cluster then chooses the node with the highest one.  </para><sect2><title>Infinity Math</title>
+   <para>Scores are calculated on a per-resource basis and any node with a negative score for a resource can’t run that resource.  After calculating the scores for a resource, the cluster then chooses the node with the highest one.  </para><section><title>Infinity Math</title>
    <para>INFINITY is currently defined as 1,000,000 and addition/subtraction with it follows the following 3 basic rules:</para>
    <orderedlist>
       <listitem>
@@ -1157,8 +1181,8 @@
       <listitem>
          <para>INFINITY - INFINITY  = -INFINITY</para>
       </listitem>
-   </orderedlist></sect2></sect1><sect1><title>Deciding Which Nodes a Resource Can Run On</title>
-   <para>There are two alternative strategies for specifying which nodes a resources can run on.  One way is to say that by default they can run anywhere and then create location constraints for nodes that are not allowed.  The other option is to have nodes “opt-in”... to start with nothing able to run anywhere and selectively enable allowed nodes.</para><sect2><title>Options</title>
+   </orderedlist></section></section><section><title>Deciding Which Nodes a Resource Can Run On</title>
+   <para>There are two alternative strategies for specifying which nodes a resources can run on.  One way is to say that by default they can run anywhere and then create location constraints for nodes that are not allowed.  The other option is to have nodes “opt-in”... to start with nothing able to run anywhere and selectively enable allowed nodes.</para><section><title>Options</title>
    <informaltable frame="all">
       <tgroup cols="2">
          <thead>
@@ -1202,7 +1226,7 @@
                <para>Positive values indicate the resource can run on this node.  Negative values indicate the resource can not run on this node.  Values of +/- INFINITY change “can” to “must”.</para>
             </entry>
          </row></tbody></tgroup>
-   </informaltable></sect2><sect2><title>Asymmetrical “Opt-In” Clusters</title>
+   </informaltable></section><section><title>Asymmetrical “Opt-In” Clusters</title>
    <para>To create an opt-in cluster, start by preventing resources from running anywhere by default</para>
    <para>crm_attribute --attr-name symmetric-cluster --attr-value false</para>
    <para>Then start enabling nodes.  The following fragment says that the web server prefers sles-1, the database prefers sles-2 and both can failover to sles-3 if their most preferred node fails.  </para>
@@ -1212,7 +1236,7 @@
    <para>    &lt;rsc_location id=”loc-3” rsc=”Database” node=”sles-2” score=”200”/&gt;</para>
    <para>    &lt;rsc_location id=”loc-4” rsc=”Database” node=”sles-3” score=”0”/&gt;</para>
    <para>&lt;/constraints&gt;</para>
-   <para>Example set of opt-in location constraints</para></sect2><sect2><title>Symmetrical “Opt-Out” Clusters</title>
+   <para>Example set of opt-in location constraints</para></section><section><title>Symmetrical “Opt-Out” Clusters</title>
    <para>To create an opt-out cluster, start by allowing resources to run anywhere by default</para>
    <para>crm_attribute --attr-name symmetric-cluster --attr-value true</para>
    <para>Then start disabling nodes.  The following fragment is the equivalent of the above opt-in configuration.</para>
@@ -1223,7 +1247,7 @@
    <para>    &lt;rsc_location id=”loc-4” rsc=”Database” node=”sles-2” score=”200”/&gt;</para>
    <para>&lt;/constraints&gt;</para>
    <para>Example set of opt-out location constraints</para>
-   <para>Whether you should choose opt-in or opt-out depends both on your personal preference and the make-up of your cluster.  If most of your resources can run on most of the nodes, then an opt-out arrangement is likely to result in a simpler configuration.  On the other-hand, if most resources can only run on a small subset of nodes an opt-in configuration might be simpler.</para></sect2><sect2><title>
+   <para>Whether you should choose opt-in or opt-out depends both on your personal preference and the make-up of your cluster.  If most of your resources can run on most of the nodes, then an opt-out arrangement is likely to result in a simpler configuration.  On the other-hand, if most resources can only run on a small subset of nodes an opt-in configuration might be simpler.</para></section><section><title>
       <anchor id="WhatifTwoNodesHavetheSame"/>What if Two Nodes Have the Same Score</title>
    <para>If two nodes have the same score, then the cluster will choose one.  This choice may seem random and may not be what was intended, however the cluster was not given enough information to know what was intended.</para>
    <para>&lt;constraints&gt;</para>
@@ -1234,7 +1258,7 @@
    <para>    &lt;rsc_location id=”loc-5” rsc=”Database” node=”sles-2” score=”200”/&gt;</para>
    <para>&lt;/constraints&gt;</para>
    <para>Example of two resources that prefer two nodes equally</para>
-   <para>In the example above, assuming no other constraints and an inactive cluster, Webserver would probably be placed on sles-1 and Database on sles-2.  It would likely have placed Webserver based on the node’s uname and Database based on the desire to spread the resource load evenly across the cluster.  However other factors can also be involved in more complex configurations.</para></sect2><sect2><title>
+   <para>In the example above, assuming no other constraints and an inactive cluster, Webserver would probably be placed on sles-1 and Database on sles-2.  It would likely have placed Webserver based on the node’s uname and Database based on the desire to spread the resource load evenly across the cluster.  However other factors can also be involved in more complex configurations.</para></section><section><title>
       <anchor id="SpecifyingtheOrderResourcesS"/>Specifying the Order Resources Should Start/Stop In</title>
    <para>The way to specify the order in which resources should start is by creating rsc_order constraints.</para>
    <informaltable frame="all">
@@ -1291,7 +1315,7 @@
             </entry>
          </row></tbody></tgroup>
    </informaltable>
-   <para/></sect2><sect2><title>Mandatory Ordering</title>
+   <para/></section><section><title>Mandatory Ordering</title>
    <para>When the then resource cannot run without the first resource being active, one should use mandatory constraints. To specify a constraint is mandatory, use a scores greater than zero.  This will ensure that the then resource will react when the first resource changes state.</para>
    <orderedlist>
       <listitem>
@@ -1303,7 +1327,7 @@
       <listitem>
          <para>If the first resource is (re)started while the then resource is running, the then resource will be stopped and restarted</para>
       </listitem>
-   </orderedlist></sect2><sect2><title>Advisory Ordering</title>
+   </orderedlist></section><section><title>Advisory Ordering</title>
    <para>On the other-hand, when score=”0” is specified for a constraint, the constraint is considered optional and only has an effect when both resources are stopping and or starting.  Any change in state by the first resource will have no effect on the then resource.</para>
    <para>&lt;constraints&gt;</para>
    <para>    &lt;rsc_order id=”order-1” first=”Database” then=”Webserver” /&gt;</para>
@@ -1311,13 +1335,13 @@
    <para>&lt;/constraints&gt;</para>
    <para>Example of an optional and mandatory ordering constraint</para>
    <para>Some additional information on ordering constraints can be found in the document <ulink url="http://oss.beekhof.net/~beekhof/heartbeat/docs/Ordering-Explained.pdf">Ordering Explained</ulink>
-   </para></sect2></sect1><sect1><title>
+   </para></section></section><section><title>
       <anchor id="PlacingResourcesRelativetoot"/>Placing Resources Relative to other Resources</title>
    <para>When the location of one resource depends on the location of another one, we call this colocation.</para>
    <para>There is an important side-effect of creating a colocation constraint between two resources, that it affects the order in which resources are assigned to a node.  If you think about it, its somewhat obvious.  You can’t place A relative to B unless you know where B is<footnote>
          <para> While the human brain is sophisticated enough to read the constraint in any order and choose the correct one depending on the situation, the cluster is not quite so smart.  Yet.</para>
       </footnote>.  So when you are creating colocation constraints, it is important to consider whether you should colocate A with B or B with A.</para>
-   <para>Another thing to keep in mind is that, assuming A is collocated with B, the cluster will also take into account A’s preferences when deciding which node to choose for B.  For a detailed look at exactly how this occurs, see the <ulink url="http://oss.beekhof.net/~beekhof/heartbeat/docs/Colocation-Explained.pdf">Colocation Explained</ulink> document.</para><sect2><title>Options</title>
+   <para>Another thing to keep in mind is that, assuming A is collocated with B, the cluster will also take into account A’s preferences when deciding which node to choose for B.  For a detailed look at exactly how this occurs, see the <ulink url="http://oss.beekhof.net/~beekhof/heartbeat/docs/Colocation-Explained.pdf">Colocation Explained</ulink> document.</para><section><title>Options</title>
    <informaltable frame="all">
       <tgroup cols="2">
          <thead>
@@ -1361,7 +1385,7 @@
                <para>Positive values indicate the resource should run on the same node.  Negative values indicate the resources should not run on the same node.  Values of +/- INFINITY change “should” to “must”.</para>
             </entry>
          </row></tbody></tgroup>
-   </informaltable></sect2><sect2><title>Mandatory Placement</title>
+   </informaltable></section><section><title>Mandatory Placement</title>
    <para>Mandatory placement occurs any time the constraint’s score is +INFINITY or -INFINITY.  In such cases, if the constraint can’t be satisfied, then the rsc resource is not permitted to run.  For score=INFINITY, this includes cases where the with-rsc resource is not active.</para>
    <para>If you need resource1 to always run on the same machine as resource2, you would add the following constraint: </para>
    <para>&lt;rsc_colocation id=”colocate” rsc=”resource1” with-rsc=”resource2” score=”INFINITY”/&gt; </para>
@@ -1370,11 +1394,11 @@
    <para>Alternatively, you may want the opposite... that resource1 cannot run on the same machine as resource2.  In this case use score=”-INFINITY”</para>
    <para>&lt;rsc_colocation id=”anti-colocate” rsc=”resource1” with-rsc=”resource2” score=”-INFINITY”/&gt; </para>
    <para>An example anti-colocation constraint</para>
-   <para>Again, by specifying -INFINTY, the constraint is binding.  So if the only place left to run is where resource2 already is, then resource1 may not run anywhere.</para></sect2><sect2><title>Advisory Placement</title>
+   <para>Again, by specifying -INFINTY, the constraint is binding.  So if the only place left to run is where resource2 already is, then resource1 may not run anywhere.</para></section><section><title>Advisory Placement</title>
    <para>If mandatory placement is about “must” and “must not”, then advisory placement is the “I’d prefer if” alternative.  For constraints with scores greater than -INFINITY and less than INFINITY, the cluster will try and accommodate your wishes but may ignore them if the alternative is to stop some of the cluster resources.</para>
    <para>Like in life, where if enough people prefer something it effectively becomes mandatory, advisory colocation constraints can combine with other elements of the configuration to behave as if they were mandatory.   </para>
    <para>&lt;rsc_colocation id=”colocate-maybe” rsc=”resource1” with-rsc=”resource2” score=”500”/&gt; </para>
-   <para>An example advisory-only colocation constraint</para></sect2></sect1><sect1><title>
+   <para>An example advisory-only colocation constraint</para></section></section><section><title>
       <anchor id="OrderingSetsofResources"/>Ordering Sets of Resources</title>
    <para>A common situation is for an administrator to create a chain of ordered resources, such as:</para>
    <para>&lt;constraints&gt;</para>
@@ -1384,7 +1408,7 @@
    <para>&lt;/constraints&gt;</para>
    <para>A chain of ordered resources</para>
    <para>
-      <inlinegraphic fileref="embedded:graphics9" width="6.689inch" depth="0.9398inch"/>Visual representation of the four resources’ start order for the above constraints</para>
+      <inlinegraphic fileref="embedded:graphics9" width="16cm" depth="2.5cm"/>Visual representation of the four resources’ start order for the above constraints</para>
    <para/>
    <para>To simplify this situation, there is an alternate format for ordering constraints</para>
    <para>&lt;constraints&gt;</para>
@@ -1421,7 +1445,7 @@
    <para>&lt;/constraints&gt;</para>
    <para>Ordered sets of unordered resources</para>
    <para>
-      <inlinegraphic fileref="embedded:graphics10" width="3.9307inch" depth="2.0417inch"/>Visual representation of the start order for two ordered sets of unordered resources  </para>
+      <inlinegraphic fileref="embedded:graphics10" width="10cm" depth="5cm"/>Visual representation of the start order for two ordered sets of unordered resources  </para>
    <para>Of course either or both sets of resources can also be internally ordered (by setting sequential=”true”) and there is no limit to the number of sets that can be specified.</para>
    <para>&lt;constraints&gt;</para>
    <para>    &lt;rsc_order id=”order-1”&gt;</para>
@@ -1441,7 +1465,7 @@
    <para>&lt;/constraints&gt;</para>
    <para>Advanced use of set ordering - Three ordered sets, two of which are internally unordered </para>
    <para>
-      <inlinegraphic fileref="embedded:graphics11" width="6.472inch" depth="3.0138inch"/>Visual representation of the start order for the three sets defined above </para></sect1><sect1><title>
+      <inlinegraphic fileref="embedded:graphics11" width="16cm" depth="7.5cm"/>Visual representation of the start order for the three sets defined above </para></section><section><title>
       <anchor id="CollocatingSetsofResources"/>Collocating Sets of Resources</title>
    <para>Another common situation is for an administrator to create a set of collocated resources.  Previously this possible either by defining a resource group (See <link linkend="">Groups - A Syntactic Shortcut</link>) which could not always accurately express the design; or by defining each relationship as an individual constraint, causing a constraint explosion as the number of resources and combinations grew.</para>
    <para>&lt;constraints&gt;</para>
@@ -1509,10 +1533,16 @@
    <para>&lt;/constraints&gt;</para>
    <para>A colocation chain where the members of the middle set have no interdependencies and the last has master status.</para>
    <para>
-      <inlinegraphic fileref="embedded:graphics12" width="6.689inch" depth="2.95inch"/>Visual representation of a colocation chain where the members of the middle set have no interdependencies</para>
-   <para>Receiving Notification of Cluster Events</para></sect1><sect1><title>Configuring Email Notifications</title></sect1><sect1><title>Configuring SNMP Notifications</title>
-   <para>
-      <anchor id="Rules"/>Rules</para>
+      <inlinegraphic fileref="embedded:graphics12" width="16cm" depth="7.5cm"/>Visual representation of a colocation chain where the members of the middle set have no interdependencies</para>
+     </section>
+   </section>
+   <section id="events"><title>Receiving Notification of Cluster Events</title>
+     <section><title>Configuring Email Notifications</title></section>
+     <section><title>Configuring SNMP Notifications</title></section>
+   </section>
+   <section id="rules">
+     <title>Rules</title>
+     <anchor id="Rules"/>Rules
    <para>Rules can be used to make your configuration more dynamic.  One common example is to set one value for resource-stickiness during working hours, to prevent resources from being moved back to their most preferred location, and another on weekends when no-one is around to notice an outage.  </para>
    <para>Another use of rules might be to assign machines to different processing groups (using a node attribute) based on time and to then use that attribute when creating location constraints.</para>
    <para>Each rule can contain a number of expressions, date-expressions and even other rules.  The results of the expressions are combined based on the rule’s boolean-op field to determine if the rule ultimately evaluates to true or false.  What happens next depends on the context in which the rule is being used.  </para>
@@ -1560,7 +1590,8 @@
             </entry>
          </row></tbody></tgroup>
    </informaltable>
-   <para>Properties of a rule object</para></sect1><sect1><title>Node Attribute Expressions</title>
+   <para>Properties of a rule object</para>
+   <section><title>Node Attribute Expressions</title>
    <para>Expression objects are used to control a resource based on the attributes defined by a node or nodes.  In addition to any attributes added by the administrator, each node has a built-in node attribute called #uname that can also be used.</para>
    <informaltable frame="all">
       <tgroup cols="2">
@@ -1632,7 +1663,7 @@
             </entry>
          </row></tbody></tgroup>
    </informaltable>
-   <para>Properties of expression objects</para></sect1><sect1><title>Time/Date Based Expressions</title>
+   <para>Properties of expression objects</para></section><section><title>Time/Date Based Expressions</title>
    <para>As the name suggests, date_expressions are used to control a resource or cluster option based on the current date/time.  They can contain an optional date_spec and/or duration object depending on the context. </para>
    <informaltable frame="all">
       <tgroup cols="2">
@@ -1685,7 +1716,7 @@
          </row></tbody></tgroup>
    </informaltable>
    <para>Properties of date_expression objects</para>
-   <para>NOTE: Because the comparisons (except for date_spec) include the time, the eq, neq, gte and lte operators have not been implemented.</para><sect2><title>Date Specifications</title>
+   <para>NOTE: Because the comparisons (except for date_spec) include the time, the eq, neq, gte and lte operators have not been implemented.</para><section><title>Date Specifications</title>
    <para>date_spec objects are used to create cron-like expressions relating to time.  Each field can contain a single number or a single range.  Instead of defaulting to zero, any field not supplied is ignored.</para>
    <para>For example, monthdays="1" matches the first day of every month and hours="09-17" matches the hours between 9am and 5pm inclusive).  However at this time one cannot specify weekdays="1,2" or weekdays="1-2,5-6" since they contain multiple ranges.  Depending on demand, this may be implemented in a future release.</para>
    <informaltable frame="all">
@@ -1781,8 +1812,8 @@
             </entry>
          </row></tbody></tgroup>
    </informaltable>
-   <para>Properties of date_spec objects</para></sect2><sect2><title>Durations</title>
-   <para>Durations are used to calculate a value for end when one is not supplied to in_range operations.  They contain the same fields as date_spec objects but without the limitations (ie. you can have a duration of 19 days).   Like date_specs, any field not supplied is ignored. </para><sect3><title>Sample Time Based Expressions</title>
+   <para>Properties of date_spec objects</para></section><section><title>Durations</title>
+   <para>Durations are used to calculate a value for end when one is not supplied to in_range operations.  They contain the same fields as date_spec objects but without the limitations (ie. you can have a duration of 19 days).   Like date_specs, any field not supplied is ignored. </para><section><title>Sample Time Based Expressions</title>
    <para>&lt;rule id="rule1"&gt;</para>
    <para>  &lt;date_expression id="date_expr1" start="2005-001" operation="in_range"&gt;</para>
    <para>    &lt;duration years="1"/&gt;</para>
@@ -1794,7 +1825,7 @@
    <para>    &lt;date_spec years="2005"/&gt;</para>
    <para>  &lt;/date_expression&gt;</para>
    <para>&lt;/rule&gt;</para>
-   <para>Equivalent expression. </para><sect1 id="Section1"><para>&lt;rule id="rule3"&gt;</para>
+   <para>Equivalent expression. </para><section id="Section1"><para>&lt;rule id="rule3"&gt;</para>
    <para>  &lt;date_expression id="date_expr3" operation="date_spec"&gt;</para>
    <para>    &lt;date_spec hours="9-16" days="1-5"/&gt;</para>
    <para>  &lt;/date_expression&gt;</para>
@@ -1916,10 +1947,10 @@
    <para>&lt;/rsc_defaults&gt;</para>
    <para>Set resource-stickiness=INFINITY Mon-Fri between 9am and 6pm, and resource-stickiness=0 all other times</para>
    <title>
-      <anchor id="EnsuringTimeBasedRulesTakeE"/>Ensuring Time Based Rules Take Effect</title>
+      <anchor id="EnsuringTimeBasedRulesTakeEffect"/>Ensuring Time Based Rules Take Effect</title>
    <para>A Pacemaker cluster is an event driven system.  As such, it wont recalculate the best place for resources to run in unless something (like a resource failure or configuration change) happens.  This can mean that a location constraint that only allows resource X to run between 9am and 5pm is not enforced.</para>
    <para>If you rely on time based rules, it is essential that you set the cluster-recheck-interval option.  This tells the cluster to periodically recalculate the ideal state of the cluster.  For example, if you set cluster-recheck-interval=5m, then sometime between 9:00 and 9:05 the cluster would notice that it needs to start resource X, and between 17:00 and 17:05 it would realize it needed to be stopped.  </para>
-   <para>Note that the timing of the actual start and stop actions depends on what else needs to be performed first.  </para></sect1></sect3></sect2></sect1><sect1><title>Using Rules to Determine Resource Location</title>
+   <para>Note that the timing of the actual start and stop actions depends on what else needs to be performed first.  </para></section></section></section></section><section><title>Using Rules to Determine Resource Location</title>
    <para>If the constraint’s outer-most rule evaluates to false, the cluster treats the constraint as if it was not there.  When the rule evaluates to true, the node’s preference for running the resource is updated with the score associated with the rule.</para>
    <para>If this sounds familiar, its because you have been using a simplified syntax for location constraint rules already.  Consider the following location constraint:</para>
    <para>&lt;rsc_location id="dont-run-apache-on-c001n03" rsc="myApacheRsc" score=”-INFINITY” node=”c001n03”/&gt;</para>
@@ -1949,7 +1980,7 @@
    <para>then we could prevent resources from running on underpowered machines with the rule</para>
    <para>&lt;rule id="need-more-power-rule" score="-INFINITY"&gt;</para>
    <para>          &lt;expression id=” need-more-power-expr” attribute="cpu_mips" operation="lt" value="3000"/&gt;</para>
-   <para>&lt;/rule&gt;</para><sect2><title/><sect3><title>Using score-attribute Instead of score</title>score-attributescore<para>When using score-attribute instead of score, each node matched by the rule has its score adjusted differently, according to its value for the named node attribute.  Thus in the previous example, if a rule used score-attribute="cpu_mips", c001n01 would have its preference to run the resource increased by 1234 whereas c001n02 would have its preference increased by 5678.</para></sect3></sect2></sect1><sect1><title>Using Rules to Control Resource Options</title>
+   <para>&lt;/rule&gt;</para><section><title/><section><title>Using score-attribute Instead of score</title>score-attributescore<para>When using score-attribute instead of score, each node matched by the rule has its score adjusted differently, according to its value for the named node attribute.  Thus in the previous example, if a rule used score-attribute="cpu_mips", c001n01 would have its preference to run the resource increased by 1234 whereas c001n02 would have its preference increased by 5678.</para></section></section></section><section><title>Using Rules to Control Resource Options</title>
    <para>Often some cluster nodes will be different from their peers, sometimes these differences (the location of a binary or the names of network interfaces) require resources be configured differently depending on the machine they’re hosted on.</para>
    <para>By defining multiple instance_attributes objects for the resource and adding a rule to each, we can easily handle these special cases.</para>
    <para>In the example below, mySpecialRsc will use eth1 and port 9999 when run on node1, eth2 and port 8888 on node2 and default to eth0 and port 9999 for all other nodes. </para>
@@ -1973,7 +2004,7 @@
    <para>  &lt;/instance_attributes&gt;</para>
    <para>&lt;/primitive&gt;</para>
    <para>Defining different resource options based on the node name</para>
-   <para>The order in which instance_attributes objects are evaluated is determined by their score (highest to lowest).  If not supplied, score defaults to zero and objects with an equal score are processed in listed order.  If the instance_attributes object does not have a rule or has a rule that evaluates to true, then for any parameter the resource does not yet have a value for, the resource will use the parameter values defined by the instance_attributes object.</para></sect1><sect1><title>Using Rules to Control Cluster Options</title>
+   <para>The order in which instance_attributes objects are evaluated is determined by their score (highest to lowest).  If not supplied, score defaults to zero and objects with an equal score are processed in listed order.  If the instance_attributes object does not have a rule or has a rule that evaluates to true, then for any parameter the resource does not yet have a value for, the resource will use the parameter values defined by the instance_attributes object.</para></section><section><title>Using Rules to Control Cluster Options</title>
    <para>Controlling cluster options is achieved in much the same manner as specifying different resource options on different nodes.</para>
    <para>The difference is that because they are cluster options, one cannot (or should not because they wont work) use attribute based expressions.  The following example illustrates how to set a different resource-stickiness value during and outside of work hours.  This allows resources to automatically move back to their most preferred hosts, but at a time that (in theory) does not interfere with business activities.</para>
    <para>&lt;rsc_defaults&gt;</para>
@@ -1989,13 +2020,17 @@
    <para>    &lt;nvpair id="after-stickiness" name="resource-stickiness" value="0"/&gt;</para>
    <para>  &lt;/meta_attributes&gt;</para>
    <para>&lt;/rsc_defaults&gt;</para>
-   <para>Set resource-stickiness=INFINITY Mon-Fri between 9am and 6pm, and resource-stickiness=0 all other times</para></sect1><sect1><title>
+   <para>Set resource-stickiness=INFINITY Mon-Fri between 9am and 6pm, and resource-stickiness=0 all other times</para></section><section><title>
       <anchor id="EnsuringTimeBasedRulesTakeE"/>Ensuring Time Based Rules Take Effect</title>
    <para>A Pacemaker cluster is an event driven system.  As such, it wont recalculate the best place for resources to run in unless something (like a resource failure or configuration change) happens.  This can mean that a location constraint that only allows resource X to run between 9am and 5pm is not enforced.</para>
    <para>If you rely on time based rules, it is essential that you set the cluster-recheck-interval option.  This tells the cluster to periodically recalculate the ideal state of the cluster.  For example, if you set cluster-recheck-interval=5m, then sometime between 9:00 and 9:05 the cluster would notice that it needs to start resource X, and between 17:00 and 17:05 it would realize it needed to be stopped.  </para>
    <para>Note that the timing of the actual start and stop actions depends on what else needs to be performed first.  </para>
-   <para>Advanced Configuration</para></sect1><sect1><title>
-      <anchor id="ConnectingtotheClusterConfig"/>Connecting to the Cluster Configuration from a Remote Machine</title>
+   </section>
+   </section>
+   <section id="advanced-config"><title>Advanced Configuration</title>
+      <section>
+	<anchor id="ConnectingtotheClusterConfig"/>
+	<title>Connecting to the Cluster Configuration from a Remote Machine</title>
    <para>Provided Pacemaker is installed on a machine, it is possible to connect to the cluster even if the machine itself is not a part of it.   To do this, one simply sets up a number of environment variables and runs the same commands as you would when working on a cluster node.</para>
    <informaltable frame="all">
       <tgroup cols="2">
@@ -2077,13 +2112,13 @@
             </entry>
          </row></tbody></tgroup>
    </informaltable>
-   <para>Extra top-level CIB options for remote access </para></sect1><sect1><title>
+   <para>Extra top-level CIB options for remote access </para></section><section><title>
       <anchor id="SpecifyingWhenRecurringActioncopy"/>Specifying When Recurring Actions are Performed</title>
    <para>By default, recurring actions are scheduled relative to when the resource started.  So if your resource was last started at 14:32 and you have a backup set to be performed every 24 hours, then the backup will always run at in the middle of the business day - hardly desirable.</para>
    <para>To specify a date/time that the operation should be relative to, set the operation’s interval-origin.  The cluster uses this point to calculate the correct start-delay such that the operation will occur at origin + (interval * N).</para>
    <para>So if the operation’s interval is 24h, it’s interval-origin is set to 02:00 and it is currently 14:32, then the cluster would initiate the operation with a start delay of 11 hours and 28 minutes.  If the resource is moved to another node before 2am, then the operation is of course cancelled.</para>
    <para>The value specified for interval and interval-origin can be any date/time conforming to the <ulink url="http://en.wikipedia.org/wiki/ISO_8601">ISO8601 standard</ulink>.  By way of example, to specify an operation that would run on the first Monday of 2009 and every monday after that you would add: </para>
-   <para>&lt;op id=”my-weekly-action” name=”custom-action” interval=”P7D” interval-origin=”2009-W01-1”/&gt; </para></sect1><sect1><title>Moving Resources</title><sect2><title>Manual Intervention</title>
+   <para>&lt;op id=”my-weekly-action” name=”custom-action” interval=”P7D” interval-origin=”2009-W01-1”/&gt; </para></section><section><title>Moving Resources</title><section><title>Manual Intervention</title>
    <para>There are primarily two occasions when you would want to move a resource from it’s current location:  when the whole node  is under maintenance and when a single resource needs to be moved.</para>
    <para>In the case where everything needs to move, since everything eventually comes down to a score, you could create constraints for every resource you have preventing it from running on that node.  While the configuration can seem convoluted at times, not even we would require this of administrators.</para>
    <para>Instead one can set a special node attribute which tells the cluster “don’t let anything run here”.  There is even a helpful tool to help query and set it called crm_standby.  To check the standby status of the current machine, simply run:</para>
@@ -2116,7 +2151,7 @@
    <para>In some cases, such as when resource stickiness is set to INFINITY, it is possible that you will end up with the problem described in <link linkend="">What if Two Nodes Have the Same Score</link>.  The tool can detect some of these cases and deals with them by also creating both a positive and negative constraint.  Eg. </para>
    <para>        Email prefers sles-1 with a score of -INFINITY</para>
    <para>        Email prefers sles-2 with a score of INFINITY</para>
-   <para>which has the same long-term consequences as discussed earlier.</para></sect2><sect2><title>
+   <para>which has the same long-term consequences as discussed earlier.</para></section><section><title>
       <anchor id="MigratingDuetoFailure"/>Moving Resources Due to Failure</title>
    <para>New in 1.0 is the concept of a migration threshold<footnote>
          <para> The naming of this option was unfortunate as it is easily confused with true migration, the process of moving a resource from one node to another without stopping it.  Xen virtual guests are the most common example of resources that can be migrated in this manner.</para>
@@ -2125,7 +2160,7 @@
    <para>So a setting of migration-threshold=2 and failure-timeout=60s would cause the resource to move to a new node after 2 failures and potentially allow it to move back (depending on the stickiness and constraint scores) after one minute.</para>
    <para>There are two exceptions to the migration threshold concept and occur when a resource either fails to start or fails to stop.  Start failures cause the failcount to be set to INFINITY and thus always cause the resource to move immediately.</para>
    <para>Stop failures are slightly different and crucial.  If a resource fails to stop and STONITH is enabled, then the cluster will fence the node in order to be able to start the resource elsewhere.  If STONITH is not enabled, then the cluster has no way to continue and will not try to start the resource elsewhere, but will try to stop it again after the failure timeout.</para>
-   <para>Note: Please read the section on <link linkend="">Ensuring Time Based Rules Take Effect</link> before enabling this option. </para></sect2><sect2><title>Moving Resources Due to Connectivity Changes</title>
+   <para>Note: Please read the section on <link linkend="">Ensuring Time Based Rules Take Effect</link> before enabling this option. </para></section><section><title>Moving Resources Due to Connectivity Changes</title>
    <para>Setting up the cluster to move resources when external connectivity is lost, is a two-step process.</para>
    <para>
       <emphasis>Tell Pacemaker to monitor connectivity</emphasis>
@@ -2227,7 +2262,7 @@
    <para>    &lt;expression id="ping-prefer" attribute="pingd" operation="defined"/&gt;</para>
    <para>  &lt;/rule&gt;</para>
    <para>&lt;/rsc_location&gt; </para>
-   <para>A more complex example of choosing a location based on connectivity  </para></sect2><sect2><title>Resource Migration</title>
+   <para>A more complex example of choosing a location based on connectivity  </para></section><section><title>Resource Migration</title>
    <para>Some resources, such as Xen virtual guests, are able to move to another location without lose of state.  We call this resource migration and is different from the normal practice of stopping the resource on the first machine and starting it elsewhere.</para>
    <para>Not all resources are able to migrate, see the Migration Checklist below, and those that can wont do so in all situations.  Conceptually there are two requirements from which the other prerequisites follow: </para>
    <orderedlist>
@@ -2241,7 +2276,7 @@
    <para>The cluster is able to accommodate both push and pull migration models by requiring the resource agent to support two new actions: migrate_to (performed on the current location) and migrate_from (performed on the destination).</para>
    <para>In push migration, the process on the current location transfers the to the new location where is it later activated.  In this scenario, most of the work would be done in the migrate_to action and, if anything, the activation would occur during migrate_from.</para>
    <para>Conversely for pull, the migrate_to action is practically empty and migrate_from does most of the work, extracting the relevant resource state from the old location and activating it.</para>
-   <para>There is no wrong or right way to implement migration for your service, as long as it works. </para><sect3><title>Migration Checklist</title>
+   <para>There is no wrong or right way to implement migration for your service, as long as it works. </para><section><title>Migration Checklist</title>
    <orderedlist>
       <listitem>
          <para>The resource may not be a clone.</para>
@@ -2262,7 +2297,7 @@
          <para>The resource must have the allow-migrate meta-attribute set to true (not the default).</para>
       </listitem>
    </orderedlist>
-   <para>If the resource depends on a clone, and at the time the resource needs to be move, the clone has instances that are stopping and instances that are starting, then the resource will be moved in the traditional manner.  The Policy Engine is not yet able to model this situation correctly and so takes the safe (yet less optimal) path. </para></sect3></sect2></sect1><sect1><title>
+   <para>If the resource depends on a clone, and at the time the resource needs to be move, the clone has instances that are stopping and instances that are starting, then the resource will be moved in the traditional manner.  The Policy Engine is not yet able to model this situation correctly and so takes the safe (yet less optimal) path. </para></section></section></section><section><title>
       <anchor id="ReusingRulesandSetsofOption"/>Reusing Rules, Options and Sets of Operations</title>
    <para>Sometimes a number of constraints need to use the same set of rules and resources need to set the same options an parameters.  To simplify this situation, you can refer to an existing object using an id-ref instead of an id.</para>
    <para>So if for one resource you have</para>
@@ -2300,8 +2335,12 @@
    <para>&lt;/primitive&gt;</para>
    <para>Illustration of the ability to reference attributes, options and operations from other resources</para>
    <para/>
-   <para>Advanced Resource Types</para></sect1><sect1><title>
-      <anchor id="GroupsASyntacticShortcut"/>Groups - A Syntactic Shortcut</title>
+      </section>
+   </section>
+   <section id="advanced-rsc"><title>Advanced Resource Types</title>
+     <section>
+       <anchor id="GroupsASyntacticShortcut"/>
+       <title>Groups - A Syntactic Shortcut</title>
    <para>One of the most common elements of a cluster is a set of resources that need to be located together, start sequentially and stop in the reverse order.  To simplify this configuration we support the concept of groups.  </para>
    <para>&lt;group id=”shortcut”&gt;</para>
    <para>  &lt;primitive id="Public-IP" class="ocf" type="IPaddr" provider=”heartbeat”&gt;</para>
@@ -2340,7 +2379,7 @@
    <para>  &lt;/constraints&gt;</para>
    <para>&lt;/configuration&gt;</para>
    <para>How the cluster sees a group resource</para>
-   <para>Obviously as the group grows bigger, the reduced configuration effort can become significant.</para><sect2><title>Properties</title>
+   <para>Obviously as the group grows bigger, the reduced configuration effort can become significant.</para><section><title>Properties</title>
    <informaltable frame="all">
       <tgroup cols="2">
          <thead>
@@ -2360,18 +2399,18 @@
                <para>Your name for the group</para>
             </entry>
          </row></tbody></tgroup>
-   </informaltable></sect2><sect2><title>Options</title>
-   <para>Options inherited from <link linkend="">simple resources</link>: priority, target-role, is-managed</para></sect2><sect2><title>Using Groups</title><sect3><title>Instance Attributes</title>
-   <para>Groups have no instance attributes, however any that are set here will be inherited by the group’s children. </para></sect3><sect3><title>Contents</title>
-   <para>Groups may only contain a collection of <link linkend="">primitive</link> cluster resources.  To refer to the child of a group resource, just use the child’s id instead of the group’s.</para></sect3><sect3><title>Constraints</title>
+   </informaltable></section><section><title>Options</title>
+   <para>Options inherited from <link linkend="">simple resources</link>: priority, target-role, is-managed</para></section><section><title>Using Groups</title><section><title>Instance Attributes</title>
+   <para>Groups have no instance attributes, however any that are set here will be inherited by the group’s children. </para></section><section><title>Contents</title>
+   <para>Groups may only contain a collection of <link linkend="">primitive</link> cluster resources.  To refer to the child of a group resource, just use the child’s id instead of the group’s.</para></section><section><title>Constraints</title>
    <para>Although it is possible to reference the group’s children in constraints, it is usually preferable to use the group’s name instead.</para>
    <para>&lt;constraints&gt;</para>
    <para>    &lt;rsc_location id=”group-prefers-node1” rsc=”shortcut” node=”node1” score=”500”/&gt;</para>
    <para>    &lt;rsc_colocation id=”webserver-with-group” rsc=”Webserver” with-rsc=”shortcut”/&gt;</para>
    <para>    &lt;rsc_order id=”start-group-then-webserver” first=”Webserver” then=”shortcut”/&gt;</para>
    <para>&lt;/constraints&gt;</para>
-   <para>Example constraints involving groups</para></sect3><sect3><title>Stickiness</title>
-   <para>Stickiness, the measure of how much a resource wants to stay where it is, is additive in groups.  Every active member of the group will contribute its stickiness value to the group’s total.  So if the default resource-stickiness is 100 a group has seven members, five of which are active, then the group as a whole will prefer its current location with a score of 500.</para></sect3></sect2></sect1><sect1><title>
+   <para>Example constraints involving groups</para></section><section><title>Stickiness</title>
+   <para>Stickiness, the measure of how much a resource wants to stay where it is, is additive in groups.  Every active member of the group will contribute its stickiness value to the group’s total.  So if the default resource-stickiness is 100 a group has seven members, five of which are active, then the group as a whole will prefer its current location with a score of 500.</para></section></section></section><section><title>
       <anchor id="ClonesResourcesThatShouldb"/>Clones - Resources That Should be Active on Multiple Hosts</title>
    <para>Clones were initially conceived as a convenient way to start N instances of an IP resource and have them distributed throughout the cluster for load balancing. They have turned out to quite useful for a number of purposes including integrating with Red Hat's DLM, the fencing subsystem and OCFS2.</para>
    <para>You can clone any resource provided the resource agent supports it.</para>
@@ -2397,7 +2436,7 @@
    <para>    &lt;/meta_attributes&gt;</para>
    <para>    &lt;primitive id="apache" class="lsb" type="apache"/&gt;</para>
    <para>&lt;/clone&gt;</para>
-   <para>An example clone</para><sect2><title>Properties</title></sect2><sect2><title/>
+   <para>An example clone</para><section><title>Properties</title></section><section><title/>
    <informaltable frame="all">
       <tgroup cols="2">
          <thead>
@@ -2417,7 +2456,7 @@
                <para>Your name for the clone</para>
             </entry>
          </row></tbody></tgroup>
-   </informaltable></sect2><sect2><title>Options</title>
+   </informaltable></section><section><title>Options</title>
    <para>Options inherited from <link linkend="">simple resources</link>: priority, target-role, is-managed</para>
    <informaltable frame="all">
       <tgroup cols="2">
@@ -2482,10 +2521,10 @@
             </entry>
          </row></tbody></tgroup>
    </informaltable>
-   <para>Clone specific configuration options</para></sect2><sect2><title>Using Clones</title><sect3><title>Instance Attributes</title>
-   <para>Clones have no instance attributes, however any that are set here will be inherited by the clone’s children. </para></sect3><sect3><title>Contents</title>
+   <para>Clone specific configuration options</para></section><section><title>Using Clones</title><section><title>Instance Attributes</title>
+   <para>Clones have no instance attributes, however any that are set here will be inherited by the clone’s children. </para></section><section><title>Contents</title>
    <para>Clones must contain exactly one group or one regular resource.</para>
-   <para>You should never reference the name of a clone’s child. If you think you need to do this, you probably need to re-evaluate your design.</para></sect3><sect3><title>Constraints</title>
+   <para>You should never reference the name of a clone’s child. If you think you need to do this, you probably need to re-evaluate your design.</para></section><section><title>Constraints</title>
    <para>In most cases, a clone will have a single copy on each active cluster node.  However if this is not the case, you can indicate which nodes the cluster should to preferentially assign copies to with resource location constraints.  These constraints are written no differently to those for regular resources except that the clone’s id is used.   </para>
    <para>Ordering constraints behave slightly differently for clones.  In the example below, apache-stats will wait until all copies of the clone that need to be started have done so before being started itself.  Only if no copies can be started will apache-stats be prevented from being active.  Additionally, the clone will wait for apache-stats to be stopped before stopping the clone.</para>
    <para>Colocation of a regular (or group) resource with a clone means that the resource can run on any machine with an active copy of the clone.  The cluster will choose a copy based on where the clone is running and the rsc resource’s own location preferences.</para>
@@ -2495,13 +2534,13 @@
    <para>    &lt;rsc_colocation id=”stats-with-clone” rsc=”apache-stats” with=”apache-clone”/&gt;</para>
    <para>    &lt;rsc_order id=”start-clone-then-stats” first=”apache-clone” then=”apache-stats”/&gt;</para>
    <para>&lt;/constraints&gt;</para>
-   <para>Example constraints involving clones</para></sect3><sect3><title>Stickiness</title>
-   <para>To achieve a stable allocation pattern, clones are slightly sticky by default.  If no value for resource-stickiness is provided, the clone will use a value of 1.  Being a small value, it causes minimal disturbance to the score calculations of other resources but is enough to prevent Pacemaker from needlessly moving copies around the cluster. </para></sect3><sect3><title>Resource Agent Requirements</title>
+   <para>Example constraints involving clones</para></section><section><title>Stickiness</title>
+   <para>To achieve a stable allocation pattern, clones are slightly sticky by default.  If no value for resource-stickiness is provided, the clone will use a value of 1.  Being a small value, it causes minimal disturbance to the score calculations of other resources but is enough to prevent Pacemaker from needlessly moving copies around the cluster. </para></section><section><title>Resource Agent Requirements</title>
    <para>Any resource can be used as an anonymous clone as it requires no additional support from the resource agent.  Whether it makes sense to do so depends on your resource and its resource agent.</para>
    <para>Globally unique clones do require some additional support in the resource agent.  In particular, it must only respond with      ${OCF_SUCCESS} if the node has that exact instance active. All other probes for instances of the clone should result in      ${OCF_NOT_RUNNING}. Unless of course they are failed, in which case they should return one of the other OCF error codes.</para>
    <para>Copies of a clone are identified by appending a colon and a numerical offset.  Eg. apache:2</para>
    <para>Resource agents can find out how many copies there are by examining the OCF_RESKEY_CRM_meta_clone_max environment variable and which copy it is by examining OCF_RESKEY_CRM_meta_clone.</para>
-   <para>You should not make any assumptions (based on OCF_RESKEY_CRM_meta_clone) about which copies are active.  In particular, the list of active copies will not always be an unbroken sequence, nor always start at 0.</para></sect3><sect3><title>Notifications</title>
+   <para>You should not make any assumptions (based on OCF_RESKEY_CRM_meta_clone) about which copies are active.  In particular, the list of active copies will not always be an unbroken sequence, nor always start at 0.</para></section><section><title>Notifications</title>
    <para>Supporting notifications requires the notify action to be implemented.  Once supported, the notify action will be passed a number of extra variables which, when combined with additional context, can be used to calculate the current state of the cluster and what is about to happen to it.</para>
    <para> </para>
    <informaltable frame="all">
@@ -2601,7 +2640,7 @@
    <para>Thus in order to indicate that clone:0 will be started on sles-1, clone:2 will be started on sles-3, and clone:3 will be started on sles-2, the cluster would set</para>
    <para>OCF_RESKEY_CRM_meta_notify_start_resource=”clone:0 clone:2 clone:3”</para>
    <para>OCF_RESKEY_CRM_meta_notify_start_uname=”sles-1 sles-3 sles-2”</para>
-   <para>Example notification variables</para></sect3><sect3><title>Proper Interpretation of Notification Environment Variables</title>
+   <para>Example notification variables</para></section><section><title>Proper Interpretation of Notification Environment Variables</title>
    <para>Pre-notification (stop)</para>
    <orderedlist>
       <listitem>
@@ -2666,8 +2705,8 @@
       <listitem>
          <para>Resources that were stopped: $OCF_RESKEY_CRM_meta_notify_stop_resource</para>
       </listitem>
-   </orderedlist></sect3></sect2></sect1><sect1><title>Multi-state - <anchor id="AdvancedResourcesMultistate"/>Resources That Have Multiple Modes</title>
-   <para>Multi-state resources are a specialization of Clones (please ensure you understand the section on clones before continuing) that allow the instances to be in one of two operating modes.  These modes are called Master and Slave but can mean whatever you wish them to mean.  The only limitation is that when an instance is started, it must come up in the Slave state.</para><sect2><title>Properties</title>
+   </orderedlist></section></section></section><section><title>Multi-state - <anchor id="AdvancedResourcesMultistate"/>Resources That Have Multiple Modes</title>
+   <para>Multi-state resources are a specialization of Clones (please ensure you understand the section on clones before continuing) that allow the instances to be in one of two operating modes.  These modes are called Master and Slave but can mean whatever you wish them to mean.  The only limitation is that when an instance is started, it must come up in the Slave state.</para><section><title>Properties</title>
    <informaltable frame="all">
       <tgroup cols="2">
          <thead>
@@ -2687,7 +2726,7 @@
                <para>Your name for the multi-state resource</para>
             </entry>
          </row></tbody></tgroup>
-   </informaltable></sect2><sect2><title>Options</title>
+   </informaltable></section><section><title>Options</title>
    <para>Options inherited from <link linkend="">simple resources</link>: priority, target-role, is-managed</para>
    <para>Options inherited from <link linkend="">clone resources</link>: clone-max, clone-node-max, notify, globally-unique, ordered, interleave</para>
    <informaltable frame="all">
@@ -2718,10 +2757,10 @@
             </entry>
          </row></tbody></tgroup>
    </informaltable>
-   <para>Multi-state specific resource configuration options</para></sect2><sect2><title>Using Multi-state Resources</title><sect3><title>Instance Attributes</title>
-   <para>Multi-state resources have no instance attributes, however any that are set here will be inherited by the master’s children. </para></sect3><sect3><title>Contents</title>
+   <para>Multi-state specific resource configuration options</para></section><section><title>Using Multi-state Resources</title><section><title>Instance Attributes</title>
+   <para>Multi-state resources have no instance attributes, however any that are set here will be inherited by the master’s children. </para></section><section><title>Contents</title>
    <para>Masters must contain exactly one group or one regular resource.</para>
-   <para>You should never reference the name of a master’s child. If you think you need to do this, you probably need to re-evaluate your design.</para></sect3><sect3><title>Monitoring Multi-State Resources</title>
+   <para>You should never reference the name of a master’s child. If you think you need to do this, you probably need to re-evaluate your design.</para></section><section><title>Monitoring Multi-State Resources</title>
    <para>The normal type of monitor actions you define are not sufficient to monitor a multi-state resource in the Master state.  To detect failures of the master instance, you need to define an additional monitor action with role=”Master”. </para>
    <para>NOTE: It is crucial that every monitor operation has a different interval</para>
    <para>&lt;master id=”myMasterRsc”&gt;</para>
@@ -2732,7 +2771,7 @@
    <para>    &lt;/operations&gt;</para>
    <para>  &lt;/primitive&gt;</para>
    <para>&lt;/master&gt;</para>
-   <para>Monitoring both states of a multi-state resource</para></sect3><sect3><title>Constraints</title>
+   <para>Monitoring both states of a multi-state resource</para></section><section><title>Constraints</title>
    <para>In most cases, a multi-state resources will have a single copy on each active cluster node.  However if this is not the case, you can indicate which nodes the cluster should to preferentially assign copies to with resource location constraints.  These constraints are written no differently to those for regular resources except that the master’s id is used.   </para>
    <para>When considering multi-state resources in constraints, for most purposes it is sufficient to treat them as clones.  The exception is when the rsc-role and/or with-rsc-role (for colocation constraints) and first-action and/or then-action (for ordering constraints) are used.</para>
    <informaltable frame="all">
@@ -2794,8 +2833,8 @@
    <para>  &lt;rsc_order id=”start-db-before-backup” first=”database” then=”backup”/&gt;</para>
    <para>  &lt;rsc_order id=”promote-db-then-app” first=”database” first-action=”promote” then=”myApp” then-action=”start”/&gt;</para>
    <para>&lt;/constraints&gt;</para>
-   <para>Example constraints involving multi-state resources</para></sect3><sect3><title>Stickiness</title>
-   <para>To achieve a stable allocation pattern, clones are slightly sticky by default.  If no value for resource-stickiness is provided, the clone will use a value of 1.  Being a small value, it causes minimal disturbance to the score calculations of other resources but is enough to prevent Pacemaker from needlessly moving copies around the cluster. </para></sect3><sect3><title>Which Resource Instance is Promoted</title>
+   <para>Example constraints involving multi-state resources</para></section><section><title>Stickiness</title>
+   <para>To achieve a stable allocation pattern, clones are slightly sticky by default.  If no value for resource-stickiness is provided, the clone will use a value of 1.  Being a small value, it causes minimal disturbance to the score calculations of other resources but is enough to prevent Pacemaker from needlessly moving copies around the cluster. </para></section><section><title>Which Resource Instance is Promoted</title>
    <para>During the start operation, most Resource Agent scripts should call the crm_master utility. This tool automatically detects both the resource and host and should be used to set a preference for being promoted. Based on this, master-max, and master-node-max, the instance(s) with the highest preference will be promoted.</para>
    <para>The other alternative is to create a location constraint that indicates which nodes are most preferred as masters. </para>
    <para>&lt;rsc_location id="master-location" rsc="myMasterRsc"&gt;</para>
@@ -2803,7 +2842,7 @@
    <para>        &lt;expression id="master-exp" attribute="#uname" operation="eq" value="node1"/&gt;</para>
    <para>    &lt;/rule&gt;</para>
    <para>&lt;/rsc_location&gt;</para>
-   <para>Manually specifying which node should be promoted</para></sect3><sect3><title>Resource Agent Requirements</title>
+   <para>Manually specifying which node should be promoted</para></section><section><title>Resource Agent Requirements</title>
    <para>Since multi-state resources are an extension of cloned resources, all the requirements of Clones are also requirements of multi-state resources.  Additionally, multi-state resources require two extra actions demote and promote.  These actions are responsible for changing the state of the resource.  Like start and stop, they should return OCF_SUCCESS if they completed successfully or a relevant error code if they did not.</para>
    <para>The states can mean whatever you wish, but when the resource is started, it must come up in the mode called Slave.  From there the cluster will then decide which instances to promote into a Master.</para>
    <para>In addition to the Clone requirements for monitor actions, agents must also <emphasis>accurately</emphasis> report which state they are in. The cluster relies on the agent to report its status (including role) accurately and does not indicate to the agent what role it currently believes it to be in.   </para>
@@ -2859,7 +2898,7 @@
             </entry>
          </row></tbody></tgroup>
    </informaltable>
-   <para>Role implications of OCF return codes</para></sect3><sect3><title>Notifications</title>
+   <para>Role implications of OCF return codes</para></section><section><title>Notifications</title>
    <para>Like with clones, supporting notifications requires the notify action to be implemented.  Once supported, the notify action will be passed a number of extra variables which, when combined with additional context, can be used to calculate the current state of the cluster and what is about to happen to it. </para>
    <informaltable frame="all">
       <tgroup cols="2">
@@ -3036,7 +3075,7 @@
    <para>Environment variables supplied with Master notify actions<footnote>
          <para> Variables in bold are specific to Master resources and all behave in the same manner as described for Clone resources.</para>
       </footnote>
-   </para></sect3><sect3><title>Proper Interpretation of Notification Environment Variables</title>
+   </para></section><section><title>Proper Interpretation of Notification Environment Variables</title>
    <para>Pre-notification (demote)</para>
    <orderedlist>
       <listitem>
@@ -3266,14 +3305,20 @@
          <para>Resources that were stopped: $OCF_RESKEY_CRM_meta_notify_stop_resource</para>
       </listitem>
    </orderedlist>
-   <para>
-      <anchor id="ProtectingYourDatawithSTONIT"/>Protecting Your Data - STONITH</para></sect3></sect2><sect2><title>Why You Need STONITH</title>
+     </section>
+     </section>
+     </section>
+     </section>
+   <section id="stonith">
+     <title>Protecting Your Data - STONITH</title>
+     <anchor id="ProtectingYourDatawithSTONIT"/>
+     <section><title>Why You Need STONITH</title>
    <para>STONITH is an acronym for Shoot-The-Other-Node-In-The-Head and it protects your data from being corrupted by rouge nodes or concurrent access.</para>
    <para>Just because a node is unresponsive, this doesn’t mean it isn’t accessing your data.  The only way to be 100% sure that your data is safe, is to use STONITH so we can be certain that the node is truly offline, before allowing the data to be accessed from another node.</para>
-   <para>STONITH also has a role to play in the event that a clustered service cannot be stopped.  In this case, the cluster uses STONITH to force the whole node offline, thereby making it safe to start the service elsewhere.</para></sect2><sect2><title>What STONITH Device Should You Use</title>
+   <para>STONITH also has a role to play in the event that a clustered service cannot be stopped.  In this case, the cluster uses STONITH to force the whole node offline, thereby making it safe to start the service elsewhere.</para></section><section><title>What STONITH Device Should You Use</title>
    <para>It is crucial that the STONITH device can allow the cluster to differentiate between a node failure and a network one.  </para>
    <para>The biggest mistake people make in choosing a STONITH device is to use remote power switch (such as many onboard IMPI controllers) that shares power with the node it controls.  In such cases, the cluster cannot be sure if the node is really offline, or active and suffering from a network fault.</para>
-   <para>Likewise, any device that relies on the machine being active (such as SSH-based “devices” used during testing) are inappropriate.</para></sect2><sect2><title>Configuring STONITH</title>
+   <para>Likewise, any device that relies on the machine being active (such as SSH-based “devices” used during testing) are inappropriate.</para></section><section><title>Configuring STONITH</title>
    <orderedlist>
       <listitem>
          <para>Find the correct driver:  stonith -L</para>
@@ -3297,7 +3342,7 @@
       <listitem>
          <para>Upload it into the CIB using cibadmin: cibadmin -C -o resources --xml-file stonith.xml</para>
       </listitem>
-   </orderedlist><sect3><title>Example</title>
+   </orderedlist><section><title>Example</title>
    <para>Assuming we have an IBM BladeCenter consisting of four nodes and the management interface is active on 10.0.0.1, then we would chose the external/ibmrsa driver in step 2 and obtain the following list of parameters</para>
    <para># stonith -t external/ibmrsa -n</para>
    <para>hostname  ipaddr  userid  passwd  type</para>
@@ -3319,8 +3364,9 @@
    <para>            &lt;/instance_attributes&gt;</para>
    <para>          &lt;/primitive&gt;</para>
    <para>        &lt;/clone&gt;</para>
-   <para>Status - Here be dragons</para>
-   <para>Most users never need understand the contents of the status section and can be content with the output from crm_mon. However for those with a curious inclination, the following attempts to proved an overview of its contents.</para></sect3></sect2></sect1><sect1><title>Node Status</title>
+   </section></section></section>
+   <section id="status"><title>Status - Here be dragons</title>
+   <para>Most users never need understand the contents of the status section and can be content with the output from crm_mon. However for those with a curious inclination, the following attempts to proved an overview of its contents.</para><section><title>Node Status</title>
    <para>In addition to the cluster’s configuration, the CIB holds an up-to-date representation of each cluster node in the status section.</para>
    <para>&lt;node_state id="cl-virt-1" uname="cl-virt-2" ha="active" in_ccm="true" crmd="online" join="member" expected="member" crm-debug-origin="do_update_resource"&gt;</para>
    <para>   &lt;transient_attributes id="cl-virt-1"/&gt;</para>
@@ -3443,7 +3489,7 @@
          </row></tbody></tgroup>
    </informaltable>
    <para>Node Status Fields </para>
-   <para>The cluster uses these fields to determine if, at the node level, the node is healthy or is in a failed state and needs to be fenced.</para></sect1><sect1><title>Transient Node Attributes</title>
+   <para>The cluster uses these fields to determine if, at the node level, the node is healthy or is in a failed state and needs to be fenced.</para></section><section><title>Transient Node Attributes</title>
    <para>Like regular <link linkend="">node attributes</link>, the name/value pairs listed here also help describe the node.  However they are forgotten by the cluster when the node goes offline.  This can be useful, for instance, when you only want a node to be in standby mode (not able to run resources) until the next reboot. </para>
    <para>In addition to any values the administrator sets, the cluster will also store information about failed resources here.</para>
    <para>      &lt;transient_attributes id="cl-virt-1"&gt;</para>
@@ -3458,7 +3504,7 @@
    <para>In the above example, we can see that the pingd:0 resource has failed once, at Mon Apr  6 11:22:22 2009.<footnote>
          <para> You can use the following perl one-liner to print a human readable of any seconds-since-epoch value:</para>
          <para>         perl -e 'print scalar(localtime($seconds))."\n"'</para>
-      </footnote>  We also see that the node is connected to three “pingd” peers and that all known resources have been checked for on this machine (probe_complete).</para></sect1><sect1><title>Operation History</title>
+      </footnote>  We also see that the node is connected to three “pingd” peers and that all known resources have been checked for on this machine (probe_complete).</para></section><section><title>Operation History</title>
    <para>A node’s resource history is held in the lrm_resources tag (a child of the lrm tag). The information stored here includes enough information for the cluster to stop the resource safely if it is removed from the configuration section. Specifically we store the resource’s ID, class, type and provider.</para>
    <para>          &lt;lrm_resource id="apcstonith" type="apcmastersnmp" class="stonith"&gt;</para>
    <para>A record of the apcstonith resource</para>
@@ -3595,14 +3641,14 @@
             </entry>
          </row></tbody></tgroup>
    </informaltable>
-   <para>Contents of an lrm_rsc_op job. </para><sect2><title>Simple Example</title>
+   <para>Contents of an lrm_rsc_op job. </para><section><title>Simple Example</title>
    <para>&lt;lrm_resource id="apcstonith" type="apcmastersnmp" class="stonith"&gt; </para>
    <para>    &lt;lrm_rsc_op id="apcstonith_monitor_0" operation="monitor" crm-debug-origin="do_update_resource" crm_feature_set="3.0.1" transition-key="22:2:7:2668bbeb-06d5-40f9-936d-24cb7f87006a" transition-magic="0:7;22:2:7:2668bbeb-06d5-40f9-936d-24cb7f87006a" call-id="2" rc-code="7" op-status="0" interval="0" last-run="1239008085" last-rc-change="1239008085" exec-time="10" queue-time="0" op-digest="2e3da9274d3550dc6526fb24bfcbcba0"/&gt;</para>
    <para>&lt;/lrm_resource&gt;</para>
    <para>A monitor operation performed by the cluster to determine the current state of the apcstonith resource</para>
    <para>In the above example, the job is a non-recurring monitor often referred to as a “probe” for the apcstonith resource. The cluster schedules probes for every configured resource on when a new node starts, in order to determine the resource’s current state before it takes further any further action.</para>
    <para>From the tranisition-key, we can see that this was the 22nd action of the 2nd graph produced by this instance of the crmd (2668bbeb-06d5-40f9-936d-24cb7f87006a).  The third field of the transition-key contains a 7, this indicates that the job expects to find the resource inactive.  By now looking at the rc-code property, we see that this was the case.</para>
-   <para>Evidently, the cluster started the resource elsewhere as that is the only job recorded for this node.</para></sect2><sect2><title>Complex Resource History Example</title>
+   <para>Evidently, the cluster started the resource elsewhere as that is the only job recorded for this node.</para></section><section><title>Complex Resource History Example</title>
    <para/>
    <para>&lt;lrm_resource id="pingd:0" type="pingd" class="ocf" provider="pacemaker"&gt;</para>
    <para>    &lt;lrm_rsc_op id="pingd:0_monitor_30000" operation="monitor" crm-debug-origin="do_update_resource" crm_feature_set="3.0.1" transition-key="10:11:0:2668bbeb-06d5-40f9-936d-24cb7f87006a" transition-magic="0:0;10:11:0:2668bbeb-06d5-40f9-936d-24cb7f87006a" call-id="34" rc-code="0" op-status="0" interval="30000" last-run="1239009741" last-rc-change="1239009741" exec-time="10" queue-time="0" op-digest="a0f8398dac7ced82320fe99fd20fbd2f"/&gt;</para>
@@ -3628,11 +3674,15 @@
    </orderedlist>
    <para>The cluster processes each job record to build up a picture of the resource’s state.  After the first and second entries, it is considered stopped and after the third it considered active. Based on the last operation, we can tell that the resource is currently active. </para>
    <para>Additionally, from the presence of a stop operation with a lower call-id than that of the start operation, we can conclude that the  resource has been restarted. Specifically this occurred as part of actions 11 and 31 of transition 11 from the crmd instance with the key 2668bbeb-06d5-40f9-936d-24cb7f87006a.  This information can be helpful for locating the relevant section of the logs when looking for the source of a failure.</para>
-   <para>Appendix: FAQ</para></sect2><sect2><title>Why is the Project Called Pacemaker?</title>
+   </section>
+   </section>
+   </section>
+   <section id="faq"><title>Appendix: FAQ</title>
+   <section><title>Why is the Project Called Pacemaker?</title>
    <para>First of all, the reason its not called the CRM is because of the abundance of <ulink url="http://en.wikipedia.org/wiki/CRM">terms</ulink> that are commonly abbreviated to those three letters.</para>
    <para>The Pacemaker name came from <ulink url="http://khamsouk.souvanlasy.com/">Kham</ulink>, a good friend of mine, and was originally used by a Java GUI that I was prototyping in early 2007. Alas other commitments have prevented the GUI from progressing much and, when it came time to choose a name for this project, Lars suggested it was an even better fit for an independent CRM.</para>
    <para>The idea stems from the analogy between the role of this software and that of the little device that keeps the human heart pumping.  Pacemaker monitors the cluster and intervenes when necessary to ensure the smooth operation of the services it provides.</para>
-   <para>There were a number of other names (and acronyms) tossed around, but suffice to say "Pacemaker" was the best</para></sect2><sect2><title>Why was the Pacemaker Project Created?</title>
+   <para>There were a number of other names (and acronyms) tossed around, but suffice to say "Pacemaker" was the best</para></section><section><title>Why was the Pacemaker Project Created?</title>
    <para>The decision was made to spin-off the CRM into its own project after the 2.1.3 Heartbeat release in order to</para>
    <orderedlist>
       <listitem>
@@ -3647,7 +3697,7 @@
       <listitem>
          <para>better and more stable interfaces</para>
       </listitem>
-   </orderedlist></sect2><sect2><title>What Messaging Layers are Supported?</title>
+   </orderedlist></section><section><title>What Messaging Layers are Supported?</title>
    <orderedlist>
       <listitem>
          <para>OpenAIS (<ulink url="http://www.openais.org/">http://www.openais.org</ulink>)</para>
@@ -3655,21 +3705,25 @@
       <listitem>
          <para>Heartbeat (<ulink url="http://linux-ha.org/">http://linux-ha.org/</ulink>)</para>
       </listitem>
-   </orderedlist></sect2><sect2><title>Can I Choose which Messaging Layer to use at Run Time?</title>
-   <para>Yes. The CRM will automatically detect who started it and behave accordingly.</para></sect2><sect2><title>Can I Have a Mixed Heartbeat-OpenAIS Cluster?</title>
+   </orderedlist></section><section><title>Can I Choose which Messaging Layer to use at Run Time?</title>
+   <para>Yes. The CRM will automatically detect who started it and behave accordingly.</para></section><section><title>Can I Have a Mixed Heartbeat-OpenAIS Cluster?</title>
    <para>No.</para>
    <para>Which Messaging Layer Should I Choose?</para>
-   <para>This is discussed in the <link linkend="">Installation</link> appendix</para></sect2><sect2><title>Where Can I Get Pre-built Packages?</title>
+   <para>This is discussed in the <link linkend="">Installation</link> appendix</para></section><section><title>Where Can I Get Pre-built Packages?</title>
    <para>Official packages for most major .rpm and .deb based distributions are available from:</para>
    <para>        <ulink url="http://download.opensuse.org/repositories/server:/ha-clustering/">http://download.opensuse.org/repositories/server:/ha-clustering/</ulink>
    </para>
-   <para>For more information, we have a <ulink url="http://clusterlabs.org/mw/Install%23Package_List">description of the available packages</ulink>.</para></sect2><sect2><title>What Versions of Pacemaker Are Supported?</title>
+   <para>For more information, we have a <ulink url="http://clusterlabs.org/mw/Install%23Package_List">description of the available packages</ulink>.</para></section><section><title>What Versions of Pacemaker Are Supported?</title>
    <para>Please refer to the <ulink url="http://clusterlabs.org/mw/Releases">Releases</ulink> page for an up-to-date list of versions supported directly by the project.</para>
    <para>When seeking assistance, please try to ensure you have one of these versions.</para>
-   <para>Appendix: More About OCF Resource Agents</para></sect2><sect2><title>Location of Custom Scripts</title>
+   </section>
+   </section>
+
+   <section id="ocf"><title>Appendix: More About OCF Resource Agents</title>
+     <section><title>Location of Custom Scripts</title>
    <para>OCF Resource Agents are found in /usr/lib/ocf/resource.d/{provider}.</para>
    <para>When creating your own agents, you are encouraged to create a new directory under /usr/lib/ocf/resource.d/ so that they are not confused with (or overwritten by) the agents shipped with Heartbeat. So, for example, if you chose the provider name of bigCorp and wanted a new resource named bigApp, you would create a script called /usr/lib/ocf/resource.d/bigCorp/bigApp and define a resource:</para>
-   <para>&lt;primitive id="custom-app" class="ocf" provider=”bigCorp” type="bigApp"/&gt;</para></sect2><sect2><title>Actions</title>
+   <para>&lt;primitive id="custom-app" class="ocf" provider=”bigCorp” type="bigApp"/&gt;</para></section><section><title>Actions</title>
    <para>All OCF Resource Agents are required to implement the following actions</para>
    <informaltable frame="all">
       <tgroup cols="3">
@@ -3804,7 +3858,7 @@
       </listitem>
    </orderedlist>
    <para/>
-   <para>Remember to use ocf-tester to verify that your new agent complies with the OCF standard properly.</para></sect2><sect2><title>
+   <para>Remember to use ocf-tester to verify that your new agent complies with the OCF standard properly.</para></section><section><title>
       <anchor id="HowDoestheClusterInterprett"/>How Does the Cluster Interpret the OCF Return Codes?</title>
    <para>The first thing the cluster does is check the return code against the expected result.  If the result does not match the expected value, then the operation is considered to have failed and recovery action is initiated.  </para>
    <para>There are three types of failure recovery:</para>
@@ -4031,7 +4085,7 @@
          </row></tbody></tgroup>
    </informaltable>
    <para>OCF Return Codes and How They are Handled</para>
-   <para>Although counter intuitive, even actions that return 0 (aka. OCF_SUCCESS) can be considered to have failed.  This can happen when a resource that is expected to be in the Master state is found running as a Slave, or when a resource is found active on multiple machines..</para><sect3><title> Exceptions</title>
+   <para>Although counter intuitive, even actions that return 0 (aka. OCF_SUCCESS) can be considered to have failed.  This can happen when a resource that is expected to be in the Master state is found running as a Slave, or when a resource is found active on multiple machines..</para><section><title> Exceptions</title>
    <orderedlist>
       <listitem>
          <para>Non-recurring monitor actions (probes) that find a resource active (or in Master mode) will not result in recovery action unless it is also found active elsewhere</para>
@@ -4043,8 +4097,13 @@
          <para>Recurring actions that return OCF_ERR_UNIMPLEMENTED do not cause any type of recovery</para>
       </listitem>
    </orderedlist>
-   <para>Appendix: <anchor id="WhatChangedin10"/>What Changed in 1.0</para></sect3></sect2><sect2><title>New</title>
-   <orderedlist>
+   </section></section>
+   </section>
+   <section id="changes">
+     <anchor id="WhatChangedin10"/>     
+     <title>Appendix: What Changed in 1.0</title>
+     <section><title>New</title>
+   <itemizedlist>
       <listitem>
          <para>Failure timeouts.  See <link linkend="">Moving Resources Due to Failure</link>
          </para>
@@ -4076,11 +4135,28 @@
          <para>Allow recurring actions to be triggered at known times. See <link linkend="">Specifying When Recurring Actions are Performed</link>
          </para>
       </listitem>
-   </orderedlist>
-   <para/></sect2><sect2><title>Changed</title>
-   <orderedlist>
+   </itemizedlist>
+   <para/></section><section><title>Changed</title>
+   <itemizedlist>
       <listitem>
          <para>Syntax</para>
+	 <itemizedlist>
+	   <listitem>
+	     <para>All resource and cluster options now use dashes (-) instead of underscores (_)</para>
+	   </listitem>
+	   <listitem>
+	     <para>master_slave was renamed to master</para>
+	   </listitem>
+	   <listitem>
+	     <para>The attributes container tag was removed</para>
+	   </listitem>
+	   <listitem>
+	     <para>The operation field pre-req has been renamed requires </para>
+	   </listitem>
+	   <listitem>
+	     <para>All operations must have an interval, start/stop must have it set to zero</para>
+	   </listitem>
+	 </itemizedlist>
       </listitem>
       <listitem>
          <para>The stonith-enabled option now defaults to true.</para>
@@ -4101,18 +4177,53 @@
       </listitem>
       <listitem>
          <para>Switched to RelaxNG schema validation and libxml2 parser.</para>
+	 <itemizedlist>
+	   <listitem>
+	     id fields are now XML IDs which have the following limitations
+	     <itemizedlist>
+	       <listitem>
+		 id’s cannot contain colons (:)
+	       </listitem>
+	       <listitem>
+		 id’s cannot begin with a number
+	       </listitem>
+	       <listitem>
+		 id’s must be globally unique (not just unique for that tag)
+	       </listitem>
+	     </itemizedlist>
+	   </listitem>
+	   <listitem>
+	     Some fields (such as those in constraints that refer to resources) are IDREFs.  This means that they must reference existing resources or objects in order for the configuration to be valid.  Removing an object which is referenced elsewhere will therefor fail.
+	   </listitem>
+	   <listitem>
+	     The CIB representation from which the md5 digest used to verify CIBs has changed.  This means that every CIB update will require a full refresh on any upgraded nodes until the cluster is fully upgraded to 1.0.  This will result in significant performance degradation and it is therefor highly inadvisable to run a mixed 1.0/0.6 cluster for any longer than absolutely necessary.
+	   </listitem>
+	 </itemizedlist>
       </listitem>
       <listitem>
          <para>Ping node information no longer needs to be added to ha.cf  Simply include the lists of hosts in your ping resource(s).</para>
       </listitem>
-   </orderedlist></sect2><sect2><title>Removed</title>
-   <orderedlist>
+   </itemizedlist></section><section><title>Removed</title>
+   <itemizedlist>
       <listitem>
          <para>Syntax</para>
+	 <itemizedlist>
+	   <listitem>
+	     It is no longer possible to set resource meta options as top-level attributes.  Use meta attributes instead.
+	   </listitem>
+	   <listitem>
+	     Resource and operation defaults are no longer read from crm_config.  See <link linkend="">Setting Global Defaults for Resource Options</link> and <link linkend="">Setting Global Defaults for Operations</link> instead.
+	   </listitem>
+	 </itemizedlist>
       </listitem>
-   </orderedlist>
-   <para>Appendix: Installation</para></sect2></sect1><sect1><title>
-      <anchor id="ChoosingaClusterStack"/>Choosing a Cluster Stack</title>
+   </itemizedlist>
+   </section>
+   </section>
+   <section id="install">
+     <title>Appendix: Installation</title>
+     <section>
+       <anchor id="ChoosingaClusterStack"/>
+       <title>Choosing a Cluster Stack</title>
    <para>Ultimately the choice of cluster stack is a personal decision that must be made in the context of you or your company’s needs and strategic direction.  Pacemaker currently functions equally well with both stacks.</para>
    <para>Here are some factors that may influence the decision</para>
    <orderedlist>
@@ -4124,6 +4235,20 @@
       </listitem>
       <listitem>
          <para>Using OpenAIS gives your applications access to the following additional cluster services</para>
+	 <itemizedlist>
+	   <listitem>
+	     checkpoint service
+	   </listitem>
+	   <listitem>
+	     distributed locking service
+	   </listitem>
+	   <listitem>
+	     extended virtual synchrony service
+	   </listitem>
+	   <listitem>
+	     cluster closed process group service
+	   </listitem>
+	 </itemizedlist>
       </listitem>
       <listitem>
          <para>It is likely that Pacemaker, at some point in the future, will make use of some of these additional services not provided by Heartbeat</para>
@@ -4131,7 +4256,7 @@
       <listitem>
          <para>To date, Pacemaker has received less real-world testing on OpenAIS than it has on Heartbeat.</para>
       </listitem>
-   </orderedlist></sect1><sect1><title>Enabling Pacemaker</title><sect2><title>For OpenAIS</title>
+   </orderedlist></section><section><title>Enabling Pacemaker</title><section><title>For OpenAIS</title>
    <para>The OpenAIS configuration is normally located in /etc/ais/openais.conf and an example for a machine with an address of 1.2.3.4 in a cluster communicating on port 1234 (without peer authentication and message encryption) is shown below.</para>
    <para>totem {</para>
    <para>        version: 2</para>
@@ -4172,12 +4297,16 @@
    <para>}</para>
    <para>Configuration fragment for enabling Pacemaker under OpenAIS </para>
    <para>The cluster needs to be run as root so that its child processes (the lrmd in particular) have sufficient privileges to perform the actions requested of it.  After-all, a cluster manager that can’t add an IP address or start apache is of little use.</para>
-   <para>The second directive is the one that actually instructs the cluster to run Pacemaker.</para></sect2><sect2><title>For Heartbeat</title>
+   <para>The second directive is the one that actually instructs the cluster to run Pacemaker.</para></section><section><title>For Heartbeat</title>
    <para>Add the following to a functional ha.cf configuration file and restart Heartbeat</para>
    <para>crm respawn</para>
    <para>Configuration fragment for enabling Pacemaker under Heartbeat</para>
-   <para>
-      <anchor id="AppendixUpgradingClusterSoft"/>Appendix: Upgrading Cluster Software</para></sect2></sect1><sect1><title>Upgrade Methodologies</title><sect2><title>Version Compatibility</title>
+     </section></section>
+     </section>
+   <section id="upgrade">
+      <anchor id="AppendixUpgradingClusterSoft"/>
+      <title>Appendix: Upgrading Cluster Software</title>
+      <section><title>Upgrade Methodologies</title><section><title>Version Compatibility</title>
    <para>When releasing newer versions we take care to make sure we are backwardly compatible with older versions. While you will always be able to upgrade from version x to x+1, in order to continue to produce high quality software it may occasionally be necessary to drop compatibility with older versions.</para>
    <para>There will always be an upgrade path from any series-2 release to any other series-2 release.</para>
    <para>There are three approaches to upgrading your cluster software</para>
@@ -4277,20 +4406,33 @@
                <para>yes</para>
             </entry>
          </row></tbody></tgroup>
-   </informaltable></sect2><sect2><title>Complete Cluster Shutdown</title>
-   <para>In this scenario one shuts down all cluster nodes and resources and upgrades all the nodes before restarting the cluster.</para><sect3><title>Procedure</title>
+   </informaltable></section><section><title>Complete Cluster Shutdown</title>
+   <para>In this scenario one shuts down all cluster nodes and resources and upgrades all the nodes before restarting the cluster.</para><section><title>Procedure</title>
    <orderedlist>
       <listitem>
          <para>On each node:</para>
+	 <orderedlist>
+	   <listitem>
+	     Shutdown the cluster stack (Heartbeat or OpenAIS)
+	   </listitem>
+	   <listitem>
+	     Upgrade the Pacemaker software.  This may also include upgrading the cluster stack and/or the underlying operating system..
+	   </listitem>
+	 </orderedlist>
       </listitem>
       <listitem>
          <para>Check the configuration manually or with the crm_verify tool if available.</para>
       </listitem>
       <listitem>
          <para>On each node:</para>
+	 <orderedlist>
+	   <listitem>
+	     Start the cluster stack.  This can be either OpenAIS or Heartbeat and does not need to be the same as the previous cluster stack.
+	   </listitem>
+	 </orderedlist>
       </listitem>
-   </orderedlist></sect3></sect2><sect2><title>Rolling (node by node)</title>
-   <para>In this scenario each node is removed from the cluster, upgraded and then brought back online until all nodes are running the newest version.</para><sect3><title>Procedure</title>
+   </orderedlist></section></section><section><title>Rolling (node by node)</title>
+   <para>In this scenario each node is removed from the cluster, upgraded and then brought back online until all nodes are running the newest version.</para><section><title>Procedure</title>
    <para>On each node:</para>
    <orderedlist>
       <listitem>
@@ -4298,12 +4440,17 @@
       </listitem>
       <listitem>
          <para>Upgrade the Pacemaker software.  This may also include upgrading the cluster stack and/or the underlying operating system.</para>
+	 <orderedlist>
+	   <listitem>
+	     On the first node, check the configuration manually or with the crm_verify tool if available.
+	   </listitem>
+	 </orderedlist>
       </listitem>
       <listitem>
          <para>Start the cluster stack.  This must be the same cluster stack that the rest of the cluster is using.</para>
       </listitem>
    </orderedlist>
-   <para>Repeat for each node in the cluster</para></sect3><sect3><title>Version Compatibility</title>
+   <para>Repeat for each node in the cluster</para></section><section><title>Version Compatibility</title>
    <informaltable frame="all">
       <tgroup cols="2">
          <thead>
@@ -4363,7 +4510,7 @@
                <para>None.  Use an alternate upgrade strategy.</para>
             </entry>
          </row></tbody></tgroup>
-   </informaltable></sect3><sect3><title>Crossing Compatibility Boundaries</title>
+   </informaltable></section><section><title>Crossing Compatibility Boundaries</title>
    <para>Rolling upgrades that cross compatibility boundaries must be preformed in multiple steps.  For example, to perform a rolling update from Heartbeat 2.0.1 to Pacemaker 1.0.0 one must:</para>
    <orderedlist>
       <listitem>
@@ -4375,58 +4522,70 @@
       <listitem>
          <para>Perform a rolling upgrade from Heartbeat 2.1.3 to Pacemaker 1.0.0</para>
       </listitem>
-   </orderedlist></sect3></sect2><sect2><title>Disconnect &amp; <ulink url="http://linux-ha.org/v2/upgrade/reattach">Reattach</ulink> 
+   </orderedlist></section></section><section><title>Disconnect &amp; <ulink url="http://linux-ha.org/v2/upgrade/reattach">Reattach</ulink> 
    </title>
-   <ulink url="http://linux-ha.org/v2/upgrade/reattach">Reattach</ulink>
-   <para>A variant of a complete cluster shutdown, but the resources are left active and re-detected when the cluster is restarted.</para><sect3><title>Procedure</title>
+   <para>A variant of a complete cluster shutdown, but the resources are left active and re-detected when the cluster is restarted.</para><section><title>Procedure</title>
    <orderedlist>
       <listitem>
          <para>Tell the cluster to stop managing services. This is required to allow the services to remain active after the cluster shuts down.  </para>
+	 <command>crm_attribute -t crm_config -n is-managed-default -v false </command>
       </listitem>
-   </orderedlist>
-   <para>crm_attribute -t crm_config -n is-managed-default -v false </para>
-   <orderedlist>
       <listitem>
          <para>For any resource that has a value for is-managed, make sure it is set to false (so that the cluster will not stop it) </para>
+	 <command>crm_resource -t primitive -r &lt;rsc_id&gt; -p is-managed -v false </command>
       </listitem>
-   </orderedlist>
-   <para>crm_resource -t primitive -r &lt;rsc_id&gt; -p is-managed -v false </para>
-   <orderedlist>
       <listitem>
          <para>On each node:</para>
+	 <orderedlist>
+	   <listitem>
+	     Shutdown the cluster stack (Heartbeat or OpenAIS)
+	   </listitem>
+	   <listitem>
+	     Upgrade the cluster stack program - This may also include upgrading the underlying operating system.
+	   </listitem>
+	 </orderedlist>
       </listitem>
       <listitem>
          <para>Check the configuration manually or with the crm_verify tool if available.</para>
       </listitem>
       <listitem>
          <para>On each node:</para>
-      </listitem>
+	 <orderedlist>
+	   <listitem>
+	     Start the cluster stack.  This can be either OpenAIS or Heartbeat and does not need to be the same as the previous cluster stack.
+	   </listitem>
+	 </orderedlist>
+	      </listitem>
       <listitem>
          <para>Verify the cluster re-detected all resources correctly</para>
       </listitem>
       <listitem>
          <para>Allow the cluster to resume managing resources again </para>
+	 <command>crm_attribute -t crm_config -n is-managed-default -v true </command>
       </listitem>
-   </orderedlist>
-   <para>crm_attribute -t crm_config -n is-managed-default -v true </para>
-   <orderedlist>
       <listitem>
          <para>For any resource that has a value for is-managed reset it to true (so the cluster can recover the service if it fails) if desired</para>
+	 <command>crm_resource -t primitive -r &lt;rsc_id&gt; -p is-managed -v false</command>
       </listitem>
    </orderedlist>
-   <para>crm_resource -t primitive -r &lt;rsc_id&gt; -p is-managed -v false</para></sect3><sect3><title>Notes</title>
-   <orderedlist>
+   </section>
+   <section><title>Notes</title>
+     <orderedlist>
       <listitem>
          <para>Always check your existing configuration is still compatible with the version you are installing before starting the cluster.</para>
       </listitem>
       <listitem>
          <para>The oldest version of the CRM to support this upgrade type was in Heartbeat 2.0.4</para>
       </listitem>
-   </orderedlist>
-   <para>Appendix: Upgrading the Configuration from 0.6</para></sect3></sect2><sect2><title>Overview</title></sect2><sect2><title>Preparation</title>
-   <para>Download the latest DTD from <ulink url="http://hg.clusterlabs.org/pacemaker/dev/file-raw/tip/xml/crm.dtd">http://hg.clusterlabs.org/pacemaker/dev/file-raw/tip/xml/crm.dtd</ulink> and ensure your configuration validates.</para></sect2><sect2><title>Perform the upgrade</title><sect3><title>Upgrade the software</title>
+     </orderedlist>
+	</section></section>
+      </section>
+      </section>
+   <section id="upgrade-config"><title>Appendix: Upgrading the Configuration from 0.6</title>
+     <section><title>Preparation</title>
+   <para>Download the latest DTD from <ulink url="http://hg.clusterlabs.org/pacemaker/dev/file-raw/tip/xml/crm.dtd">http://hg.clusterlabs.org/pacemaker/dev/file-raw/tip/xml/crm.dtd</ulink> and ensure your configuration validates.</para></section><section><title>Perform the upgrade</title><section><title>Upgrade the software</title>
    <para>Refer to the appendix: <link linkend="">Upgrading Cluster Software</link>
-   </para></sect3><sect3><title>Upgrade the Configuration</title>
+   </para></section><section><title>Upgrade the Configuration</title>
    <para>As XML is not the friendliest of languages, it is common for cluster administrators to have scripted some of their activities.  In such cases, it is likely that those scripts will not work with the new 1.0 syntax.</para>
    <para>In order to support such environments, it is actually possible to continue using the old 0.6 syntax.</para>
    <para>The downside however, is that not all the new features will be available and there is a performance impact since the cluster must do a non-persistent configuration upgrade before each transition.  So while using the old syntax is possible, it is not advisable to continue using it indefinitely.</para>
@@ -4494,7 +4653,7 @@
       </listitem>
    </orderedlist>
    <para>crm_shadow --commit upgrade06 --force</para>
-   <para>If this step fails, something really strange has occurred.  You should report a bug. </para></sect3><sect3><title>Manually Upgrading the Configuration</title>
+   <para>If this step fails, something really strange has occurred.  You should report a bug. </para></section><section><title>Manually Upgrading the Configuration</title>
    <para>It is also possible to perform the configuration upgrade steps manually.  To do this</para>
    <orderedlist>
       <listitem>
@@ -4512,59 +4671,105 @@
       </listitem>
    </orderedlist>
    <para>The advantage of this method is that it can be performed without the cluster running and any validation errors should be more informative (despite being generated by the same library!) since they include line numbers.</para>
-   <para>Appendix: Is This<anchor id="HowCanITellifanInitScriptcopycopy"/> init Script LSB Compatible?</para>
+   </section>
+   </section>
+   </section>
+   <section id="lsb">
+     <anchor id="HowCanITellifanInitScriptcopycopy"/>
+     <title>Appendix: Is This init Script LSB Compatible?</title>
    <para>Assuming some_service is configured correctly and currently not active, the following sequence will help you determine if it is LSB compatible:</para>
    <orderedlist>
-      <listitem>
-         <para>Start (stopped): </para>
-      </listitem>
-   </orderedlist>
-   <para>/etc/init.d/some_service start ; echo "result: $?" </para>
-   <orderedlist>
-      <listitem/>
-      <listitem>
-         <para>Status (running): </para>
-      </listitem>
-   </orderedlist>
-   <para>/etc/init.d/some_service status ; echo "result: $?" </para>
-   <orderedlist>
-      <listitem/>
-      <listitem>
-         <para>Start (running):</para>
-      </listitem>
-   </orderedlist>
-   <para> /etc/init.d/some_service start ; echo "result: $?" </para>
-   <orderedlist>
-      <listitem/>
-      <listitem>
-         <para>Stop (running): </para>
-      </listitem>
-   </orderedlist>
-   <para>/etc/init.d/some_service stop ; echo "result: $?" </para>
-   <orderedlist>
-      <listitem/>
-      <listitem>
-         <para>Status (stopped):</para>
-      </listitem>
-   </orderedlist>
-   <para>/etc/init.d/some_service status ; echo "result: $?" </para>
-   <orderedlist>
-      <listitem/>
-      <listitem>
-         <para>Stop (stopped): </para>
-      </listitem>
-   </orderedlist>
-   <para>/etc/init.d/some_service stop ; echo "result: $?" </para>
-   <orderedlist>
-      <listitem/>
-      <listitem>
-         <para>Status (failed): </para>
-      </listitem>
+     <listitem>
+       <para>Start (stopped): </para>
+       <command>/etc/init.d/some_service start ; echo "result: $?"</command>
+       <orderedlist>
+	 <listitem>
+	   Did the service start?
+	 </listitem>
+	 <listitem>
+	   Did the command print result: 0 (in addition to the regular output)? 
+	 </listitem>
+       </orderedlist>
+     </listitem>
+     <listitem>
+       <para>Status (running): </para>
+       <command>/etc/init.d/some_service status ; echo "result: $?" </command>
+       <orderedlist>
+	 <listitem>
+	   Did the script accept the command?
+	 </listitem>
+	 <listitem>
+	   Did the script indicate the service was running?
+	 </listitem>
+	 <listitem>
+	   Did the command print result: 0 (in addition to the regular output)?
+	 </listitem>
+       </orderedlist>
+     </listitem>
+     <listitem>
+       <para>Start (running):</para>
+       <command> /etc/init.d/some_service start ; echo "result: $?" </command>
+       <orderedlist>
+	 <listitem>
+	   Is the service still running?
+	 </listitem>
+	 <listitem>
+	   Did the command print result: 0 (in addition to the regular output)?
+	 </listitem>
+       </orderedlist>
+     </listitem>
+     <listitem>
+       <para>Stop (running): </para>
+       <command>/etc/init.d/some_service stop ; echo "result: $?" </command>
+       <orderedlist>
+	 <listitem>
+	   Was the service stopped?
+	 </listitem>
+	 <listitem>
+	   Did the command print result: 0 (in addition to the regular output)?
+	 </listitem>
+       </orderedlist>
+     </listitem>
+     <listitem>
+       <para>Status (stopped):</para>
+       <command>/etc/init.d/some_service status ; echo "result: $?" </command>
+       <orderedlist>
+	 <listitem>
+	   Did the script accept the command?
+	 </listitem>
+	 <listitem>
+	   Did the script indicate the service was not running? 
+	 </listitem>
+	 <listitem>
+	   Did the command print result: 3 (in addition to the regular output)?
+	 </listitem>
+       </orderedlist>
+     </listitem>
+     <listitem>
+       <para>Stop (stopped): </para>
+       <command>/etc/init.d/some_service stop ; echo "result: $?" </command>
+       <orderedlist>
+	 <listitem>
+	   Is the service still stopped?
+	 </listitem>
+	 <listitem>
+	   Did the command print result: 0 (in addition to the regular output)?
+	 </listitem>
+       </orderedlist>
+     </listitem>
+     <listitem>
+       <para>Status (failed): </para>
+       <para>This step is not readily testable and relies on manual inspection of the script.</para>
+       <para>The script can use one of the error codes (other than 3) listed in the LSB spec to indicate that it is active but failed.</para>
+       <para>This tells the cluster that before moving the resource to another node, it needs to stop it on the existing one first.</para>
+     </listitem>
    </orderedlist>
    <para>        This step is not readily testable and relies on manual inspection of the script.</para>
    <para>The script can use one of the error codes (other than 3) listed in the LSB spec to indicate that it is active but failed. This tells the cluster that before moving the resource to another node, it needs to stop it on the existing one first. </para>
    <para>If the answer to any of the above questions is no, then the script is not LSB compliant. Your options are then to either fix the script or write an OCF agent based on the existing script.</para>
-   <para>Appendix: Sample Configurations</para></sect3></sect2></sect1><sect1><title>An Empty Configuration</title>
+   </section>
+   <section id="samples"><title>Appendix: Sample Configurations</title>
+     <section><title>An Empty Configuration</title>
    <para>&lt;cib admin_epoch="0" epoch="0" num_updates="0" have-quorum="false"&gt;</para>
    <para>  &lt;configuration&gt;</para>
    <para>    &lt;crm_config/&gt;</para>
@@ -4574,7 +4779,7 @@
    <para>  &lt;/configuration&gt;</para>
    <para>  &lt;status/&gt;</para>
    <para>&lt;/cib&gt;</para>
-   <para>An empty configuration</para></sect1><sect1><title>A Simple Configuration</title>
+   <para>An empty configuration</para></section><section><title>A Simple Configuration</title>
    <para>&lt;cib admin_epoch="0" epoch="1" num_updates="0" have-quorum="false" validate-with=”pacemaker-1.0”&gt;</para>
    <para>    &lt;configuration&gt;</para>
    <para>        &lt;crm_config&gt;</para>
@@ -4609,7 +4814,7 @@
    <para>    &lt;status/&gt;</para>
    <para>&lt;/cib&gt;</para>
    <para>2 nodes, some cluster options and a resource</para>
-   <para>In this example, we have one resource (an IP address) that we check every five minutes and will run on host c001n01 until either the resource fails 10 times or the host shuts down.</para></sect1><sect1><title>An Advanced Configuration</title>
+   <para>In this example, we have one resource (an IP address) that we check every five minutes and will run on host c001n01 until either the resource fails 10 times or the host shuts down.</para></section><section><title>An Advanced Configuration</title>
    <para/>
    <para>&lt;cib admin_epoch="0" epoch="1" num_updates="0" have-quorum="false" validate-with=”pacemaker-1.0”&gt;</para>
    <para>    &lt;configuration&gt;</para>
@@ -4673,19 +4878,22 @@
    <para>    &lt;status/&gt;</para>
    <para>&lt;/cib&gt;</para>
    <para>groups and clones with stonith</para>
-   <para>Appendix: Further Reading</para><sect2><title/><sect3><title>Project Website</title>
+   </section>
+   </section>
+   <section id="more"><title>Appendix: Further Reading</title>
+     <section><title/><section><title>Project Website</title>
    <para>
       <ulink url="http://www.clusterlabs.org/">http://www.clusterlabs.org</ulink>
-   </para></sect3></sect2><sect2><title/><sect3><title>Cluster Commands</title>
+   </para></section></section><section><title/><section><title>Cluster Commands</title>
    <para>A comprehensive guide to cluster commands has been written by Novell and can be found at:</para>
    <para>
       <ulink url="http://www.novell.com/documentation/sles11/book_sleha/index.html?page=/documentation/sles11/book_sleha/data/book_sleha.html">http://www.novell.com/documentation/sles11/book_sleha/index.html?page=/documentation/sles11/book_sleha/data/book_sleha.html</ulink>
-   </para></sect3></sect2><sect2><title/><sect3><title>Heartbeat configuration</title>
+   </para></section></section><section><title/><section><title>Heartbeat configuration</title>
    <para>
       <ulink url="http://www.linux-ha.org/">http://www.linux-ha.org</ulink>
-   </para></sect3></sect2><sect2><title/><sect3><title>OpenAIS Configuration</title>
+   </para></section></section><section><title/><section><title>OpenAIS Configuration</title>
    <para>
       <ulink url="http://www.openais.org/">http://www.openais.org</ulink>
    </para>
-   <para/></sect3></sect2></sect1><para>Lorem Ipsum        90</para>
+   <para/></section></section></section>
 </article>
