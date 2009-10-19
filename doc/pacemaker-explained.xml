@@ -112,15 +112,15 @@
       <figure>
 	<title>An empty configuration</title>
 	<programlisting>
-  &lt;cib generated="true" admin_epoch="0" epoch="0" num_updates="0" have-quorum="false"&gt;
-     &lt;configuration&gt;
-        &lt;crm_config/&gt;
-        &lt;nodes/&gt;
-        &lt;resources/&gt;
-        &lt;constraints/&gt;
-     &lt;/configuration&gt;
-     &lt;status/&gt;
-  &lt;/cib&gt;</programlisting>
+  &lt;cib generated="true" admin_epoch="0" epoch="0" num_updates="0" have-quorum="false">
+     &lt;configuration>
+        &lt;crm_config/>
+        &lt;nodes/>
+        &lt;resources/>
+        &lt;constraints/>
+     &lt;/configuration>
+     &lt;status/>
+  &lt;/cib></programlisting>
       </figure>
     </section>
     <section>
@@ -191,7 +191,7 @@
       <figure>
 	<title>Safely using an editor to modify the cluster configuration</title>
 	<programlisting>
-  <command>cibadmin --query &gt; tmp.xml</command>
+  <command>cibadmin --query > tmp.xml</command>
   <command>vi tmp.xml</command>
   <command>cibadmin --replace --xml-file tmp.xml</command></programlisting>
       </figure>
@@ -201,7 +201,7 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
       <figure>
 	<title>Safely using an editor to modify a subsection of the cluster configuration</title>
 	<programlisting>
-  <command>cibadmin --query --obj_type resources &gt; tmp.xml</command>
+  <command>cibadmin --query --obj_type resources > tmp.xml</command>
   <command>vi tmp.xml</command>
   <command>cibadmin --replace --obj_type resources --xml-file tmp.xml</command></programlisting>
       </figure>
@@ -227,7 +227,7 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
       <para>Next identify the resource’s tag name and id (in this case primitive and child_DoFencing).  Then simply execute: </para>
       <figure>
 	<title>Deleting a resource</title>
-	<programlisting><command> cibadmin --delete --crm_xml ‘&lt;primitive id=”child_DoFencing”/&gt;’</command></programlisting>
+	<programlisting><command> cibadmin --delete --crm_xml ‘&lt;primitive id=”child_DoFencing”/>’</command></programlisting>
       </figure>
     </section>
     <section><title>Updating the Configuration Without Using XML</title>
@@ -273,7 +273,7 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
  shadow[test] # <command>cibadmin --query</command>
 <![CDATA[
  <cib cib_feature_revision="1" validate-with="pacemaker-1.0" admin_epoch="0" crm_feature_set="3.0" have-quorum="1" epoch="112"
-      dc-uuid="c001n01" num_updates="1" cib-last-written="Fri Jun 27 12:17:10 2008"&gt;
+      dc-uuid="c001n01" num_updates="1" cib-last-written="Fri Jun 27 12:17:10 2008">
     <configuration>
        <crm_config/>
        <nodes/>
@@ -416,13 +416,13 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
 	  </tgroup>
 	</informaltable>
 	<para>Note that although these fields can be written to by the admin, in most cases the cluster will overwrite any values specified by the admin with the “correct” ones.  To change the admin_epoch, for example, one would use:</para>
-	<command>cibadmin --modify --crm_xml ‘&lt;cib admin_epoch=”42”/&gt;’</command>
+	<command>cibadmin --modify --crm_xml ‘&lt;cib admin_epoch=”42”/>’</command>
 	<para>A complete set of fields will look something like this:</para>
 	<figure>
 	  <title>An example of the fields set for a cib object</title>
 	  <programlisting>
  &lt;cib have-quorum="true" validate-with="pacemaker-1.0" admin_epoch="1" epoch="12" num_updates="65"
-    dc-uuid="ea7d39f4-3b94-4cfa-ba7a-952956daabee" &gt;</programlisting>
+    dc-uuid="ea7d39f4-3b94-4cfa-ba7a-952956daabee" ></programlisting>
 	</figure>
       </section>
     </section>
@@ -553,7 +553,7 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
       <para>Each node in the cluster will have an entry in the nodes section containing its UUID, uname and type.</para>
       <figure>
 	<title>Example cluster node entry</title>
-	<screen> <node id="1186dc9a-324d-425a-966e-d757e693dc86" uname="sles-1" type="normal"/></screen>
+	<screen> &lt;node id="1186dc9a-324d-425a-966e-d757e693dc86" uname="sles-1" type="normal"/></screen>
       </figure>
       <para>In normal circumstances, the admin should let the cluster populate this information automatically from the communications and membership data.  However one can use the crm_uuid tool to read an existing UUID or define a value before the cluster starts.</para></section><section><title>
 	<anchor id="DescribingaClusterNode"/>Describing a Cluster Node</title>
@@ -561,11 +561,11 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
       <para>Node attributes can be specified ahead of time or populated later, when the cluster is running, using the crm_attribute command.</para>
       <para>Below is what the node’s definition would look like if the admin ran the command:</para>
       <para>crm_attribute --type nodes --node-uname sles-1 --attr-name kernel --attr-value `uname -r` </para>
-      <para>&lt;node uname="sles-1" type="normal" id="1186dc9a-324d-425a-966e-d757e693dc86"&gt;</para>
-      <para>  &lt;instance_attributes id="nodes-1186dc9a-324d-425a-966e-d757e693dc86"&gt;</para>
-      <para>      &lt;nvpair id="kernel-1186dc9a-324d-425a-966e-d757e693dc86" name="kernel" value="2.6.16.46-0.4-default"/&gt;</para>
-      <para>  &lt;/instance_attributes&gt;</para>
-      <para>&lt;/node&gt;</para>
+      <para>&lt;node uname="sles-1" type="normal" id="1186dc9a-324d-425a-966e-d757e693dc86"></para>
+      <para>  &lt;instance_attributes id="nodes-1186dc9a-324d-425a-966e-d757e693dc86"></para>
+      <para>      &lt;nvpair id="kernel-1186dc9a-324d-425a-966e-d757e693dc86" name="kernel" value="2.6.16.46-0.4-default"/></para>
+      <para>  &lt;/instance_attributes></para>
+      <para>&lt;/node></para>
       <para>The result of using crm_attribute to specify which kernel sles-1 is running</para>
       <para>A simpler way to determine the current value of an attribute is to use crm_attribute command again:</para>
       <para>crm_attribute --type nodes --node-uname sles-1 --attr-name kernel --get-value</para>
@@ -579,8 +579,8 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
 	<para>Because the messaging and membership layers are the authoritative source for cluster nodes, deleting them from the CIB is not a reliable solution.  First one must arrange for heartbeat to forget about the node (sles-1 in the example below).  To do this, shut down heartbeat on the node and then, from one of the remaining active cluster nodes, run:</para>
 	<para>hb_delnode sles-1</para>
 	<para>Only then is it safe to delete the node from the CIB with:</para>
-	<para>cibadmin --delete --obj_type nodes --crm_xml ‘&lt;node uname=”sles-1”/&gt;’</para>
-	<para>cibadmin --delete --obj_type status --crm_xml ‘&lt;node_status uname=”sles-1”/&gt;’</para></section></section><section><title>Replacing a Cluster Node</title><section><title>OpenAIS</title>
+	<para>cibadmin --delete --obj_type nodes --crm_xml ‘&lt;node uname=”sles-1”/>’</para>
+	<para>cibadmin --delete --obj_type status --crm_xml ‘&lt;node_status uname=”sles-1”/>’</para></section></section><section><title>Replacing a Cluster Node</title><section><title>OpenAIS</title>
 	<para>The five-step guide to replacing an existing cluster node:</para>
 	<orderedlist>
 	  <listitem>
@@ -733,24 +733,24 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
       <para>Resource definitions can be queried with the crm_resource tool.  For example</para>
       <para>crm_resource --resource Email --query-xml</para>
       <para>might produce</para>
-      <para>&lt;primitive id="Email" class="lsb" type="exim"/&gt;</para>
+      <para>&lt;primitive id="Email" class="lsb" type="exim"/></para>
       <para>An example LSB resource<footnote>
           <para> LSB resources do not allow any parameters</para>
 	</footnote>
       </para>
       <para>or, for an OCF resource:</para>
-      <para>&lt;primitive id="Public-IP" class="ocf" type="IPaddr" provider=”heartbeat”&gt;</para>
-      <para>    &lt;instance_attributes id="params-public-ip"&gt;</para>
-      <para>          &lt;nvpair id="public-ip-addr" name="ip" value="1.2.3.4"/&gt;</para>
-      <para>    &lt;/instance_attributes&gt;</para>
-      <para>&lt;/primitive&gt; </para>
+      <para>&lt;primitive id="Public-IP" class="ocf" type="IPaddr" provider=”heartbeat”></para>
+      <para>    &lt;instance_attributes id="params-public-ip"></para>
+      <para>          &lt;nvpair id="public-ip-addr" name="ip" value="1.2.3.4"/></para>
+      <para>    &lt;/instance_attributes></para>
+      <para>&lt;/primitive> </para>
       <para>An example OCF resource</para>
       <para>or, finally for the equivalent legacy Heartbeat resource:</para>
-      <para>&lt;primitive id="Public-IP-legacy" class="heartbeat" type="IPaddr”&gt;</para>
-      <para>    &lt;instance_attributes id="params-public-ip-legacy"&gt;</para>
-      <para>          &lt;nvpair id="public-ip-addr-legacy" name="1" value="1.2.3.4"/&gt;</para>
-      <para>    &lt;/instance_attributes&gt;</para>
-      <para>&lt;/primitive&gt; </para>
+      <para>&lt;primitive id="Public-IP-legacy" class="heartbeat" type="IPaddr”></para>
+      <para>    &lt;instance_attributes id="params-public-ip-legacy"></para>
+      <para>          &lt;nvpair id="public-ip-addr-legacy" name="1" value="1.2.3.4"/></para>
+      <para>    &lt;/instance_attributes></para>
+      <para>&lt;/primitive> </para>
       <para>An example Heartbeat resource<footnote>
           <para> Heartbeat resources take only ordered and unnamed parameters.  The supplied name therefor indicates the order in which they are passed to the script.  Only single digit values are allowed.</para>
 	</footnote>
@@ -878,12 +878,12 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
       <para>crm_resource --meta --resource Email --set-parameter priority --property-value 100</para>
       <para>crm_resource --meta --resource Email --set-parameter multiple-active --property-value block</para>
       <para>the resulting resource definition would be</para>
-      <para>&lt;primitive id="Email" class="lsb" type="exim"&gt;</para>
-      <para>   &lt;meta_attributes id="meta-email"&gt;</para>
-      <para>         &lt;nvpair id="email-priority" name="priority" value="100"/&gt;</para>
-      <para>         &lt;nvpair id="email-active" name="multiple-active" value="block"/&gt;</para>
-      <para>   &lt;/meta_attributes&gt;</para>
-      <para>&lt;/primitive&gt;</para>
+      <para>&lt;primitive id="Email" class="lsb" type="exim"></para>
+      <para>   &lt;meta_attributes id="meta-email"></para>
+      <para>         &lt;nvpair id="email-priority" name="priority" value="100"/></para>
+      <para>         &lt;nvpair id="email-active" name="multiple-active" value="block"/></para>
+      <para>   &lt;/meta_attributes></para>
+      <para>&lt;/primitive></para>
       <para>An example LSB resource with cluster options</para></section><section><title>
 	<anchor id="SettingGlobalDefaultsforReso"/>Setting Global Defaults for Resource Options</title>
       <para>To set a default value for a resource option, simply add it to the rsc_defaults section with crm_attribute.</para>
@@ -894,25 +894,25 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
       <para>If your resource agent supports parameters, you can add them with the crm_resource command.  For instance</para>
       <para>crm_resource --resource Public-IP --set-parameter ip --property-value 1.2.3.4</para>
       <para>would create an entry in the resource like this</para>
-      <para>&lt;primitive id="Public-IP" class="ocf" type="IPaddr" provider=”heartbeat”&gt;</para>
-      <para>    &lt;instance_attributes id="params-public-ip"&gt;</para>
-      <para>          &lt;nvpair id="public-ip-addr" name="ip" value="1.2.3.4"/&gt;</para>
-      <para>    &lt;/instance_attributes&gt;</para>
-      <para>&lt;/primitive&gt;</para>
+      <para>&lt;primitive id="Public-IP" class="ocf" type="IPaddr" provider=”heartbeat”></para>
+      <para>    &lt;instance_attributes id="params-public-ip"></para>
+      <para>          &lt;nvpair id="public-ip-addr" name="ip" value="1.2.3.4"/></para>
+      <para>    &lt;/instance_attributes></para>
+      <para>&lt;/primitive></para>
       <para>An example OCF resource with instance attributes</para>
       <para>For an OCF resource, the result would be an environment variable called OCF_RESKEY_ip with a value of 1.2.3.4</para>
       <para>The list of instance attributes supported by an OCF script can be found by calling the resource script with the meta-data command.  The output contains an XML description of all the supported attributes, their purpose and default values. </para>
       <para>export OCF_ROOT=/usr/lib/ocf; $OCF_ROOT/resource.d/heartbeat/IPaddr2 meta-data </para>
       <para>Displaying the metadata for the IPaddr resource agent </para></section><section><title>Resource Operations</title><section><title>Monitoring Resources for Failure </title>
 	<para>By default, the cluster will not ensure your resources are still healthy.  To instruct the cluster to do this, you need to add a monitor operation to the resource’s definition.</para>
-	<para>&lt;primitive id="Public-IP" class="ocf" type="IPaddr" provider=”heartbeat”&gt;</para>
-	<para>    &lt;operations&gt;</para>
-	<para>       &lt;op id="public-ip-check" name="monitor" interval="60s"/&gt;</para>
-	<para>    &lt;/operations&gt;</para>
-	<para>    &lt;instance_attributes id="params-public-ip"&gt;</para>
-	<para>          &lt;nvpair id="public-ip-addr" name="ip" value="1.2.3.4"/&gt;</para>
-	<para>    &lt;/instance_attributes&gt;</para>
-	<para>&lt;/primitive&gt;</para>
+	<para>&lt;primitive id="Public-IP" class="ocf" type="IPaddr" provider=”heartbeat”></para>
+	<para>    &lt;operations></para>
+	<para>       &lt;op id="public-ip-check" name="monitor" interval="60s"/></para>
+	<para>    &lt;/operations></para>
+	<para>    &lt;instance_attributes id="params-public-ip"></para>
+	<para>          &lt;nvpair id="public-ip-addr" name="ip" value="1.2.3.4"/></para>
+	<para>    &lt;/instance_attributes></para>
+	<para>&lt;/primitive></para>
 	<para>An OCF resource with a recurring health check</para>
 	<informaltable frame="all">
 	  <tgroup cols="2">
@@ -1022,52 +1022,52 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
       <para>crm_attribute --type op_defaults --attr-name timeout --attr-value 20s</para>
       <para>would default each operation’s timeout to 20 seconds.  If an operation’s definition also includes a value for timeout, then that value would be used instead (for that operation only).</para><section><title>When Resources Take a Long Time to Start/Stop</title>
 	<para>There are a number of implicit operations that the cluster will always perform - start, stop and a non-recurring monitor operation (used at startup to check the resource isn’t already active).  If one of these is taking too long, then you can create an entry for them and simply specify a new value.</para>
-	<para>&lt;primitive id="Public-IP" class="ocf" type="IPaddr" provider=”heartbeat”&gt;</para>
-	<para>    &lt;operations&gt;</para>
-	<para>       &lt;op id="public-ip-startup" name="monitor" interval="0" timeout=”90s”/&gt;</para>
-	<para>       &lt;op id="public-ip-start" name="start" interval="0" timeout=”180s”/&gt;</para>
-	<para>       &lt;op id="public-ip-stop" name="stop" interval="0" timeout=”15min”/&gt;</para>
-	<para>    &lt;/operations&gt;</para>
-	<para>    &lt;instance_attributes id="params-public-ip"&gt;</para>
-	<para>          &lt;nvpair id="public-ip-addr" name="ip" value="1.2.3.4"/&gt;</para>
-	<para>    &lt;/instance_attributes&gt;</para>
-	<para>&lt;/primitive&gt;</para>
+	<para>&lt;primitive id="Public-IP" class="ocf" type="IPaddr" provider=”heartbeat”></para>
+	<para>    &lt;operations></para>
+	<para>       &lt;op id="public-ip-startup" name="monitor" interval="0" timeout=”90s”/></para>
+	<para>       &lt;op id="public-ip-start" name="start" interval="0" timeout=”180s”/></para>
+	<para>       &lt;op id="public-ip-stop" name="stop" interval="0" timeout=”15min”/></para>
+	<para>    &lt;/operations></para>
+	<para>    &lt;instance_attributes id="params-public-ip"></para>
+	<para>          &lt;nvpair id="public-ip-addr" name="ip" value="1.2.3.4"/></para>
+	<para>    &lt;/instance_attributes></para>
+	<para>&lt;/primitive></para>
 	<para>An OCF resource with custom timeouts for its implicit actions</para></section><section><title>Multiple Monitor Operations</title>
 	<para>Provided no two operations (for a single resource) have the same name and interval you can have as many monitor operations as you like.  In this way you can do a superficial health check every minute and progressively more intense ones at higher intervals.</para>
 	<para>To tell the resource agent what kind of check to perform, you need to provide each monitor with a different value for a common parameter.  The OCF standard creates a special parameter called OCF_CHECK_LEVEL for this purpose and dictates that it is <emphasis>made available to the resource agent without the normal OCF_RESKEY_ prefix</emphasis>.  </para>
 	<para>Whatever name you choose, you can specify it by adding an instance_attributes block to the op tag.  Note that it is up to each resource agent to look for the parameter and decide how to use it.</para>
-	<para>&lt;primitive id="Public-IP" class="ocf" type="IPaddr" provider=”heartbeat”&gt;</para>
-	<para>    &lt;operations&gt;</para>
-	<para>       &lt;op id="public-ip-health-60" name="monitor" interval="60"&gt;</para>
-	<para>           &lt;instance_attributes id="params-public-ip-depth-60"&gt;</para>
-	<para>                  &lt;nvpair id="public-ip-depth-60" name="OCF_CHECK_LEVEL" value="10"/&gt;</para>
-	<para>           &lt;/instance_attributes&gt;</para>
-	<para>       &lt;/op&gt;</para>
-	<para>       &lt;op id="public-ip-health-300" name="monitor" interval="300"&gt;</para>
-	<para>           &lt;instance_attributes id="params-public-ip-depth-300"&gt;</para>
-	<para>                  &lt;nvpair id="public-ip-depth-300" name="OCF_CHECK_LEVEL" value="20"/&gt;</para>
-	<para>           &lt;/instance_attributes&gt;</para>
-	<para>       &lt;/op&gt;</para>
-	<para>    &lt;/operations&gt;</para>
-	<para>    &lt;instance_attributes id="params-public-ip"&gt;</para>
-	<para>          &lt;nvpair id="public-ip-level" name="ip" value="1.2.3.4"/&gt;</para>
-	<para>    &lt;/instance_attributes&gt;</para>
-	<para>&lt;/primitive&gt;</para>
+	<para>&lt;primitive id="Public-IP" class="ocf" type="IPaddr" provider=”heartbeat”></para>
+	<para>    &lt;operations></para>
+	<para>       &lt;op id="public-ip-health-60" name="monitor" interval="60"></para>
+	<para>           &lt;instance_attributes id="params-public-ip-depth-60"></para>
+	<para>                  &lt;nvpair id="public-ip-depth-60" name="OCF_CHECK_LEVEL" value="10"/></para>
+	<para>           &lt;/instance_attributes></para>
+	<para>       &lt;/op></para>
+	<para>       &lt;op id="public-ip-health-300" name="monitor" interval="300"></para>
+	<para>           &lt;instance_attributes id="params-public-ip-depth-300"></para>
+	<para>                  &lt;nvpair id="public-ip-depth-300" name="OCF_CHECK_LEVEL" value="20"/></para>
+	<para>           &lt;/instance_attributes></para>
+	<para>       &lt;/op></para>
+	<para>    &lt;/operations></para>
+	<para>    &lt;instance_attributes id="params-public-ip"></para>
+	<para>          &lt;nvpair id="public-ip-level" name="ip" value="1.2.3.4"/></para>
+	<para>    &lt;/instance_attributes></para>
+	<para>&lt;/primitive></para>
 	<para>An OCF resource with two recurring health checks performing different levels of checks</para></section><section><title>Disabling a Monitor Operation</title>
 	<para>The easiest way to stop a recurring monitor is to just delete it.  However there can be times when you only want to disable it temporarily.  In such cases, simply add disabled=”true” to the operation’s definition.</para>
-	<para>&lt;primitive id="Public-IP" class="ocf" type="IPaddr" provider=”heartbeat”&gt;</para>
-	<para>    &lt;operations&gt;</para>
-	<para>       &lt;op id="public-ip-check" name="monitor" interval="60s" disabled=”true”/&gt;</para>
-	<para>    &lt;/operations&gt;</para>
-	<para>    &lt;instance_attributes id="params-public-ip"&gt;</para>
-	<para>          &lt;nvpair id="public-ip-addr" name="ip" value="1.2.3.4"/&gt;</para>
-	<para>    &lt;/instance_attributes&gt;</para>
-	<para>&lt;/primitive&gt;</para>
+	<para>&lt;primitive id="Public-IP" class="ocf" type="IPaddr" provider=”heartbeat”></para>
+	<para>    &lt;operations></para>
+	<para>       &lt;op id="public-ip-check" name="monitor" interval="60s" disabled=”true”/></para>
+	<para>    &lt;/operations></para>
+	<para>    &lt;instance_attributes id="params-public-ip"></para>
+	<para>          &lt;nvpair id="public-ip-addr" name="ip" value="1.2.3.4"/></para>
+	<para>    &lt;/instance_attributes></para>
+	<para>&lt;/primitive></para>
 	<para>Example of an OCF resource with a disabled health check</para>
 	<para>This can be achieved from the command-line by executing</para>
-	<para>cibadmin -M -X ‘&lt;op id="public-ip-check" disabled=”true”/&gt;’</para>
+	<para>cibadmin -M -X ‘&lt;op id="public-ip-check" disabled=”true”/>’</para>
 	<para>Once you’ve done whatever you needed to do, you can then re-enable it with</para>
-	<para>cibadmin -M -X ‘&lt;op id="public-ip-check" disabled=”false”/&gt;’</para>
+	<para>cibadmin -M -X ‘&lt;op id="public-ip-check" disabled=”false”/>’</para>
       </section>
     </section>
   </chapter>
@@ -1135,33 +1135,33 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
 	<para>To create an opt-in cluster, start by preventing resources from running anywhere by default</para>
 	<para>crm_attribute --attr-name symmetric-cluster --attr-value false</para>
 	<para>Then start enabling nodes.  The following fragment says that the web server prefers sles-1, the database prefers sles-2 and both can failover to sles-3 if their most preferred node fails.  </para>
-	<para>&lt;constraints&gt;</para>
-	<para>    &lt;rsc_location id=”loc-1” rsc=”Webserver” node=”sles-1” score=”200”/&gt;</para>
-	<para>    &lt;rsc_location id=”loc-2” rsc=”Webserver” node=”sles-3” score=”0”/&gt;</para>
-	<para>    &lt;rsc_location id=”loc-3” rsc=”Database” node=”sles-2” score=”200”/&gt;</para>
-	<para>    &lt;rsc_location id=”loc-4” rsc=”Database” node=”sles-3” score=”0”/&gt;</para>
-	<para>&lt;/constraints&gt;</para>
+	<para>&lt;constraints></para>
+	<para>    &lt;rsc_location id=”loc-1” rsc=”Webserver” node=”sles-1” score=”200”/></para>
+	<para>    &lt;rsc_location id=”loc-2” rsc=”Webserver” node=”sles-3” score=”0”/></para>
+	<para>    &lt;rsc_location id=”loc-3” rsc=”Database” node=”sles-2” score=”200”/></para>
+	<para>    &lt;rsc_location id=”loc-4” rsc=”Database” node=”sles-3” score=”0”/></para>
+	<para>&lt;/constraints></para>
 	<para>Example set of opt-in location constraints</para></section><section><title>Symmetrical “Opt-Out” Clusters</title>
 	<para>To create an opt-out cluster, start by allowing resources to run anywhere by default</para>
 	<para>crm_attribute --attr-name symmetric-cluster --attr-value true</para>
 	<para>Then start disabling nodes.  The following fragment is the equivalent of the above opt-in configuration.</para>
-	<para>&lt;constraints&gt;</para>
-	<para>    &lt;rsc_location id=”loc-1” rsc=”Webserver” node=”sles-1” score=”200”/&gt;</para>
-	<para>    &lt;rsc_location id=”loc-2-dont-run” rsc=”Webserver” node=”sles-2” score=”-INFINITY”/&gt;</para>
-	<para>    &lt;rsc_location id=”loc-3-dont-run” rsc=”Database” node=”sles-1” score=”-INFINITY”/&gt;</para>
-	<para>    &lt;rsc_location id=”loc-4” rsc=”Database” node=”sles-2” score=”200”/&gt;</para>
-	<para>&lt;/constraints&gt;</para>
+	<para>&lt;constraints></para>
+	<para>    &lt;rsc_location id=”loc-1” rsc=”Webserver” node=”sles-1” score=”200”/></para>
+	<para>    &lt;rsc_location id=”loc-2-dont-run” rsc=”Webserver” node=”sles-2” score=”-INFINITY”/></para>
+	<para>    &lt;rsc_location id=”loc-3-dont-run” rsc=”Database” node=”sles-1” score=”-INFINITY”/></para>
+	<para>    &lt;rsc_location id=”loc-4” rsc=”Database” node=”sles-2” score=”200”/></para>
+	<para>&lt;/constraints></para>
 	<para>Example set of opt-out location constraints</para>
 	<para>Whether you should choose opt-in or opt-out depends both on your personal preference and the make-up of your cluster.  If most of your resources can run on most of the nodes, then an opt-out arrangement is likely to result in a simpler configuration.  On the other-hand, if most resources can only run on a small subset of nodes an opt-in configuration might be simpler.</para></section><section><title>
 	  <anchor id="WhatifTwoNodesHavetheSame"/>What if Two Nodes Have the Same Score</title>
 	<para>If two nodes have the same score, then the cluster will choose one.  This choice may seem random and may not be what was intended, however the cluster was not given enough information to know what was intended.</para>
-	<para>&lt;constraints&gt;</para>
-	<para>    &lt;rsc_location id=”loc-1” rsc=”Webserver” node=”sles-1” score=”INFINITY”/&gt;</para>
-	<para>    &lt;rsc_location id=”loc-2” rsc=”Webserver” node=”sles-2” score=”INFINITY”/&gt;</para>
-	<para>    &lt;rsc_location id=”loc-3” rsc=”Database” node=”sles-1” score=”500”/&gt;</para>
-	<para>    &lt;rsc_location id=”loc-4” rsc=”Database” node=”sles-2” score=”300”/&gt;</para>
-	<para>    &lt;rsc_location id=”loc-5” rsc=”Database” node=”sles-2” score=”200”/&gt;</para>
-	<para>&lt;/constraints&gt;</para>
+	<para>&lt;constraints></para>
+	<para>    &lt;rsc_location id=”loc-1” rsc=”Webserver” node=”sles-1” score=”INFINITY”/></para>
+	<para>    &lt;rsc_location id=”loc-2” rsc=”Webserver” node=”sles-2” score=”INFINITY”/></para>
+	<para>    &lt;rsc_location id=”loc-3” rsc=”Database” node=”sles-1” score=”500”/></para>
+	<para>    &lt;rsc_location id=”loc-4” rsc=”Database” node=”sles-2” score=”300”/></para>
+	<para>    &lt;rsc_location id=”loc-5” rsc=”Database” node=”sles-2” score=”200”/></para>
+	<para>&lt;/constraints></para>
 	<para>Example of two resources that prefer two nodes equally</para>
 	<para>In the example above, assuming no other constraints and an inactive cluster, Webserver would probably be placed on sles-1 and Database on sles-2.  It would likely have placed Webserver based on the node’s uname and Database based on the desire to spread the resource load evenly across the cluster.  However other factors can also be involved in more complex configurations.</para></section><section><title>
 	  <anchor id="SpecifyingtheOrderResourcesS"/>Specifying the Order Resources Should Start/Stop In</title>
@@ -1234,10 +1234,10 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
 	  </listitem>
       </orderedlist></section><section><title>Advisory Ordering</title>
 	<para>On the other-hand, when score=”0” is specified for a constraint, the constraint is considered optional and only has an effect when both resources are stopping and or starting.  Any change in state by the first resource will have no effect on the then resource.</para>
-	<para>&lt;constraints&gt;</para>
-	<para>    &lt;rsc_order id=”order-1” first=”Database” then=”Webserver” /&gt;</para>
-	<para>    &lt;rsc_order id=”order-2” first=”IP” then=”Webserver”  score=”0”/&gt;</para>
-	<para>&lt;/constraints&gt;</para>
+	<para>&lt;constraints></para>
+	<para>    &lt;rsc_order id=”order-1” first=”Database” then=”Webserver” /></para>
+	<para>    &lt;rsc_order id=”order-2” first=”IP” then=”Webserver”  score=”0”/></para>
+	<para>&lt;/constraints></para>
 	<para>Example of an optional and mandatory ordering constraint</para>
 	<para>Some additional information on ordering constraints can be found in the document <ulink url="http://oss.beekhof.net/~beekhof/heartbeat/docs/Ordering-Explained.pdf">Ordering Explained</ulink>
     </para></section></section><section><title>
@@ -1293,111 +1293,111 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
       </informaltable></section><section><title>Mandatory Placement</title>
 	<para>Mandatory placement occurs any time the constraint’s score is +INFINITY or -INFINITY.  In such cases, if the constraint can’t be satisfied, then the rsc resource is not permitted to run.  For score=INFINITY, this includes cases where the with-rsc resource is not active.</para>
 	<para>If you need resource1 to always run on the same machine as resource2, you would add the following constraint: </para>
-	<para>&lt;rsc_colocation id=”colocate” rsc=”resource1” with-rsc=”resource2” score=”INFINITY”/&gt; </para>
+	<para>&lt;rsc_colocation id=”colocate” rsc=”resource1” with-rsc=”resource2” score=”INFINITY”/> </para>
 	<para>An example colocation constraint</para>
 	<para>Remember, because INFINITY was used, if resource2 can’t run on any of the cluster nodes (for whatever reason) then resource1 will not be allowed to run.</para>
 	<para>Alternatively, you may want the opposite... that resource1 cannot run on the same machine as resource2.  In this case use score=”-INFINITY”</para>
-	<para>&lt;rsc_colocation id=”anti-colocate” rsc=”resource1” with-rsc=”resource2” score=”-INFINITY”/&gt; </para>
+	<para>&lt;rsc_colocation id=”anti-colocate” rsc=”resource1” with-rsc=”resource2” score=”-INFINITY”/> </para>
 	<para>An example anti-colocation constraint</para>
 	<para>Again, by specifying -INFINTY, the constraint is binding.  So if the only place left to run is where resource2 already is, then resource1 may not run anywhere.</para></section><section><title>Advisory Placement</title>
 	<para>If mandatory placement is about “must” and “must not”, then advisory placement is the “I’d prefer if” alternative.  For constraints with scores greater than -INFINITY and less than INFINITY, the cluster will try and accommodate your wishes but may ignore them if the alternative is to stop some of the cluster resources.</para>
 	<para>Like in life, where if enough people prefer something it effectively becomes mandatory, advisory colocation constraints can combine with other elements of the configuration to behave as if they were mandatory.   </para>
-	<para>&lt;rsc_colocation id=”colocate-maybe” rsc=”resource1” with-rsc=”resource2” score=”500”/&gt; </para>
+	<para>&lt;rsc_colocation id=”colocate-maybe” rsc=”resource1” with-rsc=”resource2” score=”500”/> </para>
 	<para>An example advisory-only colocation constraint</para></section></section><section><title>
 	<anchor id="OrderingSetsofResources"/>Ordering Sets of Resources</title>
       <para>A common situation is for an administrator to create a chain of ordered resources, such as:</para>
-      <para>&lt;constraints&gt;</para>
-      <para>    &lt;rsc_order id=”order-1” first=”A” then=”B” /&gt;</para>
-      <para>    &lt;rsc_order id=”order-2” first=”B” then=”C” /&gt;</para>
-      <para>    &lt;rsc_order id=”order-3” first=”C” then=”D” /&gt;</para>
-      <para>&lt;/constraints&gt;</para>
+      <para>&lt;constraints></para>
+      <para>    &lt;rsc_order id=”order-1” first=”A” then=”B” /></para>
+      <para>    &lt;rsc_order id=”order-2” first=”B” then=”C” /></para>
+      <para>    &lt;rsc_order id=”order-3” first=”C” then=”D” /></para>
+      <para>&lt;/constraints></para>
       <para>A chain of ordered resources</para>
       <para>
 	<inlinegraphic fileref="embedded:graphics9" width="16cm" depth="2.5cm"/>Visual representation of the four resources’ start order for the above constraints</para>
       <para/>
       <para>To simplify this situation, there is an alternate format for ordering constraints</para>
-      <para>&lt;constraints&gt;</para>
-      <para>    &lt;rsc_order id=”order-1”&gt;</para>
-      <para>        &lt;resource_set id=”ordered-set-example” sequential=”true”&gt;</para>
-      <para>            &lt;resource_ref id=”A”/&gt;</para>
-      <para>            &lt;resource_ref id=”B”/&gt;</para>
-      <para>            &lt;resource_ref id=”C”/&gt;</para>
-      <para>            &lt;resource_ref id=”D”/&gt;</para>
-      <para>        &lt;/resource_set&gt;</para>
-      <para>    &lt;/rsc_order&gt;</para>
-      <para>&lt;/constraints&gt;</para>
+      <para>&lt;constraints></para>
+      <para>    &lt;rsc_order id=”order-1”></para>
+      <para>        &lt;resource_set id=”ordered-set-example” sequential=”true”></para>
+      <para>            &lt;resource_ref id=”A”/></para>
+      <para>            &lt;resource_ref id=”B”/></para>
+      <para>            &lt;resource_ref id=”C”/></para>
+      <para>            &lt;resource_ref id=”D”/></para>
+      <para>        &lt;/resource_set></para>
+      <para>    &lt;/rsc_order></para>
+      <para>&lt;/constraints></para>
       <para>A chain of ordered resources expressed as a set</para>
       <para>NOTE: Resource sets have the opposite ordering semantics to groups.</para>
-      <para>&lt;group id=”dummy”&gt;</para>
-      <para>    &lt;primitive id=”D” .../&gt;</para>
-      <para>    &lt;primitive id=”C” .../&gt;</para>
-      <para>    &lt;primitive id=”B” .../&gt;</para>
-      <para>    &lt;primitive id=”A” .../&gt;</para>
-      <para>&lt;/group&gt;</para>
+      <para>&lt;group id=”dummy”></para>
+      <para>    &lt;primitive id=”D” .../></para>
+      <para>    &lt;primitive id=”C” .../></para>
+      <para>    &lt;primitive id=”B” .../></para>
+      <para>    &lt;primitive id=”A” .../></para>
+      <para>&lt;/group></para>
       <para>A group resource with the equivalent ordering rules</para>
       <para>While the set-based format is not less verbose, it is significantly easier to get right and maintain.  It can also be expanded to allow ordered sets of (un)ordered resources. In the example below, rscA and rscB can both start in parallel, as can rscC and rscD, however  rscC and rscD can only start once <emphasis>both</emphasis> rscA <emphasis>and</emphasis> rscB are active.</para>
-      <para>&lt;constraints&gt;</para>
-      <para>    &lt;rsc_order id=”order-1”&gt;</para>
-      <para>        &lt;resource_set id=”ordered-set-1” sequential=”false”&gt;</para>
-      <para>            &lt;resource_ref id=”A”/&gt;</para>
-      <para>            &lt;resource_ref id=”B”/&gt;</para>
-      <para>        &lt;/resource_set&gt;</para>
-      <para>        &lt;resource_set id=”ordered-set-2” sequential=”false”&gt;</para>
-      <para>            &lt;resource_ref id=”C”/&gt;</para>
-      <para>            &lt;resource_ref id=”D”/&gt;</para>
-      <para>        &lt;/resource_set&gt;</para>
-      <para>    &lt;/rsc_order&gt;</para>
-      <para>&lt;/constraints&gt;</para>
+      <para>&lt;constraints></para>
+      <para>    &lt;rsc_order id=”order-1”></para>
+      <para>        &lt;resource_set id=”ordered-set-1” sequential=”false”></para>
+      <para>            &lt;resource_ref id=”A”/></para>
+      <para>            &lt;resource_ref id=”B”/></para>
+      <para>        &lt;/resource_set></para>
+      <para>        &lt;resource_set id=”ordered-set-2” sequential=”false”></para>
+      <para>            &lt;resource_ref id=”C”/></para>
+      <para>            &lt;resource_ref id=”D”/></para>
+      <para>        &lt;/resource_set></para>
+      <para>    &lt;/rsc_order></para>
+      <para>&lt;/constraints></para>
       <para>Ordered sets of unordered resources</para>
       <para>
 	<inlinegraphic fileref="embedded:graphics10" width="10cm" depth="5cm"/>Visual representation of the start order for two ordered sets of unordered resources  </para>
       <para>Of course either or both sets of resources can also be internally ordered (by setting sequential=”true”) and there is no limit to the number of sets that can be specified.</para>
-      <para>&lt;constraints&gt;</para>
-      <para>    &lt;rsc_order id=”order-1”&gt;</para>
-      <para>        &lt;resource_set id=”ordered-set-1” sequential=”false”&gt;</para>
-      <para>            &lt;resource_ref id=”A”/&gt;</para>
-      <para>            &lt;resource_ref id=”B”/&gt;</para>
-      <para>        &lt;/resource_set&gt;</para>
-      <para>        &lt;resource_set id=”ordered-set-2” sequential=”true”&gt;</para>
-      <para>            &lt;resource_ref id=”C”/&gt;</para>
-      <para>            &lt;resource_ref id=”D”/&gt;</para>
-      <para>        &lt;/resource_set&gt;</para>
-      <para>        &lt;resource_set id=”ordered-set-3” sequential=”false”&gt;</para>
-      <para>            &lt;resource_ref id=”E”/&gt;</para>
-      <para>            &lt;resource_ref id=”F”/&gt;</para>
-      <para>        &lt;/resource_set&gt;</para>
-      <para>    &lt;/rsc_order&gt;</para>
-      <para>&lt;/constraints&gt;</para>
+      <para>&lt;constraints></para>
+      <para>    &lt;rsc_order id=”order-1”></para>
+      <para>        &lt;resource_set id=”ordered-set-1” sequential=”false”></para>
+      <para>            &lt;resource_ref id=”A”/></para>
+      <para>            &lt;resource_ref id=”B”/></para>
+      <para>        &lt;/resource_set></para>
+      <para>        &lt;resource_set id=”ordered-set-2” sequential=”true”></para>
+      <para>            &lt;resource_ref id=”C”/></para>
+      <para>            &lt;resource_ref id=”D”/></para>
+      <para>        &lt;/resource_set></para>
+      <para>        &lt;resource_set id=”ordered-set-3” sequential=”false”></para>
+      <para>            &lt;resource_ref id=”E”/></para>
+      <para>            &lt;resource_ref id=”F”/></para>
+      <para>        &lt;/resource_set></para>
+      <para>    &lt;/rsc_order></para>
+      <para>&lt;/constraints></para>
       <para>Advanced use of set ordering - Three ordered sets, two of which are internally unordered </para>
       <para>
 	<inlinegraphic fileref="embedded:graphics11" width="16cm" depth="7.5cm"/>Visual representation of the start order for the three sets defined above </para></section><section><title>
 	<anchor id="CollocatingSetsofResources"/>Collocating Sets of Resources</title>
       <para>Another common situation is for an administrator to create a set of collocated resources.  Previously this possible either by defining a resource group (See <link linkend="">Groups - A Syntactic Shortcut</link>) which could not always accurately express the design; or by defining each relationship as an individual constraint, causing a constraint explosion as the number of resources and combinations grew.</para>
-      <para>&lt;constraints&gt;</para>
-      <para>    &lt;rsc_colcoation id=”coloc-1” rsc=”B” with-rsc=”A” score=”INFINITY”/&gt;</para>
-      <para>    &lt;rsc_colcoation id=”coloc-2” rsc=”C” with-rsc=”B” score=”INFINITY”/&gt;</para>
-      <para>    &lt;rsc_colcoation id=”coloc-3” rsc=”D” with-rsc=”C” score=”INFINITY”/&gt;</para>
-      <para>&lt;/constraints&gt;</para>
+      <para>&lt;constraints></para>
+      <para>    &lt;rsc_colcoation id=”coloc-1” rsc=”B” with-rsc=”A” score=”INFINITY”/></para>
+      <para>    &lt;rsc_colcoation id=”coloc-2” rsc=”C” with-rsc=”B” score=”INFINITY”/></para>
+      <para>    &lt;rsc_colcoation id=”coloc-3” rsc=”D” with-rsc=”C” score=”INFINITY”/></para>
+      <para>&lt;/constraints></para>
       <para>A chain of collocated resources</para>
       <para>To make things easier, we allow an alternate form of colocation constraints using resource_sets.  Just like the expanded version, a resource that can’t be active also prevents any resource that must be collocated with it from being active.  For example if B was not able to run, then both C (and by inference D) must also remain stopped.</para>
-      <para>&lt;constraints&gt;</para>
-      <para>    &lt;rsc_colocation id=”coloc-1” score=”INFINITY” &gt;</para>
-      <para>        &lt;resource_set id=”collocated-set-example” sequential=”true”&gt;</para>
-      <para>            &lt;resource_ref id=”A”/&gt;</para>
-      <para>            &lt;resource_ref id=”B”/&gt;</para>
-      <para>            &lt;resource_ref id=”C”/&gt;</para>
-      <para>            &lt;resource_ref id=”D”/&gt;</para>
-      <para>        &lt;/resource_set&gt;</para>
-      <para>    &lt;/rsc_colocation&gt;</para>
-      <para>&lt;/constraints&gt;</para>
+      <para>&lt;constraints></para>
+      <para>    &lt;rsc_colocation id=”coloc-1” score=”INFINITY” ></para>
+      <para>        &lt;resource_set id=”collocated-set-example” sequential=”true”></para>
+      <para>            &lt;resource_ref id=”A”/></para>
+      <para>            &lt;resource_ref id=”B”/></para>
+      <para>            &lt;resource_ref id=”C”/></para>
+      <para>            &lt;resource_ref id=”D”/></para>
+      <para>        &lt;/resource_set></para>
+      <para>    &lt;/rsc_colocation></para>
+      <para>&lt;/constraints></para>
       <para>The equivalent colocation chain expressed using resource_sets</para>
       <para>NOTE: Resource sets have the same colocation semantics as groups.</para>
-      <para>&lt;group id=”dummy”&gt;</para>
-      <para>    &lt;primitive id=”A” .../&gt;</para>
-      <para>    &lt;primitive id=”B” .../&gt;</para>
-      <para>    &lt;primitive id=”C” .../&gt;</para>
-      <para>    &lt;primitive id=”D” .../&gt;</para>
-      <para>&lt;/group&gt;</para>
+      <para>&lt;group id=”dummy”></para>
+      <para>    &lt;primitive id=”A” .../></para>
+      <para>    &lt;primitive id=”B” .../></para>
+      <para>    &lt;primitive id=”C” .../></para>
+      <para>    &lt;primitive id=”D” .../></para>
+      <para>&lt;/group></para>
       <para>A group resource with the equivalent colocation rules</para>
       <para/>
       <para/>
@@ -1405,37 +1405,37 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
       <para/>
       <para/>
       <para>This notation can also be used in this context to tell the cluster that a set of resources must all be located with a common peer, but have no dependancies on each other.  In this scenario, unlike the previous on, B would be allowed to remain active even if A or C (or both) were inactive.</para>
-      <para>&lt;constraints&gt;</para>
-      <para>    &lt;rsc_colocation id=”coloc-1” score=”INFINITY” &gt;</para>
-      <para>        &lt;resource_set id=”collocated-set-1” sequential=”false”&gt;</para>
-      <para>            &lt;resource_ref id=”A”/&gt;</para>
-      <para>            &lt;resource_ref id=”B”/&gt;</para>
-      <para>            &lt;resource_ref id=”C”/&gt;</para>
-      <para>        &lt;/resource_set&gt;</para>
-      <para>        &lt;resource_set id=”collocated-set-2” sequential=”true”&gt;</para>
-      <para>            &lt;resource_ref id=”D”/&gt;</para>
-      <para>        &lt;/resource_set&gt;</para>
-      <para>    &lt;/rsc_colocation&gt;</para>
-      <para>&lt;/constraints&gt;</para>
+      <para>&lt;constraints></para>
+      <para>    &lt;rsc_colocation id=”coloc-1” score=”INFINITY” ></para>
+      <para>        &lt;resource_set id=”collocated-set-1” sequential=”false”></para>
+      <para>            &lt;resource_ref id=”A”/></para>
+      <para>            &lt;resource_ref id=”B”/></para>
+      <para>            &lt;resource_ref id=”C”/></para>
+      <para>        &lt;/resource_set></para>
+      <para>        &lt;resource_set id=”collocated-set-2” sequential=”true”></para>
+      <para>            &lt;resource_ref id=”D”/></para>
+      <para>        &lt;/resource_set></para>
+      <para>    &lt;/rsc_colocation></para>
+      <para>&lt;/constraints></para>
       <para>Using colocation sets to specify a common peer. </para>
       <para>Of course there is no limit to the number and size of the sets used.  The only thing that matters is that in order for any member of set N to be active, all the members of set N+1 must also be active (and naturally on the same node), and that if a set has sequential=”true”, then in order for member M to be active, member M+1 must also be active.  You can even specify the role in which the members of a set must be in using the set’s role attribute.</para>
-      <para>&lt;constraints&gt;</para>
-      <para>    &lt;rsc_colocation id=”coloc-1” score=”INFINITY” &gt;</para>
-      <para>        &lt;resource_set id=”collocated-set-1” sequential=”true”&gt;</para>
-      <para>            &lt;resource_ref id=”A”/&gt;</para>
-      <para>            &lt;resource_ref id=”B”/&gt;</para>
-      <para>        &lt;/resource_set&gt;</para>
-      <para>        &lt;resource_set id=”collocated-set-2” sequential=”false”&gt;</para>
-      <para>            &lt;resource_ref id=”C”/&gt;</para>
-      <para>            &lt;resource_ref id=”D”/&gt;</para>
-      <para>            &lt;resource_ref id=”E”/&gt;</para>
-      <para>        &lt;/resource_set&gt;</para>
-      <para>        &lt;resource_set id=”collocated-set-2” sequential=”true” role=”Master”&gt;</para>
-      <para>            &lt;resource_ref id=”F”/&gt;</para>
-      <para>            &lt;resource_ref id=”G”/&gt;</para>
-      <para>        &lt;/resource_set&gt;</para>
-      <para>    &lt;/rsc_colocation&gt;</para>
-      <para>&lt;/constraints&gt;</para>
+      <para>&lt;constraints></para>
+      <para>    &lt;rsc_colocation id=”coloc-1” score=”INFINITY” ></para>
+      <para>        &lt;resource_set id=”collocated-set-1” sequential=”true”></para>
+      <para>            &lt;resource_ref id=”A”/></para>
+      <para>            &lt;resource_ref id=”B”/></para>
+      <para>        &lt;/resource_set></para>
+      <para>        &lt;resource_set id=”collocated-set-2” sequential=”false”></para>
+      <para>            &lt;resource_ref id=”C”/></para>
+      <para>            &lt;resource_ref id=”D”/></para>
+      <para>            &lt;resource_ref id=”E”/></para>
+      <para>        &lt;/resource_set></para>
+      <para>        &lt;resource_set id=”collocated-set-2” sequential=”true” role=”Master”></para>
+      <para>            &lt;resource_ref id=”F”/></para>
+      <para>            &lt;resource_ref id=”G”/></para>
+      <para>        &lt;/resource_set></para>
+      <para>    &lt;/rsc_colocation></para>
+      <para>&lt;/constraints></para>
       <para>A colocation chain where the members of the middle set have no interdependencies and the last has master status.</para>
       <para>
 	<inlinegraphic fileref="embedded:graphics12" width="16cm" depth="7.5cm"/>Visual representation of a colocation chain where the members of the middle set have no interdependencies</para>
@@ -1720,137 +1720,137 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
 	<para>Properties of date_spec objects</para></section><section><title>Durations</title>
 	<para>Durations are used to calculate a value for end when one is not supplied to in_range operations.  They contain the same fields as date_spec objects but without the limitations (ie. you can have a duration of 19 days).   Like date_specs, any field not supplied is ignored. </para>
 	<section><title>Sample Time Based Expressions</title>
-	  <para>&lt;rule id="rule1"&gt;</para>
-	  <para>  &lt;date_expression id="date_expr1" start="2005-001" operation="in_range"&gt;</para>
-	  <para>    &lt;duration years="1"/&gt;</para>
-	  <para>  &lt;/date_expression&gt;</para>
-	  <para>&lt;/rule&gt;</para>
+	  <para>&lt;rule id="rule1"></para>
+	  <para>  &lt;date_expression id="date_expr1" start="2005-001" operation="in_range"></para>
+	  <para>    &lt;duration years="1"/></para>
+	  <para>  &lt;/date_expression></para>
+	  <para>&lt;/rule></para>
 	  <para>True if now is any time in the year 2005</para>
-	  <para>&lt;rule id="rule2"&gt;</para>
-	  <para>  &lt;date_expression id="date_expr2" operation="date_spec"&gt;</para>
-	  <para>    &lt;date_spec years="2005"/&gt;</para>
-	  <para>  &lt;/date_expression&gt;</para>
-	  <para>&lt;/rule&gt;</para>
-	  <para>Equivalent expression. </para><para>&lt;rule id="rule3"&gt;</para>
-	  <para>  &lt;date_expression id="date_expr3" operation="date_spec"&gt;</para>
-	  <para>    &lt;date_spec hours="9-16" days="1-5"/&gt;</para>
-	  <para>  &lt;/date_expression&gt;</para>
-	  <para>&lt;/rule&gt;</para>
+	  <para>&lt;rule id="rule2"></para>
+	  <para>  &lt;date_expression id="date_expr2" operation="date_spec"></para>
+	  <para>    &lt;date_spec years="2005"/></para>
+	  <para>  &lt;/date_expression></para>
+	  <para>&lt;/rule></para>
+	  <para>Equivalent expression. </para><para>&lt;rule id="rule3"></para>
+	  <para>  &lt;date_expression id="date_expr3" operation="date_spec"></para>
+	  <para>    &lt;date_spec hours="9-16" days="1-5"/></para>
+	  <para>  &lt;/date_expression></para>
+	  <para>&lt;/rule></para>
 	  <para>9am-5pm, Mon-Friday</para>
-	  <para>&lt;rule id="rule4" boolean_op="or"&gt;</para>
-	  <para>  &lt;date_expression id="date_expr4-1" operation="date_spec"&gt;</para>
-	  <para>    &lt;date_spec hours="9-16" days="1-5"/&gt;</para>
-	  <para>  &lt;/date_expression&gt;</para>
-	  <para>  &lt;date_expression id="date_expr4-2" operation="date_spec"&gt;</para>
-	  <para>    &lt;date_spec days="6"/&gt;</para>
-	  <para>  &lt;/date_expression&gt;</para>
-	  <para>&lt;/rule&gt;</para>
+	  <para>&lt;rule id="rule4" boolean_op="or"></para>
+	  <para>  &lt;date_expression id="date_expr4-1" operation="date_spec"></para>
+	  <para>    &lt;date_spec hours="9-16" days="1-5"/></para>
+	  <para>  &lt;/date_expression></para>
+	  <para>  &lt;date_expression id="date_expr4-2" operation="date_spec"></para>
+	  <para>    &lt;date_spec days="6"/></para>
+	  <para>  &lt;/date_expression></para>
+	  <para>&lt;/rule></para>
 	  <para>9am-5pm, Mon-Friday, or all day saturday</para>
-	  <para>&lt;rule id="rule5" boolean_op="and"&gt;</para>
-	  <para>  &lt;rule id="rule5-nested1" boolean_op="or"&gt;</para>
-	  <para>    &lt;date_expression id="date_expr5-1" operation="date_spec"&gt;</para>
-	  <para>      &lt;date_spec hours="9-16"/&gt;</para>
-	  <para>    &lt;/date_expression&gt;</para>
-	  <para>    &lt;date_expression id="date_expr5-2" operation="date_spec"&gt;</para>
-	  <para>      &lt;date_spec hours="21-23"/&gt;</para>
-	  <para>    &lt;/date_expression&gt;</para>
-	  <para>  &lt;/rule&gt;</para>
-	  <para>  &lt;date_expression id="date_expr5-3" operation="date_spec"&gt;</para>
-	  <para>    &lt;date_spec days="1-5"/&gt;</para>
-	  <para>  &lt;/date_expression&gt;</para>
-	  <para>&lt;/rule&gt;</para>
+	  <para>&lt;rule id="rule5" boolean_op="and"></para>
+	  <para>  &lt;rule id="rule5-nested1" boolean_op="or"></para>
+	  <para>    &lt;date_expression id="date_expr5-1" operation="date_spec"></para>
+	  <para>      &lt;date_spec hours="9-16"/></para>
+	  <para>    &lt;/date_expression></para>
+	  <para>    &lt;date_expression id="date_expr5-2" operation="date_spec"></para>
+	  <para>      &lt;date_spec hours="21-23"/></para>
+	  <para>    &lt;/date_expression></para>
+	  <para>  &lt;/rule></para>
+	  <para>  &lt;date_expression id="date_expr5-3" operation="date_spec"></para>
+	  <para>    &lt;date_spec days="1-5"/></para>
+	  <para>  &lt;/date_expression></para>
+	  <para>&lt;/rule></para>
 	  <para>9am-5pm or 9pm-12pm, Mon-Friday</para>
-	  <para>&lt;rule id="rule6" boolean_op="and"&gt;</para>
-	  <para>  &lt;date_expression id="date_expr6-1" operation="date_spec"&gt;</para>
-	  <para>    &lt;date_spec weekdays="1"/&gt;</para>
-	  <para>  &lt;/date_expression&gt;</para>
-	  <para>  &lt;date_expression id="date_expr6"-2 operation="in_range" start="2005-03-01" end="2005-04-01"/&gt;</para>
-	  <para>&lt;/rule&gt;</para>
+	  <para>&lt;rule id="rule6" boolean_op="and"></para>
+	  <para>  &lt;date_expression id="date_expr6-1" operation="date_spec"></para>
+	  <para>    &lt;date_spec weekdays="1"/></para>
+	  <para>  &lt;/date_expression></para>
+	  <para>  &lt;date_expression id="date_expr6"-2 operation="in_range" start="2005-03-01" end="2005-04-01"/></para>
+	  <para>&lt;/rule></para>
 	  <para>Mondays in March 2005</para>
 	  <para>NOTE: Because no time is specified, 00:00:00 is implied.</para>
 	  <para>This means that the range includes all of 2005-03-01 but none of 2005-04-01.</para>
 	  <para>You may wish to write end="2005-03-31T23:59:59" to avoid confusion.</para>
 	  <para/>
-	  <para>&lt;rule id="rule7" boolean_op="and"&gt;</para>
-	  <para>  &lt;date_expression id="date_expr7" operation="date_spec"&gt;</para>
-	  <para>    &lt;date_spec weekdays="5" monthdays="13" moon="4"/&gt;</para>
-	  <para>  &lt;/date_expression&gt;</para>
-	  <para>&lt;/rule&gt;</para>
+	  <para>&lt;rule id="rule7" boolean_op="and"></para>
+	  <para>  &lt;date_expression id="date_expr7" operation="date_spec"></para>
+	  <para>    &lt;date_spec weekdays="5" monthdays="13" moon="4"/></para>
+	  <para>  &lt;/date_expression></para>
+	  <para>&lt;/rule></para>
 	  <para>A full moon on Friday the 13th</para>
 	  <title>Using Rules to Determine Resource Location</title>
 	  <para>If the constraint’s outer-most rule evaluates to false, the cluster treats the constraint as if it was not there.  When the rule evaluates to true, the node’s preference for running the resource is updated with the score associated with the rule.</para>
 	  <para>If this sounds familiar, its because you have been using a simplified syntax for location constraint rules already.  Consider the following location constraint:</para>
-	  <para>&lt;rsc_location id="dont-run-apache-on-c001n03" rsc="myApacheRsc" score=”-INFINITY” node=”c001n03”/&gt;</para>
+	  <para>&lt;rsc_location id="dont-run-apache-on-c001n03" rsc="myApacheRsc" score=”-INFINITY” node=”c001n03”/></para>
 	  <para>Prevent myApacheRsc from running on c001n03</para>
 	  <para>This constraint can be more verbosely written as:</para>
-	  <para>&lt;rsc_location id="dont-run-apache-on-c001n03" rsc="myApacheRsc"&gt;</para>
-	  <para>    &lt;rule id="dont-run-apache-rule" score="-INFINITY"&gt;</para>
-	  <para>          &lt;expression id=”dont-run-apache-expr” attribute="#uname" operation="eq" value="c00n03"/&gt;</para>
-	  <para>    &lt;/rule&gt;</para>
-	  <para> &lt;/rsc_location&gt;</para>
+	  <para>&lt;rsc_location id="dont-run-apache-on-c001n03" rsc="myApacheRsc"></para>
+	  <para>    &lt;rule id="dont-run-apache-rule" score="-INFINITY"></para>
+	  <para>          &lt;expression id=”dont-run-apache-expr” attribute="#uname" operation="eq" value="c00n03"/></para>
+	  <para>    &lt;/rule></para>
+	  <para> &lt;/rsc_location></para>
 	  <para>Prevent myApacheRsc from running on c001n03 - expanded version</para>
 	  <para>The advantage of using the expanded form is that one can then add extra clauses to the rule, such as limiting the rule such that it only applies during certain times of the day or days of the week (this is discussed in subsequent sections).</para>
 	  <para>It also allows us to match on node properties other than its name.  If we rated each machine’s CPU power such that the cluster had the following nodes section:</para>
-	  <para>   &lt;nodes&gt;</para>
-	  <para>      &lt;node id="uuid1" uname="c001n01" type="normal"&gt;</para>
-	  <para>        &lt;instance_attributes id="uuid1-custom_attrs"&gt;</para>
-	  <para>            &lt;nvpair id="uuid1-cpu_mips" name="cpu_mips" value="1234"/&gt;</para>
-	  <para>        &lt;/instance_attributes&gt;</para>
-	  <para>      &lt;/node&gt;</para>
-	  <para>      &lt;node id="uuid2" uname="c001n02" type="normal"&gt;</para>
-	  <para>        &lt;instance_attributes id="uuid2-custom_attrs"&gt;</para>
-	  <para>            &lt;nvpair id="uuid2-cpu_mips" name="cpu_mips" value="5678"/&gt;</para>
-	  <para>        &lt;/instance_attributes&gt;</para>
-	  <para>      &lt;/node&gt;</para>
-	  <para>    &lt;/nodes&gt;</para>
+	  <para>   &lt;nodes></para>
+	  <para>      &lt;node id="uuid1" uname="c001n01" type="normal"></para>
+	  <para>        &lt;instance_attributes id="uuid1-custom_attrs"></para>
+	  <para>            &lt;nvpair id="uuid1-cpu_mips" name="cpu_mips" value="1234"/></para>
+	  <para>        &lt;/instance_attributes></para>
+	  <para>      &lt;/node></para>
+	  <para>      &lt;node id="uuid2" uname="c001n02" type="normal"></para>
+	  <para>        &lt;instance_attributes id="uuid2-custom_attrs"></para>
+	  <para>            &lt;nvpair id="uuid2-cpu_mips" name="cpu_mips" value="5678"/></para>
+	  <para>        &lt;/instance_attributes></para>
+	  <para>      &lt;/node></para>
+	  <para>    &lt;/nodes></para>
 	  <para>A sample nodes section for use with score-attribute </para>
 	  <para>then we could prevent resources from running on underpowered machines with the rule</para>
-	  <para>&lt;rule id="need-more-power-rule" score="-INFINITY"&gt;</para>
-	  <para>          &lt;expression id=” need-more-power-expr” attribute="cpu_mips" operation="lt" value="3000"/&gt;</para>
-	  <para>&lt;/rule&gt;</para>
+	  <para>&lt;rule id="need-more-power-rule" score="-INFINITY"></para>
+	  <para>          &lt;expression id=” need-more-power-expr” attribute="cpu_mips" operation="lt" value="3000"/></para>
+	  <para>&lt;/rule></para>
 	  <title>Using score-attribute Instead of score</title>
 	  <para>When using score-attribute instead of score, each node matched by the rule has its score adjusted differently, according to its value for the named node attribute.  Thus in the previous example, if a rule used score-attribute="cpu_mips", c001n01 would have its preference to run the resource increased by 1234 whereas c001n02 would have its preference increased by 5678.</para>
 	  <title>Using Rules to Control Resource Options</title>
 	  <para>Often some cluster nodes will be different from their peers, sometimes these differences (the location of a binary or the names of network interfaces) require resources be configured differently depending on the machine they’re hosted on.</para>
 	  <para>By defining multiple instance_attributes objects for the resource and adding a rule to each, we can easily handle these special cases.</para>
 	  <para>In the example below, mySpecialRsc will use eth1 and port 9999 when run on node1, eth2 and port 8888 on node2 and default to eth0 and port 9999 for all other nodes. </para>
-	  <para>&lt;primitive id="mySpecialRsc" class="ocf" type="Special" provider=”me”&gt;</para>
-	  <para>  &lt;instance_attributes id=”special-node1” score=”3”&gt;</para>
-	  <para>    &lt;rule id="node1-special-case" score=”INFINITY” &gt;</para>
-	  <para>      &lt;expression id="node1-special-case-expr" attribute="#uname" operation="eq" value="node1"/&gt;</para>
-	  <para>    &lt;/rule&gt;</para>
-	  <para>    &lt;nvpair id="node1-interface" name="interface" value="eth1"/&gt;</para>
-	  <para>  &lt;/instance_attributes&gt;</para>
-	  <para>  &lt;instance_attributes id=”special-node2” score=”2” &gt;</para>
-	  <para>    &lt;rule id="node2-special-case" score=”INFINITY”&gt;</para>
-	  <para>      &lt;expression id="node2-special-case-expr" attribute="#uname" operation="eq" value="node2"/&gt;</para>
-	  <para>    &lt;/rule&gt;</para>
-	  <para>    &lt;nvpair id="node2-interface" name="interface" value="eth2"/&gt;</para>
-	  <para>    &lt;nvpair id="node2-port" name="port" value="8888"/&gt;</para>
-	  <para>  &lt;/instance_attributes&gt;</para>
-	  <para>  &lt;instance_attributes id=”defaults” score=”1” &gt;</para>
-	  <para>    &lt;nvpair id="default-interface" name="interface" value="eth0"/&gt;</para>
-	  <para>    &lt;nvpair id="default-port" name="port" value="9999"/&gt;</para>
-	  <para>  &lt;/instance_attributes&gt;</para>
-	  <para>&lt;/primitive&gt;</para>
+	  <para>&lt;primitive id="mySpecialRsc" class="ocf" type="Special" provider=”me”></para>
+	  <para>  &lt;instance_attributes id=”special-node1” score=”3”></para>
+	  <para>    &lt;rule id="node1-special-case" score=”INFINITY” ></para>
+	  <para>      &lt;expression id="node1-special-case-expr" attribute="#uname" operation="eq" value="node1"/></para>
+	  <para>    &lt;/rule></para>
+	  <para>    &lt;nvpair id="node1-interface" name="interface" value="eth1"/></para>
+	  <para>  &lt;/instance_attributes></para>
+	  <para>  &lt;instance_attributes id=”special-node2” score=”2” ></para>
+	  <para>    &lt;rule id="node2-special-case" score=”INFINITY”></para>
+	  <para>      &lt;expression id="node2-special-case-expr" attribute="#uname" operation="eq" value="node2"/></para>
+	  <para>    &lt;/rule></para>
+	  <para>    &lt;nvpair id="node2-interface" name="interface" value="eth2"/></para>
+	  <para>    &lt;nvpair id="node2-port" name="port" value="8888"/></para>
+	  <para>  &lt;/instance_attributes></para>
+	  <para>  &lt;instance_attributes id=”defaults” score=”1” ></para>
+	  <para>    &lt;nvpair id="default-interface" name="interface" value="eth0"/></para>
+	  <para>    &lt;nvpair id="default-port" name="port" value="9999"/></para>
+	  <para>  &lt;/instance_attributes></para>
+	  <para>&lt;/primitive></para>
 	  <para>Defining different resource options based on the node name</para>
 	  <para>The order in which instance_attributes objects are evaluated is determined by their score (highest to lowest).  If not supplied, score defaults to zero and objects with an equal score are processed in listed order.  If the instance_attributes object does not have a rule or has a rule that evaluates to true, then for any parameter the resource does not yet have a value for, the resource will use the parameter values defined by the instance_attributes object.</para>
 	  <title>Using Rules to Control Cluster Options</title>
 	  <para>Controlling cluster options is achieved in much the same manner as specifying different resource options on different nodes.</para>
 	  <para>The difference is that because they are cluster options, one cannot (or should not because they wont work) use attribute based expressions.  The following example illustrates how to set a different resource-stickiness value during and outside of work hours.  This allows resources to automatically move back to their most preferred hosts, but at a time that (in theory) does not interfere with business activities.</para>
-	  <para>&lt;rsc_defaults&gt;</para>
-	  <para>  &lt;meta_attributes id=”core-hours” score=”2”&gt;</para>
-	  <para>     &lt;rule id="core-hour-rule" score=”0”&gt;</para>
-	  <para>         &lt;date_expression id="nine-to-five-Mon-to-Fri" operation="date_spec"&gt;</para>
-	  <para>            &lt;date_spec id=”nine-to-five-Mon-to-Fri-spec” hours="9-17" weekdays="1-5"/&gt;</para>
-	  <para>         &lt;/date_expression&gt;</para>
-	  <para>     &lt;/rule&gt;</para>
-	  <para>     &lt;nvpair id="core-stickiness" name="resource-stickiness" value="INFINITY"/&gt;</para>
-	  <para>  &lt;/meta_attributes&gt;</para>
-	  <para>  &lt;meta_attributes id=”after-hours” score=”1” &gt;</para>
-	  <para>    &lt;nvpair id="after-stickiness" name="resource-stickiness" value="0"/&gt;</para>
-	  <para>  &lt;/meta_attributes&gt;</para>
-	  <para>&lt;/rsc_defaults&gt;</para>
+	  <para>&lt;rsc_defaults></para>
+	  <para>  &lt;meta_attributes id=”core-hours” score=”2”></para>
+	  <para>     &lt;rule id="core-hour-rule" score=”0”></para>
+	  <para>         &lt;date_expression id="nine-to-five-Mon-to-Fri" operation="date_spec"></para>
+	  <para>            &lt;date_spec id=”nine-to-five-Mon-to-Fri-spec” hours="9-17" weekdays="1-5"/></para>
+	  <para>         &lt;/date_expression></para>
+	  <para>     &lt;/rule></para>
+	  <para>     &lt;nvpair id="core-stickiness" name="resource-stickiness" value="INFINITY"/></para>
+	  <para>  &lt;/meta_attributes></para>
+	  <para>  &lt;meta_attributes id=”after-hours” score=”1” ></para>
+	  <para>    &lt;nvpair id="after-stickiness" name="resource-stickiness" value="0"/></para>
+	  <para>  &lt;/meta_attributes></para>
+	  <para>&lt;/rsc_defaults></para>
 	  <para>Set resource-stickiness=INFINITY Mon-Fri between 9am and 6pm, and resource-stickiness=0 all other times</para>
 	  <section>
 	    <anchor id="EnsuringTimeBasedRulesTakeEffect"/>
@@ -1866,73 +1866,73 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
     <section><title>Using Rules to Determine Resource Location</title>
       <para>If the constraint’s outer-most rule evaluates to false, the cluster treats the constraint as if it was not there.  When the rule evaluates to true, the node’s preference for running the resource is updated with the score associated with the rule.</para>
       <para>If this sounds familiar, its because you have been using a simplified syntax for location constraint rules already.  Consider the following location constraint:</para>
-      <para>&lt;rsc_location id="dont-run-apache-on-c001n03" rsc="myApacheRsc" score=”-INFINITY” node=”c001n03”/&gt;</para>
+      <para>&lt;rsc_location id="dont-run-apache-on-c001n03" rsc="myApacheRsc" score=”-INFINITY” node=”c001n03”/></para>
       <para>Prevent myApacheRsc from running on c001n03</para>
       <para>This constraint can be more verbosely written as:</para>
-      <para>&lt;rsc_location id="dont-run-apache-on-c001n03" rsc="myApacheRsc"&gt;</para>
-      <para>    &lt;rule id="dont-run-apache-rule" score="-INFINITY"&gt;</para>
-      <para>          &lt;expression id=”dont-run-apache-expr” attribute="#uname" operation="eq" value="c00n03"/&gt;</para>
-      <para>    &lt;/rule&gt;</para>
-      <para> &lt;/rsc_location&gt;</para>
+      <para>&lt;rsc_location id="dont-run-apache-on-c001n03" rsc="myApacheRsc"></para>
+      <para>    &lt;rule id="dont-run-apache-rule" score="-INFINITY"></para>
+      <para>          &lt;expression id=”dont-run-apache-expr” attribute="#uname" operation="eq" value="c00n03"/></para>
+      <para>    &lt;/rule></para>
+      <para> &lt;/rsc_location></para>
       <para>Prevent myApacheRsc from running on c001n03 - expanded version</para>
       <para>The advantage of using the expanded form is that one can then add extra clauses to the rule, such as limiting the rule such that it only applies during certain times of the day or days of the week (this is discussed in subsequent sections).</para>
       <para>It also allows us to match on node properties other than its name.  If we rated each machine’s CPU power such that the cluster had the following nodes section:</para>
-      <para>   &lt;nodes&gt;</para>
-      <para>      &lt;node id="uuid1" uname="c001n01" type="normal"&gt;</para>
-      <para>        &lt;instance_attributes id="uuid1-custom_attrs"&gt;</para>
-      <para>            &lt;nvpair id="uuid1-cpu_mips" name="cpu_mips" value="1234"/&gt;</para>
-      <para>        &lt;/instance_attributes&gt;</para>
-      <para>      &lt;/node&gt;</para>
-      <para>      &lt;node id="uuid2" uname="c001n02" type="normal"&gt;</para>
-      <para>        &lt;instance_attributes id="uuid2-custom_attrs"&gt;</para>
-      <para>            &lt;nvpair id="uuid2-cpu_mips" name="cpu_mips" value="5678"/&gt;</para>
-      <para>        &lt;/instance_attributes&gt;</para>
-      <para>      &lt;/node&gt;</para>
-      <para>    &lt;/nodes&gt;</para>
+      <para>   &lt;nodes></para>
+      <para>      &lt;node id="uuid1" uname="c001n01" type="normal"></para>
+      <para>        &lt;instance_attributes id="uuid1-custom_attrs"></para>
+      <para>            &lt;nvpair id="uuid1-cpu_mips" name="cpu_mips" value="1234"/></para>
+      <para>        &lt;/instance_attributes></para>
+      <para>      &lt;/node></para>
+      <para>      &lt;node id="uuid2" uname="c001n02" type="normal"></para>
+      <para>        &lt;instance_attributes id="uuid2-custom_attrs"></para>
+      <para>            &lt;nvpair id="uuid2-cpu_mips" name="cpu_mips" value="5678"/></para>
+      <para>        &lt;/instance_attributes></para>
+      <para>      &lt;/node></para>
+      <para>    &lt;/nodes></para>
       <para>A sample nodes section for use with score-attribute </para>
       <para>then we could prevent resources from running on underpowered machines with the rule</para>
-      <para>&lt;rule id="need-more-power-rule" score="-INFINITY"&gt;</para>
-      <para>          &lt;expression id=” need-more-power-expr” attribute="cpu_mips" operation="lt" value="3000"/&gt;</para>
-      <para>&lt;/rule&gt;</para><section><title/><section><title>Using score-attribute Instead of score</title>score-attributescore<para>When using score-attribute instead of score, each node matched by the rule has its score adjusted differently, according to its value for the named node attribute.  Thus in the previous example, if a rule used score-attribute="cpu_mips", c001n01 would have its preference to run the resource increased by 1234 whereas c001n02 would have its preference increased by 5678.</para></section></section></section><section><title>Using Rules to Control Resource Options</title>
+      <para>&lt;rule id="need-more-power-rule" score="-INFINITY"></para>
+      <para>          &lt;expression id=” need-more-power-expr” attribute="cpu_mips" operation="lt" value="3000"/></para>
+      <para>&lt;/rule></para><section><title/><section><title>Using score-attribute Instead of score</title>score-attributescore<para>When using score-attribute instead of score, each node matched by the rule has its score adjusted differently, according to its value for the named node attribute.  Thus in the previous example, if a rule used score-attribute="cpu_mips", c001n01 would have its preference to run the resource increased by 1234 whereas c001n02 would have its preference increased by 5678.</para></section></section></section><section><title>Using Rules to Control Resource Options</title>
       <para>Often some cluster nodes will be different from their peers, sometimes these differences (the location of a binary or the names of network interfaces) require resources be configured differently depending on the machine they’re hosted on.</para>
       <para>By defining multiple instance_attributes objects for the resource and adding a rule to each, we can easily handle these special cases.</para>
       <para>In the example below, mySpecialRsc will use eth1 and port 9999 when run on node1, eth2 and port 8888 on node2 and default to eth0 and port 9999 for all other nodes. </para>
-      <para>&lt;primitive id="mySpecialRsc" class="ocf" type="Special" provider=”me”&gt;</para>
-      <para>  &lt;instance_attributes id=”special-node1” score=”3”&gt;</para>
-      <para>    &lt;rule id="node1-special-case" score=”INFINITY” &gt;</para>
-      <para>      &lt;expression id="node1-special-case-expr" attribute="#uname" operation="eq" value="node1"/&gt;</para>
-      <para>    &lt;/rule&gt;</para>
-      <para>    &lt;nvpair id="node1-interface" name="interface" value="eth1"/&gt;</para>
-      <para>  &lt;/instance_attributes&gt;</para>
-      <para>  &lt;instance_attributes id=”special-node2” score=”2” &gt;</para>
-      <para>    &lt;rule id="node2-special-case" score=”INFINITY”&gt;</para>
-      <para>      &lt;expression id="node2-special-case-expr" attribute="#uname" operation="eq" value="node2"/&gt;</para>
-      <para>    &lt;/rule&gt;</para>
-      <para>    &lt;nvpair id="node2-interface" name="interface" value="eth2"/&gt;</para>
-      <para>    &lt;nvpair id="node2-port" name="port" value="8888"/&gt;</para>
-      <para>  &lt;/instance_attributes&gt;</para>
-      <para>  &lt;instance_attributes id=”defaults” score=”1” &gt;</para>
-      <para>    &lt;nvpair id="default-interface" name="interface" value="eth0"/&gt;</para>
-      <para>    &lt;nvpair id="default-port" name="port" value="9999"/&gt;</para>
-      <para>  &lt;/instance_attributes&gt;</para>
-      <para>&lt;/primitive&gt;</para>
+      <para>&lt;primitive id="mySpecialRsc" class="ocf" type="Special" provider=”me”></para>
+      <para>  &lt;instance_attributes id=”special-node1” score=”3”></para>
+      <para>    &lt;rule id="node1-special-case" score=”INFINITY” ></para>
+      <para>      &lt;expression id="node1-special-case-expr" attribute="#uname" operation="eq" value="node1"/></para>
+      <para>    &lt;/rule></para>
+      <para>    &lt;nvpair id="node1-interface" name="interface" value="eth1"/></para>
+      <para>  &lt;/instance_attributes></para>
+      <para>  &lt;instance_attributes id=”special-node2” score=”2” ></para>
+      <para>    &lt;rule id="node2-special-case" score=”INFINITY”></para>
+      <para>      &lt;expression id="node2-special-case-expr" attribute="#uname" operation="eq" value="node2"/></para>
+      <para>    &lt;/rule></para>
+      <para>    &lt;nvpair id="node2-interface" name="interface" value="eth2"/></para>
+      <para>    &lt;nvpair id="node2-port" name="port" value="8888"/></para>
+      <para>  &lt;/instance_attributes></para>
+      <para>  &lt;instance_attributes id=”defaults” score=”1” ></para>
+      <para>    &lt;nvpair id="default-interface" name="interface" value="eth0"/></para>
+      <para>    &lt;nvpair id="default-port" name="port" value="9999"/></para>
+      <para>  &lt;/instance_attributes></para>
+      <para>&lt;/primitive></para>
       <para>Defining different resource options based on the node name</para>
       <para>The order in which instance_attributes objects are evaluated is determined by their score (highest to lowest).  If not supplied, score defaults to zero and objects with an equal score are processed in listed order.  If the instance_attributes object does not have a rule or has a rule that evaluates to true, then for any parameter the resource does not yet have a value for, the resource will use the parameter values defined by the instance_attributes object.</para></section><section><title>Using Rules to Control Cluster Options</title>
       <para>Controlling cluster options is achieved in much the same manner as specifying different resource options on different nodes.</para>
       <para>The difference is that because they are cluster options, one cannot (or should not because they wont work) use attribute based expressions.  The following example illustrates how to set a different resource-stickiness value during and outside of work hours.  This allows resources to automatically move back to their most preferred hosts, but at a time that (in theory) does not interfere with business activities.</para>
-      <para>&lt;rsc_defaults&gt;</para>
-      <para>  &lt;meta_attributes id=”core-hours” score=”2”&gt;</para>
-      <para>     &lt;rule id="core-hour-rule" score=”0”&gt;</para>
-      <para>         &lt;date_expression id="nine-to-five-Mon-to-Fri" operation="date_spec"&gt;</para>
-      <para>            &lt;date_spec id=”nine-to-five-Mon-to-Fri-spec” hours="9-17" weekdays="1-5"/&gt;</para>
-      <para>         &lt;/date_expression&gt;</para>
-      <para>     &lt;/rule&gt;</para>
-      <para>     &lt;nvpair id="core-stickiness" name="resource-stickiness" value="INFINITY"/&gt;</para>
-      <para>  &lt;/meta_attributes&gt;</para>
-      <para>  &lt;meta_attributes id=”after-hours” score=”1” &gt;</para>
-      <para>    &lt;nvpair id="after-stickiness" name="resource-stickiness" value="0"/&gt;</para>
-      <para>  &lt;/meta_attributes&gt;</para>
-      <para>&lt;/rsc_defaults&gt;</para>
+      <para>&lt;rsc_defaults></para>
+      <para>  &lt;meta_attributes id=”core-hours” score=”2”></para>
+      <para>     &lt;rule id="core-hour-rule" score=”0”></para>
+      <para>         &lt;date_expression id="nine-to-five-Mon-to-Fri" operation="date_spec"></para>
+      <para>            &lt;date_spec id=”nine-to-five-Mon-to-Fri-spec” hours="9-17" weekdays="1-5"/></para>
+      <para>         &lt;/date_expression></para>
+      <para>     &lt;/rule></para>
+      <para>     &lt;nvpair id="core-stickiness" name="resource-stickiness" value="INFINITY"/></para>
+      <para>  &lt;/meta_attributes></para>
+      <para>  &lt;meta_attributes id=”after-hours” score=”1” ></para>
+      <para>    &lt;nvpair id="after-stickiness" name="resource-stickiness" value="0"/></para>
+      <para>  &lt;/meta_attributes></para>
+      <para>&lt;/rsc_defaults></para>
       <para>Set resource-stickiness=INFINITY Mon-Fri between 9am and 6pm, and resource-stickiness=0 all other times</para></section><section><title>
 	<anchor id="EnsuringTimeBasedRulesTakeE"/>Ensuring Time Based Rules Take Effect</title>
       <para>A Pacemaker cluster is an event driven system.  As such, it wont recalculate the best place for resources to run in unless something (like a resource failure or configuration change) happens.  This can mean that a location constraint that only allows resource X to run between 9am and 5pm is not enforced.</para>
@@ -2031,7 +2031,7 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
       <para>To specify a date/time that the operation should be relative to, set the operation’s interval-origin.  The cluster uses this point to calculate the correct start-delay such that the operation will occur at origin + (interval * N).</para>
       <para>So if the operation’s interval is 24h, it’s interval-origin is set to 02:00 and it is currently 14:32, then the cluster would initiate the operation with a start delay of 11 hours and 28 minutes.  If the resource is moved to another node before 2am, then the operation is of course cancelled.</para>
       <para>The value specified for interval and interval-origin can be any date/time conforming to the <ulink url="http://en.wikipedia.org/wiki/ISO_8601">ISO8601 standard</ulink>.  By way of example, to specify an operation that would run on the first Monday of 2009 and every monday after that you would add: </para>
-      <para>&lt;op id=”my-weekly-action” name=”custom-action” interval=”P7D” interval-origin=”2009-W01-1”/&gt; </para></section><section><title>Moving Resources</title><section><title>Manual Intervention</title>
+      <para>&lt;op id=”my-weekly-action” name=”custom-action” interval=”P7D” interval-origin=”2009-W01-1”/> </para></section><section><title>Moving Resources</title><section><title>Manual Intervention</title>
 	<para>There are primarily two occasions when you would want to move a resource from it’s current location:  when the whole node  is under maintenance and when a single resource needs to be moved.</para>
 	<para>In the case where everything needs to move, since everything eventually comes down to a score, you could create constraints for every resource you have preventing it from running on that node.  While the configuration can seem convoluted at times, not even we would require this of administrators.</para>
 	<para>Instead one can set a special node attribute which tells the cluster “don’t let anything run here”.  There is even a helpful tool to help query and set it called crm_standby.  To check the standby status of the current machine, simply run:</para>
@@ -2045,7 +2045,7 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
 	<para>When only one resource is required to move, we do this by creating location constraints.  However once again we provide a user friendly shortcut as part of the crm_resource command which creates and modifies the extra constraints for you.  If Email was running on sles-1 and you wanted it moved to a specific location, the command would look something like:</para>
 	<para>crm_resource -M -r Email -H sles-2</para>
 	<para>Behind the scenes, the tool will create the following location constraint:</para>
-	<para>         &lt;rsc_location rsc=”Email” node=”sles-2” score=”INFINITY”/&gt;</para>
+	<para>         &lt;rsc_location rsc=”Email” node=”sles-2” score=”INFINITY”/></para>
 	<para>It is important to note that subsequent invocations of crm_resource -M are not cumulative.  So if you ran:</para>
 	<para>crm_resource -M -r Email -H sles-2</para>
 	<para>crm_resource -M -r Email -H sles-3</para>
@@ -2059,7 +2059,7 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
 	<para>Alternatively, if you only care that the resource should be moved from its current location, try </para>
 	<para>crm_resource -M -r Email</para>
 	<para>Which will instead create a negative constraint.  Eg.</para>
-	<para> &lt;rsc_location rsc=”Email” node=”sles-1” score=”-INFINITY”/&gt;</para>
+	<para> &lt;rsc_location rsc=”Email” node=”sles-1” score=”-INFINITY”/></para>
 	<para>This will achieve the desired effect but will also have long-term consequences.  As the tool will warn you, the creation of a     -INFINITY constraint will prevent the resource from running on that node until crm_resource -U is used.  This includes the situation where every other cluster node is no longer available.</para>
 	<para>In some cases, such as when resource stickiness is set to INFINITY, it is possible that you will end up with the problem described in <link linkend="">What if Two Nodes Have the Same Score</link>.  The tool can detect some of these cases and deals with them by also creating both a positive and negative constraint.  Eg. </para>
 	<para>        Email prefers sles-1 with a score of -INFINITY</para>
@@ -2123,58 +2123,58 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
           </row></tbody></tgroup>
 	</informaltable>
 	<para>Standard ping options</para>
-	<para>&lt;clone id="Connected"&gt;</para>
-	<para>  &lt;primitive id="ping" provider="pacemaker" class="ocf" type="ping"&gt;</para>
-	<para>    &lt;instance_attributes id="ping-attrs"&gt;</para>
-	<para>         &lt;nvpair id="pingd-dampen" name="dampen" value="5s"/&gt;</para>
-	<para>         &lt;nvpair id="pingd-multiplier" name="multiplier" value="1000"/&gt;</para>
-	<para>         &lt;nvpair id="pingd-hosts" name="host_list" value="my.gateway.com www.bigcorp.com"/&gt;</para>
-	<para>    &lt;/instance_attributes&gt;</para>
-	<para>     &lt;operations&gt;</para>
-	<para>         &lt;op id="ping-monitor-60s" interval="60s" name="monitor"/&gt;</para>
-	<para>     &lt;/operations&gt;</para>
-	<para>  &lt;/primitive&gt;</para>
-	<para>&lt;/clone&gt;</para>
+	<para>&lt;clone id="Connected"></para>
+	<para>  &lt;primitive id="ping" provider="pacemaker" class="ocf" type="ping"></para>
+	<para>    &lt;instance_attributes id="ping-attrs"></para>
+	<para>         &lt;nvpair id="pingd-dampen" name="dampen" value="5s"/></para>
+	<para>         &lt;nvpair id="pingd-multiplier" name="multiplier" value="1000"/></para>
+	<para>         &lt;nvpair id="pingd-hosts" name="host_list" value="my.gateway.com www.bigcorp.com"/></para>
+	<para>    &lt;/instance_attributes></para>
+	<para>     &lt;operations></para>
+	<para>         &lt;op id="ping-monitor-60s" interval="60s" name="monitor"/></para>
+	<para>     &lt;/operations></para>
+	<para>  &lt;/primitive></para>
+	<para>&lt;/clone></para>
 	<para>An example ping cluster resource, checks node connectivity once every minute</para>
 	<para>
 	  <emphasis>Tell Pacemaker how to interpret the connectivity data</emphasis>
 	</para>
 	<para>NOTE: Before reading the following, please make sure you have read and understood the <link linkend="">Rules</link> section above.</para>
 	<para>There are a number of ways to use the connectivity data provided by Heartbeat.  The most common setup is for people to have a single ping node and want to prevent the cluster from running a resource on any unconnected node.</para>
-	<para>&lt;rsc_location id="WebServer-no-connectivity" rsc="Webserver"&gt;</para>
-	<para>  &lt;rule id="ping-exclude-rule" score="-INFINITY" &gt;</para>
-	<para>    &lt;expression id="ping-exclude" attribute="pingd" operation="not_defined"/&gt;</para>
-	<para>  &lt;/rule&gt;</para>
-	<para>&lt;/rsc_location&gt;</para>
+	<para>&lt;rsc_location id="WebServer-no-connectivity" rsc="Webserver"></para>
+	<para>  &lt;rule id="ping-exclude-rule" score="-INFINITY" ></para>
+	<para>    &lt;expression id="ping-exclude" attribute="pingd" operation="not_defined"/></para>
+	<para>  &lt;/rule></para>
+	<para>&lt;/rsc_location></para>
 	<para>Don’t run on unconnected nodes</para>
 	<para>A more complex setup is to have a number of ping nodes configured.  You can require the cluster to only run resources on nodes that can connect to all (or a minimum subset) of them </para>
-	<para>&lt;rsc_location id="WebServer-connectivity" rsc="Webserver"&gt;</para>
-	<para>  &lt;rule id="ping-prefer-rule" score="-INFINITY" &gt;</para>
-	<para>    &lt;expression id="ping-prefer" attribute="pingd" operation="lt" value=”3000”/&gt;</para>
-	<para>  &lt;/rule&gt;</para>
-	<para>&lt;/rsc_location&gt; </para>
+	<para>&lt;rsc_location id="WebServer-connectivity" rsc="Webserver"></para>
+	<para>  &lt;rule id="ping-prefer-rule" score="-INFINITY" ></para>
+	<para>    &lt;expression id="ping-prefer" attribute="pingd" operation="lt" value=”3000”/></para>
+	<para>  &lt;/rule></para>
+	<para>&lt;/rsc_location> </para>
 	<para>Run only on nodes connected to 3 or more ping nodes (assumes multiplier is set to 1000)</para>
 	<para>or instead you can tell the cluster only to prefer nodes with the most connectivity. Just be sure to set the multiplier to a value higher than that of resource-stickiness (and don’t set either of them to INFINITY).</para>
-	<para>&lt;rsc_location id="WebServer-connectivity" rsc="Webserver"&gt;</para>
-	<para>  &lt;rule id="ping-prefer-rule" score-attribute="pingd" &gt;</para>
-	<para>    &lt;expression id="ping-prefer" attribute="pingd" operation="defined"/&gt;</para>
-	<para>  &lt;/rule&gt;</para>
-	<para>&lt;/rsc_location&gt; </para>
+	<para>&lt;rsc_location id="WebServer-connectivity" rsc="Webserver"></para>
+	<para>  &lt;rule id="ping-prefer-rule" score-attribute="pingd" ></para>
+	<para>    &lt;expression id="ping-prefer" attribute="pingd" operation="defined"/></para>
+	<para>  &lt;/rule></para>
+	<para>&lt;/rsc_location> </para>
 	<para>Prefer the node with the most connected ping nodes</para>
 	<para>It is perhaps easier to think of this in terms of the simple constraints that the cluster translates it into.  For example, if sles-1 is connected to all 5 ping nodes but sles-2 is only connected to 2, then it would be as if you instead had the following constraints in your configuration:</para>
-	<para>&lt;rsc_location id=”ping-1” rsc=”Webserver” node=”sles-1” score=”5000”/&gt;</para>
-	<para>&lt;rsc_location id=”ping-2” rsc=”Webserver” node=”sles-2” score=”2000”/&gt;</para>
+	<para>&lt;rsc_location id=”ping-1” rsc=”Webserver” node=”sles-1” score=”5000”/></para>
+	<para>&lt;rsc_location id=”ping-2” rsc=”Webserver” node=”sles-2” score=”2000”/></para>
 	<para>How the cluster translates the pingd constraint </para>
 	<para>The advantage being that you don’t have to manually update them whenever your network connectivity changes.</para>
 	<para>You can also combine the concepts above into something even more complex.  The example below shows how you can prefer the node with the most connected ping nodes provided they have connectivity to at least three (assuming multiplier is set to 1000).</para>
-	<para>&lt;rsc_location id="WebServer-connectivity" rsc="Webserver"&gt;</para>
-	<para>  &lt;rule id="ping-exclude-rule" score="-INFINITY" &gt;</para>
-	<para>    &lt;expression id="ping-exclude" attribute="pingd" operation="lt" value=”3000”/&gt;</para>
-	<para>  &lt;/rule&gt;</para>
-	<para>  &lt;rule id="ping-prefer-rule" score-attribute="pingd" &gt;</para>
-	<para>    &lt;expression id="ping-prefer" attribute="pingd" operation="defined"/&gt;</para>
-	<para>  &lt;/rule&gt;</para>
-	<para>&lt;/rsc_location&gt; </para>
+	<para>&lt;rsc_location id="WebServer-connectivity" rsc="Webserver"></para>
+	<para>  &lt;rule id="ping-exclude-rule" score="-INFINITY" ></para>
+	<para>    &lt;expression id="ping-exclude" attribute="pingd" operation="lt" value=”3000”/></para>
+	<para>  &lt;/rule></para>
+	<para>  &lt;rule id="ping-prefer-rule" score-attribute="pingd" ></para>
+	<para>    &lt;expression id="ping-prefer" attribute="pingd" operation="defined"/></para>
+	<para>  &lt;/rule></para>
+	<para>&lt;/rsc_location> </para>
 	<para>A more complex example of choosing a location based on connectivity  </para></section><section><title>Resource Migration</title>
 	<para>Some resources, such as Xen virtual guests, are able to move to another location without lose of state.  We call this resource migration and is different from the normal practice of stopping the resource on the first machine and starting it elsewhere.</para>
 	<para>Not all resources are able to migrate, see the Migration Checklist below, and those that can wont do so in all situations.  Conceptually there are two requirements from which the other prerequisites follow: </para>
@@ -2214,38 +2214,38 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
 	<anchor id="ReusingRulesandSetsofOption"/>Reusing Rules, Options and Sets of Operations</title>
       <para>Sometimes a number of constraints need to use the same set of rules and resources need to set the same options an parameters.  To simplify this situation, you can refer to an existing object using an id-ref instead of an id.</para>
       <para>So if for one resource you have</para>
-      <para>&lt;rsc_location id="WebServer-connectivity" rsc="Webserver"&gt;</para>
-      <para>  &lt;rule id="ping-prefer-rule" score-attribute="pingd" &gt;</para>
-      <para>    &lt;expression id="ping-prefer" attribute="pingd" operation="defined"/&gt;</para>
-      <para>  &lt;/rule&gt;</para>
-      <para>&lt;/rsc_location&gt;</para>
+      <para>&lt;rsc_location id="WebServer-connectivity" rsc="Webserver"></para>
+      <para>  &lt;rule id="ping-prefer-rule" score-attribute="pingd" ></para>
+      <para>    &lt;expression id="ping-prefer" attribute="pingd" operation="defined"/></para>
+      <para>  &lt;/rule></para>
+      <para>&lt;/rsc_location></para>
       <para>Then instead of duplicating the rule for all your other resources, you can instead specify</para>
-      <para>&lt;rsc_location id="WebDB-connectivity" rsc="WebDB"&gt;</para>
-      <para>        &lt;rule id-ref=”ping-prefer-rule”/&gt;</para>
-      <para>&lt;/rsc_location&gt; </para>
+      <para>&lt;rsc_location id="WebDB-connectivity" rsc="WebDB"></para>
+      <para>        &lt;rule id-ref=”ping-prefer-rule”/></para>
+      <para>&lt;/rsc_location> </para>
       <para>Illustration of the ability to reference rule from other constraints</para>
       <para>NOTE: The cluster will insist that the rule exists somewhere.  Attempting to add a reference to a non-existing rule will cause a validation failure, as will attempting to remove a rule that is referenced elsewhere.</para>
       <para>The same principle applies for meta_attributes and instance_attributes as illustrated in the example below</para>
-      <para>&lt;primitive id="mySpecialRsc" class="ocf" type="Special" provider=”me”&gt;</para>
-      <para>  &lt;instance_attributes id=”mySpecialRsc-attrs” score=”1” &gt;</para>
-      <para>     &lt;nvpair id="default-interface" name="interface" value="eth0"/&gt;</para>
-      <para>     &lt;nvpair id="default-port" name="port" value="9999"/&gt;</para>
-      <para>  &lt;/instance_attributes&gt;</para>
-      <para>  &lt;meta_attributes id=”mySpecialRsc-options”&gt;</para>
-      <para>     &lt;nvpair id="failure-timeout" name="failure-timeout" value="5m"/&gt;</para>
-      <para>     &lt;nvpair id="migration-threshold" name="migration-threshold" value="1"/&gt;</para>
-      <para>     &lt;nvpair id="stickiness" name="resource-stickiness" value="0"/&gt;</para>
-      <para>   &lt;/meta_attributes&gt;</para>
-      <para>   &lt;operations id=”health-checks”&gt;</para>
-      <para>       &lt;op id="health-check" name="monitor" interval="60s"/&gt;</para>
-      <para>       &lt;op id="health-check" name="monitor" interval="30min"/&gt;</para>
-      <para>    &lt;/operations&gt;</para>
-      <para>&lt;/primitive&gt;</para>
-      <para>&lt;primitive id="myOtherlRsc" class="ocf" type="Other" provider=”me”&gt;</para>
-      <para>  &lt;instance_attributes id-ref=”mySpecialRsc-attrs”/&gt;</para>
-      <para>  &lt;meta_attributes id-ref=”mySpecialRsc-options”/&gt;</para>
-      <para>  &lt;operations id-ref=”health-checks”/&gt;</para>
-      <para>&lt;/primitive&gt;</para>
+      <para>&lt;primitive id="mySpecialRsc" class="ocf" type="Special" provider=”me”></para>
+      <para>  &lt;instance_attributes id=”mySpecialRsc-attrs” score=”1” ></para>
+      <para>     &lt;nvpair id="default-interface" name="interface" value="eth0"/></para>
+      <para>     &lt;nvpair id="default-port" name="port" value="9999"/></para>
+      <para>  &lt;/instance_attributes></para>
+      <para>  &lt;meta_attributes id=”mySpecialRsc-options”></para>
+      <para>     &lt;nvpair id="failure-timeout" name="failure-timeout" value="5m"/></para>
+      <para>     &lt;nvpair id="migration-threshold" name="migration-threshold" value="1"/></para>
+      <para>     &lt;nvpair id="stickiness" name="resource-stickiness" value="0"/></para>
+      <para>   &lt;/meta_attributes></para>
+      <para>   &lt;operations id=”health-checks”></para>
+      <para>       &lt;op id="health-check" name="monitor" interval="60s"/></para>
+      <para>       &lt;op id="health-check" name="monitor" interval="30min"/></para>
+      <para>    &lt;/operations></para>
+      <para>&lt;/primitive></para>
+      <para>&lt;primitive id="myOtherlRsc" class="ocf" type="Other" provider=”me”></para>
+      <para>  &lt;instance_attributes id-ref=”mySpecialRsc-attrs”/></para>
+      <para>  &lt;meta_attributes id-ref=”mySpecialRsc-options”/></para>
+      <para>  &lt;operations id-ref=”health-checks”/></para>
+      <para>&lt;/primitive></para>
       <para>Illustration of the ability to reference attributes, options and operations from other resources</para>
       <para/>
     </section>
@@ -2255,14 +2255,14 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
       <anchor id="GroupsASyntacticShortcut"/>
       <title>Groups - A Syntactic Shortcut</title>
       <para>One of the most common elements of a cluster is a set of resources that need to be located together, start sequentially and stop in the reverse order.  To simplify this configuration we support the concept of groups.  </para>
-      <para>&lt;group id=”shortcut”&gt;</para>
-      <para>  &lt;primitive id="Public-IP" class="ocf" type="IPaddr" provider=”heartbeat”&gt;</para>
-      <para>    &lt;instance_attributes id="params-public-ip"&gt;</para>
-      <para>          &lt;nvpair id="public-ip-addr" name="ip" value="1.2.3.4"/&gt;</para>
-      <para>    &lt;/instance_attributes&gt;</para>
-      <para>  &lt;/primitive&gt;</para>
-      <para>  &lt;primitive id="Email" class="lsb" type="exim"/&gt;</para>
-      <para>&lt;/group&gt;</para>
+      <para>&lt;group id=”shortcut”></para>
+      <para>  &lt;primitive id="Public-IP" class="ocf" type="IPaddr" provider=”heartbeat”></para>
+      <para>    &lt;instance_attributes id="params-public-ip"></para>
+      <para>          &lt;nvpair id="public-ip-addr" name="ip" value="1.2.3.4"/></para>
+      <para>    &lt;/instance_attributes></para>
+      <para>  &lt;/primitive></para>
+      <para>  &lt;primitive id="Email" class="lsb" type="exim"/></para>
+      <para>&lt;/group></para>
       <para>An example group</para>
       <para>Although the example above contains only two resources, there is no limit to the number of resources a group can contain.  The example is also sufficient to explain the fundamental properties of a group:</para>
       <orderedlist>
@@ -2277,20 +2277,20 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
 	</listitem>
       </orderedlist>
       <para>The group above is logically equivalent to writing:</para>
-      <para>&lt;configuration&gt;</para>
-      <para>  &lt;resources&gt;</para>
-      <para>    &lt;primitive id="Public-IP" class="ocf" type="IPaddr" provider=”heartbeat”&gt;</para>
-      <para>      &lt;instance_attributes id="params-public-ip"&gt;</para>
-      <para>            &lt;nvpair id="public-ip-addr" name="ip" value="1.2.3.4"/&gt;</para>
-      <para>      &lt;/instance_attributes&gt;</para>
-      <para>    &lt;/primitive&gt;</para>
-      <para>    &lt;primitive id="Email" class="lsb" type="exim"/&gt;</para>
-      <para>  &lt;/resources&gt;</para>
-      <para>  &lt;constraints&gt;</para>
-      <para>        &lt;rsc_colocation id=”xxx” rsc=”Email” with-rsc=”Public-IP” score=”INFINITY”/&gt;</para>
-      <para>        &lt;rsc_order id=”yyy” first=”Public-IP then=”Email””/&gt;</para>
-      <para>  &lt;/constraints&gt;</para>
-      <para>&lt;/configuration&gt;</para>
+      <para>&lt;configuration></para>
+      <para>  &lt;resources></para>
+      <para>    &lt;primitive id="Public-IP" class="ocf" type="IPaddr" provider=”heartbeat”></para>
+      <para>      &lt;instance_attributes id="params-public-ip"></para>
+      <para>            &lt;nvpair id="public-ip-addr" name="ip" value="1.2.3.4"/></para>
+      <para>      &lt;/instance_attributes></para>
+      <para>    &lt;/primitive></para>
+      <para>    &lt;primitive id="Email" class="lsb" type="exim"/></para>
+      <para>  &lt;/resources></para>
+      <para>  &lt;constraints></para>
+      <para>        &lt;rsc_colocation id=”xxx” rsc=”Email” with-rsc=”Public-IP” score=”INFINITY”/></para>
+      <para>        &lt;rsc_order id=”yyy” first=”Public-IP then=”Email””/></para>
+      <para>  &lt;/constraints></para>
+      <para>&lt;/configuration></para>
       <para>How the cluster sees a group resource</para>
       <para>Obviously as the group grows bigger, the reduced configuration effort can become significant.</para><section><title>Properties</title>
 	<informaltable frame="all">
@@ -2317,11 +2317,11 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
 	  <para>Groups have no instance attributes, however any that are set here will be inherited by the group’s children. </para></section><section><title>Contents</title>
 	  <para>Groups may only contain a collection of <link linkend="">primitive</link> cluster resources.  To refer to the child of a group resource, just use the child’s id instead of the group’s.</para></section><section><title>Constraints</title>
 	  <para>Although it is possible to reference the group’s children in constraints, it is usually preferable to use the group’s name instead.</para>
-	  <para>&lt;constraints&gt;</para>
-	  <para>    &lt;rsc_location id=”group-prefers-node1” rsc=”shortcut” node=”node1” score=”500”/&gt;</para>
-	  <para>    &lt;rsc_colocation id=”webserver-with-group” rsc=”Webserver” with-rsc=”shortcut”/&gt;</para>
-	  <para>    &lt;rsc_order id=”start-group-then-webserver” first=”Webserver” then=”shortcut”/&gt;</para>
-	  <para>&lt;/constraints&gt;</para>
+	  <para>&lt;constraints></para>
+	  <para>    &lt;rsc_location id=”group-prefers-node1” rsc=”shortcut” node=”node1” score=”500”/></para>
+	  <para>    &lt;rsc_colocation id=”webserver-with-group” rsc=”Webserver” with-rsc=”shortcut”/></para>
+	  <para>    &lt;rsc_order id=”start-group-then-webserver” first=”Webserver” then=”shortcut”/></para>
+	  <para>&lt;/constraints></para>
 	  <para>Example constraints involving groups</para></section><section><title>Stickiness</title>
 	  <para>Stickiness, the measure of how much a resource wants to stay where it is, is additive in groups.  Every active member of the group will contribute its stickiness value to the group’s total.  So if the default resource-stickiness is 100 a group has seven members, five of which are active, then the group as a whole will prefer its current location with a score of 500.</para></section></section></section><section><title>
 	<anchor id="ClonesResourcesThatShouldb"/>Clones - Resources That Should be Active on Multiple Hosts</title>
@@ -2343,12 +2343,12 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
       <para>Anonymous clones are the simplest type.  These resources behave completely identically everywhere they are running.  Because of this, there can only be one copy of an anonymous clone active per machine.</para>
       <para>Globally unique clones are distinct entities. A copy of the clone running on one machine is not equivalent to another instance on another node. Nor would any two copies on the same node be equivalent.</para>
       <para>Stateful clones are covered later in the <link linkend="">Advanced Resources - Multi-state</link> section.</para>
-      <para>&lt;clone id=”apache-clone”&gt;</para>
-      <para>    &lt;meta_attributes id="apache-clone-meta"&gt;</para>
-      <para>          &lt;nvpair id="apache-unique" name="globally-unique" value="false"/&gt;</para>
-      <para>    &lt;/meta_attributes&gt;</para>
-      <para>    &lt;primitive id="apache" class="lsb" type="apache"/&gt;</para>
-      <para>&lt;/clone&gt;</para>
+      <para>&lt;clone id=”apache-clone”></para>
+      <para>    &lt;meta_attributes id="apache-clone-meta"></para>
+      <para>          &lt;nvpair id="apache-unique" name="globally-unique" value="false"/></para>
+      <para>    &lt;/meta_attributes></para>
+      <para>    &lt;primitive id="apache" class="lsb" type="apache"/></para>
+      <para>&lt;/clone></para>
       <para>An example clone</para><section><title>Properties</title></section><section><title/>
 	<informaltable frame="all">
 	  <tgroup cols="2">
@@ -2442,11 +2442,11 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
 	  <para>Ordering constraints behave slightly differently for clones.  In the example below, apache-stats will wait until all copies of the clone that need to be started have done so before being started itself.  Only if no copies can be started will apache-stats be prevented from being active.  Additionally, the clone will wait for apache-stats to be stopped before stopping the clone.</para>
 	  <para>Colocation of a regular (or group) resource with a clone means that the resource can run on any machine with an active copy of the clone.  The cluster will choose a copy based on where the clone is running and the rsc resource’s own location preferences.</para>
 	  <para>Colocation between clones is also possible.  In such cases, the set of allowed locations for the rsc clone is limited to nodes on which the with clone is (or will be) active.  Allocation is then performed as-per-normal.</para>
-	  <para>&lt;constraints&gt;</para>
-	  <para>    &lt;rsc_location id=”clone-prefers-node1” rsc=”apache-clone node=”node1” score=”500”/&gt;</para>
-	  <para>    &lt;rsc_colocation id=”stats-with-clone” rsc=”apache-stats” with=”apache-clone”/&gt;</para>
-	  <para>    &lt;rsc_order id=”start-clone-then-stats” first=”apache-clone” then=”apache-stats”/&gt;</para>
-	  <para>&lt;/constraints&gt;</para>
+	  <para>&lt;constraints></para>
+	  <para>    &lt;rsc_location id=”clone-prefers-node1” rsc=”apache-clone node=”node1” score=”500”/></para>
+	  <para>    &lt;rsc_colocation id=”stats-with-clone” rsc=”apache-stats” with=”apache-clone”/></para>
+	  <para>    &lt;rsc_order id=”start-clone-then-stats” first=”apache-clone” then=”apache-stats”/></para>
+	  <para>&lt;/constraints></para>
 	  <para>Example constraints involving clones</para></section><section><title>Stickiness</title>
 	  <para>To achieve a stable allocation pattern, clones are slightly sticky by default.  If no value for resource-stickiness is provided, the clone will use a value of 1.  Being a small value, it causes minimal disturbance to the score calculations of other resources but is enough to prevent Pacemaker from needlessly moving copies around the cluster. </para></section><section><title>Resource Agent Requirements</title>
 	  <para>Any resource can be used as an anonymous clone as it requires no additional support from the resource agent.  Whether it makes sense to do so depends on your resource and its resource agent.</para>
@@ -2676,14 +2676,14 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
 	  <para>You should never reference the name of a master’s child. If you think you need to do this, you probably need to re-evaluate your design.</para></section><section><title>Monitoring Multi-State Resources</title>
 	  <para>The normal type of monitor actions you define are not sufficient to monitor a multi-state resource in the Master state.  To detect failures of the master instance, you need to define an additional monitor action with role=”Master”. </para>
 	  <para>NOTE: It is crucial that every monitor operation has a different interval</para>
-	  <para>&lt;master id=”myMasterRsc”&gt;</para>
-	  <para>  &lt;primitive id="myRsc" class="ocf" type="myApp" provider=”myCorp”&gt;</para>
-	  <para>    &lt;operations&gt;</para>
-	  <para>       &lt;op id="public-ip-slave-check" name="monitor" interval="60"/&gt;</para>
-	  <para>       &lt;op id="public-ip-master-check" name="monitor" interval="61" role=”Master”/&gt;</para>
-	  <para>    &lt;/operations&gt;</para>
-	  <para>  &lt;/primitive&gt;</para>
-	  <para>&lt;/master&gt;</para>
+	  <para>&lt;master id=”myMasterRsc”></para>
+	  <para>  &lt;primitive id="myRsc" class="ocf" type="myApp" provider=”myCorp”></para>
+	  <para>    &lt;operations></para>
+	  <para>       &lt;op id="public-ip-slave-check" name="monitor" interval="60"/></para>
+	  <para>       &lt;op id="public-ip-master-check" name="monitor" interval="61" role=”Master”/></para>
+	  <para>    &lt;/operations></para>
+	  <para>  &lt;/primitive></para>
+	  <para>&lt;/master></para>
 	  <para>Monitoring both states of a multi-state resource</para></section><section><title>Constraints</title>
 	  <para>In most cases, a multi-state resources will have a single copy on each active cluster node.  However if this is not the case, you can indicate which nodes the cluster should to preferentially assign copies to with resource location constraints.  These constraints are written no differently to those for regular resources except that the master’s id is used.   </para>
 	  <para>When considering multi-state resources in constraints, for most purposes it is sufficient to treat them as clones.  The exception is when the rsc-role and/or with-rsc-role (for colocation constraints) and first-action and/or then-action (for ordering constraints) are used.</para>
@@ -2739,22 +2739,22 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
 	  <para>In the example below, myApp will wait until one of database copies has been started and promoted to master before being started itself.  Only if no copies can be promoted will apache-stats be prevented from being active.  Additionally, the database will wait for myApp to be stopped before it is demoted.</para>
 	  <para>Colocation of a regular (or group) resource with a multi-state resource means that it can run on any machine with an active copy of the clone that is in the specified state (Master or Slave).  In the example, the cluster will choose a location based on where database is running as a Master, and if there are multiple Master instances it will also factor in myApp‘s own location preferences when deciding which location to choose.</para>
 	  <para>Colocation with regular clones and other multi-state resources is also possible.  In such cases, the set of allowed locations for the rsc clone is (after role filtering) limited to nodes on which the with-rsc clone is (or will be) in the specified role.  Allocation is then performed as-per-normal.</para>
-	  <para>&lt;constraints&gt;</para>
-	  <para>  &lt;rsc_location id=”db-prefers-node1” rsc=”database” node=”node1” score=”500”/&gt;</para>
-	  <para>  &lt;rsc_colocation id=”backup-with-db-slave” rsc=”backup” with-rsc=”database” with-rsc-role=”Slave”/&gt;</para>
-	  <para>  &lt;rsc_colocation id=”myapp-with-db-master” rsc=”myApp” with-rsc=”database” with-rsc-role=”Master”/&gt;</para>
-	  <para>  &lt;rsc_order id=”start-db-before-backup” first=”database” then=”backup”/&gt;</para>
-	  <para>  &lt;rsc_order id=”promote-db-then-app” first=”database” first-action=”promote” then=”myApp” then-action=”start”/&gt;</para>
-	  <para>&lt;/constraints&gt;</para>
+	  <para>&lt;constraints></para>
+	  <para>  &lt;rsc_location id=”db-prefers-node1” rsc=”database” node=”node1” score=”500”/></para>
+	  <para>  &lt;rsc_colocation id=”backup-with-db-slave” rsc=”backup” with-rsc=”database” with-rsc-role=”Slave”/></para>
+	  <para>  &lt;rsc_colocation id=”myapp-with-db-master” rsc=”myApp” with-rsc=”database” with-rsc-role=”Master”/></para>
+	  <para>  &lt;rsc_order id=”start-db-before-backup” first=”database” then=”backup”/></para>
+	  <para>  &lt;rsc_order id=”promote-db-then-app” first=”database” first-action=”promote” then=”myApp” then-action=”start”/></para>
+	  <para>&lt;/constraints></para>
 	  <para>Example constraints involving multi-state resources</para></section><section><title>Stickiness</title>
 	  <para>To achieve a stable allocation pattern, clones are slightly sticky by default.  If no value for resource-stickiness is provided, the clone will use a value of 1.  Being a small value, it causes minimal disturbance to the score calculations of other resources but is enough to prevent Pacemaker from needlessly moving copies around the cluster. </para></section><section><title>Which Resource Instance is Promoted</title>
 	  <para>During the start operation, most Resource Agent scripts should call the crm_master utility. This tool automatically detects both the resource and host and should be used to set a preference for being promoted. Based on this, master-max, and master-node-max, the instance(s) with the highest preference will be promoted.</para>
 	  <para>The other alternative is to create a location constraint that indicates which nodes are most preferred as masters. </para>
-	  <para>&lt;rsc_location id="master-location" rsc="myMasterRsc"&gt;</para>
-	  <para>    &lt;rule id="master-rule" score="100" role="Master"&gt;</para>
-	  <para>        &lt;expression id="master-exp" attribute="#uname" operation="eq" value="node1"/&gt;</para>
-	  <para>    &lt;/rule&gt;</para>
-	  <para>&lt;/rsc_location&gt;</para>
+	  <para>&lt;rsc_location id="master-location" rsc="myMasterRsc"></para>
+	  <para>    &lt;rule id="master-rule" score="100" role="Master"></para>
+	  <para>        &lt;expression id="master-exp" attribute="#uname" operation="eq" value="node1"/></para>
+	  <para>    &lt;/rule></para>
+	  <para>&lt;/rsc_location></para>
 	  <para>Manually specifying which node should be promoted</para></section><section><title>Resource Agent Requirements</title>
 	  <para>Since multi-state resources are an extension of cloned resources, all the requirements of Clones are also requirements of multi-state resources.  Additionally, multi-state resources require two extra actions demote and promote.  These actions are responsible for changing the state of the resource.  Like start and stop, they should return OCF_SUCCESS if they completed successfully or a relevant error code if they did not.</para>
 	  <para>The states can mean whatever you wish, but when the resource is started, it must come up in the mode called Slave.  From there the cluster will then decide which instances to promote into a Master.</para>
@@ -3260,31 +3260,31 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
 	<para># stonith -t external/ibmrsa -n</para>
 	<para>hostname  ipaddr  userid  passwd  type</para>
 	<para>from which we would create a STONITH resource fragment that might look like this</para>
-	<para>        &lt;clone id="Fencing"&gt;</para>
-	<para>          &lt;meta_attributes id="fencing"&gt;</para>
-	<para>              &lt;nvpair id="Fencing-unique" name="globally-unique" value="false"/&gt;</para>
-	<para>          &lt;/meta_attributes&gt;</para>
-	<para>          &lt;primitive id="rsa" class="stonith" type=”external/ibmrsa"&gt;</para>
-	<para>            &lt;operations&gt;</para>
-	<para>              &lt;op id="rsa-mon-1" name="monitor" interval="120s"/&gt;</para>
-	<para>            &lt;/operations&gt;</para>
-	<para>            &lt;instance_attributes id="rsa-parameters"&gt;</para>
-	<para>                &lt;nvpair id="rsa-attr-1" name="hostname" value="node1 node2 node3"/&gt;</para>
-	<para>                &lt;nvpair id="rsa-attr-1" name="ipaddr" value="10.0.0.1"/&gt;</para>
-	<para>                &lt;nvpair id="rsa-attr-1" name="userid" value="testuser"/&gt;</para>
-	<para>                &lt;nvpair id="rsa-attr-1" name="passwd" value="abc123"/&gt;</para>
-	<para>                &lt;nvpair id="rsa-attr-1" name="type" value="ibm"/&gt;</para>
-	<para>            &lt;/instance_attributes&gt;</para>
-	<para>          &lt;/primitive&gt;</para>
-	<para>        &lt;/clone&gt;</para>
+	<para>        &lt;clone id="Fencing"></para>
+	<para>          &lt;meta_attributes id="fencing"></para>
+	<para>              &lt;nvpair id="Fencing-unique" name="globally-unique" value="false"/></para>
+	<para>          &lt;/meta_attributes></para>
+	<para>          &lt;primitive id="rsa" class="stonith" type=”external/ibmrsa"></para>
+	<para>            &lt;operations></para>
+	<para>              &lt;op id="rsa-mon-1" name="monitor" interval="120s"/></para>
+	<para>            &lt;/operations></para>
+	<para>            &lt;instance_attributes id="rsa-parameters"></para>
+	<para>                &lt;nvpair id="rsa-attr-1" name="hostname" value="node1 node2 node3"/></para>
+	<para>                &lt;nvpair id="rsa-attr-1" name="ipaddr" value="10.0.0.1"/></para>
+	<para>                &lt;nvpair id="rsa-attr-1" name="userid" value="testuser"/></para>
+	<para>                &lt;nvpair id="rsa-attr-1" name="passwd" value="abc123"/></para>
+	<para>                &lt;nvpair id="rsa-attr-1" name="type" value="ibm"/></para>
+	<para>            &lt;/instance_attributes></para>
+	<para>          &lt;/primitive></para>
+	<para>        &lt;/clone></para>
   </section></section></chapter>
   <chapter id="status"><title>Status - Here be dragons</title>
     <para>Most users never need understand the contents of the status section and can be content with the output from crm_mon. However for those with a curious inclination, the following attempts to proved an overview of its contents.</para><section><title>Node Status</title>
       <para>In addition to the cluster’s configuration, the CIB holds an up-to-date representation of each cluster node in the status section.</para>
-      <para>&lt;node_state id="cl-virt-1" uname="cl-virt-2" ha="active" in_ccm="true" crmd="online" join="member" expected="member" crm-debug-origin="do_update_resource"&gt;</para>
-      <para>   &lt;transient_attributes id="cl-virt-1"/&gt;</para>
-      <para>   &lt;lrm id="cl-virt-1"/&gt;</para>
-      <para>&lt;/node_state&gt;</para>
+      <para>&lt;node_state id="cl-virt-1" uname="cl-virt-2" ha="active" in_ccm="true" crmd="online" join="member" expected="member" crm-debug-origin="do_update_resource"></para>
+      <para>   &lt;transient_attributes id="cl-virt-1"/></para>
+      <para>   &lt;lrm id="cl-virt-1"/></para>
+      <para>&lt;/node_state></para>
       <para>A bare-bones status entry for a healthy node called cl-virt-1</para>
       <para>Users are highly recommended <emphasis>not to modify</emphasis> any part of a node’s state <emphasis>directly</emphasis>.  The cluster will periodically regenerate the entire section from authoritative sources.  So any changes should be with the tools for those subsystems. </para>
       <informaltable frame="all">
@@ -3405,21 +3405,21 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
       <para>The cluster uses these fields to determine if, at the node level, the node is healthy or is in a failed state and needs to be fenced.</para></section><section><title>Transient Node Attributes</title>
       <para>Like regular <link linkend="">node attributes</link>, the name/value pairs listed here also help describe the node.  However they are forgotten by the cluster when the node goes offline.  This can be useful, for instance, when you only want a node to be in standby mode (not able to run resources) until the next reboot. </para>
       <para>In addition to any values the administrator sets, the cluster will also store information about failed resources here.</para>
-      <para>      &lt;transient_attributes id="cl-virt-1"&gt;</para>
-      <para>        &lt;instance_attributes id="status-cl-virt-1"&gt;</para>
-      <para>          &lt;nvpair id="status-cl-virt-1-pingd" name="pingd" value="3"/&gt;</para>
-      <para>          &lt;nvpair id="status-cl-virt-1-probe_complete" name="probe_complete" value="true"/&gt;</para>
-      <para>          &lt;nvpair id="status-cl-virt-1-fail-count-pingd:0" name="fail-count-pingd:0" value="1"/&gt;</para>
-      <para>          &lt;nvpair id="status-cl-virt-1-last-failure-pingd:0" name="last-failure-pingd:0" value="1239009742"/&gt;</para>
-      <para>        &lt;/instance_attributes&gt;</para>
-      <para>      &lt;/transient_attributes&gt;</para>
+      <para>      &lt;transient_attributes id="cl-virt-1"></para>
+      <para>        &lt;instance_attributes id="status-cl-virt-1"></para>
+      <para>          &lt;nvpair id="status-cl-virt-1-pingd" name="pingd" value="3"/></para>
+      <para>          &lt;nvpair id="status-cl-virt-1-probe_complete" name="probe_complete" value="true"/></para>
+      <para>          &lt;nvpair id="status-cl-virt-1-fail-count-pingd:0" name="fail-count-pingd:0" value="1"/></para>
+      <para>          &lt;nvpair id="status-cl-virt-1-last-failure-pingd:0" name="last-failure-pingd:0" value="1239009742"/></para>
+      <para>        &lt;/instance_attributes></para>
+      <para>      &lt;/transient_attributes></para>
       <para>Example set of transient node attributes for node “cl-virt-1”</para>
       <para>In the above example, we can see that the pingd:0 resource has failed once, at Mon Apr  6 11:22:22 2009.<footnote>
           <para> You can use the following perl one-liner to print a human readable of any seconds-since-epoch value:</para>
           <para>         perl -e 'print scalar(localtime($seconds))."\n"'</para>
 	</footnote>  We also see that the node is connected to three “pingd” peers and that all known resources have been checked for on this machine (probe_complete).</para></section><section><title>Operation History</title>
       <para>A node’s resource history is held in the lrm_resources tag (a child of the lrm tag). The information stored here includes enough information for the cluster to stop the resource safely if it is removed from the configuration section. Specifically we store the resource’s ID, class, type and provider.</para>
-      <para>          &lt;lrm_resource id="apcstonith" type="apcmastersnmp" class="stonith"&gt;</para>
+      <para>          &lt;lrm_resource id="apcstonith" type="apcmastersnmp" class="stonith"></para>
       <para>A record of the apcstonith resource</para>
       <para>Additionally, we store the last job for every combination of resource, action and interval.  The concatenation of the values in this tuple are used to create the id of the lrm_rsc_op object.</para>
       <informaltable frame="all">
@@ -3555,20 +3555,20 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
         </row></tbody></tgroup>
       </informaltable>
       <para>Contents of an lrm_rsc_op job. </para><section><title>Simple Example</title>
-	<para>&lt;lrm_resource id="apcstonith" type="apcmastersnmp" class="stonith"&gt; </para>
-	<para>    &lt;lrm_rsc_op id="apcstonith_monitor_0" operation="monitor" crm-debug-origin="do_update_resource" crm_feature_set="3.0.1" transition-key="22:2:7:2668bbeb-06d5-40f9-936d-24cb7f87006a" transition-magic="0:7;22:2:7:2668bbeb-06d5-40f9-936d-24cb7f87006a" call-id="2" rc-code="7" op-status="0" interval="0" last-run="1239008085" last-rc-change="1239008085" exec-time="10" queue-time="0" op-digest="2e3da9274d3550dc6526fb24bfcbcba0"/&gt;</para>
-	<para>&lt;/lrm_resource&gt;</para>
+	<para>&lt;lrm_resource id="apcstonith" type="apcmastersnmp" class="stonith"> </para>
+	<para>    &lt;lrm_rsc_op id="apcstonith_monitor_0" operation="monitor" crm-debug-origin="do_update_resource" crm_feature_set="3.0.1" transition-key="22:2:7:2668bbeb-06d5-40f9-936d-24cb7f87006a" transition-magic="0:7;22:2:7:2668bbeb-06d5-40f9-936d-24cb7f87006a" call-id="2" rc-code="7" op-status="0" interval="0" last-run="1239008085" last-rc-change="1239008085" exec-time="10" queue-time="0" op-digest="2e3da9274d3550dc6526fb24bfcbcba0"/></para>
+	<para>&lt;/lrm_resource></para>
 	<para>A monitor operation performed by the cluster to determine the current state of the apcstonith resource</para>
 	<para>In the above example, the job is a non-recurring monitor often referred to as a “probe” for the apcstonith resource. The cluster schedules probes for every configured resource on when a new node starts, in order to determine the resource’s current state before it takes further any further action.</para>
 	<para>From the tranisition-key, we can see that this was the 22nd action of the 2nd graph produced by this instance of the crmd (2668bbeb-06d5-40f9-936d-24cb7f87006a).  The third field of the transition-key contains a 7, this indicates that the job expects to find the resource inactive.  By now looking at the rc-code property, we see that this was the case.</para>
 	<para>Evidently, the cluster started the resource elsewhere as that is the only job recorded for this node.</para></section><section><title>Complex Resource History Example</title>
 	<para/>
-	<para>&lt;lrm_resource id="pingd:0" type="pingd" class="ocf" provider="pacemaker"&gt;</para>
-	<para>    &lt;lrm_rsc_op id="pingd:0_monitor_30000" operation="monitor" crm-debug-origin="do_update_resource" crm_feature_set="3.0.1" transition-key="10:11:0:2668bbeb-06d5-40f9-936d-24cb7f87006a" transition-magic="0:0;10:11:0:2668bbeb-06d5-40f9-936d-24cb7f87006a" call-id="34" rc-code="0" op-status="0" interval="30000" last-run="1239009741" last-rc-change="1239009741" exec-time="10" queue-time="0" op-digest="a0f8398dac7ced82320fe99fd20fbd2f"/&gt;</para>
-	<para>    &lt;lrm_rsc_op id="pingd:0_stop_0" operation="stop" crm-debug-origin="do_update_resource" crm_feature_set="3.0.1" transition-key="11:11:0:2668bbeb-06d5-40f9-936d-24cb7f87006a" transition-magic="0:0;11:11:0:2668bbeb-06d5-40f9-936d-24cb7f87006a" call-id="32" rc-code="0" op-status="0" interval="0" last-run="1239009741" last-rc-change="1239009741" exec-time="10" queue-time="0" op-digest="313aee7c6aad26e290b9084427bbab60"/&gt;</para>
-	<para>    &lt;lrm_rsc_op id="pingd:0_start_0" operation="start" crm-debug-origin="do_update_resource" crm_feature_set="3.0.1" transition-key="31:11:0:2668bbeb-06d5-40f9-936d-24cb7f87006a" transition-magic="0:0;31:11:0:2668bbeb-06d5-40f9-936d-24cb7f87006a" call-id="33" rc-code="0" op-status="0" interval="0" last-run="1239009741" last-rc-change="1239009741" exec-time="10" queue-time="0" op-digest="313aee7c6aad26e290b9084427bbab60"/&gt;</para>
-	<para>    &lt;lrm_rsc_op id="pingd:0_monitor_0" operation="monitor" crm-debug-origin="do_update_resource" crm_feature_set="3.0.1" transition-key="23:2:7:2668bbeb-06d5-40f9-936d-24cb7f87006a" transition-magic="0:0;23:2:7:2668bbeb-06d5-40f9-936d-24cb7f87006a" call-id="3" rc-code="0" op-status="0" interval="0" last-run="1239008085" last-rc-change="1239008085" exec-time="20" queue-time="0" op-digest="313aee7c6aad26e290b9084427bbab60"/&gt;</para>
-	<para> &lt;/lrm_resource&gt;</para>
+	<para>&lt;lrm_resource id="pingd:0" type="pingd" class="ocf" provider="pacemaker"></para>
+	<para>    &lt;lrm_rsc_op id="pingd:0_monitor_30000" operation="monitor" crm-debug-origin="do_update_resource" crm_feature_set="3.0.1" transition-key="10:11:0:2668bbeb-06d5-40f9-936d-24cb7f87006a" transition-magic="0:0;10:11:0:2668bbeb-06d5-40f9-936d-24cb7f87006a" call-id="34" rc-code="0" op-status="0" interval="30000" last-run="1239009741" last-rc-change="1239009741" exec-time="10" queue-time="0" op-digest="a0f8398dac7ced82320fe99fd20fbd2f"/></para>
+	<para>    &lt;lrm_rsc_op id="pingd:0_stop_0" operation="stop" crm-debug-origin="do_update_resource" crm_feature_set="3.0.1" transition-key="11:11:0:2668bbeb-06d5-40f9-936d-24cb7f87006a" transition-magic="0:0;11:11:0:2668bbeb-06d5-40f9-936d-24cb7f87006a" call-id="32" rc-code="0" op-status="0" interval="0" last-run="1239009741" last-rc-change="1239009741" exec-time="10" queue-time="0" op-digest="313aee7c6aad26e290b9084427bbab60"/></para>
+	<para>    &lt;lrm_rsc_op id="pingd:0_start_0" operation="start" crm-debug-origin="do_update_resource" crm_feature_set="3.0.1" transition-key="31:11:0:2668bbeb-06d5-40f9-936d-24cb7f87006a" transition-magic="0:0;31:11:0:2668bbeb-06d5-40f9-936d-24cb7f87006a" call-id="33" rc-code="0" op-status="0" interval="0" last-run="1239009741" last-rc-change="1239009741" exec-time="10" queue-time="0" op-digest="313aee7c6aad26e290b9084427bbab60"/></para>
+	<para>    &lt;lrm_rsc_op id="pingd:0_monitor_0" operation="monitor" crm-debug-origin="do_update_resource" crm_feature_set="3.0.1" transition-key="23:2:7:2668bbeb-06d5-40f9-936d-24cb7f87006a" transition-magic="0:0;23:2:7:2668bbeb-06d5-40f9-936d-24cb7f87006a" call-id="3" rc-code="0" op-status="0" interval="0" last-run="1239008085" last-rc-change="1239008085" exec-time="20" queue-time="0" op-digest="313aee7c6aad26e290b9084427bbab60"/></para>
+	<para> &lt;/lrm_resource></para>
 	<para>Resource history of a pingd clone with multiple jobs</para>
 	<para>When more than one job record exists, it is important to first sort them by call-id before interpret them.  Once sorted, the above example can be summarized as:</para>
 	<orderedlist>
@@ -3636,7 +3636,7 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
     <section><title>Location of Custom Scripts</title>
       <para>OCF Resource Agents are found in /usr/lib/ocf/resource.d/{provider}.</para>
       <para>When creating your own agents, you are encouraged to create a new directory under /usr/lib/ocf/resource.d/ so that they are not confused with (or overwritten by) the agents shipped with Heartbeat. So, for example, if you chose the provider name of bigCorp and wanted a new resource named bigApp, you would create a script called /usr/lib/ocf/resource.d/bigCorp/bigApp and define a resource:</para>
-      <para>&lt;primitive id="custom-app" class="ocf" provider=”bigCorp” type="bigApp"/&gt;</para></section><section><title>Actions</title>
+      <para>&lt;primitive id="custom-app" class="ocf" provider=”bigCorp” type="bigApp"/></para></section><section><title>Actions</title>
       <para>All OCF Resource Agents are required to implement the following actions</para>
       <informaltable frame="all">
 	<tgroup cols="3">
@@ -4445,7 +4445,7 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
 	    </listitem>
 	    <listitem>
               <para>For any resource that has a value for is-managed, make sure it is set to false (so that the cluster will not stop it) </para>
-	      <command>crm_resource -t primitive -r &lt;rsc_id&gt; -p is-managed -v false </command>
+	      <command>crm_resource -t primitive -r &lt;rsc_id> -p is-managed -v false </command>
 	    </listitem>
 	    <listitem>
               <para>On each node:</para>
@@ -4478,7 +4478,7 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
 	    </listitem>
 	    <listitem>
               <para>For any resource that has a value for is-managed reset it to true (so the cluster can recover the service if it fails) if desired</para>
-	      <command>crm_resource -t primitive -r &lt;rsc_id&gt; -p is-managed -v false</command>
+	      <command>crm_resource -t primitive -r &lt;rsc_id> -p is-managed -v false</command>
 	    </listitem>
 	  </orderedlist>
 	</section>
@@ -4574,7 +4574,7 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
             </para>
 	  </listitem>
 	  <listitem>
-            <para>xsltproc /path/tp/upgrade06.xsl config06.xml &gt; config10.xml</para>
+            <para>xsltproc /path/tp/upgrade06.xsl config06.xml > config10.xml</para>
 	  </listitem>
 	  <listitem>
             <para>Locate the pacemaker.rng script.</para>
@@ -4682,113 +4682,113 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
   </chapter>
   <chapter id="samples"><title>Appendix: Sample Configurations</title>
     <section><title>An Empty Configuration</title>
-      <para>&lt;cib admin_epoch="0" epoch="0" num_updates="0" have-quorum="false"&gt;</para>
-      <para>  &lt;configuration&gt;</para>
-      <para>    &lt;crm_config/&gt;</para>
-      <para>    &lt;nodes/&gt;</para>
-      <para>    &lt;resources/&gt;</para>
-      <para>    &lt;constraints/&gt;</para>
-      <para>  &lt;/configuration&gt;</para>
-      <para>  &lt;status/&gt;</para>
-      <para>&lt;/cib&gt;</para>
+      <para>&lt;cib admin_epoch="0" epoch="0" num_updates="0" have-quorum="false"></para>
+      <para>  &lt;configuration></para>
+      <para>    &lt;crm_config/></para>
+      <para>    &lt;nodes/></para>
+      <para>    &lt;resources/></para>
+      <para>    &lt;constraints/></para>
+      <para>  &lt;/configuration></para>
+      <para>  &lt;status/></para>
+      <para>&lt;/cib></para>
       <para>An empty configuration</para></section><section><title>A Simple Configuration</title>
-      <para>&lt;cib admin_epoch="0" epoch="1" num_updates="0" have-quorum="false" validate-with=”pacemaker-1.0”&gt;</para>
-      <para>    &lt;configuration&gt;</para>
-      <para>        &lt;crm_config&gt;</para>
-      <para>            &lt;nvpair id="option-1" name="symmetric-cluster" value="true"/&gt;</para>
-      <para>            &lt;nvpair id="option-2" name="no-quorum-policy" value="stop"/&gt;</para>
-      <para>        &lt;/crm_config&gt;</para>
-      <para>        &lt;op_defaults&gt;</para>
-      <para>            &lt;nvpair id="op-default-1" name="timeout" value="30s"/&gt;</para>
-      <para>        &lt;/op_defaults&gt;</para>
-      <para>        &lt;rsc_defaults&gt;</para>
-      <para>            &lt;nvpair id="rsc-default-1" name="resource-stickiness" value="100"/&gt;</para>
-      <para>            &lt;nvpair id="rsc-default-2" name="migration-threshold" value="10"/&gt;</para>
-      <para>        &lt;/rsc_defaults&gt;</para>
-      <para>        &lt;nodes&gt;</para>
-      <para>           &lt;node id="xxx" uname="c001n01" type="normal"/&gt;</para>
-      <para>           &lt;node id="yyy" uname="c001n02" type="normal"/&gt;</para>
-      <para>        &lt;/nodes&gt;</para>
-      <para>        &lt;resources&gt;</para>
-      <para>            &lt;primitive id="myAddr" class="ocf" provider="heartbeat" type="IPaddr"&gt;</para>
-      <para>                &lt;operations&gt;</para>
-      <para>                   &lt;op id="myAddr-monitor" name="monitor" interval="300s"/&gt;</para>
-      <para>                &lt;/operations&gt;</para>
-      <para>                &lt;instance_attributes&gt;</para>
-      <para>                       &lt;nvpair name="ip" value="10.0.200.30"/&gt;</para>
-      <para>                &lt;/instance_attributes&gt;</para>
-      <para>            &lt;/primitive&gt;</para>
-      <para>        &lt;/resources&gt;</para>
-      <para>        &lt;constraints&gt;</para>
-      <para>           &lt;rsc_location id=”myAddr-preferred-host” rsc=”myAddr” node=”c001n01” score=”INFINITY”/&gt;</para>
-      <para>        &lt;/constraints&gt;</para>
-      <para>    &lt;/configuration&gt;</para>
-      <para>    &lt;status/&gt;</para>
-      <para>&lt;/cib&gt;</para>
+      <para>&lt;cib admin_epoch="0" epoch="1" num_updates="0" have-quorum="false" validate-with=”pacemaker-1.0”></para>
+      <para>    &lt;configuration></para>
+      <para>        &lt;crm_config></para>
+      <para>            &lt;nvpair id="option-1" name="symmetric-cluster" value="true"/></para>
+      <para>            &lt;nvpair id="option-2" name="no-quorum-policy" value="stop"/></para>
+      <para>        &lt;/crm_config></para>
+      <para>        &lt;op_defaults></para>
+      <para>            &lt;nvpair id="op-default-1" name="timeout" value="30s"/></para>
+      <para>        &lt;/op_defaults></para>
+      <para>        &lt;rsc_defaults></para>
+      <para>            &lt;nvpair id="rsc-default-1" name="resource-stickiness" value="100"/></para>
+      <para>            &lt;nvpair id="rsc-default-2" name="migration-threshold" value="10"/></para>
+      <para>        &lt;/rsc_defaults></para>
+      <para>        &lt;nodes></para>
+      <para>           &lt;node id="xxx" uname="c001n01" type="normal"/></para>
+      <para>           &lt;node id="yyy" uname="c001n02" type="normal"/></para>
+      <para>        &lt;/nodes></para>
+      <para>        &lt;resources></para>
+      <para>            &lt;primitive id="myAddr" class="ocf" provider="heartbeat" type="IPaddr"></para>
+      <para>                &lt;operations></para>
+      <para>                   &lt;op id="myAddr-monitor" name="monitor" interval="300s"/></para>
+      <para>                &lt;/operations></para>
+      <para>                &lt;instance_attributes></para>
+      <para>                       &lt;nvpair name="ip" value="10.0.200.30"/></para>
+      <para>                &lt;/instance_attributes></para>
+      <para>            &lt;/primitive></para>
+      <para>        &lt;/resources></para>
+      <para>        &lt;constraints></para>
+      <para>           &lt;rsc_location id=”myAddr-preferred-host” rsc=”myAddr” node=”c001n01” score=”INFINITY”/></para>
+      <para>        &lt;/constraints></para>
+      <para>    &lt;/configuration></para>
+      <para>    &lt;status/></para>
+      <para>&lt;/cib></para>
       <para>2 nodes, some cluster options and a resource</para>
       <para>In this example, we have one resource (an IP address) that we check every five minutes and will run on host c001n01 until either the resource fails 10 times or the host shuts down.</para></section><section><title>An Advanced Configuration</title>
       <para/>
-      <para>&lt;cib admin_epoch="0" epoch="1" num_updates="0" have-quorum="false" validate-with=”pacemaker-1.0”&gt;</para>
-      <para>    &lt;configuration&gt;</para>
-      <para>        &lt;crm_config&gt;</para>
-      <para>            &lt;nvpair id="option-1" name="symmetric-cluster" value="true"/&gt;</para>
-      <para>            &lt;nvpair id="option-2" name="no-quorum-policy" value="stop"/&gt;</para>
-      <para>            &lt;nvpair id="option-3" name="stonith-enabled" value="true"/&gt;</para>
-      <para>        &lt;/crm_config&gt;</para>
-      <para>        &lt;op_defaults&gt;</para>
-      <para>            &lt;nvpair id="op-default-1" name="timeout" value="30s"/&gt;</para>
-      <para>        &lt;/op_defaults&gt;</para>
-      <para>        &lt;rsc_defaults&gt;</para>
-      <para>            &lt;nvpair id="rsc-default-1" name="resource-stickiness" value="100"/&gt;</para>
-      <para>            &lt;nvpair id="rsc-default-2" name="migration-threshold" value="10"/&gt;</para>
-      <para>        &lt;/rsc_defaults&gt;</para>
-      <para>        &lt;nodes&gt;</para>
-      <para>           &lt;node id="xxx" uname="c001n01" type="normal"/&gt;</para>
-      <para>           &lt;node id="yyy" uname="c001n02" type="normal"/&gt;</para>
-      <para>           &lt;node id="zzz" uname="c001n03" type="normal"/&gt;</para>
-      <para>        &lt;/nodes&gt;</para>
-      <para>        &lt;resources&gt;</para>
-      <para>            &lt;primitive id="myAddr" class="ocf" provider="heartbeat" type="IPaddr"&gt;</para>
-      <para>                &lt;operations&gt;</para>
-      <para>                   &lt;op id="myAddr-monitor" name="monitor" interval="300s"/&gt;</para>
-      <para>                &lt;/operations&gt;</para>
-      <para>                &lt;instance_attributes&gt;</para>
-      <para>                       &lt;nvpair name="ip" value="10.0.200.30"/&gt;</para>
-      <para>                &lt;/instance_attributes&gt;</para>
-      <para>            &lt;/primitive&gt;</para>
-      <para>            &lt;group id=”myGroup”&gt;</para>
-      <para>               &lt;primitive id="database" class="lsb" type="oracle"&gt;</para>
-      <para>                    &lt;operations&gt;</para>
-      <para>                       &lt;op id="database-monitor" name="monitor" interval="300s"/&gt;</para>
-      <para>                    &lt;/operations&gt;</para>
-      <para>                &lt;/primitive&gt;</para>
-      <para>               &lt;primitive id="webserver" class="lsb" type="apache"&gt;</para>
-      <para>                    &lt;operations&gt;</para>
-      <para>                       &lt;op id="webserver-monitor" name="monitor" interval="300s"/&gt;</para>
-      <para>                    &lt;/operations&gt;</para>
-      <para>                &lt;/primitive&gt;</para>
-      <para>            &lt;/group&gt;</para>
-      <para>            &lt;clone id="STONITH”"&gt;</para>
-      <para>                 &lt;meta_attributes id="stonith-options"&gt;</para>
-      <para>                         &lt;nvpair id="stonith-option-1" name="globally-unique" value="false"/&gt;</para>
-      <para>                 &lt;/meta_attributes&gt;</para>
-      <para>                 &lt;primitive id="stonithclone" class="stonith" type="external/ssh"&gt;</para>
-      <para>                     &lt;operations&gt;</para>
-      <para>                         &lt;op id="stonith-op-mon" name="monitor" interval="5s"/&gt;</para>
-      <para>                     &lt;/operations&gt;</para>
-      <para>                     &lt;instance_attributes id="stonith-attrs"&gt;</para>
-      <para>                         &lt;nvpair id="stonith-attr-1" name="hostlist" value="c001n01,c001n02"/&gt;</para>
-      <para>                      &lt;/instance_attributes&gt;</para>
-      <para>                 &lt;/primitive&gt;</para>
-      <para>            &lt;/clone&gt;</para>
-      <para>       &lt;/resources&gt;</para>
-      <para>        &lt;constraints&gt;</para>
-      <para>           &lt;rsc_location id=”myAddr-preferred-host” rsc=”myAddr” node=”c001n01” score=”INFINITY”/&gt;</para>
-      <para>           &lt;rsc_colocation id=”group-with-ip” rsc=”myGroup” with-rsc=”myAddr” score=”INFINITY”/&gt;</para>
-      <para>        &lt;/constraints&gt;</para>
-      <para>    &lt;/configuration&gt;</para>
-      <para>    &lt;status/&gt;</para>
-      <para>&lt;/cib&gt;</para>
+      <para>&lt;cib admin_epoch="0" epoch="1" num_updates="0" have-quorum="false" validate-with=”pacemaker-1.0”></para>
+      <para>    &lt;configuration></para>
+      <para>        &lt;crm_config></para>
+      <para>            &lt;nvpair id="option-1" name="symmetric-cluster" value="true"/></para>
+      <para>            &lt;nvpair id="option-2" name="no-quorum-policy" value="stop"/></para>
+      <para>            &lt;nvpair id="option-3" name="stonith-enabled" value="true"/></para>
+      <para>        &lt;/crm_config></para>
+      <para>        &lt;op_defaults></para>
+      <para>            &lt;nvpair id="op-default-1" name="timeout" value="30s"/></para>
+      <para>        &lt;/op_defaults></para>
+      <para>        &lt;rsc_defaults></para>
+      <para>            &lt;nvpair id="rsc-default-1" name="resource-stickiness" value="100"/></para>
+      <para>            &lt;nvpair id="rsc-default-2" name="migration-threshold" value="10"/></para>
+      <para>        &lt;/rsc_defaults></para>
+      <para>        &lt;nodes></para>
+      <para>           &lt;node id="xxx" uname="c001n01" type="normal"/></para>
+      <para>           &lt;node id="yyy" uname="c001n02" type="normal"/></para>
+      <para>           &lt;node id="zzz" uname="c001n03" type="normal"/></para>
+      <para>        &lt;/nodes></para>
+      <para>        &lt;resources></para>
+      <para>            &lt;primitive id="myAddr" class="ocf" provider="heartbeat" type="IPaddr"></para>
+      <para>                &lt;operations></para>
+      <para>                   &lt;op id="myAddr-monitor" name="monitor" interval="300s"/></para>
+      <para>                &lt;/operations></para>
+      <para>                &lt;instance_attributes></para>
+      <para>                       &lt;nvpair name="ip" value="10.0.200.30"/></para>
+      <para>                &lt;/instance_attributes></para>
+      <para>            &lt;/primitive></para>
+      <para>            &lt;group id=”myGroup”></para>
+      <para>               &lt;primitive id="database" class="lsb" type="oracle"></para>
+      <para>                    &lt;operations></para>
+      <para>                       &lt;op id="database-monitor" name="monitor" interval="300s"/></para>
+      <para>                    &lt;/operations></para>
+      <para>                &lt;/primitive></para>
+      <para>               &lt;primitive id="webserver" class="lsb" type="apache"></para>
+      <para>                    &lt;operations></para>
+      <para>                       &lt;op id="webserver-monitor" name="monitor" interval="300s"/></para>
+      <para>                    &lt;/operations></para>
+      <para>                &lt;/primitive></para>
+      <para>            &lt;/group></para>
+      <para>            &lt;clone id="STONITH”"></para>
+      <para>                 &lt;meta_attributes id="stonith-options"></para>
+      <para>                         &lt;nvpair id="stonith-option-1" name="globally-unique" value="false"/></para>
+      <para>                 &lt;/meta_attributes></para>
+      <para>                 &lt;primitive id="stonithclone" class="stonith" type="external/ssh"></para>
+      <para>                     &lt;operations></para>
+      <para>                         &lt;op id="stonith-op-mon" name="monitor" interval="5s"/></para>
+      <para>                     &lt;/operations></para>
+      <para>                     &lt;instance_attributes id="stonith-attrs"></para>
+      <para>                         &lt;nvpair id="stonith-attr-1" name="hostlist" value="c001n01,c001n02"/></para>
+      <para>                      &lt;/instance_attributes></para>
+      <para>                 &lt;/primitive></para>
+      <para>            &lt;/clone></para>
+      <para>       &lt;/resources></para>
+      <para>        &lt;constraints></para>
+      <para>           &lt;rsc_location id=”myAddr-preferred-host” rsc=”myAddr” node=”c001n01” score=”INFINITY”/></para>
+      <para>           &lt;rsc_colocation id=”group-with-ip” rsc=”myGroup” with-rsc=”myAddr” score=”INFINITY”/></para>
+      <para>        &lt;/constraints></para>
+      <para>    &lt;/configuration></para>
+      <para>    &lt;status/></para>
+      <para>&lt;/cib></para>
       <para>groups and clones with stonith</para>
     </section>
   </chapter>
