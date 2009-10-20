@@ -40,11 +40,17 @@ body {
   padding: 0;
 }
 
-/* programlistings get a light grey background, with small rounded corners. */
+/* programlistings get a light red/yellow background, with small rounded corners. */
 .programlisting { 
+  background: #ffcc88;
+}
+
+/* computeroutput get a light grey background, with small rounded corners. */
+.screen { 
   background: #d3d3d3;
 }
-.programlisting:before { 
+
+.programlisting:before, .screen:before { 
   background: transparent url(images/top-right-small.png) scroll no-repeat top right;
   margin-bottom: -5px;
   height: 15px;
@@ -54,7 +60,7 @@ body {
   line-height: 0.1;
   font-size: 1px;
 }
-.programlisting:after { 
+.programlisting:after, .screen:after { 
   display: block;
   line-height: 0.1;
   font-size: 1px;
@@ -72,7 +78,7 @@ body {
 /* For links, we use LINBIT orange and grey */
 a:link { 
   font-weight: bold;
-  color: #fa8522;
+  color: #841918;
 }
 a:hover { 
   font-weight: bold;
@@ -80,4 +86,32 @@ a:hover {
 }
 a:visited { 
   color: grey; 
+}
+
+.caption {
+    margin-left: 5em;
+    margin-right: 5em;
+    font-style: italic;
+}
+
+.revhistory table, .informaltable table {
+	border-width: 1px;
+	border-spacing: ;
+	border-style: solid;
+	border-color: gray;
+	border-collapse: collapse;
+}
+.revhistory table th, .informaltable table th {
+	padding: 10px;
+	color: #ffffff;
+	border-width: 1px;
+	border-color: gray;
+	background-color: #841918;
+}
+.revhistory table td, .informaltable table td {
+	padding: 10px;
+	border-style: dotted;
+	border-width: 1px;
+	border-color: gray;
+	background-color: #FEFEF0;
 }
