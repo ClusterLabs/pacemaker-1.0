@@ -18,7 +18,6 @@
       </revision>
     </revhistory>
   </bookinfo>
-  <section/>
   <chapter id="about"><title>Read-Me-First</title>
     <section>
       <title>The Scope of this Document </title>
@@ -312,8 +311,8 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
 	<inlinegraphic fileref="embedded:graphics7" width="16cm" depth="6cm"/>An example transition graph as represented by Graphviz</para>
       <para>Interpreting the Graphviz output</para>
       <orderedlist>
-	<listitem>Arrows indicate ordering dependancies</listitem>
-	<listitem>Dashed-arrows indicate dependancies that are not present in the transition graph</listitem>
+	<listitem>Arrows indicate ordering dependencies</listitem>
+	<listitem>Dashed-arrows indicate dependencies that are not present in the transition graph</listitem>
 	<listitem>Actions with a dashed border of any color do not form part of the transition graph</listitem>
 	<listitem>Actions with a green border form part of the transition graph</listitem>
 	<listitem>Actions with a red border are ones the cluster would like to execute but are unrunnable</listitem>
@@ -329,7 +328,7 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
       <para>
 	<inlinegraphic fileref="embedded:graphics8" width="16cm" depth="10.5cm"/>Another, slightly more complex, transition graph that you’re not expected to be able to read </para></section><section><title>Do I Need to Update the Configuration on all Cluster Nodes?</title>
       <para>No.  Any changes are immediately synchronized to the other active members of the cluster.</para>
-      <para>To reduce bandwidth, the cluster only broadcasts the incremental updates that result from your changes and uses md5 sums to ensure that each copy is completely consistent.</para>
+      <para>To reduce bandwidth, the cluster only broadcasts the incremental updates that result from your changes and uses MD5 sums to ensure that each copy is completely consistent.</para>
     </section>
   </chapter>
   <chapter id="options">
@@ -445,7 +444,7 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
 	      <row>
 		<entry>batch-limit</entry>
 		<entry>30</entry>
-		<entry>The number of jobs that the TE is allowed to execute in parallell.  The "correct" value will depend on the speed and load of your network and cluster nodes.</entry>
+		<entry>The number of jobs that the TE is allowed to execute in parallel.  The "correct" value will depend on the speed and load of your network and cluster nodes.</entry>
               </row>
               <row>
 		<entry>no-quorum-policy</entry>
@@ -483,7 +482,7 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
               <row>
 		<entry>stop-orphan-actions</entry>
 		<entry>TRUE</entry>
-		<entry>Should deleted actions be cancelled</entry>
+		<entry>Should deleted actions be canceled</entry>
               </row>
               <row>
 		<entry>start-failure-is-fatal</entry>
@@ -540,7 +539,7 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
  Multiple attributes match name=batch-limit in crm_config:
  Value: 50          (set=cib-bootstrap-options, id=cib-bootstrap-options-batch-limit)
  Value: 100         (set=custom, id=custom-batch-limit)
- Please choose from one of the matches above and suppy the 'id' with --attr-id</screen>
+ Please choose from one of the matches above and supply the 'id' with --attr-id</screen>
 	</example>
 	<para>In such cases follow the on-screen instructions to perform the requested action.  To determine which value is currently being used by the cluster, please refer to the the section on <link linkend="">rules</link>.</para>
       </section>
@@ -648,7 +647,7 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
             <para>make them self describing, and</para>
 	  </listitem>
 	  <listitem>
-            <para>extendable</para>
+            <para>extensible</para>
 	  </listitem>
 	</orderedlist>
 	<para/>
@@ -1384,9 +1383,9 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
 	<anchor id="CollocatingSetsofResources"/>Collocating Sets of Resources</title>
       <para>Another common situation is for an administrator to create a set of collocated resources.  Previously this possible either by defining a resource group (See <link linkend="">Groups - A Syntactic Shortcut</link>) which could not always accurately express the design; or by defining each relationship as an individual constraint, causing a constraint explosion as the number of resources and combinations grew.</para>
       <para>&lt;constraints></para>
-      <para>    &lt;rsc_colcoation id="coloc-1" rsc="B" with-rsc="A" score="INFINITY"/></para>
-      <para>    &lt;rsc_colcoation id="coloc-2" rsc="C" with-rsc="B" score="INFINITY"/></para>
-      <para>    &lt;rsc_colcoation id="coloc-3" rsc="D" with-rsc="C" score="INFINITY"/></para>
+      <para>    &lt;rsc_colocation id="coloc-1" rsc="B" with-rsc="A" score="INFINITY"/></para>
+      <para>    &lt;rsc_colocation id="coloc-2" rsc="C" with-rsc="B" score="INFINITY"/></para>
+      <para>    &lt;rsc_colocation id="coloc-3" rsc="D" with-rsc="C" score="INFINITY"/></para>
       <para>&lt;/constraints></para>
       <para>A chain of collocated resources</para>
       <para>To make things easier, we allow an alternate form of colocation constraints using resource_sets.  Just like the expanded version, a resource that can’t be active also prevents any resource that must be collocated with it from being active.  For example if B was not able to run, then both C (and by inference D) must also remain stopped.</para>
@@ -1414,7 +1413,7 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
       <para/>
       <para/>
       <para/>
-      <para>This notation can also be used in this context to tell the cluster that a set of resources must all be located with a common peer, but have no dependancies on each other.  In this scenario, unlike the previous on, B would be allowed to remain active even if A or C (or both) were inactive.</para>
+      <para>This notation can also be used in this context to tell the cluster that a set of resources must all be located with a common peer, but have no dependencies on each other.  In this scenario, unlike the previous on, B would be allowed to remain active even if A or C (or both) were inactive.</para>
       <para>&lt;constraints></para>
       <para>    &lt;rsc_colocation id="coloc-1" score="INFINITY" ></para>
       <para>        &lt;resource_set id="collocated-set-1" sequential="false"></para>
@@ -1446,9 +1445,9 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
       <para>        &lt;/resource_set></para>
       <para>    &lt;/rsc_colocation></para>
       <para>&lt;/constraints></para>
-      <para>A colocation chain where the members of the middle set have no interdependencies and the last has master status.</para>
+      <para>A colocation chain where the members of the middle set have no inter-dependencies and the last has master status.</para>
       <para>
-	<inlinegraphic fileref="embedded:graphics12" width="16cm" depth="7.5cm"/>Visual representation of a colocation chain where the members of the middle set have no interdependencies</para>
+	<inlinegraphic fileref="embedded:graphics12" width="16cm" depth="7.5cm"/>Visual representation of a colocation chain where the members of the middle set have no inter-dependencies</para>
     </section>
   </chapter>
   <chapter id="events"><title>Receiving Notification of Cluster Events</title>
@@ -2039,8 +2038,8 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
 	<anchor id="SpecifyingWhenRecurringActioncopy"/>Specifying When Recurring Actions are Performed</title>
       <para>By default, recurring actions are scheduled relative to when the resource started.  So if your resource was last started at 14:32 and you have a backup set to be performed every 24 hours, then the backup will always run at in the middle of the business day - hardly desirable.</para>
       <para>To specify a date/time that the operation should be relative to, set the operation’s interval-origin.  The cluster uses this point to calculate the correct start-delay such that the operation will occur at origin + (interval * N).</para>
-      <para>So if the operation’s interval is 24h, it’s interval-origin is set to 02:00 and it is currently 14:32, then the cluster would initiate the operation with a start delay of 11 hours and 28 minutes.  If the resource is moved to another node before 2am, then the operation is of course cancelled.</para>
-      <para>The value specified for interval and interval-origin can be any date/time conforming to the <ulink url="http://en.wikipedia.org/wiki/ISO_8601">ISO8601 standard</ulink>.  By way of example, to specify an operation that would run on the first Monday of 2009 and every monday after that you would add: </para>
+      <para>So if the operation’s interval is 24h, it’s interval-origin is set to 02:00 and it is currently 14:32, then the cluster would initiate the operation with a start delay of 11 hours and 28 minutes.  If the resource is moved to another node before 2am, then the operation is of course canceled.</para>
+      <para>The value specified for interval and interval-origin can be any date/time conforming to the <ulink url="http://en.wikipedia.org/wiki/ISO_8601">ISO8601 standard</ulink>.  By way of example, to specify an operation that would run on the first Monday of 2009 and every Monday after that you would add: </para>
       <para>&lt;op id="my-weekly-action" name="custom-action" interval="P7D" interval-origin="2009-W01-1"/> </para></section><section><title>Moving Resources</title><section><title>Manual Intervention</title>
 	<para>There are primarily two occasions when you would want to move a resource from it’s current location:  when the whole node  is under maintenance and when a single resource needs to be moved.</para>
 	<para>In the case where everything needs to move, since everything eventually comes down to a score, you could create constraints for every resource you have preventing it from running on that node.  While the configuration can seem convoluted at times, not even we would require this of administrators.</para>
@@ -2112,7 +2111,7 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
 		  <para>dampen</para>
 		</entry>
 		<entry>
-		  <para>The time to wait (dampening) for further changes occur.  Use this to prevent a resource from bouncing around the cluster when cluster nodes notice the loss of connectively at slightly different times. </para>
+		  <para>The time to wait (dampening) for further changes occur.  Use this to prevent a resource from bouncing around the cluster when cluster nodes notice the loss of connectivity at slightly different times. </para>
 		</entry>
               </row>
               <row>
@@ -3240,7 +3239,7 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
       <para>Just because a node is unresponsive, this doesn’t mean it isn’t accessing your data.  The only way to be 100% sure that your data is safe, is to use STONITH so we can be certain that the node is truly offline, before allowing the data to be accessed from another node.</para>
       <para>STONITH also has a role to play in the event that a clustered service cannot be stopped.  In this case, the cluster uses STONITH to force the whole node offline, thereby making it safe to start the service elsewhere.</para></section><section><title>What STONITH Device Should You Use</title>
       <para>It is crucial that the STONITH device can allow the cluster to differentiate between a node failure and a network one.  </para>
-      <para>The biggest mistake people make in choosing a STONITH device is to use remote power switch (such as many onboard IMPI controllers) that shares power with the node it controls.  In such cases, the cluster cannot be sure if the node is really offline, or active and suffering from a network fault.</para>
+      <para>The biggest mistake people make in choosing a STONITH device is to use remote power switch (such as many on-board IMPI controllers) that shares power with the node it controls.  In such cases, the cluster cannot be sure if the node is really offline, or active and suffering from a network fault.</para>
       <para>Likewise, any device that relies on the machine being active (such as SSH-based "devices" used during testing) are inappropriate.</para></section><section><title>Configuring STONITH</title>
       <orderedlist>
 	<listitem>
@@ -3425,7 +3424,7 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
       <para>      &lt;/transient_attributes></para>
       <para>Example set of transient node attributes for node "cl-virt-1"</para>
       <para>In the above example, we can see that the pingd:0 resource has failed once, at Mon Apr  6 11:22:22 2009.<footnote>
-          <para> You can use the following perl one-liner to print a human readable of any seconds-since-epoch value:</para>
+          <para> You can use the following Perl one-liner to print a human readable of any seconds-since-epoch value:</para>
           <para>         perl -e 'print scalar(localtime($seconds))."\n"'</para>
 	</footnote>  We also see that the node is connected to three "pingd" peers and that all known resources have been checked for on this machine (probe_complete).</para></section><section><title>Operation History</title>
       <para>A node’s resource history is held in the lrm_resources tag (a child of the lrm tag). The information stored here includes enough information for the cluster to stop the resource safely if it is removed from the configuration section. Specifically we store the resource’s ID, class, type and provider.</para>
@@ -3552,7 +3551,7 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
 		<para>op-digest</para>
               </entry>
               <entry>
-		<para>An md5 sum representing the parameters passed to the job.  Used to detect changes to the configuration and restart resources if necessary.</para>
+		<para>An MD5 sum representing the parameters passed to the job.  Used to detect changes to the configuration and restart resources if necessary.</para>
               </entry>
             </row>
             <row>
@@ -3570,7 +3569,7 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
 	<para>&lt;/lrm_resource></para>
 	<para>A monitor operation performed by the cluster to determine the current state of the apcstonith resource</para>
 	<para>In the above example, the job is a non-recurring monitor often referred to as a "probe" for the apcstonith resource. The cluster schedules probes for every configured resource on when a new node starts, in order to determine the resource’s current state before it takes further any further action.</para>
-	<para>From the tranisition-key, we can see that this was the 22nd action of the 2nd graph produced by this instance of the crmd (2668bbeb-06d5-40f9-936d-24cb7f87006a).  The third field of the transition-key contains a 7, this indicates that the job expects to find the resource inactive.  By now looking at the rc-code property, we see that this was the case.</para>
+	<para>From the transition-key, we can see that this was the 22nd action of the 2nd graph produced by this instance of the crmd (2668bbeb-06d5-40f9-936d-24cb7f87006a).  The third field of the transition-key contains a 7, this indicates that the job expects to find the resource inactive.  By now looking at the rc-code property, we see that this was the case.</para>
 	<para>Evidently, the cluster started the resource elsewhere as that is the only job recorded for this node.</para></section><section><title>Complex Resource History Example</title>
 	<para/>
 	<para>&lt;lrm_resource id="pingd:0" type="pingd" class="ocf" provider="pacemaker"></para>
@@ -4175,7 +4174,7 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
 	      Some fields (such as those in constraints that refer to resources) are IDREFs.  This means that they must reference existing resources or objects in order for the configuration to be valid.  Removing an object which is referenced elsewhere will therefor fail.
 	    </listitem>
 	    <listitem>
-	      The CIB representation from which the md5 digest used to verify CIBs has changed.  This means that every CIB update will require a full refresh on any upgraded nodes until the cluster is fully upgraded to 1.0.  This will result in significant performance degradation and it is therefor highly inadvisable to run a mixed 1.0/0.6 cluster for any longer than absolutely necessary.
+	      The CIB representation from which the MD5 digest used to verify CIBs has changed.  This means that every CIB update will require a full refresh on any upgraded nodes until the cluster is fully upgraded to 1.0.  This will result in significant performance degradation and it is therefor highly inadvisable to run a mixed 1.0/0.6 cluster for any longer than absolutely necessary.
 	    </listitem>
 	  </itemizedlist>
 	</listitem>
