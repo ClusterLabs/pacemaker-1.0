@@ -88,6 +88,12 @@ a:visited {
   color: grey; 
 }
 
+.caption {
+    margin-left: 5em;
+    margin-right: 5em;
+    font-style: italic;
+}
+
 .revhistory table, .informaltable table {
 	border-width: 1px;
 	border-spacing: ;
@@ -98,12 +104,14 @@ a:visited {
 .revhistory table th, .informaltable table th {
 	padding: 10px;
 	color: #ffffff;
+	border-width: 1px;
 	border-color: gray;
 	background-color: #841918;
 }
 .revhistory table td, .informaltable table td {
 	padding: 10px;
 	border-style: dotted;
+	border-width: 1px;
 	border-color: gray;
 	background-color: #FEFEF0;
 }
