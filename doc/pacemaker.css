@@ -94,21 +94,23 @@ a:visited {
     font-style: italic;
 }
 
-.revhistory table, .informaltable table {
+.table-contents table, .revhistory table, .informaltable table {
 	border-width: 1px;
 	border-spacing: ;
 	border-style: solid;
 	border-color: gray;
 	border-collapse: collapse;
 }
-.revhistory table th, .informaltable table th {
+
+.table-contents th, .revhistory table th, .informaltable table th {
 	padding: 10px;
 	color: #ffffff;
 	border-width: 1px;
 	border-color: gray;
 	background-color: #841918;
 }
-.revhistory table td, .informaltable table td {
+
+.table-contents td, .revhistory table td, .informaltable table td {
 	padding: 10px;
 	border-style: dotted;
 	border-width: 1px;
