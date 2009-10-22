@@ -29,7 +29,7 @@ from CTSvars import *
 from CTS  import ClusterManager, RemoteExec
 from CTStests import BSC_AddResource
 from socket import gethostbyname_ex
-from CM_ais import crm_ais
+from CM_ais import *
 from CM_lha import crm_lha
 
 tests = None
@@ -219,8 +219,9 @@ class CtsLab(UserDict):
         self["oprofile"] = []
         self["warn-inactive"] = 0
         self["ListTests"] = 0
-        self["CMclass"] = crm_ais
-        self["logrestartcmd"] = "rcsyslog restart 2>&1 > /dev/null"
+        self["benchmark"] = 0
+        self["CMclass"] = crm_whitetank
+        self["logrestartcmd"] = "/etc/init.d/syslog-ng restart 2>&1 > /dev/null"
         self["Schema"] = "pacemaker-0.6"
         self["Stack"] = "openais"
         self["stonith-type"] = "external/ssh"
@@ -347,6 +348,7 @@ def usage(arg):
     print "\t [--syslog-facility name],  which syslog facility should the test software log to" 
     print "\t [--choose testcase-name],  run only the named test" 
     print "\t [--list-tests],            list the valid tests" 
+    print "\t [--benchmark],             add the timing information" 
     print "\t "
     print "Options for release testing: "  
     print "\t [--populate-resources | -r]" 
@@ -380,8 +382,8 @@ def usage(arg):
 if __name__ == '__main__': 
 
     from CTSaudits import AuditList
-    from CTStests import TestList,RandomTests,AllTests
-    from CTS import Scenario, InitClusterManager, PingFest, PacketLoss, BasicSanityCheck
+    from CTStests import TestList,RandomTests,AllTests,BenchTests,BenchTestList
+    from CTS import Scenario, InitClusterManager, PingFest, PacketLoss, BasicSanityCheck, Benchmark
 
     Environment = CtsLab()
 
@@ -446,6 +448,9 @@ if __name__ == '__main__':
 
        elif args[i] == "--list-tests":
            Environment["ListTests"]=1
+
+       elif args[i] == "--benchmark":
+           Environment["benchmark"]=1
 
        elif args[i] == "--bsc":
            Environment["DoBSC"] = 1
@@ -593,11 +598,19 @@ if __name__ == '__main__':
         Environment["logger"].append(SysLog(Environment))
 
     if Environment["Stack"] == "heartbeat" or Environment["Stack"] == "lha":
-        Environment['CMclass'] = crm_lha
+        Environment["Stack"]    = "heartbeat"
+        Environment['CMclass']  = crm_lha
 
-    elif Environment["Stack"] == "openais" or Environment["Stack"] == "ais":
-        Environment['CMclass']   = crm_ais
-        Environment["use_logd"]  = 0
+    elif Environment["Stack"] == "openais" or Environment["Stack"] == "ais"  or Environment["Stack"] == "whitetank":
+        Environment["Stack"]    = "openais (whitetank)"
+        Environment['CMclass']  = crm_whitetank
+        Environment["use_logd"] = 0
+
+    elif Environment["Stack"] == "corosync" or Environment["Stack"] == "cs" or Environment["Stack"] == "flatiron":
+        Environment["Stack"]    = "corosync (flatiron)"
+        Environment['CMclass']  = crm_flatiron
+        Environment["use_logd"] = 0
+
     else:
         print "Unknown stack: "+Environment["Stack"]
         sys.exit(1)
@@ -626,6 +639,8 @@ if __name__ == '__main__':
     # Scenario selection
     if Environment["DoBSC"]:
         scenario = Scenario([ BasicSanityCheck(Environment) ])
+    elif Environment["benchmark"]:
+        scenario = Scenario([ Benchmark(Environment) ])
     else:
         scenario = Scenario(
             [ InitClusterManager(Environment), PacketLoss(Environment)])
@@ -673,6 +688,8 @@ if __name__ == '__main__':
     if Environment["DoBSC"]:
         test = BSC_AddResource(cm)
         Tests.append(test)
+    elif Environment["benchmark"]:
+        Tests = BenchTestList(cm, Audits)
     elif TestCase != None:
         for test in TestList(cm, Audits):
             if test.name == TestCase:
@@ -682,7 +699,9 @@ if __name__ == '__main__':
     else:
         Tests = TestList(cm, Audits)
     
-    if Environment["all-once"] or NumIter == 0:
+    if Environment["benchmark"]:
+        Environment.ScenarioTests = BenchTests(scenario, cm, Tests, Audits)
+    elif Environment["all-once"] or NumIter == 0:
         Environment.ScenarioTests = AllTests(scenario, cm, Tests, Audits)
     else:
         Environment.ScenarioTests = RandomTests(scenario, cm, Tests, Audits)

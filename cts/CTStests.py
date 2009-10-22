@@ -165,11 +165,10 @@ class AllTests:
             ret = 1
             where = ""
             did_run = 0
-            starttime=time.time()
-            test.starttime=starttime            
 
             self.CM.log(("Running test %s" % test.name).ljust(35) + (" (%s) " % nodechoice).ljust(15) +"["+ ("%d" % testcount).rjust(3) +"]")
 
+            starttime=test.set_starttime()
             if not test.setup(nodechoice):
                 self.CM.log("Setup failed")
                 ret = 0
@@ -181,11 +180,12 @@ class AllTests:
             else:
                 did_run = 1
                 ret = test(nodechoice)
-                
+
             if not test.teardown(nodechoice):
                 self.CM.log("Teardown failed")
                 ret = 0
 
+            self.CM.debug("MARK: test %s stop" % test.name)
             stoptime=time.time()
             self.CM.oprofileSave(testcount)
 
@@ -204,6 +204,7 @@ class AllTests:
                
             if ret:
                 self.incr("success")
+                self.CM.debug("Test %s runtime: %.2f" % (test.name, test_time))
             else:
                 self.incr("failure")
                 self.CM.statall()
@@ -274,6 +275,11 @@ class RandomTests(AllTests):
 
         return testcount
 
+class BenchTests(AllTests):
+    '''
+    Nothing (yet) here.
+    '''
+
 AllTestClasses = [ ]
 
 class CTSTest:
@@ -306,6 +312,7 @@ class CTSTest:
         self.is_unsafe = 0
         self.is_experimental = 0
         self.is_valgrind = 0
+        self.benchmark = 0  # which tests to benchmark
 
     def has_key(self, key):
         return self.Stats.has_key(key)
@@ -315,6 +322,11 @@ class CTSTest:
         
     def __getitem__(self, key):
         return self.Stats[key]
+
+    def set_starttime(self):
+            self.starttime=time.time()
+            self.CM.debug("MARK: test %s start" % self.name)
+            return self.starttime
 
     def incr(self, name):
         '''Increment (or initialize) the value associated with the given name'''
@@ -587,6 +599,7 @@ class RestartTest(CTSTest):
         self.name="Restart"
         self.start = StartTest(cm)
         self.stop = StopTest(cm)
+        self.benchmark = 1
 
     def __call__(self, node):
         '''Perform the 'restart' test. '''
@@ -600,7 +613,7 @@ class RestartTest(CTSTest):
             if not self.start(node):
                 return self.failure("start (setup) failure: "+node)
 
-        self.starttime=time.time()
+        self.set_starttime()
         if not self.stop(node):
             return self.failure("stop failure: "+node)
         if not self.start(node):
@@ -617,6 +630,7 @@ class StonithdTest(CTSTest):
         CTSTest.__init__(self, cm)
         self.name="Stonithd"
         self.startall = SimulStartLite(cm)
+        self.benchmark = 1
 
     def __call__(self, node):
         self.incr("calls")
@@ -710,7 +724,7 @@ class StartOnebyOne(CTSTest):
             return self.failure("Test setup failed")
 
         failed=[]
-        self.starttime=time.time()
+        self.set_starttime()
         for node in self.CM.Env["nodes"]:
             if not self.start(node):
                 failed.append(node)
@@ -805,7 +819,7 @@ class StopOnebyOne(CTSTest):
             return self.failure("Setup failed")
 
         failed=[]
-        self.starttime=time.time()
+        self.set_starttime()
         for node in self.CM.Env["nodes"]:
             if not self.stop(node):
                 failed.append(node)
@@ -840,7 +854,7 @@ class RestartOnebyOne(CTSTest):
             return self.failure("Setup failed")
 
         did_fail=[]
-        self.starttime=time.time()
+        self.set_starttime()
         self.restart = RestartTest(self.CM)
         for node in self.CM.Env["nodes"]:
             if not self.restart(node):
@@ -873,8 +887,8 @@ class PartialStart(CTSTest):
         if not ret:
             return self.failure("Setup failed")
 
-#	FIXME!  This should use the CM class to get the pattern
-#		then it would be applicable in general
+#   FIXME!  This should use the CM class to get the pattern
+#       then it would be applicable in general
         watchpats = []
         watchpats.append("Starting crmd")
         watch = CTS.LogWatcher(self.CM["LogFileName"], watchpats,
@@ -902,6 +916,7 @@ class StandbyTest(CTSTest):
     def __init__(self, cm):
         CTSTest.__init__(self,cm)
         self.name="Standby"
+        self.benchmark = 1
             
         self.start = StartTest(cm)
         self.startall = SimulStartLite(cm)
@@ -1222,6 +1237,7 @@ class ResourceRecover(CTSTest):
         self.max=30
         self.rid=None
         #self.is_unsafe = 1
+        self.benchmark = 1
 
         # these are the values used for the new LRM API call
         self.action = "asyncmon"
@@ -1267,11 +1283,11 @@ class ResourceRecover(CTSTest):
             pats.append("crmd:.* Performing .* op=%s_stop_0" % self.rid)
             if rsc.unique():
                 pats.append("crmd:.* Performing .* op=%s_start_0" % self.rid)
-                pats.append("crmd:.* LRM operation %s_start_0.*complete" % self.rid)
+                pats.append("crmd:.* LRM operation %s_start_0.*confirmed.*ok" % self.rid)
             else:
                 # Anonymous clones may get restarted with a different clone number
                 pats.append("crmd:.* Performing .* op=.*_start_0")
-                pats.append("crmd:.* LRM operation .*_start_0.*complete")
+                pats.append("crmd:.* LRM operation .*_start_0.*confirmed.*ok")
 
         watch = CTS.LogWatcher(self.CM["LogFileName"], pats, timeout=60)
         watch.setwatch()
@@ -1426,8 +1442,8 @@ class ComponentFail(CTSTest):
 
     def errorstoignore(self):
         '''Return list of errors which should be ignored'''
-	# Note that okerrpatterns refers to the last time we ran this test
-	# The good news is that this works fine for us...
+    # Note that okerrpatterns refers to the last time we ran this test
+    # The good news is that this works fine for us...
         self.okerrpatterns.extend(self.patterns)
         return self.okerrpatterns
     
@@ -2142,7 +2158,7 @@ class BSC_AddResource(CTSTest):
         self.resource_offset =         self.resource_offset  + 1
 
         r_id = "bsc-rsc-%s-%d" % (node, self.resource_offset)
-        start_pat = "crmd.*%s_start_0.*complete"
+        start_pat = "crmd.*%s_start_0.*confirmed.*ok"
 
         patterns = []
         patterns.append(start_pat % r_id)
@@ -2240,7 +2256,7 @@ class SimulStopLite(CTSTest):
         ,     timeout=self.CM["DeadTime"]+10)
 
         watch.setwatch()
-        self.starttime=time.time()
+        self.set_starttime()
         for node in self.CM.Env["nodes"]:
             if self.CM.ShouldBeStatus[node] == "up":
                 self.CM.StopaCMnoBlock(node)
@@ -2304,7 +2320,7 @@ class SimulStartLite(CTSTest):
 
         watch.setwatch()
 
-        self.starttime=time.time()
+        self.set_starttime()
         for node in self.CM.Env["nodes"]:
             if self.CM.ShouldBeStatus[node] == "down":
                 self.CM.StartaCMnoBlock(node)
@@ -2352,3 +2368,10 @@ def TestList(cm, audits):
             result.append(bound_test)
     return result
 
+def BenchTestList(cm, audits):
+    all = TestList(cm, audits)
+    result = []
+    for test in all:
+        if test.benchmark:
+            result.append(test)
+    return result
