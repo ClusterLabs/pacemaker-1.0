@@ -3170,7 +3170,8 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
       </section>
     </section>
   </chapter>
-  <appendix id="faq"><title>FAQ</title>
+  <appendix id="faq">
+    <title>FAQ</title>
     <section>
       <qandaset defaultlabel="qanda">
 	<qandaentry>
@@ -4142,30 +4143,14 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
   </appendix>
   <appendix id="more">
     <title>Further Reading</title>
-    <section>
-      <title>Project Website</title>
-      <para>
-	<ulink url="http://www.clusterlabs.org/"/>
-      </para>
-    </section>
-    <section>
-      <title>Cluster Commands</title>
-      <para>A comprehensive guide to cluster commands has been written by Novell and can be found at:</para>
-      <para>
-	<ulink url="http://www.novell.com/documentation/sles11/book_sleha/index.html?page=/documentation/sles11/book_sleha/data/book_sleha.html"/>
-      </para>
-    </section>
-    <section>
-      <title>Heartbeat configuration</title>
-	<para>
-	  <ulink url="http://www.linux-ha.org/"/>
-	</para>
-    </section>
-    <section>
-      <title>OpenAIS Configuration</title>
-      <para>
-	<ulink url="http://www.openais.org/"/>
-      </para>
-    </section>
+    <itemizedlist>
+      <listitem>Project Website: <ulink url="http://www.clusterlabs.org/"/></listitem>
+      <listitem>
+	<para>Cluster Commands</para>
+	<para>A comprehensive guide to cluster commands has been written by Novell and can be found at: <ulink url="http://www.novell.com/documentation/sles11/book_sleha/index.html?page=/documentation/sles11/book_sleha/data/book_sleha.html"/></para>
+      </listitem>
+      <listitem>Heartbeat configuration: <ulink url="http://www.linux-ha.org/"/></listitem>
+      <listitem>OpenAIS Configuration: <ulink url="http://www.openais.org/"/></listitem>
+    </itemizedlist>
   </appendix>
 </book>
