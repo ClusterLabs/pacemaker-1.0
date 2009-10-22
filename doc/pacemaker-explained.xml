@@ -691,52 +691,33 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
       <title>Properties</title>
       <para>These values tell the cluster which script to use for the resource, where to find that script and what standards it conforms to.</para>
       <table frame="all">
-	<title>Properties of a Resource</title>
+	<title>Properties of a Primitive Resource</title>
 	<tgroup cols="2">
           <thead>
             <row>
-              <entry>
-                <para>Field</para>
-              </entry>
-              <entry>
-                <para>Description</para>
-              </entry>
+              <entry>Field</entry>
+              <entry>Description</entry>
             </row>
-          </thead><tbody><row>
-              <entry>
-		<para>id</para>
-              </entry>
-              <entry>
-		<para>Your name for the resource</para>
-              </entry>
+          </thead>
+	  <tbody>
+	    <row>
+              <entry>id</entry>
+              <entry>Your name for the resource</entry>
             </row>
             <row>
-              <entry>
-		<para>class</para>
-              </entry>
-              <entry>
-		<para>The standard the script conforms to.  Allowed values: heartbeat, lsb, ocf, stonith</para>
-              </entry>
+              <entry>class</entry>
+              <entry>The standard the script conforms to.  Allowed values: heartbeat, lsb, ocf, stonith</entry>
             </row>
             <row>
-              <entry>
-		<para>type</para>
-              </entry>
-              <entry>
-		<para>The name of the Resource Agent you wish to use. eg. IPaddr or Filesystem</para>
-              </entry>
+              <entry>type</entry>
+              <entry>The name of the Resource Agent you wish to use. eg. IPaddr or Filesystem</entry>
             </row>
             <row>
-              <entry>
-		<para>provider</para>
-              </entry>
-              <entry>
-		<para>The OCF spec allows multiple vendors to supply the same ResourceAgent.  To use the OCF resource agents supplied with Heartbeat, you should specify heartbeat here.</para>
-              </entry>
+              <entry>provider</entry>
+              <entry>The OCF spec allows multiple vendors to supply the same ResourceAgent.  To use the OCF resource agents supplied with Heartbeat, you should specify heartbeat here.</entry>
             </row>
 	  </tbody>
 	</tgroup>
-	<caption>Properties of a primitive resource</caption>
       </table>
       <para>Resource definitions can be queried with the crm_resource tool.  For example</para>
       <screen><command>crm_resource --resource Email --query-xml</command></screen>
@@ -773,38 +754,22 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
       <title>Options</title>
       <para>Options are used by the cluster to decide how your resource should behave and can be easily set using the --meta option of the crm_resource command.</para>
       <table frame="all">
-	<title>Resource Options</title>
+	<title>Available options for a primitive resource</title>
 	<tgroup cols="3">
           <thead>
             <row>
-              <entry>
-                <para>Field</para>
-              </entry>
-              <entry>
-                <para>Default</para>
-              </entry>
-              <entry>
-                <para>Description</para>
-              </entry>
+              <entry>Field</entry>
+              <entry>Default</entry>
+              <entry>Description</entry>
             </row>
           </thead><tbody><row>
-              <entry>
-		<para>priority</para>
-              </entry>
-              <entry>
-		<para>0</para>
-              </entry>
-              <entry>
-		<para>If not all resources can be active, the cluster will stop lower priority resources in order to keep higher priority ones active.</para>
-              </entry>
+              <entry>priority</entry>
+              <entry>0</entry>
+              <entry>If not all resources can be active, the cluster will stop lower priority resources in order to keep higher priority ones active.</entry>
             </row>
             <row>
-              <entry>
-		<para>target-role</para>
-              </entry>
-              <entry>
-		<para>Started</para>
-              </entry>
+              <entry>target-role</entry>
+              <entry>Started</entry>
               <entry>
 		<para>What state should the cluster attempt to keep this resource in?  Allowed values: </para>
 		<orderedlist>
@@ -821,57 +786,29 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
               </entry>
             </row>
             <row>
-              <entry>
-		<para>is-managed</para>
-              </entry>
-              <entry>
-		<para>TRUE</para>
-              </entry>
-              <entry>
-		<para>Is the cluster allowed to start and stop the resource?  Allowed values: true, false</para>
+              <entry>is-managed</entry>
+              <entry>TRUE</entry>
+              <entry>Is the cluster allowed to start and stop the resource?  Allowed values: true, false</entry>
+            </row>
+            <row>
+              <entry>resource-stickiness</entry>
+              <entry>Inherited</entry>
+              <entry>How much does the resource prefer to stay where it is? Defaults to the value of resource-stickiness in the rsc_defaults section
               </entry>
             </row>
             <row>
-              <entry>
-		<para>resource-stickiness</para>
-              </entry>
-              <entry>
-		<para>Inherited</para>
-              </entry>
-              <entry>
-		<para>How much does the resource prefer to stay where it is?  </para>
-		<para>Defaults to the value of resource-stickiness in the rsc_defaults section</para>
-              </entry>
+              <entry>migration-threshold</entry>
+              <entry>0 (disabled)</entry>
+              <entry>How many failures should occur for this resource on a node before making the node ineligible to host this resource. </entry>
             </row>
             <row>
-              <entry>
-		<para>migration-threshold</para>
-              </entry>
-              <entry>
-		<para>0 (disabled)</para>
-              </entry>
-              <entry>
-		<para>How many failures should occur for this resource on a node before making the node ineligible to host this resource. </para>
-              </entry>
+              <entry>failure-timeout</entry>
+              <entry>0 (disabled)</entry>
+              <entry>How many seconds to wait before acting as if the failure had not occurred (and potentially allowing the resource back to the node on which it failed.</entry>
             </row>
             <row>
-              <entry>
-		<para>failure-timeout</para>
-              </entry>
-              <entry>
-		<para>0 (disabled)</para>
-              </entry>
-              <entry>
-		<para>How many seconds to wait before acting as if the failure had not occurred (and potentially allowing the resource back to the node on which it failed.</para>
-              </entry>
-            </row>
-            <row>
-              <entry>
-		<para>multiple-active</para>
-              </entry>
-              <entry>
-		<para>stop_start</para>
-              </entry>
+              <entry>multiple-active</entry>
+              <entry>stop_start</entry>
               <entry>
 		<para>What should the cluster do if it ever finds the resource active on more than one node.  Allowed values: </para>
 		<orderedlist>
@@ -886,25 +823,37 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
                   </listitem>
 		</orderedlist>
               </entry>
-        </row></tbody></tgroup>
+            </row>
+	  </tbody>
+	</tgroup>
       </table>
-      <para>Available options for a primitive resource</para>
       <para>If you performed the following commands on the above resource</para>
-      <para>crm_resource --meta --resource Email --set-parameter priority --property-value 100</para>
-      <para>crm_resource --meta --resource Email --set-parameter multiple-active --property-value block</para>
+      <screen>
+	<command>crm_resource --meta --resource Email --set-parameter priority --property-value 100</command>
+	<command>crm_resource --meta --resource Email --set-parameter multiple-active --property-value block</command>
+      </screen>
       <para>the resulting resource definition would be</para>
-      <para>&lt;primitive id="Email" class="lsb" type="exim"></para>
-      <para>   &lt;meta_attributes id="meta-email"></para>
-      <para>         &lt;nvpair id="email-priority" name="priority" value="100"/></para>
-      <para>         &lt;nvpair id="email-active" name="multiple-active" value="block"/></para>
-      <para>   &lt;/meta_attributes></para>
-      <para>&lt;/primitive></para>
-      <para>An example LSB resource with cluster options</para></section><section><title>
-	<anchor id="SettingGlobalDefaultsforReso"/>Setting Global Defaults for Resource Options</title>
-      <para>To set a default value for a resource option, simply add it to the rsc_defaults section with crm_attribute.</para>
-      <para>Thus, </para>
-      <para>crm_attribute --type rsc_defaults --attr-name is-managed --attr-value false</para>
-      <para>would prevent the cluster from starting or stopping any of the resources in the configuration (unless of course the individual resources were specifically enabled and had is-managed set to true).</para></section><section><title>Instance Attributes</title>
+      <example>
+	<title>An LSB resource with cluster options</title>
+	<screen>
+  &lt;primitive id="Email" class="lsb" type="exim">
+     &lt;meta_attributes id="meta-email">
+        &lt;nvpair id="email-priority" name="priority" value="100"/>
+        &lt;nvpair id="email-active" name="multiple-active" value="block"/>
+     &lt;/meta_attributes>
+  &lt;/primitieve>
+	</screen>
+      </example>
+    </section>
+    <section>
+      <anchor id="SettingGlobalDefaultsforReso"/>
+      <title>Setting Global Defaults for Resource Options</title>
+      <para>To set a default value for a resource option, simply add it to the rsc_defaults section with crm_attribute. Thus, </para>
+      <command>crm_attribute --type rsc_defaults --attr-name is-managed --attr-value false</command>
+      <para>would prevent the cluster from starting or stopping any of the resources in the configuration (unless of course the individual resources were specifically enabled and had is-managed set to true).</para>
+    </section>
+    <section>
+      <title>Instance Attributes</title>
       <para>The scripts of some resource classes (LSB not being one of them) can be given parameters which determine how they behave and which instance of a service they control.</para>
       <para>If your resource agent supports parameters, you can add them with the crm_resource command.  For instance</para>
       <para>crm_resource --resource Public-IP --set-parameter ip --property-value 1.2.3.4</para>
@@ -934,49 +883,27 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
 	  <tgroup cols="2">
             <thead>
               <row>
-		<entry>
-                  <para>Field</para>
-		</entry>
-		<entry>
-                  <para>Description</para>
-		</entry>
+		<entry>Field</entry>
+		<entry>Description</entry>
               </row>
             </thead><tbody><row>
-		<entry>
-		  <para>id</para>
-		</entry>
-		<entry>
-		  <para>Your name for the action.  Must be unique.</para>
-		</entry>
+		<entry>id</entry>
+		<entry>Your name for the action.  Must be unique.</entry>
               </row>
               <row>
-		<entry>
-		  <para>name</para>
-		</entry>
-		<entry>
-		  <para>The action to perform.  Common values: monitor, start, stop</para>
-		</entry>
+		<entry>name</entry>
+		<entry>The action to perform.  Common values: monitor, start, stop</entry>
               </row>
               <row>
-		<entry>
-		  <para>interval</para>
-		</entry>
-		<entry>
-		  <para>How frequently (in seconds) to perform the operation.  Default value: 0</para>
-		</entry>
+		<entry>interval</entry>
+		<entry>How frequently (in seconds) to perform the operation.  Default value: 0</entry>
               </row>
               <row>
-		<entry>
-		  <para>timeout</para>
-		</entry>
-		<entry>
-		  <para>How long to wait before declaring the action has failed.</para>
-		</entry>
+		<entry>timeout</entry>
+		<entry>How long to wait before declaring the action has failed.</entry>
               </row>
               <row>
-		<entry>
-		  <para>requires</para>
-		</entry>
+		<entry>requires</entry>
 		<entry>
 		  <para>What conditions need to be satisfied before this action occurs. Allowed values: </para>
 		  <orderedlist>
@@ -994,9 +921,7 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
 		</entry>
               </row>
               <row>
-		<entry>
-		  <para>on-fail</para>
-		</entry>
+		<entry>on-fail</entry>
 		<entry>
 		  <para>The action to take if this action ever fails.  Allowed values: </para>
 		  <orderedlist>
@@ -1023,13 +948,11 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
 		</entry>
               </row>
               <row>
-		<entry>
-		  <para>enabled</para>
-		</entry>
-		<entry>
-		  <para>If false, the operation is treated as if it does not exist.  Allowed values: <emphasis>true</emphasis>, false</para>
-		</entry>
-          </row></tbody></tgroup>
+		<entry>enabled</entry>
+		<entry>If false, the operation is treated as if it does not exist.  Allowed values: <emphasis>true</emphasis>, false</entry>
+              </row>
+	    </tbody>
+	  </tgroup>
 	</table>
       </section>
     </section>
@@ -1106,51 +1029,39 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
             <para>INFINITY - INFINITY  = -INFINITY</para>
 	  </listitem>
     </orderedlist></section></section><section><title>Deciding Which Nodes a Resource Can Run On</title>
-      <para>There are two alternative strategies for specifying which nodes a resources can run on.  One way is to say that by default they can run anywhere and then create location constraints for nodes that are not allowed.  The other option is to have nodes "opt-in"... to start with nothing able to run anywhere and selectively enable allowed nodes.</para><section><title>Options</title>
+      <para>There are two alternative strategies for specifying which nodes a resources can run on.  One way is to say that by default they can run anywhere and then create location constraints for nodes that are not allowed.  The other option is to have nodes "opt-in"... to start with nothing able to run anywhere and selectively enable allowed nodes.</para>
+      <section>
+	<title>Options</title>
 	<table frame="all">
+	  <title>Options for Simple Location Constraints</title>
 	  <tgroup cols="2">
             <thead>
               <row>
-		<entry>
-                  <para>Field</para>
-		</entry>
-		<entry>
-                  <para>Description</para>
-		</entry>
+		<entry>Field</entry>
+		<entry>Description</entry>
               </row>
             </thead><tbody><row>
-		<entry>
-		  <para>id</para>
-		</entry>
-		<entry>
-		  <para>A unique name for the constraint</para>
-		</entry>
+		<entry>id</entry>
+		<entry>A unique name for the constraint</entry>
               </row>
               <row>
-		<entry>
-		  <para>rsc</para>
-		</entry>
-		<entry>
-		  <para>A resource name</para>
-		</entry>
+		<entry>rsc</entry>
+		<entry>A resource name</entry>
               </row>
               <row>
-		<entry>
-		  <para>node</para>
-		</entry>
-		<entry>
-		  <para>A node's uname</para>
-		</entry>
+		<entry>node</entry>
+		<entry>A node's uname</entry>
               </row>
               <row>
-		<entry>
-		  <para>score</para>
-		</entry>
-		<entry>
-		  <para>Positive values indicate the resource can run on this node.  Negative values indicate the resource can not run on this node.  Values of +/- INFINITY change "can" to "must".</para>
-		</entry>
-          </row></tbody></tgroup>
-      </table></section><section><title>Asymmetrical "Opt-In" Clusters</title>
+		<entry>score</entry>
+		<entry>Positive values indicate the resource can run on this node.  Negative values indicate the resource can not run on this node.  Values of +/- INFINITY change "can" to "must".</entry>
+              </row>
+	    </tbody>
+	  </tgroup>
+	</table>
+      </section>
+      <section>
+	<title>Asymmetrical "Opt-In" Clusters</title>
 	<para>To create an opt-in cluster, start by preventing resources from running anywhere by default</para>
 	<para>crm_attribute --attr-name symmetric-cluster --attr-value false</para>
 	<para>Then start enabling nodes.  The following fragment says that the web server prefers sles-1, the database prefers sles-2 and both can failover to sles-3 if their most preferred node fails.  </para>
@@ -1189,57 +1100,36 @@ The schema describing the configuration can normally be found in /usr/lib/heartb
 	  <tgroup cols="2">
             <thead>
               <row>
-		<entry>
-                  <para>Field</para>
-		</entry>
-		<entry>
-                  <para>Description</para>
-		</entry>
+		<entry>Field</entry>
+		<entry>Description</entry>
               </row>
             </thead><tbody><row>
-		<entry>
-		  <para>id</para>
-		</entry>
-		<entry>
-		  <para>A unique name for the constraint</para>
-		</entry>
+		<entry>id</entry>
+		<entry>A unique name for the constraint</entry>
               </row>
               <row>
-		<entry>
-		  <para>first</para>
-		</entry>
-		<entry>
-		  <para>The name of a resource that must be started before the then resource is allowed to. </para>
-		</entry>
+		<entry>first</entry>
+		<entry>The name of a resource that must be started before the then resource is allowed to. </entry>
               </row>
               <row>
-		<entry>
-		  <para>then</para>
-		</entry>
-		<entry>
-		  <para>The name of a resource.  This resource will start after the first resource.</para>
-		</entry>
+		<entry>then</entry>
+		<entry>The name of a resource.  This resource will start after the first resource.</entry>
               </row>
               <row>
-		<entry>
-		  <para>score</para>
-		</entry>
-		<entry>
-		  <para>If greater than zero, the constraint is mandatory.  Otherwise it is only a suggestion. Default value: <emphasis>INFINITY</emphasis>
-		  </para>
-		</entry>
+		<entry>score</entry>
+		<entry>If greater than zero, the constraint is mandatory.  Otherwise it is only a suggestion. Default value: <emphasis>INFINITY</emphasis>
+		  </entry>
               </row>
               <row>
-		<entry>
-		  <para>symmetrical</para>
-		</entry>
-		<entry>
-		  <para>If true, which is the default, stop the resources in the reverse order.  Default value: <emphasis>true</emphasis>
-		  </para>
-		</entry>
-          </row></tbody></tgroup>
+		<entry>symmetrical</entry>
+		<entry>If true, which is the default, stop the resources in the reverse order.  Default value: <emphasis>true</emphasis></entry>
+              </row>
+	    </tbody>
+	  </tgroup>
 	</table>
-	<para/></section><section><title>Mandatory Ordering</title>
+      </section>
+      <section>
+	<title>Mandatory Ordering</title>
 	<para>When the then resource cannot run without the first resource being active, one should use mandatory constraints. To specify a constraint is mandatory, use a scores greater than zero.  This will ensure that the then resource will react when the first resource changes state.</para>
 	<orderedlist>
 	  <listitem>
